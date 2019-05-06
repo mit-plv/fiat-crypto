@@ -39,11 +39,10 @@ Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.SpecializeAllWays.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.PrintGoal.
-Require Import Crypto.LanguageWf.
+Require Import Crypto.CastLemmas.
 Require Import Crypto.AbstractInterpretation.
 
 Module Compilers.
-  Import LanguageWf.Compilers.
   Import AbstractInterpretation.Compilers.
 
   Module ZRange.
@@ -95,9 +94,6 @@ Module Compilers.
             cbn; cbv [respectful_hetero]; intros.
             destruct_head' option; cbn in *; [ | reflexivity ].
             break_match; cbn in *; [ | reflexivity ].
-            let v := (eval cbv [base.interp ZRange.type.base.option.interp ZRange.type.base.interp] in (@ZRange.type.base.option.interp)) in
-            progress change v with (@ZRange.type.base.option.interp) in *.
-            progress fold (@base.interp) in *.
             rewrite FoldBool.fold_andb_map_iff in *.
             rewrite OptionList.fold_right_option_seq in *.
             destruct_head'_ex.
@@ -135,9 +131,6 @@ Module Compilers.
           Proof.
             cbn; cbv [respectful_hetero]; intros.
             destruct_head' option; cbn in *; [ | break_innermost_match; reflexivity ].
-            let v := (eval cbv [base.interp ZRange.type.base.option.interp ZRange.type.base.interp] in (@ZRange.type.base.option.interp)) in
-            progress change v with (@ZRange.type.base.option.interp) in *.
-            progress fold (@base.interp) in *.
             rewrite FoldBool.fold_andb_map_iff in *.
             destruct_head'_ex.
             destruct_head'_and.
@@ -276,10 +269,11 @@ Module Compilers.
                          | progress destruct_head'_ex
                          | break_innermost_match_step
                          | break_innermost_match_hyps_step
-                         | progress cbn [ZRange.type.base.option.is_bounded_by is_bounded_by_bool ZRange.type.base.is_bounded_by lower upper fst snd projT1 projT2 bool_eq base.interp base.base_interp Option.bind FoldBool.fold_andb_map negb ZRange.ident.option.to_literal ZRange.type.base.option.None ident.to_fancy invert_Some ident.fancy.interp ident.fancy.interp_with_wordmax fst snd ZRange.type.base.option.interp ZRange.type.base.interp List.combine List.In] in *
+                         | progress cbn [ZRange.type.base.option.is_bounded_by is_bounded_by_bool ZRange.type.base.is_bounded_by lower upper fst snd projT1 projT2 bool_eq base.interp base.base_interp Option.bind FoldBool.fold_andb_map negb ZRange.ident.option.to_literal ZRange.type.base.option.None ident.to_fancy invert_Some ident.fancy.interp ident.fancy.interp_with_wordmax fst snd ZRange.type.base.option.interp ZRange.type.base.interp List.combine List.In base.interp_beq base.base_interp_beq base.base_interp] in *
                          | progress destruct_head'_bool
                          | solve [ auto with nocore ]
                          | progress fold (@base.interp) in *
+                         | progress fold (@ZRange.type.base.option.interp) in *
                          | let v := (eval cbv [base.interp ZRange.type.base.option.interp ZRange.type.base.interp] in (@ZRange.type.base.option.interp)) in
                            progress change v with (@ZRange.type.base.option.interp) in *
                          | handle_lt_le_t_step
@@ -319,7 +313,7 @@ Module Compilers.
                              => rewrite OptionList.fold_right_option_seq in H
                            | [ |- and _ _ ] => apply conj
                            end
-                         | progress cbv [bool_eq option_map List.nth_default Definitions.Z.bneg is_bounded_by_bool zrange_beq] in *
+                         | progress cbv [bool_eq Bool.eqb option_map List.nth_default Definitions.Z.bneg is_bounded_by_bool zrange_beq] in *
                          | match goal with
                            | [ |- ?R (nat_rect ?P ?O ?S ?n) (nat_rect ?P' ?O' ?S' ?n) = true ]
                              => is_var n; induction n; cbn [nat_rect];

@@ -31,296 +31,327 @@ Module Compilers.
   Export IdentifiersLibrary.Compilers.
   Import invert_expr.
 
-  Notation EvarMap := (PositiveMap.t Compilers.base.type).
+  Notation EvarMap := Compilers.pattern.EvarMap.
   Module pattern.
     Export IdentifiersLibrary.Compilers.pattern.
 
     Module base.
       Import IdentifiersLibrary.Compilers.pattern.base.
+      Section with_base.
+        Context {base : Type}
+                (base_beq : base -> base -> bool).
+        Local Notation type := (type base).
 
-      Fixpoint partial_subst (ptype : type) (evar_map : EvarMap) : type
-        := match ptype with
-           | type.var p => match PositiveMap.find p evar_map with
-                           | Some t => relax t
-                           | None => type.var p
-                           end
-           | type.type_base t => type.type_base t
-           | type.prod A B => type.prod (partial_subst A evar_map) (partial_subst B evar_map)
-           | type.list A => type.list (partial_subst A evar_map)
-           | type.option A => type.option (partial_subst A evar_map)
-           end.
+        Fixpoint partial_subst (ptype : type) (evar_map : EvarMap) : type
+          := match ptype with
+             | type.var p => match PositiveMap.find p evar_map with
+                             | Some t => relax t
+                             | None => type.var p
+                             end
+             | type.type_base t => type.type_base t
+             | type.unit => type.unit
+             | type.prod A B => type.prod (partial_subst A evar_map) (partial_subst B evar_map)
+             | type.list A => type.list (partial_subst A evar_map)
+             | type.option A => type.option (partial_subst A evar_map)
+             end.
 
-      Fixpoint subst (ptype : type) (evar_map : EvarMap) : option Compilers.base.type
-        := match ptype with
-           | type.var p => PositiveMap.find p evar_map
-           | type.type_base t => Some (Compilers.base.type.type_base t)
-           | type.prod A B
-             => (A' <- subst A evar_map;
-                   B' <- subst B evar_map;
-                   Some (Compilers.base.type.prod A' B'))
-           | type.list A => option_map Compilers.base.type.list (subst A evar_map)
-           | type.option A => option_map Compilers.base.type.option (subst A evar_map)
-           end%option.
+        Fixpoint subst (ptype : type) (evar_map : EvarMap) : option (Compilers.base.type base)
+          := match ptype with
+             | type.var p => PositiveMap.find p evar_map
+             | type.type_base t => Some (Compilers.base.type.type_base t)
+             | type.unit => Some Compilers.base.type.unit
+             | type.prod A B
+               => (A' <- subst A evar_map;
+                     B' <- subst B evar_map;
+                     Some (Compilers.base.type.prod A' B'))
+             | type.list A => option_map Compilers.base.type.list (subst A evar_map)
+             | type.option A => option_map Compilers.base.type.option (subst A evar_map)
+             end%option.
 
-      Fixpoint subst_default_relax P {t evm} : P t -> P (subst_default (relax t) evm)
-        := match t return P t -> P (subst_default (relax t) evm) with
-           | Compilers.base.type.type_base t => fun x => x
-           | Compilers.base.type.prod A B
-             => fun v
-                => @subst_default_relax
-                     (fun A' => P (Compilers.base.type.prod A' _)) A evm
-                     (@subst_default_relax
-                        (fun B' => P (Compilers.base.type.prod _ B')) B evm
-                        v)
-           | Compilers.base.type.list A
-             => @subst_default_relax (fun t => P (Compilers.base.type.list t)) A evm
-           | Compilers.base.type.option A
-             => @subst_default_relax (fun t => P (Compilers.base.type.option t)) A evm
-           end.
+        Fixpoint subst_default_relax P {t evm} : P t -> P (@subst_default base (relax t) evm)
+          := match t return P t -> P (subst_default (relax t) evm) with
+             | Compilers.base.type.type_base _
+             | Compilers.base.type.unit
+               => fun x => x
+             | Compilers.base.type.prod A B
+               => fun v
+                  => @subst_default_relax
+                       (fun A' => P (Compilers.base.type.prod A' _)) A evm
+                       (@subst_default_relax
+                          (fun B' => P (Compilers.base.type.prod _ B')) B evm
+                          v)
+             | Compilers.base.type.list A
+               => @subst_default_relax (fun t => P (Compilers.base.type.list t)) A evm
+             | Compilers.base.type.option A
+               => @subst_default_relax (fun t => P (Compilers.base.type.option t)) A evm
+             end.
 
-      Fixpoint unsubst_default_relax P {t evm} : P (subst_default (relax t) evm) -> P t
-        := match t return P (subst_default (relax t) evm) -> P t with
-           | Compilers.base.type.type_base t => fun x => x
-           | Compilers.base.type.prod A B
-             => fun v
-                => @unsubst_default_relax
-                     (fun A' => P (Compilers.base.type.prod A' _)) A evm
-                     (@unsubst_default_relax
-                        (fun B' => P (Compilers.base.type.prod _ B')) B evm
-                        v)
-           | Compilers.base.type.list A
-             => @unsubst_default_relax (fun t => P (Compilers.base.type.list t)) A evm
-           | Compilers.base.type.option A
-             => @unsubst_default_relax (fun t => P (Compilers.base.type.option t)) A evm
-           end.
+        Fixpoint unsubst_default_relax P {t evm} : P (@subst_default base (relax t) evm) -> P t
+          := match t return P (subst_default (relax t) evm) -> P t with
+             | Compilers.base.type.type_base _
+             | Compilers.base.type.unit
+               => fun x => x
+             | Compilers.base.type.prod A B
+               => fun v
+                  => @unsubst_default_relax
+                       (fun A' => P (Compilers.base.type.prod A' _)) A evm
+                       (@unsubst_default_relax
+                          (fun B' => P (Compilers.base.type.prod _ B')) B evm
+                          v)
+             | Compilers.base.type.list A
+               => @unsubst_default_relax (fun t => P (Compilers.base.type.list t)) A evm
+             | Compilers.base.type.option A
+               => @unsubst_default_relax (fun t => P (Compilers.base.type.option t)) A evm
+             end.
 
-      Fixpoint var_types_of (t : type) : Set
-        := match t with
-           | type.var _ => Compilers.base.type
-           | type.type_base _ => unit
-           | type.prod A B => var_types_of A * var_types_of B
-           | type.list A => var_types_of A
-           | type.option A => var_types_of A
-           end%type.
+        Fixpoint var_types_of (t : type) : Type
+          := match t with
+             | type.var _ => Compilers.base.type base
+             | type.unit
+             | type.type_base _
+               => unit
+             | type.prod A B => var_types_of A * var_types_of B
+             | type.list A => var_types_of A
+             | type.option A => var_types_of A
+             end%type.
 
-      Fixpoint add_var_types_cps {t : type} (v : var_types_of t) (evm : EvarMap) : ~> EvarMap
-        := fun T k
-           => match t return var_types_of t -> T with
-              | type.var p
-                => fun t => k (PositiveMap.add p t evm)
-              | type.prod A B
-                => fun '(a, b) => @add_var_types_cps A a evm _ (fun evm => @add_var_types_cps B b evm _ k)
-              | type.list A => fun t => @add_var_types_cps A t evm _ k
-              | type.option A => fun t => @add_var_types_cps A t evm _ k
-              | type.type_base _ => fun _ => k evm
-              end v.
+        Fixpoint add_var_types_cps {t : type} (v : var_types_of t) (evm : EvarMap) : ~> EvarMap
+          := fun T k
+             => match t return var_types_of t -> T with
+                | type.var p
+                  => fun t => k (PositiveMap.add p t evm)
+                | type.prod A B
+                  => fun '(a, b) => @add_var_types_cps A a evm _ (fun evm => @add_var_types_cps B b evm _ k)
+                | type.list A => fun t => @add_var_types_cps A t evm _ k
+                | type.option A => fun t => @add_var_types_cps A t evm _ k
+                | type.type_base _
+                | type.unit
+                  => fun _ => k evm
+                end v.
 
-      Fixpoint unify_extracted
-               (ptype : type) (etype : Compilers.base.type)
-        : option (var_types_of ptype)
-        := match ptype, etype return option (var_types_of ptype) with
-           | type.var p, _ => Some etype
-           | type.type_base t, Compilers.base.type.type_base t'
-             => if base.type.base_beq t t'
-                then Some tt
-                else None
-           | type.prod A B, Compilers.base.type.prod A' B'
-             => a <- unify_extracted A A';
-                  b <- unify_extracted B B';
-                  Some (a, b)
-           | type.list A, Compilers.base.type.list A'
-             => unify_extracted A A'
-           | type.option A, Compilers.base.type.option A'
-             => unify_extracted A A'
-           | type.type_base _, _
-           | type.prod _ _, _
-           | type.list _, _
-           | type.option _, _
-             => None
-           end%option.
+        Fixpoint unify_extracted
+                 (ptype : type) (etype : Compilers.base.type base)
+          : option (var_types_of ptype)
+          := match ptype, etype return option (var_types_of ptype) with
+             | type.var p, _ => Some etype
+             | type.type_base t, Compilers.base.type.type_base t'
+               => if base_beq t t'
+                  then Some tt
+                  else None
+             | type.prod A B, Compilers.base.type.prod A' B'
+               => a <- unify_extracted A A';
+                    b <- unify_extracted B B';
+                    Some (a, b)
+             | type.list A, Compilers.base.type.list A'
+               => unify_extracted A A'
+             | type.option A, Compilers.base.type.option A'
+               => unify_extracted A A'
+             | type.unit, Compilers.base.type.unit => Some tt
+             | type.type_base _, _
+             | type.prod _ _, _
+             | type.list _, _
+             | type.option _, _
+             | type.unit, _
+               => None
+             end%option.
+      End with_base.
     End base.
 
     Module type.
-      Fixpoint partial_subst (ptype : type) (evar_map : EvarMap) : type
-        := match ptype with
-           | type.base t => type.base (base.partial_subst t evar_map)
-           | type.arrow s d => type.arrow (partial_subst s evar_map) (partial_subst d evar_map)
-           end.
+      Section with_base.
+        Context {base : Type}
+                (base_beq : base -> base -> bool).
+        Local Notation type := (type base).
 
-      Fixpoint subst (ptype : type) (evar_map : EvarMap) : option (type.type Compilers.base.type)
-        := match ptype with
-           | type.base t => option_map type.base (base.subst t evar_map)
-           | type.arrow s d
-             => (s' <- subst s evar_map;
-                   d' <- subst d evar_map;
-                   Some (type.arrow s' d'))
-           end%option.
+        Fixpoint partial_subst (ptype : type) (evar_map : EvarMap) : type
+          := match ptype with
+             | type.base t => type.base (base.partial_subst t evar_map)
+             | type.arrow s d => type.arrow (partial_subst s evar_map) (partial_subst d evar_map)
+             end.
 
-      Fixpoint subst_default_relax P {t evm} : P t -> P (type.subst_default (type.relax t) evm)
-        := match t return P t -> P (type.subst_default (type.relax t) evm) with
-           | type.base t => base.subst_default_relax (fun t => P (type.base t))
-           | type.arrow A B
-             => fun v
-                => @subst_default_relax
-                     (fun A' => P (type.arrow A' _)) A evm
-                     (@subst_default_relax
-                        (fun B' => P (type.arrow _ B')) B evm
-                        v)
-           end.
+        Fixpoint subst (ptype : type) (evar_map : EvarMap) : option (type.type (Compilers.base.type base))
+          := match ptype with
+             | type.base t => option_map type.base (base.subst t evar_map)
+             | type.arrow s d
+               => (s' <- subst s evar_map;
+                     d' <- subst d evar_map;
+                     Some (type.arrow s' d'))
+             end%option.
 
-      Fixpoint unsubst_default_relax P {t evm} : P (type.subst_default (type.relax t) evm) -> P t
-        := match t return P (type.subst_default (type.relax t) evm) -> P t with
-           | type.base t => base.unsubst_default_relax (fun t => P (type.base t))
-           | type.arrow A B
-             => fun v
-                => @unsubst_default_relax
-                     (fun A' => P (type.arrow A' _)) A evm
-                     (@unsubst_default_relax
-                        (fun B' => P (type.arrow _ B')) B evm
-                        v)
-           end.
+        Fixpoint subst_default_relax P {t evm} : P t -> P (type.subst_default (type.relax t) evm)
+          := match t return P t -> P (type.subst_default (type.relax t) evm) with
+             | type.base t => base.subst_default_relax (base:=base) (fun t => P (type.base t))
+             | type.arrow A B
+               => fun v
+                  => @subst_default_relax
+                       (fun A' => P (type.arrow A' _)) A evm
+                       (@subst_default_relax
+                          (fun B' => P (type.arrow _ B')) B evm
+                          v)
+             end.
 
-      Fixpoint var_types_of (t : type) : Set
-        := match t with
-           | type.base t => base.var_types_of t
-           | type.arrow s d => var_types_of s * var_types_of d
-           end%type.
+        Fixpoint unsubst_default_relax P {t evm} : P (type.subst_default (type.relax t) evm) -> P t
+          := match t return P (type.subst_default (type.relax t) evm) -> P t with
+             | type.base t => base.unsubst_default_relax (base:=base) (fun t => P (type.base t))
+             | type.arrow A B
+               => fun v
+                  => @unsubst_default_relax
+                       (fun A' => P (type.arrow A' _)) A evm
+                       (@unsubst_default_relax
+                          (fun B' => P (type.arrow _ B')) B evm
+                          v)
+             end.
 
-      Fixpoint add_var_types_cps {t : type} (v : var_types_of t) (evm : EvarMap) : ~> EvarMap
-        := fun T k
-           => match t return var_types_of t -> T with
-              | type.base t => fun v => @base.add_var_types_cps t v evm _ k
-              | type.arrow A B
-                => fun '(a, b) => @add_var_types_cps A a evm _ (fun evm => @add_var_types_cps B b evm _ k)
-              end v.
+        Fixpoint var_types_of (t : type) : Type
+          := match t with
+             | type.base t => base.var_types_of t
+             | type.arrow s d => var_types_of s * var_types_of d
+             end%type.
 
-      Fixpoint unify_extracted
-               (ptype : type) (etype : type.type Compilers.base.type)
-        : option (var_types_of ptype)
-        := match ptype, etype return option (var_types_of ptype) with
-           | type.base t, type.base t'
-             => base.unify_extracted t t'
-           | type.arrow A B, type.arrow A' B'
-             => a <- unify_extracted A A';
-                  b <- unify_extracted B B';
-                  Some (a, b)
-           | type.base _, _
-           | type.arrow _ _, _
-             => None
-           end%option.
+        Fixpoint add_var_types_cps {t : type} (v : var_types_of t) (evm : EvarMap) : ~> EvarMap
+          := fun T k
+             => match t return var_types_of t -> T with
+                | type.base t => fun v => @base.add_var_types_cps base t v evm _ k
+                | type.arrow A B
+                  => fun '(a, b) => @add_var_types_cps A a evm _ (fun evm => @add_var_types_cps B b evm _ k)
+                end v.
 
-      Local Notation forall_vars_body K LS EVM0
-        := (fold_right
-              (fun i k evm => forall t : Compilers.base.type, k (PositiveMap.add i t evm))
-              K
-              LS
-              EVM0).
+        Fixpoint unify_extracted
+                 (ptype : type) (etype : type.type (Compilers.base.type base))
+          : option (var_types_of ptype)
+          := match ptype, etype return option (var_types_of ptype) with
+             | type.base t, type.base t'
+               => base.unify_extracted base_beq t t'
+             | type.arrow A B, type.arrow A' B'
+               => a <- unify_extracted A A';
+                    b <- unify_extracted B B';
+                    Some (a, b)
+             | type.base _, _
+             | type.arrow _ _, _
+               => None
+             end%option.
 
-      Definition forall_vars (p : PositiveSet.t) (k : EvarMap -> Type)
-        := forall_vars_body k (List.rev (PositiveSet.elements p)) (PositiveMap.empty _).
+        Local Notation forall_vars_body K LS EVM0
+          := (fold_right
+                (fun i k evm => forall t : Compilers.base.type base, k (PositiveMap.add i t evm))
+                K
+                LS
+                EVM0).
 
-      Definition under_forall_vars {p k1 k2}
-                 (F : forall evm, k1 evm -> k2 evm)
-        : forall_vars p k1 -> forall_vars p k2
-        := list_rect
-             (fun ls
-              => forall evm0, forall_vars_body k1 ls evm0 -> forall_vars_body k2 ls evm0)
-             F
-             (fun x xs rec evm0 K1 t => rec _ (K1 t))
-             (List.rev (PositiveSet.elements p))
-             (PositiveMap.empty _).
+        Definition forall_vars (p : PositiveSet.t) (k : EvarMap -> Type)
+          := forall_vars_body k (List.rev (PositiveSet.elements p)) (PositiveMap.empty _).
 
-      Definition under_forall_vars_relation1 {p k1}
-                 (F : forall evm, k1 evm -> Prop)
-        : forall_vars p k1 -> Prop
-        := list_rect
-             (fun ls
-              => forall evm0, forall_vars_body k1 ls evm0 -> Prop)
-             F
-             (fun x xs rec evm0 K1 => forall t, rec _ (K1 t))
-             (List.rev (PositiveSet.elements p))
-             (PositiveMap.empty _).
+        Definition under_forall_vars {p k1 k2}
+                   (F : forall evm, k1 evm -> k2 evm)
+          : forall_vars p k1 -> forall_vars p k2
+          := list_rect
+               (fun ls
+                => forall evm0, forall_vars_body k1 ls evm0 -> forall_vars_body k2 ls evm0)
+               F
+               (fun x xs rec evm0 K1 t => rec _ (K1 t))
+               (List.rev (PositiveSet.elements p))
+               (PositiveMap.empty _).
 
-      Definition under_forall_vars_relation {p k1 k2}
-                 (F : forall evm, k1 evm -> k2 evm -> Prop)
-        : forall_vars p k1 -> forall_vars p k2 -> Prop
-        := list_rect
-             (fun ls
-              => forall evm0, forall_vars_body k1 ls evm0 -> forall_vars_body k2 ls evm0 -> Prop)
-             F
-             (fun x xs rec evm0 K1 K2 => forall t, rec _ (K1 t) (K2 t))
-             (List.rev (PositiveSet.elements p))
-             (PositiveMap.empty _).
+        Definition under_forall_vars_relation1 {p k1}
+                   (F : forall evm, k1 evm -> Prop)
+          : forall_vars p k1 -> Prop
+          := list_rect
+               (fun ls
+                => forall evm0, forall_vars_body k1 ls evm0 -> Prop)
+               F
+               (fun x xs rec evm0 K1 => forall t, rec _ (K1 t))
+               (List.rev (PositiveSet.elements p))
+               (PositiveMap.empty _).
 
-      Fixpoint lam_forall_vars_gen {k : EvarMap -> Type}
-               (f : forall evm, k evm)
-               (ls : list PositiveMap.key)
-        : forall evm0, forall_vars_body k ls evm0
-        := match ls return forall evm0, forall_vars_body k ls evm0 with
-           | nil => f
-           | cons x xs => fun evm t => @lam_forall_vars_gen k f xs _
-           end.
+        Definition under_forall_vars_relation {p k1 k2}
+                   (F : forall evm, k1 evm -> k2 evm -> Prop)
+          : forall_vars p k1 -> forall_vars p k2 -> Prop
+          := list_rect
+               (fun ls
+                => forall evm0, forall_vars_body k1 ls evm0 -> forall_vars_body k2 ls evm0 -> Prop)
+               F
+               (fun x xs rec evm0 K1 K2 => forall t, rec _ (K1 t) (K2 t))
+               (List.rev (PositiveSet.elements p))
+               (PositiveMap.empty _).
 
-      Definition lam_forall_vars {p : PositiveSet.t} {k : EvarMap -> Type}
+        Fixpoint lam_forall_vars_gen {k : EvarMap -> Type}
                  (f : forall evm, k evm)
-        : forall_vars p k
-        := @lam_forall_vars_gen k f _ _.
+                 (ls : list PositiveMap.key)
+          : forall evm0, forall_vars_body k ls evm0
+          := match ls return forall evm0, forall_vars_body k ls evm0 with
+             | nil => f
+             | cons x xs => fun evm t => @lam_forall_vars_gen k f xs _
+             end.
 
-      Fixpoint app_forall_vars_gen {k : EvarMap -> Type}
+        Definition lam_forall_vars {p : PositiveSet.t} {k : EvarMap -> Type}
+                   (f : forall evm, k evm)
+          : forall_vars p k
+          := @lam_forall_vars_gen k f _ _.
+
+        Fixpoint app_forall_vars_gen {k : EvarMap -> Type}
                  (evm : EvarMap)
                  (ls : list PositiveMap.key)
-        : forall evm0, forall_vars_body k ls evm0
-                       -> option (k (fold_right (fun i k evm'
-                                                 => k (match PositiveMap.find i evm with Some v => PositiveMap.add i v evm' | None => evm' end))
-                                                (fun evm => evm)
-                                                ls
-                                                evm0))
-        := match ls return forall evm0, forall_vars_body k ls evm0
-                                        -> option (k (fold_right (fun i k evm'
-                                                                  => k (match PositiveMap.find i evm with Some v => PositiveMap.add i v evm' | None => evm' end))
-                                                                 (fun evm => evm)
-                                                                 ls
-                                                                 evm0)) with
-           | nil => fun evm0 val => Some val
-           | cons x xs
-             => match PositiveMap.find x evm as xt
-                      return (forall evm0,
-                                 (forall t, fold_right _ k xs (PositiveMap.add x t evm0))
-                                 -> option (k (fold_right
-                                                 _ _ xs
-                                                 match xt with
-                                                 | Some v => PositiveMap.add x v evm0
-                                                 | None => evm0
-                                                 end)))
-                with
-                | Some v => fun evm0 val => @app_forall_vars_gen k evm xs _ (val v)
-                | None => fun evm0 val => None
-                end
-           end.
+          : forall evm0, forall_vars_body k ls evm0
+                         -> option (k (fold_right (fun i k evm'
+                                                   => k (match PositiveMap.find i evm with Some v => PositiveMap.add i v evm' | None => evm' end))
+                                                  (fun evm => evm)
+                                                  ls
+                                                  evm0))
+          := match ls return forall evm0, forall_vars_body k ls evm0
+                                          -> option (k (fold_right (fun i k evm'
+                                                                    => k (match PositiveMap.find i evm with Some v => PositiveMap.add i v evm' | None => evm' end))
+                                                                   (fun evm => evm)
+                                                                   ls
+                                                                   evm0)) with
+             | nil => fun evm0 val => Some val
+             | cons x xs
+               => match PositiveMap.find x evm as xt
+                        return (forall evm0,
+                                   (forall t, fold_right _ k xs (PositiveMap.add x t evm0))
+                                   -> option (k (fold_right
+                                                   _ _ xs
+                                                   match xt with
+                                                   | Some v => PositiveMap.add x v evm0
+                                                   | None => evm0
+                                                   end)))
+                  with
+                  | Some v => fun evm0 val => @app_forall_vars_gen k evm xs _ (val v)
+                  | None => fun evm0 val => None
+                  end
+             end.
 
-      Definition app_forall_vars {p : PositiveSet.t} {k : EvarMap -> Type}
-                 (f : forall_vars p k)
-                 (evm : EvarMap)
-        : option (k (fold_right (fun i k evm'
-                                 => k (match PositiveMap.find i evm with Some v => PositiveMap.add i v evm' | None => evm' end))
-                                (fun evm => evm)
-                                (List.rev (PositiveSet.elements p))
-                                (PositiveMap.empty _)))
-        := @app_forall_vars_gen
-             k evm
-             (List.rev (PositiveSet.elements p))
-             (PositiveMap.empty _)
-             f.
+        Definition app_forall_vars {p : PositiveSet.t} {k : EvarMap -> Type}
+                   (f : forall_vars p k)
+                   (evm : EvarMap)
+          : option (k (fold_right (fun i k evm'
+                                   => k (match PositiveMap.find i evm with Some v => PositiveMap.add i v evm' | None => evm' end))
+                                  (fun evm => evm)
+                                  (List.rev (PositiveSet.elements p))
+                                  (PositiveMap.empty _)))
+          := @app_forall_vars_gen
+               k evm
+               (List.rev (PositiveSet.elements p))
+               (PositiveMap.empty _)
+               f.
+      End with_base.
     End type.
 
-    Inductive pattern {ident : type -> Type} : type -> Type :=
-    | Wildcard (t : type) : pattern t
+    Inductive pattern {base} {ident : type base -> Type} : type base -> Type :=
+    | Wildcard (t : type base) : pattern t
     | Ident {t} (idc : ident t) : pattern t
     | App {s d} (f : pattern (s -> d)) (x : pattern s) : pattern d.
 
-    Record > anypattern {ident : type -> Type}
-      := { type_of_anypattern : type;
-           pattern_of_anypattern :> @pattern ident type_of_anypattern }.
+    Module Export Notations.
+      Delimit Scope pattern_scope with pattern.
+      Bind Scope pattern_scope with pattern.
+      Infix "@" := App : pattern_scope.
+      Notation "# x" := (Ident x) : pattern_scope.
+    End Notations.
+
+
+    Record > anypattern {base} {ident : type base -> Type}
+      := { type_of_anypattern : type base;
+           pattern_of_anypattern :> @pattern base ident type_of_anypattern }.
 
     Module Raw.
       Inductive pattern {ident : Type} :=
@@ -329,94 +360,38 @@ Module Compilers.
       | App (f x : pattern).
     End Raw.
 
-    Global Arguments Wildcard {ident%type} t%ptype.
+    Global Arguments Wildcard {base ident}%type t%ptype.
 
-    Fixpoint to_raw {ident raw_ident}
+    Fixpoint to_raw {base ident raw_ident}
              {to_raw_ident : forall t, ident t -> raw_ident}
-             {t} (p : @pattern ident t) : @Raw.pattern raw_ident
+             {t} (p : @pattern base ident t) : @Raw.pattern raw_ident
       := match p with
          | Wildcard t => Raw.Wildcard
          | Ident t idc => Raw.Ident (to_raw_ident t idc)
-         | App s d f x => Raw.App (@to_raw _ _ to_raw_ident _ f) (@to_raw _ _ to_raw_ident _ x)
+         | App s d f x => Raw.App (@to_raw _ _ _ to_raw_ident _ f) (@to_raw _ _ _ to_raw_ident _ x)
          end.
 
-    Fixpoint collect_vars {ident}
-             {t} (p : @pattern ident t) : PositiveSet.t
+    Fixpoint collect_vars {base ident}
+             {t} (p : @pattern base ident t) : PositiveSet.t
       := match p with
          | Wildcard t => type.collect_vars t
          | Ident t idc => type.collect_vars t
-         | App s d f x => PositiveSet.union (@collect_vars _ _ x) (@collect_vars _ _ f)
+         | App s d f x => PositiveSet.union (@collect_vars _ _ _ x) (@collect_vars _ _ _ f)
          end.
 
-    Notation ident := ident.ident.
-
-    Fixpoint unify_list {A B} (unif : A -> B -> EvarMap -> option EvarMap) (ls1 : list A) (ls2 : list B) (evm : EvarMap)
+    Fixpoint unify_list {base A B} (unif : A -> B -> EvarMap -> option EvarMap) (ls1 : list A) (ls2 : list B) (evm : EvarMap_at base)
       : option EvarMap
       := match ls1, ls2 with
          | nil, nil => Some evm
          | cons x xs, cons y ys
            => (evm <- unif x y evm;
-                @unify_list A B unif xs ys evm)%option
+                @unify_list base A B unif xs ys evm)%option
          | nil, _
          | cons _ _, _
            => None
          end.
-
-    Module Export Notations.
-      Export base.Notations.
-      Delimit Scope pattern_scope with pattern.
-      Bind Scope pattern_scope with pattern.
-      Local Open Scope pattern_scope.
-      Notation "# idc" := (Ident idc) : pattern_scope.
-      Notation "#?" := (Ident (@ident.Literal _)) : pattern_scope.
-      Notation "#?{ t }" := (Ident (@ident.Literal t)) (format "#?{ t }") : pattern_scope.
-      Notation "#?()" := (#?{base.type.unit}) : pattern_scope.
-      Notation "#?N" := (#?{base.type.nat}) : pattern_scope.
-      Notation "#?ℕ" := (#?{base.type.nat}) : pattern_scope.
-      Notation "#?Z" := (#?{base.type.Z}) : pattern_scope.
-      Notation "#?ℤ" := (#?{base.type.Z}) : pattern_scope.
-      Notation "#?B" := (#?{base.type.bool}) : pattern_scope.
-      Notation "#?𝔹" := (#?{base.type.bool}) : pattern_scope.
-      Notation "??" := (Wildcard _) : pattern_scope.
-      Notation "??{ t }" := (Wildcard t) (format "??{ t }") : pattern_scope.
-      Notation "' n" := (??{' n})%pattern : pattern_scope.
-      Notation "'1" := (' 1) : pattern_scope.
-      Notation "'2" := (' 2) : pattern_scope.
-      Notation "'3" := (' 3) : pattern_scope.
-      Notation "'4" := (' 4) : pattern_scope.
-      Notation "'5" := (' 5) : pattern_scope.
-      Infix "@" := App : pattern_scope.
-      Notation "( x , y , .. , z )" := (#ident.pair @ .. (#ident.pair @ x @ y) .. @ z) : pattern_scope.
-      Notation "x :: xs" := (#ident.cons @ x @ xs) : pattern_scope.
-      Notation "xs ++ ys" := (#ident.List_app @ xs @ ys) : pattern_scope.
-      Notation "[ ]" := (#ident.nil) : pattern_scope.
-      Notation "[ x ]" := (x :: []) : pattern_scope.
-      Notation "[ x ; y ; .. ; z ]" :=  (x :: (y :: .. (z :: []) ..)) : pattern_scope.
-      Notation "x - y" := (#ident.Z_sub @ x @ y) : pattern_scope.
-      Notation "x + y" := (#ident.Z_add @ x @ y) : pattern_scope.
-      Notation "x / y" := (#ident.Z_div @ x @ y) : pattern_scope.
-      Notation "x * y" := (#ident.Z_mul @ x @ y) : pattern_scope.
-      Notation "x >> y" := (#ident.Z_shiftr @ x @ y) : pattern_scope.
-      Notation "x << y" := (#ident.Z_shiftl @ x @ y) : pattern_scope.
-      Notation "x &' y" := (#ident.Z_land @ x @ y) : pattern_scope.
-      Notation "x 'mod' y" := (#ident.Z_modulo @ x @ y)%pattern : pattern_scope.
-      Notation "- x" := (#ident.Z_opp @ x) : pattern_scope.
-
-      Notation "#?ℤ'" := (#ident.Z_cast @ #?ℤ) : pattern_scope.
-      Notation "??'" := (#ident.Z_cast @ Wildcard _) : pattern_scope.
-      Notation "x -' y" := (#ident.Z_cast @ (#ident.Z_sub @ x @ y)) : pattern_scope.
-      Notation "x +' y" := (#ident.Z_cast @ (#ident.Z_add @ x @ y)) : pattern_scope.
-      Notation "x /' y" := (#ident.Z_cast @ (#ident.Z_div @ x @ y)) : pattern_scope.
-      Notation "x *' y" := (#ident.Z_cast @ (#ident.Z_mul @ x @ y)) : pattern_scope.
-      Notation "x >>' y" := (#ident.Z_cast @ (#ident.Z_shiftr @ x @ y)) : pattern_scope.
-      Notation "x <<' y" := (#ident.Z_cast @ (#ident.Z_shiftl @ x @ y)) : pattern_scope.
-      Notation "x &'' y" := (#ident.Z_cast @ (#ident.Z_land @ x @ y)) : pattern_scope.
-      Notation "x 'mod'' y" := (#ident.Z_cast @ (#ident.Z_modulo @ x @ y))%pattern : pattern_scope.
-      Notation "-' x" := (#ident.Z_cast @ (#ident.Z_opp @ x)) : pattern_scope.
-    End Notations.
   End pattern.
   Export pattern.Notations.
-  Notation pattern := (@pattern.pattern pattern.ident).
 
   Module RewriteRules.
     Module Compile.
@@ -464,11 +439,16 @@ Module Compilers.
           := (fold_right (fun a b => prod a b) unit).
         Local Notation type_of_list_cps
           := (fold_right (fun a K => a -> K)).
-        Context {ident var : type.type base.type -> Type}
-                (eta_ident_cps : forall {T : type.type base.type -> Type} {t} (idc : ident t)
+        Context {base : Type}
+                {try_make_transport_base_type_cps : type.try_make_transport_cpsT base}
+                (base_beq : base -> base -> bool).
+        Local Notation base_type := (base.type base).
+        Local Notation pattern_base_type := (pattern.base.type base).
+        Context {ident var : type.type base_type -> Type}
+                (eta_ident_cps : forall {T : type.type base_type -> Type} {t} (idc : ident t)
                                         (f : forall t', ident t' -> T t'),
                     T t)
-                {pident : type.type pattern.base.type -> Type}
+                {pident : type.type pattern_base_type -> Type}
                 (pident_arg_types : forall t, pident t -> list Type)
                 (pident_unify pident_unify_unknown : forall t t' (idc : pident t) (idc' : ident t'), option (type_of_list (pident_arg_types t idc)))
                 {raw_pident : Type}
@@ -477,28 +457,30 @@ Module Compilers.
 
                 (full_types : raw_pident -> Type)
                 (invert_bind_args invert_bind_args_unknown : forall t (idc : ident t) (pidc : raw_pident), option (full_types pidc))
-                (type_of_raw_pident : forall (pidc : raw_pident), full_types pidc -> type.type base.type)
+                (type_of_raw_pident : forall (pidc : raw_pident), full_types pidc -> type.type base_type)
                 (raw_pident_to_typed : forall (pidc : raw_pident) (args : full_types pidc), ident (type_of_raw_pident pidc args))
                 (raw_pident_is_simple : raw_pident -> bool).
 
-        Local Notation type := (type.type base.type).
-        Local Notation expr := (@expr.expr base.type ident var).
-        Local Notation pattern := (@pattern.pattern pident).
+        Local Notation type := (type.type base_type).
+        Local Notation expr := (@expr.expr base_type ident var).
+        Local Notation pattern := (@pattern.pattern base pident).
         Local Notation rawpattern := (@pattern.Raw.pattern raw_pident).
-        Local Notation anypattern := (@pattern.anypattern pident).
-        Local Notation UnderLets := (@UnderLets.UnderLets base.type ident var).
-        Local Notation ptype := (type.type pattern.base.type).
-        Local Notation value' := (@value' base.type ident var).
-        Local Notation value := (@value base.type ident var).
-        Local Notation value_with_lets := (@value_with_lets base.type ident var).
-        Local Notation Base_value := (@Base_value base.type ident var).
-        Local Notation splice_under_lets_with_value := (@splice_under_lets_with_value base.type ident var).
-        Local Notation splice_value_with_lets := (@splice_value_with_lets base.type ident var).
-        Local Notation to_raw_pattern := (@pattern.to_raw pident raw_pident (@strip_types)).
-        Let type_base (t : base.type) : type := type.base t.
-        Coercion type_base : base.type >-> type.
+        Local Notation anypattern := (@pattern.anypattern base pident).
+        Local Notation UnderLets := (@UnderLets.UnderLets base_type ident var).
+        Local Notation ptype := (type.type pattern_base_type).
+        Local Notation value' := (@value' base_type ident var).
+        Local Notation value := (@value base_type ident var).
+        Local Notation value_with_lets := (@value_with_lets base_type ident var).
+        Local Notation Base_value := (@Base_value base_type ident var).
+        Local Notation splice_under_lets_with_value := (@splice_under_lets_with_value base_type ident var).
+        Local Notation splice_value_with_lets := (@splice_value_with_lets base_type ident var).
+        Local Notation to_raw_pattern := (@pattern.to_raw _ pident raw_pident (@strip_types)).
+        Let type_base (x : base) : @base.type base := base.type.type_base x.
+        Let base' {bt} (x : Compilers.base.type bt) : type.type _ := type.base x.
+        Local Coercion base' : base.type >-> type.type.
+        Local Coercion type_base : base >-> base.type.
 
-        Context (reify_and_let_binds_base_cps : forall (t : base.type), expr t -> forall T, (expr t -> UnderLets T) -> UnderLets T)
+        Context (reify_and_let_binds_base_cps : forall (t : base_type), expr t -> forall T, (expr t -> UnderLets T) -> UnderLets T)
                 (reflect_ident_iota : forall t (idc : ident t), option (value t)).
 
         Definition under_type_of_list_cps {A1 A2 ls}
@@ -550,8 +532,8 @@ Module Compilers.
                   => fun f (x : value' _ _) => @reflect _ d (f @ (@reify _ s x))
                 end%expr%under_lets.
 
-        Fixpoint reify_expr {t} (e : @expr.expr base.type ident value t)
-          : @expr.expr base.type ident var t
+        Fixpoint reify_expr {t} (e : @expr.expr base_type ident value t)
+          : @expr.expr base_type ident var t
           := match e in expr.expr t return expr.expr t with
              | expr.Ident t idc => expr.Ident idc
              | expr.Var t v => reify v
@@ -568,7 +550,7 @@ Module Compilers.
               nodes.  Note that we also perform βιδ on "eager"
               identifiers, which is what allows us to handle
               [list_rect] and [nat_rect] recursion rules. *)
-        Fixpoint reflect_expr_beta_iota {t} (e : @expr.expr base.type ident value t)
+        Fixpoint reflect_expr_beta_iota {t} (e : @expr.expr base_type ident value t)
           : UnderLets (value t)
           := match e in expr.expr t return UnderLets (value t) with
              | expr.Var t v => UnderLets.Base v
@@ -600,8 +582,8 @@ Module Compilers.
                => fun f => UnderLets.Base (reify f)
              end.
 
-        Definition reify_expr_beta_iota {t} (e : @expr.expr base.type ident value t)
-          : UnderLets (@expr.expr base.type ident var t)
+        Definition reify_expr_beta_iota {t} (e : @expr.expr base_type ident value t)
+          : UnderLets (@expr.expr base_type ident var t)
           := e <-- @reflect_expr_beta_iota t e; reify_to_UnderLets e.
 
         Definition reify_and_let_binds_cps {with_lets} {t} : value' with_lets t -> forall T, (expr t -> UnderLets T) -> UnderLets T
@@ -728,7 +710,7 @@ Module Compilers.
              => match p return with_unification_resultT' p evm1 K -> unification_resultT' p evm2 -> option T with
                 | pattern.Wildcard t
                   => fun f x
-                     => (tr <- type.try_make_transport_cps base.try_make_transport_cps var _ _;
+                     => (tr <- type.try_make_transport_cps var _ _;
                            (tr <- tr;
                               k (f (tr x)))%option)%cps
              | pattern.Ident t idc => fun f x => k (app_type_of_list f x)
@@ -757,7 +739,7 @@ Module Compilers.
 
         Definition with_unification_resultT {var t} (p : pattern t) (K : type -> Type) : Type
           := pattern.type.forall_vars
-               (@pattern.collect_vars _ t p)
+               (pattern.collect_vars p)
                (fun evm => @with_unification_resultT' var t p evm (K (pattern.type.subst_default t evm))).
 
         Definition unification_resultT {var t} (p : pattern t) : Type
@@ -797,7 +779,7 @@ Module Compilers.
              | pattern.Wildcard t, _
                => Some (Some (t, type_of_rawexpr e))
              | pattern.Ident pt pidc, rIdent known t idc _ _
-               => if andb known (type.type_beq _ pattern.base.type.type_beq pt (pattern.type.relax t)) (* relies on evaluating to [false] if [known] is [false] *)
+               => if andb known (type.type_beq _ (pattern.base.type.type_beq _ base_beq) pt (pattern.type.relax t)) (* relies on evaluating to [false] if [known] is [false] *)
                   then Some None
                   else Some (Some (pt, t))
              | pattern.App s d pf px, rApp f x _ _
@@ -816,13 +798,13 @@ Module Compilers.
              end%option.
 
         (* for unfolding help *)
-        Definition option_type_type_beq := option_beq (type.type_beq _ base.type.type_beq).
+        Definition option_type_type_beq := option_beq (type.type_beq _ (base.type.type_beq _ base_beq)).
 
         Definition unify_types {t} (e : rawexpr) (p : pattern t) : ~> option EvarMap
           := fun T k
              => match preunify_types e p with
                 | Some (Some (pt, t))
-                  => match pattern.type.unify_extracted pt t with
+                  => match pattern.type.unify_extracted base_beq pt t with
                      | Some vars
                        => pattern.type.add_var_types_cps
                             vars (PositiveMap.empty _) _
@@ -845,7 +827,7 @@ Module Compilers.
           := match p, e return forall T, (unification_resultT' p evm -> option T) -> option T with
              | pattern.Wildcard t', _
                => fun T k
-                  => (tro <- type.try_make_transport_cps (@base.try_make_transport_cps) value (type_of_rawexpr e) (pattern.type.subst_default t' evm);
+                  => (tro <- type.try_make_transport_cps value (type_of_rawexpr e) (pattern.type.subst_default t' evm);
                         (tr <- tro;
                            _ <- pattern.type.subst t' evm; (* ensure that we did not fall into the default case *)
                            (k (tr (value_of_rawexpr e))))%option)%cps
@@ -1003,7 +985,7 @@ Module Compilers.
              end%option.
 
         Local Notation expr_maybe_do_again should_do_again
-          := (@expr.expr base.type ident (if should_do_again then value else var)).
+          := (@expr.expr base_type ident (if should_do_again then value else var)).
 
         Local Notation deep_rewrite_ruleTP_gen' should_do_again with_opt under_lets t
           := (match (expr_maybe_do_again should_do_again t) with
@@ -1054,17 +1036,17 @@ Module Compilers.
         Local Notation base_type_of t
           := (match t with type.base t' => t' | type.arrow _ __ => base.type.unit end).
 
-        Definition maybe_do_againT (should_do_again : bool) (t : base.type)
-          := ((@expr.expr base.type ident (if should_do_again then value else var) t) -> UnderLets (expr t)).
+        Definition maybe_do_againT (should_do_again : bool) (t : base_type)
+          := ((@expr.expr base_type ident (if should_do_again then value else var) t) -> UnderLets (expr t)).
         Definition maybe_do_again
-                   (do_again : forall t : base.type, @expr.expr base.type ident value t -> UnderLets (expr t))
-                   (should_do_again : bool) (t : base.type)
+                   (do_again : forall t : base_type, @expr.expr base_type ident value t -> UnderLets (expr t))
+                   (should_do_again : bool) (t : base_type)
           := if should_do_again return maybe_do_againT should_do_again t
              then do_again t
              else UnderLets.Base.
 
         Section eval_rewrite_rules.
-          Context (do_again : forall t : base.type, @expr.expr base.type ident value t -> UnderLets (expr t)).
+          Context (do_again : forall t : base_type, @expr.expr base_type ident value t -> UnderLets (expr t)).
 
           Local Notation maybe_do_again := (maybe_do_again do_again).
 
@@ -1078,9 +1060,9 @@ Module Compilers.
                   => app_with_unification_resultT_cps
                        (rew_replacement f) x _
                        (fun f'
-                        => (tr <- type.try_make_transport_cps (@base.try_make_transport_cps) _ _ _;
+                        => (tr <- type.try_make_transport_cps _ _ _;
                               (tr <- tr;
-                                 (tr' <- type.try_make_transport_cps (@base.try_make_transport_cps) _ _ _;
+                                 (tr' <- type.try_make_transport_cps _ _ _;
                                     (tr' <- tr';
                                        option_bind'
                                          (normalize_deep_rewrite_rule (projT2 f'))
@@ -1239,7 +1221,7 @@ Module Compilers.
           Context (dtree : decision_tree)
                   (rewrite_rules : rewrite_rulesT)
                   (default_fuel : nat)
-                  (do_again : forall t : base.type, @expr.expr base.type ident value t -> UnderLets (expr t)).
+                  (do_again : forall t : base_type, @expr.expr base_type ident value t -> UnderLets (expr t)).
 
           Let dorewrite1 (e : rawexpr) : UnderLets (expr (type_of_rawexpr e))
             := eval_rewrite_rules do_again dtree rewrite_rules e.
@@ -1258,10 +1240,10 @@ Module Compilers.
             := eta_ident_cps _ _ idc (fun t' idc' => assemble_identifier_rewriters' t' (rIdent true idc' (#idc')) (fun _ => id)).
         End with_do_again.
       End with_var.
-      Global Arguments rew_should_do_again {_ _ _ _ _ _} _.
-      Global Arguments rew_with_opt        {_ _ _ _ _ _} _.
-      Global Arguments rew_under_lets      {_ _ _ _ _ _} _.
-      Global Arguments rew_replacement     {_ _ _ _ _ _} _.
+      Global Arguments rew_should_do_again {_ _ _ _ _ _ _} _.
+      Global Arguments rew_with_opt        {_ _ _ _ _ _ _} _.
+      Global Arguments rew_under_lets      {_ _ _ _ _ _ _} _.
+      Global Arguments rew_replacement     {_ _ _ _ _ _ _} _.
 
       Ltac compute_with_fuel f fuel :=
         lazymatch (eval compute in (f fuel)) with
@@ -1270,14 +1252,15 @@ Module Compilers.
         | ?res => fail 0 "Invalid result of computing" f "with fuel" fuel ":" res
         end.
 
-      Ltac compile_rewrites ident var pident pident_arg_types raw_pident strip_types raw_pident_beq ps
-        := compute_with_fuel (fun fuel : nat => @compile_rewrites ident var pident pident_arg_types raw_pident strip_types raw_pident_beq fuel ps) 100%nat (* initial value of depth of patterns; doesn't matter too much *).
-      Ltac CompileRewrites ident pident pident_arg_types raw_pident strip_types raw_pident_beq ps :=
+      Ltac compile_rewrites base ident var pident pident_arg_types raw_pident strip_types raw_pident_beq ps
+        := compute_with_fuel (fun fuel : nat => @compile_rewrites base ident var pident pident_arg_types raw_pident strip_types raw_pident_beq fuel ps) 100%nat (* initial value of depth of patterns; doesn't matter too much *).
+      Ltac CompileRewrites base ident pident pident_arg_types raw_pident strip_types raw_pident_beq ps :=
         let var := fresh "var" in
+        let base_type := constr:(Compilers.base.type base) in
         let res
             := lazymatch constr:(
-                           fun var : Compilers.type.type Compilers.base.type -> Type
-                           => ltac:(let res := compile_rewrites ident var pident pident_arg_types raw_pident strip_types raw_pident_beq (ps var) in
+                           fun var : Compilers.type.type base_type -> Type
+                           => ltac:(let res := compile_rewrites base ident var pident pident_arg_types raw_pident strip_types raw_pident_beq (ps var) in
                                     exact res))
                with
                | fun _ => ?res => res
@@ -1286,17 +1269,40 @@ Module Compilers.
         cache_term res dtree.
 
       Section full.
-        Context {var : type.type base.type -> Type}.
-        Local Notation expr := (@expr base.type ident).
-        Local Notation value := (@Compile.value base.type ident var).
-        Local Notation value_with_lets := (@Compile.value_with_lets base.type ident var).
-        Local Notation UnderLets := (UnderLets.UnderLets base.type ident var).
-        Local Notation reify_and_let_binds_cps := (@Compile.reify_and_let_binds_cps ident var (@UnderLets.reify_and_let_binds_base_cps var)).
-        Local Notation reflect := (@Compile.reflect ident var).
-        Let type_base := @type.base base.type.
-        Local Coercion type_base : base.type >-> type.type.
+        Context {base : Type}.
+        Local Notation base_type := (base.type base).
+        Local Notation type := (type.type base_type).
+        Context {ident : type -> Type}
+                {base_interp : base -> Type}
+                (ident_is_var_like : forall t, ident t -> bool).
+        Local Notation expr := (@expr base_type ident).
+        Let type_base (x : base) : @base.type base := base.type.type_base x.
+        Let base' {bt} (x : Compilers.base.type bt) : type.type _ := type.base x.
+        Local Coercion base' : base.type >-> type.type.
+        Local Coercion type_base : base >-> base.type.
+        Context {baseTypeHasNat : base.type.BaseTypeHasNatT base}
+                {buildIdent : ident.BuildIdentT base_interp ident}
+                {buildEagerIdent : ident.BuildEagerIdentT ident}
+                {toRestrictedIdent : ident.ToRestrictedIdentT ident}
+                {toFromRestrictedIdent : ident.ToFromRestrictedIdentT ident}
+                {invertIdent : InvertIdentT base_interp ident}
+                {baseHasNatCorrect : base.BaseHasNatCorrectT base_interp}
+                {try_make_transport_base_cps : type.try_make_transport_cpsT base}.
 
-        (** This definition takes in an identifier. If the identifier
+        Section with_var.
+          Context {var : type -> Type}.
+          Local Notation value := (@Compile.value base_type ident var).
+          Local Notation value_with_lets := (@Compile.value_with_lets base_type ident var).
+          Local Notation UnderLets := (UnderLets.UnderLets base_type ident var).
+          Local Notation reflect := (@Compile.reflect base ident var).
+
+          Local Notation reify_and_let_binds_cps := (@Compile.reify_and_let_binds_cps base ident var (fun t => UnderLets.reify_and_let_binds_base_cps ident_is_var_like)).
+          Local Notation base_type_nat := (match base.type.nat return base with x => x end).
+
+          Local Notation base_to_nat := (base.to_nat (BaseHasNatCorrectT:=baseHasNatCorrect)).
+          Local Notation base_of_nat := (base.of_nat (BaseHasNatCorrectT:=baseHasNatCorrect)).
+
+          (** This definition takes in an identifier. If the identifier
             is not meant to be evaluated eagerly, [None] is
             returned. Otherwise, a value-thunk is returned. This
             value-thunk takes in all of the arguments to which the
@@ -1306,203 +1312,108 @@ Module Compilers.
             [list_rect] over a concrete list of cons cells holding
             PHOAS expressions), and the result of this evaluation is
             returned. *)
-        (* N.B. the [with_lets] argument to [reflect] doesn't matter
+          (* N.B. the [with_lets] argument to [reflect] doesn't matter
           here because [value' true (_ → _) ≡ value' false (_ → _)] *)
-        Definition reflect_ident_iota {t} (idc : ident t) : option (value t)
-          := Eval cbv [GallinaReify.Reify_as GallinaReify.reify GallinaReify.base.reify ident.smart_Literal] in
-              match idc in ident.ident t return option (value t) with
-              | ident.eager_nat_rect P
-                => Some
-                     (fun (N_case : value base.type.unit -> _) (S_case : value base.type.nat -> value P -> _) (n : expr base.type.nat) (* type annotations present for nicer fixpoint refolding *)
-                      => match invert_Literal n with
-                         | Some n => nat_rect
-                                       (fun _ => UnderLets (expr P))
-                                       (N_case (GallinaReify.Reify tt _))
-                                       (fun n' rec
-                                        => rec <-- rec;
-                                             S_case (GallinaReify.Reify n' _) rec)
-                                       n
-                         | None => reflect (with_lets:=false) (expr.Ident (@ident.nat_rect P)) N_case S_case n
-                         end)
-              | ident.eager_nat_rect_arrow P Q
-                => Some
-                     (fun (N_case : value P -> _) (S_case : value base.type.nat -> (value P -> _) -> _ -> _) (n : expr base.type.nat) (v : expr P) (* type annotations present for nicer fixpoint refolding *)
-                      => match invert_Literal n with
-                         | Some n => nat_rect
-                                       (fun _ => expr P -> UnderLets (expr Q))
-                                       N_case
-                                       (fun n' rec v'
-                                        => S_case (GallinaReify.Reify n' _) rec v')
-                                       n
-                                       v
-                         | None => reflect (with_lets:=false) (expr.Ident (@ident.nat_rect_arrow P Q)) N_case S_case n v
-                         end)
-              | ident.eager_list_rect A P
-                => Some
-                     (fun (N_case : value base.type.unit -> _) (C_case : value A -> _ -> value P -> _) (ls : expr (base.type.list A)) (* type annotations present for nicer fixpoint refolding *)
-                      => match reflect_list ls with
-                         | Some ls => list_rect
+          Definition reflect_ident_iota {t} (idc : ident t) : option (value t)
+            := (ident.eager_ident_rect
+                  (fun t idc => value t)
+                  (fun (*| ident.eager_nat_rect*) P
+                   => (fun (N_case : value base.type.unit -> _) (S_case : value base_type_nat -> value P -> _) (n : expr base_type_nat) (* type annotations present for nicer fixpoint refolding *)
+                       => match invert_Literal n with
+                          | Some n => nat_rect
                                         (fun _ => UnderLets (expr P))
-                                        (N_case (GallinaReify.Reify tt _))
-                                        (fun x xs rec
+                                        (N_case (#(ident.ident_tt)))
+                                        (fun n' rec
                                          => rec <-- rec;
-                                              C_case x (reify_list xs) rec)
-                                        ls
-                         | None => reflect (with_lets:=false) (expr.Ident (@ident.list_rect A P)) N_case C_case ls
-                         end)
-              | ident.eager_list_rect_arrow A P Q
-                => Some
-                     (fun (N_case : value P -> _) (C_case : value A -> _ -> (value P -> _) -> value P -> _) (ls : expr (base.type.list A)) (v : value P) (* type annotations present for nicer fixpoint refolding *)
-                      => match reflect_list ls with
-                         | Some ls => list_rect
+                                              S_case (#(ident.ident_Literal (t:=base_type_nat) (base_of_nat n'))) rec)
+                                        (base_to_nat n)
+                          | None => reflect (with_lets:=false) (expr.Ident (ident.ident_nat_rect (P:=P))) N_case S_case n
+                          end))
+                  (fun (*| ident.eager_nat_rect_arrow*) P Q
+                   => (fun (N_case : value P -> _) (S_case : value base_type_nat -> (value P -> _) -> _ -> _) (n : expr base_type_nat) (v : expr P) (* type annotations present for nicer fixpoint refolding *)
+                       => match invert_Literal n with
+                          | Some n => nat_rect
                                         (fun _ => expr P -> UnderLets (expr Q))
                                         N_case
-                                        (fun x xs rec v
-                                         => C_case x (reify_list xs) rec v)
-                                        ls
+                                        (fun n' rec v'
+                                         => S_case (#(ident.ident_Literal (t:=base_type_nat) (base_of_nat n'))) rec v')
+                                        (base_to_nat n)
                                         v
-                         | None => reflect (with_lets:=false) (expr.Ident (@ident.list_rect_arrow A P Q)) N_case C_case ls v
-                         end)
-              | ident.eager_List_nth_default A
-                => Some
-                     (fun default (ls : expr (base.type.list A)) (n : expr base.type.nat)
-                      => match reflect_list ls, invert_Literal n with
-                         | Some ls, Some n => UnderLets.Base (nth_default default ls n)
-                         | _, _ => reflect (with_lets:=false) (expr.Ident (@ident.List_nth_default A)) default ls n
-                         end)
-              | ident.Literal _ _
-              | ident.Nat_succ
-              | ident.Nat_pred
-              | ident.Nat_max
-              | ident.Nat_mul
-              | ident.Nat_add
-              | ident.Nat_sub
-              | ident.Nat_eqb
-              | ident.nil _
-              | ident.cons _
-              | ident.pair _ _
-              | ident.fst _ _
-              | ident.snd _ _
-              | ident.prod_rect _ _ _
-              | ident.bool_rect _
-              | ident.nat_rect _
-              | ident.nat_rect_arrow _ _
-              | ident.list_rect _ _
-              | ident.list_rect_arrow _ _ _
-              | ident.list_case _ _
-              | ident.List_length _
-              | ident.List_seq
-              | ident.List_firstn _
-              | ident.List_skipn _
-              | ident.List_repeat _
-              | ident.List_combine _ _
-              | ident.List_map _ _
-              | ident.List_app _
-              | ident.List_rev _
-              | ident.List_flat_map _ _
-              | ident.List_partition _
-              | ident.List_fold_right _ _
-              | ident.List_update_nth _
-              | ident.List_nth_default _
-              | ident.Z_add
-              | ident.Z_mul
-              | ident.Z_pow
-              | ident.Z_sub
-              | ident.Z_opp
-              | ident.Z_div
-              | ident.Z_modulo
-              | ident.Z_log2
-              | ident.Z_log2_up
-              | ident.Z_eqb
-              | ident.Z_leb
-              | ident.Z_ltb
-              | ident.Z_geb
-              | ident.Z_gtb
-              | ident.Z_of_nat
-              | ident.Z_to_nat
-              | ident.Z_shiftr
-              | ident.Z_shiftl
-              | ident.Z_land
-              | ident.Z_lor
-              | ident.Z_min
-              | ident.Z_max
-              | ident.Z_bneg
-              | ident.Z_lnot_modulo
-              | ident.Z_truncating_shiftl
-              | ident.Z_mul_split
-              | ident.Z_add_get_carry
-              | ident.Z_add_with_carry
-              | ident.Z_add_with_get_carry
-              | ident.Z_sub_get_borrow
-              | ident.Z_sub_with_get_borrow
-              | ident.Z_zselect
-              | ident.Z_add_modulo
-              | ident.Z_rshi
-              | ident.Z_cc_m
-              | ident.Z_combine_at_bitwidth
-              | ident.Z_cast _
-              | ident.Z_cast2 _
-              | ident.option_Some _
-              | ident.option_None _
-              | ident.option_rect _ _
-              | ident.Build_zrange
-              | ident.zrange_rect _
-              | ident.fancy_add _ _
-              | ident.fancy_addc _ _
-              | ident.fancy_sub _ _
-              | ident.fancy_subb _ _
-              | ident.fancy_mulll _
-              | ident.fancy_mullh _
-              | ident.fancy_mulhl _
-              | ident.fancy_mulhh _
-              | ident.fancy_rshi _ _
-              | ident.fancy_selc
-              | ident.fancy_selm _
-              | ident.fancy_sell
-              | ident.fancy_addm
-                => None
-              end%expr%under_lets.
+                          | None => reflect (with_lets:=false) (expr.Ident (ident.ident_nat_rect_arrow (P:=P) (Q:=Q))) N_case S_case n v
+                          end))
+                  (fun (*| ident.eager_list_rect*) A P
+                   => (fun (N_case : value base.type.unit -> _) (C_case : value A -> _ -> value P -> _) (ls : expr (base.type.list A)) (* type annotations present for nicer fixpoint refolding *)
+                       => match reflect_list ls with
+                          | Some ls => list_rect
+                                         (fun _ => UnderLets (expr P))
+                                         (N_case (#(ident.ident_tt)))
+                                         (fun x xs rec
+                                          => rec <-- rec;
+                                               C_case x (reify_list xs) rec)
+                                         ls
+                          | None => reflect (with_lets:=false) (expr.Ident (ident.ident_list_rect (A:=A) (P:=P))) N_case C_case ls
+                          end))
+                  (fun (*| ident.eager_list_rect_arrow*) A P Q
+                   => (fun (N_case : value P -> _) (C_case : value A -> _ -> (value P -> _) -> value P -> _) (ls : expr (base.type.list A)) (v : value P) (* type annotations present for nicer fixpoint refolding *)
+                       => match reflect_list ls with
+                          | Some ls => list_rect
+                                         (fun _ => expr P -> UnderLets (expr Q))
+                                         N_case
+                                         (fun x xs rec v
+                                          => C_case x (reify_list xs) rec v)
+                                         ls
+                                         v
+                          | None => reflect (with_lets:=false) (expr.Ident (ident.ident_list_rect_arrow (A:=A) (P:=P) (Q:=Q))) N_case C_case ls v
+                          end))
+                  (fun (*| ident.eager_List_nth_default*) A
+                   => (fun default (ls : expr (base.type.list A)) (n : expr base_type_nat)
+                       => match reflect_list ls, invert_Literal n with
+                          | Some ls, Some n => UnderLets.Base (nth_default default ls (base_to_nat n))
+                          | _, _ => reflect (with_lets:=false) (expr.Ident (ident.ident_List_nth_default (T:=A))) default ls n
+                          end))
+                  idc)%expr%under_lets.
 
-        Section with_rewrite_head.
-          Context (rewrite_head : forall t (idc : ident t), value_with_lets t).
+          Section with_rewrite_head.
+            Context (rewrite_head : forall t (idc : ident t), value_with_lets t).
 
-          Local Notation "e <---- e' ; f" := (Compile.splice_value_with_lets e' (fun e => f%under_lets)) : under_lets_scope.
-          Local Notation "e <----- e' ; f" := (Compile.splice_under_lets_with_value e' (fun e => f%under_lets)) : under_lets_scope.
+            Local Notation "e <---- e' ; f" := (Compile.splice_value_with_lets e' (fun e => f%under_lets)) : under_lets_scope.
+            Local Notation "e <----- e' ; f" := (Compile.splice_under_lets_with_value e' (fun e => f%under_lets)) : under_lets_scope.
 
-          Fixpoint rewrite_bottomup {t} (e : @expr value t) : value_with_lets t
-            := match e in expr.expr t return value_with_lets t with
-               | expr.Ident t idc
-                 => rewrite_head _ idc
-               | expr.App s d f x => let f : value s -> value_with_lets d := @rewrite_bottomup _ f in x <---- @rewrite_bottomup _ x; f x
-               | expr.LetIn A B x f => x <---- @rewrite_bottomup A x;
-                                         xv <----- reify_and_let_binds_cps x _ UnderLets.Base;
-                                         @rewrite_bottomup B (f (reflect xv))
-               | expr.Var t v => Compile.Base_value v
-               | expr.Abs s d f => fun x : value s => @rewrite_bottomup d (f x)
-               end%under_lets.
-        End with_rewrite_head.
+            Fixpoint rewrite_bottomup {t} (e : @expr value t) : value_with_lets t
+              := match e in expr.expr t return value_with_lets t with
+                 | expr.Ident t idc
+                   => rewrite_head _ idc
+                 | expr.App s d f x => let f : value s -> value_with_lets d := @rewrite_bottomup _ f in x <---- @rewrite_bottomup _ x; f x
+                 | expr.LetIn A B x f => x <---- @rewrite_bottomup A x;
+                                           xv <----- reify_and_let_binds_cps x _ UnderLets.Base;
+                                           @rewrite_bottomup B (f (reflect xv))
+                 | expr.Var t v => Compile.Base_value v
+                 | expr.Abs s d f => fun x : value s => @rewrite_bottomup d (f x)
+                 end%under_lets.
+          End with_rewrite_head.
 
-        Notation nbe := (@rewrite_bottomup (fun t idc => reflect (expr.Ident idc))).
+          Notation nbe := (@rewrite_bottomup (fun t idc => reflect (expr.Ident idc))).
 
-        Fixpoint repeat_rewrite
-                 (rewrite_head : forall (do_again : forall t : base.type, @expr value (type.base t) -> UnderLets (@expr var (type.base t)))
-                                            t (idc : ident t), value_with_lets t)
-                 (fuel : nat) {t} e : value_with_lets t
-          := @rewrite_bottomup
-               (rewrite_head
-                  (fun t' e'
-                   => match fuel with
-                      | Datatypes.O => nbe e'
-                      | Datatypes.S fuel' => @repeat_rewrite rewrite_head fuel' (type.base t') e'
-                      end%under_lets))
-               t e.
+          Fixpoint repeat_rewrite
+                   (rewrite_head : forall (do_again : forall t : base_type, @expr value (type.base t) -> UnderLets (@expr var (type.base t)))
+                                          t (idc : ident t), value_with_lets t)
+                   (fuel : nat) {t} e : value_with_lets t
+            := @rewrite_bottomup
+                 (rewrite_head
+                    (fun t' e'
+                     => match fuel with
+                        | Datatypes.O => nbe e'
+                        | Datatypes.S fuel' => @repeat_rewrite rewrite_head fuel' (type.base t') e'
+                        end%under_lets))
+                 t e.
 
-        Definition rewrite rewrite_head fuel {t} e : expr t
-          := reify (@repeat_rewrite rewrite_head fuel t e).
+          Definition rewrite rewrite_head fuel {t} e : expr t
+            := reify (@repeat_rewrite rewrite_head fuel t e).
+        End with_var.
+
+        Definition Rewrite rewrite_head fuel {t} (e : expr.Expr (ident:=ident) t) : expr.Expr (ident:=ident) t
+          := fun var => @rewrite var (rewrite_head var) fuel t (e _).
       End full.
-
-      Definition Rewrite rewrite_head fuel {t} (e : expr.Expr (ident:=ident) t) : expr.Expr (ident:=ident) t
-        := fun var => @rewrite var (rewrite_head var) fuel t (e _).
     End Compile.
 
     Module Reify.
@@ -1517,30 +1428,29 @@ Module Compilers.
           := (fold_right (fun a b => prod a b) unit).
         Local Notation type_of_list_cps
           := (fold_right (fun a K => a -> K)).
-        Context {ident var : type.type base.type -> Type}
-                {pident : type.type pattern.base.type -> Type}
+        Context {base : Type}.
+        Local Notation base_type := (base.type base).
+        Local Notation pattern_base_type := (pattern.base.type base).
+        Local Notation type := (type.type base_type).
+        Local Notation ptype := (type.type pattern_base_type).
+        Context {ident var : type -> Type}
+                {pident : ptype -> Type}
                 (pident_arg_types : forall t, pident t -> list Type)
                 (pident_type_of_list_arg_types_beq : forall t idc, type_of_list (pident_arg_types t idc) -> type_of_list (pident_arg_types t idc) -> bool)
                 (pident_of_typed_ident : forall t, ident t -> pident (pattern.type.relax t))
                 (pident_arg_types_of_typed_ident : forall t (idc : ident t), type_of_list (pident_arg_types _ (pident_of_typed_ident t idc)))
-                (reflect_ident_iota : forall t (idc : ident t), option (@value base.type ident var t)).
+                (reflect_ident_iota : forall t (idc : ident t), option (@value base_type ident var t)).
 
-        Local Notation type := (type.type base.type).
-        Local Notation expr := (@expr.expr base.type ident var).
+        Local Notation expr := (@expr.expr base_type ident var).
         Local Notation pattern := (@pattern.pattern pident).
-        Local Notation ptype := (type.type pattern.base.type).
-        Local Notation value := (@Compile.value base.type ident var).
-        Local Notation value_with_lets := (@Compile.value_with_lets base.type ident var).
-        Local Notation UnderLets := (UnderLets.UnderLets base.type ident var).
-        Local Notation reify_expr_beta_iota := (@reify_expr_beta_iota ident var reflect_ident_iota).
-        Local Notation unification_resultT' := (@unification_resultT' pident pident_arg_types).
-        Local Notation with_unif_rewrite_ruleTP_gen' := (@with_unif_rewrite_ruleTP_gen' ident var pident pident_arg_types value).
-        Local Notation lam_unification_resultT' := (@lam_unification_resultT' pident pident_arg_types).
+        Local Notation value := (@Compile.value base_type ident var).
+        Local Notation UnderLets := (UnderLets.UnderLets base_type ident var).
+        Local Notation reify_expr_beta_iota := (@reify_expr_beta_iota base ident var reflect_ident_iota).
 
         Local Notation expr_maybe_do_again should_do_again
-          := (@expr.expr base.type ident (if should_do_again then value else var)).
+          := (@expr.expr base_type ident (if should_do_again then value else var)).
 
-        Definition expr_value_to_rewrite_rule_replacement (should_do_again : bool) {t} (e : @expr.expr base.type ident value t)
+        Definition expr_value_to_rewrite_rule_replacement (should_do_again : bool) {t} (e : @expr.expr base_type ident value t)
           : UnderLets (expr_maybe_do_again should_do_again t)
           := (e <-- UnderLets.flat_map (@reify_expr_beta_iota) (fun t v => reflect (expr.Var v)) (UnderLets.of_expr e);
                 if should_do_again return UnderLets (expr_maybe_do_again should_do_again t)
@@ -1568,6 +1478,12 @@ Module Compilers.
         | S _ => constr_run_tac tac
         | _ => check_debug_level_then_Set ()
         end.
+      Ltac debug2 tac :=
+        let lvl := rewriter_assembly_debug_level in
+        lazymatch lvl with
+        | S (S _) => constr_run_tac tac
+        | _ => check_debug_level_then_Set ()
+        end.
 
       Ltac time_if_debug1 :=
         let lvl := rewriter_assembly_debug_level in
@@ -1581,14 +1497,20 @@ Module Compilers.
 
       Module Export GoalType.
         Local Set Primitive Projections.
-        Record rewriter_dataT {pkg : package} :=
+        Import Compilers.Classes.
+        Record rewriter_dataT
+               {exprInfo : ExprInfoT}
+               {exprExtraInfo : ExprExtraInfoT}
+               {pkg : @package base ident} :=
           Build_rewriter_dataT'
             {
+              ident_is_var_like : forall t : type (base.type base), ident t -> bool;
+
               rewrite_rules_specs : list (bool * Prop);
               dummy_count : nat;
               dtree : @Compile.decision_tree raw_ident;
 
-              rewrite_rules : forall var, @Compile.rewrite_rulesT ident var pattern_ident arg_types ;
+              rewrite_rules : forall var, @Compile.rewrite_rulesT base ident var pattern_ident arg_types ;
               all_rewrite_rules (* adjusted version *) : _;
               all_rewrite_rules_eq : all_rewrite_rules = rewrite_rules;
 
@@ -1596,24 +1518,34 @@ Module Compilers.
 
               rewrite_head0
               := (fun var
-                  => @Compile.assemble_identifier_rewriters ident var eta_ident_cps pattern_ident arg_types (@unify pkg) (@unify_unknown pkg) raw_ident full_types (@invert_bind_args pkg) (@invert_bind_args_unknown pkg) type_of raw_to_typed is_simple dtree (all_rewrite_rules var));
-              rewrite_head (* adjusted version *) : forall var (do_again : forall t, @defaults.expr (@Compile.value _ ident var) (type.base t) -> @UnderLets.UnderLets _ ident var (@defaults.expr var (type.base t)))
-                                     t (idc : ident t), @Compile.value_with_lets base.type ident var t;
+                  => @Compile.assemble_identifier_rewriters base _ base_beq ident var eta_ident_cps pattern_ident arg_types (@unify _ _ pkg) (@unify_unknown _ _ pkg) raw_ident full_types (@invert_bind_args _ _ pkg) (@invert_bind_args_unknown _ _ pkg) type_of raw_to_typed is_simple dtree (all_rewrite_rules var));
+              rewrite_head (* adjusted version *) : forall var (do_again : forall t, @expr.expr (base.type base) ident (@Compile.value _ ident var) (type.base t) -> @UnderLets.UnderLets _ ident var (@expr.expr (base.type base) ident var (type.base t)))
+                                     t (idc : ident t), @Compile.value_with_lets (base.type base) ident var t;
               rewrite_head_eq : rewrite_head = rewrite_head0
             }.
       End GoalType.
-      Definition Rewrite {pkg : package} (data : rewriter_dataT) {t} (e : expr.Expr (ident:=ident) t) : expr.Expr (ident:=ident) t
-        := @Compile.Rewrite (rewrite_head data) (default_fuel data) t e.
+      Import Compilers.Classes.
+      Definition Rewrite
+               {exprInfo : ExprInfoT}
+               {exprExtraInfo : ExprExtraInfoT}
+               {pkg : @package base ident}
+               (data : rewriter_dataT)
+               {t} (e : expr.Expr (ident:=ident) t) : expr.Expr (ident:=ident) t
+        := Compile.Rewrite (ident_is_var_like data) (rewrite_head data) (default_fuel data) e.
     End Make.
     Export Make.GoalType.
 
     Module Export GoalType.
+      Import Compilers.Classes.
       Import pattern.ident.GoalType.
-      Record RewriterT {pkg : package} :=
+      Record RewriterT
+             {exprInfo : ExprInfoT}
+             {exprExtraInfo : ExprExtraInfoT}
+             {pkg : package} :=
         {
           Rewriter_data : rewriter_dataT;
           Rewrite : forall {t} (e : expr.Expr (ident:=ident) t), expr.Expr (ident:=ident) t;
-          Rewrite_eq : @Rewrite = @Make.Rewrite pkg Rewriter_data
+          Rewrite_eq : @Rewrite = @Make.Rewrite _ _ pkg Rewriter_data
         }.
     End GoalType.
   End RewriteRules.

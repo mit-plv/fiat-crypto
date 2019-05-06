@@ -15,6 +15,7 @@ Require Import Crypto.Util.ZRange.Show.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.OptionList.
 Require Import Crypto.Language.
+Require Import Crypto.Identifier.
 Require Import Crypto.AbstractInterpretation.
 Require Import Crypto.Util.Bool.Equality.
 Require Import Crypto.Util.Notations.
@@ -24,6 +25,7 @@ Module Compilers.
   Local Set Boolean Equality Schemes.
   Local Set Decidable Equality Schemes.
   Export Language.Compilers.
+  Export Identifier.Compilers.
   Export AbstractInterpretation.Compilers.
   Import invert_expr.
   Import defaults.
@@ -38,10 +40,10 @@ Module Compilers.
           Fixpoint show_interp {t} : Show (ZRange.type.base.interp t)
             := match t return bool -> ZRange.type.base.interp t -> string with
                | base.type.unit => @show unit _
-               | base.type.Z => @show zrange _
-               | base.type.bool => @show bool _
-               | base.type.nat => @show nat _
-               | base.type.zrange => @show zrange _
+               | base.type.type_base base.type.Z => @show zrange _
+               | base.type.type_base base.type.bool => @show bool _
+               | base.type.type_base base.type.nat => @show nat _
+               | base.type.type_base base.type.zrange => @show zrange _
                | base.type.prod A B
                  => fun _ '(a, b)
                     => "(" ++ @show_interp A false a ++ ", " ++ @show_interp B true b ++ ")"
@@ -57,10 +59,10 @@ Module Compilers.
             Fixpoint show_interp {t} : Show (ZRange.type.base.option.interp t)
               := match t return bool -> ZRange.type.base.option.interp t -> string with
                  | base.type.unit => @show unit _
-                 | base.type.Z => @show (option zrange) _
-                 | base.type.bool => @show (option bool) _
-                 | base.type.nat => @show (option nat) _
-                 | base.type.zrange => @show (option zrange) _
+                 | base.type.type_base base.type.Z => @show (option zrange) _
+                 | base.type.type_base base.type.bool => @show (option bool) _
+                 | base.type.type_base base.type.nat => @show (option nat) _
+                 | base.type.type_base base.type.zrange => @show (option zrange) _
                  | base.type.prod A B
                    => let SA := @show_interp A in
                       let SB := @show_interp B in
@@ -94,7 +96,6 @@ Module Compilers.
         Module base.
           Global Instance show_base : Show base.type.base
             := fun _ t => match t with
-                       | base.type.unit => "()"
                        | base.type.Z => "ℤ"
                        | base.type.bool => "𝔹"
                        | base.type.nat => "ℕ"
@@ -102,6 +103,7 @@ Module Compilers.
                        end.
           Fixpoint show_type (with_parens : bool) (t : base.type) : string
             := match t with
+               | base.type.unit => "()"
                | base.type.type_base t => show with_parens t
                | base.type.prod A B => maybe_wrap_parens
                                         with_parens
@@ -114,7 +116,6 @@ Module Compilers.
                end.
           Fixpoint show_base_interp {t} : Show (base.base_interp t)
             := match t with
-               | base.type.unit => @show unit _
                | base.type.Z => @show Z _
                | base.type.bool => @show bool _
                | base.type.nat => @show nat _
@@ -123,6 +124,7 @@ Module Compilers.
           Global Existing Instance show_base_interp.
           Fixpoint show_interp {t} : Show (base.interp t)
             := match t with
+               | base.type.unit => @show unit _
                | base.type.type_base t => @show (base.base_interp t) _
                | base.type.prod A B => @show (base.interp A * base.interp B) _
                | base.type.list A => @show (list (base.interp A)) _
@@ -179,8 +181,7 @@ Module Compilers.
 
       Fixpoint make_castb {t} : ZRange.type.base.option.interp t -> option string
         := match t with
-           | base.type.Z => option_map show_range_or_ctype
-           | base.type.type_base t => fun _ => None
+           | base.type.type_base base.type.Z => option_map show_range_or_ctype
            | base.type.prod A B
              => fun '(r1, r2)
                 => match @make_castb A r1, @make_castb B r2 with
@@ -189,6 +190,8 @@ Module Compilers.
                    | Some c, None => Some (c ++ ", ??")
                    | None, None => None
                    end
+           | base.type.unit
+           | base.type.type_base _
            | base.type.list _
            | base.type.option _
              => fun _ => None
@@ -222,6 +225,7 @@ Module Compilers.
           := match idc in ident.ident t return type.for_each_lhs_of_arrow (fun t => (nat -> string) * ZRange.type.option.interp t)%type t -> (nat -> string) * ZRange.type.base.option.interp (type.final_codomain t) with
              | ident.Literal base.type.Z v => fun 'tt => (fun lvl => show_compact_Z (Nat.eqb lvl 0) v, ZRange.type.base.option.None)
              | ident.Literal t v => fun 'tt => (fun lvl => show (Nat.eqb lvl 0) v, ZRange.type.base.option.None)
+             | ident.tt => fun _ => (fun _ => "()", tt)
              | ident.Nat_succ => fun '((x, xr), tt) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 10) ((x 10%nat) ++ ".+1"), ZRange.type.base.option.None)
              | ident.Nat_pred => fun '((x, xr), tt) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 10) ((x 10%nat) ++ ".-1"), ZRange.type.base.option.None)
              | ident.Nat_max => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 10) ("Nat.max " ++ x 9%nat ++ " " ++ y 9%nat), ZRange.type.base.option.None)
@@ -382,6 +386,7 @@ Module Compilers.
              => match idc with
                 | ident.Literal base.type.Z v => show_compact_Z with_parens v
                 | ident.Literal t v => show with_parens v
+                | ident.tt => "()"
                 | ident.Nat_succ => "Nat.succ"
                 | ident.Nat_pred => "Nat.pred"
                 | ident.Nat_max => "Nat.max"
@@ -743,8 +748,10 @@ Module Compilers.
 
       Fixpoint base_interp (t : base.type) : Set
         := match t with
-           | base.type.Z => type
-           | base.type.type_base _ => unit
+           | base.type.type_base base.type.Z => type
+           | base.type.type_base _
+           | base.type.unit
+             => unit
            | base.type.prod A B => base_interp A * base_interp B
            | base.type.list A => list (base_interp A)
            | base.type.option A => option (base_interp A)
@@ -753,24 +760,30 @@ Module Compilers.
       Module option.
         Fixpoint interp (t : base.type) : Set
           := match t with
-             | base.type.Z => option type
-             | base.type.type_base _ => unit
+             | base.type.type_base base.type.Z => option type
+             | base.type.type_base _
+             | base.type.unit
+               => unit
              | base.type.prod A B => interp A * interp B
              | base.type.list A => option (list (interp A))
              | base.type.option A => option (option (interp A))
              end%type.
         Fixpoint None {t} : interp t
           := match t with
-             | base.type.Z => Datatypes.None
-             | base.type.type_base _ => tt
+             | base.type.type_base base.type.Z => Datatypes.None
+             | base.type.type_base _
+             | base.type.unit
+               => tt
              | base.type.prod A B => (@None A, @None B)
              | base.type.list A => Datatypes.None
              | base.type.option A => Datatypes.None
              end.
         Fixpoint Some {t} : base_interp t -> interp t
           := match t with
-             | base.type.Z => Datatypes.Some
-             | base.type.type_base _ => fun tt => tt
+             | base.type.type_base base.type.Z => Datatypes.Some
+             | base.type.type_base _
+             | base.type.unit
+               => fun tt => tt
              | base.type.prod A B => fun '(a, b) => (@Some A a, @Some B b)
              | base.type.list A => fun ls => Datatypes.Some (List.map (@Some A) ls)
              | base.type.option A => fun ls => Datatypes.Some (Option.map (@Some A) ls)
@@ -804,14 +817,12 @@ Module Compilers.
         := match t with
            | base.type.unit
              => unit
-           | base.type.nat
-           | base.type.bool
-           | base.type.zrange
-           | base.type.option _
-             => Empty_set
-           | base.type.Z => string * option int.type
+           | base.type.type_base base.type.Z => string * option int.type
            | base.type.prod A B => base_var_data A * base_var_data B
            | base.type.list A => string * option int.type * nat
+           | base.type.type_base _
+           | base.type.option _
+             => Empty_set
            end.
       Definition var_data (t : Compilers.type.type base.type) : Set
         := match t with
@@ -823,14 +834,12 @@ Module Compilers.
         := match t with
            | base.type.unit
              => unit
-           | base.type.nat
-           | base.type.bool
-           | base.type.zrange
-           | base.type.option _
-             => Empty_set
-           | base.type.Z => string
+           | base.type.type_base base.type.Z => string
            | base.type.prod A B => base_var_names A * base_var_names B
            | base.type.list A => string
+           | base.type.type_base _
+           | base.type.option _
+             => Empty_set
            end.
       Definition var_names (t : Compilers.type.type base.type) : Set
         := match t with
@@ -840,16 +849,14 @@ Module Compilers.
 
       Fixpoint names_of_base_var_data {t} : base_var_data t -> base_var_names t
         := match t return base_var_data t -> base_var_names t with
-           | base.type.unit
-           | base.type.nat
-           | base.type.bool
-           | base.type.zrange
-           | base.type.option _
-             => fun x => x
-           | base.type.Z => @fst _ _
+           | base.type.type_base base.type.Z => @fst _ _
            | base.type.prod A B
              => fun xy => (@names_of_base_var_data A (fst xy), @names_of_base_var_data B (snd xy))
            | base.type.list A => fun x => fst (fst x)
+           | base.type.unit
+           | base.type.type_base _
+           | base.type.option _
+             => fun x => x
            end.
       Definition names_of_var_data {t} : var_data t -> var_names t
         := match t with

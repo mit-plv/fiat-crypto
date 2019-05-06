@@ -488,7 +488,7 @@ Definition strip_literal_casts_rewrite_rulesT : list (bool * Prop)
   := generalize_cast [dont_do_again (forall rx x, x ∈ rx -> cstZ rx ('x) = 'x)]%Z%zrange.
 
 (** FIXME Don't use [ident.interp] for the fancy identifier rewrite rules *)
-Require Import Crypto.Language.
+Require Import Crypto.Identifier.
 Import Compilers.
 
 Ltac early_unfold_in term ::= (eval cbv [ident.interp ident.to_fancy Option.invert_Some] in term).

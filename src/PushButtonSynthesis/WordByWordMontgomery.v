@@ -31,6 +31,7 @@ Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.LanguageWf.
 Require Import Crypto.Language.
+Require Import Crypto.IdentifierExtra.
 Require Import Crypto.AbstractInterpretation.
 Require Import Crypto.LanguageStringification.
 Require Import Crypto.Arithmetic.Core.
@@ -515,7 +516,7 @@ Section __.
     cbv [ZRange.type.base.option.is_bounded_by bounds saturated_bounds saturated_bounds_list Option.invert_Some].
     replace n with (List.length x) by now rewrite H, Partition.length_partition.
     rewrite <- map_const, fold_andb_map_map1, fold_andb_map_iff.
-    cbv [ZRange.type.base.is_bounded_by is_bounded_by_bool lower upper].
+    cbv [ZRange.type.base.is_bounded_by is_bounded_by_bool lower upper type_base].
     split; [ reflexivity | ].
     intros *; rewrite combine_same, in_map_iff, Bool.andb_true_iff, !Z.leb_le.
     intros; destruct_head'_ex; destruct_head'_and; subst *; cbn [fst snd].
@@ -710,10 +711,12 @@ Section __.
                  | now apply bounded_by_prime_bytes_bounds_of_bytes_valid
                  | now apply weight_bounded_of_bytes_valid
                  | solve [ eapply op_correct; try eassumption; solve_extra_bounds_side_conditions ]
-                 | progress autorewrite with interp interp_gen_cache push_eval
+                 | progress autorewrite with interp; try typeclasses eauto
+                 | progress autorewrite with interp_gen_cache
+                 | progress autorewrite with push_eval
                  | progress autounfold with push_eval
                  | progress autorewrite with distr_length in *
-                 | solve [ cbv [valid small eval uweight n_bytes] in *; destruct_head'_and; auto ] ].
+                 | solve [ cbv [valid small eval uweight n_bytes] in *; destruct_head'_and; auto ]  ].
 
   (** TODO: DESIGN DECISION:
 

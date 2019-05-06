@@ -1,21 +1,19 @@
 Require Import Crypto.Language.
 Require Import Crypto.LanguageWf.
-Require Import Crypto.RewriterAllTactics.
+Require Import Crypto.RewriterAllTacticsExtra.
 Require Import Crypto.RewriterRulesProofs.
-Require Import Crypto.IdentifiersGENERATEDProofs.
 
 Module Compilers.
   Import Language.Compilers.
-  Import Language.Compilers.defaults.
   Import LanguageWf.Compilers.
   Import RewriterAllTactics.Compilers.RewriteRules.GoalType.
-  Import RewriterAllTactics.Compilers.RewriteRules.Tactic.
-  Import IdentifiersGENERATEDProofs.Compilers.pattern.ident.
+  Import RewriterAllTacticsExtra.Compilers.RewriteRules.Tactic.
+  Import Compilers.Classes.
 
   Module Import RewriteRules.
     Section __.
       Definition VerifiedRewriterNBE : VerifiedRewriter.
-      Proof using All. make_rewriter package_proofs true nbe_rewrite_rules_proofs. Defined.
+      Proof using All. make_rewriter true nbe_rewrite_rules_proofs. Defined.
 
       Definition RewriteNBE {t} := Eval hnf in @Rewrite VerifiedRewriterNBE t.
 
@@ -23,11 +21,11 @@ Module Compilers.
       Proof. now apply VerifiedRewriterNBE. Qed.
 
       Lemma Interp_gen_RewriteNBE {cast_outside_of_range t} e (Hwf : Wf e)
-        : expr.Interp (@ident.gen_interp cast_outside_of_range) (@RewriteNBE t e)
-          == expr.Interp (@ident.gen_interp cast_outside_of_range) e.
+        : expr.Interp (@ident_gen_interp _ cast_outside_of_range) (@RewriteNBE t e)
+          == expr.Interp (@ident_gen_interp _ cast_outside_of_range) e.
       Proof. now apply VerifiedRewriterNBE. Qed.
 
-      Lemma Interp_RewriteNBE {t} e (Hwf : Wf e) : Interp (@RewriteNBE t e) == Interp e.
+      Lemma Interp_RewriteNBE {t} e (Hwf : Wf e) : expr.Interp (@ident_interp _) (@RewriteNBE t e) == expr.Interp (@ident_interp _) e.
       Proof. apply Interp_gen_RewriteNBE; assumption. Qed.
     End __.
   End RewriteRules.
@@ -38,11 +36,11 @@ Module Compilers.
   Proof. apply Wf_RewriteNBE, Hwf. Qed.
 
   Lemma Interp_gen_PartialEvaluate {cast_outside_of_range} {t} e (Hwf : Wf e)
-    : expr.Interp (@ident.gen_interp cast_outside_of_range) (@PartialEvaluate t e) == expr.Interp (@ident.gen_interp cast_outside_of_range) e.
+    : expr.Interp (@ident_gen_interp _ cast_outside_of_range) (@PartialEvaluate t e) == expr.Interp (@ident_gen_interp _ cast_outside_of_range) e.
   Proof. apply Interp_gen_RewriteNBE, Hwf. Qed.
 
   Lemma Interp_PartialEvaluate {t} e (Hwf : Wf e)
-    : Interp (@PartialEvaluate t e) == Interp e.
+    : expr.Interp (@ident_interp _) (@PartialEvaluate t e) == expr.Interp (@ident_interp _) e.
   Proof. apply Interp_gen_PartialEvaluate; assumption. Qed.
 
   Module Export Hints.

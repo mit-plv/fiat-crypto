@@ -7,6 +7,8 @@ Require Import Crypto.Fancy.Compiler.
 Require Import Crypto.Fancy.Prod.
 Require Import Crypto.Fancy.Spec.
 Require Import Crypto.Language. Import Language.Compilers.
+Require Import Crypto.Identifier. Import Identifier.Compilers.
+Require Import Crypto.IdentifierExtra. Import IdentifierExtra.Compilers.
 Require Import Crypto.LanguageWf.
 Require Import Crypto.PushButtonSynthesis.BarrettReduction.
 Require Import Crypto.Util.Tactics.BreakMatch.
@@ -193,7 +195,7 @@ Module Barrett256.
                        | |- _ <> _ => assumption || congruence
                        | _ => push_value_unused
                        end)
-                | _ => 
+                | _ =>
                   rewrite swap_add_chain by
                       repeat match goal with
                              | |- _ <> _ => assumption || congruence

@@ -3,6 +3,8 @@ Require Import Coq.Lists.List.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Language.
+Require Import Crypto.Identifier.
+Require Import Crypto.IdentifierExtra.
 Require Import Crypto.UnderLets.
 Require Import Crypto.AbstractInterpretation.
 Require Import Crypto.RewriterAll.
@@ -16,6 +18,8 @@ Import AbstractInterpretation.Compilers.
 Import RewriterAll.Compilers.
 Import MiscCompilerPasses.Compilers.
 Import CStringification.Compilers.
+Import Identifier.Compilers.
+Import IdentifierExtra.Compilers.
 Local Coercion Z.of_nat : nat >-> Z.
 Import Compilers.defaults.
 
@@ -56,12 +60,11 @@ Module testrewrite.
                           ((\ x , expr_let y := ##5 in $y + ($y + (#ident.fst @ $x + #ident.snd @ $x)))
                              @ (##1, ##7))%expr).
 
-
   Eval cbv in partial.eval_with_bound partial.default_relax_zrange
                                       (RewriteRules.RewriteNBE (fun var =>
                 (\z , ((\ x , expr_let y := ##5 in $y + ($z + (#ident.fst @ $x + #ident.snd @ $x)))
                          @ (##1, ##7)))%expr) _)
-                (Datatypes.Some r[0~>100]%zrange, tt).
+                (Datatypes.Some r[0~>100]%zrange, Datatypes.tt).
 End testrewrite.
 Module testpartial.
   Import expr.
@@ -85,7 +88,7 @@ Module testpartial.
                 partial.default_relax_zrange
                 (\z , ((\ x , expr_let y := ##5 in $y + ($z + (#ident.fst @ $x + #ident.snd @ $x)))
                          @ (##1, ##7)))%expr
-                (Datatypes.Some r[0~>100]%zrange, tt).
+                (Datatypes.Some r[0~>100]%zrange, Datatypes.tt).
 End testpartial.
 
 Module test2.
@@ -171,7 +174,7 @@ Module test3point5.
     lazymatch (eval cbv delta [E'] in E') with
     | (fun var : type -> Type =>
          (λ x : var _,
-          #(ident.Z_cast r[0 ~> 10]) @ (#ident.List_nth_default @ #(ident.Literal (-1)%Z) @ $x @ #(ident.Literal 0%nat)))%expr)
+          #(ident.Z_cast r[0 ~> 10]) @ (#ident.List_nth_default @ #(ident.Literal (0)%Z) @ $x @ #(ident.Literal 0%nat)))%expr)
       => idtac
     end.
     constructor.
@@ -190,7 +193,7 @@ Module test4.
     pose (partial.Eval E) as E'.
     lazy in E'.
     clear E.
-    pose (Some [Some r[0~>10]%zrange],Some [Some r[0~>10]%zrange], tt) as bound.
+    pose (Some [Some r[0~>10]%zrange],Some [Some r[0~>10]%zrange], Datatypes.tt) as bound.
     pose (partial.EtaExpandWithListInfoFromBound E' bound) as E''.
     lazy in E''.
     clear E'.
@@ -203,9 +206,9 @@ Module test4.
     | (fun var : type -> Type =>
          (λ x : var _,
           expr_let y := #(ident.Z_cast r[0 ~> 10]) @
-                        (#ident.List_nth_default @ #(ident.Literal (-1)%Z) @ (#ident.fst @ $x) @ #(ident.Literal 0%nat)) in
+                        (#ident.List_nth_default @ #(ident.Literal (0)%Z) @ (#ident.fst @ $x) @ #(ident.Literal 0%nat)) in
           expr_let y0 := #(ident.Z_cast r[0 ~> 10]) @
-                          (#ident.List_nth_default @ #(ident.Literal (-1)%Z) @ (#ident.snd @ $x) @ #(ident.Literal 0%nat)) in
+                          (#ident.List_nth_default @ #(ident.Literal (0)%Z) @ (#ident.snd @ $x) @ #(ident.Literal 0%nat)) in
           expr_let y1 := #(ident.Z_cast r[0 ~> 100]) @ ((#(ident.Z_cast r[0 ~> 10]) @ $y) * (#(ident.Z_cast r[0 ~> 10]) @ $y0)) in
           #(ident.Z_cast r[0 ~> 100]) @ $y1 :: #(ident.Z_cast r[0 ~> 100]) @ $y1 :: [])%expr)
       => idtac
@@ -384,7 +387,7 @@ Module test12.
     let v := Reify (fun y : list Z => repeat y 2) in
     pose v as E.
     vm_compute in E.
-    pose (Some (repeat (@None zrange) 3), tt) as bound.
+    pose (Some (repeat (@None zrange) 3), Datatypes.tt) as bound.
     pose (PartialEvaluate (partial.EtaExpandWithListInfoFromBound E bound)) as E'.
     lazy in E'.
     clear E.

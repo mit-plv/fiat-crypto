@@ -7,12 +7,15 @@ Require Import Crypto.Util.OptionList.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Language.
+Require Import Crypto.Identifier.
+Require Import Crypto.IdentifierExtra.
 Require Import Crypto.UnderLets.
 Import ListNotations. Local Open Scope bool_scope. Local Open Scope Z_scope.
 
 Module Compilers.
   Export Language.Compilers.
   Export UnderLets.Compilers.
+  Export IdentifierExtra.Compilers.
   Import invert_expr.
 
   Module ZRange.
@@ -23,13 +26,11 @@ Module Compilers.
       Module base.
         (** turn a [base.type] into a [Set] describing the type of
           bounds on that primitive; Z is a range, nat and bool are exact values *)
-        Fixpoint interp (t : base.type) : Set
+        Fixpoint interp (t : base.type) : Type
           := match t with
-             | base.type.Z => zrange
+             | base.type.type_base base.type.Z => zrange
+             | base.type.type_base _ as t
              | base.type.unit as t
-             | base.type.nat as t
-             | base.type.bool as t
-             | base.type.zrange as t
                => base.interp t
              | base.type.prod A B => interp A * interp B
              | base.type.list A => list (interp A)
@@ -37,16 +38,15 @@ Module Compilers.
              end%type.
         Definition is_neg {t} : interp t -> bool
           := match t with
-             | base.type.Z => fun r => (lower r <? 0) && (upper r <=? 0)
+             | base.type.type_base base.type.Z => fun r => (lower r <? 0) && (upper r <=? 0)
              | _ => fun _ => false
              end.
         Fixpoint is_tighter_than {t} : interp t -> interp t -> bool
           := match t with
-             | base.type.Z => is_tighter_than_bool
-             | base.type.nat => Nat.eqb
-             | base.type.unit => fun _ _ => true
-             | base.type.bool => bool_eq
-             | base.type.zrange => zrange_beq
+             | base.type.type_base base.type.Z => is_tighter_than_bool
+             | base.type.type_base _ as t
+             | base.type.unit as t
+               => base.interp_beq (@base.base_interp_beq)
              | base.type.prod A B
                => fun '(a, b) '(a', b')
                   => @is_tighter_than A a a' && @is_tighter_than B b b'
@@ -57,11 +57,10 @@ Module Compilers.
              end%bool.
         Fixpoint is_bounded_by {t} : interp t -> binterp t -> bool
           := match t with
-             | base.type.Z => fun r z => ZRange.is_bounded_by_bool z r
-             | base.type.nat => Nat.eqb
-             | base.type.unit => fun _ _ => true
-             | base.type.bool => bool_eq
-             | base.type.zrange => zrange_beq
+             | base.type.type_base base.type.Z => fun r z => ZRange.is_bounded_by_bool z r
+             | base.type.type_base _ as t
+             | base.type.unit as t
+               => base.interp_beq (@base.base_interp_beq)
              | base.type.prod A B
                => fun '(a, b) '(a', b')
                   => @is_bounded_by A a a' && @is_bounded_by B b b'
@@ -75,27 +74,23 @@ Module Compilers.
               of optional bounds on that primitive; bounds on a [Z]
               may be either a range, or [None], generally indicating
               that the [Z] is unbounded. *)
-          Fixpoint interp (t : base.type) : Set
+          Fixpoint interp (t : base.type) : Type
             := match t with
-               | base.type.Z => option zrange
-               | base.type.unit => unit
-               | base.type.nat as t
-               | base.type.bool as t
-               | base.type.zrange as t
+               | base.type.type_base base.type.Z => option zrange
+               | base.type.type_base _ as t
                  => option (base.interp t)
                | base.type.prod A B => interp A * interp B
                | base.type.list A => option (list (interp A))
                | base.type.option A => option (option (interp A))
+               | base.type.unit => unit
                end%type.
           Fixpoint None {t} : interp t
             := match t with
                | base.type.unit => tt
                | base.type.list _
                | base.type.option _
-               | base.type.Z
-               | base.type.nat
-               | base.type.bool
-               | base.type.zrange
+               | base.type.type_base base.type.Z
+               | base.type.type_base _
                  => Datatypes.None
                | base.type.prod A B
                  => (@None A, @None B)
@@ -104,10 +99,8 @@ Module Compilers.
             := match t with
                | base.type.unit
                  => fun _ => tt
-               | base.type.Z
-               | base.type.nat
-               | base.type.bool
-               | base.type.zrange
+               | base.type.type_base base.type.Z
+               | base.type.type_base _
                  => Datatypes.Some
                | base.type.list A
                  => fun ls => Datatypes.Some (List.map (@Some A) ls)
@@ -119,10 +112,8 @@ Module Compilers.
                end.
           Fixpoint lift_Some {t} : interp t -> option (base.interp t)
             := match t with
-               | base.type.Z
-               | base.type.nat
-               | base.type.bool
-               | base.type.zrange
+               | base.type.type_base base.type.Z
+               | base.type.type_base _
                  => fun x => x
                | base.type.unit
                  => fun x => Datatypes.Some tt
@@ -136,11 +127,9 @@ Module Compilers.
           (** Keep data about list length and nat value, but not zrange *)
           Fixpoint strip_ranges {t} : interp t -> interp t
             := match t with
-               | base.type.Z => fun _ => Datatypes.None
-               | base.type.nat
-               | base.type.bool
+               | base.type.type_base base.type.Z => fun _ => Datatypes.None
+               | base.type.type_base _
                | base.type.unit
-               | base.type.zrange
                  => fun x => x
                | base.type.list A
                  => fun ls => ls <- ls; Datatypes.Some (List.map (@strip_ranges A) ls)
@@ -152,19 +141,17 @@ Module Compilers.
                end%option.
           Definition is_neg {t} : interp t -> bool
             := match t with
-               | base.type.Z
+               | base.type.type_base base.type.Z
                  => fun v => match v with
-                             | Datatypes.Some v => @is_neg base.type.Z v
+                             | Datatypes.Some v => @is_neg (base.type.type_base base.type.Z) v
                              | Datatypes.None => false
                              end
                | t => fun _ => false
                end.
           Fixpoint is_tighter_than {t} : interp t -> interp t -> bool
             := match t with
-               | base.type.Z as t
-               | base.type.nat as t
-               | base.type.bool as t
-               | base.type.zrange as t
+               | base.type.type_base base.type.Z as t
+               | base.type.type_base _ as t
                  => fun r1 r2
                     => match r1, r2 with
                        | _, Datatypes.None => true
@@ -190,14 +177,12 @@ Module Compilers.
                        | Datatypes.None, Datatypes.Some _ => false
                        | Datatypes.Some v1, Datatypes.Some v2 => option_beq (@is_tighter_than A) v1 v2
                        end
-               | _ => fun 'tt 'tt => true
+               | base.type.unit => fun 'tt 'tt => true
                end.
           Fixpoint is_bounded_by {t} : interp t -> binterp t -> bool
             := match t with
-               | base.type.Z as t
-               | base.type.nat as t
-               | base.type.bool as t
-               | base.type.zrange as t
+               | base.type.type_base base.type.Z as t
+               | base.type.type_base _ as t
                  => fun r
                     => match r with
                        | Datatypes.Some r => @base.is_bounded_by t r
@@ -218,7 +203,7 @@ Module Compilers.
                        | Datatypes.None => true
                        | Datatypes.Some v1 => option_beq_hetero (@is_bounded_by A) v1 v2
                        end
-               | _ => fun 'tt _ => true
+               | base.type.unit => fun 'tt _ => true
                end.
 
           Lemma is_bounded_by_Some {t} r val
@@ -244,24 +229,22 @@ Module Compilers.
               repeat first [ progress destruct_head'_prod
                            | progress destruct_head'_and
                            | progress destruct_head'_unit
-                           | progress cbn in *
                            | progress destruct_head' option
+                           | progress cbn [interp binterp base.interp is_bounded_by is_tighter_than base.is_tighter_than base.is_bounded_by option_beq_hetero] in *
+                           | progress subst
+                           | reflexivity
+                           | progress break_innermost_match_hyps
                            | solve [ eauto with nocore ]
                            | progress cbv [ZRange.is_bounded_by_bool is_tighter_than_bool] in *
                            | progress rewrite ?Bool.andb_true_iff in *
                            | discriminate
                            | apply conj
                            | Z.ltb_to_lt; omega
-                           | progress break_innermost_match_hyps
-                           | progress subst
-                           | rewrite NPeano.Nat.eqb_refl
-                           | apply zrange_lb
-                           | reflexivity
                            | match goal with
-                             | [ H : Nat.eqb _ _ = true |- _ ] => apply beq_nat_true in H
-                             | [ H : bool_eq _ _ = true |- _ ] => apply bool_eq_ok in H
-                             | [ H : zrange_beq _ _ = true |- _ ] => apply zrange_bl in H
-                             | [ |- bool_eq ?x ?x = true ] => destruct x; reflexivity
+                             | [ H : context[@base.interp_beq _ _ ?base_interp_beq ?t] |- _ ]
+                               => progress Reflect.reflect_beq_to_eq (@base.interp_beq _ _ base_interp_beq t)
+                             | [ |- context[@base.interp_beq _ _ ?base_interp_beq ?t] ]
+                               => progress Reflect.reflect_beq_to_eq (@base.interp_beq _ _ base_interp_beq t)
                              end ].
             { lazymatch goal with
               | [ r1 : list (interp t), r2 : list (interp t), val : list (binterp t) |- _ ]
@@ -363,10 +346,8 @@ Module Compilers.
 
         Fixpoint of_literal {t} : base.interp t -> type.base.option.interp t
           := match t with
-             | base.type.Z => fun z => Some r[z~>z]%zrange
-             | base.type.nat
-             | base.type.bool
-             | base.type.zrange
+             | base.type.type_base base.type.Z => fun z => Some r[z~>z]%zrange
+             | base.type.type_base _
                => fun n => Some n
              | base.type.unit
                => fun _ => tt
@@ -379,10 +360,8 @@ Module Compilers.
              end.
         Fixpoint to_literal {t} : type.base.option.interp t -> option (base.interp t)
           := match t with
-             | base.type.Z => fun r => r <- r; if r.(lower) =? r.(upper) then Some r.(lower) else None
-             | base.type.nat
-             | base.type.bool
-             | base.type.zrange
+             | base.type.type_base base.type.Z => fun r => r <- r; if r.(lower) =? r.(upper) then Some r.(lower) else None
+             | base.type.type_base _
                => fun v => v
              | base.type.unit
                => fun _ => Some tt
@@ -406,9 +385,12 @@ Module Compilers.
                          else None
              | None => None
              end.
+        Local Notation tZ := (base.type.type_base base.type.Z).
         Definition interp {t} (idc : ident t) : type.option.interp t
           := match idc in ident.ident t return type.option.interp t with
-             | ident.Literal _ v => of_literal v
+             | ident.Literal t v => @of_literal (base.type.type_base t) v
+             | ident.tt as idc
+               => ident.interp idc
              | ident.Nat_succ as idc
              | ident.Nat_pred as idc
                => option_map (ident.interp idc)
@@ -639,7 +621,7 @@ Module Compilers.
                  => match to_literal split_at, x, y with
                    | Some split_at, Some x, Some y
                      => ZRange.type.base.option.Some
-                         (t:=base.type.Z*base.type.Z)
+                         (t:=tZ*tZ)
                          (ZRange.split_bounds (ZRange.four_corners Z.mul x y) split_at)
                    | _, _, _ => ZRange.type.base.option.None
                    end
@@ -648,7 +630,7 @@ Module Compilers.
                  => match to_literal split_at, x, y with
                    | Some split_at, Some x, Some y
                      => ZRange.type.base.option.Some
-                         (t:=base.type.Z*base.type.Z)
+                         (t:=tZ*tZ)
                          (ZRange.split_bounds (ZRange.four_corners Z.add x y) split_at)
                    | _, _, _ => ZRange.type.base.option.None
                    end
@@ -657,7 +639,7 @@ Module Compilers.
                  => match to_literal split_at, x, y, z with
                    | Some split_at, Some x, Some y, Some z
                      => ZRange.type.base.option.Some
-                         (t:=base.type.Z*base.type.Z)
+                         (t:=tZ*tZ)
                          (ZRange.split_bounds
                             (ZRange.eight_corners (fun x y z => (x + y + z)%Z) x y z)
                             split_at)
@@ -668,7 +650,7 @@ Module Compilers.
                  => match to_literal split_at, x, y with
                    | Some split_at, Some x, Some y
                      => ZRange.type.base.option.Some
-                         (t:=base.type.Z*base.type.Z)
+                         (t:=tZ*tZ)
                          (let b := ZRange.split_bounds (ZRange.four_corners BinInt.Z.sub x y) split_at in
                           (* N.B. sub_get_borrow returns - ((x - y) / split_at) as the borrow, so we need to negate *)
                           (fst b, ZRange.opp (snd b)))
@@ -679,7 +661,7 @@ Module Compilers.
                  => match to_literal split_at, x, y, z with
                    | Some split_at, Some x, Some y, Some z
                      => ZRange.type.base.option.Some
-                         (t:=base.type.Z*base.type.Z)
+                         (t:=tZ*tZ)
                          (let b := ZRange.split_bounds (ZRange.eight_corners (fun x y z => (y - z - x)%Z) x y z) split_at in
                           (* N.B. sub_get_borrow returns - ((x - y) / split_at) as the borrow, so we need to negate *)
                           (fst b, ZRange.opp (snd b)))
@@ -927,8 +909,10 @@ Module Compilers.
     Module ident.
       Section with_var.
         Local Notation type := (type base.type).
-        Let type_base (x : base.type) : type := type.base x.
-        Local Coercion type_base : base.type >-> type.
+        Let type_base (x : base.type.base) : base.type := base.type.type_base x.
+        Let base {bt} (x : Language.Compilers.base.type bt) : type.type _ := type.base x.
+        Local Coercion base : base.type >-> type.type.
+        Local Coercion type_base : base.type.base >-> base.type.
         Context {var : type -> Type}.
         Local Notation expr := (@expr base.type ident).
         Local Notation UnderLets := (@UnderLets base.type ident var).
@@ -971,6 +955,7 @@ Module Compilers.
         Fixpoint annotate (is_let_bound : bool) {t : base.type} : abstract_domain' t -> @expr var t -> UnderLets (@expr var t)
           := match t return abstract_domain' t -> @expr var t -> UnderLets (@expr var t) with
              | base.type.type_base t => annotate_base is_let_bound
+             | base.type.unit => fun _ e => Base e
              | base.type.prod A B
                => fun st e
                   => match invert_pair e with
@@ -1068,8 +1053,11 @@ Module Compilers.
       Notation expr := (@expr base.type ident).
       Notation Expr := (@expr.Expr base.type ident).
       Local Notation type := (type base.type).
-      Let type_base (x : base.type) : type := type.base x.
-      Local Coercion type_base : base.type >-> type.
+      Let type_base (x : base.type.base) : base.type := base.type.type_base x.
+      Let base {bt} (x : Language.Compilers.base.type bt) : type.type _ := type.base x.
+      Local Coercion base : base.type >-> type.type.
+      Local Coercion type_base : base.type.base >-> base.type.
+      Local Notation tZ := (base.type.type_base base.type.Z).
 
       Section with_relax.
         Context (relax_zrange : zrange -> option zrange).
@@ -1085,15 +1073,15 @@ Module Compilers.
 
         Definition annotate_ident t : abstract_domain' t -> option (ident (t -> t))
           := match t return abstract_domain' t -> option (ident (t -> t)) with
-             | base.type.Z
+             | tZ
                => fun st => st' <- annotation_of_state st; Some (ident.Z_cast st')
-             | base.type.Z * base.type.Z
+             | tZ * tZ
                => fun '(sta, stb) => sta' <- annotation_of_state sta; stb' <- annotation_of_state stb; Some (ident.Z_cast2 (sta', stb'))
              | _ => fun _ => None
              end%option%etype.
         Definition is_annotated_for t t' (idc : ident t) : abstract_domain' t' -> bool
           := match idc, t' with
-             | ident.Z_cast r, base.type.type_base base.type.Z
+             | ident.Z_cast r, tZ
                => fun r'
                   => option_beq zrange_beq (Some r) (annotation_of_state r')
              | ident.Z_cast2 (r1, r2), base.type.prod (base.type.type_base base.type.Z) (base.type.type_base base.type.Z)

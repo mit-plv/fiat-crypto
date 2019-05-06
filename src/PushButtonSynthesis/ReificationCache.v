@@ -5,11 +5,13 @@
 Require Import Coq.Relations.Relation_Definitions.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.SubstEvars.
-Require Import Crypto.Language.
+Require Import Crypto.Identifier.
+Require Import Crypto.IdentifierExtra.
 Require Import Crypto.LanguageWf.
 
 Import
-  Language.Compilers
+  Identifier.Compilers
+  IdentifierExtra.Compilers
   LanguageWf.Compilers.
 
 Import Compilers.defaults.

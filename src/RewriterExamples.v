@@ -3,7 +3,7 @@ Require Import Coq.ZArith.ZArith.
 Require Import Coq.micromega.Lia.
 Require Import Coq.Lists.List.
 Require Import Crypto.RewriterAllTactics.
-Require Import Crypto.IdentifiersGENERATEDProofs.
+Require Import Crypto.RewriterAllTacticsExtra.
 Require Import Crypto.PreLanguage.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Notations.
@@ -12,7 +12,7 @@ Import ListNotations. Local Open Scope bool_scope. Local Open Scope Z_scope.
 
 Import RewriterAllTactics.Compilers.RewriteRules.GoalType.
 Import RewriterAllTactics.Compilers.RewriteRules.Tactic.
-Import IdentifiersGENERATEDProofs.Compilers.pattern.ident.
+Import RewriterAllTacticsExtra.Compilers.RewriteRules.Tactic.
 
 (** We first define some helper notations, and then define the list of
     types of theorems we want to rewrite with. *)
@@ -22,6 +22,32 @@ Local Notation dont_do_again := (pair false) (only parsing).
 Local Notation do_again := (pair true) (only parsing).
 Local Definition mymap {A B} := Eval cbv in @List.map A B.
 Local Definition myapp {A} := Eval cbv in @List.app A.
+
+Definition noruletypes : list (bool * Prop)
+  := [].
+
+(** Now we prove every theorem statement in the above list. *)
+
+Lemma noruleproofs
+  : PrimitiveHList.hlist (@snd bool Prop) noruletypes.
+Proof. repeat constructor. Qed.
+
+(** Next we define the rewriter package *)
+
+Definition norules : VerifiedRewriter.
+Proof using All. make_rewriter false noruleproofs. Defined.
+
+(** Now we show some simple examples. *)
+
+Example ex1 : forall x : nat, x = x.
+Proof.
+  Rewrite_for norules.
+  lazymatch goal with
+  | |- ?x = ?x => is_var x; reflexivity
+  end.
+Qed.
+
+(** ==== *)
 
 Definition myruletypes : list (bool * Prop)
   := Eval cbv [mymap myapp] in
@@ -67,11 +93,11 @@ Qed.
 (** Next we define the rewriter package *)
 
 Definition myrules : VerifiedRewriter.
-Proof using All. make_rewriter package_proofs true myruleproofs. Defined.
+Proof using All. make_rewriter true myruleproofs. Defined.
 
 (** Now we show some simple examples. *)
 
-Example ex1 : forall x, x + 0 = x.
+Example ex2 : forall x, x + 0 = x.
 Proof.
   Rewrite_for myrules.
   lazymatch goal with
@@ -86,12 +112,12 @@ Ltac test_rewrite :=
                             | fail 1 x "≢" y ]
   end.
 
-Example ex2 : forall y e1 e2,
+Example ex3 : forall y e1 e2,
     map (fun x => y + x) (dlet z := e1 + e2 in [0; 1; 2; z; z+1])
     = dlet z := e1 + e2 in [y; y + 1; y + 2; y + z; y + (z + 1)].
 Proof. test_rewrite. Qed.
 
-Example ex3 : forall (x1 x2 x3 : Z),
+Example ex4 : forall (x1 x2 x3 : Z),
     flat_map (fun a => [a; a; a]) [x1;x2;x3]
     = [x1; x1; x1; x2; x2; x2; x3; x3; x3].
 Proof. test_rewrite. Qed.

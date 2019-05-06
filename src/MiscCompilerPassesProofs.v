@@ -22,7 +22,6 @@ Module Compilers.
   Import MiscCompilerPasses.Compilers.
   Import expr.Notations.
   Import invert_expr.
-  Import defaults.
 
   Module Subst01.
     Import MiscCompilerPasses.Compilers.Subst01.

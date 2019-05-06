@@ -216,10 +216,10 @@ Rewriter.v ←──────────────────────
 RewriterReify.v ←──────┐   RewriterWf2.v   RewriterInterpProofs1.v              │                  │
                        │              ↖        ↗                                │                  │
 RewriterRules.v        └─────── RewriterAllTactics.v ───────────────────────────┘                  │
-    ↑                                      ↑                                                       │
-RewriterRulesProofs.v                      │                                                       │
-    ↑                                      │                                                       │
-    ├────────┬─────────────┬───────────────┴────────┬─────────────────────────────┬────────────────┘
+    ↑                                      ↑       ┌───────────────────────────────────────────────┘
+RewriterRulesProofs.v           RewriterAllTacticsExtra.v
+    ↑                                      ↑
+    ├────────┬─────────────┬───────────────┴────────┬─────────────────────────────┐
     │ Rewriter/NBE.v    Rewriter/Arith.v    Rewriter/ArithWithCasts.v    Rewriter/StripLiteralCasts.v
     │        ↑             ↑                        ↑                             ↑
     │        └─────────────┴────────────────────────┴─────────────────────────────┴─────────────┐
@@ -307,6 +307,9 @@ RewriterRulesProofs.v                      │                                  
   proofs of rewrite rules indexed over a `list (bool * Prop)` of
   rewrite rule types.  This is the primary interface for defining a
   rewriter from a list of rewrite rules.
+
+- RewriterAllTacticsExtra.v: Specializes `RewriterAllTactics.v` to
+  what's defined in `Identifier.v`
 
 - Rewriter/{NBE, Arith, ArithWithCasts, StripLiteralCasts, ToFancy,
   ToFancyWithCasts}.v: Use the tactic from RewriterAllTactics.v

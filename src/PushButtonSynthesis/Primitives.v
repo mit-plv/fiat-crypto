@@ -19,6 +19,7 @@ Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.ConstrFail.
 Require Import Crypto.LanguageWf.
 Require Import Crypto.Language.
+Require Import Crypto.IdentifierExtra.
 Require Import Crypto.LanguageStringification.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.ModOps.
@@ -166,7 +167,8 @@ Ltac prove_correctness' should_not_clear use_curve_good :=
     repeat first [ reflexivity
                  | progress autorewrite with interp interp_gen_cache push_eval
                  | progress autounfold with push_eval
-                 | progress autorewrite with distr_length in * ]
+                 | progress autorewrite with distr_length in *
+                 | typeclasses eauto ]
   | .. ].
 
 Ltac prove_correctness use_curve_good := prove_correctness' ltac:(fun _ => fail) use_curve_good.

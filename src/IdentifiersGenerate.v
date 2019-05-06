@@ -82,12 +82,12 @@ Module Compilers.
                     : P) in
         let __ := fill_next uconstr:(Datatypes.nil) in
         res.
-      Ltac build_all_idents := build_all_idents_gen (forall t (idc : Compilers.ident.ident t), True).
-      Ltac cache_build_all_idents :=
+      Ltac build_all_idents ident := build_all_idents_gen (forall t (idc : ident t), True).
+      Ltac cache_build_all_idents ident :=
         let name := fresh "all_idents" in
-        let term := build_all_idents in
+        let term := build_all_idents ident in
         cache_term term name.
-      Ltac make_all_idents := let v := build_all_idents in refine v.
+      Ltac make_all_idents ident := let v := build_all_idents ident in refine v.
 
       Ltac build_simple_idents ident all_idents :=
         lazymatch (eval hnf in all_idents) with
@@ -115,18 +115,18 @@ Module Compilers.
                  end in
         v.
 
-      Ltac do_make_eta_ident_cps_gen_gen do_destruct_base :=
+      Ltac do_make_eta_ident_cps_gen_gen do_destruct_base base :=
         unshelve eexists; intros;
         lazymatch goal with idc : _ |- _ => destruct idc end;
         lazymatch do_destruct_base with
-        | true => repeat match goal with t : base.type.base |- _ => destruct t end
+        | true => repeat match goal with t : base |- _ => destruct t end
         | false => idtac
         end;
         shelve_unifiable; reflexivity.
       Ltac do_make_eta_ident_cps_gen := do_make_eta_ident_cps_gen_gen false.
       Ltac do_make_eta_ident_cps_gen_expand_literal := do_make_eta_ident_cps_gen_gen true.
 
-      Ltac build_eta_ident_cps_gen_gen do_destruct_base ident :=
+      Ltac build_eta_ident_cps_gen_gen do_destruct_base base ident :=
         let has_arg := lazymatch type of ident with
                        | _ -> Set => true
                        | _ -> Type => true
@@ -146,20 +146,20 @@ Module Compilers.
                                (f : forall idc, T idc),
                           { f' : forall idc, T idc | forall idc, f' idc = f idc })
                  end in
-        constr:(ltac:(do_make_eta_ident_cps_gen_gen do_destruct_base)
+        constr:(ltac:(do_make_eta_ident_cps_gen_gen do_destruct_base base)
                 : T).
       Ltac build_eta_ident_cps_gen := build_eta_ident_cps_gen_gen false.
       Ltac build_eta_ident_cps_gen_expand_literal := build_eta_ident_cps_gen_gen true.
-      Ltac cache_build_eta_ident_cps_gen ident  :=
+      Ltac cache_build_eta_ident_cps_gen base ident :=
         let name := fresh "eta_ident_cps_gen" in
-        let term := build_eta_ident_cps_gen ident in
+        let term := build_eta_ident_cps_gen base ident in
         cache_term term name.
-      Ltac cache_build_eta_ident_cps_gen_expand_literal ident :=
+      Ltac cache_build_eta_ident_cps_gen_expand_literal base ident :=
         let name := fresh "eta_ident_cps_gen_expand_literal" in
-        let term := build_eta_ident_cps_gen_expand_literal ident in
+        let term := build_eta_ident_cps_gen_expand_literal base ident in
         cache_term term name.
-      Ltac make_eta_ident_cps_gen_gen do_destruct_base ident :=
-        let res := build_eta_ident_cps_gen_gen do_destruct_base ident in refine res.
+      Ltac make_eta_ident_cps_gen_gen do_destruct_base base ident :=
+        let res := build_eta_ident_cps_gen_gen do_destruct_base base ident in refine res.
       Ltac make_eta_ident_cps_gen := make_eta_ident_cps_gen_gen false.
       Ltac make_eta_ident_cps_gen_expand_literal := make_eta_ident_cps_gen_gen true.
 
@@ -238,11 +238,11 @@ Module Compilers.
             cache_term term name.
           Ltac make_ident_index_idempotent all_idents ident_index :=
             let v := build_ident_index_idempotent all_idents ident_index in refine v.
-          Ltac fun_to_curried_ident_infos f :=
+          Ltac fun_to_curried_ident_infos base cident f :=
             let type_to_kind T
                 := lazymatch (eval cbv beta in T) with
-                   | Compilers.base.type.base => BaseBaseType
-                   | Compilers.base.type.type => BaseType
+                   | base => BaseBaseType
+                   | Compilers.base.type.type _ => BaseType
                    | ?T => constr:(GallinaType T)
                    end in
             let T := type of f in
@@ -254,7 +254,7 @@ Module Compilers.
                                => match f x return _ with
                                   | f'
                                     => ltac:(let f := (eval cbv [f'] in f') in
-                                             let res := fun_to_curried_ident_infos f in
+                                             let res := fun_to_curried_ident_infos base cident f in
                                              exact res)
                                   end)) in
                  let v
@@ -278,11 +278,11 @@ Module Compilers.
                              constr:({| dep_types := (A:Type) :: dt ; indep_types := idt ; indep_args := (fun d => ida (Datatypes.fst d) (Datatypes.snd d)) ; to_type := (fun d i => tt (Datatypes.fst d) (Datatypes.snd d) i) ; to_ident := fun d i a => ti (Datatypes.fst d) (Datatypes.snd d) i a |})
                         end in
                  (eval cbv beta in v)
-            | Compilers.ident.ident ?t
+            | cident ?t
               => constr:({| dep_types := Datatypes.nil ; indep_types := Datatypes.nil ; indep_args := (fun _ => Datatypes.nil) ; to_type := (fun _ _ => t) ; to_ident := fun _ _ _ => f |})
             end.
 
-          Ltac build_ident_infos_of ident_to_cident :=
+          Ltac build_ident_infos_of base cident ident_to_cident :=
             let idc := fresh "idc" in
             let T := fresh in
             let v
@@ -292,21 +292,21 @@ Module Compilers.
                         | T
                           => ltac:(destruct idc;
                                    let T := (eval cbv in (projT2 T)) in
-                                   let v := fun_to_curried_ident_infos T in
+                                   let v := fun_to_curried_ident_infos base cident T in
                                    let v := (eval cbv [type_of_list List.map Type_of_kind_of_type] in v) in
-                                   let c := constr:(@Build_ident_infos v) in
+                                   let c := constr:(@Build_ident_infos base cident v) in
                                    let T := type of c in
                                    let T := (eval cbv [dep_types indep_types indep_args type_of_list List.map Type_of_kind_of_type] in T) in
                                    refine ((c : T) _ _ _ _ _);
                                    repeat decide equality)
                         end) in
-            let v := (eval cbv [dep_types indep_types indep_args type_of_list preinfos List.map Type_of_kind_of_type Datatypes.prod_rect base.type.base_rect unit_rect sumbool_rect prod_rec unit_rec sumbool_rec base.type.base_rec eq_ind_r eq_ind eq_sym eq_rec eq_rect] in v) in
+            let v := (eval cbv [dep_types indep_types indep_args type_of_list preinfos List.map Type_of_kind_of_type Datatypes.prod_rect (*base.type.base_rect base.type.base_rec*) unit_rect sumbool_rect prod_rec unit_rec sumbool_rec eq_ind_r eq_ind eq_sym eq_rec eq_rect] in v) in
             v.
-          Ltac cache_build_ident_infos_of ident_to_cident :=
+          Ltac cache_build_ident_infos_of base cident ident_to_cident :=
             let name := fresh "raw_ident_infos_of" in
-            let term := build_ident_infos_of ident_to_cident in
+            let term := build_ident_infos_of base cident ident_to_cident in
             cache_term term name.
-          Ltac make_ident_infos_of ident_to_cident := let v := build_ident_infos_of ident_to_cident in refine v.
+          Ltac make_ident_infos_of base cident ident_to_cident := let v := build_ident_infos_of base cident ident_to_cident in refine v.
 
           Ltac refine_sigT_and_pair :=
             repeat first [ exact Datatypes.tt
@@ -330,13 +330,13 @@ Module Compilers.
                                 cbn [projT1 projT2]
                            end ].
 
-          Ltac build_split_ident_gen ident ident_infos_of all_idents all_pattern_idents :=
+          Ltac build_split_ident_gen cident ident ident_infos_of all_idents all_pattern_idents :=
             let t := fresh "t" in
             let idc := fresh "idc" in
             let idc' := fresh "idc'" in
             let ridc := fresh "ridc" in
             let v := (eval cbv beta iota zeta in
-                         (fun t (idc : Compilers.ident.ident t)
+                         (fun t (idc : cident t)
                           => let idc' := idc in
                              ltac:(destruct idc;
                                    let idc := (eval cbv [idc'] in idc') in
@@ -351,24 +351,24 @@ Module Compilers.
                                    try solve [ repeat unshelve esplit ])
                              : { ridc : ident & { args : ident_args (preinfos (ident_infos_of ridc))
                                                 | { pf : _ = _
-                                                  | idc = rew [Compilers.ident.ident] pf in assemble_ident args } } })) in
+                                                  | idc = rew [cident] pf in assemble_ident args } } })) in
             v.
-          Ltac cache_build_split_ident_gen ident ident_infos_of all_idents all_pattern_idents :=
+          Ltac cache_build_split_ident_gen cident ident ident_infos_of all_idents all_pattern_idents :=
             let name := fresh "split_raw_ident_gen" in
-            let term := build_split_ident_gen ident ident_infos_of all_idents all_pattern_idents in
+            let term := build_split_ident_gen cident ident ident_infos_of all_idents all_pattern_idents in
             cache_term term name.
-          Ltac make_split_ident_gen ident ident_infos_of all_idents all_pattern_idents :=
-            let v := build_split_ident_gen ident ident_infos_of all_idents all_pattern_idents in refine v.
+          Ltac make_split_ident_gen cident ident ident_infos_of all_idents all_pattern_idents :=
+            let v := build_split_ident_gen cident ident ident_infos_of all_idents all_pattern_idents in refine v.
 
-          Ltac build_invert_bind_args eta_pattern_ident_cps_gen ident all_idents ident_index ident_index_idempotent eta_ident_cps_gen ident_infos_of split_ident_gen :=
+          Ltac build_invert_bind_args cident eta_pattern_ident_cps_gen ident all_idents ident_index ident_index_idempotent eta_ident_cps_gen ident_infos_of split_ident_gen :=
             (eval cbv [folded_invert_bind_args eta_pattern_ident_cps_gen proj1_sig eta_ident_cps_gen2 eta_ident_cps_gen proj1_sig proj2_sig eq_rect eq_sym split_ident_gen projT2 ident_transport_opt ident_beq ident_index Nat.eqb ident_beq_if ident_bl eq_ind_r eq_ind nat_eqb_bl_transparent nat_ind ident_index_inj ident_index_idempotent f_equal] in
-                (@folded_invert_bind_args eta_pattern_ident_cps_gen ident all_idents ident_index ident_index_idempotent eta_ident_cps_gen ident_infos_of split_ident_gen)).
-          Ltac cache_build_invert_bind_args eta_pattern_ident_cps_gen ident all_idents ident_index ident_index_idempotent eta_ident_cps_gen ident_infos_of split_ident_gen :=
+                (@folded_invert_bind_args _ cident eta_pattern_ident_cps_gen ident all_idents ident_index ident_index_idempotent eta_ident_cps_gen ident_infos_of split_ident_gen)).
+          Ltac cache_build_invert_bind_args cident eta_pattern_ident_cps_gen ident all_idents ident_index ident_index_idempotent eta_ident_cps_gen ident_infos_of split_ident_gen :=
             let name := fresh "raw_invert_bind_args" in
-            let term := build_invert_bind_args eta_pattern_ident_cps_gen ident all_idents ident_index ident_index_idempotent eta_ident_cps_gen ident_infos_of split_ident_gen in
+            let term := build_invert_bind_args cident eta_pattern_ident_cps_gen ident all_idents ident_index ident_index_idempotent eta_ident_cps_gen ident_infos_of split_ident_gen in
             cache_term term name.
-          Ltac make_invert_bind_args eta_pattern_ident_cps_gen ident all_idents ident_index ident_index_idempotent eta_ident_cps_gen ident_infos_of split_ident_gen :=
-            let v := build_invert_bind_args eta_pattern_ident_cps_gen ident all_idents ident_index ident_index_idempotent eta_ident_cps_gen ident_infos_of split_ident_gen in refine v.
+          Ltac make_invert_bind_args cident eta_pattern_ident_cps_gen ident all_idents ident_index ident_index_idempotent eta_ident_cps_gen ident_infos_of split_ident_gen :=
+            let v := build_invert_bind_args cident eta_pattern_ident_cps_gen ident all_idents ident_index ident_index_idempotent eta_ident_cps_gen ident_infos_of split_ident_gen in refine v.
 
           Ltac cache_build_invert_bind_args_unknown invert_bind_args :=
             let name := fresh "invert_bind_args_unknown" in
@@ -388,15 +388,15 @@ Module Compilers.
               | forall x : ?A, _ => fill_forall_args open_constr:(v _)
               | _ => v
               end.
-            Ltac print_ident :=
-              let all_idents := Compilers.pattern.Tactics.build_all_idents in
+            Ltac print_ident ident :=
+              let all_idents := Compilers.pattern.Tactics.build_all_idents ident in
               idtac "        Inductive ident :=";
               let v := all_idents in
               map_projT2 ltac:(fun v => let v := fill_forall_args v in idtac "        |" v) v;
               idtac "        .".
             Import Compilers.ident.
             Local Unset Printing Notations.
-            (*Goal True. print_ident. Abort.*)
+            (*Goal True. print_ident ident. Abort.*)
           End MakeIdent.
         End Tactics.
       End ident.
@@ -436,7 +436,7 @@ Module Compilers.
           end.
         Ltac collect_args f := collect_args' f Datatypes.tt.
 
-        Ltac build_split_types ident raw_ident raw_ident_infos_of all_idents all_raw_idents :=
+        Ltac build_split_types base ident raw_ident raw_ident_infos_of all_idents all_raw_idents :=
           let t := fresh "t" in
           let idc := fresh "idc" in
           let idc' := fresh "idc'" in
@@ -453,21 +453,21 @@ Module Compilers.
                               let f := (eval cbv [list_unapp_type_of_list dep_types preinfos raw_ident_infos_of indep_types List.app List.map Type_of_kind_of_type] in
                                            (@list_unapp_type_of_list
                                               (dep_types (preinfos (raw_ident_infos_of v)))
-                                              (List.map Type_of_kind_of_type (indep_types (preinfos (raw_ident_infos_of v)))))) in
+                                              (List.map (Type_of_kind_of_type base) (indep_types (preinfos (raw_ident_infos_of v)))))) in
                               refine (existT
                                         _
                                         v
                                         (f args)))
-                        : { ridc : raw_ident & type_of_list (dep_types (preinfos (raw_ident_infos_of ridc))) * type_of_list_of_kind (indep_types (preinfos (raw_ident_infos_of ridc))) }%type) in
+                        : { ridc : raw_ident & type_of_list (dep_types (preinfos (raw_ident_infos_of ridc))) * type_of_list_of_kind base (indep_types (preinfos (raw_ident_infos_of ridc))) }%type) in
           let v := (eval cbn [Datatypes.fst Datatypes.snd] in v) in
           v.
-        Ltac cache_build_split_types ident raw_ident raw_ident_infos_of all_idents all_raw_idents :=
+        Ltac cache_build_split_types base ident raw_ident raw_ident_infos_of all_idents all_raw_idents :=
           let name := fresh "split_types" in
-          let term := build_split_types ident raw_ident raw_ident_infos_of all_idents all_raw_idents in
+          let term := build_split_types base ident raw_ident raw_ident_infos_of all_idents all_raw_idents in
           cache_term term name.
-        Ltac make_split_types ident raw_ident raw_ident_infos_of all_idents all_raw_idents := let v := build_split_types ident raw_ident raw_ident_infos_of all_idents all_raw_idents in refine v.
+        Ltac make_split_types base ident raw_ident raw_ident_infos_of all_idents all_raw_idents := let v := build_split_types base ident raw_ident raw_ident_infos_of all_idents all_raw_idents in refine v.
 
-        Ltac build_add_types_from_raw_sig ident raw_ident raw_ident_infos_of all_idents all_raw_idents split_types :=
+        Ltac build_add_types_from_raw_sig base ident raw_ident raw_ident_infos_of all_idents all_raw_idents split_types :=
           let ridc := fresh "ridc" in
           let ridc' := fresh "ridc'" in
           let dt := fresh "dt" in
@@ -475,7 +475,7 @@ Module Compilers.
           let v := (eval cbv [id] in
                        (fun (ridc : raw_ident)
                             (dt : type_of_list (dep_types (preinfos (raw_ident_infos_of ridc))))
-                            (idt : type_of_list_of_kind (indep_types (preinfos (raw_ident_infos_of ridc))))
+                            (idt : type_of_list_of_kind base (indep_types (preinfos (raw_ident_infos_of ridc))))
                         => let ridc' := ridc in
                            ltac:(destruct ridc;
                                  let ridc := (eval cbv [ridc'] in ridc') in
@@ -494,12 +494,12 @@ Module Compilers.
                                           end ])
                            : { t : _ & { idc : ident t | @split_types _ idc = existT _ ridc (dt, idt) } })) in
           v.
-        Ltac cache_build_add_types_from_raw_sig ident raw_ident raw_ident_infos_of all_idents all_raw_idents split_types :=
+        Ltac cache_build_add_types_from_raw_sig base ident raw_ident raw_ident_infos_of all_idents all_raw_idents split_types :=
           let name := fresh "add_types_from_raw_sig" in
-          let term := build_add_types_from_raw_sig ident raw_ident raw_ident_infos_of all_idents all_raw_idents split_types in
+          let term := build_add_types_from_raw_sig base ident raw_ident raw_ident_infos_of all_idents all_raw_idents split_types in
           cache_term term name.
-        Ltac make_add_types_from_raw_sig ident raw_ident raw_ident_infos_of all_idents all_raw_idents split_types :=
-          let v := build_add_types_from_raw_sig ident raw_ident raw_ident_infos_of all_idents all_raw_idents split_types in refine v.
+        Ltac make_add_types_from_raw_sig base ident raw_ident raw_ident_infos_of all_idents all_raw_idents split_types :=
+          let v := build_add_types_from_raw_sig base ident raw_ident raw_ident_infos_of all_idents all_raw_idents split_types in refine v.
 
         Ltac prove_to_type_split_types_subst_default_eq _ :=
           let t := fresh "t" in
@@ -508,20 +508,20 @@ Module Compilers.
           intros t idc evm;
           destruct idc; cbv -[type.subst_default base.subst_default];
           cbn [type.subst_default base.subst_default]; reflexivity.
-        Ltac build_to_type_split_types_subst_default_eq raw_ident raw_ident_infos_of ident split_types :=
+        Ltac build_to_type_split_types_subst_default_eq cident raw_ident raw_ident_infos_of ident split_types :=
           constr:(ltac:(prove_to_type_split_types_subst_default_eq ())
                   : forall t idc evm,
                      Raw.ident.to_type
-                       (preinfos (raw_ident_infos_of (projT1 (@split_types_subst_default raw_ident raw_ident_infos_of ident split_types t idc evm))))
-                       (Datatypes.fst (projT2 (@split_types_subst_default raw_ident raw_ident_infos_of ident split_types t idc evm)))
-                       (Datatypes.snd (projT2 (@split_types_subst_default raw_ident raw_ident_infos_of ident split_types t idc evm)))
+                       (preinfos (raw_ident_infos_of (projT1 (@split_types_subst_default _ cident raw_ident raw_ident_infos_of ident split_types t idc evm))))
+                       (Datatypes.fst (projT2 (@split_types_subst_default _ cident raw_ident raw_ident_infos_of ident split_types t idc evm)))
+                       (Datatypes.snd (projT2 (@split_types_subst_default _ cident raw_ident raw_ident_infos_of ident split_types t idc evm)))
                      = type.subst_default t evm).
-        Ltac cache_build_to_type_split_types_subst_default_eq raw_ident raw_ident_infos_of ident split_types :=
+        Ltac cache_build_to_type_split_types_subst_default_eq cident raw_ident raw_ident_infos_of ident split_types :=
           let name := fresh "to_type_split_types_subst_default_eq" in
-          let term := build_to_type_split_types_subst_default_eq raw_ident raw_ident_infos_of ident split_types in
+          let term := build_to_type_split_types_subst_default_eq cident raw_ident raw_ident_infos_of ident split_types in
           cache_term term name.
-        Ltac make_to_type_split_types_subst_default_eq raw_ident raw_ident_infos_of ident split_types :=
-          let res := build_to_type_split_types_subst_default_eq raw_ident raw_ident_infos_of ident split_types in refine res.
+        Ltac make_to_type_split_types_subst_default_eq cident raw_ident raw_ident_infos_of ident split_types :=
+          let res := build_to_type_split_types_subst_default_eq cident raw_ident raw_ident_infos_of ident split_types in refine res.
 
         Ltac prove_projT1_add_types_from_raw_sig_eq _ :=
           let t := fresh "t" in
@@ -537,7 +537,7 @@ Module Compilers.
                           (projT1 (split_raw_ident_gen t idc))
                           (projT1 (proj1_sig (projT2 (split_raw_ident_gen t idc))))
                           (lift_type_of_list_map
-                             (@relax_kind_of_type)
+                             (@relax_kind_of_type _)
                              (Datatypes.fst (projT2 (proj1_sig (projT2 (split_raw_ident_gen t idc)))))))
                      = type.relax t).
         Ltac cache_build_projT1_add_types_from_raw_sig_eq add_types_from_raw_sig split_raw_ident_gen :=
@@ -547,80 +547,80 @@ Module Compilers.
         Ltac make_projT1_add_types_from_raw_sig_eq add_types_from_raw_sig split_raw_ident_gen :=
           let res := build_projT1_add_types_from_raw_sig_eq add_types_from_raw_sig split_raw_ident_gen in refine res.
 
-        Ltac build_arg_types_unfolded raw_ident raw_ident_infos_of ident eta_ident_cps_gen split_types :=
+        Ltac build_arg_types_unfolded cident raw_ident raw_ident_infos_of ident eta_ident_cps_gen split_types :=
           (eval cbv -[base.interp] in
-              (@arg_types raw_ident raw_ident_infos_of ident eta_ident_cps_gen split_types)).
-        Ltac cache_build_arg_types_unfolded raw_ident raw_ident_infos_of ident eta_ident_cps_gen split_types :=
+              (@arg_types _ cident raw_ident raw_ident_infos_of ident eta_ident_cps_gen split_types)).
+        Ltac cache_build_arg_types_unfolded cident raw_ident raw_ident_infos_of ident eta_ident_cps_gen split_types :=
           let name := fresh "arg_types_unfolded" in
-          let term := build_arg_types_unfolded raw_ident raw_ident_infos_of ident eta_ident_cps_gen split_types in
+          let term := build_arg_types_unfolded cident raw_ident raw_ident_infos_of ident eta_ident_cps_gen split_types in
           cache_term term name.
-        Ltac make_arg_types_unfolded raw_ident raw_ident_infos_of ident eta_ident_cps_gen split_types :=
-          let res := build_arg_types_unfolded raw_ident raw_ident_infos_of ident eta_ident_cps_gen split_types in refine res.
+        Ltac make_arg_types_unfolded cident raw_ident raw_ident_infos_of ident eta_ident_cps_gen split_types :=
+          let res := build_arg_types_unfolded cident raw_ident raw_ident_infos_of ident eta_ident_cps_gen split_types in refine res.
 
-        Ltac build_type_of_list_arg_types_beq_unfolded raw_ident raw_ident_infos_of ident eta_ident_cps_gen split_types arg_types_unfolded :=
-          (eval cbv -[Prod.prod_beq arg_types_unfolded type_of_list base.interp_beq base.base_interp_beq Z.eqb base.base_interp ZRange.zrange_beq] in
+        Ltac build_type_of_list_arg_types_beq_unfolded base_interp_beq base_interp cident raw_ident raw_ident_infos_of ident eta_ident_cps_gen split_types arg_types_unfolded :=
+          (eval cbv -[Prod.prod_beq arg_types_unfolded type_of_list base.interp_beq base_interp_beq Z.eqb base_interp ZRange.zrange_beq] in
               (proj1_sig
                  (@eta_ident_cps_gen
                     (fun t idc => type_of_list (@arg_types_unfolded t idc) -> type_of_list (@arg_types_unfolded t idc) -> bool)
-                    (@type_of_list_arg_types_beq raw_ident raw_ident_infos_of ident eta_ident_cps_gen split_types)))).
-        Ltac cache_build_type_of_list_arg_types_beq_unfolded raw_ident raw_ident_infos_of ident eta_ident_cps_gen split_types arg_types_unfolded :=
+                    (@type_of_list_arg_types_beq _ cident raw_ident raw_ident_infos_of ident eta_ident_cps_gen split_types)))).
+        Ltac cache_build_type_of_list_arg_types_beq_unfolded base_interp_beq base_interp cident raw_ident raw_ident_infos_of ident eta_ident_cps_gen split_types arg_types_unfolded :=
           let name := fresh "type_of_list_arg_types_beq_unfolded" in
-          let term := build_type_of_list_arg_types_beq_unfolded raw_ident raw_ident_infos_of ident eta_ident_cps_gen split_types arg_types_unfolded in
+          let term := build_type_of_list_arg_types_beq_unfolded base_interp_beq base_interp cident raw_ident raw_ident_infos_of ident eta_ident_cps_gen split_types arg_types_unfolded in
           cache_term term name.
-        Ltac make_type_of_list_arg_types_beq_unfolded raw_ident raw_ident_infos_of ident eta_ident_cps_gen split_types arg_types_unfolded :=
-          let res := build_type_of_list_arg_types_beq_unfolded raw_ident raw_ident_infos_of ident eta_ident_cps_gen split_types arg_types_unfolded in refine res.
+        Ltac make_type_of_list_arg_types_beq_unfolded base_interp_beq base_interp cident raw_ident raw_ident_infos_of ident eta_ident_cps_gen split_types arg_types_unfolded :=
+          let res := build_type_of_list_arg_types_beq_unfolded base_interp_beq base_interp cident raw_ident raw_ident_infos_of ident eta_ident_cps_gen split_types arg_types_unfolded in refine res.
 
-        Ltac build_to_typed_unfolded raw_ident raw_ident_infos_of ident eta_ident_cps_gen split_types to_type_split_types_subst_default_eq arg_types_unfolded :=
-          let v := (eval cbv -[type.subst_default base.subst_default arg_types_unfolded type_of_list base.base_interp Datatypes.fst Datatypes.snd] in
+        Ltac build_to_typed_unfolded base_interp cident raw_ident raw_ident_infos_of ident eta_ident_cps_gen split_types to_type_split_types_subst_default_eq arg_types_unfolded :=
+          let v := (eval cbv -[type.subst_default base.subst_default arg_types_unfolded type_of_list base_interp Datatypes.fst Datatypes.snd] in
                        (fun t (idc : ident t) (evm : EvarMap)
                         => proj1_sig
                              (@eta_ident_cps_gen
-                                (fun t idc => type_of_list (@arg_types_unfolded t idc) -> Compilers.ident.ident (type.subst_default t evm))
-                                (fun t idc => @to_typed raw_ident raw_ident_infos_of ident eta_ident_cps_gen split_types to_type_split_types_subst_default_eq t idc evm))
+                                (fun t idc => type_of_list (@arg_types_unfolded t idc) -> cident (type.subst_default t evm))
+                                (fun t idc => @to_typed _ cident raw_ident raw_ident_infos_of ident eta_ident_cps_gen split_types to_type_split_types_subst_default_eq t idc evm))
                              t idc)) in
           let v := (eval cbn [Datatypes.fst Datatypes.snd type_of_list] in v) in
           v.
-        Ltac cache_build_to_typed_unfolded raw_ident raw_ident_infos_of ident eta_ident_cps_gen split_types to_type_split_types_subst_default_eq arg_types_unfolded :=
+        Ltac cache_build_to_typed_unfolded base_interp cident raw_ident raw_ident_infos_of ident eta_ident_cps_gen split_types to_type_split_types_subst_default_eq arg_types_unfolded :=
           let name := fresh "to_typed_unfolded" in
-          let term := build_to_typed_unfolded raw_ident raw_ident_infos_of ident eta_ident_cps_gen split_types to_type_split_types_subst_default_eq arg_types_unfolded in
+          let term := build_to_typed_unfolded base_interp cident raw_ident raw_ident_infos_of ident eta_ident_cps_gen split_types to_type_split_types_subst_default_eq arg_types_unfolded in
           cache_term term name.
-        Ltac make_to_typed_unfolded raw_ident raw_ident_infos_of ident eta_ident_cps_gen split_types to_type_split_types_subst_default_eq arg_types_unfolded :=
-          let res := build_to_typed_unfolded raw_ident raw_ident_infos_of ident eta_ident_cps_gen split_types to_type_split_types_subst_default_eq arg_types_unfolded in refine res.
+        Ltac make_to_typed_unfolded base_interp cident raw_ident raw_ident_infos_of ident eta_ident_cps_gen split_types to_type_split_types_subst_default_eq arg_types_unfolded :=
+          let res := build_to_typed_unfolded base_interp cident raw_ident raw_ident_infos_of ident eta_ident_cps_gen split_types to_type_split_types_subst_default_eq arg_types_unfolded in refine res.
 
-        Ltac build_of_typed_ident_unfolded eta_pattern_ident_cps_gen raw_ident raw_ident_infos_of split_raw_ident_gen ident split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq :=
+        Ltac build_of_typed_ident_unfolded cident eta_pattern_ident_cps_gen raw_ident raw_ident_infos_of split_raw_ident_gen ident split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq :=
           let v := (eval cbv -[type.relax base.relax] in
-                       (@of_typed_ident eta_pattern_ident_cps_gen raw_ident raw_ident_infos_of split_raw_ident_gen ident split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq)) in
+                       (@of_typed_ident _ cident eta_pattern_ident_cps_gen raw_ident raw_ident_infos_of split_raw_ident_gen ident split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq)) in
           let v := (eval cbn [type.relax base.relax] in v) in
           v.
-        Ltac cache_build_of_typed_ident_unfolded eta_pattern_ident_cps_gen raw_ident raw_ident_infos_of split_raw_ident_gen ident split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq :=
+        Ltac cache_build_of_typed_ident_unfolded cident eta_pattern_ident_cps_gen raw_ident raw_ident_infos_of split_raw_ident_gen ident split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq :=
           let name := fresh "of_typed_ident_unfolded" in
-          let term := build_of_typed_ident_unfolded eta_pattern_ident_cps_gen raw_ident raw_ident_infos_of split_raw_ident_gen ident split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq in
+          let term := build_of_typed_ident_unfolded cident eta_pattern_ident_cps_gen raw_ident raw_ident_infos_of split_raw_ident_gen ident split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq in
           cache_term term name.
-        Ltac make_of_typed_ident_unfolded eta_pattern_ident_cps_gen raw_ident raw_ident_infos_of split_raw_ident_gen ident split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq :=
-          let res := build_of_typed_ident_unfolded eta_pattern_ident_cps_gen raw_ident raw_ident_infos_of split_raw_ident_gen ident split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq in refine res.
+        Ltac make_of_typed_ident_unfolded cident eta_pattern_ident_cps_gen raw_ident raw_ident_infos_of split_raw_ident_gen ident split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq :=
+          let res := build_of_typed_ident_unfolded cident eta_pattern_ident_cps_gen raw_ident raw_ident_infos_of split_raw_ident_gen ident split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq in refine res.
 
-        Ltac build_arg_types_of_typed_ident_unfolded eta_pattern_ident_cps_gen raw_ident raw_ident_infos_of split_raw_ident_gen ident eta_ident_cps_gen split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq arg_types_unfolded of_typed_ident_unfolded :=
-          (eval cbv -[type.relax base.relax type_of_list of_typed_ident arg_types_unfolded of_typed_ident_unfolded base.base_interp] in
+        Ltac build_arg_types_of_typed_ident_unfolded base_interp cident eta_pattern_ident_cps_gen raw_ident raw_ident_infos_of split_raw_ident_gen ident eta_ident_cps_gen split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq arg_types_unfolded of_typed_ident_unfolded :=
+          (eval cbv -[type.relax base.relax type_of_list of_typed_ident arg_types_unfolded of_typed_ident_unfolded base_interp] in
               (proj1_sig
                  (@eta_pattern_ident_cps_gen
                     (fun t idc => type_of_list (@arg_types_unfolded _ (@of_typed_ident_unfolded _ idc)))
-                    (@arg_types_of_typed_ident eta_pattern_ident_cps_gen raw_ident raw_ident_infos_of split_raw_ident_gen ident eta_ident_cps_gen split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq)))).
-        Ltac cache_build_arg_types_of_typed_ident_unfolded eta_pattern_ident_cps_gen raw_ident raw_ident_infos_of split_raw_ident_gen ident eta_ident_cps_gen split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq arg_types_unfolded of_typed_ident_unfolded :=
+                    (@arg_types_of_typed_ident _ cident eta_pattern_ident_cps_gen raw_ident raw_ident_infos_of split_raw_ident_gen ident eta_ident_cps_gen split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq)))).
+        Ltac cache_build_arg_types_of_typed_ident_unfolded base_interp cident eta_pattern_ident_cps_gen raw_ident raw_ident_infos_of split_raw_ident_gen ident eta_ident_cps_gen split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq arg_types_unfolded of_typed_ident_unfolded :=
           let name := fresh "arg_types_of_typed_ident_unfolded" in
-          let term := build_arg_types_of_typed_ident_unfolded eta_pattern_ident_cps_gen raw_ident raw_ident_infos_of split_raw_ident_gen ident eta_ident_cps_gen split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq arg_types_unfolded of_typed_ident_unfolded in
+          let term := build_arg_types_of_typed_ident_unfolded base_interp cident eta_pattern_ident_cps_gen raw_ident raw_ident_infos_of split_raw_ident_gen ident eta_ident_cps_gen split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq arg_types_unfolded of_typed_ident_unfolded in
           cache_term term name.
-        Ltac make_arg_types_of_typed_ident_unfolded eta_pattern_ident_cps_gen raw_ident raw_ident_infos_of split_raw_ident_gen ident eta_ident_cps_gen split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq arg_types_unfolded of_typed_ident_unfolded :=
-          let res := build_arg_types_of_typed_ident_unfolded eta_pattern_ident_cps_gen raw_ident raw_ident_infos_of split_raw_ident_gen ident eta_ident_cps_gen split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq arg_types_unfolded of_typed_ident_unfolded in refine res.
+        Ltac make_arg_types_of_typed_ident_unfolded base_interp cident eta_pattern_ident_cps_gen raw_ident raw_ident_infos_of split_raw_ident_gen ident eta_ident_cps_gen split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq arg_types_unfolded of_typed_ident_unfolded :=
+          let res := build_arg_types_of_typed_ident_unfolded base_interp cident eta_pattern_ident_cps_gen raw_ident raw_ident_infos_of split_raw_ident_gen ident eta_ident_cps_gen split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq arg_types_unfolded of_typed_ident_unfolded in refine res.
 
-        Ltac build_unify eta_pattern_ident_cps_gen eta_pattern_ident_cps_gen_expand_literal raw_ident all_raw_idents raw_ident_index raw_ident_index_idempotent eta_raw_ident_cps_gen raw_ident_infos_of split_raw_ident_gen ident eta_ident_cps_gen eta_ident_cps_gen_expand_literal split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq :=
-          let v := (eval vm_compute in (@folded_unify eta_pattern_ident_cps_gen eta_pattern_ident_cps_gen_expand_literal raw_ident all_raw_idents raw_ident_index raw_ident_index_idempotent eta_raw_ident_cps_gen raw_ident_infos_of split_raw_ident_gen ident eta_ident_cps_gen eta_ident_cps_gen_expand_literal split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq)) in
-          constr:(v <: forall {t t'} (pidc : ident t) (idc : Compilers.ident.ident t') (*evm : EvarMap*), Datatypes.option (type_of_list (@arg_types raw_ident raw_ident_infos_of ident eta_ident_cps_gen split_types t pidc))).
-        Ltac cache_build_unify eta_pattern_ident_cps_gen eta_pattern_ident_cps_gen_expand_literal raw_ident all_raw_idents raw_ident_index raw_ident_index_idempotent eta_raw_ident_cps_gen raw_ident_infos_of split_raw_ident_gen ident eta_ident_cps_gen eta_ident_cps_gen_expand_literal split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq :=
+        Ltac build_unify cident eta_pattern_ident_cps_gen eta_pattern_ident_cps_gen_expand_literal raw_ident all_raw_idents raw_ident_index raw_ident_index_idempotent eta_raw_ident_cps_gen raw_ident_infos_of split_raw_ident_gen ident eta_ident_cps_gen eta_ident_cps_gen_expand_literal split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq :=
+          let v := (eval vm_compute in (@folded_unify (*base*)_ cident eta_pattern_ident_cps_gen eta_pattern_ident_cps_gen_expand_literal raw_ident all_raw_idents raw_ident_index raw_ident_index_idempotent eta_raw_ident_cps_gen raw_ident_infos_of split_raw_ident_gen ident eta_ident_cps_gen eta_ident_cps_gen_expand_literal split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq)) in
+          constr:(v <: forall {t t'} (pidc : ident t) (idc : cident t') (*evm : EvarMap*), Datatypes.option (type_of_list (@arg_types _ cident raw_ident raw_ident_infos_of ident eta_ident_cps_gen split_types t pidc))).
+        Ltac cache_build_unify cident eta_pattern_ident_cps_gen eta_pattern_ident_cps_gen_expand_literal raw_ident all_raw_idents raw_ident_index raw_ident_index_idempotent eta_raw_ident_cps_gen raw_ident_infos_of split_raw_ident_gen ident eta_ident_cps_gen eta_ident_cps_gen_expand_literal split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq :=
           let name := fresh "unify" in
-          let term := build_unify eta_pattern_ident_cps_gen eta_pattern_ident_cps_gen_expand_literal raw_ident all_raw_idents raw_ident_index raw_ident_index_idempotent eta_raw_ident_cps_gen raw_ident_infos_of split_raw_ident_gen ident eta_ident_cps_gen eta_ident_cps_gen_expand_literal split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq in
+          let term := build_unify cident eta_pattern_ident_cps_gen eta_pattern_ident_cps_gen_expand_literal raw_ident all_raw_idents raw_ident_index raw_ident_index_idempotent eta_raw_ident_cps_gen raw_ident_infos_of split_raw_ident_gen ident eta_ident_cps_gen eta_ident_cps_gen_expand_literal split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq in
           cache_term term name.
-        Ltac make_unify eta_pattern_ident_cps_gen eta_pattern_ident_cps_gen_expand_literal raw_ident all_raw_idents raw_ident_index raw_ident_index_idempotent eta_raw_ident_cps_gen raw_ident_infos_of split_raw_ident_gen ident eta_ident_cps_gen eta_ident_cps_gen_expand_literal split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq :=
-          let res := build_unify eta_pattern_ident_cps_gen eta_pattern_ident_cps_gen_expand_literal raw_ident all_raw_idents raw_ident_index raw_ident_index_idempotent eta_raw_ident_cps_gen raw_ident_infos_of split_raw_ident_gen ident eta_ident_cps_gen eta_ident_cps_gen_expand_literal split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq in refine res.
+        Ltac make_unify cident eta_pattern_ident_cps_gen eta_pattern_ident_cps_gen_expand_literal raw_ident all_raw_idents raw_ident_index raw_ident_index_idempotent eta_raw_ident_cps_gen raw_ident_infos_of split_raw_ident_gen ident eta_ident_cps_gen eta_ident_cps_gen_expand_literal split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq :=
+          let res := build_unify cident eta_pattern_ident_cps_gen eta_pattern_ident_cps_gen_expand_literal raw_ident all_raw_idents raw_ident_index raw_ident_index_idempotent eta_raw_ident_cps_gen raw_ident_infos_of split_raw_ident_gen ident eta_ident_cps_gen eta_ident_cps_gen_expand_literal split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq in refine res.
 
         Ltac cache_build_unify_unknown unify :=
           let name := fresh "unify_unknown" in
@@ -654,21 +654,34 @@ Module Compilers.
                             end)
             | ?T => T
             end.
-          Ltac print_ident :=
-            let all_idents := Compilers.pattern.Tactics.build_all_idents in
-            epose proof (_ : type -> Set) as ident;
-            idtac "      Inductive ident : type -> Set :=";
+          Ltac Type_to_Set term :=
+            match term with
+            | context T[Type] => let T' := context T[Set] in Type_to_Set T'
+            | _ => term
+            end.
+          Ltac Set_to_Type term :=
+            match term with
+            | context T[Set] => let T' := context T[Type] in Set_to_Type T'
+            | _ => term
+            end.
+          Ltac print_ident cident :=
+            let all_idents := Compilers.pattern.Tactics.build_all_idents cident in
+            epose proof (_ : type _ -> Type) as ident;
+            idtac "      Inductive ident : type -> Type :=";
             let v := (eval cbv [Compilers.base.interp] in all_idents) in
             map_projT2 ltac:(fun v
                              => let T := type of v in
                                 let T := (eval cbv [Compilers.base.interp] in T) in
                                 let T := strip_nondep T in
-                                let T := (eval pattern Compilers.base.type.type, Compilers.base.type.prod, Compilers.base.type.list, Compilers.base.type.option, (@Compilers.base.type.type_base), (@Compilers.ident) in T) in
+                                let T := (eval pattern Compilers.base.type.type, (@Compilers.base.type.prod), (@Compilers.base.type.list), (@Compilers.base.type.option), (@Compilers.base.type.unit), (@Compilers.base.type.type_base), cident in T) in
                                 let T := lazymatch T with
-                                         | ?f _ _ _ _ _ _ => f
+                                         | ?f _ _ _ _ _ _ _ => f
                                          end in
+                                (* COQBUG work around Algebraic universe on the right: *)
+                                let T := Type_to_Set T in
+                                let T := Set_to_Type T in
                                 let T := (eval cbv beta in
-                                             (T base.type.type base.type.prod base.type.list base.type.option (@base.type.type_base) (@ident))) in
+                                             (T base.type.type (@base.type.prod) (@base.type.list) (@base.type.option) (@base.type.unit) (@base.type.type_base) (@ident))) in
                                 let v := fill_forall_args v in
                                 idtac "        |" v ":" T) v;
             idtac "      .".
@@ -676,21 +689,27 @@ Module Compilers.
           Local Set Printing Coercions.
           Local Unset Printing Notations.
           Local Set Printing Width 10000.
-          (*Goal True. print_ident. Abort.*)
+          (*Goal True. print_ident Compilers.ident.ident. Abort.*)
         End PrintIdent.
       End Tactics.
 
       Module Tactic.
-        Ltac build_package raw_ident pattern_ident :=
-          let ident := Compilers.ident.ident in
+        Ltac build_package exprInfo exprExtraInfo ident raw_ident pattern_ident :=
+          let base_interp := lazymatch (eval hnf in exprInfo) with {| Classes.base_interp := ?base_interp |} => base_interp end in
+          let base_interp_beq := lazymatch (eval hnf in exprExtraInfo) with {| Classes.base_interp_beq := ?base_interp_beq |} => base_interp_beq end in
+          let base := lazymatch type of ident with
+                      | Compilers.type.type (Compilers.base.type ?base) -> _ => base
+                      | ?T => let exp := uconstr:(Compilers.type.type (Compilers.base.type ?base)) in
+                              constr_fail_with ltac:(fun _ => fail 1 "Invalid type" T "of ident (" ident "); expected" exp)
+                      end in
           let __ := Tactics.debug1 ltac:(fun _ => idtac "Building all_idents...") in
-          let all_idents := Compilers.pattern.Tactics.cache_build_all_idents in
+          let all_idents := Compilers.pattern.Tactics.cache_build_all_idents ident in
           let __ := Tactics.debug1 ltac:(fun _ => idtac "Building ident_index...") in
           let ident_index := Compilers.pattern.Tactics.cache_build_ident_index (forall t, ident t -> nat) all_idents in
           let __ := Tactics.debug1 ltac:(fun _ => idtac "Building eta_ident_cps_gen...") in
-          let eta_ident_cps_gen := Compilers.pattern.Tactics.cache_build_eta_ident_cps_gen ident in
+          let eta_ident_cps_gen := Compilers.pattern.Tactics.cache_build_eta_ident_cps_gen base ident in
           let __ := Tactics.debug1 ltac:(fun _ => idtac "Building eta_ident_cps_gen_expand_literal...") in
-          let eta_ident_cps_gen_expand_literal := Compilers.pattern.Tactics.cache_build_eta_ident_cps_gen_expand_literal ident in
+          let eta_ident_cps_gen_expand_literal := Compilers.pattern.Tactics.cache_build_eta_ident_cps_gen_expand_literal base ident in
           (*let eta_ident_cps_gen2 := constr:(@Compilers.pattern.eta_ident_cps_gen2 eta_ident_cps_gen) in
         let __ := Tactics.debug1 ltac:(fun _ => idtac "Building eta_ident_cps_gen3...") in
         let eta_ident_cps_gen3 := constr:(@Compilers.pattern.eta_ident_cps_gen3 eta_ident_cps_gen) in*)
@@ -707,7 +726,7 @@ Module Compilers.
           let __ := Tactics.debug1 ltac:(fun _ => idtac "Building raw_ident_index_idempotent...") in
           let raw_ident_index_idempotent := Compilers.pattern.Raw.ident.Tactics.cache_build_ident_index_idempotent all_raw_idents raw_ident_index in
           let __ := Tactics.debug1 ltac:(fun _ => idtac "Building eta_raw_ident_cps_gen...") in
-          let eta_raw_ident_cps_gen := Compilers.pattern.Tactics.cache_build_eta_ident_cps_gen raw_ident in
+          let eta_raw_ident_cps_gen := Compilers.pattern.Tactics.cache_build_eta_ident_cps_gen base raw_ident in
           (*let eta_raw_ident_cps_gen2 := constr:(@Raw.ident.eta_ident_cps_gen2 raw_ident eta_raw_ident_cps_gen) in
         let __ := Tactics.debug1 ltac:(fun _ => idtac "Building eta_raw_ident_cps_gen3...") in
         let eta_raw_ident_cps_gen3 := constr:(@Raw.ident.eta_ident_cps_gen3 raw_ident eta_raw_ident_cps_gen) in
@@ -726,9 +745,9 @@ Module Compilers.
           let __ := Tactics.debug1 ltac:(fun _ => idtac "Building raw_ident_to_ident...") in
           let raw_ident_to_ident := constr:(@Raw.ident.ident_to_cident all_idents raw_ident raw_ident_index eta_raw_ident_cps_gen) in
           let __ := Tactics.debug1 ltac:(fun _ => idtac "Building raw_ident_infos_of...") in
-          let raw_ident_infos_of := Compilers.pattern.Raw.ident.Tactics.cache_build_ident_infos_of raw_ident_to_ident in
+          let raw_ident_infos_of := Compilers.pattern.Raw.ident.Tactics.cache_build_ident_infos_of base ident raw_ident_to_ident in
           let __ := Tactics.debug1 ltac:(fun _ => idtac "Building split_raw_ident_gen...") in
-          let split_raw_ident_gen := Compilers.pattern.Raw.ident.Tactics.cache_build_split_ident_gen raw_ident raw_ident_infos_of all_raw_idents all_idents in
+          let split_raw_ident_gen := Compilers.pattern.Raw.ident.Tactics.cache_build_split_ident_gen ident raw_ident raw_ident_infos_of all_raw_idents all_idents in
           (*let prefull_types := constr:(@Raw.ident.prefull_types raw_ident raw_ident_infos_of) in
         let __ := Tactics.debug1 ltac:(fun _ => idtac "Building full_types...") in
         let full_types := constr:(@Raw.ident.full_types raw_ident eta_raw_ident_cps_gen raw_ident_infos_of) in
@@ -737,9 +756,9 @@ Module Compilers.
         let __ := Tactics.debug1 ltac:(fun _ => idtac "Building type_of...") in
         let type_of := constr:(@Raw.ident.type_of raw_ident eta_raw_ident_cps_gen raw_ident_infos_of) in
         let __ := Tactics.debug1 ltac:(fun _ => idtac "Building folded_invert_bind_args...") in
-        let folded_invert_bind_args := constr:(@Raw.ident.folded_invert_bind_args eta_ident_cps_gen raw_ident all_raw_idents raw_ident_index raw_ident_index_idempotent eta_raw_ident_cps_gen raw_ident_infos_of split_raw_ident_gen) in*)
+        let folded_invert_bind_args := constr:(@Raw.ident.folded_invert_bind_args base ident eta_ident_cps_gen raw_ident all_raw_idents raw_ident_index raw_ident_index_idempotent eta_raw_ident_cps_gen raw_ident_infos_of split_raw_ident_gen) in*)
           let __ := Tactics.debug1 ltac:(fun _ => idtac "Building invert_bind_args...") in
-          let invert_bind_args := Compilers.pattern.Raw.ident.Tactics.cache_build_invert_bind_args eta_ident_cps_gen raw_ident all_raw_idents raw_ident_index raw_ident_index_idempotent eta_raw_ident_cps_gen raw_ident_infos_of split_raw_ident_gen in
+          let invert_bind_args := Compilers.pattern.Raw.ident.Tactics.cache_build_invert_bind_args ident eta_ident_cps_gen raw_ident all_raw_idents raw_ident_index raw_ident_index_idempotent eta_raw_ident_cps_gen raw_ident_infos_of split_raw_ident_gen in
           let __ := Tactics.debug1 ltac:(fun _ => idtac "Building invert_bind_args_unknown...") in
           let invert_bind_args_unknown := Compilers.pattern.Raw.ident.Tactics.cache_build_invert_bind_args_unknown invert_bind_args in
           (*let raw_to_typed := constr:(@Raw.ident.to_typed raw_ident eta_raw_ident_cps_gen raw_ident_infos_of) in
@@ -750,37 +769,38 @@ Module Compilers.
           let __ := Tactics.debug1 ltac:(fun _ => idtac "Building all_pattern_idents...") in
           let all_pattern_idents := Compilers.pattern.ident.Tactics.cache_build_all_idents pattern_ident in
           let __ := Tactics.debug1 ltac:(fun _ => idtac "Building eta_pattern_ident_cps_gen...") in
-          let eta_pattern_ident_cps_gen := Compilers.pattern.Tactics.cache_build_eta_ident_cps_gen pattern_ident in
+          let eta_pattern_ident_cps_gen := Compilers.pattern.Tactics.cache_build_eta_ident_cps_gen base pattern_ident in
           let __ := Tactics.debug1 ltac:(fun _ => idtac "Building eta_pattern_ident_cps_gen_expand_literal...") in
-          let eta_pattern_ident_cps_gen_expand_literal := Compilers.pattern.Tactics.cache_build_eta_ident_cps_gen_expand_literal pattern_ident in
+          let eta_pattern_ident_cps_gen_expand_literal := Compilers.pattern.Tactics.cache_build_eta_ident_cps_gen_expand_literal base pattern_ident in
           (*let eta_pattern_ident_cps_gen2 := constr:(@ident.eta_ident_cps_gen2 pattern_ident eta_pattern_ident_cps_gen) in
         let __ := Tactics.debug1 ltac:(fun _ => idtac "Building eta_pattern_ident_cps_gen3...") in
         let eta_pattern_ident_cps_gen3 := constr:(@ident.eta_ident_cps_gen3 pattern_ident eta_pattern_ident_cps_gen) in*)
           let __ := Tactics.debug1 ltac:(fun _ => idtac "Building split_types...") in
-          let split_types := Compilers.pattern.ident.Tactics.cache_build_split_types pattern_ident raw_ident raw_ident_infos_of all_pattern_idents all_raw_idents in
+          let split_types := Compilers.pattern.ident.Tactics.cache_build_split_types base pattern_ident raw_ident raw_ident_infos_of all_pattern_idents all_raw_idents in
           let __ := Tactics.debug1 ltac:(fun _ => idtac "Building add_types_from_raw_sig...") in
-          let add_types_from_raw_sig := Compilers.pattern.ident.Tactics.cache_build_add_types_from_raw_sig pattern_ident raw_ident raw_ident_infos_of all_pattern_idents all_raw_idents split_types in
+          let add_types_from_raw_sig := Compilers.pattern.ident.Tactics.cache_build_add_types_from_raw_sig base pattern_ident raw_ident raw_ident_infos_of all_pattern_idents all_raw_idents split_types in
           (*let split_types_subst_default := constr:(@ident.split_types_subst_default raw_ident raw_ident_infos_of pattern_ident split_types) in*)
           let __ := Tactics.debug1 ltac:(fun _ => idtac "Building to_type_split_types_subst_default_eq...") in
-          let to_type_split_types_subst_default_eq := Compilers.pattern.ident.Tactics.cache_build_to_type_split_types_subst_default_eq raw_ident raw_ident_infos_of pattern_ident split_types in
+          let to_type_split_types_subst_default_eq := Compilers.pattern.ident.Tactics.cache_build_to_type_split_types_subst_default_eq ident raw_ident raw_ident_infos_of pattern_ident split_types in
           let __ := Tactics.debug1 ltac:(fun _ => idtac "Building projT1_add_types_from_raw_sig_eq...") in
           let projT1_add_types_from_raw_sig_eq := Compilers.pattern.ident.Tactics.cache_build_projT1_add_types_from_raw_sig_eq add_types_from_raw_sig split_raw_ident_gen in
           let __ := Tactics.debug1 ltac:(fun _ => idtac "Building arg_types_unfolded...") in
-          let arg_types_unfolded := Compilers.pattern.ident.Tactics.cache_build_arg_types_unfolded raw_ident raw_ident_infos_of pattern_ident eta_pattern_ident_cps_gen split_types in
+          let arg_types_unfolded := Compilers.pattern.ident.Tactics.cache_build_arg_types_unfolded ident raw_ident raw_ident_infos_of pattern_ident eta_pattern_ident_cps_gen split_types in
           let __ := Tactics.debug1 ltac:(fun _ => idtac "Building type_of_list_arg_types_beq_unfolded...") in
-          let type_of_list_arg_types_beq_unfolded := Compilers.pattern.ident.Tactics.cache_build_type_of_list_arg_types_beq_unfolded raw_ident raw_ident_infos_of pattern_ident eta_pattern_ident_cps_gen split_types arg_types_unfolded in
+          let type_of_list_arg_types_beq_unfolded := Compilers.pattern.ident.Tactics.cache_build_type_of_list_arg_types_beq_unfolded base_interp_beq base_interp ident raw_ident raw_ident_infos_of pattern_ident eta_pattern_ident_cps_gen split_types arg_types_unfolded in
           let __ := Tactics.debug1 ltac:(fun _ => idtac "Building to_typed_unfolded...") in
-          let to_typed_unfolded := Compilers.pattern.ident.Tactics.cache_build_to_typed_unfolded raw_ident raw_ident_infos_of pattern_ident eta_pattern_ident_cps_gen split_types to_type_split_types_subst_default_eq arg_types_unfolded in
+          let to_typed_unfolded := Compilers.pattern.ident.Tactics.cache_build_to_typed_unfolded base_interp ident raw_ident raw_ident_infos_of pattern_ident eta_pattern_ident_cps_gen split_types to_type_split_types_subst_default_eq arg_types_unfolded in
           let __ := Tactics.debug1 ltac:(fun _ => idtac "Building of_typed_ident_unfolded...") in
-          let of_typed_ident_unfolded := Compilers.pattern.ident.Tactics.cache_build_of_typed_ident_unfolded eta_ident_cps_gen raw_ident raw_ident_infos_of split_raw_ident_gen pattern_ident split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq in
+          let of_typed_ident_unfolded := Compilers.pattern.ident.Tactics.cache_build_of_typed_ident_unfolded ident eta_ident_cps_gen raw_ident raw_ident_infos_of split_raw_ident_gen pattern_ident split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq in
           let __ := Tactics.debug1 ltac:(fun _ => idtac "Building arg_types_of_typed_ident_unfolded...") in
-          let arg_types_of_typed_ident_unfolded := Compilers.pattern.ident.Tactics.cache_build_arg_types_of_typed_ident_unfolded eta_ident_cps_gen raw_ident raw_ident_infos_of split_raw_ident_gen pattern_ident eta_pattern_ident_cps_gen split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq arg_types_unfolded of_typed_ident_unfolded in
+          let arg_types_of_typed_ident_unfolded := Compilers.pattern.ident.Tactics.cache_build_arg_types_of_typed_ident_unfolded base_interp ident eta_ident_cps_gen raw_ident raw_ident_infos_of split_raw_ident_gen pattern_ident eta_pattern_ident_cps_gen split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq arg_types_unfolded of_typed_ident_unfolded in
           let __ := Tactics.debug1 ltac:(fun _ => idtac "Building unify...") in
-          let unify := Compilers.pattern.ident.Tactics.cache_build_unify eta_ident_cps_gen eta_ident_cps_gen_expand_literal raw_ident all_raw_idents raw_ident_index raw_ident_index_idempotent eta_raw_ident_cps_gen raw_ident_infos_of split_raw_ident_gen pattern_ident eta_pattern_ident_cps_gen eta_pattern_ident_cps_gen_expand_literal split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq in
+          let unify := Compilers.pattern.ident.Tactics.cache_build_unify ident eta_ident_cps_gen eta_ident_cps_gen_expand_literal raw_ident all_raw_idents raw_ident_index raw_ident_index_idempotent eta_raw_ident_cps_gen raw_ident_infos_of split_raw_ident_gen pattern_ident eta_pattern_ident_cps_gen eta_pattern_ident_cps_gen_expand_literal split_types add_types_from_raw_sig projT1_add_types_from_raw_sig_eq in
           let __ := Tactics.debug1 ltac:(fun _ => idtac "Building unify_unknown...") in
           let unify_unknown := Compilers.pattern.ident.Tactics.cache_build_unify_unknown unify in
           let __ := Tactics.debug1 ltac:(fun _ => idtac "Building final ident package...") in
           constr:(@GoalType.Build_package
+                    base ident
                     all_idents
                     ident_index
                     eta_ident_cps_gen
@@ -811,8 +831,8 @@ Module Compilers.
                     arg_types_of_typed_ident_unfolded
                     unify
                     unify_unknown).
-        Ltac make_package raw_ident pattern_ident :=
-          let res := build_package raw_ident pattern_ident in refine res.
+        Ltac make_package exprInfo exprExtraInfo ident raw_ident pattern_ident :=
+          let res := build_package exprInfo exprExtraInfo ident raw_ident pattern_ident in refine res.
       End Tactic.
     End ident.
   End pattern.

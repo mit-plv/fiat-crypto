@@ -427,6 +427,7 @@ Module Compilers.
                            | progress expr.inversion_expr ].
           Qed.
 
+          Local Opaque ident.ident_Some ident.ident_None.
           Lemma wf_annotate
                 is_let_bound t G
                 v1 v2 (Hv : abstract_domain'_R t v1 v2)
@@ -435,7 +436,7 @@ Module Compilers.
           Proof using abstract_interp_ident_Proper annotate_ident_Proper extract_list_state_length extract_list_state_rel extract_option_state_rel is_annotated_for_Proper.
             revert dependent G; induction t; intros;
               cbn [ident.annotate]; try apply wf_annotate_base; trivial.
-            all: repeat first [ lazymatch goal with
+            all: try solve [ repeat first [ lazymatch goal with
                                 | [ H : expr.wf _ ?e1 ?e2, H' : reflect_list ?e1 = Some _, H'' : reflect_list ?e2 = None |- _ ]
                                   => apply expr.wf_reflect_list in H; rewrite H', H'' in H; exfalso; clear -H; intuition congruence
                                 | [ H : expr.wf _ ?e1 ?e2, H' : reflect_list ?e2 = Some _, H'' : reflect_list ?e1 = None |- _ ]
@@ -512,7 +513,7 @@ Module Compilers.
                               | progress destruct_head' option
                               | progress cbn [Option.combine option_map UnderLets.splice_option reify_option option_rect] in *
                               | progress cbn [type.decode f_equal eq_rect fst snd] in *
-                              | solve [ wf_t ] ].
+                              | solve [ wf_t ] ] ].
           Qed.
 
           Local Notation wf_value_with_lets := (@wf_value_with_lets base.type ident abstract_domain' abstract_domain'_R var1 var2).
@@ -526,6 +527,7 @@ Module Compilers.
                 let b' := type_of_value b in
                 constr:(type.arrow a' b')
             end.
+          Local Opaque ident.ident_Literal.
           Lemma wf_interp_ident_nth_default (annotate_with_state : bool) G T
             : wf_value_with_lets G (@interp_ident1 annotate_with_state _ (@ident.List_nth_default T)) (@interp_ident2 annotate_with_state _ (@ident.List_nth_default T)).
           Proof using abstract_interp_ident_Proper annotate_ident_Proper extract_list_state_length extract_list_state_rel extract_option_state_rel is_annotated_for_Proper.
@@ -533,7 +535,6 @@ Module Compilers.
             { intros; subst.
               destruct_head'_prod; destruct_head'_and; cbn [fst snd] in *.
               repeat first [ progress subst
-                           | progress cbn [invert_Literal ident.invert_Literal] in *
                            | lazymatch goal with
                              | [ H : expr.wf _ ?e1 ?e2, H' : reflect_list ?e1 = Some _, H'' : reflect_list ?e2 = None |- _ ]
                                => apply expr.wf_reflect_list in H; rewrite H', H'' in H; exfalso; clear -H; intuition congruence
@@ -571,6 +572,8 @@ Module Compilers.
                                  | | ]
                              | [ |- UnderLets.wf ?Q ?G (UnderLets.Base _) (UnderLets.Base _) ]
                                => constructor
+                             | [ H : ident.ident_Literal _ = ident.ident_Literal _ |- _ ]
+                               => apply (f_equal (fun idc => invert_Literal (var:=var1) (#idc))) in H; rewrite !expr.invert_Literal_ident_Literal in H
                              | [ H : _ = _ :> ident _ |- _ ] => inversion H; clear H
                              | [ H : List.nth_error _ _ = None |- _ ] => apply List.nth_error_None in H
                              | [ H : List.nth_error _ _ = Some _ |- _ ]
@@ -856,7 +859,7 @@ Module Compilers.
         (Hwf : Wf E)
         {b_in_Proper : Proper (type.and_for_each_lhs_of_arrow (@abstract_domain_R base.type ZRange.type.base.option.interp (fun t0 : base.type => eq))) b_in}
     : Wf (PartialEvaluateWithListInfoFromBounds E b_in).
-  Proof. cbv [PartialEvaluateWithListInfoFromBounds]; auto with wf. Qed.
+  Proof. cbv [PartialEvaluateWithListInfoFromBounds]; eauto with wf. Qed.
   Hint Resolve Wf_PartialEvaluateWithListInfoFromBounds : wf.
 
   Lemma Wf_PartialEvaluateWithBounds
@@ -865,6 +868,6 @@ Module Compilers.
         (Hwf : Wf E)
         {b_in_Proper : Proper (type.and_for_each_lhs_of_arrow (@abstract_domain_R base.type ZRange.type.base.option.interp (fun t0 : base.type => eq))) b_in}
     : Wf (PartialEvaluateWithBounds relax_zrange E b_in).
-  Proof. cbv [PartialEvaluateWithBounds]; auto with wf. Qed.
+  Proof. cbv [PartialEvaluateWithBounds]; eauto with wf. Qed.
   Hint Resolve Wf_PartialEvaluateWithBounds : wf.
 End Compilers.

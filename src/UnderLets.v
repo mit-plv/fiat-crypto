@@ -60,28 +60,13 @@ Module Compilers.
         := SubstVarLike (fun var t => is_recursively_var_or_ident should_subst_ident) e.
     End with_ident.
 
-    Definition ident_is_var_like {t} (idc : ident t) : bool
-      := match idc with
-         | ident.Literal _ _
-         | ident.nil _
-         | ident.cons _
-         | ident.pair _ _
-         | ident.fst _ _
-         | ident.snd _ _
-         | ident.Z_opp
-         | ident.Z_cast _
-         | ident.Z_cast2 _
-         | ident.Z_combine_at_bitwidth
-           => true
-         | _ => false
-         end.
+    (*
     Definition is_var_fst_snd_pair_opp_cast {var} {t} (e : expr (var:=var) t) : bool
       := @is_recursively_var_or_ident base.type ident var (@ident_is_var_like) t e.
-    Definition IsVarFstSndPairOppCast {t} (e : expr.Expr t) : bool
-      := @is_var_fst_snd_pair_opp_cast (fun _ => unit) t (e _).
 
     Definition SubstVarFstSndPairOppCast {t} (e : expr.Expr t) : expr.Expr t
       := @SubstVarOrIdent base.type ident (@ident_is_var_like) t e.
+     *)
   End SubstVarLike.
 
   Module UnderLets.
@@ -170,93 +155,109 @@ Module Compilers.
     End with_var2.
 
     Section reify.
-      Context {var : type.type base.type -> Type}.
-      Local Notation type := (type.type base.type).
-      Local Notation expr := (@expr.expr base.type ident var).
-      Local Notation UnderLets := (@UnderLets.UnderLets base.type ident var).
-      Let type_base (t : base.type) : type := type.base t.
-      Coercion type_base : base.type >-> type.
+      Context {base : Type}
+              {base_interp : base -> Type}
+              {try_make_transport_base_type_cps : @type.try_make_transport_cpsT base}.
+      Local Notation base_type := (@base.type base).
+      Local Notation type := (@type.type base_type).
+      Context {ident : type -> Type}.
+      Context {invertIdent : @InvertIdentT base base_interp ident}.
+      Context {buildIdent : @ident.BuildIdentT base base_interp ident}.
+      Context (ident_is_var_like : forall t, ident t -> bool).
+      Let type_base (x : base) : @base.type base := base.type.type_base x.
+      Let base' {bt} (x : Compilers.base.type bt) : type.type _ := type.base x.
+      Local Coercion base' : base.type >-> type.type.
+      Local Coercion type_base : base >-> base.type.
+      Section with_var.
+        Context {var : type -> Type}.
+        Local Notation expr := (@expr.expr base_type ident var).
+        Local Notation UnderLets := (@UnderLets.UnderLets base_type ident var).
+        Local Notation is_var_like := (@SubstVarLike.is_recursively_var_or_ident base_type ident var (@ident_is_var_like)).
 
-      Let default_reify_and_let_binds_base_cps {t : base.type} : expr t -> forall T, (expr t -> UnderLets T) -> UnderLets T
-        := fun e T k
-           => match invert_expr.invert_Var e with
-              | Some v => k ($v)%expr
-              | None => if SubstVarLike.is_var_fst_snd_pair_opp_cast e
-                        then k e
-                        else UnderLets.UnderLet e (fun v => k ($v)%expr)
-              end.
+        Let default_reify_and_let_binds_base_cps {t : base_type} : expr t -> forall T, (expr t -> UnderLets T) -> UnderLets T
+          := fun e T k
+             => match invert_expr.invert_Var e with
+                | Some v => k ($v)%expr
+                | None => if is_var_like e
+                          then k e
+                          else UnderLets.UnderLet e (fun v => k ($v)%expr)
+                end.
 
-      Fixpoint reify_and_let_binds_base_cps {t : base.type} : expr t -> forall T, (expr t -> UnderLets T) -> UnderLets T
-        := match t return expr t -> forall T, (expr t -> UnderLets T) -> UnderLets T with
-           | base.type.type_base t
-             => fun e T k
-                => match invert_Literal e with
-                   | Some v => k (expr.Ident (ident.Literal v))
-                   | None => @default_reify_and_let_binds_base_cps _ e T k
-                   end
-           | base.type.prod A B
-             => fun e T k
-                => match invert_pair e with
-                   | Some (a, b)
-                     => @reify_and_let_binds_base_cps
-                          A a _
-                          (fun ae
-                           => @reify_and_let_binds_base_cps
-                                B b _
-                                (fun be
-                                 => k (ae, be)%expr))
-                   | None => @default_reify_and_let_binds_base_cps _ e T k
-                   end
-           | base.type.list A
-             => fun e T k
-                => match reflect_list e with
-                   | Some ls
-                     => list_rect
-                          _
-                          (fun k => k []%expr)
-                          (fun x _ rec k
-                           => @reify_and_let_binds_base_cps
-                                A x _
-                                (fun xe
-                                 => rec (fun xse => k (xe :: xse)%expr)))
-                          ls
-                          k
-                   | None => @default_reify_and_let_binds_base_cps _ e T k
-                   end
-           | base.type.option A
-             => fun e T k
-                => match reflect_option e with
-                   | Some ls
-                     => option_rect
-                          _
-                          (fun x k
-                           => @reify_and_let_binds_base_cps
-                                A x _
-                                (fun xe
-                                 => k (#ident.Some @ xe)%expr))
-                          (fun k => k (#ident.None)%expr)
-                          ls
-                          k
-                   | None => @default_reify_and_let_binds_base_cps _ e T k
-                   end
-           end%under_lets.
+        Fixpoint reify_and_let_binds_base_cps {t : base_type} : expr t -> forall T, (expr t -> UnderLets T) -> UnderLets T
+          := match t return expr t -> forall T, (expr t -> UnderLets T) -> UnderLets T with
+             | base.type.type_base t
+               => fun e T k
+                  => match invert_Literal e with
+                     | Some v => k (expr.Ident (@ident.ident_Literal _ _ _ buildIdent _ v))
+                     | None => @default_reify_and_let_binds_base_cps _ e T k
+                     end
+             | base.type.prod A B
+               => fun e T k
+                  => match invert_pair e with
+                     | Some (a, b)
+                       => @reify_and_let_binds_base_cps
+                            A a _
+                            (fun ae
+                             => @reify_and_let_binds_base_cps
+                                  B b _
+                                  (fun be
+                                   => k (ae, be)%expr))
+                     | None => @default_reify_and_let_binds_base_cps _ e T k
+                     end
+             | base.type.list A
+               => fun e T k
+                  => match reflect_list e with
+                     | Some ls
+                       => list_rect
+                            _
+                            (fun k => k []%expr)
+                            (fun x _ rec k
+                             => @reify_and_let_binds_base_cps
+                                  A x _
+                                  (fun xe
+                                   => rec (fun xse => k (xe :: xse)%expr)))
+                            ls
+                            k
+                     | None => @default_reify_and_let_binds_base_cps _ e T k
+                     end
+             | base.type.option A
+               => fun e T k
+                  => match reflect_option e with
+                     | Some ls
+                       => option_rect
+                            _
+                            (fun x k
+                             => @reify_and_let_binds_base_cps
+                                  A x _
+                                  (fun xe
+                                   => k (#ident.ident_Some @ xe)%expr))
+                            (fun k => k (#ident.ident_None)%expr)
+                            ls
+                            k
+                     | None => @default_reify_and_let_binds_base_cps _ e T k
+                     end
+             | base.type.unit
+               => fun e T k
+                  => k (#ident.ident_tt)%expr
+             end%under_lets.
 
-      Fixpoint let_bind_return {t} : expr t -> expr t
-        := match t return expr t -> expr t with
-           | type.base t
-             => fun e => to_expr (v <-- of_expr e; reify_and_let_binds_base_cps v _ Base)
-           | type.arrow s d
-             => fun e
-                => expr.Abs (fun v => @let_bind_return
-                                        d
-                                        match invert_Abs e with
-                                        | Some f => f v
-                                        | None => e @ $v
-                                        end%expr)
-           end.
+        Fixpoint let_bind_return {t} : expr t -> expr t
+          := match t return expr t -> expr t with
+             | type.base t
+               => fun e => to_expr (v <-- of_expr e; reify_and_let_binds_base_cps v _ Base)
+             | type.arrow s d
+               => fun e
+                  => expr.Abs (fun v => @let_bind_return
+                                          d
+                                          match invert_Abs e with
+                                          | Some f => f v
+                                          | None => e @ $v
+                                          end%expr)
+             end.
+      End with_var.
+      Definition LetBindReturn {t} (e : expr.Expr t) : expr.Expr t
+        := fun var => let_bind_return (e _).
     End reify.
-    Definition LetBindReturn {t} (e : expr.Expr t) : expr.Expr t
-      := fun var => let_bind_return (e _).
   End UnderLets.
   Export UnderLets.Notations.
 End Compilers.

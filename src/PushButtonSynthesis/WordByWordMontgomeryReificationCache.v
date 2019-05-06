@@ -7,12 +7,15 @@ Require Import Crypto.Arithmetic.Freeze.
 Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Arithmetic.WordByWordMontgomery.
 Require Import Crypto.Language.
+Require Import Crypto.IdentifierExtra.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.
 Local Open Scope Z_scope.
 
 Import
   LanguageWf.Compilers
-  Language.Compilers.
+  Language.Compilers
+  Identifier.Compilers
+  IdentifierExtra.Compilers.
 Import Compilers.defaults.
 
 Import Associational Positional.

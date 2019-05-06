@@ -76,7 +76,7 @@ Module Compilers.
     Proof. induction ls; destruct v; cbn; reflexivity + apply f_equal; auto with nocore. Defined.
 
     Module base.
-      Fixpoint eq_subst_default_relax {t evm} : base.subst_default (base.relax t) evm = t.
+      Fixpoint eq_subst_default_relax {base t evm} : base.subst_default (base:=base) (base.relax t) evm = t.
       Proof.
         destruct t; cbn;
           first [ reflexivity
@@ -87,7 +87,7 @@ Module Compilers.
     End base.
 
     Module type.
-      Definition eq_subst_default_relax {t evm} : type.subst_default (type.relax t) evm = t.
+      Definition eq_subst_default_relax {base t evm} : type.subst_default (base:=base) (type.relax t) evm = t.
       Proof.
         induction t; cbn;
           first [ apply f_equal, base.eq_subst_default_relax
@@ -192,35 +192,35 @@ Module Compilers.
       Local Notation to_ident := Raw.ident.to_ident.
       Local Notation to_type := Raw.ident.to_type.
 
-      Class package_proofs {pkg : package} :=
+      Class package_proofs {base ident} {pkg : @package base ident} :=
         {
           is_simple_correct0 p
           : is_simple p = true
             <-> (forall f1 f2, type_of p f1 = type_of p f2);
           invert_bind_args_raw_to_typed p f
-          : @invert_bind_args pkg _ (raw_to_typed p f) p = Some f;
-          fold_invert_bind_args : @invert_bind_args pkg = @folded_invert_bind_args_of pkg;
+          : @invert_bind_args _ _ pkg _ (raw_to_typed p f) p = Some f;
+          fold_invert_bind_args : @invert_bind_args _ _ pkg = @folded_invert_bind_args_of pkg;
           split_ident_to_ident ridc x y z
-          : PrimitiveSigma.Primitive.projT1 (@split_raw_ident_gen _ _ (to_ident (preinfos (raw_ident_infos_of ridc)) x y z))
+          : PrimitiveSigma.Primitive.projT1 (@split_raw_ident_gen _ _ _ _ (to_ident (preinfos (raw_ident_infos_of ridc)) x y z))
             = ridc;
           eq_indep_types_of_eq_types
           : forall (ridc : raw_ident)
                    (dt1 dt2 : type_of_list (dep_types (preinfos (raw_ident_infos_of ridc))))
-                   (idt1 idt2 : Raw.ident.type_of_list_of_kind (indep_types (preinfos (raw_ident_infos_of ridc))))
+                   (idt1 idt2 : Raw.ident.type_of_list_of_kind _ (indep_types (preinfos (raw_ident_infos_of ridc))))
                    (Hty : to_type (preinfos (raw_ident_infos_of ridc)) dt1 idt1 = to_type (preinfos (raw_ident_infos_of ridc)) dt2 idt2),
               idt1 = idt2;
 
           fold_eta_ident_cps T t idc f
-          : @eta_ident_cps pkg T t idc f = proj1_sig (@eta_ident_cps_gen pkg (fun t _ => T t) f) t idc;
+          : @eta_ident_cps _ _ pkg T t idc f = proj1_sig (@eta_ident_cps_gen _ _ pkg (fun t _ => T t) f) t idc;
 
-          fold_unify : @unify pkg = @folded_unify_of pkg;
+          fold_unify : @unify _ _ pkg = @folded_unify_of pkg;
           to_typed_of_typed_ident t idc evm
-          : (rew [@ident pkg] type.eq_subst_default_relax in
+          : (rew [ident] type.eq_subst_default_relax in
                 @to_typed _ (@of_typed_ident t idc) evm (@arg_types_of_typed_ident t idc))
             = idc;
 
-          eq_invert_bind_args_unknown : @invert_bind_args_unknown pkg = @invert_bind_args pkg;
-          eq_unify_unknown : @unify_unknown pkg = @unify pkg
+          eq_invert_bind_args_unknown : @invert_bind_args_unknown _ _ pkg = @invert_bind_args _ _ pkg;
+          eq_unify_unknown : @unify_unknown _ _ pkg = @unify _ _ pkg
         }.
     End ProofGoalType.
 
@@ -228,12 +228,13 @@ Module Compilers.
       Module ident.
         Import Datatypes. (* for Some, None, option *)
 
-        Global Instance eq_ident_Decidable {p : package} : DecidableRel (@eq raw_ident)
+        Global Instance eq_ident_Decidable {base ident} {p : @package base ident} : DecidableRel (@eq raw_ident)
           := dec_rel_of_bool_dec_rel raw_ident_beq raw_ident_bl raw_ident_lb.
 
         Section with_package.
-          Context {pkg : package}
-                  {pkg_proofs : @package_proofs pkg}.
+          Context {base ident}
+                  {pkg : @package base ident}
+                  {pkg_proofs : @package_proofs _ _ pkg}.
 
           Local Notation dep_types := Raw.ident.dep_types.
           Local Notation preinfos := Raw.ident.preinfos.
@@ -272,7 +273,7 @@ Module Compilers.
           Qed.
 
           Lemma to_typed_invert_bind_args_gen t idc p f
-            : @invert_bind_args pkg t idc p = Some f
+            : @invert_bind_args _ _ pkg t idc p = Some f
               -> { pf : t = type_of p f | @raw_to_typed p f = rew [ident] pf in idc }.
           Proof.
             rewrite fold_invert_bind_args.
@@ -299,24 +300,24 @@ Module Compilers.
           Qed.
 
           Lemma type_of_invert_bind_args t idc p f
-            : @invert_bind_args pkg t idc p = Some f -> t = type_of p f.
+            : @invert_bind_args _ _ pkg t idc p = Some f -> t = type_of p f.
           Proof.
             intro pf; exact (proj1_sig (@to_typed_invert_bind_args_gen t idc p f pf)).
           Defined.
 
-          Lemma to_typed_invert_bind_args t idc p f (pf : @invert_bind_args pkg t idc p = Some f)
-            : @raw_to_typed p f = rew [Compilers.ident.ident] @type_of_invert_bind_args t idc p f pf in idc.
+          Lemma to_typed_invert_bind_args t idc p f (pf : @invert_bind_args _ _ pkg t idc p = Some f)
+            : @raw_to_typed p f = rew [ident] @type_of_invert_bind_args t idc p f pf in idc.
           Proof.
             exact (proj2_sig (@to_typed_invert_bind_args_gen t idc p f pf)).
           Defined.
 
           Lemma is_simple_correct p
             : is_simple p = true
-              <-> (forall t1 idc1 t2 idc2, @invert_bind_args pkg t1 idc1 p <> None -> @invert_bind_args pkg t2 idc2 p <> None -> t1 = t2).
+              <-> (forall t1 idc1 t2 idc2, @invert_bind_args _ _ pkg t1 idc1 p <> None -> @invert_bind_args _ _ pkg t2 idc2 p <> None -> t1 = t2).
           Proof.
             rewrite is_simple_correct0; split; intro H.
             { intros t1 idc1 t2 idc2 H1 H2.
-              destruct (@invert_bind_args _ _ idc1 p) eqn:?, (@invert_bind_args _ _ idc2 p) eqn:?; try congruence.
+              destruct (@invert_bind_args _ _ _ _ idc1 p) eqn:?, (@invert_bind_args _ _ _ _ idc2 p) eqn:?; try congruence.
               erewrite (type_of_invert_bind_args t1), (type_of_invert_bind_args t2) by eassumption.
               apply H. }
             { intros f1 f2.
@@ -389,19 +390,21 @@ Module Compilers.
       Import Datatypes. (* for Some, None, option *)
 
       Section with_package.
-        Context {pkg : package}
-                {pkg_proofs : @package_proofs pkg}.
+        Context {base ident}
+                {base_eq_dec : DecidableRel (@eq base)}
+                {pkg : @package base ident}
+                {pkg_proofs : @package_proofs _ _ pkg}.
 
         Lemma eq_indep_types_of_eq_types {t1 t2} {idc1 : pattern_ident t1} {idc2 : pattern_ident t2} evm1 evm2
               (Hty : type.subst_default t1 evm1 = type.subst_default t2 evm2)
               (pf : Primitive.projT1 (@split_types_subst_default _ idc1 evm1)
                     = Primitive.projT1 (@split_types_subst_default _ idc2 evm2))
           : Datatypes.snd (Primitive.projT2 (@split_types_subst_default _ idc1 evm1))
-            = rew <- [fun r => ident.full_type_of_list_of_kind (Raw.ident.indep_types (Raw.ident.preinfos (raw_ident_infos_of r)))] pf in
+            = rew <- [fun r => ident.full_type_of_list_of_kind _ (Raw.ident.indep_types (Raw.ident.preinfos (raw_ident_infos_of r)))] pf in
             Datatypes.snd (Primitive.projT2 (@split_types_subst_default _ idc2 evm2)).
         Proof.
-          pose proof (@to_type_split_types_subst_default_eq pkg _ idc1 evm1).
-          pose proof (@to_type_split_types_subst_default_eq pkg _ idc2 evm2).
+          pose proof (@to_type_split_types_subst_default_eq _ _ pkg _ idc1 evm1).
+          pose proof (@to_type_split_types_subst_default_eq _ _ pkg _ idc2 evm2).
           generalize dependent (type.subst_default t1 evm1);
             generalize dependent (type.subst_default t2 evm2); intros; subst.
           cbv [split_types_subst_default] in *; cbn [Primitive.projT1 Primitive.projT2 fst snd] in *.
@@ -413,19 +416,19 @@ Module Compilers.
         Qed.
 
         Lemma eta_ident_cps_correct T t idc f
-          : @eta_ident_cps pkg T t idc f = f t idc.
-        Proof. rewrite fold_eta_ident_cps; apply (proj2_sig (@eta_ident_cps_gen pkg _ f)). Qed.
+          : @eta_ident_cps _ _ pkg T t idc f = f t idc.
+        Proof. rewrite fold_eta_ident_cps; apply (proj2_sig (@eta_ident_cps_gen _ _ pkg _ f)). Qed.
 
         Lemma unify_to_typed {t t' pidc idc}
           : forall v,
-            @unify pkg t t' pidc idc = Some v
+            @unify _ _ pkg t t' pidc idc = Some v
             -> forall evm pf,
               rew [ident] pf in @to_typed t pidc evm v = idc.
         Proof.
           intros v H evm pf; subst t'; cbn [eq_rect].
           pose proof (@eq_indep_types_of_eq_types _ _ (@of_typed_ident _ idc) pidc evm evm type.eq_subst_default_relax) as H'.
           revert v H.
-          set (idc' := idc) at 1; rewrite <- (@to_typed_of_typed_ident pkg _ _ idc evm); subst idc'.
+          set (idc' := idc) at 1; rewrite <- (@to_typed_of_typed_ident _ _ pkg _ _ idc evm); subst idc'.
           rewrite fold_unify.
           cbv [folded_unify arg_types Raw.ident.assemble_ident];
             cbn [Primitive.projT1 Primitive.projT2].
@@ -499,7 +502,7 @@ Module Compilers.
                              => rewrite type.eq_subst_default_relax in H
                            | [ H : ?x = ?x |- _ ] => clear H
                            | [ H : type.subst_default ?t ?evm = type.subst_default ?t ?evm'
-                               |- context[lift_type_of_list_map (@ident.subst_default_kind_of_type ?evm) (snd (Primitive.projT2 (split_types _ ?idc)))] ]
+                               |- context[lift_type_of_list_map (@ident.subst_default_kind_of_type ?base ?evm) (snd (Primitive.projT2 (split_types _ ?idc)))] ]
                              => let H' := fresh in
                                 pose proof (@eq_indep_types_of_eq_types t idc idc evm evm' H eq_refl) as H';
                                   cbv [split_types_subst_default] in H';
@@ -518,7 +521,7 @@ Module Compilers.
         Qed.
 
         Lemma unify_of_typed_ident {t idc}
-          : @unify _ _ _ (@of_typed_ident t idc) idc <> None.
+          : @unify _ _ _ _ _ (@of_typed_ident t idc) idc <> None.
         Proof.
           rewrite fold_unify.
           cbv [folded_unify].
@@ -536,7 +539,7 @@ Module Compilers.
                               clear H'
                          | [ H : @try_unify_split_args_of ?pkg ?a ?b ?c ?d ?e = None |- _ ]
                            => let H' := fresh in
-                              pose proof (@Raw.ident.try_unify_split_args_None_correct pkg a b c d e H) as H';
+                              pose proof (@Raw.ident.try_unify_split_args_None_correct _ _ pkg a b c d e H) as H';
                               clear H
                          | [ H : forall pf : _ = _, _ |- _ ] => specialize (H eq_refl)
                          end

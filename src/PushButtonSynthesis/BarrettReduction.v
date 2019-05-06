@@ -9,6 +9,7 @@ Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Language.
+Require Import Crypto.IdentifierExtra.
 Require Import Crypto.LanguageStringification.
 Require Import Crypto.Arithmetic.BarrettReduction.
 Require Import Crypto.Arithmetic.Core.
@@ -198,8 +199,5 @@ Section rbarrett_red.
     prove_correctness' ltac:(fun _ => idtac) use_curve_good.
     { cbv [ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by bound is_bounded_by_bool value_range upper lower]. rewrite Bool.andb_true_iff, !Z.leb_le. lia. }
     { cbv [ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by bound is_bounded_by_bool value_range upper lower]. rewrite Bool.andb_true_iff, !Z.leb_le. lia. }
-    { cbn. econstructor. }
-    { cbn. econstructor. }
-    { cbn. econstructor. }
   Qed.
 End rbarrett_red.

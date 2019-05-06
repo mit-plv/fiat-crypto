@@ -1,18 +1,16 @@
 Require Import Coq.ZArith.ZArith.
+Require Import Crypto.Util.ZRange.
 Require Import Crypto.Language.
 Require Import Crypto.LanguageWf.
-Require Import Crypto.Util.ZRange.
-Require Import Crypto.RewriterAllTactics.
+Require Import Crypto.RewriterAllTacticsExtra.
 Require Import Crypto.RewriterRulesProofs.
-Require Import Crypto.IdentifiersGENERATEDProofs.
 
 Module Compilers.
   Import Language.Compilers.
-  Import Language.Compilers.defaults.
   Import LanguageWf.Compilers.
   Import RewriterAllTactics.Compilers.RewriteRules.GoalType.
-  Import RewriterAllTactics.Compilers.RewriteRules.Tactic.
-  Import IdentifiersGENERATEDProofs.Compilers.pattern.ident.
+  Import RewriterAllTacticsExtra.Compilers.RewriteRules.Tactic.
+  Import Compilers.Classes.
 
   Module Import RewriteRules.
     Section __.
@@ -22,9 +20,9 @@ Module Compilers.
               (Hhigh : forall s v v', invert_high s v = Some v' -> v = Z.shiftr v' (s/2)).
 
       Definition VerifiedRewriterToFancyWithCasts : VerifiedRewriter.
-      Proof using All. make_rewriter package_proofs false (@fancy_with_casts_rewrite_rules_proofs invert_low invert_high value_range flag_range Hlow Hhigh). Defined.
+      Proof using All. make_rewriter false (@fancy_with_casts_rewrite_rules_proofs invert_low invert_high value_range flag_range Hlow Hhigh). Defined.
 
-      Definition RewriteToFancyWithCasts {t} : Expr t -> Expr t.
+      Definition RewriteToFancyWithCasts {t} : Expr (ident:=ident) t -> Expr (ident:=ident) t.
       Proof using invert_low invert_high value_range flag_range.
         let v := (eval hnf in (@Rewrite VerifiedRewriterToFancyWithCasts t)) in exact v.
       Defined.
@@ -33,11 +31,11 @@ Module Compilers.
       Proof using All. now apply VerifiedRewriterToFancyWithCasts. Qed.
 
       Lemma Interp_gen_RewriteToFancyWithCasts {cast_outside_of_range t} e (Hwf : Wf e)
-        : expr.Interp (@ident.gen_interp cast_outside_of_range) (@RewriteToFancyWithCasts t e)
-          == expr.Interp (@ident.gen_interp cast_outside_of_range) e.
+        : expr.Interp (@ident_gen_interp _ cast_outside_of_range) (@RewriteToFancyWithCasts t e)
+          == expr.Interp (@ident_gen_interp _ cast_outside_of_range) e.
       Proof using All. now apply VerifiedRewriterToFancyWithCasts. Qed.
 
-      Lemma Interp_RewriteToFancyWithCasts {t} e (Hwf : Wf e) : Interp (@RewriteToFancyWithCasts t e) == Interp e.
+      Lemma Interp_RewriteToFancyWithCasts {t} e (Hwf : Wf e) : expr.Interp (@ident_interp _) (@RewriteToFancyWithCasts t e) == expr.Interp (@ident_interp _) e.
       Proof using All. apply Interp_gen_RewriteToFancyWithCasts; assumption. Qed.
     End __.
   End RewriteRules.
