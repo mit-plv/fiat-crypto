@@ -21,6 +21,8 @@ Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.SplitInContext.
 Require Crypto.Language.
+Require Crypto.Identifier.
+Require Crypto.IdentifierExtra.
 Require Crypto.UnderLets.
 Require Crypto.AbstractInterpretation.
 Require Crypto.Rewriter.
@@ -43,6 +45,8 @@ Import
   Crypto.AbstractInterpretationWf
   Crypto.AbstractInterpretationProofs
   Crypto.Language
+  Crypto.Identifier
+  Crypto.IdentifierExtra
   Crypto.UnderLets
   Crypto.AbstractInterpretation
   Crypto.Rewriter
@@ -57,6 +61,8 @@ Import
   AbstractInterpretationWf.Compilers
   AbstractInterpretationProofs.Compilers
   Language.Compilers
+  Identifier.Compilers
+  IdentifierExtra.Compilers
   UnderLets.Compilers
   AbstractInterpretation.Compilers
   Rewriter.Compilers
@@ -171,11 +177,11 @@ Module Pipeline.
       := match t return ZRange.type.base.option.interp t -> ZRange.type.option.interp t-> bool * list (nat * nat) * list (zrange * zrange) with
          | base.type.unit
            => fun 'tt 'tt => (false, nil, nil)
-         | base.type.nat
-         | base.type.bool
-         | base.type.zrange
+         | base.type.type_base base.type.nat
+         | base.type.type_base base.type.bool
+         | base.type.type_base base.type.zrange
            => fun _ _ => (false, nil, nil)
-         | base.type.Z
+         | base.type.type_base base.type.Z
            => fun a b
               => match a, b with
                  | None, None => (false, nil, nil)
@@ -319,7 +325,7 @@ Module Pipeline.
        let E := if with_subst01 then Subst01.Subst01 E
                 else if with_dead_code_elimination then DeadCodeElimination.EliminateDead E
                      else E in
-       let E := UnderLets.LetBindReturn E in
+       let E := UnderLets.LetBindReturn (@ident.is_var_like) E in
        let E := DoRewrite E in (* after inlining, see if any new rewrite redexes are available *)
        dlet_nd e := ToFlat E in
        let E := FromFlat e in
@@ -459,11 +465,12 @@ Module Pipeline.
 
   Local Ltac wf_interp_t :=
     repeat first [ progress destruct_head'_and
+                 | progress cbv [Classes.ident_gen_interp Classes.base Classes.ident Classes.ident_interp Classes.base_interp Classes.exprInfo] in *
                  | progress autorewrite with interp
-                 | solve [ auto with interp wf ]
+                 | solve [ eauto with nocore interp wf ]
                  | solve [ typeclasses eauto ]
                  | break_innermost_match_step
-                 | solve [ auto 100 with wf ]
+                 | solve [ eauto 100 with nocore wf ]
                  | progress intros ].
 
   Class bounds_goodT {t} bounds
@@ -500,6 +507,13 @@ Module Pipeline.
   Hint Rewrite @Interp_RewriteAndEliminateDeadAndInline : interp.
 
   Local Opaque RewriteAndEliminateDeadAndInline.
+  Local Opaque RewriteRules.RewriteStripLiteralCasts.
+  Local Opaque RewriteRules.RewriteToFancyWithCasts.
+  Local Opaque RewriteRules.RewriteToFancy.
+  Local Opaque RewriteRules.RewriteArith.
+  Local Opaque RewriteRules.RewriteMulSplit.
+  Local Opaque CheckedPartialEvaluateWithBounds.
+  Local Opaque FromFlat ToFlat.
   Lemma BoundsPipeline_correct
              {split_mul_to : split_mul_to_opt}
              (with_dead_code_elimination : bool := true)
@@ -562,6 +576,13 @@ Module Pipeline.
       { wf_interp_t. } }
   Qed.
   Local Transparent RewriteAndEliminateDeadAndInline.
+  Local Transparent RewriteRules.RewriteStripLiteralCasts.
+  Local Transparent RewriteRules.RewriteToFancyWithCasts.
+  Local Transparent RewriteRules.RewriteToFancy.
+  Local Transparent RewriteRules.RewriteArith.
+  Local Transparent RewriteRules.RewriteMulSplit.
+  Local Transparent CheckedPartialEvaluateWithBounds.
+  Local Transparent FromFlat ToFlat.
 
   Definition BoundsPipeline_correct_transT
              {t}
@@ -636,7 +657,7 @@ End Pipeline.
 Module Export Hints.
   Hint Extern 1 (@Pipeline.bounds_goodT _ _) => solve [ Pipeline.solve_bounds_good ] : typeclass_instances.
   Global Strategy -100 [type.interp ZRange.type.option.interp ZRange.type.base.option.interp GallinaReify.Reify_as GallinaReify.reify type_base].
-  Global Strategy -10 [type.app_curried type.for_each_lhs_of_arrow type.and_for_each_lhs_of_arrow type.related type.interp base.interp base.base_interp type.andb_bool_for_each_lhs_of_arrow fst snd ZRange.type.option.is_bounded_by].
+  Global Strategy -10 [type.app_curried type.for_each_lhs_of_arrow type.and_for_each_lhs_of_arrow type.related type.interp Compilers.base.interp base.base_interp type.andb_bool_for_each_lhs_of_arrow fst snd ZRange.type.option.is_bounded_by].
 End Hints.
 
 Module PipelineTactics.
@@ -656,7 +677,7 @@ Module PipelineTactics.
 
   Ltac do_unfolding :=
     cbv [type.interp ZRange.type.option.interp ZRange.type.base.option.interp GallinaReify.Reify_as GallinaReify.reify type_base] in *;
-    cbn [type.app_curried type.for_each_lhs_of_arrow type.and_for_each_lhs_of_arrow type.related type.interp base.interp base.base_interp type.andb_bool_for_each_lhs_of_arrow fst snd ZRange.type.option.is_bounded_by] in *.
+    cbn [type.app_curried type.for_each_lhs_of_arrow type.and_for_each_lhs_of_arrow type.related type.interp Compilers.base.interp base.base_interp type.andb_bool_for_each_lhs_of_arrow fst snd ZRange.type.option.is_bounded_by] in *.
 
   Ltac curry_args lem :=
     let T := type of lem in
@@ -705,6 +726,6 @@ Module PipelineTactics.
       solve_side_conditions_of_BoundsPipeline_correct
     | match goal with
       | [ |- Wf _ ]
-        => repeat apply expr.Wf_APP; auto with wf wf_gen_cache
+        => repeat apply expr.Wf_APP; eauto with nocore wf wf_gen_cache
       end ].
 End PipelineTactics.

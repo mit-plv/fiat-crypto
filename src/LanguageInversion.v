@@ -14,145 +14,21 @@ Require Import Crypto.Util.Tactics.RewriteHyp.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.FixCoqMistakes.
 
+Local Set Primitive Projections.
 Import EqNotations.
 Module Compilers.
   Import Language.Compilers.
 
-  Module base.
-    Module type.
-      Section encode_decode.
-          Definition code (t1 t2 : base.type) : Prop
-            := match t1, t2 with
-               | base.type.type_base t1, base.type.type_base t2 => t1 = t2
-               | base.type.prod A1 B1, base.type.prod A2 B2 => A1 = A2 /\ B1 = B2
-               | base.type.list A1, base.type.list A2 => A1 = A2
-               | base.type.option A1, base.type.option A2 => A1 = A2
-               | base.type.type_base _, _
-               | base.type.prod _ _, _
-               | base.type.list _, _
-               | base.type.option _, _
-                 => False
-               end.
-
-          Definition encode (x y : base.type) : x = y -> code x y.
-          Proof. intro p; destruct p, x; repeat constructor. Defined.
-          Definition decode (x y : base.type) : code x y -> x = y.
-          Proof. destruct x, y; intro p; try assumption; destruct p; (apply f_equal || apply f_equal2); (assumption || reflexivity). Defined.
-
-          Definition path_rect {x y : base.type} (Q : x = y -> Type)
-                     (f : forall p, Q (decode x y p))
-            : forall p, Q p.
-          Proof. intro p; specialize (f (encode x y p)); destruct x, p; exact f. Defined.
-      End encode_decode.
-
-      Global Instance base_eq_Decidable : DecidableRel (@eq base.type.base) := base.type.base_eq_dec.
-      Global Instance base_type_eq_Decidable : DecidableRel (@eq base.type.type) := base.type.type_eq_dec.
-      Global Instance base_eq_HProp : IsHPropRel (@eq base.type.base) := _.
-      Global Instance base_type_eq_HProp : IsHPropRel (@eq base.type.type) := _.
-
-      Ltac induction_type_in_using H rect :=
-        induction H as [H] using (rect _ _);
-        cbv [code defaults.type_base] in H;
-        let H1 := fresh H in
-        let H2 := fresh H in
-        try lazymatch type of H with
-            | False => exfalso; exact H
-            | True => destruct H
-            | ?x = ?x => clear H
-            | _ = _ :> base.type.base => try solve [ exfalso; inversion H ]
-            | _ /\ _ => destruct H as [H1 H2]
-            end.
-
-      Ltac inversion_type_step :=
-        cbv [defaults.type_base] in *;
-        first [ lazymatch goal with
-                | [ H : ?x = ?x :> base.type.type |- _ ] => clear H || eliminate_hprop_eq_helper H base_type_eq_HProp
-                | [ H : ?x = ?x :> base.type.base |- _ ] => clear H || eliminate_hprop_eq_helper H base_eq_HProp
-                | [ H : ?x = ?y :> base.type.type |- _ ] => subst x || subst y
-                | [ H : ?x = ?y :> base.type.base |- _ ] => subst x || subst y
-                end
-              | lazymatch goal with
-                | [ H : _ = base.type.type_base _ |- _ ]
-                  => induction_type_in_using H @path_rect
-                | [ H : base.type.type_base _ = _ |- _ ]
-                  => induction_type_in_using H @path_rect
-                | [ H : _ = base.type.prod _ _ |- _ ]
-                  => induction_type_in_using H @path_rect
-                | [ H : base.type.prod _ _ = _ |- _ ]
-                  => induction_type_in_using H @path_rect
-                | [ H : _ = base.type.list _ |- _ ]
-                  => induction_type_in_using H @path_rect
-                | [ H : base.type.list _ = _ |- _ ]
-                  => induction_type_in_using H @path_rect
-                | [ H : _ = base.type.option _ |- _ ]
-                  => induction_type_in_using H @path_rect
-                | [ H : base.type.option _ = _ |- _ ]
-                  => induction_type_in_using H @path_rect
-                end ];
-        cbn [f_equal f_equal2 eq_rect decode] in *.
-      Ltac inversion_type := repeat inversion_type_step.
-    End type.
-
-    Local Ltac t_red :=
-      repeat first [ progress intros
-                   | progress cbn [type.type_beq base.type.type_beq base.type.base_beq base.try_make_transport_cps base.try_make_base_transport_cps eq_rect andb] in * ].
-    Local Ltac t :=
-      repeat first [ progress t_red
-                   | reflexivity
-                   | progress split_andb
-                   | progress subst
-                   | progress break_innermost_match
-                   | progress eliminate_hprop_eq
-                   | congruence
-                   | progress Reflect.reflect_beq_to_eq base.type.type_beq
-                   | progress Reflect.reflect_beq_to_eq base.type.base_beq
-                   | match goal with
-                     | [ H : _ |- _ ] => rewrite H
-                     end ].
-
-    Lemma try_make_base_transport_cps_correct P t1 t2
-      : base.try_make_base_transport_cps P t1 t2
-        = fun T k
-          => k match Sumbool.sumbool_of_bool (base.type.base_beq t1 t2) with
-              | left pf => Some (rew [fun t => P t1 -> P t] (Reflect.reflect_to_dec _ pf) in id)
-              | right _ => None
-              end.
-    Proof. revert P t2; induction t1, t2; t. Qed.
-
-    Lemma try_make_transport_cps_correct P t1 t2
-      : base.try_make_transport_cps P t1 t2
-        = fun T k
-          => k match Sumbool.sumbool_of_bool (base.type.type_beq t1 t2) with
-              | left pf => Some (rew [fun t => P t1 -> P t] (Reflect.reflect_to_dec _ pf) in id)
-              | right _ => None
-              end.
-    Proof.
-      revert P t2; induction t1, t2;
-        t_red; rewrite ?try_make_base_transport_cps_correct; t.
-    Qed.
-
-    Lemma try_transport_cps_correct P t1 t2 v
-      : base.try_transport_cps P t1 t2 v
-        = fun T k
-          => k match Sumbool.sumbool_of_bool (base.type.type_beq t1 t2) with
-              | left pf => Some (rew [P] (Reflect.reflect_to_dec _ pf) in v)
-              | right _ => None
-              end.
-    Proof.
-      cbv [base.try_transport_cps]; rewrite try_make_transport_cps_correct;
-        t.
-    Qed.
-
-    Lemma try_transport_correct P t1 t2 v
-      : base.try_transport P t1 t2 v
-        = match Sumbool.sumbool_of_bool (base.type.type_beq t1 t2) with
-          | left pf => Some (rew [P] (Reflect.reflect_to_dec _ pf) in v)
-          | right _ => None
-          end.
-    Proof. cbv [base.try_transport]; rewrite try_transport_cps_correct; reflexivity. Qed.
-  End base.
-
   Module type.
+    Definition type_eq_Decidable {base_type} {base_type_eq_Decidable : DecidableRel (@eq base_type)}
+      : DecidableRel (@eq (type.type base_type))
+      := type.type_eq_dec _ _ (br_of_dec_rel _) (rb_of_dec_rel _).
+    Global Hint Extern 0 (DecidableRel (@eq (type.type ?base_type))) => notypeclasses refine (@type_eq_Decidable base_type _) : typeclass_instances.
+    Global Hint Extern 0 (Decidable (@eq (type.type ?base_type) _ _)) => notypeclasses refine (@type_eq_Decidable base_type _ _ _) : typeclass_instances.
+
+    Global Instance type_eq_HProp {base_type} {base_type_eq_Decidable : DecidableRel (@eq base_type)}
+      : IsHPropRel (@eq (type.type base_type)) := hprop_eq_dec.
+
     Section with_base.
       Context {base_type : Type}.
       Local Notation type := (type.type base_type).
@@ -185,7 +61,7 @@ Module Compilers.
 
     Ltac induction_type_in_using H rect :=
       induction H as [H] using (rect _ _ _);
-      cbv [code defaults.type_base] in H;
+      cbv [code] in H;
       let H1 := fresh H in
       let H2 := fresh H in
       try lazymatch type of H with
@@ -194,9 +70,7 @@ Module Compilers.
           | _ /\ _ => destruct H as [H1 H2]
           end.
     Ltac inversion_type_step :=
-      cbv [defaults.type_base] in *;
-      first [ base.type.inversion_type_step
-            | lazymatch goal with
+      first [ lazymatch goal with
               | [ H : ?x = ?x :> type.type _ |- _ ] => clear H
               | [ H : ?x = ?y :> type.type _ |- _ ] => subst x || subst y
               end
@@ -210,6 +84,7 @@ Module Compilers.
               | [ H : type.arrow _ _ = _ |- _ ]
                 => induction_type_in_using H @path_rect
               end ];
+      cbv [decode] in *;
       cbn [f_equal f_equal2 eq_rect decode] in *.
     Ltac inversion_type := repeat inversion_type_step.
 
@@ -229,32 +104,25 @@ Module Compilers.
       generalize_one_eq_var e;
       destruct e;
       try discriminate;
-      type.inversion_type;
-      base.type.inversion_type;
-      cbn [type.decode base.type.decode f_equal f_equal2 eq_rect] in *.
+      type.inversion_type.
 
     Section transport_cps.
       Context {base_type}
               {base_type_beq : base_type -> base_type -> bool}
+              {try_make_transport_base_type_cps : @type.try_make_transport_cpsT base_type}
               {reflect_base_type_beq : reflect_rel (@eq base_type) base_type_beq}
-              (try_make_transport_base_type_cps : forall (P : base_type -> Type) t1 t2, ~> option (P t1 -> P t2))
-              (try_make_transport_base_type_cps_correct
-               : forall P t1 t2,
-                  try_make_transport_base_type_cps P t1 t2
-                  = fun T k
-                    => k match Sumbool.sumbool_of_bool (base_type_beq t1 t2) with
-                        | left pf => Some (rew [fun t => P t1 -> P t] (reflect_to_dec _ pf) in id)
-                        | right _ => None
-                        end).
+              {try_make_transport_base_type_cps_correct
+               : @type.try_make_transport_cps_correctT base_type base_type_beq _ _}.
 
       Local Ltac t :=
         repeat first [ progress intros
                      | progress cbn [type.type_beq type.try_make_transport_cps eq_rect andb] in *
-                     | progress cbv [cpsreturn cpsbind cps_option_bind Option.bind cpscall] in *
+                     | progress cbv [cpsreturn cpsbind cps_option_bind Option.bind cpscall type.try_make_transport_cpsv] in *
                      | reflexivity
                      | progress split_andb
                      | progress subst
-                     | rewrite !try_make_transport_base_type_cps_correct
+                     | rewrite !(@type.try_make_transport_cps_correctP base_type _ _ _ try_make_transport_base_type_cps_correct)
+                     | rewrite !(@type.try_make_transport_cps_correctP (type.type base_type) _ _ _ _)
                      | progress break_innermost_match
                      | progress eliminate_hprop_eq
                      | congruence
@@ -263,29 +131,21 @@ Module Compilers.
                        | [ H : _ |- _ ] => rewrite H
                        end ].
 
-      Lemma try_make_transport_cps_correct P t1 t2
-        : type.try_make_transport_cps try_make_transport_base_type_cps P t1 t2
-          = fun T k
-            => k match Sumbool.sumbool_of_bool (type.type_beq _ base_type_beq t1 t2) with
-                | left pf => Some (rew [fun t => P t1 -> P t] (reflect_to_dec _ pf) in id)
-                | right _ => None
-                end.
-      Proof. revert P t2; induction t1, t2; t. Qed.
+      Global Instance try_make_transport_cps_correct
+        : type.try_make_transport_cps_correctT (type.type base_type).
+      Proof. intros P t1 t2; revert P t2; induction t1, t2; t. Qed.
 
       Lemma try_transport_cps_correct P t1 t2
-        : type.try_transport_cps try_make_transport_base_type_cps P t1 t2
+        : type.try_transport_cps P t1 t2
           = fun v T k
             => k match Sumbool.sumbool_of_bool (type.type_beq _ base_type_beq t1 t2) with
                 | left pf => Some (rew [P] (reflect_to_dec _ pf) in v)
                 | right _ => None
                 end.
-      Proof.
-        cbv [type.try_transport_cps]; rewrite try_make_transport_cps_correct;
-          t.
-      Qed.
+      Proof. cbv [type.try_transport_cps]; t. Qed.
 
       Lemma try_transport_correct P t1 t2
-        : type.try_transport try_make_transport_base_type_cps P t1 t2
+        : type.try_transport P t1 t2
           = fun v
             => match Sumbool.sumbool_of_bool (type.type_beq _ base_type_beq t1 t2) with
               | left pf => Some (rew [P] (reflect_to_dec _ pf) in v)
@@ -295,59 +155,276 @@ Module Compilers.
     End transport_cps.
   End type.
 
-  Ltac type_beq_to_eq :=
-    repeat first [ progress Reflect.reflect_beq_to_eq base.type.base_beq
-                 | progress Reflect.reflect_beq_to_eq base.type.type_beq
-                 | progress Reflect.reflect_beq_to_eq (@type.type_beq base.type base.type.type_beq)
+  Module base.
+    Module type.
+      Section encode_decode.
+        Context {base : Type}.
+        Local Notation base_type := (base.type base).
+
+        Definition code (t1 t2 : base_type) : Prop
+          := match t1, t2 with
+             | base.type.type_base t1, base.type.type_base t2 => t1 = t2
+             | base.type.prod A1 B1, base.type.prod A2 B2 => A1 = A2 /\ B1 = B2
+             | base.type.list A1, base.type.list A2 => A1 = A2
+             | base.type.option A1, base.type.option A2 => A1 = A2
+             | base.type.unit, base.type.unit => True
+             | base.type.type_base _, _
+             | base.type.prod _ _, _
+             | base.type.list _, _
+             | base.type.option _, _
+             | base.type.unit, _
+               => False
+             end.
+
+        Definition encode (x y : base_type) : x = y -> code x y.
+        Proof. intro p; destruct p, x; repeat constructor. Defined.
+        Definition decode (x y : base_type) : code x y -> x = y.
+        Proof.
+          destruct x, y; intro p; try assumption; try reflexivity;
+            destruct p; (apply f_equal || apply f_equal2); (assumption || reflexivity).
+        Defined.
+
+        Definition path_rect {x y : base_type} (Q : x = y -> Type)
+                   (f : forall p, Q (decode x y p))
+          : forall p, Q p.
+        Proof. intro p; specialize (f (encode x y p)); destruct x, p; exact f. Defined.
+      End encode_decode.
+
+      Definition base_type_eq_Decidable {base} {base_eq_Decidable : DecidableRel (@eq base)}
+        : DecidableRel (@eq (base.type.type base))
+        := base.type.type_eq_dec _ _ (br_of_dec_rel _) (rb_of_dec_rel _).
+      Global Hint Extern 0 (DecidableRel (@eq (base.type.type ?base))) => notypeclasses refine (@base_type_eq_Decidable base _) : typeclass_instances.
+      Global Hint Extern 0 (Decidable (@eq (base.type.type ?base) _ _)) => notypeclasses refine (@base_type_eq_Decidable base _ _ _) : typeclass_instances.
+
+      Global Instance base_type_eq_HProp {base} {base_eq_Decidable : DecidableRel (@eq base)}
+        : IsHPropRel (@eq (base.type.type base)) := hprop_eq_dec.
+
+      Ltac induction_type_in_using base H rect :=
+        induction H as [H] using (rect base _ _);
+        cbv [code] in H;
+        let H1 := fresh H in
+        let H2 := fresh H in
+        try lazymatch type of H with
+            | False => exfalso; exact H
+            | True => destruct H
+            | ?x = ?x => clear H
+            | _ = _ :> base => try solve [ exfalso; clear -H; inversion H ]
+            | _ /\ _ => destruct H as [H1 H2]
+            end.
+
+      Ltac inversion_type_step_with base base_eq_Decidable :=
+        let base_eq_HProp := constr:(@hprop_eq_dec base base_eq_Decidable) in
+        first [ lazymatch goal with
+                | [ H : ?x = ?x :> base.type.type base |- _ ] => clear H || eliminate_hprop_eq_helper H (@base_type_eq_HProp base base_eq_Decidable)
+                | [ H : ?x = ?x :> base |- _ ] => clear H || eliminate_hprop_eq_helper H base_eq_HProp
+                | [ H : ?x = ?y :> base.type.type base |- _ ] => subst x || subst y
+                | [ H : ?x = ?y :> base |- _ ] => subst x || subst y
+                end
+              | lazymatch goal with
+                | [ H : _ = base.type.type_base _ |- _ ]
+                  => induction_type_in_using base H @path_rect
+                | [ H : base.type.type_base _ = _ |- _ ]
+                  => induction_type_in_using base H @path_rect
+                | [ H : _ = base.type.prod _ _ |- _ ]
+                  => induction_type_in_using base H @path_rect
+                | [ H : base.type.prod _ _ = _ |- _ ]
+                  => induction_type_in_using base H @path_rect
+                | [ H : _ = base.type.list _ |- _ ]
+                  => induction_type_in_using base H @path_rect
+                | [ H : base.type.list _ = _ |- _ ]
+                  => induction_type_in_using base H @path_rect
+                | [ H : _ = base.type.option _ |- _ ]
+                  => induction_type_in_using base H @path_rect
+                | [ H : base.type.option _ = _ |- _ ]
+                  => induction_type_in_using base H @path_rect
+                end
+              | Compilers.type.inversion_type_step ];
+        cbv [decode] in *;
+        cbn [f_equal f_equal2 eq_rect decode] in *.
+      Ltac inversion_type_with base base_eq_Decidable := repeat inversion_type_step_with base base_eq_Decidable.
+      Ltac with_base_eq_Decidable tac :=
+        let base := lazymatch goal with
+                    | [ |- context[base.type.type ?base] ] => base
+                    | [ H : context[base.type.type ?base] |- _ ] => base
+                    end in
+        let base_eq_Decidable := constr:(_ : DecidableRel (@eq base)) in
+        tac base base_eq_Decidable.
+      Ltac inversion_type_step := with_base_eq_Decidable inversion_type_step_with.
+      Ltac inversion_type := with_base_eq_Decidable inversion_type_with.
+    End type.
+
+    Local Ltac t_red :=
+      repeat first [ progress intros
+                   | progress cbn [type.type_beq base.type.type_beq base.try_make_transport_cps eq_rect andb] in * ].
+    Section try_transport.
+      Context {base : Type}
+              {base_beq : base -> base -> bool}
+              {reflect_base_beq : reflect_rel (@eq base) base_beq}
+              {try_make_transport_base_cps : @type.try_make_transport_cpsT base}
+              {try_make_transport_base_cps_correct : type.try_make_transport_cps_correctT base}.
+
+      Local Ltac t :=
+        repeat first [ progress t_red
+                     | reflexivity
+                     | progress split_andb
+                     | progress subst
+                     | progress break_innermost_match
+                     | progress eliminate_hprop_eq
+                     | congruence
+                     | progress Reflect.reflect_beq_to_eq (@base.type.type_beq base base_beq)
+                     | progress Reflect.reflect_beq_to_eq base_beq
+                     | match goal with
+                       | [ H : _ |- _ ] => rewrite H
+                       end ].
+
+      Global Instance try_make_transport_cps_correct
+        : type.try_make_transport_cps_correctT (base.type base).
+      Proof.
+        intros P t1 t2; revert P t2; induction t1, t2; t.
+      Qed.
+
+      Lemma try_transport_cps_correct P t1 t2 v
+        : base.try_transport_cps P t1 t2 v
+          = fun T k
+            => k match Sumbool.sumbool_of_bool (base.type.type_beq _ base_beq t1 t2) with
+                 | left pf => Some (rew [P] (Reflect.reflect_to_dec _ pf) in v)
+                 | right _ => None
+                 end.
+      Proof.
+        cbv [base.try_transport_cps]; rewrite try_make_transport_cps_correct;
+          t.
+      Qed.
+
+      Lemma try_transport_correct P t1 t2 v
+        : base.try_transport P t1 t2 v
+          = match Sumbool.sumbool_of_bool (base.type.type_beq _ base_beq t1 t2) with
+            | left pf => Some (rew [P] (Reflect.reflect_to_dec _ pf) in v)
+            | right _ => None
+            end.
+      Proof. cbv [base.try_transport]; rewrite try_transport_cps_correct; reflexivity. Qed.
+    End try_transport.
+  End base.
+
+  Ltac inversion_type_step := first [ type.inversion_type_step | base.type.inversion_type_step ].
+  Ltac inversion_type := repeat inversion_type_step.
+
+  Ltac eta_contract_for_type_beq_to_eq_in_type_of lem :=
+    lazymatch type of lem with
+    | context T[@type.type_beq ?base_type (fun x y => ?beq x y)]
+      => let T' := context T[@type.type_beq base_type beq] in
+         eta_contract_for_type_beq_to_eq_in_type_of (lem : T')
+    | context T[@base.type.type_beq ?base (fun x y => ?beq x y)]
+      => let T' := context T[@base.type.type_beq base beq] in
+         eta_contract_for_type_beq_to_eq_in_type_of (lem : T')
+    | _ => lem
+    end.
+  Ltac eta_contract_for_type_beq_to_eq :=
+    repeat match goal with
+           | [ H : context[@type.type_beq ?base_type (fun x y : ?T => ?beq x y)] |- _ ]
+             => change (fun x y : T => beq x y) with beq in *
+           | [ |- context[@type.type_beq ?base_type (fun x y : ?T => ?beq x y)] ]
+             => change (fun x y : T => beq x y) with beq in *
+           | [ H : context[@base.type.type_beq ?base (fun x y : ?T => ?beq x y)] |- _ ]
+             => change (fun x y : T => beq x y) with beq in *
+           | [ |- context[@base.type.type_beq ?base (fun x y : ?T => ?beq x y)] ]
+             => change (fun x y : T => beq x y) with beq in *
+           end.
+
+  Ltac type_beq_to_eq_internal reflect_for_base reflect_for_base_type reflect_for_type :=
+    repeat first [ progress eta_contract_for_type_beq_to_eq
+                 | progress Reflect.reflect_beq_to_eq_using reflect_for_base
+                 | progress Reflect.reflect_beq_to_eq_using reflect_for_base_type
+                 | progress Reflect.reflect_beq_to_eq_using reflect_for_type
                  | match goal with
                    | [ H : ?x <> ?x |- _ ] => exfalso; exact (H eq_refl)
                    end ].
 
+  Ltac type_beq_to_eq_with do_type_beq_to_eq :=
+    do_type_beq_to_eq ().
+
+  Ltac find_type_beq_to_eq _ :=
+    let ty := lazymatch goal with
+              | [ H : context[type.type_beq ?base_type] |- _ ] => constr:(type.type base_type)
+              | [ |- context[type.type_beq ?base_type] ] => constr:(type.type base_type)
+              | [ H : context[base.type.type_beq ?base] |- _ ] => constr:(type.type (base.type base))
+              | [ |- context[base.type.type_beq ?base] ] => constr:(type.type (base.type base))
+              | [ H : context[base.type ?base] |- _ ] => constr:(type.type (base.type base))
+              | [ |- context[base.type ?base] ] => constr:(type.type (base.type base))
+              | [ H : context[type.type ?base_type] |- _ ] => constr:(type.type base_type)
+              | [ |- context[type.type ?base_type] ] => constr:(type.type base_type)
+              | _ => open_constr:(type.type (base.type _))
+              end in
+    lazymatch ty with
+    | type.type (base.type ?base)
+      => let reflect_for_type := eta_contract_for_type_beq_to_eq_in_type_of constr:(_ : reflect_rel (@eq ty) (@type.type_beq (base.type base) (@base.type.type_beq base _))) in
+         let reflect_for_base_type := eta_contract_for_type_beq_to_eq_in_type_of constr:(_ : reflect_rel (@eq (base.type base)) (@base.type.type_beq base _)) in
+         let reflect_for_base := eta_contract_for_type_beq_to_eq_in_type_of constr:(_ : reflect_rel (@eq base) _) in
+         ltac:(fun _ => type_beq_to_eq_internal reflect_for_base reflect_for_base_type reflect_for_type)
+    | type.type ?base_type
+      => let reflect_for_type := eta_contract_for_type_beq_to_eq_in_type_of constr:(_ : reflect_rel (@eq ty) (@type.type_beq base_type _)) in
+         let reflect_for_base_type := eta_contract_for_type_beq_to_eq_in_type_of constr:(_ : reflect_rel (@eq base_type) _) in
+         ltac:(fun _ => type_beq_to_eq_internal () reflect_for_base_type reflect_for_type)
+    end.
+
+  Ltac type_beq_to_eq :=
+    let type_beq_to_eq_info := find_type_beq_to_eq () in
+    type_beq_to_eq_with type_beq_to_eq_info.
+
   Ltac rewrite_type_transport_correct :=
-    cbv [type.try_transport_cps type.try_transport base.try_transport base.try_transport_cps] in *;
     cbv [cpsbind cpscall cpsreturn id cps_option_bind] in *;
     repeat match goal with
-           | [ |- context[type.try_make_transport_cps ?bmt ?P ?t1 ?t2] ]
-             => erewrite type.try_make_transport_cps_correct
-               by first [ exact base.try_make_transport_cps_correct | exact base.type.internal_type_dec_lb ]
-           | [ H : context[type.try_make_transport_cps ?bmt ?P ?t1 ?t2] |- _ ]
-             => erewrite type.try_make_transport_cps_correct in H
-               by first [ exact base.try_make_transport_cps_correct | exact base.type.internal_type_dec_lb ]
-           | [ |- context[base.try_make_transport_cps ?P ?t1 ?t2] ]
-             => rewrite base.try_make_transport_cps_correct
-           | [ H : context[base.try_make_transport_cps ?P ?t1 ?t2] |- _ ]
+           | [ H : context[type.try_transport] |- _ ]
+             => rewrite type.try_transport_correct in H
+           | [ |- context[type.try_transport] ]
+             => rewrite type.try_transport_correct
+           | [ H : context[type.try_transport_cps] |- _ ]
+             => rewrite type.try_transport_cps_correct in H
+           | [ |- context[type.try_transport_cps] ]
+             => rewrite type.try_transport_cps_correct
+           | [ H : context[type.try_make_transport_cps] |- _ ]
+             => rewrite type.try_make_transport_cps_correct in H
+           | [ |- context[type.try_make_transport_cps] ]
+             => rewrite type.try_make_transport_cps_correct
+
+           | [ H : context[base.try_transport] |- _ ]
+             => rewrite base.try_transport_correct in H
+           | [ |- context[base.try_transport] ]
+             => rewrite base.try_transport_correct
+           | [ H : context[base.try_transport_cps] |- _ ]
+             => rewrite base.try_transport_cps_correct in H
+           | [ |- context[base.try_transport_cps] ]
+             => rewrite base.try_transport_cps_correct
+           | [ H : context[base.try_make_transport_cps] |- _ ]
              => rewrite base.try_make_transport_cps_correct in H
-           | [ |- context[base.try_make_base_transport_cps ?P ?t1 ?t2] ]
-             => rewrite base.try_make_base_transport_cps_correct
-           | [ H : context[base.try_make_base_transport_cps ?P ?t1 ?t2] |- _ ]
-             => rewrite base.try_make_base_transport_cps_correct in H
+           | [ |- context[base.try_make_transport_cps] ]
+             => rewrite base.try_make_transport_cps_correct
            end.
 
   Module ident.
-    Ltac invert_step :=
+    Ltac invert_step_for ident :=
       match goal with
       | [ e : ident (type.base _) |- _ ] => type.invert_one e
       | [ e : ident (type.arrow _ _) |- _ ] => type.invert_one e
       end.
 
-    Ltac invert := repeat invert_step.
+    Ltac invert_for ident := repeat invert_step_for ident.
 
-    Ltac invert_match_step :=
+    Ltac invert_match_step_for ident :=
+      let is_ident term := match type of term with ident _ => idtac end in
       match goal with
-      | [ H : context[match ?e with ident.Literal _ _ => _ | _ => _ end] |- _ ]
-        => type.invert_one e
-      | [ |- context[match ?e with ident.Literal _ _ => _ | _ => _ end] ]
-        => type.invert_one e
+      | [ H : context[match ?e with _ => _ end] |- _ ]
+        => is_ident e; type.invert_one e
+      | [ |- context[match ?e with _ => _ end] ]
+        => is_ident e; type.invert_one e
       end.
 
-    Ltac invert_match := repeat invert_match_step.
+    Ltac invert_match_for ident := repeat invert_match_step_for ident.
   End ident.
 
   Module expr.
     Ltac invert_step :=
       match goal with
       | [ e : expr.expr (type.base _) |- _ ] => type.invert_one e
-      | [ e : expr.expr (defaults.type_base _) |- _ ] => type.invert_one e
       | [ e : expr.expr (type.arrow _ _) |- _ ] => type.invert_one e
       end.
 
@@ -446,268 +523,30 @@ Module Compilers.
       End encode_decode.
     End with_var.
 
-    Section with_var2.
-      Context {var : type base.type -> Type}.
-      Local Notation expr := (@expr base.type ident var).
-      Local Notation try_transportP P := (@type.try_transport base.type (@base.try_make_transport_cps) P _ _).
-      Local Notation try_transport := (try_transportP _).
-      Let type_base (v : base.type) : defaults.type := type.base v.
-      Coercion type_base : base.type >-> type.type.
-
-      Local Ltac t :=
-        repeat first [ progress intros
-                     | progress cbv [type_base] in *
-                     | progress subst
-                     | progress cbn [eq_rect f_equal f_equal2 Option.bind fst snd projT1 projT2] in *
-                     | progress destruct_head'_sig
-                     | progress inversion_option
-                     | progress inversion_prod
-                     | discriminate
-                     | reflexivity
-                     | progress type.inversion_type
-                     | progress invert_match
-                     | progress ident.invert_match
-                     | progress break_innermost_match_hyps
-                     | exists eq_refl; cbn
-                     | progress rewrite_type_transport_correct
-                     | progress type_beq_to_eq
-                     | congruence ].
-
-      Lemma invert_Z_opp_Some {t} {e : expr t} {v}
-        : invert_expr.invert_Z_opp e = Some v -> { pf : base.type.Z = t :> defaults.type
-                                                | e = rew [expr] pf in (#ident.Z_opp @ (rew [expr] (eq_sym pf) in v))%expr }.
-      Proof. cbv [invert_expr.invert_Z_opp]; intros; t. Qed.
-      Lemma invert_Z_opp_SomeZ {e : expr base.type.Z} {v}
-        : invert_expr.invert_Z_opp e = Some v -> e = (#ident.Z_opp @ v)%expr.
-      Proof. intro H; apply invert_Z_opp_Some in H; t. Qed.
-      Lemma invert_Z_cast_Some {e : expr base.type.Z} {v} : invert_expr.invert_Z_cast e = Some v -> e = (#(ident.Z_cast (fst v)) @ snd v)%expr.
-      Proof. cbv [invert_expr.invert_Z_cast]; t. Qed.
-      Lemma invert_Z_cast2_Some {e : expr (base.type.Z * base.type.Z)} {v}
-        : invert_expr.invert_Z_cast2 e = Some v -> e = (#(ident.Z_cast2 (fst v)) @ snd v)%expr.
-      Proof. cbv [invert_expr.invert_Z_cast2]; t. Qed.
-      Lemma invert_pair_Some {A B} {e : expr (A * B)} {v}
-        : invert_expr.invert_pair e = Some v -> e = (fst v, snd v)%expr.
-      Proof. cbv [invert_expr.invert_pair]; t. Qed.
-      Lemma invert_Literal_Some {t} {e : expr t} {v}
-        : invert_expr.invert_Literal e = Some v -> match t return expr t -> type.interp base.interp t -> Prop with
-                                                  | type.base (base.type.type_base _) => fun e v => e = expr.Ident (ident.Literal v)
-                                                  | _ => fun _ _ => False
-                                                  end e v.
-      Proof. cbv [invert_expr.invert_Literal invert_expr.ident.invert_Literal]; t. Qed.
-      Lemma invert_Literal_Some_base {t : base.type} {e : expr t} {v} : invert_expr.invert_Literal e = Some v -> e = ident.smart_Literal v.
-      Proof. intro H; apply invert_Literal_Some in H; cbv [type_base] in *; break_innermost_match_hyps; subst; try reflexivity; tauto. Qed.
-      Lemma invert_nil_Some {t} {e : expr (base.type.list t)}
-        : invert_expr.invert_nil e = true -> e = (#ident.nil)%expr.
-      Proof. cbv [invert_expr.invert_nil invert_expr.invert_Ident]; t. Qed.
-      Lemma invert_cons_Some {t} {e : expr (base.type.list t)} {v}
-        : invert_expr.invert_cons e = Some v -> e = (fst v :: snd v)%expr.
-      Proof.
-        cbv [invert_expr.invert_cons type_base] in *.
-        destruct (invert_expr.invert_AppIdent2 e) eqn:H; [ | congruence ].
-        apply invert_AppIdent2_Some in H; subst; break_innermost_match.
-        t.
-      Qed.
-      Lemma invert_None_Some {t} {e : expr (base.type.option t)}
-        : invert_expr.invert_None e = true -> e = (#ident.None)%expr.
-      Proof. cbv [invert_expr.invert_None invert_expr.invert_Ident]; t. Qed.
-      Lemma invert_Some_Some {t} {e : expr (base.type.option t)} {v}
-        : invert_expr.invert_Some e = Some v -> e = (#ident.Some @ v)%expr.
-      Proof.
-        cbv [invert_expr.invert_Some].
-        destruct (invert_expr.invert_AppIdent _) eqn:H; [ | congruence ].
-        apply invert_AppIdent_Some in H; subst; break_innermost_match.
-        t.
-      Qed.
-
-      Lemma reify_option_None {t} : reify_option None = (#ident.None)%expr :> expr (base.type.option t).
-      Proof. reflexivity. Qed.
-      Lemma reify_option_Some {t} (x : expr (type.base t)) : reify_option (Some x) = (#ident.Some @ x)%expr.
-      Proof. reflexivity. Qed.
-      Lemma reflect_option_Some {t} {e : expr (base.type.option t)} {v} : invert_expr.reflect_option e = Some v -> e = reify_option v.
-      Proof.
-        cbv [invert_expr.reflect_option].
-        destruct (invert_expr.invert_None _) eqn:H;
-          [ | destruct (invert_expr.invert_Some _) eqn:H' ];
-          try apply invert_None_Some in H;
-          try apply invert_Some_Some in H';
-          intros; inversion_option; subst; reflexivity.
-      Qed.
-      Lemma reflect_option_Some_None {t} {e : expr (base.type.option t)} : invert_expr.reflect_option e = Some None -> e = (#ident.None)%expr.
-      Proof. exact (@reflect_option_Some _ e None). Qed.
-      Lemma reflect_reify_option {t} {v} : invert_expr.reflect_option (var:=var) (reify_option (t:=t) v) = Some v.
-      Proof.
-        destruct v; rewrite ?reify_option_Some, ?reify_option_None; reflexivity.
-      Qed.
-      Lemma reflect_option_Some_iff  {t} {e : expr (base.type.option t)} {v} : invert_expr.reflect_option e = Some v <-> e = reify_option v.
-      Proof. split; intro; subst; apply reflect_reify_option || apply reflect_option_Some; assumption. Qed.
-
-      Lemma reflect_list_cps'_id_nil {t} (e : expr _ := (#(@ident.nil t))%expr)
-        : forall T k, invert_expr.reflect_list_cps' e T k = k (invert_expr.reflect_list_cps' e _ id).
-      Proof. reflexivity. Qed.
-      Lemma reflect_list_cps'_id_cons_body {t} (x : expr _) (xs : expr (base.type.list t)) (e := (x :: xs)%expr)
-            (rec : forall T k, invert_expr.reflect_list_cps' xs T k = k (invert_expr.reflect_list_cps' xs _ id))
-        : forall T k, invert_expr.reflect_list_cps' e T k = k (invert_expr.reflect_list_cps' e _ id).
-      Proof.
-        intros T k; subst e; cbn [invert_expr.reflect_list_cps']; cbv [id type_base] in *.
-        rewrite_type_transport_correct; break_innermost_match; type_beq_to_eq; subst; cbn [eq_rect]; try reflexivity.
-        all: etransitivity; rewrite rec; clear rec; [ | reflexivity ]; cbv [id]; break_innermost_match; try reflexivity.
-      Qed.
-
-
-      Lemma reflect_list_cps'_id {t} {e : expr t}
-        : forall T k, invert_expr.reflect_list_cps' e T k = k (invert_expr.reflect_list_cps' e _ id).
-      Proof.
-        induction e; try exact (fun T k => eq_refl (k None));
-          [ destruct_head' ident; first [ exact (fun T k => eq_refl (k None))
-                                        | exact (fun T k => eq_refl (k (Some nil))) ]
-          | ].
-        do 2 (let f := match goal with f : expr (_ -> _) |- _ => f end in
-              type.invert_one f; try (exact (fun T k => eq_refl (k None))); []).
-        ident.invert; break_innermost_match_hyps; subst; destruct_head' False; try (exact (fun T k => eq_refl (k None))); [].
-        cbn [f_equal f_equal2 eq_rect].
-        apply reflect_list_cps'_id_cons_body; assumption.
-      Qed.
-
-      Lemma reflect_list_cps_id {t} {e : expr (base.type.list t)}
-        : forall T k, @invert_expr.reflect_list_cps _ _ e T k = k (invert_expr.reflect_list e).
-      Proof. exact (@reflect_list_cps'_id _ e). Qed.
-
-      Lemma reflect_list_step {t} {e : expr (base.type.list t)}
-        : invert_expr.reflect_list e
-          = match invert_expr.invert_nil e, invert_expr.invert_cons e with
-            | true, _ => Some nil
-            | false, Some (x, xs) => option_map (cons x) (invert_expr.reflect_list xs)
-            | false, None => None
-            end.
-      Proof.
-        type.invert_one e; cbv [invert_expr.invert_nil invert_expr.invert_Ident type_base]; try reflexivity;
-          [ ident.invert_match; cbv [type_base] in *; type.inversion_type; reflexivity | ].
-        do 2 (let f := match goal with f : expr (_ -> _) |- _ => f end in
-              type.invert_one f; try reflexivity; []).
-        cbv [type_base] in *; ident.invert; break_innermost_match_hyps; subst; destruct_head' False; try reflexivity; [].
-        cbn [invert_expr.invert_cons f_equal2 f_equal eq_rect].
-        cbv [invert_expr.reflect_list invert_expr.invert_cons invert_expr.invert_AppIdent2 invert_expr.invert_App2 invert_expr.invert_App Option.bind invert_expr.invert_Ident].
-        cbv [invert_expr.reflect_list_cps].
-        cbn [invert_expr.reflect_list_cps'].
-        repeat first [ reflexivity
-                     | discriminate
-                     | progress rewrite_type_transport_correct
-                     | progress type_beq_to_eq
-                     | progress break_innermost_match
-                     | progress type.inversion_type
-                     | rewrite reflect_list_cps'_id; reflexivity ].
-      Qed.
-
-      Lemma reify_list_nil {t} : reify_list nil = ([])%expr :> expr (base.type.list t).
-      Proof. reflexivity. Qed.
-      Lemma reify_list_cons {t} (x : expr (type.base t)) xs : reify_list (x :: xs) = (x :: reify_list xs)%expr.
-      Proof. reflexivity. Qed.
-      Lemma reflect_list_Some {t} {e : expr (base.type.list t)} {v} : invert_expr.reflect_list e = Some v -> e = reify_list v.
-      Proof.
-        revert e; induction v as [|v vs IHvs]; intro e; rewrite ?reify_list_cons, ?reify_list_nil;
-          rewrite reflect_list_step; cbv [option_map]; break_innermost_match; auto using invert_nil_Some; try congruence; [].
-        match goal with H : _ |- _ => apply invert_cons_Some in H end; subst.
-        cbn [fst snd] in *.
-        intro; erewrite <- IHvs; [ f_equal; reflexivity || congruence | congruence ].
-      Qed.
-      Lemma reflect_list_Some_nil {t} {e : expr (base.type.list t)} : invert_expr.reflect_list e = Some nil -> e = (#ident.nil)%expr.
-      Proof. exact (@reflect_list_Some _ e nil). Qed.
-      Lemma reflect_reify_list {t} {v} : invert_expr.reflect_list (var:=var) (reify_list (t:=t) v) = Some v.
-      Proof.
-        induction v as [|v vs IHvs]; rewrite ?reify_list_cons, ?reify_list_nil, reflect_list_step; [ reflexivity | ].
-        cbn; cbv [option_map]; cbv [type_base] in *; rewrite IHvs; reflexivity.
-      Qed.
-      Lemma reflect_list_Some_iff  {t} {e : expr (base.type.list t)} {v} : invert_expr.reflect_list e = Some v <-> e = reify_list v.
-      Proof. split; intro; subst; apply reflect_reify_list || apply reflect_list_Some; assumption. Qed.
-    End with_var2.
-
-    Section with_interp.
-      Context {cast_outside_of_range : ZRange.zrange -> BinInt.Z -> BinInt.Z}.
-      Local Notation ident_interp := (@ident.gen_interp cast_outside_of_range).
-
-      Lemma reify_list_interp_related_gen_iff {var R t ls v}
-        : expr.interp_related_gen (var:=var) (@ident_interp) R (reify_list (t:=t) ls) v
-          <-> List.Forall2 (expr.interp_related_gen (@ident_interp) R) ls v.
-      Proof using Type.
-        revert v; induction ls as [|l ls IHls], v as [|v vs].
-        all: repeat first [ rewrite expr.reify_list_nil
-                          | rewrite expr.reify_list_cons
-                          | progress cbn [expr.interp_related_gen ident.gen_interp type.related] in *
-                          | progress cbv [Morphisms.respectful] in *
-                          | progress destruct_head'_ex
-                          | progress destruct_head'_and
-                          | progress subst
-                          | reflexivity
-                          | assumption
-                          | apply conj
-                          | progress intros
-                          | match goal with
-                            | [ H : List.Forall2 _ nil _ |- _ ] => inversion_clear H
-                            | [ H : List.Forall2 _ (cons _ _) _ |- _ ] => inversion_clear H
-                            | [ |- List.Forall2 _ _ _ ] => constructor
-                            | [ H : nil = cons _ _ |- _ ] => solve [ inversion H ]
-                            | [ H : cons _ _ = nil |- _ ] => solve [ inversion H ]
-                            | [ H : cons _ _ = cons _ _ |- _ ] => inversion H; clear H
-                            | [ H : forall x y, x = y -> _ |- _ ] => specialize (fun x => H x x eq_refl)
-                            | [ H : forall a x y, x = y -> _ |- _ ] => specialize (fun a x => H a x x eq_refl)
-                            | [ H : forall x y, _ = ?f x y, H' : context[?f _ _] |- _ ] => rewrite <- H in H'
-                            | [ H : _ |- _ ] => apply H; clear H
-                            | [ |- ex _ ] => eexists
-                            end ].
-      Qed.
-
-      Lemma reify_list_interp_related_iff {t ls v}
-        : expr.interp_related (@ident_interp) (reify_list (t:=t) ls) v
-          <-> List.Forall2 (expr.interp_related (@ident_interp)) ls v.
-      Proof using Type. apply reify_list_interp_related_gen_iff. Qed.
-
-      Lemma reflect_list_interp_related_gen_iff {var R t ls ls' v}
-            (Hls : invert_expr.reflect_list (t:=t) ls = Some ls')
-        : List.Forall2 (expr.interp_related_gen (var:=var) (@ident_interp) R) ls' v
-          <-> expr.interp_related_gen (@ident_interp) R ls v.
-      Proof using Type.
-        apply reflect_list_Some in Hls; subst.
-        rewrite reify_list_interp_related_gen_iff; reflexivity.
-      Qed.
-
-      Lemma reflect_list_interp_related_iff {t ls ls' v}
-            (Hls : invert_expr.reflect_list (t:=t) ls = Some ls')
-        : List.Forall2 (expr.interp_related (@ident_interp)) ls' v
-          <-> expr.interp_related (@ident_interp) ls v.
-      Proof using Type. now apply reflect_list_interp_related_gen_iff. Qed.
-    End with_interp.
-
-    Ltac invert_subst_step_helper guard_tac :=
-      cbv [defaults.type_base] in *;
+    Ltac invert_subst_simple_step_helper guard_tac :=
       match goal with
-      | [ H : invert_expr.invert_Var ?e = Some _ |- _ ] => guard_tac H; apply invert_Var_Some in H
-      | [ H : invert_expr.invert_Ident ?e = Some _ |- _ ] => guard_tac H; apply invert_Ident_Some in H
-      | [ H : invert_expr.invert_LetIn ?e = Some _ |- _ ] => guard_tac H; apply invert_LetIn_Some in H
-      | [ H : invert_expr.invert_App ?e = Some _ |- _ ] => guard_tac H; apply invert_App_Some in H
-      | [ H : invert_expr.invert_Abs ?e = Some _ |- _ ] => guard_tac H; apply invert_Abs_Some in H
-      | [ H : invert_expr.invert_App2 ?e = Some _ |- _ ] => guard_tac H; apply invert_App2_Some in H
-      | [ H : invert_expr.invert_AppIdent ?e = Some _ |- _ ] => guard_tac H; apply invert_AppIdent_Some in H
-      | [ H : invert_expr.invert_AppIdent2 ?e = Some _ |- _ ] => guard_tac H; apply invert_AppIdent2_Some in H
-      | [ H : invert_expr.invert_Z_opp ?e = Some _ |- _ ] => guard_tac H; first [ apply invert_Z_opp_SomeZ in H | apply invert_Z_opp_Some in H ]
-      | [ H : invert_expr.invert_Z_cast ?e = Some _ |- _ ] => guard_tac H; apply invert_Z_cast_Some in H
-      | [ H : invert_expr.invert_Z_cast2 ?e = Some _ |- _ ] => guard_tac H; apply invert_Z_cast2_Some in H
-      | [ H : invert_expr.invert_pair ?e = Some _ |- _ ] => guard_tac H; apply invert_pair_Some in H
-      | [ H : invert_expr.invert_Literal ?e = Some _ |- _ ] => guard_tac H; apply invert_Literal_Some in H
-      | [ H : invert_expr.invert_nil ?e = Some _ |- _ ] => guard_tac H; apply invert_nil_Some in H
-      | [ H : invert_expr.invert_cons ?e = Some _ |- _ ] => guard_tac H; apply invert_cons_Some in H
-      | [ H : invert_expr.reflect_list ?e = Some _ |- _ ]
-        => guard_tac H; first [ apply reflect_list_Some_nil in H | apply reflect_list_Some in H ];
-          rewrite ?reify_list_cons, ?reify_list_nil in H
-      | [ H : invert_expr.invert_None ?e = Some _ |- _ ] => guard_tac H; apply invert_None_Some in H
-      | [ H : invert_expr.invert_Some ?e = Some _ |- _ ] => guard_tac H; apply invert_Some_Some in H
-      | [ H : invert_expr.reflect_option ?e = Some _ |- _ ]
-        => guard_tac H; first [ apply reflect_option_Some_None in H | apply reflect_option_Some in H ];
-          rewrite ?reify_option_Some, ?reify_option_None in H
+      | [ H : @invert_expr.invert_Var ?base_type ?ident ?var ?t ?e = Some _ |- _ ]
+        => guard_tac H; apply (@invert_Var_Some base_type ident var t e) in H
+      | [ H : @invert_expr.invert_Ident ?base_type ?ident ?var ?t ?e = Some _ |- _ ]
+        => guard_tac H; apply (@invert_Ident_Some base_type ident var t e) in H
+      | [ H : @invert_expr.invert_LetIn ?base_type ?ident ?var ?t ?e = Some _ |- _ ]
+        => guard_tac H; apply (@invert_LetIn_Some base_type ident var t e) in H
+      | [ H : @invert_expr.invert_App ?base_type ?ident ?var ?t ?e = Some _ |- _ ]
+        => guard_tac H; apply (@invert_App_Some base_type ident var t e) in H
+      | [ H : @invert_expr.invert_Abs ?base_type ?ident ?var ?s ?d ?e = Some _ |- _ ]
+        => guard_tac H; apply (@invert_Abs_Some base_type ident var s d e) in H
+      | [ H : @invert_expr.invert_App2 ?base_type ?ident ?var ?t ?e = Some _ |- _ ]
+        => guard_tac H; apply (@invert_App2_Some base_type ident var t e) in H
+      | [ H : @invert_expr.invert_AppIdent ?base_type ?ident ?var ?t ?e = Some _ |- _ ]
+        => guard_tac H; apply (@invert_AppIdent_Some base_type ident var t e) in H
+      | [ H : @invert_expr.invert_AppIdent2 ?base_type ?ident ?var ?t ?e = Some _ |- _ ]
+        => guard_tac H; apply (@invert_AppIdent2_Some base_type ident var t e) in H
       end.
-    Ltac invert_subst_step :=
-      first [ invert_subst_step_helper ltac:(fun _ => idtac)
+    Ltac invert_subst_simple_step :=
+      first [ progress cbv beta iota in *
+            | invert_subst_simple_step_helper ltac:(fun _ => idtac)
             | subst ].
-    Ltac invert_subst := repeat invert_subst_step.
+    Ltac invert_subst_simple := repeat invert_subst_simple_step.
 
     Ltac induction_expr_in_using H rect :=
       induction H as [H] using (rect _ _ _);
@@ -749,5 +588,369 @@ Module Compilers.
         => induction_expr_in_using H @path_rect
       end.
     Ltac inversion_expr := repeat inversion_expr_step.
+
+    Section with_container.
+      Import invert_expr.
+      Context {base : Type}
+              {base_interp : base -> Type}
+              {try_make_transport_base_cps : @type.try_make_transport_cpsT base}
+              {base_beq : base -> base -> bool}.
+      Local Notation base_type := (@base.type base).
+      Local Notation type := (@type.type base_type).
+      Context {ident : type -> Type}.
+      Context {invertIdent : @InvertIdentT base base_interp ident}.
+      Context {buildIdent : @ident.BuildIdentT base base_interp ident}.
+      Context {reflect_base_beq : reflect_rel (@eq base) base_beq}
+              {try_make_transport_base_cps_correct : type.try_make_transport_cps_correctT base}.
+      Context {buildInvertIdentCorrect : BuildInvertIdentCorrectT}.
+
+      Lemma invert_ident_Literal_ident_Literal
+        : forall {t v}, invert_ident_Literal (ident.ident_Literal (t:=t) v) = Some v.
+      Proof. intros t v; now apply (proj2 (invert_ident_Literal_correct (idc:=ident.ident_Literal (t:=t) v))). Qed.
+      Lemma is_nil_ident_nil : forall {t}, is_nil (ident.ident_nil (t:=t)) = true.
+      Proof. intros t; now apply (proj2 (is_nil_correct (idc:=ident.ident_nil (t:=t)))). Qed.
+      Lemma is_cons_ident_cons : forall {t}, is_cons (ident.ident_cons (t:=t)) = true.
+      Proof. intros t; now apply (proj2 (is_cons_correct (idc:=ident.ident_cons (t:=t)))). Qed.
+      Lemma is_Some_ident_Some : forall {t}, is_Some (ident.ident_Some (t:=t)) = true.
+      Proof. intros t; now apply (proj2 (is_Some_correct (idc:=ident.ident_Some (t:=t)))). Qed.
+      Lemma is_None_ident_None : forall {t}, is_None (ident.ident_None (t:=t)) = true.
+      Proof. intros t; now apply (proj2 (is_None_correct (idc:=ident.ident_None (t:=t)))). Qed.
+      Lemma is_pair_ident_pair : forall {A B}, is_pair (ident.ident_pair (A:=A) (B:=B)) = true.
+      Proof. intros A B; now apply (proj2 (is_pair_correct (idc:=ident.ident_pair (A:=A) (B:=B)))). Qed.
+
+      Let type_base (x : base) : @base.type base := base.type.type_base x.
+      Let base' {bt} (x : Compilers.base.type bt) : type.type _ := type.base x.
+      Local Coercion base' : base.type >-> type.type.
+      Local Coercion type_base : base >-> base.type.
+
+      Section with_var1.
+        Context {var : type -> Type}.
+
+        Local Notation expr := (@expr.expr base_type ident var).
+
+        Local Ltac t_step :=
+          first [ progress intros
+                | progress cbv [type_base base'] in *
+                | progress subst
+                | progress cbn [eq_rect f_equal f_equal2 Option.bind fst snd projT1 projT2] in *
+                | progress inversion_option
+                | progress inversion_prod
+                | progress inversion_sigma
+                | progress destruct_head'_sig
+                | progress destruct_head'_prod
+                | exfalso; assumption
+                | match goal with
+                  | [ H : invert_ident_Literal _ = Some _ |- _ ] => apply invert_ident_Literal_correct in H
+                  | [ H : is_nil _ = true |- _ ] => apply is_nil_correct in H
+                  | [ H : is_cons _ = true |- _ ] => apply is_cons_correct in H
+                  | [ H : is_Some _ = true |- _ ] => apply is_Some_correct in H
+                  | [ H : is_None _ = true |- _ ] => apply is_None_correct in H
+                  | [ H : is_pair _ = true |- _ ] => apply is_pair_correct in H
+                  | [ H : context[invert_ident_Literal (ident.ident_Literal (t:=?T) ?V)] |- _ ]
+                    => rewrite (invert_ident_Literal_ident_Literal (t:=T) (v:=V)) in H
+                  | [ |- context[invert_ident_Literal (ident.ident_Literal (t:=?T) ?V)] ]
+                    => rewrite (invert_ident_Literal_ident_Literal (t:=T) (v:=V))
+                  | [ H : context[is_nil ident.ident_nil] |- _ ] => rewrite is_nil_ident_nil in H
+                  | [ |- context[is_nil ident.ident_nil] ] => rewrite is_nil_ident_nil
+                  | [ H : context[is_cons ident.ident_cons] |- _ ] => rewrite is_cons_ident_cons in H
+                  | [ |- context[is_cons ident.ident_cons] ] => rewrite is_cons_ident_cons
+                  | [ H : context[is_Some ident.ident_Some] |- _ ] => rewrite is_Some_ident_Some in H
+                  | [ |- context[is_Some ident.ident_Some] ] => rewrite is_Some_ident_Some
+                  | [ H : context[is_None ident.ident_None] |- _ ] => rewrite is_None_ident_None in H
+                  | [ |- context[is_None ident.ident_None] ] => rewrite is_None_ident_None
+                  | [ H : context[is_pair ident.ident_pair] |- _ ] => rewrite is_pair_ident_pair in H
+                  | [ |- context[is_pair ident.ident_pair] ] => rewrite is_pair_ident_pair
+                  end
+                | progress invert_subst_simple_step
+                | discriminate
+                | reflexivity
+                | progress inversion_expr
+                | apply conj
+                | progress inversion_type
+                | progress invert_match
+                | progress ident.invert_match_for ident
+                | progress break_innermost_match_hyps
+                | exists eq_refl; cbn
+                | progress rewrite_type_transport_correct
+                | progress type_beq_to_eq
+                | congruence
+                | break_innermost_match_step
+                | progress eliminate_hprop_eq ].
+        Local Ltac t := repeat t_step.
+
+        Lemma invert_pair_Some_iff {A B} {e : expr (A * B)} {v}
+          : invert_expr.invert_pair e = Some v <-> e = (fst v, snd v)%expr.
+        Proof. cbv [invert_expr.invert_pair]; t. Qed.
+        Lemma invert_Literal_Some_iff {t} {e : expr t} {v}
+          : invert_expr.invert_Literal e = Some v <-> match t return expr t -> type.interp (base.interp base_interp) t -> Prop with
+                                                      | type.base (base.type.type_base t) => fun e v => e = expr.Ident (ident.ident_Literal (t:=t) v)
+                                                      | _ => fun _ _ => False
+                                                      end e v.
+        Proof. cbv [invert_expr.invert_Literal]; t. Qed.
+        Lemma invert_nil_Some_iff {t} {e : expr (base.type.list t)}
+          : invert_expr.invert_nil e = true <-> e = []%expr.
+        Proof. cbv [invert_expr.invert_nil]; t. Qed.
+        Lemma invert_cons_Some_iff {t} {e : expr (base.type.list t)} {v}
+          : invert_expr.invert_cons e = Some v <-> e = (fst v :: snd v)%expr.
+        Proof. cbv [invert_expr.invert_cons]; t. Qed.
+        Lemma invert_None_Some_iff {t} {e : expr (base.type.option t)}
+          : invert_expr.invert_None e = true <-> e = (#ident.ident_None)%expr.
+        Proof. cbv [invert_expr.invert_None]; t. Qed.
+        Lemma invert_Some_Some_iff {t} {e : expr (base.type.option t)} {v}
+          : invert_expr.invert_Some e = Some v <-> e = (#ident.ident_Some @ v)%expr.
+        Proof. cbv [invert_expr.invert_Some]; t. Qed.
+
+        Lemma invert_pair_Some {A B} {e : expr (A * B)} {v}
+          : invert_expr.invert_pair e = Some v -> e = (fst v, snd v)%expr.
+        Proof. intros; now apply (proj1 invert_pair_Some_iff). Qed.
+        Lemma invert_Literal_Some {t} {e : expr t} {v}
+          : invert_expr.invert_Literal e = Some v -> match t return expr t -> type.interp (base.interp base_interp) t -> Prop with
+                                                     | type.base (base.type.type_base t) => fun e v => e = expr.Ident (ident.ident_Literal (t:=t) v)
+                                                     | _ => fun _ _ => False
+                                                     end e v.
+        Proof. intros; now apply (proj1 invert_Literal_Some_iff). Qed.
+        Lemma invert_Literal_Some_base {t : base.type base} {e : expr t} {v} : invert_expr.invert_Literal e = Some v -> e = ident.smart_Literal v.
+        Proof. intro H; apply invert_Literal_Some in H; cbv [base'] in *; break_innermost_match_hyps; subst; try reflexivity; tauto. Qed.
+        Lemma invert_nil_Some {t} {e : expr (base.type.list t)}
+          : invert_expr.invert_nil e = true -> e = []%expr.
+        Proof. intros; now apply (proj1 invert_nil_Some_iff). Qed.
+        Lemma invert_cons_Some {t} {e : expr (base.type.list t)} {v}
+          : invert_expr.invert_cons e = Some v -> e = (fst v :: snd v)%expr.
+        Proof. intros; now apply (proj1 invert_cons_Some_iff). Qed.
+        Lemma invert_None_Some {t} {e : expr (base.type.option t)}
+          : invert_expr.invert_None e = true -> e = (#ident.ident_None)%expr.
+        Proof. intros; now apply (proj1 invert_None_Some_iff). Qed.
+        Lemma invert_Some_Some {t} {e : expr (base.type.option t)} {v}
+          : invert_expr.invert_Some e = Some v -> e = (#ident.ident_Some @ v)%expr.
+        Proof. intros; now apply (proj1 invert_Some_Some_iff). Qed.
+
+        Lemma invert_pair_ident_pair {A B} {v1 v2}
+          : invert_expr.invert_pair (var:=var) (A:=A) (B:=B) (v1, v2) = Some (v1, v2).
+        Proof. intros; now apply (proj2 invert_pair_Some_iff). Qed.
+        Lemma invert_Literal_ident_Literal {t} {v}
+          : invert_expr.invert_Literal (var:=var) (#(ident.ident_Literal (t:=t) v)) = Some v.
+        Proof. intros; now apply (proj2 (invert_Literal_Some_iff (t:=t))). Qed.
+        Lemma invert_nil_ident_nil {t}
+          : invert_expr.invert_nil (var:=var) (#(ident.ident_nil (t:=t))) = true.
+        Proof. intros; now apply (proj2 invert_nil_Some_iff). Qed.
+        Lemma invert_cons_ident_cons {t} {x xs}
+          : invert_expr.invert_cons (var:=var) (t:=t) (x :: xs) = Some (x, xs).
+        Proof. intros; now apply (proj2 invert_cons_Some_iff). Qed.
+        Lemma invert_None_ident_None {t}
+          : invert_expr.invert_None (var:=var) (#(ident.ident_None (t:=t))) = true.
+        Proof. intros; now apply (proj2 invert_None_Some_iff). Qed.
+        Lemma invert_Some_ident_Some {t x}
+          : invert_expr.invert_Some (var:=var) (#(ident.ident_Some (t:=t)) @ x) = Some x.
+        Proof. intros; now apply (proj2 invert_Some_Some_iff). Qed.
+
+
+        Lemma reify_option_None {t} : reify_option None = (#ident.ident_None)%expr :> expr (base.type.option t).
+        Proof. reflexivity. Qed.
+        Lemma reify_option_Some {t} (x : expr (type.base t)) : reify_option (Some x) = (#ident.ident_Some @ x)%expr.
+        Proof. reflexivity. Qed.
+        Lemma reflect_option_ident_None {t} : reflect_option (var:=var) (#(ident.ident_None (t:=t))) = Some None.
+        Proof. cbv [reflect_option]; cbn; now rewrite (proj2 is_None_correct). Qed.
+        Lemma reflect_option_ident_Some {t e} : reflect_option (var:=var) (#(ident.ident_Some (t:=t)) @ e) = Some (Some e).
+        Proof. cbv [reflect_option]; cbn; rewrite (proj2 is_Some_correct) by reflexivity; t. Qed.
+        Lemma reflect_option_Some {t} {e : expr (base.type.option t)} {v} : invert_expr.reflect_option e = Some v -> e = reify_option v.
+        Proof.
+          cbv [invert_expr.reflect_option].
+          destruct (invert_expr.invert_None _) eqn:H;
+            [ | destruct (invert_expr.invert_Some _) eqn:H' ];
+            try apply invert_None_Some in H;
+            try apply invert_Some_Some in H';
+            intros; inversion_option; subst; reflexivity.
+        Qed.
+        Lemma reflect_option_Some_None {t} {e : expr (base.type.option t)} : invert_expr.reflect_option e = Some None -> e = (#ident.ident_None)%expr.
+        Proof. exact (@reflect_option_Some _ e None). Qed.
+        Lemma reflect_reify_option {t} {v} : invert_expr.reflect_option (var:=var) (reify_option (t:=t) v) = Some v.
+        Proof.
+          destruct v; rewrite ?reify_option_Some, ?reify_option_None, ?reflect_option_ident_None, ?reflect_option_ident_Some; reflexivity.
+        Qed.
+        Lemma reflect_option_Some_iff  {t} {e : expr (base.type.option t)} {v} : invert_expr.reflect_option e = Some v <-> e = reify_option v.
+        Proof. split; intro; subst; apply reflect_reify_option || apply reflect_option_Some; assumption. Qed.
+
+        Local Lemma reflect_list_cps'_id_ident {t} {idc : ident t}
+          : forall T k, invert_expr.reflect_list_cps' (var:=var) (#idc) T k = k (invert_expr.reflect_list_cps' (#idc) _ id).
+        Proof. cbv [reflect_list_cps']; t. Qed.
+        Local Lemma reflect_list_cps'_id_app2 {A B C} {idc : ident (A -> B -> C)} {x xs}
+              (e := (#(idc) @ x @ xs)%expr)
+              (rec : forall T k, invert_expr.reflect_list_cps' xs T k = k (invert_expr.reflect_list_cps' xs _ id))
+          : forall T k, invert_expr.reflect_list_cps' (var:=var) e T k = k (invert_expr.reflect_list_cps' e _ id).
+        Proof.
+          subst e; cbn [invert_expr.reflect_list_cps']; (destruct (is_cons idc) eqn:?);
+            [ repeat (t || rewrite rec)
+            | reflexivity ].
+        Qed.
+        Lemma reflect_list_cps'_id {t} {e : expr t}
+          : forall T k, invert_expr.reflect_list_cps' e T k = k (invert_expr.reflect_list_cps' e _ id).
+        Proof.
+          induction e; try exact (fun T k => eq_refl (k None));
+            [ now apply reflect_list_cps'_id_ident
+            | ].
+          do 2 (let f := match goal with f : expr (_ -> _) |- _ => f end in
+                type.invert_one f; try (exact (fun T k => eq_refl (k None))); []).
+          now apply reflect_list_cps'_id_app2.
+        Qed.
+
+        Lemma reflect_list_cps_id {t} {e : expr (base.type.list t)}
+          : forall T k, invert_expr.reflect_list_cps e (T:=T) k = k (invert_expr.reflect_list e).
+        Proof. exact (@reflect_list_cps'_id _ e). Qed.
+
+        Lemma reflect_list_step {t} {e : expr (base.type.list t)}
+          : invert_expr.reflect_list e
+            = match invert_expr.invert_nil e, invert_expr.invert_cons e with
+              | true, _ => Some nil
+              | false, Some (x, xs) => option_map (cons x) (invert_expr.reflect_list xs)
+              | false, None => None
+              end.
+        Proof.
+          destruct (invert_nil e) eqn:Hnil;
+            [ | destruct (invert_cons e) eqn:Hcons ];
+            [ try apply invert_nil_Some in Hnil; try apply invert_cons_Some in Hcons;
+              subst;
+              cbv [reflect_list reflect_list_cps]; cbn [reflect_list_cps'];
+              t;
+              now (rewrite reflect_list_cps'_id; t).. | ].
+          type.invert_one e;
+            cbv [reflect_list reflect_list_cps base']; cbn [reflect_list_cps']; try reflexivity;
+              [ t
+              | do 2 (let f := match goal with f : expr (_ -> _) |- _ => f end in
+                      type.invert_one f; try reflexivity; []) ].
+          { rewrite (proj2 invert_nil_Some_iff) in Hnil; congruence. }
+          { let idc := match goal with |- context[is_cons ?idc] => idc end in
+            destruct (is_cons idc) eqn:Hcons'; [ | reflexivity ].
+            t.
+            erewrite (proj2 (invert_cons_Some_iff (v:=(_, _)))) in Hcons by reflexivity.
+            congruence. }
+        Qed.
+
+        Lemma reify_list_nil {t} : reify_list nil = ([])%expr :> expr (base.type.list t).
+        Proof. reflexivity. Qed.
+        Lemma reify_list_cons {t} (x : expr (type.base t)) xs : reify_list (x :: xs) = (x :: reify_list xs)%expr.
+        Proof. reflexivity. Qed.
+        Lemma reflect_list_Some {t} {e : expr (base.type.list t)} {v} : invert_expr.reflect_list e = Some v -> e = reify_list v.
+        Proof.
+          revert e; induction v as [|v vs IHvs]; intro e; rewrite ?reify_list_cons, ?reify_list_nil;
+            rewrite reflect_list_step; cbv [option_map]; break_innermost_match; auto using invert_nil_Some; try congruence; [].
+          match goal with H : _ |- _ => apply invert_cons_Some in H end; subst.
+          cbn [fst snd] in *.
+          intro; erewrite <- IHvs; [ f_equal; reflexivity || congruence | congruence ].
+        Qed.
+        Lemma reflect_list_Some_nil {t} {e : expr (base.type.list t)} : invert_expr.reflect_list e = Some nil -> e = (#ident.ident_nil)%expr.
+        Proof. exact (@reflect_list_Some _ e nil). Qed.
+        Lemma reflect_reify_list {t} {v} : invert_expr.reflect_list (var:=var) (reify_list (t:=t) v) = Some v.
+        Proof.
+          induction v as [|v vs IHvs]; rewrite ?reify_list_cons, ?reify_list_nil, reflect_list_step; [ now rewrite (proj2 invert_nil_Some_iff) | ].
+          erewrite (proj2 (invert_cons_Some_iff (v:=(_,_)))) by (cbn; reflexivity).
+          now rewrite IHvs.
+        Qed.
+        Lemma reflect_list_Some_iff  {t} {e : expr (base.type.list t)} {v} : invert_expr.reflect_list e = Some v <-> e = reify_list v.
+        Proof. split; intro; subst; apply reflect_reify_list || apply reflect_list_Some; assumption. Qed.
+
+        Section with_interp.
+          Context {ident_interp : forall t, ident t -> type.interp (base.interp base_interp) t}.
+
+          Context {buildInterpIdentCorrect : ident.BuildInterpIdentCorrectT ident_interp}.
+
+          Local Ltac rewrite_interp_ident :=
+            repeat match goal with
+                   | [ H : context[ident_interp _ (ident.ident_Literal (t:=?T) ?V)] |- _ ]
+                     => rewrite (ident.interp_ident_Literal (t:=T) (v:=V)) in H
+                   | [ |- context[ident_interp _ (ident.ident_Literal (t:=?T) ?V)] ]
+                     => rewrite (ident.interp_ident_Literal (t:=T) (v:=V))
+                   | _ => progress rewrite ?ident.interp_ident_nil, ?ident.interp_ident_cons, ?ident.interp_ident_Some, ?ident.interp_ident_None, ?ident.interp_ident_pair in *
+                   end.
+
+          Lemma reify_list_interp_related_gen_iff {R t ls v}
+            : expr.interp_related_gen (var:=var) (@ident_interp) R (reify_list (t:=t) ls) v
+              <-> List.Forall2 (expr.interp_related_gen (@ident_interp) R) ls v.
+          Proof using buildInterpIdentCorrect.
+            revert v; induction ls as [|l ls IHls], v as [|v vs].
+            all: repeat first [ rewrite reify_list_nil
+                              | rewrite reify_list_cons
+                              | progress cbn [expr.interp_related_gen type.related] in *
+                              | progress rewrite_interp_ident
+                              | progress cbv [Morphisms.respectful] in *
+                              | progress destruct_head'_ex
+                              | progress destruct_head'_and
+                              | progress subst
+                              | reflexivity
+                              | assumption
+                              | apply conj
+                              | progress intros
+                              | match goal with
+                                | [ H : List.Forall2 _ nil _ |- _ ] => inversion_clear H
+                                | [ H : List.Forall2 _ (cons _ _) _ |- _ ] => inversion_clear H
+                                | [ |- List.Forall2 _ _ _ ] => constructor
+                                | [ H : nil = cons _ _ |- _ ] => solve [ inversion H ]
+                                | [ H : cons _ _ = nil |- _ ] => solve [ inversion H ]
+                                | [ H : cons _ _ = cons _ _ |- _ ] => inversion H; clear H
+                                | [ H : forall x y, x = y -> _ |- _ ] => specialize (fun x => H x x eq_refl)
+                                | [ H : forall a x y, x = y -> _ |- _ ] => specialize (fun a x => H a x x eq_refl)
+                                | [ H : forall x y, _ = ?f x y, H' : context[?f _ _] |- _ ] => rewrite <- H in H'
+                                | [ H : _ |- _ ] => apply H; clear H
+                                | [ |- ex _ ] => do 2 eexists; repeat apply conj; [ | | reflexivity ]
+                                end ].
+          Qed.
+
+          Lemma reflect_list_interp_related_gen_iff {R t ls ls' v}
+                (Hls : invert_expr.reflect_list (t:=t) ls = Some ls')
+            : List.Forall2 (expr.interp_related_gen (var:=var) (@ident_interp) R) ls' v
+              <-> expr.interp_related_gen (@ident_interp) R ls v.
+          Proof using buildInterpIdentCorrect try_make_transport_base_cps_correct buildInvertIdentCorrect.
+            apply reflect_list_Some in Hls; subst.
+            rewrite reify_list_interp_related_gen_iff; reflexivity.
+          Qed.
+        End with_interp.
+      End with_var1.
+
+      Section with_interp.
+        Context {ident_interp : forall t, ident t -> type.interp (base.interp base_interp) t}.
+        Context {buildInterpIdentCorrect : ident.BuildInterpIdentCorrectT ident_interp}.
+
+        Lemma reify_list_interp_related_iff {t ls v}
+          : expr.interp_related (@ident_interp) (reify_list (t:=t) ls) v
+            <-> List.Forall2 (expr.interp_related (@ident_interp)) ls v.
+        Proof using buildInterpIdentCorrect. apply reify_list_interp_related_gen_iff. Qed.
+
+        Lemma reflect_list_interp_related_iff {t ls ls' v}
+              (Hls : invert_expr.reflect_list (t:=t) ls = Some ls')
+          : List.Forall2 (expr.interp_related (@ident_interp)) ls' v
+            <-> expr.interp_related (@ident_interp) ls v.
+        Proof using buildInterpIdentCorrect buildInvertIdentCorrect try_make_transport_base_cps_correct. now apply reflect_list_interp_related_gen_iff. Qed.
+      End with_interp.
+    End with_container.
+
+    Ltac invert_subst_step_helper guard_tac :=
+      first [ invert_subst_simple_step_helper guard_tac
+            | match goal with
+              | [ H : invert_expr.invert_pair ?e = Some _ |- _ ] => guard_tac H; apply invert_pair_Some in H
+              | [ H : invert_expr.invert_Literal ?e = Some _ |- _ ] => guard_tac H; apply invert_Literal_Some in H
+              | [ H : invert_expr.invert_nil ?e = Some _ |- _ ] => guard_tac H; apply invert_nil_Some in H
+              | [ H : invert_expr.invert_cons ?e = Some _ |- _ ] => guard_tac H; apply invert_cons_Some in H
+              | [ H : invert_expr.reflect_list ?e = Some _ |- _ ]
+                => guard_tac H; first [ apply reflect_list_Some_nil in H | apply reflect_list_Some in H ];
+                   rewrite ?reify_list_cons, ?reify_list_nil in H
+              | [ H : invert_expr.invert_None ?e = Some _ |- _ ] => guard_tac H; apply invert_None_Some in H
+              | [ H : invert_expr.invert_Some ?e = Some _ |- _ ] => guard_tac H; apply invert_Some_Some in H
+              | [ H : invert_expr.reflect_option ?e = Some _ |- _ ]
+                => guard_tac H; first [ apply reflect_option_Some_None in H | apply reflect_option_Some in H ];
+                   rewrite ?reify_option_Some, ?reify_option_None in H
+              | [ H : context[invert_expr.invert_pair (_, _)] |- _ ] => guard_tac H; rewrite invert_pair_ident_pair in H
+              | [ H : context[invert_expr.invert_Literal (#(ident.ident_Literal (t:=?T) ?V))] |- _ ] => guard_tac H; rewrite (invert_Literal_ident_Literal (t:=T) (v:=V)) in H
+              | [ H : context[invert_expr.invert_ident_Literal (ident.ident_Literal (t:=?T) ?V)] |- _ ] => guard_tac H; rewrite (expr.invert_ident_Literal_ident_Literal (t:=T) (v:=V)) in H
+              | [ H : context[invert_expr.invert_nil [] ] |- _ ] => guard_tac H; rewrite invert_nil_ident_nil in H
+              | [ H : context[invert_expr.invert_cons (_ :: _)] |- _ ] => guard_tac H; rewrite invert_cons_ident_cons in H
+              | [ H : context[invert_expr.invert_None (#ident.ident_None)] |- _ ] => guard_tac H; rewrite invert_None_ident_None in H
+              | [ H : context[invert_expr.invert_Some (#ident.ident_Some @ _)] |- _ ] => guard_tac H; rewrite invert_Some_ident_Some in H
+              | [ H : context[invert_expr.reflect_option (#ident.ident_None)] |- _ ] => guard_tac H; rewrite reflect_option_ident_None in H
+              | [ H : context[invert_expr.reflect_option (#ident.ident_Some @ _)] |- _ ] => guard_tac H; rewrite reflect_option_ident_Some in H
+              end ].
+    Ltac invert_subst_step :=
+      first [ progress cbv beta iota in *
+            | invert_subst_step_helper ltac:(fun _ => idtac)
+            | subst ].
+    Ltac invert_subst := repeat invert_subst_step.
   End expr.
 End Compilers.

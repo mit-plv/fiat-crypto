@@ -31,7 +31,7 @@ Module Compilers.
 
       Import ProofTactic.Settings.
 
-      Definition package_proofs : @ProofGoalType.package_proofs package.
+      Definition package_proofs : @ProofGoalType.package_proofs _ _ package.
       Proof. ProofTactic.prove_package_proofs (). Qed.
     End ident.
   End pattern.

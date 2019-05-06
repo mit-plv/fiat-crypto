@@ -21,6 +21,8 @@ Require Import Crypto.Util.Tactics.ConstrFail.
 Import Coq.Lists.List ListNotations. Local Open Scope bool_scope. Local Open Scope Z_scope.
 Export PreLanguage.
 
+Local Set Primitive Projections.
+
 Import EqNotations.
 Module Compilers.
   Export PreLanguage.
@@ -33,6 +35,10 @@ Module Compilers.
 
     Tactic Notation "debug_enter_reify_idtac" ident(funname) uconstr(e)
       := idtac funname ": Attempting to reify:" e.
+    Tactic Notation "debug_enter_reify_preprocess_idtac" ident(funname) uconstr(e)
+      := idtac funname ": Attempting to preprocess:" e.
+    Tactic Notation "debug_enter_reify_after_preprocess_idtac" ident(funname) uconstr(e)
+      := idtac funname ": Attempting to reify (post-preprocessing):" e.
     Tactic Notation "debug_leave_reify_success_idtac" ident(funname) uconstr(e) uconstr(ret)
       := idtac funname ": Success in reifying:" e "as" ret.
     Tactic Notation "debug_leave_reify_failure_idtac" ident(funname) uconstr(e)
@@ -66,6 +72,8 @@ Module Compilers.
     Ltac debug_enter_reify_base_type e := debug2 ltac:(fun _ => debug_enter_reify_idtac reify_base_type e).
     Ltac debug_enter_reify_type e := debug2 ltac:(fun _ => debug_enter_reify_idtac reify_type e).
     Ltac debug_enter_reify_in_context e := debug2 ltac:(fun _ => debug_enter_reify_idtac reify_in_context e).
+    Ltac debug_enter_reify_preprocess e := debug2 ltac:(fun _ => debug_enter_reify_preprocess_idtac reify_preprocess e).
+    Ltac debug_enter_reify_in_context_after_preprocess e := debug2 ltac:(fun _ => debug_enter_reify_after_preprocess_idtac reify_in_context e).
     Ltac debug_leave_reify_in_context_success e ret := debug3 ltac:(fun _ => debug_leave_reify_success_idtac reify_in_context e ret).
     Ltac debug_leave_reify_in_context_failure e
       := let dummy := debug0 ltac:(fun _ => debug_leave_reify_failure_idtac reify_in_context e) in
@@ -84,10 +92,11 @@ Module Compilers.
     Inductive type {base_type : Type} := base (t : base_type) | arrow (s d : type).
     Global Arguments type : clear implicits.
 
-    Global Instance reflect_type_beq {base_type} {base_beq} {reflect_base_beq : reflect_rel (@eq base_type) base_beq} : reflect_rel (@eq (type base_type)) (@type_beq base_type base_beq) | 10.
+    Lemma reflect_type_beq {base_type} {base_beq} {reflect_base_beq : reflect_rel (@eq base_type) base_beq} : reflect_rel (@eq (type base_type)) (@type_beq base_type base_beq).
     Proof.
       apply reflect_of_beq; (apply internal_type_dec_bl + apply internal_type_dec_lb); apply reflect_to_beq; assumption.
     Defined.
+    Global Hint Extern 1 (reflect (@eq (type ?base_type) ?x ?y) _) => notypeclasses refine (@reflect_type_beq base_type _ _ x y) : typeclass_instances.
 
     Fixpoint final_codomain {base_type} (t : type base_type) : base_type
       := match t with
@@ -237,9 +246,30 @@ Module Compilers.
          | t => t
          end.
 
+    Class try_make_transport_cpsT {base : Type}
+      := try_make_transport_cpsv : forall (P : base -> Type) t1 t2, ~> option (P t1 -> P t2).
+    Hint Mode try_make_transport_cpsT ! : typeclass_instances.
+    Global Arguments try_make_transport_cpsT : clear implicits.
+
+    Class try_make_transport_cps_correctT {base : Type}
+          {base_beq : base -> base -> bool}
+          {try_make_transport_cps : @type.try_make_transport_cpsT base}
+          {reflect_base_beq : reflect_rel (@eq base) base_beq}
+      := try_make_transport_cps_correctP
+         : forall P t1 t2,
+          try_make_transport_cps P t1 t2
+          = fun T k
+            => k match Sumbool.sumbool_of_bool (base_beq t1 t2) with
+                 | left pf => Some (rew [fun t => P t1 -> P t] (reflect_to_dec _ pf) in id)
+                 | right _ => None
+                 end.
+
+    Hint Mode try_make_transport_cps_correctT ! - - - : typeclass_instances.
+    Global Arguments try_make_transport_cps_correctT base {_ _ _}.
+
     Section transport_cps.
-      Context {base_type}
-              (try_make_transport_base_type_cps : forall (P : base_type -> Type) t1 t2, ~> option (P t1 -> P t2)).
+      Context {base_type : Type}.
+      Context {try_make_transport_base_type_cps : @try_make_transport_cpsT base_type}.
 
       Fixpoint try_make_transport_cps (P : type base_type -> Type) (t1 t2 : type base_type)
         : ~> option (P t1 -> P t2)
@@ -261,6 +291,8 @@ Module Compilers.
       Definition try_transport (P : type base_type -> Type) (t1 t2 : type base_type) (v : P t1) : option (P t2)
         := try_transport_cps P t1 t2 v _ id.
     End transport_cps.
+
+    Global Hint Extern 1 (@try_make_transport_cpsT (type ?base_type)) => notypeclasses refine (@try_make_transport_cps base_type _) : typeclass_instances. (* notypeclasses refine to avoid universe bugs in simple apply; hint instead of instance for COQBUG(https://github.com/coq/coq/issues/10072) *)
 
     (*
     Fixpoint try_transport {base_type}
@@ -295,91 +327,80 @@ Module Compilers.
       | _ => let rt := base_reify ty in
              constr:(@base base_type rt)
       end.
+
+    Class reified_of {base_type} {interp_base_type : base_type -> Type} (v : Type) (rv : type base_type)
+      := reified_ok : @interp base_type interp_base_type rv = v.
+
+    Ltac reify_via_tc base_type interp_base_type ty :=
+      let rv := constr:(_ : @reified_of base_type interp_base_type ty _) in
+      lazymatch type of rv with
+      | @reified_of _ _ _ ?rv => rv
+      end.
   End type.
   Notation type := type.type.
   Delimit Scope etype_scope with etype.
   Bind Scope etype_scope with type.type.
+  Global Arguments type.base {_} _%etype.
   Infix "->" := type.arrow : etype_scope.
   Infix "==" := type.eqv : type_scope.
   Module base.
     Local Notation einterp := type.interp.
     Module type.
-      Inductive base := unit | Z | bool | nat | zrange. (* Not Variant because COQBUG(https://github.com/coq/coq/issues/7738) *)
-      Inductive type := type_base (t : base) | prod (A B : type) | list (A : type) | option (A : type).
-      Global Coercion type_base : base >-> type.
+      Inductive type {base_type : Type} := type_base (t : base_type) | prod (A B : type) | list (A : type) | option (A : type) | unit.
+      Global Arguments type : clear implicits.
+      Class BaseTypeHasNatT {base : Type} := nat : base.
+      Global Arguments BaseTypeHasNatT : clear implicits.
     End type.
-    Global Coercion type.type_base : type.base >-> type.type.
     Notation type := type.type.
 
-    Global Instance reflect_base_beq : reflect_rel (@eq type.base) type.base_beq | 10
-      := reflect_of_beq type.internal_base_dec_bl type.internal_base_dec_lb.
+    Class BaseHasNatCorrectT {base} {base_interp : base -> Type} {baseHasNat : type.BaseTypeHasNatT base} :=
+      {
+        to_nat : base_interp type.nat -> nat;
+        of_nat : nat -> base_interp type.nat;
+        of_to_nat : forall (P : _ -> Type) x, P (of_nat (to_nat x)) -> P x;
+        to_of_nat : forall (P : _ -> Type) x, P (to_nat (of_nat x)) -> P x
+      }.
+    Global Arguments BaseHasNatCorrectT {base} base_interp {_}.
 
-    Global Instance reflect_type_beq : reflect_rel (@eq type) type.type_beq | 10
-      := reflect_of_beq type.internal_type_dec_bl type.internal_type_dec_lb.
+    Definition reflect_type_beq {base} {base_beq} {r : reflect_rel (@eq base) base_beq}
+      : reflect_rel (@eq (type base)) (@type.type_beq base base_beq)
+      := reflect_of_beq (@type.internal_type_dec_bl _ _ (proj1 (reflect_to_beq _))) (@type.internal_type_dec_lb _ _ (proj2 (reflect_to_beq _))).
+    Global Hint Extern 1 (reflect (@eq (type ?base) ?x ?y) _) => notypeclasses refine (@reflect_type_beq base _ _ x y) : typeclass_instances.
 
-    Definition base_interp (ty : type.base)
-      := match ty with
-         | type.unit => Datatypes.unit
-         | type.Z => BinInt.Z
-         | type.bool => Datatypes.bool
-         | type.nat => Datatypes.nat
-         | type.zrange => zrange
-         end.
-
-    Fixpoint interp (ty : type)
+    Fixpoint interp {base} (base_interp : base -> Type) (ty : type base)
       := match ty with
          | type.type_base t => base_interp t
-         | type.prod A B => interp A * interp B
-         | type.list A => Datatypes.list (interp A)
-         | type.option A => Datatypes.option (interp A)
+         | type.unit => Datatypes.unit
+         | type.prod A B => interp base_interp A * interp base_interp B
+         | type.list A => Datatypes.list (interp base_interp A)
+         | type.option A => Datatypes.option (interp base_interp A)
          end%type.
 
-    Fixpoint base_interp_beq {t} : base_interp t -> base_interp t -> bool
-      := match t with
-         | type.unit => fun _ _ => true
-         | type.Z => Z.eqb
-         | type.bool => Bool.eqb
-         | type.nat => Nat.eqb
-         | type.zrange => zrange_beq
-         end.
-
-    Global Instance reflect_base_interp_eq {t} : reflect_rel (@eq (base_interp t)) (@base_interp_beq t) | 10.
-    Proof. induction t; cbn [base_interp base_interp_beq]; eauto with typeclass_instances. Qed.
-
-    Fixpoint interp_beq {t} : interp t -> interp t -> bool
+    Fixpoint interp_beq {base base_interp} (base_interp_beq : forall b : base, base_interp b -> base_interp b -> bool) {t}
+      : interp base_interp t -> interp base_interp t -> bool
       := match t with
          | type.type_base t => @base_interp_beq t
-         | type.prod A B => prod_beq _ _ (@interp_beq A) (@interp_beq B)
-         | type.list A => list_beq _ (@interp_beq A)
-         | type.option A => option_beq (@interp_beq A)
+         | type.prod A B => prod_beq _ _ (@interp_beq _ _ base_interp_beq A) (@interp_beq _ _ base_interp_beq B)
+         | type.list A => list_beq _ (@interp_beq _ _ base_interp_beq A)
+         | type.option A => option_beq (@interp_beq _ _ base_interp_beq A)
+         | type.unit => fun _ _ => true
          end.
 
-    Global Instance reflect_interp_eq {t} : reflect_rel (@eq (interp t)) (@interp_beq t) | 10.
+    Lemma reflect_interp_eq {base base_interp base_interp_beq} {reflect_base_interp_eq : forall b : base, reflect_rel (@eq (base_interp b)) (base_interp_beq b)} {t}
+      : reflect_rel (@eq (interp base_interp t)) (@interp_beq base base_interp base_interp_beq t).
     Proof. induction t; cbn [interp interp_beq]; eauto with typeclass_instances. Qed.
+    Global Hint Extern 1 (reflect (@eq (interp ?base_interp ?t) ?x ?y) _) => notypeclasses refine (@reflect_interp_eq _ base_interp _ _ x y) : typeclass_instances.
 
-    Definition try_make_base_transport_cps
-               (P : type.base -> Type) (t1 t2 : type.base)
-      : ~> option (P t1 -> P t2)
-      := match t1, t2 with
-         | type.unit, type.unit
-         | type.Z, type.Z
-         | type.bool, type.bool
-         | type.nat, type.nat
-         | type.zrange, type.zrange
-           => (return (Some id))
-         | type.unit, _
-         | type.Z, _
-         | type.bool, _
-         | type.nat, _
-         | type.zrange, _
-           => (return None)
-         end%cps.
     Fixpoint try_make_transport_cps
-             (P : type -> Type) (t1 t2 : type)
+             {base}
+             {try_make_transport_base_type_cps : @type.try_make_transport_cpsT base}
+             (P : type base -> Type) (t1 t2 : type base)
       : ~> option (P t1 -> P t2)
       := match t1, t2 with
          | type.type_base t1, type.type_base t2
-           => try_make_base_transport_cps (fun t => P (type.type_base t)) t1 t2
+           => type.try_make_transport_cpsv (fun t => P (type.type_base t)) t1 t2
+         | type.unit, type.unit
+           => (return (Some (fun x => x)))
          | type.prod A B, type.prod A' B'
            => (trA <-- try_make_transport_cps (fun A => P (type.prod A _)) _ _;
                 trB <-- try_make_transport_cps (fun B => P (type.prod _ B)) _ _;
@@ -390,59 +411,53 @@ Module Compilers.
          | type.prod _ _, _
          | type.list _, _
          | type.option _, _
+         | type.unit, _
            => (return None)
          end%cps.
 
-    Definition try_transport_cps (P : type -> Type) (t1 t2 : type) (v : P t1) : ~> option (P t2)
+    Global Hint Extern 1 (@type.try_make_transport_cpsT (type ?base)) => notypeclasses refine (@try_make_transport_cps base _) : typeclass_instances. (* notypeclasses refine to avoid universe bugs in simple apply; hint instead of instance for COQBUG(https://github.com/coq/coq/issues/10072) *)
+
+    Definition try_transport_cps
+               {base}
+               {try_make_transport_base_type_cps : @type.try_make_transport_cpsT base}
+               (P : type base -> Type) (t1 t2 : type base) (v : P t1) : ~> option (P t2)
       := (tr <-- try_make_transport_cps P t1 t2;
             return (Some (tr v)))%cps.
 
-    Definition try_transport (P : type -> Type) (t1 t2 : type) (v : P t1) : option (P t2)
+    Definition try_transport
+               {base}
+               {try_make_transport_base_type_cps : @type.try_make_transport_cpsT base}
+               (P : type base -> Type) (t1 t2 : type base) (v : P t1) : option (P t2)
       := try_transport_cps P t1 t2 v _ id.
 
-    Ltac reify_base ty :=
+    Ltac reify base reify_base ty :=
+      let reify_rec ty := reify base reify_base ty in
       let __ := Reify.debug_enter_reify_base_type ty in
       lazymatch eval cbv beta in ty with
-      | Datatypes.unit => type.unit
-      | Datatypes.nat => type.nat
-      | Datatypes.bool => type.bool
-      | BinInt.Z => type.Z
-      | zrange => type.zrange
-      | interp (type.type_base ?T) => T
-      | @einterp type interp (@Compilers.type.base type (type.type_base ?T)) => T
-      | _ => constr_fail_with ltac:(fun _ => fail 1 "Unrecognized type:" ty)
-      end.
-    Ltac reify ty :=
-      let __ := Reify.debug_enter_reify_base_type ty in
-      lazymatch eval cbv beta in ty with
+      | Datatypes.unit => constr:(@type.unit base)
       | Datatypes.prod ?A ?B
-        => let rA := reify A in
-          let rB := reify B in
-          constr:(type.prod rA rB)
+        => let rA := reify_rec A in
+          let rB := reify_rec B in
+          constr:(@type.prod base rA rB)
       | Datatypes.list ?T
-        => let rT := reify T in
-          constr:(type.list rT)
+        => let rT := reify_rec T in
+          constr:(@type.list base rT)
       | Datatypes.option ?T
-        => let rT := reify T in
-          constr:(type.option rT)
-      | interp ?T => T
-      | @einterp type interp (@Compilers.type.base type ?T) => T
+        => let rT := reify_rec T in
+          constr:(@type.option base rT)
+      | @interp base ?base_interp ?T => T
+      | @einterp (@type base) (@interp base ?base_interp) (@Compilers.type.base (@type base) ?T) => T
       | ?ty => let rT := reify_base ty in
-              constr:(@type.type_base rT)
+              constr:(@type.type_base base rT)
       end.
-    Notation reify_base t := (ltac:(let rt := reify_base t in exact rt)) (only parsing).
-    Notation reify t := (ltac:(let rt := reify t in exact rt)) (only parsing).
-    Notation reify_norm_base t := (ltac:(let t' := eval cbv in t in let rt := reify_base t' in exact rt)) (only parsing).
-    Notation reify_norm t := (ltac:(let t' := eval cbv in t in let rt := reify t' in exact rt)) (only parsing).
-    Notation reify_base_type_of e := (reify_base ((fun t (_ : t) => t) _ e)) (only parsing).
-    Notation reify_type_of e := (reify ((fun t (_ : t) => t) _ e)) (only parsing).
-    Notation reify_norm_base_type_of e := (reify_norm_base ((fun t (_ : t) => t) _ e)) (only parsing).
-    Notation reify_norm_type_of e := (reify_norm ((fun t (_ : t) => t) _ e)) (only parsing).
+    (*Notation reify t := (ltac:(let rt := reify t in exact rt)) (only parsing).
+    Notation reify_norm t := (ltac:(let t' := eval cbv in t in let rt := reify t' in exact rt)) (only parsing).*)
+    (*Notation reify_type_of e := (reify ((fun t (_ : t) => t) _ e)) (only parsing).*)
+    (*Notation reify_norm_type_of e := (reify_norm ((fun t (_ : t) => t) _ e)) (only parsing).*)
   End base.
-  Global Coercion base.type.type_base : base.type.base >-> base.type.type.
   Bind Scope etype_scope with base.type.
   Infix "*" := base.type.prod : etype_scope.
-  Notation "()" := (base.type.type_base base.type.unit) : etype_scope.
+  Notation "()" := base.type.unit : etype_scope.
 
   Module expr.
     Section with_var.
@@ -617,6 +632,38 @@ Module Compilers.
         end
       end.
 
+    (** Modify this to get more match-to-elim conversion *)
+    Ltac reify_preprocess_extra term := term.
+
+    Ltac reify_preprocess term :=
+      lazymatch term with
+      | match ?b with true => ?t | false => ?f end
+        => let T := type of term in
+           reify_preprocess (@bool_rect (fun _ => T) t f b)
+      | match ?x with Datatypes.pair a b => @?f a b end
+        => let T := type of term in
+           reify_preprocess (@prod_rect _ _ (fun _ => T) f x)
+      | match ?x with ZRange.Build_zrange a b => @?f a b end
+        => let T := type of term in
+           reify_preprocess (@ZRange.zrange_rect (fun _ => T) f x)
+      | match ?x with nil => ?N | cons a b => @?C a b end
+        => let T := type of term in
+           reify_preprocess (@list_case _ (fun _ => T) N C x)
+      | let x := ?a in ?b
+        => let A := type of a in
+           let T := type of term in
+           let rec_val := match constr:(Set) with
+                          | _ => let v := constr:((fun x : A => b) a) in
+                                 let __ := type of v in (* ensure that the abstraction is well-typed, i.e., that we're not relying on the value of the let to well-type the body *)
+                                 v
+                          | _ => constr:(match a return T with x => b end) (* if we do rely on the body of [x] to well-type [b], then just inline it *)
+                          end in
+           (*let B := lazymatch type of b with forall x, @?B x => B end in*)
+           reify_preprocess rec_val (*(@Let_In A B a b)*)
+      | ?term => reify_preprocess_extra term
+      end.
+
+
     Ltac reify_in_context base_type ident reify_base_type reify_ident var term value_ctx template_ctx :=
       let reify_rec_gen term value_ctx template_ctx := reify_in_context base_type ident reify_base_type reify_ident var term value_ctx template_ctx in
       let reify_rec term := reify_rec_gen term value_ctx template_ctx in
@@ -633,30 +680,9 @@ Module Compilers.
         => constr:(@Var base_type ident var rT v)
       | _
         =>
+        let term := reify_preprocess term in
+        let __ := Reify.debug_enter_reify_in_context_after_preprocess term in
         lazymatch term with
-        | match ?b with true => ?t | false => ?f end
-          => let T := type of term in
-             reify_rec (@bool_rect (fun _ => T) t f b)
-        | match ?x with Datatypes.pair a b => @?f a b end
-          => let T := type of term in
-             reify_rec (@prod_rect _ _ (fun _ => T) f x)
-        | match ?x with ZRange.Build_zrange a b => @?f a b end
-          => let T := type of term in
-             reify_rec (@ZRange.zrange_rect (fun _ => T) f x)
-        | match ?x with nil => ?N | cons a b => @?C a b end
-          => let T := type of term in
-             reify_rec (@list_case _ (fun _ => T) N C x)
-        | let x := ?a in ?b
-          => let A := type of a in
-             let T := type of term in
-             let rec_val := match constr:(Set) with
-                            | _ => let v := constr:((fun x : A => b) a) in
-                                   let __ := type of v in (* ensure that the abstraction is well-typed, i.e., that we're not relying on the value of the let to well-type the body *)
-                                   v
-                            | _ => constr:(match a return T with x => b end) (* if we do rely on the body of [x] to well-type [b], then just inline it *)
-                            end in
-             (*let B := lazymatch type of b with forall x, @?B x => B end in*)
-             reify_rec rec_val (*(@Let_In A B a b)*)
         | @Let_In ?A ?B ?a ?b
           => let ra := reify_rec a in
              let rb := reify_rec b in
@@ -800,770 +826,354 @@ Module Compilers.
   End expr.
   Export expr.Notations.
   Notation expr := expr.expr.
+  Notation Expr := expr.Expr.
 
   Module ident.
-    Local Notation type := (type base.type).
-    Local Notation ttype := type.
-    Module fancy.
-      Section with_base.
-        Let type_base (x : base.type) : type := type.base x.
-        Local Coercion type_base : base.type >-> type.
-        Section with_scope.
-          Import base.type.
-          Notation type := ttype.
+    Section generic.
+      Context {base : Type}
+              {base_interp : base -> Type}.
+      Local Notation base_type := (@base.type base).
+      Local Notation type := (@type.type base_type).
+      Local Notation base_type_interp := (@base.interp base base_interp).
+      Context {ident var : type -> Type}.
+      Class BuildIdentT :=
+        {
+          ident_Literal : forall {t}, base_interp t -> ident (type.base (base.type.type_base t));
+          ident_nil : forall {t}, ident (type.base (base.type.list t));
+          ident_cons : forall {t}, ident (type.base t -> type.base (base.type.list t) -> type.base (base.type.list t));
+          ident_Some : forall {t}, ident (type.base t -> type.base (base.type.option t));
+          ident_None : forall {t}, ident (type.base (base.type.option t));
+          ident_pair : forall {A B}, ident (type.base A -> type.base B -> type.base (A * B));
+          ident_tt : ident (type.base base.type.unit)
+        }.
+      Context {buildIdent : BuildIdentT}.
 
-          Inductive ident_with_wordmax {log2wordmax : BinInt.Z} : base.type -> base.type -> Set :=
-          | add (imm : BinInt.Z) : ident_with_wordmax (Z * Z) (Z * Z)
-          | addc (imm : BinInt.Z) : ident_with_wordmax (Z * Z * Z) (Z * Z)
-          | sub (imm : BinInt.Z) : ident_with_wordmax (Z * Z) (Z * Z)
-          | subb (imm : BinInt.Z) : ident_with_wordmax (Z * Z * Z) (Z * Z)
-          | mulll : ident_with_wordmax (Z * Z) Z
-          | mullh : ident_with_wordmax (Z * Z) Z
-          | mulhl : ident_with_wordmax (Z * Z) Z
-          | mulhh : ident_with_wordmax (Z * Z) Z
-          | selm : ident_with_wordmax (Z * Z * Z) Z
-          | rshi : BinInt.Z -> ident_with_wordmax (Z * Z) Z
-          .
+      Section correctness_class.
+        Context {ident_interp : forall t, ident t -> type.interp (base.interp base_interp) t}.
 
-          Inductive ident : base.type -> base.type -> Set :=
-          | with_wordmax (log2wordmax : BinInt.Z) {s d} (idc : @ident_with_wordmax log2wordmax s d) : ident s d
-          | selc : ident (Z * Z * Z) Z
-          | sell : ident (Z * Z * Z) Z
-          | addm : ident (Z * Z * Z) Z
-          .
+        Class BuildInterpIdentCorrectT :=
+          {
+            interp_ident_Literal : forall {t v}, ident_interp (type.base (base.type.type_base t)) (ident_Literal (t:=t) v) = v;
+            interp_ident_nil : forall {t}, ident_interp _ (ident_nil (t:=t)) = nil;
+            interp_ident_cons : forall {t}, ident_interp _ (ident_cons (t:=t)) = cons;
+            interp_ident_Some : forall {t}, ident_interp _ (ident_Some (t:=t)) = Some;
+            interp_ident_None : forall {t}, ident_interp _ (ident_None (t:=t)) = None;
+            interp_ident_pair : forall {A B}, ident_interp _ (ident_pair (A:=A) (B:=B)) = pair;
+          }.
+      End correctness_class.
 
-          Section interp_with_wordmax.
-            Context (log2wordmax : BinInt.Z).
-            Let wordmax := 2 ^ log2wordmax.
-            Let half_bits := log2wordmax / 2.
-            Let wordmax_half_bits := 2 ^ half_bits.
+      Local Notation expr := (@expr.expr base_type ident var).
 
-            Local Notation low x := (Z.land x (wordmax_half_bits - 1)).
-            Local Notation high x := (x >> half_bits).
-            Local Notation shift x imm := ((x << imm) mod wordmax).
+      Definition reify_list {t} (ls : list (expr (type.base t))) : expr (type.base (base.type.list t))
+        := Datatypes.list_rect
+             (fun _ => _)
+             (expr.Ident ident_nil)
+             (fun x _ xs => expr.Ident ident_cons @ x @ xs)%expr
+             ls.
 
-            Definition interp_with_wordmax {s d} (idc : @ident_with_wordmax log2wordmax s d) : base.interp s -> base.interp d :=
-              match idc with
-              | add imm => fun x => Z.add_get_carry_full wordmax (fst x) (shift (snd x) imm)
-              | addc imm => fun x => Z.add_with_get_carry_full wordmax (fst (fst x)) (snd (fst x)) (shift (snd x) imm)
-              | sub imm => fun x => Z.sub_get_borrow_full wordmax (fst x) (shift (snd x) imm)
-              | subb imm => fun x => Z.sub_with_get_borrow_full wordmax (fst (fst x)) (snd (fst x)) (shift (snd x) imm)
-              | mulll => fun x => low (fst x) * low (snd x)
-              | mullh => fun x => low (fst x) * high (snd x)
-              | mulhl => fun x => high (fst x) * low (snd x)
-              | mulhh => fun x => high (fst x) * high (snd x)
-              | rshi n => fun x => Z.rshi wordmax (fst x) (snd x) n
-              | selm => fun x => Z.zselect (Z.cc_m wordmax (fst (fst x))) (snd (fst x)) (snd x)
-              end.
-          End interp_with_wordmax.
+      Definition reify_option {t} (v : option (expr (type.base t))) : expr (type.base (base.type.option t))
+        := Datatypes.option_rect
+             (fun _ => _)
+             (fun x => expr.Ident ident_Some @ x)%expr
+             (expr.Ident ident_None)
+             v.
 
-          Definition interp {s d} (idc : @ident s d) : base.interp s -> base.interp d :=
-            match idc with
-            | with_wordmax lwm s d idc => interp_with_wordmax lwm idc
-            | selc => fun x => Z.zselect (fst (fst x)) (snd (fst x)) (snd x)
-            | sell => fun x => Z.zselect (Z.land (fst (fst x)) 1) (snd (fst x)) (snd x)
-            | addm => fun x => Z.add_modulo (fst (fst x)) (snd (fst x)) (snd x)
-            end.
-        End with_scope.
-      End with_base.
-      Global Coercion with_wordmax : ident_with_wordmax >-> ident.
-      Global Arguments interp_with_wordmax {_ s d} idc.
-      Global Arguments interp {s d} idc.
-    End fancy.
+      Fixpoint smart_Literal {t:base_type} : base_type_interp t -> expr (type.base t)
+        := match t with
+           | base.type.type_base t => fun v => expr.Ident (ident_Literal v)
+           | base.type.prod A B
+             => fun '((a, b) : base_type_interp A * base_type_interp B)
+                => expr.Ident ident_pair @ (@smart_Literal A a) @ (@smart_Literal B b)
+           | base.type.list A
+             => fun v : list (base_type_interp A)
+                => reify_list (List.map (@smart_Literal A) v)
+           | base.type.option A
+             => fun v : option (base_type_interp A)
+                => reify_option (option_map (@smart_Literal A) v)
+           | base.type.unit => fun _ => expr.Ident ident_tt
+           end%expr.
 
-    Section with_base.
-      Let type_base (x : base.type) : type := type.base x.
-      Local Coercion type_base : base.type >-> type.
-      Section with_scope.
+      Section eager_rect.
+        Let type_base (x : base) : @base.type base := base.type.type_base x.
+        Let base' {bt} (x : Compilers.base.type bt) : type.type _ := type.base x.
+        Local Coercion base' : base.type >-> type.type.
+        Local Coercion type_base : base >-> base.type.
         Import base.type.
-        Notation type := ttype.
-        (* N.B. [ident] must have essentially flat structure for the
-           python script constructing [pattern.ident] to work *)
-        Inductive ident : type -> Type :=
-        | Literal {t:base.type.base} (v : base.interp t) : ident t
-        | Nat_succ : ident (nat -> nat)
-        | Nat_pred : ident (nat -> nat)
-        | Nat_max : ident (nat -> nat -> nat)
-        | Nat_mul : ident (nat -> nat -> nat)
-        | Nat_add : ident (nat -> nat -> nat)
-        | Nat_sub : ident (nat -> nat -> nat)
-        | Nat_eqb : ident (nat -> nat -> bool)
-        | nil {t} : ident (list t)
-        | cons {t:base.type} : ident (t -> list t -> list t)
-        | pair {A B:base.type} : ident (A -> B -> A * B)
-        | fst {A B} : ident (A * B -> A)
-        | snd {A B} : ident (A * B -> B)
-        | prod_rect {A B T:base.type} : ident ((A -> B -> T) -> A * B -> T)
-        | bool_rect {T:base.type} : ident ((unit -> T) -> (unit -> T) -> bool -> T)
-        | nat_rect {P:base.type} : ident ((unit -> P) -> (nat -> P -> P) -> nat -> P)
-        | nat_rect_arrow {P Q:base.type} : ident ((P -> Q) -> (nat -> (P -> Q) -> (P -> Q)) -> nat -> P -> Q)
-        | eager_nat_rect {P:base.type} : ident ((unit -> P) -> (nat -> P -> P) -> nat -> P)
-        | eager_nat_rect_arrow {P Q:base.type} : ident ((P -> Q) -> (nat -> (P -> Q) -> (P -> Q)) -> nat -> P -> Q)
-        | list_rect {A P:base.type} : ident ((unit -> P) -> (A -> list A -> P -> P) -> list A -> P)
-        | list_rect_arrow {A P Q:base.type} : ident ((P -> Q) -> (A -> list A -> (P -> Q) -> (P -> Q)) -> list A -> P -> Q)
-        | eager_list_rect {A P:base.type} : ident ((unit -> P) -> (A -> list A -> P -> P) -> list A -> P)
-        | eager_list_rect_arrow {A P Q:base.type} : ident ((P -> Q) -> (A -> list A -> (P -> Q) -> (P -> Q)) -> list A -> P -> Q)
-        | list_case {A P:base.type} : ident ((unit -> P) -> (A -> list A -> P) -> list A -> P)
-        | List_length {T} : ident (list T -> nat)
-        | List_seq : ident (nat -> nat -> list nat)
-        | List_firstn {A:base.type} : ident (nat -> list A -> list A)
-        | List_skipn {A:base.type} : ident (nat -> list A -> list A)
-        | List_repeat {A:base.type} : ident (A -> nat -> list A)
-        | List_combine {A B} : ident (list A -> list B -> list (A * B))
-        | List_map {A B:base.type} : ident ((A -> B) -> list A -> list B)
-        | List_app {A} : ident (list A -> list A -> list A)
-        | List_rev {A} : ident (list A -> list A)
-        | List_flat_map {A B:base.type} : ident ((A -> (list B)) -> list A -> (list B))
-        | List_partition {A:base.type} : ident ((A -> bool) -> list A -> (list A * list A))
-        | List_fold_right {A B:base.type} : ident ((B -> A -> A) -> A -> list B -> A)
-        | List_update_nth {T:base.type} : ident (nat -> (T -> T) -> list T -> list T)
-        | List_nth_default {T:base.type} : ident (T -> list T -> nat -> T)
-        | eager_List_nth_default {T:base.type} : ident (T -> list T -> nat -> T)
-        | Z_add : ident (Z -> Z -> Z)
-        | Z_mul : ident (Z -> Z -> Z)
-        | Z_pow : ident (Z -> Z -> Z)
-        | Z_sub : ident (Z -> Z -> Z)
-        | Z_opp : ident (Z -> Z)
-        | Z_div : ident (Z -> Z -> Z)
-        | Z_modulo : ident (Z -> Z -> Z)
-        | Z_log2 : ident (Z -> Z)
-        | Z_log2_up : ident (Z -> Z)
-        | Z_eqb : ident (Z -> Z -> bool)
-        | Z_leb : ident (Z -> Z -> bool)
-        | Z_ltb : ident (Z -> Z -> bool)
-        | Z_geb : ident (Z -> Z -> bool)
-        | Z_gtb : ident (Z -> Z -> bool)
-        | Z_of_nat : ident (nat -> Z)
-        | Z_to_nat : ident (Z -> nat)
-        | Z_shiftr : ident (Z -> Z -> Z)
-        | Z_shiftl : ident (Z -> Z -> Z)
-        | Z_land : ident (Z -> Z -> Z)
-        | Z_lor : ident (Z -> Z -> Z)
-        | Z_min : ident (Z -> Z -> Z)
-        | Z_max : ident (Z -> Z -> Z)
-        | Z_bneg : ident (Z -> Z)
-        | Z_lnot_modulo : ident (Z -> Z -> Z)
-        | Z_truncating_shiftl : ident (Z -> Z -> Z -> Z)
-        | Z_mul_split : ident (Z -> Z -> Z -> Z * Z)
-        | Z_add_get_carry : ident (Z -> Z -> Z -> (Z * Z))
-        | Z_add_with_carry : ident (Z -> Z -> Z -> Z)
-        | Z_add_with_get_carry : ident (Z -> Z -> Z -> Z -> (Z * Z))
-        | Z_sub_get_borrow : ident (Z -> Z -> Z -> (Z * Z))
-        | Z_sub_with_get_borrow : ident (Z -> Z -> Z -> Z -> (Z * Z))
-        | Z_zselect : ident (Z -> Z -> Z -> Z)
-        | Z_add_modulo : ident (Z -> Z -> Z -> Z)
-        | Z_rshi : ident (Z -> Z -> Z -> Z -> Z)
-        | Z_cc_m : ident (Z -> Z -> Z)
-        | Z_combine_at_bitwidth : ident (Z -> Z -> Z -> Z)
-        | Z_cast (range : ZRange.zrange) : ident (Z -> Z)
-        | Z_cast2 (range : ZRange.zrange * ZRange.zrange) : ident ((Z * Z) -> (Z * Z))
-        | option_Some {A:base.type} : ident (A -> option A)
-        | option_None {A:base.type} : ident (option A)
-        | option_rect {A P : base.type} : ident ((A -> P) -> (unit -> P) -> option A -> P)
-        | Build_zrange : ident (Z -> Z -> zrange)
-        | zrange_rect {P:base.type} : ident ((Z -> Z -> P) -> zrange -> P)
-        | fancy_add (log2wordmax : BinInt.Z) (imm : BinInt.Z) : ident (Z * Z -> Z * Z)
-        | fancy_addc (log2wordmax : BinInt.Z) (imm : BinInt.Z) : ident (Z * Z * Z -> Z * Z)
-        | fancy_sub (log2wordmax : BinInt.Z) (imm : BinInt.Z) : ident (Z * Z -> Z * Z)
-        | fancy_subb (log2wordmax : BinInt.Z) (imm : BinInt.Z) : ident (Z * Z * Z -> Z * Z)
-        | fancy_mulll (log2wordmax : BinInt.Z) : ident (Z * Z -> Z)
-        | fancy_mullh (log2wordmax : BinInt.Z) : ident (Z * Z -> Z)
-        | fancy_mulhl (log2wordmax : BinInt.Z) : ident (Z * Z -> Z)
-        | fancy_mulhh (log2wordmax : BinInt.Z) : ident (Z * Z -> Z)
-        | fancy_rshi (log2wordmax : BinInt.Z) : BinInt.Z -> ident (Z * Z -> Z)
-        | fancy_selc : ident (Z * Z * Z -> Z)
-        | fancy_selm (log2wordmax : BinInt.Z) : ident (Z * Z * Z -> Z)
-        | fancy_sell : ident (Z * Z * Z -> Z)
-        | fancy_addm : ident (Z * Z * Z -> Z)
+
+        Context {ident_interp : forall t, ident t -> type.interp (base.interp base_interp) t}.
+        Context {baseTypeHasNat : BaseTypeHasNatT base}.
+        Local Notation nat := (match nat return base with x => x end).
+
+        (** We define a restricted class of identifers used for eager computation *)
+        Inductive restricted_ident : type.type base_type -> Type :=
+        | restricted_ident_nat_rect {P:base_type} : restricted_ident ((unit -> P) -> (nat -> P -> P) -> nat -> P)
+        | restricted_ident_nat_rect_arrow {P Q:base_type} : restricted_ident ((P -> Q) -> (nat -> (P -> Q) -> (P -> Q)) -> nat -> P -> Q)
+        | restricted_ident_list_rect {A P:base_type} : restricted_ident ((unit -> P) -> (A -> list A -> P -> P) -> list A -> P)
+        | restricted_ident_list_rect_arrow {A P Q:base_type} : restricted_ident ((P -> Q) -> (A -> list A -> (P -> Q) -> (P -> Q)) -> list A -> P -> Q)
+        | restricted_ident_List_nth_default {T:base_type} : restricted_ident (T -> list T -> nat -> T)
+        | restricted_ident_eager_nat_rect {P:base_type}: restricted_ident ((unit -> P) -> (nat -> P -> P) -> nat -> P)
+        | restricted_ident_eager_nat_rect_arrow {P Q:base_type} : restricted_ident ((P -> Q) -> (nat -> (P -> Q) -> (P -> Q)) -> nat -> P -> Q)
+        | restricted_ident_eager_list_rect {A P:base_type} : restricted_ident ((unit -> P) -> (A -> list A -> P -> P) -> list A -> P)
+        | restricted_ident_eager_list_rect_arrow {A P Q:base_type} : restricted_ident ((P -> Q) -> (A -> list A -> (P -> Q) -> (P -> Q)) -> list A -> P -> Q)
+        | restricted_ident_eager_List_nth_default {T:base_type} : restricted_ident (T -> list T -> nat -> T)
         .
-        Notation Some := option_Some.
-        Notation None := option_None.
 
-        Global Arguments Z_cast2 _%zrange_scope.
+        Class BuildEagerIdentT :=
+          {
+            ident_nat_rect {P:base_type} : ident ((unit -> P) -> (nat -> P -> P) -> nat -> P)
+            ; ident_nat_rect_arrow {P Q:base_type} : ident ((P -> Q) -> (nat -> (P -> Q) -> (P -> Q)) -> nat -> P -> Q)
+            ; ident_list_rect {A P:base_type} : ident ((unit -> P) -> (A -> list A -> P -> P) -> list A -> P)
+            ; ident_list_rect_arrow {A P Q:base_type} : ident ((P -> Q) -> (A -> list A -> (P -> Q) -> (P -> Q)) -> list A -> P -> Q)
+            ; ident_List_nth_default {T:base_type} : ident (T -> list T -> nat -> T)
+            ; ident_eager_nat_rect {P:base_type}: ident ((unit -> P) -> (nat -> P -> P) -> nat -> P)
+            ; ident_eager_nat_rect_arrow {P Q:base_type} : ident ((P -> Q) -> (nat -> (P -> Q) -> (P -> Q)) -> nat -> P -> Q)
+            ; ident_eager_list_rect {A P:base_type} : ident ((unit -> P) -> (A -> list A -> P -> P) -> list A -> P)
+            ; ident_eager_list_rect_arrow {A P Q:base_type} : ident ((P -> Q) -> (A -> list A -> (P -> Q) -> (P -> Q)) -> list A -> P -> Q)
+            ; ident_eager_List_nth_default {T:base_type} : ident (T -> list T -> nat -> T)
+          }.
 
-        Definition to_fancy {s d : base.type} (idc : ident (s -> d)) : Datatypes.option (fancy.ident s d)
-          := match idc in ident t return Datatypes.option match t with
-                                                | type.base s -> type.base d => fancy.ident s d
-                                                | _ => Datatypes.unit
-                                                end%etype with
-             | fancy_add log2wordmax imm => Datatypes.Some (fancy.with_wordmax log2wordmax (fancy.add imm))
-             | fancy_addc log2wordmax imm => Datatypes.Some (fancy.with_wordmax log2wordmax (fancy.addc imm))
-             | fancy_sub log2wordmax imm => Datatypes.Some (fancy.with_wordmax log2wordmax (fancy.sub imm))
-             | fancy_subb log2wordmax imm => Datatypes.Some (fancy.with_wordmax log2wordmax (fancy.subb imm))
-             | fancy_mulll log2wordmax => Datatypes.Some (fancy.with_wordmax log2wordmax fancy.mulll)
-             | fancy_mullh log2wordmax => Datatypes.Some (fancy.with_wordmax log2wordmax fancy.mullh)
-             | fancy_mulhl log2wordmax => Datatypes.Some (fancy.with_wordmax log2wordmax fancy.mulhl)
-             | fancy_mulhh log2wordmax => Datatypes.Some (fancy.with_wordmax log2wordmax fancy.mulhh)
-             | fancy_rshi log2wordmax x => Datatypes.Some (fancy.with_wordmax log2wordmax (fancy.rshi x))
-             | fancy_selc => Datatypes.Some fancy.selc
-             | fancy_selm log2wordmax => Datatypes.Some (fancy.with_wordmax log2wordmax fancy.selm)
-             | fancy_sell => Datatypes.Some fancy.sell
-             | fancy_addm => Datatypes.Some fancy.addm
-             | _ => Datatypes.None
+        Context {buildEagerIdent : BuildEagerIdentT}.
+
+        Section correctness_class.
+          Context {baseHasNatCorrect : base.BaseHasNatCorrectT base_interp}.
+
+          Local Notation of_nat := (@base.of_nat base base_interp _ baseHasNatCorrect).
+          Local Notation to_nat := (@base.to_nat base base_interp _ baseHasNatCorrect).
+
+          Class BuildInterpEagerIdentCorrectT :=
+            {
+              interp_ident_nat_rect {P:base_type}
+              : ident_interp _ (@ident_nat_rect _ P)
+                = (fun O_case S_case n
+                   => ident.Thunked.nat_rect (base_type_interp P) O_case (fun n => S_case (of_nat n)) (to_nat n))
+                    :> ((Datatypes.unit -> _) -> (base_type_interp nat -> _ -> _) -> base_type_interp nat -> _)
+
+              ; interp_ident_nat_rect_arrow {P Q:base_type}
+                : ident_interp _ (@ident_nat_rect_arrow _ P Q)
+                  = (fun O_case S_case n
+                     => nat_rect (fun _ => _) O_case (fun n => S_case (of_nat n)) (to_nat n))
+                      :> ((base_type_interp P -> base_type_interp Q) -> (base_type_interp nat -> (base_type_interp P -> base_type_interp Q) -> base_type_interp P -> base_type_interp Q) -> base_type_interp nat -> base_type_interp P -> base_type_interp Q)
+
+              ; interp_ident_list_rect {A P:base_type}
+                : ident_interp _ (@ident_list_rect _ A P) = ident.Thunked.list_rect _
+              ; interp_ident_list_rect_arrow {A P Q:base_type}
+                : ident_interp _ (@ident_list_rect_arrow _ A P Q) = list_rect (fun _ => base_type_interp P -> base_type_interp Q)
+              ; interp_ident_List_nth_default {T:base_type}
+                : ident_interp _ (@ident_List_nth_default _ T)
+                  = (fun d ls n => @List.nth_default _ d ls (to_nat n))
+                      :> (base_type_interp T -> Datatypes.list (base_type_interp T) -> base_interp nat -> base_type_interp T)
+
+              ; interp_ident_eager_nat_rect {P:base_type}
+                : ident_interp _ (@ident_eager_nat_rect _ P)
+                  = (fun O_case S_case n
+                     => ident.Thunked.nat_rect (base_type_interp P) O_case (fun n => S_case (of_nat n)) (to_nat n))
+                      :> ((Datatypes.unit -> _) -> (base_type_interp nat -> _ -> _) -> base_type_interp nat -> _)
+
+              ; interp_ident_eager_nat_rect_arrow {P Q:base_type}
+                : ident_interp _ (@ident_eager_nat_rect_arrow _ P Q)
+                  = (fun O_case S_case n
+                     => nat_rect (fun _ => _) O_case (fun n => S_case (of_nat n)) (to_nat n))
+                      :> ((base_type_interp P -> base_type_interp Q) -> (base_type_interp nat -> (base_type_interp P -> base_type_interp Q) -> base_type_interp P -> base_type_interp Q) -> base_type_interp nat -> base_type_interp P -> base_type_interp Q)
+
+              ; interp_ident_eager_list_rect {A P:base_type}
+                : ident_interp _ (@ident_eager_list_rect _ A P) = ident.Thunked.list_rect _
+              ; interp_ident_eager_list_rect_arrow {A P Q:base_type}
+                : ident_interp _ (@ident_eager_list_rect_arrow _ A P Q) = list_rect (fun _ => base_type_interp P -> base_type_interp Q)
+              ; interp_ident_eager_List_nth_default {T:base_type}
+                : ident_interp _ (@ident_eager_List_nth_default _ T)
+                  = (fun d ls n => @List.nth_default _ d ls (to_nat n))
+                      :> (base_type_interp T -> Datatypes.list (base_type_interp T) -> base_interp nat -> base_type_interp T)
+            }.
+        End correctness_class.
+
+        Definition fromRestrictedIdent {t} (idc : restricted_ident t) : ident t
+          := match idc with
+             | restricted_ident_nat_rect P => ident_nat_rect
+             | restricted_ident_nat_rect_arrow P Q => ident_nat_rect_arrow
+             | restricted_ident_list_rect A P => ident_list_rect
+             | restricted_ident_list_rect_arrow A P Q => ident_list_rect_arrow
+             | restricted_ident_List_nth_default T => ident_List_nth_default
+             | restricted_ident_eager_nat_rect P => ident_eager_nat_rect
+             | restricted_ident_eager_nat_rect_arrow P Q => ident_eager_nat_rect_arrow
+             | restricted_ident_eager_list_rect A P => ident_eager_list_rect
+             | restricted_ident_eager_list_rect_arrow A P Q => ident_eager_list_rect_arrow
+             | restricted_ident_eager_List_nth_default T => ident_eager_List_nth_default
              end.
 
-        Definition of_fancy {s d : base.type} (idc : fancy.ident s d) : ident (s -> d)
-          := match idc in fancy.ident s d return ident (s -> d) with
-             | fancy.with_wordmax log2wordmax s d idc
-               => match idc in fancy.ident_with_wordmax s d return ident (s -> d) with
-                  | fancy.add imm => fancy_add log2wordmax imm
-                  | fancy.addc imm => fancy_addc log2wordmax imm
-                  | fancy.sub imm => fancy_sub log2wordmax imm
-                  | fancy.subb imm => fancy_subb log2wordmax imm
-                  | fancy.mulll => fancy_mulll log2wordmax
-                  | fancy.mullh => fancy_mullh log2wordmax
-                  | fancy.mulhl => fancy_mulhl log2wordmax
-                  | fancy.mulhh => fancy_mulhh log2wordmax
-                  | fancy.selm => fancy_selm log2wordmax
-                  | fancy.rshi x => fancy_rshi log2wordmax x
-                  end
-             | fancy.selc => fancy_selc
-             | fancy.sell => fancy_sell
-             | fancy.addm => fancy_addm
+        Class ToRestrictedIdentT :=
+          toRestrictedIdent : forall {t}, ident t -> Datatypes.option (restricted_ident t).
+
+        Context {toRestrictedIdent : ToRestrictedIdentT}.
+
+        (** N.B. These proofs MUST be transparent for things to compute *)
+        Class ToFromRestrictedIdentT :=
+          {
+            transparent_toFromRestrictedIdent_eq : forall {t} (idc : restricted_ident t),
+              toRestrictedIdent _ (fromRestrictedIdent idc) = Datatypes.Some idc
+            ; transparent_fromToRestrictedIdent_eq : forall {t} (idc : ident t),
+                option_map fromRestrictedIdent (toRestrictedIdent _ idc) = option_map (fun _ => idc) (toRestrictedIdent _ idc)
+          }.
+
+        Context {toFromRestrictedIdent : ToFromRestrictedIdentT}.
+
+        Local Coercion fromRestrictedIdent : restricted_ident >-> ident.
+
+        Section eager_ident_rect.
+          Context (R : forall t, ident t -> Type)
+                  (eager_nat_rect_f : forall P, R _ (@ident_eager_nat_rect _ P))
+                  (eager_nat_rect_arrow_f : forall P Q, R _ (@ident_eager_nat_rect_arrow _ P Q))
+                  (eager_list_rect_f : forall A P, R _ (@ident_eager_list_rect _ A P))
+                  (eager_list_rect_arrow_f : forall A P Q, R _ (@ident_eager_list_rect_arrow _ A P Q))
+                  (eager_List_nth_default_f : forall T, R _ (@ident_eager_List_nth_default _ T))
+                  {t} (idc : ident t).
+
+          Definition eager_ident_rect
+            : Datatypes.option (R t idc)
+            := ((match toRestrictedIdent _ idc as idc'
+                       return match option_map (fun _ => idc) idc' with
+                              | Some idc' => Datatypes.option (R t idc')
+                              | None => Datatypes.option (R t idc)
+                              end -> Datatypes.option (R t idc)
+                 with
+                 | Some _ => fun v => v
+                 | None => fun v => v
+                 end)
+                  (rew [fun idc' => match idc' with
+                                    | Datatypes.Some idc' => Datatypes.option (R _ idc')
+                                    | Datatypes.None => Datatypes.option (R _ idc)
+                                    end]
+                       transparent_fromToRestrictedIdent_eq idc in
+                      match toRestrictedIdent _ idc as idc'
+                            return match option_map fromRestrictedIdent idc' with
+                                   | Some idc' => Datatypes.option (R t idc')
+                                   | None => Datatypes.option (R t idc)
+                                   end
+                      with
+                      | Datatypes.None => Datatypes.None
+                      | Datatypes.Some idc'
+                        => match idc' return Datatypes.option (R _ idc') with
+                           | restricted_ident_nat_rect _
+                           | restricted_ident_nat_rect_arrow _ _
+                           | restricted_ident_list_rect _ _
+                           | restricted_ident_list_rect_arrow _ _ _
+                           | restricted_ident_List_nth_default _
+                             => Datatypes.None
+                           | restricted_ident_eager_nat_rect P => Datatypes.Some (eager_nat_rect_f P)
+                           | restricted_ident_eager_nat_rect_arrow P Q => Datatypes.Some (eager_nat_rect_arrow_f P Q)
+                           | restricted_ident_eager_list_rect A P => Datatypes.Some (eager_list_rect_f A P)
+                           | restricted_ident_eager_list_rect_arrow A P Q => Datatypes.Some (eager_list_rect_arrow_f A P Q)
+                           | restricted_ident_eager_List_nth_default T => Datatypes.Some (eager_List_nth_default_f T)
+                           end
+                      end)).
+        End eager_ident_rect.
+      End eager_rect.
+    End generic.
+    Global Arguments BuildIdentT {base base_interp} ident, {base} base_interp ident.
+    Global Arguments ToRestrictedIdentT {_} ident {_}.
+    Global Arguments BuildEagerIdentT {_} ident {_}.
+    Global Arguments BuildInterpEagerIdentCorrectT {_ _ _} ident_interp {_ _ _}.
+    Global Arguments ToFromRestrictedIdentT {_} ident {_ _ _}.
+    Global Arguments BuildInterpIdentCorrectT {_ _ _ _} _.
+
+    (** TODO: Do these tactics belong here or in another file? *)
+    Ltac rewrite_interp_eager ident_interp :=
+      let buildInterpEagerIdentCorrect := constr:(_ : ident.BuildInterpEagerIdentCorrectT ident_interp) in
+      (* in case the user passed in [_] or something *)
+      let ident_interp := lazymatch type of buildInterpEagerIdentCorrect with ident.BuildInterpEagerIdentCorrectT ?ident_interp => ident_interp end in
+      repeat match goal with
+             | [ |- context[ident_interp _ ident.ident_eager_nat_rect] ]
+               => rewrite (@ident.interp_ident_eager_nat_rect _ _ _ _ _ _ _ buildInterpEagerIdentCorrect)
+             | [ |- context[ident_interp _ ident.ident_eager_nat_rect_arrow] ]
+               => rewrite (@ident.interp_ident_eager_nat_rect_arrow _ _ _ _ _ _ _ buildInterpEagerIdentCorrect)
+             | [ |- context[ident_interp _ ident.ident_eager_list_rect] ]
+               => rewrite (@ident.interp_ident_eager_list_rect _ _ _ _ _ _ _ buildInterpEagerIdentCorrect)
+             | [ |- context[ident_interp _ ident.ident_eager_list_rect_arrow] ]
+               => rewrite (@ident.interp_ident_eager_list_rect_arrow _ _ _ _ _ _ _ buildInterpEagerIdentCorrect)
+             | [ |- context[ident_interp _ ident.ident_eager_List_nth_default] ]
+               => rewrite (@ident.interp_ident_eager_List_nth_default _ _ _ _ _ _ _ buildInterpEagerIdentCorrect)
+             | [ |- context[ident_interp _ ident.ident_nat_rect] ]
+               => rewrite (@ident.interp_ident_nat_rect _ _ _ _ _ _ _ buildInterpEagerIdentCorrect)
+             | [ |- context[ident_interp _ ident.ident_nat_rect_arrow] ]
+               => rewrite (@ident.interp_ident_nat_rect_arrow _ _ _ _ _ _ _ buildInterpEagerIdentCorrect)
+             | [ |- context[ident_interp _ ident.ident_list_rect] ]
+               => rewrite (@ident.interp_ident_list_rect _ _ _ _ _ _ _ buildInterpEagerIdentCorrect)
+             | [ |- context[ident_interp _ ident.ident_list_rect_arrow] ]
+               => rewrite (@ident.interp_ident_list_rect_arrow _ _ _ _ _ _ _ buildInterpEagerIdentCorrect)
+             | [ |- context[ident_interp _ ident.ident_List_nth_default] ]
+               => rewrite (@ident.interp_ident_List_nth_default _ _ _ _ _ _ _ buildInterpEagerIdentCorrect)
+
+             | [ H : context[ident_interp _ ident.ident_eager_nat_rect] |- _ ]
+               => rewrite (@ident.interp_ident_eager_nat_rect _ _ _ _ _ _ _ buildInterpEagerIdentCorrect) in H
+             | [ H : context[ident_interp _ ident.ident_eager_nat_rect_arrow] |- _ ]
+               => rewrite (@ident.interp_ident_eager_nat_rect_arrow _ _ _ _ _ _ _ buildInterpEagerIdentCorrect) in H
+             | [ H : context[ident_interp _ ident.ident_eager_list_rect] |- _ ]
+               => rewrite (@ident.interp_ident_eager_list_rect _ _ _ _ _ _ _ buildInterpEagerIdentCorrect) in H
+             | [ H : context[ident_interp _ ident.ident_eager_list_rect_arrow] |- _ ]
+               => rewrite (@ident.interp_ident_eager_list_rect_arrow _ _ _ _ _ _ _ buildInterpEagerIdentCorrect) in H
+             | [ H : context[ident_interp _ ident.ident_eager_List_nth_default] |- _ ]
+               => rewrite (@ident.interp_ident_eager_List_nth_default _ _ _ _ _ _ _ buildInterpEagerIdentCorrect) in H
+             | [ H : context[ident_interp _ ident.ident_nat_rect] |- _ ]
+               => rewrite (@ident.interp_ident_nat_rect _ _ _ _ _ _ _ buildInterpEagerIdentCorrect) in H
+             | [ H : context[ident_interp _ ident.ident_nat_rect_arrow] |- _ ]
+               => rewrite (@ident.interp_ident_nat_rect_arrow _ _ _ _ _ _ _ buildInterpEagerIdentCorrect) in H
+             | [ H : context[ident_interp _ ident.ident_list_rect] |- _ ]
+               => rewrite (@ident.interp_ident_list_rect _ _ _ _ _ _ _ buildInterpEagerIdentCorrect) in H
+             | [ H : context[ident_interp _ ident.ident_list_rect_arrow] |- _ ]
+               => rewrite (@ident.interp_ident_list_rect_arrow _ _ _ _ _ _ _ buildInterpEagerIdentCorrect) in H
+             | [ H : context[ident_interp _ ident.ident_List_nth_default] |- _ ]
+               => rewrite (@ident.interp_ident_List_nth_default _ _ _ _ _ _ _ buildInterpEagerIdentCorrect) in H
              end.
-      End with_scope.
-      Notation Some := option_Some.
-      Notation None := option_None.
+    Ltac rewrite_interp ident_interp :=
+      let buildInterpIdentCorrect := constr:(_ : ident.BuildInterpIdentCorrectT ident_interp) in
+      (* in case the user passed in [_] or something *)
+      let ident_interp := lazymatch type of buildInterpIdentCorrect with ident.BuildInterpIdentCorrectT ?ident_interp => ident_interp end in
+      repeat match goal with
+             | [ |- context[ident_interp _ (ident.ident_Literal _)] ]
+               => rewrite (@ident.interp_ident_Literal _ _ _ _ _ buildInterpIdentCorrect)
+             | [ |- context[ident_interp _ ident.ident_nil] ]
+               => rewrite (@ident.interp_ident_nil _ _ _ _ _ buildInterpIdentCorrect)
+             | [ |- context[ident_interp _ ident.ident_cons] ]
+               => rewrite (@ident.interp_ident_cons _ _ _ _ _ buildInterpIdentCorrect)
+             | [ |- context[ident_interp _ ident.ident_Some] ]
+               => rewrite (@ident.interp_ident_Some _ _ _ _ _ buildInterpIdentCorrect)
+             | [ |- context[ident_interp _ ident.ident_None] ]
+               => rewrite (@ident.interp_ident_None _ _ _ _ _ buildInterpIdentCorrect)
+             | [ |- context[ident_interp _ ident.ident_pair] ]
+               => rewrite (@ident.interp_ident_pair _ _ _ _ _ buildInterpIdentCorrect)
 
-      Section gen.
-        Context (cast_outside_of_range : zrange -> BinInt.Z -> BinInt.Z).
-
-        Local Notation is_more_pos_than_neg := ident.is_more_pos_than_neg.
-        Local Notation cast := (ident.cast cast_outside_of_range).
-        Local Notation cast2 := (ident.cast2 cast_outside_of_range).
-
-        Local Notation wordmax log2wordmax := (2 ^ log2wordmax).
-        Local Notation half_bits log2wordmax := (log2wordmax / 2).
-        Local Notation wordmax_half_bits log2wordmax := (2 ^ (half_bits log2wordmax)).
-
-        Local Notation low log2wordmax x := (Z.land x ((wordmax_half_bits log2wordmax) - 1)).
-        Local Notation high log2wordmax x := (x >> (half_bits log2wordmax)).
-        Local Notation shift log2wordmax x imm := ((x << imm) mod (wordmax log2wordmax)).
-
-        (** Interpret identifiers where the behavior of [Z_cast] on a
-            value that does not fit in the range is given by a context
-            variable.  (This allows us to treat [Z_cast] as "undefined
-            behavior" when the value doesn't fit in the range by
-            quantifying over all possible interpretations. *)
-        Definition gen_interp {t} (idc : ident t) : type.interp base.interp t
-          := match idc in ident t return type.interp base.interp t with
-             | Literal _ v => v
-             | Nat_succ => Nat.succ
-             | Nat_pred => Nat.pred
-             | Nat_max => Nat.max
-             | Nat_mul => Nat.mul
-             | Nat_add => Nat.add
-             | Nat_sub => Nat.sub
-             | Nat_eqb => Nat.eqb
-             | nil t => Datatypes.nil
-             | cons t => Datatypes.cons
-             | pair A B => Datatypes.pair
-             | fst A B => Datatypes.fst
-             | snd A B => Datatypes.snd
-             | prod_rect A B T => fun f '((a, b) : base.interp A * base.interp B) => f a b
-             | bool_rect T
-               => fun t f => Datatypes.bool_rect _ (t tt) (f tt)
-             | nat_rect P
-             | eager_nat_rect P
-               => fun O_case S_case => Datatypes.nat_rect _ (O_case tt) S_case
-             | nat_rect_arrow P Q
-             | eager_nat_rect_arrow P Q
-               => fun O_case S_case => Datatypes.nat_rect _ O_case S_case
-             | list_rect A P
-             | eager_list_rect A P
-               => fun N_case C_case => Datatypes.list_rect _ (N_case tt) C_case
-             | list_rect_arrow A P Q
-             | eager_list_rect_arrow A P Q
-               => fun N_case C_case => Datatypes.list_rect _ N_case C_case
-             | list_case A P
-               => fun N_case C_case => ListUtil.list_case _ (N_case tt) C_case
-             | List_length T => @List.length _
-             | List_seq => List.seq
-             | List_firstn A => @List.firstn _
-             | List_skipn A => @List.skipn _
-             | List_repeat A => @repeat _
-             | List_combine A B => @List.combine _ _
-             | List_map A B => @List.map _ _
-             | List_app A => @List.app _
-             | List_rev A => @List.rev _
-             | List_flat_map A B => @List.flat_map _ _
-             | List_partition A => @List.partition _
-             | List_fold_right A B => @List.fold_right _ _
-             | List_update_nth T => update_nth
-             | List_nth_default T => @nth_default _
-             | eager_List_nth_default T => @nth_default _
-             | Z_add => Z.add
-             | Z_mul => Z.mul
-             | Z_pow => Z.pow
-             | Z_sub => Z.sub
-             | Z_opp => Z.opp
-             | Z_div => Z.div
-             | Z_modulo => Z.modulo
-             | Z_eqb => Z.eqb
-             | Z_leb => Z.leb
-             | Z_ltb => Z.ltb
-             | Z_geb => Z.geb
-             | Z_gtb => Z.gtb
-             | Z_log2 => Z.log2
-             | Z_log2_up => Z.log2_up
-             | Z_of_nat => Z.of_nat
-             | Z_to_nat => Z.to_nat
-             | Z_shiftr => Z.shiftr
-             | Z_shiftl => Z.shiftl
-             | Z_land => Z.land
-             | Z_lor => Z.lor
-             | Z_min => Z.min
-             | Z_max => Z.max
-             | Z_mul_split => Z.mul_split
-             | Z_add_get_carry => Z.add_get_carry_full
-             | Z_add_with_carry => Z.add_with_carry
-             | Z_add_with_get_carry => Z.add_with_get_carry_full
-             | Z_sub_get_borrow => Z.sub_get_borrow_full
-             | Z_sub_with_get_borrow => Z.sub_with_get_borrow_full
-             | Z_zselect => Z.zselect
-             | Z_add_modulo => Z.add_modulo
-             | Z_truncating_shiftl => Z.truncating_shiftl
-             | Z_bneg => Z.bneg
-             | Z_lnot_modulo => Z.lnot_modulo
-             | Z_rshi => Z.rshi
-             | Z_cc_m => Z.cc_m
-             | Z_combine_at_bitwidth => Z.combine_at_bitwidth
-             | Z_cast r => cast r
-             | Z_cast2 (r1, r2) => fun '(x1, x2) => (cast r1 x1, cast r2 x2)
-             | Some A => @Datatypes.Some _
-             | None A => @Datatypes.None _
-             | option_rect A P
-               => fun S_case N_case o => @Datatypes.option_rect _ _ S_case (N_case tt) o
-             | Build_zrange => ZRange.Build_zrange
-             | zrange_rect A => @ZRange.zrange_rect _
-             | fancy_add _ _ as idc
-             | fancy_addc _ _ as idc
-             | fancy_sub _ _ as idc
-             | fancy_subb _ _ as idc
-             | fancy_mulll _ as idc
-             | fancy_mullh _ as idc
-             | fancy_mulhl _ as idc
-             | fancy_mulhh _ as idc
-             | fancy_rshi _ _ as idc
-             | fancy_selc as idc
-             | fancy_selm _ as idc
-             | fancy_sell as idc
-             | fancy_addm as idc
-               => fancy.interp (invert_Some (to_fancy idc))
+             | [ H : context[ident_interp _ (ident.ident_Literal _)] |- _ ]
+               => rewrite (@ident.interp_ident_Literal _ _ _ _ _ buildInterpIdentCorrect) in H
+             | [ H : context[ident_interp _ ident.ident_nil] |- _ ]
+               => rewrite (@ident.interp_ident_nil _ _ _ _ _ buildInterpIdentCorrect) in H
+             | [ H : context[ident_interp _ ident.ident_cons] |- _ ]
+               => rewrite (@ident.interp_ident_cons _ _ _ _ _ buildInterpIdentCorrect) in H
+             | [ H : context[ident_interp _ ident.ident_Some] |- _ ]
+               => rewrite (@ident.interp_ident_Some _ _ _ _ _ buildInterpIdentCorrect) in H
+             | [ H : context[ident_interp _ ident.ident_None] |- _ ]
+               => rewrite (@ident.interp_ident_None _ _ _ _ _ buildInterpIdentCorrect) in H
+             | [ H : context[ident_interp _ ident.ident_pair] |- _ ]
+               => rewrite (@ident.interp_ident_pair _ _ _ _ _ buildInterpIdentCorrect) in H
              end.
-      End gen.
-    End with_base.
-    Notation Some := option_Some.
-    Notation None := option_None.
-
-    (** Interpret identifiers where [Z_cast] is an opaque identity
-        function when the value is not inside the range *)
-    Notation interp := (@gen_interp ident.cast_outside_of_range).
-    Notation LiteralUnit := (@Literal base.type.unit).
-    Notation LiteralZ := (@Literal base.type.Z).
-    Notation LiteralBool := (@Literal base.type.bool).
-    Notation LiteralNat := (@Literal base.type.nat).
-    Notation LiteralZRange := (@Literal base.type.zrange).
-
-    (** TODO: MOVE ME? *)
-    Ltac require_primitive_const term :=
-      lazymatch term with
-      | S ?n => require_primitive_const n
-      | O => idtac
-      | true => idtac
-      | false => idtac
-      | tt => idtac
-      | Z0 => idtac
-      | Zpos ?p => require_primitive_const p
-      | Zneg ?p => require_primitive_const p
-      | xI ?p => require_primitive_const p
-      | xO ?p => require_primitive_const p
-      | xH => idtac
-      | Datatypes.Some ?x => require_primitive_const x
-      | Datatypes.None => idtac
-      | ZRange.Build_zrange ?x ?y
-        => require_primitive_const x; require_primitive_const y
-      | ident.literal ?x => idtac
-      | ?term => fail 0 "Not a known const:" term
-      end.
-    Ltac is_primitive_const term :=
-      match constr:(Set) with
-      | _ => let check := match goal with
-                          | _ => require_primitive_const term
-                          end in
-             true
-      | _ => false
-      end.
-
-    Ltac reify
-         term
-         then_tac
-         reify_rec
-         else_tac :=
-      (*let __ := match goal with _ => idtac "attempting to reify_op" term end in*)
-      let term_is_primitive_const := is_primitive_const term in
-      lazymatch term_is_primitive_const with
-      | true
-        =>
-        let T := type of term in
-        let rT := base.reify_base T in
-        then_tac (@ident.Literal rT term)
-      | false
-        =>
-        lazymatch term with
-        | Nat.succ => then_tac Nat_succ
-        | Nat.add => then_tac Nat_add
-        | Nat.sub => then_tac Nat_sub
-        | Nat.eqb => then_tac Nat_eqb
-        | Nat.mul => then_tac Nat_mul
-        | Nat.max => then_tac Nat_max
-        | Nat.pred => then_tac Nat_pred
-        | S => then_tac Nat_succ
-        | @Datatypes.nil ?T
-          => let rT := base.reify T in
-             then_tac (@ident.nil rT)
-        | @Datatypes.cons ?T
-          => let rT := base.reify T in
-             then_tac (@ident.cons rT)
-        | @Datatypes.fst ?A ?B
-          => let rA := base.reify A in
-             let rB := base.reify B in
-             then_tac (@ident.fst rA rB)
-        | @Datatypes.snd ?A ?B
-          => let rA := base.reify A in
-             let rB := base.reify B in
-             then_tac (@ident.snd rA rB)
-        | @Datatypes.pair ?A ?B
-          => let rA := base.reify A in
-             let rB := base.reify B in
-             then_tac (@ident.pair rA rB)
-        | @Datatypes.bool_rect ?T0 ?Ptrue ?Pfalse
-          => lazymatch (eval cbv beta in T0) with
-            | fun _ => ?T => reify_rec (@ident.Thunked.bool_rect T (fun _ : Datatypes.unit => Ptrue) (fun _ : Datatypes.unit => Pfalse))
-            | T0 => else_tac ()
-            | ?T' => reify_rec (@Datatypes.bool_rect T' Ptrue Pfalse)
-            end
-        | @ident.Thunked.bool_rect ?T
-          => let rT := base.reify T in
-             then_tac (@ident.bool_rect rT)
-        | @Datatypes.option_rect ?A ?T0 ?PSome ?PNone
-          => lazymatch (eval cbv beta in T0) with
-             | fun _ => ?T => reify_rec (@ident.Thunked.option_rect A T PSome (fun _ : Datatypes.unit => PNone))
-             | T0 => else_tac ()
-             | ?T' => reify_rec (@Datatypes.option_rect A T' PSome PNone)
-             end
-        | @ident.Thunked.option_rect ?A ?T
-          => let rA := base.reify A in
-             let rT := base.reify T in
-             then_tac (@ident.option_rect rA rT)
-        | @Datatypes.prod_rect ?A ?B ?T0
-          => lazymatch (eval cbv beta in T0) with
-            | fun _ => ?T
-              => let rA := base.reify A in
-                let rB := base.reify B in
-                let rT := base.reify T in
-                then_tac (@ident.prod_rect rA rB rT)
-            | T0 => else_tac ()
-            | ?T' => reify_rec (@Datatypes.prod_rect A B T')
-            end
-        | @ZRange.zrange_rect ?T0
-          => lazymatch (eval cbv beta in T0) with
-             | fun _ => ?T
-               => let rT := base.reify T in
-                  then_tac (@ident.zrange_rect rT)
-             | T0 => else_tac ()
-             | ?T' => reify_rec (@ZRange.zrange_rect T')
-             end
-        | @Datatypes.nat_rect ?T0 ?P0
-          => lazymatch (eval cbv beta in T0) with
-             | fun _ => _ -> _ => else_tac ()
-             | fun _ => ?T => reify_rec (@ident.Thunked.nat_rect T (fun _ : Datatypes.unit => P0))
-             | T0 => else_tac ()
-             | ?T' => reify_rec (@Datatypes.nat_rect T' P0)
-             end
-        | @Datatypes.nat_rect ?T0
-          => lazymatch (eval cbv beta in T0) with
-             | (fun _ => ?P -> ?Q)
-               => let rP := base.reify P in
-                  let rQ := base.reify Q in
-                  then_tac (@ident.nat_rect_arrow rP rQ)
-             | T0 => else_tac ()
-             | ?T' => reify_rec (@Datatypes.nat_rect T')
-             end
-        | @ident.Thunked.nat_rect ?T
-          => let rT := base.reify T in
-             then_tac (@ident.nat_rect rT)
-        | ident.eagerly (@Datatypes.nat_rect) ?T0 ?P0
-          => lazymatch (eval cbv beta in T0) with
-             | fun _ => _ -> _ => else_tac ()
-             | fun _ => ?T => reify_rec (ident.eagerly (@ident.Thunked.nat_rect) T (fun _ : Datatypes.unit => P0))
-             | T0 => else_tac ()
-             | ?T' => reify_rec (ident.eagerly (@Datatypes.nat_rect) T' P0)
-             end
-        | ident.eagerly (@Datatypes.nat_rect) ?T0
-          => lazymatch (eval cbv beta in T0) with
-             | (fun _ => ?P -> ?Q)
-               => let rP := base.reify P in
-                  let rQ := base.reify Q in
-                  then_tac (@ident.eager_nat_rect_arrow rP rQ)
-             | T0 => else_tac ()
-             | ?T' => reify_rec (ident.eagerly (@Datatypes.nat_rect) T')
-            end
-        | ident.eagerly (@ident.Thunked.nat_rect) ?T
-          => let rT := base.reify T in
-             then_tac (@ident.eager_nat_rect rT)
-        | @Datatypes.list_rect ?A ?T0 ?Pnil
-          => lazymatch (eval cbv beta in T0) with
-             | fun _ => _ -> _ => else_tac ()
-             | fun _ => ?T => reify_rec (@ident.Thunked.list_rect A T (fun _ : Datatypes.unit => Pnil))
-             | T0 => else_tac ()
-             | ?T' => reify_rec (@Datatypes.list_rect A T' Pnil)
-             end
-        | @Datatypes.list_rect ?A ?T0
-          => lazymatch (eval cbv beta in T0) with
-             | (fun _ => ?P -> ?Q)
-               => let rA := base.reify A in
-                  let rP := base.reify P in
-                  let rQ := base.reify Q in
-                  then_tac (@ident.list_rect_arrow rA rP rQ)
-             | T0 => else_tac ()
-             | ?T' => reify_rec (@Datatypes.list_rect A T')
-             end
-        | @ident.Thunked.list_rect ?A ?T
-          => let rA := base.reify A in
-             let rT := base.reify T in
-             then_tac (@ident.list_rect rA rT)
-        | ident.eagerly (@Datatypes.list_rect) ?A ?T0 ?Pnil
-          => lazymatch (eval cbv beta in T0) with
-             | fun _ => _ -> _ => else_tac ()
-             | fun _ => ?T => reify_rec (ident.eagerly (@ident.Thunked.list_rect) A T (fun _ : Datatypes.unit => Pnil))
-             | T0 => else_tac ()
-             | ?T' => reify_rec (ident.eagerly (@Datatypes.list_rect) A T' Pnil)
-             end
-        | ident.eagerly (@Datatypes.list_rect) ?A ?T0
-          => lazymatch (eval cbv beta in T0) with
-             | (fun _ => ?P -> ?Q)
-               => let rA := base.reify A in
-                  let rP := base.reify P in
-                  let rQ := base.reify Q in
-                  then_tac (@ident.eager_list_rect_arrow rA rP rQ)
-             | T0 => else_tac ()
-             | ?T' => reify_rec (ident.eagerly (@Datatypes.list_rect) A T')
-             end
-        | ident.eagerly (@ident.Thunked.list_rect) ?A ?T
-          => let rA := base.reify A in
-             let rT := base.reify T in
-             then_tac (@ident.eager_list_rect rA rT)
-        | @ListUtil.list_case ?A ?T0 ?Pnil
-          => lazymatch (eval cbv beta in T0) with
-            | fun _ => ?T => reify_rec (@ident.Thunked.list_case A T (fun _ : Datatypes.unit => Pnil))
-            | T0 => else_tac ()
-            | ?T' => reify_rec (@ListUtil.list_case A T' Pnil)
-            end
-        | @ident.Thunked.list_case ?A ?T
-          => let rA := base.reify A in
-             let rT := base.reify T in
-             then_tac (@ident.list_case rA rT)
-        | @List.length ?A =>
-          let rA := base.reify A in
-          then_tac (@ident.List_length rA)
-        | List.seq => then_tac ident.List_seq
-        | @List.firstn ?A
-          => let rA := base.reify A in
-             then_tac (@ident.List_firstn rA)
-        | @List.skipn ?A
-          => let rA := base.reify A in
-             then_tac (@ident.List_skipn rA)
-        | @repeat ?A
-          => let rA := base.reify A in
-             then_tac (@ident.List_repeat rA)
-        | @List.combine ?A ?B
-          => let rA := base.reify A in
-             let rB := base.reify B in
-             then_tac (@ident.List_combine rA rB)
-        | @List.map ?A ?B
-          => let rA := base.reify A in
-             let rB := base.reify B in
-             then_tac (@ident.List_map rA rB)
-        | @List.flat_map ?A ?B
-          => let rA := base.reify A in
-             let rB := base.reify B in
-             then_tac (@ident.List_flat_map rA rB)
-        | @List.partition ?A
-          => let rA := base.reify A in
-             then_tac (@ident.List_partition rA)
-        | @List.app ?A
-          => let rA := base.reify A in
-             then_tac (@ident.List_app rA)
-        | @List.map ?A ?B
-          => let rA := base.reify A in
-             let rB := base.reify B in
-             then_tac (@ident.List_map rA rB)
-        | @List.rev ?A
-          => let rA := base.reify A in
-             then_tac (@ident.List_rev rA)
-        | @List.fold_right ?A ?B
-          => let rA := base.reify A in
-             let rB := base.reify B in
-             then_tac (@ident.List_fold_right rA rB)
-        | @update_nth ?T
-          => let rT := base.reify T in
-             then_tac (@ident.List_update_nth rT)
-        | @List.nth_default ?T
-          => let rT := base.reify T in
-             then_tac (@ident.List_nth_default rT)
-        | ident.eagerly (@List.nth_default) ?T
-          => let rT := base.reify T in
-             then_tac (@ident.eager_List_nth_default rT)
-        | Z.add => then_tac ident.Z_add
-        | Z.mul => then_tac ident.Z_mul
-        | Z.pow => then_tac ident.Z_pow
-        | Z.sub => then_tac ident.Z_sub
-        | Z.opp => then_tac ident.Z_opp
-        | Z.div => then_tac ident.Z_div
-        | Z.modulo => then_tac ident.Z_modulo
-        | Z.eqb => then_tac ident.Z_eqb
-        | Z.leb => then_tac ident.Z_leb
-        | Z.ltb => then_tac ident.Z_ltb
-        | Z.geb => then_tac ident.Z_geb
-        | Z.gtb => then_tac ident.Z_gtb
-        | Z.log2 => then_tac ident.Z_log2
-        | Z.log2_up => then_tac ident.Z_log2_up
-        | Z.shiftl => then_tac ident.Z_shiftl
-        | Z.shiftr => then_tac ident.Z_shiftr
-        | Z.land => then_tac ident.Z_land
-        | Z.lor => then_tac ident.Z_lor
-        | Z.min => then_tac ident.Z_min
-        | Z.max => then_tac ident.Z_max
-        | Z.bneg => then_tac ident.Z_bneg
-        | Z.lnot_modulo => then_tac ident.Z_lnot_modulo
-        | Z.truncating_shiftl => then_tac ident.Z_truncating_shiftl
-        | Z.of_nat => then_tac ident.Z_of_nat
-        | Z.to_nat => then_tac ident.Z_to_nat
-        | Z.mul_split => then_tac ident.Z_mul_split
-        | Z.add_get_carry_full => then_tac ident.Z_add_get_carry
-        | Z.add_with_carry => then_tac ident.Z_add_with_carry
-        | Z.add_with_get_carry_full => then_tac ident.Z_add_with_get_carry
-        | Z.sub_get_borrow_full => then_tac ident.Z_sub_get_borrow
-        | Z.sub_with_get_borrow_full => then_tac ident.Z_sub_with_get_borrow
-        | Z.zselect => then_tac ident.Z_zselect
-        | Z.add_modulo => then_tac ident.Z_add_modulo
-        | Z.rshi => then_tac ident.Z_rshi
-        | Z.cc_m => then_tac ident.Z_cc_m
-        | Z.combine_at_bitwidth => then_tac ident.Z_combine_at_bitwidth
-        | ident.cast _ ?r => then_tac (ident.Z_cast r)
-        | ident.cast2 _ ?r => then_tac (ident.Z_cast2 r)
-        | @Some ?A
-          => let rA := base.reify A in
-             then_tac (@ident.Some rA)
-        | @None ?A
-          => let rA := base.reify A in
-             then_tac (@ident.None rA)
-        | ZRange.Build_zrange => then_tac ident.Build_zrange
-        | ident.eagerly (?f ?x) => reify_rec (ident.eagerly f x)
-        | fancy.interp ?idc
-          => let ridc := (eval cbv [of_fancy] in (of_fancy idc)) in
-             then_tac ridc
-        | @gen_interp _ _ ?idc => then_tac idc
-        | _ => else_tac ()
-        end
-      end.
-
-    Definition reify_list {var} {t} (ls : list (@expr.expr base.type ident var (type.base t))) : @expr.expr base.type ident var (type.base (base.type.list t))
-      := Datatypes.list_rect
-           (fun _ => _)
-           (expr.Ident ident.nil)
-           (fun x _ xs => expr.Ident ident.cons @ x @ xs)%expr
-           ls.
-
-    Definition reify_option {var} {t} (v : option (@expr.expr base.type ident var (type.base t))) : @expr.expr base.type ident var (type.base (base.type.option t))
-      := Datatypes.option_rect
-           (fun _ => _)
-           (fun x => expr.Ident ident.Some @ x)%expr
-           (expr.Ident ident.None)
-           v.
-
-    Fixpoint smart_Literal {var} {t:base.type} : base.interp t -> @expr.expr base.type ident var (type.base t)
-      := match t with
-         | base.type.type_base t => fun v => expr.Ident (ident.Literal v)
-         | base.type.prod A B
-           => fun '((a, b) : base.interp A * base.interp B)
-              => expr.Ident ident.pair @ (@smart_Literal var A a) @ (@smart_Literal var B b)
-         | base.type.list A
-           => fun v : list (base.interp A)
-              => reify_list (List.map (@smart_Literal var A) v)
-         | base.type.option A
-           => fun v : option (base.interp A)
-              => reify_option (option_map (@smart_Literal var A) v)
-         end%expr.
 
     Module Export Notations.
       Delimit Scope ident_scope with ident.
-      Bind Scope ident_scope with ident.
       Global Arguments expr.Ident {base_type%type ident%function var%function t%etype} idc%ident.
-      Notation "## x" := (Literal x) (only printing) : ident_scope.
-      Notation "## x" := (Literal (t:=base.reify_base_type_of x) x) (only parsing) : ident_scope.
-      Notation "## x" := (expr.Ident (Literal x)) (only printing) : expr_scope.
-      Notation "## x" := (smart_Literal (t:=base.reify_type_of x) x) (only parsing) : expr_scope.
       Notation "# x" := (expr.Ident x) : expr_pat_scope.
-      Notation "# x" := (@expr.Ident base.type _ _ _ x) : expr_scope.
+      Notation "# x" := (@expr.Ident _ _ _ _ x) : expr_scope.
       Notation "x @ y" := (expr.App x%expr_pat y%expr_pat) : expr_pat_scope.
-      Notation "( x , y , .. , z )" := (expr.App (expr.App (#pair) .. (expr.App (expr.App (#pair) x%expr) y%expr) .. ) z%expr) : expr_scope.
-      Notation "( x , y , .. , z )" := (expr.App (expr.App (#pair)%expr_pat .. (expr.App (expr.App (#pair)%expr_pat x%expr_pat) y%expr_pat) .. ) z%expr_pat) : expr_pat_scope.
-      Notation "x :: y" := (#cons @ x @ y)%expr : expr_scope.
-      Notation "[ ]" := (#nil)%expr : expr_scope.
-      Notation "x :: y" := (#cons @ x @ y)%expr_pat : expr_pat_scope.
-      Notation "[ ]" := (#nil)%expr_pat : expr_pat_scope.
+
+      Notation "( x , y , .. , z )" := (expr.App (expr.App (#ident_pair) .. (expr.App (expr.App (#ident_pair) x%expr) y%expr) .. ) z%expr) : expr_scope.
+      Notation "x :: y" := (#ident_cons @ x @ y)%expr : expr_scope.
+      Notation "[ ]" := (#ident_nil)%expr : expr_scope.
       Notation "[ x ]" := (x :: [])%expr : expr_scope.
-      Notation "[ x ; y ; .. ; z ]" := (#cons @ x @ (#cons @ y @ .. (#cons @ z @ #nil) ..))%expr : expr_scope.
-      Notation "ls [[ n ]]"
-        := ((#(List_nth_default) @ _ @ ls @ #(Literal n%nat))%expr)
-           : expr_scope.
-      Notation "xs ++ ys" := (#List_app @ xs @ ys)%expr : expr_scope.
-      Notation "x - y" := (#Z_sub @ x @ y)%expr : expr_scope.
-      Notation "x + y" := (#Z_add @ x @ y)%expr : expr_scope.
-      Notation "x / y" := (#Z_div @ x @ y)%expr : expr_scope.
-      Notation "x * y" := (#Z_mul @ x @ y)%expr : expr_scope.
-      Notation "x >> y" := (#Z_shiftr @ x @ y)%expr : expr_scope.
-      Notation "x << y" := (#Z_shiftl @ x @ y)%expr : expr_scope.
-      Notation "x &' y" := (#Z_land @ x @ y)%expr : expr_scope.
-      Notation "x || y" := (#Z_lor @ x @ y)%expr : expr_scope.
-      Notation "x 'mod' y" := (#Z_modulo @ x @ y)%expr : expr_scope.
-      Notation "- x" := (#Z_opp @ x)%expr : expr_scope.
-      Global Arguments gen_interp _ _ !_.
-      Global Arguments ident.Z_cast _%zrange_scope.
-      Global Arguments ident.Z_cast2 _%zrange_scope.
+      Notation "[ x ; y ; .. ; z ]" := (#ident_cons @ x @ (#ident_cons @ y @ .. (#ident_cons @ z @ #ident_nil) ..))%expr : expr_scope.
     End Notations.
   End ident.
   Export ident.Notations.
-  Notation ident := ident.ident.
 
-  Global Strategy -1000 [expr.Interp expr.interp type.interp base.interp base.base_interp ident.gen_interp].
-  Ltac reify var term :=
-    expr.reify base.type ident ltac:(base.reify) ident.reify var term.
-  Ltac Reify term :=
-    expr.Reify base.type ident ltac:(base.reify) ident.reify term.
-  Ltac Reify_rhs _ :=
-    expr.Reify_rhs base.type ident ltac:(base.reify) ident.reify (@base.interp) (@ident.interp) ().
-
-  Global Hint Extern 1 (@expr.Reified_of _ _ _ _ ?t ?v ?rv)
-  => cbv [expr.Reified_of]; Reify_rhs (); reflexivity : typeclass_instances.
+  Global Strategy -1000 [expr.Interp expr.interp type.interp base.interp].
 
   Module Import invert_expr.
-    Module ident.
-      Definition invert_Literal_cps {t} (idc : ident t) : ~> option (type.interp base.interp t)
-        := fun T => match idc with
-                    | ident.Literal _ n => fun k => k (Some n)
-                    | _ => fun k => k None
-                    end.
-
-      Definition invert_Literal {t} (idc : ident t) : option (type.interp base.interp t)
-        := match idc with
-           | ident.Literal _ n => Some n
-           | _ => None
-           end.
-    End ident.
-
     Section with_var_gen.
       Context {base_type} {ident var : type base_type -> Type}.
       Local Notation expr := (@expr base_type ident var).
@@ -1652,80 +1262,156 @@ Module Compilers.
            end e.
     End with_var_gen.
 
-    Section with_var.
-      Context {var : type base.type -> Type}.
-      Local Notation expr := (@expr base.type ident var).
-      Local Notation try_transportP P := (@type.try_transport base.type (@base.try_make_transport_cps) P _ _).
+    Section with_container.
+      Context {base : Type}
+              {base_interp : base -> Type}
+              {try_make_transport_base_type_cps : @type.try_make_transport_cpsT base}.
+      Local Notation base_type := (@base.type base).
+      Local Notation type := (@type.type base_type).
+      Context {ident var : type -> Type}.
+      Class InvertIdentT :=
+        {
+          invert_ident_Literal : forall {t}, ident t -> option (type.interp (base.interp base_interp) t);
+          is_nil : forall {t}, ident t -> bool;
+          is_cons : forall {t}, ident t -> bool;
+          is_Some : forall {t}, ident t -> bool;
+          is_None : forall {t}, ident t -> bool;
+          is_pair : forall {t}, ident t -> bool
+        }.
+      Context {invertIdent : InvertIdentT}.
+
+      Section correctness_class.
+        Context {buildIdent : ident.BuildIdentT base_interp ident}.
+
+        Class BuildInvertIdentCorrectT :=
+          {
+            invert_ident_Literal_correct
+            : forall {t idc v},
+              invert_ident_Literal (t:=t) idc = Some v
+              <-> match t return ident t -> type.interp (base.interp base_interp) t -> Prop with
+                  | type.base (base.type.type_base t)
+                    => fun idc v => idc = ident.ident_Literal (t:=t) v
+                  | _ => fun _ _ => False
+                  end idc v;
+            is_nil_correct
+            : forall {t idc},
+                is_nil (t:=t) idc = true
+                <-> match t return ident t -> Prop with
+                    | type.base (base.type.list t)
+                      => fun idc => idc = ident.ident_nil (t:=t)
+                    | _ => fun _ => False
+                    end idc;
+            is_cons_correct
+            : forall {t idc},
+                is_cons (t:=t) idc = true
+                <-> match t return ident t -> Prop with
+                    | type.base t -> type.base (base.type.list _) -> type.base (base.type.list _)
+                      => fun idc => existT _ _ idc = existT _ _ (ident.ident_cons (t:=t)) :> sigT ident
+                    | _ => fun _ => False
+                    end%etype idc;
+            is_Some_correct
+            : forall {t idc},
+                is_Some (t:=t) idc = true
+                <-> match t return ident t -> Prop with
+                    | type.base t -> type.base (base.type.option _)
+                      => fun idc => existT _ _ idc = existT _ _ (ident.ident_Some (t:=t)) :> sigT ident
+                    | _ => fun _ => False
+                    end%etype idc;
+            is_None_correct
+            : forall {t idc},
+                is_None (t:=t) idc = true
+                <-> match t return ident t -> Prop with
+                    | type.base (base.type.option t)
+                      => fun idc => idc = ident.ident_None (t:=t)
+                    | _ => fun _ => False
+                    end idc;
+            is_pair_correct
+            : forall {t idc},
+                is_pair (t:=t) idc = true
+                <-> match t return ident t -> Prop with
+                    | type.base A -> type.base B -> type.base (base.type.prod _ _)
+                      => fun idc => existT _ _ idc = existT _ _ (ident.ident_pair (A:=A) (B:=B)) :> sigT ident
+                    | _ => fun _ => False
+                    end%etype idc;
+          }.
+      End correctness_class.
+
+      Local Notation expr := (@expr.expr base_type ident var).
+      Local Notation try_transportP P := (@type.try_transport _ _ P _ _).
       Local Notation try_transport := (try_transportP _).
-      Let type_base (v : base.type) : type.type base.type := type.base v.
-      Coercion type_base : base.type >-> type.type.
+      Let type_base (x : base) : @base.type base := base.type.type_base x.
+      Let base' {bt} (x : Compilers.base.type bt) : type.type _ := type.base x.
+      Local Coercion base' : base.type >-> type.type.
+      Local Coercion type_base : base >-> base.type.
 
-      Definition invert_Z_opp {t} (e : expr t)
-        : option (expr t)
-        := match e in expr.expr t return option (expr t) with
-           | expr.App (type.base base.type.Z) (type.base base.type.Z) (#ident.Z_opp) v => Some v
-           | _ => None
-           end%expr_pat%expr.
+      Fixpoint reflect_list_cps' {t} (e : expr t)
+        : ~> option (list (expr (type.base match t return base_type with
+                                           | type.base (base.type.list t) => t
+                                           | _ => base.type.unit
+                                           end)))
+        := match e in expr.expr t
+                 return ~> option (list (expr (type.base match t return base_type with
+                                                         | type.base (base.type.list t) => t
+                                                         | _ => base.type.unit
+                                                         end)))
+           with
+           | #maybe_nil => if is_nil maybe_nil then (return (Some nil)) else (return None)
+           | #maybe_cons @ x @ xs
+             => if is_cons maybe_cons
+                then (x' <-- type.try_transport_cps expr _ _ x;
+                        xs' <-- @reflect_list_cps' _ xs;
+                        xs' <-- type.try_transport_cps (fun t => list (expr (type.base match t return base_type with
+                                                                                                                                                 | type.base (base.type.list t) => t
+                                                                                                                                                 | _ => base.type.unit
+                                                                                                                                                 end))) _ _ xs';
+                      return (Some (x' :: xs')%list))
+                else (return None)
+           | _ => (return None)
+           end%expr_pat%expr%cps.
 
-      Definition invert_Z_cast (e : expr base.type.Z)
-        : option (zrange * expr base.type.Z)
-        := match e with
-           | expr.App (type.base base.type.Z) _ (#(ident.Z_cast r)) v => Some (r, v)
-           | _ => None
-           end%core%expr_pat%expr.
+      Definition reflect_list_cps {t} (e : expr (type.base (base.type.list t)))
+        : ~> option (list (expr (type.base t)))
+        := reflect_list_cps' e.
+      Global Arguments reflect_list_cps {t} e [T] k.
 
-      Definition invert_Z_cast2 (e : expr (base.type.Z * base.type.Z))
-        : option ((zrange * zrange) * expr (base.type.Z * base.type.Z))
-        := match e with
-           | expr.App (type.base (base.type.Z * base.type.Z)) _ (#(ident.Z_cast2 r)) v => Some (r, v)
-           | _ => None
-           end%etype%core%expr_pat%expr.
+      Definition reflect_list {t} (e : expr (type.base (base.type.list t)))
+        : option (list (expr (type.base t)))
+        := reflect_list_cps e id.
 
       Definition invert_pair {A B} (e : expr (A * B))
         : option (expr A * expr B)
         := match e with
-           | (a, b)
-             => a <- try_transport a; b <- try_transport b; Some (a, b)%core
+           | #maybe_pair @ a @ b
+             => if is_pair maybe_pair
+                then a <- try_transport a; b <- try_transport b; Some (a, b)%core
+                else None
            | _ => None
            end%expr_pat%expr%option.
       Definition invert_Literal {t} (e : expr t)
-        : option (type.interp base.interp t)
+        : option (type.interp (base.interp base_interp) t)
         := match e with
-           | expr.Ident _ idc => ident.invert_Literal idc
+           | expr.Ident _ idc => invert_ident_Literal idc
            | _ => None
            end%expr_pat%expr.
       Definition invert_nil {t} (e : expr (base.type.list t)) : bool
         := match invert_Ident e with
-           | Some (ident.nil _) => true
+           | Some maybe_nil => is_nil maybe_nil
            | _ => false
            end.
       Definition invert_None {t} (e : expr (base.type.option t)) : bool
         := match invert_Ident e with
-           | Some (ident.None _) => true
+           | Some maybe_None => is_None maybe_None
            | _ => false
            end.
-      Local Notation if_arrow f t
-        := (match t return Type with
-            | (a -> b)%etype => f a b
-            | _ => unit
-            end) (only parsing).
       Definition invert_Some {t} (e : expr (base.type.option t))
         : option (expr t)
-        := match invert_AppIdent e with
-           | Some (existT s (idc, e))
-             => match idc in ident.ident t
-                      return if_arrow (fun a b => expr a) t
-                             -> option match t return Type with
-                                       | (a -> type.base (base.type.option t))
-                                         => expr t
-                                       | _ => unit
-                                       end%etype
-                with
-                | ident.Some _ => fun x => Some x
-                | _ => fun _ => None
-                end e
-           | None => None
-           end.
+        := match e with
+           | #maybe_Some @ v
+             => if is_Some maybe_Some
+                then try_transport v
+                else None
+           | _ => None
+           end%expr_pat.
 
       Definition reflect_option {t} (e : expr (base.type.option t))
         : option (option (expr t))
@@ -1735,61 +1421,23 @@ Module Compilers.
            | false, None => None
            end.
 
-      Local Notation if_arrow2 f t
-        := (match t return Type with
-            | (a -> b -> c)%etype => f a b c
-            | _ => unit
-            end) (only parsing).
       Definition invert_cons {t} (e : expr (base.type.list t))
         : option (expr t * expr (base.type.list t))
         := match invert_AppIdent2 e with
-           | Some (existT _ (idc, x, y))
-             => match idc in ident.ident t
-                      return if_arrow2 (fun a b c => expr a) t
-                             -> if_arrow2 (fun a b c => expr b) t
-                             -> option match t return Type with
-                                       | (a -> b -> type.base (base.type.list t))
-                                         => (expr t * expr (base.type.list t))%type
-                                       | _ => unit
-                                       end%etype
-                with
-                | ident.cons t => fun x xs => Some (x, xs)
-                | _ => fun _ _ => None
-                end x y
+           | Some (existT _ (idc, x, xs))
+             => if is_cons idc
+                then (x' <- try_transport x; xs' <- try_transport xs; Some (x', xs'))%option
+                else None
            | _ => None
            end.
-    End with_var.
-
-    Fixpoint reflect_list_cps' {var t} (e : @expr.expr base.type ident var t) {struct e}
-      : ~> option (list (@expr.expr base.type ident var (type.base match t return base.type with
-                                                                   | type.base (base.type.list t) => t
-                                                                   | _ => base.type.unit
-                                                                   end)))
-      := match e in expr.expr t return ~> option (list (@expr.expr base.type ident var (type.base match t return base.type with
-                                                                                                  | type.base (base.type.list t) => t
-                                                                                                  | _ => base.type.unit
-                                                                                                  end)))
-         with
-         | [] => (return (Some nil))
-         | x :: xs
-           => (x' <-- type.try_transport_cps base.try_make_transport_cps (@expr.expr base.type ident var) _ _ x;
-                xs' <-- @reflect_list_cps' var _ xs;
-                xs' <-- type.try_transport_cps base.try_make_transport_cps (fun t => list (@expr.expr _ _ _ (type.base match t return base.type with
-                                                                                                                  | type.base (base.type.list t) => t
-                                                                                                                  | _ => base.type.unit
-                                                                                                                  end))) _ _ xs';
-              return (Some (x' :: xs')%list))
-         | _ => (return None)
-         end%expr_pat%expr%cps.
-
-    Definition reflect_list_cps {var t} (e : @expr.expr base.type ident var (type.base (base.type.list t)))
-      : ~> option (list (@expr.expr base.type ident var (type.base t)))
-      := reflect_list_cps' e.
-    Global Arguments reflect_list_cps {var t} e [T] k.
-
-    Definition reflect_list {var t} (e : @expr.expr base.type ident var (type.base (base.type.list t)))
-      : option (list (@expr.expr base.type ident var (type.base t)))
-      := reflect_list_cps e id.
+    End with_container.
+    Global Arguments invert_ident_Literal {_ _ _ _} {t} _, {_ _ _ _} t _.
+    Global Arguments is_nil {_ _ _ _} {t} _, {_ _ _ _} t _.
+    Global Arguments is_cons {_ _ _ _} {t} _, {_ _ _ _} t _.
+    Global Arguments is_None {_ _ _ _} {t} _, {_ _ _ _} t _.
+    Global Arguments is_Some {_ _ _ _} {t} _, {_ _ _ _} t _.
+    Global Arguments is_pair {_ _ _ _} {t} _, {_ _ _ _} t _.
+    Global Arguments InvertIdentT {base base_interp} ident, {base} base_interp ident.
   End invert_expr.
 
   Module DefaultValue.
@@ -1800,149 +1448,177 @@ Module Compilers.
         that will never actually be reached in correctly used code. *)
     Module type.
       Module base.
-        Fixpoint default {t : base.type} : base.interp t
-          := match t with
-             | base.type.unit => tt
-             | base.type.Z => (-1)%Z
-             | base.type.nat => 0%nat
-             | base.type.bool => true
-             | base.type.zrange => r[0~>0]%zrange
-             | base.type.list _ => nil
-             | base.type.prod A B
-               => (@default A, @default B)
-             | base.type.option A => None
-             end.
+        Class DefaultT {base : Type} {base_interp : base -> Type}
+          := defaultv : forall {t}, base_interp t.
+        Global Hint Mode DefaultT ! - : typeclass_instances.
+
+        Section with_base.
+          Context {base : Type}
+                  {base_interp : base -> Type}.
+          Local Notation base_type := (@base.type base).
+          Local Notation type := (@type.type base_type).
+          Local Notation base_type_interp := (@base.interp base base_interp).
+          Context {baseDefault : @DefaultT base base_interp}.
+
+          Fixpoint default {t : base.type base} : base_type_interp t
+            := match t with
+               | base.type.type_base t => defaultv (t:=t)
+               | base.type.unit => tt
+               | base.type.list _ => nil
+               | base.type.prod A B
+                 => (@default A, @default B)
+               | base.type.option A => None
+               end.
+        End with_base.
+        Global Hint Extern 1 (@DefaultT (base.type ?base) (@base.interp ?base ?base_interp)) => notypeclasses refine (@default base base_interp _) : typeclass_instances. (* notypeclasses refine to avoid universe bugs in simple apply; hint instead of instance for COQBUG(https://github.com/coq/coq/issues/10072) *)
       End base.
-      Fixpoint default {t} : type.interp base.interp t
-        := match t with
-           | type.base x => @base.default x
-           | type.arrow s d => fun _ => @default d
-           end.
+
+      Section with_base.
+        Context {base_type : Type}
+                {base_interp : base_type -> Type}.
+        Local Notation type := (@type.type base_type).
+        Context {baseDefault : @base.DefaultT base_type base_interp}.
+
+        Fixpoint default {t} : type.interp base_interp t
+          := match t with
+             | type.base x => base.defaultv (t:=x)
+             | type.arrow s d => fun _ => @default d
+             end.
+      End with_base.
     End type.
 
     Module expr.
       Module base.
+        Section generic.
+          Context {base : Type}
+                  {base_interp : base -> Type}.
+          Context {baseDefault : @type.base.DefaultT base base_interp}.
+          Local Notation base_type := (@base.type base).
+          Local Notation type := (@type.type base_type).
+          Local Notation base_type_interp := (@base.interp base base_interp).
+          Local Notation base_type_default := (@type.base.default base base_interp baseDefault).
+          Context {ident : type -> Type}.
+          Context {buildIdent : @ident.BuildIdentT base base_interp ident}.
+
+          Section with_var.
+            Context {var : type -> Type}.
+            Local Notation expr := (@expr.expr base_type ident var).
+
+            Definition default {t : base_type} : expr (type.base t)
+              := ident.smart_Literal (@base_type_default t).
+          End with_var.
+
+          Definition Default {t : base_type} : expr.Expr (type.base t) := fun _ => default.
+        End generic.
+      End base.
+
+      Section generic.
+        Context {base : Type}
+                {base_interp : base -> Type}.
+        Context {baseDefault : @type.base.DefaultT base base_interp}.
+        Local Notation base_type := (@base.type base).
+        Local Notation type := (@type.type base_type).
+        Local Notation base_type_interp := (@base.interp base base_interp).
+        Local Notation base_type_default := (@type.base.default base base_interp baseDefault).
+        Context {ident : type -> Type}.
+        Context {buildIdent : @ident.BuildIdentT base base_interp ident}.
+
         Section with_var.
-          Context {var : type.type base.type -> Type}.
-          Fixpoint default {t : base.type} : @expr base.type ident var (type.base t)
+          Context {var : type -> Type}.
+          Local Notation expr := (@expr.expr base_type ident var).
+
+          Fixpoint default {t : type} : @expr t
             := match t with
-               | base.type.prod A B
-                 => (@default A, @default B)
-               | base.type.list A => #ident.nil
-               | base.type.option A => #ident.None
-               | base.type.unit as t
-               | base.type.Z as t
-               | base.type.nat as t
-               | base.type.bool as t
-               | base.type.zrange as t
-                 => ##(@type.base.default t)
+               | type.base x => base.default
+               | type.arrow s d => λ _, @default d
                end%expr.
         End with_var.
 
-        Definition Default {t : base.type} : expr.Expr (type.base t) := fun _ => default.
-      End base.
-
-      Section with_var.
-        Context {var : type base.type -> Type}.
-        Fixpoint default {t : type base.type} : @expr base.type ident var t
-          := match t with
-             | type.base x => base.default
-             | type.arrow s d => λ _, @default d
-             end%expr.
-      End with_var.
-
-      Definition Default {t} : expr.Expr t := fun _ => default.
+        Definition Default {t} : expr.Expr t := fun _ => default.
+      End generic.
+      Global Hint Extern 1 (@type.base.DefaultT (type.type (base.type ?base)) (@expr.expr (base.type ?base) ?ident ?var))
+      => notypeclasses refine (@default base _ _ ident _ var) : typeclass_instances.
+      Global Hint Extern 1 (@type.base.DefaultT (type.type (base.type ?base)) (@expr.Expr (base.type ?base) ?ident))
+      => notypeclasses refine (@Default base _ _ ident _) : typeclass_instances.
     End expr.
   End DefaultValue.
-
-  Module Import defaults.
-    Notation expr := (@expr base.type ident).
-    Notation Expr := (@expr.Expr base.type ident).
-    Notation type := (type base.type).
-    Global Coercion type_base (t : base.type) : type := type.base t.
-    Global Arguments type_base _ / .
-    Notation interp := (@expr.interp base.type ident base.interp (@ident.interp)).
-    Notation Interp := (@expr.Interp base.type ident base.interp (@ident.interp)).
-    Ltac reify_type ty := type.reify ltac:(base.reify) base.type ty.
-    Notation reify_type t := (ltac:(let rt := reify_type t in exact rt)) (only parsing).
-    Notation reify_type_of e := (reify_type ((fun t (_ : t) => t) _ e)) (only parsing).
-  End defaults.
 
   Notation reify_list := ident.reify_list.
   Notation reify_option := ident.reify_option.
 
   Module GallinaReify.
     Module base.
+      Notation reify := ident.smart_Literal.
+
+      Section generic.
+        Context {base : Type}
+                {base_interp : base -> Type}.
+        Local Notation base_type := (@base.type base).
+        Local Notation type := (@type.type base_type).
+        Local Notation base_type_interp := (@base.interp base base_interp).
+        Context {ident : type -> Type}.
+        Context {buildIdent : @ident.BuildIdentT base base_interp ident}.
+
+        Definition Reify_as (t : base_type) (v : base_type_interp t) : expr.Expr (type.base t)
+          := fun var => reify v.
+      End generic.
+
+      (*(** [Reify] does Ltac type inference to get the type *)
+      Notation Reify v
+        := (Reify_as (base.reify_type_of v) (fun _ => v)) (only parsing).*)
+    End base.
+
+    Section generic.
+      Context {base : Type}
+              {base_interp : base -> Type}.
+      Local Notation base_type := (@base.type base).
+      Local Notation type := (@type.type base_type).
+      Local Notation base_type_interp := (@base.interp base base_interp).
+      Context {ident : type -> Type}.
+      Context {buildIdent : @ident.BuildIdentT base base_interp ident}.
+
+      Section value.
+        Context (var : type -> Type).
+        Fixpoint value (t : type)
+          := match t return Type with
+             | type.arrow s d => var s -> value d
+             | type.base t => base_type_interp t
+             end%type.
+      End value.
+
       Section reify.
         Context {var : type -> Type}.
-        Fixpoint reify {t : base.type} {struct t}
-          : base.interp t -> @expr var t
-          := match t return base.interp t -> expr t with
-             | base.type.prod A B as t
-               => fun '((a, b) : base.interp A * base.interp B)
-                  => (@reify A a, @reify B b)%expr
-             | base.type.list A as t
-               => fun x : list (base.interp A)
-                  => reify_list (List.map (@reify A) x)
-             | base.type.option A as t
-               => fun x : option (base.interp A)
-                  => reify_option (option_map (@reify A) x)
-             | base.type.unit as t
-             | base.type.Z as t
-             | base.type.bool as t
-             | base.type.nat as t
-             | base.type.zrange as t
-               => fun x : base.interp t
-                  => (##x)%expr
+        Local Notation expr := (@expr.expr base_type ident var).
+
+        Fixpoint reify {t : type} {struct t}
+          : value var t -> expr t
+          := match t return value var t -> expr t with
+             | type.arrow s d
+               => fun (f : var s -> value var d)
+                  => (λ x , @reify d (f x))%expr
+             | type.base t
+               => base.reify
              end.
       End reify.
 
-      Definition Reify_as (t : base.type) (v : base.interp t) : Expr t
-        := fun var => reify v.
-
-      (** [Reify] does Ltac type inference to get the type *)
-      Notation Reify v
-        := (Reify_as (base.reify_type_of v) (fun _ => v)) (only parsing).
-    End base.
-
-    Section value.
-      Context (var : type -> Type).
-      Fixpoint value (t : type)
-        := match t return Type with
-           | type.arrow s d => var s -> value d
-           | type.base t => base.interp t
-           end%type.
-    End value.
-
-    Section reify.
-      Context {var : type -> Type}.
-      Fixpoint reify {t : type} {struct t}
-        : value var t -> @expr var t
-        := match t return value var t -> expr t with
+      Fixpoint reify_as_interp {t : type} {struct t}
+        : type.interp base_type_interp t -> @expr _ ident (type.interp base_type_interp) t
+        := match t return type.interp base_type_interp t -> expr t with
            | type.arrow s d
-             => fun (f : var s -> value var d)
-                => (λ x , @reify d (f x))%expr
+             => fun (f : type.interp base_type_interp s -> type.interp base_type_interp d)
+                => (λ x , @reify_as_interp d (f x))%expr
            | type.base t
-             => @base.reify var t
+             => base.reify
            end.
-    End reify.
 
-    Fixpoint reify_as_interp {t : type} {struct t}
-      : type.interp base.interp t -> @expr (type.interp base.interp) t
-      := match t return type.interp base.interp t -> expr t with
-         | type.arrow s d
-           => fun (f : type.interp base.interp s -> type.interp base.interp d)
-              => (λ x , @reify_as_interp d (f x))%expr
-         | type.base t
-           => @base.reify _ t
-         end.
+      Definition Reify_as (t : type) (v : forall var, value var t) : expr.Expr t
+        := fun var => reify (v _).
 
-    Definition Reify_as (t : type) (v : forall var, value var t) : Expr t
-      := fun var => reify (v _).
-
+      (*
     (** [Reify] does Ltac type inference to get the type *)
     Notation Reify v
-      := (Reify_as (reify_type_of v) (fun _ => v)) (only parsing).
+      := (Reify_as (reify_type_of v) (fun _ => v)) (only parsing).*)
+    End generic.
   End GallinaReify.
 
   Module GeneralizeVar.
@@ -1959,76 +1635,124 @@ Module Compilers.
         no lambdas to get blocked on) and thus will also compute the
         preceeding PHOAS passes only once. *)
     Module Flat.
-      Inductive expr : type -> Set :=
-      | Ident {t} (idc : ident t) : expr t
-      | Var (t : type) (n : positive) : expr t
-      | Abs (s : type) (n : positive) {d} (f : expr d) : expr (s -> d)
-      | App {s d} (f : expr (s -> d)) (x : expr s) : expr d
-      | LetIn {A B} (n : positive) (ex : expr A) (eC : expr B) : expr B.
+      Section with_base.
+        Context {base_type : Type}
+                {ident : type base_type -> Type}.
+        Local Notation type := (@type.type base_type).
+
+        Inductive expr : type -> Type :=
+        | Ident {t} (idc : ident t) : expr t
+        | Var (t : type) (n : positive) : expr t
+        | Abs (s : type) (n : positive) {d} (f : expr d) : expr (s -> d)
+        | App {s d} (f : expr (s -> d)) (x : expr s) : expr d
+        | LetIn {A B} (n : positive) (ex : expr A) (eC : expr B) : expr B.
+      End with_base.
     End Flat.
 
     Definition ERROR {T} (v : T) : T. exact v. Qed.
 
-    Fixpoint to_flat' {t} (e : @expr (fun _ => PositiveMap.key) t)
-             (cur_idx : PositiveMap.key)
-      : Flat.expr t
-      := match e in expr.expr t return Flat.expr t with
-         | expr.Var t v => Flat.Var t v
-         | expr.App s d f x => Flat.App
-                                 (@to_flat' _ f cur_idx)
-                                 (@to_flat' _ x cur_idx)
-         | expr.Ident t idc => Flat.Ident idc
-         | expr.Abs s d f
-           => Flat.Abs s cur_idx
-                       (@to_flat'
-                          d (f cur_idx)
-                          (Pos.succ cur_idx))
-         | expr.LetIn A B ex eC
-           => Flat.LetIn
-                cur_idx
-                (@to_flat' A ex cur_idx)
-                (@to_flat'
-                   B (eC cur_idx)
-                   (Pos.succ cur_idx))
-         end.
+    Section with_base.
+      Context {base_type : Type}
+              {base_type_interp : base_type -> Type}.
+      Local Notation type := (@type.type base_type).
+      Context {ident : type -> Type}.
+      Context {try_make_transport_base_type_cps : @type.try_make_transport_cpsT base_type}
+              {exprDefault : forall var, @DefaultValue.type.base.DefaultT type (@expr base_type ident var)}.
+      Local Notation expr := (@expr base_type ident).
 
-    Fixpoint from_flat {t} (e : Flat.expr t)
-      : forall var, PositiveMap.t { t : type & var t } -> @expr var t
-      := match e in Flat.expr t return forall var, _ -> expr t with
-         | Flat.Var t v
-           => fun var ctx
-              => match (tv <- PositiveMap.find v ctx;
-                          type.try_transport base.try_make_transport_cps var _ _ (projT2 tv))%option with
-                 | Some v => expr.Var v
-                 | None => ERROR DefaultValue.expr.default
-                 end
-         | Flat.Ident t idc => fun var ctx => expr.Ident idc
-         | Flat.App s d f x
-           => let f' := @from_flat _ f in
-              let x' := @from_flat _ x in
-              fun var ctx => expr.App (f' var ctx) (x' var ctx)
-         | Flat.Abs s cur_idx d f
-           => let f' := @from_flat d f in
-              fun var ctx
-              => expr.Abs (fun v => f' var (PositiveMap.add cur_idx (existT _ s v) ctx))
-         | Flat.LetIn A B cur_idx ex eC
-           => let ex' := @from_flat A ex in
-              let eC' := @from_flat B eC in
-              fun var ctx
-              => expr.LetIn
-                   (ex' var ctx)
-                   (fun v => eC' var (PositiveMap.add cur_idx (existT _ A v) ctx))
-         end.
+      Fixpoint to_flat' {t} (e : @expr (fun _ => PositiveMap.key) t)
+               (cur_idx : PositiveMap.key)
+        : Flat.expr t
+        := match e in expr.expr t return Flat.expr t with
+           | expr.Var t v => Flat.Var t v
+           | expr.App s d f x => Flat.App
+                                   (@to_flat' _ f cur_idx)
+                                   (@to_flat' _ x cur_idx)
+           | expr.Ident t idc => Flat.Ident idc
+           | expr.Abs s d f
+             => Flat.Abs s cur_idx
+                         (@to_flat'
+                            d (f cur_idx)
+                            (Pos.succ cur_idx))
+           | expr.LetIn A B ex eC
+             => Flat.LetIn
+                  cur_idx
+                  (@to_flat' A ex cur_idx)
+                  (@to_flat'
+                     B (eC cur_idx)
+                     (Pos.succ cur_idx))
+           end.
 
-    Definition to_flat {t} (e : expr t) : Flat.expr t
-      := to_flat' e 1%positive.
-    Definition ToFlat {t} (E : Expr t) : Flat.expr t
-      := to_flat (E _).
-    Definition FromFlat {t} (e : Flat.expr t) : Expr t
-      := let e' := @from_flat t e in
-         fun var => e' var (PositiveMap.empty _).
-    Definition GeneralizeVar {t} (e : @expr (fun _ => PositiveMap.key) t) : Expr t
-      := FromFlat (to_flat e).
+      Fixpoint from_flat {t} (e : Flat.expr t)
+        : forall var, PositiveMap.t { t : type & var t } -> @expr var t
+        := match e in Flat.expr t return forall var, _ -> expr t with
+           | Flat.Var t v
+             => fun var ctx
+                => match (tv <- PositiveMap.find v ctx;
+                            type.try_transport var _ _ (projT2 tv))%option with
+                   | Some v => expr.Var v
+                   | None => ERROR DefaultValue.type.base.defaultv
+                   end
+           | Flat.Ident t idc => fun var ctx => expr.Ident idc
+           | Flat.App s d f x
+             => let f' := @from_flat _ f in
+                let x' := @from_flat _ x in
+                fun var ctx => expr.App (f' var ctx) (x' var ctx)
+           | Flat.Abs s cur_idx d f
+             => let f' := @from_flat d f in
+                fun var ctx
+                => expr.Abs (fun v => f' var (PositiveMap.add cur_idx (existT _ s v) ctx))
+           | Flat.LetIn A B cur_idx ex eC
+             => let ex' := @from_flat A ex in
+                let eC' := @from_flat B eC in
+                fun var ctx
+                => expr.LetIn
+                     (ex' var ctx)
+                     (fun v => eC' var (PositiveMap.add cur_idx (existT _ A v) ctx))
+           end.
+
+      Definition to_flat {t} (e : expr t) : Flat.expr t
+        := to_flat' e 1%positive.
+      Definition ToFlat {t} (E : Expr t) : Flat.expr t
+        := to_flat (E _).
+      Definition FromFlat {t} (e : Flat.expr t) : Expr t
+        := let e' := @from_flat t e in
+           fun var => e' var (PositiveMap.empty _).
+      Definition GeneralizeVar {t} (e : @expr (fun _ => PositiveMap.key) t) : Expr t
+        := FromFlat (to_flat e).
+    End with_base.
   End GeneralizeVar.
+
+  Module Classes.
+    Class ExprInfoT :=
+      {
+        base : Type;
+        ident : type (base.type base) -> Type;
+        base_interp : base -> Type;
+        ident_gen_interp : (zrange -> Z -> Z) -> forall t, ident t -> type.interp (base.interp base_interp) t;
+        ident_interp := ident_gen_interp ident.cast_outside_of_range
+      }.
+
+    Class ExprExtraInfoT {exprInfo : ExprInfoT} :=
+      {
+        base_beq : base -> base -> bool;
+        base_interp_beq : forall {t}, base_interp t -> base_interp t -> bool;
+        try_make_transport_base_cps :> type.try_make_transport_cpsT base;
+        baseHasNat :> base.type.BaseTypeHasNatT base;
+        buildIdent :> ident.BuildIdentT base_interp ident;
+        toRestrictedIdent :> ident.ToRestrictedIdentT ident;
+        buildEagerIdent :> ident.BuildEagerIdentT ident;
+        invertIdent :> InvertIdentT base_interp ident;
+        defaultBase :> @DefaultValue.type.base.DefaultT base base_interp;
+        reflect_base_beq :> reflect_rel (@eq base) base_beq;
+        reflect_base_interp_beq :> forall {t}, reflect_rel (@eq (base_interp t)) (@base_interp_beq t);
+        try_make_transport_base_cps_correct :> type.try_make_transport_cps_correctT base;
+        baseHasNatCorrect :> base.BaseHasNatCorrectT base_interp;
+        toFromRestrictedIdent :> ident.ToFromRestrictedIdentT ident;
+        buildInvertIdentCorrect :> BuildInvertIdentCorrectT;
+        buildInterpIdentCorrect :> forall cast_outside_of_range, ident.BuildInterpIdentCorrectT (ident_gen_interp cast_outside_of_range);
+        buildInterpEagerIdentCorrect :> forall cast_outside_of_range, ident.BuildInterpEagerIdentCorrectT (ident_gen_interp cast_outside_of_range);
+        ident_gen_interp_Proper :> forall cast_outside_of_range t, Proper (eq ==> type.eqv) (ident_gen_interp cast_outside_of_range t)
+      }.
+  End Classes.
 End Compilers.
-Global Opaque ident.cast. (* This should never be unfolded except in [LanguageWf] *)

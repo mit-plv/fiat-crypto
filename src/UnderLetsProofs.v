@@ -142,6 +142,7 @@ Module Compilers.
       End interp.
     End with_ident.
 
+    (*
     Lemma Wf_SubstVarFstSndPairOppCast {t} (e : expr.Expr t)
       : expr.Wf e -> expr.Wf (SubstVarLike.SubstVarFstSndPairOppCast e).
     Proof. apply Wf_SubstVarOrIdent. Qed.
@@ -156,10 +157,11 @@ Module Compilers.
         : Interp (SubstVarLike.SubstVarFstSndPairOppCast e) == Interp e.
       Proof. apply Interp_SubstVarOrIdent, Hwf. Qed.
     End with_cast.
+     *)
   End SubstVarLike.
 
-  Hint Resolve SubstVarLike.Wf_SubstVar SubstVarLike.Wf_SubstVarFstSndPairOppCast SubstVarLike.Wf_SubstVarLike SubstVarLike.Wf_SubstVarOrIdent : wf.
-  Hint Rewrite @SubstVarLike.Interp_SubstVar @SubstVarLike.Interp_SubstVarFstSndPairOppCast @SubstVarLike.Interp_SubstVarLike @SubstVarLike.Interp_SubstVarOrIdent : interp.
+  Hint Resolve SubstVarLike.Wf_SubstVar (*SubstVarLike.Wf_SubstVarFstSndPairOppCast*) SubstVarLike.Wf_SubstVarLike SubstVarLike.Wf_SubstVarOrIdent : wf.
+  Hint Rewrite @SubstVarLike.Interp_SubstVar (*@SubstVarLike.Interp_SubstVarFstSndPairOppCast*) @SubstVarLike.Interp_SubstVarLike @SubstVarLike.Interp_SubstVarOrIdent : interp.
 
   Module UnderLets.
     Import UnderLets.Compilers.UnderLets.
@@ -1029,84 +1031,99 @@ Module Compilers.
     End with_ident.
 
     Section reify.
-      Local Notation type := (type.type base.type).
-      Local Notation expr := (@expr.expr base.type ident).
-      Local Notation UnderLets := (@UnderLets.UnderLets base.type ident).
+      Context {base : Type}.
+      Local Notation base_type := (@base.type base).
+      Local Notation type := (@type.type base_type).
+      Context {ident : type -> Type}
+              {base_interp : base -> Type}
+              {base_beq : base -> base -> bool}
+              {reflect_base_beq : Reflect.reflect_rel (@eq base) base_beq}
+              {try_make_transport_base_type_cps : @type.try_make_transport_cpsT base}
+              {invertIdent : @InvertIdentT base base_interp ident}
+              {buildIdent : @ident.BuildIdentT base base_interp ident}
+              {buildInvertIdentCorrect : BuildInvertIdentCorrectT}
+              {try_make_transport_base_cps_correct : type.try_make_transport_cps_correctT base}.
+      Local Notation UnderLets := (@UnderLets base_type ident).
+      Context (ident_is_var_like : forall t, ident t -> bool).
+      Let type_base (x : base) : @base.type base := base.type.type_base x.
+      Let base' {bt} (x : Compilers.base.type bt) : type.type _ := type.base x.
+      Local Coercion base' : base.type >-> type.type.
+      Local Coercion type_base : base >-> base.type.
 
       Section with_var.
         Context {var1 var2 : type -> Type}.
-        Local Notation expr1 := (@expr.expr base.type ident var1).
-        Local Notation expr2 := (@expr.expr base.type ident var2).
-        Local Notation UnderLets1 := (@UnderLets.UnderLets base.type ident var1).
-        Local Notation UnderLets2 := (@UnderLets.UnderLets base.type ident var2).
+        Local Notation expr1 := (@expr.expr base_type ident var1).
+        Local Notation expr2 := (@expr.expr base_type ident var2).
+        Local Notation UnderLets1 := (@UnderLets.UnderLets base_type ident var1).
+        Local Notation UnderLets2 := (@UnderLets.UnderLets base_type ident var2).
 
-        Local Ltac wf_reify_and_let_binds_base_cps_t Hk :=
-          repeat first [ lazymatch goal with
-                         | [ H : expr.wf _ ?e1 ?e2, H' : reflect_list ?e1 = Some _, H'' : reflect_list ?e2 = None |- _ ]
-                           => apply expr.wf_reflect_list in H; rewrite H', H'' in H; exfalso; clear -H; intuition congruence
-                         | [ H : expr.wf _ ?e1 ?e2, H' : reflect_list ?e2 = Some _, H'' : reflect_list ?e1 = None |- _ ]
-                           => apply expr.wf_reflect_list in H; rewrite H', H'' in H; exfalso; clear -H; intuition congruence
-                         | [ H : expr.wf _ (reify_list _) (reify_list _) |- _ ] => apply expr.wf_reify_list in H
-                         | [ H : List.Forall2 _ ?xs ?ys |- _ ]
-                           => match xs with nil => idtac | _::_ => idtac end;
-                              match ys with nil => idtac | _::_ => idtac end;
-                              inversion H; clear H
-                         end
-                       | progress subst
-                       | progress destruct_head' False
-                       | progress expr.inversion_wf_constr
-                       | progress expr.inversion_expr
-                       | progress expr.invert_subst
-                       | progress destruct_head'_sig
-                       | progress destruct_head'_ex
-                       | progress destruct_head'_and
-                       | progress type.inversion_type
-                       | progress base.type.inversion_type
-                       | progress cbn [invert_Var invert_Literal ident.invert_Literal eq_rect f_equal f_equal2 type.decode fst snd projT1 projT2 invert_pair Option.bind combine list_rect length] in *
-                       | progress cbv [type.try_transport type.try_transport_cps CPSNotations.cps_option_bind CPSNotations.cpsreturn CPSNotations.cpsbind CPSNotations.cpscall type.try_make_transport_cps id] in *
-                       | rewrite base.try_make_transport_cps_correct in *
-                       | progress type_beq_to_eq
-                       | discriminate
-                       | congruence
-                       | apply Hk
-                       | exists nil; reflexivity
-                       | eexists (cons _ nil); reflexivity
-                       | rewrite app_assoc; eexists; reflexivity
-                       | progress wf_safe_t
-                       | match goal with
-                         | [ H : _ = _ :> ident _ |- _ ] => inversion H; clear H
-                         end
-                       | progress inversion_option
-                       | progress break_innermost_match_hyps
-                       | progress expr.inversion_wf_one_constr
-                       | progress expr.invert_match_step
-                       | match goal with |- wf _ _ _ _ => constructor end
-                       | match goal with
-                         | [ H : context[wf _ _ _ _] |- wf _ _ _ _ ] => apply H; eauto with nocore
-                         | [ H : Forall2 (expr.wf _) ?xs ?ys |- Forall2 (expr.wf _) ?xs ?ys ]
-                           => eapply Forall2_Proper_impl; [ .. | exact H ]; repeat intro; try reflexivity
-                         end
-                       | progress wf_unsafe_t_step
-                       | match goal with
-                         | [ H : context[match Compilers.reify_list ?ls with _ => _ end] |- _ ]
-                           => is_var ls; destruct ls; rewrite ?expr.reify_list_cons, ?expr.reify_list_nil in H
-                         | [ H : SubstVarLike.is_recursively_var_or_ident _ _ = _ |- _ ] => clear H
-                         | [ H : forall x y, @?A x y \/ @?B x y -> @?C x y |- _ ]
-                           => pose proof (fun x y pf => H x y (or_introl pf));
-                              pose proof (fun x y pf => H x y (or_intror pf));
-                              clear H
-                         end ].
+        Local Ltac wf_reify_and_let_binds_base_cps_t_step Hk :=
+          first [ lazymatch goal with
+                  | [ H : expr.wf _ ?e1 ?e2, H' : reflect_list ?e1 = Some _, H'' : reflect_list ?e2 = None |- _ ]
+                    => apply expr.wf_reflect_list in H; rewrite H', H'' in H; exfalso; clear -H; intuition congruence
+                  | [ H : expr.wf _ ?e1 ?e2, H' : reflect_list ?e2 = Some _, H'' : reflect_list ?e1 = None |- _ ]
+                    => apply expr.wf_reflect_list in H; rewrite H', H'' in H; exfalso; clear -H; intuition congruence
+                  | [ H : expr.wf _ (reify_list _) (reify_list _) |- _ ] => apply expr.wf_reify_list in H
+                  | [ H : List.Forall2 _ ?xs ?ys |- _ ]
+                    => match xs with nil => idtac | _::_ => idtac end;
+                       match ys with nil => idtac | _::_ => idtac end;
+                       inversion H; clear H
+                  end
+                | progress subst
+                | progress destruct_head' False
+                | progress expr.inversion_wf_constr
+                | progress expr.inversion_expr
+                | progress expr.invert_subst
+                | progress destruct_head'_sig
+                | progress destruct_head'_ex
+                | progress destruct_head'_and
+                | progress inversion_type
+                | progress cbn [eq_rect f_equal f_equal2 type.decode fst snd projT1 projT2 Option.bind combine list_rect length] in *
+                | progress cbv [CPSNotations.cps_option_bind CPSNotations.cpsreturn CPSNotations.cpsbind CPSNotations.cpscall id] in *
+                | progress rewrite_type_transport_correct
+                | progress type_beq_to_eq
+                | discriminate
+                | congruence
+                | apply Hk
+                | exists nil; reflexivity
+                | eexists (cons _ nil); reflexivity
+                | rewrite app_assoc; eexists; reflexivity
+                | progress wf_safe_t
+                | match goal with
+                  | [ H : _ = _ :> ident _ |- _ ] => inversion H; clear H
+                  end
+                | progress inversion_option
+                | progress break_innermost_match_hyps
+                | progress expr.inversion_wf_one_constr
+                | progress expr.invert_match_step
+                | match goal with |- wf _ _ _ _ => constructor end
+                | match goal with
+                  | [ H : context[wf _ _ _ _] |- wf _ _ _ _ ] => apply H; eauto with nocore
+                  | [ H : Forall2 (expr.wf _) ?xs ?ys |- Forall2 (expr.wf _) ?xs ?ys ]
+                    => eapply Forall2_Proper_impl; [ .. | exact H ]; repeat intro; try reflexivity
+                  end
+                | progress wf_unsafe_t_step
+                | match goal with
+                  | [ H : context[match Compilers.reify_list ?ls with _ => _ end] |- _ ]
+                    => is_var ls; destruct ls; rewrite ?expr.reify_list_cons, ?expr.reify_list_nil in H
+                  | [ H : SubstVarLike.is_recursively_var_or_ident _ _ = _ |- _ ] => clear H
+                  | [ H : forall x y, @?A x y \/ @?B x y -> @?C x y |- _ ]
+                    => pose proof (fun x y pf => H x y (or_introl pf));
+                       pose proof (fun x y pf => H x y (or_intror pf));
+                       clear H
+                  end ].
+        Local Ltac wf_reify_and_let_binds_base_cps_t Hk := repeat wf_reify_and_let_binds_base_cps_t_step Hk.
 
-        Lemma wf_reify_and_let_binds_base_cps {t : base.type} {T1 T2} (e1 : expr1 (type.base t)) (e2 : expr2 (type.base t))
+        Lemma wf_reify_and_let_binds_base_cps {t : base_type} {T1 T2} (e1 : expr1 (type.base t)) (e2 : expr2 (type.base t))
               (k1 : expr1 (type.base t) -> UnderLets1 T1) (k2 : expr2 (type.base t) -> UnderLets2 T2)
               (P : _ -> _ -> _ -> Prop) G
               (Hwf : expr.wf G e1 e2)
               (Hk : forall G' e1 e2, (exists seg, G' = seg ++ G) -> expr.wf G' e1 e2 -> wf P G' (k1 e1) (k2 e2))
-          : wf P G (reify_and_let_binds_base_cps e1 T1 k1) (reify_and_let_binds_base_cps e2 T2 k2).
+          : wf P G (reify_and_let_binds_base_cps ident_is_var_like e1 T1 k1) (reify_and_let_binds_base_cps ident_is_var_like e2 T2 k2).
         Proof.
           revert dependent G; induction t; cbn [reify_and_let_binds_base_cps]; intros;
             cbv [option_rect];
-            try (cbv [SubstVarLike.is_var_fst_snd_pair_opp_cast] in *; erewrite !SubstVarLike.wfT_is_recursively_var_or_ident by eassumption);
+            try erewrite !SubstVarLike.wfT_is_recursively_var_or_ident by eassumption;
             break_innermost_match; wf_reify_and_let_binds_base_cps_t Hk; eauto.
           all: repeat match goal with H : list (sigT _) |- _ => revert dependent H end.
           all: revert dependent k1; revert dependent k2.
@@ -1120,7 +1137,7 @@ Module Compilers.
         Lemma wf_let_bind_return {t} (e1 : expr1 t) (e2 : expr2 t)
               G
               (Hwf : expr.wf G e1 e2)
-          : expr.wf G (let_bind_return e1) (let_bind_return e2).
+          : expr.wf G (let_bind_return ident_is_var_like e1) (let_bind_return ident_is_var_like e2).
         Proof.
           revert dependent G; induction t; intros; cbn [let_bind_return]; cbv [invert_Abs];
             wf_safe_t;
@@ -1160,44 +1177,50 @@ Module Compilers.
         Qed.
       End with_var.
 
-      Section with_cast.
-        Context (cast_outside_of_range : ZRange.zrange -> BinInt.Z -> BinInt.Z).
-        Local Notation ident_interp := (@ident.gen_interp cast_outside_of_range).
-        Local Notation interp := (@expr.interp _ _ _ (@ident_interp)).
-        Local Notation Interp := (@expr.Interp _ _ _ (@ident_interp)).
+      Section with_interp.
+        Context {ident_interp : forall t, ident t -> type.interp (base.interp base_interp) t}
+                {ident_interp_Proper : forall t : type, Proper (eq ==> type.eqv) (ident_interp t)}.
+        Context {buildInterpIdentCorrect : ident.BuildInterpIdentCorrectT ident_interp}.
+        Local Notation interp := (expr.interp (@ident_interp)).
+        (*Local Notation Interp := (@expr.Interp _ _ _ (@ident_interp)).*)
 
         Lemma interp_reify_and_let_binds_base_cps
               {t e T k}
               (P : T -> Prop)
               (Hk : forall e', interp e' = interp e -> P (UnderLets.interp (@ident_interp) (k e')))
-          : P (UnderLets.interp (@ident_interp) (@reify_and_let_binds_base_cps _ t e T k)).
-        Proof.
+          : P (UnderLets.interp (@ident_interp) (reify_and_let_binds_base_cps ident_is_var_like (t:=t) e T k)).
+        Proof using buildInvertIdentCorrect try_make_transport_base_cps_correct.
+          clear buildInterpIdentCorrect.
           revert T k P Hk; induction t; cbn [reify_and_let_binds_base_cps]; intros;
             cbv [option_rect]; break_innermost_match;
-            expr.invert_subst; cbn [type.related UnderLets.interp fst snd expr.interp ident_interp] in *; subst; eauto;
+            expr.invert_subst; cbn [type.related UnderLets.interp fst snd expr.interp] in *; subst; eauto;
               repeat first [ progress intros
                            | reflexivity
-                           | progress cbn [expr.interp ident_interp List.map]
+                           | progress cbn [expr.interp List.map]
                            | apply (f_equal2 (@pair _ _))
                            | apply (f_equal2 (@cons _))
                            | apply (f_equal (@Some _))
                            | match goal with
                              | [ H : _ |- _ ] => apply H; clear H
-                             | [ H : SubstVarLike.is_var_fst_snd_pair_opp_cast (reify_list _) = _ |- _ ] => clear H
                              | [ H : context[interp (reify_list _)] |- _ ]
                                => rewrite expr.interp_reify_list in H
+                             | [ H : SubstVarLike.is_recursively_var_or_ident _ _ = _ |- _ ] => clear H
                              | [ |- ?Q (UnderLets.interp _ (list_rect ?P ?X ?Y ?ls ?k)) ]
                                => is_var ls; is_var k;
                                   revert dependent k; induction ls; cbn [list_rect];
                                   [ | generalize dependent (list_rect P X Y) ]; intros
-                             end ].
+                             | [ |- ?x = ?y :> unit ] => destruct x, y; reflexivity
+                             | [ |- context[reify_list (_ :: _)] ] => rewrite expr.reify_list_cons
+                             end
+                           | progress cbn [type.interp base.interp] in *
+                           | congruence ].
         Qed.
 
         Lemma interp_reify_and_let_binds_base
               {t e}
-          : interp (UnderLets.interp (@ident_interp) (@reify_and_let_binds_base_cps _ t e _ UnderLets.Base))
+          : interp (UnderLets.interp (@ident_interp) (reify_and_let_binds_base_cps ident_is_var_like (t:=t) e _ UnderLets.Base))
             = interp e.
-        Proof.
+        Proof using buildInvertIdentCorrect try_make_transport_base_cps_correct.
           eapply interp_reify_and_let_binds_base_cps; cbn [UnderLets.interp].
           trivial.
         Qed.
@@ -1214,11 +1237,10 @@ Module Compilers.
                        | progress destruct_head'_sig
                        | progress destruct_head'_ex
                        | progress destruct_head'_and
-                       | progress type.inversion_type
-                       | progress base.type.inversion_type
-                       | progress cbn [invert_Var invert_Literal ident.invert_Literal eq_rect f_equal f_equal2 type.decode fst snd projT1 projT2 invert_pair Option.bind to_expr expr.interp ident.interp ident.gen_interp type.eqv length list_rect combine In] in *
-                       | progress cbv [type.try_transport type.try_transport_cps CPSNotations.cps_option_bind CPSNotations.cpsreturn CPSNotations.cpsbind CPSNotations.cpscall type.try_make_transport_cps id] in *
-                       | rewrite base.try_make_transport_cps_correct in *
+                       | progress inversion_type
+                       | progress cbn [(*invert_Var invert_Literal ident.invert_Literal*) eq_rect f_equal f_equal2 type.decode fst snd projT1 projT2 invert_pair Option.bind to_expr expr.interp (*ident.interp ident.gen_interp*) type.eqv length list_rect combine In] in *
+                       | progress cbv [CPSNotations.cps_option_bind CPSNotations.cpsreturn CPSNotations.cpsbind CPSNotations.cpscall id] in *
+                       | progress rewrite_type_transport_correct
                        | progress type_beq_to_eq
                        | discriminate
                        | congruence
@@ -1238,8 +1260,8 @@ Module Compilers.
                        | progress expr.inversion_wf_one_constr
                        | progress expr.invert_match_step
                        | match goal with
-                         | [ |- ?R (expr.interp _ ?e1) (expr.interp _ ?e2) ]
-                           => solve [ eapply (@expr.wf_interp_Proper _ _ _ e1 e2); eauto ]
+                         | [ |- ?R' (expr.interp _ ?e1) (expr.interp _ ?e2) ]
+                           => solve [ unshelve eapply (expr.wf_interp_Proper_gen1 (R:=fun _ => eq) _ _ e1 e2); shelve_unifiable; eauto ]
                          | [ H : context[reflect_list (reify_list _)] |- _ ] => rewrite expr.reflect_reify_list in H
                          | [ H : forall x y, @?A x y \/ @?B x y -> @?C x y |- _ ]
                            => pose proof (fun x y pf => H x y (or_introl pf));
@@ -1249,6 +1271,7 @@ Module Compilers.
                            => match xs with nil => idtac | _::_ => idtac end;
                               match ys with nil => idtac | _::_ => idtac end;
                               inversion H; clear H
+                         | [ |- @eq unit ?x ?y ] => case x; case y; reflexivity
                          end
                        | progress interp_unsafe_t_step
                        | match goal with
@@ -1272,18 +1295,18 @@ Module Compilers.
                               | .. ]
                          end ].
 
-        Lemma interp_to_expr_reify_and_let_binds_base_cps {t : base.type} {t' : base.type} (e1 : expr (type.base t)) (e2 : expr (type.base t))
+        Lemma interp_to_expr_reify_and_let_binds_base_cps {t : base_type} {t' : base_type} (e1 : expr (type.base t)) (e2 : expr (type.base t))
               G
               (HG : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> v1 == v2)
               (Hwf : expr.wf G e1 e2)
               (k1 : expr (type.base t) -> UnderLets _ (expr (type.base t')))
-              (k2 : base.interp t -> base.interp t')
+              (k2 : base.interp base_interp t -> base.interp base_interp t')
               (Hk : forall e1 v, interp e1 == v -> interp (to_expr (k1 e1)) == k2 v)
-          : interp (to_expr (reify_and_let_binds_base_cps e1 _ k1)) == k2 (interp e2).
-        Proof.
+          : interp (to_expr (reify_and_let_binds_base_cps ident_is_var_like e1 _ k1)) == k2 (interp e2).
+        Proof using buildInvertIdentCorrect ident_interp_Proper try_make_transport_base_cps_correct.
           revert dependent G; revert dependent t'; induction t; cbn [reify_and_let_binds_base_cps]; intros;
             cbv [option_rect];
-            try (cbv [SubstVarLike.is_var_fst_snd_pair_opp_cast] in *; erewrite !SubstVarLike.wfT_is_recursively_var_or_ident by eassumption);
+            try erewrite !SubstVarLike.wfT_is_recursively_var_or_ident by eassumption;
             break_innermost_match; interp_to_expr_reify_and_let_binds_base_cps_t Hk.
           all: repeat match goal with H : list (sigT _) |- _ => revert dependent H end.
           all: revert dependent k1; revert dependent k2.
@@ -1298,24 +1321,24 @@ Module Compilers.
               G
               (HG : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> v1 == v2)
               (Hwf : expr.wf G e1 e2)
-          : interp (let_bind_return e1) == interp e2.
-        Proof.
+          : interp (let_bind_return ident_is_var_like e1) == interp e2.
+        Proof using buildInvertIdentCorrect ident_interp_Proper try_make_transport_base_cps_correct.
           revert dependent G; induction t; intros; cbn [let_bind_return type.eqv expr.interp] in *; cbv [invert_Abs respectful] in *;
             repeat first [ progress wf_safe_t
                          | progress expr.invert_subst
                          | progress expr.invert_match
                          | progress expr.inversion_wf
                          | progress break_innermost_match_hyps
-                         | progress destruct_head' False
+                         | progress destruct_head'_False
                          | solve [ wf_t ]
                          | match goal with
-                           | [ H : _ |- expr.interp _ (let_bind_return ?e0) == expr.interp _ ?e ?v ]
+                           | [ H : _ |- expr.interp _ (let_bind_return _ ?e0) == expr.interp _ ?e ?v ]
                              => eapply (H e0 (e @ $v)%expr (cons _ _)); [ .. | solve [ wf_t ] ]; solve [ wf_t ]
-                           | [ H : _ |- expr.interp _ (let_bind_return ?e0) == expr.interp _ ?e ?v ]
+                           | [ H : _ |- expr.interp _ (let_bind_return _ ?e0) == expr.interp _ ?e ?v ]
                              => cbn [expr.interp]; eapply H; [ | solve [ wf_t ] ]; solve [ wf_t ]
                            end ];
             [].
-          { pose (P := fun t => { e1e2 : expr t * expr t | expr.wf G (fst e1e2) (snd e1e2) }).
+          { epose (P := fun t => { e1e2 : expr t * expr t | expr.wf G (fst e1e2) (snd e1e2) }).
             pose ((exist _ (e1, e2) Hwf) : P _) as pkg.
             change e1 with (fst (proj1_sig pkg)).
             change e2 with (snd (proj1_sig pkg)).
@@ -1349,7 +1372,7 @@ Module Compilers.
                                => eapply H; eauto with nocore
                              end
                            | solve [ eauto ]
-                           | solve [ eapply expr.wf_interp_Proper; eauto ] ].
+                           | solve [ eapply expr.wf_interp_Proper_gen1; eauto ] ].
             all: eapply interp_to_expr_reify_and_let_binds_base_cps with (k1:=Base) (k2:=(fun x => x)); eauto; wf_safe_t. }
         Qed.
 
@@ -1382,17 +1405,22 @@ Module Compilers.
             => let fh := fresh in set (fh := f); cbn [expr.interp_related_gen]; subst fh
           | [ |- expr.interp_related_gen _ _ (expr.Ident ?idc) ?ev ]
             => is_evar ev;
-               cbn [expr.interp_related_gen]; apply ident.gen_interp_Proper; reflexivity
+               cbn [expr.interp_related_gen]; apply ident_interp_Proper; reflexivity
           | [ H : ?x == _ |- ?x == _ ] => exact H
           | [ |- ?x = ?y ] => tryif first [ has_evar x | has_evar y ] then fail else (progress subst)
           | [ |- ?x = ?x ] => tryif has_evar x then fail else reflexivity
           | [ |- ?ev = _ ] => is_evar ev; reflexivity
           | [ |- _ = ?ev ] => is_evar ev; reflexivity
+          | [ |- ?x = ?y :> unit ] => case x; case y; reflexivity
+          | [ |- ?G ] => tryif has_evar G then fail else rewrite ident.interp_ident_cons
           end.
 
         Local Ltac do_interp_related :=
           repeat first [ progress cbv beta
                        | progress recurse_interp_related_step
+                       | match goal with
+                         | [ x : type.interp (base.interp base_interp) (type.base ()) |- _ ] => destruct x
+                         end
                        | eassumption
                        | do 2 eexists; repeat apply conj; intros
                        | match goal with
@@ -1406,8 +1434,8 @@ Module Compilers.
                        expr.interp_related (@ident_interp) x1 x2
                        -> interp_related (@ident_interp) R (k x1) (kv x2))
                 /\ kv xv = v)
-            -> interp_related (@ident_interp) R (@reify_and_let_binds_base_cps _ t e T k) v.
-        Proof using Type.
+            -> interp_related (@ident_interp) R (reify_and_let_binds_base_cps ident_is_var_like (t:=t) e T k) v.
+        Proof using buildInterpIdentCorrect buildInvertIdentCorrect ident_interp_Proper try_make_transport_base_cps_correct.
           cbv [expr.interp_related]; revert T T' k R v; induction t.
           all: repeat first [ progress cbn [expr.interp_related_gen interp_related reify_and_let_binds_base_cps fst snd] in *
                             | progress cbv [expr.interp_related option_rect] in *
@@ -1423,7 +1451,7 @@ Module Compilers.
                               | [ H : expr.interp_related_gen ?ii _ (reify_list ?ls1) ?ls2 |- _ ] => change (expr.interp_related ii (reify_list ls1) ls2) in H; rewrite expr.reify_list_interp_related_iff in H
                               end ].
           all: match goal with
-               | [ H : SubstVarLike.is_var_fst_snd_pair_opp_cast _ = _ |- _ ] => clear H
+               | [ H : SubstVarLike.is_recursively_var_or_ident _ _ = _ |- _ ] => clear H
                end.
           all: lazymatch goal with
                | [ H : List.Forall2 _ ?ls1 ?ls2
@@ -1448,7 +1476,7 @@ Module Compilers.
                       | [ H : forall x1 x2, ?R x1 x2 -> ?R' (?f1 x1) (?f2 x2) |- ?R' (?f1 _) (?f2 _) ]
                         => apply H; clear H
                       | [ |- expr.interp_related_gen _ _ _ nil ] => reflexivity
-                      | [ H : _ |- interp_related _ _ (reify_and_let_binds_base_cps _ _ _) _ ] => apply H
+                      | [ H : _ |- interp_related _ _ (reify_and_let_binds_base_cps _ _ _ _) _ ] => apply H
                       | [ |- exists kv xv, _ /\ _ /\ kv xv = ?f (?x :: ?xs) ]
                         => exists (fun x' => f (x' :: xs)), x; repeat apply conj; [ | | reflexivity ]
                       | _ => assumption
@@ -1463,19 +1491,19 @@ Module Compilers.
 
         Lemma reify_and_let_binds_base_interp_related {t e v}
           : expr.interp_related (@ident_interp) e v
-            -> interp_related (@ident_interp) (expr.interp_related (@ident_interp)) (@reify_and_let_binds_base_cps _ t e _ Base) v.
-        Proof using Type.
+            -> interp_related (@ident_interp) (expr.interp_related (@ident_interp)) (reify_and_let_binds_base_cps ident_is_var_like (t:=t) e _ Base) v.
+        Proof using buildInterpIdentCorrect buildInvertIdentCorrect ident_interp_Proper try_make_transport_base_cps_correct.
           intro; eapply reify_and_let_binds_base_interp_related_of_ex.
           eexists id, _; eauto.
         Qed.
 
-        Lemma Interp_LetBindReturn {t} (e : expr.Expr t) (Hwf : expr.Wf e) : Interp (LetBindReturn e) == Interp e.
-        Proof.
+        Lemma Interp_LetBindReturn {t} (e : expr.Expr t) (Hwf : expr.Wf e) : expr.Interp ident_interp (LetBindReturn ident_is_var_like e) == expr.Interp ident_interp e.
+        Proof using buildInvertIdentCorrect ident_interp_Proper try_make_transport_base_cps_correct.
           apply interp_let_bind_return with (G:=nil); cbn [List.In]; eauto; tauto.
         Qed.
-      End with_cast.
+      End with_interp.
 
-      Lemma Wf_LetBindReturn {t} (e : expr.Expr t) (Hwf : expr.Wf e) : expr.Wf (LetBindReturn e).
+      Lemma Wf_LetBindReturn {t} (e : expr.Expr t) (Hwf : expr.Wf e) : expr.Wf (LetBindReturn ident_is_var_like e).
       Proof. intros ??; apply wf_let_bind_return, Hwf. Qed.
     End reify.
   End UnderLets.

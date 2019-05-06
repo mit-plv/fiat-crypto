@@ -26,6 +26,7 @@ Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ListUtil.Forall.
 Require Import Crypto.Util.Bool.
+Require Import Crypto.Util.Bool.Reflect.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Logic.ProdForall.
 Require Import Crypto.Util.Decidable.
@@ -42,6 +43,8 @@ Module Compilers.
 
   Create HintDb wf discriminated.
   Create HintDb interp discriminated.
+
+  Hint Extern 2 => typeclasses eauto : wf.
 
   Module type.
     Section eqv.
@@ -214,268 +217,6 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
       induction t; cbn in *; rewrite ?Bool.andb_true_iff; destruct_head'_prod; cbn [fst snd]; split_iff; intuition.
     Qed.
   End type.
-
-  Module ident.
-    Local Open Scope etype_scope.
-    Global Instance gen_eqv_Reflexive_Proper cast_outside_of_range {t} (idc : ident t) : Proper type.eqv (ident.gen_interp cast_outside_of_range idc) | 1.
-    Proof.
-      destruct idc; cbn [type.eqv ident.gen_interp type.interp base.interp base.base_interp];
-        try solve [ typeclasses eauto
-                  | cbv [respectful]; repeat intro; subst; destruct_head_hnf bool; destruct_head_hnf prod; destruct_head_hnf option; destruct_head_hnf zrange; eauto
-                  | cbv [respectful]; repeat intro; (apply nat_rect_Proper_nondep || apply list_rect_Proper || apply list_case_Proper || apply list_rect_arrow_Proper); repeat intro; eauto ].
-    Qed.
-
-    Global Instance eqv_Reflexive_Proper {t} (idc : ident t) : Proper type.eqv (ident.interp idc) | 1.
-    Proof. exact _. Qed.
-
-    Global Instance gen_interp_Proper {cast_outside_of_range} {t} : Proper (@eq (ident t) ==> type.eqv) (ident.gen_interp cast_outside_of_range) | 1.
-    Proof. intros idc idc' ?; subst idc'; apply gen_eqv_Reflexive_Proper. Qed.
-
-    Global Instance interp_Proper {t} : Proper (@eq (ident t) ==> type.eqv) ident.interp | 1.
-    Proof. exact _. Qed.
-
-    Global Instance eqv_Reflexive {t} : Reflexive (fun idc1 idc2 : ident t => type.eqv (ident.interp idc1) (ident.interp idc2)) | 20.
-    Proof. intro; apply eqv_Reflexive_Proper. Qed.
-
-    Global Instance eqv_Transitive {t} : Transitive (fun idc1 idc2 : ident t => type.eqv (ident.interp idc1) (ident.interp idc2)) | 20.
-    Proof. repeat intro; etransitivity; eassumption. Qed.
-
-    Global Instance eqv_Symmetric {t} : Symmetric (fun idc1 idc2 : ident t => type.eqv (ident.interp idc1) (ident.interp idc2)) | 20.
-    Proof. repeat intro; symmetry; eassumption. Qed.
-
-    Local Transparent ident.cast.
-    Section with_cast.
-      Context {cast_outside_of_range : zrange -> Z -> Z}.
-
-      Local Notation cast := (@ident.cast cast_outside_of_range).
-
-      Lemma cast_opp' r v : (-cast (-r) (-v) = cast r v)%Z.
-      Proof.
-        pose proof (ZRange.goodb_normalize r); cbv [ZRange.goodb] in *.
-        cbv [cast ident.is_more_pos_than_neg]; rewrite !ZRange.normalize_opp, !ZRange.opp_involutive, !Z.opp_involutive.
-        repeat change (lower (-?r)) with (-upper r)%Z.
-        repeat change (upper (-?r)) with (-lower r)%Z.
-        destruct (ZRange.normalize r) as [l u]; clear r; cbn [lower upper] in *.
-        rewrite !Z.abs_opp.
-        repeat first [ progress split_andb
-                     | progress rewrite ?Bool.andb_false_iff in *
-                     | progress rewrite ?Bool.orb_true_iff in *
-                     | progress rewrite ?Bool.orb_false_iff in *
-                     | progress destruct_head'_and
-                     | progress Z.ltb_to_lt
-                     | progress subst
-                     | rewrite !Z.sub_opp_r
-                     | rewrite !Z.opp_involutive
-                     | rewrite !Z.add_0_r
-                     | rewrite !Z.sub_0_r
-                     | rewrite !Z.sub_diag
-                     | rewrite !Z.mod_1_r
-                     | progress change (- (-1))%Z with 1%Z
-                     | progress change (0 - 1)%Z with (-1)%Z
-                     | progress change (-0)%Z with 0%Z
-                     | lia
-                     | match goal with
-                       | [ H : ?x = ?x |- _ ] => clear H
-                       | [ H : (?x <= ?x)%Z |- _ ] => clear H
-                       | [ H : ?T, H' : ?T |- _ ] => clear H'
-                       | [ H : (-?x = -?y)%Z |- _ ] => assert (x = y) by lia; clear H
-                       | [ H : (0 <= - ?x)%Z |- _ ] => assert (x <= 0)%Z by lia; clear H
-                       | [ H : (?x > ?y)%Z |- _ ] => assert (y < x)%Z by lia; clear H
-                       | [ H : (?x >= ?y)%Z |- _ ] => assert (y <= x)%Z by lia; clear H
-                       | [ H : (- ?y < -?x)%Z |- _ ] => assert (x < y)%Z by lia; clear H
-                       | [ H : (?x <= ?y)%Z, H' : (?y <= ?x)%Z |- _ ] => assert (x = y) by lia; clear H H'
-                       (*| [ H : Z.abs ?l = Z.abs ?u |- _ ] => progress cbv [ZRange.opp]; cbn [lower upper]*)
-                       | [ H : (?l <= ?u)%Z, H' : (?u < 0)%Z, H'' : context[Z.abs ?l] |- _ ]
-                         => rewrite (Z.abs_neq l), (Z.abs_neq u) in * by lia
-                       | [ H : (?l <= ?u)%Z, H' : (0 < ?l)%Z, H'' : context[Z.abs ?l] |- _ ]
-                         => rewrite (Z.abs_eq l), (Z.abs_eq u) in * by lia
-                       | [ |- context[(?x mod (-?a + ?b + 1))%Z] ]
-                         => replace (x mod (-a + b + 1))%Z with (-((-x) mod (- - (a - b - 1))))%Z
-                           by (rewrite !Zmod_opp_opp, !Z.opp_involutive; apply f_equal2; lia)
-                       | [ |- context[(?x mod (?a - ?b + 1))%Z] ]
-                         => replace (x mod (a - b + 1))%Z with (-((-x) mod (- - (b - a - 1))))%Z
-                           by (rewrite !Zmod_opp_opp, !Z.opp_involutive; apply f_equal2; lia)
-                       | [ |- context[(?x mod (-1))%Z] ]
-                         => replace ((x mod (-1)))%Z with (-((-x) mod (- - 1)))%Z
-                           by (rewrite !Zmod_opp_opp, !Z.opp_involutive; apply f_equal2; lia)
-                       end
-                     | progress destruct_head'_or
-                     | break_innermost_match_step ].
-      Qed.
-
-      Lemma cast_in_normalized_bounds r v : is_bounded_by_bool v (ZRange.normalize r) = true -> cast r v = v.
-      Proof. cbv [cast is_bounded_by_bool]; break_innermost_match; congruence. Qed.
-
-      Lemma cast_in_bounds r v : is_bounded_by_bool v r = true -> cast r v = v.
-      Proof.
-        intro; apply cast_in_normalized_bounds, ZRange.is_bounded_by_normalize; assumption.
-      Qed.
-
-      Lemma cast_always_bounded r v : is_bounded_by_bool (cast r v) (ZRange.normalize r) = true.
-      Proof.
-        pose proof (ZRange.goodb_normalize r); cbv [ZRange.goodb] in *.
-        cbv [cast]; break_innermost_match; Z.div_mod_to_quot_rem.
-        all: destruct (ZRange.normalize r) as [l u]; clear r; cbn [lower upper ZRange.opp] in *.
-        all: cbv [is_bounded_by_bool]; cbn [lower upper].
-        all: repeat first [ progress rewrite ?Bool.andb_true_iff, ?Bool.andb_false_iff in *
-                          | rewrite !Z.leb_le in *
-                          | progress destruct_head'_and
-                          | lia ].
-      Qed.
-
-      Lemma cast_bounded r v : (lower r <= upper r)%Z -> is_bounded_by_bool (cast r v) r = true.
-      Proof.
-        intro H; replace r with (ZRange.normalize r) at 2; [ apply cast_always_bounded | ].
-        cbv [ZRange.normalize lower upper] in *; destruct r; split_min_max; reflexivity.
-      Qed.
-
-      Lemma cast_cases r v
-        : is_bounded_by_bool (cast r v) (ZRange.normalize r) = true
-          /\ ((is_bounded_by_bool v (ZRange.normalize r) = true /\ cast r v = v)
-              \/ is_bounded_by_bool v (ZRange.normalize r) = false).
-      Proof.
-        split; [ apply cast_always_bounded | ].
-        pose proof (cast_in_normalized_bounds r v).
-        edestruct is_bounded_by_bool; tauto.
-      Qed.
-
-      Lemma cast_out_of_bounds_in_range_pos r v
-        : ident.is_more_pos_than_neg (ZRange.normalize r) v = true
-          -> is_bounded_by_bool v (ZRange.normalize r) = false
-          -> is_bounded_by_bool (cast_outside_of_range (ZRange.normalize r) v) (ZRange.normalize r) = true
-          -> cast r v = cast_outside_of_range (ZRange.normalize r) v.
-      Proof.
-        cbv [cast is_bounded_by_bool]; break_innermost_match; try congruence; intros.
-        pose proof (ZRange.goodb_normalize r); cbv [ZRange.goodb] in *.
-        split_andb; Z.ltb_to_lt; try lia.
-        match goal with
-        | [ |- context[(?a mod ?b)%Z] ]
-          => cut ((a / b) = 0)%Z
-        end.
-        all: Z.div_mod_to_quot_rem; nia.
-      Qed.
-
-      Lemma cast_out_of_bounds_in_range_neg r v
-        : ident.is_more_pos_than_neg (ZRange.normalize r) v = false
-          -> is_bounded_by_bool v (ZRange.normalize r) = false
-          -> is_bounded_by_bool (-cast_outside_of_range (-ZRange.normalize r) (-v)) (ZRange.normalize r) = true
-          -> cast r v = (-cast_outside_of_range (-ZRange.normalize r) (-v))%Z.
-      Proof.
-        cbv [cast is_bounded_by_bool]; break_innermost_match; try congruence; intros.
-        pose proof (ZRange.goodb_normalize r); cbv [ZRange.goodb] in *.
-        split_andb; Z.ltb_to_lt; try lia.
-        repeat change (lower (-?r)) with (-upper r)%Z.
-        repeat change (upper (-?r)) with (-lower r)%Z.
-        match goal with
-        | [ |- context[(?a mod ?b)%Z] ]
-          => cut ((a / b) = 0)%Z
-        end.
-        all: Z.div_mod_to_quot_rem; nia.
-      Qed.
-
-      Lemma cast_out_of_bounds_in_range r v
-        : is_bounded_by_bool v (ZRange.normalize r) = false
-          -> (ident.is_more_pos_than_neg (ZRange.normalize r) v = true -> is_bounded_by_bool (cast_outside_of_range (ZRange.normalize r) v) (ZRange.normalize r) = true)
-          -> (ident.is_more_pos_than_neg (ZRange.normalize r) v = false -> is_bounded_by_bool (-cast_outside_of_range (-ZRange.normalize r) (-v)) (ZRange.normalize r) = true)
-          -> cast r v = if ident.is_more_pos_than_neg (ZRange.normalize r) v
-                        then cast_outside_of_range (ZRange.normalize r) v
-                        else (-cast_outside_of_range (-ZRange.normalize r) (-v))%Z.
-      Proof.
-        pose proof (cast_out_of_bounds_in_range_pos r v).
-        pose proof (cast_out_of_bounds_in_range_neg r v).
-        break_innermost_match; intros; auto.
-      Qed.
-
-      Lemma cast_out_of_bounds_simple r v
-        : (is_bounded_by_bool v (ZRange.normalize r) = true -> cast_outside_of_range (ZRange.normalize r) v = v)
-          -> (ident.is_more_pos_than_neg (ZRange.normalize r) v = false -> (is_bounded_by_bool (-v) (-ZRange.normalize r))%Z = true -> (-cast_outside_of_range (-ZRange.normalize r) (-v) = v)%Z)
-          -> (ident.is_more_pos_than_neg (ZRange.normalize r) v = true -> is_bounded_by_bool (cast_outside_of_range (ZRange.normalize r) v) (ZRange.normalize r) = true)
-          -> (ident.is_more_pos_than_neg (ZRange.normalize r) v = false -> is_bounded_by_bool (-cast_outside_of_range (-ZRange.normalize r) (-v)) (ZRange.normalize r) = true)
-          -> cast r v = if ident.is_more_pos_than_neg (ZRange.normalize r) v
-                        then cast_outside_of_range (ZRange.normalize r) v
-                        else (-cast_outside_of_range (-ZRange.normalize r) (-v))%Z.
-      Proof.
-        pose proof (cast_out_of_bounds_in_range r v).
-        assert (is_bounded_by_bool (-v) (-ZRange.normalize r) = is_bounded_by_bool v (ZRange.normalize r)).
-        { cbv [is_bounded_by_bool].
-          repeat change (lower (-?r)) with (-upper r)%Z.
-          repeat change (upper (-?r)) with (-lower r)%Z.
-          cbv [andb]; break_innermost_match; Z.ltb_to_lt; break_match; Z.ltb_to_lt; try lia; try reflexivity.
-          symmetry; Z.ltb_to_lt; lia. }
-        destruct (is_bounded_by_bool v (ZRange.normalize r)) eqn:?.
-        { rewrite cast_in_normalized_bounds by assumption; intros; symmetry; break_innermost_match; auto. }
-        { auto. }
-      Qed.
-
-      Lemma is_more_pos_then_neg_0_u u v
-        : (0 <= u)%Z
-          -> ident.is_more_pos_than_neg (ZRange.normalize r[0~>u]) v = true.
-      Proof using Type.
-        intro.
-        cbv [ident.is_more_pos_than_neg]; cbn [upper lower].
-        rewrite (proj1 ZRange.normalize_id_iff_goodb)
-          by (cbv [ZRange.goodb lower upper]; Z.ltb_to_lt; assumption).
-        cbn [lower upper].
-        rewrite Z.abs_0, Z.abs_eq by assumption.
-        cbv [andb orb]; break_innermost_match; Z.ltb_to_lt; try lia; reflexivity.
-      Qed.
-
-      Lemma cast_out_of_bounds_simple_0 u v
-        : (0 <= u)%Z
-          -> ((0 <= v <= u)%Z -> cast_outside_of_range r[0~>u] v = v)
-          -> (0 <= cast_outside_of_range r[0~>u] v <= u)%Z
-          -> cast r[0~>u] v = cast_outside_of_range r[0~>u] v.
-      Proof.
-        pose proof (cast_out_of_bounds_simple r[0~>u] v) as H.
-        intro H0.
-        pose proof (is_more_pos_then_neg_0_u u v H0) as H1.
-        rewrite H1 in *.
-        rewrite (proj1 ZRange.normalize_id_iff_goodb) in H
-          by (cbv [ZRange.goodb lower upper]; Z.ltb_to_lt; assumption).
-        cbv [is_bounded_by_bool ZRange.opp] in *; cbn [lower upper] in *; rewrite ?Bool.andb_true_iff, ?Z.leb_le in *.
-        intros; apply H; intros; destruct_head'_and; repeat apply conj; Z.ltb_to_lt; auto; try congruence.
-      Qed.
-
-      Lemma cast_out_of_bounds_simple_0_mod u v
-        : (0 <= u)%Z
-          -> ((0 <= v <= u)%Z -> cast_outside_of_range r[0~>u] v = v)
-          -> (cast r[0~>u] v = (cast_outside_of_range r[0~>u] v) mod (u + 1))%Z.
-      Proof.
-        intro H0.
-        pose proof (is_more_pos_then_neg_0_u u v H0) as H1.
-        cbv [cast]; rewrite H1.
-        rewrite (proj1 ZRange.normalize_id_iff_goodb)
-          by (cbv [ZRange.goodb lower upper]; Z.ltb_to_lt; assumption).
-        cbn [lower upper].
-        rewrite !Z.sub_0_r, !Z.add_0_r.
-        break_innermost_match; split_andb; Z.ltb_to_lt; intro H';
-          rewrite ?H' by lia; Z.rewrite_mod_small; reflexivity.
-      Qed.
-
-      Lemma cast_normalize r v : cast (ZRange.normalize r) v = cast r v.
-      Proof.
-        cbv [cast]; rewrite ZRange.normalize_idempotent; reflexivity.
-      Qed.
-    End with_cast.
-
-    Lemma cast_idempotent_gen {cast_outside_of_range1 cast_outside_of_range2}
-          r1 r2 v
-      : is_tighter_than_bool (ZRange.normalize r1) (ZRange.normalize r2) = true
-        -> ident.cast cast_outside_of_range2 r2 (ident.cast cast_outside_of_range1 r1 v)
-           = ident.cast cast_outside_of_range1 r1 v.
-    Proof.
-      intro H; apply (@cast_in_normalized_bounds _ r2).
-      eapply ZRange.is_bounded_by_of_is_tighter_than, cast_always_bounded; assumption.
-    Qed.
-
-    Lemma cast_idempotent {cast_outside_of_range1 cast_outside_of_range2}
-          r v
-      : ident.cast cast_outside_of_range2 r (ident.cast cast_outside_of_range1 r v)
-        = ident.cast cast_outside_of_range1 r v.
-    Proof.
-      apply cast_idempotent_gen; change (is_true (is_tighter_than_bool (ZRange.normalize r) (ZRange.normalize r))); reflexivity.
-    Qed.
-  End ident.
 
   Module expr.
     Section with_ty.
@@ -887,7 +628,6 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
                          | solve [ eauto with nocore ]
                          | match goal with
                            | [ |- type.related R (ident_interp1 _ ?x) (ident_interp2 _ ?y) ] => apply ident_interp_Proper
-                           | [ |- Proper type.eqv (ident.interp _) ] => apply ident.eqv_Reflexive_Proper
                            | [ H : context[?R (expr.interp _ _) (expr.interp _ _)] |- ?R (expr.interp _ _) (expr.interp _ _) ] => eapply H; eauto with nocore
                            end ].
         Qed.
@@ -911,60 +651,56 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
       End with_1.
     End interp_gen.
 
-    Section with_cast.
-      Context {cast_outside_of_range : ZRange.zrange -> BinInt.Z -> BinInt.Z}.
-      Local Notation ident_interp := (@ident.gen_interp cast_outside_of_range).
-      Local Notation interp := (@expr.interp _ _ _ (@ident_interp)).
-      Local Notation Interp := (@expr.Interp _ _ _ (@ident_interp)).
-      Local Open Scope etype_scope.
-      Lemma wf_interp_Proper G {t} e1 e2
-            (Hwf : @wf _ _ _ _ G t e1 e2)
-            (HG : forall t v1 v2, In (existT _ t (v1, v2)) G -> v1 == v2)
-        : interp e1 == interp e2.
-      Proof. apply @wf_interp_Proper_gen1 with (G:=G); eauto using ident.gen_interp_Proper. Qed.
-
-      Lemma Wf_Interp_Proper {t} (e : expr.Expr t) : Wf e -> Proper type.eqv (Interp e).
-      Proof. repeat intro; apply wf_interp_Proper with (G:=nil); cbn [List.In]; intuition eauto. Qed.
-    End with_cast.
-
     Section invert.
+      Import invert_expr.
+      Context {base : Type}
+              {base_interp : base -> Type}
+              {try_make_transport_base_cps : @type.try_make_transport_cpsT base}
+              {base_beq : base -> base -> bool}.
+      Local Notation base_type := (@base.type base).
+      Local Notation type := (@type.type base_type).
+      Context {ident : type -> Type}.
+      Context {invertIdent : @InvertIdentT base base_interp ident}.
+      Context {buildIdent : @ident.BuildIdentT base base_interp ident}.
+      Context {reflect_base_beq : reflect_rel (@eq base) base_beq}
+              {try_make_transport_base_cps_correct : type.try_make_transport_cps_correctT base}
+              {buildInvertIdentCorrect : BuildInvertIdentCorrectT}.
       Section with_var2.
-        Context {var1 var2 : type.type base.type -> Type}.
-        Local Notation expr1 := (@expr.expr base.type ident.ident var1).
-        Local Notation expr2 := (@expr.expr base.type ident.ident var2).
+        Context {var1 var2 : type -> Type}.
+        Local Notation expr1 := (@expr.expr base_type ident var1).
+        Local Notation expr2 := (@expr.expr base_type ident var2).
 
         Lemma wf_reify_list G {t} e1 e2
           : @wf _ _ var1 var2 G _ (reify_list (t:=t) e1) (reify_list (t:=t) e2)
             <-> List.Forall2 (wf G) e1 e2.
-        Proof.
+        Proof using reflect_base_beq.
           revert e2; induction e1 as [|e1 e1s IHe1s], e2 as [|e2 e2s];
             rewrite ?expr.reify_list_cons, ?expr.reify_list_nil;
-              repeat first [ progress apply conj
-                           | progress intros
-                           | progress destruct_head'_and
-                           | progress destruct_head'_sig
-                           | progress type.inversion_type
-                           | progress base.type.inversion_type
-                           | congruence
-                           | tauto
-                           | progress cbn [In] in *
-                           | match goal with |- wf _ _ _ => constructor end
-                           | progress inversion_wf_constr
-                           | rewrite IHe1s in *
-                           | progress destruct_head'_or
-                           | match goal with
-                             | [ H : Forall2 _ ?xs ?ys |- _ ]
-                               => match xs with nil => idtac | _::_ => idtac end;
-                                  match ys with nil => idtac | _::_ => idtac end;
-                                  inversion H; clear H
-                             end
-                           | solve [ eauto ] ].
+            repeat first [ progress apply conj
+                         | progress intros
+                         | progress destruct_head'_and
+                         | progress destruct_head'_sig
+                         | progress inversion_type
+                         | congruence
+                         | tauto
+                         | progress cbn [In] in *
+                         | match goal with |- wf _ _ _ => constructor end
+                         | progress inversion_wf_constr
+                         | rewrite IHe1s in *
+                         | progress destruct_head'_or
+                         | match goal with
+                           | [ H : Forall2 _ ?xs ?ys |- _ ]
+                             => match xs with nil => idtac | _::_ => idtac end;
+                                match ys with nil => idtac | _::_ => idtac end;
+                                inversion H; clear H
+                           end
+                         | solve [ eauto ] ].
         Qed.
 
         Lemma wf_reflect_list G {t} e1 e2
            : @wf _ _ var1 var2 G (type.base (base.type.list t)) e1 e2
             -> (invert_expr.reflect_list e1 = None <-> invert_expr.reflect_list e2 = None).
-        Proof.
+        Proof using buildInvertIdentCorrect try_make_transport_base_cps_correct.
           destruct (invert_expr.reflect_list e1) eqn:H1, (invert_expr.reflect_list e2) eqn:H2;
             try (split; congruence); expr.invert_subst;
               try revert dependent e2; try revert dependent e1;
@@ -982,30 +718,28 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
                       => cut (P <-> Some xs = None); [ intuition congruence | ]
                     | _ => idtac
                     end.
-          all: repeat first [ congruence
-                            | progress inversion_wf_constr
-                            | progress subst
-                            | progress cbv [option_map] in *
-                            | progress destruct_head' False
-                            | progress destruct_head'_sig
-                            | progress destruct_head'_and
+          all: repeat first [ progress cbn [fst snd projT1 projT2 eq_rect] in *
+                            | progress destruct_head'_False
                             | progress inversion_option
                             | progress inversion_sigma
                             | progress inversion_prod
-                            | progress type.inversion_type
-                            | progress base.type.inversion_type
-                            | progress break_match_hyps
-                            | progress cbn [fst snd invert_expr.invert_Ident invert_expr.invert_nil invert_expr.invert_cons invert_expr.invert_AppIdent2 invert_expr.invert_Ident invert_expr.invert_App2 invert_expr.invert_App Option.bind fst snd projT1 projT2 eq_rect] in *
+                            | discriminate
+                            | progress destruct_head'_sig
+                            | progress destruct_head'_and
                             | progress expr.invert_subst
+                            | progress inversion_wf_constr
                             | solve [ eauto ]
-                            | progress inversion_wf_one_constr
-                            | progress expr.invert_match ].
+                            | progress inversion_type
+                            | break_innermost_match_hyps_step
+                            | progress expr.invert_match
+                            | progress expr.inversion_expr
+                            | progress inversion_wf_one_constr ].
         Qed.
 
         Lemma wf_reify_option G {t} e1 e2
           : @wf _ _ var1 var2 G _ (reify_option (t:=t) e1) (reify_option (t:=t) e2)
             <-> option_eq (wf G) e1 e2.
-        Proof.
+        Proof using reflect_base_beq.
           destruct_head' option; cbn in *; split; intros.
           all: repeat first [ assumption
                             | progress inversion_option
@@ -1013,14 +747,14 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
                             | progress inversion_wf_constr
                             | progress destruct_head'_sig
                             | progress destruct_head'_and
-                            | progress type.inversion_type
+                            | progress inversion_type
                             | constructor ].
         Qed.
 
         Lemma wf_reflect_option G {t} e1 e2
            : @wf _ _ var1 var2 G (type.base (base.type.option t)) e1 e2
             -> (invert_expr.reflect_option e1 = None <-> invert_expr.reflect_option e2 = None).
-        Proof.
+        Proof using buildInvertIdentCorrect try_make_transport_base_cps_correct.
           destruct (invert_expr.reflect_option e1) eqn:H1, (invert_expr.reflect_option e2) eqn:H2;
             try (split; congruence); expr.invert_subst;
               try (revert dependent e2; intro); try (revert dependent e1; intro);
@@ -1035,110 +769,95 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
                             | progress inversion_wf_constr
                             | progress subst
                             | progress cbv [option_map] in *
+                            | progress cbn [fst snd projT1 projT2 eq_rect] in *
                             | progress destruct_head' False
                             | progress destruct_head'_sig
                             | progress destruct_head'_and
                             | progress inversion_option
                             | progress inversion_sigma
                             | progress inversion_prod
-                            | progress type.inversion_type
-                            | progress base.type.inversion_type
+                            | progress inversion_type
                             | progress break_match_hyps
-                            | progress cbn [fst snd invert_expr.invert_Ident invert_expr.invert_None invert_expr.invert_Some invert_expr.invert_AppIdent invert_expr.invert_Ident invert_expr.invert_App2 invert_expr.invert_App Option.bind fst snd projT1 projT2 eq_rect] in *
                             | progress expr.invert_subst
                             | solve [ eauto ]
                             | progress inversion_wf_one_constr
-                            | progress expr.invert_match ].
+                            | progress expr.invert_match
+                            | progress expr.inversion_expr ].
         Qed.
 
-        Lemma wf_reify {t} v G : expr.wf G (@GallinaReify.base.reify var1 t v) (@GallinaReify.base.reify var2 t v).
-        Proof.
+        Lemma wf_smart_Literal {t v G}
+          : expr.wf G (ident.smart_Literal (var:=var1) (t:=t) v) (ident.smart_Literal (var:=var2) (t:=t) v).
+        Proof using reflect_base_beq.
           induction t; cbn; cbv [option_map]; break_innermost_match; repeat constructor; auto; [].
           rewrite wf_reify_list, Forall2_map_map_iff, Forall2_Forall, Forall_forall; cbv [Proper]; auto.
         Qed.
 
-        Lemma wf_smart_Literal {t v G}
-          : expr.wf G (@ident.smart_Literal var1 t v) (@ident.smart_Literal var2 t v).
-        Proof using Type.
-          induction t; cbn; eta_expand; repeat constructor; auto.
-          all: rewrite wf_reify_list + rewrite wf_reify_option.
-          all: repeat first [ progress cbv [option_map option_eq Proper]
-                            | reflexivity
-                            | rewrite Forall2_map_map_iff, Forall2_Forall, Forall_forall
-                            | break_innermost_match_step
-                            | solve [ auto ] ].
-        Qed.
+        Lemma wf_reify {t} v G : expr.wf G (GallinaReify.base.reify (var:=var1) (t:=t) v) (GallinaReify.base.reify (var:=var2) (t:=t) v).
+        Proof using reflect_base_beq. exact wf_smart_Literal. Qed.
 
         Lemma wf_smart_Literal_eq {t v1 v2 G}
-          : v1 = v2 -> expr.wf G (@ident.smart_Literal var1 t v1) (@ident.smart_Literal var2 t v2).
-        Proof using Type. intro; subst; apply wf_smart_Literal. Qed.
+          : v1 = v2 -> expr.wf G (ident.smart_Literal (var:=var1) (t:=t) v1) (ident.smart_Literal (var:=var2) (t:=t) v2).
+        Proof using reflect_base_beq. intro; subst; apply wf_smart_Literal. Qed.
       End with_var2.
 
-      Lemma Wf_Reify_as {t} v : expr.Wf (@GallinaReify.base.Reify_as t v).
+      Lemma Wf_Reify_as {t} v : expr.Wf (GallinaReify.base.Reify_as t v).
       Proof. repeat intro; apply wf_reify. Qed.
 
-      Lemma Wf_reify {t} v : expr.Wf (fun var => @GallinaReify.base.reify var t v).
+      Lemma Wf_reify {t} v : expr.Wf (fun var => GallinaReify.base.reify (t:=t) v).
       Proof. repeat intro; apply wf_reify. Qed.
 
       Section interp.
-        Import defaults.
-        Context {cast_outside_of_range : ZRange.zrange -> BinInt.Z -> BinInt.Z}.
-        Local Notation ident_interp := (@ident.gen_interp cast_outside_of_range).
-        Local Notation interp := (expr.interp (@ident_interp)).
+        Context {ident_interp : forall t, ident t -> type.interp (base.interp base_interp) t}.
+        Context {buildInterpIdentCorrect : ident.BuildInterpIdentCorrectT ident_interp}.
+
+        Local Notation interp := (expr.interp ident_interp).
         Local Notation expr_interp_related := (@expr.interp_related _ _ _ (@ident_interp)).
 
-        Lemma reify_list_interp_related {t} ls1 ls2
-              (H : List.Forall2 expr_interp_related ls1 ls2)
-          : expr_interp_related (reify_list (t:=t) ls1) ls2.
-        Proof using Type.
-          cbv [reify_list]; induction H;
-            cbn [list_rect expr_interp_related expr.interp_related_gen type.related ident_interp];
-            repeat esplit; cbv [respectful]; intros; subst; eauto.
-        Qed.
-
         Lemma interp_reify_list {t} ls : interp (reify_list (t:=t) ls) = List.map interp ls.
-        Proof.
-          cbv [reify_list]; induction ls as [|l ls IHls]; [ reflexivity | ];
-            cbn [list_rect map expr.interp ident.interp ident.gen_interp]; rewrite <- IHls;
-              reflexivity.
+        Proof using buildInterpIdentCorrect.
+          cbv [reify_list]; induction ls as [|l ls IHls];
+            cbn [list_rect map expr.interp];
+            [ now rewrite ident.interp_ident_nil
+            | now rewrite ident.interp_ident_cons, IHls ].
         Qed.
 
         Lemma interp_reify_option {t} v : interp (reify_option (t:=t) v) = Option.map interp v.
-        Proof. destruct v; reflexivity. Qed.
-
-        Lemma smart_Literal_interp_related {t} v
-          : expr.interp_related (@ident_interp) (@ident.smart_Literal _ t v) v.
-        Proof using Type.
-          cbv [expr.interp_related]; induction t;
-            repeat first [ progress cbn [ident.smart_Literal ident_interp expr.interp_related expr.interp_related_gen type.related] in *
-                         | progress cbv [reify_option option_map expr.interp_related]
-                         | break_innermost_match_step
-                         | reflexivity
-                         | esplit
-                         | solve [ eauto ]
-                         | apply reify_list_interp_related
-                         | rewrite Forall2_map_l_iff, Forall2_Forall, Forall_forall; cbv [Proper]; intros ].
+        Proof using buildInterpIdentCorrect.
+          destruct v;
+            rewrite ?expr.reify_option_None, ?expr.reify_option_Some; cbn [expr.interp];
+              now (rewrite ident.interp_ident_None + rewrite ident.interp_ident_Some).
         Qed.
 
-        Lemma interp_smart_Literal {t} v : interp (@ident.smart_Literal _ t v) = v.
-        Proof.
+        Lemma smart_Literal_interp_related {t} v
+          : expr.interp_related (@ident_interp) (ident.smart_Literal (t:=t) v) v.
+        Proof using buildInterpIdentCorrect.
+          induction t;
+            repeat first [ progress cbn [ident.smart_Literal expr.interp_related_gen type.related base.interp] in *
+                         | progress cbv [reify_option option_map option_rect expr.interp_related] in *
+                         | rewrite ident.interp_ident_Literal
+                         | rewrite ident.interp_ident_pair
+                         | rewrite ident.interp_ident_Some
+                         | rewrite ident.interp_ident_None
+                         | break_innermost_match_step
+                         | reflexivity
+                         | do 2 eexists; repeat apply conj; [ | | reflexivity ]
+                         | solve [ eauto ]
+                         | apply (proj2 expr.reify_list_interp_related_iff)
+                         | rewrite Forall2_map_l_iff, Forall2_Forall, Forall_forall; cbv [Proper]; intros
+                         | match goal with
+                           | [ |- ?x = ?y :> unit ] => now destruct x, y
+                           end ].
+        Qed.
+
+        Lemma interp_smart_Literal {t} v : interp (ident.smart_Literal (t:=t) v) = v.
+        Proof using buildInterpIdentCorrect.
           pose proof (@smart_Literal_interp_related t v) as H.
           eapply eqv_of_interp_related in H; assumption.
         Qed.
 
         Lemma reify_interp_related {t} v
           : expr_interp_related (GallinaReify.base.reify (t:=t) v) v.
-        Proof using Type.
-          cbv [expr.interp_related]; induction t;
-            repeat first [ progress cbn [GallinaReify.base.reify ident_interp expr.interp_related expr.interp_related_gen type.related] in *
-                         | progress cbv [reify_option option_map expr.interp_related]
-                         | break_innermost_match_step
-                         | reflexivity
-                         | esplit
-                         | solve [ eauto ]
-                         | apply reify_list_interp_related
-                         | rewrite Forall2_map_l_iff, Forall2_Forall, Forall_forall; cbv [Proper]; intros ].
-        Qed.
+        Proof. apply smart_Literal_interp_related. Qed.
 
         Lemma interp_reify {t} v : interp (GallinaReify.base.reify (t:=t) v) = v.
         Proof.
@@ -1147,8 +866,8 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
         Qed.
 
         Lemma interp_reify_as_interp {t} v1 v2
-          : v1 == v2 -> interp (@GallinaReify.reify_as_interp t v1) == v2.
-        Proof.
+          : v1 == v2 -> interp (GallinaReify.reify_as_interp (t:=t) v1) == v2.
+        Proof using buildInterpIdentCorrect.
           induction t as [|s IHs d IHd]; cbn [GallinaReify.reify_as_interp type.related interp]; cbv [respectful]; eauto.
           intro; subst; apply interp_reify.
         Qed.
@@ -1157,10 +876,10 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
           : expr_interp_related (GallinaReify.base.Reify_as t v _) v.
         Proof. apply reify_interp_related. Qed.
 
-        Lemma Interp_Reify_as {t} v : expr.Interp (@ident.gen_interp cast_outside_of_range) (GallinaReify.base.Reify_as t v) = v.
+        Lemma Interp_Reify_as {t} v : expr.Interp ident_interp (GallinaReify.base.Reify_as t v) = v.
         Proof. apply interp_reify. Qed.
 
-        Lemma Interp_reify {t} v : expr.Interp (@ident.gen_interp cast_outside_of_range) (fun var => GallinaReify.base.reify (t:=t) v) = v.
+        Lemma Interp_reify {t} v : expr.Interp ident_interp (fun var => GallinaReify.base.reify (t:=t) v) = v.
         Proof. apply interp_reify. Qed.
       End interp.
     End invert.
@@ -1287,13 +1006,13 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
           | progress subst
           | progress inversion_sigma
           | progress inversion_prod
-          | progress cbn [List.In eq_rect expr.interp ident.interp type.interp base.interp base.base_interp type.eqv] in *
+          | progress cbn [List.In eq_rect expr.interp (*ident.interp*) type.interp base.interp (*base.base_interp*) type.eqv] in *
           | progress cbv [respectful LetIn.Let_In] in *
           | solve [ eauto using conj, eq_refl, or_introl, or_intror with nocore ]
           | progress destruct_head'_or
           | match goal with
-            | [ |- ident.interp ?x == ident.interp ?x ] => apply ident.eqv_Reflexive
-            | [ |- Proper (fun x y => ident.interp x == ident.interp y) _ ] => apply ident.eqv_Reflexive_Proper
+            (*| [ |- ident.interp ?x == ident.interp ?x ] => apply ident.eqv_Reflexive*)
+            (*| [ |- Proper (fun x y => ident.interp x == ident.interp y) _ ] => apply ident.eqv_Reflexive_Proper*)
             | [ H : context[expr.interp _ _ == expr.interp _ _] |- expr.interp _ _ == expr.interp _ _ ]
               => eapply H; eauto with nocore; solve [ repeat interp_safe_t_step ]
             end ].
@@ -1309,33 +1028,55 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
   Ltac interp_t := repeat interp_t_step.
 
 
-  Import defaults.
   Module DefaultValue.
     Import Language.Compilers.DefaultValue.
     Module expr.
+      Class ExprDefault_wfT {base_type ident} {d : forall var, @type.base.DefaultT _ (@expr base_type ident var)}
+        := ExprDefault_wf : forall var1 var2 G t, expr.wf G (d var1 t) (d var2 t).
+      Class ExprDefault_WfT {base_type ident} {d : @type.base.DefaultT _ (@Expr base_type ident)}
+        := ExprDefault_Wf : forall t, expr.Wf (d t).
+      Global Arguments ExprDefault_wfT {_ _} _.
+      Global Arguments ExprDefault_WfT {_ _} _.
       Module base.
-        Section with_var2.
-          Context {var1 var2 : type -> Type}.
+        Section with_base.
+          Context {base : Type}
+                  {base_interp : base -> Type}.
+          Local Notation base_type := (@base.type base).
+          Local Notation type := (@type.type base_type).
+          Local Notation base_type_interp := (@base.interp base base_interp).
+          Context {ident : type -> Type}.
+          Context {baseDefault : @type.base.DefaultT base base_interp}
+                  {buildIdent : @ident.BuildIdentT base base_interp ident}.
 
-          Lemma wf_default G {t : base.type} : expr.wf G (@expr.base.default var1 t) (@expr.base.default var2 t).
-          Proof.
-            induction t; destruct_head' base.type.base; wf_t.
-          Qed.
-        End with_var2.
+          Section with_var2.
+            Context {var1 var2 : type -> Type}.
 
-        Lemma Wf_Default {t : base.type} : Wf (@expr.base.Default t).
-        Proof. repeat intro; apply @wf_default. Qed.
+            Lemma wf_default G {t : base_type} : expr.wf (var1:=var1) (var2:=var2) (t:=type.base t) G expr.base.default expr.base.default.
+            Proof.
+              induction t; wf_t.
+            Qed.
+          End with_var2.
+
+          Lemma Wf_Default {t : base_type} : Wf (t:=type.base t) expr.base.Default.
+          Proof. repeat intro; apply @wf_default. Qed.
+        End with_base.
       End base.
 
-      Section with_var2.
-        Context {var1 var2 : type -> Type}.
+      Section with_base.
+        Context {base : Type}
+                {base_interp : base -> Type}.
+        Local Notation base_type := (@base.type base).
+        Local Notation type := (@type.type base_type).
+        Local Notation base_type_interp := (@base.interp base base_interp).
+        Context {ident : type -> Type}.
+        Context {baseDefault : @type.base.DefaultT base base_interp}
+                {buildIdent : @ident.BuildIdentT base base_interp ident}.
 
-        Lemma wf_default G {t : type} : expr.wf G (@expr.default var1 t) (@expr.default var2 t).
-        Proof. revert G; induction t; intros; wf_t; apply base.wf_default. Qed.
-      End with_var2.
-
-      Lemma Wf_Default {t : type} : Wf (@expr.Default t).
-      Proof. repeat intro; apply @wf_default. Qed.
+        Global Instance wf_default : @ExprDefault_wfT base_type ident _.
+        Proof. intros var1 var2 G t; revert G; induction t; intros; wf_t; apply base.wf_default. Qed.
+        Global Instance Wf_Default : @ExprDefault_WfT base_type ident _.
+        Proof. repeat intro; apply @wf_default. Qed.
+      End with_base.
     End expr.
   End DefaultValue.
 
@@ -1343,405 +1084,515 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
     Import Language.Compilers.GeneralizeVar.
     Local Open Scope etype_scope.
     Module Flat.
-      Fixpoint wf (G : PositiveMap.t type) {t} (e : Flat.expr t) : bool
-        := match e with
-           | Flat.Ident t idc => true
-           | Flat.Var t n
-             => match PositiveMap.find n G with
-                | Some t' => type.type_beq _ base.type.type_beq t t'
-                | None => false
-                end
-           | Flat.Abs s n d f
-             => match PositiveMap.find n G with
-                | None => @wf (PositiveMap.add n s G) _ f
-                | Some _ => false
-                end
-           | Flat.App s d f x
-             => andb (@wf G _ f) (@wf G _ x)
-           | Flat.LetIn A B n ex eC
-             => match PositiveMap.find n G with
-                | None => andb (@wf G _ ex) (@wf (PositiveMap.add n A G) _ eC)
-                | Some _ => false
-                end
-           end.
+      Section with_base_type.
+        Context {base_type : Type}
+                {ident : type base_type -> Type}
+                {base_type_beq : base_type -> base_type -> bool}.
+        Local Notation type := (@type.type base_type).
+
+        Fixpoint wf (G : PositiveMap.t type) {t} (e : @Flat.expr base_type ident t) : bool
+          := match e with
+             | Flat.Ident t idc => true
+             | Flat.Var t n
+               => match PositiveMap.find n G with
+                  | Some t' => type.type_beq _ base_type_beq t t'
+                  | None => false
+                  end
+             | Flat.Abs s n d f
+               => match PositiveMap.find n G with
+                  | None => @wf (PositiveMap.add n s G) _ f
+                  | Some _ => false
+                  end
+             | Flat.App s d f x
+               => andb (@wf G _ f) (@wf G _ x)
+             | Flat.LetIn A B n ex eC
+               => match PositiveMap.find n G with
+                  | None => andb (@wf G _ ex) (@wf (PositiveMap.add n A G) _ eC)
+                  | Some _ => false
+                  end
+             end.
+      End with_base_type.
     End Flat.
 
-    Section with_var.
-      Import BinPos.
-      Context {var1 var2 : type -> Type}.
+    Section with_base_type.
+      Context {base_type : Type}
+              {ident : type base_type -> Type}
+              {try_make_transport_base_type_cps : @type.try_make_transport_cpsT base_type}
+              {base_type_beq : base_type -> base_type -> bool}
+              {reflect_base_type_beq : reflect_rel (@eq base_type) base_type_beq}
+              {try_make_transport_base_type_cps_correct : @type.try_make_transport_cps_correctT base_type base_type_beq _ _}.
+      Local Notation type := (@type.type base_type).
+      Local Notation Flat_expr := (@Flat.expr base_type ident).
+      Context {exprDefault : forall var, @DefaultValue.type.base.DefaultT type (@expr base_type ident var)}
+              {wf_exprDefault : DefaultValue.expr.ExprDefault_wfT exprDefault}.
 
-      Lemma wf_from_flat_gen
-            {t}
-            (e : Flat.expr t)
-        : forall (G1 : PositiveMap.t type) (G2 : list { t : _ & var1 t * var2 t }%type)
-                 (ctx1 : PositiveMap.t { t : type & var1 t })
-                 (ctx2 : PositiveMap.t { t : type & var2 t })
-                 (H_G1_ctx1 : forall p, PositiveMap.find p G1 = option_map (@projT1 _ _) (PositiveMap.find p ctx1))
-                 (H_G1_ctx2 : forall p, PositiveMap.find p G1 = option_map (@projT1 _ _) (PositiveMap.find p ctx2))
-                 (H_ctx_G2 : forall t v1 v2, List.In (existT _ t (v1, v2)) G2
-                                             <-> (exists p, PositiveMap.find p ctx1 = Some (existT _ t v1) /\ PositiveMap.find p ctx2 = Some (existT _ t v2))),
-          Flat.wf G1 e = true -> expr.wf G2 (from_flat e var1 ctx1) (from_flat e var2 ctx2).
-      Proof.
-        induction e;
-          repeat first [ progress cbn [Flat.wf from_flat option_map projT1 projT2 List.In fst snd] in *
-                       | progress intros
-                       | destructure_step
-                       | progress cbv [Option.bind type.try_transport type.try_transport_cps cpsreturn cpsbind cpscall cps_option_bind eq_rect id] in *
-                       | match goal with |- expr.wf _ _ _ => constructor end
-                       | solve [ eauto using conj, ex_intro, eq_refl, or_introl, or_intror with nocore ]
-                       | congruence
-                       | destructure_split_step
-                       | erewrite type.try_make_transport_cps_correct
-                         by first [ exact base.type.internal_type_dec_lb | exact base.try_make_transport_cps_correct ]
-                       | match goal with
-                         | [ H : context[expr.wf _ _ _] |- expr.wf _ _ _ ] => eapply H; clear H; eauto with nocore
-                         | [ |- context[PositiveMap.find _ (PositiveMap.add _ _ _)] ] => rewrite PositiveMapAdditionalFacts.gsspec
-                         | [ H : context[PositiveMap.find _ (PositiveMap.add _ _ _)] |- _ ] => rewrite PositiveMapAdditionalFacts.gsspec in H
-                         | [ H : forall t v1 v2, In _ ?G2 <-> _ |- context[In _ ?G2] ] => rewrite H
-                         | [ H : In _ ?G2, H' : forall t v1 v2, In _ ?G2 <-> _ |- _ ] => rewrite H' in H
-                         | [ |- exists p, PositiveMap.find p (PositiveMap.add ?n (existT _ ?t ?v) _) = Some (existT _ ?t _) /\ _ ]
-                           => exists n
-                         | [ H : PositiveMap.find ?n ?ctx = ?v |- exists p, PositiveMap.find p (PositiveMap.add _ _ ?ctx) = ?v /\ _ ]
-                           => exists n
-                         | [ |- _ \/ exists p, PositiveMap.find p (PositiveMap.add ?n (existT _ ?t ?v) _) = Some (existT _ ?t _) /\ _ ]
-                           => right; exists n
-                         | [ H : PositiveMap.find ?n ?ctx = ?v |- _ \/ exists p, PositiveMap.find p (PositiveMap.add _ _ ?ctx) = ?v /\ _ ]
-                           => right; exists n
-                         | [ H : PositiveMap.find ?n ?G = ?a, H' : PositiveMap.find ?n ?G' = ?b, H'' : forall p, PositiveMap.find p ?G = option_map _ (PositiveMap.find p ?G') |- _ ]
-                           => (tryif assert (a = option_map (@projT1 _ _) b) by (cbn [projT1 option_map]; (reflexivity || congruence))
-                                then fail
-                                else let H1 := fresh in
-                                     pose proof (H'' n) as H1;
-                                     rewrite H, H' in H1;
-                                     cbn [option_map projT1] in H1)
-                         end ].
-      Qed.
+      Section with_var.
+        Import BinPos.
+        Context {var1 var2 : type -> Type}.
 
-      Lemma wf_from_flat
-            {t}
-            (e : Flat.expr t)
-        : Flat.wf (PositiveMap.empty _) e = true -> expr.wf nil (from_flat e var1 (PositiveMap.empty _)) (from_flat e var2 (PositiveMap.empty _)).
-      Proof.
-        apply wf_from_flat_gen; intros *;
-          repeat setoid_rewrite PositiveMap.gempty;
-          cbn [In option_map];
-          intuition (destruct_head'_ex; intuition (congruence || auto)).
-      Qed.
+        Lemma wf_from_flat_gen
+              {t}
+              (e : Flat_expr t)
+          : forall (G1 : PositiveMap.t type) (G2 : list { t : _ & var1 t * var2 t }%type)
+                   (ctx1 : PositiveMap.t { t : type & var1 t })
+                   (ctx2 : PositiveMap.t { t : type & var2 t })
+                   (H_G1_ctx1 : forall p, PositiveMap.find p G1 = option_map (@projT1 _ _) (PositiveMap.find p ctx1))
+                   (H_G1_ctx2 : forall p, PositiveMap.find p G1 = option_map (@projT1 _ _) (PositiveMap.find p ctx2))
+                   (H_ctx_G2 : forall t v1 v2, List.In (existT _ t (v1, v2)) G2
+                                               <-> (exists p, PositiveMap.find p ctx1 = Some (existT _ t v1) /\ PositiveMap.find p ctx2 = Some (existT _ t v2))),
+            Flat.wf (base_type_beq:=base_type_beq) G1 e = true -> expr.wf G2 (from_flat e var1 ctx1) (from_flat e var2 ctx2).
+        Proof using try_make_transport_base_type_cps_correct.
+          induction e;
+            repeat first [ progress cbn [Flat.wf from_flat option_map projT1 projT2 List.In fst snd] in *
+                         | progress intros
+                         | destructure_step
+                         | progress cbv [Option.bind cpsreturn cpsbind cpscall cps_option_bind eq_rect id] in *
+                         | match goal with |- expr.wf _ _ _ => constructor end
+                         | solve [ eauto using conj, ex_intro, eq_refl, or_introl, or_intror with nocore ]
+                         | congruence
+                         | destructure_split_step
+                         | progress rewrite_type_transport_correct
+                         | match goal with
+                           | [ H : context[expr.wf _ _ _] |- expr.wf _ _ _ ] => eapply H; clear H; eauto with nocore
+                           | [ |- context[PositiveMap.find _ (PositiveMap.add _ _ _)] ] => rewrite PositiveMapAdditionalFacts.gsspec
+                           | [ H : context[PositiveMap.find _ (PositiveMap.add _ _ _)] |- _ ] => rewrite PositiveMapAdditionalFacts.gsspec in H
+                           | [ H : forall t v1 v2, In _ ?G2 <-> _ |- context[In _ ?G2] ] => rewrite H
+                           | [ H : In _ ?G2, H' : forall t v1 v2, In _ ?G2 <-> _ |- _ ] => rewrite H' in H
+                           | [ |- exists p, PositiveMap.find p (PositiveMap.add ?n (existT _ ?t ?v) _) = Some (existT _ ?t _) /\ _ ]
+                             => exists n
+                           | [ H : PositiveMap.find ?n ?ctx = ?v |- exists p, PositiveMap.find p (PositiveMap.add _ _ ?ctx) = ?v /\ _ ]
+                             => exists n
+                           | [ |- _ \/ exists p, PositiveMap.find p (PositiveMap.add ?n (existT _ ?t ?v) _) = Some (existT _ ?t _) /\ _ ]
+                             => right; exists n
+                           | [ H : PositiveMap.find ?n ?ctx = ?v |- _ \/ exists p, PositiveMap.find p (PositiveMap.add _ _ ?ctx) = ?v /\ _ ]
+                             => right; exists n
+                           | [ H : PositiveMap.find ?n ?G = ?a, H' : PositiveMap.find ?n ?G' = ?b, H'' : forall p, PositiveMap.find p ?G = option_map _ (PositiveMap.find p ?G') |- _ ]
+                             => (tryif assert (a = option_map (@projT1 _ _) b) by (cbn [projT1 option_map]; (reflexivity || congruence))
+                                  then fail
+                                  else let H1 := fresh in
+                                       pose proof (H'' n) as H1;
+                                       rewrite H, H' in H1;
+                                       cbn [option_map projT1] in H1)
+                           end ].
+        Qed.
 
-      Lemma wf_from_flat_to_flat_gen
-            offset G1 G2 ctx
-            {t} (e1 e2 : expr t)
-            (Hwf : expr.wf G1 e1 e2)
-            (HG1G2 : forall t v1 v2,
-                List.In (existT _ t (v1, v2)) G1
-                -> exists v1', PositiveMap.find v1 ctx = Some (existT _ t v1')
-                               /\ List.In (existT _ t (v1', v2)) G2)
-            (Hoffset : forall p, PositiveMap.find p ctx <> None -> (p < offset)%positive)
-        : expr.wf G2 (var2:=var2) (from_flat (@to_flat' t e1 offset) var1 ctx) e2.
-      Proof.
-        revert dependent offset; revert dependent G2; revert dependent ctx; induction Hwf; intros.
-        all: repeat first [ progress cbn [from_flat to_flat' List.In projT1 projT2 fst snd] in *
-                          | progress intros
-                          | destructure_step
-                          | progress cbv [Option.bind type.try_transport type.try_transport_cps cpsreturn cpsbind cpscall cps_option_bind eq_rect id] in *
-                          | match goal with |- expr.wf _ _ _ => constructor end
-                          | solve [ eauto using conj, ex_intro, eq_refl, or_introl, or_intror with nocore ]
-                          | congruence
-                          | destructure_split_step
-                          | erewrite type.try_make_transport_cps_correct
-                            by first [ exact base.type.internal_type_dec_lb | exact base.try_make_transport_cps_correct ]
-                          | match goal with
-                            | [ H : List.In (existT _ ?t (?v1, ?v2)) ?G, H' : forall t' v1' v2', List.In _ ?G -> _ |- _ ]
-                              => specialize (H' _ _ _ H)
-                            | [ H : _ |- expr.wf _ _ _ ] => apply H; clear H
-                            | [ v' : var1 ?t |- exists v : var1 ?t, _ ] => exists v'
-                            | [ |- context[PositiveMap.find _ (PositiveMap.add _ _ _)] ] => rewrite PositiveMapAdditionalFacts.gsspec
-                            | [ H : context[PositiveMap.find _ (PositiveMap.add _ _ _)] |- _ ] => rewrite PositiveMapAdditionalFacts.gsspec in H
-                            | [ H : forall p, _ <> None -> (_ < _)%positive, H' : _ <> None |- _ ]
-                              => unique pose proof (H _ H')
-                            | [ H : forall p, PositiveMap.find p ?ctx <> None -> (p < ?offset)%positive,
-                                  H' : PositiveMap.find ?p' ?ctx = Some _ |- _]
-                              => unique assert ((p' < offset)%positive) by (apply H; rewrite H'; congruence)
-                            | [ H : (?x < ?x)%positive |- _ ] => exfalso; clear -H; lia
-                            | [ |- (_ < _)%positive ] => lia
-                            end ].
-      Qed.
+        Lemma wf_from_flat
+              {t}
+              (e : Flat_expr t)
+          : Flat.wf (base_type_beq:=base_type_beq) (PositiveMap.empty _) e = true -> expr.wf nil (from_flat e var1 (PositiveMap.empty _)) (from_flat e var2 (PositiveMap.empty _)).
+        Proof using try_make_transport_base_type_cps_correct.
+          apply wf_from_flat_gen; intros *;
+            repeat setoid_rewrite PositiveMap.gempty;
+            cbn [In option_map];
+            intuition (destruct_head'_ex; intuition (congruence || auto)).
+        Qed.
 
-      Lemma wf_from_flat_to_flat
-            {t} (e1 e2 : expr t)
-            (Hwf : expr.wf nil e1 e2)
-        : expr.wf nil (var2:=var2) (from_flat (@to_flat t e1) var1 (PositiveMap.empty _)) e2.
-      Proof.
-        eapply wf_from_flat_to_flat_gen; eauto; cbn [List.In]; try tauto; intros *;
-          rewrite PositiveMap.gempty; congruence.
-      Qed.
-    End with_var.
+        Lemma wf_from_flat_to_flat_gen
+              offset G1 G2 ctx
+              {t} (e1 e2 : expr t)
+              (Hwf : expr.wf G1 e1 e2)
+              (HG1G2 : forall t v1 v2,
+                  List.In (existT _ t (v1, v2)) G1
+                  -> exists v1', PositiveMap.find v1 ctx = Some (existT _ t v1')
+                                 /\ List.In (existT _ t (v1', v2)) G2)
+              (Hoffset : forall p, PositiveMap.find p ctx <> None -> (p < offset)%positive)
+          : expr.wf G2 (var2:=var2) (from_flat (to_flat' (t:=t) e1 offset) var1 ctx) e2.
+        Proof.
+          revert dependent offset; revert dependent G2; revert dependent ctx; induction Hwf; intros.
+          all: repeat first [ progress cbn [from_flat to_flat' List.In projT1 projT2 fst snd] in *
+                            | progress intros
+                            | destructure_step
+                            | progress cbv [Option.bind cpsreturn cpsbind cpscall cps_option_bind eq_rect id] in *
+                            | match goal with |- expr.wf _ _ _ => constructor end
+                            | solve [ eauto using conj, ex_intro, eq_refl, or_introl, or_intror with nocore ]
+                            | congruence
+                            | destructure_split_step
+                            | progress rewrite_type_transport_correct
+                            | match goal with
+                              | [ H : List.In (existT _ ?t (?v1, ?v2)) ?G, H' : forall t' v1' v2', List.In _ ?G -> _ |- _ ]
+                                => specialize (H' _ _ _ H)
+                              | [ H : _ |- expr.wf _ _ _ ] => apply H; clear H
+                              | [ v' : var1 ?t |- exists v : var1 ?t, _ ] => exists v'
+                              | [ |- context[PositiveMap.find _ (PositiveMap.add _ _ _)] ] => rewrite PositiveMapAdditionalFacts.gsspec
+                              | [ H : context[PositiveMap.find _ (PositiveMap.add _ _ _)] |- _ ] => rewrite PositiveMapAdditionalFacts.gsspec in H
+                              | [ H : forall p, _ <> None -> (_ < _)%positive, H' : _ <> None |- _ ]
+                                => unique pose proof (H _ H')
+                              | [ H : forall p, PositiveMap.find p ?ctx <> None -> (p < ?offset)%positive,
+                                    H' : PositiveMap.find ?p' ?ctx = Some _ |- _]
+                                => unique assert ((p' < offset)%positive) by (apply H; rewrite H'; congruence)
+                              | [ H : (?x < ?x)%positive |- _ ] => exfalso; clear -H; lia
+                              | [ |- (_ < _)%positive ] => lia
+                              end ].
+        Qed.
 
-    Section with_var3.
-      Context {var1 var2 var3 : type -> Type}.
+        Lemma wf_from_flat_to_flat
+              {t} (e1 e2 : expr t)
+              (Hwf : expr.wf nil e1 e2)
+          : expr.wf nil (var2:=var2) (from_flat (to_flat (t:=t) e1) var1 (PositiveMap.empty _)) e2.
+        Proof using try_make_transport_base_type_cps_correct.
+          eapply wf_from_flat_to_flat_gen; eauto; cbn [List.In]; try tauto; intros *;
+            rewrite PositiveMap.gempty; congruence.
+        Qed.
+      End with_var.
 
-      Lemma wf3_from_flat_gen
-            {t}
-            (e : Flat.expr t)
-        : forall (G1 : PositiveMap.t type) (G2 : list { t : _ & var1 t * var2 t * var3 t }%type)
-                 (ctx1 : PositiveMap.t { t : type & var1 t })
-                 (ctx2 : PositiveMap.t { t : type & var2 t })
-                 (ctx3 : PositiveMap.t { t : type & var3 t })
-                 (H_G1_ctx1 : forall p, PositiveMap.find p G1 = option_map (@projT1 _ _) (PositiveMap.find p ctx1))
-                 (H_G1_ctx2 : forall p, PositiveMap.find p G1 = option_map (@projT1 _ _) (PositiveMap.find p ctx2))
-                 (H_G1_ctx3 : forall p, PositiveMap.find p G1 = option_map (@projT1 _ _) (PositiveMap.find p ctx3))
-                 (H_ctx_G2 : forall t v1 v2 v3, List.In (existT _ t (v1, v2, v3)) G2
-                                             <-> (exists p, PositiveMap.find p ctx1 = Some (existT _ t v1) /\ PositiveMap.find p ctx2 = Some (existT _ t v2) /\ PositiveMap.find p ctx3 = Some (existT _ t v3))),
-          Flat.wf G1 e = true -> expr.wf3 G2 (from_flat e var1 ctx1) (from_flat e var2 ctx2) (from_flat e var3 ctx3).
-      Proof.
-        induction e;
-          repeat first [ progress cbn [Flat.wf from_flat option_map projT1 projT2 List.In fst snd] in *
-                       | progress intros
-                       | destructure_step
-                       | progress cbv [Option.bind type.try_transport type.try_transport_cps cpsreturn cpsbind cpscall cps_option_bind eq_rect id] in *
-                       | match goal with |- expr.wf3 _ _ _ _ => constructor end
-                       | solve [ eauto using conj, ex_intro, eq_refl, or_introl, or_intror with nocore ]
-                       | congruence
-                       | destructure_split_step
-                       | erewrite type.try_make_transport_cps_correct
-                         by first [ exact base.type.internal_type_dec_lb | exact base.try_make_transport_cps_correct ]
-                       | match goal with
-                         | [ H : context[expr.wf3 _ _ _ _] |- expr.wf3 _ _ _ _ ] => eapply H; clear H; eauto with nocore
-                         | [ |- context[PositiveMap.find _ (PositiveMap.add _ _ _)] ] => rewrite PositiveMapAdditionalFacts.gsspec
-                         | [ H : context[PositiveMap.find _ (PositiveMap.add _ _ _)] |- _ ] => rewrite PositiveMapAdditionalFacts.gsspec in H
-                         | [ H : forall t v1 v2 v3, In _ ?G2 <-> _ |- context[In _ ?G2] ] => rewrite H
-                         | [ H : In _ ?G2, H' : forall t v1 v2 v3, In _ ?G2 <-> _ |- _ ] => rewrite H' in H
-                         | [ |- exists p, PositiveMap.find p (PositiveMap.add ?n (existT _ ?t ?v) _) = Some (existT _ ?t _) /\ _ ]
-                           => exists n
-                         | [ H : PositiveMap.find ?n ?ctx = ?v |- exists p, PositiveMap.find p (PositiveMap.add _ _ ?ctx) = ?v /\ _ ]
-                           => exists n
-                         | [ |- _ \/ exists p, PositiveMap.find p (PositiveMap.add ?n (existT _ ?t ?v) _) = Some (existT _ ?t _) /\ _ ]
-                           => right; exists n
-                         | [ H : PositiveMap.find ?n ?ctx = ?v |- _ \/ exists p, PositiveMap.find p (PositiveMap.add _ _ ?ctx) = ?v /\ _ ]
-                           => right; exists n
-                         | [ H : PositiveMap.find ?n ?G = ?a, H' : PositiveMap.find ?n ?G' = ?b, H'' : forall p, PositiveMap.find p ?G = option_map _ (PositiveMap.find p ?G') |- _ ]
-                           => (tryif assert (a = option_map (@projT1 _ _) b) by (cbn [projT1 option_map]; (reflexivity || congruence))
-                                then fail
-                                else let H1 := fresh in
-                                     pose proof (H'' n) as H1;
-                                     rewrite H, H' in H1;
-                                     cbn [option_map projT1] in H1)
-                         end ].
-      Qed.
+      Section with_var3.
+        Context {var1 var2 var3 : type -> Type}.
 
-      Lemma wf3_from_flat
-            {t}
-            (e : Flat.expr t)
-        : Flat.wf (PositiveMap.empty _) e = true -> expr.wf3 nil (from_flat e var1 (PositiveMap.empty _)) (from_flat e var2 (PositiveMap.empty _)) (from_flat e var3 (PositiveMap.empty _)).
-      Proof.
-        apply wf3_from_flat_gen; intros *;
-          repeat setoid_rewrite PositiveMap.gempty;
-          cbn [In option_map];
-          intuition (destruct_head'_ex; intuition (congruence || auto)).
-      Qed.
-    End with_var3.
-
-    Lemma Wf_FromFlat {t} (e : Flat.expr t) : Flat.wf (PositiveMap.empty _) e = true -> expr.Wf (FromFlat e).
-    Proof. intros H ??; apply wf_from_flat, H. Qed.
-
-    Lemma Wf3_FromFlat {t} (e : Flat.expr t) : Flat.wf (PositiveMap.empty _) e = true -> expr.Wf3 (FromFlat e).
-    Proof. intros H ???; apply wf3_from_flat, H. Qed.
-
-    Lemma Wf_via_flat {t} (e : Expr t)
-      : (e = GeneralizeVar (e _) /\ Flat.wf (PositiveMap.empty _) (to_flat (e _)) = true)
-        -> expr.Wf e.
-    Proof. intros [H0 H1]; rewrite H0; cbv [GeneralizeVar]; apply Wf_FromFlat, H1. Qed.
-
-    Lemma wf_to_flat'_gen
-          {t}
-          (e1 e2 : expr t)
-          G
-          (Hwf : expr.wf G e1 e2)
-      : forall (ctx1 ctx2 : PositiveMap.t type)
-               (H_G_ctx : forall t v1 v2, List.In (existT _ t (v1, v2)) G
-                                          -> (PositiveMap.find v1 ctx1 = Some t /\ PositiveMap.find v2 ctx2 = Some t))
-               cur_idx1 cur_idx2
-               (Hidx1 : forall p, PositiveMap.mem p ctx1 = true -> BinPos.Pos.lt p cur_idx1)
-               (Hidx2 : forall p, PositiveMap.mem p ctx2 = true -> BinPos.Pos.lt p cur_idx2),
-        Flat.wf ctx1 (to_flat' e1 cur_idx1) = true
-        /\ Flat.wf ctx2 (to_flat' e2 cur_idx2) = true.
-    Proof.
-      setoid_rewrite PositiveMap.mem_find; induction Hwf;
-        repeat first [ progress cbn [Flat.wf to_flat' option_map projT1 projT2 List.In fst snd eq_rect] in *
-                     | progress intros
-                     | destructure_step
-                     | solve [ eauto using conj, ex_intro, eq_refl, or_introl, or_intror with nocore ]
-                     | congruence
-                     | lazymatch goal with
-                       | [ H : BinPos.Pos.lt ?x ?x |- _ ] => exfalso; clear -H; lia
-                       | [ H : BinPos.Pos.lt (BinPos.Pos.succ ?x) ?x |- _ ] => exfalso; clear -H; lia
-                       | [ H : BinPos.Pos.lt ?x ?y, H' : BinPos.Pos.lt ?y ?x |- _ ] => exfalso; clear -H H'; lia
-                       | [ |- BinPos.Pos.lt _ _ ] => progress saturate_pos
-                       end
-                     | match goal with
-                       | [ H : ?x = Some _ |- context[?x] ] => rewrite H
-                       | [ H : ?x = None |- context[?x] ] => rewrite H
-                       | [ H : ?x = Some _, H' : context[?x] |- _ ] => rewrite H in H'
-                       | [ H : ?x = None, H' : context[?x] |- _ ] => rewrite H in H'
-                       | [ H : In _ ?G2, H' : forall t v1 v2, In _ ?G2 -> _ |- _ ] => apply H' in H
-                       end
-                     | progress rewrite_find_add
-                     | destructure_destruct_step
-                     | progress saturate_pos_fast
-                     | match goal with
-                       | [ H : context[Flat.wf _ _ = true /\ Flat.wf _ _ = true] |- Flat.wf _ _ = true /\ Flat.wf _ _ = true ]
-                         => eapply H; clear H; eauto with nocore
-                       | [ |- (?f = true /\ ?x = true) /\ (?f' = true /\ ?x' = true) ]
-                         => cut ((f = true /\ f' = true) /\ (x = true /\ x' = true));
-                            [ tauto | split ]
-                       | [ |- BinPos.Pos.lt _ _ ]
-                         => repeat match goal with
-                                   | [ H : ?T, H' : ?T |- _ ] => clear H'
-                                   | [ H : BinPos.Pos.lt _ _ |- _ ] => revert H
-                                   | [ H : _ |- _ ] => clear H
+        Lemma wf3_from_flat_gen
+              {t}
+              (e : Flat_expr t)
+          : forall (G1 : PositiveMap.t type) (G2 : list { t : _ & var1 t * var2 t * var3 t }%type)
+                   (ctx1 : PositiveMap.t { t : type & var1 t })
+                   (ctx2 : PositiveMap.t { t : type & var2 t })
+                   (ctx3 : PositiveMap.t { t : type & var3 t })
+                   (H_G1_ctx1 : forall p, PositiveMap.find p G1 = option_map (@projT1 _ _) (PositiveMap.find p ctx1))
+                   (H_G1_ctx2 : forall p, PositiveMap.find p G1 = option_map (@projT1 _ _) (PositiveMap.find p ctx2))
+                   (H_G1_ctx3 : forall p, PositiveMap.find p G1 = option_map (@projT1 _ _) (PositiveMap.find p ctx3))
+                   (H_ctx_G2 : forall t v1 v2 v3, List.In (existT _ t (v1, v2, v3)) G2
+                                                  <-> (exists p, PositiveMap.find p ctx1 = Some (existT _ t v1) /\ PositiveMap.find p ctx2 = Some (existT _ t v2) /\ PositiveMap.find p ctx3 = Some (existT _ t v3))),
+            Flat.wf (base_type_beq:=base_type_beq) G1 e = true -> expr.wf3 G2 (from_flat e var1 ctx1) (from_flat e var2 ctx2) (from_flat e var3 ctx3).
+        Proof using try_make_transport_base_type_cps_correct.
+          induction e.
+          all: repeat first [ progress cbn [Flat.wf from_flat option_map projT1 projT2 List.In fst snd] in *
+                            | progress intros
+                            | discriminate
+                            | match goal with
+                              | [ |- expr.wf3 _ _ _ _ ] => constructor
+                              | [ H : match ?x with Some _ => false | _ => _ end = true |- _ ]
+                                => destruct x eqn:?
+                              | [ H : match ?x with None => false | _ => _ end = true |- _ ]
+                                => destruct x eqn:?
+                              | [ H : andb _ _ = true |- _ ] => rewrite Bool.andb_true_iff in H; destruct H
+                              end
+                            | progress specialize_by_assumption
+                            | assumption
+                            | progress inversion_option
+                            | match goal with
+                              | [ H : ?x = ?y |- _ ]
+                                => is_var y;
+                                   match goal with
+                                   | [ H' : context[rew H in _] |- _ ] => idtac
+                                   | [ H' : context[rew <- H in _] |- _ ] => idtac
+                                   | [ |- context[rew H in _] ] => idtac
+                                   | [ |- context[rew <- H in _] ] => idtac
                                    end;
-                            lia
-                       end
-                     | apply conj ].
-    Qed.
+                                   destruct H
+                              end
+                            | progress subst
+                            | reflexivity
+                            | progress cbn [Option.bind projT1 projT2 eq_rect] in *
+                            | match goal with
+                              | [ IH : forall G : PositiveMap.t type, _ |- _ ]
+                                => match goal with
+                                   | [ H' : Flat.wf ?G ?e = true |- _ ]
+                                     => lazymatch type of IH with
+                                        | context[e] => specialize (IH G)
+                                        end
+                                   end
+                              | [ IH : forall G : list ?T, _ |- _ ]
+                                => lazymatch goal with
+                                   | [ |- context[@cons T ?x ?xs] ] => specialize (IH (x :: xs))
+                                   | [ ls : list T |- _ ] => specialize (IH ls)
+                                   end
+                              | [ IH : forall G : PositiveMap.t ?T, _ |- _ ]
+                                => lazymatch goal with
+                                   | [ |- context[@PositiveMap.add T ?n ?t ?Gv] ]
+                                     => specialize (IH (PositiveMap.add n t Gv))
+                                   | [ G : PositiveMap.t T |- _ ]
+                                     => specialize (IH G)
+                                   end
+                              | [ IH : (forall p, PositiveMap.find p (PositiveMap.add _ _ _) = option_map _ (PositiveMap.find p (PositiveMap.add _ _ ?ctx))) -> _,
+                                       H : forall p', PositiveMap.find p' _ = option_map _ (PositiveMap.find p' ?ctx) |- _ ]
+                                => let T := match type of IH with (?A -> _)%type => A end in
+                                   let H' := fresh in
+                                   cut T; [ intro H'; specialize (IH H'); clear H'
+                                          | clear -H reflect_base_type_beq; do 1 (let x := fresh "x" in intro x; specialize (H x)) ]
+                              | [ IH : (forall p, PositiveMap.find p _ = option_map _ (PositiveMap.find p ?ctx)) -> _,
+                                       H : forall p', PositiveMap.find p' _ = option_map _ (PositiveMap.find p' ?ctx) |- _ ]
+                                => let T := match type of IH with (?A -> _)%type => A end in
+                                   let H' := fresh in
+                                   cut T; [ intro H'; specialize (IH H'); clear H'
+                                          | clear -H reflect_base_type_beq; do 1 (let x := fresh "x" in intro x; specialize (H x)) ]
+                              | [ IH : (forall t v1 v2 v3, _ <-> _) -> _, H : forall t' v1' v2' v3', _ <-> _ |- _ ]
+                                => let T := match type of IH with (?A -> _)%type => A end in
+                                   let H' := fresh in
+                                   cut T; [ intro H'; specialize (IH H'); clear H'
+                                          | (*clear -H reflect_base_type_beq;*) do 4 (let x := fresh "x" in intro x; specialize (H x)) ]
+                              end
+                            | progress cbn [List.In] in *
+                            | match goal with
+                              | [ H : ?A <-> _ |- (_ \/ ?A) <-> _ ] => rewrite H; clear H
+                              | [ |- context[PositiveMap.find _ (PositiveMap.add _ _ _)] ]
+                                => rewrite !PositiveMapAdditionalFacts.gsspec || setoid_rewrite PositiveMapAdditionalFacts.gsspec
+                              | [ H : _ |- _ ] => eapply H; eassumption
+                              end
+                            | progress destruct_head'_and
+                            | progress destruct_head'_sigT
+                            | match goal with
+                              | [ H : forall p, PositiveMap.find p ?G = _, H' : PositiveMap.find ?pv ?G = _ |- _ ]
+                                => specialize (H pv); rewrite H' in H
+                              | [ H : Some _ = option_map _ ?x |- _ ] => destruct x eqn:?; cbn [option_map] in H
+                              end
+                            | progress rewrite_type_transport_correct
+                            | progress break_match_when_head (@sumbool)
+                            | progress type_beq_to_eq
+                            | match goal with
+                              | [ H : forall t v1 v2 v3, In _ ?G <-> ex _ |- In _ ?G ]
+                                => rewrite H; clear H; try solve [ repeat esplit; eassumption ]
+                              end
+                            | repeat apply conj; (reflexivity || assumption)
+                            | match goal with
+                              | [ |- (_ = _ \/ ex _) <-> (exists p, (if ?dec p ?n then _ else _) = _ /\ _ /\ _) ]
+                                => let H := fresh in
+                                   let p := fresh "p" in
+                                   split; intro H;
+                                   [ destruct H as [ | [p H] ];
+                                     [ exists n; destruct (dec n n) | exists p; destruct (dec p n) ];
+                                     repeat first [ congruence
+                                                  | progress subst
+                                                  | progress inversion_sigma
+                                                  | progress inversion_prod
+                                                  | progress cbn [eq_rect fst snd] in * ]
+                                   | destruct H as [p H];
+                                     destruct (dec p n); [ left | right; exists p ];
+                                     repeat first [ progress inversion_option
+                                                  | progress inversion_sigma
+                                                  | progress subst
+                                                  | progress eliminate_hprop_eq
+                                                  | reflexivity
+                                                  | assumption
+                                                  | progress destruct_head'_and ] ]
+                              | [ H : None = option_map _ ?x |- _ ] => destruct x eqn:?; cbn [option_map] in H
+                              end ].
+        Qed.
 
-    Lemma wf_to_flat
-          {t}
-          (e1 e2 : expr t)
-      : expr.wf nil e1 e2 -> Flat.wf (PositiveMap.empty _) (to_flat e1) = true /\ Flat.wf (PositiveMap.empty _) (to_flat e2) = true.
-    Proof.
-      intro; apply wf_to_flat'_gen with (G:=nil); eauto; intros *; cbn [In];
-        rewrite ?PositiveMap.mem_find, ?PositiveMap.gempty; intuition congruence.
-    Qed.
+        Lemma wf3_from_flat
+              {t}
+              (e : Flat_expr t)
+          : Flat.wf (base_type_beq:=base_type_beq) (PositiveMap.empty _) e = true -> expr.wf3 nil (from_flat e var1 (PositiveMap.empty _)) (from_flat e var2 (PositiveMap.empty _)) (from_flat e var3 (PositiveMap.empty _)).
+        Proof using try_make_transport_base_type_cps_correct.
+          apply wf3_from_flat_gen; intros *;
+            repeat setoid_rewrite PositiveMap.gempty;
+            cbn [In option_map];
+            intuition (destruct_head'_ex; intuition (congruence || auto)).
+        Qed.
+      End with_var3.
 
-    Lemma Wf_ToFlat {t} (e : Expr t) (Hwf : expr.Wf e) : Flat.wf (PositiveMap.empty _) (ToFlat e) = true.
-    Proof. eapply wf_to_flat, Hwf. Qed.
+      Lemma Wf_FromFlat {t} (e : Flat_expr t) : Flat.wf (base_type_beq:=base_type_beq) (PositiveMap.empty _) e = true -> expr.Wf (FromFlat e).
+      Proof. intros H ??; apply wf_from_flat, H. Qed.
 
-    Lemma Wf_FromFlat_to_flat {t} (e : expr t) : expr.wf nil e e -> expr.Wf (FromFlat (to_flat e)).
-    Proof. intro Hwf; eapply Wf_FromFlat, wf_to_flat, Hwf. Qed.
-    Lemma Wf_FromFlat_ToFlat {t} (e : Expr t) : expr.Wf e -> expr.Wf (FromFlat (ToFlat e)).
-    Proof. intro H; apply Wf_FromFlat_to_flat, H. Qed.
-    Lemma Wf_GeneralizeVar {t} (e : Expr t) : expr.Wf e -> expr.Wf (GeneralizeVar (e _)).
-    Proof. apply Wf_FromFlat_ToFlat. Qed.
+      Lemma Wf3_FromFlat {t} (e : Flat_expr t) : Flat.wf (base_type_beq:=base_type_beq) (PositiveMap.empty _) e = true -> expr.Wf3 (FromFlat e).
+      Proof. intros H ???; apply wf3_from_flat, H. Qed.
 
-    Lemma Wf3_FromFlat_to_flat {t} (e : expr t) : expr.wf nil e e -> expr.Wf3 (FromFlat (to_flat e)).
-    Proof. intro Hwf; eapply Wf3_FromFlat, wf_to_flat, Hwf. Qed.
-    Lemma Wf3_FromFlat_ToFlat {t} (e : Expr t) : expr.Wf e -> expr.Wf3 (FromFlat (ToFlat e)).
-    Proof. intro H; apply Wf3_FromFlat_to_flat, H. Qed.
-    Lemma Wf3_GeneralizeVar {t} (e : Expr t) : expr.Wf e -> expr.Wf3 (GeneralizeVar (e _)).
-    Proof. apply Wf3_FromFlat_ToFlat. Qed.
+      Lemma Wf_via_flat {t} (e : Expr t)
+        : (e = GeneralizeVar (e _) /\ Flat.wf (base_type_beq:=base_type_beq) (PositiveMap.empty _) (to_flat (e _)) = true)
+          -> expr.Wf e.
+      Proof. intros [H0 H1]; rewrite H0; cbv [GeneralizeVar]; apply Wf_FromFlat, H1. Qed.
 
-    Local Ltac t :=
-      repeat first [ reflexivity
-                   | progress saturate_pos
-                   | progress cbn [from_flat to_flat' projT1 projT2 fst snd eq_rect expr.interp List.In type.eqv] in *
-                   | progress fold @type.interp
-                   | progress cbv [Option.bind LetIn.Let_In respectful] in *
-                   | destructure_step
-                   | erewrite type.try_make_transport_cps_correct
-                     by first [ exact base.type.internal_type_dec_lb | exact base.try_make_transport_cps_correct ]
-                   | erewrite type.try_transport_correct
-                     by first [ exact base.type.internal_type_dec_lb | exact base.try_make_transport_cps_correct ]
-                   | progress intros
-                   | congruence
-                   | solve [ eauto using conj, ex_intro, eq_refl, or_introl, or_intror with nocore ]
-                   | progress cbn [type.app_curried type.for_each_lhs_of_arrow] in *
-                   | destructure_split_step
-                   | match goal with
-                     | [ |- ident.interp _ == ident.interp _ ] => apply ident.eqv_Reflexive
-                     | [ H : forall x : prod _ _, _ |- _ ] => specialize (fun a b => H (a, b))
-                     | [ H : In _ ?G2, H' : forall t v1 v2, In _ ?G2 <-> _ |- _ ] => rewrite H' in H
-                     | [ H : In _ ?G2, H' : forall t v1 v2, In _ ?G2 -> _ |- _ ] => apply H' in H
-                     | [ H' : forall t v1 v2, In _ ?G2 <-> _ |- context[In _ ?G2] ] => rewrite H'
-                     | [ H : ?x = Some ?a, H' : ?x = Some ?b |- _ ] => assert (a = b) by congruence; clear H'
-                     | [ H : BinPos.Pos.lt ?x ?x |- _ ] => exfalso; lia
-                     | [ H : BinPos.Pos.lt (BinPos.Pos.succ ?x) ?x |- _ ] => exfalso; lia
-                     | [ |- BinPos.Pos.lt _ _ ] => lia
-                     | [ |- context[PositiveMap.find _ (PositiveMap.add _ _ _)] ] => rewrite PositiveMapAdditionalFacts.gsspec
-                     | [ H : context[PositiveMap.find _ (PositiveMap.add _ _ _)] |- _ ] => rewrite PositiveMapAdditionalFacts.gsspec in H
-                     | [ |- _ \/ None = Some _ ] => left
-                     | [ |- Some _ = Some _ ] => apply f_equal
-                     | [ |- existT _ ?x _ = existT _ ?x _ ] => apply f_equal
-                     | [ |- pair _ _ = pair _ _ ] => apply f_equal2
-                     | [ H : context[type.related _ (expr.interp _ _) (expr.interp _ _)] |- type.related _ (expr.interp _ _) (expr.interp _ _) ] => eapply H; clear H; solve [ t ]
-                     end ].
-    Section gen2.
-      Context {base_interp : base.type -> Type}
-              {ident_interp1 ident_interp2 : forall t, ident t -> type.interp base_interp t}
-              {R : forall t, relation (base_interp t)}
-              {ident_interp_Proper : forall t, (eq ==> type.related R)%signature (ident_interp1 t) (ident_interp2 t)}.
-
-      Lemma interp_gen2_from_flat_to_flat'
-            {t} (e1 : expr t) (e2 : expr t) G ctx
-            (H_ctx_G : forall t v1 v2, List.In (existT _ t (v1, v2)) G
-                                       -> (exists v2', PositiveMap.find v1 ctx = Some (existT _ t v2') /\ type.related R v2' v2))
+      Lemma wf_to_flat'_gen
+            {t}
+            (e1 e2 : expr t)
+            G
             (Hwf : expr.wf G e1 e2)
-            cur_idx
-            (Hidx : forall p, PositiveMap.mem p ctx = true -> BinPos.Pos.lt p cur_idx)
-        : type.related R (expr.interp ident_interp1 (from_flat (to_flat' e1 cur_idx) _ ctx)) (expr.interp ident_interp2 e2).
-      Proof.
-        setoid_rewrite PositiveMap.mem_find in Hidx.
-        revert dependent cur_idx; revert dependent ctx; induction Hwf; intros;
-          t.
+        : forall (ctx1 ctx2 : PositiveMap.t type)
+                 (H_G_ctx : forall t v1 v2, List.In (existT _ t (v1, v2)) G
+                                            -> (PositiveMap.find v1 ctx1 = Some t /\ PositiveMap.find v2 ctx2 = Some t))
+                 cur_idx1 cur_idx2
+                 (Hidx1 : forall p, PositiveMap.mem p ctx1 = true -> BinPos.Pos.lt p cur_idx1)
+                 (Hidx2 : forall p, PositiveMap.mem p ctx2 = true -> BinPos.Pos.lt p cur_idx2),
+          Flat.wf (ident:=ident) (base_type_beq:=base_type_beq) ctx1 (to_flat' e1 cur_idx1) = true
+          /\ Flat.wf (base_type_beq:=base_type_beq) ctx2 (to_flat' e2 cur_idx2) = true.
+      Proof using try_make_transport_base_type_cps_correct.
+        setoid_rewrite PositiveMap.mem_find; induction Hwf;
+          repeat first [ progress cbn [Flat.wf to_flat' option_map projT1 projT2 List.In fst snd eq_rect] in *
+                       | progress intros
+                       | destructure_step
+                       | solve [ eauto using conj, ex_intro, eq_refl, or_introl, or_intror with nocore ]
+                       | congruence
+                       | lazymatch goal with
+                         | [ H : BinPos.Pos.lt ?x ?x |- _ ] => exfalso; clear -H; lia
+                         | [ H : BinPos.Pos.lt (BinPos.Pos.succ ?x) ?x |- _ ] => exfalso; clear -H; lia
+                         | [ H : BinPos.Pos.lt ?x ?y, H' : BinPos.Pos.lt ?y ?x |- _ ] => exfalso; clear -H H'; lia
+                         | [ H : BinPos.Pos.lt ?x ?y |- BinPos.Pos.lt ?x (Pos.succ ?y) ] => clear -H; lia
+                         | [ |- BinPos.Pos.lt _ _ ] => progress saturate_pos
+                         end
+                       | match goal with
+                         | [ H : ?x = Some _ |- context[?x] ] => rewrite H
+                         | [ H : ?x = None |- context[?x] ] => rewrite H
+                         | [ H : ?x = Some _, H' : context[?x] |- _ ] => rewrite H in H'
+                         | [ H : ?x = None, H' : context[?x] |- _ ] => rewrite H in H'
+                         | [ H : In _ ?G2, H' : forall t v1 v2, In _ ?G2 -> _ |- _ ] => apply H' in H
+                         | [ H : match ?x with Some _ => true | None => false end = true |- _ ]
+                           => destruct x eqn:?; try discriminate
+                         | [ H : match ?x with Some _ => false | None => true end = true |- _ ]
+                           => destruct x eqn:?; try discriminate
+                         | [ H : context[PositiveMap.E.eq_dec ?x ?y] |- (?x < Pos.succ ?y)%positive ]
+                           => destruct (PositiveMap.E.eq_dec x y); [ subst; clear; lia | ]
+                         end
+                       | progress rewrite_find_add
+                       | destructure_destruct_step
+                       | progress saturate_pos_fast
+                       | match goal with
+                         | [ H : context[Flat.wf _ _ = true /\ Flat.wf _ _ = true] |- Flat.wf _ _ = true /\ Flat.wf _ _ = true ]
+                           => eapply H; clear H; eauto with nocore
+                         | [ |- (?f = true /\ ?x = true) /\ (?f' = true /\ ?x' = true) ]
+                           => cut ((f = true /\ f' = true) /\ (x = true /\ x' = true));
+                              [ tauto | split ]
+                         | [ |- BinPos.Pos.lt _ _ ]
+                           => repeat match goal with
+                                     | [ H : ?T, H' : ?T |- _ ] => clear H'
+                                     | [ H : BinPos.Pos.lt _ _ |- _ ] => revert H
+                                     | [ H : _ |- _ ] => clear H
+                                     end;
+                              lia
+                         end
+                       | apply conj ].
       Qed.
 
-      Lemma Interp_gen2_FromFlat_ToFlat {t} (e : Expr t) (Hwf : expr.Wf e)
-        : type.related R (expr.Interp ident_interp1 (FromFlat (ToFlat e))) (expr.Interp ident_interp2 e).
-      Proof.
-        cbv [Interp FromFlat ToFlat to_flat].
-        apply interp_gen2_from_flat_to_flat' with (G:=nil); eauto; intros *; cbn [List.In]; rewrite ?PositiveMap.mem_find, ?PositiveMap.gempty;
-          intuition congruence.
+      Lemma wf_to_flat
+            {t}
+            (e1 e2 : expr t)
+        : expr.wf (ident:=ident) nil e1 e2 -> Flat.wf (base_type_beq:=base_type_beq) (PositiveMap.empty _) (to_flat e1) = true /\ Flat.wf (base_type_beq:=base_type_beq) (PositiveMap.empty _) (to_flat e2) = true.
+      Proof using try_make_transport_base_type_cps_correct.
+        intro; apply wf_to_flat'_gen with (G:=nil); eauto; intros *; cbn [In];
+          rewrite ?PositiveMap.mem_find, ?PositiveMap.gempty; intuition congruence.
       Qed.
 
-      Lemma Interp_gen2_GeneralizeVar {t} (e : Expr t) (Hwf : expr.Wf e)
-        : type.related R (expr.Interp ident_interp1 (GeneralizeVar (e _))) (expr.Interp ident_interp2 e).
-      Proof. apply Interp_gen2_FromFlat_ToFlat, Hwf. Qed.
-    End gen2.
-    Section gen1.
-      Context {base_interp : base.type -> Type}
-              {ident_interp : forall t, ident t -> type.interp base_interp t}
-              {R : forall t, relation (base_interp t)}
-              {ident_interp_Proper : forall t, Proper (eq ==> type.related R) (ident_interp t)}.
+      Lemma Wf_ToFlat {t} (e : Expr (ident:=ident) t) (Hwf : expr.Wf e) : Flat.wf (base_type_beq:=base_type_beq) (PositiveMap.empty _) (ToFlat e) = true.
+      Proof. eapply wf_to_flat, Hwf. Qed.
 
-      Lemma interp_gen1_from_flat_to_flat'
-            {t} (e1 : expr t) (e2 : expr t) G ctx
-            (H_ctx_G : forall t v1 v2, List.In (existT _ t (v1, v2)) G
-                                       -> (exists v2', PositiveMap.find v1 ctx = Some (existT _ t v2') /\ type.related R v2' v2))
-            (Hwf : expr.wf G e1 e2)
-            cur_idx
-            (Hidx : forall p, PositiveMap.mem p ctx = true -> BinPos.Pos.lt p cur_idx)
-        : type.related R (expr.interp ident_interp (from_flat (to_flat' e1 cur_idx) _ ctx)) (expr.interp ident_interp e2).
-      Proof. apply @interp_gen2_from_flat_to_flat' with (G:=G); eassumption. Qed.
+      Lemma Wf_FromFlat_to_flat {t} (e : expr t) : expr.wf (ident:=ident) nil e e -> expr.Wf (FromFlat (to_flat e)).
+      Proof. intro Hwf; eapply Wf_FromFlat, wf_to_flat, Hwf. Qed.
+      Lemma Wf_FromFlat_ToFlat {t} (e : Expr t) : expr.Wf (ident:=ident) e -> expr.Wf (FromFlat (ToFlat e)).
+      Proof. intro H; apply Wf_FromFlat_to_flat, H. Qed.
+      Lemma Wf_GeneralizeVar {t} (e : Expr t) : expr.Wf (ident:=ident) e -> expr.Wf (GeneralizeVar (e _)).
+      Proof. apply Wf_FromFlat_ToFlat. Qed.
 
-      Lemma Interp_gen1_FromFlat_ToFlat {t} (e : Expr t) (Hwf : expr.Wf e)
-        : type.related R (expr.Interp ident_interp (FromFlat (ToFlat e))) (expr.Interp ident_interp e).
-      Proof. apply @Interp_gen2_FromFlat_ToFlat; eassumption. Qed.
+      Lemma Wf3_FromFlat_to_flat {t} (e : expr t) : expr.wf (ident:=ident) nil e e -> expr.Wf3 (FromFlat (to_flat e)).
+      Proof. intro Hwf; eapply Wf3_FromFlat, wf_to_flat, Hwf. Qed.
+      Lemma Wf3_FromFlat_ToFlat {t} (e : Expr t) : expr.Wf (ident:=ident) e -> expr.Wf3 (FromFlat (ToFlat e)).
+      Proof. intro H; apply Wf3_FromFlat_to_flat, H. Qed.
+      Lemma Wf3_GeneralizeVar {t} (e : Expr t) : expr.Wf (ident:=ident) e -> expr.Wf3 (GeneralizeVar (e _)).
+      Proof. apply Wf3_FromFlat_ToFlat. Qed.
 
-      Lemma Interp_gen1_GeneralizeVar {t} (e : Expr t) (Hwf : expr.Wf e)
-        : type.related R (expr.Interp ident_interp (GeneralizeVar (e _))) (expr.Interp ident_interp e).
-      Proof. apply @Interp_gen2_GeneralizeVar; eassumption. Qed.
-    End gen1.
+      Local Ltac t :=
+        repeat first [ reflexivity
+                     | progress saturate_pos
+                     | progress cbn [from_flat to_flat' projT1 projT2 fst snd eq_rect expr.interp List.In type.eqv] in *
+                     | progress fold @type.interp
+                     | progress cbv [Option.bind LetIn.Let_In respectful] in *
+                     | destructure_step
+                     | progress rewrite_type_transport_correct
+                     | progress intros
+                     | congruence
+                     | solve [ eauto using conj, ex_intro, eq_refl, or_introl, or_intror with nocore ]
+                     | progress cbn [type.app_curried type.for_each_lhs_of_arrow] in *
+                     | destructure_split_step
+                     | match goal with
+                       (*| [ |- ident.interp _ == ident.interp _ ] => apply ident.eqv_Reflexive*)
+                       | [ H : forall x : prod _ _, _ |- _ ] => specialize (fun a b => H (a, b))
+                       | [ H : In _ ?G2, H' : forall t v1 v2, In _ ?G2 <-> _ |- _ ] => rewrite H' in H
+                       | [ H : In _ ?G2, H' : forall t v1 v2, In _ ?G2 -> _ |- _ ] => apply H' in H
+                       | [ H' : forall t v1 v2, In _ ?G2 <-> _ |- context[In _ ?G2] ] => rewrite H'
+                       | [ H : ?x = Some ?a, H' : ?x = Some ?b |- _ ] => assert (a = b) by congruence; clear H'
+                       | [ H : BinPos.Pos.lt ?x ?x |- _ ] => exfalso; lia
+                       | [ H : BinPos.Pos.lt (BinPos.Pos.succ ?x) ?x |- _ ] => exfalso; lia
+                       | [ |- BinPos.Pos.lt _ _ ] => lia
+                       | [ |- context[PositiveMap.find _ (PositiveMap.add _ _ _)] ] => rewrite PositiveMapAdditionalFacts.gsspec
+                       | [ H : context[PositiveMap.find _ (PositiveMap.add _ _ _)] |- _ ] => rewrite PositiveMapAdditionalFacts.gsspec in H
+                       | [ |- _ \/ None = Some _ ] => left
+                       | [ |- Some _ = Some _ ] => apply f_equal
+                       | [ |- existT _ ?x _ = existT _ ?x _ ] => apply f_equal
+                       | [ |- pair _ _ = pair _ _ ] => apply f_equal2
+                       | [ H : context[type.related _ (expr.interp _ _) (expr.interp _ _)] |- type.related _ (expr.interp _ _) (expr.interp _ _) ] => eapply H; clear H; solve [ t ]
+                       end ].
+      Section gen2.
+        Context {base_interp : base_type -> Type}
+                {ident_interp1 ident_interp2 : forall t, ident t -> type.interp base_interp t}
+                {R : forall t, relation (base_interp t)}
+                {ident_interp_Proper : forall t, (eq ==> type.related R)%signature (ident_interp1 t) (ident_interp2 t)}.
 
-    Section with_cast.
-      Context {cast_outside_of_range : zrange -> Z -> Z}.
+        Lemma interp_gen2_from_flat_to_flat'
+              {t} (e1 : expr t) (e2 : expr t) G ctx
+              (H_ctx_G : forall t v1 v2, List.In (existT _ t (v1, v2)) G
+                                         -> (exists v2', PositiveMap.find v1 ctx = Some (existT _ t v2') /\ type.related R v2' v2))
+              (Hwf : expr.wf G e1 e2)
+              cur_idx
+              (Hidx : forall p, PositiveMap.mem p ctx = true -> BinPos.Pos.lt p cur_idx)
+          : type.related R (expr.interp ident_interp1 (from_flat (to_flat' e1 cur_idx) _ ctx)) (expr.interp ident_interp2 e2).
+        Proof using try_make_transport_base_type_cps_correct ident_interp_Proper.
+          setoid_rewrite PositiveMap.mem_find in Hidx.
+          revert dependent cur_idx; revert dependent ctx; induction Hwf; intros;
+            t.
+        Qed.
 
-      Local Notation Interp := (expr.Interp (@ident.gen_interp cast_outside_of_range)).
+        Lemma Interp_gen2_FromFlat_ToFlat {t} (e : Expr t) (Hwf : expr.Wf e)
+          : type.related R (expr.Interp ident_interp1 (FromFlat (ToFlat e))) (expr.Interp ident_interp2 e).
+        Proof using try_make_transport_base_type_cps_correct ident_interp_Proper.
+          cbv [expr.Interp FromFlat ToFlat to_flat].
+          apply interp_gen2_from_flat_to_flat' with (G:=nil); eauto; intros *; cbn [List.In]; rewrite ?PositiveMap.mem_find, ?PositiveMap.gempty;
+            intuition congruence.
+        Qed.
 
-      Lemma Interp_FromFlat_ToFlat {t} (e : Expr t) (Hwf : expr.Wf e) : Interp (FromFlat (ToFlat e)) == Interp e.
-      Proof. apply @Interp_gen1_FromFlat_ToFlat; eauto using ident.gen_interp_Proper. Qed.
+        Lemma Interp_gen2_GeneralizeVar {t} (e : Expr t) (Hwf : expr.Wf e)
+          : type.related R (expr.Interp ident_interp1 (GeneralizeVar (e _))) (expr.Interp ident_interp2 e).
+        Proof. apply Interp_gen2_FromFlat_ToFlat, Hwf. Qed.
+      End gen2.
+      Section gen1.
+        Context {base_interp : base_type -> Type}
+                {ident_interp : forall t, ident t -> type.interp base_interp t}
+                {R : forall t, relation (base_interp t)}
+                {ident_interp_Proper : forall t, Proper (eq ==> type.related R) (ident_interp t)}.
 
-      Lemma Interp_GeneralizeVar {t} (e : Expr t) (Hwf : expr.Wf e) : Interp (GeneralizeVar (e _)) == Interp e.
-      Proof. apply Interp_FromFlat_ToFlat, Hwf. Qed.
-    End with_cast.
+        Lemma interp_gen1_from_flat_to_flat'
+              {t} (e1 : expr t) (e2 : expr t) G ctx
+              (H_ctx_G : forall t v1 v2, List.In (existT _ t (v1, v2)) G
+                                         -> (exists v2', PositiveMap.find v1 ctx = Some (existT _ t v2') /\ type.related R v2' v2))
+              (Hwf : expr.wf G e1 e2)
+              cur_idx
+              (Hidx : forall p, PositiveMap.mem p ctx = true -> BinPos.Pos.lt p cur_idx)
+          : type.related R (expr.interp ident_interp (from_flat (to_flat' e1 cur_idx) _ ctx)) (expr.interp ident_interp e2).
+        Proof. apply @interp_gen2_from_flat_to_flat' with (G:=G); eassumption. Qed.
+
+        Lemma Interp_gen1_FromFlat_ToFlat {t} (e : Expr t) (Hwf : expr.Wf e)
+          : type.related R (expr.Interp ident_interp (FromFlat (ToFlat e))) (expr.Interp ident_interp e).
+        Proof. apply @Interp_gen2_FromFlat_ToFlat; eassumption. Qed.
+
+        Lemma Interp_gen1_GeneralizeVar {t} (e : Expr t) (Hwf : expr.Wf e)
+          : type.related R (expr.Interp ident_interp (GeneralizeVar (e _))) (expr.Interp ident_interp e).
+        Proof. apply @Interp_gen2_GeneralizeVar; eassumption. Qed.
+      End gen1.
+
+      (*
+      Section with_cast.
+        Context {cast_outside_of_range : zrange -> Z -> Z}.
+
+        Local Notation Interp := (expr.Interp (@ident.gen_interp cast_outside_of_range)).
+
+        Lemma Interp_FromFlat_ToFlat {t} (e : Expr t) (Hwf : expr.Wf e) : Interp (FromFlat (ToFlat e)) == Interp e.
+        Proof. apply @Interp_gen1_FromFlat_ToFlat; eauto using ident.gen_interp_Proper. Qed.
+
+        Lemma Interp_GeneralizeVar {t} (e : Expr t) (Hwf : expr.Wf e) : Interp (GeneralizeVar (e _)) == Interp e.
+        Proof. apply Interp_FromFlat_ToFlat, Hwf. Qed.
+      End with_cast.
+       *)
+    End with_base_type.
   End GeneralizeVar.
 
-  Ltac prove_Wf _ :=
+  Ltac prove_Wf_with extra_tac :=
     lazymatch goal with
-    | [ |- expr.Wf ?e ] => apply (@GeneralizeVar.Wf_via_flat _ e); vm_cast_no_check (conj (eq_refl e) (eq_refl true))
+    | [ |- @expr.Wf ?base_type ?ident ?t ?e ]
+      => refine (@GeneralizeVar.Wf_via_flat base_type ident _ _ _ _ _ t e _);
+         [ solve [ assumption | auto with nocore | typeclasses eauto | extra_tac ()
+                   | let G := match goal with |- ?G => G end in
+                     fail 1 "Could not automatically solve" G ]..
+         | vm_cast_no_check (conj (eq_refl e) (eq_refl true)) ]
     end.
 
-  Global Hint Extern 0 (?x == ?x) => apply expr.Wf_Interp_Proper : wf interp.
+  Ltac prove_Wf _ := prove_Wf_with ltac:(fun _ => idtac).
+
+  Global Hint Extern 0 (?x == ?x) => apply expr.Wf_Interp_Proper_gen : wf interp.
   Hint Resolve GeneralizeVar.Wf_FromFlat_ToFlat GeneralizeVar.Wf_GeneralizeVar : wf.
   Hint Resolve GeneralizeVar.Wf3_FromFlat_ToFlat GeneralizeVar.Wf3_GeneralizeVar : wf.
-  Hint Rewrite @GeneralizeVar.Interp_GeneralizeVar @GeneralizeVar.Interp_FromFlat_ToFlat : interp.
+  Hint Rewrite @GeneralizeVar.Interp_gen1_GeneralizeVar @GeneralizeVar.Interp_gen1_FromFlat_ToFlat : interp.
 End Compilers.

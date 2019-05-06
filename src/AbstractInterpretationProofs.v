@@ -36,6 +36,8 @@ Require Import Crypto.Util.Tactics.DoWithHyp.
 Require Import Crypto.Language.
 Require Import Crypto.LanguageInversion.
 Require Import Crypto.LanguageWf.
+Require Import Crypto.IdentifierWf.
+Require Import Crypto.CastLemmas.
 Require Import Crypto.UnderLetsProofs.
 Require Import Crypto.AbstractInterpretation.
 Require Import Crypto.AbstractInterpretationWf.
@@ -47,6 +49,7 @@ Module Compilers.
   Import AbstractInterpretation.Compilers.
   Import LanguageInversion.Compilers.
   Import LanguageWf.Compilers.
+  Import IdentifierWf.Compilers.
   Import UnderLetsProofs.Compilers.
   Import AbstractInterpretationWf.Compilers.
   Import AbstractInterpretationZRangeProofs.Compilers.
@@ -751,7 +754,9 @@ Module Compilers.
                          | progress subst
                          | progress eliminate_hprop_eq
                          | progress cbn [expr.interp eq_rect] in *
-                         | erewrite interp_annotate_ident by eassumption
+                         | match goal with
+                           | [ H : annotate_ident _ _ = Some _ |- _ ] => rewrite (interp_annotate_ident _ _ _ H) by eassumption
+                           end
                          | progress expr.invert_match
                          | progress type_beq_to_eq
                          | progress rewrite_type_transport_correct
@@ -792,6 +797,11 @@ Module Compilers.
                             | progress break_innermost_match_hyps
                             | progress expr.invert_subst
                             | progress cbn [fst snd UnderLets.interp expr.interp ident_interp Nat.add] in *
+                            | match goal with
+                              | [ H : context[ident_interp (ident.ident_Literal _)] |- _ ] => rewrite ident.interp_ident_Literal in H
+                              | [ H : context[ident_interp ident.ident_Some] |- _ ] => rewrite ident.interp_ident_Some in H
+                              | [ H : context[ident_interp ident.ident_pair] |- _ ] => rewrite ident.interp_ident_pair in H
+                              end
                             | rewrite !UnderLets.interp_splice
                             | rewrite !UnderLets.interp_splice_list
                             | rewrite !List.map_map
@@ -838,6 +848,15 @@ Module Compilers.
                               end
                             | apply Nat.eq_le_incl
                             | rewrite <- List.map_map with (f:=fst), map_fst_combine
+                            | match goal with
+                              | [ |- context[List.map (fun a : ?A * ?B => @?body a) (List.combine _ _)] ]
+                                => let aa := fresh in
+                                   let bb := fresh in
+                                   let g' := match (eval cbn [fst] in (fun (bb : B) (aa : A) => body (aa, bb))) with
+                                             | fun _ => ?g => g
+                                             end in
+                                   erewrite <- List.map_map with (f:=fst) (g:=g'), map_fst_combine
+                              end
                             | rewrite Lists.List.firstn_all2 by distr_length
                             | apply map_nth_default_seq
                             | progress destruct_head' option
@@ -1091,7 +1110,7 @@ Module Compilers.
             [ intros arg1 arg2 Harg12 Harg1
             | intros arg1 Harg11 Harg1 ].
           all: eapply Compilers.type.andb_bool_impl_and_for_each_lhs_of_arrow in Harg1; [ | apply ZRange.type.option.is_bounded_by_impl_related_hetero ].
-          all: eapply ident.interp_eval_with_bound with (abstraction_relation':=@abstraction_relation') (abstract_domain'_R:=fun t => abstract_domain'_R t); eauto using bottom'_bottom with typeclass_instances.
+          all: eapply ident.interp_eval_with_bound with (abstraction_relation':=@abstraction_relation') (abstract_domain'_R:=fun t => abstract_domain'_R t); eauto using bottom'_bottom, interp_annotate_ident with typeclass_instances.
           all: intros; (eapply extract_list_state_related + eapply extract_option_state_related); eassumption.
         Qed.
 
@@ -1107,7 +1126,7 @@ Module Compilers.
         Proof using Hrelax.
           cbv [partial.eta_expand_with_bound]; intros arg1 arg2 Harg12 Harg1.
           eapply Compilers.type.andb_bool_impl_and_for_each_lhs_of_arrow in Harg1.
-          { apply ident.interp_eta_expand_with_bound with (abstraction_relation':=@abstraction_relation') (abstract_domain'_R:=fun t => abstract_domain'_R t); eauto using bottom'_bottom with typeclass_instances.
+          { apply ident.interp_eta_expand_with_bound with (abstraction_relation':=@abstraction_relation') (abstract_domain'_R:=fun t => abstract_domain'_R t); eauto using bottom'_bottom, interp_annotate_ident with typeclass_instances.
             all: intros; (eapply extract_list_state_related + eapply extract_option_state_related); eassumption. }
           { apply ZRange.type.option.is_bounded_by_impl_related_hetero. }
         Qed.
@@ -1272,7 +1291,7 @@ Module Compilers.
       by (hnf; etransitivity; [ eassumption | symmetry; eassumption ]).
     assert (arg2_Proper : Proper (type.and_for_each_lhs_of_arrow (@type.related base.type base.interp (fun _ => eq))) arg2)
       by (hnf; etransitivity; [ symmetry; eassumption | eassumption ]).
-    rewrite <- (@GeneralizeVar.Interp_gen1_GeneralizeVar _ _ _ _ _ E) by auto with wf.
+    rewrite <- (GeneralizeVar.Interp_gen1_GeneralizeVar E) by auto with wf.
     eapply Interp_EvalWithBound; eauto with wf typeclass_instances.
   Qed.
 
@@ -1315,8 +1334,8 @@ Module Compilers.
         by (hnf; etransitivity; [ eassumption | symmetry; eassumption ]).
     assert (arg2_Proper : Proper (type.and_for_each_lhs_of_arrow (@type.related base.type base.interp (fun _ => eq))) arg2)
       by (hnf; etransitivity; [ symmetry; eassumption | eassumption ]).
-    rewrite <- (@GeneralizeVar.Interp_GeneralizeVar _ _ E) by auto.
-    apply Interp_EtaExpandWithListInfoFromBound; auto with wf.
+    rewrite <- (GeneralizeVar.Interp_gen1_GeneralizeVar E) by auto.
+    apply Interp_EtaExpandWithListInfoFromBound; eauto with wf.
   Qed.
 
   Theorem CheckedPartialEvaluateWithBounds_Correct
@@ -1341,7 +1360,7 @@ Module Compilers.
     cbv [CheckedPartialEvaluateWithBounds Let_In] in *;
       break_innermost_match_hyps; inversion_sum; subst.
     let H := lazymatch goal with H : _ = nil |- _ => H end in
-    pose proof (@Interp_WithoutUnsupportedCasts _ _ H ltac:(solve [ auto with wf ])) as H'; clear H;
+    pose proof (@Interp_WithoutUnsupportedCasts _ _ H ltac:(solve [ eauto with wf ])) as H'; clear H;
       assert (forall cast_outside_of_range1 cast_outside_of_range2,
                  expr.Interp (@ident.gen_interp cast_outside_of_range1) E == expr.Interp (@ident.gen_interp cast_outside_of_range2) E)
       by (intros c1 c2; specialize (H' c1 c2);
@@ -1363,6 +1382,6 @@ Module Compilers.
                         | apply type.app_curried_Proper
                         | apply expr.Wf_Interp_Proper_gen
                         | progress intros ]. }
-    { auto with wf typeclass_instances. }
+    { eauto with wf typeclass_instances. }
   Qed.
 End Compilers.

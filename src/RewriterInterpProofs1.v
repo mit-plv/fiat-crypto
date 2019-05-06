@@ -33,6 +33,7 @@ Require Import Crypto.Util.Option.
 Require Import Crypto.Util.CPSNotations.
 Require Import Crypto.Util.HProp.
 Require Import Crypto.Util.Decidable.
+Require Import Crypto.Util.Bool.Reflect.
 Require Import Crypto.Util.Notations.
 Import ListNotations. Local Open Scope bool_scope. Local Open Scope Z_scope.
 
@@ -47,7 +48,6 @@ Module Compilers.
   Import Rewriter.Compilers.
   Import RewriterWf1.Compilers.
   Import expr.Notations.
-  Import defaults.
   Import Rewriter.Compilers.RewriteRules.
   Import RewriterWf1.Compilers.RewriteRules.
 
@@ -57,15 +57,24 @@ Module Compilers.
       Import RewriterWf1.Compilers.RewriteRules.Compile.
 
       Section with_var.
+        Context {base : Type}.
+        Local Notation base_type := (base.type base).
+        Local Notation pbase_type := (pattern.base.type base).
+        Local Notation type := (type.type base_type).
+        Local Notation ptype := (type.type pbase_type).
         Local Notation type_of_list
           := (fold_right (fun a b => prod a b) unit).
         Local Notation type_of_list_cps
           := (fold_right (fun a K => a -> K)).
-        Context {ident var : type.type base.type -> Type}
-                (eta_ident_cps : forall {T : type.type base.type -> Type} {t} (idc : ident t)
+        Context {base_beq : base -> base -> bool}
+                {reflect_base_beq : reflect_rel (@eq base) base_beq}
+                {try_make_transport_base_cps : type.try_make_transport_cpsT base}
+                {try_make_transport_base_cps_correct : type.try_make_transport_cps_correctT base}
+                {ident var : type -> Type}
+                (eta_ident_cps : forall {T : type -> Type} {t} (idc : ident t)
                                         (f : forall t', ident t' -> T t'),
                     T t)
-                {pident : type.type pattern.base.type -> Type}
+                {pident : ptype -> Type}
                 (pident_arg_types : forall t, pident t -> list Type)
                 (pident_unify pident_unify_unknown : forall t t' (idc : pident t) (idc' : ident t'), option (type_of_list (pident_arg_types t idc)))
                 {raw_pident : Type}
@@ -74,7 +83,7 @@ Module Compilers.
 
                 (full_types : raw_pident -> Type)
                 (invert_bind_args invert_bind_args_unknown : forall t (idc : ident t) (pidc : raw_pident), option (full_types pidc))
-                (type_of_raw_pident : forall (pidc : raw_pident), full_types pidc -> type.type base.type)
+                (type_of_raw_pident : forall (pidc : raw_pident), full_types pidc -> type)
                 (raw_pident_to_typed : forall (pidc : raw_pident) (args : full_types pidc), ident (type_of_raw_pident pidc args))
                 (raw_pident_is_simple : raw_pident -> bool)
                 (pident_unify_unknown_correct
@@ -88,28 +97,28 @@ Module Compilers.
                  : forall t idc p f (pf : invert_bind_args t idc p = Some f),
                     raw_pident_to_typed p f = rew [ident] raw_pident_to_typed_invert_bind_args_type t idc p f pf in idc).
 
-        Local Notation type := (type.type base.type).
-        Local Notation expr := (@expr.expr base.type ident var).
-        Local Notation pattern := (@pattern.pattern pident).
-        Local Notation UnderLets := (@UnderLets.UnderLets base.type ident var).
-        Local Notation ptype := (type.type pattern.base.type).
-        Local Notation value' := (@value' base.type ident var).
-        Local Notation value := (@value base.type ident var).
-        Local Notation value_with_lets := (@value_with_lets base.type ident var).
-        Local Notation Base_value := (@Base_value base.type ident var).
-        Local Notation splice_under_lets_with_value := (@splice_under_lets_with_value base.type ident var).
-        Local Notation splice_value_with_lets := (@splice_value_with_lets base.type ident var).
-        Local Notation rawexpr := (@rawexpr ident var).
-        Local Notation eval_decision_tree := (@eval_decision_tree ident var raw_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple).
-        Local Notation reveal_rawexpr_cps_gen := (@reveal_rawexpr_cps_gen ident var).
-        Local Notation reveal_rawexpr_cps := (@reveal_rawexpr_cps ident var).
-        Local Notation eval_rewrite_rules := (@eval_rewrite_rules ident var pident pident_arg_types pident_unify pident_unify_unknown raw_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple).
-        Local Notation rewrite_rulesT := (@rewrite_rulesT ident var pident pident_arg_types).
-        Local Notation rewrite_with_rule := (@rewrite_with_rule ident var pident pident_arg_types pident_unify pident_unify_unknown).
-        Let type_base (t : base.type) : type := type.base t.
-        Coercion type_base : base.type >-> type.
+        Local Notation expr := (@expr.expr base_type ident var).
+        Local Notation pattern := (@pattern.pattern base pident).
+        Local Notation UnderLets := (@UnderLets.UnderLets base_type ident var).
+        Local Notation value' := (@value' base_type ident var).
+        Local Notation value := (@value base_type ident var).
+        Local Notation value_with_lets := (@value_with_lets base_type ident var).
+        Local Notation Base_value := (@Base_value base_type ident var).
+        Local Notation splice_under_lets_with_value := (@splice_under_lets_with_value base_type ident var).
+        Local Notation splice_value_with_lets := (@splice_value_with_lets base_type ident var).
+        Local Notation rawexpr := (@rawexpr base ident var).
+        Local Notation eval_decision_tree := (@eval_decision_tree base ident var raw_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple).
+        Local Notation reveal_rawexpr_cps_gen := (@reveal_rawexpr_cps_gen base ident var).
+        Local Notation reveal_rawexpr_cps := (@reveal_rawexpr_cps base ident var).
+        Local Notation eval_rewrite_rules := (@eval_rewrite_rules base try_make_transport_base_cps base_beq ident var pident pident_arg_types pident_unify pident_unify_unknown raw_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple).
+        Local Notation rewrite_rulesT := (@rewrite_rulesT base ident var pident pident_arg_types).
+        Local Notation rewrite_with_rule := (@rewrite_with_rule base try_make_transport_base_cps base_beq ident var pident pident_arg_types pident_unify pident_unify_unknown).
+        Let type_base (x : base) : @base.type base := base.type.type_base x.
+        Let base' {bt} (x : Compilers.base.type bt) : type.type _ := type.base x.
+        Local Coercion base' : base.type >-> type.type.
+        Local Coercion type_base : base >-> base.type.
 
-        Context (reify_and_let_binds_base_cps : forall (t : base.type), expr t -> forall T, (expr t -> UnderLets T) -> UnderLets T).
+        Context (reify_and_let_binds_base_cps : forall (t : base_type), expr t -> forall T, (expr t -> UnderLets T) -> UnderLets T).
 
         Local Notation "e <---- e' ; f" := (splice_value_with_lets e' (fun e => f%under_lets)) : under_lets_scope.
         Local Notation "e <----- e' ; f" := (splice_under_lets_with_value e' (fun e => f%under_lets)) : under_lets_scope.
@@ -165,8 +174,6 @@ Module Compilers.
           destruct r.
           all: cbn [eval_decision_tree fold_right].
           all: destruct app_case as [app_case|].
-          Set Ltac Profiling.
-          Reset Ltac Profile.
           all: repeat first [ match goal with
                               | [ |- context[?x = ?x \/ _] ] => solve [ auto ]
                               | [ |- context[_ \/ ?x = ?x] ] => solve [ auto ]
@@ -314,10 +321,10 @@ Module Compilers.
         Qed.
 
         Lemma eval_rewrite_rules_correct
-              (do_again : forall t : base.type, @expr.expr base.type ident value t -> UnderLets (expr t))
+              (do_again : forall t : base_type, @expr.expr base_type ident value t -> UnderLets (expr t))
               (maybe_do_again
-               := fun (should_do_again : bool) (t : base.type)
-                  => if should_do_again return ((@expr.expr base.type ident (if should_do_again then value else var) t) -> UnderLets (expr t))
+               := fun (should_do_again : bool) (t : base_type)
+                  => if should_do_again return ((@expr.expr base_type ident (if should_do_again then value else var) t) -> UnderLets (expr t))
                      then do_again t
                      else UnderLets.Base)
               (d : decision_tree)
@@ -348,16 +355,26 @@ Module Compilers.
       End with_var.
 
       Section with_interp.
+        Context {base : Type}.
+        Local Notation base_type := (base.type base).
+        Local Notation pbase_type := (pattern.base.type base).
+        Local Notation type := (type.type base_type).
+        Local Notation ptype := (type.type pbase_type).
         Local Notation type_of_list
           := (fold_right (fun a b => prod a b) unit).
         Local Notation type_of_list_cps
           := (fold_right (fun a K => a -> K)).
-        Context {ident : type.type base.type -> Type}
-                {ident_interp : forall t, ident t -> type.interp base.interp t}
-                (eta_ident_cps : forall {T : type.type base.type -> Type} {t} (idc : ident t)
+        Context {base_beq : base -> base -> bool}
+                {reflect_base_beq : reflect_rel (@eq base) base_beq}
+                {try_make_transport_base_cps : type.try_make_transport_cpsT base}
+                {try_make_transport_base_cps_correct : type.try_make_transport_cps_correctT base}
+                {ident : type -> Type}
+                {base_interp : base -> Type}
+                {ident_interp : forall t, ident t -> type.interp (base.interp base_interp) t}
+                (eta_ident_cps : forall {T : type -> Type} {t} (idc : ident t)
                                         (f : forall t', ident t' -> T t'),
                     T t)
-                {pident : type.type pattern.base.type -> Type}
+                {pident : ptype -> Type}
                 (pident_arg_types : forall t, pident t -> list Type)
                 (pident_unify pident_unify_unknown : forall t t' (idc : pident t) (idc' : ident t'), option (type_of_list (pident_arg_types t idc)))
                 {raw_pident : Type}
@@ -366,7 +383,7 @@ Module Compilers.
 
                 (full_types : raw_pident -> Type)
                 (invert_bind_args invert_bind_args_unknown : forall t (idc : ident t) (pidc : raw_pident), option (full_types pidc))
-                (type_of_raw_pident : forall (pidc : raw_pident), full_types pidc -> type.type base.type)
+                (type_of_raw_pident : forall (pidc : raw_pident), full_types pidc -> type)
                 (raw_pident_to_typed : forall (pidc : raw_pident) (args : full_types pidc), ident (type_of_raw_pident pidc args))
                 (raw_pident_is_simple : raw_pident -> bool)
                 (pident_unify_unknown_correct
@@ -389,60 +406,59 @@ Module Compilers.
                     -> forall evm pf,
                       rew [ident] pf in @pident_to_typed t idc evm v = idc').
 
-        Local Notation var := (type.interp base.interp) (only parsing).
-        Local Notation type := (type.type base.type).
-        Local Notation expr := (@expr.expr base.type ident var).
-        Local Notation pattern := (@pattern.pattern pident).
-        Local Notation UnderLets := (@UnderLets.UnderLets base.type ident var).
-        Local Notation ptype := (type.type pattern.base.type).
-        Local Notation value' := (@value' base.type ident var).
-        Local Notation value := (@value base.type ident var).
-        Local Notation value_with_lets := (@value_with_lets base.type ident var).
-        Local Notation Base_value := (@Base_value base.type ident var).
-        Local Notation splice_under_lets_with_value := (@splice_under_lets_with_value base.type ident var).
-        Local Notation splice_value_with_lets := (@splice_value_with_lets base.type ident var).
-        Local Notation rawexpr := (@rawexpr ident var).
-        Local Notation eval_decision_tree := (@eval_decision_tree ident var raw_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple).
-        Local Notation eval_rewrite_rules := (@eval_rewrite_rules ident var pident pident_arg_types pident_unify pident_unify_unknown raw_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple).
-        Local Notation rewrite_rulesT := (@rewrite_rulesT ident var pident pident_arg_types).
-        Local Notation rewrite_with_rule := (@rewrite_with_rule ident var pident pident_arg_types pident_unify pident_unify_unknown).
-        Local Notation reify := (@reify ident var).
-        Local Notation reflect := (@reflect ident var).
-        (*Local Notation rawexpr_equiv_expr := (@rawexpr_equiv_expr ident var).*)
-        Local Notation rewrite_rule_data_interp_goodT := (@rewrite_rule_data_interp_goodT ident pident pident_arg_types pident_to_typed ident_interp).
-        Local Notation rewrite_rules_interp_goodT := (@rewrite_rules_interp_goodT ident pident pident_arg_types pident_to_typed ident_interp).
-        Local Notation rewrite_ruleTP := (@rewrite_ruleTP ident var pident pident_arg_types).
-        Local Notation rewrite_ruleT := (@rewrite_ruleT ident var pident pident_arg_types).
-        Local Notation unify_pattern := (@unify_pattern ident var pident pident_arg_types pident_unify pident_unify_unknown).
-        Local Notation unify_pattern' := (@unify_pattern' ident var pident pident_arg_types pident_unify pident_unify_unknown).
-        Local Notation under_with_unification_resultT_relation_hetero := (@under_with_unification_resultT_relation_hetero ident var pident pident_arg_types).
-        Local Notation under_with_unification_resultT'_relation_hetero := (@under_with_unification_resultT'_relation_hetero ident var pident pident_arg_types).
-        Local Notation assemble_identifier_rewriters := (@assemble_identifier_rewriters ident var eta_ident_cps pident pident_arg_types pident_unify pident_unify_unknown raw_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple).
-        Local Notation assemble_identifier_rewriters' := (@assemble_identifier_rewriters' ident var pident pident_arg_types pident_unify pident_unify_unknown raw_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple).
-        Local Notation pattern_default_interp' := (@pattern_default_interp' ident pident pident_arg_types pident_to_typed (@ident_interp)).
-        Local Notation pattern_default_interp := (@pattern_default_interp ident pident pident_arg_types pident_to_typed (@ident_interp)).
-        Local Notation pattern_collect_vars := (@pattern.collect_vars pident).
-        Local Notation app_with_unification_resultT_cps := (@app_with_unification_resultT_cps pident pident_arg_types).
-        Local Notation app_transport_with_unification_resultT'_cps := (@app_transport_with_unification_resultT'_cps pident pident_arg_types).
-        Local Notation with_unification_resultT' := (@with_unification_resultT' pident pident_arg_types).
-        Local Notation value'_interp := (@value'_interp ident ident_interp).
-        Local Notation eval_decision_tree_correct := (@eval_decision_tree_correct ident var raw_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple invert_bind_args_unknown_correct raw_pident_to_typed_invert_bind_args_type raw_pident_to_typed_invert_bind_args).
+        Local Notation var := (type.interp (base.interp base_interp)) (only parsing).
+        Local Notation expr := (@expr.expr base_type ident var).
+        Local Notation pattern := (@pattern.pattern base pident).
+        Local Notation UnderLets := (@UnderLets.UnderLets base_type ident var).
+        Local Notation value' := (@value' base_type ident var).
+        Local Notation value := (@value base_type ident var).
+        Local Notation value_with_lets := (@value_with_lets base_type ident var).
+        Local Notation Base_value := (@Base_value base_type ident var).
+        Local Notation splice_under_lets_with_value := (@splice_under_lets_with_value base_type ident var).
+        Local Notation splice_value_with_lets := (@splice_value_with_lets base_type ident var).
+        Local Notation rawexpr := (@rawexpr base ident var).
+        Local Notation eval_decision_tree := (@eval_decision_tree base ident var raw_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple).
+        Local Notation eval_rewrite_rules := (@eval_rewrite_rules base try_make_transport_base_cps base_beq ident var pident pident_arg_types pident_unify pident_unify_unknown raw_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple).
+        Local Notation rewrite_rulesT := (@rewrite_rulesT base ident var pident pident_arg_types).
+        Local Notation rewrite_with_rule := (@rewrite_with_rule base try_make_transport_base_cps base_beq ident var pident pident_arg_types pident_unify pident_unify_unknown).
+        Local Notation reify := (@reify base ident var).
+        Local Notation reflect := (@reflect base ident var).
+        Local Notation rewrite_rule_data_interp_goodT := (@rewrite_rule_data_interp_goodT base try_make_transport_base_cps ident pident pident_arg_types pident_to_typed base_interp ident_interp).
+        Local Notation rewrite_rules_interp_goodT := (@rewrite_rules_interp_goodT base try_make_transport_base_cps ident pident pident_arg_types pident_to_typed base_interp ident_interp).
+        Local Notation rewrite_ruleTP := (@rewrite_ruleTP base ident var pident pident_arg_types).
+        Local Notation rewrite_ruleT := (@rewrite_ruleT base ident var pident pident_arg_types).
+        Local Notation unify_pattern := (@unify_pattern base try_make_transport_base_cps base_beq ident var pident pident_arg_types pident_unify pident_unify_unknown).
+        Local Notation unify_pattern' := (@unify_pattern' base try_make_transport_base_cps ident var pident pident_arg_types pident_unify pident_unify_unknown).
+        Local Notation assemble_identifier_rewriters := (@assemble_identifier_rewriters base try_make_transport_base_cps base_beq ident var eta_ident_cps pident pident_arg_types pident_unify pident_unify_unknown raw_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple).
+        Local Notation assemble_identifier_rewriters' := (@assemble_identifier_rewriters' base try_make_transport_base_cps base_beq ident var pident pident_arg_types pident_unify pident_unify_unknown raw_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple).
+        Local Notation pattern_default_interp' := (@pattern_default_interp' base ident pident pident_arg_types pident_to_typed base_interp (@ident_interp)).
+        Local Notation pattern_default_interp := (@pattern_default_interp base ident pident pident_arg_types pident_to_typed base_interp (@ident_interp)).
+        Local Notation pattern_collect_vars := (@pattern.collect_vars base pident).
+        Local Notation app_with_unification_resultT_cps := (@app_with_unification_resultT_cps base try_make_transport_base_cps pident pident_arg_types).
+        Local Notation app_transport_with_unification_resultT'_cps := (@app_transport_with_unification_resultT'_cps base try_make_transport_base_cps pident pident_arg_types).
+        Local Notation with_unification_resultT' := (@with_unification_resultT' base pident pident_arg_types).
+        Local Notation value'_interp := (@value'_interp base ident base_interp ident_interp).
+        Local Notation eval_decision_tree_correct := (@eval_decision_tree_correct base ident var raw_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple invert_bind_args_unknown_correct raw_pident_to_typed_invert_bind_args_type raw_pident_to_typed_invert_bind_args).
         Local Notation expr_interp_related := (@expr.interp_related _ ident _ ident_interp).
         Local Notation UnderLets_interp_related := (@UnderLets.interp_related _ ident _ ident_interp _ _ expr_interp_related).
-        Local Notation rawexpr_interp_related := (@rawexpr_interp_related ident ident_interp).
-        Local Notation value_interp_related := (@value_interp_related ident ident_interp).
-        Local Notation unification_resultT'_interp_related := (@unification_resultT'_interp_related ident pident pident_arg_types ident_interp).
-        Local Notation unification_resultT_interp_related := (@unification_resultT_interp_related ident pident pident_arg_types ident_interp).
-        Let type_base (t : base.type) : type := type.base t.
-        Coercion type_base : base.type >-> type.
+        Local Notation rawexpr_interp_related := (@rawexpr_interp_related base ident base_interp ident_interp).
+        Local Notation value_interp_related := (@value_interp_related base ident base_interp ident_interp).
+        Local Notation unification_resultT'_interp_related := (@unification_resultT'_interp_related base ident pident pident_arg_types base_interp ident_interp).
+        Local Notation unification_resultT_interp_related := (@unification_resultT_interp_related base ident pident pident_arg_types base_interp ident_interp).
+        Local Notation preunify_types := (@preunify_types base base_beq ident var pident).
+        Local Notation unify_types := (@unify_types base base_beq ident var pident).
+        Let type_base (x : base) : @base.type base := base.type.type_base x.
+        Let base' {bt} (x : Compilers.base.type bt) : type.type _ := type.base x.
+        Local Coercion base' : base.type >-> type.type.
+        Local Coercion type_base : base >-> base.type.
 
-        Context (reify_and_let_binds_base_cps : forall (t : base.type), expr t -> forall T, (expr t -> UnderLets T) -> UnderLets T)
+        Context (reify_and_let_binds_base_cps : forall (t : base_type), expr t -> forall T, (expr t -> UnderLets T) -> UnderLets T)
                 (interp_reify_and_let_binds_base
                  : forall t e v,
                     expr_interp_related e v
                     -> UnderLets_interp_related (@reify_and_let_binds_base_cps t e _ UnderLets.Base) v).
 
-        Local Notation reify_and_let_binds_cps := (@reify_and_let_binds_cps ident var reify_and_let_binds_base_cps).
+        Local Notation reify_and_let_binds_cps := (@reify_and_let_binds_cps base ident var reify_and_let_binds_base_cps).
         Local Notation "e <---- e' ; f" := (splice_value_with_lets e' (fun e => f%under_lets)) : under_lets_scope.
         Local Notation "e <----- e' ; f" := (splice_under_lets_with_value e' (fun e => f%under_lets)) : under_lets_scope.
 
@@ -473,10 +489,6 @@ Module Compilers.
                            [ eassumption | | reflexivity ] ].
         Qed.
 
-        (*Local Infix "===" := expr_interp_related : type_scope.
-        Local Infix "====" := value_interp_related : type_scope.
-        Local Infix "=====" := rawexpr_interp_related : type_scope.*)
-
         Fixpoint types_match_with (evm : EvarMap) {t} (e : rawexpr) (p : pattern t) {struct p} : Prop
           := match p, e with
              | pattern.Wildcard t, e
@@ -492,22 +504,18 @@ Module Compilers.
              end.
 
         Lemma preunify_types_to_match_with {t re p evm}
-          : match @preunify_types ident var pident t re p with
+          : match @preunify_types t re p with
             | Some None => True
             | Some (Some (pt, t')) => pattern.type.subst pt evm = Some t'
             | None => False
             end
             -> types_match_with evm re p.
-        Proof using Type.
+        Proof using reflect_base_beq.
           revert re; induction p; intro; cbn [preunify_types types_match_with];
             break_innermost_match; try exact id.
           all: repeat first [ progress Bool.split_andb
                             | progress type_beq_to_eq
                             | progress inversion_option
-                            | progress Reflect.beq_to_eq
-                                       (@type.type_beq pattern.base.type pattern.base.type.type_beq)
-                                       (@type.internal_type_dec_bl pattern.base.type pattern.base.type.type_beq pattern.base.type.internal_type_dec_bl)
-                                       (@type.internal_type_dec_lb pattern.base.type pattern.base.type.type_beq pattern.base.type.internal_type_dec_lb)
                             | progress subst
                             | reflexivity
                             | progress cbn [Option.bind pattern.type.subst_default pattern.type.subst]
@@ -527,9 +535,9 @@ Module Compilers.
         Qed.
 
         Lemma unify_types_match_with {t re p evm}
-          : @unify_types ident var pident t re p _ id = Some evm
+          : @unify_types t re p _ id = Some evm
             -> types_match_with evm re p.
-        Proof using Type.
+        Proof using reflect_base_beq.
           intro H; apply preunify_types_to_match_with; revert H.
           cbv [unify_types id].
           break_innermost_match; intros; inversion_option; try exact I.
@@ -641,7 +649,7 @@ Module Compilers.
               (evm' := mk_new_evm evm (pattern_collect_vars p))
           : @types_match_with evm' t re p <-> @types_match_with evm t re p.
         Proof using Type.
-          clear -type_base; subst evm'; apply types_match_with_Proper_evm.
+          clear -type_base base'; subst evm'; apply types_match_with_Proper_evm.
           intro k; rewrite pattern.base.fold_right_evar_map_find_In.
           intro H; rewrite H.
           rewrite PositiveMap.gempty.
@@ -654,7 +662,7 @@ Module Compilers.
               (evm' := mk_new_evm evm (pattern_collect_vars p))
           : pattern.type.subst t evm' = Some (type_of_rawexpr re).
         Proof using Type.
-          clear -Ht Ht' type_base.
+          clear -Ht Ht' type_base base'.
           subst evm'.
           apply eq_subst_types_pattern_collect_vars.
           revert re Ht Ht'; induction p.
@@ -701,7 +709,7 @@ Module Compilers.
                         (@pattern_default_interp' _ t p _ id) args
                         _ (@Some _));
                  k' (k v0))%option.
-        Proof using Type.
+        Proof using try_make_transport_base_cps_correct.
           revert K evm1 evm2 args k T k'; induction p.
           all: repeat first [ progress intros
                             | progress cbn [pattern_default_interp' unification_resultT' app_transport_with_unification_resultT'_cps eq_rect] in *
@@ -785,10 +793,9 @@ Module Compilers.
               /\ app_transport_with_unification_resultT'_cps
                    (pattern_default_interp' p evm' id) resv _ (@Some _)
                  = Some (rew Hty in v).
-        Proof using pident_unify_unknown_correct pident_unify_to_typed.
-          clear -pident_unify_unknown_correct pident_unify_to_typed Hre H Ht Ht' Hty.
+        Proof using pident_unify_unknown_correct pident_unify_to_typed try_make_transport_base_cps_correct.
+          clear -reflect_base_beq try_make_transport_base_cps_correct pident_unify_unknown_correct pident_unify_to_typed Hre H Ht Ht' Hty type_base base'.
           clearbody Hty.
-          (*assert (Ht : @types_match_with evm t re p) by (eapply types_match_with_of_unify_pattern'; eassumption).*)
           assert (Hevm' : @types_match_with evm' t re p) by now apply types_match_with_new_evm_iff.
           clearbody evm'; cbv [unification_resultT'_interp_related].
           revert re res v evm' H Hre Hty Ht' Ht Hevm'; induction p; cbn [unify_pattern' related_unification_resultT' unification_resultT' rawexpr_interp_related app_transport_with_unification_resultT'_cps pattern_default_interp'] in *.
@@ -837,7 +844,7 @@ Module Compilers.
                                      | [ |- context[rew _ in rew _ in _] ]
                                        => rewrite <- eq_trans_rew_distr
                                      | [ |- (rew ?pf1 in ?f) (rew ?pf2 in ?x) = ?f ?x ]
-                                       => clear; cbv [eq_rect]
+                                       => clear -reflect_base_beq; cbv [eq_rect]
                                      end
                                    | progress cbn [type_of_rawexpr expr.interp types_match_with pattern.type.subst pattern.type.subst_default] in *
                                    | erewrite pident_unify_to_typed' with (pf:=eq_refl) by eassumption
@@ -891,8 +898,8 @@ Module Compilers.
               (evm' := mk_new_evm (projT1 res) (pattern_collect_vars p))
           : exists resv,
             unification_resultT_interp_related res resv
-            /\ exists Hty, (app_with_unification_resultT_cps (@pattern_default_interp t p) resv _ (@Some _) = Some (existT (fun evm => type.interp base.interp (pattern.type.subst_default t evm)) evm' (rew Hty in v))).
-        Proof using pident_unify_unknown_correct pident_unify_to_typed.
+            /\ exists Hty, (app_with_unification_resultT_cps (@pattern_default_interp t p) resv _ (@Some _) = Some (existT (fun evm => type.interp (base.interp base_interp) (pattern.type.subst_default t evm)) evm' (rew Hty in v))).
+        Proof using pident_unify_unknown_correct pident_unify_to_typed try_make_transport_base_cps_correct.
           subst evm'; cbv [unify_pattern unification_resultT_interp_related unification_resultT related_unification_resultT app_with_unification_resultT_cps pattern_default_interp] in *.
           repeat
             (unshelve
@@ -952,7 +959,7 @@ Module Compilers.
         Qed.
 
         Lemma interp_maybe_do_again
-              (do_again : forall t : base.type, @expr.expr base.type ident value t -> UnderLets (expr t))
+              (do_again : forall t : base_type, @expr.expr base_type ident value t -> UnderLets (expr t))
               (Hdo_again : forall t e v,
                   expr.interp_related_gen ident_interp (fun t => value_interp_related) e v
                   -> UnderLets_interp_related (do_again t e) v)
@@ -960,14 +967,14 @@ Module Compilers.
               (He : (if should_do_again return @expr.expr _ _ (if should_do_again then _ else _) _ -> _
                      then expr.interp_related_gen ident_interp (fun t => value_interp_related)
                      else expr_interp_related) e v)
-          : UnderLets_interp_related (@maybe_do_again _ _ do_again should_do_again t e) v.
+          : UnderLets_interp_related (@maybe_do_again _ _ _ do_again should_do_again t e) v.
         Proof using Type.
           cbv [maybe_do_again]; break_innermost_match; [ apply Hdo_again | cbn [UnderLets.interp_related] ];
             assumption.
         Qed.
 
         Lemma interp_rewrite_with_rule
-              (do_again : forall t : base.type, @expr.expr base.type ident value t -> UnderLets (expr t))
+              (do_again : forall t : base_type, @expr.expr base_type ident value t -> UnderLets (expr t))
               (Hdo_again : forall t e v,
                   expr.interp_related_gen ident_interp (fun t => value_interp_related) e v
                   -> UnderLets_interp_related (do_again t e) v)
@@ -979,7 +986,7 @@ Module Compilers.
           : @rewrite_with_rule do_again t re rewr = Some v1
             -> rawexpr_interp_related re (rew Ht in v2)
             -> UnderLets_interp_related v1 v2.
-        Proof using pident_unify_to_typed pident_unify_unknown_correct.
+        Proof using pident_unify_to_typed pident_unify_unknown_correct try_make_transport_base_cps_correct.
           destruct rewr as [p r].
           cbv [rewrite_with_rule].
           repeat first [ match goal with
@@ -1054,7 +1061,7 @@ Module Compilers.
         Qed.
 
         Lemma interp_eval_rewrite_rules
-              (do_again : forall t : base.type, @expr.expr base.type ident value t -> UnderLets (expr t))
+              (do_again : forall t : base_type, @expr.expr base_type ident value t -> UnderLets (expr t))
               (d : decision_tree)
               (rew_rules : rewrite_rulesT)
               (re : rawexpr) v
@@ -1066,7 +1073,7 @@ Module Compilers.
               (Hr : rawexpr_interp_related re v)
               (Hrew_rules : rewrite_rules_interp_goodT rew_rules)
           : UnderLets_interp_related res v.
-        Proof using raw_pident_to_typed_invert_bind_args invert_bind_args_unknown_correct pident_unify_unknown_correct pident_unify_to_typed.
+        Proof using raw_pident_to_typed_invert_bind_args invert_bind_args_unknown_correct pident_unify_unknown_correct pident_unify_to_typed try_make_transport_base_cps_correct.
           subst res; cbv [eval_rewrite_rules].
           refine (let H := eval_decision_tree_correct d [re] _ in _).
           destruct H as [H| [? [? [H ?] ] ] ]; rewrite H; cbn [Option.sequence Option.sequence_return UnderLets_interp_related];
@@ -1086,8 +1093,12 @@ Module Compilers.
           { apply rawexpr_interp_related_Proper_rawexpr_equiv; assumption. }
         Qed.
 
+        (* Ltac's [repeat] is too weak :-( *)
+        Local Ltac grepeat_progress tac :=
+          progress (repeat tac); try (grepeat_progress tac).
+
         Lemma interp_assemble_identifier_rewriters'
-              (do_again : forall t : base.type, @expr.expr base.type ident value t -> UnderLets (expr t))
+              (do_again : forall t : base_type, @expr.expr base_type ident value t -> UnderLets (expr t))
               (dt : decision_tree)
               (rew_rules : rewrite_rulesT)
               t re K
@@ -1103,7 +1114,7 @@ Module Compilers.
               (Hrew_rules : rewrite_rules_interp_goodT rew_rules)
               (Hr : rawexpr_interp_related re v)
           : value_interp_related res (rew Ht in v).
-        Proof using raw_pident_to_typed_invert_bind_args_type raw_pident_to_typed_invert_bind_args invert_bind_args_unknown_correct pident_unify_unknown_correct pident_unify_to_typed.
+        Proof using raw_pident_to_typed_invert_bind_args_type raw_pident_to_typed_invert_bind_args invert_bind_args_unknown_correct pident_unify_unknown_correct pident_unify_to_typed try_make_transport_base_cps_correct.
           subst K res.
           revert dependent re; induction t as [t|s IHs d IHd]; cbn [assemble_identifier_rewriters' value'_interp];
             intros; fold (@type.interp).
@@ -1129,22 +1140,23 @@ Module Compilers.
             unshelve eexists.
             { clear; cbv [rValueOrExpr2 type_of_rawexpr]; destruct s; reflexivity. }
             repeat apply conj.
-            all: repeat first [ instantiate (1:=ltac:(eassumption))
-                              | match goal with
-                                | [ |- expr_interp_related (rew [?P] ?H in ?v) ?ev ]
-                                  => is_evar ev;
-                                     refine (_ : expr_interp_related (rew [P] H in v) (rew [type.interp base.interp] H in _))
-                                end
-                              | assumption
-                              | progress cbv [eq_sym eq_rect]
-                              | break_innermost_match_step
-                              | reflexivity
-                              | apply expr_of_rawexpr_interp_related
-                              | apply reify_interp_related ]. }
+            all: grepeat_progress
+                   ltac:(first [ instantiate (1:=ltac:(eassumption))
+                               | match goal with
+                                 | [ |- expr_interp_related (rew [?P] ?H in ?v) ?ev ]
+                                   => is_evar ev;
+                                      refine (_ : expr_interp_related (rew [P] H in v) (rew [type.interp base.interp] H in _))
+                                 end
+                               | assumption
+                               | progress cbv [eq_sym eq_rect]
+                               | break_innermost_match_step
+                               | reflexivity
+                               | apply expr_of_rawexpr_interp_related
+                               | apply reify_interp_related ]). }
         Qed.
 
         Lemma interp_assemble_identifier_rewriters
-              (do_again : forall t : base.type, @expr.expr base.type ident value t -> UnderLets (expr t))
+              (do_again : forall t : base_type, @expr.expr base_type ident value t -> UnderLets (expr t))
               (d : decision_tree)
               (rew_rules : rewrite_rulesT)
               t idc v
@@ -1155,7 +1167,7 @@ Module Compilers.
               (Hrew_rules : rewrite_rules_interp_goodT rew_rules)
               (Hv : ident_interp t idc == v)
           : value_interp_related res v.
-        Proof using eta_ident_cps_correct raw_pident_to_typed_invert_bind_args_type raw_pident_to_typed_invert_bind_args invert_bind_args_unknown_correct pident_unify_unknown_correct pident_unify_to_typed.
+        Proof using eta_ident_cps_correct raw_pident_to_typed_invert_bind_args_type raw_pident_to_typed_invert_bind_args invert_bind_args_unknown_correct pident_unify_unknown_correct pident_unify_to_typed try_make_transport_base_cps_correct.
           subst res; cbv [assemble_identifier_rewriters].
           rewrite eta_ident_cps_correct.
           match goal with
@@ -1169,45 +1181,81 @@ Module Compilers.
         Qed.
       End with_interp.
 
-      Section with_cast.
-        Context (cast_outside_of_range : ZRange.zrange -> Z -> Z).
-        Local Notation var := (type.interp base.interp).
-        Local Notation ident_interp := (@ident.gen_interp cast_outside_of_range).
-        Local Notation value_interp_related := (@value_interp_related ident (@ident_interp)).
+      Section full.
+        Context {base : Type}.
+        Local Notation base_type := (base.type base).
+        Local Notation type := (type.type base_type).
+        Context {ident : type -> Type}
+                {base_interp : base -> Type}
+                {ident_interp : forall t, ident t -> type.interp (base.interp base_interp) t}
+                (ident_is_var_like : forall t, ident t -> bool).
+        Local Notation expr := (@expr base_type ident).
+        Let type_base (x : base) : @base.type base := base.type.type_base x.
+        Let base' {bt} (x : Compilers.base.type bt) : type.type _ := type.base x.
+        Local Coercion base' : base.type >-> type.type.
+        Local Coercion type_base : base >-> base.type.
+        Context {base_beq : base -> base -> bool}
+                {reflect_base_beq : reflect_rel (@eq base) base_beq}
+                {try_make_transport_base_cps : type.try_make_transport_cpsT base}
+                {try_make_transport_base_cps_correct : type.try_make_transport_cps_correctT base}
+                {baseTypeHasNat : base.type.BaseTypeHasNatT base}
+                {buildIdent : ident.BuildIdentT base_interp ident}
+                {buildEagerIdent : ident.BuildEagerIdentT ident}
+                {toRestrictedIdent : ident.ToRestrictedIdentT ident}
+                {toFromRestrictedIdent : ident.ToFromRestrictedIdentT ident}
+                {invertIdent : invert_expr.InvertIdentT base_interp ident}
+                {baseHasNatCorrect : base.BaseHasNatCorrectT base_interp}
+                {buildInvertIdentCorrect : invert_expr.BuildInvertIdentCorrectT}
+                {ident_interp_Proper : forall t, Proper (eq ==> type.eqv) (ident_interp t)}
+                {buildInterpIdentCorrect : ident.BuildInterpIdentCorrectT ident_interp}.
+
+        Local Notation value := (@Compile.value base_type ident).
+        Local Notation value_with_lets := (@Compile.value_with_lets base_type ident).
+        Local Notation UnderLets := (UnderLets.UnderLets base_type ident).
+        Local Notation reflect := (@Compile.reflect base ident).
+        Local Notation var := (type.interp (base.interp base_interp)).
+        Local Notation value_interp_related := (@value_interp_related base ident base_interp (@ident_interp)).
         Local Notation expr_interp_related := (@expr.interp_related _ ident _ (@ident_interp)).
+        Local Notation rewrite_bottomup := (@rewrite_bottomup base ident base_interp ident_is_var_like buildIdent invertIdent try_make_transport_base_cps).
+        Local Notation repeat_rewrite := (@repeat_rewrite base ident base_interp ident_is_var_like buildIdent invertIdent try_make_transport_base_cps).
+        Local Notation rewrite := (@rewrite base ident base_interp ident_is_var_like buildIdent invertIdent try_make_transport_base_cps).
+        Local Notation Rewrite := (@Rewrite base ident base_interp ident_is_var_like buildIdent invertIdent try_make_transport_base_cps).
 
         Section with_rewrite_head.
           Context (rewrite_head : forall t (idc : ident t), value_with_lets t)
-                  (interp_rewrite_head : forall t idc v, ident_interp idc == v -> value_interp_related (rewrite_head t idc) v).
+                  (interp_rewrite_head : forall t idc v, ident_interp _ idc == v -> value_interp_related (rewrite_head t idc) v).
+
+          Local Ltac t :=
+            repeat first [ apply interp_Base_value
+                         | eassumption
+                         | progress cbv beta
+                         | progress intros
+                         | progress destruct_head'_ex
+                         | progress destruct_head'_and
+                         | progress subst
+                         | match goal with
+                           | [ IH : forall v, expr.interp_related_gen _ _ ?e v -> _, H' : expr.interp_related_gen _ _ ?e _ |- _ ]
+                             => specialize (IH _ H')
+                           end
+                         | apply reflect_interp_related
+                         | eapply interp_splice_value_with_lets_of_ex;
+                           do 2 eexists; repeat apply conj; [ eassumption | | reflexivity ]
+                         | eapply @interp_splice_under_lets_with_value_of_ex with (R:=expr_interp_related);
+                           do 2 eexists; repeat apply conj
+                         | apply interp_reify_and_let_binds
+                         | apply UnderLets.reify_and_let_binds_base_interp_related
+                         | match goal with
+                           | [ H : _ |- _ ] => eapply H; clear H; solve [ t ]
+                           | [ |- ?f ?x = ?f ?y ] => is_evar x; reflexivity
+                           | [ |- ?x = ?x ] => reflexivity
+                           end ].
 
           Lemma interp_rewrite_bottomup {t e v}
                 (He : expr.interp_related_gen (@ident_interp) (fun t => value_interp_related) e v)
             : value_interp_related (@rewrite_bottomup var rewrite_head t e) v.
-          Proof using interp_rewrite_head.
+          Proof using interp_rewrite_head try_make_transport_base_cps_correct ident_interp_Proper buildInvertIdentCorrect buildInterpIdentCorrect.
             induction e; cbn [rewrite_bottomup value_interp_related expr.interp_related_gen] in *; auto.
-            all: repeat first [ apply interp_Base_value
-                              | eassumption
-                              | progress cbv beta
-                              | progress intros
-                              | progress destruct_head'_ex
-                              | progress destruct_head'_and
-                              | progress subst
-                              | match goal with
-                                | [ IH : forall v, expr.interp_related_gen _ _ ?e v -> _, H' : expr.interp_related_gen _ _ ?e _ |- _ ]
-                                  => specialize (IH _ H')
-                                end
-                              | apply reflect_interp_related
-                              | eapply interp_splice_value_with_lets_of_ex;
-                                do 2 eexists; repeat apply conj; [ eassumption | | reflexivity ]
-                              | eapply @interp_splice_under_lets_with_value_of_ex with (R:=expr_interp_related);
-                                do 2 eexists; repeat apply conj
-                              | apply interp_reify_and_let_binds
-                              | apply UnderLets.reify_and_let_binds_base_interp_related
-                              | match goal with
-                                | [ H : _ |- _ ] => eapply H; clear H
-                                | [ |- ?f ?x = ?f ?y ] => is_evar x; reflexivity
-                                | [ |- ?x = ?x ] => reflexivity
-                                end ].
+            all: t.
           Qed.
         End with_rewrite_head.
 
@@ -1216,7 +1264,7 @@ Module Compilers.
         Lemma interp_nbe {t e v}
               (He : expr.interp_related_gen (@ident_interp) (fun t => value_interp_related) e v)
           : value_interp_related (@nbe t e) v.
-        Proof using Type.
+        Proof using try_make_transport_base_cps_correct ident_interp_Proper buildInvertIdentCorrect buildInterpIdentCorrect.
           eapply interp_rewrite_bottomup; try eassumption.
           intros; apply reflect_interp_related; cbv [expr.interp_related]; cbn [expr.interp_related_gen]; assumption.
         Qed.
@@ -1230,11 +1278,11 @@ Module Compilers.
                             expr.interp_related_gen (@ident_interp) (fun t => value_interp_related) e v
                             -> UnderLets.interp_related (@ident_interp) (expr.interp_related (@ident_interp)) (do_again t e) v)
                         t idc v,
-                  ident_interp idc == v
+                  ident_interp _ idc == v
                   -> value_interp_related (@rewrite_head do_again t idc) v)
               (He : expr.interp_related_gen (@ident_interp) (fun t => value_interp_related) e v)
           : retT.
-        Proof using Type.
+        Proof using try_make_transport_base_cps_correct ident_interp_Proper buildInvertIdentCorrect buildInterpIdentCorrect.
           subst retT.
           revert rewrite_head t e v Hrewrite_head He.
           induction fuel as [|fuel IH]; cbn [repeat_rewrite]; intros;
@@ -1253,11 +1301,11 @@ Module Compilers.
                             expr.interp_related_gen (@ident_interp) (fun t => value_interp_related) e v
                             -> UnderLets.interp_related (@ident_interp) (expr.interp_related (@ident_interp)) (do_again t e) v)
                         t idc v,
-                  ident_interp idc == v
+                  ident_interp _ idc == v
                   -> value_interp_related (@rewrite_head do_again t idc) v)
               (He : expr.interp_related_gen (@ident_interp) (fun t => value_interp_related) e v)
           : retT.
-        Proof using Type.
+        Proof using try_make_transport_base_cps_correct ident_interp_Proper buildInvertIdentCorrect buildInterpIdentCorrect.
           subst retT; cbv [rewrite].
           apply reify_interp_related, interp_repeat_rewrite; auto.
         Qed.
@@ -1271,12 +1319,12 @@ Module Compilers.
                             expr.interp_related_gen (@ident_interp) (fun t => value_interp_related) e v
                             -> UnderLets.interp_related (@ident_interp) (expr.interp_related (@ident_interp)) (do_again t e) v)
                         t idc v,
-                  ident_interp idc == v
+                  ident_interp _ idc == v
                   -> value_interp_related (@rewrite_head do_again t idc) v)
               (HG : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> value_interp_related v1 v2)
               (Hwf : expr.wf G e1 e2)
           : retT.
-        Proof using Type.
+        Proof using try_make_transport_base_cps_correct ident_interp_Proper buildInvertIdentCorrect buildInterpIdentCorrect.
           apply expr.eqv_of_interp_related, interp_related_rewrite; try assumption; [].
           eapply expr.interp_related_gen_of_wf; eassumption.
         Qed.
@@ -1290,15 +1338,16 @@ Module Compilers.
                             expr.interp_related_gen (@ident_interp) (fun t => value_interp_related) e v
                             -> UnderLets.interp_related (@ident_interp) (expr.interp_related (@ident_interp)) (do_again t e) v)
                         t idc v,
-                  ident_interp idc == v
+                  ident_interp _ idc == v
                   -> value_interp_related (@rewrite_head _ do_again t idc) v)
               (Hwf : expr.Wf e)
           : retT.
-        Proof using Type.
+        Proof using try_make_transport_base_cps_correct ident_interp_Proper buildInvertIdentCorrect buildInterpIdentCorrect.
+          clear -Hrewrite_head Hwf try_make_transport_base_cps_correct ident_interp_Proper buildInvertIdentCorrect buildInterpIdentCorrect type_base base'.
           subst retT; cbv [Rewrite expr.Interp].
           eapply interp_rewrite; eauto; cbn [List.In]; tauto.
         Qed.
-      End with_cast.
+      End full.
     End Compile.
   End RewriteRules.
 End Compilers.

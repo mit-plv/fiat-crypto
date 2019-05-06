@@ -1,17 +1,15 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Language.
 Require Import Crypto.LanguageWf.
-Require Import Crypto.RewriterAllTactics.
+Require Import Crypto.RewriterAllTacticsExtra.
 Require Import Crypto.RewriterRulesProofs.
-Require Import Crypto.IdentifiersGENERATEDProofs.
 
 Module Compilers.
   Import Language.Compilers.
-  Import Language.Compilers.defaults.
   Import LanguageWf.Compilers.
   Import RewriterAllTactics.Compilers.RewriteRules.GoalType.
-  Import RewriterAllTactics.Compilers.RewriteRules.Tactic.
-  Import IdentifiersGENERATEDProofs.Compilers.pattern.ident.
+  Import RewriterAllTacticsExtra.Compilers.RewriteRules.Tactic.
+  Import Compilers.Classes.
 
   Module Import RewriteRules.
     Section __.
@@ -20,9 +18,9 @@ Module Compilers.
               (Hhigh : forall s v v', invert_high s v = Some v' -> v = Z.shiftr v' (s/2)).
 
       Definition VerifiedRewriterToFancy : VerifiedRewriter.
-      Proof using All. make_rewriter package_proofs false fancy_rewrite_rules_proofs. Defined.
+      Proof using All. make_rewriter false fancy_rewrite_rules_proofs. Defined.
 
-      Definition RewriteToFancy {t} : Expr t -> Expr t.
+      Definition RewriteToFancy {t} : Expr (ident:=ident) t -> Expr (ident:=ident) t.
       Proof using invert_low invert_high.
         let v := (eval hnf in (@Rewrite VerifiedRewriterToFancy t)) in exact v.
       Defined.
@@ -31,11 +29,11 @@ Module Compilers.
       Proof using All. now apply VerifiedRewriterToFancy. Qed.
 
       Lemma Interp_gen_RewriteToFancy {cast_outside_of_range t} e (Hwf : Wf e)
-        : expr.Interp (@ident.gen_interp cast_outside_of_range) (@RewriteToFancy t e)
-          == expr.Interp (@ident.gen_interp cast_outside_of_range) e.
+        : expr.Interp (@ident_gen_interp _ cast_outside_of_range) (@RewriteToFancy t e)
+          == expr.Interp (@ident_gen_interp _ cast_outside_of_range) e.
       Proof using All. now apply VerifiedRewriterToFancy. Qed.
 
-      Lemma Interp_RewriteToFancy {t} e (Hwf : Wf e) : Interp (@RewriteToFancy t e) == Interp e.
+      Lemma Interp_RewriteToFancy {t} e (Hwf : Wf e) : expr.Interp (@ident_interp _) (@RewriteToFancy t e) == expr.Interp (@ident_interp _) e.
       Proof using All. apply Interp_gen_RewriteToFancy; assumption. Qed.
     End __.
   End RewriteRules.

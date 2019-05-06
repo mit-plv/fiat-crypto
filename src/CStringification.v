@@ -39,6 +39,8 @@ Module Compilers.
     Local Open Scope string_scope.
     Local Open Scope Z_scope.
 
+    Local Notation tZ := (base.type.type_base base.type.Z).
+
     Module C.
       Module String.
         Definition typedef_header (static : bool) (prefix : string) (bitwidths_used : PositiveSet.t)
@@ -245,18 +247,16 @@ Module Compilers.
 
       Fixpoint to_base_arg_list (prefix : string) {t} : base_var_data t -> list string
         := match t return base_var_data t -> _ with
-           | base.type.Z
+           | tZ
              => fun '(n, r) => [String.type.primitive.to_string prefix type.Z r ++ " " ++ n]
            | base.type.prod A B
              => fun '(va, vb) => (@to_base_arg_list prefix A va ++ @to_base_arg_list prefix B vb)%list
-           | base.type.list base.type.Z
+           | base.type.list tZ
              => fun '(n, r, len) => ["const " ++ String.type.primitive.to_string prefix type.Z r ++ " " ++ n ++ "[" ++ decimal_string_of_Z (Z.of_nat len) ++ "]"]
            | base.type.list _ => fun _ => ["#error ""complex list"";"]
            | base.type.option _ => fun _ => ["#error option;"]
            | base.type.unit => fun _ => ["#error unit;"]
-           | base.type.nat => fun _ => ["#error ℕ;"]
-           | base.type.bool => fun _ => ["#error bool;"]
-           | base.type.zrange => fun _ => ["#error zrange;"]
+           | base.type.type_base t => fun _ => ["#error " ++ show false t ++ ";"]%string
            end.
 
       Definition to_arg_list (prefix : string) {t} : var_data t -> list string
@@ -275,18 +275,16 @@ Module Compilers.
 
       Fixpoint to_base_retarg_list prefix {t} : base_var_data t -> list string
         := match t return base_var_data t -> _ with
-           | base.type.Z
+           | tZ
              => fun '(n, r) => [String.type.primitive.to_string prefix type.Zptr r ++ " " ++ n]
            | base.type.prod A B
              => fun '(va, vb) => (@to_base_retarg_list prefix A va ++ @to_base_retarg_list prefix B vb)%list
-           | base.type.list base.type.Z
+           | base.type.list tZ
              => fun '(n, r, len) => [String.type.primitive.to_string prefix type.Z r ++ " " ++ n ++ "[" ++ decimal_string_of_Z (Z.of_nat len) ++ "]"]
            | base.type.list _ => fun _ => ["#error ""complex list"";"]
            | base.type.option _ => fun _ => ["#error option;"]
            | base.type.unit => fun _ => ["#error unit;"]
-           | base.type.nat => fun _ => ["#error ℕ;"]
-           | base.type.bool => fun _ => ["#error bool;"]
-           | base.type.zrange => fun _ => ["#error zrange;"]
+           | base.type.type_base t => fun _ => ["#error " ++ show false t ++ ";"]%string
            end.
 
       Definition to_retarg_list (prefix : string) {t} : var_data t -> list string
@@ -295,9 +293,9 @@ Module Compilers.
            | type.arrow _ _ => fun _ => ["#error arrow;"]
            end.
 
-      Fixpoint bound_to_string {t : base.type} : var_data t -> ZRange.type.base.option.interp t -> list string
-        := match t return var_data t -> ZRange.type.base.option.interp t -> list string with
-           | base.type.Z
+      Fixpoint bound_to_string {t : base.type} : var_data (type.base t) -> ZRange.type.base.option.interp t -> list string
+        := match t return var_data (type.base t) -> ZRange.type.base.option.interp t -> list string with
+           | tZ
              => fun '(name, _) arg
                 => [(name ++ ": ")
                       ++ match arg with
@@ -316,9 +314,7 @@ Module Compilers.
                          end]%string
            | base.type.option _
            | base.type.unit
-           | base.type.bool
-           | base.type.nat
-           | base.type.zrange
+           | base.type.type_base _
              => fun _ _ => nil
            end%list.
 
@@ -448,8 +444,8 @@ Module Compilers.
 
       Definition C_bin_op_conversion
                  (desired_type : option int.type)
-                 (args : arith_expr_for (base.type.Z * base.type.Z))
-        : arith_expr_for (base.type.Z * base.type.Z) * option int.type
+                 (args : arith_expr_for (type.base (tZ * tZ)))
+        : arith_expr_for (type.base (tZ * tZ)) * option int.type
         := match desired_type with
            | None => (args, None)
            | Some _
@@ -472,8 +468,8 @@ Module Compilers.
            end.
 
       Definition C_un_op_conversion (desired_type : option int.type)
-                 (arg : arith_expr_for base.type.Z)
-        : arith_expr_for base.type.Z :=
+                 (arg : arith_expr_for (type.base tZ))
+        : arith_expr_for (type.base tZ) :=
         let '(e, r) := arg in
         let rin := option_map integer_promote_type r in
         Zcast_up_if_needed desired_type (e, rin).
@@ -488,7 +484,7 @@ Module Compilers.
 
       Definition to_function_lines (static : bool) (prefix : string) (name : string)
                  {t}
-                 (f : type.for_each_lhs_of_arrow var_data t * var_data (type.final_codomain t) * expr)
+                 (f : type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * expr)
         : list string
         := let '(args, rets, body) := f in
            (((((if static then "static " else "")
@@ -502,7 +498,7 @@ Module Compilers.
       Definition ToFunctionLines (do_bounds_check : bool) (static : bool) (prefix : string) (name : string)
                  {t}
                  (e : @Compilers.expr.Expr base.type ident.ident t)
-                 (comment : type.for_each_lhs_of_arrow var_data t -> var_data (type.final_codomain t) -> list string)
+                 (comment : type.for_each_lhs_of_arrow var_data t -> var_data (type.base (type.final_codomain t)) -> list string)
                  (name_list : option (list string))
                  (inbounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
                  (outbounds : ZRange.type.base.option.interp (type.final_codomain t))
@@ -529,10 +525,10 @@ Module Compilers.
       Definition ToFunctionString (do_bounds_check : bool) (static : bool) (prefix : string) (name : string)
                  {t}
                  (e : @Compilers.expr.Expr base.type ident.ident t)
-                 (comment : type.for_each_lhs_of_arrow var_data t -> var_data (type.final_codomain t) -> list string)
+                 (comment : type.for_each_lhs_of_arrow var_data t -> var_data (type.base (type.final_codomain t)) -> list string)
                  (name_list : option (list string))
                  (inbounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
-                 (outbounds : ZRange.type.option.interp (type.final_codomain t))
+                 (outbounds : ZRange.type.option.interp (type.base (type.final_codomain t)))
         : (string * ident_infos) + string
         := match ToFunctionLines do_bounds_check static prefix name e comment name_list inbounds outbounds with
            | inl (ls, used_types) => inl (LinesToString ls, used_types)

@@ -51,8 +51,8 @@ Require Import Crypto.Util.HProp.
 Require Import Crypto.Util.Decidable.
 Require Crypto.Util.PrimitiveProd.
 Require Crypto.Util.PrimitiveHList.
-Require Import Crypto.Language.
-Require Import Crypto.LanguageWf.
+Require Import Crypto.PreLanguage.
+Require Import Crypto.CastLemmas.
 Require Import Crypto.RewriterRules.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Tactics.Head.
@@ -65,11 +65,10 @@ Local Definition myflatten {A} := Eval cbv in List.fold_right myapp (@nil A).
 Local Notation dont_do_again := (pair false) (only parsing).
 Local Notation do_again := (pair true) (only parsing).
 
-Import Language.Compilers.
-Import LanguageWf.Compilers.
+Require Crypto.Identifier.
 
 Local Ltac start_proof :=
-  cbv [snd]; hnf; cbv [PrimitiveHList.hlist ident.eagerly ident.literal ident.interp ident.fancy.interp ident.fancy.interp_with_wordmax Let_In ident.to_fancy invert_Some ident.cast2];
+  cbv [snd]; hnf; cbv [PrimitiveHList.hlist ident.eagerly ident.literal Identifier.Compilers.ident.interp Identifier.Compilers.ident.fancy.interp Identifier.Compilers.ident.fancy.interp_with_wordmax Let_In Identifier.Compilers.ident.to_fancy invert_Some ident.cast2];
   repeat apply PrimitiveProd.Primitive.pair; try exact tt.
 
 Local Hint Resolve
@@ -95,8 +94,7 @@ Local Ltac interp_good_t_step_related :=
           | [ |- True ] => exact I
           | [ H : ?x = true, H' : ?x = false |- _ ] => exfalso; clear -H H'; congruence
           | [ |- ?G ] => has_evar G; reflexivity
-          | [ |- context[expr.interp_related_gen _ _ _ _] ] => reflexivity
-          | [ |- context[_ == _] ] => reflexivity
+          (*| [ |- context[_ == _] ] => reflexivity*)
           (*| [ |- context[(fst ?x, snd ?x)] ] => progress eta_expand
                 | [ |- context[match ?x with pair a b => _ end] ] => progress eta_expand*)
           end
@@ -232,7 +230,6 @@ Local Ltac interp_good_t_step_arith :=
                [ clear -H; cbv [is_bounded_by_bool] in H; cbn [lower upper] in H; Bool.split_andb; Z.ltb_to_lt; lia..
                | ]
           end
-        | progress cbn [expr.interp_related_gen] in *
         | match goal with
           | [ |- context[Z.shiftl] ] => rewrite Z.shiftl_mul_pow2 by auto with zarith
           | [ |- context[Z.shiftr] ] => rewrite Z.shiftr_div_pow2 by auto with zarith

@@ -20,7 +20,7 @@ Import
   Language.Compilers
   CStringification.Compilers.
 
-Import Language.Compilers.defaults.
+Import IdentifierExtra.Compilers.defaults.
 
 Import Associational Positional.
 

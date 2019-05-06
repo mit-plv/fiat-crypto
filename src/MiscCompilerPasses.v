@@ -9,7 +9,6 @@ Import ListNotations. Local Open Scope Z_scope.
 Module Compilers.
   Export Language.Compilers.
   Import invert_expr.
-  Import defaults.
 
   Module Subst01.
     Section with_counter.

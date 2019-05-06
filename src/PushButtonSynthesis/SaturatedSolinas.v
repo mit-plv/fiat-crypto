@@ -20,6 +20,7 @@ Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.LanguageWf.
 Require Import Crypto.Language.
+Require Import Crypto.IdentifierExtra.
 Require Import Crypto.AbstractInterpretation.
 Require Import Crypto.LanguageStringification.
 Require Import Crypto.Arithmetic.Core.

@@ -183,7 +183,8 @@ Module Rust.
   Definition to_strings (prefix : string) (e : IR.expr) : list string :=
     List.map (stmt_to_string prefix) e.
 
-  Import Crypto.Language.Compilers Crypto.Language.Compilers.defaults IR.OfPHOAS.
+  Import Crypto.Language.Compilers Crypto.Identifier.Compilers IR.OfPHOAS.
+  Local Notation tZ := (base.type.type_base base.type.Z).
 
   Inductive Mode := In | Out.
 
@@ -193,12 +194,12 @@ Module Rust.
 
   Fixpoint to_base_arg_list (prefix : string) (mode : Mode) {t} : ToString.OfPHOAS.base_var_data t -> list string :=
     match t return base_var_data t -> _ with
-    | base.type.Z =>
+    | tZ =>
       let typ := match mode with In => IR.type.Z | Out => IR.type.Zptr end in
       fun '(n, r) => [n ++ ": " ++ primitive_type_to_string prefix typ r]
     | base.type.prod A B =>
       fun '(va, vb) => (to_base_arg_list prefix mode va ++ to_base_arg_list prefix mode vb)%list
-    | base.type.list base.type.Z =>
+    | base.type.list tZ =>
       fun '(n, r, len) =>
         match mode with
         | In => (* arrays for inputs are immutable borrows *)
@@ -213,9 +214,7 @@ Module Rust.
     | base.type.list _ => fun _ => ["#error ""complex list"";"]
     | base.type.option _ => fun _ => ["#error option;"]
     | base.type.unit => fun _ => ["#error unit;"]
-    | base.type.nat => fun _ => ["#error ℕ;"]
-    | base.type.bool => fun _ => ["#error bool;"]
-    | base.type.zrange => fun _ => ["#error zrange;"]
+    | base.type.type_base t => fun _ => ["#error " ++ show false t ++ ";"]%string
     end%string.
 
   Definition to_arg_list (prefix : string) (mode : Mode) {t} : var_data t -> list string :=
@@ -233,9 +232,9 @@ Module Rust.
        end%list.
 
   (* Used in comment *)
-  Fixpoint bound_to_string {t : base.type} : var_data t -> Compilers.ZRange.type.base.option.interp t -> list string :=
-    match t return var_data t -> Compilers.ZRange.type.base.option.interp t -> list string with
-    | base.type.Z
+  Fixpoint bound_to_string {t : base.type} : var_data (type.base t) -> Compilers.ZRange.type.base.option.interp t -> list string :=
+    match t return var_data (type.base t) -> Compilers.ZRange.type.base.option.interp t -> list string with
+    | tZ
       => fun '(name, _) arg
          => [(name ++ ": ")
                ++ match arg with
@@ -254,9 +253,8 @@ Module Rust.
                   end]%string
     | base.type.option _
     | base.type.unit
-    | base.type.bool
-    | base.type.nat
-    | base.type.zrange => fun _ _ => []
+    | base.type.type_base _
+      => fun _ _ => []
     end%list.
 
   (* Used in comment *)
@@ -279,8 +277,8 @@ Module Rust.
 
   Definition Rust_bin_op_conversion
              (desired_type : option ToString.int.type)
-             (args : arith_expr_for (base.type.Z * base.type.Z))
-    : arith_expr_for (base.type.Z * base.type.Z) * option ToString.int.type :=
+             (args : arith_expr_for (type.base (tZ * tZ)))
+    : arith_expr_for (type.base (tZ * tZ)) * option ToString.int.type :=
     match desired_type with
     | None => (args, None)
     | Some dt =>
@@ -297,13 +295,13 @@ Module Rust.
     end.
 
   Definition Rust_un_op_conversion (desired_type : option ToString.int.type)
-             (arg : arith_expr_for base.type.Z)
-    : arith_expr_for base.type.Z :=
+             (arg : arith_expr_for (type.base tZ))
+    : arith_expr_for (type.base tZ) :=
     let '(e, r) := arg in
     Zcast_up_if_needed desired_type (e, r).
 
-  Definition Rust_result_upcast (desired_type : option ToString.int.type) (e : arith_expr_for base.type.Z)
-    : arith_expr_for base.type.Z :=
+  Definition Rust_result_upcast (desired_type : option ToString.int.type) (e : arith_expr_for (type.base tZ))
+    : arith_expr_for (type.base tZ) :=
     Zcast_up_if_needed desired_type e.
 
   Local Instance CLanguageCasts : LanguageCasts :=
@@ -314,7 +312,7 @@ Module Rust.
 
   Definition to_function_lines (static : bool) (prefix : string) (name : string)
              {t}
-             (f : type.for_each_lhs_of_arrow var_data t * var_data (type.final_codomain t) * IR.expr)
+             (f : type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * IR.expr)
     : list string :=
     let '(args, rets, body) := f in
     ("#[inline]" ++ String.NewLine ++ (if static then "fn " else "pub fn ") ++ name ++
@@ -324,7 +322,7 @@ Module Rust.
   Definition ToFunctionLines (do_bounds_check : bool) (static : bool) (prefix : string) (name : string)
              {t}
              (e : @Compilers.expr.Expr base.type ident.ident t)
-             (comment : type.for_each_lhs_of_arrow var_data t -> var_data (type.final_codomain t) -> list string)
+             (comment : type.for_each_lhs_of_arrow var_data t -> var_data (type.base (type.final_codomain t)) -> list string)
              (name_list : option (list string))
              (inbounds : type.for_each_lhs_of_arrow Compilers.ZRange.type.option.interp t)
              (outbounds : Compilers.ZRange.type.base.option.interp (type.final_codomain t))

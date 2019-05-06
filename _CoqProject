@@ -7,9 +7,13 @@ src/BoundsPipeline.v
 src/CLI.v
 src/COperationSpecifications.v
 src/CStringification.v
+src/CastLemmas.v
 src/CompilersTestCases.v
 src/Demo.v
 src/IR.v
+src/Identifier.v
+src/IdentifierExtra.v
+src/IdentifierWf.v
 src/IdentifiersGENERATED.v
 src/IdentifiersGENERATEDProofs.v
 src/IdentifiersGenerate.v
@@ -26,6 +30,7 @@ src/PreLanguage.v
 src/Rewriter.v
 src/RewriterAll.v
 src/RewriterAllTactics.v
+src/RewriterAllTacticsExtra.v
 src/RewriterExamples.v
 src/RewriterInterpProofs1.v
 src/RewriterReify.v

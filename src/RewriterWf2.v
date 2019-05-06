@@ -26,6 +26,7 @@ Require Import Crypto.Util.Option.
 Require Import Crypto.Util.CPSNotations.
 Require Import Crypto.Util.HProp.
 Require Import Crypto.Util.Decidable.
+Require Import Crypto.Util.Bool.Reflect.
 Import Coq.Lists.List ListNotations. Local Open Scope list_scope.
 Local Open Scope Z_scope.
 
@@ -40,7 +41,6 @@ Module Compilers.
   Import Rewriter.Compilers.
   Import RewriterWf1.Compilers.
   Import expr.Notations.
-  Import defaults.
   Import RewriterWf1.Compilers.RewriteRules.
 
   Module Import RewriteRules.
@@ -51,15 +51,24 @@ Module Compilers.
       Import RewriterWf1.Compilers.RewriteRules.Compile.
 
       Section with_type.
+        Context {base : Type}.
+        Local Notation base_type := (base.type base).
+        Local Notation pbase_type := (pattern.base.type base).
+        Local Notation type := (type.type base_type).
+        Local Notation ptype := (type.type pbase_type).
         Local Notation type_of_list
           := (fold_right (fun a b => prod a b) unit).
         Local Notation type_of_list_cps
           := (fold_right (fun a K => a -> K)).
-        Context {ident : type.type base.type -> Type}
-                (eta_ident_cps : forall {T : type.type base.type -> Type} {t} (idc : ident t)
+        Context {base_beq : base -> base -> bool}
+                {reflect_base_beq : reflect_rel (@eq base) base_beq}
+                {try_make_transport_base_cps : type.try_make_transport_cpsT base}
+                {try_make_transport_base_cps_correct : type.try_make_transport_cps_correctT base}
+                {ident : type -> Type}
+                (eta_ident_cps : forall {T : type -> Type} {t} (idc : ident t)
                                         (f : forall t', ident t' -> T t'),
                     T t)
-                {pident : type.type pattern.base.type -> Type}
+                {pident : ptype -> Type}
                 (pident_arg_types : forall t, pident t -> list Type)
                 (pident_unify pident_unify_unknown : forall t t' (idc : pident t) (idc' : ident t'), option (type_of_list (pident_arg_types t idc)))
                 {raw_pident : Type}
@@ -68,7 +77,7 @@ Module Compilers.
 
                 (full_types : raw_pident -> Type)
                 (invert_bind_args invert_bind_args_unknown : forall t (idc : ident t) (pidc : raw_pident), option (full_types pidc))
-                (type_of_raw_pident : forall (pidc : raw_pident), full_types pidc -> type.type base.type)
+                (type_of_raw_pident : forall (pidc : raw_pident), full_types pidc -> type)
                 (raw_pident_to_typed : forall (pidc : raw_pident) (args : full_types pidc), ident (type_of_raw_pident pidc args))
                 (raw_pident_is_simple : raw_pident -> bool)
                 (pident_unify_unknown_correct
@@ -80,69 +89,66 @@ Module Compilers.
                  : forall t idc p f, invert_bind_args t idc p = Some f -> t = type_of_raw_pident p f)
                 (raw_pident_to_typed_invert_bind_args
                  : forall t idc p f (pf : invert_bind_args t idc p = Some f),
-                    raw_pident_to_typed p f = rew [ident] raw_pident_to_typed_invert_bind_args_type t idc p f pf in idc)
-        (*(raw_pident_bl : forall p q, raw_pident_beq p q = true -> p = q)
-                (raw_pident_lb : forall p q, p = q -> raw_pident_beq p q = true)*).
-        Local Notation type := (type.type base.type).
-        Local Notation pattern := (@pattern.pattern pident).
-        Local Notation expr := (@expr.expr base.type ident).
-        Local Notation UnderLets := (@UnderLets.UnderLets base.type ident).
-        Local Notation ptype := (type.type pattern.base.type).
-        Local Notation value' := (@value' base.type ident).
-        Local Notation value := (@value base.type ident).
-        Local Notation value_with_lets := (@value_with_lets base.type ident).
-        Local Notation Base_value := (@Base_value base.type ident).
-        Local Notation splice_under_lets_with_value := (@splice_under_lets_with_value base.type ident).
-        Local Notation splice_value_with_lets := (@splice_value_with_lets base.type ident).
-        Local Notation reify := (@reify ident).
-        Local Notation reflect := (@reflect ident).
-        Local Notation rawexpr := (@rawexpr ident).
-        Local Notation eval_decision_tree var := (@eval_decision_tree ident var raw_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple).
-        Local Notation reveal_rawexpr e := (@reveal_rawexpr_cps ident _ e _ id).
+                    raw_pident_to_typed p f = rew [ident] raw_pident_to_typed_invert_bind_args_type t idc p f pf in idc).
+        Local Notation pattern := (@pattern.pattern base pident).
+        Local Notation expr := (@expr.expr base_type ident).
+        Local Notation UnderLets := (@UnderLets.UnderLets base_type ident).
+        Local Notation value' := (@value' base_type ident).
+        Local Notation value := (@value base_type ident).
+        Local Notation value_with_lets := (@value_with_lets base_type ident).
+        Local Notation Base_value := (@Base_value base_type ident).
+        Local Notation splice_under_lets_with_value := (@splice_under_lets_with_value base_type ident).
+        Local Notation splice_value_with_lets := (@splice_value_with_lets base_type ident).
+        Local Notation reify := (@reify base ident).
+        Local Notation reflect := (@reflect base ident).
+        Local Notation rawexpr := (@rawexpr base ident).
+        Local Notation eval_decision_tree var := (@eval_decision_tree base ident var raw_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple).
+        Local Notation reveal_rawexpr e := (@reveal_rawexpr_cps base ident _ e _ id).
+
+        Let type_base (x : base) : @base.type base := base.type.type_base x.
+        Let base' {bt} (x : Compilers.base.type bt) : type.type _ := type.base x.
+        Local Coercion base' : base.type >-> type.type.
+        Local Coercion type_base : base >-> base.type.
 
         Section with_var2.
           Context {var1 var2 : type -> Type}.
 
-          Context (reify_and_let_binds_base_cps1 : forall (t : base.type), @expr var1 t -> forall T, (@expr var1 t -> @UnderLets var1 T) -> @UnderLets var1 T)
-                  (reify_and_let_binds_base_cps2 : forall (t : base.type), @expr var2 t -> forall T, (@expr var2 t -> @UnderLets var2 T) -> @UnderLets var2 T)
+          Context (reify_and_let_binds_base_cps1 : forall (t : base_type), @expr var1 t -> forall T, (@expr var1 t -> @UnderLets var1 T) -> @UnderLets var1 T)
+                  (reify_and_let_binds_base_cps2 : forall (t : base_type), @expr var2 t -> forall T, (@expr var2 t -> @UnderLets var2 T) -> @UnderLets var2 T)
                   (wf_reify_and_let_binds_base_cps
-                   : forall G (t : base.type) x1 x2 T1 T2 P
+                   : forall G (t : base_type) x1 x2 T1 T2 P
                             (Hx : expr.wf G x1 x2)
                             (e1 : expr t -> @UnderLets var1 T1) (e2 : expr t -> @UnderLets var2 T2)
                             (He : forall x1 x2 G' seg, (G' = (seg ++ G)%list) -> expr.wf G' x1 x2 -> UnderLets.wf P G' (e1 x1) (e2 x2)),
                       UnderLets.wf P G (reify_and_let_binds_base_cps1 t x1 T1 e1) (reify_and_let_binds_base_cps2 t x2 T2 e2)).
 
-          Local Notation wf_value' := (@wf_value' base.type ident var1 var2).
-          Local Notation wf_value := (@wf_value base.type ident var1 var2).
-          Local Notation wf_value_with_lets := (@wf_value_with_lets base.type ident var1 var2).
-          Local Notation reify_and_let_binds_cps1 := (@reify_and_let_binds_cps ident var1 reify_and_let_binds_base_cps1).
-          Local Notation reify_and_let_binds_cps2 := (@reify_and_let_binds_cps ident var2 reify_and_let_binds_base_cps2).
-          Local Notation rewrite_rulesT1 := (@rewrite_rulesT ident var1 pident pident_arg_types).
-          Local Notation rewrite_rulesT2 := (@rewrite_rulesT ident var2 pident pident_arg_types).
-          Local Notation eval_rewrite_rules1 := (@eval_rewrite_rules ident var1 pident pident_arg_types pident_unify pident_unify_unknown raw_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple).
-          Local Notation eval_rewrite_rules2 := (@eval_rewrite_rules ident var2 pident pident_arg_types pident_unify pident_unify_unknown raw_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple).
-          Local Notation with_unification_resultT'1 := (@with_unification_resultT' ident var1 pident pident_arg_types).
-          Local Notation with_unification_resultT'2 := (@with_unification_resultT' ident var2 pident pident_arg_types).
-          Local Notation with_unification_resultT1 := (@with_unification_resultT ident var1 pident pident_arg_types).
-          Local Notation with_unification_resultT2 := (@with_unification_resultT ident var2 pident pident_arg_types).
-          Local Notation rewrite_rule_data1 := (@rewrite_rule_data ident var1 pident pident_arg_types).
-          Local Notation rewrite_rule_data2 := (@rewrite_rule_data ident var2 pident pident_arg_types).
-          Local Notation with_unif_rewrite_ruleTP_gen1 := (@with_unif_rewrite_ruleTP_gen ident var1 pident pident_arg_types).
-          Local Notation with_unif_rewrite_ruleTP_gen2 := (@with_unif_rewrite_ruleTP_gen ident var2 pident pident_arg_types).
-          Local Notation wf_rawexpr := (@wf_rawexpr ident var1 var2).
+          Local Notation wf_value' := (@wf_value' base_type ident var1 var2).
+          Local Notation wf_value := (@wf_value base_type ident var1 var2).
+          Local Notation wf_value_with_lets := (@wf_value_with_lets base_type ident var1 var2).
+          Local Notation reify_and_let_binds_cps1 := (@reify_and_let_binds_cps base ident var1 reify_and_let_binds_base_cps1).
+          Local Notation reify_and_let_binds_cps2 := (@reify_and_let_binds_cps base ident var2 reify_and_let_binds_base_cps2).
+          Local Notation rewrite_rulesT1 := (@rewrite_rulesT base ident var1 pident pident_arg_types).
+          Local Notation rewrite_rulesT2 := (@rewrite_rulesT base ident var2 pident pident_arg_types).
+          Local Notation eval_rewrite_rules1 := (@eval_rewrite_rules base try_make_transport_base_cps base_beq ident var1 pident pident_arg_types pident_unify pident_unify_unknown raw_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple).
+          Local Notation eval_rewrite_rules2 := (@eval_rewrite_rules base try_make_transport_base_cps base_beq ident var2 pident pident_arg_types pident_unify pident_unify_unknown raw_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple).
+          Local Notation rewrite_rule_data1 := (@rewrite_rule_data base ident var1 pident pident_arg_types).
+          Local Notation rewrite_rule_data2 := (@rewrite_rule_data base ident var2 pident pident_arg_types).
+          Local Notation with_unif_rewrite_ruleTP_gen1 := (@with_unif_rewrite_ruleTP_gen base ident var1 pident pident_arg_types).
+          Local Notation with_unif_rewrite_ruleTP_gen2 := (@with_unif_rewrite_ruleTP_gen base ident var2 pident pident_arg_types).
+          Local Notation wf_rawexpr := (@wf_rawexpr base ident var1 var2).
           (** TODO: Move Me up *)
-          Local Notation unify_pattern'1 := (@unify_pattern' ident var1 pident pident_arg_types pident_unify pident_unify_unknown).
-          Local Notation unify_pattern'2 := (@unify_pattern' ident var2 pident pident_arg_types pident_unify pident_unify_unknown).
-          Local Notation unify_pattern1 := (@unify_pattern ident var1 pident pident_arg_types pident_unify pident_unify_unknown).
-          Local Notation unify_pattern2 := (@unify_pattern ident var2 pident pident_arg_types pident_unify pident_unify_unknown).
-          Local Notation wf_unification_resultT' := (@wf_unification_resultT' ident pident pident_arg_types var1 var2).
-          Local Notation wf_unification_resultT := (@wf_unification_resultT ident pident pident_arg_types var1 var2).
-          Local Notation wf_with_unification_resultT := (@wf_with_unification_resultT ident pident pident_arg_types var1 var2).
-          Local Notation wf_with_unif_rewrite_ruleTP_gen := (@wf_with_unif_rewrite_ruleTP_gen ident pident pident_arg_types var1 var2).
-          Local Notation wf_deep_rewrite_ruleTP_gen := (@wf_deep_rewrite_ruleTP_gen ident var1 var2).
-          Local Notation app_with_unification_resultT_cps1 := (@app_with_unification_resultT_cps pident pident_arg_types (@value var1)).
-          Local Notation app_with_unification_resultT_cps2 := (@app_with_unification_resultT_cps pident pident_arg_types (@value var2)).
-          Local Notation wf_app_with_unification_resultT := (@wf_app_with_unification_resultT ident pident pident_arg_types var1 var2).
+          Local Notation unify_pattern'1 := (@unify_pattern' base try_make_transport_base_cps ident var1 pident pident_arg_types pident_unify pident_unify_unknown).
+          Local Notation unify_pattern'2 := (@unify_pattern' base try_make_transport_base_cps ident var2 pident pident_arg_types pident_unify pident_unify_unknown).
+          Local Notation unify_pattern1 := (@unify_pattern base try_make_transport_base_cps base_beq ident var1 pident pident_arg_types pident_unify pident_unify_unknown).
+          Local Notation unify_pattern2 := (@unify_pattern base try_make_transport_base_cps base_beq ident var2 pident pident_arg_types pident_unify pident_unify_unknown).
+          Local Notation wf_unification_resultT' := (@wf_unification_resultT' base ident pident pident_arg_types var1 var2).
+          Local Notation wf_unification_resultT := (@wf_unification_resultT base ident pident pident_arg_types var1 var2).
+          Local Notation wf_with_unification_resultT := (@wf_with_unification_resultT base ident pident pident_arg_types var1 var2).
+          Local Notation wf_with_unif_rewrite_ruleTP_gen := (@wf_with_unif_rewrite_ruleTP_gen base try_make_transport_base_cps ident pident pident_arg_types var1 var2).
+          Local Notation wf_deep_rewrite_ruleTP_gen := (@wf_deep_rewrite_ruleTP_gen base ident var1 var2).
+          Local Notation app_with_unification_resultT_cps1 := (@app_with_unification_resultT_cps base try_make_transport_base_cps pident pident_arg_types (@value var1)).
+          Local Notation app_with_unification_resultT_cps2 := (@app_with_unification_resultT_cps base try_make_transport_base_cps pident pident_arg_types (@value var2)).
+          Local Notation wf_app_with_unification_resultT := (@wf_app_with_unification_resultT base base_beq reflect_base_beq try_make_transport_base_cps try_make_transport_base_cps_correct ident pident pident_arg_types var1 var2).
 
           (* Because [proj1] and [proj2] in the stdlib are opaque *)
           Local Notation proj1 x := (let (a, b) := x in a).
@@ -156,7 +162,7 @@ Module Compilers.
                 (wf_unification_resultT' G)
                 (@unify_pattern'1 _ re1 p evm _ (@Some _))
                 (@unify_pattern'2 _ re2 p evm _ (@Some _)).
-          Proof using Type.
+          Proof using try_make_transport_base_cps_correct.
             revert t' e1 e2 re1 re2 He; induction p; intros; cbn [unify_pattern'].
             all: repeat first [ progress cbn [Option.bind eq_rect option_eq] in *
                               | assumption
@@ -220,7 +226,7 @@ Module Compilers.
                 (wf_unification_resultT G)
                 (@unify_pattern1 t re1 p _ (@Some _))
                 (@unify_pattern2 t re2 p _ (@Some _)).
-          Proof using Type.
+          Proof using try_make_transport_base_cps_correct.
             cbv [unify_pattern wf_unification_resultT].
             cps_id'_with_option unify_types_cps_id.
             rewrite <- (wf_unify_types He).
@@ -533,7 +539,7 @@ Module Compilers.
             : (rew [fun t => @UnderLets var (B t)] p in UnderLets.splice v f)
               = UnderLets.splice (rew [fun t => @UnderLets var (A t)] p in v)
                                  (fun v => rew [fun t => @UnderLets var (B t)] p in f (rew [A] (eq_sym p) in v)).
-          Proof. case p; reflexivity. Defined.
+          Proof using Type. case p; reflexivity. Defined.
 
           Local Lemma ap_transport_Base {var T}
                 (A : T -> Type)
@@ -541,12 +547,12 @@ Module Compilers.
                 (v : A x)
             : (rew [fun t => @UnderLets var (A t)] p in UnderLets.Base v)
               = UnderLets.Base (rew [A] p in v).
-          Proof. case p; reflexivity. Defined.
+          Proof using Type. case p; reflexivity. Defined.
 
-          Local Notation rewrite_rules_goodT := (@rewrite_rules_goodT ident pident pident_arg_types var1 var2).
-          Local Notation wf_rewrite_rule_data := (@wf_rewrite_rule_data ident pident pident_arg_types var1 var2).
-          Local Notation wf_reflect := (@wf_reflect ident var1 var2).
-          Local Notation wf_reify := (@wf_reify ident var1 var2).
+          Local Notation rewrite_rules_goodT := (@rewrite_rules_goodT base try_make_transport_base_cps ident pident pident_arg_types var1 var2).
+          Local Notation wf_rewrite_rule_data := (@wf_rewrite_rule_data base try_make_transport_base_cps ident pident pident_arg_types var1 var2).
+          Local Notation wf_reflect := (@wf_reflect base ident var1 var2).
+          Local Notation wf_reify := (@wf_reify base ident var1 var2).
 
           Local Lemma Some_neq_None_helper {A B x y} : @Some A x = None <-> @Some B y = None.
           Proof using Type. clear; intuition congruence. Qed.
@@ -619,9 +625,9 @@ Module Compilers.
             try congruence.
 
           Lemma wf_eval_rewrite_rules
-                (do_again1 : forall t : base.type, @expr.expr base.type ident (@value var1) t -> @UnderLets var1 (@expr var1 t))
-                (do_again2 : forall t : base.type, @expr.expr base.type ident (@value var2) t -> @UnderLets var2 (@expr var2 t))
-                (wf_do_again : forall G (t : base.type) e1 e2,
+                (do_again1 : forall t : base_type, @expr.expr base_type ident (@value var1) t -> @UnderLets var1 (@expr var1 t))
+                (do_again2 : forall t : base_type, @expr.expr base_type ident (@value var2) t -> @UnderLets var2 (@expr var2 t))
+                (wf_do_again : forall G (t : base_type) e1 e2,
                     (exists G', (forall t v1 v2, List.In (existT _ t (v1, v2)) G' -> Compile.wf_value G v1 v2) /\ expr.wf G' e1 e2)
                     -> UnderLets.wf (fun G' => expr.wf G') G (@do_again1 t e1) (@do_again2 t e2))
                 (d : @decision_tree raw_pident)
@@ -635,7 +641,7 @@ Module Compilers.
                 G
                 (rew [fun t => @UnderLets var1 (expr t)] (proj1 (eq_type_of_rawexpr_of_wf Hwf)) in (eval_rewrite_rules1 do_again1 d rew1 re1))
                 (rew [fun t => @UnderLets var2 (expr t)] (proj2 (eq_type_of_rawexpr_of_wf Hwf)) in (eval_rewrite_rules2 do_again2 d rew2 re2)).
-          Proof using invert_bind_args_unknown_correct pident_unify_unknown_correct raw_pident_to_typed_invert_bind_args.
+          Proof using invert_bind_args_unknown_correct pident_unify_unknown_correct raw_pident_to_typed_invert_bind_args try_make_transport_base_cps_correct.
             cbv [eval_rewrite_rules Option.sequence_return rewrite_with_rule].
             cbv [rewrite_rules_goodT] in Hrew.
             eapply wf_eval_decision_tree with (ctxe:=[existT _ t (e1, e2)]);
@@ -727,7 +733,7 @@ Module Compilers.
                          | break_innermost_match_step
                          | progress cbv [id] in *
                          | match goal with
-                           | [ H : wf_maybe_do_again_expr _ ?v _ |- context[?v] ] => clear -H wf_do_again; cbv [wf_maybe_do_again_expr maybe_do_again] in *
+                           | [ H : wf_maybe_do_again_expr _ ?v _ |- context[?v] ] => clear -H wf_do_again reflect_base_beq; cbv [wf_maybe_do_again_expr maybe_do_again] in *
                            | [ |- UnderLets.wf _ _ _ _ ] => constructor
                            | [ |- context[type.decode _ _ ?pf ] ]
                              => is_var pf;
@@ -745,15 +751,15 @@ Module Compilers.
                     (rew1 : rewrite_rulesT1)
                     (rew2 : rewrite_rulesT2)
                     (Hrew : rewrite_rules_goodT rew1 rew2)
-                    (do_again1 : forall t : base.type, @expr.expr base.type ident (@value var1) t -> @UnderLets var1 (@expr var1 t))
-                    (do_again2 : forall t : base.type, @expr.expr base.type ident (@value var2) t -> @UnderLets var2 (@expr var2 t))
-                    (wf_do_again : forall G G' (t : base.type) e1 e2,
+                    (do_again1 : forall t : base_type, @expr (@value var1) t -> @UnderLets var1 (@expr var1 t))
+                    (do_again2 : forall t : base_type, @expr (@value var2) t -> @UnderLets var2 (@expr var2 t))
+                    (wf_do_again : forall G G' (t : base_type) e1 e2,
                         (forall t v1 v2, List.In (existT _ t (v1, v2)) G' -> Compile.wf_value G v1 v2)
                         -> expr.wf G' e1 e2
                         -> UnderLets.wf (fun G' => expr.wf G') G (@do_again1 t e1) (@do_again2 t e2)).
 
-            Local Notation assemble_identifier_rewriters' var := (@assemble_identifier_rewriters' ident var pident pident_arg_types pident_unify pident_unify_unknown raw_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple dtree).
-            Local Notation assemble_identifier_rewriters var := (@assemble_identifier_rewriters ident var eta_ident_cps pident pident_arg_types pident_unify pident_unify_unknown raw_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple dtree).
+            Local Notation assemble_identifier_rewriters' var := (@assemble_identifier_rewriters' base try_make_transport_base_cps base_beq ident var pident pident_arg_types pident_unify pident_unify_unknown raw_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple dtree).
+            Local Notation assemble_identifier_rewriters var := (@assemble_identifier_rewriters base try_make_transport_base_cps base_beq ident var eta_ident_cps pident pident_arg_types pident_unify pident_unify_unknown raw_pident full_types invert_bind_args invert_bind_args_unknown type_of_raw_pident raw_pident_to_typed raw_pident_is_simple dtree).
 
             Lemma wf_assemble_identifier_rewriters' G t re1 e1 re2 e2
                   K1 K2
@@ -764,7 +770,7 @@ Module Compilers.
                   G
                   (@assemble_identifier_rewriters' var1 rew1 do_again1 t re1 K1)
                   (@assemble_identifier_rewriters' var2 rew2 do_again2 t re2 K2).
-            Proof.
+            Proof using invert_bind_args_unknown_correct pident_unify_unknown_correct raw_pident_to_typed_invert_bind_args try_make_transport_base_cps_correct wf_do_again Hrew.
               revert dependent G; revert dependent re1; revert dependent re2; induction t as [t|s IHs d IHd];
                 intros; cbn [assemble_identifier_rewriters'].
               { rewrite HK1, HK2; apply wf_eval_rewrite_rules; try assumption.
@@ -784,7 +790,7 @@ Module Compilers.
                   G
                   (@assemble_identifier_rewriters var1 rew1 do_again1 t idc)
                   (@assemble_identifier_rewriters var2 rew2 do_again2 t idc).
-            Proof.
+            Proof using invert_bind_args_unknown_correct pident_unify_unknown_correct raw_pident_to_typed_invert_bind_args try_make_transport_base_cps_correct wf_do_again Hrew eta_ident_cps_correct.
               cbv [assemble_identifier_rewriters]; rewrite !eta_ident_cps_correct.
               unshelve eapply wf_assemble_identifier_rewriters'; [ shelve | shelve | constructor | | ]; reflexivity.
             Qed.
@@ -792,121 +798,158 @@ Module Compilers.
         End with_var2.
       End with_type.
 
-      Section full_with_var2.
-        Context {var1 var2 : type.type base.type -> Type}.
-        Local Notation expr := (@expr.expr base.type ident).
-        Local Notation value := (@Compile.value base.type ident).
-        Local Notation value_with_lets := (@Compile.value_with_lets base.type ident).
-        Local Notation UnderLets := (UnderLets.UnderLets base.type ident).
-        Local Notation reflect := (@Compile.reflect ident).
-        Section with_rewrite_head.
-          Context (rewrite_head1 : forall t (idc : ident t), @value_with_lets var1 t)
-                  (rewrite_head2 : forall t (idc : ident t), @value_with_lets var2 t)
-                  (wf_rewrite_head : forall G t (idc1 idc2 : ident t),
-                      idc1 = idc2 -> wf_value_with_lets G (rewrite_head1 t idc1) (rewrite_head2 t idc2)).
+      Section full.
+        Context {base : Type}.
+        Local Notation base_type := (base.type base).
+        Local Notation type := (type.type base_type).
+        Context {ident : type -> Type}
+                {base_interp : base -> Type}
+                (ident_is_var_like : forall t, ident t -> bool).
+        Local Notation expr := (@expr base_type ident).
+        Let type_base (x : base) : @base.type base := base.type.type_base x.
+        Let base' {bt} (x : Compilers.base.type bt) : type.type _ := type.base x.
+        Local Coercion base' : base.type >-> type.type.
+        Local Coercion type_base : base >-> base.type.
+        Context {base_beq : base -> base -> bool}
+                {reflect_base_beq : reflect_rel (@eq base) base_beq}
+                {try_make_transport_base_cps : type.try_make_transport_cpsT base}
+                {try_make_transport_base_cps_correct : type.try_make_transport_cps_correctT base}
+                {baseTypeHasNat : base.type.BaseTypeHasNatT base}
+                {buildIdent : ident.BuildIdentT base_interp ident}
+                {buildEagerIdent : ident.BuildEagerIdentT ident}
+                {toRestrictedIdent : ident.ToRestrictedIdentT ident}
+                {toFromRestrictedIdent : ident.ToFromRestrictedIdentT ident}
+                {invertIdent : invert_expr.InvertIdentT base_interp ident}
+                {baseHasNatCorrect : base.BaseHasNatCorrectT base_interp}
+                {buildInvertIdentCorrect : invert_expr.BuildInvertIdentCorrectT}.
 
-          Local Notation rewrite_bottomup1 := (@rewrite_bottomup var1 rewrite_head1).
-          Local Notation rewrite_bottomup2 := (@rewrite_bottomup var2 rewrite_head2).
+        Local Notation value := (@Compile.value base_type ident).
+        Local Notation value_with_lets := (@Compile.value_with_lets base_type ident).
+        Local Notation UnderLets := (UnderLets.UnderLets base_type ident).
+        Local Notation reflect := (@Compile.reflect base ident).
 
-          Lemma wf_rewrite_bottomup G G' {t} e1 e2 (Hwf : expr.wf G e1 e2)
+        Section with_var2.
+          Context {var1 var2 : type -> Type}.
+
+          Section with_rewrite_head.
+            Context (rewrite_head1 : forall t (idc : ident t), @value_with_lets var1 t)
+                    (rewrite_head2 : forall t (idc : ident t), @value_with_lets var2 t)
+                    (wf_rewrite_head : forall G t (idc1 idc2 : ident t),
+                        idc1 = idc2 -> wf_value_with_lets G (rewrite_head1 t idc1) (rewrite_head2 t idc2)).
+
+            Local Notation rewrite_bottomup1 := (@rewrite_bottomup base ident base_interp ident_is_var_like buildIdent invertIdent try_make_transport_base_cps var1 rewrite_head1).
+            Local Notation rewrite_bottomup2 := (@rewrite_bottomup base ident base_interp ident_is_var_like buildIdent invertIdent try_make_transport_base_cps var2 rewrite_head2).
+
+            Local Ltac t :=
+              repeat first [ reflexivity
+                           | solve [ eauto ]
+                           | apply wf_rewrite_head
+                           | apply wf_Base_value
+                           | apply wf_splice_value_with_lets
+                           | apply wf_splice_under_lets_with_value
+                           | apply wf_reify_and_let_binds_cps
+                           | apply UnderLets.wf_reify_and_let_binds_base_cps
+                           | apply wf_reflect
+                           | progress subst
+                           | progress destruct_head'_ex
+                           | progress cbv [wf_value_with_lets wf_value] in *
+                           | progress cbn [wf_value' fst snd] in *
+                           | progress intros
+                           | wf_safe_t_step
+                           | eapply wf_value'_Proper_list; [ | solve [ eauto ] ]
+                           | match goal with
+                             | [ |- UnderLets.wf _ _ _ _ ] => constructor
+                             | [ H : _ |- _ ] => apply H; clear H; solve [ t ]
+                             end ].
+
+            Lemma wf_rewrite_bottomup G G' {t} e1 e2 (Hwf : expr.wf G e1 e2)
+                  (HG : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> wf_value G' v1 v2)
+              : wf_value_with_lets G' (@rewrite_bottomup1 t e1) (@rewrite_bottomup2 t e2).
+            Proof using wf_rewrite_head try_make_transport_base_cps_correct buildInvertIdentCorrect.
+              revert dependent G'; induction Hwf; intros; cbn [rewrite_bottomup].
+              all: t.
+            Qed.
+          End with_rewrite_head.
+
+          Local Notation nbe var := (@rewrite_bottomup base ident base_interp ident_is_var_like buildIdent invertIdent try_make_transport_base_cps var (fun t idc => reflect (expr.Ident idc))).
+
+          Lemma wf_nbe G G' {t} e1 e2
+                (Hwf : expr.wf G e1 e2)
                 (HG : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> wf_value G' v1 v2)
-            : wf_value_with_lets G' (@rewrite_bottomup1 t e1) (@rewrite_bottomup2 t e2).
-          Proof.
-            revert dependent G'; induction Hwf; intros; cbn [rewrite_bottomup].
-            all: repeat first [ reflexivity
-                              | solve [ eauto ]
-                              | apply wf_rewrite_head
-                              | apply wf_Base_value
-                              | apply wf_splice_value_with_lets
-                              | apply wf_splice_under_lets_with_value
-                              | apply wf_reify_and_let_binds_cps
-                              | apply UnderLets.wf_reify_and_let_binds_base_cps
-                              | apply wf_reflect
-                              | progress subst
-                              | progress destruct_head'_ex
-                              | progress cbv [wf_value_with_lets wf_value] in *
-                              | progress cbn [wf_value' fst snd] in *
-                              | progress intros
-                              | wf_safe_t_step
-                              | eapply wf_value'_Proper_list; [ | solve [ eauto ] ]
-                              | match goal with
-                                | [ |- UnderLets.wf _ _ _ _ ] => constructor
-                                | [ H : _ |- _ ] => apply H; clear H
-                                end ].
+            : wf_value_with_lets G' (@nbe var1 t e1) (@nbe var2 t e2).
+          Proof using try_make_transport_base_cps_correct buildInvertIdentCorrect.
+            eapply wf_rewrite_bottomup; try eassumption.
+            intros; subst; eapply wf_reflect; wf_t.
           Qed.
-        End with_rewrite_head.
 
-        Local Notation nbe var := (@rewrite_bottomup var (fun t idc => reflect (expr.Ident idc))).
+          Section with_rewrite_head2.
+            Context (rewrite_head1 : forall (do_again : forall t : base_type, @expr (@value var1) (type.base t) -> @UnderLets var1 (@expr var1 (type.base t)))
+                                            t (idc : ident t), @value_with_lets var1 t)
+                    (rewrite_head2 : forall (do_again : forall t : base_type, @expr (@value var2) (type.base t) -> @UnderLets var2 (@expr var2 (type.base t)))
+                                            t (idc : ident t), @value_with_lets var2 t)
+                    (wf_rewrite_head
+                     : forall
+                        do_again1
+                        do_again2
+                        (wf_do_again
+                         : forall G' G (t : base_type) e1 e2
+                                  (HG : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> wf_value G' v1 v2),
+                            expr.wf G e1 e2
+                            -> UnderLets.wf (fun G' => expr.wf G') G' (do_again1 t e1) (do_again2 t e2))
+                        G t (idc1 idc2 : ident t),
+                        idc1 = idc2 -> wf_value_with_lets G (rewrite_head1 do_again1 t idc1) (rewrite_head2 do_again2 t idc2)).
 
-        Lemma wf_nbe G G' {t} e1 e2
-              (Hwf : expr.wf G e1 e2)
-              (HG : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> wf_value G' v1 v2)
-          : wf_value_with_lets G' (@nbe var1 t e1) (@nbe var2 t e2).
-        Proof.
-          eapply wf_rewrite_bottomup; try eassumption.
-          intros; subst; eapply wf_reflect; wf_t.
+            Local Notation repeat_rewrite1 := (@repeat_rewrite base ident base_interp ident_is_var_like buildIdent invertIdent try_make_transport_base_cps var1 rewrite_head1).
+            Local Notation repeat_rewrite2 := (@repeat_rewrite base ident base_interp ident_is_var_like buildIdent invertIdent try_make_transport_base_cps var2 rewrite_head2).
+            Local Notation rewrite1 := (@rewrite base ident base_interp ident_is_var_like buildIdent invertIdent try_make_transport_base_cps var1 rewrite_head1).
+            Local Notation rewrite2 := (@rewrite base ident base_interp ident_is_var_like buildIdent invertIdent try_make_transport_base_cps var2 rewrite_head2).
+
+            Lemma wf_repeat_rewrite fuel
+              : forall {t} G G' e1 e2
+                       (Hwf : expr.wf G e1 e2)
+                       (HG : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> wf_value G' v1 v2),
+                wf_value_with_lets G' (@repeat_rewrite1 fuel t e1) (@repeat_rewrite2 fuel t e2).
+            Proof using wf_rewrite_head try_make_transport_base_cps_correct buildInvertIdentCorrect.
+              induction fuel as [|fuel IHfuel]; intros; cbn [repeat_rewrite]; eapply wf_rewrite_bottomup; try eassumption;
+                apply wf_rewrite_head; intros; [ eapply wf_nbe with (t:=type.base _) | eapply IHfuel with (t:=type.base _) ];
+                  eassumption.
+            Qed.
+
+            Lemma wf_rewrite fuel
+              : forall {t} G G' e1 e2
+                       (Hwf : expr.wf G e1 e2)
+                       (HG : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> wf_value G' v1 v2),
+                expr.wf G' (@rewrite1 fuel t e1) (@rewrite2 fuel t e2).
+            Proof. intros; eapply wf_reify, wf_repeat_rewrite; eassumption. Qed.
+          End with_rewrite_head2.
+        End with_var2.
+
+        Local Notation Rewrite := (@Rewrite base ident base_interp ident_is_var_like buildIdent invertIdent try_make_transport_base_cps).
+
+        Theorem Wf_Rewrite
+                (rewrite_head
+                 : forall var
+                          (do_again : forall t : base_type, @expr (@value var) (type.base t) -> @UnderLets.UnderLets base_type ident var (@expr var (type.base t)))
+                          t (idc : ident t), @value_with_lets var t)
+                (wf_rewrite_head
+                 : forall
+                    var1 var2
+                    do_again1
+                    do_again2
+                    (wf_do_again
+                     : forall G G' (t : base_type) e1 e2,
+                        (forall t v1 v2, List.In (existT _ t (v1, v2)) G' -> Compile.wf_value G v1 v2)
+                        -> expr.wf G' e1 e2
+                        -> UnderLets.wf (fun G' => expr.wf G') G (do_again1 t e1) (do_again2 t e2))
+                    t (idc : ident t),
+                    wf_value_with_lets nil (rewrite_head var1 do_again1 t idc) (rewrite_head var2 do_again2 t idc))
+                fuel {t} (e : Expr t) (Hwf : Wf e)
+          : Wf (@Rewrite rewrite_head fuel t e).
+        Proof using try_make_transport_base_cps_correct buildInvertIdentCorrect.
+          intros var1 var2; cbv [Rewrite]; eapply wf_rewrite with (G:=nil); [ | apply Hwf | wf_t ].
+          intros; subst; eapply wf_value'_Proper_list; [ | eapply wf_rewrite_head ]; wf_t.
         Qed.
-
-        Section with_rewrite_head2.
-          Context (rewrite_head1 : forall (do_again : forall t : base.type, @expr (@value var1) (type.base t) -> @UnderLets var1 (@expr var1 (type.base t)))
-                                          t (idc : ident t), @value_with_lets var1 t)
-                  (rewrite_head2 : forall (do_again : forall t : base.type, @expr (@value var2) (type.base t) -> @UnderLets var2 (@expr var2 (type.base t)))
-                                          t (idc : ident t), @value_with_lets var2 t)
-                  (wf_rewrite_head
-                   : forall
-                      do_again1
-                      do_again2
-                      (wf_do_again
-                       : forall G' G (t : base.type) e1 e2
-                                (HG : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> wf_value G' v1 v2),
-                          expr.wf G e1 e2
-                          -> UnderLets.wf (fun G' => expr.wf G') G' (do_again1 t e1) (do_again2 t e2))
-                      G t (idc1 idc2 : ident t),
-                      idc1 = idc2 -> wf_value_with_lets G (rewrite_head1 do_again1 t idc1) (rewrite_head2 do_again2 t idc2)).
-
-          Lemma wf_repeat_rewrite fuel
-            : forall {t} G G' e1 e2
-                     (Hwf : expr.wf G e1 e2)
-                     (HG : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> wf_value G' v1 v2),
-              wf_value_with_lets G' (@repeat_rewrite var1 rewrite_head1 fuel t e1) (@repeat_rewrite var2 rewrite_head2 fuel t e2).
-          Proof.
-            induction fuel as [|fuel IHfuel]; intros; cbn [repeat_rewrite]; eapply wf_rewrite_bottomup; try eassumption;
-              apply wf_rewrite_head; intros; [ eapply wf_nbe with (t:=type.base _) | eapply IHfuel with (t:=type.base _) ];
-                eassumption.
-          Qed.
-
-          Lemma wf_rewrite fuel
-            : forall {t} G G' e1 e2
-                     (Hwf : expr.wf G e1 e2)
-                     (HG : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> wf_value G' v1 v2),
-              expr.wf G' (@rewrite var1 rewrite_head1 fuel t e1) (@rewrite var2 rewrite_head2 fuel t e2).
-          Proof. intros; eapply wf_reify, wf_repeat_rewrite; eassumption. Qed.
-        End with_rewrite_head2.
-      End full_with_var2.
-
-      Theorem Wf_Rewrite
-              (rewrite_head
-               : forall var
-                        (do_again : forall t : base.type, @expr (@value base.type ident var) (type.base t) -> @UnderLets.UnderLets base.type ident var (@expr var (type.base t)))
-                        t (idc : ident t), @value_with_lets base.type ident var t)
-              (wf_rewrite_head
-               : forall
-                  var1 var2
-                  do_again1
-                  do_again2
-                  (wf_do_again
-                   : forall G G' (t : base.type) e1 e2,
-                      (forall t v1 v2, List.In (existT _ t (v1, v2)) G' -> Compile.wf_value G v1 v2)
-                      -> expr.wf G' e1 e2
-                      -> UnderLets.wf (fun G' => expr.wf G') G (do_again1 t e1) (do_again2 t e2))
-                  t (idc : ident t),
-                  wf_value_with_lets nil (rewrite_head var1 do_again1 t idc) (rewrite_head var2 do_again2 t idc))
-              fuel {t} (e : Expr t) (Hwf : Wf e)
-        : Wf (@Rewrite rewrite_head fuel t e).
-      Proof.
-        intros var1 var2; cbv [Rewrite]; eapply wf_rewrite with (G:=nil); [ | apply Hwf | wf_t ].
-        intros; subst; eapply wf_value'_Proper_list; [ | eapply wf_rewrite_head ]; wf_t.
-      Qed.
+      End full.
     End Compile.
   End RewriteRules.
 End Compilers.
