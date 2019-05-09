@@ -186,10 +186,25 @@ Lemma dec_of_bool_dec {P : Prop} (b : bool) (Hbl : b = true -> P) (Hlb : P -> b 
   : Decidable P.
 Proof. destruct b; [ left; apply Hbl; reflexivity | right; intro p; apply Bool.diff_false_true, Hlb, p ]. Defined.
 
+Definition bool_of_dec (P : Prop) {H : Decidable P} : bool := if H then true else false.
+Lemma bp_of_dec (P : Prop) {H : Decidable P} : bool_of_dec P = true -> P.
+Proof. cbv [bool_of_dec]; destruct H; [ trivial with nocore | abstract congruence ]. Defined.
+Lemma pb_of_dec (P : Prop) {H : Decidable P} : P -> bool_of_dec P = true.
+Proof. cbv [bool_of_dec]; destruct H; [ reflexivity | abstract tauto ]. Defined.
+
 Lemma dec_rel_of_bool_dec_rel {A} {R : A -> A -> Prop} (b : A -> A -> bool)
       (Hbl : forall x y, b x y = true -> R x y) (Hlb : forall x y, R x y -> b x y = true)
   : DecidableRel R.
 Proof. eauto using dec_of_bool_dec. Defined.
+
+Definition bool_rel_of_dec_rel {A} (R : A -> A -> Prop) {H : DecidableRel R} : A -> A -> bool
+  := fun x y => if H x y then true else false.
+Lemma br_of_dec_rel {A} (R : A -> A -> Prop) {H : DecidableRel R}
+  : forall x y, bool_rel_of_dec_rel R x y = true -> R x y.
+Proof. cbv [bool_rel_of_dec_rel]; intros x y; destruct (H x y); [ trivial with nocore | abstract congruence ]. Defined.
+Lemma rb_of_dec_rel {A} (R : A -> A -> Prop) {H : DecidableRel R}
+  : forall x y, R x y -> bool_rel_of_dec_rel R x y = true.
+Proof. cbv [bool_rel_of_dec_rel]; intros x y; destruct (H x y); [ reflexivity | abstract tauto ]. Defined.
 
 Lemma dec_bool : forall {P} {Pdec:Decidable P}, (if dec P then true else false) = true -> P.
 Proof. intros. destruct dec; solve [ auto | discriminate ]. Qed.
