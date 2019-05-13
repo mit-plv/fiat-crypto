@@ -65,6 +65,19 @@ Ltac beq_to_eq beq bl lb :=
            => change (mark G); generalize dependent (bl x y H); clear H;
               intros; cbv beta delta [mark]
          | [ H : context[beq ?x ?x] |- _ ] => rewrite (lb x x eq_refl) in H
+         | [ |- context[beq ?x ?x] ] => rewrite (lb x x eq_refl)
+         end.
+
+Ltac reflect_beq_to_eq beq :=
+  let lem_to_dec := constr:(fun b x y => @reflect_to_dec (x = y) (beq x y) b _) in
+  let lem_of_dec := constr:(fun b x y => @reflect_of_dec (x = y) (beq x y) b _) in
+  repeat match goal with
+         | [ H : beq ?x ?y = true |- _ ] => apply (lem_to_dec true x y) in H; cbv beta iota in H
+         | [ H : beq ?x ?y = false |- _ ] => apply (lem_to_dec false x y) in H; cbv beta iota in H
+         | [ |- beq ?x ?y = true ] => refine (lem_of_dec true x y _)
+         | [ |- beq ?x ?y = false ] => refine (lem_of_dec false x y _)
+         | [ H : context[beq ?x ?x] |- _ ] => rewrite (lem_of_dec true x x eq_refl) in H
+         | [ |- context[beq ?x ?x] ] => rewrite (lem_of_dec true x x eq_refl)
          end.
 
 Existing Class reflect.
