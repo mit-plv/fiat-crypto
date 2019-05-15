@@ -991,6 +991,7 @@ Module Compilers.
           repeat first [ break_match_step ltac:(fun v => match v with Sumbool.sumbool_of_bool _ => idtac end)
                        | progress rewrite_type_transport_correct
                        | progress type_beq_to_eq
+                       | progress intros
                        | progress cbv [option_bind'] in *
                        | progress cbn [Option.bind projT1 projT2 UnderLets.interp eq_rect UnderLets_interp_related] in *
                        | progress destruct_head'_sigT

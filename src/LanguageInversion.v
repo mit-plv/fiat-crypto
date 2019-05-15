@@ -10,6 +10,7 @@ Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.Bool.Reflect.
 Require Import Crypto.Util.CPSNotations.
+Require Import Crypto.Util.Tactics.RewriteHyp.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.FixCoqMistakes.
 
@@ -92,46 +93,6 @@ Module Compilers.
       Ltac inversion_type := repeat inversion_type_step.
     End type.
 
-    Local Ltac beq_t :=
-      repeat first [ progress cbn in *
-                   | apply BinInt.Z.eqb_eq
-                   | apply Bool.eqb_true_iff
-                   | apply PeanoNat.Nat.eqb_eq
-                   | apply ZRange.zrange_bl
-                   | apply ZRange.zrange_lb
-                   | apply internal_prod_dec_bl
-                   | apply internal_prod_dec_lb
-                   | apply ListUtil.internal_list_dec_bl
-                   | apply ListUtil.internal_list_dec_lb
-                   | apply internal_option_dec_bl
-                   | apply internal_option_dec_lb
-                   | progress destruct_head'_unit
-                   | reflexivity
-                   | solve [ auto ] ].
-
-    Lemma base_interp_bl {t x y} : @base.base_interp_beq t x y = true -> x = y.
-    Proof. induction t; beq_t. Qed.
-    Local Hint Resolve base_interp_bl : core.
-
-    Lemma base_interp_lb {t x y} : x = y -> @base.base_interp_beq t x y = true.
-    Proof. induction t; beq_t. Qed.
-    Local Hint Resolve base_interp_lb : core.
-
-    Global Instance dec_eq_base_interp {t} : DecidableRel (@eq (@base.base_interp t)) | 10
-      := dec_rel_of_bool_dec_rel base.base_interp_beq (@base_interp_bl t) (@base_interp_lb t).
-
-    Lemma interp_bl {t x y} : @base.interp_beq t x y = true -> x = y.
-    Proof. induction t; beq_t. Qed.
-
-    Lemma interp_lb {t x y} : x = y -> @base.interp_beq t x y = true.
-    Proof. induction t; beq_t. Qed.
-
-    Global Instance dec_eq_interp {t} : DecidableRel (@eq (@base.interp t)) | 10
-      := dec_rel_of_bool_dec_rel base.interp_beq (@interp_bl t) (@interp_lb t).
-
-    Global Instance Decidable_type_eq : DecidableRel (@eq base.type)
-      := base.type.type_eq_dec.
-
     Local Ltac t_red :=
       repeat first [ progress intros
                    | progress cbn [type.type_beq base.type.type_beq base.type.base_beq base.try_make_transport_cps base.try_make_base_transport_cps eq_rect andb] in * ].
@@ -143,8 +104,8 @@ Module Compilers.
                    | progress break_innermost_match
                    | progress eliminate_hprop_eq
                    | congruence
-                   | progress Reflect.beq_to_eq base.type.type_beq base.type.internal_type_dec_bl base.type.internal_type_dec_lb
-                   | progress Reflect.beq_to_eq base.type.base_beq base.type.internal_base_dec_bl base.type.internal_base_dec_lb
+                   | progress Reflect.reflect_beq_to_eq base.type.type_beq
+                   | progress Reflect.reflect_beq_to_eq base.type.base_beq
                    | match goal with
                      | [ H : _ |- _ ] => rewrite H
                      end ].
@@ -153,7 +114,7 @@ Module Compilers.
       : base.try_make_base_transport_cps P t1 t2
         = fun T k
           => k match Sumbool.sumbool_of_bool (base.type.base_beq t1 t2) with
-              | left pf => Some (rew [fun t => P t1 -> P t] (base.type.internal_base_dec_bl _ _ pf) in id)
+              | left pf => Some (rew [fun t => P t1 -> P t] (Reflect.reflect_to_dec _ pf) in id)
               | right _ => None
               end.
     Proof. revert P t2; induction t1, t2; t. Qed.
@@ -162,16 +123,19 @@ Module Compilers.
       : base.try_make_transport_cps P t1 t2
         = fun T k
           => k match Sumbool.sumbool_of_bool (base.type.type_beq t1 t2) with
-              | left pf => Some (rew [fun t => P t1 -> P t] (base.type.internal_type_dec_bl _ _ pf) in id)
+              | left pf => Some (rew [fun t => P t1 -> P t] (Reflect.reflect_to_dec _ pf) in id)
               | right _ => None
               end.
-    Proof. revert P t2; induction t1, t2; t_red; rewrite ?try_make_base_transport_cps_correct; t. Qed.
+    Proof.
+      revert P t2; induction t1, t2;
+        t_red; rewrite ?try_make_base_transport_cps_correct; t.
+    Qed.
 
     Lemma try_transport_cps_correct P t1 t2 v
       : base.try_transport_cps P t1 t2 v
         = fun T k
           => k match Sumbool.sumbool_of_bool (base.type.type_beq t1 t2) with
-              | left pf => Some (rew [P] (base.type.internal_type_dec_bl _ _ pf) in v)
+              | left pf => Some (rew [P] (Reflect.reflect_to_dec _ pf) in v)
               | right _ => None
               end.
     Proof.
@@ -182,11 +146,10 @@ Module Compilers.
     Lemma try_transport_correct P t1 t2 v
       : base.try_transport P t1 t2 v
         = match Sumbool.sumbool_of_bool (base.type.type_beq t1 t2) with
-          | left pf => Some (rew [P] (base.type.internal_type_dec_bl _ _ pf) in v)
+          | left pf => Some (rew [P] (Reflect.reflect_to_dec _ pf) in v)
           | right _ => None
           end.
     Proof. cbv [base.try_transport]; rewrite try_transport_cps_correct; reflexivity. Qed.
-
   End base.
 
   Module type.
@@ -272,24 +235,17 @@ Module Compilers.
 
     Section transport_cps.
       Context {base_type}
-              (base_type_beq : base_type -> base_type -> bool)
-              (base_type_bl : forall t1 t2, base_type_beq t1 t2 = true -> t1 = t2)
-              (base_type_lb : forall t1 t2, t1 = t2 -> base_type_beq t1 t2 = true)
+              {base_type_beq : base_type -> base_type -> bool}
+              {reflect_base_type_beq : reflect_rel (@eq base_type) base_type_beq}
               (try_make_transport_base_type_cps : forall (P : base_type -> Type) t1 t2, ~> option (P t1 -> P t2))
               (try_make_transport_base_type_cps_correct
                : forall P t1 t2,
                   try_make_transport_base_type_cps P t1 t2
                   = fun T k
                     => k match Sumbool.sumbool_of_bool (base_type_beq t1 t2) with
-                        | left pf => Some (rew [fun t => P t1 -> P t] (base_type_bl _ _ pf) in id)
+                        | left pf => Some (rew [fun t => P t1 -> P t] (reflect_to_dec _ pf) in id)
                         | right _ => None
                         end).
-
-      Let base_type_eq_dec : DecidableRel (@eq base_type)
-        := dec_rel_of_bool_dec_rel base_type_beq base_type_bl base_type_lb.
-
-      Local Instance Decidable_type_eq : DecidableRel (@eq (@type.type base_type))
-        := type.type_eq_dec _ base_type_beq base_type_bl base_type_lb.
 
       Local Ltac t :=
         repeat first [ progress intros
@@ -302,12 +258,8 @@ Module Compilers.
                      | progress break_innermost_match
                      | progress eliminate_hprop_eq
                      | congruence
+                     | progress Reflect.reflect_beq_to_eq (type.type_beq _ base_type_beq)
                      | match goal with
-                       | [ H : type.type_beq _ _ _ _ = true |- _ ] => apply type.internal_type_dec_bl in H; auto
-                       | [ H : context[type.type_beq _ _ ?x ?x] |- _ ] => rewrite type.internal_type_dec_lb in H by auto
-                       | [ |- context[base_type_bl ?x ?y ?pf] ] => generalize (base_type_bl x y pf); intro
-                       | [ |- context[type.internal_type_dec_bl ?a ?b ?c ?d ?e ?f] ]
-                         => generalize (type.internal_type_dec_bl a b c d e f); intro
                        | [ H : _ |- _ ] => rewrite H
                        end ].
 
@@ -315,7 +267,7 @@ Module Compilers.
         : type.try_make_transport_cps try_make_transport_base_type_cps P t1 t2
           = fun T k
             => k match Sumbool.sumbool_of_bool (type.type_beq _ base_type_beq t1 t2) with
-                | left pf => Some (rew [fun t => P t1 -> P t] (type.internal_type_dec_bl _ _ base_type_bl _ _ pf) in id)
+                | left pf => Some (rew [fun t => P t1 -> P t] (reflect_to_dec _ pf) in id)
                 | right _ => None
                 end.
       Proof. revert P t2; induction t1, t2; t. Qed.
@@ -324,7 +276,7 @@ Module Compilers.
         : type.try_transport_cps try_make_transport_base_type_cps P t1 t2
           = fun v T k
             => k match Sumbool.sumbool_of_bool (type.type_beq _ base_type_beq t1 t2) with
-                | left pf => Some (rew [P] (type.internal_type_dec_bl _ _ base_type_bl _ _ pf) in v)
+                | left pf => Some (rew [P] (reflect_to_dec _ pf) in v)
                 | right _ => None
                 end.
       Proof.
@@ -336,23 +288,17 @@ Module Compilers.
         : type.try_transport try_make_transport_base_type_cps P t1 t2
           = fun v
             => match Sumbool.sumbool_of_bool (type.type_beq _ base_type_beq t1 t2) with
-              | left pf => Some (rew [P] (type.internal_type_dec_bl _ _ base_type_bl _ _ pf) in v)
+              | left pf => Some (rew [P] (reflect_to_dec _ pf) in v)
               | right _ => None
               end.
       Proof. cbv [type.try_transport]; rewrite try_transport_cps_correct; reflexivity. Qed.
     End transport_cps.
   End type.
 
-  Global Instance Decidable_type_eq : DecidableRel (@eq (@type.type base.type))
-    := type.type_eq_dec _ base.type.type_beq base.type.internal_type_dec_bl base.type.internal_type_dec_lb.
-
   Ltac type_beq_to_eq :=
-    repeat first [ progress Reflect.beq_to_eq base.type.base_beq base.type.internal_base_dec_bl base.type.internal_base_dec_lb
-                 | progress Reflect.beq_to_eq base.type.type_beq base.type.internal_type_dec_bl base.type.internal_type_dec_lb
-                 | progress Reflect.beq_to_eq
-                            (@type.type_beq base.type base.type.type_beq)
-                            (@type.internal_type_dec_bl base.type base.type.type_beq base.type.internal_type_dec_bl)
-                            (@type.internal_type_dec_lb base.type base.type.type_beq base.type.internal_type_dec_lb)
+    repeat first [ progress Reflect.reflect_beq_to_eq base.type.base_beq
+                 | progress Reflect.reflect_beq_to_eq base.type.type_beq
+                 | progress Reflect.reflect_beq_to_eq (@type.type_beq base.type base.type.type_beq)
                  | match goal with
                    | [ H : ?x <> ?x |- _ ] => exfalso; exact (H eq_refl)
                    end ].
