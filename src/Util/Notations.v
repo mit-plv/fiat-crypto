@@ -125,6 +125,8 @@ Reserved Notation "u {{ i }}" (at level 30).
 Reserved Notation "a # b" (at level 55, no associativity). (* match with theories/QArith/QArith_base.v *)
 Reserved Notation "'plet' x := y 'in' z"
          (at level 200, z at level 200, format "'plet'  x  :=  y  'in' '//' z").
+Reserved Notation "'subst_let' x := y 'in' z"
+         (at level 200, z at level 200, format "'subst_let'  x  :=  y  'in' '//' z").
 Reserved Notation "'nlet' x := A 'in' b"
          (at level 200, b at level 200, x at level 99, format "'nlet'  x  :=  A  'in' '//' b").
 Reserved Notation "'nlet' x : tx := A 'in' b"
@@ -144,6 +146,9 @@ Reserved Notation "'dlet' x .. y := v 'in' f"
          (at level 200, x binder, y binder, f at level 200, format "'dlet'  x .. y  :=  v  'in' '//' f").
 Reserved Notation "'pflet' x , pf := y 'in' f"
          (at level 200, f at level 200, format "'pflet'  x ,  pf  :=  y  'in' '//' f").
+
+Notation "'subst_let' x := y 'in' z" := (match y return _ with x => z end) (only parsing).
+
 Reserved Notation "'λ' x .. y , t" (at level 200, x binder, y binder, right associativity, format "'λ'  x .. y , '//' t").
 Reserved Notation "'λn'  x .. y , t" (at level 200, right associativity).
 Reserved Notation "x ::> ( max_bitwidth = v )"
