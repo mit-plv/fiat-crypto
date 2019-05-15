@@ -17,7 +17,7 @@ Require Crypto.Util.PrimitiveProd.
 
 Lemma reflect_to_dec_iff {P b1 b2} : reflect P b1 -> (b1 = b2) <-> (if b2 then P else ~P).
 Proof.
-  intro H; destruct H, b2; split; intuition congruence.
+  intro H; destruct H, b2; split; trivial; repeat intro; abstract (exfalso; intuition congruence).
 Qed.
 
 Lemma reflect_to_dec {P b1 b2} : reflect P b1 -> (b1 = b2) -> (if b2 then P else ~P).
@@ -31,14 +31,14 @@ Lemma reflect_of_brel {A R Rb} (bl : forall a a' : A, Rb a a' = true -> (R a a' 
   : forall x y, reflect (R x y) (Rb x y).
 Proof.
   intros x y; specialize (bl x y); specialize (lb x y).
-  destruct (Rb x y); constructor; intuition congruence.
+  destruct (Rb x y); constructor; auto; repeat intro; abstract (exfalso; intuition congruence).
 Qed.
 
 Lemma reflect_to_brel {A R Rb} (H : forall x y : A, reflect (R x y) (Rb x y))
   : (forall a a' : A, Rb a a' = true -> R a a')
     /\ (forall a a' : A, R a a' -> Rb a a' = true).
 Proof.
-  split; intros x y; specialize (H x y); destruct H; intuition congruence.
+  split; intros x y; specialize (H x y); destruct H; trivial; repeat intro; abstract (exfalso; intuition congruence).
 Qed.
 
 Lemma reflect_of_beq {A beq} (bl : forall a a' : A, beq a a' = true -> a = a')
@@ -51,7 +51,42 @@ Lemma reflect_to_beq {A beq} (H : forall x y : A, reflect (x = y) (beq x y))
     /\ (forall a a' : A, a = a' -> beq a a' = true).
 Proof. apply reflect_to_brel; assumption. Qed.
 
+Lemma reflect_rect_dep {P b} (Q : reflect P b -> Type)
+      (H : forall pf : if b then P else ~P,
+          (if b return (reflect P b -> Type) -> (if b then P else ~P) -> Type
+           then fun Q pf => Q (ReflectT _ pf)
+           else fun Q pf => Q (ReflectF _ pf))
+            Q pf)
+  : forall x, Q x.
+Proof. intro x; destruct x; apply H. Defined.
+
 Definition mark {T} (v : T) := v.
+
+Ltac induction_reflect x :=
+  let G := lazymatch goal with |- ?G => G end in
+  change (mark G);
+  generalize dependent x;
+  let Q := lazymatch goal with |- forall y, @?Q y => Q end in
+  refine (@reflect_rect_dep _ _ Q _);
+  intros; cbv beta delta [mark].
+
+Section encode_decode.
+  Context {P : Prop}.
+
+  Definition code (b : bool) : Type
+    := if b then P else ~P.
+  Definition encode {b} : reflect P b -> code b
+    := fun r => match r with
+                | ReflectT x => x
+                | ReflectF x => x
+                end.
+  Definition decode {b} : code b -> reflect P b
+    := if b return code b -> reflect P b then @ReflectT P else @ReflectF P.
+  Lemma endecode {b} x : encode (@decode b x) = x.
+  Proof. destruct b; reflexivity. Defined.
+  Lemma deencode {b} x : decode (@encode b x) = x.
+  Proof. destruct x; reflexivity. Defined.
+End encode_decode.
 
 Ltac beq_to_eq beq bl lb :=
   let lem := constr:(@reflect_of_beq _ beq bl lb) in
@@ -66,18 +101,6 @@ Ltac beq_to_eq beq bl lb :=
               intros; cbv beta delta [mark]
          | [ H : context[beq ?x ?x] |- _ ] => rewrite (lb x x eq_refl) in H
          | [ |- context[beq ?x ?x] ] => rewrite (lb x x eq_refl)
-         end.
-
-Ltac reflect_beq_to_eq beq :=
-  let lem_to_dec := constr:(fun b x y => @reflect_to_dec (x = y) (beq x y) b _) in
-  let lem_of_dec := constr:(fun b x y => @reflect_of_dec (x = y) (beq x y) b _) in
-  repeat match goal with
-         | [ H : beq ?x ?y = true |- _ ] => apply (lem_to_dec true x y) in H; cbv beta iota in H
-         | [ H : beq ?x ?y = false |- _ ] => apply (lem_to_dec false x y) in H; cbv beta iota in H
-         | [ |- beq ?x ?y = true ] => refine (lem_of_dec true x y _)
-         | [ |- beq ?x ?y = false ] => refine (lem_of_dec false x y _)
-         | [ H : context[beq ?x ?x] |- _ ] => rewrite (lem_of_dec true x x eq_refl) in H
-         | [ |- context[beq ?x ?x] ] => rewrite (lem_of_dec true x x eq_refl)
          end.
 
 Existing Class reflect.
@@ -106,6 +129,52 @@ Global Instance dec_of_reflect P {b} {H : reflect P b} : Decidable P | 15
 Global Instance eq_decb_hprop {A} {x y : A} {hp : IsHProp A} : reflect (@eq A x y) true | 5.
 Proof. left; auto. Qed.
 
+Lemma ishprop_reflect_all_eq_gen {A} {beq} {H : forall x y : A, reflect (x = y) (beq x y)}
+  : forall x y, (beq x y = true \/ IsHProp (x <> y)) -> IsHProp (reflect (x = y) (beq x y)).
+Proof.
+  intros x y H' p q.
+  induction_reflect p; induction_reflect q.
+  destruct (beq x y); f_equal.
+  { apply Eqdep_dec.UIP_dec; intros x' y'; specialize (H x' y'); eapply @dec_of_reflect; eassumption. }
+  { destruct H' as [H'|H']; [ congruence | now apply H' ]. }
+Qed.
+
+Lemma eq_reflect_to_dec_true_gen {A beq} {H : forall x y : A, reflect (x = y) (beq x y)}
+      {x y pf H'}
+  : @reflect_to_dec (x = y) (beq x y) true H' pf = @reflect_to_dec (x = y) (beq x y) true (H _ _) pf.
+Proof.
+  apply f_equal2; [ | reflexivity ].
+  apply ishprop_reflect_all_eq_gen; left; assumption.
+Qed.
+
+Ltac generalize_reflect_to_dec :=
+  repeat match goal with
+         | [ H : context[@reflect_to_dec ?P ?b true ?R ?H] |- ?G ]
+           => change (mark G); generalize dependent (@reflect_to_dec P b true R H); try clear H; intros; cbv beta delta [mark]
+         | [ |- context[@reflect_to_dec ?P ?b true ?R ?H] ]
+           => let G := match goal with |- ?G => G end in
+              change (mark G); generalize dependent (@reflect_to_dec P b true R H); try clear H; intros; cbv beta delta [mark]
+         end.
+
+Ltac reflect_beq_to_eq beq :=
+  let R := constr:(_ : forall x y, reflect (x = y) (beq x y)) in
+  let lem_to_dec := constr:(fun b x y => @reflect_to_dec (x = y) (beq x y) b (R x y)) in
+  let lem_of_dec := constr:(fun b x y => @reflect_of_dec (x = y) (beq x y) b (R x y)) in
+  generalize_reflect_to_dec;
+  repeat match goal with
+         | [ H : beq ?x ?y = true |- _ ] => apply (lem_to_dec true x y) in H; cbv beta iota in H
+         | [ H : beq ?x ?y = false |- _ ] => apply (lem_to_dec false x y) in H; cbv beta iota in H
+         | [ |- beq ?x ?y = true ] => refine (lem_of_dec true x y _)
+         | [ |- beq ?x ?y = false ] => refine (lem_of_dec false x y _)
+         | [ H : context[beq ?x ?x] |- _ ] => rewrite (lem_of_dec true x x eq_refl) in H
+         | [ |- context[beq ?x ?x] ] => rewrite (lem_of_dec true x x eq_refl)
+         | [ H : context[@reflect_to_dec ?P (beq ?x ?y) true ?R ?H] |- ?G ]
+           => change (mark G); generalize dependent (@reflect_to_dec P (beq x y) true R H); try clear H; intros; cbv beta delta [mark]
+         | [ |- context[@reflect_to_dec ?P (beq ?x ?y) true ?R ?H] ]
+           => let G := match goal with |- ?G => G end in
+              change (mark G); generalize dependent (@reflect_to_dec P (beq x y) true R H); try clear H; intros; cbv beta delta [mark]
+         end.
+
 Ltac solve_reflect_step :=
   first [ match goal with
           | [ H : reflect _ ?b |- _ ] => tryif is_var b then destruct H else (inversion H; clear H)
@@ -116,8 +185,10 @@ Ltac solve_reflect_step :=
         | progress destruct_head'_and
         | progress intros
         | progress subst
-        | solve [ eauto
-                | firstorder (auto; try discriminate) ]
+        | solve [ eauto ]
+        | progress destruct_head'_or
+        | apply conj
+        | repeat intro; abstract (exfalso; firstorder (auto; try discriminate))
             (*
           | [ H :
           | [ H : forall x y : ?A, reflect (x = y) _, x0 : ?A, y0 : ?A  |- _ ]
