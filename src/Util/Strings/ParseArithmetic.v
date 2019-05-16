@@ -4,6 +4,8 @@ Require Import Coq.ZArith.BinInt.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Strings.Equality.
 Require Import Crypto.Util.Strings.Decimal.
+Require Crypto.Util.Strings.OctalString.
+Require Crypto.Util.Strings.HexString.
 Require Import Crypto.Util.Notations.
 Import ListNotations.
 Import BinPosDef.
@@ -24,6 +26,12 @@ Definition is_num (ch : ascii) : bool
       || ascii_beq ch "8"
       || ascii_beq ch "9")%bool.
 
+Definition is_oct_num (ch : ascii) : bool
+  := match OctalString.ascii_to_digit ch with Some _ => true | None => false end.
+
+Definition is_hex_num (ch : ascii) : bool
+  := match HexString.ascii_to_digit ch with Some _ => true | None => false end.
+
 Fixpoint split_before_first (f : ascii -> bool) (s : string) : string * string
   := match s with
      | EmptyString => (EmptyString, EmptyString)
@@ -34,13 +42,45 @@ Fixpoint split_before_first (f : ascii -> bool) (s : string) : string * string
                (String ch s1, s2)
      end.
 
-Definition parse_N (s : string) : option (N * string)
-  := let '(n, rest) := split_before_first (fun ch => negb (is_num ch)) s in
-     match Z_of_decimal_string n, Nat.eqb (String.length n) 0 with
-     | Zneg _, _ | _, true => None
-     | Z0, _ => Some (N0, rest)
-     | Zpos p, _ => Some (Npos p, rest)
+Fixpoint split_before_first_skip (f : ascii -> bool) (s : string) (skip : nat) : string * string
+  := match skip, s with
+     | 0, _ => split_before_first f s
+     | _, EmptyString => (EmptyString, EmptyString)
+     | S skip', String ch rest
+       => let '(s1, s2) := split_before_first_skip f rest skip' in
+          (String ch s1, s2)
      end.
+
+Definition startswith_oct (s : string) : bool
+  := match s with
+     | String zero (String kind (String d rest))
+       => ascii_beq zero "0" && ascii_beq kind "o" && is_oct_num d
+     | _ => false
+     end.
+
+Definition startswith_hex (s : string) : bool
+  := match s with
+     | String zero (String kind (String d rest))
+       => ascii_beq zero "0" && ascii_beq kind "x" && is_hex_num d
+     | _ => false
+     end.
+
+Definition parse_N (s : string) : option (N * string)
+  := if startswith_oct s
+     then
+       let '(n, rest) := split_before_first_skip (fun ch => negb (is_oct_num ch)) s 2 in
+       Some (OctalString.to_N n, rest)
+     else if startswith_hex s
+          then
+            let '(n, rest) := split_before_first_skip (fun ch => negb (is_hex_num ch)) s 2 in
+            Some (OctalString.to_N n, rest)
+          else
+            let '(n, rest) := split_before_first (fun ch => negb (is_num ch)) s in
+            match Z_of_decimal_string n, Nat.eqb (String.length n) 0 with
+            | Zneg _, _ | _, true => None
+            | Z0, _ => Some (N0, rest)
+            | Zpos p, _ => Some (Npos p, rest)
+            end.
 
 Definition parse_ch {T} (ls : list (ascii * T)) (s : string) : option (T * string)
   := match s with
