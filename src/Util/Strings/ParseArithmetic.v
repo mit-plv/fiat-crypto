@@ -73,7 +73,7 @@ Definition parse_N (s : string) : option (N * string)
      else if startswith_hex s
           then
             let '(n, rest) := split_before_first_skip (fun ch => negb (is_hex_num ch)) s 2 in
-            Some (OctalString.to_N n, rest)
+            Some (HexString.to_N n, rest)
           else
             let '(n, rest) := split_before_first (fun ch => negb (is_num ch)) s in
             match Z_of_decimal_string n, Nat.eqb (String.length n) 0 with
