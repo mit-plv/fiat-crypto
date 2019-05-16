@@ -22,6 +22,7 @@ Require Import Crypto.Util.ZUtil.ZSimplify.Simple.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.AddGetCarry.
 Require Import Crypto.Util.ZUtil.MulSplit.
+Require Import Crypto.Util.ZUtil.TruncatingShiftl.
 Require Import Crypto.Util.ZUtil.Zselect.
 Require Import Crypto.Util.ZUtil.Div.
 Require Import Crypto.Util.ZUtil.Modulo.
@@ -117,6 +118,7 @@ Local Ltac interp_good_t_step_related :=
           | [ |- context[Z.mul_split ?a ?b ?c] ]
             => rewrite (surjective_pairing (Z.mul_split a b c)), Z.mul_split_div, Z.mul_split_mod
           | [ |- context[Z.zselect] ] => rewrite Z.zselect_correct
+          | [ |- context[Z.truncating_shiftl] ] => rewrite Z.truncating_shiftl_correct
           | [ |- context[Z.sub_get_borrow_full ?a ?b ?c] ]
             => rewrite (surjective_pairing (Z.sub_get_borrow_full a b c)), Z.sub_get_borrow_full_div, Z.sub_get_borrow_full_mod
           | [ |- context[Z.sub_with_get_borrow_full ?a ?b ?c ?d] ]
@@ -483,3 +485,11 @@ Section fancy.
     Time all: try solve [ systematically_handle_casts; repeat interp_good_t_step_arith ].
   Qed.
 End fancy.
+
+Lemma mul_split_rewrite_rules_proofs (bitwidth : Z) (lgcarrymax : Z)
+  : PrimitiveHList.hlist (@snd bool Prop) (mul_split_rewrite_rulesT bitwidth lgcarrymax).
+Proof using Type.
+  start_proof; auto; intros; try lia.
+  all: repeat interp_good_t_step_related.
+  all: systematically_handle_casts.
+Admitted.

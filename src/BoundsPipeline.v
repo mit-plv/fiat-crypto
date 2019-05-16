@@ -113,6 +113,26 @@ Qed.
 
 Class static_opt := static : bool.
 Typeclasses Opaque static_opt.
+Class split_mul_to_opt := split_mul_to : option (Z * Z).
+Typeclasses Opaque split_mul_to_opt.
+Class should_split_mul_opt := should_split_mul : bool.
+Typeclasses Opaque should_split_mul_opt.
+Class widen_carry_opt := widen_carry : bool.
+Typeclasses Opaque widen_carry_opt.
+Class widen_bytes_opt := widen_bytes : bool.
+Typeclasses Opaque widen_bytes_opt.
+Notation split_mul_to_of_should_split_mul machine_wordsize possible_bitwidths
+  := (if should_split_mul return split_mul_to_opt
+      then Some (machine_wordsize, fold_right Z.min machine_wordsize (filter (fun x => (1 <=? x)%Z) possible_bitwidths))
+      else None) (only parsing).
+(* We include [0], so that even after bounds relaxation, we can
+   notice where the constant 0s are, and remove them. *)
+Notation prefix_with_carry bitwidths :=
+  ((if widen_carry then (0::bitwidths) else (0::1::bitwidths))%Z)
+    (only parsing).
+Notation prefix_with_carry_bytes bitwidths :=
+  (prefix_with_carry (if widen_bytes then bitwidths else 8::bitwidths)%Z)
+    (only parsing).
 
 Module Pipeline.
   Import GeneralizeVar.
@@ -299,6 +319,7 @@ Module Pipeline.
        E.
 
   Definition BoundsPipeline
+             {split_mul_to : split_mul_to_opt}
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
              (translate_to_fancy : option to_fancy_args)
@@ -324,6 +345,11 @@ Module Pipeline.
       match E' with
       | inl E
         => let E := RewriteAndEliminateDeadAndInline RewriteRules.RewriteArithWithCasts with_dead_code_elimination with_subst01 E in
+           let E := match split_mul_to with
+                    | Some (max_bitwidth, lgcarrymax)
+                      => RewriteRules.RewriteMulSplit max_bitwidth lgcarrymax E
+                    | None => E
+                    end in
            let E := match translate_to_fancy with
                     | Some {| invert_low := invert_low ; invert_high := invert_high ; value_range := value_range ; flag_range := flag_range |}
                       => RewriteRules.RewriteToFancyWithCasts invert_low invert_high value_range flag_range E
@@ -340,6 +366,7 @@ Module Pipeline.
   Definition BoundsPipelineToStrings
              {output_language_api : ToString.OutputLanguageAPI}
              {static : static_opt}
+             {split_mul_to : split_mul_to_opt}
              (type_prefix : string)
              (name : string)
              (with_dead_code_elimination : bool := true)
@@ -371,6 +398,7 @@ Module Pipeline.
   Definition BoundsPipelineToString
              {output_language_api : ToString.OutputLanguageAPI}
              {static : static_opt}
+             {split_mul_to : split_mul_to_opt}
              (type_prefix : string)
              (name : string)
              (with_dead_code_elimination : bool := true)
@@ -396,10 +424,10 @@ Module Pipeline.
        end.
 
   Local Notation arg_bounds_of_pipeline result
-    := ((fun a b c t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c t E arg_bounds out_bounds = result') => arg_bounds) _ _ _ _ _ _ _ result eq_refl)
+    := ((fun a b c d t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d t E arg_bounds out_bounds = result') => arg_bounds) _ _ _ _ _ _ _ _ result eq_refl)
          (only parsing).
   Local Notation out_bounds_of_pipeline result
-    := ((fun a b c t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c t E arg_bounds out_bounds = result') => out_bounds) _ _ _ _ _ _ _ result eq_refl)
+    := ((fun a b c d t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d t E arg_bounds out_bounds = result') => out_bounds) _ _ _ _ _ _ _ _ result eq_refl)
          (only parsing).
 
   Notation FromPipelineToString prefix name result
@@ -465,6 +493,7 @@ Module Pipeline.
 
   Local Opaque RewriteAndEliminateDeadAndInline.
   Lemma BoundsPipeline_correct
+             {split_mul_to : split_mul_to_opt}
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
              (translate_to_fancy : option to_fancy_args)
@@ -515,7 +544,7 @@ Module Pipeline.
       { subst; split; [ | solve [ wf_interp_t ] ].
         split_and; simpl in *.
         split; [ solve [ wf_interp_t; eauto with nocore ] | ].
-        intros; break_innermost_match; autorewrite with interp; try solve [ wf_interp_t ]; [ | ].
+        intros; break_innermost_match; autorewrite with interp; try solve [ wf_interp_t ].
         all: match goal with H : context[type.app_curried _ _ = _] |- _ => erewrite H; clear H end; eauto.
         all: transitivity (type.app_curried (Interp (PartialEvaluateWithListInfoFromBounds e arg_bounds)) arg1);
           [ | apply Interp_PartialEvaluateWithListInfoFromBounds; auto ].
@@ -541,6 +570,7 @@ Module Pipeline.
        /\ Wf rv.
 
   Lemma BoundsPipeline_correct_trans
+        {split_mul_to : split_mul_to_opt}
         (with_dead_code_elimination : bool := true)
         (with_subst01 : bool)
         (translate_to_fancy : option to_fancy_args)

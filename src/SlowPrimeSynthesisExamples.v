@@ -8,8 +8,10 @@ Require Import Crypto.Util.ZRange.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.PushButtonSynthesis.UnsaturatedSolinas.
+Require Crypto.PushButtonSynthesis.WordByWordMontgomery.
 Require Import Crypto.CStringification.
 Require Import Crypto.BoundsPipeline.
+Require Import Crypto.Util.ZUtil.ModInv.
 
 Require Import Crypto.Util.Notations.
 Import ListNotations. Local Open Scope Z_scope.
@@ -28,6 +30,823 @@ Local Coercion Z.pos : positive >-> Z.
 
 Local Existing Instance ToString.C.OutputCAPI.
 Local Instance static : static_opt := true.
+
+Module debugging_remove_mul_split_to_C_uint1_carry.
+  Section __.
+    Context (n : nat := 5%nat)
+            (s : Z := 2^255)
+            (c : list (Z * Z) := [(1,19)])
+            (machine_wordsize : Z := 64)
+            (should_split_mul : should_split_mul_opt := true)
+            (widen_carry : widen_carry_opt := true)
+            (widen_bytes : widen_bytes_opt := false).
+
+    Local Existing Instances should_split_mul widen_carry widen_bytes.
+
+    Let limbwidth := (Z.log2_up (s - Associational.eval c) / Z.of_nat n)%Q.
+    Let idxs := (List.seq 0 n ++ [0; 1])%list%nat.
+
+    Definition possible_values_of_machine_wordsize
+      := prefix_with_carry [machine_wordsize; 2 * machine_wordsize]%Z.
+
+    Let possible_values := possible_values_of_machine_wordsize.
+
+    Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
+
+    Let prime_upperbound_list : list Z
+      := encode_no_reduce (weight (Qnum limbwidth) (Qden limbwidth)) n (s-1).
+    Let tight_upperbounds : list Z
+      := List.map
+           (fun v : Z => Qceiling (11/10 * v))
+           prime_upperbound_list.
+    Definition tight_bounds : list (ZRange.type.option.interp base.type.Z)
+      := List.map (fun u => Some r[0~>u]%zrange) tight_upperbounds.
+    Definition loose_bounds : list (ZRange.type.option.interp base.type.Z)
+      := List.map (fun u => Some r[0 ~> 3*u]%zrange) tight_upperbounds.
+
+
+    Let limbwidth_num := Eval vm_compute in Qnum limbwidth.
+    Let limbwidth_den := Eval vm_compute in QDen limbwidth.
+
+    Set Printing Depth 100000.
+    Local Open Scope string_scope.
+    Compute
+      Pipeline.BoundsPipelineToString
+      "" (* prefix *)
+      "mul"
+      false (* subst01 *)
+      None (* fancy *)
+      possible_values
+      ltac:(let r := Reify ((carry_mulmod limbwidth_num limbwidth_den s c n idxs)) in
+            exact r)
+             (fun _ _ => []) (* comment *)
+             (Some loose_bounds, (Some loose_bounds, tt))
+             (Some tight_bounds).
+(* /*
+ * Input Bounds:
+ *   arg1: [[0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664]]
+ *   arg2: [[0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664]]
+ * Output Bounds:
+ *   out1: [[0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc]]
+ */
+static void mul(uint64_t out1[5], const uint64_t arg1[5], const uint64_t arg2[5]) {
+  uint64_t x1;
+  uint64_t x2;
+  mulx_u64(&x1, &x2, (arg1[4]), ((arg2[4]) * (uint64_t)UINT8_C(0x13)));
+  uint64_t x3;
+  uint64_t x4;
+  mulx_u64(&x3, &x4, (arg1[4]), ((arg2[3]) * (uint64_t)UINT8_C(0x13)));
+  uint64_t x5;
+  uint64_t x6;
+  mulx_u64(&x5, &x6, (arg1[4]), ((arg2[2]) * (uint64_t)UINT8_C(0x13)));
+  uint64_t x7;
+  uint64_t x8;
+  mulx_u64(&x7, &x8, (arg1[4]), ((arg2[1]) * (uint64_t)UINT8_C(0x13)));
+  uint64_t x9;
+  uint64_t x10;
+  mulx_u64(&x9, &x10, (arg1[3]), ((arg2[4]) * (uint64_t)UINT8_C(0x13)));
+  uint64_t x11;
+  uint64_t x12;
+  mulx_u64(&x11, &x12, (arg1[3]), ((arg2[3]) * (uint64_t)UINT8_C(0x13)));
+  uint64_t x13;
+  uint64_t x14;
+  mulx_u64(&x13, &x14, (arg1[3]), ((arg2[2]) * (uint64_t)UINT8_C(0x13)));
+  uint64_t x15;
+  uint64_t x16;
+  mulx_u64(&x15, &x16, (arg1[2]), ((arg2[4]) * (uint64_t)UINT8_C(0x13)));
+  uint64_t x17;
+  uint64_t x18;
+  mulx_u64(&x17, &x18, (arg1[2]), ((arg2[3]) * (uint64_t)UINT8_C(0x13)));
+  uint64_t x19;
+  uint64_t x20;
+  mulx_u64(&x19, &x20, (arg1[1]), ((arg2[4]) * (uint64_t)UINT8_C(0x13)));
+  uint64_t x21;
+  uint64_t x22;
+  mulx_u64(&x21, &x22, (arg1[4]), (arg2[0]));
+  uint64_t x23;
+  uint64_t x24;
+  mulx_u64(&x23, &x24, (arg1[3]), (arg2[1]));
+  uint64_t x25;
+  uint64_t x26;
+  mulx_u64(&x25, &x26, (arg1[3]), (arg2[0]));
+  uint64_t x27;
+  uint64_t x28;
+  mulx_u64(&x27, &x28, (arg1[2]), (arg2[2]));
+  uint64_t x29;
+  uint64_t x30;
+  mulx_u64(&x29, &x30, (arg1[2]), (arg2[1]));
+  uint64_t x31;
+  uint64_t x32;
+  mulx_u64(&x31, &x32, (arg1[2]), (arg2[0]));
+  uint64_t x33;
+  uint64_t x34;
+  mulx_u64(&x33, &x34, (arg1[1]), (arg2[3]));
+  uint64_t x35;
+  uint64_t x36;
+  mulx_u64(&x35, &x36, (arg1[1]), (arg2[2]));
+  uint64_t x37;
+  uint64_t x38;
+  mulx_u64(&x37, &x38, (arg1[1]), (arg2[1]));
+  uint64_t x39;
+  uint64_t x40;
+  mulx_u64(&x39, &x40, (arg1[1]), (arg2[0]));
+  uint64_t x41;
+  uint64_t x42;
+  mulx_u64(&x41, &x42, (arg1[0]), (arg2[4]));
+  uint64_t x43;
+  uint64_t x44;
+  mulx_u64(&x43, &x44, (arg1[0]), (arg2[3]));
+  uint64_t x45;
+  uint64_t x46;
+  mulx_u64(&x45, &x46, (arg1[0]), (arg2[2]));
+  uint64_t x47;
+  uint64_t x48;
+  mulx_u64(&x47, &x48, (arg1[0]), (arg2[1]));
+  uint64_t x49;
+  uint64_t x50;
+  mulx_u64(&x49, &x50, (arg1[0]), (arg2[0]));
+  uint64_t x51;
+  uint1 x52;
+  addcarryx_u64(&x51, &x52, 0x0, x13, x7);
+  uint64_t x53;
+  uint1 x54;
+  addcarryx_u64(&x53, &x54, x52, x14, x8);
+  uint64_t x55;
+  uint1 x56;
+  addcarryx_u64(&x55, &x56, 0x0, x17, x51);
+  uint64_t x57;
+  uint1 x58;
+  addcarryx_u64(&x57, &x58, x56, x18, x53);
+  uint64_t x59;
+  uint1 x60;
+  addcarryx_u64(&x59, &x60, 0x0, x19, x55);
+  uint64_t x61;
+  uint1 x62;
+  addcarryx_u64(&x61, &x62, x60, x20, x57);
+  uint64_t x63;
+  uint1 x64;
+  addcarryx_u64(&x63, &x64, 0x0, x49, x59);
+  uint64_t x65;
+  uint1 x66;
+  addcarryx_u64(&x65, &x66, x64, x50, x61);
+  uint64_t x67 = ((x63 >> 51) | ((x65 << 13) & UINT64_C(0xffffffffffffffff)));
+  uint64_t x68 = (x63 & UINT64_C(0x7ffffffffffff));
+  uint64_t x69;
+  uint1 x70;
+  addcarryx_u64(&x69, &x70, 0x0, x23, x21);
+  uint64_t x71;
+  uint1 x72;
+  addcarryx_u64(&x71, &x72, x70, x24, x22);
+  uint64_t x73;
+  uint1 x74;
+  addcarryx_u64(&x73, &x74, 0x0, x27, x69);
+  uint64_t x75;
+  uint1 x76;
+  addcarryx_u64(&x75, &x76, x74, x28, x71);
+  uint64_t x77;
+  uint1 x78;
+  addcarryx_u64(&x77, &x78, 0x0, x33, x73);
+  uint64_t x79;
+  uint1 x80;
+  addcarryx_u64(&x79, &x80, x78, x34, x75);
+  uint64_t x81;
+  uint1 x82;
+  addcarryx_u64(&x81, &x82, 0x0, x41, x77);
+  uint64_t x83;
+  uint1 x84;
+  addcarryx_u64(&x83, &x84, x82, x42, x79);
+  uint64_t x85;
+  uint1 x86;
+  addcarryx_u64(&x85, &x86, 0x0, x25, x1);
+  uint64_t x87;
+  uint1 x88;
+  addcarryx_u64(&x87, &x88, x86, x26, x2);
+  uint64_t x89;
+  uint1 x90;
+  addcarryx_u64(&x89, &x90, 0x0, x29, x85);
+  uint64_t x91;
+  uint1 x92;
+  addcarryx_u64(&x91, &x92, x90, x30, x87);
+  uint64_t x93;
+  uint1 x94;
+  addcarryx_u64(&x93, &x94, 0x0, x35, x89);
+  uint64_t x95;
+  uint1 x96;
+  addcarryx_u64(&x95, &x96, x94, x36, x91);
+  uint64_t x97;
+  uint1 x98;
+  addcarryx_u64(&x97, &x98, 0x0, x43, x93);
+  uint64_t x99;
+  uint1 x100;
+  addcarryx_u64(&x99, &x100, x98, x44, x95);
+  uint64_t x101;
+  uint1 x102;
+  addcarryx_u64(&x101, &x102, 0x0, x9, x3);
+  uint64_t x103;
+  uint1 x104;
+  addcarryx_u64(&x103, &x104, x102, x10, x4);
+  uint64_t x105;
+  uint1 x106;
+  addcarryx_u64(&x105, &x106, 0x0, x31, x101);
+  uint64_t x107;
+  uint1 x108;
+  addcarryx_u64(&x107, &x108, x106, x32, x103);
+  uint64_t x109;
+  uint1 x110;
+  addcarryx_u64(&x109, &x110, 0x0, x37, x105);
+  uint64_t x111;
+  uint1 x112;
+  addcarryx_u64(&x111, &x112, x110, x38, x107);
+  uint64_t x113;
+  uint1 x114;
+  addcarryx_u64(&x113, &x114, 0x0, x45, x109);
+  uint64_t x115;
+  uint1 x116;
+  addcarryx_u64(&x115, &x116, x114, x46, x111);
+  uint64_t x117;
+  uint1 x118;
+  addcarryx_u64(&x117, &x118, 0x0, x11, x5);
+  uint64_t x119;
+  uint1 x120;
+  addcarryx_u64(&x119, &x120, x118, x12, x6);
+  uint64_t x121;
+  uint1 x122;
+  addcarryx_u64(&x121, &x122, 0x0, x15, x117);
+  uint64_t x123;
+  uint1 x124;
+  addcarryx_u64(&x123, &x124, x122, x16, x119);
+  uint64_t x125;
+  uint1 x126;
+  addcarryx_u64(&x125, &x126, 0x0, x39, x121);
+  uint64_t x127;
+  uint1 x128;
+  addcarryx_u64(&x127, &x128, x126, x40, x123);
+  uint64_t x129;
+  uint1 x130;
+  addcarryx_u64(&x129, &x130, 0x0, x47, x125);
+  uint64_t x131;
+  uint1 x132;
+  addcarryx_u64(&x131, &x132, x130, x48, x127);
+  uint64_t x133;
+  uint1 x134;
+  addcarryx_u64(&x133, &x134, 0x0, x67, x129);
+  uint64_t x135 = (x134 + x131);
+  uint64_t x136 = ((x133 >> 51) | ((x135 << 13) & UINT64_C(0xffffffffffffffff)));
+  uint64_t x137 = (x133 & UINT64_C(0x7ffffffffffff));
+  uint64_t x138;
+  uint1 x139;
+  addcarryx_u64(&x138, &x139, 0x0, x136, x113);
+  uint64_t x140 = (x139 + x115);
+  uint64_t x141 = ((x138 >> 51) | ((x140 << 13) & UINT64_C(0xffffffffffffffff)));
+  uint64_t x142 = (x138 & UINT64_C(0x7ffffffffffff));
+  uint64_t x143;
+  uint1 x144;
+  addcarryx_u64(&x143, &x144, 0x0, x141, x97);
+  uint64_t x145 = (x144 + x99);
+  uint64_t x146 = ((x143 >> 51) | ((x145 << 13) & UINT64_C(0xffffffffffffffff)));
+  uint64_t x147 = (x143 & UINT64_C(0x7ffffffffffff));
+  uint64_t x148;
+  uint1 x149;
+  addcarryx_u64(&x148, &x149, 0x0, x146, x81);
+  uint64_t x150 = (x149 + x83);
+  uint64_t x151 = ((x148 >> 51) | ((x150 << 13) & UINT64_C(0xffffffffffffffff)));
+  uint64_t x152 = (x148 & UINT64_C(0x7ffffffffffff));
+  uint64_t x153 = (x151 * (uint64_t)UINT8_C(0x13));
+  uint64_t x154 = (x68 + x153);
+  uint64_t x155 = (x154 >> 51);
+  uint64_t x156 = (x154 & UINT64_C(0x7ffffffffffff));
+  uint64_t x157 = (x155 + x137);
+  uint64_t x158 = (x157 >> 51);
+  uint64_t x159 = (x157 & UINT64_C(0x7ffffffffffff));
+  uint64_t x160 = (x158 + x142);
+  out1[0] = x156;
+  out1[1] = x159;
+  out1[2] = x160;
+  out1[3] = x147;
+  out1[4] = x152;
+}
+*)
+  (*Time Compute
+     (Pipeline.BoundsPipeline
+        true None [64; 128]
+        ltac:(let r := Reify (fun f
+                              => (  (squaremod (weight limbwidth_num limbwidth_den) s c n f)
+                                    )) in
+              exact r)
+               (Some (repeat (@None _) n), tt)
+               ZRange.type.base.option.None).
+   *)
+  End __.
+End debugging_remove_mul_split_to_C_uint1_carry.
+
+Module debugging_remove_mul_split.
+  Section __.
+    Context (n : nat := 5%nat)
+            (s : Z := 2^255)
+            (c : list (Z * Z) := [(1,19)])
+            (machine_wordsize : Z := 64)
+            (should_split_mul : should_split_mul_opt := true)
+            (widen_carry : widen_carry_opt := true)
+            (widen_bytes : widen_bytes_opt := true).
+
+    Local Existing Instances should_split_mul widen_carry widen_bytes.
+
+    Let limbwidth := (Z.log2_up (s - Associational.eval c) / Z.of_nat n)%Q.
+    Let idxs := (List.seq 0 n ++ [0; 1])%list%nat.
+
+    Definition possible_values_of_machine_wordsize
+      := prefix_with_carry [machine_wordsize; 2 * machine_wordsize]%Z.
+
+    Let possible_values := possible_values_of_machine_wordsize.
+
+    Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
+
+    Let prime_upperbound_list : list Z
+      := encode_no_reduce (weight (Qnum limbwidth) (Qden limbwidth)) n (s-1).
+    Let tight_upperbounds : list Z
+      := List.map
+           (fun v : Z => Qceiling (11/10 * v))
+           prime_upperbound_list.
+    Definition tight_bounds : list (ZRange.type.option.interp base.type.Z)
+      := List.map (fun u => Some r[0~>u]%zrange) tight_upperbounds.
+    Definition loose_bounds : list (ZRange.type.option.interp base.type.Z)
+      := List.map (fun u => Some r[0 ~> 3*u]%zrange) tight_upperbounds.
+
+
+    Let limbwidth_num := Eval vm_compute in Qnum limbwidth.
+    Let limbwidth_den := Eval vm_compute in QDen limbwidth.
+
+    Set Printing Depth 100000.
+    Local Open Scope string_scope.
+    Local Notation "'uint64,uint64'" := (ident.Z_cast2
+                                           (r[0 ~> 18446744073709551615]%zrange,
+                                            r[0 ~> 18446744073709551615]%zrange)%core) : expr_scope.
+    Local Notation "'uint64'" := (ident.Z_cast r[0 ~> 18446744073709551615]%zrange) : expr_scope.
+    Local Open Scope expr_scope.
+    Local Open Scope core_scope.
+    Compute
+      Pipeline.BoundsPipeline
+      false (* subst01 *)
+      None (* fancy *)
+      possible_values
+      ltac:(let r := Reify ((carry_mulmod limbwidth_num limbwidth_den s c n idxs)) in
+            exact r)
+             (Some loose_bounds, (Some loose_bounds, tt))
+             (Some tight_bounds).
+(*     = ErrorT.Success
+         (fun var : type -> Type =>
+          λ x x0 : var (type.base (base.type.list (base.type.type_base base.type.Z))),
+          expr_let x1 := ((#uint64,uint64)%expr @
+                          ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
+                           ((#uint64)%expr @ ($x [[4]])) @
+                           ((#uint64)%expr @ (((#uint64)%expr @ ($x0 [[4]]))%expr_pat * ##19))))%expr_pat in
+          expr_let x2 := ((#uint64,uint64)%expr @
+                          ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
+                           ((#uint64)%expr @ ($x [[4]])) @
+                           ((#uint64)%expr @ (((#uint64)%expr @ ($x0 [[3]]))%expr_pat * ##19))))%expr_pat in
+          expr_let x3 := ((#uint64,uint64)%expr @
+                          ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
+                           ((#uint64)%expr @ ($x [[4]])) @
+                           ((#uint64)%expr @ (((#uint64)%expr @ ($x0 [[2]]))%expr_pat * ##19))))%expr_pat in
+          expr_let x4 := ((#uint64,uint64)%expr @
+                          ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
+                           ((#uint64)%expr @ ($x [[4]])) @
+                           ((#uint64)%expr @ (((#uint64)%expr @ ($x0 [[1]]))%expr_pat * ##19))))%expr_pat in
+          expr_let x5 := ((#uint64,uint64)%expr @
+                          ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
+                           ((#uint64)%expr @ ($x [[3]])) @
+                           ((#uint64)%expr @ (((#uint64)%expr @ ($x0 [[4]]))%expr_pat * ##19))))%expr_pat in
+          expr_let x6 := ((#uint64,uint64)%expr @
+                          ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
+                           ((#uint64)%expr @ ($x [[3]])) @
+                           ((#uint64)%expr @ (((#uint64)%expr @ ($x0 [[3]]))%expr_pat * ##19))))%expr_pat in
+          expr_let x7 := ((#uint64,uint64)%expr @
+                          ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
+                           ((#uint64)%expr @ ($x [[3]])) @
+                           ((#uint64)%expr @ (((#uint64)%expr @ ($x0 [[2]]))%expr_pat * ##19))))%expr_pat in
+          expr_let x8 := ((#uint64,uint64)%expr @
+                          ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
+                           ((#uint64)%expr @ ($x [[2]])) @
+                           ((#uint64)%expr @ (((#uint64)%expr @ ($x0 [[4]]))%expr_pat * ##19))))%expr_pat in
+          expr_let x9 := ((#uint64,uint64)%expr @
+                          ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
+                           ((#uint64)%expr @ ($x [[2]])) @
+                           ((#uint64)%expr @ (((#uint64)%expr @ ($x0 [[3]]))%expr_pat * ##19))))%expr_pat in
+          expr_let x10 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ($x [[1]])) @
+                            ((#uint64)%expr @ (((#uint64)%expr @ ($x0 [[4]]))%expr_pat * ##19))))%expr_pat in
+          expr_let x11 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ($x [[4]])) @ ((#uint64)%expr @ ($x0 [[0]]))))%expr_pat in
+          expr_let x12 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ($x [[3]])) @ ((#uint64)%expr @ ($x0 [[1]]))))%expr_pat in
+          expr_let x13 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ($x [[3]])) @ ((#uint64)%expr @ ($x0 [[0]]))))%expr_pat in
+          expr_let x14 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ($x [[2]])) @ ((#uint64)%expr @ ($x0 [[2]]))))%expr_pat in
+          expr_let x15 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ($x [[2]])) @ ((#uint64)%expr @ ($x0 [[1]]))))%expr_pat in
+          expr_let x16 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ($x [[2]])) @ ((#uint64)%expr @ ($x0 [[0]]))))%expr_pat in
+          expr_let x17 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ($x [[1]])) @ ((#uint64)%expr @ ($x0 [[3]]))))%expr_pat in
+          expr_let x18 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ($x [[1]])) @ ((#uint64)%expr @ ($x0 [[2]]))))%expr_pat in
+          expr_let x19 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ($x [[1]])) @ ((#uint64)%expr @ ($x0 [[1]]))))%expr_pat in
+          expr_let x20 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ($x [[1]])) @ ((#uint64)%expr @ ($x0 [[0]]))))%expr_pat in
+          expr_let x21 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ($x [[0]])) @ ((#uint64)%expr @ ($x0 [[4]]))))%expr_pat in
+          expr_let x22 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ($x [[0]])) @ ((#uint64)%expr @ ($x0 [[3]]))))%expr_pat in
+          expr_let x23 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ($x [[0]])) @ ((#uint64)%expr @ ($x0 [[2]]))))%expr_pat in
+          expr_let x24 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ($x [[0]])) @ ((#uint64)%expr @ ($x0 [[1]]))))%expr_pat in
+          expr_let x25 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_mul_split)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ($x [[0]])) @ ((#uint64)%expr @ ($x0 [[0]]))))%expr_pat in
+          expr_let x26 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x7)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x4))))%expr_pat in
+          expr_let x27 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_with_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x26)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x7)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x4))))%expr_pat in
+          expr_let x28 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x9)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x26))))%expr_pat in
+          expr_let x29 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_with_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x28)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x9)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x27))))%expr_pat in
+          expr_let x30 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x10)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x28))))%expr_pat in
+          expr_let x31 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_with_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x30)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x10)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x29))))%expr_pat in
+          expr_let x32 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x25)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x30))))%expr_pat in
+          expr_let x33 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_with_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x32)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x25)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x31))))%expr_pat in
+          expr_let x34 := ((#uint64)%expr @
+                           (((#uint64)%expr @
+                             (((#uint64)%expr @ ((#ident.fst)%expr @ $x32))%expr_pat >> ##51))%expr_pat
+                            || ((#uint64)%expr @
+                                ((#ident.Z_truncating_shiftl)%expr @ ##64 @
+                                 ((#uint64)%expr @ ((#ident.fst)%expr @ $x33)) @ ##13))%expr_pat))%expr_pat in
+          expr_let x35 := ((#uint64)%expr @
+                           (((#uint64)%expr @ ((#ident.fst)%expr @ $x32))%expr_pat &'
+                            ##2251799813685247))%expr_pat in
+          expr_let x36 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x12)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x11))))%expr_pat in
+          expr_let x37 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_with_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x36)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x12)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x11))))%expr_pat in
+          expr_let x38 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x14)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x36))))%expr_pat in
+          expr_let x39 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_with_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x38)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x14)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x37))))%expr_pat in
+          expr_let x40 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x17)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x38))))%expr_pat in
+          expr_let x41 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_with_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x40)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x17)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x39))))%expr_pat in
+          expr_let x42 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x21)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x40))))%expr_pat in
+          expr_let x43 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_with_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x42)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x21)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x41))))%expr_pat in
+          expr_let x44 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x13)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x1))))%expr_pat in
+          expr_let x45 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_with_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x44)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x13)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x1))))%expr_pat in
+          expr_let x46 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x15)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x44))))%expr_pat in
+          expr_let x47 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_with_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x46)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x15)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x45))))%expr_pat in
+          expr_let x48 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x18)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x46))))%expr_pat in
+          expr_let x49 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_with_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x48)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x18)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x47))))%expr_pat in
+          expr_let x50 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x22)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x48))))%expr_pat in
+          expr_let x51 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_with_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x50)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x22)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x49))))%expr_pat in
+          expr_let x52 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x5)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x2))))%expr_pat in
+          expr_let x53 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_with_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x52)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x5)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x2))))%expr_pat in
+          expr_let x54 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x16)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x52))))%expr_pat in
+          expr_let x55 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_with_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x54)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x16)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x53))))%expr_pat in
+          expr_let x56 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x19)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x54))))%expr_pat in
+          expr_let x57 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_with_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x56)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x19)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x55))))%expr_pat in
+          expr_let x58 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x23)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x56))))%expr_pat in
+          expr_let x59 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_with_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x58)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x23)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x57))))%expr_pat in
+          expr_let x60 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x6)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x3))))%expr_pat in
+          expr_let x61 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_with_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x60)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x6)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x3))))%expr_pat in
+          expr_let x62 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x8)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x60))))%expr_pat in
+          expr_let x63 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_with_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x62)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x8)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x61))))%expr_pat in
+          expr_let x64 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x20)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x62))))%expr_pat in
+          expr_let x65 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_with_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x64)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x20)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x63))))%expr_pat in
+          expr_let x66 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x24)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x64))))%expr_pat in
+          expr_let x67 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_with_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x66)) @
+                            ((#uint64)%expr @ ((#ident.snd)%expr @ $x24)) @
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x65))))%expr_pat in
+          expr_let x68 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ $x34) @ ((#uint64)%expr @ ((#ident.fst)%expr @ $x66))))%expr_pat in
+          expr_let x69 := ((#uint64)%expr @
+                           (((#uint64)%expr @ ((#ident.snd)%expr @ $x68))%expr_pat +
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x67))%expr_pat))%expr_pat in
+          expr_let x70 := ((#uint64)%expr @
+                           (((#uint64)%expr @
+                             (((#uint64)%expr @ ((#ident.fst)%expr @ $x68))%expr_pat >> ##51))%expr_pat
+                            || ((#uint64)%expr @
+                                ((#ident.Z_truncating_shiftl)%expr @ ##64 @ ((#uint64)%expr @ $x69) @
+                                 ##13))%expr_pat))%expr_pat in
+          expr_let x71 := ((#uint64)%expr @
+                           (((#uint64)%expr @ ((#ident.fst)%expr @ $x68))%expr_pat &'
+                            ##2251799813685247))%expr_pat in
+          expr_let x72 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ $x70) @ ((#uint64)%expr @ ((#ident.fst)%expr @ $x58))))%expr_pat in
+          expr_let x73 := ((#uint64)%expr @
+                           (((#uint64)%expr @ ((#ident.snd)%expr @ $x72))%expr_pat +
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x59))%expr_pat))%expr_pat in
+          expr_let x74 := ((#uint64)%expr @
+                           (((#uint64)%expr @
+                             (((#uint64)%expr @ ((#ident.fst)%expr @ $x72))%expr_pat >> ##51))%expr_pat
+                            || ((#uint64)%expr @
+                                ((#ident.Z_truncating_shiftl)%expr @ ##64 @ ((#uint64)%expr @ $x73) @
+                                 ##13))%expr_pat))%expr_pat in
+          expr_let x75 := ((#uint64)%expr @
+                           (((#uint64)%expr @ ((#ident.fst)%expr @ $x72))%expr_pat &'
+                            ##2251799813685247))%expr_pat in
+          expr_let x76 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ $x74) @ ((#uint64)%expr @ ((#ident.fst)%expr @ $x50))))%expr_pat in
+          expr_let x77 := ((#uint64)%expr @
+                           (((#uint64)%expr @ ((#ident.snd)%expr @ $x76))%expr_pat +
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x51))%expr_pat))%expr_pat in
+          expr_let x78 := ((#uint64)%expr @
+                           (((#uint64)%expr @
+                             (((#uint64)%expr @ ((#ident.fst)%expr @ $x76))%expr_pat >> ##51))%expr_pat
+                            || ((#uint64)%expr @
+                                ((#ident.Z_truncating_shiftl)%expr @ ##64 @ ((#uint64)%expr @ $x77) @
+                                 ##13))%expr_pat))%expr_pat in
+          expr_let x79 := ((#uint64)%expr @
+                           (((#uint64)%expr @ ((#ident.fst)%expr @ $x76))%expr_pat &'
+                            ##2251799813685247))%expr_pat in
+          expr_let x80 := ((#uint64,uint64)%expr @
+                           ((#ident.Z_add_get_carry)%expr @ ##18446744073709551616 @
+                            ((#uint64)%expr @ $x78) @ ((#uint64)%expr @ ((#ident.fst)%expr @ $x42))))%expr_pat in
+          expr_let x81 := ((#uint64)%expr @
+                           (((#uint64)%expr @ ((#ident.snd)%expr @ $x80))%expr_pat +
+                            ((#uint64)%expr @ ((#ident.fst)%expr @ $x43))%expr_pat))%expr_pat in
+          expr_let x82 := ((#uint64)%expr @
+                           (((#uint64)%expr @
+                             (((#uint64)%expr @ ((#ident.fst)%expr @ $x80))%expr_pat >> ##51))%expr_pat
+                            || ((#uint64)%expr @
+                                ((#ident.Z_truncating_shiftl)%expr @ ##64 @ ((#uint64)%expr @ $x81) @
+                                 ##13))%expr_pat))%expr_pat in
+          expr_let x83 := ((#uint64)%expr @
+                           (((#uint64)%expr @ ((#ident.fst)%expr @ $x80))%expr_pat &'
+                            ##2251799813685247))%expr_pat in
+          expr_let x84 := ((#uint64)%expr @ (((#uint64)%expr @ $x82)%expr_pat * ##19))%expr_pat in
+          expr_let x85 := ((#uint64)%expr @
+                           (((#uint64)%expr @ $x35)%expr_pat + ((#uint64)%expr @ $x84)%expr_pat))%expr_pat in
+          expr_let x86 := ((#uint64)%expr @ (((#uint64)%expr @ $x85)%expr_pat >> ##51))%expr_pat in
+          expr_let x87 := ((#uint64)%expr @ (((#uint64)%expr @ $x85)%expr_pat &' ##2251799813685247))%expr_pat in
+          expr_let x88 := ((#uint64)%expr @
+                           (((#uint64)%expr @ $x86)%expr_pat + ((#uint64)%expr @ $x71)%expr_pat))%expr_pat in
+          expr_let x89 := ((#uint64)%expr @ (((#uint64)%expr @ $x88)%expr_pat >> ##51))%expr_pat in
+          expr_let x90 := ((#uint64)%expr @ (((#uint64)%expr @ $x88)%expr_pat &' ##2251799813685247))%expr_pat in
+          expr_let x91 := ((#uint64)%expr @
+                           (((#uint64)%expr @ $x89)%expr_pat + ((#uint64)%expr @ $x75)%expr_pat))%expr_pat in
+          [((#uint64)%expr @ $x87)%expr_pat; ((#uint64)%expr @ $x90)%expr_pat;
+          ((#uint64)%expr @ $x91)%expr_pat; ((#uint64)%expr @ $x79)%expr_pat;
+          ((#uint64)%expr @ $x83)%expr_pat])
+     : Pipeline.ErrorT
+         (Expr
+            (type.base (base.type.list (base.type.type_base base.type.Z)) ->
+             type.base (base.type.list (base.type.type_base base.type.Z)) ->
+             type.base (base.type.list (base.type.type_base base.type.Z))))
+ *)
+  End __.
+End debugging_remove_mul_split.
+
+Module debugging_remove_mul_split2.
+  Import Crypto.PushButtonSynthesis.WordByWordMontgomery.
+  Import Crypto.Arithmetic.WordByWordMontgomery.WordByWordMontgomery.
+  Section __.
+    Context (m : Z := 2^224 - 2^96 + 1)
+            (machine_wordsize : Z := 64)
+            (should_split_mul : should_split_mul_opt := true)
+            (widen_carry : widen_carry_opt := true)
+            (widen_bytes : widen_bytes_opt := true).
+
+    Local Existing Instances should_split_mul widen_carry widen_bytes.
+
+    Let s := 2^Z.log2_up m.
+    Let c := s - m.
+    Let n : nat := Eval compute in Z.to_nat (Qceiling (Z.log2_up s / machine_wordsize)).
+    Let r := 2^machine_wordsize.
+    Let r' := match Z.modinv r m with
+              | Some r' => r'
+              | None => 0
+              end.
+    Let m' := Eval vm_compute in
+          match Z.modinv (-m) r with
+          | Some m' => m'
+          | None => 0
+          end.
+
+    Local Notation saturated_bounds := (Primitives.saturated_bounds n machine_wordsize).
+
+    Definition bounds : list (ZRange.type.option.interp base.type.Z)
+      := Option.invert_Some saturated_bounds (*List.map (fun u => Some r[0~>u]%zrange) upperbounds*).
+
+    Definition possible_values_of_machine_wordsize
+      := prefix_with_carry [machine_wordsize; 2 * machine_wordsize]%Z.
+    Let possible_values := possible_values_of_machine_wordsize.
+
+    Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
+
+    (*
+    Time Definition foo :=
+      ltac:(let r := Reify ((mulmod machine_wordsize n m m')) in
+            exact r).
+*)
+    Set Printing Depth 100000.
+    Local Open Scope string_scope.
+    (*
+    Compute
+      Pipeline.BoundsPipelineToStrings
+      true (* static *)
+      "" (* prefix *)
+      "mul"
+      false (* subst01 *)
+      None
+      None (* fancy *)
+      possible_values
+      foo
+      (fun _ _ => []) (* comment *)
+      (Some bounds, (Some bounds, tt))
+      (Some bounds).
+*)
+    Check (fun with_mul_split => with_mul_split).
+    Time Compute smul m machine_wordsize "" (* prefix *).
+    Check (fun without_mul_split => without_mul_split).
+    Time Compute smul m machine_wordsize "" (* prefix *).
+    Goal True.
+      pose (smul m machine_wordsize "") as v; clear -v.
+      cbv in m; subst m machine_wordsize.
+      cbv [smul] in v.
+      set (k := mul _ _) in (value of v).
+      clear v.
+      cbv [mul] in k.
+      Import WordByWordMontgomeryReificationCache.
+      cbv -[Pipeline.BoundsPipeline reified_mul_gen] in k.
+      cbv [Pipeline.BoundsPipeline LetIn.Let_In] in k.
+      set (v := CheckedPartialEvaluateWithBounds _ _ _ _) in (value of k).
+      Notation INL := (inl _).
+      vm_compute in v.
+      Notation IDD := (id _).
+      lazymatch (eval cbv [v] in v) with
+      | @inl ?A ?B ?x => pose (id x) as v'; change v with (@inl A B v') in (value of k); clear v
+      end.
+      cbv beta iota in k.
+      set (v := Pipeline.RewriteAndEliminateDeadAndInline _ _ _ _) in (value of k).
+      set (v'' := MulSplit.Compilers.RewriteRules.RewriteMulSplit _ _ _) in (value of k).
+      vm_compute in v; clear v';
+      lazymatch (eval cbv [v] in v) with
+      | ?x => pose (id x) as v'; change v with v' in (value of v''); clear v
+      end.
+      cbv [id] in v'.
+      vm_compute in v''.
+    Abort.
+  End __.
+End debugging_remove_mul_split2.
+
+Local Instance split_mul_to : split_mul_to_opt := None.
 
 Module debugging_rewriting.
   Section __.

@@ -74,6 +74,9 @@ Local Opaque
 Section __.
   Context {output_language_api : ToString.OutputLanguageAPI}
           {static : static_opt}
+          {should_split_mul : should_split_mul_opt}
+          {widen_carry : widen_carry_opt}
+          {widen_bytes : widen_bytes_opt}
           (n : nat)
           (s : Z)
           (c : list (Z * Z))
@@ -110,7 +113,7 @@ Section __.
     := [0; machine_wordsize; 2 * machine_wordsize]%Z.
 
   Definition possible_values_of_machine_wordsize_with_bytes
-    := [0; 1; 8; machine_wordsize; 2 * machine_wordsize]%Z.
+    := prefix_with_carry_bytes [machine_wordsize; 2 * machine_wordsize]%Z.
 
   Let possible_values := possible_values_of_machine_wordsize.
   Let possible_values_with_bytes := possible_values_of_machine_wordsize_with_bytes.
@@ -118,6 +121,8 @@ Section __.
     := List.map (fun u => Some r[0~>u]%zrange) tight_upperbounds.
   Definition loose_bounds : list (ZRange.type.option.interp base.type.Z)
     := List.map (fun u => Some r[0 ~> loose_upperbound_extra_multiplicand*u]%zrange) tight_upperbounds.
+
+  Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
 
   Lemma length_prime_upperbound_list : List.length prime_upperbound_list = n.
   Proof using Type. cbv [prime_upperbound_list]; now autorewrite with distr_length. Qed.

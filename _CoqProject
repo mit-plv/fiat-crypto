@@ -113,6 +113,7 @@ src/PushButtonSynthesis/WordByWordMontgomery.v
 src/PushButtonSynthesis/WordByWordMontgomeryReificationCache.v
 src/Rewriter/Arith.v
 src/Rewriter/ArithWithCasts.v
+src/Rewriter/MulSplit.v
 src/Rewriter/NBE.v
 src/Rewriter/StripLiteralCasts.v
 src/Rewriter/ToFancy.v

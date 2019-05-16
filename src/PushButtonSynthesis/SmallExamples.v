@@ -19,6 +19,24 @@ Import Compilers.defaults.
 
 Import Associational Positional.
 
+Local Instance : split_mul_to_opt := None.
+
+Time Compute
+     (Pipeline.BoundsPipeline
+        true None [64; 128]
+        ltac:(let r := Reify (fun f g => mulmod (weight 51 1) (2^255) [(1,19)] 5 f g) in
+              exact r)
+               (Some (repeat (@None _) 5), ((Some (repeat (@None _) 5), tt)))
+               ZRange.type.base.option.None).
+
+Time Compute
+     (Pipeline.BoundsPipeline
+        true None [64; 128]
+        ltac:(let r := Reify (fun f g => mulmod (weight 51 2) (2^255) [(1,19)] 10 f g) in
+              exact r)
+               (Some (repeat (@None _) 10), ((Some (repeat (@None _) 10), tt)))
+               ZRange.type.base.option.None).
+
 Time Compute
      (Pipeline.BoundsPipeline
         true None [64; 128]

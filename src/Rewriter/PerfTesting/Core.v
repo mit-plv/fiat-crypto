@@ -40,6 +40,9 @@ Import
 
 Local Existing Instance CStringification.Compilers.ToString.C.OutputCAPI.
 Local Instance : static_opt := true.
+Local Instance : should_split_mul_opt := false.
+Local Instance : widen_bytes_opt := false.
+Local Instance : widen_carry_opt := false.
 
 Import defaults.
 
