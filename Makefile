@@ -635,6 +635,10 @@ clean::
 
 cleanall:: clean
 
+ifneq ($(filter install,$(MAKECMDGOALS)),)
+FILESTOINSTALL := $(wildcard $(FILESTOINSTALL))
+endif
+
 install: coq
 
 printenv::
