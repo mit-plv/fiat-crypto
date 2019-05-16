@@ -71,6 +71,7 @@ Module Compilers.
          | ident.Z_opp
          | ident.Z_cast _
          | ident.Z_cast2 _
+         | ident.Z_combine_at_bitwidth
            => true
          | _ => false
          end.
