@@ -834,3 +834,65 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
              ]%Z%zrange
           ].
 End fancy.
+
+Section with_bitwidth.
+  Context (bitwidth : Z)
+          (lgcarrymax : Z).
+
+  Local Notation doublewidth := (cstZ r[0~>2^(2*bitwidth) - 1]).
+  Local Notation singlewidth := (cstZ r[0~>2^bitwidth - 1]).
+  Local Notation carrymax := (2^lgcarrymax-1).
+  Local Notation carrywidth := (cstZ r[0~>carrymax]).
+  Local Notation singlewidth_carry := (cstZZ (r[0~>2^bitwidth - 1], r[0~>carrymax])%zrange).
+  Local Notation alt_singlewidth_carry := (cstZZ (r[0~>2^bitwidth - 1], r[0~>2^bitwidth-1])%zrange).
+  Local Notation pairsinglewidth := (cstZZ (r[0~>2^bitwidth - 1], r[0~>2^bitwidth - 1])%zrange).
+  Local Notation cstZsingle_to_double l h
+    := (doublewidth (Z.combine_at_bitwidth ('bitwidth) (singlewidth l) (singlewidth h))).
+  Local Notation cstZsingle_to_double_pair lh
+    := (cstZsingle_to_double (fst lh) (snd lh)).
+
+  Definition mul_split_rewrite_rulesT : Datatypes.list (Datatypes.bool * Prop)
+    := Eval cbv [myapp mymap myflatten] in
+        myflatten_generalize_cast
+          [mymap
+             dont_do_again
+             [(forall r x, cstZ r (cstZ r x) = cstZ r x) (* when inlining Z.combine_at_bitwidth, casts will sometimes get doubled up, so we need to strip the extra casts *)
+              ; (forall x y,
+                    doublewidth (singlewidth x * singlewidth y)
+                    = (dlet lh := pairsinglewidth (Z.mul_split ('(2^bitwidth)) (singlewidth x) (singlewidth y)) in
+                           cstZsingle_to_double_pair lh))
+              ; (forall xl xh yl yh,
+                    doublewidth (cstZsingle_to_double xl xh + cstZsingle_to_double yl yh)
+                    = (dlet lc := singlewidth_carry (Z.add_get_carry_full ('(2^bitwidth)) (singlewidth xl) (singlewidth yl)) in
+                           dlet hc := singlewidth_carry (Z.add_with_get_carry_full ('(2^bitwidth)) (carrywidth (snd lc)) (singlewidth xh) (singlewidth yh)) in
+                           cstZsingle_to_double (fst lc) (fst hc)))
+              ; (forall x yl yh,
+                    doublewidth (singlewidth x + cstZsingle_to_double yl yh)
+                    = (dlet lc := singlewidth_carry (Z.add_get_carry_full ('(2^bitwidth)) (singlewidth x) (singlewidth yl)) in
+                           dlet h := singlewidth (Z.add(*_with_carry*) (carrywidth (snd lc)) (*(singlewidth ('0))*) (singlewidth yh)) in
+                           cstZsingle_to_double (fst lc) h))
+              ; (forall xl xh y,
+                    doublewidth (cstZsingle_to_double xl xh + singlewidth y)
+                    = (dlet lc := singlewidth_carry (Z.add_get_carry_full ('(2^bitwidth)) (singlewidth xl) (singlewidth y)) in
+                           dlet h := singlewidth (Z.add(*_with_carry*) (carrywidth (snd lc)) (singlewidth xh) (*(singlewidth ('0))*)) in
+                           cstZsingle_to_double (fst lc) h))
+              ; (forall xl xh mask,
+                    0 <= mask < 2^bitwidth
+                    -> singlewidth (cstZsingle_to_double xl xh &' singlewidth ('mask))
+                       = singlewidth (singlewidth xl &' singlewidth ('mask)))
+              ; (forall xl xh mask,
+                    0 <= mask < 2^bitwidth
+                    -> singlewidth (singlewidth ('mask) &' cstZsingle_to_double xl xh)
+                       = singlewidth (singlewidth ('mask) &' singlewidth xl))
+              ; (forall xl xh offset,
+                    0 < offset < bitwidth
+                    -> singlewidth (cstZsingle_to_double xl xh >> singlewidth ('offset))
+                       = singlewidth (Z.lor (singlewidth (singlewidth xl >> singlewidth ('offset)))
+                                            (singlewidth
+                                               (Z.truncating_shiftl
+                                                  (singlewidth ('bitwidth))
+                                                  (singlewidth xh)
+                                                  (singlewidth ('(bitwidth - offset)))))))
+             ]
+          ].
+End with_bitwidth.

@@ -88,6 +88,9 @@ Local Opaque
 Section __.
   Context {output_language_api : ToString.OutputLanguageAPI}
           {static : static_opt}
+          {should_split_mul : should_split_mul_opt}
+          {widen_carry : widen_carry_opt}
+          {widen_bytes : widen_bytes_opt}
           (m : Z)
           (machine_wordsize : Z).
 
@@ -121,15 +124,17 @@ Section __.
   (* We include [0], so that even after bounds relaxation, we can
        notice where the constant 0s are, and remove them. *)
   Definition possible_values_of_machine_wordsize
-    := [0; 1; machine_wordsize; 2 * machine_wordsize]%Z.
+    := prefix_with_carry [machine_wordsize; 2 * machine_wordsize]%Z.
 
   Definition possible_values_of_machine_wordsize_with_bytes
-    := [0; 1; 8; machine_wordsize; 2 * machine_wordsize]%Z.
+    := prefix_with_carry_bytes [machine_wordsize; 2 * machine_wordsize]%Z.
 
   Let possible_values := possible_values_of_machine_wordsize.
   Let possible_values_with_bytes := possible_values_of_machine_wordsize_with_bytes.
   Definition bounds : list (ZRange.type.option.interp base.type.Z)
     := Option.invert_Some saturated_bounds (*List.map (fun u => Some r[0~>u]%zrange) upperbounds*).
+
+  Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
 
   (** Note: If you change the name or type signature of this
         function, you will need to update the code in CLI.v *)

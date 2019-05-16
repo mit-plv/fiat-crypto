@@ -213,6 +213,13 @@ Module ForExtraction.
     {
       (** Is the code static / inlined *)
       static :> static_opt
+
+      (** Should we split apart oversized operations? *)
+      ; should_split_mul :> should_split_mul_opt := false
+      (** Should we widen the carry to the full bitwidth? *)
+      ; widen_carry :> widen_carry_opt := false
+      (** Should we widen the byte type to the full bitwidth? *)
+      ; widen_bytes :> widen_bytes_opt := false
     }.
 
   (** We define a class for the various operations that are specific to a pipeline *)

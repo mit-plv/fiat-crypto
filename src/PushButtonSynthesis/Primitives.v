@@ -609,6 +609,9 @@ Notation "'docstring_with_summary_from_lemma!' summary correctness"
 Section __.
   Context {output_language_api : ToString.OutputLanguageAPI}
           {static : static_opt}
+          {should_split_mul : should_split_mul_opt}
+          {widen_carry : widen_carry_opt}
+          {widen_bytes : widen_bytes_opt}
           (n : nat)
           (machine_wordsize : Z).
 
@@ -623,10 +626,12 @@ Section __.
     := [0; machine_wordsize; 2 * machine_wordsize]%Z.
 
   Definition possible_values_of_machine_wordsize_with_bytes
-    := [0; 1; 8; machine_wordsize; 2 * machine_wordsize]%Z.
+    := prefix_with_carry_bytes [machine_wordsize; 2 * machine_wordsize]%Z.
 
   Let possible_values := possible_values_of_machine_wordsize.
   Let possible_values_with_bytes := possible_values_of_machine_wordsize_with_bytes.
+
+  Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
 
   Lemma length_saturated_bounds_list : List.length saturated_bounds_list = n.
   Proof using Type. cbv [saturated_bounds_list]; now autorewrite with distr_length. Qed.

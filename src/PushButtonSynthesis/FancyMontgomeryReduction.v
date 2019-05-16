@@ -62,6 +62,8 @@ Section rmontred.
 
   Let possible_values := possible_values_of_machine_wordsize.
 
+  Local Instance split_mul_to : split_mul_to_opt := None.
+
   Let fancy_args
     := (Some {| Pipeline.invert_low log2wordsize := invert_low log2wordsize consts_list;
                 Pipeline.invert_high log2wordsize := invert_high log2wordsize consts_list;

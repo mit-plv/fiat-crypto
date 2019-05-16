@@ -59,6 +59,9 @@ Local Opaque expr.Interp.
 Section __.
   Context {output_language_api : ToString.OutputLanguageAPI}
           {static : static_opt}
+          {should_split_mul : should_split_mul_opt}
+          {widen_carry : widen_carry_opt}
+          {widen_bytes : widen_bytes_opt}
           (s : Z)
           (c : list (Z * Z))
           (machine_wordsize : Z).
@@ -66,7 +69,7 @@ Section __.
   (* We include [0], so that even after bounds relaxation, we can
        notice where the constant 0s are, and remove them. *)
   Definition possible_values_of_machine_wordsize
-    := [0; 1; machine_wordsize]%Z.
+    := prefix_with_carry [machine_wordsize].
 
   Let n : nat := Z.to_nat (Qceiling (Z.log2_up s / machine_wordsize)).
   Let m := s - Associational.eval c.
@@ -82,6 +85,8 @@ Section __.
   Let bound := Some r[0 ~> (2^machine_wordsize - 1)]%zrange.
   Let boundsn : list (ZRange.type.option.interp base.type.Z)
     := repeat bound n.
+
+  Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
 
   (** Note: If you change the name or type signature of this
         function, you will need to update the code in CLI.v *)
