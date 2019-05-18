@@ -1255,7 +1255,7 @@ Module Compilers.
                end%under_lets.
 
           Definition assemble_identifier_rewriters {t} (idc : ident t) : value_with_lets t
-            := eta_ident_cps _ _ idc (fun t' idc' => assemble_identifier_rewriters' t' (rIdent true idc' #idc') (fun _ => id)).
+            := eta_ident_cps _ _ idc (fun t' idc' => assemble_identifier_rewriters' t' (rIdent true idc' (#idc')) (fun _ => id)).
         End with_do_again.
       End with_var.
       Global Arguments rew_should_do_again {_ _ _ _ _ _} _.
