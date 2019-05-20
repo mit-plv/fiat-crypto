@@ -156,8 +156,8 @@ Ltac generalize_reflect_to_dec :=
               change (mark G); generalize dependent (@reflect_to_dec P b true R H); try clear H; intros; cbv beta delta [mark]
          end.
 
-Ltac reflect_beq_to_eq beq :=
-  let R := constr:(_ : forall x y, reflect (x = y) (beq x y)) in
+Ltac reflect_beq_to_eq_using R :=
+  let beq := lazymatch type of R with forall x y, reflect (x = y) (?beq x y) => beq end in
   let lem_to_dec := constr:(fun b x y => @reflect_to_dec (x = y) (beq x y) b (R x y)) in
   let lem_of_dec := constr:(fun b x y => @reflect_of_dec (x = y) (beq x y) b (R x y)) in
   generalize_reflect_to_dec;
@@ -174,6 +174,10 @@ Ltac reflect_beq_to_eq beq :=
            => let G := match goal with |- ?G => G end in
               change (mark G); generalize dependent (@reflect_to_dec P (beq x y) true R H); try clear H; intros; cbv beta delta [mark]
          end.
+
+Ltac reflect_beq_to_eq beq :=
+  let R := constr:(_ : forall x y, reflect (x = y) (beq x y)) in
+  reflect_beq_to_eq_using R.
 
 Ltac solve_reflect_step :=
   first [ match goal with
