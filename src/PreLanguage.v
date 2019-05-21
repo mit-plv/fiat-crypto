@@ -52,3 +52,5 @@ Module ident.
       := Datatypes.option_rect (fun _ => P) S_case (N_case tt) o.
   End Thunked.
 End ident.
+
+Global Opaque ident.cast. (* This should never be unfolded except in [LanguageWf] *)
