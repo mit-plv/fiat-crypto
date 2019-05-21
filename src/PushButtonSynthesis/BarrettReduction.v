@@ -22,7 +22,6 @@ Require Import Crypto.PushButtonSynthesis.ReificationCache.
 Require Import Crypto.PushButtonSynthesis.Primitives.
 Require Import Crypto.PushButtonSynthesis.BarrettReductionReificationCache.
 Require Import Crypto.PushButtonSynthesis.InvertHighLow.
-Require Import Crypto.PushButtonSynthesis.LegacySynthesisTactics.
 Import ListNotations.
 Local Open Scope Z_scope. Local Open Scope list_scope. Local Open Scope bool_scope.
 
