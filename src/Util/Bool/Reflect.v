@@ -147,6 +147,29 @@ Proof.
   apply ishprop_reflect_all_eq_gen; left; assumption.
 Qed.
 
+Lemma eq_reflect_to_dec_true_refl {A beq} {H : forall x y : A, reflect (x = y) (beq x y)}
+      {x pf H'}
+  : @reflect_to_dec (x = x) (beq x x) true H' pf = eq_refl.
+Proof.
+  apply Eqdep_dec.UIP_dec; intros; eapply @dec_of_reflect; eauto.
+Qed.
+
+Ltac generalize_reflect_to_dec_rel_refl_using beq R :=
+  let A := lazymatch type of beq with ?A -> _ -> _ => A end in
+  let do_gen x R' H :=
+      (let G := match goal with |- ?G => G end in
+       change (mark G); generalize (@eq_reflect_to_dec_true_refl A beq R x H R');
+       generalize dependent (@reflect_to_dec (@eq A x x) (beq x x) true R' H);
+       try clear H;
+       let H' := fresh in
+       intro H'; intros; try subst H'; cbv beta delta [mark]) in
+  repeat match goal with
+         | [ H : context[@reflect_to_dec (@eq A ?x ?x) (beq ?x ?x) true ?R' ?H'] |- _ ]
+           => do_gen x R' H'
+         | [ |- context[@reflect_to_dec (@eq A ?x ?x) (beq ?x ?x) true ?R' ?H'] ]
+           => do_gen x R' H'
+         end.
+
 Ltac generalize_reflect_to_dec :=
   repeat match goal with
          | [ H : context[@reflect_to_dec ?P ?b true ?R ?H] |- ?G ]
@@ -160,6 +183,7 @@ Ltac reflect_beq_to_eq_using R :=
   let beq := lazymatch type of R with forall x y, reflect (x = y) (?beq x y) => beq end in
   let lem_to_dec := constr:(fun b x y => @reflect_to_dec (x = y) (beq x y) b (R x y)) in
   let lem_of_dec := constr:(fun b x y => @reflect_of_dec (x = y) (beq x y) b (R x y)) in
+  generalize_reflect_to_dec_rel_refl_using beq R;
   generalize_reflect_to_dec;
   repeat match goal with
          | [ H : beq ?x ?y = true |- _ ] => apply (lem_to_dec true x y) in H; cbv beta iota in H
