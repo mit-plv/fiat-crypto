@@ -156,18 +156,19 @@ Qed.
 
 Ltac generalize_reflect_to_dec_rel_refl_using beq R :=
   let A := lazymatch type of beq with ?A -> _ -> _ => A end in
-  let do_gen x R' H :=
+  let do_gen b x R' H :=
       (let G := match goal with |- ?G => G end in
        change (mark G); generalize (@eq_reflect_to_dec_true_refl A beq R x H R');
-       generalize dependent (@reflect_to_dec (@eq A x x) (beq x x) true R' H);
+       change (beq x x) with b in *;
+       generalize dependent (@reflect_to_dec (@eq A x x) b true R' H);
        try clear H;
        let H' := fresh in
-       intro H'; intros; try subst H'; cbv beta delta [mark]) in
+       intro H'; intros; subst H'; cbv beta delta [mark]) in
   repeat match goal with
-         | [ H : context[@reflect_to_dec (@eq A ?x ?x) (beq ?x ?x) true ?R' ?H'] |- _ ]
-           => do_gen x R' H'
-         | [ |- context[@reflect_to_dec (@eq A ?x ?x) (beq ?x ?x) true ?R' ?H'] ]
-           => do_gen x R' H'
+         | [ H : context[@reflect_to_dec (@eq A ?x ?x) ?b true ?R' ?H'] |- _ ]
+           => do_gen b x R' H'
+         | [ |- context[@reflect_to_dec (@eq A ?x ?x) ?b true ?R' ?H'] ]
+           => do_gen b x R' H'
          end.
 
 Ltac generalize_reflect_to_dec :=
