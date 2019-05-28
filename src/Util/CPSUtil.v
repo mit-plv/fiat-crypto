@@ -335,6 +335,7 @@ Qed.
 Hint Rewrite @combine_cps_correct: uncps.
 
 (* differs from fold_right_cps in that the functional argument `g` is also a CPS function *)
+Local Set Universe Polymorphism.
 Definition fold_right_cps2_specialized_step
            (fold_right_cps2_specialized
             : forall {T A B} (g : B -> A -> (A->T)->T) (a0 : A) (l : list B) (f : A -> T), _)
@@ -347,6 +348,7 @@ Fixpoint fold_right_cps2_specialized {T A B} (g : B -> A -> (A->T)->T) (a0 : A) 
   @fold_right_cps2_specialized_step (@fold_right_cps2_specialized) T A B g a0 l f.
 Definition fold_right_cps2 {A B} (g : B -> A -> forall {T}, (A->T)->T) (a0 : A) (l : list B) {T} (f : A -> T) :=
   @fold_right_cps2_specialized T A B (fun b a => @g b a T) a0 l f.
+Local Unset Universe Polymorphism.
 Lemma unfold_fold_right_cps2 {A B} (g : B -> A -> forall {T}, (A->T)->T) (a0 : A) (l : list B) {T} (f : A -> T)
   : @fold_right_cps2 A B g a0 l T f
     = match l with
