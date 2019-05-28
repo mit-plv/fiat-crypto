@@ -24,6 +24,7 @@ src/PreLanguage.v
 src/Rewriter.v
 src/RewriterAll.v
 src/RewriterAllTactics.v
+src/RewriterExamples.v
 src/RewriterInterpProofs1.v
 src/RewriterReify.v
 src/RewriterRules.v

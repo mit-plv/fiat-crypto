@@ -21,6 +21,7 @@ Require Import Crypto.Util.Tactics.ConstrFail.
 Import Coq.Lists.List ListNotations. Local Open Scope bool_scope. Local Open Scope Z_scope.
 Export PreLanguage.
 
+Import EqNotations.
 Module Compilers.
   Export PreLanguage.
   Local Set Boolean Equality Schemes.
@@ -770,6 +771,17 @@ Module Compilers.
       let R := Reify base_type ident reify_base_type reify_ident RHS in
       transitivity (@Interp base_type ident base_interp interp_ident _ R);
       [ | reflexivity ].
+
+    Class Reified_of {base_type ident interp_base_type interp_ident} {t} (v : type.interp interp_base_type t) (rv : @Expr base_type ident t)
+      := reified_ok : @Interp base_type ident interp_base_type interp_ident t rv = v.
+
+    Lemma Reify_rhs {base_type ident interp_base_type interp_ident t v rv lhs}
+          {H : @Reified_of base_type ident interp_base_type interp_ident t v rv}
+      : lhs == @Interp base_type ident interp_base_type interp_ident t rv
+        -> lhs == v.
+    Proof.
+      cbv [Reified_of] in H; subst v; exact id.
+    Qed.
 
     Module Export Notations.
       Delimit Scope expr_scope with expr.
@@ -1530,6 +1542,9 @@ Module Compilers.
     expr.Reify base.type ident ltac:(base.reify) ident.reify term.
   Ltac Reify_rhs _ :=
     expr.Reify_rhs base.type ident ltac:(base.reify) ident.reify (@base.interp) (@ident.interp) ().
+
+  Global Hint Extern 1 (@expr.Reified_of _ _ _ _ ?t ?v ?rv)
+  => cbv [expr.Reified_of]; Reify_rhs (); reflexivity : typeclass_instances.
 
   Module Import invert_expr.
     Module ident.

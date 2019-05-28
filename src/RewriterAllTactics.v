@@ -1,3 +1,4 @@
+Require Import Coq.Classes.Morphisms.
 Require Import Crypto.Language.
 Require Import Crypto.LanguageInversion.
 Require Import Crypto.LanguageWf.
@@ -100,6 +101,72 @@ Module Compilers.
       let RInterp := cache_proof_with_type_by (@Interp_GoalT pkg R) ltac:(idtac; prove_interp_good ()) RInterp in
       make_VerifiedRewriter pkg_proofs R Rwf RInterp specs_proofs.
 
+    Module Import FinalTacticHelpers.
+      Lemma generalize_to_eqv {base_type base_interp} {A B f g}
+            (H : @type.related base_type base_interp (fun _ => eq) (type.arrow A B) f g)
+        : forall x, Proper (@type.eqv A) x -> f x == g x.
+      Proof. intro; apply H. Qed.
+
+      Lemma eq_trans_eqv {base_type base_interp T x y z}
+            (H1 : x = y)
+            (H2 : @type.related base_type base_interp (fun _ => eq) T y z)
+        : x == z.
+      Proof. subst; assumption. Qed.
+
+      Lemma eq_trans_eqv_Interp {base_type base_interp ident ident_interp T x y z}
+            (H2 : @type.related base_type base_interp (fun _ => eq) T (@expr.Interp base_type ident base_interp ident_interp T y) z)
+            (H1 : x = y)
+        : (@expr.Interp base_type ident base_interp ident_interp T x) == z.
+      Proof. subst; assumption. Qed.
+
+      Ltac generalize_hyps_for_rewriting :=
+        intros;
+        repeat match goal with
+               | [ |- @eq ?T ?x ?y ] => let t := defaults.reify_type T in
+                                        change (@type.related _ base.interp (fun _ => eq) t x y)
+               | [ H := _ |- _ ] => revert H
+               | [ H : ?T |- @type.related _ base.interp (fun _ => eq) ?B _ _ ]
+                 => let t := defaults.reify_type T in
+                    generalize (_ : Proper (@type.related _ base.interp (fun _ => eq) t) H);
+                    revert H;
+                    refine (@generalize_to_eqv _ base.interp t B _ _ _)
+               | [ H : ?T |- _ ] => clear H
+               end.
+
+      Ltac etransitivity_for_sides do_lhs do_rhs :=
+        intros;
+        let LHS := match goal with |- ?LHS = ?RHS => LHS end in
+        let RHS := match goal with |- ?LHS = ?RHS => RHS end in
+        let LHS' := open_constr:(_) in
+        let RHS' := open_constr:(_) in
+        transitivity RHS';
+        [ transitivity LHS'; [ symmetry | shelve ] | ];
+        [ lazymatch do_lhs with true => idtac | false => reflexivity end
+        | lazymatch do_rhs with true => idtac | false => reflexivity end ].
+
+      Ltac do_reify_rhs := refine (@expr.Reify_rhs _ _ _ _ _ _ _ _ _ _).
+      Ltac do_rewrite_with verified_rewriter_package :=
+        refine (eq_trans_eqv_Interp _ _);
+        [ refine (@Interp_gen_Rewrite verified_rewriter_package _ _ _ _);
+          [ .. | prove_Wf () ]
+        | lazymatch goal with
+          | [ |- ?ev = ?RHS ] => let RHS' := (eval vm_compute in RHS) in
+                                 unify ev RHS'; vm_cast_no_check (eq_refl RHS)
+          end ].
+
+      Ltac do_final_cbv := cbv [expr.Interp expr.interp ident.gen_interp type.interp base.interp base.base_interp].
+
+      Ltac Rewrite_for_gen verified_rewriter_package do_lhs do_rhs :=
+        unshelve (
+            solve [
+                etransitivity_for_sides do_lhs do_rhs;
+                generalize_hyps_for_rewriting;
+                do_reify_rhs;
+                do_rewrite_with verified_rewriter_package
+          ]);
+        do_final_cbv.
+    End FinalTacticHelpers.
+
     Module Export GoalType.
       Export RewriterWf1.Compilers.RewriteRules.GoalType.
     End GoalType.
@@ -114,6 +181,11 @@ Module Compilers.
 
       Tactic Notation "make_rewriter" constr(pkg_proofs) constr(include_interp) constr(specs_proofs) :=
         make_rewriter pkg_proofs include_interp specs_proofs.
+
+
+      Ltac Rewrite_lhs_for verified_rewriter_package := Rewrite_for_gen verified_rewriter_package true false.
+      Ltac Rewrite_rhs_for verified_rewriter_package := Rewrite_for_gen verified_rewriter_package false true.
+      Ltac Rewrite_for verified_rewriter_package := Rewrite_for_gen verified_rewriter_package true true.
     End Tactic.
   End RewriteRules.
 End Compilers.
