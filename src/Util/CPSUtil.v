@@ -174,14 +174,14 @@ Lemma map_cps_correct {A B} g ls: forall {T} f,
 Proof. induction ls as [|?? IHls]; simpl; intros; rewrite ?IHls; reflexivity. Qed.
 Hint Rewrite @map_cps_correct : uncps.
 
-Fixpoint map_cps_cps {A B} (g : A->forall T, (B -> T) -> T) ls
+Fixpoint map_cps2 {A B} (g : A->forall T, (B -> T) -> T) ls
          {T} (f:list B->T) : T:=
   match ls with
   | nil => f nil
-  | a :: t => map_cps_cps g t (fun r => g a _ (fun ga => f (ga :: r)))
+  | a :: t => map_cps2 g t (fun r => g a _ (fun ga => f (ga :: r)))
   end.
-Lemma map_cps_cps_correct {A B} g g' (Hg : forall T k a, g a T k = k (g' a)) ls : forall {T} f,
-    @map_cps_cps A B g ls T f = f (map g' ls).
+Lemma map_cps2_correct {A B} g g' (Hg : forall T k a, g a T k = k (g' a)) ls : forall {T} f,
+    @map_cps2 A B g ls T f = f (map g' ls).
 Proof. induction ls as [|?? IHls]; simpl; intros; rewrite ?IHls, ?Hg; reflexivity. Qed.
 
 Fixpoint firstn_cps {A} (n:nat) (l:list A) {T} (f:list A->T) :=
