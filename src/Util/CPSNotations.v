@@ -43,3 +43,7 @@ Notation "x' <--- v ; C" := (cpsbind v%cps (fun x' => C%cps)) : cps_scope.
 Definition cps_option_bind {A B} (v:~> option A) (f:A ~> option B) : ~> option B
   := cpsbind v (fun x' T k => match x' with Some x' => f x' T k | None => k None end).
 Notation "x' <-- v ; C" := (cps_option_bind v%cps (fun x' => C%cps)) : cps_scope.
+
+Module CPSBindNotations.
+  Notation "x' <- v ; C" := (cpsbind v%cps (fun x' => C%cps)) : cps_scope.
+End CPSBindNotations.
