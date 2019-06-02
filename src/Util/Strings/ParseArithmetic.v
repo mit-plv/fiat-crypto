@@ -156,36 +156,41 @@ Fixpoint parse_Z (s : string) : option (Z * string)
      | EmptyString => None
      end.
 
-Fixpoint parseZ_op_fueled
-         (ops : list (ascii * (Z -> Z -> Z)))
-         (prev_parse : string -> option (Z * string))
-         (fuel : nat) (acc : Z) : string -> option (Z * string)
+Fixpoint parse_op_fueled
+         {A B}
+         (ops : list (ascii * (A -> B -> A)))
+         (prev_parse : string -> option (B * string))
+         (fuel : nat) (acc : A) : string -> option (A * string)
   := match fuel with
      | O => ret acc
      | S fuel'
        => (op <- parse_ch ops;
              z <- prev_parse;
              let acc := op acc z in
-             parseZ_op_fueled ops prev_parse fuel' acc)
+             parse_op_fueled ops prev_parse fuel' acc)
           || ret acc
      end.
 
-Definition parseZ_op_from_acc
-         (ops : list (ascii * (Z -> Z -> Z)))
-         (prev_parse : string -> option (Z * string))
-         (acc : Z) (s : string) : option (Z * string)
-  := parseZ_op_fueled ops prev_parse (String.length s) acc s.
+Definition parse_op_from_acc
+           {A B}
+           (ops : list (ascii * (A -> B -> A)))
+           (prev_parse : string -> option (B * string))
+           (acc : A) (s : string) : option (A * string)
+  := parse_op_fueled ops prev_parse (String.length s) acc s.
 
-Definition parseZ_op
-         (ops : list (ascii * (Z -> Z -> Z)))
-         (prev_parse : string -> option (Z * string))
-  : string -> option (Z * string)
+Definition parse_op
+           {A}
+           (ops : list (ascii * (A -> A -> A)))
+           (prev_parse : string -> option (A * string))
+  : string -> option (A * string)
   := acc <- prev_parse;
-       parseZ_op_from_acc ops prev_parse acc.
+       parse_op_from_acc ops prev_parse acc.
 
-Fixpoint parseZ_parens_fueled
-         (prev_parse : string -> option (Z * string))
-         (fuel : nat) : string -> option (Z * string)
+Fixpoint parse_parens_fueled
+         {A}
+         (inj : Z -> A)
+         (prev_parse : string -> option (A * string))
+         (fuel : nat) : string -> option (A * string)
   := match fuel with
      | O => fun _ => None
      | S fuel'
@@ -193,30 +198,67 @@ Fixpoint parseZ_parens_fueled
               z <- prev_parse;
               _ <- parse_close;
               ret z)
-           || parse_Z)
+           || (z <- parse_Z; ret (inj z)))
      end.
 
-Section step.
-  Context (parseZ : string -> option (Z * string)).
+Inductive Zexpr := Zv (_ : Z) | Zopp (a : Zexpr) | Zadd (a b : Zexpr) | Zsub (a b : Zexpr) | Zmul (a b : Zexpr) | Zdiv (a b : Zexpr) | Zpow (b e : Zexpr).
+Coercion Zv : Z >-> Zexpr.
+Delimit Scope Zexpr_scope with Zexpr.
+Bind Scope Zexpr_scope with Zexpr.
+Infix "^" := Zpow : Zexpr_scope.
+Infix "*" := Zmul : Zexpr_scope.
+Infix "+" := Zadd : Zexpr_scope.
+Infix "/" := Zdiv : Zexpr_scope.
+Infix "-" := Zsub : Zexpr_scope.
+Notation "- x" := (Zopp) : Zexpr_scope.
 
-  Definition parseZ_parens (s : string) : option (Z * string)
-    := parseZ_parens_fueled parseZ (String.length s) s.
-  Definition parseZ_exp : string -> option (Z * string)
-    := parseZ_op [("^", Z.pow)]%char parseZ_parens.
-  Definition parseZ_mul_div : string -> option (Z * string)
-    := parseZ_op [("*", Z.mul); ("/", Z.div)]%char parseZ_exp.
-  Definition parseZ_add_sub : string -> option (Z * string)
-    := parseZ_op [("+", Z.add); ("-", Z.sub)]%char parseZ_mul_div.
-End step.
-
-Fixpoint parseZ_arith_fueled (fuel : nat) : string -> option (Z * string)
-  := match fuel with
-     | O => parseZ_add_sub parse_Z
-     | S fuel' => parseZ_add_sub (parseZ_arith_fueled fuel')
+Fixpoint eval_Zexpr (v : Zexpr) : Z
+  := match v with
+     | Zv x => x
+     | Zopp a => Z.opp (eval_Zexpr a)
+     | Zadd a b => Z.add (eval_Zexpr a) (eval_Zexpr b)
+     | Zsub a b => Z.sub (eval_Zexpr a) (eval_Zexpr b)
+     | Zmul a b => Z.mul (eval_Zexpr a) (eval_Zexpr b)
+     | Zdiv a b => Z.div (eval_Zexpr a) (eval_Zexpr b)
+     | Zpow b e => Z.pow (eval_Zexpr b) (eval_Zexpr e)
      end.
 
-Definition parseZ_arith_prefix (s : string) : option (Z * string)
-  := parseZ_arith_fueled (String.length s) s.
+Section gen.
+  Context {A}
+          (Zadd : A -> A -> A)
+          (Zsub : A -> A -> A)
+          (Zmul : A -> A -> A)
+          (Zdiv : A -> A -> A)
+          (Zpow : A -> A -> A)
+          (inj : Z -> A).
+  Section step.
+    Context (parseZ : string -> option (A * string)).
+
+    Definition parseZ_gen_parens (s : string) : option (A * string)
+      := parse_parens_fueled inj parseZ (String.length s) s.
+    Definition parseZ_gen_exp : string -> option (A * string)
+      := parse_op [("^", Zpow)]%char parseZ_gen_parens.
+    Definition parseZ_gen_mul_div : string -> option (A * string)
+      := parse_op [("*", Zmul); ("/", Zdiv)]%char parseZ_gen_exp.
+    Definition parseZ_gen_add_sub : string -> option (A * string)
+      := parse_op [("+", Zadd); ("-", Zsub)]%char parseZ_gen_mul_div.
+  End step.
+
+  Fixpoint parseZ_gen_arith_fueled (fuel : nat) : string -> option (A * string)
+    := match fuel with
+       | O => parseZ_gen_add_sub (z <- parse_Z; ret (inj z))
+       | S fuel' => parseZ_gen_add_sub (parseZ_gen_arith_fueled fuel')
+       end.
+
+  Definition parseZ_gen_arith_prefix (s : string) : option (A * string)
+    := parseZ_gen_arith_fueled (String.length s) s.
+End gen.
+
+Definition parseZ_arith_prefix : string -> option (Z * string)
+  := parseZ_gen_arith_prefix Z.add Z.sub Z.mul Z.div Z.pow id.
+
+Definition parseZexpr_arith_prefix : string -> option (Zexpr * string)
+  := parseZ_gen_arith_prefix Zadd Zsub Zmul Zdiv Zpow id.
 
 Fixpoint remove_spaces (s : string) : string
   := match s with
@@ -228,6 +270,12 @@ Fixpoint remove_spaces (s : string) : string
 
 Definition parseZ_arith (s : string) : option Z
   := match parseZ_arith_prefix (remove_spaces s) with
+     | Some (z, EmptyString) => Some z
+     | _ => None
+     end.
+
+Definition parseZexpr_arith (s : string) : option Zexpr
+  := match parseZexpr_arith_prefix (remove_spaces s) with
      | Some (z, EmptyString) => Some z
      | _ => None
      end.

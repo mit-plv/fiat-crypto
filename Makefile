@@ -199,42 +199,42 @@ $(WORD_BY_WORD_MONTGOMERY_C_FILES): $(WORD_BY_WORD_MONTGOMERY) # Makefile
 curve25519_64.c:
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) '25519' '5' '2^255' '1,19' '64' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) '25519' '5' '2^255 - 19' '64' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^255 - 19
 curve25519_32.c:
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) '25519' '10' '2^255' '1,19' '32' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) '25519' '10' '2^255 - 19' '32' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^521 - 1
 p521_64.c:
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) 'p521' '9' '2^521' '1,1' '64' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) 'p521' '9' '2^521 - 1' '64' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^521 - 1
 p521_32.c:
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) 'p521' '17' '2^521' '1,1' '32' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) 'p521' '17' '2^521 - 1' '32' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 ## 2^224 - 2^96 + 1 ## does not bounds check
 #p224_solinas_64.c:
 #	$(SHOW)'SYNTHESIZE > $@'
 #	$(HIDE)rm -f $@.ok
-#	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) 'p224' '4' '2^224' '2^96,1;1,-1' '64' && touch $@.ok) > $@.tmp
+#	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) 'p224' '4' '2^224 - 2^96 + 1' '64' && touch $@.ok) > $@.tmp
 #	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^448 - 2^224 - 1
 p448_solinas_64.c:
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) 'p448' '8' '2^448' '2^224,1;1,1' '64' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) 'p448' '8' '2^448 - 2^224 - 1' '64' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^256 - 2^224 + 2^192 + 2^96 - 1
