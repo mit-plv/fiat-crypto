@@ -207,6 +207,7 @@ src/Util/Strings/Equality.v
 src/Util/Strings/HexString.v
 src/Util/Strings/OctalString.v
 src/Util/Strings/ParseArithmetic.v
+src/Util/Strings/ParseArithmeticToTaps.v
 src/Util/Strings/Show.v
 src/Util/Strings/String.v
 src/Util/Strings/StringMap.v
