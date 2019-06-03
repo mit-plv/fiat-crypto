@@ -73,7 +73,7 @@
 2^450 - 2^225 - 1
 2^480 - 2^240 - 1 # ridinghood
 
-# two ore more taps
+# two or more taps
 
 2^205 - 45*2^198 - 1
 2^224 - 2^96 + 1 # p224
