@@ -1,0 +1,6 @@
+Testing WordByWordMontgomery "2^140-27" (bitwidth = 64 ) (params = {| WordByWordMontgomery.m := 1393796574908163946345982392040522594123749; WordByWordMontgomery.machine_wordsize := 64 |} ) "GallinaAxComputedOf with vm_compute" :
+Tactic call ran for 0.467 secs (0.391u,0.076s) (success)
+Testing WordByWordMontgomery "2^140-27" (bitwidth = 64 ) (params = {| WordByWordMontgomery.m := 1393796574908163946345982392040522594123749; WordByWordMontgomery.machine_wordsize := 64 |} ) "GallinaAxComputedOf with cbv" :
+Tactic call ran for 4.524 secs (4.516u,0.004s) (success)
+Testing WordByWordMontgomery "2^140-27" (bitwidth = 64 ) (params = {| WordByWordMontgomery.m := 1393796574908163946345982392040522594123749; WordByWordMontgomery.machine_wordsize := 64 |} ) "GallinaAxComputedOf with lazy" :
+Tactic call ran for 5.545 secs (5.536u,0.004s) (success)

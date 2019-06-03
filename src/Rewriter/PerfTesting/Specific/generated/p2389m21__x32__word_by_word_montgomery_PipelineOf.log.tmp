@@ -1,0 +1,11 @@
+Testing WordByWordMontgomery "2^389-21" (bitwidth = 32 ) (params = {| WordByWordMontgomery.m := 1260864198284623334792929283204595641762551656654894293374345388935863096687910739565256520156317300505812095689818091; WordByWordMontgomery.machine_wordsize := 32 |} ) "PipelineFullOf with vm_compute" :
+Tactic call ran for 159.788 secs (159.275u,0.5s) (success)
+Testing WordByWordMontgomery "2^389-21" (bitwidth = 32 ) (params = {| WordByWordMontgomery.m := 1260864198284623334792929283204595641762551656654894293374345388935863096687910739565256520156317300505812095689818091; WordByWordMontgomery.machine_wordsize := 32 |} ) "PipelineFullOf with native_compute" (1) :
+Tactic call ran for 133.71 secs (66.175u,0.432s) (success)
+Testing WordByWordMontgomery "2^389-21" (bitwidth = 32 ) (params = {| WordByWordMontgomery.m := 1260864198284623334792929283204595641762551656654894293374345388935863096687910739565256520156317300505812095689818091; WordByWordMontgomery.machine_wordsize := 32 |} ) "PipelineFullOf with native_compute" (2) :
+Tactic call ran for 64.79 secs (64.084u,0.463s) (success)
+Testing WordByWordMontgomery "2^389-21" (bitwidth = 32 ) (params = {| WordByWordMontgomery.m := 1260864198284623334792929283204595641762551656654894293374345388935863096687910739565256520156317300505812095689818091; WordByWordMontgomery.machine_wordsize := 32 |} ) "PipelineFullToStringsOf with vm_compute" :
+Tactic call ran for 157.572 secs (157.516u,0.02s) (success)
+Testing WordByWordMontgomery "2^389-21" (bitwidth = 32 ) (params = {| WordByWordMontgomery.m := 1260864198284623334792929283204595641762551656654894293374345388935863096687910739565256520156317300505812095689818091; WordByWordMontgomery.machine_wordsize := 32 |} ) "PipelineFullToStringsOf with native_compute" (1) :
+Tactic call ran for 71.695 secs (66.348u,0.428s) (success)
+Testing WordByWordMontgomery "2^389-21" (bitwidth = 32 ) (params = {| WordByWordMontgomery.m := 1260864198284623334792929283204595641762551656654894293374345388935863096687910739565256520156317300505812095689818091; WordByWordMontgomery.machine_wordsize := 32 |} ) "PipelineFullToStringsOf with native_compute" (2) :
