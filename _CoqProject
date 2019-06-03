@@ -38,6 +38,7 @@ src/StandaloneOCamlMain.v
 src/TAPSort.v
 src/UnderLets.v
 src/UnderLetsProofs.v
+src/UnsaturatedSolinasHeuristics.v
 src/Algebra/Field.v
 src/Algebra/Field_test.v
 src/Algebra/Group.v
