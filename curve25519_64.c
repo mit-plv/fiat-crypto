@@ -2,7 +2,7 @@
 /* curve description: 25519 */
 /* requested operations: carry_mul, carry_square, carry_scmul121666, carry, add, sub, opp, selectznz, to_bytes, from_bytes */
 /* n = 5 (from "5") */
-/* s-c = 0x8000000000000000000000000000000000000000000000000000000000000000 - [(1, 19)] (from "2^255 - 19") */
+/* s-c = 2^255 - [(1, 19)] (from "2^255 - 19") */
 /* machine_wordsize = 64 (from "64") */
 
 /* Computed values: */

@@ -128,3 +128,44 @@ Module Hex.
                 parens
                 (show_Z true (Qnum q) ++ " / " ++ show_positive true (Qden q)).
 End Hex.
+
+Module PowersOfTwo.
+  Fixpoint show_Z_up_to' (max : nat) (max_dec : Z) (neg : bool) : Show Z
+    := match max with
+       | O => Hex.show_Z
+       | S n'
+         => fun with_parens z
+            => if z <? max_dec
+               then Decimal.show_Z with_parens z
+               else if Z.abs (2^Z.log2_up z - z) <=? Z.abs (z - 2^Z.log2 z)
+                    then let log2z := Z.log2_up z in
+                         let z := 2^log2z - z in
+                         if z =? 0
+                         then "2^" ++ Decimal.show_Z false log2z
+                         else maybe_wrap_parens
+                                with_parens
+                                ("2^" ++ Decimal.show_Z false log2z
+                                      ++ (if neg then "+" else "-")
+                                      ++ show_Z_up_to' n' max_dec (negb neg) false z)
+                    else let log2z := Z.log2 z in
+                         let z := z - 2^log2z in
+                         if z =? 0
+                         then "2^" ++ Decimal.show_Z false log2z
+                         else maybe_wrap_parens
+                                with_parens
+                                ("2^" ++ Decimal.show_Z false log2z
+                                      ++ (if neg then "-" else "+")
+                                      ++ show_Z_up_to' n' max_dec neg false z)
+       end%Z%string.
+
+  Definition show_Z_up_to (max : nat) (max_dec : Z) : Show Z
+    := fun with_parens z
+       => (if z <? 0
+           then "-" ++ (show_Z_up_to' max max_dec false true (-z))
+           else if z =? 0
+                then "0"
+                else show_Z_up_to' max max_dec false with_parens z)%Z.
+
+  Definition show_Z : Show Z
+    := fun with_parens z => show_Z_up_to (S (Z.to_nat (Z.log2_up (Z.abs z)))) 32 with_parens z.
+End PowersOfTwo.
