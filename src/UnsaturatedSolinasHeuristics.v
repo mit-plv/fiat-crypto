@@ -73,9 +73,9 @@ else:
   Definition loose_bounds : list (option zrange)
     := List.map (fun u => Some r[0~>u]%zrange) loose_upperbounds.
 
-  (** check if the suggested number of limbs will overflow when adding
-      partial products after a multiplication and then doing solinas
-      reduction *)
+  (** check if the suggested number of limbs will overflow
+      double-width registers when adding partial products after a
+      multiplication and then doing solinas reduction *)
   Definition overflow_free : bool
     := let v := squaremod (weight (Qnum limbwidth) (Qden limbwidth)) s c n loose_upperbounds in
        forallb (fun k => Z.log2 k <? 2 * machine_wordsize) v.
@@ -89,6 +89,8 @@ else:
        | nil => false
        end.
 End __.
+
+Inductive MaybeLimbCount := NumLimbs (n : nat) | Auto (idx : nat).
 
 Section ___.
   Context (s : Z)
@@ -107,4 +109,10 @@ Section ___.
   Let result := filter (fun n => overflow_free n s c machine_wordsize) (seq min_limbs min_limbs).
   Definition get_possible_limbs : list nat
     := result.
+
+  Definition get_num_limbs (n : MaybeLimbCount) : option nat
+    := match n with
+       | NumLimbs n => Some n
+       | Auto idx => nth_error get_possible_limbs idx
+       end.
 End ___.
