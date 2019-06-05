@@ -89,6 +89,10 @@ Module RuntimeDefinitions <: Runtime.
   End RT_Z.
 End RuntimeDefinitions.
 
+Module RuntimeAxioms : Runtime.
+  Include RuntimeDefinitions.
+End RuntimeAxioms.
+
 Module Export RuntimeDefinitionsCbv.
   Import RuntimeDefinitions.
   Declare Reduction cbv_no_rt
@@ -115,11 +119,33 @@ Module Export RuntimeDefinitionsCbv.
                 RT_Z.add_get_carry_full
                 RT_Z.add_with_get_carry_full
                 RT_Z.mul_split].
-End RuntimeDefinitionsCbv.
+  Declare Reduction pattern_rt
+    := pattern Let_In,
+       runtime_nth_default,
+       runtime_add,
+       runtime_sub,
+       runtime_mul,
+       runtime_opp,
+       runtime_div,
+       runtime_modulo,
+       RT_Z.add_get_carry_full,
+       RT_Z.add_with_get_carry_full,
+       RT_Z.mul_split.
 
-Module RuntimeAxioms : Runtime.
-  Include RuntimeDefinitions.
-End RuntimeAxioms.
+  Import RuntimeAxioms.
+  Declare Reduction pattern_ax_rt
+    := pattern (@Let_In),
+       (@runtime_nth_default),
+       runtime_add,
+       runtime_sub,
+       runtime_mul,
+       runtime_opp,
+       runtime_div,
+       runtime_modulo,
+       RT_Z.add_get_carry_full,
+       RT_Z.add_with_get_carry_full,
+       RT_Z.mul_split.
+End RuntimeDefinitionsCbv.
 
 Module RT_Extra (Import RT : Runtime).
   Fixpoint dlet_nd_list_pair {A B} (ls : list (A * B)) {T} (f : list (A * B) -> T) : T
