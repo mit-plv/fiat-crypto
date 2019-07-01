@@ -40,6 +40,9 @@ Extract Constant sys_argv => "Array.to_list Sys.argv".
 Extract Inlined Constant string_init => "String.init".
 Extract Constant raise_Failure => "fun x -> raise (Failure x)".
 
+(* Zoe: Otherwise, because of the dependent record CLI_options, extracted code hits [assert false]. *)
+Extraction Inline ForExtraction.mode_options.
+
 Fixpoint nat_of_int (x : int) : nat
   := match x with
      | int_O => O
@@ -95,7 +98,7 @@ Definition raise_failure {A} (msg : list String.string) : A
 Module UnsaturatedSolinas.
   Definition main : unit
     := let argv := List.map string_to_Coq_string sys_argv in
-       ForExtraction.UnsaturatedSolinas.PipelineMain
+       ForExtraction.Main ForExtraction.UnsaturatedSolinas
          argv
          printf_list_string
          raise_failure.
@@ -104,7 +107,7 @@ End UnsaturatedSolinas.
 Module WordByWordMontgomery.
   Definition main : unit
     := let argv := List.map string_to_Coq_string sys_argv in
-       ForExtraction.WordByWordMontgomery.PipelineMain
+       ForExtraction.Main ForExtraction.WordByWordMontgomery
          argv
          printf_list_string
          raise_failure.
@@ -113,7 +116,7 @@ End WordByWordMontgomery.
 Module SaturatedSolinas.
   Definition main : unit
     := let argv := List.map string_to_Coq_string sys_argv in
-       ForExtraction.SaturatedSolinas.PipelineMain
+       ForExtraction.Main ForExtraction.SaturatedSolinas
          argv
          printf_list_string
          raise_failure.

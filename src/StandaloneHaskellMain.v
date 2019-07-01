@@ -41,7 +41,7 @@ Module UnsaturatedSolinas.
     := cast_io
          (argv <- getArgs;
             prog <- getProgName;
-            ForExtraction.UnsaturatedSolinas.PipelineMain
+            ForExtraction.Main ForExtraction.UnsaturatedSolinas
               (prog::argv)
               (fun res => printf_string
                          (String.concat "" res))
@@ -53,7 +53,7 @@ Module WordByWordMontgomery.
     := cast_io
          (argv <- getArgs;
             prog <- getProgName;
-            ForExtraction.WordByWordMontgomery.PipelineMain
+            ForExtraction.Main ForExtraction.WordByWordMontgomery
               (prog::argv)
               (fun res => printf_string
                          (String.concat "" res))
@@ -65,7 +65,7 @@ Module SaturatedSolinas.
     := cast_io
          (argv <- getArgs;
             prog <- getProgName;
-            ForExtraction.SaturatedSolinas.PipelineMain
+            ForExtraction.Main ForExtraction.SaturatedSolinas
               (prog::argv)
               (fun res => printf_string
                          (String.concat "" res))
