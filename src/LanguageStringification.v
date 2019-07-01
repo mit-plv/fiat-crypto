@@ -724,6 +724,8 @@ Module Compilers.
            else None.
       Definition unsigned_counterpart_of (t : type) : type
         := unsigned (lgbitwidth_of t).
+      Definition signed_counterpart_of (t : type) : type
+        := signed (lgbitwidth_of t).
 
       Global Instance show_type : Show type
         := fun with_parens t
