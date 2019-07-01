@@ -17,6 +17,7 @@ Require Import Crypto.UnsaturatedSolinasHeuristics.
 Require Import Crypto.LanguageStringification.
 Require Import Crypto.CStringification.
 Require Import Crypto.BoundsPipeline.
+Require Import Crypto.RustStringification.
 Import ListNotations. Local Open Scope Z_scope. Local Open Scope string_scope.
 
 Import
@@ -130,7 +131,7 @@ Module ForExtraction.
        end.
 
   Definition supported_languages : list (string * ToString.OutputLanguageAPI)
-    := [("C", ToString.OutputCAPI)].
+    := [("C", ToString.OutputCAPI); ("Rust", Rust.OutputRustAPI)].
 
   Definition curve_description_help
     := "  curve_description       A string which will be prefixed to every function name generated".

@@ -8,6 +8,7 @@ src/CLI.v
 src/COperationSpecifications.v
 src/IR.v
 src/CStringification.v
+src/RustStringification.v
 src/CompilersTestCases.v
 src/Demo.v
 src/IdentifiersGENERATED.v
