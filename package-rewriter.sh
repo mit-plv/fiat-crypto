@@ -1,15 +1,18 @@
 #!/usr/bin/env bash
 
 FILES="$(make --dry-run --always-make src/RewriterExamples.vo | grep -o 'src/.*\.v' | grep -v Coqprime | uniq | sort)"
+EXTRA_FILES="LICENSE CONTRIBUTORS AUTHORS"
 rm -rf rewriting
 mkdir rewriting
 cat > rewriting/_CoqProject <<EOF
 -R src Rewriting
 EOF
 
-for i in $FILES; do
+for i in $FILES ${EXTRA_FILES}; do
     mkdir -p rewriting/$(dirname $i)
-    sed s'/Crypto\./Rewriting./g' $i > rewriting/$i
+    sed 's/Crypto\./Rewriting./g; s/fiat-crypto/rewriting/g' $i > rewriting/$i
+done
+for i in $FILES; do
     echo $i >> rewriting/_CoqProject
 done
 
