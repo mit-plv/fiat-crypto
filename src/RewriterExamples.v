@@ -1,3 +1,4 @@
+(** * Examples of Using the Rewriter *)
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.micromega.Lia.
 Require Import Coq.Lists.List.
@@ -12,6 +13,9 @@ Import ListNotations. Local Open Scope bool_scope. Local Open Scope Z_scope.
 Import RewriterAllTactics.Compilers.RewriteRules.GoalType.
 Import RewriterAllTactics.Compilers.RewriteRules.Tactic.
 Import IdentifiersGENERATEDProofs.Compilers.pattern.ident.
+
+(** We first define some helper notations, and then define the list of
+    types of theorems we want to rewrite with. *)
 
 Local Notation "' x" := (ident.literal x).
 Local Notation dont_do_again := (pair false) (only parsing).
@@ -50,6 +54,8 @@ Definition myruletypes : list (bool * Prop)
                     (fun x _ flat_map_tl => f x ++ flat_map_tl)
                     xs)]).
 
+(** Now we prove every theorem statement in the above list. *)
+
 Lemma myruleproofs
   : PrimitiveHList.hlist (@snd bool Prop) myruletypes.
 Proof.
@@ -58,8 +64,12 @@ Proof.
               | now apply ListUtil.eq_app_list_rect ].
 Qed.
 
+(** Next we define the rewriter package *)
+
 Definition myrules : VerifiedRewriter.
 Proof using All. make_rewriter package_proofs true myruleproofs. Defined.
+
+(** Now we show some simple examples. *)
 
 Example ex1 : forall x, x + 0 = x.
 Proof.
