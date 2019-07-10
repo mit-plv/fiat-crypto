@@ -114,6 +114,8 @@ src/Rewriter/NBE.v
 src/Rewriter/StripLiteralCasts.v
 src/Rewriter/ToFancy.v
 src/Rewriter/ToFancyWithCasts.v
+src/Rewriter/PerfTesting/Core.v
+src/Rewriter/PerfTesting/StandaloneOCamlMain.v
 src/Spec/CompleteEdwardsCurve.v
 src/Spec/ModularArithmetic.v
 src/Spec/MontgomeryCurve.v

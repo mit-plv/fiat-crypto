@@ -169,27 +169,37 @@ Makefile.coq: Makefile _CoqProject
 
 
 STANDALONE := unsaturated_solinas saturated_solinas word_by_word_montgomery
+PERF_STANDALONE := perf_unsaturated_solinas perf_word_by_word_montgomery
 
-$(STANDALONE:%=src/ExtractionOCaml/%.ml) : %.ml : %.v src/StandaloneOCamlMain.vo
+STANDALONE_OCAML := $(STANDALONE) $(PERF_STANDALONE)
+STANDALONE_HASKELL := $(STANDALONE)
+
+$(STANDALONE:%=src/ExtractionOCaml/%.ml): src/StandaloneOCamlMain.vo
+$(PERF_STANDALONE:%=src/ExtractionOCaml/%.ml): src/Rewriter/PerfTesting/StandaloneOCamlMain.vo
+$(STANDALONE:%=src/ExtractionHaskell/%.hs): src/StandaloneHaskellMain.vo
+# $(PERF_STANDALONE:%=src/ExtractionHaskell/%.hs): src/Rewriter/PerfTesting/StandaloneHaskellMain.vo
+
+$(STANDALONE_OCAML:%=src/ExtractionOCaml/%.ml) : %.ml : %.v
 	$(SHOW)'COQC $< > $@'
 	$(HIDE)$(TIMER_FULL) $(COQC) $(COQDEBUG) $(COQFLAGS) $(COQLIBS) $< > $@.tmp
 	$(HIDE)sed 's/\r\n/\n/g; s/\r//g' $@.tmp > $@ && rm -f $@.tmp
 
-$(STANDALONE:%=src/ExtractionHaskell/%.hs) : %.hs : %.v src/StandaloneHaskellMain.vo src/haskell.sed
+$(STANDALONE_HASKELL:%=src/ExtractionHaskell/%.hs) : %.hs : %.v src/haskell.sed
 	$(SHOW)'COQC $< > $@'
 	$(HIDE)$(TIMER_FULL) $(COQC) $(COQDEBUG) $(COQFLAGS) $(COQLIBS) $< > $@.tmp
 	$(HIDE)sed 's/\r\n/\n/g; s/\r//g' $@.tmp | sed -f src/haskell.sed > $@ && rm -f $@.tmp
 
 # pass -w -20 to disable the unused argument warning
-$(STANDALONE:%=src/ExtractionOCaml/%) : % : %.ml
-	$(TIMER_FULL) ocamlopt -w -20 -o $@ $<
+# unix package needed for Unix.gettimeofday for the perf_* binaries
+$(STANDALONE_OCAML:%=src/ExtractionOCaml/%) : % : %.ml
+	$(TIMER_FULL) ocamlfind ocamlopt -package unix -linkpkg -w -20 -o $@ $<
 
-$(STANDALONE:%=src/ExtractionHaskell/%) : % : %.hs
+$(STANDALONE_HASKELL:%=src/ExtractionHaskell/%) : % : %.hs
 	$(TIMER_FULL) $(GHC) $(GHCFLAGS) -o $@ $<
 
 standalone: standalone-haskell standalone-ocaml
-standalone-haskell: $(STANDALONE:%=src/ExtractionHaskell/%)
-standalone-ocaml: $(STANDALONE:%=src/ExtractionOCaml/%)
+standalone-haskell: $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%)
+standalone-ocaml: $(STANDALONE_OCAML:%=src/ExtractionOCaml/%)
 
 $(UNSATURATED_SOLINAS_C_FILES): $(UNSATURATED_SOLINAS) # Makefile
 
@@ -275,10 +285,67 @@ p434_64.c p434_32.c : p434_%.c :
 test-c-files: $(ALL_C_FILES)
 	$(CC) -Wall -Wno-unused-function -Werror $(CFLAGS) -c $(ALL_C_FILES)
 
+# Perf testing
+PERF_MAKEFILE = src/Rewriter/PerfTesting/Specific/generated/primes.mk
+include $(PERF_MAKEFILE)
+
+$(PERF_MAKEFILE): Makefile src/Rewriter/PerfTesting/Specific/make.py primes.txt
+	./src/Rewriter/PerfTesting/Specific/make.py primes.txt
+# PERF_TIMEOUT?=./etc/timeout -t 600 -m 10000 # limit to 10 GB # https://raw.githubusercontent.com/pshved/timeout/master/timeout
+PERF_TIMEOUT?=timeout 600
+
+.PHONY: perf perf-vos perf-extraction
+PERF_VOLOGS := $(PERF_PRIME_VOS:.vo=.log)
+PERF_SHLOGS := $(PERF_PRIME_SHS:.sh=.log)
+PERF_LOGS := $(PERF_VOLOGS) $(PERF_SHLOGS)
+ALL_PERF_LOGS := $(PERF_LOGS) $(PERF_LOGS:.log=.log.tmp)
+
+perf-vos: $(PERF_VOLOGS) \
+	$(PERF_MAKEFILE) \
+	src/Rewriter/PerfTesting/Core.vo \
+
+perf-extraction: $(PERF_SHLOGS) \
+	$(PERF_MAKEFILE) \
+	$(PERF_STANDALONE:%=src/ExtractionOCaml/%)
+
+perf: perf-extraction perf-vos
+
+.PHONE: perf-csv
+PERF_TXTS := perf-old-vm-times.txt perf-new-vm-times.txt perf-new-extraction-times.txt perf-old-cbv-times.txt \
+	perf-new-extraction-over-old-vm.txt perf-new-vm-over-old-vm.txt perf-old-vm-over-old-vm.txt \
+	perf-new-extraction-over-new-extraction.txt perf-new-vm-over-new-extraction.txt perf-old-vm-over-new-extraction.txt
+perf-csv: perf.csv perf-graph.csv $(PERF_TXTS)
+
+perf.csv::
+	$(SHOW)'PYTHON > $@'
+	$(HIDE)./src/Rewriter/PerfTesting/Specific/to_csv.py $(wildcard $(ALL_PERF_LOGS)) > $@.tmp
+	$(HIDE)sed 's/\r\n/\n/g; s/\r//g; s/\s*$$//g' $@.tmp > $@ && rm -f $@.tmp
+
+perf-graph.csv::
+	$(SHOW)'PYTHON > $@'
+	$(HIDE)./src/Rewriter/PerfTesting/Specific/to_csv.py --for-graph $(wildcard $(ALL_PERF_LOGS)) > $@.tmp
+	$(HIDE)sed 's/\r\n/\n/g; s/\r//g; s/\s*$$//g' $@.tmp > $@ && rm -f $@.tmp
+
+$(PERF_TXTS) :: %.txt :
+	$(SHOW)'PYTHON > $@'
+	$(HIDE)./src/Rewriter/PerfTesting/Specific/to_csv.py --$* --txt $(wildcard $(ALL_PERF_LOGS)) > $@.tmp
+	$(HIDE)sed 's/\r\n/\n/g; s/\r//g; s/\s*$$//g' $@.tmp > $@ && rm -f $@.tmp
+
+$(PERF_PRIME_VOS:.vo=.log) : %.log : %.v src/Rewriter/PerfTesting/Core.vo
+	$(SHOW)'PERF COQC $< > $@'
+	$(HIDE)$(TIMER_FULL) $(PERF_TIMEOUT) $(COQC) $(COQDEBUG) $(COQFLAGS) $(COQLIBS) $< > $@.tmp
+	$(HIDE)sed 's/\r\n/\n/g; s/\r//g; s/\s*$$//g' $@.tmp > $@ && rm -f $@.tmp
+
+$(PERF_PRIME_SHS:.sh=.log) : %.log : %.sh $(PERF_STANDALONE:%=src/ExtractionOCaml/%)
+	$(SHOW)'PERF SH $< > $@'
+	$(HIDE)$(TIMER_FULL) $(PERF_TIMEOUT) bash $< > $@.tmp
+	$(HIDE)sed 's/\r\n/\n/g; s/\r//g; s/\s*$$//g' $@.tmp > $@ && rm -f $@.tmp
+
 clean::
 	rm -f Makefile.coq
 
 cleanall:: clean
+	rm -rf src/Rewriter/PerfTesting/Specific/generated
 
 install: coq
 
