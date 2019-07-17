@@ -129,8 +129,15 @@ Module ForExtraction.
          => inr [res]
        end.
 
+  Definition supported_languages : list (string * ToString.OutputLanguageAPI)
+    := [("C", ToString.OutputCAPI)].
+
   Definition curve_description_help
     := "  curve_description       A string which will be prefixed to every function name generated".
+  Definition lang_help
+    := "  LANGUAGE                The output language code should be emitted in.  Defaults to C if no language is given.  Case-sensitive."
+         ++ String.NewLine ++
+       "                            Valid options are: " ++ String.concat ", " (List.map (@fst _ _) supported_languages).
   Definition n_help
     := "  n                       The number of limbs, or the literal '(auto)' or '(autoN)' for a non-negative number N, to automatically guess the number of limbs".
   Definition sc_help
@@ -289,6 +296,21 @@ Module ForExtraction.
            | inr s => error s
            end.
 
+      Definition argv_to_language_and_argv (argv : list string)
+        : list string * ToString.OutputLanguageAPI
+        := match argv with
+           | prog_name::maybe_lang::rest
+             => fold_right
+                  (fun '(lang, output_api) default
+                   => if (maybe_lang =? "--lang=" ++ lang)%string
+                      then (prog_name :: rest, output_api)
+                      else default)
+                  (* if the second argument is not --lang=<something known>, default to C *)
+                  (argv, ToString.OutputCAPI)
+                  supported_languages
+           | _ => (argv, ToString.OutputCAPI)
+           end.
+
       Definition PipelineMain
                  {A}
                  (argv : list string)
@@ -299,13 +321,15 @@ Module ForExtraction.
                match argv with
                | nil => error ["empty argv"]
                | prog::args
-                 => error ((["USAGE: " ++ prog ++ " curve_description " ++ pipeline_usage_string;
+                 => error ((["USAGE: " ++ prog ++ " [--lang=LANGUAGE] curve_description " ++ pipeline_usage_string;
                                "Got " ++ show false (List.length args) ++ " arguments.";
                                "";
+                               lang_help;
                                curve_description_help]%string)
                              ++ help_lines
                              ++ [""])%list
                end in
+           let '(argv, output_language_api) := argv_to_language_and_argv argv in
            match argv with
            | _::curve_description::args
              => let output_language_api := ToString.OutputCAPI in (* for typeclass inference *)
