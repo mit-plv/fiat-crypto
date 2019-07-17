@@ -21,7 +21,7 @@ Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.LanguageWf.
 Require Import Crypto.Language.
 Require Import Crypto.AbstractInterpretation.
-Require Import Crypto.CStringification.
+Require Import Crypto.LanguageStringification.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Arithmetic.Saturated.
@@ -37,7 +37,7 @@ Import
   LanguageWf.Compilers
   Language.Compilers
   AbstractInterpretation.Compilers
-  CStringification.Compilers.
+  LanguageStringification.Compilers.
 Import Compilers.defaults.
 
 Import COperationSpecifications.Primitives.
@@ -57,7 +57,8 @@ Local Opaque reified_mul_gen. (* needed for making [autorewrite] not take a very
 Local Opaque expr.Interp.
 
 Section __.
-  Context (s : Z)
+  Context {output_language_api : ToString.OutputLanguageAPI}
+          (s : Z)
           (c : list (Z * Z))
           (machine_wordsize : Z).
 
@@ -163,7 +164,7 @@ Section __.
          (Some boundsn, None (* Should be: Some r[0~>0]%zrange, but bounds analysis is not good enough *) ).
 
   Definition smul (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
+    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
           prefix "mul" mul

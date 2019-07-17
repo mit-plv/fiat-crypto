@@ -19,6 +19,7 @@ Require Import Crypto.BoundsPipeline.
 Require Import Crypto.Language.
 Require Import Crypto.RewriterAll.
 Require Import Crypto.AbstractInterpretation.
+Require Import Crypto.CStringification.
 Require Import Crypto.Util.ZUtil.ModInv. (* Only needed for WBW Montgomery *)
 Require Import Crypto.Util.Strings.Show.
 
@@ -32,6 +33,8 @@ Import
   Language.Compilers
   AbstractInterpretation.Compilers
   RewriterAll.Compilers.
+
+Local Existing Instance CStringification.Compilers.ToString.C.OutputCAPI.
 
 Import defaults.
 

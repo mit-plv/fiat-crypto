@@ -88,14 +88,15 @@ The ordering of files (eliding `*Proofs.v` files) is:
                     ↑       ↖                                                      ↑                               ↑
 AbstractInterpretation.v  "Rewriter"                                               │                               │
          ↑                  ↑ ┌────────────────────────────────────────────────────┘                               │
-CStringification.v          │ │               Arithmetic.v                                                         │
-   ↑    ┌───────────────────┴─┘                   ↑                                                                │
-BoundsPipeline.v                        COperationSpecifications.v                                                 │
-      ↑                                           ↑                                                                │
-      │  ┌────────────────────────────────────────┴────────────────────────────────────────────────────────────────┘
-PushButtonSynthesis.v ←── Toplevel2.v ←───────────┐
-   ↑                                              │
-CLI.v                         SlowPrimeSynthesisExamples.v
+LanguageStringification.v   │ │               Arithmetic.v                                                         │
+↑    ↑  ┌───────────────────┴─┘                   ↑                                                                │
+│  BoundsPipeline.v                     COperationSpecifications.v                                                 │
+│     ↑                                           ↑                                                                │
+│     └─────────────────────────┬─────────────────┴────────────────────────────────────────────────────────────────┘
+CStringification.v     PushButtonSynthesis.v ←── Toplevel2.v ←───────────┐
+↑                               ↑                                        │
+│ ┌─────────────────────────────┘                       SlowPrimeSynthesisExamples.v
+CLI.v
 ↑  ↑
 │  └────────────────────────────┐
 StandaloneHaskellMain.v   StandaloneOCamlMain.v
@@ -150,11 +151,16 @@ The files contain:
   + EliminateDead (dead code elimination)
   + Subst01 (substitute let-binders used 0 or 1 times)
 
-- CStringification.v: conversion to C code as strings.  (Depends on
+- LanguageStringification.v: defines a printer (Show instance) for the
+  PHOAS language, defines some common language-independent utilities
+  for conversion to output code, and defines the spec/API of
+  conversion from PHOAS to code in a language as strings.  (Depends on
   AbstractInterpretation.v for ZRange utilities.)  Defines the passes:
-  + ToString.ToFunctionLines
-  + ToString.ToFunctionString
   + ToString.LinesToString
+  + ToString.ToFunctionLines
+
+- CStringification.v: conversion to C code as strings.  Instantiates
+  the API defined in LanguageStringification.
 
 - CompilersTestCases.v: Various test cases to ensure everything is working
 
@@ -165,6 +171,7 @@ The files contain:
 
 - COperationSpecifications.v: The specifications for the various
   operations to be synthesized.
+  TODO: This file should probably be renamed.
 
 - PushButtonSynthesis/ReificationCache.v: Defines the cache that holds
   reified versions of operations, as well as the tactics that reify
