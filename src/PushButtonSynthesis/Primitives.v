@@ -30,7 +30,7 @@ Require Import Crypto.BoundsPipeline.
 Require Import Crypto.COperationSpecifications.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.
 Import ListNotations.
-Local Open Scope Z_scope. Local Open Scope list_scope. Local Open Scope bool_scope.
+Local Open Scope string_scope. Local Open Scope Z_scope. Local Open Scope list_scope. Local Open Scope bool_scope.
 
 Import
   LanguageWf.Compilers
@@ -841,16 +841,23 @@ Section __.
 
     (** Note: If you change the name or type signature of this
           function, you will need to update the code in CLI.v *)
-    Definition Synthesize (comment_header : list string) (function_name_prefix : string) (requests : list string)
-      : list string (* comment header *) * list (string * Pipeline.ErrorT (list string)) * PositiveSet.t (* types used *)
+    Definition Synthesize (check_args : Pipeline.ErrorT (list string) -> Pipeline.ErrorT (list string))
+               (comment_header : list string) (function_name_prefix : string) (requests : list string)
+      : list (string * Pipeline.ErrorT (list string))
       := let ls := match requests with
                    | nil => List.map (fun '(_, sr) => sr function_name_prefix) known_functions
                    | requests => List.map (synthesize_of_name function_name_prefix) requests
                    end in
          let infos := aggregate_infos ls in
          let '(extra_ls, extra_bit_widths) := extra_synthesis function_name_prefix infos in
-         (comment_header,
-          extra_ls ++ List.map (fun '(name, res) => (name, (res <- res; Success (fst res))%error)) ls,
-          PositiveSet.union extra_bit_widths (ToString.bitwidths_used infos)).
+         let res := extra_ls ++ List.map (fun '(name, res) => (name, (res <- res; Success (fst res))%error)) ls in
+         let types_used := PositiveSet.union extra_bit_widths (ToString.bitwidths_used infos) in
+         let header :=
+             (comment_header
+                ++ ToString.typedef_header function_name_prefix types_used
+                ++ [""]) in
+         [("check_args" ++ String.NewLine ++ String.concat String.NewLine header,
+           check_args (ErrorT.Success header))%string]
+           ++ res.
   End for_stringification.
 End __.
