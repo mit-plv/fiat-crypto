@@ -17,6 +17,7 @@ src/IdentifiersLibrary.v
 src/IdentifiersLibraryProofs.v
 src/Language.v
 src/LanguageInversion.v
+src/LanguageStringification.v
 src/LanguageWf.v
 src/MiscCompilerPasses.v
 src/MiscCompilerPassesProofs.v

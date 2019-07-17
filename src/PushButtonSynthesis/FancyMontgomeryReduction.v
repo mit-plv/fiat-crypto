@@ -13,7 +13,7 @@ Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
 Require Import Crypto.Language.
-Require Import Crypto.CStringification.
+Require Import Crypto.LanguageStringification.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.FancyMontgomeryReduction.
 Require Import Crypto.BoundsPipeline.
@@ -28,7 +28,7 @@ Local Open Scope Z_scope. Local Open Scope list_scope. Local Open Scope bool_sco
 
 Import
   Language.Compilers
-  CStringification.Compilers.
+  LanguageStringification.Compilers.
 Import Compilers.defaults.
 
 Import COperationSpecifications.Primitives.
@@ -42,7 +42,8 @@ Local Set Keyed Unification. (* needed for making [autorewrite] fast, c.f. COQBU
 Local Opaque reified_montred_gen. (* needed for making [autorewrite] not take a very long time *)
 
 Section rmontred.
-  Context (N R N' : Z) (n : nat)
+  Context {output_language_api : ToString.OutputLanguageAPI}
+          (N R N' : Z) (n : nat)
           (machine_wordsize : Z).
 
   Let value_range := r[0 ~> (2^machine_wordsize - 1)%Z]%zrange.
@@ -156,7 +157,7 @@ Section rmontred.
          bound.
 
   Definition smontred (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
+    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
           prefix "montred" montred

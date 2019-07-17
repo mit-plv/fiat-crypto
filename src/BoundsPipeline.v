@@ -25,7 +25,7 @@ Require Crypto.UnderLets.
 Require Crypto.AbstractInterpretation.
 Require Crypto.Rewriter.
 Require Crypto.MiscCompilerPasses.
-Require Crypto.CStringification.
+Require Crypto.LanguageStringification.
 Require Crypto.LanguageWf.
 Require Crypto.UnderLetsProofs.
 Require Crypto.MiscCompilerPassesProofs.
@@ -47,7 +47,7 @@ Import
   Crypto.AbstractInterpretation
   Crypto.Rewriter
   Crypto.MiscCompilerPasses
-  Crypto.CStringification.
+  Crypto.LanguageStringification.
 
 Import
   LanguageWf.Compilers
@@ -61,7 +61,7 @@ Import
   AbstractInterpretation.Compilers
   Rewriter.Compilers
   MiscCompilerPasses.Compilers
-  CStringification.Compilers.
+  LanguageStringification.Compilers.
 
 Import Compilers.defaults.
 
@@ -133,6 +133,7 @@ Module Pipeline.
   Notation ErrorT := (ErrorT ErrorMessage).
 
   Section show.
+    Context {output_api : ToString.OutputLanguageAPI}.
     Local Open Scope string_scope.
     Fixpoint find_too_loose_base_bounds {t}
       : ZRange.type.base.option.interp t -> ZRange.type.base.option.interp t-> bool * list (nat * nat) * list (zrange * zrange)
@@ -224,7 +225,7 @@ Module Pipeline.
               | Computed_bounds_are_not_tight_enough t computed_bounds expected_bounds syntax_tree arg_bounds
                 => ((["Computed bounds " ++ show true computed_bounds ++ " are not tight enough (expected bounds not looser than " ++ show true expected_bounds ++ ")."]%string)
                       ++ [explain_too_loose_bounds (t:=type.base _) computed_bounds expected_bounds]
-                      ++ match ToString.C.ToFunctionLines
+                      ++ match ToString.ToFunctionLines
                                  false (* do extra bounds check *) false (* static *) "" "f" syntax_tree (fun _ _ => nil) None arg_bounds ZRange.type.base.option.None with
                          | inl (E_lines, types_used)
                            => ["When doing bounds analysis on the syntax tree:"]
@@ -334,6 +335,7 @@ Module Pipeline.
       end.
 
   Definition BoundsPipelineToStrings
+             {output_language_api : ToString.OutputLanguageAPI}
              (static : bool)
              (type_prefix : string)
              (name : string)
@@ -343,10 +345,10 @@ Module Pipeline.
              (possible_values : list Z)
              {t}
              (E : Expr t)
-             (comment : type.for_each_lhs_of_arrow ToString.C.OfPHOAS.var_data t -> ToString.C.OfPHOAS.var_data (type.final_codomain t) -> list string)
+             (comment : type.for_each_lhs_of_arrow ToString.OfPHOAS.var_data t -> ToString.OfPHOAS.var_data (type.final_codomain t) -> list string)
              arg_bounds
              out_bounds
-    : ErrorT (list string * ToString.C.ident_infos)
+    : ErrorT (list string * ToString.ident_infos)
     := let E := BoundsPipeline
                   (*with_dead_code_elimination*)
                   with_subst01
@@ -354,7 +356,7 @@ Module Pipeline.
                   possible_values
                   E arg_bounds out_bounds in
        match E with
-       | Success E' => let E := ToString.C.ToFunctionLines
+       | Success E' => let E := ToString.ToFunctionLines
                                   true static type_prefix name E' comment None arg_bounds out_bounds in
                       match E with
                       | inl E => Success E
@@ -364,6 +366,7 @@ Module Pipeline.
        end.
 
   Definition BoundsPipelineToString
+             {output_language_api : ToString.OutputLanguageAPI}
              (static : bool)
              (type_prefix : string)
              (name : string)
@@ -373,10 +376,10 @@ Module Pipeline.
              relax_zrange
              {t}
              (E : Expr t)
-             (comment : type.for_each_lhs_of_arrow ToString.C.OfPHOAS.var_data t -> ToString.C.OfPHOAS.var_data (type.final_codomain t) -> list string)
+             (comment : type.for_each_lhs_of_arrow ToString.OfPHOAS.var_data t -> ToString.OfPHOAS.var_data (type.final_codomain t) -> list string)
              arg_bounds
              out_bounds
-    : ErrorT (string * ToString.C.ident_infos)
+    : ErrorT (string * ToString.ident_infos)
     := let E := BoundsPipelineToStrings
                   static type_prefix name
                   (*with_dead_code_elimination*)
@@ -385,7 +388,7 @@ Module Pipeline.
                   relax_zrange
                   E comment arg_bounds out_bounds in
        match E with
-       | Success (E, types_used) => Success (ToString.C.LinesToString E, types_used)
+       | Success (E, types_used) => Success (ToString.LinesToString E, types_used)
        | Error err => Error err
        end.
 
@@ -401,7 +404,7 @@ Module Pipeline.
         => ((prefix ++ name)%string,
             match result with
             | Success E'
-              => let E := ToString.C.ToFunctionLines
+              => let E := ToString.ToFunctionLines
                             true true (* static *) prefix (prefix ++ name)%string
                             E'
                             (comment (prefix ++ name)%string)

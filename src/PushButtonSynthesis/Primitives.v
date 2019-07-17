@@ -19,7 +19,7 @@ Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.ConstrFail.
 Require Import Crypto.LanguageWf.
 Require Import Crypto.Language.
-Require Import Crypto.CStringification.
+Require Import Crypto.LanguageStringification.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Arithmetic.Partition.
@@ -35,7 +35,7 @@ Local Open Scope Z_scope. Local Open Scope list_scope. Local Open Scope bool_sco
 Import
   LanguageWf.Compilers
   Language.Compilers
-  CStringification.Compilers.
+  LanguageStringification.Compilers.
 Import Compilers.defaults.
 
 Import COperationSpecifications.Primitives.
@@ -576,8 +576,8 @@ Module CorrectnessStringification.
     let correctness := (eval hnf in correctness) in
     let correctness := (eval cbv [Partition.partition WordByWordMontgomery.valid WordByWordMontgomery.small] in correctness) in
     let correctness := strip_bounds_info correctness in
-    let arg_var_names := constr:(type.map_for_each_lhs_of_arrow (@ToString.C.OfPHOAS.names_of_var_data) arg_var_data) in
-    let out_var_names := constr:(ToString.C.OfPHOAS.names_of_base_var_data out_var_data) in
+    let arg_var_names := constr:(type.map_for_each_lhs_of_arrow (@ToString.OfPHOAS.names_of_var_data) arg_var_data) in
+    let out_var_names := constr:(ToString.OfPHOAS.names_of_base_var_data out_var_data) in
     let res := with_assoc_list
                  ctx
                  correctness
@@ -607,7 +607,8 @@ Notation "'docstring_with_summary_from_lemma!' summary correctness"
   := (CorrectnessStringification.docstring_with_summary_from_lemma summary correctness) (only parsing, at level 10, summary at next level, correctness at next level).
 
 Section __.
-  Context (n : nat)
+  Context {output_language_api : ToString.OutputLanguageAPI}
+          (n : nat)
           (machine_wordsize : Z).
 
   Definition saturated_bounds_list : list (option zrange)
@@ -653,7 +654,7 @@ Section __.
          saturated_bounds.
 
   Definition sselectznz (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
+    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
           prefix "selectznz" selectznz
@@ -672,7 +673,7 @@ Section __.
          (Some r[0~>2^s-1], Some r[0~>2^s-1])%zrange.
 
   Definition smulx (prefix : string) (s : Z)
-    : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
+    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
           prefix ("mulx_u" ++ decimal_string_of_Z s) (mulx s)
@@ -692,7 +693,7 @@ Section __.
 
 
   Definition saddcarryx (prefix : string) (s : Z)
-    : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
+    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
           prefix ("addcarryx_u" ++ decimal_string_of_Z s) (addcarryx s)
@@ -711,7 +712,7 @@ Section __.
          (Some r[0~>2^s-1], Some r[0~>1])%zrange.
 
   Definition ssubborrowx (prefix : string) (s : Z)
-    : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
+    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
           prefix ("subborrowx_u" ++ decimal_string_of_Z s) (subborrowx s)
@@ -731,7 +732,7 @@ Section __.
          (Some r[0~>2^s-1])%zrange.
 
   Definition scmovznz (prefix : string) (s : Z)
-    : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
+    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
           prefix ("cmovznz_u" ++ decimal_string_of_Z s) (cmovznz s)
@@ -785,44 +786,44 @@ Section __.
             (known_functions : list (string
                                      * (string
                                         -> string *
-                                           Pipeline.ErrorT (list string * ToString.C.ident_infos))))
+                                           Pipeline.ErrorT (list string * ToString.ident_infos))))
             (extra_special_synthesis : string ->
                                        list
                                          (option
                                             (string *
                                              Pipeline.ErrorT
-                                               (list string * ToString.C.ident_infos)))).
+                                               (list string * ToString.ident_infos)))).
 
-    Definition aggregate_infos {A B C} (ls : list (A * ErrorT B (C * ToString.C.ident_infos))) : ToString.C.ident_infos
+    Definition aggregate_infos {A B C} (ls : list (A * ErrorT B (C * ToString.ident_infos))) : ToString.ident_infos
       := fold_right
-           ToString.C.ident_info_union
-           ToString.C.ident_info_empty
+           ToString.ident_info_union
+           ToString.ident_info_empty
            (List.map
               (fun '(_, res) => match res with
                                 | Success (_, infos) => infos
-                                | Error _ => ToString.C.ident_info_empty
+                                | Error _ => ToString.ident_info_empty
                                 end)
               ls).
 
-    Definition extra_synthesis (function_name_prefix : string) (infos : ToString.C.ident_infos)
+    Definition extra_synthesis (function_name_prefix : string) (infos : ToString.ident_infos)
       : list (string * Pipeline.ErrorT (list string)) * PositiveSet.t
       := let ls_addcarryx := List.flat_map
                                (fun lg_split:positive => [saddcarryx function_name_prefix lg_split; ssubborrowx function_name_prefix lg_split])
-                               (PositiveSet.elements (ToString.C.addcarryx_lg_splits infos)) in
+                               (PositiveSet.elements (ToString.addcarryx_lg_splits infos)) in
          let ls_mulx := List.map
                           (fun lg_split:positive => smulx function_name_prefix lg_split)
-                          (PositiveSet.elements (ToString.C.mulx_lg_splits infos)) in
+                          (PositiveSet.elements (ToString.mulx_lg_splits infos)) in
          let ls_cmov := List.map
                           (fun bitwidth:positive => scmovznz function_name_prefix bitwidth)
-                          (PositiveSet.elements (ToString.C.cmovznz_bitwidths infos)) in
+                          (PositiveSet.elements (ToString.cmovznz_bitwidths infos)) in
          let ls := ls_addcarryx ++ ls_mulx ++ ls_cmov in
          let infos := aggregate_infos ls in
          (List.map (fun '(name, res) => (name, (res <- res; Success (fst res))%error)) ls,
-          ToString.C.bitwidths_used infos).
+          ToString.bitwidths_used infos).
 
 
     Definition synthesize_of_name (function_name_prefix : string) (name : string)
-      : string * ErrorT Pipeline.ErrorMessage (list string * ToString.C.ident_infos)
+      : string * ErrorT Pipeline.ErrorMessage (list string * ToString.ident_infos)
       := fold_right
            (fun v default
             => match v with
@@ -850,6 +851,6 @@ Section __.
          let '(extra_ls, extra_bit_widths) := extra_synthesis function_name_prefix infos in
          (comment_header,
           extra_ls ++ List.map (fun '(name, res) => (name, (res <- res; Success (fst res))%error)) ls,
-          PositiveSet.union extra_bit_widths (ToString.C.bitwidths_used infos)).
+          PositiveSet.union extra_bit_widths (ToString.bitwidths_used infos)).
   End for_stringification.
 End __.

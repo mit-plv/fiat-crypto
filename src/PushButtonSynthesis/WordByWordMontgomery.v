@@ -32,7 +32,7 @@ Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.LanguageWf.
 Require Import Crypto.Language.
 Require Import Crypto.AbstractInterpretation.
-Require Import Crypto.CStringification.
+Require Import Crypto.LanguageStringification.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Arithmetic.Freeze.
@@ -51,7 +51,7 @@ Import
   LanguageWf.Compilers
   Language.Compilers
   AbstractInterpretation.Compilers
-  CStringification.Compilers.
+  LanguageStringification.Compilers.
 Import Compilers.defaults.
 
 Import COperationSpecifications.Primitives.
@@ -86,7 +86,8 @@ Local Opaque
       expr.Interp.
 
 Section __.
-  Context (m : Z)
+  Context {output_language_api : ToString.OutputLanguageAPI}
+          (m : Z)
           (machine_wordsize : Z).
 
   Let s := 2^Z.log2_up m.
@@ -263,7 +264,7 @@ Section __.
          (Some bounds).
 
   Definition smul (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
+    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
           prefix "mul" mul
@@ -283,7 +284,7 @@ Section __.
          (Some bounds).
 
   Definition ssquare (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
+    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
           prefix "square" square
@@ -303,7 +304,7 @@ Section __.
          (Some bounds).
 
   Definition sadd (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
+    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
           prefix "add" add
@@ -323,7 +324,7 @@ Section __.
          (Some bounds).
 
   Definition ssub (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
+    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
           prefix "sub" sub
@@ -343,7 +344,7 @@ Section __.
          (Some bounds).
 
   Definition sopp (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
+    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
           prefix "opp" opp
@@ -363,7 +364,7 @@ Section __.
          (Some bounds).
 
   Definition sfrom_montgomery (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
+    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
           prefix "from_montgomery" from_montgomery
@@ -382,7 +383,7 @@ Section __.
          (Some r[0~>r-1]%zrange).
 
   Definition snonzero (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
+    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
           prefix "nonzero" nonzero
@@ -402,7 +403,7 @@ Section __.
          prime_bytes_bounds.
 
   Definition sto_bytes (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
+    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
           prefix "to_bytes" to_bytes
@@ -422,7 +423,7 @@ Section __.
          prime_bounds.
 
   Definition sfrom_bytes (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
+    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
           prefix "from_bytes" from_bytes
@@ -442,7 +443,7 @@ Section __.
          (Some bounds).
 
   Definition sencode (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
+    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
           prefix "encode" encode
@@ -462,7 +463,7 @@ Section __.
          (Some bounds).
 
   Definition szero (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
+    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
           prefix "zero" zero
@@ -482,7 +483,7 @@ Section __.
          (Some bounds).
 
   Definition sone (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
+    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
           prefix "one" one
@@ -493,7 +494,7 @@ Section __.
 
   Definition selectznz : Pipeline.ErrorT _ := Primitives.selectznz n machine_wordsize.
   Definition sselectznz (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
+    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Primitives.sselectznz n machine_wordsize prefix.
 
   Lemma bounded_by_of_valid x

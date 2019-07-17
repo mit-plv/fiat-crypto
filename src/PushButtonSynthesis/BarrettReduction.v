@@ -9,7 +9,7 @@ Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Language.
-Require Import Crypto.CStringification.
+Require Import Crypto.LanguageStringification.
 Require Import Crypto.Arithmetic.BarrettReduction.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.ModOps.
@@ -27,7 +27,7 @@ Local Open Scope Z_scope. Local Open Scope list_scope. Local Open Scope bool_sco
 
 Import
   Language.Compilers
-  CStringification.Compilers.
+  LanguageStringification.Compilers.
 Import Compilers.defaults.
 
 Import COperationSpecifications.Primitives.
@@ -40,7 +40,8 @@ Local Set Keyed Unification. (* needed for making [autorewrite] fast, c.f. COQBU
 Local Opaque reified_barrett_red_gen. (* needed for making [autorewrite] not take a very long time *)
 
 Section rbarrett_red.
-  Context (M machine_wordsize : Z).
+  Context {output_language_api : ToString.OutputLanguageAPI}
+          (M machine_wordsize : Z).
 
   Let value_range := r[0 ~> (2^machine_wordsize - 1)%Z]%zrange.
   Let flag_range := r[0 ~> 1]%zrange.
@@ -164,7 +165,7 @@ Section rbarrett_red.
          bound.
 
   Definition sbarrett_red (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.C.ident_infos))
+    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
           prefix "barrett_red" barrett_red
