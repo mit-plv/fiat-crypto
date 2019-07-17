@@ -678,13 +678,16 @@ Section __.
 
     (** Note: If you change the name or type signature of this
           function, you will need to update the code in CLI.v *)
-    Definition Synthesize (function_name_prefix : string) (requests : list string)
-      : list string * list (string * Pipeline.ErrorT (list string)) * PositiveSet.t (* types used *)
+    Definition Synthesize (comment_header : list string) (function_name_prefix : string) (requests : list string)
+      : list (string * Pipeline.ErrorT (list string))
       := Primitives.Synthesize
            machine_wordsize valid_names known_functions (extra_special_synthesis function_name_prefix)
-           (ToString.comment_block
-              ["Computed values:";
-                 "carry_chain = " ++ show false idxs]%string
+           check_args
+           ((ToString.comment_block comment_header)
+              ++ [""]
+              ++ (ToString.comment_block
+                    ["Computed values:";
+                       "carry_chain = " ++ show false idxs]%string)
               ++ [""])
            function_name_prefix requests.
   End for_stringification.
