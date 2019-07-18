@@ -43,6 +43,7 @@ Local Opaque reified_montred_gen. (* needed for making [autorewrite] not take a 
 
 Section rmontred.
   Context {output_language_api : ToString.OutputLanguageAPI}
+          (static : bool)
           (N R N' : Z) (n : nat)
           (machine_wordsize : Z).
 
@@ -160,7 +161,7 @@ Section rmontred.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          prefix "montred" montred
+          static prefix "montred" montred
           (fun _ _ _ => @nil string).
 
   Local Ltac solve_montred_preconditions :=

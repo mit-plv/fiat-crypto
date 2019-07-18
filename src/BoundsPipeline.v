@@ -399,13 +399,13 @@ Module Pipeline.
     := ((fun a b c t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c t E arg_bounds out_bounds = result') => out_bounds) _ _ _ _ _ _ _ result eq_refl)
          (only parsing).
 
-  Notation FromPipelineToString prefix name result
+  Notation FromPipelineToString static prefix name result
     := (fun comment
         => ((prefix ++ name)%string,
             match result with
             | Success E'
               => let E := ToString.ToFunctionLines
-                            true true (* static *) prefix (prefix ++ name)%string
+                            true static prefix (prefix ++ name)%string
                             E'
                             (comment (prefix ++ name)%string)
                             None
