@@ -320,8 +320,7 @@ Module ForExtraction.
            let '(argv, output_language_api) := argv_to_language_and_argv argv in
            match argv with
            | _::curve_description::args
-             => let output_language_api := ToString.OutputCAPI in (* for typeclass inference *)
-                match parse_args args with
+             => match parse_args args with
                 | Some (inl args)
                   => Pipeline curve_description args success error
                 | Some (inr errs)
