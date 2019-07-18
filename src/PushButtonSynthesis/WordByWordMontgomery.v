@@ -87,6 +87,7 @@ Local Opaque
 
 Section __.
   Context {output_language_api : ToString.OutputLanguageAPI}
+          (static : bool)
           (m : Z)
           (machine_wordsize : Z).
 
@@ -267,7 +268,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          prefix "mul" mul
+          static prefix "mul" mul
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => ["The function " ++ fname ++ " multiplies two field elements in the Montgomery domain."]%string)
@@ -287,7 +288,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          prefix "square" square
+          static prefix "square" square
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => ["The function " ++ fname ++ " squares a field element in the Montgomery domain."]%string)
@@ -307,7 +308,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          prefix "add" add
+          static prefix "add" add
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => ["The function " ++ fname ++ " adds two field elements in the Montgomery domain."]%string)
@@ -327,7 +328,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          prefix "sub" sub
+          static prefix "sub" sub
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => ["The function " ++ fname ++ " subtracts two field elements in the Montgomery domain."]%string)
@@ -347,7 +348,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          prefix "opp" opp
+          static prefix "opp" opp
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => ["The function " ++ fname ++ " negates a field element in the Montgomery domain."]%string)
@@ -367,7 +368,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          prefix "from_montgomery" from_montgomery
+          static prefix "from_montgomery" from_montgomery
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => ["The function " ++ fname ++ " translates a field element out of the Montgomery domain."]%string)
@@ -386,7 +387,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          prefix "nonzero" nonzero
+          static prefix "nonzero" nonzero
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => ["The function " ++ fname ++ " outputs a single non-zero word if the input is non-zero and zero otherwise."]%string)
@@ -406,7 +407,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          prefix "to_bytes" to_bytes
+          static prefix "to_bytes" to_bytes
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => ["The function " ++ fname ++ " serializes a field element in the Montgomery domain to bytes in little-endian order."]%string)
@@ -426,7 +427,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          prefix "from_bytes" from_bytes
+          static prefix "from_bytes" from_bytes
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => ["The function " ++ fname ++ " deserializes a field element in the Montgomery domain from bytes in little-endian order."]%string)
@@ -446,7 +447,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          prefix "encode" encode
+          static prefix "encode" encode
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => ["The function " ++ fname ++ " encodes an integer as a field element in the Montgomery domain."]%string)
@@ -466,7 +467,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          prefix "zero" zero
+          static prefix "zero" zero
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname => ["The function " ++ fname ++ " returns the field element zero in the Montgomery domain."]%string)
@@ -486,7 +487,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          prefix "one" one
+          static prefix "one" one
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname => ["The function " ++ fname ++ " returns the field element one in the Montgomery domain."]%string)
@@ -495,7 +496,7 @@ Section __.
   Definition selectznz : Pipeline.ErrorT _ := Primitives.selectznz n machine_wordsize.
   Definition sselectznz (prefix : string)
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
-    := Primitives.sselectznz n machine_wordsize prefix.
+    := Primitives.sselectznz static n machine_wordsize prefix.
 
   Lemma bounded_by_of_valid x
         (H : valid x)
@@ -853,7 +854,7 @@ Section __.
     Definition Synthesize (comment_header : list string) (function_name_prefix : string) (requests : list string)
       : list (string * Pipeline.ErrorT (list string))
       := Primitives.Synthesize
-           machine_wordsize valid_names known_functions (fun _ => nil)
+           static machine_wordsize valid_names known_functions (fun _ => nil)
            check_args
            (ToString.comment_block comment_header ++ [""]) function_name_prefix requests.
   End for_stringification.

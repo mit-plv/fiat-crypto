@@ -209,77 +209,77 @@ $(WORD_BY_WORD_MONTGOMERY_C_FILES): $(WORD_BY_WORD_MONTGOMERY) # Makefile
 curve25519_64.c:
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) '25519' '5' '2^255 - 19' '64' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --static '25519' '5' '2^255 - 19' '64' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^255 - 19
 curve25519_32.c:
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) '25519' '10' '2^255 - 19' '32' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --static '25519' '10' '2^255 - 19' '32' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^521 - 1
 p521_64.c:
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) 'p521' '9' '2^521 - 1' '64' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --static 'p521' '9' '2^521 - 1' '64' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^521 - 1
 p521_32.c:
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) 'p521' '17' '2^521 - 1' '32' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --static 'p521' '17' '2^521 - 1' '32' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 ## 2^224 - 2^96 + 1 ## does not bounds check
 #p224_solinas_64.c:
 #	$(SHOW)'SYNTHESIZE > $@'
 #	$(HIDE)rm -f $@.ok
-#	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) 'p224' '4' '2^224 - 2^96 + 1' '64' && touch $@.ok) > $@.tmp
+#	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --static 'p224' '4' '2^224 - 2^96 + 1' '64' && touch $@.ok) > $@.tmp
 #	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^448 - 2^224 - 1
 p448_solinas_64.c:
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) 'p448' '8' '2^448 - 2^224 - 1' '64' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --static 'p448' '8' '2^448 - 2^224 - 1' '64' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^256 - 2^224 + 2^192 + 2^96 - 1
 p256_64.c p256_32.c : p256_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) 'p256' '2^256 - 2^224 + 2^192 + 2^96 - 1' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) --static 'p256' '2^256 - 2^224 + 2^192 + 2^96 - 1' '$*' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^256 - 2^32 - 977
 secp256k1_64.c secp256k1_32.c : secp256k1_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) 'secp256k1' '2^256 - 2^32 - 977' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) --static 'secp256k1' '2^256 - 2^32 - 977' '$*' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^384 - 2^128 - 2^96 + 2^32 - 1
 p384_64.c p384_32.c : p384_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) 'p384' '2^384 - 2^128 - 2^96 + 2^32 - 1' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) --static 'p384' '2^384 - 2^128 - 2^96 + 2^32 - 1' '$*' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^224 - 2^96 + 1
 p224_64.c p224_32.c : p224_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) 'p224' '2^224 - 2^96 + 1' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) --static 'p224' '2^224 - 2^96 + 1' '$*' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^216 * 3^137 - 1
 p434_64.c p434_32.c : p434_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) 'p434' '2^216 * 3^137 - 1' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) --static 'p434' '2^216 * 3^137 - 1' '$*' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 test-c-files: $(ALL_C_FILES)

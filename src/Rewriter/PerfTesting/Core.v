@@ -93,7 +93,7 @@ Module Import UnsaturatedSolinas.
   Definition PipelineFullOf (p : params) : Pipeline.ErrorT (Expr _)
     := PushButtonSynthesis.UnsaturatedSolinas.carry_mul n s c machine_wordsize.
   Definition PipelineFullToStringsOf (p : params) : string * _
-    := PushButtonSynthesis.UnsaturatedSolinas.scarry_mul n s c machine_wordsize "".
+    := PushButtonSynthesis.UnsaturatedSolinas.scarry_mul true n s c machine_wordsize "".
   Section pipeline.
     Context (p : params).
 
@@ -290,7 +290,7 @@ Module Import WordByWordMontgomery.
   Definition PipelineFullOf (p : params) : Pipeline.ErrorT (Expr _)
     := PushButtonSynthesis.WordByWordMontgomery.mul m machine_wordsize.
   Definition PipelineFullToStringsOf (p : params) : string * _
-    := PushButtonSynthesis.WordByWordMontgomery.smul m machine_wordsize "".
+    := PushButtonSynthesis.WordByWordMontgomery.smul true m machine_wordsize "".
   Section pipeline.
     Context (p : params).
 
