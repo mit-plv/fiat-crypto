@@ -1,3 +1,4 @@
+-arg -no-template-check
 -R src Crypto
 -R bbv/theories bbv
 bbv/theories/BinNotation.v
