@@ -6,6 +6,7 @@ src/AbstractInterpretationZRangeProofs.v
 src/BoundsPipeline.v
 src/CLI.v
 src/COperationSpecifications.v
+src/IR.v
 src/CStringification.v
 src/CompilersTestCases.v
 src/Demo.v
