@@ -333,6 +333,157 @@ Module Compilers.
              => fun '(absurd, _) => match absurd : Empty_set with end
            end%list.
 
+
+
+
+      (** * Language-specific numeric conversions to be passed to the PHOAS -> IR translation *)
+
+      (** Quoting
+          http://en.cppreference.com/w/c/language/conversion:
+
+          ** Integer promotions
+
+          Integer promotion is the implicit conversion of a value of
+          any integer type with rank less or equal to rank of int or
+          of a bit field of type _Bool, int, signed int, unsigned
+          int, to the value of type int or unsigned int
+
+          If int can represent the entire range of values of the
+          original type (or the range of values of the original bit
+          field), the value is converted to type int. Otherwise the
+          value is converted to unsigned int. *)
+      (** We assume a 32-bit [int] type *)
+      Definition integer_promote_type (t : int.type) : int.type
+        := if int.is_tighter_than t int32
+           then int32
+           else t.
+
+
+      (** Quoting
+          http://en.cppreference.com/w/c/language/conversion:
+
+          rank above is a property of every integer type and is
+          defined as follows:
+
+          1) the ranks of all signed integer types are different and
+             increase with their precision: rank of signed char <
+             rank of short < rank of int < rank of long int < rank
+             of long long int
+
+          2) the ranks of all signed integer types equal the ranks
+             of the corresponding unsigned integer types
+
+          3) the rank of any standard integer type is greater than
+             the rank of any extended integer type of the same size
+             (that is, rank of __int64 < rank of long long int, but
+             rank of long long < rank of __int128 due to the rule
+             (1))
+
+          4) rank of char equals rank of signed char and rank of
+             unsigned char
+
+          5) the rank of _Bool is less than the rank of any other
+             standard integer type
+
+          6) the rank of any enumerated type equals the rank of its
+             compatible integer type
+
+          7) ranking is transitive: if rank of T1 < rank of T2 and
+             rank of T2 < rank of T3 then rank of T1 < rank of T3
+
+          8) any aspects of relative ranking of extended integer
+             types not covered above are implementation defined *)
+         (** We define the rank to be the bitwidth, which satisfies
+             (1), (2), (4), (5), and (7).  Points (3) and (6) do not
+             apply. *)
+      Definition rank (r : int.type) : BinInt.Z := int.bitwidth_of r.
+      Definition IMPOSSIBLE {T} (v : T) : T. exact v. Qed.
+      (** Quoting
+          http://en.cppreference.com/w/c/language/conversion: *)
+      Definition common_type (t1 t2 : int.type) : int.type
+        (** First of all, both operands undergo integer promotions
+            (see below). Then *)
+        := let t1 := integer_promote_type t1 in
+           let t2 := integer_promote_type t2 in
+           (** - If the types after promotion are the same, that
+               type is the common type *)
+           if int.type_beq t1 t2 then
+             t1
+           (** - Otherwise, if both operands after promotion have
+                 the same signedness (both signed or both unsigned),
+                 the operand with the lesser conversion rank (see
+                 below) is implicitly converted to the type of the
+                 operand with the greater conversion rank *)
+           else if bool_beq (int.is_signed t1) (int.is_signed t2) then
+                  (if rank t1 >=? rank t2 then t1 else t2)
+           (** - Otherwise, the signedness is different: If the
+                 operand with the unsigned type has conversion rank
+                 greater or equal than the rank of the type of the
+                 signed operand, then the operand with the signed
+                 type is implicitly converted to the unsigned type
+            *)
+           else if int.is_unsigned t1 && (rank t1 >=? rank t2) then
+             t1
+           else if int.is_unsigned t2 && (rank t2 >=? rank t1) then
+             t2
+           (** - Otherwise, the signedness is different and the
+                 signed operand's rank is greater than unsigned
+                 operand's rank. In this case, if the signed type
+                 can represent all values of the unsigned type, then
+                 the operand with the unsigned type is implicitly
+                 converted to the type of the signed operand. *)
+           else if int.is_signed t1 && int.is_tighter_than t2 t1 then
+             t1
+           else if int.is_signed t2 && int.is_tighter_than t1 t2 then
+             t2
+           (** - Otherwise, both operands undergo implicit
+                 conversion to the unsigned type counterpart of the
+                 signed operand's type. *)
+           (** N.B. This case ought to be impossible in our code,
+               where [rank] is the bitwidth. *)
+           else if int.is_signed t1 then
+             int.unsigned_counterpart_of t1
+           else
+             int.unsigned_counterpart_of t2.
+
+      (* Zoe: used to be [C_bin_op_conversion]. Changed name for uniformity *)
+      Definition C_bin_op_conversion
+                 (desired_type : option int.type)
+                 (args : arith_expr_for (base.type.Z * base.type.Z))
+        : arith_expr_for (base.type.Z * base.type.Z)
+        := match desired_type with
+           | None => args
+           | Some _
+             => let '((e1, t1), (e2, t2)) := args in
+                (* Zoe: internalized integer promotions *)
+                let t1 := option_map integer_promote_type t1 in
+                let t2 := option_map integer_promote_type t2 in
+                match t1, t2 with
+                | None, _ | _, None => args
+                | Some t1', Some t2'
+                  => if int.is_tighter_than t2' t1'
+                     then (Zcast_up_if_needed desired_type (e1, t1), (e2, t2))
+                     else ((e1, t1), Zcast_up_if_needed desired_type (e2, t2))
+                end
+           end.
+
+      Definition C_un_op_conversion (desired_type : option int.type)
+                 (arg : arith_expr_for base.type.Z)
+        : arith_expr_for base.type.Z :=
+        let '(e, r) := arg in
+        let rin := option_map integer_promote_type r in
+        Zcast_up_if_needed desired_type (e, rin).
+
+      Local Instance CLanguageCasts : LanguageCasts :=
+        Build_LanguageCasts
+          common_type
+          C_bin_op_conversion
+          C_un_op_conversion.
+      (* Zoe: Halp! what are these "Error: Not a projection" messages I'm
+         getting when using record notation *)
+
+      (** Top-level printing functions *)
+
       Definition to_function_lines (static : bool) (prefix : string) (name : string)
                  {t}
                  (f : type.for_each_lhs_of_arrow var_data t * var_data (type.final_codomain t) * expr)
