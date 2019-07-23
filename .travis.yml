@@ -85,10 +85,10 @@ jobs:
 
     - stage: standalone-ocaml
       env: COQ_VERSION="8.9.0"  COQ_PACKAGE="coq-8.9.0" PPA="ppa:jgross-h/many-coq-versions"
-      script: PREV=coq CUR=standalone-ocaml ./etc/ci/travis.sh -j2 standalone-ocaml c-files test-c-files CC=gcc
+      script: PREV=coq CUR=standalone-ocaml ./etc/ci/travis.sh -j2 standalone-ocaml perf-standalone c-files test-c-files CC=gcc
     - stage: standalone-ocaml
       env: COQ_VERSION="8.8.2"  COQ_PACKAGE="coq-8.8.2" PPA="ppa:jgross-h/many-coq-versions"
-      script: PREV=coq CUR=standalone-ocaml ./etc/ci/travis.sh -j2 standalone-ocaml c-files test-c-files CC=gcc
+      script: PREV=coq CUR=standalone-ocaml ./etc/ci/travis.sh -j2 standalone-ocaml perf-standalone c-files test-c-files CC=gcc
 
 #    - stage: selected-test selected-bench
 #      env: COQ_VERSION="8.8.2"  COQ_PACKAGE="coq-8.8.2" PPA="ppa:jgross-h/many-coq-versions"
