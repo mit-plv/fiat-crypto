@@ -44,6 +44,9 @@ SPECIAL_VOFILES := \
 	src/ExtractionOCaml/%.vo \
 	src/ExtractionHaskell/%.vo
 GREP_EXCLUDE_SPECIAL_VOFILES := grep -v '^src/Extraction\(OCaml\|Haskell\)/'
+PERFTESTING_VO := \
+	src/Rewriter/PerfTesting/Core.vo \
+	src/Rewriter/PerfTesting/StandaloneOCamlMain.vo
 # add files to this list to prevent them from being built as final
 # targets by the "lite" target
 LITE_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo \
@@ -52,11 +55,13 @@ LITE_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo \
 	src/RewriterWf1.vo \
 	src/RewriterWf2.vo \
 	src/RewriterRulesGood.vo \
-	src/RewriterAll.vo
+	src/RewriterAll.vo \
+	$(PERFTESTING_VO)
 NOBIGMEM_UNMADE_VOFILES := \
 	src/Curves/Weierstrass/AffineProofs.vo \
 	src/Curves/Weierstrass/Jacobian.vo \
-	src/Curves/Weierstrass/Projective.vo
+	src/Curves/Weierstrass/Projective.vo \
+	$(PERFTESTING_VO)
 REGULAR_VOFILES := $(filter-out $(SPECIAL_VOFILES),$(VOFILES))
 PRE_STANDALONE_PRE_VOFILES := $(filter src/Standalone%.vo,$(REGULAR_VOFILES))
 UTIL_PRE_VOFILES := $(filter src/Algebra/%.vo src/Tactics/%.vo src/Util/%.vo,$(REGULAR_VOFILES))
@@ -294,11 +299,13 @@ $(PERF_MAKEFILE): Makefile src/Rewriter/PerfTesting/Specific/make.py primes.txt
 # PERF_TIMEOUT?=./etc/timeout -t 600 -m 10000 # limit to 10 GB # https://raw.githubusercontent.com/pshved/timeout/master/timeout
 PERF_TIMEOUT?=timeout 600
 
-.PHONY: perf perf-vos perf-extraction
+.PHONY: perf perf-vos perf-extraction perf-standalone
 PERF_VOLOGS := $(PERF_PRIME_VOS:.vo=.log)
 PERF_SHLOGS := $(PERF_PRIME_SHS:.sh=.log)
 PERF_LOGS := $(PERF_VOLOGS) $(PERF_SHLOGS)
 ALL_PERF_LOGS := $(PERF_LOGS) $(PERF_LOGS:.log=.log.tmp)
+
+perf-standalone: $(PERF_STANDALONE:%=src/ExtractionOCaml/%)
 
 perf-vos: $(PERF_VOLOGS) \
 	$(PERF_MAKEFILE) \
@@ -306,7 +313,7 @@ perf-vos: $(PERF_VOLOGS) \
 
 perf-extraction: $(PERF_SHLOGS) \
 	$(PERF_MAKEFILE) \
-	$(PERF_STANDALONE:%=src/ExtractionOCaml/%)
+	perf-standalone
 
 perf: perf-extraction perf-vos
 
