@@ -400,7 +400,7 @@ Module Compilers.
       Definition IMPOSSIBLE {T} (v : T) : T. exact v. Qed.
       (** Quoting
           http://en.cppreference.com/w/c/language/conversion: *)
-      Definition common_type (t1 t2 : int.type) : int.type
+      Definition C_common_type (t1 t2 : int.type) : int.type
         (** First of all, both operands undergo integer promotions
             (see below). Then *)
         := let t1 := integer_promote_type t1 in
@@ -446,7 +446,6 @@ Module Compilers.
            else
              int.unsigned_counterpart_of t2.
 
-      (* Zoe: used to be [C_bin_op_conversion]. Changed name for uniformity *)
       Definition C_bin_op_conversion
                  (desired_type : option int.type)
                  (args : arith_expr_for (base.type.Z * base.type.Z))
@@ -475,12 +474,9 @@ Module Compilers.
         Zcast_up_if_needed desired_type (e, rin).
 
       Local Instance CLanguageCasts : LanguageCasts :=
-        Build_LanguageCasts
-          common_type
-          C_bin_op_conversion
-          C_un_op_conversion.
-      (* Zoe: Halp! what are these "Error: Not a projection" messages I'm
-         getting when using record notation *)
+        {| common_type := C_common_type;
+           bin_op_conversion := C_bin_op_conversion;
+           un_op_conversion := C_un_op_conversion |}.
 
       (** Top-level printing functions *)
 
