@@ -141,7 +141,7 @@ Module Compilers.
             (* Zoe: Right now common type is only used to compute the common
                type of operand in binary operations. Therefore, it can be
                internal to the bin_op_conversion (that will need to return an
-               extra result) and not exposed here. Leacing it as is in favor of
+               extra result) and not exposed here. Leaving it as is in favor of
                incrementality for now. Thoughts? *)
             common_type : int.type -> int.type -> int.type;
             bin_op_conversion : option int.type -> arith_expr_for (base.type.Z * base.type.Z) -> arith_expr_for (base.type.Z * base.type.Z);
@@ -351,29 +351,37 @@ Module Compilers.
                                   value being shifted, because shift does
                                   not commute with mod. *)
                               (* Zoe: This is the only computation that is
-                                      affected by this change. In
+                                      affected by the parametrization
+                                      over the language conversions. In
                                       particular, in the previous version
-                                      the to find the desired type, input
-                                      type was promoted before the union,
-                                      whereas now it is not
-                                      promoted. AFAICT, this will not
-                                      change the semantics of the final
-                                      program, but I'd like some more
-                                      insight on this. The only class of
-                                      examples that I can find and alter
-                                      the generated code is the following:
+                                      the operand was casted up to
+                                      [(int.union_zrange r[0~>2^offset]%zrange) (promote_type r)]
+                                      whereas now is casted up to
+                                      [(int.union_zrange r[0~>2^offset]%zrange) r)]
 
-                                      Assume r = uint8 and offset \in [1, 31].
-                                      Then
-                                        rin = promote r = int32
-                                        int.union_zrange r[0~>2^offset] r = uint32
-                                        int.union_zrange r[0~>2^offset] rin = int32
+                                      AFAICT, this will not change the
+                                      generated code since shifts only
+                                      happen to integers >= 32 bits so
+                                      promotion does not happen.
+
+                                      The only class of examples that I
+                                      can find and alter the generated
+                                      code is the following: Assume r =
+                                      uint8 and offset \in [1, 31].  Then
+
+                                      rin = promote r = int32
+
+                                      int.union_zrange r[0~>2^offset] r = uint32
+
+                                      int.union_zrange r[0~>2^offset] rin = int32
+
                                       Previously, no coercion was going to
-                                      be generated, but now we are coercing
-                                      the operand to uint32, before
-                                      performing the shift.. That seems
-                                      fine to me, but I'l like more
-                                      thoughts on this. *)
+                                      be generated, but now we are
+                                      coercing the operand to uint32,
+                                      before performing the shift. Note
+                                      that no coercion was going to be
+                                      generated before, only implicit
+                                      promotion to int32. *)
                               let '(e', rin') := un_op_conversion
                                                    (option_map (int.union_zrange r[0~>2^offset]%zrange) r)
                                                    (e, r) in
@@ -698,80 +706,80 @@ Module Compilers.
                  | type.arrow s d => fun _ _ => inr ["Invalid type of expr: " ++ show false t]%string
                  end.
 
-               Definition report_type_mismatch (expected : defaults.type) (given : defaults.type) : string
-               := ("Type mismatch; expected " ++ show false expected ++ " but given " ++ show false given ++ ".")%string.
+            Definition report_type_mismatch (expected : defaults.type) (given : defaults.type) : string
+              := ("Type mismatch; expected " ++ show false expected ++ " but given " ++ show false given ++ ".")%string.
 
-             Fixpoint arith_expr_of_PHOAS_args
-                      {t}
-               : type.for_each_lhs_of_arrow (@Compilers.expr.expr base.type ident.ident var_data) t
-                 -> ErrT (type.for_each_lhs_of_arrow (fun t => @Compilers.expr.expr base.type ident.ident var_data t * (arith_expr type.Z * option int.type)) t)
-               := match t with
-                  | type.base t => fun 'tt => inl tt
-                  | type.arrow (type.base base.type.Z) d
-                    => fun '(arg, args)
-                       => arg' ,, args' <- arith_expr_of_base_PHOAS arg int.option.None , @arith_expr_of_PHOAS_args d args;
-                            inl ((arg, arg'), args')
-                  | type.arrow s d
-                    => fun '(arg, args)
-                       => arg' ,, args' <- @inr unit _ ["Invalid argument of non-ℤ type " ++ show false s]%string , @arith_expr_of_PHOAS_args d args;
-                            inr ["Impossible! (type error got lost somewhere)"]
-                  end.
+            Fixpoint arith_expr_of_PHOAS_args
+                     {t}
+              : type.for_each_lhs_of_arrow (@Compilers.expr.expr base.type ident.ident var_data) t
+                -> ErrT (type.for_each_lhs_of_arrow (fun t => @Compilers.expr.expr base.type ident.ident var_data t * (arith_expr type.Z * option int.type)) t)
+              := match t with
+                 | type.base t => fun 'tt => inl tt
+                 | type.arrow (type.base base.type.Z) d
+                   => fun '(arg, args)
+                      => arg' ,, args' <- arith_expr_of_base_PHOAS arg int.option.None , @arith_expr_of_PHOAS_args d args;
+                           inl ((arg, arg'), args')
+                 | type.arrow s d
+                   => fun '(arg, args)
+                      => arg' ,, args' <- @inr unit _ ["Invalid argument of non-ℤ type " ++ show false s]%string , @arith_expr_of_PHOAS_args d args;
+                           inr ["Impossible! (type error got lost somewhere)"]
+                 end.
 
-             Let recognize_1ref_ident
-                 {t}
-                 (idc : ident.ident t)
-                 (rout : option int.type)
-               : type.for_each_lhs_of_arrow (fun t => @Compilers.expr.expr base.type ident.ident var_data t * (arith_expr type.Z * option int.type))%type t
-                 -> ErrT (arith_expr type.Zptr -> expr)
-               := let _ := @PHOAS.expr.partially_show_expr in
-                  match idc with
-                  | ident.Z_zselect
-                    => fun '((econdv, (econd, rcond)), ((e1v, (e1, r1)), ((e2v, (e2, r2)), tt)))
-                       => match rcond with
-                          | Some (int.unsigned 0)
-                            => let '((e1, r1), (e2, r2)) :=
-                                   bin_op_conversion rout ((e1, r1), (e2, r2)) in
-                               let ct := (r1 <- r1; r2 <- r2; Some (common_type r1 r2))%option in
-                               ty <- match ct, rout with
-                                     | Some ct, Some rout
-                                       => if int.type_beq ct rout
-                                          then inl ct
-                                          else inr ["Casting the result of Z.zselect to a type other than the common type is not currently supported.  (Cannot cast a pointer to " ++ show false rout ++ " to a pointer to " ++ show false ct ++ ".)"]%string
-                                     | None, _ => inr ["Unexpected None result of common-type calculation for Z.zselect"]
-                                     | _, None => inr ["Missing cast annotation on return of Z.zselect"]
-                                     end;
-                                 ret (fun retptr => [Call (Z_zselect ty @@ (retptr, (econd, e1, e2)))]%Cexpr)
-                          | _ => inr ["Invalid argument to Z.zselect not known to be 0 or 1: " ++ show false econdv]%string
-                          end
-                  | _ => fun _ => inr ["Unrecognized identifier (expecting a 1-pointer-returning function): " ++ show false idc]%string
-                  end.
+            Let recognize_1ref_ident
+                {t}
+                (idc : ident.ident t)
+                (rout : option int.type)
+              : type.for_each_lhs_of_arrow (fun t => @Compilers.expr.expr base.type ident.ident var_data t * (arith_expr type.Z * option int.type))%type t
+                -> ErrT (arith_expr type.Zptr -> expr)
+              := let _ := @PHOAS.expr.partially_show_expr in
+                 match idc with
+                 | ident.Z_zselect
+                   => fun '((econdv, (econd, rcond)), ((e1v, (e1, r1)), ((e2v, (e2, r2)), tt)))
+                      => match rcond with
+                         | Some (int.unsigned 0)
+                           => let '((e1, r1), (e2, r2)) :=
+                                  bin_op_conversion rout ((e1, r1), (e2, r2)) in
+                              let ct := (r1 <- r1; r2 <- r2; Some (common_type r1 r2))%option in
+                              ty <- match ct, rout with
+                                    | Some ct, Some rout
+                                      => if int.type_beq ct rout
+                                         then inl ct
+                                         else inr ["Casting the result of Z.zselect to a type other than the common type is not currently supported.  (Cannot cast a pointer to " ++ show false rout ++ " to a pointer to " ++ show false ct ++ ".)"]%string
+                                    | None, _ => inr ["Unexpected None result of common-type calculation for Z.zselect"]
+                                    | _, None => inr ["Missing cast annotation on return of Z.zselect"]
+                                    end;
+                                ret (fun retptr => [Call (Z_zselect ty @@ (retptr, (econd, e1, e2)))]%Cexpr)
+                         | _ => inr ["Invalid argument to Z.zselect not known to be 0 or 1: " ++ show false econdv]%string
+                         end
+                 | _ => fun _ => inr ["Unrecognized identifier (expecting a 1-pointer-returning function): " ++ show false idc]%string
+                 end.
 
-             Definition bounds_check (do_bounds_check : bool) (descr : string) {t} (idc : ident.ident t) (s : BinInt.Z) {t'} (ev : @Compilers.expr.expr base.type ident.ident var_data t') (found : option int.type)
-               : ErrT unit
-               := if negb do_bounds_check
-                  then ret tt
-                  else
-                    let _ := @PHOAS.expr.partially_show_expr in
-                    match found with
-                    | None => inr ["Missing range on " ++ descr ++ " " ++ show true idc ++ ": " ++ show true ev]%string
-                    | Some ty
-                      => if int.is_tighter_than ty (int.of_zrange_relaxed r[0~>2^s-1])
-                         then ret tt
-                         else inr ["Final bounds check failed on " ++ descr ++ " " ++ show false idc ++ "; expected an unsigned " ++ decimal_string_of_Z s ++ "-bit number (" ++ show false (int.of_zrange_relaxed r[0~>2^s-1]) ++ "), but found a " ++ show false ty ++ "."]%string
-                    end.
+            Definition bounds_check (do_bounds_check : bool) (descr : string) {t} (idc : ident.ident t) (s : BinInt.Z) {t'} (ev : @Compilers.expr.expr base.type ident.ident var_data t') (found : option int.type)
+              : ErrT unit
+              := if negb do_bounds_check
+                 then ret tt
+                 else
+                   let _ := @PHOAS.expr.partially_show_expr in
+                   match found with
+                   | None => inr ["Missing range on " ++ descr ++ " " ++ show true idc ++ ": " ++ show true ev]%string
+                   | Some ty
+                     => if int.is_tighter_than ty (int.of_zrange_relaxed r[0~>2^s-1])
+                        then ret tt
+                        else inr ["Final bounds check failed on " ++ descr ++ " " ++ show false idc ++ "; expected an unsigned " ++ decimal_string_of_Z s ++ "-bit number (" ++ show false (int.of_zrange_relaxed r[0~>2^s-1]) ++ "), but found a " ++ show false ty ++ "."]%string
+                   end.
 
-             Let round_up_to_split_type (lgs : Z) (t : option int.type) : option int.type
-               := option_map (int.union (int.of_zrange_relaxed r[0~>2^lgs-1])) t.
+            Let round_up_to_split_type (lgs : Z) (t : option int.type) : option int.type
+              := option_map (int.union (int.of_zrange_relaxed r[0~>2^lgs-1])) t.
 
-             Let recognize_3arg_2ref_ident
-                 (do_bounds_check : bool)
-                 (t:=(base.type.Z -> base.type.Z -> base.type.Z -> base.type.Z * base.type.Z)%etype)
-                 (idc : ident.ident t)
-                 (rout : option int.type * option int.type)
-                 (args : type.for_each_lhs_of_arrow (fun t => @Compilers.expr.expr base.type ident.ident var_data t * (arith_expr type.Z * option int.type))%type t)
-               : ErrT ((option int.type * option int.type) * (arith_expr (type.Zptr * type.Zptr) -> expr))
-               := let _ := @PHOAS.expr.partially_show_expr in
-                  let '((s, _), ((e1v, (e1, r1)), ((e2v, (e2, r2)), tt))) := args in
+            Let recognize_3arg_2ref_ident
+                (do_bounds_check : bool)
+                (t:=(base.type.Z -> base.type.Z -> base.type.Z -> base.type.Z * base.type.Z)%etype)
+                (idc : ident.ident t)
+                (rout : option int.type * option int.type)
+                (args : type.for_each_lhs_of_arrow (fun t => @Compilers.expr.expr base.type ident.ident var_data t * (arith_expr type.Z * option int.type))%type t)
+              : ErrT ((option int.type * option int.type) * (arith_expr (type.Zptr * type.Zptr) -> expr))
+              := let _ := @PHOAS.expr.partially_show_expr in
+                 let '((s, _), ((e1v, (e1, r1)), ((e2v, (e2, r2)), tt))) := args in
                   match (s <- invert_Literal s; maybe_log2 s)%option, idc return ErrT ((option int.type * option int.type) * (arith_expr (type.Zptr * type.Zptr) -> expr))
                   with
                   | Some s, ident.Z_mul_split
@@ -801,318 +809,318 @@ Module Compilers.
                   | None, _ => inr ["Expression is not a literal power of two of type ℤ: " ++ show true s ++ " (when trying to parse the first argument of " ++ show true idc ++ ")"]%string
                   end.
 
-             Let recognize_4arg_2ref_ident
-                 (do_bounds_check : bool)
-                 (t:=(base.type.Z -> base.type.Z -> base.type.Z -> base.type.Z -> base.type.Z * base.type.Z)%etype)
-                 (idc : ident.ident t)
-                 (rout : option int.type * option int.type)
-                 (args : type.for_each_lhs_of_arrow (fun t => @Compilers.expr.expr base.type ident.ident var_data t * (arith_expr type.Z * option int.type))%type t)
-               : ErrT ((option int.type * option int.type) * (arith_expr (type.Zptr * type.Zptr) -> expr))
-               := let _ := @PHOAS.expr.partially_show_expr in
-                  let '((s, _), ((e1v, (e1, r1)), ((e2v, (e2, r2)), ((e3v, (e3, r3)), tt)))) := args in
-                  match (s <- invert_Literal s; maybe_log2 s)%option, idc return ErrT ((option int.type * option int.type) * (arith_expr (type.Zptr * type.Zptr) -> expr))
-                  with
-                  | Some s, ident.Z_add_with_get_carry as idc
-                  | Some s, ident.Z_sub_with_get_borrow as idc
-                    => let idc' : ident _ _ := Option.invert_Some
-                                                 match idc with
-                                                 | ident.Z_add_with_get_carry => Some (Z_add_with_get_carry s)
-                                                 | ident.Z_sub_with_get_borrow => Some (Z_sub_with_get_borrow s)
-                                                 | _ => None
-                                                 end in
-                       (_ ,, _ ,, _ ,, _ ,, _
-                          <- (bounds_check do_bounds_check "first (carry) argument to" idc 1 e1v r1,
-                              bounds_check do_bounds_check "second argument to" idc s e2v r2,
-                              bounds_check do_bounds_check "third argument to" idc s e2v r2,
-                              bounds_check do_bounds_check "first return value of" idc s e2v (fst rout),
-                              bounds_check do_bounds_check "second (carry) return value of" idc 1 (* boolean carry/borrow *) e2v (snd rout));
-                          inl ((round_up_to_split_type s (fst rout), snd rout),
-                               fun retptr => [Call (idc' @@ (retptr, (e1, e2, e3)))%Cexpr]))
-                  | Some _, _ => inr ["Unrecognized identifier when attempting to construct an assignment with 2 arguments: " ++ show true idc]%string
-                  | None, _ => inr ["Expression is not a literal power of two of type ℤ: " ++ show true s ++ " (when trying to parse the first argument of " ++ show true idc ++ ")"]%string
+            Let recognize_4arg_2ref_ident
+                (do_bounds_check : bool)
+                (t:=(base.type.Z -> base.type.Z -> base.type.Z -> base.type.Z -> base.type.Z * base.type.Z)%etype)
+                (idc : ident.ident t)
+                (rout : option int.type * option int.type)
+                (args : type.for_each_lhs_of_arrow (fun t => @Compilers.expr.expr base.type ident.ident var_data t * (arith_expr type.Z * option int.type))%type t)
+              : ErrT ((option int.type * option int.type) * (arith_expr (type.Zptr * type.Zptr) -> expr))
+              := let _ := @PHOAS.expr.partially_show_expr in
+                 let '((s, _), ((e1v, (e1, r1)), ((e2v, (e2, r2)), ((e3v, (e3, r3)), tt)))) := args in
+                 match (s <- invert_Literal s; maybe_log2 s)%option, idc return ErrT ((option int.type * option int.type) * (arith_expr (type.Zptr * type.Zptr) -> expr))
+                 with
+                 | Some s, ident.Z_add_with_get_carry as idc
+                 | Some s, ident.Z_sub_with_get_borrow as idc
+                   => let idc' : ident _ _ := Option.invert_Some
+                                                match idc with
+                                                | ident.Z_add_with_get_carry => Some (Z_add_with_get_carry s)
+                                                | ident.Z_sub_with_get_borrow => Some (Z_sub_with_get_borrow s)
+                                                | _ => None
+                                                end in
+                      (_ ,, _ ,, _ ,, _ ,, _
+                         <- (bounds_check do_bounds_check "first (carry) argument to" idc 1 e1v r1,
+                             bounds_check do_bounds_check "second argument to" idc s e2v r2,
+                             bounds_check do_bounds_check "third argument to" idc s e2v r2,
+                             bounds_check do_bounds_check "first return value of" idc s e2v (fst rout),
+                             bounds_check do_bounds_check "second (carry) return value of" idc 1 (* boolean carry/borrow *) e2v (snd rout));
+                         inl ((round_up_to_split_type s (fst rout), snd rout),
+                              fun retptr => [Call (idc' @@ (retptr, (e1, e2, e3)))%Cexpr]))
+                 | Some _, _ => inr ["Unrecognized identifier when attempting to construct an assignment with 2 arguments: " ++ show true idc]%string
+                 | None, _ => inr ["Expression is not a literal power of two of type ℤ: " ++ show true s ++ " (when trying to parse the first argument of " ++ show true idc ++ ")"]%string
+                 end.
+
+            Let recognize_2ref_ident
+                {t}
+              : forall (do_bounds_check : bool)
+                       (idc : ident.ident t)
+                       (rout : option int.type * option int.type)
+                       (args : type.for_each_lhs_of_arrow (fun t => @Compilers.expr.expr base.type ident.ident var_data t * (arith_expr type.Z * option int.type))%type t),
+                ErrT ((option int.type * option int.type) * (arith_expr (type.Zptr * type.Zptr) -> expr))
+              := match t with
+                 | (type.base base.type.Z -> type.base base.type.Z -> type.base base.type.Z -> type.base (base.type.Z * base.type.Z))%etype
+                   => recognize_3arg_2ref_ident
+                 | (type.base base.type.Z -> type.base base.type.Z -> type.base base.type.Z -> type.base base.type.Z -> type.base (base.type.Z * base.type.Z))%etype
+                   => recognize_4arg_2ref_ident
+                 | _ => fun do_bounds_check idc rout args => inr ["Unrecognized type for function call: " ++ show false t ++ " (when trying to handle the identifer " ++ show false idc ++ ")"]%string
+                 end.
+
+            Definition declare_name
+                       (descr : string)
+                       (count : positive)
+                       (make_name : positive -> option string)
+                       (r : option int.type)
+              : ErrT (expr * string * arith_expr type.Zptr)
+              := (n ,, r <- (match make_name count with
+                             | Some n => ret n
+                             | None => inr ["Variable naming-function does not support the index " ++ show false count]%string
+                             end,
+                             match r with
+                             | Some r => ret r
+                             | None => inr ["Missing return type annotation for " ++ descr]%string
+                             end);
+                    ret ([DeclareVar type.Z (Some r) n], n, (Addr @@ Var type.Z n)%Cexpr)).
+
+            Let make_assign_arg_1ref_opt
+                (e : @Compilers.expr.expr base.type ident.ident var_data base.type.Z)
+                (count : positive)
+                (make_name : positive -> option string)
+              : ErrT (expr * var_data base.type.Z)
+              := let _ := @PHOAS.expr.partially_show_expr in
+                 let e1 := e in
+                 let '(rout, e) := match invert_Z_cast e with
+                                   | Some (r, e) => (Some (int.of_zrange_relaxed r), e)
+                                   | None => (None, e)
+                                   end%core in
+                 let res_ref
+                     := match invert_AppIdent_curried e with
+                        | Some (existT _ (idc, args))
+                          => args <- arith_expr_of_PHOAS_args args;
+                               idce <- recognize_1ref_ident idc rout args;
+                               v <- declare_name (show false idc) count make_name rout;
+                               let '(decls, n, retv) := v in
+                               ret ((decls ++ (idce retv))%list, (n, rout))
+                        | None => inr ["Invalid assignment of non-identifier-application: " ++ show false e]%string
+                        end in
+                 match res_ref with
+                 | inl res => ret res
+                 | inr _
+                   => e1 <- arith_expr_of_base_PHOAS e1 None;
+                        let '(e1, r1) := e1 in
+                        match make_name count with
+                        | Some n1
+                          => ret ([Assign true type.Z r1 n1 e1], (n1, r1))
+                        | None => inr ["Variable naming-function does not support the index " ++ show false count]%string
+                        end
+                 end.
+
+            Let make_assign_arg_2ref
+                (do_bounds_check : bool)
+                (e : @Compilers.expr.expr base.type ident.ident var_data (base.type.Z * base.type.Z))
+                (count : positive)
+                (make_name : positive -> option string)
+              : ErrT (expr * var_data (base.type.Z * base.type.Z))
+              := let _ := @PHOAS.expr.partially_show_expr in
+                 let '((rout1, rout2), e)
+                     := match invert_Z_cast2 e with
+                        | Some ((r1, r2), e) => ((Some (int.of_zrange_relaxed r1), Some (int.of_zrange_relaxed r2)), e)
+                        | None => ((None, None), e)
+                        end%core in
+                 match invert_AppIdent_curried e with
+                 | Some (existT t (idc, args))
+                   => args <- arith_expr_of_PHOAS_args args;
+                        idce <- recognize_2ref_ident do_bounds_check idc (rout1, rout2) args;
+                        let '((rout1, rout2), idce) := idce in
+                        v1,, v2 <- (declare_name (show false idc) count make_name rout1,
+                                    declare_name (show false idc) (Pos.succ count) make_name rout2);
+                          let '(decls1, n1, retv1) := v1 in
+                          let '(decls2, n2, retv2) := v2 in
+                          ret (decls1 ++ decls2 ++ (idce (retv1, retv2)%Cexpr), ((n1, rout1), (n2, rout2)))%list
+                 | None => inr ["Invalid assignment of non-identifier-application: " ++ show false e]%string
+                 end.
+
+            Let make_assign_arg_ref
+                (do_bounds_check : bool)
+                {t}
+              : forall (e : @Compilers.expr.expr base.type ident.ident var_data t)
+                       (count : positive)
+                       (make_name : positive -> option string),
+                ErrT (expr * var_data t)
+              := let _ := @PHOAS.expr.partially_show_expr in
+                 match t with
+                 | type.base base.type.Z => make_assign_arg_1ref_opt
+                 | type.base (base.type.Z * base.type.Z)%etype => make_assign_arg_2ref do_bounds_check
+                 | _ => fun e _ _ => inr ["Invalid type of assignment expression: " ++ show false t ++ " (with expression " ++ show true e ++ ")"]
+                 end.
+
+            Fixpoint size_of_type (t : base.type) : positive
+              := match t with
+                 | base.type.type_base t => 1
+                 | base.type.prod A B => size_of_type A + size_of_type B
+                 | base.type.list A => 1
+                 | base.type.option A => 1
+                 end%positive.
+
+            Let make_uniform_assign_expr_of_PHOAS
+                (do_bounds_check : bool)
+                {s} (e1 : @Compilers.expr.expr base.type ident.ident var_data s)
+                {d} (e2 : var_data s -> var_data d -> ErrT expr)
+                (count : positive)
+                (make_name : positive -> option string)
+                (vd : var_data d)
+              : ErrT expr
+              := let _ := @PHOAS.expr.partially_show_expr in (* for TC resolution *)
+                 e1_vs <- make_assign_arg_ref do_bounds_check e1 count make_name;
+                   let '(e1, vs) := e1_vs in
+                   e2 <- e2 vs vd;
+                     ret (e1 ++ e2)%list.
+
+            (* See above comment about extraction issues *)
+            Definition make_assign_expr_of_PHOAS
+                       (do_bounds_check : bool)
+                       {s} (e1 : @Compilers.expr.expr base.type ident.ident var_data s)
+                       {s' d} (e2 : var_data s' -> var_data d -> ErrT expr)
+                       (count : positive)
+                       (make_name : positive -> option string)
+                       (v : var_data d)
+              : ErrT expr
+              := Eval cbv beta iota delta [bind2_err bind3_err bind4_err bind5_err recognize_1ref_ident recognize_3arg_2ref_ident recognize_4arg_2ref_ident recognize_2ref_ident make_assign_arg_1ref_opt make_assign_arg_2ref make_assign_arg_ref make_uniform_assign_expr_of_PHOAS make_uniform_assign_expr_of_PHOAS round_up_to_split_type] in
+                  match type.try_transport base.try_make_transport_cps _ _ s' e1 with
+                  | Some e1 => make_uniform_assign_expr_of_PHOAS do_bounds_check e1 e2 count make_name v
+                  | None => inr [report_type_mismatch s' s]
                   end.
 
-             Let recognize_2ref_ident
-                 {t}
-               : forall (do_bounds_check : bool)
-                        (idc : ident.ident t)
-                        (rout : option int.type * option int.type)
-                        (args : type.for_each_lhs_of_arrow (fun t => @Compilers.expr.expr base.type ident.ident var_data t * (arith_expr type.Z * option int.type))%type t),
-                 ErrT ((option int.type * option int.type) * (arith_expr (type.Zptr * type.Zptr) -> expr))
-               := match t with
-                  | (type.base base.type.Z -> type.base base.type.Z -> type.base base.type.Z -> type.base (base.type.Z * base.type.Z))%etype
-                    => recognize_3arg_2ref_ident
-                  | (type.base base.type.Z -> type.base base.type.Z -> type.base base.type.Z -> type.base base.type.Z -> type.base (base.type.Z * base.type.Z))%etype
-                    => recognize_4arg_2ref_ident
-                  | _ => fun do_bounds_check idc rout args => inr ["Unrecognized type for function call: " ++ show false t ++ " (when trying to handle the identifer " ++ show false idc ++ ")"]%string
-                  end.
+            Fixpoint expr_of_base_PHOAS
+                     (do_bounds_check : bool)
+                     {t}
+                     (e : @Compilers.expr.expr base.type ident.ident var_data t)
+                     (count : positive)
+                     (make_name : positive -> option string)
+                     {struct e}
+              : forall (ret_val : var_data t), ErrT expr
+              := match e in expr.expr t return var_data t -> ErrT expr with
+                 | expr.LetIn (type.base s) d e1 e2
+                   => make_assign_expr_of_PHOAS
+                        do_bounds_check
+                        e1
+                        (fun vs vd => @expr_of_base_PHOAS do_bounds_check d (e2 vs) (size_of_type s + count)%positive make_name vd)
+                        count make_name
+                 | expr.LetIn (type.arrow _ _) _ _ _ as e
+                 | expr.Var _ _ as e
+                 | expr.Ident _ _ as e
+                 | expr.App _ _ _ _ as e
+                 | expr.Abs _ _ _ as e
+                   => fun v => make_return_assignment_of_arith v e
+                 end%expr_pat%option.
 
-             Definition declare_name
-                        (descr : string)
-                        (count : positive)
-                        (make_name : positive -> option string)
-                        (r : option int.type)
-               : ErrT (expr * string * arith_expr type.Zptr)
-               := (n ,, r <- (match make_name count with
-                              | Some n => ret n
-                              | None => inr ["Variable naming-function does not support the index " ++ show false count]%string
-                              end,
-                              match r with
-                              | Some r => ret r
-                              | None => inr ["Missing return type annotation for " ++ descr]%string
-                              end);
-                     ret ([DeclareVar type.Z (Some r) n], n, (Addr @@ Var type.Z n)%Cexpr)).
+            Fixpoint base_var_data_of_bounds {t}
+                     (count : positive)
+                     (make_name : positive -> option string)
+                     {struct t}
+              : ZRange.type.base.option.interp t -> option (positive * var_data t)
+              := match t return ZRange.type.base.option.interp t -> option (positive * var_data t) with
+                 | base.type.Z
+                   => fun r => (n <- make_name count;
+                                  Some (Pos.succ count, (n, option_map int.of_zrange_relaxed r)))
+                 | base.type.prod A B
+                   => fun '(ra, rb)
+                      => (va <- @base_var_data_of_bounds A count make_name ra;
+                            let '(count, va) := va in
+                            vb <- @base_var_data_of_bounds B count make_name rb;
+                              let '(count, vb) := vb in
+                              Some (count, (va, vb)))
+                 | base.type.list base.type.Z
+                   => fun r
+                      => (ls <- r;
+                            n <- make_name count;
+                            Some (Pos.succ count,
+                                  (n,
+                                   match List.map (option_map int.of_zrange_relaxed) ls with
+                                   | nil => None
+                                   | cons x xs
+                                     => List.fold_right
+                                          (fun r1 r2 => r1 <- r1; r2 <- r2; Some (int.union r1 r2))
+                                          x
+                                          xs
+                                   end,
+                                   length ls)))
+                 | base.type.unit
+                   => fun _ => Some (count, tt)
+                 | base.type.list _
+                 | base.type.option _
+                 | base.type.type_base _
+                   => fun _ => None
+                 end%option.
 
-             Let make_assign_arg_1ref_opt
-                 (e : @Compilers.expr.expr base.type ident.ident var_data base.type.Z)
-                 (count : positive)
-                 (make_name : positive -> option string)
-               : ErrT (expr * var_data base.type.Z)
-               := let _ := @PHOAS.expr.partially_show_expr in
-                  let e1 := e in
-                  let '(rout, e) := match invert_Z_cast e with
-                                    | Some (r, e) => (Some (int.of_zrange_relaxed r), e)
-                                    | None => (None, e)
-                                    end%core in
-                  let res_ref
-                      := match invert_AppIdent_curried e with
-                         | Some (existT _ (idc, args))
-                           => args <- arith_expr_of_PHOAS_args args;
-                                idce <- recognize_1ref_ident idc rout args;
-                                v <- declare_name (show false idc) count make_name rout;
-                                let '(decls, n, retv) := v in
-                                ret ((decls ++ (idce retv))%list, (n, rout))
-                         | None => inr ["Invalid assignment of non-identifier-application: " ++ show false e]%string
-                         end in
-                  match res_ref with
-                  | inl res => ret res
-                  | inr _
-                    => e1 <- arith_expr_of_base_PHOAS e1 None;
-                         let '(e1, r1) := e1 in
-                         match make_name count with
-                         | Some n1
-                           => ret ([Assign true type.Z r1 n1 e1], (n1, r1))
-                         | None => inr ["Variable naming-function does not support the index " ++ show false count]%string
+            Definition var_data_of_bounds {t}
+                       (count : positive)
+                       (make_name : positive -> option string)
+              : ZRange.type.option.interp t -> option (positive * var_data t)
+              := match t with
+                 | type.base t => base_var_data_of_bounds count make_name
+                 | type.arrow s d => fun _ => None
+                 end.
+
+            Fixpoint expr_of_PHOAS'
+                     (do_bounds_check : bool)
+                     {t}
+                     (e : @Compilers.expr.expr base.type ident.ident var_data t)
+                     (make_in_name : positive -> option string)
+                     (make_name : positive -> option string)
+                     (inbounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
+                     (out_data : var_data (type.final_codomain t))
+                     (count : positive)
+                     (in_to_body_count : positive -> positive)
+                     {struct t}
+              : ErrT (type.for_each_lhs_of_arrow var_data t * var_data (type.final_codomain t) * expr)
+              := let _ := @PHOAS.expr.partially_show_expr in (* for TC resolution *)
+                 match t return @Compilers.expr.expr base.type ident.ident var_data t -> type.for_each_lhs_of_arrow ZRange.type.option.interp t -> var_data (type.final_codomain t) -> ErrT (type.for_each_lhs_of_arrow var_data t * var_data (type.final_codomain t) * expr) with
+                 | type.base t
+                   => fun e tt vd
+                      => rv <- expr_of_base_PHOAS do_bounds_check e (in_to_body_count count) make_name vd;
+                           ret (tt, vd, rv)
+                 | type.arrow s d
+                   => fun e '(inbound, inbounds) vd
+                      => match var_data_of_bounds count make_in_name inbound, invert_Abs e with
+                         | Some (count, vs), Some f
+                           => retv <- @expr_of_PHOAS' do_bounds_check d (f vs) make_in_name make_name inbounds vd count in_to_body_count;
+                                let '(vss, vd, rv) := retv in
+                                ret (vs, vss, vd, rv)
+                         | None, _ => inr ["Unable to bind names for all arguments and bounds at type " ++ show false s]%string%list
+                         | _, None => inr ["Invalid non-λ expression of arrow type (" ++ show false t ++ "): " ++ show true e]%string%list
                          end
-                  end.
+                 end%core%expr e inbounds out_data.
 
-             Let make_assign_arg_2ref
-                 (do_bounds_check : bool)
-                 (e : @Compilers.expr.expr base.type ident.ident var_data (base.type.Z * base.type.Z))
-                 (count : positive)
-                 (make_name : positive -> option string)
-               : ErrT (expr * var_data (base.type.Z * base.type.Z))
-               := let _ := @PHOAS.expr.partially_show_expr in
-                  let '((rout1, rout2), e)
-                      := match invert_Z_cast2 e with
-                         | Some ((r1, r2), e) => ((Some (int.of_zrange_relaxed r1), Some (int.of_zrange_relaxed r2)), e)
-                         | None => ((None, None), e)
-                         end%core in
-                  match invert_AppIdent_curried e with
-                  | Some (existT t (idc, args))
-                    => args <- arith_expr_of_PHOAS_args args;
-                         idce <- recognize_2ref_ident do_bounds_check idc (rout1, rout2) args;
-                         let '((rout1, rout2), idce) := idce in
-                         v1,, v2 <- (declare_name (show false idc) count make_name rout1,
-                                     declare_name (show false idc) (Pos.succ count) make_name rout2);
-                           let '(decls1, n1, retv1) := v1 in
-                           let '(decls2, n2, retv2) := v2 in
-                           ret (decls1 ++ decls2 ++ (idce (retv1, retv2)%Cexpr), ((n1, rout1), (n2, rout2)))%list
-                  | None => inr ["Invalid assignment of non-identifier-application: " ++ show false e]%string
-                  end.
+            Definition expr_of_PHOAS
+                       (do_bounds_check : bool)
+                       {t}
+                       (e : @Compilers.expr.expr base.type ident.ident var_data t)
+                       (make_in_name : positive -> option string)
+                       (make_out_name : positive -> option string)
+                       (make_name : positive -> option string)
+                       (inbounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
+                       (outbounds : ZRange.type.option.interp (type.final_codomain t))
+                       (count : positive)
+                       (in_to_body_count out_to_in_count : positive -> positive)
+              : ErrT (type.for_each_lhs_of_arrow var_data t * var_data (type.final_codomain t) * expr)
+              := match var_data_of_bounds count make_out_name outbounds with
+                 | Some vd
+                   => let '(count, vd) := vd in
+                      let count := out_to_in_count count in
+                      @expr_of_PHOAS' do_bounds_check t e make_in_name make_name inbounds vd count in_to_body_count
+                 | None => inr ["Unable to bind names for all return arguments and bounds at type " ++ show false (type.final_codomain t)]%string
+                 end.
 
-             Let make_assign_arg_ref
-                 (do_bounds_check : bool)
-                 {t}
-               : forall (e : @Compilers.expr.expr base.type ident.ident var_data t)
-                        (count : positive)
-                        (make_name : positive -> option string),
-                 ErrT (expr * var_data t)
-               := let _ := @PHOAS.expr.partially_show_expr in
-                  match t with
-                  | type.base base.type.Z => make_assign_arg_1ref_opt
-                  | type.base (base.type.Z * base.type.Z)%etype => make_assign_arg_2ref do_bounds_check
-                  | _ => fun e _ _ => inr ["Invalid type of assignment expression: " ++ show false t ++ " (with expression " ++ show true e ++ ")"]
-                  end.
-
-             Fixpoint size_of_type (t : base.type) : positive
-               := match t with
-                  | base.type.type_base t => 1
-                  | base.type.prod A B => size_of_type A + size_of_type B
-                  | base.type.list A => 1
-                  | base.type.option A => 1
-                  end%positive.
-
-             Let make_uniform_assign_expr_of_PHOAS
-                 (do_bounds_check : bool)
-                 {s} (e1 : @Compilers.expr.expr base.type ident.ident var_data s)
-                 {d} (e2 : var_data s -> var_data d -> ErrT expr)
-                 (count : positive)
-                 (make_name : positive -> option string)
-                 (vd : var_data d)
-               : ErrT expr
-               := let _ := @PHOAS.expr.partially_show_expr in (* for TC resolution *)
-                  e1_vs <- make_assign_arg_ref do_bounds_check e1 count make_name;
-                    let '(e1, vs) := e1_vs in
-                    e2 <- e2 vs vd;
-                      ret (e1 ++ e2)%list.
-
-             (* See above comment about extraction issues *)
-             Definition make_assign_expr_of_PHOAS
-                        (do_bounds_check : bool)
-                        {s} (e1 : @Compilers.expr.expr base.type ident.ident var_data s)
-                        {s' d} (e2 : var_data s' -> var_data d -> ErrT expr)
-                        (count : positive)
-                        (make_name : positive -> option string)
-                        (v : var_data d)
-               : ErrT expr
-               := Eval cbv beta iota delta [bind2_err bind3_err bind4_err bind5_err recognize_1ref_ident recognize_3arg_2ref_ident recognize_4arg_2ref_ident recognize_2ref_ident make_assign_arg_1ref_opt make_assign_arg_2ref make_assign_arg_ref make_uniform_assign_expr_of_PHOAS make_uniform_assign_expr_of_PHOAS round_up_to_split_type] in
-                   match type.try_transport base.try_make_transport_cps _ _ s' e1 with
-                   | Some e1 => make_uniform_assign_expr_of_PHOAS do_bounds_check e1 e2 count make_name v
-                   | None => inr [report_type_mismatch s' s]
-                   end.
-
-             Fixpoint expr_of_base_PHOAS
-                      (do_bounds_check : bool)
-                      {t}
-                      (e : @Compilers.expr.expr base.type ident.ident var_data t)
-                      (count : positive)
-                      (make_name : positive -> option string)
-                      {struct e}
-               : forall (ret_val : var_data t), ErrT expr
-               := match e in expr.expr t return var_data t -> ErrT expr with
-                  | expr.LetIn (type.base s) d e1 e2
-                    => make_assign_expr_of_PHOAS
-                         do_bounds_check
-                         e1
-                         (fun vs vd => @expr_of_base_PHOAS do_bounds_check d (e2 vs) (size_of_type s + count)%positive make_name vd)
-                         count make_name
-                  | expr.LetIn (type.arrow _ _) _ _ _ as e
-                  | expr.Var _ _ as e
-                  | expr.Ident _ _ as e
-                  | expr.App _ _ _ _ as e
-                  | expr.Abs _ _ _ as e
-                    => fun v => make_return_assignment_of_arith v e
-                  end%expr_pat%option.
-
-             Fixpoint base_var_data_of_bounds {t}
-                      (count : positive)
-                      (make_name : positive -> option string)
-                      {struct t}
-               : ZRange.type.base.option.interp t -> option (positive * var_data t)
-               := match t return ZRange.type.base.option.interp t -> option (positive * var_data t) with
-                  | base.type.Z
-                    => fun r => (n <- make_name count;
-                                   Some (Pos.succ count, (n, option_map int.of_zrange_relaxed r)))
-                  | base.type.prod A B
-                    => fun '(ra, rb)
-                       => (va <- @base_var_data_of_bounds A count make_name ra;
-                             let '(count, va) := va in
-                             vb <- @base_var_data_of_bounds B count make_name rb;
-                               let '(count, vb) := vb in
-                               Some (count, (va, vb)))
-                  | base.type.list base.type.Z
-                    => fun r
-                       => (ls <- r;
-                             n <- make_name count;
-                             Some (Pos.succ count,
-                                   (n,
-                                    match List.map (option_map int.of_zrange_relaxed) ls with
-                                    | nil => None
-                                    | cons x xs
-                                      => List.fold_right
-                                           (fun r1 r2 => r1 <- r1; r2 <- r2; Some (int.union r1 r2))
-                                           x
-                                           xs
-                                    end,
-                                    length ls)))
-                  | base.type.unit
-                    => fun _ => Some (count, tt)
-                  | base.type.list _
-                  | base.type.option _
-                  | base.type.type_base _
-                    => fun _ => None
-                  end%option.
-
-             Definition var_data_of_bounds {t}
-                        (count : positive)
-                        (make_name : positive -> option string)
-               : ZRange.type.option.interp t -> option (positive * var_data t)
-               := match t with
-                  | type.base t => base_var_data_of_bounds count make_name
-                  | type.arrow s d => fun _ => None
-                  end.
-
-             Fixpoint expr_of_PHOAS'
-                      (do_bounds_check : bool)
-                      {t}
-                      (e : @Compilers.expr.expr base.type ident.ident var_data t)
-                      (make_in_name : positive -> option string)
-                      (make_name : positive -> option string)
-                      (inbounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
-                      (out_data : var_data (type.final_codomain t))
-                      (count : positive)
-                      (in_to_body_count : positive -> positive)
-                      {struct t}
-               : ErrT (type.for_each_lhs_of_arrow var_data t * var_data (type.final_codomain t) * expr)
-               := let _ := @PHOAS.expr.partially_show_expr in (* for TC resolution *)
-                  match t return @Compilers.expr.expr base.type ident.ident var_data t -> type.for_each_lhs_of_arrow ZRange.type.option.interp t -> var_data (type.final_codomain t) -> ErrT (type.for_each_lhs_of_arrow var_data t * var_data (type.final_codomain t) * expr) with
-                  | type.base t
-                    => fun e tt vd
-                       => rv <- expr_of_base_PHOAS do_bounds_check e (in_to_body_count count) make_name vd;
-                            ret (tt, vd, rv)
-                  | type.arrow s d
-                    => fun e '(inbound, inbounds) vd
-                       => match var_data_of_bounds count make_in_name inbound, invert_Abs e with
-                          | Some (count, vs), Some f
-                            => retv <- @expr_of_PHOAS' do_bounds_check d (f vs) make_in_name make_name inbounds vd count in_to_body_count;
-                                 let '(vss, vd, rv) := retv in
-                                 ret (vs, vss, vd, rv)
-                          | None, _ => inr ["Unable to bind names for all arguments and bounds at type " ++ show false s]%string%list
-                          | _, None => inr ["Invalid non-λ expression of arrow type (" ++ show false t ++ "): " ++ show true e]%string%list
-                          end
-                  end%core%expr e inbounds out_data.
-
-             Definition expr_of_PHOAS
-                        (do_bounds_check : bool)
-                        {t}
-                        (e : @Compilers.expr.expr base.type ident.ident var_data t)
-                        (make_in_name : positive -> option string)
-                        (make_out_name : positive -> option string)
-                        (make_name : positive -> option string)
-                        (inbounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
-                        (outbounds : ZRange.type.option.interp (type.final_codomain t))
-                        (count : positive)
-                        (in_to_body_count out_to_in_count : positive -> positive)
-               : ErrT (type.for_each_lhs_of_arrow var_data t * var_data (type.final_codomain t) * expr)
-               := match var_data_of_bounds count make_out_name outbounds with
-                  | Some vd
-                    => let '(count, vd) := vd in
-                       let count := out_to_in_count count in
-                       @expr_of_PHOAS' do_bounds_check t e make_in_name make_name inbounds vd count in_to_body_count
-                  | None => inr ["Unable to bind names for all return arguments and bounds at type " ++ show false (type.final_codomain t)]%string
-                  end.
-
-             Definition ExprOfPHOAS
-                        (do_bounds_check : bool)
-                        {t}
-                        (e : @Compilers.expr.Expr base.type ident.ident t)
-                        (name_list : option (list string))
-                        (inbounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
-               : ErrT (type.for_each_lhs_of_arrow var_data t * var_data (type.final_codomain t) * expr)
-               := (let outbounds := partial.Extract e inbounds in
-                   let make_name_gen prefix := match name_list with
-                                               | None => fun p => Some (prefix ++ decimal_string_of_Z (Zpos p))
-                                               | Some ls => fun p => List.nth_error ls (pred (Pos.to_nat p))
-                                               end in
-                   let make_in_name := make_name_gen "arg" in
-                   let make_out_name := make_name_gen "out" in
-                   let make_name := make_name_gen "x" in
-                   let reset_if_names_given := match name_list with
-                                               | Some _ => fun p : positive => p
-                                               | None => fun _ : positive => 1%positive
-                                               end in
-                   expr_of_PHOAS do_bounds_check (e _) make_in_name make_out_name make_name inbounds outbounds 1 reset_if_names_given reset_if_names_given).
+            Definition ExprOfPHOAS
+                       (do_bounds_check : bool)
+                       {t}
+                       (e : @Compilers.expr.Expr base.type ident.ident t)
+                       (name_list : option (list string))
+                       (inbounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
+              : ErrT (type.for_each_lhs_of_arrow var_data t * var_data (type.final_codomain t) * expr)
+              := (let outbounds := partial.Extract e inbounds in
+                  let make_name_gen prefix := match name_list with
+                                              | None => fun p => Some (prefix ++ decimal_string_of_Z (Zpos p))
+                                              | Some ls => fun p => List.nth_error ls (pred (Pos.to_nat p))
+                                              end in
+                  let make_in_name := make_name_gen "arg" in
+                  let make_out_name := make_name_gen "out" in
+                  let make_name := make_name_gen "x" in
+                  let reset_if_names_given := match name_list with
+                                              | Some _ => fun p : positive => p
+                                              | None => fun _ : positive => 1%positive
+                                              end in
+                  expr_of_PHOAS do_bounds_check (e _) make_in_name make_out_name make_name inbounds outbounds 1 reset_if_names_given reset_if_names_given).
           End with_bind.
         End __.
       End OfPHOAS.
