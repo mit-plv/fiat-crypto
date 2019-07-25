@@ -10,18 +10,23 @@ Delimit Scope ctype_scope with ctype.
 Local Open Scope ctype_scope.
 Delimit Scope expr_scope with expr.
 Local Open Scope expr_scope.
+Inductive flat_type (base_type_code : Type)
+  := Tbase (T : base_type_code) | Unit | Prod (A B : flat_type).
+Bind Scope ctype_scope with flat_type.
+
 Section language.
   Context (base_type_code : Type).
 
-  Inductive flat_type := Tbase (T : base_type_code) | Unit | Prod (A B : flat_type).
-  Bind Scope ctype_scope with flat_type.
+  Local Notation flat_type := (flat_type base_type_code).
+  Local Notation Tbase := (Tbase _).
+  Local Notation Unit := (Unit _).
+  Local Notation Prod := (Prod _).
 
   Inductive type := Arrow (A : flat_type) (B : flat_type).
   Bind Scope ctype_scope with type.
 
   Infix "*" := Prod : ctype_scope.
   Notation "A -> B" := (Arrow A B) : ctype_scope.
-  Local Coercion Tbase : base_type_code >-> flat_type.
 
   Section tuple.
     Context (T : flat_type).
@@ -71,7 +76,7 @@ Section language.
       (** N.B. [Let] binds the components of a pair to separate variables, and does so recursively *)
       Inductive exprf : flat_type -> Type :=
       | TT : exprf Unit
-      | Var {t} (v : var t) : exprf t
+      | Var {t} (v : var t) : exprf (Tbase t)
       | Op {t1 tR} (opc : op t1 tR) (args : exprf t1) : exprf tR
       | LetIn {tx} (ex : exprf tx) {tC} (eC : interp_flat_type_gen var tx -> exprf tC) : exprf tC
       | Pair {tx} (ex : exprf tx) {ty} (ey : exprf ty) : exprf (Prod tx ty).
@@ -87,8 +92,8 @@ Section language.
       Context (interp_op : forall src dst, op src dst -> interp_flat_type src -> interp_flat_type dst).
 
       Definition interpf_step
-                 (interpf : forall {t} (e : @exprf interp_flat_type t), interp_flat_type t)
-                 {t} (e : @exprf interp_flat_type t) : interp_flat_type t
+                 (interpf : forall {t} (e : @exprf interp_base_type t), interp_flat_type t)
+                 {t} (e : @exprf interp_base_type t) : interp_flat_type t
         := match e in exprf t return interp_flat_type t with
            | TT => tt
            | Var _ x => x
