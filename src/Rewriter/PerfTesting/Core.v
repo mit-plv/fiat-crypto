@@ -29,6 +29,10 @@ Local Open Scope list_scope.
 Local Open Scope option_scope.
 Global Open Scope Z_scope.
 
+(* replace this with vm_compute and the next fail with idtac to enable the precomputed versions *)
+Declare Reduction precompute := cbv iota.
+Ltac check_precomputed_enabled := fail 0 "Precomputed tests are disabled".
+
 Import
   Language.Compilers
   AbstractInterpretation.Compilers
@@ -86,7 +90,7 @@ Module Import UnsaturatedSolinas.
 
   Definition GallinaAxOf (p : params) : Dyn
     := dyn (fun f g : list Z => ModOpsAx.carry_mulmod (Qnum limbwidth) (Zpos (Qden limbwidth)) s c n idxs (RT_ExtraAx.expand_list 0 f n) (RT_ExtraAx.expand_list 0 g n)).
-  Time Definition GallinaAxComputedOf := Eval vm_compute in GallinaAxOf.
+  Time Definition GallinaAxComputedOf := Eval precompute in GallinaAxOf.
   Definition GallinaDefOf (p : params) : Dyn
     := dyn (fun f g : list Z => ModOpsDef.carry_mulmod (Qnum limbwidth) (Zpos (Qden limbwidth)) s c n idxs (RT_ExtraDef.expand_list 0 f n) (RT_ExtraDef.expand_list 0 g n)).
 
@@ -178,6 +182,7 @@ Module Import UnsaturatedSolinas.
     let p := compute_p prime bitwidth index in perfGallinaAxOf' prime bitwidth index p.
 
   Ltac perfGallinaAxComputedOf' prime bitwidth index p :=
+    check_precomputed_enabled;
     lazymatch p with
     | Some ?p
       => idtac_and_time prime bitwidth index p "GallinaAxComputedOf with vm_compute" (fun _ => let __ := eval vm_compute in (GallinaAxComputedOf p) in idtac);
@@ -186,6 +191,7 @@ Module Import UnsaturatedSolinas.
     | None => idtac
     end.
   Ltac perfGallinaAxComputedOf prime bitwidth index :=
+    check_precomputed_enabled;
     let p := compute_p prime bitwidth index in perfGallinaAxComputedOf' prime bitwidth index p.
 
   Ltac perfPipelineOf' prime bitwidth index p :=
@@ -283,7 +289,7 @@ Module Import WordByWordMontgomery.
 
   Definition GallinaAxOf (p : params) : Dyn
     := dyn (fun f g : list Z => WordByWordMontgomeryAx.mulmod machine_wordsize n m m' (RT_ExtraAx.expand_list 0 f n) (RT_ExtraAx.expand_list 0 g n)).
-  Time Definition GallinaAxComputedOf := Eval vm_compute in GallinaAxOf.
+  Time Definition GallinaAxComputedOf := Eval precompute in GallinaAxOf.
   Definition GallinaDefOf (p : params) : Dyn
     := dyn (fun f g : list Z => WordByWordMontgomeryDef.mulmod machine_wordsize n m m' (RT_ExtraDef.expand_list 0 f n) (RT_ExtraDef.expand_list 0 g n)).
 
@@ -372,6 +378,7 @@ Module Import WordByWordMontgomery.
     let p := compute_p prime bitwidth in perfGallinaAxOf' prime bitwidth p.
 
   Ltac perfGallinaAxComputedOf' prime bitwidth p :=
+    check_precomputed_enabled;
     lazymatch p with
     | Some ?p
       => idtac_and_time prime bitwidth p "GallinaAxComputedOf with vm_compute" (fun _ => let __ := eval vm_compute in (GallinaAxComputedOf p) in idtac);
@@ -380,6 +387,7 @@ Module Import WordByWordMontgomery.
     | None => idtac
     end.
   Ltac perfGallinaAxComputedOf prime bitwidth :=
+    check_precomputed_enabled;
     let p := compute_p prime bitwidth in perfGallinaAxComputedOf' prime bitwidth p.
 
   Ltac perfPipelineOf' prime bitwidth p :=
