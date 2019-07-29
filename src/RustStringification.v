@@ -33,8 +33,8 @@ Module Rust.
            else [])
        ++ (if PositiveSet.mem 128 bitwidths_used
            then ["pub type " ++ prefix ++ "u128 = u128;"; (* Since 128 bit integers exist in (nightly) rust consider removing the *)
-                                                      (* type synonym and extending stdint_ditwidths *)
-                   "pub type " ++ prefix ++ "i128 = i128;"]%string
+                                                          (* type synonym and extending stdint_ditwidths *)
+                 "pub type " ++ prefix ++ "i128 = i128;"]%string
            else []))%list.
 
   (* Supported integer bitwidths *)
@@ -363,26 +363,26 @@ Module Rust.
              (inbounds : type.for_each_lhs_of_arrow Compilers.ZRange.type.option.interp t)
              (outbounds : Compilers.ZRange.type.base.option.interp (type.final_codomain t))
     : (list string * ToString.ident_infos) + string :=
-    := match ExprOfPHOAS do_bounds_check e name_list inbounds with
-       | inl (indata, outdata, f) =>
-         inl ((["/*"%string]
-                 ++ (List.map (fun s => if (String.length s =? 0)%nat then " *" else (" * " ++ s))%string (comment indata outdata))
-                 ++ [" * Input Bounds:"%string]
-                 ++ List.map (fun v => " *   "%string ++ v)%string (input_bounds_to_string indata inbounds)
-                 ++ [" * Output Bounds:"%string]
-                 ++ List.map (fun v => " *   "%string ++ v)%string (bound_to_string outdata outbounds)
-                 ++ [" */"%string]
-                 ++ to_function_lines static prefix name (indata, outdata, f))%list,
-                 (* Zoe: This is a function in the CStringification file,
-                    consider moving this elsewhere? *)
-                 Compilers.ToString.C.collect_infos f)
-       | inr nil =>
-         inr ("Unknown internal error in converting " ++ name ++ " to Rust")%string
-       | inr [err] =>
-         inr ("Error in converting " ++ name ++ " to Rust:" ++ String.NewLine ++ err)%string
-       | inr errs =>
-         inr ("Errors in converting " ++ name ++ " to Rust:" ++ String.NewLine ++ String.concat String.NewLine errs)%string
-       end.
+    match ExprOfPHOAS do_bounds_check e name_list inbounds with
+    | inl (indata, outdata, f) =>
+      inl ((["/*"%string]
+              ++ (List.map (fun s => if (String.length s =? 0)%nat then " *" else (" * " ++ s))%string (comment indata outdata))
+              ++ [" * Input Bounds:"%string]
+              ++ List.map (fun v => " *   "%string ++ v)%string (input_bounds_to_string indata inbounds)
+              ++ [" * Output Bounds:"%string]
+              ++ List.map (fun v => " *   "%string ++ v)%string (bound_to_string outdata outbounds)
+              ++ [" */"%string]
+              ++ to_function_lines static prefix name (indata, outdata, f))%list,
+           (* Zoe: This is a function in the CStringification file,
+              consider moving this elsewhere? *)
+           Compilers.ToString.C.collect_infos f)
+    | inr nil =>
+      inr ("Unknown internal error in converting " ++ name ++ " to Rust")%string
+    | inr [err] =>
+      inr ("Error in converting " ++ name ++ " to Rust:" ++ String.NewLine ++ err)%string
+    | inr errs =>
+      inr ("Errors in converting " ++ name ++ " to Rust:" ++ String.NewLine ++ String.concat String.NewLine errs)%string
+    end.
 
   Definition OutputRustAPI : ToString.OutputLanguageAPI :=
     {| ToString.comment_block := List.map (fun line => "/* " ++ line ++ " */")%string;

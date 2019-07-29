@@ -8,11 +8,12 @@
 /* Computed values: */
 /* carry_chain = [0, 1, 2, 3, 4, 0, 1] */
 
+#![allow(unused_parens)]
 use std::prelude;
-type fiat_25519_u1 = u8;
-type fiat_25519_i1 = i8;
-type fiat_25519_u128 = u128;
-type fiat_25519_i128 = i128;
+pub type fiat_25519_u1 = u8;
+pub type fiat_25519_i1 = i8;
+pub type fiat_25519_u128 = u128;
+pub type fiat_25519_i128 = i128;
 
 
 /*
@@ -29,9 +30,9 @@ type fiat_25519_i128 = i128;
  *   out1: [0x0 ~> 0x7ffffffffffff]
  *   out2: [0x0 ~> 0x1]
  */
-fn fiat_25519_addcarryx_u51(out1: &mut u64, out2: &mut fiat_25519_u1, arg1: fiat_25519_u1, arg2: u64, arg3: u64) -> () {
+pub fn fiat_25519_addcarryx_u51(out1: &mut u64, out2: &mut fiat_25519_u1, arg1: fiat_25519_u1, arg2: u64, arg3: u64) -> () {
   let x1: u64 = (((arg1 as u64) + arg2) + arg3);
-  let x2: u64 = (x1 & (0x7ffffffffffff as u64));
+  let x2: u64 = (x1 & 0x7ffffffffffff);
   let x3: fiat_25519_u1 = ((x1 >> 51) as fiat_25519_u1);
   *out1 = x2;
   *out2 = x3;
@@ -51,12 +52,12 @@ fn fiat_25519_addcarryx_u51(out1: &mut u64, out2: &mut fiat_25519_u1, arg1: fiat
  *   out1: [0x0 ~> 0x7ffffffffffff]
  *   out2: [0x0 ~> 0x1]
  */
-fn fiat_25519_subborrowx_u51(out1: &mut u64, out2: &mut fiat_25519_u1, arg1: fiat_25519_u1, arg2: u64, arg3: u64) -> () {
-  let x1: i64 = (((((arg2 - (arg1 as u64)) as i64) as u64) - arg3) as i64);
+pub fn fiat_25519_subborrowx_u51(out1: &mut u64, out2: &mut fiat_25519_u1, arg1: fiat_25519_u1, arg2: u64, arg3: u64) -> () {
+  let x1: i64 = (((arg2 as i64) - (arg1 as i64)) - (arg3 as i64));
   let x2: fiat_25519_i1 = ((x1 >> 51) as fiat_25519_i1);
-  let x3: u64 = ((x1 as u64) & (0x7ffffffffffff as u64));
+  let x3: u64 = ((x1 as u64) & 0x7ffffffffffff);
   *out1 = x3;
-  *out2 = (0x0 - (x2 as fiat_25519_u1));
+  *out2 = (((0x0 as fiat_25519_i1) - x2) as fiat_25519_u1);
 }
 
 /*
@@ -71,9 +72,9 @@ fn fiat_25519_subborrowx_u51(out1: &mut u64, out2: &mut fiat_25519_u1, arg1: fia
  * Output Bounds:
  *   out1: [0x0 ~> 0xffffffffffffffff]
  */
-fn fiat_25519_cmovznz_u64(out1: &mut u64, arg1: fiat_25519_u1, arg2: u64, arg3: u64) -> () {
+pub fn fiat_25519_cmovznz_u64(out1: &mut u64, arg1: fiat_25519_u1, arg2: u64, arg3: u64) -> () {
   let x1: fiat_25519_u1 = (!(!arg1));
-  let x2: u64 = ((((0x0 - x1) as fiat_25519_i1) as u64) & (0xffffffffffffffff as u64));
+  let x2: u64 = ((((0x0 as fiat_25519_i1) - (x1 as fiat_25519_i1)) as u64) & 0xffffffffffffffff);
   let x3: u64 = ((x2 & arg3) | ((!x2) & arg2));
   *out1 = x3;
 }
@@ -89,17 +90,17 @@ fn fiat_25519_cmovznz_u64(out1: &mut u64, arg1: fiat_25519_u1, arg2: u64, arg3: 
  * Output Bounds:
  *   out1: [[0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc]]
  */
-fn fiat_25519_carry_mul(out1: &mut [u64; 5], arg1: &[u64; 5], arg2: &[u64; 5]) -> () {
-  let x1: fiat_25519_u128 = (((arg1[4]) as fiat_25519_u128) * (((arg2[4]) * ((0x13 as u8) as u64)) as fiat_25519_u128));
-  let x2: fiat_25519_u128 = (((arg1[4]) as fiat_25519_u128) * (((arg2[3]) * ((0x13 as u8) as u64)) as fiat_25519_u128));
-  let x3: fiat_25519_u128 = (((arg1[4]) as fiat_25519_u128) * (((arg2[2]) * ((0x13 as u8) as u64)) as fiat_25519_u128));
-  let x4: fiat_25519_u128 = (((arg1[4]) as fiat_25519_u128) * (((arg2[1]) * ((0x13 as u8) as u64)) as fiat_25519_u128));
-  let x5: fiat_25519_u128 = (((arg1[3]) as fiat_25519_u128) * (((arg2[4]) * ((0x13 as u8) as u64)) as fiat_25519_u128));
-  let x6: fiat_25519_u128 = (((arg1[3]) as fiat_25519_u128) * (((arg2[3]) * ((0x13 as u8) as u64)) as fiat_25519_u128));
-  let x7: fiat_25519_u128 = (((arg1[3]) as fiat_25519_u128) * (((arg2[2]) * ((0x13 as u8) as u64)) as fiat_25519_u128));
-  let x8: fiat_25519_u128 = (((arg1[2]) as fiat_25519_u128) * (((arg2[4]) * ((0x13 as u8) as u64)) as fiat_25519_u128));
-  let x9: fiat_25519_u128 = (((arg1[2]) as fiat_25519_u128) * (((arg2[3]) * ((0x13 as u8) as u64)) as fiat_25519_u128));
-  let x10: fiat_25519_u128 = (((arg1[1]) as fiat_25519_u128) * (((arg2[4]) * ((0x13 as u8) as u64)) as fiat_25519_u128));
+pub fn fiat_25519_carry_mul(out1: &mut [u64; 5], arg1: &[u64; 5], arg2: &[u64; 5]) -> () {
+  let x1: fiat_25519_u128 = (((arg1[4]) as fiat_25519_u128) * (((arg2[4]) * (0x13 as u64)) as fiat_25519_u128));
+  let x2: fiat_25519_u128 = (((arg1[4]) as fiat_25519_u128) * (((arg2[3]) * (0x13 as u64)) as fiat_25519_u128));
+  let x3: fiat_25519_u128 = (((arg1[4]) as fiat_25519_u128) * (((arg2[2]) * (0x13 as u64)) as fiat_25519_u128));
+  let x4: fiat_25519_u128 = (((arg1[4]) as fiat_25519_u128) * (((arg2[1]) * (0x13 as u64)) as fiat_25519_u128));
+  let x5: fiat_25519_u128 = (((arg1[3]) as fiat_25519_u128) * (((arg2[4]) * (0x13 as u64)) as fiat_25519_u128));
+  let x6: fiat_25519_u128 = (((arg1[3]) as fiat_25519_u128) * (((arg2[3]) * (0x13 as u64)) as fiat_25519_u128));
+  let x7: fiat_25519_u128 = (((arg1[3]) as fiat_25519_u128) * (((arg2[2]) * (0x13 as u64)) as fiat_25519_u128));
+  let x8: fiat_25519_u128 = (((arg1[2]) as fiat_25519_u128) * (((arg2[4]) * (0x13 as u64)) as fiat_25519_u128));
+  let x9: fiat_25519_u128 = (((arg1[2]) as fiat_25519_u128) * (((arg2[3]) * (0x13 as u64)) as fiat_25519_u128));
+  let x10: fiat_25519_u128 = (((arg1[1]) as fiat_25519_u128) * (((arg2[4]) * (0x13 as u64)) as fiat_25519_u128));
   let x11: fiat_25519_u128 = (((arg1[4]) as fiat_25519_u128) * ((arg2[0]) as fiat_25519_u128));
   let x12: fiat_25519_u128 = (((arg1[3]) as fiat_25519_u128) * ((arg2[1]) as fiat_25519_u128));
   let x13: fiat_25519_u128 = (((arg1[3]) as fiat_25519_u128) * ((arg2[0]) as fiat_25519_u128));
@@ -117,30 +118,30 @@ fn fiat_25519_carry_mul(out1: &mut [u64; 5], arg1: &[u64; 5], arg2: &[u64; 5]) -
   let x25: fiat_25519_u128 = (((arg1[0]) as fiat_25519_u128) * ((arg2[0]) as fiat_25519_u128));
   let x26: fiat_25519_u128 = (x25 + (x10 + (x9 + (x7 + x4))));
   let x27: u64 = ((x26 >> 51) as u64);
-  let x28: u64 = ((x26 & ((0x7ffffffffffff as u64) as fiat_25519_u128)) as u64);
+  let x28: u64 = ((x26 & 0x7ffffffffffff) as u64);
   let x29: fiat_25519_u128 = (x21 + (x17 + (x14 + (x12 + x11))));
   let x30: fiat_25519_u128 = (x22 + (x18 + (x15 + (x13 + x1))));
   let x31: fiat_25519_u128 = (x23 + (x19 + (x16 + (x5 + x2))));
   let x32: fiat_25519_u128 = (x24 + (x20 + (x8 + (x6 + x3))));
   let x33: fiat_25519_u128 = ((x27 as fiat_25519_u128) + x32);
   let x34: u64 = ((x33 >> 51) as u64);
-  let x35: u64 = ((x33 & ((0x7ffffffffffff as u64) as fiat_25519_u128)) as u64);
+  let x35: u64 = ((x33 & 0x7ffffffffffff) as u64);
   let x36: fiat_25519_u128 = ((x34 as fiat_25519_u128) + x31);
   let x37: u64 = ((x36 >> 51) as u64);
-  let x38: u64 = ((x36 & ((0x7ffffffffffff as u64) as fiat_25519_u128)) as u64);
+  let x38: u64 = ((x36 & 0x7ffffffffffff) as u64);
   let x39: fiat_25519_u128 = ((x37 as fiat_25519_u128) + x30);
   let x40: u64 = ((x39 >> 51) as u64);
-  let x41: u64 = ((x39 & ((0x7ffffffffffff as u64) as fiat_25519_u128)) as u64);
+  let x41: u64 = ((x39 & 0x7ffffffffffff) as u64);
   let x42: fiat_25519_u128 = ((x40 as fiat_25519_u128) + x29);
   let x43: u64 = ((x42 >> 51) as u64);
-  let x44: u64 = ((x42 & ((0x7ffffffffffff as u64) as fiat_25519_u128)) as u64);
-  let x45: u64 = (x43 * ((0x13 as u8) as u64));
+  let x44: u64 = ((x42 & 0x7ffffffffffff) as u64);
+  let x45: u64 = (x43 * (0x13 as u64));
   let x46: u64 = (x28 + x45);
   let x47: u64 = (x46 >> 51);
-  let x48: u64 = (x46 & (0x7ffffffffffff as u64));
+  let x48: u64 = (x46 & 0x7ffffffffffff);
   let x49: u64 = (x47 + x35);
   let x50: u64 = (x49 >> 51);
-  let x51: u64 = (x49 & (0x7ffffffffffff as u64));
+  let x51: u64 = (x49 & 0x7ffffffffffff);
   let x52: u64 = (x50 + x38);
   out1[0] = x48;
   out1[1] = x51;
@@ -159,11 +160,11 @@ fn fiat_25519_carry_mul(out1: &mut [u64; 5], arg1: &[u64; 5], arg2: &[u64; 5]) -
  * Output Bounds:
  *   out1: [[0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc]]
  */
-fn fiat_25519_carry_square(out1: &mut [u64; 5], arg1: &[u64; 5]) -> () {
-  let x1: u64 = ((arg1[4]) * ((0x13 as u8) as u64));
+pub fn fiat_25519_carry_square(out1: &mut [u64; 5], arg1: &[u64; 5]) -> () {
+  let x1: u64 = ((arg1[4]) * (0x13 as u64));
   let x2: u64 = (x1 * (0x2 as u64));
   let x3: u64 = ((arg1[4]) * (0x2 as u64));
-  let x4: u64 = ((arg1[3]) * ((0x13 as u8) as u64));
+  let x4: u64 = ((arg1[3]) * (0x13 as u64));
   let x5: u64 = (x4 * (0x2 as u64));
   let x6: u64 = ((arg1[3]) * (0x2 as u64));
   let x7: u64 = ((arg1[2]) * (0x2 as u64));
@@ -185,30 +186,30 @@ fn fiat_25519_carry_square(out1: &mut [u64; 5], arg1: &[u64; 5]) -> () {
   let x23: fiat_25519_u128 = (((arg1[0]) as fiat_25519_u128) * ((arg1[0]) as fiat_25519_u128));
   let x24: fiat_25519_u128 = (x23 + (x15 + x13));
   let x25: u64 = ((x24 >> 51) as u64);
-  let x26: u64 = ((x24 & ((0x7ffffffffffff as u64) as fiat_25519_u128)) as u64);
+  let x26: u64 = ((x24 & 0x7ffffffffffff) as u64);
   let x27: fiat_25519_u128 = (x19 + (x16 + x14));
   let x28: fiat_25519_u128 = (x20 + (x17 + x9));
   let x29: fiat_25519_u128 = (x21 + (x18 + x10));
   let x30: fiat_25519_u128 = (x22 + (x12 + x11));
   let x31: fiat_25519_u128 = ((x25 as fiat_25519_u128) + x30);
   let x32: u64 = ((x31 >> 51) as u64);
-  let x33: u64 = ((x31 & ((0x7ffffffffffff as u64) as fiat_25519_u128)) as u64);
+  let x33: u64 = ((x31 & 0x7ffffffffffff) as u64);
   let x34: fiat_25519_u128 = ((x32 as fiat_25519_u128) + x29);
   let x35: u64 = ((x34 >> 51) as u64);
-  let x36: u64 = ((x34 & ((0x7ffffffffffff as u64) as fiat_25519_u128)) as u64);
+  let x36: u64 = ((x34 & 0x7ffffffffffff) as u64);
   let x37: fiat_25519_u128 = ((x35 as fiat_25519_u128) + x28);
   let x38: u64 = ((x37 >> 51) as u64);
-  let x39: u64 = ((x37 & ((0x7ffffffffffff as u64) as fiat_25519_u128)) as u64);
+  let x39: u64 = ((x37 & 0x7ffffffffffff) as u64);
   let x40: fiat_25519_u128 = ((x38 as fiat_25519_u128) + x27);
   let x41: u64 = ((x40 >> 51) as u64);
-  let x42: u64 = ((x40 & ((0x7ffffffffffff as u64) as fiat_25519_u128)) as u64);
-  let x43: u64 = (x41 * ((0x13 as u8) as u64));
+  let x42: u64 = ((x40 & 0x7ffffffffffff) as u64);
+  let x43: u64 = (x41 * (0x13 as u64));
   let x44: u64 = (x26 + x43);
   let x45: u64 = (x44 >> 51);
-  let x46: u64 = (x44 & (0x7ffffffffffff as u64));
+  let x46: u64 = (x44 & 0x7ffffffffffff);
   let x47: u64 = (x45 + x33);
   let x48: u64 = (x47 >> 51);
-  let x49: u64 = (x47 & (0x7ffffffffffff as u64));
+  let x49: u64 = (x47 & 0x7ffffffffffff);
   let x50: u64 = (x48 + x36);
   out1[0] = x46;
   out1[1] = x49;
@@ -227,19 +228,19 @@ fn fiat_25519_carry_square(out1: &mut [u64; 5], arg1: &[u64; 5]) -> () {
  * Output Bounds:
  *   out1: [[0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc]]
  */
-fn fiat_25519_carry(out1: &mut [u64; 5], arg1: &[u64; 5]) -> () {
+pub fn fiat_25519_carry(out1: &mut [u64; 5], arg1: &[u64; 5]) -> () {
   let x1: u64 = (arg1[0]);
   let x2: u64 = ((x1 >> 51) + (arg1[1]));
   let x3: u64 = ((x2 >> 51) + (arg1[2]));
   let x4: u64 = ((x3 >> 51) + (arg1[3]));
   let x5: u64 = ((x4 >> 51) + (arg1[4]));
-  let x6: u64 = ((x1 & (0x7ffffffffffff as u64)) + ((x5 >> 51) * ((0x13 as u8) as u64)));
-  let x7: u64 = ((x6 >> 51) + (x2 & (0x7ffffffffffff as u64)));
-  let x8: u64 = (x6 & (0x7ffffffffffff as u64));
-  let x9: u64 = (x7 & (0x7ffffffffffff as u64));
-  let x10: u64 = ((x7 >> 51) + (x3 & (0x7ffffffffffff as u64)));
-  let x11: u64 = (x4 & (0x7ffffffffffff as u64));
-  let x12: u64 = (x5 & (0x7ffffffffffff as u64));
+  let x6: u64 = ((x1 & 0x7ffffffffffff) + ((x5 >> 51) * (0x13 as u64)));
+  let x7: u64 = ((x6 >> 51) + (x2 & 0x7ffffffffffff));
+  let x8: u64 = (x6 & 0x7ffffffffffff);
+  let x9: u64 = (x7 & 0x7ffffffffffff);
+  let x10: u64 = ((x7 >> 51) + (x3 & 0x7ffffffffffff));
+  let x11: u64 = (x4 & 0x7ffffffffffff);
+  let x12: u64 = (x5 & 0x7ffffffffffff);
   out1[0] = x8;
   out1[1] = x9;
   out1[2] = x10;
@@ -258,7 +259,7 @@ fn fiat_25519_carry(out1: &mut [u64; 5], arg1: &[u64; 5]) -> () {
  * Output Bounds:
  *   out1: [[0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664]]
  */
-fn fiat_25519_add(out1: &mut [u64; 5], arg1: &[u64; 5], arg2: &[u64; 5]) -> () {
+pub fn fiat_25519_add(out1: &mut [u64; 5], arg1: &[u64; 5], arg2: &[u64; 5]) -> () {
   let x1: u64 = ((arg1[0]) + (arg2[0]));
   let x2: u64 = ((arg1[1]) + (arg2[1]));
   let x3: u64 = ((arg1[2]) + (arg2[2]));
@@ -282,12 +283,12 @@ fn fiat_25519_add(out1: &mut [u64; 5], arg1: &[u64; 5], arg2: &[u64; 5]) -> () {
  * Output Bounds:
  *   out1: [[0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664]]
  */
-fn fiat_25519_sub(out1: &mut [u64; 5], arg1: &[u64; 5], arg2: &[u64; 5]) -> () {
-  let x1: u64 = (((0xfffffffffffda as u64) + (arg1[0])) - (arg2[0]));
-  let x2: u64 = (((0xffffffffffffe as u64) + (arg1[1])) - (arg2[1]));
-  let x3: u64 = (((0xffffffffffffe as u64) + (arg1[2])) - (arg2[2]));
-  let x4: u64 = (((0xffffffffffffe as u64) + (arg1[3])) - (arg2[3]));
-  let x5: u64 = (((0xffffffffffffe as u64) + (arg1[4])) - (arg2[4]));
+pub fn fiat_25519_sub(out1: &mut [u64; 5], arg1: &[u64; 5], arg2: &[u64; 5]) -> () {
+  let x1: u64 = ((0xfffffffffffda + (arg1[0])) - (arg2[0]));
+  let x2: u64 = ((0xffffffffffffe + (arg1[1])) - (arg2[1]));
+  let x3: u64 = ((0xffffffffffffe + (arg1[2])) - (arg2[2]));
+  let x4: u64 = ((0xffffffffffffe + (arg1[3])) - (arg2[3]));
+  let x5: u64 = ((0xffffffffffffe + (arg1[4])) - (arg2[4]));
   out1[0] = x1;
   out1[1] = x2;
   out1[2] = x3;
@@ -305,12 +306,12 @@ fn fiat_25519_sub(out1: &mut [u64; 5], arg1: &[u64; 5], arg2: &[u64; 5]) -> () {
  * Output Bounds:
  *   out1: [[0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664]]
  */
-fn fiat_25519_opp(out1: &mut [u64; 5], arg1: &[u64; 5]) -> () {
-  let x1: u64 = ((0xfffffffffffda as u64) - (arg1[0]));
-  let x2: u64 = ((0xffffffffffffe as u64) - (arg1[1]));
-  let x3: u64 = ((0xffffffffffffe as u64) - (arg1[2]));
-  let x4: u64 = ((0xffffffffffffe as u64) - (arg1[3]));
-  let x5: u64 = ((0xffffffffffffe as u64) - (arg1[4]));
+pub fn fiat_25519_opp(out1: &mut [u64; 5], arg1: &[u64; 5]) -> () {
+  let x1: u64 = (0xfffffffffffda - (arg1[0]));
+  let x2: u64 = (0xffffffffffffe - (arg1[1]));
+  let x3: u64 = (0xffffffffffffe - (arg1[2]));
+  let x4: u64 = (0xffffffffffffe - (arg1[3]));
+  let x5: u64 = (0xffffffffffffe - (arg1[4]));
   out1[0] = x1;
   out1[1] = x2;
   out1[2] = x3;
@@ -330,7 +331,7 @@ fn fiat_25519_opp(out1: &mut [u64; 5], arg1: &[u64; 5]) -> () {
  * Output Bounds:
  *   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  */
-fn fiat_25519_selectznz(out1: &mut [u64; 5], arg1: fiat_25519_u1, arg2: &[u64; 5], arg3: &[u64; 5]) -> () {
+pub fn fiat_25519_selectznz(out1: &mut [u64; 5], arg1: fiat_25519_u1, arg2: &[u64; 5], arg3: &[u64; 5]) -> () {
   let mut x1: u64 = 0;
   fiat_25519_cmovznz_u64(&mut x1, arg1, (arg2[0]), (arg3[0]));
   let mut x2: u64 = 0;
@@ -358,109 +359,109 @@ fn fiat_25519_selectznz(out1: &mut [u64; 5], arg1: fiat_25519_u1, arg2: &[u64; 5
  * Output Bounds:
  *   out1: [[0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0x7f]]
  */
-fn fiat_25519_to_bytes(out1: &mut [u8; 32], arg1: &[u64; 5]) -> () {
+pub fn fiat_25519_to_bytes(out1: &mut [u8; 32], arg1: &[u64; 5]) -> () {
   let mut x1: u64 = 0;
   let mut x2: fiat_25519_u1 = 0;
-  fiat_25519_subborrowx_u51(&mut x1, &mut x2, 0x0, (arg1[0]), (0x7ffffffffffed as u64));
+  fiat_25519_subborrowx_u51(&mut x1, &mut x2, 0x0, (arg1[0]), 0x7ffffffffffed);
   let mut x3: u64 = 0;
   let mut x4: fiat_25519_u1 = 0;
-  fiat_25519_subborrowx_u51(&mut x3, &mut x4, x2, (arg1[1]), (0x7ffffffffffff as u64));
+  fiat_25519_subborrowx_u51(&mut x3, &mut x4, x2, (arg1[1]), 0x7ffffffffffff);
   let mut x5: u64 = 0;
   let mut x6: fiat_25519_u1 = 0;
-  fiat_25519_subborrowx_u51(&mut x5, &mut x6, x4, (arg1[2]), (0x7ffffffffffff as u64));
+  fiat_25519_subborrowx_u51(&mut x5, &mut x6, x4, (arg1[2]), 0x7ffffffffffff);
   let mut x7: u64 = 0;
   let mut x8: fiat_25519_u1 = 0;
-  fiat_25519_subborrowx_u51(&mut x7, &mut x8, x6, (arg1[3]), (0x7ffffffffffff as u64));
+  fiat_25519_subborrowx_u51(&mut x7, &mut x8, x6, (arg1[3]), 0x7ffffffffffff);
   let mut x9: u64 = 0;
   let mut x10: fiat_25519_u1 = 0;
-  fiat_25519_subborrowx_u51(&mut x9, &mut x10, x8, (arg1[4]), (0x7ffffffffffff as u64));
+  fiat_25519_subborrowx_u51(&mut x9, &mut x10, x8, (arg1[4]), 0x7ffffffffffff);
   let mut x11: u64 = 0;
-  fiat_25519_cmovznz_u64(&mut x11, x10, (0x0 as u64), (0xffffffffffffffff as u64));
+  fiat_25519_cmovznz_u64(&mut x11, x10, (0x0 as u64), 0xffffffffffffffff);
   let mut x12: u64 = 0;
   let mut x13: fiat_25519_u1 = 0;
-  fiat_25519_addcarryx_u51(&mut x12, &mut x13, 0x0, x1, (x11 & (0x7ffffffffffed as u64)));
+  fiat_25519_addcarryx_u51(&mut x12, &mut x13, 0x0, x1, (x11 & 0x7ffffffffffed));
   let mut x14: u64 = 0;
   let mut x15: fiat_25519_u1 = 0;
-  fiat_25519_addcarryx_u51(&mut x14, &mut x15, x13, x3, (x11 & (0x7ffffffffffff as u64)));
+  fiat_25519_addcarryx_u51(&mut x14, &mut x15, x13, x3, (x11 & 0x7ffffffffffff));
   let mut x16: u64 = 0;
   let mut x17: fiat_25519_u1 = 0;
-  fiat_25519_addcarryx_u51(&mut x16, &mut x17, x15, x5, (x11 & (0x7ffffffffffff as u64)));
+  fiat_25519_addcarryx_u51(&mut x16, &mut x17, x15, x5, (x11 & 0x7ffffffffffff));
   let mut x18: u64 = 0;
   let mut x19: fiat_25519_u1 = 0;
-  fiat_25519_addcarryx_u51(&mut x18, &mut x19, x17, x7, (x11 & (0x7ffffffffffff as u64)));
+  fiat_25519_addcarryx_u51(&mut x18, &mut x19, x17, x7, (x11 & 0x7ffffffffffff));
   let mut x20: u64 = 0;
   let mut x21: fiat_25519_u1 = 0;
-  fiat_25519_addcarryx_u51(&mut x20, &mut x21, x19, x9, (x11 & (0x7ffffffffffff as u64)));
+  fiat_25519_addcarryx_u51(&mut x20, &mut x21, x19, x9, (x11 & 0x7ffffffffffff));
   let x22: u64 = (x20 << 4);
   let x23: u64 = (x18 * (0x2 as u64));
   let x24: u64 = (x16 << 6);
   let x25: u64 = (x14 << 3);
   let x26: u64 = (x12 >> 8);
-  let x27: u8 = ((x12 & ((0xff as u8) as u64)) as u8);
+  let x27: u8 = ((x12 & 0xff) as u8);
   let x28: u64 = (x26 >> 8);
-  let x29: u8 = ((x26 & ((0xff as u8) as u64)) as u8);
+  let x29: u8 = ((x26 & 0xff) as u8);
   let x30: u64 = (x28 >> 8);
-  let x31: u8 = ((x28 & ((0xff as u8) as u64)) as u8);
+  let x31: u8 = ((x28 & 0xff) as u8);
   let x32: u64 = (x30 >> 8);
-  let x33: u8 = ((x30 & ((0xff as u8) as u64)) as u8);
+  let x33: u8 = ((x30 & 0xff) as u8);
   let x34: u64 = (x32 >> 8);
-  let x35: u8 = ((x32 & ((0xff as u8) as u64)) as u8);
+  let x35: u8 = ((x32 & 0xff) as u8);
   let x36: u8 = ((x34 >> 8) as u8);
-  let x37: u8 = ((x34 & ((0xff as u8) as u64)) as u8);
+  let x37: u8 = ((x34 & 0xff) as u8);
   let x38: u64 = ((x36 as u64) + x25);
   let x39: u64 = (x38 >> 8);
-  let x40: u8 = ((x38 & ((0xff as u8) as u64)) as u8);
+  let x40: u8 = ((x38 & 0xff) as u8);
   let x41: u64 = (x39 >> 8);
-  let x42: u8 = ((x39 & ((0xff as u8) as u64)) as u8);
+  let x42: u8 = ((x39 & 0xff) as u8);
   let x43: u64 = (x41 >> 8);
-  let x44: u8 = ((x41 & ((0xff as u8) as u64)) as u8);
+  let x44: u8 = ((x41 & 0xff) as u8);
   let x45: u64 = (x43 >> 8);
-  let x46: u8 = ((x43 & ((0xff as u8) as u64)) as u8);
+  let x46: u8 = ((x43 & 0xff) as u8);
   let x47: u64 = (x45 >> 8);
-  let x48: u8 = ((x45 & ((0xff as u8) as u64)) as u8);
+  let x48: u8 = ((x45 & 0xff) as u8);
   let x49: u8 = ((x47 >> 8) as u8);
-  let x50: u8 = ((x47 & ((0xff as u8) as u64)) as u8);
+  let x50: u8 = ((x47 & 0xff) as u8);
   let x51: u64 = ((x49 as u64) + x24);
   let x52: u64 = (x51 >> 8);
-  let x53: u8 = ((x51 & ((0xff as u8) as u64)) as u8);
+  let x53: u8 = ((x51 & 0xff) as u8);
   let x54: u64 = (x52 >> 8);
-  let x55: u8 = ((x52 & ((0xff as u8) as u64)) as u8);
+  let x55: u8 = ((x52 & 0xff) as u8);
   let x56: u64 = (x54 >> 8);
-  let x57: u8 = ((x54 & ((0xff as u8) as u64)) as u8);
+  let x57: u8 = ((x54 & 0xff) as u8);
   let x58: u64 = (x56 >> 8);
-  let x59: u8 = ((x56 & ((0xff as u8) as u64)) as u8);
+  let x59: u8 = ((x56 & 0xff) as u8);
   let x60: u64 = (x58 >> 8);
-  let x61: u8 = ((x58 & ((0xff as u8) as u64)) as u8);
+  let x61: u8 = ((x58 & 0xff) as u8);
   let x62: u64 = (x60 >> 8);
-  let x63: u8 = ((x60 & ((0xff as u8) as u64)) as u8);
+  let x63: u8 = ((x60 & 0xff) as u8);
   let x64: fiat_25519_u1 = ((x62 >> 8) as fiat_25519_u1);
-  let x65: u8 = ((x62 & ((0xff as u8) as u64)) as u8);
+  let x65: u8 = ((x62 & 0xff) as u8);
   let x66: u64 = ((x64 as u64) + x23);
   let x67: u64 = (x66 >> 8);
-  let x68: u8 = ((x66 & ((0xff as u8) as u64)) as u8);
+  let x68: u8 = ((x66 & 0xff) as u8);
   let x69: u64 = (x67 >> 8);
-  let x70: u8 = ((x67 & ((0xff as u8) as u64)) as u8);
+  let x70: u8 = ((x67 & 0xff) as u8);
   let x71: u64 = (x69 >> 8);
-  let x72: u8 = ((x69 & ((0xff as u8) as u64)) as u8);
+  let x72: u8 = ((x69 & 0xff) as u8);
   let x73: u64 = (x71 >> 8);
-  let x74: u8 = ((x71 & ((0xff as u8) as u64)) as u8);
+  let x74: u8 = ((x71 & 0xff) as u8);
   let x75: u64 = (x73 >> 8);
-  let x76: u8 = ((x73 & ((0xff as u8) as u64)) as u8);
+  let x76: u8 = ((x73 & 0xff) as u8);
   let x77: u8 = ((x75 >> 8) as u8);
-  let x78: u8 = ((x75 & ((0xff as u8) as u64)) as u8);
+  let x78: u8 = ((x75 & 0xff) as u8);
   let x79: u64 = ((x77 as u64) + x22);
   let x80: u64 = (x79 >> 8);
-  let x81: u8 = ((x79 & ((0xff as u8) as u64)) as u8);
+  let x81: u8 = ((x79 & 0xff) as u8);
   let x82: u64 = (x80 >> 8);
-  let x83: u8 = ((x80 & ((0xff as u8) as u64)) as u8);
+  let x83: u8 = ((x80 & 0xff) as u8);
   let x84: u64 = (x82 >> 8);
-  let x85: u8 = ((x82 & ((0xff as u8) as u64)) as u8);
+  let x85: u8 = ((x82 & 0xff) as u8);
   let x86: u64 = (x84 >> 8);
-  let x87: u8 = ((x84 & ((0xff as u8) as u64)) as u8);
+  let x87: u8 = ((x84 & 0xff) as u8);
   let x88: u64 = (x86 >> 8);
-  let x89: u8 = ((x86 & ((0xff as u8) as u64)) as u8);
+  let x89: u8 = ((x86 & 0xff) as u8);
   let x90: u8 = ((x88 >> 8) as u8);
-  let x91: u8 = ((x88 & ((0xff as u8) as u64)) as u8);
+  let x91: u8 = ((x88 & 0xff) as u8);
   out1[0] = x27;
   out1[1] = x29;
   out1[2] = x31;
@@ -505,7 +506,7 @@ fn fiat_25519_to_bytes(out1: &mut [u8; 32], arg1: &[u64; 5]) -> () {
  * Output Bounds:
  *   out1: [[0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc]]
  */
-fn fiat_25519_from_bytes(out1: &mut [u64; 5], arg1: &[u8; 32]) -> () {
+pub fn fiat_25519_from_bytes(out1: &mut [u64; 5], arg1: &[u8; 32]) -> () {
   let x1: u64 = (((arg1[31]) as u64) << 44);
   let x2: u64 = (((arg1[30]) as u64) << 36);
   let x3: u64 = (((arg1[29]) as u64) << 28);
@@ -540,20 +541,20 @@ fn fiat_25519_from_bytes(out1: &mut [u64; 5], arg1: &[u8; 32]) -> () {
   let x32: u8 = (arg1[0]);
   let x33: u64 = ((x32 as u64) + (x31 + (x30 + (x29 + (x28 + (x27 + x26))))));
   let x34: u8 = ((x33 >> 51) as u8);
-  let x35: u64 = (x33 & (0x7ffffffffffff as u64));
+  let x35: u64 = (x33 & 0x7ffffffffffff);
   let x36: u64 = (x6 + (x5 + (x4 + (x3 + (x2 + x1)))));
   let x37: u64 = (x12 + (x11 + (x10 + (x9 + (x8 + x7)))));
   let x38: u64 = (x19 + (x18 + (x17 + (x16 + (x15 + (x14 + x13))))));
   let x39: u64 = (x25 + (x24 + (x23 + (x22 + (x21 + x20)))));
   let x40: u64 = ((x34 as u64) + x39);
   let x41: u8 = ((x40 >> 51) as u8);
-  let x42: u64 = (x40 & (0x7ffffffffffff as u64));
+  let x42: u64 = (x40 & 0x7ffffffffffff);
   let x43: u64 = ((x41 as u64) + x38);
   let x44: u8 = ((x43 >> 51) as u8);
-  let x45: u64 = (x43 & (0x7ffffffffffff as u64));
+  let x45: u64 = (x43 & 0x7ffffffffffff);
   let x46: u64 = ((x44 as u64) + x37);
   let x47: u8 = ((x46 >> 51) as u8);
-  let x48: u64 = (x46 & (0x7ffffffffffff as u64));
+  let x48: u64 = (x46 & 0x7ffffffffffff);
   let x49: u64 = ((x47 as u64) + x36);
   out1[0] = x35;
   out1[1] = x42;
