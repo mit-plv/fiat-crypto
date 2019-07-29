@@ -4,8 +4,7 @@ From Crypto.Util Require Import
      ListUtil
      Strings.String Strings.Decimal Strings.HexString Strings.Show
      ZRange ZRange.Operations ZRange.Show
-     Option OptionList Equality Notations
-     Bool.Equality.
+     Option OptionList Bool.Equality.
 
 From Crypto Require Import IR CStringification Language AbstractInterpretation.
 
