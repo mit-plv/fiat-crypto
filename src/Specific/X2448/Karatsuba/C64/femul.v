@@ -1,5 +1,6 @@
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Specific.X2448.Karatsuba.C64.Synthesis.
+From Coq Require Import ZArith.
 
 (* TODO : change this to field once field isomorphism happens *)
 Definition mul :
