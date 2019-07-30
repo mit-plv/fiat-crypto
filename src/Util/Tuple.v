@@ -693,8 +693,6 @@ Definition apply {R T} (n:nat) : function R T n -> tuple T n -> R :=
   | S n' => fun f x =>  apply' n' f x
   end.
 
-Require Import Coq.Lists.SetoidList.
-
 Lemma fieldwise_to_list_iff : forall {T T' n} R (s : tuple T n) (t : tuple T' n),
     (fieldwise R s t <-> Forall2 R (to_list _ s) (to_list _ t)).
 Proof.
@@ -1154,6 +1152,8 @@ Proof.
   repeat intro; subst; apply (@fieldwise_Proper_gen A B eq eq); try assumption;
     repeat intro; subst; auto; reflexivity.
 Qed.
+
+Require Import Coq.Lists.SetoidList.
 
 Global Instance fieldwise'_Proper
   : forall {n A B}, Proper (pointwise_relation _ (pointwise_relation _ impl) ==> eq ==> eq ==> impl) (@fieldwise' A B n) | 10.
