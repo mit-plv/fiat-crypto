@@ -131,7 +131,8 @@ Module ForExtraction.
        end.
 
   Definition supported_languages : list (string * ToString.OutputLanguageAPI)
-    := [("C", ToString.OutputCAPI); ("Rust", Rust.OutputRustAPI)].
+    := [("C", ToString.OutputCAPI)
+       ; ("Rust", Rust.OutputRustAPI)].
 
   Definition curve_description_help
     := "  curve_description       A string which will be prefixed to every function name generated".
