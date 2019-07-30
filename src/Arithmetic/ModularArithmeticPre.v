@@ -2,9 +2,12 @@ Require Import Coq.ZArith.BinInt Coq.NArith.BinNat Coq.Numbers.BinNums Coq.ZArit
 Require Import Coq.Logic.Eqdep_dec.
 Require Import Coq.Logic.EqdepFacts.
 Require Import Coq.omega.Omega.
+From Coq Require Import ZArith.
 Require Import Crypto.Util.NumTheoryUtil.
 Require Export Crypto.Util.FixCoqMistakes.
 Require Import Crypto.Util.Tactics.BreakMatch.
+
+Open Scope Z_scope.
 
 Lemma Z_mod_mod x m : x mod m = (x mod m) mod m.
   symmetry.
