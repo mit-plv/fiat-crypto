@@ -1,4 +1,5 @@
 -R src Crypto
+-R coqprime/src/Coqprime Coqprime
 src/AbstractInterpretation.v
 src/AbstractInterpretationProofs.v
 src/AbstractInterpretationWf.v
