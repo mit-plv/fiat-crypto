@@ -22,6 +22,8 @@ Require Import Crypto.Util.Tactics.MoveLetIn.
 Require Import Crypto.Util.Tactics.ClearAll.
 Require Import Crypto.Util.Tactics.ClearbodyAll.
 
+Import LetIn.
+
 Module Export Exports.
   Export Crypto.Compilers.Z.Reify. (* export for the tactic redefinitions *)
 End Exports.
