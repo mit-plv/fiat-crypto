@@ -12,9 +12,11 @@
 /*   return values.                                                   */
 
 #![allow(unused_parens)]
-use std::prelude;
+#[allow(non_camel_case_types)]
 pub type fiat_secp256k1_u1 = u8;
 pub type fiat_secp256k1_i1 = i8;
+pub type fiat_secp256k1_u2 = u8;
+pub type fiat_secp256k1_i2 = i8;
 pub type fiat_secp256k1_u128 = u128;
 pub type fiat_secp256k1_i128 = i128;
 
@@ -35,7 +37,7 @@ pub type fiat_secp256k1_i128 = i128;
  */
 pub fn fiat_secp256k1_addcarryx_u64(out1: &mut u64, out2: &mut fiat_secp256k1_u1, arg1: fiat_secp256k1_u1, arg2: u64, arg3: u64) -> () {
   let x1: fiat_secp256k1_u128 = (((arg1 as fiat_secp256k1_u128) + (arg2 as fiat_secp256k1_u128)) + (arg3 as fiat_secp256k1_u128));
-  let x2: u64 = ((x1 & 0xffffffffffffffff) as u64);
+  let x2: u64 = ((x1 & (0xffffffffffffffff as fiat_secp256k1_u128)) as u64);
   let x3: fiat_secp256k1_u1 = ((x1 >> 64) as fiat_secp256k1_u1);
   *out1 = x2;
   *out2 = x3;
@@ -58,9 +60,9 @@ pub fn fiat_secp256k1_addcarryx_u64(out1: &mut u64, out2: &mut fiat_secp256k1_u1
 pub fn fiat_secp256k1_subborrowx_u64(out1: &mut u64, out2: &mut fiat_secp256k1_u1, arg1: fiat_secp256k1_u1, arg2: u64, arg3: u64) -> () {
   let x1: fiat_secp256k1_i128 = (((arg2 as fiat_secp256k1_i128) - (arg1 as fiat_secp256k1_i128)) - (arg3 as fiat_secp256k1_i128));
   let x2: fiat_secp256k1_i1 = ((x1 >> 64) as fiat_secp256k1_i1);
-  let x3: u64 = ((x1 & 0xffffffffffffffff) as u64);
+  let x3: u64 = ((x1 & (0xffffffffffffffff as fiat_secp256k1_i128)) as u64);
   *out1 = x3;
-  *out2 = (((0x0 as fiat_secp256k1_i1) - x2) as fiat_secp256k1_u1);
+  *out2 = (((0x0 as fiat_secp256k1_i2) - (x2 as fiat_secp256k1_i2)) as fiat_secp256k1_u1);
 }
 
 /*
@@ -78,7 +80,7 @@ pub fn fiat_secp256k1_subborrowx_u64(out1: &mut u64, out2: &mut fiat_secp256k1_u
  */
 pub fn fiat_secp256k1_mulx_u64(out1: &mut u64, out2: &mut u64, arg1: u64, arg2: u64) -> () {
   let x1: fiat_secp256k1_u128 = ((arg1 as fiat_secp256k1_u128) * (arg2 as fiat_secp256k1_u128));
-  let x2: u64 = ((x1 & 0xffffffffffffffff) as u64);
+  let x2: u64 = ((x1 & (0xffffffffffffffff as fiat_secp256k1_u128)) as u64);
   let x3: u64 = ((x1 >> 64) as u64);
   *out1 = x2;
   *out2 = x3;
@@ -98,7 +100,7 @@ pub fn fiat_secp256k1_mulx_u64(out1: &mut u64, out2: &mut u64, arg1: u64, arg2: 
  */
 pub fn fiat_secp256k1_cmovznz_u64(out1: &mut u64, arg1: fiat_secp256k1_u1, arg2: u64, arg3: u64) -> () {
   let x1: fiat_secp256k1_u1 = (!(!arg1));
-  let x2: u64 = ((((0x0 as fiat_secp256k1_i1) - (x1 as fiat_secp256k1_i1)) as u64) & 0xffffffffffffffff);
+  let x2: u64 = ((((((0x0 as fiat_secp256k1_i2) - (x1 as fiat_secp256k1_i2)) as fiat_secp256k1_i1) as fiat_secp256k1_i128) & (0xffffffffffffffff as fiat_secp256k1_i128)) as u64);
   let x3: u64 = ((x2 & arg3) | ((!x2) & arg2));
   *out1 = x3;
 }
@@ -146,7 +148,7 @@ pub fn fiat_secp256k1_mul(out1: &mut [u64; 4], arg1: &[u64; 4], arg2: &[u64; 4])
   fiat_secp256k1_addcarryx_u64(&mut x17, &mut x18, x16, x8, x5);
   let mut x19: u64 = 0;
   let mut x20: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x19, &mut x20, x18, x6, 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x19, &mut x20, x18, x6, (0x0 as u64));
   let mut x21: u64 = 0;
   let mut x22: u64 = 0;
   fiat_secp256k1_mulx_u64(&mut x21, &mut x22, x11, 0xd838091dd2253531);
@@ -173,7 +175,7 @@ pub fn fiat_secp256k1_mul(out1: &mut [u64; 4], arg1: &[u64; 4], arg2: &[u64; 4])
   fiat_secp256k1_addcarryx_u64(&mut x35, &mut x36, x34, x26, x23);
   let mut x37: u64 = 0;
   let mut x38: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x37, &mut x38, x36, x24, 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x37, &mut x38, x36, x24, (0x0 as u64));
   let mut x39: u64 = 0;
   let mut x40: fiat_secp256k1_u1 = 0;
   fiat_secp256k1_addcarryx_u64(&mut x39, &mut x40, 0x0, x11, x29);
@@ -191,7 +193,7 @@ pub fn fiat_secp256k1_mul(out1: &mut [u64; 4], arg1: &[u64; 4], arg2: &[u64; 4])
   fiat_secp256k1_addcarryx_u64(&mut x47, &mut x48, x46, x19, x37);
   let mut x49: u64 = 0;
   let mut x50: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x49, &mut x50, x48, 0x0, 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x49, &mut x50, x48, (0x0 as u64), (0x0 as u64));
   let mut x51: u64 = 0;
   let mut x52: u64 = 0;
   fiat_secp256k1_mulx_u64(&mut x51, &mut x52, x1, (arg2[3]));
@@ -215,7 +217,7 @@ pub fn fiat_secp256k1_mul(out1: &mut [u64; 4], arg1: &[u64; 4], arg2: &[u64; 4])
   fiat_secp256k1_addcarryx_u64(&mut x63, &mut x64, x62, x54, x51);
   let mut x65: u64 = 0;
   let mut x66: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x65, &mut x66, x64, x52, 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x65, &mut x66, x64, x52, (0x0 as u64));
   let mut x67: u64 = 0;
   let mut x68: fiat_secp256k1_u1 = 0;
   fiat_secp256k1_addcarryx_u64(&mut x67, &mut x68, 0x0, x41, x57);
@@ -230,7 +232,7 @@ pub fn fiat_secp256k1_mul(out1: &mut [u64; 4], arg1: &[u64; 4], arg2: &[u64; 4])
   fiat_secp256k1_addcarryx_u64(&mut x73, &mut x74, x72, x47, x63);
   let mut x75: u64 = 0;
   let mut x76: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x75, &mut x76, x74, (x49 as fiat_secp256k1_u1), x65);
+  fiat_secp256k1_addcarryx_u64(&mut x75, &mut x76, x74, ((x49 as fiat_secp256k1_u1) as u64), x65);
   let mut x77: u64 = 0;
   let mut x78: u64 = 0;
   fiat_secp256k1_mulx_u64(&mut x77, &mut x78, x67, 0xd838091dd2253531);
@@ -257,7 +259,7 @@ pub fn fiat_secp256k1_mul(out1: &mut [u64; 4], arg1: &[u64; 4], arg2: &[u64; 4])
   fiat_secp256k1_addcarryx_u64(&mut x91, &mut x92, x90, x82, x79);
   let mut x93: u64 = 0;
   let mut x94: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x93, &mut x94, x92, x80, 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x93, &mut x94, x92, x80, (0x0 as u64));
   let mut x95: u64 = 0;
   let mut x96: fiat_secp256k1_u1 = 0;
   fiat_secp256k1_addcarryx_u64(&mut x95, &mut x96, 0x0, x67, x85);
@@ -275,7 +277,7 @@ pub fn fiat_secp256k1_mul(out1: &mut [u64; 4], arg1: &[u64; 4], arg2: &[u64; 4])
   fiat_secp256k1_addcarryx_u64(&mut x103, &mut x104, x102, x75, x93);
   let mut x105: u64 = 0;
   let mut x106: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x105, &mut x106, x104, x76, 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x105, &mut x106, x104, (x76 as u64), (0x0 as u64));
   let mut x107: u64 = 0;
   let mut x108: u64 = 0;
   fiat_secp256k1_mulx_u64(&mut x107, &mut x108, x2, (arg2[3]));
@@ -299,7 +301,7 @@ pub fn fiat_secp256k1_mul(out1: &mut [u64; 4], arg1: &[u64; 4], arg2: &[u64; 4])
   fiat_secp256k1_addcarryx_u64(&mut x119, &mut x120, x118, x110, x107);
   let mut x121: u64 = 0;
   let mut x122: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x121, &mut x122, x120, x108, 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x121, &mut x122, x120, x108, (0x0 as u64));
   let mut x123: u64 = 0;
   let mut x124: fiat_secp256k1_u1 = 0;
   fiat_secp256k1_addcarryx_u64(&mut x123, &mut x124, 0x0, x97, x113);
@@ -341,7 +343,7 @@ pub fn fiat_secp256k1_mul(out1: &mut [u64; 4], arg1: &[u64; 4], arg2: &[u64; 4])
   fiat_secp256k1_addcarryx_u64(&mut x147, &mut x148, x146, x138, x135);
   let mut x149: u64 = 0;
   let mut x150: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x149, &mut x150, x148, x136, 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x149, &mut x150, x148, x136, (0x0 as u64));
   let mut x151: u64 = 0;
   let mut x152: fiat_secp256k1_u1 = 0;
   fiat_secp256k1_addcarryx_u64(&mut x151, &mut x152, 0x0, x123, x141);
@@ -359,7 +361,7 @@ pub fn fiat_secp256k1_mul(out1: &mut [u64; 4], arg1: &[u64; 4], arg2: &[u64; 4])
   fiat_secp256k1_addcarryx_u64(&mut x159, &mut x160, x158, x131, x149);
   let mut x161: u64 = 0;
   let mut x162: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x161, &mut x162, x160, x132, 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x161, &mut x162, x160, (x132 as u64), (0x0 as u64));
   let mut x163: u64 = 0;
   let mut x164: u64 = 0;
   fiat_secp256k1_mulx_u64(&mut x163, &mut x164, x3, (arg2[3]));
@@ -383,7 +385,7 @@ pub fn fiat_secp256k1_mul(out1: &mut [u64; 4], arg1: &[u64; 4], arg2: &[u64; 4])
   fiat_secp256k1_addcarryx_u64(&mut x175, &mut x176, x174, x166, x163);
   let mut x177: u64 = 0;
   let mut x178: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x177, &mut x178, x176, x164, 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x177, &mut x178, x176, x164, (0x0 as u64));
   let mut x179: u64 = 0;
   let mut x180: fiat_secp256k1_u1 = 0;
   fiat_secp256k1_addcarryx_u64(&mut x179, &mut x180, 0x0, x153, x169);
@@ -425,7 +427,7 @@ pub fn fiat_secp256k1_mul(out1: &mut [u64; 4], arg1: &[u64; 4], arg2: &[u64; 4])
   fiat_secp256k1_addcarryx_u64(&mut x203, &mut x204, x202, x194, x191);
   let mut x205: u64 = 0;
   let mut x206: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x205, &mut x206, x204, x192, 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x205, &mut x206, x204, x192, (0x0 as u64));
   let mut x207: u64 = 0;
   let mut x208: fiat_secp256k1_u1 = 0;
   fiat_secp256k1_addcarryx_u64(&mut x207, &mut x208, 0x0, x179, x197);
@@ -443,7 +445,7 @@ pub fn fiat_secp256k1_mul(out1: &mut [u64; 4], arg1: &[u64; 4], arg2: &[u64; 4])
   fiat_secp256k1_addcarryx_u64(&mut x215, &mut x216, x214, x187, x205);
   let mut x217: u64 = 0;
   let mut x218: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x217, &mut x218, x216, x188, 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x217, &mut x218, x216, (x188 as u64), (0x0 as u64));
   let mut x219: u64 = 0;
   let mut x220: fiat_secp256k1_u1 = 0;
   fiat_secp256k1_subborrowx_u64(&mut x219, &mut x220, 0x0, x209, 0xfffffffefffffc2f);
@@ -458,7 +460,7 @@ pub fn fiat_secp256k1_mul(out1: &mut [u64; 4], arg1: &[u64; 4], arg2: &[u64; 4])
   fiat_secp256k1_subborrowx_u64(&mut x225, &mut x226, x224, x215, 0xffffffffffffffff);
   let mut x227: u64 = 0;
   let mut x228: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_subborrowx_u64(&mut x227, &mut x228, x226, x217, 0x0);
+  fiat_secp256k1_subborrowx_u64(&mut x227, &mut x228, x226, x217, (0x0 as u64));
   let mut x229: u64 = 0;
   fiat_secp256k1_cmovznz_u64(&mut x229, x228, x219, x209);
   let mut x230: u64 = 0;
@@ -514,7 +516,7 @@ pub fn fiat_secp256k1_square(out1: &mut [u64; 4], arg1: &[u64; 4]) -> () {
   fiat_secp256k1_addcarryx_u64(&mut x17, &mut x18, x16, x8, x5);
   let mut x19: u64 = 0;
   let mut x20: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x19, &mut x20, x18, x6, 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x19, &mut x20, x18, x6, (0x0 as u64));
   let mut x21: u64 = 0;
   let mut x22: u64 = 0;
   fiat_secp256k1_mulx_u64(&mut x21, &mut x22, x11, 0xd838091dd2253531);
@@ -541,7 +543,7 @@ pub fn fiat_secp256k1_square(out1: &mut [u64; 4], arg1: &[u64; 4]) -> () {
   fiat_secp256k1_addcarryx_u64(&mut x35, &mut x36, x34, x26, x23);
   let mut x37: u64 = 0;
   let mut x38: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x37, &mut x38, x36, x24, 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x37, &mut x38, x36, x24, (0x0 as u64));
   let mut x39: u64 = 0;
   let mut x40: fiat_secp256k1_u1 = 0;
   fiat_secp256k1_addcarryx_u64(&mut x39, &mut x40, 0x0, x11, x29);
@@ -559,7 +561,7 @@ pub fn fiat_secp256k1_square(out1: &mut [u64; 4], arg1: &[u64; 4]) -> () {
   fiat_secp256k1_addcarryx_u64(&mut x47, &mut x48, x46, x19, x37);
   let mut x49: u64 = 0;
   let mut x50: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x49, &mut x50, x48, 0x0, 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x49, &mut x50, x48, (0x0 as u64), (0x0 as u64));
   let mut x51: u64 = 0;
   let mut x52: u64 = 0;
   fiat_secp256k1_mulx_u64(&mut x51, &mut x52, x1, (arg1[3]));
@@ -583,7 +585,7 @@ pub fn fiat_secp256k1_square(out1: &mut [u64; 4], arg1: &[u64; 4]) -> () {
   fiat_secp256k1_addcarryx_u64(&mut x63, &mut x64, x62, x54, x51);
   let mut x65: u64 = 0;
   let mut x66: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x65, &mut x66, x64, x52, 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x65, &mut x66, x64, x52, (0x0 as u64));
   let mut x67: u64 = 0;
   let mut x68: fiat_secp256k1_u1 = 0;
   fiat_secp256k1_addcarryx_u64(&mut x67, &mut x68, 0x0, x41, x57);
@@ -598,7 +600,7 @@ pub fn fiat_secp256k1_square(out1: &mut [u64; 4], arg1: &[u64; 4]) -> () {
   fiat_secp256k1_addcarryx_u64(&mut x73, &mut x74, x72, x47, x63);
   let mut x75: u64 = 0;
   let mut x76: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x75, &mut x76, x74, (x49 as fiat_secp256k1_u1), x65);
+  fiat_secp256k1_addcarryx_u64(&mut x75, &mut x76, x74, ((x49 as fiat_secp256k1_u1) as u64), x65);
   let mut x77: u64 = 0;
   let mut x78: u64 = 0;
   fiat_secp256k1_mulx_u64(&mut x77, &mut x78, x67, 0xd838091dd2253531);
@@ -625,7 +627,7 @@ pub fn fiat_secp256k1_square(out1: &mut [u64; 4], arg1: &[u64; 4]) -> () {
   fiat_secp256k1_addcarryx_u64(&mut x91, &mut x92, x90, x82, x79);
   let mut x93: u64 = 0;
   let mut x94: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x93, &mut x94, x92, x80, 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x93, &mut x94, x92, x80, (0x0 as u64));
   let mut x95: u64 = 0;
   let mut x96: fiat_secp256k1_u1 = 0;
   fiat_secp256k1_addcarryx_u64(&mut x95, &mut x96, 0x0, x67, x85);
@@ -643,7 +645,7 @@ pub fn fiat_secp256k1_square(out1: &mut [u64; 4], arg1: &[u64; 4]) -> () {
   fiat_secp256k1_addcarryx_u64(&mut x103, &mut x104, x102, x75, x93);
   let mut x105: u64 = 0;
   let mut x106: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x105, &mut x106, x104, x76, 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x105, &mut x106, x104, (x76 as u64), (0x0 as u64));
   let mut x107: u64 = 0;
   let mut x108: u64 = 0;
   fiat_secp256k1_mulx_u64(&mut x107, &mut x108, x2, (arg1[3]));
@@ -667,7 +669,7 @@ pub fn fiat_secp256k1_square(out1: &mut [u64; 4], arg1: &[u64; 4]) -> () {
   fiat_secp256k1_addcarryx_u64(&mut x119, &mut x120, x118, x110, x107);
   let mut x121: u64 = 0;
   let mut x122: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x121, &mut x122, x120, x108, 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x121, &mut x122, x120, x108, (0x0 as u64));
   let mut x123: u64 = 0;
   let mut x124: fiat_secp256k1_u1 = 0;
   fiat_secp256k1_addcarryx_u64(&mut x123, &mut x124, 0x0, x97, x113);
@@ -709,7 +711,7 @@ pub fn fiat_secp256k1_square(out1: &mut [u64; 4], arg1: &[u64; 4]) -> () {
   fiat_secp256k1_addcarryx_u64(&mut x147, &mut x148, x146, x138, x135);
   let mut x149: u64 = 0;
   let mut x150: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x149, &mut x150, x148, x136, 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x149, &mut x150, x148, x136, (0x0 as u64));
   let mut x151: u64 = 0;
   let mut x152: fiat_secp256k1_u1 = 0;
   fiat_secp256k1_addcarryx_u64(&mut x151, &mut x152, 0x0, x123, x141);
@@ -727,7 +729,7 @@ pub fn fiat_secp256k1_square(out1: &mut [u64; 4], arg1: &[u64; 4]) -> () {
   fiat_secp256k1_addcarryx_u64(&mut x159, &mut x160, x158, x131, x149);
   let mut x161: u64 = 0;
   let mut x162: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x161, &mut x162, x160, x132, 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x161, &mut x162, x160, (x132 as u64), (0x0 as u64));
   let mut x163: u64 = 0;
   let mut x164: u64 = 0;
   fiat_secp256k1_mulx_u64(&mut x163, &mut x164, x3, (arg1[3]));
@@ -751,7 +753,7 @@ pub fn fiat_secp256k1_square(out1: &mut [u64; 4], arg1: &[u64; 4]) -> () {
   fiat_secp256k1_addcarryx_u64(&mut x175, &mut x176, x174, x166, x163);
   let mut x177: u64 = 0;
   let mut x178: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x177, &mut x178, x176, x164, 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x177, &mut x178, x176, x164, (0x0 as u64));
   let mut x179: u64 = 0;
   let mut x180: fiat_secp256k1_u1 = 0;
   fiat_secp256k1_addcarryx_u64(&mut x179, &mut x180, 0x0, x153, x169);
@@ -793,7 +795,7 @@ pub fn fiat_secp256k1_square(out1: &mut [u64; 4], arg1: &[u64; 4]) -> () {
   fiat_secp256k1_addcarryx_u64(&mut x203, &mut x204, x202, x194, x191);
   let mut x205: u64 = 0;
   let mut x206: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x205, &mut x206, x204, x192, 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x205, &mut x206, x204, x192, (0x0 as u64));
   let mut x207: u64 = 0;
   let mut x208: fiat_secp256k1_u1 = 0;
   fiat_secp256k1_addcarryx_u64(&mut x207, &mut x208, 0x0, x179, x197);
@@ -811,7 +813,7 @@ pub fn fiat_secp256k1_square(out1: &mut [u64; 4], arg1: &[u64; 4]) -> () {
   fiat_secp256k1_addcarryx_u64(&mut x215, &mut x216, x214, x187, x205);
   let mut x217: u64 = 0;
   let mut x218: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x217, &mut x218, x216, x188, 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x217, &mut x218, x216, (x188 as u64), (0x0 as u64));
   let mut x219: u64 = 0;
   let mut x220: fiat_secp256k1_u1 = 0;
   fiat_secp256k1_subborrowx_u64(&mut x219, &mut x220, 0x0, x209, 0xfffffffefffffc2f);
@@ -826,7 +828,7 @@ pub fn fiat_secp256k1_square(out1: &mut [u64; 4], arg1: &[u64; 4]) -> () {
   fiat_secp256k1_subborrowx_u64(&mut x225, &mut x226, x224, x215, 0xffffffffffffffff);
   let mut x227: u64 = 0;
   let mut x228: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_subborrowx_u64(&mut x227, &mut x228, x226, x217, 0x0);
+  fiat_secp256k1_subborrowx_u64(&mut x227, &mut x228, x226, x217, (0x0 as u64));
   let mut x229: u64 = 0;
   fiat_secp256k1_cmovznz_u64(&mut x229, x228, x219, x209);
   let mut x230: u64 = 0;
@@ -883,7 +885,7 @@ pub fn fiat_secp256k1_add(out1: &mut [u64; 4], arg1: &[u64; 4], arg2: &[u64; 4])
   fiat_secp256k1_subborrowx_u64(&mut x15, &mut x16, x14, x7, 0xffffffffffffffff);
   let mut x17: u64 = 0;
   let mut x18: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_subborrowx_u64(&mut x17, &mut x18, x16, x8, 0x0);
+  fiat_secp256k1_subborrowx_u64(&mut x17, &mut x18, x16, (x8 as u64), (0x0 as u64));
   let mut x19: u64 = 0;
   fiat_secp256k1_cmovznz_u64(&mut x19, x18, x9, x1);
   let mut x20: u64 = 0;
@@ -962,16 +964,16 @@ pub fn fiat_secp256k1_sub(out1: &mut [u64; 4], arg1: &[u64; 4], arg2: &[u64; 4])
 pub fn fiat_secp256k1_opp(out1: &mut [u64; 4], arg1: &[u64; 4]) -> () {
   let mut x1: u64 = 0;
   let mut x2: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_subborrowx_u64(&mut x1, &mut x2, 0x0, 0x0, (arg1[0]));
+  fiat_secp256k1_subborrowx_u64(&mut x1, &mut x2, 0x0, (0x0 as u64), (arg1[0]));
   let mut x3: u64 = 0;
   let mut x4: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_subborrowx_u64(&mut x3, &mut x4, x2, 0x0, (arg1[1]));
+  fiat_secp256k1_subborrowx_u64(&mut x3, &mut x4, x2, (0x0 as u64), (arg1[1]));
   let mut x5: u64 = 0;
   let mut x6: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_subborrowx_u64(&mut x5, &mut x6, x4, 0x0, (arg1[2]));
+  fiat_secp256k1_subborrowx_u64(&mut x5, &mut x6, x4, (0x0 as u64), (arg1[2]));
   let mut x7: u64 = 0;
   let mut x8: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_subborrowx_u64(&mut x7, &mut x8, x6, 0x0, (arg1[3]));
+  fiat_secp256k1_subborrowx_u64(&mut x7, &mut x8, x6, (0x0 as u64), (arg1[3]));
   let mut x9: u64 = 0;
   fiat_secp256k1_cmovznz_u64(&mut x9, x8, (0x0 as u64), 0xffffffffffffffff);
   let mut x10: u64 = 0;
@@ -1036,31 +1038,31 @@ pub fn fiat_secp256k1_from_montgomery(out1: &mut [u64; 4], arg1: &[u64; 4]) -> (
   fiat_secp256k1_addcarryx_u64(&mut x18, &mut x19, 0x0, x1, x10);
   let mut x20: u64 = 0;
   let mut x21: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x20, &mut x21, x19, 0x0, x12);
+  fiat_secp256k1_addcarryx_u64(&mut x20, &mut x21, x19, (0x0 as u64), x12);
   let mut x22: u64 = 0;
   let mut x23: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x22, &mut x23, x21, 0x0, x14);
+  fiat_secp256k1_addcarryx_u64(&mut x22, &mut x23, x21, (0x0 as u64), x14);
   let mut x24: u64 = 0;
   let mut x25: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x24, &mut x25, x23, 0x0, x16);
+  fiat_secp256k1_addcarryx_u64(&mut x24, &mut x25, x23, (0x0 as u64), x16);
   let mut x26: u64 = 0;
   let mut x27: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x26, &mut x27, x17, x5, 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x26, &mut x27, x17, x5, (0x0 as u64));
   let mut x28: u64 = 0;
   let mut x29: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x28, &mut x29, x25, 0x0, x26);
+  fiat_secp256k1_addcarryx_u64(&mut x28, &mut x29, x25, (0x0 as u64), x26);
   let mut x30: u64 = 0;
   let mut x31: fiat_secp256k1_u1 = 0;
   fiat_secp256k1_addcarryx_u64(&mut x30, &mut x31, 0x0, x20, (arg1[1]));
   let mut x32: u64 = 0;
   let mut x33: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x32, &mut x33, x31, x22, 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x32, &mut x33, x31, x22, (0x0 as u64));
   let mut x34: u64 = 0;
   let mut x35: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x34, &mut x35, x33, x24, 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x34, &mut x35, x33, x24, (0x0 as u64));
   let mut x36: u64 = 0;
   let mut x37: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x36, &mut x37, x35, x28, 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x36, &mut x37, x35, x28, (0x0 as u64));
   let mut x38: u64 = 0;
   let mut x39: u64 = 0;
   fiat_secp256k1_mulx_u64(&mut x38, &mut x39, x30, 0xd838091dd2253531);
@@ -1099,13 +1101,13 @@ pub fn fiat_secp256k1_from_montgomery(out1: &mut [u64; 4], arg1: &[u64; 4]) -> (
   fiat_secp256k1_addcarryx_u64(&mut x60, &mut x61, x59, x36, x52);
   let mut x62: u64 = 0;
   let mut x63: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x62, &mut x63, x53, x41, 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x62, &mut x63, x53, x41, (0x0 as u64));
   let mut x64: u64 = 0;
   let mut x65: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x64, &mut x65, x29, 0x0, 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x64, &mut x65, x29, (0x0 as u64), (0x0 as u64));
   let mut x66: u64 = 0;
   let mut x67: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x66, &mut x67, x37, (x64 as fiat_secp256k1_u1), 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x66, &mut x67, x37, ((x64 as fiat_secp256k1_u1) as u64), (0x0 as u64));
   let mut x68: u64 = 0;
   let mut x69: fiat_secp256k1_u1 = 0;
   fiat_secp256k1_addcarryx_u64(&mut x68, &mut x69, x61, x66, x62);
@@ -1114,13 +1116,13 @@ pub fn fiat_secp256k1_from_montgomery(out1: &mut [u64; 4], arg1: &[u64; 4]) -> (
   fiat_secp256k1_addcarryx_u64(&mut x70, &mut x71, 0x0, x56, (arg1[2]));
   let mut x72: u64 = 0;
   let mut x73: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x72, &mut x73, x71, x58, 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x72, &mut x73, x71, x58, (0x0 as u64));
   let mut x74: u64 = 0;
   let mut x75: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x74, &mut x75, x73, x60, 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x74, &mut x75, x73, x60, (0x0 as u64));
   let mut x76: u64 = 0;
   let mut x77: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x76, &mut x77, x75, x68, 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x76, &mut x77, x75, x68, (0x0 as u64));
   let mut x78: u64 = 0;
   let mut x79: u64 = 0;
   fiat_secp256k1_mulx_u64(&mut x78, &mut x79, x70, 0xd838091dd2253531);
@@ -1159,13 +1161,13 @@ pub fn fiat_secp256k1_from_montgomery(out1: &mut [u64; 4], arg1: &[u64; 4]) -> (
   fiat_secp256k1_addcarryx_u64(&mut x100, &mut x101, x99, x76, x92);
   let mut x102: u64 = 0;
   let mut x103: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x102, &mut x103, x93, x81, 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x102, &mut x103, x93, x81, (0x0 as u64));
   let mut x104: u64 = 0;
   let mut x105: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x104, &mut x105, x69, 0x0, 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x104, &mut x105, x69, (0x0 as u64), (0x0 as u64));
   let mut x106: u64 = 0;
   let mut x107: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x106, &mut x107, x77, (x104 as fiat_secp256k1_u1), 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x106, &mut x107, x77, ((x104 as fiat_secp256k1_u1) as u64), (0x0 as u64));
   let mut x108: u64 = 0;
   let mut x109: fiat_secp256k1_u1 = 0;
   fiat_secp256k1_addcarryx_u64(&mut x108, &mut x109, x101, x106, x102);
@@ -1174,13 +1176,13 @@ pub fn fiat_secp256k1_from_montgomery(out1: &mut [u64; 4], arg1: &[u64; 4]) -> (
   fiat_secp256k1_addcarryx_u64(&mut x110, &mut x111, 0x0, x96, (arg1[3]));
   let mut x112: u64 = 0;
   let mut x113: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x112, &mut x113, x111, x98, 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x112, &mut x113, x111, x98, (0x0 as u64));
   let mut x114: u64 = 0;
   let mut x115: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x114, &mut x115, x113, x100, 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x114, &mut x115, x113, x100, (0x0 as u64));
   let mut x116: u64 = 0;
   let mut x117: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x116, &mut x117, x115, x108, 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x116, &mut x117, x115, x108, (0x0 as u64));
   let mut x118: u64 = 0;
   let mut x119: u64 = 0;
   fiat_secp256k1_mulx_u64(&mut x118, &mut x119, x110, 0xd838091dd2253531);
@@ -1219,13 +1221,13 @@ pub fn fiat_secp256k1_from_montgomery(out1: &mut [u64; 4], arg1: &[u64; 4]) -> (
   fiat_secp256k1_addcarryx_u64(&mut x140, &mut x141, x139, x116, x132);
   let mut x142: u64 = 0;
   let mut x143: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x142, &mut x143, x133, x121, 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x142, &mut x143, x133, x121, (0x0 as u64));
   let mut x144: u64 = 0;
   let mut x145: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x144, &mut x145, x109, 0x0, 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x144, &mut x145, x109, (0x0 as u64), (0x0 as u64));
   let mut x146: u64 = 0;
   let mut x147: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x146, &mut x147, x117, (x144 as fiat_secp256k1_u1), 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x146, &mut x147, x117, ((x144 as fiat_secp256k1_u1) as u64), (0x0 as u64));
   let mut x148: u64 = 0;
   let mut x149: fiat_secp256k1_u1 = 0;
   fiat_secp256k1_addcarryx_u64(&mut x148, &mut x149, x141, x146, x142);
@@ -1243,10 +1245,10 @@ pub fn fiat_secp256k1_from_montgomery(out1: &mut [u64; 4], arg1: &[u64; 4]) -> (
   fiat_secp256k1_subborrowx_u64(&mut x156, &mut x157, x155, x148, 0xffffffffffffffff);
   let mut x158: u64 = 0;
   let mut x159: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_addcarryx_u64(&mut x158, &mut x159, x149, 0x0, 0x0);
+  fiat_secp256k1_addcarryx_u64(&mut x158, &mut x159, x149, (0x0 as u64), (0x0 as u64));
   let mut x160: u64 = 0;
   let mut x161: fiat_secp256k1_u1 = 0;
-  fiat_secp256k1_subborrowx_u64(&mut x160, &mut x161, x157, (x158 as fiat_secp256k1_u1), 0x0);
+  fiat_secp256k1_subborrowx_u64(&mut x160, &mut x161, x157, ((x158 as fiat_secp256k1_u1) as u64), (0x0 as u64));
   let mut x162: u64 = 0;
   fiat_secp256k1_cmovznz_u64(&mut x162, x161, x150, x136);
   let mut x163: u64 = 0;
@@ -1323,64 +1325,64 @@ pub fn fiat_secp256k1_to_bytes(out1: &mut [u8; 32], arg1: &[u64; 4]) -> () {
   let x3: u64 = (arg1[1]);
   let x4: u64 = (arg1[0]);
   let x5: u64 = (x4 >> 8);
-  let x6: u8 = ((x4 & 0xff) as u8);
+  let x6: u8 = ((x4 & (0xff as u64)) as u8);
   let x7: u64 = (x5 >> 8);
-  let x8: u8 = ((x5 & 0xff) as u8);
+  let x8: u8 = ((x5 & (0xff as u64)) as u8);
   let x9: u64 = (x7 >> 8);
-  let x10: u8 = ((x7 & 0xff) as u8);
+  let x10: u8 = ((x7 & (0xff as u64)) as u8);
   let x11: u64 = (x9 >> 8);
-  let x12: u8 = ((x9 & 0xff) as u8);
+  let x12: u8 = ((x9 & (0xff as u64)) as u8);
   let x13: u64 = (x11 >> 8);
-  let x14: u8 = ((x11 & 0xff) as u8);
+  let x14: u8 = ((x11 & (0xff as u64)) as u8);
   let x15: u64 = (x13 >> 8);
-  let x16: u8 = ((x13 & 0xff) as u8);
+  let x16: u8 = ((x13 & (0xff as u64)) as u8);
   let x17: u8 = ((x15 >> 8) as u8);
-  let x18: u8 = ((x15 & 0xff) as u8);
+  let x18: u8 = ((x15 & (0xff as u64)) as u8);
   let x19: u8 = (x17 & 0xff);
   let x20: u64 = (x3 >> 8);
-  let x21: u8 = ((x3 & 0xff) as u8);
+  let x21: u8 = ((x3 & (0xff as u64)) as u8);
   let x22: u64 = (x20 >> 8);
-  let x23: u8 = ((x20 & 0xff) as u8);
+  let x23: u8 = ((x20 & (0xff as u64)) as u8);
   let x24: u64 = (x22 >> 8);
-  let x25: u8 = ((x22 & 0xff) as u8);
+  let x25: u8 = ((x22 & (0xff as u64)) as u8);
   let x26: u64 = (x24 >> 8);
-  let x27: u8 = ((x24 & 0xff) as u8);
+  let x27: u8 = ((x24 & (0xff as u64)) as u8);
   let x28: u64 = (x26 >> 8);
-  let x29: u8 = ((x26 & 0xff) as u8);
+  let x29: u8 = ((x26 & (0xff as u64)) as u8);
   let x30: u64 = (x28 >> 8);
-  let x31: u8 = ((x28 & 0xff) as u8);
+  let x31: u8 = ((x28 & (0xff as u64)) as u8);
   let x32: u8 = ((x30 >> 8) as u8);
-  let x33: u8 = ((x30 & 0xff) as u8);
+  let x33: u8 = ((x30 & (0xff as u64)) as u8);
   let x34: u8 = (x32 & 0xff);
   let x35: u64 = (x2 >> 8);
-  let x36: u8 = ((x2 & 0xff) as u8);
+  let x36: u8 = ((x2 & (0xff as u64)) as u8);
   let x37: u64 = (x35 >> 8);
-  let x38: u8 = ((x35 & 0xff) as u8);
+  let x38: u8 = ((x35 & (0xff as u64)) as u8);
   let x39: u64 = (x37 >> 8);
-  let x40: u8 = ((x37 & 0xff) as u8);
+  let x40: u8 = ((x37 & (0xff as u64)) as u8);
   let x41: u64 = (x39 >> 8);
-  let x42: u8 = ((x39 & 0xff) as u8);
+  let x42: u8 = ((x39 & (0xff as u64)) as u8);
   let x43: u64 = (x41 >> 8);
-  let x44: u8 = ((x41 & 0xff) as u8);
+  let x44: u8 = ((x41 & (0xff as u64)) as u8);
   let x45: u64 = (x43 >> 8);
-  let x46: u8 = ((x43 & 0xff) as u8);
+  let x46: u8 = ((x43 & (0xff as u64)) as u8);
   let x47: u8 = ((x45 >> 8) as u8);
-  let x48: u8 = ((x45 & 0xff) as u8);
+  let x48: u8 = ((x45 & (0xff as u64)) as u8);
   let x49: u8 = (x47 & 0xff);
   let x50: u64 = (x1 >> 8);
-  let x51: u8 = ((x1 & 0xff) as u8);
+  let x51: u8 = ((x1 & (0xff as u64)) as u8);
   let x52: u64 = (x50 >> 8);
-  let x53: u8 = ((x50 & 0xff) as u8);
+  let x53: u8 = ((x50 & (0xff as u64)) as u8);
   let x54: u64 = (x52 >> 8);
-  let x55: u8 = ((x52 & 0xff) as u8);
+  let x55: u8 = ((x52 & (0xff as u64)) as u8);
   let x56: u64 = (x54 >> 8);
-  let x57: u8 = ((x54 & 0xff) as u8);
+  let x57: u8 = ((x54 & (0xff as u64)) as u8);
   let x58: u64 = (x56 >> 8);
-  let x59: u8 = ((x56 & 0xff) as u8);
+  let x59: u8 = ((x56 & (0xff as u64)) as u8);
   let x60: u64 = (x58 >> 8);
-  let x61: u8 = ((x58 & 0xff) as u8);
+  let x61: u8 = ((x58 & (0xff as u64)) as u8);
   let x62: u8 = ((x60 >> 8) as u8);
-  let x63: u8 = ((x60 & 0xff) as u8);
+  let x63: u8 = ((x60 & (0xff as u64)) as u8);
   out1[0] = x6;
   out1[1] = x8;
   out1[2] = x10;

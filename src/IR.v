@@ -52,7 +52,7 @@ Module Compilers.
       End type.
       Import type.Notations.
       Import int.Notations.
-
+ 
       Section ident.
         Import type.
         Inductive ident : type -> type -> Set :=
@@ -138,14 +138,22 @@ Module Compilers.
            numeric conversions *)
         Class LanguageCasts :=
           {
-            (* Zoe: Right now common type is only used to compute the common
-               type of operand in binary operations. Therefore, it can be
-               internal to the bin_op_conversion (that will need to return an
-               extra result) and not exposed here. Leaving it as is in favor of
-               incrementality for now. Thoughts? *)
-            common_type : int.type -> int.type -> int.type;
-            bin_op_conversion : option int.type -> arith_expr_for (base.type.Z * base.type.Z) -> arith_expr_for (base.type.Z * base.type.Z);
-            un_op_conversion : option int.type -> arith_expr_for base.type.Z -> arith_expr_for base.type.Z
+            (* [bin_op_conversion] returns the arithmetic expression with
+               the required cats and the type of the arithmetic expression
+               that is calculated based on the types of the operands and
+               the desired type *)
+            (* Zoe: My preference would be to expose something like
+               [arith_bin_arith_expr_of_PHOAS_ident] here but
+               unfortunately this seems compilated for unary operators,
+               since many of them seem to require special handling for the
+               final casts. I'm exposing this for now so that we can treat
+               binary and unary operators uniformly. *)
+            bin_op_conversion : option int.type -> arith_expr_for (base.type.Z * base.type.Z) ->
+                                arith_expr_for (base.type.Z * base.type.Z) * option (int.type);
+            un_op_conversion : option int.type -> arith_expr_for base.type.Z -> arith_expr_for base.type.Z;
+            (* This is used to upcast expressions that are being assigned
+               to variables/arrays or being passed as arguments. *)
+            result_upcast : option int.type -> arith_expr_for base.type.Z -> arith_expr_for base.type.Z;
           }.
 
         Section __.
@@ -231,10 +239,9 @@ Module Compilers.
                      (idc : ident (type.Z * type.Z) type.Z)
             : option int.type -> arith_expr_for s -> arith_expr_for d
             := fun desired_type '((e1, t1), (e2, t2)) =>
-                 let '((e1, t1), (e2, t2)) :=
+                 let '(((e1, t1), (e2, t2)), typ) :=
                      bin_op_conversion desired_type ((e1, t1), (e2, t2)) in
-                 let ct := (t1 <- t1; t2 <- t2; Some (common_type t1 t2))%option in
-                 Zcast_down_if_needed desired_type ((idc @@ (e1, e2))%Cexpr, ct).
+                 Zcast_down_if_needed desired_type ((idc @@ (e1, e2))%Cexpr, typ).
 
           Local Definition fakeprod (A B : Compilers.type.type base.type) : Compilers.type.type base.type
             := match A, B with
@@ -382,10 +389,10 @@ Module Compilers.
                                       that no coercion was going to be
                                       generated before, only implicit
                                       promotion to int32. *)
-                              let '(e', rin') := un_op_conversion
-                                                   (option_map (int.union_zrange r[0~>2^offset]%zrange) r)
-                                                   (e, r) in
-                              ret (cast_down_if_needed rout (Z_shiftr offset @@ e', rin'))
+                           let '(e', rin') := un_op_conversion
+                                                (option_map (int.union_zrange r[0~>2^offset]%zrange) r)
+                                                (e, r) in
+                           ret (cast_down_if_needed rout (Z_shiftr offset @@ e', rin'))
                          | None => inr ["Invalid right-shift by a non-literal"]%string
                          end
                  | ident.Z_shiftl
@@ -439,65 +446,9 @@ Module Compilers.
                  | ident.pair A B
                    => fun _ _ _ => inr ["Invalid identifier in arithmetic expression " ++ show true idc]%string
                  | ident.Z_opp (* we pretend this is [0 - _] *)
-                   => fun r '(e, t) =>
-                        (* Zoe: Negation as a binary operation has a
-                                slighly different handling from binary
-                                operators
-                                (i.e. [arith_bin_arith_expr_of_PHOAS_ident]).
-                                In particular, to avoid an underflow in
-                                Rust (where there's no wrapparound mod 2
-                                as in C), we make sure that the operation
-                                happens in the signed counterpart of the
-                                disired type.
-
-                                In paricular the problem manifests in
-                                function [fiat_25519_subborrowx_u51] where
-                                the following operation takes place:
-
-                                *out2 = (fiat_p224_uint1)(0x0 - x2);
-
-                                where x2 is an int1 and the desired type
-                                of the operation is uint1. The code will
-                                try to cast the operand up to the desired
-                                type. In C, because of integer promotion
-                                (that is, x2 will be promoted to int32)
-                                trying to upcast this to uint1 will have
-                                no effect at all and the operation will be
-                                carried out in a signed manner.
-
-                                Note that, if we were dealing with
-                                integers >= 32 bits then x2 would have
-                                been casted to uint32 and the subtraction
-                                would have been carried out in an unsigned
-                                manner, causing overflow/wrapping to
-                                happen. This would perhaps have still
-                                worked in C, but I am not sure if it's the
-                                desired behavior. (That's not manifested
-                                anywhere in the code right now as there's
-                                only two places where arithmetic negation
-                                happens and it only involves 1-bit
-                                integers).
-
-                                In Rust, however, there's no integer
-                                promotion and a coercion is inserted to x2
-                                in order to cast it to uint1 forcing the
-                                subtraction to happend in an unsigned
-                                manner and Rust to crash.
-
-                                For this reason, the operands are not
-                                casted to the desired type, but to it's
-                                signed counterpart, then once the
-                                operation is performed the result is
-                                casted to the desired type. AFAICT this
-                                does't affect at all the C generated code
-                                but it fixes the problem we have with
-                                Rust. *)
+                   => fun r x =>
                         let zero := (literal 0 @@ TT, Some (int.of_zrange_relaxed r[0~>0])) in
-                        let '((e1, t1), (e2, t2)) :=
-                            bin_op_conversion (option_map int.signed_counterpart_of r)
-                                              (zero, (e, t)) in
-                        let ct := (t1 <- t1; t2 <- t2; Some (common_type t1 t2))%option in
-                        ret (Zcast_down_if_needed r ((Z_sub @@ (e1, e2))%Cexpr, ct))
+                        ret (arith_bin_arith_expr_of_PHOAS_ident Z_sub r (zero, x))
                  | ident.Literal _ v
                    => fun _ => ret v
                  | ident.Nat_succ
@@ -733,7 +684,7 @@ Module Compilers.
                  | base.type.Z
                    => fun '(n, r) e
                       => (rhs <- arith_expr_of_base_PHOAS e r;
-                            let '(e, r) := rhs in
+                            let '(e, r) := result_upcast r rhs in
                             ret [AssignZPtr n r e])
                  | base.type.type_base _ => fun _ _ => inr ["Invalid type " ++ show false t]%string
                  | base.type.prod A B
@@ -748,7 +699,9 @@ Module Compilers.
                    => fun '(n, r, len) e
                       => (ls <- arith_expr_of_base_PHOAS e (Some (repeat r len));
                             ret (List.map
-                                   (fun '(i, (e, _)) => AssignNth n i e)
+                                   (fun '(i, rhs) =>
+                                      let '(e, _) := result_upcast r rhs in
+                                      AssignNth n i e)
                                    (List.combine (List.seq 0 len) ls)))
                  | base.type.list _
                  | base.type.option _
@@ -794,14 +747,13 @@ Module Compilers.
                    => fun '((econdv, (econd, rcond)), ((e1v, (e1, r1)), ((e2v, (e2, r2)), tt)))
                       => match rcond with
                          | Some (int.unsigned 0)
-                           => let '((e1, r1), (e2, r2)) :=
+                           => let '(((e1, r1), (e2, r2)), typ) :=
                                   bin_op_conversion rout ((e1, r1), (e2, r2)) in
-                              let ct := (r1 <- r1; r2 <- r2; Some (common_type r1 r2))%option in
-                              ty <- match ct, rout with
-                                    | Some ct, Some rout
-                                      => if int.type_beq ct rout
-                                         then inl ct
-                                         else inr ["Casting the result of Z.zselect to a type other than the common type is not currently supported.  (Cannot cast a pointer to " ++ show false rout ++ " to a pointer to " ++ show false ct ++ ".)"]%string
+                              ty <- match typ, rout with
+                                    | Some typ, Some rout
+                                      => if int.type_beq typ rout
+                                         then inl typ
+                                         else inr ["Casting the result of Z.zselect to a type other than the common type is not currently supported.  (Cannot cast a pointer to " ++ show false rout ++ " to a pointer to " ++ show false typ ++ ".)"]%string
                                     | None, _ => inr ["Unexpected None result of common-type calculation for Z.zselect"]
                                     | _, None => inr ["Missing cast annotation on return of Z.zselect"]
                                     end;
@@ -833,7 +785,8 @@ Module Compilers.
                 (t:=(base.type.Z -> base.type.Z -> base.type.Z -> base.type.Z * base.type.Z)%etype)
                 (idc : ident.ident t)
                 (rout : option int.type * option int.type)
-                (args : type.for_each_lhs_of_arrow (fun t => @Compilers.expr.expr base.type ident.ident var_data t * (arith_expr type.Z * option int.type))%type t)
+                (args : type.for_each_lhs_of_arrow (fun t => @Compilers.expr.expr base.type ident.ident var_data t *
+                                                             (arith_expr type.Z * option int.type))%type t)
               : ErrT ((option int.type * option int.type) * (arith_expr (type.Zptr * type.Zptr) -> expr))
               := let _ := @PHOAS.expr.partially_show_expr in
                  let '((s, _), ((e1v, (e1, r1)), ((e2v, (e2, r2)), tt))) := args in
@@ -860,8 +813,10 @@ Module Compilers.
                         bounds_check do_bounds_check "second argument to" idc s e2v r2,
                         bounds_check do_bounds_check "first return value of" idc s e2v (fst rout),
                         bounds_check do_bounds_check "second return value of" idc 1 (* boolean carry/borrow *) e2v (snd rout);
-                          inl ((round_up_to_split_type s (fst rout), snd rout),
-                               fun retptr => [Call (idc' @@ (retptr, (literal 0 @@ TT, e1, e2)))%Cexpr]))
+                       let '(e1, _) := result_upcast (Some (int.of_zrange_relaxed r[0 ~> 2 ^ s - 1])) (e1, r1) in
+                       let '(e2, _) := result_upcast (Some (int.of_zrange_relaxed r[0 ~> 2 ^ s - 1])) (e2, r2) in
+                       inl ((round_up_to_split_type s (fst rout), snd rout),
+                            fun retptr => [Call (idc' @@ (retptr, (literal 0 @@ TT, e1, e2)))%Cexpr]))
                   | Some _, _ => inr ["Unrecognized identifier when attempting to construct an assignment with 2 arguments: " ++ show true idc]%string
                   | None, _ => inr ["Expression is not a literal power of two of type ℤ: " ++ show true s ++ " (when trying to parse the first argument of " ++ show true idc ++ ")"]%string
                   end.
@@ -891,6 +846,9 @@ Module Compilers.
                              bounds_check do_bounds_check "third argument to" idc s e2v r2,
                              bounds_check do_bounds_check "first return value of" idc s e2v (fst rout),
                              bounds_check do_bounds_check "second (carry) return value of" idc 1 (* boolean carry/borrow *) e2v (snd rout));
+                         let '(e1, _) := result_upcast (Some (int.of_zrange_relaxed r[0 ~> 2 ^ 1 - 1])) (e1, r1) in
+                         let '(e2, _) := result_upcast (Some (int.of_zrange_relaxed r[0 ~> 2 ^ s - 1])) (e2, r2) in
+                         let '(e3, _) := result_upcast (Some (int.of_zrange_relaxed r[0 ~> 2 ^ s - 1])) (e3, r3) in
                          inl ((round_up_to_split_type s (fst rout), snd rout),
                               fun retptr => [Call (idc' @@ (retptr, (e1, e2, e3)))%Cexpr]))
                  | Some _, _ => inr ["Unrecognized identifier when attempting to construct an assignment with 2 arguments: " ++ show true idc]%string
