@@ -24,22 +24,23 @@ Module Rust.
 
   (* Header imports and type defs *)
   (* TODO thread static flag in order to append pub *)
-  Definition typedef_header (prefix : string) (bitwidths_used : PositiveSet.t)
-  : list string :=
-    ([header]
-       ++ (if PositiveSet.mem 1 bitwidths_used
-           then ["pub type " ++ prefix ++ "u1 = u8;"; (* C: typedef unsigned char prefix_uint1 *)
-                   "pub type " ++ prefix ++ "i1 = i8;" ]%string (* C: typedef signed char prefix_int1 *)
-           else [])
-       ++ (if PositiveSet.mem 2 bitwidths_used
-           then ["pub type " ++ prefix ++ "u2 = u8;";
-                   "pub type " ++ prefix ++ "i2 = i8;" ]%string
-           else [])
-       ++ (if PositiveSet.mem 128 bitwidths_used
-           then ["pub type " ++ prefix ++ "u128 = u128;"; (* Since 128 bit integers exist in (nightly) rust consider removing the *)
-                                                          (* type synonym and extending stdint_ditwidths *)
-                   "pub type " ++ prefix ++ "i128 = i128;"]%string
-           else []))%list.
+  Definition typedef_header (static : bool) (prefix : string) (bitwidths_used : PositiveSet.t)
+    : list string
+    := let type_prefix := ((if static then "type " else "pub type ") ++ prefix)%string in
+       ([header]
+          ++ (if PositiveSet.mem 1 bitwidths_used
+              then [type_prefix ++ "u1 = u8;"; (* C: typedef unsigned char prefix_uint1 *)
+                      type_prefix ++ "i1 = i8;" ]%string (* C: typedef signed char prefix_int1 *)
+              else [])
+          ++ (if PositiveSet.mem 2 bitwidths_used
+              then [type_prefix ++ "u2 = u8;";
+                      type_prefix ++ "i2 = i8;" ]%string
+              else [])
+          ++ (if PositiveSet.mem 128 bitwidths_used
+              then [type_prefix ++ "u128 = u128;"; (* Since 128 bit integers exist in (nightly) rust consider removing the *)
+                      (* type synonym and extending stdint_ditwidths *)
+                      type_prefix ++ "i128 = i128;"]%string
+              else []))%list.
 
   (* Supported integer bitwidths *)
   Definition stdint_bitwidths : list Z := [8; 16; 32; 64].
