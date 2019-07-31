@@ -21,3 +21,8 @@ git diff
 
 cat time-of-build-pretty.log
 make "$@" TIMED=1 || exit $?
+
+if [ ! -z "$(git diff)" ]; then
+    git diff
+    exit 1
+fi
