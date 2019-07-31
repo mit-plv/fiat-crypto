@@ -18,22 +18,27 @@ Module ToString := LanguageStringification.Compilers.ToString.
 
 Module Rust.
 
-  (* Header imports *)
-  Definition imports : string := "#![allow(unused_parens)]" ++ String.NewLine ++ "use std::prelude;".
+  Definition header : string :=
+    "#![allow(unused_parens)]" ++ String.NewLine ++
+    "#[allow(non_camel_case_types)]" ++ String.NewLine.
 
   (* Header imports and type defs *)
   (* TODO thread static flag in order to append pub *)
   Definition typedef_header (prefix : string) (bitwidths_used : PositiveSet.t)
   : list string :=
-    ([imports]
+    ([header]
        ++ (if PositiveSet.mem 1 bitwidths_used
            then ["pub type " ++ prefix ++ "u1 = u8;"; (* C: typedef unsigned char prefix_uint1 *)
                    "pub type " ++ prefix ++ "i1 = i8;" ]%string (* C: typedef signed char prefix_int1 *)
            else [])
+       ++ (if PositiveSet.mem 2 bitwidths_used
+           then ["pub type " ++ prefix ++ "u2 = u8;";
+                   "pub type " ++ prefix ++ "i2 = i8;" ]%string
+           else [])
        ++ (if PositiveSet.mem 128 bitwidths_used
            then ["pub type " ++ prefix ++ "u128 = u128;"; (* Since 128 bit integers exist in (nightly) rust consider removing the *)
                                                           (* type synonym and extending stdint_ditwidths *)
-                 "pub type " ++ prefix ++ "i128 = i128;"]%string
+                   "pub type " ++ prefix ++ "i128 = i128;"]%string
            else []))%list.
 
   (* Supported integer bitwidths *)
@@ -271,66 +276,22 @@ Module Rust.
 
   (** * Language-specific numeric conversions to be passed to the PHOAS -> IR translation *)
 
-  (* Zoe: Verbatim from C translation, but without integer promotions *)
-
-  Definition rank (r : ToString.int.type) : BinInt.Z := ToString.int.bitwidth_of r.
-
-  Definition Rust_common_type (t1 t2 : ToString.int.type) : ToString.int.type :=
-    (** - If the types after promotion are the same, that
-          type is the common type *)
-    if ToString.int.type_beq t1 t2 then
-      t1
-    (** - Otherwise, if both operands after promotion have
-          the same signedness (both signed or both unsigned),
-          the operand with the lesser conversion rank (see
-          below) is implicitly converted to the type of the
-          operand with the greater conversion rank *)
-
-    else if bool_beq (ToString.int.is_signed t1) (ToString.int.is_signed t2) then
-      (if rank t1 >=? rank t2 then t1 else t2)
-      (** - Otherwise, the signedness is different: If the
-            operand with the unsigned type has conversion rank
-            greater or equal than the rank of the type of the
-            signed operand, then the operand with the signed
-            type is implicitly converted to the unsigned type
-       *)
-    else if ToString.int.is_unsigned t1 && (rank t1 >=? rank t2) then
-      t1
-    else if ToString.int.is_unsigned t2 && (rank t2 >=? rank t1) then
-      t2
-    (** - Otherwise, the signedness is different and the
-          signed operand's rank is greater than unsigned
-          operand's rank. In this case, if the signed type
-          can represent all values of the unsigned type, then
-          the operand with the unsigned type is implicitly
-          converted to the type of the signed operand. *)
-    else if ToString.int.is_signed t1 && ToString.int.is_tighter_than t2 t1 then
-      t1
-    else if ToString.int.is_signed t2 && ToString.int.is_tighter_than t1 t2 then
-      t2
-    (** - Otherwise, both operands undergo implicit
-          conversion to the unsigned type counterpart of the
-          signed operand's type. *)
-    (** N.B. This case ought to be impossible in our code,
-        where [rank] is the bitwidth. *)
-    else if ToString.int.is_signed t1 then
-      ToString.int.unsigned_counterpart_of t1
-    else
-      ToString.int.unsigned_counterpart_of t2.
-
   Definition Rust_bin_op_conversion
              (desired_type : option ToString.int.type)
              (args : arith_expr_for (base.type.Z * base.type.Z))
-    : arith_expr_for (base.type.Z * base.type.Z) :=
+    : arith_expr_for (base.type.Z * base.type.Z) * option ToString.int.type :=
     match desired_type with
-    | None => args
-    | Some _ =>
+    | None => (args, None)
+    | Some dt =>
       let '((e1, t1), (e2, t2)) := args in
       match t1, t2 with
-      | None, _ | _, None => args
+      | None, _ | _, None => (args, None)
       | Some t1', Some t2' =>
-        (Zcast_up_if_needed desired_type (e1, t1),
-         Zcast_up_if_needed desired_type (e2, t2))
+        let ct := ToString.int.union t1' t2' in
+        let desired_type' := Some (ToString.int.union ct dt) in
+        ((Zcast_up_if_needed desired_type' (e1, t1),
+          Zcast_up_if_needed desired_type' (e2, t2)),
+         desired_type')
       end
     end.
 
@@ -340,10 +301,15 @@ Module Rust.
     let '(e, r) := arg in
     Zcast_up_if_needed desired_type (e, r).
 
+  Definition Rust_result_upcast (desired_type : option ToString.int.type) (e : arith_expr_for base.type.Z)
+    : arith_expr_for base.type.Z :=
+    Zcast_up_if_needed desired_type e.
+
   Local Instance CLanguageCasts : LanguageCasts :=
-    {| common_type := Rust_common_type;
-       bin_op_conversion := Rust_bin_op_conversion;
-       un_op_conversion := Rust_un_op_conversion |}.
+    {| bin_op_conversion := Rust_bin_op_conversion;
+       un_op_conversion := Rust_un_op_conversion;
+       result_upcast := Rust_result_upcast
+    |}.
 
   Definition to_function_lines (static : bool) (prefix : string) (name : string)
              {t}

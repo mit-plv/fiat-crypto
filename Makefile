@@ -378,7 +378,7 @@ p434_64.rs p434_32.rs : p434_%.rs :
 	$(HIDE)rm $@.ok && mv $@.tmp fiat-rust/src/$@
 
 test-rust-files: $(ALL_RUST_FILES)
-	$(shell cd fiat-rust; ${CARGO_BUILD})
+	cd fiat-rust; $(CARGO_BUILD)
 
 # Perf testing
 PERF_MAKEFILE = src/Rewriter/PerfTesting/Specific/generated/primes.mk

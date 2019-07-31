@@ -449,20 +449,25 @@ Module Compilers.
       Definition C_bin_op_conversion
                  (desired_type : option int.type)
                  (args : arith_expr_for (base.type.Z * base.type.Z))
-        : arith_expr_for (base.type.Z * base.type.Z)
+        : arith_expr_for (base.type.Z * base.type.Z) * option int.type
         := match desired_type with
-           | None => args
+           | None => (args, None)
            | Some _
              => let '((e1, t1), (e2, t2)) := args in
                 (* Zoe: internalized integer promotions *)
                 let t1 := option_map integer_promote_type t1 in
                 let t2 := option_map integer_promote_type t2 in
                 match t1, t2 with
-                | None, _ | _, None => args
-                | Some t1', Some t2'
-                  => if int.is_tighter_than t2' t1'
-                     then (Zcast_up_if_needed desired_type (e1, t1), (e2, t2))
-                     else ((e1, t1), Zcast_up_if_needed desired_type (e2, t2))
+                | None, _ | _, None => (args, None)
+                | Some t1', Some t2' =>
+                  let args := 
+                      if int.is_tighter_than t2' t1'
+                      then (Zcast_up_if_needed desired_type (e1, t1), (e2, t2))
+                      else ((e1, t1), Zcast_up_if_needed desired_type (e2, t2))
+                  in
+                  let '((e1, t1), (e2, t2)) := args in 
+                  let ct := (t1 <- t1; t2 <- t2; Some (C_common_type t1 t2))%option in
+                  (args, ct)
                 end
            end.
 
@@ -474,9 +479,10 @@ Module Compilers.
         Zcast_up_if_needed desired_type (e, rin).
 
       Local Instance CLanguageCasts : LanguageCasts :=
-        {| common_type := C_common_type;
-           bin_op_conversion := C_bin_op_conversion;
-           un_op_conversion := C_un_op_conversion |}.
+        {| bin_op_conversion := C_bin_op_conversion;
+           un_op_conversion := C_un_op_conversion;
+           result_upcast := fun _ e => e (* C doesn't need to upcast assignments/functions args*)
+        |}.
 
       (** Top-level printing functions *)
 
