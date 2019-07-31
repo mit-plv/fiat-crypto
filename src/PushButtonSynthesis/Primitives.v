@@ -855,7 +855,7 @@ Section __.
          let types_used := PositiveSet.union extra_bit_widths (ToString.bitwidths_used infos) in
          let header :=
              (comment_header
-                ++ ToString.typedef_header function_name_prefix types_used
+                ++ ToString.typedef_header static function_name_prefix types_used
                 ++ [""]) in
          [("check_args" ++ String.NewLine ++ String.concat String.NewLine header,
            check_args (ErrorT.Success header))%string]

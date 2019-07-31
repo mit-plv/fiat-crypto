@@ -41,7 +41,7 @@ Module Compilers.
 
     Module C.
       Module String.
-        Definition typedef_header (prefix : string) (bitwidths_used : PositiveSet.t)
+        Definition typedef_header (static : bool) (prefix : string) (bitwidths_used : PositiveSet.t)
         : list string
           := (["#include <stdint.h>"]
                 ++ (if PositiveSet.mem 1 bitwidths_used
@@ -460,12 +460,12 @@ Module Compilers.
                 match t1, t2 with
                 | None, _ | _, None => (args, None)
                 | Some t1', Some t2' =>
-                  let args := 
+                  let args :=
                       if int.is_tighter_than t2' t1'
                       then (Zcast_up_if_needed desired_type (e1, t1), (e2, t2))
                       else ((e1, t1), Zcast_up_if_needed desired_type (e2, t2))
                   in
-                  let '((e1, t1), (e2, t2)) := args in 
+                  let '((e1, t1), (e2, t2)) := args in
                   let ct := (t1 <- t1; t2 <- t2; Some (C_common_type t1 t2))%option in
                   (args, ct)
                 end

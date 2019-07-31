@@ -881,7 +881,7 @@ Module Compilers.
         (** Generates a header of any needed typedefs based on the bitwidths used and the curve-specific prefix *)
         (** TODO: should we pick a more generic name than "typedef_header"? *)
         typedef_header
-        : forall (prefix : string) (bitwidths_used : PositiveSet.t),
+        : forall (static : bool) (prefix : string) (bitwidths_used : PositiveSet.t),
             list string
       }.
   End ToString.
