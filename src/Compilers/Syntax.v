@@ -10,6 +10,7 @@ Delimit Scope ctype_scope with ctype.
 Local Open Scope ctype_scope.
 Delimit Scope expr_scope with expr.
 Local Open Scope expr_scope.
+Local Unset Uniform Inductive Parameters.
 Inductive flat_type (base_type_code : Type)
   := Tbase (T : base_type_code) | Unit | Prod (A B : flat_type base_type_code).
 Bind Scope ctype_scope with flat_type.
