@@ -13,6 +13,7 @@
 
 #![allow(unused_parens)]
 #[allow(non_camel_case_types)]
+
 pub type fiat_p384_u1 = u8;
 pub type fiat_p384_i1 = i8;
 pub type fiat_p384_u2 = u8;
