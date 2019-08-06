@@ -9,6 +9,10 @@ CUR_ARCHIVE="${CACHE_DIR}/vos-${COQ_VERSION}-${CUR}.tar.gz"
 tar -xzf "${PREV_ARCHIVE}" || true
 mkdir -p "${CACHE_DIR}"
 
+if [ ! -z "${TOUCH}" ]; then
+    make -j2 -t ${TOUCH} || exit $?
+fi
+
 rm -f finished.ok
 (make "$@" TIMED=1 2>&1 && touch finished.ok) | tee -a time-of-build.log
 python "./etc/coq-scripts/timing/make-one-time-file.py" "time-of-build.log" "time-of-build-pretty.log" || exit $?
