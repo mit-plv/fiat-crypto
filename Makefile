@@ -94,8 +94,9 @@ endif
 UNSATURATED_SOLINAS_C_FILES := curve25519_64.c curve25519_32.c p521_64.c p521_32.c p448_solinas_64.c # p224_solinas_64.c
 WORD_BY_WORD_MONTGOMERY_C_FILES := p256_64.c p256_32.c p384_64.c p384_32.c secp256k1_64.c secp256k1_32.c p224_64.c p224_32.c p434_64.c # p434_32.c
 ALL_C_FILES := $(UNSATURATED_SOLINAS_C_FILES) $(WORD_BY_WORD_MONTGOMERY_C_FILES)
-UNSATURATED_SOLINAS_RUST_FILES := curve25519_64.rs curve25519_32.rs p521_64.rs p521_32.rs p448_solinas_64.rs # p224_solinas_64.rs
-WORD_BY_WORD_MONTGOMERY_RUST_FILES := p256_64.rs p256_32.rs p384_64.rs p384_32.rs secp256k1_64.rs secp256k1_32.rs p224_64.rs p224_32.rs p434_64.rs # p434_32.rs
+RS_DIR := fiat-rust/src/
+UNSATURATED_SOLINAS_RUST_FILES := $(RS_DIR)curve25519_64.rs $(RS_DIR)curve25519_32.rs $(RS_DIR)p521_64.rs $(RS_DIR)p521_32.rs $(RS_DIR)p448_solinas_64.rs # $(RS_DIR)p224_solinas_64.rs
+WORD_BY_WORD_MONTGOMERY_RUST_FILES := $(RS_DIR)p256_64.rs $(RS_DIR)p256_32.rs $(RS_DIR)p384_64.rs $(RS_DIR)p384_32.rs $(RS_DIR)secp256k1_64.rs $(RS_DIR)secp256k1_32.rs $(RS_DIR)p224_64.rs $(RS_DIR)p224_32.rs $(RS_DIR)p434_64.rs # $(RS_DIR)p434_32.rs
 ALL_RUST_FILES := $(UNSATURATED_SOLINAS_RUST_FILES) $(WORD_BY_WORD_MONTGOMERY_RUST_FILES)
 FUNCTIONS_FOR_25519 := carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes
 UNSATURATED_SOLINAS := src/ExtractionOCaml/unsaturated_solinas
@@ -301,81 +302,81 @@ $(UNSATURATED_SOLINAS_RUST_FILES): $(UNSATURATED_SOLINAS) # Makefile
 $(WORD_BY_WORD_MONTGOMERY_RUST_FILES): $(WORD_BY_WORD_MONTGOMERY) # Makefile
 
 # 2^255 - 19
-curve25519_64.rs:
+$(RS_DIR)curve25519_64.rs:
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
 	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Rust '25519' '5' '2^255 - 19' '64' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
-	$(HIDE)rm $@.ok && mv $@.tmp fiat-rust/src/$@
+	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^255 - 19
-curve25519_32.rs:
+$(RS_DIR)curve25519_32.rs:
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
 	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Rust '25519' '10' '2^255 - 19' '32' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
-	$(HIDE)rm $@.ok && mv $@.tmp fiat-rust/src/$@
+	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^521 - 1
-p521_64.rs:
+$(RS_DIR)p521_64.rs:
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
 	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Rust 'p521' '9' '2^521 - 1' '64' && touch $@.ok) > $@.tmp
-	$(HIDE)rm $@.ok && mv $@.tmp fiat-rust/src/$@
+	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^521 - 1
-p521_32.rs:
+$(RS_DIR)p521_32.rs:
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
 	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Rust 'p521' '17' '2^521 - 1' '32' && touch $@.ok) > $@.tmp
-	$(HIDE)rm $@.ok && mv $@.tmp fiat-rust/src/$@
+	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 ## 2^224 - 2^96 + 1 ## does not bounds check
-#p224_solinas_64.rs:
+#$(RS_DIR)p224_solinas_64.rs:
 #	$(SHOW)'SYNTHESIZE > $@'
 #	$(HIDE)rm -f $@.ok
 #	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Rust 'p224' '4' '2^224 - 2^96 + 1' '64' && touch $@.ok) > $@.tmp
-#	$(HIDE)rm $@.ok && mv $@.tmp fiat-rust/src/$@
+#	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^448 - 2^224 - 1
-p448_solinas_64.rs:
+$(RS_DIR)p448_solinas_64.rs:
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
 	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Rust 'p448' '8' '2^448 - 2^224 - 1' '64' && touch $@.ok) > $@.tmp
-	$(HIDE)rm $@.ok && mv $@.tmp fiat-rust/src/$@
+	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^256 - 2^224 + 2^192 + 2^96 - 1
-p256_64.rs p256_32.rs : p256_%.rs :
+$(RS_DIR)p256_64.rs $(RS_DIR)p256_32.rs : $(RS_DIR)p256_%.rs :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
 	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) --lang=Rust 'p256' '2^256 - 2^224 + 2^192 + 2^96 - 1' '$*' && touch $@.ok) > $@.tmp
-	$(HIDE)rm $@.ok && mv $@.tmp fiat-rust/src/$@
+	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^256 - 2^32 - 977
-secp256k1_64.rs secp256k1_32.rs : secp256k1_%.rs :
+$(RS_DIR)secp256k1_64.rs $(RS_DIR)secp256k1_32.rs : $(RS_DIR)secp256k1_%.rs :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
 	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) --lang=Rust 'secp256k1' '2^256 - 2^32 - 977' '$*' && touch $@.ok) > $@.tmp
-	$(HIDE)rm $@.ok && mv $@.tmp fiat-rust/src/$@
+	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^384 - 2^128 - 2^96 + 2^32 - 1
-p384_64.rs p384_32.rs : p384_%.rs :
+$(RS_DIR)p384_64.rs $(RS_DIR)p384_32.rs : $(RS_DIR)p384_%.rs :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
 	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) --lang=Rust 'p384' '2^384 - 2^128 - 2^96 + 2^32 - 1' '$*' && touch $@.ok) > $@.tmp
-	$(HIDE)rm $@.ok && mv $@.tmp fiat-rust/src/$@
+	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^224 - 2^96 + 1
-p224_64.rs p224_32.rs : p224_%.rs :
+$(RS_DIR)p224_64.rs $(RS_DIR)p224_32.rs : $(RS_DIR)p224_%.rs :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
 	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) --lang=Rust 'p224' '2^224 - 2^96 + 1' '$*' && touch $@.ok) > $@.tmp
-	$(HIDE)rm $@.ok && mv $@.tmp fiat-rust/src/$@
+	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^216 * 3^137 - 1
-p434_64.rs p434_32.rs : p434_%.rs :
+$(RS_DIR)p434_64.rs $(RS_DIR)p434_32.rs : $(RS_DIR)p434_%.rs :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
 	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) --lang=Rust 'p434' '2^216 * 3^137 - 1' '$*' && touch $@.ok) > $@.tmp
-	$(HIDE)rm $@.ok && mv $@.tmp fiat-rust/src/$@
+	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 test-rust-files: $(ALL_RUST_FILES)
 	cd fiat-rust; $(CARGO_BUILD)
