@@ -943,6 +943,7 @@ Module Compilers.
         | Z_max : ident (Z -> Z -> Z)
         | Z_bneg : ident (Z -> Z)
         | Z_lnot_modulo : ident (Z -> Z -> Z)
+        | Z_truncating_shiftl : ident (Z -> Z -> Z -> Z)
         | Z_mul_split : ident (Z -> Z -> Z -> Z * Z)
         | Z_add_get_carry : ident (Z -> Z -> Z -> (Z * Z))
         | Z_add_with_carry : ident (Z -> Z -> Z -> Z)
@@ -1121,6 +1122,7 @@ Module Compilers.
              | Z_sub_with_get_borrow => Z.sub_with_get_borrow_full
              | Z_zselect => Z.zselect
              | Z_add_modulo => Z.add_modulo
+             | Z_truncating_shiftl => Z.truncating_shiftl
              | Z_bneg => Z.bneg
              | Z_lnot_modulo => Z.lnot_modulo
              | Z_rshi => Z.rshi
@@ -1435,6 +1437,7 @@ Module Compilers.
         | Z.max => then_tac ident.Z_max
         | Z.bneg => then_tac ident.Z_bneg
         | Z.lnot_modulo => then_tac ident.Z_lnot_modulo
+        | Z.truncating_shiftl => then_tac ident.Z_truncating_shiftl
         | Z.of_nat => then_tac ident.Z_of_nat
         | Z.to_nat => then_tac ident.Z_to_nat
         | Z.mul_split => then_tac ident.Z_mul_split

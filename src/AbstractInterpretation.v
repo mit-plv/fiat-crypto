@@ -486,7 +486,13 @@ Module Compilers.
                                                 then r[0 ~> 0]
                                                 else r[m+1 ~> 0])
                    | _, _ => None
-                   end
+                    end
+             | ident.Z_truncating_shiftl as idc
+               => fun bw x y => match to_literal bw, to_literal x, to_literal y with
+                                | Some bw, Some x, Some y => of_literal (ident.interp idc bw x y)
+                                | Some bw, _, _ => if bw <? 0 then None else Some r[0 ~> 2^bw-1]
+                                | None, _, _ => None
+                                end
              | ident.bool_rect _
                => fun t f b
                  => match b with

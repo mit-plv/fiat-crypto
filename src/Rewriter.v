@@ -1428,6 +1428,7 @@ Module Compilers.
               | ident.Z_max
               | ident.Z_bneg
               | ident.Z_lnot_modulo
+              | ident.Z_truncating_shiftl
               | ident.Z_mul_split
               | ident.Z_add_get_carry
               | ident.Z_add_with_carry

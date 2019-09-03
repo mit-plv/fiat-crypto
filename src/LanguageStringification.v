@@ -335,6 +335,8 @@ Module Compilers.
                => fun args => (show_application with_casts (fun _ => "Z.zselect") args, ZRange.type.base.option.None)
              | ident.Z_add_modulo
                => fun args => (show_application with_casts (fun _ => "Z.add_modulo") args, ZRange.type.base.option.None)
+             | ident.Z_truncating_shiftl
+               => fun args => (show_application with_casts (fun _ => "Z.truncating_shiftl") args, ZRange.type.base.option.None)
              | ident.Z_rshi
                => fun args => (show_application with_casts (fun _ => "Z.rshi") args, ZRange.type.base.option.None)
              | ident.Z_cc_m
@@ -453,6 +455,7 @@ Module Compilers.
                 | ident.Z_sub_with_get_borrow => "Z.sub_with_get_borrow"
                 | ident.Z_zselect => "Z.zselect"
                 | ident.Z_add_modulo => "Z.add_modulo"
+                | ident.Z_truncating_shiftl => "Z.truncating_shiftl"
                 | ident.Z_rshi => "Z.rshi"
                 | ident.Z_cc_m => "Z.cc_m"
                 | ident.Z_combine_at_bitwidth => "Z.combine_at_bitwidth"
