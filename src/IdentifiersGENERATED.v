@@ -85,6 +85,7 @@ Module Compilers.
         | Z_max
         | Z_bneg
         | Z_lnot_modulo
+        | Z_truncating_shiftl
         | Z_mul_split
         | Z_add_get_carry
         | Z_add_with_carry
@@ -196,6 +197,7 @@ Module Compilers.
       | Z_max : (ident (type.arrow (type.base (base.type.type_base base.type.Z)) (type.arrow (type.base (base.type.type_base base.type.Z)) (type.base (base.type.type_base base.type.Z)))))
       | Z_bneg : (ident (type.arrow (type.base (base.type.type_base base.type.Z)) (type.base (base.type.type_base base.type.Z))))
       | Z_lnot_modulo : (ident (type.arrow (type.base (base.type.type_base base.type.Z)) (type.arrow (type.base (base.type.type_base base.type.Z)) (type.base (base.type.type_base base.type.Z)))))
+      | Z_truncating_shiftl : (ident (type.arrow (type.base (base.type.type_base base.type.Z)) (type.arrow (type.base (base.type.type_base base.type.Z)) (type.arrow (type.base (base.type.type_base base.type.Z)) (type.base (base.type.type_base base.type.Z))))))
       | Z_mul_split : (ident (type.arrow (type.base (base.type.type_base base.type.Z)) (type.arrow (type.base (base.type.type_base base.type.Z)) (type.arrow (type.base (base.type.type_base base.type.Z)) (type.base (base.type.prod (base.type.type_base base.type.Z) (base.type.type_base base.type.Z)))))))
       | Z_add_get_carry : (ident (type.arrow (type.base (base.type.type_base base.type.Z)) (type.arrow (type.base (base.type.type_base base.type.Z)) (type.arrow (type.base (base.type.type_base base.type.Z)) (type.base (base.type.prod (base.type.type_base base.type.Z) (base.type.type_base base.type.Z)))))))
       | Z_add_with_carry : (ident (type.arrow (type.base (base.type.type_base base.type.Z)) (type.arrow (type.base (base.type.type_base base.type.Z)) (type.arrow (type.base (base.type.type_base base.type.Z)) (type.base (base.type.type_base base.type.Z))))))

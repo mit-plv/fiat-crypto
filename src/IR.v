@@ -52,7 +52,7 @@ Module Compilers.
       End type.
       Import type.Notations.
       Import int.Notations.
- 
+
       Section ident.
         Import type.
         Inductive ident : type -> type -> Set :=
@@ -322,15 +322,22 @@ Module Compilers.
                     else None).
 
 
+            Definition arith_expr_of_PHOAS_literal_Z
+                       (t:=base.type.Z)
+                       v
+              : int.option.interp (type.final_codomain t) -> arith_expr_for_base t
+              := fun r
+                 => cast_down_if_needed
+                      r
+                      (literal v @@ TT, Some (int.of_zrange_relaxed r[v~>v]))%core%Cexpr%option%zrange.
+
             Definition arith_expr_of_PHOAS_ident
                        {t}
                        (idc : ident.ident t)
               : int.option.interp (type.final_codomain t) -> type.interpM_final (fun T => ErrT T) arith_expr_for_base t
               := match idc in ident.ident t return int.option.interp (type.final_codomain t) -> type.interpM_final (fun T => ErrT T) arith_expr_for_base t with
                  | ident.Literal base.type.Z v
-                   => fun r => ret (cast_down_if_needed
-                                      r
-                                      (literal v @@ TT, Some (int.of_zrange_relaxed r[v~>v])))
+                   => fun r => ret (arith_expr_of_PHOAS_literal_Z v r)
                  | ident.nil t
                    => fun _ => ret nil
                  | ident.cons t
@@ -419,6 +426,30 @@ Module Compilers.
                            let '(e', rin') := un_op_conversion rpre_out (e, r) in
                            ret (cast_down_if_needed rout (Z_shiftl offset @@ e', rin'))
                          | None => inr ["Invalid left-shift by a non-literal"]%string
+                         end
+                 | ident.Z_truncating_shiftl
+                   => fun rout '(bitwidth, rbitwidth) '(e, r) '(offset, roffset)
+                      => match invert_literal bitwidth, invert_literal offset with
+                         | Some bitwidth, Some offset
+                           => (** N.B. We must cast the expression up to a
+                                large enough type to fit 2^offset
+                                (importantly, not just 2^offset-1),
+                                because C considers it to be undefined
+                                behavior to shift >= width of the type.
+                                We should probably figure out how to not
+                                generate these things in the first
+                                place...
+
+                                N.B. We make sure that we only
+                                left-shift unsigned values, since
+                                shifting into the sign bit is undefined
+                                behavior. *)
+                           let rpre_out := Some (int.of_zrange_relaxed r[0 ~> Z.max (2^offset) (2^bitwidth-1)]%zrange) in
+                           let '(e', rin') := un_op_conversion rpre_out (e, r) in
+                           let shifted := cast_down_if_needed rout (Z_shiftl offset @@ e', rin') in
+                           ret (arith_bin_arith_expr_of_PHOAS_ident Z_land rout (shifted, arith_expr_of_PHOAS_literal_Z (2^bitwidth-1) (Some (int.of_zrange_relaxed r[0~>2^bitwidth - 1]))))
+                         | _, None => inr ["Invalid (truncating) left-shift by a non-literal"]%string
+                         | None, _ => inr ["Invalid left-shift truncated to a non-literal bitwidth"]%string
                          end
                  | ident.Z_bneg
                    => fun rout '(e, r)

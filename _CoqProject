@@ -6,11 +6,10 @@ src/AbstractInterpretationZRangeProofs.v
 src/BoundsPipeline.v
 src/CLI.v
 src/COperationSpecifications.v
-src/IR.v
 src/CStringification.v
-src/RustStringification.v
 src/CompilersTestCases.v
 src/Demo.v
+src/IR.v
 src/IdentifiersGENERATED.v
 src/IdentifiersGENERATEDProofs.v
 src/IdentifiersGenerate.v
@@ -35,6 +34,7 @@ src/RewriterRulesProofs.v
 src/RewriterWf1.v
 src/RewriterWf1Tactics.v
 src/RewriterWf2.v
+src/RustStringification.v
 src/SlowPrimeSynthesisExamples.v
 src/StandaloneHaskellMain.v
 src/StandaloneOCamlMain.v
@@ -314,6 +314,7 @@ src/Util/ZUtil/Sorting.v
 src/Util/ZUtil/Stabilization.v
 src/Util/ZUtil/Tactics.v
 src/Util/ZUtil/Testbit.v
+src/Util/ZUtil/TruncatingShiftl.v
 src/Util/ZUtil/Z2Nat.v
 src/Util/ZUtil/ZSimplify.v
 src/Util/ZUtil/Zselect.v

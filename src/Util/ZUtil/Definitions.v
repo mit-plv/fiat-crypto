@@ -34,6 +34,9 @@ Module Z.
        then ((lo + (hi << k)) >> n) &' (Z.ones k)
        else ((lo + hi * s) >> n) mod s.
 
+  (** left-shift that truncates *)
+  Definition truncating_shiftl bw x n := (x << n) mod (2^bw).
+
   Definition get_carry (bitwidth : Z) (v : Z) : Z * Z
     := (v mod 2^bitwidth, v / 2^bitwidth).
   Definition add_with_carry (c : Z) (x y : Z) : Z
