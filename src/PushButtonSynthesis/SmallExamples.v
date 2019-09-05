@@ -43,9 +43,12 @@ Compute
                (Some (repeat (@None _) 5), tt)
                ZRange.type.base.option.None).
 
+Local Existing Instance ToString.C.OutputCAPI.
+Local Instance : static_opt := true.
+
 Compute
   (Pipeline.BoundsPipelineToString
-     true "fiat_" "fiat_mulx_u64"
+     "fiat_" "fiat_mulx_u64"
         true None [64; 128]
         ltac:(let r := Reify (mulx 64) in
               exact r)
@@ -55,7 +58,7 @@ Compute
 
 Compute
   (Pipeline.BoundsPipelineToString
-     true "fiat_" "fiat_addcarryx_u64"
+     "fiat_" "fiat_addcarryx_u64"
         true None [1; 64; 128]
         ltac:(let r := Reify (addcarryx 64) in
               exact r)
@@ -65,7 +68,7 @@ Compute
 
 Compute
   (Pipeline.BoundsPipelineToString
-     true "fiat_" "fiat_addcarryx_u51"
+     "fiat_" "fiat_addcarryx_u51"
         true None [1; 64; 128]
         ltac:(let r := Reify (addcarryx 51) in
               exact r)
@@ -75,7 +78,7 @@ Compute
 
 Compute
   (Pipeline.BoundsPipelineToString
-     true "fiat_" "fiat_subborrowx_u64"
+     "fiat_" "fiat_subborrowx_u64"
         true None [1; 64; 128]
         ltac:(let r := Reify (subborrowx 64) in
               exact r)
@@ -84,7 +87,7 @@ Compute
                (Some r[0~>2^64-1], Some r[0~>1])%zrange).
 Compute
   (Pipeline.BoundsPipelineToString
-     true "fiat_" "fiat_subborrowx_u51"
+     "fiat_" "fiat_subborrowx_u51"
         true None [1; 64; 128]
         ltac:(let r := Reify (subborrowx 51) in
               exact r)
@@ -94,7 +97,7 @@ Compute
 
 Compute
   (Pipeline.BoundsPipelineToString
-     true "fiat_" "fiat_cmovznz64"
+     "fiat_" "fiat_cmovznz64"
         true None [1; 64; 128]
         ltac:(let r := Reify (cmovznz 64) in
               exact r)

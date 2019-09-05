@@ -58,7 +58,7 @@ Local Opaque expr.Interp.
 
 Section __.
   Context {output_language_api : ToString.OutputLanguageAPI}
-          (static : bool)
+          {static : static_opt}
           (s : Z)
           (c : list (Z * Z))
           (machine_wordsize : Z).
@@ -168,7 +168,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          static prefix "mul" mul
+          prefix "mul" mul
           (docstring_with_summary_from_lemma!
              (fun fname : string => ["The function " ++ fname ++ " multiplies two field elements."]%string)
              (mul_correct weightf n m boundsn)).
@@ -202,7 +202,7 @@ Section __.
     Definition Synthesize (comment_header : list string) (function_name_prefix : string) (requests : list string)
       : list (string * Pipeline.ErrorT (list string))
       := Primitives.Synthesize
-           static machine_wordsize valid_names known_functions (fun _ => nil)
+           machine_wordsize valid_names known_functions (fun _ => nil)
            check_args
            (ToString.comment_block comment_header ++ [""]) function_name_prefix requests.
   End for_stringification.

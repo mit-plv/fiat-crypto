@@ -138,8 +138,8 @@ Local Notation out_bounds_of_pipeline result
   := ((fun a b c d e arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e arg_bounds out_bounds = result') => out_bounds) _ _ _ _ _ _ _ result eq_refl)
        (only parsing).
 
-Notation FromPipelineToString static prefix name result
-  := (Pipeline.FromPipelineToString static prefix name result).
+Notation FromPipelineToString prefix name result
+  := (Pipeline.FromPipelineToString prefix name result).
 
 Ltac prove_correctness' should_not_clear use_curve_good :=
   let Hres := match goal with H : _ = Success _ |- _ => H end in
@@ -608,7 +608,7 @@ Notation "'docstring_with_summary_from_lemma!' summary correctness"
 
 Section __.
   Context {output_language_api : ToString.OutputLanguageAPI}
-          (static : bool)
+          {static : static_opt}
           (n : nat)
           (machine_wordsize : Z).
 
@@ -658,7 +658,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          static prefix "selectznz" selectznz
+          prefix "selectznz" selectznz
           (docstring_with_summary_from_lemma!
              (fun fname : string => ["The function " ++ fname ++ " is a multi-limb conditional select."]%string)
              (selectznz_correct dummy_weight n saturated_bounds_list)).
@@ -677,7 +677,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          static prefix ("mulx_u" ++ decimal_string_of_Z s) (mulx s)
+          prefix ("mulx_u" ++ decimal_string_of_Z s) (mulx s)
           (docstring_with_summary_from_lemma!
              (fun fname : string => ["The function " ++ fname ++ " is a multiplication, returning the full double-width result."]%string)
              (mulx_correct s)).
@@ -697,7 +697,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          static prefix ("addcarryx_u" ++ decimal_string_of_Z s) (addcarryx s)
+          prefix ("addcarryx_u" ++ decimal_string_of_Z s) (addcarryx s)
           (docstring_with_summary_from_lemma!
              (fun fname : string => ["The function " ++ fname ++ " is an addition with carry."]%string)
              (addcarryx_correct s)).
@@ -716,7 +716,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          static prefix ("subborrowx_u" ++ decimal_string_of_Z s) (subborrowx s)
+          prefix ("subborrowx_u" ++ decimal_string_of_Z s) (subborrowx s)
           (docstring_with_summary_from_lemma!
              (fun fname : string => ["The function " ++ fname ++ " is a subtraction with borrow."]%string)
              (subborrowx_correct s)).
@@ -736,7 +736,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          static prefix ("cmovznz_u" ++ decimal_string_of_Z s) (cmovznz s)
+          prefix ("cmovznz_u" ++ decimal_string_of_Z s) (cmovznz s)
           (docstring_with_summary_from_lemma!
              (fun fname : string => ["The function " ++ fname ++ " is a single-word conditional move."]%string)
              (cmovznz_correct s)).

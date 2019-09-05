@@ -73,7 +73,7 @@ Local Opaque
 
 Section __.
   Context {output_language_api : ToString.OutputLanguageAPI}
-          (static : bool)
+          {static : static_opt}
           (n : nat)
           (s : Z)
           (c : list (Z * Z))
@@ -267,7 +267,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          static prefix "carry_mul" carry_mul
+          prefix "carry_mul" carry_mul
           (docstring_with_summary_from_lemma!
              (fun fname : string => ["The function " ++ fname ++ " multiplies two field elements and reduces the result."]%string)
              (carry_mul_correct weightf n m tight_bounds loose_bounds)).
@@ -286,7 +286,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          static prefix "carry_square" carry_square
+          prefix "carry_square" carry_square
           (docstring_with_summary_from_lemma!
              (fun fname : string => ["The function " ++ fname ++ " squares a field element and reduces the result."]%string)
              (carry_square_correct weightf n m tight_bounds loose_bounds)).
@@ -305,7 +305,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          static prefix ("carry_scmul_" ++ decimal_string_of_Z x) (carry_scmul_const x)
+          prefix ("carry_scmul_" ++ decimal_string_of_Z x) (carry_scmul_const x)
           (docstring_with_summary_from_lemma!
              (fun fname : string => ["The function " ++ fname ++ " multiplies a field element by " ++ decimal_string_of_Z x ++ " and reduces the result."]%string)
              (carry_scmul_const_correct weightf n m tight_bounds loose_bounds x)).
@@ -324,7 +324,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          static prefix "carry" carry
+          prefix "carry" carry
           (docstring_with_summary_from_lemma!
              (fun fname : string => ["The function " ++ fname ++ " reduces a field element."]%string)
              (carry_correct weightf n m tight_bounds loose_bounds)).
@@ -343,7 +343,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          static prefix "add" add
+          prefix "add" add
           (docstring_with_summary_from_lemma!
              (fun fname : string => ["The function " ++ fname ++ " adds two field elements."]%string)
              (add_correct weightf n m tight_bounds loose_bounds)).
@@ -362,7 +362,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          static prefix "sub" sub
+          prefix "sub" sub
           (docstring_with_summary_from_lemma!
              (fun fname : string => ["The function " ++ fname ++ " subtracts two field elements."]%string)
              (sub_correct weightf n m tight_bounds loose_bounds)).
@@ -381,7 +381,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          static prefix "opp" opp
+          prefix "opp" opp
           (docstring_with_summary_from_lemma!
              (fun fname : string => ["The function " ++ fname ++ " negates a field element."]%string)
              (opp_correct weightf n m tight_bounds loose_bounds)).
@@ -400,7 +400,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          static prefix "to_bytes" to_bytes
+          prefix "to_bytes" to_bytes
           (docstring_with_summary_from_lemma!
              (fun fname : string => ["The function " ++ fname ++ " serializes a field element to bytes in little-endian order."]%string)
              (to_bytes_correct weightf n n_bytes m tight_bounds)).
@@ -419,7 +419,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          static prefix "from_bytes" from_bytes
+          prefix "from_bytes" from_bytes
           (docstring_with_summary_from_lemma!
              (fun fname : string => ["The function " ++ fname ++ " deserializes a field element from bytes in little-endian order."]%string)
              (from_bytes_correct weightf n n_bytes m s tight_bounds)).
@@ -438,7 +438,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          static prefix "encode" encode
+          prefix "encode" encode
           (docstring_with_summary_from_lemma!
              (fun fname : string => ["The function " ++ fname ++ " encodes an integer as a field element."]%string)
              (encode_correct weightf n m tight_bounds)).
@@ -457,7 +457,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          static prefix "zero" zero
+          prefix "zero" zero
           (docstring_with_summary_from_lemma!
              (fun fname => ["The function " ++ fname ++ " returns the field element zero."]%string)
              (zero_correct weightf n m tight_bounds)).
@@ -476,7 +476,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          static prefix "one" one
+          prefix "one" one
           (docstring_with_summary_from_lemma!
              (fun fname => ["The function " ++ fname ++ " returns the field element one."]%string)
              (one_correct weightf n m tight_bounds)).
@@ -484,7 +484,7 @@ Section __.
   Definition selectznz : Pipeline.ErrorT _ := Primitives.selectznz n machine_wordsize.
   Definition sselectznz (prefix : string)
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
-    := Primitives.sselectznz static n machine_wordsize prefix.
+    := Primitives.sselectznz n machine_wordsize prefix.
 
   Local Ltac solve_extra_bounds_side_conditions :=
     cbn [lower upper fst snd] in *; Bool.split_andb; Z.ltb_to_lt; lia.
@@ -682,7 +682,7 @@ Section __.
     Definition Synthesize (comment_header : list string) (function_name_prefix : string) (requests : list string)
       : list (string * Pipeline.ErrorT (list string))
       := Primitives.Synthesize
-           static machine_wordsize valid_names known_functions (extra_special_synthesis function_name_prefix)
+           machine_wordsize valid_names known_functions (extra_special_synthesis function_name_prefix)
            check_args
            ((ToString.comment_block comment_header)
               ++ [""]

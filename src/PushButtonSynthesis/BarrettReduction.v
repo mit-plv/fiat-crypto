@@ -41,7 +41,7 @@ Local Opaque reified_barrett_red_gen. (* needed for making [autorewrite] not tak
 
 Section rbarrett_red.
   Context {output_language_api : ToString.OutputLanguageAPI}
-          (static : bool)
+          {static : static_opt}
           (M machine_wordsize : Z).
 
   Let value_range := r[0 ~> (2^machine_wordsize - 1)%Z]%zrange.
@@ -169,7 +169,7 @@ Section rbarrett_red.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          static prefix "barrett_red" barrett_red
+          prefix "barrett_red" barrett_red
           (fun _ _ _ => @nil string).
 
   Local Ltac solve_barrett_red_preconditions :=
