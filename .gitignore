@@ -137,3 +137,7 @@ src/Rewriter/PerfTesting/Specific/generated/*.v
 src/Rewriter/PerfTesting/Specific/generated/*.log
 src/Rewriter/PerfTesting/Specific/generated/*.sh
 src/Rewriter/PerfTesting/Specific/generated/primes.mk
+
+# Rust
+/fiat-rust/Cargo.lock
+/fiat-rust/target/
