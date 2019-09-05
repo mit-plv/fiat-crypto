@@ -51,12 +51,14 @@ Passing no arguments, or passing `-h` or `--help` (or any other invalid argument
 Here are some examples of ways to invoke the binaries (from the directories that they live in):
 
     # Generate code for 2^255-19
-    ./unsaturated_solinas '25519' '5' '2^255' '1,19' '64' carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes > curve25519_64.c
-    ./unsaturated_solinas '25519' '10' '2^255' '1,19' '32' carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes > curve25519_32.c
+    ./unsaturated_solinas '25519' '5' '2^255 - 19' '64' carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes > curve25519_64.c
+    ./unsaturated_solinas '25519' '10' '2^255 - 19' '32' carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes > curve25519_32.c
 
     # Generate code for NIST-P256 (2^256 - 2^224 + 2^192 + 2^96 - 1)
-    ./word_by_word_montgomery 'p256' '2^256' '2^224,1;2^192,-1;2^96,-1;1,1' '32' > p256_32.c
-    ./word_by_word_montgomery 'p256' '2^256' '2^224,1;2^192,-1;2^96,-1;1,1' '64' > p256_64.c
+    ./word_by_word_montgomery 'p256' '2^256 - 2^224 + 2^192 + 2^96 - 1' '32' > p256_32.c
+    ./word_by_word_montgomery 'p256' '2^256 - 2^224 + 2^192 + 2^96 - 1' '64' > p256_64.c
+
+You can find more examples in the `Makefile`.
 
 Reading About The Code
 ----------------------
