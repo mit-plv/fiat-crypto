@@ -111,6 +111,9 @@ Proof.
         try (rewrite <- Z.log2_up_le_pow2_full in *; omega).
 Qed.
 
+Class static_opt := static : bool.
+Global Typeclasses Opaque static_opt.
+
 Module Pipeline.
   Import GeneralizeVar.
   Inductive ErrorMessage :=
@@ -336,7 +339,7 @@ Module Pipeline.
 
   Definition BoundsPipelineToStrings
              {output_language_api : ToString.OutputLanguageAPI}
-             (static : bool)
+             {static : static_opt}
              (type_prefix : string)
              (name : string)
              (with_dead_code_elimination : bool := true)
@@ -367,7 +370,7 @@ Module Pipeline.
 
   Definition BoundsPipelineToString
              {output_language_api : ToString.OutputLanguageAPI}
-             (static : bool)
+             {static : static_opt}
              (type_prefix : string)
              (name : string)
              (with_dead_code_elimination : bool := true)
@@ -381,7 +384,7 @@ Module Pipeline.
              out_bounds
     : ErrorT (string * ToString.ident_infos)
     := let E := BoundsPipelineToStrings
-                  static type_prefix name
+                  type_prefix name
                   (*with_dead_code_elimination*)
                   with_subst01
                   translate_to_fancy
@@ -399,13 +402,13 @@ Module Pipeline.
     := ((fun a b c t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c t E arg_bounds out_bounds = result') => out_bounds) _ _ _ _ _ _ _ result eq_refl)
          (only parsing).
 
-  Notation FromPipelineToString static prefix name result
+  Notation FromPipelineToString prefix name result
     := (fun comment
         => ((prefix ++ name)%string,
             match result with
             | Success E'
               => let E := ToString.ToFunctionLines
-                            true static prefix (prefix ++ name)%string
+                            true (_ : static_opt) prefix (prefix ++ name)%string
                             E'
                             (comment (prefix ++ name)%string)
                             None

@@ -26,6 +26,9 @@ Local Coercion Z.of_nat : nat >-> Z.
 Local Coercion QArith_base.inject_Z : Z >-> Q.
 Local Coercion Z.pos : positive >-> Z.
 
+Local Existing Instance ToString.C.OutputCAPI.
+Local Instance static : static_opt := true.
+
 Module debugging_rewriting.
   Section __.
     Context (n : nat := 2%nat)
@@ -179,7 +182,6 @@ Section debugging_p448.
 
   Time Compute
        Pipeline.BoundsPipelineToStrings
-       true (* static *)
        "" (* prefix *)
        "mul"
        false (* subst01 *)
