@@ -36,6 +36,7 @@ pub type fiat_secp256k1_i128 = i128;
  *   out1: [0x0 ~> 0xffffffffffffffff]
  *   out2: [0x0 ~> 0x1]
  */
+#[inline]
 pub fn fiat_secp256k1_addcarryx_u64(out1: &mut u64, out2: &mut fiat_secp256k1_u1, arg1: fiat_secp256k1_u1, arg2: u64, arg3: u64) -> () {
   let x1: fiat_secp256k1_u128 = (((arg1 as fiat_secp256k1_u128) + (arg2 as fiat_secp256k1_u128)) + (arg3 as fiat_secp256k1_u128));
   let x2: u64 = ((x1 & (0xffffffffffffffff as fiat_secp256k1_u128)) as u64);
@@ -58,6 +59,7 @@ pub fn fiat_secp256k1_addcarryx_u64(out1: &mut u64, out2: &mut fiat_secp256k1_u1
  *   out1: [0x0 ~> 0xffffffffffffffff]
  *   out2: [0x0 ~> 0x1]
  */
+#[inline]
 pub fn fiat_secp256k1_subborrowx_u64(out1: &mut u64, out2: &mut fiat_secp256k1_u1, arg1: fiat_secp256k1_u1, arg2: u64, arg3: u64) -> () {
   let x1: fiat_secp256k1_i128 = (((arg2 as fiat_secp256k1_i128) - (arg1 as fiat_secp256k1_i128)) - (arg3 as fiat_secp256k1_i128));
   let x2: fiat_secp256k1_i1 = ((x1 >> 64) as fiat_secp256k1_i1);
@@ -79,6 +81,7 @@ pub fn fiat_secp256k1_subborrowx_u64(out1: &mut u64, out2: &mut fiat_secp256k1_u
  *   out1: [0x0 ~> 0xffffffffffffffff]
  *   out2: [0x0 ~> 0xffffffffffffffff]
  */
+#[inline]
 pub fn fiat_secp256k1_mulx_u64(out1: &mut u64, out2: &mut u64, arg1: u64, arg2: u64) -> () {
   let x1: fiat_secp256k1_u128 = ((arg1 as fiat_secp256k1_u128) * (arg2 as fiat_secp256k1_u128));
   let x2: u64 = ((x1 & (0xffffffffffffffff as fiat_secp256k1_u128)) as u64);
@@ -99,6 +102,7 @@ pub fn fiat_secp256k1_mulx_u64(out1: &mut u64, out2: &mut u64, arg1: u64, arg2: 
  * Output Bounds:
  *   out1: [0x0 ~> 0xffffffffffffffff]
  */
+#[inline]
 pub fn fiat_secp256k1_cmovznz_u64(out1: &mut u64, arg1: fiat_secp256k1_u1, arg2: u64, arg3: u64) -> () {
   let x1: fiat_secp256k1_u1 = (!(!arg1));
   let x2: u64 = ((((((0x0 as fiat_secp256k1_i2) - (x1 as fiat_secp256k1_i2)) as fiat_secp256k1_i1) as fiat_secp256k1_i128) & (0xffffffffffffffff as fiat_secp256k1_i128)) as u64);
@@ -121,6 +125,7 @@ pub fn fiat_secp256k1_cmovznz_u64(out1: &mut u64, arg1: fiat_secp256k1_u1, arg2:
  * Output Bounds:
  *   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  */
+#[inline]
 pub fn fiat_secp256k1_mul(out1: &mut [u64; 4], arg1: &[u64; 4], arg2: &[u64; 4]) -> () {
   let x1: u64 = (arg1[1]);
   let x2: u64 = (arg1[2]);
@@ -489,6 +494,7 @@ pub fn fiat_secp256k1_mul(out1: &mut [u64; 4], arg1: &[u64; 4], arg2: &[u64; 4])
  * Output Bounds:
  *   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  */
+#[inline]
 pub fn fiat_secp256k1_square(out1: &mut [u64; 4], arg1: &[u64; 4]) -> () {
   let x1: u64 = (arg1[1]);
   let x2: u64 = (arg1[2]);
@@ -859,6 +865,7 @@ pub fn fiat_secp256k1_square(out1: &mut [u64; 4], arg1: &[u64; 4]) -> () {
  * Output Bounds:
  *   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  */
+#[inline]
 pub fn fiat_secp256k1_add(out1: &mut [u64; 4], arg1: &[u64; 4], arg2: &[u64; 4]) -> () {
   let mut x1: u64 = 0;
   let mut x2: fiat_secp256k1_u1 = 0;
@@ -916,6 +923,7 @@ pub fn fiat_secp256k1_add(out1: &mut [u64; 4], arg1: &[u64; 4], arg2: &[u64; 4])
  * Output Bounds:
  *   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  */
+#[inline]
 pub fn fiat_secp256k1_sub(out1: &mut [u64; 4], arg1: &[u64; 4], arg2: &[u64; 4]) -> () {
   let mut x1: u64 = 0;
   let mut x2: fiat_secp256k1_u1 = 0;
@@ -962,6 +970,7 @@ pub fn fiat_secp256k1_sub(out1: &mut [u64; 4], arg1: &[u64; 4], arg2: &[u64; 4])
  * Output Bounds:
  *   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  */
+#[inline]
 pub fn fiat_secp256k1_opp(out1: &mut [u64; 4], arg1: &[u64; 4]) -> () {
   let mut x1: u64 = 0;
   let mut x2: fiat_secp256k1_u1 = 0;
@@ -1008,6 +1017,7 @@ pub fn fiat_secp256k1_opp(out1: &mut [u64; 4], arg1: &[u64; 4]) -> () {
  * Output Bounds:
  *   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  */
+#[inline]
 pub fn fiat_secp256k1_from_montgomery(out1: &mut [u64; 4], arg1: &[u64; 4]) -> () {
   let x1: u64 = (arg1[0]);
   let mut x2: u64 = 0;
@@ -1276,6 +1286,7 @@ pub fn fiat_secp256k1_from_montgomery(out1: &mut [u64; 4], arg1: &[u64; 4]) -> (
  * Output Bounds:
  *   out1: [0x0 ~> 0xffffffffffffffff]
  */
+#[inline]
 pub fn fiat_secp256k1_nonzero(out1: &mut u64, arg1: &[u64; 4]) -> () {
   let x1: u64 = ((arg1[0]) | ((arg1[1]) | ((arg1[2]) | ((arg1[3]) | (0x0 as u64)))));
   *out1 = x1;
@@ -1293,6 +1304,7 @@ pub fn fiat_secp256k1_nonzero(out1: &mut u64, arg1: &[u64; 4]) -> () {
  * Output Bounds:
  *   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  */
+#[inline]
 pub fn fiat_secp256k1_selectznz(out1: &mut [u64; 4], arg1: fiat_secp256k1_u1, arg2: &[u64; 4], arg3: &[u64; 4]) -> () {
   let mut x1: u64 = 0;
   fiat_secp256k1_cmovznz_u64(&mut x1, arg1, (arg2[0]), (arg3[0]));
@@ -1320,6 +1332,7 @@ pub fn fiat_secp256k1_selectznz(out1: &mut [u64; 4], arg1: fiat_secp256k1_u1, ar
  * Output Bounds:
  *   out1: [[0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff]]
  */
+#[inline]
 pub fn fiat_secp256k1_to_bytes(out1: &mut [u8; 32], arg1: &[u64; 4]) -> () {
   let x1: u64 = (arg1[3]);
   let x2: u64 = (arg1[2]);
@@ -1431,6 +1444,7 @@ pub fn fiat_secp256k1_to_bytes(out1: &mut [u8; 32], arg1: &[u64; 4]) -> () {
  * Output Bounds:
  *   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  */
+#[inline]
 pub fn fiat_secp256k1_from_bytes(out1: &mut [u64; 4], arg1: &[u8; 32]) -> () {
   let x1: u64 = (((arg1[31]) as u64) << 56);
   let x2: u64 = (((arg1[30]) as u64) << 48);

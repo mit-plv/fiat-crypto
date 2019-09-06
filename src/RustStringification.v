@@ -317,7 +317,7 @@ Module Rust.
              (f : type.for_each_lhs_of_arrow var_data t * var_data (type.final_codomain t) * IR.expr)
     : list string :=
     let '(args, rets, body) := f in
-    ((if static then "fn " else "pub fn ") ++ name ++
+    ("#[inline]" ++ String.NewLine ++ (if static then "fn " else "pub fn ") ++ name ++
       "(" ++ String.concat ", " (to_arg_list prefix Out rets ++ to_arg_list_for_each_lhs_of_arrow prefix args) ++
       ") -> () {")%string :: (List.map (fun s => "  " ++ s)%string (to_strings prefix body)) ++ ["}"%string]%list.
 

@@ -31,6 +31,7 @@ pub type fiat_25519_i2 = i8;
  *   out1: [0x0 ~> 0x3ffffff]
  *   out2: [0x0 ~> 0x1]
  */
+#[inline]
 pub fn fiat_25519_addcarryx_u26(out1: &mut u32, out2: &mut fiat_25519_u1, arg1: fiat_25519_u1, arg2: u32, arg3: u32) -> () {
   let x1: u32 = (((arg1 as u32) + arg2) + arg3);
   let x2: u32 = (x1 & 0x3ffffff);
@@ -53,6 +54,7 @@ pub fn fiat_25519_addcarryx_u26(out1: &mut u32, out2: &mut fiat_25519_u1, arg1: 
  *   out1: [0x0 ~> 0x3ffffff]
  *   out2: [0x0 ~> 0x1]
  */
+#[inline]
 pub fn fiat_25519_subborrowx_u26(out1: &mut u32, out2: &mut fiat_25519_u1, arg1: fiat_25519_u1, arg2: u32, arg3: u32) -> () {
   let x1: i32 = ((((((arg2 as i64) - (arg1 as i64)) as i32) as i64) - (arg3 as i64)) as i32);
   let x2: fiat_25519_i1 = ((x1 >> 26) as fiat_25519_i1);
@@ -75,6 +77,7 @@ pub fn fiat_25519_subborrowx_u26(out1: &mut u32, out2: &mut fiat_25519_u1, arg1:
  *   out1: [0x0 ~> 0x1ffffff]
  *   out2: [0x0 ~> 0x1]
  */
+#[inline]
 pub fn fiat_25519_addcarryx_u25(out1: &mut u32, out2: &mut fiat_25519_u1, arg1: fiat_25519_u1, arg2: u32, arg3: u32) -> () {
   let x1: u32 = (((arg1 as u32) + arg2) + arg3);
   let x2: u32 = (x1 & 0x1ffffff);
@@ -97,6 +100,7 @@ pub fn fiat_25519_addcarryx_u25(out1: &mut u32, out2: &mut fiat_25519_u1, arg1: 
  *   out1: [0x0 ~> 0x1ffffff]
  *   out2: [0x0 ~> 0x1]
  */
+#[inline]
 pub fn fiat_25519_subborrowx_u25(out1: &mut u32, out2: &mut fiat_25519_u1, arg1: fiat_25519_u1, arg2: u32, arg3: u32) -> () {
   let x1: i32 = ((((((arg2 as i64) - (arg1 as i64)) as i32) as i64) - (arg3 as i64)) as i32);
   let x2: fiat_25519_i1 = ((x1 >> 25) as fiat_25519_i1);
@@ -117,6 +121,7 @@ pub fn fiat_25519_subborrowx_u25(out1: &mut u32, out2: &mut fiat_25519_u1, arg1:
  * Output Bounds:
  *   out1: [0x0 ~> 0xffffffff]
  */
+#[inline]
 pub fn fiat_25519_cmovznz_u32(out1: &mut u32, arg1: fiat_25519_u1, arg2: u32, arg3: u32) -> () {
   let x1: fiat_25519_u1 = (!(!arg1));
   let x2: u32 = ((((((0x0 as fiat_25519_i2) - (x1 as fiat_25519_i2)) as fiat_25519_i1) as i64) & (0xffffffff as i64)) as u32);
@@ -135,6 +140,7 @@ pub fn fiat_25519_cmovznz_u32(out1: &mut u32, arg1: fiat_25519_u1, arg2: u32, ar
  * Output Bounds:
  *   out1: [[0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333]]
  */
+#[inline]
 pub fn fiat_25519_carry_mul(out1: &mut [u32; 10], arg1: &[u32; 10], arg2: &[u32; 10]) -> () {
   let x1: u64 = (((arg1[9]) as u64) * (((arg2[9]) * ((0x2 as u32) * (0x13 as u32))) as u64));
   let x2: u64 = (((arg1[9]) as u64) * (((arg2[8]) * (0x13 as u32)) as u64));
@@ -305,6 +311,7 @@ pub fn fiat_25519_carry_mul(out1: &mut [u32; 10], arg1: &[u32; 10], arg2: &[u32;
  * Output Bounds:
  *   out1: [[0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333]]
  */
+#[inline]
 pub fn fiat_25519_carry_square(out1: &mut [u32; 10], arg1: &[u32; 10]) -> () {
   let x1: u32 = ((arg1[9]) * (0x13 as u32));
   let x2: u32 = (x1 * (0x2 as u32));
@@ -448,6 +455,7 @@ pub fn fiat_25519_carry_square(out1: &mut [u32; 10], arg1: &[u32; 10]) -> () {
  * Output Bounds:
  *   out1: [[0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333]]
  */
+#[inline]
 pub fn fiat_25519_carry_scmul_121666(out1: &mut [u32; 10], arg1: &[u32; 10]) -> () {
   let x1: u64 = ((0x1db42 as u64) * ((arg1[9]) as u64));
   let x2: u64 = ((0x1db42 as u64) * ((arg1[8]) as u64));
@@ -518,6 +526,7 @@ pub fn fiat_25519_carry_scmul_121666(out1: &mut [u32; 10], arg1: &[u32; 10]) -> 
  * Output Bounds:
  *   out1: [[0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333]]
  */
+#[inline]
 pub fn fiat_25519_carry(out1: &mut [u32; 10], arg1: &[u32; 10]) -> () {
   let x1: u32 = (arg1[0]);
   let x2: u32 = ((x1 >> 26) + (arg1[1]));
@@ -564,6 +573,7 @@ pub fn fiat_25519_carry(out1: &mut [u32; 10], arg1: &[u32; 10]) -> () {
  * Output Bounds:
  *   out1: [[0x0 ~> 0xd333332], [0x0 ~> 0x6999999], [0x0 ~> 0xd333332], [0x0 ~> 0x6999999], [0x0 ~> 0xd333332], [0x0 ~> 0x6999999], [0x0 ~> 0xd333332], [0x0 ~> 0x6999999], [0x0 ~> 0xd333332], [0x0 ~> 0x6999999]]
  */
+#[inline]
 pub fn fiat_25519_add(out1: &mut [u32; 10], arg1: &[u32; 10], arg2: &[u32; 10]) -> () {
   let x1: u32 = ((arg1[0]) + (arg2[0]));
   let x2: u32 = ((arg1[1]) + (arg2[1]));
@@ -598,6 +608,7 @@ pub fn fiat_25519_add(out1: &mut [u32; 10], arg1: &[u32; 10], arg2: &[u32; 10]) 
  * Output Bounds:
  *   out1: [[0x0 ~> 0xd333332], [0x0 ~> 0x6999999], [0x0 ~> 0xd333332], [0x0 ~> 0x6999999], [0x0 ~> 0xd333332], [0x0 ~> 0x6999999], [0x0 ~> 0xd333332], [0x0 ~> 0x6999999], [0x0 ~> 0xd333332], [0x0 ~> 0x6999999]]
  */
+#[inline]
 pub fn fiat_25519_sub(out1: &mut [u32; 10], arg1: &[u32; 10], arg2: &[u32; 10]) -> () {
   let x1: u32 = ((0x7ffffda + (arg1[0])) - (arg2[0]));
   let x2: u32 = ((0x3fffffe + (arg1[1])) - (arg2[1]));
@@ -631,6 +642,7 @@ pub fn fiat_25519_sub(out1: &mut [u32; 10], arg1: &[u32; 10], arg2: &[u32; 10]) 
  * Output Bounds:
  *   out1: [[0x0 ~> 0xd333332], [0x0 ~> 0x6999999], [0x0 ~> 0xd333332], [0x0 ~> 0x6999999], [0x0 ~> 0xd333332], [0x0 ~> 0x6999999], [0x0 ~> 0xd333332], [0x0 ~> 0x6999999], [0x0 ~> 0xd333332], [0x0 ~> 0x6999999]]
  */
+#[inline]
 pub fn fiat_25519_opp(out1: &mut [u32; 10], arg1: &[u32; 10]) -> () {
   let x1: u32 = (0x7ffffda - (arg1[0]));
   let x2: u32 = (0x3fffffe - (arg1[1]));
@@ -666,6 +678,7 @@ pub fn fiat_25519_opp(out1: &mut [u32; 10], arg1: &[u32; 10]) -> () {
  * Output Bounds:
  *   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  */
+#[inline]
 pub fn fiat_25519_selectznz(out1: &mut [u32; 10], arg1: fiat_25519_u1, arg2: &[u32; 10], arg3: &[u32; 10]) -> () {
   let mut x1: u32 = 0;
   fiat_25519_cmovznz_u32(&mut x1, arg1, (arg2[0]), (arg3[0]));
@@ -709,6 +722,7 @@ pub fn fiat_25519_selectznz(out1: &mut [u32; 10], arg1: fiat_25519_u1, arg2: &[u
  * Output Bounds:
  *   out1: [[0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0x7f]]
  */
+#[inline]
 pub fn fiat_25519_to_bytes(out1: &mut [u8; 32], arg1: &[u32; 10]) -> () {
   let mut x1: u32 = 0;
   let mut x2: fiat_25519_u1 = 0;
@@ -893,6 +907,7 @@ pub fn fiat_25519_to_bytes(out1: &mut [u8; 32], arg1: &[u32; 10]) -> () {
  * Output Bounds:
  *   out1: [[0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333]]
  */
+#[inline]
 pub fn fiat_25519_from_bytes(out1: &mut [u32; 10], arg1: &[u8; 32]) -> () {
   let x1: u32 = (((arg1[31]) as u32) << 18);
   let x2: u32 = (((arg1[30]) as u32) << 10);

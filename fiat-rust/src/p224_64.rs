@@ -36,6 +36,7 @@ pub type fiat_p224_i128 = i128;
  *   out1: [0x0 ~> 0xffffffffffffffff]
  *   out2: [0x0 ~> 0x1]
  */
+#[inline]
 pub fn fiat_p224_addcarryx_u64(out1: &mut u64, out2: &mut fiat_p224_u1, arg1: fiat_p224_u1, arg2: u64, arg3: u64) -> () {
   let x1: fiat_p224_u128 = (((arg1 as fiat_p224_u128) + (arg2 as fiat_p224_u128)) + (arg3 as fiat_p224_u128));
   let x2: u64 = ((x1 & (0xffffffffffffffff as fiat_p224_u128)) as u64);
@@ -58,6 +59,7 @@ pub fn fiat_p224_addcarryx_u64(out1: &mut u64, out2: &mut fiat_p224_u1, arg1: fi
  *   out1: [0x0 ~> 0xffffffffffffffff]
  *   out2: [0x0 ~> 0x1]
  */
+#[inline]
 pub fn fiat_p224_subborrowx_u64(out1: &mut u64, out2: &mut fiat_p224_u1, arg1: fiat_p224_u1, arg2: u64, arg3: u64) -> () {
   let x1: fiat_p224_i128 = (((arg2 as fiat_p224_i128) - (arg1 as fiat_p224_i128)) - (arg3 as fiat_p224_i128));
   let x2: fiat_p224_i1 = ((x1 >> 64) as fiat_p224_i1);
@@ -79,6 +81,7 @@ pub fn fiat_p224_subborrowx_u64(out1: &mut u64, out2: &mut fiat_p224_u1, arg1: f
  *   out1: [0x0 ~> 0xffffffffffffffff]
  *   out2: [0x0 ~> 0xffffffffffffffff]
  */
+#[inline]
 pub fn fiat_p224_mulx_u64(out1: &mut u64, out2: &mut u64, arg1: u64, arg2: u64) -> () {
   let x1: fiat_p224_u128 = ((arg1 as fiat_p224_u128) * (arg2 as fiat_p224_u128));
   let x2: u64 = ((x1 & (0xffffffffffffffff as fiat_p224_u128)) as u64);
@@ -99,6 +102,7 @@ pub fn fiat_p224_mulx_u64(out1: &mut u64, out2: &mut u64, arg1: u64, arg2: u64) 
  * Output Bounds:
  *   out1: [0x0 ~> 0xffffffffffffffff]
  */
+#[inline]
 pub fn fiat_p224_cmovznz_u64(out1: &mut u64, arg1: fiat_p224_u1, arg2: u64, arg3: u64) -> () {
   let x1: fiat_p224_u1 = (!(!arg1));
   let x2: u64 = ((((((0x0 as fiat_p224_i2) - (x1 as fiat_p224_i2)) as fiat_p224_i1) as fiat_p224_i128) & (0xffffffffffffffff as fiat_p224_i128)) as u64);
@@ -121,6 +125,7 @@ pub fn fiat_p224_cmovznz_u64(out1: &mut u64, arg1: fiat_p224_u1, arg2: u64, arg3
  * Output Bounds:
  *   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  */
+#[inline]
 pub fn fiat_p224_mul(out1: &mut [u64; 4], arg1: &[u64; 4], arg2: &[u64; 4]) -> () {
   let x1: u64 = (arg1[1]);
   let x2: u64 = (arg1[2]);
@@ -465,6 +470,7 @@ pub fn fiat_p224_mul(out1: &mut [u64; 4], arg1: &[u64; 4], arg2: &[u64; 4]) -> (
  * Output Bounds:
  *   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  */
+#[inline]
 pub fn fiat_p224_square(out1: &mut [u64; 4], arg1: &[u64; 4]) -> () {
   let x1: u64 = (arg1[1]);
   let x2: u64 = (arg1[2]);
@@ -811,6 +817,7 @@ pub fn fiat_p224_square(out1: &mut [u64; 4], arg1: &[u64; 4]) -> () {
  * Output Bounds:
  *   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  */
+#[inline]
 pub fn fiat_p224_add(out1: &mut [u64; 4], arg1: &[u64; 4], arg2: &[u64; 4]) -> () {
   let mut x1: u64 = 0;
   let mut x2: fiat_p224_u1 = 0;
@@ -868,6 +875,7 @@ pub fn fiat_p224_add(out1: &mut [u64; 4], arg1: &[u64; 4], arg2: &[u64; 4]) -> (
  * Output Bounds:
  *   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  */
+#[inline]
 pub fn fiat_p224_sub(out1: &mut [u64; 4], arg1: &[u64; 4], arg2: &[u64; 4]) -> () {
   let mut x1: u64 = 0;
   let mut x2: fiat_p224_u1 = 0;
@@ -914,6 +922,7 @@ pub fn fiat_p224_sub(out1: &mut [u64; 4], arg1: &[u64; 4], arg2: &[u64; 4]) -> (
  * Output Bounds:
  *   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  */
+#[inline]
 pub fn fiat_p224_opp(out1: &mut [u64; 4], arg1: &[u64; 4]) -> () {
   let mut x1: u64 = 0;
   let mut x2: fiat_p224_u1 = 0;
@@ -960,6 +969,7 @@ pub fn fiat_p224_opp(out1: &mut [u64; 4], arg1: &[u64; 4]) -> () {
  * Output Bounds:
  *   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  */
+#[inline]
 pub fn fiat_p224_from_montgomery(out1: &mut [u64; 4], arg1: &[u64; 4]) -> () {
   let x1: u64 = (arg1[0]);
   let mut x2: u64 = 0;
@@ -1183,6 +1193,7 @@ pub fn fiat_p224_from_montgomery(out1: &mut [u64; 4], arg1: &[u64; 4]) -> () {
  * Output Bounds:
  *   out1: [0x0 ~> 0xffffffffffffffff]
  */
+#[inline]
 pub fn fiat_p224_nonzero(out1: &mut u64, arg1: &[u64; 4]) -> () {
   let x1: u64 = ((arg1[0]) | ((arg1[1]) | ((arg1[2]) | ((arg1[3]) | (0x0 as u64)))));
   *out1 = x1;
@@ -1200,6 +1211,7 @@ pub fn fiat_p224_nonzero(out1: &mut u64, arg1: &[u64; 4]) -> () {
  * Output Bounds:
  *   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  */
+#[inline]
 pub fn fiat_p224_selectznz(out1: &mut [u64; 4], arg1: fiat_p224_u1, arg2: &[u64; 4], arg3: &[u64; 4]) -> () {
   let mut x1: u64 = 0;
   fiat_p224_cmovznz_u64(&mut x1, arg1, (arg2[0]), (arg3[0]));
@@ -1227,6 +1239,7 @@ pub fn fiat_p224_selectznz(out1: &mut [u64; 4], arg1: fiat_p224_u1, arg2: &[u64;
  * Output Bounds:
  *   out1: [[0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0x0], [0x0 ~> 0x0], [0x0 ~> 0x0], [0x0 ~> 0x0]]
  */
+#[inline]
 pub fn fiat_p224_to_bytes(out1: &mut [u8; 32], arg1: &[u64; 4]) -> () {
   let x1: u64 = (arg1[3]);
   let x2: u64 = (arg1[2]);
@@ -1331,6 +1344,7 @@ pub fn fiat_p224_to_bytes(out1: &mut [u8; 32], arg1: &[u64; 4]) -> () {
  * Output Bounds:
  *   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffff]]
  */
+#[inline]
 pub fn fiat_p224_from_bytes(out1: &mut [u64; 4], arg1: &[u8; 32]) -> () {
   let x1: u64 = (((arg1[27]) as u64) << 24);
   let x2: u64 = (((arg1[26]) as u64) << 16);
