@@ -112,7 +112,7 @@ Proof.
 Qed.
 
 Class static_opt := static : bool.
-Global Typeclasses Opaque static_opt.
+Typeclasses Opaque static_opt.
 
 Module Pipeline.
   Import GeneralizeVar.
