@@ -29,6 +29,7 @@ Require Export Crypto.Util.Tactics.Not.
 Require Export Crypto.Util.Tactics.OnSubterms.
 Require Export Crypto.Util.Tactics.PoseTermWithName.
 Require Export Crypto.Util.Tactics.PrintContext.
+Require Export Crypto.Util.Tactics.PrintGoal.
 Require Export Crypto.Util.Tactics.Revert.
 Require Export Crypto.Util.Tactics.RewriteHyp.
 Require Export Crypto.Util.Tactics.SetEvars.
