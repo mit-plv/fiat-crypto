@@ -38,6 +38,7 @@ Require Import Crypto.Util.Tactics.UniquePose.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.SpecializeAllWays.
 Require Import Crypto.Util.Tactics.Head.
+Require Import Crypto.Util.Tactics.PrintGoal.
 Require Import Crypto.LanguageWf.
 Require Import Crypto.AbstractInterpretation.
 
@@ -473,10 +474,12 @@ Module Compilers.
                                   => pose proof (@ZRange.is_bounded_by_of_is_tighter_than r1 r2 H' v H);
                                      clear H H' r1
                                 | [ |- context [match (if _ then _ else _) with _ => _ end ] ]
-                                => break_innermost_match
+                                  => break_innermost_match
+                                | [ |- context[ZRange.constant ?x] ] => unique pose proof (ZRange.is_bounded_by_bool_constant x)
+                                | [ |- context[r[?x~>?x]%zrange] ] => unique pose proof (ZRange.is_bounded_by_bool_constant x)
                                 end
                               | progress Z.ltb_to_lt
-                              | progress rewrite ?Z.mul_split_div, ?Z.mul_split_mod, ?Z.add_get_carry_full_div, ?Z.add_get_carry_full_mod, ?Z.add_with_get_carry_full_div, ?Z.add_with_get_carry_full_mod, ?Z.sub_get_borrow_full_div, ?Z.sub_get_borrow_full_mod, ?Z.sub_with_get_borrow_full_div, ?Z.sub_with_get_borrow_full_mod, ?Z.zselect_correct, ?Z.add_modulo_correct, ?Z.rshi_correct_full, ?Z.truncating_shiftl_correct ].
+                              | progress rewrite ?Z.mul_split_div, ?Z.mul_split_mod, ?Z.add_get_carry_full_div, ?Z.add_get_carry_full_mod, ?Z.add_with_get_carry_full_div, ?Z.add_with_get_carry_full_mod, ?Z.sub_get_borrow_full_div, ?Z.sub_get_borrow_full_mod, ?Z.sub_with_get_borrow_full_div, ?Z.sub_with_get_borrow_full_mod, ?Z.zselect_correct, ?Z.add_modulo_correct, ?Z.rshi_correct_full, ?Z.truncating_shiftl_correct_land_ones ].
             all: clear cast_outside_of_range.
             all: repeat lazymatch goal with
                         | [ |- is_bounded_by_bool (Z.land _ _) (ZRange.land_bounds _ _) = true ]
@@ -522,6 +525,8 @@ Module Compilers.
                                => Z.div_mod_to_quot_rem; nia
                              end
                            | intros; mul_by_halves_t ].
+            (** For command-line debugging, we display goals that should not remain *)
+            all: [ > idtac "WARNING: Remaining goal:"; print_context_and_goal () .. | | ].
             { intros.
               rewrite Z.le_sub_1_iff.
               break_innermost_match; Z.ltb_to_lt;

@@ -490,7 +490,12 @@ Module Compilers.
              | ident.Z_truncating_shiftl as idc
                => fun bw x y => match to_literal bw, to_literal x, to_literal y with
                                 | Some bw, Some x, Some y => of_literal (ident.interp idc bw x y)
-                                | Some bw, _, _ => if bw <? 0 then None else Some r[0 ~> 2^bw-1]
+                                | Some bw, _, _
+                                  => x <- x;
+                                       y <- y;
+                                       Some (ZRange.land_bounds
+                                               (ZRange.four_corners_and_zero Z.shiftl x y)
+                                               (ZRange.constant (Z.ones (Z.max 0 bw))))
                                 | None, _, _ => None
                                 end
              | ident.bool_rect _
