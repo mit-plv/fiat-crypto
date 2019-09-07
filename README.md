@@ -17,7 +17,7 @@ To build (if your COQPATH variable is empty):
 
 To build:
 
-       export COQPATH="$(pwd)/coqprime${COQPATH:+:}$COQPATH"
+       export COQPATH="$(pwd)/coqprime/src${COQPATH:+:}$COQPATH"
        make
 
 Usage
