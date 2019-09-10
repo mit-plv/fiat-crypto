@@ -326,16 +326,6 @@ static void mul(uint64_t out1[5], const uint64_t arg1[5], const uint64_t arg2[5]
   out1[4] = x152;
 }
 *)
-  (*Time Compute
-     (Pipeline.BoundsPipeline
-        true None [64; 128]
-        ltac:(let r := Reify (fun f
-                              => (  (squaremod (weight limbwidth_num limbwidth_den) s c n f)
-                                    )) in
-              exact r)
-               (Some (repeat (@None _) n), tt)
-               ZRange.type.base.option.None).
-   *)
   End __.
 End debugging_remove_mul_split_to_C_uint1_carry.
 
