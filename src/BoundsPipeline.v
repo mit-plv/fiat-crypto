@@ -111,14 +111,19 @@ Proof.
         try (rewrite <- Z.log2_up_le_pow2_full in *; omega).
 Qed.
 
+(** Prefix function definitions with static/non-public? *)
 Class static_opt := static : bool.
 Typeclasses Opaque static_opt.
-Class split_mul_to_opt := split_mul_to : option (Z * Z).
-Typeclasses Opaque split_mul_to_opt.
+(** Split apart multiplications? *)
 Class should_split_mul_opt := should_split_mul : bool.
 Typeclasses Opaque should_split_mul_opt.
+(** If [None], don't split apart multiplications; if [Some (w, wc)], split apart multiplications to use wordsize [w] and widen carries to width [wc] *)
+Class split_mul_to_opt := split_mul_to : option (Z * Z).
+Typeclasses Opaque split_mul_to_opt.
+(** Widen carries to the machine wordsize? *)
 Class widen_carry_opt := widen_carry : bool.
 Typeclasses Opaque widen_carry_opt.
+(** Widen uint8 / bytes types to machine wordsize? *)
 Class widen_bytes_opt := widen_bytes : bool.
 Typeclasses Opaque widen_bytes_opt.
 Notation split_mul_to_of_should_split_mul machine_wordsize possible_bitwidths
