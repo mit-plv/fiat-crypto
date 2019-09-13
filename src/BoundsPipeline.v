@@ -136,7 +136,7 @@ Notation prefix_with_carry bitwidths :=
   ((if widen_carry then (0::bitwidths) else (0::1::bitwidths))%Z)
     (only parsing).
 Notation prefix_with_carry_bytes bitwidths :=
-  (prefix_with_carry (if widen_bytes then bitwidths%list else 8::bitwidths)%Z)
+  (prefix_with_carry (match bitwidths return _ with bw => if widen_bytes then bw else 8::bw end)%Z) (* master and 8.9 are incompatible about scoping of multiple occurrences of an argument *)
     (only parsing).
 
 Module Pipeline.
