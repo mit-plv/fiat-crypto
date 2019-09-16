@@ -25,6 +25,7 @@ INSTALLDEFAULTROOT := Crypto
 
 .PHONY: coq clean update-_CoqProject cleanall install \
 	install-coqprime clean-coqprime coqprime coqprime-all \
+	bedrock2 clean-bedrock2 coqutil clean-coqutil \
 	install-standalone install-standalone-ocaml install-standalone-haskell \
 	util c-files rust-files \
 	nobigmem print-nobigmem \
@@ -38,9 +39,17 @@ include etc/coq-scripts/Makefile.vo_closure
 .DEFAULT_GOAL := all
 
 SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g' | uniq
+BEDROCK2_FOLDER := bedrock2/bedrock2
+BEDROCK2_SRC := $(BEDROCK2_FOLDER)/src
+BEDROCK2_NAME := bedrock2
+COQUTIL_FOLDER := bedrock2/deps/coqutil
+COQUTIL_SRC := $(COQUTIL_FOLDER)/src
+COQUTIL_NAME := coqutil
 update-_CoqProject::
 	$(SHOW)'ECHO > _CoqProject'
-	$(HIDE)(echo '-R $(SRC_DIR) $(MOD_NAME)'; (git ls-files 'src/*.v' | $(GREP_EXCLUDE_SPECIAL_VOFILES) | $(SORT_COQPROJECT))) > _CoqProject
+	$(HIDE)(echo '-R $(SRC_DIR) $(MOD_NAME)'; echo '-R $(BEDROCK2_SRC) $(BEDROCK2_NAME)'; \
+        echo '-R $(COQUTIL_SRC) $(COQUTIL_NAME)'; \
+        (git ls-files 'src/*.v' | $(GREP_EXCLUDE_SPECIAL_VOFILES) | $(SORT_COQPROJECT))) > _CoqProject
 
 # coq .vo files that are not compiled using coq_makefile
 SPECIAL_VOFILES := \
@@ -170,7 +179,19 @@ clean-coqprime:
 install-coqprime:
 	$(MAKE) --no-print-directory -C $(COQPRIME_FOLDER) install
 
-cleanall:: clean-coqprime
+coqutil:
+	$(MAKE) --no-print-directory -C $(COQUTIL_FOLDER)
+
+clean-coqutil:
+	$(MAKE) --no-print-directory -C $(COQUTIL_FOLDER) clean
+
+bedrock2: coqutil
+	$(MAKE) --no-print-directory -C $(BEDROCK2_FOLDER)
+
+clean-bedrock2:
+	$(MAKE) --no-print-directory -C $(BEDROCK2_FOLDER) clean
+
+cleanall:: clean-coqprime clean-bedrock2 clean-coqutil
 
 install: install-coqprime
 
