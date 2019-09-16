@@ -985,7 +985,7 @@ Module Compilers.
                                         SubstVarLike.is_var_fst_snd_pair_opp_cast
                                      ] in rewrite_head0) in
                    let rewrite_head1
-                       := (eval cbn [type.try_make_transport_cps base.try_make_transport_cps base.try_make_base_transport_cps]
+                       := (eval cbn [type.try_make_transport_cps base.try_make_transport_cps]
                             in rewrite_head1) in
                    rewrite_head1).
       Ltac make_rewrite_head2 pident_unify_unknown invert_bind_args_unknown rewrite_head1 pr2_rewrite_rules :=
@@ -1004,8 +1004,6 @@ Module Compilers.
                                 Compile.expr_of_rawexpr
                                 Compile.normalize_deep_rewrite_rule
                                 Compile.option_bind' pident_unify_unknown invert_bind_args_unknown Compile.normalize_deep_rewrite_rule
-                                (*Compile.reflect*)
-                                (*Compile.reify*)
                                 Compile.reveal_rawexpr_cps
                                 Compile.reveal_rawexpr_cps_gen
                                 Compile.rew_should_do_again
@@ -1017,12 +1015,10 @@ Module Compilers.
                                 Compile.type_of_rawexpr
                                 Compile.option_type_type_beq
                                 Compile.value
-                                (*Compile.value'*)
                                 Compile.value_of_rawexpr
                                 Compile.value_with_lets
                                 ident.smart_Literal
                                 type.try_transport_cps
-                                (*rlist_rect rwhen rwhenl*)
                              ] in rewrite_head1)).
       Ltac make_rewrite_head3 rewrite_head2 :=
         time_tac_in_constr_if_debug1
@@ -1033,9 +1029,9 @@ Module Compilers.
                                 Option.sequence Option.sequence_return Option.bind
                                 UnderLets.reify_and_let_binds_base_cps
                                 UnderLets.splice UnderLets.splice_list UnderLets.to_expr
-                                base.interp base.base_interp
-                                base.type.base_beq option_beq
-                                type.try_make_transport_cps base.try_make_transport_cps base.try_make_base_transport_cps
+                                base.interp
+                                option_beq
+                                type.try_make_transport_cps base.try_make_transport_cps
                                 Datatypes.fst Datatypes.snd
                              ] in rewrite_head2)).
       Ltac make_rewrite_head' pident_unify_unknown invert_bind_args_unknown rewrite_head0 pr2_rewrite_rules :=
