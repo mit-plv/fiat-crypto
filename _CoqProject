@@ -1,4 +1,6 @@
 -R src Crypto
+-R bedrock2/bedrock2/src bedrock2
+-R bedrock2/deps/coqutil/src coqutil
 src/BoundsPipeline.v
 src/CLI.v
 src/COperationSpecifications.v

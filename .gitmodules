@@ -5,3 +5,6 @@
 	path = coqprime
 	url = https://github.com/thery/coqprime
 	ignore = dirty
+[submodule "bedrock2"]
+	path = bedrock2
+	url = https://github.com/mit-plv/bedrock2.git
