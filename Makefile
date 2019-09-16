@@ -47,8 +47,8 @@ COQUTIL_SRC := $(COQUTIL_FOLDER)/src
 COQUTIL_NAME := coqutil
 update-_CoqProject::
 	$(SHOW)'ECHO > _CoqProject'
-	$(HIDE)(echo '-R $(SRC_DIR) $(MOD_NAME)'; echo '-R $(BEDROCK2_SRC) $(BEDROCK2_NAME)'; \
-        echo '-R $(COQUTIL_SRC) $(COQUTIL_NAME)'; \
+	$(HIDE)(echo '-R $(SRC_DIR) $(MOD_NAME)'; echo '-Q $(BEDROCK2_SRC) $(BEDROCK2_NAME)'; \
+        echo '-Q $(COQUTIL_SRC) $(COQUTIL_NAME)'; \
         (git ls-files 'src/*.v' | $(GREP_EXCLUDE_SPECIAL_VOFILES) | $(SORT_COQPROJECT))) > _CoqProject
 
 # coq .vo files that are not compiled using coq_makefile

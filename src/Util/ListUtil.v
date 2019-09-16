@@ -1,5 +1,5 @@
 Require Import Coq.Lists.List.
-Require Import Coq.omega.Omega Lia.
+Require Import Coq.omega.Omega Coq.micromega.Lia.
 Require Import Coq.Arith.Peano_dec.
 Require Import Coq.Classes.Morphisms.
 Require Import Coq.Numbers.Natural.Peano.NPeano.
