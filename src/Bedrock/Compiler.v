@@ -3,6 +3,8 @@ Require Import Coq.Lists.List.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.BoundsPipeline.
 Require bedrock2.Syntax.
+Require bedrock2.Semantics.
+Require bedrock2.BasicC64Semantics. (* for debugging *)
 Require Import Crypto.Util.Notations.
 Import ListNotations. Local Open Scope Z_scope.
 
@@ -10,7 +12,7 @@ Import Language.Compilers.
 
 Module Compiler.
   Section __.
-    Context {p : Syntax.parameters}
+    Context {p : Semantics.parameters}
             (next_varname : Syntax.varname -> Syntax.varname)
             (error : Syntax.expr.expr)
             (ident_to_funname : forall t, ident.ident t -> Syntax.funname).
@@ -95,12 +97,19 @@ Module Compiler.
       | base.type.unit | base.type.bool | base.type.zrange => Syntax.cmd.set
       end.
 
+    Definition range_good (r : zrange) : bool :=
+      ((lower r =? 0) && (upper r =? (2 ^ Semantics.width - 1)))%bool.
+
     (* TODO:
        How should we deal with casts? Options include a) stripping
        them out and having an inductive precondition that says all the
        casts are right; b) returning garbage/error from of_inner_expr
        if the casts are wrong, probably by having of_inner_expr match
-       on the full expression of identifiers + casts *)
+       on the full expression of identifiers + casts
+
+       To make recursive logic work, we could also use a flag in
+       of_inner_expr that describes whether a cast is expected?
+     *)
 
     Local Notation type_Z := (type.base (base.type.type_base base.type.Z)).
     Local Notation type_ZZ :=
@@ -125,9 +134,12 @@ Module Compiler.
                                   (expr.Ident _ ident.Z_add_get_carry)
                                   (expr.Ident _ (ident.Literal base.type.Z 18446744073709551616)))
                         x) y)) =>
-        let sum := Syntax.expr.op Syntax.bopname.add (of_inner_expr x) (of_inner_expr y) in
-        let carry := Syntax.expr.op Syntax.bopname.ltu sum (of_inner_expr x) in
-        (sum, carry)
+        if (range_good r1 && range_good r2)%bool
+        then
+          let sum := Syntax.expr.op Syntax.bopname.add (of_inner_expr x) (of_inner_expr y) in
+          let carry := Syntax.expr.op Syntax.bopname.ltu sum (of_inner_expr x) in
+          (sum, carry)
+        else make_error _
       | (expr.App
            type_Z type_Z
            (expr.Ident _ (ident.Z_cast r))
@@ -135,7 +147,9 @@ Module Compiler.
               (type.base (base.type.prod (base.type.type_base base.type.Z) _)) type_Z
               (expr.Ident _ (ident.fst base.type.Z _))
               x)) =>
-        fst (of_inner_expr x)
+        if range_good r
+        then fst (of_inner_expr x)
+        else make_error _
       | (expr.App
            type_Z type_Z
            (expr.Ident _ (ident.Z_cast r))
@@ -143,7 +157,9 @@ Module Compiler.
               (type.base (base.type.prod _ (base.type.type_base base.type.Z))) type_Z
               (expr.Ident _ (ident.snd _ base.type.Z))
               x)) =>
-        snd (of_inner_expr x)
+        if range_good r
+        then snd (of_inner_expr x)
+        else make_error _
       | expr.Var (type.base _) x => value_of_var x
       | _ => make_error _
       end.
@@ -172,11 +188,21 @@ Module Compiler.
           (nextname, set_return_values retnames v)
       | _ => fun _ => (nextname, Syntax.cmd.skip)
       end.
+  End __.
 
+  Section debug.
+    Context (nv : String.string -> String.string)
+            (error : Syntax.expr.expr).
+    Local Notation of_expr := (@of_expr BasicC64Semantics.parameters nv error _). 
+    
     (* Test expression for debugging:
-           let r0 := cast2 (uint64, uint64) (Z.add_get_carry (2^64) x y) in
-           fst r0 *)
-    Definition test_expr x y : @cexpr var (type.base (base.type.type_base base.type.Z)) :=
+
+       let r0 := cast2 (uint64, uint64) (Z.add_get_carry (2^64) x y) in
+       fst r0
+     *)
+    Definition test_expr x y
+      : @Language.Compilers.expr.expr base.type ident.ident var
+                                      (type.base (base.type.type_base base.type.Z)) :=
       expr.LetIn
         (A:=type.base (base.type.prod (base.type.type_base base.type.Z) (base.type.type_base base.type.Z)))
         (expr.App (expr.Ident (ident.Z_cast2 (r[0 ~> 18446744073709551615]%zrange,
@@ -193,7 +219,16 @@ Module Compiler.
              (expr.App
                 (expr.Ident ident.fst)
                 (expr.Var res))).
-    Definition test_expr2 x y : @cexpr var (type.base (base.type.type_base base.type.Z)) :=
+
+    (* Test expression for debugging:
+
+       let r0 := cast2 (uint64, uint64) (Z.add_get_carry (2^64) $x $y) in
+       let r1 := cast2 (uint64, uint64) (Z.add_get_carry (2^64) (fst r0) $y) in
+       fst r0
+     *)
+    Definition test_expr2 (x y : Syntax.varname)
+      : @Language.Compilers.expr.expr base.type ident.ident var
+                                      (type.base (base.type.type_base base.type.Z)) :=
       expr.LetIn
         (A:=type.base (base.type.prod (base.type.type_base base.type.Z) (base.type.type_base base.type.Z)))
         (expr.App (expr.Ident (ident.Z_cast2 (r[0 ~> 18446744073709551615]%zrange,
@@ -203,7 +238,7 @@ Module Compiler.
                         (expr.App
                            (expr.Ident ident.Z_add_get_carry)
                            (expr.Ident (ident.Literal (t:=base.type.Z) 18446744073709551616)))
-                           x) y))
+                           (expr.Var x)) (expr.Var y)))
         (fun res =>
            expr.LetIn
              (A:=type.base (base.type.prod (base.type.type_base base.type.Z) (base.type.type_base base.type.Z)))
@@ -221,19 +256,17 @@ Module Compiler.
                                    (expr.Var res))))
                              (expr.App
                                 (expr.Ident (ident.Z_cast r[0 ~> 18446744073709551615]%zrange))
-                                (expr.App
-                                   (expr.Ident ident.snd)
-                                   (expr.Var res)))))
+                                (expr.Var y))))
              (fun res2 =>
                 (expr.App
                    (expr.Ident (ident.Z_cast r[0 ~> 18446744073709551615]%zrange))
                    (expr.App
                       (expr.Ident ident.fst)
                       (expr.Var res2))))).
+
     (*
-    Print test_expr.
-    Eval cbn in (fun x y => of_expr (test_expr x y)).
-    Eval cbn in (fun x y => of_expr (test_expr2 x y)).
+    Eval simpl in (fun x y => of_expr (test_expr x y)).
+    Eval simpl in (fun x y => of_expr (test_expr2 x y)).
     *)
-  End __.
+  End debug.
 End Compiler.
