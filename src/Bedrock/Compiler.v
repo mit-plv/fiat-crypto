@@ -147,6 +147,14 @@ Module Compiler.
               (expr.Ident _ (ident.fst base.type.Z _))
               x)) =>
         fst (of_inner_expr x)
+      | (expr.App
+           type_Z type_Z
+           (expr.Ident _ (ident.Z_cast r))
+           (expr.App
+              (type.base (base.type.prod _ (base.type.type_base base.type.Z))) type_Z
+              (expr.Ident _ (ident.snd _ base.type.Z))
+              x)) =>
+        snd (of_inner_expr x)
       | expr.Var (type.base _) x => value_of_var x
       | _ => make_error _
       end.
@@ -196,9 +204,47 @@ Module Compiler.
              (expr.App
                 (expr.Ident ident.fst)
                 (expr.Var res))).
-  (*
+    Definition test_expr2 x y : @cexpr var (type.base (base.type.type_base base.type.Z)) :=
+      expr.LetIn
+        (A:=type.base (base.type.prod (base.type.type_base base.type.Z) (base.type.type_base base.type.Z)))
+        (expr.App (expr.Ident (ident.Z_cast2 (r[0 ~> 18446744073709551615]%zrange,
+                                              r[0 ~> 18446744073709551615]%zrange)))
+                  (expr.App
+                     (expr.App
+                        (expr.App
+                           (expr.Ident ident.Z_add_get_carry)
+                           (expr.Ident (ident.Literal (t:=base.type.Z) 18446744073709551616)))
+                           x) y))
+        (fun res =>
+           expr.LetIn
+             (A:=type.base (base.type.prod (base.type.type_base base.type.Z) (base.type.type_base base.type.Z)))
+             (expr.App (expr.Ident (ident.Z_cast2 (r[0 ~> 18446744073709551615]%zrange,
+                                                   r[0 ~> 18446744073709551615]%zrange)))
+                       (expr.App
+                          (expr.App
+                             (expr.App
+                                (expr.Ident ident.Z_add_get_carry)
+                                (expr.Ident (ident.Literal (t:=base.type.Z) 18446744073709551616)))
+                             (expr.App
+                                (expr.Ident (ident.Z_cast r[0 ~> 18446744073709551615]%zrange))
+                                (expr.App
+                                   (expr.Ident ident.fst)
+                                   (expr.Var res))))
+                             (expr.App
+                                (expr.Ident (ident.Z_cast r[0 ~> 18446744073709551615]%zrange))
+                                (expr.App
+                                   (expr.Ident ident.snd)
+                                   (expr.Var res)))))
+             (fun res2 =>
+                (expr.App
+                   (expr.Ident (ident.Z_cast r[0 ~> 18446744073709551615]%zrange))
+                   (expr.App
+                      (expr.Ident ident.fst)
+                      (expr.Var res2))))).
+    (*
     Print test_expr.
     Eval cbn in (fun x y => of_expr (test_expr x y)).
-   *)
+    Eval cbn in (fun x y => of_expr (test_expr2 x y)).
+    *)
   End __.
 End Compiler.
