@@ -1,23 +1,12 @@
 Require Import Coq.ZArith.ZArith.
-Require Import Coq.QArith.QArith.
-Require Import Coq.QArith.Qround.
 Require Import Coq.Lists.List.
 Require Import Crypto.Util.ZRange.
-Require Import Crypto.Arithmetic.Core.
-Require Import Crypto.Arithmetic.ModOps.
-Require Import Crypto.CStringification.
 Require Import Crypto.BoundsPipeline.
 Require bedrock2.Syntax.
 Require Import Crypto.Util.Notations.
 Import ListNotations. Local Open Scope Z_scope.
 
-Import
-  Language.Compilers
-  CStringification.Compilers.
-
-Import Language.Compilers.defaults.
-
-Import Associational Positional.
+Import Language.Compilers.
 
 Module Compiler.
   Section __.
