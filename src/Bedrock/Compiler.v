@@ -358,16 +358,53 @@ Module Compiler.
                  (expr.Ident ident.fst)
                  (expr.Var res)))).
 
+    (* Test expression for debugging:
+
+       let r0 := (uint64) (((uint64) $x + (uint64) $y) >> 20) in
+       [1; (uint64) $r0]
+     *)
+    Definition test_expr5 (x y : Syntax.varname)
+      : @Language.Compilers.expr.expr base.type ident.ident var
+                                      (type.base (base.type.list base.type.Z)) :=
+      expr.LetIn
+        (expr.App (expr.Ident (ident.Z_cast (r[0 ~> 18446744073709551615]%zrange)))
+                  (expr.App
+                     (expr.App
+                        (expr.Ident ident.Z_shiftr)
+                        (expr.App
+                           (expr.App
+                              (expr.Ident ident.Z_add)
+                              (expr.App
+                                 (expr.Ident (ident.Z_cast r[0 ~> 18446744073709551615]%zrange))
+                                 (expr.Var x)))
+                           (expr.App
+                              (expr.Ident (ident.Z_cast r[0 ~> 18446744073709551615]%zrange))
+                              (expr.Var y))))
+                     (expr.Ident (ident.Literal (t:=base.type.Z) 20))))
+        (fun res =>
+           expr.App
+             (expr.App
+                (expr.Ident ident.cons)
+                (expr.Ident (ident.Literal (t:=base.type.Z) 1)))
+             (expr.App
+                (expr.App
+                   (expr.Ident ident.cons)
+                   (expr.App
+                      (expr.Ident (ident.Z_cast r[0 ~> 18446744073709551615]%zrange))
+                      (expr.Var res)))
+                (expr.Ident ident.nil))).
+
     (*
     Local Notation "'uint64'" := (ident.Z_cast r[0 ~> 18446744073709551615]%zrange) : expr_scope.
     Local Notation "'uint64,uint64'" := (ident.Z_cast2
                                            (r[0 ~> 18446744073709551615]%zrange,
                                             r[0 ~> 18446744073709551615]%zrange)%core) : expr_scope.
-    Print test_expr4.
+    Print test_expr5.
     Eval simpl in (fun x y => of_expr (test_expr x y)).
     Eval simpl in (fun x y => of_expr (test_expr2 x y)).
     Eval simpl in (fun x y => of_expr (test_expr3 x y)).
-    Eval simpl in (fun x y => of_expr (test_expr4 x)).
+    Eval simpl in (fun x => of_expr (test_expr4 x)).
+    Eval simpl in (fun x y => of_expr (test_expr5 x y)).
      *)
   End debug.
 End Compiler.
