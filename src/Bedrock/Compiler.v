@@ -27,7 +27,8 @@ Module Compiler.
     Fixpoint base_var (t : base.type) : Type :=
       match t with
       | base.type.prod a b => base_var a * base_var b
-      | _ => Syntax.varname (* N.B. for lists, represents the list's *location in memory* *)
+      | base.type.list base.type.Z => Syntax.expr.expr (* N.B. for lists, represents the list's *location in memory* *)
+      | _ => Syntax.varname
       end.
     (* interpretation of type.type base.type *)
     Fixpoint var (t : type.type base.type) : Type :=
@@ -52,6 +53,7 @@ Module Compiler.
     Fixpoint value_of_var {t} : base_var t -> base_value t :=
       match t with
       | base.type.prod a b => fun x => (value_of_var (fst x), value_of_var (snd x))
+      | base.type.list base.type.Z => fun loc => loc
       | base.type.list _ | base.type.option _ | base.type.Z | base.type.nat
       | base.type.unit | base.type.bool | base.type.zrange => Syntax.expr.var
       end.
@@ -80,7 +82,9 @@ Module Compiler.
         let step1 := get_retnames a startname in
         let step2 := get_retnames b (fst step1) in
         (fst step2, (snd step1, snd step2))
-      (* everything else, including list, is single-variable assignment *)
+      (* this should not get called on lists of Zs -- return garbage *)
+      | base.type.list base.type.Z => (startname, Syntax.expr.literal 0)
+      (* everything else is single-variable assignment *)
       | base.type.list _ | base.type.option _ | base.type.Z | base.type.nat
       | base.type.unit | base.type.bool | base.type.zrange =>
                                           (next_varname startname, startname)
@@ -93,6 +97,8 @@ Module Compiler.
         fun retnames values =>
           Syntax.cmd.seq (set_return_values (fst retnames) (fst values))
                          (set_return_values (snd retnames) (snd values))
+      (* this should not be called on lists of Zs -- return garbage *)
+      | base.type.list base.type.Z => fun _ _ => Syntax.cmd.skip
       | base.type.list _ | base.type.option _ | base.type.Z | base.type.nat
       | base.type.unit | base.type.bool | base.type.zrange => Syntax.cmd.set
       end.
@@ -121,6 +127,9 @@ Module Compiler.
         is_bounded_by_bool z max_range
       | (expr.Ident _ (ident.Literal base.type.nat n)) =>
         is_bounded_by_bool (Z.of_nat n) max_range
+      | (expr.App _ (type.base (base.type.list _)) _ _) =>
+        (* lists get a pass *)
+        true
       | _ => false
       end.
 
@@ -168,11 +177,13 @@ Module Compiler.
              (expr.Ident _ (ident.snd _ base.type.Z))
              x) =>
           snd (of_inner_expr false x)
-        | (expr.App type_nat type_Z
-             (expr.App (type.base (base.type.list _)) _
+        | (expr.App
+             type_nat type_Z
+             (expr.App
+                (type.base (base.type.list _)) _
                 (expr.App _ _
-                   (expr.Ident _ (ident.List_nth_default _))
-                   d) l) i) =>
+                          (expr.Ident _ (ident.List_nth_default _))
+                          d) l) i) =>
           let addr := Syntax.expr.op Syntax.bopname.add
                                      (of_inner_expr false l)
                                      (of_inner_expr true i) in
@@ -189,12 +200,23 @@ Module Compiler.
              (nextname : Syntax.varname)
       : var t -> Syntax.varname * Syntax.cmd.cmd :=
       match e with
-      | @expr.LetIn _ _ _ (type.base t1) (type.base t2) x f =>
+      | expr.LetIn (type.base t1) (type.base t2) x f =>
         fun retnames : var (type.base t2) =>
           let gr := get_retnames t1 nextname in
           let cmdx := set_return_values (snd gr) (of_inner_expr true x) in
           let recf := of_expr (f (snd gr)) (fst gr) retnames in
           (fst recf, Syntax.cmd.seq cmdx (snd recf))
+      | expr.App
+          (type.base (base.type.list base.type.Z)) (type.base (base.type.list base.type.Z))
+          (expr.App type_Z _ (expr.Ident _ (ident.cons _)) x) l =>
+        fun retloc : Syntax.expr.expr =>
+          (* retloc is the address at which to store the head of the list *)
+          let cmdx := (Syntax.cmd.store Syntax.access_size.word retloc (of_inner_expr true x)) in
+          let recl :=
+              of_expr l nextname (Syntax.expr.op Syntax.bopname.add retloc (Syntax.expr.literal 1)) in
+          (fst recl, Syntax.cmd.seq cmdx (snd recl))
+      | (expr.Ident _ (ident.nil base.type.Z)) =>
+        fun _ => (nextname, Syntax.cmd.skip)
       | expr.App _ (type.base _) f x =>
         fun retnames =>
           let v := of_inner_expr true (expr.App f x) in
@@ -212,9 +234,14 @@ Module Compiler.
   End __.
 
   Section debug.
-    Context (nv : String.string -> String.string)
-            (ERROR : Syntax.expr.expr).
-    Local Notation of_expr := (@of_expr BasicC64Semantics.parameters nv ERROR _).
+    Import Coq.Strings.String. Local Open Scope string_scope.
+    Let ERROR : Syntax.expr.expr := (Syntax.expr.var "ERROR").
+    Let nv : String.string -> String.string :=
+      fun old_varname =>
+        let old_num := List.nth_default ""%string (String.split "x" old_varname) 1 in
+        let new_num := Decimal.decimal_string_of_Z (Decimal.Z_of_decimal_string old_num + 1) in
+        String.append "x" new_num.
+    Local Notation of_expr e := (@of_expr BasicC64Semantics.parameters nv ERROR _ e "x0").
     Local Notation of_inner_expr := (@of_inner_expr BasicC64Semantics.parameters ERROR _).
 
     (* Test expression for debugging:
@@ -326,7 +353,7 @@ Module Compiler.
        let r0 := cast2 (uint64, uint64) (Z.add_get_carry (2^64) ((uint64) x[1]) #6) in
        fst r0
      *)
-    Definition test_expr4 (x : Syntax.varname)
+    Definition test_expr4 (x : Syntax.expr.expr)
       : @Language.Compilers.expr.expr base.type ident.ident var
                                       (type.base (base.type.type_base base.type.Z)) :=
       expr.LetIn
@@ -361,7 +388,7 @@ Module Compiler.
     (* Test expression for debugging:
 
        let r0 := (uint64) (((uint64) $x + (uint64) $y) >> 20) in
-       [1; (uint64) $r0]
+       [1; 2; (uint64) $r0]
      *)
     Definition test_expr5 (x y : Syntax.varname)
       : @Language.Compilers.expr.expr base.type ident.ident var
@@ -389,10 +416,14 @@ Module Compiler.
              (expr.App
                 (expr.App
                    (expr.Ident ident.cons)
+                   (expr.Ident (ident.Literal (t:=base.type.Z) 2)))
+                (expr.App
                    (expr.App
-                      (expr.Ident (ident.Z_cast r[0 ~> 18446744073709551615]%zrange))
-                      (expr.Var res)))
-                (expr.Ident ident.nil))).
+                      (expr.Ident ident.cons)
+                      (expr.App
+                         (expr.Ident (ident.Z_cast r[0 ~> 18446744073709551615]%zrange))
+                         (expr.Var res)))
+                   (expr.Ident ident.nil)))).
 
     (*
     Local Notation "'uint64'" := (ident.Z_cast r[0 ~> 18446744073709551615]%zrange) : expr_scope.
@@ -400,11 +431,20 @@ Module Compiler.
                                            (r[0 ~> 18446744073709551615]%zrange,
                                             r[0 ~> 18446744073709551615]%zrange)%core) : expr_scope.
     Print test_expr5.
-    Eval simpl in (fun x y => of_expr (test_expr x y)).
-    Eval simpl in (fun x y => of_expr (test_expr2 x y)).
-    Eval simpl in (fun x y => of_expr (test_expr3 x y)).
-    Eval simpl in (fun x => of_expr (test_expr4 x)).
-    Eval simpl in (fun x y => of_expr (test_expr5 x y)).
+    Local Notation "x ; y" := (Syntax.cmd.seq x y)
+                                (at level 199, y at next level, format "x ; '//'  y") : syntax_scope.
+    Local Notation "% x" := (Syntax.expr.var x) (at level 0, only printing, format "% x") : syntax_scope.
+    Local Notation "x <- y" := (Syntax.cmd.set x y) (at level 199, y at next level) : syntax_scope.
+    Local Notation "x <-- y" := (Syntax.cmd.store Syntax.access_size.word x y)
+                                 (at level 199) : syntax_scope.
+    Local Notation "x" := (Syntax.expr.literal x) (at level 199, only printing) : syntax_scope.
+    Import Syntax. Import Syntax.bopname.
+    Local Open Scope syntax_scope.
+    Eval simpl in (fun x y => of_expr (test_expr x y) "ret").
+    Eval lazy in (fun x y => of_expr (test_expr2 x y) "ret").
+    Eval lazy in (fun x y => of_expr (test_expr3 x y) "ret").
+    Eval lazy in (fun x => of_expr (test_expr4 x) "ret").
+    Eval lazy in (fun x y => of_expr (test_expr5 x y) (Syntax.expr.var "ret")).
      *)
   End debug.
 End Compiler.
