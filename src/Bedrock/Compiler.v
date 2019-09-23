@@ -1,10 +1,10 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Lists.List.
-Require Import Crypto.Util.ZRange.
-Require Import Crypto.BoundsPipeline.
 Require bedrock2.Syntax.
 Require bedrock2.Semantics.
 Require bedrock2.BasicC64Semantics. (* for debugging *)
+Require Import Crypto.Util.ZRange.
+Require Import Crypto.BoundsPipeline.
 Require Import Crypto.Util.Notations.
 Import ListNotations. Local Open Scope Z_scope.
 
@@ -27,7 +27,7 @@ Module Compiler.
     Fixpoint base_var (t : base.type) : Type :=
       match t with
       | base.type.prod a b => base_var a * base_var b
-      | _ => Syntax.varname
+      | _ => Syntax.varname (* N.B. for lists, represents the list's *location in memory* *)
       end.
     (* interpretation of type.type base.type *)
     Fixpoint var (t : type.type base.type) : Type :=
@@ -100,6 +100,7 @@ Module Compiler.
     Definition max_range : zrange := {| lower := 0; upper := 2 ^ Semantics.width |}.
     Definition range_good (r : zrange) : bool := is_tighter_than_bool r max_range.
 
+    Local Notation type_nat := (type.base (base.type.type_base base.type.nat)).
     Local Notation type_Z := (type.base (base.type.type_base base.type.Z)).
     Local Notation type_ZZ :=
       (type.base (base.type.prod (base.type.type_base base.type.Z) (base.type.type_base base.type.Z))).
@@ -167,6 +168,19 @@ Module Compiler.
              (expr.Ident _ (ident.snd _ base.type.Z))
              x) =>
           snd (of_inner_expr false x)
+        | (expr.App type_nat type_Z
+             (expr.App (type.base (base.type.list _)) _
+                (expr.App _ _
+                   (expr.Ident _ (ident.List_nth_default _))
+                   d) l) i) =>
+          let addr := Syntax.expr.op Syntax.bopname.add
+                                     (of_inner_expr false l)
+                                     (of_inner_expr true i) in
+          Syntax.expr.load Syntax.access_size.word addr
+        | expr.Ident type_Z (ident.Literal base.type.Z x) =>
+          Syntax.expr.literal x
+        | expr.Ident type_nat (ident.Literal base.type.nat x) =>
+          Syntax.expr.literal (Z.of_nat x)
         | expr.Var (type.base _) x => value_of_var x
         | _ => make_error _
         end.
