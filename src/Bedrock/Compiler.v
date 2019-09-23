@@ -199,9 +199,9 @@ Module Compiler.
 
   Section debug.
     Context (nv : String.string -> String.string)
-            (error : Syntax.expr.expr).
-    Local Notation of_expr := (@of_expr BasicC64Semantics.parameters nv error _).
-    Local Notation of_inner_expr := (@of_inner_expr BasicC64Semantics.parameters error _).
+            (ERROR : Syntax.expr.expr).
+    Local Notation of_expr := (@of_expr BasicC64Semantics.parameters nv ERROR _).
+    Local Notation of_inner_expr := (@of_inner_expr BasicC64Semantics.parameters ERROR _).
 
     (* Test expression for debugging:
 
@@ -307,15 +307,53 @@ Module Compiler.
                  (expr.Ident ident.fst)
                  (expr.Var res)))).
 
+    (* Test expression for debugging:
+
+       let r0 := cast2 (uint64, uint64) (Z.add_get_carry (2^64) ((uint64) x[1]) #6) in
+       fst r0
+     *)
+    Definition test_expr4 (x : Syntax.varname)
+      : @Language.Compilers.expr.expr base.type ident.ident var
+                                      (type.base (base.type.type_base base.type.Z)) :=
+      expr.LetIn
+        (A:=type.base (base.type.prod (base.type.type_base base.type.Z) (base.type.type_base base.type.Z)))
+        (expr.App (expr.Ident (ident.Z_cast2 (r[0 ~> 18446744073709551615]%zrange,
+                                              r[0 ~> 18446744073709551615]%zrange)))
+                  (expr.App
+                     (expr.App
+                        (expr.App
+                           (expr.Ident ident.Z_add_get_carry)
+                           (expr.Ident (ident.Literal (t:=base.type.Z) 18446744073709551616)))
+                        (expr.App
+                           (expr.Ident (ident.Z_cast r[0 ~> 18446744073709551615]%zrange))
+                           (expr.App
+                              (expr.App
+                                 (expr.App
+                                    (expr.Ident (ident.List_nth_default))
+                                    (expr.Ident (ident.Literal (t:=base.type.Z) 0)))
+                                 (expr.Var x))
+                              (expr.Ident (ident.Literal (t:=base.type.nat) 1%nat)))
+                           ))
+                     (expr.App
+                        (expr.Ident (ident.Z_cast r[0 ~> 18446744073709551615]%zrange))
+                        (expr.Ident (ident.Literal (t:=base.type.Z) 6)))))
+        (fun res =>
+           (expr.App
+              (expr.Ident (ident.Z_cast r[0 ~> 18446744073709551615]%zrange))
+              (expr.App
+                 (expr.Ident ident.fst)
+                 (expr.Var res)))).
+
     (*
     Local Notation "'uint64'" := (ident.Z_cast r[0 ~> 18446744073709551615]%zrange) : expr_scope.
     Local Notation "'uint64,uint64'" := (ident.Z_cast2
                                            (r[0 ~> 18446744073709551615]%zrange,
                                             r[0 ~> 18446744073709551615]%zrange)%core) : expr_scope.
-    Print test_expr3.
+    Print test_expr4.
     Eval simpl in (fun x y => of_expr (test_expr x y)).
     Eval simpl in (fun x y => of_expr (test_expr2 x y)).
     Eval simpl in (fun x y => of_expr (test_expr3 x y)).
+    Eval simpl in (fun x y => of_expr (test_expr4 x)).
      *)
   End debug.
 End Compiler.
