@@ -11,7 +11,7 @@ Import ListNotations. Local Open Scope Z_scope.
 Import Language.Compilers.
 
 Module Compiler.
-  Section __.
+  Section Compiler.
     Context {p : Semantics.parameters}
             (next_varname : Syntax.varname -> Syntax.varname)
             (error : Syntax.expr.expr)
@@ -259,40 +259,48 @@ Module Compiler.
 
     Fixpoint of_expr {t} (e : @cexpr var t)
              (nextname : Syntax.varname)
-      : var t -> Syntax.varname * Syntax.cmd.cmd :=
+      : type.for_each_lhs_of_arrow var t (* argument names *)
+        -> var t (* return value names *)
+        -> Syntax.varname * Syntax.cmd.cmd :=
       match e with
       | expr.LetIn (type.base t1) (type.base t2) x f =>
-        fun retnames : var (type.base t2) =>
+        fun argnames (retnames : var (type.base t2))  =>
           let gr := get_retnames t1 nextname in
           let cmdx := set_return_values (snd gr) (of_inner_expr true x) in
-          let recf := of_expr (f (snd gr)) (fst gr) retnames in
+          let recf := of_expr (f (snd gr)) (fst gr) argnames retnames in
           (fst recf, Syntax.cmd.seq cmdx (snd recf))
       | expr.App
           (type.base (base.type.list base.type.Z)) (type.base (base.type.list base.type.Z))
           (expr.App type_Z _ (expr.Ident _ (ident.cons _)) x) l =>
-        fun retloc : Syntax.expr.expr =>
+        fun argnames (retloc : Syntax.expr.expr) =>
           (* retloc is the address at which to store the head of the list *)
           let cmdx := (Syntax.cmd.store Syntax.access_size.word retloc (of_inner_expr true x)) in
           let recl :=
-              of_expr l nextname (Syntax.expr.op Syntax.bopname.add retloc (Syntax.expr.literal 1)) in
+              of_expr l nextname argnames
+                      (Syntax.expr.op Syntax.bopname.add retloc (Syntax.expr.literal 1))
+          in
           (fst recl, Syntax.cmd.seq cmdx (snd recl))
       | (expr.Ident _ (ident.nil base.type.Z)) =>
-        fun _ => (nextname, Syntax.cmd.skip)
+        fun _ _ => (nextname, Syntax.cmd.skip)
       | expr.App _ (type.base _) f x =>
-        fun retnames =>
+        fun _ retnames =>
           let v := of_inner_expr true (expr.App f x) in
           (nextname, set_return_values retnames v)
       | expr.Ident (type.base _) x =>
-        fun retnames =>
+        fun _ retnames =>
           let v := of_inner_expr true (expr.Ident x) in
           (nextname, set_return_values retnames v)
       | expr.Var (type.base _) x =>
-        fun retnames =>
+        fun _ retnames =>
           let v := of_inner_expr true (expr.Var x) in
           (nextname, set_return_values retnames v)
-      | _ => fun _ => (nextname, Syntax.cmd.skip)
+      | expr.Abs (type.base s) d f =>
+        fun (argnames : base_var s * type.for_each_lhs_of_arrow _ d)
+            (retnames : base_var s -> var d) =>
+          of_expr (f (fst argnames)) nextname (snd argnames) (retnames (fst argnames))
+      | _ => fun _ _ => (nextname, Syntax.cmd.skip)
       end.
-  End __.
+  End Compiler.
 
   Section debug.
     Import Coq.Strings.String. Local Open Scope string_scope.
@@ -502,11 +510,11 @@ Module Compiler.
     Local Notation "x" := (Syntax.expr.literal x) (at level 199, only printing) : syntax_scope.
     Import Syntax. Import Syntax.bopname.
     Local Open Scope syntax_scope.
-    Eval simpl in (fun x y => of_expr (test_expr x y) "ret").
-    Eval lazy in (fun x y => of_expr (test_expr2 x y) "ret").
-    Eval lazy in (fun x y => of_expr (test_expr3 x y) "ret").
-    Eval lazy in (fun x => of_expr (test_expr4 x) "ret").
-    Eval lazy in (fun x y => of_expr (test_expr5 x y) (Syntax.expr.var "ret")).
+    Eval simpl in (fun x y => of_expr (test_expr x y) tt "ret").
+    Eval lazy in (fun x y => of_expr (test_expr2 x y) tt "ret").
+    Eval lazy in (fun x y => of_expr (test_expr3 x y) tt "ret").
+    Eval lazy in (fun x => of_expr (test_expr4 x) tt "ret").
+    Eval lazy in (fun x y => of_expr (test_expr5 x y) tt (Syntax.expr.var "ret")).
     *)
   End debug.
 End Compiler.
