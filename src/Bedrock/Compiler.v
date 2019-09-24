@@ -201,24 +201,41 @@ Module Compiler.
              (expr.App type_Z (type.arrow type_Z type_Z)
                        (expr.Ident _ ident.Z_add) x) y) =>
           Syntax.expr.op Syntax.bopname.add (of_inner_expr true x) (of_inner_expr true y)
+        (* Z_mul -> bopname.mul *)
+        | (expr.App
+             type_Z type_Z
+             (expr.App type_Z (type.arrow type_Z type_Z)
+                       (expr.Ident _ ident.Z_mul) x) y) =>
+          Syntax.expr.op Syntax.bopname.mul (of_inner_expr true x) (of_inner_expr true y)
         (* Z_land -> bopname.and *)
         | (expr.App
              type_Z type_Z
              (expr.App type_Z (type.arrow type_Z type_Z)
                        (expr.Ident _ ident.Z_land) x) y) =>
           Syntax.expr.op Syntax.bopname.and (of_inner_expr true x) (of_inner_expr true y)
+        (* Z_lor -> bopname.or *)
+        | (expr.App
+             type_Z type_Z
+             (expr.App type_Z (type.arrow type_Z type_Z)
+                       (expr.Ident _ ident.Z_lor) x) y) =>
+          Syntax.expr.op Syntax.bopname.or (of_inner_expr true x) (of_inner_expr true y)
         (* Z_shiftr -> bopname.sru *)
         | (expr.App
              type_Z type_Z
              (expr.App type_Z (type.arrow type_Z type_Z)
                        (expr.Ident _ ident.Z_shiftr) x) y) =>
           Syntax.expr.op Syntax.bopname.sru (of_inner_expr true x) (of_inner_expr true y)
-        (* Z_shiftl -> bopname.slu *)
+        (* Z_truncating_shiftl : convert to bopname.slu if the truncation matches *)
         | (expr.App
              type_Z type_Z
              (expr.App type_Z (type.arrow type_Z type_Z)
-                       (expr.Ident _ ident.Z_shiftl) x) y) =>
-          Syntax.expr.op Syntax.bopname.slu (of_inner_expr true x) (of_inner_expr true y)
+                       (expr.App type_Z (type.arrow type_Z (type.arrow type_Z type_Z))
+                                 (expr.Ident _ ident.Z_truncating_shiftl)
+                                 (expr.Ident _ (ident.Literal base.type.Z s)))
+                       x) y) =>
+          if Z.eqb s Semantics.width
+          then Syntax.expr.op Syntax.bopname.slu (of_inner_expr true x) (of_inner_expr true y)
+          else make_error _
         (* fst : since the [value] of a product type is a tuple, simply use Coq's [fst] *)
         | (expr.App
              (type.base (base.type.prod (base.type.type_base base.type.Z) _)) type_Z
