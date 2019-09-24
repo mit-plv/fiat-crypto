@@ -17,6 +17,7 @@ Module Compiler.
             (error : Syntax.expr.expr)
             (ident_to_funname : forall t, ident.ident t -> Syntax.funname).
     Local Notation cexpr := (@Language.Compilers.expr.expr base.type ident.ident).
+    Local Notation maxint := (2 ^ Semantics.width).
 
     (* cexpr typing cheat sheet:
          Language.Compilers.type === type.type := base (of base.type) or arrow (recursive type.type)
@@ -133,13 +134,6 @@ Module Compiler.
       | _ => false
       end.
 
-    (* TODO: of_inner_expr needs to handle:
-       - all binary operations (mul_split, add_get_carry, add_with_get_carry, add, lor, shiftl, truncating_shiftl)
-       - nth_default of lists
-       - fst/snd
-       - list formation (cons, nil)
-     *)
-    (* TODO : change magic numbers to something based on Semantics.width *)
     (* Used to interpret expressions that are not allowed to contain let statements *)
     Fixpoint of_inner_expr
              (require_cast : bool)
@@ -163,10 +157,31 @@ Module Compiler.
              (expr.App type_Z (type.arrow type_Z type_ZZ)
                        (expr.App type_Z (type.arrow type_Z (type.arrow type_Z type_ZZ))
                                  (expr.Ident _ ident.Z_add_get_carry)
-                                 (expr.Ident _ (ident.Literal base.type.Z 18446744073709551616)))
+                                 (expr.Ident _ (ident.Literal base.type.Z maxint)))
                        x) y) =>
           let sum := Syntax.expr.op Syntax.bopname.add (of_inner_expr true x) (of_inner_expr true y) in
+          (* Given (0 <= x < w) and (0 <= y < w), carry bit = (x + y) mod w <? x:
+               if (x + y) mod w < x, then clearly the sum must have overflowed (since 0 <= y)
+               if the sum overflowed, then (x + y) mod w = x + y - w < x *)
           let carry := Syntax.expr.op Syntax.bopname.ltu sum (of_inner_expr true x) in
+          (sum, carry)
+        (* Z_add_with_get_carry : compute sum and carry separately and assign to
+           two different variables *)
+        | (expr.App
+             type_Z type_ZZ
+             (expr.App type_Z (type.arrow type_Z type_ZZ)
+                       (expr.App type_Z (type.arrow type_Z (type.arrow type_Z type_ZZ))
+                                 (expr.App type_Z (type.arrow type_Z (type.arrow type_Z (type.arrow type_Z type_ZZ)))
+                                           (expr.Ident _ ident.Z_add_with_get_carry)
+                                           (expr.Ident _ (ident.Literal base.type.Z maxint)))
+                                 c) x) y) =>
+          let sum_cx := Syntax.expr.op Syntax.bopname.add (of_inner_expr true c) (of_inner_expr true x) in
+          let sum := Syntax.expr.op Syntax.bopname.add sum_cx (of_inner_expr true y) in
+          (* compute the carry by adding together the carries of both additions,
+          using the same strategy as in Z_add_get_carry *)
+          let carry_cx := Syntax.expr.op Syntax.bopname.ltu sum_cx (of_inner_expr true x) in
+          let carry_cxy := Syntax.expr.op Syntax.bopname.ltu sum sum_cx in
+          let carry := Syntax.expr.op Syntax.bopname.add carry_cx carry_cxy in
           (sum, carry)
         (* Z_mul_split : compute high and low separately and assign to two
            different variables *)
@@ -175,7 +190,7 @@ Module Compiler.
              (expr.App type_Z (type.arrow type_Z type_ZZ)
                        (expr.App type_Z (type.arrow type_Z (type.arrow type_Z type_ZZ))
                                  (expr.Ident _ ident.Z_mul_split)
-                                 (expr.Ident _ (ident.Literal base.type.Z 18446744073709551616)))
+                                 (expr.Ident _ (ident.Literal base.type.Z maxint)))
                        x) y) =>
           let low := Syntax.expr.op Syntax.bopname.mul (of_inner_expr true x) (of_inner_expr true y) in
           let high := Syntax.expr.op Syntax.bopname.mulhuu (of_inner_expr true x) (of_inner_expr true y) in
