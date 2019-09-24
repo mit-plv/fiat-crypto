@@ -139,7 +139,6 @@ Module Compiler.
        - fst/snd
        - list formation (cons, nil)
      *)
-    (* TODO : better comments in this function *)
     (* Used to interpret expressions that are not allowed to contain let statements *)
     Fixpoint of_inner_expr
              (require_cast : bool)
@@ -148,16 +147,16 @@ Module Compiler.
       then make_error _
       else
         match e with
+        (* Z_cast : clear casts because has_casts already checked for them *)
         | (expr.App
              type_Z type_Z
-             (expr.Ident _ (ident.Z_cast r)) x) =>
-          (* strip casts -- we already checked for them in has_casts *)
-          of_inner_expr false x
+             (expr.Ident _ (ident.Z_cast r)) x) => of_inner_expr false x
+        (* Z_cast2 : clear casts because has_casts already checked for them *)
         | (expr.App
              type_ZZ type_ZZ
-             (expr.Ident _ (ident.Z_cast2 (r1, r2))) x) =>
-          (* strip casts -- we already checked for them in has_casts *)
-          of_inner_expr false x
+             (expr.Ident _ (ident.Z_cast2 (r1, r2))) x) => of_inner_expr false x
+        (* Z_add_get_carry : compute sum and carry separately and
+           assign to two different variables *)
         | (expr.App
              type_Z type_ZZ
              (expr.App type_Z (type.arrow type_Z type_ZZ)
@@ -168,36 +167,45 @@ Module Compiler.
           let sum := Syntax.expr.op Syntax.bopname.add (of_inner_expr true x) (of_inner_expr true y) in
           let carry := Syntax.expr.op Syntax.bopname.ltu sum (of_inner_expr true x) in
           (sum, carry)
+        (* Z_add -> bopname.add *)
         | (expr.App
              type_Z type_Z
              (expr.App type_Z (type.arrow type_Z type_Z)
                        (expr.Ident _ ident.Z_add) x) y) =>
           Syntax.expr.op Syntax.bopname.add (of_inner_expr true x) (of_inner_expr true y)
+        (* Z_land -> bopname.and *)
         | (expr.App
              type_Z type_Z
              (expr.App type_Z (type.arrow type_Z type_Z)
                        (expr.Ident _ ident.Z_land) x) y) =>
           Syntax.expr.op Syntax.bopname.and (of_inner_expr true x) (of_inner_expr true y)
+        (* Z_shiftr -> bopname.sru *)
         | (expr.App
              type_Z type_Z
              (expr.App type_Z (type.arrow type_Z type_Z)
                        (expr.Ident _ ident.Z_shiftr) x) y) =>
           Syntax.expr.op Syntax.bopname.sru (of_inner_expr true x) (of_inner_expr true y)
+        (* Z_shiftl -> bopname.slu *)
         | (expr.App
              type_Z type_Z
              (expr.App type_Z (type.arrow type_Z type_Z)
                        (expr.Ident _ ident.Z_shiftl) x) y) =>
           Syntax.expr.op Syntax.bopname.slu (of_inner_expr true x) (of_inner_expr true y)
+        (* fst : since the [value] of a product type is a tuple, simply use Coq's [fst] *)
         | (expr.App
              (type.base (base.type.prod (base.type.type_base base.type.Z) _)) type_Z
              (expr.Ident _ (ident.fst base.type.Z _))
              x) =>
           fst (of_inner_expr false x)
+        (* snd : since the [value] of a product type is a tuple, simply Coq's [snd] *)
         | (expr.App
              (type.base (base.type.prod _ (base.type.type_base base.type.Z))) type_Z
              (expr.Ident _ (ident.snd _ base.type.Z))
              x) =>
           snd (of_inner_expr false x)
+        (* List_nth_default : lists are represented by the location of the head
+           of the list in memory; therefore, to get the nth element of the list,
+           we add the index and load from the resulting address *)
         | (expr.App
              type_nat type_Z
              (expr.App
@@ -209,11 +217,15 @@ Module Compiler.
                                      (of_inner_expr false l)
                                      (of_inner_expr true i) in
           Syntax.expr.load Syntax.access_size.word addr
+        (* Literal (Z) -> Syntax.expr.literal *)
         | expr.Ident type_Z (ident.Literal base.type.Z x) =>
           Syntax.expr.literal x
+        (* Literal (nat) : convert to Z, then use Syntax.expr.literal *)
         | expr.Ident type_nat (ident.Literal base.type.nat x) =>
           Syntax.expr.literal (Z.of_nat x)
+        (* Var : use value_of_var to convert the expression *)
         | expr.Var (type.base _) x => value_of_var x
+        (* if no clauses matched the expression, return an error *)
         | _ => make_error _
         end.
 
