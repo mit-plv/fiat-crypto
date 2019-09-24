@@ -157,14 +157,17 @@ Module Compiler.
              (expr.App type_Z (type.arrow type_Z type_ZZ)
                        (expr.App type_Z (type.arrow type_Z (type.arrow type_Z type_ZZ))
                                  (expr.Ident _ ident.Z_add_get_carry)
-                                 (expr.Ident _ (ident.Literal base.type.Z maxint)))
+                                 (expr.Ident _ (ident.Literal base.type.Z s)))
                        x) y) =>
-          let sum := Syntax.expr.op Syntax.bopname.add (of_inner_expr true x) (of_inner_expr true y) in
-          (* Given (0 <= x < w) and (0 <= y < w), carry bit = (x + y) mod w <? x:
+          if Z.eqb s maxint
+          then
+            let sum := Syntax.expr.op Syntax.bopname.add (of_inner_expr true x) (of_inner_expr true y) in
+            (* Given (0 <= x < w) and (0 <= y < w), carry bit = (x + y) mod w <? x:
                if (x + y) mod w < x, then clearly the sum must have overflowed (since 0 <= y)
                if the sum overflowed, then (x + y) mod w = x + y - w < x *)
-          let carry := Syntax.expr.op Syntax.bopname.ltu sum (of_inner_expr true x) in
-          (sum, carry)
+            let carry := Syntax.expr.op Syntax.bopname.ltu sum (of_inner_expr true x) in
+            (sum, carry)
+          else make_error _
         (* Z_add_with_get_carry : compute sum and carry separately and assign to
            two different variables *)
         | (expr.App
@@ -173,16 +176,19 @@ Module Compiler.
                        (expr.App type_Z (type.arrow type_Z (type.arrow type_Z type_ZZ))
                                  (expr.App type_Z (type.arrow type_Z (type.arrow type_Z (type.arrow type_Z type_ZZ)))
                                            (expr.Ident _ ident.Z_add_with_get_carry)
-                                           (expr.Ident _ (ident.Literal base.type.Z maxint)))
+                                           (expr.Ident _ (ident.Literal base.type.Z s)))
                                  c) x) y) =>
-          let sum_cx := Syntax.expr.op Syntax.bopname.add (of_inner_expr true c) (of_inner_expr true x) in
-          let sum := Syntax.expr.op Syntax.bopname.add sum_cx (of_inner_expr true y) in
-          (* compute the carry by adding together the carries of both additions,
+          if Z.eqb s maxint
+          then
+            let sum_cx := Syntax.expr.op Syntax.bopname.add (of_inner_expr true c) (of_inner_expr true x) in
+            let sum := Syntax.expr.op Syntax.bopname.add sum_cx (of_inner_expr true y) in
+            (* compute the carry by adding together the carries of both additions,
           using the same strategy as in Z_add_get_carry *)
-          let carry_cx := Syntax.expr.op Syntax.bopname.ltu sum_cx (of_inner_expr true x) in
-          let carry_cxy := Syntax.expr.op Syntax.bopname.ltu sum sum_cx in
-          let carry := Syntax.expr.op Syntax.bopname.add carry_cx carry_cxy in
-          (sum, carry)
+            let carry_cx := Syntax.expr.op Syntax.bopname.ltu sum_cx (of_inner_expr true x) in
+            let carry_cxy := Syntax.expr.op Syntax.bopname.ltu sum sum_cx in
+            let carry := Syntax.expr.op Syntax.bopname.add carry_cx carry_cxy in
+            (sum, carry)
+          else make_error _
         (* Z_mul_split : compute high and low separately and assign to two
            different variables *)
         | (expr.App
@@ -190,11 +196,14 @@ Module Compiler.
              (expr.App type_Z (type.arrow type_Z type_ZZ)
                        (expr.App type_Z (type.arrow type_Z (type.arrow type_Z type_ZZ))
                                  (expr.Ident _ ident.Z_mul_split)
-                                 (expr.Ident _ (ident.Literal base.type.Z maxint)))
+                                 (expr.Ident _ (ident.Literal base.type.Z s)))
                        x) y) =>
-          let low := Syntax.expr.op Syntax.bopname.mul (of_inner_expr true x) (of_inner_expr true y) in
-          let high := Syntax.expr.op Syntax.bopname.mulhuu (of_inner_expr true x) (of_inner_expr true y) in
-          (low, high)
+          if Z.eqb s maxint
+          then
+            let low := Syntax.expr.op Syntax.bopname.mul (of_inner_expr true x) (of_inner_expr true y) in
+            let high := Syntax.expr.op Syntax.bopname.mulhuu (of_inner_expr true x) (of_inner_expr true y) in
+            (low, high)
+          else make_error _
         (* Z_add -> bopname.add *)
         | (expr.App
              type_Z type_Z
