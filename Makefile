@@ -439,6 +439,8 @@ $(PERF_PRIME_SHS:.sh=.log) : %.log : %.sh $(PERF_STANDALONE:%=src/ExtractionOCam
 	$(HIDE)$(TIMER_FULL) $(PERF_TIMEOUT) bash $< > $@.tmp
 	$(HIDE)sed 's/\r\n/\n/g; s/\r//g; s/\s*$$//g' $@.tmp > $@ && rm -f $@.tmp
 
+curves: $(filter src/Spec/%Curve%.vo,$(REGULAR_VOFILES)) $(filter src/Curves/%.vo,$(REGULAR_VOFILES))
+
 clean::
 	rm -f Makefile.coq
 
