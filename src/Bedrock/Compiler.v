@@ -139,6 +139,7 @@ Module Compiler.
        - fst/snd
        - list formation (cons, nil)
      *)
+    (* TODO : change magic numbers to something based on Semantics.width *)
     (* Used to interpret expressions that are not allowed to contain let statements *)
     Fixpoint of_inner_expr
              (require_cast : bool)
@@ -155,8 +156,8 @@ Module Compiler.
         | (expr.App
              type_ZZ type_ZZ
              (expr.Ident _ (ident.Z_cast2 (r1, r2))) x) => of_inner_expr false x
-        (* Z_add_get_carry : compute sum and carry separately and
-           assign to two different variables *)
+        (* Z_add_get_carry : compute sum and carry separately and assign to two
+           different variables *)
         | (expr.App
              type_Z type_ZZ
              (expr.App type_Z (type.arrow type_Z type_ZZ)
@@ -167,6 +168,18 @@ Module Compiler.
           let sum := Syntax.expr.op Syntax.bopname.add (of_inner_expr true x) (of_inner_expr true y) in
           let carry := Syntax.expr.op Syntax.bopname.ltu sum (of_inner_expr true x) in
           (sum, carry)
+        (* Z_mul_split : compute high and low separately and assign to two
+           different variables *)
+        | (expr.App
+             type_Z type_ZZ
+             (expr.App type_Z (type.arrow type_Z type_ZZ)
+                       (expr.App type_Z (type.arrow type_Z (type.arrow type_Z type_ZZ))
+                                 (expr.Ident _ ident.Z_mul_split)
+                                 (expr.Ident _ (ident.Literal base.type.Z 18446744073709551616)))
+                       x) y) =>
+          let low := Syntax.expr.op Syntax.bopname.mul (of_inner_expr true x) (of_inner_expr true y) in
+          let high := Syntax.expr.op Syntax.bopname.mulhuu (of_inner_expr true x) (of_inner_expr true y) in
+          (low, high)
         (* Z_add -> bopname.add *)
         | (expr.App
              type_Z type_Z
