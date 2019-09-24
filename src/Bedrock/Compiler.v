@@ -139,6 +139,7 @@ Module Compiler.
        - fst/snd
        - list formation (cons, nil)
      *)
+    (* TODO : better comments in this function *)
     (* Used to interpret expressions that are not allowed to contain let statements *)
     Fixpoint of_inner_expr
              (require_cast : bool)
@@ -167,6 +168,26 @@ Module Compiler.
           let sum := Syntax.expr.op Syntax.bopname.add (of_inner_expr true x) (of_inner_expr true y) in
           let carry := Syntax.expr.op Syntax.bopname.ltu sum (of_inner_expr true x) in
           (sum, carry)
+        | (expr.App
+             type_Z type_Z
+             (expr.App type_Z (type.arrow type_Z type_Z)
+                       (expr.Ident _ ident.Z_add) x) y) =>
+          Syntax.expr.op Syntax.bopname.add (of_inner_expr true x) (of_inner_expr true y)
+        | (expr.App
+             type_Z type_Z
+             (expr.App type_Z (type.arrow type_Z type_Z)
+                       (expr.Ident _ ident.Z_land) x) y) =>
+          Syntax.expr.op Syntax.bopname.and (of_inner_expr true x) (of_inner_expr true y)
+        | (expr.App
+             type_Z type_Z
+             (expr.App type_Z (type.arrow type_Z type_Z)
+                       (expr.Ident _ ident.Z_shiftr) x) y) =>
+          Syntax.expr.op Syntax.bopname.sru (of_inner_expr true x) (of_inner_expr true y)
+        | (expr.App
+             type_Z type_Z
+             (expr.App type_Z (type.arrow type_Z type_Z)
+                       (expr.Ident _ ident.Z_shiftl) x) y) =>
+          Syntax.expr.op Syntax.bopname.slu (of_inner_expr true x) (of_inner_expr true y)
         | (expr.App
              (type.base (base.type.prod (base.type.type_base base.type.Z) _)) type_Z
              (expr.Ident _ (ident.fst base.type.Z _))
@@ -387,7 +408,7 @@ Module Compiler.
 
     (* Test expression for debugging:
 
-       let r0 := (uint64) (((uint64) $x + (uint64) $y) >> 20) in
+       let r0 := (uint64) ((uint64) ((uint64) $x + (uint64) $y) >> 20) in
        [1; 2; (uint64) $r0]
      *)
     Definition test_expr5 (x y : Syntax.varname)
@@ -399,14 +420,16 @@ Module Compiler.
                      (expr.App
                         (expr.Ident ident.Z_shiftr)
                         (expr.App
+                           (expr.Ident (ident.Z_cast r[0 ~> 18446744073709551615]%zrange))
                            (expr.App
-                              (expr.Ident ident.Z_add)
+                              (expr.App
+                                 (expr.Ident ident.Z_add)
+                                 (expr.App
+                                    (expr.Ident (ident.Z_cast r[0 ~> 18446744073709551615]%zrange))
+                                    (expr.Var x)))
                               (expr.App
                                  (expr.Ident (ident.Z_cast r[0 ~> 18446744073709551615]%zrange))
-                                 (expr.Var x)))
-                           (expr.App
-                              (expr.Ident (ident.Z_cast r[0 ~> 18446744073709551615]%zrange))
-                              (expr.Var y))))
+                                 (expr.Var y)))))
                      (expr.Ident (ident.Literal (t:=base.type.Z) 20))))
         (fun res =>
            expr.App
@@ -430,7 +453,6 @@ Module Compiler.
     Local Notation "'uint64,uint64'" := (ident.Z_cast2
                                            (r[0 ~> 18446744073709551615]%zrange,
                                             r[0 ~> 18446744073709551615]%zrange)%core) : expr_scope.
-    Print test_expr5.
     Local Notation "x ; y" := (Syntax.cmd.seq x y)
                                 (at level 199, y at next level, format "x ; '//'  y") : syntax_scope.
     Local Notation "% x" := (Syntax.expr.var x) (at level 0, only printing, format "% x") : syntax_scope.
@@ -445,6 +467,6 @@ Module Compiler.
     Eval lazy in (fun x y => of_expr (test_expr3 x y) "ret").
     Eval lazy in (fun x => of_expr (test_expr4 x) "ret").
     Eval lazy in (fun x y => of_expr (test_expr5 x y) (Syntax.expr.var "ret")).
-     *)
+    *)
   End debug.
 End Compiler.
