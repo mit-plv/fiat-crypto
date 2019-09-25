@@ -59,6 +59,7 @@ Local Opaque expr.Interp.
 Section __.
   Context {output_language_api : ToString.OutputLanguageAPI}
           {static : static_opt}
+          {emit_primitives : emit_primitives_opt}
           {should_split_mul : should_split_mul_opt}
           {widen_carry : widen_carry_opt}
           {widen_bytes : widen_bytes_opt}
