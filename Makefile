@@ -25,6 +25,7 @@ INSTALLDEFAULTROOT := Crypto
 
 .PHONY: coq clean update-_CoqProject cleanall install \
 	install-coqprime clean-coqprime coqprime coqprime-all \
+	install-standalone install-standalone-ocaml install-standalone-haskell \
 	util c-files rust-files \
 	nobigmem print-nobigmem \
 	lite only-heavy printlite \
@@ -185,6 +186,9 @@ PERF_STANDALONE := perf_unsaturated_solinas perf_word_by_word_montgomery
 
 STANDALONE_OCAML := $(STANDALONE) $(PERF_STANDALONE)
 STANDALONE_HASKELL := $(STANDALONE)
+
+OCAML_BINARIES := $(STANDALONE:%=src/ExtractionOCaml/%)
+HASKELL_BINARIES := $(STANDALONE:%=src/ExtractionHaskell/%)
 
 $(STANDALONE:%=src/ExtractionOCaml/%.ml): src/StandaloneOCamlMain.vo
 $(PERF_STANDALONE:%=src/ExtractionOCaml/%.ml): src/Rewriter/PerfTesting/StandaloneOCamlMain.vo
@@ -448,6 +452,14 @@ cleanall:: clean
 	rm -rf src/Rewriter/PerfTesting/Specific/generated
 
 install: coq
+
+install-standalone-ocaml: standalone-ocaml
+	$(MAKE) -f Makefile.coq install FILESTOINSTALL="$(OCAML_BINARIES)"
+
+install-standalone-haskell: standalone-haskell
+	$(MAKE) -f Makefile.coq install FILESTOINSTALL="$(HASKELL_BINARIES)"
+
+install-standalone: install-standalone-ocaml install-standalone-haskell
 
 printenv::
 	@echo "COQPATH =        $$COQPATH"
