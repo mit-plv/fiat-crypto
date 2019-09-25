@@ -114,6 +114,9 @@ Qed.
 (** Prefix function definitions with static/non-public? *)
 Class static_opt := static : bool.
 Typeclasses Opaque static_opt.
+(** Emit the primitive operations? *)
+Class emit_primitives_opt := emit_primitives : bool.
+Typeclasses Opaque emit_primitives_opt.
 (** Split apart multiplications? *)
 Class should_split_mul_opt := should_split_mul : bool.
 Typeclasses Opaque should_split_mul_opt.

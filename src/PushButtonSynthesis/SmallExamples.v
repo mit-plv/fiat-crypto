@@ -63,6 +63,7 @@ Compute
 
 Local Existing Instance ToString.C.OutputCAPI.
 Local Instance : static_opt := true.
+Local Instance : emit_primitives_opt := true.
 
 Compute
   (Pipeline.BoundsPipelineToString

@@ -609,6 +609,7 @@ Notation "'docstring_with_summary_from_lemma!' summary correctness"
 Section __.
   Context {output_language_api : ToString.OutputLanguageAPI}
           {static : static_opt}
+          {emit_primitives : emit_primitives_opt}
           {should_split_mul : should_split_mul_opt}
           {widen_carry : widen_carry_opt}
           {widen_bytes : widen_bytes_opt}
@@ -856,7 +857,7 @@ Section __.
                    end in
          let infos := aggregate_infos ls in
          let '(extra_ls, extra_bit_widths) := extra_synthesis function_name_prefix infos in
-         let res := extra_ls ++ List.map (fun '(name, res) => (name, (res <- res; Success (fst res))%error)) ls in
+         let res := (if emit_primitives then extra_ls else nil) ++ List.map (fun '(name, res) => (name, (res <- res; Success (fst res))%error)) ls in
          let types_used := PositiveSet.union extra_bit_widths (ToString.bitwidths_used infos) in
          let header :=
              (comment_header

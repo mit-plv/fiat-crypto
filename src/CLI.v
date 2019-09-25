@@ -142,6 +142,8 @@ Module ForExtraction.
        "                            Valid options are: " ++ String.concat ", " (List.map (@fst _ _) supported_languages).
   Definition static_help
     := "  --static                Declare the functions as static, i.e., local to the file.".
+  Definition no_primitives_help
+    := "  --no-primitives         Suppress the generation of the bodies of primitive operations such as addcarryx, subborrowx, cmovznz, mulx, etc.".
   Definition n_help
     := "  n                       The number of limbs, or the literal '(auto)' or '(autoN)' for a non-negative number N, to automatically guess the number of limbs".
   Definition sc_help
@@ -213,6 +215,9 @@ Module ForExtraction.
     {
       (** Is the code static / inlined *)
       static :> static_opt
+
+      (** Should we emit primitive operations *)
+      ; emit_primitives :> emit_primitives_opt
 
       (** Should we split apart oversized operations? *)
       ; should_split_mul :> should_split_mul_opt := false
@@ -341,23 +346,26 @@ Module ForExtraction.
                match argv with
                | nil => error ["empty argv"]
                | prog::args
-                 => error ((["USAGE: " ++ prog ++ " [--lang=LANGUAGE] [--static] curve_description " ++ pipeline_usage_string;
+                 => error ((["USAGE: " ++ prog ++ " [--lang=LANGUAGE] [--static] [--no-primitives] curve_description " ++ pipeline_usage_string;
                                "Got " ++ show false (List.length args) ++ " arguments.";
                                "";
                                lang_help;
                                static_help;
+                               no_primitives_help;
                                curve_description_help]%string)
                              ++ help_lines
                              ++ [""])%list
                end in
            let '(argv, output_language_api) := argv_to_language_and_argv argv in
            let '(argv, staticv) := argv_to_contains_opt_and_argv "--static" argv in
+           let '(argv, no_primitivesv) := argv_to_contains_opt_and_argv "--no-primitives" argv in
            match argv with
            | _::curve_description::args
              => match parse_args args with
                 | Some (inl args)
                   => let opts
-                         := {| static := staticv |} in
+                         := {| static := staticv
+                               ; emit_primitives := negb no_primitivesv |} in
                      Pipeline curve_description args success error
                 | Some (inr errs)
                   => error errs

@@ -30,6 +30,7 @@ Local Coercion Z.pos : positive >-> Z.
 
 Local Existing Instance ToString.C.OutputCAPI.
 Local Instance static : static_opt := true.
+Local Instance : emit_primitives_opt := true.
 
 Module debugging_remove_mul_split_to_C_uint1_carry.
   Section __.
