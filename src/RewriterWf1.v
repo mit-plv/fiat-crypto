@@ -3001,8 +3001,8 @@ Module Compilers.
               intros; destruct_head'_ex; subst.
             all: repeat first [ break_innermost_match_step
                               | progress cbn [reflect reify] in *
-                              | progress fold (@reflect ident var1) (@reflect ident var2)
-                              | progress fold (@reify ident var1) (@reify ident var2)
+                              | progress fold (@reflect base ident var1) (@reflect base ident var2)
+                              | progress fold (@reify base ident var1) (@reify base ident var2)
                               | progress intros
                               | assumption
                               | apply wf_reify
