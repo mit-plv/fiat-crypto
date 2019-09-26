@@ -3351,7 +3351,7 @@ Module Compilers.
                 v.
           Proof using Type.
             apply expr_value_to_rewrite_rule_replacement_interp_related_unbundled; [ | assumption ].
-            eapply @reflect_ident_iota_interp_related; typeclasses eauto.
+            intros; eapply @reflect_ident_iota_interp_related; try eassumption; typeclasses eauto.
           Qed.
         End with_interp.
       End with_classes.
