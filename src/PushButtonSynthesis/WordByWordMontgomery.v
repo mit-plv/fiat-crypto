@@ -30,6 +30,7 @@ Require Import Crypto.Util.Tactics.HasBody.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.LanguageWf.
+Require Import Crypto.LanguageWfExtra.
 Require Import Crypto.Language.
 Require Import Crypto.IdentifierExtra.
 Require Import Crypto.AbstractInterpretation.
@@ -50,6 +51,7 @@ Local Open Scope Z_scope. Local Open Scope list_scope. Local Open Scope bool_sco
 
 Import
   LanguageWf.Compilers
+  LanguageWfExtra.Compilers
   Language.Compilers
   AbstractInterpretation.Compilers
   LanguageStringification.Compilers.
@@ -711,12 +713,11 @@ Section __.
                  | now apply bounded_by_prime_bytes_bounds_of_bytes_valid
                  | now apply weight_bounded_of_bytes_valid
                  | solve [ eapply op_correct; try eassumption; solve_extra_bounds_side_conditions ]
-                 | progress autorewrite with interp; try typeclasses eauto
-                 | progress autorewrite with interp_gen_cache
+                 | progress autorewrite with interp_gen_cache interp_extra
                  | progress autorewrite with push_eval
                  | progress autounfold with push_eval
                  | progress autorewrite with distr_length in *
-                 | solve [ cbv [valid small eval uweight n_bytes] in *; destruct_head'_and; auto ]  ].
+                 | solve [ cbv [valid small eval uweight n_bytes] in *; destruct_head'_and; auto ] ].
 
   (** TODO: DESIGN DECISION:
 

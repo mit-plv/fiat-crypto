@@ -2,12 +2,15 @@ Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Language.
 Require Import Crypto.LanguageWf.
+Require Import Crypto.LanguageWfExtra.
 Require Import Crypto.RewriterAllTacticsExtra.
 Require Import Crypto.RewriterRulesProofs.
 
 Module Compilers.
   Import Language.Compilers.
   Import LanguageWf.Compilers.
+  Import Identifier.Compilers.
+  Import LanguageWfExtra.Compilers.
   Import RewriterAllTactics.Compilers.RewriteRules.GoalType.
   Import RewriterAllTacticsExtra.Compilers.RewriteRules.Tactic.
   Import Compilers.Classes.
@@ -31,17 +34,17 @@ Module Compilers.
       Proof using All. now apply VerifiedRewriterToFancyWithCasts. Qed.
 
       Lemma Interp_gen_RewriteToFancyWithCasts {cast_outside_of_range t} e (Hwf : Wf e)
-        : expr.Interp (@ident_gen_interp _ cast_outside_of_range) (@RewriteToFancyWithCasts t e)
-          == expr.Interp (@ident_gen_interp _ cast_outside_of_range) e.
+        : expr.Interp (@ident.gen_interp cast_outside_of_range) (@RewriteToFancyWithCasts t e)
+          == expr.Interp (@ident.gen_interp cast_outside_of_range) e.
       Proof using All. now apply VerifiedRewriterToFancyWithCasts. Qed.
 
-      Lemma Interp_RewriteToFancyWithCasts {t} e (Hwf : Wf e) : expr.Interp (@ident_interp _) (@RewriteToFancyWithCasts t e) == expr.Interp (@ident_interp _) e.
+      Lemma Interp_RewriteToFancyWithCasts {t} e (Hwf : Wf e) : expr.Interp (@ident.interp) (@RewriteToFancyWithCasts t e) == expr.Interp (@ident.interp) e.
       Proof using All. apply Interp_gen_RewriteToFancyWithCasts; assumption. Qed.
     End __.
   End RewriteRules.
 
   Module Export Hints.
-    Hint Resolve Wf_RewriteToFancyWithCasts : wf.
-    Hint Rewrite @Interp_gen_RewriteToFancyWithCasts @Interp_RewriteToFancyWithCasts : interp.
+    Hint Resolve Wf_RewriteToFancyWithCasts : wf wf_extra.
+    Hint Rewrite @Interp_gen_RewriteToFancyWithCasts @Interp_RewriteToFancyWithCasts : interp interp_extra.
   End Hints.
 End Compilers.

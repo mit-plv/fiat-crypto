@@ -2,6 +2,7 @@
 src/AbstractInterpretation.v
 src/AbstractInterpretationProofs.v
 src/AbstractInterpretationWf.v
+src/AbstractInterpretationWfExtra.v
 src/AbstractInterpretationZRangeProofs.v
 src/BoundsPipeline.v
 src/CLI.v
@@ -24,8 +25,10 @@ src/Language.v
 src/LanguageInversion.v
 src/LanguageStringification.v
 src/LanguageWf.v
+src/LanguageWfExtra.v
 src/MiscCompilerPasses.v
 src/MiscCompilerPassesProofs.v
+src/MiscCompilerPassesProofsExtra.v
 src/PreLanguage.v
 src/Rewriter.v
 src/RewriterAll.v
@@ -46,6 +49,7 @@ src/StandaloneOCamlMain.v
 src/TAPSort.v
 src/UnderLets.v
 src/UnderLetsProofs.v
+src/UnderLetsProofsExtra.v
 src/UnsaturatedSolinasHeuristics.v
 src/Algebra/Field.v
 src/Algebra/Field_test.v

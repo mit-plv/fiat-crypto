@@ -1,11 +1,14 @@
 Require Import Crypto.Language.
 Require Import Crypto.LanguageWf.
+Require Import Crypto.LanguageWfExtra.
 Require Import Crypto.RewriterAllTacticsExtra.
 Require Import Crypto.RewriterRulesProofs.
 
 Module Compilers.
   Import Language.Compilers.
   Import LanguageWf.Compilers.
+  Import Identifier.Compilers.
+  Import LanguageWfExtra.Compilers.
   Import RewriterAllTactics.Compilers.RewriteRules.GoalType.
   Import RewriterAllTacticsExtra.Compilers.RewriteRules.Tactic.
   Import Compilers.Classes.
@@ -21,17 +24,17 @@ Module Compilers.
       Proof. now apply VerifiedRewriterStripLiteralCasts. Qed.
 
       Lemma Interp_gen_RewriteStripLiteralCasts {cast_outside_of_range t} e (Hwf : Wf e)
-        : expr.Interp (@ident_gen_interp _ cast_outside_of_range) (@RewriteStripLiteralCasts t e)
-          == expr.Interp (@ident_gen_interp _ cast_outside_of_range) e.
+        : expr.Interp (@ident.gen_interp cast_outside_of_range) (@RewriteStripLiteralCasts t e)
+          == expr.Interp (@ident.gen_interp cast_outside_of_range) e.
       Proof. now apply VerifiedRewriterStripLiteralCasts. Qed.
 
-      Lemma Interp_RewriteStripLiteralCasts {t} e (Hwf : Wf e) : expr.Interp (@ident_interp _) (@RewriteStripLiteralCasts t e) == expr.Interp (@ident_interp _) e.
+      Lemma Interp_RewriteStripLiteralCasts {t} e (Hwf : Wf e) : expr.Interp (@ident.interp) (@RewriteStripLiteralCasts t e) == expr.Interp (@ident.interp) e.
       Proof. apply Interp_gen_RewriteStripLiteralCasts; assumption. Qed.
     End __.
   End RewriteRules.
 
   Module Export Hints.
-    Hint Resolve Wf_RewriteStripLiteralCasts : wf.
-    Hint Rewrite @Interp_gen_RewriteStripLiteralCasts @Interp_RewriteStripLiteralCasts : interp.
+    Hint Resolve Wf_RewriteStripLiteralCasts : wf wf_extra.
+    Hint Rewrite @Interp_gen_RewriteStripLiteralCasts @Interp_RewriteStripLiteralCasts : interp interp_extra.
   End Hints.
 End Compilers.
