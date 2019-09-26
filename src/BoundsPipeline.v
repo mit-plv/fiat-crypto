@@ -29,20 +29,28 @@ Require Crypto.Rewriter.
 Require Crypto.MiscCompilerPasses.
 Require Crypto.LanguageStringification.
 Require Crypto.LanguageWf.
+Require Crypto.LanguageWfExtra.
 Require Crypto.UnderLetsProofs.
+Require Crypto.UnderLetsProofsExtra.
 Require Crypto.MiscCompilerPassesProofs.
+Require Crypto.MiscCompilerPassesProofsExtra.
 Require Crypto.RewriterAll.
 Require Crypto.AbstractInterpretationWf.
+Require Crypto.AbstractInterpretationWfExtra.
 Require Crypto.AbstractInterpretationProofs.
 Require Import Crypto.Util.Notations.
 Import ListNotations. Local Open Scope Z_scope.
 
 Import
   Crypto.LanguageWf
+  Crypto.LanguageWfExtra
   Crypto.UnderLetsProofs
+  Crypto.UnderLetsProofsExtra
   Crypto.MiscCompilerPassesProofs
+  Crypto.MiscCompilerPassesProofsExtra
   Crypto.RewriterAll
   Crypto.AbstractInterpretationWf
+  Crypto.AbstractInterpretationWfExtra
   Crypto.AbstractInterpretationProofs
   Crypto.Language
   Crypto.Identifier
@@ -55,10 +63,14 @@ Import
 
 Import
   LanguageWf.Compilers
+  LanguageWfExtra.Compilers
   UnderLetsProofs.Compilers
+  UnderLetsProofsExtra.Compilers
   MiscCompilerPassesProofs.Compilers
+  MiscCompilerPassesProofsExtra.Compilers
   RewriterAll.Compilers
   AbstractInterpretationWf.Compilers
+  AbstractInterpretationWfExtra.Compilers
   AbstractInterpretationProofs.Compilers
   Language.Compilers
   Identifier.Compilers
@@ -467,10 +479,10 @@ Module Pipeline.
     repeat first [ progress destruct_head'_and
                  | progress cbv [Classes.ident_gen_interp Classes.base Classes.ident Classes.ident_interp Classes.base_interp Classes.exprInfo] in *
                  | progress autorewrite with interp
-                 | solve [ eauto with nocore interp wf ]
+                 | solve [ eauto with nocore interp_extra wf_extra ]
                  | solve [ typeclasses eauto ]
                  | break_innermost_match_step
-                 | solve [ eauto 100 with nocore wf ]
+                 | solve [ eauto 100 with nocore wf_extra ]
                  | progress intros ].
 
   Class bounds_goodT {t} bounds
@@ -490,7 +502,7 @@ Module Pipeline.
     : Wf (@RewriteAndEliminateDeadAndInline t DoRewrite with_dead_code_elimination with_subst01 E).
   Proof. cbv [RewriteAndEliminateDeadAndInline Let_In]; wf_interp_t. Qed.
 
-  Global Hint Resolve @Wf_RewriteAndEliminateDeadAndInline : wf.
+  Global Hint Resolve @Wf_RewriteAndEliminateDeadAndInline : wf wf_extra.
 
   Lemma Interp_RewriteAndEliminateDeadAndInline {cast_outside_of_range} {t} DoRewrite with_dead_code_elimination with_subst01
         (Interp_DoRewrite : forall E, Wf E -> expr.Interp (@ident.gen_interp cast_outside_of_range) (DoRewrite E) == expr.Interp (@ident.gen_interp cast_outside_of_range) E)
@@ -504,7 +516,7 @@ Module Pipeline.
       repeat (wf_interp_t || rewrite !Interp_DoRewrite).
   Qed.
 
-  Hint Rewrite @Interp_RewriteAndEliminateDeadAndInline : interp.
+  Hint Rewrite @Interp_RewriteAndEliminateDeadAndInline : interp interp_extra.
 
   Local Opaque RewriteAndEliminateDeadAndInline.
   Local Opaque RewriteRules.RewriteStripLiteralCasts.
@@ -566,7 +578,7 @@ Module Pipeline.
       { subst; split; [ | solve [ wf_interp_t ] ].
         split_and; simpl in *.
         split; [ solve [ wf_interp_t; eauto with nocore ] | ].
-        intros; break_innermost_match; autorewrite with interp; try solve [ wf_interp_t ].
+        intros; break_innermost_match; autorewrite with interp_extra; try solve [ wf_interp_t ].
         all: match goal with H : context[type.app_curried _ _ = _] |- _ => erewrite H; clear H end; eauto.
         all: transitivity (type.app_curried (Interp (PartialEvaluateWithListInfoFromBounds e arg_bounds)) arg1);
           [ | apply Interp_PartialEvaluateWithListInfoFromBounds; auto ].
@@ -726,6 +738,6 @@ Module PipelineTactics.
       solve_side_conditions_of_BoundsPipeline_correct
     | match goal with
       | [ |- Wf _ ]
-        => repeat apply expr.Wf_APP; eauto with nocore wf wf_gen_cache
+        => repeat apply expr.Wf_APP; eauto with nocore wf_extra wf_gen_cache; eauto with nocore wf wf_gen_cache
       end ].
 End PipelineTactics.

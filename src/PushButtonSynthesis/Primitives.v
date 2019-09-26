@@ -18,6 +18,7 @@ Require Import Crypto.Util.Tactics.HasBody.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.ConstrFail.
 Require Import Crypto.LanguageWf.
+Require Import Crypto.LanguageWfExtra.
 Require Import Crypto.Language.
 Require Import Crypto.IdentifierExtra.
 Require Import Crypto.LanguageStringification.
@@ -35,6 +36,7 @@ Local Open Scope string_scope. Local Open Scope Z_scope. Local Open Scope list_s
 
 Import
   LanguageWf.Compilers
+  LanguageWfExtra.Compilers
   Language.Compilers
   LanguageStringification.Compilers.
 Import Compilers.defaults.
@@ -165,7 +167,8 @@ Ltac prove_correctness' should_not_clear use_curve_good :=
   try split; PipelineTactics.use_compilers_correctness Hres;
   [ pose_proof_length_list_Z_bounded_by;
     repeat first [ reflexivity
-                 | progress autorewrite with interp interp_gen_cache push_eval
+                 | progress autorewrite with interp_extra interp_gen_cache
+                 | progress autorewrite with push_eval
                  | progress autounfold with push_eval
                  | progress autorewrite with distr_length in *
                  | typeclasses eauto ]

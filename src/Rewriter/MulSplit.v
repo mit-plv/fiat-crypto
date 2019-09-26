@@ -1,12 +1,15 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Language.
 Require Import Crypto.LanguageWf.
+Require Import Crypto.LanguageWfExtra.
 Require Import Crypto.RewriterAllTacticsExtra.
 Require Import Crypto.RewriterRulesProofs.
 
 Module Compilers.
   Import Language.Compilers.
   Import LanguageWf.Compilers.
+  Import Identifier.Compilers.
+  Import LanguageWfExtra.Compilers.
   Import RewriterAllTactics.Compilers.RewriteRules.GoalType.
   Import RewriterAllTacticsExtra.Compilers.RewriteRules.Tactic.
   Import Compilers.Classes.
@@ -25,17 +28,17 @@ Module Compilers.
       Proof. now apply VerifiedRewriterMulSplit. Qed.
 
       Lemma Interp_gen_RewriteMulSplit {cast_outside_of_range t} e (Hwf : Wf e)
-        : expr.Interp (@ident_gen_interp _ cast_outside_of_range) (@RewriteMulSplit t e)
-          == expr.Interp (@ident_gen_interp _ cast_outside_of_range) e.
+        : expr.Interp (@ident.gen_interp cast_outside_of_range) (@RewriteMulSplit t e)
+          == expr.Interp (@ident.gen_interp cast_outside_of_range) e.
       Proof. now apply VerifiedRewriterMulSplit. Qed.
 
-      Lemma Interp_RewriteMulSplit {t} e (Hwf : Wf e) : expr.Interp (@ident_interp _) (@RewriteMulSplit t e) == expr.Interp (@ident_interp _) e.
+      Lemma Interp_RewriteMulSplit {t} e (Hwf : Wf e) : expr.Interp (@ident.interp) (@RewriteMulSplit t e) == expr.Interp (@ident.interp) e.
       Proof. apply Interp_gen_RewriteMulSplit; assumption. Qed.
     End __.
   End RewriteRules.
 
   Module Export Hints.
-    Hint Resolve Wf_RewriteMulSplit : wf.
-    Hint Rewrite @Interp_gen_RewriteMulSplit @Interp_RewriteMulSplit : interp.
+    Hint Resolve Wf_RewriteMulSplit : wf wf_extra.
+    Hint Rewrite @Interp_gen_RewriteMulSplit @Interp_RewriteMulSplit : interp interp_extra.
   End Hints.
 End Compilers.
