@@ -150,45 +150,6 @@ Module Compiler.
         | (expr.App
              type_ZZ type_ZZ
              (expr.Ident _ (ident.Z_cast2 (r1, r2))) x) => of_inner_expr false x
-        (* Z_add_get_carry : compute sum and carry separately and assign to two
-           different variables *)
-        | (expr.App
-             type_Z type_ZZ
-             (expr.App type_Z (type.arrow type_Z type_ZZ)
-                       (expr.App type_Z (type.arrow type_Z (type.arrow type_Z type_ZZ))
-                                 (expr.Ident _ ident.Z_add_get_carry)
-                                 (expr.Ident _ (ident.Literal base.type.Z s)))
-                       x) y) =>
-          if Z.eqb s maxint
-          then
-            let sum := Syntax.expr.op Syntax.bopname.add (of_inner_expr true x) (of_inner_expr true y) in
-            (* Given (0 <= x < w) and (0 <= y < w), carry bit = (x + y) mod w <? x:
-               if (x + y) mod w < x, then clearly the sum must have overflowed (since 0 <= y)
-               if the sum overflowed, then (x + y) mod w = x + y - w < x *)
-            let carry := Syntax.expr.op Syntax.bopname.ltu sum (of_inner_expr true x) in
-            (sum, carry)
-          else make_error _
-        (* Z_add_with_get_carry : compute sum and carry separately and assign to
-           two different variables *)
-        | (expr.App
-             type_Z type_ZZ
-             (expr.App type_Z (type.arrow type_Z type_ZZ)
-                       (expr.App type_Z (type.arrow type_Z (type.arrow type_Z type_ZZ))
-                                 (expr.App type_Z (type.arrow type_Z (type.arrow type_Z (type.arrow type_Z type_ZZ)))
-                                           (expr.Ident _ ident.Z_add_with_get_carry)
-                                           (expr.Ident _ (ident.Literal base.type.Z s)))
-                                 c) x) y) =>
-          if Z.eqb s maxint
-          then
-            let sum_cx := Syntax.expr.op Syntax.bopname.add (of_inner_expr true c) (of_inner_expr true x) in
-            let sum := Syntax.expr.op Syntax.bopname.add sum_cx (of_inner_expr true y) in
-            (* compute the carry by adding together the carries of both additions,
-          using the same strategy as in Z_add_get_carry *)
-            let carry_cx := Syntax.expr.op Syntax.bopname.ltu sum_cx (of_inner_expr true x) in
-            let carry_cxy := Syntax.expr.op Syntax.bopname.ltu sum sum_cx in
-            let carry := Syntax.expr.op Syntax.bopname.add carry_cx carry_cxy in
-            (sum, carry)
-          else make_error _
         (* Z_mul_split : compute high and low separately and assign to two
            different variables *)
         | (expr.App
@@ -283,6 +244,86 @@ Module Compiler.
         | _ => make_error _
         end.
 
+    Definition of_add_get_carry (sum_var carry_var : Syntax.varname)
+               r1 r2 s (x y : cexpr type_Z) : Syntax.cmd.cmd :=
+      if (range_good r1 && range_good r2)%bool
+      then if Z.eqb s maxint
+           then
+             let sum := Syntax.expr.op Syntax.bopname.add
+                                       (of_inner_expr true x) (of_inner_expr true y) in
+             (* Given (0 <= x < w) and (0 <= y < w), carry bit = (x + y) mod w
+                <? x: if (x + y) mod w < x, then clearly the sum must have
+                overflowed (since 0 <= y) if the sum overflowed, then (x + y)
+                mod w = x + y - w < x *)
+             let carry := Syntax.expr.op Syntax.bopname.ltu
+                                         (Syntax.expr.var sum_var) (of_inner_expr true x) in
+             Syntax.cmd.seq (Syntax.cmd.set sum_var sum) (Syntax.cmd.set carry_var carry)
+           else Syntax.cmd.skip
+      else Syntax.cmd.skip.
+
+    Definition of_add_with_get_carry (sum_var carry_var : Syntax.varname)
+               r1 r2 s (c x y : cexpr type_Z) : Syntax.cmd.cmd :=
+      if (range_good r1 && range_good r2)%bool
+      then if Z.eqb s maxint
+           then
+             let sum_cx := Syntax.expr.op Syntax.bopname.add
+                                          (of_inner_expr true c) (of_inner_expr true x) in
+             let sum := Syntax.expr.op Syntax.bopname.add
+                                       (Syntax.expr.var sum_var) (of_inner_expr true y) in
+             (* compute the carry by adding together the carries of both
+                additions, using the same strategy as in Z_add_get_carry *)
+             let carry_cx := Syntax.expr.op Syntax.bopname.ltu
+                                            (Syntax.expr.var sum_var) (of_inner_expr true x) in
+             let carry_cxy := Syntax.expr.op Syntax.bopname.ltu
+                                             (Syntax.expr.var sum_var) (of_inner_expr true y) in
+             let carry := Syntax.expr.op Syntax.bopname.add (Syntax.expr.var carry_var) carry_cxy in
+             (* sum_var := c + x
+                carry_var := (sum_var <? x)
+                sum_var +=y
+                carry_var += (sum_var <? y) *)
+             (Syntax.cmd.seq
+                (Syntax.cmd.seq
+                   (Syntax.cmd.seq
+                      (Syntax.cmd.set sum_var sum_cx)
+                      (Syntax.cmd.set carry_var carry_cx))
+                   (Syntax.cmd.set sum_var sum))
+                (Syntax.cmd.set carry_var carry))
+           else Syntax.cmd.skip
+      else Syntax.cmd.skip.
+
+    Local Notation AddGetCarry r1 r2 s x y :=
+      (expr.App
+         (s:=type_ZZ) (d:=type_ZZ)
+         (expr.Ident (ident.Z_cast2 (r1, r2)))
+         (expr.App (s:=type_Z)
+                   (expr.App (s:=type_Z)
+                             (expr.App (s:=type_Z)
+                                       (expr.Ident ident.Z_add_get_carry)
+                                       (expr.Ident (ident.Literal (t:=base.type.Z) s)))
+                             x) y)).
+    Local Notation AddWithGetCarry r1 r2 s c x y :=
+      (expr.App
+         (s:=type_ZZ) (d:=type_ZZ)
+         (expr.Ident (ident.Z_cast2 (r1, r2)))
+         (expr.App (s:=type_Z)
+                   (expr.App (s:=type_Z)
+                             (expr.App (s:=type_Z)
+                                       (expr.App
+                                          (expr.Ident ident.Z_add_with_get_carry)
+                                          (expr.Ident (ident.Literal (t:=base.type.Z) s)))
+                                       c) x) y)).
+
+    Definition of_carries {t} (e : @cexpr var t)
+      : var t -> option Syntax.cmd.cmd :=
+      match e with
+      | AddGetCarry r1 r2 s x y =>
+        fun ret => Some (of_add_get_carry (fst ret) (snd ret) r1 r2 s x y)
+      | AddWithGetCarry r1 r2 s c x y =>
+        fun ret =>
+          Some (of_add_with_get_carry (fst ret) (snd ret) r1 r2 s c x y)
+      | _ => fun _ => None
+      end.
+
     Fixpoint of_expr {t} (e : @cexpr var t)
              (nextname : Syntax.varname)
       : type.for_each_lhs_of_arrow var t (* argument names *)
@@ -290,9 +331,13 @@ Module Compiler.
         -> Syntax.varname * Syntax.cmd.cmd :=
       match e with
       | expr.LetIn (type.base t1) (type.base t2) x f =>
-        fun argnames (retnames : var (type.base t2))  =>
+        fun argnames retnames  =>
           let gr := get_retnames t1 nextname in
-          let cmdx := set_return_values (snd gr) (of_inner_expr true x) in
+          let cmdx :=
+              match of_carries x (snd gr) with
+              | Some cmdx => cmdx
+              | None => set_return_values (snd gr) (of_inner_expr true x)
+              end in
           let recf := of_expr (f (snd gr)) (fst gr) argnames retnames in
           (fst recf, Syntax.cmd.seq cmdx (snd recf))
       | expr.App
@@ -301,11 +346,10 @@ Module Compiler.
         fun argnames (retloc : Syntax.expr.expr) =>
           (* retloc is the address at which to store the head of the list *)
           let cmdx := (Syntax.cmd.store Syntax.access_size.word retloc (of_inner_expr true x)) in
-          let recl :=
-              of_expr l nextname argnames
-                      (Syntax.expr.op Syntax.bopname.add retloc (Syntax.expr.literal 1))
-          in
-          (fst recl, Syntax.cmd.seq cmdx (snd recl))
+          let next_retloc := (Syntax.expr.op Syntax.bopname.add retloc (Syntax.expr.literal 1)) in
+          let set_next_retloc := (Syntax.cmd.set nextname next_retloc) in
+          let recl := of_expr l (next_varname nextname) argnames (Syntax.expr.var nextname) in
+          (fst recl, Syntax.cmd.seq (Syntax.cmd.seq cmdx set_next_retloc) (snd recl))
       | (expr.Ident _ (ident.nil base.type.Z)) =>
         fun _ _ => (nextname, Syntax.cmd.skip)
       | expr.App _ (type.base _) f x =>
@@ -522,6 +566,40 @@ Module Compiler.
                          (expr.Var res)))
                    (expr.Ident ident.nil)))).
 
+    (* Test expression for debugging:
+
+       let r0 := (uint64, uint64) (Z.add_with_get_carry (2^64) $c $x $y) in
+       fst r0
+     *)
+    Definition test_expr6 (c x y : Syntax.varname)
+      : @Language.Compilers.expr.expr base.type ident.ident var
+                                      (type.base (base.type.type_base base.type.Z)) :=
+      expr.LetIn
+        (A:=type.base (base.type.prod (base.type.type_base base.type.Z) (base.type.type_base base.type.Z)))
+        (expr.App (expr.Ident (ident.Z_cast2 (r[0 ~> 18446744073709551615]%zrange,
+                                              r[0 ~> 18446744073709551615]%zrange)))
+                  (expr.App
+                     (expr.App
+                        (expr.App
+                           (expr.App
+                              (expr.Ident ident.Z_add_with_get_carry)
+                              (expr.Ident (ident.Literal (t:=base.type.Z) 18446744073709551616)))
+                           (expr.App
+                              (expr.Ident (ident.Z_cast r[0 ~> 18446744073709551615]%zrange))
+                              (expr.Var c)))
+                        (expr.App
+                           (expr.Ident (ident.Z_cast r[0 ~> 18446744073709551615]%zrange))
+                           (expr.Var x)))
+                     (expr.App
+                        (expr.Ident (ident.Z_cast r[0 ~> 18446744073709551615]%zrange))
+                        (expr.Var y))))
+             (fun res =>
+                (expr.App
+                   (expr.Ident (ident.Z_cast r[0 ~> 18446744073709551615]%zrange))
+                   (expr.App
+                      (expr.Ident ident.fst)
+                      (expr.Var res)))).
+
     (*
     Local Notation "'uint64'" := (ident.Z_cast r[0 ~> 18446744073709551615]%zrange) : expr_scope.
     Local Notation "'uint64,uint64'" := (ident.Z_cast2
@@ -534,13 +612,14 @@ Module Compiler.
     Local Notation "x <-- y" := (Syntax.cmd.store Syntax.access_size.word x y)
                                  (at level 199) : syntax_scope.
     Local Notation "x" := (Syntax.expr.literal x) (at level 199, only printing) : syntax_scope.
-    Import Syntax. Import Syntax.bopname.
+    Import Syntax. Import Syntax.bopname. Import Syntax.expr.
     Local Open Scope syntax_scope.
     Eval simpl in (fun x y => of_expr (test_expr x y) tt "ret").
     Eval lazy in (fun x y => of_expr (test_expr2 x y) tt "ret").
     Eval lazy in (fun x y => of_expr (test_expr3 x y) tt "ret").
     Eval lazy in (fun x => of_expr (test_expr4 x) tt "ret").
     Eval lazy in (fun x y => of_expr (test_expr5 x y) tt (Syntax.expr.var "ret")).
+    Eval lazy in (fun c x y => of_expr (test_expr6 c x y) tt "ret").
     *)
   End debug.
 End Compiler.
