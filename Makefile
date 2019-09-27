@@ -25,7 +25,7 @@ INSTALLDEFAULTROOT := Crypto
 
 .PHONY: coq clean update-_CoqProject cleanall install \
 	install-coqprime clean-coqprime coqprime coqprime-all \
-	bedrock2 clean-bedrock2 coqutil clean-coqutil \
+	bedrock2 clean-bedrock2 install-bedrock2 coqutil clean-coqutil install-coqutil \
 	install-standalone install-standalone-ocaml install-standalone-haskell \
 	util c-files rust-files \
 	nobigmem print-nobigmem \
@@ -39,17 +39,9 @@ include etc/coq-scripts/Makefile.vo_closure
 .DEFAULT_GOAL := all
 
 SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g' | uniq
-BEDROCK2_FOLDER := bedrock2/bedrock2
-BEDROCK2_SRC := $(BEDROCK2_FOLDER)/src
-BEDROCK2_NAME := bedrock2
-COQUTIL_FOLDER := bedrock2/deps/coqutil
-COQUTIL_SRC := $(COQUTIL_FOLDER)/src
-COQUTIL_NAME := coqutil
 update-_CoqProject::
 	$(SHOW)'ECHO > _CoqProject'
-	$(HIDE)(echo '-R $(SRC_DIR) $(MOD_NAME)'; echo '-Q $(BEDROCK2_SRC) $(BEDROCK2_NAME)'; \
-        echo '-Q $(COQUTIL_SRC) $(COQUTIL_NAME)'; \
-        (git ls-files 'src/*.v' | $(GREP_EXCLUDE_SPECIAL_VOFILES) | $(SORT_COQPROJECT))) > _CoqProject
+	$(HIDE)(echo '-R $(SRC_DIR) $(MOD_NAME)'; (git ls-files 'src/*.v' | $(GREP_EXCLUDE_SPECIAL_VOFILES) | $(SORT_COQPROJECT))) > _CoqProject
 
 # coq .vo files that are not compiled using coq_makefile
 SPECIAL_VOFILES := \
@@ -161,10 +153,19 @@ EXTERNAL_DEPENDENCIES?=
 ifneq ($(EXTERNAL_DEPENDENCIES),1)
 
 COQPRIME_FOLDER := coqprime
-COQPATH?=${CURDIR_SAFE}/$(COQPRIME_FOLDER)/src
+BEDROCK2_FOLDER := bedrock2/bedrock2
+BEDROCK2_SRC := $(BEDROCK2_FOLDER)/src
+BEDROCK2_NAME := bedrock2
+COQUTIL_FOLDER := bedrock2/deps/coqutil
+COQUTIL_SRC := $(COQUTIL_FOLDER)/src
+COQUTIL_NAME := coqutil
+# If we want to work on windows, we should probably figure out how to
+# use `;` rather than `:` when both we are on Windows AND OCaml is NOT
+# compiled via cygwin
+COQPATH?=${CURDIR_SAFE}/$(COQPRIME_FOLDER)/src:${CURDIR_SAFE}/$(BEDROCK2_SRC):${CURDIR_SAFE}/$(COQUTIL_SRC)
 export COQPATH
 
-$(VOFILES): | coqprime
+$(VOFILES): | coqprime coqutil bedrock2
 
 coqprime:
 	(cd $(COQPRIME_FOLDER) && $(COQBIN)coq_makefile -f _CoqProject -o Makefile)
@@ -185,15 +186,21 @@ coqutil:
 clean-coqutil:
 	$(MAKE) --no-print-directory -C $(COQUTIL_FOLDER) clean
 
+install-coqutil:
+	$(MAKE) --no-print-directory -C $(COQUTIL_FOLDER) install
+
 bedrock2: coqutil
 	$(MAKE) --no-print-directory -C $(BEDROCK2_FOLDER)
 
 clean-bedrock2:
 	$(MAKE) --no-print-directory -C $(BEDROCK2_FOLDER) clean
 
+install-bedrock2:
+	$(MAKE) --no-print-directory -C $(BEDROCK2_FOLDER) install
+
 cleanall:: clean-coqprime clean-bedrock2 clean-coqutil
 
-install: install-coqprime
+install: install-coqprime install-bedrock2 install-coqutil
 
 endif
 
