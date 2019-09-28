@@ -8,6 +8,7 @@ Require Import Crypto.Util.NumTheoryUtil.
 Require Import Coq.Classes.Morphisms Coq.Setoids.Setoid.
 Require Import Coq.ZArith.BinInt Coq.NArith.BinNat Coq.ZArith.ZArith Coq.ZArith.Znumtheory Coq.NArith.NArith. (* import Zdiv before Znumtheory *)
 Require Import Coq.Logic.Eqdep_dec.
+Require Import Coq.Sorting.Permutation.
 Require Import Crypto.Util.NumTheoryUtil.
 Require Import Crypto.Util.ZUtil.Odd.
 Require Import Crypto.Util.ZUtil.Modulo.
@@ -43,6 +44,104 @@ Module F.
              end.
     Qed.
   End Field.
+
+  Section Fermat.
+    Context (q:positive) {prime_q:prime q}.
+    Add Field _field1 : (Algebra.Field.field_theory_for_stdlib_tactic(T:=F q))
+                          (morphism (F.ring_morph q),
+                           constants [F.is_constant],
+                           div (F.morph_div_theory q),
+                           power_tac (F.power_theory q) [F.is_pow_constant]).
+
+    Local Notation "'Π' xs" := (List.fold_right F.mul (@F.one q) xs) (at level 10).
+    Lemma Πnz xs (H : forall x, In x xs -> x <> 0) : Π xs <> 0.
+    Proof.
+      induction xs; cbn.
+      { symmetry; eapply Hierarchy.zero_neq_one. }
+      eapply Ring.nonzero_product_iff_nonzero_factor; split.
+      { eapply H; constructor; trivial. }
+      { eapply IHxs; intros; eapply H; constructor 2; trivial. }
+      Unshelve.
+    Qed.
+    Lemma Πperm xs ys (H : Permutation xs ys) : Π xs = Π ys.
+    Proof. induction H; cbn; try ring; try ring [IHPermutation]; congruence. Qed.
+
+    Definition nonzeros := List.map (F.of_nat q) (List.seq 1 (Z.to_nat (q-1))).
+    Lemma nonzeros_correct x : x <> 0 <-> List.In x nonzeros.
+    Proof.
+      cbv [nonzeros].
+      setoid_rewrite List.in_map_iff.
+      setoid_rewrite List.in_seq.
+      replace ((1 + Z.to_nat (Z.pos q - 1))%nat) with (Z.to_nat q) by admit.
+      setoid_rewrite F.eq_to_Z_iff.
+      destruct x as [x pf_x];
+      cbv [F.of_nat F.of_Z F.to_Z F.zero proj1_sig];
+        rewrite Z.mod_0_l by Lia.lia.
+      split.
+      { intros.
+        exists (Z.to_nat x).
+        epose proof Z.mod_pos_bound x q ltac:(Lia.lia).
+        rewrite Z2Nat.id by Lia.lia.
+        split; eauto.
+        (* Z of_nat to_nat...  *)
+        split.
+        { change 1%nat with (Z.to_nat 1); eapply Z2Nat.inj_le; try Lia.lia. }
+        { eapply Z2Nat.inj_lt; try Lia.lia. } }
+      { intros (y&?&?). subst x.
+        rewrite Z.mod_small; try split; try Lia.lia.
+        (* Z of_nat to_nat *) admit. }
+    Admitted.
+    Lemma NoDup_nonzeros : List.NoDup nonzeros.
+    Proof.
+      cbv [nonzeros]; eapply List.NoDup_nth; intros.
+      rewrite !List.map_length, List.seq_length in *.
+      rewrite !List.map_nth, !List.seq_nth in * by assumption.
+      eapply F.eq_of_Z_iff in H1.
+      assert (0 < Z.of_nat (i+1) < Z.pos q) by admit.
+      assert (0 < Z.of_nat (j+1) < Z.pos q) by admit.
+      rewrite 2Z.mod_small in *; Lia.lia.
+    Admitted.
+
+    Context (a : F q) (Ha : a <> 0).
+    Definition images := List.map (F.mul a) nonzeros.
+    Lemma images_perm : Permutation images nonzeros.
+    Proof.
+      eapply NoDup_Permutation_bis.
+      { cbv [images]; eapply List.NoDup_nth; intros.
+        rewrite List.map_length in *.
+        eapply List.NoDup_nth; eauto using NoDup_nonzeros.
+        rewrite 2List.map_nth in *.
+        Search Hierarchy.field.
+        (* cancel left multiplicaion by a *) admit. }
+      { eapply NoDup_nonzeros. }
+      { cbv [images]. rewrite List.map_length; trivial. }
+      { intros ? H. eapply nonzeros_correct.
+        eapply List.in_map_iff in H; destruct H as (?&?&?); subst.
+        eapply nonzeros_correct in H0.
+        { eapply Ring.nonzero_product_iff_nonzero_factor; eauto. } }
+    Admitted.
+    Lemma Πimages0 : Π images = Π nonzeros.
+    Proof. eapply Πperm, images_perm. Qed.
+    Lemma Πimages1 : Π images = F.pow a (Z.to_N (Z.of_nat (length nonzeros))) * Π nonzeros.
+    Proof.
+      cbv [images].
+      generalize nonzeros as xs; induction xs as [|x xs];
+          cbn [List.fold_right List.map length].
+      { rewrite F.pow_0_r; ring. }
+      { rewrite Nat2Z.inj_succ, Z2N.inj_succ, F.pow_succ_r by Lia.lia.
+        ring [IHxs]. }
+    Qed.
+
+    Lemma fermat : F.pow a (Z.to_N (q-1)) = 1.
+    Proof.
+      let H := constr:(eq_trans (eq_sym Πimages1) Πimages0) in
+      unshelve epose proof proj1 (((Field.mul_cancel_l_iff _) _) _) H.
+      { eapply Πnz; intros; eapply nonzeros_correct; eauto. }
+      enough (Z.of_nat (length nonzeros) = Z.pos q - 1)%Z by congruence; clear.
+      cbv [nonzeros].
+      rewrite !List.map_length, List.seq_length, Z2Nat.id in * by Lia.lia; trivial.
+    Qed.
+  End Fermat.
 
   Section NumberThoery.
     Context {q:positive} {prime_q:prime q} {two_lt_q: 2 < q}.
