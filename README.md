@@ -17,7 +17,7 @@ To build (if your COQPATH variable is empty):
 
 To build:
 
-       export COQPATH="$(pwd)/coqprime/src${COQPATH:+:}$COQPATH"
+       export COQPATH="$(pwd)/coqprime/src:$(pwd)/bedrock2/bedrock2/src:$(pwd)/bedrock2/deps/coqutil/src${COQPATH:+:}$COQPATH"
        make
 
 Usage
