@@ -297,7 +297,7 @@ Module Compilers.
     End with_type.
 
     Module ident.
-      Import defaults.
+      Import API.
       Local Notation UnderLets := (@UnderLets base.type ident).
       Section with_type.
         Context (abstract_domain' : base.type -> Type).
@@ -695,7 +695,7 @@ Module Compilers.
     End ident.
 
     Section specialized.
-      Import defaults.
+      Import API.
       Local Notation abstract_domain' := ZRange.type.base.option.interp (only parsing).
       Local Notation abstract_domain := (@partial.abstract_domain base.type abstract_domain').
       Local Notation abstract_domain'_R t := (@eq (abstract_domain' t)) (only parsing).
@@ -851,7 +851,7 @@ Module Compilers.
     End specialized.
   End partial.
   Hint Resolve Wf_Eval Wf_EvalWithBound Wf_EtaExpandWithBound Wf_EtaExpandWithListInfoFromBound : wf.
-  Import defaults.
+  Import API.
 
   Lemma Wf_PartialEvaluateWithListInfoFromBounds
         {t} (E : Expr t)

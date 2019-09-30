@@ -81,7 +81,7 @@ Import
   MiscCompilerPasses.Compilers
   Stringification.Language.Compilers.
 
-Import Compilers.defaults.
+Import Compilers.API.
 
 Definition round_up_bitwidth_gen (possible_values : list Z) (bitwidth : Z) : option Z
   := List.fold_right
@@ -175,8 +175,8 @@ Module Pipeline.
   | Values_not_provably_distinctZ (descr : string) (lhs rhs : Z)
   | Values_not_provably_equalZ (descr : string) (lhs rhs : Z)
   | Values_not_provably_equal_listZ (descr : string) (lhs rhs : list Z)
-  | Unsupported_casts_in_input {t} (e : @Compilers.defaults.Expr t) (ls : list { t : _ & ident t })
-  | Stringification_failed {t} (e : @Compilers.defaults.Expr t) (err : string)
+  | Unsupported_casts_in_input {t} (e : @Compilers.API.Expr t) (ls : list { t : _ & ident t })
+  | Stringification_failed {t} (e : @Compilers.API.Expr t) (err : string)
   | Invalid_argument (msg : string).
 
   Notation ErrorT := (ErrorT ErrorMessage).

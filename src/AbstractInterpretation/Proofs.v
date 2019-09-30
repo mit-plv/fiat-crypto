@@ -673,7 +673,7 @@ Module Compilers.
     End with_type.
 
     Module ident.
-      Import defaults.
+      Import API.
       Local Notation UnderLets := (@UnderLets base.type ident).
       Section with_type.
         Context (abstract_domain' : base.type -> Type).
@@ -975,7 +975,7 @@ Module Compilers.
     Qed.
 
     Section specialized.
-      Import defaults.
+      Import API.
       Local Notation abstract_domain' := ZRange.type.base.option.interp (only parsing).
       Local Notation abstract_domain := (@partial.abstract_domain base.type abstract_domain').
       Local Notation abstract_domain'_R t := (@eq (abstract_domain' t)) (only parsing).
@@ -1224,7 +1224,7 @@ Module Compilers.
       Qed.
     End specialized.
   End partial.
-  Import defaults.
+  Import API.
 
   Module Import CheckCasts.
     Module ident.

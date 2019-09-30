@@ -23,7 +23,7 @@ Module Compilers.
   Import MiscCompilerPassesProofs.Compilers.
   Import expr.Notations.
   Import invert_expr.
-  Import Compilers.defaults.
+  Import Compilers.API.
 
   Module Subst01.
     Import MiscCompilerPassesProofs.Compilers.Subst01.

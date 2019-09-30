@@ -13,7 +13,7 @@ Module Compilers.
   Import Language.API.Compilers.
   Import Language.WfExtra.Compilers.
   Import AbstractInterpretation.Wf.Compilers.
-  Import Compilers.defaults.
+  Import Compilers.API.
 
   Import AbstractInterpretation.Wf.Compilers.partial.
 

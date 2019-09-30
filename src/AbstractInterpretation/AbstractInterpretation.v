@@ -1133,7 +1133,7 @@ Module Compilers.
         := @partial.ident.extract abstract_domain' bottom' abstract_interp_ident t (e _) bound.
     End specialized.
   End partial.
-  Import defaults.
+  Import API.
 
   Module Import CheckCasts.
     Fixpoint get_casts {t} (e : expr t) : list { t : _ & ident t }

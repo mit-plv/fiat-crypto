@@ -30,7 +30,7 @@ Local Open Scope Z_scope. Local Open Scope list_scope. Local Open Scope bool_sco
 Import
   Language.Compilers
   Stringification.Language.Compilers.
-Import Compilers.defaults.
+Import Compilers.API.
 
 Import COperationSpecifications.Primitives.
 

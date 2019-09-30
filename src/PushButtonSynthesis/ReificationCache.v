@@ -14,7 +14,7 @@ Import
   Language.API.Compilers
   Language.Wf.Compilers.
 
-Import Compilers.defaults.
+Import Compilers.API.
 
 Fixpoint pointwise_equal {t} : relation (type.interp base.interp t)
   := match t with

@@ -13,7 +13,7 @@ Module Compilers.
   Import Language.API.Compilers.
   Import Language.WfExtra.Compilers.
   Import UnderLetsProofs.Compilers.
-  Import Compilers.defaults.
+  Import Compilers.API.
 
   Module SubstVarLike.
     Import UnderLetsProofs.Compilers.SubstVarLike.
