@@ -5,7 +5,7 @@ Building
 -----
 [![Build Status](https://api.travis-ci.org/mit-plv/fiat-crypto.png?branch=master)](https://travis-ci.org/mit-plv/fiat-crypto)
 
-This repository requires coq 8.8 or later. 8.7 may work, but we don't use it ourselves.
+This repository requires coq 8.9 or later. 8.7 may work, but we don't use it ourselves.
 
 Git submodules are used for some dependencies. If you did not clone with `--recursive`, run
 
