@@ -2,6 +2,8 @@
 {-# LANGUAGE UnicodeSyntax, ViewPatterns #-}
 {-# OPTIONS_GHC -Wall #-}
 
+{- Copied and slightly modified from https://github.com/EvgenyMakarov/math-classes/blob/master/tools/DepsToDot.hs -}
+
 import Data.Graph.Inductive
   (reachable, delEdge, mkGraph, nmap, Edge, Gr, DynGraph, UEdge, LEdge, efilter, LNode, labNodes, Graph, delNodes)
 import Data.GraphViz
