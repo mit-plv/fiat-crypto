@@ -9,7 +9,7 @@ Module Compilers.
   Import Language.Wf.Compilers.
   Import Identifier.Compilers.
   Import Language.API.Compilers.
-  Import Compilers.defaults.
+  Import Compilers.API.
 
   Create HintDb wf_extra discriminated.
   Create HintDb interp_extra discriminated.

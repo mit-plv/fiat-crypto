@@ -43,7 +43,7 @@ Import
   Language.Compilers
   AbstractInterpretation.Compilers
   Stringification.Language.Compilers.
-Import Compilers.defaults.
+Import Compilers.API.
 
 Import COperationSpecifications.Primitives.
 Import COperationSpecifications.Solinas.

@@ -39,7 +39,7 @@ Import
   Language.WfExtra.Compilers
   Language.Compilers
   Stringification.Language.Compilers.
-Import Compilers.defaults.
+Import Compilers.API.
 
 Import COperationSpecifications.Primitives.
 Import COperationSpecifications.Solinas. (* for selectznz *)

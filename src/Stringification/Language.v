@@ -28,7 +28,7 @@ Module Compilers.
   Export Identifier.Compilers.
   Export AbstractInterpretation.Compilers.
   Import invert_expr.
-  Import defaults.
+  Import API.
 
   Module ToString.
     Local Open Scope string_scope.

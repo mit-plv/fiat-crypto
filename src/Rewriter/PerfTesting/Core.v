@@ -45,7 +45,7 @@ Local Instance : should_split_mul_opt := false.
 Local Instance : widen_bytes_opt := false.
 Local Instance : widen_carry_opt := false.
 
-Import defaults.
+Import API.
 
 Local Set Primitive Projections.
 Record Dyn := dyn { Ty : Type ; val :> Ty }.

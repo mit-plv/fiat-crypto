@@ -129,7 +129,7 @@ Module Compilers.
     End with_var.
   End invert_expr.
 
-  Module Import defaults.
+  Module Import API.
     Notation expr := (@expr base.type ident).
     Notation Expr := (@expr.Expr base.type ident).
     Notation type := (type base.type).
@@ -142,7 +142,7 @@ Module Compilers.
     Ltac reify_type ty := type.reify ltac:(base.reify) constr:(base.type) ty.
     Notation reify_type t := (ltac:(let rt := reify_type t in exact rt)) (only parsing).
     Notation reify_type_of e := (reify_type ((fun t (_ : t) => t) _ e)) (only parsing).
-  End defaults.
+  End API.
 
   Module GallinaReify.
     Export Language.Compilers.GallinaReify.

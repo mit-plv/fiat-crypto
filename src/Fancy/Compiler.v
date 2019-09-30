@@ -4,7 +4,7 @@ Require Import Crypto.Language.Identifier. Import Identifier.Compilers.
 Require Import Crypto.Language.Wf. Import Language.Wf.Compilers.
 Require Import Crypto.Language.Inversion. Import Language.Inversion.Compilers.
 Require Import Crypto.Language.API. Import Language.API.Compilers.
-Import Compilers.defaults.
+Import Compilers.API.
 Require Import Crypto.CastLemmas.
 Require Import Crypto.Fancy.Spec.
 Require Import Crypto.Util.Option.
@@ -532,7 +532,7 @@ Section of_prefancy.
                   | progress inversion_of_prefancy_ident
                   | progress inversion_prod
                   | progress cbv [id]
-                  | progress cbn [eq_rect projT1 projT2 expr.interp ident.interp ident.gen_interp interp_base defaults.base defaults.type_base interp interp_if_Z option_map] in *
+                  | progress cbn [eq_rect projT1 projT2 expr.interp ident.interp ident.gen_interp interp_base API.base API.type_base interp interp_if_Z option_map] in *
                   | progress cbn [invert_expr.invert_Ident] in * (* N.B. Must be above [break_innermost_match] for proofs below to work *)
                   | progress Language.Inversion.Compilers.type_beq_to_eq
                   | progress name_eqb_to_eq

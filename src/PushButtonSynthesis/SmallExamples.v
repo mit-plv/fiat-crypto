@@ -16,7 +16,7 @@ Local Open Scope Z_scope. Local Open Scope list_scope.
 Import
   Language.Compilers
   Stringification.C.Compilers.
-Import Compilers.defaults.
+Import Compilers.API.
 
 Import Associational Positional.
 

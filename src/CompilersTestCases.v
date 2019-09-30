@@ -21,7 +21,7 @@ Import Stringification.C.Compilers.
 Import Identifier.Compilers.
 Import Language.API.Compilers.
 Local Coercion Z.of_nat : nat >-> Z.
-Import Compilers.defaults.
+Import Compilers.API.
 
 Local Notation "x + y"
   := ((#ident.Z_add @ x @ y)%expr)

@@ -30,7 +30,7 @@ Module Compilers.
   Export AbstractInterpretation.Compilers.
   Export Stringification.Language.Compilers.
   Import invert_expr.
-  Import defaults.
+  Import API.
 
   Module ToString.
     Import Stringification.Language.Compilers.ToString.

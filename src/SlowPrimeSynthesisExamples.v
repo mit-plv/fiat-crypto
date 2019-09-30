@@ -20,7 +20,7 @@ Import
   Language.Compilers
   Stringification.C.Compilers.
 
-Import Language.API.Compilers.defaults.
+Import Language.API.Compilers.API.
 
 Import Associational Positional.
 

@@ -30,7 +30,7 @@ Module Compilers.
   Export AbstractInterpretation.Compilers.
   Export Stringification.Language.Compilers.
   Import invert_expr.
-  Import defaults.
+  Import API.
 
   Local Notation tZ := (base.type.type_base base.type.Z).
 
@@ -760,7 +760,7 @@ Module Compilers.
                  | type.arrow s d => fun _ _ => inr ["Invalid type of expr: " ++ show false t]%string
                  end.
 
-            Definition report_type_mismatch (expected : defaults.type) (given : defaults.type) : string
+            Definition report_type_mismatch (expected : API.type) (given : API.type) : string
               := ("Type mismatch; expected " ++ show false expected ++ " but given " ++ show false given ++ ".")%string.
 
             Fixpoint arith_expr_of_PHOAS_args
