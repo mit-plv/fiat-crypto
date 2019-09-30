@@ -55,10 +55,10 @@ PERFTESTING_VO := \
 LITE_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo \
 	src/Curves/Weierstrass/Jacobian.vo \
 	src/Curves/Weierstrass/Projective.vo \
-	src/Rewriter.ProofsCommon.vo \
-	src/Rewriter.Wf.vo \
-	src/Rewriter.RulesGood.vo \
-	src/Rewriter.All.vo \
+	src/Rewriter/ProofsCommon.vo \
+	src/Rewriter/Wf.vo \
+	src/Rewriter/RulesGood.vo \
+	src/Rewriter/All.vo \
 	$(PERFTESTING_VO)
 NOBIGMEM_UNMADE_VOFILES := \
 	src/Curves/Weierstrass/AffineProofs.vo \
@@ -70,7 +70,7 @@ PRE_STANDALONE_PRE_VOFILES := $(filter src/Standalone%.vo,$(REGULAR_VOFILES))
 UTIL_PRE_VOFILES := $(filter src/Algebra/%.vo src/Tactics/%.vo src/Util/%.vo,$(REGULAR_VOFILES))
 SOME_EARLY_VOFILES := \
   src/Arithmetic/Core.vo \
-  src/Rewriter.vo
+  src/Rewriter/Rewriter.vo
 
 # computing the vo_reverse_closure is slow, so we only do it if we're
 # asked to make the lite target
