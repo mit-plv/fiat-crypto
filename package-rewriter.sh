@@ -37,7 +37,7 @@ EOF
 cat > rewriting/README.md <<'EOF'
 Building
 -----
-This repository requires coq 8.8 or later. 8.7 may work, but we don't use it ourselves.
+This repository requires coq 8.9 or later. 8.8 may work, but we don't use it ourselves.
 
 To build:
 

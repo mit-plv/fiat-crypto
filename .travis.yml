@@ -35,19 +35,15 @@ jobs:
       language: c
       script: CUR=early ./etc/ci/travis.sh -j2 some-early util printlite lite
     - stage: some-early util printlite lite
+      env: COQ_VERSION="v8.10"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.10-daily"
+      language: c
+      script: CUR=early ./etc/ci/travis.sh -j2 some-early util printlite lite
+    - stage: some-early util printlite lite
       env: COQ_VERSION="v8.9"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.9-daily"
       language: c
       script: CUR=early ./etc/ci/travis.sh -j2 some-early util printlite lite
     - stage: some-early util printlite lite
-      env: COQ_VERSION="v8.8"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.8-daily"
-      language: c
-      script: CUR=early ./etc/ci/travis.sh -j2 some-early util printlite lite
-    - stage: some-early util printlite lite
-      env: COQ_VERSION="8.9.0"  COQ_PACKAGE="coq-8.9.0" PPA="ppa:jgross-h/many-coq-versions"
-      language: c
-      script: CUR=early ./etc/ci/travis.sh -j2 some-early util printlite lite
-    - stage: some-early util printlite lite
-      env: COQ_VERSION="8.8.2"  COQ_PACKAGE="coq-8.8.2" PPA="ppa:jgross-h/many-coq-versions"
+      env: COQ_VERSION="8.9.1"  COQ_PACKAGE="coq-8.9.1" PPA="ppa:jgross-h/many-coq-versions"
       language: c
       script: CUR=early ./etc/ci/travis.sh -j2 some-early util printlite lite
 
@@ -56,19 +52,15 @@ jobs:
       language: c
       script: PREV=early CUR=pre-standalone ./etc/ci/travis.sh -j2 pre-standalone print-nobigmem nobigmem
     - stage: pre-standalone print-nobigmem nobigmem
+      env: COQ_VERSION="v8.10"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.10-daily"
+      language: c
+      script: PREV=early CUR=pre-standalone ./etc/ci/travis.sh -j2 pre-standalone print-nobigmem nobigmem
+    - stage: pre-standalone print-nobigmem nobigmem
       env: COQ_VERSION="v8.9"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.9-daily"
       language: c
       script: PREV=early CUR=pre-standalone ./etc/ci/travis.sh -j2 pre-standalone print-nobigmem nobigmem
     - stage: pre-standalone print-nobigmem nobigmem
-      env: COQ_VERSION="v8.8"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.8-daily"
-      language: c
-      script: PREV=early CUR=pre-standalone ./etc/ci/travis.sh -j2 pre-standalone print-nobigmem nobigmem
-    - stage: pre-standalone print-nobigmem nobigmem
-      env: COQ_VERSION="8.9.0"  COQ_PACKAGE="coq-8.9.0" PPA="ppa:jgross-h/many-coq-versions"
-      language: c
-      script: PREV=early CUR=pre-standalone ./etc/ci/travis.sh -j2 pre-standalone print-nobigmem nobigmem
-    - stage: pre-standalone print-nobigmem nobigmem
-      env: COQ_VERSION="8.8.2"  COQ_PACKAGE="coq-8.8.2" PPA="ppa:jgross-h/many-coq-versions"
+      env: COQ_VERSION="8.9.1"  COQ_PACKAGE="coq-8.9.1" PPA="ppa:jgross-h/many-coq-versions"
       language: c
       script: PREV=early CUR=pre-standalone ./etc/ci/travis.sh -j2 pre-standalone print-nobigmem nobigmem
 
@@ -77,49 +69,32 @@ jobs:
       language: c
       script: PREV=pre-standalone CUR=coq ./etc/ci/travis.sh -j1 coq
     - stage: coq
+      env: COQ_VERSION="v8.10"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.10-daily"
+      language: c
+      script: PREV=pre-standalone CUR=coq ./etc/ci/travis.sh -j1 coq
+    - stage: coq
       env: COQ_VERSION="v8.9"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.9-daily"
       language: c
       script: PREV=pre-standalone CUR=coq ./etc/ci/travis.sh -j1 coq
     - stage: coq
-      env: COQ_VERSION="v8.8"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.8-daily"
-      language: c
-      script: PREV=pre-standalone CUR=coq ./etc/ci/travis.sh -j1 coq
-    - stage: coq
-      env: COQ_VERSION="8.9.0"  COQ_PACKAGE="coq-8.9.0" PPA="ppa:jgross-h/many-coq-versions"
-      language: c
-      script: PREV=pre-standalone CUR=coq ./etc/ci/travis.sh -j1 coq
-    - stage: coq
-      env: COQ_VERSION="8.8.2"  COQ_PACKAGE="coq-8.8.2" PPA="ppa:jgross-h/many-coq-versions"
+      env: COQ_VERSION="8.9.1"  COQ_PACKAGE="coq-8.9.1" PPA="ppa:jgross-h/many-coq-versions"
       language: c
       script: PREV=pre-standalone CUR=coq ./etc/ci/travis.sh -j1 coq
 
     - stage: standalone-ocaml
-      env: COQ_VERSION="8.9.0"  COQ_PACKAGE="coq-8.9.0" PPA="ppa:jgross-h/many-coq-versions"
-      language: c
-      compiler: gcc
-      script: PREV=coq CUR=standalone-ocaml ./etc/ci/travis.sh -j2 standalone-ocaml perf-standalone c-files rust-files test-c-files CC=gcc
-    - stage: standalone-ocaml
-      env: COQ_VERSION="8.8.2"  COQ_PACKAGE="coq-8.8.2" PPA="ppa:jgross-h/many-coq-versions"
+      env: COQ_VERSION="8.9.1"  COQ_PACKAGE="coq-8.9.1" PPA="ppa:jgross-h/many-coq-versions"
       language: c
       compiler: gcc
       script: PREV=coq CUR=standalone-ocaml ./etc/ci/travis.sh -j2 standalone-ocaml perf-standalone c-files rust-files test-c-files CC=gcc
 
     - stage: test-rust
-      env: COQ_VERSION="8.9.0"  COQ_PACKAGE="coq-8.9.0" PPA="ppa:jgross-h/many-coq-versions"
-      language: rust
-      rust: nightly
-      script: PREV=standalone-ocaml CUR=test-rust TOUCH=rust-files ./etc/ci/travis.sh -j2 test-rust-files
-    - stage: test-rust
-      env: COQ_VERSION="8.8.2"  COQ_PACKAGE="coq-8.8.2" PPA="ppa:jgross-h/many-coq-versions"
+      env: COQ_VERSION="8.9.1"  COQ_PACKAGE="coq-8.9.1" PPA="ppa:jgross-h/many-coq-versions"
       language: rust
       rust: nightly
       script: PREV=standalone-ocaml CUR=test-rust TOUCH=rust-files ./etc/ci/travis.sh -j2 test-rust-files
 
 #    - stage: selected-test selected-bench
-#      env: COQ_VERSION="8.8.2"  COQ_PACKAGE="coq-8.8.2" PPA="ppa:jgross-h/many-coq-versions"
-#      script: PREV=standalone-ocaml CUR=selected-test-bench ./etc/ci/travis.sh -j2 selected-test selected-bench
-#    - stage: selected-test selected-bench
-#      env: COQ_VERSION="8.7.2"  COQ_PACKAGE="coq-8.7.2" PPA="ppa:jgross-h/many-coq-versions"
+#      env: COQ_VERSION="8.9.1"  COQ_PACKAGE="coq-8.9.1" PPA="ppa:jgross-h/many-coq-versions"
 #      script: PREV=standalone-ocaml CUR=selected-test-bench ./etc/ci/travis.sh -j2 selected-test selected-bench
 
 after_success:
