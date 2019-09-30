@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-FILES="$(make --dry-run --always-make src/RewriterExamples.vo | grep -o 'src/.*\.v' | grep -v Coqprime | uniq | sort)"
+FILES="$(make --dry-run --always-make src/Rewriter.Examples.vo | grep -o 'src/.*\.v' | grep -v Coqprime | uniq | sort)"
 EXTRA_FILES="LICENSE AUTHORS"
 EXTRA_EXTRA_FILES="CONTRIBUTORS"
 rm -rf rewriting
@@ -45,12 +45,12 @@ To build:
 
 Examples
 -----
-There are some examples of using the rewriter in [`src/RewriterExamples.v`](./src/RewriterExamples.v).
+There are some examples of using the rewriter in [`src/Rewriter.Examples.v`](./src/Rewriter.Examples.v).
 
 Rewriter Implementation
 -----
 
-- PreLanguage.v defines some basic constructs used in annotating some
+- Language.Pre.v defines some basic constructs used in annotating some
   rewrite rules (`ident.eagerly`, `ident.literal`, etc)
 
 - Language.v defines:
@@ -75,16 +75,16 @@ IdentifiersLibrary.v ←──────────────────�
     ↑ ↑                                                   ↑                                        ↑
     │ └──────────────── IdentifiersLibraryProofs.v ←──────┴─ IdentifiersGenerateProofs.v ←─ IdentifersGENERATEDProofs.v
     │                                     ↑                                                        ↑
-Rewriter.v ←───────────────────────── RewriterWf1.v ←─────────────────── RewriterWf1Tactics.v      │
+Rewriter.v ←───────────────────────── Rewriter.ProofsCommon.v ←─────────────────── Rewriter.ProofsCommonTactics.v      │
     ↑                                 ↗        ↖                                ↑                  │
-RewriterReify.v ←──────┐   RewriterWf2.v   RewriterInterpProofs1.v              │                  │
+Rewriter.Reify.v ←──────┐   Rewriter.Wf.v   Rewriter.InterpProofs.v              │                  │
                        │              ↖        ↗                                │                  │
-                       └─────── RewriterAllTactics.v ───────────────────────────┘                  │
+                       └─────── Rewriter.AllTactics.v ───────────────────────────┘                  │
                                            ↑                                                       │
                                            │                                                       │
                                            │                                                       │
                                            ├───────────────────────────────────────────────────────┘
-                                    RewriterExamples.v
+                                    Rewriter.Examples.v
 ```
 
 - IdentifiersLibrary.v: Some definitions about identifiers and pattern
@@ -128,7 +128,7 @@ RewriterReify.v ←──────┐   RewriterWf2.v   RewriterInterpProofs1
   whether or not to try rewriting again in the output of the
   replacement for that rule.
 
-- RewriterWf1.v: Defines the notion of interp-goodness and wf-goodness
+- Rewriter.ProofsCommon.v: Defines the notion of interp-goodness and wf-goodness
   for rewrite rules, defines tactics to prove these notions, and
   contains a semi-arbitrary collection of proofs and definitions that
   are mostly shared between the wf proofs and the interp proofs.
@@ -138,18 +138,18 @@ RewriterReify.v ←──────┐   RewriterWf2.v   RewriterInterpProofs1
   type of the overall specialized rewriter together with its `Wf` and
   `Interp` proofs. (This package should perhaps move to another file?)
 
-- RewriterWf1Tactics.v: Defines the actual tactics used to prove that
+- Rewriter.ProofsCommonTactics.v: Defines the actual tactics used to prove that
   specific rewrite rules are correct, and to inhabit the packages
-  defined in RewriterWf1.v.
+  defined in Rewriter.ProofsCommon.v.
 
-- RewriterWf2.v: Proves wf-preservation of the generic rewriter,
+- Rewriter.Wf.v: Proves wf-preservation of the generic rewriter,
   taking in wf-goodness of rewrite rules as a hypothesis.
 
-- RewriterInterpProofs1.v: Proves interp-correctness of the generic
+- Rewriter.InterpProofs.v: Proves interp-correctness of the generic
   rewriter, taking in interp-goodness of rewrite rules as a
   hypothesis.
 
-- RewriterAllTactics.v: Defines the tactic
+- Rewriter.AllTactics.v: Defines the tactic
   `RewriteRules.Tactic.make_rewriter` (and a similar tactic notation)
   which build the entire `VerifiedRewriter`.  They take in the
   `include_interp` as in Rewriter.v tactics, as well as an hlist of
@@ -157,12 +157,12 @@ RewriterReify.v ←──────┐   RewriterWf2.v   RewriterInterpProofs1
   rewrite rule types.  This is the primary interface for defining a
   rewriter from a list of rewrite rules.
 
-- RewriterExamples.v: A couple of examples of using the rewriter.
+- Rewriter.Examples.v: A couple of examples of using the rewriter.
 
 Proofs files:
 For Language.v, there is a semi-arbitrary split between two files
-`LanguageInversion` and `LanguageWf`.
-- LanguageInversion.v:
+`Language.Inversion` and `Language.Wf`.
+- Language.Inversion.v:
   + classifies equality of type codes and exprs
   + type codes have decidable equality
   + correctness of the various type-transport definitions
@@ -189,7 +189,7 @@ For Language.v, there is a semi-arbitrary split between two files
     in hypotheses of the form `expr.invert_* _ = Some _`
   + expr.inversion_expr, which inverts equalities of exprs
 
-- LanguageWf.v: Depends on LanguageInversion.v
+- Language.Wf.v: Depends on Language.Inversion.v
   Defines:
   + expr.wf, expr.Wf, expr.wf3, expr.Wf3
   + GeneralizeVar.Flat.wf

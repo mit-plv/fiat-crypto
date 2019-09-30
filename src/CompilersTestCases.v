@@ -2,24 +2,24 @@ Require Import Coq.ZArith.ZArith.
 Require Import Coq.Lists.List.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.LetIn.
-Require Import Crypto.Language.
-Require Import Crypto.Identifier.
-Require Import Crypto.IdentifierExtra.
-Require Import Crypto.UnderLets.
-Require Import Crypto.AbstractInterpretation.
-Require Import Crypto.RewriterAll.
+Require Import Crypto.Language.Language.
+Require Import Crypto.Language.Identifier.
+Require Import Crypto.Language.API.
+Require Import Crypto.Language.UnderLets.
+Require Import Crypto.AbstractInterpretation.AbstractInterpretation.
+Require Import Crypto.Rewriter.All.
 Require Import Crypto.MiscCompilerPasses.
-Require Import Crypto.CStringification.
+Require Import Crypto.Stringification.C.
 Import ListNotations. Local Open Scope Z_scope.
 
 Import Language.Compilers.
 Import UnderLets.Compilers.
 Import AbstractInterpretation.Compilers.
-Import RewriterAll.Compilers.
+Import Rewriter.All.Compilers.
 Import MiscCompilerPasses.Compilers.
-Import CStringification.Compilers.
+Import Stringification.C.Compilers.
 Import Identifier.Compilers.
-Import IdentifierExtra.Compilers.
+Import Language.API.Compilers.
 Local Coercion Z.of_nat : nat >-> Z.
 Import Compilers.defaults.
 

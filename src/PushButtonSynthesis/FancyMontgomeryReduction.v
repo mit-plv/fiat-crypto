@@ -12,9 +12,9 @@ Require Import Crypto.Util.ZUtil.ModInv.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
-Require Import Crypto.Language.
-Require Import Crypto.IdentifierExtra.
-Require Import Crypto.LanguageStringification.
+Require Import Crypto.Language.Language.
+Require Import Crypto.Language.API.
+Require Import Crypto.Stringification.Language.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.FancyMontgomeryReduction.
 Require Import Crypto.BoundsPipeline.
@@ -29,7 +29,7 @@ Local Open Scope Z_scope. Local Open Scope list_scope. Local Open Scope bool_sco
 
 Import
   Language.Compilers
-  LanguageStringification.Compilers.
+  Stringification.Language.Compilers.
 Import Compilers.defaults.
 
 Import COperationSpecifications.Primitives.

@@ -16,10 +16,10 @@ Require Crypto.PushButtonSynthesis.UnsaturatedSolinas.
 Require Import Crypto.PushButtonSynthesis.WordByWordMontgomeryReificationCache.
 Require Import Crypto.PushButtonSynthesis.UnsaturatedSolinasReificationCache.
 Require Import Crypto.BoundsPipeline.
-Require Import Crypto.Language.
-Require Import Crypto.RewriterAll.
-Require Import Crypto.AbstractInterpretation.
-Require Import Crypto.CStringification.
+Require Import Crypto.Language.Language.
+Require Import Crypto.Rewriter.All.
+Require Import Crypto.AbstractInterpretation.AbstractInterpretation.
+Require Import Crypto.Stringification.C.
 Require Import Crypto.Util.ZUtil.ModInv. (* Only needed for WBW Montgomery *)
 Require Import Crypto.Util.Strings.Show.
 
@@ -36,9 +36,9 @@ Ltac check_precomputed_enabled := fail 0 "Precomputed tests are disabled".
 Import
   Language.Compilers
   AbstractInterpretation.Compilers
-  RewriterAll.Compilers.
+  Rewriter.All.Compilers.
 
-Local Existing Instance CStringification.Compilers.ToString.C.OutputCAPI.
+Local Existing Instance Stringification.C.Compilers.ToString.C.OutputCAPI.
 Local Instance : static_opt := true.
 Local Instance : emit_primitives_opt := true.
 Local Instance : should_split_mul_opt := false.

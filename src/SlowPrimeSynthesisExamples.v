@@ -9,7 +9,7 @@ Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.PushButtonSynthesis.UnsaturatedSolinas.
 Require Crypto.PushButtonSynthesis.WordByWordMontgomery.
-Require Import Crypto.CStringification.
+Require Import Crypto.Stringification.C.
 Require Import Crypto.BoundsPipeline.
 Require Import Crypto.Util.ZUtil.ModInv.
 
@@ -18,9 +18,9 @@ Import ListNotations. Local Open Scope Z_scope.
 
 Import
   Language.Compilers
-  CStringification.Compilers.
+  Stringification.C.Compilers.
 
-Import IdentifierExtra.Compilers.defaults.
+Import Language.API.Compilers.defaults.
 
 Import Associational Positional.
 

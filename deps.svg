@@ -12,12 +12,12 @@
 <!-- 0 -->
 <g id="node1" class="node"><title>0</title>
 <ellipse fill="none" stroke="black" cx="2972.28" cy="-666" rx="111.28" ry="18"/>
-<text text-anchor="middle" x="2972.28" y="-662.3" font-family="Times,serif" font-size="14.00">AbstractInterpretationProofs</text>
+<text text-anchor="middle" x="2972.28" y="-662.3" font-family="Times,serif" font-size="14.00">AbstractInterpretation.Proofs</text>
 </g>
 <!-- 12 -->
 <g id="node4" class="node"><title>12</title>
 <ellipse fill="none" stroke="black" cx="2724.28" cy="-594" rx="100.182" ry="18"/>
-<text text-anchor="middle" x="2724.28" y="-590.3" font-family="Times,serif" font-size="14.00">AbstractInterpretationWf</text>
+<text text-anchor="middle" x="2724.28" y="-590.3" font-family="Times,serif" font-size="14.00">AbstractInterpretation.Wf</text>
 </g>
 <!-- 0&#45;&gt;12 -->
 <g id="edge1" class="edge"><title>0&#45;&gt;12</title>
@@ -27,7 +27,7 @@
 <!-- 16 -->
 <g id="node5" class="node"><title>16</title>
 <ellipse fill="none" stroke="black" cx="2981.28" cy="-594" rx="139.175" ry="18"/>
-<text text-anchor="middle" x="2981.28" y="-590.3" font-family="Times,serif" font-size="14.00">AbstractInterpretationZRangeProofs</text>
+<text text-anchor="middle" x="2981.28" y="-590.3" font-family="Times,serif" font-size="14.00">AbstractInterpretation.ZRangeProofs</text>
 </g>
 <!-- 0&#45;&gt;16 -->
 <g id="edge2" class="edge"><title>0&#45;&gt;16</title>
@@ -52,7 +52,7 @@
 <!-- 60 -->
 <g id="node16" class="node"><title>60</title>
 <ellipse fill="none" stroke="black" cx="2461.28" cy="-450" rx="62.2891" ry="18"/>
-<text text-anchor="middle" x="2461.28" y="-446.3" font-family="Times,serif" font-size="14.00">IdentifierExtra</text>
+<text text-anchor="middle" x="2461.28" y="-446.3" font-family="Times,serif" font-size="14.00">Language.API</text>
 </g>
 <!-- 4&#45;&gt;60 -->
 <g id="edge4" class="edge"><title>4&#45;&gt;60</title>
@@ -72,7 +72,7 @@
 <!-- 8 -->
 <g id="node3" class="node"><title>8</title>
 <ellipse fill="none" stroke="black" cx="2724.28" cy="-666" rx="118.879" ry="18"/>
-<text text-anchor="middle" x="2724.28" y="-662.3" font-family="Times,serif" font-size="14.00">AbstractInterpretationWfExtra</text>
+<text text-anchor="middle" x="2724.28" y="-662.3" font-family="Times,serif" font-size="14.00">AbstractInterpretation.WfExtra</text>
 </g>
 <!-- 8&#45;&gt;12 -->
 <g id="edge6" class="edge"><title>8&#45;&gt;12</title>
@@ -82,7 +82,7 @@
 <!-- 112 -->
 <g id="node29" class="node"><title>112</title>
 <ellipse fill="none" stroke="black" cx="2281.28" cy="-594" rx="76.0865" ry="18"/>
-<text text-anchor="middle" x="2281.28" y="-590.3" font-family="Times,serif" font-size="14.00">LanguageWfExtra</text>
+<text text-anchor="middle" x="2281.28" y="-590.3" font-family="Times,serif" font-size="14.00">Language.WfExtra</text>
 </g>
 <!-- 8&#45;&gt;112 -->
 <g id="edge7" class="edge"><title>8&#45;&gt;112</title>
@@ -137,7 +137,7 @@
 <!-- 104 -->
 <g id="node27" class="node"><title>104</title>
 <ellipse fill="none" stroke="black" cx="3537.28" cy="-738" rx="96.3833" ry="18"/>
-<text text-anchor="middle" x="3537.28" y="-734.3" font-family="Times,serif" font-size="14.00">LanguageStringification</text>
+<text text-anchor="middle" x="3537.28" y="-734.3" font-family="Times,serif" font-size="14.00">Stringification.Language</text>
 </g>
 <!-- 20&#45;&gt;104 -->
 <g id="edge14" class="edge"><title>20&#45;&gt;104</title>
@@ -157,7 +157,7 @@
 <!-- 200 -->
 <g id="node51" class="node"><title>200</title>
 <ellipse fill="none" stroke="red" cx="2005.28" cy="-738" rx="52.7911" ry="18"/>
-<text text-anchor="middle" x="2005.28" y="-734.3" font-family="Times,serif" font-size="14.00">RewriterAll</text>
+<text text-anchor="middle" x="2005.28" y="-734.3" font-family="Times,serif" font-size="14.00">Rewriter.All</text>
 </g>
 <!-- 20&#45;&gt;200 -->
 <g id="edge16" class="edge"><title>20&#45;&gt;200</title>
@@ -212,7 +212,7 @@
 <!-- 268 -->
 <g id="node68" class="node"><title>268</title>
 <ellipse fill="none" stroke="black" cx="3484.28" cy="-954" rx="77.1866" ry="18"/>
-<text text-anchor="middle" x="3484.28" y="-950.3" font-family="Times,serif" font-size="14.00">RustStringification</text>
+<text text-anchor="middle" x="3484.28" y="-950.3" font-family="Times,serif" font-size="14.00">Stringification.Rust</text>
 </g>
 <!-- 24&#45;&gt;268 -->
 <g id="edge21" class="edge"><title>24&#45;&gt;268</title>
@@ -227,7 +227,7 @@
 <!-- 32 -->
 <g id="node9" class="node"><title>32</title>
 <ellipse fill="none" stroke="black" cx="3537.28" cy="-882" rx="67.6881" ry="18"/>
-<text text-anchor="middle" x="3537.28" y="-878.3" font-family="Times,serif" font-size="14.00">CStringification</text>
+<text text-anchor="middle" x="3537.28" y="-878.3" font-family="Times,serif" font-size="14.00">Stringification.C</text>
 </g>
 <!-- 96 -->
 <g id="node25" class="node"><title>96</title>
@@ -392,7 +392,7 @@
 <!-- 100 -->
 <g id="node26" class="node"><title>100</title>
 <ellipse fill="none" stroke="black" cx="2377.28" cy="-162" rx="78.7863" ry="18"/>
-<text text-anchor="middle" x="2377.28" y="-158.3" font-family="Times,serif" font-size="14.00">LanguageInversion</text>
+<text text-anchor="middle" x="2377.28" y="-158.3" font-family="Times,serif" font-size="14.00">Language.Inversion</text>
 </g>
 <!-- 80&#45;&gt;100 -->
 <g id="edge38" class="edge"><title>80&#45;&gt;100</title>
@@ -422,7 +422,7 @@
 <!-- 116 -->
 <g id="node30" class="node"><title>116</title>
 <ellipse fill="none" stroke="black" cx="2406.28" cy="-234" rx="57.3905" ry="18"/>
-<text text-anchor="middle" x="2406.28" y="-230.3" font-family="Times,serif" font-size="14.00">LanguageWf</text>
+<text text-anchor="middle" x="2406.28" y="-230.3" font-family="Times,serif" font-size="14.00">Language.Wf</text>
 </g>
 <!-- 92&#45;&gt;116 -->
 <g id="edge42" class="edge"><title>92&#45;&gt;116</title>
@@ -447,7 +447,7 @@
 <!-- 132 -->
 <g id="node34" class="node"><title>132</title>
 <ellipse fill="none" stroke="black" cx="2377.28" cy="-18" rx="57.3905" ry="18"/>
-<text text-anchor="middle" x="2377.28" y="-14.3" font-family="Times,serif" font-size="14.00">PreLanguage</text>
+<text text-anchor="middle" x="2377.28" y="-14.3" font-family="Times,serif" font-size="14.00">Language.Pre</text>
 </g>
 <!-- 108&#45;&gt;132 -->
 <g id="edge46" class="edge"><title>108&#45;&gt;132</title>
@@ -717,7 +717,7 @@
 <!-- 192 -->
 <g id="node49" class="node"><title>192</title>
 <ellipse fill="none" stroke="red" cx="1802.28" cy="-594" rx="96.6831" ry="18"/>
-<text text-anchor="middle" x="1802.28" y="-590.3" font-family="Times,serif" font-size="14.00">RewriterAllTacticsExtra</text>
+<text text-anchor="middle" x="1802.28" y="-590.3" font-family="Times,serif" font-size="14.00">Rewriter.AllTacticsExtra</text>
 </g>
 <!-- 192&#45;&gt;64 -->
 <g id="edge83" class="edge"><title>192&#45;&gt;64</title>
@@ -727,7 +727,7 @@
 <!-- 196 -->
 <g id="node50" class="node"><title>196</title>
 <ellipse fill="none" stroke="red" cx="1977.28" cy="-522" rx="77.9862" ry="18"/>
-<text text-anchor="middle" x="1977.28" y="-518.3" font-family="Times,serif" font-size="14.00">RewriterAllTactics</text>
+<text text-anchor="middle" x="1977.28" y="-518.3" font-family="Times,serif" font-size="14.00">Rewriter.AllTactics</text>
 </g>
 <!-- 192&#45;&gt;196 -->
 <g id="edge84" class="edge"><title>192&#45;&gt;196</title>
@@ -737,7 +737,7 @@
 <!-- 216 -->
 <g id="node55" class="node"><title>216</title>
 <ellipse fill="none" stroke="red" cx="2143.28" cy="-450" rx="89.8845" ry="18"/>
-<text text-anchor="middle" x="2143.28" y="-446.3" font-family="Times,serif" font-size="14.00">RewriterInterpProofs1</text>
+<text text-anchor="middle" x="2143.28" y="-446.3" font-family="Times,serif" font-size="14.00">Rewriter.InterpProofs</text>
 </g>
 <!-- 196&#45;&gt;216 -->
 <g id="edge85" class="edge"><title>196&#45;&gt;216</title>
@@ -747,7 +747,7 @@
 <!-- 228 -->
 <g id="node58" class="node"><title>228</title>
 <ellipse fill="none" stroke="red" cx="2201.28" cy="-378" rx="61.1893" ry="18"/>
-<text text-anchor="middle" x="2201.28" y="-374.3" font-family="Times,serif" font-size="14.00">RewriterReify</text>
+<text text-anchor="middle" x="2201.28" y="-374.3" font-family="Times,serif" font-size="14.00">Rewriter.Reify</text>
 </g>
 <!-- 196&#45;&gt;228 -->
 <g id="edge86" class="edge"><title>196&#45;&gt;228</title>
@@ -757,7 +757,7 @@
 <!-- 256 -->
 <g id="node65" class="node"><title>256</title>
 <ellipse fill="none" stroke="red" cx="1818.28" cy="-450" rx="83.3857" ry="18"/>
-<text text-anchor="middle" x="1818.28" y="-446.3" font-family="Times,serif" font-size="14.00">RewriterWf1Tactics</text>
+<text text-anchor="middle" x="1818.28" y="-446.3" font-family="Times,serif" font-size="14.00">Rewriter.ProofsCommonTactics</text>
 </g>
 <!-- 196&#45;&gt;256 -->
 <g id="edge87" class="edge"><title>196&#45;&gt;256</title>
@@ -767,7 +767,7 @@
 <!-- 264 -->
 <g id="node67" class="node"><title>264</title>
 <ellipse fill="none" stroke="red" cx="1977.28" cy="-450" rx="57.6901" ry="18"/>
-<text text-anchor="middle" x="1977.28" y="-446.3" font-family="Times,serif" font-size="14.00">RewriterWf2</text>
+<text text-anchor="middle" x="1977.28" y="-446.3" font-family="Times,serif" font-size="14.00">Rewriter.Wf</text>
 </g>
 <!-- 196&#45;&gt;264 -->
 <g id="edge88" class="edge"><title>196&#45;&gt;264</title>
@@ -857,7 +857,7 @@
 <!-- 232 -->
 <g id="node59" class="node"><title>232</title>
 <ellipse fill="none" stroke="red" cx="2101.28" cy="-594" rx="84.485" ry="18"/>
-<text text-anchor="middle" x="2101.28" y="-590.3" font-family="Times,serif" font-size="14.00">RewriterRulesProofs</text>
+<text text-anchor="middle" x="2101.28" y="-590.3" font-family="Times,serif" font-size="14.00">Rewriter.RulesProofs</text>
 </g>
 <!-- 204&#45;&gt;232 -->
 <g id="edge98" class="edge"><title>204&#45;&gt;232</title>
@@ -882,7 +882,7 @@
 <!-- 212 -->
 <g id="node54" class="node"><title>212</title>
 <ellipse fill="none" stroke="red" cx="1166.28" cy="-666" rx="76.8869" ry="18"/>
-<text text-anchor="middle" x="1166.28" y="-662.3" font-family="Times,serif" font-size="14.00">RewriterExamples</text>
+<text text-anchor="middle" x="1166.28" y="-662.3" font-family="Times,serif" font-size="14.00">Rewriter.Examples</text>
 </g>
 <!-- 212&#45;&gt;192 -->
 <g id="edge102" class="edge"><title>212&#45;&gt;192</title>
@@ -892,7 +892,7 @@
 <!-- 260 -->
 <g id="node66" class="node"><title>260</title>
 <ellipse fill="none" stroke="red" cx="2016.28" cy="-378" rx="57.6901" ry="18"/>
-<text text-anchor="middle" x="2016.28" y="-374.3" font-family="Times,serif" font-size="14.00">RewriterWf1</text>
+<text text-anchor="middle" x="2016.28" y="-374.3" font-family="Times,serif" font-size="14.00">Rewriter.ProofsCommon</text>
 </g>
 <!-- 216&#45;&gt;260 -->
 <g id="edge103" class="edge"><title>216&#45;&gt;260</title>
@@ -942,7 +942,7 @@
 <!-- 236 -->
 <g id="node60" class="node"><title>236</title>
 <ellipse fill="none" stroke="red" cx="2371.28" cy="-522" rx="61.99" ry="18"/>
-<text text-anchor="middle" x="2371.28" y="-518.3" font-family="Times,serif" font-size="14.00">RewriterRules</text>
+<text text-anchor="middle" x="2371.28" y="-518.3" font-family="Times,serif" font-size="14.00">Rewriter.Rules</text>
 </g>
 <!-- 232&#45;&gt;236 -->
 <g id="edge111" class="edge"><title>232&#45;&gt;236</title>

@@ -14,15 +14,15 @@ Require Crypto.PushButtonSynthesis.SaturatedSolinas.
 Require Crypto.PushButtonSynthesis.UnsaturatedSolinas.
 Require Crypto.PushButtonSynthesis.WordByWordMontgomery.
 Require Import Crypto.UnsaturatedSolinasHeuristics.
-Require Import Crypto.LanguageStringification.
-Require Import Crypto.CStringification.
+Require Import Crypto.Stringification.Language.
+Require Import Crypto.Stringification.C.
 Require Import Crypto.BoundsPipeline.
-Require Import Crypto.RustStringification.
+Require Import Crypto.Stringification.Rust.
 Import ListNotations. Local Open Scope Z_scope. Local Open Scope string_scope.
 
 Import
-  LanguageStringification.Compilers
-  CStringification.Compilers.
+  Stringification.Language.Compilers
+  Stringification.C.Compilers.
 
 Module ForExtraction.
   Definition parse_neg (s : string) : string * Z
