@@ -33,15 +33,15 @@ Compute API.type. (* to figure out what goes into a type *)
     Notation expr := (@expr base.type ident).
 
     (** [interp_type : type -> Type] is the type code denotation function *)
-    Notation interp_type := (@type.interp base_type base_type_interp).
+    Notation interp_type := (@type.interp base.type base.interp).
     (** [Interp : forall {t}, Expr t -> interp_type t] is the [Expr] denotation function *)
-    Notation Interp := (@expr.Interp base_type ident base_type_interp (@ident_interp)).
+    Notation Interp := (@expr.Interp base.type ident base.interp (@ident_interp)).
     (** [interp : forall {t}, @expr interp_type t -> interp_type t] is the [expr] denotation function *)
-    Notation interp := (@expr.interp base_type ident base_type_interp (@ident_interp)).
-    Notation gen_Interp cast_outside_of_range := (@expr.Interp base_type ident base_type_interp (@ident.gen_interp cast_outside_of_range)).
-    Notation gen_interp cast_outside_of_range := (@expr.interp base_type ident base_type_interp (@ident.gen_interp cast_outside_of_range)).
+    Notation interp := (@expr.interp base.type ident base.interp (@ident_interp)).
+    Notation gen_Interp cast_outside_of_range := (@expr.Interp base.type ident base.interp (@ident.gen_interp cast_outside_of_range)).
+    Notation gen_interp cast_outside_of_range := (@expr.interp base.type ident base.interp (@ident.gen_interp cast_outside_of_range)).
 
-    Ltac reify_type ty := type.reify ltac:(reify_base_type) constr:(base_type) ty.
+    Ltac reify_type ty := type.reify ltac:(reify_base_type) constr:(base.type) ty.
     Notation reify_type t := (ltac:(let rt := reify_type t in exact rt)) (only parsing).
     Notation reify_type_of e := (reify_type ((fun t (_ : t) => t) _ e)) (only parsing).
 

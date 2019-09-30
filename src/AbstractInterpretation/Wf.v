@@ -411,7 +411,7 @@ Module Compilers.
                            | break_innermost_match_step
                            | progress subst
                            | progress cbv [type_base ident.smart_Literal] in *
-                           | progress cbn [invert_Literal ident.invert_Literal] in *
+                           | progress cbn [invert_Literal] in *
                            | discriminate
                            | progress destruct_head' False
                            | progress expr.invert_subst
@@ -469,7 +469,7 @@ Module Compilers.
                               | apply DefaultValue.expr.base.wf_default
                               | apply DefaultValue.expr.wf_default
                               | progress expr.invert_subst
-                              | progress cbn [ident.annotate ident.smart_Literal invert_Literal ident.invert_Literal invert_pair invert_AppIdent2 invert_App2 fst snd projT2 projT1 eq_rect Option.bind] in *
+                              | progress cbn [ident.annotate ident.smart_Literal invert_Literal invert_pair invert_AppIdent2 invert_App2 fst snd projT2 projT1 eq_rect Option.bind] in *
                               | progress destruct_head' False
                               | progress inversion_option
                               | progress destruct_head'_ex

@@ -72,7 +72,8 @@ Module Compilers.
           let ridc := lazymatch goal with |- context[@raw_ident_infos_of _ _ _ ?ridc] => ridc end in
           destruct ridc; reflexivity.
 
-        Ltac prove_eq_indep_types_of_eq_types _ :=
+        Ltac prove_eq_indep_types_of_eq_types reflect_base_beq _ :=
+          pose proof reflect_base_beq;
           intros;
           let ridc := lazymatch goal with H : context[@raw_ident_infos_of _ _ _ ?ridc] |- _ => ridc end in
           destruct ridc; cbv in *;
@@ -117,10 +118,13 @@ Module Compilers.
       Module Export Settings.
         Export ident.GoalType.Settings.
       End Settings.
-      Ltac prove_package_proofs _ :=
+      Ltac prove_package_proofs exprInfoAndExprExtraInfo :=
         idtac;
         let time_if_debug1 := Tactics.time_if_debug1 in
         let pkg := lazymatch goal with |- @package_proofs _ _ ?pkg => pkg end in
+        let exprInfo := (eval hnf in (Specif.projT1 exprInfoAndExprExtraInfo)) in
+        let exprExtraInfo := (eval hnf in (Specif.projT2 exprInfoAndExprExtraInfo)) in
+        let reflect_base_beq := lazymatch (eval hnf in exprExtraInfo) with {| Classes.reflect_base_beq := ?reflect_base_beq |} => reflect_base_beq end in
         cbv [pkg];
         unshelve econstructor;
         [ let __ := Tactics.debug1 ltac:(fun _ => idtac "Proving is_simple_correct0...") in
@@ -132,7 +136,7 @@ Module Compilers.
         | let __ := Tactics.debug1 ltac:(fun _ => idtac "Proving split_ident_to_ident...") in
           time_if_debug1 Raw.ident.prove_split_ident_to_ident; fail 0 "A goal remains"
         | let __ := Tactics.debug1 ltac:(fun _ => idtac "Proving eq_indep_types_of_eq_types...") in
-          time_if_debug1 Raw.ident.prove_eq_indep_types_of_eq_types; fail 0 "A goal remains"
+          time_if_debug1 ltac:(Raw.ident.prove_eq_indep_types_of_eq_types reflect_base_beq); fail 0 "A goal remains"
         | let __ := Tactics.debug1 ltac:(fun _ => idtac "Proving fold_eta_ident_cps...") in
           time_if_debug1 ident.prove_fold_eta_ident_cps; fail 0 "A goal remains"
         | let __ := Tactics.debug1 ltac:(fun _ => idtac "Proving fold_unify...") in
@@ -143,9 +147,9 @@ Module Compilers.
           time_if_debug1 Raw.ident.prove_eq_invert_bind_args_unknown; fail 0 "A goal remains"
         | let __ := Tactics.debug1 ltac:(fun _ => idtac "Proving eq_unify_unknown...") in
           time_if_debug1 ident.prove_eq_unify_unknown; fail 0 "A goal remains" ].
-      Ltac cache_build_package_proofs package :=
+      Ltac cache_build_package_proofs exprInfoAndExprExtraInfo package :=
         let name := fresh "ident_package_proofs" in
-        cache_proof_with_type_by (@package_proofs _ _ package) ltac:(prove_package_proofs ()) name.
+        cache_proof_with_type_by (@package_proofs _ _ package) ltac:(prove_package_proofs exprInfoAndExprExtraInfo) name.
     End ProofTactic.
   End pattern.
 End Compilers.

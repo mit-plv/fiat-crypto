@@ -567,6 +567,7 @@ Section of_prefancy.
                | progress subst
                | progress cbn [GallinaReify.base.reify ident.ident_Literal ident.buildIdent] in *
                | progress cbn [projT1 projT2 eq_rect of_prefancy_ident option_map] in *
+               | progress cbv [ident.literal] in *
                | progress inversion_sigma
                | progress Z.ltb_to_lt
                | progress break_innermost_match
