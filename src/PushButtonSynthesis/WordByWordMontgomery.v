@@ -29,12 +29,12 @@ Require Import Crypto.Util.ZUtil.Shift. (* For WBW montgomery proofs *)
 Require Import Crypto.Util.Tactics.HasBody.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.SpecializeBy.
-Require Import Crypto.LanguageWf.
-Require Import Crypto.LanguageWfExtra.
-Require Import Crypto.Language.
-Require Import Crypto.IdentifierExtra.
-Require Import Crypto.AbstractInterpretation.
-Require Import Crypto.LanguageStringification.
+Require Import Crypto.Language.Wf.
+Require Import Crypto.Language.WfExtra.
+Require Import Crypto.Language.Language.
+Require Import Crypto.Language.API.
+Require Import Crypto.AbstractInterpretation.AbstractInterpretation.
+Require Import Crypto.Stringification.Language.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Arithmetic.Freeze.
@@ -50,11 +50,11 @@ Import ListNotations.
 Local Open Scope Z_scope. Local Open Scope list_scope. Local Open Scope bool_scope.
 
 Import
-  LanguageWf.Compilers
-  LanguageWfExtra.Compilers
+  Language.Wf.Compilers
+  Language.WfExtra.Compilers
   Language.Compilers
   AbstractInterpretation.Compilers
-  LanguageStringification.Compilers.
+  Stringification.Language.Compilers.
 Import Compilers.defaults.
 
 Import COperationSpecifications.Primitives.

@@ -3,9 +3,9 @@ Require Import Coq.Strings.String.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Lists.List.
 Require Import Crypto.Util.ZRange.
-Require Import Crypto.Language.
-Require Import Crypto.IdentifierExtra.
-Require Import Crypto.CStringification.
+Require Import Crypto.Language.Language.
+Require Import Crypto.Language.API.
+Require Import Crypto.Stringification.C.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Arithmetic.Primitives.
@@ -15,7 +15,7 @@ Local Open Scope Z_scope. Local Open Scope list_scope.
 
 Import
   Language.Compilers
-  CStringification.Compilers.
+  Stringification.C.Compilers.
 Import Compilers.defaults.
 
 Import Associational Positional.

@@ -8,9 +8,9 @@ Require Import Crypto.Util.ErrorT.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
-Require Import Crypto.Language.
-Require Import Crypto.IdentifierExtra.
-Require Import Crypto.LanguageStringification.
+Require Import Crypto.Language.Language.
+Require Import Crypto.Language.API.
+Require Import Crypto.Stringification.Language.
 Require Import Crypto.Arithmetic.BarrettReduction.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.ModOps.
@@ -28,7 +28,7 @@ Local Open Scope Z_scope. Local Open Scope list_scope. Local Open Scope bool_sco
 
 Import
   Language.Compilers
-  LanguageStringification.Compilers.
+  Stringification.Language.Compilers.
 Import Compilers.defaults.
 
 Import COperationSpecifications.Primitives.

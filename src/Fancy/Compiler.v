@@ -1,9 +1,9 @@
 Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
 Require Import Coq.Lists.List. Import ListNotations.
-Require Import Crypto.Identifier. Import Identifier.Compilers.
-Require Import Crypto.LanguageWf. Import LanguageWf.Compilers.
-Require Import Crypto.LanguageInversion. Import LanguageInversion.Compilers.
-Require Import Crypto.IdentifierExtra. Import IdentifierExtra.Compilers.
+Require Import Crypto.Language.Identifier. Import Identifier.Compilers.
+Require Import Crypto.Language.Wf. Import Language.Wf.Compilers.
+Require Import Crypto.Language.Inversion. Import Language.Inversion.Compilers.
+Require Import Crypto.Language.API. Import Language.API.Compilers.
 Import Compilers.defaults.
 Require Import Crypto.CastLemmas.
 Require Import Crypto.Fancy.Spec.
@@ -534,15 +534,15 @@ Section of_prefancy.
                   | progress cbv [id]
                   | progress cbn [eq_rect projT1 projT2 expr.interp ident.interp ident.gen_interp interp_base defaults.base defaults.type_base interp interp_if_Z option_map] in *
                   | progress cbn [invert_expr.invert_Ident] in * (* N.B. Must be above [break_innermost_match] for proofs below to work *)
-                  | progress LanguageInversion.Compilers.type_beq_to_eq
+                  | progress Language.Inversion.Compilers.type_beq_to_eq
                   | progress name_eqb_to_eq
-                  | progress LanguageInversion.Compilers.rewrite_type_transport_correct
+                  | progress Language.Inversion.Compilers.rewrite_type_transport_correct
                   | progress HProp.eliminate_hprop_eq
                   | progress break_innermost_match_hyps
                   | progress break_innermost_match
                   | progress inversion_type
                   | progress expr.invert_subst
-                  | progress LanguageInversion.Compilers.expr.inversion_expr
+                  | progress Language.Inversion.Compilers.expr.inversion_expr
                   | solve [auto]
                   | contradiction
              ].
@@ -622,7 +622,7 @@ Section of_prefancy.
              | _ => progress destruct_head'_sig
              | _ => progress destruct_head'_and
              | _ => progress hammer
-             | _ => progress LanguageInversion.Compilers.expr.invert_subst
+             | _ => progress Language.Inversion.Compilers.expr.invert_subst
              | _ => rewrite cast_mod by (cbv; congruence)
              | _ => rewrite Z.mod_mod by omega
              | _ => rewrite Z.mod_small by apply b2z_range

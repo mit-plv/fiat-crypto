@@ -5,10 +5,10 @@ Require Import Coq.Lists.List. Import ListNotations.
 Require Import Crypto.Fancy.Compiler.
 Require Import Crypto.Fancy.Prod.
 Require Import Crypto.Fancy.Spec.
-Require Import Crypto.Language. Import Language.Compilers.
-Require Import Crypto.Identifier. Import Identifier.Compilers.
-Require Import Crypto.IdentifierExtra. Import IdentifierExtra.Compilers.
-Require Import Crypto.LanguageWf.
+Require Import Crypto.Language.Language. Import Language.Compilers.
+Require Import Crypto.Language.Identifier. Import Identifier.Compilers.
+Require Import Crypto.Language.API. Import Language.API.Compilers.
+Require Import Crypto.Language.Wf.
 Require Import Crypto.Arithmetic.FancyMontgomeryReduction.
 Require Import Crypto.PushButtonSynthesis.FancyMontgomeryReduction.
 Require Import Crypto.Util.Tactics.BreakMatch.
@@ -73,9 +73,9 @@ Module Montgomery256.
   Local Ltac wf_subgoal :=
     repeat match goal with
            | _ => progress cbn [fst snd]
-           | |- LanguageWf.Compilers.expr.wf _ _ _ =>
+           | |- Language.Wf.Compilers.expr.wf _ _ _ =>
              econstructor; try solve [econstructor]; [ ]
-           | |- LanguageWf.Compilers.expr.wf _ _ _ =>
+           | |- Language.Wf.Compilers.expr.wf _ _ _ =>
              solve [econstructor]
            | |- In _ _ => auto 50 using in_eq, in_cons
            end.

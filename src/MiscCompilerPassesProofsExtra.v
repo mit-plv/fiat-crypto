@@ -3,22 +3,22 @@ Require Import Coq.Lists.List.
 Require Import Coq.Classes.Morphisms.
 Require Import Coq.MSets.MSetPositive.
 Require Import Coq.FSets.FMapPositive.
-Require Import Crypto.Language.
-Require Import Crypto.LanguageInversion.
-Require Import Crypto.Identifier.
-Require Import Crypto.IdentifierExtra.
-Require Import Crypto.LanguageWf.
-Require Import Crypto.LanguageWfExtra.
+Require Import Crypto.Language.Language.
+Require Import Crypto.Language.Inversion.
+Require Import Crypto.Language.Identifier.
+Require Import Crypto.Language.API.
+Require Import Crypto.Language.Wf.
+Require Import Crypto.Language.WfExtra.
 Require Import Crypto.MiscCompilerPasses.
 Require Import Crypto.MiscCompilerPassesProofs.
 
 Module Compilers.
   Import Language.Compilers.
-  Import LanguageInversion.Compilers.
+  Import Language.Inversion.Compilers.
   Import Identifier.Compilers.
-  Import IdentifierExtra.Compilers.
-  Import LanguageWf.Compilers.
-  Import LanguageWfExtra.Compilers.
+  Import Language.API.Compilers.
+  Import Language.Wf.Compilers.
+  Import Language.WfExtra.Compilers.
   Import MiscCompilerPasses.Compilers.
   Import MiscCompilerPassesProofs.Compilers.
   Import expr.Notations.

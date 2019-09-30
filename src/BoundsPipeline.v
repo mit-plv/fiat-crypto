@@ -20,66 +20,66 @@ Require Import Crypto.Util.Tactics.HasBody.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.SplitInContext.
-Require Crypto.Language.
-Require Crypto.Identifier.
-Require Crypto.IdentifierExtra.
-Require Crypto.UnderLets.
-Require Crypto.AbstractInterpretation.
-Require Crypto.Rewriter.
+Require Crypto.Language.Language.
+Require Crypto.Language.Identifier.
+Require Crypto.Language.API.
+Require Crypto.Language.UnderLets.
+Require Crypto.AbstractInterpretation.AbstractInterpretation.
+Require Crypto.Rewriter.Rewriter.
 Require Crypto.MiscCompilerPasses.
-Require Crypto.LanguageStringification.
-Require Crypto.LanguageWf.
-Require Crypto.LanguageWfExtra.
-Require Crypto.UnderLetsProofs.
-Require Crypto.UnderLetsProofsExtra.
+Require Crypto.Stringification.Language.
+Require Crypto.Language.Wf.
+Require Crypto.Language.WfExtra.
+Require Crypto.Language.UnderLetsProofs.
+Require Crypto.Language.UnderLetsProofsExtra.
 Require Crypto.MiscCompilerPassesProofs.
 Require Crypto.MiscCompilerPassesProofsExtra.
-Require Crypto.RewriterAll.
-Require Crypto.AbstractInterpretationWf.
-Require Crypto.AbstractInterpretationWfExtra.
-Require Crypto.AbstractInterpretationProofs.
+Require Crypto.Rewriter.All.
+Require Crypto.AbstractInterpretation.Wf.
+Require Crypto.AbstractInterpretation.WfExtra.
+Require Crypto.AbstractInterpretation.Proofs.
 Require Import Crypto.Util.Notations.
 Import ListNotations. Local Open Scope Z_scope.
 
 Import
-  Crypto.LanguageWf
-  Crypto.LanguageWfExtra
-  Crypto.UnderLetsProofs
-  Crypto.UnderLetsProofsExtra
+  Crypto.Language.Wf
+  Crypto.Language.WfExtra
+  Crypto.Language.UnderLetsProofs
+  Crypto.Language.UnderLetsProofsExtra
   Crypto.MiscCompilerPassesProofs
   Crypto.MiscCompilerPassesProofsExtra
-  Crypto.RewriterAll
-  Crypto.AbstractInterpretationWf
-  Crypto.AbstractInterpretationWfExtra
-  Crypto.AbstractInterpretationProofs
-  Crypto.Language
-  Crypto.Identifier
-  Crypto.IdentifierExtra
-  Crypto.UnderLets
-  Crypto.AbstractInterpretation
-  Crypto.Rewriter
+  Crypto.Rewriter.All
+  Crypto.AbstractInterpretation.Wf
+  Crypto.AbstractInterpretation.WfExtra
+  Crypto.AbstractInterpretation.Proofs
+  Crypto.Language.Language
+  Crypto.Language.Identifier
+  Crypto.Language.API
+  Crypto.Language.UnderLets
+  Crypto.AbstractInterpretation.AbstractInterpretation
+  Crypto.Rewriter.Rewriter
   Crypto.MiscCompilerPasses
-  Crypto.LanguageStringification.
+  Crypto.Stringification.Language.
 
 Import
-  LanguageWf.Compilers
-  LanguageWfExtra.Compilers
+  Language.Wf.Compilers
+  Language.WfExtra.Compilers
   UnderLetsProofs.Compilers
   UnderLetsProofsExtra.Compilers
   MiscCompilerPassesProofs.Compilers
   MiscCompilerPassesProofsExtra.Compilers
-  RewriterAll.Compilers
-  AbstractInterpretationWf.Compilers
-  AbstractInterpretationWfExtra.Compilers
-  AbstractInterpretationProofs.Compilers
+  Rewriter.All.Compilers
+  AbstractInterpretation.Wf.Compilers
+  AbstractInterpretation.WfExtra.Compilers
+  AbstractInterpretation.Proofs.Compilers
   Language.Compilers
   Identifier.Compilers
-  IdentifierExtra.Compilers
+  Language.API.Compilers
   UnderLets.Compilers
   AbstractInterpretation.Compilers
   Rewriter.Compilers
   MiscCompilerPasses.Compilers
-  LanguageStringification.Compilers.
+  Stringification.Language.Compilers.
 
 Import Compilers.defaults.
 

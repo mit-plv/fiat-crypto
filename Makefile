@@ -55,10 +55,10 @@ PERFTESTING_VO := \
 LITE_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo \
 	src/Curves/Weierstrass/Jacobian.vo \
 	src/Curves/Weierstrass/Projective.vo \
-	src/RewriterWf1.vo \
-	src/RewriterWf2.vo \
-	src/RewriterRulesGood.vo \
-	src/RewriterAll.vo \
+	src/Rewriter.ProofsCommon.vo \
+	src/Rewriter.Wf.vo \
+	src/Rewriter.RulesGood.vo \
+	src/Rewriter.All.vo \
 	$(PERFTESTING_VO)
 NOBIGMEM_UNMADE_VOFILES := \
 	src/Curves/Weierstrass/AffineProofs.vo \
