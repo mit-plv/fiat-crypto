@@ -532,7 +532,7 @@ Section of_prefancy.
                   | progress inversion_of_prefancy_ident
                   | progress inversion_prod
                   | progress cbv [id]
-                  | progress cbn [eq_rect projT1 projT2 expr.interp ident.interp ident.gen_interp interp_base API.base API.type_base interp interp_if_Z option_map] in *
+                  | progress cbn [eq_rect projT1 projT2 expr.interp ident.interp ident.gen_interp interp_base Coercions.base Coercions.type_base interp interp_if_Z option_map] in *
                   | progress cbn [invert_expr.invert_Ident] in * (* N.B. Must be above [break_innermost_match] for proofs below to work *)
                   | progress Language.Inversion.Compilers.type_beq_to_eq
                   | progress name_eqb_to_eq
