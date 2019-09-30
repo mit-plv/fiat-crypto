@@ -238,7 +238,7 @@ Module Compilers.
       .
 
       Definition package : @GoalType.package Compilers.base Compilers.ident.
-      Proof. Time Tactic.make_package Compilers.exprInfo Compilers.exprExtraInfo Compilers.ident Raw.ident.ident ident.ident. Defined.
+      Proof. Time Tactic.make_package Compilers.exprInfoAndExprExtraInfo Raw.ident.ident ident.ident. Defined.
     End ident.
   End pattern.
 End Compilers.

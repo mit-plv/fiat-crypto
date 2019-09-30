@@ -282,31 +282,39 @@ Module Compilers.
               => constr:({| dep_types := Datatypes.nil ; indep_types := Datatypes.nil ; indep_args := (fun _ => Datatypes.nil) ; to_type := (fun _ _ => t) ; to_ident := fun _ _ _ => f |})
             end.
 
-          Ltac build_ident_infos_of base cident ident_to_cident :=
+          Ltac inner_build_ident_infos_of idc T base cident :=
+            destruct idc;
+            let T := (eval cbv in (projT2 T)) in
+            let v := fun_to_curried_ident_infos base cident T in
+            let v := (eval cbv [type_of_list List.map Type_of_kind_of_type] in v) in
+            let c := constr:(@Build_ident_infos base cident v) in
+            let T := type of c in
+            let T := (eval cbv [dep_types indep_types indep_args type_of_list List.map Type_of_kind_of_type] in T) in
+            refine ((c : T) _ _ _ _ _);
+            repeat decide equality.
+
+          Ltac build_ident_infos_of base reflect_base_beq reflect_base_interp_beq cident ident_to_cident :=
             let idc := fresh "idc" in
             let T := fresh in
+            let H := fresh in
+            let H' := fresh in
             let v
                 := constr:(
-                     fun idc
-                     => match ident_to_cident idc return ident_infos with
-                        | T
-                          => ltac:(destruct idc;
-                                   let T := (eval cbv in (projT2 T)) in
-                                   let v := fun_to_curried_ident_infos base cident T in
-                                   let v := (eval cbv [type_of_list List.map Type_of_kind_of_type] in v) in
-                                   let c := constr:(@Build_ident_infos base cident v) in
-                                   let T := type of c in
-                                   let T := (eval cbv [dep_types indep_types indep_args type_of_list List.map Type_of_kind_of_type] in T) in
-                                   refine ((c : T) _ _ _ _ _);
-                                   repeat decide equality)
-                        end) in
+                     match reflect_base_beq, reflect_base_interp_beq return _ with
+                     | H, H' (* make these available in the context *)
+                       => fun idc
+                          => match ident_to_cident idc return @ident_infos _ cident with
+                             | T
+                               => ltac:(inner_build_ident_infos_of idc T base cident)
+                             end
+                     end) in
             let v := (eval cbv [dep_types indep_types indep_args type_of_list preinfos List.map Type_of_kind_of_type Datatypes.prod_rect (*base.type.base_rect base.type.base_rec*) unit_rect sumbool_rect prod_rec unit_rec sumbool_rec eq_ind_r eq_ind eq_sym eq_rec eq_rect] in v) in
             v.
-          Ltac cache_build_ident_infos_of base cident ident_to_cident :=
+          Ltac cache_build_ident_infos_of base reflect_base_beq reflect_base_interp_beq cident ident_to_cident :=
             let name := fresh "raw_ident_infos_of" in
-            let term := build_ident_infos_of base cident ident_to_cident in
+            let term := build_ident_infos_of base reflect_base_beq reflect_base_interp_beq cident ident_to_cident in
             cache_term term name.
-          Ltac make_ident_infos_of base cident ident_to_cident := let v := build_ident_infos_of base cident ident_to_cident in refine v.
+          Ltac make_ident_infos_of base reflect_base_beq reflect_base_interp_beq cident ident_to_cident := let v := build_ident_infos_of base reflect_base_beq reflect_base_interp_beq cident ident_to_cident in refine v.
 
           Ltac refine_sigT_and_pair :=
             repeat first [ exact Datatypes.tt
@@ -694,9 +702,14 @@ Module Compilers.
       End Tactics.
 
       Module Tactic.
-        Ltac build_package exprInfo exprExtraInfo ident raw_ident pattern_ident :=
+        Ltac build_package exprInfoAndExprExtraInfo raw_ident pattern_ident :=
+          let exprInfo := (eval hnf in (Specif.projT1 exprInfoAndExprExtraInfo)) in
+          let exprExtraInfo := (eval hnf in (Specif.projT2 exprInfoAndExprExtraInfo)) in
           let base_interp := lazymatch (eval hnf in exprInfo) with {| Classes.base_interp := ?base_interp |} => base_interp end in
+          let ident := lazymatch (eval hnf in exprInfo) with {| Classes.ident := ?ident |} => ident end in
           let base_interp_beq := lazymatch (eval hnf in exprExtraInfo) with {| Classes.base_interp_beq := ?base_interp_beq |} => base_interp_beq end in
+          let reflect_base_beq := lazymatch (eval hnf in exprExtraInfo) with {| Classes.reflect_base_beq := ?reflect_base_beq |} => reflect_base_beq end in
+          let reflect_base_interp_beq := lazymatch (eval hnf in exprExtraInfo) with {| Classes.reflect_base_interp_beq := ?reflect_base_interp_beq |} => reflect_base_interp_beq end in
           let base := lazymatch type of ident with
                       | Compilers.type.type (Compilers.base.type ?base) -> _ => base
                       | ?T => let exp := uconstr:(Compilers.type.type (Compilers.base.type ?base)) in
@@ -745,7 +758,7 @@ Module Compilers.
           let __ := Tactics.debug1 ltac:(fun _ => idtac "Building raw_ident_to_ident...") in
           let raw_ident_to_ident := constr:(@Raw.ident.ident_to_cident all_idents raw_ident raw_ident_index eta_raw_ident_cps_gen) in
           let __ := Tactics.debug1 ltac:(fun _ => idtac "Building raw_ident_infos_of...") in
-          let raw_ident_infos_of := Compilers.pattern.Raw.ident.Tactics.cache_build_ident_infos_of base ident raw_ident_to_ident in
+          let raw_ident_infos_of := Compilers.pattern.Raw.ident.Tactics.cache_build_ident_infos_of base reflect_base_beq reflect_base_interp_beq ident raw_ident_to_ident in
           let __ := Tactics.debug1 ltac:(fun _ => idtac "Building split_raw_ident_gen...") in
           let split_raw_ident_gen := Compilers.pattern.Raw.ident.Tactics.cache_build_split_ident_gen ident raw_ident raw_ident_infos_of all_raw_idents all_idents in
           (*let prefull_types := constr:(@Raw.ident.prefull_types raw_ident raw_ident_infos_of) in
@@ -831,8 +844,8 @@ Module Compilers.
                     arg_types_of_typed_ident_unfolded
                     unify
                     unify_unknown).
-        Ltac make_package exprInfo exprExtraInfo ident raw_ident pattern_ident :=
-          let res := build_package exprInfo exprExtraInfo ident raw_ident pattern_ident in refine res.
+        Ltac make_package exprInfoAndExprExtraInfo raw_ident pattern_ident :=
+          let res := build_package exprInfoAndExprExtraInfo raw_ident pattern_ident in refine res.
       End Tactic.
     End ident.
   End pattern.

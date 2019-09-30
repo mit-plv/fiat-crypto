@@ -32,6 +32,33 @@ Module Compilers.
   Export Language.Compilers.
   Import Identifier.Compilers.
 
+  Definition exprInfo : Classes.ExprInfoT := Eval hnf in projT1 exprInfoAndExprExtraInfo.
+  Definition exprExtraInfo : @Classes.ExprExtraInfoT exprInfo := Eval hnf in projT2 exprInfoAndExprExtraInfo.
+
+  Global Existing Instances
+         baseHasNat
+         baseHasNatCorrect
+         try_make_base_transport_cps_correct
+         buildEagerIdent
+         buildInterpEagerIdentCorrect
+         toRestrictedIdent
+         toFromRestrictedIdent
+         buildInterpIdentCorrect
+         invertIdent
+         buildInvertIdentCorrect
+         base_default
+         exprInfo
+  .
+  Global Existing Instance reflect_base_beq | 10.
+  Global Existing Instance reflect_base_interp_eq | 10.
+  Global Existing Instance try_make_base_transport_cps | 5.
+  Global Existing Instance buildIdent | 5.
+  Global Existing Instance gen_eqv_Reflexive_Proper | 1.
+  Global Existing Instance eqv_Reflexive_Proper | 1.
+  Global Existing Instance ident_gen_interp_Proper | 1.
+  Global Existing Instance ident_interp_Proper | 1.
+
+
   (** This file defines some convenience notations and definitions. *)
   Module base.
     Export Language.Compilers.base.
@@ -52,9 +79,9 @@ Module Compilers.
       Notation eta_base_cps_gen := Compilers.eta_base_cps_gen (only parsing).
       Notation eta_base_cps := Compilers.eta_base_cps (only parsing).
     End type.
-    Notation type := Compilers.base_type (only parsing).
+    Notation type := (@base.type base) (only parsing).
     Notation base_interp := Compilers.base_interp (only parsing).
-    Notation interp := Compilers.base_type_interp (only parsing).
+    Notation interp := (base.interp Compilers.base_interp) (only parsing).
     Notation reflect_base_beq := Compilers.reflect_base_beq (only parsing).
     Notation base_interp_beq := Compilers.base_interp_beq (only parsing).
     Notation baseHasNatCorrect := Compilers.baseHasNatCorrect (only parsing).
@@ -185,7 +212,7 @@ Module Compilers.
 
     Notation buildEagerIdent := Compilers.buildEagerIdent (only parsing).
     Notation buildInterpEagerIdentCorrect := Compilers.buildInterpEagerIdentCorrect (only parsing).
-    Notation fromRestrictedIdent := Compilers.fromRestrictedIdent (only parsing).
+    Notation toRestrictedIdent := Compilers.toRestrictedIdent (only parsing).
     Notation toFromRestrictedIdent := Compilers.toFromRestrictedIdent (only parsing).
 
     Ltac reify term then_tac reify_rec else_tac := Compilers.reify_ident term then_tac reify_rec else_tac.
@@ -209,7 +236,7 @@ Module Compilers.
       Notation "## x" := (expr.Ident (Compilers.ident_Literal x)) (only printing) : expr_scope.
       Notation "## x" := (smart_Literal (base_interp:=base_interp) (t:=base.reify_type_of x) x) (only parsing) : expr_scope.
       Notation "# x" := (expr.Ident x) : expr_pat_scope.
-      Notation "# x" := (@expr.Ident base_type _ _ _ x) : expr_scope.
+      Notation "# x" := (@expr.Ident base.type _ _ _ x) : expr_scope.
       Notation "x @ y" := (expr.App x%expr_pat y%expr_pat) : expr_pat_scope.
       Notation "( x , y , .. , z )" := (expr.App (expr.App (#Compilers.ident_pair) .. (expr.App (expr.App (#Compilers.ident_pair) x%expr) y%expr) .. ) z%expr) : expr_scope.
       Notation "( x , y , .. , z )" := (expr.App (expr.App (#Compilers.ident_pair)%expr_pat .. (expr.App (expr.App (#Compilers.ident_pair)%expr_pat x%expr_pat) y%expr_pat) .. ) z%expr_pat) : expr_pat_scope.
@@ -242,16 +269,16 @@ Module Compilers.
   Notation ident := Identifier.Compilers.ident (only parsing).
 
   Module expr.
-    Notation gen_Interp cast_outside_of_range := (@expr.Interp base_type ident base_type_interp (@ident.gen_interp cast_outside_of_range)).
-    Notation gen_interp cast_outside_of_range := (@expr.interp base_type ident base_type_interp (@ident.gen_interp cast_outside_of_range)).
+    Notation gen_Interp cast_outside_of_range := (@expr.Interp base.type ident base.interp (@ident.gen_interp cast_outside_of_range)).
+    Notation gen_interp cast_outside_of_range := (@expr.interp base.type ident base.interp (@ident.gen_interp cast_outside_of_range)).
   End expr.
 
   Ltac reify var term :=
-    expr.reify constr:(base_type) ident ltac:(reify_base_type) ltac:(reify_ident) var term.
+    expr.reify constr:(base.type) ident ltac:(reify_base_type) ltac:(reify_ident) var term.
   Ltac Reify term :=
-    expr.Reify constr:(base_type) ident ltac:(reify_base_type) ltac:(reify_ident) term.
+    expr.Reify constr:(base.type) ident ltac:(reify_base_type) ltac:(reify_ident) term.
   Ltac Reify_rhs _ :=
-    expr.Reify_rhs constr:(base_type) ident ltac:(reify_base_type) ltac:(reify_ident) (@base_type_interp) (@ident_interp) ().
+    expr.Reify_rhs constr:(base.type) ident ltac:(reify_base_type) ltac:(reify_ident) (@base.interp) (@ident_interp) ().
 
   Global Hint Extern 1 (@expr.Reified_of _ _ _ _ ?t ?v ?rv)
   => cbv [expr.Reified_of]; Reify_rhs (); reflexivity : typeclass_instances.
@@ -260,19 +287,18 @@ Module Compilers.
     Export Language.Compilers.invert_expr.
 
     Module ident.
-      Notation invert_Literal := Compilers.invert_ident_Literal (only parsing).
       Notation invertIdent := Compilers.invertIdent (only parsing).
       Notation buildInvertIdentCorrect := Compilers.buildInvertIdentCorrect (only parsing).
     End ident.
 
     Section with_var.
-      Context {var : type base_type -> Type}.
-      Local Notation expr := (@expr base_type ident var).
+      Context {var : type base.type -> Type}.
+      Local Notation expr := (@expr base.type ident var).
       Local Notation try_transportP P := (@type.try_transport _ _ P _ _).
       Local Notation try_transport := (try_transportP _).
-      Let type_base (x : base) : base_type := base.type.type_base x.
+      Let type_base (x : base) : base.type := base.type.type_base x.
       Let base {bt} (x : Language.Compilers.base.type bt) : type.type _ := type.base x.
-      Local Coercion base : base_type >-> type.type.
+      Local Coercion base : base.type >-> type.type.
       Local Coercion type_base : Compilers.base >-> base.type.
       Local Notation tZ := (base.type.type_base Z).
 
@@ -310,7 +336,7 @@ Module Compilers.
   End Classes.
 
   Module Coercions.
-    Coercion type_base (x : base) : base_type := base.type.type_base x.
+    Coercion type_base (x : base) : base.type := base.type.type_base x.
     Coercion base {bt} (x : Language.Compilers.base.type bt) : type.type _ := type.base x.
     Global Arguments base {_} _ / .
     Global Arguments type_base _ / .
