@@ -691,51 +691,67 @@ Module Compilers.
                => fun '((r1', r2') : option zrange * option zrange)
                   => (interp_Z_cast r1 r1', interp_Z_cast r2 r2')
              (** TODO(jadep): fill in fancy bounds analysis rules *)
-             | ident.fancy_add log2wordmax _
-             | ident.fancy_sub log2wordmax _
-               => let wordmax := 2^log2wordmax in
-                  let r := r[0~>wordmax-1] in
-                  fun args
-                  => if ZRange.type.base.option.is_tighter_than args (Some r, Some r)
-                     then (Some r, Some r[0~>1])
-                     else ZRange.type.base.option.None
-             | ident.fancy_addc log2wordmax _
-             | ident.fancy_subb log2wordmax _
-               => let wordmax := 2^log2wordmax in
-                  let r := r[0~>wordmax-1] in
-                  fun args
-                  => if ZRange.type.base.option.is_tighter_than args (Some r[0~>1], Some r, Some r)
-                     then (Some r, Some r[0~>1])
-                     else ZRange.type.base.option.None
-             | ident.fancy_mulll log2wordmax
-             | ident.fancy_mullh log2wordmax
-             | ident.fancy_mulhl log2wordmax
-             | ident.fancy_mulhh log2wordmax
-               => let wordmax := 2^log2wordmax in
-                  let r := r[0~>wordmax-1] in
-                  fun args
-                  => if ZRange.type.base.option.is_tighter_than args (Some r, Some r)
-                     then if (Z.eqb (log2wordmax mod 2) 0)
-                          then Some r
+             | ident.fancy_add
+             | ident.fancy_sub
+               => fun '((log2wordmax, imm), args)
+                  => match to_literal (t:=tZ) log2wordmax, to_literal (t:=tZ) imm with
+                     | Some log2wordmax, _
+                       => let wordmax := 2^log2wordmax in
+                          let r := r[0~>wordmax-1] in
+                          if ZRange.type.base.option.is_tighter_than (t:=tZ*tZ) args (Some r, Some r)
+                          then (Some r, Some r[0~>1])
                           else ZRange.type.base.option.None
-                     else ZRange.type.base.option.None
-             | ident.fancy_rshi log2wordmax n as idc
-               => let wordmax := 2^log2wordmax in
-                  let r := r[0~>wordmax-1] in
-                  let r_nbits := r[0~>2^n-1] in
-                  fun args
-                  =>
-                    if (0 <=? log2wordmax)%Z
-                    then if (ZRange.type.base.option.is_tighter_than args (Some r_nbits, Some r) && (0 <=? n)%Z)
-                         then
-                           hi_range <- fst args;
-                             lo_range <- snd args;
-                             Some (ZRange.four_corners (fun x y => ident.interp idc (x, y)) hi_range lo_range)
-                         else if ZRange.type.base.option.is_tighter_than args (Some r, Some r)
-                              then Some r
-                              else ZRange.type.base.option.None
-                    else ZRange.type.base.option.None
-             | ident.fancy_selm _
+                     | _, _ => ZRange.type.base.option.None
+                     end
+             | ident.fancy_addc
+             | ident.fancy_subb
+               => fun '((log2wordmax, imm), args)
+                  => match to_literal (t:=tZ) log2wordmax, to_literal (t:=tZ) imm with
+                     | Some log2wordmax, _
+                       => let wordmax := 2^log2wordmax in
+                          let r := r[0~>wordmax-1] in
+                          if ZRange.type.base.option.is_tighter_than (t:=tZ*tZ*tZ) args (Some r[0~>1], Some r, Some r)
+                          then (Some r, Some r[0~>1])
+                          else ZRange.type.base.option.None
+                     | _, _ => ZRange.type.base.option.None
+                     end
+             | ident.fancy_mulll
+             | ident.fancy_mullh
+             | ident.fancy_mulhl
+             | ident.fancy_mulhh
+               => fun '(log2wordmax, args)
+                  => match to_literal (t:=tZ) log2wordmax with
+                     | Some log2wordmax
+                       => let wordmax := 2^log2wordmax in
+                          let r := r[0~>wordmax-1] in
+                          if ZRange.type.base.option.is_tighter_than (t:=tZ*tZ) args (Some r, Some r)
+                          then if (Z.eqb (log2wordmax mod 2) 0)
+                               then Some r
+                               else ZRange.type.base.option.None
+                          else ZRange.type.base.option.None
+                     | _ => ZRange.type.base.option.None
+                     end
+             | ident.fancy_rshi as idc
+               => fun '((log2wordmax, n), args)
+                  => match to_literal (t:=tZ) log2wordmax, to_literal (t:=tZ) n with
+                     | Some log2wordmax, Some n
+                       => let wordmax := 2^log2wordmax in
+                          let r := r[0~>wordmax-1] in
+                          let r_nbits := r[0~>2^n-1] in
+                          if (0 <=? log2wordmax)%Z
+                          then if (ZRange.type.base.option.is_tighter_than (t:=tZ*tZ) args (Some r_nbits, Some r) && (0 <=? n)%Z)
+                               then
+                                 hi_range <- fst args;
+                                   lo_range <- snd args;
+                                   Some (ZRange.four_corners (fun x y => ident.interp idc ((log2wordmax, n), (x, y))) hi_range lo_range)
+                               else if ZRange.type.base.option.is_tighter_than (t:=tZ*tZ) args (Some r, Some r)
+                                    then Some r
+                                    else ZRange.type.base.option.None
+                          else ZRange.type.base.option.None
+                     | _, _ => ZRange.type.base.option.None
+                     end
+             | ident.fancy_selm
+               => fun '(_, (_, y, z)) => y <- y; z <- z; Some (ZRange.union y z)
              | ident.fancy_selc
              | ident.fancy_sell
                => fun '(_, y, z) => y <- y; z <- z; Some (ZRange.union y z)

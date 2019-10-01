@@ -53,6 +53,25 @@ Section of_prefancy.
                 eidc
                 x))
           f).
+  Local Notation pair_LiteralZ B v e :=
+    (expr.App
+       (s:=type.base B)
+       (expr.App
+          (expr.Ident (@ident.pair _ _))
+          (expr.Ident (ident.Literal (t:=base.type.Z) v)))
+       e).
+  Local Notation pair_LiteralZZ B v1 v2 e :=
+    (expr.App
+       (s:=type.base B)
+       (expr.App
+          (expr.Ident (@ident.pair _ _))
+          (expr.App
+             (expr.App
+                (expr.Ident (@ident.pair _ _))
+                (expr.Ident (ident.Literal (t:=base.type.Z) v1)))
+             (expr.Ident (ident.Literal (t:=base.type.Z) v2))))
+       e).
+
   Context (name : Type) (name_succ : name -> name) (error : name) (consts : Z -> option name).
 
   Fixpoint base_var (t : base.type) : Type :=
@@ -111,64 +130,104 @@ Section of_prefancy.
                                       end
                                       -> option {i : instruction & tuple name i.(num_source_regs) }
     with
-    | ident.fancy_add log2wordmax imm
-      => fun args : @cexpr var (tZ * tZ) =>
-           if Z.eqb log2wordmax 256
-           then Some (existT _ (ADD imm) (of_prefancy_scalar args))
-           else None
-    | ident.fancy_addc log2wordmax imm
-      => fun args : @cexpr var (tZ * tZ * tZ)  =>
-           if Z.eqb log2wordmax 256
-           then Some (existT _ (ADDC imm) (of_prefancy_scalar ((#ident.snd @ (#ident.fst @ args)), (#ident.snd @ args))))
-           else None
-    | ident.fancy_sub log2wordmax imm
-      => fun args : @cexpr var (tZ * tZ)  =>
-           if Z.eqb log2wordmax 256
-           then Some (existT _ (SUB imm) (of_prefancy_scalar args))
-           else None
-    | ident.fancy_subb log2wordmax imm
-      => fun args : @cexpr var (tZ * tZ * tZ)  =>
-           if Z.eqb log2wordmax 256
-           then Some (existT _ (SUBC imm) (of_prefancy_scalar ((#ident.snd @ (#ident.fst @ args)), (#ident.snd @ args))))
-           else None
-    | ident.fancy_mulll log2wordmax
-      => fun args : @cexpr var (tZ * tZ)  =>
-           if Z.eqb log2wordmax 256
-           then Some (existT _ MUL128LL (of_prefancy_scalar args))
-           else None
-    | ident.fancy_mullh log2wordmax
-      => fun args : @cexpr var (tZ * tZ)  =>
-           if Z.eqb log2wordmax 256
-           then Some (existT _ MUL128LU (of_prefancy_scalar ((#ident.snd @ args), (#ident.fst @ args))))
-           else None
-    | ident.fancy_mulhl log2wordmax
-      => fun args : @cexpr var (tZ * tZ)  =>
-           if Z.eqb log2wordmax 256
-           then Some (existT _ MUL128UL (of_prefancy_scalar ((#ident.snd @ args), (#ident.fst @ args))))
-           else None
-    | ident.fancy_mulhh log2wordmax
-      => fun args : @cexpr var (tZ * tZ)  =>
-           if Z.eqb log2wordmax 256
-           then Some (existT _ MUL128UU (of_prefancy_scalar args))
-           else None
-    | ident.fancy_rshi log2wordmax imm
-      => fun args : @cexpr var (tZ * tZ)  =>
-           if Z.eqb log2wordmax 256
-           then Some (existT _ (RSHI imm) (of_prefancy_scalar args))
-           else None
     | ident.fancy_selc
       => fun args : @cexpr var (tZ * tZ * tZ) => Some (existT _ SELC (of_prefancy_scalar ((#ident.snd @ args), (#ident.snd @ (#ident.fst @ args)))))
-    | ident.fancy_selm log2wordmax
-      => fun args : @cexpr var (tZ * tZ * tZ)  =>
-           if Z.eqb log2wordmax 256
-           then Some (existT _ SELM (of_prefancy_scalar ((#ident.snd @ args), (#ident.snd @ (#ident.fst @ args)))))
-           else None
     | ident.fancy_sell
       => fun args : @cexpr var (tZ * tZ * tZ) => Some (existT _ SELL (of_prefancy_scalar ((#ident.snd @ args), (#ident.snd @ (#ident.fst @ args)))))
     | ident.fancy_addm
       => fun args : @cexpr var (tZ * tZ * tZ) => Some (existT _ ADDM (of_prefancy_scalar args))
+    | ident.fancy_mulll
+      => fun args : @cexpr var (tZ * (tZ * tZ)) =>
+           match args with
+           | pair_LiteralZ (tZ * tZ) log2wordmax args =>
+             if Z.eqb log2wordmax 256
+             then Some (existT _ MUL128LL (of_prefancy_scalar args))
+             else None
+           | _ => None
+           end
+    | ident.fancy_mullh
+      => fun args : @cexpr var (tZ * (tZ * tZ)) =>
+           match args with
+           | pair_LiteralZ (tZ * tZ) log2wordmax args =>
+             if Z.eqb log2wordmax 256
+             then Some (existT _ MUL128LU (of_prefancy_scalar ((#ident.snd @ args), (#ident.fst @ args))))
+             else None
+           | _ => None
+           end
+    | ident.fancy_mulhl
+      => fun args : @cexpr var (tZ * (tZ * tZ)) =>
+           match args with
+           | pair_LiteralZ (tZ * tZ) log2wordmax args =>
+             if Z.eqb log2wordmax 256
+             then Some (existT _ MUL128UL (of_prefancy_scalar ((#ident.snd @ args), (#ident.fst @ args))))
+             else None
+           | _ => None
+           end
+    | ident.fancy_mulhh
+      => fun args : @cexpr var (tZ * (tZ * tZ)) =>
+           match args with
+           | pair_LiteralZ (tZ * tZ) log2wordmax args =>
+             if Z.eqb log2wordmax 256
+             then Some (existT _ MUL128UU (of_prefancy_scalar args))
+             else None
+           | _ => None
+           end
+    | ident.fancy_selm
+      => fun args : @cexpr var (tZ * (tZ * tZ * tZ)) =>
+           match args with
+           | pair_LiteralZ (tZ * tZ * tZ) log2wordmax args =>
+             if Z.eqb log2wordmax 256
+             then Some (existT _ SELM (of_prefancy_scalar ((#ident.snd @ args), (#ident.snd @ (#ident.fst @ args)))))
+             else None
+           | _ => None
+           end
+    | ident.fancy_add
+      => fun args : @cexpr var ((tZ * tZ) * (tZ * tZ)) =>
+           match args with
+           | pair_LiteralZZ (tZ * tZ) log2wordmax imm args =>
+             if Z.eqb log2wordmax 256
+             then Some (existT _ (ADD imm) (of_prefancy_scalar args))
+             else None
+           | _ => None
+           end
+    | ident.fancy_addc
+      => fun args : @cexpr var ((tZ * tZ) * (tZ * tZ * tZ)) =>
+           match args with
+           | pair_LiteralZZ (tZ * tZ * tZ) log2wordmax imm args =>
+               if Z.eqb log2wordmax 256
+               then Some (existT _ (ADDC imm) (of_prefancy_scalar ((#ident.snd @ (#ident.fst @ args)), (#ident.snd @ args))))
+               else None
+           | _ => None
+           end
+    | ident.fancy_sub
+      => fun args : @cexpr var ((tZ * tZ) * (tZ * tZ)) =>
+           match args with
+           | pair_LiteralZZ (tZ * tZ) log2wordmax imm args =>
+               if Z.eqb log2wordmax 256
+               then Some (existT _ (SUB imm) (of_prefancy_scalar args))
+               else None
+           | _ => None
+           end
+    | ident.fancy_subb
+      => fun args : @cexpr var ((tZ * tZ) * (tZ * tZ * tZ)) =>
+           match args with
+           | pair_LiteralZZ (tZ * tZ * tZ) log2wordmax imm args =>
+               if Z.eqb log2wordmax 256
+               then Some (existT _ (SUBC imm) (of_prefancy_scalar ((#ident.snd @ (#ident.fst @ args)), (#ident.snd @ args))))
+               else None
+           | _ => None
+           end
+    | ident.fancy_rshi
+      => fun args : @cexpr var ((tZ * tZ) * (tZ * tZ)) =>
+           match args with
+           | pair_LiteralZZ (tZ * tZ) log2wordmax imm args =>
+               if Z.eqb log2wordmax 256
+               then Some (existT _ (RSHI imm) (of_prefancy_scalar args))
+               else None
+           | _ => None
+           end
     | _ => fun _ => None
-    end.
+    end%option.
 
   Local Notation "x <- y ; f" := (match y with Some x => f | None => Ret error end).
   Definition of_prefancy_step
@@ -291,51 +350,51 @@ Section of_prefancy.
         forall r imm x y,
           valid_scalar x ->
           valid_scalar y ->
-          valid_ident r (new_cc_to_name r (ADD imm)) (ident.fancy_add 256 imm) (x, y)%expr
+          valid_ident r (new_cc_to_name r (ADD imm)) ident.fancy_add ((##256, ##imm), (x, y))%expr
     | valid_fancy_addc :
         forall r imm c x y,
           (of_prefancy_scalar (t:= tZ) c = r CC.C) ->
           valid_carry c ->
           valid_scalar x ->
           valid_scalar y ->
-          valid_ident r (new_cc_to_name r (ADDC imm)) (ident.fancy_addc 256 imm) (c, x, y)%expr
+          valid_ident r (new_cc_to_name r (ADDC imm)) ident.fancy_addc ((##256, ##imm), (c, x, y))%expr
     | valid_fancy_sub :
         forall r imm x y,
           valid_scalar x ->
           valid_scalar y ->
-          valid_ident r (new_cc_to_name r (SUB imm)) (ident.fancy_sub 256 imm) (x, y)%expr
+          valid_ident r (new_cc_to_name r (SUB imm)) ident.fancy_sub ((##256, ##imm), (x, y))%expr
     | valid_fancy_subb :
         forall r imm c x y,
           (of_prefancy_scalar (t:= tZ) c = r CC.C) ->
           valid_carry c ->
           valid_scalar x ->
           valid_scalar y ->
-          valid_ident r (new_cc_to_name r (SUBC imm)) (ident.fancy_subb 256 imm) (c, x, y)%expr
+          valid_ident r (new_cc_to_name r (SUBC imm)) ident.fancy_subb ((##256, ##imm), (c, x, y))%expr
     | valid_fancy_mulll :
         forall r x y,
           valid_scalar x ->
           valid_scalar y ->
-          valid_ident r (new_cc_to_name r MUL128LL) (ident.fancy_mulll 256) (x, y)%expr
+          valid_ident r (new_cc_to_name r MUL128LL) ident.fancy_mulll ((##256), (x, y))%expr
     | valid_fancy_mullh :
         forall r x y,
           valid_scalar x ->
           valid_scalar y ->
-          valid_ident r (new_cc_to_name r MUL128LU) (ident.fancy_mullh 256) (x, y)%expr
+          valid_ident r (new_cc_to_name r MUL128LU) ident.fancy_mullh ((##256), (x, y))%expr
     | valid_fancy_mulhl :
         forall r x y,
           valid_scalar x ->
           valid_scalar y ->
-          valid_ident r (new_cc_to_name r MUL128UL) (ident.fancy_mulhl 256) (x, y)%expr
+          valid_ident r (new_cc_to_name r MUL128UL) ident.fancy_mulhl ((##256), (x, y))%expr
     | valid_fancy_mulhh :
         forall r x y,
           valid_scalar x ->
           valid_scalar y ->
-          valid_ident r (new_cc_to_name r MUL128UU) (ident.fancy_mulhh 256) (x, y)%expr
+          valid_ident r (new_cc_to_name r MUL128UU) ident.fancy_mulhh ((##256), (x, y))%expr
     | valid_fancy_rshi :
         forall r imm x y,
           valid_scalar x ->
           valid_scalar y ->
-          valid_ident r (new_cc_to_name r (RSHI imm)) (ident.fancy_rshi 256 imm) (x, y)%expr
+          valid_ident r (new_cc_to_name r (RSHI imm)) ident.fancy_rshi ((##256, ##imm), (x, y))%expr
     | valid_fancy_selc :
         forall r c x y,
           (of_prefancy_scalar (t:= tZ) c = r CC.C) ->
@@ -349,7 +408,7 @@ Section of_prefancy.
           valid_scalar c ->
           valid_scalar x ->
           valid_scalar y ->
-          valid_ident r (new_cc_to_name r SELM) (ident.fancy_selm 256) (c, x, y)%expr
+          valid_ident r (new_cc_to_name r SELM) ident.fancy_selm ((##256), (c, x, y))%expr
     | valid_fancy_sell :
         forall r c x y,
           (of_prefancy_scalar (t:= tZ) c = r CC.L) ->
@@ -499,6 +558,7 @@ Section of_prefancy.
         repeat first [
                  progress HProp.eliminate_hprop_eq
                | progress subst
+               | progress cbn [GallinaReify.base.reify ident.ident_Literal ident.buildIdent] in *
                | progress cbn [projT1 projT2 eq_rect of_prefancy_ident option_map] in *
                | progress inversion_sigma
                | progress Z.ltb_to_lt
@@ -533,6 +593,7 @@ Section of_prefancy.
                   | progress inversion_prod
                   | progress cbv [id]
                   | progress cbn [eq_rect projT1 projT2 expr.interp ident.interp ident.gen_interp interp_base Coercions.base Coercions.type_base interp interp_if_Z option_map] in *
+                  | progress ident.fancy.cbv_fancy_in_all
                   | progress cbn [invert_expr.invert_Ident] in * (* N.B. Must be above [break_innermost_match] for proofs below to work *)
                   | progress Language.Inversion.Compilers.type_beq_to_eq
                   | progress name_eqb_to_eq
@@ -685,7 +746,7 @@ Section of_prefancy.
         | _, _ => fun _ _ _ => True
         end idc x rf.
     Proof.
-      destruct 1; try exact I; cbn [of_prefancy_ident]; hammer; intros; inversion_option; (simplify_ident; [ ]).
+      destruct 1; try exact I; cbn [of_prefancy_ident]; cbn [GallinaReify.base.reify ident.ident_Literal ident.buildIdent] in *; hammer; intros; inversion_option; (simplify_ident; [ ]).
       all:
         rewrite cast_mod by omega;
         match goal with

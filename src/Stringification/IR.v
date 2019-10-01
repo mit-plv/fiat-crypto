@@ -620,17 +620,17 @@ Module Compilers.
                  | ident.Z_cast2 _
                  | ident.Build_zrange
                  | ident.zrange_rect _
-                 | ident.fancy_add _ _
-                 | ident.fancy_addc _ _
-                 | ident.fancy_sub _ _
-                 | ident.fancy_subb _ _
-                 | ident.fancy_mulll _
-                 | ident.fancy_mullh _
-                 | ident.fancy_mulhl _
-                 | ident.fancy_mulhh _
-                 | ident.fancy_rshi _ _
+                 | ident.fancy_add
+                 | ident.fancy_addc
+                 | ident.fancy_sub
+                 | ident.fancy_subb
+                 | ident.fancy_mulll
+                 | ident.fancy_mullh
+                 | ident.fancy_mulhl
+                 | ident.fancy_mulhh
+                 | ident.fancy_rshi
                  | ident.fancy_selc
-                 | ident.fancy_selm _
+                 | ident.fancy_selm
                  | ident.fancy_sell
                  | ident.fancy_addm
                    => fun _ => type.interpM_return _ _ _ (inr ["Invalid identifier in arithmetic expression " ++ show true idc]%string)
