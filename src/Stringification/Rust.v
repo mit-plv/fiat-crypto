@@ -183,7 +183,7 @@ Module Rust.
   Definition to_strings (prefix : string) (e : IR.expr) : list string :=
     List.map (stmt_to_string prefix) e.
 
-  Import Crypto.Language.Language.Compilers Crypto.Language.Identifier.Compilers IR.OfPHOAS.
+  Import Crypto.Language.Language.Compilers Crypto.Language.API.Compilers IR.OfPHOAS.
   Local Notation tZ := (base.type.type_base base.type.Z).
 
   Inductive Mode := In | Out.
@@ -321,7 +321,7 @@ Module Rust.
 
   Definition ToFunctionLines (do_bounds_check : bool) (static : bool) (prefix : string) (name : string)
              {t}
-             (e : @Compilers.expr.Expr base.type ident.ident t)
+             (e : API.Expr t)
              (comment : type.for_each_lhs_of_arrow var_data t -> var_data (type.base (type.final_codomain t)) -> list string)
              (name_list : option (list string))
              (inbounds : type.for_each_lhs_of_arrow Compilers.ZRange.type.option.interp t)
