@@ -84,18 +84,18 @@ Module Compilers.
   Proof. destruct t; cbn [base_interp base_interp_beq]; eauto with typeclass_instances. Qed.
 
   Definition try_make_base_transport_cps : @type.try_make_transport_cpsT base
-    := Eval cbv [eta_base_cps base_beq internal_base_dec_bl eq_rect proj1_sig eta_base_cps_gen base_ind base_rect base_rec] in
-        (fun (P : base -> Type) (t1 t2 : base)
-         => eta_base_cps
-              (fun t1
-               => @eta_base_cps
-                    (fun t2 => ~> option (P t1 -> P t2))
-                    (fun t2
-                     => (if base_beq t1 t2 as b return base_beq t1 t2 = b -> _
-                         then fun pf => (return (Some (rew [fun t2 => P t1 -> P t2] (internal_base_dec_bl _ _ pf) in id)))
-                         else fun _ => (return None)) eq_refl)
-                    t2)
-              t1)%cps.
+    := (fun (P : base -> Type) (t1 t2 : base)
+        => eta_base_cps
+             (fun t1
+              => @eta_base_cps
+                   (fun t2 => ~> option (P t1 -> P t2))
+                   (fun t2
+                    => match base_eq_dec t1 t2 with
+                       | left pf => (return (Some (rew [fun t2 => P t1 -> P t2] pf in id)))
+                       | right _ => (return None)
+                       end)
+                   t2)
+             t1)%cps.
   Global Existing Instance try_make_base_transport_cps | 5.
 
   Global Instance try_make_base_transport_cps_correct
