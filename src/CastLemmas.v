@@ -131,6 +131,7 @@ Module ident.
       edestruct is_bounded_by_bool; tauto.
     Qed.
 
+    (*
     Lemma cast_out_of_bounds_in_range_pos r v
       : ident.is_more_pos_than_neg (ZRange.normalize r) v = true
         -> is_bounded_by_bool v (ZRange.normalize r) = false
@@ -146,7 +147,9 @@ Module ident.
       end.
       all: Z.div_mod_to_quot_rem; nia.
     Qed.
+     *)
 
+    (*
     Lemma cast_out_of_bounds_in_range_neg r v
       : ident.is_more_pos_than_neg (ZRange.normalize r) v = false
         -> is_bounded_by_bool v (ZRange.normalize r) = false
@@ -164,7 +167,9 @@ Module ident.
       end.
       all: Z.div_mod_to_quot_rem; nia.
     Qed.
+     *)
 
+    (*
     Lemma cast_out_of_bounds_in_range r v
       : is_bounded_by_bool v (ZRange.normalize r) = false
         -> (ident.is_more_pos_than_neg (ZRange.normalize r) v = true -> is_bounded_by_bool (cast_outside_of_range (ZRange.normalize r) v) (ZRange.normalize r) = true)
@@ -177,7 +182,9 @@ Module ident.
       pose proof (cast_out_of_bounds_in_range_neg r v).
       break_innermost_match; intros; auto.
     Qed.
+     *)
 
+    (*
     Lemma cast_out_of_bounds_simple r v
       : (is_bounded_by_bool v (ZRange.normalize r) = true -> cast_outside_of_range (ZRange.normalize r) v = v)
         -> (ident.is_more_pos_than_neg (ZRange.normalize r) v = false -> (is_bounded_by_bool (-v) (-ZRange.normalize r))%Z = true -> (-cast_outside_of_range (-ZRange.normalize r) (-v) = v)%Z)
@@ -198,6 +205,7 @@ Module ident.
       { rewrite cast_in_normalized_bounds by assumption; intros; symmetry; break_innermost_match; auto. }
       { auto. }
     Qed.
+     *)
 
     Lemma is_more_pos_then_neg_0_u u v
       : (0 <= u)%Z
@@ -212,6 +220,7 @@ Module ident.
       cbv [andb orb]; break_innermost_match; Z.ltb_to_lt; try lia; reflexivity.
     Qed.
 
+    (*
     Lemma cast_out_of_bounds_simple_0 u v
       : (0 <= u)%Z
         -> ((0 <= v <= u)%Z -> cast_outside_of_range r[0~>u] v = v)
@@ -227,7 +236,8 @@ Module ident.
       cbv [is_bounded_by_bool ZRange.opp] in *; cbn [lower upper] in *; rewrite ?Bool.andb_true_iff, ?Z.leb_le in *.
       intros; apply H; intros; destruct_head'_and; repeat apply conj; Z.ltb_to_lt; auto; try congruence.
     Qed.
-
+     *)
+    (*
     Lemma cast_out_of_bounds_simple_0_mod u v
       : (0 <= u)%Z
         -> ((0 <= v <= u)%Z -> cast_outside_of_range r[0~>u] v = v)
@@ -242,6 +252,40 @@ Module ident.
       rewrite !Z.sub_0_r, !Z.add_0_r.
       break_innermost_match; split_andb; Z.ltb_to_lt; intro H';
         rewrite ?H' by lia; Z.rewrite_mod_small; reflexivity.
+    Qed.
+     *)
+
+    Lemma cast_out_of_bounds_simple_0_mod u v
+      : (0 <= u)%Z
+        -> ((cast_outside_of_range r[0~>u] v) mod (u + 1) = v mod (u + 1))%Z
+        -> (cast r[0~>u] v = (cast_outside_of_range r[0~>u] v) mod (u + 1))%Z.
+    Proof.
+      intro H0.
+      pose proof (is_more_pos_then_neg_0_u u v H0) as H1.
+      cbv [cast]; rewrite H1.
+      rewrite (proj1 ZRange.normalize_id_iff_goodb)
+        by (cbv [ZRange.goodb lower upper]; Z.ltb_to_lt; assumption).
+      cbn [lower upper].
+      rewrite !Z.sub_0_r, !Z.add_0_r.
+      break_innermost_match; split_andb; Z.ltb_to_lt; intro H';
+        rewrite ?H' by lia; Z.rewrite_mod_small; reflexivity.
+    Qed.
+
+    (* N.B. This lemma depends on the hard-coded behavior of casting
+        out of range being modulo, and hence we label it
+        "platform-specific". *)
+    Lemma platform_specific_cast_0_is_mod u v
+      : (0 <= u)%Z
+        -> (cast r[0~>u] v = v mod (u + 1))%Z.
+    Proof.
+      intro H0.
+      pose proof (is_more_pos_then_neg_0_u u v H0) as H1.
+      cbv [cast]; rewrite H1.
+      rewrite (proj1 ZRange.normalize_id_iff_goodb)
+        by (cbv [ZRange.goodb lower upper]; Z.ltb_to_lt; assumption).
+      cbn [lower upper].
+      rewrite !Z.sub_0_r, !Z.add_0_r.
+      break_innermost_match; split_andb; Z.ltb_to_lt; Z.rewrite_mod_small; reflexivity.
     Qed.
 
     Lemma cast_normalize r v : cast (ZRange.normalize r) v = cast r v.

@@ -17,6 +17,10 @@ typedef signed char fiat_p434_int1;
 typedef signed __int128 fiat_p434_int128;
 typedef unsigned __int128 fiat_p434_uint128;
 
+#if (-1 & 3) != 3
+#error "This code only works on a two's complement system"
+#endif
+
 
 /*
  * The function fiat_p434_addcarryx_u64 is an addition with carry.

@@ -19,10 +19,17 @@ Module ident.
           || ((Z.abs (lower r) =? Z.abs (upper r)) && (0 <=? v))).
 
     (** We ensure that [ident.cast] is symmetric under [Z.opp], as
-            this makes some rewrite rules much, much easier to
-            prove. *)
+        this makes some rewrite rules much, much easier to prove. *)
+    (** We actually ignore [cast_outside_of_range] and hard-code it to
+        the identity.  This is needed for one of our rewrite rules.
+
+        XXX TODO: Come up with a good way of proving boundedness for
+          the abstract interpreter, now that we no longer can even
+          guarantee that we have the same behavior independent of
+          overflow behavior. *)
     Let cast_outside_of_range' (r : zrange) (v : BinInt.Z) : BinInt.Z
-      := ((cast_outside_of_range r v - lower r) mod (upper r - lower r + 1)) + lower r.
+      := let v' := let dummy := cast_outside_of_range r v in v in
+         ((v' - lower r) mod (upper r - lower r + 1)) + lower r.
 
     Definition cast (r : zrange) (x : BinInt.Z)
       := let r := ZRange.normalize r in
