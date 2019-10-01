@@ -6,7 +6,7 @@ From Crypto.Util Require Import
      ZRange ZRange.Operations ZRange.Show
      Option OptionList Bool.Equality.
 
-From Crypto Require Import IR Stringification.C Stringification.Language AbstractInterpretation.
+From Crypto Require Import IR Stringification.Language AbstractInterpretation.
 
 Import ListNotations.
 
@@ -339,7 +339,7 @@ Module Rust.
               ++ to_function_lines static prefix name (indata, outdata, f))%list,
            (* Zoe: This is a function in the Stringification.C file,
               consider moving this elsewhere? *)
-           Compilers.ToString.C.collect_infos f)
+           IR.ident_infos.collect_infos f)
     | inr nil =>
       inr ("Unknown internal error in converting " ++ name ++ " to Rust")%string
     | inr [err] =>

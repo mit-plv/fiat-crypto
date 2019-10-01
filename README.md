@@ -139,12 +139,9 @@ Language.v
     ↑
    IR.v
     ↑
-   C.v
-    ↑
-   Rust.v
+ ┌──┴───────┐
+C.v       Rust.v
 ```
-The dependency of `Rust.v` on `C.v` is temporary and should go away in
-the future, leaving `Rust.v` and `C.v` both depending on `IR.v`.
 
 We will come back to the `Rewriter/*` files shortly.
 

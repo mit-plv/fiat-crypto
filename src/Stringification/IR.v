@@ -118,6 +118,69 @@ Module Compilers.
            | _ => None
            end.
 
+      Module ident_infos.
+        Definition collect_bitwidths_of_int_type (t : int.type) : PositiveSet.t
+          := PositiveSet.add (Z.to_pos (int.bitwidth_of t)) PositiveSet.empty.
+        Definition collect_infos_of_ident {s d} (idc : ident s d) : ident_infos
+          := match idc with
+             | Z_static_cast ty => ident_info_of_bitwidths_used (collect_bitwidths_of_int_type ty)
+             | Z_mul_split lg2s
+               => ident_info_of_mulx (PositiveSet.add (Z.to_pos lg2s) PositiveSet.empty)
+             | Z_add_with_get_carry lg2s
+             | Z_sub_with_get_borrow lg2s
+               => ident_info_of_addcarryx (PositiveSet.add (Z.to_pos lg2s) PositiveSet.empty)
+             | Z_zselect ty
+               => ident_info_of_cmovznz (collect_bitwidths_of_int_type ty)
+             | literal _
+             | List_nth _
+             | Addr
+             | Dereference
+             | Z_shiftr _
+             | Z_shiftl _
+             | Z_land
+             | Z_lor
+             | Z_add
+             | Z_mul
+             | Z_sub
+             | Z_opp
+             | Z_bneg
+             | Z_lnot _
+             | Z_add_modulo
+               => ident_info_empty
+             end.
+        Fixpoint collect_infos_of_arith_expr {t} (e : arith_expr t) : ident_infos
+          := match e with
+             | AppIdent s d idc arg => ident_info_union (collect_infos_of_ident idc) (@collect_infos_of_arith_expr _ arg)
+             | Var t v => ident_info_empty
+             | Pair A B a b => ident_info_union (@collect_infos_of_arith_expr _ a) (@collect_infos_of_arith_expr _ b)
+             | TT => ident_info_empty
+             end.
+
+        Fixpoint collect_infos_of_stmt (e : stmt) : ident_infos
+          := match e with
+             | Assign _ _ (Some sz) _ val
+             | AssignZPtr _ (Some sz) val
+               => ident_info_union (ident_info_of_bitwidths_used (collect_bitwidths_of_int_type sz)) (collect_infos_of_arith_expr val)
+             | Call val
+             | Assign _ _ None _ val
+             | AssignZPtr _ None val
+             | AssignNth _ _ val
+               => collect_infos_of_arith_expr val
+             | DeclareVar _ (Some sz) _
+               => ident_info_of_bitwidths_used (collect_bitwidths_of_int_type sz)
+             | DeclareVar _ None _
+               => ident_info_empty
+             end.
+
+        Fixpoint collect_infos (e : expr) : ident_infos
+          := fold_right
+               ident_info_union
+               ident_info_empty
+               (List.map
+                  collect_infos_of_stmt
+                  e).
+      End ident_infos.
+
       Module OfPHOAS.
         Export Stringification.Language.Compilers.ToString.OfPHOAS.
 
