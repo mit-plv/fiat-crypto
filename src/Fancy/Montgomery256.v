@@ -2,15 +2,14 @@ Require Import Coq.Bool.Bool.
 Require Import Coq.derive.Derive.
 Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
 Require Import Coq.Lists.List. Import ListNotations.
-Require Import Crypto.Fancy.Compiler.
-Require Import Crypto.Fancy.Prod.
-Require Import Crypto.Fancy.Spec.
 Require Import Crypto.Language.Language. Import Language.Compilers.
-Require Import Crypto.Language.Identifier. Import Identifier.Compilers.
 Require Import Crypto.Language.API. Import Language.API.Compilers.
 Require Import Crypto.Language.Wf.
 Require Import Crypto.Arithmetic.FancyMontgomeryReduction.
 Require Import Crypto.PushButtonSynthesis.FancyMontgomeryReduction.
+Require Import Crypto.Fancy.Compiler.
+Require Import Crypto.Fancy.Prod.
+Require Import Crypto.Fancy.Spec.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.ZUtil.EquivModulo.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
@@ -31,7 +30,7 @@ Module Montgomery256.
   Proof. lazy; reflexivity. Qed.
 
   Lemma montred256_correct :
-    COperationSpecifications.MontgomeryReduction.montred_correct N R R' (expr.Interp (@ident.gen_interp cast_oor) montred256).
+    COperationSpecifications.MontgomeryReduction.montred_correct N R R' (expr.gen_Interp cast_oor montred256).
   Proof.
     apply montred_correct with (n:=2%nat) (machine_wordsize:=machine_wordsize) (N':=N').
     { lazy. reflexivity. }

@@ -1,6 +1,5 @@
 Require Import Crypto.Language.Language.
 Require Import Crypto.Language.Wf.
-Require Import Crypto.Language.Identifier.
 Require Import Crypto.Language.API.
 Require Import Crypto.Language.WfExtra.
 Require Import Crypto.Language.UnderLetsProofs.
@@ -9,7 +8,6 @@ Module Compilers.
   Import Language.Compilers.
   Import Language.Inversion.Compilers.
   Import Language.Wf.Compilers.
-  Import Identifier.Compilers.
   Import Language.API.Compilers.
   Import Language.WfExtra.Compilers.
   Import UnderLetsProofs.Compilers.
@@ -38,7 +36,7 @@ Module Compilers.
       := @Wf_LetBindReturn
            base.type.base ident.ident
            base.base_interp base.type.base_beq base.reflect_base_beq
-           base.try_make_base_transport_cps invert_expr.ident.InvertIdent ident.buildIdent
+           base.try_make_base_transport_cps invert_expr.ident.invertIdent ident.buildIdent
            invert_expr.ident.buildInvertIdentCorrect
            base.try_make_base_transport_cps_correct
            ident_is_var_like t e Hwf.
@@ -47,7 +45,7 @@ Module Compilers.
       := @Interp_LetBindReturn
            base.type.base ident.ident
            base.base_interp base.type.base_beq base.reflect_base_beq
-           base.try_make_base_transport_cps invert_expr.ident.InvertIdent ident.buildIdent
+           base.try_make_base_transport_cps invert_expr.ident.invertIdent ident.buildIdent
            invert_expr.ident.buildInvertIdentCorrect
            base.try_make_base_transport_cps_correct
            ident_is_var_like

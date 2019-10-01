@@ -73,7 +73,6 @@ Import
   AbstractInterpretation.WfExtra.Compilers
   AbstractInterpretation.Proofs.Compilers
   Language.Compilers
-  Identifier.Compilers
   Language.API.Compilers
   UnderLets.Compilers
   AbstractInterpretation.Compilers
@@ -175,8 +174,8 @@ Module Pipeline.
   | Values_not_provably_distinctZ (descr : string) (lhs rhs : Z)
   | Values_not_provably_equalZ (descr : string) (lhs rhs : Z)
   | Values_not_provably_equal_listZ (descr : string) (lhs rhs : list Z)
-  | Unsupported_casts_in_input {t} (e : @Compilers.API.Expr t) (ls : list { t : _ & ident t })
-  | Stringification_failed {t} (e : @Compilers.API.Expr t) (err : string)
+  | Unsupported_casts_in_input {t} (e : Expr t) (ls : list { t : _ & ident t })
+  | Stringification_failed {t} (e : Expr t) (err : string)
   | Invalid_argument (msg : string).
 
   Notation ErrorT := (ErrorT ErrorMessage).
@@ -505,12 +504,12 @@ Module Pipeline.
   Global Hint Resolve @Wf_RewriteAndEliminateDeadAndInline : wf wf_extra.
 
   Lemma Interp_RewriteAndEliminateDeadAndInline {cast_outside_of_range} {t} DoRewrite with_dead_code_elimination with_subst01
-        (Interp_DoRewrite : forall E, Wf E -> expr.Interp (@ident.gen_interp cast_outside_of_range) (DoRewrite E) == expr.Interp (@ident.gen_interp cast_outside_of_range) E)
+        (Interp_DoRewrite : forall E, Wf E -> expr.gen_Interp cast_outside_of_range (DoRewrite E) == expr.gen_Interp cast_outside_of_range E)
         (Wf_DoRewrite : forall E, Wf E -> Wf (DoRewrite E))
         E
         (Hwf : Wf E)
-    : expr.Interp (@ident.gen_interp cast_outside_of_range) (@RewriteAndEliminateDeadAndInline t DoRewrite with_dead_code_elimination with_subst01 E)
-      == expr.Interp (@ident.gen_interp cast_outside_of_range) E.
+    : expr.gen_Interp cast_outside_of_range (@RewriteAndEliminateDeadAndInline t DoRewrite with_dead_code_elimination with_subst01 E)
+      == expr.gen_Interp cast_outside_of_range E.
   Proof.
     cbv [RewriteAndEliminateDeadAndInline Let_In];
       repeat (wf_interp_t || rewrite !Interp_DoRewrite).
@@ -550,7 +549,7 @@ Module Pipeline.
               (Harg12 : type.and_for_each_lhs_of_arrow (@type.eqv) arg1 arg2)
               (Harg1 : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds arg1 = true),
           ZRange.type.base.option.is_bounded_by out_bounds (type.app_curried (Interp rv) arg1) = true
-          /\ forall cast_outside_of_range, type.app_curried (expr.Interp (@ident.gen_interp cast_outside_of_range) rv) arg1
+          /\ forall cast_outside_of_range, type.app_curried (expr.gen_Interp cast_outside_of_range rv) arg1
                                            = type.app_curried (Interp e) arg2)
       /\ Wf rv.
   Proof.
@@ -606,7 +605,7 @@ Module Pipeline.
                (Harg12 : type.and_for_each_lhs_of_arrow (@type.eqv) arg1 arg2)
                (Harg1 : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds arg1 = true),
            ZRange.type.base.option.is_bounded_by out_bounds (type.app_curried (Interp rv) arg1) = true
-           /\ forall cast_outside_of_range, type.app_curried (expr.Interp (@ident.gen_interp cast_outside_of_range) rv) arg1
+           /\ forall cast_outside_of_range, type.app_curried (expr.gen_Interp cast_outside_of_range rv) arg1
                                             = type.app_curried InterpE arg2)
        /\ Wf rv.
 

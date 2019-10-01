@@ -15,7 +15,7 @@ Require Import Crypto.Util.ZRange.Show.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.OptionList.
 Require Import Crypto.Language.Language.
-Require Import Crypto.Language.Identifier.
+Require Import Crypto.Language.API.
 Require Import Crypto.AbstractInterpretation.AbstractInterpretation.
 Require Import Crypto.Util.Bool.Equality.
 Require Import Crypto.Util.Notations.
@@ -25,10 +25,10 @@ Module Compilers.
   Local Set Boolean Equality Schemes.
   Local Set Decidable Equality Schemes.
   Export Language.Language.Compilers.
-  Export Identifier.Compilers.
+  Export Language.API.Compilers.
   Export AbstractInterpretation.Compilers.
   Import invert_expr.
-  Import API.
+  Import Compilers.API.
 
   Module ToString.
     Local Open Scope string_scope.

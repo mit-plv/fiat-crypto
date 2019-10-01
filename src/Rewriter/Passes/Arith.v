@@ -1,5 +1,6 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Language.Language.
+Require Import Crypto.Language.API.
 Require Import Crypto.Language.Wf.
 Require Import Crypto.Language.WfExtra.
 Require Import Crypto.Rewriter.AllTacticsExtra.
@@ -7,8 +8,8 @@ Require Import Crypto.Rewriter.RulesProofs.
 
 Module Compilers.
   Import Language.Compilers.
+  Import Language.API.Compilers.
   Import Language.Wf.Compilers.
-  Import Identifier.Compilers.
   Import Language.WfExtra.Compilers.
   Import Rewriter.AllTactics.Compilers.RewriteRules.GoalType.
   Import Rewriter.AllTacticsExtra.Compilers.RewriteRules.Tactic.
@@ -27,11 +28,11 @@ Module Compilers.
       Proof. now apply VerifiedRewriterArith. Qed.
 
       Lemma Interp_gen_RewriteArith {cast_outside_of_range t} e (Hwf : Wf e)
-        : expr.Interp (@ident.gen_interp cast_outside_of_range) (@RewriteArith t e)
-          == expr.Interp (@ident.gen_interp cast_outside_of_range) e.
+        : API.gen_Interp cast_outside_of_range (@RewriteArith t e)
+          == API.gen_Interp cast_outside_of_range e.
       Proof. now apply VerifiedRewriterArith. Qed.
 
-      Lemma Interp_RewriteArith {t} e (Hwf : Wf e) : expr.Interp (@ident.interp) (@RewriteArith t e) == expr.Interp (@ident.interp) e.
+      Lemma Interp_RewriteArith {t} e (Hwf : Wf e) : API.Interp (@RewriteArith t e) == API.Interp e.
       Proof. apply Interp_gen_RewriteArith; assumption. Qed.
     End __.
   End RewriteRules.

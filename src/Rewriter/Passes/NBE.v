@@ -1,4 +1,5 @@
 Require Import Crypto.Language.Language.
+Require Import Crypto.Language.API.
 Require Import Crypto.Language.Wf.
 Require Import Crypto.Language.WfExtra.
 Require Import Crypto.Rewriter.AllTacticsExtra.
@@ -6,8 +7,8 @@ Require Import Crypto.Rewriter.RulesProofs.
 
 Module Compilers.
   Import Language.Compilers.
+  Import Language.API.Compilers.
   Import Language.Wf.Compilers.
-  Import Identifier.Compilers.
   Import Language.WfExtra.Compilers.
   Import Rewriter.AllTactics.Compilers.RewriteRules.GoalType.
   Import Rewriter.AllTacticsExtra.Compilers.RewriteRules.Tactic.
@@ -24,11 +25,11 @@ Module Compilers.
       Proof. now apply VerifiedRewriterNBE. Qed.
 
       Lemma Interp_gen_RewriteNBE {cast_outside_of_range t} e (Hwf : Wf e)
-        : expr.Interp (@ident.gen_interp cast_outside_of_range) (@RewriteNBE t e)
-          == expr.Interp (@ident.gen_interp cast_outside_of_range) e.
+        : API.gen_Interp cast_outside_of_range (@RewriteNBE t e)
+          == API.gen_Interp cast_outside_of_range e.
       Proof. now apply VerifiedRewriterNBE. Qed.
 
-      Lemma Interp_RewriteNBE {t} e (Hwf : Wf e) : expr.Interp (@ident.interp) (@RewriteNBE t e) == expr.Interp (@ident.interp) e.
+      Lemma Interp_RewriteNBE {t} e (Hwf : Wf e) : API.Interp (@RewriteNBE t e) == API.Interp e.
       Proof. apply Interp_gen_RewriteNBE; assumption. Qed.
     End __.
   End RewriteRules.
@@ -39,11 +40,11 @@ Module Compilers.
   Proof. apply Wf_RewriteNBE, Hwf. Qed.
 
   Lemma Interp_gen_PartialEvaluate {cast_outside_of_range} {t} e (Hwf : Wf e)
-    : expr.Interp (@ident.gen_interp cast_outside_of_range) (@PartialEvaluate t e) == expr.Interp (@ident.gen_interp cast_outside_of_range) e.
+    : API.gen_Interp cast_outside_of_range (@PartialEvaluate t e) == API.gen_Interp cast_outside_of_range e.
   Proof. apply Interp_gen_RewriteNBE, Hwf. Qed.
 
   Lemma Interp_PartialEvaluate {t} e (Hwf : Wf e)
-    : expr.Interp (@ident.interp) (@PartialEvaluate t e) == expr.Interp (@ident.interp) e.
+    : API.Interp (@PartialEvaluate t e) == API.Interp e.
   Proof. apply Interp_gen_PartialEvaluate; assumption. Qed.
 
   Module Export Hints.

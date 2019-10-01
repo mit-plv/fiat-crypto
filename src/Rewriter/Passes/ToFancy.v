@@ -1,5 +1,6 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Language.Language.
+Require Import Crypto.Language.API.
 Require Import Crypto.Language.Wf.
 Require Import Crypto.Language.WfExtra.
 Require Import Crypto.Rewriter.AllTacticsExtra.
@@ -7,8 +8,8 @@ Require Import Crypto.Rewriter.RulesProofs.
 
 Module Compilers.
   Import Language.Compilers.
+  Import Language.API.Compilers.
   Import Language.Wf.Compilers.
-  Import Identifier.Compilers.
   Import Language.WfExtra.Compilers.
   Import Rewriter.AllTactics.Compilers.RewriteRules.GoalType.
   Import Rewriter.AllTacticsExtra.Compilers.RewriteRules.Tactic.
@@ -23,7 +24,7 @@ Module Compilers.
       Definition VerifiedRewriterToFancy : VerifiedRewriter.
       Proof using All. make_rewriter false fancy_rewrite_rules_proofs. Defined.
 
-      Definition RewriteToFancy {t} : Expr (ident:=ident) t -> Expr (ident:=ident) t.
+      Definition RewriteToFancy {t} : API.Expr t -> API.Expr t.
       Proof using invert_low invert_high.
         let v := (eval hnf in (@Rewrite VerifiedRewriterToFancy t)) in exact v.
       Defined.
@@ -32,11 +33,11 @@ Module Compilers.
       Proof using All. now apply VerifiedRewriterToFancy. Qed.
 
       Lemma Interp_gen_RewriteToFancy {cast_outside_of_range t} e (Hwf : Wf e)
-        : expr.Interp (@ident.gen_interp cast_outside_of_range) (@RewriteToFancy t e)
-          == expr.Interp (@ident.gen_interp cast_outside_of_range) e.
+        : API.gen_Interp cast_outside_of_range (@RewriteToFancy t e)
+          == API.gen_Interp cast_outside_of_range e.
       Proof using All. now apply VerifiedRewriterToFancy. Qed.
 
-      Lemma Interp_RewriteToFancy {t} e (Hwf : Wf e) : expr.Interp (@ident.interp) (@RewriteToFancy t e) == expr.Interp (@ident.interp) e.
+      Lemma Interp_RewriteToFancy {t} e (Hwf : Wf e) : API.Interp (@RewriteToFancy t e) == API.Interp e.
       Proof using All. apply Interp_gen_RewriteToFancy; assumption. Qed.
     End __.
   End RewriteRules.

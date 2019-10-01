@@ -36,7 +36,7 @@ Require Import Crypto.Util.Tactics.DoWithHyp.
 Require Import Crypto.Language.Language.
 Require Import Crypto.Language.Inversion.
 Require Import Crypto.Language.Wf.
-Require Import Crypto.Language.IdentifierWf.
+Require Import Crypto.Language.API.
 Require Import Crypto.CastLemmas.
 Require Import Crypto.Language.UnderLetsProofs.
 Require Import Crypto.AbstractInterpretation.AbstractInterpretation.
@@ -49,7 +49,7 @@ Module Compilers.
   Import AbstractInterpretation.Compilers.
   Import Language.Inversion.Compilers.
   Import Language.Wf.Compilers.
-  Import IdentifierWf.Compilers.
+  Import Language.API.Compilers.
   Import UnderLetsProofs.Compilers.
   Import AbstractInterpretation.Wf.Compilers.
   Import AbstractInterpretation.ZRangeProofs.Compilers.

@@ -179,7 +179,7 @@ Section rmontred.
   Local Strategy -100 [montred]. (* needed for making Qed not take forever *)
   Local Strategy -100 [montred' reified_montred_gen]. (* needed for making prove_correctness not take forever *)
   Lemma montred_correct res (Hres : montred = Success res)
-    : montred_correct N R R' (expr.Interp (@ident.gen_interp cast_oor) res).
+    : montred_correct N R R' (API.gen_Interp cast_oor res).
   Proof using n curve_good.
     cbv [montred_correct]; intros.
     rewrite <- MontgomeryReduction.montred'_correct with (R:=R) (N':=N') (Zlog2R:=machine_wordsize) (n:=n) (lo:=lo) (hi:=hi) by solve_montred_preconditions.

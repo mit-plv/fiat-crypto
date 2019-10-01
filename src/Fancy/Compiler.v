@@ -1,6 +1,5 @@
 Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
 Require Import Coq.Lists.List. Import ListNotations.
-Require Import Crypto.Language.Identifier. Import Identifier.Compilers.
 Require Import Crypto.Language.Wf. Import Language.Wf.Compilers.
 Require Import Crypto.Language.Inversion. Import Language.Inversion.Compilers.
 Require Import Crypto.Language.API. Import Language.API.Compilers.
@@ -24,7 +23,12 @@ Local Open Scope Z_scope.
 
 (* TODO: organize this file *)
 Section of_prefancy.
-  Local Notation cexpr := (@Compilers.expr.expr base.type ident.ident).
+  (* We would like to write [Local Notation cexpr := (@API.expr).] but
+     we can't, in part because implicit status doesn't work through
+     nested notations, and in part because
+     COQBUG(https://github.com/coq/coq/issues/10803) *)
+  (* Set Printing All. Print API.expr. *)
+  Local Notation cexpr := (@expr.expr (Language.Compilers.base.type.type Compilers.base) Identifier.Compilers.ident).
   Local Notation LetInAppIdentZ S D r eidc x f
     := (expr.LetIn
           (A:=type.base (base.type.type_base base.type.Z))
@@ -269,7 +273,8 @@ Section of_prefancy.
     Definition cast_oor (r : zrange) (v : Z) := v mod (upper r + 1).
     Local Notation "'existZ' x" := (existT _ (type.base tZ) x) (at level 200).
     Local Notation "'existZZ' x" := (existT _ (type.base (tZ * tZ)%etype) x) (at level 200).
-    Local Notation cinterp := (expr.interp (@ident.gen_interp cast_oor)).
+    Local Notation cgen_interp coor := (API.gen_interp coor).
+    Local Notation cinterp := (API.gen_interp cast_oor).
     Definition interp_if_Z {t} (e : cexpr t) : option Z :=
       option_map (expr.interp (@ident.gen_interp cast_oor) (t:=tZ))
                  (type.try_transport
