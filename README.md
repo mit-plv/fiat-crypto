@@ -78,10 +78,21 @@ Reading The Code
 The idea of the synthesis process is demoed in [`src/Demo.v`](./src/Demo.v).
 We strongly recommend reading this before studying the full-scale system.
 
+### Proofs About Elliptic Curves
+
+We have some about elliptic curves, for example:
+
+- [`src/Curves/Edwards/AffineProofs.v`](./src/Curves/Edwards/AffineProofs.v),
+- [`src/Curves/Edwards/XYZT/Basic.v`](./src/Curves/Edwards/XYZT/Basic.v),
+- [`src/Curves/Montgomery/AffineProofs.v`](./src/Curves/Montgomery/AffineProofs.v),
+- [`src/Curves/Montgomery/XZProofs.v`](src/Curves/Montgomery/XZProofs.v).
+
 ### Actual Synthesis Pipeline
 
 The entry point for clients of the PHOAS expressions we use is
-`Language/API.v`.
+`Language/API.v`.  Refer to comments in that file for an explanation
+of the interface; the following text describes how the expressions are
+generated, not how to interact with them.
 
 The ordering of files (eliding `*Proofs.v` files) is:
 
@@ -469,10 +480,3 @@ For `Language.v`, there is a semi-arbitrary split between two files
 - `AbstractInterpretation/Proofs.v`: interp lemmas for the
   AbstractInterpretation pass, and also correctness lemmas that
   combine Wf and interp
-
-There are also proofs about elliptic curves, for example:
-
-- [`src/Curves/Edwards/AffineProofs.v`](./src/Curves/Edwards/AffineProofs.v),
-- [`src/Curves/Edwards/XYZT/Basic.v`](./src/Curves/Edwards/XYZT/Basic.v),
-- [`src/Curves/Montgomery/AffineProofs.v`](./src/Curves/Montgomery/AffineProofs.v),
-- [`src/Curves/Montgomery/XZProofs.v`](src/Curves/Montgomery/XZProofs.v).
