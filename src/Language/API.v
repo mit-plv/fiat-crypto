@@ -30,99 +30,261 @@ Import EqNotations.
 Module Compilers.
   Export Language.Pre.
   Export Language.Compilers.
-  Export Identifier.Compilers.
+  Import Identifier.Compilers.
 
   (** First we have some helper definitions; scroll down to the [API] module to see the actual API *)
   Module base.
-    Export Identifier.Compilers.base.
+    Export Language.Compilers.base.
+
+    Module type.
+      Import Identifier.Compilers.
+      Notation base := base (only parsing).
+      Notation Z := Z (only parsing).
+      Notation nat := nat (only parsing).
+      Notation zrange := zrange (only parsing).
+      Notation bool := bool (only parsing).
+      Notation base_beq := Compilers.base_beq (only parsing).
+
+      Export Language.Compilers.base.type.
+      Notation type := (@type base) (only parsing).
+
+      Notation baseHasNat := Compilers.baseHasNat (only parsing).
+      Notation eta_base_cps_gen := Compilers.eta_base_cps_gen (only parsing).
+      Notation eta_base_cps := Compilers.eta_base_cps (only parsing).
+    End type.
+    Notation type := Compilers.base_type (only parsing).
+    Notation base_interp := Compilers.base_interp (only parsing).
+    Notation interp := Compilers.base_type_interp (only parsing).
+    Notation reflect_base_beq := Compilers.reflect_base_beq (only parsing).
+    Notation base_interp_beq := Compilers.base_interp_beq (only parsing).
+    Notation baseHasNatCorrect := Compilers.baseHasNatCorrect (only parsing).
+    Notation reflect_base_interp_eq := Compilers.reflect_base_interp_eq (only parsing).
+    Notation try_make_base_transport_cps := Compilers.try_make_base_transport_cps (only parsing).
+    Notation try_make_base_transport_cps_correct := Compilers.try_make_base_transport_cps_correct (only parsing).
 
     Notation reify_base t := (ltac:(let rt := reify_base t in exact rt)) (only parsing).
-    Notation reify t := (ltac:(let rt := reify t in exact rt)) (only parsing).
+    Notation reify t := (ltac:(let rt := reify_base_type t in exact rt)) (only parsing).
     Notation reify_norm_base t := (ltac:(let t' := eval cbv in t in let rt := reify_base t' in exact rt)) (only parsing).
-    Notation reify_norm t := (ltac:(let t' := eval cbv in t in let rt := reify t' in exact rt)) (only parsing).
+    Notation reify_norm t := (ltac:(let t' := eval cbv in t in let rt := reify_base_type t' in exact rt)) (only parsing).
     Notation reify_base_type_of e := (reify_base ((fun t (_ : t) => t) _ e)) (only parsing).
     Notation reify_type_of e := (reify ((fun t (_ : t) => t) _ e)) (only parsing).
     Notation reify_norm_base_type_of e := (reify_norm_base ((fun t (_ : t) => t) _ e)) (only parsing).
     Notation reify_norm_type_of e := (reify_norm ((fun t (_ : t) => t) _ e)) (only parsing).
+
+    Ltac reify_base ty := Identifier.Compilers.reify_base ty.
+    Ltac reify ty := Identifier.Compilers.reify_base_type ty.
+    Ltac reify_type ty := Identifier.Compilers.reify_type ty.
   End base.
 
   Module ident.
-    Export Identifier.Compilers.ident.
+    Export Language.Compilers.ident.
+    Notation ident := Compilers.ident (only parsing).
+
+    Notation Literal := Compilers.ident_Literal (only parsing).
+    Notation Nat_succ := Compilers.ident_Nat_succ (only parsing).
+    Notation Nat_pred := Compilers.ident_Nat_pred (only parsing).
+    Notation Nat_max := Compilers.ident_Nat_max (only parsing).
+    Notation Nat_mul := Compilers.ident_Nat_mul (only parsing).
+    Notation Nat_add := Compilers.ident_Nat_add (only parsing).
+    Notation Nat_sub := Compilers.ident_Nat_sub (only parsing).
+    Notation Nat_eqb := Compilers.ident_Nat_eqb (only parsing).
+    Notation nil := Compilers.ident_nil (only parsing).
+    Notation cons := Compilers.ident_cons (only parsing).
+    Notation tt := Compilers.ident_tt (only parsing).
+    Notation pair := Compilers.ident_pair (only parsing).
+    Notation fst := Compilers.ident_fst (only parsing).
+    Notation snd := Compilers.ident_snd (only parsing).
+    Notation prod_rect := Compilers.ident_prod_rect (only parsing).
+    Notation bool_rect := Compilers.ident_bool_rect (only parsing).
+    Notation nat_rect := Compilers.ident_nat_rect (only parsing).
+    Notation nat_rect_arrow := Compilers.ident_nat_rect_arrow (only parsing).
+    Notation eager_nat_rect := Compilers.ident_eager_nat_rect (only parsing).
+    Notation eager_nat_rect_arrow := Compilers.ident_eager_nat_rect_arrow (only parsing).
+    Notation list_rect := Compilers.ident_list_rect (only parsing).
+    Notation list_rect_arrow := Compilers.ident_list_rect_arrow (only parsing).
+    Notation eager_list_rect := Compilers.ident_eager_list_rect (only parsing).
+    Notation eager_list_rect_arrow := Compilers.ident_eager_list_rect_arrow (only parsing).
+    Notation list_case := Compilers.ident_list_case (only parsing).
+    Notation List_length := Compilers.ident_List_length (only parsing).
+    Notation List_seq := Compilers.ident_List_seq (only parsing).
+    Notation List_firstn := Compilers.ident_List_firstn (only parsing).
+    Notation List_skipn := Compilers.ident_List_skipn (only parsing).
+    Notation List_repeat := Compilers.ident_List_repeat (only parsing).
+    Notation List_combine := Compilers.ident_List_combine (only parsing).
+    Notation List_map := Compilers.ident_List_map (only parsing).
+    Notation List_app := Compilers.ident_List_app (only parsing).
+    Notation List_rev := Compilers.ident_List_rev (only parsing).
+    Notation List_flat_map := Compilers.ident_List_flat_map (only parsing).
+    Notation List_partition := Compilers.ident_List_partition (only parsing).
+    Notation List_fold_right := Compilers.ident_List_fold_right (only parsing).
+    Notation List_update_nth := Compilers.ident_List_update_nth (only parsing).
+    Notation List_nth_default := Compilers.ident_List_nth_default (only parsing).
+    Notation eager_List_nth_default := Compilers.ident_eager_List_nth_default (only parsing).
+    Notation Z_add := Compilers.ident_Z_add (only parsing).
+    Notation Z_mul := Compilers.ident_Z_mul (only parsing).
+    Notation Z_pow := Compilers.ident_Z_pow (only parsing).
+    Notation Z_sub := Compilers.ident_Z_sub (only parsing).
+    Notation Z_opp := Compilers.ident_Z_opp (only parsing).
+    Notation Z_div := Compilers.ident_Z_div (only parsing).
+    Notation Z_modulo := Compilers.ident_Z_modulo (only parsing).
+    Notation Z_log2 := Compilers.ident_Z_log2 (only parsing).
+    Notation Z_log2_up := Compilers.ident_Z_log2_up (only parsing).
+    Notation Z_eqb := Compilers.ident_Z_eqb (only parsing).
+    Notation Z_leb := Compilers.ident_Z_leb (only parsing).
+    Notation Z_ltb := Compilers.ident_Z_ltb (only parsing).
+    Notation Z_geb := Compilers.ident_Z_geb (only parsing).
+    Notation Z_gtb := Compilers.ident_Z_gtb (only parsing).
+    Notation Z_of_nat := Compilers.ident_Z_of_nat (only parsing).
+    Notation Z_to_nat := Compilers.ident_Z_to_nat (only parsing).
+    Notation Z_shiftr := Compilers.ident_Z_shiftr (only parsing).
+    Notation Z_shiftl := Compilers.ident_Z_shiftl (only parsing).
+    Notation Z_land := Compilers.ident_Z_land (only parsing).
+    Notation Z_lor := Compilers.ident_Z_lor (only parsing).
+    Notation Z_min := Compilers.ident_Z_min (only parsing).
+    Notation Z_max := Compilers.ident_Z_max (only parsing).
+    Notation Z_bneg := Compilers.ident_Z_bneg (only parsing).
+    Notation Z_lnot_modulo := Compilers.ident_Z_lnot_modulo (only parsing).
+    Notation Z_truncating_shiftl := Compilers.ident_Z_truncating_shiftl (only parsing).
+    Notation Z_mul_split := Compilers.ident_Z_mul_split (only parsing).
+    Notation Z_add_get_carry := Compilers.ident_Z_add_get_carry (only parsing).
+    Notation Z_add_with_carry := Compilers.ident_Z_add_with_carry (only parsing).
+    Notation Z_add_with_get_carry := Compilers.ident_Z_add_with_get_carry (only parsing).
+    Notation Z_sub_get_borrow := Compilers.ident_Z_sub_get_borrow (only parsing).
+    Notation Z_sub_with_get_borrow := Compilers.ident_Z_sub_with_get_borrow (only parsing).
+    Notation Z_zselect := Compilers.ident_Z_zselect (only parsing).
+    Notation Z_add_modulo := Compilers.ident_Z_add_modulo (only parsing).
+    Notation Z_rshi := Compilers.ident_Z_rshi (only parsing).
+    Notation Z_cc_m := Compilers.ident_Z_cc_m (only parsing).
+    Notation Z_combine_at_bitwidth := Compilers.ident_Z_combine_at_bitwidth (only parsing).
+    Notation Z_cast := Compilers.ident_Z_cast (only parsing).
+    Notation Z_cast2 := Compilers.ident_Z_cast2 (only parsing).
+    Notation Some := Compilers.ident_Some (only parsing).
+    Notation None := Compilers.ident_None (only parsing).
+    Notation option_rect := Compilers.ident_option_rect (only parsing).
+    Notation Build_zrange := Compilers.ident_Build_zrange (only parsing).
+    Notation zrange_rect := Compilers.ident_zrange_rect (only parsing).
+    Notation fancy_add := Compilers.ident_fancy_add (only parsing).
+    Notation fancy_addc := Compilers.ident_fancy_addc (only parsing).
+    Notation fancy_sub := Compilers.ident_fancy_sub (only parsing).
+    Notation fancy_subb := Compilers.ident_fancy_subb (only parsing).
+    Notation fancy_mulll := Compilers.ident_fancy_mulll (only parsing).
+    Notation fancy_mullh := Compilers.ident_fancy_mullh (only parsing).
+    Notation fancy_mulhl := Compilers.ident_fancy_mulhl (only parsing).
+    Notation fancy_mulhh := Compilers.ident_fancy_mulhh (only parsing).
+    Notation fancy_rshi := Compilers.ident_fancy_rshi (only parsing).
+    Notation fancy_selc := Compilers.ident_fancy_selc (only parsing).
+    Notation fancy_selm := Compilers.ident_fancy_selm (only parsing).
+    Notation fancy_sell := Compilers.ident_fancy_sell (only parsing).
+    Notation fancy_addm := Compilers.ident_fancy_addm (only parsing).
+
+    Notation option_Some := Compilers.ident_Some (only parsing).
+    Notation option_None := Compilers.ident_None (only parsing).
+
+    Notation gen_interp := Compilers.ident_gen_interp (only parsing).
+    Notation interp := (@Compilers.ident_gen_interp ident.cast_outside_of_range) (only parsing).
+
+    Notation buildEagerIdent := Compilers.buildEagerIdent (only parsing).
+    Notation buildInterpEagerIdentCorrect := Compilers.buildInterpEagerIdentCorrect (only parsing).
+    Notation fromRestrictedIdent := Compilers.fromRestrictedIdent (only parsing).
+    Notation toFromRestrictedIdent := Compilers.toFromRestrictedIdent (only parsing).
+
+    Ltac reify term then_tac reify_rec else_tac := Compilers.reify_ident term then_tac reify_rec else_tac.
+
+    Notation buildIdent := Compilers.buildIdent (only parsing).
+    Notation is_var_like := Compilers.ident_is_var_like (only parsing).
+    Notation buildInterpIdentCorrect := Compilers.buildInterpIdentCorrect (only parsing).
+    Notation gen_eqv_Reflexive_Proper := Compilers.gen_eqv_Reflexive_Proper (only parsing).
+    Notation eqv_Reflexive_Proper := Compilers.eqv_Reflexive_Proper (only parsing).
+    Notation gen_interp_Proper := Compilers.ident_gen_interp_Proper (only parsing).
+    Notation interp_Proper := Compilers.ident_interp_Proper (only parsing).
 
     Module Export Notations.
       Export Language.Compilers.ident.Notations.
       Delimit Scope ident_scope with ident.
       Bind Scope ident_scope with ident.
+      Notation interp := (@Compilers.ident_gen_interp ident.cast_outside_of_range) (only parsing).
       Global Arguments expr.Ident {base_type%type ident%function var%function t%etype} idc%ident.
-      Notation "## x" := (Literal x) (only printing) : ident_scope.
-      Notation "## x" := (Literal (t:=base.reify_base_type_of x) x) (only parsing) : ident_scope.
-      Notation "## x" := (expr.Ident (Literal x)) (only printing) : expr_scope.
-      Notation "## x" := (smart_Literal (base_interp:=base.base_interp) (t:=base.reify_type_of x) x) (only parsing) : expr_scope.
+      Notation "## x" := (Compilers.ident_Literal x) (only printing) : ident_scope.
+      Notation "## x" := (Compilers.ident_Literal (t:=base.reify_base_type_of x) x) (only parsing) : ident_scope.
+      Notation "## x" := (expr.Ident (Compilers.ident_Literal x)) (only printing) : expr_scope.
+      Notation "## x" := (smart_Literal (base_interp:=base_interp) (t:=base.reify_type_of x) x) (only parsing) : expr_scope.
       Notation "# x" := (expr.Ident x) : expr_pat_scope.
-      Notation "# x" := (@expr.Ident base.type _ _ _ x) : expr_scope.
+      Notation "# x" := (@expr.Ident base_type _ _ _ x) : expr_scope.
       Notation "x @ y" := (expr.App x%expr_pat y%expr_pat) : expr_pat_scope.
-      Notation "( x , y , .. , z )" := (expr.App (expr.App (#pair) .. (expr.App (expr.App (#pair) x%expr) y%expr) .. ) z%expr) : expr_scope.
-      Notation "( x , y , .. , z )" := (expr.App (expr.App (#pair)%expr_pat .. (expr.App (expr.App (#pair)%expr_pat x%expr_pat) y%expr_pat) .. ) z%expr_pat) : expr_pat_scope.
-      Notation "x :: y" := (#cons @ x @ y)%expr : expr_scope.
-      Notation "[ ]" := (#nil)%expr : expr_scope.
-      Notation "x :: y" := (#cons @ x @ y)%expr_pat : expr_pat_scope.
-      Notation "[ ]" := (#nil)%expr_pat : expr_pat_scope.
+      Notation "( x , y , .. , z )" := (expr.App (expr.App (#Compilers.ident_pair) .. (expr.App (expr.App (#Compilers.ident_pair) x%expr) y%expr) .. ) z%expr) : expr_scope.
+      Notation "( x , y , .. , z )" := (expr.App (expr.App (#Compilers.ident_pair)%expr_pat .. (expr.App (expr.App (#Compilers.ident_pair)%expr_pat x%expr_pat) y%expr_pat) .. ) z%expr_pat) : expr_pat_scope.
+      Notation "x :: y" := (#Compilers.ident_cons @ x @ y)%expr : expr_scope.
+      Notation "[ ]" := (#Compilers.ident_nil)%expr : expr_scope.
+      Notation "x :: y" := (#Compilers.ident_cons @ x @ y)%expr_pat : expr_pat_scope.
+      Notation "[ ]" := (#Compilers.ident_nil)%expr_pat : expr_pat_scope.
       Notation "[ x ]" := (x :: [])%expr : expr_scope.
-      Notation "[ x ; y ; .. ; z ]" := (#cons @ x @ (#cons @ y @ .. (#cons @ z @ #nil) ..))%expr : expr_scope.
+      Notation "[ x ; y ; .. ; z ]" := (#Compilers.ident_cons @ x @ (#Compilers.ident_cons @ y @ .. (#Compilers.ident_cons @ z @ #Compilers.ident_nil) ..))%expr : expr_scope.
       Notation "ls [[ n ]]"
-        := ((#(List_nth_default) @ _ @ ls @ #(Literal n%nat))%expr)
+        := ((#(Compilers.ident_List_nth_default) @ _ @ ls @ #(Compilers.ident_Literal n%nat))%expr)
            : expr_scope.
-      Notation "xs ++ ys" := (#List_app @ xs @ ys)%expr : expr_scope.
-      Notation "x - y" := (#Z_sub @ x @ y)%expr : expr_scope.
-      Notation "x + y" := (#Z_add @ x @ y)%expr : expr_scope.
-      Notation "x / y" := (#Z_div @ x @ y)%expr : expr_scope.
-      Notation "x * y" := (#Z_mul @ x @ y)%expr : expr_scope.
-      Notation "x >> y" := (#Z_shiftr @ x @ y)%expr : expr_scope.
-      Notation "x << y" := (#Z_shiftl @ x @ y)%expr : expr_scope.
-      Notation "x &' y" := (#Z_land @ x @ y)%expr : expr_scope.
-      Notation "x || y" := (#Z_lor @ x @ y)%expr : expr_scope.
-      Notation "x 'mod' y" := (#Z_modulo @ x @ y)%expr : expr_scope.
-      Notation "- x" := (#Z_opp @ x)%expr : expr_scope.
-      Global Arguments gen_interp _ _ !_.
-      Global Arguments ident.Z_cast _%zrange_scope.
-      Global Arguments ident.Z_cast2 _%zrange_scope.
+      Notation "xs ++ ys" := (#Compilers.ident_List_app @ xs @ ys)%expr : expr_scope.
+      Notation "x - y" := (#Compilers.ident_Z_sub @ x @ y)%expr : expr_scope.
+      Notation "x + y" := (#Compilers.ident_Z_add @ x @ y)%expr : expr_scope.
+      Notation "x / y" := (#Compilers.ident_Z_div @ x @ y)%expr : expr_scope.
+      Notation "x * y" := (#Compilers.ident_Z_mul @ x @ y)%expr : expr_scope.
+      Notation "x >> y" := (#Compilers.ident_Z_shiftr @ x @ y)%expr : expr_scope.
+      Notation "x << y" := (#Compilers.ident_Z_shiftl @ x @ y)%expr : expr_scope.
+      Notation "x &' y" := (#Compilers.ident_Z_land @ x @ y)%expr : expr_scope.
+      Notation "x || y" := (#Compilers.ident_Z_lor @ x @ y)%expr : expr_scope.
+      Notation "x 'mod' y" := (#Compilers.ident_Z_modulo @ x @ y)%expr : expr_scope.
+      Notation "- x" := (#Compilers.ident_Z_opp @ x)%expr : expr_scope.
+      Global Arguments ident_gen_interp _ _ !_.
+      Global Arguments Compilers.ident_Z_cast _%zrange_scope.
+      Global Arguments Compilers.ident_Z_cast2 _%zrange_scope.
     End Notations.
   End ident.
   Export ident.Notations.
+  Notation ident := Identifier.Compilers.ident (only parsing).
+
+  Module expr.
+    Notation gen_Interp cast_outside_of_range := (@expr.Interp base_type ident base_type_interp (@ident.gen_interp cast_outside_of_range)).
+    Notation gen_interp cast_outside_of_range := (@expr.interp base_type ident base_type_interp (@ident.gen_interp cast_outside_of_range)).
+  End expr.
 
   Ltac reify var term :=
-    expr.reify constr:(base.type) ident ltac:(base.reify) ident.reify var term.
+    expr.reify constr:(base_type) ident ltac:(reify_base_type) ltac:(reify_ident) var term.
   Ltac Reify term :=
-    expr.Reify constr:(base.type) ident ltac:(base.reify) ident.reify term.
+    expr.Reify constr:(base_type) ident ltac:(reify_base_type) ltac:(reify_ident) term.
   Ltac Reify_rhs _ :=
-    expr.Reify_rhs constr:(base.type) ident ltac:(base.reify) ident.reify (@base.interp) (@ident.interp) ().
+    expr.Reify_rhs constr:(base_type) ident ltac:(reify_base_type) ltac:(reify_ident) (@base_type_interp) (@ident_interp) ().
 
   Global Hint Extern 1 (@expr.Reified_of _ _ _ _ ?t ?v ?rv)
   => cbv [expr.Reified_of]; Reify_rhs (); reflexivity : typeclass_instances.
 
   Module Import invert_expr.
-    Export Identifier.Compilers.invert_expr.
+    Export Language.Compilers.invert_expr.
+
+    Module ident.
+      Notation invert_Literal := Compilers.invert_ident_Literal (only parsing).
+      Notation invertIdent := Compilers.invertIdent (only parsing).
+      Notation buildInvertIdentCorrect := Compilers.buildInvertIdentCorrect (only parsing).
+    End ident.
 
     Section with_var.
-      Context {var : type base.type -> Type}.
-      Local Notation expr := (@expr base.type ident var).
+      Context {var : type base_type -> Type}.
+      Local Notation expr := (@expr base_type ident var).
       Local Notation try_transportP P := (@type.try_transport _ _ P _ _).
       Local Notation try_transport := (try_transportP _).
-      Let type_base (x : base.type.base) : base.type := base.type.type_base x.
+      Let type_base (x : base) : base_type := base.type.type_base x.
       Let base {bt} (x : Language.Compilers.base.type bt) : type.type _ := type.base x.
-      Local Coercion base : base.type >-> type.type.
-      Local Coercion type_base : base.type.base >-> base.type.
-      Local Notation tZ := (base.type.type_base base.type.Z).
+      Local Coercion base : base_type >-> type.type.
+      Local Coercion type_base : Compilers.base >-> base.type.
+      Local Notation tZ := (base.type.type_base Z).
 
       Definition invert_Z_cast (e : expr tZ)
-        : option (zrange * expr base.type.Z)
+        : option (ZRange.zrange * expr Z)
         := match e with
            | expr.App (type.base tZ) _ (#(ident.Z_cast r)) v => Some (r, v)
            | _ => None
            end%core%expr_pat%expr.
 
-      Definition invert_Z_cast2 (e : expr (base.type.Z * base.type.Z))
-        : option ((zrange * zrange) * expr (base.type.Z * base.type.Z))
+      Definition invert_Z_cast2 (e : expr (Z * Z))
+        : option ((ZRange.zrange * ZRange.zrange) * expr (Z * Z))
         := match e with
            | expr.App (type.base (tZ * tZ)) _ (#(ident.Z_cast2 r)) v => Some (r, v)
            | _ => None
@@ -130,8 +292,25 @@ Module Compilers.
     End with_var.
   End invert_expr.
 
+  Module DefaultValue.
+    Export Language.Compilers.DefaultValue.
+    Module type.
+      Export Language.Compilers.DefaultValue.type.
+      Module base.
+        Export Language.Compilers.DefaultValue.type.base.
+        Notation base_default := Compilers.base_default (only parsing).
+      End base.
+    End type.
+  End DefaultValue.
+
+  Module Classes.
+    Export Language.Compilers.Classes.
+    Notation exprInfo := Compilers.exprInfo (only parsing).
+    Notation exprExtraInfo := Compilers.exprExtraInfo (only parsing).
+  End Classes.
+
   Module Coercions.
-    Coercion type_base (x : base.type.base) : base.type := base.type.type_base x.
+    Coercion type_base (x : base) : base_type := base.type.type_base x.
     Coercion base {bt} (x : Language.Compilers.base.type bt) : type.type _ := type.base x.
     Global Arguments base {_} _ / .
     Global Arguments type_base _ / .
@@ -162,13 +341,15 @@ Compute API.type. (* to figure out what goes into a type *)
     Notation expr := (@expr base.type ident).
 
     (** [interp_type : type -> Type] is the type code denotation function *)
-    Notation interp_type := (@type.interp base.type base.interp).
+    Notation interp_type := (@type.interp base_type base_type_interp).
     (** [Interp : forall {t}, Expr t -> interp_type t] is the [Expr] denotation function *)
-    Notation Interp := (@expr.Interp base.type ident base.interp (@ident.interp)).
+    Notation Interp := (@expr.Interp base_type ident base_type_interp (@ident_interp)).
     (** [interp : forall {t}, @expr interp_type t -> interp_type t] is the [expr] denotation function *)
-    Notation interp := (@expr.interp base.type ident base.interp (@ident.interp)).
+    Notation interp := (@expr.interp base_type ident base_type_interp (@ident_interp)).
+    Notation gen_Interp cast_outside_of_range := (@expr.Interp base_type ident base_type_interp (@ident.gen_interp cast_outside_of_range)).
+    Notation gen_interp cast_outside_of_range := (@expr.interp base_type ident base_type_interp (@ident.gen_interp cast_outside_of_range)).
 
-    Ltac reify_type ty := type.reify ltac:(base.reify) constr:(base.type) ty.
+    Ltac reify_type ty := type.reify ltac:(reify_base_type) constr:(base_type) ty.
     Notation reify_type t := (ltac:(let rt := reify_type t in exact rt)) (only parsing).
     Notation reify_type_of e := (reify_type ((fun t (_ : t) => t) _ e)) (only parsing).
 
@@ -183,11 +364,11 @@ Compute API.type. (* to figure out what goes into a type *)
       Export Language.Compilers.GallinaReify.base.
       (** [Reify] does Ltac type inference to get the type *)
       Notation Reify v
-        := (@Reify_as base.type.base base.base_interp ident ident.buildIdent (base.reify_type_of v) (fun _ => v)) (only parsing).
+        := (@Reify_as Compilers.base base_interp ident buildIdent (base.reify_type_of v) (fun _ => v)) (only parsing).
     End base.
 
     (** [Reify] does Ltac type inference to get the type *)
     Notation Reify v
-      := (@Reify_as base.type.base base.base_interp ident ident.buildIdent (reify_type_of v) (fun _ => v)) (only parsing).
+      := (@Reify_as Compilers.base base_interp ident buildIdent (reify_type_of v) (fun _ => v)) (only parsing).
   End GallinaReify.
 End Compilers.

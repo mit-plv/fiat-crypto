@@ -14,7 +14,6 @@ Local Open Scope Z_scope.
 Import
   Language.Wf.Compilers
   Language.Compilers
-  Identifier.Compilers
   Language.API.Compilers.
 Import Compilers.API.
 

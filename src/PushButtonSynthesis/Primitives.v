@@ -38,6 +38,7 @@ Import
   Language.Wf.Compilers
   Language.WfExtra.Compilers
   Language.Compilers
+  API.Compilers
   Stringification.Language.Compilers.
 Import Compilers.API.
 

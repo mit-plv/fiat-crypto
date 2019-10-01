@@ -10,7 +10,6 @@ Require Import Crypto.Language.API.
 Require Import Crypto.Language.Wf.
 
 Import
-  Identifier.Compilers
   Language.API.Compilers
   Language.Wf.Compilers.
 

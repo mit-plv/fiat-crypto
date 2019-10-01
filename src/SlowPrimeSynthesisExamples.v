@@ -18,6 +18,7 @@ Import ListNotations. Local Open Scope Z_scope.
 
 Import
   Language.Compilers
+  Language.API.Compilers
   Stringification.C.Compilers.
 
 Import Language.API.Compilers.API.

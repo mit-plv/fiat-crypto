@@ -3,14 +3,13 @@ Require Import Coq.derive.Derive.
 Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
 Require Import Coq.Lists.List. Import ListNotations.
 Require Import Crypto.COperationSpecifications. Import COperationSpecifications.BarrettReduction.
-Require Import Crypto.Fancy.Compiler.
-Require Import Crypto.Fancy.Prod.
-Require Import Crypto.Fancy.Spec.
 Require Import Crypto.Language.Language. Import Language.Compilers.
-Require Import Crypto.Language.Identifier. Import Identifier.Compilers.
 Require Import Crypto.Language.API. Import Language.API.Compilers.
 Require Import Crypto.Language.Wf.
 Require Import Crypto.PushButtonSynthesis.BarrettReduction.
+Require Import Crypto.Fancy.Compiler.
+Require Import Crypto.Fancy.Prod.
+Require Import Crypto.Fancy.Spec.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.ZUtil.EquivModulo.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
@@ -28,7 +27,7 @@ Module Barrett256.
   Proof. lazy; reflexivity. Qed.
 
   Lemma barrett_red256_correct :
-    COperationSpecifications.BarrettReduction.barrett_red_correct machine_wordsize M (expr.Interp (@ident.gen_interp cast_oor) barrett_red256).
+    COperationSpecifications.BarrettReduction.barrett_red_correct machine_wordsize M (expr.gen_Interp cast_oor barrett_red256).
   Proof.
     apply barrett_red_correct with (machine_wordsize:=machine_wordsize).
     { lazy. reflexivity. }

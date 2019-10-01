@@ -18,7 +18,6 @@ Import AbstractInterpretation.Compilers.
 Import Rewriter.All.Compilers.
 Import MiscCompilerPasses.Compilers.
 Import Stringification.C.Compilers.
-Import Identifier.Compilers.
 Import Language.API.Compilers.
 Local Coercion Z.of_nat : nat >-> Z.
 Import Compilers.API.

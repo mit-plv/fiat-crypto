@@ -15,7 +15,7 @@ Require Import Crypto.Util.ZRange.Show.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.OptionList.
 Require Import Crypto.Language.Language.
-Require Import Crypto.Language.Identifier.
+Require Import Crypto.Language.API.
 Require Import Crypto.Stringification.Language.
 Require Import Crypto.AbstractInterpretation.AbstractInterpretation.
 Require Import Crypto.Util.Bool.Equality.
@@ -26,11 +26,11 @@ Module Compilers.
   Local Set Boolean Equality Schemes.
   Local Set Decidable Equality Schemes.
   Export Language.Compilers.
-  Export Identifier.Compilers.
+  Export Language.API.Compilers.
   Export AbstractInterpretation.Compilers.
   Export Stringification.Language.Compilers.
   Import invert_expr.
-  Import API.
+  Import Compilers.API.
 
   Local Notation tZ := (base.type.type_base base.type.Z).
 
