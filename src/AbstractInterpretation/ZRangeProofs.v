@@ -31,6 +31,7 @@ Require Import Crypto.Util.ZUtil.Tactics.ReplaceNegWithPos.
 Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
 Require Import Crypto.Util.ZUtil.Morphisms.
 Require Import Crypto.Util.HProp.
+Require Import Crypto.Util.Bool.Reflect.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.SplitInContext.
@@ -269,7 +270,9 @@ Module Compilers.
                          | progress destruct_head'_ex
                          | break_innermost_match_step
                          | break_innermost_match_hyps_step
-                         | progress cbn [ZRange.type.base.option.is_bounded_by is_bounded_by_bool ZRange.type.base.is_bounded_by lower upper fst snd projT1 projT2 bool_eq base.interp base.base_interp Option.bind FoldBool.fold_andb_map negb ZRange.ident.option.to_literal ZRange.type.base.option.None ident.to_fancy invert_Some ident.fancy.interp ident.fancy.interp_with_wordmax fst snd ZRange.type.base.option.interp ZRange.type.base.interp List.combine List.In base.interp_beq base.base_interp_beq base.base_interp] in *
+                         | progress cbn [id
+                                           ZRange.type.base.option.is_bounded_by is_bounded_by_bool ZRange.type.base.is_bounded_by lower upper fst snd projT1 projT2 bool_eq base.interp base.base_interp Option.bind FoldBool.fold_andb_map negb ZRange.ident.option.to_literal ZRange.type.base.option.None fst snd ZRange.type.base.option.interp ZRange.type.base.interp List.combine List.In base.interp_beq base.base_interp_beq base.base_interp] in *
+                         | progress ident.fancy.cbv_fancy_in_all
                          | progress destruct_head'_bool
                          | solve [ auto with nocore ]
                          | progress fold (@base.interp) in *
@@ -396,17 +399,114 @@ Module Compilers.
             apply LandLorShiftBounds.Z.shiftr_range; auto with zarith; rewrite Z.add_diag, <-Z_div_exact_full_2 by auto with zarith
             end; auto using Z.mod_pos_bound with zarith.
 
-          Local Lemma interp_related_fancy_rshi k n :
-            interp_is_related (ident.fancy_rshi k n).
+          Local Lemma invert_to_literal {t} e v
+            : ZRange.ident.option.to_literal (t:=t) e = Some v
+              <-> e = ZRange.ident.option.of_literal v.
+          Proof.
+            induction t; split_iff; split; cbn; cbv [Option.bind option_map Option.lift]; break_innermost_match;
+              repeat first [ progress Z.ltb_to_lt
+                           | reflexivity
+                           | congruence
+                           | apply (f_equal2 (@pair _ _))
+                           | progress cbn [ZRange.lower ZRange.upper] in *
+                           | progress cbv [Option.bind] in *; break_match_hyps
+                           | progress subst
+                           | progress intros
+                           | progress inversion_option
+                           | progress inversion_prod
+                           | progress inversion_zrange
+                           | progress destruct_head_hnf' zrange
+                           | progress destruct_head_hnf' unit
+                           | solve [ eauto ]
+                           | match goal with
+                             | [ H : OptionList.Option.List.lift (List.map ZRange.ident.option.to_literal ?l) = Some ?v |- _ ]
+                               => cbv [OptionList.Option.List.lift] in H; revert v H; induction l; intro v; destruct v; cbn [List.fold_right List.map]; intro
+                             | [ |- OptionList.Option.List.lift (List.map ZRange.ident.option.to_literal (List.map ZRange.ident.option.of_literal ?v)) = Some ?v ]
+                               => cbv [OptionList.Option.List.lift]; induction v; cbn [List.fold_right List.map]
+                             | [ H : cons _ _ = cons _ _ |- _ ] => inversion H; clear H
+                             | [ H : forall x, Some x = Some _ -> _ |- _ ] => specialize (H _ eq_refl)
+                             | [ H : forall x, Some _ = Some x -> _ |- _ ] => specialize (H _ eq_refl)
+                             | [ H : forall e v, ?f e = Some v -> e = ?g v, H' : ?f ?e' = Some ?v' |- _ ]
+                               => is_var v'; specialize (H e' v' H')
+                             | [ H : forall e v, e = ?f v -> ?g e = Some v, H' : ?g ?e' = _ |- _ ]
+                               => erewrite H in H' by reflexivity
+                             end
+                           | progress break_match
+                           | apply (f_equal2 (@cons _))
+                           | apply (f_equal (@Some _)) ].
+          Qed.
+
+          Local Lemma is_bounded_by_of_literal {t} x y
+            : ZRange.type.base.option.is_bounded_by (t:=t) (ZRange.ident.option.of_literal x) y = true <-> x = y.
+          Proof.
+            induction t; split_iff; split; cbn [ZRange.ident.option.of_literal ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by]; break_innermost_match.
+            all: repeat first [ progress intros
+                              | progress subst
+                              | progress destruct_head'_and
+                              | progress cbv [option_beq_hetero option_map] in *
+                         | match goal with
+                           | [ H : forall x y, x = y -> _ |- _ ] => specialize (fun x => H x x eq_refl)
+                           | [ H : andb _ _ = true |- _ ] => rewrite Bool.andb_true_iff in H
+                           | [ |- andb _ _ = true ] => rewrite Bool.andb_true_iff
+                           | [ |- and _ _ ] => split
+                           | [ H : is_bounded_by_bool _ r[?x ~> ?x] = true |- _ ]
+                             => apply ZRange.is_bounded_by_bool_constant_iff in H
+                           | [ H : ?beq ?x ?y = true |- ?x = ?y ]
+                             => progress reflect_beq_to_eq beq
+                           | [ |- ?beq ?x ?x = true ]
+                             => progress reflect_beq_to_eq beq
+                           end
+                         | solve [ eauto with nocore ]
+                         | reflexivity
+                         | apply ZRange.is_bounded_by_bool_constant
+                         | progress inversion_prod
+                         | progress destruct_head_hnf' unit
+                         | progress break_innermost_match_hyps
+                         | progress break_innermost_match
+                         | congruence
+                         | apply (f_equal2 (@pair _ _))
+                         | apply (f_equal2 (@cons _))
+                         | apply (f_equal (@Some _))
+                         | match goal with
+                           | [ H : FoldBool.fold_andb_map ZRange.type.base.option.is_bounded_by (List.map ZRange.ident.option.of_literal ?x) ?y = true |- ?x = ?y ]
+                             => is_var x; is_var y; revert dependent y; induction x; intro y; destruct y; cbn [FoldBool.fold_andb_map List.map] in *; generalize dependent (@FoldBool.fold_andb_map); intros
+                           | [ |- FoldBool.fold_andb_map ZRange.type.base.option.is_bounded_by (List.map ZRange.ident.option.of_literal ?x) ?x = true ]
+                             => is_var x; induction x; cbn [FoldBool.fold_andb_map List.map] in *; generalize dependent (@FoldBool.fold_andb_map); intros
+                           end ].
+          Qed.
+
+          Local Ltac require_pairs_of_literals term :=
+            lazymatch term with
+            | ZRange.ident.option.of_literal _ => idtac
+            | (?x, ?y) => require_pairs_of_literals x; require_pairs_of_literals y
+            end.
+          Local Ltac handle_to_literal :=
+            repeat match goal with
+                   | [ |- context[ZRange.ident.option.to_literal (t:=?T) ?x] ]
+                     => is_var x;
+                        let H := fresh in
+                        destruct (ZRange.ident.option.to_literal (t:=T) x) eqn:H;
+                        [ rewrite invert_to_literal in H; subst x | ]
+                   | [ H : ZRange.type.base.option.is_bounded_by (t:=?T1*?T2) (?r1, ?r2) (?x1, ?x2) = true |- _ ]
+                     => require_pairs_of_literals r1;
+                        change (ZRange.type.base.option.is_bounded_by (t:=T1) r1 x1 && ZRange.type.base.option.is_bounded_by (t:=T2) r2 x2 = true)%bool in H;
+                        rewrite Bool.andb_true_iff in H; destruct H
+                   | [ H : ZRange.type.base.option.is_bounded_by (ZRange.ident.option.of_literal ?x) ?y = true |- _ ]
+                     => rewrite is_bounded_by_of_literal in H; (subst x || subst y)
+                   end.
+
+          Local Lemma interp_related_fancy_rshi :
+            interp_is_related ident.fancy_rshi.
           Proof.
             cbn [type.related_hetero ZRange.ident.option.interp ident.interp ident.gen_interp respectful_hetero type.interp ZRange.type.base.option.interp ZRange.type.base.interp base.interp base.base_interp ZRange.type.base.option.Some ZRange.ident.option.of_literal].
             cbv [respectful_hetero option_map list_case].
             clear cast_outside_of_range.
             intros.
             destruct_head_hnf' prod.
-            break_innermost_match;
+            handle_to_literal;
+              break_innermost_match;
               auto using type.base.option.is_bounded_by_None;
-              cbn [ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by Option.bind ZRange.ident.option.to_literal ident.fancy.interp invert_Some ident.to_fancy ident.fancy.interp_with_wordmax] in *;
+              ident.fancy.cbv_fancy_in_all; cbn [ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by Option.bind ZRange.ident.option.to_literal fst snd] in *;
               repeat match goal with
                      | H : _ |- _ =>
                      rewrite Bool.andb_true_iff in H;
@@ -441,7 +541,7 @@ Module Compilers.
             all: destruct_head_hnf' prod.
             all: destruct_head_hnf' option.
             Time all: try solve [ non_arith_t ].
-            all: cbn [ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by Option.bind ZRange.ident.option.to_literal ident.fancy.interp invert_Some ident.to_fancy ident.fancy.interp_with_wordmax] in *.
+            all: ident.fancy.cbv_fancy_in_all; cbn [ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by Option.bind ZRange.ident.option.to_literal fst snd] in *.
             all: break_innermost_match; try reflexivity.
             Time all: try solve [ non_arith_t ].
             all: repeat first [ progress subst

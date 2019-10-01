@@ -354,28 +354,28 @@ Module Compilers.
              | ident.Build_zrange => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 0) ("r[" ++ x 60%nat ++ " ~> " ++ y 200%nat), ZRange.type.base.option.None)
              | ident.zrange_rect A
                => fun args => (show_application with_casts (fun _ => "zrange_rect") args, ZRange.type.base.option.None)
-             | ident.fancy_add log2wordmax imm
-               => fun args => (show_application with_casts (fun lvl' => maybe_wrap_parens (Nat.ltb lvl' 11) ("fancy.add 2^" ++ decimal_string_of_Z log2wordmax ++ " " ++ HexString.of_Z imm)) args, ZRange.type.base.option.None)
-             | ident.fancy_addc log2wordmax imm
-               => fun args => (show_application with_casts (fun lvl' => maybe_wrap_parens (Nat.ltb lvl' 11) ("fancy.addc 2^" ++ decimal_string_of_Z log2wordmax ++ " " ++ HexString.of_Z imm)) args, ZRange.type.base.option.None)
-             | ident.fancy_sub log2wordmax imm
-               => fun args => (show_application with_casts (fun lvl' => maybe_wrap_parens (Nat.ltb lvl' 11) ("fancy.sub 2^" ++ decimal_string_of_Z log2wordmax ++ " " ++ HexString.of_Z imm)) args, ZRange.type.base.option.None)
-             | ident.fancy_subb log2wordmax imm
-               => fun args => (show_application with_casts (fun lvl' => maybe_wrap_parens (Nat.ltb lvl' 11) ("fancy.subb 2^" ++ decimal_string_of_Z log2wordmax ++ " " ++ HexString.of_Z imm)) args, ZRange.type.base.option.None)
-             | ident.fancy_mulll log2wordmax
-               => fun args => (show_application with_casts (fun lvl' => maybe_wrap_parens (Nat.ltb lvl' 11) ("fancy.mulll 2^" ++ decimal_string_of_Z log2wordmax)) args, ZRange.type.base.option.None)
-             | ident.fancy_mullh log2wordmax
-               => fun args => (show_application with_casts (fun lvl' => maybe_wrap_parens (Nat.ltb lvl' 11) ("fancy.mullh 2^" ++ decimal_string_of_Z log2wordmax)) args, ZRange.type.base.option.None)
-             | ident.fancy_mulhl log2wordmax
-               => fun args => (show_application with_casts (fun lvl' => maybe_wrap_parens (Nat.ltb lvl' 11) ("fancy.mulhl 2^" ++ decimal_string_of_Z log2wordmax)) args, ZRange.type.base.option.None)
-             | ident.fancy_mulhh log2wordmax
-               => fun args => (show_application with_casts (fun lvl' => maybe_wrap_parens (Nat.ltb lvl' 11) ("fancy.mulhh 2^" ++ decimal_string_of_Z log2wordmax)) args, ZRange.type.base.option.None)
-             | ident.fancy_rshi log2wordmax x
-               => fun args => (show_application with_casts (fun lvl' => maybe_wrap_parens (Nat.ltb lvl' 11) ("fancy.rshi 2^" ++ decimal_string_of_Z log2wordmax ++ " " ++ decimal_string_of_Z x)) args, ZRange.type.base.option.None)
+             | ident.fancy_add
+               => fun args => (show_application with_casts (fun _ => "fancy.add") args, ZRange.type.base.option.None)
+             | ident.fancy_addc
+               => fun args => (show_application with_casts (fun _ => "fancy.addc") args, ZRange.type.base.option.None)
+             | ident.fancy_sub
+               => fun args => (show_application with_casts (fun _ => "fancy.sub") args, ZRange.type.base.option.None)
+             | ident.fancy_subb
+               => fun args => (show_application with_casts (fun _ => "fancy.subb") args, ZRange.type.base.option.None)
+             | ident.fancy_mulll
+               => fun args => (show_application with_casts (fun _ => "fancy.mulll") args, ZRange.type.base.option.None)
+             | ident.fancy_mullh
+               => fun args => (show_application with_casts (fun _ => "fancy.mullh") args, ZRange.type.base.option.None)
+             | ident.fancy_mulhl
+               => fun args => (show_application with_casts (fun _ => "fancy.mulhl") args, ZRange.type.base.option.None)
+             | ident.fancy_mulhh
+               => fun args => (show_application with_casts (fun _ => "fancy.mulhh") args, ZRange.type.base.option.None)
+             | ident.fancy_rshi
+               => fun args => (show_application with_casts (fun _ => "fancy.rshi") args, ZRange.type.base.option.None)
              | ident.fancy_selc
                => fun args => (show_application with_casts (fun _ => "fancy.selc") args, ZRange.type.base.option.None)
-             | ident.fancy_selm log2wordmax
-               => fun args => (show_application with_casts (fun lvl' => maybe_wrap_parens (Nat.ltb lvl' 11) ("fancy.selm 2^" ++ decimal_string_of_Z log2wordmax)) args, ZRange.type.base.option.None)
+             | ident.fancy_selm
+               => fun args => (show_application with_casts (fun _ => "fancy.selm") args, ZRange.type.base.option.None)
              | ident.fancy_sell
                => fun args => (show_application with_casts (fun _ => "fancy.sell") args, ZRange.type.base.option.None)
              | ident.fancy_addm
@@ -468,27 +468,17 @@ Module Compilers.
                 | ident.Z_cast2 (r1, r2) => "(" ++ show_range_or_ctype r1 ++ ", " ++ show_range_or_ctype r2 ++ ")"
                 | ident.Build_zrange => "Build_zrange"
                 | ident.zrange_rect _ => "zrange_rect"
-                | ident.fancy_add log2wordmax imm
-                  => maybe_wrap_parens with_parens ("fancy.add 2^" ++ decimal_string_of_Z log2wordmax ++ " " ++ HexString.of_Z imm)
-                | ident.fancy_addc log2wordmax imm
-                  => maybe_wrap_parens with_parens ("fancy.addc 2^" ++ decimal_string_of_Z log2wordmax ++ " " ++ HexString.of_Z imm)
-                | ident.fancy_sub log2wordmax imm
-                  => maybe_wrap_parens with_parens ("fancy.sub 2^" ++ decimal_string_of_Z log2wordmax ++ " " ++ HexString.of_Z imm)
-                | ident.fancy_subb log2wordmax imm
-                  => maybe_wrap_parens with_parens ("fancy.subb 2^" ++ decimal_string_of_Z log2wordmax ++ " " ++ HexString.of_Z imm)
-                | ident.fancy_mulll log2wordmax
-                  => maybe_wrap_parens with_parens ("fancy.mulll 2^" ++ decimal_string_of_Z log2wordmax)
-                | ident.fancy_mullh log2wordmax
-                  => maybe_wrap_parens with_parens ("fancy.mullh 2^" ++ decimal_string_of_Z log2wordmax)
-                | ident.fancy_mulhl log2wordmax
-                  => maybe_wrap_parens with_parens ("fancy.mulhl 2^" ++ decimal_string_of_Z log2wordmax)
-                | ident.fancy_mulhh log2wordmax
-                  => maybe_wrap_parens with_parens ("fancy.mulhh 2^" ++ decimal_string_of_Z log2wordmax)
-                | ident.fancy_rshi log2wordmax x
-                  => maybe_wrap_parens with_parens ("fancy.rshi 2^" ++ decimal_string_of_Z log2wordmax ++ " " ++ decimal_string_of_Z x)
+                | ident.fancy_add => "fancy.add"
+                | ident.fancy_addc => "fancy.addc"
+                | ident.fancy_sub => "fancy.sub"
+                | ident.fancy_subb => "fancy.subb"
+                | ident.fancy_mulll => "fancy.mulll"
+                | ident.fancy_mullh => "fancy.mullh"
+                | ident.fancy_mulhl => "fancy.mulhl"
+                | ident.fancy_mulhh => "fancy.mulhh"
+                | ident.fancy_rshi => "fancy.rshi"
                 | ident.fancy_selc => "fancy.selc"
-                | ident.fancy_selm log2wordmax
-                  => maybe_wrap_parens with_parens ("fancy.selm 2^" ++ decimal_string_of_Z log2wordmax)
+                | ident.fancy_selm => "fancy.selm"
                 | ident.fancy_sell => "fancy.sell"
                 | ident.fancy_addm => "fancy.addm"
                 end.

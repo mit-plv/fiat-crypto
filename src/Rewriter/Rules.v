@@ -487,12 +487,6 @@ Definition arith_with_casts_rewrite_rulesT : list (bool * Prop)
 Definition strip_literal_casts_rewrite_rulesT : list (bool * Prop)
   := generalize_cast [dont_do_again (forall rx x, x ∈ rx -> cstZ rx ('x) = 'x)]%Z%zrange.
 
-(** FIXME Don't use [ident.interp] for the fancy identifier rewrite rules *)
-Require Import Crypto.Language.Identifier.
-Import Compilers.
-
-Ltac early_unfold_in term ::= (eval cbv [ident.interp ident.to_fancy Option.invert_Some] in term).
-
 Section fancy.
   Context (invert_low invert_high : Z (*log2wordmax*) -> Z -> option Z)
           (value_range flag_range : zrange).
@@ -531,31 +525,31 @@ Section fancy.
                (forall r rs s rx x rshiftl rland ry y rmask mask roffset offset,
                    s = 2^Z.log2 s -> s ∈ rs -> offset ∈ roffset -> mask ∈ rmask -> shiftl_good rshiftl rland offset -> land_good rland ry mask -> range_in_bitwidth rshiftl s -> (mask = Z.ones (Z.log2 s - offset)) -> (0 <= offset <= Z.log2 s)
                    -> cstZZ r (Z.add_get_carry_full (cstZ rs ('s)) (cstZ rx x) (cstZ rshiftl ((cstZ rland (cstZ ry y &' cstZ rmask ('mask))) << cstZ roffset ('offset))))
-                      = cstZZ r (ident.interp (ident.fancy_add (Z.log2 s) (offset)) (cstZ rx x, cstZ ry y)))
+                      = cstZZ r (ident.fancy.add (('(Z.log2 s), 'offset), (cstZ rx x, cstZ ry y))))
                ; (forall r rs s rx x rshiftl rland ry y rmask mask roffset offset,
                      (s = 2^Z.log2 s) -> (mask = Z.ones (Z.log2 s - offset)) -> (0 <= offset <= Z.log2 s) -> s ∈ rs -> mask ∈ rmask -> offset ∈ roffset -> shiftl_good rshiftl rland offset -> land_good rland ry mask -> range_in_bitwidth rshiftl s
                      -> cstZZ r (Z.add_get_carry_full (cstZ rs ('s)) (cstZ rx x) (cstZ rshiftl (cstZ rland (cstZ ry y &' cstZ rmask ('mask)) << cstZ roffset ('offset))))
-                        = cstZZ r (ident.interp (ident.fancy_add (Z.log2 s) offset) (cstZ rx x, cstZ ry y)))
+                        = cstZZ r (ident.fancy.add (('(Z.log2 s), 'offset), (cstZ rx x, cstZ ry y))))
 
                ; (forall r rs s rshiftl rland ry y rmask mask roffset offset rx x,
                      s ∈ rs -> mask ∈ rmask -> offset ∈ roffset -> (s = 2^Z.log2 s) -> shiftl_good rshiftl rland offset -> land_good rland ry mask -> range_in_bitwidth rshiftl s -> (mask = Z.ones (Z.log2 s - offset)) -> (0 <= offset <= Z.log2 s)
                      -> cstZZ r (Z.add_get_carry_full (cstZ rs ('s)) (cstZ rshiftl (Z.shiftl (cstZ rland (Z.land (cstZ ry y) (cstZ rmask ('mask)))) (cstZ roffset ('offset)))) (cstZ rx x))
-                        = cstZZ r (ident.interp (ident.fancy_add (Z.log2 s) offset) (cstZ rx x, cstZ ry y)))
+                        = cstZZ r (ident.fancy.add (('(Z.log2 s), 'offset), (cstZ rx x, cstZ ry y))))
 
                ; (forall r rs s rx x rshiftr ry y roffset offset,
                      s ∈ rs -> offset ∈ roffset -> (s = 2^Z.log2 s) -> shiftr_good rshiftr ry offset -> range_in_bitwidth rshiftr s
                      -> cstZZ r (Z.add_get_carry_full (cstZ rs ('s)) (cstZ rx x) (cstZ rshiftr (Z.shiftr (cstZ ry y) (cstZ roffset ('offset)))))
-                        = cstZZ r (ident.interp (ident.fancy_add (Z.log2 s) (-offset)) (cstZ rx x, cstZ ry y)))
+                        = cstZZ r (ident.fancy.add (('(Z.log2 s), '(-offset)), (cstZ rx x, cstZ ry y)))%core)
 
                ; (forall r rs s rshiftr ry y roffset offset rx x,
                      s ∈ rs -> offset ∈ roffset -> (s = 2^Z.log2 s) -> shiftr_good rshiftr ry offset -> range_in_bitwidth rshiftr s
                      -> cstZZ r (Z.add_get_carry_full (cstZ rs ('s)) (cstZ rshiftr (Z.shiftr (cstZ ry y) (cstZ roffset ('offset)))) (cstZ rx x))
-                        = cstZZ r (ident.interp (ident.fancy_add (Z.log2 s) (-offset)) (cstZ rx x, cstZ ry y)))
+                        = cstZZ r (ident.fancy.add (('(Z.log2 s), '(-offset)), (cstZ rx x, cstZ ry y))%core))
 
                ; (forall r rs s rx x ry y,
                      s ∈ rs -> (s = 2^Z.log2 s) -> range_in_bitwidth ry s
                      -> cstZZ r (Z.add_get_carry_full (cstZ rs ('s)) (cstZ rx x) (cstZ ry y))
-                        = cstZZ r (ident.interp (ident.fancy_add (Z.log2 s) 0) (cstZ rx x, cstZ ry y)))
+                        = cstZZ r (ident.fancy.add (('(Z.log2 s), '0), (cstZ rx x, cstZ ry y))))
 
                (*
 (Z.add_with_get_carry_concrete 2^256) @@ (?c, ?x, ?y << 128) --> (addc 128) @@ (c, x, y)
@@ -567,27 +561,27 @@ Section fancy.
                ; (forall r rs s rc c rx x rshiftl rland ry y rmask mask roffset offset,
                      s ∈ rs -> mask ∈ rmask -> offset ∈ roffset -> (s = 2^Z.log2 s) -> shiftl_good rshiftl rland offset -> land_good rland ry mask -> range_in_bitwidth rshiftl s -> (mask = Z.ones (Z.log2 s - offset)) -> (0 <= offset <= Z.log2 s)
                      -> cstZZ r (Z.add_with_get_carry_full (cstZ rs ('s)) (cstZ rc c) (cstZ rx x) (cstZ rshiftl (Z.shiftl (cstZ rland (Z.land (cstZ ry y) (cstZ rmask ('mask)))) (cstZ roffset ('offset)))))
-                        = cstZZ r (ident.interp (ident.fancy_addc (Z.log2 s) offset) (cstZ rc c, cstZ rx x, cstZ ry y)))
+                        = cstZZ r (ident.fancy.addc (('(Z.log2 s), 'offset), (cstZ rc c, cstZ rx x, cstZ ry y))))
 
                ; (forall r rs s rc c rshiftl rland ry y rmask mask roffset offset rx x,
                      s ∈ rs -> mask ∈ rmask -> offset ∈ roffset -> (s = 2^Z.log2 s) -> shiftl_good rshiftl rland offset -> range_in_bitwidth rshiftl s -> land_good rland ry mask -> (mask = Z.ones (Z.log2 s - offset)) -> (0 <= offset <= Z.log2 s)
                      -> cstZZ r (Z.add_with_get_carry_full (cstZ rs ('s)) (cstZ rc c) (cstZ rshiftl (Z.shiftl (cstZ rland (Z.land (cstZ ry y) (cstZ rmask ('mask)))) (cstZ roffset ('offset)))) (cstZ rx x))
-                        = cstZZ r (ident.interp (ident.fancy_addc (Z.log2 s) offset) (cstZ rc c, cstZ rx x, cstZ ry y)))
+                        = cstZZ r (ident.fancy.addc (('(Z.log2 s), 'offset), (cstZ rc c, cstZ rx x, cstZ ry y))))
 
                ; (forall r rs s rc c rx x rshiftr ry y roffset offset,
                      s ∈ rs -> offset ∈ roffset -> (s = 2^Z.log2 s) -> shiftr_good rshiftr ry offset -> range_in_bitwidth rshiftr s
                      -> cstZZ r (Z.add_with_get_carry_full (cstZ rs ('s)) (cstZ rc c) (cstZ rx x) (cstZ rshiftr (Z.shiftr (cstZ ry y) (cstZ roffset ('offset)))))
-                        = cstZZ r (ident.interp (ident.fancy_addc (Z.log2 s) (-offset)) (cstZ rc c, cstZ rx x, cstZ ry y)))
+                        = cstZZ r (ident.fancy.addc (('(Z.log2 s), '(-offset)), (cstZ rc c, cstZ rx x, cstZ ry y))%core))
 
                ; (forall r rs s rc c rshiftr ry y roffset offset rx x,
                      s ∈ rs -> offset ∈ roffset -> (s = 2^Z.log2 s) -> shiftr_good rshiftr ry offset -> range_in_bitwidth rshiftr s
                      -> cstZZ r (Z.add_with_get_carry_full (cstZ rs ('s)) (cstZ rc c) (cstZ rshiftr (Z.shiftr (cstZ ry y) (cstZ roffset ('offset)))) (cstZ rx x))
-                        = cstZZ r (ident.interp (ident.fancy_addc (Z.log2 s) (-offset)) (cstZ rc c, cstZ rx x, cstZ ry y)))
+                        = cstZZ r (ident.fancy.addc (('(Z.log2 s), '(-offset)), (cstZ rc c, cstZ rx x, cstZ ry y))%core))
 
                ; (forall r rs s rc c rx x ry y,
                      s ∈ rs -> (s = 2^Z.log2 s) -> range_in_bitwidth ry s
                      -> cstZZ r (Z.add_with_get_carry_full (cstZ rs ('s)) (cstZ rc c) (cstZ rx x) (cstZ ry y))
-                        = cstZZ r (ident.interp (ident.fancy_addc (Z.log2 s) 0) (cstZ rc c, cstZ rx x, cstZ ry y)))
+                        = cstZZ r (ident.fancy.addc (('(Z.log2 s), '0), (cstZ rc c, cstZ rx x, cstZ ry y))))
 
                (*
 (Z.sub_get_borrow_concrete 2^256) @@ (?x, ?y << 128) --> (sub 128) @@ (x, y)
@@ -598,17 +592,17 @@ Section fancy.
                ; (forall r rs s rx x rshiftl rland ry y rmask mask roffset offset,
                      s ∈ rs -> mask ∈ rmask -> offset ∈ roffset -> (s = 2^Z.log2 s) -> shiftl_good rshiftl rland offset -> range_in_bitwidth rshiftl s -> land_good rland ry mask -> (mask = Z.ones (Z.log2 s - offset)) -> (0 <= offset <= Z.log2 s)
                      -> cstZZ r (Z.sub_get_borrow_full (cstZ rs ('s)) (cstZ rx x) (cstZ rshiftl (Z.shiftl (cstZ rland (Z.land (cstZ ry y) (cstZ rmask ('mask)))) (cstZ roffset ('offset)))))
-                        = cstZZ r (ident.interp (ident.fancy_sub (Z.log2 s) offset) (cstZ rx x, cstZ ry y)))
+                        = cstZZ r (ident.fancy.sub (('(Z.log2 s), 'offset), (cstZ rx x, cstZ ry y))))
 
                ; (forall r rs s rx x rshiftr ry y roffset offset,
                      s ∈ rs -> offset ∈ roffset -> (s = 2^Z.log2 s) -> shiftr_good rshiftr ry offset -> range_in_bitwidth rshiftr s
                      -> cstZZ r (Z.sub_get_borrow_full (cstZ rs ('s)) (cstZ rx x) (cstZ rshiftr (Z.shiftr (cstZ ry y) (cstZ roffset ('offset)))))
-                        = cstZZ r (ident.interp (ident.fancy_sub (Z.log2 s) (-offset)) (cstZ rx x, cstZ ry y)))
+                        = cstZZ r (ident.fancy.sub (('(Z.log2 s), '(-offset)), (cstZ rx x, cstZ ry y))%core))
 
                ; (forall r rs s rx x ry y,
                      s ∈ rs -> (s = 2^Z.log2 s) -> range_in_bitwidth ry s
                      -> cstZZ r (Z.sub_get_borrow_full (cstZ rs ('s)) (cstZ rx x) (cstZ ry y))
-                        = cstZZ r (ident.interp (ident.fancy_sub (Z.log2 s) 0) (cstZ rx x, cstZ ry y)))
+                        = cstZZ r (ident.fancy.sub (('(Z.log2 s), '0), (cstZ rx x, cstZ ry y))))
 
                (*
 (Z.sub_with_get_borrow_concrete 2^256) @@ (?c, ?x, ?y << 128) --> (subb 128) @@ (c, x, y)
@@ -619,24 +613,24 @@ Section fancy.
                ; (forall r rs s rb b rx x rshiftl rland ry y rmask mask roffset offset,
                      s ∈ rs -> mask ∈ rmask -> offset ∈ roffset -> (s = 2^Z.log2 s) -> shiftl_good rshiftl rland offset -> range_in_bitwidth rshiftl s -> land_good rland ry mask -> (mask = Z.ones (Z.log2 s - offset)) -> (0 <= offset <= Z.log2 s)
                      -> cstZZ r (Z.sub_with_get_borrow_full (cstZ rs ('s)) (cstZ rb b) (cstZ rx x) (cstZ rshiftl (Z.shiftl (cstZ rland (Z.land (cstZ ry y) (cstZ rmask ('mask)))) (cstZ roffset ('offset)))))
-                        = cstZZ r (ident.interp (ident.fancy_subb (Z.log2 s) offset) (cstZ rb b, cstZ rx x, cstZ ry y)))
+                        = cstZZ r (ident.fancy.subb (('(Z.log2 s), 'offset), (cstZ rb b, cstZ rx x, cstZ ry y))))
 
                ; (forall r rs s rb b rx x rshiftr ry y roffset offset,
                      s ∈ rs -> offset ∈ roffset -> (s = 2^Z.log2 s) -> shiftr_good rshiftr ry offset -> range_in_bitwidth rshiftr s
                      -> cstZZ r (Z.sub_with_get_borrow_full (cstZ rs ('s)) (cstZ rb b) (cstZ rx x) (cstZ rshiftr (Z.shiftr (cstZ ry y) (cstZ roffset ('offset)))))
-                        = cstZZ r (ident.interp (ident.fancy_subb (Z.log2 s) (-offset)) (cstZ rb b, cstZ rx x, cstZ ry y)))
+                        = cstZZ r (ident.fancy.subb (('(Z.log2 s), '(-offset)), (cstZ rb b, cstZ rx x, cstZ ry y))%core))
 
                ; (forall r rs s rb b rx x ry y,
                      s ∈ rs -> (s = 2^Z.log2 s) -> range_in_bitwidth ry s
                      -> cstZZ r (Z.sub_with_get_borrow_full (cstZ rs ('s)) (cstZ rb b) (cstZ rx x) (cstZ ry y))
-                        = cstZZ r (ident.interp (ident.fancy_subb (Z.log2 s) 0) (cstZ rb b, cstZ rx x, cstZ ry y)))
+                        = cstZZ r (ident.fancy.subb (('(Z.log2 s), '0), (cstZ rb b, cstZ rx x, cstZ ry y))))
 
                (*(Z.rshi_concrete 2^256 ?n) @@ (?c, ?x, ?y) --> (rshi n) @@ (x, y)*)
 
                ; (forall r rs s rx x ry y rn n,
                      s ∈ rs -> n ∈ rn -> (s = 2^Z.log2 s)
                      -> cstZ r (Z.rshi (cstZ rs ('s)) (cstZ rx x) (cstZ ry y) (cstZ rn ('n)))
-                        = cstZ r (ident.interp (ident.fancy_rshi (Z.log2 s) n) (cstZ rx x, cstZ ry y)))
+                        = cstZ r (ident.fancy.rshi (('(Z.log2 s), 'n), (cstZ rx x, cstZ ry y))))
 
                (*
 Z.zselect @@ (Z.cc_m_concrete 2^256 ?c, ?x, ?y) --> selm @@ (c, x, y)
@@ -646,26 +640,26 @@ Z.zselect @@ (?c, ?x, ?y)                       --> selc @@ (c, x, y)
                ; (forall r rccm rs s rc c rx x ry y,
                      s ∈ rs -> (s = 2^Z.log2 s) -> cc_m_good rccm s rc
                      -> cstZ r (Z.zselect (cstZ rccm (Z.cc_m (cstZ rs ('s)) (cstZ rc c))) (cstZ rx x) (cstZ ry y))
-                        = cstZ r (ident.interp (ident.fancy_selm (Z.log2 s)) (cstZ rc c, cstZ rx x, cstZ ry y)))
+                        = cstZ r (ident.fancy.selm ('(Z.log2 s), (cstZ rc c, cstZ rx x, cstZ ry y))))
 
                ; (forall r rland r1 rc c rx x ry y,
                      1 ∈ r1 -> land_good rland 1 rc
                      -> cstZ r (Z.zselect (cstZ rland (cstZ r1 1 &' cstZ rc c)) (cstZ rx x) (cstZ ry y))
-                        = cstZ r (ident.interp ident.fancy_sell (cstZ rc c, cstZ rx x, cstZ ry y)))
+                        = cstZ r (ident.fancy.sell (cstZ rc c, cstZ rx x, cstZ ry y)))
 
                ; (forall r rland rc c r1 rx x ry y,
                      1 ∈ r1 -> land_good rland rc 1
                      -> cstZ r (Z.zselect (cstZ rland (cstZ rc c &' cstZ r1 1)) (cstZ rx x) (cstZ ry y))
-                        = cstZ r (ident.interp ident.fancy_sell (cstZ rc c, cstZ rx x, cstZ ry y)))
+                        = cstZ r (ident.fancy.sell (cstZ rc c, cstZ rx x, cstZ ry y)))
 
                ; (forall r c x y,
                      cstZ r (Z.zselect c x y)
-                     = cstZ r (ident.interp ident.fancy_selc (c, x, y)))
+                     = cstZ r (ident.fancy.selc (c, x, y)))
 
                (*Z.add_modulo @@ (?x, ?y, ?m) --> addm @@ (x, y, m)*)
                ; (forall x y m,
                      Z.add_modulo x y m
-                     = ident.interp ident.fancy_addm (x, y, m))
+                     = ident.fancy.addm (x, y, m))
 
                (*
 Z.mul @@ (?x &' (2^128-1), ?y &' (2^128-1)) --> mulll @@ (x, y)
@@ -680,7 +674,7 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
                       plet xv := match xo with Some x => x | None => 0 end in
                       xo <> None -> x ∈ rx -> mask ∈ rmask -> (mask = 2^(s/2)-1) -> land_good rland ry mask
                       -> cstZ r (cstZ rx ('x) * cstZ rland (Z.land (cstZ ry y) (cstZ rmask ('mask))))
-                         = cstZ r (ident.interp (ident.fancy_mulll s) ('xv, cstZ ry y)))
+                         = cstZ r (ident.fancy.mulll (('s), ('xv, cstZ ry y))))
 
                ; (forall r rx x rland rmask mask ry y,
                      plet s := (2*Z.log2_up mask)%Z in
@@ -688,7 +682,7 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
                       plet xv := match xo with Some x => x | None => 0 end in
                       xo <> None -> x ∈ rx -> mask ∈ rmask -> (mask = 2^(s/2)-1) -> land_good rland mask ry
                       -> cstZ r (cstZ rx ('x) * cstZ rland (Z.land (cstZ rmask ('mask)) (cstZ ry y)))
-                         = cstZ r (ident.interp (ident.fancy_mulll s) ('xv, cstZ ry y)))
+                         = cstZ r (ident.fancy.mulll (('s), ('xv, cstZ ry y))))
 
                ; (forall r rx x rshiftr ry y roffset offset,
                      plet s := (2*offset)%Z in
@@ -696,7 +690,7 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
                       plet xv := match xo with Some x => x | None => 0 end in
                       xo <> None -> x ∈ rx -> offset ∈ roffset -> shiftr_good rshiftr ry offset
                       -> cstZ r (cstZ rx ('x) * cstZ rshiftr (Z.shiftr (cstZ ry y) (cstZ roffset ('offset))))
-                         = cstZ r (ident.interp (ident.fancy_mullh s) ('xv, cstZ ry y)))
+                         = cstZ r (ident.fancy.mullh (('s), ('xv, cstZ ry y))))
 
                ; (forall r rx x rland rmask mask ry y,
                      plet s := (2*Z.log2_up mask)%Z in
@@ -704,7 +698,7 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
                       plet xv := match xo with Some x => x | None => 0 end in
                       xo <> None -> x ∈ rx -> mask ∈ rmask -> (mask = 2^(s/2)-1) -> land_good rland mask ry
                       -> cstZ r (cstZ rx ('x) * cstZ rland (Z.land (cstZ rmask ('mask)) (cstZ ry y)))
-                         = cstZ r (ident.interp (ident.fancy_mulhl s) ('xv, cstZ ry y)))
+                         = cstZ r (ident.fancy.mulhl (('s), ('xv, cstZ ry y))))
 
                ; (forall r rx x rland ry y rmask mask,
                      plet s := (2*Z.log2_up mask)%Z in
@@ -712,7 +706,7 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
                       plet xv := match xo with Some x => x | None => 0 end in
                       xo <> None -> x ∈ rx -> mask ∈ rmask -> (mask = 2^(s/2)-1) -> land_good rland ry mask
                       -> cstZ r (cstZ rx ('x) * cstZ rland (Z.land (cstZ ry y) (cstZ rmask ('mask))))
-                         = cstZ r (ident.interp (ident.fancy_mulhl s) ('xv, cstZ ry y)))
+                         = cstZ r (ident.fancy.mulhl (('s), ('xv, cstZ ry y))))
 
                ; (forall r rx x rshiftr ry y roffset offset,
                      plet s := (2*offset)%Z in
@@ -720,7 +714,7 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
                       plet xv := match xo with Some x => x | None => 0 end in
                       xo <> None -> x ∈ rx -> offset ∈ roffset -> shiftr_good rshiftr ry offset
                       -> cstZ r (cstZ rx ('x) * cstZ rshiftr (Z.shiftr (cstZ ry y) (cstZ roffset ('offset))))
-                         = cstZ r (ident.interp (ident.fancy_mulhh s) ('xv, cstZ ry y)))
+                         = cstZ r (ident.fancy.mulhh (('s), ('xv, cstZ ry y))))
 
                (* literal on right *)
                ; (forall r rland rmask mask rx x ry y,
@@ -729,7 +723,7 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
                       plet yv := match yo with Some y => y | None => 0 end in
                       yo <> None -> y ∈ ry -> mask ∈ rmask -> (mask = 2^(s/2)-1) -> land_good rland mask rx
                       -> cstZ r (cstZ rland (Z.land (cstZ rmask ('mask)) (cstZ rx x)) * cstZ ry ('y))
-                         = cstZ r (ident.interp (ident.fancy_mulll s) (cstZ rx x, 'yv)))
+                         = cstZ r (ident.fancy.mulll (('s), (cstZ rx x, 'yv))))
 
                ; (forall r rland rx x rmask mask ry y,
                      plet s := (2*Z.log2_up mask)%Z in
@@ -737,7 +731,7 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
                       plet yv := match yo with Some y => y | None => 0 end in
                       yo <> None -> y ∈ ry -> mask ∈ rmask -> (mask = 2^(s/2)-1) -> land_good rland rx mask
                       -> cstZ r (cstZ rland (Z.land (cstZ rx x) (cstZ rmask ('mask))) * cstZ ry ('y))
-                         = cstZ r (ident.interp (ident.fancy_mulll s) (cstZ rx x, 'yv)))
+                         = cstZ r (ident.fancy.mulll (('s), (cstZ rx x, 'yv))))
 
                ; (forall r rland rmask mask rx x ry y,
                      plet s := (2*Z.log2_up mask)%Z in
@@ -745,7 +739,7 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
                       plet yv := match yo with Some y => y | None => 0 end in
                       yo <> None -> y ∈ ry -> mask ∈ rmask -> (mask = 2^(s/2)-1) -> land_good rland mask rx
                       -> cstZ r (cstZ rland (Z.land (cstZ rmask ('mask)) (cstZ rx x)) * cstZ ry ('y))
-                         = cstZ r (ident.interp (ident.fancy_mullh s) (cstZ rx x, 'yv)))
+                         = cstZ r (ident.fancy.mullh (('s), (cstZ rx x, 'yv))))
 
                ; (forall r rland rx x rmask mask ry y,
                      plet s := (2*Z.log2_up mask)%Z in
@@ -753,7 +747,7 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
                       plet yv := match yo with Some y => y | None => 0 end in
                       yo <> None -> y ∈ ry -> mask ∈ rmask -> (mask = 2^(s/2)-1) -> land_good rland rx mask
                       -> cstZ r (cstZ rland (Z.land (cstZ rx x) (cstZ rmask ('mask))) * cstZ ry ('y))
-                         = cstZ r (ident.interp (ident.fancy_mullh s) (cstZ rx x, 'yv)))
+                         = cstZ r (ident.fancy.mullh (('s), (cstZ rx x, 'yv))))
 
                ; (forall r rshiftr rx x roffset offset ry y,
                      plet s := (2*offset)%Z in
@@ -761,7 +755,7 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
                       plet yv := match yo with Some y => y | None => 0 end in
                       yo <> None -> y ∈ ry -> offset ∈ roffset -> shiftr_good rshiftr rx offset
                       -> cstZ r (cstZ rshiftr (Z.shiftr (cstZ rx x) (cstZ roffset ('offset))) * cstZ ry ('y))
-                         = cstZ r (ident.interp (ident.fancy_mulhl s) (cstZ rx x, 'yv)))
+                         = cstZ r (ident.fancy.mulhl (('s), (cstZ rx x, 'yv))))
 
                ; (forall r rshiftr rx x roffset offset ry y,
                      plet s := (2*offset)%Z in
@@ -769,62 +763,62 @@ Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
                       plet yv := match yo with Some y => y | None => 0 end in
                       yo <> None -> y ∈ ry -> offset ∈ roffset -> shiftr_good rshiftr rx offset
                       -> cstZ r (cstZ rshiftr (Z.shiftr (cstZ rx x) (cstZ roffset ('offset))) * cstZ ry ('y))
-                         = cstZ r (ident.interp (ident.fancy_mulhh s) (cstZ rx x, 'yv)))
+                         = cstZ r (ident.fancy.mulhh (('s), (cstZ rx x, 'yv))))
 
                (* no literal *)
                ; (forall r rland1 rmask1 mask1 rx x rland2 rmask2 mask2 ry y,
                      plet s := (2*Z.log2_up mask1)%Z in
                       mask1 ∈ rmask1 -> mask2 ∈ rmask2 -> (mask1 = 2^(s/2)-1) -> (mask2 = 2^(s/2)-1) -> land_good rland1 mask1 rx -> land_good rland2 mask2 ry
                       -> cstZ r (cstZ rland1 (Z.land (cstZ rmask1 ('mask1)) (cstZ rx x)) * cstZ rland2 (Z.land (cstZ rmask2 ('mask2)) (cstZ ry y)))
-                         = cstZ r (ident.interp (ident.fancy_mulll s) (cstZ rx x, cstZ ry y)))
+                         = cstZ r (ident.fancy.mulll (('s), (cstZ rx x, cstZ ry y))))
 
                ; (forall r rland1 rx x rmask1 mask1 rland2 rmask2 mask2 ry y,
                      plet s := (2*Z.log2_up mask1)%Z in
                       mask1 ∈ rmask1 -> mask2 ∈ rmask2 -> (mask1 = 2^(s/2)-1) -> (mask2 = 2^(s/2)-1) -> land_good rland1 rx mask1 -> land_good rland2 mask2 ry
                       -> cstZ r (cstZ rland1 (Z.land (cstZ rx x) (cstZ rmask1 ('mask1))) * cstZ rland2 (Z.land (cstZ rmask2 ('mask2)) (cstZ ry y)))
-                         = cstZ r (ident.interp (ident.fancy_mulll s) (cstZ rx x, cstZ ry y)))
+                         = cstZ r (ident.fancy.mulll (('s), (cstZ rx x, cstZ ry y))))
 
                ; (forall r rland1 rmask1 mask1 rx x rland2 ry y rmask2 mask2,
                      plet s := (2*Z.log2_up mask1)%Z in
                       mask1 ∈ rmask1 -> mask2 ∈ rmask2 -> (mask1 = 2^(s/2)-1) -> (mask2 = 2^(s/2)-1) -> land_good rland1 mask1 rx -> land_good rland2 ry mask2
                       -> cstZ r (cstZ rland1 (Z.land (cstZ rmask1 ('mask1)) (cstZ rx x)) * cstZ rland2 (Z.land (cstZ ry y) (cstZ rmask2 ('mask2))))
-                         = cstZ r (ident.interp (ident.fancy_mulll s) (cstZ rx x, cstZ ry y)))
+                         = cstZ r (ident.fancy.mulll (('s), (cstZ rx x, cstZ ry y))))
 
                ; (forall r rland1 rx x rmask1 mask1 rland2 ry y rmask2 mask2,
                      plet s := (2*Z.log2_up mask1)%Z in
                       mask1 ∈ rmask1 -> mask2 ∈ rmask2 -> (mask1 = 2^(s/2)-1) -> (mask2 = 2^(s/2)-1) -> land_good rland1 rx mask1 -> land_good rland2 ry mask2
                       -> cstZ r (cstZ rland1 (Z.land (cstZ rx x) (cstZ rmask1 ('mask1))) * cstZ rland2 (Z.land (cstZ ry y) (cstZ rmask2 ('mask2))))
-                         = cstZ r (ident.interp (ident.fancy_mulll s) (cstZ rx x, cstZ ry y)))
+                         = cstZ r (ident.fancy.mulll (('s), (cstZ rx x, cstZ ry y))))
 
                ; (forall r rland1 rmask mask rx x rshiftr2 ry y roffset offset,
                      plet s := (2*offset)%Z in
                       mask ∈ rmask -> offset ∈ roffset -> (mask = 2^(s/2)-1) -> land_good rland1 mask rx -> shiftr_good rshiftr2 ry offset
                       -> cstZ r (cstZ rland1 (Z.land (cstZ rmask ('mask)) (cstZ rx x)) * cstZ rshiftr2 (Z.shiftr (cstZ ry y) (cstZ roffset ('offset))))
-                         = cstZ r (ident.interp (ident.fancy_mullh s) (cstZ rx x, cstZ ry y)))
+                         = cstZ r (ident.fancy.mullh (('s), (cstZ rx x, cstZ ry y))))
 
                ; (forall r rland1 rx x rmask mask rshiftr2 ry y roffset offset,
                      plet s := (2*offset)%Z in
                       mask ∈ rmask -> offset ∈ roffset -> (mask = 2^(s/2)-1) -> land_good rland1 rx mask -> shiftr_good rshiftr2 ry offset
                       -> cstZ r (cstZ rland1 (Z.land (cstZ rx x) (cstZ rmask ('mask))) * cstZ rshiftr2 (Z.shiftr (cstZ ry y) (cstZ roffset ('offset))))
-                         = cstZ r (ident.interp (ident.fancy_mullh s) (cstZ rx x, cstZ ry y)))
+                         = cstZ r (ident.fancy.mullh (('s), (cstZ rx x, cstZ ry y))))
 
                ; (forall r rshiftr1 rx x roffset offset rland2 rmask mask ry y,
                      plet s := (2*offset)%Z in
                       mask ∈ rmask -> offset ∈ roffset -> (mask = 2^(s/2)-1) -> shiftr_good rshiftr1 rx offset -> land_good rland2 mask ry
                       -> cstZ r (cstZ rshiftr1 (Z.shiftr (cstZ rx x) (cstZ roffset ('offset))) * cstZ rland2 (Z.land (cstZ rmask ('mask)) (cstZ ry y)))
-                         = cstZ r (ident.interp (ident.fancy_mulhl s) (cstZ rx x, cstZ ry y)))
+                         = cstZ r (ident.fancy.mulhl (('s), (cstZ rx x, cstZ ry y))))
 
                ; (forall r rshiftr1 rx x roffset offset rland2 ry y rmask mask,
                      plet s := (2*offset)%Z in
                       mask ∈ rmask -> offset ∈ roffset -> (mask = 2^(s/2)-1) -> shiftr_good rshiftr1 rx offset -> land_good rland2 ry mask
                       -> cstZ r (cstZ rshiftr1 (Z.shiftr (cstZ rx x) (cstZ roffset ('offset))) * cstZ rland2 (Z.land (cstZ ry y) (cstZ rmask ('mask))))
-                         = cstZ r (ident.interp (ident.fancy_mulhl s) (cstZ rx x, cstZ ry y)))
+                         = cstZ r (ident.fancy.mulhl (('s), (cstZ rx x, cstZ ry y))))
 
                ; (forall r rshiftr1 rx x roffset1 offset1 rshiftr2 ry y roffset2 offset2,
                      plet s := (2*offset1)%Z in
                       offset1 ∈ roffset1 -> offset2 ∈ roffset2 -> (offset1 = offset2) -> shiftr_good rshiftr1 rx offset1 -> shiftr_good rshiftr2 ry offset2
                       -> cstZ r (cstZ rshiftr1 (Z.shiftr (cstZ rx x) (cstZ roffset1 ('offset1))) * cstZ rshiftr2 (Z.shiftr (cstZ ry y) (cstZ roffset2 ('offset2))))
-                         = cstZ r (ident.interp (ident.fancy_mulhh s) (cstZ rx x, cstZ ry y)))
+                         = cstZ r (ident.fancy.mulhh (('s), (cstZ rx x, cstZ ry y))))
 
                (** Dummy rule to make sure we use the two value ranges; this can be removed *)
                ; (forall rx x,

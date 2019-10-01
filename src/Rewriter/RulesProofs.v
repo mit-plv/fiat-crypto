@@ -65,10 +65,9 @@ Local Definition myflatten {A} := Eval cbv in List.fold_right myapp (@nil A).
 Local Notation dont_do_again := (pair false) (only parsing).
 Local Notation do_again := (pair true) (only parsing).
 
-Require Crypto.Language.Identifier.
-
 Local Ltac start_proof :=
-  cbv [snd]; hnf; cbv [PrimitiveHList.hlist ident.eagerly ident.literal Identifier.Compilers.ident.interp Identifier.Compilers.ident.fancy.interp Identifier.Compilers.ident.fancy.interp_with_wordmax Let_In Identifier.Compilers.ident.to_fancy invert_Some ident.cast2];
+  cbv [snd]; hnf; cbv [id
+                         PrimitiveHList.hlist ident.eagerly ident.literal Let_In ident.cast2]; ident.fancy.cbv_fancy;
   repeat apply PrimitiveProd.Primitive.pair; try exact tt.
 
 Local Hint Resolve

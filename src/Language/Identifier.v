@@ -136,74 +136,6 @@ Module Compilers.
     Export Language.Compilers.ident.
     Local Notation type := (type base.type).
     Local Notation ttype := type.
-    Module fancy.
-      Section with_base.
-        Let type_base (x : base.type.base) : base.type := base.type.type_base x.
-        Let base (x : base.type) : type := type.base x.
-        Local Coercion type_base : base.type.base >-> base.type.
-
-        Section with_scope.
-          Import base.type.
-          Notation type := ttype.
-
-          Inductive ident_with_wordmax {log2wordmax : BinInt.Z} : base.type -> base.type -> Set :=
-          | add (imm : BinInt.Z) : ident_with_wordmax (Z * Z) (Z * Z)
-          | addc (imm : BinInt.Z) : ident_with_wordmax (Z * Z * Z) (Z * Z)
-          | sub (imm : BinInt.Z) : ident_with_wordmax (Z * Z) (Z * Z)
-          | subb (imm : BinInt.Z) : ident_with_wordmax (Z * Z * Z) (Z * Z)
-          | mulll : ident_with_wordmax (Z * Z) Z
-          | mullh : ident_with_wordmax (Z * Z) Z
-          | mulhl : ident_with_wordmax (Z * Z) Z
-          | mulhh : ident_with_wordmax (Z * Z) Z
-          | selm : ident_with_wordmax (Z * Z * Z) Z
-          | rshi : BinInt.Z -> ident_with_wordmax (Z * Z) Z
-          .
-
-          Inductive ident : base.type -> base.type -> Set :=
-          | with_wordmax (log2wordmax : BinInt.Z) {s d} (idc : @ident_with_wordmax log2wordmax s d) : ident s d
-          | selc : ident (Z * Z * Z) Z
-          | sell : ident (Z * Z * Z) Z
-          | addm : ident (Z * Z * Z) Z
-          .
-
-          Section interp_with_wordmax.
-            Context (log2wordmax : BinInt.Z).
-            Let wordmax := 2 ^ log2wordmax.
-            Let half_bits := log2wordmax / 2.
-            Let wordmax_half_bits := 2 ^ half_bits.
-
-            Local Notation low x := (Z.land x (wordmax_half_bits - 1)).
-            Local Notation high x := (x >> half_bits).
-            Local Notation shift x imm := ((x << imm) mod wordmax).
-
-            Definition interp_with_wordmax {s d} (idc : @ident_with_wordmax log2wordmax s d) : base.interp s -> base.interp d :=
-              match idc with
-              | add imm => fun x => Z.add_get_carry_full wordmax (fst x) (shift (snd x) imm)
-              | addc imm => fun x => Z.add_with_get_carry_full wordmax (fst (fst x)) (snd (fst x)) (shift (snd x) imm)
-              | sub imm => fun x => Z.sub_get_borrow_full wordmax (fst x) (shift (snd x) imm)
-              | subb imm => fun x => Z.sub_with_get_borrow_full wordmax (fst (fst x)) (snd (fst x)) (shift (snd x) imm)
-              | mulll => fun x => low (fst x) * low (snd x)
-              | mullh => fun x => low (fst x) * high (snd x)
-              | mulhl => fun x => high (fst x) * low (snd x)
-              | mulhh => fun x => high (fst x) * high (snd x)
-              | rshi n => fun x => Z.rshi wordmax (fst x) (snd x) n
-              | selm => fun x => Z.zselect (Z.cc_m wordmax (fst (fst x))) (snd (fst x)) (snd x)
-              end.
-          End interp_with_wordmax.
-
-          Definition interp {s d} (idc : @ident s d) : base.interp s -> base.interp d :=
-            match idc with
-            | with_wordmax lwm s d idc => interp_with_wordmax lwm idc
-            | selc => fun x => Z.zselect (fst (fst x)) (snd (fst x)) (snd x)
-            | sell => fun x => Z.zselect (Z.land (fst (fst x)) 1) (snd (fst x)) (snd x)
-            | addm => fun x => Z.add_modulo (fst (fst x)) (snd (fst x)) (snd x)
-            end.
-        End with_scope.
-      End with_base.
-      Global Coercion with_wordmax : ident_with_wordmax >-> ident.
-      Global Arguments interp_with_wordmax {_ s d} idc.
-      Global Arguments interp {s d} idc.
-    End fancy.
 
     Section with_base.
       Let type_base (x : base.type.base) : base.type := base.type.type_base x.
@@ -299,17 +231,17 @@ Module Compilers.
         | option_rect {A P : base.type} : ident ((A -> P) -> (unit -> P) -> option A -> P)
         | Build_zrange : ident (Z -> Z -> zrange)
         | zrange_rect {P:base.type} : ident ((Z -> Z -> P) -> zrange -> P)
-        | fancy_add (log2wordmax : BinInt.Z) (imm : BinInt.Z) : ident (Z * Z -> Z * Z)
-        | fancy_addc (log2wordmax : BinInt.Z) (imm : BinInt.Z) : ident (Z * Z * Z -> Z * Z)
-        | fancy_sub (log2wordmax : BinInt.Z) (imm : BinInt.Z) : ident (Z * Z -> Z * Z)
-        | fancy_subb (log2wordmax : BinInt.Z) (imm : BinInt.Z) : ident (Z * Z * Z -> Z * Z)
-        | fancy_mulll (log2wordmax : BinInt.Z) : ident (Z * Z -> Z)
-        | fancy_mullh (log2wordmax : BinInt.Z) : ident (Z * Z -> Z)
-        | fancy_mulhl (log2wordmax : BinInt.Z) : ident (Z * Z -> Z)
-        | fancy_mulhh (log2wordmax : BinInt.Z) : ident (Z * Z -> Z)
-        | fancy_rshi (log2wordmax : BinInt.Z) : BinInt.Z -> ident (Z * Z -> Z)
+        | fancy_add : ident ((Z * Z) * (Z * Z) -> Z * Z)
+        | fancy_addc : ident ((Z * Z) * (Z * Z * Z) -> Z * Z)
+        | fancy_sub : ident ((Z * Z) * (Z * Z) -> Z * Z)
+        | fancy_subb : ident ((Z * Z) * (Z * Z * Z) -> Z * Z)
+        | fancy_mulll : ident (Z * (Z * Z) -> Z)
+        | fancy_mullh : ident (Z * (Z * Z) -> Z)
+        | fancy_mulhl : ident (Z * (Z * Z) -> Z)
+        | fancy_mulhh : ident (Z * (Z * Z) -> Z)
+        | fancy_rshi : ident ((Z * Z) * (Z * Z) -> Z)
         | fancy_selc : ident (Z * Z * Z -> Z)
-        | fancy_selm (log2wordmax : BinInt.Z) : ident (Z * Z * Z -> Z)
+        | fancy_selm : ident (Z * (Z * Z * Z) -> Z)
         | fancy_sell : ident (Z * Z * Z -> Z)
         | fancy_addm : ident (Z * Z * Z -> Z)
         .
@@ -317,47 +249,6 @@ Module Compilers.
         Notation None := option_None.
 
         Global Arguments Z_cast2 _%zrange_scope.
-
-        Definition to_fancy {s d : base.type} (idc : ident (s -> d)) : Datatypes.option (fancy.ident s d)
-          := match idc in ident t return Datatypes.option match t with
-                                                | type.base s -> type.base d => fancy.ident s d
-                                                | _ => Datatypes.unit
-                                                end%etype with
-             | fancy_add log2wordmax imm => Datatypes.Some (fancy.with_wordmax log2wordmax (fancy.add imm))
-             | fancy_addc log2wordmax imm => Datatypes.Some (fancy.with_wordmax log2wordmax (fancy.addc imm))
-             | fancy_sub log2wordmax imm => Datatypes.Some (fancy.with_wordmax log2wordmax (fancy.sub imm))
-             | fancy_subb log2wordmax imm => Datatypes.Some (fancy.with_wordmax log2wordmax (fancy.subb imm))
-             | fancy_mulll log2wordmax => Datatypes.Some (fancy.with_wordmax log2wordmax fancy.mulll)
-             | fancy_mullh log2wordmax => Datatypes.Some (fancy.with_wordmax log2wordmax fancy.mullh)
-             | fancy_mulhl log2wordmax => Datatypes.Some (fancy.with_wordmax log2wordmax fancy.mulhl)
-             | fancy_mulhh log2wordmax => Datatypes.Some (fancy.with_wordmax log2wordmax fancy.mulhh)
-             | fancy_rshi log2wordmax x => Datatypes.Some (fancy.with_wordmax log2wordmax (fancy.rshi x))
-             | fancy_selc => Datatypes.Some fancy.selc
-             | fancy_selm log2wordmax => Datatypes.Some (fancy.with_wordmax log2wordmax fancy.selm)
-             | fancy_sell => Datatypes.Some fancy.sell
-             | fancy_addm => Datatypes.Some fancy.addm
-             | _ => Datatypes.None
-             end.
-
-        Definition of_fancy {s d : base.type} (idc : fancy.ident s d) : ident (s -> d)
-          := match idc in fancy.ident s d return ident (s -> d) with
-             | fancy.with_wordmax log2wordmax s d idc
-               => match idc in fancy.ident_with_wordmax s d return ident (s -> d) with
-                  | fancy.add imm => fancy_add log2wordmax imm
-                  | fancy.addc imm => fancy_addc log2wordmax imm
-                  | fancy.sub imm => fancy_sub log2wordmax imm
-                  | fancy.subb imm => fancy_subb log2wordmax imm
-                  | fancy.mulll => fancy_mulll log2wordmax
-                  | fancy.mullh => fancy_mullh log2wordmax
-                  | fancy.mulhl => fancy_mulhl log2wordmax
-                  | fancy.mulhh => fancy_mulhh log2wordmax
-                  | fancy.selm => fancy_selm log2wordmax
-                  | fancy.rshi x => fancy_rshi log2wordmax x
-                  end
-             | fancy.selc => fancy_selc
-             | fancy.sell => fancy_sell
-             | fancy.addm => fancy_addm
-             end.
       End with_scope.
       Notation Some := option_Some.
       Notation None := option_None.
@@ -368,14 +259,6 @@ Module Compilers.
         Local Notation is_more_pos_than_neg := ident.is_more_pos_than_neg.
         Local Notation cast := (ident.cast cast_outside_of_range).
         Local Notation cast2 := (ident.cast2 cast_outside_of_range).
-
-        Local Notation wordmax log2wordmax := (2 ^ log2wordmax).
-        Local Notation half_bits log2wordmax := (log2wordmax / 2).
-        Local Notation wordmax_half_bits log2wordmax := (2 ^ (half_bits log2wordmax)).
-
-        Local Notation low log2wordmax x := (Z.land x ((wordmax_half_bits log2wordmax) - 1)).
-        Local Notation high log2wordmax x := (x >> (half_bits log2wordmax)).
-        Local Notation shift log2wordmax x imm := ((x << imm) mod (wordmax log2wordmax)).
 
         (** Interpret identifiers where the behavior of [Z_cast] on a
             value that does not fit in the range is given by a context
@@ -474,20 +357,19 @@ Module Compilers.
                => fun S_case N_case o => @Datatypes.option_rect _ _ S_case (N_case Datatypes.tt) o
              | Build_zrange => ZRange.Build_zrange
              | zrange_rect A => @ZRange.zrange_rect _
-             | fancy_add _ _ as idc
-             | fancy_addc _ _ as idc
-             | fancy_sub _ _ as idc
-             | fancy_subb _ _ as idc
-             | fancy_mulll _ as idc
-             | fancy_mullh _ as idc
-             | fancy_mulhl _ as idc
-             | fancy_mulhh _ as idc
-             | fancy_rshi _ _ as idc
-             | fancy_selc as idc
-             | fancy_selm _ as idc
-             | fancy_sell as idc
-             | fancy_addm as idc
-               => fancy.interp (invert_Some (to_fancy idc))
+             | fancy_add => ident.fancy.add
+             | fancy_addc => ident.fancy.addc
+             | fancy_sub => ident.fancy.sub
+             | fancy_subb => ident.fancy.subb
+             | fancy_mulll => ident.fancy.mulll
+             | fancy_mullh => ident.fancy.mullh
+             | fancy_mulhl => ident.fancy.mulhl
+             | fancy_mulhh => ident.fancy.mulhh
+             | fancy_rshi => ident.fancy.rshi
+             | fancy_selc => ident.fancy.selc
+             | fancy_selm => ident.fancy.selm
+             | fancy_sell => ident.fancy.sell
+             | fancy_addm => ident.fancy.addm
              end.
       End gen.
     End with_base.
@@ -837,10 +719,20 @@ Module Compilers.
           => let rA := base.reify A in
              then_tac (@ident.None rA)
         | ZRange.Build_zrange => then_tac ident.Build_zrange
+        | ident.fancy.add => then_tac ident.fancy_add
+        | ident.fancy.addc => then_tac ident.fancy_addc
+        | ident.fancy.sub => then_tac ident.fancy_sub
+        | ident.fancy.subb => then_tac ident.fancy_subb
+        | ident.fancy.mulll => then_tac ident.fancy_mulll
+        | ident.fancy.mullh => then_tac ident.fancy_mullh
+        | ident.fancy.mulhl => then_tac ident.fancy_mulhl
+        | ident.fancy.mulhh => then_tac ident.fancy_mulhh
+        | ident.fancy.rshi => then_tac ident.fancy_rshi
+        | ident.fancy.selc => then_tac ident.fancy_selc
+        | ident.fancy.selm => then_tac ident.fancy_selm
+        | ident.fancy.sell => then_tac ident.fancy_sell
+        | ident.fancy.addm => then_tac ident.fancy_addm
         | ident.eagerly (?f ?x) => reify_rec (ident.eagerly f x)
-        | fancy.interp ?idc
-          => let ridc := (eval cbv [of_fancy] in (of_fancy idc)) in
-             then_tac ridc
         | @gen_interp _ _ ?idc => then_tac idc
         | _ => else_tac ()
         end
