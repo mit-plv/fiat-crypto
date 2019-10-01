@@ -53,7 +53,11 @@ Module Compilers.
                 ++ (if PositiveSet.mem 128 bitwidths_used
                     then ["typedef signed __int128 " ++ prefix ++ "int128;";
                             "typedef unsigned __int128 " ++ prefix ++ "uint128;"]%string
-                    else []))%list.
+                    else [])
+                ++ [""
+                    ; "#if (-1 & 3) != 3"
+                    ; "#error ""This code only works on a two's complement system"""
+                    ; "#endif"])%list.
 
         Definition stdint_bitwidths : list Z := [8; 16; 32; 64].
         Definition is_special_bitwidth (bw : Z) := negb (existsb (Z.eqb bw) stdint_bitwidths).

@@ -12,6 +12,10 @@
 typedef unsigned char fiat_25519_uint1;
 typedef signed char fiat_25519_int1;
 
+#if (-1 & 3) != 3
+#error "This code only works on a two's complement system"
+#endif
+
 
 /*
  * The function fiat_25519_addcarryx_u26 is an addition with carry.

@@ -566,7 +566,7 @@ Section of_prefancy.
       ident.cast cast_oor r[0~>u] v = v mod (u + 1).
     Proof.
       intros.
-      rewrite ident.cast_out_of_bounds_simple_0_mod by auto using cast_oor_id.
+      rewrite ident.cast_out_of_bounds_simple_0_mod by auto using cast_oor_id, cast_oor_mod.
       cbv [cast_oor upper]. apply Z.mod_mod. omega.
     Qed.
 
