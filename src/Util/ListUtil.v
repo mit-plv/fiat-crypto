@@ -27,6 +27,16 @@ Definition list_case
      | cons x xs => C x xs
      end.
 
+Definition list_case_nodep
+           {A} (P : Type) (N : P) (C : A -> list A -> P)
+           (ls : list A)
+  : P
+  := match ls with
+     | nil => N
+     | cons x xs => C x xs
+     end.
+
+
 Global Instance list_rect_Proper_dep_gen {A P} (RP : forall x : list A, P x -> P x -> Prop)
   : Proper (RP nil ==> forall_relation (fun x => forall_relation (fun xs => RP xs ==> RP (cons x xs))) ==> forall_relation RP) (@list_rect A P) | 10.
 Proof.
