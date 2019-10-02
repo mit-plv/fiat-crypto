@@ -255,7 +255,7 @@ Module Compilers.
             quantifying over all possible interpretations. *)
         Definition ident_gen_interp {t} (idc : ident t) : type.interp base_type_interp t
           := match idc in ident t return type.interp base_type_interp t with
-             | ident_Literal _ v => v
+             | ident_Literal _ v => ident.literal v
              | ident_Nat_succ => Nat.succ
              | ident_Nat_pred => Nat.pred
              | ident_Nat_max => Nat.max
@@ -269,23 +269,17 @@ Module Compilers.
              | ident_pair A B => Datatypes.pair
              | ident_fst A B => Datatypes.fst
              | ident_snd A B => Datatypes.snd
-             | ident_prod_rect A B T => fun f '((a, b) : base_type_interp A * base_type_interp B) => f a b
-             | ident_bool_rect T
-               => fun t f => Datatypes.bool_rect _ (t Datatypes.tt) (f Datatypes.tt)
-             | ident_nat_rect P
-             | ident_eager_nat_rect P
-               => fun O_case S_case => Datatypes.nat_rect _ (O_case Datatypes.tt) S_case
-             | ident_nat_rect_arrow P Q
-             | ident_eager_nat_rect_arrow P Q
-               => fun O_case S_case => Datatypes.nat_rect _ O_case S_case
-             | ident_list_rect A P
-             | ident_eager_list_rect A P
-               => fun N_case C_case => Datatypes.list_rect _ (N_case Datatypes.tt) C_case
-             | ident_list_rect_arrow A P Q
-             | ident_eager_list_rect_arrow A P Q
-               => fun N_case C_case => Datatypes.list_rect _ N_case C_case
-             | ident_list_case A P
-               => fun N_case C_case => ListUtil.list_case _ (N_case Datatypes.tt) C_case
+             | ident_prod_rect A B T => @prod_rect_nodep _ _ _
+             | ident_bool_rect T => @ident.Thunked.bool_rect _
+             | ident_nat_rect P => @ident.Thunked.nat_rect _
+             | ident_eager_nat_rect P => ident.eagerly (@ident.Thunked.nat_rect) _
+             | ident_nat_rect_arrow P Q => @nat_rect_nodep _
+             | ident_eager_nat_rect_arrow P Q => ident.eagerly (@nat_rect_nodep) _
+             | ident_list_rect A P => @ident.Thunked.list_rect _ _
+             | ident_eager_list_rect A P => ident.eagerly (@ident.Thunked.list_rect) _ _
+             | ident_list_rect_arrow A P Q => @list_rect_nodep _ _
+             | ident_eager_list_rect_arrow A P Q => ident.eagerly (@list_rect_nodep) _ _
+             | ident_list_case A P => @ident.Thunked.list_case _ _
              | ident_List_length T => @List.length _
              | ident_List_seq => List.seq
              | ident_List_firstn A => @List.firstn _
@@ -338,13 +332,12 @@ Module Compilers.
              | ident_Z_cc_m => Z.cc_m
              | ident_Z_combine_at_bitwidth => Z.combine_at_bitwidth
              | ident_Z_cast r => cast r
-             | ident_Z_cast2 (r1, r2) => fun '(x1, x2) => (cast r1 x1, cast r2 x2)
+             | ident_Z_cast2 r => cast2 r
              | ident_Some A => @Datatypes.Some _
              | ident_None A => @Datatypes.None _
-             | ident_option_rect A P
-               => fun S_case N_case o => @Datatypes.option_rect _ _ S_case (N_case Datatypes.tt) o
+             | ident_option_rect A P => @ident.Thunked.option_rect _ _
              | ident_Build_zrange => ZRange.Build_zrange
-             | ident_zrange_rect A => @ZRange.zrange_rect _
+             | ident_zrange_rect A => @ZRange.zrange_rect_nodep _
              | ident_fancy_add => ident.fancy.add
              | ident_fancy_addc => ident.fancy.addc
              | ident_fancy_sub => ident.fancy.sub
@@ -480,95 +473,110 @@ Module Compilers.
            then_tac (@ident_pair rA rB)
       | @Datatypes.bool_rect ?T0 ?Ptrue ?Pfalse
         => lazymatch (eval cbv beta in T0) with
-           | fun _ => ?T => reify_rec (@ident.Thunked.bool_rect T (fun _ : Datatypes.unit => Ptrue) (fun _ : Datatypes.unit => Pfalse))
+           | fun _ => ?T => reify_rec (@bool_rect_nodep T Ptrue Pfalse)
            | T0 => else_tac ()
            | ?T' => reify_rec (@Datatypes.bool_rect T' Ptrue Pfalse)
            end
+      | @bool_rect_nodep ?T ?Ptrue ?Pfalse
+        => reify_rec (@ident.Thunked.bool_rect T (fun _ : Datatypes.unit => Ptrue) (fun _ : Datatypes.unit => Pfalse))
       | @ident.Thunked.bool_rect ?T
         => let rT := reify_base_type T in
            then_tac (@ident_bool_rect rT)
       | @Datatypes.option_rect ?A ?T0 ?PSome ?PNone
         => lazymatch (eval cbv beta in T0) with
-           | fun _ => ?T => reify_rec (@ident.Thunked.option_rect A T PSome (fun _ : Datatypes.unit => PNone))
+           | fun _ => ?T => reify_rec (@option_rect_nodep A T PSome PNone)
            | T0 => else_tac ()
            | ?T' => reify_rec (@Datatypes.option_rect A T' PSome PNone)
            end
+      | @option_rect_nodep ?A ?T ?PSome ?PNone
+        => reify_rec (@ident.Thunked.option_rect A T PSome (fun _ : Datatypes.unit => PNone))
       | @ident.Thunked.option_rect ?A ?T
         => let rA := reify_base_type A in
            let rT := reify_base_type T in
            then_tac (@ident_option_rect rA rT)
       | @Datatypes.prod_rect ?A ?B ?T0
         => lazymatch (eval cbv beta in T0) with
-           | fun _ => ?T
-             => let rA := reify_base_type A in
-                let rB := reify_base_type B in
-                let rT := reify_base_type T in
-                then_tac (@ident_prod_rect rA rB rT)
+           | fun _ => ?T => reify_rec (@prod_rect_nodep A B T)
            | T0 => else_tac ()
            | ?T' => reify_rec (@Datatypes.prod_rect A B T')
            end
+      | @prod_rect_nodep ?A ?B ?T
+        => let rA := reify_base_type A in
+           let rB := reify_base_type B in
+           let rT := reify_base_type T in
+           then_tac (@ident_prod_rect rA rB rT)
       | @ZRange.zrange_rect ?T0
         => lazymatch (eval cbv beta in T0) with
-           | fun _ => ?T
-             => let rT := reify_base_type T in
-                then_tac (@ident_zrange_rect rT)
+           | fun _ => ?T => reify_rec (@ZRange.zrange_rect_nodep T)
            | T0 => else_tac ()
            | ?T' => reify_rec (@ZRange.zrange_rect T')
            end
+      | @ZRange.zrange_rect_nodep ?T
+        => let rT := reify_base_type T in
+           then_tac (@ident_zrange_rect rT)
       | @Datatypes.nat_rect ?T0 ?P0
         => lazymatch (eval cbv beta in T0) with
-           | fun _ => _ -> _ => else_tac ()
-           | fun _ => ?T => reify_rec (@ident.Thunked.nat_rect T (fun _ : Datatypes.unit => P0))
+           | fun _ => ?T => reify_rec (@nat_rect_nodep T P0)
            | T0 => else_tac ()
            | ?T' => reify_rec (@Datatypes.nat_rect T' P0)
            end
-      | @Datatypes.nat_rect ?T0
-        => lazymatch (eval cbv beta in T0) with
-           | (fun _ => ?P -> ?Q)
+      | @nat_rect_nodep ?T ?P0
+        => lazymatch T with
+           | ?P -> ?Q => else_tac ()
+           | _ => reify_rec (@ident.Thunked.nat_rect T (fun _ : Datatypes.unit => P0))
+           end
+      | @nat_rect_nodep ?T
+        => lazymatch T with
+           | ?P -> ?Q
              => let rP := reify_base_type P in
                 let rQ := reify_base_type Q in
                 then_tac (@ident_nat_rect_arrow rP rQ)
-           | T0 => else_tac ()
-           | ?T' => reify_rec (@Datatypes.nat_rect T')
+           | _ => else_tac ()
            end
       | @ident.Thunked.nat_rect ?T
         => let rT := reify_base_type T in
            then_tac (@ident_nat_rect rT)
       | ident.eagerly (@Datatypes.nat_rect) ?T0 ?P0
         => lazymatch (eval cbv beta in T0) with
-           | fun _ => _ -> _ => else_tac ()
-           | fun _ => ?T => reify_rec (ident.eagerly (@ident.Thunked.nat_rect) T (fun _ : Datatypes.unit => P0))
+           | fun _ => ?T => reify_rec (ident.eagerly (@nat_rect_nodep) T P0)
            | T0 => else_tac ()
            | ?T' => reify_rec (ident.eagerly (@Datatypes.nat_rect) T' P0)
            end
-      | ident.eagerly (@Datatypes.nat_rect) ?T0
-        => lazymatch (eval cbv beta in T0) with
-           | (fun _ => ?P -> ?Q)
+      | ident.eagerly (@nat_rect_nodep) ?T ?P0
+        => lazymatch T with
+           | ?P -> ?Q => else_tac ()
+           | _ => reify_rec (ident.eagerly (@ident.Thunked.nat_rect) T (fun _ : Datatypes.unit => P0))
+           end
+      | ident.eagerly (@nat_rect_nodep) ?T
+        => lazymatch T with
+           | ?P -> ?Q
              => let rP := reify_base_type P in
                 let rQ := reify_base_type Q in
                 then_tac (@ident_eager_nat_rect_arrow rP rQ)
-           | T0 => else_tac ()
-           | ?T' => reify_rec (ident.eagerly (@Datatypes.nat_rect) T')
+           | _ => else_tac ()
            end
       | ident.eagerly (@ident.Thunked.nat_rect) ?T
         => let rT := reify_base_type T in
            then_tac (@ident_eager_nat_rect rT)
       | @Datatypes.list_rect ?A ?T0 ?Pnil
         => lazymatch (eval cbv beta in T0) with
-           | fun _ => _ -> _ => else_tac ()
-           | fun _ => ?T => reify_rec (@ident.Thunked.list_rect A T (fun _ : Datatypes.unit => Pnil))
+           | fun _ => ?T => reify_rec (@list_rect_nodep A T Pnil)
            | T0 => else_tac ()
            | ?T' => reify_rec (@Datatypes.list_rect A T' Pnil)
            end
-      | @Datatypes.list_rect ?A ?T0
-        => lazymatch (eval cbv beta in T0) with
-           | (fun _ => ?P -> ?Q)
+      | @list_rect_nodep ?A ?T ?Pnil
+        => lazymatch T with
+           | _ -> _ => else_tac ()
+           | _ => reify_rec (@ident.Thunked.list_rect A T (fun _ : Datatypes.unit => Pnil))
+           end
+      | @list_rect_nodep ?A ?T
+        => lazymatch T with
+           | ?P -> ?Q
              => let rA := reify_base_type A in
                 let rP := reify_base_type P in
                 let rQ := reify_base_type Q in
                 then_tac (@ident_list_rect_arrow rA rP rQ)
-           | T0 => else_tac ()
-           | ?T' => reify_rec (@Datatypes.list_rect A T')
+           | _ => else_tac ()
            end
       | @ident.Thunked.list_rect ?A ?T
         => let rA := reify_base_type A in
@@ -576,20 +584,23 @@ Module Compilers.
            then_tac (@ident_list_rect rA rT)
       | ident.eagerly (@Datatypes.list_rect) ?A ?T0 ?Pnil
         => lazymatch (eval cbv beta in T0) with
-           | fun _ => _ -> _ => else_tac ()
-           | fun _ => ?T => reify_rec (ident.eagerly (@ident.Thunked.list_rect) A T (fun _ : Datatypes.unit => Pnil))
+           | fun _ => ?T => reify_rec (ident.eagerly (@list_rect_nodep) A T Pnil)
            | T0 => else_tac ()
            | ?T' => reify_rec (ident.eagerly (@Datatypes.list_rect) A T' Pnil)
            end
-      | ident.eagerly (@Datatypes.list_rect) ?A ?T0
-        => lazymatch (eval cbv beta in T0) with
-           | (fun _ => ?P -> ?Q)
+      | ident.eagerly (@list_rect_nodep) ?A ?T ?Pnil
+        => lazymatch T with
+           | _ -> _ => else_tac ()
+           | _ => reify_rec (ident.eagerly (@ident.Thunked.list_rect) A T (fun _ : Datatypes.unit => Pnil))
+           end
+      | ident.eagerly (@list_rect_nodep) ?A ?T
+        => lazymatch T with
+           | ?P -> ?Q
              => let rA := reify_base_type A in
                 let rP := reify_base_type P in
                 let rQ := reify_base_type Q in
                 then_tac (@ident_eager_list_rect_arrow rA rP rQ)
-           | T0 => else_tac ()
-           | ?T' => reify_rec (ident.eagerly (@Datatypes.list_rect) A T')
+           | _ => else_tac ()
            end
       | ident.eagerly (@ident.Thunked.list_rect) ?A ?T
         => let rA := reify_base_type A in
@@ -597,9 +608,14 @@ Module Compilers.
            then_tac (@ident_eager_list_rect rA rT)
       | @ListUtil.list_case ?A ?T0 ?Pnil
         => lazymatch (eval cbv beta in T0) with
-           | fun _ => ?T => reify_rec (@ident.Thunked.list_case A T (fun _ : Datatypes.unit => Pnil))
+           | fun _ => ?T => reify_rec (@ListUtil.list_case_nodep A T Pnil)
            | T0 => else_tac ()
            | ?T' => reify_rec (@ListUtil.list_case A T' Pnil)
+           end
+      | @ListUtil.list_case_nodep ?A ?T ?Pnil
+        => lazymatch T with
+           | _ -> _ => else_tac ()
+           | _ => reify_rec (@ident.Thunked.list_case A T (fun _ : Datatypes.unit => Pnil))
            end
       | @ident.Thunked.list_case ?A ?T
         => let rA := reify_base_type A in

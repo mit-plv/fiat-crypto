@@ -237,7 +237,8 @@ Module Compilers.
                   let pident_to_typed' := (eval cbn [Datatypes.fst Datatypes.snd List.fold_right] in pident_to_typed') in
                   change pident_to_typed with pident_to_typed' in H;
                   cbv [Compile.rewrite_rules_interp_goodT_curried_cps
-                         Classes.base Classes.ident Classes.ident_gen_interp Classes.base_interp Classes.ident_interp] in H;
+                         Classes.base Classes.ident Classes.ident_gen_interp Classes.base_interp Classes.ident_interp
+                         ident.literal ident.eagerly] in H;
                   cbn [fst snd hd tl projT1 projT2] in H;
                   (* make [Qed] not take forever by explicitly recording a cast node *)
                   let H' := fresh in
@@ -445,33 +446,17 @@ Module Compilers.
                  => cbn [expr.interp_related_gen ident_gen_interp_head type.related]; reflexivity
                end.
 
-      Ltac fin_tac base_interp_head ident_gen_interp_head :=
+      Ltac fin_tac :=
         repeat first [ assumption
                      | progress change S with Nat.succ
-                     | progress cbn [base.interp base_interp_head type.interp] in *
-                     | progress fold (@type.interp _ base.interp)
-                     | progress fold (@base.interp)
-                     | progress subst
-                     | progress cbv [respectful ident.Thunked.bool_rect ident.Thunked.list_case ident.Thunked.option_rect pointwise_relation]
-                     | progress intros
-                     | solve [ auto ]
+                     | progress cbv [ident.literal ident.eagerly ident.cast2] in *
+                     | progress cbn [fst snd] in *
                      | match goal with
                        | [ |- ?x = ?x ] => reflexivity
-                       | [ |- list_rect _ _ _ _ = ident.Thunked.list_rect _ _ _ _ ]
-                         => cbv [ident.Thunked.list_rect]; apply list_rect_Proper; cbv [pointwise_relation]; intros
-                       | [ |- list_rect (fun _ => ?A -> ?B) _ _ _ _ = list_rect _ _ _ _ _ ]
-                         => apply list_rect_arrow_Proper; cbv [respectful]; intros
-                       | [ |- nat_rect _ _ _ _ = ident.Thunked.nat_rect _ _ _ _ ]
-                         => apply nat_rect_Proper_nondep; cbv [respectful]
-                       | [ |- nat_rect (fun _ => ?A -> ?B) _ _ _ _ = nat_rect _ _ _ _ _ ]
-                         => apply (@nat_rect_Proper_nondep_gen (A -> B) (eq ==> eq)%signature); cbv [respectful]; intros
-                       | [ |- list_case _ _ _ ?ls = list_case _ _ _ ?ls ]
-                         => is_var ls; destruct ls; cbn [list_case]
-                       | [ |- bool_rect _ _ _ ?b = bool_rect _ _ _ ?b ]
-                         => is_var b; destruct b; cbn [bool_rect]
-                       | [ |- _ = ident.cast2 _ _ _ ] => cbv [ident.cast2]; break_innermost_match
+                       | [ |- _ = _ ] => reflexivity
                        end ].
-      Ltac handle_reified_rewrite_rules_interp exprInfo exprExtraInfo base_interp_head ident_gen_interp_head :=
+
+      Ltac handle_reified_rewrite_rules_interp exprInfo exprExtraInfo base_interp_head ident_gen_interp_head ident_gen_interp_Proper :=
         let not_arrow t := lazymatch t with _ -> _ => fail | _ => idtac end in
         repeat first [ assumption
                      | match goal with
@@ -501,8 +486,11 @@ Module Compilers.
 
                        | [ |- expr.interp_related_gen _ _ (expr.Var _) _ ]
                          => cbn [expr.interp_related_gen]
-                       | [ |- expr.interp_related_gen _ _ (expr.Ident _) _ ]
-                         => cbn [expr.interp_related_gen ident_gen_interp_head type.related]; fin_tac base_interp_head ident_gen_interp_head
+                       | [ |- expr.interp_related_gen _ _ (expr.Ident ?idc) ?rhs ]
+                         => let rhs' := open_constr:(_) in
+                            replace rhs with rhs';
+                            [ cbn [expr.interp_related_gen]; now refine (ident_gen_interp_Proper _ _ idc idc eq_refl)
+                            | try reflexivity ]
                        | [ |- expr.interp_related_gen _ _ (expr.Abs ?f) _ ]
                          => let fh := fresh in set (fh := f); cbn [expr.interp_related_gen]; subst fh; cbv beta; intros
                        | [ |- expr.interp_related_gen _ _ (expr.LetIn ?v ?f) (LetIn.Let_In ?V ?F) ]
@@ -520,7 +508,7 @@ Module Compilers.
                             cbn [expr.interp_related_gen]; subst fh xh;
                             exists F, X; repeat apply conj; [ | | reflexivity ]
 
-                       | [ |- _ = _ ] => solve [ fin_tac base_interp_head ident_gen_interp_head ]
+                       | [ |- _ = _ ] => solve [ fin_tac ]
                        | [ |- type.eqv _ _ ] => cbn [ident_gen_interp_head type.related]; cbv [respectful]; intros; subst
                        end
                      | progress repeat (do 2 eexists; repeat apply conj; [ | | reflexivity ]) ].
@@ -544,7 +532,7 @@ Module Compilers.
                  fun _
                  => preprocess base_interp_head;
                     handle_extra_nbe ident_gen_interp_head ident_gen_interp_Proper;
-                    handle_reified_rewrite_rules_interp exprInfo exprExtraInfo base_interp_head ident_gen_interp_head)
+                    handle_reified_rewrite_rules_interp exprInfo exprExtraInfo base_interp_head ident_gen_interp_head ident_gen_interp_Proper)
           end;
           warn_if_goals_remain ().
       End Tactic.

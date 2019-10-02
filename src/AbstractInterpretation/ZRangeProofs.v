@@ -79,7 +79,8 @@ Module Compilers.
           Local Ltac z_cast_t :=
             cbn [type.related_hetero ZRange.ident.option.interp ident.interp ident.gen_interp respectful_hetero type.interp ZRange.type.base.option.interp ZRange.type.base.interp base.interp base.base_interp ZRange.type.base.option.Some];
             cbv [ZRange.ident.option.interp_Z_cast ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by respectful_hetero];
-            intros; break_innermost_match; trivial;
+            cbv [ident.cast2] in *; cbn [fst snd] in *;
+            intros; break_innermost_match; break_innermost_match_hyps; trivial;
             rewrite ?Bool.andb_true_iff, ?Bool.andb_false_iff in *; destruct_head'_and; destruct_head'_or; repeat apply conj; Z.ltb_to_lt;
             rewrite ?ident.cast_in_bounds by (eapply ZRange.is_bounded_by_iff_is_tighter_than; eauto);
             try reflexivity; try lia; try assumption.
@@ -536,6 +537,14 @@ Module Compilers.
                  | _ => idtac
                  end.
             all: cbn [type.related_hetero ZRange.ident.option.interp ident.interp ident.gen_interp respectful_hetero type.interp ZRange.type.base.option.interp ZRange.type.base.interp base.interp base.base_interp ZRange.type.base.option.Some ZRange.ident.option.of_literal].
+            all: cbv [ident.cast2 ident.literal prod_rect_nodep ident.eagerly] in *.
+            all: change (@zrange_rect_nodep) with (fun T => @zrange_rect (fun _ => T)) in *.
+            all: change (@ident.Thunked.nat_rect) with (fun P P0 => @nat_rect (fun _ => P) (P0 Datatypes.tt)) in *.
+            all: change (@nat_rect_nodep) with (fun P => @nat_rect (fun _ => P)).
+            all: change (@ident.Thunked.list_rect) with (fun A P PNil => @list_rect A (fun _ => P) (PNil Datatypes.tt)) in *.
+            all: change (@list_rect_nodep) with (fun A P => @list_rect A (fun _ => P)).
+            all: change (@ident.Thunked.list_case) with (fun A P PNil => @list_case A (fun _ => P) (PNil Datatypes.tt)) in *.
+            all: change (@ident.Thunked.option_rect) with (fun A P PS PN => @option_rect A (fun _ => P) PS (PN Datatypes.tt)) in *.
             all: cbv [respectful_hetero option_map option_rect zrange_rect list_case].
             all: intros.
             all: destruct_head_hnf' prod.
