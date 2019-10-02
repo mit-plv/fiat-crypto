@@ -91,7 +91,7 @@ jobs:
       env: COQ_VERSION="8.9.1"  COQ_PACKAGE="coq-8.9.1" PPA="ppa:jgross-h/many-coq-versions"
       language: rust
       rust: nightly
-      script: PREV=standalone-ocaml CUR=test-rust TOUCH=rust-files ./etc/ci/travis.sh -j2 test-rust-files
+      script: PREV=standalone-ocaml CUR=test-rust EXTERNAL_DEPENDENCIES=1 TOUCH=rust-files ./etc/ci/travis.sh -j2 test-rust-files
 
 #    - stage: selected-test selected-bench
 #      env: COQ_VERSION="8.9.1"  COQ_PACKAGE="coq-8.9.1" PPA="ppa:jgross-h/many-coq-versions"
