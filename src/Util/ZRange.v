@@ -16,6 +16,7 @@ Local Set Decidable Equality Schemes.
 Record zrange := { lower : Z ; upper : Z }.
 Bind Scope zrange_scope with zrange.
 Local Open Scope Z_scope.
+Scheme Minimality for zrange Sort Type.
 
 Definition ZToZRange (z : Z) : zrange := {| lower := z ; upper := z |}.
 
