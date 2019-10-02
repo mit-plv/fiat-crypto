@@ -7,6 +7,7 @@ Require Import Crypto.Language.Pre.
 Require Import Crypto.Util.Tuple Crypto.Util.Prod Crypto.Util.LetIn.
 Require Import Crypto.Util.ListUtil Coq.Lists.List Crypto.Util.NatUtil.
 Require Import Crypto.Util.Option.
+Require Import Crypto.Util.OptionList.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.Operations.
@@ -1276,7 +1277,8 @@ Module Compilers.
           is_cons : forall {t}, ident t -> bool;
           is_Some : forall {t}, ident t -> bool;
           is_None : forall {t}, ident t -> bool;
-          is_pair : forall {t}, ident t -> bool
+          is_pair : forall {t}, ident t -> bool;
+          is_tt : forall {t}, ident t -> bool
         }.
       Context {invertIdent : InvertIdentT}.
 
@@ -1331,6 +1333,14 @@ Module Compilers.
                 <-> match t return ident t -> Prop with
                     | type.base A -> type.base B -> type.base (base.type.prod _ _)
                       => fun idc => existT _ _ idc = existT _ _ (ident.ident_pair (A:=A) (B:=B)) :> sigT ident
+                    | _ => fun _ => False
+                    end%etype idc;
+            is_tt_correct
+            : forall {t idc},
+                is_tt (t:=t) idc = true
+                <-> match t return ident t -> Prop with
+                    | type.base base.type.unit
+                      => fun idc => idc = ident.ident_tt
                     | _ => fun _ => False
                     end%etype idc;
           }.
@@ -1412,6 +1422,11 @@ Module Compilers.
                 else None
            | _ => None
            end%expr_pat.
+      Definition invert_tt (e : expr base.type.unit) : bool
+        := match invert_Ident e with
+           | Some maybe_tt => is_tt maybe_tt
+           | _ => false
+           end.
 
       Definition reflect_option {t} (e : expr (base.type.option t))
         : option (option (expr t))
@@ -1430,6 +1445,26 @@ Module Compilers.
                 else None
            | _ => None
            end.
+
+      Fixpoint reflect_smart_Literal {t : base_type} : expr t -> option (base.interp base_interp t)
+        := match t with
+           | base.type.type_base t => invert_Literal
+           | base.type.prod A B
+             => fun e => ab <- invert_pair e;
+                           a <- @reflect_smart_Literal A (fst ab);
+                           b <- @reflect_smart_Literal B (snd ab);
+                           Some (a, b)
+           | base.type.list A
+             => fun e => e <- reflect_list e;
+                           Option.List.lift (List.map (@reflect_smart_Literal A) e)
+           | base.type.option A
+             => fun e => e <- reflect_option e;
+                           match e with
+                           | Some e => option_map (@Some _) (@reflect_smart_Literal A e)
+                           | None => Some None
+                           end
+           | base.type.unit => fun e => if invert_tt e then Some tt else None
+           end%option.
     End with_container.
     Global Arguments invert_ident_Literal {_ _ _ _} {t} _, {_ _ _ _} t _.
     Global Arguments is_nil {_ _ _ _} {t} _, {_ _ _ _} t _.
@@ -1437,6 +1472,7 @@ Module Compilers.
     Global Arguments is_None {_ _ _ _} {t} _, {_ _ _ _} t _.
     Global Arguments is_Some {_ _ _ _} {t} _, {_ _ _ _} t _.
     Global Arguments is_pair {_ _ _ _} {t} _, {_ _ _ _} t _.
+    Global Arguments is_tt {_ _ _ _} {t} _, {_ _ _ _} t _.
     Global Arguments InvertIdentT {base base_interp} ident, {base} base_interp ident.
   End invert_expr.
 

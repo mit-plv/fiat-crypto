@@ -915,6 +915,7 @@ Module Compilers.
             ; is_Some t idc := match idc with ident.Some _ => true | _ => false end
             ; is_None t idc := match idc with ident.None _ => true | _ => false end
             ; is_pair t idc := match idc with ident.pair _ _ => true | _ => false end
+            ; is_tt t idc := match idc with ident.tt => true | _ => false end
           }.
 
       Global Instance buildInvertIdentCorrect : @BuildInvertIdentCorrectT base.type.base base.base_interp ident _ _.

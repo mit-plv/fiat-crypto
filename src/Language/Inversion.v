@@ -617,6 +617,8 @@ Module Compilers.
       Proof. intros t; now apply (proj2 (is_None_correct (idc:=ident.ident_None (t:=t)))). Qed.
       Lemma is_pair_ident_pair : forall {A B}, is_pair (ident.ident_pair (A:=A) (B:=B)) = true.
       Proof. intros A B; now apply (proj2 (is_pair_correct (idc:=ident.ident_pair (A:=A) (B:=B)))). Qed.
+      Lemma is_tt_ident_tt : is_tt ident.ident_tt = true.
+      Proof. now apply (proj2 (is_tt_correct (idc:=ident.ident_tt))). Qed.
 
       Let type_base (x : base) : @base.type base := base.type.type_base x.
       Let base' {bt} (x : Compilers.base.type bt) : type.type _ := type.base x.
@@ -646,6 +648,7 @@ Module Compilers.
                   | [ H : is_Some _ = true |- _ ] => apply is_Some_correct in H
                   | [ H : is_None _ = true |- _ ] => apply is_None_correct in H
                   | [ H : is_pair _ = true |- _ ] => apply is_pair_correct in H
+                  | [ H : is_tt _ = true |- _ ] => apply is_tt_correct in H
                   | [ H : context[invert_ident_Literal (ident.ident_Literal (t:=?T) ?V)] |- _ ]
                     => rewrite (invert_ident_Literal_ident_Literal (t:=T) (v:=V)) in H
                   | [ |- context[invert_ident_Literal (ident.ident_Literal (t:=?T) ?V)] ]
@@ -660,6 +663,8 @@ Module Compilers.
                   | [ |- context[is_None ident.ident_None] ] => rewrite is_None_ident_None
                   | [ H : context[is_pair ident.ident_pair] |- _ ] => rewrite is_pair_ident_pair in H
                   | [ |- context[is_pair ident.ident_pair] ] => rewrite is_pair_ident_pair
+                  | [ H : context[is_tt ident.ident_tt] |- _ ] => rewrite is_tt_ident_tt in H
+                  | [ |- context[is_tt ident.ident_tt] ] => rewrite is_tt_ident_tt
                   end
                 | progress invert_subst_simple_step
                 | discriminate
@@ -699,6 +704,9 @@ Module Compilers.
         Lemma invert_Some_Some_iff {t} {e : expr (base.type.option t)} {v}
           : invert_expr.invert_Some e = Some v <-> e = (#ident.ident_Some @ v)%expr.
         Proof. cbv [invert_expr.invert_Some]; t. Qed.
+        Lemma invert_tt_Some_iff {e : expr base.type.unit}
+          : invert_expr.invert_tt e = true <-> e = (#ident.ident_tt)%expr.
+        Proof. cbv [invert_expr.invert_tt]; t. Qed.
 
         Lemma invert_pair_Some {A B} {e : expr (A * B)} {v}
           : invert_expr.invert_pair e = Some v -> e = (fst v, snd v)%expr.
@@ -723,6 +731,9 @@ Module Compilers.
         Lemma invert_Some_Some {t} {e : expr (base.type.option t)} {v}
           : invert_expr.invert_Some e = Some v -> e = (#ident.ident_Some @ v)%expr.
         Proof. intros; now apply (proj1 invert_Some_Some_iff). Qed.
+        Lemma invert_tt_Some {e : expr base.type.unit}
+          : invert_expr.invert_tt e = true -> e = (#ident.ident_tt)%expr.
+        Proof. intros; now apply (proj1 invert_tt_Some_iff). Qed.
 
         Lemma invert_pair_ident_pair {A B} {v1 v2}
           : invert_expr.invert_pair (var:=var) (A:=A) (B:=B) (v1, v2) = Some (v1, v2).
@@ -742,6 +753,9 @@ Module Compilers.
         Lemma invert_Some_ident_Some {t x}
           : invert_expr.invert_Some (var:=var) (#(ident.ident_Some (t:=t)) @ x) = Some x.
         Proof. intros; now apply (proj2 invert_Some_Some_iff). Qed.
+        Lemma invert_tt_ident_tt
+          : invert_expr.invert_tt (var:=var) (#(ident.ident_tt)) = true.
+        Proof. intros; now apply (proj2 invert_tt_Some_iff). Qed.
 
 
         Lemma reify_option_None {t} : reify_option None = (#ident.ident_None)%expr :> expr (base.type.option t).
@@ -848,6 +862,55 @@ Module Compilers.
         Lemma reflect_list_Some_iff  {t} {e : expr (base.type.list t)} {v} : invert_expr.reflect_list e = Some v <-> e = reify_list v.
         Proof. split; intro; subst; apply reflect_reify_list || apply reflect_list_Some; assumption. Qed.
 
+
+        Lemma reflect_smart_Literal_smart_Literal {t v} : reflect_smart_Literal (var:=var) (ident.smart_Literal (t:=t) v) = Some v.
+        Proof.
+          induction t; cbn -[reflect_list]; t.
+          all: repeat first [ rewrite invert_pair_ident_pair
+                            | progress cbn [Option.bind fst snd option_map List.map List.fold_right]
+                            | rewrite reflect_reify_list
+                            | rewrite List.map_map
+                            | rewrite reflect_reify_option
+                            | progress destruct_head_hnf' unit
+                            | progress destruct_head_hnf' option
+                            | reflexivity
+                            | match goal with H : _ |- _ => rewrite H; clear H end
+                            | match goal with
+                              | [ |- OptionList.Option.List.lift (List.map _ ?ls) = Some ?ls ]
+                                => cbv [OptionList.Option.List.lift]; induction ls
+                              end ].
+        Qed.
+        Lemma reflect_reify_smart_Literal {t v} : reflect_smart_Literal (var:=var) (GallinaReify.base.reify (t:=t) v) = Some v.
+        Proof. apply reflect_smart_Literal_smart_Literal. Qed.
+        Lemma reflect_smart_Literal_Some {t} {e : expr (type.base t)} {v}
+          : reflect_smart_Literal (t:=t) e = Some v -> e = ident.smart_Literal (t:=t) v.
+        Proof.
+          induction t; cbn -[reflect_list]; intro H; t.
+          all: repeat first [ progress t
+                            | progress cbv [Option.bind option_map] in *
+                            | progress cbn [List.map List.fold_right] in *
+                            | match goal with
+                              | [ H : invert_Literal ?e = Some ?v |- _ ] => apply (@invert_Literal_Some_base _ e v) in H
+                              | [ H : invert_pair ?e = Some ?v |- _ ] => apply invert_pair_Some in H
+                              | [ H : invert_tt ?e = true |- _ ] => apply invert_tt_Some in H
+                              | [ H : reflect_list ?e = Some ?v |- _ ] => apply reflect_list_Some in H
+                              | [ H : reflect_option ?e = Some ?v |- _ ] => apply reflect_option_Some in H
+                              | [ IH : context[reflect_smart_Literal _ = Some _ -> _ = ident.smart_Literal _],
+                                       H : reflect_smart_Literal _ = Some _ |- _ ]
+                                => apply IH in H
+                              | [ H : OptionList.Option.List.lift (List.map reflect_smart_Literal ?l) = Some ?v |- _ ]
+                                => cbv [OptionList.Option.List.lift] in H; revert dependent v; induction l; intro v; destruct v; intros
+                              | [ H : context[match ?x with Some _ => _ | _ => _ end] |- _ ] => destruct x eqn:?
+                              | [ H : cons _ _ = cons _ _ |- _ ] => inversion H; clear H
+                              | [ H : forall x, Some _ = Some x -> _ |- _ ] => specialize (H _ eq_refl)
+                              | [ H : forall x, Some x = Some _ -> _ |- _ ] => specialize (H _ eq_refl)
+                              end
+                            | rewrite reify_list_cons ].
+        Qed.
+        Lemma reflect_smart_Literal_Some_iff  {t} {e : expr (type.base t)} {v} : invert_expr.reflect_smart_Literal e = Some v <-> e = ident.smart_Literal (t:=t) v.
+        Proof. split; intro; subst; apply reflect_reify_smart_Literal || apply reflect_smart_Literal_Some; assumption. Qed.
+
+
         Section with_interp.
           Context {ident_interp : forall t, ident t -> type.interp (base.interp base_interp) t}.
 
@@ -927,12 +990,14 @@ Module Compilers.
             | match goal with
               | [ H : invert_expr.invert_pair ?e = Some _ |- _ ] => guard_tac H; apply invert_pair_Some in H
               | [ H : invert_expr.invert_Literal ?e = Some _ |- _ ] => guard_tac H; apply invert_Literal_Some in H
-              | [ H : invert_expr.invert_nil ?e = Some _ |- _ ] => guard_tac H; apply invert_nil_Some in H
+              | [ H : invert_expr.reflect_smart_Literal ?e = Some _ |- _ ] => guard_tac H; apply reflect_smart_Literal_Some in H
+              | [ H : invert_expr.invert_nil ?e = true |- _ ] => guard_tac H; apply invert_nil_Some in H
               | [ H : invert_expr.invert_cons ?e = Some _ |- _ ] => guard_tac H; apply invert_cons_Some in H
+              | [ H : invert_expr.invert_tt ?e = true |- _ ] => guard_tac H; apply invert_tt_Some in H
               | [ H : invert_expr.reflect_list ?e = Some _ |- _ ]
                 => guard_tac H; first [ apply reflect_list_Some_nil in H | apply reflect_list_Some in H ];
                    rewrite ?reify_list_cons, ?reify_list_nil in H
-              | [ H : invert_expr.invert_None ?e = Some _ |- _ ] => guard_tac H; apply invert_None_Some in H
+              | [ H : invert_expr.invert_None ?e = true |- _ ] => guard_tac H; apply invert_None_Some in H
               | [ H : invert_expr.invert_Some ?e = Some _ |- _ ] => guard_tac H; apply invert_Some_Some in H
               | [ H : invert_expr.reflect_option ?e = Some _ |- _ ]
                 => guard_tac H; first [ apply reflect_option_Some_None in H | apply reflect_option_Some in H ];
@@ -944,6 +1009,7 @@ Module Compilers.
               | [ H : context[invert_expr.invert_cons (_ :: _)] |- _ ] => guard_tac H; rewrite invert_cons_ident_cons in H
               | [ H : context[invert_expr.invert_None (#ident.ident_None)] |- _ ] => guard_tac H; rewrite invert_None_ident_None in H
               | [ H : context[invert_expr.invert_Some (#ident.ident_Some @ _)] |- _ ] => guard_tac H; rewrite invert_Some_ident_Some in H
+              | [ H : context[invert_expr.invert_tt (#ident.ident_tt)] |- _ ] => guard_tac H; rewrite invert_tt_ident_tt in H
               | [ H : context[invert_expr.reflect_option (#ident.ident_None)] |- _ ] => guard_tac H; rewrite reflect_option_ident_None in H
               | [ H : context[invert_expr.reflect_option (#ident.ident_Some @ _)] |- _ ] => guard_tac H; rewrite reflect_option_ident_Some in H
               end ].
