@@ -640,16 +640,16 @@ Module Compilers.
       lazymatch term with
       | match ?b with true => ?t | false => ?f end
         => let T := type of term in
-           reify_preprocess (@bool_rect (fun _ => T) t f b)
+           reify_preprocess (@bool_rect_nodep T t f b)
       | match ?x with Datatypes.pair a b => @?f a b end
         => let T := type of term in
-           reify_preprocess (@prod_rect _ _ (fun _ => T) f x)
+           reify_preprocess (@prod_rect_nodep _ _ T f x)
       | match ?x with ZRange.Build_zrange a b => @?f a b end
         => let T := type of term in
-           reify_preprocess (@ZRange.zrange_rect (fun _ => T) f x)
+           reify_preprocess (@ZRange.zrange_rect_nodep T f x)
       | match ?x with nil => ?N | cons a b => @?C a b end
         => let T := type of term in
-           reify_preprocess (@list_case _ (fun _ => T) N C x)
+           reify_preprocess (@list_case_nodep _ T N C x)
       | let x := ?a in ?b
         => let A := type of a in
            let T := type of term in
@@ -854,7 +854,7 @@ Module Compilers.
 
         Class BuildInterpIdentCorrectT :=
           {
-            interp_ident_Literal : forall {t v}, ident_interp (type.base (base.type.type_base t)) (ident_Literal (t:=t) v) = v;
+            interp_ident_Literal : forall {t v}, ident_interp (type.base (base.type.type_base t)) (ident_Literal (t:=t) v) = ident.literal v;
             interp_ident_nil : forall {t}, ident_interp _ (ident_nil (t:=t)) = nil;
             interp_ident_cons : forall {t}, ident_interp _ (ident_cons (t:=t)) = cons;
             interp_ident_Some : forall {t}, ident_interp _ (ident_Some (t:=t)) = Some;
@@ -952,13 +952,13 @@ Module Compilers.
               ; interp_ident_nat_rect_arrow {P Q:base_type}
                 : ident_interp _ (@ident_nat_rect_arrow _ P Q)
                   = (fun O_case S_case n
-                     => nat_rect (fun _ => _) O_case (fun n => S_case (of_nat n)) (to_nat n))
+                     => nat_rect_nodep O_case (fun n => S_case (of_nat n)) (to_nat n))
                       :> ((base_type_interp P -> base_type_interp Q) -> (base_type_interp nat -> (base_type_interp P -> base_type_interp Q) -> base_type_interp P -> base_type_interp Q) -> base_type_interp nat -> base_type_interp P -> base_type_interp Q)
 
               ; interp_ident_list_rect {A P:base_type}
                 : ident_interp _ (@ident_list_rect _ A P) = ident.Thunked.list_rect _
               ; interp_ident_list_rect_arrow {A P Q:base_type}
-                : ident_interp _ (@ident_list_rect_arrow _ A P Q) = list_rect (fun _ => base_type_interp P -> base_type_interp Q)
+                : ident_interp _ (@ident_list_rect_arrow _ A P Q) = @list_rect_nodep _ (base_type_interp P -> base_type_interp Q)
               ; interp_ident_List_nth_default {T:base_type}
                 : ident_interp _ (@ident_List_nth_default _ T)
                   = (fun d ls n => @List.nth_default _ d ls (to_nat n))
@@ -967,22 +967,22 @@ Module Compilers.
               ; interp_ident_eager_nat_rect {P:base_type}
                 : ident_interp _ (@ident_eager_nat_rect _ P)
                   = (fun O_case S_case n
-                     => ident.Thunked.nat_rect (base_type_interp P) O_case (fun n => S_case (of_nat n)) (to_nat n))
+                     => ident.eagerly ident.Thunked.nat_rect (base_type_interp P) O_case (fun n => S_case (of_nat n)) (to_nat n))
                       :> ((Datatypes.unit -> _) -> (base_type_interp nat -> _ -> _) -> base_type_interp nat -> _)
 
               ; interp_ident_eager_nat_rect_arrow {P Q:base_type}
                 : ident_interp _ (@ident_eager_nat_rect_arrow _ P Q)
                   = (fun O_case S_case n
-                     => nat_rect (fun _ => _) O_case (fun n => S_case (of_nat n)) (to_nat n))
+                     => ident.eagerly nat_rect_nodep _ O_case (fun n => S_case (of_nat n)) (to_nat n))
                       :> ((base_type_interp P -> base_type_interp Q) -> (base_type_interp nat -> (base_type_interp P -> base_type_interp Q) -> base_type_interp P -> base_type_interp Q) -> base_type_interp nat -> base_type_interp P -> base_type_interp Q)
 
               ; interp_ident_eager_list_rect {A P:base_type}
-                : ident_interp _ (@ident_eager_list_rect _ A P) = ident.Thunked.list_rect _
+                : ident_interp _ (@ident_eager_list_rect _ A P) = ident.eagerly ident.Thunked.list_rect _
               ; interp_ident_eager_list_rect_arrow {A P Q:base_type}
-                : ident_interp _ (@ident_eager_list_rect_arrow _ A P Q) = list_rect (fun _ => base_type_interp P -> base_type_interp Q)
+                : ident_interp _ (@ident_eager_list_rect_arrow _ A P Q) = ident.eagerly list_rect_nodep _ (base_type_interp P -> base_type_interp Q)
               ; interp_ident_eager_List_nth_default {T:base_type}
                 : ident_interp _ (@ident_eager_List_nth_default _ T)
-                  = (fun d ls n => @List.nth_default _ d ls (to_nat n))
+                  = (fun d ls n => ident.eagerly (@List.nth_default) _ d ls (to_nat n))
                       :> (base_type_interp T -> Datatypes.list (base_type_interp T) -> base_interp nat -> base_type_interp T)
             }.
         End correctness_class.

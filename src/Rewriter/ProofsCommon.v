@@ -3116,7 +3116,10 @@ Module Compilers.
                          | progress intros
                          | progress subst
                          | break_innermost_match_step
-                         | progress ident.rewrite_interp ident_interp ].
+                         | progress ident.rewrite_interp ident_interp
+                         | progress cbv [ident.literal ident.eagerly] in * ].
+            all: change (@nat_rect_nodep) with (fun P => @nat_rect (fun _ => P)) in *.
+            all: change (@list_rect_nodep) with (fun A P => @list_rect A (fun _ => P)) in *.
             all: repeat
                    repeat
                    first [ progress cbn [type.related type.interp base.interp value_interp_related expr.interp_related expr.interp_related_gen reify reflect value'] in *
@@ -3125,6 +3128,7 @@ Module Compilers.
                          | progress subst
                          | progress ident.rewrite_interp ident_interp
                          | progress ident.rewrite_interp_eager ident_interp
+                         | progress cbv [ident.literal ident.eagerly] in *
                          | match goal with
                            | [ H : List.Forall2 _ ?l1 ?l2, H' : ?R ?v1 ?v2 |- ?R (nth_default ?v1 ?l1 ?x) (nth_default ?v2 ?l2 ?x) ]
                              => apply Forall2_forall_iff''; split; assumption

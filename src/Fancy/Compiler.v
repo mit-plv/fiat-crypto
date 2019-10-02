@@ -499,6 +499,8 @@ Section of_prefancy.
                   | progress inversion_type
                   | progress cbn [fst snd upper lower fst snd eq_rect projT1 projT2 eq_rect type.decode f_equal f_equal2] in *
                   | progress cbn [expr.interp ident.gen_interp type.interp base.interp base.base_interp] in *
+                  | progress cbv [ident.cast2 ident.literal] in *
+                  | progress destruct_head'_prod
                   | progress expr.inversion_expr
                   | progress expr.inversion_wf_one_constr
                   | progress expr.invert_subst
@@ -598,6 +600,7 @@ Section of_prefancy.
                   | progress inversion_prod
                   | progress cbv [id]
                   | progress cbn [eq_rect projT1 projT2 expr.interp ident.interp ident.gen_interp interp_base Coercions.base Coercions.type_base interp interp_if_Z option_map] in *
+                  | progress cbv [ident.cast2 ident.literal] in *
                   | progress ident.fancy.cbv_fancy_in_all
                   | progress cbn [invert_expr.invert_Ident] in * (* N.B. Must be above [break_innermost_match] for proofs below to work *)
                   | progress Language.Inversion.Compilers.type_beq_to_eq

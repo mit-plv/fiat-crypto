@@ -797,6 +797,7 @@ Module Compilers.
                             | progress break_innermost_match_hyps
                             | progress expr.invert_subst
                             | progress cbn [fst snd UnderLets.interp expr.interp ident_interp Nat.add] in *
+                            | progress cbv [ident.literal] in *
                             | match goal with
                               | [ H : context[ident_interp (ident.ident_Literal _)] |- _ ] => rewrite ident.interp_ident_Literal in H
                               | [ H : context[ident_interp ident.ident_Some] |- _ ] => rewrite ident.interp_ident_Some in H
@@ -1072,6 +1073,7 @@ Module Compilers.
                        | break_innermost_match_hyps_step
                        | break_innermost_match_step
                        | progress cbn [ident.gen_interp base.interp base.base_interp] in *
+                       | progress cbv [ident.cast2] in *
                        | progress intros
                        | progress Bool.split_andb
                        | rewrite ident.cast_in_bounds by assumption
