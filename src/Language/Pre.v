@@ -54,3 +54,10 @@ Module ident.
 End ident.
 
 Global Opaque ident.cast. (* This should never be unfolded except in [Language.Wf] *)
+
+Local Set Implicit Arguments.
+Scheme Minimality for bool Sort Type.
+Scheme Minimality for prod Sort Type.
+Scheme Minimality for nat Sort Type.
+Scheme Minimality for list Sort Type.
+Scheme Minimality for option Sort Type.
