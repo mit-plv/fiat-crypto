@@ -73,6 +73,7 @@ src/Fancy/Montgomery256.v
 src/Fancy/Prod.v
 src/Fancy/Spec.v
 src/Language/API.v
+src/Language/APINotations.v
 src/Language/Identifier.v
 src/Language/IdentifiersGENERATED.v
 src/Language/IdentifiersGENERATEDProofs.v
