@@ -22,6 +22,7 @@ Require Import Crypto.Util.Tactics.UniquePose.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.RewriteHyp.
 Require Import Crypto.Util.Tactics.CPSId.
+Require Import Crypto.Util.Tactics.PrintGoal.
 Require Import Crypto.Util.FMapPositive.Equality.
 Require Import Crypto.Util.MSetPositive.Equality.
 Require Import Crypto.Util.MSetPositive.Facts.
@@ -58,6 +59,9 @@ Module Compilers.
   Module Import RewriteRules.
     Import Rewriter.Compilers.RewriteRules.
     Export Rewriter.ProofsCommon.Compilers.RewriteRules.
+
+    Ltac warn_if_goals_remain _ :=
+      [ > idtac "WARNING: Remaining goal:"; print_context_and_goal () .. ].
 
     Module Import WfTactics.
       Export Rewriter.ProofsCommon.Compilers.RewriteRules.WfTactics.
@@ -168,7 +172,8 @@ Module Compilers.
         Ltac prove_good _ :=
           let do_time := Make.time_if_debug1 in (* eval the level early *)
           do_time start_good;
-          do_time ltac:(fun _ => handle_reified_rewrite_rules; handle_extra_nbe; handle_extra_arith_rules).
+          do_time ltac:(fun _ => handle_reified_rewrite_rules; handle_extra_nbe; handle_extra_arith_rules);
+          warn_if_goals_remain ().
       End Tactic.
     End WfTactics.
 
@@ -540,7 +545,8 @@ Module Compilers.
                  => preprocess base_interp_head;
                     handle_extra_nbe ident_gen_interp_head ident_gen_interp_Proper;
                     handle_reified_rewrite_rules_interp exprInfo exprExtraInfo base_interp_head ident_gen_interp_head)
-          end.
+          end;
+          warn_if_goals_remain ().
       End Tactic.
     End InterpTactics.
   End RewriteRules.
