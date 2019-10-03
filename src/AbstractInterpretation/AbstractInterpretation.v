@@ -690,7 +690,6 @@ Module Compilers.
              | ident.Z_cast2 (r1, r2)
                => fun '((r1', r2') : option zrange * option zrange)
                   => (interp_Z_cast r1 r1', interp_Z_cast r2 r2')
-             (** TODO(jadep): fill in fancy bounds analysis rules *)
              | ident.fancy_add
              | ident.fancy_sub
                => fun '((log2wordmax, imm), args)
