@@ -4,6 +4,7 @@ Require Import Coq.omega.Omega.
 Require Import Coq.micromega.Lia.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.Operations.
+Require Import Crypto.Util.ZUtil.Hints.ZArith.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.SplitMinMax.
 Require Import Crypto.Util.Tactics.SpecializeBy.
@@ -77,6 +78,14 @@ Module ZRange.
 
   Lemma normalize_id_iff_goodb {r} : goodb r = true <-> normalize r = r.
   Proof. repeat t2_step. Qed.
+
+  Lemma normalize_id_pow2 (k : Z) (k_nonneg : (0 <= k)%Z)
+    : normalize r[0 ~> 2 ^ k - 1] = r[0 ~> 2 ^ k - 1].
+  Proof.
+    assert (0 < 2 ^ k)%Z by auto with zarith.
+    assert (0 <= 2 ^ k - 1)%Z by lia.
+    repeat t2_step.
+  Qed.
 
   Lemma is_tighter_than_bool_extend_land_lor_bounds r : is_tighter_than_bool r (extend_land_lor_bounds r) = true.
   Proof. repeat t2_step. Qed.

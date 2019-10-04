@@ -14,6 +14,8 @@ Require Import Crypto.Util.ZUtil.Notations.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
+Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
+Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
 Require Import Crypto.Util.ZUtil.Hints.
 Require Import Crypto.Util.ZUtil.Hints.Core.
 Require Import Crypto.Util.ZUtil.ZSimplify.Core.
@@ -26,6 +28,9 @@ Require Import Crypto.Util.ZUtil.TruncatingShiftl.
 Require Import Crypto.Util.ZUtil.Zselect.
 Require Import Crypto.Util.ZUtil.Div.
 Require Import Crypto.Util.ZUtil.Modulo.
+Require Import Crypto.Util.ZUtil.Pow.
+Require Import Crypto.Util.ZUtil.LandLorShiftBounds.
+Require Import Crypto.Util.ZUtil.Shift.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.Operations.
 Require Import Crypto.Util.ZRange.BasicLemmas.
@@ -394,6 +399,8 @@ Local Ltac unfold_cast_lemmas :=
            => rewrite ZRange.normalize_constant in H
          | [ H : is_bounded_by_bool _ (ZRange.normalize ?r) = true |- _ ]
            => is_var r; generalize dependent (ZRange.normalize r); clear r; intro r; intros
+         | [ H : is_bounded_by_bool _ (ZRange.normalize r[0 ~> 2 ^ _ - 1]) = true |- _ ]
+           => rewrite ZRange.normalize_id_pow2 in H by lia
          | [ H : is_bounded_by_bool ?x (ZRange.constant ?x) = true |- _ ]
            => clear H
          | [ H : is_bounded_by_bool ?x ?r = true |- _ ]
@@ -482,10 +489,300 @@ Section fancy.
   Qed.
 End fancy.
 
+Local Ltac cast_to_arith r v :=
+  match goal with
+  | [ |- context[ident.cast ?coor r v] ]
+    => let H := fresh in
+       eassert (H : _);
+       [ | rewrite (ident.cast_in_bounds r v) by exact H ]
+  end;
+  repeat
+    first [ match goal with
+            | [ |- context[andb _ _ = true] ] => rewrite Bool.andb_true_iff
+            | [ |- and _ _ ] => split
+            end
+          | progress unfold is_bounded_by_bool in *
+          | progress cbn [lower upper] in *
+          | progress Bool.split_andb
+          | progress Z.ltb_to_lt ].
+
+(* calls the provided transitivity tactic (tr) iff the value being replaced (x)
+   appears underneath only simple arithmetic functions. This is so that [nia]
+   doesn't hang for ages. *)
+Local Ltac do_transitivity' x lhs tr val :=
+  match lhs with
+  | x => tr val; [ nia | ]
+  | ?a + ?b =>
+    first [ do_transitivity' x a tr val
+          | do_transitivity' x b tr val ]
+  | ?a * ?b =>
+    first [ do_transitivity' x a tr val
+          | do_transitivity' x b tr val ]
+  | ?a - ?b =>
+    first [ do_transitivity' x a tr val
+          | do_transitivity' x b tr val ]
+  end.
+
+(* helper for extreme_values; eliminates cases that [nia] likely can't solve and
+  tries to call the provided kind of transitivity (tr) with high/low values *)
+Local Ltac do_transitivity x val :=
+  match goal with
+  | |- ?lhs <= _ =>
+      do_transitivity' x lhs ltac:(transitivity) val
+  | |- ?lhs < _ =>
+    do_transitivity' x lhs ltac:(fun x => apply Z.le_lt_trans with (m:=x)) val
+  end.
+
+(* call transitivity with upper/lower bounds of variables *)
+Local Ltac extreme_values' x l u :=
+  let lhs :=
+      match goal with
+      | |- ?lhs <= _ => lhs
+      | |- ?lhs < _ => lhs
+      end in
+  let tr :=
+      match goal with
+      | |- _ <= _ => ltac:(transitivity)
+      | |- _ < _ => ltac:(fun x => apply Z.le_lt_trans with (m:=x))
+      end in
+  match lhs with
+  | context [ x ] =>
+    let f := lazymatch (eval pattern x in lhs) with
+             | ?f _ => f
+             end in
+    first [ do_transitivity' x lhs tr constr:(f u)
+          | do_transitivity' x lhs tr constr:(f l) ]
+  | _ => fail
+  end.
+Local Ltac extreme_values :=
+  repeat
+    match goal with
+    | _: ?l <= ?x <= ?u |- _ => extreme_values' x l u
+    | _: ?l <= ?x, _: ?x <= ?u |- _ => extreme_values' x l u
+    end.
+
+(* TODO : move *)
+Lemma to_double_bounds xl xh bitwidth : 
+  0 <= xl <= 2 ^ bitwidth - 1 ->
+  0 <= xh <= 2 ^ bitwidth - 1 ->
+  xl + xh * 2 ^ bitwidth <= 2 ^ bitwidth * 2 ^ bitwidth - 1.
+Proof. nia. Qed.
+
+Lemma land_mod a b :
+  0 <= b ->
+  a &' b = (a mod (2 ^ (Z.log2 b + 1))) &' b.
+Proof.
+  intros. rewrite <-Z.land_ones by auto with zarith.
+  rewrite <-Z.land_assoc, (Z.land_comm (Z.ones _)).
+  rewrite Z.land_ones_low; auto with zarith.
+Qed.
+  
+Lemma land_add_high a b c d :
+  Z.log2 d < c ->
+  0 <= d ->
+  (a + b * 2 ^ c) &' d = a &' d.
+Proof.
+  intros. rewrite land_mod by lia.
+  rewrite Z.add_mod, Z.mul_mod, Z.mod_same_pow
+    by (Z.zero_bounds; auto with zarith).
+  autorewrite with zsimplify_fast.
+  rewrite <-Z.land_ones, <-Z.land_assoc, (Z.land_comm (Z.ones _))
+    by auto with zarith.
+  rewrite Z.land_ones_low; auto with zarith.
+Qed.
+
+Local Ltac pose_mod_bounds :=
+  repeat match goal with
+         | |- context [?a mod ?b] =>
+           unique pose proof (Z.mod_pos_bound a b ltac:(auto with zarith))
+         end.
+
+Local Ltac pose_shiftr_bounds :=
+  repeat match goal with
+         | |- context [?a >> ?b] =>
+           unique pose proof
+                  (Z.shiftr_nonneg_le
+                     a b ltac:(auto with zarith) ltac:(auto with zarith));
+           unique pose proof (proj2 (Z.shiftr_nonneg a b) ltac:(auto with zarith))
+         end.
+
+Local Ltac bounds_arith_hammer :=
+  repeat match goal with
+         | _ => progress pose_mod_bounds
+         | _ => progress pose_shiftr_bounds
+         | |- _ / _ <= _ - 1 =>
+           apply Le.Z.le_sub_1_iff;
+           apply Z.div_lt_upper_bound; solve [auto with zarith nia]
+         | _ => apply to_double_bounds; lia
+         | _ => solve [Z.zero_bounds]
+         | _ => lia
+         end.
+
+(* TODO: can this be replaced by just adding Z.shiftr_range to zarith? *)
+Local Ltac use_shiftr_range :=
+  try split; Z.zero_bounds; apply Z.shiftr_range;
+  autorewrite with zsimplify; auto with zarith.
+
 Lemma mul_split_rewrite_rules_proofs (bitwidth : Z) (lgcarrymax : Z)
   : PrimitiveHList.hlist (@snd bool Prop) (mul_split_rewrite_rulesT bitwidth lgcarrymax).
 Proof using Type.
   start_proof; auto; intros; try lia.
+  (* assert bounds to help out [lia] *)
+  all: try (assert (0 < 2 ^ bitwidth) by Z.zero_bounds;
+            assert (0 < 2 ^ bitwidth * 2 ^ bitwidth) by Z.zero_bounds;
+            assert ((2 ^ bitwidth - 1) * (2 ^ bitwidth - 1) <= 2 ^ bitwidth * 2 ^ bitwidth - 1) as Hle_double
+                by (autorewrite with push_Zmul zsimplify; lia)).
+  all: try (assert (2 <= 2 ^ lgcarrymax) by auto with zarith).
+  all: try (assert (0 <= bitwidth) by (apply Z.nonneg_pow_pos with (a:=2); lia)).
+  all: try (assert (bitwidth < 2 ^ bitwidth) by (apply Z.pow_gt_lin_r; lia)).
   all: repeat interp_good_t_step_related.
   all: systematically_handle_casts.
-Admitted.
+
+  reflexivity.
+
+  all:unfold Z.combine_at_bitwidth.
+  all:rewrite ?Z.shiftl_mul_pow2, ?Z.shiftr_div_pow2, ?Z.pow_twice_r in * by lia.
+
+  {
+    repeat match goal with
+           | [ |- context[ident.cast ?coor ?r ?v] ]
+             => progress lazymatch v with
+                         | context[ident.cast] => idtac (* do inner expressions first *)
+                         | _ => cast_to_arith r v;
+                                  [ solve [bounds_arith_hammer] .. | ]
+                         end
+           end.
+    rewrite ?ident.platform_specific_cast_0_is_mod by lia.
+    autorewrite with zsimplify_fast.
+    Z.rewrite_mod_small.
+    rewrite Z.mul_div_eq' by lia.
+    lia.
+  }
+  {
+    repeat match goal with
+           | [ |- context[ident.cast ?coor ?r ?v] ]
+             => cast_to_arith r v; [ solve [bounds_arith_hammer] .. | ]
+           end.
+    rewrite ?ident.platform_specific_cast_0_is_mod by lia.
+    autorewrite with zsimplify_fast.
+    Z.rewrite_mod_small.
+
+    rewrite !Z.rem_mul_r by lia.
+    push_Zmod. pull_Zmod.
+    autorewrite with zsimplify.
+    solve [repeat (ring_simplify; f_equal; try lia)].
+  }
+  { 
+    repeat match goal with
+           | [ |- context[ident.cast ?coor ?r ?v] ]
+             => cast_to_arith r v; [ solve [bounds_arith_hammer] .. | ]
+           end.
+    rewrite ?ident.platform_specific_cast_0_is_mod by lia.
+    autorewrite with zsimplify_fast.
+    Z.rewrite_mod_small.
+
+    rewrite !Z.rem_mul_r by lia.
+    push_Zmod. pull_Zmod.
+    autorewrite with zsimplify.
+    ring_simplify.
+    solve [repeat (ring_simplify; f_equal; try lia)].
+  }
+  { 
+    repeat match goal with
+           | [ |- context[ident.cast ?coor ?r ?v] ]
+             => cast_to_arith r v; [ solve [bounds_arith_hammer] .. | ]
+           end.
+    rewrite ?ident.platform_specific_cast_0_is_mod by lia.
+    autorewrite with zsimplify_fast.
+    Z.rewrite_mod_small.
+
+    rewrite !Z.rem_mul_r by lia.
+    push_Zmod. pull_Zmod.
+    autorewrite with zsimplify.
+    ring_simplify.
+    solve [repeat (ring_simplify; f_equal; try lia)].
+  }
+  { 
+    repeat match goal with
+           | [ |- context[ident.cast ?coor ?r ?v] ]
+             => cast_to_arith r v; [ solve [bounds_arith_hammer] .. | ]
+           end.
+    rewrite ?ident.platform_specific_cast_0_is_mod by lia.
+    autorewrite with zsimplify_fast.
+    Z.rewrite_mod_small.
+
+    rewrite land_add_high by (auto with zarith; apply Z.log2_lt_pow2; lia).
+    lia.
+  }
+  { 
+    repeat match goal with
+           | [ |- context[ident.cast ?coor ?r ?v] ]
+             => cast_to_arith r v; [ solve [bounds_arith_hammer] .. | ]
+           end.
+    rewrite ?ident.platform_specific_cast_0_is_mod by lia.
+    autorewrite with zsimplify_fast.
+    Z.rewrite_mod_small.
+
+    rewrite !(Z.land_comm mask).
+    rewrite land_add_high by (auto with zarith; apply Z.log2_lt_pow2; lia).
+    lia.
+  }
+  { 
+    repeat match goal with
+           | [ |- context[ident.cast ?coor ?r ?v] ]
+             => cast_to_arith r v; [ solve [bounds_arith_hammer] .. | ]
+           end.
+    rewrite ?ident.platform_specific_cast_0_is_mod by lia.
+    autorewrite with zsimplify_fast.
+    Z.rewrite_mod_small.
+
+    rewrite <-!Z.land_ones, <-!Z.shiftl_mul_pow2 by lia.
+    match goal with
+    | |- context [Z.lor (?a >> ?b) (_ &' Z.ones ?c)] =>
+      rewrite <-(Z.mod_small (a >> b) (2 ^ c)) by auto with zarith;
+        rewrite <-Z.land_ones, <-Z.land_lor_distr_l by auto with zarith
+    end.
+    rewrite Z.lor_shiftl by use_shiftr_range.
+    rewrite Z.shiftr_add_shiftl_low by lia.
+    match goal with
+    | H : ?x < ?y |- context [Z.shiftr ?a (?x - ?y)] =>
+      replace (Z.shiftr a (x - y)) with (Z.shiftl a (y - x))
+        by (rewrite <-Z.shiftl_opp_r; f_equal; lia)
+    end.
+    reflexivity.
+  }
+  {
+    f_equal.
+    repeat match goal with
+           | [ |- context[ident.cast ?coor ?r ?v] ]
+             => cast_to_arith r v; [ solve [bounds_arith_hammer] .. | ]
+           end.
+    rewrite ?ident.platform_specific_cast_0_is_mod by lia.
+    autorewrite with zsimplify_fast.
+    Z.rewrite_mod_small.
+
+    rewrite <-Z.pow_twice_r in *.
+    rewrite <-!Z.land_ones, <-!Z.shiftl_mul_pow2 by lia.
+    match goal with
+    | |- context [Z.lor (?a >> ?b) (_ &' Z.ones ?c)] =>
+      rewrite <-(Z.mod_small (a >> b) (2 ^ c)) by auto with zarith;
+        rewrite <-Z.land_ones, <-Z.land_lor_distr_l by auto with zarith
+    end.
+    rewrite Z.lor_shiftl by use_shiftr_range.
+    rewrite Z.shiftr_add_shiftl_low by lia.
+    match goal with
+    | H : ?x < ?y |- context [Z.shiftr ?a (?x - ?y)] =>
+      replace (Z.shiftr a (x - y)) with (Z.shiftl a (y - x))
+        by (rewrite <-Z.shiftl_opp_r; f_equal; lia)
+    end.
+
+    rewrite !(Z.land_ones _ bitwidth) by lia.
+    rewrite Z.mod_eq by auto with zarith.
+    rewrite ?(Z.mul_comm (2 ^ _)), <-?Z.shiftl_mul_pow2, <-?Z.shiftr_div_pow2
+      by auto with zarith.
+
+    rewrite Z.shiftr_add_shiftl_high by use_shiftr_range.
+    autorewrite with zsimplify.
+    lia.
+  }
+Qed.
