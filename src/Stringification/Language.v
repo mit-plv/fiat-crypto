@@ -347,10 +347,9 @@ Module Compilers.
                => fun args => (show_application with_casts (fun _ => "Z.cc_m") args, ZRange.type.base.option.None)
              | ident.Z_combine_at_bitwidth
                => fun args => (show_application with_casts (fun _ => "Z.combine_at_bitwidth") args, ZRange.type.base.option.None)
-             | ident.Z_cast range
-               => fun '((x, xr), tt) => (x, Some range)
-             | ident.Z_cast2 (r1, r2)
-               => fun '((x, xr), tt) => (x, (Some r1, Some r2))
+             | ident.Z_cast
+             | ident.Z_cast2
+               => fun '((_, range), ((x, xr), tt)) => (x, range)
              | ident.Build_zrange => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 0) ("r[" ++ x 60%nat ++ " ~> " ++ y 200%nat), ZRange.type.base.option.None)
              | ident.zrange_rect A
                => fun args => (show_application with_casts (fun _ => "zrange_rect") args, ZRange.type.base.option.None)
@@ -464,8 +463,8 @@ Module Compilers.
                 | ident.Z_rshi => "Z.rshi"
                 | ident.Z_cc_m => "Z.cc_m"
                 | ident.Z_combine_at_bitwidth => "Z.combine_at_bitwidth"
-                | ident.Z_cast range => "(" ++ show_range_or_ctype range ++ ")"
-                | ident.Z_cast2 (r1, r2) => "(" ++ show_range_or_ctype r1 ++ ", " ++ show_range_or_ctype r2 ++ ")"
+                | ident.Z_cast => "Z.cast"
+                | ident.Z_cast2 => "Z.cast2"
                 | ident.Build_zrange => "Build_zrange"
                 | ident.zrange_rect _ => "zrange_rect"
                 | ident.fancy_add => "fancy.add"

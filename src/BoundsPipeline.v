@@ -174,7 +174,7 @@ Module Pipeline.
   | Values_not_provably_distinctZ (descr : string) (lhs rhs : Z)
   | Values_not_provably_equalZ (descr : string) (lhs rhs : Z)
   | Values_not_provably_equal_listZ (descr : string) (lhs rhs : list Z)
-  | Unsupported_casts_in_input {t} (e : Expr t) (ls : list { t : _ & ident t })
+  | Unsupported_casts_in_input {t} (e : Expr t) (ls : list { t : _ & @expr (fun _ => string) t })
   | Stringification_failed {t} (e : Expr t) (err : string)
   | Invalid_argument (msg : string).
 
@@ -385,7 +385,7 @@ Module Pipeline.
       | inr (inl (b, E))
         => Error (Computed_bounds_are_not_tight_enough b out_bounds E arg_bounds)
       | inr (inr unsupported_casts)
-        => Error (Unsupported_casts_in_input E unsupported_casts)
+        => Error (Unsupported_casts_in_input E (@List.map { _ & forall var, _ } _ (fun '(existT t e) => existT _ t (e _)) unsupported_casts))
       end.
 
   Definition BoundsPipelineToStrings

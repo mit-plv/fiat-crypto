@@ -678,14 +678,14 @@ Module Compilers.
       Section with_type.
         Context (abstract_domain' : base.type -> Type).
         Local Notation abstract_domain := (@abstract_domain base.type abstract_domain').
-        Context (annotate_ident : forall t, abstract_domain' t -> option (ident (t -> t)))
+        Local Notation var := interp_type.
+        Context (annotate_expr : forall t, abstract_domain' t -> option (@expr var (t -> t)))
                 (bottom' : forall A, abstract_domain' A)
                 (abstract_interp_ident : forall t, ident t -> type.interp abstract_domain' t)
                 (update_literal_with_state : forall A : base.type.base, abstract_domain' A -> base.interp A -> base.interp A)
                 (extract_list_state : forall A, abstract_domain' (base.type.list A) -> option (list (abstract_domain' A)))
                 (extract_option_state : forall A, abstract_domain' (base.type.option A) -> option (option (abstract_domain' A)))
-                (is_annotated_for : forall t t', ident t -> abstract_domain' t' -> bool)
-                (is_annotation : forall t, ident t -> bool)
+                (is_annotated_for : forall t t', @expr var t -> abstract_domain' t' -> bool)
                 (abstraction_relation' : forall t, abstract_domain' t -> base.interp t -> Prop)
                 (abstract_domain'_R : forall t, abstract_domain' t -> abstract_domain' t -> Prop)
                 (abstraction_relation'_Proper : forall t, Proper (abstract_domain'_R t ==> eq ==> Basics.impl) (abstraction_relation' t))
@@ -699,11 +699,11 @@ Module Compilers.
         Local Notation abstract_domain_R := (@abstract_domain_R base.type abstract_domain' abstract_domain'_R).
         Local Notation fill_in_bottom_for_arrows := (@fill_in_bottom_for_arrows base.type abstract_domain' bottom').
         Context {abstract_interp_ident_Proper : forall t, Proper (eq ==> @abstract_domain_R t) (abstract_interp_ident t)}
-                (interp_annotate_ident
+                (interp_annotate_expr
                  : forall t st idc,
-                    annotate_ident t st = Some idc
+                    annotate_expr t st = Some idc
                     -> forall v, abstraction_relation' _ st v
-                           -> ident_interp idc v = v)
+                           -> expr.interp (@ident_interp) idc v = v)
                 (abstract_interp_ident_Proper'
                  : forall t idc, type.related_hetero (@abstraction_relation') (abstract_interp_ident t idc) (ident_interp idc))
                 (extract_list_state_related
@@ -723,11 +723,11 @@ Module Compilers.
                     -> abstraction_relation' _ st v
                     -> option_eq (abstraction_relation' t) a v).
 
-        Local Notation update_annotation := (@ident.update_annotation _ abstract_domain' annotate_ident is_annotated_for).
-        Local Notation annotate_with_ident := (@ident.annotate_with_ident _ abstract_domain' annotate_ident is_annotated_for).
-        Local Notation annotate_base := (@ident.annotate_base _ abstract_domain' annotate_ident is_annotated_for).
-        Local Notation annotate := (@ident.annotate _ abstract_domain' annotate_ident abstract_interp_ident extract_list_state extract_option_state is_annotated_for).
-        Local Notation interp_ident := (@ident.interp_ident _ abstract_domain' annotate_ident bottom' abstract_interp_ident extract_list_state extract_option_state is_annotated_for).
+        Local Notation update_annotation := (@ident.update_annotation _ abstract_domain' annotate_expr is_annotated_for).
+        Local Notation annotate_with_expr := (@ident.annotate_with_expr _ abstract_domain' annotate_expr is_annotated_for).
+        Local Notation annotate_base := (@ident.annotate_base _ abstract_domain' annotate_expr is_annotated_for).
+        Local Notation annotate := (@ident.annotate _ abstract_domain' annotate_expr abstract_interp_ident extract_list_state extract_option_state is_annotated_for).
+        Local Notation interp_ident := (@ident.interp_ident _ abstract_domain' annotate_expr bottom' abstract_interp_ident extract_list_state extract_option_state is_annotated_for).
         Local Notation related_bounded_value := (@related_bounded_value base.type ident abstract_domain' base.interp (@ident_interp) abstraction_relation' bottom' abstract_domain'_R).
         Local Notation reify := (@reify base.type ident _ abstract_domain' annotate bottom').
         Local Notation reflect := (@reflect base.type ident _ abstract_domain' annotate bottom').
@@ -748,14 +748,14 @@ Module Compilers.
               (He : abstraction_relation' t st (expr.interp (t:=type.base t) (@ident_interp) e))
           : expr.interp (@ident_interp) (@update_annotation t st e)
             = expr.interp (@ident_interp) e.
-        Proof using interp_annotate_ident.
+        Proof using interp_annotate_expr.
           cbv [update_annotation];
             repeat first [ reflexivity
                          | progress subst
                          | progress eliminate_hprop_eq
                          | progress cbn [expr.interp eq_rect] in *
                          | match goal with
-                           | [ H : annotate_ident _ _ = Some _ |- _ ] => rewrite (interp_annotate_ident _ _ _ H) by eassumption
+                           | [ H : annotate_expr _ _ = Some _ |- _ ] => rewrite (interp_annotate_expr _ _ _ H) by eassumption
                            end
                          | progress expr.invert_match
                          | progress type_beq_to_eq
@@ -763,12 +763,12 @@ Module Compilers.
                          | progress break_innermost_match_step ].
         Qed.
 
-        Lemma interp_annotate_with_ident is_let_bound t st e
+        Lemma interp_annotate_with_expr is_let_bound t st e
               (He : abstraction_relation' t st (expr.interp (t:=type.base t) (@ident_interp) e))
-          : expr.interp (@ident_interp) (UnderLets.interp (@ident_interp) (@annotate_with_ident is_let_bound t st e))
+          : expr.interp (@ident_interp) (UnderLets.interp (@ident_interp) (@annotate_with_expr is_let_bound t st e))
             = expr.interp (@ident_interp) e.
-        Proof using interp_annotate_ident.
-          cbv [annotate_with_ident]; break_innermost_match; cbn [expr.interp UnderLets.interp];
+        Proof using interp_annotate_expr.
+          cbv [annotate_with_expr]; break_innermost_match; cbn [expr.interp UnderLets.interp];
             apply interp_update_annotation; assumption.
         Qed.
 
@@ -776,16 +776,16 @@ Module Compilers.
               (He : abstraction_relation' t st (expr.interp (t:=type.base (base.type.type_base t)) (@ident_interp) e))
           : expr.interp (@ident_interp) (UnderLets.interp (@ident_interp) (@annotate_base is_let_bound t st e))
             = expr.interp (@ident_interp) e.
-        Proof using interp_annotate_ident.
+        Proof using interp_annotate_expr.
           cbv [annotate_base]; break_innermost_match; expr.invert_subst; cbv beta iota in *; subst.
-          { apply interp_annotate_with_ident; assumption. }
+          { apply interp_annotate_with_expr; assumption. }
         Qed.
 
         Lemma interp_annotate is_let_bound (t : base.type) st e
               (He : abstraction_relation' t st (expr.interp (t:=type.base t) (@ident_interp) e))
           : expr.interp (@ident_interp) (UnderLets.interp (@ident_interp) (@annotate is_let_bound t st e))
             = expr.interp (@ident_interp) e.
-        Proof using interp_annotate_ident abstract_interp_ident_Proper' extract_list_state_related extract_list_state_length_good extract_option_state_related bottom'_related.
+        Proof using interp_annotate_expr abstract_interp_ident_Proper' extract_list_state_related extract_list_state_length_good extract_option_state_related bottom'_related.
           induction t; cbn [annotate]; auto using interp_annotate_base.
           all: repeat first [ reflexivity
                             | progress subst
@@ -808,7 +808,7 @@ Module Compilers.
                             | rewrite !List.map_map
                             | rewrite expr.interp_reify_list
                             | rewrite nth_error_combine
-                            | apply interp_annotate_with_ident; assumption
+                            | apply interp_annotate_with_expr; assumption
                             | progress fold (@base.interp) in *
                             | progress intros
                             | pose proof (@extract_list_state_length_good _ _ _ _ ltac:(eassumption) ltac:(eassumption)); clear extract_list_state_length_good
@@ -876,7 +876,7 @@ Module Compilers.
 
         Lemma interp_ident_Proper_not_nth_default annotate_with_state t idc
           : related_bounded_value (abstract_interp_ident t idc) (UnderLets.interp (@ident_interp) (Base (reflect annotate_with_state (expr.Ident idc) (abstract_interp_ident _ idc)))) (ident_interp idc).
-        Proof using abstract_interp_ident_Proper' abstraction_relation'_Proper bottom'_related extract_list_state_length_good extract_list_state_related extract_option_state_related interp_annotate_ident abstract_interp_ident_Proper bottom'_Proper abstract_domain'_R_transitive abstract_domain'_R_symmetric.
+        Proof using abstract_interp_ident_Proper' abstraction_relation'_Proper bottom'_related extract_list_state_length_good extract_list_state_related extract_option_state_related interp_annotate_expr abstract_interp_ident_Proper bottom'_Proper abstract_domain'_R_transitive abstract_domain'_R_symmetric.
           cbn [UnderLets.interp].
           eapply interp_reflect;
             try first [ apply ident.gen_interp_Proper
@@ -888,7 +888,7 @@ Module Compilers.
 
         Lemma interp_ident_Proper_nth_default annotate_with_state T (idc:=@ident.List_nth_default T)
           : related_bounded_value (abstract_interp_ident _ idc) (UnderLets.interp (@ident_interp) (interp_ident annotate_with_state idc)) (ident_interp idc).
-        Proof using abstract_interp_ident_Proper abstract_interp_ident_Proper' abstraction_relation'_Proper extract_list_state_length_good extract_list_state_related extract_option_state_related interp_annotate_ident bottom'_related.
+        Proof using abstract_interp_ident_Proper abstract_interp_ident_Proper' abstraction_relation'_Proper extract_list_state_length_good extract_list_state_related extract_option_state_related interp_annotate_expr bottom'_related.
           subst idc; cbn [interp_ident reify reflect fst snd UnderLets.interp ident_interp related_bounded_value abstract_domain value].
           cbv [abstract_domain]; cbn [type.interp bottom_for_each_lhs_of_arrow state_of_value fst snd].
           repeat first [ progress intros
@@ -928,8 +928,8 @@ Module Compilers.
                               | refine (@interp_ident_Proper_nth_default _ _) ].
         Qed.
 
-        Local Notation eval_with_bound := (@partial.ident.eval_with_bound _ abstract_domain' annotate_ident bottom' abstract_interp_ident extract_list_state extract_option_state is_annotated_for).
-        Local Notation eta_expand_with_bound := (@partial.ident.eta_expand_with_bound _ abstract_domain' annotate_ident bottom' abstract_interp_ident extract_list_state extract_option_state is_annotated_for).
+        Local Notation eval_with_bound := (@partial.ident.eval_with_bound _ abstract_domain' annotate_expr bottom' abstract_interp_ident extract_list_state extract_option_state is_annotated_for).
+        Local Notation eta_expand_with_bound := (@partial.ident.eta_expand_with_bound _ abstract_domain' annotate_expr bottom' abstract_interp_ident extract_list_state extract_option_state is_annotated_for).
         Local Notation extract := (@ident.extract abstract_domain' bottom' abstract_interp_ident).
 
         Lemma interp_eval_with_bound
@@ -991,12 +991,6 @@ Module Compilers.
         cbv [abstraction_relation' bottom']; induction t; cbn; intros; break_innermost_match; cbn; try reflexivity.
         rewrite Bool.andb_true_iff; split; auto.
       Qed.
-
-      Lemma invert_is_annotation t idc
-        : is_annotation t idc = true
-          -> (exists r, existT _ t idc = existT _ (base.type.Z -> base.type.Z)%etype (ident.Z_cast r))
-             \/ (exists r, existT _ t idc = existT _ (base.type.Z * base.type.Z -> base.type.Z * base.type.Z)%etype (ident.Z_cast2 r)).
-      Proof using Type. destruct idc; cbn [is_annotation]; try discriminate; eauto. Qed.
 
       Lemma abstract_interp_ident_related cast_outside_of_range {t} (idc : ident t)
         : type.related_hetero (@abstraction_relation') (@abstract_interp_ident t idc) (@ident.gen_interp cast_outside_of_range _ idc).
@@ -1060,19 +1054,19 @@ Module Compilers.
           eapply ZRange.is_tighter_than_bool_normalize_of_goodb, ZRange.goodb_of_is_bounded_by_bool; eassumption.
         Qed.
 
-        Lemma interp_annotate_ident {t} st idc
-              (Hst : @annotate_ident relax_zrange t st = Some idc)
+        Lemma interp_annotate_expr {t} st idc
+              (Hst : @annotate_expr relax_zrange _ t st = Some idc)
           : forall v, abstraction_relation' st v
                       -> (forall cast_outside_of_range,
-                             ident.gen_interp cast_outside_of_range idc v = v).
+                             expr.interp (@ident.gen_interp cast_outside_of_range) idc v = v).
         Proof using Hrelax.
-          repeat first [ progress cbv [annotate_ident Option.bind annotation_of_state option_map abstraction_relation' ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by] in *
+          repeat first [ progress cbv [annotate_expr Option.bind annotation_of_state option_map abstraction_relation' ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by] in *
                        | reflexivity
                        | progress inversion_option
                        | progress subst
                        | break_innermost_match_hyps_step
                        | break_innermost_match_step
-                       | progress cbn [ident.gen_interp base.interp base.base_interp] in *
+                       | progress cbn [ident.gen_interp base.interp base.base_interp expr.interp] in *
                        | progress cbv [ident.cast2] in *
                        | progress intros
                        | progress Bool.split_andb
@@ -1083,11 +1077,11 @@ Module Compilers.
                          end ].
         Qed.
 
-        Lemma interp_annotate_ident_Proper {t} st1 st2 (Hst : abstract_domain'_R t st1 st2)
-          : @annotate_ident relax_zrange t st1 = @annotate_ident relax_zrange t st2.
+        Lemma interp_annotate_expr_Proper {t} st1 st2 (Hst : abstract_domain'_R t st1 st2)
+          : @annotate_expr relax_zrange interp_type t st1 = @annotate_expr relax_zrange interp_type t st2.
         Proof using Type. congruence. Qed.
 
-        Local Hint Resolve interp_annotate_ident abstract_interp_ident_related.
+        Local Hint Resolve interp_annotate_expr abstract_interp_ident_related.
 
         Lemma interp_eval_with_bound
               cast_outside_of_range
@@ -1112,7 +1106,7 @@ Module Compilers.
             [ intros arg1 arg2 Harg12 Harg1
             | intros arg1 Harg11 Harg1 ].
           all: eapply Compilers.type.andb_bool_impl_and_for_each_lhs_of_arrow in Harg1; [ | apply ZRange.type.option.is_bounded_by_impl_related_hetero ].
-          all: eapply ident.interp_eval_with_bound with (abstraction_relation':=@abstraction_relation') (abstract_domain'_R:=fun t => abstract_domain'_R t); eauto using bottom'_bottom, interp_annotate_ident with typeclass_instances.
+          all: eapply ident.interp_eval_with_bound with (abstraction_relation':=@abstraction_relation') (abstract_domain'_R:=fun t => abstract_domain'_R t); eauto using bottom'_bottom, interp_annotate_expr with typeclass_instances.
           all: intros; (eapply extract_list_state_related + eapply extract_option_state_related); eassumption.
         Qed.
 
@@ -1128,7 +1122,7 @@ Module Compilers.
         Proof using Hrelax.
           cbv [partial.eta_expand_with_bound]; intros arg1 arg2 Harg12 Harg1.
           eapply Compilers.type.andb_bool_impl_and_for_each_lhs_of_arrow in Harg1.
-          { apply ident.interp_eta_expand_with_bound with (abstraction_relation':=@abstraction_relation') (abstract_domain'_R:=fun t => abstract_domain'_R t); eauto using bottom'_bottom, interp_annotate_ident with typeclass_instances.
+          { apply ident.interp_eta_expand_with_bound with (abstraction_relation':=@abstraction_relation') (abstract_domain'_R:=fun t => abstract_domain'_R t); eauto using bottom'_bottom, interp_annotate_expr with typeclass_instances.
             all: intros; (eapply extract_list_state_related + eapply extract_option_state_related); eassumption. }
           { apply ZRange.type.option.is_bounded_by_impl_related_hetero. }
         Qed.
@@ -1232,8 +1226,7 @@ Module Compilers.
     Module ident.
       Lemma interp_eqv_without_casts t idc
             cast_outside_of_range1 cast_outside_of_range2
-            (Hc : partial.is_annotation t idc = false)
-      : ident.gen_interp cast_outside_of_range1 idc
+      : ident.gen_interp cast_outside_of_range1 (t:=t) idc
         == ident.gen_interp cast_outside_of_range2 idc.
       Proof.
         generalize (@ident.gen_interp_Proper cast_outside_of_range1 t idc idc eq_refl);

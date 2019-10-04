@@ -18,24 +18,24 @@ Local Notation dont_do_again := (pair false) (only parsing).
 Local Notation do_again := (pair true) (only parsing).
 
 Local Notation "' x" := (ident.literal x).
-Local Notation cstZ := (ident.cast ident.cast_outside_of_range).
-Local Notation cstZZ := (ident.cast2 ident.cast_outside_of_range).
+Local Notation cstZ r := (ident.cast ident.cast_outside_of_range ('r%zrange)).
+Local Notation cstZZ r1 r2 := (ident.cast2 ident.cast_outside_of_range ('(r1%zrange), '(r2%zrange))).
 Local Notation "'plet' x := y 'in' z"
   := (match y return _ with x => z end).
 
-Local Notation dlet2_opp2 rvc e
-  := (plet rvc' := (fst rvc, -snd rvc)%zrange in
-          plet cst' := cstZZ rvc' in
-          plet cst1 := cstZ (fst rvc%zrange%zrange) in
-          plet cst2 := cstZ (snd rvc%zrange%zrange) in
-          plet cst2' := cstZ (-snd rvc%zrange%zrange) in
+Local Notation dlet2_opp2 rv rc e
+  := (plet rc' := (-rc)%zrange in
+          plet cst' := cstZZ rv rc' in
+          plet cst1 := cstZ rv in
+          plet cst2 := cstZ rc in
+          plet cst2' := cstZ rc' in
           (dlet vc := cst' e in
                (cst1 (fst (cst' vc)), cst2 (-(cst2' (snd (cst' vc))))))).
 
-Local Notation dlet2 rvc e
-  := (dlet vc := cstZZ rvc e in
-          (cstZ (fst rvc) (fst (cstZZ rvc vc)),
-           cstZ (snd rvc) (snd (cstZZ rvc vc)))).
+Local Notation dlet2 rv rc e
+  := (dlet vc := cstZZ rv rc e in
+          (cstZ rv (fst (cstZZ rv rc vc)),
+           cstZ rc (snd (cstZZ rv rc vc)))).
 
 
 Local Notation "x '\in' y" := (is_bounded_by_bool x (ZRange.normalize y) = true) : zrange_scope.
@@ -355,62 +355,62 @@ Definition arith_with_casts_rewrite_rulesT : list (bool * Prop)
                   -> Z.mul_split (cstZ rs ('s)) (cstZ ry y) (cstZ r1 1)
                      = (cstZ ry y, cstZ r[0~>0] 0))
 
-            ; (forall rvc s rny ry y x,
+            ; (forall rv rc s rny ry y x,
                   (ry <= -n rny)%zrange
-                  -> cstZZ rvc (Z.add_get_carry_full s (cstZ rny (-cstZ ry y)) x)
-                     = dlet2_opp2 rvc (Z.sub_get_borrow_full s x (cstZ ry y)))
-            ; (forall rvc s rny ry y x,
+                  -> cstZZ rv rc (Z.add_get_carry_full s (cstZ rny (-cstZ ry y)) x)
+                     = dlet2_opp2 rv rc (Z.sub_get_borrow_full s x (cstZ ry y)))
+            ; (forall rv rc s rny ry y x,
                   (ry <= -n rny)%zrange
-                  -> cstZZ rvc (Z.add_get_carry_full s x (cstZ rny (-cstZ ry y)))
-                     = dlet2_opp2 rvc (Z.sub_get_borrow_full s x (cstZ ry y)))
-            ; (forall rvc s ryy yy x,
+                  -> cstZZ rv rc (Z.add_get_carry_full s x (cstZ rny (-cstZ ry y)))
+                     = dlet2_opp2 rv rc (Z.sub_get_borrow_full s x (cstZ ry y)))
+            ; (forall rv rc s ryy yy x,
                   yy ∈ ryy -> yy < 0
-                  -> cstZZ rvc (Z.add_get_carry_full s (cstZ ryy ('yy)) x)
-                     = dlet2_opp2 rvc (Z.sub_get_borrow_full s x (cstZ (-ryy) ('(-yy)))))
-            ; (forall rvc s ryy yy x,
+                  -> cstZZ rv rc (Z.add_get_carry_full s (cstZ ryy ('yy)) x)
+                     = dlet2_opp2 rv rc (Z.sub_get_borrow_full s x (cstZ (-ryy) ('(-yy)))))
+            ; (forall rv rc s ryy yy x,
                   yy ∈ ryy -> yy < 0
-                  -> cstZZ rvc (Z.add_get_carry_full s x (cstZ ryy ('yy)))
-                     = dlet2_opp2 rvc (Z.sub_get_borrow_full s x (cstZ (-ryy) ('(-yy)))))
-            ; (forall rvc s rnc rc c rny ry y x,
-                  (ry <= -n rny)%zrange -> (rc <= -n rnc)%zrange
-                  -> cstZZ rvc (Z.add_with_get_carry_full s (cstZ rnc (-cstZ rc c)) (cstZ rny (-cstZ ry y)) x)
-                     = dlet2_opp2 rvc (Z.sub_with_get_borrow_full s (cstZ rc c) x (cstZ ry y)))
-            ; (forall rvc s rnc rc c rny ry y x,
-                  (ry <= -n rny)%zrange -> (rc <= -n rnc)%zrange
-                  -> cstZZ rvc (Z.add_with_get_carry_full s (cstZ rnc (-cstZ rc c)) x (cstZ rny (-cstZ ry y)))
-                     = dlet2_opp2 rvc (Z.sub_with_get_borrow_full s (cstZ rc c) x (cstZ ry y)))
-            ; (forall rvc s r0 rny ry y x,
+                  -> cstZZ rv rc (Z.add_get_carry_full s x (cstZ ryy ('yy)))
+                     = dlet2_opp2 rv rc (Z.sub_get_borrow_full s x (cstZ (-ryy) ('(-yy)))))
+            ; (forall rv rc s rnc rc' c' rny ry y x,
+                  (ry <= -n rny)%zrange -> (rc' <= -n rnc)%zrange
+                  -> cstZZ rv rc (Z.add_with_get_carry_full s (cstZ rnc (-cstZ rc' c')) (cstZ rny (-cstZ ry y)) x)
+                     = dlet2_opp2 rv rc (Z.sub_with_get_borrow_full s (cstZ rc' c') x (cstZ ry y)))
+            ; (forall rv rc s rnc rc' c' rny ry y x,
+                  (ry <= -n rny)%zrange -> (rc' <= -n rnc)%zrange
+                  -> cstZZ rv rc (Z.add_with_get_carry_full s (cstZ rnc (-cstZ rc' c')) x (cstZ rny (-cstZ ry y)))
+                     = dlet2_opp2 rv rc (Z.sub_with_get_borrow_full s (cstZ rc' c') x (cstZ ry y)))
+            ; (forall rv rc s r0 rny ry y x,
                   0 ∈ r0 -> (ry <= -n rny)%zrange
-                  -> cstZZ rvc (Z.add_with_get_carry_full s (cstZ r0 0) (cstZ rny (-cstZ ry y)) x)
-                     = dlet2_opp2 rvc (Z.sub_get_borrow_full s x (cstZ ry y)))
-            ; (forall rvc s rcc cc rny ry y x,
+                  -> cstZZ rv rc (Z.add_with_get_carry_full s (cstZ r0 0) (cstZ rny (-cstZ ry y)) x)
+                     = dlet2_opp2 rv rc (Z.sub_get_borrow_full s x (cstZ ry y)))
+            ; (forall rv rc s rcc cc rny ry y x,
                   cc < 0 -> cc ∈ rcc -> (ry <= -n rny)%zrange
-                  -> cstZZ rvc (Z.add_with_get_carry_full s (cstZ rcc ('cc)) (cstZ rny (-cstZ ry y)) x)
-                     = dlet2_opp2 rvc (Z.sub_with_get_borrow_full s (cstZ (-rcc) ('(-cc))) x (cstZ ry y)))
-            ; (forall rvc s r0 rny ry y x,
+                  -> cstZZ rv rc (Z.add_with_get_carry_full s (cstZ rcc ('cc)) (cstZ rny (-cstZ ry y)) x)
+                     = dlet2_opp2 rv rc (Z.sub_with_get_borrow_full s (cstZ (-rcc) ('(-cc))) x (cstZ ry y)))
+            ; (forall rv rc s r0 rny ry y x,
                   0 ∈ r0 -> (ry <= -n rny)%zrange
-                  -> cstZZ rvc (Z.add_with_get_carry_full s (cstZ r0 0) x (cstZ rny (-cstZ ry y)))
-                     = dlet2_opp2 rvc (Z.sub_get_borrow_full s x (cstZ ry y)))
-            ; (forall rvc s rcc cc rny ry y x,
+                  -> cstZZ rv rc (Z.add_with_get_carry_full s (cstZ r0 0) x (cstZ rny (-cstZ ry y)))
+                     = dlet2_opp2 rv rc (Z.sub_get_borrow_full s x (cstZ ry y)))
+            ; (forall rv rc s rcc cc rny ry y x,
                   cc < 0 -> cc ∈ rcc -> (ry <= -n rny)%zrange
-                  -> cstZZ rvc (Z.add_with_get_carry_full s (cstZ rcc ('cc)) x (cstZ rny (-cstZ ry y)))
-                     = dlet2_opp2 rvc (Z.sub_with_get_borrow_full s (cstZ (-rcc) ('(-cc))) x (cstZ ry y)))
-            ; (forall rvc s rnc rc c ryy yy x,
-                  yy <= 0 -> yy ∈ ryy -> (rc <= -n rnc)%zrange
-                  -> cstZZ rvc (Z.add_with_get_carry_full s (cstZ rnc (-cstZ rc c)) (cstZ ryy ('yy)) x)
-                     = dlet2_opp2 rvc (Z.sub_with_get_borrow_full s (cstZ rc c) x (cstZ (-ryy) ('(-yy)))))
-            ; (forall rvc s rnc rc c ryy yy x,
-                  yy <= 0 -> yy ∈ ryy -> (rc <= -n rnc)%zrange
-                  -> cstZZ rvc (Z.add_with_get_carry_full s (cstZ rnc (-cstZ rc c)) x (cstZ ryy ('yy)))
-                     = dlet2_opp2 rvc (Z.sub_with_get_borrow_full s (cstZ rc c) x (cstZ (-ryy) ('(-yy)))))
-            ; (forall rvc s rcc cc ryy yy x,
+                  -> cstZZ rv rc (Z.add_with_get_carry_full s (cstZ rcc ('cc)) x (cstZ rny (-cstZ ry y)))
+                     = dlet2_opp2 rv rc (Z.sub_with_get_borrow_full s (cstZ (-rcc) ('(-cc))) x (cstZ ry y)))
+            ; (forall rv rc s rnc rc' c' ryy yy x,
+                  yy <= 0 -> yy ∈ ryy -> (rc' <= -n rnc)%zrange
+                  -> cstZZ rv rc (Z.add_with_get_carry_full s (cstZ rnc (-cstZ rc' c')) (cstZ ryy ('yy)) x)
+                     = dlet2_opp2 rv rc (Z.sub_with_get_borrow_full s (cstZ rc' c') x (cstZ (-ryy) ('(-yy)))))
+            ; (forall rv rc s rnc rc' c' ryy yy x,
+                  yy <= 0 -> yy ∈ ryy -> (rc' <= -n rnc)%zrange
+                  -> cstZZ rv rc (Z.add_with_get_carry_full s (cstZ rnc (-cstZ rc' c')) x (cstZ ryy ('yy)))
+                     = dlet2_opp2 rv rc (Z.sub_with_get_borrow_full s (cstZ rc' c') x (cstZ (-ryy) ('(-yy)))))
+            ; (forall rv rc s rcc cc ryy yy x,
                   yy <= 0 -> cc <= 0 -> yy + cc < 0 (* at least one must be strictly negative *) -> yy ∈ ryy -> cc ∈ rcc
-                  -> cstZZ rvc (Z.add_with_get_carry_full s (cstZ rcc ('cc)) (cstZ ryy ('yy)) x)
-                     = dlet2_opp2 rvc (Z.sub_with_get_borrow_full s (cstZ (-rcc) ('(-cc))) x (cstZ (-ryy) ('(-yy)))))
-            ; (forall rvc s rcc cc ryy yy x,
+                  -> cstZZ rv rc (Z.add_with_get_carry_full s (cstZ rcc ('cc)) (cstZ ryy ('yy)) x)
+                     = dlet2_opp2 rv rc (Z.sub_with_get_borrow_full s (cstZ (-rcc) ('(-cc))) x (cstZ (-ryy) ('(-yy)))))
+            ; (forall rv rc s rcc cc ryy yy x,
                   yy <= 0 -> cc <= 0 -> yy + cc < 0 (* at least one must be strictly negative *) -> yy ∈ ryy -> cc ∈ rcc
-                  -> cstZZ rvc (Z.add_with_get_carry_full s (cstZ rcc ('cc)) x (cstZ ryy ('yy)))
-                     = dlet2_opp2 rvc (Z.sub_with_get_borrow_full s (cstZ (-rcc) ('(-cc))) x (cstZ (-ryy) ('(-yy)))))
+                  -> cstZZ rv rc (Z.add_with_get_carry_full s (cstZ rcc ('cc)) x (cstZ ryy ('yy)))
+                     = dlet2_opp2 rv rc (Z.sub_with_get_borrow_full s (cstZ (-rcc) ('(-cc))) x (cstZ (-ryy) ('(-yy)))))
 
 
             ; (forall rs s rxx xx ryy yy,
@@ -441,42 +441,42 @@ Definition arith_with_casts_rewrite_rulesT : list (bool * Prop)
                   -> Z.add_with_get_carry_full (cstZ rs ('s)) (cstZ r0c 0) (cstZ ry y) (cstZ r0x 0)
                      = (cstZ ry y, cstZ r[0~>0] 0))
 
-            ; (forall rvc s r0 x y, (* carry = 0: ADC x y -> ADD x y *)
+            ; (forall rv rc s r0 x y, (* carry = 0: ADC x y -> ADD x y *)
                   0 ∈ r0
-                  -> cstZZ rvc (Z.add_with_get_carry_full s (cstZ r0 0) x y)
-                     = dlet2 rvc (Z.add_get_carry_full s x y))
-            ; (forall rvc rs s rc c r0x r0y, (* ADC 0 0 -> (ADX 0 0, 0) *) (* except we don't do ADX, because C stringification doesn't handle it *)
-                  0 ∈ r0x -> 0 ∈ r0y -> (rc <= r[0~>s-1])%zrange -> 0 ∈ snd rvc -> s ∈ rs
-                  -> cstZZ rvc (Z.add_with_get_carry_full (cstZ rs ('s)) (cstZ rc c) (cstZ r0x 0) (cstZ r0y 0))
-                     = (dlet vc := (cstZZ rvc (Z.add_with_get_carry_full (cstZ rs ('s)) (cstZ rc c) (cstZ r0x 0) (cstZ r0y 0))) in
-                            (cstZ (fst rvc) (fst (cstZZ rvc vc)),
+                  -> cstZZ rv rc (Z.add_with_get_carry_full s (cstZ r0 0) x y)
+                     = dlet2 rv rc (Z.add_get_carry_full s x y))
+            ; (forall rv rc rs s rc' c' r0x r0y, (* ADC 0 0 -> (ADX 0 0, 0) *) (* except we don't do ADX, because C stringification doesn't handle it *)
+                  0 ∈ r0x -> 0 ∈ r0y -> (rc' <= r[0~>s-1])%zrange -> 0 ∈ rc -> s ∈ rs
+                  -> cstZZ rv rc (Z.add_with_get_carry_full (cstZ rs ('s)) (cstZ rc' c') (cstZ r0x 0) (cstZ r0y 0))
+                     = (dlet vc := (cstZZ rv rc (Z.add_with_get_carry_full (cstZ rs ('s)) (cstZ rc' c') (cstZ r0x 0) (cstZ r0y 0))) in
+                            (cstZ rv (fst (cstZZ rv rc vc)),
                              cstZ r[0~>0] 0)))
 
             (* let-bind any adc/sbb/mulx *)
-            ; (forall rvc s c x y,
-                  cstZZ rvc (Z.add_with_get_carry_full s c x y)
-                  = dlet2 rvc (Z.add_with_get_carry_full s c x y))
+            ; (forall rv rc s c x y,
+                  cstZZ rv rc (Z.add_with_get_carry_full s c x y)
+                  = dlet2 rv rc (Z.add_with_get_carry_full s c x y))
             ; (forall rv c x y,
                   cstZ rv (Z.add_with_carry c x y)
                   = (dlet vc := cstZ rv (Z.add_with_carry c x y) in
                          cstZ rv vc))
-            ; (forall rvc s x y,
-                  cstZZ rvc (Z.add_get_carry_full s x y)
-                  = dlet2 rvc (Z.add_get_carry_full s x y))
-            ; (forall rvc s c x y,
-                  cstZZ rvc (Z.sub_with_get_borrow_full s c x y)
-                  = dlet2 rvc (Z.sub_with_get_borrow_full s c x y))
-            ; (forall rvc s x y,
-                  cstZZ rvc (Z.sub_get_borrow_full s x y)
-                  = dlet2 rvc (Z.sub_get_borrow_full s x y))
-            ; (forall rvc s x y,
-                  cstZZ rvc (Z.mul_split s x y)
-                  = dlet2 rvc (Z.mul_split s x y))
+            ; (forall rv rc s x y,
+                  cstZZ rv rc (Z.add_get_carry_full s x y)
+                  = dlet2 rv rc (Z.add_get_carry_full s x y))
+            ; (forall rv rc s c x y,
+                  cstZZ rv rc (Z.sub_with_get_borrow_full s c x y)
+                  = dlet2 rv rc (Z.sub_with_get_borrow_full s c x y))
+            ; (forall rv rc s x y,
+                  cstZZ rv rc (Z.sub_get_borrow_full s x y)
+                  = dlet2 rv rc (Z.sub_get_borrow_full s x y))
+            ; (forall rv rc s x y,
+                  cstZZ rv rc (Z.mul_split s x y)
+                  = dlet2 rv rc (Z.mul_split s x y))
            ]%Z%zrange
          ; mymap
              do_again
              [ (* [do_again], so that if one of the arguments is concrete, we automatically get the rewrite rule for [Z_cast] applying to it *)
-               (forall r x y, cstZZ r (x, y) = (cstZ (fst r) x, cstZ (snd r) y))
+               (forall rx ry x y, cstZZ rx ry (x, y) = (cstZ rx x, cstZ ry y))
              ]
          ; mymap
              dont_do_again
@@ -522,34 +522,34 @@ Section fancy.
 (Z.add_get_carry_concrete 2^256) @@ (?x >> 128, ?y) --> (add (- 128)) @@ (y, x)
 (Z.add_get_carry_concrete 2^256) @@ (?x, ?y)        --> (add 0) @@ (y, x)
                *)
-               (forall r rs s rx x rshiftl rland ry y rmask mask roffset offset,
+               (forall r1 r2 rs s rx x rshiftl rland ry y rmask mask roffset offset,
                    s = 2^Z.log2 s -> s ∈ rs -> offset ∈ roffset -> mask ∈ rmask -> shiftl_good rshiftl rland offset -> land_good rland ry mask -> range_in_bitwidth rshiftl s -> (mask = Z.ones (Z.log2 s - offset)) -> (0 <= offset <= Z.log2 s)
-                   -> cstZZ r (Z.add_get_carry_full (cstZ rs ('s)) (cstZ rx x) (cstZ rshiftl ((cstZ rland (cstZ ry y &' cstZ rmask ('mask))) << cstZ roffset ('offset))))
-                      = cstZZ r (ident.fancy.add (('(Z.log2 s), 'offset), (cstZ rx x, cstZ ry y))))
-               ; (forall r rs s rx x rshiftl rland ry y rmask mask roffset offset,
+                   -> cstZZ r1 r2 (Z.add_get_carry_full (cstZ rs ('s)) (cstZ rx x) (cstZ rshiftl ((cstZ rland (cstZ ry y &' cstZ rmask ('mask))) << cstZ roffset ('offset))))
+                      = cstZZ r1 r2 (ident.fancy.add (('(Z.log2 s), 'offset), (cstZ rx x, cstZ ry y))))
+               ; (forall r1 r2 rs s rx x rshiftl rland ry y rmask mask roffset offset,
                      (s = 2^Z.log2 s) -> (mask = Z.ones (Z.log2 s - offset)) -> (0 <= offset <= Z.log2 s) -> s ∈ rs -> mask ∈ rmask -> offset ∈ roffset -> shiftl_good rshiftl rland offset -> land_good rland ry mask -> range_in_bitwidth rshiftl s
-                     -> cstZZ r (Z.add_get_carry_full (cstZ rs ('s)) (cstZ rx x) (cstZ rshiftl (cstZ rland (cstZ ry y &' cstZ rmask ('mask)) << cstZ roffset ('offset))))
-                        = cstZZ r (ident.fancy.add (('(Z.log2 s), 'offset), (cstZ rx x, cstZ ry y))))
+                     -> cstZZ r1 r2 (Z.add_get_carry_full (cstZ rs ('s)) (cstZ rx x) (cstZ rshiftl (cstZ rland (cstZ ry y &' cstZ rmask ('mask)) << cstZ roffset ('offset))))
+                        = cstZZ r1 r2 (ident.fancy.add (('(Z.log2 s), 'offset), (cstZ rx x, cstZ ry y))))
 
-               ; (forall r rs s rshiftl rland ry y rmask mask roffset offset rx x,
+               ; (forall r1 r2 rs s rshiftl rland ry y rmask mask roffset offset rx x,
                      s ∈ rs -> mask ∈ rmask -> offset ∈ roffset -> (s = 2^Z.log2 s) -> shiftl_good rshiftl rland offset -> land_good rland ry mask -> range_in_bitwidth rshiftl s -> (mask = Z.ones (Z.log2 s - offset)) -> (0 <= offset <= Z.log2 s)
-                     -> cstZZ r (Z.add_get_carry_full (cstZ rs ('s)) (cstZ rshiftl (Z.shiftl (cstZ rland (Z.land (cstZ ry y) (cstZ rmask ('mask)))) (cstZ roffset ('offset)))) (cstZ rx x))
-                        = cstZZ r (ident.fancy.add (('(Z.log2 s), 'offset), (cstZ rx x, cstZ ry y))))
+                     -> cstZZ r1 r2 (Z.add_get_carry_full (cstZ rs ('s)) (cstZ rshiftl (Z.shiftl (cstZ rland (Z.land (cstZ ry y) (cstZ rmask ('mask)))) (cstZ roffset ('offset)))) (cstZ rx x))
+                        = cstZZ r1 r2 (ident.fancy.add (('(Z.log2 s), 'offset), (cstZ rx x, cstZ ry y))))
 
-               ; (forall r rs s rx x rshiftr ry y roffset offset,
+               ; (forall r1 r2 rs s rx x rshiftr ry y roffset offset,
                      s ∈ rs -> offset ∈ roffset -> (s = 2^Z.log2 s) -> shiftr_good rshiftr ry offset -> range_in_bitwidth rshiftr s
-                     -> cstZZ r (Z.add_get_carry_full (cstZ rs ('s)) (cstZ rx x) (cstZ rshiftr (Z.shiftr (cstZ ry y) (cstZ roffset ('offset)))))
-                        = cstZZ r (ident.fancy.add (('(Z.log2 s), '(-offset)), (cstZ rx x, cstZ ry y)))%core)
+                     -> cstZZ r1 r2 (Z.add_get_carry_full (cstZ rs ('s)) (cstZ rx x) (cstZ rshiftr (Z.shiftr (cstZ ry y) (cstZ roffset ('offset)))))
+                        = cstZZ r1 r2 (ident.fancy.add (('(Z.log2 s), '(-offset)), (cstZ rx x, cstZ ry y)))%core)
 
-               ; (forall r rs s rshiftr ry y roffset offset rx x,
+               ; (forall r1 r2 rs s rshiftr ry y roffset offset rx x,
                      s ∈ rs -> offset ∈ roffset -> (s = 2^Z.log2 s) -> shiftr_good rshiftr ry offset -> range_in_bitwidth rshiftr s
-                     -> cstZZ r (Z.add_get_carry_full (cstZ rs ('s)) (cstZ rshiftr (Z.shiftr (cstZ ry y) (cstZ roffset ('offset)))) (cstZ rx x))
-                        = cstZZ r (ident.fancy.add (('(Z.log2 s), '(-offset)), (cstZ rx x, cstZ ry y))%core))
+                     -> cstZZ r1 r2 (Z.add_get_carry_full (cstZ rs ('s)) (cstZ rshiftr (Z.shiftr (cstZ ry y) (cstZ roffset ('offset)))) (cstZ rx x))
+                        = cstZZ r1 r2 (ident.fancy.add (('(Z.log2 s), '(-offset)), (cstZ rx x, cstZ ry y))%core))
 
-               ; (forall r rs s rx x ry y,
+               ; (forall r1 r2 rs s rx x ry y,
                      s ∈ rs -> (s = 2^Z.log2 s) -> range_in_bitwidth ry s
-                     -> cstZZ r (Z.add_get_carry_full (cstZ rs ('s)) (cstZ rx x) (cstZ ry y))
-                        = cstZZ r (ident.fancy.add (('(Z.log2 s), '0), (cstZ rx x, cstZ ry y))))
+                     -> cstZZ r1 r2 (Z.add_get_carry_full (cstZ rs ('s)) (cstZ rx x) (cstZ ry y))
+                        = cstZZ r1 r2 (ident.fancy.add (('(Z.log2 s), '0), (cstZ rx x, cstZ ry y))))
 
                (*
 (Z.add_with_get_carry_concrete 2^256) @@ (?c, ?x, ?y << 128) --> (addc 128) @@ (c, x, y)
@@ -558,30 +558,30 @@ Section fancy.
 (Z.add_with_get_carry_concrete 2^256) @@ (?c, ?x >> 128, ?y) --> (addc (- 128)) @@ (c, y, x)
 (Z.add_with_get_carry_concrete 2^256) @@ (?c, ?x, ?y)        --> (addc 0) @@ (c, y, x)
                 *)
-               ; (forall r rs s rc c rx x rshiftl rland ry y rmask mask roffset offset,
+               ; (forall r1 r2 rs s rc c rx x rshiftl rland ry y rmask mask roffset offset,
                      s ∈ rs -> mask ∈ rmask -> offset ∈ roffset -> (s = 2^Z.log2 s) -> shiftl_good rshiftl rland offset -> land_good rland ry mask -> range_in_bitwidth rshiftl s -> (mask = Z.ones (Z.log2 s - offset)) -> (0 <= offset <= Z.log2 s)
-                     -> cstZZ r (Z.add_with_get_carry_full (cstZ rs ('s)) (cstZ rc c) (cstZ rx x) (cstZ rshiftl (Z.shiftl (cstZ rland (Z.land (cstZ ry y) (cstZ rmask ('mask)))) (cstZ roffset ('offset)))))
-                        = cstZZ r (ident.fancy.addc (('(Z.log2 s), 'offset), (cstZ rc c, cstZ rx x, cstZ ry y))))
+                     -> cstZZ r1 r2 (Z.add_with_get_carry_full (cstZ rs ('s)) (cstZ rc c) (cstZ rx x) (cstZ rshiftl (Z.shiftl (cstZ rland (Z.land (cstZ ry y) (cstZ rmask ('mask)))) (cstZ roffset ('offset)))))
+                        = cstZZ r1 r2 (ident.fancy.addc (('(Z.log2 s), 'offset), (cstZ rc c, cstZ rx x, cstZ ry y))))
 
-               ; (forall r rs s rc c rshiftl rland ry y rmask mask roffset offset rx x,
+               ; (forall r1 r2 rs s rc c rshiftl rland ry y rmask mask roffset offset rx x,
                      s ∈ rs -> mask ∈ rmask -> offset ∈ roffset -> (s = 2^Z.log2 s) -> shiftl_good rshiftl rland offset -> range_in_bitwidth rshiftl s -> land_good rland ry mask -> (mask = Z.ones (Z.log2 s - offset)) -> (0 <= offset <= Z.log2 s)
-                     -> cstZZ r (Z.add_with_get_carry_full (cstZ rs ('s)) (cstZ rc c) (cstZ rshiftl (Z.shiftl (cstZ rland (Z.land (cstZ ry y) (cstZ rmask ('mask)))) (cstZ roffset ('offset)))) (cstZ rx x))
-                        = cstZZ r (ident.fancy.addc (('(Z.log2 s), 'offset), (cstZ rc c, cstZ rx x, cstZ ry y))))
+                     -> cstZZ r1 r2 (Z.add_with_get_carry_full (cstZ rs ('s)) (cstZ rc c) (cstZ rshiftl (Z.shiftl (cstZ rland (Z.land (cstZ ry y) (cstZ rmask ('mask)))) (cstZ roffset ('offset)))) (cstZ rx x))
+                        = cstZZ r1 r2 (ident.fancy.addc (('(Z.log2 s), 'offset), (cstZ rc c, cstZ rx x, cstZ ry y))))
 
-               ; (forall r rs s rc c rx x rshiftr ry y roffset offset,
+               ; (forall r1 r2 rs s rc c rx x rshiftr ry y roffset offset,
                      s ∈ rs -> offset ∈ roffset -> (s = 2^Z.log2 s) -> shiftr_good rshiftr ry offset -> range_in_bitwidth rshiftr s
-                     -> cstZZ r (Z.add_with_get_carry_full (cstZ rs ('s)) (cstZ rc c) (cstZ rx x) (cstZ rshiftr (Z.shiftr (cstZ ry y) (cstZ roffset ('offset)))))
-                        = cstZZ r (ident.fancy.addc (('(Z.log2 s), '(-offset)), (cstZ rc c, cstZ rx x, cstZ ry y))%core))
+                     -> cstZZ r1 r2 (Z.add_with_get_carry_full (cstZ rs ('s)) (cstZ rc c) (cstZ rx x) (cstZ rshiftr (Z.shiftr (cstZ ry y) (cstZ roffset ('offset)))))
+                        = cstZZ r1 r2 (ident.fancy.addc (('(Z.log2 s), '(-offset)), (cstZ rc c, cstZ rx x, cstZ ry y))%core))
 
-               ; (forall r rs s rc c rshiftr ry y roffset offset rx x,
+               ; (forall r1 r2 rs s rc c rshiftr ry y roffset offset rx x,
                      s ∈ rs -> offset ∈ roffset -> (s = 2^Z.log2 s) -> shiftr_good rshiftr ry offset -> range_in_bitwidth rshiftr s
-                     -> cstZZ r (Z.add_with_get_carry_full (cstZ rs ('s)) (cstZ rc c) (cstZ rshiftr (Z.shiftr (cstZ ry y) (cstZ roffset ('offset)))) (cstZ rx x))
-                        = cstZZ r (ident.fancy.addc (('(Z.log2 s), '(-offset)), (cstZ rc c, cstZ rx x, cstZ ry y))%core))
+                     -> cstZZ r1 r2 (Z.add_with_get_carry_full (cstZ rs ('s)) (cstZ rc c) (cstZ rshiftr (Z.shiftr (cstZ ry y) (cstZ roffset ('offset)))) (cstZ rx x))
+                        = cstZZ r1 r2 (ident.fancy.addc (('(Z.log2 s), '(-offset)), (cstZ rc c, cstZ rx x, cstZ ry y))%core))
 
-               ; (forall r rs s rc c rx x ry y,
+               ; (forall r1 r2 rs s rc c rx x ry y,
                      s ∈ rs -> (s = 2^Z.log2 s) -> range_in_bitwidth ry s
-                     -> cstZZ r (Z.add_with_get_carry_full (cstZ rs ('s)) (cstZ rc c) (cstZ rx x) (cstZ ry y))
-                        = cstZZ r (ident.fancy.addc (('(Z.log2 s), '0), (cstZ rc c, cstZ rx x, cstZ ry y))))
+                     -> cstZZ r1 r2 (Z.add_with_get_carry_full (cstZ rs ('s)) (cstZ rc c) (cstZ rx x) (cstZ ry y))
+                        = cstZZ r1 r2 (ident.fancy.addc (('(Z.log2 s), '0), (cstZ rc c, cstZ rx x, cstZ ry y))))
 
                (*
 (Z.sub_get_borrow_concrete 2^256) @@ (?x, ?y << 128) --> (sub 128) @@ (x, y)
@@ -589,20 +589,20 @@ Section fancy.
 (Z.sub_get_borrow_concrete 2^256) @@ (?x, ?y)        --> (sub 0) @@ (y, x)
                 *)
 
-               ; (forall r rs s rx x rshiftl rland ry y rmask mask roffset offset,
+               ; (forall r1 r2 rs s rx x rshiftl rland ry y rmask mask roffset offset,
                      s ∈ rs -> mask ∈ rmask -> offset ∈ roffset -> (s = 2^Z.log2 s) -> shiftl_good rshiftl rland offset -> range_in_bitwidth rshiftl s -> land_good rland ry mask -> (mask = Z.ones (Z.log2 s - offset)) -> (0 <= offset <= Z.log2 s)
-                     -> cstZZ r (Z.sub_get_borrow_full (cstZ rs ('s)) (cstZ rx x) (cstZ rshiftl (Z.shiftl (cstZ rland (Z.land (cstZ ry y) (cstZ rmask ('mask)))) (cstZ roffset ('offset)))))
-                        = cstZZ r (ident.fancy.sub (('(Z.log2 s), 'offset), (cstZ rx x, cstZ ry y))))
+                     -> cstZZ r1 r2 (Z.sub_get_borrow_full (cstZ rs ('s)) (cstZ rx x) (cstZ rshiftl (Z.shiftl (cstZ rland (Z.land (cstZ ry y) (cstZ rmask ('mask)))) (cstZ roffset ('offset)))))
+                        = cstZZ r1 r2 (ident.fancy.sub (('(Z.log2 s), 'offset), (cstZ rx x, cstZ ry y))))
 
-               ; (forall r rs s rx x rshiftr ry y roffset offset,
+               ; (forall r1 r2 rs s rx x rshiftr ry y roffset offset,
                      s ∈ rs -> offset ∈ roffset -> (s = 2^Z.log2 s) -> shiftr_good rshiftr ry offset -> range_in_bitwidth rshiftr s
-                     -> cstZZ r (Z.sub_get_borrow_full (cstZ rs ('s)) (cstZ rx x) (cstZ rshiftr (Z.shiftr (cstZ ry y) (cstZ roffset ('offset)))))
-                        = cstZZ r (ident.fancy.sub (('(Z.log2 s), '(-offset)), (cstZ rx x, cstZ ry y))%core))
+                     -> cstZZ r1 r2 (Z.sub_get_borrow_full (cstZ rs ('s)) (cstZ rx x) (cstZ rshiftr (Z.shiftr (cstZ ry y) (cstZ roffset ('offset)))))
+                        = cstZZ r1 r2 (ident.fancy.sub (('(Z.log2 s), '(-offset)), (cstZ rx x, cstZ ry y))%core))
 
-               ; (forall r rs s rx x ry y,
+               ; (forall r1 r2 rs s rx x ry y,
                      s ∈ rs -> (s = 2^Z.log2 s) -> range_in_bitwidth ry s
-                     -> cstZZ r (Z.sub_get_borrow_full (cstZ rs ('s)) (cstZ rx x) (cstZ ry y))
-                        = cstZZ r (ident.fancy.sub (('(Z.log2 s), '0), (cstZ rx x, cstZ ry y))))
+                     -> cstZZ r1 r2 (Z.sub_get_borrow_full (cstZ rs ('s)) (cstZ rx x) (cstZ ry y))
+                        = cstZZ r1 r2 (ident.fancy.sub (('(Z.log2 s), '0), (cstZ rx x, cstZ ry y))))
 
                (*
 (Z.sub_with_get_borrow_concrete 2^256) @@ (?c, ?x, ?y << 128) --> (subb 128) @@ (c, x, y)
@@ -610,20 +610,20 @@ Section fancy.
 (Z.sub_with_get_borrow_concrete 2^256) @@ (?c, ?x, ?y)        --> (subb 0) @@ (c, y, x)
                 *)
 
-               ; (forall r rs s rb b rx x rshiftl rland ry y rmask mask roffset offset,
+               ; (forall r1 r2 rs s rb b rx x rshiftl rland ry y rmask mask roffset offset,
                      s ∈ rs -> mask ∈ rmask -> offset ∈ roffset -> (s = 2^Z.log2 s) -> shiftl_good rshiftl rland offset -> range_in_bitwidth rshiftl s -> land_good rland ry mask -> (mask = Z.ones (Z.log2 s - offset)) -> (0 <= offset <= Z.log2 s)
-                     -> cstZZ r (Z.sub_with_get_borrow_full (cstZ rs ('s)) (cstZ rb b) (cstZ rx x) (cstZ rshiftl (Z.shiftl (cstZ rland (Z.land (cstZ ry y) (cstZ rmask ('mask)))) (cstZ roffset ('offset)))))
-                        = cstZZ r (ident.fancy.subb (('(Z.log2 s), 'offset), (cstZ rb b, cstZ rx x, cstZ ry y))))
+                     -> cstZZ r1 r2 (Z.sub_with_get_borrow_full (cstZ rs ('s)) (cstZ rb b) (cstZ rx x) (cstZ rshiftl (Z.shiftl (cstZ rland (Z.land (cstZ ry y) (cstZ rmask ('mask)))) (cstZ roffset ('offset)))))
+                        = cstZZ r1 r2 (ident.fancy.subb (('(Z.log2 s), 'offset), (cstZ rb b, cstZ rx x, cstZ ry y))))
 
-               ; (forall r rs s rb b rx x rshiftr ry y roffset offset,
+               ; (forall r1 r2 rs s rb b rx x rshiftr ry y roffset offset,
                      s ∈ rs -> offset ∈ roffset -> (s = 2^Z.log2 s) -> shiftr_good rshiftr ry offset -> range_in_bitwidth rshiftr s
-                     -> cstZZ r (Z.sub_with_get_borrow_full (cstZ rs ('s)) (cstZ rb b) (cstZ rx x) (cstZ rshiftr (Z.shiftr (cstZ ry y) (cstZ roffset ('offset)))))
-                        = cstZZ r (ident.fancy.subb (('(Z.log2 s), '(-offset)), (cstZ rb b, cstZ rx x, cstZ ry y))%core))
+                     -> cstZZ r1 r2 (Z.sub_with_get_borrow_full (cstZ rs ('s)) (cstZ rb b) (cstZ rx x) (cstZ rshiftr (Z.shiftr (cstZ ry y) (cstZ roffset ('offset)))))
+                        = cstZZ r1 r2 (ident.fancy.subb (('(Z.log2 s), '(-offset)), (cstZ rb b, cstZ rx x, cstZ ry y))%core))
 
-               ; (forall r rs s rb b rx x ry y,
+               ; (forall r1 r2 rs s rb b rx x ry y,
                      s ∈ rs -> (s = 2^Z.log2 s) -> range_in_bitwidth ry s
-                     -> cstZZ r (Z.sub_with_get_borrow_full (cstZ rs ('s)) (cstZ rb b) (cstZ rx x) (cstZ ry y))
-                        = cstZZ r (ident.fancy.subb (('(Z.log2 s), '0), (cstZ rb b, cstZ rx x, cstZ ry y))))
+                     -> cstZZ r1 r2 (Z.sub_with_get_borrow_full (cstZ rs ('s)) (cstZ rb b) (cstZ rx x) (cstZ ry y))
+                        = cstZZ r1 r2 (ident.fancy.subb (('(Z.log2 s), '0), (cstZ rb b, cstZ rx x, cstZ ry y))))
 
                (*(Z.rshi_concrete 2^256 ?n) @@ (?c, ?x, ?y) --> (rshi n) @@ (x, y)*)
 
@@ -837,9 +837,9 @@ Section with_bitwidth.
   Local Notation singlewidth := (cstZ r[0~>2^bitwidth - 1]).
   Local Notation carrymax := (2^lgcarrymax-1).
   Local Notation carrywidth := (cstZ r[0~>carrymax]).
-  Local Notation singlewidth_carry := (cstZZ (r[0~>2^bitwidth - 1], r[0~>carrymax])%zrange).
-  Local Notation alt_singlewidth_carry := (cstZZ (r[0~>2^bitwidth - 1], r[0~>2^bitwidth-1])%zrange).
-  Local Notation pairsinglewidth := (cstZZ (r[0~>2^bitwidth - 1], r[0~>2^bitwidth - 1])%zrange).
+  Local Notation singlewidth_carry := (cstZZ r[0~>2^bitwidth - 1] r[0~>carrymax]).
+  Local Notation alt_singlewidth_carry := (cstZZ r[0~>2^bitwidth - 1] r[0~>2^bitwidth-1]).
+  Local Notation pairsinglewidth := (cstZZ r[0~>2^bitwidth - 1] r[0~>2^bitwidth - 1]).
   Local Notation cstZsingle_to_double l h
     := (doublewidth (Z.combine_at_bitwidth ('bitwidth) (singlewidth l) (singlewidth h))).
   Local Notation cstZsingle_to_double_pair lh
