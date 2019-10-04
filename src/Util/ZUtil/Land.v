@@ -23,4 +23,35 @@ Module Z.
 
   Lemma sub_1_lt_le x y : (x - 1 < y) <-> (x <= y).
   Proof. lia. Qed.
+
+  Lemma land_mod a b :
+    0 <= b ->
+    a &' b = (a mod (2 ^ (Z.log2 b + 1))) &' b.
+  Proof.
+    pose proof (Z.log2_nonneg b).
+    intros. rewrite <-Z.land_ones by lia.
+    rewrite <-Z.land_assoc, (Z.land_comm (Z.ones _)).
+    rewrite Z.land_ones_low; auto with zarith.
+  Qed.
+
+  Lemma land_add_high a b c d :
+    Z.log2 d < c ->
+    0 <= d ->
+    (a + b * 2 ^ c) &' d = a &' d.
+  Proof.
+    pose proof (Z.log2_nonneg d).
+    intros. rewrite land_mod by lia.
+    rewrite Z.add_mod, Z.mul_mod by (apply Z.pow_nonzero; lia).
+    match goal with
+    | |- context [?a ^ ?b mod ?a ^ ?c] =>
+      replace b with ((b - c) + c) by lia;
+        rewrite (Z.pow_add_r a (b - c) c) by lia;
+        rewrite Z.mod_mul by (apply Z.pow_nonzero; lia)
+    end.
+    rewrite Z.mul_0_r, Z.mod_0_l, Z.add_0_r, Z.mod_mod
+      by (apply Z.pow_nonzero; lia).
+    rewrite <-Z.land_ones, <-Z.land_assoc, (Z.land_comm (Z.ones _))
+      by auto with zarith.
+    rewrite Z.land_ones_low; auto with zarith.
+  Qed.
 End Z.
