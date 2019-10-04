@@ -261,8 +261,6 @@ Module Compilers.
       Notation "x 'mod' y" := (#Compilers.ident_Z_modulo @ x @ y)%expr : expr_scope.
       Notation "- x" := (#Compilers.ident_Z_opp @ x)%expr : expr_scope.
       Global Arguments ident_gen_interp _ _ !_.
-      Global Arguments Compilers.ident_Z_cast _%zrange_scope.
-      Global Arguments Compilers.ident_Z_cast2 _%zrange_scope.
     End Notations.
   End ident.
   Export ident.Notations.
@@ -301,20 +299,48 @@ Module Compilers.
       Local Coercion base : base.type >-> type.type.
       Local Coercion type_base : Compilers.base >-> base.type.
       Local Notation tZ := (base.type.type_base Z).
+      Local Notation tzrange := (base.type.type_base zrange).
 
-      Definition invert_Z_cast (e : expr tZ)
+      Definition invert_Z_cast {t} (e : expr t)
+        : option ZRange.zrange
+        := match invert_AppIdent e with
+           | Some (existT (type.base tzrange) (idc, r))
+             => r <- reflect_smart_Literal r;
+                  if match idc with ident.Z_cast => true | _ => false end
+                  then Some r
+                  else None
+           | _ => None
+           end%option.
+
+      Definition invert_Z_cast2 {t} (e : expr t)
+        : option (ZRange.zrange * ZRange.zrange)
+        := match invert_AppIdent e with
+           | Some (existT (type.base (tzrange * tzrange))
+                          (idc, r))
+             => r <- reflect_smart_Literal r;
+                  if match idc with ident.Z_cast2 => true | _ => false end
+                  then Some r
+                  else None
+           | _ => None
+           end%option.
+
+      Definition invert_App_Z_cast (e : expr tZ)
         : option (ZRange.zrange * expr Z)
-        := match e with
-           | expr.App (type.base tZ) _ (#(ident.Z_cast r)) v => Some (r, v)
+        := match invert_App e with
+           | Some (existT (type.base tZ) (idc, v))
+             => r <- invert_Z_cast idc;
+                  Some (r, v)
            | _ => None
-           end%core%expr_pat%expr.
+           end.
 
-      Definition invert_Z_cast2 (e : expr (Z * Z))
+      Definition invert_App_Z_cast2 (e : expr (tZ * tZ))
         : option ((ZRange.zrange * ZRange.zrange) * expr (Z * Z))
-        := match e with
-           | expr.App (type.base (tZ * tZ)) _ (#(ident.Z_cast2 r)) v => Some (r, v)
+        := match invert_App e with
+           | Some (existT (type.base (tZ * tZ)) (idc, v))
+             => r <- invert_Z_cast2 idc;
+                  Some (r, v)
            | _ => None
-           end%etype%core%expr_pat%expr.
+           end.
     End with_var.
   End invert_expr.
 

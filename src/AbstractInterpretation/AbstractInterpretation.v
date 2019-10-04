@@ -7,6 +7,7 @@ Require Import Crypto.Util.OptionList.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Language.Language.
+Require Import Crypto.Language.InversionExtra.
 Require Import Crypto.Language.Identifier.
 Require Import Crypto.Language.API.
 Require Import Crypto.Language.UnderLets.
@@ -17,6 +18,7 @@ Module Compilers.
   Export UnderLets.Compilers.
   Export Language.API.Compilers.
   Import invert_expr.
+  Import Language.InversionExtra.Compilers.
 
   Module ZRange.
     Module type.
@@ -378,12 +380,16 @@ Module Compilers.
         (** do bounds analysis on identifiers; take in optional bounds
             on arguments, return optional bounds on outputs. *)
         (** Casts are like assertions; we only guarantee anything when they're true *)
-        Definition interp_Z_cast (r : zrange) (v : option zrange) : option zrange
-          := match v with
-             | Some v => if is_tighter_than_bool v r (* the value is definitely inside the range *)
-                         then Some v
-                         else None
-             | None => None
+        (** If [r] is [None], that means we had a cast with a
+            non-literal range.  If [v] is [None], that means we don't
+            know anything about bounds on [v]. *)
+        Definition interp_Z_cast (r : option zrange) (v : option zrange) : option zrange
+          := match r, v with
+             | Some r, Some v
+               => if is_tighter_than_bool v r (* the value is definitely inside the range *)
+                  then Some v
+                  else None
+             | _, _ => None
              end.
         Local Notation tZ := (base.type.type_base base.type.Z).
         Definition interp {t} (idc : ident t) : type.option.interp t
@@ -684,11 +690,11 @@ Module Compilers.
                        lo <- lo;
                        hi <- hi;
                        Some (ZRange.four_corners (ident.interp idc bitwidth) lo hi)
-             | ident.Z_cast range
-               => fun r : option zrange
+             | ident.Z_cast
+               => fun (range : option zrange) (r : option zrange)
                   => interp_Z_cast range r
-             | ident.Z_cast2 (r1, r2)
-               => fun '((r1', r2') : option zrange * option zrange)
+             | ident.Z_cast2
+               => fun '((r1, r2) : option zrange * option zrange) '((r1', r2') : option zrange * option zrange)
                   => (interp_Z_cast r1 r1', interp_Z_cast r2 r2')
              | ident.fancy_add
              | ident.fancy_sub
@@ -933,28 +939,28 @@ Module Compilers.
         Local Notation UnderLets := (@UnderLets base.type ident var).
         Context (abstract_domain' : base.type -> Type).
         Local Notation abstract_domain := (@abstract_domain base.type abstract_domain').
-        Context (annotate_ident : forall t, abstract_domain' t -> option (ident (t -> t)))
+        Context (annotate_expr : forall t, abstract_domain' t -> option (@expr var (t -> t)))
                 (bottom' : forall A, abstract_domain' A)
                 (abstract_interp_ident : forall t, ident t -> type.interp abstract_domain' t)
                 (extract_list_state : forall A, abstract_domain' (base.type.list A) -> option (list (abstract_domain' A)))
                 (extract_option_state : forall A, abstract_domain' (base.type.option A) -> option (option (abstract_domain' A)))
-                (is_annotated_for : forall t t', ident t -> abstract_domain' t' -> bool).
+                (is_annotated_for : forall t t', @expr var t -> abstract_domain' t' -> bool).
 
         (** TODO: Is it okay to commute annotations? *)
         Definition update_annotation {t} (st : abstract_domain' t) (e : @expr var t) : @expr var t
-          := match e, annotate_ident _ st with
-             | (#cst' @ e'), Some cst
+          := match e, annotate_expr _ st with
+             | (cst' @ e'), Some cst
                => if is_annotated_for _ _ cst' st
                   then e
-                  else ###cst @ e
-             | _, Some cst => ###cst @ e
+                  else cst @ e
+             | _, Some cst => cst @ e
              | _, None => e
              end%expr_pat%expr.
 
-        Definition annotate_with_ident (is_let_bound : bool) {t}
+        Definition annotate_with_expr (is_let_bound : bool) {t}
                    (st : abstract_domain' t) (e : @expr var t)
           : UnderLets (@expr var t)
-          := let cst_e := update_annotation st e (*match annotate_ident _ st with
+          := let cst_e := update_annotation st e (*match annotate_expr _ st with
                           | Some cst => ###cst @ e
                           | None => e
                           end%expr*) in
@@ -965,7 +971,7 @@ Module Compilers.
         Definition annotate_base (is_let_bound : bool) {t : base.type.base}
                    (st : abstract_domain' t) (e : @expr var t)
           : UnderLets (@expr var t)
-          := annotate_with_ident is_let_bound st e.
+          := annotate_with_expr is_let_bound st e.
 
         Fixpoint annotate (is_let_bound : bool) {t : base.type} : abstract_domain' t -> @expr var t -> UnderLets (@expr var t)
           := match t return abstract_domain' t -> @expr var t -> UnderLets (@expr var t) with
@@ -980,7 +986,7 @@ Module Compilers.
                           (x' <-- @annotate is_let_bound A stx x;
                              y' <-- @annotate is_let_bound B sty y;
                              Base (x', y')%expr)
-                     | None => annotate_with_ident is_let_bound st e
+                     | None => annotate_with_expr is_let_bound st e
                      end
              | base.type.list A
                => fun st e
@@ -997,7 +1003,7 @@ Module Compilers.
                                              @annotate is_let_bound A st' e')
                                          (List.combine (List.seq 0 (List.length ls_st)) ls_st));
                              Base (reify_list retv))
-                     | None, _ => annotate_with_ident is_let_bound st e
+                     | None, _ => annotate_with_expr is_let_bound st e
                      end
              | base.type.option A
                => fun st e
@@ -1009,7 +1015,7 @@ Module Compilers.
                              Base (reify_option retv))
                      | Some _, None
                      | None, _
-                       => annotate_with_ident is_let_bound st e
+                       => annotate_with_expr is_let_bound st e
                      end
              end%under_lets.
 
@@ -1086,31 +1092,44 @@ Module Compilers.
         Definition annotation_of_state (st : abstract_domain' base.type.Z) : option zrange
           := option_map always_relax_zrange st.
 
-        Definition annotate_ident t : abstract_domain' t -> option (ident (t -> t))
-          := match t return abstract_domain' t -> option (ident (t -> t)) with
+        Local Notation cstZ r
+          := (expr.App
+                (d:=type.arrow (type.base tZ) (type.base tZ))
+                (expr.Ident ident.Z_cast)
+                (expr.Ident (@ident.Literal base.type.zrange r%zrange))).
+        Local Notation cstZZ r1 r2
+          := (expr.App
+                (d:=type.arrow (type.base (tZ * tZ)) (type.base (tZ * tZ)))
+                (expr.Ident ident.Z_cast2)
+                (#(@ident.Literal base.type.zrange r1%zrange), #(@ident.Literal base.type.zrange r2%zrange))%expr_pat).
+
+        Definition annotate_expr {var} t : abstract_domain' t -> option (@expr var (t -> t))
+          := match t return abstract_domain' t -> option (expr (t -> t)) with
              | tZ
-               => fun st => st' <- annotation_of_state st; Some (ident.Z_cast st')
+               => fun st => st' <- annotation_of_state st; Some (cstZ st')
              | tZ * tZ
-               => fun '(sta, stb) => sta' <- annotation_of_state sta; stb' <- annotation_of_state stb; Some (ident.Z_cast2 (sta', stb'))
+               => fun '(sta, stb) => sta' <- annotation_of_state sta; stb' <- annotation_of_state stb; Some (cstZZ sta' stb')
              | _ => fun _ => None
              end%option%etype.
-        Definition is_annotated_for t t' (idc : ident t) : abstract_domain' t' -> bool
-          := match idc, t' with
-             | ident.Z_cast r, tZ
+
+        Definition is_annotated_for {var} t t' (idc : @expr var t) : abstract_domain' t' -> bool
+          := match invert_Z_cast idc, invert_Z_cast2 idc, t' with
+             | Some r, _, tZ
                => fun r'
                   => option_beq zrange_beq (Some r) (annotation_of_state r')
-             | ident.Z_cast2 (r1, r2), base.type.prod (base.type.type_base base.type.Z) (base.type.type_base base.type.Z)
+             | _, Some (r1, r2), base.type.prod (base.type.type_base base.type.Z) (base.type.type_base base.type.Z)
                => fun '(r1', r2')
                   => (option_beq zrange_beq (Some r1) (annotation_of_state r1'))
                        && (option_beq zrange_beq (Some r2) (annotation_of_state r2'))
-             | _, _ => fun _ => false
+             | _, _, _ => fun _ => false
              end.
-        Definition is_annotation t (idc : ident t) : bool
-          := match idc with
-             | ident.Z_cast _
-             | ident.Z_cast2 _
-               => true
-             | _ => false
+        Definition annotation_to_expr {var1} t (idc : @expr var1 t) : option (forall var2, @expr var2 t)
+          := match invert_Z_cast idc, invert_Z_cast2 idc, t with
+             | Some r, _, (type.base tZ -> type.base tZ)%etype
+               => Some (fun var2 => cstZ r)
+             | _, Some (r1, r2), (type.base (tZ * tZ) -> type.base (tZ * tZ))%etype
+               => Some (fun var2 => cstZZ r1 r2)
+             | _, _, _ => None
              end.
         Definition bottom' T : abstract_domain' T
           := ZRange.type.base.option.None.
@@ -1123,11 +1142,11 @@ Module Compilers.
 
         Definition eval_with_bound {var} {t} (e : @expr _ t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : expr t
           := (@partial.ident.eval_with_bound)
-               var abstract_domain' annotate_ident bottom' abstract_interp_ident extract_list_state extract_option_state is_annotated_for true t e bound.
+               var abstract_domain' annotate_expr bottom' abstract_interp_ident extract_list_state extract_option_state is_annotated_for true t e bound.
 
         Definition eta_expand_with_bound {var} {t} (e : @expr _ t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : expr t
           := (@partial.ident.eta_expand_with_bound)
-               var abstract_domain' annotate_ident bottom' abstract_interp_ident extract_list_state extract_option_state is_annotated_for t e bound.
+               var abstract_domain' annotate_expr bottom' abstract_interp_ident extract_list_state extract_option_state is_annotated_for t e bound.
 
         Definition EvalWithBound {t} (e : Expr t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : Expr t
           := fun var => eval_with_bound (e _) bound.
@@ -1137,7 +1156,7 @@ Module Compilers.
 
       Definition eval {var} {t} (e : @expr _ t) : expr t
         := (@partial.ident.eval)
-             var abstract_domain' (annotate_ident default_relax_zrange) bottom' abstract_interp_ident extract_list_state extract_option_state (is_annotated_for default_relax_zrange) t e.
+             var abstract_domain' (annotate_expr default_relax_zrange) bottom' abstract_interp_ident extract_list_state extract_option_state (is_annotated_for default_relax_zrange) t e.
       Definition Eval {t} (e : Expr t) : Expr t
         := fun var => eval (e _).
       Definition EtaExpandWithListInfoFromBound {t} (e : Expr t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : Expr t
@@ -1151,16 +1170,20 @@ Module Compilers.
   Import API.
 
   Module Import CheckCasts.
-    Fixpoint get_casts {t} (e : expr t) : list { t : _ & ident t }
-      := match e with
-         | expr.Ident t idc => if partial.is_annotation _ idc then [existT _ t idc] else nil
-         | expr.Var t v => v
-         | expr.Abs s d f => @get_casts _ (f nil)
-         | expr.App s d f x => @get_casts _ f ++ @get_casts _ x
-         | expr.LetIn A B x f => @get_casts _ x ++ @get_casts _ (f nil)
+    Fixpoint get_casts {t} (e : expr t) : list { t : _ & forall var, @expr var t }
+      := match partial.annotation_to_expr _ e with
+         | Some e => [existT _ t e]
+         | None
+           => match e with
+              | expr.Ident t idc => nil
+              | expr.Var t v => v
+              | expr.Abs s d f => @get_casts _ (f nil)
+              | expr.App s d f x => @get_casts _ f ++ @get_casts _ x
+              | expr.LetIn A B x f => @get_casts _ x ++ @get_casts _ (f nil)
+              end
          end%list.
 
-    Definition GetUnsupportedCasts {t} (e : Expr t) : list { t : _ & ident t }
+    Definition GetUnsupportedCasts {t} (e : Expr t) : list { t : _ & forall var, @expr var t }
       := get_casts (e _).
   End CheckCasts.
 
@@ -1179,7 +1202,7 @@ Module Compilers.
              {t} (E : Expr t)
              (b_in : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
              (b_out : ZRange.type.base.option.interp (type.final_codomain t))
-    : Expr t + (ZRange.type.base.option.interp (type.final_codomain t) * Expr t + list { t : _ & ident t })
+    : Expr t + (ZRange.type.base.option.interp (type.final_codomain t) * Expr t + list { t : _ & forall var, @expr var t })
     := dlet_nd e := GeneralizeVar.ToFlat E in
        let E := GeneralizeVar.FromFlat e in
        let b_computed := partial.Extract E b_in in

@@ -574,8 +574,8 @@ Module Compilers.
         | ident_Z_rshi : ident (Z -> Z -> Z -> Z -> Z)
         | ident_Z_cc_m : ident (Z -> Z -> Z)
         | ident_Z_combine_at_bitwidth : ident (Z -> Z -> Z -> Z)
-        | ident_Z_cast (range : ZRange.zrange) : ident (Z -> Z)
-        | ident_Z_cast2 (range : ZRange.zrange * ZRange.zrange) : ident ((Z * Z) -> (Z * Z))
+        | ident_Z_cast : ident (zrange -> Z -> Z)
+        | ident_Z_cast2 : ident ((zrange * zrange) -> (Z * Z) -> (Z * Z))
         | ident_Some {A:base_type} : ident (A -> option A)
         | ident_None {A:base_type} : ident (option A)
         | ident_option_rect {A P : base_type} : ident ((A -> P) -> (unit -> P) -> option A -> P)
@@ -687,8 +687,8 @@ Module Compilers.
              | ident_Z_rshi => Z.rshi
              | ident_Z_cc_m => Z.cc_m
              | ident_Z_combine_at_bitwidth => Z.combine_at_bitwidth
-             | ident_Z_cast r => cast r
-             | ident_Z_cast2 r => cast2 r
+             | ident_Z_cast => cast
+             | ident_Z_cast2 => cast2
              | ident_Some A => @Datatypes.Some _
              | ident_None A => @Datatypes.None _
              | ident_option_rect A P => @ident.Thunked.option_rect _ _
@@ -1026,8 +1026,8 @@ Module Compilers.
       | Z.cc_m => then_tac ident_Z_cc_m
       | Z.combine_at_bitwidth => then_tac ident_Z_combine_at_bitwidth
       | Datatypes.tt => then_tac ident_tt
-      | ident.cast _ ?r => then_tac (ident_Z_cast r)
-      | ident.cast2 _ ?r => then_tac (ident_Z_cast2 r)
+      | ident.cast _ => then_tac ident_Z_cast
+      | ident.cast2 _ => then_tac ident_Z_cast2
       | @Some ?A
         => let rA := reify_base_type A in
            then_tac (@ident_Some rA)

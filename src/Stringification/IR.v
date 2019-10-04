@@ -616,8 +616,8 @@ Module Compilers.
                  | ident.Z_rshi
                  | ident.Z_cc_m
                  | ident.Z_combine_at_bitwidth
-                 | ident.Z_cast _
-                 | ident.Z_cast2 _
+                 | ident.Z_cast
+                 | ident.Z_cast2
                  | ident.Build_zrange
                  | ident.zrange_rect _
                  | ident.fancy_add
@@ -677,11 +677,15 @@ Module Compilers.
                                    (fun t => int.option.interp t -> ErrT (arith_expr_for_base t))
                                    t)
                  with
-                 | ident.Z_cast r
-                   => inl (fun arg => inl (fun r' => arg <- arg (Some (int.of_zrange_relaxed r)); ret (Zcast_down_if_needed r' arg)))
-                 | ident.Z_cast2 (r1, r2)
-                   => inl (fun arg => inl (fun r' => arg <- (arg (Some (int.of_zrange_relaxed r1), Some (int.of_zrange_relaxed r2)));
-                                                       ret (cast_down_if_needed (t:=tZ*tZ) r' arg)))
+                 | ident.Z_cast
+                   => inl (fun r arg
+                           => r <- r tt;
+                              inl (fun r' => arg <- arg (Some (int.of_zrange_relaxed r)); ret (Zcast_down_if_needed r' arg)))
+                 | ident.Z_cast2
+                   => inl (fun r arg
+                           => r <- r (tt, tt);
+                              inl (fun r' => arg <- (arg (Some (int.of_zrange_relaxed (fst r)), Some (int.of_zrange_relaxed (snd r))));
+                                             ret (cast_down_if_needed (t:=tZ*tZ) r' arg)))
                  | ident.pair A B
                    => inl (fun ea eb
                            => inl
@@ -1000,7 +1004,7 @@ Module Compilers.
               : ErrT (expr * var_data tZ)
               := let _ := @PHOAS.expr.partially_show_expr in
                  let e1 := e in
-                 let '(rout, e) := match invert_Z_cast e with
+                 let '(rout, e) := match invert_App_Z_cast e with
                                    | Some (r, e) => (Some (int.of_zrange_relaxed r), e)
                                    | None => (None, e)
                                    end%core in
@@ -1034,7 +1038,7 @@ Module Compilers.
               : ErrT (expr * var_data (tZ * tZ))
               := let _ := @PHOAS.expr.partially_show_expr in
                  let '((rout1, rout2), e)
-                     := match invert_Z_cast2 e with
+                     := match invert_App_Z_cast2 e with
                         | Some ((r1, r2), e) => ((Some (int.of_zrange_relaxed r1), Some (int.of_zrange_relaxed r2)), e)
                         | None => ((None, None), e)
                         end%core in

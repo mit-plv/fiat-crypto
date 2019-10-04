@@ -29,6 +29,8 @@ Local Notation "x * y"
   := ((#ident.Z_mul @ x @ y)%expr)
      : expr_scope.
 Local Notation "x" := (expr.Var x) (only printing, at level 9) : expr_scope.
+Local Notation cstZ r := (#ident.Z_cast @ #(@ident.Literal base.type.zrange r%zrange))%expr.
+Local Notation cstZZ r1 r2 := (#ident.Z_cast2 @ (#(@ident.Literal base.type.zrange r1%zrange), #(@ident.Literal base.type.zrange r2%zrange)))%expr.
 
 Example test1 : True.
 Proof.
@@ -115,9 +117,9 @@ Module test2.
      lazymatch (eval cbv delta [E''] in E'') with
      | (fun var : type -> Type =>
           (λ x : var _,
-                 expr_let y := #(ident.Z_cast r[0 ~> 100]) @ ((#(ident.Z_cast r[0 ~> 10]) @ $x) * (#(ident.Z_cast r[0 ~> 10]) @ $x)) in
-               expr_let y0 := #(ident.Z_cast r[0 ~> 10000]) @ ((#(ident.Z_cast r[0 ~> 100]) @ $y) * (#(ident.Z_cast r[0 ~> 100]) @ $y)) in
-               (#(ident.Z_cast r[0 ~> 10000]) @ $y0, #(ident.Z_cast r[0 ~> 10000]) @ $y0))%expr)
+                 expr_let y := (cstZ r[0 ~> 100]) @ (((cstZ r[0 ~> 10]) @ $x) * ((cstZ r[0 ~> 10]) @ $x)) in
+               expr_let y0 := (cstZ r[0 ~> 10000]) @ (((cstZ r[0 ~> 100]) @ $y) * ((cstZ r[0 ~> 100]) @ $y)) in
+               ((cstZ r[0 ~> 10000]) @ $y0, (cstZ r[0 ~> 10000]) @ $y0))%expr)
       => idtac
     end.
     constructor.
@@ -151,11 +153,11 @@ Module test3.
     lazymatch (eval cbv delta [E'''] in E''') with
     | (fun var : type -> Type =>
           (λ x : var _,
-           expr_let y := #(ident.Z_cast r[0 ~> 100]) @ ((#(ident.Z_cast r[0 ~> 10]) @ $x) * (#(ident.Z_cast r[0 ~> 10]) @ $x)) in
-           expr_let y0 := #(ident.Z_cast r[0 ~> 10000]) @ ((#(ident.Z_cast r[0 ~> 100]) @ $y) * (#(ident.Z_cast r[0 ~> 100]) @ $y)) in
-           expr_let y1 := #(ident.Z_cast r[0 ~> 100000000]) @ ((#(ident.Z_cast r[0 ~> 10000]) @ $y0) * (#(ident.Z_cast r[0 ~> 10000]) @ $y0)) in
-           expr_let y2 := #(ident.Z_cast r[0 ~> 10000000000000000]) @ ((#(ident.Z_cast r[0 ~> 100000000]) @ $y1) * (#(ident.Z_cast r[0 ~> 100000000]) @ $y1)) in
-           #(ident.Z_cast r[0 ~> 100000000000000000000000000000000]) @ ((#(ident.Z_cast r[0 ~> 10000000000000000]) @ $y2) * (#(ident.Z_cast r[0 ~> 10000000000000000]) @ $y2)))%expr)
+           expr_let y := (cstZ r[0 ~> 100]) @ (((cstZ r[0 ~> 10]) @ $x) * ((cstZ r[0 ~> 10]) @ $x)) in
+           expr_let y0 := (cstZ r[0 ~> 10000]) @ (((cstZ r[0 ~> 100]) @ $y) * ((cstZ r[0 ~> 100]) @ $y)) in
+           expr_let y1 := (cstZ r[0 ~> 100000000]) @ (((cstZ r[0 ~> 10000]) @ $y0) * ((cstZ r[0 ~> 10000]) @ $y0)) in
+           expr_let y2 := (cstZ r[0 ~> 10000000000000000]) @ (((cstZ r[0 ~> 100000000]) @ $y1) * ((cstZ r[0 ~> 100000000]) @ $y1)) in
+           (cstZ r[0 ~> 100000000000000000000000000000000]) @ (((cstZ r[0 ~> 10000000000000000]) @ $y2) * ((cstZ r[0 ~> 10000000000000000]) @ $y2)))%expr)
       => idtac
     end.
     constructor.
@@ -173,7 +175,7 @@ Module test3point5.
     lazymatch (eval cbv delta [E'] in E') with
     | (fun var : type -> Type =>
          (λ x : var _,
-          #(ident.Z_cast r[0 ~> 10]) @ (#ident.List_nth_default @ #(ident.Literal (0)%Z) @ $x @ #(ident.Literal 0%nat)))%expr)
+          (cstZ r[0 ~> 10]) @ (#ident.List_nth_default @ #(ident.Literal (0)%Z) @ $x @ #(ident.Literal 0%nat)))%expr)
       => idtac
     end.
     constructor.
@@ -204,12 +206,12 @@ Module test4.
     lazymatch (eval cbv delta [E''''] in E'''') with
     | (fun var : type -> Type =>
          (λ x : var _,
-          expr_let y := #(ident.Z_cast r[0 ~> 10]) @
+          expr_let y := (cstZ r[0 ~> 10]) @
                         (#ident.List_nth_default @ #(ident.Literal (0)%Z) @ (#ident.fst @ $x) @ #(ident.Literal 0%nat)) in
-          expr_let y0 := #(ident.Z_cast r[0 ~> 10]) @
+          expr_let y0 := (cstZ r[0 ~> 10]) @
                           (#ident.List_nth_default @ #(ident.Literal (0)%Z) @ (#ident.snd @ $x) @ #(ident.Literal 0%nat)) in
-          expr_let y1 := #(ident.Z_cast r[0 ~> 100]) @ ((#(ident.Z_cast r[0 ~> 10]) @ $y) * (#(ident.Z_cast r[0 ~> 10]) @ $y0)) in
-          #(ident.Z_cast r[0 ~> 100]) @ $y1 :: #(ident.Z_cast r[0 ~> 100]) @ $y1 :: [])%expr)
+          expr_let y1 := (cstZ r[0 ~> 100]) @ (((cstZ r[0 ~> 10]) @ $y) * ((cstZ r[0 ~> 10]) @ $y0)) in
+          (cstZ r[0 ~> 100]) @ $y1 :: (cstZ r[0 ~> 100]) @ $y1 :: [])%expr)
       => idtac
     end.
     constructor.
