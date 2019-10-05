@@ -1,6 +1,5 @@
 Require Import Crypto.Language.Language.
 Require Import Crypto.Language.Inversion.
-Require Import Crypto.Language.Identifier.
 Require Import Crypto.Language.API.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.DestructHead.

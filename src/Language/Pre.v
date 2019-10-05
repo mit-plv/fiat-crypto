@@ -135,7 +135,6 @@ Definition nat_rect_arrow_nodep P Q := @nat_rect_nodep (P -> Q).
 Definition list_rect_arrow_nodep A P Q := @list_rect_nodep A (P -> Q).
 
 Module GallinaIdentList.
-  Local Set Universe Polymorphism.
   Inductive t := nil | cons {T : Type} (v : T) (vs : t).
 
   Fixpoint nth_type (n : nat) (l : t) (default : Type) {struct l} :=
@@ -163,7 +162,6 @@ End GallinaIdentList.
 Export GallinaIdentList.Notations.
 
 Module TypeList.
-  Local Set Universe Polymorphism.
   Inductive t := nil | cons (T : Type) (vs : t).
 
   Fixpoint nth (n : nat) (l : t) (default : Type) {struct l} :=
@@ -184,7 +182,6 @@ End TypeList.
 Export TypeList.Notations.
 
 Module Named.
-  Local Set Universe Polymorphism.
   Local Set Primitive Projections.
   Inductive maybe_name := no_name | a_name (_ : forall P : Prop, P -> P).
   Record t := { type : Type ; value : type ; naming : maybe_name }.
@@ -193,6 +190,5 @@ Notation with_name name v := (@Named.Build_t _ v (Named.a_name (fun (P : Prop) (
 Notation without_name v := (@Named.Build_t _ v Named.no_name) (only parsing).
 
 Module GallinaAndReifiedIdentList.
-  Local Set Universe Polymorphism.
   Inductive t := nil | cons {T1 T2 : Type} (v1 : T1) (v2 : T2) (vs : t).
 End GallinaAndReifiedIdentList.

@@ -1188,7 +1188,7 @@ Module Compilers.
       let rewriter_data := fresh "rewriter_data" in
       let data := Make.Build_rewriter_dataT reify_base reify_ident exprInfo exprExtraInfo pkg ident_is_var_like include_interp specs in
       let Rewrite_name := fresh "Rewriter" in
-      let Rewrite := (eval cbv [Make.Rewrite rewrite_head default_fuel] in (@Make.Rewrite exprInfo exprExtraInfo pkg data)) in
+      let Rewrite := (eval cbv [Make.Rewrite rewrite_head Make.GoalType.ident_is_var_like Classes.base Classes.base_interp Classes.ident Classes.buildIdent Classes.invertIdent Classes.try_make_transport_base_cps default_fuel] in (@Make.Rewrite exprInfo exprExtraInfo pkg data)) in
       let Rewrite := cache_term Rewrite Rewrite_name in
       constr:(@Build_RewriterT exprInfo exprExtraInfo pkg data Rewrite eq_refl).
 

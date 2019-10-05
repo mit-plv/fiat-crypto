@@ -10,6 +10,7 @@ Require Import Crypto.Language.Language.
 Require Import Crypto.Language.Inversion.
 Require Import Crypto.Language.Wf.
 Require Import Crypto.Language.UnderLetsProofs.
+Require Import Crypto.Language.IdentifiersBasicLibrary.
 Require Import Crypto.Language.IdentifiersLibrary.
 Require Import Crypto.Language.IdentifiersLibraryProofs.
 Require Import Crypto.Rewriter.Rewriter.
@@ -51,6 +52,7 @@ Module Compilers.
   Import Language.Wf.Compilers.
   Import UnderLetsProofs.Compilers.
   Import IdentifiersLibrary.Compilers.
+  Import IdentifiersBasicLibrary.Compilers.
   Import IdentifiersLibraryProofs.Compilers.
   Import Rewriter.Compilers.
   Import expr.Notations.
@@ -3398,11 +3400,13 @@ Module Compilers.
     End InterpTactics.
 
     Module GoalType.
+      Import Compilers.Basic.GoalType.
       Import Compilers.Classes.
 
       Record VerifiedRewriter :=
         {
           exprInfo : ExprInfoT;
+          exprReifyInfo : ExprReifyInfoT;
 
           Rewrite : forall {t} (e : expr.Expr (ident:=ident) t), expr.Expr (ident:=ident) t;
           Wf_Rewrite : forall {t} e (Hwf : Wf e), Wf (@Rewrite t e);

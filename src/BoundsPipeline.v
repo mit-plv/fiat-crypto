@@ -21,7 +21,6 @@ Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.SplitInContext.
 Require Crypto.Language.Language.
-Require Crypto.Language.Identifier.
 Require Crypto.Language.API.
 Require Crypto.Language.UnderLets.
 Require Crypto.AbstractInterpretation.AbstractInterpretation.
@@ -53,7 +52,6 @@ Import
   Crypto.AbstractInterpretation.WfExtra
   Crypto.AbstractInterpretation.Proofs
   Crypto.Language.Language
-  Crypto.Language.Identifier
   Crypto.Language.API
   Crypto.Language.UnderLets
   Crypto.AbstractInterpretation.AbstractInterpretation

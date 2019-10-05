@@ -3,7 +3,6 @@ Require Import Coq.Lists.List.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Language.Language.
-Require Import Crypto.Language.Identifier.
 Require Import Crypto.Language.API.
 Require Import Crypto.Language.UnderLets.
 Require Import Crypto.AbstractInterpretation.AbstractInterpretation.

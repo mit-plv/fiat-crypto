@@ -5,7 +5,7 @@ Require Import Coq.Classes.Morphisms.
 Require Import Coq.Relations.Relation_Definitions.
 Require Import Crypto.Language.Pre.
 Require Import Crypto.Language.Language.
-Require Import Crypto.Language.Identifier.
+Require Import Crypto.Language.IdentifiersBasicGENERATED.
 Require Import Crypto.Util.Tuple Crypto.Util.Prod Crypto.Util.LetIn.
 Require Import Crypto.Util.ListUtil Coq.Lists.List Crypto.Util.NatUtil.
 Require Import Crypto.Util.Option.
@@ -24,16 +24,19 @@ Require Import Crypto.Util.Tactics.Head.
 Import Coq.Lists.List ListNotations. Local Open Scope bool_scope. Local Open Scope Z_scope.
 Export Language.Pre.
 Export Language.
-Export Identifier.
+Export IdentifiersBasicGENERATED.
 
 Import EqNotations.
 Module Compilers.
   Export Language.Pre.
   Export Language.Compilers.
-  Import Identifier.Compilers.
+  Import IdentifiersBasicLibrary.Compilers.
+  Import IdentifiersBasicLibrary.Compilers.Basic.
+  Import IdentifiersBasicGenerate.Compilers.Basic.Tactic.
+  Import IdentifiersBasicGENERATED.Compilers.
 
-  Definition exprInfo : Classes.ExprInfoT := Eval hnf in projT1 exprInfoAndExprExtraInfo.
-  Definition exprExtraInfo : @Classes.ExprExtraInfoT exprInfo := Eval hnf in projT2 exprInfoAndExprExtraInfo.
+  Definition exprInfo : Classes.ExprInfoT := Eval hnf in GoalType.exprInfo package.
+  Definition exprExtraInfo : @Classes.ExprExtraInfoT exprInfo := Eval hnf in GoalType.exprExtraInfo package.
 
   Global Existing Instances
          baseHasNat
@@ -50,7 +53,7 @@ Module Compilers.
          exprInfo
   .
   Global Existing Instance reflect_base_beq | 10.
-  Global Existing Instance reflect_base_interp_eq | 10.
+  Global Existing Instance reflect_base_interp_beq | 10.
   Global Existing Instance try_make_base_transport_cps | 5.
   Global Existing Instance buildIdent | 5.
   Global Existing Instance eqv_Reflexive_Proper | 1.
@@ -93,13 +96,33 @@ Module Compilers.
   Global Arguments ident_None {_} : assert.
   Global Arguments ident_option_rect {_ _} : assert.
   Global Arguments ident_zrange_rect {_} : assert.
+  Global Arguments eta_base_cps {_} _ _ : assert.
+  Global Arguments ident_interp {_} _ : assert.
+  Global Arguments base_interp_beq {_} _ _ : assert.
+  Global Arguments reflect_base_interp_beq {_}.
+  Global Arguments ident_is_var_like {_} _ : assert.
+  Global Arguments eqv_Reflexive_Proper {_} _.
+  Global Arguments ident_interp_Proper {_}.
+
+  Ltac reify_base :=
+    let package := reify_package_of_package package in
+    reify_base_via_reify_package package.
+  Ltac reify_base_type :=
+    let package := reify_package_of_package package in
+    reify_base_type_via_reify_package package.
+  Ltac reify_type :=
+    let package := reify_package_of_package package in
+    reify_type_via_reify_package package.
+  Ltac reify_ident :=
+    let package := reify_package_of_package package in
+    reify_ident_via_reify_package package.
 
   (** This file defines some convenience notations and definitions. *)
   Module base.
     Export Language.Compilers.base.
 
     Module type.
-      Import Identifier.Compilers.
+      Import IdentifiersBasicGENERATED.Compilers.
       Notation base := base (only parsing).
       Notation Z := Z (only parsing).
       Notation nat := nat (only parsing).
@@ -120,7 +143,7 @@ Module Compilers.
     Notation reflect_base_beq := Compilers.reflect_base_beq (only parsing).
     Notation base_interp_beq := Compilers.base_interp_beq (only parsing).
     Notation baseHasNatCorrect := Compilers.baseHasNatCorrect (only parsing).
-    Notation reflect_base_interp_eq := Compilers.reflect_base_interp_eq (only parsing).
+    Notation reflect_base_interp_eq := Compilers.reflect_base_interp_beq (only parsing).
     Notation try_make_base_transport_cps := Compilers.try_make_base_transport_cps (only parsing).
     Notation try_make_base_transport_cps_correct := Compilers.try_make_base_transport_cps_correct (only parsing).
 
@@ -133,9 +156,9 @@ Module Compilers.
     Notation reify_norm_base_type_of e := (reify_norm_base ((fun t (_ : t) => t) _ e)) (only parsing).
     Notation reify_norm_type_of e := (reify_norm ((fun t (_ : t) => t) _ e)) (only parsing).
 
-    Ltac reify_base ty := Identifier.Compilers.reify_base ty.
-    Ltac reify ty := Identifier.Compilers.reify_base_type ty.
-    Ltac reify_type ty := Identifier.Compilers.reify_type ty.
+    Ltac reify_base ty := Compilers.reify_base ty.
+    Ltac reify ty := Compilers.reify_base_type ty.
+    Ltac reify_type ty := Compilers.reify_type ty.
   End base.
 
   Module ident.
@@ -249,7 +272,7 @@ Module Compilers.
     Notation toRestrictedIdent := Compilers.toRestrictedIdent (only parsing).
     Notation toFromRestrictedIdent := Compilers.toFromRestrictedIdent (only parsing).
 
-    Ltac reify term then_tac reify_rec else_tac := Compilers.reify_ident term then_tac reify_rec else_tac.
+    Ltac reify := Compilers.reify_ident.
 
     Notation buildIdent := Compilers.buildIdent (only parsing).
     Notation is_var_like := Compilers.ident_is_var_like (only parsing).
@@ -296,7 +319,7 @@ Module Compilers.
     End Notations.
   End ident.
   Export ident.Notations.
-  Notation ident := Identifier.Compilers.ident (only parsing).
+  Notation ident := IdentifiersBasicGENERATED.Compilers.ident (only parsing).
 
   Ltac reify var term :=
     expr.reify constr:(base.type) ident ltac:(reify_base_type) ltac:(reify_ident) var term.

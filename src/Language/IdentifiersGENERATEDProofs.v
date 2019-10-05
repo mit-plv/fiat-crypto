@@ -14,6 +14,7 @@ Require Import Crypto.Util.Equality.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Language.Language.
 Require Import Crypto.Language.Inversion.
+Require Import Crypto.Language.IdentifiersBasicGENERATED.
 Require Import Crypto.Language.IdentifiersGENERATED.
 Require Import Crypto.Language.IdentifiersGenerateProofs.
 Require Import Crypto.Util.FixCoqMistakes.
@@ -32,7 +33,7 @@ Module Compilers.
       Import ProofTactic.Settings.
 
       Definition package_proofs : @ProofGoalType.package_proofs _ _ package.
-      Proof. ProofTactic.prove_package_proofs Identifier.Compilers.exprInfoAndExprExtraInfo. Qed.
+      Proof. ProofTactic.prove_package_proofs IdentifiersBasicGENERATED.Compilers.package. Qed.
     End ident.
   End pattern.
 End Compilers.

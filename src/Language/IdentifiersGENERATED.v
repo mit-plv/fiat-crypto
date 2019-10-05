@@ -1,8 +1,8 @@
-Require Import Crypto.Language.Identifier.
+Require Import Crypto.Language.IdentifiersBasicGENERATED.
 Require Import Crypto.Language.IdentifiersGenerate.
 
 Module Compilers.
-  Import Identifier.Compilers.
+  Import IdentifiersBasicGENERATED.Compilers.
   Export IdentifiersGenerate.Compilers.
 
   Module pattern.
@@ -15,7 +15,7 @@ Module Compilers.
         Export IdentifiersGenerate.Compilers.pattern.Raw.ident.
         Module PrintIdent.
           Import Raw.ident.Tactics.MakeIdent.
-          Import Identifier.Compilers.
+          Import IdentifiersBasicGENERATED.Compilers.
           Local Unset Printing Notations.
           (*Goal True. print_ident Compilers.ident. Abort.*)
         End PrintIdent.
@@ -128,7 +128,7 @@ Module Compilers.
       Export IdentifiersGenerate.Compilers.pattern.ident.
       Module PrintIdent.
         Import ident.Tactics.PrintIdent.
-        Import Identifier.Compilers.
+        Import IdentifiersBasicGENERATED.Compilers.
         Import Coq.Init.Datatypes.
         Import Coq.ZArith.BinInt.
         Import Crypto.Util.ZRange.
@@ -238,7 +238,7 @@ Module Compilers.
       .
 
       Definition package : @GoalType.package Compilers.base Compilers.ident.
-      Proof. Time Tactic.make_package Compilers.exprInfoAndExprExtraInfo Raw.ident.ident ident.ident. Defined.
+      Proof. Time Tactic.make_package IdentifiersBasicGENERATED.Compilers.package Raw.ident.ident ident.ident. Defined.
     End ident.
   End pattern.
 End Compilers.
