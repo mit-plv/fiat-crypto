@@ -3118,6 +3118,7 @@ Module Compilers.
                          | break_innermost_match_step
                          | progress ident.rewrite_interp ident_interp
                          | progress cbv [ident.literal ident.eagerly] in * ].
+            all: cbv [nat_rect_arrow_nodep list_rect_arrow_nodep] in *.
             all: change (@nat_rect_nodep) with (fun P => @nat_rect (fun _ => P)) in *.
             all: change (@list_rect_nodep) with (fun A P => @list_rect A (fun _ => P)) in *.
             all: repeat

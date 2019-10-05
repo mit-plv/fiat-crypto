@@ -400,7 +400,7 @@ Module Compilers.
               let all_idents := Compilers.pattern.Tactics.build_all_idents ident in
               idtac "        Inductive ident :=";
               let v := all_idents in
-              map_projT2 ltac:(fun v => let v := fill_forall_args v in idtac "        |" v) v;
+              map_projT2 ltac:(fun v => (*let v := fill_forall_args v in*) idtac "        |" v) v;
               idtac "        .".
             Import Compilers.ident.
             Local Unset Printing Notations.
@@ -690,7 +690,7 @@ Module Compilers.
                                 let T := Set_to_Type T in
                                 let T := (eval cbv beta in
                                              (T base.type.type (@base.type.prod) (@base.type.list) (@base.type.option) (@base.type.unit) (@base.type.type_base) (@ident))) in
-                                let v := fill_forall_args v in
+                                (*let v := fill_forall_args v in*)
                                 idtac "        |" v ":" T) v;
             idtac "      .".
           Import Compilers.ident.
