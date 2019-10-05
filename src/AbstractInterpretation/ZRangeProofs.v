@@ -79,7 +79,7 @@ Module Compilers.
           Local Ltac z_cast_t :=
             cbn [type.related_hetero ZRange.ident.option.interp ident.interp ident.gen_interp respectful_hetero type.interp ZRange.type.base.option.interp ZRange.type.base.interp base.interp base.base_interp ZRange.type.base.option.Some];
             cbv [ZRange.ident.option.interp_Z_cast ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by respectful_hetero];
-            cbn [base.interp_beq Compilers.base_interp_beq] in *;
+            cbn [base.interp_beq base.base_interp_beq] in *;
             cbv [ident.cast2] in *; cbn [fst snd] in *;
             intros; break_innermost_match; break_innermost_match_hyps; trivial;
             rewrite ?Bool.andb_true_iff, ?Bool.andb_false_iff in *; destruct_head'_and; destruct_head'_or; repeat apply conj; Z.ltb_to_lt;
