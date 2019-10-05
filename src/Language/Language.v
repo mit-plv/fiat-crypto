@@ -699,6 +699,7 @@ Module Compilers.
     Ltac reify_ident_preprocess term :=
       let __ := Reify.debug_enter_reify_ident_preprocess term in
       lazymatch term with
+      | Datatypes.S => reify_ident_preprocess Nat.succ
       | @Datatypes.prod_rect ?A ?B ?T0
         => lazymatch (eval cbv beta in T0) with
            | fun _ => ?T => reify_ident_preprocess (@prod_rect_nodep A B T)
