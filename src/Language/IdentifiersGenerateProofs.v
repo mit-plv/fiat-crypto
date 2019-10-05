@@ -16,6 +16,7 @@ Require Import Crypto.Util.Tactics.CacheTerm.
 Require Import Crypto.Language.Language.
 Require Import Crypto.Language.Inversion.
 Require Import Crypto.Language.IdentifiersGenerate.
+Require Import Crypto.Language.IdentifiersBasicLibrary.
 Require Import Crypto.Language.IdentifiersLibraryProofs.
 Require Import Crypto.Util.FixCoqMistakes.
 
@@ -23,6 +24,7 @@ Import EqNotations.
 Module Compilers.
   Import Language.Compilers.
   Import Language.Inversion.Compilers.
+  Import IdentifiersBasicLibrary.Compilers.
   Import IdentifiersGenerate.Compilers.
   Export IdentifiersLibraryProofs.Compilers.
   Local Set Primitive Projections.
@@ -118,12 +120,12 @@ Module Compilers.
       Module Export Settings.
         Export ident.GoalType.Settings.
       End Settings.
-      Ltac prove_package_proofs exprInfoAndExprExtraInfo :=
+      Ltac prove_package_proofs ident_package :=
         idtac;
         let time_if_debug1 := Tactics.time_if_debug1 in
         let pkg := lazymatch goal with |- @package_proofs _ _ ?pkg => pkg end in
-        let exprInfo := (eval hnf in (Specif.projT1 exprInfoAndExprExtraInfo)) in
-        let exprExtraInfo := (eval hnf in (Specif.projT2 exprInfoAndExprExtraInfo)) in
+        let exprInfo := (eval hnf in (Basic.GoalType.exprInfo ident_package)) in
+        let exprExtraInfo := (eval hnf in (Basic.GoalType.exprExtraInfo ident_package)) in
         let reflect_base_beq := lazymatch (eval hnf in exprExtraInfo) with {| Classes.reflect_base_beq := ?reflect_base_beq |} => reflect_base_beq end in
         cbv [pkg];
         unshelve econstructor;
@@ -147,9 +149,9 @@ Module Compilers.
           time_if_debug1 Raw.ident.prove_eq_invert_bind_args_unknown; fail 0 "A goal remains"
         | let __ := Tactics.debug1 ltac:(fun _ => idtac "Proving eq_unify_unknown...") in
           time_if_debug1 ident.prove_eq_unify_unknown; fail 0 "A goal remains" ].
-      Ltac cache_build_package_proofs exprInfoAndExprExtraInfo package :=
+      Ltac cache_build_package_proofs ident_package package :=
         let name := fresh "ident_package_proofs" in
-        cache_proof_with_type_by (@package_proofs _ _ package) ltac:(prove_package_proofs exprInfoAndExprExtraInfo) name.
+        cache_proof_with_type_by (@package_proofs _ _ package) ltac:(prove_package_proofs ident_package) name.
     End ProofTactic.
   End pattern.
 End Compilers.

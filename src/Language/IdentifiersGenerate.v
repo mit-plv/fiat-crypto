@@ -11,6 +11,7 @@ Require Import Crypto.Util.Bool.Reflect.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Language.Language.
 Require Import Crypto.Language.IdentifiersLibrary.
+Require Import Crypto.Language.IdentifiersBasicLibrary.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.ConstrFail.
 Require Import Crypto.Util.Tactics.CacheTerm.
@@ -24,6 +25,7 @@ Module Compilers.
   Set Decidable Equality Schemes.
   Local Set Primitive Projections.
   Export Language.Compilers.
+  Import IdentifiersBasicLibrary.Compilers.
   Export IdentifiersLibrary.Compilers.
 
   Local Notation type_of_list := (fold_right (fun A B => prod A B) unit).
@@ -702,9 +704,9 @@ Module Compilers.
       End Tactics.
 
       Module Tactic.
-        Ltac build_package exprInfoAndExprExtraInfo raw_ident pattern_ident :=
-          let exprInfo := (eval hnf in (Specif.projT1 exprInfoAndExprExtraInfo)) in
-          let exprExtraInfo := (eval hnf in (Specif.projT2 exprInfoAndExprExtraInfo)) in
+        Ltac build_package ident_package raw_ident pattern_ident :=
+          let exprInfo := (eval hnf in (Basic.GoalType.exprInfo ident_package)) in
+          let exprExtraInfo := (eval hnf in (Basic.GoalType.exprExtraInfo ident_package)) in
           let base_interp := lazymatch (eval hnf in exprInfo) with {| Classes.base_interp := ?base_interp |} => base_interp end in
           let ident := lazymatch (eval hnf in exprInfo) with {| Classes.ident := ?ident |} => ident end in
           let base_interp_beq := lazymatch (eval hnf in exprExtraInfo) with {| Classes.base_interp_beq := ?base_interp_beq |} => base_interp_beq end in
@@ -844,8 +846,8 @@ Module Compilers.
                     arg_types_of_typed_ident_unfolded
                     unify
                     unify_unknown).
-        Ltac make_package exprInfoAndExprExtraInfo raw_ident pattern_ident :=
-          let res := build_package exprInfoAndExprExtraInfo raw_ident pattern_ident in refine res.
+        Ltac make_package ident_package raw_ident pattern_ident :=
+          let res := build_package ident_package raw_ident pattern_ident in refine res.
       End Tactic.
     End ident.
   End pattern.

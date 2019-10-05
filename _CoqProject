@@ -74,7 +74,10 @@ src/Fancy/Prod.v
 src/Fancy/Spec.v
 src/Language/API.v
 src/Language/APINotations.v
-src/Language/Identifier.v
+src/Language/IdentifierParameters.v
+src/Language/IdentifiersBasicGENERATED.v
+src/Language/IdentifiersBasicGenerate.v
+src/Language/IdentifiersBasicLibrary.v
 src/Language/IdentifiersGENERATED.v
 src/Language/IdentifiersGENERATEDProofs.v
 src/Language/IdentifiersGenerate.v

@@ -8,7 +8,6 @@ Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Language.Language.
 Require Import Crypto.Language.InversionExtra.
-Require Import Crypto.Language.Identifier.
 Require Import Crypto.Language.API.
 Require Import Crypto.Language.UnderLets.
 Import ListNotations. Local Open Scope bool_scope. Local Open Scope Z_scope.

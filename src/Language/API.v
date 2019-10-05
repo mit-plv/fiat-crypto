@@ -2,10 +2,10 @@ Require Import Crypto.Language.APINotations.
 
 Export Language.Pre.
 Export Language.Language.
-Export Language.Identifier.
+Export Language.IdentifiersBasicGENERATED.
 
 Module Compilers.
-  Import Identifier.Compilers.
+  Import IdentifiersBasicGENERATED.Compilers.
   Include Language.APINotations.Compilers.
 
   (** This is the module that defines the top-level constants which

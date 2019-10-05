@@ -5,7 +5,6 @@ Require Import Coq.MSets.MSetPositive.
 Require Import Coq.FSets.FMapPositive.
 Require Import Crypto.Language.Language.
 Require Import Crypto.Language.Inversion.
-Require Import Crypto.Language.Identifier.
 Require Import Crypto.Language.API.
 Require Import Crypto.Language.Wf.
 Require Import Crypto.Language.WfExtra.
@@ -15,7 +14,6 @@ Require Import Crypto.MiscCompilerPassesProofs.
 Module Compilers.
   Import Language.Compilers.
   Import Language.Inversion.Compilers.
-  Import Identifier.Compilers.
   Import Language.API.Compilers.
   Import Language.Wf.Compilers.
   Import Language.WfExtra.Compilers.

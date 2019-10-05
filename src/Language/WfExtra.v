@@ -1,13 +1,11 @@
 Require Import Crypto.Language.Language.
 Require Import Crypto.Language.Wf.
-Require Import Crypto.Language.Identifier.
 Require Import Crypto.Language.API.
 
 Module Compilers.
   Import Language.Compilers.
   Import Language.Inversion.Compilers.
   Import Language.Wf.Compilers.
-  Import Identifier.Compilers.
   Import Language.API.Compilers.
   Import Compilers.API.
 

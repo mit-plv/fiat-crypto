@@ -28,7 +28,7 @@ Section of_prefancy.
      nested notations, and in part because
      COQBUG(https://github.com/coq/coq/issues/10803) *)
   (* Set Printing All. Print API.expr. *)
-  Local Notation cexpr := (@expr.expr (Language.Compilers.base.type.type Compilers.base) Identifier.Compilers.ident).
+  Local Notation cexpr := (@expr.expr (Language.Compilers.base.type.type Compilers.base) IdentifiersBasicGENERATED.Compilers.ident).
   Local Notation tZ := (base.type.type_base base.type.Z).
   Local Notation tzrange := (base.type.type_base base.type.zrange).
   Local Notation cstZ r

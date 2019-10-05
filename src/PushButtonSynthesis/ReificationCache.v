@@ -5,7 +5,6 @@
 Require Import Coq.Relations.Relation_Definitions.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.SubstEvars.
-Require Import Crypto.Language.Identifier.
 Require Import Crypto.Language.API.
 Require Import Crypto.Language.Wf.
 

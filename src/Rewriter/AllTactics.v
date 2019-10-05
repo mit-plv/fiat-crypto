@@ -5,6 +5,8 @@ Require Import Crypto.Language.Wf.
 Require Import Crypto.Language.UnderLetsProofs.
 Require Import Crypto.Language.IdentifiersLibrary.
 Require Import Crypto.Language.IdentifiersLibraryProofs.
+Require Import Crypto.Language.IdentifiersBasicLibrary.
+Require Import Crypto.Language.IdentifiersBasicGenerate.
 Require Import Crypto.Rewriter.Rewriter.
 Require Import Crypto.Rewriter.Reify.
 Require Import Crypto.Rewriter.ProofsCommon.
@@ -18,9 +20,12 @@ Require Import Crypto.Util.Tactics.ConstrFail.
 Module Compilers.
   Import Language.Wf.Compilers.
   Import IdentifiersLibrary.Compilers.
+  Import IdentifiersBasicLibrary.Compilers.
+  Import IdentifiersBasicGenerate.Compilers.
   Import IdentifiersLibraryProofs.Compilers.
   Import Rewriter.Compilers.RewriteRules.
   Import Rewriter.Reify.Compilers.RewriteRules.
+  Import Rewriter.ProofsCommon.Compilers.
   Import Rewriter.ProofsCommon.Compilers.RewriteRules.
   Import Rewriter.ProofsCommonTactics.Compilers.RewriteRules.
   Import Rewriter.Wf.Compilers.RewriteRules.
@@ -33,6 +38,7 @@ Module Compilers.
   Import Rewriter.ProofsCommonTactics.Compilers.RewriteRules.InterpTactics.Tactic.
 
   Module Import RewriteRules.
+    Import Compilers.Basic.GoalType.
     Import Compilers.pattern.ident.GoalType.
     Import Compilers.pattern.ProofGoalType.
     Import Compilers.Classes.
@@ -40,6 +46,7 @@ Module Compilers.
     Definition VerifiedRewriter_of_Rewriter
                {exprInfo : ExprInfoT}
                {exprExtraInfo : ExprExtraInfoT}
+               {exprReifyInfo : ExprReifyInfoT}
                {pkg : package}
                {pkg_proofs : package_proofs}
                (R : RewriterT)
@@ -53,7 +60,7 @@ Module Compilers.
       simple refine
              (let HWf := _ in
               let HInterp_gen := _ in
-              @Build_VerifiedRewriter exprInfo (@Rewriter.Compilers.RewriteRules.GoalType.Rewrite exprInfo exprExtraInfo pkg R) HWf HInterp_gen _ _ (@GeneralizeVar.Wf_via_flat _ ident _ _ _ _ _));
+              @Build_VerifiedRewriter exprInfo exprReifyInfo (@Rewriter.Compilers.RewriteRules.GoalType.Rewrite exprInfo exprExtraInfo pkg R) HWf HInterp_gen _ _ (@GeneralizeVar.Wf_via_flat _ ident _ _ _ _ _));
         [ | clear HWf ]; intros.
       all: abstract (
                rewrite Rewrite_eq; cbv [Make.Rewrite]; rewrite rewrite_head_eq, all_rewrite_rules_eq, ?eq_invert_bind_args_unknown, ?eq_unify_unknown;
@@ -73,21 +80,29 @@ Module Compilers.
                          with nocore ]).
     Defined.
 
-    Ltac make_VerifiedRewriter exprInfo exprExtraInfo pkg pkg_proofs R RWf RInterp RProofs :=
-      let res := (eval hnf in (@VerifiedRewriter_of_Rewriter exprInfo exprExtraInfo pkg pkg_proofs R RWf RInterp RProofs)) in
+    Ltac make_VerifiedRewriter exprInfo exprExtraInfo exprReifyInfo pkg pkg_proofs R RWf RInterp RProofs :=
+      let res := (eval hnf in (@VerifiedRewriter_of_Rewriter exprInfo exprExtraInfo exprReifyInfo pkg pkg_proofs R RWf RInterp RProofs)) in
       let res := lazymatch res with
-                 | context Res[@Build_VerifiedRewriter ?exprInfo ?R]
+                 | context Res[@Build_VerifiedRewriter ?exprInfo ?exprReifyInfo ?R]
                    => let t := fresh "t" in
                       let R' := fresh in
                       let R' := constr:(fun t
                                         => match R t return _ with
                                            | R' => ltac:(let v := (eval hnf in R') in exact v)
                                            end) in
-                      context Res[@Build_VerifiedRewriter exprInfo R']
+                      context Res[@Build_VerifiedRewriter exprInfo exprReifyInfo R']
                  end in
       res.
 
-    Ltac Build_Rewriter reify_base reify_ident exprInfo exprExtraInfo pkg_proofs ident_is_var_like include_interp specs_proofs :=
+    Ltac Build_Rewriter basic_package pkg_proofs include_interp specs_proofs :=
+      let basic_package := (eval hnf in basic_package) in
+      let exprInfo := (eval hnf in (Basic.GoalType.exprInfo basic_package)) in
+      let exprExtraInfo := (eval hnf in (Basic.GoalType.exprExtraInfo basic_package)) in
+      let exprReifyInfo := (eval hnf in (Basic.GoalType.exprReifyInfo basic_package)) in
+      let ident_is_var_like := lazymatch basic_package with {| Basic.GoalType.ident_is_var_like := ?ident_is_var_like |} => ident_is_var_like end in
+      let reify_package := Basic.Tactic.reify_package_of_package basic_package in
+      let reify_base := Basic.Tactic.reify_base_via_reify_package reify_package in
+      let reify_ident := Basic.Tactic.reify_ident_via_reify_package reify_package in
       let pkg := lazymatch type of pkg_proofs with @package_proofs ?base ?ident ?pkg => pkg end in
       let specs := lazymatch type of specs_proofs with
                    | PrimitiveHList.hlist (@snd bool Prop) ?specs => specs
@@ -104,7 +119,7 @@ Module Compilers.
       let __ := Make.debug1 ltac:(fun _ => idtac "Proving Rewriter_Interp...") in
       let RInterp := fresh "Rewriter_Interp" in
       let RInterp := cache_proof_with_type_by (@Interp_GoalT exprInfo exprExtraInfo pkg R) ltac:(idtac; prove_interp_good ()) RInterp in
-      make_VerifiedRewriter exprInfo exprExtraInfo pkg pkg_proofs R Rwf RInterp specs_proofs.
+      make_VerifiedRewriter exprInfo exprExtraInfo exprReifyInfo pkg pkg_proofs R Rwf RInterp specs_proofs.
 
     Module Import FinalTacticHelpers.
       Lemma generalize_to_eqv {base_type base_interp} {A B f g}
@@ -153,12 +168,24 @@ Module Compilers.
         [ lazymatch do_lhs with true => idtac | false => reflexivity end
         | lazymatch do_rhs with true => idtac | false => reflexivity end ].
 
-      Ltac do_reify_rhs ident ident_interp := notypeclasses refine (@expr.Reify_rhs _ ident _ ident_interp _ _ _ _ _ _); [ typeclasses eauto | ].
+      Ltac do_reify_rhs_with verified_rewriter_package :=
+        let exprInfo := (eval hnf in (RewriteRules.GoalType.exprInfo verified_rewriter_package)) in
+        let exprReifyInfo := (eval hnf in (RewriteRules.GoalType.exprReifyInfo verified_rewriter_package)) in
+        lazymatch exprInfo with
+        | {| Classes.ident := ?ident
+             ; Classes.ident_interp := ?ident_interp |}
+          => notypeclasses refine (@expr.Reify_rhs _ ident _ ident_interp _ _ _ _ _ _);
+               [ Basic.Tactic.expr_reified_hint_via_reify_package exprReifyInfo | ]
+        end.
+
+      Ltac prove_Wf_with verified_rewriter_package :=
+        refine (@prove_Wf verified_rewriter_package _ _ _);
+        vm_compute; split; reflexivity.
 
       Ltac do_rewrite_with verified_rewriter_package :=
         refine (eq_trans_eqv_Interp _ _);
         [ refine (@Interp_Rewrite verified_rewriter_package _ _ _);
-          [ .. | prove_Wf () ]
+          [ .. | prove_Wf_with verified_rewriter_package ]
         | lazymatch goal with
           | [ |- ?ev = ?RHS ] => let RHS' := (eval vm_compute in RHS) in
                                  unify ev RHS'; vm_cast_no_check (eq_refl RHS)
@@ -170,7 +197,7 @@ Module Compilers.
         cbv [expr.Interp expr.interp Classes.ident_interp type.interp base.interp base_interp_head ident_interp_head ident.literal ident.eagerly ident.cast2].
 
       Ltac Rewrite_for_gen verified_rewriter_package do_lhs do_rhs :=
-        lazymatch (eval hnf in (exprInfo verified_rewriter_package)) with
+        lazymatch (eval hnf in (RewriteRules.GoalType.exprInfo verified_rewriter_package)) with
         | {| base := ?base
              ; ident := ?ident
              ; base_interp := ?base_interp
@@ -178,14 +205,14 @@ Module Compilers.
           |}
           => let base_type := constr:(base.type base) in
              let base_type_interp := constr:(base.interp base_interp) in
-             let reify_type := type.reify_via_tc base_type base_type_interp in
+             let reify_type := Basic.Tactic.reify_type_via_reify_package (RewriteRules.GoalType.exprReifyInfo verified_rewriter_package) in
              unshelve (
-                 solve [
-                     etransitivity_for_sides do_lhs do_rhs;
-                     generalize_hyps_for_rewriting base reify_type base_interp;
-                     do_reify_rhs ident ident_interp;
-                     do_rewrite_with verified_rewriter_package
-               ]);
+                 etransitivity_for_sides do_lhs do_rhs;
+                 generalize_hyps_for_rewriting base reify_type base_interp;
+                 do_reify_rhs_with verified_rewriter_package;
+                 do_rewrite_with verified_rewriter_package;
+                 let n := numgoals in
+                 guard n = 0 (* assert that all goals are solved; we don't use [solve] because it eats error messages of inner tactics *));
              do_final_cbv base_interp ident_interp
         end.
     End FinalTacticHelpers.
@@ -199,11 +226,11 @@ Module Compilers.
         Export Rewriter.Reify.Compilers.RewriteRules.Tactic.Settings.
       End Settings.
 
-      Ltac make_rewriter reify_base reify_ident exprInfo exprExtraInfo pkg_proofs ident_is_var_like include_interp specs_proofs :=
-        let res := Build_Rewriter reify_base reify_ident exprInfo exprExtraInfo pkg_proofs ident_is_var_like include_interp specs_proofs in refine res.
+      Ltac make_rewriter basic_package pkg_proofs include_interp specs_proofs :=
+        let res := Build_Rewriter basic_package pkg_proofs include_interp specs_proofs in refine res.
 
-      Tactic Notation "make_rewriter" tactic3(reify_base) tactic3(reify_ident) constr(exprInfo) constr(exprExtraInfo) constr(pkg_proofs) constr(ident_is_var_like) constr(include_interp) constr(specs_proofs) :=
-        make_rewriter reify_base reify_ident exprInfo exprExtraInfo pkg_proofs ident_is_var_like include_interp specs_proofs.
+      Tactic Notation "make_rewriter" constr(basic_package) constr(pkg_proofs) constr(include_interp) constr(specs_proofs) :=
+        make_rewriter basic_package pkg_proofs include_interp specs_proofs.
 
 
       Ltac Rewrite_lhs_for verified_rewriter_package := Rewrite_for_gen verified_rewriter_package true false.

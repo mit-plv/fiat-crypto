@@ -129,7 +129,7 @@ Module Compilers.
                      | econstructor; solve [ fin_wf ]
                      | progress cbn [List.In fst snd eq_rect] in * ].
 
-      Ltac handle_reified_rewrite_rules :=
+      Ltac handle_reified_rewrite_rules exprExtraInfo :=
         repeat
           first [ match goal with
                   | [ |- option_eq _ ?x ?y ]
@@ -137,18 +137,17 @@ Module Compilers.
                        lazymatch y with Some _ => idtac | None => idtac end;
                        progress cbn [option_eq]
                   | [ |- UnderLets.wf _ _ (Reify.expr_value_to_rewrite_rule_replacement ?rii1 ?sda _) (Reify.expr_value_to_rewrite_rule_replacement ?rii2 ?sda _) ]
-                    => apply (fun H => @Reify.wf_expr_value_to_rewrite_rule_replacement_unbundled _ _ _ _ rii1 rii2 H sda); intros
-                  | [ |- option_eq _ (Compile.reflect_ident_iota _) (Compile.reflect_ident_iota _) ]
-                    => apply Reify.wf_reflect_ident_iota
+                    => apply (@Reify.wf_expr_value_to_rewrite_rule_replacement _ exprExtraInfo _ _ sda); intros
                   | [ |- ?x = ?x ] => reflexivity
                   end
                 | break_innermost_match_step
                 | progress cbv [Compile.wf_maybe_do_again_expr] in *
                 | progress fin_wf ].
 
-      Ltac handle_extra_nbe :=
+      Ltac handle_extra_nbe exprExtraInfo :=
         repeat first [ match goal with
-                       | [ |- expr.wf _ (reify_list _) (reify_list _) ] => rewrite expr.wf_reify_list
+                       | [ |- expr.wf ?G (reify_list ?e1) (reify_list ?e2) ]
+                         => refine (proj2 (expr.wf_reify_list (buildIdent := @Classes.buildIdent _ exprExtraInfo) (reflect_base_beq := @Classes.reflect_base_beq _ exprExtraInfo) G e1 e2) _)
                        | [ |- List.Forall2 _ ?x ?x ] => rewrite Forall2_Forall; cbv [Proper]
                        | [ |- List.Forall2 _ (List.map _ _) (List.map _ _) ] => rewrite Forall2_map_map_iff
                        | [ |- List.Forall _ (seq _ _) ] => rewrite Forall_seq
@@ -171,8 +170,9 @@ Module Compilers.
 
         Ltac prove_good _ :=
           let do_time := Make.time_if_debug1 in (* eval the level early *)
+          let exprExtraInfo := lazymatch goal with |- context[@Wf_GoalT ?exprInfo ?exprExtraInfo ?pkg] => exprExtraInfo end in
           do_time start_good;
-          do_time ltac:(fun _ => handle_reified_rewrite_rules; handle_extra_nbe; handle_extra_arith_rules);
+          do_time ltac:(fun _ => handle_reified_rewrite_rules exprExtraInfo; handle_extra_nbe exprExtraInfo; handle_extra_arith_rules);
           warn_if_goals_remain ().
       End Tactic.
     End WfTactics.
@@ -419,12 +419,14 @@ Module Compilers.
                   => progress change (fun t : T => vii t b) with (fun t : T => @Compile.value_interp_related _ _ _ ident_interp t b)
                 end ].
       Ltac preprocess base_interp_head := repeat preprocess_step base_interp_head.
-      Ltac handle_extra_nbe ident_interp_head ident_interp_Proper :=
+
+      Ltac handle_extra_nbe exprExtraInfo ident_interp_head ident_interp_Proper :=
         repeat match goal with
                | [ |- UnderLets.interp_related _ _ (UnderLets.Base (expr.Ident _)) _ ]
                  => cbn [UnderLets.interp_related UnderLets.interp_related_gen expr.interp_related_gen ident_interp_head type.related]; reflexivity
-               | [ |- UnderLets.interp_related _ _ (UnderLets.Base (reify_list _)) _ ]
-                 => cbn [UnderLets.interp_related UnderLets.interp_related_gen]; rewrite expr.reify_list_interp_related_gen_iff
+               | [ |- UnderLets.interp_related _ _ (UnderLets.Base (reify_list ?LS)) ?V ]
+                 => cbn [UnderLets.interp_related UnderLets.interp_related_gen];
+                    refine (proj2 (expr.reify_list_interp_related_gen_iff (buildInterpIdentCorrect:=@Classes.buildInterpIdentCorrect _ exprExtraInfo) (ls:=LS) (v:=V)) _)
                | [ |- UnderLets.interp_related ?ident_interp _ (UnderLets.Base ?e) ?x ]
                  => lazymatch (eval cbn [expr.interp ident_interp_head] in (expr.interp ident_interp e)) with
                     | (_, _) =>
@@ -531,7 +533,7 @@ Module Compilers.
                  ltac:(
                  fun _
                  => preprocess base_interp_head;
-                    handle_extra_nbe ident_interp_head ident_interp_Proper;
+                    handle_extra_nbe exprExtraInfo ident_interp_head ident_interp_Proper;
                     handle_reified_rewrite_rules_interp exprInfo exprExtraInfo base_interp_head ident_interp_head ident_interp_Proper)
           end;
           warn_if_goals_remain ().
