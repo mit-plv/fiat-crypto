@@ -21,6 +21,8 @@ Require Import Crypto.Util.Tactics.RunTacticAsConstr.
 Require Import Crypto.Util.Tactics.DebugPrint.
 Require Import Crypto.Util.Tactics.ConstrFail.
 Require Import Crypto.Util.Tactics.Head.
+Require Import Crypto.Util.Tactics.PrintGoal.
+Require Import Crypto.Util.Tactics.CacheTerm.
 Require Import Crypto.Util.HProp.
 Import Coq.Lists.List ListNotations. Local Open Scope bool_scope. Local Open Scope Z_scope.
 Export Language.Pre.
@@ -79,6 +81,180 @@ Module Compilers.
         (fun ty => @eta_base_cps (fun _ => Type) (fun t => TypeList.nth (index_of_base t) base_type_list True) ty)).
   Ltac make_base_interp eta_base_cps base_type_list index_of_base :=
     let res := build_base_interp eta_base_cps base_type_list index_of_base in refine res.
+
+  Ltac find_evar_tail x :=
+    lazymatch x with
+    | Datatypes.cons _ ?x => find_evar_tail x
+    | ?ev => let __ := match goal with _ => is_evar ev end in
+             ev
+    end.
+  Ltac build_all_gen T mk P :=
+    let res := open_constr:(_ : list T) in
+    let fill_next v :=
+        let next := find_evar_tail res in
+        let __ := open_constr:(eq_refl : next = v) in
+        constr:(I) in
+    let __ := open_constr:(
+                ltac:(intros;
+                      let v' := fresh "v'" in
+                      lazymatch goal with
+                      | [ v : _ |- _ ] => pose v as v'; destruct v
+                      end;
+                      let v := (eval cbv [v'] in v') in
+                      let h := head v in
+                      let v' := mk h in
+                      let __ := fill_next open_constr:(Datatypes.cons v' _) in
+                      constructor)
+                : P) in
+    let __ := fill_next uconstr:(Datatypes.nil) in
+    res.
+  Ltac build_all_base base := build_all_gen base ltac:(fun x => x) (base -> True).
+  Ltac make_all_base base :=
+    let res := build_all_base base in refine res.
+
+
+  Ltac build_all_base_and_interp all_base base_interp :=
+    let all_base := (eval cbv in all_base) in
+    let base_interp_head := head base_interp in
+    (eval cbv [List.map base_interp_head] in
+        (List.map (fun v => (v, base_interp v : Type)) all_base)).
+  Ltac make_all_base_and_interp all_base base_interp :=
+    let res := build_all_base_and_interp all_base base_interp in refine res.
+
+  Ltac reify_base_via_list base base_interp all_base_and_interp :=
+    let all_base_and_interp := (eval hnf in all_base_and_interp) in
+    let all_base_and_interp := (eval cbv beta in all_base_and_interp) in
+    fun ty
+    => let ty := (eval cbv beta in ty) in
+       let __ := Reify.debug_enter_reify_base_type ty in
+       lazymatch all_base_and_interp with
+       | context[Datatypes.cons (?rty, ty)] => rty
+       | _
+         => lazymatch ty with
+            | base_interp ?T => T
+            | @base.interp base base_interp (@base.type.type_base base ?T) => T
+            | @type.interp (base.type base) (@base.interp base base_interp) (@Compilers.type.base (base.type base) (@base.type.type_base base ?T)) => T
+            | _ => constr_fail_with ltac:(fun _ => fail 1 "Unrecognized type:" ty)
+            end
+       end.
+
+  Ltac reify_base_type_via_list base base_interp all_base_and_interp :=
+    Language.Compilers.base.reify base ltac:(reify_base_via_list base base_interp all_base_and_interp).
+  Ltac reify_type_via_list base base_interp all_base_and_interp :=
+    Language.Compilers.type.reify ltac:(reify_base_type_via_list base base_interp all_base_and_interp) constr:(base.type base).
+
+  Ltac ident_type_of_interped_type reify_type base base_interp ident ty :=
+    let recur := ident_type_of_interped_type reify_type base base_interp ident in
+    let is_sort := lazymatch ty with
+                   | forall T : Type, _ => true
+                   | forall T : Set , _ => true
+                   | forall T : Prop, _ => true
+                   | _ => false
+                   end in
+    lazymatch is_sort with
+    | true
+      => lazymatch ty with
+         | forall x : ?T, ?F
+           => let F' := fresh in
+              let t := fresh "t" in
+              let rT := constr:(base.type base) in
+              let interp_rT := constr:(base.interp base_interp) in
+              constr:(forall t : rT,
+                         match interp_rT t return _ with
+                         | x
+                           => match F return _ with
+                              | F'
+                                => ltac:(let Fv := (eval cbv [x F'] in F') in
+                                         clear x F';
+                                         let __ := type of Fv in (* force recomputation of universes *)
+                                         let res := recur Fv in
+                                         exact res)
+                              end
+                         end)
+         end
+    | false
+      => let rT := reify_type ty in
+         constr:(ident rT)
+    end.
+
+  Ltac ident_type_of_interped_type_via_list base base_interp all_base_and_interp :=
+    let reify_type := ltac:(reify_type_via_list base base_interp all_base_and_interp) in
+    let base_interp_head := head base_interp in
+    fun is_literal ty ident
+    => let res
+           := lazymatch is_literal with
+              | true
+                => constr:(forall t : base, base_interp t -> ident (type.base (base.type.type_base t)))
+              | false
+                => ident_type_of_interped_type reify_type base base_interp ident ty
+              end in
+       (eval cbv [base_interp_head] in res).
+
+  Ltac print_ident_of_named base base_interp all_base_and_interp :=
+    let get_type := ident_type_of_interped_type_via_list base base_interp all_base_and_interp in
+    fun idc
+    => let v := lazymatch idc with
+                | with_name _ ?v => v
+                | without_name ?v => v
+                end in
+       let is_literal := lazymatch v with
+                         | @ident.literal => true
+                         | _ => false
+                         end in
+       let ty := type of v in
+       let ty := (eval cbv beta in ty) in
+       let ident := fresh "ident" in
+       let rty := constr:(fun ident : _ -> Type
+                          => ltac:(let res := get_type is_literal ty ident in exact res)) in
+       let print_rty name :=
+           lazymatch rty with
+           | fun ident : ?T => ?F
+             => let F' := fresh in
+                let __
+                    := constr:(fun ident : T
+                               => match F return _ with
+                                  | F' => ltac:(let F' := (eval cbv [F'] in F') in
+                                                idtac "|" name ":" F';
+                                                exact I)
+                                  end) in
+                idtac
+           end in
+       lazymatch idc with
+       | with_name name _ => print_rty name
+       | _ => let name := fresh "ident_" v in
+              print_rty name
+       end.
+
+  Ltac print_ident_via base base_interp all_base_and_interp all_ident_named_interped :=
+    let all_ident_named_interped := (eval hnf in all_ident_named_interped) in
+    let do_print := print_ident_of_named base base_interp all_base_and_interp in
+    let type := constr:(type.type (base.type base)) in
+    let type_to_Type := constr:(type -> Type) in
+    let rec iter ls
+        := lazymatch ls with
+           | @GallinaIdentList.cons _ ?v ?rest
+             => do_print v; iter rest
+           | GallinaIdentList.nil => idtac
+           end in
+    idtac "Inductive ident :" type_to_Type ":=";
+    iter all_ident_named_interped;
+    idtac ".".
+
+  Ltac print_ident_ind base base_type_list all_ident_named_interped :=
+    (* we wrap everything in constr:(...) to inline [abstract] *)
+    let __
+        := constr:(
+             ltac:(let eta_base_cps_gen := build_eta_base_cps_gen base in
+                   let eta_base_cps := build_eta_base_cps eta_base_cps_gen in
+                   let index_of_base := build_index_of_base base in
+                   let base_interp := build_base_interp eta_base_cps base_type_list index_of_base in
+                   let base_interp_name := fresh "temp_base_interp" in
+                   let base_interp := cache_term base_interp base_interp_name in
+                   let all_base := build_all_base base in
+                   let all_base_and_interp := build_all_base_and_interp all_base base_interp in
+                   print_ident_via base base_interp all_base_and_interp all_ident_named_interped;
+                   exact I)) in
+    idtac.
 
   Ltac build_baseHasNatAndCorrect base_interp :=
     constr:(ltac:(unshelve eexists; hnf; [ constructor | unshelve econstructor ]; cbv;
@@ -209,7 +385,7 @@ Module Compilers.
                        end;
                        lazymatch goal with
                        | [ |- _ = ?v ]
-                         => reify_ident v ltac:(fun idc => unify id' idc) ltac:(fun term => fail 0 "could not reify" term "as an ident") ltac:(fun _ => fail 0 "could not reify" v "as an ident")
+                         => reify_ident v ltac:(fun idc => unify id' idc) ltac:(fun _ => fail 0 "could not reify" v "as an ident")
                        end
                   end; reflexivity)
             : { buildEagerIdent : _ & @ident.BuildInterpEagerIdentCorrectT _ _ _ ident_interp baseHasNat buildEagerIdent baseHasNatCorrect }).
@@ -256,10 +432,10 @@ Module Compilers.
   Ltac build_buildIdentAndInterpCorrect ident_interp reify_ident :=
     constr:(ltac:(let ident_interp_head := head ident_interp in
                   unshelve econstructor;
-                  [ econstructor; intros;
+                  [ econstructor;
                     lazymatch goal with
                     | [ |- ?ident (type.base base.type.unit) ] => solve [ constructor ]
-                    | _ => shelve
+                    | _ => intros; shelve
                     end
                   | constructor ];
                   intros;
@@ -269,7 +445,10 @@ Module Compilers.
                        change (ii id' = v); cbv [ident_interp_head];
                        fold (@base.interp);
                        let v := match goal with |- _ = ?v => v end in
-                       reify_ident v ltac:(fun idc => unify id' idc) ltac:(fun term => fail 0 "could not reify" term "as an ident") ltac:(fun _ => fail 0 "could not reify" v "as an ident")
+                       reify_ident
+                         v
+                         ltac:(fun idc => unify id' idc)
+                                ltac:(fun _ => fail 0 "could not reify" v "as an ident")
                   end; reflexivity)
             : { buildIdent : _
                              & @ident.BuildInterpIdentCorrectT _ _ _ buildIdent ident_interp }).
@@ -416,6 +595,164 @@ Module Compilers.
       => solve [ let rv := expr.Reify constr:(base_type) ident ltac:(reify_base_type) ltac:(reify_ident) v in unify e rv; reflexivity | idtac "ERROR: Failed to reify" v "(of type" t "); try setting Reify.debug_level to see output" ]
     end.
 
+  Ltac build_index_of_ident ident :=
+    constr:(ltac:(let t := fresh "t" in
+                  let idc := fresh "idc" in
+                  let min := open_constr:(_ : Datatypes.nat) in
+                  unshelve (intros t idc; destruct idc;
+                            [ > let v := get_min_and_incr min in refine v .. ]);
+                  exact O)
+            : forall t, ident t -> Datatypes.nat).
+  Ltac make_index_of_ident ident :=
+    let res := build_index_of_ident ident in refine res.
+
+  Ltac build_ident_interp base_interp ident index_of_ident all_ident_named_interped :=
+    let T := constr:(forall t, ident t -> type.interp (base.interp base_interp) t) in
+    let res
+        := (eval cbv beta iota in
+               (ltac:(let t := fresh "t" in
+                      let idc := fresh "idc" in
+                      let v := fresh "v" in
+                      let index_of_ident := (eval cbv in index_of_ident) in
+                      let base_interp_head := head base_interp in
+                      let all_ident_named_interped := (eval hnf in all_ident_named_interped) in
+                      intros t idc;
+                      pose (fun default : False => GallinaIdentList.nth (@index_of_ident _ idc) all_ident_named_interped default) as v;
+                      destruct idc;
+                      cbv [GallinaIdentList.nth GallinaIdentList.nth_type] in v;
+                      let res := lazymatch (eval cbv [v] in v) with
+                                 | fun _ => {| Named.value := ?v |} => v
+                                 | ?v => constr_fail_with ltac:(fun _ => fail 1 "Invalid interpreted identifier" v)
+                                 end in
+                      clear v;
+                      cbn [type.interp base.interp base_interp_head];
+                      apply res; assumption)
+                : T)) in
+    constr:(res : T).
+  Ltac make_ident_interp base_interp ident index_of_ident all_ident_named_interped :=
+    let res := build_ident_interp base_interp ident index_of_ident all_ident_named_interped in exact res.
+
+  Ltac build_all_idents ident :=
+    build_all_gen
+      { T : Type & T }
+      ltac:(fun h => constr:(existT (fun T => T) _ h))
+             (forall t, ident t -> True).
+  Ltac make_all_idents ident :=
+    let res := build_all_idents ident in refine res.
+
+  Ltac build_all_ident_and_interp all_idents all_ident_named_interped :=
+    let all_idents := (eval hnf in all_idents) in
+    let all_ident_named_interped := (eval hnf in all_ident_named_interped) in
+    lazymatch all_idents with
+    | Datatypes.nil
+      => lazymatch all_ident_named_interped with
+         | GallinaIdentList.nil => GallinaAndReifiedIdentList.nil
+         | _ => constr_fail_with ltac:(fun _ => fail 1 "Invalid remaining interped identifiers" all_ident_named_interped)
+         end
+    | Datatypes.cons (existT _ _ ?ridc) ?rest_ridc
+      => lazymatch all_ident_named_interped with
+         | GallinaIdentList.nil => constr_fail_with ltac:(fun _ => fail 1 "Invalid remaining identifiers" all_idents)
+         | GallinaIdentList.cons {| Named.value := ?vidc |} ?rest_vidc
+           => let rest := build_all_ident_and_interp rest_ridc rest_vidc in
+              constr:(GallinaAndReifiedIdentList.cons ridc vidc rest)
+         | _ => constr_fail_with ltac:(fun _ => fail 1 "Invalid non-GallinaIdentList" all_ident_named_interped)
+         end
+    | _ => constr_fail_with ltac:(fun _ => fail 1 "Invalid non list of existT identifiers" all_idents)
+    end.
+  Ltac make_all_ident_and_interp all_idents all_ident_named_interped :=
+    let res := build_all_ident_and_interp all_idents all_ident_named_interped in
+    refine res.
+
+  Ltac try_build f x :=
+    match constr:(Set) with
+    | _ => let res := f x in
+           constr:(Datatypes.Some res)
+    | _ => constr:(@Datatypes.None Datatypes.unit)
+    end.
+
+  Ltac require_recursively_constructor_or_literal term :=
+    lazymatch term with
+    | ident.literal _ => idtac
+    | ?f ?x => require_recursively_constructor_or_literal f;
+               require_recursively_constructor_or_literal x
+    | ?term => is_constructor term
+    end.
+  Ltac is_recursively_constructor_or_literal term :=
+    match constr:(Set) with
+    | _ => let check := match constr:(Set) with
+                        | _ => require_recursively_constructor_or_literal term
+                        end in
+           true
+    | _ => false
+    end.
+
+  Ltac try_reify_literal try_reify_base ident_Literal term :=
+    let T := type of term in
+    let rT := try_reify_base T in
+    lazymatch rT with
+    | Datatypes.Some ?rT
+      => let term_is_primitive_const := is_recursively_constructor_or_literal term in
+         lazymatch term_is_primitive_const with
+         | true => constr:(Datatypes.Some (@ident_Literal rT term))
+         | false => constr:(@Datatypes.None unit)
+         end
+    | Datatypes.None => constr:(@Datatypes.None unit)
+    end.
+
+  Ltac get_head_with_eagerly_then_plug_reified_types reify_base_type lookup_cps term then_tac else_tac :=
+    let recr := get_head_with_eagerly_then_plug_reified_types reify_base_type lookup_cps in
+    lazymatch term with
+    | ident.eagerly ?f => lookup_cps term then_tac else_tac
+    | ?f ?x
+      => recr
+           f
+           ltac:(fun rf
+                 => lazymatch type of rf with
+                    | forall t, _
+                      => let rx := reify_base_type x in
+                         then_tac (rf rx)
+                    | _ => else_tac ()
+                    end)
+                  else_tac
+    | _ => lookup_cps term then_tac else_tac
+    end.
+
+  Ltac reify_ident_via_list base base_interp all_base_and_interp all_ident_and_interp ident_interp :=
+    let all_ident_and_interp := (eval hnf in all_ident_and_interp) in
+    let try_reify_base := try_build ltac:(reify_base_via_list base base_interp all_base_and_interp) in
+    let reify_base := reify_base_via_list base base_interp all_base_and_interp in
+    let reify_base_type := reify_base_type_via_list base base_interp all_base_and_interp in
+    let ident_Literal := let idc := constr:(@ident.literal) in
+                         lazymatch all_ident_and_interp with
+                         | context[GallinaAndReifiedIdentList.cons ?ridc idc] => ridc
+                         | _ => constr_fail_with ltac:(fun _ => fail 1 "Missing reification for" idc "in" all_ident_and_interp)
+                         end in
+    fun term then_tac else_tac
+    => let as_lit := try_reify_literal try_reify_base ident_Literal term in
+       lazymatch as_lit with
+       | Datatypes.Some ?ridc => then_tac ridc
+       | Datatypes.None
+         => lazymatch term with
+            | @ident_interp _ ?idc => then_tac idc
+            | _
+              => get_head_with_eagerly_then_plug_reified_types
+                   reify_base_type
+                   ltac:(fun idc then_tac else_tac
+                         => let __ := Reify.debug_enter_lookup_ident idc in
+                            lazymatch all_ident_and_interp with
+                            | context[GallinaAndReifiedIdentList.cons ?ridc idc]
+                              => let __ := Reify.debug_leave_lookup_ident_success idc ridc in
+                                 then_tac ridc
+                            | _
+                              => let __ := Reify.debug_leave_lookup_ident_failure idc in
+                                 else_tac ()
+                            end)
+                   term
+                   then_tac
+                   else_tac
+            end
+       end.
+
 
   Definition var_like_idents : GallinaIdentList.t
     := [@ident.literal
@@ -434,6 +771,215 @@ Module Compilers.
 
   Inductive base := Z | bool | nat | zrange. (* Not Variant because COQBUG(https://github.com/coq/coq/issues/7738) *)
 
+  Definition all_ident_named_interped : GallinaIdentList.t
+    := [with_name ident_Literal (@ident.literal)
+        ; with_name ident_Nat_succ Nat.succ
+        ; with_name ident_Nat_pred Nat.pred
+        ; with_name ident_Nat_max Nat.max
+        ; with_name ident_Nat_mul Nat.mul
+        ; with_name ident_Nat_add Nat.add
+        ; with_name ident_Nat_sub Nat.sub
+        ; with_name ident_Nat_eqb Nat.eqb
+        ; with_name ident_nil (@Datatypes.nil)
+        ; with_name ident_cons (@Datatypes.cons)
+        ; with_name ident_tt Datatypes.tt
+        ; with_name ident_pair (@Datatypes.pair)
+        ; with_name ident_fst (@Datatypes.fst)
+        ; with_name ident_snd (@Datatypes.snd)
+        ; with_name ident_prod_rect (@prod_rect_nodep)
+        ; with_name ident_bool_rect (@ident.Thunked.bool_rect)
+        ; with_name ident_nat_rect (@ident.Thunked.nat_rect)
+        ; with_name ident_eager_nat_rect (ident.eagerly (@ident.Thunked.nat_rect))
+        ; with_name ident_nat_rect_arrow (@nat_rect_arrow_nodep)
+        ; with_name ident_eager_nat_rect_arrow (ident.eagerly (@nat_rect_arrow_nodep))
+        ; with_name ident_list_rect (@ident.Thunked.list_rect)
+        ; with_name ident_eager_list_rect (ident.eagerly (@ident.Thunked.list_rect))
+        ; with_name ident_list_rect_arrow (@list_rect_arrow_nodep)
+        ; with_name ident_eager_list_rect_arrow (ident.eagerly (@list_rect_arrow_nodep))
+        ; with_name ident_list_case (@ident.Thunked.list_case)
+        ; with_name ident_List_length (@List.length)
+        ; with_name ident_List_seq (@List.seq)
+        ; with_name ident_List_firstn (@List.firstn)
+        ; with_name ident_List_skipn (@List.skipn)
+        ; with_name ident_List_repeat (@repeat)
+        ; with_name ident_List_combine (@List.combine)
+        ; with_name ident_List_map (@List.map)
+        ; with_name ident_List_app (@List.app)
+        ; with_name ident_List_rev (@List.rev)
+        ; with_name ident_List_flat_map (@List.flat_map)
+        ; with_name ident_List_partition (@List.partition)
+        ; with_name ident_List_fold_right (@List.fold_right)
+        ; with_name ident_List_update_nth (@update_nth)
+        ; with_name ident_List_nth_default (@nth_default)
+        ; with_name ident_eager_List_nth_default (ident.eagerly (@nth_default))
+        ; with_name ident_Z_add Z.add
+        ; with_name ident_Z_mul Z.mul
+        ; with_name ident_Z_pow Z.pow
+        ; with_name ident_Z_sub Z.sub
+        ; with_name ident_Z_opp Z.opp
+        ; with_name ident_Z_div Z.div
+        ; with_name ident_Z_modulo Z.modulo
+        ; with_name ident_Z_eqb Z.eqb
+        ; with_name ident_Z_leb Z.leb
+        ; with_name ident_Z_ltb Z.ltb
+        ; with_name ident_Z_geb Z.geb
+        ; with_name ident_Z_gtb Z.gtb
+        ; with_name ident_Z_log2 Z.log2
+        ; with_name ident_Z_log2_up Z.log2_up
+        ; with_name ident_Z_of_nat Z.of_nat
+        ; with_name ident_Z_to_nat Z.to_nat
+        ; with_name ident_Z_shiftr Z.shiftr
+        ; with_name ident_Z_shiftl Z.shiftl
+        ; with_name ident_Z_land Z.land
+        ; with_name ident_Z_lor Z.lor
+        ; with_name ident_Z_min Z.min
+        ; with_name ident_Z_max Z.max
+        ; with_name ident_Z_mul_split Z.mul_split
+        ; with_name ident_Z_add_get_carry Z.add_get_carry_full
+        ; with_name ident_Z_add_with_carry Z.add_with_carry
+        ; with_name ident_Z_add_with_get_carry Z.add_with_get_carry_full
+        ; with_name ident_Z_sub_get_borrow Z.sub_get_borrow_full
+        ; with_name ident_Z_sub_with_get_borrow Z.sub_with_get_borrow_full
+        ; with_name ident_Z_zselect Z.zselect
+        ; with_name ident_Z_add_modulo Z.add_modulo
+        ; with_name ident_Z_truncating_shiftl Z.truncating_shiftl
+        ; with_name ident_Z_bneg Z.bneg
+        ; with_name ident_Z_lnot_modulo Z.lnot_modulo
+        ; with_name ident_Z_rshi Z.rshi
+        ; with_name ident_Z_cc_m Z.cc_m
+        ; with_name ident_Z_combine_at_bitwidth Z.combine_at_bitwidth
+        ; with_name ident_Z_cast ident.cast
+        ; with_name ident_Z_cast2 ident.cast2
+        ; with_name ident_Some (@Datatypes.Some)
+        ; with_name ident_None (@Datatypes.None)
+        ; with_name ident_option_rect (@ident.Thunked.option_rect)
+        ; with_name ident_Build_zrange ZRange.Build_zrange
+        ; with_name ident_zrange_rect (@ZRange.zrange_rect_nodep)
+        ; with_name ident_fancy_add ident.fancy.add
+        ; with_name ident_fancy_addc ident.fancy.addc
+        ; with_name ident_fancy_sub ident.fancy.sub
+        ; with_name ident_fancy_subb ident.fancy.subb
+        ; with_name ident_fancy_mulll ident.fancy.mulll
+        ; with_name ident_fancy_mullh ident.fancy.mullh
+        ; with_name ident_fancy_mulhl ident.fancy.mulhl
+        ; with_name ident_fancy_mulhh ident.fancy.mulhh
+        ; with_name ident_fancy_rshi ident.fancy.rshi
+        ; with_name ident_fancy_selc ident.fancy.selc
+        ; with_name ident_fancy_selm ident.fancy.selm
+        ; with_name ident_fancy_sell ident.fancy.sell
+        ; with_name ident_fancy_addm ident.fancy.addm
+       ]%gi_list.
+
+  Section print_ident.
+    Local Set Printing All.
+    Local Set Printing Width 10000.
+    (*Goal True. print_ident_ind base base_type_list all_ident_named_interped. Abort.*)
+  End print_ident.
+
+  Inductive ident : (forall _ : type.type (base.type.type base), Type) :=
+  | ident_Literal : (forall (t : base) (_ : match t return Type with
+                                            | Z => BinNums.Z
+                                            | bool => Datatypes.bool
+                                            | nat => Datatypes.nat
+                                            | zrange => ZRange.zrange
+                                            end), ident (@type.base (base.type.type base) (@base.type.type_base base t)))
+  | ident_Nat_succ : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base nat)) (@type.base (base.type.type base) (@base.type.type_base base nat))))
+  | ident_Nat_pred : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base nat)) (@type.base (base.type.type base) (@base.type.type_base base nat))))
+  | ident_Nat_max : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base nat)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base nat)) (@type.base (base.type.type base) (@base.type.type_base base nat)))))
+  | ident_Nat_mul : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base nat)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base nat)) (@type.base (base.type.type base) (@base.type.type_base base nat)))))
+  | ident_Nat_add : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base nat)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base nat)) (@type.base (base.type.type base) (@base.type.type_base base nat)))))
+  | ident_Nat_sub : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base nat)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base nat)) (@type.base (base.type.type base) (@base.type.type_base base nat)))))
+  | ident_Nat_eqb : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base nat)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base nat)) (@type.base (base.type.type base) (@base.type.type_base base bool)))))
+  | ident_nil : (forall t : base.type.type base, ident (@type.base (base.type.type base) (@base.type.list base t)))
+  | ident_cons : (forall t : base.type.type base, ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) t) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.list base t)) (@type.base (base.type.type base) (@base.type.list base t)))))
+  | ident_tt : (ident (@type.base (base.type.type base) (@base.type.unit base)))
+  | ident_pair : (forall t t0 : base.type.type base, ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) t) (@type.arrow (base.type.type base) (@type.base (base.type.type base) t0) (@type.base (base.type.type base) (@base.type.prod base t t0)))))
+  | ident_fst : (forall t t0 : base.type.type base, ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.prod base t t0)) (@type.base (base.type.type base) t)))
+  | ident_snd : (forall t t0 : base.type.type base, ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.prod base t t0)) (@type.base (base.type.type base) t0)))
+  | ident_prod_rect : (forall t t0 t1 : base.type.type base, ident (@type.arrow (base.type.type base) (@type.arrow (base.type.type base) (@type.base (base.type.type base) t) (@type.arrow (base.type.type base) (@type.base (base.type.type base) t0) (@type.base (base.type.type base) t1))) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.prod base t t0)) (@type.base (base.type.type base) t1))))
+  | ident_bool_rect : (forall t : base.type.type base, ident (@type.arrow (base.type.type base) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.unit base)) (@type.base (base.type.type base) t)) (@type.arrow (base.type.type base) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.unit base)) (@type.base (base.type.type base) t)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base bool)) (@type.base (base.type.type base) t)))))
+  | ident_nat_rect : (forall t : base.type.type base, ident (@type.arrow (base.type.type base) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.unit base)) (@type.base (base.type.type base) t)) (@type.arrow (base.type.type base) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base nat)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) t) (@type.base (base.type.type base) t))) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base nat)) (@type.base (base.type.type base) t)))))
+  | ident_eager_nat_rect : (forall t : base.type.type base, ident (@type.arrow (base.type.type base) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.unit base)) (@type.base (base.type.type base) t)) (@type.arrow (base.type.type base) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base nat)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) t) (@type.base (base.type.type base) t))) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base nat)) (@type.base (base.type.type base) t)))))
+  | ident_nat_rect_arrow : (forall t t0 : base.type.type base, ident (@type.arrow (base.type.type base) (@type.arrow (base.type.type base) (@type.base (base.type.type base) t) (@type.base (base.type.type base) t0)) (@type.arrow (base.type.type base) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base nat)) (@type.arrow (base.type.type base) (@type.arrow (base.type.type base) (@type.base (base.type.type base) t) (@type.base (base.type.type base) t0)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) t) (@type.base (base.type.type base) t0)))) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base nat)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) t) (@type.base (base.type.type base) t0))))))
+  | ident_eager_nat_rect_arrow : (forall t t0 : base.type.type base, ident (@type.arrow (base.type.type base) (@type.arrow (base.type.type base) (@type.base (base.type.type base) t) (@type.base (base.type.type base) t0)) (@type.arrow (base.type.type base) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base nat)) (@type.arrow (base.type.type base) (@type.arrow (base.type.type base) (@type.base (base.type.type base) t) (@type.base (base.type.type base) t0)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) t) (@type.base (base.type.type base) t0)))) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base nat)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) t) (@type.base (base.type.type base) t0))))))
+  | ident_list_rect : (forall t t0 : base.type.type base, ident (@type.arrow (base.type.type base) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.unit base)) (@type.base (base.type.type base) t0)) (@type.arrow (base.type.type base) (@type.arrow (base.type.type base) (@type.base (base.type.type base) t) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.list base t)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) t0) (@type.base (base.type.type base) t0)))) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.list base t)) (@type.base (base.type.type base) t0)))))
+  | ident_eager_list_rect : (forall t t0 : base.type.type base, ident (@type.arrow (base.type.type base) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.unit base)) (@type.base (base.type.type base) t0)) (@type.arrow (base.type.type base) (@type.arrow (base.type.type base) (@type.base (base.type.type base) t) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.list base t)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) t0) (@type.base (base.type.type base) t0)))) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.list base t)) (@type.base (base.type.type base) t0)))))
+  | ident_list_rect_arrow : (forall t t0 t1 : base.type.type base, ident (@type.arrow (base.type.type base) (@type.arrow (base.type.type base) (@type.base (base.type.type base) t0) (@type.base (base.type.type base) t1)) (@type.arrow (base.type.type base) (@type.arrow (base.type.type base) (@type.base (base.type.type base) t) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.list base t)) (@type.arrow (base.type.type base) (@type.arrow (base.type.type base) (@type.base (base.type.type base) t0) (@type.base (base.type.type base) t1)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) t0) (@type.base (base.type.type base) t1))))) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.list base t)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) t0) (@type.base (base.type.type base) t1))))))
+  | ident_eager_list_rect_arrow : (forall t t0 t1 : base.type.type base, ident (@type.arrow (base.type.type base) (@type.arrow (base.type.type base) (@type.base (base.type.type base) t0) (@type.base (base.type.type base) t1)) (@type.arrow (base.type.type base) (@type.arrow (base.type.type base) (@type.base (base.type.type base) t) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.list base t)) (@type.arrow (base.type.type base) (@type.arrow (base.type.type base) (@type.base (base.type.type base) t0) (@type.base (base.type.type base) t1)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) t0) (@type.base (base.type.type base) t1))))) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.list base t)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) t0) (@type.base (base.type.type base) t1))))))
+  | ident_list_case : (forall t t0 : base.type.type base, ident (@type.arrow (base.type.type base) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.unit base)) (@type.base (base.type.type base) t0)) (@type.arrow (base.type.type base) (@type.arrow (base.type.type base) (@type.base (base.type.type base) t) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.list base t)) (@type.base (base.type.type base) t0))) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.list base t)) (@type.base (base.type.type base) t0)))))
+  | ident_List_length : (forall t : base.type.type base, ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.list base t)) (@type.base (base.type.type base) (@base.type.type_base base nat))))
+  | ident_List_seq : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base nat)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base nat)) (@type.base (base.type.type base) (@base.type.list base (@base.type.type_base base nat))))))
+  | ident_List_firstn : (forall t : base.type.type base, ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base nat)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.list base t)) (@type.base (base.type.type base) (@base.type.list base t)))))
+  | ident_List_skipn : (forall t : base.type.type base, ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base nat)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.list base t)) (@type.base (base.type.type base) (@base.type.list base t)))))
+  | ident_List_repeat : (forall t : base.type.type base, ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) t) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base nat)) (@type.base (base.type.type base) (@base.type.list base t)))))
+  | ident_List_combine : (forall t t0 : base.type.type base, ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.list base t)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.list base t0)) (@type.base (base.type.type base) (@base.type.list base (@base.type.prod base t t0))))))
+  | ident_List_map : (forall t t0 : base.type.type base, ident (@type.arrow (base.type.type base) (@type.arrow (base.type.type base) (@type.base (base.type.type base) t) (@type.base (base.type.type base) t0)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.list base t)) (@type.base (base.type.type base) (@base.type.list base t0)))))
+  | ident_List_app : (forall t : base.type.type base, ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.list base t)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.list base t)) (@type.base (base.type.type base) (@base.type.list base t)))))
+  | ident_List_rev : (forall t : base.type.type base, ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.list base t)) (@type.base (base.type.type base) (@base.type.list base t))))
+  | ident_List_flat_map : (forall t t0 : base.type.type base, ident (@type.arrow (base.type.type base) (@type.arrow (base.type.type base) (@type.base (base.type.type base) t) (@type.base (base.type.type base) (@base.type.list base t0))) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.list base t)) (@type.base (base.type.type base) (@base.type.list base t0)))))
+  | ident_List_partition : (forall t : base.type.type base, ident (@type.arrow (base.type.type base) (@type.arrow (base.type.type base) (@type.base (base.type.type base) t) (@type.base (base.type.type base) (@base.type.type_base base bool))) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.list base t)) (@type.base (base.type.type base) (@base.type.prod base (@base.type.list base t) (@base.type.list base t))))))
+  | ident_List_fold_right : (forall t t0 : base.type.type base, ident (@type.arrow (base.type.type base) (@type.arrow (base.type.type base) (@type.base (base.type.type base) t0) (@type.arrow (base.type.type base) (@type.base (base.type.type base) t) (@type.base (base.type.type base) t))) (@type.arrow (base.type.type base) (@type.base (base.type.type base) t) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.list base t0)) (@type.base (base.type.type base) t)))))
+  | ident_List_update_nth : (forall t : base.type.type base, ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base nat)) (@type.arrow (base.type.type base) (@type.arrow (base.type.type base) (@type.base (base.type.type base) t) (@type.base (base.type.type base) t)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.list base t)) (@type.base (base.type.type base) (@base.type.list base t))))))
+  | ident_List_nth_default : (forall t : base.type.type base, ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) t) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.list base t)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base nat)) (@type.base (base.type.type base) t)))))
+  | ident_eager_List_nth_default : (forall t : base.type.type base, ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) t) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.list base t)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base nat)) (@type.base (base.type.type base) t)))))
+  | ident_Z_add : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.base (base.type.type base) (@base.type.type_base base Z)))))
+  | ident_Z_mul : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.base (base.type.type base) (@base.type.type_base base Z)))))
+  | ident_Z_pow : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.base (base.type.type base) (@base.type.type_base base Z)))))
+  | ident_Z_sub : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.base (base.type.type base) (@base.type.type_base base Z)))))
+  | ident_Z_opp : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.base (base.type.type base) (@base.type.type_base base Z))))
+  | ident_Z_div : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.base (base.type.type base) (@base.type.type_base base Z)))))
+  | ident_Z_modulo : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.base (base.type.type base) (@base.type.type_base base Z)))))
+  | ident_Z_eqb : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.base (base.type.type base) (@base.type.type_base base bool)))))
+  | ident_Z_leb : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.base (base.type.type base) (@base.type.type_base base bool)))))
+  | ident_Z_ltb : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.base (base.type.type base) (@base.type.type_base base bool)))))
+  | ident_Z_geb : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.base (base.type.type base) (@base.type.type_base base bool)))))
+  | ident_Z_gtb : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.base (base.type.type base) (@base.type.type_base base bool)))))
+  | ident_Z_log2 : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.base (base.type.type base) (@base.type.type_base base Z))))
+  | ident_Z_log2_up : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.base (base.type.type base) (@base.type.type_base base Z))))
+  | ident_Z_of_nat : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base nat)) (@type.base (base.type.type base) (@base.type.type_base base Z))))
+  | ident_Z_to_nat : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.base (base.type.type base) (@base.type.type_base base nat))))
+  | ident_Z_shiftr : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.base (base.type.type base) (@base.type.type_base base Z)))))
+  | ident_Z_shiftl : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.base (base.type.type base) (@base.type.type_base base Z)))))
+  | ident_Z_land : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.base (base.type.type base) (@base.type.type_base base Z)))))
+  | ident_Z_lor : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.base (base.type.type base) (@base.type.type_base base Z)))))
+  | ident_Z_min : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.base (base.type.type base) (@base.type.type_base base Z)))))
+  | ident_Z_max : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.base (base.type.type base) (@base.type.type_base base Z)))))
+  | ident_Z_mul_split : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.base (base.type.type base) (@base.type.prod base (@base.type.type_base base Z) (@base.type.type_base base Z)))))))
+  | ident_Z_add_get_carry : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.base (base.type.type base) (@base.type.prod base (@base.type.type_base base Z) (@base.type.type_base base Z)))))))
+  | ident_Z_add_with_carry : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.base (base.type.type base) (@base.type.type_base base Z))))))
+  | ident_Z_add_with_get_carry : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.base (base.type.type base) (@base.type.prod base (@base.type.type_base base Z) (@base.type.type_base base Z))))))))
+  | ident_Z_sub_get_borrow : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.base (base.type.type base) (@base.type.prod base (@base.type.type_base base Z) (@base.type.type_base base Z)))))))
+  | ident_Z_sub_with_get_borrow : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.base (base.type.type base) (@base.type.prod base (@base.type.type_base base Z) (@base.type.type_base base Z))))))))
+  | ident_Z_zselect : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.base (base.type.type base) (@base.type.type_base base Z))))))
+  | ident_Z_add_modulo : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.base (base.type.type base) (@base.type.type_base base Z))))))
+  | ident_Z_truncating_shiftl : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.base (base.type.type base) (@base.type.type_base base Z))))))
+  | ident_Z_bneg : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.base (base.type.type base) (@base.type.type_base base Z))))
+  | ident_Z_lnot_modulo : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.base (base.type.type base) (@base.type.type_base base Z)))))
+  | ident_Z_rshi : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.base (base.type.type base) (@base.type.type_base base Z)))))))
+  | ident_Z_cc_m : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.base (base.type.type base) (@base.type.type_base base Z)))))
+  | ident_Z_combine_at_bitwidth : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.base (base.type.type base) (@base.type.type_base base Z))))))
+  | ident_Z_cast : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base zrange)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.base (base.type.type base) (@base.type.type_base base Z)))))
+  | ident_Z_cast2 : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.prod base (@base.type.type_base base zrange) (@base.type.type_base base zrange))) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.prod base (@base.type.type_base base Z) (@base.type.type_base base Z))) (@type.base (base.type.type base) (@base.type.prod base (@base.type.type_base base Z) (@base.type.type_base base Z))))))
+  | ident_Some : (forall t : base.type.type base, ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) t) (@type.base (base.type.type base) (@base.type.option base t))))
+  | ident_None : (forall t : base.type.type base, ident (@type.base (base.type.type base) (@base.type.option base t)))
+  | ident_option_rect : (forall t t0 : base.type.type base, ident (@type.arrow (base.type.type base) (@type.arrow (base.type.type base) (@type.base (base.type.type base) t) (@type.base (base.type.type base) t0)) (@type.arrow (base.type.type base) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.unit base)) (@type.base (base.type.type base) t0)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.option base t)) (@type.base (base.type.type base) t0)))))
+  | ident_Build_zrange : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.base (base.type.type base) (@base.type.type_base base zrange)))))
+  | ident_zrange_rect : (forall t : base.type.type base, ident (@type.arrow (base.type.type base) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base Z)) (@type.base (base.type.type base) t))) (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.type_base base zrange)) (@type.base (base.type.type base) t))))
+  | ident_fancy_add : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.prod base (@base.type.prod base (@base.type.type_base base Z) (@base.type.type_base base Z)) (@base.type.prod base (@base.type.type_base base Z) (@base.type.type_base base Z)))) (@type.base (base.type.type base) (@base.type.prod base (@base.type.type_base base Z) (@base.type.type_base base Z)))))
+  | ident_fancy_addc : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.prod base (@base.type.prod base (@base.type.type_base base Z) (@base.type.type_base base Z)) (@base.type.prod base (@base.type.prod base (@base.type.type_base base Z) (@base.type.type_base base Z)) (@base.type.type_base base Z)))) (@type.base (base.type.type base) (@base.type.prod base (@base.type.type_base base Z) (@base.type.type_base base Z)))))
+  | ident_fancy_sub : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.prod base (@base.type.prod base (@base.type.type_base base Z) (@base.type.type_base base Z)) (@base.type.prod base (@base.type.type_base base Z) (@base.type.type_base base Z)))) (@type.base (base.type.type base) (@base.type.prod base (@base.type.type_base base Z) (@base.type.type_base base Z)))))
+  | ident_fancy_subb : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.prod base (@base.type.prod base (@base.type.type_base base Z) (@base.type.type_base base Z)) (@base.type.prod base (@base.type.prod base (@base.type.type_base base Z) (@base.type.type_base base Z)) (@base.type.type_base base Z)))) (@type.base (base.type.type base) (@base.type.prod base (@base.type.type_base base Z) (@base.type.type_base base Z)))))
+  | ident_fancy_mulll : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.prod base (@base.type.type_base base Z) (@base.type.prod base (@base.type.type_base base Z) (@base.type.type_base base Z)))) (@type.base (base.type.type base) (@base.type.type_base base Z))))
+  | ident_fancy_mullh : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.prod base (@base.type.type_base base Z) (@base.type.prod base (@base.type.type_base base Z) (@base.type.type_base base Z)))) (@type.base (base.type.type base) (@base.type.type_base base Z))))
+  | ident_fancy_mulhl : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.prod base (@base.type.type_base base Z) (@base.type.prod base (@base.type.type_base base Z) (@base.type.type_base base Z)))) (@type.base (base.type.type base) (@base.type.type_base base Z))))
+  | ident_fancy_mulhh : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.prod base (@base.type.type_base base Z) (@base.type.prod base (@base.type.type_base base Z) (@base.type.type_base base Z)))) (@type.base (base.type.type base) (@base.type.type_base base Z))))
+  | ident_fancy_rshi : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.prod base (@base.type.prod base (@base.type.type_base base Z) (@base.type.type_base base Z)) (@base.type.prod base (@base.type.type_base base Z) (@base.type.type_base base Z)))) (@type.base (base.type.type base) (@base.type.type_base base Z))))
+  | ident_fancy_selc : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.prod base (@base.type.prod base (@base.type.type_base base Z) (@base.type.type_base base Z)) (@base.type.type_base base Z))) (@type.base (base.type.type base) (@base.type.type_base base Z))))
+  | ident_fancy_selm : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.prod base (@base.type.type_base base Z) (@base.type.prod base (@base.type.prod base (@base.type.type_base base Z) (@base.type.type_base base Z)) (@base.type.type_base base Z)))) (@type.base (base.type.type base) (@base.type.type_base base Z))))
+  | ident_fancy_sell : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.prod base (@base.type.prod base (@base.type.type_base base Z) (@base.type.type_base base Z)) (@base.type.type_base base Z))) (@type.base (base.type.type base) (@base.type.type_base base Z))))
+  | ident_fancy_addm : (ident (@type.arrow (base.type.type base) (@type.base (base.type.type base) (@base.type.prod base (@base.type.prod base (@base.type.type_base base Z) (@base.type.type_base base Z)) (@base.type.type_base base Z))) (@type.base (base.type.type base) (@base.type.type_base base Z))))
+  .
+
   Definition index_of_base : base -> Datatypes.nat
     := ltac:(make_index_of_base base).
 
@@ -447,6 +993,82 @@ Module Compilers.
   Definition base_interp := ltac:(make_base_interp (@eta_base_cps) base_type_list index_of_base).
 
   Local Notation base_type_interp := (base.interp base_interp).
+
+  Definition all_base := ltac:(make_all_base base).
+  Definition all_base_and_interp := ltac:(make_all_base_and_interp all_base base_interp).
+  Definition index_of_ident := ltac:(make_index_of_ident ident).
+
+  Definition ident_interp : forall {t}, ident t -> type.interp base_type_interp t
+    := ltac:(make_ident_interp base_interp ident index_of_ident all_ident_named_interped).
+
+  Definition base_eq_dec := ltac:(make_base_eq_dec base).
+
+  Definition base_beq_and_reflect := ltac:(make_base_beq_and_reflect base).
+  Definition base_beq := ltac:(make_base_beq base_beq_and_reflect).
+  Definition reflect_base_beq : reflect_rel (@eq base) base_beq := ltac:(make_reflect_base_beq base_beq_and_reflect).
+
+  Definition baseHasNatAndCorrect := ltac:(make_baseHasNatAndCorrect base_interp).
+  Definition baseHasNat : base.type.BaseTypeHasNatT base := ltac:(make_baseHasNat baseHasNatAndCorrect).
+  Definition baseHasNatCorrect : base.BaseHasNatCorrectT base_interp := ltac:(make_baseHasNatCorrect baseHasNatAndCorrect).
+
+  Definition base_interp_beq : forall {t}, base_interp t -> base_interp t -> Datatypes.bool
+    := ltac:(make_base_interp_beq base_interp).
+
+  Definition reflect_base_interp_eq : forall {t}, reflect_rel (@eq (base_interp t)) (@base_interp_beq t)
+    := ltac:(make_reflect_base_interp_eq base_interp (@base_interp_beq)).
+
+  Definition try_make_base_transport_cps : @type.try_make_transport_cpsT base
+    := ltac:(make_try_make_base_transport_cps base_eq_dec (@eta_base_cps)).
+
+  Definition try_make_base_transport_cps_correct : @type.try_make_transport_cps_correctT base base_beq try_make_base_transport_cps reflect_base_beq
+    := ltac:(make_try_make_base_transport_cps_correct try_make_base_transport_cps reflect_base_beq).
+
+  Definition all_idents := ltac:(make_all_idents ident).
+  Definition all_ident_and_interp := ltac:(make_all_ident_and_interp all_idents all_ident_named_interped).
+
+  Local Ltac do_reify_ident := reify_ident_via_list base base_interp all_base_and_interp all_ident_and_interp (@ident_interp).
+
+  Definition buildEagerIdentAndInterpCorrect := ltac:(make_buildEagerIdentAndInterpCorrect (@ident_interp) baseHasNat baseHasNatCorrect ltac:(do_reify_ident)).
+
+  Definition buildEagerIdent : ident.BuildEagerIdentT ident
+    := ltac:(make_buildEagerIdent buildEagerIdentAndInterpCorrect).
+  Definition buildInterpEagerIdentCorrect : @ident.BuildInterpEagerIdentCorrectT _ _ _ (@ident_interp) _ buildEagerIdent baseHasNatCorrect
+    := ltac:(make_buildInterpEagerIdentCorrect buildEagerIdentAndInterpCorrect).
+
+  Definition toRestrictedIdentAndCorrect := ltac:(make_toRestrictedIdentAndCorrect baseHasNat buildEagerIdent).
+  Definition toRestrictedIdent : @ident.ToRestrictedIdentT _ ident baseHasNat
+    := ltac:(make_toRestrictedIdent toRestrictedIdentAndCorrect).
+  Definition toFromRestrictedIdent : @ident.ToFromRestrictedIdentT _ ident baseHasNat buildEagerIdent toRestrictedIdent
+    := ltac:(make_toFromRestrictedIdent toRestrictedIdentAndCorrect).
+
+  Definition buildIdentAndInterpCorrect
+    := ltac:(make_buildIdentAndInterpCorrect (@ident_interp) ltac:(do_reify_ident)).
+  Definition buildIdent : @ident.BuildIdentT base base_interp ident
+    := ltac:(make_buildIdent buildIdentAndInterpCorrect).
+  Definition buildInterpIdentCorrect
+    : @ident.BuildInterpIdentCorrectT base base_interp ident buildIdent (@ident_interp)
+    := ltac:(make_buildInterpIdentCorrect buildIdentAndInterpCorrect).
+
+  Definition ident_is_var_like : forall {t} (idc : ident t), Datatypes.bool
+    := ltac:(make_ident_is_var_like ident (@ident_interp) var_like_idents).
+
+  Definition eqv_Reflexive_Proper : forall {t} (idc : ident t), Proper type.eqv (@ident_interp t idc)
+    := ltac:(make_eqv_Reflexive_Proper (@ident_interp) base_interp).
+
+  Definition ident_interp_Proper : forall {t}, Proper (eq ==> type.eqv) (@ident_interp t)
+    := ltac:(make_ident_interp_Proper (@eqv_Reflexive_Proper)).
+
+  Definition invertIdentAndCorrect := ltac:(make_invertIdentAndCorrect (@base_type) base_interp buildIdent reflect_base_beq).
+  Definition invertIdent : @invert_expr.InvertIdentT base base_interp ident
+    := ltac:(make_invertIdent invertIdentAndCorrect).
+  Definition buildInvertIdentCorrect : @invert_expr.BuildInvertIdentCorrectT base base_interp ident invertIdent buildIdent
+    := ltac:(make_buildInvertIdentCorrect invertIdentAndCorrect).
+
+  Definition base_default : @DefaultValue.type.base.DefaultT base base_interp
+    := ltac:(make_base_default base_interp).
+
+  Definition exprInfoAndExprExtraInfo : GoalType.package
+    := ltac:(make_exprInfoAndExprExtraInfo base ident base_interp (@ident_interp) base_default (@reflect_base_interp_eq) try_make_base_transport_cps_correct toFromRestrictedIdent buildInvertIdentCorrect (@buildInterpIdentCorrect) buildInterpEagerIdentCorrect (@ident_interp_Proper)).
 
   Ltac reify_base ty :=
     let __ := Reify.debug_enter_reify_base_type ty in
@@ -462,226 +1084,6 @@ Module Compilers.
     end.
   Ltac reify_base_type ty := Language.Compilers.base.reify base reify_base ty.
   Ltac reify_type ty := Language.Compilers.type.reify reify_base_type constr:(base_type) ty.
-
-  Bind Scope etype_scope with base.
-
-  Section ident.
-    Import Language.Compilers.ident.
-    Local Notation type := (type base_type).
-    Local Notation ttype := type.
-
-    Section with_base.
-      Let type_base (x : Compilers.base) : base_type := base.type.type_base x.
-      Let base {bt} (x : Language.Compilers.base.type bt) : type.type _ := type.base x.
-      Local Coercion base : base.type >-> type.type.
-      Local Coercion type_base : Compilers.base >-> base.type.
-      Section with_scope.
-        Import base.type.
-        Local Notation nat := Compilers.nat.
-        Notation type := ttype.
-        (* N.B. [ident] must have essentially flat structure for the
-           python script constructing [pattern.ident] to work *)
-        Inductive ident : type -> Type :=
-        | ident_Literal {t:Compilers.base} (v : base_interp t) : ident t
-        | ident_Nat_succ : ident (nat -> nat)
-        | ident_Nat_pred : ident (nat -> nat)
-        | ident_Nat_max : ident (nat -> nat -> nat)
-        | ident_Nat_mul : ident (nat -> nat -> nat)
-        | ident_Nat_add : ident (nat -> nat -> nat)
-        | ident_Nat_sub : ident (nat -> nat -> nat)
-        | ident_Nat_eqb : ident (nat -> nat -> bool)
-        | ident_nil {t} : ident (list t)
-        | ident_cons {t:base_type} : ident (t -> list t -> list t)
-        | ident_tt : ident unit
-        | ident_pair {A B:base_type} : ident (A -> B -> A * B)
-        | ident_fst {A B} : ident (A * B -> A)
-        | ident_snd {A B} : ident (A * B -> B)
-        | ident_prod_rect {A B T:base_type} : ident ((A -> B -> T) -> A * B -> T)
-        | ident_bool_rect {T:base_type} : ident ((unit -> T) -> (unit -> T) -> bool -> T)
-        | ident_nat_rect {P:base_type} : ident ((unit -> P) -> (nat -> P -> P) -> nat -> P)
-        | ident_nat_rect_arrow {P Q:base_type} : ident ((P -> Q) -> (nat -> (P -> Q) -> (P -> Q)) -> nat -> P -> Q)
-        | ident_eager_nat_rect {P:base_type} : ident ((unit -> P) -> (nat -> P -> P) -> nat -> P)
-        | ident_eager_nat_rect_arrow {P Q:base_type} : ident ((P -> Q) -> (nat -> (P -> Q) -> (P -> Q)) -> nat -> P -> Q)
-        | ident_list_rect {A P:base_type} : ident ((unit -> P) -> (A -> list A -> P -> P) -> list A -> P)
-        | ident_list_rect_arrow {A P Q:base_type} : ident ((P -> Q) -> (A -> list A -> (P -> Q) -> (P -> Q)) -> list A -> P -> Q)
-        | ident_eager_list_rect {A P:base_type} : ident ((unit -> P) -> (A -> list A -> P -> P) -> list A -> P)
-        | ident_eager_list_rect_arrow {A P Q:base_type} : ident ((P -> Q) -> (A -> list A -> (P -> Q) -> (P -> Q)) -> list A -> P -> Q)
-        | ident_list_case {A P:base_type} : ident ((unit -> P) -> (A -> list A -> P) -> list A -> P)
-        | ident_List_length {T} : ident (list T -> nat)
-        | ident_List_seq : ident (nat -> nat -> list nat)
-        | ident_List_firstn {A:base_type} : ident (nat -> list A -> list A)
-        | ident_List_skipn {A:base_type} : ident (nat -> list A -> list A)
-        | ident_List_repeat {A:base_type} : ident (A -> nat -> list A)
-        | ident_List_combine {A B} : ident (list A -> list B -> list (A * B))
-        | ident_List_map {A B:base_type} : ident ((A -> B) -> list A -> list B)
-        | ident_List_app {A} : ident (list A -> list A -> list A)
-        | ident_List_rev {A} : ident (list A -> list A)
-        | ident_List_flat_map {A B:base_type} : ident ((A -> (list B)) -> list A -> (list B))
-        | ident_List_partition {A:base_type} : ident ((A -> bool) -> list A -> (list A * list A))
-        | ident_List_fold_right {A B:base_type} : ident ((B -> A -> A) -> A -> list B -> A)
-        | ident_List_update_nth {T:base_type} : ident (nat -> (T -> T) -> list T -> list T)
-        | ident_List_nth_default {T:base_type} : ident (T -> list T -> nat -> T)
-        | ident_eager_List_nth_default {T:base_type} : ident (T -> list T -> nat -> T)
-        | ident_Z_add : ident (Z -> Z -> Z)
-        | ident_Z_mul : ident (Z -> Z -> Z)
-        | ident_Z_pow : ident (Z -> Z -> Z)
-        | ident_Z_sub : ident (Z -> Z -> Z)
-        | ident_Z_opp : ident (Z -> Z)
-        | ident_Z_div : ident (Z -> Z -> Z)
-        | ident_Z_modulo : ident (Z -> Z -> Z)
-        | ident_Z_log2 : ident (Z -> Z)
-        | ident_Z_log2_up : ident (Z -> Z)
-        | ident_Z_eqb : ident (Z -> Z -> bool)
-        | ident_Z_leb : ident (Z -> Z -> bool)
-        | ident_Z_ltb : ident (Z -> Z -> bool)
-        | ident_Z_geb : ident (Z -> Z -> bool)
-        | ident_Z_gtb : ident (Z -> Z -> bool)
-        | ident_Z_of_nat : ident (nat -> Z)
-        | ident_Z_to_nat : ident (Z -> nat)
-        | ident_Z_shiftr : ident (Z -> Z -> Z)
-        | ident_Z_shiftl : ident (Z -> Z -> Z)
-        | ident_Z_land : ident (Z -> Z -> Z)
-        | ident_Z_lor : ident (Z -> Z -> Z)
-        | ident_Z_min : ident (Z -> Z -> Z)
-        | ident_Z_max : ident (Z -> Z -> Z)
-        | ident_Z_bneg : ident (Z -> Z)
-        | ident_Z_lnot_modulo : ident (Z -> Z -> Z)
-        | ident_Z_truncating_shiftl : ident (Z -> Z -> Z -> Z)
-        | ident_Z_mul_split : ident (Z -> Z -> Z -> Z * Z)
-        | ident_Z_add_get_carry : ident (Z -> Z -> Z -> (Z * Z))
-        | ident_Z_add_with_carry : ident (Z -> Z -> Z -> Z)
-        | ident_Z_add_with_get_carry : ident (Z -> Z -> Z -> Z -> (Z * Z))
-        | ident_Z_sub_get_borrow : ident (Z -> Z -> Z -> (Z * Z))
-        | ident_Z_sub_with_get_borrow : ident (Z -> Z -> Z -> Z -> (Z * Z))
-        | ident_Z_zselect : ident (Z -> Z -> Z -> Z)
-        | ident_Z_add_modulo : ident (Z -> Z -> Z -> Z)
-        | ident_Z_rshi : ident (Z -> Z -> Z -> Z -> Z)
-        | ident_Z_cc_m : ident (Z -> Z -> Z)
-        | ident_Z_combine_at_bitwidth : ident (Z -> Z -> Z -> Z)
-        | ident_Z_cast : ident (zrange -> Z -> Z)
-        | ident_Z_cast2 : ident ((zrange * zrange) -> (Z * Z) -> (Z * Z))
-        | ident_Some {A:base_type} : ident (A -> option A)
-        | ident_None {A:base_type} : ident (option A)
-        | ident_option_rect {A P : base_type} : ident ((A -> P) -> (unit -> P) -> option A -> P)
-        | ident_Build_zrange : ident (Z -> Z -> zrange)
-        | ident_zrange_rect {P:base_type} : ident ((Z -> Z -> P) -> zrange -> P)
-        | ident_fancy_add : ident ((Z * Z) * (Z * Z) -> Z * Z)
-        | ident_fancy_addc : ident ((Z * Z) * (Z * Z * Z) -> Z * Z)
-        | ident_fancy_sub : ident ((Z * Z) * (Z * Z) -> Z * Z)
-        | ident_fancy_subb : ident ((Z * Z) * (Z * Z * Z) -> Z * Z)
-        | ident_fancy_mulll : ident (Z * (Z * Z) -> Z)
-        | ident_fancy_mullh : ident (Z * (Z * Z) -> Z)
-        | ident_fancy_mulhl : ident (Z * (Z * Z) -> Z)
-        | ident_fancy_mulhh : ident (Z * (Z * Z) -> Z)
-        | ident_fancy_rshi : ident ((Z * Z) * (Z * Z) -> Z)
-        | ident_fancy_selc : ident (Z * Z * Z -> Z)
-        | ident_fancy_selm : ident (Z * (Z * Z * Z) -> Z)
-        | ident_fancy_sell : ident (Z * Z * Z -> Z)
-        | ident_fancy_addm : ident (Z * Z * Z -> Z)
-        .
-      End with_scope.
-    End with_base.
-  End ident.
-
-  Definition ident_interp {t} (idc : ident t) : type.interp base_type_interp t
-    := match idc in ident t return type.interp base_type_interp t with
-       | ident_Literal _ v => ident.literal v
-       | ident_Nat_succ => Nat.succ
-       | ident_Nat_pred => Nat.pred
-       | ident_Nat_max => Nat.max
-       | ident_Nat_mul => Nat.mul
-       | ident_Nat_add => Nat.add
-       | ident_Nat_sub => Nat.sub
-       | ident_Nat_eqb => Nat.eqb
-       | ident_nil t => Datatypes.nil
-       | ident_cons t => Datatypes.cons
-       | ident_tt => Datatypes.tt
-       | ident_pair A B => Datatypes.pair
-       | ident_fst A B => Datatypes.fst
-       | ident_snd A B => Datatypes.snd
-       | ident_prod_rect A B T => @prod_rect_nodep _ _ _
-       | ident_bool_rect T => @ident.Thunked.bool_rect _
-       | ident_nat_rect P => @ident.Thunked.nat_rect _
-       | ident_eager_nat_rect P => ident.eagerly (@ident.Thunked.nat_rect) _
-       | ident_nat_rect_arrow P Q => @nat_rect_nodep _
-       | ident_eager_nat_rect_arrow P Q => ident.eagerly (@nat_rect_nodep) _
-       | ident_list_rect A P => @ident.Thunked.list_rect _ _
-       | ident_eager_list_rect A P => ident.eagerly (@ident.Thunked.list_rect) _ _
-       | ident_list_rect_arrow A P Q => @list_rect_nodep _ _
-       | ident_eager_list_rect_arrow A P Q => ident.eagerly (@list_rect_nodep) _ _
-       | ident_list_case A P => @ident.Thunked.list_case _ _
-       | ident_List_length T => @List.length _
-       | ident_List_seq => List.seq
-       | ident_List_firstn A => @List.firstn _
-       | ident_List_skipn A => @List.skipn _
-       | ident_List_repeat A => @repeat _
-       | ident_List_combine A B => @List.combine _ _
-       | ident_List_map A B => @List.map _ _
-       | ident_List_app A => @List.app _
-       | ident_List_rev A => @List.rev _
-       | ident_List_flat_map A B => @List.flat_map _ _
-       | ident_List_partition A => @List.partition _
-       | ident_List_fold_right A B => @List.fold_right _ _
-       | ident_List_update_nth T => update_nth
-       | ident_List_nth_default T => @nth_default _
-       | ident_eager_List_nth_default T => @nth_default _
-       | ident_Z_add => Z.add
-       | ident_Z_mul => Z.mul
-       | ident_Z_pow => Z.pow
-       | ident_Z_sub => Z.sub
-       | ident_Z_opp => Z.opp
-       | ident_Z_div => Z.div
-       | ident_Z_modulo => Z.modulo
-       | ident_Z_eqb => Z.eqb
-       | ident_Z_leb => Z.leb
-       | ident_Z_ltb => Z.ltb
-       | ident_Z_geb => Z.geb
-       | ident_Z_gtb => Z.gtb
-       | ident_Z_log2 => Z.log2
-       | ident_Z_log2_up => Z.log2_up
-       | ident_Z_of_nat => Z.of_nat
-       | ident_Z_to_nat => Z.to_nat
-       | ident_Z_shiftr => Z.shiftr
-       | ident_Z_shiftl => Z.shiftl
-       | ident_Z_land => Z.land
-       | ident_Z_lor => Z.lor
-       | ident_Z_min => Z.min
-       | ident_Z_max => Z.max
-       | ident_Z_mul_split => Z.mul_split
-       | ident_Z_add_get_carry => Z.add_get_carry_full
-       | ident_Z_add_with_carry => Z.add_with_carry
-       | ident_Z_add_with_get_carry => Z.add_with_get_carry_full
-       | ident_Z_sub_get_borrow => Z.sub_get_borrow_full
-       | ident_Z_sub_with_get_borrow => Z.sub_with_get_borrow_full
-       | ident_Z_zselect => Z.zselect
-       | ident_Z_add_modulo => Z.add_modulo
-       | ident_Z_truncating_shiftl => Z.truncating_shiftl
-       | ident_Z_bneg => Z.bneg
-       | ident_Z_lnot_modulo => Z.lnot_modulo
-       | ident_Z_rshi => Z.rshi
-       | ident_Z_cc_m => Z.cc_m
-       | ident_Z_combine_at_bitwidth => Z.combine_at_bitwidth
-       | ident_Z_cast => ident.cast
-       | ident_Z_cast2 => ident.cast2
-       | ident_Some A => @Datatypes.Some _
-       | ident_None A => @Datatypes.None _
-       | ident_option_rect A P => @ident.Thunked.option_rect _ _
-       | ident_Build_zrange => ZRange.Build_zrange
-       | ident_zrange_rect A => @ZRange.zrange_rect_nodep _
-       | ident_fancy_add => ident.fancy.add
-       | ident_fancy_addc => ident.fancy.addc
-       | ident_fancy_sub => ident.fancy.sub
-       | ident_fancy_subb => ident.fancy.subb
-       | ident_fancy_mulll => ident.fancy.mulll
-       | ident_fancy_mullh => ident.fancy.mullh
-       | ident_fancy_mulhl => ident.fancy.mulhl
-       | ident_fancy_mulhh => ident.fancy.mulhh
-       | ident_fancy_rshi => ident.fancy.rshi
-       | ident_fancy_selc => ident.fancy.selc
-       | ident_fancy_selm => ident.fancy.selm
-       | ident_fancy_sell => ident.fancy.sell
-       | ident_fancy_addm => ident.fancy.addm
-       end.
 
   (** TODO: MOVE ME? *)
   Ltac require_primitive_const_extra term := fail 0 "Not a known const:" term.
@@ -755,152 +1157,53 @@ Module Compilers.
         => let rA := reify_base_type A in
            let rB := reify_base_type B in
            then_tac (@ident_pair rA rB)
-      | @Datatypes.bool_rect ?T0 ?Ptrue ?Pfalse
-        => lazymatch (eval cbv beta in T0) with
-           | fun _ => ?T => reify_rec (@bool_rect_nodep T Ptrue Pfalse)
-           | T0 => else_tac ()
-           | ?T' => reify_rec (@Datatypes.bool_rect T' Ptrue Pfalse)
-           end
-      | @bool_rect_nodep ?T ?Ptrue ?Pfalse
-        => reify_rec (@ident.Thunked.bool_rect T (fun _ : Datatypes.unit => Ptrue) (fun _ : Datatypes.unit => Pfalse))
       | @ident.Thunked.bool_rect ?T
         => let rT := reify_base_type T in
            then_tac (@ident_bool_rect rT)
-      | @Datatypes.option_rect ?A ?T0 ?PSome ?PNone
-        => lazymatch (eval cbv beta in T0) with
-           | fun _ => ?T => reify_rec (@option_rect_nodep A T PSome PNone)
-           | T0 => else_tac ()
-           | ?T' => reify_rec (@Datatypes.option_rect A T' PSome PNone)
-           end
-      | @option_rect_nodep ?A ?T ?PSome ?PNone
-        => reify_rec (@ident.Thunked.option_rect A T PSome (fun _ : Datatypes.unit => PNone))
       | @ident.Thunked.option_rect ?A ?T
         => let rA := reify_base_type A in
            let rT := reify_base_type T in
            then_tac (@ident_option_rect rA rT)
-      | @Datatypes.prod_rect ?A ?B ?T0
-        => lazymatch (eval cbv beta in T0) with
-           | fun _ => ?T => reify_rec (@prod_rect_nodep A B T)
-           | T0 => else_tac ()
-           | ?T' => reify_rec (@Datatypes.prod_rect A B T')
-           end
       | @prod_rect_nodep ?A ?B ?T
         => let rA := reify_base_type A in
            let rB := reify_base_type B in
            let rT := reify_base_type T in
            then_tac (@ident_prod_rect rA rB rT)
-      | @ZRange.zrange_rect ?T0
-        => lazymatch (eval cbv beta in T0) with
-           | fun _ => ?T => reify_rec (@ZRange.zrange_rect_nodep T)
-           | T0 => else_tac ()
-           | ?T' => reify_rec (@ZRange.zrange_rect T')
-           end
       | @ZRange.zrange_rect_nodep ?T
         => let rT := reify_base_type T in
            then_tac (@ident_zrange_rect rT)
-      | @Datatypes.nat_rect ?T0 ?P0
-        => lazymatch (eval cbv beta in T0) with
-           | fun _ => ?T => reify_rec (@nat_rect_nodep T P0)
-           | T0 => else_tac ()
-           | ?T' => reify_rec (@Datatypes.nat_rect T' P0)
-           end
-      | @nat_rect_nodep ?T ?P0
-        => lazymatch T with
-           | ?P -> ?Q => else_tac ()
-           | _ => reify_rec (@ident.Thunked.nat_rect T (fun _ : Datatypes.unit => P0))
-           end
-      | @nat_rect_nodep ?T
-        => lazymatch T with
-           | ?P -> ?Q
-             => let rP := reify_base_type P in
-                let rQ := reify_base_type Q in
-                then_tac (@ident_nat_rect_arrow rP rQ)
-           | _ => else_tac ()
-           end
+      | @nat_rect_arrow_nodep ?P ?Q
+        => let rP := reify_base_type P in
+           let rQ := reify_base_type Q in
+           then_tac (@ident_nat_rect_arrow rP rQ)
       | @ident.Thunked.nat_rect ?T
         => let rT := reify_base_type T in
            then_tac (@ident_nat_rect rT)
-      | ident.eagerly (@Datatypes.nat_rect) ?T0 ?P0
-        => lazymatch (eval cbv beta in T0) with
-           | fun _ => ?T => reify_rec (ident.eagerly (@nat_rect_nodep) T P0)
-           | T0 => else_tac ()
-           | ?T' => reify_rec (ident.eagerly (@Datatypes.nat_rect) T' P0)
-           end
-      | ident.eagerly (@nat_rect_nodep) ?T ?P0
-        => lazymatch T with
-           | ?P -> ?Q => else_tac ()
-           | _ => reify_rec (ident.eagerly (@ident.Thunked.nat_rect) T (fun _ : Datatypes.unit => P0))
-           end
-      | ident.eagerly (@nat_rect_nodep) ?T
-        => lazymatch T with
-           | ?P -> ?Q
-             => let rP := reify_base_type P in
-                let rQ := reify_base_type Q in
-                then_tac (@ident_eager_nat_rect_arrow rP rQ)
-           | _ => else_tac ()
-           end
+      | ident.eagerly (@nat_rect_arrow_nodep) ?P ?Q
+        => let rP := reify_base_type P in
+           let rQ := reify_base_type Q in
+           then_tac (@ident_eager_nat_rect_arrow rP rQ)
       | ident.eagerly (@ident.Thunked.nat_rect) ?T
         => let rT := reify_base_type T in
            then_tac (@ident_eager_nat_rect rT)
-      | @Datatypes.list_rect ?A ?T0 ?Pnil
-        => lazymatch (eval cbv beta in T0) with
-           | fun _ => ?T => reify_rec (@list_rect_nodep A T Pnil)
-           | T0 => else_tac ()
-           | ?T' => reify_rec (@Datatypes.list_rect A T' Pnil)
-           end
-      | @list_rect_nodep ?A ?T ?Pnil
-        => lazymatch T with
-           | _ -> _ => else_tac ()
-           | _ => reify_rec (@ident.Thunked.list_rect A T (fun _ : Datatypes.unit => Pnil))
-           end
-      | @list_rect_nodep ?A ?T
-        => lazymatch T with
-           | ?P -> ?Q
-             => let rA := reify_base_type A in
-                let rP := reify_base_type P in
-                let rQ := reify_base_type Q in
-                then_tac (@ident_list_rect_arrow rA rP rQ)
-           | _ => else_tac ()
-           end
+      | @list_rect_arrow_nodep ?A ?P ?Q
+        => let rA := reify_base_type A in
+           let rP := reify_base_type P in
+           let rQ := reify_base_type Q in
+           then_tac (@ident_list_rect_arrow rA rP rQ)
       | @ident.Thunked.list_rect ?A ?T
         => let rA := reify_base_type A in
            let rT := reify_base_type T in
            then_tac (@ident_list_rect rA rT)
-      | ident.eagerly (@Datatypes.list_rect) ?A ?T0 ?Pnil
-        => lazymatch (eval cbv beta in T0) with
-           | fun _ => ?T => reify_rec (ident.eagerly (@list_rect_nodep) A T Pnil)
-           | T0 => else_tac ()
-           | ?T' => reify_rec (ident.eagerly (@Datatypes.list_rect) A T' Pnil)
-           end
-      | ident.eagerly (@list_rect_nodep) ?A ?T ?Pnil
-        => lazymatch T with
-           | _ -> _ => else_tac ()
-           | _ => reify_rec (ident.eagerly (@ident.Thunked.list_rect) A T (fun _ : Datatypes.unit => Pnil))
-           end
-      | ident.eagerly (@list_rect_nodep) ?A ?T
-        => lazymatch T with
-           | ?P -> ?Q
-             => let rA := reify_base_type A in
-                let rP := reify_base_type P in
-                let rQ := reify_base_type Q in
-                then_tac (@ident_eager_list_rect_arrow rA rP rQ)
-           | _ => else_tac ()
-           end
+      | ident.eagerly (@list_rect_arrow_nodep) ?A ?P ?Q
+        => let rA := reify_base_type A in
+           let rP := reify_base_type P in
+           let rQ := reify_base_type Q in
+           then_tac (@ident_eager_list_rect_arrow rA rP rQ)
       | ident.eagerly (@ident.Thunked.list_rect) ?A ?T
         => let rA := reify_base_type A in
            let rT := reify_base_type T in
            then_tac (@ident_eager_list_rect rA rT)
-      | @ListUtil.list_case ?A ?T0 ?Pnil
-        => lazymatch (eval cbv beta in T0) with
-           | fun _ => ?T => reify_rec (@ListUtil.list_case_nodep A T Pnil)
-           | T0 => else_tac ()
-           | ?T' => reify_rec (@ListUtil.list_case A T' Pnil)
-           end
-      | @ListUtil.list_case_nodep ?A ?T ?Pnil
-        => lazymatch T with
-           | _ -> _ => else_tac ()
-           | _ => reify_rec (@ident.Thunked.list_case A T (fun _ : Datatypes.unit => Pnil))
-           end
       | @ident.Thunked.list_case ?A ?T
         => let rA := reify_base_type A in
            let rT := reify_base_type T in
@@ -1015,76 +1318,11 @@ Module Compilers.
       | ident.fancy.selm => then_tac ident_fancy_selm
       | ident.fancy.sell => then_tac ident_fancy_sell
       | ident.fancy.addm => then_tac ident_fancy_addm
-      | ident.eagerly (?f ?x) => reify_rec (ident.eagerly f x)
       | @ident_interp _ ?idc => then_tac idc
       | _ => else_tac ()
       end
     end.
 
-  Definition base_eq_dec := ltac:(make_base_eq_dec base).
-
-  Definition base_beq_and_reflect := ltac:(make_base_beq_and_reflect base).
-  Definition base_beq := ltac:(make_base_beq base_beq_and_reflect).
-  Definition reflect_base_beq : reflect_rel (@eq base) base_beq := ltac:(make_reflect_base_beq base_beq_and_reflect).
-
-  Definition baseHasNatAndCorrect := ltac:(make_baseHasNatAndCorrect base_interp).
-  Definition baseHasNat : base.type.BaseTypeHasNatT base := ltac:(make_baseHasNat baseHasNatAndCorrect).
-  Definition baseHasNatCorrect : base.BaseHasNatCorrectT base_interp := ltac:(make_baseHasNatCorrect baseHasNatAndCorrect).
-
-  Definition base_interp_beq : forall {t}, base_interp t -> base_interp t -> Datatypes.bool
-    := ltac:(make_base_interp_beq base_interp).
-
-  Definition reflect_base_interp_eq : forall {t}, reflect_rel (@eq (base_interp t)) (@base_interp_beq t)
-    := ltac:(make_reflect_base_interp_eq base_interp (@base_interp_beq)).
-
-  Definition try_make_base_transport_cps : @type.try_make_transport_cpsT base
-    := ltac:(make_try_make_base_transport_cps base_eq_dec (@eta_base_cps)).
-
-  Definition try_make_base_transport_cps_correct : @type.try_make_transport_cps_correctT base base_beq try_make_base_transport_cps reflect_base_beq
-    := ltac:(make_try_make_base_transport_cps_correct try_make_base_transport_cps reflect_base_beq).
-
-  Definition buildEagerIdentAndInterpCorrect := ltac:(make_buildEagerIdentAndInterpCorrect (@ident_interp) baseHasNat baseHasNatCorrect ltac:(reify_ident)).
-
-  Definition buildEagerIdent : ident.BuildEagerIdentT ident
-    := ltac:(make_buildEagerIdent buildEagerIdentAndInterpCorrect).
-  Definition buildInterpEagerIdentCorrect : @ident.BuildInterpEagerIdentCorrectT _ _ _ (@ident_interp) _ buildEagerIdent baseHasNatCorrect
-    := ltac:(make_buildInterpEagerIdentCorrect buildEagerIdentAndInterpCorrect).
-
-  Definition toRestrictedIdentAndCorrect := ltac:(make_toRestrictedIdentAndCorrect baseHasNat buildEagerIdent).
-  Definition toRestrictedIdent : @ident.ToRestrictedIdentT _ ident baseHasNat
-    := ltac:(make_toRestrictedIdent toRestrictedIdentAndCorrect).
-  Definition toFromRestrictedIdent : @ident.ToFromRestrictedIdentT _ ident baseHasNat buildEagerIdent toRestrictedIdent
-    := ltac:(make_toFromRestrictedIdent toRestrictedIdentAndCorrect).
-
-
-  Definition buildIdentAndInterpCorrect
-    := ltac:(make_buildIdentAndInterpCorrect (@ident_interp) ltac:(reify_ident)).
-  Definition buildIdent : @ident.BuildIdentT base base_interp ident
-    := ltac:(make_buildIdent buildIdentAndInterpCorrect).
-  Definition buildInterpIdentCorrect
-    : @ident.BuildInterpIdentCorrectT base base_interp ident buildIdent (@ident_interp)
-    := ltac:(make_buildInterpIdentCorrect buildIdentAndInterpCorrect).
-
-  Definition ident_is_var_like : forall {t} (idc : ident t), Datatypes.bool
-    := ltac:(make_ident_is_var_like ident (@ident_interp) var_like_idents).
-
-  Definition eqv_Reflexive_Proper : forall {t} (idc : ident t), Proper type.eqv (@ident_interp t idc)
-    := ltac:(make_eqv_Reflexive_Proper (@ident_interp) base_interp).
-
-  Definition ident_interp_Proper : forall {t}, Proper (eq ==> type.eqv) (@ident_interp t)
-    := ltac:(make_ident_interp_Proper (@eqv_Reflexive_Proper)).
-
-  Definition invertIdentAndCorrect := ltac:(make_invertIdentAndCorrect (@base_type) base_interp buildIdent reflect_base_beq).
-  Definition invertIdent : @invert_expr.InvertIdentT base base_interp ident
-    := ltac:(make_invertIdent invertIdentAndCorrect).
-  Definition buildInvertIdentCorrect : @invert_expr.BuildInvertIdentCorrectT base base_interp ident invertIdent buildIdent
-    := ltac:(make_buildInvertIdentCorrect invertIdentAndCorrect).
-
-  Definition base_default : @DefaultValue.type.base.DefaultT base base_interp
-    := ltac:(make_base_default base_interp).
-
-  Definition exprInfoAndExprExtraInfo : GoalType.package
-    := ltac:(make_exprInfoAndExprExtraInfo base ident base_interp (@ident_interp) base_default (@reflect_base_interp_eq) try_make_base_transport_cps_correct toFromRestrictedIdent buildInvertIdentCorrect (@buildInterpIdentCorrect) buildInterpEagerIdentCorrect (@ident_interp_Proper)).
 
   Global Strategy -1000 [base_interp ident_interp].
 

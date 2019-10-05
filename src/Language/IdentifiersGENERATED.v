@@ -40,12 +40,12 @@ Module Compilers.
         | ident_prod_rect
         | ident_bool_rect
         | ident_nat_rect
-        | ident_nat_rect_arrow
         | ident_eager_nat_rect
+        | ident_nat_rect_arrow
         | ident_eager_nat_rect_arrow
         | ident_list_rect
-        | ident_list_rect_arrow
         | ident_eager_list_rect
+        | ident_list_rect_arrow
         | ident_eager_list_rect_arrow
         | ident_list_case
         | ident_List_length
@@ -70,13 +70,13 @@ Module Compilers.
         | ident_Z_opp
         | ident_Z_div
         | ident_Z_modulo
-        | ident_Z_log2
-        | ident_Z_log2_up
         | ident_Z_eqb
         | ident_Z_leb
         | ident_Z_ltb
         | ident_Z_geb
         | ident_Z_gtb
+        | ident_Z_log2
+        | ident_Z_log2_up
         | ident_Z_of_nat
         | ident_Z_to_nat
         | ident_Z_shiftr
@@ -85,9 +85,6 @@ Module Compilers.
         | ident_Z_lor
         | ident_Z_min
         | ident_Z_max
-        | ident_Z_bneg
-        | ident_Z_lnot_modulo
-        | ident_Z_truncating_shiftl
         | ident_Z_mul_split
         | ident_Z_add_get_carry
         | ident_Z_add_with_carry
@@ -96,6 +93,9 @@ Module Compilers.
         | ident_Z_sub_with_get_borrow
         | ident_Z_zselect
         | ident_Z_add_modulo
+        | ident_Z_truncating_shiftl
+        | ident_Z_bneg
+        | ident_Z_lnot_modulo
         | ident_Z_rshi
         | ident_Z_cc_m
         | ident_Z_combine_at_bitwidth
@@ -150,35 +150,35 @@ Module Compilers.
       | ident_nil : (forall t : pattern.base.type.type base, ident (type.base (pattern.base.type.list t)))
       | ident_cons : (forall t : pattern.base.type.type base, ident (type.arrow (type.base t) (type.arrow (type.base (pattern.base.type.list t)) (type.base (pattern.base.type.list t)))))
       | ident_tt : (ident (type.base pattern.base.type.unit))
-      | ident_pair : (forall A B : pattern.base.type.type base, ident (type.arrow (type.base A) (type.arrow (type.base B) (type.base (pattern.base.type.prod A B)))))
-      | ident_fst : (forall A B : pattern.base.type.type base, ident (type.arrow (type.base (pattern.base.type.prod A B)) (type.base A)))
-      | ident_snd : (forall A B : pattern.base.type.type base, ident (type.arrow (type.base (pattern.base.type.prod A B)) (type.base B)))
-      | ident_prod_rect : (forall A B T : pattern.base.type.type base, ident (type.arrow (type.arrow (type.base A) (type.arrow (type.base B) (type.base T))) (type.arrow (type.base (pattern.base.type.prod A B)) (type.base T))))
-      | ident_bool_rect : (forall T : pattern.base.type.type base, ident (type.arrow (type.arrow (type.base pattern.base.type.unit) (type.base T)) (type.arrow (type.arrow (type.base pattern.base.type.unit) (type.base T)) (type.arrow (type.base (pattern.base.type.type_base Compilers.bool)) (type.base T)))))
-      | ident_nat_rect : (forall P : pattern.base.type.type base, ident (type.arrow (type.arrow (type.base pattern.base.type.unit) (type.base P)) (type.arrow (type.arrow (type.base (pattern.base.type.type_base Compilers.nat)) (type.arrow (type.base P) (type.base P))) (type.arrow (type.base (pattern.base.type.type_base Compilers.nat)) (type.base P)))))
-      | ident_nat_rect_arrow : (forall P Q : pattern.base.type.type base, ident (type.arrow (type.arrow (type.base P) (type.base Q)) (type.arrow (type.arrow (type.base (pattern.base.type.type_base Compilers.nat)) (type.arrow (type.arrow (type.base P) (type.base Q)) (type.arrow (type.base P) (type.base Q)))) (type.arrow (type.base (pattern.base.type.type_base Compilers.nat)) (type.arrow (type.base P) (type.base Q))))))
-      | ident_eager_nat_rect : (forall P : pattern.base.type.type base, ident (type.arrow (type.arrow (type.base pattern.base.type.unit) (type.base P)) (type.arrow (type.arrow (type.base (pattern.base.type.type_base Compilers.nat)) (type.arrow (type.base P) (type.base P))) (type.arrow (type.base (pattern.base.type.type_base Compilers.nat)) (type.base P)))))
-      | ident_eager_nat_rect_arrow : (forall P Q : pattern.base.type.type base, ident (type.arrow (type.arrow (type.base P) (type.base Q)) (type.arrow (type.arrow (type.base (pattern.base.type.type_base Compilers.nat)) (type.arrow (type.arrow (type.base P) (type.base Q)) (type.arrow (type.base P) (type.base Q)))) (type.arrow (type.base (pattern.base.type.type_base Compilers.nat)) (type.arrow (type.base P) (type.base Q))))))
-      | ident_list_rect : (forall A P : pattern.base.type.type base, ident (type.arrow (type.arrow (type.base pattern.base.type.unit) (type.base P)) (type.arrow (type.arrow (type.base A) (type.arrow (type.base (pattern.base.type.list A)) (type.arrow (type.base P) (type.base P)))) (type.arrow (type.base (pattern.base.type.list A)) (type.base P)))))
-      | ident_list_rect_arrow : (forall A P Q : pattern.base.type.type base, ident (type.arrow (type.arrow (type.base P) (type.base Q)) (type.arrow (type.arrow (type.base A) (type.arrow (type.base (pattern.base.type.list A)) (type.arrow (type.arrow (type.base P) (type.base Q)) (type.arrow (type.base P) (type.base Q))))) (type.arrow (type.base (pattern.base.type.list A)) (type.arrow (type.base P) (type.base Q))))))
-      | ident_eager_list_rect : (forall A P : pattern.base.type.type base, ident (type.arrow (type.arrow (type.base pattern.base.type.unit) (type.base P)) (type.arrow (type.arrow (type.base A) (type.arrow (type.base (pattern.base.type.list A)) (type.arrow (type.base P) (type.base P)))) (type.arrow (type.base (pattern.base.type.list A)) (type.base P)))))
-      | ident_eager_list_rect_arrow : (forall A P Q : pattern.base.type.type base, ident (type.arrow (type.arrow (type.base P) (type.base Q)) (type.arrow (type.arrow (type.base A) (type.arrow (type.base (pattern.base.type.list A)) (type.arrow (type.arrow (type.base P) (type.base Q)) (type.arrow (type.base P) (type.base Q))))) (type.arrow (type.base (pattern.base.type.list A)) (type.arrow (type.base P) (type.base Q))))))
-      | ident_list_case : (forall A P : pattern.base.type.type base, ident (type.arrow (type.arrow (type.base pattern.base.type.unit) (type.base P)) (type.arrow (type.arrow (type.base A) (type.arrow (type.base (pattern.base.type.list A)) (type.base P))) (type.arrow (type.base (pattern.base.type.list A)) (type.base P)))))
-      | ident_List_length : (forall T : pattern.base.type.type base, ident (type.arrow (type.base (pattern.base.type.list T)) (type.base (pattern.base.type.type_base Compilers.nat))))
+      | ident_pair : (forall t t0 : pattern.base.type.type base, ident (type.arrow (type.base t) (type.arrow (type.base t0) (type.base (pattern.base.type.prod t t0)))))
+      | ident_fst : (forall t t0 : pattern.base.type.type base, ident (type.arrow (type.base (pattern.base.type.prod t t0)) (type.base t)))
+      | ident_snd : (forall t t0 : pattern.base.type.type base, ident (type.arrow (type.base (pattern.base.type.prod t t0)) (type.base t0)))
+      | ident_prod_rect : (forall t t0 t1 : pattern.base.type.type base, ident (type.arrow (type.arrow (type.base t) (type.arrow (type.base t0) (type.base t1))) (type.arrow (type.base (pattern.base.type.prod t t0)) (type.base t1))))
+      | ident_bool_rect : (forall t : pattern.base.type.type base, ident (type.arrow (type.arrow (type.base pattern.base.type.unit) (type.base t)) (type.arrow (type.arrow (type.base pattern.base.type.unit) (type.base t)) (type.arrow (type.base (pattern.base.type.type_base Compilers.bool)) (type.base t)))))
+      | ident_nat_rect : (forall t : pattern.base.type.type base, ident (type.arrow (type.arrow (type.base pattern.base.type.unit) (type.base t)) (type.arrow (type.arrow (type.base (pattern.base.type.type_base Compilers.nat)) (type.arrow (type.base t) (type.base t))) (type.arrow (type.base (pattern.base.type.type_base Compilers.nat)) (type.base t)))))
+      | ident_eager_nat_rect : (forall t : pattern.base.type.type base, ident (type.arrow (type.arrow (type.base pattern.base.type.unit) (type.base t)) (type.arrow (type.arrow (type.base (pattern.base.type.type_base Compilers.nat)) (type.arrow (type.base t) (type.base t))) (type.arrow (type.base (pattern.base.type.type_base Compilers.nat)) (type.base t)))))
+      | ident_nat_rect_arrow : (forall t t0 : pattern.base.type.type base, ident (type.arrow (type.arrow (type.base t) (type.base t0)) (type.arrow (type.arrow (type.base (pattern.base.type.type_base Compilers.nat)) (type.arrow (type.arrow (type.base t) (type.base t0)) (type.arrow (type.base t) (type.base t0)))) (type.arrow (type.base (pattern.base.type.type_base Compilers.nat)) (type.arrow (type.base t) (type.base t0))))))
+      | ident_eager_nat_rect_arrow : (forall t t0 : pattern.base.type.type base, ident (type.arrow (type.arrow (type.base t) (type.base t0)) (type.arrow (type.arrow (type.base (pattern.base.type.type_base Compilers.nat)) (type.arrow (type.arrow (type.base t) (type.base t0)) (type.arrow (type.base t) (type.base t0)))) (type.arrow (type.base (pattern.base.type.type_base Compilers.nat)) (type.arrow (type.base t) (type.base t0))))))
+      | ident_list_rect : (forall t t0 : pattern.base.type.type base, ident (type.arrow (type.arrow (type.base pattern.base.type.unit) (type.base t0)) (type.arrow (type.arrow (type.base t) (type.arrow (type.base (pattern.base.type.list t)) (type.arrow (type.base t0) (type.base t0)))) (type.arrow (type.base (pattern.base.type.list t)) (type.base t0)))))
+      | ident_eager_list_rect : (forall t t0 : pattern.base.type.type base, ident (type.arrow (type.arrow (type.base pattern.base.type.unit) (type.base t0)) (type.arrow (type.arrow (type.base t) (type.arrow (type.base (pattern.base.type.list t)) (type.arrow (type.base t0) (type.base t0)))) (type.arrow (type.base (pattern.base.type.list t)) (type.base t0)))))
+      | ident_list_rect_arrow : (forall t t0 t1 : pattern.base.type.type base, ident (type.arrow (type.arrow (type.base t0) (type.base t1)) (type.arrow (type.arrow (type.base t) (type.arrow (type.base (pattern.base.type.list t)) (type.arrow (type.arrow (type.base t0) (type.base t1)) (type.arrow (type.base t0) (type.base t1))))) (type.arrow (type.base (pattern.base.type.list t)) (type.arrow (type.base t0) (type.base t1))))))
+      | ident_eager_list_rect_arrow : (forall t t0 t1 : pattern.base.type.type base, ident (type.arrow (type.arrow (type.base t0) (type.base t1)) (type.arrow (type.arrow (type.base t) (type.arrow (type.base (pattern.base.type.list t)) (type.arrow (type.arrow (type.base t0) (type.base t1)) (type.arrow (type.base t0) (type.base t1))))) (type.arrow (type.base (pattern.base.type.list t)) (type.arrow (type.base t0) (type.base t1))))))
+      | ident_list_case : (forall t t0 : pattern.base.type.type base, ident (type.arrow (type.arrow (type.base pattern.base.type.unit) (type.base t0)) (type.arrow (type.arrow (type.base t) (type.arrow (type.base (pattern.base.type.list t)) (type.base t0))) (type.arrow (type.base (pattern.base.type.list t)) (type.base t0)))))
+      | ident_List_length : (forall t : pattern.base.type.type base, ident (type.arrow (type.base (pattern.base.type.list t)) (type.base (pattern.base.type.type_base Compilers.nat))))
       | ident_List_seq : (ident (type.arrow (type.base (pattern.base.type.type_base Compilers.nat)) (type.arrow (type.base (pattern.base.type.type_base Compilers.nat)) (type.base (pattern.base.type.list (pattern.base.type.type_base Compilers.nat))))))
-      | ident_List_firstn : (forall A : pattern.base.type.type base, ident (type.arrow (type.base (pattern.base.type.type_base Compilers.nat)) (type.arrow (type.base (pattern.base.type.list A)) (type.base (pattern.base.type.list A)))))
-      | ident_List_skipn : (forall A : pattern.base.type.type base, ident (type.arrow (type.base (pattern.base.type.type_base Compilers.nat)) (type.arrow (type.base (pattern.base.type.list A)) (type.base (pattern.base.type.list A)))))
-      | ident_List_repeat : (forall A : pattern.base.type.type base, ident (type.arrow (type.base A) (type.arrow (type.base (pattern.base.type.type_base Compilers.nat)) (type.base (pattern.base.type.list A)))))
-      | ident_List_combine : (forall A B : pattern.base.type.type base, ident (type.arrow (type.base (pattern.base.type.list A)) (type.arrow (type.base (pattern.base.type.list B)) (type.base (pattern.base.type.list (pattern.base.type.prod A B))))))
-      | ident_List_map : (forall A B : pattern.base.type.type base, ident (type.arrow (type.arrow (type.base A) (type.base B)) (type.arrow (type.base (pattern.base.type.list A)) (type.base (pattern.base.type.list B)))))
-      | ident_List_app : (forall A : pattern.base.type.type base, ident (type.arrow (type.base (pattern.base.type.list A)) (type.arrow (type.base (pattern.base.type.list A)) (type.base (pattern.base.type.list A)))))
-      | ident_List_rev : (forall A : pattern.base.type.type base, ident (type.arrow (type.base (pattern.base.type.list A)) (type.base (pattern.base.type.list A))))
-      | ident_List_flat_map : (forall A B : pattern.base.type.type base, ident (type.arrow (type.arrow (type.base A) (type.base (pattern.base.type.list B))) (type.arrow (type.base (pattern.base.type.list A)) (type.base (pattern.base.type.list B)))))
-      | ident_List_partition : (forall A : pattern.base.type.type base, ident (type.arrow (type.arrow (type.base A) (type.base (pattern.base.type.type_base Compilers.bool))) (type.arrow (type.base (pattern.base.type.list A)) (type.base (pattern.base.type.prod (pattern.base.type.list A) (pattern.base.type.list A))))))
-      | ident_List_fold_right : (forall A B : pattern.base.type.type base, ident (type.arrow (type.arrow (type.base B) (type.arrow (type.base A) (type.base A))) (type.arrow (type.base A) (type.arrow (type.base (pattern.base.type.list B)) (type.base A)))))
-      | ident_List_update_nth : (forall T : pattern.base.type.type base, ident (type.arrow (type.base (pattern.base.type.type_base Compilers.nat)) (type.arrow (type.arrow (type.base T) (type.base T)) (type.arrow (type.base (pattern.base.type.list T)) (type.base (pattern.base.type.list T))))))
-      | ident_List_nth_default : (forall T : pattern.base.type.type base, ident (type.arrow (type.base T) (type.arrow (type.base (pattern.base.type.list T)) (type.arrow (type.base (pattern.base.type.type_base Compilers.nat)) (type.base T)))))
-      | ident_eager_List_nth_default : (forall T : pattern.base.type.type base, ident (type.arrow (type.base T) (type.arrow (type.base (pattern.base.type.list T)) (type.arrow (type.base (pattern.base.type.type_base Compilers.nat)) (type.base T)))))
+      | ident_List_firstn : (forall t : pattern.base.type.type base, ident (type.arrow (type.base (pattern.base.type.type_base Compilers.nat)) (type.arrow (type.base (pattern.base.type.list t)) (type.base (pattern.base.type.list t)))))
+      | ident_List_skipn : (forall t : pattern.base.type.type base, ident (type.arrow (type.base (pattern.base.type.type_base Compilers.nat)) (type.arrow (type.base (pattern.base.type.list t)) (type.base (pattern.base.type.list t)))))
+      | ident_List_repeat : (forall t : pattern.base.type.type base, ident (type.arrow (type.base t) (type.arrow (type.base (pattern.base.type.type_base Compilers.nat)) (type.base (pattern.base.type.list t)))))
+      | ident_List_combine : (forall t t0 : pattern.base.type.type base, ident (type.arrow (type.base (pattern.base.type.list t)) (type.arrow (type.base (pattern.base.type.list t0)) (type.base (pattern.base.type.list (pattern.base.type.prod t t0))))))
+      | ident_List_map : (forall t t0 : pattern.base.type.type base, ident (type.arrow (type.arrow (type.base t) (type.base t0)) (type.arrow (type.base (pattern.base.type.list t)) (type.base (pattern.base.type.list t0)))))
+      | ident_List_app : (forall t : pattern.base.type.type base, ident (type.arrow (type.base (pattern.base.type.list t)) (type.arrow (type.base (pattern.base.type.list t)) (type.base (pattern.base.type.list t)))))
+      | ident_List_rev : (forall t : pattern.base.type.type base, ident (type.arrow (type.base (pattern.base.type.list t)) (type.base (pattern.base.type.list t))))
+      | ident_List_flat_map : (forall t t0 : pattern.base.type.type base, ident (type.arrow (type.arrow (type.base t) (type.base (pattern.base.type.list t0))) (type.arrow (type.base (pattern.base.type.list t)) (type.base (pattern.base.type.list t0)))))
+      | ident_List_partition : (forall t : pattern.base.type.type base, ident (type.arrow (type.arrow (type.base t) (type.base (pattern.base.type.type_base Compilers.bool))) (type.arrow (type.base (pattern.base.type.list t)) (type.base (pattern.base.type.prod (pattern.base.type.list t) (pattern.base.type.list t))))))
+      | ident_List_fold_right : (forall t t0 : pattern.base.type.type base, ident (type.arrow (type.arrow (type.base t0) (type.arrow (type.base t) (type.base t))) (type.arrow (type.base t) (type.arrow (type.base (pattern.base.type.list t0)) (type.base t)))))
+      | ident_List_update_nth : (forall t : pattern.base.type.type base, ident (type.arrow (type.base (pattern.base.type.type_base Compilers.nat)) (type.arrow (type.arrow (type.base t) (type.base t)) (type.arrow (type.base (pattern.base.type.list t)) (type.base (pattern.base.type.list t))))))
+      | ident_List_nth_default : (forall t : pattern.base.type.type base, ident (type.arrow (type.base t) (type.arrow (type.base (pattern.base.type.list t)) (type.arrow (type.base (pattern.base.type.type_base Compilers.nat)) (type.base t)))))
+      | ident_eager_List_nth_default : (forall t : pattern.base.type.type base, ident (type.arrow (type.base t) (type.arrow (type.base (pattern.base.type.list t)) (type.arrow (type.base (pattern.base.type.type_base Compilers.nat)) (type.base t)))))
       | ident_Z_add : (ident (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.base (pattern.base.type.type_base Compilers.Z)))))
       | ident_Z_mul : (ident (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.base (pattern.base.type.type_base Compilers.Z)))))
       | ident_Z_pow : (ident (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.base (pattern.base.type.type_base Compilers.Z)))))
@@ -186,13 +186,13 @@ Module Compilers.
       | ident_Z_opp : (ident (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.base (pattern.base.type.type_base Compilers.Z))))
       | ident_Z_div : (ident (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.base (pattern.base.type.type_base Compilers.Z)))))
       | ident_Z_modulo : (ident (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.base (pattern.base.type.type_base Compilers.Z)))))
-      | ident_Z_log2 : (ident (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.base (pattern.base.type.type_base Compilers.Z))))
-      | ident_Z_log2_up : (ident (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.base (pattern.base.type.type_base Compilers.Z))))
       | ident_Z_eqb : (ident (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.base (pattern.base.type.type_base Compilers.bool)))))
       | ident_Z_leb : (ident (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.base (pattern.base.type.type_base Compilers.bool)))))
       | ident_Z_ltb : (ident (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.base (pattern.base.type.type_base Compilers.bool)))))
       | ident_Z_geb : (ident (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.base (pattern.base.type.type_base Compilers.bool)))))
       | ident_Z_gtb : (ident (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.base (pattern.base.type.type_base Compilers.bool)))))
+      | ident_Z_log2 : (ident (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.base (pattern.base.type.type_base Compilers.Z))))
+      | ident_Z_log2_up : (ident (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.base (pattern.base.type.type_base Compilers.Z))))
       | ident_Z_of_nat : (ident (type.arrow (type.base (pattern.base.type.type_base Compilers.nat)) (type.base (pattern.base.type.type_base Compilers.Z))))
       | ident_Z_to_nat : (ident (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.base (pattern.base.type.type_base Compilers.nat))))
       | ident_Z_shiftr : (ident (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.base (pattern.base.type.type_base Compilers.Z)))))
@@ -201,9 +201,6 @@ Module Compilers.
       | ident_Z_lor : (ident (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.base (pattern.base.type.type_base Compilers.Z)))))
       | ident_Z_min : (ident (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.base (pattern.base.type.type_base Compilers.Z)))))
       | ident_Z_max : (ident (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.base (pattern.base.type.type_base Compilers.Z)))))
-      | ident_Z_bneg : (ident (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.base (pattern.base.type.type_base Compilers.Z))))
-      | ident_Z_lnot_modulo : (ident (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.base (pattern.base.type.type_base Compilers.Z)))))
-      | ident_Z_truncating_shiftl : (ident (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.base (pattern.base.type.type_base Compilers.Z))))))
       | ident_Z_mul_split : (ident (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.base (pattern.base.type.prod (pattern.base.type.type_base Compilers.Z) (pattern.base.type.type_base Compilers.Z)))))))
       | ident_Z_add_get_carry : (ident (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.base (pattern.base.type.prod (pattern.base.type.type_base Compilers.Z) (pattern.base.type.type_base Compilers.Z)))))))
       | ident_Z_add_with_carry : (ident (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.base (pattern.base.type.type_base Compilers.Z))))))
@@ -212,16 +209,19 @@ Module Compilers.
       | ident_Z_sub_with_get_borrow : (ident (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.base (pattern.base.type.prod (pattern.base.type.type_base Compilers.Z) (pattern.base.type.type_base Compilers.Z))))))))
       | ident_Z_zselect : (ident (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.base (pattern.base.type.type_base Compilers.Z))))))
       | ident_Z_add_modulo : (ident (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.base (pattern.base.type.type_base Compilers.Z))))))
+      | ident_Z_truncating_shiftl : (ident (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.base (pattern.base.type.type_base Compilers.Z))))))
+      | ident_Z_bneg : (ident (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.base (pattern.base.type.type_base Compilers.Z))))
+      | ident_Z_lnot_modulo : (ident (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.base (pattern.base.type.type_base Compilers.Z)))))
       | ident_Z_rshi : (ident (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.base (pattern.base.type.type_base Compilers.Z)))))))
       | ident_Z_cc_m : (ident (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.base (pattern.base.type.type_base Compilers.Z)))))
       | ident_Z_combine_at_bitwidth : (ident (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.base (pattern.base.type.type_base Compilers.Z))))))
       | ident_Z_cast : (ident (type.arrow (type.base (pattern.base.type.type_base Compilers.zrange)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.base (pattern.base.type.type_base Compilers.Z)))))
       | ident_Z_cast2 : (ident (type.arrow (type.base (pattern.base.type.prod (pattern.base.type.type_base Compilers.zrange) (pattern.base.type.type_base Compilers.zrange))) (type.arrow (type.base (pattern.base.type.prod (pattern.base.type.type_base Compilers.Z) (pattern.base.type.type_base Compilers.Z))) (type.base (pattern.base.type.prod (pattern.base.type.type_base Compilers.Z) (pattern.base.type.type_base Compilers.Z))))))
-      | ident_Some : (forall A : pattern.base.type.type base, ident (type.arrow (type.base A) (type.base (pattern.base.type.option A))))
-      | ident_None : (forall A : pattern.base.type.type base, ident (type.base (pattern.base.type.option A)))
-      | ident_option_rect : (forall A P : pattern.base.type.type base, ident (type.arrow (type.arrow (type.base A) (type.base P)) (type.arrow (type.arrow (type.base pattern.base.type.unit) (type.base P)) (type.arrow (type.base (pattern.base.type.option A)) (type.base P)))))
+      | ident_Some : (forall t : pattern.base.type.type base, ident (type.arrow (type.base t) (type.base (pattern.base.type.option t))))
+      | ident_None : (forall t : pattern.base.type.type base, ident (type.base (pattern.base.type.option t)))
+      | ident_option_rect : (forall t t0 : pattern.base.type.type base, ident (type.arrow (type.arrow (type.base t) (type.base t0)) (type.arrow (type.arrow (type.base pattern.base.type.unit) (type.base t0)) (type.arrow (type.base (pattern.base.type.option t)) (type.base t0)))))
       | ident_Build_zrange : (ident (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.base (pattern.base.type.type_base Compilers.zrange)))))
-      | ident_zrange_rect : (forall P : pattern.base.type.type base, ident (type.arrow (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.base P))) (type.arrow (type.base (pattern.base.type.type_base Compilers.zrange)) (type.base P))))
+      | ident_zrange_rect : (forall t : pattern.base.type.type base, ident (type.arrow (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.arrow (type.base (pattern.base.type.type_base Compilers.Z)) (type.base t))) (type.arrow (type.base (pattern.base.type.type_base Compilers.zrange)) (type.base t))))
       | ident_fancy_add : (ident (type.arrow (type.base (pattern.base.type.prod (pattern.base.type.prod (pattern.base.type.type_base Compilers.Z) (pattern.base.type.type_base Compilers.Z)) (pattern.base.type.prod (pattern.base.type.type_base Compilers.Z) (pattern.base.type.type_base Compilers.Z)))) (type.base (pattern.base.type.prod (pattern.base.type.type_base Compilers.Z) (pattern.base.type.type_base Compilers.Z)))))
       | ident_fancy_addc : (ident (type.arrow (type.base (pattern.base.type.prod (pattern.base.type.prod (pattern.base.type.type_base Compilers.Z) (pattern.base.type.type_base Compilers.Z)) (pattern.base.type.prod (pattern.base.type.prod (pattern.base.type.type_base Compilers.Z) (pattern.base.type.type_base Compilers.Z)) (pattern.base.type.type_base Compilers.Z)))) (type.base (pattern.base.type.prod (pattern.base.type.type_base Compilers.Z) (pattern.base.type.type_base Compilers.Z)))))
       | ident_fancy_sub : (ident (type.arrow (type.base (pattern.base.type.prod (pattern.base.type.prod (pattern.base.type.type_base Compilers.Z) (pattern.base.type.type_base Compilers.Z)) (pattern.base.type.prod (pattern.base.type.type_base Compilers.Z) (pattern.base.type.type_base Compilers.Z)))) (type.base (pattern.base.type.prod (pattern.base.type.type_base Compilers.Z) (pattern.base.type.type_base Compilers.Z)))))

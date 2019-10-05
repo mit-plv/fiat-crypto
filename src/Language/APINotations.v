@@ -56,6 +56,43 @@ Module Compilers.
   Global Existing Instance eqv_Reflexive_Proper | 1.
   Global Existing Instance ident_interp_Proper | 1.
 
+  Bind Scope etype_scope with base.
+
+  Global Arguments ident_Literal {_} _ : assert.
+  Global Arguments ident_nil {_} : assert.
+  Global Arguments ident_cons {_} : assert.
+  Global Arguments ident_pair {_ _} : assert.
+  Global Arguments ident_fst {_ _} : assert.
+  Global Arguments ident_snd {_ _} : assert.
+  Global Arguments ident_prod_rect {_ _ _} : assert.
+  Global Arguments ident_bool_rect {_} : assert.
+  Global Arguments ident_nat_rect {_} : assert.
+  Global Arguments ident_nat_rect_arrow {_ _} : assert.
+  Global Arguments ident_eager_nat_rect {_} : assert.
+  Global Arguments ident_eager_nat_rect_arrow {_ _} : assert.
+  Global Arguments ident_list_rect {_ _} : assert.
+  Global Arguments ident_list_rect_arrow {_ _ _} : assert.
+  Global Arguments ident_eager_list_rect {_ _} : assert.
+  Global Arguments ident_eager_list_rect_arrow {_ _ _} : assert.
+  Global Arguments ident_list_case {_ _} : assert.
+  Global Arguments ident_List_length {_} : assert.
+  Global Arguments ident_List_firstn {_} : assert.
+  Global Arguments ident_List_skipn {_} : assert.
+  Global Arguments ident_List_repeat {_} : assert.
+  Global Arguments ident_List_combine {_ _} : assert.
+  Global Arguments ident_List_map {_ _} : assert.
+  Global Arguments ident_List_app {_} : assert.
+  Global Arguments ident_List_rev {_} : assert.
+  Global Arguments ident_List_flat_map {_ _} : assert.
+  Global Arguments ident_List_partition {_} : assert.
+  Global Arguments ident_List_fold_right {_ _} : assert.
+  Global Arguments ident_List_update_nth {_} : assert.
+  Global Arguments ident_List_nth_default {_} : assert.
+  Global Arguments ident_eager_List_nth_default {_} : assert.
+  Global Arguments ident_Some {_} : assert.
+  Global Arguments ident_None {_} : assert.
+  Global Arguments ident_option_rect {_ _} : assert.
+  Global Arguments ident_zrange_rect {_} : assert.
 
   (** This file defines some convenience notations and definitions. *)
   Module base.

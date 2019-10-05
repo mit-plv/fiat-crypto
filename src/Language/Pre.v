@@ -131,8 +131,27 @@ Scheme Minimality for nat Sort Type.
 Scheme Minimality for list Sort Type.
 Scheme Minimality for option Sort Type.
 
+Definition nat_rect_arrow_nodep P Q := @nat_rect_nodep (P -> Q).
+Definition list_rect_arrow_nodep A P Q := @list_rect_nodep A (P -> Q).
+
 Module GallinaIdentList.
-  Polymorphic Inductive t := nil | cons {T : Type} (v : T) (vs : t).
+  Local Set Universe Polymorphism.
+  Inductive t := nil | cons {T : Type} (v : T) (vs : t).
+
+  Fixpoint nth_type (n : nat) (l : t) (default : Type) {struct l} :=
+    match n, l with
+    | O, @cons T _ _ => T
+    | S m, @cons _ _ l => nth_type m l default
+    | _, _ => default
+    end.
+
+  Fixpoint nth (n : nat) (l : t) {T} (default : T) {struct l} : nth_type n l T :=
+    match n, l return nth_type n l T with
+    | O, @cons _ x _ => x
+    | S m, @cons _ _ l => nth m l default
+    | _, _ => default
+    end.
+
   Module Export Notations.
     Delimit Scope gallina_ident_list_scope with gi_list.
     Bind Scope gallina_ident_list_scope with t.
@@ -163,3 +182,17 @@ Module TypeList.
   End Notations.
 End TypeList.
 Export TypeList.Notations.
+
+Module Named.
+  Local Set Universe Polymorphism.
+  Local Set Primitive Projections.
+  Inductive maybe_name := no_name | a_name (_ : forall P : Prop, P -> P).
+  Record t := { type : Type ; value : type ; naming : maybe_name }.
+End Named.
+Notation with_name name v := (@Named.Build_t _ v (Named.a_name (fun (P : Prop) (name : P) => name))) (only parsing).
+Notation without_name v := (@Named.Build_t _ v Named.no_name) (only parsing).
+
+Module GallinaAndReifiedIdentList.
+  Local Set Universe Polymorphism.
+  Inductive t := nil | cons {T1 T2 : Type} (v1 : T1) (v2 : T2) (vs : t).
+End GallinaAndReifiedIdentList.
