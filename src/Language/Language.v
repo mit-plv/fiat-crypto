@@ -1765,8 +1765,7 @@ Module Compilers.
         base : Type;
         ident : type (base.type base) -> Type;
         base_interp : base -> Type;
-        ident_gen_interp : (zrange -> Z -> Z) -> forall t, ident t -> type.interp (base.interp base_interp) t;
-        ident_interp := ident_gen_interp ident.cast_outside_of_range
+        ident_interp : forall t, ident t -> type.interp (base.interp base_interp) t
       }.
 
     Class ExprExtraInfoT {exprInfo : ExprInfoT} :=
@@ -1786,9 +1785,9 @@ Module Compilers.
         baseHasNatCorrect :> base.BaseHasNatCorrectT base_interp;
         toFromRestrictedIdent :> ident.ToFromRestrictedIdentT ident;
         buildInvertIdentCorrect :> BuildInvertIdentCorrectT;
-        buildInterpIdentCorrect :> forall cast_outside_of_range, ident.BuildInterpIdentCorrectT (ident_gen_interp cast_outside_of_range);
-        buildInterpEagerIdentCorrect :> forall cast_outside_of_range, ident.BuildInterpEagerIdentCorrectT (ident_gen_interp cast_outside_of_range);
-        ident_gen_interp_Proper :> forall cast_outside_of_range t, Proper (eq ==> type.eqv) (ident_gen_interp cast_outside_of_range t)
+        buildInterpIdentCorrect :> ident.BuildInterpIdentCorrectT ident_interp;
+        buildInterpEagerIdentCorrect :> ident.BuildInterpEagerIdentCorrectT ident_interp;
+        ident_interp_Proper :> forall t, Proper (eq ==> type.eqv) (ident_interp t)
       }.
   End Classes.
 End Compilers.

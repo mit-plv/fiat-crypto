@@ -154,31 +154,31 @@ Module Compilers.
         | lazymatch do_rhs with true => idtac | false => reflexivity end ].
 
       Ltac do_reify_rhs ident ident_interp := notypeclasses refine (@expr.Reify_rhs _ ident _ ident_interp _ _ _ _ _ _); [ typeclasses eauto | ].
+
       Ltac do_rewrite_with verified_rewriter_package :=
         refine (eq_trans_eqv_Interp _ _);
-        [ refine (@Interp_gen_Rewrite verified_rewriter_package _ _ _ _);
+        [ refine (@Interp_Rewrite verified_rewriter_package _ _ _);
           [ .. | prove_Wf () ]
         | lazymatch goal with
           | [ |- ?ev = ?RHS ] => let RHS' := (eval vm_compute in RHS) in
                                  unify ev RHS'; vm_cast_no_check (eq_refl RHS)
           end ].
 
-      Ltac do_final_cbv base_interp ident_gen_interp :=
+      Ltac do_final_cbv base_interp ident_interp :=
         let base_interp_head := head base_interp in
-        let ident_gen_interp_head := head ident_gen_interp in
-        cbv [expr.Interp expr.interp Classes.ident_gen_interp Classes.ident_interp type.interp base.interp base_interp_head ident_gen_interp_head ident.literal ident.eagerly ident.cast2].
+        let ident_interp_head := head ident_interp in
+        cbv [expr.Interp expr.interp Classes.ident_interp type.interp base.interp base_interp_head ident_interp_head ident.literal ident.eagerly ident.cast2].
 
       Ltac Rewrite_for_gen verified_rewriter_package do_lhs do_rhs :=
         lazymatch (eval hnf in (exprInfo verified_rewriter_package)) with
         | {| base := ?base
              ; ident := ?ident
              ; base_interp := ?base_interp
-             ; ident_gen_interp := ?ident_gen_interp
+             ; ident_interp := ?ident_interp
           |}
           => let base_type := constr:(base.type base) in
              let base_type_interp := constr:(base.interp base_interp) in
              let reify_type := type.reify_via_tc base_type base_type_interp in
-             let ident_interp := constr:(@ident_gen_interp ident.cast_outside_of_range) in
              unshelve (
                  solve [
                      etransitivity_for_sides do_lhs do_rhs;
@@ -186,7 +186,7 @@ Module Compilers.
                      do_reify_rhs ident ident_interp;
                      do_rewrite_with verified_rewriter_package
                ]);
-             do_final_cbv base_interp ident_gen_interp
+             do_final_cbv base_interp ident_interp
         end.
     End FinalTacticHelpers.
 

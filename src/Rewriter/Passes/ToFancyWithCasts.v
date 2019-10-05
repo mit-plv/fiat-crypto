@@ -34,18 +34,13 @@ Module Compilers.
       Lemma Wf_RewriteToFancyWithCasts {t} e (Hwf : Wf e) : Wf (@RewriteToFancyWithCasts t e).
       Proof using All. now apply VerifiedRewriterToFancyWithCasts. Qed.
 
-      Lemma Interp_gen_RewriteToFancyWithCasts {cast_outside_of_range t} e (Hwf : Wf e)
-        : API.gen_Interp cast_outside_of_range (@RewriteToFancyWithCasts t e)
-          == API.gen_Interp cast_outside_of_range e.
-      Proof using All. now apply VerifiedRewriterToFancyWithCasts. Qed.
-
       Lemma Interp_RewriteToFancyWithCasts {t} e (Hwf : Wf e) : API.Interp (@RewriteToFancyWithCasts t e) == API.Interp e.
-      Proof using All. apply Interp_gen_RewriteToFancyWithCasts; assumption. Qed.
+      Proof using All. now apply VerifiedRewriterToFancyWithCasts. Qed.
     End __.
   End RewriteRules.
 
   Module Export Hints.
     Hint Resolve Wf_RewriteToFancyWithCasts : wf wf_extra.
-    Hint Rewrite @Interp_gen_RewriteToFancyWithCasts @Interp_RewriteToFancyWithCasts : interp interp_extra.
+    Hint Rewrite @Interp_RewriteToFancyWithCasts : interp interp_extra.
   End Hints.
 End Compilers.

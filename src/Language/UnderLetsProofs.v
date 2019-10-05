@@ -141,27 +141,10 @@ Module Compilers.
         Proof. apply interp_subst_var_like_gen_nil, Hwf. Qed.
       End interp.
     End with_ident.
-
-    (*
-    Lemma Wf_SubstVarFstSndPairOppCast {t} (e : expr.Expr t)
-      : expr.Wf e -> expr.Wf (SubstVarLike.SubstVarFstSndPairOppCast e).
-    Proof. apply Wf_SubstVarOrIdent. Qed.
-
-    Section with_cast.
-      Context {cast_outside_of_range : ZRange.zrange -> BinInt.Z -> BinInt.Z}.
-      Local Notation ident_interp := (@ident.gen_interp cast_outside_of_range).
-      Local Notation interp := (@expr.interp _ _ _ (@ident_interp)).
-      Local Notation Interp := (@expr.Interp _ _ _ (@ident_interp)).
-
-      Lemma Interp_SubstVarFstSndPairOppCast {t} (e : expr.Expr t) (Hwf : expr.Wf e)
-        : Interp (SubstVarLike.SubstVarFstSndPairOppCast e) == Interp e.
-      Proof. apply Interp_SubstVarOrIdent, Hwf. Qed.
-    End with_cast.
-     *)
   End SubstVarLike.
 
-  Hint Resolve SubstVarLike.Wf_SubstVar (*SubstVarLike.Wf_SubstVarFstSndPairOppCast*) SubstVarLike.Wf_SubstVarLike SubstVarLike.Wf_SubstVarOrIdent : wf.
-  Hint Rewrite @SubstVarLike.Interp_SubstVar (*@SubstVarLike.Interp_SubstVarFstSndPairOppCast*) @SubstVarLike.Interp_SubstVarLike @SubstVarLike.Interp_SubstVarOrIdent : interp.
+  Hint Resolve SubstVarLike.Wf_SubstVar SubstVarLike.Wf_SubstVarLike SubstVarLike.Wf_SubstVarOrIdent : wf.
+  Hint Rewrite @SubstVarLike.Interp_SubstVar @SubstVarLike.Interp_SubstVarLike @SubstVarLike.Interp_SubstVarOrIdent : interp.
 
   Module UnderLets.
     Import UnderLets.Compilers.UnderLets.
@@ -1238,7 +1221,7 @@ Module Compilers.
                        | progress destruct_head'_ex
                        | progress destruct_head'_and
                        | progress inversion_type
-                       | progress cbn [(*invert_Var invert_Literal ident.invert_Literal*) eq_rect f_equal f_equal2 type.decode fst snd projT1 projT2 invert_pair Option.bind to_expr expr.interp (*ident.interp ident.gen_interp*) type.eqv length list_rect combine In] in *
+                       | progress cbn [eq_rect f_equal f_equal2 type.decode fst snd projT1 projT2 invert_pair Option.bind to_expr expr.interp type.eqv length list_rect combine In] in *
                        | progress cbv [CPSNotations.cps_option_bind CPSNotations.cpsreturn CPSNotations.cpsbind CPSNotations.cpscall id] in *
                        | progress rewrite_type_transport_correct
                        | progress type_beq_to_eq

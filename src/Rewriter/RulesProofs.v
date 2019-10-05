@@ -178,16 +178,16 @@ Local Ltac interp_good_t_step_arith :=
             => rewrite ZRange.is_bounded_by_bool_move_opp_normalize in H
           | [ |- context[is_bounded_by_bool _ (ZRange.normalize (-_))] ]
             => rewrite ZRange.is_bounded_by_bool_move_opp_normalize
-          | [ H : is_bounded_by_bool ?v (ZRange.normalize ?r) = true |- context[ident.cast _ ?r ?v] ]
-            => rewrite (@ident.cast_in_normalized_bounds _ r v) by exact H
-          | [ H : is_bounded_by_bool ?v (ZRange.normalize ?r) = true |- context[ident.cast _ (-?r) (-?v)] ]
-            => rewrite (@ident.cast_in_normalized_bounds _ (-r) (-v));
+          | [ H : is_bounded_by_bool ?v (ZRange.normalize ?r) = true |- context[ident.cast ?r ?v] ]
+            => rewrite (@ident.cast_in_normalized_bounds r v) by exact H
+          | [ H : is_bounded_by_bool ?v (ZRange.normalize ?r) = true |- context[ident.cast (-?r) (-?v)] ]
+            => rewrite (@ident.cast_in_normalized_bounds (-r) (-v));
                [ | clear -H ]
-          | [ |- context[ident.cast _ ?r (-ident.cast _ (-?r) ?v)] ]
-            => rewrite (ident.cast_in_normalized_bounds r (-ident.cast _ (-r) v))
+          | [ |- context[ident.cast ?r (-ident.cast (-?r) ?v)] ]
+            => rewrite (ident.cast_in_normalized_bounds r (-ident.cast (-r) v))
               by (rewrite <- ZRange.is_bounded_by_bool_move_opp_normalize; apply ident.cast_always_bounded)
-          | [ |- context[ident.cast _ ?r (ident.cast _ ?r _)] ]
-            => rewrite (@ident.cast_idempotent _ _ r)
+          | [ |- context[ident.cast ?r (ident.cast ?r _)] ]
+            => rewrite (@ident.cast_idempotent r)
           | [ H : is_bounded_by_bool _ ?r = true |- _]
             => is_var r; unique pose proof (ZRange.is_bounded_by_normalize _ _ H)
           | [ H : lower ?x = upper ?x |- _ ] => is_var x; destruct x; cbn [upper lower] in *
@@ -211,15 +211,15 @@ Local Ltac interp_good_t_step_arith :=
         | break_innermost_match_hyps_step
         | progress destruct_head'_or
         | match goal with
-          | [ |- context[-ident.cast _ (-?r) (-?v)] ] => rewrite (ident.cast_opp' r v)
-          | [ |- context[ident.cast ?coor ?r ?v] ]
+          | [ |- context[-ident.cast (-?r) (-?v)] ] => rewrite (ident.cast_opp' r v)
+          | [ |- context[ident.cast ?r ?v] ]
             => is_var v;
-               pose proof (@ident.cast_always_bounded coor r v);
-               generalize dependent (ident.cast coor r v); clear v; intro v; intros
-          | [ |- context[ident.cast ?coor ?r ?v] ]
-            => is_var v; is_var coor;
-               pose proof (@ident.cast_cases coor r v);
-               generalize dependent (ident.cast coor r v); intros
+               pose proof (@ident.cast_always_bounded r v);
+               generalize dependent (ident.cast r v); clear v; intro v; intros
+          | [ |- context[ident.cast ?r ?v] ]
+            => is_var v;
+               pose proof (@ident.cast_cases r v);
+               generalize dependent (ident.cast r v); intros
           | [ H : is_bounded_by_bool ?v ?r = true, H' : is_tighter_than_bool ?r ?r' = true |- _ ]
             => unique assert (is_bounded_by_bool v r' = true) by (eauto 2 using ZRange.is_bounded_by_of_is_tighter_than)
           | [ H : is_bounded_by_bool (-?v) ?r = true, H' : (-?r <=? ?r')%zrange = true |- _ ]
@@ -309,28 +309,28 @@ Local Ltac interp_good_t_step_arith :=
                | [ |- context[y + z + x] ]
                  => progress replace (y + z + x) with (x + y + z) by (clear; lia)
                end
-          | [ |- - ident.cast _ (-?r) (- (?x / ?y)) = ident.cast _ ?r (?x' / ?y) ]
+          | [ |- - ident.cast (-?r) (- (?x / ?y)) = ident.cast ?r (?x' / ?y) ]
             => tryif constr_eq x x' then fail else replace x with x' by lia
           | [ |- _ = _ :> BinInt.Z ] => progress autorewrite with zsimplify_fast
           end ].
 
 Local Ltac remove_casts :=
   repeat match goal with
-         | [ |- context[ident.cast _ r[?x~>?x] ?x] ]
+         | [ |- context[ident.cast r[?x~>?x] ?x] ]
            => rewrite (ident.cast_in_bounds r[x~>x] x) by apply ZRange.is_bounded_by_bool_constant
-         | [ |- context[ident.cast _ ?r (ident.cast _ ?r _)] ]
+         | [ |- context[ident.cast ?r (ident.cast ?r _)] ]
            => rewrite ident.cast_idempotent
-         | [ H : context[ident.cast _ ?r (ident.cast _ ?r _)] |- _ ]
+         | [ H : context[ident.cast ?r (ident.cast ?r _)] |- _ ]
            => rewrite ident.cast_idempotent in H
-         | [ |- context[ident.cast ?coor ?r ?v] ]
+         | [ |- context[ident.cast ?r ?v] ]
            => is_var v;
-              pose proof (@ident.cast_always_bounded coor r v);
-              generalize dependent (ident.cast coor r v);
+              pose proof (@ident.cast_always_bounded r v);
+              generalize dependent (ident.cast r v);
               clear v; intro v; intros
-         | [ H : context[ident.cast ?coor ?r ?v] |- _ ]
+         | [ H : context[ident.cast ?r ?v] |- _ ]
            => is_var v;
-              pose proof (@ident.cast_always_bounded coor r v);
-              generalize dependent (ident.cast coor r v);
+              pose proof (@ident.cast_always_bounded r v);
+              generalize dependent (ident.cast r v);
               clear v; intro v; intros
          | [ H : context[ZRange.constant ?v] |- _ ] => unique pose proof (ZRange.is_bounded_by_bool_normalize_constant v)
          | [ H : is_tighter_than_bool (?ZRf ?r1 ?r2) (ZRange.normalize ?rs) = true,
@@ -338,11 +338,11 @@ Local Ltac remove_casts :=
                       H2 : is_bounded_by_bool ?v2 ?r2 = true
              |- _ ]
            => let cst := multimatch goal with
-                         | [ |- context[ident.cast ?coor rs (?Zf v1 v2)] ] => constr:(ident.cast coor rs (Zf v1 v2))
-                         | [ H : context[ident.cast ?coor rs (?Zf v1 v2)] |- _ ] => constr:(ident.cast coor rs (Zf v1 v2))
+                         | [ |- context[ident.cast rs (?Zf v1 v2)] ] => constr:(ident.cast rs (Zf v1 v2))
+                         | [ H : context[ident.cast rs (?Zf v1 v2)] |- _ ] => constr:(ident.cast rs (Zf v1 v2))
                          end in
               lazymatch cst with
-              | ident.cast ?coor rs (?Zf v1 v2)
+              | ident.cast rs (?Zf v1 v2)
                 => let lem := lazymatch constr:((ZRf, Zf)%core) with
                               | (ZRange.shiftl, Z.shiftl)%core => constr:(@ZRange.is_bounded_by_bool_shiftl v1 r1 v2 r2 H1 H2)
                               | (ZRange.shiftr, Z.shiftr)%core => constr:(@ZRange.is_bounded_by_bool_shiftr v1 r1 v2 r2 H1 H2)
@@ -350,28 +350,28 @@ Local Ltac remove_casts :=
                               end in
                    try unique pose proof (@ZRange.is_bounded_by_of_is_tighter_than _ _ H _ lem);
                    clear H;
-                   rewrite (@ident.cast_in_normalized_bounds coor rs (Zf v1 v2)) in * by assumption
+                   rewrite (@ident.cast_in_normalized_bounds rs (Zf v1 v2)) in * by assumption
               end
          | [ H : is_tighter_than_bool (?ZRf ?r1) (ZRange.normalize ?rs) = true,
                  H1 : is_bounded_by_bool ?v1 ?r1 = true
              |- _ ]
            => let cst := multimatch goal with
-                         | [ |- context[ident.cast ?coor rs (?Zf v1)] ] => constr:(ident.cast coor rs (Zf v1))
-                         | [ H : context[ident.cast ?coor rs (?Zf v1)] |- _ ] => constr:(ident.cast coor rs (Zf v1))
+                         | [ |- context[ident.cast rs (?Zf v1)] ] => constr:(ident.cast rs (Zf v1))
+                         | [ H : context[ident.cast rs (?Zf v1)] |- _ ] => constr:(ident.cast rs (Zf v1))
                          end in
               lazymatch cst with
-              | ident.cast ?coor rs (?Zf v1)
+              | ident.cast rs (?Zf v1)
                 => let lem := lazymatch constr:((ZRf, Zf)%core) with
                               | (ZRange.cc_m ?s, Z.cc_m ?s)%core => constr:(@ZRange.is_bounded_by_bool_cc_m s v1 r1 H1)
                               end in
                    try unique pose proof (@ZRange.is_bounded_by_of_is_tighter_than _ _ H _ lem);
                    clear H;
-                   rewrite (@ident.cast_in_normalized_bounds coor rs (Zf v1)) in * by assumption
+                   rewrite (@ident.cast_in_normalized_bounds rs (Zf v1)) in * by assumption
               end
-         | [ H : is_bounded_by_bool ?v (ZRange.normalize ?r) = true |- context[ident.cast ?coor ?r ?v] ]
-           => rewrite (@ident.cast_in_normalized_bounds coor r v) in * by assumption
-         | [ H : is_bounded_by_bool ?v (ZRange.normalize ?r) = true, H' : context[ident.cast ?coor ?r ?v] |- _ ]
-           => rewrite (@ident.cast_in_normalized_bounds coor r v) in * by assumption
+         | [ H : is_bounded_by_bool ?v (ZRange.normalize ?r) = true |- context[ident.cast ?r ?v] ]
+           => rewrite (@ident.cast_in_normalized_bounds r v) in * by assumption
+         | [ H : is_bounded_by_bool ?v (ZRange.normalize ?r) = true, H' : context[ident.cast ?r ?v] |- _ ]
+           => rewrite (@ident.cast_in_normalized_bounds r v) in * by assumption
          | [ H : is_bounded_by_bool ?v ?r = true,
                  H' : is_tighter_than_bool ?r r[0~>?x-1]%zrange = true,
                       H'' : Z.eqb ?x ?m = true
@@ -441,7 +441,7 @@ Local Ltac systematically_handle_casts :=
 
 Local Ltac fin_with_nia :=
   lazymatch goal with
-  | [ |- ident.cast _ ?r _ = ident.cast _ ?r _ ] => apply f_equal; Z.div_mod_to_quot_rem; nia
+  | [ |- ident.cast ?r _ = ident.cast ?r _ ] => apply f_equal; Z.div_mod_to_quot_rem; nia
   | _ => reflexivity || (Z.div_mod_to_quot_rem; (lia + nia))
   end.
 
@@ -492,7 +492,7 @@ End fancy.
 
 Local Ltac cast_to_arith r v :=
   match goal with
-  | [ |- context[ident.cast ?coor r v] ]
+  | [ |- context[ident.cast r v] ]
     => let H := fresh in
        eassert (H : _);
        [ | rewrite (ident.cast_in_bounds r v) by exact H ]
@@ -566,13 +566,13 @@ Proof using Type.
   (* special case to match on a particular rule that is way easier to prove this
      way; this is hacky and should ideally be removed eventually *)
   all: try match goal with
-           | |- ident.cast _ r[0 ~> 2 ^ ?b * 2 ^ ?b - 1] (_ >> _) = _ =>
+           | |- ident.cast r[0 ~> 2 ^ ?b * 2 ^ ?b - 1] (_ >> _) = _ =>
              f_equal
            end.
 
   (* remove whatever bounds [bounds_arith_hammer] solves *)
   all:repeat match goal with
-             | [ |- context[ident.cast ?coor ?r ?v] ]
+             | [ |- context[ident.cast ?r ?v] ]
                => cast_to_arith r v; [ solve [bounds_arith_hammer] .. | ]
              end.
 

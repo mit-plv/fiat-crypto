@@ -2669,7 +2669,7 @@ Module Compilers.
                            rewrite_rules_interp_goodT_curried_cps_folded snd hd tl projT1 projT2 rewrite_rule_data_interp_goodT_curried
                            rewrite_rule_data_interp_goodT_curried under_with_unification_resultT_relation_hetero under_with_unification_resultT'_relation_hetero wf_with_unification_resultT under_type_of_list_relation_cps under_type_of_list_relation1_cps pattern.pattern_of_anypattern pattern.type_of_anypattern rew_replacement rew_should_do_again rew_with_opt rew_under_lets wf_with_unification_resultT pattern_default_interp pattern.type.under_forall_vars_relation pattern.type.under_forall_vars_relation1 deep_rewrite_ruleTP_gen with_unification_resultT' pattern.ident.arg_types pattern.type.lam_forall_vars Compilers.pattern.type.lam_forall_vars_gen pattern_default_interp' pattern.collect_vars PositiveMap.empty pattern.type.collect_vars PositiveSet.elements PositiveSet.union pattern.base.collect_vars PositiveSet.empty PositiveSet.xelements lam_type_of_list id pattern.ident.to_typed under_type_of_list_relation_cps deep_rewrite_ruleTP_gen_good_relation normalize_deep_rewrite_rule pattern.type.subst_default PositiveSet.add PositiveSet.rev PositiveSet.rev_append PositiveMap.add option_bind' wf_value value pattern.base.subst_default pattern.base.lookup_default PositiveMap.find rewrite_ruleTP ident.smart_Literal value_interp_related
                            Reify.expr_value_to_rewrite_rule_replacement UnderLets.flat_map reify_expr_beta_iota reflect_expr_beta_iota reflect_ident_iota Compile.reify_to_UnderLets UnderLets.of_expr Compile.Base_value
-                           Classes.ident_gen_interp Classes.base Classes.ident Classes.base_interp Classes.ident_interp
+                           Classes.base Classes.ident Classes.base_interp Classes.ident_interp
                            List.map List.fold_right List.rev list_rect orb List.app
                         ] in
                 rewrite_rules_interp_goodT_curried_cps_folded.
@@ -3342,15 +3342,14 @@ Module Compilers.
 
           Lemma expr_value_to_rewrite_rule_replacement_interp_related
                 (should_do_again : bool)
-                {cast_outside_of_range}
                 {t} e v
-                (He : expr.interp_related_gen (ident_gen_interp cast_outside_of_range) (fun t => value_interp_related (ident_gen_interp cast_outside_of_range)) e v)
+                (He : expr.interp_related_gen ident_interp (fun t => value_interp_related ident_interp) e v)
             : UnderLets.interp_related
-                (ident_gen_interp cast_outside_of_range)
+                ident_interp
                 (if should_do_again
                     return (@expr.expr base_type ident (if should_do_again then @value _ ident var else var) t) -> type.interp (base.interp base_interp) t -> Prop
-                 then expr.interp_related_gen (ident_gen_interp cast_outside_of_range) (fun t => value_interp_related (ident_gen_interp cast_outside_of_range))
-                 else expr.interp_related (ident_gen_interp cast_outside_of_range))
+                 then expr.interp_related_gen ident_interp (fun t => value_interp_related ident_interp)
+                 else expr.interp_related ident_interp)
                 (@expr_value_to_rewrite_rule_replacement _ ident var (fun t => reflect_ident_iota) should_do_again t e)
                 v.
           Proof using Type.
@@ -3389,11 +3388,10 @@ Module Compilers.
           := (match y return _ with x => z end).
 
         Definition Interp_GoalT {exprInfo : ExprInfoT} {exprExtraInfo : ExprExtraInfoT} {pkg : package} (Rewriter : RewriterT) : Prop
-          := forall (cast_outside_of_range : zrange -> Z -> Z),
-            plet data := Rewriter_data Rewriter in
+          := plet data := Rewriter_data Rewriter in
                    specT data
                    -> @Compile.rewrite_rules_interp_goodT
-                        base _ ident pattern_ident arg_types to_typed base_interp (ident_gen_interp cast_outside_of_range)
+                        base _ ident pattern_ident arg_types to_typed base_interp ident_interp
                         (Make.GoalType.rewrite_rules data _).
       End GoalType.
     End InterpTactics.
@@ -3407,13 +3405,8 @@ Module Compilers.
 
           Rewrite : forall {t} (e : expr.Expr (ident:=ident) t), expr.Expr (ident:=ident) t;
           Wf_Rewrite : forall {t} e (Hwf : Wf e), Wf (@Rewrite t e);
-          Interp_gen_Rewrite
-          : forall {cast_outside_of_range t} e (Hwf : Wf e),
-              expr.Interp (ident_gen_interp cast_outside_of_range) (@Rewrite t e)
-              == expr.Interp (ident_gen_interp cast_outside_of_range) e;
           Interp_Rewrite {t} e
-          : forall (Hwf : Wf e), expr.Interp ident_interp (@Rewrite t e) == expr.Interp ident_interp e
-          := Interp_gen_Rewrite e;
+          : forall (Hwf : Wf e), expr.Interp ident_interp (@Rewrite t e) == expr.Interp ident_interp e;
 
           check_wf : forall {t}, expr.Expr (ident:=ident) t -> bool;
           generalize_for_wf : forall {t}, expr.Expr (ident:=ident) t -> expr.Expr (ident:=ident) t;

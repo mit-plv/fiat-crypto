@@ -38,8 +38,6 @@ Compute API.type. (* to figure out what goes into a type *)
     Notation Interp := (@expr.Interp base.type ident base.interp (@ident_interp)).
     (** [interp : forall {t}, @expr interp_type t -> interp_type t] is the [expr] denotation function *)
     Notation interp := (@expr.interp base.type ident base.interp (@ident_interp)).
-    Notation gen_Interp cast_outside_of_range := (@expr.Interp base.type ident base.interp (@ident.gen_interp cast_outside_of_range)).
-    Notation gen_interp cast_outside_of_range := (@expr.interp base.type ident base.interp (@ident.gen_interp cast_outside_of_range)).
 
     Ltac reify_type ty := type.reify ltac:(reify_base_type) constr:(base.type) ty.
     Notation reify_type t := (ltac:(let rt := reify_type t in exact rt)) (only parsing).

@@ -27,18 +27,13 @@ Module Compilers.
       Lemma Wf_RewriteArith {t} e (Hwf : Wf e) : Wf (@RewriteArith t e).
       Proof. now apply VerifiedRewriterArith. Qed.
 
-      Lemma Interp_gen_RewriteArith {cast_outside_of_range t} e (Hwf : Wf e)
-        : API.gen_Interp cast_outside_of_range (@RewriteArith t e)
-          == API.gen_Interp cast_outside_of_range e.
-      Proof. now apply VerifiedRewriterArith. Qed.
-
       Lemma Interp_RewriteArith {t} e (Hwf : Wf e) : API.Interp (@RewriteArith t e) == API.Interp e.
-      Proof. apply Interp_gen_RewriteArith; assumption. Qed.
+      Proof. now apply VerifiedRewriterArith. Qed.
     End __.
   End RewriteRules.
 
   Module Export Hints.
     Hint Resolve Wf_RewriteArith : wf wf_extra.
-    Hint Rewrite @Interp_gen_RewriteArith @Interp_RewriteArith : interp interp_extra.
+    Hint Rewrite @Interp_RewriteArith : interp interp_extra.
   End Hints.
 End Compilers.

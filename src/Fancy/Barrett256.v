@@ -27,7 +27,7 @@ Module Barrett256.
   Proof. lazy; reflexivity. Qed.
 
   Lemma barrett_red256_correct :
-    COperationSpecifications.BarrettReduction.barrett_red_correct machine_wordsize M (expr.gen_Interp cast_oor barrett_red256).
+    COperationSpecifications.BarrettReduction.barrett_red_correct machine_wordsize M (API.Interp barrett_red256).
   Proof.
     apply barrett_red_correct with (machine_wordsize:=machine_wordsize).
     { lazy. reflexivity. }

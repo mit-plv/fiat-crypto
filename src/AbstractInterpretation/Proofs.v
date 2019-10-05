@@ -691,11 +691,10 @@ Module Compilers.
                 (abstraction_relation'_Proper : forall t, Proper (abstract_domain'_R t ==> eq ==> Basics.impl) (abstraction_relation' t))
                 (bottom'_related : forall t v, abstraction_relation' t (bottom' t) v)
                 {bottom'_Proper : forall t, Proper (abstract_domain'_R t) (bottom' t)}
-                (cast_outside_of_range : zrange -> Z -> Z)
                 {abstract_domain'_R_transitive : forall t, Transitive (@abstract_domain'_R t)}
                 {abstract_domain'_R_symmetric : forall t, Symmetric (@abstract_domain'_R t)}.
         Local Notation abstraction_relation := (@abstraction_relation base.type abstract_domain' base.interp abstraction_relation').
-        Local Notation ident_interp := (@ident.gen_interp cast_outside_of_range).
+        Local Notation ident_interp := ident.interp (only parsing).
         Local Notation abstract_domain_R := (@abstract_domain_R base.type abstract_domain' abstract_domain'_R).
         Local Notation fill_in_bottom_for_arrows := (@fill_in_bottom_for_arrows base.type abstract_domain' bottom').
         Context {abstract_interp_ident_Proper : forall t, Proper (eq ==> @abstract_domain_R t) (abstract_interp_ident t)}
@@ -879,7 +878,7 @@ Module Compilers.
         Proof using abstract_interp_ident_Proper' abstraction_relation'_Proper bottom'_related extract_list_state_length_good extract_list_state_related extract_option_state_related interp_annotate_expr abstract_interp_ident_Proper bottom'_Proper abstract_domain'_R_transitive abstract_domain'_R_symmetric.
           cbn [UnderLets.interp].
           eapply interp_reflect;
-            try first [ apply ident.gen_interp_Proper
+            try first [ apply ident.interp_Proper
                       | apply abstract_interp_ident_Proper''
                       | eapply abstract_interp_ident_Proper; reflexivity
                       | apply interp_annotate ];
@@ -951,7 +950,7 @@ Module Compilers.
                      _
                      (extract e_st st)
                      (type.app_curried (expr.interp (@ident_interp) (eval_with_bound annotate_with_state e1 st)) arg1)).
-        Proof. cbv [extract eval_with_bound]; apply @interp_eval_with_bound' with (abstract_domain'_R:=abstract_domain'_R); auto using interp_annotate, interp_ident_Proper, ident.gen_interp_Proper. Qed.
+        Proof. cbv [extract eval_with_bound]; apply @interp_eval_with_bound' with (abstract_domain'_R:=abstract_domain'_R); auto using interp_annotate, interp_ident_Proper, ident.interp_Proper. Qed.
 
         Lemma interp_eta_expand_with_bound
               {t} (e1 e2 : expr t)
@@ -963,7 +962,7 @@ Module Compilers.
                    (Harg12 : type.and_for_each_lhs_of_arrow (@type.eqv) arg1 arg2)
                    (Harg1 : type.and_for_each_lhs_of_arrow (@abstraction_relation) b_in arg1),
             type.app_curried (expr.interp (@ident_interp) (eta_expand_with_bound e1 b_in)) arg1 = type.app_curried (expr.interp (@ident_interp) e2) arg2.
-        Proof. cbv [partial.ident.eta_expand_with_bound]; eapply interp_eta_expand_with_bound'; eauto using interp_annotate, ident.gen_interp_Proper. Qed.
+        Proof. cbv [partial.ident.eta_expand_with_bound]; eapply interp_eta_expand_with_bound'; eauto using interp_annotate, ident.interp_Proper. Qed.
       End with_type.
     End ident.
 
@@ -992,8 +991,8 @@ Module Compilers.
         rewrite Bool.andb_true_iff; split; auto.
       Qed.
 
-      Lemma abstract_interp_ident_related cast_outside_of_range {t} (idc : ident t)
-        : type.related_hetero (@abstraction_relation') (@abstract_interp_ident t idc) (@ident.gen_interp cast_outside_of_range _ idc).
+      Lemma abstract_interp_ident_related {t} (idc : ident t)
+        : type.related_hetero (@abstraction_relation') (@abstract_interp_ident t idc) (ident.interp idc).
       Proof using Type. apply ZRange.ident.option.interp_related. Qed.
 
       Lemma extract_list_state_related {t} st v ls
@@ -1057,8 +1056,7 @@ Module Compilers.
         Lemma interp_annotate_expr {t} st idc
               (Hst : @annotate_expr relax_zrange _ t st = Some idc)
           : forall v, abstraction_relation' st v
-                      -> (forall cast_outside_of_range,
-                             expr.interp (@ident.gen_interp cast_outside_of_range) idc v = v).
+                      -> expr.interp (@ident.interp) idc v = v.
         Proof using Hrelax.
           repeat first [ progress cbv [annotate_expr Option.bind annotation_of_state option_map abstraction_relation' ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by] in *
                        | reflexivity
@@ -1066,7 +1064,7 @@ Module Compilers.
                        | progress subst
                        | break_innermost_match_hyps_step
                        | break_innermost_match_step
-                       | progress cbn [ident.gen_interp base.interp base.base_interp expr.interp] in *
+                       | progress cbn [ident.interp base.interp base.base_interp expr.interp] in *
                        | progress cbv [ident.cast2] in *
                        | progress intros
                        | progress Bool.split_andb
@@ -1084,7 +1082,6 @@ Module Compilers.
         Local Hint Resolve interp_annotate_expr abstract_interp_ident_related.
 
         Lemma interp_eval_with_bound
-              cast_outside_of_range
               {t} (e_st e1 e2 : expr t)
               (Hwf : expr.wf3 nil e_st e1 e2)
               (Hwf' : expr.wf nil e2 e2)
@@ -1093,14 +1090,14 @@ Module Compilers.
           : (forall arg1 arg2
                     (Harg12 : type.and_for_each_lhs_of_arrow (@type.eqv) arg1 arg2)
                     (Harg1 : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) st arg1 = true),
-                type.app_curried (expr.interp (@ident.gen_interp cast_outside_of_range) (eval_with_bound relax_zrange e1 st)) arg1
-                = type.app_curried (expr.interp (@ident.gen_interp cast_outside_of_range) e2) arg2)
+                type.app_curried (expr.interp (@ident.interp) (eval_with_bound relax_zrange e1 st)) arg1
+                = type.app_curried (expr.interp (@ident.interp) e2) arg2)
             /\ (forall arg1
                        (Harg11 : type.and_for_each_lhs_of_arrow (@type.eqv) arg1 arg1)
                        (Harg1 : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) st arg1 = true),
                    abstraction_relation'
                      (extract e_st st)
-                     (type.app_curried (expr.interp (@ident.gen_interp cast_outside_of_range) (eval_with_bound relax_zrange e1 st)) arg1)).
+                     (type.app_curried (expr.interp (@ident.interp) (eval_with_bound relax_zrange e1 st)) arg1)).
         Proof using Hrelax.
           cbv [eval_with_bound]; split;
             [ intros arg1 arg2 Harg12 Harg1
@@ -1128,7 +1125,6 @@ Module Compilers.
         Qed.
 
         Lemma Interp_EvalWithBound
-              cast_outside_of_range
               {t} (e : Expr t)
               (Hwf : expr.Wf3 e)
               (Hwf' : expr.Wf e)
@@ -1138,14 +1134,14 @@ Module Compilers.
           : (forall arg1 arg2
                     (Harg12 : type.and_for_each_lhs_of_arrow (@type.eqv) arg1 arg2)
                     (Harg1 : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) st arg1 = true),
-                type.app_curried (expr.Interp (@ident.gen_interp cast_outside_of_range) (EvalWithBound relax_zrange e st)) arg1
-                = type.app_curried (expr.Interp (@ident.gen_interp cast_outside_of_range) e) arg2)
+                type.app_curried (expr.Interp (@ident.interp) (EvalWithBound relax_zrange e st)) arg1
+                = type.app_curried (expr.Interp (@ident.interp) e) arg2)
             /\ (forall arg1
                        (Harg11 : type.and_for_each_lhs_of_arrow (@type.eqv) arg1 arg1)
                        (Harg1 : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) st arg1 = true),
                    abstraction_relation'
                      (Extract e st)
-                     (type.app_curried (expr.Interp (@ident.gen_interp cast_outside_of_range) (EvalWithBound relax_zrange e st)) arg1)).
+                     (type.app_curried (expr.Interp (@ident.interp) (EvalWithBound relax_zrange e st)) arg1)).
         Proof using Hrelax. cbv [Extract EvalWithBound]; apply interp_eval_with_bound; auto. Qed.
 
         Lemma Interp_EtaExpandWithBound
@@ -1222,50 +1218,7 @@ Module Compilers.
   End partial.
   Import API.
 
-  Module Import CheckCasts.
-    Module ident.
-      Lemma interp_eqv_without_casts t idc
-            cast_outside_of_range1 cast_outside_of_range2
-      : ident.gen_interp cast_outside_of_range1 (t:=t) idc
-        == ident.gen_interp cast_outside_of_range2 idc.
-      Proof.
-        generalize (@ident.gen_interp_Proper cast_outside_of_range1 t idc idc eq_refl);
-          destruct idc; try exact id; cbn in Hc; discriminate.
-      Qed.
-    End ident.
-
-    Lemma interp_eqv_without_casts
-          cast_outside_of_range1 cast_outside_of_range2
-          G {t} e1 e2 e3
-          (HG : forall t v1 v2 v3, List.In (existT _ t (v1, v2, v3)) G -> v2 == v3)
-          (Hwf : expr.wf3 G e1 e2 e3)
-          (Hc : @CheckCasts.get_casts t e1 = nil)
-    : expr.interp (@ident.gen_interp cast_outside_of_range1) e2
-      == expr.interp (@ident.gen_interp cast_outside_of_range2) e3.
-    Proof.
-      induction Hwf;
-        repeat first [ progress cbn [CheckCasts.get_casts] in *
-                     | discriminate
-                     | match goal with
-                       | [ H : (_ ++ _)%list = nil |- _ ] => apply List.app_eq_nil in H
-                       end
-                     | progress destruct_head'_and
-                     | progress break_innermost_match_hyps
-                     | progress interp_safe_t
-                     | solve [ eauto using ident.interp_eqv_without_casts ] ].
-    Qed.
-
-    Lemma Interp_WithoutUnsupportedCasts {t} (e : Expr t)
-          (Hc : CheckCasts.GetUnsupportedCasts e = nil)
-          (Hwf : expr.Wf3 e)
-          cast_outside_of_range1 cast_outside_of_range2
-      : expr.Interp (@ident.gen_interp cast_outside_of_range1) e
-        == expr.Interp (@ident.gen_interp cast_outside_of_range2) e.
-    Proof. eapply interp_eqv_without_casts with (G:=nil); wf_safe_t. Qed.
-  End CheckCasts.
-
   Lemma Interp_PartialEvaluateWithBounds
-        cast_outside_of_range
         relax_zrange
         (Hrelax : forall r r' z, is_tighter_than_bool z r = true
                                  -> relax_zrange r = Some r'
@@ -1277,8 +1230,8 @@ Module Compilers.
     : forall arg1 arg2
         (Harg12 : type.and_for_each_lhs_of_arrow (@type.eqv) arg1 arg2)
         (Harg1 : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) b_in arg1 = true),
-      type.app_curried (expr.Interp (@ident.gen_interp cast_outside_of_range) (PartialEvaluateWithBounds relax_zrange E b_in)) arg1
-      = type.app_curried (expr.Interp (@ident.gen_interp cast_outside_of_range) E) arg2.
+      type.app_curried (expr.Interp (@ident.interp) (PartialEvaluateWithBounds relax_zrange E b_in)) arg1
+      = type.app_curried (expr.Interp (@ident.interp) E) arg2.
   Proof.
     cbv [PartialEvaluateWithBounds].
     intros arg1 arg2 Harg12 Harg1.
@@ -1291,7 +1244,6 @@ Module Compilers.
   Qed.
 
   Lemma Interp_PartialEvaluateWithBounds_bounded
-        cast_outside_of_range
         relax_zrange
         (Hrelax : forall r r' z, is_tighter_than_bool z r = true
                                  -> relax_zrange r = Some r'
@@ -1305,7 +1257,7 @@ Module Compilers.
              (Harg1 : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) b_in arg1 = true),
       ZRange.type.base.option.is_bounded_by
         (partial.Extract E b_in)
-        (type.app_curried (expr.Interp (@ident.gen_interp cast_outside_of_range) (PartialEvaluateWithBounds relax_zrange E b_in)) arg1)
+        (type.app_curried (expr.Interp (@ident.interp) (PartialEvaluateWithBounds relax_zrange E b_in)) arg1)
       = true.
   Proof.
     cbv [PartialEvaluateWithBounds].
@@ -1348,20 +1300,11 @@ Module Compilers.
               (Harg12 : type.and_for_each_lhs_of_arrow (@type.eqv) arg1 arg2)
               (Harg1 : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) b_in arg1 = true),
           ZRange.type.base.option.is_bounded_by b_out (type.app_curried (Interp rv) arg1) = true
-          /\ forall cast_outside_of_range, type.app_curried (expr.Interp (@ident.gen_interp cast_outside_of_range) rv) arg1
-                                           = type.app_curried (Interp E) arg2)
+          /\ type.app_curried (Interp rv) arg1 = type.app_curried (Interp E) arg2)
       /\ Wf rv.
   Proof.
     cbv [CheckedPartialEvaluateWithBounds Let_In] in *;
       break_innermost_match_hyps; inversion_sum; subst.
-    let H := lazymatch goal with H : _ = nil |- _ => H end in
-    pose proof (@Interp_WithoutUnsupportedCasts _ _ H ltac:(solve [ eauto with wf ])) as H'; clear H;
-      assert (forall cast_outside_of_range1 cast_outside_of_range2,
-                 expr.Interp (@ident.gen_interp cast_outside_of_range1) E == expr.Interp (@ident.gen_interp cast_outside_of_range2) E)
-      by (intros c1 c2; specialize (H' c1 c2);
-          rewrite !@GeneralizeVar.Interp_gen1_FromFlat_ToFlat in H' by eauto with wf typeclass_instances;
-          assumption).
-    clear H'.
     split.
     { intros arg1 arg2 Harg12 Harg1.
       assert (arg1_Proper : Proper (type.and_for_each_lhs_of_arrow (@type.related base.type base.interp (fun _ => eq))) arg1)

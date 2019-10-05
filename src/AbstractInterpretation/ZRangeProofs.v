@@ -68,16 +68,14 @@ Module Compilers.
       Module option.
         (** First we prove relatedness for some particularly complicated identifiers separately *)
         Section interp_related.
-          Context (cast_outside_of_range : zrange -> Z -> Z).
-
           Local Notation interp_is_related idc
             := (type.related_hetero
                   (fun t st v => ZRange.type.base.option.is_bounded_by st v = true)
                   (ZRange.ident.option.interp idc)
-                  (ident.gen_interp cast_outside_of_range idc)).
+                  (ident.interp idc)).
 
           Local Ltac z_cast_t :=
-            cbn [type.related_hetero ZRange.ident.option.interp ident.interp ident.gen_interp respectful_hetero type.interp ZRange.type.base.option.interp ZRange.type.base.interp base.interp base.base_interp ZRange.type.base.option.Some];
+            cbn [type.related_hetero ZRange.ident.option.interp ident.interp respectful_hetero type.interp ZRange.type.base.option.interp ZRange.type.base.interp base.interp base.base_interp ZRange.type.base.option.Some];
             cbv [ZRange.ident.option.interp_Z_cast ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by respectful_hetero];
             cbn [base.interp_beq base.base_interp_beq] in *;
             cbv [ident.cast2] in *; cbn [fst snd] in *;
@@ -501,9 +499,8 @@ Module Compilers.
           Local Lemma interp_related_fancy_rshi :
             interp_is_related ident.fancy_rshi.
           Proof.
-            cbn [type.related_hetero ZRange.ident.option.interp ident.interp ident.gen_interp respectful_hetero type.interp ZRange.type.base.option.interp ZRange.type.base.interp base.interp base.base_interp ZRange.type.base.option.Some ZRange.ident.option.of_literal].
+            cbn [type.related_hetero ZRange.ident.option.interp ident.interp respectful_hetero type.interp ZRange.type.base.option.interp ZRange.type.base.interp base.interp base.base_interp ZRange.type.base.option.Some ZRange.ident.option.of_literal].
             cbv [respectful_hetero option_map list_case].
-            clear cast_outside_of_range.
             intros.
             destruct_head_hnf' prod.
             handle_to_literal;
@@ -538,7 +535,7 @@ Module Compilers.
                  | [ |- context[ident.fancy_rshi] ] => apply interp_related_fancy_rshi
                  | _ => idtac
                  end.
-            all: cbn [type.related_hetero ZRange.ident.option.interp ident.interp ident.gen_interp respectful_hetero type.interp ZRange.type.base.option.interp ZRange.type.base.interp base.interp base.base_interp ZRange.type.base.option.Some ZRange.ident.option.of_literal].
+            all: cbn [type.related_hetero ZRange.ident.option.interp ident.interp respectful_hetero type.interp ZRange.type.base.option.interp ZRange.type.base.interp base.interp base.base_interp ZRange.type.base.option.Some ZRange.ident.option.of_literal].
             all: cbv [ident.cast2 ident.literal prod_rect_nodep ident.eagerly] in *.
             all: change (@zrange_rect_nodep) with (fun T => @zrange_rect (fun _ => T)) in *.
             all: change (@ident.Thunked.nat_rect) with (fun P P0 => @nat_rect (fun _ => P) (P0 Datatypes.tt)) in *.
@@ -585,7 +582,6 @@ Module Compilers.
                                 end
                               | progress Z.ltb_to_lt
                               | progress rewrite ?Z.mul_split_div, ?Z.mul_split_mod, ?Z.add_get_carry_full_div, ?Z.add_get_carry_full_mod, ?Z.add_with_get_carry_full_div, ?Z.add_with_get_carry_full_mod, ?Z.sub_get_borrow_full_div, ?Z.sub_get_borrow_full_mod, ?Z.sub_with_get_borrow_full_div, ?Z.sub_with_get_borrow_full_mod, ?Z.zselect_correct, ?Z.add_modulo_correct, ?Z.rshi_correct_full, ?Z.truncating_shiftl_correct_land_ones ].
-            all: clear cast_outside_of_range.
             all: repeat lazymatch goal with
                         | [ |- is_bounded_by_bool (Z.land _ _) (ZRange.land_bounds _ _) = true ]
                           => apply ZRange.is_bounded_by_bool_land_bounds; auto

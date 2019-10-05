@@ -30,7 +30,7 @@ Module Montgomery256.
   Proof. lazy; reflexivity. Qed.
 
   Lemma montred256_correct :
-    COperationSpecifications.MontgomeryReduction.montred_correct N R R' (expr.gen_Interp cast_oor montred256).
+    COperationSpecifications.MontgomeryReduction.montred_correct N R R' (API.Interp montred256).
   Proof.
     apply montred_correct with (n:=2%nat) (machine_wordsize:=machine_wordsize) (N':=N').
     { lazy. reflexivity. }

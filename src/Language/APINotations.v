@@ -53,9 +53,7 @@ Module Compilers.
   Global Existing Instance reflect_base_interp_eq | 10.
   Global Existing Instance try_make_base_transport_cps | 5.
   Global Existing Instance buildIdent | 5.
-  Global Existing Instance gen_eqv_Reflexive_Proper | 1.
   Global Existing Instance eqv_Reflexive_Proper | 1.
-  Global Existing Instance ident_gen_interp_Proper | 1.
   Global Existing Instance ident_interp_Proper | 1.
 
 
@@ -207,8 +205,7 @@ Module Compilers.
     Notation option_Some := Compilers.ident_Some (only parsing).
     Notation option_None := Compilers.ident_None (only parsing).
 
-    Notation gen_interp := Compilers.ident_gen_interp (only parsing).
-    Notation interp := (@Compilers.ident_gen_interp ident.cast_outside_of_range) (only parsing).
+    Notation interp := Compilers.ident_interp (only parsing).
 
     Notation buildEagerIdent := Compilers.buildEagerIdent (only parsing).
     Notation buildInterpEagerIdentCorrect := Compilers.buildInterpEagerIdentCorrect (only parsing).
@@ -220,16 +217,14 @@ Module Compilers.
     Notation buildIdent := Compilers.buildIdent (only parsing).
     Notation is_var_like := Compilers.ident_is_var_like (only parsing).
     Notation buildInterpIdentCorrect := Compilers.buildInterpIdentCorrect (only parsing).
-    Notation gen_eqv_Reflexive_Proper := Compilers.gen_eqv_Reflexive_Proper (only parsing).
     Notation eqv_Reflexive_Proper := Compilers.eqv_Reflexive_Proper (only parsing).
-    Notation gen_interp_Proper := Compilers.ident_gen_interp_Proper (only parsing).
     Notation interp_Proper := Compilers.ident_interp_Proper (only parsing).
 
     Module Export Notations.
       Export Language.Compilers.ident.Notations.
       Delimit Scope ident_scope with ident.
       Bind Scope ident_scope with ident.
-      Notation interp := (@Compilers.ident_gen_interp ident.cast_outside_of_range) (only parsing).
+      Notation interp := Compilers.ident_interp (only parsing).
       Global Arguments expr.Ident {base_type%type ident%function var%function t%etype} idc%ident.
       Notation "## x" := (Compilers.ident_Literal x) (only printing) : ident_scope.
       Notation "## x" := (Compilers.ident_Literal (t:=base.reify_base_type_of x) x) (only parsing) : ident_scope.
@@ -260,16 +255,11 @@ Module Compilers.
       Notation "x || y" := (#Compilers.ident_Z_lor @ x @ y)%expr : expr_scope.
       Notation "x 'mod' y" := (#Compilers.ident_Z_modulo @ x @ y)%expr : expr_scope.
       Notation "- x" := (#Compilers.ident_Z_opp @ x)%expr : expr_scope.
-      Global Arguments ident_gen_interp _ _ !_.
+      Global Arguments ident_interp _ !_.
     End Notations.
   End ident.
   Export ident.Notations.
   Notation ident := Identifier.Compilers.ident (only parsing).
-
-  Module expr.
-    Notation gen_Interp cast_outside_of_range := (@expr.Interp base.type ident base.interp (@ident.gen_interp cast_outside_of_range)).
-    Notation gen_interp cast_outside_of_range := (@expr.interp base.type ident base.interp (@ident.gen_interp cast_outside_of_range)).
-  End expr.
 
   Ltac reify var term :=
     expr.reify constr:(base.type) ident ltac:(reify_base_type) ltac:(reify_ident) var term.

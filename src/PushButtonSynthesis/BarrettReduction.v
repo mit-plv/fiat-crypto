@@ -190,7 +190,7 @@ Section rbarrett_red.
 
   Local Strategy -100 [barrett_red]. (* needed for making Qed not take forever *)
   Lemma barrett_red_correct res (Hres : barrett_red = Success res)
-    : barrett_red_correct machine_wordsize M (API.gen_Interp cast_oor res).
+    : barrett_red_correct machine_wordsize M (API.Interp res).
   Proof using M curve_good.
     cbv [barrett_red_correct]; intros.
     assert (1 < machine_wordsize) by apply use_curve_good.

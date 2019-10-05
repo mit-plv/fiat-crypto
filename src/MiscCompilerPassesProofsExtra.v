@@ -28,20 +28,20 @@ Module Compilers.
   Module Subst01.
     Import MiscCompilerPassesProofs.Compilers.Subst01.
 
-    Definition Interp_gen_Subst01 {cast_outside_of_range} {t} e Hwf
-      := @Interp_Subst01 _ ident _ (@ident.gen_interp cast_outside_of_range) (@ident.gen_interp_Proper cast_outside_of_range) t e Hwf.
+    Definition Interp_Subst01 {t} e Hwf
+      := @Interp_Subst01 _ ident _ (@ident.interp) (@ident.interp_Proper) t e Hwf.
   End Subst01.
 
   Hint Resolve Subst01.Wf_Subst01 : wf_extra.
-  Hint Rewrite @Subst01.Interp_gen_Subst01 : interp_extra.
+  Hint Rewrite @Subst01.Interp_Subst01 : interp_extra.
 
   Module DeadCodeElimination.
     Import MiscCompilerPassesProofs.Compilers.DeadCodeElimination.
 
-    Definition Interp_gen_EliminateDead {cast_outside_of_range} {t} e Hwf
-      := @Interp_EliminateDead _ ident _ (@ident.gen_interp cast_outside_of_range) (@ident.gen_interp_Proper cast_outside_of_range) t e Hwf.
+    Definition Interp_EliminateDead {t} e Hwf
+      := @Interp_EliminateDead _ ident _ (@ident.interp) (@ident.interp_Proper) t e Hwf.
   End DeadCodeElimination.
 
   Hint Resolve DeadCodeElimination.Wf_EliminateDead : wf_extra.
-  Hint Rewrite @DeadCodeElimination.Interp_gen_EliminateDead : interp_extra.
+  Hint Rewrite @DeadCodeElimination.Interp_EliminateDead : interp_extra.
 End Compilers.

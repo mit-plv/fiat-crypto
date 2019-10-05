@@ -18,8 +18,8 @@ Local Notation dont_do_again := (pair false) (only parsing).
 Local Notation do_again := (pair true) (only parsing).
 
 Local Notation "' x" := (ident.literal x).
-Local Notation cstZ r := (ident.cast ident.cast_outside_of_range ('r%zrange)).
-Local Notation cstZZ r1 r2 := (ident.cast2 ident.cast_outside_of_range ('(r1%zrange), '(r2%zrange))).
+Local Notation cstZ r := (ident.cast ('r%zrange)).
+Local Notation cstZZ r1 r2 := (ident.cast2 ('(r1%zrange), '(r2%zrange))).
 Local Notation "'plet' x := y 'in' z"
   := (match y return _ with x => z end).
 
@@ -43,52 +43,6 @@ Local Notation "x ∈ y" := (is_bounded_by_bool x (ZRange.normalize y) = true) :
 Local Notation "x <= y" := (is_tighter_than_bool (ZRange.normalize x) y = true) : zrange_scope.
 Local Notation litZZ x := (ident.literal (fst x), ident.literal (snd x)) (only parsing).
 Local Notation n r := (ZRange.normalize r) (only parsing).
-
-Local Ltac generalize_cast' force_progress term :=
-  let default _ := lazymatch force_progress with
-                   | false => term
-                   end in
-  lazymatch type of term with
-  | Prop => lazymatch term with
-            | context[ident.cast_outside_of_range]
-              => lazymatch (eval pattern ident.cast_outside_of_range in term) with
-                 | (fun x : ?T => ?f) _
-                   => constr:(forall x : T, f)
-                 end
-            | _ => default ()
-            end
-  | _
-    => lazymatch term with
-       | context[ident.cast_outside_of_range]
-         => let term := match term with
-                        | context F[@cons Prop ?x]
-                          => let x := generalize_cast' true x in
-                             let term := context F[@cons Prop x] in
-                             term
-                        | context F[@cons (?T * Prop) (?b, ?x)]
-                          => let x := generalize_cast' true x in
-                             let term := context F[@cons (T * Prop) (b, x)] in
-                             term
-                        end in
-            generalize_cast' false term
-       | _ => default ()
-       end
-  end.
-Local Ltac early_unfold_in term := term.
-Local Ltac generalize_cast term :=
-  let term := early_unfold_in term in
-  generalize_cast' false term.
-
-(* Play tricks/games with [match] to get [term] interpreted as a constr rather than an ident when it's not closed, to get better error messages *)
-Local Notation generalize_cast term
-  := (match term return _ with
-      | _TERM => ltac:(let TERM := (eval cbv delta [_TERM] in _TERM) in
-                       let res := generalize_cast TERM in
-                       exact res)
-      end) (only parsing).
-
-Local Notation myflatten_generalize_cast x
-  := (myflatten (generalize_cast x)) (only parsing).
 
 (* N.B. [ident.eagerly] does not play well with [do_again] *)
 Definition nbe_rewrite_rulesT : list (bool * Prop)
@@ -327,7 +281,7 @@ Definition arith_rewrite_rulesT (max_const_val : Z) : list (bool * Prop)
 
 Definition arith_with_casts_rewrite_rulesT : list (bool * Prop)
   := Eval cbv [myapp mymap myflatten] in
-      myflatten_generalize_cast
+      myflatten
         [mymap
            dont_do_again
            [(forall A B x y, @fst A B (x, y) = x)
@@ -485,7 +439,7 @@ Definition arith_with_casts_rewrite_rulesT : list (bool * Prop)
         ].
 
 Definition strip_literal_casts_rewrite_rulesT : list (bool * Prop)
-  := generalize_cast [dont_do_again (forall rx x, x ∈ rx -> cstZ rx ('x) = 'x)]%Z%zrange.
+  := [dont_do_again (forall rx x, x ∈ rx -> cstZ rx ('x) = 'x)]%Z%zrange.
 
 Section fancy.
   Context (invert_low invert_high : Z (*log2wordmax*) -> Z -> option Z)
@@ -512,7 +466,7 @@ Section fancy.
 
   Definition fancy_with_casts_rewrite_rulesT : list (bool * Prop)
     := Eval cbv [myapp mymap myflatten] in
-        myflatten_generalize_cast
+        myflatten
           [mymap
              dont_do_again
              [(*
@@ -847,7 +801,7 @@ Section with_bitwidth.
 
   Definition mul_split_rewrite_rulesT : Datatypes.list (Datatypes.bool * Prop)
     := Eval cbv [myapp mymap myflatten] in
-        myflatten_generalize_cast
+        myflatten
           [mymap
              dont_do_again
              [(forall r x, cstZ r (cstZ r x) = cstZ r x) (* when inlining Z.combine_at_bitwidth, casts will sometimes get doubled up, so we need to strip the extra casts *)

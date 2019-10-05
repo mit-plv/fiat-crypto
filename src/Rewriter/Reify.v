@@ -917,17 +917,15 @@ Module Compilers.
         let exprExtraInfo := (eval hnf in exprExtraInfo) in
         let pident_pair := build_pident_pair exprExtraInfo pkg in
         let ident_interp := (eval cbv [Classes.ident_interp] in (@Classes.ident_interp exprInfo)) in
-        let ident_gen_interp := (eval cbv [Classes.ident_gen_interp] in (@Classes.ident_gen_interp exprInfo)) in
         let ident_interp_head := head ident_interp in
-        let ident_gen_interp_head := head ident_gen_interp in
         let base_interp_beq := (eval cbv [Classes.base_interp_beq] in (@Classes.base_interp_beq exprInfo exprExtraInfo)) in
         let base_interp_beq_head := head base_interp_beq in
         let x := fresh "x" in
-        let v := (eval cbv -[ident_interp_head ident_gen_interp_head ident.smart_Literal base_interp_beq_head] in
+        let v := (eval cbv -[ident_interp_head ident.smart_Literal base_interp_beq_head] in
                      (fun var
                       => @interp_rewrite_rules_folded
                            exprInfo exprExtraInfo pkg var pident_pair (fun evm t x => Datatypes.fst x))) in
-        let v := (eval cbv [ident_interp_head ident_gen_interp_head ident.smart_Literal ident.ident_Literal ident.ident_tt ident.ident_pair] in v) in
+        let v := (eval cbv [ident_interp_head ident.smart_Literal ident.ident_Literal ident.ident_tt ident.ident_pair] in v) in
         v.
 
       Module Import AdjustRewriteRulesForReduction.

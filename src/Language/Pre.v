@@ -13,8 +13,6 @@ Module ident.
   Definition gets_inlined (real_val : bool) {T} (v : T) : bool := real_val.
 
   Section cast.
-    Context (cast_outside_of_range : zrange -> BinInt.Z -> BinInt.Z).
-
     Definition is_more_pos_than_neg (r : zrange) (v : BinInt.Z) : bool
       := ((Z.abs (lower r) <? Z.abs (upper r)) (* if more of the range is above 0 than below 0 *)
           || ((lower r =? upper r) && (0 <=? lower r))
@@ -22,31 +20,24 @@ Module ident.
 
     (** We ensure that [ident.cast] is symmetric under [Z.opp], as
         this makes some rewrite rules much, much easier to prove. *)
-    (** We actually ignore [cast_outside_of_range] and hard-code it to
-        the identity.  This is needed for one of our rewrite rules.
-
-        XXX TODO: Come up with a good way of proving boundedness for
+    (** XXX TODO: Come up with a good way of proving boundedness for
           the abstract interpreter, now that we no longer can even
           guarantee that we have the same behavior independent of
           overflow behavior. *)
-    Let cast_outside_of_range' (r : zrange) (v : BinInt.Z) : BinInt.Z
-      := let v' := let dummy := cast_outside_of_range r v in v in
-         ((v' - lower r) mod (upper r - lower r + 1)) + lower r.
+    Let cast_outside_of_range (r : zrange) (v : BinInt.Z) : BinInt.Z
+      := ((v - lower r) mod (upper r - lower r + 1)) + lower r.
 
     Definition cast (r : zrange) (x : BinInt.Z)
       := let r := ZRange.normalize r in
          if (lower r <=? x) && (x <=? upper r)
          then x
          else if is_more_pos_than_neg r x
-              then cast_outside_of_range' r x
-              else -cast_outside_of_range' (-r) (-x).
+              then cast_outside_of_range r x
+              else -cast_outside_of_range (-r) (-x).
     Definition cast2 (r : zrange * zrange) (x : BinInt.Z * BinInt.Z)
       := (cast (Datatypes.fst r) (Datatypes.fst x),
           cast (Datatypes.snd r) (Datatypes.snd x)).
   End cast.
-
-  Definition cast_outside_of_range (r : zrange) (v : BinInt.Z) : BinInt.Z.
-  Proof. exact v. Qed.
 
   Module fancy.
     Module with_wordmax.
