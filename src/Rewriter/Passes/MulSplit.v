@@ -28,18 +28,13 @@ Module Compilers.
       Lemma Wf_RewriteMulSplit {t} e (Hwf : Wf e) : Wf (@RewriteMulSplit t e).
       Proof. now apply VerifiedRewriterMulSplit. Qed.
 
-      Lemma Interp_gen_RewriteMulSplit {cast_outside_of_range t} e (Hwf : Wf e)
-        : API.gen_Interp cast_outside_of_range (@RewriteMulSplit t e)
-          == API.gen_Interp cast_outside_of_range e.
-      Proof. now apply VerifiedRewriterMulSplit. Qed.
-
       Lemma Interp_RewriteMulSplit {t} e (Hwf : Wf e) : API.Interp (@RewriteMulSplit t e) == API.Interp e.
-      Proof. apply Interp_gen_RewriteMulSplit; assumption. Qed.
+      Proof. now apply VerifiedRewriterMulSplit. Qed.
     End __.
   End RewriteRules.
 
   Module Export Hints.
     Hint Resolve Wf_RewriteMulSplit : wf wf_extra.
-    Hint Rewrite @Interp_gen_RewriteMulSplit @Interp_RewriteMulSplit : interp interp_extra.
+    Hint Rewrite @Interp_RewriteMulSplit : interp interp_extra.
   End Hints.
 End Compilers.

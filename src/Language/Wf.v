@@ -1562,20 +1562,6 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
           : type.related R (expr.Interp ident_interp (GeneralizeVar (e _))) (expr.Interp ident_interp e).
         Proof. apply @Interp_gen2_GeneralizeVar; eassumption. Qed.
       End gen1.
-
-      (*
-      Section with_cast.
-        Context {cast_outside_of_range : zrange -> Z -> Z}.
-
-        Local Notation Interp := (expr.Interp (@ident.gen_interp cast_outside_of_range)).
-
-        Lemma Interp_FromFlat_ToFlat {t} (e : Expr t) (Hwf : expr.Wf e) : Interp (FromFlat (ToFlat e)) == Interp e.
-        Proof. apply @Interp_gen1_FromFlat_ToFlat; eauto using ident.gen_interp_Proper. Qed.
-
-        Lemma Interp_GeneralizeVar {t} (e : Expr t) (Hwf : expr.Wf e) : Interp (GeneralizeVar (e _)) == Interp e.
-        Proof. apply Interp_FromFlat_ToFlat, Hwf. Qed.
-      End with_cast.
-       *)
     End with_base_type.
   End GeneralizeVar.
 

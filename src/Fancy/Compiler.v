@@ -283,13 +283,11 @@ Section of_prefancy.
     Local Notation interp := (interp name_eqb wordmax cc_spec).
     Local Notation uint256 := r[0~>wordmax-1]%zrange.
     Local Notation uint128 := r[0~>(2 ^ (Z.log2 wordmax / 2) - 1)]%zrange.
-    Definition cast_oor (r : zrange) (v : Z) := v mod (upper r + 1).
     Local Notation "'existZ' x" := (existT _ (type.base tZ) x) (at level 200).
     Local Notation "'existZZ' x" := (existT _ (type.base (tZ * tZ)%etype) x) (at level 200).
-    Local Notation cgen_interp coor := (API.gen_interp coor).
-    Local Notation cinterp := (API.gen_interp cast_oor).
+    Local Notation cinterp := API.interp.
     Definition interp_if_Z {t} (e : cexpr t) : option Z :=
-      option_map (expr.interp (@ident.gen_interp cast_oor) (t:=tZ))
+      option_map (API.interp (t:=tZ))
                  (type.try_transport
                     _ _ tZ e).
 
@@ -298,7 +296,7 @@ Section of_prefancy.
       exists e',
         (type.try_transport
            _ _ tZ e) = Some e' /\
-        expr.interp (@ident.gen_interp cast_oor) (t:=tZ) e' = r.
+        API.interp (t:=tZ) e' = r.
     Proof.
       clear. cbv [interp_if_Z option_map].
       break_match; inversion 1; intros.
@@ -476,11 +474,6 @@ Section of_prefancy.
           valid_expr _ r x
     .
 
-    Lemma cast_oor_id v u : 0 <= v <= u -> cast_oor r[0 ~> u] v = v.
-    Proof. intros; cbv [cast_oor upper]. apply Z.mod_small; omega. Qed.
-    Lemma cast_oor_mod v u : 0 <= u -> cast_oor r[0 ~> u] v mod (u+1) = v mod (u+1).
-    Proof. intros; cbv [cast_oor upper]. apply Z.mod_mod; omega. Qed.
-
     Lemma wordmax_nonneg : 0 <= wordmax.
     Proof. cbv; congruence. Qed.
 
@@ -511,7 +504,7 @@ Section of_prefancy.
                   | progress destruct_head'_and
                   | progress inversion_type
                   | progress cbn [fst snd upper lower fst snd eq_rect projT1 projT2 eq_rect type.decode f_equal f_equal2] in *
-                  | progress cbn [expr.interp ident.gen_interp type.interp base.interp base.base_interp] in *
+                  | progress cbn [expr.interp ident.interp type.interp base.interp base.base_interp] in *
                   | progress cbv [ident.cast2 ident.literal] in *
                   | progress destruct_head'_prod
                   | progress expr.inversion_expr
@@ -613,7 +606,7 @@ Section of_prefancy.
                   | progress inversion_of_prefancy_ident
                   | progress inversion_prod
                   | progress cbv [id]
-                  | progress cbn [eq_rect projT1 projT2 expr.interp ident.interp ident.gen_interp interp_base Coercions.base Coercions.type_base interp interp_if_Z option_map] in *
+                  | progress cbn [eq_rect projT1 projT2 expr.interp ident.interp interp_base Coercions.base Coercions.type_base interp interp_if_Z option_map] in *
                   | progress cbv [ident.cast2 ident.literal] in *
                   | progress ident.fancy.cbv_fancy_in_all
                   | progress cbn [invert_expr.invert_Ident] in * (* N.B. Must be above [break_innermost_match] for proofs below to work *)
@@ -646,12 +639,8 @@ Section of_prefancy.
 
     Lemma cast_mod u v :
       0 <= u ->
-      ident.cast cast_oor r[0~>u] v = v mod (u + 1).
-    Proof.
-      intros.
-      rewrite ident.cast_out_of_bounds_simple_0_mod by auto using cast_oor_id, cast_oor_mod.
-      cbv [cast_oor upper]. apply Z.mod_mod. omega.
-    Qed.
+      ident.cast r[0~>u] v = v mod (u + 1).
+    Proof. apply ident.cast_out_of_bounds_simple_0_mod. Qed.
 
     Lemma cc_spec_c v :
       Z.b2z (cc_spec CC.C v) = (v / wordmax) mod 2.

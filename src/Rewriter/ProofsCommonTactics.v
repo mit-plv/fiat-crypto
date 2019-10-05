@@ -213,13 +213,13 @@ Module Compilers.
         let exprExtraInfo := lazymatch goal with |- context[@Interp_GoalT ?exprInfo ?exprExtraInfo ?pkg] => (eval hnf in exprExtraInfo) end in
         cbv [List.skipn Interp_GoalT] in *; Compilers.pattern.ident.GoalType.red_proj; intros;
         lazymatch constr:((exprInfo, exprExtraInfo)) with
-        | ({| Classes.ident_gen_interp := ?ident_gen_interp
+        | ({| Classes.ident_interp := ?ident_interp
            |}
            , {| Classes.base_beq := ?base_beq
                 ; Classes.reflect_base_beq := ?reflect_base_beq
                 ; Classes.try_make_transport_base_cps_correct := ?try_make_transport_base_cps_correct
              |})
-          => let ident_gen_interp_head := head ident_gen_interp in
+          => let ident_interp_head := head ident_interp in
              lazymatch goal with
              | [ |- @Compile.rewrite_rules_interp_goodT ?base ?try_make_transport_base_cps ?ident ?pident ?pident_arg_types ?pident_to_typed ?base_interp ?ident_interp (Make.GoalType.rewrite_rules ?data ?var) ]
                => let base_interp_head := head base_interp in
@@ -237,7 +237,7 @@ Module Compilers.
                   let pident_to_typed' := (eval cbn [Datatypes.fst Datatypes.snd List.fold_right] in pident_to_typed') in
                   change pident_to_typed with pident_to_typed' in H;
                   cbv [Compile.rewrite_rules_interp_goodT_curried_cps
-                         Classes.base Classes.ident Classes.ident_gen_interp Classes.base_interp Classes.ident_interp
+                         Classes.base Classes.ident Classes.ident_interp Classes.base_interp Classes.ident_interp
                          ident.literal ident.eagerly] in H;
                   cbn [fst snd hd tl projT1 projT2] in H;
                   (* make [Qed] not take forever by explicitly recording a cast node *)
@@ -268,7 +268,7 @@ Module Compilers.
                               end
                             | progress eta_expand
                             | progress cbn [eq_rect] in * ];
-               cbn [fst snd base.interp type.interp projT1 projT2 UnderLets.interp expr.interp type.related ident_gen_interp_head] in *;
+               cbn [fst snd base.interp type.interp projT1 projT2 UnderLets.interp expr.interp type.related ident_interp_head] in *;
                cbn [fst snd] in *;
                eta_expand;
                split_andb;
@@ -303,7 +303,7 @@ Module Compilers.
                                       .. ]
         end.
 
-      Ltac recurse_interp_related_step ident_gen_interp_head ident_gen_interp_Proper :=
+      Ltac recurse_interp_related_step ident_interp_head ident_interp_Proper :=
         let do_replace v :=
             ((tryif is_evar v then fail else idtac);
              let v' := open_constr:(_) in
@@ -334,13 +334,13 @@ Module Compilers.
           => let fh := fresh in set (fh := f); cbn [expr.interp_related_gen]; subst fh
         | [ |- expr.interp_related_gen _ _ (expr.Ident ?idc) ?ev ]
           => is_evar ev;
-             cbn [expr.interp_related_gen]; apply ident_gen_interp_Proper; reflexivity
+             cbn [expr.interp_related_gen]; apply ident_interp_Proper; reflexivity
         | [ |- _ = _ :> ?T ]
           => lazymatch T with
              | BinInt.Z => idtac
              | (BinInt.Z * BinInt.Z)%type => idtac
              end;
-             progress cbn [ident_gen_interp_head fst snd]
+             progress cbn [ident_interp_head fst snd]
         | [ |- ?x = ?y ] => tryif first [ has_evar x | has_evar y ] then fail else (progress subst)
         | [ |- ?x = ?y ] => tryif first [ has_evar x | has_evar y ] then fail else reflexivity
         | [ |- ?x = ?x ] => tryif has_evar x then fail else reflexivity
@@ -419,31 +419,31 @@ Module Compilers.
                   => progress change (fun t : T => vii t b) with (fun t : T => @Compile.value_interp_related _ _ _ ident_interp t b)
                 end ].
       Ltac preprocess base_interp_head := repeat preprocess_step base_interp_head.
-      Ltac handle_extra_nbe ident_gen_interp_head ident_gen_interp_Proper :=
+      Ltac handle_extra_nbe ident_interp_head ident_interp_Proper :=
         repeat match goal with
                | [ |- UnderLets.interp_related _ _ (UnderLets.Base (expr.Ident _)) _ ]
-                 => cbn [UnderLets.interp_related UnderLets.interp_related_gen expr.interp_related_gen ident_gen_interp_head type.related]; reflexivity
+                 => cbn [UnderLets.interp_related UnderLets.interp_related_gen expr.interp_related_gen ident_interp_head type.related]; reflexivity
                | [ |- UnderLets.interp_related _ _ (UnderLets.Base (reify_list _)) _ ]
                  => cbn [UnderLets.interp_related UnderLets.interp_related_gen]; rewrite expr.reify_list_interp_related_gen_iff
                | [ |- UnderLets.interp_related ?ident_interp _ (UnderLets.Base ?e) ?x ]
-                 => lazymatch (eval cbn [expr.interp ident_gen_interp_head] in (expr.interp ident_interp e)) with
+                 => lazymatch (eval cbn [expr.interp ident_interp_head] in (expr.interp ident_interp e)) with
                     | (_, _) =>
                       cbn [UnderLets.interp_related UnderLets.interp_related_gen];
-                      recurse_interp_related_step ident_gen_interp_head ident_gen_interp_Proper;
-                      [ recurse_interp_related_step ident_gen_interp_head ident_gen_interp_Proper
+                      recurse_interp_related_step ident_interp_head ident_interp_Proper;
+                      [ recurse_interp_related_step ident_interp_head ident_interp_Proper
                       | lazymatch x with
                         | (_, _) => reflexivity
                         | _ => etransitivity; [ | symmetry; apply surjective_pairing ]; reflexivity
                         end ];
                       [ | reflexivity ]; cbn [fst snd];
-                      recurse_interp_related_step ident_gen_interp_head ident_gen_interp_Proper; [ recurse_interp_related_step ident_gen_interp_head ident_gen_interp_Proper | reflexivity ]
+                      recurse_interp_related_step ident_interp_head ident_interp_Proper; [ recurse_interp_related_step ident_interp_head ident_interp_Proper | reflexivity ]
                     end
                | [ |- List.Forall2 _ (List.map _ _) _ ]
                  => rewrite Forall2_map_l_iff
                | [ |- List.Forall2 _ ?x ?x ] => rewrite Forall2_Forall; cbv [Proper]
                | [ |- List.Forall _ _ ] => rewrite Forall_forall; intros
                | [ |- expr.interp_related_gen _ _ (expr.Ident _) _ ]
-                 => cbn [expr.interp_related_gen ident_gen_interp_head type.related]; reflexivity
+                 => cbn [expr.interp_related_gen ident_interp_head type.related]; reflexivity
                end.
 
       Ltac fin_tac :=
@@ -456,13 +456,13 @@ Module Compilers.
                        | [ |- _ = _ ] => reflexivity
                        end ].
 
-      Ltac handle_reified_rewrite_rules_interp exprInfo exprExtraInfo base_interp_head ident_gen_interp_head ident_gen_interp_Proper :=
+      Ltac handle_reified_rewrite_rules_interp exprInfo exprExtraInfo base_interp_head ident_interp_head ident_interp_Proper :=
         let not_arrow t := lazymatch t with _ -> _ => fail | _ => idtac end in
         repeat first [ assumption
                      | match goal with
                        | [ |- UnderLets.interp_related _ _ (Reify.expr_value_to_rewrite_rule_replacement _ ?sda _) _ ]
-                         => refine (@Reify.expr_value_to_rewrite_rule_replacement_interp_related exprInfo exprExtraInfo sda _ _ _ _ _);
-                            cbv [Classes.base Classes.ident Classes.ident_gen_interp Classes.base_interp Classes.ident_interp]
+                         => refine (@Reify.expr_value_to_rewrite_rule_replacement_interp_related exprInfo exprExtraInfo sda _ _ _ _);
+                            cbv [Classes.base Classes.ident Classes.ident_interp Classes.base_interp Classes.ident_interp]
 
                        | [ |- UnderLets.interp_related_gen ?ii ?R (UnderLets.Base (#_(*ident.ident_list_rect*) @ _ @ _ @ _)%expr) (@list_rect ?A (fun _ => ?P) ?N ?C ?ls) ]
                          => not_arrow P; progress change (@list_rect A (fun _ => P) N C ls) with (@ident.Thunked.list_rect A P (fun _ => N) C ls)
@@ -489,7 +489,7 @@ Module Compilers.
                        | [ |- expr.interp_related_gen _ _ (expr.Ident ?idc) ?rhs ]
                          => let rhs' := open_constr:(_) in
                             replace rhs with rhs';
-                            [ cbn [expr.interp_related_gen]; now refine (ident_gen_interp_Proper _ _ idc idc eq_refl)
+                            [ cbn [expr.interp_related_gen]; now refine (ident_interp_Proper _ idc idc eq_refl)
                             | try reflexivity ]
                        | [ |- expr.interp_related_gen _ _ (expr.Abs ?f) _ ]
                          => let fh := fresh in set (fh := f); cbn [expr.interp_related_gen]; subst fh; cbv beta; intros
@@ -509,7 +509,7 @@ Module Compilers.
                             exists F, X; repeat apply conj; [ | | reflexivity ]
 
                        | [ |- _ = _ ] => solve [ fin_tac ]
-                       | [ |- type.eqv _ _ ] => cbn [ident_gen_interp_head type.related]; cbv [respectful]; intros; subst
+                       | [ |- type.eqv _ _ ] => cbn [ident_interp_head type.related]; cbv [respectful]; intros; subst
                        end
                      | progress repeat (do 2 eexists; repeat apply conj; [ | | reflexivity ]) ].
 
@@ -520,19 +520,19 @@ Module Compilers.
           let exprExtraInfo := lazymatch goal with |- context[@Interp_GoalT ?exprInfo ?exprExtraInfo ?pkg] => (eval hnf in exprExtraInfo) end in
           lazymatch constr:((exprInfo, exprExtraInfo)) with
           | ({| Classes.base_interp := ?base_interp
-                ; Classes.ident_gen_interp := ?ident_gen_interp
+                ; Classes.ident_interp := ?ident_interp
              |}
-             , {| Classes.ident_gen_interp_Proper := ?ident_gen_interp_Proper
+             , {| Classes.ident_interp_Proper := ?ident_interp_Proper
                |})
             => let base_interp_head := head base_interp in
-               let ident_gen_interp_head := head ident_gen_interp in
+               let ident_interp_head := head ident_interp in
                do_time start_interp_good;
                do_time
                  ltac:(
                  fun _
                  => preprocess base_interp_head;
-                    handle_extra_nbe ident_gen_interp_head ident_gen_interp_Proper;
-                    handle_reified_rewrite_rules_interp exprInfo exprExtraInfo base_interp_head ident_gen_interp_head ident_gen_interp_Proper)
+                    handle_extra_nbe ident_interp_head ident_interp_Proper;
+                    handle_reified_rewrite_rules_interp exprInfo exprExtraInfo base_interp_head ident_interp_head ident_interp_Proper)
           end;
           warn_if_goals_remain ().
       End Tactic.

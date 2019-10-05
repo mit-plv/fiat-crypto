@@ -37,9 +37,7 @@ Import EqNotations.
 Module ident.
   Local Transparent ident.cast.
   Section with_cast.
-    Context {cast_outside_of_range : zrange -> Z -> Z}.
-
-    Local Notation cast := (@ident.cast cast_outside_of_range).
+    Local Notation cast := ident.cast (only parsing).
 
     Lemma cast_opp' r v : (-cast (-r) (-v) = cast r v)%Z.
     Proof.
@@ -131,82 +129,6 @@ Module ident.
       edestruct is_bounded_by_bool; tauto.
     Qed.
 
-    (*
-    Lemma cast_out_of_bounds_in_range_pos r v
-      : ident.is_more_pos_than_neg (ZRange.normalize r) v = true
-        -> is_bounded_by_bool v (ZRange.normalize r) = false
-        -> is_bounded_by_bool (cast_outside_of_range (ZRange.normalize r) v) (ZRange.normalize r) = true
-        -> cast r v = cast_outside_of_range (ZRange.normalize r) v.
-    Proof.
-      cbv [cast is_bounded_by_bool]; break_innermost_match; try congruence; intros.
-      pose proof (ZRange.goodb_normalize r); cbv [ZRange.goodb] in *.
-      split_andb; Z.ltb_to_lt; try lia.
-      match goal with
-      | [ |- context[(?a mod ?b)%Z] ]
-        => cut ((a / b) = 0)%Z
-      end.
-      all: Z.div_mod_to_quot_rem; nia.
-    Qed.
-     *)
-
-    (*
-    Lemma cast_out_of_bounds_in_range_neg r v
-      : ident.is_more_pos_than_neg (ZRange.normalize r) v = false
-        -> is_bounded_by_bool v (ZRange.normalize r) = false
-        -> is_bounded_by_bool (-cast_outside_of_range (-ZRange.normalize r) (-v)) (ZRange.normalize r) = true
-        -> cast r v = (-cast_outside_of_range (-ZRange.normalize r) (-v))%Z.
-    Proof.
-      cbv [cast is_bounded_by_bool]; break_innermost_match; try congruence; intros.
-      pose proof (ZRange.goodb_normalize r); cbv [ZRange.goodb] in *.
-      split_andb; Z.ltb_to_lt; try lia.
-      repeat change (lower (-?r)) with (-upper r)%Z.
-      repeat change (upper (-?r)) with (-lower r)%Z.
-      match goal with
-      | [ |- context[(?a mod ?b)%Z] ]
-        => cut ((a / b) = 0)%Z
-      end.
-      all: Z.div_mod_to_quot_rem; nia.
-    Qed.
-     *)
-
-    (*
-    Lemma cast_out_of_bounds_in_range r v
-      : is_bounded_by_bool v (ZRange.normalize r) = false
-        -> (ident.is_more_pos_than_neg (ZRange.normalize r) v = true -> is_bounded_by_bool (cast_outside_of_range (ZRange.normalize r) v) (ZRange.normalize r) = true)
-        -> (ident.is_more_pos_than_neg (ZRange.normalize r) v = false -> is_bounded_by_bool (-cast_outside_of_range (-ZRange.normalize r) (-v)) (ZRange.normalize r) = true)
-        -> cast r v = if ident.is_more_pos_than_neg (ZRange.normalize r) v
-                      then cast_outside_of_range (ZRange.normalize r) v
-                      else (-cast_outside_of_range (-ZRange.normalize r) (-v))%Z.
-    Proof.
-      pose proof (cast_out_of_bounds_in_range_pos r v).
-      pose proof (cast_out_of_bounds_in_range_neg r v).
-      break_innermost_match; intros; auto.
-    Qed.
-     *)
-
-    (*
-    Lemma cast_out_of_bounds_simple r v
-      : (is_bounded_by_bool v (ZRange.normalize r) = true -> cast_outside_of_range (ZRange.normalize r) v = v)
-        -> (ident.is_more_pos_than_neg (ZRange.normalize r) v = false -> (is_bounded_by_bool (-v) (-ZRange.normalize r))%Z = true -> (-cast_outside_of_range (-ZRange.normalize r) (-v) = v)%Z)
-        -> (ident.is_more_pos_than_neg (ZRange.normalize r) v = true -> is_bounded_by_bool (cast_outside_of_range (ZRange.normalize r) v) (ZRange.normalize r) = true)
-        -> (ident.is_more_pos_than_neg (ZRange.normalize r) v = false -> is_bounded_by_bool (-cast_outside_of_range (-ZRange.normalize r) (-v)) (ZRange.normalize r) = true)
-        -> cast r v = if ident.is_more_pos_than_neg (ZRange.normalize r) v
-                      then cast_outside_of_range (ZRange.normalize r) v
-                      else (-cast_outside_of_range (-ZRange.normalize r) (-v))%Z.
-    Proof.
-      pose proof (cast_out_of_bounds_in_range r v).
-      assert (is_bounded_by_bool (-v) (-ZRange.normalize r) = is_bounded_by_bool v (ZRange.normalize r)).
-      { cbv [is_bounded_by_bool].
-        repeat change (lower (-?r)) with (-upper r)%Z.
-        repeat change (upper (-?r)) with (-lower r)%Z.
-        cbv [andb]; break_innermost_match; Z.ltb_to_lt; break_match; Z.ltb_to_lt; try lia; try reflexivity.
-        symmetry; Z.ltb_to_lt; lia. }
-      destruct (is_bounded_by_bool v (ZRange.normalize r)) eqn:?.
-      { rewrite cast_in_normalized_bounds by assumption; intros; symmetry; break_innermost_match; auto. }
-      { auto. }
-    Qed.
-     *)
-
     Lemma is_more_pos_then_neg_0_u u v
       : (0 <= u)%Z
         -> ident.is_more_pos_than_neg (ZRange.normalize r[0~>u]) v = true.
@@ -220,28 +142,9 @@ Module ident.
       cbv [andb orb]; break_innermost_match; Z.ltb_to_lt; try lia; reflexivity.
     Qed.
 
-    (*
-    Lemma cast_out_of_bounds_simple_0 u v
-      : (0 <= u)%Z
-        -> ((0 <= v <= u)%Z -> cast_outside_of_range r[0~>u] v = v)
-        -> (0 <= cast_outside_of_range r[0~>u] v <= u)%Z
-        -> cast r[0~>u] v = cast_outside_of_range r[0~>u] v.
-    Proof.
-      pose proof (cast_out_of_bounds_simple r[0~>u] v) as H.
-      intro H0.
-      pose proof (is_more_pos_then_neg_0_u u v H0) as H1.
-      rewrite H1 in *.
-      rewrite (proj1 ZRange.normalize_id_iff_goodb) in H
-        by (cbv [ZRange.goodb lower upper]; Z.ltb_to_lt; assumption).
-      cbv [is_bounded_by_bool ZRange.opp] in *; cbn [lower upper] in *; rewrite ?Bool.andb_true_iff, ?Z.leb_le in *.
-      intros; apply H; intros; destruct_head'_and; repeat apply conj; Z.ltb_to_lt; auto; try congruence.
-    Qed.
-     *)
-    (*
     Lemma cast_out_of_bounds_simple_0_mod u v
       : (0 <= u)%Z
-        -> ((0 <= v <= u)%Z -> cast_outside_of_range r[0~>u] v = v)
-        -> (cast r[0~>u] v = (cast_outside_of_range r[0~>u] v) mod (u + 1))%Z.
+        -> (cast r[0~>u] v = v mod (u + 1))%Z.
     Proof.
       intro H0.
       pose proof (is_more_pos_then_neg_0_u u v H0) as H1.
@@ -250,25 +153,8 @@ Module ident.
         by (cbv [ZRange.goodb lower upper]; Z.ltb_to_lt; assumption).
       cbn [lower upper].
       rewrite !Z.sub_0_r, !Z.add_0_r.
-      break_innermost_match; split_andb; Z.ltb_to_lt; intro H';
-        rewrite ?H' by lia; Z.rewrite_mod_small; reflexivity.
-    Qed.
-     *)
-
-    Lemma cast_out_of_bounds_simple_0_mod u v
-      : (0 <= u)%Z
-        -> ((cast_outside_of_range r[0~>u] v) mod (u + 1) = v mod (u + 1))%Z
-        -> (cast r[0~>u] v = (cast_outside_of_range r[0~>u] v) mod (u + 1))%Z.
-    Proof.
-      intro H0.
-      pose proof (is_more_pos_then_neg_0_u u v H0) as H1.
-      cbv [cast]; rewrite H1.
-      rewrite (proj1 ZRange.normalize_id_iff_goodb)
-        by (cbv [ZRange.goodb lower upper]; Z.ltb_to_lt; assumption).
-      cbn [lower upper].
-      rewrite !Z.sub_0_r, !Z.add_0_r.
-      break_innermost_match; split_andb; Z.ltb_to_lt; intro H';
-        rewrite ?H' by lia; Z.rewrite_mod_small; reflexivity.
+      break_innermost_match; split_andb; Z.ltb_to_lt;
+        Z.rewrite_mod_small; reflexivity.
     Qed.
 
     (* N.B. This lemma depends on the hard-coded behavior of casting
@@ -294,20 +180,20 @@ Module ident.
     Qed.
   End with_cast.
 
-  Lemma cast_idempotent_gen {cast_outside_of_range1 cast_outside_of_range2}
+  Lemma cast_idempotent_gen
         r1 r2 v
     : is_tighter_than_bool (ZRange.normalize r1) (ZRange.normalize r2) = true
-      -> ident.cast cast_outside_of_range2 r2 (ident.cast cast_outside_of_range1 r1 v)
-         = ident.cast cast_outside_of_range1 r1 v.
+      -> ident.cast r2 (ident.cast r1 v)
+         = ident.cast r1 v.
   Proof.
-    intro H; apply (@cast_in_normalized_bounds _ r2).
+    intro H; apply (@cast_in_normalized_bounds r2).
     eapply ZRange.is_bounded_by_of_is_tighter_than, cast_always_bounded; assumption.
   Qed.
 
-  Lemma cast_idempotent {cast_outside_of_range1 cast_outside_of_range2}
+  Lemma cast_idempotent
         r v
-    : ident.cast cast_outside_of_range2 r (ident.cast cast_outside_of_range1 r v)
-      = ident.cast cast_outside_of_range1 r v.
+    : ident.cast r (ident.cast r v)
+      = ident.cast r v.
   Proof.
     apply cast_idempotent_gen; change (is_true (is_tighter_than_bool (ZRange.normalize r) (ZRange.normalize r))); reflexivity.
   Qed.

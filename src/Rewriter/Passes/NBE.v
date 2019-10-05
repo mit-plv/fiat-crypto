@@ -24,13 +24,8 @@ Module Compilers.
       Lemma Wf_RewriteNBE {t} e (Hwf : Wf e) : Wf (@RewriteNBE t e).
       Proof. now apply VerifiedRewriterNBE. Qed.
 
-      Lemma Interp_gen_RewriteNBE {cast_outside_of_range t} e (Hwf : Wf e)
-        : API.gen_Interp cast_outside_of_range (@RewriteNBE t e)
-          == API.gen_Interp cast_outside_of_range e.
-      Proof. now apply VerifiedRewriterNBE. Qed.
-
       Lemma Interp_RewriteNBE {t} e (Hwf : Wf e) : API.Interp (@RewriteNBE t e) == API.Interp e.
-      Proof. apply Interp_gen_RewriteNBE; assumption. Qed.
+      Proof. now apply VerifiedRewriterNBE. Qed.
     End __.
   End RewriteRules.
 
@@ -39,16 +34,12 @@ Module Compilers.
   Lemma Wf_PartialEvaluate {t} e (Hwf : Wf e) : Wf (@PartialEvaluate t e).
   Proof. apply Wf_RewriteNBE, Hwf. Qed.
 
-  Lemma Interp_gen_PartialEvaluate {cast_outside_of_range} {t} e (Hwf : Wf e)
-    : API.gen_Interp cast_outside_of_range (@PartialEvaluate t e) == API.gen_Interp cast_outside_of_range e.
-  Proof. apply Interp_gen_RewriteNBE, Hwf. Qed.
-
   Lemma Interp_PartialEvaluate {t} e (Hwf : Wf e)
     : API.Interp (@PartialEvaluate t e) == API.Interp e.
-  Proof. apply Interp_gen_PartialEvaluate; assumption. Qed.
+  Proof. apply Interp_RewriteNBE, Hwf. Qed.
 
   Module Export Hints.
     Hint Resolve Wf_PartialEvaluate Wf_RewriteNBE : wf wf_extra.
-    Hint Rewrite @Interp_gen_PartialEvaluate @Interp_gen_RewriteNBE @Interp_PartialEvaluate @Interp_RewriteNBE : interp interp_extra.
+    Hint Rewrite @Interp_PartialEvaluate @Interp_RewriteNBE : interp interp_extra.
   End Hints.
 End Compilers.

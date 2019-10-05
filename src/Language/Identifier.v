@@ -193,8 +193,8 @@ Module Compilers.
                (eval cbv beta in (f' x'))
     | ?f => f
     end.
-  Ltac build_buildEagerIdentAndInterpCorrect ident_gen_interp baseHasNat baseHasNatCorrect reify_ident :=
-    constr:(ltac:(let ident_gen_interp_head := head ident_gen_interp in
+  Ltac build_buildEagerIdentAndInterpCorrect ident_interp baseHasNat baseHasNatCorrect reify_ident :=
+    constr:(ltac:(let ident_interp_head := head ident_interp in
                   let baseHasNat' := (eval hnf in baseHasNat) in
                   let baseHasNatCorrect' := (eval hnf in baseHasNatCorrect) in
                   change baseHasNatCorrect with baseHasNatCorrect';
@@ -202,7 +202,7 @@ Module Compilers.
                   lazymatch goal with
                   | [ |- ?ii ?id = ?v ]
                     => let id' := (eval cbv in id) in
-                       change (ii id' = v); cbv [ident_gen_interp_head];
+                       change (ii id' = v); cbv [ident_interp_head];
                        change baseHasNat with baseHasNat'; cbv [base.of_nat base.to_nat];
                        match goal with
                        | [ |- ?LHS = ?v ] => let v' := uneta_fun_push_eagerly v in change (LHS = v')
@@ -212,9 +212,9 @@ Module Compilers.
                          => reify_ident v ltac:(fun idc => unify id' idc) ltac:(fun term => fail 0 "could not reify" term "as an ident") ltac:(fun _ => fail 0 "could not reify" v "as an ident")
                        end
                   end; reflexivity)
-            : { buildEagerIdent : _ & forall cast_outside_of_range, @ident.BuildInterpEagerIdentCorrectT _ _ _ (@ident_gen_interp cast_outside_of_range) baseHasNat buildEagerIdent baseHasNatCorrect }).
-  Ltac make_buildEagerIdentAndInterpCorrect ident_gen_interp baseHasNat baseHasNatCorrect reify_ident :=
-    let res := build_buildEagerIdentAndInterpCorrect ident_gen_interp baseHasNat baseHasNatCorrect reify_ident in refine res.
+            : { buildEagerIdent : _ & @ident.BuildInterpEagerIdentCorrectT _ _ _ ident_interp baseHasNat buildEagerIdent baseHasNatCorrect }).
+  Ltac make_buildEagerIdentAndInterpCorrect ident_interp baseHasNat baseHasNatCorrect reify_ident :=
+    let res := build_buildEagerIdentAndInterpCorrect ident_interp baseHasNat baseHasNatCorrect reify_ident in refine res.
 
   Ltac make_buildEagerIdent buildEagerIdentAndInterpCorrect :=
     let v := (eval hnf in (projT1 buildEagerIdentAndInterpCorrect)) in
@@ -225,10 +225,9 @@ Module Compilers.
 
   Ltac make_buildInterpEagerIdentCorrect buildEagerIdentAndInterpCorrect :=
     refine (projT2 buildEagerIdentAndInterpCorrect).
-  Ltac build_buildInterpEagerIdentCorrect ident_gen_interp buildEagerIdent baseHasNatCorrect buildEagerIdentAndInterpCorrect :=
+  Ltac build_buildInterpEagerIdentCorrect ident_interp buildEagerIdent baseHasNatCorrect buildEagerIdentAndInterpCorrect :=
     constr:(ltac:(make_buildInterpEagerIdentCorrect buildEagerIdentAndInterpCorrect)
-            : forall cast_outside_of_range,
-               @ident.BuildInterpEagerIdentCorrectT _ _ _ (ident_gen_interp cast_outside_of_range) _ buildEagerIdent baseHasNatCorrect).
+            : @ident.BuildInterpEagerIdentCorrectT _ _ _ ident_interp _ buildEagerIdent baseHasNatCorrect).
 
   Ltac build_toRestrictedIdentAndCorrect baseHasNat buildEagerIdent :=
     constr:(ltac:(unshelve eexists; hnf; [ | split ]; cbv;
@@ -254,8 +253,8 @@ Module Compilers.
     constr:(ltac:(make_toFromRestrictedIdent toRestrictedIdentAndCorrect)
             : @ident.ToFromRestrictedIdentT _ _ baseHasNat buildEagerIdent toRestrictedIdent).
 
-  Ltac build_buildIdentAndInterpCorrect ident_gen_interp reify_ident :=
-    constr:(ltac:(let ident_gen_interp_head := head ident_gen_interp in
+  Ltac build_buildIdentAndInterpCorrect ident_interp reify_ident :=
+    constr:(ltac:(let ident_interp_head := head ident_interp in
                   unshelve econstructor;
                   [ econstructor; intros;
                     lazymatch goal with
@@ -267,16 +266,15 @@ Module Compilers.
                   lazymatch goal with
                   | [ |- ?ii ?id = ?v ]
                     => let id' := (eval cbv in id) in
-                       change (ii id' = v); cbv [ident_gen_interp_head];
+                       change (ii id' = v); cbv [ident_interp_head];
                        fold (@base.interp);
                        let v := match goal with |- _ = ?v => v end in
                        reify_ident v ltac:(fun idc => unify id' idc) ltac:(fun term => fail 0 "could not reify" term "as an ident") ltac:(fun _ => fail 0 "could not reify" v "as an ident")
                   end; reflexivity)
             : { buildIdent : _
-                             & forall cast_outside_of_range,
-                    @ident.BuildInterpIdentCorrectT _ _ _ buildIdent (@ident_gen_interp cast_outside_of_range) }).
-  Ltac make_buildIdentAndInterpCorrect ident_gen_interp reify_ident :=
-    let res := build_buildIdentAndInterpCorrect ident_gen_interp reify_ident in refine res.
+                             & @ident.BuildInterpIdentCorrectT _ _ _ buildIdent ident_interp }).
+  Ltac make_buildIdentAndInterpCorrect ident_interp reify_ident :=
+    let res := build_buildIdentAndInterpCorrect ident_interp reify_ident in refine res.
 
   Ltac make_buildIdent buildIdentAndInterpCorrect :=
     let v := (eval hnf in (projT1 buildIdentAndInterpCorrect)) in
@@ -287,10 +285,9 @@ Module Compilers.
 
   Ltac make_buildInterpIdentCorrect buildIdentAndInterpCorrect :=
     refine (projT2 buildIdentAndInterpCorrect).
-  Ltac build_buildInterpIdentCorrect ident_gen_interp buildIdent buildIdentAndInterpCorrect :=
+  Ltac build_buildInterpIdentCorrect ident_interp buildIdent buildIdentAndInterpCorrect :=
     constr:(ltac:(make_buildInterpIdentCorrect buildIdentAndInterpCorrect)
-            : forall cast_outside_of_range,
-               @ident.BuildInterpIdentCorrectT _ _ _ buildIdent (ident_gen_interp cast_outside_of_range)).
+            : @ident.BuildInterpIdentCorrectT _ _ _ buildIdent ident_interp).
 
   Ltac build_ident_is_var_like ident ident_interp var_like_idents :=
     (eval cbv beta zeta in
@@ -311,12 +308,12 @@ Module Compilers.
   Ltac make_ident_is_var_like ident ident_interp var_like_idents :=
     let res := build_ident_is_var_like ident ident_interp var_like_idents in refine res.
 
-  Ltac build_gen_eqv_Reflexive_Proper ident_gen_interp base_interp :=
+  Ltac build_eqv_Reflexive_Proper ident_interp base_interp :=
     constr:(ltac:(let idc := fresh in
-                  let ident_gen_interp_head := head ident_gen_interp in
+                  let ident_interp_head := head ident_interp in
                   let base_interp_head := head base_interp in
-                  intros ? ? idc;
-                  destruct idc; cbn [type.eqv ident_gen_interp_head type.interp base.interp base_interp_head];
+                  intros ? idc;
+                  destruct idc; cbn [type.eqv ident_interp_head type.interp base.interp base_interp_head];
                   cbv [ident.eagerly];
                   try solve [ typeclasses eauto
                             | cbv [respectful]; repeat intro; subst; cbv; break_innermost_match; eauto using eq_refl with nocore
@@ -325,30 +322,17 @@ Module Compilers.
                   | [ |- ?G ] => idtac "WARNING: Could not automatically prove Proper lemma" G;
                                  idtac "  Please ensure this goal can be solved by typeclasses eauto"
                   end)
-            : forall cast_outside_of_range {t} idc, Proper type.eqv (@ident_gen_interp cast_outside_of_range t idc)).
-  Ltac make_gen_eqv_Reflexive_Proper ident_gen_interp base_interp :=
-    let res := build_gen_eqv_Reflexive_Proper ident_gen_interp base_interp in refine res.
+            : forall {t} idc, Proper type.eqv (@ident_interp t idc)).
+  Ltac make_eqv_Reflexive_Proper ident_interp base_interp :=
+    let res := build_eqv_Reflexive_Proper ident_interp base_interp in refine res.
 
-  Ltac make_eqv_Reflexive_Proper gen_eqv_Reflexive_Proper :=
-    apply gen_eqv_Reflexive_Proper.
-  Ltac build_eqv_Reflexive_Proper ident_interp gen_eqv_Reflexive_Proper :=
-    constr:(ltac:(make_eqv_Reflexive_Proper gen_eqv_Reflexive_Proper)
-                   : forall {t} idc, Proper type.eqv (@ident_interp t idc)).
-
-  Ltac make_ident_gen_interp_Proper gen_eqv_Reflexive_Proper :=
+  Ltac make_ident_interp_Proper eqv_Reflexive_Proper :=
     let idc := fresh "idc" in
     let idc' := fresh "idc'" in
-    intros ? ? idc idc' ?; subst idc'; apply gen_eqv_Reflexive_Proper.
-  Ltac build_ident_gen_interp_Proper ident_gen_interp gen_eqv_Reflexive_Proper :=
-    constr:(ltac:(make_ident_gen_interp_Proper gen_eqv_Reflexive_Proper)
-            : forall {cast_outside_of_range} {t},
-               Proper (eq ==> type.eqv) (@ident_gen_interp cast_outside_of_range t)).
-
-  Ltac make_ident_interp_Proper ident_gen_interp_Proper :=
-    apply ident_gen_interp_Proper.
-  Ltac build_ident_interp_Proper ident_interp ident_gen_interp_Proper :=
-    constr:(ltac:(make_ident_interp_Proper ident_gen_interp_Proper)
-            : forall {t} idc, Proper (eq ==> type.eqv) (@ident_interp t)).
+    intros ? idc idc' ?; subst idc'; apply eqv_Reflexive_Proper.
+  Ltac build_ident_interp_Proper ident_interp eqv_Reflexive_Proper :=
+    constr:(ltac:(make_ident_interp_Proper eqv_Reflexive_Proper)
+            : forall {t}, Proper (eq ==> type.eqv) (@ident_interp t)).
 
   Ltac build_invertIdentAndCorrect base_type base_interp buildIdent reflect_base_beq :=
     constr:(ltac:(pose proof reflect_base_beq;
@@ -401,12 +385,12 @@ Module Compilers.
             : @DefaultValue.type.base.DefaultT _ base_interp).
   Ltac make_base_default base_interp := let res := build_base_default base_interp in refine res.
 
-  Ltac make_exprInfoAndExprExtraInfo base ident base_interp ident_gen_interp base_default reflect_base_interp_eq try_make_base_transport_cps_correct toFromRestrictedIdent buildInvertIdentCorrect buildInterpIdentCorrect buildInterpEagerIdentCorrect ident_gen_interp_Proper :=
+  Ltac make_exprInfoAndExprExtraInfo base ident base_interp ident_interp base_default reflect_base_interp_eq try_make_base_transport_cps_correct toFromRestrictedIdent buildInvertIdentCorrect buildInterpIdentCorrect buildInterpEagerIdentCorrect ident_interp_Proper :=
     (exists {|
           Classes.base := base;
           Classes.ident := ident;
           Classes.base_interp := base_interp;
-          Classes.ident_gen_interp := ident_gen_interp
+          Classes.ident_interp := ident_interp
         |});
     econstructor;
     first [ exact base_default
@@ -416,9 +400,9 @@ Module Compilers.
           | exact buildInvertIdentCorrect
           | exact (@buildInterpIdentCorrect)
           | exact (@buildInterpEagerIdentCorrect)
-          | exact (@ident_gen_interp_Proper) ].
-  Ltac build_exprInfoAndExprExtraInfo base ident base_interp ident_gen_interp base_default reflect_base_interp_eq try_make_base_transport_cps_correct toFromRestrictedIdent buildInvertIdentCorrect buildInterpIdentCorrect buildInterpEagerIdentCorrect ident_gen_interp_Proper :=
-    let res := make_exprInfoAndExprExtraInfo base ident base_interp ident_gen_interp base_default reflect_base_interp_eq try_make_base_transport_cps_correct toFromRestrictedIdent buildInvertIdentCorrect buildInterpIdentCorrect buildInterpEagerIdentCorrect ident_gen_interp_Proper in refine res.
+          | exact (@ident_interp_Proper) ].
+  Ltac build_exprInfoAndExprExtraInfo base ident base_interp ident_interp base_default reflect_base_interp_eq try_make_base_transport_cps_correct toFromRestrictedIdent buildInvertIdentCorrect buildInterpIdentCorrect buildInterpEagerIdentCorrect ident_interp_Proper :=
+    let res := make_exprInfoAndExprExtraInfo base ident base_interp ident_interp base_default reflect_base_interp_eq try_make_base_transport_cps_correct toFromRestrictedIdent buildInvertIdentCorrect buildInterpIdentCorrect buildInterpEagerIdentCorrect ident_interp_Proper in refine res.
 
   Ltac base_type_reified_hint base_type reify_type :=
     lazymatch goal with
@@ -596,125 +580,108 @@ Module Compilers.
         | ident_fancy_addm : ident (Z * Z * Z -> Z)
         .
       End with_scope.
-
-      Section gen.
-        Context (cast_outside_of_range : ZRange.zrange -> BinInt.Z -> BinInt.Z).
-
-        Local Notation is_more_pos_than_neg := ident.is_more_pos_than_neg.
-        Local Notation cast := (ident.cast cast_outside_of_range).
-        Local Notation cast2 := (ident.cast2 cast_outside_of_range).
-
-        (** Interpret identifiers where the behavior of [Z_cast] on a
-            value that does not fit in the range is given by a context
-            variable.  (This allows us to treat [Z_cast] as "undefined
-            behavior" when the value doesn't fit in the range by
-            quantifying over all possible interpretations. *)
-        Definition ident_gen_interp {t} (idc : ident t) : type.interp base_type_interp t
-          := match idc in ident t return type.interp base_type_interp t with
-             | ident_Literal _ v => ident.literal v
-             | ident_Nat_succ => Nat.succ
-             | ident_Nat_pred => Nat.pred
-             | ident_Nat_max => Nat.max
-             | ident_Nat_mul => Nat.mul
-             | ident_Nat_add => Nat.add
-             | ident_Nat_sub => Nat.sub
-             | ident_Nat_eqb => Nat.eqb
-             | ident_nil t => Datatypes.nil
-             | ident_cons t => Datatypes.cons
-             | ident_tt => Datatypes.tt
-             | ident_pair A B => Datatypes.pair
-             | ident_fst A B => Datatypes.fst
-             | ident_snd A B => Datatypes.snd
-             | ident_prod_rect A B T => @prod_rect_nodep _ _ _
-             | ident_bool_rect T => @ident.Thunked.bool_rect _
-             | ident_nat_rect P => @ident.Thunked.nat_rect _
-             | ident_eager_nat_rect P => ident.eagerly (@ident.Thunked.nat_rect) _
-             | ident_nat_rect_arrow P Q => @nat_rect_nodep _
-             | ident_eager_nat_rect_arrow P Q => ident.eagerly (@nat_rect_nodep) _
-             | ident_list_rect A P => @ident.Thunked.list_rect _ _
-             | ident_eager_list_rect A P => ident.eagerly (@ident.Thunked.list_rect) _ _
-             | ident_list_rect_arrow A P Q => @list_rect_nodep _ _
-             | ident_eager_list_rect_arrow A P Q => ident.eagerly (@list_rect_nodep) _ _
-             | ident_list_case A P => @ident.Thunked.list_case _ _
-             | ident_List_length T => @List.length _
-             | ident_List_seq => List.seq
-             | ident_List_firstn A => @List.firstn _
-             | ident_List_skipn A => @List.skipn _
-             | ident_List_repeat A => @repeat _
-             | ident_List_combine A B => @List.combine _ _
-             | ident_List_map A B => @List.map _ _
-             | ident_List_app A => @List.app _
-             | ident_List_rev A => @List.rev _
-             | ident_List_flat_map A B => @List.flat_map _ _
-             | ident_List_partition A => @List.partition _
-             | ident_List_fold_right A B => @List.fold_right _ _
-             | ident_List_update_nth T => update_nth
-             | ident_List_nth_default T => @nth_default _
-             | ident_eager_List_nth_default T => @nth_default _
-             | ident_Z_add => Z.add
-             | ident_Z_mul => Z.mul
-             | ident_Z_pow => Z.pow
-             | ident_Z_sub => Z.sub
-             | ident_Z_opp => Z.opp
-             | ident_Z_div => Z.div
-             | ident_Z_modulo => Z.modulo
-             | ident_Z_eqb => Z.eqb
-             | ident_Z_leb => Z.leb
-             | ident_Z_ltb => Z.ltb
-             | ident_Z_geb => Z.geb
-             | ident_Z_gtb => Z.gtb
-             | ident_Z_log2 => Z.log2
-             | ident_Z_log2_up => Z.log2_up
-             | ident_Z_of_nat => Z.of_nat
-             | ident_Z_to_nat => Z.to_nat
-             | ident_Z_shiftr => Z.shiftr
-             | ident_Z_shiftl => Z.shiftl
-             | ident_Z_land => Z.land
-             | ident_Z_lor => Z.lor
-             | ident_Z_min => Z.min
-             | ident_Z_max => Z.max
-             | ident_Z_mul_split => Z.mul_split
-             | ident_Z_add_get_carry => Z.add_get_carry_full
-             | ident_Z_add_with_carry => Z.add_with_carry
-             | ident_Z_add_with_get_carry => Z.add_with_get_carry_full
-             | ident_Z_sub_get_borrow => Z.sub_get_borrow_full
-             | ident_Z_sub_with_get_borrow => Z.sub_with_get_borrow_full
-             | ident_Z_zselect => Z.zselect
-             | ident_Z_add_modulo => Z.add_modulo
-             | ident_Z_truncating_shiftl => Z.truncating_shiftl
-             | ident_Z_bneg => Z.bneg
-             | ident_Z_lnot_modulo => Z.lnot_modulo
-             | ident_Z_rshi => Z.rshi
-             | ident_Z_cc_m => Z.cc_m
-             | ident_Z_combine_at_bitwidth => Z.combine_at_bitwidth
-             | ident_Z_cast => cast
-             | ident_Z_cast2 => cast2
-             | ident_Some A => @Datatypes.Some _
-             | ident_None A => @Datatypes.None _
-             | ident_option_rect A P => @ident.Thunked.option_rect _ _
-             | ident_Build_zrange => ZRange.Build_zrange
-             | ident_zrange_rect A => @ZRange.zrange_rect_nodep _
-             | ident_fancy_add => ident.fancy.add
-             | ident_fancy_addc => ident.fancy.addc
-             | ident_fancy_sub => ident.fancy.sub
-             | ident_fancy_subb => ident.fancy.subb
-             | ident_fancy_mulll => ident.fancy.mulll
-             | ident_fancy_mullh => ident.fancy.mullh
-             | ident_fancy_mulhl => ident.fancy.mulhl
-             | ident_fancy_mulhh => ident.fancy.mulhh
-             | ident_fancy_rshi => ident.fancy.rshi
-             | ident_fancy_selc => ident.fancy.selc
-             | ident_fancy_selm => ident.fancy.selm
-             | ident_fancy_sell => ident.fancy.sell
-             | ident_fancy_addm => ident.fancy.addm
-             end.
-      End gen.
     End with_base.
   End ident.
 
-  (** Interpret identifiers where [Z_cast] is an opaque identity
-        function when the value is not inside the range *)
-  Notation ident_interp := (@ident_gen_interp ident.cast_outside_of_range).
+  Definition ident_interp {t} (idc : ident t) : type.interp base_type_interp t
+    := match idc in ident t return type.interp base_type_interp t with
+       | ident_Literal _ v => ident.literal v
+       | ident_Nat_succ => Nat.succ
+       | ident_Nat_pred => Nat.pred
+       | ident_Nat_max => Nat.max
+       | ident_Nat_mul => Nat.mul
+       | ident_Nat_add => Nat.add
+       | ident_Nat_sub => Nat.sub
+       | ident_Nat_eqb => Nat.eqb
+       | ident_nil t => Datatypes.nil
+       | ident_cons t => Datatypes.cons
+       | ident_tt => Datatypes.tt
+       | ident_pair A B => Datatypes.pair
+       | ident_fst A B => Datatypes.fst
+       | ident_snd A B => Datatypes.snd
+       | ident_prod_rect A B T => @prod_rect_nodep _ _ _
+       | ident_bool_rect T => @ident.Thunked.bool_rect _
+       | ident_nat_rect P => @ident.Thunked.nat_rect _
+       | ident_eager_nat_rect P => ident.eagerly (@ident.Thunked.nat_rect) _
+       | ident_nat_rect_arrow P Q => @nat_rect_nodep _
+       | ident_eager_nat_rect_arrow P Q => ident.eagerly (@nat_rect_nodep) _
+       | ident_list_rect A P => @ident.Thunked.list_rect _ _
+       | ident_eager_list_rect A P => ident.eagerly (@ident.Thunked.list_rect) _ _
+       | ident_list_rect_arrow A P Q => @list_rect_nodep _ _
+       | ident_eager_list_rect_arrow A P Q => ident.eagerly (@list_rect_nodep) _ _
+       | ident_list_case A P => @ident.Thunked.list_case _ _
+       | ident_List_length T => @List.length _
+       | ident_List_seq => List.seq
+       | ident_List_firstn A => @List.firstn _
+       | ident_List_skipn A => @List.skipn _
+       | ident_List_repeat A => @repeat _
+       | ident_List_combine A B => @List.combine _ _
+       | ident_List_map A B => @List.map _ _
+       | ident_List_app A => @List.app _
+       | ident_List_rev A => @List.rev _
+       | ident_List_flat_map A B => @List.flat_map _ _
+       | ident_List_partition A => @List.partition _
+       | ident_List_fold_right A B => @List.fold_right _ _
+       | ident_List_update_nth T => update_nth
+       | ident_List_nth_default T => @nth_default _
+       | ident_eager_List_nth_default T => @nth_default _
+       | ident_Z_add => Z.add
+       | ident_Z_mul => Z.mul
+       | ident_Z_pow => Z.pow
+       | ident_Z_sub => Z.sub
+       | ident_Z_opp => Z.opp
+       | ident_Z_div => Z.div
+       | ident_Z_modulo => Z.modulo
+       | ident_Z_eqb => Z.eqb
+       | ident_Z_leb => Z.leb
+       | ident_Z_ltb => Z.ltb
+       | ident_Z_geb => Z.geb
+       | ident_Z_gtb => Z.gtb
+       | ident_Z_log2 => Z.log2
+       | ident_Z_log2_up => Z.log2_up
+       | ident_Z_of_nat => Z.of_nat
+       | ident_Z_to_nat => Z.to_nat
+       | ident_Z_shiftr => Z.shiftr
+       | ident_Z_shiftl => Z.shiftl
+       | ident_Z_land => Z.land
+       | ident_Z_lor => Z.lor
+       | ident_Z_min => Z.min
+       | ident_Z_max => Z.max
+       | ident_Z_mul_split => Z.mul_split
+       | ident_Z_add_get_carry => Z.add_get_carry_full
+       | ident_Z_add_with_carry => Z.add_with_carry
+       | ident_Z_add_with_get_carry => Z.add_with_get_carry_full
+       | ident_Z_sub_get_borrow => Z.sub_get_borrow_full
+       | ident_Z_sub_with_get_borrow => Z.sub_with_get_borrow_full
+       | ident_Z_zselect => Z.zselect
+       | ident_Z_add_modulo => Z.add_modulo
+       | ident_Z_truncating_shiftl => Z.truncating_shiftl
+       | ident_Z_bneg => Z.bneg
+       | ident_Z_lnot_modulo => Z.lnot_modulo
+       | ident_Z_rshi => Z.rshi
+       | ident_Z_cc_m => Z.cc_m
+       | ident_Z_combine_at_bitwidth => Z.combine_at_bitwidth
+       | ident_Z_cast => ident.cast
+       | ident_Z_cast2 => ident.cast2
+       | ident_Some A => @Datatypes.Some _
+       | ident_None A => @Datatypes.None _
+       | ident_option_rect A P => @ident.Thunked.option_rect _ _
+       | ident_Build_zrange => ZRange.Build_zrange
+       | ident_zrange_rect A => @ZRange.zrange_rect_nodep _
+       | ident_fancy_add => ident.fancy.add
+       | ident_fancy_addc => ident.fancy.addc
+       | ident_fancy_sub => ident.fancy.sub
+       | ident_fancy_subb => ident.fancy.subb
+       | ident_fancy_mulll => ident.fancy.mulll
+       | ident_fancy_mullh => ident.fancy.mullh
+       | ident_fancy_mulhl => ident.fancy.mulhl
+       | ident_fancy_mulhh => ident.fancy.mulhh
+       | ident_fancy_rshi => ident.fancy.rshi
+       | ident_fancy_selc => ident.fancy.selc
+       | ident_fancy_selm => ident.fancy.selm
+       | ident_fancy_sell => ident.fancy.sell
+       | ident_fancy_addm => ident.fancy.addm
+       end.
 
   (** TODO: MOVE ME? *)
   Ltac require_primitive_const_extra term := fail 0 "Not a known const:" term.
@@ -1026,8 +993,8 @@ Module Compilers.
       | Z.cc_m => then_tac ident_Z_cc_m
       | Z.combine_at_bitwidth => then_tac ident_Z_combine_at_bitwidth
       | Datatypes.tt => then_tac ident_tt
-      | ident.cast _ => then_tac ident_Z_cast
-      | ident.cast2 _ => then_tac ident_Z_cast2
+      | ident.cast => then_tac ident_Z_cast
+      | ident.cast2 => then_tac ident_Z_cast2
       | @Some ?A
         => let rA := reify_base_type A in
            then_tac (@ident_Some rA)
@@ -1049,7 +1016,7 @@ Module Compilers.
       | ident.fancy.sell => then_tac ident_fancy_sell
       | ident.fancy.addm => then_tac ident_fancy_addm
       | ident.eagerly (?f ?x) => reify_rec (ident.eagerly f x)
-      | @ident_gen_interp _ _ ?idc => then_tac idc
+      | @ident_interp _ ?idc => then_tac idc
       | _ => else_tac ()
       end
     end.
@@ -1076,11 +1043,11 @@ Module Compilers.
   Definition try_make_base_transport_cps_correct : @type.try_make_transport_cps_correctT base base_beq try_make_base_transport_cps reflect_base_beq
     := ltac:(make_try_make_base_transport_cps_correct try_make_base_transport_cps reflect_base_beq).
 
-  Definition buildEagerIdentAndInterpCorrect := ltac:(make_buildEagerIdentAndInterpCorrect (@ident_gen_interp) baseHasNat baseHasNatCorrect ltac:(reify_ident)).
+  Definition buildEagerIdentAndInterpCorrect := ltac:(make_buildEagerIdentAndInterpCorrect (@ident_interp) baseHasNat baseHasNatCorrect ltac:(reify_ident)).
 
   Definition buildEagerIdent : ident.BuildEagerIdentT ident
     := ltac:(make_buildEagerIdent buildEagerIdentAndInterpCorrect).
-  Definition buildInterpEagerIdentCorrect : forall cast_outside_of_range, @ident.BuildInterpEagerIdentCorrectT _ _ _ (@ident_gen_interp cast_outside_of_range) _ buildEagerIdent baseHasNatCorrect
+  Definition buildInterpEagerIdentCorrect : @ident.BuildInterpEagerIdentCorrectT _ _ _ (@ident_interp) _ buildEagerIdent baseHasNatCorrect
     := ltac:(make_buildInterpEagerIdentCorrect buildEagerIdentAndInterpCorrect).
 
   Definition toRestrictedIdentAndCorrect := ltac:(make_toRestrictedIdentAndCorrect baseHasNat buildEagerIdent).
@@ -1091,27 +1058,21 @@ Module Compilers.
 
 
   Definition buildIdentAndInterpCorrect
-    := ltac:(make_buildIdentAndInterpCorrect ident_gen_interp ltac:(reify_ident)).
+    := ltac:(make_buildIdentAndInterpCorrect (@ident_interp) ltac:(reify_ident)).
   Definition buildIdent : @ident.BuildIdentT base base_interp ident
     := ltac:(make_buildIdent buildIdentAndInterpCorrect).
   Definition buildInterpIdentCorrect
-    : forall {cast_outside_of_range}, @ident.BuildInterpIdentCorrectT base base_interp ident buildIdent (@ident_gen_interp cast_outside_of_range)
+    : @ident.BuildInterpIdentCorrectT base base_interp ident buildIdent (@ident_interp)
     := ltac:(make_buildInterpIdentCorrect buildIdentAndInterpCorrect).
 
   Definition ident_is_var_like : forall {t} (idc : ident t), Datatypes.bool
     := ltac:(make_ident_is_var_like ident (@ident_interp) var_like_idents).
 
-  Definition gen_eqv_Reflexive_Proper : forall cast_outside_of_range {t} (idc : ident t), Proper type.eqv (@ident_gen_interp cast_outside_of_range t idc)
-    := ltac:(make_gen_eqv_Reflexive_Proper ident_gen_interp base_interp).
-
-  Definition eqv_Reflexive_Proper : forall {t} (idc : ident t), Proper type.eqv (ident_interp idc)
-    := ltac:(make_eqv_Reflexive_Proper gen_eqv_Reflexive_Proper).
-
-  Definition ident_gen_interp_Proper : forall {cast_outside_of_range} {t}, Proper (@eq (ident t) ==> type.eqv) (ident_gen_interp cast_outside_of_range)
-    := ltac:(make_ident_gen_interp_Proper gen_eqv_Reflexive_Proper).
+  Definition eqv_Reflexive_Proper : forall {t} (idc : ident t), Proper type.eqv (@ident_interp t idc)
+    := ltac:(make_eqv_Reflexive_Proper (@ident_interp) base_interp).
 
   Definition ident_interp_Proper : forall {t}, Proper (eq ==> type.eqv) (@ident_interp t)
-    := ltac:(make_ident_interp_Proper (@ident_gen_interp_Proper)).
+    := ltac:(make_ident_interp_Proper (@eqv_Reflexive_Proper)).
 
   Definition invertIdentAndCorrect := ltac:(make_invertIdentAndCorrect (@base_type) base_interp buildIdent reflect_base_beq).
   Definition invertIdent : @invert_expr.InvertIdentT base base_interp ident
@@ -1123,9 +1084,9 @@ Module Compilers.
     := ltac:(make_base_default base_interp).
 
   Definition exprInfoAndExprExtraInfo : GoalType.package
-    := ltac:(make_exprInfoAndExprExtraInfo base ident base_interp ident_gen_interp base_default (@reflect_base_interp_eq) try_make_base_transport_cps_correct toFromRestrictedIdent buildInvertIdentCorrect (@buildInterpIdentCorrect) buildInterpEagerIdentCorrect (@ident_gen_interp_Proper)).
+    := ltac:(make_exprInfoAndExprExtraInfo base ident base_interp (@ident_interp) base_default (@reflect_base_interp_eq) try_make_base_transport_cps_correct toFromRestrictedIdent buildInvertIdentCorrect (@buildInterpIdentCorrect) buildInterpEagerIdentCorrect (@ident_interp_Proper)).
 
-  Global Strategy -1000 [base_interp ident_gen_interp].
+  Global Strategy -1000 [base_interp ident_interp].
 
   Global Hint Extern 1 => base_type_reified_hint (@base_type) ltac:(reify_type) : typeclass_instances.
   Global Hint Extern 1 => expr_reified_hint (@base_type) ident ltac:(reify_base_type) ltac:(reify_ident) : typeclass_instances.

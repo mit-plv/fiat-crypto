@@ -476,7 +476,7 @@ Module Pipeline.
 
   Local Ltac wf_interp_t :=
     repeat first [ progress destruct_head'_and
-                 | progress cbv [Classes.ident_gen_interp Classes.base Classes.ident Classes.ident_interp Classes.base_interp Classes.exprInfo] in *
+                 | progress cbv [Classes.base Classes.ident Classes.ident_interp Classes.base_interp Classes.exprInfo] in *
                  | progress autorewrite with interp
                  | solve [ eauto with nocore interp_extra wf_extra ]
                  | solve [ typeclasses eauto ]
@@ -503,13 +503,13 @@ Module Pipeline.
 
   Global Hint Resolve @Wf_RewriteAndEliminateDeadAndInline : wf wf_extra.
 
-  Lemma Interp_RewriteAndEliminateDeadAndInline {cast_outside_of_range} {t} DoRewrite with_dead_code_elimination with_subst01
-        (Interp_DoRewrite : forall E, Wf E -> expr.gen_Interp cast_outside_of_range (DoRewrite E) == expr.gen_Interp cast_outside_of_range E)
+  Lemma Interp_RewriteAndEliminateDeadAndInline {t} DoRewrite with_dead_code_elimination with_subst01
+        (Interp_DoRewrite : forall E, Wf E -> Interp (DoRewrite E) == Interp E)
         (Wf_DoRewrite : forall E, Wf E -> Wf (DoRewrite E))
         E
         (Hwf : Wf E)
-    : expr.gen_Interp cast_outside_of_range (@RewriteAndEliminateDeadAndInline t DoRewrite with_dead_code_elimination with_subst01 E)
-      == expr.gen_Interp cast_outside_of_range E.
+    : Interp (@RewriteAndEliminateDeadAndInline t DoRewrite with_dead_code_elimination with_subst01 E)
+      == Interp E.
   Proof.
     cbv [RewriteAndEliminateDeadAndInline Let_In];
       repeat (wf_interp_t || rewrite !Interp_DoRewrite).
@@ -549,8 +549,7 @@ Module Pipeline.
               (Harg12 : type.and_for_each_lhs_of_arrow (@type.eqv) arg1 arg2)
               (Harg1 : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds arg1 = true),
           ZRange.type.base.option.is_bounded_by out_bounds (type.app_curried (Interp rv) arg1) = true
-          /\ forall cast_outside_of_range, type.app_curried (expr.gen_Interp cast_outside_of_range rv) arg1
-                                           = type.app_curried (Interp e) arg2)
+          /\ type.app_curried (Interp rv) arg1 = type.app_curried (Interp e) arg2)
       /\ Wf rv.
   Proof.
     assert (Hbounds_Proper : bounds_goodT arg_bounds) by (apply type.and_eqv_for_each_lhs_of_arrow_not_higher_order, type_good).
@@ -605,8 +604,7 @@ Module Pipeline.
                (Harg12 : type.and_for_each_lhs_of_arrow (@type.eqv) arg1 arg2)
                (Harg1 : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds arg1 = true),
            ZRange.type.base.option.is_bounded_by out_bounds (type.app_curried (Interp rv) arg1) = true
-           /\ forall cast_outside_of_range, type.app_curried (expr.gen_Interp cast_outside_of_range rv) arg1
-                                            = type.app_curried InterpE arg2)
+           /\ type.app_curried (Interp rv) arg1 = type.app_curried InterpE arg2)
        /\ Wf rv.
 
   Lemma BoundsPipeline_correct_trans

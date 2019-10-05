@@ -24,18 +24,13 @@ Module Compilers.
       Lemma Wf_RewriteStripLiteralCasts {t} e (Hwf : Wf e) : Wf (@RewriteStripLiteralCasts t e).
       Proof. now apply VerifiedRewriterStripLiteralCasts. Qed.
 
-      Lemma Interp_gen_RewriteStripLiteralCasts {cast_outside_of_range t} e (Hwf : Wf e)
-        : API.gen_Interp cast_outside_of_range (@RewriteStripLiteralCasts t e)
-          == API.gen_Interp cast_outside_of_range e.
-      Proof. now apply VerifiedRewriterStripLiteralCasts. Qed.
-
       Lemma Interp_RewriteStripLiteralCasts {t} e (Hwf : Wf e) : expr.Interp (@Compilers.ident_interp) (@RewriteStripLiteralCasts t e) == expr.Interp (@Compilers.ident_interp) e.
-      Proof. apply Interp_gen_RewriteStripLiteralCasts; assumption. Qed.
+      Proof. now apply VerifiedRewriterStripLiteralCasts. Qed.
     End __.
   End RewriteRules.
 
   Module Export Hints.
     Hint Resolve Wf_RewriteStripLiteralCasts : wf wf_extra.
-    Hint Rewrite @Interp_gen_RewriteStripLiteralCasts @Interp_RewriteStripLiteralCasts : interp interp_extra.
+    Hint Rewrite @Interp_RewriteStripLiteralCasts : interp interp_extra.
   End Hints.
 End Compilers.
