@@ -848,6 +848,10 @@ Module Compilers.
                     unify_unknown).
         Ltac make_package ident_package raw_ident pattern_ident :=
           let res := build_package ident_package raw_ident pattern_ident in refine res.
+        Ltac cache_build_package ident_package raw_ident pattern_ident :=
+          let name := fresh "pattern_package" in
+          let term := build_package ident_package raw_ident pattern_ident in
+          cache_term term name.
       End Tactic.
     End ident.
   End pattern.

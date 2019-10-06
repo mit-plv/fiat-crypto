@@ -17,6 +17,7 @@ Require Import Crypto.Util.ZUtil.Notations.
 Require Import Crypto.Util.CPSNotations.
 Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.Bool.Reflect.
+Require Crypto.Util.PrimitiveHList.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.Tactics.RunTacticAsConstr.
 Require Import Crypto.Util.Tactics.DebugPrint.
@@ -35,6 +36,195 @@ Module Compilers.
 
   Module Basic.
     Export IdentifiersBasicLibrary.Compilers.Basic.
+
+    Module ScrapeTactics.
+      Ltac scrape_preprocess T :=
+        let T := Compilers.expr.reify_preprocess T in
+        let T := Compilers.expr.reify_ident_preprocess T in
+        T.
+
+      Ltac scrape_data_of_type' scrape_data_of_term so_far T :=
+        let recr := scrape_data_of_type' scrape_data_of_term in
+        let T := scrape_preprocess T in
+        let is_var_T := match constr:(Set) with
+                        | _ => let __ := match constr:(Set) with _ => is_var T end in
+                               true
+                        | _ => false
+                        end in
+        lazymatch is_var_T with
+        | true => so_far
+        | false
+          => lazymatch T with
+             | forall x : ?T, @?F x => recr so_far F
+             | Type => so_far
+             | Set => so_far
+             | Prop => so_far
+             | Datatypes.list (* hardcoded *) => so_far
+             | Datatypes.option (* hardcoded *) => so_far
+             | Datatypes.unit (* hardcoded *) => so_far
+             | Datatypes.prod (* hardcoded *) => so_far
+             | ?x = ?y
+               => let so_far := scrape_data_of_term so_far x in
+                  scrape_data_of_term so_far y
+             | ?f ?x
+               => let so_far := recr so_far f in
+                  recr so_far x
+             | fun x : ?T => ?F
+               => let so_far := recr so_far T in
+                  let F' := fresh in
+                  lazymatch
+                    constr:(
+                      fun x : T =>
+                        match F return _ with
+                        | F' =>
+                          ltac:(
+                            let F := (eval cbv delta [F'] in F') in
+                            clear F';
+                            let so_far := recr so_far F in
+                            exact so_far)
+                        end)
+                  with
+                  | fun _ => ?so_far => so_far
+                  | ?term => constr_fail_with ltac:(fun _ => fail 1 "cannot eliminate functional dependencies of" term)
+                  end
+             | ?ty
+               => let base_type_list_named := lazymatch so_far with {| ScrapedData.base_type_list_named := ?base_type_list_named |} => base_type_list_named end in
+                  lazymatch base_type_list_named with
+                  | context[GallinaIdentList.cons {| Named.value := ty |}] (* already present *)
+                    => so_far
+                  | _ => lazymatch so_far with
+                         | {| ScrapedData.all_ident_named_interped := ?all_ident_named_interped
+                              ; ScrapedData.base_type_list_named := ?base_type_list_named |}
+                           => constr:({| ScrapedData.all_ident_named_interped := all_ident_named_interped
+                                         ; ScrapedData.base_type_list_named := GallinaIdentList.cons (without_name ty) base_type_list_named |})
+                         end
+                  end
+             end
+        end.
+
+      Ltac require_type_or_arrow T :=
+        lazymatch (eval cbv beta in T) with
+        | Type => idtac
+        | Set => idtac
+        | Prop => idtac
+        | forall x : ?A, @?F x
+          => let __ := constr:(forall x : A,
+                                  ltac:(require_type_or_arrow (F x); exact True)) in
+             idtac
+        end.
+
+      Ltac scrape_data_of_term so_far term :=
+        let scrape_data_of_type := scrape_data_of_type' scrape_data_of_term in
+        let recr := scrape_data_of_term in
+        let term := scrape_preprocess term in
+        let is_var_term := match constr:(Set) with
+                           | _ => let __ := match constr:(Set) with _ => is_var term end in
+                                  true
+                           | _ => false
+                           end in
+        let is_a_type :=
+            let T := type of term in
+            match constr:(Set) with
+            | _ => let __ := match constr:(Set) with _ => require_type_or_arrow T end in
+                   true
+            | _ => false
+            end in
+        let try_add term :=
+            let all_ident_named_interped := lazymatch so_far with {| ScrapedData.all_ident_named_interped := ?all_ident_named_interped |} => all_ident_named_interped end in
+            lazymatch all_ident_named_interped with
+            | context[GallinaIdentList.cons {| Named.value := term |}] (* already present *)
+              => so_far
+            | _ => lazymatch so_far with
+                   | {| ScrapedData.all_ident_named_interped := ?all_ident_named_interped
+                        ; ScrapedData.base_type_list_named := ?base_type_list_named |}
+                     => constr:({| ScrapedData.all_ident_named_interped := GallinaIdentList.cons (without_name term) all_ident_named_interped
+                                   ; ScrapedData.base_type_list_named := base_type_list_named |})
+                   end
+            end in
+        lazymatch is_var_term with
+        | true => so_far
+        | false =>
+          lazymatch is_a_type with
+          | true => scrape_data_of_type so_far term
+          | false =>
+            lazymatch term with
+            | ident.eagerly ?t => try_add term
+            | ?f ?x
+              => let so_far := recr so_far f in
+                 recr so_far x
+            | fun x : ?T => ?F
+              => let so_far := scrape_data_of_type so_far T in
+                 let F' := fresh in
+                 lazymatch
+                   constr:(
+                     fun x : T =>
+                       match F return _ with
+                       | F' =>
+                         ltac:(
+                           let F := (eval cbv delta [F'] in F') in
+                           clear F';
+                           let so_far := recr so_far F in
+                           exact so_far)
+                       end)
+                 with
+                 | fun _ => ?so_far => so_far
+                 | ?term => constr_fail_with ltac:(fun _ => fail 1 "cannot eliminate functional dependencies of" term)
+                 end
+            | ?term => try_add term
+            end
+          end
+        end.
+
+      Ltac scrape_data_of_type so_far T
+        := scrape_data_of_type' scrape_data_of_term so_far T.
+
+      Notation initial_type_list :=
+        ([without_name Datatypes.nat]%gi_list)
+          (only parsing).
+      Notation initial_term_list :=
+        ([without_name (@ident.literal)
+          ; without_name (@Datatypes.nil)
+          ; without_name (@Datatypes.cons)
+          ; without_name (@Datatypes.Some)
+          ; without_name (@Datatypes.None)
+          ; without_name (@Datatypes.pair)
+          ; without_name (@Datatypes.tt)
+          ; with_name ident_nat_rect (@ident.Thunked.nat_rect)
+          ; with_name ident_eager_nat_rect (ident.eagerly (@ident.Thunked.nat_rect))
+          ; with_name ident_nat_rect_arrow (@nat_rect_arrow_nodep)
+          ; with_name ident_eager_nat_rect_arrow (ident.eagerly (@nat_rect_arrow_nodep))
+          ; with_name ident_list_rect (@ident.Thunked.list_rect)
+          ; with_name ident_eager_list_rect (ident.eagerly (@ident.Thunked.list_rect))
+          ; with_name ident_list_rect_arrow (@list_rect_arrow_nodep)
+          ; with_name ident_eager_list_rect_arrow (ident.eagerly (@list_rect_arrow_nodep))
+          ; with_name ident_List_nth_default (@nth_default)
+          ; with_name ident_eager_List_nth_default (ident.eagerly (@nth_default))
+         ]%gi_list)
+          (only parsing).
+
+      Ltac scrape_data_of_rulesT rules :=
+        let rec iter so_far ls :=
+            lazymatch (eval hnf in ls) with
+            | Datatypes.cons (_, ?T) ?rest
+              => let so_far := scrape_data_of_type so_far T in
+                 iter so_far rest
+            | Datatypes.nil => so_far
+            | ?term => constr_fail_with ltac:(fun _ => fail 1 "Invalid non-list-of-pair rewrite rules" term)
+            end in
+        iter {| ScrapedData.all_ident_named_interped := initial_term_list
+                ; ScrapedData.base_type_list_named := initial_type_list |}
+             rules.
+
+      Ltac build_scrape_data rules_proofs :=
+        let expected_type := uconstr:(PrimitiveHList.hlist (@snd bool Prop) ?[rewrite_rules]) in
+        lazymatch (type of rules_proofs) with
+        | PrimitiveHList.hlist _ ?rewrite_rulesT
+          => scrape_data_of_rulesT rewrite_rulesT
+        | ?T => constr_fail_with ltac:(fun _ => fail 1 "Unexpected type" T "of rewrite rules proofs" rules_proofs "; expected" expected_type)
+        end.
+      Ltac make_scrape_data rules_proofs :=
+        let res := build_scrape_data rules_proofs in refine res.
+    End ScrapeTactics.
 
     Module Import Tactics.
       Ltac ident_basic_assembly_debug_level := constr:(1%nat).
@@ -1166,6 +1356,19 @@ Module Compilers.
                   ident_is_var_like).
       Ltac make_package base ident base_type_list_named var_like_idents all_ident_named_interped :=
         let res := build_package base ident base_type_list_named var_like_idents all_ident_named_interped in refine res.
+
+      Ltac build_package_of_scraped scraped_data var_like_idents base ident :=
+        lazymatch (eval hnf in scraped_data) with
+        | {| ScrapedData.all_ident_named_interped := ?all_ident_named_interped
+             ; ScrapedData.base_type_list_named := ?base_type_list_named |}
+          => build_package base ident base_type_list_named var_like_idents all_ident_named_interped
+        end.
+      Ltac make_package_of_scraped scraped_data var_like_idents base ident :=
+        let res := build_package_of_scraped scraped_data var_like_idents base ident in refine res.
+      Ltac cache_build_package_of_scraped scraped_data var_like_idents base ident :=
+        let name := fresh "package" in
+        let term := build_package_of_scraped scraped_data var_like_idents base ident in
+        cache_term term name.
     End Tactic.
   End Basic.
 End Compilers.

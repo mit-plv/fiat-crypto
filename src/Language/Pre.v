@@ -192,3 +192,12 @@ Notation without_name v := (@Named.Build_t _ v Named.no_name) (only parsing).
 Module GallinaAndReifiedIdentList.
   Inductive t := nil | cons {T1 T2 : Type} (v1 : T1) (v2 : T2) (vs : t).
 End GallinaAndReifiedIdentList.
+
+Module ScrapedData.
+  Local Set Primitive Projections.
+  Record t :=
+    {
+      base_type_list_named : GallinaIdentList.t
+      ; all_ident_named_interped : GallinaIdentList.t
+    }.
+End ScrapedData.
