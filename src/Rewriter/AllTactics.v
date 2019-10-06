@@ -5,6 +5,8 @@ Require Import Crypto.Language.Wf.
 Require Import Crypto.Language.UnderLetsProofs.
 Require Import Crypto.Language.IdentifiersLibrary.
 Require Import Crypto.Language.IdentifiersLibraryProofs.
+Require Import Crypto.Language.IdentifiersGenerate.
+Require Import Crypto.Language.IdentifiersGenerateProofs.
 Require Import Crypto.Language.IdentifiersBasicLibrary.
 Require Import Crypto.Language.IdentifiersBasicGenerate.
 Require Import Crypto.Rewriter.Rewriter.
@@ -22,6 +24,8 @@ Module Compilers.
   Import IdentifiersLibrary.Compilers.
   Import IdentifiersBasicLibrary.Compilers.
   Import IdentifiersBasicGenerate.Compilers.
+  Import IdentifiersGenerate.Compilers.
+  Import IdentifiersGenerateProofs.Compilers.
   Import IdentifiersLibraryProofs.Compilers.
   Import Rewriter.Compilers.RewriteRules.
   Import Rewriter.Reify.Compilers.RewriteRules.
@@ -232,6 +236,11 @@ Module Compilers.
       Tactic Notation "make_rewriter" constr(basic_package) constr(pkg_proofs) constr(include_interp) constr(specs_proofs) :=
         make_rewriter basic_package pkg_proofs include_interp specs_proofs.
 
+      Ltac make_rewriter_from_scraped scraped_data var_like_idents base ident raw_ident pattern_ident include_interp specs_proofs :=
+        let basic_package := Basic.Tactic.cache_build_package_of_scraped scraped_data var_like_idents base ident in
+        let pattern_package := Compilers.pattern.ident.Tactic.cache_build_package basic_package raw_ident pattern_ident in
+        let pkg_proofs := Compilers.pattern.ProofTactic.cache_build_package_proofs basic_package pattern_package in
+        make_rewriter basic_package pkg_proofs include_interp specs_proofs.
 
       Ltac Rewrite_lhs_for verified_rewriter_package := Rewrite_for_gen verified_rewriter_package true false.
       Ltac Rewrite_rhs_for verified_rewriter_package := Rewrite_for_gen verified_rewriter_package false true.
