@@ -14,6 +14,7 @@ Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZUtil.ModInv.
 Require Import bedrock2.Syntax.
 Require Import bedrock2.BasicC32Semantics.
+Require Import bedrock2.BasicC64Semantics.
 Require bedrock2.NotationsCustomEntry.
 
 Require Import Crypto.Util.Notations.
