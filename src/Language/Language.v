@@ -772,7 +772,6 @@ Module Compilers.
           := reify_ident
                term
                ltac:(fun idc => constr:(@Ident base_type ident var _ idc))
-                      (*reify_rec*)
                       else_tac in
       let __ := Reify.debug_enter_reify_in_context term in
       let
