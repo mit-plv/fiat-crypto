@@ -9,7 +9,6 @@ Require Import Coq.Classes.Morphisms Coq.Setoids.Setoid.
 Require Import Coq.ZArith.BinInt Coq.NArith.BinNat Coq.ZArith.ZArith Coq.ZArith.Znumtheory Coq.NArith.NArith. (* import Zdiv before Znumtheory *)
 Require Import Coq.Logic.Eqdep_dec.
 Require Import Coq.Sorting.Permutation.
-Require Import Crypto.Util.NumTheoryUtil.
 Require Import Crypto.Util.ZUtil.Odd.
 Require Import Crypto.Util.ZUtil.Modulo.
 Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
@@ -72,7 +71,8 @@ Module F.
       cbv [nonzeros].
       setoid_rewrite List.in_map_iff.
       setoid_rewrite List.in_seq.
-      replace ((1 + Z.to_nat (Z.pos q - 1))%nat) with (Z.to_nat q) by admit.
+      replace ((1 + Z.to_nat (Z.pos q - 1))%nat) with (Z.to_nat q)
+        by (autorewrite with push_Zto_nat; Lia.lia).
       setoid_rewrite F.eq_to_Z_iff.
       destruct x as [x pf_x];
       cbv [F.of_nat F.of_Z F.to_Z F.zero proj1_sig];
@@ -89,37 +89,47 @@ Module F.
         { eapply Z2Nat.inj_lt; try Lia.lia. } }
       { intros (y&?&?). subst x.
         rewrite Z.mod_small; try split; try Lia.lia.
-        (* Z of_nat to_nat *) admit. }
-    Admitted.
+        apply Z2Nat.inj_lt; rewrite ?Nat2Z.id; Lia.lia. }
+    Qed.
     Lemma NoDup_nonzeros : List.NoDup nonzeros.
     Proof.
-      cbv [nonzeros]; eapply List.NoDup_nth; intros.
+      cbv [nonzeros]; eapply List.NoDup_nth with (d:=F.of_nat q 0); intros.
       rewrite !List.map_length, List.seq_length in *.
       rewrite !List.map_nth, !List.seq_nth in * by assumption.
       eapply F.eq_of_Z_iff in H1.
-      assert (0 < Z.of_nat (i+1) < Z.pos q) by admit.
-      assert (0 < Z.of_nat (j+1) < Z.pos q) by admit.
+      assert (0 < Z.of_nat (i+1) < Z.pos q) by
+          (autorewrite with push_Zto_nat push_Zof_nat in *; Lia.lia).
+      assert (0 < Z.of_nat (j+1) < Z.pos q) by
+          (autorewrite with push_Zto_nat push_Zof_nat in *; Lia.lia).
       rewrite 2Z.mod_small in *; Lia.lia.
-    Admitted.
+    Qed.
 
     Context (a : F q) (Ha : a <> 0).
     Definition images := List.map (F.mul a) nonzeros.
     Lemma images_perm : Permutation images nonzeros.
     Proof.
       eapply NoDup_Permutation_bis.
-      { cbv [images]; eapply List.NoDup_nth; intros.
+      { cbv [images]; eapply List.NoDup_nth with (d:=F.mul a 0); intros.
         rewrite List.map_length in *.
         eapply List.NoDup_nth; eauto using NoDup_nonzeros.
         rewrite 2List.map_nth in *.
-        Search Hierarchy.field.
-        (* cancel left multiplicaion by a *) admit. }
+        match goal with
+        | H : a * ?b = a * ?c |- _ =>
+          let H' := fresh in
+          assert (F.inv a * a * b = F.inv a * a * c) as H' by
+                (rewrite <-!Hierarchy.associative;
+                 apply Hierarchy.ring_mul_Proper; auto);
+            rewrite Hierarchy.left_multiplicative_inverse in H' by auto;
+            rewrite !Hierarchy.left_identity in H'
+        end.
+        eassumption. }
       { eapply NoDup_nonzeros. }
       { cbv [images]. rewrite List.map_length; trivial. }
       { intros ? H. eapply nonzeros_correct.
         eapply List.in_map_iff in H; destruct H as (?&?&?); subst.
         eapply nonzeros_correct in H0.
         { eapply Ring.nonzero_product_iff_nonzero_factor; eauto. } }
-    Admitted.
+    Qed.
     Lemma Πimages0 : Π images = Π nonzeros.
     Proof. eapply Πperm, images_perm. Qed.
     Lemma Πimages1 : Π images = F.pow a (Z.to_N (Z.of_nat (length nonzeros))) * Π nonzeros.
@@ -146,7 +156,6 @@ Module F.
   Section NumberThoery.
     Context {q:positive} {prime_q:prime q} {two_lt_q: 2 < q}.
 
-    (* TODO: move to PrimeFieldTheorems *)
     Lemma to_Z_1 : @F.to_Z q 1 = 1%Z.
     Proof using two_lt_q. simpl. rewrite Zmod_small; omega. Qed.
 
