@@ -4,7 +4,6 @@ Require Export Coq.setoid_ring.Ring_theory Coq.setoid_ring.Field_theory Coq.seto
 
 Require Import Coq.nsatz.Nsatz.
 Require Import Crypto.Arithmetic.ModularArithmeticPre.
-Require Import Crypto.Util.NumTheoryUtil.
 Require Import Coq.Classes.Morphisms Coq.Setoids.Setoid.
 Require Import Coq.ZArith.BinInt Coq.NArith.BinNat Coq.ZArith.ZArith Coq.ZArith.Znumtheory Coq.NArith.NArith. (* import Zdiv before Znumtheory *)
 Require Import Coq.Logic.Eqdep_dec.
@@ -14,6 +13,7 @@ Require Import Crypto.Util.ZUtil.Modulo.
 Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Decidable.
+Require Import Crypto.Util.NumTheoryUtil.
 Require Export Crypto.Util.FixCoqMistakes.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Crypto.Algebra.Hierarchy Crypto.Algebra.Field.
@@ -142,7 +142,7 @@ Module F.
         ring [IHxs]. }
     Qed.
 
-    Lemma fermat : F.pow a (Z.to_N (q-1)) = 1.
+    Lemma fermat_little : F.pow a (Z.to_N (q-1)) = 1.
     Proof.
       let H := constr:(eq_trans (eq_sym Πimages1) Πimages0) in
       unshelve epose proof proj1 (((Field.mul_cancel_l_iff _) _) _) H.
@@ -151,9 +151,19 @@ Module F.
       cbv [nonzeros].
       rewrite !List.map_length, List.seq_length, Z2Nat.id in * by Lia.lia; trivial.
     Qed.
+
+    Lemma fermat_inv : F.mul (F.pow a (Z.to_N (q-2))) a = F.one.
+    Proof.
+      pose proof (prime_ge_2 _ prime_q).
+      rewrite <-fermat_little.
+      replace (Z.pos q - 1)%Z with (Z.pos q - 2 + 1)%Z by ring.
+      rewrite Z2N.inj_add by Lia.lia.
+      rewrite F.pow_add_r, F.pow_1_r.
+      reflexivity.
+    Qed.
   End Fermat.
 
-  Section NumberThoery.
+  Section NumberTheory.
     Context {q:positive} {prime_q:prime q} {two_lt_q: 2 < q}.
 
     Lemma to_Z_1 : @F.to_Z q 1 = 1%Z.
@@ -165,16 +175,16 @@ Module F.
       { subst x; rewrite inv_0, F.pow_0_l; trivial.
         change (0%N) with (Z.to_N 0%Z); rewrite Z2N.inj_iff; omega. }
       erewrite <-Algebra.Field.inv_unique; try reflexivity.
-      rewrite F.eq_to_Z_iff, F.to_Z_mul, F.to_Z_pow, Z2N.id, to_Z_1 by omega.
-      apply (fermat_inv q _ (F.to_Z x)); rewrite F.mod_to_Z; eapply F.to_Z_nonzero; trivial.
+      apply fermat_inv; trivial.
     Qed.
 
     Lemma euler_criterion (a : F q) (a_nonzero : a <> 0) :
       (a ^ (Z.to_N (q / 2)) = 1) <-> (exists b, b*b = a).
     Proof using Type*.
       pose proof F.to_Z_nonzero_range a; pose proof (odd_as_div q).
+      pose proof (prime_ge_2 _ prime_q).
       specialize_by (destruct (Z.prime_odd_or_2 _ prime_q); try omega; trivial).
-      rewrite F.eq_to_Z_iff, !F.to_Z_pow, !to_Z_1, !Z2N.id by omega.
+      rewrite F.eq_to_Z_iff, !F.to_Z_pow, !to_Z_1, !Z2N.id by Z.zero_bounds.
       rewrite F.square_iff, <-(euler_criterion (q/2)) by (trivial || omega); reflexivity.
     Qed.
 
@@ -184,7 +194,7 @@ Module F.
       { left. abstract (exists 0; subst; apply Ring.mul_0_l). }
       { eapply Decidable_iff_to_impl; [eapply euler_criterion; assumption | exact _]. }
     Defined.
-  End NumberThoery.
+  End NumberTheory.
 
   Section SquareRootsPrime3Mod4.
     Context {q:positive} {prime_q: prime q} {q_3mod4 : q mod 4 = 3}.

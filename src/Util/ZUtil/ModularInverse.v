@@ -28,7 +28,7 @@ Module Z.
     rewrite <-!(Z.mul_assoc _ (-1) _), !(Z.mul_comm (-1)), !Z.mul_assoc.
     rewrite <-Z.mul_add_distr_r. rewrite Heq.
     rewrite <-Z.opp_eq_mul_m1. apply Z.eq_opp_r. assumption.
-  Qed. 
+  Qed.
 
   Definition mod_inv n m : Z := fst (bezout n m) mod m.
 
