@@ -20,8 +20,12 @@ Module Compiler.
     Local Notation maxint := (2 ^ Semantics.width).
 
     (* Notations for commonly-used types *)
+    Local Notation type_range := (type.base (base.type.type_base base.type.zrange)).
     Local Notation type_nat := (type.base (base.type.type_base base.type.nat)).
     Local Notation type_Z := (type.base (base.type.type_base base.type.Z)).
+    Local Notation type_range2 :=
+      (type.base (base.type.prod (base.type.type_base base.type.zrange)
+                                 (base.type.type_base base.type.zrange))).
     Local Notation type_ZZ :=
       (type.base (base.type.prod (base.type.type_base base.type.Z)
                                  (base.type.type_base base.type.Z))).
@@ -118,11 +122,24 @@ Module Compiler.
       match e with
       | (expr.App
            type_Z type_Z
-           (expr.Ident _ (ident.Z_cast r)) _) => range_good r
+           (expr.App
+              type_range (type.arrow type_Z type_Z)
+              (expr.Ident _ ident.Z_cast)
+              (expr.Ident _ (ident.Literal base.type.zrange r))) _) =>
+        range_good r
       | (expr.App
            type_ZZ type_ZZ
-           (expr.Ident _ (ident.Z_cast2 (r1, r2))) _) =>
-        (range_good r1 && range_good r2)%bool
+           (expr.App
+              type_range2 (type.arrow type_ZZ type_ZZ)
+              (expr.Ident _ ident.Z_cast2)
+              (expr.App
+                 type_range type_range2
+                 (expr.App
+                    type_range (type.arrow type_range type_range2)
+                    (expr.Ident _ (ident.pair _ _))
+                    (expr.Ident _ (ident.Literal base.type.zrange r1)))
+                 (expr.Ident _ (ident.Literal base.type.zrange r2)))) _) =>
+        range_good r1 && range_good r2
       | (expr.Ident _ (ident.Literal base.type.Z z)) =>
         is_bounded_by_bool z max_range
       | (expr.Ident _ (ident.Literal base.type.nat n)) =>
@@ -144,11 +161,15 @@ Module Compiler.
         (* Z_cast : clear casts because has_casts already checked for them *)
         | (expr.App
              type_Z type_Z
-             (expr.Ident _ (ident.Z_cast r)) x) => of_inner_expr false x
+             (expr.App
+                type_range (type.arrow type_Z type_Z)
+                (expr.Ident _ ident.Z_cast) _) x) => of_inner_expr false x
         (* Z_cast2 : clear casts because has_casts already checked for them *)
-        | (expr.App
-             type_ZZ type_ZZ
-             (expr.Ident _ (ident.Z_cast2 (r1, r2))) x) => of_inner_expr false x
+      | (expr.App
+           type_ZZ type_ZZ
+           (expr.App
+              type_range2 (type.arrow type_ZZ type_ZZ)
+              (expr.Ident _ ident.Z_cast2) _) x) => of_inner_expr false x
         (* Z_mul_split : compute high and low separately and assign to two
            different variables *)
         | (expr.App
@@ -297,17 +318,39 @@ Module Compiler.
     Local Notation AddGetCarry r1 r2 s x y :=
       (expr.App
          (s:=type_ZZ) (d:=type_ZZ)
-         (expr.Ident (ident.Z_cast2 (r1, r2)))
+         (* cast *)
+         (expr.App
+            (s:=type_range2) (d:=type.arrow type_ZZ type_ZZ)
+            (expr.Ident ident.Z_cast2)
+            (expr.App
+               (s:=type_range) (d:=type_range2)
+               (expr.App
+                  (s:=type_range) (d:=type.arrow type_range type_range2)
+                  (expr.Ident ident.pair)
+                  (expr.Ident (ident.Literal (t:=base.type.zrange) r1)))
+               (expr.Ident (ident.Literal (t:=base.type.zrange) r2))))
+         (* add-get-carry expression *)
          (expr.App (s:=type_Z)
                    (expr.App (s:=type_Z)
-                             (expr.App (s:=type_Z)
-                                       (expr.Ident ident.Z_add_get_carry)
-                                       (expr.Ident (ident.Literal (t:=base.type.Z) s)))
+                             (expr.App
+                                (expr.Ident ident.Z_add_get_carry)
+                                (expr.Ident (ident.Literal (t:=base.type.Z) s)))
                              x) y)).
     Local Notation AddWithGetCarry r1 r2 s c x y :=
       (expr.App
          (s:=type_ZZ) (d:=type_ZZ)
-         (expr.Ident (ident.Z_cast2 (r1, r2)))
+         (* cast *)
+         (expr.App
+            (s:=type_range2) (d:=type.arrow type_ZZ type_ZZ)
+            (expr.Ident ident.Z_cast2)
+            (expr.App
+               (s:=type_range) (d:=type_range2)
+               (expr.App
+                  (s:=type_range) (d:=type.arrow type_range type_range2)
+                  (expr.Ident ident.pair)
+                  (expr.Ident (ident.Literal (t:=base.type.zrange) r1)))
+               (expr.Ident (ident.Literal (t:=base.type.zrange) r2))))
+         (* add-with-get-carry expression *)
          (expr.App (s:=type_Z)
                    (expr.App (s:=type_Z)
                              (expr.App (s:=type_Z)
@@ -526,9 +569,7 @@ Module Compiler.
         args_to_list argnames = Some innames ->
         let of_expre : Syntax.cmd.cmd :=
             snd (of_expr next_varname error (e var) nextname argnames rets) in
-        let interpe : type.interp base.interp t :=
-            expr.interp (interp_base_type:=base.interp)
-                        (@ident.gen_interp cast_oor_truncate) (e _) in
+        let interpe : type.interp base.interp t := API.interp (e _) in
         In (fname, (innames, outnames, of_expre)) funnames ->
         WeakestPrecondition.call
           funnames fname trace mem args (fun _ => results_equivalent _ interpe).
