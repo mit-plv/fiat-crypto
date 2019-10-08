@@ -557,10 +557,6 @@ Module Compiler.
           results_equivalent type_Z res mem [w]
     .
 
-    (* cast-outside-of-range with behavior similar to words *)
-    Definition cast_oor_truncate (r : zrange) (x : Z) : Z :=
-      (Z.max (lower r) x) mod (upper r + 1).
-
     Lemma of_expr_correct {t} (e : API.Expr t) :
       valid_expr (e var) ->
       forall nextname argnames rets,
