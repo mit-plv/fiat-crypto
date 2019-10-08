@@ -296,6 +296,7 @@ src/Util/ZUtil/Lnot.v
 src/Util/ZUtil/Log2.v
 src/Util/ZUtil/ModInv.v
 src/Util/ZUtil/Modulo.v
+src/Util/ZUtil/ModularInverse.v
 src/Util/ZUtil/Morphisms.v
 src/Util/ZUtil/Mul.v
 src/Util/ZUtil/MulSplit.v

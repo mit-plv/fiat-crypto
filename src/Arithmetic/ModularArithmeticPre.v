@@ -3,9 +3,10 @@ Require Import Coq.Logic.Eqdep_dec.
 Require Import Coq.Logic.EqdepFacts.
 Require Import Coq.omega.Omega.
 From Coq Require Import ZArith.
-Require Import Crypto.Util.NumTheoryUtil.
 Require Export Crypto.Util.FixCoqMistakes.
 Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.ZUtil.ModularInverse.
+Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
 
 Open Scope Z_scope.
 
@@ -103,15 +104,10 @@ Next Obligation.
     rewrite ?powmod_1plus, ?Zdiv.Zmult_mod_idemp_l, ?Zdiv.Zmult_mod_idemp_r; reflexivity.
 Qed.
 
-Program Definition mod_inv_sig {m} (a:{z : Z | z = z mod m}) : {z : Z | z = z mod m} :=
-  let (a, _) := a in
-  match a return _ with
-  | 0%Z => 0 (* m = 2 *)
-  | _ => powmod m a (Z.to_N (m-2))
-  end.
-Next Obligation.
-  intros; break_match; rewrite ?powmod_Zpow_mod, ?Zmod_mod, ?Zmod_0_l; reflexivity.
-Qed.
+Definition mod_inv_sig {m} (a:{z : Z | z = z mod m}) : {z : Z | z = z mod m}.
+  simple refine (exist _ (if Z.eq_dec (proj1_sig a) 0 then 0 else Z.mod_inv (proj1_sig a) m) _).
+  abstract (break_match; unfold Z.mod_inv; rewrite ?Zmod_0_l, ?Zmod_mod; reflexivity).
+Defined.
 
 Program Definition inv_impl {m : BinNums.Z} :
    {inv0 : {z : BinNums.Z | z = z mod m} -> {z : BinNums.Z | z = z mod m} |
@@ -127,17 +123,13 @@ Program Definition inv_impl {m : BinNums.Z} :
      := mod_inv_sig.
 Next Obligation.
   intros m; split.
-  { apply exist_reduced_eq; rewrite Zmod_0_l; reflexivity. }
+  { apply exist_reduced_eq. cbv [Z.mod_inv proj1_sig].
+    rewrite !Zmod_0_l. break_match; congruence. }
   intros Hm [a pfa] Ha'. apply exist_reduced_eq.
   assert (Hm':0 <= m - 2) by (pose proof prime_ge_2 m Hm; omega).
   assert (Ha:a mod m<>0) by (intro; apply Ha', exist_reduced_eq; congruence).
   cbv [proj1_sig mod_inv_sig].
-  transitivity ((a*powmod m a (Z.to_N (m - 2))) mod m); [destruct a; f_equal; ring|].
-  rewrite !powmod_Zpow_mod.
-  rewrite Z2N.id by assumption.
-  rewrite Zmult_mod_idemp_r.
-  rewrite <-Z.pow_succ_r by assumption.
-  replace (Z.succ (m - 2)) with (m-1) by omega.
-  rewrite (Zmod_small 1) by omega.
-  apply (fermat_little m Hm a Ha).
+  break_match; [ rewrite ?Zmod_0_l in *; congruence | ].
+  rewrite <-(Z.mod_inv_correct a m) by (eauto; Z.div_mod_to_quot_rem; omega).
+  rewrite Zmod_mod. f_equal; ring.
 Qed.

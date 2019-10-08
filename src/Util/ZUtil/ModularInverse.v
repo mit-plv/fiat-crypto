@@ -30,13 +30,14 @@ Module Z.
     rewrite <-Z.opp_eq_mul_m1. apply Z.eq_opp_r. assumption.
   Qed. 
 
-  Definition mod_inv n m : Z := fst (bezout n m).
+  Definition mod_inv n m : Z := fst (bezout n m) mod m.
 
   (* mod_inv is correct if n and m are relatively prime *)
   Lemma mod_inv_correct_full n m :
     1 < m -> Z.gcd n m = 1 -> (n * mod_inv n m) mod m = 1.
   Proof.
     unfold mod_inv; intros ? Hgcd.
+    rewrite Z.mul_mod_idemp_r by omega.
     transitivity (1 mod m); [ | apply Z.mod_1_l; omega ].
     rewrite <-Hgcd, <-bezout_correct.
     rewrite Z.mod_add by omega.
