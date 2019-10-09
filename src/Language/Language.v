@@ -95,6 +95,7 @@ Module Compilers.
       | _ => check_debug_level_then_Set ()
       end.
     Ltac debug_enter_reify_base_type e := debug2 ltac:(fun _ => debug_enter_reify_idtac reify_base_type e).
+    Ltac debug_enter_reify_pattern_base_type e := debug2 ltac:(fun _ => debug_enter_reify_idtac reify_pattern_base_type e).
     Ltac debug_enter_reify_type e := debug2 ltac:(fun _ => debug_enter_reify_idtac reify_type e).
     Ltac debug_enter_reify_in_context e := debug2 ltac:(fun _ => debug_enter_reify_idtac reify_in_context e).
     Ltac debug_enter_reify_ident e := debug3 ltac:(fun _ => debug_enter_reify_ident_idtac reify_ident e).
@@ -111,6 +112,9 @@ Module Compilers.
     Ltac debug_leave_lookup_ident_failure e := debug4 ltac:(fun _ => debug_leave_lookup_ident_failure_idtac reify_ident e).
     Ltac debug_leave_reify_base_type_failure e
       := let dummy := debug0 ltac:(fun _ => debug_leave_reify_failure_idtac reify_base_type e) in
+         constr_fail.
+    Ltac debug_leave_reify_pattern_base_type_failure e
+      := let dummy := debug0 ltac:(fun _ => debug_leave_reify_failure_idtac reify_pattern_base_type e) in
          constr_fail.
     Tactic Notation "idtac_reify_in_context_case" ident(case) :=
       idtac "reify_in_context:" case.
@@ -489,6 +493,74 @@ Module Compilers.
   Bind Scope etype_scope with base.type.
   Infix "*" := base.type.prod : etype_scope.
   Notation "()" := base.type.unit : etype_scope.
+
+  Module pattern.
+    Module base.
+      Local Notation einterp := type.interp.
+      Module type.
+        Inductive type {base_type : Type} := var (p : positive) | type_base (t : base_type) | prod (A B : type) | list (A : type) | option (A : type) | unit.
+        Global Arguments type : clear implicits.
+      End type.
+      Notation type := type.type.
+
+      Module Notations.
+        Bind Scope pbtype_scope with type.type.
+        Delimit Scope ptype_scope with ptype.
+        Delimit Scope pbtype_scope with pbtype.
+        Notation "A * B" := (type.prod A%ptype B%ptype) : ptype_scope.
+        Notation "A * B" := (type.prod A%pbtype B%pbtype) : pbtype_scope.
+        Notation "()" := base.type.unit : pbtype_scope.
+        Notation "()" := (type.base base.type.unit) : ptype_scope.
+        Notation "A -> B" := (@type.arrow (base.type _) A%ptype B%ptype) : ptype_scope.
+        Notation "' n" := (type.var n) : pbtype_scope.
+        Notation "' n" := (type.base (type.var n)) : ptype_scope.
+        Notation "'1" := (type.var 1) : pbtype_scope.
+        Notation "'2" := (type.var 2) : pbtype_scope.
+        Notation "'3" := (type.var 3) : pbtype_scope.
+        Notation "'4" := (type.var 4) : pbtype_scope.
+        Notation "'5" := (type.var 5) : pbtype_scope.
+        Notation "'1" := (type.base (type.var 1)) : ptype_scope.
+        Notation "'2" := (type.base (type.var 2)) : ptype_scope.
+        Notation "'3" := (type.base (type.var 3)) : ptype_scope.
+        Notation "'4" := (type.base (type.var 4)) : ptype_scope.
+        Notation "'5" := (type.base (type.var 5)) : ptype_scope.
+      End Notations.
+
+    Fixpoint interp {base} (base_interp : base -> Type) (lookup : positive -> Type) (ty : type base)
+      := match ty with
+         | type.type_base t => base_interp t
+         | type.unit => Datatypes.unit
+         | type.prod A B => interp base_interp lookup A * interp base_interp lookup B
+         | type.list A => Datatypes.list (interp base_interp lookup A)
+         | type.option A => Datatypes.option (interp base_interp lookup A)
+         | type.var n => lookup n
+         end%type.
+
+    Ltac reify base reify_base ty :=
+        let reify_rec ty := reify base reify_base ty in
+        let __ := Reify.debug_enter_reify_pattern_base_type ty in
+        lazymatch eval cbv beta in ty with
+        | Datatypes.unit => constr:(@type.unit base)
+        | Datatypes.prod ?A ?B
+          => let rA := reify_rec A in
+             let rB := reify_rec B in
+             constr:(@type.prod base rA rB)
+        | Datatypes.list ?T
+          => let rT := reify_rec T in
+             constr:(@type.list base rT)
+        | Datatypes.option ?T
+          => let rT := reify_rec T in
+             constr:(@type.option base rT)
+        | @interp base ?base_interp ?lookup ?T => T
+        | @einterp (@type base) (@interp base ?base_interp ?lookup) (@Compilers.type.base (@type base) ?T) => T
+        | ?ty => let rT := reify_base ty in
+                 constr:(@type.type_base base rT)
+        end.
+    End base.
+    Notation type base := (type.type (base.type base)).
+    Export base.Notations.
+  End pattern.
+  Export pattern.base.Notations.
 
   Module expr.
     Section with_var.

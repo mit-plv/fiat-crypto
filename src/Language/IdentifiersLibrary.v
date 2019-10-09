@@ -72,13 +72,10 @@ Module Compilers.
   Module pattern.
     Notation EvarMap_at base := (PositiveMap.t (Compilers.base.type base)).
     Notation EvarMap := (EvarMap_at _).
+    Export Language.Compilers.pattern.
     Module base.
       Local Notation einterp := type.interp.
-      Module type.
-        Inductive type {base_type : Type} := var (p : positive) | type_base (t : base_type) | prod (A B : type) | list (A : type) | option (A : type) | unit.
-        Global Arguments type : clear implicits.
-      End type.
-      Notation type := type.type.
+      Export Language.Compilers.pattern.base.
 
       Definition reflect_beq {base : Type} {base_beq : base -> base -> bool}
                  {reflect_base_beq : reflect_rel (@eq base) base_beq}
@@ -130,34 +127,8 @@ Module Compilers.
              | type.option A => collect_vars A
              end.
       End with_base.
-
-      Module Notations.
-        (*Global Coercion type.type_base : Compilers.base.type.base >-> type.type.*)
-        Bind Scope pbtype_scope with type.type.
-        (*Bind Scope ptype_scope with Compilers.type.type type.type.*) (* COQBUG(https://github.com/coq/coq/issues/7699) *)
-        Delimit Scope ptype_scope with ptype.
-        Delimit Scope pbtype_scope with pbtype.
-        Notation "A * B" := (type.prod A%ptype B%ptype) : ptype_scope.
-        Notation "A * B" := (type.prod A%pbtype B%pbtype) : pbtype_scope.
-        Notation "()" := base.type.unit : pbtype_scope.
-        Notation "()" := (type.base base.type.unit) : ptype_scope.
-        Notation "A -> B" := (@type.arrow (base.type _) A%ptype B%ptype) : ptype_scope.
-        Notation "' n" := (type.var n) : pbtype_scope.
-        Notation "' n" := (type.base (type.var n)) : ptype_scope.
-        Notation "'1" := (type.var 1) : pbtype_scope.
-        Notation "'2" := (type.var 2) : pbtype_scope.
-        Notation "'3" := (type.var 3) : pbtype_scope.
-        Notation "'4" := (type.var 4) : pbtype_scope.
-        Notation "'5" := (type.var 5) : pbtype_scope.
-        Notation "'1" := (type.base (type.var 1)) : ptype_scope.
-        Notation "'2" := (type.base (type.var 2)) : ptype_scope.
-        Notation "'3" := (type.base (type.var 3)) : ptype_scope.
-        Notation "'4" := (type.base (type.var 4)) : ptype_scope.
-        Notation "'5" := (type.base (type.var 5)) : ptype_scope.
-      End Notations.
     End base.
     Notation type base := (type.type (base.type base)).
-    Export base.Notations.
 
     Module type.
       Section with_base.
