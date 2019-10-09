@@ -383,31 +383,6 @@ Module Compilers.
           Ltac cache_build_invert_bind_args_unknown invert_bind_args :=
             let name := fresh "invert_bind_args_unknown" in
             cache_term invert_bind_args name.
-
-          Module MakeIdent.
-            Ltac map_projT2 tac ls :=
-              lazymatch ls with
-              | Datatypes.nil => idtac
-              | Datatypes.cons (existT _ _ ?v) ?ls
-                => tac v; map_projT2 tac ls
-              end.
-            Ltac fill_forall_args v :=
-              let T := type of v in
-              lazymatch (eval cbv beta in T) with
-              | ?A -> ?B => v
-              | forall x : ?A, _ => fill_forall_args open_constr:(v _)
-              | _ => v
-              end.
-            Ltac print_ident ident :=
-              let all_idents := Compilers.pattern.Tactics.build_all_idents ident in
-              idtac "        Inductive ident :=";
-              let v := all_idents in
-              map_projT2 ltac:(fun v => (*let v := fill_forall_args v in*) idtac "        |" v) v;
-              idtac "        .".
-            Import Compilers.ident.
-            Local Unset Printing Notations.
-            (*Goal True. print_ident ident. Abort.*)
-          End MakeIdent.
         End Tactics.
       End ident.
     End Raw.
@@ -635,72 +610,6 @@ Module Compilers.
         Ltac cache_build_unify_unknown unify :=
           let name := fresh "unify_unknown" in
           cache_term unify name.
-
-        Module PrintIdent.
-          Ltac map_projT2 tac ls :=
-            lazymatch ls with
-            | Datatypes.nil => idtac
-            | Datatypes.cons (existT _ _ ?v) ?ls
-              => tac v; map_projT2 tac ls
-            end.
-          Ltac fill_forall_args v :=
-            let T := type of v in
-            lazymatch (eval cbv beta in T) with
-            | ?A -> ?B => v
-            | forall x : ?A, _ => fill_forall_args open_constr:(v _)
-            | _ => v
-            end.
-          Ltac strip_nondep T :=
-            lazymatch T with
-            | ?A -> ?B => strip_nondep B
-            | forall x : ?A, ?B
-              => let B' := fresh in
-                 constr:(forall x : A,
-                            match B return _ with
-                            | B' => ltac:(let B := (eval cbv [B'] in B') in
-                                          clear B';
-                                          let B := strip_nondep B in
-                                          exact B)
-                            end)
-            | ?T => T
-            end.
-          Ltac Type_to_Set term :=
-            match term with
-            | context T[Type] => let T' := context T[Set] in Type_to_Set T'
-            | _ => term
-            end.
-          Ltac Set_to_Type term :=
-            match term with
-            | context T[Set] => let T' := context T[Type] in Set_to_Type T'
-            | _ => term
-            end.
-          Ltac print_ident cident :=
-            let all_idents := Compilers.pattern.Tactics.build_all_idents cident in
-            epose proof (_ : type _ -> Type) as ident;
-            idtac "      Inductive ident : type -> Type :=";
-            let v := (eval cbv [Compilers.base.interp] in all_idents) in
-            map_projT2 ltac:(fun v
-                             => let T := type of v in
-                                let T := (eval cbv [Compilers.base.interp] in T) in
-                                let T := strip_nondep T in
-                                let T := (eval pattern Compilers.base.type.type, (@Compilers.base.type.prod), (@Compilers.base.type.list), (@Compilers.base.type.option), (@Compilers.base.type.unit), (@Compilers.base.type.type_base), cident in T) in
-                                let T := lazymatch T with
-                                         | ?f _ _ _ _ _ _ _ => f
-                                         end in
-                                (* COQBUG work around Algebraic universe on the right: *)
-                                let T := Type_to_Set T in
-                                let T := Set_to_Type T in
-                                let T := (eval cbv beta in
-                                             (T base.type.type (@base.type.prod) (@base.type.list) (@base.type.option) (@base.type.unit) (@base.type.type_base) (@ident))) in
-                                (*let v := fill_forall_args v in*)
-                                idtac "        |" v ":" T) v;
-            idtac "      .".
-          Import Compilers.ident.
-          Local Set Printing Coercions.
-          Local Unset Printing Notations.
-          Local Set Printing Width 10000.
-          (*Goal True. print_ident Compilers.ident.ident. Abort.*)
-        End PrintIdent.
       End Tactics.
 
       Module Tactic.

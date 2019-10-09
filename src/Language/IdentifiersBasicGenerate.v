@@ -371,9 +371,13 @@ Module Compilers.
         Language.Compilers.base.reify base ltac:(reify_base_via_list base base_interp all_base_and_interp).
       Ltac reify_type_via_list base base_interp all_base_and_interp :=
         Language.Compilers.type.reify ltac:(reify_base_type_via_list base base_interp all_base_and_interp) constr:(base.type base).
+      Ltac reify_pattern_base_type_via_list base base_interp all_base_and_interp :=
+        Language.Compilers.pattern.base.reify base ltac:(reify_base_via_list base base_interp all_base_and_interp).
+      Ltac reify_pattern_type_via_list base base_interp all_base_and_interp :=
+        Language.Compilers.type.reify ltac:(reify_pattern_base_type_via_list base base_interp all_base_and_interp) constr:(pattern.base.type base).
 
-      Ltac ident_type_of_interped_type reify_type base base_interp ident ty :=
-        let recur := ident_type_of_interped_type reify_type base base_interp ident in
+      Ltac ident_type_of_interped_type reify_type base_type base_type_interp ident ty :=
+        let recur := ident_type_of_interped_type reify_type base_type base_type_interp ident in
         let is_sort := lazymatch ty with
                        | forall T : Type, _ => true
                        | forall T : Set , _ => true
@@ -386,10 +390,8 @@ Module Compilers.
              | forall x : ?T, ?F
                => let F' := fresh in
                   let t := fresh "t" in
-                  let rT := constr:(base.type base) in
-                  let interp_rT := constr:(base.interp base_interp) in
-                  constr:(forall t : rT,
-                             match interp_rT t return _ with
+                  constr:(forall t : base_type,
+                             match base_type_interp t return _ with
                              | x
                                => match F return _ with
                                   | F'
@@ -406,22 +408,101 @@ Module Compilers.
              constr:(ident rT)
         end.
 
-      Ltac ident_type_of_interped_type_via_list base base_interp all_base_and_interp :=
-        let reify_type := ltac:(reify_type_via_list base base_interp all_base_and_interp) in
+      Ltac ident_type_of_interped_type_via_list base base_interp all_base_and_interp is_pattern :=
+        let reify_type := lazymatch is_pattern with
+                          | false => reify_type_via_list base base_interp all_base_and_interp
+                          | true => reify_pattern_type_via_list base base_interp all_base_and_interp
+                          end in
+        let base_type := lazymatch is_pattern with
+                         | false => constr:(base.type base)
+                         | true => constr:(pattern.base.type base)
+                         end in
         let base_interp_head := head base_interp in
-        fun is_literal ty ident
-        => let res
+        fun lookup is_literal ty ident
+        => let base_type_interp := lazymatch is_pattern with
+                                   | false => constr:(base.interp base_interp)
+                                   | true => constr:(pattern.base.interp base_interp lookup)
+                                   end in
+           let res
                := lazymatch is_literal with
                   | true
-                    => constr:(forall t : base, base_interp t -> ident (type.base (base.type.type_base t)))
+                    => let t := fresh "t" in
+                       lazymatch is_pattern with
+                       | false => constr:(forall t : base, base_interp t -> ident (type.base (base.type.type_base t)))
+                       | true => constr:(forall t : base, ident (type.base (pattern.base.type.type_base t)))
+                       end
                   | false
-                    => ident_type_of_interped_type reify_type base base_interp ident ty
+                    => ident_type_of_interped_type reify_type base_type base_type_interp ident ty
                   end in
            (eval cbv [base_interp_head] in res).
 
-      Ltac print_ident_of_named base base_interp all_base_and_interp :=
-        let get_type := ident_type_of_interped_type_via_list base base_interp all_base_and_interp in
-        fun idc
+      Ltac build_base_elim base_type_list_named :=
+        let base := fresh "base" in
+        constr:(forall (base : Set),
+                   ltac:(let rec iter ls :=
+                             lazymatch (eval hnf in ls) with
+                             | GallinaIdentList.nil => exact base
+                             | @GallinaIdentList.cons _ ?v ?rest
+                               => lazymatch v with
+                                  | with_name name _ => refine (forall (name : base), _)
+                                  | without_name ?T
+                                    => let name := fresh T in
+                                       refine (forall name : base, _)
+                                  end;
+                                  iter rest
+                             end in
+                         iter base_type_list_named)).
+
+      Ltac print_ind_of_elim elimT :=
+        lazymatch elimT with
+        | forall ind : ?T, ?P
+          => idtac "Inductive" ind ":" T ":=";
+             let P' := fresh in
+             let __ :=
+                 constr:(
+                   fun ind : T =>
+                     match P return True with
+                     | P' =>
+                       ltac:(
+                         let P := (eval cbv delta [P'] in P') in
+                         let rec iter T :=
+                             let rest := match T with
+                                         | ?A -> ?rest => rest
+                                         | _ => Datatypes.tt
+                                         end in
+                             lazymatch rest with
+                             | Datatypes.tt => idtac "."
+                             | _ => lazymatch T with
+                                    | forall ctor : ?ty, _ =>
+                                      idtac "|" ctor ":" ty;
+                                      iter rest
+                                    end
+                             end in
+                         iter P;
+                         exact I)
+                     end) in
+             idtac
+        end.
+
+      Ltac build_raw_ident_elim all_ident_named_interped :=
+        let raw_ident := fresh "raw_ident" in
+        constr:(forall (raw_ident : Set),
+                   ltac:(let rec iter ls :=
+                             lazymatch (eval hnf in ls) with
+                             | GallinaIdentList.nil => exact raw_ident
+                             | @GallinaIdentList.cons _ ?v ?rest
+                               => let name := lazymatch v with
+                                              | with_name name _ => fresh "raw_" name
+                                              | without_name ?T => fresh "raw_ident_" T
+                                              end in
+                                  refine (forall name : raw_ident, _);
+                                  iter rest
+                             end in
+                         iter all_ident_named_interped)).
+
+      Ltac get_ident_type_of_named base base_interp all_base_and_interp is_pattern :=
+        let get_type := ident_type_of_interped_type_via_list base base_interp all_base_and_interp is_pattern in
+        fun lookup ident idc
         => let v := lazymatch idc with
                     | with_name _ ?v => v
                     | without_name ?v => v
@@ -432,59 +513,69 @@ Module Compilers.
                              end in
            let ty := type of v in
            let ty := (eval cbv beta in ty) in
-           let ident := fresh "ident" in
-           let rty := constr:(fun ident : _ -> Type
-                              => ltac:(let res := get_type is_literal ty ident in exact res)) in
-           let print_rty name :=
-               lazymatch rty with
-               | fun ident : ?T => ?F
-                 => let F' := fresh in
-                    let __
-                        := constr:(fun ident : T
-                                   => match F return _ with
-                                      | F' => ltac:(let F' := (eval cbv [F'] in F') in
-                                                    idtac "|" name ":" F';
-                                                    exact I)
-                                      end) in
-                    idtac
-               end in
-           lazymatch idc with
-           | with_name name _ => print_rty name
-           | _ => let name := fresh "ident_" v in
-                  print_rty name
-           end.
+           get_type lookup is_literal ty ident.
 
-      Ltac print_ident_via base base_interp all_base_and_interp all_ident_named_interped :=
-        let all_ident_named_interped := (eval hnf in all_ident_named_interped) in
-        let do_print := print_ident_of_named base base_interp all_base_and_interp in
-        let type := constr:(type.type (base.type base)) in
-        let type_to_Type := constr:(type -> Type) in
-        let rec iter ls
-            := lazymatch ls with
-               | @GallinaIdentList.cons _ ?v ?rest
-                 => do_print v; iter rest
-               | GallinaIdentList.nil => idtac
-               end in
-        idtac "Inductive ident :" type_to_Type ":=";
-        iter all_ident_named_interped;
-        idtac ".".
+      Ltac build_ident_elim_via base base_interp all_base_and_interp all_ident_named_interped is_pattern :=
+        let get_type := get_ident_type_of_named base base_interp all_base_and_interp is_pattern in
+        let ident := lazymatch is_pattern with
+                     | false => fresh "ident"
+                     | true => fresh "pattern_ident"
+                     end in
+        let base_type := lazymatch is_pattern with
+                         | false => constr:(base.type base)
+                         | true => constr:(pattern.base.type base)
+                         end in
+        let lookup := fresh in
+        let t := fresh "t" in
+        let res
+            := constr:(forall (lookup : positive -> Type)
+                              (ident : forall t : type.type base_type, Type),
+                          ltac:(let base_type_interp
+                                    := lazymatch is_pattern with
+                                       | false => constr:(base.interp base_interp)
+                                       | true => constr:(pattern.base.interp base_interp lookup)
+                                       end in
+                                let rec iter ls :=
+                                    lazymatch (eval hnf in ls) with
+                                    | GallinaIdentList.nil
+                                      => let t := fresh "t" in exact (forall t, ident t)
+                                    | @GallinaIdentList.cons _ ?v ?rest
+                                      => let name
+                                             := lazymatch is_pattern with
+                                                | false
+                                                  => lazymatch v with
+                                                     | with_name name _ => fresh name
+                                                     | without_name ?T => fresh "ident_" T
+                                                     end
+                                                | true
+                                                  => lazymatch v with
+                                                     | with_name name _ => fresh "pattern_" name
+                                                     | without_name ?T => fresh "pattern_ident_" T
+                                                     end
+                                                end in
+                                         let ty := get_type lookup ident v in
+                                         refine (forall name : ty, _);
+                                         iter rest
+                                    end in
+                                iter all_ident_named_interped)) in
+        lazymatch res with
+        | _ -> ?res => res
+        | ?res => constr_fail_with ltac:(fun _ => fail 1 "Cannot eliminate functional dependencies of" res)
+        end.
 
-      Ltac print_ident_ind base base_type_list_named all_ident_named_interped :=
-        (* we wrap everything in constr:(...) to inline [abstract] *)
-        let __
-            := constr:(
-                 ltac:(let eta_base_cps_gen := build_eta_base_cps_gen base in
-                       let eta_base_cps := build_eta_base_cps eta_base_cps_gen in
-                       let index_of_base := build_index_of_base base in
-                       let base_type_list := build_base_type_list base_type_list_named in
-                       let base_interp := build_base_interp eta_base_cps base_type_list index_of_base in
-                       let base_interp_name := fresh "temp_base_interp" in
-                       let base_interp := cache_term base_interp base_interp_name in
-                       let all_base := build_all_base base in
-                       let all_base_and_interp := build_all_base_and_interp all_base base_interp in
-                       print_ident_via base base_interp all_base_and_interp all_ident_named_interped;
-                       exact I)) in
-        idtac.
+      Ltac build_ident_elim base base_type_list_named all_ident_named_interped is_pattern :=
+        (eval cbv beta zeta in
+            (ltac:(let eta_base_cps_gen := build_eta_base_cps_gen base in
+                   let eta_base_cps := build_eta_base_cps eta_base_cps_gen in
+                   let index_of_base := build_index_of_base base in
+                   let base_type_list := build_base_type_list base_type_list_named in
+                   let base_interp := build_base_interp eta_base_cps base_type_list index_of_base in
+                   let base_interp_name := fresh "temp_base_interp" in
+                   let base_interp := cache_term base_interp base_interp_name in
+                   let all_base := build_all_base base in
+                   let all_base_and_interp := build_all_base_and_interp all_base base_interp in
+                   let ty := build_ident_elim_via base base_interp all_base_and_interp all_ident_named_interped is_pattern in
+                   exact ty))).
 
       Ltac build_baseHasNatAndCorrect base_interp :=
         constr:(ltac:(unshelve eexists; hnf; [ constructor | unshelve econstructor ]; cbv;
@@ -1218,26 +1309,29 @@ Module Compilers.
     End Tactics.
 
     Module PrintBase.
-      Ltac do_print_base v :=
-        lazymatch v with
-        | with_name name _ => idtac "|" name
-        | without_name ?T => let name := fresh T in idtac "|" name
-        end.
+      Ltac build_base_elim base_type_list_named :=
+        Tactics.build_base_elim base_type_list_named.
+
       Ltac print_base base_type_list_named :=
-        let rec iter ls
-            := lazymatch (eval hnf in ls) with
-               | @GallinaIdentList.cons _ ?v ?rest
-                 => do_print_base v; iter rest
-               | GallinaIdentList.nil => idtac
-               end in
-        idtac "Inductive base :=";
-        iter base_type_list_named;
-        idtac ".".
+        let elimT := build_base_elim base_type_list_named in
+        Tactics.print_ind_of_elim elimT.
     End PrintBase.
 
     Module PrintIdent.
+      Ltac build_ident_elim base base_type_list_named all_ident_named_interped :=
+        Tactics.build_ident_elim base base_type_list_named all_ident_named_interped false.
+      Ltac build_pattern_ident_elim base base_type_list_named all_ident_named_interped :=
+        Tactics.build_ident_elim base base_type_list_named all_ident_named_interped true.
+      Ltac build_raw_ident_elim all_ident_named_interped :=
+        Tactics.build_raw_ident_elim all_ident_named_interped.
+
       Ltac print_ident base base_type_list_named all_ident_named_interped :=
-        print_ident_ind base base_type_list_named all_ident_named_interped.
+        let ident_elimT := build_ident_elim base base_type_list_named all_ident_named_interped in
+        let pattern_ident_elimT := build_pattern_ident_elim base base_type_list_named all_ident_named_interped in
+        let raw_ident_elimT := build_raw_ident_elim all_ident_named_interped in
+        print_ind_of_elim ident_elimT;
+        print_ind_of_elim pattern_ident_elimT;
+        print_ind_of_elim raw_ident_elimT.
     End PrintIdent.
 
     Module Tactic.
