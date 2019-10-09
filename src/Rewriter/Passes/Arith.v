@@ -11,16 +11,16 @@ Module Compilers.
   Import Language.API.Compilers.
   Import Language.Wf.Compilers.
   Import Language.WfExtra.Compilers.
-  Import Rewriter.AllTactics.Compilers.RewriteRules.GoalType.
-  Import Rewriter.AllTacticsExtra.Compilers.RewriteRules.Tactic.
+  Import Rewriter.AllTacticsExtra.Compilers.RewriteRules.GoalType.
+  Import Rewriter.AllTactics.Compilers.RewriteRules.Tactic.
   Import Compilers.Classes.
 
   Module Import RewriteRules.
     Section __.
       Context (max_const_val : Z).
 
-      Definition VerifiedRewriterArith : VerifiedRewriter.
-      Proof using All. make_rewriter false (arith_rewrite_rules_proofs max_const_val). Defined.
+      Definition VerifiedRewriterArith : VerifiedRewriter_with_args false (arith_rewrite_rules_proofs max_const_val).
+      Proof using All. make_rewriter. Defined.
 
       Definition RewriteArith {t} := Eval hnf in @Rewrite VerifiedRewriterArith t.
 

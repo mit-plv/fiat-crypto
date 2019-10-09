@@ -10,14 +10,14 @@ Module Compilers.
   Import Language.API.Compilers.
   Import Language.Wf.Compilers.
   Import Language.WfExtra.Compilers.
-  Import Rewriter.AllTactics.Compilers.RewriteRules.GoalType.
-  Import Rewriter.AllTacticsExtra.Compilers.RewriteRules.Tactic.
+  Import Rewriter.AllTacticsExtra.Compilers.RewriteRules.GoalType.
+  Import Rewriter.AllTactics.Compilers.RewriteRules.Tactic.
   Import Compilers.Classes.
 
   Module Import RewriteRules.
     Section __.
-      Definition VerifiedRewriterArithWithCasts : VerifiedRewriter.
-      Proof using All. make_rewriter false arith_with_casts_rewrite_rules_proofs. Defined.
+      Definition VerifiedRewriterArithWithCasts : VerifiedRewriter_with_args false arith_with_casts_rewrite_rules_proofs.
+      Proof using All. make_rewriter. Defined.
 
       Definition RewriteArithWithCasts {t} := Eval hnf in @Rewrite VerifiedRewriterArithWithCasts t.
 

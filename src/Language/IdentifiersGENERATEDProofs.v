@@ -32,8 +32,8 @@ Module Compilers.
 
       Import ProofTactic.Settings.
 
-      Definition package_proofs : @ProofGoalType.package_proofs _ _ package.
-      Proof. ProofTactic.prove_package_proofs IdentifiersBasicGENERATED.Compilers.package. Qed.
+      Definition package_proofs : @ProofGoalType.package_proofs_with_args Compilers.base Compilers.ident package IdentifiersBasicGENERATED.Compilers.package.
+      Proof. ProofTactic.prove_package_proofs. Qed.
     End ident.
   End pattern.
 End Compilers.

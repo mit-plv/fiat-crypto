@@ -10,14 +10,14 @@ Module Compilers.
   Import Language.API.Compilers.
   Import Language.Wf.Compilers.
   Import Language.WfExtra.Compilers.
-  Import Rewriter.AllTactics.Compilers.RewriteRules.GoalType.
-  Import Rewriter.AllTacticsExtra.Compilers.RewriteRules.Tactic.
+  Import Rewriter.AllTacticsExtra.Compilers.RewriteRules.GoalType.
+  Import Rewriter.AllTactics.Compilers.RewriteRules.Tactic.
   Import Compilers.Classes.
 
   Module Import RewriteRules.
     Section __.
-      Definition VerifiedRewriterNBE : VerifiedRewriter.
-      Proof using All. make_rewriter true nbe_rewrite_rules_proofs. Defined.
+      Definition VerifiedRewriterNBE : VerifiedRewriter_with_args true nbe_rewrite_rules_proofs.
+      Proof using All. make_rewriter. Defined.
 
       Definition RewriteNBE {t} := Eval hnf in @Rewrite VerifiedRewriterNBE t.
 

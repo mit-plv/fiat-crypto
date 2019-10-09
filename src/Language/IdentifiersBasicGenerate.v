@@ -222,8 +222,15 @@ Module Compilers.
           => scrape_data_of_rulesT rewrite_rulesT
         | ?T => constr_fail_with ltac:(fun _ => fail 1 "Unexpected type" T "of rewrite rules proofs" rules_proofs "; expected" expected_type)
         end.
-      Ltac make_scrape_data rules_proofs :=
+      Ltac make_scrape_data_via rules_proofs :=
         let res := build_scrape_data rules_proofs in refine res.
+      Ltac make_scrape_data :=
+        idtac;
+        lazymatch goal with
+        | [ |- ScrapedData.t_with_args ?rules_proofs ]
+          => cbv [ScrapedData.t_with_args];
+             make_scrape_data_via rules_proofs
+        end.
     End ScrapeTactics.
 
     Module Import Tactics.
@@ -1308,9 +1315,36 @@ Module Compilers.
         cache_term term name.
     End Tactics.
 
+    Module PrintHelpers.
+      Ltac make_ident_from_build build :=
+        idtac;
+        lazymatch goal with
+        | [ |- GoalType.ident_elim_with_args ?scraped_data ?base ]
+          => cbv [GoalType.ident_elim_with_args];
+             lazymatch (eval hnf in scraped_data) with
+             | {| ScrapedData.base_type_list_named := ?base_type_list_named
+                  ; ScrapedData.all_ident_named_interped := ?all_ident_named_interped |}
+               => let res := build base base_type_list_named all_ident_named_interped in
+                  refine res
+             end
+        end.
+    End PrintHelpers.
+
     Module PrintBase.
       Ltac build_base_elim base_type_list_named :=
         Tactics.build_base_elim base_type_list_named.
+
+      Ltac make_base_elim :=
+        idtac;
+        lazymatch goal with
+        | [ |- GoalType.base_elim_with_args ?scraped_data ]
+          => cbv [GoalType.base_elim_with_args];
+             lazymatch (eval hnf in scraped_data) with
+             | {| ScrapedData.base_type_list_named := ?base_type_list_named |}
+               => let res := build_base_elim base_type_list_named in
+                  refine res
+             end
+        end.
 
       Ltac print_base base_type_list_named :=
         let elimT := build_base_elim base_type_list_named in
@@ -1318,12 +1352,18 @@ Module Compilers.
     End PrintBase.
 
     Module PrintIdent.
+      Import PrintHelpers.
       Ltac build_ident_elim base base_type_list_named all_ident_named_interped :=
         Tactics.build_ident_elim base base_type_list_named all_ident_named_interped false.
       Ltac build_pattern_ident_elim base base_type_list_named all_ident_named_interped :=
         Tactics.build_ident_elim base base_type_list_named all_ident_named_interped true.
       Ltac build_raw_ident_elim all_ident_named_interped :=
         Tactics.build_raw_ident_elim all_ident_named_interped.
+
+      Ltac make_ident_elim := make_ident_from_build build_ident_elim.
+      Ltac make_pattern_ident_elim := make_ident_from_build build_pattern_ident_elim.
+      Ltac make_raw_ident_elim :=
+        make_ident_from_build ltac:(fun base base_type_list_named all_ident_named_interped => build_raw_ident_elim all_ident_named_interped).
 
       Ltac print_ident base base_type_list_named all_ident_named_interped :=
         let ident_elimT := build_ident_elim base base_type_list_named all_ident_named_interped in
@@ -1448,7 +1488,7 @@ Module Compilers.
                      all_base_and_interp
                      all_ident_and_interp)
                   ident_is_var_like).
-      Ltac make_package base ident base_type_list_named var_like_idents all_ident_named_interped :=
+      Ltac make_package_via base ident base_type_list_named var_like_idents all_ident_named_interped :=
         let res := build_package base ident base_type_list_named var_like_idents all_ident_named_interped in refine res.
 
       Ltac build_package_of_scraped scraped_data var_like_idents base ident :=
@@ -1459,6 +1499,13 @@ Module Compilers.
         end.
       Ltac make_package_of_scraped scraped_data var_like_idents base ident :=
         let res := build_package_of_scraped scraped_data var_like_idents base ident in refine res.
+      Ltac make_package :=
+        idtac;
+        lazymatch goal with
+        | [ |- GoalType.package_with_args ?scraped_data ?var_like_idents ?base ?ident ]
+          => cbv [GoalType.package_with_args];
+             make_package_of_scraped scraped_data var_like_idents base ident
+        end.
       Ltac cache_build_package_of_scraped scraped_data var_like_idents base ident :=
         let name := fresh "package" in
         let term := build_package_of_scraped scraped_data var_like_idents base ident in

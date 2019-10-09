@@ -11,6 +11,7 @@ Require Import Crypto.Util.PrimitiveSigma.
 Require Import Crypto.Util.Bool.Reflect.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Language.Language.
+Require Import Crypto.Language.IdentifiersBasicLibrary.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.ConstrFail.
 Require Import Crypto.Util.Tactics.CacheTerm.
@@ -23,6 +24,7 @@ Module Compilers.
   Set Boolean Equality Schemes.
   Set Decidable Equality Schemes.
   Local Set Primitive Projections.
+  Import IdentifiersBasicLibrary.Compilers.
   Export Language.Compilers.
 
   Local Notation type_of_list := (fold_right (fun A B => prod A B) unit).
@@ -808,6 +810,9 @@ Module Compilers.
             unify_unknown : forall {t t'} (pidc : pattern_ident t) (idc : ident t') (*evm : EvarMap*), Datatypes.option (type_of_list (@ident.arg_types base ident raw_ident raw_ident_infos_of pattern_ident eta_pattern_ident_cps_gen split_types t pidc))
           }.
 
+        Definition package_with_args {base} {ident} (ident_package : Basic.GoalType.package) (raw_ident : Type) (pattern_ident : type.type (pattern.base.type base) -> Type)
+          := @package base ident.
+
         Ltac red_proj :=
           cbv [
               all_idents
@@ -843,38 +848,38 @@ Module Compilers.
             ] in *.
 
         Module Export Settings.
-          Strategy -100 [
-                        all_idents
-                          ident_index
-                          eta_ident_cps_gen
-                          eta_ident_cps_gen_expand_literal
-                          eta_ident_cps
-                          simple_idents
-                          raw_ident
-                          all_raw_idents
-                          raw_ident_index
-                          raw_ident_index_idempotent
-                          eta_raw_ident_cps_gen
-                          raw_ident_infos_of
-                          split_raw_ident_gen
-                          invert_bind_args
-                          invert_bind_args_unknown
-                          pattern_ident
-                          all_pattern_idents
-                          eta_pattern_ident_cps_gen
-                          eta_pattern_ident_cps_gen_expand_literal
-                          split_types
-                          add_types_from_raw_sig
-                          to_type_split_types_subst_default_eq
-                          projT1_add_types_from_raw_sig_eq
-                          arg_types_unfolded
-                          to_typed_unfolded
-                          type_of_list_arg_types_beq_unfolded
-                          of_typed_ident_unfolded
-                          arg_types_of_typed_ident_unfolded
-                          unify
-                          unify_unknown
-                      ].
+          Global Strategy -100 [
+                               all_idents
+                                 ident_index
+                                 eta_ident_cps_gen
+                                 eta_ident_cps_gen_expand_literal
+                                 eta_ident_cps
+                                 simple_idents
+                                 raw_ident
+                                 all_raw_idents
+                                 raw_ident_index
+                                 raw_ident_index_idempotent
+                                 eta_raw_ident_cps_gen
+                                 raw_ident_infos_of
+                                 split_raw_ident_gen
+                                 invert_bind_args
+                                 invert_bind_args_unknown
+                                 pattern_ident
+                                 all_pattern_idents
+                                 eta_pattern_ident_cps_gen
+                                 eta_pattern_ident_cps_gen_expand_literal
+                                 split_types
+                                 add_types_from_raw_sig
+                                 to_type_split_types_subst_default_eq
+                                 projT1_add_types_from_raw_sig_eq
+                                 arg_types_unfolded
+                                 to_typed_unfolded
+                                 type_of_list_arg_types_beq_unfolded
+                                 of_typed_ident_unfolded
+                                 arg_types_of_typed_ident_unfolded
+                                 unify
+                                 unify_unknown
+                             ].
         End Settings.
 
         Notation eta_ident_cps_gen2_of p := (@pattern.eta_ident_cps_gen2 _ _ (@eta_ident_cps_gen _ _ p)).

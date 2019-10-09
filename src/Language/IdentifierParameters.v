@@ -120,3 +120,7 @@ Definition all_ident_named_interped : GallinaIdentList.t
       ; with_name ident_fancy_sell ident.fancy.sell
       ; with_name ident_fancy_addm ident.fancy.addm
      ]%gi_list.
+
+Definition scraped_data : ScrapedData.t
+  := {| ScrapedData.base_type_list_named := base_type_list_named
+        ; ScrapedData.all_ident_named_interped := all_ident_named_interped |}.

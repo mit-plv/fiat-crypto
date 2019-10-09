@@ -12,6 +12,7 @@ Import ListNotations. Local Open Scope bool_scope. Local Open Scope Z_scope.
 
 Import Rewriter.AllTactics.Compilers.RewriteRules.GoalType.
 Import Rewriter.AllTactics.Compilers.RewriteRules.Tactic.
+Import Rewriter.AllTacticsExtra.Compilers.RewriteRules.GoalType.
 Import Rewriter.AllTacticsExtra.Compilers.RewriteRules.Tactic.
 
 (** We first define some helper notations, and then define the list of
@@ -34,8 +35,8 @@ Proof. repeat constructor. Qed.
 
 (** Next we define the rewriter package *)
 
-Definition norules : VerifiedRewriter.
-Proof using All. make_rewriter false noruleproofs. Defined.
+Definition norules : VerifiedRewriter_with_args false noruleproofs.
+Proof using All. make_rewriter. Defined.
 
 (** Now we show some simple examples. *)
 
@@ -92,8 +93,8 @@ Qed.
 
 (** Next we define the rewriter package *)
 
-Definition myrules : VerifiedRewriter.
-Proof using All. make_rewriter true myruleproofs. Defined.
+Definition myrules : VerifiedRewriter_with_args true myruleproofs.
+Proof using All. make_rewriter. Defined.
 
 (** Now we show some simple examples. *)
 

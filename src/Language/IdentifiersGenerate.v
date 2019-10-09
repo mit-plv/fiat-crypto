@@ -755,8 +755,15 @@ Module Compilers.
                     arg_types_of_typed_ident_unfolded
                     unify
                     unify_unknown).
-        Ltac make_package ident_package raw_ident pattern_ident :=
+        Ltac make_package_via ident_package raw_ident pattern_ident :=
           let res := build_package ident_package raw_ident pattern_ident in refine res.
+        Ltac make_package :=
+          idtac;
+          lazymatch goal with
+          | [ |- GoalType.package_with_args ?ident_package ?raw_ident ?pattern_ident ]
+            => cbv [GoalType.package_with_args];
+               make_package_via ident_package raw_ident pattern_ident
+          end.
         Ltac cache_build_package ident_package raw_ident pattern_ident :=
           let name := fresh "pattern_package" in
           let term := build_package ident_package raw_ident pattern_ident in

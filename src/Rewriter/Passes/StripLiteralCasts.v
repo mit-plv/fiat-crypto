@@ -10,14 +10,14 @@ Module Compilers.
   Import Language.API.Compilers.
   Import Language.Wf.Compilers.
   Import Language.WfExtra.Compilers.
-  Import Rewriter.AllTactics.Compilers.RewriteRules.GoalType.
-  Import Rewriter.AllTacticsExtra.Compilers.RewriteRules.Tactic.
+  Import Rewriter.AllTacticsExtra.Compilers.RewriteRules.GoalType.
+  Import Rewriter.AllTactics.Compilers.RewriteRules.Tactic.
   Import Compilers.Classes.
 
   Module Import RewriteRules.
     Section __.
-      Definition VerifiedRewriterStripLiteralCasts : VerifiedRewriter.
-      Proof using All. make_rewriter false strip_literal_casts_rewrite_rules_proofs. Defined.
+      Definition VerifiedRewriterStripLiteralCasts : VerifiedRewriter_with_args false strip_literal_casts_rewrite_rules_proofs.
+      Proof using All. make_rewriter. Defined.
 
       Definition RewriteStripLiteralCasts {t} := Eval hnf in @Rewrite VerifiedRewriterStripLiteralCasts t.
 

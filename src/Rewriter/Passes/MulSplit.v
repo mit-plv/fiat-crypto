@@ -11,8 +11,8 @@ Module Compilers.
   Import Language.API.Compilers.
   Import Language.Wf.Compilers.
   Import Language.WfExtra.Compilers.
-  Import Rewriter.AllTactics.Compilers.RewriteRules.GoalType.
-  Import Rewriter.AllTacticsExtra.Compilers.RewriteRules.Tactic.
+  Import Rewriter.AllTacticsExtra.Compilers.RewriteRules.GoalType.
+  Import Rewriter.AllTactics.Compilers.RewriteRules.Tactic.
   Import Compilers.Classes.
 
   Module Import RewriteRules.
@@ -20,8 +20,8 @@ Module Compilers.
       Context (bitwidth : Z)
               (lgcarrymax : Z).
 
-      Definition VerifiedRewriterMulSplit : VerifiedRewriter.
-      Proof using All. make_rewriter false (mul_split_rewrite_rules_proofs bitwidth lgcarrymax). Defined.
+      Definition VerifiedRewriterMulSplit : VerifiedRewriter_with_args false (mul_split_rewrite_rules_proofs bitwidth lgcarrymax).
+      Proof using All. make_rewriter. Defined.
 
       Definition RewriteMulSplit {t} := Eval hnf in @Rewrite VerifiedRewriterMulSplit t.
 
