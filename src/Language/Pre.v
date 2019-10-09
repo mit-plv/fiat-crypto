@@ -4,6 +4,7 @@ Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.Operations.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.Notations.
+Require Crypto.Util.PrimitiveHList.
 Local Open Scope bool_scope.
 Local Open Scope Z_scope.
 
@@ -200,4 +201,6 @@ Module ScrapedData.
       base_type_list_named : GallinaIdentList.t
       ; all_ident_named_interped : GallinaIdentList.t
     }.
+
+  Definition t_with_args {rewrite_rulesT} (rules_proofs : PrimitiveHList.hlist (@snd bool Prop) rewrite_rulesT) := t.
 End ScrapedData.

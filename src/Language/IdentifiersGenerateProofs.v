@@ -120,7 +120,7 @@ Module Compilers.
       Module Export Settings.
         Export ident.GoalType.Settings.
       End Settings.
-      Ltac prove_package_proofs ident_package :=
+      Ltac prove_package_proofs_via ident_package :=
         idtac;
         let time_if_debug1 := Tactics.time_if_debug1 in
         let pkg := lazymatch goal with |- @package_proofs _ _ ?pkg => pkg end in
@@ -149,6 +149,13 @@ Module Compilers.
           time_if_debug1 Raw.ident.prove_eq_invert_bind_args_unknown; fail 0 "A goal remains"
         | let __ := Tactics.debug1 ltac:(fun _ => idtac "Proving eq_unify_unknown...") in
           time_if_debug1 ident.prove_eq_unify_unknown; fail 0 "A goal remains" ].
+      Ltac prove_package_proofs :=
+        idtac;
+        lazymatch goal with
+        | [ |- ProofGoalType.package_proofs_with_args ?ident_package ]
+          => cbv [ProofGoalType.package_proofs_with_args];
+             prove_package_proofs_via ident_package
+        end.
       Ltac cache_build_package_proofs ident_package package :=
         let name := fresh "ident_package_proofs" in
         cache_proof_with_type_by (@package_proofs _ _ package) ltac:(prove_package_proofs ident_package) name.

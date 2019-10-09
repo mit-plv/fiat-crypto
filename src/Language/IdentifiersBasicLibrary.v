@@ -20,6 +20,12 @@ Module Compilers.
           ; exprReifyInfo : @ExprReifyInfoT exprInfo
           ; ident_is_var_like : forall t (idc : Classes.ident t), Datatypes.bool
         }.
+
+      Definition package_with_args (scraped_data : ScrapedData.t) (var_like_idents : GallinaIdentList.t) (base : Type) (ident : type.type (base.type base) -> Type)
+        := package.
+
+      Definition base_elim_with_args (scraped_data : ScrapedData.t) := Type.
+      Definition ident_elim_with_args (scraped_data : ScrapedData.t) (base : Type) := Type.
     End GoalType.
   End Basic.
 End Compilers.

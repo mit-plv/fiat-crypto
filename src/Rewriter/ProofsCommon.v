@@ -3417,6 +3417,24 @@ Module Compilers.
           generalize_for_wf : forall {t}, expr.Expr (ident:=ident) t -> expr.Expr (ident:=ident) t;
           prove_Wf : forall {t} (e : expr.Expr (ident:=ident) t), (e = generalize_for_wf e /\ check_wf e = true) -> expr.Wf e;
         }.
+
+      Definition VerifiedRewriter_with_args
+                 (basic_package : Basic.GoalType.package)
+                 {base ident pkg} (pkg_proofs : @pattern.ProofGoalType.package_proofs base ident pkg)
+                 (include_interp : bool)
+                 {rewrite_rulesT} (rules_proofs : PrimitiveHList.hlist (@snd bool Prop) rewrite_rulesT)
+        := VerifiedRewriter.
+
+      Definition VerifiedRewriter_with_ind_args
+                 (scraped_data : ScrapedData.t)
+                 (var_like_idents : GallinaIdentList.t)
+                 (base : Type)
+                 (ident : type.type (base.type base) -> Type)
+                 (raw_ident : type.type (pattern.base.type base) -> Type)
+                 (pattern_ident : type.type (pattern.base.type base) -> Type)
+                 (include_interp : bool)
+                 {rewrite_rulesT} (rules_proofs : PrimitiveHList.hlist (@snd bool Prop) rewrite_rulesT)
+        := VerifiedRewriter.
     End GoalType.
   End RewriteRules.
 End Compilers.

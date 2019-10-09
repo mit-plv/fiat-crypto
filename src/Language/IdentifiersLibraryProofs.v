@@ -15,6 +15,7 @@ Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.CacheTerm.
 Require Import Crypto.Language.Language.
 Require Import Crypto.Language.Inversion.
+Require Import Crypto.Language.IdentifiersBasicLibrary.
 Require Import Crypto.Language.IdentifiersLibrary.
 Require Import Crypto.Util.FixCoqMistakes.
 
@@ -22,6 +23,7 @@ Import EqNotations.
 Module Compilers.
   Import Language.Compilers.
   Import Language.Inversion.Compilers.
+  Import IdentifiersBasicLibrary.Compilers.
   Import IdentifiersLibrary.Compilers.
   Local Set Primitive Projections.
 
@@ -222,6 +224,9 @@ Module Compilers.
           eq_invert_bind_args_unknown : @invert_bind_args_unknown _ _ pkg = @invert_bind_args _ _ pkg;
           eq_unify_unknown : @unify_unknown _ _ pkg = @unify _ _ pkg
         }.
+
+      Definition package_proofs_with_args {base ident} {pkg : @package base ident} (ident_package : Basic.GoalType.package)
+        := @package_proofs base ident pkg.
     End ProofGoalType.
 
     Module Raw.

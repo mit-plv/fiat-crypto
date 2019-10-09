@@ -326,8 +326,8 @@ Module Compilers.
   | raw_ident_fancy_addm : raw_ident
   .
 
-  Definition package : GoalType.package.
-  Proof. Tactic.make_package base ident base_type_list_named var_like_idents all_ident_named_interped. Defined.
+  Definition package : GoalType.package_with_args scraped_data var_like_idents base ident.
+  Proof. Tactic.make_package. Defined.
 
   Global Strategy -1000 [base_interp ident_interp].
 End Compilers.

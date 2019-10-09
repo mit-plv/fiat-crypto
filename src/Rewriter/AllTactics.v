@@ -107,7 +107,8 @@ Module Compilers.
       let reify_package := Basic.Tactic.reify_package_of_package basic_package in
       let reify_base := Basic.Tactic.reify_base_via_reify_package reify_package in
       let reify_ident := Basic.Tactic.reify_ident_via_reify_package reify_package in
-      let pkg := lazymatch type of pkg_proofs with @package_proofs ?base ?ident ?pkg => pkg end in
+      let pkg_proofs_type := type of pkg_proofs in
+      let pkg := lazymatch (eval hnf in pkg_proofs_type) with @package_proofs ?base ?ident ?pkg => pkg end in
       let specs := lazymatch type of specs_proofs with
                    | PrimitiveHList.hlist (@snd bool Prop) ?specs => specs
                    | ?T
@@ -230,17 +231,33 @@ Module Compilers.
         Export Rewriter.Reify.Compilers.RewriteRules.Tactic.Settings.
       End Settings.
 
-      Ltac make_rewriter basic_package pkg_proofs include_interp specs_proofs :=
+      Ltac make_rewriter_via basic_package pkg_proofs include_interp specs_proofs :=
         let res := Build_Rewriter basic_package pkg_proofs include_interp specs_proofs in refine res.
 
-      Tactic Notation "make_rewriter" constr(basic_package) constr(pkg_proofs) constr(include_interp) constr(specs_proofs) :=
-        make_rewriter basic_package pkg_proofs include_interp specs_proofs.
+      Ltac make_rewriter :=
+        idtac;
+        lazymatch goal with
+        | [ |- GoalType.VerifiedRewriter_with_args ?basic_package ?pkg_proofs ?include_interp ?specs_proofs ]
+          => cbv [GoalType.VerifiedRewriter_with_args];
+             make_rewriter_via basic_package pkg_proofs include_interp specs_proofs
+        end.
+
+      Tactic Notation "make_rewriter_via" constr(basic_package) constr(pkg_proofs) constr(include_interp) constr(specs_proofs) :=
+        make_rewriter_via basic_package pkg_proofs include_interp specs_proofs.
 
       Ltac make_rewriter_from_scraped scraped_data var_like_idents base ident raw_ident pattern_ident include_interp specs_proofs :=
         let basic_package := Basic.Tactic.cache_build_package_of_scraped scraped_data var_like_idents base ident in
         let pattern_package := Compilers.pattern.ident.Tactic.cache_build_package basic_package raw_ident pattern_ident in
         let pkg_proofs := Compilers.pattern.ProofTactic.cache_build_package_proofs basic_package pattern_package in
         make_rewriter basic_package pkg_proofs include_interp specs_proofs.
+
+      Ltac make_rewriter_all :=
+        idtac;
+        lazymatch goal with
+        | [ |- GoalType.VerifiedRewriter_with_ind_args ?scraped_data ?var_like_idents ?base ?ident ?raw_ident ?pattern_ident ?include_interp ?specs_proofs ]
+          => cbv [GoalType.VerifiedRewriter_with_ind_args];
+             make_rewriter_from_scraped scraped_data var_like_idents base ident raw_ident pattern_ident include_interp specs_proofs
+        end.
 
       Ltac Rewrite_lhs_for verified_rewriter_package := Rewrite_for_gen verified_rewriter_package true false.
       Ltac Rewrite_rhs_for verified_rewriter_package := Rewrite_for_gen verified_rewriter_package false true.

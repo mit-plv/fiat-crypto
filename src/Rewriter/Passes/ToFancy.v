@@ -11,8 +11,8 @@ Module Compilers.
   Import Language.API.Compilers.
   Import Language.Wf.Compilers.
   Import Language.WfExtra.Compilers.
-  Import Rewriter.AllTactics.Compilers.RewriteRules.GoalType.
-  Import Rewriter.AllTacticsExtra.Compilers.RewriteRules.Tactic.
+  Import Rewriter.AllTacticsExtra.Compilers.RewriteRules.GoalType.
+  Import Rewriter.AllTactics.Compilers.RewriteRules.Tactic.
   Import Compilers.Classes.
 
   Module Import RewriteRules.
@@ -21,8 +21,8 @@ Module Compilers.
               (Hlow : forall s v v', invert_low s v = Some v' -> v = Z.land v' (2^(s/2)-1))
               (Hhigh : forall s v v', invert_high s v = Some v' -> v = Z.shiftr v' (s/2)).
 
-      Definition VerifiedRewriterToFancy : VerifiedRewriter.
-      Proof using All. make_rewriter false fancy_rewrite_rules_proofs. Defined.
+      Definition VerifiedRewriterToFancy : VerifiedRewriter_with_args false fancy_rewrite_rules_proofs.
+      Proof using All. make_rewriter. Defined.
 
       Definition RewriteToFancy {t} : API.Expr t -> API.Expr t.
       Proof using invert_low invert_high.
