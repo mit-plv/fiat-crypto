@@ -16,6 +16,7 @@ Module Compiler.
     Context {p : Semantics.parameters}
             (next_varname : Syntax.varname -> Syntax.varname)
             (error : Syntax.expr.expr)
+            (word_size_in_bytes : Z)
             (ident_to_funname : forall t, ident.ident t -> Syntax.funname).
     Local Notation maxint := (2 ^ Semantics.width).
 
@@ -30,65 +31,83 @@ Module Compiler.
       (type.base (base.type.prod (base.type.type_base base.type.Z)
                                  (base.type.type_base base.type.Z))).
 
-    (* interpretation of base.type *)
-    Fixpoint base_var (t : base.type) : Type :=
+    (* Types that appear in the bedrock2 expressions on the left-hand-side of
+       assignments (or in return values). For example, if we want to assign three
+       integers, we need three [Syntax.varname]s.
+
+       Lists use [Syntax.expr.expr] instead of [Syntax.varname] because lists
+       are stored in main memory; we use [Syntax.cmd.store] instead of
+       [Syntax.cmd.set], which allows expressions for the storage location.
+
+       For functions (type.arrow) this is a little unintuitive, since you would
+       never really assign a function in bedrock2. But, when the compiler
+       translates a function, it uses [ltype] to pass along the information
+       about how the return values should be assigned. Therefore, the [ltype] of
+       a function returning two integers would be two [Syntax.varname]s, totally
+       independent of the input. An earlier version of this code set the
+       [type.arrow] case to [ltype s -> ltype d], which would have meant that
+       the return variable names could depend on the argument variable names;
+       this would be an okay behavior to allow, although we don't currently need
+       it. *)
+    Fixpoint base_ltype (t : base.type) : Type :=
       match t with
-      | base.type.prod a b => base_var a * base_var b
+      | base.type.prod a b => base_ltype a * base_ltype b
       | base.type.list (base.type.type_base base.type.Z) =>
         Syntax.expr.expr (* N.B. for lists, represents the list's *location in memory* *)
       | _ => Syntax.varname
       end.
-    (* interpretation of type.type base.type *)
-    Fixpoint var (t : type.type base.type) : Type :=
+    Fixpoint ltype (t : type.type base.type) : Type :=
       match t with
-      | type.base t => base_var t
-      | type.arrow s d => var d
+      | type.base t => base_ltype t
+      | type.arrow s d => ltype d
       end.
 
-    (* the type of *values* of variables in terms of Syntax.expr.expr *)
-    Fixpoint base_value (t : base.type) : Type :=
+    (* Types that appear in the bedrock2 expressions on the right-hand-side of
+       assignments. For example, if we want to assign three integers, we need
+       three [Syntax.expr.expr]s. *)
+    Fixpoint base_rtype (t : base.type) : Type :=
       match t with
-      | base.type.prod a b => base_value a * base_value b
+      | base.type.prod a b => base_rtype a * base_rtype b
       | _ => Syntax.expr.expr
       end.
-    Fixpoint value (t : type.type base.type) : Type :=
+    Fixpoint rtype (t : type.type base.type) : Type :=
       match t with
-      | type.base a => base_value a
-      | type.arrow a b => value a -> value b
+      | type.base a => base_rtype a
+      | type.arrow a b => rtype a -> rtype b
       end.
 
-    (* convert vars to values (used for renaming the variables) *)
-    Fixpoint value_of_var {t} : base_var t -> base_value t :=
+    (* convert ltypes to rtypes (used for renaming variables) - the opposite
+       direction is not permitted *)
+    Fixpoint rtype_of_ltype {t} : base_ltype t -> base_rtype t :=
       match t with
-      | base.type.prod a b => fun x => (value_of_var (fst x), value_of_var (snd x))
+      | base.type.prod a b => fun x => (rtype_of_ltype (fst x), rtype_of_ltype (snd x))
       | base.type.list (base.type.type_base base.type.Z) => fun loc => loc
       | base.type.list _ | base.type.option _ | base.type.unit
       | base.type.type_base _ => Syntax.expr.var
       end.
 
     (* error creation *)
-    Fixpoint base_make_error t : base_value t :=
+    Fixpoint base_make_error t : base_rtype t :=
       match t with
       | base.type.prod a b => (base_make_error a, base_make_error b)
       | base.type.list _ | base.type.option _ | base.type.unit
       | base.type.type_base _ => error
       end.
-    Fixpoint make_error t : value t :=
+    Fixpoint make_error t : rtype t :=
       match t with
       | type.base a => base_make_error a
       | type.arrow a b => fun _ => make_error b
       end.
 
-    (* given the next variable name to use and the type of a let
-       binder, generate a correctly-typed structure of variable names to
-       assign *)
-    Fixpoint get_retnames (t : base.type) (startname : Syntax.varname)
-      : Syntax.varname * base_var t :=
+    (* Used to generate left-hand-side of assignments, given the next variable
+       name to use. Returns the new next name to use, and the left-hand-side. *)
+    Fixpoint translate_lhs (t : base.type) (startname : Syntax.varname)
+      : Syntax.varname * base_ltype t :=
       match t with
       (* prod is a special case -- assign to multiple variables *)
       | base.type.prod a b =>
-        let step1 := get_retnames a startname in
-        let step2 := get_retnames b (fst step1) in
+        let step1 := translate_lhs a startname in
+        let step2 := translate_lhs b (fst step1) in
         (fst step2, (snd step1, snd step2))
       (* this should not get called on lists of Zs -- return garbage *)
       | base.type.list (base.type.type_base base.type.Z) =>
@@ -98,13 +117,13 @@ Module Compiler.
       | base.type.type_base _ => (next_varname startname, startname)
       end.
 
-    Fixpoint set_return_values {t : base.type}
-      : base_var t -> base_value t -> Syntax.cmd.cmd :=
+    Fixpoint assign {t : base.type}
+      : base_ltype t -> base_rtype t -> Syntax.cmd.cmd :=
       match t with
       | base.type.prod a b =>
-        fun retnames values =>
-          Syntax.cmd.seq (set_return_values (fst retnames) (fst values))
-                         (set_return_values (snd retnames) (snd values))
+        fun (lhs : base_ltype (a * b)) (rhs : base_rtype (a * b)) =>
+          Syntax.cmd.seq (assign (fst lhs) (fst rhs))
+                         (assign (snd lhs) (snd rhs))
       (* this should not be called on lists of Zs -- return garbage *)
       | base.type.list (base.type.type_base base.type.Z) =>
         fun _ _ => Syntax.cmd.skip
@@ -118,7 +137,7 @@ Module Compiler.
     (* checks that the expression is either a) a literal nat or Z that
     falls within the allowed range or b) an expression surrounded by
     casts that fall within the allowed range *)
-    Definition has_casts {t} (e : @API.expr var t) : bool :=
+    Definition has_casts {t} (e : @API.expr ltype t) : bool :=
       match e with
       | (expr.App
            type_Z type_Z
@@ -153,7 +172,7 @@ Module Compiler.
     (* Used to interpret expressions that are not allowed to contain let statements *)
     Fixpoint of_inner_expr
              (require_cast : bool)
-             {t} (e : @API.expr var t) : value t :=
+             {t} (e : @API.expr ltype t) : rtype t :=
       if (require_cast && negb (has_casts e))%bool
       then make_error _
       else
@@ -172,6 +191,7 @@ Module Compiler.
               (expr.Ident _ ident.Z_cast2) _) x) => of_inner_expr false x
         (* Z_mul_split : compute high and low separately and assign to two
            different variables *)
+        (* TODO : don't duplicate argument expressions *)
         | (expr.App
              type_Z type_ZZ
              (expr.App type_Z (type.arrow type_Z type_ZZ)
@@ -230,13 +250,13 @@ Module Compiler.
           if Z.eqb s Semantics.width
           then Syntax.expr.op Syntax.bopname.slu (of_inner_expr true x) (of_inner_expr true y)
           else make_error _
-        (* fst : since the [value] of a product type is a tuple, simply use Coq's [fst] *)
+        (* fst : since the [rtype] of a product type is a tuple, simply use Coq's [fst] *)
         | (expr.App
              (type.base (base.type.prod (base.type.type_base base.type.Z) _)) type_Z
              (expr.Ident _ (ident.fst (base.type.type_base base.type.Z) _))
              x) =>
           fst (of_inner_expr false x)
-        (* snd : since the [value] of a product type is a tuple, simply Coq's [snd] *)
+        (* snd : since the [rtype] of a product type is a tuple, simply Coq's [snd] *)
         | (expr.App
              (type.base (base.type.prod _ (base.type.type_base base.type.Z))) type_Z
              (expr.Ident _ (ident.snd _ (base.type.type_base base.type.Z)))
@@ -252,9 +272,12 @@ Module Compiler.
                 (expr.App _ _
                           (expr.Ident _ (ident.List_nth_default _))
                           d) l) i) =>
+          let offset := Syntax.expr.op Syntax.bopname.mul
+                                       (of_inner_expr true i)
+                                       (Syntax.expr.literal word_size_in_bytes) in
           let addr := Syntax.expr.op Syntax.bopname.add
                                      (of_inner_expr false l)
-                                     (of_inner_expr true i) in
+                                     offset in
           Syntax.expr.load Syntax.access_size.word addr
         (* Literal (Z) -> Syntax.expr.literal *)
         | expr.Ident type_Z (ident.Literal base.type.Z x) =>
@@ -262,56 +285,56 @@ Module Compiler.
         (* Literal (nat) : convert to Z, then use Syntax.expr.literal *)
         | expr.Ident type_nat (ident.Literal base.type.nat x) =>
           Syntax.expr.literal (Z.of_nat x)
-        (* Var : use value_of_var to convert the expression *)
-        | expr.Var (type.base _) x => value_of_var x
+        (* Var : use rtype_of_ltype to convert the expression *)
+        | expr.Var (type.base _) x => rtype_of_ltype x
         (* if no clauses matched the expression, return an error *)
         | _ => make_error _
         end.
 
-    Definition of_add_get_carry (sum_var carry_var : Syntax.varname)
+    Definition of_add_get_carry (sum carry : Syntax.varname)
                r1 r2 s (x y : API.expr type_Z) : Syntax.cmd.cmd :=
       if (range_good r1 && range_good r2)%bool
       then if Z.eqb s maxint
            then
-             let sum := Syntax.expr.op Syntax.bopname.add
-                                       (of_inner_expr true x) (of_inner_expr true y) in
+             let sum_expr := Syntax.expr.op Syntax.bopname.add
+                                            (of_inner_expr true x) (of_inner_expr true y) in
              (* Given (0 <= x < w) and (0 <= y < w), carry bit = (x + y) mod w
                 <? x: if (x + y) mod w < x, then clearly the sum must have
                 overflowed (since 0 <= y) if the sum overflowed, then (x + y)
                 mod w = x + y - w < x *)
-             let carry := Syntax.expr.op Syntax.bopname.ltu
-                                         (Syntax.expr.var sum_var) (of_inner_expr true x) in
-             Syntax.cmd.seq (Syntax.cmd.set sum_var sum) (Syntax.cmd.set carry_var carry)
+             let carry_expr := Syntax.expr.op Syntax.bopname.ltu
+                                              (Syntax.expr.var sum) (of_inner_expr true x) in
+             Syntax.cmd.seq (Syntax.cmd.set sum sum_expr) (Syntax.cmd.set carry carry_expr)
            else Syntax.cmd.skip
       else Syntax.cmd.skip.
 
-    Definition of_add_with_get_carry (sum_var carry_var : Syntax.varname)
+    Definition of_add_with_get_carry (sum carry : Syntax.varname)
                r1 r2 s (c x y : API.expr type_Z) : Syntax.cmd.cmd :=
       if (range_good r1 && range_good r2)%bool
       then if Z.eqb s maxint
            then
              let sum_cx := Syntax.expr.op Syntax.bopname.add
                                           (of_inner_expr true c) (of_inner_expr true x) in
-             let sum := Syntax.expr.op Syntax.bopname.add
-                                       (Syntax.expr.var sum_var) (of_inner_expr true y) in
+             let sum_cxy := Syntax.expr.op Syntax.bopname.add
+                                           (Syntax.expr.var sum) (of_inner_expr true y) in
              (* compute the carry by adding together the carries of both
                 additions, using the same strategy as in Z_add_get_carry *)
              let carry_cx := Syntax.expr.op Syntax.bopname.ltu
-                                            (Syntax.expr.var sum_var) (of_inner_expr true x) in
+                                            (Syntax.expr.var sum) (of_inner_expr true x) in
              let carry_cxy := Syntax.expr.op Syntax.bopname.ltu
-                                             (Syntax.expr.var sum_var) (of_inner_expr true y) in
-             let carry := Syntax.expr.op Syntax.bopname.add (Syntax.expr.var carry_var) carry_cxy in
-             (* sum_var := c + x
-                carry_var := (sum_var <? x)
-                sum_var +=y
-                carry_var += (sum_var <? y) *)
+                                             (Syntax.expr.var sum) (of_inner_expr true y) in
+             let carry_expr := Syntax.expr.op Syntax.bopname.add (Syntax.expr.var carry) carry_cxy in
+             (* sum := c + x
+                carry := (sum <? x)
+                sum +=y
+                carry += (sum <? y) *)
              (Syntax.cmd.seq
                 (Syntax.cmd.seq
                    (Syntax.cmd.seq
-                      (Syntax.cmd.set sum_var sum_cx)
-                      (Syntax.cmd.set carry_var carry_cx))
-                   (Syntax.cmd.set sum_var sum))
-                (Syntax.cmd.set carry_var carry))
+                      (Syntax.cmd.set sum sum_cx)
+                      (Syntax.cmd.set carry carry_cx))
+                   (Syntax.cmd.set sum sum_cxy))
+                (Syntax.cmd.set carry carry_expr))
            else Syntax.cmd.skip
       else Syntax.cmd.skip.
 
@@ -359,8 +382,8 @@ Module Compiler.
                                           (expr.Ident (ident.Literal (t:=base.type.Z) s)))
                                        c) x) y)).
 
-    Definition of_carries {t} (e : @API.expr var t)
-      : var t -> option Syntax.cmd.cmd :=
+    Definition of_carries {t} (e : @API.expr ltype t)
+      : ltype t -> option Syntax.cmd.cmd :=
       match e with
       | AddGetCarry r1 r2 s x y =>
         fun ret => Some (of_add_get_carry (fst ret) (snd ret) r1 r2 s x y)
@@ -370,19 +393,19 @@ Module Compiler.
       | _ => fun _ => None
       end.
 
-    Fixpoint of_expr {t} (e : @API.expr var t)
+    Fixpoint of_expr {t} (e : @API.expr ltype t)
              (nextname : Syntax.varname)
-      : type.for_each_lhs_of_arrow var t (* argument names *)
-        -> var t (* return value names *)
+      : type.for_each_lhs_of_arrow ltype t (* argument names *)
+        -> ltype t (* return value names *)
         -> Syntax.varname * Syntax.cmd.cmd :=
       match e with
       | expr.LetIn (type.base t1) (type.base t2) x f =>
         fun argnames retnames  =>
-          let gr := get_retnames t1 nextname in
+          let gr := translate_lhs t1 nextname in
           let cmdx :=
               match of_carries x (snd gr) with
               | Some cmdx => cmdx
-              | None => set_return_values (snd gr) (of_inner_expr true x)
+              | None => assign (snd gr) (of_inner_expr true x)
               end in
           let recf := of_expr (f (snd gr)) (fst gr) argnames retnames in
           (fst recf, Syntax.cmd.seq cmdx (snd recf))
@@ -402,18 +425,18 @@ Module Compiler.
       | expr.App _ (type.base _) f x =>
         fun _ retnames =>
           let v := of_inner_expr true (expr.App f x) in
-          (nextname, set_return_values retnames v)
+          (nextname, assign retnames v)
       | expr.Ident (type.base _) x =>
         fun _ retnames =>
           let v := of_inner_expr true (expr.Ident x) in
-          (nextname, set_return_values retnames v)
+          (nextname, assign retnames v)
       | expr.Var (type.base _) x =>
         fun _ retnames =>
           let v := of_inner_expr true (expr.Var x) in
-          (nextname, set_return_values retnames v)
+          (nextname, assign retnames v)
       | expr.Abs (type.base s) d f =>
-        fun (argnames : base_var s * type.for_each_lhs_of_arrow _ d)
-            (retnames : var d) =>
+        fun (argnames : base_ltype s * type.for_each_lhs_of_arrow _ d)
+            (retnames : ltype d) =>
           of_expr (f (fst argnames)) nextname (snd argnames) retnames
       | _ => fun _ _ => (nextname, Syntax.cmd.skip)
       end.
@@ -423,6 +446,8 @@ Module Compiler.
     Context {p : Semantics.parameters}
             (next_varname : Syntax.varname -> Syntax.varname)
             (error : Syntax.expr.expr)
+            (word_size_in_bytes : Z)
+            (word_size_in_bytes_eq : word_size_in_bytes * 8 = Semantics.width)
             (ident_to_funname : forall t, ident.ident t -> Syntax.funname).
     Local Notation maxint := (2 ^ Semantics.width).
 
@@ -434,11 +459,11 @@ Module Compiler.
                                  (base.type.type_base base.type.Z))).
 
     (* TODO : fill these in *)
-    Axiom valid_carry_expr : forall {t}, @API.expr var t -> Prop.
-    Axiom valid_inner_expr : forall {t}, @API.expr var t -> Prop.
+    Axiom valid_carry_expr : forall {t}, @API.expr ltype t -> Prop.
+    Axiom valid_inner_expr : forall {t}, @API.expr ltype t -> Prop.
 
     (* states whether the expression is acceptable input for [of_expr] *)
-    Inductive valid_expr : forall {t}, @API.expr var t -> Prop :=
+    Inductive valid_expr : forall {t}, @API.expr ltype t -> Prop :=
     | valid_carry_let :
         forall t x f,
           valid_carry_expr x ->
@@ -480,14 +505,14 @@ Module Compiler.
           valid_expr (expr.Abs (s:=type.base s) (d:=d) f)
     .
 
-    (* convert expressions that are expected to be all variable names from var
-       to the flat list format expected by bedrock for function input/output *)
-    Fixpoint base_var_to_list {t} : base_var t -> option (list Syntax.varname) :=
+    (* convert expressions from ltype to the flat list format expected by
+       bedrock2 for function input/output *)
+    Fixpoint base_ltype_to_list {t} : base_ltype t -> option (list Syntax.varname) :=
       match t with
       | base.type.prod a b =>
-        fun x : base_var a * base_var b =>
-          Option.bind (base_var_to_list (fst x))
-                      (fun lx => option_map (app lx) (base_var_to_list (snd x)))
+        fun x : base_ltype a * base_ltype b =>
+          Option.bind (base_ltype_to_list (fst x))
+                      (fun lx => option_map (app lx) (base_ltype_to_list (snd x)))
       | base.type.list (base.type.type_base base.type.Z) =>
         fun x : Syntax.expr.expr =>
           match x with
@@ -496,31 +521,27 @@ Module Compiler.
           end
       | _ => fun x : Syntax.varname => Some [x]
       end.
-    Fixpoint var_to_list {t} : var t -> option (list Syntax.varname) :=
+    Fixpoint ltype_to_list {t} : ltype t -> option (list Syntax.varname) :=
       match t with
-      | type.base a => fun x => base_var_to_list x
+      | type.base a => fun x => base_ltype_to_list x
       | type.arrow a b => fun _ => None (* can't convert a function to a varname *)
       end.
 
-    (* convert the type of arguments from the nested for_each_lhs_of_arrow
+    (* Convert the type of arguments from the nested for_each_lhs_of_arrow
        construction to a flat list
 
-       of_expr expects type.for_each_lhs_of_arrow, which gives you a var for
-       each argument, which for the most part gives you Syntax.expr.expr (and
-       functions from var -> var if the argument is a function)
-
-       bedrock wants to get a list of variable names, which is a more
-       restrictive requirement; instead of expr.expr, we would want everything
-       to be a Syntax.expr.var. This function returns [None] if the more
-       restrictive condition is not met. *)
+       While bedrock2 wants a flat list of variable names for arguments, of_expr
+       expects type.for_each_lhs_of_arrow, which provides a left-hand-side for
+       each argument as an [ltype]. We can translate by disallowing functions and
+       simply concatenating the lists from [base_ltype_to_list]. *)
     Fixpoint args_to_list {t}
-      : type.for_each_lhs_of_arrow var t -> option (list Syntax.varname) :=
+      : type.for_each_lhs_of_arrow ltype t -> option (list Syntax.varname) :=
       match t with
       | type.base _ => fun _ : unit => Some nil
       | type.arrow (type.base s) d =>
-        fun args : base_var s * type.for_each_lhs_of_arrow var d =>
+        fun args : base_ltype s * type.for_each_lhs_of_arrow ltype d =>
           Option.bind
-            (base_var_to_list (fst args))
+            (base_ltype_to_list (fst args))
             (fun x =>
                option_map
                  (app x)
@@ -541,9 +562,11 @@ Module Compiler.
           results_equivalent (type.base (base.type.prod a b)) res mem (rets1 ++ rets2)
     | equiv_list :
         forall (res : list Z) mem ret,
-          (* for all 0 <= i < list length, the value in memory at ret+i matches the list *)
+          (* for all 0 <= i < list length, the rtype in memory at
+             ret+(i*word_size_in_bytes) matches the list *)
           Forall (fun i =>
-                    let addr := Interface.word.add ret (Interface.word.of_Z (Z.of_nat i)) in
+                    let offset := Z.of_nat i * word_size_in_bytes in
+                    let addr := Interface.word.add ret (Interface.word.of_Z offset) in
                     exists w,
                       Interface.map.get mem addr = Some w /\
                       Interface.word.unsigned w = nth_default 0 res i)
@@ -558,13 +581,14 @@ Module Compiler.
     .
 
     Lemma of_expr_correct {t} (e : API.Expr t) :
-      valid_expr (e var) ->
+      valid_expr (e ltype) ->
       forall nextname argnames rets,
       forall funnames fname innames outnames trace mem args,
-        var_to_list rets = Some outnames ->
+        ltype_to_list rets = Some outnames ->
         args_to_list argnames = Some innames ->
         let of_expre : Syntax.cmd.cmd :=
-            snd (of_expr next_varname error (e var) nextname argnames rets) in
+            snd (of_expr next_varname error word_size_in_bytes
+                         (e ltype) nextname argnames rets) in
         let interpe : type.interp base.interp t := API.interp (e _) in
         In (fname, (innames, outnames, of_expre)) funnames ->
         WeakestPrecondition.call
