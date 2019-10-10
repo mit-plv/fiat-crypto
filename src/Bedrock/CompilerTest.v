@@ -499,13 +499,13 @@ ErrorT.Success
         let old_num := List.nth_default ""%string (String.split "x" old_varname) 1 in
         let new_num := Decimal.decimal_string_of_Z (Decimal.Z_of_decimal_string old_num + 1) in
         String.append "x" new_num.
-    Local Notation of_expr e := (@Compiler.of_expr BasicC64Semantics.parameters nv ERROR 8 _ e "x0").
+    Local Notation translate_expr e := (@Compiler.translate_expr BasicC64Semantics.parameters nv ERROR 8 _ e "x0").
 
     Definition mulmod_bedrock : Syntax.cmd.cmd :=
       match mulmod with
-      | ErrorT.Success e => snd (of_expr (e Compiler.ltype)
-                                         (Syntax.expr.var "y0", (Syntax.expr.var "y1", tt))
-                                         (Syntax.expr.var "ret"))
+      | ErrorT.Success e => snd (translate_expr (e Compiler.ltype)
+                                                (Syntax.expr.var "y0", (Syntax.expr.var "y1", tt))
+                                                (Syntax.expr.var "ret"))
       | ErrorT.Error _ => Syntax.cmd.skip
       end.
 
@@ -2158,13 +2158,13 @@ ErrorT.Success
         let old_num := List.nth_default ""%string (String.split "x" old_varname) 1 in
         let new_num := Decimal.decimal_string_of_Z (Decimal.Z_of_decimal_string old_num + 1) in
         String.append "x" new_num.
-    Local Notation of_expr e := (@Compiler.of_expr BasicC32Semantics.parameters nv ERROR 4 _ e "x0").
+    Local Notation translate_expr e := (@Compiler.translate_expr BasicC32Semantics.parameters nv ERROR 4 _ e "x0").
 
     Definition mulmod_bedrock : Syntax.cmd.cmd :=
       match mulmod with
-      | ErrorT.Success e => snd (of_expr (e Compiler.ltype)
-                                         (Syntax.expr.var "y0", (Syntax.expr.var "y1", tt))
-                                         (Syntax.expr.var "ret"))
+      | ErrorT.Success e => snd (translate_expr (e Compiler.ltype)
+                                                (Syntax.expr.var "y0", (Syntax.expr.var "y1", tt))
+                                                (Syntax.expr.var "ret"))
       | ErrorT.Error _ => Syntax.cmd.skip
       end.
 
