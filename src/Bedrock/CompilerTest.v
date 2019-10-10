@@ -705,7 +705,7 @@ ErrorT.Success
       match mulmod with
       | ErrorT.Success e => snd (of_expr (e Compiler.var)
                                          (Syntax.expr.var "y0", (Syntax.expr.var "y1", tt))
-                                         (fun _ _ => Syntax.expr.var "ret"))
+                                         (Syntax.expr.var "ret"))
       | ErrorT.Error _ => Syntax.cmd.skip
       end.
 
@@ -3154,7 +3154,7 @@ ErrorT.Success
       match mulmod with
       | ErrorT.Success e => snd (of_expr (e Compiler.var)
                                          (Syntax.expr.var "y0", (Syntax.expr.var "y1", tt))
-                                         (fun _ _ => Syntax.expr.var "ret"))
+                                         (Syntax.expr.var "ret"))
       | ErrorT.Error _ => Syntax.cmd.skip
       end.
 
