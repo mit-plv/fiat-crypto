@@ -42,7 +42,7 @@ Module Compiler.
     Fixpoint var (t : type.type base.type) : Type :=
       match t with
       | type.base t => base_var t
-      | type.arrow s d => var s -> var d
+      | type.arrow s d => var d
       end.
 
     (* the type of *values* of variables in terms of Syntax.expr.expr *)
@@ -413,8 +413,8 @@ Module Compiler.
           (nextname, set_return_values retnames v)
       | expr.Abs (type.base s) d f =>
         fun (argnames : base_var s * type.for_each_lhs_of_arrow _ d)
-            (retnames : base_var s -> var d) =>
-          of_expr (f (fst argnames)) nextname (snd argnames) (retnames (fst argnames))
+            (retnames : var d) =>
+          of_expr (f (fst argnames)) nextname (snd argnames) retnames
       | _ => fun _ _ => (nextname, Syntax.cmd.skip)
       end.
   End Compiler.
