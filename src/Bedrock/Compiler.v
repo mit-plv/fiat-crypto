@@ -452,51 +452,36 @@ Module Compiler.
                                  (base.type.type_base base.type.Z))).
 
     (* TODO : fill these in *)
-    Axiom valid_carry_expr : forall {t}, @API.expr ltype t -> Prop.
-    Axiom valid_inner_expr : forall {t}, @API.expr ltype t -> Prop.
+    Axiom valid_carry_expr : forall {t}, @API.expr (fun _ => unit) t -> bool.
+    Axiom valid_inner_expr : forall {t}, @API.expr (fun _ => unit) t -> bool.
 
-    (* states whether the expression is acceptable input for [of_expr] *)
-    Inductive valid_expr : forall {t}, @API.expr ltype t -> Prop :=
-    | valid_carry_let :
-        forall t x f,
-          valid_carry_expr x ->
-          (forall names, valid_expr (f names)) ->
-          valid_expr (expr.LetIn (A:=type_ZZ) (B:=t) x f)
-    | valid_let :
-        forall t1 t2 x f,
-          valid_inner_expr x ->
-          (forall names, valid_expr (f names)) ->
-          valid_expr (expr.LetIn (A:=type.base t1) (B:=t2) x f)
-    | valid_cons :
-        forall x l,
-          valid_inner_expr x ->
-          valid_expr l ->
-          valid_expr
-            (expr.App
-               (expr.App
-                  (expr.Ident
-                     (@ident.cons (base.type.type_base base.type.Z)))
-                  x) l)
-    | valid_nil :
-        valid_expr (expr.Ident
-                      (@ident.nil (base.type.type_base base.type.Z)))
-    | valid_app :
-        forall s d f x,
-          valid_inner_expr (expr.App (s:=type.base s) (d:=type.base d) f x) ->
-          valid_expr (expr.App f x)
-    | valid_ident :
-        forall t i,
-          valid_inner_expr (expr.Ident (t:=type.base t) i) ->
-          valid_expr (expr.Ident i)
-    | valid_var :
-        forall t x,
-          valid_inner_expr (expr.Var (t:=type.base t) x) ->
-          valid_expr (expr.Var x)
-    | valid_abs :
-        forall s d f,
-          (forall names, valid_expr (f names)) ->
-          valid_expr (expr.Abs (s:=type.base s) (d:=d) f)
-    .
+    (* states whether the expression is acceptable input for translate_expr *)
+    Fixpoint valid_expr {t} (e : @API.expr (fun _ => unit) t) : bool :=
+      match e with
+      (* let-in with a carry expression *)
+      | expr.LetIn type_ZZ t2 x f =>
+        (valid_carry_expr x && valid_expr (f tt))
+      (* other let-in *)
+      | expr.LetIn (type.base t1) t2 x f =>
+        (valid_inner_expr x && valid_expr (f tt))
+      (* list-of-Z cons *)
+      | expr.App
+          _ _
+          (expr.App
+             _ _
+             (expr.Ident
+                _ (ident.cons (base.type.type_base base.type.Z)))
+             x) l =>
+        valid_inner_expr x && valid_expr l
+      (* list-of-Z nil -- always valid *)
+      | expr.Ident
+          _ (ident.nil (base.type.type_base base.type.Z)) =>
+         true
+      (* Abs case is special *)
+      | expr.Abs s d f =>
+        valid_expr (f tt)
+      | _ => valid_inner_expr e
+      end.
 
     (* Convert expressions from ltype to the flat list format expected by
        bedrock2 for function input/output *)
@@ -597,7 +582,7 @@ Module Compiler.
 
     Lemma translate_expr_correct {t} (e : API.Expr t) :
       (* e is valid input to translate_expr *)
-      valid_expr (e ltype) ->
+      valid_expr (e _) = true ->
       forall (args : type.for_each_lhs_of_arrow (type.interp base.interp) t)
              (bedrock_args : list Interface.word.rep)
              (argnames : type.for_each_lhs_of_arrow ltype t)
