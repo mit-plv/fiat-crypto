@@ -3430,7 +3430,7 @@ Module Compilers.
                  (var_like_idents : GallinaIdentList.t)
                  (base : Type)
                  (ident : type.type (base.type base) -> Type)
-                 (raw_ident : type.type (pattern.base.type base) -> Type)
+                 (raw_ident : Type)
                  (pattern_ident : type.type (pattern.base.type base) -> Type)
                  (include_interp : bool)
                  {rewrite_rulesT} (rules_proofs : PrimitiveHList.hlist (@snd bool Prop) rewrite_rulesT)
