@@ -124,6 +124,7 @@ Module Compilers.
       let __ := Make.debug1 ltac:(fun _ => idtac "Proving Rewriter_Interp...") in
       let RInterp := fresh "Rewriter_Interp" in
       let RInterp := cache_proof_with_type_by (@Interp_GoalT exprInfo exprExtraInfo pkg R) ltac:(idtac; prove_interp_good ()) RInterp in
+      let __ := Make.debug1 ltac:(fun _ => idtac "Assembling verified rewriter...") in
       make_VerifiedRewriter exprInfo exprExtraInfo exprReifyInfo pkg pkg_proofs R Rwf RInterp specs_proofs.
 
     Module Import FinalTacticHelpers.
@@ -232,7 +233,12 @@ Module Compilers.
       End Settings.
 
       Ltac make_rewriter_via basic_package pkg_proofs include_interp specs_proofs :=
-        let res := Build_Rewriter basic_package pkg_proofs include_interp specs_proofs in refine res.
+        let res := Build_Rewriter basic_package pkg_proofs include_interp specs_proofs in
+        let __ := Make.debug1 ltac:(fun _ => idtac "Kernel type-checking verified rewriter...") in
+        let name := fresh "verified_rewriter" in
+        let res := cache_term res name in
+        let __ := Make.debug1 ltac:(fun _ => idtac "Refining with verified rewriter...") in
+        refine res.
 
       Ltac make_rewriter :=
         idtac;
@@ -249,7 +255,7 @@ Module Compilers.
         let basic_package := Basic.Tactic.cache_build_package_of_scraped scraped_data var_like_idents base ident in
         let pattern_package := Compilers.pattern.ident.Tactic.cache_build_package basic_package raw_ident pattern_ident in
         let pkg_proofs := Compilers.pattern.ProofTactic.cache_build_package_proofs basic_package pattern_package in
-        make_rewriter basic_package pkg_proofs include_interp specs_proofs.
+        make_rewriter_via basic_package pkg_proofs include_interp specs_proofs.
 
       Ltac make_rewriter_all :=
         idtac;

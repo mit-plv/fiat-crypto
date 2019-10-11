@@ -23,6 +23,7 @@ Require Import Crypto.Util.Tactics.RunTacticAsConstr.
 Require Import Crypto.Util.Tactics.DebugPrint.
 Require Import Crypto.Util.Tactics.ConstrFail.
 Require Import Crypto.Util.Tactics.Head.
+Require Import Crypto.Util.Tactics.HeadUnderBinders.
 Require Import Crypto.Util.Tactics.PrintGoal.
 Require Import Crypto.Util.Tactics.CacheTerm.
 Require Import Crypto.Util.HProp.
@@ -178,8 +179,13 @@ Module Compilers.
       Ltac scrape_data_of_type so_far T
         := scrape_data_of_type' scrape_data_of_term so_far T.
 
+      (* N.B. We include [bool] here only because some of the tactic
+          code fails if there is only one base type.
+
+         TODO: make this not be the case. *)
       Notation initial_type_list :=
-        ([without_name Datatypes.nat]%gi_list)
+        ([without_name Datatypes.nat
+          ; without_name Datatypes.bool]%gi_list)
           (only parsing).
       Notation initial_term_list :=
         ([without_name (@ident.literal)
@@ -230,6 +236,9 @@ Module Compilers.
         | [ |- ScrapedData.t_with_args ?rules_proofs ]
           => cbv [ScrapedData.t_with_args];
              make_scrape_data_via rules_proofs
+        | [ |- ?G ]
+          => let exp := uconstr:(ScrapedData.t_with_args ?[rules_proofs]) in
+             fail 0 "Unexpected goal:" G "(expected" exp ")"
         end.
     End ScrapeTactics.
 
@@ -533,10 +542,13 @@ Module Compilers.
                          | true => constr:(pattern.base.type base)
                          end in
         let lookup := fresh in
+        let identType := constr:(Type) in
+        let base_interpType := lazymatch type of base_interp with _ -> ?TYPE => TYPE end in
+        let _enforce_univs := constr:(base_interpType : identType) in
         let t := fresh "t" in
         let res
             := constr:(forall (lookup : positive -> Type)
-                              (ident : forall t : type.type base_type, Type),
+                              (ident : forall t : type.type base_type, identType),
                           ltac:(let base_type_interp
                                     := lazymatch is_pattern with
                                        | false => constr:(base.interp base_interp)
@@ -842,49 +854,61 @@ Module Compilers.
         constr:(ltac:(make_ident_interp_Proper eqv_Reflexive_Proper)
                 : forall {t}, Proper (eq ==> type.eqv) (@ident_interp t)).
 
-      Ltac build_invertIdentAndCorrect base_type base_interp buildIdent reflect_base_beq :=
-        constr:(ltac:(pose proof reflect_base_beq;
-                      pose proof (_ : reflect_rel (@eq (type.type base_type)) _);
-                      unshelve
-                        (unshelve econstructor;
-                         [ constructor; let idc := fresh "idc" in intros ? idc; destruct idc; shelve
-                         | constructor;
-                           (let idc := fresh "idc" in
-                            intros ? idc;
-                            split;
-                            [ destruct idc; shelve
-                            | ]) ];
-                         repeat first [ match goal with
-                                        | [ |- match ?x with _ => _ end _ _ -> _ ] => is_var x; destruct x
-                                        | [ |- match ?x with _ => _ end _ -> _ ] => is_var x; destruct x
-                                        | [ |- False -> _ ] => intro; exfalso; assumption
-                                        | [ |- _ = _ -> _ ] => intro; subst
-                                        | [ H : existT _ _ ?idc = existT _ _ ?idc' |- _ ]
-                                          => is_var idc; destruct idc; try discriminate; []
-                                        end
-                                      | cbv; match goal with
-                                             | [ |- ?ev = ?x ]
-                                               => is_evar ev; tryif has_evar x then fail else reflexivity
-                                             end ]);
-                      try first [ exact Datatypes.None
-                                | exact Datatypes.false
-                                | cbv; intro; inversion_option; subst; solve [ reflexivity | exfalso; now apply diff_false_true ] ])
-                : { invertIdent : _
-                                  & @invert_expr.BuildInvertIdentCorrectT _ base_interp _ invertIdent buildIdent }).
-      Ltac make_invertIdentAndCorrect base_type base_interp buildIdent reflect_base_beq :=
-        let res := build_invertIdentAndCorrect base_type base_interp buildIdent reflect_base_beq in refine res.
+      Ltac build_invertIdent base_interp ident buildIdent :=
+        (eval cbv beta zeta in
+            (ltac:(
+               let ident_Literal := (eval lazy in (@ident.ident_Literal _ _ _ buildIdent)) in
+               let ident_Literal := head_under_binders ident_Literal in
+               let ident_nil := (eval lazy in (@ident.ident_nil _ _ _ buildIdent)) in
+               let ident_nil := head_under_binders ident_nil in
+               let ident_cons := (eval lazy in (@ident.ident_cons _ _ _ buildIdent)) in
+               let ident_cons := head_under_binders ident_cons in
+               let ident_Some := (eval lazy in (@ident.ident_Some _ _ _ buildIdent)) in
+               let ident_Some := head_under_binders ident_Some in
+               let ident_None := (eval lazy in (@ident.ident_None _ _ _ buildIdent)) in
+               let ident_None := head_under_binders ident_None in
+               let ident_pair := (eval lazy in (@ident.ident_pair _ _ _ buildIdent)) in
+               let ident_pair := head_under_binders ident_pair in
+               let ident_tt := (eval lazy in (@ident.ident_tt _ _ _ buildIdent)) in
+               let ident_tt := head_under_binders ident_tt in
+               let check_head idc' idc :=
+                   let idc' := (eval hnf in idc') in
+                   let h := head idc' in
+                   constr_eq h idc in
+               let bool_by_head idc ridc :=
+                   let idc' := fresh "idc'" in
+                   pose idc as idc';
+                   destruct idc;
+                   first [ check_head idc' ridc; exact Datatypes.true
+                         | exact Datatypes.false ] in
+               let idc := fresh "idc" in
+               constructor;
+               intros ? idc;
+               [ let idc' := fresh "idc'" in
+                 pose idc as idc';
+                 destruct idc;
+                 first [ check_head idc' ident_Literal;
+                         refine (Datatypes.Some _);
+                         assumption
+                       | exact Datatypes.None ]
+               | bool_by_head idc ident_nil
+               | bool_by_head idc ident_cons
+               | bool_by_head idc ident_Some
+               | bool_by_head idc ident_None
+               | bool_by_head idc ident_pair
+               | bool_by_head idc ident_tt ])
+             : @invert_expr.InvertIdentT _ base_interp ident)).
+      Ltac make_invertIdent base_interp ident buildIdent :=
+        let res := build_invertIdent base_interp ident buildIdent in refine res.
 
-      Ltac make_invertIdent invertIdentAndCorrect :=
-        let res := (eval cbv in (projT1 invertIdentAndCorrect)) in refine res.
-      Ltac build_invertIdent base_interp ident invertIdentAndCorrect :=
-        constr:(ltac:(make_invertIdent invertIdentAndCorrect)
-                : @invert_expr.InvertIdentT _ base_interp ident).
-
-      Ltac make_buildInvertIdentCorrect invertIdentAndCorrect :=
-        refine (projT2 invertIdentAndCorrect).
-      Ltac build_buildInvertIdentCorrect base_interp invertIdent buildIdent invertIdentAndCorrect :=
-        constr:(ltac:(make_buildInvertIdentCorrect invertIdentAndCorrect)
-                : @invert_expr.BuildInvertIdentCorrectT _ base_interp _ invertIdent buildIdent).
+      Ltac make_buildInvertIdentCorrect invertIdent buildIdent reflect_base_beq :=
+        apply (@HelperLemmas.build_BuildInvertIdentCorrectT_opt _ _ _ invertIdent buildIdent _ reflect_base_beq);
+        [ reflexivity.. | ];
+        let idc := fresh "idc" in
+        intros ? idc; destruct idc; vm_compute; constructor.
+      Ltac build_buildInvertIdentCorrect invertIdent buildIdent reflect_base_beq :=
+        constr:(ltac:(make_buildInvertIdentCorrect invertIdent buildIdent reflect_base_beq)
+                : @invert_expr.BuildInvertIdentCorrectT _ _ _ invertIdent buildIdent).
 
       Ltac inhabit := (constructor; fail) + (constructor; inhabit).
       Ltac build_base_default base_interp :=
@@ -1142,7 +1166,10 @@ Module Compilers.
       Ltac cache_build_base_interp eta_base_cps base_type_list index_of_base :=
         let name := fresh "base_interp" in
         let term := build_base_interp eta_base_cps base_type_list index_of_base in
-        cache_term term name.
+        let base_interp := cache_term term name in
+        let base_interp_head := head base_interp in
+        (*let __ := match goal with _ => strategy -1000 [base_interp_head] end in*)
+        base_interp.
 
       Ltac cache_build_all_gen T mk P :=
         let name := fresh "all_gen" in
@@ -1274,19 +1301,14 @@ Module Compilers.
         let term := build_ident_interp_Proper ident_interp eqv_Reflexive_Proper in
         cache_term term name.
 
-      Ltac cache_build_invertIdentAndCorrect base_type base_interp buildIdent reflect_base_beq :=
-        let name := fresh "invertIdentAndCorrect" in
-        let term := build_invertIdentAndCorrect base_type base_interp buildIdent reflect_base_beq in
-        cache_term term name.
-
-      Ltac cache_build_invertIdent base_interp ident invertIdentAndCorrect :=
+      Ltac cache_build_invertIdent base_interp ident buildIdent :=
         let name := fresh "invertIdent" in
-        let term := build_invertIdent base_interp ident invertIdentAndCorrect in
+        let term := build_invertIdent base_interp ident buildIdent in
         cache_term term name.
 
-      Ltac cache_build_buildInvertIdentCorrect base_interp invertIdent buildIdent invertIdentAndCorrect :=
+      Ltac cache_build_buildInvertIdentCorrect invertIdent buildIdent reflect_base_beq :=
         let name := fresh "buildInvertIdentCorrect" in
-        let term := build_buildInvertIdentCorrect base_interp invertIdent buildIdent invertIdentAndCorrect in
+        let term := build_buildInvertIdentCorrect invertIdent buildIdent reflect_base_beq in
         cache_term term name.
 
       Ltac cache_build_base_default base_interp :=
@@ -1302,7 +1324,10 @@ Module Compilers.
       Ltac cache_build_ident_interp base_interp ident index_of_ident all_ident_named_interped :=
         let name := fresh "ident_interp" in
         let term := build_ident_interp base_interp ident index_of_ident all_ident_named_interped in
-        cache_term term name.
+        let ident_interp := cache_term term name in
+        let ident_interp_head := head ident_interp in
+        (*let __ := match goal with _ => strategy -1000 [ident_interp_head] end in*)
+        ident_interp.
 
       Ltac cache_build_all_idents ident :=
         let name := fresh "all_idents" in
@@ -1456,12 +1481,10 @@ Module Compilers.
         let eqv_Reflexive_Proper := cache_build_eqv_Reflexive_Proper ident_interp base_interp in
         let __ := Tactics.debug1 ltac:(fun _ => idtac "Building ident_interp_Proper...") in
         let ident_interp_Proper := cache_build_ident_interp_Proper ident_interp eqv_Reflexive_Proper in
-        let __ := Tactics.debug1 ltac:(fun _ => idtac "Building invertIdentAndCorrect...") in
-        let invertIdentAndCorrect := cache_build_invertIdentAndCorrect base_type base_interp buildIdent reflect_base_beq in
         let __ := Tactics.debug1 ltac:(fun _ => idtac "Building invertIdent...") in
-        let invertIdent := cache_build_invertIdent base_interp ident invertIdentAndCorrect in
+        let invertIdent := cache_build_invertIdent base_interp ident buildIdent in
         let __ := Tactics.debug1 ltac:(fun _ => idtac "Building buildInvertIdentCorrect...") in
-        let buildInvertIdentCorrect := cache_build_buildInvertIdentCorrect base_interp invertIdent buildIdent invertIdentAndCorrect in
+        let buildInvertIdentCorrect := cache_build_buildInvertIdentCorrect invertIdent buildIdent reflect_base_beq in
         let __ := Tactics.debug1 ltac:(fun _ => idtac "Building base_default...") in
         let base_default := cache_build_base_default base_interp in
         let __ := Tactics.debug1 ltac:(fun _ => idtac "Building package...") in

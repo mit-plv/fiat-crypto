@@ -158,7 +158,7 @@ Module Compilers.
         end.
       Ltac cache_build_package_proofs ident_package package :=
         let name := fresh "ident_package_proofs" in
-        cache_proof_with_type_by (@package_proofs _ _ package) ltac:(prove_package_proofs ident_package) name.
+        cache_proof_with_type_by (@package_proofs _ _ package) ltac:(prove_package_proofs_via ident_package) name.
     End ProofTactic.
   End pattern.
 End Compilers.
