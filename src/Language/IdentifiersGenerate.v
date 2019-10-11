@@ -15,6 +15,7 @@ Require Import Crypto.Language.IdentifiersBasicLibrary.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.ConstrFail.
 Require Import Crypto.Util.Tactics.CacheTerm.
+Require Import Crypto.Util.Tactics.PrintGoal.
 Require Import Crypto.Util.Tactics.DebugPrint.
 Import ListNotations. Local Open Scope list_scope.
 Import PrimitiveSigma.Primitive.
@@ -58,6 +59,9 @@ Module Compilers.
         | S _ => ltac:(fun tac => time tac ())
         | ?v => ltac:(fun tac => fail 0 "Invalid non-nat ident_assembly_debug_level" v)
         end.
+
+      Ltac warn_if_goals_remain _ :=
+        [ > idtac "WARNING: Remaining goal:"; print_context_and_goal () .. ].
 
       Ltac find_evar_tail x :=
         lazymatch x with
@@ -358,7 +362,8 @@ Module Compilers.
                                    cbv [ident_infos_of ident_args type_of_list indep_args dep_types indep_types preinfos assemble_ident to_ident List.map Type_of_kind_of_type];
                                    unshelve (eexists; refine_sigT_and_pair; try constructor);
                                    cbv [to_type Datatypes.fst];
-                                   try solve [ repeat unshelve esplit ])
+                                   repeat unshelve esplit;
+                                   warn_if_goals_remain ())
                              : { ridc : ident & { args : ident_args (preinfos (ident_infos_of ridc))
                                                 | { pf : _ = _
                                                   | idc = rew [cident] pf in assemble_ident args } } })) in

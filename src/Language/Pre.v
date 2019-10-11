@@ -4,6 +4,7 @@ Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.Operations.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.Notations.
+Require Import Crypto.Util.Notations.
 Require Crypto.Util.PrimitiveHList.
 Local Open Scope bool_scope.
 Local Open Scope Z_scope.
@@ -204,3 +205,47 @@ Module ScrapedData.
 
   Definition t_with_args {rewrite_rulesT} (rules_proofs : PrimitiveHList.hlist (@snd bool Prop) rewrite_rulesT) := t.
 End ScrapedData.
+
+Local Definition mymap {A B} := Eval cbv in @List.map A B.
+Local Definition myapp {A} := Eval cbv in @List.app A.
+Local Notation dont_do_again := (pair false) (only parsing).
+Local Notation do_again := (pair true) (only parsing).
+
+Module Import RewriteRuleNotationsTactics.
+  Ltac mymap_dont_do_again ls' :=
+    let v := (eval cbv [mymap myapp ls'] in (mymap dont_do_again ls')) in
+    exact v.
+  Ltac mymap_do_again ls' :=
+    let v := (eval cbv [mymap myapp ls'] in (mymap do_again ls')) in
+    exact v.
+  Ltac myapp x' y' :=
+    let v := (eval cbv [mymap myapp x' y'] in (myapp x' y')) in
+    exact v.
+End RewriteRuleNotationsTactics.
+
+Module RewriteRuleNotations.
+  Notation "' x" := (ident.literal x).
+  Notation dont_do_again := (pair false) (only parsing).
+  Notation do_again := (pair true) (only parsing).
+
+  Notation all_dont_do_again ls
+    := (match ls return _ with
+        | ls'
+          => ltac:(mymap_dont_do_again ls')
+        end) (only parsing).
+
+
+  Notation all_do_again ls
+    := (match ls return _ with
+        | ls' => ltac:(mymap_do_again ls')
+        end) (only parsing).
+
+  Delimit Scope rew_rules_scope with rew_rules.
+  Notation "x ++ y"
+    := (match x%rew_rules, y%rew_rules return _ with
+        | x', y' => ltac:(myapp x' y')
+        end) (only parsing).
+  Notation "[ ]" := nil (format "[ ]") : rew_rules_scope.
+  Notation "[ x ]" := (cons x nil) : rew_rules_scope.
+  Notation "[ x ; y ; .. ; z ]" :=  (cons x (cons y .. (cons z nil) ..)) : rew_rules_scope.
+End RewriteRuleNotations.
