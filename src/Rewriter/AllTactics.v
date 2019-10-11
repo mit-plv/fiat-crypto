@@ -234,9 +234,6 @@ Module Compilers.
 
       Ltac make_rewriter_via basic_package pkg_proofs include_interp specs_proofs :=
         let res := Build_Rewriter basic_package pkg_proofs include_interp specs_proofs in
-        let __ := Make.debug1 ltac:(fun _ => idtac "Kernel type-checking verified rewriter...") in
-        let name := fresh "verified_rewriter" in
-        let res := cache_term res name in
         let __ := Make.debug1 ltac:(fun _ => idtac "Refining with verified rewriter...") in
         refine res.
 
