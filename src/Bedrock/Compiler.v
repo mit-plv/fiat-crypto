@@ -3,6 +3,7 @@ Require Import Coq.Lists.List.
 Require bedrock2.Syntax.
 Require bedrock2.Semantics.
 Require bedrock2.WeakestPrecondition.
+Require Import bedrock2.Map.Separation bedrock2.Array bedrock2.Scalars.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.BoundsPipeline.
 Require Import Crypto.Language.API.
@@ -39,16 +40,8 @@ Module Compiler.
        are stored in main memory; we use [Syntax.cmd.store] instead of
        [Syntax.cmd.set], which allows expressions for the storage location.
 
-       For functions (type.arrow) this is a little unintuitive, since you would
-       never really assign a function in bedrock2. But, when the compiler
-       translates a function, it uses [ltype] to pass along the information
-       about how the return values should be assigned. Therefore, the [ltype] of
-       a function returning two integers would be two [Syntax.varname]s, totally
-       independent of the input. An earlier version of this code set the
-       [type.arrow] case to [ltype s -> ltype d], which would have meant that
-       the return variable names could depend on the argument variable names;
-       this would be an okay behavior to allow, although we don't currently need
-       it. *)
+       Functions can't appear on the left-hand-side, so we return garbage output
+       (the unit type). *)
     Fixpoint base_ltype (t : base.type) : Type :=
       match t with
       | base.type.prod a b => base_ltype a * base_ltype b
@@ -59,7 +52,7 @@ Module Compiler.
     Fixpoint ltype (t : type.type base.type) : Type :=
       match t with
       | type.base t => base_ltype t
-      | type.arrow s d => ltype d
+      | type.arrow s d => unit (* garbage *)
       end.
 
     (* Types that appear in the bedrock2 expressions on the right-hand-side of
@@ -396,7 +389,7 @@ Module Compiler.
     Fixpoint translate_expr {t} (e : @API.expr ltype t)
              (nextname : Syntax.varname)
       : type.for_each_lhs_of_arrow ltype t (* argument names *)
-        -> ltype t (* return value names *)
+        -> base_ltype (type.final_codomain t) (* return value names *)
         -> Syntax.varname * Syntax.cmd.cmd :=
       match e with
       | expr.LetIn (type.base t1) (type.base t2) x f =>
@@ -436,7 +429,7 @@ Module Compiler.
           (nextname, assign retnames v)
       | expr.Abs (type.base s) d f =>
         fun (argnames : base_ltype s * type.for_each_lhs_of_arrow _ d)
-            (retnames : ltype d) =>
+            (retnames : base_ltype (type.final_codomain d)) =>
           translate_expr (f (fst argnames)) nextname (snd argnames) retnames
       | _ => fun _ _ => (nextname, Syntax.cmd.skip)
       end.
@@ -505,14 +498,14 @@ Module Compiler.
           valid_expr (expr.Abs (s:=type.base s) (d:=d) f)
     .
 
-    (* convert expressions from ltype to the flat list format expected by
+    (* Convert expressions from ltype to the flat list format expected by
        bedrock2 for function input/output *)
-    Fixpoint base_ltype_to_list {t} : base_ltype t -> option (list Syntax.varname) :=
+    Fixpoint flatten_names {t} : base_ltype t -> option (list Syntax.varname) :=
       match t with
       | base.type.prod a b =>
         fun x : base_ltype a * base_ltype b =>
-          Option.bind (base_ltype_to_list (fst x))
-                      (fun lx => option_map (app lx) (base_ltype_to_list (snd x)))
+          Option.bind (flatten_names (fst x))
+                      (fun lx => option_map (app lx) (flatten_names (snd x)))
       | base.type.list (base.type.type_base base.type.Z) =>
         fun x : Syntax.expr.expr =>
           match x with
@@ -521,78 +514,123 @@ Module Compiler.
           end
       | _ => fun x : Syntax.varname => Some [x]
       end.
-    Fixpoint ltype_to_list {t} : ltype t -> option (list Syntax.varname) :=
-      match t with
-      | type.base a => fun x => base_ltype_to_list x
-      | type.arrow a b => fun _ => None (* can't convert a function to a varname *)
-      end.
 
     (* Convert the type of arguments from the nested for_each_lhs_of_arrow
-       construction to a flat list
-
-       While bedrock2 wants a flat list of variable names for arguments, translate_expr
-       expects type.for_each_lhs_of_arrow, which provides a left-hand-side for
-       each argument as an [ltype]. We can translate by disallowing functions and
-       simply concatenating the lists from [base_ltype_to_list]. *)
-    Fixpoint args_to_list {t}
+       construction to a flat list; similar to flatten_names, but has to deal
+       with the extra structure of for_each_lhs_of_arrow even though we disallow
+       functions. *)
+    Fixpoint flatten_argnames {t}
       : type.for_each_lhs_of_arrow ltype t -> option (list Syntax.varname) :=
       match t with
       | type.base _ => fun _ : unit => Some nil
       | type.arrow (type.base s) d =>
         fun args : base_ltype s * type.for_each_lhs_of_arrow ltype d =>
           Option.bind
-            (base_ltype_to_list (fst args))
+            (flatten_names (fst args))
             (fun x =>
                option_map
                  (app x)
-                 (args_to_list (snd args)))
+                 (flatten_argnames (snd args)))
       | type.arrow (type.arrow s d1) d2 => fun _ => None (* can't have function arguments *)
       end.
 
-    (* bedrock postcondition stating that the bedrock result is equivalent to
-       the fiat-crypto result *)
-    Inductive results_equivalent :
-      forall t, type.interp base.interp t ->
-                @Interface.map.rep _ _ Semantics.mem ->
-                  list Interface.word.rep -> Prop :=
-    | equiv_prod :
-        forall a b res mem rets1 rets2,
-          results_equivalent (type.base a) (fst res) mem rets1 ->
-          results_equivalent (type.base b) (snd res) mem rets2 ->
-          results_equivalent (type.base (base.type.prod a b)) res mem (rets1 ++ rets2)
-    | equiv_list :
-        forall (res : list Z) mem ret,
-          (* for all 0 <= i < list length, the rtype in memory at
-             ret+(i*word_size_in_bytes) matches the list *)
-          Forall (fun i =>
-                    let offset := Z.of_nat i * word_size_in_bytes in
-                    let addr := Interface.word.add ret (Interface.word.of_Z offset) in
-                    exists w,
-                      Interface.map.get mem addr = Some w /\
-                      Interface.word.unsigned w = nth_default 0 res i)
-                 (seq 0 (length res)) ->
-          results_equivalent
-            (type.base (base.type.list (base.type.type_base base.type.Z)))
-            res mem [ret]
-    | equiv_Z :
-        forall (res : Z) mem w,
-          Interface.word.unsigned w = res ->
-          results_equivalent type_Z res mem [w]
-    .
+    Local Definition zarray
+          (start : Interface.word.rep) (xs : list Z)
+          (mem : Interface.map.rep (map:=Semantics.mem))
+      : Prop :=
+      let size := Interface.word.of_Z word_size_in_bytes in
+      array (truncated_scalar Syntax.access_size.word) size start xs mem.
+
+    (* states that a fiat-crypto value is equivalent to a bedrock value *)
+    Fixpoint equivalent {t}
+      : base.interp t -> list Interface.word.rep ->
+        Interface.map.rep (map:=Semantics.mem) -> Prop :=
+      match t with
+      (* product case *)
+      | base.type.prod a b =>
+        fun (x : base.interp a * base.interp b)
+            (y : list Interface.word.rep)
+            (mem : Interface.map.rep) =>
+          exists y1 y2,
+            y = y1 ++ y2 /\
+            sep (equivalent (fst x) y1)
+                (equivalent (snd x) y2) mem
+      (* list case -- only list Z allowed *)
+      | base.type.list (base.type.type_base base.type.Z) =>
+        fun (x : list Z)
+            (y : list Interface.word.rep)
+            (mem : Interface.map.rep) =>
+          exists loc,
+            y = loc :: nil /\
+            zarray loc x mem
+      (* base type case -- only Z allowed *)
+      | base.type.type_base base.type.Z =>
+        fun (x : Z)
+            (y : list Interface.word.rep)
+            (mem : Interface.map.rep) =>
+          exists w,
+            y = w :: nil /\
+            Interface.word.unsigned w = x
+      | _ => fun _ _ _ => False
+      end.
+
+    (* wrapper for equivalent that deals with for_each_lhs_of_arrow *)
+    Fixpoint args_equivalent {t} :
+      type.for_each_lhs_of_arrow (type.interp base.interp) t
+      -> list Interface.word.rep
+      -> Interface.map.rep (map:=Semantics.mem) -> Prop :=
+      match t with
+      | type.base a =>
+        fun _ _ _ => True (* no more arguments; done *)
+      | type.arrow (type.base s) d =>
+        (* peel off one argument and enforce separation logic *)
+        fun (args : base.interp s * type.for_each_lhs_of_arrow _ d)
+            (w : list Interface.word.rep)
+            (mem : Interface.map.rep) =>
+          exists w1 w2,
+            w = w1 ++ w2 /\
+            sep (equivalent (fst args) w1)
+                (args_equivalent (snd args) w2) mem
+      | type.arrow (type.arrow _ _) _ =>
+        fun _ _ _ => False (* disallow function arguments *)
+      end.
 
     Lemma translate_expr_correct {t} (e : API.Expr t) :
+      (* e is valid input to translate_expr *)
       valid_expr (e ltype) ->
-      forall nextname argnames rets,
-      forall funnames fname innames outnames trace mem args,
-        ltype_to_list rets = Some outnames ->
-        args_to_list argnames = Some innames ->
-        let translate_e : Syntax.cmd.cmd :=
+      forall (args : type.for_each_lhs_of_arrow (type.interp base.interp) t)
+             (bedrock_args : list Interface.word.rep)
+             (argnames : type.for_each_lhs_of_arrow ltype t)
+             (flat_argnames : list Syntax.varname)
+             (retnames : base_ltype (type.final_codomain t))
+             (flat_retnames : list Syntax.varname)
+             (nextname : Syntax.varname)
+             (mem : Interface.map.rep),
+        (* args and bedrock_args are equivalent *)
+        args_equivalent args bedrock_args mem ->
+        (* argnames and flat_argnames are equivalent *)
+        flatten_argnames argnames = Some flat_argnames ->
+        (* retnames and flat_retnames are equivalent *)
+        flatten_names retnames = Some flat_retnames ->
+        (* ret := result of applying e to args *)
+        let ret : base.interp (type.final_codomain t) :=
+            type.app_curried (API.interp (e _)) args in
+        (* bedrock_e := translation of e as bedrock2 function body *)
+        let bedrock_e : Syntax.cmd.cmd :=
             snd (translate_expr next_varname error word_size_in_bytes
-                         (e ltype) nextname argnames rets) in
-        let interp_e : type.interp base.interp t := API.interp (e _) in
-        In (fname, (innames, outnames, translate_e)) funnames ->
-        WeakestPrecondition.call
-          funnames fname trace mem args (fun _ => results_equivalent _ interp_e).
+                                (e ltype) nextname argnames retnames) in
+        forall (fname : Syntax.funname)
+               (funnames' : list _)
+               (* fname's body is bedrock_e *)
+               (funnames := (fname, (flat_argnames, flat_retnames, bedrock_e))
+                              :: funnames')
+               (tr : Semantics.trace)
+               (R : Interface.map.rep -> Prop),
+          (* calling fname with bedrock_args is equivalent to ret *)
+          WeakestPrecondition.call
+            funnames fname tr mem bedrock_args
+            (fun tr' m' bedrock_ret =>
+               tr = tr' /\ sep (equivalent ret bedrock_ret) R m').
     Proof.
       (* TODO : look at Jason's final correctness theorem, make sure this short-circuits correctly. *)
     Admitted.
