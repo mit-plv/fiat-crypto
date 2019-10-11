@@ -39,6 +39,76 @@ Module Compilers.
     Export IdentifiersBasicLibrary.Compilers.Basic.
 
     Module ScrapeTactics.
+      Ltac heuristic_process_rules_proofs rules_proofs :=
+        let get_prim_fst v :=
+            lazymatch v with
+            | PrimitiveProd.Primitive.pair ?x ?y => x
+            | _ => constr:(PrimitiveProd.Primitive.fst v)
+            end in
+        let get_prim_snd v :=
+            lazymatch v with
+            | PrimitiveProd.Primitive.pair ?x ?y => y
+            | _ => constr:(PrimitiveProd.Primitive.snd v)
+            end in
+        let get_fst v :=
+            lazymatch v with
+            | Datatypes.pair ?x ?y => x
+            | _ => constr:(Datatypes.fst v)
+            end in
+        let get_snd v :=
+            lazymatch v with
+            | Datatypes.pair ?x ?y => y
+            | _ => constr:(Datatypes.snd v)
+            end in
+        lazymatch type of rules_proofs with
+        | PrimitiveHList.hlist (@snd bool Prop) _ => rules_proofs
+        | PrimitiveProd.Primitive.prod (@snd bool Prop ?lem) _
+          => let fst_part := get_prim_fst rules_proofs in
+             let snd_part := get_prim_snd rules_proofs in
+             let snd_part := heuristic_process_rules_proofs snd_part in
+             let rest := lazymatch type of snd_part with PrimitiveHList.hlist (@snd bool Prop) ?rest => rest end in
+             constr:(PrimitiveProd.Primitive.pair fst_part snd_part
+                     : PrimitiveHList.hlist (@snd bool Prop) (Datatypes.cons lem rest))
+        | PrimitiveProd.Primitive.prod (PrimitiveProd.Primitive.prod ?P1 ?P2) ?rest
+          => let fst_part := get_prim_fst rules_proofs in
+             let snd_part := get_prim_snd rules_proofs in
+             let fst_fst_part := get_prim_fst fst_part in
+             let snd_fst_part := get_prim_snd fst_part in
+             heuristic_process_rules_proofs
+               (@PrimitiveProd.Primitive.pair
+                  P1 (PrimitiveProd.Primitive.prod P2 rest)
+                  fst_fst_part (@PrimitiveProd.Primitive.pair P2 rest snd_fst_part snd_part))
+        | PrimitiveProd.Primitive.prod (Datatypes.prod ?P1 ?P2) ?rest
+          => let fst_part := get_prim_fst rules_proofs in
+             let snd_part := get_prim_snd rules_proofs in
+             let fst_fst_part := get_fst fst_part in
+             let snd_fst_part := get_snd fst_part in
+             heuristic_process_rules_proofs
+               (@PrimitiveProd.Primitive.pair
+                  P1 (PrimitiveProd.Primitive.prod P2 rest)
+                  fst_fst_part (@PrimitiveProd.Primitive.pair P2 rest snd_fst_part snd_part))
+        | PrimitiveProd.Primitive.prod ?P ?rest
+          => heuristic_process_rules_proofs (rules_proofs : PrimitiveProd.Primitive.prod (@snd bool Prop (RewriteRuleNotations.default_do_again P)) rest)
+        | Datatypes.prod ?P ?rest
+          => let fst_part := get_fst rules_proofs in
+             let snd_part := get_snd rules_proofs in
+             heuristic_process_rules_proofs (@PrimitiveProd.Primitive.pair P rest fst_part snd_part)
+        | Datatypes.unit
+          => constr:(rules_proofs : PrimitiveHList.hlist (@snd bool Prop) Datatypes.nil)
+        | ?P => constr:(PrimitiveProd.Primitive.pair rules_proofs tt
+                        : PrimitiveHList.hlist (@snd bool Prop) (Datatypes.cons (RewriteRuleNotations.default_do_again P) Datatypes.nil))
+        end.
+
+
+      Ltac make_rules_proofsT_with_args :=
+        idtac;
+        lazymatch goal with
+        | [ |- rules_proofsT_with_args ?rules_proofs ]
+          => let res := heuristic_process_rules_proofs rules_proofs in
+             let T := type of res in
+             eexists; exact (@id T res)
+        end.
+
       Ltac scrape_preprocess T :=
         let T := Compilers.expr.reify_preprocess T in
         let T := Compilers.expr.reify_ident_preprocess T in
