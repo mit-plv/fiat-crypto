@@ -585,6 +585,9 @@ Proof using Type.
            | |- context [(_ * _) mod _] =>
              (* multiplication case *)
              rewrite Z.mul_div_eq' by lia; lia
+           | |- ((_ + _) * ?y) mod _ = _ =>
+             (* double * single multiplication case *)
+             rewrite Z.mul_add_distr_r, <- Z.mul_assoc, (Z.mul_comm (2^_) y), Z.mul_assoc
            | |- (_ + _) mod (_ * _) = _ =>
              (* addition cases *)
              rewrite !Z.rem_mul_r by lia;
