@@ -211,6 +211,9 @@ Local Definition myapp {A} := Eval cbv in @List.app A.
 Local Notation dont_do_again := (pair false) (only parsing).
 Local Notation do_again := (pair true) (only parsing).
 
+Definition rules_proofsT_with_args {T} (rules_proofs : T) :=
+  { rules : _ & PrimitiveHList.hlist (@snd bool Prop) rules }.
+
 Module Import RewriteRuleNotationsTactics.
   Ltac mymap_dont_do_again ls' :=
     let v := (eval cbv [mymap myapp ls'] in (mymap dont_do_again ls')) in
@@ -227,6 +230,7 @@ Module RewriteRuleNotations.
   Notation "' x" := (ident.literal x).
   Notation dont_do_again := (pair false) (only parsing).
   Notation do_again := (pair true) (only parsing).
+  Notation default_do_again := dont_do_again (only parsing).
 
   Notation all_dont_do_again ls
     := (match ls return _ with
