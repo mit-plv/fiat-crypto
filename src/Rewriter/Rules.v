@@ -851,14 +851,16 @@ Section with_bitwidth.
               ; (forall xl xh offset,
                     0 < offset < bitwidth
                     -> doublewidth (cstZsingle_to_double xl xh >> singlewidth ('offset))
-                       = cstZsingle_to_double
-                           (Z.lor (singlewidth (singlewidth xl >> singlewidth ('offset)))
-                                  (singlewidth
-                                     (Z.truncating_shiftl
-                                        (singlewidth ('bitwidth))
-                                        (singlewidth xh)
-                                        (singlewidth ('(bitwidth - offset))))))
-                           (singlewidth xh >> singlewidth ('offset)))
+                       = (dlet l := singlewidth
+                                      (Z.lor (singlewidth (singlewidth xl >> singlewidth ('offset)))
+                                             (singlewidth
+                                                (Z.truncating_shiftl
+                                                   (singlewidth ('bitwidth))
+                                                   (singlewidth xh)
+                                                   (singlewidth ('(bitwidth - offset)))))) in
+                              dlet h := singlewidth
+                                          (singlewidth xh >> singlewidth ('offset)) in
+                              cstZsingle_to_double l h))
              ]
           ].
 End with_bitwidth.
