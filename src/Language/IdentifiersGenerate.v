@@ -5,7 +5,6 @@ Require Import Coq.Lists.List.
 Require Import Coq.derive.Derive.
 Require Import Crypto.Util.CPSNotations.
 Require Import Crypto.Util.Option.
-Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.PrimitiveSigma.
 Require Import Crypto.Util.Bool.Reflect.
 Require Import Crypto.Util.Notations.
@@ -548,7 +547,7 @@ Module Compilers.
           let res := build_arg_types_unfolded cident raw_ident raw_ident_infos_of ident eta_ident_cps_gen split_types in refine res.
 
         Ltac build_type_of_list_arg_types_beq_unfolded base_interp_beq base_interp cident raw_ident raw_ident_infos_of ident eta_ident_cps_gen split_types arg_types_unfolded :=
-          (eval cbv -[Prod.prod_beq arg_types_unfolded type_of_list base.interp_beq base_interp_beq Z.eqb base_interp ZRange.zrange_beq] in
+          (eval cbv -[Prod.prod_beq arg_types_unfolded type_of_list base.interp_beq base_interp_beq Z.eqb base_interp] in
               (proj1_sig
                  (@eta_ident_cps_gen
                     (fun t idc => type_of_list (@arg_types_unfolded t idc) -> type_of_list (@arg_types_unfolded t idc) -> bool)
