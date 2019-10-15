@@ -86,7 +86,7 @@ Module X25519_64.
               exact r)
                (Some loose_bounds, (Some loose_bounds, tt))
                (Some tight_bounds).
-    Definition mulmod := Eval compute in mulmod_.
+    Definition mulmod := Eval vm_compute in mulmod_.
 (*
 ErrorT.Success
   (fun var : API.type -> Type =>
@@ -510,7 +510,7 @@ ErrorT.Success
       end.
 
     Import NotationsCustomEntry.
-    Eval compute in mulmod_bedrock.
+    Compute mulmod_bedrock.
   (* using format_bedrock.sh:
 = bedrock_func_body
     : (((x0 = (load(y0 + 4 * 8) * (load(y1 + 4 * 8) * 19)));
@@ -702,7 +702,7 @@ Module X25519_32.
               exact r)
                (Some loose_bounds, (Some loose_bounds, tt))
                (Some tight_bounds).
-    Definition mulmod := Eval compute in mulmod_.
+    Definition mulmod := Eval vm_compute in mulmod_.
 (*
 ErrorT.Success
   (fun var : API.type -> Type =>
@@ -2280,7 +2280,7 @@ ErrorT.Success
       end.
 
     Import NotationsCustomEntry.
-    Eval compute in mulmod_bedrock.
+    Compute mulmod_bedrock.
   (* using format_bedrock.sh:
 = bedrock_func_body
     : (((x0 = (load(y0 + 9 * 4) * (load(y1 + 9 * 4) * (2 * 19))));
