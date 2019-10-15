@@ -748,9 +748,6 @@ Module Compilers.
       | match ?x with Datatypes.pair a b => @?f a b end
         => let T := type of term in
            reify_preprocess (@prod_rect_nodep _ _ T f x)
-      | match ?x with ZRange.Build_zrange a b => @?f a b end
-        => let T := type of term in
-           reify_preprocess (@ZRange.zrange_rect_nodep T f x)
       | match ?x with nil => ?N | cons a b => @?C a b end
         => let T := type of term in
            reify_preprocess (@ListUtil.list_case _ (fun _ => T) N C x)
@@ -766,6 +763,14 @@ Module Compilers.
            (*let B := lazymatch type of b with forall x, @?B x => B end in*)
            reify_preprocess rec_val (*(@Let_In A B a b)*)
       | ?term => reify_preprocess_extra term
+      end.
+
+    Ltac reify_preprocess_extra term ::=
+      lazymatch term with
+      | match ?x with ZRange.Build_zrange a b => @?f a b end
+        => let T := type of term in
+           reify_preprocess (@ZRange.zrange_rect_nodep T f x)
+      | _ => term
       end.
 
     Ltac reify_ident_preprocess term :=
