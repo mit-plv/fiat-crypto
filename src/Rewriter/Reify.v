@@ -6,8 +6,6 @@ Require Import Crypto.Util.Option.
 Require Import Crypto.Util.OptionList.
 Require Import Crypto.Util.CPSNotations.
 Require Import Crypto.Util.Bool.Reflect.
-Require Import Crypto.Util.ZRange.
-Require Import Crypto.Util.ZRange.Operations.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.Notations.
 Require Import Crypto.Util.Tactics.ConstrFail.
@@ -473,8 +471,7 @@ Module Compilers.
              let term := adjust_if_negb term in
              term
         | dyncons ?v ?ctx
-          => let term := substitute_beq_with base_interp_beq only_eliminate_in_ctx full_ctx term zrange_beq v in
-             let term := substitute_beq_with base_interp_beq only_eliminate_in_ctx full_ctx term Z.eqb v in
+          => let term := substitute_beq_with base_interp_beq only_eliminate_in_ctx full_ctx term Z.eqb v in
              let term := match constr:(Set) with
                          | _ => let T := type of v in
                                 let beq := (eval cbv beta delta [Reflect.decb_rel] in (Reflect.decb_rel (@eq T))) in
@@ -1197,7 +1194,7 @@ Module Compilers.
         Export Make.Tactic.Settings.
       End Settings.
 
-      Tactic Notation "make_Rewriter" tactic3(reify_base) tactic3(reify_ident) constr(exprInfo) constr(exprExtraInfo) constr(pkg) constr(ident_is_var_like) constr(include_interp) constr(specs) :=
+      Ltac make_Rewriter reify_base reify_ident exprInfo exprExtraInfo pkg ident_is_var_like include_interp specs :=
         let res := Build_RewriterT reify_base reify_ident exprInfo exprExtraInfo pkg ident_is_var_like include_interp specs in refine res.
     End Tactic.
   End RewriteRules.
