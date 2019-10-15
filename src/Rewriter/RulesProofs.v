@@ -529,6 +529,10 @@ Local Ltac pose_shiftr_bounds :=
          end.
 
 Local Ltac bounds_arith_hammer :=
+  try match goal with
+      | [ H0 : 0 < ?z, H : 0 <= ?x <= ?z - 1, H' : 0 <= ?y <= ?z - 1 |- ?x * ?y / ?z <= ?z - 1 ]
+        => clear -H H' H0 (* fast path so we don't time out on 8.9 *)
+      end;
   repeat match goal with
          | _ => progress pose_mod_bounds
          | _ => progress pose_shiftr_bounds
