@@ -200,7 +200,7 @@ Module Compilers.
       Ltac do_final_cbv base_interp ident_interp :=
         let base_interp_head := head base_interp in
         let ident_interp_head := head ident_interp in
-        cbv [expr.Interp expr.interp Classes.ident_interp type.interp base.interp base_interp_head ident_interp_head ident.literal ident.eagerly ident.cast2].
+        cbv [expr.Interp expr.interp Classes.ident_interp type.interp base.interp base_interp_head ident_interp_head ident.literal ident.eagerly].
 
       Ltac Rewrite_for_gen verified_rewriter_package do_lhs do_rhs :=
         lazymatch (eval hnf in (RewriteRules.GoalType.exprInfo verified_rewriter_package)) with

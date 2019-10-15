@@ -451,7 +451,7 @@ Module Compilers.
       Ltac fin_tac :=
         repeat first [ assumption
                      | progress change S with Nat.succ
-                     | progress cbv [ident.literal ident.eagerly ident.cast2] in *
+                     | progress cbv [ident.literal ident.eagerly] in *
                      | progress cbn [fst snd] in *
                      | match goal with
                        | [ |- ?x = ?x ] => reflexivity
