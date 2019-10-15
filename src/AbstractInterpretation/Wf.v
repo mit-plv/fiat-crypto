@@ -796,6 +796,8 @@ Module Compilers.
               (expr.Ident ident.Z_cast2)
               (#(@ident.Literal base.type.zrange r1%zrange), #(@ident.Literal base.type.zrange r2%zrange))%expr_pat).
 
+      Local Arguments base.try_make_transport_cps / _ _ _.
+      Local Arguments type.try_make_transport_cps / _ _ _ _ _.
       Lemma is_annotated_for_spec {relax_zrange var} t t' e st
         : @is_annotated_for relax_zrange var t t' e st = true
           <-> ((exists (pf : t' = tZ) r,
