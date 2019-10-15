@@ -765,14 +765,6 @@ Module Compilers.
       | ?term => reify_preprocess_extra term
       end.
 
-    Ltac reify_preprocess_extra term ::=
-      lazymatch term with
-      | match ?x with ZRange.Build_zrange a b => @?f a b end
-        => let T := type of term in
-           reify_preprocess (@ZRange.zrange_rect_nodep T f x)
-      | _ => term
-      end.
-
     Ltac reify_ident_preprocess term :=
       let __ := Reify.debug_enter_reify_ident_preprocess term in
       lazymatch term with
@@ -829,15 +821,27 @@ Module Compilers.
            | T0 => reify_ident_preprocess_extra term
            | ?T' => reify_ident_preprocess (@Datatypes.option_rect A T' PSome PNone)
            end
+      | ident.eagerly (?f ?x)
+        => reify_ident_preprocess (ident.eagerly f x)
+      | ?term => reify_ident_preprocess_extra term
+      end.
+
+    Ltac reify_preprocess_extra term ::=
+      lazymatch term with
+      | match ?x with ZRange.Build_zrange a b => @?f a b end
+        => let T := type of term in
+           reify_preprocess (@ZRange.zrange_rect_nodep T f x)
+      | _ => term
+      end.
+    Ltac reify_ident_preprocess_extra term ::=
+      lazymatch term with
       | @ZRange.zrange_rect ?T0
         => lazymatch (eval cbv beta in T0) with
            | fun _ => ?T => reify_ident_preprocess (@ZRange.zrange_rect_nodep T)
            | T0 => reify_ident_preprocess_extra term
            | ?T' => reify_ident_preprocess (@ZRange.zrange_rect T')
            end
-      | ident.eagerly (?f ?x)
-        => reify_ident_preprocess (ident.eagerly f x)
-      | ?term => reify_ident_preprocess_extra term
+      | _ => term
       end.
 
 
