@@ -2,8 +2,11 @@ Require Import Crypto.Util.FixCoqMistakes.
 Require Import Coq.Classes.Morphisms Coq.Relations.Relation_Definitions.
 Require Import Crypto.Util.Tactics.GetGoal.
 Require Import Crypto.Util.Notations.
+Require Rewriter.Util.LetIn.
 
-Definition Let_In {A P} (x : A) (f : forall a : A, P a) : P x := let y := x in f y.
+(* Make this a notation for the version in [Rewriter] for ease of conversion *)
+Notation Let_In := Rewriter.Util.LetIn.Let_In (only parsing).
+
 Definition Let_In_pf {A P} (x : A) (f : forall a : A, a = x -> P a) : P x := let y := x in f y eq_refl.
 Notation "'dlet_nd' x .. y := v 'in' f" := (Let_In (P:=fun _ => _) v (fun x => .. (fun y => f) .. )) (only parsing).
 Notation "'dlet' x .. y := v 'in' f" := (Let_In v (fun x => .. (fun y => f) .. )).

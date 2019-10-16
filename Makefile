@@ -24,6 +24,7 @@ HIDE := $(if $(VERBOSE),,@)
 INSTALLDEFAULTROOT := Crypto
 
 .PHONY: coq clean update-_CoqProject cleanall install \
+	install-rewriter clean-rewriter rewriter \
 	install-coqprime clean-coqprime coqprime coqprime-all \
 	bedrock2 clean-bedrock2 install-bedrock2 coqutil clean-coqutil install-coqutil \
 	install-standalone install-standalone-ocaml install-standalone-haskell \
@@ -56,8 +57,6 @@ PERFTESTING_VO := \
 LITE_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo \
 	src/Curves/Weierstrass/Jacobian.vo \
 	src/Curves/Weierstrass/Projective.vo \
-	src/Rewriter/ProofsCommon.vo \
-	src/Rewriter/Wf.vo \
 	src/Rewriter/RulesGood.vo \
 	src/Rewriter/All.vo \
 	$(PERFTESTING_VO)
@@ -71,7 +70,7 @@ PRE_STANDALONE_PRE_VOFILES := $(filter src/Standalone%.vo,$(REGULAR_VOFILES))
 UTIL_PRE_VOFILES := $(filter src/Algebra/%.vo src/Tactics/%.vo src/Util/%.vo,$(REGULAR_VOFILES))
 SOME_EARLY_VOFILES := \
   src/Arithmetic/Core.vo \
-  src/Rewriter/Rewriter.vo
+  src/Rewriter/AllTacticsExtra.vo
 
 # computing the vo_reverse_closure is slow, so we only do it if we're
 # asked to make the lite target
@@ -154,6 +153,8 @@ EXTERNAL_DEPENDENCIES?=
 
 ifneq ($(EXTERNAL_DEPENDENCIES),1)
 
+REWRITER_FOLDER := rewriter
+REWRITER_SRC := $(REWRITER_FOLDER)/src
 COQPRIME_FOLDER := coqprime
 BEDROCK2_FOLDER := bedrock2/bedrock2
 BEDROCK2_SRC := $(BEDROCK2_FOLDER)/src
@@ -164,10 +165,12 @@ COQUTIL_NAME := coqutil
 # If we want to work on windows, we should probably figure out how to
 # use `;` rather than `:` when both we are on Windows AND OCaml is NOT
 # compiled via cygwin
-COQPATH?=${CURDIR_SAFE}/$(COQPRIME_FOLDER)/src:${CURDIR_SAFE}/$(BEDROCK2_SRC):${CURDIR_SAFE}/$(COQUTIL_SRC)
+COQPATH?=${CURDIR_SAFE}/$(COQPRIME_FOLDER)/src:${CURDIR_SAFE}/$(BEDROCK2_SRC):${CURDIR_SAFE}/$(COQUTIL_SRC):${CURDIR_SAFE}/$(REWRITER_SRC)
 export COQPATH
 
-$(VOFILES): | coqprime coqutil bedrock2
+$(VOFILES): | coqprime coqutil bedrock2 rewriter
+
+$(ALLDFILES): | coqprime coqutil bedrock2 rewriter
 
 coqprime:
 	(cd $(COQPRIME_FOLDER) && $(COQBIN)coq_makefile -f _CoqProject -o Makefile)
@@ -181,6 +184,15 @@ clean-coqprime:
 
 install-coqprime:
 	$(MAKE) --no-print-directory -C $(COQPRIME_FOLDER) install
+
+rewriter:
+	$(MAKE) --no-print-directory -C $(REWRITER_FOLDER)
+
+clean-rewriter:
+	$(MAKE) --no-print-directory -C $(REWRITER_FOLDER) clean
+
+install-rewriter:
+	$(MAKE) --no-print-directory -C $(REWRITER_FOLDER) install
 
 coqutil:
 	$(MAKE) --no-print-directory -C $(COQUTIL_FOLDER)
@@ -200,9 +212,9 @@ clean-bedrock2:
 install-bedrock2:
 	$(MAKE) --no-print-directory -C $(BEDROCK2_FOLDER) install
 
-cleanall:: clean-coqprime clean-bedrock2 clean-coqutil
+cleanall:: clean-coqprime clean-bedrock2 clean-coqutil clean-rewriter
 
-install: install-coqprime install-bedrock2 install-coqutil
+install: install-coqprime install-bedrock2 install-coqutil install-rewriter
 
 endif
 

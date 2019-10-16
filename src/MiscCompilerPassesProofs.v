@@ -3,9 +3,9 @@ Require Import Coq.Lists.List.
 Require Import Coq.Classes.Morphisms.
 Require Import Coq.MSets.MSetPositive.
 Require Import Coq.FSets.FMapPositive.
-Require Import Crypto.Language.Language.
-Require Import Crypto.Language.Inversion.
-Require Import Crypto.Language.Wf.
+Require Import Rewriter.Language.Language.
+Require Import Rewriter.Language.Inversion.
+Require Import Rewriter.Language.Wf.
 Require Import Crypto.MiscCompilerPasses.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.SplitInContext.

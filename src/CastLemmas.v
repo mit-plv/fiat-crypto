@@ -4,7 +4,7 @@ Require Import Coq.micromega.Lia.
 Require Import Coq.FSets.FMapPositive.
 Require Import Coq.Classes.Morphisms.
 Require Import Coq.Relations.Relations.
-Require Export Crypto.Language.Pre.
+Require Export Crypto.Language.PreExtra.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.UniquePose.

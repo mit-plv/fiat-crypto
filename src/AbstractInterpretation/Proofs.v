@@ -33,12 +33,12 @@ Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.SpecializeAllWays.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.DoWithHyp.
-Require Import Crypto.Language.Language.
-Require Import Crypto.Language.Inversion.
-Require Import Crypto.Language.Wf.
+Require Import Rewriter.Language.Language.
+Require Import Rewriter.Language.Inversion.
+Require Import Rewriter.Language.Wf.
 Require Import Crypto.Language.API.
 Require Import Crypto.CastLemmas.
-Require Import Crypto.Language.UnderLetsProofs.
+Require Import Rewriter.Language.UnderLetsProofs.
 Require Import Crypto.AbstractInterpretation.AbstractInterpretation.
 Require Import Crypto.AbstractInterpretation.Wf.
 Require Import Crypto.AbstractInterpretation.ZRangeProofs.
@@ -1058,7 +1058,7 @@ Module Compilers.
           : forall v, abstraction_relation' st v
                       -> expr.interp (@ident.interp) idc v = v.
         Proof using Hrelax.
-          repeat first [ progress cbv [annotate_expr Option.bind annotation_of_state option_map abstraction_relation' ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by] in *
+          repeat first [ progress cbv [annotate_expr Crypto.Util.Option.bind annotation_of_state option_map abstraction_relation' ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by] in *
                        | reflexivity
                        | progress inversion_option
                        | progress subst

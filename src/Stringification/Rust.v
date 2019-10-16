@@ -183,14 +183,14 @@ Module Rust.
   Definition to_strings (prefix : string) (e : IR.expr) : list string :=
     List.map (stmt_to_string prefix) e.
 
-  Import Crypto.Language.Language.Compilers Crypto.Language.API.Compilers IR.OfPHOAS.
+  Import Rewriter.Language.Language.Compilers Crypto.Language.API.Compilers IR.OfPHOAS.
   Local Notation tZ := (base.type.type_base base.type.Z).
 
   Inductive Mode := In | Out.
 
 
   (* This would have been nice, but coercions don't work *)
-  (* Module Base := Crypto.Language.Language.Compilers.base. *)
+  (* Module Base := Rewriter.Language.Language.Compilers.base. *)
 
   Fixpoint to_base_arg_list (prefix : string) (mode : Mode) {t} : ToString.OfPHOAS.base_var_data t -> list string :=
     match t return base_var_data t -> _ with

@@ -1,6 +1,6 @@
-Require Import Crypto.Language.Language.
+Require Import Rewriter.Language.Language.
 Require Import Crypto.Language.API.
-Require Import Crypto.Language.Wf.
+Require Import Rewriter.Language.Wf.
 Require Import Crypto.Language.WfExtra.
 Require Import Crypto.Rewriter.AllTacticsExtra.
 Require Import Crypto.Rewriter.RulesProofs.

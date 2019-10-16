@@ -15,6 +15,7 @@ Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.ListUtil.
+Require Import Crypto.Util.ListUtil.FoldBool.
 Require Import Crypto.Util.NatUtil.
 Require Import Crypto.Util.ZUtil.AddGetCarry.
 Require Import Crypto.Util.ZUtil.AddModulo.
@@ -40,6 +41,7 @@ Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.SpecializeAllWays.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.PrintGoal.
+Require Import Crypto.Language.PreExtra.
 Require Import Crypto.CastLemmas.
 Require Import Crypto.AbstractInterpretation.AbstractInterpretation.
 
@@ -96,7 +98,7 @@ Module Compilers.
             cbn; cbv [respectful_hetero]; intros.
             destruct_head' option; cbn in *; [ | reflexivity ].
             break_match; cbn in *; [ | reflexivity ].
-            rewrite FoldBool.fold_andb_map_iff in *.
+            rewrite fold_andb_map_iff in *.
             rewrite OptionList.fold_right_option_seq in *.
             destruct_head'_ex.
             destruct_head'_and.
@@ -116,7 +118,7 @@ Module Compilers.
                          | progress autorewrite with distr_length
                          | progress destruct_head'_and
                          | rewrite combine_app_samelength
-                         | rewrite FoldBool.fold_andb_map_iff in *
+                         | rewrite fold_andb_map_iff in *
                          | specialize (IHxs _ _ ltac:(eassumption) ltac:(eassumption) ltac:(eassumption))
                          | match goal with
                            | [ H : cons _ _ = cons _ _ |- _ ] => inversion H; clear H
@@ -133,7 +135,7 @@ Module Compilers.
           Proof.
             cbn; cbv [respectful_hetero]; intros.
             destruct_head' option; cbn in *; [ | break_innermost_match; reflexivity ].
-            rewrite FoldBool.fold_andb_map_iff in *.
+            rewrite fold_andb_map_iff in *.
             destruct_head'_ex.
             destruct_head'_and.
             repeat break_match_step ltac:(fun v => let t := type of v in match (eval hnf in t) with prod _ _ => idtac end).
@@ -166,7 +168,7 @@ Module Compilers.
                          | specialize (IHxs _ _ (@surjective_pairing _ _ _))
                          | progress Bool.split_andb
                          | match goal with
-                           | [ |- context[Option.bind ?x ?y] ] => destruct x eqn:?
+                           | [ |- context[(_ <- ?x; _)%option] ] => destruct x eqn:?
                            | [ H : bool_eq _ _ = true |- _ ] => apply bool_eq_ok in H
                            | [ H : forall v, _ = v \/ _ -> _ |- _ ] => pose proof (H _ (or_introl eq_refl)); specialize (fun v pf => H v (or_intror pf))
                            | [ |- context[match ?b with true => ?f ?x | false => ?f ?y end] ]
@@ -239,8 +241,8 @@ Module Compilers.
                            | [ H : ~?R ?x ?x |- _ ] => exfalso; apply H; reflexivity
                            | [ |- ZRange.type.base.option.is_bounded_by ZRange.type.base.option.None _ = true ]
                              => apply type.base.option.is_bounded_by_None
-                           | [ H : FoldBool.fold_andb_map _ ?l1 ?l2 = true |- length ?l1 = length ?l2 ]
-                             => eapply FoldBool.fold_andb_map_length, H
+                           | [ H : fold_andb_map _ ?l1 ?l2 = true |- length ?l1 = length ?l2 ]
+                             => eapply fold_andb_map_length, H
                            | [ H : forall x y, Nat.eqb x y = true -> _ |- _ ] => specialize (fun x => H x x (@Nat.eqb_refl x))
                            | [ H : forall x, true = true -> _ |- _ ] => specialize (fun x => H x eq_refl)
                            | [ H : forall v, List.In v (List.combine ?ls1 ?ls2) -> ?R (fst v) (snd v) = true,
@@ -272,7 +274,7 @@ Module Compilers.
                          | break_innermost_match_step
                          | break_innermost_match_hyps_step
                          | progress cbn [id
-                                           ZRange.type.base.option.is_bounded_by is_bounded_by_bool ZRange.type.base.is_bounded_by lower upper fst snd projT1 projT2 bool_eq base.interp base.base_interp Option.bind FoldBool.fold_andb_map negb ZRange.ident.option.to_literal ZRange.type.base.option.None fst snd ZRange.type.base.option.interp ZRange.type.base.interp List.combine List.In base.interp_beq base.base_interp_beq base.base_interp] in *
+                                           ZRange.type.base.option.is_bounded_by is_bounded_by_bool ZRange.type.base.is_bounded_by lower upper fst snd projT1 projT2 bool_eq base.interp base.base_interp Crypto.Util.Option.bind fold_andb_map negb ZRange.ident.option.to_literal ZRange.type.base.option.None fst snd ZRange.type.base.option.interp ZRange.type.base.interp List.combine List.In base.interp_beq base.base_interp_beq base.base_interp] in *
                          | progress ident.fancy.cbv_fancy_in_all
                          | progress destruct_head'_bool
                          | solve [ auto with nocore ]
@@ -285,8 +287,8 @@ Module Compilers.
                          | match goal with
                            | [ |- context[andb ?a ?b = true] ] => rewrite !Bool.andb_true_iff
                            | [ H : context[andb ?a ?b = true] |- _ ] => rewrite !Bool.andb_true_iff
-                           | [ H : FoldBool.fold_andb_map _ _ _ = true |- _ ] => rewrite FoldBool.fold_andb_map_iff in H
-                           | [ |- FoldBool.fold_andb_map _ _ _ = true ] => rewrite FoldBool.fold_andb_map_iff
+                           | [ H : fold_andb_map _ _ _ = true |- _ ] => rewrite fold_andb_map_iff in H
+                           | [ |- fold_andb_map _ _ _ = true ] => rewrite fold_andb_map_iff
                            | [ H : forall (x : option _), _ |- _ ] => pose proof (H None); specialize (fun x => H (Some x))
                            | [ H : forall x y z (w : option _), _ |- _ ] => pose proof (fun x y z => H x y z None); specialize (fun x y z w => H x y z (Some w))
                            | [ H : forall v, _ = v \/ _ -> _ |- _ ] => pose proof (H _ (or_introl eq_refl)); specialize (fun v pf => H v (or_intror pf))
@@ -404,13 +406,13 @@ Module Compilers.
             : ZRange.ident.option.to_literal (t:=t) e = Some v
               <-> e = ZRange.ident.option.of_literal v.
           Proof.
-            induction t; split_iff; split; cbn; cbv [Option.bind option_map Option.lift]; break_innermost_match;
+            induction t; split_iff; split; cbn; cbv [Crypto.Util.Option.bind option_map Option.lift]; break_innermost_match;
               repeat first [ progress Z.ltb_to_lt
                            | reflexivity
                            | congruence
                            | apply (f_equal2 (@pair _ _))
                            | progress cbn [ZRange.lower ZRange.upper] in *
-                           | progress cbv [Option.bind] in *; break_match_hyps
+                           | progress cbv [Crypto.Util.Option.bind] in *; break_match_hyps
                            | progress subst
                            | progress intros
                            | progress inversion_option
@@ -420,10 +422,10 @@ Module Compilers.
                            | progress destruct_head_hnf' unit
                            | solve [ eauto ]
                            | match goal with
-                             | [ H : OptionList.Option.List.lift (List.map ZRange.ident.option.to_literal ?l) = Some ?v |- _ ]
-                               => cbv [OptionList.Option.List.lift] in H; revert v H; induction l; intro v; destruct v; cbn [List.fold_right List.map]; intro
-                             | [ |- OptionList.Option.List.lift (List.map ZRange.ident.option.to_literal (List.map ZRange.ident.option.of_literal ?v)) = Some ?v ]
-                               => cbv [OptionList.Option.List.lift]; induction v; cbn [List.fold_right List.map]
+                             | [ H : Crypto.Util.OptionList.Option.List.lift (List.map ZRange.ident.option.to_literal ?l) = Some ?v |- _ ]
+                               => cbv [Crypto.Util.OptionList.Option.List.lift] in H; revert v H; induction l; intro v; destruct v; cbn [List.fold_right List.map]; intro
+                             | [ |- Crypto.Util.OptionList.Option.List.lift (List.map ZRange.ident.option.to_literal (List.map ZRange.ident.option.of_literal ?v)) = Some ?v ]
+                               => cbv [Crypto.Util.OptionList.Option.List.lift]; induction v; cbn [List.fold_right List.map]
                              | [ H : cons _ _ = cons _ _ |- _ ] => inversion H; clear H
                              | [ H : forall x, Some x = Some _ -> _ |- _ ] => specialize (H _ eq_refl)
                              | [ H : forall x, Some _ = Some x -> _ |- _ ] => specialize (H _ eq_refl)
@@ -469,10 +471,10 @@ Module Compilers.
                          | apply (f_equal2 (@cons _))
                          | apply (f_equal (@Some _))
                          | match goal with
-                           | [ H : FoldBool.fold_andb_map ZRange.type.base.option.is_bounded_by (List.map ZRange.ident.option.of_literal ?x) ?y = true |- ?x = ?y ]
-                             => is_var x; is_var y; revert dependent y; induction x; intro y; destruct y; cbn [FoldBool.fold_andb_map List.map] in *; generalize dependent (@FoldBool.fold_andb_map); intros
-                           | [ |- FoldBool.fold_andb_map ZRange.type.base.option.is_bounded_by (List.map ZRange.ident.option.of_literal ?x) ?x = true ]
-                             => is_var x; induction x; cbn [FoldBool.fold_andb_map List.map] in *; generalize dependent (@FoldBool.fold_andb_map); intros
+                           | [ H : fold_andb_map ZRange.type.base.option.is_bounded_by (List.map ZRange.ident.option.of_literal ?x) ?y = true |- ?x = ?y ]
+                             => is_var x; is_var y; revert dependent y; induction x; intro y; destruct y; cbn [fold_andb_map List.map] in *; generalize dependent (@fold_andb_map); intros
+                           | [ |- fold_andb_map ZRange.type.base.option.is_bounded_by (List.map ZRange.ident.option.of_literal ?x) ?x = true ]
+                             => is_var x; induction x; cbn [fold_andb_map List.map] in *; generalize dependent (@fold_andb_map); intros
                            end ].
           Qed.
 
@@ -506,7 +508,7 @@ Module Compilers.
             handle_to_literal;
               break_innermost_match;
               auto using type.base.option.is_bounded_by_None;
-              ident.fancy.cbv_fancy_in_all; cbn [ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by Option.bind ZRange.ident.option.to_literal fst snd] in *;
+              ident.fancy.cbv_fancy_in_all; cbn [ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by Crypto.Util.Option.bind ZRange.ident.option.to_literal fst snd] in *;
               repeat match goal with
                      | H : _ |- _ =>
                      rewrite Bool.andb_true_iff in H;
@@ -537,27 +539,26 @@ Module Compilers.
                  end.
             all: cbn [type.related_hetero ZRange.ident.option.interp ident.interp respectful_hetero type.interp ZRange.type.base.option.interp ZRange.type.base.interp base.interp base.base_interp ZRange.type.base.option.Some ZRange.ident.option.of_literal].
             all: cbv [ident.cast2 ident.literal prod_rect_nodep ident.eagerly] in *.
-            all: cbv [nat_rect_arrow_nodep list_rect_arrow_nodep] in *.
             all: change (@zrange_rect_nodep) with (fun T => @zrange_rect (fun _ => T)) in *.
-            all: change (@ident.Thunked.nat_rect) with (fun P P0 => @nat_rect (fun _ => P) (P0 Datatypes.tt)) in *.
-            all: change (@nat_rect_nodep) with (fun P => @nat_rect (fun _ => P)).
-            all: change (@ident.Thunked.list_rect) with (fun A P PNil => @list_rect A (fun _ => P) (PNil Datatypes.tt)) in *.
-            all: change (@list_rect_nodep) with (fun A P => @list_rect A (fun _ => P)).
-            all: change (@ident.Thunked.list_case) with (fun A P PNil => @list_case A (fun _ => P) (PNil Datatypes.tt)) in *.
-            all: change (@ident.Thunked.option_rect) with (fun A P PS PN => @option_rect A (fun _ => P) PS (PN Datatypes.tt)) in *.
+            all: change (@Thunked.nat_rect) with (fun P P0 => @nat_rect (fun _ => P) (P0 Datatypes.tt)) in *.
+            all: change (@nat_rect_arrow_nodep) with (fun P Q => @nat_rect (fun _ => P -> Q)).
+            all: change (@Thunked.list_rect) with (fun A P PNil => @list_rect A (fun _ => P) (PNil Datatypes.tt)) in *.
+            all: change (@list_rect_arrow_nodep) with (fun A P Q => @list_rect A (fun _ => P -> Q)).
+            all: change (@Thunked.list_case) with (fun A P PNil => @list_case A (fun _ => P) (PNil Datatypes.tt)) in *.
+            all: change (@Thunked.option_rect) with (fun A P PS PN => @option_rect A (fun _ => P) PS (PN Datatypes.tt)) in *.
             all: cbv [respectful_hetero option_map option_rect zrange_rect list_case].
             all: intros.
             all: destruct_head_hnf' prod.
             all: destruct_head_hnf' option.
             Time all: try solve [ non_arith_t ].
-            all: ident.fancy.cbv_fancy_in_all; cbn [ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by Option.bind ZRange.ident.option.to_literal fst snd] in *.
+            all: ident.fancy.cbv_fancy_in_all; cbn [ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by Crypto.Util.Option.bind ZRange.ident.option.to_literal fst snd] in *.
             all: break_innermost_match; try reflexivity.
             Time all: try solve [ non_arith_t ].
             all: repeat first [ progress subst
                               | progress inversion_prod
                               | progress inversion_option
                               | progress destruct_head'_and
-                              | progress cbn [ZRange.type.base.option.is_tighter_than lower upper fst snd Option.bind ZRange.type.base.is_tighter_than] in *
+                              | progress cbn [ZRange.type.base.option.is_tighter_than lower upper fst snd Crypto.Util.Option.bind ZRange.type.base.is_tighter_than] in *
                               | progress cbv [Definitions.Z.lnot_modulo Definitions.Z.add_with_carry] in *
                               | handle_lt_le_t_step
                               | simplify_ranges_t_step

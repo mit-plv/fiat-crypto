@@ -6,7 +6,7 @@ Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.Freeze.
 Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Arithmetic.WordByWordMontgomery.
-Require Import Crypto.Language.Language.
+Require Import Rewriter.Language.Language.
 Require Import Crypto.Language.API.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.
 Local Open Scope Z_scope.

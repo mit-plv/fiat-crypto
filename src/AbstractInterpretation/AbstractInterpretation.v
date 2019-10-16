@@ -6,10 +6,10 @@ Require Import Crypto.Util.Option.
 Require Import Crypto.Util.OptionList.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.LetIn.
-Require Import Crypto.Language.Language.
+Require Import Rewriter.Language.Language.
 Require Import Crypto.Language.InversionExtra.
 Require Import Crypto.Language.API.
-Require Import Crypto.Language.UnderLets.
+Require Import Rewriter.Language.UnderLets.
 Import ListNotations. Local Open Scope bool_scope. Local Open Scope Z_scope.
 
 Module Compilers.

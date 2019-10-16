@@ -20,16 +20,16 @@ Require Import Crypto.Util.Tactics.HasBody.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.SplitInContext.
-Require Crypto.Language.Language.
+Require Rewriter.Language.Language.
 Require Crypto.Language.API.
-Require Crypto.Language.UnderLets.
+Require Rewriter.Language.UnderLets.
 Require Crypto.AbstractInterpretation.AbstractInterpretation.
-Require Crypto.Rewriter.Rewriter.
+Require Rewriter.Rewriter.Rewriter.
 Require Crypto.MiscCompilerPasses.
 Require Crypto.Stringification.Language.
-Require Crypto.Language.Wf.
+Require Rewriter.Language.Wf.
 Require Crypto.Language.WfExtra.
-Require Crypto.Language.UnderLetsProofs.
+Require Rewriter.Language.UnderLetsProofs.
 Require Crypto.Language.UnderLetsProofsExtra.
 Require Crypto.MiscCompilerPassesProofs.
 Require Crypto.MiscCompilerPassesProofsExtra.
@@ -41,9 +41,9 @@ Require Import Crypto.Util.Notations.
 Import ListNotations. Local Open Scope Z_scope.
 
 Import
-  Crypto.Language.Wf
+  Rewriter.Language.Wf
   Crypto.Language.WfExtra
-  Crypto.Language.UnderLetsProofs
+  Rewriter.Language.UnderLetsProofs
   Crypto.Language.UnderLetsProofsExtra
   Crypto.MiscCompilerPassesProofs
   Crypto.MiscCompilerPassesProofsExtra
@@ -51,11 +51,11 @@ Import
   Crypto.AbstractInterpretation.Wf
   Crypto.AbstractInterpretation.WfExtra
   Crypto.AbstractInterpretation.Proofs
-  Crypto.Language.Language
+  Rewriter.Language.Language
   Crypto.Language.API
-  Crypto.Language.UnderLets
+  Rewriter.Language.UnderLets
   Crypto.AbstractInterpretation.AbstractInterpretation
-  Crypto.Rewriter.Rewriter
+  Rewriter.Rewriter.Rewriter
   Crypto.MiscCompilerPasses
   Crypto.Stringification.Language.
 

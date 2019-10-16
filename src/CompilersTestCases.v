@@ -2,9 +2,9 @@ Require Import Coq.ZArith.ZArith.
 Require Import Coq.Lists.List.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.LetIn.
-Require Import Crypto.Language.Language.
+Require Import Rewriter.Language.Language.
 Require Import Crypto.Language.API.
-Require Import Crypto.Language.UnderLets.
+Require Import Rewriter.Language.UnderLets.
 Require Import Crypto.AbstractInterpretation.AbstractInterpretation.
 Require Import Crypto.Rewriter.All.
 Require Import Crypto.MiscCompilerPasses.

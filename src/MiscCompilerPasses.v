@@ -2,7 +2,7 @@ Require Import Coq.ZArith.ZArith.
 Require Import Coq.MSets.MSetPositive.
 Require Import Coq.FSets.FMapPositive.
 Require Import Crypto.Util.ListUtil Coq.Lists.List.
-Require Import Crypto.Language.Language.
+Require Import Rewriter.Language.Language.
 Require Import Crypto.Util.Notations.
 Import ListNotations. Local Open Scope Z_scope.
 

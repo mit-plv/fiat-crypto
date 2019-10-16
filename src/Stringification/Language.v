@@ -14,7 +14,7 @@ Require Import Crypto.Util.ZRange.Operations.
 Require Import Crypto.Util.ZRange.Show.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.OptionList.
-Require Import Crypto.Language.Language.
+Require Import Rewriter.Language.Language.
 Require Import Crypto.Language.API.
 Require Import Crypto.AbstractInterpretation.AbstractInterpretation.
 Require Import Crypto.Util.Bool.Equality.

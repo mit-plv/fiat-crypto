@@ -3,7 +3,7 @@ Require Import Coq.Strings.String.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Lists.List.
 Require Import Crypto.Util.ZRange.
-Require Import Crypto.Language.Language.
+Require Import Rewriter.Language.Language.
 Require Import Crypto.Language.API.
 Require Import Crypto.Stringification.C.
 Require Import Crypto.Arithmetic.Core.

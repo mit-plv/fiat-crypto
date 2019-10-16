@@ -1,8 +1,8 @@
-Require Import Crypto.Language.Language.
-Require Import Crypto.Language.Wf.
+Require Import Rewriter.Language.Language.
+Require Import Rewriter.Language.Wf.
 Require Import Crypto.Language.API.
 Require Import Crypto.Language.WfExtra.
-Require Import Crypto.Language.UnderLetsProofs.
+Require Import Rewriter.Language.UnderLetsProofs.
 
 Module Compilers.
   Import Language.Compilers.

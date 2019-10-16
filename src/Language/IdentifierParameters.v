@@ -2,9 +2,33 @@ Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Util.ListUtil Coq.Lists.List.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZUtil.Definitions.
-Require Import Crypto.Language.Pre.
+Require Import Crypto.Language.PreExtra.
+Require Rewriter.Util.InductiveHList.
+Require Rewriter.Util.LetIn.
+Import InductiveHList.Notations.
 
-Definition var_like_idents : GallinaIdentList.t
+Ltac reify_preprocess_extra term ::=
+  lazymatch term with
+  | @Crypto.Util.LetIn.Let_In ?A ?B ?x ?f
+    => constr:(@Rewriter.Util.LetIn.Let_In A B x f)
+  | match ?x with ZRange.Build_zrange a b => @?f a b end
+    => let T := type of term in
+       constr:(@ZRange.zrange_rect_nodep T f x)
+  | _ => term
+  end.
+
+Ltac reify_ident_preprocess_extra term ::=
+  lazymatch term with
+  | @ZRange.zrange_rect ?T0
+    => lazymatch (eval cbv beta in T0) with
+       | fun _ => ?T => constr:(@ZRange.zrange_rect_nodep T)
+       | T0 => term
+       | ?T' => constr:(@ZRange.zrange_rect T')
+       end
+  | _ => term
+  end.
+
+Definition var_like_idents : InductiveHList.hlist
   := [@ident.literal
       ; @Datatypes.nil
       ; @Datatypes.cons
@@ -14,15 +38,15 @@ Definition var_like_idents : GallinaIdentList.t
       ; Z.opp
       ; ident.cast
       ; ident.cast2
-      ; Z.combine_at_bitwidth]%gi_list.
+      ; Z.combine_at_bitwidth]%hlist.
 
-Definition base_type_list_named : GallinaIdentList.t
+Definition base_type_list_named : InductiveHList.hlist
   := [with_name Z BinInt.Z
       ; with_name bool Datatypes.bool
       ; with_name nat Datatypes.nat
-      ; with_name zrange ZRange.zrange]%gi_list.
+      ; with_name zrange ZRange.zrange]%hlist.
 
-Definition all_ident_named_interped : GallinaIdentList.t
+Definition all_ident_named_interped : InductiveHList.hlist
   := [with_name ident_Literal (@ident.literal)
       ; with_name ident_Nat_succ Nat.succ
       ; with_name ident_Nat_pred Nat.pred
@@ -38,16 +62,16 @@ Definition all_ident_named_interped : GallinaIdentList.t
       ; with_name ident_fst (@Datatypes.fst)
       ; with_name ident_snd (@Datatypes.snd)
       ; with_name ident_prod_rect (@prod_rect_nodep)
-      ; with_name ident_bool_rect (@ident.Thunked.bool_rect)
-      ; with_name ident_nat_rect (@ident.Thunked.nat_rect)
-      ; with_name ident_eager_nat_rect (ident.eagerly (@ident.Thunked.nat_rect))
+      ; with_name ident_bool_rect (@Thunked.bool_rect)
+      ; with_name ident_nat_rect (@Thunked.nat_rect)
+      ; with_name ident_eager_nat_rect (ident.eagerly (@Thunked.nat_rect))
       ; with_name ident_nat_rect_arrow (@nat_rect_arrow_nodep)
       ; with_name ident_eager_nat_rect_arrow (ident.eagerly (@nat_rect_arrow_nodep))
-      ; with_name ident_list_rect (@ident.Thunked.list_rect)
-      ; with_name ident_eager_list_rect (ident.eagerly (@ident.Thunked.list_rect))
+      ; with_name ident_list_rect (@Thunked.list_rect)
+      ; with_name ident_eager_list_rect (ident.eagerly (@Thunked.list_rect))
       ; with_name ident_list_rect_arrow (@list_rect_arrow_nodep)
       ; with_name ident_eager_list_rect_arrow (ident.eagerly (@list_rect_arrow_nodep))
-      ; with_name ident_list_case (@ident.Thunked.list_case)
+      ; with_name ident_list_case (@Thunked.list_case)
       ; with_name ident_List_length (@List.length)
       ; with_name ident_List_seq (@List.seq)
       ; with_name ident_List_firstn (@List.firstn)
@@ -103,7 +127,7 @@ Definition all_ident_named_interped : GallinaIdentList.t
       ; with_name ident_Z_cast2 ident.cast2
       ; with_name ident_Some (@Datatypes.Some)
       ; with_name ident_None (@Datatypes.None)
-      ; with_name ident_option_rect (@ident.Thunked.option_rect)
+      ; with_name ident_option_rect (@Thunked.option_rect)
       ; with_name ident_Build_zrange ZRange.Build_zrange
       ; with_name ident_zrange_rect (@ZRange.zrange_rect_nodep)
       ; with_name ident_fancy_add ident.fancy.add
@@ -119,7 +143,7 @@ Definition all_ident_named_interped : GallinaIdentList.t
       ; with_name ident_fancy_selm ident.fancy.selm
       ; with_name ident_fancy_sell ident.fancy.sell
       ; with_name ident_fancy_addm ident.fancy.addm
-     ]%gi_list.
+     ]%hlist.
 
 Definition scraped_data : ScrapedData.t
   := {| ScrapedData.base_type_list_named := base_type_list_named

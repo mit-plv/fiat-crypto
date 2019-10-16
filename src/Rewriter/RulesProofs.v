@@ -1,12 +1,6 @@
 Require Import Coq.micromega.Lia.
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Util.ListUtil Coq.Lists.List Crypto.Util.ListUtil.FoldBool.
-(*
-Require Import Crypto.Util.Option.
-Require Import Crypto.Util.OptionList.
-Require Import Crypto.Util.CPSNotations.
-Require Import Crypto.Util.Bool.Reflect.
- *)
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.Operations.
 Require Import Crypto.Util.ZUtil.Definitions.
@@ -57,7 +51,7 @@ Require Import Crypto.Util.HProp.
 Require Import Crypto.Util.Decidable.
 Require Crypto.Util.PrimitiveProd.
 Require Crypto.Util.PrimitiveHList.
-Require Import Crypto.Language.Pre.
+Require Import Crypto.Language.PreExtra.
 Require Import Crypto.CastLemmas.
 Require Import Crypto.Rewriter.Rules.
 Require Import Crypto.Util.LetIn.

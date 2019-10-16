@@ -1,5 +1,5 @@
 Require Import Crypto.Language.IdentifiersBasicGENERATED.
-Require Import Crypto.Language.IdentifiersGenerate.
+Require Import Rewriter.Language.IdentifiersGenerate.
 
 Module Compilers.
   Import IdentifiersBasicGENERATED.Compilers.
