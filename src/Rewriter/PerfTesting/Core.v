@@ -16,7 +16,7 @@ Require Crypto.PushButtonSynthesis.UnsaturatedSolinas.
 Require Import Crypto.PushButtonSynthesis.WordByWordMontgomeryReificationCache.
 Require Import Crypto.PushButtonSynthesis.UnsaturatedSolinasReificationCache.
 Require Import Crypto.BoundsPipeline.
-Require Import Crypto.Language.Language.
+Require Import Rewriter.Language.Language.
 Require Import Crypto.Rewriter.All.
 Require Import Crypto.AbstractInterpretation.AbstractInterpretation.
 Require Import Crypto.Stringification.C.

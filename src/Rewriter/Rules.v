@@ -6,7 +6,7 @@ Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.Notations.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.Operations.
-Require Import Crypto.Language.Pre.
+Require Import Crypto.Language.PreExtra.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Notations.
 Import ListNotations. Local Open Scope bool_scope. Local Open Scope Z_scope.
@@ -52,8 +52,8 @@ Definition nbe_rewrite_rulesT : list (bool * Prop)
            dont_do_again
            [(forall A B x y, @fst A B (x, y) = x)
             ; (forall A B x y, @snd A B (x, y) = y)
-            ; (forall P t f, @ident.Thunked.bool_rect P t f true = t tt)
-            ; (forall P t f, @ident.Thunked.bool_rect P t f false = f tt)
+            ; (forall P t f, @Thunked.bool_rect P t f true = t tt)
+            ; (forall P t f, @Thunked.bool_rect P t f false = f tt)
             ; (forall A B C f x y, @prod_rect A B (fun _ => C) f (x, y) = f x y)
 
             ; (forall A x n,
@@ -69,13 +69,13 @@ Definition nbe_rewrite_rulesT : list (bool * Prop)
                       (fun x xs fold_right_xs => f x fold_right_xs)
                       ls)
             ; (forall A P N C ls,
-                  @ident.Thunked.list_rect A P N C ls
-                  = ident.eagerly (@ident.Thunked.list_rect) A P N C ls)
+                  @Thunked.list_rect A P N C ls
+                  = ident.eagerly (@Thunked.list_rect) A P N C ls)
             ; (forall A P Q N C ls v,
                   @list_rect A (fun _ => P -> Q) N C ls v
                   = ident.eagerly (@list_rect) A (fun _ => P -> Q) N C ls v)
-            ; (forall A P N C, @ident.Thunked.list_case A P N C nil = N tt)
-            ; (forall A P N C x xs, @ident.Thunked.list_case A P N C (x :: xs) = C x xs)
+            ; (forall A P N C, @Thunked.list_case A P N C nil = N tt)
+            ; (forall A P N C x xs, @Thunked.list_case A P N C (x :: xs) = C x xs)
             ; (forall A B f ls,
                   @List.map A B f ls
                   = (ident.eagerly (@list_rect) _ _)
@@ -83,8 +83,8 @@ Definition nbe_rewrite_rulesT : list (bool * Prop)
                       (fun x xs map_f_xs => f x :: map_f_xs)
                       ls)
             ; (forall P O_case S_case n,
-                  @ident.Thunked.nat_rect P O_case S_case ('n)
-                  = (ident.eagerly (@ident.Thunked.nat_rect) _)
+                  @Thunked.nat_rect P O_case S_case ('n)
+                  = (ident.eagerly (@Thunked.nat_rect) _)
                       O_case
                       S_case
                       ('n))

@@ -29,9 +29,9 @@ Require Import Crypto.Util.ZUtil.Shift. (* For WBW montgomery proofs *)
 Require Import Crypto.Util.Tactics.HasBody.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.SpecializeBy.
-Require Import Crypto.Language.Wf.
+Require Import Rewriter.Language.Wf.
 Require Import Crypto.Language.WfExtra.
-Require Import Crypto.Language.Language.
+Require Import Rewriter.Language.Language.
 Require Import Crypto.Language.API.
 Require Import Crypto.AbstractInterpretation.AbstractInterpretation.
 Require Import Crypto.Stringification.Language.

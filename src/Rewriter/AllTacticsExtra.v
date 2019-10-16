@@ -1,5 +1,5 @@
-Require Import Crypto.Rewriter.AllTactics.
-Require Import Crypto.Rewriter.ProofsCommon.
+Require Import Rewriter.Rewriter.AllTactics.
+Require Import Rewriter.Rewriter.ProofsCommon.
 Require Import Crypto.Language.IdentifiersBasicGENERATED.
 Require Import Crypto.Language.IdentifiersGENERATEDProofs.
 

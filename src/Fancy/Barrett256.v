@@ -3,9 +3,9 @@ Require Import Coq.derive.Derive.
 Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
 Require Import Coq.Lists.List. Import ListNotations.
 Require Import Crypto.COperationSpecifications. Import COperationSpecifications.BarrettReduction.
-Require Import Crypto.Language.Language. Import Language.Compilers.
+Require Import Rewriter.Language.Language. Import Language.Compilers.
 Require Import Crypto.Language.API. Import Language.API.Compilers.
-Require Import Crypto.Language.Wf.
+Require Import Rewriter.Language.Wf.
 Require Import Crypto.PushButtonSynthesis.BarrettReduction.
 Require Import Crypto.Fancy.Compiler.
 Require Import Crypto.Fancy.Prod.

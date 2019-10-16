@@ -17,9 +17,9 @@ Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.Tactics.HasBody.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.ConstrFail.
-Require Import Crypto.Language.Wf.
+Require Import Rewriter.Language.Wf.
 Require Import Crypto.Language.WfExtra.
-Require Import Crypto.Language.Language.
+Require Import Rewriter.Language.Language.
 Require Import Crypto.Language.API.
 Require Import Crypto.Stringification.Language.
 Require Import Crypto.Arithmetic.Core.
@@ -454,7 +454,7 @@ Module CorrectnessStringification.
            => stringify_if testv t f
          | match ?testv with left _ => ?t | right _ => ?f end
            => stringify_if testv t f
-         | Decidable.dec ?p
+         | Crypto.Util.Decidable.dec ?p
            => recurse p lvl
          | Z0 => show_Z ()
          | Zpos _ => show_Z ()

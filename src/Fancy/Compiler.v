@@ -1,7 +1,7 @@
 Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
 Require Import Coq.Lists.List. Import ListNotations.
-Require Import Crypto.Language.Wf. Import Language.Wf.Compilers.
-Require Import Crypto.Language.Inversion. Import Language.Inversion.Compilers.
+Require Import Rewriter.Language.Wf. Import Language.Wf.Compilers.
+Require Import Rewriter.Language.Inversion. Import Language.Inversion.Compilers.
 Require Import Crypto.Language.API. Import Language.API.Compilers.
 Import Compilers.API.
 Require Import Crypto.CastLemmas.

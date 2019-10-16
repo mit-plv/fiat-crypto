@@ -1,5 +1,5 @@
-Require Import Crypto.Language.Language.
-Require Import Crypto.Language.Wf.
+Require Import Rewriter.Language.Language.
+Require Import Rewriter.Language.Wf.
 Require Import Crypto.Language.API.
 
 Module Compilers.

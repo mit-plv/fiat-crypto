@@ -3,8 +3,8 @@ Require Import Coq.FSets.FMapPositive.
 Require Import Coq.Bool.Bool.
 Require Import Coq.Classes.Morphisms.
 Require Import Coq.Relations.Relation_Definitions.
-Require Import Crypto.Language.Pre.
-Require Import Crypto.Language.Language.
+Require Import Crypto.Language.PreExtra.
+Require Import Rewriter.Language.Language.
 Require Import Crypto.Language.IdentifiersBasicGENERATED.
 Require Import Crypto.Util.Tuple Crypto.Util.Prod Crypto.Util.LetIn.
 Require Import Crypto.Util.ListUtil Coq.Lists.List Crypto.Util.NatUtil.
