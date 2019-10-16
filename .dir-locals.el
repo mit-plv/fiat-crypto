@@ -7,5 +7,5 @@
                           (setenv "COQPATH" (mapconcat #'identity (cons coqutil-folder (funcall coq-path)) path-separator)))
                         (unless (member bedrock2-folder (funcall coq-path))
                           (setenv "COQPATH" (mapconcat #'identity (cons bedrock2-folder (funcall coq-path)) path-separator)))
-                        (unless (member coqprime-folder coq-path)
+                        (unless (member coqprime-folder (funcall coq-path))
                           (setenv "COQPATH" (mapconcat #'identity (cons coqprime-folder (funcall coq-path)) path-separator))))))))
