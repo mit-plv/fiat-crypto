@@ -462,7 +462,7 @@ Module Tuple.
   Definition mapi_with'_cps {T A B n} i
           (f: nat->T->A->forall {R}, (T*B->R)->R) (start:T)
     : Tuple.tuple' A n -> forall {R}, (T * tuple' B n -> R) -> R
-    := fun ts R => @mapi_with'_cps_specialized R T A B (fun n t a => @f n t a R) n i start ts.
+    := fun ts {R} => @mapi_with'_cps_specialized R T A B (fun n t a => @f n t a R) n i start ts.
 
   Definition mapi_with_cps {S A B n}
           (f: nat->S->A->forall {T}, (S*B->T)->T) (start:S) (ys:tuple A n) {T}
@@ -515,7 +515,7 @@ Module Tuple.
   Definition mapi_with'_cps2 {T A B n} i
           (f: nat->T->A->forall {R}, (T*B->R)->R) (start:T)
     : Tuple.tuple' A n -> forall {R}, (T * tuple' B n -> R) -> R
-    := fun ts R => @mapi_with'_cps2_specialized R T A B (fun n t a => @f n t a R) n i start ts.
+    := fun ts {R} => @mapi_with'_cps2_specialized R T A B (fun n t a => @f n t a R) n i start ts.
 
   Definition mapi_with_cps2 {S A B n}
           (f: nat->S->A->forall {T}, (S*B->T)->T) (start:S) (ys:tuple A n) {T}

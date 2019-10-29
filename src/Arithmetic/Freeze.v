@@ -165,20 +165,20 @@ Section freeze_mod_ops.
   Local Notation wprops := (@wprops limbwidth_num limbwidth_den limbwidth_good).
 
   Local Notation wunique := (@weight_unique limbwidth_num limbwidth_den limbwidth_good).
-  Local Notation wunique_bytes := (@weight_unique 8 1 ltac:(clear; lia)).
+  Local Notation wunique_bytes := (@weight_unique 8 1 ltac:(clear; lia)) (only parsing).
 
-  Local Hint Immediate (wprops).
-  Local Hint Immediate (wprops_bytes).
-  Local Hint Immediate (weight_0 wprops).
-  Local Hint Immediate (weight_positive wprops).
-  Local Hint Immediate (weight_multiples wprops).
-  Local Hint Immediate (weight_divides wprops).
-  Local Hint Immediate (weight_0 wprops_bytes).
-  Local Hint Immediate (weight_positive wprops_bytes).
-  Local Hint Immediate (weight_multiples wprops_bytes).
-  Local Hint Immediate (weight_divides wprops_bytes).
-  Local Hint Immediate (wunique) (wunique_bytes).
-  Local Hint Resolve (wunique) (wunique_bytes).
+  Local Hint Immediate (wprops) : core.
+  Local Hint Immediate (wprops_bytes) : core.
+  Local Hint Immediate (weight_0 wprops) : core.
+  Local Hint Immediate (weight_positive wprops) : core.
+  Local Hint Immediate (weight_multiples wprops) : core.
+  Local Hint Immediate (weight_divides wprops) : core.
+  Local Hint Immediate (weight_0 wprops_bytes) : core.
+  Local Hint Immediate (weight_positive wprops_bytes) : core.
+  Local Hint Immediate (weight_multiples wprops_bytes) : core.
+  Local Hint Immediate (weight_divides wprops_bytes) : core.
+  Local Hint Immediate (wunique) (wunique_bytes) : core.
+  Local Hint Resolve (wunique) (wunique_bytes) : core.
 
   Definition bytes_n
     := Eval cbv [Qceiling Qdiv inject_Z Qfloor Qmult Qopp Qnum Qden Qinv Pos.mul]

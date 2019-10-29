@@ -394,7 +394,7 @@ Section of_Z.
     intros a b.
     let x := match goal with |- ?x => x end in
     let f := match (eval pattern b in x) with ?f _ => f end in
-    apply (Z.peano_ind f); intros until 0; try intro IHb.
+    apply (Z.peano_ind f); intros *; try intro IHb.
     { rewrite !mul_0_r; reflexivity. }
     { rewrite Z.mul_succ_r, <-Z.add_1_r.
       rewrite of_Z_add, of_Z_add_1_r.

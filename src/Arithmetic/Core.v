@@ -1456,4 +1456,4 @@ Record weight_properties {weight : nat -> Z} :=
     weight_multiples : forall i, weight (S i) mod weight i = 0;
     weight_divides : forall i : nat, 0 < weight (S i) / weight i;
   }.
-Hint Resolve weight_0 weight_positive weight_multiples weight_divides.
+Hint Resolve weight_0 weight_positive weight_multiples weight_divides : core.
