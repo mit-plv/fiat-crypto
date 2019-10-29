@@ -315,7 +315,7 @@ Module Compilers.
                            | [ H : length ?l1 = length ?l2, H' : context[length ?l1] |- _ ] => rewrite H in H'
                            | [ |- context[List.flat_map _ _] ] => rewrite List.flat_map_concat_map, concat_fold_right_app
                            | [ H : S _ = S _ |- _ ] => inversion H; clear H
-                           | [ H : List.fold_right (fun x y => x <- x; y <- y; Some _)%option (Some ?init) ?ls = Some ?v |- _]
+                           | [ H : List.fold_right (fun x y => x' <- x; y' <- y; Some _)%option (Some ?init) ?ls = Some ?v |- _]
                              => rewrite OptionList.fold_right_option_seq in H
                            | [ |- and _ _ ] => apply conj
                            end

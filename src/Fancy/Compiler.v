@@ -1211,9 +1211,9 @@ Section Proofs.
     |}.
 
 
-  Hint Resolve Pos.lt_trans Pos.lt_irrefl Pos.lt_succ_diag_r Pos.eqb_refl.
-  Hint Resolve in_or_app.
-  Hint Resolve make_consts_ok make_pairs_ok make_ctx_ok no_pairs.
+  Hint Resolve Pos.lt_trans Pos.lt_irrefl Pos.lt_succ_diag_r Pos.eqb_refl : core.
+  Hint Resolve in_or_app : core.
+  Hint Resolve make_consts_ok make_pairs_ok make_ctx_ok no_pairs : core.
   (* TODO : probably not all of these preconditions are necessary -- prune them sometime *)
   Lemma of_Expr_correct next_name consts_list arg_list error
         (carry_flag : bool)

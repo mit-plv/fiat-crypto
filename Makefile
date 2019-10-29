@@ -41,9 +41,10 @@ include etc/coq-scripts/Makefile.vo_closure
 .DEFAULT_GOAL := all
 
 SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g' | uniq
+WARNINGS := +implicit-core-hint-db,+implicits-in-term,+non-reversible-notation,+deprecated-intros-until-0,+deprecated-focus,+unused-intro-pattern
 update-_CoqProject::
 	$(SHOW)'ECHO > _CoqProject'
-	$(HIDE)(echo '-R $(SRC_DIR) $(MOD_NAME)'; (git ls-files 'src/*.v' | $(GREP_EXCLUDE_SPECIAL_VOFILES) | $(SORT_COQPROJECT))) > _CoqProject
+	$(HIDE)(echo '-R $(SRC_DIR) $(MOD_NAME)'; echo '-arg -w -arg $(WARNINGS)'; (git ls-files 'src/*.v' | $(GREP_EXCLUDE_SPECIAL_VOFILES) | $(SORT_COQPROJECT))) > _CoqProject
 
 # coq .vo files that are not compiled using coq_makefile
 SPECIAL_VOFILES := \
@@ -137,7 +138,8 @@ print-nobigmem::
 	@echo 'Files Not Made:'
 	@for i in $(sort $(NOBIGMEM_ALL_UNMADE_VOFILES)); do echo $$i; done
 
-OTHERFLAGS += -w "-notation-overridden"
+# Remove -undeclared-scope once we stop supporting 8.9
+OTHERFLAGS += -w -notation-overridden,-undeclared-scope
 ifneq ($(PROFILE),)
 OTHERFLAGS += -profile-ltac
 endif

@@ -346,7 +346,7 @@ Module Rows.
     Hint Rewrite Positional.eval_nil Positional.eval0 @Positional.eval_snoc
          Positional.eval_to_associational
          Columns.eval_nil Columns.eval_snoc using (auto; solve [distr_length]) : push_eval.
-    Hint Resolve in_eq in_cons.
+    Hint Resolve in_eq in_cons : core.
 
     Definition eval n (inp : rows) :=
       sum (map (Positional.eval weight n) inp).
@@ -711,7 +711,7 @@ Module Rows.
           cbn [fst]. distr_length.
         Qed. Hint Rewrite length_sum_rows : distr_length.
       End SumRows.
-      Hint Resolve length_sum_rows.
+      Hint Resolve length_sum_rows : core.
       Hint Rewrite sum_rows_mod using (auto; solve [distr_length; auto]) : push_eval.
 
       Definition flatten' (start_state : list Z * Z) (inp : rows) : list Z * Z :=

@@ -566,7 +566,9 @@ Section __.
     rewrite !fold_andb_map_map1, !fold_andb_map_iff; cbn [upper lower].
     setoid_rewrite Bool.andb_true_iff.
     intro H.
-    repeat first [ let H' := fresh in destruct H as [H' H]; split; [ assumption | ]
+    repeat first [ lazymatch type of H with
+                   | and _ _ => let H' := fresh in destruct H as [H' H]; split; [ assumption | ]
+                   end
                  | let x := fresh in intro x; specialize (H x) ].
     cbv [loose_upperbound_extra_multiplicand].
     Z.ltb_to_lt; lia.
@@ -581,7 +583,7 @@ Section __.
     all: repeat apply conj; autorewrite with distr_length; (congruence || auto).
     all: cbv [tight_bounds] in *.
     all: lazymatch goal with
-         | [ H1 : list_Z_bounded_by (List.map (fun x => Some (@?f x)) ?b) ?x, H2 : eval ?wt ?n ?b < _
+         | [ H1 : list_Z_bounded_by (List.map (fun y => Some (@?f y)) ?b) ?x, H2 : eval ?wt ?n ?b < _
              |- context[eval ?wt ?n ?x] ]
            => unshelve epose proof (eval_list_Z_bounded_by wt n (List.map (fun x => Some (f x)) b) (List.map f b) x H1 _ _ (fun A B => Z.lt_le_incl _ _ (weight_positive _ _))); clear H1
          end.

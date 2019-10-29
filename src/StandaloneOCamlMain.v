@@ -12,7 +12,7 @@ Require Import Crypto.Util.Notations.
 Import ListNotations. Local Open Scope string_scope.
 
 Global Set Warnings Append "-extraction-opaque-accessed".
-Extraction Language Ocaml.
+Extraction Language OCaml.
 Global Unset Extraction Optimize.
 
 Inductive int : Set := int_O | int_S (x : int).

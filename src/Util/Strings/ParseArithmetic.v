@@ -210,7 +210,7 @@ Infix "*" := Zmul : Zexpr_scope.
 Infix "+" := Zadd : Zexpr_scope.
 Infix "/" := Zdiv : Zexpr_scope.
 Infix "-" := Zsub : Zexpr_scope.
-Notation "- x" := (Zopp) : Zexpr_scope.
+Notation "- x" := (Zopp x) : Zexpr_scope.
 
 Fixpoint eval_Zexpr (v : Zexpr) : Z
   := match v with

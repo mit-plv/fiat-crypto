@@ -59,10 +59,10 @@ Section mod_ops.
     { t_weight_with (@pow_ceil_mul_nat_multiples 2). }
     { intros; apply Z.gt_lt. t_weight_with (@pow_ceil_mul_nat_divide 2). }
   Defined.
-  Local Hint Immediate (weight_0 wprops).
-  Local Hint Immediate (weight_positive wprops).
-  Local Hint Immediate (weight_multiples wprops).
-  Local Hint Immediate (weight_divides wprops).
+  Local Hint Immediate (weight_0 wprops) : core.
+  Local Hint Immediate (weight_positive wprops) : core.
+  Local Hint Immediate (weight_multiples wprops) : core.
+  Local Hint Immediate (weight_divides wprops) : core.
 
   Local Lemma weight_1_gt_1 : weight 1 > 1.
   Proof using limbwidth_good.
