@@ -5,6 +5,7 @@ Require Import Coq.Strings.String.
 Require Import Coq.derive.Derive.
 Require Import Coq.Lists.List.
 Require Import Crypto.BoundsPipeline.
+Require Import Crypto.COperationSpecifications.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Bedrock.Compiler.
@@ -29,6 +30,28 @@ Import Associational Positional.
 Local Coercion Z.of_nat : nat >-> Z.
 Local Coercion QArith_base.inject_Z : Z >-> Q.
 Local Coercion Z.pos : positive >-> Z.
+
+(* Define compiler parameters for 64- and 32-bit *)
+Local Definition ERROR : Syntax.expr.expr := (Syntax.expr.var "ERROR"%string).
+Local Definition next_name : String.string -> String.string :=
+  fun old_varname =>
+    let old_num := List.nth_default ""%string (String.split "x" old_varname) 1 in
+    let new_num := Decimal.decimal_string_of_Z (Decimal.Z_of_decimal_string old_num + 1) in
+    String.append "x" new_num.
+Local Instance params64 : Compiler.parameters :=
+  {|
+    semantics := BasicC64Semantics.parameters;
+    next_varname := next_name;
+    error := ERROR;
+    word_size_in_bytes := 8;
+  |}.
+Local Instance params32 : Compiler.parameters :=
+  {|
+    semantics := BasicC32Semantics.parameters;
+    next_varname := next_name;
+    error := ERROR;
+    word_size_in_bytes := 4;
+  |}.
 
 (* Curve25519 64-bit, taken from SlowPrimeSynthesisExamples.v *)
 Module X25519_64.
@@ -492,14 +515,7 @@ ErrorT.Success
              type.base (base.type.list (base.type.type_base Compilers.Z))))
 *)
 
-    Import Coq.Strings.String. Local Open Scope string_scope.
-    Let ERROR : Syntax.expr.expr := (Syntax.expr.var "ERROR"%string).
-    Let nv : String.string -> String.string :=
-      fun old_varname =>
-        let old_num := List.nth_default ""%string (String.split "x" old_varname) 1 in
-        let new_num := Decimal.decimal_string_of_Z (Decimal.Z_of_decimal_string old_num + 1) in
-        String.append "x" new_num.
-    Local Notation translate_expr e := (@Compiler.translate_expr BasicC64Semantics.parameters nv ERROR 8 _ e "x0").
+    Local Notation translate_expr e := (@Compiler.translate_expr params64 _ e "x0").
 
     Definition mulmod_bedrock : Syntax.cmd.cmd :=
       match mulmod with
@@ -2263,14 +2279,7 @@ ErrorT.Success
              type.base (base.type.list (base.type.type_base Compilers.Z))))
  *)
 
-    Import Coq.Strings.String. Local Open Scope string_scope.
-    Let ERROR : Syntax.expr.expr := (Syntax.expr.var "ERROR"%string).
-    Let nv : String.string -> String.string :=
-      fun old_varname =>
-        let old_num := List.nth_default ""%string (String.split "x" old_varname) 1 in
-        let new_num := Decimal.decimal_string_of_Z (Decimal.Z_of_decimal_string old_num + 1) in
-        String.append "x" new_num.
-    Local Notation translate_expr e := (@Compiler.translate_expr BasicC32Semantics.parameters nv ERROR 4 _ e "x0").
+    Local Notation translate_expr e := (@Compiler.translate_expr params32 _ e "x0").
 
     Definition mulmod_bedrock : Syntax.cmd.cmd :=
       match mulmod with
