@@ -14,8 +14,11 @@ Require Import Crypto.Stringification.C.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZUtil.ModInv.
 Require Import bedrock2.Syntax.
-Require Import bedrock2.BasicC32Semantics.
-Require Import bedrock2.BasicC64Semantics.
+Require Import bedrock2.WeakestPreconditionProperties.
+Require Import bedrock2.Map.Separation.
+Require Import bedrock2.Map.SeparationLogic.
+Require bedrock2.BasicC32Semantics.
+Require bedrock2.BasicC64Semantics.
 Require bedrock2.NotationsCustomEntry.
 
 Require Import Crypto.Util.Notations.
@@ -52,6 +55,101 @@ Local Instance params32 : Compiler.parameters :=
     error := ERROR;
     word_size_in_bytes := 4;
   |}.
+
+(* separation-logic helper lemma *)
+Lemma sep_and_l {key value map}
+      (p : Prop) (q r : @Interface.map.rep key value map -> Prop)
+      (m : @Interface.map.rep key value map) (_ : p):
+  sep q r m ->
+  sep (fun m => p /\ q m) r m.
+Proof.
+  cbv [sep]; destruct 1 as [m1 [m2 ?] ]; intros.
+  exists m1; exists m2; tauto.
+Qed.
+
+(* separation-logic helper lemma *)
+Lemma sep_and_r {key value map}
+      (p : Prop) (q r : @Interface.map.rep key value map -> Prop)
+      (m : @Interface.map.rep key value map) (_ : p):
+  sep r q m ->
+  sep r (fun m => p /\ q m) m.
+Proof.
+  cbv [sep]; destruct 1 as [m1 [m2 ?] ]; intros.
+  exists m1; exists m2; tauto.
+Qed.
+
+(* Make sure correctness proof composes with operation specifications *)
+Module Correctness.
+  Section __.
+    Context {p} {p_ok : @Compiler.ok p}.
+
+    Context wt n m tight_bounds loose_bounds
+            (solinas_add_impl :
+               API.Expr (type.arrow
+                           (type.base (base.type.list (base.type.type_base base.type.Z)))
+                           (type.arrow
+                              (type.base (base.type.list (base.type.type_base base.type.Z)))
+                              (type.base (base.type.list (base.type.type_base base.type.Z))))))
+            (solinas_add_impl_valid :
+               Compiler.valid_expr (solinas_add_impl (fun _ : API.type => unit)) = true)
+            (solinas_add_impl_correct :
+               COperationSpecifications.Solinas.add_correct
+                 wt n m tight_bounds loose_bounds (API.Interp solinas_add_impl)).
+
+    Lemma bedrock2_add_correct
+          xs ys x_loc y_loc
+          (xname yname retname nextname : @Syntax.varname (@Semantics.syntax semantics))
+          funnames' (fname : @funname (@Semantics.syntax semantics))
+          tr R mem:
+      sep (Compiler.zarray x_loc xs) (Compiler.zarray y_loc ys) mem ->
+      let bedrock_add :=
+          snd (Compiler.translate_expr (solinas_add_impl _) nextname
+                                       (Syntax.expr.var xname, (Syntax.expr.var yname, tt))
+                                       (Syntax.expr.var retname)) in
+      let funnames := (fname, ([xname; yname], [retname], bedrock_add)) :: funnames' in
+      WeakestPrecondition.call
+        funnames fname tr mem [x_loc; y_loc]
+        (fun tr' m' bedrock_ret =>
+           tr = tr' /\
+           sep
+             (fun m' =>
+                exists sum_loc,
+                  bedrock_ret = [sum_loc] /\
+                  Compiler.zarray sum_loc (API.Interp solinas_add_impl xs ys) m')
+             R m').
+    Proof.
+      intros.
+      pose proof (@Semantics.mem_ok semantics semantics_ok).
+      pose proof (Semantics.ext_spec.weaken (ok:=Semantics.ext_spec_ok (parameters_ok:=semantics_ok))).
+      eapply (Proper_call (Proper_ext_spec:=ltac:(eassumption))).
+      2 : {
+        apply Compiler.translate_expr_correct with (args:= (xs, (ys, tt))) (R0:=R);
+        try exact solinas_add_impl_valid; try reflexivity; [ ].
+        (* TODO : this is the proof that arguments are equivalent and separation
+           logic tactics can probably make it a whole lot nicer *)
+        cbn [Compiler.args_equivalent Compiler.equivalent].
+        exists [x_loc]. exists [y_loc]. split; [ reflexivity | ].
+        apply sep_ex1_l. exists x_loc.
+        apply sep_ex1_r. exists [y_loc].
+        apply sep_ex1_r. exists nil.
+        cbn [fst snd].
+        apply sep_and_l; [ reflexivity | ].
+        apply sep_and_r; [ reflexivity | ].
+        apply sep_assoc.
+        apply Proper_sep_impl1 with (x:=eq mem) (x0:=emp True).
+        { cbv [Lift1Prop.impl1].
+          intros; subst.
+          eapply sep_ex1_r. exists y_loc.
+          apply sep_and_r; [ reflexivity | ].
+          assumption. }
+        { cbv [Lift1Prop.impl1].
+          intros; tauto. }
+        { eapply sep_emp_True_r. reflexivity. } }
+      { cbv [pointwise_relation Basics.impl].
+        intros. tauto. }
+    Qed.
+  End __.
+End Correctness.
 
 (* Curve25519 64-bit, taken from SlowPrimeSynthesisExamples.v *)
 Module X25519_64.

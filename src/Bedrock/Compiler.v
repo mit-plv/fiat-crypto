@@ -516,12 +516,15 @@ Module Compiler.
       | type.arrow (type.arrow s d1) d2 => fun _ => None (* can't have function arguments *)
       end.
 
-    Local Definition zarray
-          (start : Interface.word.rep) (xs : list Z)
-          (mem : Interface.map.rep (map:=Semantics.mem))
+    Definition zarray
+               (start : @Interface.word.rep
+                          (@Semantics.width semantics) (@Semantics.word semantics))
+               (xs : list Z)
+               (mem : Interface.map.rep
+                        (map:=Semantics.mem (parameters:=semantics)))
       : Prop :=
       let size := Interface.word.of_Z word_size_in_bytes in
-      array (truncated_scalar Syntax.access_size.word) size start xs mem.
+      Array.array (Scalars.truncated_scalar Syntax.access_size.word) size start xs mem.
 
     (* states that a fiat-crypto value is equivalent to a bedrock value *)
     Fixpoint equivalent {t}
@@ -596,7 +599,7 @@ Module Compiler.
         flatten_names retnames = Some flat_retnames ->
         (* ret := result of applying e to args *)
         let ret : base.interp (type.final_codomain t) :=
-            type.app_curried (API.interp (e _)) args in
+            type.app_curried (API.Interp e) args in
         (* bedrock_e := translation of e as bedrock2 function body *)
         let bedrock_e : Syntax.cmd.cmd :=
             snd (translate_expr (e ltype) nextname argnames retnames) in
