@@ -63,7 +63,8 @@ Module Z.
         Z.add_get_carry_full Z.add_with_get_carry_full
         Z.add_get_carry Z.add_with_get_carry Z.add_with_carry
         Z.sub_get_borrow_full Z.sub_with_get_borrow_full
-        Z.sub_get_borrow Z.sub_with_get_borrow Z.sub_with_borrow Let_In.
+        Z.sub_get_borrow Z.sub_with_get_borrow Z.sub_with_borrow Let_In
+    : core.
 
   Lemma add_get_carry_full_mod s x y :
     fst (Z.add_get_carry_full s x y)  = (x + y) mod s.

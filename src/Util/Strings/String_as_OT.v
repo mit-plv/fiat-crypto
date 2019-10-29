@@ -81,7 +81,7 @@ Module String_as_OT <: OrderedType.
 
   Definition eq := @eq string.
 
-  Hint Resolve string_compare_eq_refl.
+  Hint Resolve string_compare_eq_refl : core.
 
   Lemma eq_Eq : forall x y, x = y -> string_compare x y = Eq.
   Proof.

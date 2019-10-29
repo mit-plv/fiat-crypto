@@ -72,7 +72,7 @@ Section Generic.
   Qed.
   Local Lemma xmod_lt_M : x mod b ^ (k - 1) <= M.
   Proof. pose proof (Z.mod_pos_bound x (b ^ (k - 1)) ltac:(Z.zero_bounds)). lia. Qed.
-  Local Hint Resolve M_pos x_upper xmod_lt_M.
+  Local Hint Resolve M_pos x_upper xmod_lt_M : core.
 
   Definition reduce :=
     dlet_nd q1t := q1 xt in
@@ -120,7 +120,7 @@ Module Fancy.
     Context (mu_eq : mu = 2 ^ (2 * k) / M) (muHigh_one : mu / w sz = 1) (M_range : 2^(k-1) < M < 2^k).
 
     Local Lemma wprops : @weight_properties w. Proof. apply uwprops; auto with lia. Qed.
-    Local Hint Resolve wprops.
+    Local Hint Resolve wprops : core.
     Hint Rewrite mut_correct Mt_correct : pull_partition.
 
     Lemma w_eq_2k : w sz = 2^k. Proof. rewrite uweight_eq_alt' by auto. congruence. Qed.
@@ -161,7 +161,7 @@ Module Fancy.
     (* widemul_inlined takes the following argument order : (width of limbs in input) (# limbs in input) (# parts to split each limb into before multiplying) *)
 
     Definition fill (n : nat) (a : list Z) := a ++ Positional.zeros (n - length a).
-    Definition low : list Z -> list Z := firstn sz. 
+    Definition low : list Z -> list Z := firstn sz.
     Definition high : list Z -> list Z := skipn sz.
     Definition mul_high (a b : list Z) a0b1 : list Z :=
       dlet_nd a0b0 := widemul (low a) (low b) in
@@ -438,7 +438,7 @@ Module Fancy.
         pose proof Z.mod_pos_bound a (w 1) ltac:(auto).
         break_innermost_match; Z.ltb_to_lt;
           repeat match goal with
-                 | _ => lia 
+                 | _ => lia
                  | _ => reflexivity
                  | _ => apply partition_eq_mod; solve [auto with zarith]
                  | _ => rewrite partition_step, weight_0 by auto
@@ -460,7 +460,7 @@ Module Fancy.
         0 <= x < M * 2 ^ k ->
         0 <= q3 ->
         q3 = x / M + (if b then -1 else 0) ->
-        x - q3 mod w sz * M = x mod M + (if b then M else 0). 
+        x - q3 mod w sz * M = x mod M + (if b then M else 0).
       Proof.
         intros. assert (0 < 2^(k-1)) by Z.zero_bounds.
         assert (q3 < w sz).
@@ -494,7 +494,7 @@ Module Fancy.
                  | _ => rewrite Z.mod_small in * by lia
                  | _ => progress Z.rewrite_mod_small
                  | _ => progress (push_Zmod; pull_Zmod); autorewrite with zsimplify_fast
-                 | _ => lia 
+                 | _ => lia
                  | _ => reflexivity
                  end.
       Qed.
@@ -502,7 +502,7 @@ Module Fancy.
 
     Section Def.
       Context (sz_eq_1 : sz = 1%nat). (* this is needed to get rid of branches in the templates; a different definition would be needed for sizes other than 1, but would be able to use the same proofs. *)
-      Local Hint Resolve q1_correct q3_correct r_correct.
+      Local Hint Resolve q1_correct q3_correct r_correct : core.
 
       (* muselect relies on an initially-set flag, so pull it out of q3 *)
       Definition fancy_reduce_muSelect_first xt :=

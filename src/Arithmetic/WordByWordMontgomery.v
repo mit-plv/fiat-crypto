@@ -140,12 +140,12 @@ Module WordByWordMontgomery.
     Proof using lgr_big. clear -lgr_big; subst r. auto with zarith. Qed.
     Local Notation wprops := (@uwprops lgr lgr_big).
 
-    Local Hint Immediate (wprops).
-    Local Hint Immediate (weight_0 wprops).
-    Local Hint Immediate (weight_positive wprops).
-    Local Hint Immediate (weight_multiples wprops).
-    Local Hint Immediate (weight_divides wprops).
-    Local Hint Immediate r_big.
+    Local Hint Immediate (wprops) : core.
+    Local Hint Immediate (weight_0 wprops) : core.
+    Local Hint Immediate (weight_positive wprops) : core.
+    Local Hint Immediate (weight_multiples wprops) : core.
+    Local Hint Immediate (weight_divides wprops) : core.
+    Local Hint Immediate r_big : core.
 
     Lemma length_small {n v} : @small n v -> length v = n.
     Proof using Type. clear; cbv [small]; intro H; rewrite H; autorewrite with distr_length; reflexivity. Qed.
@@ -250,7 +250,7 @@ Module WordByWordMontgomery.
     Proof using Type.
       etransitivity; [ eapply Positional.zeros_ext_map | rewrite eval_zero ]; cbv [Partition.partition]; cbn; try reflexivity; autorewrite with distr_length; reflexivity.
     Qed.
-    Local Hint Immediate small_zero.
+    Local Hint Immediate small_zero : core.
 
     Ltac push_recursive_partition :=
       repeat match goal with
@@ -309,7 +309,7 @@ Module WordByWordMontgomery.
     Proof using lgr_big.
       pose proof r_big as r_big.
       clear - lgr_big r_big.
-      autounfold with loc; intro n; destruct (zerop n); intros until 0; intro Hsmall; intros.
+      autounfold with loc; intro n; destruct (zerop n); intros *; intro Hsmall; intros.
       { intros; subst; cbn; rewrite Z.add_with_get_carry_full_mod.
         split; cbn; autorewrite with zsimplify_fast; auto with zarith. }
       { rewrite (surjective_pairing (Rows.mul _ _ _ _ _ _)).
@@ -988,11 +988,11 @@ Module WordByWordMontgomery.
     Local Notation wprops := (@uwprops bitwidth bitwidth_big).
     Local Notation small := (@small bitwidth n).
 
-    Local Hint Immediate (wprops).
-    Local Hint Immediate (weight_0 wprops).
-    Local Hint Immediate (weight_positive wprops).
-    Local Hint Immediate (weight_multiples wprops).
-    Local Hint Immediate (weight_divides wprops).
+    Local Hint Immediate (wprops) : core.
+    Local Hint Immediate (weight_0 wprops) : core.
+    Local Hint Immediate (weight_positive wprops) : core.
+    Local Hint Immediate (weight_multiples wprops) : core.
+    Local Hint Immediate (weight_divides wprops) : core.
 
     Local Lemma m_enc_correct_montgomery : m = eval m_enc.
     Proof using m_small m_big bitwidth_big.

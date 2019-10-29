@@ -200,9 +200,9 @@ Module BaseConversion.
     Let nout := (m * 2)%nat.
 
     Local Lemma mn_nonzero : mn <> 0%nat. Proof. subst mn. apply Nat.neq_mul_0. auto. Qed.
-    Local Hint Resolve mn_nonzero.
+    Local Hint Resolve mn_nonzero : core.
     Local Lemma nout_nonzero : nout <> 0%nat.  Proof. subst nout. apply Nat.neq_mul_0. auto. Qed.
-    Local Hint Resolve nout_nonzero.
+    Local Hint Resolve nout_nonzero : core.
     Local Lemma base_bounds : 0 < 1 <= log2base. Proof using log2base_pos. clear -log2base_pos; auto with zarith. Qed.
     Local Lemma dbase_bounds : 0 < 1 <= log2base / Z.of_nat n. Proof using n_nz n_le_log2base. clear -n_nz n_le_log2base; auto with zarith. Qed.
     Let dwprops : @weight_properties dw := wprops (log2base / Z.of_nat n) 1 dbase_bounds.
@@ -215,7 +215,7 @@ Module BaseConversion.
     Lemma widemul_correct a b :
       length a = m ->
       length b = m ->
-      widemul a b = Partition.partition sw nout (seval m a * seval m b). 
+      widemul a b = Partition.partition sw nout (seval m a * seval m b).
     Proof. apply mul_converted_partitions; auto with zarith. Qed.
 
     Derive widemul_inlined

@@ -98,7 +98,7 @@ Module F.
       destruct (Zle_lt_or_eq _ _ two_le_q) as [H|H]; [exact H|].
       rewrite <-H in q_3mod4; discriminate.
     Qed.
-    Local Hint Resolve two_lt_q_3mod4.
+    Local Hint Resolve two_lt_q_3mod4 : core.
 
     Lemma sqrt_3mod4_correct (x:F q) :
       ((exists y, y*y = x) <-> (sqrt_3mod4 x)*(sqrt_3mod4 x) = x)%F.
@@ -145,7 +145,7 @@ Module F.
       destruct (Zle_lt_or_eq _ _ two_le_q) as [H|H]; [exact H|].
       rewrite <-H in *. discriminate.
     Qed.
-    Local Hint Resolve two_lt_q_5mod8.
+    Local Hint Resolve two_lt_q_5mod8 : core.
 
     Definition sqrt_5mod8 (a : F q) : F q :=
       let b := a ^ Z.to_N (q / 8 + 1) in
@@ -167,7 +167,7 @@ Module F.
       rewrite !F.pow_pow_l.
 
       replace (Z.to_N (q / 8 + 1) * (2*2))%N with (Z.to_N (q / 2 + 2))%N.
-      Focus 2. { (* this is a boring but gnarly proof :/ *)
+      2: { (* this is a boring but gnarly proof :/ *)
         change (2*2)%N with (Z.to_N 4).
         rewrite <- Z2N.inj_mul by Z.zero_bounds.
         apply Z2N.inj_iff; try Z.zero_bounds.
@@ -180,7 +180,7 @@ Module F.
         rewrite q_5mod8.
         replace (5 mod 2)%Z with 1%Z by auto.
         ring.
-      } Unfocus.
+      }
 
       rewrite Z2N.inj_add, F.pow_add_r by Z.zero_bounds.
       replace (x ^ Z.to_N (q / 2)) with (F.of_Z q 1) by

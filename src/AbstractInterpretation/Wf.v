@@ -152,9 +152,9 @@ Module Compilers.
           destruct t; [ destruct v1, v2, Hv | ]; cbn in *; cbv [respectful]; eauto; intros; apply bottom_Proper.
         Qed.
 
-        Local Hint Resolve (ex_intro _ nil) (ex_intro _ (cons _ nil)).
-        Local Hint Constructors expr.wf ex.
-        Local Hint Unfold List.In.
+        Local Hint Resolve (ex_intro _ nil) (ex_intro _ (cons _ nil)) : core.
+        Local Hint Constructors expr.wf ex : core.
+        Local Hint Unfold List.In : core.
 
         Lemma wf_value_Proper_list G1 G2
               (HG1G2 : forall t v1 v2, List.In (existT _ t (v1, v2)) G1 -> List.In (existT _ t (v1, v2)) G2)

@@ -332,7 +332,7 @@ Module test9.
               @ $x,
             #ident.list_case
               @ (λ _, #ident.nil)
-              @ (λ _ x0, $x0)
+              @ (λ _ x1, $x1)
               @ $x))%expr)
       => idtac
     end.
