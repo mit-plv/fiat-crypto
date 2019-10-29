@@ -12,25 +12,35 @@ Import ListNotations. Local Open Scope Z_scope.
 
 Import API.Compilers.
 
+Class parameters :=
+  {
+    semantics :> Semantics.parameters;
+    next_varname : Syntax.varname -> Syntax.varname;
+    error : Syntax.expr.expr;
+    word_size_in_bytes : Z;
+    maxint := 2 ^ Semantics.width;
+  }.
+
+Class ok {p:parameters} :=
+  {
+    semantics_ok : Semantics.parameters_ok semantics;
+    word_size_in_bytes_ok : 0 < word_size_in_bytes;
+  }.
+
+(* Notations for commonly-used types *)
+Local Notation type_range := (type.base (base.type.type_base base.type.zrange)).
+Local Notation type_nat := (type.base (base.type.type_base base.type.nat)).
+Local Notation type_Z := (type.base (base.type.type_base base.type.Z)).
+Local Notation type_range2 :=
+  (type.base (base.type.prod (base.type.type_base base.type.zrange)
+                             (base.type.type_base base.type.zrange))).
+Local Notation type_ZZ :=
+  (type.base (base.type.prod (base.type.type_base base.type.Z)
+                             (base.type.type_base base.type.Z))).
+
 Module Compiler.
   Section Compiler.
-    Context {p : Semantics.parameters}
-            (next_varname : Syntax.varname -> Syntax.varname)
-            (error : Syntax.expr.expr)
-            (word_size_in_bytes : Z)
-            (ident_to_funname : forall t, ident.ident t -> Syntax.funname).
-    Local Notation maxint := (2 ^ Semantics.width).
-
-    (* Notations for commonly-used types *)
-    Local Notation type_range := (type.base (base.type.type_base base.type.zrange)).
-    Local Notation type_nat := (type.base (base.type.type_base base.type.nat)).
-    Local Notation type_Z := (type.base (base.type.type_base base.type.Z)).
-    Local Notation type_range2 :=
-      (type.base (base.type.prod (base.type.type_base base.type.zrange)
-                                 (base.type.type_base base.type.zrange))).
-    Local Notation type_ZZ :=
-      (type.base (base.type.prod (base.type.type_base base.type.Z)
-                                 (base.type.type_base base.type.Z))).
+    Context {p : parameters}.
 
     (* Types that appear in the bedrock2 expressions on the left-hand-side of
        assignments (or in return values). For example, if we want to assign three
@@ -436,20 +446,7 @@ Module Compiler.
   End Compiler.
 
   Section Proofs.
-    Context {p : Semantics.parameters}
-            (next_varname : Syntax.varname -> Syntax.varname)
-            (error : Syntax.expr.expr)
-            (word_size_in_bytes : Z)
-            (word_size_in_bytes_eq : word_size_in_bytes * 8 = Semantics.width)
-            (ident_to_funname : forall t, ident.ident t -> Syntax.funname).
-    Local Notation maxint := (2 ^ Semantics.width).
-
-    (* Notations for commonly-used types *)
-    Local Notation type_nat := (type.base (base.type.type_base base.type.nat)).
-    Local Notation type_Z := (type.base (base.type.type_base base.type.Z)).
-    Local Notation type_ZZ :=
-      (type.base (base.type.prod (base.type.type_base base.type.Z)
-                                 (base.type.type_base base.type.Z))).
+    Context {p : parameters} {p_ok : @ok p }.
 
     (* TODO : fill these in *)
     Axiom valid_carry_expr : forall {t}, @API.expr (fun _ => unit) t -> bool.
@@ -602,8 +599,7 @@ Module Compiler.
             type.app_curried (API.interp (e _)) args in
         (* bedrock_e := translation of e as bedrock2 function body *)
         let bedrock_e : Syntax.cmd.cmd :=
-            snd (translate_expr next_varname error word_size_in_bytes
-                                (e ltype) nextname argnames retnames) in
+            snd (translate_expr (e ltype) nextname argnames retnames) in
         forall (fname : Syntax.funname)
                (funnames' : list _)
                (* fname's body is bedrock_e *)
@@ -617,7 +613,6 @@ Module Compiler.
             (fun tr' m' bedrock_ret =>
                tr = tr' /\ sep (equivalent ret bedrock_ret) R m').
     Proof.
-      (* TODO : look at Jason's final correctness theorem, make sure this short-circuits correctly. *)
     Admitted.
   End Proofs.
 End Compiler.
