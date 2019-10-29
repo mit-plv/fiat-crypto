@@ -455,7 +455,7 @@ perf-extraction: $(PERF_SHLOGS) \
 
 perf: perf-extraction perf-vos
 
-.PHONE: perf-csv
+.PHONY: perf-csv
 PERF_TXTS := perf-old-vm-times.txt perf-new-vm-times.txt perf-new-extraction-times.txt perf-old-cbv-times.txt \
 	perf-new-extraction-over-old-vm.txt perf-new-vm-over-old-vm.txt perf-old-vm-over-old-vm.txt \
 	perf-new-extraction-over-new-extraction.txt perf-new-vm-over-new-extraction.txt perf-old-vm-over-new-extraction.txt
