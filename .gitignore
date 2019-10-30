@@ -141,3 +141,9 @@ src/Rewriter/PerfTesting/Specific/generated/primes.mk
 # Rust
 /fiat-rust/Cargo.lock
 /fiat-rust/target/
+
+
+# lean
+*.olean
+/_target
+/leanpkg.path

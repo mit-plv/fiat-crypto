@@ -1,3 +1,4 @@
+import tactic.norm_num
 open prod
 universes u v w
 
@@ -366,7 +367,7 @@ set_option pp.max_depth 1000000000
 open modops
 example (f g : list ℤ) : carry_mulmod ex.machine_wordsize 1 ex.s ex.c ex.n ex.idxs (list.expand 0 f ex.n) (list.expand 0 g ex.n) = [] :=
 begin
-  simp only [ex.n,ex.s,ex.c,ex.idxs,ex.machine_wordsize,list.reverse,list.zip,list.zip_with,list.map,list.reverse_core,carry_mulmod,list.expand,list.expand_helper,positional.mulmod,positional.to_associational,list.seq,list.combine,associational.mul,list.flat_map,list.join,associational.repeat_reduce,list.append,has_append.append,associational.split,list.partition,list.partition._match_1,list.map], --,list.reverse,list.reverse_core,list.foldr,list.join,list.append,list.map,list.zip,list.zip_with,modops.weight,int.pow,int.pow_nat,has_pow.pow,has_mul.mul,int.mul,int.div,has_div.div,has_neg.neg,(∘),ite,list.partition,decidable_of_decidable_of_iff,list.filter,modops.weight,bit0,int.add,has_add.add,bit1,has_one.one,int.add,int.one],
+--  simp only [ex.n,ex.s,ex.c,ex.idxs,ex.machine_wordsize,list.reverse,list.zip,list.zip_with,list.map,list.reverse_core,carry_mulmod,list.expand,list.expand_helper,positional.mulmod,positional.to_associational,list.seq,list.combine,associational.mul,list.flat_map,list.join,associational.repeat_reduce,list.append,has_append.append,associational.split,list.partition,list.partition._match_1,list.map], --,list.reverse,list.reverse_core,list.foldr,list.join,list.append,list.map,list.zip,list.zip_with,modops.weight,int.pow,int.pow_nat,has_pow.pow,has_mul.mul,int.mul,int.div,has_div.div,has_neg.neg,(∘),ite,list.partition,decidable_of_decidable_of_iff,list.filter,modops.weight,bit0,int.add,has_add.add,bit1,has_one.one,int.add,int.one],
   norm_num,
 end
 #check id
