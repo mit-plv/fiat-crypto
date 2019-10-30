@@ -1,6 +1,6 @@
 import tactic.norm_num
 open prod
-universes u v w
+universes u v w ℓ
 
 def let_in {A : Type u} {B : Type v} (x : A) (f : A → B) := f x
 
@@ -19,26 +19,17 @@ def list.seq : ℕ → ℕ → list ℕ
 | start (nat.succ len') := start :: list.seq (nat.succ start) len'
 
 @[simp]
-def list.update_nth' {T : Type u} (n : ℕ) (f : T → T) (xs : list T) : list T :=
-  nat.rec
-    (λ xs,
-       list.rec
-         (λ _, [])
-         (λ x' xs' _ _, f x' :: xs')
-         xs
-         tt)
-    (λ n' update_n'th xs,
-       list.rec
-         (λ _, [])
-         (λ x' xs' _ _, x' :: update_n'th xs')
-         xs
-         tt)
-    n
-    xs
+def list.update_nth' {T : Type u} : ∀ (n : ℕ) (f : T → T) (xs : list T), list T
+| 0 f [] := []
+| 0 f (x' :: xs') := f x' :: xs'
+| (nat.succ n') f [] := []
+| (nat.succ n') f (x' :: xs') := x' :: list.update_nth' n' f xs'
 
 @[simp]
-def list.nth_default {A : Type u} (default : A) (ls : list A) (n : ℕ) : A :=
-  option.get_or_else (list.nth ls n) default
+def list.nth_default {A : Type u} (default : A) : ∀ (ls : list A) (n : ℕ), A
+| []        _             := default
+| (x :: xs) 0             := x
+| (x :: xs) (nat.succ n') := list.nth_default xs n'
 
 @[simp]
 def list.expand_helper {A : Type u} : ∀ (default : A) (ls : list A) (n : nat) (idx : nat), list A
@@ -53,12 +44,14 @@ def list.expand {A} (default : A) (ls : list A) (n : nat) : list A
 def int.zselect (cond zero_case nonzero_case : ℤ) :=
     if cond = 0 then zero_case else nonzero_case.
 
+def int.pow_nat' (b : ℤ) : ℕ → ℤ
+| 0 := 1
+| (k+1) := b * int.pow_nat' k
+
 @[simp]
-def int.pow_nat (b : ℤ) (e : ℕ) : ℤ :=
-  nat.rec
-    1
-    (λ _ acc, b * acc)
-    e
+def int.pow_nat : ℤ → ℕ → ℤ
+| (int.of_nat b) e := int.of_nat (b ^ e)
+| (int.neg_succ_of_nat b) e := int.pow_nat' (int.neg_succ_of_nat b) e
 
 instance int_has_pow_nat : has_pow int nat := ⟨int.pow_nat⟩
 
@@ -67,6 +60,21 @@ def int.pow (b : ℤ) : ℤ → ℤ
 | (int.neg_succ_of_nat n) := 0
 
 instance : has_pow int int := ⟨int.pow⟩
+
+@[simp]
+def int.pow_nat_zero (b : ℤ) : int.pow_nat b 0 = 1 :=
+begin
+  cases b, refl, refl
+end
+
+@[simp]
+def int.pow_zero (b : ℤ) : b^0 = 1 := by apply int.pow_nat_zero
+
+@[simp]
+def int.pow_zero' (b : ℤ) : int.pow b 0 = 1 := by apply int.pow_nat_zero
+
+@[simp]
+def int.pow_of_nat (b : ℕ) (e : ℕ) : int.pow b e = int.of_nat (b ^ e) := rfl
 
 @[simp]
 def associational.eval (p : list (ℤ × ℤ)) : ℤ :=
@@ -98,7 +106,7 @@ def associational.negate_snd (p : list (ℤ × ℤ)) : list (ℤ × ℤ) :=
 
 @[simp]
 def associational.split (s : ℤ) (p : list (ℤ × ℤ)) : list (ℤ × ℤ) × list (ℤ × ℤ)
-    := let hi_lo := list.partition (λ t, int.mod (fst t) s = 0) p in
+    := let hi_lo := list.partition (λ t, (fst t) % s = 0) p in
        (snd hi_lo, list.map (λ t, (fst t / s, snd t)) (fst hi_lo)).
 
 @[simp]
@@ -128,13 +136,13 @@ def associational.reduce_square (s:ℤ) (c:list (ℤ × ℤ)) (p:list (ℤ × �
       []
       (λ t ts acc,
         (let (t, c_t, two_c_t, two_t) := t in
-        (if (int.mod (fst t * fst t) s = 0)
+        (if ((fst t * fst t) % s = 0)
             then div_s (associational.mul [t] c_t)
             else associational.mul [t] [t])
              ++ (list.flat_map
                    (λ pat : (ℤ × ℤ) × (list (ℤ × ℤ)) × (list (ℤ × ℤ)) × list (ℤ × ℤ),
                      let (t', c_t', two_c_t', two_t') := pat in
-                     if (int.mod (fst t * fst t') s = 0)
+                     if ((fst t * fst t') % s = 0)
                      then div_s
                               (if fst t' <= fst t
                                then associational.mul [t'] two_c_t
@@ -155,7 +163,7 @@ def associational.carryterm (w fw:ℤ) (t:ℤ × ℤ) :=
   if (fst t = w)
   then let_in (snd t)         (λ t2,
        let_in (t2 / fw)       (λ d2,
-       let_in (int.mod t2 fw) (λ m2,
+       let_in (t2 % fw) (λ m2,
        [(w * fw, d2), (w,m2)])))
   else [t]
 
@@ -178,16 +186,12 @@ section
     := list.update_nth' i (λ y, x + y) ls.
 
   @[simp]
-  def positional.place (t:ℤ×ℤ) (i:ℕ) : ℕ × ℤ :=
-    nat.rec
-      (λ _, (0, fst t * snd t))
-      (λ i' place_i' _,
-        let i := nat.succ i' in
-        if (int.mod (fst t) (weight i) = 0)
-        then (i, let c := fst t / weight i in c * snd t)
-        else place_i' tt)
-      i
-      tt.
+  def positional.place (t:ℤ×ℤ) : ∀ (i:ℕ), ℕ × ℤ
+  | 0             := (0, fst t * snd t)
+  | (nat.succ i') := let i := nat.succ i' in
+                     if ((fst t) % (weight i) = 0)
+                     then (i, let c := fst t / weight i in c * snd t)
+                     else positional.place i'
 
   @[simp]
   def positional.from_associational (n : ℕ) (p:list (ℤ×ℤ)) :=
@@ -351,23 +355,45 @@ end
 
 def let_in.lift {A : Type u} {B : Type v} {C : Type w} (F : B → C) (x : A) (f : A → B) : F (let_in x f) = let_in x (λ y, F (f y)) := rfl
 
+def let_in.lift_zip2 {A : Type u} {B : Type v} {C : Type w} (ls : list C) (x : A) (f : A → list B) : list.zip ls (let_in x f) = let_in x (λ y, list.zip ls (f y)) := let_in.lift _ _ _.
+
+def let_in.lift_foldr {A : Type u} {B : Type v} {C : Type w} (x : A) (f : A → list B) (g : B → C → C) (init : C) : list.foldr g init (let_in x f) = let_in x (λ x, list.foldr g init (f x)) := rfl
+
+def let_in.lift_map {A : Type u} {B : Type v} {C : Type w} (x : A) (f : A → list B) (g : B → C) : list.map g (let_in x f) = let_in x (λ x, list.map g (f x)) := rfl
+
+def let_in.lift_filter {A : Type u} {B : Type v} {C : Type w} (x : A) (f : A → list B) (g : B → Prop) [decidable_pred g] : list.filter g (let_in x f) = let_in x (λ x, list.filter g (f x)) := rfl
+
+def let_in.lift_update_nth' {A : Type u} {B : Type v} {C : Type w} (x : A) (f : A → list B) (g : B → B) (n : ℕ) : list.update_nth' n g (let_in x f) = let_in x (λ x, list.update_nth' n g (f x)) := rfl
+
+def let_in.split_pair {A : Type u} {A' : Type w} {B : Type v} (x : A) (y : A') (f : A × A' → B) : let_in (x, y) f = let_in x (λ x, let_in y (λ y, f (x, y))) := rfl
+
+def let_in.lift_nat.zero {A : Type v} (f : ℕ → A) : let_in 0 f = f 0 := rfl
+
+def let_in.lift_nat.one {A : Type v} (f : ℕ → A) : let_in 1 f = f 1 := rfl
+
 @[simp]
-def ex.n : ℕ := 5
+def ex.n : ℕ := 1 -- 5
 @[simp]
-def ex.s : ℤ := 2^255
+def ex.s : ℤ := 2^16 -- 2^255
 @[simp]
-def ex.c : list (ℤ × ℤ) := [(1, 19)]
+def ex.c : list (ℤ × ℤ) := [(1, 1)] -- [(1, 19)]
 @[simp]
-def ex.idxs : list ℕ := [0, 1, 2, 3, 4, 0, 1]
+def ex.idxs : list ℕ := [0, 1] -- [0, 1, 2, 3, 4, 0, 1]
 @[simp]
-def ex.machine_wordsize : ℤ := 64
+def ex.machine_wordsize : ℤ := 8 -- 64
+
+local notation `dlet` binders ` ≔ ` b ` in ` c:(scoped P, P) := let_in b c
 
 set_option pp.max_depth 1000000000
+-- set_option pp.max_steps 1000000000
 --set_option pp.numerals false
 open modops
 example (f g : list ℤ) : carry_mulmod ex.machine_wordsize 1 ex.s ex.c ex.n ex.idxs (list.expand 0 f ex.n) (list.expand 0 g ex.n) = [] :=
 begin
 --  simp only [ex.n,ex.s,ex.c,ex.idxs,ex.machine_wordsize,list.reverse,list.zip,list.zip_with,list.map,list.reverse_core,carry_mulmod,list.expand,list.expand_helper,positional.mulmod,positional.to_associational,list.seq,list.combine,associational.mul,list.flat_map,list.join,associational.repeat_reduce,list.append,has_append.append,associational.split,list.partition,list.partition._match_1,list.map], --,list.reverse,list.reverse_core,list.foldr,list.join,list.append,list.map,list.zip,list.zip_with,modops.weight,int.pow,int.pow_nat,has_pow.pow,has_mul.mul,int.mul,int.div,has_div.div,has_neg.neg,(∘),ite,list.partition,decidable_of_decidable_of_iff,list.filter,modops.weight,bit0,int.add,has_add.add,bit1,has_one.one,int.add,int.one],
-  norm_num,
+  norm_num [(^),int.pow,int.pow_nat,int.mod,(∘),has_append.append,list.append,list.filter],
+  simp only [int.pow_nat,bit0,bit1,(+),int.add,nat.add,1,0,int.zero,int.one,has_one.one,int.mod],
+  norm_num [(^),int.pow,int.pow_nat,int.mod,(∘),has_append.append,list.append,list.filter,nat.pow,let_in.lift_zip2,let_in.split_pair,let_in.lift_nat.zero,let_in.lift_foldr,let_in.lift_nat.one,let_in.lift_update_nth',let_in.lift_filter,let_in.lift_map],
+  simp only [int.pow_nat,bit0,bit1,(+),int.add,nat.add,1,0,int.zero,int.one,has_one.one,int.mod],
 end
 #check id
