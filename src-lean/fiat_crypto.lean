@@ -1,4 +1,5 @@
 import tactic.norm_num
+import algebra.group_power
 open prod
 universes u v w ℓ
 
@@ -43,24 +44,6 @@ def list.expand {A} (default : A) (ls : list A) (n : nat) : list A
 
 def int.zselect (cond zero_case nonzero_case : ℤ) :=
     if cond = 0 then zero_case else nonzero_case.
-
-@[simp]
-def int.pow (b : ℤ) (e : ℤ) : ℤ :=
-  if e < 0
-  then 0
-  else let e : ℕ := int.to_nat e in
-       if b < 0
-       then let b := int.to_nat (-b) in
-            if e % 2 = 0
-            then b^e
-            else -(b^e)
-       else let b := int.to_nat b in
-            b^e
-
-instance : has_pow int int := ⟨int.pow⟩
-
-@[simp]
-def int.unfold_has_pow (b e : ℤ) : b ^ e = int.pow b e := rfl
 
 @[simp]
 def int.to_nat_bit (b : bool) (v : ℤ) : int.to_nat (int.bit b v) = if v < 0 then 0 else nat.bit b (int.to_nat v) :=
@@ -330,7 +313,7 @@ section
 
   @[simp]
   def modops.weight (i : ℕ) : ℤ
-    := 2^(-(-(limbwidth_num * i) / limbwidth_den)).
+    := 2^(int.to_nat (-(-(limbwidth_num * i) / limbwidth_den))).
 
   @[simp]
   def modops.carry_mulmod (f g : list ℤ) : list ℤ :=
@@ -392,7 +375,7 @@ def let_in.lift_nat.zero {A : Type v} (f : ℕ → A) : let_in 0 f = f 0 := rfl
 def let_in.lift_nat.one {A : Type v} (f : ℕ → A) : let_in 1 f = f 1 := rfl
 
 @[simp]
-def ex.n : ℕ := 1 -- 2 -- 5
+def ex.n : ℕ := 1 -- 5
 @[simp]
 def ex.s : ℤ := 2^16 -- 2^255
 @[simp]
@@ -402,15 +385,27 @@ def ex.idxs : list ℕ := [0, 1] -- [0, 1, 2, 3, 4, 0, 1]
 @[simp]
 def ex.machine_wordsize : ℤ := 8 -- 64
 
+@[simp]
+def ex2.n : ℕ := 5
+@[simp]
+def ex2.s : ℤ := 2^255
+@[simp]
+def ex2.c : list (ℤ × ℤ) := [(1, 19)]
+@[simp]
+def ex2.idxs : list ℕ := [0, 1, 2, 3, 4, 0, 1]
+@[simp]
+def ex2.machine_wordsize : ℤ := 64
+
 local notation `dlet` binders ` ≔ ` b ` in ` c:(scoped P, P) := let_in b c
 
 set_option pp.max_depth 1000000000
 -- set_option pp.max_steps 1000000000
 --set_option pp.numerals false
 open modops
-example (f g : list ℤ) : carry_mulmod ex.machine_wordsize 1 ex.s ex.c ex.n ex.idxs (list.expand 0 f ex.n) (list.expand 0 g ex.n) = [] :=
+open ex
+example (f g : list ℤ) : carry_mulmod machine_wordsize 1 s c n idxs (list.expand 0 f n) (list.expand 0 g n) = [] :=
 begin
-  norm_num [int.pow,int.unfold_has_pow,int.to_nat,(∘),has_append.append,list.append,list.filter,
+  norm_num [int.to_nat,(∘),has_append.append,list.append,list.filter,
     let_in.lift_zip2,let_in.split_pair,let_in.lift_nat.zero,let_in.lift_foldr,let_in.lift_nat.one,let_in.lift_update_nth',let_in.lift_filter,let_in.lift_map,let_in.lift_append1,let_in.lift_append2,let_in.lift_join,let_in.lift_from_associational],
 end
 #check id
