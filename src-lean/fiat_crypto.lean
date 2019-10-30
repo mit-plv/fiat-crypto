@@ -44,37 +44,41 @@ def list.expand {A} (default : A) (ls : list A) (n : nat) : list A
 def int.zselect (cond zero_case nonzero_case : ℤ) :=
     if cond = 0 then zero_case else nonzero_case.
 
-def int.pow_nat' (b : ℤ) : ℕ → ℤ
-| 0 := 1
-| (k+1) := b * int.pow_nat' k
-
 @[simp]
-def int.pow_nat : ℤ → ℕ → ℤ
-| (int.of_nat b) e := int.of_nat (b ^ e)
-| (int.neg_succ_of_nat b) e := int.pow_nat' (int.neg_succ_of_nat b) e
-
-instance int_has_pow_nat : has_pow int nat := ⟨int.pow_nat⟩
-
-def int.pow (b : ℤ) : ℤ → ℤ
-| (int.of_nat n) := b ^ n
-| (int.neg_succ_of_nat n) := 0
+def int.pow (b : ℤ) (e : ℤ) : ℤ :=
+  if e < 0
+  then 0
+  else let e : ℕ := int.to_nat e in
+       if b < 0
+       then let b := int.to_nat (-b) in
+            if e % 2 = 0
+            then b^e
+            else -(b^e)
+       else let b := int.to_nat b in
+            b^e
 
 instance : has_pow int int := ⟨int.pow⟩
 
 @[simp]
-def int.pow_nat_zero (b : ℤ) : int.pow_nat b 0 = 1 :=
+def int.unfold_has_pow (b e : ℤ) : b ^ e = int.pow b e := rfl
+
+@[simp]
+def int.to_nat_bit (b : bool) (v : ℤ) : int.to_nat (int.bit b v) = if v < 0 then 0 else nat.bit b (int.to_nat v) :=
 begin
-  cases b, refl, refl
+  cases v, cases b, refl, refl, simp [int.to_nat], cases b, simp, split_ifs, refl, exfalso, apply h, apply int.neg_succ_lt_zero
 end
 
 @[simp]
-def int.pow_zero (b : ℤ) : b^0 = 1 := by apply int.pow_nat_zero
+def int.to_nat_bit0 (v : ℤ) : int.to_nat (bit0 v) = if v < 0 then 0 else bit0 (int.to_nat v) := int.to_nat_bit ff _
 
 @[simp]
-def int.pow_zero' (b : ℤ) : int.pow b 0 = 1 := by apply int.pow_nat_zero
+def int.to_nat_bit1 (v : ℤ) : int.to_nat (bit1 v) = if v < 0 then 0 else bit1 (int.to_nat v) := int.to_nat_bit tt _
 
 @[simp]
-def int.pow_of_nat (b : ℕ) (e : ℕ) : int.pow b e = int.of_nat (b ^ e) := rfl
+def int.to_nat_0 : int.to_nat 0 = 0 := rfl
+
+@[simp]
+def int.to_nat_1 : int.to_nat 1 = 1 := rfl
 
 @[simp]
 def associational.eval (p : list (ℤ × ℤ)) : ℤ :=
@@ -198,6 +202,14 @@ section
     list.foldr (λ t ls,
       let_in (positional.place t (nat.pred n)) (λ p,
       positional.add_to_nth (fst p) (snd p) ls )) (positional.zeros n) p.
+
+  @[simp]
+  def positional.from_associational_cons (n : ℕ) (p : ℤ × ℤ) (ps:list (ℤ×ℤ))
+    : positional.from_associational n (p :: ps)
+      = list.foldr (λ t ls,
+          let_in (positional.place t (nat.pred n)) (λ p,
+          positional.add_to_nth (fst p) (snd p) ls )) (positional.zeros n) (p::ps)
+      := rfl
 
   @[simp]
   def positional.extend_to_length (n_in n_out : ℕ) (p:list ℤ) : list ℤ :=
@@ -357,13 +369,21 @@ def let_in.lift {A : Type u} {B : Type v} {C : Type w} (F : B → C) (x : A) (f 
 
 def let_in.lift_zip2 {A : Type u} {B : Type v} {C : Type w} (ls : list C) (x : A) (f : A → list B) : list.zip ls (let_in x f) = let_in x (λ y, list.zip ls (f y)) := let_in.lift _ _ _.
 
+def let_in.lift_append1 {A : Type u} {B : Type v} (x : A) (f : A → list B) (ls : list B) : list.append (let_in x f) ls = let_in x (λ y, list.append (f y) ls) := rfl
+
+def let_in.lift_append2 {A : Type u} {B : Type v} (x : A) (f : A → list B) (ls : list B) : list.append ls (let_in x f) = let_in x (λ y, list.append ls (f y)) := rfl
+
 def let_in.lift_foldr {A : Type u} {B : Type v} {C : Type w} (x : A) (f : A → list B) (g : B → C → C) (init : C) : list.foldr g init (let_in x f) = let_in x (λ x, list.foldr g init (f x)) := rfl
 
 def let_in.lift_map {A : Type u} {B : Type v} {C : Type w} (x : A) (f : A → list B) (g : B → C) : list.map g (let_in x f) = let_in x (λ x, list.map g (f x)) := rfl
 
-def let_in.lift_filter {A : Type u} {B : Type v} {C : Type w} (x : A) (f : A → list B) (g : B → Prop) [decidable_pred g] : list.filter g (let_in x f) = let_in x (λ x, list.filter g (f x)) := rfl
+def let_in.lift_join {A : Type u} {B : Type v} (x : A) (f : A → list (list B)) : list.join (let_in x f) = let_in x (λ x, list.join (f x)) := rfl
 
-def let_in.lift_update_nth' {A : Type u} {B : Type v} {C : Type w} (x : A) (f : A → list B) (g : B → B) (n : ℕ) : list.update_nth' n g (let_in x f) = let_in x (λ x, list.update_nth' n g (f x)) := rfl
+def let_in.lift_from_associational {A : Type u} (f : A → list (ℤ × ℤ)) (weight : ℕ → ℤ) (n : ℕ) (x : A) : positional.from_associational weight n (let_in x f) = let_in x (λ x, positional.from_associational weight n (f x)) := rfl
+
+def let_in.lift_filter {A : Type u} {B : Type v} (x : A) (f : A → list B) (g : B → Prop) [decidable_pred g] : list.filter g (let_in x f) = let_in x (λ x, list.filter g (f x)) := rfl
+
+def let_in.lift_update_nth' {A : Type u} {B : Type v} (x : A) (f : A → list B) (g : B → B) (n : ℕ) : list.update_nth' n g (let_in x f) = let_in x (λ x, list.update_nth' n g (f x)) := rfl
 
 def let_in.split_pair {A : Type u} {A' : Type w} {B : Type v} (x : A) (y : A') (f : A × A' → B) : let_in (x, y) f = let_in x (λ x, let_in y (λ y, f (x, y))) := rfl
 
@@ -372,7 +392,7 @@ def let_in.lift_nat.zero {A : Type v} (f : ℕ → A) : let_in 0 f = f 0 := rfl
 def let_in.lift_nat.one {A : Type v} (f : ℕ → A) : let_in 1 f = f 1 := rfl
 
 @[simp]
-def ex.n : ℕ := 1 -- 5
+def ex.n : ℕ := 1 -- 2 -- 5
 @[simp]
 def ex.s : ℤ := 2^16 -- 2^255
 @[simp]
@@ -390,10 +410,7 @@ set_option pp.max_depth 1000000000
 open modops
 example (f g : list ℤ) : carry_mulmod ex.machine_wordsize 1 ex.s ex.c ex.n ex.idxs (list.expand 0 f ex.n) (list.expand 0 g ex.n) = [] :=
 begin
---  simp only [ex.n,ex.s,ex.c,ex.idxs,ex.machine_wordsize,list.reverse,list.zip,list.zip_with,list.map,list.reverse_core,carry_mulmod,list.expand,list.expand_helper,positional.mulmod,positional.to_associational,list.seq,list.combine,associational.mul,list.flat_map,list.join,associational.repeat_reduce,list.append,has_append.append,associational.split,list.partition,list.partition._match_1,list.map], --,list.reverse,list.reverse_core,list.foldr,list.join,list.append,list.map,list.zip,list.zip_with,modops.weight,int.pow,int.pow_nat,has_pow.pow,has_mul.mul,int.mul,int.div,has_div.div,has_neg.neg,(∘),ite,list.partition,decidable_of_decidable_of_iff,list.filter,modops.weight,bit0,int.add,has_add.add,bit1,has_one.one,int.add,int.one],
-  norm_num [(^),int.pow,int.pow_nat,int.mod,(∘),has_append.append,list.append,list.filter],
-  simp only [int.pow_nat,bit0,bit1,(+),int.add,nat.add,1,0,int.zero,int.one,has_one.one,int.mod],
-  norm_num [(^),int.pow,int.pow_nat,int.mod,(∘),has_append.append,list.append,list.filter,nat.pow,let_in.lift_zip2,let_in.split_pair,let_in.lift_nat.zero,let_in.lift_foldr,let_in.lift_nat.one,let_in.lift_update_nth',let_in.lift_filter,let_in.lift_map],
-  simp only [int.pow_nat,bit0,bit1,(+),int.add,nat.add,1,0,int.zero,int.one,has_one.one,int.mod],
+  norm_num [int.pow,int.unfold_has_pow,int.to_nat,(∘),has_append.append,list.append,list.filter,
+    let_in.lift_zip2,let_in.split_pair,let_in.lift_nat.zero,let_in.lift_foldr,let_in.lift_nat.one,let_in.lift_update_nth',let_in.lift_filter,let_in.lift_map,let_in.lift_append1,let_in.lift_append2,let_in.lift_join,let_in.lift_from_associational],
 end
 #check id
