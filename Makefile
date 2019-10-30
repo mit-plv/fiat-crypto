@@ -59,6 +59,7 @@ LITE_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo \
 	src/Curves/Weierstrass/Projective.vo \
 	src/Rewriter/RulesGood.vo \
 	src/Rewriter/All.vo \
+	src/Fancy/Compiler.vo \
 	$(PERFTESTING_VO)
 NOBIGMEM_UNMADE_VOFILES := \
 	src/Curves/Weierstrass/AffineProofs.vo \
