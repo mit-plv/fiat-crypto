@@ -1,5 +1,5 @@
 open prod
-universes u v
+universes u v w
 
 def let_in {A : Type u} {B : Type v} (x : A) (f : A → B) := f x
 
@@ -11,13 +11,11 @@ def list.flat_map {A : Type u} {B : Type v} (f : A → list B) (ls : list A) : l
 def list.combine {A : Type u} {B : Type v} (as : list A) (bs : list B) : list (A × B) :=
   list.zip as bs
 
+-- start len
 @[simp]
-def list.seq (start len : ℕ) : list ℕ :=
-  nat.rec
-    (λ start, [])
-    (λ len' seq_len' start, start :: seq_len' (nat.succ start))
-    len
-    start
+def list.seq : ℕ → ℕ → list ℕ
+| _ 0 := []
+| start (nat.succ len') := start :: list.seq (nat.succ start) len'
 
 @[simp]
 def list.update_nth' {T : Type u} (n : ℕ) (f : T → T) (xs : list T) : list T :=
@@ -42,13 +40,9 @@ def list.nth_default {A : Type u} (default : A) (ls : list A) (n : ℕ) : A :=
   option.get_or_else (list.nth ls n) default
 
 @[simp]
-def list.expand_helper {A : Type u} (default : A) (ls : list A) (n : nat) (idx : nat) : list A :=
-  nat.rec
-    (λ _, [])
-    (λ n' rec_call idx,
-       (list.nth_default default ls idx) :: (rec_call (nat.succ idx)))
-    n
-    idx.
+def list.expand_helper {A : Type u} : ∀ (default : A) (ls : list A) (n : nat) (idx : nat), list A
+| default ls 0             idx := []
+| default ls (nat.succ n') idx := list.nth_default default ls idx :: list.expand_helper default ls n' (nat.succ idx)
 
 @[simp]
 def list.expand {A} (default : A) (ls : list A) (n : nat) : list A
@@ -111,17 +105,14 @@ def associational.reduce (s:ℤ) (c:list _) (p:list _) : list (ℤ × ℤ) :=
     let lo_hi := associational.split s p in fst lo_hi ++ associational.mul c (snd lo_hi)
 
 @[simp]
-def associational.repeat_reduce (n : nat) (s:ℤ) (c:list _) (p:list _) : list (ℤ × ℤ)
-    := nat.rec
-         (λ p, p)
-         (λ n' repeat_reduce_n' p,
-            let lo_hi := associational.split s p in
-            if (list.length (snd lo_hi) = 0)
-            then p
-            else let p := fst lo_hi ++ associational.mul c (snd lo_hi) in
-                 repeat_reduce_n' p)
-         n
-         p
+def associational.repeat_reduce : ∀ (n : nat) (s:ℤ) (c:list (ℤ × ℤ)) (p:list (ℤ × ℤ)), list (ℤ × ℤ)
+| 0             s c p := p
+| (nat.succ n') s c p :=
+    let lo_hi := associational.split s p in
+    if (list.length (snd lo_hi) = 0)
+    then p
+    else let p := fst lo_hi ++ associational.mul c (snd lo_hi) in
+         associational.repeat_reduce n' s c p
 
 @[simp]
 def associational.let_bind_for_reduce_square (c:list (ℤ × ℤ)) (p:list (ℤ × ℤ)) : list ((ℤ × ℤ) × list(ℤ × ℤ) × list(ℤ × ℤ) × list(ℤ × ℤ)) :=
@@ -357,6 +348,7 @@ section
     encode modops.weight n s c f
 end
 
+def let_in.lift {A : Type u} {B : Type v} {C : Type w} (F : B → C) (x : A) (f : A → B) : F (let_in x f) = let_in x (λ y, F (f y)) := rfl
 
 @[simp]
 def ex.n : ℕ := 5
@@ -369,11 +361,12 @@ def ex.idxs : list ℕ := [0, 1, 2, 3, 4, 0, 1]
 @[simp]
 def ex.machine_wordsize : ℤ := 64
 
-set_option pp.max_depth 1000000
+set_option pp.max_depth 1000000000
+--set_option pp.numerals false
 open modops
 example (f g : list ℤ) : carry_mulmod ex.machine_wordsize 1 ex.s ex.c ex.n ex.idxs (list.expand 0 f ex.n) (list.expand 0 g ex.n) = [] :=
 begin
-  simp [ex.n,ex.s,ex.c,ex.idxs,ex.machine_wordsize,list.reverse,list.reverse_core,list.foldr,list.join,list.append,list.map,list.zip,list.zip_with,modops.weight,int.pow,int.pow_nat,has_pow.pow,has_mul.mul,int.mul,int.div,has_div.div,has_neg.neg,(∘),ite,list.partition,decidable_of_decidable_of_iff,list.filter,modops.weight],
-  rewrite [↑(nat.rec)]
+  simp only [ex.n,ex.s,ex.c,ex.idxs,ex.machine_wordsize,list.reverse,list.zip,list.zip_with,list.map,list.reverse_core,carry_mulmod,list.expand,list.expand_helper,positional.mulmod,positional.to_associational,list.seq,list.combine,associational.mul,list.flat_map,list.join,associational.repeat_reduce,list.append,has_append.append,associational.split,list.partition,list.partition._match_1,list.map], --,list.reverse,list.reverse_core,list.foldr,list.join,list.append,list.map,list.zip,list.zip_with,modops.weight,int.pow,int.pow_nat,has_pow.pow,has_mul.mul,int.mul,int.div,has_div.div,has_neg.neg,(∘),ite,list.partition,decidable_of_decidable_of_iff,list.filter,modops.weight,bit0,int.add,has_add.add,bit1,has_one.one,int.add,int.one],
+  norm_num,
 end
 #check id
