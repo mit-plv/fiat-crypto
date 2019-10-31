@@ -1,12 +1,4 @@
 import tactic.norm_num
-open prod
-
-example (f g : list ℤ) : (associational.split 65536 [(1, list.nth_default 0 f 0 * list.nth_default 0 g 0)]).snd = [] :=
-begin
-  rw [associational.split_val], norm_num [associational.split_val, (∘), list.filter], norm_num [associational.split_val, (∘), list.filter]
-end
-
-
 import algebra.group_power
 open prod
 universes u v w ℓ
@@ -107,14 +99,15 @@ def associational.negate_snd (p : list (ℤ × ℤ)) : list (ℤ × ℤ) :=
 --     := let hi_lo := list.partition (λ t, (fst t) % s = 0) p in
 --        (snd hi_lo, list.map (λ t, (fst t / s, snd t)) (fst hi_lo)).
 
+@[simp]
 def associational.split (s : ℤ) (p : list (ℤ × ℤ)) : list (ℤ × ℤ) × list (ℤ × ℤ) :=
   let (a, b) := list.partition (λ t, (fst t) % s = 0) p in
   (b, list.map (λ t, (fst t / s, snd t)) a)
 
-@[simp] theorem associational.split_val {s : ℤ} {p : list (ℤ × ℤ)} {a b}
-  (h : list.partition (λ t, (prod.fst t) % s = 0) p = (a, b)) :
-  associational.split s p = (b, list.map (λ t, (fst t / s, snd t)) a) :=
-by rw [associational.split, h, associational.split]
+-- @[simp] theorem associational.split_val {s : ℤ} {p : list (ℤ × ℤ)} {a b}
+--   (h : list.partition (λ t, (prod.fst t) % s = 0) p = (a, b)) :
+--   associational.split s p = (b, list.map (λ t, (fst t / s, snd t)) a) :=
+-- by rw [associational.split, h, associational.split]
 
 def associational.reduce (s c p) : list (ℤ × ℤ) :=
   let (a, b) := associational.split s p in
@@ -130,7 +123,6 @@ by rw [associational.reduce, h, associational.reduce]
 -- def associational.reduce (s:ℤ) (c:list _) (p:list _) : list (ℤ × ℤ) :=
 --     let lo_hi := associational.split s p in fst lo_hi ++ associational.mul c (snd lo_hi)
 
-@[simp]
 def associational.repeat_reduce : ∀ (n : nat) (s:ℤ) (c:list (ℤ × ℤ)) (p:list (ℤ × ℤ)), list (ℤ × ℤ)
 | 0             s c p := p
 | (nat.succ n') s c p :=
@@ -139,6 +131,27 @@ def associational.repeat_reduce : ∀ (n : nat) (s:ℤ) (c:list (ℤ × ℤ)) (p
     then p
     else let p := fst lo_hi ++ associational.mul c (snd lo_hi) in
          associational.repeat_reduce n' s c p
+
+@[simp] theorem associational.repeat_reduce_0 (s : ℤ) (c : list (ℤ × ℤ)) (p : list (ℤ × ℤ)) : associational.repeat_reduce 0 s c p = p :=
+  rfl
+
+@[simp] theorem associational.repeat_reduce_succ_len_0 (n n' : ℕ) (lo : _) (hi : _) (s : ℤ) (c : list (ℤ × ℤ)) (p : list (ℤ × ℤ))
+    (hn : n = nat.succ n')
+    (split_pf : associational.split s p = (lo, hi))
+    (len_pf : list.length hi = 0)
+  : associational.repeat_reduce n s c p = p :=
+begin
+  simp [associational.repeat_reduce,split_pf,len_pf,hn]
+end
+
+@[simp] theorem associational.repeat_reduce_succ_len_nz (n n' : ℕ) (lo : _) (hi : _) (s : ℤ) (c : list (ℤ × ℤ)) (p : list (ℤ × ℤ))
+    (hn : n = nat.succ n')
+    (split_pf : associational.split s p = (lo, hi))
+    (len_pf : list.length hi ≠ 0)
+  : associational.repeat_reduce n s c p = associational.repeat_reduce n' s c (lo ++ associational.mul c hi) :=
+begin
+  simp [associational.repeat_reduce,split_pf,hn], split_ifs, rewrite [h] at len_pf, exfalso, apply len_pf, refl, refl
+end
 
 @[simp]
 def associational.let_bind_for_reduce_square (c:list (ℤ × ℤ)) (p:list (ℤ × ℤ)) : list ((ℤ × ℤ) × list(ℤ × ℤ) × list(ℤ × ℤ) × list(ℤ × ℤ)) :=
@@ -450,7 +463,7 @@ open ex
 example (f g : list ℤ) : carry_mulmod machine_wordsize 1 s c n idxs (list.expand 0 f n) (list.expand 0 g n) = [] :=
 begin
   norm_num [int.to_nat,(∘),has_append.append,list.append,list.filter,
-    associational.split, associational.reduce, associational.carryterm,
+    associational.reduce, associational.carryterm, associational.repeat_reduce,
     let_in.lift_zip2,let_in.split_pair,let_in.lift_nat.zero,let_in.lift_foldr,let_in.lift_nat.one,let_in.lift_update_nth',let_in.lift_filter,let_in.lift_map,let_in.lift_append1,let_in.lift_append2,let_in.lift_join,let_in.lift_from_associational,let_in.lift_bind,let_in.lift_reduce],
 end
 #check id
