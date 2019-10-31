@@ -1,4 +1,12 @@
 import tactic.norm_num
+open prod
+
+example (f g : list ℤ) : (associational.split 65536 [(1, list.nth_default 0 f 0 * list.nth_default 0 g 0)]).snd = [] :=
+begin
+  rw [associational.split_val], norm_num [associational.split_val, (∘), list.filter], norm_num [associational.split_val, (∘), list.filter]
+end
+
+
 import algebra.group_power
 open prod
 universes u v w ℓ
@@ -7,7 +15,7 @@ def let_in {A : Type u} {B : Type v} (x : A) (f : A → B) := f x
 
 @[simp]
 def list.flat_map {A : Type u} {B : Type v} (f : A → list B) (ls : list A) : list B :=
-  list.join (list.map f ls)
+  list.bind ls f
 
 @[simp]
 def list.combine {A : Type u} {B : Type v} (as : list A) (bs : list B) : list (A × B) :=
@@ -18,6 +26,9 @@ def list.combine {A : Type u} {B : Type v} (as : list A) (bs : list B) : list (A
 def list.seq : ℕ → ℕ → list ℕ
 | _ 0 := []
 | start (nat.succ len') := start :: list.seq (nat.succ start) len'
+
+@[simp] theorem prod.fst_mk {A : Type u} {B : Type v} (x : A) (y : B) : fst (x, y) = x := rfl
+@[simp] theorem prod.snd_mk {A : Type u} {B : Type v} (x : A) (y : B) : snd (x, y) = y := rfl
 
 @[simp]
 def list.update_nth' {T : Type u} : ∀ (n : ℕ) (f : T → T) (xs : list T), list T
@@ -91,14 +102,33 @@ def associational.square (p : list (ℤ × ℤ)) : list (ℤ × ℤ) :=
 def associational.negate_snd (p : list (ℤ × ℤ)) : list (ℤ × ℤ) :=
   list.map (λ cx, (fst cx, -snd cx)) p
 
-@[simp]
-def associational.split (s : ℤ) (p : list (ℤ × ℤ)) : list (ℤ × ℤ) × list (ℤ × ℤ)
-    := let hi_lo := list.partition (λ t, (fst t) % s = 0) p in
-       (snd hi_lo, list.map (λ t, (fst t / s, snd t)) (fst hi_lo)).
+-- @[simp]
+-- def associational.split (s : ℤ) (p : list (ℤ × ℤ)) : list (ℤ × ℤ) × list (ℤ × ℤ)
+--     := let hi_lo := list.partition (λ t, (fst t) % s = 0) p in
+--        (snd hi_lo, list.map (λ t, (fst t / s, snd t)) (fst hi_lo)).
 
-@[simp]
-def associational.reduce (s:ℤ) (c:list _) (p:list _) : list (ℤ × ℤ) :=
-    let lo_hi := associational.split s p in fst lo_hi ++ associational.mul c (snd lo_hi)
+def associational.split (s : ℤ) (p : list (ℤ × ℤ)) : list (ℤ × ℤ) × list (ℤ × ℤ) :=
+  let (a, b) := list.partition (λ t, (fst t) % s = 0) p in
+  (b, list.map (λ t, (fst t / s, snd t)) a)
+
+@[simp] theorem associational.split_val {s : ℤ} {p : list (ℤ × ℤ)} {a b}
+  (h : list.partition (λ t, (prod.fst t) % s = 0) p = (a, b)) :
+  associational.split s p = (b, list.map (λ t, (fst t / s, snd t)) a) :=
+by rw [associational.split, h, associational.split]
+
+def associational.reduce (s c p) : list (ℤ × ℤ) :=
+  let (a, b) := associational.split s p in
+  a ++ associational.mul c b
+
+@[simp] theorem associational.reduce_val (s c p) {a b}
+  (h : associational.split s p = (a, b)) :
+  associational.reduce s c p = a ++ associational.mul c b :=
+by rw [associational.reduce, h, associational.reduce]
+
+
+-- @[simp]
+-- def associational.reduce (s:ℤ) (c:list _) (p:list _) : list (ℤ × ℤ) :=
+--     let lo_hi := associational.split s p in fst lo_hi ++ associational.mul c (snd lo_hi)
 
 @[simp]
 def associational.repeat_reduce : ∀ (n : nat) (s:ℤ) (c:list (ℤ × ℤ)) (p:list (ℤ × ℤ)), list (ℤ × ℤ)
@@ -145,7 +175,7 @@ def associational.reduce_square (s:ℤ) (c:list (ℤ × ℤ)) (p:list (ℤ × �
 def associational.bind_snd (p : list (ℤ × ℤ)) :=
   list.map (λ t, let_in (snd t) (λ t2, (fst t, t2))) p
 
-@[simp]
+-- @[simp]
 def associational.carryterm (w fw:ℤ) (t:ℤ × ℤ) :=
   if (fst t = w)
   then let_in (snd t)         (λ t2,
@@ -153,6 +183,16 @@ def associational.carryterm (w fw:ℤ) (t:ℤ × ℤ) :=
        let_in (t2 % fw) (λ m2,
        [(w * fw, d2), (w,m2)])))
   else [t]
+
+@[simp] theorem associational.carryterm_pos (w fw b) :
+  associational.carryterm w fw (w, b) =
+  let_in b               (λ t2,
+  let_in (t2 / fw)       (λ d2,
+  let_in (t2 % fw) (λ m2,
+  [(w * fw, d2), (w,m2)]))) := if_pos rfl
+
+@[simp] theorem associational.carryterm_neg {w fw a b}
+  (h : a ≠ w) : associational.carryterm w fw (a, b) = [(a, b)] := if_neg h
 
 @[simp]
 def associational.carry (w fw:ℤ) (p:list (ℤ × ℤ)):=
@@ -362,6 +402,10 @@ def let_in.lift_map {A : Type u} {B : Type v} {C : Type w} (x : A) (f : A → li
 
 def let_in.lift_join {A : Type u} {B : Type v} (x : A) (f : A → list (list B)) : list.join (let_in x f) = let_in x (λ x, list.join (f x)) := rfl
 
+def let_in.lift_bind {A : Type u} {B : Type v} {C : Type w} (x : A) (f : A → list B) (g : B → list C) : list.bind (let_in x f) g = let_in x (λ x, list.bind (f x) g) := rfl
+
+def let_in.lift_reduce {A : Type u} (s : ℤ) (c : list (ℤ × ℤ)) (x : A) (f : A → list (ℤ × ℤ)) : associational.reduce s c (let_in x f) = let_in x (λ x, associational.reduce s c (f x)) := rfl
+
 def let_in.lift_from_associational {A : Type u} (f : A → list (ℤ × ℤ)) (weight : ℕ → ℤ) (n : ℕ) (x : A) : positional.from_associational weight n (let_in x f) = let_in x (λ x, positional.from_associational weight n (f x)) := rfl
 
 def let_in.lift_filter {A : Type u} {B : Type v} (x : A) (f : A → list B) (g : B → Prop) [decidable_pred g] : list.filter g (let_in x f) = let_in x (λ x, list.filter g (f x)) := rfl
@@ -406,6 +450,7 @@ open ex
 example (f g : list ℤ) : carry_mulmod machine_wordsize 1 s c n idxs (list.expand 0 f n) (list.expand 0 g n) = [] :=
 begin
   norm_num [int.to_nat,(∘),has_append.append,list.append,list.filter,
-    let_in.lift_zip2,let_in.split_pair,let_in.lift_nat.zero,let_in.lift_foldr,let_in.lift_nat.one,let_in.lift_update_nth',let_in.lift_filter,let_in.lift_map,let_in.lift_append1,let_in.lift_append2,let_in.lift_join,let_in.lift_from_associational],
+    associational.split, associational.reduce, associational.carryterm,
+    let_in.lift_zip2,let_in.split_pair,let_in.lift_nat.zero,let_in.lift_foldr,let_in.lift_nat.one,let_in.lift_update_nth',let_in.lift_filter,let_in.lift_map,let_in.lift_append1,let_in.lift_append2,let_in.lift_join,let_in.lift_from_associational,let_in.lift_bind,let_in.lift_reduce],
 end
 #check id
