@@ -28,6 +28,7 @@ make "$@" TIMED=1 || exit $?
 
 if [ ! -z "$(git diff)" ]; then
     git submodule foreach --recursive git diff
+    git submodule foreach --recursive git status
     git diff
     exit 1
 fi
