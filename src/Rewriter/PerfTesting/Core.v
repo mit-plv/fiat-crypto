@@ -31,7 +31,12 @@ Global Open Scope Z_scope.
 
 (* replace this with vm_compute and the next fail with idtac to enable the precomputed versions *)
 Declare Reduction precompute := cbv iota.
-Ltac check_precomputed_enabled := fail 0 "Precomputed tests are disabled".
+Ltac check_precomputed_enabled :=
+  let v := (eval precompute in (id true)) in
+  lazymatch v with
+  | true => idtac
+  | _ => fail 0 "Precomputed tests are disabled"
+  end.
 
 Import
   Language.Compilers
