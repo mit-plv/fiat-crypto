@@ -7682,7 +7682,7 @@ Goal False.
 Abort.
 *)
 
-Time Compute
+Time Redirect "log" Compute
      (Pipeline.BoundsPipeline_full
         true (relax_zrange_gen [64; 128])
         ltac:(let r := Reify (to_associational (weight 51 1) 5) in
@@ -7691,7 +7691,7 @@ Time Compute
 
 (* N.B. When the uncurrying PR lands, we will no longer need to
    manually uncurry this function example before reification *)
-Time Compute
+Time Redirect "log" Compute
      (Pipeline.BoundsPipeline_full
         true (relax_zrange_gen [64; 128])
         ltac:(let r := Reify (fun '(x, y) => scmul (weight 51 1) 5 x y) in
@@ -7760,7 +7760,7 @@ Module X25519_64.
   Print Assumptions base_51_good.
   Import PrintingNotations.
   Set Printing Width 80.
-  Print base_51_carry_mul.
+  Redirect "log" Print base_51_carry_mul.
 (*base_51_carry_mul =
 fun var : type -> Type =>
 (λ x : var
@@ -7807,7 +7807,7 @@ fun var : type -> Type =>
              type.list (type.type_primitive type.Z) ->
              type.list (type.type_primitive type.Z)))
 *)
-  Print base_51_sub.
+  Redirect "log" Print base_51_sub.
   (*
 base_51_sub =
 fun var : type -> Type =>
@@ -8483,7 +8483,7 @@ Module StraightlineTest.
                (Pair (AppIdent (var:=var) (ident.Z.cast r[0~>4294967295]%zrange) (AppIdent (var:=var) (ident.Z.shiftr 8) (Var x)))
                      (Abs (fun x : var type.Z => expr.Var x)))).
 
-  Check eq_refl :
+  Redirect "log" Check eq_refl :
     Straightline.of_Expr test =
     fun var x _ =>
        Straightline.expr.LetInAppIdentZ r[0 ~> 4294967295] (ident.Z.shiftr 8) (Straightline.expr.Var _ x)
@@ -8501,7 +8501,7 @@ Module StraightlineTest.
                                             (Abs (fun z : var type.Z => (AppIdent (ident.Z.cast r[0~>4294967295]%zrange) (AppIdent (ident.Z.shiftr 3) (Var z)))))
         ))))).
 
-  Check eq_refl :
+  Redirect "log" Check eq_refl :
     Straightline.of_Expr test_mul =
     fun var x _ =>
        Straightline.expr.LetInAppIdentZ r[0 ~> 4294967295] (ident.Z.shiftr 8) (Straightline.expr.Var _ x)
@@ -8528,7 +8528,7 @@ Module StraightlineTest.
                                                    (AppIdent (@ident.primitive type.Z 100) TT))))
                             (Abs (fun z : var type.Z => Var z)))).
 
-  Check eq_refl :
+  Redirect "log" Check eq_refl :
     Straightline.of_Expr test_selm =
     fun var x _ =>
       Straightline.expr.LetInAppIdentZ r[0 ~> 4294967295] ident.Z.zselect
@@ -11206,8 +11206,8 @@ Module BarrettReduction.
     Let mu := (2 ^ (2 * machine_wordsize)) / M.
     Let muLow := mu mod (2 ^ machine_wordsize).
 
-    Check barrett_reduce_correct.
-    Print Pipeline.Values_not_provably_distinct.
+    Redirect "log" Check barrett_reduce_correct.
+    Redirect "log" Print Pipeline.Values_not_provably_distinct.
 
     Definition relax_zrange_of_machine_wordsize'
       := relax_zrange_gen [1; machine_wordsize / 2; machine_wordsize; 2 * machine_wordsize]%Z.
@@ -11633,7 +11633,7 @@ Module Barrett256.
   Import PrintingNotations.
   Set Printing Width 1000.
   Open Scope expr_scope.
-  Print barrett_red256.
+  Redirect "log" Print barrett_red256.
   (*
 barrett_red256 =  fun var : type -> Type => λ x : var (type.type_primitive type.Z * type.type_primitive type.Z)%ctype,
                 expr_let x0 := SELM (x₂, 0, 26959946667150639793205513449348445388433292963828203772348655992835) in
@@ -11672,7 +11672,7 @@ barrett_red256 =  fun var : type -> Type => λ x : var (type.type_primitive type
   Import PreFancy.Notations.
   Local Notation "'RegMod'" := (Straightline.expr.Primitive (t:=type.Z) 115792089210356248762697446949407573530086143415290314195533631308867097853951).
   Local Notation "'RegMuLow'" := (Straightline.expr.Primitive (t:=type.Z) 26959946667150639793205513449348445388433292963828203772348655992835).
-  Print barrett_red256_prefancy.
+  Redirect "log" Print barrett_red256_prefancy.
   (*
     selm@(y, $x₂, RegZero, RegMuLow);
     rshi@(y0, RegZero, $x₂,255);
@@ -11840,7 +11840,7 @@ Module P192_64.
   Local Notation "'adx64' '(' c ',' x ',' y ')'" :=
     (Z.cast bool @@ (Z.add_with_carry @@ (c, x , y)))%expr (at level 50) : expr_scope.
 
-  Print mulmod.
+  Redirect "log" Print mulmod.
 (*
 mulmod = fun var : type -> Type => λ x : var (type.list (type.type_primitive type.Z) * type.list (type.type_primitive type.Z))%ctype,
          expr_let x0 := mul64 ((uint64)(x₁[[2]]), (uint64)(x₂[[2]])) in
@@ -11908,7 +11908,7 @@ Module P192_32.
   Local Notation "'adc32' '(' c ',' x ',' y ')'" :=
     (Z.cast2 (uint32, bool)%core @@ (Z.add_with_get_carry_concrete 4294967296 @@ (c, x , y)))%expr (at level 50) : expr_scope.
 
-  Print mulmod.
+  Redirect "log" Print mulmod.
   (*
 mulmod = fun var : type -> Type => λ x : var (type.list (type.type_primitive type.Z) * type.list (type.type_primitive type.Z))%ctype,
          expr_let x0 := mul32 ((uint32)(x₁[[5]]), (uint32)(x₂[[5]])) in
@@ -12588,7 +12588,7 @@ Module Montgomery256.
   Import PrintingNotations.
   Set Printing Width 10000.
 
-  Print montred256.
+  Redirect "log" Print montred256.
 (*
 montred256 = fun var : type -> Type => (λ x : var (type.type_primitive type.Z * type.type_primitive type.Z)%ctype,
     expr_let x0 := 79228162514264337593543950337 *₂₅₆ (uint128)(x₁ >> 128) in
@@ -12616,7 +12616,7 @@ montred256 = fun var : type -> Type => (λ x : var (type.type_primitive type.Z *
   Import PreFancy.Notations.
   Local Notation "'RegMod'" := (Straightline.expr.Primitive (t:=type.Z) 115792089210356248762697446949407573530086143415290314195533631308867097853951).
   Local Notation "'RegPInv'" := (Straightline.expr.Primitive (t:=type.Z) 115792089210356248768974548684794254293921932838497980611635986753331132366849).
-  Print montred256_prefancy.
+  Redirect "log" Print montred256_prefancy.
   (*
    mulhl@(y0, RegPInv, $x₁);
    mulll@(y1, RegPInv, $x₁);
@@ -12653,7 +12653,7 @@ Import Barrett256 Montgomery256.
 (* Status: Code in final form is proven correct modulo admits in compiler portions. *)
 
 (* Montgomery Code : *)
-Eval cbv beta iota delta [Prod.MontRed256 Prod.Mul256 Prod.Mul256x256] in Prod.MontRed256.
+Redirect "log" Eval cbv beta iota delta [Prod.MontRed256 Prod.Mul256 Prod.Mul256x256] in Prod.MontRed256.
 (*
      = fun lo hi y t1 t2 scratch RegPInv : register =>
        MUL128LL y lo RegPInv;
@@ -12696,7 +12696,7 @@ out in the right order or reasoning about which instructions
 commute. *)
 
 (* Barrett reference code: *)
-Eval cbv beta iota delta [Prod.MulMod Prod.Mul256x256] in Prod.MulMod.
+Redirect "log" Eval cbv beta iota delta [Prod.MulMod Prod.Mul256x256] in Prod.MulMod.
 (*
      = fun x xHigh RegMuLow scratchp1 scratchp2 scratchp3 scratchp4 scratchp5 : register =>
        let q1Bottom256 := scratchp1 in
@@ -12741,7 +12741,7 @@ Eval cbv beta iota delta [Prod.MulMod Prod.Mul256x256] in Prod.MulMod.
  *)
 
 (* Barrett generated code (equivalence with reference admitted) *)
-Eval cbv beta iota delta [barrett_red256_alloc] in barrett_red256_alloc.
+Redirect "log" Eval cbv beta iota delta [barrett_red256_alloc] in barrett_red256_alloc.
 (*
      = fun (xLow xHigh RegMuLow : register) (_ : positive) (_ : register) =>
        SELM r2 RegMuLow RegZero;

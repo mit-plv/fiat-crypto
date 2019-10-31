@@ -3054,7 +3054,7 @@ Module MontgomeryReduction.
         split; intros; break_innermost_match_hyps; Z.ltb_to_lt; subst; congruence.
     Qed.
 
-    Print montred'.
+    Redirect "log" Print montred'.
     Definition montred
       := Pipeline.BoundsPipeline
            false (* subst01 *)
@@ -3110,7 +3110,7 @@ Ltac solve_rmontred := solve_rop MontgomeryReduction.rmontred_correct.
 Ltac solve_rmontred_nocache := solve_rop_nocache MontgomeryReduction.rmontred_correct.
 
 
-Time Compute
+Time Redirect "log" Compute
      (Pipeline.BoundsPipeline
         true None [64; 128]
         ltac:(let r := Reify (to_associational (weight 51 1) 5) in
@@ -3118,7 +3118,7 @@ Time Compute
                (Some (repeat (@None _) 5), tt)
                ZRange.type.base.option.None).
 
-Time Compute
+Time Redirect "log" Compute
      (Pipeline.BoundsPipeline
         true None [64; 128]
         ltac:(let r := Reify (scmul (weight 51 1) 5) in
@@ -3126,7 +3126,7 @@ Time Compute
                (None, (Some (repeat (@None _) 5), tt))
                ZRange.type.base.option.None).
 
-Compute
+Redirect "log" Compute
      (Pipeline.BoundsPipeline
         true None [64; 128]
         ltac:(let r := Reify (fun f => carry_mulmod 51 1 (2^255) [(1,19)] 5 (seq 0 5 ++ [0; 1])%list%nat f f) in
@@ -3134,7 +3134,7 @@ Compute
                (Some (repeat (@None _) 5), tt)
                ZRange.type.base.option.None).
 
-Compute
+Redirect "log" Compute
   (Pipeline.BoundsPipelineToString
      true "fiat_" "fiat_mulx_u64" []
         true None [64; 128]
@@ -3143,7 +3143,7 @@ Compute
                (Some r[0~>2^64-1], (Some r[0~>2^64-1], tt))%zrange
                (Some r[0~>2^64-1], Some r[0~>2^64-1])%zrange).
 
-Compute
+Redirect "log" Compute
   (Pipeline.BoundsPipelineToString
      true "fiat_" "fiat_addcarryx_u64" []
         true None [1; 64; 128]
@@ -3152,7 +3152,7 @@ Compute
                (Some r[0~>1], (Some r[0~>2^64-1], (Some r[0~>2^64-1], tt)))%zrange
                (Some r[0~>2^64-1], Some r[0~>1])%zrange).
 
-Compute
+Redirect "log" Compute
   (Pipeline.BoundsPipelineToString
      true "fiat_" "fiat_addcarryx_u51" []
         true None [1; 64; 128]
@@ -3161,7 +3161,7 @@ Compute
                (Some r[0~>1], (Some r[0~>2^51-1], (Some r[0~>2^51-1], tt)))%zrange
                (Some r[0~>2^51-1], Some r[0~>1])%zrange).
 
-Compute
+Redirect "log" Compute
   (Pipeline.BoundsPipelineToString
      true "fiat_" "fiat_subborrowx_u64" []
         true None [1; 64; 128]
@@ -3169,7 +3169,7 @@ Compute
               exact r)
                (Some r[0~>1], (Some r[0~>2^64-1], (Some r[0~>2^64-1], tt)))%zrange
                (Some r[0~>2^64-1], Some r[0~>1])%zrange).
-Compute
+Redirect "log" Compute
   (Pipeline.BoundsPipelineToString
      true "fiat_" "fiat_subborrowx_u51" []
         true None [1; 64; 128]
@@ -3178,7 +3178,7 @@ Compute
                (Some r[0~>1], (Some r[0~>2^51-1], (Some r[0~>2^51-1], tt)))%zrange
                (Some r[0~>2^51-1], Some r[0~>1])%zrange).
 
-Compute
+Redirect "log" Compute
   (Pipeline.BoundsPipelineToString
      true "fiat_" "fiat_cmovznz64" []
         true None [1; 64; 128]

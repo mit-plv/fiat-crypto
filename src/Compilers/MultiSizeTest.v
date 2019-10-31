@@ -265,13 +265,13 @@ Example ex1 : Unbounded := fun _ =>
   LetIn (Plus (Var a) (Var b)) (fun c =>
   Plus (Var c) (Var c)))).
 
-Eval compute in (UnboundedD ex1).
+Redirect "log" Eval compute in (UnboundedD ex1).
 
 Definition ex1b := Boundify ex1.
-Eval compute in ex1b.
+Redirect "log" Eval compute in ex1b.
 
 Definition ex1bm := Movedown (Boundify ex1).
-Eval compute in ex1bm.
+Redirect "log" Eval compute in ex1bm.
 
 Definition ex1bmc := Cancel (Movedown (Boundify ex1)).
-Eval compute in ex1bmc.
+Redirect "log" Eval compute in ex1bmc.

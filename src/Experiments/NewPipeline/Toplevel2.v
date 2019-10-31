@@ -2344,7 +2344,7 @@ Module Barrett256.
           end; lazy; try split; congruence.
   Qed.
 
-  Eval simpl in (type.for_each_lhs_of_arrow (type.interp base.interp)
+  Redirect "log" Eval simpl in (type.for_each_lhs_of_arrow (type.interp base.interp)
     (type.base (base.type.type_base base.type.Z) ->
      type.base (base.type.type_base base.type.Z) ->
      type.base (base.type.type_base base.type.Z))%ptype).
@@ -2461,7 +2461,7 @@ Module Barrett256.
   Qed.
 
   (* This expression should have NO ands in it -- search for "&'" should return nothing *)
-  Print barrett_red256.
+  Redirect "log" Print barrett_red256.
 
   (* TODO: don't rely on the C, M, and L flags *)
   Lemma barrett_red256_fancy_correct :
@@ -2797,7 +2797,7 @@ Module Barrett256.
   Import PrintingNotations.
   Set Printing Width 1000.
   Open Scope expr_scope.
-  Print barrett_red256.
+  Redirect "log" Print barrett_red256.
   (*
 barrett_red256 =  fun var : type -> Type => λ x : var (type.type_primitive type.Z * type.type_primitive type.Z)%ctype,
                 expr_let x0 := SELM (x₂, 0, 26959946667150639793205513449348445388433292963828203772348655992835) in

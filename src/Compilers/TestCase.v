@@ -204,7 +204,7 @@ Section cse.
 End cse.
 
 Definition example_expr_simplified := Eval vm_compute in Eta.ExprEta (InlineConst is_const (ANormal example_expr)).
-Compute CSE example_expr_simplified.
+Redirect "log" Compute CSE example_expr_simplified.
 
 Definition example_expr_compiled
   := Eval vm_compute in
@@ -213,7 +213,7 @@ Definition example_expr_compiled
       | None => True
       end.
 
-Compute register_reassign (InContext:=PositiveContext_nd) (ReverseContext:=PositiveContext_nd) Pos.eqb empty empty example_expr_compiled (Some 1%positive :: Some 2%positive :: None :: List.map (@Some _) (List.map Pos.of_nat (seq 3 20))).
+Redirect "log" Compute register_reassign (InContext:=PositiveContext_nd) (ReverseContext:=PositiveContext_nd) Pos.eqb empty empty example_expr_compiled (Some 1%positive :: Some 2%positive :: None :: List.map (@Some _) (List.map Pos.of_nat (seq 3 20))).
 
 Module bounds.
   Record bounded := { lower : nat ; value : nat ; upper : nat }.
@@ -262,9 +262,9 @@ Module bounds.
        | Prod _ _ => fun x => (constant_bounds _ (fst x), constant_bounds _ (snd x))
        end.
 
-  Compute example_expr_simplified.
+  Redirect "log" Compute example_expr_simplified.
   Local Open Scope zrange_scope.
-  Eval compute in
+  Redirect "log" Eval compute in
       (fun x (xpf : 0 <= x <= 10) y (ypf : 100 <= y <= 1000)
        => let (l, _, u) :=
               proj1_sig
