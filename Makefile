@@ -176,7 +176,6 @@ $(VOFILES): | coqprime coqutil bedrock2 rewriter
 $(ALLDFILES): | coqprime coqutil bedrock2 rewriter
 
 coqprime:
-	(cd $(COQPRIME_FOLDER) && $(COQBIN)coq_makefile -f _CoqProject -o Makefile)
 	$(MAKE) --no-print-directory -C $(COQPRIME_FOLDER) src/Coqprime/PrimalityTest/Zp.vo
 
 coqprime-all: coqprime
