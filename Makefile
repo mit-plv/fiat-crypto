@@ -29,6 +29,7 @@ INSTALLDEFAULTROOT := Crypto
 	bedrock2 clean-bedrock2 install-bedrock2 coqutil clean-coqutil install-coqutil \
 	install-standalone install-standalone-ocaml install-standalone-haskell \
 	util c-files rust-files \
+	deps \
 	nobigmem print-nobigmem \
 	lite only-heavy printlite \
 	some-early pre-standalone standalone standalone-haskell standalone-ocaml \
@@ -59,9 +60,6 @@ LITE_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo \
 	src/Curves/Weierstrass/Projective.vo \
 	src/Rewriter/RulesGood.vo \
 	src/Rewriter/All.vo \
-	src/Fancy/Compiler.vo \
-	src/PushButtonSynthesis/FancyMontgomeryReductionReificationCache.vo \
-	src/src/PushButtonSynthesis/WordByWordMontgomeryReificationCache.vo \
 	$(PERFTESTING_VO)
 NOBIGMEM_UNMADE_VOFILES := \
 	src/Curves/Weierstrass/AffineProofs.vo \
@@ -170,6 +168,8 @@ COQUTIL_NAME := coqutil
 # compiled via cygwin
 COQPATH?=${CURDIR_SAFE}/$(COQPRIME_FOLDER)/src:${CURDIR_SAFE}/$(BEDROCK2_SRC):${CURDIR_SAFE}/$(COQUTIL_SRC):${CURDIR_SAFE}/$(REWRITER_SRC)
 export COQPATH
+
+deps: coqprime coqutil bedrock2 rewriter
 
 $(VOFILES): | coqprime coqutil bedrock2 rewriter
 
