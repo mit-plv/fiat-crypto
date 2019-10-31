@@ -60,6 +60,8 @@ LITE_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo \
 	src/Rewriter/RulesGood.vo \
 	src/Rewriter/All.vo \
 	src/Fancy/Compiler.vo \
+	src/PushButtonSynthesis/FancyMontgomeryReductionReificationCache.vo \
+	src/src/PushButtonSynthesis/WordByWordMontgomeryReificationCache.vo \
 	$(PERFTESTING_VO)
 NOBIGMEM_UNMADE_VOFILES := \
 	src/Curves/Weierstrass/AffineProofs.vo \
