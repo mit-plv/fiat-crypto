@@ -457,10 +457,15 @@ perf-extraction: $(PERF_SHLOGS) \
 
 perf: perf-extraction perf-vos
 
+PERF_PRE_TXTS := perf-old-vm-times perf-new-vm-times perf-new-extraction-times perf-old-cbv-times \
+	perf-new-extraction-over-old-vm perf-new-vm-over-old-vm perf-old-vm-over-old-vm \
+	perf-new-extraction-over-new-extraction perf-new-vm-over-new-extraction perf-old-vm-over-new-extraction
+PERF_TXTS := $(addsuffix .txt,$(PERF_PRE_TXTS) \
+	$(foreach kind,UnsaturatedSolinas WordByWordMontgomery, \
+	$(foreach bitwidth,32 64, \
+	$(addsuffix --only-$(kind)-x$(bitwidth),$(PERF_PRE_TXTS)))))
+
 .PHONY: perf-csv
-PERF_TXTS := perf-old-vm-times.txt perf-new-vm-times.txt perf-new-extraction-times.txt perf-old-cbv-times.txt \
-	perf-new-extraction-over-old-vm.txt perf-new-vm-over-old-vm.txt perf-old-vm-over-old-vm.txt \
-	perf-new-extraction-over-new-extraction.txt perf-new-vm-over-new-extraction.txt perf-old-vm-over-new-extraction.txt
 perf-csv: perf.csv perf-graph.csv $(PERF_TXTS)
 
 perf.csv::
