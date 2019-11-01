@@ -96,8 +96,9 @@ POSSIBLE_COLUMNS = ('perf_old_vm_times',
                     'perf_new_vm_over_new_extraction',
                     'perf_old_vm_over_new_extraction')
 
-def lines_to_rows(lines, for_graph=False, real_or_user='real', **kwargs):
+def lines_to_rows(lines, for_graph=False, real_or_user='real', only=None, **kwargs):
     def key_is_good(key):
+        if only is not None and only.replace('-', ' ').replace('_', ' ') not in key: return False
         if 'lazy' in key or '(1)' in key or 'native_compute' in key: return False
         if 'Pipeline' in key and 'NBE' not in key: return False
         if 'Pipeline' in key and 'cbv' in key: return False
@@ -183,12 +184,19 @@ if __name__ == '__main__':
         outfname = fnames[i+1]
         del fnames[i+1]
         del fnames[i]
+    only = None
+    for i, fname in enumerate(fnames):
+        if '--only-' in fname and fname.startswith('--'):
+            if only is not None:
+                raise Exception('Only one argument can start with -- and contain --only-')
+            fnames[i], only = fname.split('--only-')
     kwargs = dict([('for_graph', False)] + [(i, False) for i in POSSIBLE_COLUMNS])
     for key in kwargs.keys():
         arg = '--' + key.replace('_', '-')
         if arg in fnames:
             kwargs[key] = True
             del fnames[fnames.index(arg)]
+    kwargs['only'] = only
     txt = False
     if '--txt' in fnames:
         txt = True
