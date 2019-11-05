@@ -96,6 +96,10 @@ Module Correctness.
                COperationSpecifications.Solinas.add_correct
                  wt n m tight_bounds loose_bounds (API.Interp solinas_add_impl)).
 
+    (* TODO: annoyingly, COperationSpeficiations are in terms of *functions*,
+       not output, so it's hard to state this as anything other than an
+       equivalence. *)
+
     Lemma bedrock2_add_correct
           xs ys x_loc y_loc
           (xname yname retname nextname : @Syntax.varname (@Semantics.syntax semantics))
@@ -112,7 +116,7 @@ Module Correctness.
         (fun tr' m' bedrock_ret =>
            tr = tr' /\
            sep
-             (fun m' =>
+             (fun m' => 
                 exists sum_loc,
                   bedrock_ret = [sum_loc] /\
                   Compiler.zarray sum_loc (API.Interp solinas_add_impl xs ys) m')

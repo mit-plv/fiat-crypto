@@ -55,9 +55,8 @@ Module Compiler.
     Fixpoint base_ltype (t : base.type) : Type :=
       match t with
       | base.type.prod a b => base_ltype a * base_ltype b
-      | base.type.list (base.type.type_base base.type.Z) =>
-        Syntax.expr.expr (* N.B. for lists, represents the list's *location in memory* *)
-      | _ => Syntax.varname
+      | _ => Syntax.varname (* N.B. for lists, the value of the variable
+                               represents the list's *location in memory* *)
       end.
     Fixpoint ltype (t : type.type base.type) : Type :=
       match t with
@@ -84,7 +83,6 @@ Module Compiler.
     Fixpoint rtype_of_ltype {t} : base_ltype t -> base_rtype t :=
       match t with
       | base.type.prod a b => fun x => (rtype_of_ltype (fst x), rtype_of_ltype (snd x))
-      | base.type.list (base.type.type_base base.type.Z) => fun loc => loc
       | base.type.list _ | base.type.option _ | base.type.unit
       | base.type.type_base _ => Syntax.expr.var
       end.
@@ -112,9 +110,6 @@ Module Compiler.
         let step1 := translate_lhs a startname in
         let step2 := translate_lhs b (fst step1) in
         (fst step2, (snd step1, snd step2))
-      (* this should not get called on lists of Zs -- return garbage *)
-      | base.type.list (base.type.type_base base.type.Z) =>
-        (startname, Syntax.expr.literal 0)
       (* everything else is single-variable assignment *)
       | base.type.list _ | base.type.option _ | base.type.unit
       | base.type.type_base _ => (next_varname startname, startname)
@@ -416,12 +411,14 @@ Module Compiler.
           (type.base (base.type.list (base.type.type_base base.type.Z)))
           (type.base (base.type.list (base.type.type_base base.type.Z)))
           (expr.App type_Z _ (expr.Ident _ (ident.cons _)) x) l =>
-        fun argnames (retloc : Syntax.expr.expr) =>
+        fun argnames (retloc : Syntax.varname) =>
           (* retloc is the address at which to store the head of the list *)
-          let cmdx := (Syntax.cmd.store Syntax.access_size.word retloc (translate_inner_expr true x)) in
-          let next_retloc := (Syntax.expr.op Syntax.bopname.add retloc (Syntax.expr.literal 1)) in
+          let cmdx := (Syntax.cmd.store Syntax.access_size.word
+                                        (Syntax.expr.var retloc) (translate_inner_expr true x)) in
+          let next_retloc := (Syntax.expr.op Syntax.bopname.add
+                                             (Syntax.expr.var retloc) (Syntax.expr.literal 1)) in
           let set_next_retloc := (Syntax.cmd.set nextname next_retloc) in
-          let recl := translate_expr l (next_varname nextname) argnames (Syntax.expr.var nextname) in
+          let recl := translate_expr l (next_varname nextname) argnames nextname in
           (fst recl, Syntax.cmd.seq (Syntax.cmd.seq cmdx set_next_retloc) (snd recl))
       | (expr.Ident _ (ident.nil (base.type.type_base base.type.Z))) =>
         fun _ _ => (nextname, Syntax.cmd.skip)
@@ -449,17 +446,43 @@ Module Compiler.
     Context {p : parameters} {p_ok : @ok p }.
 
     (* TODO : fill these in *)
-    Axiom valid_carry_expr : forall {t}, @API.expr (fun _ => unit) t -> bool.
-    Axiom valid_inner_expr : forall {t}, @API.expr (fun _ => unit) t -> bool.
+    Axiom valid_carry_expr : forall {t}, @API.expr (fun _ => unit) t -> Prop.
+    Axiom valid_inner_expr : forall {t}, @API.expr (fun _ => unit) t -> Prop.
 
+    (* Inductive version: *)
+    Inductive valid_expr : forall {t}, @API.expr (fun _ => unit) t -> Prop :=
+    | valid_LetIn_carry :
+        forall {b} x f,
+          valid_carry_expr x -> valid_expr (f tt) ->
+          valid_expr (expr.LetIn (A:=type_ZZ) (B:=type.base b) x f)
+    | valid_LetIn :
+        forall {a b} x f,
+          valid_inner_expr x -> valid_expr (f tt) ->
+          valid_expr (expr.LetIn (A:=type.base a) (B:=type.base b) x f)
+    | valid_cons :
+        forall x l,
+          valid_inner_expr x -> valid_expr l ->
+          valid_expr
+            (expr.App
+               (expr.App
+                  (expr.Ident
+                     (ident.cons (t:=base.type.type_base base.type.Z))) x) l)
+    | valid_nil :
+        valid_expr (expr.Ident (ident.nil (t:=base.type.type_base base.type.Z)))
+    | valid_Abs :
+        forall {s d} f, valid_expr (f tt) -> valid_expr (expr.Abs (s:=s) (d:=d) f)
+    | valid_inner : forall {t} e, valid_inner_expr e -> valid_expr (t:=t) e
+    .
+
+    (* Fixpoint version:
     (* states whether the expression is acceptable input for translate_expr *)
     Fixpoint valid_expr {t} (e : @API.expr (fun _ => unit) t) : bool :=
       match e with
       (* let-in with a carry expression *)
-      | expr.LetIn type_ZZ t2 x f =>
+      | expr.LetIn type_ZZ (type.base t2) x f =>
         (valid_carry_expr x && valid_expr (f tt))
       (* other let-in *)
-      | expr.LetIn (type.base t1) t2 x f =>
+      | expr.LetIn (type.base t1) (type.base t2) x f =>
         (valid_inner_expr x && valid_expr (f tt))
       (* list-of-Z cons *)
       | expr.App
@@ -478,7 +501,7 @@ Module Compiler.
       | expr.Abs s d f =>
         valid_expr (f tt)
       | _ => valid_inner_expr e
-      end.
+      end. *)
 
     (* Convert expressions from ltype to the flat list format expected by
        bedrock2 for function input/output *)
@@ -488,12 +511,6 @@ Module Compiler.
         fun x : base_ltype a * base_ltype b =>
           Option.bind (flatten_names (fst x))
                       (fun lx => option_map (app lx) (flatten_names (snd x)))
-      | base.type.list (base.type.type_base base.type.Z) =>
-        fun x : Syntax.expr.expr =>
-          match x with
-          | Syntax.expr.var n => Some [n]
-          | _ => None (* fail if list location is any expr other than a variable *)
-          end
       | _ => fun x : Syntax.varname => Some [x]
       end.
 
@@ -526,6 +543,41 @@ Module Compiler.
       let size := Interface.word.of_Z word_size_in_bytes in
       Array.array (Scalars.truncated_scalar Syntax.access_size.word) size start xs mem.
 
+    (* states that a fiat-crypto value is equivalent to the return values of a bedrock function *)
+    Fixpoint equivalent {t}
+      : base.interp t -> (* fiat-crypto return value *)
+        base_ltype t -> (* bedrock2 local variables in which return values are stored *)
+        Interface.map.rep (map:=Semantics.locals) -> (* bedrock2 local variables *)
+        Interface.map.rep (map:=Semantics.mem) -> (* bedrock2 main memory *)
+        Prop :=
+      match t with
+      (* product case *)
+      | base.type.prod a b =>
+        fun (x : base.interp a * base.interp b)
+            (y : base_ltype a * base_ltype b)
+            locals mem =>
+            sep (equivalent (fst x) (fst y) locals)
+                (equivalent (snd x) (snd y) locals) mem
+      (* list case -- only list Z allowed *)
+      | base.type.list (base.type.type_base base.type.Z) =>
+        fun (x : list Z)
+            (y : Syntax.varname)
+            locals mem =>
+          exists loc,
+            Interface.map.get locals y = Some loc
+            /\ zarray loc x mem
+      (* base type case -- only Z allowed *)
+      | base.type.type_base base.type.Z =>
+        fun (x : Z)
+            (y : Syntax.varname)
+            locals mem =>
+          exists w,
+            Interface.map.get locals y = Some w
+            /\ Interface.word.unsigned w = x
+      | _ => fun _ _ _ _ => False
+      end.
+
+    (*
     (* states that a fiat-crypto value is equivalent to a bedrock value *)
     Fixpoint equivalent {t}
       : base.interp t -> list Interface.word.rep ->
@@ -557,9 +609,9 @@ Module Compiler.
             y = w :: nil /\
             Interface.word.unsigned w = x
       | _ => fun _ _ _ => False
-      end.
+      end. *)
 
-    (* wrapper for equivalent that deals with for_each_lhs_of_arrow *)
+    (*    (* wrapper for equivalent that deals with for_each_lhs_of_arrow *)
     Fixpoint args_equivalent {t} :
       type.for_each_lhs_of_arrow (type.interp base.interp) t
       -> list Interface.word.rep
@@ -578,11 +630,278 @@ Module Compiler.
                 (args_equivalent (snd args) w2) mem
       | type.arrow (type.arrow _ _) _ =>
         fun _ _ _ => False (* disallow function arguments *)
-      end.
+      end. *)
 
-    Lemma translate_expr_correct {t} (e : API.Expr t) :
+    (* TODO : move *)
+    Require Import bedrock2.Map.SeparationLogic bedrock2.ProgramLogic.
+
+    Ltac cleanup :=
+      repeat first [ progress subst
+                   | progress cbn [fst snd eq_rect] in *
+                   | match goal with H : ?x = ?x |- _ => clear H end ].
+
+    (* Cheat sheet on wf:
+       Wf.Compilers.expr.wf = inductive stating two exprs match
+       Wf.Compilers.expr.Wf = proof that for any Expr, giving it two different
+         vars results in exprs that match  *)
+    Import Rewriter.Language.Wf.Compilers.expr.
+
+    Require Import Crypto.Util.Tactics.DestructHead.
+    Require Import Crypto.Util.Tactics.BreakMatch.
+    Import Rewriter.Language.Inversion.Compilers.
+    (* borrowed from Fancy/Compiler.v *)
+    Ltac hammer_wf :=
+      repeat first [ progress subst
+                   | progress cbn [eq_rect fst snd projT1 projT2] in *
+                   | progress destruct_head'_False
+                   | progress inversion_wf_one_constr
+                   | progress expr.invert_subst
+                   | progress destruct_head'_and
+                   | progress destruct_head'_sig
+                   | progress expr.inversion_expr
+                   | break_innermost_match_hyps_step 
+                   | match goal with
+                     | H : existT _ _ _ = existT _ _ _ |- _ =>
+                       apply Eqdep_dec.inj_pair2_eq_dec in H;
+                       [ | solve [ apply type.type_eq_Decidable] ]
+                     end ]; cleanup.
+
+    
+    Ltac hammer :=
+      repeat first [
+                    progress subst
+                             (*
+                  | progress inversion_sigma
+                  | progress inversion_option
+                  | progress inversion_prod *)
+                  | progress cbv [id]
+                  | progress cbn [eq_rect projT1 projT2 expr.interp ident.interp Coercions.base Coercions.type_base interp option_map] in *
+                  | progress cbn [invert_expr.invert_Ident] in * (* N.B. Must be above [break_innermost_match] for proofs below to work *)
+                  | progress Language.Inversion.Compilers.type_beq_to_eq
+                  | progress Language.Inversion.Compilers.rewrite_type_transport_correct
+                  | progress HProp.eliminate_hprop_eq
+                  | progress break_innermost_match_hyps
+                  | progress break_innermost_match
+                  | progress inversion_type
+                  | progress expr.invert_subst
+                  | progress Language.Inversion.Compilers.expr.inversion_expr
+                  | solve [auto]
+                  | contradiction
+             ].
+
+    Lemma translate_carries_Some {t : base.type}
+          G x1 x2 x3 nextname :
+      wf3 (var2:=API.interp_type) G x1 x2 x3 ->
+      valid_carry_expr x1 ->
+      exists cmdx,
+        translate_carries (t:=type.base t) x3 (snd (translate_lhs t nextname)) = Some cmdx.
+    Admitted.
+
+    (* valid inner expressions can't possibly be valid carry expressions *)
+    Lemma translate_carries_None {t : base.type}
+          G x1 x2 x3 nextname :
+      wf3 (var2:=API.interp_type) G x1 x2 x3 ->
+      valid_inner_expr x1 ->
+      translate_carries (t:=type.base t) x3 (snd (translate_lhs t nextname)) = None.
+    Admitted.
+
+    (* N.B. technically, x2 and f2 are not needed in the following lemmas, it just makes things easier *)
+
+    Lemma translate_expr_carry {t1 t2 : base.type}
+          G x1 x2 x3 f1 f2 f3 nextname argnames retnames cmdx:
+      wf3 G x1 x2 x3 ->
+      (forall v1 v2 v3,
+          wf3 (existT (fun t => (unit * API.interp_type t * ltype t)%type) (type.base t1) (v1, v2, v3) :: G)
+              (f1 v1) (f2 v2) (f3 v3)) ->
+      (* valid_carry_expr x1 -> valid_expr (f1 tt) -> *)
+      let gr := translate_lhs t1 nextname in
+      let recf := translate_expr (f3 (snd gr)) (fst gr) argnames retnames in 
+      translate_carries (t:=type.base t1) x3 (snd gr) = Some cmdx ->
+      translate_expr (expr.LetIn (A:=type.base t1) (B:=type.base t2) x3 f3) nextname argnames retnames =
+      (fst recf, Syntax.cmd.seq cmdx (snd recf)).
+    Proof.
+      cbv zeta; intros. cbn [translate_expr].
+      break_innermost_match; congruence.
+    Qed.
+    (*
+    Fixpoint translate_expr {t} (e : @API.expr ltype t)
+             (nextname : Syntax.varname)
+      : type.for_each_lhs_of_arrow ltype t (* argument names *)
+        -> base_ltype (type.final_codomain t) (* return value names *)
+        -> Syntax.varname * Syntax.cmd.cmd :=
+      match e with
+      | expr.LetIn (type.base t1) (type.base t2) x f =>
+        fun argnames retnames  =>
+          let gr := translate_lhs t1 nextname in
+          let cmdx :=
+              match translate_carries x (snd gr) with
+              | Some cmdx => cmdx
+              | None => assign (snd gr) (translate_inner_expr true x)
+              end in
+          let recf := translate_expr (f (snd gr)) (fst gr) argnames retnames in
+          (fst recf, Syntax.cmd.seq cmdx (snd recf))
+      | expr.App
+          (type.base (base.type.list (base.type.type_base base.type.Z)))
+          (type.base (base.type.list (base.type.type_base base.type.Z)))
+          (expr.App type_Z _ (expr.Ident _ (ident.cons _)) x) l =>
+        fun argnames (retloc : Syntax.expr.expr) =>
+          (* retloc is the address at which to store the head of the list *)
+          let cmdx := (Syntax.cmd.store Syntax.access_size.word retloc (translate_inner_expr true x)) in
+          let next_retloc := (Syntax.expr.op Syntax.bopname.add retloc (Syntax.expr.literal 1)) in
+          let set_next_retloc := (Syntax.cmd.set nextname next_retloc) in
+          let recl := translate_expr l (next_varname nextname) argnames (Syntax.expr.var nextname) in
+          (fst recl, Syntax.cmd.seq (Syntax.cmd.seq cmdx set_next_retloc) (snd recl))
+      | (expr.Ident _ (ident.nil (base.type.type_base base.type.Z))) =>
+        fun _ _ => (nextname, Syntax.cmd.skip)
+      | expr.App _ (type.base _) f x =>
+        fun _ retnames =>
+          let v := translate_inner_expr true (expr.App f x) in
+          (nextname, assign retnames v)
+      | expr.Ident (type.base _) x =>
+        fun _ retnames =>
+          let v := translate_inner_expr true (expr.Ident x) in
+          (nextname, assign retnames v)
+      | expr.Var (type.base _) x =>
+        fun _ retnames =>
+          let v := translate_inner_expr true (expr.Var x) in
+          (nextname, assign retnames v)
+      | expr.Abs (type.base s) d f =>
+        fun (argnames : base_ltype s * type.for_each_lhs_of_arrow _ d)
+            (retnames : base_ltype (type.final_codomain d)) =>
+          translate_expr (f (fst argnames)) nextname (snd argnames) retnames
+      | _ => fun _ _ => (nextname, Syntax.cmd.skip)
+      end.
+*)
+
+    Lemma translate_carries_correct {t}
+          (* three exprs, representing the same Expr with different vars *)
+          (e1 : @API.expr (fun _ => unit) (type.base t))
+          (e2 : @API.expr API.interp_type (type.base t))
+          (e3 : @API.expr ltype (type.base t)) :
+      (* e1 is a valid input to translate_carries_correct *)
+      valid_carry_expr e1 ->
+      forall G retnames cmdx,
+        wf3 G e1 e2 e3 ->
+        translate_carries e3 retnames = Some cmdx ->
+        let ret : base.interp t := API.interp e2 in
+        forall (tr : Semantics.trace)
+               (env mem locals : Interface.map.rep)
+               (mc : MetricLogging.MetricLog)
+               (R : Interface.map.rep -> Prop),
+          Semantics.exec
+            env cmdx tr mem locals mc
+            (fun tr' mem' locals' mc' =>
+               tr = tr' /\ sep (equivalent ret retnames locals') R mem').
+    Admitted.
+
+    Lemma translate_inner_expr_correct {t}
+          (* three exprs, representing the same Expr with different vars *)
+          (e1 : @API.expr (fun _ => unit) (type.base t))
+          (e2 : @API.expr API.interp_type (type.base t))
+          (e3 : @API.expr ltype (type.base t)) :
+      (* e1 is a valid input to translate_carries_correct *)
+      valid_inner_expr e1 ->
+      forall G retnames,
+        wf3 G e1 e2 e3 ->
+        let ret : base.interp t := API.interp e2 in
+        forall (tr : Semantics.trace)
+               (env mem locals : Interface.map.rep)
+               (mc : MetricLogging.MetricLog)
+               (R : Interface.map.rep -> Prop),
+          Semantics.exec
+            env (translate_inner_expr e2) tr mem locals mc
+            (fun tr' mem' locals' mc' =>
+               tr = tr' /\ sep (equivalent ret retnames locals') R mem').
+    Admitted.
+  Semantics.exec.exec env (assign (snd (translate_lhs a nextname)) (translate_inner_expr true x3)) tr mem locals
+    mc ?mid
+
+    Lemma translate_expr_correct' {t}
+          (* three exprs, representing the same Expr with different vars *)
+          (e1 : @API.expr (fun _ => unit) t)
+          (e2 : @API.expr API.interp_type t)
+          (e3 : @API.expr ltype t)
+          (* e1 is valid input to translate_expr *)
+          (e1_valid : valid_expr e1)
+          (* context list *)
+          (G : list _) :
+      (* exprs are all related *)
+      wf3 G e1 e2 e3 ->
+      (* putting the exists way up here makes the IH less annoying *)
+      forall (args : type.for_each_lhs_of_arrow (type.interp base.interp) t)
+             (argnames : type.for_each_lhs_of_arrow ltype t)
+             (retnames : base_ltype (type.final_codomain t))
+             (nextname : Syntax.varname),
+        (* bedrock_e := translation of e as bedrock2 function body *)
+        let bedrock_e : Syntax.cmd.cmd :=
+            snd (translate_expr e3 nextname argnames retnames) in
+        (* ret := result of applying e to args *)
+        let ret : base.interp (type.final_codomain t) :=
+            type.app_curried (API.interp e2) args in
+        forall (tr : Semantics.trace)
+               (env mem locals : Interface.map.rep)
+               (mc : MetricLogging.MetricLog)
+               (R : Interface.map.rep -> Prop),
+          (* executing bedrock_e is equivalent to interpreting e *)
+          (* TODO: do we need to say that the function doesn't overwrite old locals? *)
+          Semantics.exec
+            env bedrock_e tr mem locals mc
+            (fun tr' mem' locals' mc' =>
+               tr = tr' /\ sep (equivalent ret retnames locals') R mem').
+    Proof.
+      revert e2 e3 G.
+      induction e1_valid; inversion 1; cbv zeta in *; intros.
+      all:hammer_wf. (* get rid of the wf nonsense *)
+
+      { (* carry let-in *)
+        (* posit the existence of a return value from translate_carries and use
+           it to rewrite translate_expr *)
+        match goal with H : valid_carry_expr _ |- _ =>
+                        pose proof H;
+                        eapply translate_carries_Some in H;
+                          [ destruct H | eassumption .. ]
+        end.
+        erewrite translate_expr_carry by eassumption.
+        cleanup.
+
+        (* use exec.seq and translate_carries_correct to take a bedrock2 step *)
+        eapply Semantics.exec.seq;
+          [ eapply translate_carries_correct with (R0:=R); eassumption | ].
+
+        (* simplify fiat-crypto step *)
+        intros; cbn [expr.interp type.app_curried].
+        cbv [Rewriter.Util.LetIn.Let_In]. cleanup.
+
+        (* use inductive hypothesis *)
+        destruct_head'_and. subst.
+        eapply IHe1_valid; eauto. }
+      { (* non-carry let-in *)
+        (* simplify one translation step *)
+        cbn [translate_expr].
+        erewrite translate_carries_None by eassumption.
+        cleanup.
+
+        eapply Semantics.exec.seq.
+        
+        (* need proof saying if valid_inner_expr, then translate_carries returns None *)
+        erewrite translate_expr_carry by eassumption.
+        cleanup.
+        eapply Semantics.exec.seq;
+          [ eapply translate_carries_correct with (R0:=R); eassumption | ].
+        intros.
+        cbn [expr.interp type.app_curried].
+        cbv [Rewriter.Util.LetIn.Let_In].
+        cleanup.
+
+        destruct_head'_and. subst.
+        eapply IHe1_valid; eauto. }
+        
+        
+    Qed.
+
+    Lemma translate_expr_correct {t} (* (e : API.Expr t) *) :
       (* e is valid input to translate_expr *)
-      valid_expr (e _) = true ->
+      forall e : API.Expr t, valid_expr (e _) ->
       forall (args : type.for_each_lhs_of_arrow (type.interp base.interp) t)
              (bedrock_args : list Interface.word.rep)
              (argnames : type.for_each_lhs_of_arrow ltype t)
@@ -616,6 +935,13 @@ Module Compiler.
             (fun tr' m' bedrock_ret =>
                tr = tr' /\ sep (equivalent ret bedrock_ret) R m').
     Proof.
-    Admitted.
+      induction 1; cbv zeta in *; intros.
+      { eauto. }
+      { repeat (straightline || (straightline_call; [solve[ecancel_assumption]|])).
+        eauto. }
+      { repeat (straightline || (straightline_call; [solve[ecancel_assumption]|])).
+        eauto. }
+        ; []; eauto. }.
+    Qed.
   End Proofs.
 End Compiler.
