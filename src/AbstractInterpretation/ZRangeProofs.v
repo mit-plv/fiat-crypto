@@ -538,7 +538,7 @@ Module Compilers.
                  | _ => idtac
                  end.
             all: cbn [type.related_hetero ZRange.ident.option.interp ident.interp respectful_hetero type.interp ZRange.type.base.option.interp ZRange.type.base.interp base.interp base.base_interp ZRange.type.base.option.Some ZRange.ident.option.of_literal].
-            all: cbv [ident.cast2 ident.literal prod_rect_nodep ident.eagerly] in *.
+            all: cbv [ident.cast2 ident.literal prod_rect_nodep prod_rect ident.eagerly] in *.
             all: change (@zrange_rect_nodep) with (fun T => @zrange_rect (fun _ => T)) in *.
             all: change (@Thunked.nat_rect) with (fun P P0 => @nat_rect (fun _ => P) (P0 Datatypes.tt)) in *.
             all: change (@nat_rect_arrow_nodep) with (fun P Q => @nat_rect (fun _ => P -> Q)).
