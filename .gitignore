@@ -136,7 +136,7 @@ src/ExtractionOCaml/*.cmx
 src/ExtractionOCaml/*.ml
 src/ExtractionOCaml/*.o
 src/Rewriter/PerfTesting/Specific/generated/*.v
-src/Rewriter/PerfTesting/Specific/generated/*.log
+# src/Rewriter/PerfTesting/Specific/generated/*.log
 src/Rewriter/PerfTesting/Specific/generated/*.sh
 src/Rewriter/PerfTesting/Specific/generated/primes.mk
 

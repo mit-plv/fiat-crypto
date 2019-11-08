@@ -30,7 +30,7 @@ Local Open Scope option_scope.
 Global Open Scope Z_scope.
 
 (* replace this with vm_compute and the next fail with idtac to enable the precomputed versions *)
-Declare Reduction precompute := cbv iota.
+Declare Reduction precompute := vm_compute. (* cbv iota. *)
 Ltac check_precomputed_enabled :=
   let v := (eval precompute in (id true)) in
   lazymatch v with
