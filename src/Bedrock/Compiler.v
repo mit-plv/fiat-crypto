@@ -15,7 +15,7 @@ Import API.Compilers.
 Class parameters :=
   {
     semantics :> Semantics.parameters;
-    next_varname : Syntax.varname -> Syntax.varname;
+    varname_gen : nat -> Syntax.varname;
     error : Syntax.expr.expr;
     word_size_in_bytes : Z;
     maxint := 2 ^ Semantics.width;
@@ -25,6 +25,8 @@ Class ok {p:parameters} :=
   {
     semantics_ok : Semantics.parameters_ok semantics;
     word_size_in_bytes_ok : 0 < word_size_in_bytes;
+    varname_gen_unique :
+      forall i j : nat, varname_gen i = varname_gen j <-> i = j;
   }.
 
 (* Notations for commonly-used types *)
@@ -103,17 +105,17 @@ Module Compiler.
 
     (* Used to generate left-hand-side of assignments, given the next variable
        name to use. Returns the new next name to use, and the left-hand-side. *)
-    Fixpoint translate_lhs (t : base.type) (startname : Syntax.varname)
-      : Syntax.varname * base_ltype t :=
+    Fixpoint translate_lhs (t : base.type) (nextn : nat)
+      : nat * base_ltype t :=
       match t with
       (* prod is a special case -- assign to multiple variables *)
       | base.type.prod a b =>
-        let step1 := translate_lhs a startname in
+        let step1 := translate_lhs a nextn in
         let step2 := translate_lhs b (fst step1) in
         (fst step2, (snd step1, snd step2))
       (* everything else is single-variable assignment *)
       | base.type.list _ | base.type.option _ | base.type.unit
-      | base.type.type_base _ => (next_varname startname, startname)
+      | base.type.type_base _ => (S nextn, varname_gen nextn)
       end.
 
     Fixpoint assign {t : base.type}
@@ -389,15 +391,14 @@ Module Compiler.
       | _ => fun _ => None
       end.
 
-    Fixpoint translate_expr {t} (e : @API.expr ltype t)
-             (nextname : Syntax.varname)
+    Fixpoint translate_expr {t} (e : @API.expr ltype t) (nextn : nat)
       : type.for_each_lhs_of_arrow ltype t (* argument names *)
         -> base_ltype (type.final_codomain t) (* return value names *)
-        -> Syntax.varname * Syntax.cmd.cmd :=
+        -> nat * Syntax.cmd.cmd :=
       match e with
       | expr.LetIn (type.base t1) (type.base t2) x f =>
         fun argnames retnames  =>
-          let gr := translate_lhs t1 nextname in
+          let gr := translate_lhs t1 nextn in
           let cmdx :=
               match translate_carries x (snd gr) with
               | Some cmdx => cmdx
@@ -414,28 +415,28 @@ Module Compiler.
                                         (Syntax.expr.var retloc) (translate_inner_expr true x)) in
           let next_retloc := (Syntax.expr.op Syntax.bopname.add
                                              (Syntax.expr.var retloc) (Syntax.expr.literal 1)) in
-          let set_next_retloc := (Syntax.cmd.set nextname next_retloc) in
-          let recl := translate_expr l (next_varname nextname) argnames nextname in
+          let set_next_retloc := (Syntax.cmd.set (varname_gen nextn) next_retloc) in
+          let recl := translate_expr l (S nextn) argnames (varname_gen nextn) in
           (fst recl, Syntax.cmd.seq (Syntax.cmd.seq cmdx set_next_retloc) (snd recl))
       | (expr.Ident _ (ident.nil (base.type.type_base base.type.Z))) =>
-        fun _ _ => (nextname, Syntax.cmd.skip)
+        fun _ _ => (nextn, Syntax.cmd.skip)
       | expr.App _ (type.base _) f x =>
         fun _ retnames =>
           let v := translate_inner_expr true (expr.App f x) in
-          (nextname, assign retnames v)
+          (nextn, assign retnames v)
       | expr.Ident (type.base _) x =>
         fun _ retnames =>
           let v := translate_inner_expr true (expr.Ident x) in
-          (nextname, assign retnames v)
+          (nextn, assign retnames v)
       | expr.Var (type.base _) x =>
         fun _ retnames =>
           let v := translate_inner_expr true (expr.Var x) in
-          (nextname, assign retnames v)
+          (nextn, assign retnames v)
       | expr.Abs (type.base s) d f =>
         fun (argnames : base_ltype s * type.for_each_lhs_of_arrow _ d)
             (retnames : base_ltype (type.final_codomain d)) =>
-          translate_expr (f (fst argnames)) nextname (snd argnames) retnames
-      | _ => fun _ _ => (nextname, Syntax.cmd.skip)
+          translate_expr (f (fst argnames)) nextn (snd argnames) retnames
+      | _ => fun _ _ => (nextn, Syntax.cmd.skip)
       end.
   End Compiler.
 
@@ -467,8 +468,10 @@ Module Compiler.
     | valid_nil :
         valid_expr (expr.Ident (ident.nil (t:=base.type.type_base base.type.Z)))
     | valid_Abs :
-        forall {s d} f, valid_expr (f tt) -> valid_expr (expr.Abs (s:=s) (d:=d) f)
-    | valid_inner : forall {t} e, valid_inner_expr true e -> valid_expr (t:=t) e
+        forall {s d} f, valid_expr (f tt) ->
+                        valid_expr (expr.Abs (s:=type.base s) (d:=d) f)
+    | valid_inner : forall {t} e,
+        valid_inner_expr true e -> valid_expr (t:=type.base t) e
     .
 
     (* Fixpoint version:
@@ -692,34 +695,34 @@ Module Compiler.
              ].
 
     Lemma translate_carries_Some {t : base.type}
-          G x1 x2 x3 nextname :
+          G x1 x2 x3 nextn :
       wf3 (var2:=API.interp_type) G x1 x2 x3 ->
       valid_carry_expr x1 ->
       exists cmdx,
-        translate_carries (t:=type.base t) x3 (snd (translate_lhs t nextname)) = Some cmdx.
+        translate_carries (t:=type.base t) x3 (snd (translate_lhs t nextn)) = Some cmdx.
     Admitted.
 
     (* valid inner expressions can't possibly be valid carry expressions *)
     Lemma translate_carries_None {t : base.type}
-          G x1 x2 x3 nextname :
+          G x1 x2 x3 nextn :
       wf3 (var2:=API.interp_type) G x1 x2 x3 ->
       valid_inner_expr true x1 ->
-      translate_carries (t:=type.base t) x3 (snd (translate_lhs t nextname)) = None.
+      translate_carries (t:=type.base t) x3 (snd (translate_lhs t nextn)) = None.
     Admitted.
 
     (* N.B. technically, x2 and f2 are not needed in the following lemmas, it just makes things easier *)
 
     Lemma translate_expr_carry {t1 t2 : base.type}
-          G x1 x2 x3 f1 f2 f3 nextname argnames retnames cmdx:
+          G x1 x2 x3 f1 f2 f3 nextn argnames retnames cmdx:
       wf3 G x1 x2 x3 ->
       (forall v1 v2 v3,
           wf3 (existT (fun t => (unit * API.interp_type t * ltype t)%type) (type.base t1) (v1, v2, v3) :: G)
               (f1 v1) (f2 v2) (f3 v3)) ->
       (* valid_carry_expr x1 -> valid_expr (f1 tt) -> *)
-      let gr := translate_lhs t1 nextname in
+      let gr := translate_lhs t1 nextn in
       let recf := translate_expr (f3 (snd gr)) (fst gr) argnames retnames in 
       translate_carries (t:=type.base t1) x3 (snd gr) = Some cmdx ->
-      translate_expr (expr.LetIn (A:=type.base t1) (B:=type.base t2) x3 f3) nextname argnames retnames =
+      translate_expr (expr.LetIn (A:=type.base t1) (B:=type.base t2) x3 f3) nextn argnames retnames =
       (fst recf, Syntax.cmd.seq cmdx (snd recf)).
     Proof.
       cbv zeta; intros. cbn [translate_expr].
@@ -727,14 +730,14 @@ Module Compiler.
     Qed.
     (*
     Fixpoint translate_expr {t} (e : @API.expr ltype t)
-             (nextname : Syntax.varname)
+             (nextn : Syntax.varname)
       : type.for_each_lhs_of_arrow ltype t (* argument names *)
         -> base_ltype (type.final_codomain t) (* return value names *)
         -> Syntax.varname * Syntax.cmd.cmd :=
       match e with
       | expr.LetIn (type.base t1) (type.base t2) x f =>
         fun argnames retnames  =>
-          let gr := translate_lhs t1 nextname in
+          let gr := translate_lhs t1 nextn in
           let cmdx :=
               match translate_carries x (snd gr) with
               | Some cmdx => cmdx
@@ -750,30 +753,178 @@ Module Compiler.
           (* retloc is the address at which to store the head of the list *)
           let cmdx := (Syntax.cmd.store Syntax.access_size.word retloc (translate_inner_expr true x)) in
           let next_retloc := (Syntax.expr.op Syntax.bopname.add retloc (Syntax.expr.literal 1)) in
-          let set_next_retloc := (Syntax.cmd.set nextname next_retloc) in
-          let recl := translate_expr l (next_varname nextname) argnames (Syntax.expr.var nextname) in
+          let set_next_retloc := (Syntax.cmd.set nextn next_retloc) in
+          let recl := translate_expr l (next_varname nextn) argnames (Syntax.expr.var nextn) in
           (fst recl, Syntax.cmd.seq (Syntax.cmd.seq cmdx set_next_retloc) (snd recl))
       | (expr.Ident _ (ident.nil (base.type.type_base base.type.Z))) =>
-        fun _ _ => (nextname, Syntax.cmd.skip)
+        fun _ _ => (nextn, Syntax.cmd.skip)
       | expr.App _ (type.base _) f x =>
         fun _ retnames =>
           let v := translate_inner_expr true (expr.App f x) in
-          (nextname, assign retnames v)
+          (nextn, assign retnames v)
       | expr.Ident (type.base _) x =>
         fun _ retnames =>
           let v := translate_inner_expr true (expr.Ident x) in
-          (nextname, assign retnames v)
+          (nextn, assign retnames v)
       | expr.Var (type.base _) x =>
         fun _ retnames =>
           let v := translate_inner_expr true (expr.Var x) in
-          (nextname, assign retnames v)
+          (nextn, assign retnames v)
       | expr.Abs (type.base s) d f =>
         fun (argnames : base_ltype s * type.for_each_lhs_of_arrow _ d)
             (retnames : base_ltype (type.final_codomain d)) =>
-          translate_expr (f (fst argnames)) nextname (snd argnames) retnames
-      | _ => fun _ _ => (nextname, Syntax.cmd.skip)
+          translate_expr (f (fst argnames)) nextn (snd argnames) retnames
+      | _ => fun _ _ => (nextn, Syntax.cmd.skip)
       end.
 *)
+    (* shouldn't need any properties of call, since the compiler does not output
+       bedrock2 function calls *)
+    Context (call : Syntax.funname ->
+                    Semantics.trace ->
+                    Interface.map.rep (map:=Semantics.mem) ->
+                    list Interface.word.rep ->
+                    (Semantics.trace -> Interface.map.rep (map:=Semantics.mem) ->
+                     list Interface.word.rep -> Prop) ->
+                    Prop).
+
+    Context (Proper_call :
+               Morphisms.pointwise_relation
+                 Syntax.funname
+                 (Morphisms.pointwise_relation
+                    Semantics.trace
+                    (Morphisms.pointwise_relation
+                       Interface.map.rep
+                       (Morphisms.pointwise_relation
+                          (list Interface.word.rep)
+                          (Morphisms.respectful
+                             (Morphisms.pointwise_relation
+                                Semantics.trace
+                                (Morphisms.pointwise_relation
+                                   Interface.map.rep
+                                   (Morphisms.pointwise_relation
+                                      (list Interface.word.rep) Basics.impl)))
+                             Basics.impl)))) call call).
+
+    Section accesses.
+      Context (init_locals : list Syntax.varname) (min_varname : nat).
+      Context (init_locals_ok :
+                 forall v n, In v init_locals ->
+                             (min_varname <= n)%nat ->
+                             varname_gen n <> v).
+      Fixpoint expr_accesses_ok
+               (memlocs : list Syntax.expr.expr)
+               (nextn : nat)
+               (e : Syntax.expr.expr) : Prop :=
+        match e with
+        | Syntax.expr.literal z => True
+        | Syntax.expr.var v =>
+          In v init_locals
+          \/ (exists n, v = varname_gen n
+                        /\ (min_varname <= n < nextn)%nat)
+        | Syntax.expr.load sz a =>
+          In a memlocs (* N.B. requires load expressions to be exact match *)
+        | Syntax.expr.op bop x y =>
+          expr_accesses_ok memlocs nextn x
+          /\ expr_accesses_ok memlocs nextn y
+        end.
+      
+      Fixpoint accesses_ok
+               (memlocs : list Syntax.expr.expr)
+               (nextn : nat)
+               (c : Syntax.cmd.cmd) : list Syntax.expr.expr * nat * Prop :=
+        match c with
+        | Syntax.cmd.skip => (memlocs, nextn, True)
+        | Syntax.cmd.set v e =>
+          (memlocs, S nextn,
+           v = varname_gen nextn /\ expr_accesses_ok memlocs nextn e)
+        | Syntax.cmd.store sz a e =>
+          (* TODO: something about sz? *)
+          (a :: memlocs, nextn,
+           In a memlocs /\ expr_accesses_ok memlocs nextn e)
+        | Syntax.cmd.seq c1 c2 =>
+          let c1_ok := accesses_ok memlocs nextn c1 in
+          let memlocs' := fst (fst c1_ok) in
+          let nextn' := snd (fst c1_ok) in
+          accesses_ok memlocs' nextn' c2
+        | _ => (* currently not outputting unset,
+                  while, call, cond, or interact; ignore them *)
+          (memlocs, nextn, False)
+        end.
+    End accesses.
+
+    (* Determines what local variables are set at the start of a function,
+       according to the arguments *)
+    Fixpoint init_locals_from_args' {t}
+      : base_ltype t -> list Syntax.varname :=
+      match t with
+      | base.type.prod a b =>
+        fun x =>
+          init_locals_from_args' (fst x) ++ init_locals_from_args' (snd x)
+      | _ => fun x => [x]
+      end.
+    Fixpoint init_locals_from_args {t}
+      : type.for_each_lhs_of_arrow ltype t -> list Syntax.varname :=
+      match t with
+      | type.base _ => fun _ => []
+      | type.arrow (type.base s) d =>
+        fun argnames : base_ltype s * _ =>
+          (init_locals_from_args' (fst argnames))
+            ++ init_locals_from_args (snd argnames)
+      | type.arrow (type.arrow _ _) _ => fun _ => [] (* not allowed *)
+      end.
+
+    (* Determines what locations in memory access parts of the arguments -- this
+    applies only to list arguments. We have to use the fiat-crypto-style
+    arguments to find out the lengths of the lists. *)
+    Fixpoint init_memlocs_from_args' {t}
+      : base.interp t -> base_ltype t -> list Syntax.expr.expr :=
+      match t with
+      | base.type.prod a b =>
+        fun x y =>
+          (init_memlocs_from_args' (fst x) (fst y))
+            ++ init_memlocs_from_args' (snd x) (snd y)
+      | base.type.list (base.type.type_base base.type.Z) =>
+        fun (x : list Z) (y : Syntax.varname) =>
+          (* this creates all of the valid indexing expressions for the list *)
+          fold_right
+            (fun i (locs : list Syntax.expr.expr) =>
+               let offset := Syntax.expr.op Syntax.bopname.mul
+                                            (Syntax.expr.literal (Z.of_nat i))
+                                            (Syntax.expr.literal word_size_in_bytes) in
+               (Syntax.expr.op Syntax.bopname.add
+                              (hd (Syntax.expr.var y) locs) offset) :: locs)
+            nil (seq 0 (length x))
+      | _ => fun x y => []
+      end.
+    Fixpoint init_memlocs_from_args {t}
+      : type.for_each_lhs_of_arrow (type.interp base.interp) t ->
+        type.for_each_lhs_of_arrow ltype t -> list Syntax.expr.expr :=
+      match t with
+      | type.base _ => fun _ _ => []
+      | type.arrow (type.base s) d =>
+        fun args argnames =>
+          (init_memlocs_from_args' (fst args) (fst argnames))
+            ++ init_memlocs_from_args (snd args) (snd argnames)
+      | type.arrow (type.arrow _ _) _ => fun _ _ => [] (* not allowed *)
+      end.
+
+    (* TODO: gross name *)
+    (* wrapper definition *)
+    Definition all_accesses_ok {t}
+               (args : type.for_each_lhs_of_arrow (type.interp base.interp) t)
+               (argnames : type.for_each_lhs_of_arrow ltype t)
+               (startname nextn : nat)
+               (c : Syntax.cmd.cmd) : Prop :=
+      snd (accesses_ok (init_locals_from_args argnames) startname
+                       (init_memlocs_from_args args argnames) nextn c).
+
+    Definition varnames_complete
+               (minn maxn : nat)
+               (locals : Interface.map.rep (map:=Semantics.locals)) : Prop :=
+      forall n,
+        (minn <= n < maxn)%nat ->
+        exists a,
+          WeakestPrecondition.get locals (varname_gen n) (eq a).
 
     Lemma translate_carries_correct {t}
           (* three exprs, representing the same Expr with different vars *)
@@ -782,44 +933,46 @@ Module Compiler.
           (e3 : @API.expr ltype (type.base t)) :
       (* e1 is a valid input to translate_carries_correct *)
       valid_carry_expr e1 ->
-      forall G retnames cmdx,
+      forall G cmdx nextn,
         wf3 G e1 e2 e3 ->
-        translate_carries e3 retnames = Some cmdx ->
-        let ret : base.interp t := API.interp e2 in
+        let gr := translate_lhs t nextn in
+        translate_carries e3 (snd gr) = Some cmdx ->
         forall (tr : Semantics.trace)
-               (env mem locals : Interface.map.rep)
-               (mc : MetricLogging.MetricLog)
+               (mem locals : Interface.map.rep)
                (R : Interface.map.rep -> Prop),
-          Semantics.exec
-            env cmdx tr mem locals mc
-            (fun tr' mem' locals' mc' =>
+          WeakestPrecondition.cmd
+            call cmdx tr mem locals
+            (fun tr' mem' locals' =>
                tr = tr'
-               /\ sep (equivalent (API.interp e2) retnames locals') R mem').
+               /\ varnames_complete nextn (fst gr) locals'
+               /\ sep (equivalent (API.interp e2) (snd gr) locals') R mem').
     Admitted.
 
     Lemma translate_inner_expr_correct {t}
           (* three exprs, representing the same Expr with different vars *)
           (e1 : @API.expr (fun _ => unit) (type.base t))
           (e2 : @API.expr API.interp_type (type.base t))
-          (e3 : @API.expr ltype (type.base t)) :
-      forall require_cast G nextname retnames,
-        (* e1 is a valid input to translate_carries_correct *)
-        valid_inner_expr require_cast e1 ->
-          wf3 G e1 e2 e3 ->
-          forall (tr : Semantics.trace)
-                 (env mem locals : Interface.map.rep)
-                 (mc : MetricLogging.MetricLog)
-                 (R : Interface.map.rep -> Prop),
-            Semantics.exec
-              env
-              (assign (snd (translate_lhs t nextname))
-                      (translate_inner_expr require_cast e3))
-              tr mem locals mc
-              (fun tr' mem' locals' mc' =>
-                 tr = tr'
-                 /\ sep (equivalent (API.interp e2) retnames locals') R mem').
+          (e3 : @API.expr ltype (type.base t))
+          (require_cast : bool) :
+      (* e1 is a valid input to translate_carries_correct *)
+      valid_inner_expr require_cast e1 ->
+      forall G nextn,
+        let gr := translate_lhs t nextn in
+        let out := translate_inner_expr require_cast e3 in
+        wf3 G e1 e2 e3 ->
+        forall (tr : Semantics.trace)
+               (mem locals : Interface.map.rep)
+               (R : Interface.map.rep -> Prop),
+          WeakestPrecondition.cmd
+            call (assign (snd gr) out)
+            tr mem locals
+            (fun tr' mem' locals' =>
+               tr = tr'
+               /\ varnames_complete nextn (fst gr) locals'
+               /\ sep (equivalent (API.interp e2) (snd gr) locals') R mem').
     Admitted.
 
+    (* TODO : add varnames_complete clause *)
     (* special case that's used for adding elements to a list of Zs *)
     Lemma translate_inner_expr_correct_store
           (* three exprs, representing the same Expr with different vars *)
@@ -831,16 +984,15 @@ Module Compiler.
         valid_inner_expr require_cast e1 ->
           wf3 G e1 e2 e3 ->
           forall (tr : Semantics.trace)
-                 (env mem locals : Interface.map.rep)
-                 (mc : MetricLogging.MetricLog)
+                 (mem locals : Interface.map.rep)
                  (R : Interface.map.rep -> Prop),
-            Semantics.exec
-              env
+            WeakestPrecondition.cmd
+              call
               (Syntax.cmd.store Syntax.access_size.word
                                 (Syntax.expr.var retnames)
                                 (translate_inner_expr require_cast e3))
-              tr mem locals mc
-              (fun tr' mem' locals' mc' =>
+              tr mem locals
+              (fun tr' mem' locals' =>
                  tr = tr'
                  /\ sep (equivalent (API.interp e2) retnames locals') R mem').
     Admitted.
@@ -858,39 +1010,10 @@ Module Compiler.
       repeat (split; try eassumption).
     Qed.
 
-    Lemma exec_weaken env x tr mem locals mc
-          (post1 post2 : _ -> _ -> _ -> _ -> Prop) :
-      (forall tr' mem' locals' mc',
-          post1 tr' mem' locals' mc' ->
-          post2 tr' mem' locals' mc') ->
-      Semantics.exec env x tr mem locals mc post1 ->
-      Semantics.exec env x tr mem locals mc post2.
-    Proof.
-      intros Heq_post.
-      induction 1; intros; try solve [econstructor; eauto]; [ | ].
-      { econstructor; eauto; [ ]; intros.
-        match goal with
-        | H : (forall _ _ _ _, ?P _ _ _ _ -> exists _, _),
-              H2 : ?P _ _ _ _ |- _ => destruct (H _ _ _ _ H2) end.
-        repeat match goal with
-               | H : exists _, _ |- _ => destruct H
-               | _ => progress destruct_head'_and
-               | |- exists _, _ /\ _ => eexists; split; [ eassumption | ]
-               | _ => solve [eauto]
-               end. }
-      { econstructor; eauto; [ ]; intros.
-        match goal with
-        | H : (forall _ _, ?P _ _ -> exists _, _),
-              H2 : ?P _ _ |- _ => destruct (H _ _ H2) end.
-        repeat match goal with
-               | H : exists _, _ |- _ => destruct H
-               | _ => progress destruct_head'_and
-               | |- exists _, _ /\ _ => eexists; split; [ eassumption | ]
-               | _ => solve [eauto]
-               end. }
-    Qed.
-
-    Lemma translate_expr_correct' {t}
+    (* TODO: consider removing the Abs case from translate_expr and putting it
+    in an outer wrapper, so we don't need to deal with for_each_lhs_of_arrow *)
+    (* can simulate this in proof by assuming t is a base type *)
+    Lemma translate_expr_correct' {t'} (t:=type.base t')
           (* three exprs, representing the same Expr with different vars *)
           (e1 : @API.expr (fun _ => unit) t)
           (e2 : @API.expr API.interp_type t)
@@ -901,29 +1024,28 @@ Module Compiler.
           (G : list _) :
       (* exprs are all related *)
       wf3 G e1 e2 e3 ->
-      (* putting the exists way up here makes the IH less annoying *)
-      forall (args : type.for_each_lhs_of_arrow (type.interp base.interp) t)
-             (argnames : type.for_each_lhs_of_arrow ltype t)
-             (retnames : base_ltype (type.final_codomain t))
-             (nextname : Syntax.varname),
-        (* bedrock_e := translation of e as bedrock2 function body *)
-        let bedrock_e : Syntax.cmd.cmd :=
-            snd (translate_expr e3 nextname argnames retnames) in
-        (* ret := result of applying e to args *)
-        let ret : base.interp (type.final_codomain t) :=
-            type.app_curried (API.interp e2) args in
+      forall (init_locals : list Syntax.varname)
+             (memlocs : list Syntax.expr.expr)
+             (retnames : base_ltype t')
+             (nextn : nat),
+        (* ret := fiat-crypto interpretation of e2 *)
+        let ret : base.interp t' := API.interp e2 in
+        (* out := translation output for e3 *)
+        let out := translate_expr e3 nextn tt retnames in
+        (* output expression doesn't look up variables that don't exist *)
+        snd (accesses_ok init_locals nextn memlocs (fst out) (snd out)) ->
         forall (tr : Semantics.trace)
                (env mem locals : Interface.map.rep)
-               (mc : MetricLogging.MetricLog)
                (R : Interface.map.rep -> Prop),
           (* executing bedrock_e is equivalent to interpreting e *)
           (* TODO: do we need to say that the function doesn't overwrite old locals? *)
-          Semantics.exec
-            env bedrock_e tr mem locals mc
-            (fun tr' mem' locals' mc' =>
+          WeakestPrecondition.cmd call (snd out) tr mem locals
+            (fun tr' mem' locals' =>
                tr = tr'
+               /\ varnames_complete nextn (fst out) locals'
                /\ sep (equivalent ret retnames locals') R mem').
     Proof.
+      cbv [all_accesses_ok].
       revert e2 e3 G.
       induction e1_valid; inversion 1; cbv zeta in *; intros.
       all:hammer_wf. (* get rid of the wf nonsense *)
@@ -939,34 +1061,55 @@ Module Compiler.
         erewrite translate_expr_carry by eassumption.
         cleanup.
 
-        (* use exec.seq and translate_carries_correct to take a bedrock2 step *)
-        eapply Semantics.exec.seq;
-          [ eapply translate_carries_correct with (R0:=R); eassumption | ].
-
         (* simplify fiat-crypto step *)
         intros; cbn [expr.interp type.app_curried].
         cbv [Rewriter.Util.LetIn.Let_In]. cleanup.
 
+        (* simplify bedrock2 step *)
+        cbn [WeakestPrecondition.cmd WeakestPrecondition.cmd_body].
+        eapply WeakestPreconditionProperties.Proper_cmd;
+          [ eapply Proper_call | repeat intro | ].
+        (* N.B. putting below line in the [ | | ] above makes eassumption fail *)
+        2 : eapply translate_carries_correct with (R0:=R); try eassumption.
+
         (* use inductive hypothesis *)
-        destruct_head'_and. subst.
-        eapply IHe1_valid; eauto. }
+        cleanup.
+        eapply IHe1_valid; eauto.
+
+        (* and now we have just accesses_ok! *)
+        (* TODO : prove *)
+        Compute (fun b => @init_locals_from_args (@type.base (Language.Compilers.base.type Compilers.base) b)).
+        Print init_locals_from_args'.
+        cbn.
+        cbn in H7.
+        cbn in H.
+        rewrite H in H7.
+        About accesses_ok.
+        (* accesses_ok arguments:
+           init_locals, startn, memlocs, maxn, c *)
+        (* goal says that accesses_ok is true for no initial *)
+        Print accesses_ok.
+
+      }
       { (* non-carry let-in *)
         (* simplify one translation step *)
         cbn [translate_expr].
         erewrite translate_carries_None by eassumption.
         cleanup.
 
-        (* use exec.seq and translate_inner_expr_correct to take a bedrock2 step *)
-        eapply Semantics.exec.seq;
-          [ eapply translate_inner_expr_correct with (R0:=R);
-            eassumption | ].
-
         (* simplify fiat-crypto step *)
         intros; cbn [expr.interp type.app_curried].
         cbv [Rewriter.Util.LetIn.Let_In]. cleanup.
 
+        (* simplify bedrock2 step *)
+        cbn [WeakestPrecondition.cmd WeakestPrecondition.cmd_body].
+        eapply WeakestPreconditionProperties.Proper_cmd;
+          [ eapply Proper_call | repeat intro | ].
+        (* N.B. putting below line in the [ | | ] above makes eassumption fail *)
+        2 : eapply translate_inner_expr_correct with (R0:=R); eassumption.
+
         (* use inductive hypothesis *)
-        destruct_head'_and. subst.
+        cleanup.
         eapply IHe1_valid; eauto. }
       { (* cons *)
 
@@ -984,13 +1127,169 @@ Module Compiler.
         cbn [type.for_each_lhs_of_arrow
                type.app_curried type.final_codomain base_ltype] in *.
 
+        (* simplify bedrock2 step *)
+        cbn [WeakestPrecondition.cmd WeakestPrecondition.cmd_body].
+
+        Print Syntax.cmd.cmd.
+        Print Syntax.expr.expr.
+        Print WeakestPrecondition.dexpr.
+        Print WeakestPrecondition.expr_body.
+
+        cbn [WeakestPrecondition.dexpr WeakestPrecondition.expr WeakestPrecondition.expr_body].
+        Search WeakestPrecondition.expr.
+        
+        (* here is where, before, we used translate_inner_expr_correct_store *)
+        (* need some kind of statement in the validity precondition or some
+        extra precondition on the provided return values that the return
+        variable holding list locations exists -- probably also need somewhere
+        to fold through that next_varname will never overwrite this variable *)
+        (* probably will also need to know eventually that next_varname doesn't
+           repeat *)
+        (* presumably for the inductive hypothesis we need more information
+        about locals? Every time we get the value of a var, we need to know it
+        was in context *)
+        (* Need to think carefully. Don't rush it.
+           1) How do we deal with the representation of lists? Variables are
+              maybe not the best way -- are literals possible?
+           2) More broadly (probably this should be answered first) -- what's up
+              with local variables? For induction to work, how much information
+              about them does my theorem statement need to have?
+
+           Focusing first on 2) -- when does WeakestPrecondition.cmd need to
+           know local information?
+
+           In store, we get two expressions ea and ev and need to say there
+           exist a and v, both words, such that evaluating ea in the local
+           context gives you a and evaluating ev gives you v -- no misses
+           allowed, so all vars and loads have to have information there.
+
+           set also needs to know that there exists v : word such that the
+           expression on the RHS (ev) evaluates to v.
+
+           Perhaps we need a predicate on the expression that says "no misses"
+           -- that is, no references to variables that don't exist, and maybe no
+           loads where there weren't previous stores.
+
+           The loads might be tricky -- if arguments are lists, we'd have to
+           load from those places, so any "no misses" predicate would need to
+           know where the input data is stored. Should be folded neatly into an
+           inductive hypothesis that allows stores, even though I don't think we
+           do load-store.
+
+           Or maybe we could be more direct and just have a predicate saying,
+           for every place where we call store or load, the preconditions in
+           WeakestPrecondition.cmd hold. I'm fuzzy on this one.
+
+           Loads might be possible to make way simpler if we just use literals,
+           so instead let's think about set, which we definitely need to use.
+
+           Can we add a definition saying that all inner expressions do evaluate
+           to some word, to our postcondition? Would that help? No, probably
+           not, since it would be a proof obligation and not a hypothesis, and
+           we don't need it for the continuation -- we need it for the inner
+           expressions of the exposed step.
+
+           Idea: make predicate on locals and API.expr, and use it to say that
+           all vars called in the start expression exist; require this for
+           initial locals and also add to postcondition (so it must hold for all
+           locals).  During the inductive step, your IH will require the proof
+           that the exposed step obeys the rule, and prove to you that it's true
+           for the continuation, but this is not very useful -- how do you get
+           the information for the current step?
+
+           Can we use nextn? So, say, our predicate states that every
+           variable call is <= nextn, using the nextn-takes-nat
+           construction, or is equal to something that we know is in the start
+           context (arguments or return value variables that require variable
+           loads -- list currently).
+
+           We would then need to use the compiler structure to prove that, if
+           the predicate holds, the WeakestPrecondition.expr stuff works for all
+           inner expressions. The logic would be that all the variables must
+           have been set, since we don't waste variable names[0], and we don't
+           have any loads.
+
+           How do we state that proof (in particular, "expr stuff works"), and
+           could it just be folded into the main proof? So the predicate takes
+           care of saying all our variable reads are of stuff that's in the
+           arguments or the set range of names, and the precondition takes care
+           of saying that those variables are set -- we have to prove the
+           precondition each time in the main proof, but that's better than two
+           proofs.
+
+           Predicate should be fixpoint on *bedrock2* expression, so in terms of
+           output -- fill precondition by compute. Similarly, compute a function
+           on arguments that gives you all the memory addresses and variables
+           that are filled at the start, which is input to the predicate. So the
+           predicate is dumb and just says "all accesses are in this list, all
+           variables in this one", starting with the two lists given by
+           extracting them from arguments and updating with loads/sets.
+
+           ...actually, do we then need to deal with nextn at all? Since
+           we're working with a function of the output, we could just aggregate
+           all the variables that have been set. No need to deal with nextn,
+           just that list, same as arguments. And our predicate says "forall v :
+           varname, In v <list> -> exists a : word, WeakestPrecondition.get
+           locals v (eq a)".
+
+           But what gets plugged in for locals? For arguments, it's starting
+           locals, and that's why we originally thought of using nextn -- so
+           we wouldn't have to keep track of locals. Then we just say in the
+           inductive proof that we have a start_nextn and that everything
+           between nextn and start_nextn is in locals (in postcondition).
+           So in the inductive step, we increase nextn, and need to prove our
+           new locals contains the new variables, which it should. Sounds right.
+
+           Next, reread and think through concrete steps. Write them down and
+           then start.
+
+           [0] probably looks like an extra precondition in the inductive proof
+           saying (forall n, start_nextn <= n <= nextn, exists a,
+           WeakestPrecondition.get locals (varname n) (eq a)), and then removing
+           the precondition for non-inductive wrapper because at the start,
+           start_nextn = nextn
+         *)
+        (* ideas:
+
+           A: instead of next_varname function, use a list varname_list and have a
+           default_varname
+
+           pros: easy to state that the list variables in retnames don't get
+           overwritten, flexible
+           cons: annoying to state if you don't know how many variables you need
+
+           B: keep as-is, write a statement saying "next_varname will never
+           produce the list variables in retname"
+
+           pros: minimal code changes
+           cons: difficult to state and work with in proofs
+
+           C: Make the whole system not use varnames for lists, but rather literals
+
+           pros: easy for proofs
+           cons: constricting for callers
+
+           D: make next_varname take a nat and have a proof that the nats aren't
+           equal; then you just start with the index of the first varname, and
+           have a proof that refnames is not equal to any varnames greater than
+           that
+        *)
+        Print Syntax.expr.expr.
+        eapply WeakestPreconditionProperties.Proper_cmd;
+          [ eapply Proper_call | repeat intro | ].
+        (* N.B. putting below line in the [ | | ] above makes eassumption fail *)
+        2 : eapply translate_inner_expr_correct with (R0:=R); eassumption.
+
+
+
+
         (* use exec.seq and translate_inner_expr_correct to take a bedrock2 step *)
         eapply Semantics.exec.seq
           with (mid:=fun tr' mem' locals' _ =>
                        tr = tr'
                        /\ Interface.map.get locals retnames = Interface.map.get locals' retnames
                        /\ (exists x y,
-                              Interface.map.get locals' nextname = Some x
+                              Interface.map.get locals' nextn = Some x
                               /\ Interface.map.get locals' retnames = Some y
                               /\ x = Interface.word.add y (Interface.word.of_Z 1))
                        /\ sep (equivalent (expr.interp (t:=type_Z) (@Compilers.ident_interp) x4)
@@ -1049,18 +1348,18 @@ Module Compiler.
           split; try eassumption.
           
           
-          (* x4 == x6 == retnames, nextname == x6+1 *)
-          (* TODO : figure out what's going on here with nextname/retname -- which is doing what? *)
+          (* x4 == x6 == retnames, nextn == x6+1 *)
+          (* TODO : figure out what's going on here with nextn/retname -- which is doing what? *)
 
 
           (* 
              we're dealing with an expression whose return type is list, so retnames
                is a variable that holds the head of the list when we're done
              so when we encounter a cons (x :: l), we store l in the location indicated by retnames,
-               set nextname := $retnames + 1, and then recursive call with retnames:=nextname
+               set nextn := $retnames + 1, and then recursive call with retnames:=nextn
              therefore, us having retnames in the thing that still has the cons and having
-               nextname in the one that doesn't have the cons is just fine, although we
-               probably need from mid that nextname:=$retnames+1
+               nextn in the one that doesn't have the cons is just fine, although we
+               probably need from mid that nextn:=$retnames+1
 
 *)
 
@@ -1082,7 +1381,7 @@ Module Compiler.
           rewrite sep_ex1_l.
 
           (*
-    Semantics.exec.exec env (snd (translate_expr x3 (next_varname nextname) argnames nextname)) t' m' l' mc'
+    Semantics.exec.exec env (snd (translate_expr x3 (next_varname nextn) argnames nextn)) t' m' l' mc'
         (fun (tr' : Semantics.trace) (mem' locals' : Interface.map.rep) (_ : MetricLogging.MetricLog) =>
         t' = tr' /\
         sep
@@ -1123,7 +1422,7 @@ Module Compiler.
             reflexivity. }
           split; try congruence; [ ].
           (* ?mid t' m'
-               (Interface.map.put l' nextname (bopname.add x0 1))
+               (Interface.map.put l' nextn (bopname.add x0 1))
                (... logging ...) *) }
         
           match goal with
@@ -1164,7 +1463,7 @@ Module Compiler.
              (flat_argnames : list Syntax.varname)
              (retnames : base_ltype (type.final_codomain t))
              (flat_retnames : list Syntax.varname)
-             (nextname : Syntax.varname)
+             (nextn : Syntax.varname)
              (mem : Interface.map.rep),
         (* args and bedrock_args are equivalent *)
         args_equivalent args bedrock_args mem ->
@@ -1177,7 +1476,7 @@ Module Compiler.
             type.app_curried (API.Interp e) args in
         (* bedrock_e := translation of e as bedrock2 function body *)
         let bedrock_e : Syntax.cmd.cmd :=
-            snd (translate_expr (e ltype) nextname argnames retnames) in
+            snd (translate_expr (e ltype) nextn argnames retnames) in
         forall (fname : Syntax.funname)
                (funnames' : list _)
                (* fname's body is bedrock_e *)
