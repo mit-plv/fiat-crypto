@@ -491,17 +491,24 @@ $(PERF_TXTS) : %.txt :
 	$(HIDE)./src/Rewriter/PerfTesting/Specific/to_csv.py --$* --txt $(wildcard $(ALL_PERF_LOGS)) > $@.tmp
 	$(HIDE)sed 's/\r\n/\n/g; s/\r//g; s/\s*$$//g' $@.tmp > $@ && rm -f $@.tmp
 
+# work around COQBUG(https://github.com/coq/coq/issues/10495)
+# rm -f /tmp/Coq_native*.{cmi,cmx,cmxs,o,native} # specific extensions
+clean-tmp-native-work-around-bug-10495 = rm -f /tmp/Coq_native*
+
 $(PERF_PRIME_VOS:.vo=.log) : %.log : %.v src/Rewriter/PerfTesting/Core.vo
 	$(SHOW)'PERF COQC $< > $@'
 	$(HIDE)(ulimit -S -s $(PERF_MAX_STACK); $(TIMER_FULL) $(PERF_TIMEOUT) $(COQC) $(COQDEBUG) $(COQFLAGS) $(COQLIBS) $< && touch $@.ok) > $@.tmp
+	$(HIDE)$(clean-tmp-native-work-around-bug-10495)
 	$(HIDE)rm $@.ok
 	$(HIDE)sed 's/\r\n/\n/g; s/\r//g; s/\s*$$//g' $@.tmp > $@ && rm -f $@.tmp
 
 $(PERF_PRIME_SHS:.sh=.log) : %.log : %.sh $(PERF_STANDALONE:%=src/ExtractionOCaml/%)
 	$(SHOW)'PERF SH $< > $@'
 	$(HIDE)(ulimit -S -s $(PERF_MAX_STACK); $(TIMER_FULL) $(PERF_TIMEOUT) bash $< && touch $@.ok) > $@.tmp
+	$(HIDE)$(clean-tmp-native-work-around-bug-10495)
 	$(HIDE)rm $@.ok
 	$(HIDE)sed 's/\r\n/\n/g; s/\r//g; s/\s*$$//g' $@.tmp > $@ && rm -f $@.tmp
+
 
 curves: $(filter src/Spec/%Curve%.vo,$(REGULAR_VOFILES)) $(filter src/Curves/%.vo,$(REGULAR_VOFILES))
 
