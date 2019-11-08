@@ -441,7 +441,7 @@ $(PERF_MAKEFILE): Makefile src/Rewriter/PerfTesting/Specific/make.py primes.txt
 PERF_MAX_TIME?=600 # 10 minutes
 PERF_MAX_MEM?=10000 # 10 GB
 PERF_MAX_STACK?=1000000
-PERF_TIMEOUT?=etc/timeout/timeout -t $(PERF_MAX_TIME) -m $(PERF_MAX_MEM) # limit to 10 GB # https://raw.githubusercontent.com/pshved/timeout/master/timeout
+PERF_TIMEOUT?=timeout $(PERF_MAX_TIME) etc/timeout/timeout -m $(PERF_MAX_MEM) # limit to 10 GB # https://raw.githubusercontent.com/pshved/timeout/master/timeout
 # PERF_TIMEOUT?=timeout $(PERF_MAX_TIME)
 
 .PHONY: perf perf-vos perf-extraction perf-standalone
