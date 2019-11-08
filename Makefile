@@ -473,29 +473,34 @@ PERF_TXTS := $(addsuffix .txt,$(PERF_PRE_TXTS) \
 .PHONY: perf-csv
 perf-csv: perf.csv perf-graph.csv $(PERF_TXTS)
 
-perf.csv::
+.PHONY: perf.csv
+perf.csv:
 	$(SHOW)'PYTHON > $@'
 	$(HIDE)./src/Rewriter/PerfTesting/Specific/to_csv.py $(wildcard $(ALL_PERF_LOGS)) > $@.tmp
 	$(HIDE)sed 's/\r\n/\n/g; s/\r//g; s/\s*$$//g' $@.tmp > $@ && rm -f $@.tmp
 
-perf-graph.csv::
+.PHONY: perf-graph.csv
+perf-graph.csv:
 	$(SHOW)'PYTHON > $@'
 	$(HIDE)./src/Rewriter/PerfTesting/Specific/to_csv.py --for-graph $(wildcard $(ALL_PERF_LOGS)) > $@.tmp
 	$(HIDE)sed 's/\r\n/\n/g; s/\r//g; s/\s*$$//g' $@.tmp > $@ && rm -f $@.tmp
 
-$(PERF_TXTS) :: %.txt :
+.PHONY: $(PERF_TXTS)
+$(PERF_TXTS) : %.txt :
 	$(SHOW)'PYTHON > $@'
 	$(HIDE)./src/Rewriter/PerfTesting/Specific/to_csv.py --$* --txt $(wildcard $(ALL_PERF_LOGS)) > $@.tmp
 	$(HIDE)sed 's/\r\n/\n/g; s/\r//g; s/\s*$$//g' $@.tmp > $@ && rm -f $@.tmp
 
 $(PERF_PRIME_VOS:.vo=.log) : %.log : %.v src/Rewriter/PerfTesting/Core.vo
 	$(SHOW)'PERF COQC $< > $@'
-	$(HIDE)ulimit -S -s $(PERF_MAX_STACK); $(TIMER_FULL) $(PERF_TIMEOUT) $(COQC) $(COQDEBUG) $(COQFLAGS) $(COQLIBS) $< > $@.tmp
+	$(HIDE)(ulimit -S -s $(PERF_MAX_STACK); $(TIMER_FULL) $(PERF_TIMEOUT) $(COQC) $(COQDEBUG) $(COQFLAGS) $(COQLIBS) $< && touch $@.ok) > $@.tmp
+	$(HIDE)rm $@.ok
 	$(HIDE)sed 's/\r\n/\n/g; s/\r//g; s/\s*$$//g' $@.tmp > $@ && rm -f $@.tmp
 
 $(PERF_PRIME_SHS:.sh=.log) : %.log : %.sh $(PERF_STANDALONE:%=src/ExtractionOCaml/%)
 	$(SHOW)'PERF SH $< > $@'
-	$(HIDE)ulimit -S -s $(PERF_MAX_STACK); $(TIMER_FULL) $(PERF_TIMEOUT) bash $< > $@.tmp
+	$(HIDE)(ulimit -S -s $(PERF_MAX_STACK); $(TIMER_FULL) $(PERF_TIMEOUT) bash $< && touch $@.ok) > $@.tmp
+	$(HIDE)rm $@.ok
 	$(HIDE)sed 's/\r\n/\n/g; s/\r//g; s/\s*$$//g' $@.tmp > $@ && rm -f $@.tmp
 
 curves: $(filter src/Spec/%Curve%.vo,$(REGULAR_VOFILES)) $(filter src/Curves/%.vo,$(REGULAR_VOFILES))
