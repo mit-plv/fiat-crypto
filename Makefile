@@ -492,8 +492,7 @@ $(PERF_TXTS) : %.txt :
 	$(HIDE)sed 's/\r\n/\n/g; s/\r//g; s/\s*$$//g' $@.tmp > $@ && rm -f $@.tmp
 
 # work around COQBUG(https://github.com/coq/coq/issues/10495)
-# rm -f /tmp/Coq_native*.{cmi,cmx,cmxs,o,native} # specific extensions
-clean-tmp-native-work-around-bug-10495 = rm -f /tmp/Coq_native*
+clean-tmp-native-work-around-bug-10495 = rm -f /tmp/Coq_native*.{cmi,cmx,cmxs,o,native}
 
 $(PERF_PRIME_VOS:.vo=.log) : %.log : %.v src/Rewriter/PerfTesting/Core.vo
 	$(SHOW)'PERF COQC $< > $@'
