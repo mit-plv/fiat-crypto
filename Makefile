@@ -492,19 +492,19 @@ $(PERF_TXTS) : %.txt :
 	$(HIDE)sed 's/\r\n/\n/g; s/\r//g; s/\s*$$//g' $@.tmp > $@ && rm -f $@.tmp
 
 # work around COQBUG(https://github.com/coq/coq/issues/10495)
-clean-tmp-native-work-around-bug-10495 = rm -f /tmp/Coq_native*.{cmi,cmx,cmxs,o,native}
+.PHONY: clean-tmp-native-work-around-bug-10495
+clean-tmp-native-work-around-bug-10495::
+	rm -f /tmp/Coq_native*.{cmi,cmx,cmxs,o,native}
 
 $(PERF_PRIME_VOS:.vo=.log) : %.log : %.v src/Rewriter/PerfTesting/Core.vo
 	$(SHOW)'PERF COQC $< > $@'
 	$(HIDE)(ulimit -S -s $(PERF_MAX_STACK); $(TIMER_FULL) $(PERF_TIMEOUT) $(COQC) $(COQDEBUG) $(COQFLAGS) $(COQLIBS) $< && touch $@.ok) > $@.tmp
-	$(HIDE)$(clean-tmp-native-work-around-bug-10495)
 	$(HIDE)rm $@.ok
 	$(HIDE)sed 's/\r\n/\n/g; s/\r//g; s/\s*$$//g' $@.tmp > $@ && rm -f $@.tmp
 
 $(PERF_PRIME_SHS:.sh=.log) : %.log : %.sh $(PERF_STANDALONE:%=src/ExtractionOCaml/%)
 	$(SHOW)'PERF SH $< > $@'
 	$(HIDE)(ulimit -S -s $(PERF_MAX_STACK); $(TIMER_FULL) $(PERF_TIMEOUT) bash $< && touch $@.ok) > $@.tmp
-	$(HIDE)$(clean-tmp-native-work-around-bug-10495)
 	$(HIDE)rm $@.ok
 	$(HIDE)sed 's/\r\n/\n/g; s/\r//g; s/\s*$$//g' $@.tmp > $@ && rm -f $@.tmp
 
