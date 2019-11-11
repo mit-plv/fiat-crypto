@@ -1,0 +1,40 @@
+Testing WordByWordMontgomery "2^192-2^64-1" (bitwidth = 64 ) (params = {| WordByWordMontgomery.m := 6277101735386680763835789423207666416083908700390324961279; WordByWordMontgomery.machine_wordsize := 64 |} ) "PipelineFullOf with vm_compute" :
+Tactic call ran for 0.75 secs (0.744u,0.008s) (success)
+Testing WordByWordMontgomery "2^192-2^64-1" (bitwidth = 64 ) (params = {| WordByWordMontgomery.m := 6277101735386680763835789423207666416083908700390324961279; WordByWordMontgomery.machine_wordsize := 64 |} ) "PipelineFullToStringsOf with vm_compute" :
+Tactic call ran for 0.738 secs (0.739u,0.s) (success)
+Testing WordByWordMontgomery "2^192-2^64-1" (bitwidth = 64 ) (params = {| WordByWordMontgomery.m := 6277101735386680763835789423207666416083908700390324961279; WordByWordMontgomery.machine_wordsize := 64 |} ) "PipelineNBEOf with vm_compute" :
+Tactic call ran for 0.502 secs (0.5u,0.s) (success)
+Testing WordByWordMontgomery "2^192-2^64-1" (bitwidth = 64 ) (params = {| WordByWordMontgomery.m := 6277101735386680763835789423207666416083908700390324961279; WordByWordMontgomery.machine_wordsize := 64 |} ) "PipelineArithOf with vm_compute" :
+Tactic call ran for 0.497 secs (0.5u,0.s) (success)
+Testing WordByWordMontgomery "2^192-2^64-1" (bitwidth = 64 ) (params = {| WordByWordMontgomery.m := 6277101735386680763835789423207666416083908700390324961279; WordByWordMontgomery.machine_wordsize := 64 |} ) "PipelineFullOf with native_compute" (1) :
+Tactic call ran for 227.395 secs (5.608u,0.22s) (success)
+Testing WordByWordMontgomery "2^192-2^64-1" (bitwidth = 64 ) (params = {| WordByWordMontgomery.m := 6277101735386680763835789423207666416083908700390324961279; WordByWordMontgomery.machine_wordsize := 64 |} ) "PipelineFullOf with native_compute" (2) :
+Tactic call ran for 0.798 secs (0.496u,0.059s) (success)
+Testing WordByWordMontgomery "2^192-2^64-1" (bitwidth = 64 ) (params = {| WordByWordMontgomery.m := 6277101735386680763835789423207666416083908700390324961279; WordByWordMontgomery.machine_wordsize := 64 |} ) "PipelineFullToStringsOf with native_compute" (1) :
+Tactic call ran for 6.035 secs (0.876u,0.103s) (success)
+Testing WordByWordMontgomery "2^192-2^64-1" (bitwidth = 64 ) (params = {| WordByWordMontgomery.m := 6277101735386680763835789423207666416083908700390324961279; WordByWordMontgomery.machine_wordsize := 64 |} ) "PipelineFullToStringsOf with native_compute" (2) :
+Tactic call ran for 0.673 secs (0.499u,0.064s) (success)
+Testing WordByWordMontgomery "2^192-2^64-1" (bitwidth = 64 ) (params = {| WordByWordMontgomery.m := 6277101735386680763835789423207666416083908700390324961279; WordByWordMontgomery.machine_wordsize := 64 |} ) "PipelineNBEOf with native_compute" (1) :
+Tactic call ran for 0.8 secs (0.396u,0.075s) (success)
+Testing WordByWordMontgomery "2^192-2^64-1" (bitwidth = 64 ) (params = {| WordByWordMontgomery.m := 6277101735386680763835789423207666416083908700390324961279; WordByWordMontgomery.machine_wordsize := 64 |} ) "PipelineNBEOf with native_compute" (2) :
+Tactic call ran for 0.609 secs (0.451u,0.072s) (success)
+Testing WordByWordMontgomery "2^192-2^64-1" (bitwidth = 64 ) (params = {| WordByWordMontgomery.m := 6277101735386680763835789423207666416083908700390324961279; WordByWordMontgomery.machine_wordsize := 64 |} ) "PipelineArithOf with native_compute" (1) :
+Tactic call ran for 0.833 secs (0.408u,0.076s) (success)
+Testing WordByWordMontgomery "2^192-2^64-1" (bitwidth = 64 ) (params = {| WordByWordMontgomery.m := 6277101735386680763835789423207666416083908700390324961279; WordByWordMontgomery.machine_wordsize := 64 |} ) "PipelineArithOf with native_compute" (2) :
+Tactic call ran for 0.552 secs (0.416u,0.043s) (success)
+Testing WordByWordMontgomery "2^192-2^64-1" (bitwidth = 64 ) (params = {| WordByWordMontgomery.m := 6277101735386680763835789423207666416083908700390324961279; WordByWordMontgomery.machine_wordsize := 64 |} ) "PipelineFullOf with cbv" :
+Tactic call ran for 12.867 secs (12.771u,0.096s) (success)
+Testing WordByWordMontgomery "2^192-2^64-1" (bitwidth = 64 ) (params = {| WordByWordMontgomery.m := 6277101735386680763835789423207666416083908700390324961279; WordByWordMontgomery.machine_wordsize := 64 |} ) "PipelineFullToStringsOf with cbv" :
+Tactic call ran for 14.108 secs (14.079u,0.032s) (success)
+Testing WordByWordMontgomery "2^192-2^64-1" (bitwidth = 64 ) (params = {| WordByWordMontgomery.m := 6277101735386680763835789423207666416083908700390324961279; WordByWordMontgomery.machine_wordsize := 64 |} ) "PipelineNBEOf with cbv" :
+Tactic call ran for 11.363 secs (11.32u,0.044s) (success)
+Testing WordByWordMontgomery "2^192-2^64-1" (bitwidth = 64 ) (params = {| WordByWordMontgomery.m := 6277101735386680763835789423207666416083908700390324961279; WordByWordMontgomery.machine_wordsize := 64 |} ) "PipelineArithOf with cbv" :
+Tactic call ran for 8.922 secs (8.919u,0.s) (success)
+Testing WordByWordMontgomery "2^192-2^64-1" (bitwidth = 64 ) (params = {| WordByWordMontgomery.m := 6277101735386680763835789423207666416083908700390324961279; WordByWordMontgomery.machine_wordsize := 64 |} ) "PipelineFullOf with lazy" :
+Tactic call ran for 13.424 secs (13.387u,0.035s) (success)
+Testing WordByWordMontgomery "2^192-2^64-1" (bitwidth = 64 ) (params = {| WordByWordMontgomery.m := 6277101735386680763835789423207666416083908700390324961279; WordByWordMontgomery.machine_wordsize := 64 |} ) "PipelineFullToStringsOf with lazy" :
+Tactic call ran for 13.845 secs (13.827u,0.016s) (success)
+Testing WordByWordMontgomery "2^192-2^64-1" (bitwidth = 64 ) (params = {| WordByWordMontgomery.m := 6277101735386680763835789423207666416083908700390324961279; WordByWordMontgomery.machine_wordsize := 64 |} ) "PipelineNBEOf with lazy" :
+Tactic call ran for 8.995 secs (8.912u,0.084s) (success)
+Testing WordByWordMontgomery "2^192-2^64-1" (bitwidth = 64 ) (params = {| WordByWordMontgomery.m := 6277101735386680763835789423207666416083908700390324961279; WordByWordMontgomery.machine_wordsize := 64 |} ) "PipelineArithOf with lazy" :
+Tactic call ran for 9.252 secs (9.236u,0.016s) (success)

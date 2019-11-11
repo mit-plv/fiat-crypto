@@ -1,0 +1,3 @@
+Testing WordByWordMontgomery 2^129-25 (bitwidth = 64 ) (params = {| m := 680564733841876926926749214863536422887; machine_wordsize := 64|} ) PipelineFullToStringsOf with extraction OCaml: real: 0.141678 s; user: 0.140000 s
+Testing WordByWordMontgomery 2^129-25 (bitwidth = 64 ) (params = {| m := 680564733841876926926749214863536422887; machine_wordsize := 64|} ) PipelineFlatNBEOf with extraction OCaml: real: 0.049598 s; user: 0.052000 s
+Testing WordByWordMontgomery 2^129-25 (bitwidth = 64 ) (params = {| m := 680564733841876926926749214863536422887; machine_wordsize := 64|} ) PipelineFlatArithOf with extraction OCaml: real: 0.061210 s; user: 0.056000 s

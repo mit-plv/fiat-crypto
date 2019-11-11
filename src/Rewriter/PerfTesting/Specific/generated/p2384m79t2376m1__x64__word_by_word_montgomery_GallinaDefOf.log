@@ -1,0 +1,4 @@
+Testing WordByWordMontgomery "2^384-79*2^376-1" (bitwidth = 64 ) (params = {| WordByWordMontgomery.m := 27242793346725870392864805069239920482418413479970250235261124736529268568574243274298145027791523704776457633923071; WordByWordMontgomery.machine_wordsize := 64 |} ) "GallinaDefOf with cbv_no_rt" :
+Tactic call ran for 118.614 secs (118.504u,0.111s) (success)
+Testing WordByWordMontgomery "2^384-79*2^376-1" (bitwidth = 64 ) (params = {| WordByWordMontgomery.m := 27242793346725870392864805069239920482418413479970250235261124736529268568574243274298145027791523704776457633923071; WordByWordMontgomery.machine_wordsize := 64 |} ) "GallinaDefOf with lazy_no_rt" :
+Tactic call ran for 196.824 secs (196.692u,0.132s) (success)

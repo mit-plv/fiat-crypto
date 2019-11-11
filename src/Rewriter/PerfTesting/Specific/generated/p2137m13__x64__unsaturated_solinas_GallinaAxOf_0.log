@@ -1,0 +1,10 @@
+Testing UnsaturatedSolinas "2^137-13" (bitwidth = 64 ) (index = 0%nat ) (params = {| UnsaturatedSolinas.n := 3; UnsaturatedSolinas.s := 174224571863520493293247799005065324265472; UnsaturatedSolinas.c := (1, 13) :: nil; UnsaturatedSolinas.idxs := 0%nat :: 1%nat :: 2%nat :: 0%nat :: 1%nat :: nil; UnsaturatedSolinas.machine_wordsize := 64 |} ) "GallinaAxOf with vm_compute" :
+Tactic call ran for 0.014 secs (0.012u,0.s) (success)
+Testing UnsaturatedSolinas "2^137-13" (bitwidth = 64 ) (index = 0%nat ) (params = {| UnsaturatedSolinas.n := 3; UnsaturatedSolinas.s := 174224571863520493293247799005065324265472; UnsaturatedSolinas.c := (1, 13) :: nil; UnsaturatedSolinas.idxs := 0%nat :: 1%nat :: 2%nat :: 0%nat :: 1%nat :: nil; UnsaturatedSolinas.machine_wordsize := 64 |} ) "GallinaAxOf with native_compute" (1) :
+Tactic call ran for 0.27 secs (0.012u,0.016s) (success)
+Testing UnsaturatedSolinas "2^137-13" (bitwidth = 64 ) (index = 0%nat ) (params = {| UnsaturatedSolinas.n := 3; UnsaturatedSolinas.s := 174224571863520493293247799005065324265472; UnsaturatedSolinas.c := (1, 13) :: nil; UnsaturatedSolinas.idxs := 0%nat :: 1%nat :: 2%nat :: 0%nat :: 1%nat :: nil; UnsaturatedSolinas.machine_wordsize := 64 |} ) "GallinaAxOf with native_compute" (2) :
+Tactic call ran for 0.132 secs (0.008u,0.016s) (success)
+Testing UnsaturatedSolinas "2^137-13" (bitwidth = 64 ) (index = 0%nat ) (params = {| UnsaturatedSolinas.n := 3; UnsaturatedSolinas.s := 174224571863520493293247799005065324265472; UnsaturatedSolinas.c := (1, 13) :: nil; UnsaturatedSolinas.idxs := 0%nat :: 1%nat :: 2%nat :: 0%nat :: 1%nat :: nil; UnsaturatedSolinas.machine_wordsize := 64 |} ) "GallinaAxOf with cbv" :
+Tactic call ran for 0.445 secs (0.407u,0.039s) (success)
+Testing UnsaturatedSolinas "2^137-13" (bitwidth = 64 ) (index = 0%nat ) (params = {| UnsaturatedSolinas.n := 3; UnsaturatedSolinas.s := 174224571863520493293247799005065324265472; UnsaturatedSolinas.c := (1, 13) :: nil; UnsaturatedSolinas.idxs := 0%nat :: 1%nat :: 2%nat :: 0%nat :: 1%nat :: nil; UnsaturatedSolinas.machine_wordsize := 64 |} ) "GallinaAxOf with lazy" :
+Tactic call ran for 0.51 secs (0.512u,0.s) (success)

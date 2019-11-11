@@ -1,0 +1,10 @@
+Testing WordByWordMontgomery "2^127-1" (bitwidth = 32 ) (params = {| WordByWordMontgomery.m := 170141183460469231731687303715884105727; WordByWordMontgomery.machine_wordsize := 32 |} ) "GallinaAxOf with vm_compute" :
+Tactic call ran for 0.187 secs (0.188u,0.s) (success)
+Testing WordByWordMontgomery "2^127-1" (bitwidth = 32 ) (params = {| WordByWordMontgomery.m := 170141183460469231731687303715884105727; WordByWordMontgomery.machine_wordsize := 32 |} ) "GallinaAxOf with native_compute" (1) :
+Tactic call ran for 0.702 secs (0.136u,0.031s) (success)
+Testing WordByWordMontgomery "2^127-1" (bitwidth = 32 ) (params = {| WordByWordMontgomery.m := 170141183460469231731687303715884105727; WordByWordMontgomery.machine_wordsize := 32 |} ) "GallinaAxOf with native_compute" (2) :
+Tactic call ran for 0.169 secs (0.083u,0.024s) (success)
+Testing WordByWordMontgomery "2^127-1" (bitwidth = 32 ) (params = {| WordByWordMontgomery.m := 170141183460469231731687303715884105727; WordByWordMontgomery.machine_wordsize := 32 |} ) "GallinaAxOf with cbv" :
+Tactic call ran for 4.033 secs (4.008u,0.023s) (success)
+Testing WordByWordMontgomery "2^127-1" (bitwidth = 32 ) (params = {| WordByWordMontgomery.m := 170141183460469231731687303715884105727; WordByWordMontgomery.machine_wordsize := 32 |} ) "GallinaAxOf with lazy" :
+Tactic call ran for 6.026 secs (6.008u,0.02s) (success)
