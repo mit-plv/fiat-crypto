@@ -65,8 +65,9 @@ def write_makefile(primes):
                          for mdescr, mkind, extra_args in MKINDS
                          for extra_arg in extra_args)
 
-    write_if_different(os.path.join(GENERATED_DIRECTORY, 'primes.mk'),
-                       r'''PERF_PRIME_VOS := %s
+    # We unconditionally write to primes.mk, so that invoking this target actually updates the timestamp
+    with open(os.path.join(GENERATED_DIRECTORY, 'primes.mk'), 'r') as f:
+        f.write(r'''PERF_PRIME_VOS := %s
 PERF_PRIME_SHS := %s
 ''' % (vos, shs))
 
