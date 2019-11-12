@@ -1,5 +1,6 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Lists.List.
+Require Import Coq.micromega.Lia.
 Require bedrock2.Syntax.
 Require bedrock2.Semantics.
 Require bedrock2.WeakestPrecondition.
@@ -170,23 +171,24 @@ Module Compiler.
     (* Used to interpret expressions that are not allowed to contain let statements *)
     Fixpoint translate_inner_expr
              (require_cast : bool)
-             {t} (e : @API.expr ltype t) : rtype t :=
+             {t} (e : @API.expr ltype (type.base t)) : base_rtype t :=
       if (require_cast && negb (has_casts e))%bool
-      then make_error _
+      then base_make_error _
       else
-        match e with
+        match e in expr.expr t0 return rtype t0 with
         (* Z_cast : clear casts because has_casts already checked for them *)
         | (expr.App
              type_Z type_Z
              (expr.App
                 type_range (type.arrow type_Z type_Z)
-                (expr.Ident _ ident.Z_cast) _) x) => translate_inner_expr false x
+                (expr.Ident _ ident.Z_cast) _) x) =>
+          translate_inner_expr false x
         (* Z_cast2 : clear casts because has_casts already checked for them *)
-      | (expr.App
-           type_ZZ type_ZZ
-           (expr.App
-              type_range2 (type.arrow type_ZZ type_ZZ)
-              (expr.Ident _ ident.Z_cast2) _) x) => translate_inner_expr false x
+        | (expr.App
+             type_ZZ type_ZZ
+             (expr.App
+                type_range2 (type.arrow type_ZZ type_ZZ)
+                (expr.Ident _ ident.Z_cast2) _) x) => translate_inner_expr false x
         (* Z_mul_split : compute high and low separately and assign to two
            different variables *)
         (* TODO : don't duplicate argument expressions *)
@@ -206,7 +208,7 @@ Module Compiler.
                           Syntax.bopname.mulhuu
                           (translate_inner_expr true x) (translate_inner_expr true y) in
             (low, high)
-          else make_error _
+          else base_make_error _
         (* Z_add -> bopname.add *)
         | (expr.App
              type_Z type_Z
@@ -247,7 +249,7 @@ Module Compiler.
                        x) y) =>
           if Z.eqb s Semantics.width
           then Syntax.expr.op Syntax.bopname.slu (translate_inner_expr true x) (translate_inner_expr true y)
-          else make_error _
+          else base_make_error _ 
         (* fst : since the [rtype] of a product type is a tuple, simply use Coq's [fst] *)
         | (expr.App
              (type.base (base.type.prod (base.type.type_base base.type.Z) _)) type_Z
@@ -391,52 +393,74 @@ Module Compiler.
       | _ => fun _ => None
       end.
 
-    Fixpoint translate_expr {t} (e : @API.expr ltype t) (nextn : nat)
-      : type.for_each_lhs_of_arrow ltype t (* argument names *)
-        -> base_ltype (type.final_codomain t) (* return value names *)
+    Fixpoint translate_expr {t} (e : @API.expr ltype (type.base t)) (nextn : nat)
+      : base_ltype t (* return value names *)
         -> nat * Syntax.cmd.cmd :=
-      match e with
+      match e in expr.expr t0 return ltype t0 -> _ with
       | expr.LetIn (type.base t1) (type.base t2) x f =>
-        fun argnames retnames  =>
+        fun retnames  =>
           let gr := translate_lhs t1 nextn in
           let cmdx :=
               match translate_carries x (snd gr) with
               | Some cmdx => cmdx
               | None => assign (snd gr) (translate_inner_expr true x)
               end in
-          let recf := translate_expr (f (snd gr)) (fst gr) argnames retnames in
+          let recf := translate_expr (f (snd gr)) (fst gr) retnames in
           (fst recf, Syntax.cmd.seq cmdx (snd recf))
       | expr.App
           type_listZ type_listZ
           (expr.App type_Z _ (expr.Ident _ (ident.cons _)) x) l =>
-        fun argnames (retloc : Syntax.varname) =>
+        fun (retloc : Syntax.varname) =>
           (* retloc is the address at which to store the head of the list *)
           let cmdx := (Syntax.cmd.store Syntax.access_size.word
                                         (Syntax.expr.var retloc) (translate_inner_expr true x)) in
           let next_retloc := (Syntax.expr.op Syntax.bopname.add
                                              (Syntax.expr.var retloc) (Syntax.expr.literal 1)) in
           let set_next_retloc := (Syntax.cmd.set (varname_gen nextn) next_retloc) in
-          let recl := translate_expr l (S nextn) argnames (varname_gen nextn) in
+          let recl := translate_expr l (S nextn) (varname_gen nextn) in
           (fst recl, Syntax.cmd.seq (Syntax.cmd.seq cmdx set_next_retloc) (snd recl))
       | (expr.Ident _ (ident.nil (base.type.type_base base.type.Z))) =>
-        fun _ _ => (nextn, Syntax.cmd.skip)
+        fun _ => (nextn, Syntax.cmd.skip)
       | expr.App _ (type.base _) f x =>
-        fun _ retnames =>
+        fun retnames =>
           let v := translate_inner_expr true (expr.App f x) in
           (nextn, assign retnames v)
       | expr.Ident (type.base _) x =>
-        fun _ retnames =>
+        fun retnames =>
           let v := translate_inner_expr true (expr.Ident x) in
           (nextn, assign retnames v)
       | expr.Var (type.base _) x =>
-        fun _ retnames =>
+        fun retnames =>
           let v := translate_inner_expr true (expr.Var x) in
           (nextn, assign retnames v)
+      | _ => fun _ => (nextn, Syntax.cmd.skip)
+      end.
+
+    Fixpoint translate_func {t} (e : @API.expr ltype t) (nextn : nat)
+      : type.for_each_lhs_of_arrow ltype t -> (* argument names *)
+        base_ltype (type.final_codomain t) -> (* return value names *)
+        Syntax.cmd.cmd :=
+      match e with
       | expr.Abs (type.base s) d f =>
+        (* if we have an abs, peel off one argument and recurse *)
         fun (argnames : base_ltype s * type.for_each_lhs_of_arrow _ d)
             (retnames : base_ltype (type.final_codomain d)) =>
-          translate_expr (f (fst argnames)) nextn (snd argnames) retnames
-      | _ => fun _ _ => (nextn, Syntax.cmd.skip)
+          translate_func (f (fst argnames)) nextn (snd argnames) retnames
+      (* if any expression that outputs a base type, call translate_expr *)
+      | expr.Ident (type.base b) idc =>
+        fun (_:unit) retnames =>
+          snd (translate_expr (expr.Ident idc) nextn retnames)
+      | expr.Var (type.base b) v =>
+        fun (_:unit) retnames =>
+          snd (translate_expr (expr.Var v) nextn retnames)
+      | expr.App _ (type.base b) f x =>
+        fun (_:unit) retnames =>
+          snd (translate_expr (expr.App f x) nextn retnames)
+      | expr.LetIn _ (type.base b) x f =>
+        fun (_:unit) retnames =>
+          snd (translate_expr (expr.LetIn x f) nextn retnames)
+      (* if the expression does not have a base type and is not an Abs, return garbage *)
+      | _ => fun _ _ => Syntax.cmd.skip
       end.
   End Compiler.
 
@@ -448,7 +472,7 @@ Module Compiler.
     Axiom valid_inner_expr : forall {t}, bool -> @API.expr (fun _ => unit) t -> Prop.
 
     (* Inductive version: *)
-    Inductive valid_expr : forall {t}, @API.expr (fun _ => unit) t -> Prop :=
+    Inductive valid_expr : forall {t}, @API.expr (fun _ => unit) (type.base t) -> Prop :=
     | valid_LetIn_carry :
         forall {b} x f,
           valid_carry_expr x -> valid_expr (f tt) ->
@@ -467,11 +491,16 @@ Module Compiler.
                      (ident.cons (t:=base.type.type_base base.type.Z))) x) l)
     | valid_nil :
         valid_expr (expr.Ident (ident.nil (t:=base.type.type_base base.type.Z)))
-    | valid_Abs :
-        forall {s d} f, valid_expr (f tt) ->
-                        valid_expr (expr.Abs (s:=type.base s) (d:=d) f)
     | valid_inner : forall {t} e,
-        valid_inner_expr true e -> valid_expr (t:=type.base t) e
+        valid_inner_expr true e -> valid_expr (t:=t) e
+    .
+
+    Inductive valid_func : forall {t}, @API.expr (fun _ => unit) t -> Prop :=
+    | validf_Abs :
+        forall {s d} f, valid_func (f tt) ->
+                        valid_func (expr.Abs (s:=type.base s) (d:=d) f)
+    | validf_base :
+        forall {b} e, valid_func (t:=type.base b) e
     .
 
     (* Fixpoint version:
@@ -648,8 +677,7 @@ Module Compiler.
     Require Import Crypto.Util.Tactics.BreakMatch.
 
     Ltac cleanup :=
-      repeat first [ progress subst
-                   | progress cbn [fst snd eq_rect] in *
+      repeat first [ progress cbn [fst snd eq_rect] in *
                    | progress destruct_head'_and
                    | match goal with H : exists _, _ |- _ => destruct H end
                    | match goal with H : ?x = ?x |- _ => clear H end ].
@@ -713,16 +741,16 @@ Module Compiler.
     (* N.B. technically, x2 and f2 are not needed in the following lemmas, it just makes things easier *)
 
     Lemma translate_expr_carry {t1 t2 : base.type}
-          G x1 x2 x3 f1 f2 f3 nextn argnames retnames cmdx:
+          G x1 x2 x3 f1 f2 f3 nextn retnames cmdx:
       wf3 G x1 x2 x3 ->
       (forall v1 v2 v3,
           wf3 (existT (fun t => (unit * API.interp_type t * ltype t)%type) (type.base t1) (v1, v2, v3) :: G)
               (f1 v1) (f2 v2) (f3 v3)) ->
       (* valid_carry_expr x1 -> valid_expr (f1 tt) -> *)
       let gr := translate_lhs t1 nextn in
-      let recf := translate_expr (f3 (snd gr)) (fst gr) argnames retnames in 
+      let recf := translate_expr (f3 (snd gr)) (fst gr) retnames in 
       translate_carries (t:=type.base t1) x3 (snd gr) = Some cmdx ->
-      translate_expr (expr.LetIn (A:=type.base t1) (B:=type.base t2) x3 f3) nextn argnames retnames =
+      translate_expr (expr.LetIn (A:=type.base t1) (B:=type.base t2) x3 f3) nextn retnames =
       (fst recf, Syntax.cmd.seq cmdx (snd recf)).
     Proof.
       cbv zeta; intros. cbn [translate_expr].
@@ -806,11 +834,13 @@ Module Compiler.
                              Basics.impl)))) call call).
 
     Section accesses.
-      Context (init_locals : list Syntax.varname) (min_varname : nat).
-      Context (init_locals_ok :
-                 forall v n, In v init_locals ->
-                             (min_varname <= n)%nat ->
-                             varname_gen n <> v).
+      Context (locals : Interface.map.rep (map:=Semantics.locals)) (min_varname : nat).
+      Context (locals_ok :
+                 (* no name that appears in locals can later be generated by varname_gen *)
+                 forall n name,
+                   Interface.map.get locals name <> None ->
+                   (min_varname <= n)%nat ->
+                   varname_gen n <> name).
       Fixpoint expr_accesses_ok
                (memlocs : list Syntax.expr.expr)
                (nextn : nat)
@@ -818,7 +848,7 @@ Module Compiler.
         match e with
         | Syntax.expr.literal z => True
         | Syntax.expr.var v =>
-          In v init_locals
+          Interface.map.get locals v <> None
           \/ (exists n, v = varname_gen n
                         /\ (min_varname <= n < nextn)%nat)
         | Syntax.expr.load sz a =>
@@ -873,6 +903,7 @@ Module Compiler.
       | type.arrow (type.arrow _ _) _ => fun _ => [] (* not allowed *)
       end.
 
+    (* TODO : delete if unused
     (* Determines what locations in memory access parts of the arguments -- this
     applies only to list arguments. We have to use the fiat-crypto-style
     arguments to find out the lengths of the lists. *)
@@ -917,7 +948,6 @@ Module Compiler.
                (c : Syntax.cmd.cmd) : Prop :=
       snd (accesses_ok (init_locals_from_args argnames) startname
                        (init_memlocs_from_args args argnames) nextn c).
-
     Definition varnames_complete
                (minn maxn : nat)
                (locals : Interface.map.rep (map:=Semantics.locals)) : Prop :=
@@ -925,6 +955,20 @@ Module Compiler.
         (minn <= n < maxn)%nat ->
         exists a,
           WeakestPrecondition.get locals (varname_gen n) (eq a).
+     *)
+
+    (* locals without real values *)
+    Definition dummy_locals (start final : nat) : Interface.map.rep (map:=Semantics.locals) :=
+      fold_right (fun i m => Interface.map.put m (varname_gen i) (Interface.word.of_Z 0))
+                 Interface.map.empty (seq start (final - start)).
+
+    Lemma extend_locals locals locals' nextn midn finaln :
+      (nextn <= midn <= finaln)%nat ->
+      Interface.map.sub_domain locals locals' ->
+      Interface.map.sub_domain (dummy_locals nextn midn) locals ->
+      Interface.map.sub_domain (dummy_locals midn finaln) locals' ->
+      Interface.map.sub_domain (dummy_locals nextn finaln) locals'.
+    Admitted.
 
     Lemma translate_carries_correct {t}
           (* three exprs, representing the same Expr with different vars *)
@@ -944,7 +988,9 @@ Module Compiler.
             call cmdx tr mem locals
             (fun tr' mem' locals' =>
                tr = tr'
-               /\ varnames_complete nextn (fst gr) locals'
+               /\ Interface.map.sub_domain locals locals'
+               /\ Interface.map.sub_domain (dummy_locals nextn (fst gr)) locals'
+               /\ (nextn <= fst gr)%nat
                /\ sep (equivalent (API.interp e2) (snd gr) locals') R mem').
     Admitted.
 
@@ -968,7 +1014,6 @@ Module Compiler.
             tr mem locals
             (fun tr' mem' locals' =>
                tr = tr'
-               /\ varnames_complete nextn (fst gr) locals'
                /\ sep (equivalent (API.interp e2) (snd gr) locals') R mem').
     Admitted.
 
@@ -1010,8 +1055,6 @@ Module Compiler.
       repeat (split; try eassumption).
     Qed.
 
-    (* TODO: consider removing the Abs case from translate_expr and putting it
-    in an outer wrapper, so we don't need to deal with for_each_lhs_of_arrow *)
     (* can simulate this in proof by assuming t is a base type *)
     Lemma translate_expr_correct' {t'} (t:=type.base t')
           (* three exprs, representing the same Expr with different vars *)
@@ -1024,28 +1067,35 @@ Module Compiler.
           (G : list _) :
       (* exprs are all related *)
       wf3 G e1 e2 e3 ->
-      forall (init_locals : list Syntax.varname)
+      forall (locals : Interface.map.rep)
              (memlocs : list Syntax.expr.expr)
              (retnames : base_ltype t')
              (nextn : nat),
         (* ret := fiat-crypto interpretation of e2 *)
         let ret : base.interp t' := API.interp e2 in
         (* out := translation output for e3 *)
-        let out := translate_expr e3 nextn tt retnames in
+        let out := translate_expr e3 nextn retnames in
+        (*
         (* output expression doesn't look up variables that don't exist *)
-        snd (accesses_ok init_locals nextn memlocs (fst out) (snd out)) ->
+        snd (accesses_ok locals nextn memlocs (fst out) (snd out)) -> *)
         forall (tr : Semantics.trace)
-               (env mem locals : Interface.map.rep)
+               (mem : Interface.map.rep)
                (R : Interface.map.rep -> Prop),
-          (* executing bedrock_e is equivalent to interpreting e *)
-          (* TODO: do we need to say that the function doesn't overwrite old locals? *)
+          (*
+          (* all the variable names between startn and nextn are in locals *)
+          Interface.map.sub_domain (dummy_locals startn (nextn - startn)) locals -> *)
+          (* executing translation output is equivalent to interpreting e *)
           WeakestPrecondition.cmd call (snd out) tr mem locals
             (fun tr' mem' locals' =>
                tr = tr'
-               /\ varnames_complete nextn (fst out) locals'
+               (* locals' needs to have *some* value for everything that was in locals
+                  (output may overwrite input, but input variables cannot disappear *)
+               /\ Interface.map.sub_domain locals locals'
+               (* locals' needs to have every generated varname from nextn...fst out *)
+               /\ Interface.map.sub_domain (dummy_locals nextn (fst out)) locals'
+               /\ (nextn <= fst out)%nat
                /\ sep (equivalent ret retnames locals') R mem').
     Proof.
-      cbv [all_accesses_ok].
       revert e2 e3 G.
       induction e1_valid; inversion 1; cbv zeta in *; intros.
       all:hammer_wf. (* get rid of the wf nonsense *)
@@ -1058,7 +1108,12 @@ Module Compiler.
                         eapply translate_carries_Some in H;
                           [ destruct H | eassumption .. ]
         end.
-        erewrite translate_expr_carry by eassumption.
+        erewrite @translate_expr_carry by eassumption.
+        repeat match goal with
+        | H : context[accesses_ok] |- _ =>
+          erewrite @translate_expr_carry in H by eassumption;
+            cbn in H
+        end.
         cleanup.
 
         (* simplify fiat-crypto step *)
@@ -1073,8 +1128,100 @@ Module Compiler.
         2 : eapply translate_carries_correct with (R0:=R); try eassumption.
 
         (* use inductive hypothesis *)
-        cleanup.
+        cbn [translate_lhs] in *; cleanup.
+        (* we have the information that the continuation function is complete
+        from (S (S nextn)) --> (fst out), and that the inner expression is
+        complete from nextn --> (S (S nextn)); need to combine *)
+
+        eapply WeakestPreconditionProperties.Proper_cmd;
+          [ eapply Proper_call | repeat intro | ].
+
+        2: { eapply IHe1_valid with (R:=R); try eassumption; eauto.
+             match goal with H : _ |- _ => apply H end. }
+        { intros; cleanup.
+          split; try congruence; [ ].
+          repeat split; try eassumption; [ | | ].
+          { eauto using Properties.map.sub_domain_trans. }
+          { eauto using extend_locals. }
+          { lia. } } }
+
+          
+        2: {
+          eapply IHe1_valid; try eassumption; eauto;
+          [ solve [match goal with H : _ |- _ => apply H end] | ].
+          remember (translate_expr (f3 (varname_gen nextn, varname_gen (S nextn))) (S (S nextn)) retnames) as F.
+          setoid_rewrite <-HeqF.
+
+          clear IHe1_valid.
+
+          Print accesses_ok.
+
+          (* Proof path:
+
+             1. because we know a1 extends locals and a1 contains nextn...(S (S nextn)),
+                accesses_ok locals nextn memlocs finaln exp ->
+                accesses_ok a1 (S (S nextn) memlocs finaln exp
+                because no access that is ok in locals would be not ok in a1
+             2. now need to prove the finaln values equivalent
+
+             in H7, finaln is what's returned from x0 (the carry expression) -- S (S nextn)
+             in the goal, finaln is what's returned from translate_expr
+
+             why?
+             *)
+
+
+          { setoid_rewrite H8.
+          
+          Search a1.
+          (* H7 says:
+             for the continuation expression, accesses are ok; they are either in locals or in nextn...<final nextn>
+             goal says:
+             for the continuation expression, accesses are ok; they are either in a1 or in (S (S nextn))...<final nextn>
+
+             For this we need to know that a1 = locals + nextn + S nextn
+
+          *)
+
+          Lemma __  locals l' a b c :
+            a <= b <= c ->
+            let l' := (* locals + a...b *) in
+            accesses_ok init_locals a memlocs c ->
+            accesses_ok l' b memlocs c.
+            
+          (* last argument is the same for both H7 and goal *)
+          (* need to prove that the new nextn returned by accesses_ok is the
+          same as the one returned by translate_expr, and that having
+          accesses_ok with a lower minimum varname implies the same with higher
+          minimum varname -- nope, last part is not true, because stuff in the
+          middle would be bad
+
+          Why the mismatch?
+
+          add nextn and (S nextn) to init_locals?
+           *)
+          remember (f3 (varname_gen nextn, varname_gen (S nextn))) as F.
+          cbn in H7.
+        (* N.B. putting below line in the [ | | ] above makes eassumption fail *)
+        2 : eapply translate_carries_correct with (R0:=R); try eassumption.
+        
+        (* the goal is right -- I have to prove that the final locals' are
+           complete from nextn --> out *)
+        (* my IH gives me that that is true from (S (S nextn)) --> out *)
+        (* the connection should be that a1 is my current locals; assuming the
+        cmd doesn't overwrite any of the variables it has (nextn through
+        nextn+2), I'm good *)
+        (* but how do we get that reasoning to work? *)
+        (* idea: use startn
+           varnames_complete startn nextn locals ->
+           WP.cmd ... (varnames_complete nextn out)
+           *)
+        (* what I'm missing, really, is the connection between the final locals and a1 *)
         eapply IHe1_valid; eauto.
+        2: {
+          cbn. eauto.
+          lia. }
+          (*(
 
         (* and now we have just accesses_ok! *)
         (* TODO : prove *)
