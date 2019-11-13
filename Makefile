@@ -456,11 +456,26 @@ perf-vos: $(PERF_VOLOGS) \
 	$(PERF_MAKEFILE) \
 	src/Rewriter/PerfTesting/Core.vo \
 
+FILTER_OUT = $(foreach v,$(2),$(if $(findstring $(1),$(v)),,$(v)))
+FILTER = $(foreach v,$(2),$(if $(findstring $(1),$(v)),$(v),))
+.PHONY: perf-except-computed-vos
+perf-except-computed-vos: $(call FILTER_OUT,ComputedOf,$(PERF_VOLOGS)) \
+	$(PERF_MAKEFILE) \
+	src/Rewriter/PerfTesting/Core.vo \
+
+.PHONY: perf-only-computed-vos
+perf-only-computed-vos: $(call FILTER,ComputedOf,$(PERF_VOLOGS)) \
+	$(PERF_MAKEFILE) \
+	src/Rewriter/PerfTesting/Core.vo \
+
 perf-extraction: $(PERF_SHLOGS) \
 	$(PERF_MAKEFILE) \
 	perf-standalone
 
+.PHONY: perf perf-except-computed perf-only-computed
 perf: perf-extraction perf-vos
+perf-except-computed: perf-extraction perf-except-computed-vos
+perf-only-computed: perf-extraction perf-only-computed-vos
 
 PERF_PRE_TXTS := perf-old-vm-times perf-new-vm-times perf-new-extraction-times perf-old-cbv-times \
 	perf-new-extraction-over-old-vm perf-new-vm-over-old-vm perf-old-vm-over-old-vm \
