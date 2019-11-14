@@ -467,6 +467,9 @@ Module Compiler.
   Section Proofs.
     Context {p : parameters} {p_ok : @ok p }.
 
+    Local Instance mem_ok : Interface.map.ok Semantics.mem
+      := Semantics.mem_ok (parameters_ok := semantics_ok).
+
     (* TODO : fill these in *)
     Axiom valid_carry_expr : forall {t}, @API.expr (fun _ => unit) t -> Prop.
     Axiom valid_inner_expr : forall {t}, bool -> @API.expr (fun _ => unit) t -> Prop.
@@ -570,8 +573,10 @@ Module Compiler.
                         (map:=Semantics.mem (parameters:=semantics)))
       : Prop :=
       let size := Interface.word.of_Z word_size_in_bytes in
-      Array.array (Scalars.truncated_scalar Syntax.access_size.word) size start xs mem.
+      Array.array scalar size start (map Interface.word.of_Z xs) mem.
 
+    (* relation that states whether a fiat-crypto value and a bedrock2 value are
+       equivalent in a given bedrock2 context *)
     Fixpoint equivalent {t}
       : base.interp t -> (* fiat-crypto value *)
         base_rtype t -> (* bedrock2 value *)
@@ -660,7 +665,7 @@ Module Compiler.
       match G with
       | [] => True
       | existT (type.base b) (w, x, y) :: G' =>
-        sep (equivalent x y locals)
+        sep (equivalent x (rtype_of_ltype y) locals)
             (Lift1Prop.ex1
                (fun prev_locals mem' =>
                   Interface.map.only_differ prev_locals (varname_set y) locals
@@ -858,7 +863,7 @@ Module Compiler.
         translate_carries e3 (snd gr) = Some cmdx ->
         forall (tr : Semantics.trace)
                (mem locals : Interface.map.rep)
-               (R : Interface.map.rep -> Prop),
+               (R : Interface.map.rep -> Interface.map.rep -> Prop),
           context_list_equiv locals mem G ->
           WeakestPrecondition.cmd
             call cmdx tr mem locals
@@ -871,62 +876,29 @@ Module Compiler.
                (* no variables disappear *)
                /\ Interface.map.sub_domain locals locals'
                (* information stored in LHS variables is equivalent to interp *)
-               /\ sep (equivalent (API.interp e2) (snd gr) locals') R mem').
+               /\ sep (equivalent (API.interp e2) (rtype_of_ltype (snd gr)) locals')
+                      (R locals') mem').
     Admitted.
 
-    Print WeakestPrecondition.dexpr.
-    Lemma translate_inner_expr_correct {t}
-          (* three exprs, representing the same Expr with different vars *)
-          (e1 : @API.expr (fun _ => unit) (type.base t))
-          (e2 : @API.expr API.interp_type (type.base t))
-          (e3 : @API.expr ltype (type.base t))
-          (require_cast : bool) :
-      (* e1 is a valid input to translate_carries_correct *)
-      valid_inner_expr require_cast e1 ->
-      forall G nextn,
-        let gr := translate_lhs t nextn in
-        let out := translate_inner_expr require_cast e3 in
-        wf3 G e1 e2 e3 ->
-        forall (tr : Semantics.trace)
-               (mem locals : Interface.map.rep)
-               (R : Interface.map.rep -> Prop),
-          context_list_equiv locals mem G ->
-          WeakestPrecondition.cmd
-            call (assign (snd gr) out)
-            tr mem locals
-            (fun tr' mem' locals' =>
-               tr = tr'
-               /\ Interface.map.sub_domain locals locals'
-               /\ sep (equivalent (API.interp e2) (snd gr) locals') R mem').
-    Admitted.
-    About translate_inner_expr.
-    Search base_rtype.
-    Print base_rtype.
-    Print assign.
-    About equivalent.
-    Check base.interp.
-    Lemma assign_correct {t}
-          (x : base.interp t)
-          (lhs : base_ltype t)
-          (rhs : base_rtype t) :
-      forall G nextn,
-        forall (tr : Semantics.trace)
-               (mem locals : Interface.map.rep)
-               (R : Interface.map.rep -> Prop),
-          equivalent x lhs locals mem ->
-          WeakestPrecondition.cmd
-            call (assign lhs rhs)
-            tr mem locals
-            (fun tr' mem' locals' =>
-               tr = tr'
-               (* translate_carries never stores anything -- mem unchanged *)
-               /\ mem = mem'
-               (* new locals only differ in the values of LHS variables *)
-               /\ Interface.map.only_differ locals (varname_set (snd gr)) locals'
-               (* no variables disappear *)
-               /\ Interface.map.sub_domain locals locals'
-               (* information stored in LHS variables is equivalent to interp *)
-               /\ sep (equivalent (API.interp e2) (snd gr) locals') R mem').
+    Lemma assign_correct {t} :
+      forall (x : base.interp t)
+             (lhs : base_ltype t) (rhs : base_rtype t)
+             (tr : Semantics.trace)
+             (mem locals : Interface.map.rep)
+             (R : Interface.map.rep -> Interface.map.rep -> Prop),
+        (* rhs == x *)
+        equivalent x rhs locals mem ->
+        WeakestPrecondition.cmd
+          call (assign lhs rhs)
+          tr mem locals
+          (fun tr' mem' locals' =>
+             tr = tr'
+             (* assign never stores anything -- mem unchanged *)
+             /\ mem = mem'
+             (* new locals only differ in the values of LHS variables *)
+             /\ Interface.map.only_differ locals (varname_set lhs) locals'
+             (* evaluating lhs == x *)
+             /\ sep (equivalent x (rtype_of_ltype lhs) locals') (R locals') mem').
     Admitted.
 
     Lemma translate_inner_expr_correct {t}
@@ -937,71 +909,158 @@ Module Compiler.
           (require_cast : bool) :
       (* e1 is a valid input to translate_carries_correct *)
       valid_inner_expr require_cast e1 ->
-      forall G nextn,
-        let gr := translate_lhs t nextn in
-        let out := translate_inner_expr require_cast e3 in
+      forall G mem locals,
         wf3 G e1 e2 e3 ->
-        forall (tr : Semantics.trace)
-               (mem locals : Interface.map.rep)
-               (R : Interface.map.rep -> Prop),
-          context_list_equiv locals mem G ->
-          WeakestPrecondition.cmd
-            call (assign (snd gr) out)
-            tr mem locals
-            (fun tr' mem' locals' =>
-               tr = tr'
-               /\ Interface.map.sub_domain locals locals'
-               /\ sep (equivalent (API.interp e2) (snd gr) locals') R mem').
+        let out := translate_inner_expr require_cast e3 in
+        context_list_equiv locals mem G ->
+        equivalent (API.interp e2) out locals mem.
     Admitted.
 
     (* TODO: see if there's a bedrock2 lemma that proves this *)
     Lemma sep_indep {k v}
           {map : Interface.map.map k v}
           a b m :
-      sep (map:=map) (fun _ => a) b m -> a /\ sep (fun _ => True) b m.
+      sep (map:=map) (fun _ => a) b m <-> a /\ sep (fun _ => True) b m.
     Proof.
-      cbv [sep]; intros.
-      repeat match goal with H : exists _, _ |- _ => destruct H end.
-      destruct_head'_and; split; [ assumption | ].
-      intros; do 2 eexists.
-      repeat (split; try eassumption).
+     cbv [sep]; split; intros; cleanup.
+     { split; [ assumption | ].
+        do 2 eexists. repeat (split; try eassumption). }
+      { do 2 eexists. repeat (split; try eassumption). }
     Qed.
 
-    (* states that the variables given as return types are okay; this means that
-       if a list is returned, the variable holding the location where the list head
-       should go actually exists in the local context. *)
-    Fixpoint retnames_ok
-             {t} (locals : Interface.map.rep (map:=Semantics.locals))
-      : base_ltype t -> Prop :=
+    (* if a list appears in the type, the variable holding the location where
+       the list head should go actually exists in the local context and maps to
+       a location in memory. *)
+    Fixpoint lists_ok {t}
+             (locals : Interface.map.rep (map:=Semantics.locals))
+      : base_ltype t ->
+        base.interp t -> (* get lengths of lists from fiat-crypto compiler output *)
+        Interface.map.rep (map:=Semantics.mem) ->
+        Prop :=
       match t with
       | base.type.prod a b =>
-        fun x =>
-          retnames_ok locals (fst x) /\ retnames_ok locals (snd x)
+        fun x r =>
+          sep (lists_ok locals (fst x) (fst r))
+              (lists_ok locals (snd x) (snd r))
       | base.type.list (base.type.type_base base.type.Z) =>
-        fun x =>
-          exists a, WeakestPrecondition.get locals x (eq a)
-      | _ => fun _ => True
+        fun x r =>
+          Lift1Prop.ex1
+            (fun loc =>
+               sep (emp (WeakestPrecondition.get locals x (eq loc)))
+                   (zarray loc r))
+      | _ => fun _ _ _ => True
       end.
 
-    Lemma sub_domain_retnames t retnames locals locals' :
-      Interface.map.sub_domain locals locals' ->
-      retnames_ok locals retnames ->
-      @retnames_ok t locals' retnames.
+    (* TODO : move *)
+    Lemma disjoint_union {E} s1 s2 s3 :
+      @PropSet.disjoint E (PropSet.union s1 s2) s3 <->
+      PropSet.disjoint s1 s3 /\ PropSet.disjoint s2 s3.
+    Proof.
+      cbv [PropSet.disjoint PropSet.union PropSet.elem_of]; split.
+      { intro H; split; intro x; specialize (H x); tauto. }
+      { intros [H1 H2] x. specialize (H1 x). specialize (H2 x). tauto. } 
+    Qed.
+
+    (* TODO : move *)
+    Lemma disjoint_comm {E} s1 s2 :
+      @PropSet.disjoint E s1 s2 <-> PropSet.disjoint s2 s1.
+    Proof.
+      cbv [PropSet.disjoint PropSet.elem_of]; split;
+        intros H x; specialize (H x); tauto.
+    Qed.
+
+    (* if two maps only differ on some keys, and we get a key that is not in the
+    differing set, then any proposition that holds on one result should hold on
+    the other. *)
+    Lemma get_untouched m1 m2 ks k P :
+      Interface.map.only_differ m2 ks m1 ->
+      PropSet.disjoint (PropSet.singleton_set k) ks ->
+      WeakestPrecondition.get m1 k P <-> WeakestPrecondition.get m2 k P.
     Admitted.
 
+    Lemma lists_ok_step {t} locals locals' ks mem retnames ret :
+      Interface.map.only_differ locals ks locals' ->
+      PropSet.disjoint (varname_set retnames) ks ->
+      forall R,
+        sep (lists_ok locals retnames ret) R mem ->
+        sep (@lists_ok t locals' retnames ret) R mem.
+    Proof.
+      induction t; cbn [lists_ok varname_set]; intros;
+        break_match; try tauto; [ | ].
+      { apply sep_assoc.
+        match goal with H : _ |- _ =>
+                        apply disjoint_union in H; cleanup end.
+        apply IHt1; [ solve [eauto] .. | ].
+        apply sep_comm, sep_assoc.
+        apply IHt2; [ solve [eauto] .. | ].
+        apply sep_assoc, sep_comm, sep_assoc.
+        assumption. }
+      { repeat match goal with
+               | H : sep (Lift1Prop.ex1 _) _ _ |- _ =>
+                 apply sep_ex1_l in H; destruct H
+               | |- sep (Lift1Prop.ex1 _) _ _ =>
+                 apply sep_ex1_l; eexists; [ ]
+               end.
+        eapply Proper_sep_iff1; [ intro | reflexivity | eassumption ].
+        cbv beta. rewrite !sep_emp_l.
+        apply and_iff_compat_r.
+        eapply get_untouched; eauto. }
+    Qed.
+
+    (* TODO : remove if unused
     Local Ltac simpl_sep :=
       let t := ltac:(solve [eapply Semantics.mem_ok]) in
       match goal with
+      | _ => progress cleanup
+      | H : Lift1Prop.ex1 _ _ |- _ => destruct H
       | H : sep (fun mem => sep _ _ mem) _ _ |- _ =>
+        apply @sep_assoc in H; [ | t]
+      | H : sep (sep _ _) _ _ |- _ =>
         apply @sep_assoc in H; [ | t]
       | H : sep (emp _) _ _ |- _ =>
         apply @sep_emp_l in H; [ cleanup | t]
+      | H : sep (Lift1Prop.ex1 _) _ _ |- _ =>
+        apply @sep_ex1_l in H; [ | t]
+      | H : sep (fun _ => True) _ _ |- _ =>
+        (* N.B. must go *above* sep_indep to avoid infinite loop *)
+        apply @sep_comm in H; [ | t]
+      | H : sep (fun _ => ?x) _ _ |- _ =>
+        apply @sep_indep in H
       | |- sep (fun mem => sep _ _ mem) _ _ =>
+        apply @sep_assoc; [t | ]
+      | |- sep (sep _ _) _ _ =>
         apply @sep_assoc; [t | ]
       | |- sep (emp _) _ _ =>
         apply @sep_emp_l; [t | ]
+      | |- sep (Lift1Prop.ex1 _) _ _  =>
+        apply @sep_ex1_l ; [t | ]
+      | |- sep (fun _ => True) _ _ =>
+        (* N.B. must go *above* sep_indep to avoid infinite loop *)
+        apply @sep_comm; [ t | ]
+      | |- sep (fun _ => ?x) _ _ =>
+        apply @sep_indep
       | |- _ /\ _ => split; [ solve [eauto] | ]
-      end.
+      | |- Lift1Prop.ex1 _ _ => eexists
+      end. *)
+
+    Lemma translate_lhs_mono t :
+      forall nextn, (nextn <= fst (translate_lhs t nextn))%nat.
+    Proof.
+      induction t; cbn [translate_lhs fst]; eauto with lia; [ ].
+      intros. etransitivity; [ | apply IHt2]. eauto.
+    Qed.
+
+    Lemma disjoint_translate_lhs s t :
+      forall nextn,
+        (forall n : nat,
+            (nextn <= n)%nat ->
+            PropSet.disjoint (PropSet.singleton_set (varname_gen n)) s) ->
+        PropSet.disjoint (varname_set (snd (translate_lhs t nextn))) s.
+    Proof.
+      induction t; cbn [translate_lhs varname_set fst snd]; eauto; [ ].
+      intros nextn Hdisj. pose proof (translate_lhs_mono t1 nextn).
+      apply disjoint_union; split; eauto with lia.
+    Qed.
 
     Lemma translate_expr_correct' {t'} (t:=type.base t')
           (* three exprs, representing the same Expr with different vars *)
@@ -1015,35 +1074,32 @@ Module Compiler.
       (* exprs are all related *)
       wf3 G e1 e2 e3 ->
       forall (locals : Interface.map.rep)
-             (memlocs : list Syntax.expr.expr)
              (retnames : base_ltype t')
              (nextn : nat),
         (* ret := fiat-crypto interpretation of e2 *)
         let ret : base.interp t' := API.interp e2 in
         (* out := translation output for e3 *)
         let out := translate_expr e3 nextn retnames in
-        (* retnames are okay *)
-        retnames_ok locals retnames ->
-        (*
-        (* output expression doesn't look up variables that don't exist *)
-        snd (accesses_ok locals nextn memlocs (fst out) (snd out)) -> *)
+        (* retnames don't contain variables we could accidentally overwrite *)
+        (forall n,
+            (nextn <= n)%nat ->
+            PropSet.disjoint
+              (PropSet.singleton_set (varname_gen n))
+              (varname_set retnames)) ->
         forall (tr : Semantics.trace)
                (mem : Interface.map.rep)
                (R : Interface.map.rep -> Prop),
-          (*
-          (* all the variable names between startn and nextn are in locals *)
-          Interface.map.sub_domain (dummy_locals startn (nextn - startn)) locals -> *)
           (* contexts are equivalent; for every variable in the context list G,
              the fiat-crypto and bedrock2 results match *)
           context_list_equiv locals mem G ->
+          (* any lists in retnames are valid *)
+          sep (lists_ok locals retnames ret) R mem ->
           (* executing translation output is equivalent to interpreting e *)
-          WeakestPrecondition.cmd call (snd out) tr mem locals
-                                  (fun tr' mem' locals' =>
-                                     tr = tr'
-                                     (* locals' needs to have *some* value for everything that was in locals
-                  (output may overwrite input, but input variables cannot disappear) *)
-                                     /\ Interface.map.sub_domain locals locals'
-                                     /\ sep (equivalent ret retnames locals') R mem').
+          WeakestPrecondition.cmd
+            call (snd out) tr mem locals
+            (fun tr' mem' locals' =>
+               tr = tr'
+               /\ sep (equivalent ret (rtype_of_ltype retnames) locals') R mem').
     Proof.
       revert e2 e3 G.
       subst t.
@@ -1070,35 +1126,38 @@ Module Compiler.
         eapply WeakestPreconditionProperties.Proper_cmd;
           [ eapply Proper_call | repeat intro | ].
         (* N.B. putting below line in the [ | | ] above makes eassumption fail *)
-        2 : eapply translate_carries_correct with (R0:=R); try eassumption.
+        2 : eapply translate_carries_correct; try eassumption.
 
         (* use inductive hypothesis *)
         cbn [translate_lhs] in *; cleanup.
         eapply WeakestPreconditionProperties.Proper_cmd;
           [ eapply Proper_call | repeat intro | ].
         2: { eapply IHe1_valid with (R:=R); try eassumption;
-             try solve [eapply sub_domain_retnames; eauto];
+             try solve [eauto with lia];
              try match goal with
                  | H : (forall v1 v2 v3,
                            wf3  _ (_ v1) (_ v2) (_ v3)),
                        H' : sep (equivalent ?x _ _) _ _ |- _ =>
                    apply H with (v2:=x)
-                 end; [ ].
+                 end;
+             [ | solve [eapply lists_ok_step; subst; eauto; [ ];
+                        apply disjoint_comm, disjoint_union; eauto ] ].
              clear IHe1_valid.
              cbn [context_list_equiv equivalent] in *.
-             (* for some reason, [repeat] or [do x] makes this fail... *)
-             simpl_sep. simpl_sep. simpl_sep. simpl_sep. simpl_sep.
-             simpl_sep. simpl_sep. simpl_sep.
-             subst; eexists; split; solve [eauto]. }
-      { intros; cleanup; subst.
-        split; try congruence; [ ].
-        repeat split; try eassumption;
-          eauto using Properties.map.sub_domain_trans. } }
+             match goal with H : sep _ _ _ |- _ => eapply H end. }
+      { intros; cleanup; subst; tauto. } }
     { (* non-carry let-in *)
       (* simplify one translation step *)
       cbn [translate_expr].
       erewrite translate_carries_None by eassumption.
       cleanup.
+
+      (* assert that translate_lhs is well-behaved *)
+      match goal with
+        |- context [translate_lhs ?t ?n] =>
+        pose proof (translate_lhs_mono t n)
+      end.
+      
 
       (* simplify fiat-crypto step *)
       intros; cbn [expr.interp type.app_curried].
@@ -1109,31 +1168,27 @@ Module Compiler.
       eapply WeakestPreconditionProperties.Proper_cmd;
         [ eapply Proper_call | repeat intro | ].
       (* N.B. putting below line in the [ | | ] above makes eassumption fail *)
-      2 : eapply translate_inner_expr_correct with (R0:=R); eassumption.
+      2 : eapply assign_correct; try eassumption; [ ];
+        eapply translate_inner_expr_correct; eassumption.
 
       (* use inductive hypothesis *)
-      (* use inductive hypothesis *)
-        cbn [translate_lhs] in *; cleanup.
-        eapply WeakestPreconditionProperties.Proper_cmd;
-          [ eapply Proper_call | repeat intro | ].
-        2: { eapply IHe1_valid with (R:=R); try eassumption;
-             try solve [eapply sub_domain_retnames; eauto];
+      cbn [translate_lhs] in *; cleanup.
+      eapply WeakestPreconditionProperties.Proper_cmd;
+        [ eapply Proper_call | repeat intro | ].
+      2: { eapply IHe1_valid with (R:=R); try eassumption;
+             try solve [eauto with lia];
              try match goal with
                  | H : (forall v1 v2 v3,
                            wf3  _ (_ v1) (_ v2) (_ v3)),
                        H' : sep (equivalent ?x _ _) _ _ |- _ =>
                    apply H with (v2:=x)
-                 end; [ ].
+                 end;
+             [ | solve [eapply lists_ok_step; subst; eauto; [ ];
+                        apply disjoint_comm, disjoint_translate_lhs; eauto ] ].
              clear IHe1_valid.
              cbn [context_list_equiv equivalent] in *.
-             (* for some reason, [repeat] or [do x] makes this fail... *)
-             simpl_sep. simpl_sep. simpl_sep. simpl_sep. simpl_sep.
-             simpl_sep. simpl_sep. simpl_sep.
-             subst; eexists; split; solve [eauto]. }
-      { intros; cleanup; subst.
-        split; try congruence; [ ].
-        repeat split; try eassumption;
-          eauto using Properties.map.sub_domain_trans. } }
+             match goal with H : sep _ _ _ |- _ => eapply H end. }
+      { intros; cleanup; subst; tauto. } }
     { (* cons *)
 
       (* repeatedly do inversion until the cons is exposed *)
@@ -1150,385 +1205,86 @@ Module Compiler.
       cbn [type.for_each_lhs_of_arrow
              type.app_curried type.final_codomain base_ltype] in *.
 
-      cbn [retnames_ok] in *.
+      cbn [expr.interp Compilers.ident_interp] in *.
+      cbn [lists_ok] in *.
+      cbv [zarray] in *. cbn [array map] in *.
       cleanup.
+
+      repeat match goal with
+             | H : sep (Lift1Prop.ex1 _) _ _ |- _ =>
+               apply sep_ex1_l in H; destruct H
+             | H : sep (sep _ _) _ _ |- _ =>
+               apply sep_assoc in H
+             | H : sep (fun mem => sep _ _ mem) _ _ |- _ =>
+               apply sep_assoc in H
+             | H : sep (emp _) _ _ |- _ =>
+               apply sep_emp_l in H; cleanup
+             end.
 
       (* simplify bedrock2 step *)
       cbn [WeakestPrecondition.cmd WeakestPrecondition.cmd_body].
 
-      Print Syntax.cmd.cmd.
-      Print Syntax.expr.expr.
-      Print WeakestPrecondition.dexpr.
-      Print WeakestPrecondition.expr_body.
-
+      (* read from variable holding memory location *)
       cbn [WeakestPrecondition.dexpr WeakestPrecondition.expr WeakestPrecondition.expr_body].
       eexists; split; [ eassumption | ].
 
-      Print WeakestPrecondition.cmd_body.
-      (* 
-           here, the goal says that translate_inner_expr is an expression that evaluates to some word a
-           ...and that's true only if it doesn't look up variables that don't exist
-           ...which is why we needed accessses_ok before
-
-           Try to think of more elegant solutions
-
-           Note: haven't used translate_inner_expr_correct yet, and might well
-           want a totally different form for it -- WeakestPrecondition.dexpr instead of cmd
-           
-       *)
-
-      
-      (* here is where, before, we used translate_inner_expr_correct_store *)
-      (* need some kind of statement in the validity precondition or some
-        extra precondition on the provided return values that the return
-        variable holding list locations exists -- probably also need somewhere
-        to fold through that next_varname will never overwrite this variable *)
-      (* probably will also need to know eventually that next_varname doesn't
-           repeat *)
-      (* presumably for the inductive hypothesis we need more information
-        about locals? Every time we get the value of a var, we need to know it
-        was in context *)
-      (* Need to think carefully. Don't rush it.
-           1) How do we deal with the representation of lists? Variables are
-              maybe not the best way -- are literals possible?
-           2) More broadly (probably this should be answered first) -- what's up
-              with local variables? For induction to work, how much information
-              about them does my theorem statement need to have?
-
-           Focusing first on 2) -- when does WeakestPrecondition.cmd need to
-           know local information?
-
-           In store, we get two expressions ea and ev and need to say there
-           exist a and v, both words, such that evaluating ea in the local
-           context gives you a and evaluating ev gives you v -- no misses
-           allowed, so all vars and loads have to have information there.
-
-           set also needs to know that there exists v : word such that the
-           expression on the RHS (ev) evaluates to v.
-
-           Perhaps we need a predicate on the expression that says "no misses"
-           -- that is, no references to variables that don't exist, and maybe no
-           loads where there weren't previous stores.
-
-           The loads might be tricky -- if arguments are lists, we'd have to
-           load from those places, so any "no misses" predicate would need to
-           know where the input data is stored. Should be folded neatly into an
-           inductive hypothesis that allows stores, even though I don't think we
-           do load-store.
-
-           Or maybe we could be more direct and just have a predicate saying,
-           for every place where we call store or load, the preconditions in
-           WeakestPrecondition.cmd hold. I'm fuzzy on this one.
-
-           Loads might be possible to make way simpler if we just use literals,
-           so instead let's think about set, which we definitely need to use.
-
-           Can we add a definition saying that all inner expressions do evaluate
-           to some word, to our postcondition? Would that help? No, probably
-           not, since it would be a proof obligation and not a hypothesis, and
-           we don't need it for the continuation -- we need it for the inner
-           expressions of the exposed step.
-
-           Idea: make predicate on locals and API.expr, and use it to say that
-           all vars called in the start expression exist; require this for
-           initial locals and also add to postcondition (so it must hold for all
-           locals).  During the inductive step, your IH will require the proof
-           that the exposed step obeys the rule, and prove to you that it's true
-           for the continuation, but this is not very useful -- how do you get
-           the information for the current step?
-
-           Can we use nextn? So, say, our predicate states that every
-           variable call is <= nextn, using the nextn-takes-nat
-           construction, or is equal to something that we know is in the start
-           context (arguments or return value variables that require variable
-           loads -- list currently).
-
-           We would then need to use the compiler structure to prove that, if
-           the predicate holds, the WeakestPrecondition.expr stuff works for all
-           inner expressions. The logic would be that all the variables must
-           have been set, since we don't waste variable names[0], and we don't
-           have any loads.
-
-           How do we state that proof (in particular, "expr stuff works"), and
-           could it just be folded into the main proof? So the predicate takes
-           care of saying all our variable reads are of stuff that's in the
-           arguments or the set range of names, and the precondition takes care
-           of saying that those variables are set -- we have to prove the
-           precondition each time in the main proof, but that's better than two
-           proofs.
-
-           Predicate should be fixpoint on *bedrock2* expression, so in terms of
-           output -- fill precondition by compute. Similarly, compute a function
-           on arguments that gives you all the memory addresses and variables
-           that are filled at the start, which is input to the predicate. So the
-           predicate is dumb and just says "all accesses are in this list, all
-           variables in this one", starting with the two lists given by
-           extracting them from arguments and updating with loads/sets.
-
-           ...actually, do we then need to deal with nextn at all? Since
-           we're working with a function of the output, we could just aggregate
-           all the variables that have been set. No need to deal with nextn,
-           just that list, same as arguments. And our predicate says "forall v :
-           varname, In v <list> -> exists a : word, WeakestPrecondition.get
-           locals v (eq a)".
-
-           But what gets plugged in for locals? For arguments, it's starting
-           locals, and that's why we originally thought of using nextn -- so
-           we wouldn't have to keep track of locals. Then we just say in the
-           inductive proof that we have a start_nextn and that everything
-           between nextn and start_nextn is in locals (in postcondition).
-           So in the inductive step, we increase nextn, and need to prove our
-           new locals contains the new variables, which it should. Sounds right.
-
-           Next, reread and think through concrete steps. Write them down and
-           then start.
-
-           [0] probably looks like an extra precondition in the inductive proof
-           saying (forall n, start_nextn <= n <= nextn, exists a,
-           WeakestPrecondition.get locals (varname n) (eq a)), and then removing
-           the precondition for non-inductive wrapper because at the start,
-           start_nextn = nextn
-       *)
-      (* ideas:
-
-           A: instead of next_varname function, use a list varname_list and have a
-           default_varname
-
-           pros: easy to state that the list variables in retnames don't get
-           overwritten, flexible
-           cons: annoying to state if you don't know how many variables you need
-
-           B: keep as-is, write a statement saying "next_varname will never
-           produce the list variables in retname"
-
-           pros: minimal code changes
-           cons: difficult to state and work with in proofs
-
-           C: Make the whole system not use varnames for lists, but rather literals
-
-           pros: easy for proofs
-           cons: constricting for callers
-
-           D: make next_varname take a nat and have a proof that the nats aren't
-           equal; then you just start with the index of the first varname, and
-           have a proof that refnames is not equal to any varnames greater than
-           that
-       *)
-      Print Syntax.expr.expr.
-      eapply WeakestPreconditionProperties.Proper_cmd;
-        [ eapply Proper_call | repeat intro | ].
-      (* N.B. putting below line in the [ | | ] above makes eassumption fail *)
-      2 : eapply translate_inner_expr_correct with (R0:=R); eassumption.
-
-
-
-
-      (* use exec.seq and translate_inner_expr_correct to take a bedrock2 step *)
-      eapply Semantics.exec.seq
-        with (mid:=fun tr' mem' locals' _ =>
-                     tr = tr'
-                     /\ Interface.map.get locals retnames = Interface.map.get locals' retnames
-                     /\ (exists x y,
-                            Interface.map.get locals' nextn = Some x
-                            /\ Interface.map.get locals' retnames = Some y
-                            /\ x = Interface.word.add y (Interface.word.of_Z 1))
-                     /\ sep (equivalent (expr.interp (t:=type_Z) (@Compilers.ident_interp) x4)
-                                        retnames locals') R mem');
-        [ eapply Semantics.exec.seq;
-          [ eapply translate_inner_expr_correct_store with (R:=R); eassumption | ] | ].
-      2 : {
-        (* simplify fiat-crypto step *)
-        intros; cbn [expr.interp type.app_curried Compilers.ident_interp].
-        cbn [Compilers.ident_interp]. cleanup.
-
-        (* simplify equivalent and other things depending on the expr type *)
-        cbn [type.for_each_lhs_of_arrow
-               type.app_curried equivalent type.final_codomain base_ltype] in *.
-
-        destruct_head'_and. subst.
-
-        eapply exec_weaken;
-          [ | eapply IHe1_valid with (R:=R); eassumption].
-        clear IHe1_valid.
-
-        intros; cleanup.
-        destruct_head'_and.
-        split; try congruence; [ ].
-
-        apply (sep_ex1_l (ok:=Semantics.mem_ok (parameters_ok:=semantics_ok))).
-        repeat match goal with
-               | H : _ |- _ =>
-                 apply (sep_ex1_l (ok:=Semantics.mem_ok (parameters_ok:=semantics_ok))) in H;
-                   destruct H as [? H]
-               end.
-
-
-        match goal with H : Interface.map.get _ retnames = Some ?x |- _ =>
-                        exists x end.
-        repeat match goal with H : sep _ R _ |- _ =>
-                               eapply sep_indep in H end.
-        cleanup.
-        match goal with H1 : (?x = Some ?y1), H2 : (?x = Some ?y2) |- _ =>
-                        replace y1 with y2 in * by congruence end.
-
-        match goal with
-          H : forall c, c -> sep (fun _ => c) ?R ?m |- sep (fun _ => ?p) ?R ?m =>
-          apply H end.
-
-        cbv [Lift1Prop.and1] in *.
-        intros.
-        (* here, we've lost information about the locals when we applied IH,
-             so l' = locals' = locals is not clear -- need to weaken again before applying IH? *)
-        
-        Search locals.
-        Search locals'.
-        rewrite H2.
-        
-
-        split; try eassumption.
-        
-        
-        (* x4 == x6 == retnames, nextn == x6+1 *)
-        (* TODO : figure out what's going on here with nextn/retname -- which is doing what? *)
-
-
-        (* 
-             we're dealing with an expression whose return type is list, so retnames
-               is a variable that holds the head of the list when we're done
-             so when we encounter a cons (x :: l), we store l in the location indicated by retnames,
-               set nextn := $retnames + 1, and then recursive call with retnames:=nextn
-             therefore, us having retnames in the thing that still has the cons and having
-               nextn in the one that doesn't have the cons is just fine, although we
-               probably need from mid that nextn:=$retnames+1
-
-         *)
-
-        cbv [sep].
-        do 2 eexists. repeat split; try eassumption.
-        1-2:admit.
-
-        (* here's where we need more about locals *)
-        eauto.
-        
-        cbv [Lift1Prop.and1] in H3.
-        Search sep Lift1Prop.and1.
-        Print Lift1Prop.
-        
-        
-        Print zarray.
-        cbn [zarray array truncated_scalar].
-        Search Lift1Prop.ex1.
-        rewrite sep_ex1_l.
-
-        (*
-    Semantics.exec.exec env (snd (translate_expr x3 (next_varname nextn) argnames nextn)) t' m' l' mc'
-        (fun (tr' : Semantics.trace) (mem' locals' : Interface.map.rep) (_ : MetricLogging.MetricLog) =>
-        t' = tr' /\
-        sep
-        (fun mem0 : Interface.map.rep =>
-            exists loc : Interface.word.rep,
-            Interface.map.get locals' retnames = Some loc /\
-            zarray loc (expr.interp (@Compilers.ident_interp) x4 :: expr.interp (@Compilers.ident_interp) x2) mem0)
-        R mem')
-         *)
-
-
-        Search Semantics.exec.exec.
-        (* mid should say something about x4 being related to x; here, we need
-          to somehow pull out the cons and use the IH for l/x2/x3 *)
-        (* we should be able to turn the zarray into a conjuction, somehow
-          pull the conjunction out of sep, and then out of exec post, to get two
-          exec goals, one of which uses IH and the other mid *)
-        Set Printing Implicit.
-        
-        eapply IHe1_valid; eauto.
-      }
-
-      { intros.
-        cleanup.
-        destruct_head'_and.
-        cbn [base_ltype type.final_codomain equivalent] in *.
-
-        match goal with
-        | H : _ |- _ => apply sep_indep in H
-        end.
-
-        repeat match goal with H : exists _, _ |- _ => destruct H end.
-        destruct_head'_and.
-        
-        eapply Semantics.exec.set.
-        { cbn [Semantics.eval_expr].
-          match goal with H : Interface.map.get _ _ = _ |- _ => rewrite H end.
-          reflexivity. }
-        split; try congruence; [ ].
-      (* ?mid t' m'
-               (Interface.map.put l' nextn (bopname.add x0 1))
-               (... logging ...) *) }
-      
+      (* inner_expr creates a valid expression *)
       match goal with
-      | H : _ |- _ => apply sep_indep in H
+      | H : wf3 ?G ?x1 ?x2 ?x3 |- context [translate_inner_expr ?rc ?x3] =>
+        pose proof
+             (translate_inner_expr_correct
+                x1 x2 x3 rc
+                ltac:(assumption) G _ _ H ltac:(eassumption)) as X;
+          cbv [equivalent Lift1Prop.ex1] in X
       end.
+      cleanup.
+      eexists; split; [ eassumption | ].
 
-      repeat match goal with H : exists _, _ |- _ => destruct H end.
-      
-      [ eapply translate_inner_expr_correct with (R0:=R); eassumption | ].
+      (* store expression at head of list *)
+      eapply store_word_of_sep; [ | ].
+      1: solve [match goal with H : _ |- _ => apply H end].
 
-      (* simplify fiat-crypto step *)
-      intros; cbn [expr.interp type.app_curried].
-      cbv [Rewriter.Util.LetIn.Let_In]. cleanup.
-
-      (* use inductive hypothesis *)
-      destruct_head'_and. subst.
-      eapply IHe1_valid; eauto. }
-
-    (* nil *)
-    (* Abs *)
-
-    (* all the rest are inner *)
-    (* Ident *)
-    (* Var *)
-    (* Abs *)
-    (* App *)
-    (* LetIn *)
-    
+      intros.
+      (* now we need to set the new destination to retnames+1 *)
     
     Qed.
 
     Lemma translate_expr_correct {t} (* (e : API.Expr t) *) :
       (* e is valid input to translate_expr *)
-      forall e : API.Expr t, valid_expr (e _) ->
-                             forall (args : type.for_each_lhs_of_arrow (type.interp base.interp) t)
-                                    (bedrock_args : list Interface.word.rep)
-                                    (argnames : type.for_each_lhs_of_arrow ltype t)
-                                    (flat_argnames : list Syntax.varname)
-                                    (retnames : base_ltype (type.final_codomain t))
-                                    (flat_retnames : list Syntax.varname)
-                                    (nextn : Syntax.varname)
-                                    (mem : Interface.map.rep),
-                               (* args and bedrock_args are equivalent *)
-                               args_equivalent args bedrock_args mem ->
-                               (* argnames and flat_argnames are equivalent *)
-                               flatten_argnames argnames = Some flat_argnames ->
-                               (* retnames and flat_retnames are equivalent *)
-                               flatten_names retnames = Some flat_retnames ->
-                               (* ret := result of applying e to args *)
-                               let ret : base.interp (type.final_codomain t) :=
-                                   type.app_curried (API.Interp e) args in
-                               (* bedrock_e := translation of e as bedrock2 function body *)
-                               let bedrock_e : Syntax.cmd.cmd :=
-                                   snd (translate_expr (e ltype) nextn argnames retnames) in
-                               forall (fname : Syntax.funname)
-                                      (funnames' : list _)
-                                      (* fname's body is bedrock_e *)
-                                      (funnames := (fname, (flat_argnames, flat_retnames, bedrock_e))
-                                                     :: funnames')
-                                      (tr : Semantics.trace)
-                                      (R : Interface.map.rep -> Prop),
-                                 (* calling fname with bedrock_args is equivalent to ret *)
-                                 WeakestPrecondition.call
-                                   funnames fname tr mem bedrock_args
-                                   (fun tr' m' bedrock_ret =>
-                                      tr = tr' /\ sep (equivalent ret bedrock_ret) R m').
+      forall e : API.Expr t,
+        valid_expr (e _) ->
+        forall (args : type.for_each_lhs_of_arrow (type.interp base.interp) t)
+               (bedrock_args : list Interface.word.rep)
+               (argnames : type.for_each_lhs_of_arrow ltype t)
+               (flat_argnames : list Syntax.varname)
+               (retnames : base_ltype (type.final_codomain t))
+               (flat_retnames : list Syntax.varname)
+               (nextn : Syntax.varname)
+               (mem : Interface.map.rep),
+          (* args and bedrock_args are equivalent *)
+          args_equivalent args bedrock_args mem ->
+          (* argnames and flat_argnames are equivalent *)
+          flatten_argnames argnames = Some flat_argnames ->
+          (* retnames and flat_retnames are equivalent *)
+          flatten_names retnames = Some flat_retnames ->
+          (* ret := result of applying e to args *)
+          let ret : base.interp (type.final_codomain t) :=
+              type.app_curried (API.Interp e) args in
+          (* bedrock_e := translation of e as bedrock2 function body *)
+          let bedrock_e : Syntax.cmd.cmd :=
+              snd (translate_expr (e ltype) nextn argnames retnames) in
+          forall (fname : Syntax.funname)
+                 (funnames' : list _)
+                 (* fname's body is bedrock_e *)
+                 (funnames := (fname, (flat_argnames, flat_retnames, bedrock_e))
+                                :: funnames')
+                 (tr : Semantics.trace)
+                 (R : Interface.map.rep -> Prop),
+            (* calling fname with bedrock_args is equivalent to ret *)
+            WeakestPrecondition.call
+              funnames fname tr mem bedrock_args
+              (fun tr' m' bedrock_ret =>
+                 tr = tr' /\ sep (equivalent ret bedrock_ret) R m').
     Proof.
       induction 1; cbv zeta in *; intros.
       { eauto. }
