@@ -442,6 +442,7 @@ PERF_MAX_TIME?=600 # 10 minutes
 PERF_MAX_MEM?=10000000 # 10 GB
 PERF_MAX_STACK?=1000000
 PERF_TIMEOUT?=timeout $(PERF_MAX_TIME) etc/timeout/timeout -m $(PERF_MAX_MEM) # limit to 10 GB # https://raw.githubusercontent.com/pshved/timeout/master/timeout
+PERF_SH_TIMEOUT?=timeout $(PERF_MAX_TIME)
 # PERF_TIMEOUT?=timeout $(PERF_MAX_TIME)
 
 .PHONY: perf perf-vos perf-extraction perf-standalone
@@ -519,7 +520,7 @@ $(PERF_PRIME_VOS:.vo=.log) : %.log : %.v src/Rewriter/PerfTesting/Core.vo
 
 $(PERF_PRIME_SHS:.sh=.log) : %.log : %.sh $(PERF_STANDALONE:%=src/ExtractionOCaml/%)
 	$(SHOW)'PERF SH $< > $@'
-	$(HIDE)(ulimit -S -s $(PERF_MAX_STACK); $(TIMER_FULL) $(PERF_TIMEOUT) bash $< && touch $@.ok) > $@.tmp
+	$(HIDE)(ulimit -S -s $(PERF_MAX_STACK); $(TIMER_FULL) $(PERF_SH_TIMEOUT) bash $< && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok
 	$(HIDE)sed 's/\r\n/\n/g; s/\r//g; s/\s*$$//g' $@.tmp > $@ && rm -f $@.tmp
 
