@@ -439,9 +439,9 @@ include $(PERF_MAKEFILE)
 $(PERF_MAKEFILE): Makefile src/Rewriter/PerfTesting/Specific/make.py primes.txt
 	./src/Rewriter/PerfTesting/Specific/make.py primes.txt
 PERF_MAX_TIME?=600 # 10 minutes
-PERF_MAX_MEM?=10000000 # 10 GB
+PERF_MAX_MEM?=10000000000 # 10 GB in bytes
 PERF_MAX_STACK?=1000000
-PERF_TIMEOUT?=timeout $(PERF_MAX_TIME) etc/timeout/timeout -m $(PERF_MAX_MEM) # limit to 10 GB # https://raw.githubusercontent.com/pshved/timeout/master/timeout
+PERF_TIMEOUT?=timeout $(PERF_MAX_TIME) cgexec -g memory:$(call log_to_cgroup,$@) # etc/timeout/timeout -m $(PERF_MAX_MEM) # limit to 10 GB # https://raw.githubusercontent.com/pshved/timeout/master/timeout
 PERF_SH_TIMEOUT?=timeout $(PERF_MAX_TIME)
 # PERF_TIMEOUT?=timeout $(PERF_MAX_TIME)
 
@@ -472,6 +472,21 @@ perf-only-computed-vos: $(call FILTER,ComputedOf,$(PERF_VOLOGS)) \
 perf-extraction: $(PERF_SHLOGS) \
 	$(PERF_MAKEFILE) \
 	perf-standalone
+
+log_to_cgroup = $(patsubst src/Rewriter/PerfTesting/Specific/generated/%.log,%,$1)
+
+ALL_MEMLIMITS := $(foreach i,$(PERF_VOLOGS),/sys/fs/cgroup/memory/$(call log_to_cgroup,$(i))/memory.limit_in_bytes)
+.PHONY: $(ALL_MEMLIMITS) $(addprefix clean-,$(ALL_MEMLIMITS)) cgroups clean-cgroups
+cgroups: $(ALL_MEMLIMITS)
+clean-cgroups: $(addprefix clean-,$(ALL_MEMLIMITS))
+
+$(ALL_MEMLIMITS) : /sys/fs/cgroup/memory/%/memory.limit_in_bytes :
+	sudo cgcreate -t $$USER:$$USER -a $$USER:$$USER -g memory:$*
+	echo $(PERF_MAX_MEM) > $@
+	@ # echo $(PERF_MAX_MEM) > /sys/fs/cgroup/memory/$*/memory.memsw.limit_in_bytes
+
+$(addprefix clean-,$(ALL_MEMLIMITS)) : clean-/sys/fs/cgroup/memory/%/memory.limit_in_bytes :
+	sudo cgdelete memory:$*
 
 .PHONY: perf perf-except-computed perf-only-computed
 perf: perf-extraction perf-vos
