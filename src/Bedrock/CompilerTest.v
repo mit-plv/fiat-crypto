@@ -36,22 +36,19 @@ Local Coercion Z.pos : positive >-> Z.
 
 (* Define compiler parameters for 64- and 32-bit *)
 Local Definition ERROR : Syntax.expr.expr := (Syntax.expr.var "ERROR"%string).
-Local Definition next_name : String.string -> String.string :=
-  fun old_varname =>
-    let old_num := List.nth_default ""%string (String.split "x" old_varname) 1 in
-    let new_num := Decimal.decimal_string_of_Z (Decimal.Z_of_decimal_string old_num + 1) in
-    String.append "x" new_num.
+Local Definition next_name : nat -> String.string :=
+  fun n => String.append "x" (Decimal.decimal_string_of_Z (Z.of_nat n)).
 Local Instance params64 : Compiler.parameters :=
   {|
     semantics := BasicC64Semantics.parameters;
-    next_varname := next_name;
+    varname_gen := next_name;
     error := ERROR;
     word_size_in_bytes := 8;
   |}.
 Local Instance params32 : Compiler.parameters :=
   {|
     semantics := BasicC32Semantics.parameters;
-    next_varname := next_name;
+    varname_gen := next_name;
     error := ERROR;
     word_size_in_bytes := 4;
   |}.
@@ -78,6 +75,7 @@ Proof.
   exists m1; exists m2; tauto.
 Qed.
 
+(*
 (* Make sure correctness proof composes with operation specifications *)
 Module Correctness.
   Section __.
@@ -154,6 +152,7 @@ Module Correctness.
     Qed.
   End __.
 End Correctness.
+*)
 
 (* Curve25519 64-bit, taken from SlowPrimeSynthesisExamples.v *)
 Module X25519_64.
@@ -617,13 +616,15 @@ ErrorT.Success
              type.base (base.type.list (base.type.type_base Compilers.Z))))
 *)
 
-    Local Notation translate_expr e := (@Compiler.translate_expr params64 _ e "x0").
+    Local Notation translate_func e := (@Compiler.translate_func params64 _ e 0%nat).
 
     Definition mulmod_bedrock : Syntax.cmd.cmd :=
       match mulmod with
-      | ErrorT.Success e => snd (translate_expr (e Compiler.ltype)
-                                                (Syntax.expr.var "y0", (Syntax.expr.var "y1", tt))
-                                                (Syntax.expr.var "ret"))
+      | ErrorT.Success e =>
+        let a := (["a0"; "a1"; "a2"; "a3"; "a4"])%list in
+        let b := (["b0"; "b1"; "b2"; "b3"; "b4"])%list in
+        let ret := (["ret0"; "ret1"; "ret2"; "ret3"; "ret4"])%list in
+        translate_func (e Compiler.ltype) (a, (b, tt)) ret
       | ErrorT.Error _ => Syntax.cmd.skip
       end.
 
@@ -632,56 +633,31 @@ ErrorT.Success
     Redirect "Crypto.Bedrock.CompilerTest.X25519_64.mulmod_bedrock" Compute mulmod_bedrock.
   (* using format_bedrock.sh:
 = bedrock_func_body
-    : (((x0 = (load(y0 + 4 * 8) * (load(y1 + 4 * 8) * 19)));
-        x1 = ((mulhuu(load(y0 + 4 * 8))(load(y1 + 4 * 8) * 19))));
-       ((x2 = (load(y0 + 4 * 8) * (load(y1 + 3 * 8) * 19)));
-        x3 = ((mulhuu(load(y0 + 4 * 8))(load(y1 + 3 * 8) * 19))));
-       ((x4 = (load(y0 + 4 * 8) * (load(y1 + 2 * 8) * 19)));
-        x5 = ((mulhuu(load(y0 + 4 * 8))(load(y1 + 2 * 8) * 19))));
-       ((x6 = (load(y0 + 4 * 8) * (load(y1 + 1 * 8) * 19)));
-        x7 = ((mulhuu(load(y0 + 4 * 8))(load(y1 + 1 * 8) * 19))));
-       ((x8 = (load(y0 + 3 * 8) * (load(y1 + 4 * 8) * 19)));
-        x9 = ((mulhuu(load(y0 + 3 * 8))(load(y1 + 4 * 8) * 19))));
-       ((x10 = (load(y0 + 3 * 8) * (load(y1 + 3 * 8) * 19)));
-        x11 = ((mulhuu(load(y0 + 3 * 8))(load(y1 + 3 * 8) * 19))));
-       ((x12 = (load(y0 + 3 * 8) * (load(y1 + 2 * 8) * 19)));
-        x13 = ((mulhuu(load(y0 + 3 * 8))(load(y1 + 2 * 8) * 19))));
-       ((x14 = (load(y0 + 2 * 8) * (load(y1 + 4 * 8) * 19)));
-        x15 = ((mulhuu(load(y0 + 2 * 8))(load(y1 + 4 * 8) * 19))));
-       ((x16 = (load(y0 + 2 * 8) * (load(y1 + 3 * 8) * 19)));
-        x17 = ((mulhuu(load(y0 + 2 * 8))(load(y1 + 3 * 8) * 19))));
-       ((x18 = (load(y0 + 1 * 8) * (load(y1 + 4 * 8) * 19)));
-        x19 = ((mulhuu(load(y0 + 1 * 8))(load(y1 + 4 * 8) * 19))));
-       ((x20 = (load(y0 + 4 * 8) * load(y1 + 0 * 8)));
-        x21 = ((mulhuu(load(y0 + 4 * 8))(load(y1 + 0 * 8)))));
-       ((x22 = (load(y0 + 3 * 8) * load(y1 + 1 * 8)));
-        x23 = ((mulhuu(load(y0 + 3 * 8))(load(y1 + 1 * 8)))));
-       ((x24 = (load(y0 + 3 * 8) * load(y1 + 0 * 8)));
-        x25 = ((mulhuu(load(y0 + 3 * 8))(load(y1 + 0 * 8)))));
-       ((x26 = (load(y0 + 2 * 8) * load(y1 + 2 * 8)));
-        x27 = ((mulhuu(load(y0 + 2 * 8))(load(y1 + 2 * 8)))));
-       ((x28 = (load(y0 + 2 * 8) * load(y1 + 1 * 8)));
-        x29 = ((mulhuu(load(y0 + 2 * 8))(load(y1 + 1 * 8)))));
-       ((x30 = (load(y0 + 2 * 8) * load(y1 + 0 * 8)));
-        x31 = ((mulhuu(load(y0 + 2 * 8))(load(y1 + 0 * 8)))));
-       ((x32 = (load(y0 + 1 * 8) * load(y1 + 3 * 8)));
-        x33 = ((mulhuu(load(y0 + 1 * 8))(load(y1 + 3 * 8)))));
-       ((x34 = (load(y0 + 1 * 8) * load(y1 + 2 * 8)));
-        x35 = ((mulhuu(load(y0 + 1 * 8))(load(y1 + 2 * 8)))));
-       ((x36 = (load(y0 + 1 * 8) * load(y1 + 1 * 8)));
-        x37 = ((mulhuu(load(y0 + 1 * 8))(load(y1 + 1 * 8)))));
-       ((x38 = (load(y0 + 1 * 8) * load(y1 + 0 * 8)));
-        x39 = ((mulhuu(load(y0 + 1 * 8))(load(y1 + 0 * 8)))));
-       ((x40 = (load(y0 + 0 * 8) * load(y1 + 4 * 8)));
-        x41 = ((mulhuu(load(y0 + 0 * 8))(load(y1 + 4 * 8)))));
-       ((x42 = (load(y0 + 0 * 8) * load(y1 + 3 * 8)));
-        x43 = ((mulhuu(load(y0 + 0 * 8))(load(y1 + 3 * 8)))));
-       ((x44 = (load(y0 + 0 * 8) * load(y1 + 2 * 8)));
-        x45 = ((mulhuu(load(y0 + 0 * 8))(load(y1 + 2 * 8)))));
-       ((x46 = (load(y0 + 0 * 8) * load(y1 + 1 * 8)));
-        x47 = ((mulhuu(load(y0 + 0 * 8))(load(y1 + 1 * 8)))));
-       ((x48 = (load(y0 + 0 * 8) * load(y1 + 0 * 8)));
-        x49 = ((mulhuu(load(y0 + 0 * 8))(load(y1 + 0 * 8)))));
+    : (((x0 = (a4 * (b4 * 19))); x1 = ((mulhuu(a4)(b4 * 19))));
+       ((x2 = (a4 * (b3 * 19))); x3 = ((mulhuu(a4)(b3 * 19))));
+       ((x4 = (a4 * (b2 * 19))); x5 = ((mulhuu(a4)(b2 * 19))));
+       ((x6 = (a4 * (b1 * 19))); x7 = ((mulhuu(a4)(b1 * 19))));
+       ((x8 = (a3 * (b4 * 19))); x9 = ((mulhuu(a3)(b4 * 19))));
+       ((x10 = (a3 * (b3 * 19))); x11 = ((mulhuu(a3)(b3 * 19))));
+       ((x12 = (a3 * (b2 * 19))); x13 = ((mulhuu(a3)(b2 * 19))));
+       ((x14 = (a2 * (b4 * 19))); x15 = ((mulhuu(a2)(b4 * 19))));
+       ((x16 = (a2 * (b3 * 19))); x17 = ((mulhuu(a2)(b3 * 19))));
+       ((x18 = (a1 * (b4 * 19))); x19 = ((mulhuu(a1)(b4 * 19))));
+       ((x20 = (a4 * b0)); x21 = ((mulhuu(a4)(b0))));
+       ((x22 = (a3 * b1)); x23 = ((mulhuu(a3)(b1))));
+       ((x24 = (a3 * b0)); x25 = ((mulhuu(a3)(b0))));
+       ((x26 = (a2 * b2)); x27 = ((mulhuu(a2)(b2))));
+       ((x28 = (a2 * b1)); x29 = ((mulhuu(a2)(b1))));
+       ((x30 = (a2 * b0)); x31 = ((mulhuu(a2)(b0))));
+       ((x32 = (a1 * b3)); x33 = ((mulhuu(a1)(b3))));
+       ((x34 = (a1 * b2)); x35 = ((mulhuu(a1)(b2))));
+       ((x36 = (a1 * b1)); x37 = ((mulhuu(a1)(b1))));
+       ((x38 = (a1 * b0)); x39 = ((mulhuu(a1)(b0))));
+       ((x40 = (a0 * b4)); x41 = ((mulhuu(a0)(b4))));
+       ((x42 = (a0 * b3)); x43 = ((mulhuu(a0)(b3))));
+       ((x44 = (a0 * b2)); x45 = ((mulhuu(a0)(b2))));
+       ((x46 = (a0 * b1)); x47 = ((mulhuu(a0)(b1))));
+       ((x48 = (a0 * b0)); x49 = ((mulhuu(a0)(b0))));
        ((x50 = (x12 + x6)); x51 = (x50 < x12));
        ((((x52 = (x51 + x13)); x53 = (x52 < x13)); x52 = (x52 + x7));
         x53 = (x53 + (x52 < x7)));
@@ -754,11 +730,8 @@ ErrorT.Success
        (x152 = (x150 * 19)); (x153 = (x67 + x152)); (x154 = (x153 >> 51));
        (x155 = (x153 & 2251799813685247)); (x156 = (x154 + x136));
        (x157 = (x156 >> 51)); (x158 = (x156 & 2251799813685247));
-       (x159 = (x157 + x141)); ((store(ret, x155)); x160 = (ret + 1));
-       ((store(x160, x158)); x161 = (x160 + 1));
-       ((store(x161, x159)); x162 = (x161 + 1));
-       ((store(x162, x146)); x163 = (x162 + 1));
-       ((store(x163, x151)); x164 = (x163 + 1));
+       (x159 = (x157 + x141)); (ret0 = (x155)); (ret1 = (x158));
+       (ret2 = (x159)); (ret3 = (x146)); (ret4 = (x151));
        /*skip*/)
     : cmd
    *)
@@ -2381,13 +2354,16 @@ ErrorT.Success
              type.base (base.type.list (base.type.type_base Compilers.Z))))
  *)
 
-    Local Notation translate_expr e := (@Compiler.translate_expr params32 _ e "x0").
+    Local Notation translate_func e := (@Compiler.translate_func params32 _ e 0%nat).
 
     Definition mulmod_bedrock : Syntax.cmd.cmd :=
       match mulmod with
-      | ErrorT.Success e => snd (translate_expr (e Compiler.ltype)
-                                                (Syntax.expr.var "y0", (Syntax.expr.var "y1", tt))
-                                                (Syntax.expr.var "ret"))
+      | ErrorT.Success e =>
+        let a := (["a0"; "a1"; "a2"; "a3"; "a4"; "a5"; "a6"; "a7"; "a8"; "a9"])%list in
+        let b := (["b0"; "b1"; "b2"; "b3"; "b4"; "b5"; "b6"; "b7"; "b8"; "b9"])%list in
+        let ret := (["ret0"; "ret1"; "ret2"; "ret3"; "ret4";
+                       "ret5"; "ret6"; "ret7"; "ret8"; "ret9"])%list in
+        translate_func (e Compiler.ltype) (a, (b, tt)) ret
       | ErrorT.Error _ => Syntax.cmd.skip
       end.
 
@@ -2396,206 +2372,106 @@ ErrorT.Success
     Redirect "Crypto.Bedrock.CompilerTest.mulmod_bedrock.X25519_32" Compute mulmod_bedrock.
   (* using format_bedrock.sh:
 = bedrock_func_body
-    : (((x0 = (load(y0 + 9 * 4) * (load(y1 + 9 * 4) * (2 * 19))));
-        x1 = ((mulhuu(load(y0 + 9 * 4))(load(y1 + 9 * 4) * (2 * 19)))));
-       ((x2 = (load(y0 + 9 * 4) * (load(y1 + 8 * 4) * 19)));
-        x3 = ((mulhuu(load(y0 + 9 * 4))(load(y1 + 8 * 4) * 19))));
-       ((x4 = (load(y0 + 9 * 4) * (load(y1 + 7 * 4) * (2 * 19))));
-        x5 = ((mulhuu(load(y0 + 9 * 4))(load(y1 + 7 * 4) * (2 * 19)))));
-       ((x6 = (load(y0 + 9 * 4) * (load(y1 + 6 * 4) * 19)));
-        x7 = ((mulhuu(load(y0 + 9 * 4))(load(y1 + 6 * 4) * 19))));
-       ((x8 = (load(y0 + 9 * 4) * (load(y1 + 5 * 4) * (2 * 19))));
-        x9 = ((mulhuu(load(y0 + 9 * 4))(load(y1 + 5 * 4) * (2 * 19)))));
-       ((x10 = (load(y0 + 9 * 4) * (load(y1 + 4 * 4) * 19)));
-        x11 = ((mulhuu(load(y0 + 9 * 4))(load(y1 + 4 * 4) * 19))));
-       ((x12 = (load(y0 + 9 * 4) * (load(y1 + 3 * 4) * (2 * 19))));
-        x13 = ((mulhuu(load(y0 + 9 * 4))(load(y1 + 3 * 4) * (2 * 19)))));
-       ((x14 = (load(y0 + 9 * 4) * (load(y1 + 2 * 4) * 19)));
-        x15 = ((mulhuu(load(y0 + 9 * 4))(load(y1 + 2 * 4) * 19))));
-       ((x16 = (load(y0 + 9 * 4) * (load(y1 + 1 * 4) * (2 * 19))));
-        x17 = ((mulhuu(load(y0 + 9 * 4))(load(y1 + 1 * 4) * (2 * 19)))));
-       ((x18 = (load(y0 + 8 * 4) * (load(y1 + 9 * 4) * 19)));
-        x19 = ((mulhuu(load(y0 + 8 * 4))(load(y1 + 9 * 4) * 19))));
-       ((x20 = (load(y0 + 8 * 4) * (load(y1 + 8 * 4) * 19)));
-        x21 = ((mulhuu(load(y0 + 8 * 4))(load(y1 + 8 * 4) * 19))));
-       ((x22 = (load(y0 + 8 * 4) * (load(y1 + 7 * 4) * 19)));
-        x23 = ((mulhuu(load(y0 + 8 * 4))(load(y1 + 7 * 4) * 19))));
-       ((x24 = (load(y0 + 8 * 4) * (load(y1 + 6 * 4) * 19)));
-        x25 = ((mulhuu(load(y0 + 8 * 4))(load(y1 + 6 * 4) * 19))));
-       ((x26 = (load(y0 + 8 * 4) * (load(y1 + 5 * 4) * 19)));
-        x27 = ((mulhuu(load(y0 + 8 * 4))(load(y1 + 5 * 4) * 19))));
-       ((x28 = (load(y0 + 8 * 4) * (load(y1 + 4 * 4) * 19)));
-        x29 = ((mulhuu(load(y0 + 8 * 4))(load(y1 + 4 * 4) * 19))));
-       ((x30 = (load(y0 + 8 * 4) * (load(y1 + 3 * 4) * 19)));
-        x31 = ((mulhuu(load(y0 + 8 * 4))(load(y1 + 3 * 4) * 19))));
-       ((x32 = (load(y0 + 8 * 4) * (load(y1 + 2 * 4) * 19)));
-        x33 = ((mulhuu(load(y0 + 8 * 4))(load(y1 + 2 * 4) * 19))));
-       ((x34 = (load(y0 + 7 * 4) * (load(y1 + 9 * 4) * (2 * 19))));
-        x35 = ((mulhuu(load(y0 + 7 * 4))(load(y1 + 9 * 4) * (2 * 19)))));
-       ((x36 = (load(y0 + 7 * 4) * (load(y1 + 8 * 4) * 19)));
-        x37 = ((mulhuu(load(y0 + 7 * 4))(load(y1 + 8 * 4) * 19))));
-       ((x38 = (load(y0 + 7 * 4) * (load(y1 + 7 * 4) * (2 * 19))));
-        x39 = ((mulhuu(load(y0 + 7 * 4))(load(y1 + 7 * 4) * (2 * 19)))));
-       ((x40 = (load(y0 + 7 * 4) * (load(y1 + 6 * 4) * 19)));
-        x41 = ((mulhuu(load(y0 + 7 * 4))(load(y1 + 6 * 4) * 19))));
-       ((x42 = (load(y0 + 7 * 4) * (load(y1 + 5 * 4) * (2 * 19))));
-        x43 = ((mulhuu(load(y0 + 7 * 4))(load(y1 + 5 * 4) * (2 * 19)))));
-       ((x44 = (load(y0 + 7 * 4) * (load(y1 + 4 * 4) * 19)));
-        x45 = ((mulhuu(load(y0 + 7 * 4))(load(y1 + 4 * 4) * 19))));
-       ((x46 = (load(y0 + 7 * 4) * (load(y1 + 3 * 4) * (2 * 19))));
-        x47 = ((mulhuu(load(y0 + 7 * 4))(load(y1 + 3 * 4) * (2 * 19)))));
-       ((x48 = (load(y0 + 6 * 4) * (load(y1 + 9 * 4) * 19)));
-        x49 = ((mulhuu(load(y0 + 6 * 4))(load(y1 + 9 * 4) * 19))));
-       ((x50 = (load(y0 + 6 * 4) * (load(y1 + 8 * 4) * 19)));
-        x51 = ((mulhuu(load(y0 + 6 * 4))(load(y1 + 8 * 4) * 19))));
-       ((x52 = (load(y0 + 6 * 4) * (load(y1 + 7 * 4) * 19)));
-        x53 = ((mulhuu(load(y0 + 6 * 4))(load(y1 + 7 * 4) * 19))));
-       ((x54 = (load(y0 + 6 * 4) * (load(y1 + 6 * 4) * 19)));
-        x55 = ((mulhuu(load(y0 + 6 * 4))(load(y1 + 6 * 4) * 19))));
-       ((x56 = (load(y0 + 6 * 4) * (load(y1 + 5 * 4) * 19)));
-        x57 = ((mulhuu(load(y0 + 6 * 4))(load(y1 + 5 * 4) * 19))));
-       ((x58 = (load(y0 + 6 * 4) * (load(y1 + 4 * 4) * 19)));
-        x59 = ((mulhuu(load(y0 + 6 * 4))(load(y1 + 4 * 4) * 19))));
-       ((x60 = (load(y0 + 5 * 4) * (load(y1 + 9 * 4) * (2 * 19))));
-        x61 = ((mulhuu(load(y0 + 5 * 4))(load(y1 + 9 * 4) * (2 * 19)))));
-       ((x62 = (load(y0 + 5 * 4) * (load(y1 + 8 * 4) * 19)));
-        x63 = ((mulhuu(load(y0 + 5 * 4))(load(y1 + 8 * 4) * 19))));
-       ((x64 = (load(y0 + 5 * 4) * (load(y1 + 7 * 4) * (2 * 19))));
-        x65 = ((mulhuu(load(y0 + 5 * 4))(load(y1 + 7 * 4) * (2 * 19)))));
-       ((x66 = (load(y0 + 5 * 4) * (load(y1 + 6 * 4) * 19)));
-        x67 = ((mulhuu(load(y0 + 5 * 4))(load(y1 + 6 * 4) * 19))));
-       ((x68 = (load(y0 + 5 * 4) * (load(y1 + 5 * 4) * (2 * 19))));
-        x69 = ((mulhuu(load(y0 + 5 * 4))(load(y1 + 5 * 4) * (2 * 19)))));
-       ((x70 = (load(y0 + 4 * 4) * (load(y1 + 9 * 4) * 19)));
-        x71 = ((mulhuu(load(y0 + 4 * 4))(load(y1 + 9 * 4) * 19))));
-       ((x72 = (load(y0 + 4 * 4) * (load(y1 + 8 * 4) * 19)));
-        x73 = ((mulhuu(load(y0 + 4 * 4))(load(y1 + 8 * 4) * 19))));
-       ((x74 = (load(y0 + 4 * 4) * (load(y1 + 7 * 4) * 19)));
-        x75 = ((mulhuu(load(y0 + 4 * 4))(load(y1 + 7 * 4) * 19))));
-       ((x76 = (load(y0 + 4 * 4) * (load(y1 + 6 * 4) * 19)));
-        x77 = ((mulhuu(load(y0 + 4 * 4))(load(y1 + 6 * 4) * 19))));
-       ((x78 = (load(y0 + 3 * 4) * (load(y1 + 9 * 4) * (2 * 19))));
-        x79 = ((mulhuu(load(y0 + 3 * 4))(load(y1 + 9 * 4) * (2 * 19)))));
-       ((x80 = (load(y0 + 3 * 4) * (load(y1 + 8 * 4) * 19)));
-        x81 = ((mulhuu(load(y0 + 3 * 4))(load(y1 + 8 * 4) * 19))));
-       ((x82 = (load(y0 + 3 * 4) * (load(y1 + 7 * 4) * (2 * 19))));
-        x83 = ((mulhuu(load(y0 + 3 * 4))(load(y1 + 7 * 4) * (2 * 19)))));
-       ((x84 = (load(y0 + 2 * 4) * (load(y1 + 9 * 4) * 19)));
-        x85 = ((mulhuu(load(y0 + 2 * 4))(load(y1 + 9 * 4) * 19))));
-       ((x86 = (load(y0 + 2 * 4) * (load(y1 + 8 * 4) * 19)));
-        x87 = ((mulhuu(load(y0 + 2 * 4))(load(y1 + 8 * 4) * 19))));
-       ((x88 = (load(y0 + 1 * 4) * (load(y1 + 9 * 4) * (2 * 19))));
-        x89 = ((mulhuu(load(y0 + 1 * 4))(load(y1 + 9 * 4) * (2 * 19)))));
-       ((x90 = (load(y0 + 9 * 4) * load(y1 + 0 * 4)));
-        x91 = ((mulhuu(load(y0 + 9 * 4))(load(y1 + 0 * 4)))));
-       ((x92 = (load(y0 + 8 * 4) * load(y1 + 1 * 4)));
-        x93 = ((mulhuu(load(y0 + 8 * 4))(load(y1 + 1 * 4)))));
-       ((x94 = (load(y0 + 8 * 4) * load(y1 + 0 * 4)));
-        x95 = ((mulhuu(load(y0 + 8 * 4))(load(y1 + 0 * 4)))));
-       ((x96 = (load(y0 + 7 * 4) * load(y1 + 2 * 4)));
-        x97 = ((mulhuu(load(y0 + 7 * 4))(load(y1 + 2 * 4)))));
-       ((x98 = (load(y0 + 7 * 4) * (load(y1 + 1 * 4) * 2)));
-        x99 = ((mulhuu(load(y0 + 7 * 4))(load(y1 + 1 * 4) * 2))));
-       ((x100 = (load(y0 + 7 * 4) * load(y1 + 0 * 4)));
-        x101 = ((mulhuu(load(y0 + 7 * 4))(load(y1 + 0 * 4)))));
-       ((x102 = (load(y0 + 6 * 4) * load(y1 + 3 * 4)));
-        x103 = ((mulhuu(load(y0 + 6 * 4))(load(y1 + 3 * 4)))));
-       ((x104 = (load(y0 + 6 * 4) * load(y1 + 2 * 4)));
-        x105 = ((mulhuu(load(y0 + 6 * 4))(load(y1 + 2 * 4)))));
-       ((x106 = (load(y0 + 6 * 4) * load(y1 + 1 * 4)));
-        x107 = ((mulhuu(load(y0 + 6 * 4))(load(y1 + 1 * 4)))));
-       ((x108 = (load(y0 + 6 * 4) * load(y1 + 0 * 4)));
-        x109 = ((mulhuu(load(y0 + 6 * 4))(load(y1 + 0 * 4)))));
-       ((x110 = (load(y0 + 5 * 4) * load(y1 + 4 * 4)));
-        x111 = ((mulhuu(load(y0 + 5 * 4))(load(y1 + 4 * 4)))));
-       ((x112 = (load(y0 + 5 * 4) * (load(y1 + 3 * 4) * 2)));
-        x113 = ((mulhuu(load(y0 + 5 * 4))(load(y1 + 3 * 4) * 2))));
-       ((x114 = (load(y0 + 5 * 4) * load(y1 + 2 * 4)));
-        x115 = ((mulhuu(load(y0 + 5 * 4))(load(y1 + 2 * 4)))));
-       ((x116 = (load(y0 + 5 * 4) * (load(y1 + 1 * 4) * 2)));
-        x117 = ((mulhuu(load(y0 + 5 * 4))(load(y1 + 1 * 4) * 2))));
-       ((x118 = (load(y0 + 5 * 4) * load(y1 + 0 * 4)));
-        x119 = ((mulhuu(load(y0 + 5 * 4))(load(y1 + 0 * 4)))));
-       ((x120 = (load(y0 + 4 * 4) * load(y1 + 5 * 4)));
-        x121 = ((mulhuu(load(y0 + 4 * 4))(load(y1 + 5 * 4)))));
-       ((x122 = (load(y0 + 4 * 4) * load(y1 + 4 * 4)));
-        x123 = ((mulhuu(load(y0 + 4 * 4))(load(y1 + 4 * 4)))));
-       ((x124 = (load(y0 + 4 * 4) * load(y1 + 3 * 4)));
-        x125 = ((mulhuu(load(y0 + 4 * 4))(load(y1 + 3 * 4)))));
-       ((x126 = (load(y0 + 4 * 4) * load(y1 + 2 * 4)));
-        x127 = ((mulhuu(load(y0 + 4 * 4))(load(y1 + 2 * 4)))));
-       ((x128 = (load(y0 + 4 * 4) * load(y1 + 1 * 4)));
-        x129 = ((mulhuu(load(y0 + 4 * 4))(load(y1 + 1 * 4)))));
-       ((x130 = (load(y0 + 4 * 4) * load(y1 + 0 * 4)));
-        x131 = ((mulhuu(load(y0 + 4 * 4))(load(y1 + 0 * 4)))));
-       ((x132 = (load(y0 + 3 * 4) * load(y1 + 6 * 4)));
-        x133 = ((mulhuu(load(y0 + 3 * 4))(load(y1 + 6 * 4)))));
-       ((x134 = (load(y0 + 3 * 4) * (load(y1 + 5 * 4) * 2)));
-        x135 = ((mulhuu(load(y0 + 3 * 4))(load(y1 + 5 * 4) * 2))));
-       ((x136 = (load(y0 + 3 * 4) * load(y1 + 4 * 4)));
-        x137 = ((mulhuu(load(y0 + 3 * 4))(load(y1 + 4 * 4)))));
-       ((x138 = (load(y0 + 3 * 4) * (load(y1 + 3 * 4) * 2)));
-        x139 = ((mulhuu(load(y0 + 3 * 4))(load(y1 + 3 * 4) * 2))));
-       ((x140 = (load(y0 + 3 * 4) * load(y1 + 2 * 4)));
-        x141 = ((mulhuu(load(y0 + 3 * 4))(load(y1 + 2 * 4)))));
-       ((x142 = (load(y0 + 3 * 4) * (load(y1 + 1 * 4) * 2)));
-        x143 = ((mulhuu(load(y0 + 3 * 4))(load(y1 + 1 * 4) * 2))));
-       ((x144 = (load(y0 + 3 * 4) * load(y1 + 0 * 4)));
-        x145 = ((mulhuu(load(y0 + 3 * 4))(load(y1 + 0 * 4)))));
-       ((x146 = (load(y0 + 2 * 4) * load(y1 + 7 * 4)));
-        x147 = ((mulhuu(load(y0 + 2 * 4))(load(y1 + 7 * 4)))));
-       ((x148 = (load(y0 + 2 * 4) * load(y1 + 6 * 4)));
-        x149 = ((mulhuu(load(y0 + 2 * 4))(load(y1 + 6 * 4)))));
-       ((x150 = (load(y0 + 2 * 4) * load(y1 + 5 * 4)));
-        x151 = ((mulhuu(load(y0 + 2 * 4))(load(y1 + 5 * 4)))));
-       ((x152 = (load(y0 + 2 * 4) * load(y1 + 4 * 4)));
-        x153 = ((mulhuu(load(y0 + 2 * 4))(load(y1 + 4 * 4)))));
-       ((x154 = (load(y0 + 2 * 4) * load(y1 + 3 * 4)));
-        x155 = ((mulhuu(load(y0 + 2 * 4))(load(y1 + 3 * 4)))));
-       ((x156 = (load(y0 + 2 * 4) * load(y1 + 2 * 4)));
-        x157 = ((mulhuu(load(y0 + 2 * 4))(load(y1 + 2 * 4)))));
-       ((x158 = (load(y0 + 2 * 4) * load(y1 + 1 * 4)));
-        x159 = ((mulhuu(load(y0 + 2 * 4))(load(y1 + 1 * 4)))));
-       ((x160 = (load(y0 + 2 * 4) * load(y1 + 0 * 4)));
-        x161 = ((mulhuu(load(y0 + 2 * 4))(load(y1 + 0 * 4)))));
-       ((x162 = (load(y0 + 1 * 4) * load(y1 + 8 * 4)));
-        x163 = ((mulhuu(load(y0 + 1 * 4))(load(y1 + 8 * 4)))));
-       ((x164 = (load(y0 + 1 * 4) * (load(y1 + 7 * 4) * 2)));
-        x165 = ((mulhuu(load(y0 + 1 * 4))(load(y1 + 7 * 4) * 2))));
-       ((x166 = (load(y0 + 1 * 4) * load(y1 + 6 * 4)));
-        x167 = ((mulhuu(load(y0 + 1 * 4))(load(y1 + 6 * 4)))));
-       ((x168 = (load(y0 + 1 * 4) * (load(y1 + 5 * 4) * 2)));
-        x169 = ((mulhuu(load(y0 + 1 * 4))(load(y1 + 5 * 4) * 2))));
-       ((x170 = (load(y0 + 1 * 4) * load(y1 + 4 * 4)));
-        x171 = ((mulhuu(load(y0 + 1 * 4))(load(y1 + 4 * 4)))));
-       ((x172 = (load(y0 + 1 * 4) * (load(y1 + 3 * 4) * 2)));
-        x173 = ((mulhuu(load(y0 + 1 * 4))(load(y1 + 3 * 4) * 2))));
-       ((x174 = (load(y0 + 1 * 4) * load(y1 + 2 * 4)));
-        x175 = ((mulhuu(load(y0 + 1 * 4))(load(y1 + 2 * 4)))));
-       ((x176 = (load(y0 + 1 * 4) * (load(y1 + 1 * 4) * 2)));
-        x177 = ((mulhuu(load(y0 + 1 * 4))(load(y1 + 1 * 4) * 2))));
-       ((x178 = (load(y0 + 1 * 4) * load(y1 + 0 * 4)));
-        x179 = ((mulhuu(load(y0 + 1 * 4))(load(y1 + 0 * 4)))));
-       ((x180 = (load(y0 + 0 * 4) * load(y1 + 9 * 4)));
-        x181 = ((mulhuu(load(y0 + 0 * 4))(load(y1 + 9 * 4)))));
-       ((x182 = (load(y0 + 0 * 4) * load(y1 + 8 * 4)));
-        x183 = ((mulhuu(load(y0 + 0 * 4))(load(y1 + 8 * 4)))));
-       ((x184 = (load(y0 + 0 * 4) * load(y1 + 7 * 4)));
-        x185 = ((mulhuu(load(y0 + 0 * 4))(load(y1 + 7 * 4)))));
-       ((x186 = (load(y0 + 0 * 4) * load(y1 + 6 * 4)));
-        x187 = ((mulhuu(load(y0 + 0 * 4))(load(y1 + 6 * 4)))));
-       ((x188 = (load(y0 + 0 * 4) * load(y1 + 5 * 4)));
-        x189 = ((mulhuu(load(y0 + 0 * 4))(load(y1 + 5 * 4)))));
-       ((x190 = (load(y0 + 0 * 4) * load(y1 + 4 * 4)));
-        x191 = ((mulhuu(load(y0 + 0 * 4))(load(y1 + 4 * 4)))));
-       ((x192 = (load(y0 + 0 * 4) * load(y1 + 3 * 4)));
-        x193 = ((mulhuu(load(y0 + 0 * 4))(load(y1 + 3 * 4)))));
-       ((x194 = (load(y0 + 0 * 4) * load(y1 + 2 * 4)));
-        x195 = ((mulhuu(load(y0 + 0 * 4))(load(y1 + 2 * 4)))));
-       ((x196 = (load(y0 + 0 * 4) * load(y1 + 1 * 4)));
-        x197 = ((mulhuu(load(y0 + 0 * 4))(load(y1 + 1 * 4)))));
-       ((x198 = (load(y0 + 0 * 4) * load(y1 + 0 * 4)));
-        x199 = ((mulhuu(load(y0 + 0 * 4))(load(y1 + 0 * 4)))));
+    : (((x0 = (a9 * (b9 * (2 * 19)))); x1 = ((mulhuu(a9)(b9 * (2 * 19)))));
+       ((x2 = (a9 * (b8 * 19))); x3 = ((mulhuu(a9)(b8 * 19))));
+       ((x4 = (a9 * (b7 * (2 * 19)))); x5 = ((mulhuu(a9)(b7 * (2 * 19)))));
+       ((x6 = (a9 * (b6 * 19))); x7 = ((mulhuu(a9)(b6 * 19))));
+       ((x8 = (a9 * (b5 * (2 * 19)))); x9 = ((mulhuu(a9)(b5 * (2 * 19)))));
+       ((x10 = (a9 * (b4 * 19))); x11 = ((mulhuu(a9)(b4 * 19))));
+       ((x12 = (a9 * (b3 * (2 * 19)))); x13 = ((mulhuu(a9)(b3 * (2 * 19)))));
+       ((x14 = (a9 * (b2 * 19))); x15 = ((mulhuu(a9)(b2 * 19))));
+       ((x16 = (a9 * (b1 * (2 * 19)))); x17 = ((mulhuu(a9)(b1 * (2 * 19)))));
+       ((x18 = (a8 * (b9 * 19))); x19 = ((mulhuu(a8)(b9 * 19))));
+       ((x20 = (a8 * (b8 * 19))); x21 = ((mulhuu(a8)(b8 * 19))));
+       ((x22 = (a8 * (b7 * 19))); x23 = ((mulhuu(a8)(b7 * 19))));
+       ((x24 = (a8 * (b6 * 19))); x25 = ((mulhuu(a8)(b6 * 19))));
+       ((x26 = (a8 * (b5 * 19))); x27 = ((mulhuu(a8)(b5 * 19))));
+       ((x28 = (a8 * (b4 * 19))); x29 = ((mulhuu(a8)(b4 * 19))));
+       ((x30 = (a8 * (b3 * 19))); x31 = ((mulhuu(a8)(b3 * 19))));
+       ((x32 = (a8 * (b2 * 19))); x33 = ((mulhuu(a8)(b2 * 19))));
+       ((x34 = (a7 * (b9 * (2 * 19)))); x35 = ((mulhuu(a7)(b9 * (2 * 19)))));
+       ((x36 = (a7 * (b8 * 19))); x37 = ((mulhuu(a7)(b8 * 19))));
+       ((x38 = (a7 * (b7 * (2 * 19)))); x39 = ((mulhuu(a7)(b7 * (2 * 19)))));
+       ((x40 = (a7 * (b6 * 19))); x41 = ((mulhuu(a7)(b6 * 19))));
+       ((x42 = (a7 * (b5 * (2 * 19)))); x43 = ((mulhuu(a7)(b5 * (2 * 19)))));
+       ((x44 = (a7 * (b4 * 19))); x45 = ((mulhuu(a7)(b4 * 19))));
+       ((x46 = (a7 * (b3 * (2 * 19)))); x47 = ((mulhuu(a7)(b3 * (2 * 19)))));
+       ((x48 = (a6 * (b9 * 19))); x49 = ((mulhuu(a6)(b9 * 19))));
+       ((x50 = (a6 * (b8 * 19))); x51 = ((mulhuu(a6)(b8 * 19))));
+       ((x52 = (a6 * (b7 * 19))); x53 = ((mulhuu(a6)(b7 * 19))));
+       ((x54 = (a6 * (b6 * 19))); x55 = ((mulhuu(a6)(b6 * 19))));
+       ((x56 = (a6 * (b5 * 19))); x57 = ((mulhuu(a6)(b5 * 19))));
+       ((x58 = (a6 * (b4 * 19))); x59 = ((mulhuu(a6)(b4 * 19))));
+       ((x60 = (a5 * (b9 * (2 * 19)))); x61 = ((mulhuu(a5)(b9 * (2 * 19)))));
+       ((x62 = (a5 * (b8 * 19))); x63 = ((mulhuu(a5)(b8 * 19))));
+       ((x64 = (a5 * (b7 * (2 * 19)))); x65 = ((mulhuu(a5)(b7 * (2 * 19)))));
+       ((x66 = (a5 * (b6 * 19))); x67 = ((mulhuu(a5)(b6 * 19))));
+       ((x68 = (a5 * (b5 * (2 * 19)))); x69 = ((mulhuu(a5)(b5 * (2 * 19)))));
+       ((x70 = (a4 * (b9 * 19))); x71 = ((mulhuu(a4)(b9 * 19))));
+       ((x72 = (a4 * (b8 * 19))); x73 = ((mulhuu(a4)(b8 * 19))));
+       ((x74 = (a4 * (b7 * 19))); x75 = ((mulhuu(a4)(b7 * 19))));
+       ((x76 = (a4 * (b6 * 19))); x77 = ((mulhuu(a4)(b6 * 19))));
+       ((x78 = (a3 * (b9 * (2 * 19)))); x79 = ((mulhuu(a3)(b9 * (2 * 19)))));
+       ((x80 = (a3 * (b8 * 19))); x81 = ((mulhuu(a3)(b8 * 19))));
+       ((x82 = (a3 * (b7 * (2 * 19)))); x83 = ((mulhuu(a3)(b7 * (2 * 19)))));
+       ((x84 = (a2 * (b9 * 19))); x85 = ((mulhuu(a2)(b9 * 19))));
+       ((x86 = (a2 * (b8 * 19))); x87 = ((mulhuu(a2)(b8 * 19))));
+       ((x88 = (a1 * (b9 * (2 * 19)))); x89 = ((mulhuu(a1)(b9 * (2 * 19)))));
+       ((x90 = (a9 * b0)); x91 = ((mulhuu(a9)(b0))));
+       ((x92 = (a8 * b1)); x93 = ((mulhuu(a8)(b1))));
+       ((x94 = (a8 * b0)); x95 = ((mulhuu(a8)(b0))));
+       ((x96 = (a7 * b2)); x97 = ((mulhuu(a7)(b2))));
+       ((x98 = (a7 * (b1 * 2))); x99 = ((mulhuu(a7)(b1 * 2))));
+       ((x100 = (a7 * b0)); x101 = ((mulhuu(a7)(b0))));
+       ((x102 = (a6 * b3)); x103 = ((mulhuu(a6)(b3))));
+       ((x104 = (a6 * b2)); x105 = ((mulhuu(a6)(b2))));
+       ((x106 = (a6 * b1)); x107 = ((mulhuu(a6)(b1))));
+       ((x108 = (a6 * b0)); x109 = ((mulhuu(a6)(b0))));
+       ((x110 = (a5 * b4)); x111 = ((mulhuu(a5)(b4))));
+       ((x112 = (a5 * (b3 * 2))); x113 = ((mulhuu(a5)(b3 * 2))));
+       ((x114 = (a5 * b2)); x115 = ((mulhuu(a5)(b2))));
+       ((x116 = (a5 * (b1 * 2))); x117 = ((mulhuu(a5)(b1 * 2))));
+       ((x118 = (a5 * b0)); x119 = ((mulhuu(a5)(b0))));
+       ((x120 = (a4 * b5)); x121 = ((mulhuu(a4)(b5))));
+       ((x122 = (a4 * b4)); x123 = ((mulhuu(a4)(b4))));
+       ((x124 = (a4 * b3)); x125 = ((mulhuu(a4)(b3))));
+       ((x126 = (a4 * b2)); x127 = ((mulhuu(a4)(b2))));
+       ((x128 = (a4 * b1)); x129 = ((mulhuu(a4)(b1))));
+       ((x130 = (a4 * b0)); x131 = ((mulhuu(a4)(b0))));
+       ((x132 = (a3 * b6)); x133 = ((mulhuu(a3)(b6))));
+       ((x134 = (a3 * (b5 * 2))); x135 = ((mulhuu(a3)(b5 * 2))));
+       ((x136 = (a3 * b4)); x137 = ((mulhuu(a3)(b4))));
+       ((x138 = (a3 * (b3 * 2))); x139 = ((mulhuu(a3)(b3 * 2))));
+       ((x140 = (a3 * b2)); x141 = ((mulhuu(a3)(b2))));
+       ((x142 = (a3 * (b1 * 2))); x143 = ((mulhuu(a3)(b1 * 2))));
+       ((x144 = (a3 * b0)); x145 = ((mulhuu(a3)(b0))));
+       ((x146 = (a2 * b7)); x147 = ((mulhuu(a2)(b7))));
+       ((x148 = (a2 * b6)); x149 = ((mulhuu(a2)(b6))));
+       ((x150 = (a2 * b5)); x151 = ((mulhuu(a2)(b5))));
+       ((x152 = (a2 * b4)); x153 = ((mulhuu(a2)(b4))));
+       ((x154 = (a2 * b3)); x155 = ((mulhuu(a2)(b3))));
+       ((x156 = (a2 * b2)); x157 = ((mulhuu(a2)(b2))));
+       ((x158 = (a2 * b1)); x159 = ((mulhuu(a2)(b1))));
+       ((x160 = (a2 * b0)); x161 = ((mulhuu(a2)(b0))));
+       ((x162 = (a1 * b8)); x163 = ((mulhuu(a1)(b8))));
+       ((x164 = (a1 * (b7 * 2))); x165 = ((mulhuu(a1)(b7 * 2))));
+       ((x166 = (a1 * b6)); x167 = ((mulhuu(a1)(b6))));
+       ((x168 = (a1 * (b5 * 2))); x169 = ((mulhuu(a1)(b5 * 2))));
+       ((x170 = (a1 * b4)); x171 = ((mulhuu(a1)(b4))));
+       ((x172 = (a1 * (b3 * 2))); x173 = ((mulhuu(a1)(b3 * 2))));
+       ((x174 = (a1 * b2)); x175 = ((mulhuu(a1)(b2))));
+       ((x176 = (a1 * (b1 * 2))); x177 = ((mulhuu(a1)(b1 * 2))));
+       ((x178 = (a1 * b0)); x179 = ((mulhuu(a1)(b0))));
+       ((x180 = (a0 * b9)); x181 = ((mulhuu(a0)(b9))));
+       ((x182 = (a0 * b8)); x183 = ((mulhuu(a0)(b8))));
+       ((x184 = (a0 * b7)); x185 = ((mulhuu(a0)(b7))));
+       ((x186 = (a0 * b6)); x187 = ((mulhuu(a0)(b6))));
+       ((x188 = (a0 * b5)); x189 = ((mulhuu(a0)(b5))));
+       ((x190 = (a0 * b4)); x191 = ((mulhuu(a0)(b4))));
+       ((x192 = (a0 * b3)); x193 = ((mulhuu(a0)(b3))));
+       ((x194 = (a0 * b2)); x195 = ((mulhuu(a0)(b2))));
+       ((x196 = (a0 * b1)); x197 = ((mulhuu(a0)(b1))));
+       ((x198 = (a0 * b0)); x199 = ((mulhuu(a0)(b0))));
        ((x200 = (x32 + x16)); x201 = (x200 < x32));
        ((((x202 = (x201 + x33)); x203 = (x202 < x33)); x202 = (x202 + x17));
         x203 = (x203 + (x202 < x17)));
@@ -2917,17 +2793,10 @@ ErrorT.Success
        ((x630 = (x238 + x626)); x631 = (x630 < x238)); (x632 = (x631 + x629));
        (x633 = (x630 >> 26 | x632 << 6)); (x634 = (x630 & 67108863));
        (x635 = (x633 + x569)); (x636 = (x635 >> 25));
-       (x637 = (x635 & 33554431)); (x638 = (x636 + x576));
-       ((store(ret, x634)); x639 = (ret + 1));
-       ((store(x639, x637)); x640 = (x639 + 1));
-       ((store(x640, x638)); x641 = (x640 + 1));
-       ((store(x641, x583)); x642 = (x641 + 1));
-       ((store(x642, x590)); x643 = (x642 + 1));
-       ((store(x643, x597)); x644 = (x643 + 1));
-       ((store(x644, x604)); x645 = (x644 + 1));
-       ((store(x645, x611)); x646 = (x645 + 1));
-       ((store(x646, x618)); x647 = (x646 + 1));
-       ((store(x647, x625)); x648 = (x647 + 1));
+       (x637 = (x635 & 33554431)); (x638 = (x636 + x576)); (ret0 = (x634));
+       (ret1 = (x637)); (ret2 = (x638)); (ret3 = (x583)); (ret4 = (x590));
+       (ret5 = (x597)); (ret6 = (x604)); (ret7 = (x611)); (ret8 = (x618));
+       (ret9 = (x625));
        /*skip*/)
     : cmd
 *)

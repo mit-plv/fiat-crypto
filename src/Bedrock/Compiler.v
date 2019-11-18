@@ -59,8 +59,11 @@ Module Compiler.
     Fixpoint base_ltype (t : base.type) : Type :=
       match t with
       | base.type.prod a b => base_ltype a * base_ltype b
-      | _ => Syntax.varname (* N.B. for lists, the value of the variable
-                               represents the list's *location in memory* *)
+      | base.type.list (base.type.type_base base.type.Z) =>
+        list Syntax.varname (* N.B. we require lists to have all their values
+                               stored in local variables, so we don't have to
+                               do memory reads *)
+      | _ => Syntax.varname
       end.
     Fixpoint ltype (t : type.type base.type) : Type :=
       match t with
@@ -74,6 +77,8 @@ Module Compiler.
     Fixpoint base_rtype (t : base.type) : Type :=
       match t with
       | base.type.prod a b => base_rtype a * base_rtype b
+      | base.type.list (base.type.type_base base.type.Z) =>
+        list Syntax.expr.expr
       | _ => Syntax.expr.expr
       end.
     Fixpoint rtype (t : type.type base.type) : Type :=
@@ -87,6 +92,8 @@ Module Compiler.
     Fixpoint rtype_of_ltype {t} : base_ltype t -> base_rtype t :=
       match t with
       | base.type.prod a b => fun x => (rtype_of_ltype (fst x), rtype_of_ltype (snd x))
+      | base.type.list (base.type.type_base base.type.Z) =>
+        map Syntax.expr.var
       | base.type.list _ | base.type.option _ | base.type.unit
       | base.type.type_base _ => Syntax.expr.var
       end.
@@ -95,6 +102,7 @@ Module Compiler.
     Fixpoint base_make_error t : base_rtype t :=
       match t with
       | base.type.prod a b => (base_make_error a, base_make_error b)
+      | base.type.list (base.type.type_base base.type.Z) => [error]
       | base.type.list _ | base.type.option _ | base.type.unit
       | base.type.type_base _ => error
       end.
@@ -114,6 +122,10 @@ Module Compiler.
         let step1 := translate_lhs a nextn in
         let step2 := translate_lhs b (fst step1) in
         (fst step2, (snd step1, snd step2))
+      (* assignments to lists are not allowed; we only construct lists as
+         output, and don't assign them to variables, so return garbage *)
+      | base.type.list (base.type.type_base base.type.Z) =>
+       (nextn, nil) 
       (* everything else is single-variable assignment *)
       | base.type.list _ | base.type.option _ | base.type.unit
       | base.type.type_base _ => (S nextn, varname_gen nextn)
@@ -126,6 +138,8 @@ Module Compiler.
         fun (lhs : base_ltype (a * b)) (rhs : base_rtype (a * b)) =>
           Syntax.cmd.seq (assign (fst lhs) (fst rhs))
                          (assign (snd lhs) (snd rhs))
+      | base.type.list (base.type.type_base base.type.Z) =>
+        fun _ _ => Syntax.cmd.skip (* not allowed to assign to a list; return garbage *)
       | base.type.list _ | base.type.option _ | base.type.unit
       | base.type.type_base _ => Syntax.cmd.set
       end.
@@ -262,23 +276,21 @@ Module Compiler.
              (expr.Ident _ (ident.snd _ (base.type.type_base base.type.Z)))
              x) =>
           snd (translate_inner_expr false x)
-        (* List_nth_default : lists are represented by the location of the head
-           of the list in memory; therefore, to get the nth element of the list,
-           we add the index and load from the resulting address *)
+        (* List_nth_default : lists are represented by lists of variables, so we
+           can perform the nth_default inline. This saves us from having to
+           prove that all indexing into lists is in-bounds. *)
         | (expr.App
              type_nat type_Z
              (expr.App
                 type_listZ _
-                (expr.App _ _
+                (expr.App type_Z _
                           (expr.Ident _ (ident.List_nth_default _))
-                          d) l) i) =>
-          let offset := Syntax.expr.op Syntax.bopname.mul
-                                       (translate_inner_expr true i)
-                                       (Syntax.expr.literal word_size_in_bytes) in
-          let addr := Syntax.expr.op Syntax.bopname.add
-                                     (translate_inner_expr false l)
-                                     offset in
-          Syntax.expr.load Syntax.access_size.word addr
+                          d) (expr.Var type_listZ l))
+             (expr.Ident _ (ident.Literal base.type.nat i))) =>
+          let l : list Syntax.varname := l in
+          let i : nat := i in
+          let d : Syntax.expr.expr := translate_inner_expr true d in
+          nth_default d (map Syntax.expr.var l) i
         (* Literal (Z) -> Syntax.expr.literal *)
         | expr.Ident type_Z (ident.Literal base.type.Z x) =>
           Syntax.expr.literal x
@@ -393,33 +405,6 @@ Module Compiler.
       | _ => fun _ => None
       end.
 
-    (* Translates the construction of an output list. This function is separate
-       for proof reasons. We only ever allow writing to the memory as part of the
-       construction of the output list, and don't expect to read from the memory
-       after that. So it makes sense to have two separate inductive proofs: one for
-       translate_list whose preconditions don't involve anything about reading from
-       memory, and one for translate_expr whose preconditions do involve reading
-       from memory. *)
-    Fixpoint translate_list (e : @API.expr ltype type_listZ) (nextn : nat)
-      : Syntax.varname (* variable whose value is the list-head address *)
-        -> nat * Syntax.cmd.cmd :=
-      match e with
-      | expr.App
-          type_listZ type_listZ
-          (expr.App type_Z _ (expr.Ident _ (ident.cons _)) x) l =>
-        fun (loc : Syntax.varname) =>
-          let storex := (Syntax.cmd.store Syntax.access_size.word
-                                          (Syntax.expr.var loc)
-                                          (translate_inner_expr true x)) in
-          let nextloc := (Syntax.expr.op Syntax.bopname.add
-                                         (Syntax.expr.var loc)
-                                         (Syntax.expr.literal word_size_in_bytes)) in
-          let set_nextloc := (Syntax.cmd.set (varname_gen nextn) nextloc) in
-          let recl := translate_list l (S nextn) (varname_gen nextn) in
-          (fst recl, Syntax.cmd.seq (Syntax.cmd.seq storex set_nextloc) (snd recl))
-      | _ => fun _ => (nextn, Syntax.cmd.skip)
-      end.
-
     Fixpoint translate_expr {t} (e : @API.expr ltype (type.base t)) (nextn : nat)
       : base_ltype t (* return value names *)
         -> nat * Syntax.cmd.cmd :=
@@ -437,8 +422,14 @@ Module Compiler.
       | expr.App
           type_listZ type_listZ
           (expr.App type_Z _ (expr.Ident _ (ident.cons _)) x) l =>
-        (* special function handles the construction of output lists *)
-        translate_list (expr.App (expr.App (expr.Ident ident.cons) x) l) nextn
+        fun (retnames : list Syntax.varname) =>
+          match retnames with
+          | nil => (nextn, Syntax.cmd.skip) (* shouldn't happen *)
+          | n :: retnames' =>
+            let x := translate_inner_expr true x in
+            let recl := translate_expr l nextn retnames' in
+            (fst recl, Syntax.cmd.seq (Syntax.cmd.set n x) (snd recl))
+          end
       | expr.App _ (type.base _) f x =>
         fun retnames =>
           let v := translate_inner_expr true (expr.App f x) in
@@ -482,6 +473,7 @@ Module Compiler.
       end.
   End Compiler.
 
+  (*
   Section Proofs.
     Context {p : parameters} {p_ok : @ok p }.
 
@@ -548,8 +540,42 @@ Module Compiler.
       the translation expression start with loading all the list-arguments into
       variables
 
-      
 
+      THINK. How does this solve problems?
+
+      Well, the nth_default equivalence works because during the translation we
+      *perform* nth_default. And this structure makes it so we have *no memory
+       reads*, and therefore need no memory state in context_list_equiv; we can
+       assume memory changes have no effect on the interpretation of any
+       expression.
+
+       How can we now wrap this in reads at the beginning and writes at the end?
+       this compiler will take in a normal fiat-crypto expression (i.e. takes in
+       lists and outputs lists) and return a bedrock2 cmd that requires starting
+       with a context that has all list elts pre-loaded and returns values in
+       separate variables. The correctness proofs will need to know both lists,
+       and know that the ones in arguments are equivalent to fiat-crypto
+       arguments in the given context.
+
+
+       Then we'll need a new ltype that *does* represent lists as locations in
+       memory, and things to convert to and from this type by loading or
+       storing.
+
+       Then, we can write something that takes in fiat-crypto arguments
+       (API.interp type, so list Z for type_listZ), and loads any lists into
+       variables (using varname_gen), returning a bedrock2 cmd, an ltype for the
+       arguments, and a new nextn. We can prove that the ltype and the
+       fiat-crypto arguments are equivalent in the new context after running the
+       cmd, which composes with the previous proof.
+
+       To wrap the end -- given ltype (type_listZ==>list Syntax.varname), store
+       the list.
+
+       Plan:
+
+       - for now, focus on the "middle part" -- everything is in locals. Once
+         that's done, write the rest.
 
      *)
     Print base_ltype.
@@ -1728,4 +1754,5 @@ Module Compiler.
       ; []; eauto. }.
     Qed.
   End Proofs.
+*)
 End Compiler.
