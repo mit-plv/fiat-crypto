@@ -393,6 +393,33 @@ Module Compiler.
       | _ => fun _ => None
       end.
 
+    (* Translates the construction of an output list. This function is separate
+       for proof reasons. We only ever allow writing to the memory as part of the
+       construction of the output list, and don't expect to read from the memory
+       after that. So it makes sense to have two separate inductive proofs: one for
+       translate_list whose preconditions don't involve anything about reading from
+       memory, and one for translate_expr whose preconditions do involve reading
+       from memory. *)
+    Fixpoint translate_list (e : @API.expr ltype type_listZ) (nextn : nat)
+      : Syntax.varname (* variable whose value is the list-head address *)
+        -> nat * Syntax.cmd.cmd :=
+      match e with
+      | expr.App
+          type_listZ type_listZ
+          (expr.App type_Z _ (expr.Ident _ (ident.cons _)) x) l =>
+        fun (loc : Syntax.varname) =>
+          let storex := (Syntax.cmd.store Syntax.access_size.word
+                                          (Syntax.expr.var loc)
+                                          (translate_inner_expr true x)) in
+          let nextloc := (Syntax.expr.op Syntax.bopname.add
+                                         (Syntax.expr.var loc)
+                                         (Syntax.expr.literal word_size_in_bytes)) in
+          let set_nextloc := (Syntax.cmd.set (varname_gen nextn) nextloc) in
+          let recl := translate_list l (S nextn) (varname_gen nextn) in
+          (fst recl, Syntax.cmd.seq (Syntax.cmd.seq storex set_nextloc) (snd recl))
+      | _ => fun _ => (nextn, Syntax.cmd.skip)
+      end.
+
     Fixpoint translate_expr {t} (e : @API.expr ltype (type.base t)) (nextn : nat)
       : base_ltype t (* return value names *)
         -> nat * Syntax.cmd.cmd :=
@@ -410,17 +437,8 @@ Module Compiler.
       | expr.App
           type_listZ type_listZ
           (expr.App type_Z _ (expr.Ident _ (ident.cons _)) x) l =>
-        fun (retloc : Syntax.varname) =>
-          (* retloc is the address at which to store the head of the list *)
-          let cmdx := (Syntax.cmd.store Syntax.access_size.word
-                                        (Syntax.expr.var retloc) (translate_inner_expr true x)) in
-          let next_retloc := (Syntax.expr.op Syntax.bopname.add
-                                             (Syntax.expr.var retloc) (Syntax.expr.literal 1)) in
-          let set_next_retloc := (Syntax.cmd.set (varname_gen nextn) next_retloc) in
-          let recl := translate_expr l (S nextn) (varname_gen nextn) in
-          (fst recl, Syntax.cmd.seq (Syntax.cmd.seq cmdx set_next_retloc) (snd recl))
-      | (expr.Ident _ (ident.nil (base.type.type_base base.type.Z))) =>
-        fun _ => (nextn, Syntax.cmd.skip)
+        (* special function handles the construction of output lists *)
+        translate_list (expr.App (expr.App (expr.Ident ident.cons) x) l) nextn
       | expr.App _ (type.base _) f x =>
         fun retnames =>
           let v := translate_inner_expr true (expr.App f x) in
@@ -467,12 +485,268 @@ Module Compiler.
   Section Proofs.
     Context {p : parameters} {p_ok : @ok p }.
 
+    Local Instance sem_ok : Semantics.parameters_ok semantics
+      := semantics_ok.
     Local Instance mem_ok : Interface.map.ok Semantics.mem
-      := Semantics.mem_ok (parameters_ok := semantics_ok).
+      := Semantics.mem_ok.
+    Local Instance varname_eqb_spec x y : BoolSpec _ _ _
+      := Semantics.varname_eqb_spec x y.
 
     (* TODO : fill these in *)
     Axiom valid_carry_expr : forall {t}, @API.expr (fun _ => unit) t -> Prop.
-    Axiom valid_inner_expr : forall {t}, bool -> @API.expr (fun _ => unit) t -> Prop.
+
+
+    Set Printing All.
+    (* DESIGN TIME
+
+    Problems:
+      - need to not require a context-matching precondition in inductive proofs that change memory
+      - need to include in validity precondition that nth_default doesn't overshoot the list
+
+      these problems *together* do suggest some reads-first approach, but I'm not quite sure how it would look
+      
+
+      ...could we make rtype for lists a list of Syntax.expr? (wouldn't solve
+      problem that we need something to say in validity precondition)
+
+
+      imagine a new compiler pass that replaces e.g. fun x => f (x[[2]], x[[4]]) with fun x2 x4 => f(x2, x4)
+
+
+      when we reach Abs, and the value to be taken in is a list, then we want to
+      return an Abs that takes in *some number* of Zs. we could do it by making
+      a fixpoint type called length that returns a nat for lists and a unit for
+      everything else, and checking what the length is supposed to be. Then we
+      make an Abs that takes in the Zs, constructs the list, and then passes the
+      constructed list into the continuation. When we later encounter
+      nth_default, we require that the structure of the list is exposed and
+      recurse down until we either go out of bounds (replacing the nth_default
+      with d) or get the right element (replacing nth_default with that var).
+
+      then when we go through and convert to bedrock2, we can have a validity
+      precondition that excludes memory reads entirely.
+
+      The correctness proof would need to say that the transformation preserves
+      return values. And then the bedrock2 translation would have to somehow go
+      back to lists...
+
+
+      In the translation, var=ltype
+      can ltype require lists of Syntax.varname for lists? (where the
+      varname is the variable holding the *value stored*, not the address)
+      that would mean that when we encounter nth_default, we require the list to
+      be an expr.Var and we get a list Syntax.varname in context that we can
+      perform the nth_default on and output just the varname as the translation,
+      bypassing the read entirely
+
+      when we want to say the contexts match (context_list_equiv), for the list
+      case, we get an (API.interp type_listZ = list Z) and an (ltype type_listZ
+      = list Syntax.varname); the proposition then becomes whether these
+      variables pairwise-match the Zs
+
+      But we do still want the bedrock2 arguments to be a list...need to make
+      the translation expression start with loading all the list-arguments into
+      variables
+
+      
+
+
+     *)
+    Print base_ltype.
+
+    
+
+    (* special structure for the construction of output lists; they must consist
+    only of cons and nil, and are not allowed to contain reads from lists (since
+    in the bedrock2 translation, this would mean reading from memory, and the
+    proofs want to assume that all memory reads happen before any memory
+    writes). *)
+    Inductive valid_inner_expr
+      : forall {t},
+        bool (* require expression to be enclosed by casts? (require_casts = rc) *) ->
+        bool (* memory reads allowed? (reads_allowed = ra) *) ->
+        @API.expr (fun _ => unit) t -> Prop :=
+    | valid_inner_cast1 :
+        forall (rc ra : bool) r x,
+          valid_inner_expr false ra x ->
+          range_good r = true ->
+          valid_inner_expr (t:=type_Z) rc ra
+                           (expr.App
+                              (expr.App (expr.Ident ident.Z_cast)
+                                        (expr.Ident (ident.Literal (t:=base.type.zrange) r))) x)
+    | valid_inner_cast2 :
+        forall (rc ra : bool) r1 r2 x,
+          valid_inner_expr false ra x ->
+          range_good r1 = true ->
+          range_good r2 = true ->
+          valid_inner_expr (t:=type_ZZ) rc ra
+                           (expr.App
+                              (expr.App (expr.Ident ident.Z_cast2)
+                                        (expr.App
+                                           (expr.App
+                                              (expr.Ident ident.pair)
+                                              (expr.Ident (ident.Literal (t:=base.type.zrange) r1)))
+                                           (expr.Ident (ident.Literal (t:=base.type.zrange) r2)))) x)
+    | valid_inner_literalz :
+        forall rc ra z,
+          (* either bounded or casts not required *)
+          (is_bounded_by_bool z max_range || negb rc = true)%bool ->
+          valid_inner_expr (t:=type_Z) rc ra (expr.Ident (ident.Literal (t:=base.type.Z) z))
+    | valid_inner_literalnat :
+        forall rc ra n,
+          (* either bounded or casts not required *)
+          (is_bounded_by_bool (Z.of_nat n) max_range || negb rc = true)%bool ->
+          valid_inner_expr (t:=type_nat) rc ra (expr.Ident (ident.Literal (t:=base.type.nat) n))
+    | valid_inner_add :
+        forall ra x y,
+          valid_inner_expr true ra x ->
+          valid_inner_expr true ra y ->
+          valid_inner_expr false ra (expr.App (expr.App (expr.Ident ident.Z_add) x) y)
+    (* TODO: need many more cases here, one for each in translate_inner_expr  *)
+    | valid_inner_nth_default :
+        forall rc d l i,
+          valid_inner_expr false true l ->
+          (* index fits in bounds *)
+          is_bounded_by_bool (Z.of_nat i) max_range = true ->
+          (* index fits in list *)
+          
+          valid_inner_expr
+            (t:=type_listZ)
+            rc (* lists get a pass on casts *)
+            true (* lists involve memory reads *)
+            (expr.App (expr.App (expr.App (expr.Ident ident.List_nth_default) d) l)
+            (expr.Ident (ident.Literal i)))
+        
+    .
+    (*
+        | (expr.App
+             type_nat type_Z
+             (expr.App
+                type_listZ _
+                (expr.App _ _
+                          (expr.Ident _ (ident.List_nth_default _))
+                          d) l) i) =>
+          let offset := Syntax.expr.op Syntax.bopname.mul
+                                       (translate_inner_expr true i)
+                                       (Syntax.expr.literal word_size_in_bytes) in
+          let addr := Syntax.expr.op Syntax.bopname.add
+                                     (translate_inner_expr false l)
+                                     offset in
+          Syntax.expr.load Syntax.access_size.word addr
+        (* Z_mul_split : compute high and low separately and assign to two
+           different variables *)
+        (* TODO : don't duplicate argument expressions *)
+        | (expr.App
+             type_Z type_ZZ
+             (expr.App type_Z (type.arrow type_Z type_ZZ)
+                       (expr.App type_Z (type.arrow type_Z (type.arrow type_Z type_ZZ))
+                                 (expr.Ident _ ident.Z_mul_split)
+                                 (expr.Ident _ (ident.Literal base.type.Z s)))
+                       x) y) =>
+          if Z.eqb s maxint
+          then
+            let low := Syntax.expr.op
+                         Syntax.bopname.mul
+                         (translate_inner_expr true x) (translate_inner_expr true y) in
+            let high := Syntax.expr.op
+                          Syntax.bopname.mulhuu
+                          (translate_inner_expr true x) (translate_inner_expr true y) in
+            (low, high)
+          else base_make_error _
+        (* Z_add -> bopname.add *)
+        | (expr.App
+             type_Z type_Z
+             (expr.App type_Z (type.arrow type_Z type_Z)
+                       (expr.Ident _ ident.Z_add) x) y) =>
+          Syntax.expr.op Syntax.bopname.add (translate_inner_expr true x) (translate_inner_expr true y)
+        (* Z_mul -> bopname.mul *)
+        | (expr.App
+             type_Z type_Z
+             (expr.App type_Z (type.arrow type_Z type_Z)
+                       (expr.Ident _ ident.Z_mul) x) y) =>
+          Syntax.expr.op Syntax.bopname.mul (translate_inner_expr true x) (translate_inner_expr true y)
+        (* Z_land -> bopname.and *)
+        | (expr.App
+             type_Z type_Z
+             (expr.App type_Z (type.arrow type_Z type_Z)
+                       (expr.Ident _ ident.Z_land) x) y) =>
+          Syntax.expr.op Syntax.bopname.and (translate_inner_expr true x) (translate_inner_expr true y)
+        (* Z_lor -> bopname.or *)
+        | (expr.App
+             type_Z type_Z
+             (expr.App type_Z (type.arrow type_Z type_Z)
+                       (expr.Ident _ ident.Z_lor) x) y) =>
+          Syntax.expr.op Syntax.bopname.or (translate_inner_expr true x) (translate_inner_expr true y)
+        (* Z_shiftr -> bopname.sru *)
+        | (expr.App
+             type_Z type_Z
+             (expr.App type_Z (type.arrow type_Z type_Z)
+                       (expr.Ident _ ident.Z_shiftr) x) y) =>
+          Syntax.expr.op Syntax.bopname.sru (translate_inner_expr true x) (translate_inner_expr true y)
+        (* Z_truncating_shiftl : convert to bopname.slu if the truncation matches *)
+        | (expr.App
+             type_Z type_Z
+             (expr.App type_Z (type.arrow type_Z type_Z)
+                       (expr.App type_Z (type.arrow type_Z (type.arrow type_Z type_Z))
+                                 (expr.Ident _ ident.Z_truncating_shiftl)
+                                 (expr.Ident _ (ident.Literal base.type.Z s)))
+                       x) y) =>
+          if Z.eqb s Semantics.width
+          then Syntax.expr.op Syntax.bopname.slu (translate_inner_expr true x) (translate_inner_expr true y)
+          else base_make_error _ 
+        (* fst : since the [rtype] of a product type is a tuple, simply use Coq's [fst] *)
+        | (expr.App
+             (type.base (base.type.prod (base.type.type_base base.type.Z) _)) type_Z
+             (expr.Ident _ (ident.fst (base.type.type_base base.type.Z) _))
+             x) =>
+          fst (translate_inner_expr false x)
+        (* snd : since the [rtype] of a product type is a tuple, simply Coq's [snd] *)
+        | (expr.App
+             (type.base (base.type.prod _ (base.type.type_base base.type.Z))) type_Z
+             (expr.Ident _ (ident.snd _ (base.type.type_base base.type.Z)))
+             x) =>
+          snd (translate_inner_expr false x)
+        (* List_nth_default : lists are represented by the location of the head
+           of the list in memory; therefore, to get the nth element of the list,
+           we add the index and load from the resulting address *)
+        | (expr.App
+             type_nat type_Z
+             (expr.App
+                type_listZ _
+                (expr.App _ _
+                          (expr.Ident _ (ident.List_nth_default _))
+                          d) l) i) =>
+          let offset := Syntax.expr.op Syntax.bopname.mul
+                                       (translate_inner_expr true i)
+                                       (Syntax.expr.literal word_size_in_bytes) in
+          let addr := Syntax.expr.op Syntax.bopname.add
+                                     (translate_inner_expr false l)
+                                     offset in
+          Syntax.expr.load Syntax.access_size.word addr
+        (* Literal (Z) -> Syntax.expr.literal *)
+        | expr.Ident type_Z (ident.Literal base.type.Z x) =>
+          Syntax.expr.literal x
+        (* Literal (nat) : convert to Z, then use Syntax.expr.literal *)
+        | expr.Ident type_nat (ident.Literal base.type.nat x) =>
+          Syntax.expr.literal (Z.of_nat x)
+        (* Var : use rtype_of_ltype to convert the expression *)
+        | expr.Var (type.base _) x => rtype_of_ltype x
+        (* if no clauses matched the expression, return an error *)
+        | _ => make_error _
+        end. *)
+    Inductive valid_list : @API.expr (fun _ => unit) type_listZ -> Prop :=
+    | valid_cons :
+        forall x l,
+          valid_inner_expr true x ->
+          valid_list l ->
+          valid_list
+            (expr.App
+               (expr.App
+                  (expr.Ident
+                     (ident.cons (t:=base.type.type_base base.type.Z))) x) l)
+    | valid_nil :
+        valid_list (expr.Ident (ident.nil (t:=base.type.type_base base.type.Z)))
+    .
 
     (* Inductive version: *)
     Inductive valid_expr : forall {t}, @API.expr (fun _ => unit) (type.base t) -> Prop :=
@@ -484,16 +758,7 @@ Module Compiler.
         forall {a b} x f,
           valid_inner_expr true x -> valid_expr (f tt) ->
           valid_expr (expr.LetIn (A:=type.base a) (B:=type.base b) x f)
-    | valid_cons :
-        forall x l,
-          valid_inner_expr true x -> valid_expr l ->
-          valid_expr
-            (expr.App
-               (expr.App
-                  (expr.Ident
-                     (ident.cons (t:=base.type.type_base base.type.Z))) x) l)
-    | valid_nil :
-        valid_expr (expr.Ident (ident.nil (t:=base.type.type_base base.type.Z)))
+    | valid_outlist : forall l, valid_list l -> valid_expr l
     | valid_inner : forall {t} e,
         valid_inner_expr true e -> valid_expr (t:=t) e
     .
@@ -612,44 +877,6 @@ Module Compiler.
       | _ => fun _ _ _ _ => False
       end.
 
-    (* TODO : remove if unused
-    (* states that a fiat-crypto value is equivalent to the return values of a bedrock function *)
-    Fixpoint equivalent {t}
-      : base.interp t -> (* fiat-crypto return value *)
-        base_ltype t -> (* bedrock2 local variables in which return values are stored *)
-        Interface.map.rep (map:=Semantics.locals) -> (* bedrock2 local variables *)
-        Interface.map.rep (map:=Semantics.mem) -> (* bedrock2 main memory *)
-        Prop :=
-      match t with
-      (* product case *)
-      | base.type.prod a b =>
-        fun (x : base.interp a * base.interp b)
-            (y : base_ltype a * base_ltype b)
-            locals mem =>
-          sep (equivalent (fst x) (fst y) locals)
-              (equivalent (snd x) (snd y) locals) mem
-      (* list case -- only list Z allowed *)
-      | base.type.list (base.type.type_base base.type.Z) =>
-        fun (x : list Z)
-            (y : Syntax.varname)
-            locals =>
-          Lift1Prop.ex1
-            (fun loc mem =>
-               Lift1Prop.and1
-                 (fun _ =>
-                    Interface.map.get locals y = Some loc)
-                 (zarray loc x))
-      (* base type case -- only Z allowed *)
-      | base.type.type_base base.type.Z =>
-        fun (x : Z) (y : Syntax.varname)
-            locals =>
-          emp
-            (exists w,
-                Interface.map.get locals y = Some w
-                /\ Interface.word.unsigned w = x)
-      | _ => fun _ _ _ _ => False
-      end. *)
-
     Fixpoint varname_set {t} : base_ltype t -> PropSet.set Syntax.varname :=
       match t with
       | base.type.prod a b =>
@@ -658,75 +885,23 @@ Module Compiler.
       end.
 
     Fixpoint context_list_equiv {var1}
-               (locals : Interface.map.rep (map:=Semantics.locals))
-               (mem : Interface.map.rep (map:=Semantics.mem))
-               (G : list {t : API.type & (var1 t * API.interp_type t * ltype t)%type})
-      : Prop :=
+             (G : list {t : API.type & (var1 t * API.interp_type t * ltype t)%type})
+             (locals : Interface.map.rep (map:=Semantics.locals)) {struct G}
+      : Interface.map.rep (map:=Semantics.mem) -> Prop :=
       match G with
-      | [] => True
+      | [] => fun _ => True
       | existT (type.base b) (w, x, y) :: G' =>
-        sep (equivalent x (rtype_of_ltype y) locals)
-            (Lift1Prop.ex1
-               (fun prev_locals mem' =>
-                  Interface.map.only_differ prev_locals (varname_set y) locals
-                  /\ context_list_equiv prev_locals mem' G')) mem
-      | existT (type.arrow _ _) _ :: G' => False (* no functions allowed *)
+        (* This is not a separation-logic condition because the memory cannot
+        change (we don't allow writing to memory except as the very last step,
+        after all reads) and we want the values of locals to be able to read
+        from the same sections of memory. *)
+        fun mem =>
+          equivalent x (rtype_of_ltype y) locals mem
+          /\ (exists prev_locals,
+                 Interface.map.only_differ prev_locals (varname_set y) locals
+                 /\ context_list_equiv G' prev_locals mem)
+      | existT (type.arrow _ _) _ :: G' => fun _ => False (* no functions allowed *)
       end.
-
-    (*
-    (* states that a fiat-crypto value is equivalent to a bedrock value *)
-    Fixpoint equivalent {t}
-      : base.interp t -> list Interface.word.rep ->
-        Interface.map.rep (map:=Semantics.mem) -> Prop :=
-      match t with
-      (* product case *)
-      | base.type.prod a b =>
-        fun (x : base.interp a * base.interp b)
-            (y : list Interface.word.rep)
-            (mem : Interface.map.rep) =>
-          exists y1 y2,
-            y = y1 ++ y2 /\
-            sep (equivalent (fst x) y1)
-                (equivalent (snd x) y2) mem
-      (* list case -- only list Z allowed *)
-      | base.type.list (base.type.type_base base.type.Z) =>
-        fun (x : list Z)
-            (y : list Interface.word.rep)
-            (mem : Interface.map.rep) =>
-          exists loc,
-            y = loc :: nil /\
-            zarray loc x mem
-      (* base type case -- only Z allowed *)
-      | base.type.type_base base.type.Z =>
-        fun (x : Z)
-            (y : list Interface.word.rep)
-            (mem : Interface.map.rep) =>
-          exists w,
-            y = w :: nil /\
-            Interface.word.unsigned w = x
-      | _ => fun _ _ _ => False
-      end. *)
-
-    (*    (* wrapper for equivalent that deals with for_each_lhs_of_arrow *)
-    Fixpoint args_equivalent {t} :
-      type.for_each_lhs_of_arrow (type.interp base.interp) t
-      -> list Interface.word.rep
-      -> Interface.map.rep (map:=Semantics.mem) -> Prop :=
-      match t with
-      | type.base a =>
-        fun _ _ _ => True (* no more arguments; done *)
-      | type.arrow (type.base s) d =>
-        (* peel off one argument and enforce separation logic *)
-        fun (args : base.interp s * type.for_each_lhs_of_arrow _ d)
-            (w : list Interface.word.rep)
-            (mem : Interface.map.rep) =>
-          exists w1 w2,
-            w = w1 ++ w2 /\
-            sep (equivalent (fst args) w1)
-                (args_equivalent (snd args) w2) mem
-      | type.arrow (type.arrow _ _) _ =>
-        fun _ _ _ => False (* disallow function arguments *)
-      end. *)
 
     (* TODO : move *)
     Require Import bedrock2.Map.SeparationLogic bedrock2.ProgramLogic.
@@ -863,8 +1038,8 @@ Module Compiler.
         translate_carries e3 (snd gr) = Some cmdx ->
         forall (tr : Semantics.trace)
                (mem locals : Interface.map.rep)
-               (R : Interface.map.rep -> Interface.map.rep -> Prop),
-          context_list_equiv locals mem G ->
+               (R : Interface.map.rep -> Prop),
+          context_list_equiv G locals mem ->
           WeakestPrecondition.cmd
             call cmdx tr mem locals
             (fun tr' mem' locals' =>
@@ -877,15 +1052,17 @@ Module Compiler.
                /\ Interface.map.sub_domain locals locals'
                (* information stored in LHS variables is equivalent to interp *)
                /\ sep (equivalent (API.interp e2) (rtype_of_ltype (snd gr)) locals')
-                      (R locals') mem').
+                      R mem').
     Admitted.
+
+    About varname_set.
 
     Lemma assign_correct {t} :
       forall (x : base.interp t)
              (lhs : base_ltype t) (rhs : base_rtype t)
              (tr : Semantics.trace)
              (mem locals : Interface.map.rep)
-             (R : Interface.map.rep -> Interface.map.rep -> Prop),
+             (R : Interface.map.rep -> Prop),
         (* rhs == x *)
         equivalent x rhs locals mem ->
         WeakestPrecondition.cmd
@@ -898,7 +1075,7 @@ Module Compiler.
              (* new locals only differ in the values of LHS variables *)
              /\ Interface.map.only_differ locals (varname_set lhs) locals'
              (* evaluating lhs == x *)
-             /\ sep (equivalent x (rtype_of_ltype lhs) locals') (R locals') mem').
+             /\ sep (equivalent x (rtype_of_ltype lhs) locals') R mem').
     Admitted.
 
     Lemma translate_inner_expr_correct {t}
@@ -912,7 +1089,7 @@ Module Compiler.
       forall G mem locals,
         wf3 G e1 e2 e3 ->
         let out := translate_inner_expr require_cast e3 in
-        context_list_equiv locals mem G ->
+        context_list_equiv G locals mem ->
         equivalent (API.interp e2) out locals mem.
     Admitted.
 
@@ -945,10 +1122,13 @@ Module Compiler.
       | base.type.list (base.type.type_base base.type.Z) =>
         fun x r =>
           Lift1Prop.ex1
-            (fun loc =>
-               sep (emp (WeakestPrecondition.get locals x (eq loc)))
-                   (zarray loc r))
-      | _ => fun _ _ _ => True
+            (fun old_data =>
+               Lift1Prop.ex1
+                 (fun loc =>
+                    sep (emp (length old_data = length r
+                              /\ WeakestPrecondition.get locals x (eq loc)))
+                        (zarray loc old_data)))
+    | _ => fun _ _ _ => True
       end.
 
     (* TODO : move *)
@@ -959,6 +1139,17 @@ Module Compiler.
       cbv [PropSet.disjoint PropSet.union PropSet.elem_of]; split.
       { intro H; split; intro x; specialize (H x); tauto. }
       { intros [H1 H2] x. specialize (H1 x). specialize (H2 x). tauto. } 
+    Qed.
+
+    (* TODO : move *)
+    Lemma disjoint_singleton {E} {eqb : E -> E -> bool} {dec : @Decidable.EqDecider eqb} :
+          forall e1 e2,
+            e1 <> e2 ->
+            @PropSet.disjoint E (PropSet.singleton_set e1) (PropSet.singleton_set e2).
+    Proof.
+      cbv [PropSet.disjoint PropSet.singleton_set PropSet.elem_of].
+      intros e1 e2 ? x; destruct (dec e1 x); subst; try tauto.
+      right; congruence.
     Qed.
 
     (* TODO : move *)
@@ -977,6 +1168,13 @@ Module Compiler.
       PropSet.disjoint (PropSet.singleton_set k) ks ->
       WeakestPrecondition.get m1 k P <-> WeakestPrecondition.get m2 k P.
     Admitted.
+
+    Lemma get_put m k v :
+      WeakestPrecondition.get (Interface.map.put m k v) k (eq v).
+    Proof.
+      cbv [WeakestPrecondition.get]; exists v; split;
+        rewrite ?Interface.map.get_put_same; reflexivity.
+    Qed.
 
     Lemma lists_ok_step {t} locals locals' ks mem retnames ret :
       Interface.map.only_differ locals ks locals' ->
@@ -1004,6 +1202,7 @@ Module Compiler.
         eapply Proper_sep_iff1; [ intro | reflexivity | eassumption ].
         cbv beta. rewrite !sep_emp_l.
         apply and_iff_compat_r.
+        apply and_iff_compat_l.
         eapply get_untouched; eauto. }
     Qed.
 
@@ -1062,6 +1261,159 @@ Module Compiler.
       apply disjoint_union; split; eauto with lia.
     Qed.
 
+    Lemma translate_list_correct
+          (* three exprs, representing the same Expr with different vars *)
+          (e1 : @API.expr (fun _ => unit) type_listZ)
+          (e2 : @API.expr API.interp_type type_listZ)
+          (e3 : @API.expr ltype type_listZ)
+          (* e1 is valid input to translate_list *)
+          (e1_valid : valid_list e1)
+          (* context list *)
+          (G : list _) :
+      (* exprs are all related *)
+      wf3 G e1 e2 e3 ->
+      forall (locals : Interface.map.rep)
+             (dst : Syntax.varname)
+             (nextn : nat),
+        (* ret := fiat-crypto interpretation of e2 *)
+        let ret : list Z := API.interp e2 in
+        (* out := translation output for e3 *)
+        let out := translate_list e3 nextn dst in
+        (* dst is not a variable we could accidentally overwrite *)
+        (forall n,
+            (nextn <= n)%nat ->
+            varname_gen n <> dst) ->
+        forall (tr : Semantics.trace)
+               (mem : Interface.map.rep)
+               (R : Interface.map.rep -> Prop),
+          (* dst contains a valid memory location at which there exists a list
+             of the right length *)
+          (exists addr old_data,
+              length old_data = length ret
+              /\ WeakestPrecondition.get locals dst (eq addr)
+              /\ sep (zarray addr old_data) R mem) ->
+          (* outputs are equivalent *)
+          WeakestPrecondition.cmd
+            call (snd out) tr mem locals
+            (fun tr' mem' locals' =>
+               tr = tr'
+               /\ sep (equivalent (t:=base.type.list (base.type.type_base base.type.Z))
+                                  ret (rtype_of_ltype (t:=base.type.type_base base.type.Z) dst)
+                                  locals') R mem').
+    Proof.
+      revert e2 e3 G.
+      induction e1_valid; inversion 1; cbv zeta in *; intros.
+      all:hammer_wf.
+      { (* cons *) 
+        repeat match goal with
+               | H : wf3 _ _ _ _ |- _ =>
+                 match type of H with context [Compilers.ident.cons] =>
+                                      inversion H; hammer_wf
+                 end
+               end.
+
+        cbn [translate_list].
+        cbn [expr.interp Compilers.ident_interp] in *.
+        cbv [zarray] in *. cbn [array map] in *.
+        cleanup.
+
+        (* simplify bedrock2 step *)
+        cbn [WeakestPrecondition.cmd WeakestPrecondition.cmd_body].
+
+        (* read from variable holding memory location *)
+        cbn [WeakestPrecondition.dexpr WeakestPrecondition.expr WeakestPrecondition.expr_body].
+        eexists; split; [ eassumption | ].
+
+        (* PROBLEM : inner_expr wants context_list_equiv, and we might even need
+        it for reading return variables. Find a way to make this irrespective of
+        memory! *)
+
+        (* ideas:
+
+        A) separate compiler into three phases: one reads all the memory from
+        input, compiling to an rtype that needs lists of exprs for lists, and
+        another does the construction of the output list at the end. Cons:
+        restricts how to read from input, kind of complex.
+
+        B) make just the output part special; read from all the input first 
+
+        C) make a special valid_inner_expr for the construction of output lists
+        that doesn't allow reads from lists
+
+
+        C proof structure:
+        translate_func_correct
+          -> translate_expr_correct (has context_list_equiv precondition)
+             -> translate_inner_expr_correct (has context_list_equiv precondition IFF memory reads are allowed)
+             -> translate_list_correct (no context_list_equiv precondition)
+                -> translate_inner_expr_correct (memory reads not allowed)
+
+        *)
+        
+        (* inner_expr creates a valid expression *)
+        match goal with
+        | H : wf3 ?G ?x1 ?x2 ?x3 |- context [translate_inner_expr ?rc ?x3] =>
+          pose proof
+               (translate_inner_expr_correct
+                  x1 x2 x3 rc
+                  ltac:(assumption) G) end.
+        cbv [equivalent Lift1Prop.ex1] in H4.
+        cbv [context_list_equiv] in H4.
+        apply H4.
+        
+
+        ltac:(eassumption)) as X;
+            cbv [equivalent Lift1Prop.ex1] in X
+        end.
+        cleanup.
+        eexists; split; [ eassumption | ].
+
+        (* store expression at head of list *)
+        eapply store_word_of_sep; [ | ].
+        1: solve [match goal with H : _ |- _ => apply H end].
+
+        intros.
+        (* now we need to set the new destination to retnames+1 *)
+        eexists. split.
+        { eapply WeakestPreconditionProperties.Proper_get;
+            [ repeat intro | eassumption ].
+          subst; reflexivity. }
+        { cbv [coqutil.dlet.dlet].
+          cbn [rtype_of_ltype equivalent varname_set] in *.
+          cbv [zarray] in *. cbn [array map] in *.
+
+          eapply WeakestPreconditionProperties.Proper_cmd;
+            [ eapply Proper_call | repeat intro | ].
+          
+          2: { eapply IHe1_valid; try eassumption;
+               clear IHe1_valid.
+               { intros. apply disjoint_singleton.
+                 rewrite varname_gen_unique. lia. }
+               {
+                 Search m.
+                 (* we know that context_list_equiv holds on locals/mem/G, now need
+                it for (locals ++ (vg n, x0+1))/m/G
+
+                we know almost nothing about m, just have a sep-logic condition
+                ideally should have m == mem...
+                for mem we have a sep-logic condition that looks similar to the one for m. does that prove mem = m?
+                m is introduced with store_word_of_sep
+                maybe need to add context_list_equiv to the seplogic condition?
+                  *)
+                 admit. }
+               { apply sep_ex1_l.
+                 eexists.
+                 apply sep_assoc.
+                 apply sep_emp_l. split; [ solve [apply get_put] | ].
+                 match goal with
+                 | H : sep _ (sep ?p _) ?m |- sep ?p _ ?m =>
+                   apply sep_comm, sep_assoc in H; apply H
+                 end. } }
+          { intros; cleanup; subst; tauto. } }
+        apply Wea
+        eapply IHe1_valid.
+    Admitted.
+    
     Lemma translate_expr_correct' {t'} (t:=type.base t')
           (* three exprs, representing the same Expr with different vars *)
           (e1 : @API.expr (fun _ => unit) t)
@@ -1091,7 +1443,7 @@ Module Compiler.
                (R : Interface.map.rep -> Prop),
           (* contexts are equivalent; for every variable in the context list G,
              the fiat-crypto and bedrock2 results match *)
-          context_list_equiv locals mem G ->
+          context_list_equiv G locals mem ->
           (* any lists in retnames are valid *)
           sep (lists_ok locals retnames ret) R mem ->
           (* executing translation output is equivalent to interpreting e *)
@@ -1103,7 +1455,11 @@ Module Compiler.
     Proof.
       revert e2 e3 G.
       subst t.
-      induction e1_valid; inversion 1; cbv zeta in *; intros.
+      induction e1_valid;
+        try match goal with
+            | H : valid_list _ |- _ => inversion H; subst
+            end;
+      inversion 1; cbv zeta in *; intros.
       all:hammer_wf. (* get rid of the wf nonsense *)
 
       { (* carry let-in *)
@@ -1133,6 +1489,7 @@ Module Compiler.
         eapply WeakestPreconditionProperties.Proper_cmd;
           [ eapply Proper_call | repeat intro | ].
         2: { eapply IHe1_valid with (R:=R); try eassumption;
+             clear IHe1_valid;
              try solve [eauto with lia];
              try match goal with
                  | H : (forall v1 v2 v3,
@@ -1142,9 +1499,13 @@ Module Compiler.
                  end;
              [ | solve [eapply lists_ok_step; subst; eauto; [ ];
                         apply disjoint_comm, disjoint_union; eauto ] ].
-             clear IHe1_valid.
              cbn [context_list_equiv equivalent] in *.
-             match goal with H : sep _ _ _ |- _ => eapply H end. }
+             split;
+               [ solve [
+                     apply sep_emp_True_r;
+                     match goal with H : sep _ _ _ |- _ =>
+                                        eapply H end ] | ].
+             subst; eexists; split; eauto. }
       { intros; cleanup; subst; tauto. } }
     { (* non-carry let-in *)
       (* simplify one translation step *)
@@ -1176,6 +1537,7 @@ Module Compiler.
       eapply WeakestPreconditionProperties.Proper_cmd;
         [ eapply Proper_call | repeat intro | ].
       2: { eapply IHe1_valid with (R:=R); try eassumption;
+             clear IHe1_valid;
              try solve [eauto with lia];
              try match goal with
                  | H : (forall v1 v2 v3,
@@ -1185,9 +1547,13 @@ Module Compiler.
                  end;
              [ | solve [eapply lists_ok_step; subst; eauto; [ ];
                         apply disjoint_comm, disjoint_translate_lhs; eauto ] ].
-             clear IHe1_valid.
-             cbn [context_list_equiv equivalent] in *.
-             match goal with H : sep _ _ _ |- _ => eapply H end. }
+           cbn [context_list_equiv equivalent] in *.
+             split;
+             [ solve [
+                   apply sep_emp_True_r;
+                   match goal with H : sep _ _ _ |- _ =>
+                                   eapply H end ] | ].
+           subst; eexists; split; eauto. }
       { intros; cleanup; subst; tauto. } }
     { (* cons *)
 
@@ -1202,6 +1568,36 @@ Module Compiler.
       (* simplify one translation step *)
       cbn [translate_expr]. cleanup.
 
+      Search translate_list.
+      eapply translate_list_correct.
+      2:eassumption.
+      1:eassumption.
+      1: admit. (* make disjoint_singleton iff *)
+      {
+      cbn [lists_ok] in *.
+      cbv [zarray] in *. cbn [array map] in *.
+      cleanup.
+
+      repeat match goal with
+             | H : sep (Lift1Prop.ex1 _) _ _ |- _ =>
+               apply sep_ex1_l in H; destruct H
+             | H : sep (sep _ _) _ _ |- _ =>
+               apply sep_assoc in H
+             | H : sep (fun mem => sep _ _ mem) _ _ |- _ =>
+               apply sep_assoc in H
+             | H : sep (emp _) _ _ |- _ =>
+               apply sep_emp_l in H; cleanup
+             end.
+
+      do 2 eexists; split; eauto. }
+
+      repeat match goal with
+             | H : wf3 _ _ _ _ |- _ =>
+               match type of H with context [Compilers.ident.cons] =>
+                                    inversion H; hammer_wf
+               end
+             end.
+        
       cbn [type.for_each_lhs_of_arrow
              type.app_curried type.final_codomain base_ltype] in *.
 
@@ -1246,7 +1642,44 @@ Module Compiler.
 
       intros.
       (* now we need to set the new destination to retnames+1 *)
-    
+      eexists. split.
+      { eapply WeakestPreconditionProperties.Proper_get;
+          [ repeat intro | eassumption ].
+        subst; reflexivity. }
+      { cbv [coqutil.dlet.dlet].
+        cbn [rtype_of_ltype equivalent varname_set] in *.
+        cbv [zarray] in *. cbn [array map] in *.
+
+      eapply WeakestPreconditionProperties.Proper_cmd;
+        [ eapply Proper_call | repeat intro | ].
+      
+      2: { eapply IHe1_valid; try eassumption;
+           clear IHe1_valid.
+           { intros. apply disjoint_singleton.
+             rewrite varname_gen_unique. lia. }
+           {
+             Search m.
+             (* we know that context_list_equiv holds on locals/mem/G, now need
+                it for (locals ++ (vg n, x0+1))/m/G
+
+                we know almost nothing about m, just have a sep-logic condition
+                ideally should have m == mem...
+                for mem we have a sep-logic condition that looks similar to the one for m. does that prove mem = m?
+                m is introduced with store_word_of_sep
+                maybe need to add context_list_equiv to the seplogic condition?
+              *)
+             admit. }
+           { apply sep_ex1_l.
+             eexists.
+             apply sep_assoc.
+             apply sep_emp_l. split; [ solve [apply get_put] | ].
+             match goal with
+               | H : sep _ (sep ?p _) ?m |- sep ?p _ ?m =>
+                 apply sep_comm, sep_assoc in H; apply H
+             end. } }
+      { intros; cleanup; subst; tauto. } }
+        apply Wea
+        eapply IHe1_valid.
     Qed.
 
     Lemma translate_expr_correct {t} (* (e : API.Expr t) *) :
