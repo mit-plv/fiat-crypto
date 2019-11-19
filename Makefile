@@ -106,7 +106,7 @@ UNSATURATED_SOLINAS := src/ExtractionOCaml/unsaturated_solinas
 WORD_BY_WORD_MONTGOMERY := src/ExtractionOCaml/word_by_word_montgomery
 
 
-all: coq c-files rust-files
+all: coq standalone-ocaml c-files rust-files
 coq: $(REGULAR_VOFILES)
 c-files: $(ALL_C_FILES)
 rust-files: $(ALL_RUST_FILES)
