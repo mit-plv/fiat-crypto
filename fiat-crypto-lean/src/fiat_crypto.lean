@@ -434,24 +434,35 @@ def let_in.lift_nat.one {A : Type v} (f : ℕ → A) : let_in 1 f = f 1 := rfl
 @[simp]
 def ex.n : ℕ := 1 -- 5
 @[simp]
-def ex.s : ℤ := 2^16 -- 2^255
+def ex.s : ℤ := 2^5 -- 2^255
 @[simp]
-def ex.c : list (ℤ × ℤ) := [(1, 1)] -- [(1, 19)]
+def ex.c : list (ℤ × ℤ) := [(1, 3)] -- [(1, 19)]
 @[simp]
-def ex.idxs : list ℕ := [0, 1] -- [0, 1, 2, 3, 4, 0, 1]
+def ex.idxs : list ℕ := [0, 0, 1] -- [0, 1, 2, 3, 4, 0, 1]
 @[simp]
 def ex.machine_wordsize : ℤ := 8 -- 64
 
 @[simp]
-def ex2.n : ℕ := 5
+def ex2.n : ℕ := 2
 @[simp]
-def ex2.s : ℤ := 2^255
+def ex2.s : ℤ := 2^7
 @[simp]
-def ex2.c : list (ℤ × ℤ) := [(1, 19)]
+def ex2.c : list (ℤ × ℤ) := [(1, 15)]
 @[simp]
-def ex2.idxs : list ℕ := [0, 1, 2, 3, 4, 0, 1]
+def ex2.idxs : list ℕ := [0, 0, 1]
 @[simp]
 def ex2.machine_wordsize : ℤ := 64
+
+@[simp]
+def ex5.n : ℕ := 5
+@[simp]
+def ex5.s : ℤ := 2^255
+@[simp]
+def ex5.c : list (ℤ × ℤ) := [(1, 19)]
+@[simp]
+def ex5.idxs : list ℕ := [0, 1, 2, 3, 4, 0, 1]
+@[simp]
+def ex5.machine_wordsize : ℤ := 64
 
 local notation `dlet` binders ` ≔ ` b ` in ` c:(scoped P, P) := let_in b c
 
