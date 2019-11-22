@@ -2,7 +2,7 @@
 name = "fiat-crypto"
 version = "0.1"
 lean_version = "3.4.2"
-path = "src-lean"
+path = "src"
 
 [dependencies]
 mathlib = {git = "https://github.com/leanprover-community/mathlib.git", rev = "ca9008153aaa6f16c7e2f691231b889dbb05a576"}
