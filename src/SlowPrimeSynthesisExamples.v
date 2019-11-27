@@ -72,7 +72,7 @@ Module debugging_remove_mul_split_to_C_uint1_carry.
 
     Set Printing Depth 100000.
     Local Open Scope string_scope.
-    Compute
+    Redirect "log" Compute
       Pipeline.BoundsPipelineToString
       "" (* prefix *)
       "mul"
@@ -376,7 +376,7 @@ Module debugging_remove_mul_split.
     Local Notation "'uint64'" := (ident.Z_cast r[0 ~> 18446744073709551615]%zrange) : expr_scope.
     Local Open Scope expr_scope.
     Local Open Scope core_scope.
-    Compute
+    Redirect "log" Compute
       Pipeline.BoundsPipeline
       false (* subst01 *)
       None (* fancy *)
@@ -790,7 +790,7 @@ Module debugging_remove_mul_split2.
     Set Printing Depth 100000.
     Local Open Scope string_scope.
     (*
-    Compute
+    Redirect "log" Compute
       Pipeline.BoundsPipelineToStrings
       true (* static *)
       "" (* prefix *)
@@ -804,10 +804,10 @@ Module debugging_remove_mul_split2.
       (Some bounds, (Some bounds, tt))
       (Some bounds).
 *)
-    Check (fun with_mul_split => with_mul_split).
-    Time Compute smul m machine_wordsize "" (* prefix *).
-    Check (fun without_mul_split => without_mul_split).
-    Time Compute smul m machine_wordsize "" (* prefix *).
+    Redirect "log" Check (fun with_mul_split => with_mul_split).
+    Time Redirect "log" Compute smul m machine_wordsize "" (* prefix *).
+    Check Redirect "log" (fun without_mul_split => without_mul_split).
+    Time Redirect "log" Compute smul m machine_wordsize "" (* prefix *).
     Goal True.
       pose (smul m machine_wordsize "") as v; clear -v.
       cbv in m; subst m machine_wordsize.
@@ -871,7 +871,7 @@ Module debugging_rewriting.
     Let limbwidth_num := Eval vm_compute in Qnum limbwidth.
     Let limbwidth_den := Eval vm_compute in QDen limbwidth.
 
-    Compute
+    Redirect "log" Compute
       (Pipeline.BoundsPipeline
          true None [64; 128]
          ltac:(let r := Reify (fun f g
@@ -881,7 +881,7 @@ Module debugging_rewriting.
                 (Some (repeat (@None _) n), (Some (repeat (@None _) n), tt))
                 ZRange.type.base.option.None).
 
-    Compute
+    Redirect "log" Compute
       (Pipeline.BoundsPipeline
          true None [64; 128]
          ltac:(let r := Reify (fun f g
@@ -891,7 +891,7 @@ Module debugging_rewriting.
                 (Some (repeat (@None _) n), (Some (repeat (@None _) n), tt))
                 ZRange.type.base.option.None).
 
-    Compute
+    Redirect "log" Compute
       (Pipeline.BoundsPipeline
          true None [64; 128]
          ltac:(let r := Reify (fun f g
@@ -902,7 +902,7 @@ Module debugging_rewriting.
                 (Some (repeat (@None _) n), (Some (repeat (@None _) n), tt))
                 ZRange.type.base.option.None).
 
-    Compute
+    Redirect "log" Compute
       (Pipeline.BoundsPipeline
          true None [64; 128]
          ltac:(let r := Reify (fun f (g : list Z)
@@ -912,7 +912,7 @@ Module debugging_rewriting.
                 (Some (repeat (@None _) n), (Some (repeat (@None _) n), tt))
                 ZRange.type.base.option.None).
 
-    Compute
+    Redirect "log" Compute
       (Pipeline.BoundsPipeline
          true None [64; 128]
          ltac:(let r := Reify (fun (f g : list Z)
@@ -980,8 +980,8 @@ Section debugging_p448.
 
   Set Printing Depth 100000.
   Local Open Scope string_scope.
-  Print squaremod.
-  Time Compute
+  Redirect "log" Print squaremod.
+  Time Redirect "log" Compute
      (Pipeline.BoundsPipeline
         true None [64; 128]
         ltac:(let r := Reify (fun f
@@ -991,7 +991,7 @@ Section debugging_p448.
                (Some (repeat (@None _) n), tt)
                ZRange.type.base.option.None).
 
-  Time Compute
+  Time Redirect "log" Compute
        Pipeline.BoundsPipelineToStrings
        "" (* prefix *)
        "mul"
@@ -1004,7 +1004,7 @@ Section debugging_p448.
               (Some loose_bounds, (Some loose_bounds, tt))
               (Some tight_bounds).
 
-  Time Compute
+  Time Redirect "log" Compute
        Pipeline.BoundsPipeline
        false (* subst01 *)
        None (* fancy *)
@@ -1014,7 +1014,7 @@ Section debugging_p448.
               (Some loose_bounds, (Some loose_bounds, tt))
               (Some tight_bounds).
 
-  Time Compute
+  Time Redirect "log" Compute
      (Pipeline.BoundsPipeline
         true None [64; 128]
         ltac:(let r := Reify ((carry_mulmod limbwidth_num limbwidth_den s c n [3; 7; 4; 0; 5; 1; 6; 2; 7; 3; 4; 0]%nat)) in
@@ -1022,7 +1022,7 @@ Section debugging_p448.
                (Some (repeat (@None _) n), (Some (repeat (@None _) n), tt))
                ZRange.type.base.option.None).
 
-  Time Compute
+  Time Redirect "log" Compute
      (Pipeline.BoundsPipeline
         true None [64; 128]
         ltac:(let r := Reify ((carry_mulmod limbwidth_num limbwidth_den s c n []%nat)) in
@@ -1030,7 +1030,7 @@ Section debugging_p448.
                (Some (repeat (@None _) n), (Some (repeat (@None _) n), tt))
                ZRange.type.base.option.None).
 
-  Time Compute
+  Time Redirect "log" Compute
      (Pipeline.BoundsPipeline
         true None [64; 128]
         ltac:(let r := Reify (fun f g
@@ -1040,7 +1040,7 @@ Section debugging_p448.
                (Some (repeat (@None _) n), (Some (repeat (@None _) n), tt))
                ZRange.type.base.option.None).
 
-  Time Compute
+  Time Redirect "log" Compute
      (Pipeline.BoundsPipeline
         true None [64; 128]
         ltac:(let r := Reify (fun a b
@@ -1205,7 +1205,7 @@ fun var : type -> Type =>
           type.base (base.type.list (base.type.type_base base.type.Z)))%ptype
 *)
 
-  Compute Compilers.ToString.C.ToFunctionString
+  Redirect "log" Compute Compilers.ToString.C.ToFunctionString
           true true "" "fecarry_mul" [] base_51_carry_mul
           None (Some loose_bounds, (Some loose_bounds, tt)).
   (*
@@ -1224,7 +1224,7 @@ void fecarry_mul(uint64_t[5] x1, uint64_t[5] x2, uint64_t[5] x3) {
   x3[4] = (uint64_t)(x8 & 0x7ffffffffffffUL);
 }
 *)
-  Compute Compilers.ToString.C.ToFunctionString
+  Redirect "log" Compute Compilers.ToString.C.ToFunctionString
           true true "" "fesub" [] base_51_sub
           None (Some tight_bounds, (Some tight_bounds, tt)).
 (*
