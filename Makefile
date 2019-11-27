@@ -33,7 +33,8 @@ INSTALLDEFAULTROOT := Crypto
 	nobigmem print-nobigmem \
 	lite only-heavy printlite \
 	some-early pre-standalone standalone standalone-haskell standalone-ocaml \
-	test-c-files test-rust-files
+	test-c-files test-rust-files \
+	check-output accept-output
 
 -include Makefile.coq
 include etc/coq-scripts/Makefile.vo_closure
@@ -105,8 +106,19 @@ FUNCTIONS_FOR_25519 := carry_mul carry_square carry_scmul121666 carry add sub op
 UNSATURATED_SOLINAS := src/ExtractionOCaml/unsaturated_solinas
 WORD_BY_WORD_MONTGOMERY := src/ExtractionOCaml/word_by_word_montgomery
 
+OUTPUT_VOS := \
+	src/Fancy/Montgomery256.vo \
+	src/Bedrock/CompilerTest.vo
 
-all: coq standalone-ocaml c-files rust-files
+OUTPUT_PREOUTS := \
+	Crypto.Bedrock.CompilerTest.X25519_64.mulmod_bedrock \
+	Crypto.Bedrock.CompilerTest.mulmod_bedrock.X25519_32 \
+	Crypto.Fancy.Montgomery256.Prod.MontRed256
+
+CHECK_OUTPUTS := $(addprefix check-,$(OUTPUT_PREOUTS))
+ACCEPT_OUTPUTS := $(addprefix accept-,$(OUTPUT_PREOUTS))
+
+all: coq standalone-ocaml c-files rust-files check-output
 coq: $(REGULAR_VOFILES)
 c-files: $(ALL_C_FILES)
 rust-files: $(ALL_RUST_FILES)
@@ -527,6 +539,17 @@ $(PERF_PRIME_SHS:.sh=.log) : %.log : %.sh $(PERF_STANDALONE:%=src/ExtractionOCam
 
 
 curves: $(filter src/Spec/%Curve%.vo,$(REGULAR_VOFILES)) $(filter src/Curves/%.vo,$(REGULAR_VOFILES))
+
+.PHONY: $(CHECK_OUTPUTS) $(ACCEPT_OUTPUTS)
+check-output: $(CHECK_OUTPUTS)
+accept-output: $(ACCEPT_OUTPUTS)
+$(CHECK_OUTPUTS) : check-% : $(OUTPUT_VOS)
+	$(SHOW)'DIFF $*'
+	$(HIDE)diff $*.expected $*.out || (RV=$$?; echo "To accept the new output, run make accept-$*"; exit $$RV)
+
+$(ACCEPT_OUTPUTS) : accept-% :
+	$(SHOW)'ACCEPT $*.out'
+	$(HIDE)cp -f $*.out $*.expected
 
 clean::
 	rm -f Makefile.coq

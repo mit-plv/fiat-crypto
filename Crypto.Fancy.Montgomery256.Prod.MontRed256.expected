@@ -1,0 +1,21 @@
+     = fun lo hi y t t0 scratch RegPInv : register =>
+       MUL128LL y lo RegPInv;
+       MUL128UL t lo RegPInv;
+       ADD 128 y y t;
+       MUL128LU t lo RegPInv;
+       ADD 128 y y t;
+       MUL128LL t y RegMod;
+       MUL128UU t0 y RegMod;
+       MUL128UL scratch y RegMod;
+       ADD 128 t t scratch;
+       ADDC (-128) t0 t0 scratch;
+       MUL128LU scratch y RegMod;
+       ADD 128 t t scratch;
+       ADDC (-128) t0 t0 scratch;
+       ADD 0 lo lo t;
+       ADDC 0 hi hi t0;
+       SELC y RegMod RegZero;
+       SUB 0 lo hi y;
+       ADDM lo lo RegZero RegMod;
+       Ret lo
+     : forall lo hi y t t0 scratch RegPInv : register, expr
