@@ -510,7 +510,8 @@ ErrorT.Success
       end.
 
     Import NotationsCustomEntry.
-    Compute mulmod_bedrock.
+    Local Set Printing Width 150.
+    Redirect "Crypto.Bedrock.CompilerTest.X25519_64.mulmod_bedrock" Compute mulmod_bedrock.
   (* using format_bedrock.sh:
 = bedrock_func_body
     : (((x0 = (load(y0 + 4 * 8) * (load(y1 + 4 * 8) * 19)));
@@ -2229,7 +2230,7 @@ ErrorT.Success
                         ###26))%expr_pat
                       || ((#Compilers.ident_Z_cast)%expr @ (#uint32)%expr @
                           ((#Compilers.ident_Z_truncating_shiftl)%expr @ (###32)%expr @
-                           ((#Compilers.ident_Z_cast)%expr @ (#uint32)%expr @ $v331) @ 
+                           ((#Compilers.ident_Z_cast)%expr @ (#uint32)%expr @ $v331) @
                            (###6)%expr))%expr_pat))%expr_pat in
    expr_let v333 := ((#Compilers.ident_Z_cast)%expr @ (#uint32)%expr @
                      (((#Compilers.ident_Z_cast)%expr @ (#uint32)%expr @ ((#Compilers.ident_fst)%expr @ $v330))%expr_pat &'
@@ -2280,7 +2281,8 @@ ErrorT.Success
       end.
 
     Import NotationsCustomEntry.
-    Compute mulmod_bedrock.
+    Local Set Printing Width 150.
+    Redirect "Crypto.Bedrock.CompilerTest.mulmod_bedrock.X25519_32" Compute mulmod_bedrock.
   (* using format_bedrock.sh:
 = bedrock_func_body
     : (((x0 = (load(y0 + 9 * 4) * (load(y1 + 9 * 4) * (2 * 19))));
