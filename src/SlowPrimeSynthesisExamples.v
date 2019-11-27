@@ -806,7 +806,7 @@ Module debugging_remove_mul_split2.
 *)
     Redirect "log" Check (fun with_mul_split => with_mul_split).
     Time Redirect "log" Compute smul m machine_wordsize "" (* prefix *).
-    Check Redirect "log" (fun without_mul_split => without_mul_split).
+    Redirect "log" Check (fun without_mul_split => without_mul_split).
     Time Redirect "log" Compute smul m machine_wordsize "" (* prefix *).
     Goal True.
       pose (smul m machine_wordsize "") as v; clear -v.
