@@ -174,8 +174,6 @@ Module Compiler.
         range_good r1 && range_good r2
       | (expr.Ident _ (ident.Literal base.type.Z z)) =>
         is_bounded_by_bool z max_range
-      | (expr.Ident _ (ident.Literal base.type.nat n)) =>
-        is_bounded_by_bool (Z.of_nat n) max_range
       | (expr.App _ (type.base (base.type.list _)) _ _) =>
         (* lists get a pass *)
         true
@@ -294,9 +292,6 @@ Module Compiler.
         (* Literal (Z) -> Syntax.expr.literal *)
         | expr.Ident type_Z (ident.Literal base.type.Z x) =>
           Syntax.expr.literal x
-        (* Literal (nat) : convert to Z, then use Syntax.expr.literal *)
-        | expr.Ident type_nat (ident.Literal base.type.nat x) =>
-          Syntax.expr.literal (Z.of_nat x)
         (* Var : use rtype_of_ltype to convert the expression *)
         | expr.Var (type.base _) x => rtype_of_ltype x
         (* if no clauses matched the expression, return an error *)
@@ -428,7 +423,7 @@ Module Compiler.
           | n :: retnames' =>
             let x := translate_inner_expr true x in
             let recl := translate_expr l nextn retnames' in
-            (fst recl, Syntax.cmd.seq (Syntax.cmd.set n x) (snd recl))
+            (fst recl, Syntax.cmd.seq (assign (t:=base.type.type_base base.type.Z) n x) (snd recl))
           end
       | expr.App _ (type.base _) f x =>
         fun retnames =>
@@ -473,9 +468,8 @@ Module Compiler.
       end.
   End Compiler.
 
-  (*
   Section Proofs.
-    Context {p : parameters} {p_ok : @ok p }.
+    Context {p : parameters} {p_ok : @ok p}.
 
     Local Instance sem_ok : Semantics.parameters_ok semantics
       := semantics_ok.
@@ -487,125 +481,24 @@ Module Compiler.
     (* TODO : fill these in *)
     Axiom valid_carry_expr : forall {t}, @API.expr (fun _ => unit) t -> Prop.
 
-
-    Set Printing All.
-    (* DESIGN TIME
-
-    Problems:
-      - need to not require a context-matching precondition in inductive proofs that change memory
-      - need to include in validity precondition that nth_default doesn't overshoot the list
-
-      these problems *together* do suggest some reads-first approach, but I'm not quite sure how it would look
-      
-
-      ...could we make rtype for lists a list of Syntax.expr? (wouldn't solve
-      problem that we need something to say in validity precondition)
-
-
-      imagine a new compiler pass that replaces e.g. fun x => f (x[[2]], x[[4]]) with fun x2 x4 => f(x2, x4)
-
-
-      when we reach Abs, and the value to be taken in is a list, then we want to
-      return an Abs that takes in *some number* of Zs. we could do it by making
-      a fixpoint type called length that returns a nat for lists and a unit for
-      everything else, and checking what the length is supposed to be. Then we
-      make an Abs that takes in the Zs, constructs the list, and then passes the
-      constructed list into the continuation. When we later encounter
-      nth_default, we require that the structure of the list is exposed and
-      recurse down until we either go out of bounds (replacing the nth_default
-      with d) or get the right element (replacing nth_default with that var).
-
-      then when we go through and convert to bedrock2, we can have a validity
-      precondition that excludes memory reads entirely.
-
-      The correctness proof would need to say that the transformation preserves
-      return values. And then the bedrock2 translation would have to somehow go
-      back to lists...
-
-
-      In the translation, var=ltype
-      can ltype require lists of Syntax.varname for lists? (where the
-      varname is the variable holding the *value stored*, not the address)
-      that would mean that when we encounter nth_default, we require the list to
-      be an expr.Var and we get a list Syntax.varname in context that we can
-      perform the nth_default on and output just the varname as the translation,
-      bypassing the read entirely
-
-      when we want to say the contexts match (context_list_equiv), for the list
-      case, we get an (API.interp type_listZ = list Z) and an (ltype type_listZ
-      = list Syntax.varname); the proposition then becomes whether these
-      variables pairwise-match the Zs
-
-      But we do still want the bedrock2 arguments to be a list...need to make
-      the translation expression start with loading all the list-arguments into
-      variables
-
-
-      THINK. How does this solve problems?
-
-      Well, the nth_default equivalence works because during the translation we
-      *perform* nth_default. And this structure makes it so we have *no memory
-       reads*, and therefore need no memory state in context_list_equiv; we can
-       assume memory changes have no effect on the interpretation of any
-       expression.
-
-       How can we now wrap this in reads at the beginning and writes at the end?
-       this compiler will take in a normal fiat-crypto expression (i.e. takes in
-       lists and outputs lists) and return a bedrock2 cmd that requires starting
-       with a context that has all list elts pre-loaded and returns values in
-       separate variables. The correctness proofs will need to know both lists,
-       and know that the ones in arguments are equivalent to fiat-crypto
-       arguments in the given context.
-
-
-       Then we'll need a new ltype that *does* represent lists as locations in
-       memory, and things to convert to and from this type by loading or
-       storing.
-
-       Then, we can write something that takes in fiat-crypto arguments
-       (API.interp type, so list Z for type_listZ), and loads any lists into
-       variables (using varname_gen), returning a bedrock2 cmd, an ltype for the
-       arguments, and a new nextn. We can prove that the ltype and the
-       fiat-crypto arguments are equivalent in the new context after running the
-       cmd, which composes with the previous proof.
-
-       To wrap the end -- given ltype (type_listZ==>list Syntax.varname), store
-       the list.
-
-       Plan:
-
-       - for now, focus on the "middle part" -- everything is in locals. Once
-         that's done, write the rest.
-
-     *)
-    Print base_ltype.
-
-    
-
-    (* special structure for the construction of output lists; they must consist
-    only of cons and nil, and are not allowed to contain reads from lists (since
-    in the bedrock2 translation, this would mean reading from memory, and the
-    proofs want to assume that all memory reads happen before any memory
-    writes). *)
     Inductive valid_inner_expr
       : forall {t},
-        bool (* require expression to be enclosed by casts? (require_casts = rc) *) ->
-        bool (* memory reads allowed? (reads_allowed = ra) *) ->
+        bool (* require_casts *) ->
         @API.expr (fun _ => unit) t -> Prop :=
     | valid_inner_cast1 :
-        forall (rc ra : bool) r x,
-          valid_inner_expr false ra x ->
+        forall rc r x,
+          valid_inner_expr false x ->
           range_good r = true ->
-          valid_inner_expr (t:=type_Z) rc ra
+          valid_inner_expr (t:=type_Z) rc
                            (expr.App
                               (expr.App (expr.Ident ident.Z_cast)
                                         (expr.Ident (ident.Literal (t:=base.type.zrange) r))) x)
     | valid_inner_cast2 :
-        forall (rc ra : bool) r1 r2 x,
-          valid_inner_expr false ra x ->
+        forall (rc : bool) r1 r2 x,
+          valid_inner_expr false x ->
           range_good r1 = true ->
           range_good r2 = true ->
-          valid_inner_expr (t:=type_ZZ) rc ra
+          valid_inner_expr (t:=type_ZZ) rc
                            (expr.App
                               (expr.App (expr.Ident ident.Z_cast2)
                                         (expr.App
@@ -614,164 +507,28 @@ Module Compiler.
                                               (expr.Ident (ident.Literal (t:=base.type.zrange) r1)))
                                            (expr.Ident (ident.Literal (t:=base.type.zrange) r2)))) x)
     | valid_inner_literalz :
-        forall rc ra z,
+        forall rc z,
           (* either bounded or casts not required *)
           (is_bounded_by_bool z max_range || negb rc = true)%bool ->
-          valid_inner_expr (t:=type_Z) rc ra (expr.Ident (ident.Literal (t:=base.type.Z) z))
-    | valid_inner_literalnat :
-        forall rc ra n,
-          (* either bounded or casts not required *)
-          (is_bounded_by_bool (Z.of_nat n) max_range || negb rc = true)%bool ->
-          valid_inner_expr (t:=type_nat) rc ra (expr.Ident (ident.Literal (t:=base.type.nat) n))
+          valid_inner_expr (t:=type_Z) rc (expr.Ident (ident.Literal (t:=base.type.Z) z))
     | valid_inner_add :
-        forall ra x y,
-          valid_inner_expr true ra x ->
-          valid_inner_expr true ra y ->
-          valid_inner_expr false ra (expr.App (expr.App (expr.Ident ident.Z_add) x) y)
-    (* TODO: need many more cases here, one for each in translate_inner_expr  *)
+        forall x y,
+          valid_inner_expr true x ->
+          valid_inner_expr true y ->
+          valid_inner_expr false (expr.App (expr.App (expr.Ident ident.Z_add) x) y)
     | valid_inner_nth_default :
         forall rc d l i,
-          valid_inner_expr false true l ->
-          (* index fits in bounds *)
-          is_bounded_by_bool (Z.of_nat i) max_range = true ->
-          (* index fits in list *)
-          
+          valid_inner_expr true d ->
           valid_inner_expr
-            (t:=type_listZ)
-            rc (* lists get a pass on casts *)
-            true (* lists involve memory reads *)
-            (expr.App (expr.App (expr.App (expr.Ident ident.List_nth_default) d) l)
+            (t:=type_Z)
+            rc (* casts not required, since a list of vars must be already cast *)
+            (expr.App (expr.App (expr.App (expr.Ident ident.List_nth_default) d)
+                                (expr.Var (t:=type_listZ) l))
             (expr.Ident (ident.Literal i)))
-        
-    .
-    (*
-        | (expr.App
-             type_nat type_Z
-             (expr.App
-                type_listZ _
-                (expr.App _ _
-                          (expr.Ident _ (ident.List_nth_default _))
-                          d) l) i) =>
-          let offset := Syntax.expr.op Syntax.bopname.mul
-                                       (translate_inner_expr true i)
-                                       (Syntax.expr.literal word_size_in_bytes) in
-          let addr := Syntax.expr.op Syntax.bopname.add
-                                     (translate_inner_expr false l)
-                                     offset in
-          Syntax.expr.load Syntax.access_size.word addr
-        (* Z_mul_split : compute high and low separately and assign to two
-           different variables *)
-        (* TODO : don't duplicate argument expressions *)
-        | (expr.App
-             type_Z type_ZZ
-             (expr.App type_Z (type.arrow type_Z type_ZZ)
-                       (expr.App type_Z (type.arrow type_Z (type.arrow type_Z type_ZZ))
-                                 (expr.Ident _ ident.Z_mul_split)
-                                 (expr.Ident _ (ident.Literal base.type.Z s)))
-                       x) y) =>
-          if Z.eqb s maxint
-          then
-            let low := Syntax.expr.op
-                         Syntax.bopname.mul
-                         (translate_inner_expr true x) (translate_inner_expr true y) in
-            let high := Syntax.expr.op
-                          Syntax.bopname.mulhuu
-                          (translate_inner_expr true x) (translate_inner_expr true y) in
-            (low, high)
-          else base_make_error _
-        (* Z_add -> bopname.add *)
-        | (expr.App
-             type_Z type_Z
-             (expr.App type_Z (type.arrow type_Z type_Z)
-                       (expr.Ident _ ident.Z_add) x) y) =>
-          Syntax.expr.op Syntax.bopname.add (translate_inner_expr true x) (translate_inner_expr true y)
-        (* Z_mul -> bopname.mul *)
-        | (expr.App
-             type_Z type_Z
-             (expr.App type_Z (type.arrow type_Z type_Z)
-                       (expr.Ident _ ident.Z_mul) x) y) =>
-          Syntax.expr.op Syntax.bopname.mul (translate_inner_expr true x) (translate_inner_expr true y)
-        (* Z_land -> bopname.and *)
-        | (expr.App
-             type_Z type_Z
-             (expr.App type_Z (type.arrow type_Z type_Z)
-                       (expr.Ident _ ident.Z_land) x) y) =>
-          Syntax.expr.op Syntax.bopname.and (translate_inner_expr true x) (translate_inner_expr true y)
-        (* Z_lor -> bopname.or *)
-        | (expr.App
-             type_Z type_Z
-             (expr.App type_Z (type.arrow type_Z type_Z)
-                       (expr.Ident _ ident.Z_lor) x) y) =>
-          Syntax.expr.op Syntax.bopname.or (translate_inner_expr true x) (translate_inner_expr true y)
-        (* Z_shiftr -> bopname.sru *)
-        | (expr.App
-             type_Z type_Z
-             (expr.App type_Z (type.arrow type_Z type_Z)
-                       (expr.Ident _ ident.Z_shiftr) x) y) =>
-          Syntax.expr.op Syntax.bopname.sru (translate_inner_expr true x) (translate_inner_expr true y)
-        (* Z_truncating_shiftl : convert to bopname.slu if the truncation matches *)
-        | (expr.App
-             type_Z type_Z
-             (expr.App type_Z (type.arrow type_Z type_Z)
-                       (expr.App type_Z (type.arrow type_Z (type.arrow type_Z type_Z))
-                                 (expr.Ident _ ident.Z_truncating_shiftl)
-                                 (expr.Ident _ (ident.Literal base.type.Z s)))
-                       x) y) =>
-          if Z.eqb s Semantics.width
-          then Syntax.expr.op Syntax.bopname.slu (translate_inner_expr true x) (translate_inner_expr true y)
-          else base_make_error _ 
-        (* fst : since the [rtype] of a product type is a tuple, simply use Coq's [fst] *)
-        | (expr.App
-             (type.base (base.type.prod (base.type.type_base base.type.Z) _)) type_Z
-             (expr.Ident _ (ident.fst (base.type.type_base base.type.Z) _))
-             x) =>
-          fst (translate_inner_expr false x)
-        (* snd : since the [rtype] of a product type is a tuple, simply Coq's [snd] *)
-        | (expr.App
-             (type.base (base.type.prod _ (base.type.type_base base.type.Z))) type_Z
-             (expr.Ident _ (ident.snd _ (base.type.type_base base.type.Z)))
-             x) =>
-          snd (translate_inner_expr false x)
-        (* List_nth_default : lists are represented by the location of the head
-           of the list in memory; therefore, to get the nth element of the list,
-           we add the index and load from the resulting address *)
-        | (expr.App
-             type_nat type_Z
-             (expr.App
-                type_listZ _
-                (expr.App _ _
-                          (expr.Ident _ (ident.List_nth_default _))
-                          d) l) i) =>
-          let offset := Syntax.expr.op Syntax.bopname.mul
-                                       (translate_inner_expr true i)
-                                       (Syntax.expr.literal word_size_in_bytes) in
-          let addr := Syntax.expr.op Syntax.bopname.add
-                                     (translate_inner_expr false l)
-                                     offset in
-          Syntax.expr.load Syntax.access_size.word addr
-        (* Literal (Z) -> Syntax.expr.literal *)
-        | expr.Ident type_Z (ident.Literal base.type.Z x) =>
-          Syntax.expr.literal x
-        (* Literal (nat) : convert to Z, then use Syntax.expr.literal *)
-        | expr.Ident type_nat (ident.Literal base.type.nat x) =>
-          Syntax.expr.literal (Z.of_nat x)
-        (* Var : use rtype_of_ltype to convert the expression *)
-        | expr.Var (type.base _) x => rtype_of_ltype x
-        (* if no clauses matched the expression, return an error *)
-        | _ => make_error _
-        end. *)
-    Inductive valid_list : @API.expr (fun _ => unit) type_listZ -> Prop :=
-    | valid_cons :
-        forall x l,
-          valid_inner_expr true x ->
-          valid_list l ->
-          valid_list
-            (expr.App
-               (expr.App
-                  (expr.Ident
-                     (ident.cons (t:=base.type.type_base base.type.Z))) x) l)
-    | valid_nil :
-        valid_list (expr.Ident (ident.nil (t:=base.type.type_base base.type.Z)))
+    | valid_inner_var :
+        forall t v, valid_inner_expr (t:=type.base t) false (expr.Var v)
+    (* TODO: need many more cases here, one for each in translate_inner_expr --
+       this is just a small set to test proof strategies *)
     .
 
     (* Inductive version: *)
@@ -780,11 +537,30 @@ Module Compiler.
         forall {b} x f,
           valid_carry_expr x -> valid_expr (f tt) ->
           valid_expr (expr.LetIn (A:=type_ZZ) (B:=type.base b) x f)
-    | valid_LetIn :
+    (* N.B. LetIn is split into cases so that only pairs of type_base and type_base are
+      allowed; this is primarily because we don't want lists on the LHS *)
+    | valid_LetIn_prod :
+        forall {a b c} x f,
+          valid_inner_expr true x -> valid_expr (f tt) ->
+          valid_expr (expr.LetIn
+                        (A:=type.base (base.type.prod
+                                         (base.type.type_base a) (base.type.type_base b)))
+                        (B:=type.base c) x f)
+    | valid_LetIn_base :
         forall {a b} x f,
           valid_inner_expr true x -> valid_expr (f tt) ->
-          valid_expr (expr.LetIn (A:=type.base a) (B:=type.base b) x f)
-    | valid_outlist : forall l, valid_list l -> valid_expr l
+          valid_expr (expr.LetIn (A:=type.base (base.type.type_base a)) (B:=type.base b) x f)
+    | valid_cons :
+        forall x l,
+          valid_inner_expr true x ->
+          valid_expr l ->
+          valid_expr
+            (expr.App
+               (expr.App
+                  (expr.Ident
+                     (ident.cons (t:=base.type.type_base base.type.Z))) x) l)
+    | valid_nil :
+        valid_expr (expr.Ident (ident.nil (t:=base.type.type_base base.type.Z)))
     | valid_inner : forall {t} e,
         valid_inner_expr true e -> valid_expr (t:=t) e
     .
@@ -794,67 +570,8 @@ Module Compiler.
         forall {s d} f, valid_func (f tt) ->
                         valid_func (expr.Abs (s:=type.base s) (d:=d) f)
     | validf_base :
-        forall {b} e, valid_func (t:=type.base b) e
+        forall {b} e, valid_expr e -> valid_func (t:=type.base b) e
     .
-
-    (* Fixpoint version:
-    (* states whether the expression is acceptable input for translate_expr *)
-    Fixpoint valid_expr {t} (e : @API.expr (fun _ => unit) t) : bool :=
-      match e with
-      (* let-in with a carry expression *)
-      | expr.LetIn type_ZZ (type.base t2) x f =>
-        (valid_carry_expr x && valid_expr (f tt))
-      (* other let-in *)
-      | expr.LetIn (type.base t1) (type.base t2) x f =>
-        (valid_inner_expr x && valid_expr (f tt))
-      (* list-of-Z cons *)
-      | expr.App
-          _ _
-          (expr.App
-             _ _
-             (expr.Ident
-                _ (ident.cons (base.type.type_base base.type.Z)))
-             x) l =>
-        valid_inner_expr x && valid_expr l
-      (* list-of-Z nil -- always valid *)
-      | expr.Ident
-          _ (ident.nil (base.type.type_base base.type.Z)) =>
-         true
-      (* Abs case is special *)
-      | expr.Abs s d f =>
-        valid_expr (f tt)
-      | _ => valid_inner_expr e
-      end. *)
-
-    (* Convert expressions from ltype to the flat list format expected by
-       bedrock2 for function input/output *)
-    Fixpoint flatten_names {t} : base_ltype t -> option (list Syntax.varname) :=
-      match t with
-      | base.type.prod a b =>
-        fun x : base_ltype a * base_ltype b =>
-          Option.bind (flatten_names (fst x))
-                      (fun lx => option_map (app lx) (flatten_names (snd x)))
-      | _ => fun x : Syntax.varname => Some [x]
-      end.
-
-    (* Convert the type of arguments from the nested for_each_lhs_of_arrow
-       construction to a flat list; similar to flatten_names, but has to deal
-       with the extra structure of for_each_lhs_of_arrow even though we disallow
-       functions. *)
-    Fixpoint flatten_argnames {t}
-      : type.for_each_lhs_of_arrow ltype t -> option (list Syntax.varname) :=
-      match t with
-      | type.base _ => fun _ : unit => Some nil
-      | type.arrow (type.base s) d =>
-        fun args : base_ltype s * type.for_each_lhs_of_arrow ltype d =>
-          Option.bind
-            (flatten_names (fst args))
-            (fun x =>
-               option_map
-                 (app x)
-                 (flatten_argnames (snd args)))
-      | type.arrow (type.arrow s d1) d2 => fun _ => None (* can't have function arguments *)
-      end.
 
     Definition zarray
                (start : @Interface.word.rep
@@ -869,65 +586,156 @@ Module Compiler.
     (* relation that states whether a fiat-crypto value and a bedrock2 value are
        equivalent in a given bedrock2 context *)
     Fixpoint equivalent {t}
+             (locals : Interface.map.rep (map:=Semantics.locals))
       : base.interp t -> (* fiat-crypto value *)
         base_rtype t -> (* bedrock2 value *)
-        Interface.map.rep (map:=Semantics.locals) -> (* bedrock2 local variables *)
-        Interface.map.rep (map:=Semantics.mem) -> (* bedrock2 main memory *)
         Prop :=
       match t with
       (* product case *)
       | base.type.prod a b =>
         fun (x : base.interp a * base.interp b)
-            (y : base_rtype a * base_rtype b)
-            locals mem =>
-          sep (equivalent (fst x) (fst y) locals)
-              (equivalent (snd x) (snd y) locals) mem
+            (y : base_rtype a * base_rtype b) =>
+          equivalent locals (fst x) (fst y)
+          /\ equivalent locals (snd x) (snd y)
       (* list case -- only list Z allowed *)
-      | base.type.list (base.type.type_base base.type.Z) =>
-        fun (x : list Z)
-            (y : Syntax.expr.expr)
-            locals =>
-          Lift1Prop.ex1
-            (fun loc =>
-               sep
-                 (fun mem =>
-                    WeakestPrecondition.dexpr mem locals y loc)
-                 (zarray loc x))
+      | base.type.list t2 =>
+        (match t2 as t0 return (base.interp t0 -> base_rtype t0 -> Prop) ->
+                               base.interp (base.type.list t0) ->
+                               base_rtype (base.type.list t0) -> Prop with
+         | base.type.type_base base.type.Z =>
+           fun eq (x : list Z) (y : list Syntax.expr.expr) =>
+             length x = length y
+             /\ Forall2 eq x y
+         | _ => fun _ _ _ => False
+         end) (equivalent (t:=t2) locals)
       (* base type case -- only Z allowed *)
       | base.type.type_base base.type.Z =>
-        fun (x : Z) (y : Syntax.expr.expr)
-            locals =>
-          Lift1Prop.ex1
-            (fun w mem =>
-                WeakestPrecondition.dexpr mem locals y w)
-      | _ => fun _ _ _ _ => False
+        fun (x : Z) (y : Syntax.expr.expr) =>
+          forall mem, (* not allowed to read *)
+            WeakestPrecondition.expr mem locals y
+                                     (fun w => Interface.word.unsigned w = x)
+      | _ => fun _ _ => False
       end.
 
     Fixpoint varname_set {t} : base_ltype t -> PropSet.set Syntax.varname :=
       match t with
       | base.type.prod a b =>
         fun x => PropSet.union (varname_set (fst x)) (varname_set (snd x))
+      | base.type.list (base.type.type_base base.type.Z) =>
+        PropSet.of_list
       | _ => fun x => PropSet.singleton_set x
       end.
 
-    Fixpoint context_list_equiv {var1}
-             (G : list {t : API.type & (var1 t * API.interp_type t * ltype t)%type})
-             (locals : Interface.map.rep (map:=Semantics.locals)) {struct G}
-      : Interface.map.rep (map:=Semantics.mem) -> Prop :=
-      match G with
-      | [] => fun _ => True
-      | existT (type.base b) (w, x, y) :: G' =>
-        (* This is not a separation-logic condition because the memory cannot
-        change (we don't allow writing to memory except as the very last step,
-        after all reads) and we want the values of locals to be able to read
-        from the same sections of memory. *)
-        fun mem =>
-          equivalent x (rtype_of_ltype y) locals mem
-          /\ (exists prev_locals,
-                 Interface.map.only_differ prev_locals (varname_set y) locals
-                 /\ context_list_equiv G' prev_locals mem)
-      | existT (type.arrow _ _) _ :: G' => fun _ => False (* no functions allowed *)
+    Definition varname_not_in_context {var1}
+               (v : Syntax.varname)
+               (x : {t : API.type & (var1 t * API.interp_type t * ltype t)%type})
+      : Prop :=
+      match x with
+      | existT (type.base b) (w, x, y) =>
+        ~ (varname_set y) v
+      | existT (type.arrow _ _) _ => False (* no functions allowed *)
       end.
+
+    Definition equivalent_in_context {var1}
+               (locals : Interface.map.rep (map:=Semantics.locals))
+               (x : {t : API.type & (var1 t * API.interp_type t * ltype t)%type})
+      : Prop :=
+      match x with
+      | existT (type.base b) (w, x, y) =>
+        equivalent locals x (rtype_of_ltype y)
+      | existT (type.arrow _ _) _ => False (* no functions allowed *)
+      end.
+   
+    Definition context_list_equiv {var1}
+             (G : list {t : API.type & (var1 t * API.interp_type t * ltype t)%type})
+             (locals : Interface.map.rep (map:=Semantics.locals))
+      : Prop :=
+      Forall (equivalent_in_context locals) G.
+
+
+    Lemma equivalent_not_varname_set {t}
+          locals1 locals2 vset (varnames : base_ltype t) x :
+      Interface.map.only_differ locals1 vset locals2 ->
+      (forall v : Syntax.varname, vset v -> ~ varname_set varnames v) ->
+      equivalent locals1 x (rtype_of_ltype varnames) ->
+      equivalent locals2 x (rtype_of_ltype varnames).
+    Proof.
+      (* TODO : clean up this proof *)
+      intros Hdiffer Hexcl.
+      induction t; cbn [rtype_of_ltype varname_set equivalent fst snd]; intros;
+        BreakMatch.break_match;
+        DestructHead.destruct_head'_and;
+        try tauto;
+        try solve [
+              (* solves all the simple cases where ltype is a varname *)
+              specialize (Hexcl varnames); intros;
+              destruct (Hdiffer varnames) as [? | Heq];
+              cbv [PropSet.singleton_set
+                     PropSet.elem_of
+                     WeakestPrecondition.expr
+                     WeakestPrecondition.expr_body
+                     varname_set
+                     WeakestPrecondition.get ] in *;
+              [ tauto | rewrite <-Heq; eauto ] ].
+      { (* prod case *)
+        cbn [varname_set] in Hexcl; cbv [PropSet.union PropSet.elem_of] in Hexcl.
+        split; [ apply IHt1 | apply IHt2]; auto;
+          let x := fresh in
+          let y := fresh in
+          intros x y; specialize (Hexcl x y); tauto. }
+      { (* list case *)
+        split; [ assumption | ].
+        cbn [varname_set] in Hexcl; cbv [PropSet.union PropSet.of_list] in Hexcl.
+        cbn [Language.Compilers.base.interp Compilers.base_interp base_rtype] in *. (* simplify types *)
+        rewrite ListUtil.Forall2_forall_iff with (d1:=0) (d2:=Syntax.expr.literal 0) by auto.
+        match goal with H : _ |- _ =>
+                        intros i Hi;
+                          rewrite ListUtil.Forall2_forall_iff
+                          with (d1:=0) (d2:=Syntax.expr.literal 0) in H by auto;
+                          specialize (H i Hi); revert H
+        end.
+        rewrite map_length in *.
+        apply ListUtil.nth_default_preserves_properties_length_dep; try lia.
+        intros.
+        assert Syntax.varname as d by (destruct varnames; auto; cbn [length] in *; omega).
+        erewrite !ListUtil.map_nth_default with (x:=d) in * by lia.
+        apply IHt; eauto.
+        cbv [varname_set PropSet.singleton_set].
+        let x := fresh in
+        let y := fresh in
+        intros x y; specialize (Hexcl x y).
+        apply ListUtil.nth_default_preserves_properties_length_dep; try lia.
+        intros.
+        match goal with
+          |- ?x <> ?y => destruct (Semantics.varname_eqb_spec x y); subst
+        end; tauto. }
+    Qed.
+
+    Lemma equivalent_not_in_context {var1} locals1 locals2 vset x :
+      Interface.map.only_differ locals1 vset locals2 ->
+      (forall v, vset v -> varname_not_in_context v x) ->
+      equivalent_in_context (var1:=var1) locals1 x ->
+      equivalent_in_context locals2 x.
+    Proof.
+      intros; cbv [equivalent_in_context varname_not_in_context] in *.
+      destruct x as [x [ [? ?] ?] ]; destruct x; [ | tauto ].
+      eauto using equivalent_not_varname_set.
+    Qed.
+
+    Lemma equivalent_not_in_context_forall {var1} locals1 locals2 vset G :
+      Interface.map.only_differ locals1 vset locals2 ->
+      (forall v, vset v -> Forall (varname_not_in_context v) G) ->
+      Forall (equivalent_in_context (var1:=var1) locals1) G ->
+      Forall (equivalent_in_context locals2) G.
+    Proof.
+      intros Hdiffer Hexcl; induction G; intros; constructor;
+        match goal with
+          | H : Forall _ (_ :: _) |- _ => inversion H; subst; clear H end.
+      { eapply equivalent_not_in_context; eauto.
+        intros x y; specialize (Hexcl x y); inversion Hexcl; auto. }
+      { apply IHG; auto.
+        intros x y; specialize (Hexcl x y); inversion Hexcl; auto. }
+    Qed.
 
     (* TODO : move *)
     Require Import bedrock2.Map.SeparationLogic bedrock2.ProgramLogic.
@@ -1065,7 +873,7 @@ Module Compiler.
         forall (tr : Semantics.trace)
                (mem locals : Interface.map.rep)
                (R : Interface.map.rep -> Prop),
-          context_list_equiv G locals mem ->
+          context_list_equiv G locals ->
           WeakestPrecondition.cmd
             call cmdx tr mem locals
             (fun tr' mem' locals' =>
@@ -1077,11 +885,9 @@ Module Compiler.
                (* no variables disappear *)
                /\ Interface.map.sub_domain locals locals'
                (* information stored in LHS variables is equivalent to interp *)
-               /\ sep (equivalent (API.interp e2) (rtype_of_ltype (snd gr)) locals')
+               /\ sep (emp (equivalent locals' (API.interp e2) (rtype_of_ltype (snd gr))))
                       R mem').
     Admitted.
-
-    About varname_set.
 
     Lemma assign_correct {t} :
       forall (x : base.interp t)
@@ -1090,7 +896,7 @@ Module Compiler.
              (mem locals : Interface.map.rep)
              (R : Interface.map.rep -> Prop),
         (* rhs == x *)
-        equivalent x rhs locals mem ->
+        equivalent locals x rhs ->
         WeakestPrecondition.cmd
           call (assign lhs rhs)
           tr mem locals
@@ -1101,7 +907,7 @@ Module Compiler.
              (* new locals only differ in the values of LHS variables *)
              /\ Interface.map.only_differ locals (varname_set lhs) locals'
              (* evaluating lhs == x *)
-             /\ sep (equivalent x (rtype_of_ltype lhs) locals') R mem').
+             /\ sep (emp (equivalent locals' x (rtype_of_ltype lhs))) R mem').
     Admitted.
 
     Lemma translate_inner_expr_correct {t}
@@ -1112,11 +918,11 @@ Module Compiler.
           (require_cast : bool) :
       (* e1 is a valid input to translate_carries_correct *)
       valid_inner_expr require_cast e1 ->
-      forall G mem locals,
+      forall G locals,
         wf3 G e1 e2 e3 ->
         let out := translate_inner_expr require_cast e3 in
-        context_list_equiv G locals mem ->
-        equivalent (API.interp e2) out locals mem.
+        context_list_equiv G locals ->
+        equivalent locals (API.interp e2) out.
     Admitted.
 
     (* TODO: see if there's a bedrock2 lemma that proves this *)
@@ -1130,32 +936,6 @@ Module Compiler.
         do 2 eexists. repeat (split; try eassumption). }
       { do 2 eexists. repeat (split; try eassumption). }
     Qed.
-
-    (* if a list appears in the type, the variable holding the location where
-       the list head should go actually exists in the local context and maps to
-       a location in memory. *)
-    Fixpoint lists_ok {t}
-             (locals : Interface.map.rep (map:=Semantics.locals))
-      : base_ltype t ->
-        base.interp t -> (* get lengths of lists from fiat-crypto compiler output *)
-        Interface.map.rep (map:=Semantics.mem) ->
-        Prop :=
-      match t with
-      | base.type.prod a b =>
-        fun x r =>
-          sep (lists_ok locals (fst x) (fst r))
-              (lists_ok locals (snd x) (snd r))
-      | base.type.list (base.type.type_base base.type.Z) =>
-        fun x r =>
-          Lift1Prop.ex1
-            (fun old_data =>
-               Lift1Prop.ex1
-                 (fun loc =>
-                    sep (emp (length old_data = length r
-                              /\ WeakestPrecondition.get locals x (eq loc)))
-                        (zarray loc old_data)))
-    | _ => fun _ _ _ => True
-      end.
 
     (* TODO : move *)
     Lemma disjoint_union {E} s1 s2 s3 :
@@ -1202,77 +982,11 @@ Module Compiler.
         rewrite ?Interface.map.get_put_same; reflexivity.
     Qed.
 
-    Lemma lists_ok_step {t} locals locals' ks mem retnames ret :
-      Interface.map.only_differ locals ks locals' ->
-      PropSet.disjoint (varname_set retnames) ks ->
-      forall R,
-        sep (lists_ok locals retnames ret) R mem ->
-        sep (@lists_ok t locals' retnames ret) R mem.
-    Proof.
-      induction t; cbn [lists_ok varname_set]; intros;
-        break_match; try tauto; [ | ].
-      { apply sep_assoc.
-        match goal with H : _ |- _ =>
-                        apply disjoint_union in H; cleanup end.
-        apply IHt1; [ solve [eauto] .. | ].
-        apply sep_comm, sep_assoc.
-        apply IHt2; [ solve [eauto] .. | ].
-        apply sep_assoc, sep_comm, sep_assoc.
-        assumption. }
-      { repeat match goal with
-               | H : sep (Lift1Prop.ex1 _) _ _ |- _ =>
-                 apply sep_ex1_l in H; destruct H
-               | |- sep (Lift1Prop.ex1 _) _ _ =>
-                 apply sep_ex1_l; eexists; [ ]
-               end.
-        eapply Proper_sep_iff1; [ intro | reflexivity | eassumption ].
-        cbv beta. rewrite !sep_emp_l.
-        apply and_iff_compat_r.
-        apply and_iff_compat_l.
-        eapply get_untouched; eauto. }
-    Qed.
-
-    (* TODO : remove if unused
-    Local Ltac simpl_sep :=
-      let t := ltac:(solve [eapply Semantics.mem_ok]) in
-      match goal with
-      | _ => progress cleanup
-      | H : Lift1Prop.ex1 _ _ |- _ => destruct H
-      | H : sep (fun mem => sep _ _ mem) _ _ |- _ =>
-        apply @sep_assoc in H; [ | t]
-      | H : sep (sep _ _) _ _ |- _ =>
-        apply @sep_assoc in H; [ | t]
-      | H : sep (emp _) _ _ |- _ =>
-        apply @sep_emp_l in H; [ cleanup | t]
-      | H : sep (Lift1Prop.ex1 _) _ _ |- _ =>
-        apply @sep_ex1_l in H; [ | t]
-      | H : sep (fun _ => True) _ _ |- _ =>
-        (* N.B. must go *above* sep_indep to avoid infinite loop *)
-        apply @sep_comm in H; [ | t]
-      | H : sep (fun _ => ?x) _ _ |- _ =>
-        apply @sep_indep in H
-      | |- sep (fun mem => sep _ _ mem) _ _ =>
-        apply @sep_assoc; [t | ]
-      | |- sep (sep _ _) _ _ =>
-        apply @sep_assoc; [t | ]
-      | |- sep (emp _) _ _ =>
-        apply @sep_emp_l; [t | ]
-      | |- sep (Lift1Prop.ex1 _) _ _  =>
-        apply @sep_ex1_l ; [t | ]
-      | |- sep (fun _ => True) _ _ =>
-        (* N.B. must go *above* sep_indep to avoid infinite loop *)
-        apply @sep_comm; [ t | ]
-      | |- sep (fun _ => ?x) _ _ =>
-        apply @sep_indep
-      | |- _ /\ _ => split; [ solve [eauto] | ]
-      | |- Lift1Prop.ex1 _ _ => eexists
-      end. *)
-
     Lemma translate_lhs_mono t :
       forall nextn, (nextn <= fst (translate_lhs t nextn))%nat.
     Proof.
-      induction t; cbn [translate_lhs fst]; eauto with lia; [ ].
-      intros. etransitivity; [ | apply IHt2]. eauto.
+      induction t; cbn [translate_lhs]; break_match; cbn [fst]; eauto with lia; [ ].
+      intros; etransitivity; [ | apply IHt2]; eauto.
     Qed.
 
     Lemma disjoint_translate_lhs s t :
@@ -1282,164 +996,19 @@ Module Compiler.
             PropSet.disjoint (PropSet.singleton_set (varname_gen n)) s) ->
         PropSet.disjoint (varname_set (snd (translate_lhs t nextn))) s.
     Proof.
-      induction t; cbn [translate_lhs varname_set fst snd]; eauto; [ ].
-      intros nextn Hdisj. pose proof (translate_lhs_mono t1 nextn).
-      apply disjoint_union; split; eauto with lia.
+      induction t; cbn [translate_lhs]; break_match; cbn [varname_set fst snd]; eauto; [ | ].
+      { intros nextn Hdisj. pose proof (translate_lhs_mono t1 nextn).
+        apply disjoint_union; split; eauto with lia. }
+      { cbv [PropSet.disjoint PropSet.of_list]; intros.
+        tauto. }
     Qed.
 
-    Lemma translate_list_correct
-          (* three exprs, representing the same Expr with different vars *)
-          (e1 : @API.expr (fun _ => unit) type_listZ)
-          (e2 : @API.expr API.interp_type type_listZ)
-          (e3 : @API.expr ltype type_listZ)
-          (* e1 is valid input to translate_list *)
-          (e1_valid : valid_list e1)
-          (* context list *)
-          (G : list _) :
-      (* exprs are all related *)
-      wf3 G e1 e2 e3 ->
-      forall (locals : Interface.map.rep)
-             (dst : Syntax.varname)
-             (nextn : nat),
-        (* ret := fiat-crypto interpretation of e2 *)
-        let ret : list Z := API.interp e2 in
-        (* out := translation output for e3 *)
-        let out := translate_list e3 nextn dst in
-        (* dst is not a variable we could accidentally overwrite *)
-        (forall n,
-            (nextn <= n)%nat ->
-            varname_gen n <> dst) ->
-        forall (tr : Semantics.trace)
-               (mem : Interface.map.rep)
-               (R : Interface.map.rep -> Prop),
-          (* dst contains a valid memory location at which there exists a list
-             of the right length *)
-          (exists addr old_data,
-              length old_data = length ret
-              /\ WeakestPrecondition.get locals dst (eq addr)
-              /\ sep (zarray addr old_data) R mem) ->
-          (* outputs are equivalent *)
-          WeakestPrecondition.cmd
-            call (snd out) tr mem locals
-            (fun tr' mem' locals' =>
-               tr = tr'
-               /\ sep (equivalent (t:=base.type.list (base.type.type_base base.type.Z))
-                                  ret (rtype_of_ltype (t:=base.type.type_base base.type.Z) dst)
-                                  locals') R mem').
-    Proof.
-      revert e2 e3 G.
-      induction e1_valid; inversion 1; cbv zeta in *; intros.
-      all:hammer_wf.
-      { (* cons *) 
-        repeat match goal with
-               | H : wf3 _ _ _ _ |- _ =>
-                 match type of H with context [Compilers.ident.cons] =>
-                                      inversion H; hammer_wf
-                 end
-               end.
+    Definition return_variables_valid {t} : base_ltype t -> base.interp t -> Prop :=
+      match t with
+      | base.type.list (base.type.type_base base.type.Z) => fun retnames ret => length retnames = length ret
+      | _ => fun _ _ => True
+      end.
 
-        cbn [translate_list].
-        cbn [expr.interp Compilers.ident_interp] in *.
-        cbv [zarray] in *. cbn [array map] in *.
-        cleanup.
-
-        (* simplify bedrock2 step *)
-        cbn [WeakestPrecondition.cmd WeakestPrecondition.cmd_body].
-
-        (* read from variable holding memory location *)
-        cbn [WeakestPrecondition.dexpr WeakestPrecondition.expr WeakestPrecondition.expr_body].
-        eexists; split; [ eassumption | ].
-
-        (* PROBLEM : inner_expr wants context_list_equiv, and we might even need
-        it for reading return variables. Find a way to make this irrespective of
-        memory! *)
-
-        (* ideas:
-
-        A) separate compiler into three phases: one reads all the memory from
-        input, compiling to an rtype that needs lists of exprs for lists, and
-        another does the construction of the output list at the end. Cons:
-        restricts how to read from input, kind of complex.
-
-        B) make just the output part special; read from all the input first 
-
-        C) make a special valid_inner_expr for the construction of output lists
-        that doesn't allow reads from lists
-
-
-        C proof structure:
-        translate_func_correct
-          -> translate_expr_correct (has context_list_equiv precondition)
-             -> translate_inner_expr_correct (has context_list_equiv precondition IFF memory reads are allowed)
-             -> translate_list_correct (no context_list_equiv precondition)
-                -> translate_inner_expr_correct (memory reads not allowed)
-
-        *)
-        
-        (* inner_expr creates a valid expression *)
-        match goal with
-        | H : wf3 ?G ?x1 ?x2 ?x3 |- context [translate_inner_expr ?rc ?x3] =>
-          pose proof
-               (translate_inner_expr_correct
-                  x1 x2 x3 rc
-                  ltac:(assumption) G) end.
-        cbv [equivalent Lift1Prop.ex1] in H4.
-        cbv [context_list_equiv] in H4.
-        apply H4.
-        
-
-        ltac:(eassumption)) as X;
-            cbv [equivalent Lift1Prop.ex1] in X
-        end.
-        cleanup.
-        eexists; split; [ eassumption | ].
-
-        (* store expression at head of list *)
-        eapply store_word_of_sep; [ | ].
-        1: solve [match goal with H : _ |- _ => apply H end].
-
-        intros.
-        (* now we need to set the new destination to retnames+1 *)
-        eexists. split.
-        { eapply WeakestPreconditionProperties.Proper_get;
-            [ repeat intro | eassumption ].
-          subst; reflexivity. }
-        { cbv [coqutil.dlet.dlet].
-          cbn [rtype_of_ltype equivalent varname_set] in *.
-          cbv [zarray] in *. cbn [array map] in *.
-
-          eapply WeakestPreconditionProperties.Proper_cmd;
-            [ eapply Proper_call | repeat intro | ].
-          
-          2: { eapply IHe1_valid; try eassumption;
-               clear IHe1_valid.
-               { intros. apply disjoint_singleton.
-                 rewrite varname_gen_unique. lia. }
-               {
-                 Search m.
-                 (* we know that context_list_equiv holds on locals/mem/G, now need
-                it for (locals ++ (vg n, x0+1))/m/G
-
-                we know almost nothing about m, just have a sep-logic condition
-                ideally should have m == mem...
-                for mem we have a sep-logic condition that looks similar to the one for m. does that prove mem = m?
-                m is introduced with store_word_of_sep
-                maybe need to add context_list_equiv to the seplogic condition?
-                  *)
-                 admit. }
-               { apply sep_ex1_l.
-                 eexists.
-                 apply sep_assoc.
-                 apply sep_emp_l. split; [ solve [apply get_put] | ].
-                 match goal with
-                 | H : sep _ (sep ?p _) ?m |- sep ?p _ ?m =>
-                   apply sep_comm, sep_assoc in H; apply H
-                 end. } }
-          { intros; cleanup; subst; tauto. } }
-        apply Wea
-        eapply IHe1_valid.
-    Admitted.
-    
     Lemma translate_expr_correct' {t'} (t:=type.base t')
           (* three exprs, representing the same Expr with different vars *)
           (e1 : @API.expr (fun _ => unit) t)
@@ -1461,31 +1030,34 @@ Module Compiler.
         (* retnames don't contain variables we could accidentally overwrite *)
         (forall n,
             (nextn <= n)%nat ->
-            PropSet.disjoint
-              (PropSet.singleton_set (varname_gen n))
-              (varname_set retnames)) ->
+            ~ (varname_set retnames) (varname_gen n)) ->
+        (* G doesn't contain variables we could accidentally overwrite *)
+        (forall n,
+            (nextn <= n)%nat ->
+            Forall (varname_not_in_context (varname_gen n)) G) ->
+        (* G doesn't contain variables that retnames will overwrite *)
+        (forall v,
+            varname_set retnames v ->
+            Forall (varname_not_in_context v) G) ->
+        (* if return value is a list, retnames contains enough variables *)
+        return_variables_valid retnames ret -> 
         forall (tr : Semantics.trace)
                (mem : Interface.map.rep)
                (R : Interface.map.rep -> Prop),
           (* contexts are equivalent; for every variable in the context list G,
              the fiat-crypto and bedrock2 results match *)
-          context_list_equiv G locals mem ->
-          (* any lists in retnames are valid *)
-          sep (lists_ok locals retnames ret) R mem ->
+          context_list_equiv G locals ->
           (* executing translation output is equivalent to interpreting e *)
           WeakestPrecondition.cmd
             call (snd out) tr mem locals
             (fun tr' mem' locals' =>
-               tr = tr'
-               /\ sep (equivalent ret (rtype_of_ltype retnames) locals') R mem').
+               tr = tr' /\
+               mem = mem' /\
+               sep (emp (equivalent locals' ret (rtype_of_ltype retnames))) R mem').
     Proof.
       revert e2 e3 G.
       subst t.
-      induction e1_valid;
-        try match goal with
-            | H : valid_list _ |- _ => inversion H; subst
-            end;
-      inversion 1; cbv zeta in *; intros.
+      induction e1_valid; inversion 1; cbv zeta in *; intros.
       all:hammer_wf. (* get rid of the wf nonsense *)
 
       { (* carry let-in *)
@@ -1500,40 +1072,50 @@ Module Compiler.
         cleanup.
 
         (* simplify fiat-crypto step *)
-        intros; cbn [expr.interp type.app_curried].
-        cbv [Rewriter.Util.LetIn.Let_In]. cleanup.
+        intros; cbn [expr.interp type.app_curried] in *.
+        cbv [Rewriter.Util.LetIn.Let_In] in *. cleanup.
 
         (* simplify bedrock2 step *)
         cbn [WeakestPrecondition.cmd WeakestPrecondition.cmd_body].
         eapply WeakestPreconditionProperties.Proper_cmd;
           [ eapply Proper_call | repeat intro | ].
         (* N.B. putting below line in the [ | | ] above makes eassumption fail *)
-        2 : eapply translate_carries_correct; try eassumption.
+        2 : eapply translate_carries_correct with (R0:=R); try eassumption.
 
         (* use inductive hypothesis *)
         cbn [translate_lhs] in *; cleanup.
         eapply WeakestPreconditionProperties.Proper_cmd;
           [ eapply Proper_call | repeat intro | ].
-        2: { eapply IHe1_valid with (R:=R); try eassumption;
+
+        2: { eapply IHe1_valid with (R:=R);
              clear IHe1_valid;
-             try solve [eauto with lia];
-             try match goal with
-                 | H : (forall v1 v2 v3,
-                           wf3  _ (_ v1) (_ v2) (_ v3)),
-                       H' : sep (equivalent ?x _ _) _ _ |- _ =>
-                   apply H with (v2:=x)
-                 end;
-             [ | solve [eapply lists_ok_step; subst; eauto; [ ];
-                        apply disjoint_comm, disjoint_union; eauto ] ].
-             cbn [context_list_equiv equivalent] in *.
-             split;
-               [ solve [
-                     apply sep_emp_True_r;
-                     match goal with H : sep _ _ _ |- _ =>
-                                        eapply H end ] | ].
-             subst; eexists; split; eauto. }
-      { intros; cleanup; subst; tauto. } }
-    { (* non-carry let-in *)
+             try match goal with H : _ |- _ => solve [apply H] end;
+             match goal with H : sep (emp _) _ _ |- _ => apply sep_emp_l in H end;
+             cleanup; eauto with lia.
+
+             { (* proof that new context doesn't contain variables that could be
+                  overwritten in the future *)
+               intros; apply Forall_cons; eauto with lia; [ ].
+               cbn [varname_not_in_context varname_set fst snd].
+               cbv [PropSet.union PropSet.singleton_set PropSet.elem_of].
+               setoid_rewrite varname_gen_unique.
+               lia. }
+             { (* proof that new context doesn't contain variables that retnames
+                  will overwrite *)
+               intros; apply Forall_cons; eauto with lia; [ ].
+               cbn [varname_not_in_context varname_set fst snd].
+               cbv [PropSet.union PropSet.singleton_set PropSet.elem_of].
+               (* this should not be hard -- when you're done copy it to other
+                  cases and return to cons *)
+               setoid_rewrite varname_gen_unique.
+               lia. }
+             { (* proof that context_list_equiv continues to hold *)
+               cbv [context_list_equiv] in *; apply Forall_cons; eauto; [ ].
+               eapply equivalent_not_in_context_forall; eauto.
+               cbv [varname_set fst snd PropSet.union PropSet.singleton_set PropSet.elem_of].
+               destruct 1; subst; eauto. } }
+        { intros; cleanup; subst; tauto. } }
+    { (* let-in (product of base types) *)
       (* simplify one translation step *)
       cbn [translate_expr].
       erewrite translate_carries_None by eassumption.
@@ -1562,24 +1144,72 @@ Module Compiler.
       cbn [translate_lhs] in *; cleanup.
       eapply WeakestPreconditionProperties.Proper_cmd;
         [ eapply Proper_call | repeat intro | ].
-      2: { eapply IHe1_valid with (R:=R); try eassumption;
-             clear IHe1_valid;
-             try solve [eauto with lia];
-             try match goal with
-                 | H : (forall v1 v2 v3,
-                           wf3  _ (_ v1) (_ v2) (_ v3)),
-                       H' : sep (equivalent ?x _ _) _ _ |- _ =>
-                   apply H with (v2:=x)
-                 end;
-             [ | solve [eapply lists_ok_step; subst; eauto; [ ];
-                        apply disjoint_comm, disjoint_translate_lhs; eauto ] ].
-           cbn [context_list_equiv equivalent] in *.
-             split;
-             [ solve [
-                   apply sep_emp_True_r;
-                   match goal with H : sep _ _ _ |- _ =>
-                                   eapply H end ] | ].
-           subst; eexists; split; eauto. }
+      2: { eapply IHe1_valid with (R:=R);
+           clear IHe1_valid;
+           try match goal with H : _ |- _ => solve [apply H] end;
+           match goal with H : sep (emp _) _ _ |- _ => apply sep_emp_l in H end;
+           cleanup; eauto with lia.
+
+           { (* proof that new context doesn't contain variables that could be
+                  overwritten in the future *)
+             intros; apply Forall_cons; eauto with lia; [ ].
+             cbn [varname_not_in_context varname_set fst snd].
+             cbv [PropSet.union PropSet.singleton_set PropSet.elem_of].
+             setoid_rewrite varname_gen_unique.
+             lia. }
+           { (* proof that context_list_equiv continues to hold *)
+             cbv [context_list_equiv] in *; apply Forall_cons; eauto; [ ].
+             eapply equivalent_not_in_context_forall; eauto.
+             cbv [varname_set fst snd PropSet.union PropSet.singleton_set PropSet.elem_of].
+             destruct 1; subst; eauto. } }
+      { intros; cleanup; subst; tauto. } }
+    { (* let-in (base type) *)
+      (* simplify one translation step *)
+      cbn [translate_expr].
+      erewrite translate_carries_None by eassumption.
+      cleanup.
+
+      (* assert that translate_lhs is well-behaved *)
+      match goal with
+        |- context [translate_lhs ?t ?n] =>
+        pose proof (translate_lhs_mono t n)
+      end.
+      
+
+      (* simplify fiat-crypto step *)
+      intros; cbn [expr.interp type.app_curried].
+      cbv [Rewriter.Util.LetIn.Let_In]. cleanup.
+
+      (* simplify bedrock2 step *)
+      cbn [WeakestPrecondition.cmd WeakestPrecondition.cmd_body].
+      eapply WeakestPreconditionProperties.Proper_cmd;
+        [ eapply Proper_call | repeat intro | ].
+      (* N.B. putting below line in the [ | | ] above makes eassumption fail *)
+      2 : eapply assign_correct; try eassumption; [ ];
+        eapply translate_inner_expr_correct; eassumption.
+
+      (* use inductive hypothesis *)
+      cbn [translate_lhs] in *; cleanup.
+      eapply WeakestPreconditionProperties.Proper_cmd;
+        [ eapply Proper_call | repeat intro | ].
+      2: { eapply IHe1_valid with (R:=R);
+           clear IHe1_valid;
+           try match goal with H : _ |- _ => solve [apply H] end;
+           match goal with H : sep (emp _) _ _ |- _ => apply sep_emp_l in H end;
+           cleanup; eauto with lia.
+
+           { (* proof that new context doesn't contain variables that could be
+                  overwritten in the future *)
+             intros; apply Forall_cons; eauto with lia; [ ].
+             cbn [varname_not_in_context varname_set fst snd].
+             cbv [PropSet.union PropSet.singleton_set PropSet.elem_of].
+             setoid_rewrite varname_gen_unique.
+             lia. }
+           { (* proof that context_list_equiv continues to hold *)
+             cbv [context_list_equiv] in *; apply Forall_cons; eauto; [ ].
+             eapply equivalent_not_in_context_forall; eauto.
+             cbv [varname_set fst snd PropSet.union PropSet.singleton_set PropSet.elem_of].
+             destruct 1; subst; eauto. } }
       { intros; cleanup; subst; tauto. } }
     { (* cons *)
 
@@ -1594,7 +1224,102 @@ Module Compiler.
       (* simplify one translation step *)
       cbn [translate_expr]. cleanup.
 
-      Search translate_list.
+      (* simplify fiat-crypto step *)
+      intros; cbn [expr.interp type.app_curried Compilers.ident_interp] in *.
+      cbv [Rewriter.Util.LetIn.Let_In]. cleanup.
+
+      (* use the hypothesis proving retnames has enough variables *)
+      cbn [return_variables_valid length] in *.
+      break_match; [ cbn [length] in *; congruence | ].
+      cleanup.
+
+      (* simplify bedrock2 step *)
+      cbn [WeakestPrecondition.cmd WeakestPrecondition.cmd_body].
+      eapply WeakestPreconditionProperties.Proper_cmd;
+        [ eapply Proper_call | repeat intro | ].
+      (* N.B. putting below line in the [ | | ] above makes eassumption fail *)
+      2 : eapply assign_correct; try eassumption; [ ];
+        eapply translate_inner_expr_correct; eassumption.
+
+      (* use inductive hypothesis *)
+      cleanup.
+      eapply WeakestPreconditionProperties.Proper_cmd;
+        [ eapply Proper_call | repeat intro | ].
+      2: { eapply IHe1_valid with (R:=R);
+           clear IHe1_valid;
+           try match goal with H : _ |- _ => solve [apply H] end;
+           match goal with H : sep (emp _) _ _ |- _ => apply sep_emp_l in H end;
+           cleanup; eauto with lia.
+
+           { (* proof that retnames doesn't contain names that could be
+                overwritten later *)
+             intros n Hn.
+             match goal with
+             | H : forall n, _ -> ~ varname_set _ _ |- _ =>
+               specialize (H n Hn); cbn [varname_set PropSet.of_list In] in H
+             end.
+             cbv [varname_set PropSet.of_list].
+             tauto. }
+           { (* proof that context_list_equiv continues to hold *)
+             cbv [context_list_equiv] in *.
+             eapply equivalent_not_in_context_forall; eauto.
+             cbv [varname_set fst snd PropSet.union PropSet.singleton_set PropSet.elem_of].
+
+             intros. subst v0; eauto.
+             (* okay, here we need to know that v doesn't appear in G. We need
+             to know that from...idk, translate_inner_expr? *)
+             Search v.
+             (* probably need to change the only_differ to say that locals did
+             not have those variables set previously -- undef_on? *)
+             (* Ah! actually, what we really need to know is that stuff in
+               retnames doesn't appear in G *)
+             Print Interface.map.
+             Print Interface.map.undef_on.
+             
+
+
+
+             
+             destruct 1; subst; eauto. } }
+      { intros; cleanup; subst; tauto. } }
+      2: { eapply IHe1_valid with (R:=R);
+           clear IHe1_valid;
+           try match goal with H : _ |- _ => apply H end;
+           cbn [context_list_equiv equivalent rtype_of_ltype fst snd] in *;
+           match goal with H : _ |- _ => apply sep_emp_l in H end;
+           cleanup; eauto with lia.
+           { (* set manipulations; we know it's disjoint from a superset *)
+             admit. }
+           {
+             Search wf3 cons.
+             Print wf3.
+           (*
+             x4 : API.expr Z
+             v : varname
+             x5 : API.expr Z
+             We know x4 and x5 are the same in G
+             We know the variable now stored at a1[v] == x4
+             Why does G not change? 
+             Probably because the expr didn't have a letin; it was just a cons
+             However, G should get a cons, because there's a new value
+            *)
+             cbv [context_list_equiv].
+
+
+      }
+      { intros; cleanup; subst; tauto. } }
+      cbn [equivalent].
+      eapply IHe1_valid.
+
+
+
+
+
+
+
+
+      
+
       eapply translate_list_correct.
       2:eassumption.
       1:eassumption.
@@ -1707,52 +1432,5 @@ Module Compiler.
         apply Wea
         eapply IHe1_valid.
     Qed.
-
-    Lemma translate_expr_correct {t} (* (e : API.Expr t) *) :
-      (* e is valid input to translate_expr *)
-      forall e : API.Expr t,
-        valid_expr (e _) ->
-        forall (args : type.for_each_lhs_of_arrow (type.interp base.interp) t)
-               (bedrock_args : list Interface.word.rep)
-               (argnames : type.for_each_lhs_of_arrow ltype t)
-               (flat_argnames : list Syntax.varname)
-               (retnames : base_ltype (type.final_codomain t))
-               (flat_retnames : list Syntax.varname)
-               (nextn : Syntax.varname)
-               (mem : Interface.map.rep),
-          (* args and bedrock_args are equivalent *)
-          args_equivalent args bedrock_args mem ->
-          (* argnames and flat_argnames are equivalent *)
-          flatten_argnames argnames = Some flat_argnames ->
-          (* retnames and flat_retnames are equivalent *)
-          flatten_names retnames = Some flat_retnames ->
-          (* ret := result of applying e to args *)
-          let ret : base.interp (type.final_codomain t) :=
-              type.app_curried (API.Interp e) args in
-          (* bedrock_e := translation of e as bedrock2 function body *)
-          let bedrock_e : Syntax.cmd.cmd :=
-              snd (translate_expr (e ltype) nextn argnames retnames) in
-          forall (fname : Syntax.funname)
-                 (funnames' : list _)
-                 (* fname's body is bedrock_e *)
-                 (funnames := (fname, (flat_argnames, flat_retnames, bedrock_e))
-                                :: funnames')
-                 (tr : Semantics.trace)
-                 (R : Interface.map.rep -> Prop),
-            (* calling fname with bedrock_args is equivalent to ret *)
-            WeakestPrecondition.call
-              funnames fname tr mem bedrock_args
-              (fun tr' m' bedrock_ret =>
-                 tr = tr' /\ sep (equivalent ret bedrock_ret) R m').
-    Proof.
-      induction 1; cbv zeta in *; intros.
-      { eauto. }
-      { repeat (straightline || (straightline_call; [solve[ecancel_assumption]|])).
-        eauto. }
-      { repeat (straightline || (straightline_call; [solve[ecancel_assumption]|])).
-        eauto. }
-      ; []; eauto. }.
-    Qed.
   End Proofs.
-*)
 End Compiler.
