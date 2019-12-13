@@ -279,7 +279,9 @@ End with_round_up_list.
 Ltac refine_PipelineSideConditions_constructor :=
   lazymatch goal with
   | [ |- PipelineSideConditions ?opts ?evars _ ]
-    => simple refine {| Hevar := _ |}; [ shelve | .. ];
+    => simple refine {| Hevar := _ |};
+       (* for compatibility pre/post https://github.com/coq/coq/pull/7825 *)
+       [ shelve .. | | | | | | | | | | | | ];
        cbv [b e' e_final_newtype e e_pre_pkg e_pkg proj1_sig]
   end.
 Ltac refine_with_pipeline_correct opts :=
