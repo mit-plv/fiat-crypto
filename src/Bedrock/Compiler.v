@@ -971,9 +971,20 @@ Module Compiler.
     the other. *)
     Lemma get_untouched m1 m2 ks k P :
       Interface.map.only_differ m2 ks m1 ->
-      PropSet.disjoint (PropSet.singleton_set k) ks ->
+      ~ ks k ->
       WeakestPrecondition.get m1 k P <-> WeakestPrecondition.get m2 k P.
     Admitted.
+
+    Lemma expr_untouched mem1 mem2 l1 l2 vars v P :
+      Interface.map.only_differ l2 vars l1 ->
+      ~ vars v ->
+      WeakestPrecondition.expr mem1 l1 (Syntax.expr.var v) P <->
+      WeakestPrecondition.expr mem2 l2 (Syntax.expr.var v) P.
+    Proof.
+      intros.
+      cbv [WeakestPrecondition.expr WeakestPrecondition.expr_body].
+      rewrite get_untouched; eauto; reflexivity.
+    Qed.
 
     Lemma get_put m k v :
       WeakestPrecondition.get (Interface.map.put m k v) k (eq v).
@@ -1005,9 +1016,21 @@ Module Compiler.
 
     Definition return_variables_valid {t} : base_ltype t -> base.interp t -> Prop :=
       match t with
-      | base.type.list (base.type.type_base base.type.Z) => fun retnames ret => length retnames = length ret
+      | base.type.list (base.type.type_base base.type.Z) =>
+        fun retnames ret => length retnames = length ret /\ NoDup retnames
       | _ => fun _ _ => True
       end.
+
+    Definition used_varnames nextn final_nextn : PropSet.set Syntax.varname :=
+      fun v => exists n, varname_gen n = v /\ (nextn <= n < final_nextn)%nat.
+
+    Lemma used_varnames_step nextn final_nextn :
+      (nextn < final_nextn)%nat ->
+      forall v,
+        used_varnames nextn final_nextn v <->
+        PropSet.union (PropSet.singleton_set (varname_gen nextn))
+                      (used_varnames (S nextn) final_nextn) v.
+    Admitted.
 
     Lemma translate_expr_correct' {t'} (t:=type.base t')
           (* three exprs, representing the same Expr with different vars *)
@@ -1028,9 +1051,10 @@ Module Compiler.
         (* out := translation output for e3 *)
         let out := translate_expr e3 nextn retnames in
         (* retnames don't contain variables we could accidentally overwrite *)
-        (forall n,
+        (forall v n,
+            varname_set retnames v ->
             (nextn <= n)%nat ->
-            ~ (varname_set retnames) (varname_gen n)) ->
+            varname_gen n <> v) ->
         (* G doesn't contain variables we could accidentally overwrite *)
         (forall n,
             (nextn <= n)%nat ->
@@ -1053,7 +1077,16 @@ Module Compiler.
             (fun tr' mem' locals' =>
                tr = tr' /\
                mem = mem' /\
-               sep (emp (equivalent locals' ret (rtype_of_ltype retnames))) R mem').
+               (* locals and locals' only differ on variables that are in the
+               return-variable-names list, or in the range between nextn and the
+               first output value (which represents the next fresh variable name
+               after the function) *)
+               Interface.map.only_differ
+                 locals
+                 (PropSet.union (varname_set retnames)
+                                (used_varnames nextn (fst out)))
+                 locals' /\
+          sep (emp (equivalent locals' ret (rtype_of_ltype retnames))) R mem').
     Proof.
       revert e2 e3 G.
       subst t.
@@ -1105,16 +1138,17 @@ Module Compiler.
                intros; apply Forall_cons; eauto with lia; [ ].
                cbn [varname_not_in_context varname_set fst snd].
                cbv [PropSet.union PropSet.singleton_set PropSet.elem_of].
-               (* this should not be hard -- when you're done copy it to other
-                  cases and return to cons *)
-               setoid_rewrite varname_gen_unique.
-               lia. }
+               match goal with
+                 |- ~ (?A \/ ?B) =>
+                 assert (~ A /\ ~ B); [split|tauto]
+               end; eauto. }
              { (* proof that context_list_equiv continues to hold *)
                cbv [context_list_equiv] in *; apply Forall_cons; eauto; [ ].
                eapply equivalent_not_in_context_forall; eauto.
                cbv [varname_set fst snd PropSet.union PropSet.singleton_set PropSet.elem_of].
                destruct 1; subst; eauto. } }
-        { intros; cleanup; subst; tauto. } }
+        { admit. (* TODO *) } }
+        (* { intros; cleanup; subst; tauto. } } *)
     { (* let-in (product of base types) *)
       (* simplify one translation step *)
       cbn [translate_expr].
@@ -1129,8 +1163,8 @@ Module Compiler.
       
 
       (* simplify fiat-crypto step *)
-      intros; cbn [expr.interp type.app_curried].
-      cbv [Rewriter.Util.LetIn.Let_In]. cleanup.
+      intros; cbn [expr.interp type.app_curried] in *.
+      cbv [Rewriter.Util.LetIn.Let_In] in *. cleanup.
 
       (* simplify bedrock2 step *)
       cbn [WeakestPrecondition.cmd WeakestPrecondition.cmd_body].
@@ -1149,20 +1183,29 @@ Module Compiler.
            try match goal with H : _ |- _ => solve [apply H] end;
            match goal with H : sep (emp _) _ _ |- _ => apply sep_emp_l in H end;
            cleanup; eauto with lia.
-
-           { (* proof that new context doesn't contain variables that could be
+             { (* proof that new context doesn't contain variables that could be
                   overwritten in the future *)
-             intros; apply Forall_cons; eauto with lia; [ ].
-             cbn [varname_not_in_context varname_set fst snd].
-             cbv [PropSet.union PropSet.singleton_set PropSet.elem_of].
-             setoid_rewrite varname_gen_unique.
-             lia. }
+               intros; apply Forall_cons; eauto with lia; [ ].
+               cbn [varname_not_in_context varname_set fst snd].
+               cbv [PropSet.union PropSet.singleton_set PropSet.elem_of].
+               setoid_rewrite varname_gen_unique.
+               lia. }
+             { (* proof that new context doesn't contain variables that retnames
+                  will overwrite *)
+               intros; apply Forall_cons; eauto with lia; [ ].
+               cbn [varname_not_in_context varname_set fst snd].
+               cbv [PropSet.union PropSet.singleton_set PropSet.elem_of].
+               match goal with
+                 |- ~ (?A \/ ?B) =>
+                 assert (~ A /\ ~ B); [split|tauto]
+               end; eauto. }
            { (* proof that context_list_equiv continues to hold *)
              cbv [context_list_equiv] in *; apply Forall_cons; eauto; [ ].
              eapply equivalent_not_in_context_forall; eauto.
              cbv [varname_set fst snd PropSet.union PropSet.singleton_set PropSet.elem_of].
              destruct 1; subst; eauto. } }
-      { intros; cleanup; subst; tauto. } }
+        { admit. (* TODO *) } }
+        (* { intros; cleanup; subst; tauto. } } *)
     { (* let-in (base type) *)
       (* simplify one translation step *)
       cbn [translate_expr].
@@ -1177,8 +1220,8 @@ Module Compiler.
       
 
       (* simplify fiat-crypto step *)
-      intros; cbn [expr.interp type.app_curried].
-      cbv [Rewriter.Util.LetIn.Let_In]. cleanup.
+      intros; cbn [expr.interp type.app_curried] in *.
+      cbv [Rewriter.Util.LetIn.Let_In] in *. cleanup.
 
       (* simplify bedrock2 step *)
       cbn [WeakestPrecondition.cmd WeakestPrecondition.cmd_body].
@@ -1199,18 +1242,32 @@ Module Compiler.
            cleanup; eauto with lia.
 
            { (* proof that new context doesn't contain variables that could be
-                  overwritten in the future *)
+                overwritten in the future *)
              intros; apply Forall_cons; eauto with lia; [ ].
              cbn [varname_not_in_context varname_set fst snd].
              cbv [PropSet.union PropSet.singleton_set PropSet.elem_of].
              setoid_rewrite varname_gen_unique.
              lia. }
+           { (* proof that new context doesn't contain variables that retnames
+                will overwrite *)
+             intros; apply Forall_cons; eauto with lia; [ ].
+             cbn [varname_not_in_context varname_set fst snd].
+             cbv [PropSet.union PropSet.singleton_set PropSet.elem_of].
+             eauto. }
            { (* proof that context_list_equiv continues to hold *)
              cbv [context_list_equiv] in *; apply Forall_cons; eauto; [ ].
              eapply equivalent_not_in_context_forall; eauto.
              cbv [varname_set fst snd PropSet.union PropSet.singleton_set PropSet.elem_of].
              destruct 1; subst; eauto. } }
-      { intros; cleanup; subst; tauto. } }
+      { intros; cleanup.
+        repeat split; try (subst; tauto); [ ].
+        (* TODO *)
+        (* locals only_differs from a2 on nextn *)
+        (* a2 only_differs from a5 on retnames + S nextn...out *)
+        (* therefore locals only_differs from a5 on retnames + nextn...out *)
+
+        admit. (* TODO *) } }
+      (* { intros; cleanup; subst; tauto. } } *)
     { (* cons *)
 
       (* repeatedly do inversion until the cons is exposed *)
@@ -1226,10 +1283,10 @@ Module Compiler.
 
       (* simplify fiat-crypto step *)
       intros; cbn [expr.interp type.app_curried Compilers.ident_interp] in *.
-      cbv [Rewriter.Util.LetIn.Let_In]. cleanup.
+      cbv [Rewriter.Util.LetIn.Let_In] in *. cleanup.
 
       (* use the hypothesis proving retnames has enough variables *)
-      cbn [return_variables_valid length] in *.
+      cbn [return_variables_valid length] in *. cleanup.
       break_match; [ cbn [length] in *; congruence | ].
       cleanup.
 
@@ -1245,192 +1302,89 @@ Module Compiler.
       cleanup.
       eapply WeakestPreconditionProperties.Proper_cmd;
         [ eapply Proper_call | repeat intro | ].
-      2: { eapply IHe1_valid with (R:=R);
-           clear IHe1_valid;
-           try match goal with H : _ |- _ => solve [apply H] end;
-           match goal with H : sep (emp _) _ _ |- _ => apply sep_emp_l in H end;
-           cleanup; eauto with lia.
+      2: { eapply IHe1_valid with (R:=R); clear IHe1_valid.
+           all:try match goal with H : _ |- _ => solve [apply H] end.
+           all: match goal with
+                  H : sep (emp _) _ _ |- _ => apply sep_emp_l in H end.
+           all:cleanup.
 
            { (* proof that retnames doesn't contain names that could be
                 overwritten later *)
-             intros n Hn.
+             intros.
              match goal with
-             | H : forall n, _ -> ~ varname_set _ _ |- _ =>
-               specialize (H n Hn); cbn [varname_set PropSet.of_list In] in H
+               H : context [varname_set (_ :: _)] |- _ =>
+                             apply H; [|solve[auto] .. ]
              end.
-             cbv [varname_set PropSet.of_list].
+             (* TODO : make a lemma for this? *)
+             cbn [varname_set PropSet.of_list In] in *.
+             cbv [PropSet.of_list] in *.
              tauto. }
+           { (* proof that new context doesn't contain variables that retnames
+                will overwrite *)
+             intros.
+             match goal with
+               H : context [varname_set (_ :: _)] |- _ =>
+                             apply H; [|solve[auto] .. ]
+             end.
+             (* TODO : make a lemma for this? *)
+             cbn [varname_set PropSet.of_list In] in *.
+             cbv [PropSet.of_list] in *.
+             tauto. }
+           { (* proof that retnames are still valid *)
+             match goal with H : NoDup (_ :: _) |- _ => inversion H end.
+             cbn [length] in *; split; auto. }
            { (* proof that context_list_equiv continues to hold *)
              cbv [context_list_equiv] in *.
              eapply equivalent_not_in_context_forall; eauto.
              cbv [varname_set fst snd PropSet.union PropSet.singleton_set PropSet.elem_of].
 
-             intros. subst v0; eauto.
-             (* okay, here we need to know that v doesn't appear in G. We need
-             to know that from...idk, translate_inner_expr? *)
-             Search v.
-             (* probably need to change the only_differ to say that locals did
-             not have those variables set previously -- undef_on? *)
-             (* Ah! actually, what we really need to know is that stuff in
-               retnames doesn't appear in G *)
-             Print Interface.map.
-             Print Interface.map.undef_on.
-             
-
-
-
-             
-             destruct 1; subst; eauto. } }
-      { intros; cleanup; subst; tauto. } }
-      2: { eapply IHe1_valid with (R:=R);
-           clear IHe1_valid;
-           try match goal with H : _ |- _ => apply H end;
-           cbn [context_list_equiv equivalent rtype_of_ltype fst snd] in *;
-           match goal with H : _ |- _ => apply sep_emp_l in H end;
-           cleanup; eauto with lia.
-           { (* set manipulations; we know it's disjoint from a superset *)
-             admit. }
-           {
-             Search wf3 cons.
-             Print wf3.
-           (*
-             x4 : API.expr Z
-             v : varname
-             x5 : API.expr Z
-             We know x4 and x5 are the same in G
-             We know the variable now stored at a1[v] == x4
-             Why does G not change? 
-             Probably because the expr didn't have a letin; it was just a cons
-             However, G should get a cons, because there's a new value
-            *)
-             cbv [context_list_equiv].
-
-
-      }
-      { intros; cleanup; subst; tauto. } }
-      cbn [equivalent].
-      eapply IHe1_valid.
-
-
-
-
-
-
-
-
-      
-
-      eapply translate_list_correct.
-      2:eassumption.
-      1:eassumption.
-      1: admit. (* make disjoint_singleton iff *)
-      {
-      cbn [lists_ok] in *.
-      cbv [zarray] in *. cbn [array map] in *.
-      cleanup.
-
-      repeat match goal with
-             | H : sep (Lift1Prop.ex1 _) _ _ |- _ =>
-               apply sep_ex1_l in H; destruct H
-             | H : sep (sep _ _) _ _ |- _ =>
-               apply sep_assoc in H
-             | H : sep (fun mem => sep _ _ mem) _ _ |- _ =>
-               apply sep_assoc in H
-             | H : sep (emp _) _ _ |- _ =>
-               apply sep_emp_l in H; cleanup
-             end.
-
-      do 2 eexists; split; eauto. }
-
-      repeat match goal with
-             | H : wf3 _ _ _ _ |- _ =>
-               match type of H with context [Compilers.ident.cons] =>
-                                    inversion H; hammer_wf
-               end
-             end.
-        
-      cbn [type.for_each_lhs_of_arrow
-             type.app_curried type.final_codomain base_ltype] in *.
-
-      cbn [expr.interp Compilers.ident_interp] in *.
-      cbn [lists_ok] in *.
-      cbv [zarray] in *. cbn [array map] in *.
-      cleanup.
-
-      repeat match goal with
-             | H : sep (Lift1Prop.ex1 _) _ _ |- _ =>
-               apply sep_ex1_l in H; destruct H
-             | H : sep (sep _ _) _ _ |- _ =>
-               apply sep_assoc in H
-             | H : sep (fun mem => sep _ _ mem) _ _ |- _ =>
-               apply sep_assoc in H
-             | H : sep (emp _) _ _ |- _ =>
-               apply sep_emp_l in H; cleanup
-             end.
-
-      (* simplify bedrock2 step *)
-      cbn [WeakestPrecondition.cmd WeakestPrecondition.cmd_body].
-
-      (* read from variable holding memory location *)
-      cbn [WeakestPrecondition.dexpr WeakestPrecondition.expr WeakestPrecondition.expr_body].
-      eexists; split; [ eassumption | ].
-
-      (* inner_expr creates a valid expression *)
-      match goal with
-      | H : wf3 ?G ?x1 ?x2 ?x3 |- context [translate_inner_expr ?rc ?x3] =>
-        pose proof
-             (translate_inner_expr_correct
-                x1 x2 x3 rc
-                ltac:(assumption) G _ _ H ltac:(eassumption)) as X;
-          cbv [equivalent Lift1Prop.ex1] in X
-      end.
-      cleanup.
-      eexists; split; [ eassumption | ].
-
-      (* store expression at head of list *)
-      eapply store_word_of_sep; [ | ].
-      1: solve [match goal with H : _ |- _ => apply H end].
-
-      intros.
-      (* now we need to set the new destination to retnames+1 *)
-      eexists. split.
-      { eapply WeakestPreconditionProperties.Proper_get;
-          [ repeat intro | eassumption ].
-        subst; reflexivity. }
-      { cbv [coqutil.dlet.dlet].
-        cbn [rtype_of_ltype equivalent varname_set] in *.
-        cbv [zarray] in *. cbn [array map] in *.
-
-      eapply WeakestPreconditionProperties.Proper_cmd;
-        [ eapply Proper_call | repeat intro | ].
-      
-      2: { eapply IHe1_valid; try eassumption;
-           clear IHe1_valid.
-           { intros. apply disjoint_singleton.
-             rewrite varname_gen_unique. lia. }
-           {
-             Search m.
-             (* we know that context_list_equiv holds on locals/mem/G, now need
-                it for (locals ++ (vg n, x0+1))/m/G
-
-                we know almost nothing about m, just have a sep-logic condition
-                ideally should have m == mem...
-                for mem we have a sep-logic condition that looks similar to the one for m. does that prove mem = m?
-                m is introduced with store_word_of_sep
-                maybe need to add context_list_equiv to the seplogic condition?
-              *)
-             admit. }
-           { apply sep_ex1_l.
-             eexists.
-             apply sep_assoc.
-             apply sep_emp_l. split; [ solve [apply get_put] | ].
+             intros. subst; eauto.
              match goal with
-               | H : sep _ (sep ?p _) ?m |- sep ?p _ ?m =>
-                 apply sep_comm, sep_assoc in H; apply H
-             end. } }
-      { intros; cleanup; subst; tauto. } }
-        apply Wea
-        eapply IHe1_valid.
+               H : context [varname_set (_ :: _)] |- _ =>
+                             apply H; [|solve[auto] .. ]
+             end.
+             cbn [varname_set PropSet.of_list In] in *.
+             cbv [PropSet.of_list] in *.
+             tauto. } }
+      {
+        repeat split; intros; cleanup; try (subst; tauto); [ | ].
+        { admit. (* TODO *)
+          }
+        {
+          clear IHe1_valid.
+        apply sep_emp_l.
+        repeat match goal with H : sep (emp _) _ _ |- _ => apply sep_emp_l in H end.
+        cbn [equivalent rtype_of_ltype fst snd] in *.
+        cleanup.
+        cbn [length map Compilers.base_interp] in *.
+        repeat split; try congruence; [ ].
+        apply Forall2_cons; [|eassumption].
+        match goal with H : NoDup (_ :: _) |- _ => inversion H end.
+        subst. (* TODO: remove the subst *)
+
+        intros; eapply expr_untouched; eauto; [ ].
+        cbn. cbv [PropSet.union PropSet.of_list PropSet.elem_of].
+        match goal with
+          |- ~ (?A \/ ?B) =>
+          assert (~ A /\ ~ B); [split|tauto]
+        end; eauto; [ ].
+        cbv [used_varnames]. intro. cleanup.
+        match goal with H : context [varname_set (?v :: retnames)] |- _ =>
+                        eapply (H v) end; eauto; [ ].
+        (* TODO : make a lemma for this? *)
+        cbn [varname_set PropSet.of_list In] in *.
+        cbv [PropSet.of_list] in *.
+        tauto. } } }
+    { (* nil *)
+      admit. (* TODO *)
+    }
     Qed.
   End Proofs.
 End Compiler.
+
+(* THOUGHTS
+
+Instead of passing retnames as an argument, maybe return them -- then have a
+reassign pass that can allow custom ones
+
+*)
