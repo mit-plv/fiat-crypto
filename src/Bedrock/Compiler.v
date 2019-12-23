@@ -1021,17 +1021,34 @@ Module Compiler.
       | _ => fun _ _ => True
       end.
 
+    
+    (* TODO: move *)
+    Lemma only_differ_trans {key value} {map: Interface.map.map key value}
+          m1 m2 m3 ks1 ks2 :
+      Interface.map.only_differ m2 ks1 m1 ->
+      Interface.map.only_differ m3 ks2 m2 ->
+      Interface.map.only_differ m3 (PropSet.union ks1 ks2) m1.
+    Admitted.
+
+    (* TODO: move *)
+    Lemma only_differ_sameset {key value} {map: Interface.map.map key value}
+          m1 m2 ks1 ks2 :
+      PropSet.sameset ks1 ks2 ->
+      Interface.map.only_differ m2 ks1 m1 ->
+      Interface.map.only_differ m2 ks2 m1.
+    Admitted.
+
+
     Definition used_varnames nextn final_nextn : PropSet.set Syntax.varname :=
       fun v => exists n, varname_gen n = v /\ (nextn <= n < final_nextn)%nat.
 
     Lemma used_varnames_step nextn final_nextn :
       (nextn < final_nextn)%nat ->
-      forall v,
-        used_varnames nextn final_nextn v <->
-        PropSet.union (PropSet.singleton_set (varname_gen nextn))
-                      (used_varnames (S nextn) final_nextn) v.
+      PropSet.sameset
+        (used_varnames nextn final_nextn)
+        (PropSet.union (PropSet.singleton_set (varname_gen nextn))
+                      (used_varnames (S nextn) final_nextn)).
     Admitted.
-
     Lemma translate_expr_correct' {t'} (t:=type.base t')
           (* three exprs, representing the same Expr with different vars *)
           (e1 : @API.expr (fun _ => unit) t)
@@ -1261,13 +1278,27 @@ Module Compiler.
              destruct 1; subst; eauto. } }
       { intros; cleanup.
         repeat split; try (subst; tauto); [ ].
-        (* TODO *)
-        (* locals only_differs from a2 on nextn *)
-        (* a2 only_differs from a5 on retnames + S nextn...out *)
-        (* therefore locals only_differs from a5 on retnames + nextn...out *)
-
-        admit. (* TODO *) } }
-      (* { intros; cleanup; subst; tauto. } } *)
+        match goal with
+          H1 : (Interface.map.only_differ locals _ ?x) |- _ =>
+          eapply only_differ_trans in H1; [ | solve [eauto] ..]
+        end.
+        eapply only_differ_sameset; eauto.
+        cbv [PropSet.sameset PropSet.union PropSet.subset
+                             PropSet.elem_of used_varnames].
+        split; intros;
+          repeat match goal with
+                 | H : _ \/ _ |- _ => destruct H
+                 | _ => tauto
+                 | _ => progress cleanup
+                 end; [ | | ].
+        { right. eexists; split; eauto; lia. }
+        { right. eexists; split; eauto.
+          admit. (* TODO: nextn increases monotonically *) }
+        { match goal with
+          | H : varname_gen ?x = ?y |- _ \/ varname_set (varname_gen ?n) ?y =>
+            destruct (Nat.eq_dec x n); [ right | left ]
+          end; [ congruence | ].
+          right. eexists; split; eauto; lia. } } }
     { (* cons *)
 
       (* repeatedly do inversion until the cons is exposed *)
@@ -1360,8 +1391,6 @@ Module Compiler.
         repeat split; try congruence; [ ].
         apply Forall2_cons; [|eassumption].
         match goal with H : NoDup (_ :: _) |- _ => inversion H end.
-        subst. (* TODO: remove the subst *)
-
         intros; eapply expr_untouched; eauto; [ ].
         cbn. cbv [PropSet.union PropSet.of_list PropSet.elem_of].
         match goal with
@@ -1386,5 +1415,9 @@ End Compiler.
 
 Instead of passing retnames as an argument, maybe return them -- then have a
 reassign pass that can allow custom ones
+
+Need to prove that output is always < nextn; options include adding to
+postcondition or making the first return argument be, instead of the
+next nextn, the number of variables used, as a nat
 
 *)
