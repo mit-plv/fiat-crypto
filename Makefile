@@ -165,12 +165,16 @@ CURDIR_SAFE := $(CURDIR)
 endif
 
 EXTERNAL_DEPENDENCIES?=
+EXTERNAL_BEDROCK2?=
+EXTERNAL_REWRITER?=
+EXTERNAL_COQPRIME?=
 
 ifneq ($(EXTERNAL_DEPENDENCIES),1)
 
 REWRITER_FOLDER := rewriter
 REWRITER_SRC := $(REWRITER_FOLDER)/src
 COQPRIME_FOLDER := coqprime
+COQPRIME_SRC := $(COQPRIME_FOLDER)/src
 BEDROCK2_FOLDER := bedrock2/bedrock2
 BEDROCK2_SRC := $(BEDROCK2_FOLDER)/src
 BEDROCK2_NAME := bedrock2
@@ -180,14 +184,37 @@ COQUTIL_NAME := coqutil
 # If we want to work on windows, we should probably figure out how to
 # use `;` rather than `:` when both we are on Windows AND OCaml is NOT
 # compiled via cygwin
-COQPATH?=${CURDIR_SAFE}/$(COQPRIME_FOLDER)/src:${CURDIR_SAFE}/$(BEDROCK2_SRC):${CURDIR_SAFE}/$(COQUTIL_SRC):${CURDIR_SAFE}/$(REWRITER_SRC)
+COQPATH_TEMP:=
+
+ifneq ($(EXTERNAL_REWRITER),1)
+COQPATH_TEMP:=${CURDIR_SAFE}/$(REWRITER_SRC):$(COQPATH_TEMP)
+deps: rewriter
+$(VOFILES): | rewriter
+$(ALLDFILES): | rewriter
+cleanall:: clean-rewriter
+install: install-rewriter
+endif
+
+ifneq ($(EXTERNAL_BEDROCK2),1)
+COQPATH_TEMP:=${CURDIR_SAFE}/$(BEDROCK2_SRC):${CURDIR_SAFE}/$(COQUTIL_SRC):$(COQPATH_TEMP)
+deps: coqutil bedrock2
+$(VOFILES): | coqutil bedrock2
+$(ALLDFILES): | coqutil bedrock2
+cleanall:: clean-bedrock2 clean-coqutil
+install: install-bedrock2 install-coqutil
+endif
+
+ifneq ($(EXTERNAL_COQPRIME),1)
+COQPATH_TEMP:=${CURDIR_SAFE}/$(COQPRIME_SRC):$(COQPATH_TEMP)
+deps: coqprime
+$(VOFILES): | coqprime
+$(ALLDFILES): | coqprime
+cleanall:: clean-coqprime
+install: install-coqprime
+endif
+
+COQPATH?=$(patsubst %:,%,$(COQPATH_TEMP))
 export COQPATH
-
-deps: coqprime coqutil bedrock2 rewriter
-
-$(VOFILES): | coqprime coqutil bedrock2 rewriter
-
-$(ALLDFILES): | coqprime coqutil bedrock2 rewriter
 
 coqprime:
 	$(MAKE) --no-print-directory -C $(COQPRIME_FOLDER) src/Coqprime/PrimalityTest/Zp.vo
@@ -227,11 +254,6 @@ clean-bedrock2:
 
 install-bedrock2:
 	$(MAKE) --no-print-directory -C $(BEDROCK2_FOLDER) install
-
-cleanall:: clean-coqprime clean-bedrock2 clean-coqutil clean-rewriter
-
-install: install-coqprime install-bedrock2 install-coqutil install-rewriter
-
 endif
 
 # Note that the bit about OTHERFLAGS is to work around COQBUG(https://github.com/coq/coq/issues/10905)
