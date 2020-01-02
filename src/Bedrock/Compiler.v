@@ -112,40 +112,6 @@ Module Compiler.
       | type.arrow a b => fun _ => make_error b
       end.
 
-    (* TODO: remove if unused *)
-    (* Used to generate left-hand-side of assignments, given the next variable
-       name to use. Returns the number of variable names used, and the left-hand-side. *)
-    Fixpoint translate_lhs (t : base.type) (nextn : nat)
-      : nat * base_ltype t :=
-      match t with
-      (* prod is a special case -- assign to multiple variables *)
-      | base.type.prod a b =>
-        let step1 := translate_lhs a nextn in
-        let step2 := translate_lhs b (nextn + fst step1) in
-        ((fst step2 + fst step1)%nat, (snd step1, snd step2))
-      (* assignments to lists are not allowed; we only construct lists as
-         output, and don't assign them to variables, so return garbage *)
-      | base.type.list (base.type.type_base base.type.Z) =>
-       (0%nat, nil) 
-      (* everything else is single-variable assignment *)
-      | base.type.list _ | base.type.option _ | base.type.unit
-      | base.type.type_base _ => (1%nat, varname_gen nextn)
-      end.
-
-    (* TODO : remove if unused *)
-    Fixpoint assign' {t : base.type}
-      : base_ltype t -> base_rtype t -> Syntax.cmd.cmd :=
-      match t with
-      | base.type.prod a b =>
-        fun (lhs : base_ltype (a * b)) (rhs : base_rtype (a * b)) =>
-          Syntax.cmd.seq (assign' (fst lhs) (fst rhs))
-                         (assign' (snd lhs) (snd rhs))
-      | base.type.list (base.type.type_base base.type.Z) =>
-        fun _ _ => Syntax.cmd.skip (* not allowed to assign to a list; return garbage *)
-      | base.type.list _ | base.type.option _ | base.type.unit
-      | base.type.type_base _ => Syntax.cmd.set
-      end.
-
     (* These should only be used to fill holes in unreachable cases;
        nothing about them should need to be proven *)
     Fixpoint dummy_base_ltype (t : base.type) : base_ltype t :=
@@ -464,6 +430,8 @@ Module Compiler.
       | expr.App _ (type.base t) f x =>
         let v := translate_inner_expr true (expr.App f x) in
         assign nextn v
+      | expr.Ident type_listZ (ident.nil _) =>
+        (0%nat, [], Syntax.cmd.skip)
       | expr.Ident (type.base _) x =>
         let v := translate_inner_expr true (expr.Ident x) in
         assign nextn v
@@ -858,7 +826,11 @@ Module Compiler.
       let nvars := (fst (fst trx) + fst (fst trf))%nat in
       translate_expr (expr.LetIn (A:=type.base t1) (B:=type.base t2) x3 f3) nextn =
       (nvars, snd (fst trf), Syntax.cmd.seq (snd trx) (snd trf)).
-    Admitted.
+    Proof.
+      intros. subst nvars trf. cbn [translate_expr].
+      match goal with H : _ = Some _ |- _ => rewrite H end.
+      reflexivity.
+    Qed.
 
     (* shouldn't need any properties of call, since the compiler does not output
        bedrock2 function calls *)
@@ -1049,29 +1021,6 @@ Module Compiler.
         rewrite ?Interface.map.get_put_same; reflexivity.
     Qed.
 
-    (* TODO: remove if translate_lhs remains unused
-    Lemma translate_lhs_mono t :
-      forall nextn, (nextn <= fst (translate_lhs t nextn))%nat.
-    Proof.
-      induction t; cbn [translate_lhs]; break_match; cbn [fst]; eauto with lia; [ ].
-      intros; etransitivity; [ | apply IHt2]; eauto.
-    Qed.
-
-    Lemma disjoint_translate_lhs s t :
-      forall nextn,
-        (forall n : nat,
-            (nextn <= n)%nat ->
-            PropSet.disjoint (PropSet.singleton_set (varname_gen n)) s) ->
-        PropSet.disjoint (varname_set (snd (translate_lhs t nextn))) s.
-    Proof.
-      induction t; cbn [translate_lhs]; break_match; cbn [varname_set fst snd]; eauto; [ | ].
-      { intros nextn Hdisj. pose proof (translate_lhs_mono t1 nextn).
-        apply disjoint_union; split; eauto with lia. }
-      { cbv [PropSet.disjoint PropSet.of_list]; intros.
-        tauto. }
-    Qed.
-     *)
-    
     (* TODO: move *)
     Lemma only_differ_trans {key value} {map: Interface.map.map key value}
           m1 m2 m3 ks1 ks2 :
@@ -1124,7 +1073,22 @@ Module Compiler.
              end.
     Qed.
 
-    Lemma translate_expr_correct' {t'} (t:=type.base t')
+    (* if e is a valid_inner_expr, it won't hit any other cases *)
+    Lemma translate_expr_valid_inner {t}
+          (e1 : @API.expr (fun _ => unit) (type.base t))
+          (e2 : @API.expr API.interp_type (type.base t))
+          (e3 : @API.expr ltype (type.base t))
+          G nextn :
+      valid_inner_expr true e1 ->
+      wf3 G e1 e2 e3 ->
+      translate_expr e3 nextn =
+      assign nextn (translate_inner_expr true e3).
+    Proof.
+      inversion 1; hammer_wf; try reflexivity;
+        inversion 1; hammer_wf; reflexivity.
+    Qed.
+
+    Lemma translate_expr_correct {t'} (t:=type.base t')
           (* three exprs, representing the same Expr with different vars *)
           (e1 : @API.expr (fun _ => unit) t)
           (e2 : @API.expr API.interp_type t)
@@ -1151,6 +1115,8 @@ Module Compiler.
           (* contexts are equivalent; for every variable in the context list G,
              the fiat-crypto and bedrock2 results match *)
           context_list_equiv G locals ->
+          (* TODO: does this need to be a separation-logic condition? *)
+          R mem ->
           (* executing translation output is equivalent to interpreting e *)
           WeakestPrecondition.cmd
             call (snd out) tr mem locals
@@ -1163,7 +1129,7 @@ Module Compiler.
     Proof.
       revert e2 e3 G.
       subst t.
-      induction e1_valid; inversion 1; cbv zeta in *; intros.
+      induction e1_valid; try (inversion 1; [ ]); cbv zeta in *; intros.
       all:hammer_wf. (* get rid of the wf nonsense *)
 
       { (* carry let-in *)
@@ -1281,7 +1247,7 @@ Module Compiler.
         eapply translate_inner_expr_correct; eassumption.
 
       (* use inductive hypothesis *)
-      cbn [translate_lhs] in *; cleanup.
+      cleanup.
       eapply WeakestPreconditionProperties.Proper_cmd;
         [ eapply Proper_call | repeat intro | ].
       2: { eapply IHe1_valid with (R:=R);
@@ -1364,7 +1330,8 @@ Module Compiler.
           cleanup.
           repeat split; try congruence; [ ].
           apply Forall2_cons; [|eassumption].
-          intros; eapply expr_untouched; eauto; [ ].
+          let mem := fresh "mem" in
+          intro mem; eapply expr_untouched with (mem2:=mem); eauto; [ ].
           cbv [used_varnames PropSet.of_list PropSet.elem_of].
           rewrite in_map_iff. intro; cleanup.
           match goal with H : varname_gen ?x = varname_gen _ |- _ =>
@@ -1373,8 +1340,43 @@ Module Compiler.
                           apply in_seq in H end.
           lia. } } }
     { (* nil *)
-      admit. (* TODO *)
-    }
+      (* simplify one translation step *)
+      cbn [translate_expr assign fst snd]. cleanup.
+
+      (* simplify fiat-crypto step *)
+      intros; cbn [expr.interp type.app_curried Compilers.ident_interp] in *.
+
+      (* simplify bedrock2 step *)
+      cbn [WeakestPrecondition.cmd WeakestPrecondition.cmd_body].
+
+      repeat split; eauto; [ | ].
+      { cbv [Interface.map.only_differ]. right; reflexivity. }
+      { apply sep_emp_l.
+        cbn [equivalent rtype_of_ltype dummy_base_ltype map].
+        eauto. } }
+    { (* inner expr *)
+      erewrite translate_expr_valid_inner by eauto.
+
+      (* simplify bedrock2 cmd *)
+      cbn [WeakestPrecondition.cmd WeakestPrecondition.cmd_body].
+      eapply WeakestPreconditionProperties.Proper_cmd;
+        [ eapply Proper_call | repeat intro | ].
+      (* N.B. putting below line in the [ | | ] above makes eassumption fail *)
+      2 : eapply assign_correct; try eassumption; [ ];
+        eapply translate_inner_expr_correct; eassumption.
+
+      cleanup. repeat split; eauto using only_differ_sameset. }
     Qed.
   End Proofs.
 End Compiler.
+
+(* TODO
+
+- fix CompilerTest.v
+- clean up and automate translate_expr_correct
+- define valid_carry_expr
+- prove admits (big ones: translate_carries_correct, translate_inner_expr_correct, assign_correct)
+- add in more cases for valid_inner_expr
+- prove translate_func
+- move lemmas to other files, general cleanup
+*)
