@@ -1096,12 +1096,33 @@ Module Compiler.
       { intro Hiff; split; apply Hiff; eauto. }
     Qed.
 
+    (* TODO : move *)
     Lemma only_differ_step nvars nvars' nextn l1 l2 l3 :
       Interface.map.only_differ l1 (used_varnames nextn nvars) l2 ->
       Interface.map.only_differ l2 (used_varnames (nextn + nvars) nvars') l3 ->
       Interface.map.only_differ l1 (used_varnames nextn (nvars + nvars')) l3.
     Proof.
-    Admitted.
+      cbv [Interface.map.only_differ used_varnames PropSet.of_list
+                                     PropSet.elem_of].
+      let H1 := fresh in
+      let H2 := fresh in
+      let x := fresh "x" in
+      intros H1 H2 x; specialize (H1 x); specialize (H2 x).
+      repeat match goal with
+             | _ => progress cleanup
+             | _ => progress subst
+             | H : _ \/ _ |- _ => destruct H
+             | |- context [In _ (map _ _)] => rewrite in_map_iff
+             | H : In _ (map _ _) |- _ => apply in_map_iff in H
+             | H : In _ (seq _ _) |- _ => apply in_seq in H
+             | H : varname_gen _ = varname_gen _ |- _ =>
+               apply varname_gen_unique in H
+             | _ => solve [right; congruence]
+             | _ => solve [left; eexists;
+                           rewrite in_seq, varname_gen_unique; split;
+                           eauto with lia ]
+             end.
+    Qed.
 
     Lemma translate_expr_correct' {t'} (t:=type.base t')
           (* three exprs, representing the same Expr with different vars *)
