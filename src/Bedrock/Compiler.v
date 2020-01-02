@@ -442,7 +442,7 @@ Module Compiler.
       end.
 
     (* TODO: should we take return variable names as an argument here
-       and rename the return values? *)
+       and rename the return values, instead of returning their names? *)
     Fixpoint translate_func {t} (e : @API.expr ltype t) (nextn : nat)
       : type.for_each_lhs_of_arrow ltype t -> (* argument names *)
         (nat (* number of variables used *)
@@ -1367,6 +1367,108 @@ Module Compiler.
 
       cleanup. repeat split; eauto using only_differ_sameset. }
     Qed.
+
+    Fixpoint arg_varnames {t}
+      : type.for_each_lhs_of_arrow ltype t -> PropSet.set Syntax.varname :=
+      match t with
+      | type.base a => fun _ => PropSet.empty_set
+      | type.arrow (type.base a) b =>
+        fun args => PropSet.union (varname_set (fst args)) (arg_varnames (snd args))
+      | type.arrow (type.arrow a b) c => fun _ => PropSet.empty_set (* not allowed *)
+      end.
+
+    Fixpoint args_equivalent {t}
+             (locals : Interface.map.rep (map:=Semantics.locals))
+      : type.for_each_lhs_of_arrow API.interp_type t ->
+        type.for_each_lhs_of_arrow ltype t -> Prop :=
+      match t with
+      | type.base a => fun _ _ => True
+      | type.arrow (type.base a) b =>
+        fun args2 args3 =>
+          equivalent locals (fst args2) (rtype_of_ltype (fst args3)) /\
+          args_equivalent locals (snd args2) (snd args3)
+      | type.arrow (type.arrow a b) c => fun _ _ => False (* not allowed *)
+      end.
+
+    (* if an expression is a valid_expr, translate_func calls translate_expr *)
+    Lemma translate_func_valid_expr {t} 
+          (e1 : @API.expr (fun _ => unit) (type.base t))
+          (e2 : @API.expr API.interp_type (type.base t))
+          (e3 : @API.expr ltype (type.base t))
+          (* e1 is a valid_expr *)
+          (e1_valid : valid_expr e1)
+          (* context list *)
+          (G : list _) nextn args3 :
+      (* exprs are all related *)
+      wf3 G e1 e2 e3 ->
+      translate_func e3 nextn args3 = translate_expr e3 nextn.
+    Proof.
+      inversion e1_valid; inversion 1; hammer_wf; reflexivity.
+    Qed.
+
+    Lemma translate_func_correct {t}
+          (* three exprs, representing the same Expr with different vars *)
+          (e1 : @API.expr (fun _ => unit) t)
+          (e2 : @API.expr API.interp_type t)
+          (e3 : @API.expr ltype t)
+          (* e1 is valid input to translate_func *)
+          (e1_valid : valid_func e1)
+          (* context list *)
+          (G : list _) :
+      (* exprs are all related *)
+      wf3 G e1 e2 e3 ->
+      forall (locals : Interface.map.rep)
+             (nextn : nat)
+             (args2 : type.for_each_lhs_of_arrow API.interp_type t)
+             (args3 : type.for_each_lhs_of_arrow ltype t),
+        (* ret := fiat-crypto interpretation of e2 applied to args2 *)
+        let ret :=
+            type.app_curried (API.interp e2) args2 in
+        (* out := translation output for e3 applied to args3 *)
+        let out := translate_func e3 nextn args3 in
+        (* G doesn't contain variables we could accidentally overwrite *)
+        (forall n,
+            (nextn <= n)%nat ->
+            Forall (varname_not_in_context (varname_gen n)) G) ->
+        (* arguments don't contain variables we could accidentally overwrite *)
+        (forall n,
+            (nextn <= n)%nat ->
+            ~ arg_varnames args3 (varname_gen n)) ->
+        (* args2 and args3 are equivalent in the given context *)
+        args_equivalent locals args2 args3 ->
+        forall (tr : Semantics.trace)
+               (mem : Interface.map.rep)
+               (R : Interface.map.rep -> Prop),
+          (* contexts are equivalent; for every variable in the context list G,
+             the fiat-crypto and bedrock2 results match *)
+          context_list_equiv G locals ->
+          (* TODO: some kind of precondition for args *)
+          R mem ->
+          (* executing translation output is equivalent to interpreting e *)
+          WeakestPrecondition.cmd
+            call (snd out) tr mem locals
+            (fun tr' mem' locals' =>
+               tr = tr' /\
+               mem = mem' /\
+               Interface.map.only_differ
+                 locals (used_varnames nextn (fst (fst out))) locals' /\
+               sep (emp (equivalent locals' ret (rtype_of_ltype (snd (fst out))))) R mem').
+    Proof.
+      cbv zeta. revert G.
+      induction e1_valid; cbn [translate_func]; try (inversion 1; [ ]); hammer_wf; intros.
+      { cbn [arg_varnames args_equivalent] in *.
+        eapply IHe1_valid; eauto; [ | | | ].
+        all: intros;
+          repeat match goal with
+                 | H : forall n, (_ <= n)%nat -> _ |- context [varname_gen ?x] =>
+                   specialize (H x ltac:(lia)) end.
+        all:cbv [PropSet.union PropSet.elem_of] in *.
+        all:repeat match goal with H : ~ (_ \/ _) |- _ =>
+                                   apply Decidable.not_or in H1 end; cleanup.
+        all: try apply Forall_cons; eauto. }
+      { erewrite translate_func_valid_expr by eauto.
+        eapply translate_expr_correct; eauto. }
+    Qed.
   End Proofs.
 End Compiler.
 
@@ -1377,6 +1479,5 @@ End Compiler.
 - define valid_carry_expr
 - prove admits (big ones: translate_carries_correct, translate_inner_expr_correct, assign_correct)
 - add in more cases for valid_inner_expr
-- prove translate_func
 - move lemmas to other files, general cleanup
 *)
