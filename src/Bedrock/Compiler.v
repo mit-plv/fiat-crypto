@@ -112,36 +112,73 @@ Module Compiler.
       | type.arrow a b => fun _ => make_error b
       end.
 
+    (* TODO: remove if unused *)
     (* Used to generate left-hand-side of assignments, given the next variable
-       name to use. Returns the new next name to use, and the left-hand-side. *)
+       name to use. Returns the number of variable names used, and the left-hand-side. *)
     Fixpoint translate_lhs (t : base.type) (nextn : nat)
       : nat * base_ltype t :=
       match t with
       (* prod is a special case -- assign to multiple variables *)
       | base.type.prod a b =>
         let step1 := translate_lhs a nextn in
-        let step2 := translate_lhs b (fst step1) in
-        (fst step2, (snd step1, snd step2))
+        let step2 := translate_lhs b (nextn + fst step1) in
+        ((fst step2 + fst step1)%nat, (snd step1, snd step2))
       (* assignments to lists are not allowed; we only construct lists as
          output, and don't assign them to variables, so return garbage *)
       | base.type.list (base.type.type_base base.type.Z) =>
-       (nextn, nil) 
+       (0%nat, nil) 
       (* everything else is single-variable assignment *)
       | base.type.list _ | base.type.option _ | base.type.unit
-      | base.type.type_base _ => (S nextn, varname_gen nextn)
+      | base.type.type_base _ => (1%nat, varname_gen nextn)
       end.
 
-    Fixpoint assign {t : base.type}
+    (* TODO : remove if unused *)
+    Fixpoint assign' {t : base.type}
       : base_ltype t -> base_rtype t -> Syntax.cmd.cmd :=
       match t with
       | base.type.prod a b =>
         fun (lhs : base_ltype (a * b)) (rhs : base_rtype (a * b)) =>
-          Syntax.cmd.seq (assign (fst lhs) (fst rhs))
-                         (assign (snd lhs) (snd rhs))
+          Syntax.cmd.seq (assign' (fst lhs) (fst rhs))
+                         (assign' (snd lhs) (snd rhs))
       | base.type.list (base.type.type_base base.type.Z) =>
         fun _ _ => Syntax.cmd.skip (* not allowed to assign to a list; return garbage *)
       | base.type.list _ | base.type.option _ | base.type.unit
       | base.type.type_base _ => Syntax.cmd.set
+      end.
+
+    (* These should only be used to fill holes in unreachable cases;
+       nothing about them should need to be proven *)
+    Fixpoint dummy_base_ltype (t : base.type) : base_ltype t :=
+      match t with
+      | base.type.prod a b => (dummy_base_ltype a, dummy_base_ltype b)
+      | base.type.list (base.type.type_base base.type.Z) => nil
+      | _ => varname_gen 0%nat
+      end.
+    Definition dummy_ltype (t : API.type) : ltype t :=
+      match t with
+      | type.base a => dummy_base_ltype a
+      | type.arrow a b => tt
+      end.
+
+    Fixpoint assign {t : base.type} (nextn : nat)
+      : base_rtype t -> (nat * base_ltype t * Syntax.cmd.cmd) :=
+      match t with
+      | base.type.prod a b =>
+        fun rhs =>
+          let assign1 := assign nextn (fst rhs) in
+          let assign2 := assign (nextn + fst (fst assign1)) (snd rhs) in
+          ((fst (fst assign1) + fst (fst assign2))%nat,
+           (snd (fst assign1), snd (fst assign2)),
+           Syntax.cmd.seq (snd assign1) (snd assign2))
+      | base.type.list (base.type.type_base base.type.Z) =>
+        fun _ =>
+          (* not allowed to assign to a list; return garbage *)
+          (0%nat, dummy_base_ltype _, Syntax.cmd.skip)
+      | base.type.list _ | base.type.option _ | base.type.unit
+      | base.type.type_base _ =>
+        fun rhs =>
+          let v := varname_gen nextn in
+          (1%nat, v, Syntax.cmd.set v rhs)
       end.
 
     Definition max_range : zrange := {| lower := 0; upper := 2 ^ Semantics.width |}.
@@ -389,82 +426,76 @@ Module Compiler.
                                           (expr.Ident (ident.Literal (t:=base.type.Z) s)))
                                        c) x) y)).
 
-    Definition translate_carries {t} (e : @API.expr ltype t)
-      : ltype t -> option Syntax.cmd.cmd :=
+    Definition translate_carries {t} (e : @API.expr ltype t) (nextn : nat)
+      : option (nat * ltype t * Syntax.cmd.cmd) :=
+      let sum := varname_gen nextn in
+      let carry := varname_gen (S nextn) in
       match e with
       | AddGetCarry r1 r2 s x y =>
-        fun ret => Some (translate_add_get_carry (fst ret) (snd ret) r1 r2 s x y)
+        Some (2%nat, (sum,carry), translate_add_get_carry sum carry r1 r2 s x y)
       | AddWithGetCarry r1 r2 s c x y =>
-        fun ret =>
-          Some (translate_add_with_get_carry (fst ret) (snd ret) r1 r2 s c x y)
-      | _ => fun _ => None
+        Some (2%nat, (sum,carry), translate_add_with_get_carry sum carry r1 r2 s c x y)
+      | _ => None
       end.
 
     Fixpoint translate_expr {t} (e : @API.expr ltype (type.base t)) (nextn : nat)
-      : base_ltype t (* return value names *)
-        -> nat * Syntax.cmd.cmd :=
-      match e in expr.expr t0 return ltype t0 -> _ with
+      : nat (* number of variable names used *)
+        * base_ltype t (* variables in which return values are stored *)
+        * Syntax.cmd.cmd (* actual program *) :=
+      match e in expr.expr t0 return (nat * ltype t0 * Syntax.cmd.cmd) with
       | expr.LetIn (type.base t1) (type.base t2) x f =>
-        fun retnames  =>
-          let gr := translate_lhs t1 nextn in
-          let cmdx :=
-              match translate_carries x (snd gr) with
-              | Some cmdx => cmdx
-              | None => assign (snd gr) (translate_inner_expr true x)
-              end in
-          let recf := translate_expr (f (snd gr)) (fst gr) retnames in
-          (fst recf, Syntax.cmd.seq cmdx (snd recf))
+        let trx :=
+            match translate_carries x nextn with
+            | Some trx => trx
+            | None => assign nextn (translate_inner_expr true x)
+            end in
+        let trf := translate_expr (f (snd (fst trx))) (nextn + fst (fst trx)) in
+        ((fst (fst trx) + fst (fst trf))%nat,
+         snd (fst trf),
+         Syntax.cmd.seq (snd trx) (snd trf))
       | expr.App
           type_listZ type_listZ
           (expr.App type_Z _ (expr.Ident _ (ident.cons _)) x) l =>
-        fun (retnames : list Syntax.varname) =>
-          match retnames with
-          | nil => (nextn, Syntax.cmd.skip) (* shouldn't happen *)
-          | n :: retnames' =>
-            let x := translate_inner_expr true x in
-            let recl := translate_expr l nextn retnames' in
-            (fst recl, Syntax.cmd.seq (assign (t:=base.type.type_base base.type.Z) n x) (snd recl))
-          end
-      | expr.App _ (type.base _) f x =>
-        fun retnames =>
-          let v := translate_inner_expr true (expr.App f x) in
-          (nextn, assign retnames v)
+        let trx := assign nextn (translate_inner_expr true x) in
+        let trl := translate_expr l (S nextn) in
+        ((fst (fst trx) + fst (fst trl))%nat,
+         snd (fst trx) :: snd (fst trl),
+         Syntax.cmd.seq (snd trx) (snd trl))
+      | expr.App _ (type.base t) f x =>
+        let v := translate_inner_expr true (expr.App f x) in
+        assign nextn v
       | expr.Ident (type.base _) x =>
-        fun retnames =>
-          let v := translate_inner_expr true (expr.Ident x) in
-          (nextn, assign retnames v)
+        let v := translate_inner_expr true (expr.Ident x) in
+        assign nextn v
       | expr.Var (type.base _) x =>
-        fun retnames =>
-          let v := translate_inner_expr true (expr.Var x) in
-          (nextn, assign retnames v)
-      | _ => fun _ => (nextn, Syntax.cmd.skip)
+        let v := translate_inner_expr true (expr.Var x) in
+        assign nextn v
+      | _ => (0%nat, dummy_ltype _, Syntax.cmd.skip)
       end.
 
+    (* TODO: should we take return variable names as an argument here
+       and rename the return values? *)
     Fixpoint translate_func {t} (e : @API.expr ltype t) (nextn : nat)
       : type.for_each_lhs_of_arrow ltype t -> (* argument names *)
-        base_ltype (type.final_codomain t) -> (* return value names *)
-        Syntax.cmd.cmd :=
+        (nat (* number of variables used *)
+         * base_ltype (type.final_codomain t) (* return value names *)
+         * Syntax.cmd.cmd) :=
       match e with
       | expr.Abs (type.base s) d f =>
         (* if we have an abs, peel off one argument and recurse *)
-        fun (argnames : base_ltype s * type.for_each_lhs_of_arrow _ d)
-            (retnames : base_ltype (type.final_codomain d)) =>
-          translate_func (f (fst argnames)) nextn (snd argnames) retnames
+        fun (argnames : base_ltype s * type.for_each_lhs_of_arrow _ d) =>
+          translate_func (f (fst argnames)) nextn (snd argnames)
       (* if any expression that outputs a base type, call translate_expr *)
       | expr.Ident (type.base b) idc =>
-        fun (_:unit) retnames =>
-          snd (translate_expr (expr.Ident idc) nextn retnames)
+        fun (_:unit) => translate_expr (expr.Ident idc) nextn
       | expr.Var (type.base b) v =>
-        fun (_:unit) retnames =>
-          snd (translate_expr (expr.Var v) nextn retnames)
+        fun (_:unit) => translate_expr (expr.Var v) nextn
       | expr.App _ (type.base b) f x =>
-        fun (_:unit) retnames =>
-          snd (translate_expr (expr.App f x) nextn retnames)
+        fun (_:unit) => translate_expr (expr.App f x) nextn
       | expr.LetIn _ (type.base b) x f =>
-        fun (_:unit) retnames =>
-          snd (translate_expr (expr.LetIn x f) nextn retnames)
+        fun (_:unit) => translate_expr (expr.LetIn x f) nextn
       (* if the expression does not have a base type and is not an Abs, return garbage *)
-      | _ => fun _ _ => Syntax.cmd.skip
+      | _ => fun _ => (0%nat, dummy_base_ltype _, Syntax.cmd.skip)
       end.
   End Compiler.
 
@@ -800,7 +831,7 @@ Module Compiler.
       wf3 (var2:=API.interp_type) G x1 x2 x3 ->
       valid_carry_expr x1 ->
       exists cmdx,
-        translate_carries (t:=type.base t) x3 (snd (translate_lhs t nextn)) = Some cmdx.
+        translate_carries (t:=type.base t) x3 nextn = Some cmdx.
     Admitted.
 
     (* valid inner expressions can't possibly be valid carry expressions *)
@@ -808,27 +839,26 @@ Module Compiler.
           G x1 x2 x3 nextn :
       wf3 (var2:=API.interp_type) G x1 x2 x3 ->
       valid_inner_expr true x1 ->
-      translate_carries (t:=type.base t) x3 (snd (translate_lhs t nextn)) = None.
+      translate_carries (t:=type.base t) x3 nextn = None.
     Admitted.
 
     (* N.B. technically, x2 and f2 are not needed in the following lemmas, it just makes things easier *)
-
     Lemma translate_expr_carry {t1 t2 : base.type}
-          G x1 x2 x3 f1 f2 f3 nextn retnames cmdx:
+          G x1 x2 x3 f1 f2 f3 nextn
+          (trx : nat * base_ltype t1 * Syntax.cmd.cmd) :
       wf3 G x1 x2 x3 ->
       (forall v1 v2 v3,
-          wf3 (existT (fun t => (unit * API.interp_type t * ltype t)%type) (type.base t1) (v1, v2, v3) :: G)
+          wf3
+            (existT (fun t => (unit * API.interp_type t * ltype t)%type)
+                    (type.base t1) (v1, v2, v3) :: G)
               (f1 v1) (f2 v2) (f3 v3)) ->
-      (* valid_carry_expr x1 -> valid_expr (f1 tt) -> *)
-      let gr := translate_lhs t1 nextn in
-      let recf := translate_expr (f3 (snd gr)) (fst gr) retnames in 
-      translate_carries (t:=type.base t1) x3 (snd gr) = Some cmdx ->
-      translate_expr (expr.LetIn (A:=type.base t1) (B:=type.base t2) x3 f3) nextn retnames =
-      (fst recf, Syntax.cmd.seq cmdx (snd recf)).
-    Proof.
-      cbv zeta; intros. cbn [translate_expr].
-      break_innermost_match; congruence.
-    Qed.
+      valid_expr (f1 tt) ->
+      translate_carries (t:=type.base t1) x3 nextn = Some trx ->
+      let trf := translate_expr (f3 (snd (fst trx))) (nextn + fst (fst trx)) in
+      let nvars := (fst (fst trx) + fst (fst trf))%nat in
+      translate_expr (expr.LetIn (A:=type.base t1) (B:=type.base t2) x3 f3) nextn =
+      (nvars, snd (fst trf), Syntax.cmd.seq (snd trx) (snd trf)).
+    Admitted.
 
     (* shouldn't need any properties of call, since the compiler does not output
        bedrock2 function calls *)
@@ -858,6 +888,19 @@ Module Compiler.
                                       (list Interface.word.rep) Basics.impl)))
                              Basics.impl)))) call call).
 
+    Definition used_varnames nextn nvars : PropSet.set Syntax.varname :=
+      PropSet.of_list (map varname_gen (seq nextn nvars)).
+
+    Lemma used_varnames_iff nextn nvars v :
+      used_varnames nextn nvars v <->
+      (exists n,
+          v = varname_gen n /\ nextn <= n < nextn + nvars)%nat.
+    Admitted.
+
+    Lemma used_varnames_le nextn nvars n :
+      (nextn + nvars <= n)%nat ->
+      ~ used_varnames nextn nvars (varname_gen n).
+    Admitted.
 
     Lemma translate_carries_correct {t}
           (* three exprs, representing the same Expr with different vars *)
@@ -866,48 +909,61 @@ Module Compiler.
           (e3 : @API.expr ltype (type.base t)) :
       (* e1 is a valid input to translate_carries_correct *)
       valid_carry_expr e1 ->
-      forall G cmdx nextn,
+      forall G nextn
+             (trx : nat * base_ltype t * Syntax.cmd.cmd),
         wf3 G e1 e2 e3 ->
-        let gr := translate_lhs t nextn in
-        translate_carries e3 (snd gr) = Some cmdx ->
+        translate_carries e3 nextn = Some trx ->
         forall (tr : Semantics.trace)
                (mem locals : Interface.map.rep)
                (R : Interface.map.rep -> Prop),
           context_list_equiv G locals ->
           WeakestPrecondition.cmd
-            call cmdx tr mem locals
+            call (snd trx) tr mem locals
             (fun tr' mem' locals' =>
                tr = tr'
                (* translate_carries never stores anything -- mem unchanged *)
                /\ mem = mem'
+               (* return values match the number of variables used *)
+               /\ PropSet.sameset (varname_set (snd (fst trx)))
+                                  (used_varnames nextn (fst (fst trx)))
                (* new locals only differ in the values of LHS variables *)
-               /\ Interface.map.only_differ locals (varname_set (snd gr)) locals'
+               /\ Interface.map.only_differ locals (varname_set (snd (fst trx))) locals'
                (* no variables disappear *)
                /\ Interface.map.sub_domain locals locals'
                (* information stored in LHS variables is equivalent to interp *)
-               /\ sep (emp (equivalent locals' (API.interp e2) (rtype_of_ltype (snd gr))))
+               /\ sep
+                    (emp (equivalent locals' (API.interp e2)
+                                     (rtype_of_ltype (snd (fst trx)))))
                       R mem').
     Admitted.
 
+    (* TODO: it's always the case that
+         varname_set (snd (fst a)) = { nextn,  ..., nextn + fst (fst a) - 1}
+       consider which representation is easier to work with *)
     Lemma assign_correct {t} :
       forall (x : base.interp t)
-             (lhs : base_ltype t) (rhs : base_rtype t)
+             (rhs : base_rtype t)
+             (nextn : nat)
              (tr : Semantics.trace)
              (mem locals : Interface.map.rep)
              (R : Interface.map.rep -> Prop),
         (* rhs == x *)
         equivalent locals x rhs ->
+        let a := assign nextn rhs in
         WeakestPrecondition.cmd
-          call (assign lhs rhs)
+          call (snd a)
           tr mem locals
           (fun tr' mem' locals' =>
              tr = tr'
              (* assign never stores anything -- mem unchanged *)
              /\ mem = mem'
+             (* return values match the number of variables used *)
+             /\ PropSet.sameset (varname_set (snd (fst a)))
+                                (used_varnames nextn (fst (fst a)))
              (* new locals only differ in the values of LHS variables *)
-             /\ Interface.map.only_differ locals (varname_set lhs) locals'
+             /\ Interface.map.only_differ locals (varname_set (snd (fst a))) locals'
              (* evaluating lhs == x *)
-             /\ sep (emp (equivalent locals' x (rtype_of_ltype lhs))) R mem').
+             /\ sep (emp (equivalent locals' x (rtype_of_ltype (snd (fst a))))) R mem').
     Admitted.
 
     Lemma translate_inner_expr_correct {t}
@@ -993,6 +1049,7 @@ Module Compiler.
         rewrite ?Interface.map.get_put_same; reflexivity.
     Qed.
 
+    (* TODO: remove if translate_lhs remains unused
     Lemma translate_lhs_mono t :
       forall nextn, (nextn <= fst (translate_lhs t nextn))%nat.
     Proof.
@@ -1013,14 +1070,7 @@ Module Compiler.
       { cbv [PropSet.disjoint PropSet.of_list]; intros.
         tauto. }
     Qed.
-
-    Definition return_variables_valid {t} : base_ltype t -> base.interp t -> Prop :=
-      match t with
-      | base.type.list (base.type.type_base base.type.Z) =>
-        fun retnames ret => length retnames = length ret /\ NoDup retnames
-      | _ => fun _ _ => True
-      end.
-
+     *)
     
     (* TODO: move *)
     Lemma only_differ_trans {key value} {map: Interface.map.map key value}
@@ -1038,17 +1088,21 @@ Module Compiler.
       Interface.map.only_differ m2 ks2 m1.
     Admitted.
 
+    Lemma sameset_iff {E} (s1 s2 : PropSet.set E) :
+      PropSet.sameset s1 s2 <-> (forall e, s1 e <-> s2 e).
+    Proof.
+      cbv [PropSet.sameset PropSet.subset PropSet.elem_of]. split.
+      { destruct 1; split; eauto. }
+      { intro Hiff; split; apply Hiff; eauto. }
+    Qed.
 
-    Definition used_varnames nextn final_nextn : PropSet.set Syntax.varname :=
-      fun v => exists n, varname_gen n = v /\ (nextn <= n < final_nextn)%nat.
-
-    Lemma used_varnames_step nextn final_nextn :
-      (nextn < final_nextn)%nat ->
-      PropSet.sameset
-        (used_varnames nextn final_nextn)
-        (PropSet.union (PropSet.singleton_set (varname_gen nextn))
-                      (used_varnames (S nextn) final_nextn)).
+    Lemma only_differ_step nvars nvars' nextn l1 l2 l3 :
+      Interface.map.only_differ l1 (used_varnames nextn nvars) l2 ->
+      Interface.map.only_differ l2 (used_varnames (nextn + nvars) nvars') l3 ->
+      Interface.map.only_differ l1 (used_varnames nextn (nvars + nvars')) l3.
+    Proof.
     Admitted.
+
     Lemma translate_expr_correct' {t'} (t:=type.base t')
           (* three exprs, representing the same Expr with different vars *)
           (e1 : @API.expr (fun _ => unit) t)
@@ -1061,27 +1115,15 @@ Module Compiler.
       (* exprs are all related *)
       wf3 G e1 e2 e3 ->
       forall (locals : Interface.map.rep)
-             (retnames : base_ltype t')
              (nextn : nat),
         (* ret := fiat-crypto interpretation of e2 *)
         let ret : base.interp t' := API.interp e2 in
         (* out := translation output for e3 *)
-        let out := translate_expr e3 nextn retnames in
-        (* retnames don't contain variables we could accidentally overwrite *)
-        (forall v n,
-            varname_set retnames v ->
-            (nextn <= n)%nat ->
-            varname_gen n <> v) ->
+        let out := translate_expr e3 nextn in
         (* G doesn't contain variables we could accidentally overwrite *)
         (forall n,
             (nextn <= n)%nat ->
             Forall (varname_not_in_context (varname_gen n)) G) ->
-        (* G doesn't contain variables that retnames will overwrite *)
-        (forall v,
-            varname_set retnames v ->
-            Forall (varname_not_in_context v) G) ->
-        (* if return value is a list, retnames contains enough variables *)
-        return_variables_valid retnames ret -> 
         forall (tr : Semantics.trace)
                (mem : Interface.map.rep)
                (R : Interface.map.rep -> Prop),
@@ -1094,16 +1136,9 @@ Module Compiler.
             (fun tr' mem' locals' =>
                tr = tr' /\
                mem = mem' /\
-               (* locals and locals' only differ on variables that are in the
-               return-variable-names list, or in the range between nextn and the
-               first output value (which represents the next fresh variable name
-               after the function) *)
                Interface.map.only_differ
-                 locals
-                 (PropSet.union (varname_set retnames)
-                                (used_varnames nextn (fst out)))
-                 locals' /\
-          sep (emp (equivalent locals' ret (rtype_of_ltype retnames))) R mem').
+                 locals (used_varnames nextn (fst (fst out))) locals' /\
+          sep (emp (equivalent locals' ret (rtype_of_ltype (snd (fst out))))) R mem').
     Proof.
       revert e2 e3 G.
       subst t.
@@ -1133,7 +1168,7 @@ Module Compiler.
         2 : eapply translate_carries_correct with (R0:=R); try eassumption.
 
         (* use inductive hypothesis *)
-        cbn [translate_lhs] in *; cleanup.
+        cleanup.
         eapply WeakestPreconditionProperties.Proper_cmd;
           [ eapply Proper_call | repeat intro | ].
 
@@ -1146,38 +1181,26 @@ Module Compiler.
              { (* proof that new context doesn't contain variables that could be
                   overwritten in the future *)
                intros; apply Forall_cons; eauto with lia; [ ].
-               cbn [varname_not_in_context varname_set fst snd].
-               cbv [PropSet.union PropSet.singleton_set PropSet.elem_of].
-               setoid_rewrite varname_gen_unique.
-               lia. }
-             { (* proof that new context doesn't contain variables that retnames
-                  will overwrite *)
-               intros; apply Forall_cons; eauto with lia; [ ].
-               cbn [varname_not_in_context varname_set fst snd].
-               cbv [PropSet.union PropSet.singleton_set PropSet.elem_of].
-               match goal with
-                 |- ~ (?A \/ ?B) =>
-                 assert (~ A /\ ~ B); [split|tauto]
-               end; eauto. }
+               cbn [varname_not_in_context].
+               match goal with H : PropSet.sameset _ _ |- _ =>
+                               rewrite sameset_iff in H; rewrite H end.
+               eauto using used_varnames_le. }
              { (* proof that context_list_equiv continues to hold *)
                cbv [context_list_equiv] in *; apply Forall_cons; eauto; [ ].
-               eapply equivalent_not_in_context_forall; eauto.
-               cbv [varname_set fst snd PropSet.union PropSet.singleton_set PropSet.elem_of].
-               destruct 1; subst; eauto. } }
-        { admit. (* TODO *) } }
-        (* { intros; cleanup; subst; tauto. } } *)
+               eapply equivalent_not_in_context_forall; eauto. intro.
+               match goal with H : PropSet.sameset _ _ |- _ =>
+                               rewrite sameset_iff in H; rewrite H end.
+               rewrite used_varnames_iff. intros; cleanup.
+               subst. eauto. } }
+        { intros; cleanup; subst; repeat split; try tauto; [ ].
+          (* remaining case : only_differ *)
+          eapply only_differ_step; try eassumption; [ ].
+          eapply only_differ_sameset; eauto. } } 
     { (* let-in (product of base types) *)
       (* simplify one translation step *)
       cbn [translate_expr].
       erewrite translate_carries_None by eassumption.
       cleanup.
-
-      (* assert that translate_lhs is well-behaved *)
-      match goal with
-        |- context [translate_lhs ?t ?n] =>
-        pose proof (translate_lhs_mono t n)
-      end.
-      
 
       (* simplify fiat-crypto step *)
       intros; cbn [expr.interp type.app_curried] in *.
@@ -1192,7 +1215,7 @@ Module Compiler.
         eapply translate_inner_expr_correct; eassumption.
 
       (* use inductive hypothesis *)
-      cbn [translate_lhs] in *; cleanup.
+      cleanup.
       eapply WeakestPreconditionProperties.Proper_cmd;
         [ eapply Proper_call | repeat intro | ].
       2: { eapply IHe1_valid with (R:=R);
@@ -1203,38 +1226,26 @@ Module Compiler.
              { (* proof that new context doesn't contain variables that could be
                   overwritten in the future *)
                intros; apply Forall_cons; eauto with lia; [ ].
-               cbn [varname_not_in_context varname_set fst snd].
-               cbv [PropSet.union PropSet.singleton_set PropSet.elem_of].
-               setoid_rewrite varname_gen_unique.
-               lia. }
-             { (* proof that new context doesn't contain variables that retnames
-                  will overwrite *)
-               intros; apply Forall_cons; eauto with lia; [ ].
-               cbn [varname_not_in_context varname_set fst snd].
-               cbv [PropSet.union PropSet.singleton_set PropSet.elem_of].
-               match goal with
-                 |- ~ (?A \/ ?B) =>
-                 assert (~ A /\ ~ B); [split|tauto]
-               end; eauto. }
-           { (* proof that context_list_equiv continues to hold *)
-             cbv [context_list_equiv] in *; apply Forall_cons; eauto; [ ].
-             eapply equivalent_not_in_context_forall; eauto.
-             cbv [varname_set fst snd PropSet.union PropSet.singleton_set PropSet.elem_of].
-             destruct 1; subst; eauto. } }
-        { admit. (* TODO *) } }
-        (* { intros; cleanup; subst; tauto. } } *)
+               cbn [varname_not_in_context ltype base_ltype] in *.
+               match goal with H : PropSet.sameset _ _ |- _ =>
+                               rewrite sameset_iff in H; rewrite H end.
+               eauto using used_varnames_le. }
+             { (* proof that context_list_equiv continues to hold *)
+               cbv [context_list_equiv] in *; apply Forall_cons; eauto; [ ].
+               eapply equivalent_not_in_context_forall; eauto. intro.
+               match goal with H : PropSet.sameset _ _ |- _ =>
+                               rewrite sameset_iff in H; rewrite H end.
+               rewrite used_varnames_iff. intros; cleanup.
+               subst. eauto. } }
+        { intros; cleanup; subst; repeat split; try tauto; [ ].
+          (* remaining case : only_differ *)
+          eapply only_differ_step; try eassumption; [ ].
+          eapply only_differ_sameset; eauto. } } 
     { (* let-in (base type) *)
       (* simplify one translation step *)
       cbn [translate_expr].
       erewrite translate_carries_None by eassumption.
       cleanup.
-
-      (* assert that translate_lhs is well-behaved *)
-      match goal with
-        |- context [translate_lhs ?t ?n] =>
-        pose proof (translate_lhs_mono t n)
-      end.
-      
 
       (* simplify fiat-crypto step *)
       intros; cbn [expr.interp type.app_curried] in *.
@@ -1261,44 +1272,21 @@ Module Compiler.
            { (* proof that new context doesn't contain variables that could be
                 overwritten in the future *)
              intros; apply Forall_cons; eauto with lia; [ ].
+             cbn [assign fst] in *.
              cbn [varname_not_in_context varname_set fst snd].
              cbv [PropSet.union PropSet.singleton_set PropSet.elem_of].
              setoid_rewrite varname_gen_unique.
              lia. }
-           { (* proof that new context doesn't contain variables that retnames
-                will overwrite *)
-             intros; apply Forall_cons; eauto with lia; [ ].
-             cbn [varname_not_in_context varname_set fst snd].
-             cbv [PropSet.union PropSet.singleton_set PropSet.elem_of].
-             eauto. }
            { (* proof that context_list_equiv continues to hold *)
              cbv [context_list_equiv] in *; apply Forall_cons; eauto; [ ].
              eapply equivalent_not_in_context_forall; eauto.
-             cbv [varname_set fst snd PropSet.union PropSet.singleton_set PropSet.elem_of].
-             destruct 1; subst; eauto. } }
-      { intros; cleanup.
-        repeat split; try (subst; tauto); [ ].
-        match goal with
-          H1 : (Interface.map.only_differ locals _ ?x) |- _ =>
-          eapply only_differ_trans in H1; [ | solve [eauto] ..]
-        end.
-        eapply only_differ_sameset; eauto.
-        cbv [PropSet.sameset PropSet.union PropSet.subset
-                             PropSet.elem_of used_varnames].
-        split; intros;
-          repeat match goal with
-                 | H : _ \/ _ |- _ => destruct H
-                 | _ => tauto
-                 | _ => progress cleanup
-                 end; [ | | ].
-        { right. eexists; split; eauto; lia. }
-        { right. eexists; split; eauto.
-          admit. (* TODO: nextn increases monotonically *) }
-        { match goal with
-          | H : varname_gen ?x = ?y |- _ \/ varname_set (varname_gen ?n) ?y =>
-            destruct (Nat.eq_dec x n); [ right | left ]
-          end; [ congruence | ].
-          right. eexists; split; eauto; lia. } } }
+             cbn [assign snd fst varname_set].
+             cbv [PropSet.union PropSet.singleton_set PropSet.elem_of].
+             intros; subst; eauto. } }
+        { intros; cleanup; subst; repeat split; try tauto; [ ].
+          (* remaining case : only_differ *)
+          eapply only_differ_step; try eassumption; [ ].
+          eapply only_differ_sameset; eauto. } } 
     { (* cons *)
 
       (* repeatedly do inversion until the cons is exposed *)
@@ -1315,11 +1303,6 @@ Module Compiler.
       (* simplify fiat-crypto step *)
       intros; cbn [expr.interp type.app_curried Compilers.ident_interp] in *.
       cbv [Rewriter.Util.LetIn.Let_In] in *. cleanup.
-
-      (* use the hypothesis proving retnames has enough variables *)
-      cbn [return_variables_valid length] in *. cleanup.
-      break_match; [ cbn [length] in *; congruence | ].
-      cleanup.
 
       (* simplify bedrock2 step *)
       cbn [WeakestPrecondition.cmd WeakestPrecondition.cmd_body].
@@ -1338,86 +1321,39 @@ Module Compiler.
            all: match goal with
                   H : sep (emp _) _ _ |- _ => apply sep_emp_l in H end.
            all:cleanup.
-
-           { (* proof that retnames doesn't contain names that could be
-                overwritten later *)
-             intros.
-             match goal with
-               H : context [varname_set (_ :: _)] |- _ =>
-                             apply H; [|solve[auto] .. ]
-             end.
-             (* TODO : make a lemma for this? *)
-             cbn [varname_set PropSet.of_list In] in *.
-             cbv [PropSet.of_list] in *.
-             tauto. }
-           { (* proof that new context doesn't contain variables that retnames
-                will overwrite *)
-             intros.
-             match goal with
-               H : context [varname_set (_ :: _)] |- _ =>
-                             apply H; [|solve[auto] .. ]
-             end.
-             (* TODO : make a lemma for this? *)
-             cbn [varname_set PropSet.of_list In] in *.
-             cbv [PropSet.of_list] in *.
-             tauto. }
-           { (* proof that retnames are still valid *)
-             match goal with H : NoDup (_ :: _) |- _ => inversion H end.
-             cbn [length] in *; split; auto. }
+           all: try solve [eauto with lia].
            { (* proof that context_list_equiv continues to hold *)
              cbv [context_list_equiv] in *.
              eapply equivalent_not_in_context_forall; eauto.
-             cbv [varname_set fst snd PropSet.union PropSet.singleton_set PropSet.elem_of].
-
-             intros. subst; eauto.
-             match goal with
-               H : context [varname_set (_ :: _)] |- _ =>
-                             apply H; [|solve[auto] .. ]
-             end.
-             cbn [varname_set PropSet.of_list In] in *.
-             cbv [PropSet.of_list] in *.
-             tauto. } }
-      {
-        repeat split; intros; cleanup; try (subst; tauto); [ | ].
-        { admit. (* TODO *)
-          }
-        {
+             cbn [assign snd fst varname_set].
+             cbv [PropSet.union PropSet.singleton_set PropSet.elem_of].
+             intros; subst; eauto. } }
+      { intros; cleanup; subst; repeat split; try tauto; [ | ].
+        all:cbn [assign fst snd varname_set] in *.
+        { (* only_differ *)
+          rewrite <-(Nat.add_1_r nextn) in *.
+          eapply only_differ_step; try eassumption; [ ].
+          eapply only_differ_sameset; eauto. }
+        { (* equivalence of output holds *)
           clear IHe1_valid.
-        apply sep_emp_l.
-        repeat match goal with H : sep (emp _) _ _ |- _ => apply sep_emp_l in H end.
-        cbn [equivalent rtype_of_ltype fst snd] in *.
-        cleanup.
-        cbn [length map Compilers.base_interp] in *.
-        repeat split; try congruence; [ ].
-        apply Forall2_cons; [|eassumption].
-        match goal with H : NoDup (_ :: _) |- _ => inversion H end.
-        intros; eapply expr_untouched; eauto; [ ].
-        cbn. cbv [PropSet.union PropSet.of_list PropSet.elem_of].
-        match goal with
-          |- ~ (?A \/ ?B) =>
-          assert (~ A /\ ~ B); [split|tauto]
-        end; eauto; [ ].
-        cbv [used_varnames]. intro. cleanup.
-        match goal with H : context [varname_set (?v :: retnames)] |- _ =>
-                        eapply (H v) end; eauto; [ ].
-        (* TODO : make a lemma for this? *)
-        cbn [varname_set PropSet.of_list In] in *.
-        cbv [PropSet.of_list] in *.
-        tauto. } } }
+          apply sep_emp_l.
+          repeat match goal with H : sep (emp _) _ _ |- _ => apply sep_emp_l in H end.
+          cbn [equivalent rtype_of_ltype fst snd] in *.
+          cbn [length map Compilers.base_interp] in *.
+          cleanup.
+          repeat split; try congruence; [ ].
+          apply Forall2_cons; [|eassumption].
+          intros; eapply expr_untouched; eauto; [ ].
+          cbv [used_varnames PropSet.of_list PropSet.elem_of].
+          rewrite in_map_iff. intro; cleanup.
+          match goal with H : varname_gen ?x = varname_gen _ |- _ =>
+                          apply varname_gen_unique in H; subst x end.
+          match goal with H : In _ (seq _ _) |- _ =>
+                          apply in_seq in H end.
+          lia. } } }
     { (* nil *)
       admit. (* TODO *)
     }
     Qed.
   End Proofs.
 End Compiler.
-
-(* THOUGHTS
-
-Instead of passing retnames as an argument, maybe return them -- then have a
-reassign pass that can allow custom ones
-
-Need to prove that output is always < nextn; options include adding to
-postcondition or making the first return argument be, instead of the
-next nextn, the number of variables used, as a nat
-
-*)
