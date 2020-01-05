@@ -33,13 +33,15 @@ INSTALLDEFAULTROOT := Crypto
 	bedrock2 clean-bedrock2 install-bedrock2 coqutil clean-coqutil install-coqutil \
 	install-standalone install-standalone-ocaml install-standalone-haskell \
 	uninstall-standalone uninstall-standalone-ocaml uninstall-standalone-haskell \
-	util c-files rust-files \
+	util c-files rust-files go-files \
 	deps \
 	nobigmem print-nobigmem \
 	lite only-heavy printlite \
 	some-early pre-standalone standalone standalone-haskell standalone-ocaml \
 	test-c-files test-rust-files \
 	only-test-c-files only-test-rust-files \
+	test-c-files test-rust-files test-go-files \
+	only-test-c-files only-test-rust-files only-test-go-files \
 	check-output accept-output
 
 -include Makefile.coq
@@ -108,16 +110,39 @@ ifneq ($(filter pre-standalone,$(MAKECMDGOALS)),)
 PRE_STANDALONE_VOFILES := $(call vo_closure,$(PRE_STANDALONE_PRE_VOFILES))
 endif
 
-UNSATURATED_SOLINAS_C_FILES := curve25519_64.c curve25519_32.c p521_64.c p521_32.c p448_solinas_64.c # p224_solinas_64.c
-WORD_BY_WORD_MONTGOMERY_C_FILES := p256_64.c p256_32.c p384_64.c p384_32.c secp256k1_64.c secp256k1_32.c p224_64.c p224_32.c p434_64.c # p434_32.c
-ALL_C_FILES := $(UNSATURATED_SOLINAS_C_FILES) $(WORD_BY_WORD_MONTGOMERY_C_FILES)
+C_DIR :=
 RS_DIR := fiat-rust/src/
-UNSATURATED_SOLINAS_RUST_FILES := $(RS_DIR)curve25519_64.rs $(RS_DIR)curve25519_32.rs $(RS_DIR)p521_64.rs $(RS_DIR)p521_32.rs $(RS_DIR)p448_solinas_64.rs # $(RS_DIR)p224_solinas_64.rs
-WORD_BY_WORD_MONTGOMERY_RUST_FILES := $(RS_DIR)p256_64.rs $(RS_DIR)p256_32.rs $(RS_DIR)p384_64.rs $(RS_DIR)p384_32.rs $(RS_DIR)secp256k1_64.rs $(RS_DIR)secp256k1_32.rs $(RS_DIR)p224_64.rs $(RS_DIR)p224_32.rs $(RS_DIR)p434_64.rs # $(RS_DIR)p434_32.rs
-ALL_RUST_FILES := $(UNSATURATED_SOLINAS_RUST_FILES) $(WORD_BY_WORD_MONTGOMERY_RUST_FILES)
+GO_DIR := fiat-go/src/
+
+UNSATURATED_SOLINAS_BASE_FILES := curve25519_64 curve25519_32 p521_64 p521_32 p448_solinas_64 # p224_solinas_64
+WORD_BY_WORD_MONTGOMERY_BASE_FILES := p256_64 p256_32 p384_64 p384_32 secp256k1_64 secp256k1_32 p224_64 p224_32 p434_64 # p434_32
+ALL_BASE_FILES := $(UNSATURATED_SOLINAS_BASE_FILES) $(WORD_BY_WORD_MONTGOMERY_BASE_FILES)
+
+UNSATURATED_SOLINAS_C_FILES := $(patsubst %,%.c,$(UNSATURATED_SOLINAS_BASE_FILES))
+WORD_BY_WORD_MONTGOMERY_C_FILES := $(patsubst %,%.c,$(WORD_BY_WORD_MONTGOMERY_BASE_FILES))
+ALL_C_FILES := $(patsubst %,%.c,$(ALL_BASE_FILES))
+
+UNSATURATED_SOLINAS_RUST_FILES := $(patsubst %,$(RS_DIR)%.rs,$(UNSATURATED_SOLINAS_BASE_FILES))
+WORD_BY_WORD_MONTGOMERY_RUST_FILES := $(patsubst %,$(RS_DIR)%.rs,$(WORD_BY_WORD_MONTGOMERY_BASE_FILES))
+ALL_RUST_FILES := $(patsubst %,$(RS_DIR)%.rs,$(ALL_BASE_FILES))
+
+UNMADE_GO_FILES := p521_32 # uses uint128 when it's not allowed to; see https://github.com/mit-plv/fiat-crypto/issues/655
+
+UNSATURATED_SOLINAS_GO_FILES := $(patsubst %,$(GO_DIR)%.go,$(filter-out $(UNMADE_GO_FILES),$(UNSATURATED_SOLINAS_BASE_FILES)))
+WORD_BY_WORD_MONTGOMERY_GO_FILES := $(patsubst %,$(GO_DIR)%.go,$(filter-out $(UNMADE_GO_FILES),$(WORD_BY_WORD_MONTGOMERY_BASE_FILES)))
+ALL_GO_FILES := $(patsubst %,$(GO_DIR)%.go,$(filter-out $(UNMADE_GO_FILES),$(ALL_BASE_FILES)))
+
 FUNCTIONS_FOR_25519 := carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes
 UNSATURATED_SOLINAS := src/ExtractionOCaml/unsaturated_solinas
 WORD_BY_WORD_MONTGOMERY := src/ExtractionOCaml/word_by_word_montgomery
+
+# to_bytes doesn't work yet for Go
+GO_EXTRA_ARGS_ALL := --cmovznz-by-mul --widen-carry --widen-bytes
+GO_EXTRA_ARGS_64  := --no-wide-int $(GO_EXTRA_ARGS_ALL)
+GO_EXTRA_ARGS_32  := $(GO_EXTRA_ARGS_ALL)
+GO_FUNCTIONS_FOR_25519 := $(filter-out to_bytes,$(FUNCTIONS_FOR_25519))
+GO_UNSATURATED_SOLINAS_FUNCTIONS := carry_mul carry_square carry add sub opp selectznz from_bytes
+
 
 OUTPUT_VOS := \
 	src/Fancy/Montgomery256.vo \
@@ -134,11 +159,12 @@ OUTPUT_PREOUTS := \
 CHECK_OUTPUTS := $(addprefix check-,$(OUTPUT_PREOUTS))
 ACCEPT_OUTPUTS := $(addprefix accept-,$(OUTPUT_PREOUTS))
 
-all: coq standalone-ocaml perf-standalone c-files rust-files check-output
+all: coq standalone-ocaml perf-standalone c-files rust-files go-files check-output
 coq: $(REGULAR_VOFILES)
 coq-without-bedrock2: $(REGULAR_EXCEPT_BEDROCK2_VOFILES)
 c-files: $(ALL_C_FILES)
 rust-files: $(ALL_RUST_FILES)
+go-files: $(ALL_GO_FILES)
 
 lite: $(LITE_VOFILES)
 nobigmem: $(NOBIGMEM_VOFILES)
@@ -494,6 +520,99 @@ all: $(addprefix fiat-rust/,$(COPY_TO_FIAT_RUST))
 .PHONY: $(addprefix fiat-rust/,$(COPY_TO_FIAT_RUST))
 $(addprefix fiat-rust/,$(COPY_TO_FIAT_RUST)) : fiat-rust/% : %
 	cp -f $< $@
+
+$(UNSATURATED_SOLINAS_GO_FILES): $(UNSATURATED_SOLINAS) # Makefile
+
+$(WORD_BY_WORD_MONTGOMERY_GO_FILES): $(WORD_BY_WORD_MONTGOMERY) # Makefile
+
+# 2^255 - 19
+$(GO_DIR)curve25519_64.go : $(GO_DIR)curve25519_%.go :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Go $(GO_EXTRA_ARGS_$*) '25519' '5' '2^255 - 19' '$*' $(GO_FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
+	$(HIDE)rm $@.ok && mv $@.tmp $@
+
+# 2^255 - 19
+$(GO_DIR)curve25519_32.go : $(GO_DIR)curve25519_%.go :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Go $(GO_EXTRA_ARGS_$*) '25519' '10' '2^255 - 19' '$*' $(GO_FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
+	$(HIDE)rm $@.ok && mv $@.tmp $@
+
+# 2^521 - 1
+$(GO_DIR)p521_64.go : $(GO_DIR)p521_%.go :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Go $(GO_EXTRA_ARGS_$*) 'p521' '9' '2^521 - 1' '$*' $(GO_UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)rm $@.ok && mv $@.tmp $@
+
+# 2^521 - 1
+$(GO_DIR)p521_32.go : $(GO_DIR)p521_%.go :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Go $(GO_EXTRA_ARGS_$*) 'p521' '18' '2^521 - 1' '$*' $(GO_UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)rm $@.ok && mv $@.tmp $@
+
+## 2^224 - 2^96 + 1 ## does not bounds check
+#$(GO_DIR)p224_solinas_64.go : $(GO_DIR)p224_%.go :
+#	$(SHOW)'SYNTHESIZE > $@'
+#	$(HIDE)rm -f $@.ok
+#	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Go $(GO_EXTRA_ARGS_$*) 'p224' '4' '2^224 - 2^96 + 1' '$*' $(GO_UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
+#	$(HIDE)rm $@.ok && mv $@.tmp $@
+
+# 2^448 - 2^224 - 1
+$(GO_DIR)p448_solinas_64.go : $(GO_DIR)p448_solinas_%.go :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Go $(GO_EXTRA_ARGS_$*) 'p448' '8' '2^448 - 2^224 - 1' '$*' $(GO_UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)rm $@.ok && mv $@.tmp $@
+
+# 2^256 - 2^224 + 2^192 + 2^96 - 1
+$(GO_DIR)p256_64.go $(GO_DIR)p256_32.go : $(GO_DIR)p256_%.go :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) --lang=Go $(GO_EXTRA_ARGS_$*) 'p256' '2^256 - 2^224 + 2^192 + 2^96 - 1' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)rm $@.ok && mv $@.tmp $@
+
+# 2^256 - 2^32 - 977
+$(GO_DIR)secp256k1_64.go $(GO_DIR)secp256k1_32.go : $(GO_DIR)secp256k1_%.go :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) --lang=Go $(GO_EXTRA_ARGS_$*) 'secp256k1' '2^256 - 2^32 - 977' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)rm $@.ok && mv $@.tmp $@
+
+# 2^384 - 2^128 - 2^96 + 2^32 - 1
+$(GO_DIR)p384_64.go $(GO_DIR)p384_32.go : $(GO_DIR)p384_%.go :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) --lang=Go $(GO_EXTRA_ARGS_$*) 'p384' '2^384 - 2^128 - 2^96 + 2^32 - 1' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)rm $@.ok && mv $@.tmp $@
+
+# 2^224 - 2^96 + 1
+$(GO_DIR)p224_64.go $(GO_DIR)p224_32.go : $(GO_DIR)p224_%.go :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) --lang=Go $(GO_EXTRA_ARGS_$*) 'p224' '2^224 - 2^96 + 1' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)rm $@.ok && mv $@.tmp $@
+
+# 2^216 * 3^137 - 1
+$(GO_DIR)p434_64.go $(GO_DIR)p434_32.go : $(GO_DIR)p434_%.go :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) --lang=Go $(GO_EXTRA_ARGS_$*) 'p434' '2^216 * 3^137 - 1' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)rm $@.ok && mv $@.tmp $@
+
+.PHONY: $(addprefix test-,$(ALL_GO_FILES))
+.PHONY: $(addprefix only-test-,$(ALL_GO_FILES))
+
+$(addprefix test-,$(ALL_GO_FILES)) : test-% : %
+	go build $*
+
+$(addprefix only-test-,$(ALL_GO_FILES)) : only-test-% :
+	go build $*
+
+test-go-files: $(addprefix test-,$(ALL_GO_FILES))
+only-test-go-files: $(addprefix only-test-,$(ALL_GO_FILES))
 
 # Perf testing
 PERF_MAKEFILE = src/Rewriter/PerfTesting/Specific/generated/primes.mk
