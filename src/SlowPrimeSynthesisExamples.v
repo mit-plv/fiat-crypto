@@ -9,7 +9,8 @@ Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.PushButtonSynthesis.UnsaturatedSolinas.
 Require Crypto.PushButtonSynthesis.WordByWordMontgomery.
-Require Import Crypto.Stringification.C.
+Require Crypto.Stringification.C.
+Require Crypto.Stringification.Go.
 Require Import Crypto.BoundsPipeline.
 Require Import Crypto.Util.ZUtil.ModInv.
 
@@ -18,8 +19,7 @@ Import ListNotations. Local Open Scope Z_scope.
 
 Import
   Language.Compilers
-  Language.API.Compilers
-  Stringification.C.Compilers.
+  Language.API.Compilers.
 
 Import Language.API.Compilers.API.
 
@@ -29,11 +29,1065 @@ Local Coercion Z.of_nat : nat >-> Z.
 Local Coercion QArith_base.inject_Z : Z >-> Q.
 Local Coercion Z.pos : positive >-> Z.
 
+Local Existing Instance default_low_level_rewriter_method.
+
+Module debugging_go_build0.
+  Import Stringification.Go.
+  Section __.
+    Local Existing Instance Go.OutputGoAPI.
+    Local Instance static : static_opt := false.
+    Local Instance : emit_primitives_opt := true.
+    Local Instance : use_mul_for_cmovznz_opt := true.
+    Local Instance : widen_carry_opt := true.
+    Local Instance : widen_bytes_opt := true.
+    Local Instance : should_split_mul_opt := true. (* only for x64 *)
+
+    Context (n : nat := 3%nat)
+            (s : Z := 2^448)
+            (c : list (Z * Z) := [(2^224,1);(1,1)])
+            (machine_wordsize : Z := 512/3).
+    (*
+    Goal True.
+      pose (scarry_mul n s c machine_wordsize "p448_") as v.
+      cbv [scarry_mul] in v.
+      set (k := carry_mul n s c machine_wordsize) in (value of v).
+      vm_compute in k.
+      subst k.
+      cbv beta iota in v.
+      cbv [Language.Compilers.ToString.ToFunctionLines] in v.
+      cbv [Go.OutputGoAPI Crypto.Util.Option.sequence_return] in v.
+      cbv [Go.ToFunctionLines] in v.
+      set (k := IR.OfPHOAS.ExprOfPHOAS _ _ _ _) in (value of v).
+      clear v.
+      cbv [IR.OfPHOAS.ExprOfPHOAS] in k; rename k into v.
+      cbv [IR.OfPHOAS.expr_of_PHOAS] in v.
+      set (k := partial.Extract _ _ _) in (value of v).
+      cbv [partial.Extract] in k.
+      clear v; rename k into v.
+      cbv [partial.ident.extract] in v.
+      cbv [partial.extract_gen] in v.
+      cbv [type.app_curried] in v.
+      cbv delta [partial.extract'] in v.
+      cbv delta [partial.extract_gen] in v.
+      cbv beta in v.
+      cbv [type.app_curried] in v.
+      cbv delta [partial.extract'] in v.
+      cbv beta in v.
+      cbv iota in v; cbv beta in v.
+      cbv iota in v; cbv beta in v.
+      cbv iota in v; cbv beta in v.
+      cbv iota in v; cbv beta in v.
+      cbv iota in v; cbv beta in v.
+      cbv iota in v; cbv beta in v.
+      cbv iota in v; cbv beta in v.
+      cbv iota in v; cbv beta in v.
+      cbv iota in v; cbv beta in v.
+      cbv iota in v; cbv beta in v.
+      cbv iota in v; cbv beta in v.
+      do 50 (cbv iota in v; cbv beta in v).
+      Import Rewriter.Util.LetIn.
+      repeat match (eval cbv [v] in v) with
+             | Let_In ?x ?f
+               => let x := (eval vm_compute in x) in
+                  clear v; pose (f x) as v
+             end.
+      (*
+      cbv beta in v.
+      cbv [partial.abstract_interp_ident] in v.
+      set (k := ZRange.ident.option.interp true Compilers.ident_cons) in (value of v).
+      cbn in k; subst k; cbv beta in v.
+      set (k := ZRange.ident.option.interp true Compilers.ident_nil) in (value of v).
+      cbn in k; subst k; cbv beta in v.
+      cbn [option_map] in v.
+      set (l := ZRange.ident.option.interp true _) in (value of v) at 2; vm_compute in l.
+      subst l.
+      set (l := ZRange.ident.option.interp true _) in (value of v) at 3; vm_compute in l.
+      subst l.
+      set (l := ZRange.ident.option.interp true _) in (value of v) at 4; vm_compute in l.
+      subst l.
+       *)
+      (*
+      cbv [ZRange.ident.option.interp] in v.
+      cbv [
+      cbv beta zeta delta [Rewriter.Util.LetIn.Let_In].
+      cbv [partial.extract'] in v.
+      vm_compute in k.
+      vm_compute in k.
+      vm_compute in k; subst k.
+      cbv beta iota zeta in v.
+      set (v' := Go.to_function_lines _ _ _ _) in (value of v).
+
+      clear v; rename v' into v.
+      cbv [WordByWordMontgomery.add] in k.
+      cbv [possible_values_of_machine_wordsize] in k.
+      cbv [widen_carry] in k.
+      cbv [widen_carry_opt_instance_0] in k.
+      cbv [Pipeline.BoundsPipeline] in k.
+      set (k' := GeneralizeVar.ToFlat _) in (value of k).
+      vm_compute in k'; subst k'.
+      cbv [Rewriter.Util.LetIn.Let_In] in k.
+      set (k' := GeneralizeVar.FromFlat _) in (value of k); vm_compute in k'; subst k'.
+      cbv [CheckedPartialEvaluateWithBounds] in k.
+      cbv [Rewriter.Util.LetIn.Let_In] in k.
+      set (k' := CheckCasts.GetUnsupportedCasts _) in (value of k).
+      vm_compute in k'.
+      subst k'.
+      cbv beta iota in k.
+       *)
+    Abort.
+     *)
+  End __.
+End debugging_go_build0.
+
+Module debugging_go_build.
+  Import Crypto.PushButtonSynthesis.WordByWordMontgomery.
+  Import Crypto.Arithmetic.WordByWordMontgomery.WordByWordMontgomery.
+  Import Stringification.Go.
+  Section __.
+    Local Existing Instance Go.OutputGoAPI.
+    Local Instance static : static_opt := false.
+    Local Instance : emit_primitives_opt := true.
+    Local Instance : use_mul_for_cmovznz_opt := true.
+    Local Instance : widen_carry_opt := true.
+    Local Instance : widen_bytes_opt := true.
+    Local Instance : should_split_mul_opt := true. (* only for x64 *)
+
+    Context (m : Z := 2^256 - 2^224 + 2^192 + 2^96 - 1)
+            (machine_wordsize : Z := 64).
+
+    (*
+    Goal True.
+      pose (sadd m machine_wordsize "p256") as v.
+      cbv [sadd] in v.
+      set (k := WordByWordMontgomery.add m machine_wordsize) in (value of v).
+      cbv [WordByWordMontgomery.add] in k.
+      cbv [possible_values_of_machine_wordsize] in k.
+      cbv [widen_carry] in k.
+      cbv [widen_carry_opt_instance_0] in k.
+      cbv [Pipeline.BoundsPipeline] in k.
+      set (k' := GeneralizeVar.ToFlat _) in (value of k).
+      vm_compute in k'; subst k'.
+      cbv [Rewriter.Util.LetIn.Let_In] in k.
+      set (k' := GeneralizeVar.FromFlat _) in (value of k); vm_compute in k'; subst k'.
+      cbv [CheckedPartialEvaluateWithBounds] in k.
+      cbv [Rewriter.Util.LetIn.Let_In] in k.
+      set (k' := CheckCasts.GetUnsupportedCasts _) in (value of k).
+      vm_compute in k'.
+      subst k'.
+      cbv beta iota in k.
+      set (k' := partial.Extract _ _) in (value of k).
+      vm_compute in k'.
+      subst k'.
+      set (k' := ZRange.type.base.option.is_tighter_than _ _) in (value of k).
+      vm_compute in k'; subst k'.
+      cbv beta iota in k.
+      cbv [split_mul_to] in k.
+      cbv [should_split_mul] in k.
+      cbv [should_split_mul_opt_instance_0] in k.
+      set (k' := PartialEvaluateWithBounds _ _ _) in (value of k).
+      vm_compute in k'.
+      subst k'.
+      vm_compute in k.
+      Notation "'λ'" := (expr.Abs _).
+      Notation "'LET'" := (expr.LetIn _ _).
+      subst k.
+      cbv beta iota zeta in v.
+      Arguments String.append !_ !_ / .
+      cbn [String.append List.map List.app String.concat] in v.
+      cbv [Language.Compilers.ToString.ToFunctionLines] in v.
+      cbv [Crypto.Util.Option.sequence_return] in v.
+      cbv [Go.OutputGoAPI] in v.
+      cbn [type.map_for_each_lhs_of_arrow] in v.
+      cbv [Go.ToFunctionLines] in v.
+      set (k := IR.OfPHOAS.ExprOfPHOAS _ _ _ _) in (value of v).
+      clear v.
+      rename k into v.
+      cbn [type.final_codomain] in v.
+      cbn [Language.Compilers.ToString.OfPHOAS.var_data type.for_each_lhs_of_arrow] in v.
+      cbn [Language.Compilers.ToString.OfPHOAS.base_var_data] in v.
+      cbv [IR.OfPHOAS.ExprOfPHOAS] in v.
+      cbn [IR.OfPHOAS.expr_of_PHOAS] in v.
+      cbv [IR.OfPHOAS.expr_of_PHOAS] in v.
+      set (k := IR.OfPHOAS.var_data_of_bounds _ _ _) in (value of v).
+      vm_compute in k.
+      subst k; cbv beta iota zeta in v.
+      cbn [IR.OfPHOAS.expr_of_PHOAS'] in v.
+      set (k := IR.OfPHOAS.var_data_of_bounds _ _ _) in (value of v).
+      vm_compute in k.
+      subst k; cbv beta iota zeta in v.
+      set (k := IR.OfPHOAS.var_data_of_bounds _ _ _) in (value of v).
+      vm_compute in k.
+      subst k; cbv beta iota zeta in v.
+      cbv [Show.show] in v.
+      cbv [Language.Compilers.ToString.PHOAS.type.show] in v.
+      cbn [Language.Compilers.ToString.PHOAS.type.show_type Language.Compilers.ToString.PHOAS.type.base.show] in v.
+      cbv [Language.Compilers.ToString.PHOAS.type.base.show] in v.
+      cbn [Language.Compilers.ToString.PHOAS.type.base.show_type Show.maybe_wrap_parens] in v.
+      cbv [Show.show] in v.
+      cbn [Language.Compilers.ToString.PHOAS.type.base.show_base] in v.
+      cbn [String.append List.map List.app String.concat] in v.
+      unfold invert_expr.invert_Abs at 1 in (value of v).
+      unfold invert_expr.invert_Abs at 1 in (value of v).
+      Time set (F := expr.LetIn _ _) in (value of v).
+      Arguments IR.OfPHOAS.make_assign_expr_of_PHOAS _ / .
+      Arguments Pos.to_nat !_ / .
+      Ltac bar v F X :=
+        (time (try lazymatch (eval cbv [v] in v) with context[F ?x] => pose (F x) as F'; change (F x) with F' in (value of v); subst F; rename F' into F; cbv beta iota zeta in F, v
+                   end;
+               lazymatch (eval cbv [F] in F) with @expr.LetIn ?b ?i ?v ?A ?B ?x ?f => pose f as F'; pose x as X; change F with (@expr.LetIn b i v A B X F') in * end;
+               clear F; rename F' into F; subst X;
+               cbn [IR.OfPHOAS.expr_of_base_PHOAS] in v);
+         time (repeat lazymatch (eval cbv [v] in v) with
+                      | context C[match ?f ?x with _ => _ end]
+                        => let f' := Tactics.Head.head f in
+                           let fx := constr:(f x) in
+                           (*idtac fx "(" f' ")";*)
+                           let do_vm _ := lazymatch (eval cbv [v] in v) with
+                                          | context C[fx]
+                                            => pose fx as k;
+                                               clear v;
+                                               let C' := context C[k] in
+                                               pose C' as v;
+                                               (vm_compute in k; subst k; cbv beta iota in v)
+                                          end in
+                           lazymatch f' with
+                           | @type.try_transport => do_vm ()
+                           | @invert_expr.invert_App_Z_cast2 => do_vm ()
+                           | @invert_expr.invert_App_Z_cast => do_vm ()
+                           | @invert_expr.invert_App_curried => do_vm ()
+                           | @Option.bind => do_vm ()
+                           | @Crypto.Util.Option.bind => do_vm ()
+                           | @IR.OfPHOAS.arith_expr_of_PHOAS_args => do_vm ()
+                           | @IR.OfPHOAS.bounds_check => do_vm ()
+                           | @fst => do_vm ()
+                           | @snd => do_vm ()
+                           | _ => progress cbn [f'] in v
+                           end
+                      end;
+               repeat (set (k := option_map _ _) in (value of v) at 1; vm_compute in k; subst k; cbv beta iota in v);
+               cbn -[F] in v));
+        time (repeat match (eval cbv [v] in v) with
+                     | context C[match match ?x with inl l => @?LX l | inr r => @?RX r end with inl l' => @?L l' | inr r' => @?R r' end]
+                       => let C' := context C[match x with inl l => match LX l with inl l' => L l' | inr r' => R r' end | inr r => match RX r with inl l' => L l' | inr r' => R r' end end] in
+                          let C' := (eval cbv beta iota zeta in C') in
+                          clear v; pose C' as v
+                     end).
+      Arguments IR.name_infos.adjust_dead : simpl never.
+      do 3 bar v F X.
+      do 1 bar v F X.
+      time (try lazymatch (eval cbv [v] in v) with context[F ?x] => pose (F x) as F'; change (F x) with F' in (value of v); subst F; rename F' into F; cbv beta iota zeta in F, v
+                end;
+            lazymatch (eval cbv [F] in F) with @expr.LetIn ?b ?i ?v ?A ?B ?x ?f => pose f as F'; pose x as X; change F with (@expr.LetIn b i v A B X F') in * end;
+            clear F; rename F' into F; subst X;
+            cbn [IR.OfPHOAS.expr_of_base_PHOAS] in v).
+      cbn [IR.OfPHOAS.make_assign_expr_of_PHOAS] in v.
+      do 4 lazymatch (eval cbv [v] in v) with
+           | context C[match ?f ?x with _ => _ end]
+             => let f' := Tactics.Head.head f in
+                let fx := constr:(f x) in
+                (*idtac fx "(" f' ")";*)
+                let do_vm _ := lazymatch (eval cbv [v] in v) with
+                               | context C[fx]
+                                 => pose fx as k;
+                                      clear v;
+                                      let C' := context C[k] in
+                                      pose C' as v;
+                                        (vm_compute in k; subst k; cbv beta iota in v)
+                               end in
+                lazymatch f' with
+                | @type.try_transport => do_vm ()
+                | @invert_expr.invert_App_Z_cast2 => do_vm ()
+                | @invert_expr.invert_App_Z_cast => do_vm ()
+                | @invert_expr.invert_App_curried => do_vm ()
+                | @Option.bind => do_vm ()
+                | @Crypto.Util.Option.bind => do_vm ()
+                | @IR.OfPHOAS.arith_expr_of_PHOAS_args => do_vm ()
+                | @IR.OfPHOAS.bounds_check => do_vm ()
+                | @fst => do_vm ()
+                | @snd => do_vm ()
+                | _ => progress cbn [f'] in v
+                end
+           end.
+      (*do 1 bar v F X.
+      Set Printing Depth 10000000.
+      do 2 bar v F X.
+      do 2 bar v F X.
+      lazymatch (eval cbv [v] in v) with context[F ?x] => pose (F x) as F'; change (F x) with F' in (value of v); subst F; rename F' into F; cbv beta iota zeta in F, v
+      end;
+        lazymatch (eval cbv [F] in F) with @expr.LetIn ?b ?i ?v ?A ?B ?x ?f => pose f as F'; pose x as X; change F with (@expr.LetIn b i v A B X F') in * end;
+        clear F; rename F' into F; subst X;
+          cbn [IR.OfPHOAS.expr_of_base_PHOAS] in v.
+      cbn [IR.OfPHOAS.make_assign_expr_of_PHOAS] in v.*)
+      (*
+      do 4 lazymatch (eval cbv [v] in v) with
+           | context C[match ?f ?x with _ => _ end]
+             => let f' := Tactics.Head.head f in
+                let fx := constr:(f x) in
+                (*idtac fx "(" f' ")";*)
+                let do_vm _ := lazymatch (eval cbv [v] in v) with
+                               | context C[fx]
+                                 => pose fx as k;
+                                      clear v;
+                                      let C' := context C[k] in
+                                      pose C' as v;
+                                        (vm_compute in k; subst k; cbv beta iota in v)
+                               end in
+                lazymatch f' with
+                | @type.try_transport => do_vm ()
+                | @invert_expr.invert_App_Z_cast2 => do_vm ()
+                | @invert_expr.invert_App_Z_cast => do_vm ()
+                | @invert_expr.invert_App_curried => do_vm ()
+                | @invert_expr.invert_AppIdent_curried => do_vm ()
+                | @Option.bind => do_vm ()
+                | @Crypto.Util.Option.bind => do_vm ()
+                | @IR.OfPHOAS.arith_expr_of_PHOAS_args => do_vm ()
+                | @IR.OfPHOAS.bounds_check => do_vm ()
+                | @fst => do_vm ()
+                | @snd => do_vm ()
+                | _ => progress cbn [f'] in v
+                end
+           end.
+      set (k := Language.Compilers.ToString.int.type_beq _ _) in (value of v).
+      vm_compute in k.
+      subst k.
+      cbv iota in v; cbv beta in v.
+      subst k; cbv beta iota in v.
+      do 4 lazymatch (eval cbv [v] in v) with
+           | context C[match ?f ?x with _ => _ end]
+             => let f' := Tactics.Head.head f in
+                let fx := constr:(f x) in
+                (*idtac fx "(" f' ")";*)
+                let do_vm _ := lazymatch (eval cbv [v] in v) with
+                               | context C[fx]
+                                 => pose fx as k;
+                                      clear v;
+                                      let C' := context C[k] in
+                                      pose C' as v;
+                                        (vm_compute in k; subst k; cbv beta iota in v)
+                               end in
+                lazymatch f' with
+                | @type.try_transport => do_vm ()
+                | @invert_expr.invert_App_Z_cast2 => do_vm ()
+                | @invert_expr.invert_App_Z_cast => do_vm ()
+                | @invert_expr.invert_App_curried => do_vm ()
+                | @Option.bind => do_vm ()
+                | @Crypto.Util.Option.bind => do_vm ()
+                | @IR.OfPHOAS.arith_expr_of_PHOAS_args => do_vm ()
+                | @IR.OfPHOAS.bounds_check => do_vm ()
+                | @Language.Compilers.ToString.int.of_zrange_relaxed => do_vm ()
+                | @fst => do_vm ()
+                | @snd => do_vm ()
+                | _ => progress cbn [f'] in v
+                end
+           end.
+      do 1 lazymatch (eval cbv [v] in v) with
+           | context C[match ?f ?x with _ => _ end]
+             => let f' := Tactics.Head.head f in
+                let fx := constr:(f x) in
+                (*idtac fx "(" f' ")";*)
+                let do_vm _ := lazymatch (eval cbv [v] in v) with
+                               | context C[fx]
+                                 => pose fx as k;
+                                      clear v;
+                                      let C' := context C[k] in
+                                      pose C' as v;
+                                        (vm_compute in k; subst k; cbv beta iota in v)
+                               end in
+                lazymatch f' with
+                | @type.try_transport => do_vm ()
+                | @invert_expr.invert_App_Z_cast2 => do_vm ()
+                | @invert_expr.invert_App_Z_cast => do_vm ()
+                | @invert_expr.invert_App_curried => do_vm ()
+                | @Option.bind => do_vm ()
+                | @Crypto.Util.Option.bind => do_vm ()
+                | @IR.OfPHOAS.arith_expr_of_PHOAS_args => do_vm ()
+                | @IR.OfPHOAS.bounds_check => do_vm ()
+                | @Language.Compilers.ToString.int.of_zrange_relaxed => do_vm ()
+                | @NatUtil.nat_beq => do_vm ()
+                | @fst => do_vm ()
+                | @snd => do_vm ()
+                | _ => progress cbn [f'] in v
+                end
+           end.
+
+      set (k := IR.OfPHOAS.arith_expr_of_base_PHOAS _ _) in (value of v).
+      clear v; rename k into v.
+      cbv [IR.OfPHOAS.arith_expr_of_base_PHOAS] in v.
+      vm_compute in k.
+      subst k; cbv beta iota in v.
+      cbn [IR.OfPHOAS.arith_expr_of_base_PHOAS] in v.
+      set (k :=
+      cbn -[F] in v.
+
+      do 1 bar v F X.
+      Notation "'LL'" := expr.LetIn.
+
+      subst X; cbn -[F] in v.
+      lazymatch (eval cbv [v] in v) with context[F ?x] => pose (F x) as F'; change (F x) with F' in (value of v); subst F; rename F' into F; cbv beta iota zeta in F, v
+      end.
+      Time match (eval cbv [F] in F) with context G[expr.LetIn ?x ?f] => set (F' := f) in (value of F); set (X := x) in (value of F) end;
+        subst F; rename F' into F.
+      cbn [IR.OfPHOAS.expr_of_base_PHOAS] in v.
+      set (k := IR.OfPHOAS.make_assign_expr_of_PHOAS _ _ _ _ _ _) in (value of v).
+      clear v.
+      subst X.
+      cbv [IR.OfPHOAS.make_assign_expr_of_PHOAS] in k.
+      set (k' := type.try_transport _ _ _ _) in (value of k).
+      vm_compute in k'; subst k'; cbv beta iota zeta in k.
+      set (k' := invert_expr.invert_App_Z_cast _) in (value of k); vm_compute in k'.
+      subst k'; cbv beta iota zeta in k.
+      set (k' := invert_expr.invert_AppIdent_curried _) in (value of k); vm_compute in k'.
+      subst k'; cbv beta iota zeta in k.
+      set (k' := IR.OfPHOAS.arith_expr_of_PHOAS_args _) in (value of k).
+      vm_compute in k'.
+      subst k'; cbv beta iota zeta in k.
+      set (k' := IR.OfPHOAS.arith_expr_of_base_PHOAS _ _) in (value of k).
+      vm_compute in k'.
+      subst k'; cbv beta iota zeta in k.
+      rename k into v.
+      lazymatch (eval cbv [v] in v) with context[F ?x] => pose (F x) as F'; change (F x) with F' in (value of v); subst F; rename F' into F; cbv beta iota zeta in F, v
+      end.
+      Time match (eval cbv [F] in F) with context G[expr.LetIn ?x ?f] => set (F' := f) in (value of F); set (X := x) in (value of F) end;
+        subst F; rename F' into F.
+      cbn -[F] in v.
+      subst X.
+      cbv [IR.OfPHOAS.make_assign_expr_of_PHOAS] in v.
+      cbn -[F] in v.
+      About base.try_make_transport_cps.
+      Arguments base.try_make_transport_cps _ _ _ !_ !_ / .
+      cbn -[F] in v.
+      cbn -[F] in v.
+      lazymatch (eval cbv [v] in v) with context[F ?x] => pose (F x) as F'; change (F x) with F' in (value of v); subst F; rename F' into F; cbv beta iota zeta in F, v
+      end.
+      lazymatch (eval cbv [F] in F) with @expr.LetIn ?b ?i ?v ?A ?B ?x ?f => pose f as F'; pose x as X; change F with (@expr.LetIn b i v A B X F') in * end;
+        clear F; rename F' into F.
+      subst X.
+      cbn -[F] in v.
+      lazymatch (eval cbv [v] in v) with context[F ?x] => pose (F x) as F'; change (F x) with F' in (value of v); subst F; rename F' into F; cbv beta iota zeta in F, v
+      end;
+        lazymatch (eval cbv [F] in F) with @expr.LetIn ?b ?i ?v ?A ?B ?x ?f => pose f as F'; pose x as X; change F with (@expr.LetIn b i v A B X F') in * end;
+        clear F; rename F' into F; subst X.
+      cbn [IR.OfPHOAS.expr_of_base_PHOAS] in v.
+      cbv [IR.OfPHOAS.make_assign_expr_of_PHOAS] in v.
+      set (k := type.try_transport _ _ _ _) in (value of v).
+      vm_compute in k.
+      subst k; cbv beta iota zeta in v.
+      set (k := invert_expr.invert_App_Z_cast2 _) in (value of v); vm_compute in k.
+      subst k; cbv beta iota zeta in v.
+      set (k := invert_expr.invert_AppIdent_curried _) in (value of v);
+        vm_compute in k.
+      subst k; cbv beta iota zeta in v.
+      set (k := IR.OfPHOAS.arith_expr_of_PHOAS_args _) in (value of v);
+        vm_compute in k.
+      subst k; cbv beta iota zeta in v.
+      set (k := Crypto.Util.Option.bind _ _) in (value of v).
+      vm_compute in k.
+      subst k; cbv beta iota zeta in v.
+      set (k := IR.OfPHOAS.bounds_check _ _ _ _ _ _) in (value of v).
+      vm_compute in k.
+      subst k; cbv beta iota zeta in v.
+      set (k := fst _) in (value of v) at 1.
+      vm_compute in k.
+      subst k; cbv beta iota zeta in v.
+      set (k := snd _) in (value of v) at 1.
+      vm_compute in k.
+      subst k; cbv beta iota zeta in v.
+      repeat (set (k := option_map _ _) in (value of v) at 1; vm_compute in k; subst k; cbv beta iota in v).
+      cbn -[F] in v.
+      lazymatch (eval cbv [v] in v) with context[F ?x] => pose (F x) as F'; change (F x) with F' in (value of v); subst F; rename F' into F; cbv beta iota zeta in F, v
+      end;
+        lazymatch (eval cbv [F] in F) with @expr.LetIn ?b ?i ?v ?A ?B ?x ?f => pose f as F'; pose x as X; change F with (@expr.LetIn b i v A B X F') in * end;
+        clear F; rename F' into F; subst X.
+      do 2 lazymatch (eval cbv [v] in v) with
+           | context[match ?f ?x with _ => _ end]
+             => let f' := Tactics.Head.head f in
+                lazymatch f' with
+                | _ => cbn [f'] in v
+                end
+           end.
+      do 1 lazymatch (eval cbv [v] in v) with
+           | context[match ?f ?x with _ => _ end]
+             => let f' := Tactics.Head.head f in
+                lazymatch f' with
+                | @type.try_transport => set (k := f x) in (value of v); vm_compute in k; subst k; cbv beta iota in v
+                | _ => cbn [f'] in v
+                end
+           end.
+      do 3 lazymatch (eval cbv [v] in v) with
+           | context[match ?f ?x with _ => _ end]
+             => let f' := Tactics.Head.head f in
+                let do_vm _ := set (k := f x) in (value of v); vm_compute in k; subst k; cbv beta iota in v in
+                lazymatch f' with
+                | @type.try_transport => do_vm ()
+                | @invert_expr.invert_App_Z_cast2 => do_vm ()
+                | @invert_expr.invert_App_curried => do_vm ()
+                | _ => progress cbn [f'] in v
+                end
+           end.
+      do 2 lazymatch (eval cbv [v] in v) with
+           | context[match ?f ?x with _ => _ end]
+             => let f' := Tactics.Head.head f in
+                let do_vm _ := set (k := f x) in (value of v); vm_compute in k; subst k; cbv beta iota in v in
+                lazymatch f' with
+                | @type.try_transport => do_vm ()
+                | @invert_expr.invert_App_Z_cast2 => do_vm ()
+                | @invert_expr.invert_App_curried => do_vm ()
+                | @Option.bind => do_vm ()
+                | @IR.OfPHOAS.arith_expr_of_PHOAS_args => do_vm ()
+                | _ => progress cbn [f'] in v
+                end
+           end.
+      do 1 lazymatch (eval cbv [v] in v) with
+           | context[match ?f ?x with _ => _ end]
+             => let f' := Tactics.Head.head f in
+                let do_vm _ := set (k := f x) in (value of v); vm_compute in k; subst k; cbv beta iota in v in
+                lazymatch f' with
+                | @type.try_transport => do_vm ()
+                | @invert_expr.invert_App_Z_cast2 => do_vm ()
+                | @invert_expr.invert_App_curried => do_vm ()
+                | @Option.bind => do_vm ()
+                | @Crypto.Util.Option.bind => do_vm ()
+                | @IR.OfPHOAS.arith_expr_of_PHOAS_args => do_vm ()
+                | _ => progress cbn [f'] in v
+                end
+           end.
+      Time do 6 lazymatch (eval cbv [v] in v) with
+                | context[match ?f ?x with _ => _ end]
+                  => let f' := Tactics.Head.head f in
+                     let do_vm _ := (set (k := f x) in (value of v); vm_compute in k; subst k; cbv beta iota in v) in
+                     lazymatch f' with
+                     | @type.try_transport => do_vm ()
+                     | @invert_expr.invert_App_Z_cast2 => do_vm ()
+                     | @invert_expr.invert_App_curried => do_vm ()
+                     | @Option.bind => do_vm ()
+                     | @Crypto.Util.Option.bind => do_vm ()
+                     | @IR.OfPHOAS.arith_expr_of_PHOAS_args => do_vm ()
+                     | @IR.OfPHOAS.bounds_check => do_vm ()
+                     | @fst => do_vm ()
+                     | @snd => do_vm ()
+                     | _ => progress cbn [f'] in v
+                     end
+                end.
+      repeat (set (k := option_map _ _) in (value of v) at 1; vm_compute in k; subst k; cbv beta iota in v).
+      cbn -[F] in v.
+      lazymatch (eval cbv [v] in v) with context[F ?x] => pose (F x) as F'; change (F x) with F' in (value of v); subst F; rename F' into F; cbv beta iota zeta in F, v
+      end;
+        lazymatch (eval cbv [F] in F) with @expr.LetIn ?b ?i ?v ?A ?B ?x ?f => pose f as F'; pose x as X; change F with (@expr.LetIn b i v A B X F') in * end;
+        clear F; rename F' into F; subst X.
+      cbn [IR.OfPHOAS.expr_of_base_PHOAS] in v.
+      Time do 2 lazymatch (eval cbv [v] in v) with
+                | context[match ?f ?x with _ => _ end]
+                  => let f' := Tactics.Head.head f in
+                     let fx := constr:(f x) in
+                     idtac fx "(" f' ")";
+                     let do_vm _ := (set (k := f x) in (value of v); vm_compute in k; subst k; cbv beta iota in v) in
+                     lazymatch f' with
+                     | @type.try_transport => do_vm ()
+                     | @invert_expr.invert_App_Z_cast2 => do_vm ()
+                     | @invert_expr.invert_App_curried => do_vm ()
+                     | @Option.bind => do_vm ()
+                     | @Crypto.Util.Option.bind => do_vm ()
+                     | @IR.OfPHOAS.arith_expr_of_PHOAS_args => do_vm ()
+                     | @IR.OfPHOAS.bounds_check => do_vm ()
+                     | @fst => do_vm ()
+                     | @snd => do_vm ()
+                     | _ => progress cbn [f'] in v
+                     end
+                end.
+      Time do 2 lazymatch (eval cbv [v] in v) with
+                | context[match ?f ?x with _ => _ end]
+                  => let f' := Tactics.Head.head f in
+                     let fx := constr:(f x) in
+                     idtac fx "(" f' ")";
+                     let do_vm _ := (set (k := f x) in (value of v); vm_compute in k; subst k; cbv beta iota in v) in
+                     lazymatch f' with
+                     | @type.try_transport => do_vm ()
+                     | @invert_expr.invert_App_Z_cast2 => do_vm ()
+                     | @invert_expr.invert_App_curried => do_vm ()
+                     | @Option.bind => do_vm ()
+                     | @Crypto.Util.Option.bind => do_vm ()
+                     | @IR.OfPHOAS.arith_expr_of_PHOAS_args => do_vm ()
+                     | @IR.OfPHOAS.bounds_check => do_vm ()
+                     | @fst => do_vm ()
+                     | @snd => do_vm ()
+                     | _ => progress cbn [f'] in v
+                     end
+                end.
+      Time do 2 lazymatch (eval cbv [v] in v) with
+                | context[match ?f ?x with _ => _ end]
+                  => let f' := Tactics.Head.head f in
+                     let fx := constr:(f x) in
+                     idtac fx "(" f' ")";
+                     let do_vm _ := (set (k := f x) in (value of v); vm_compute in k; subst k; cbv beta iota in v) in
+                     lazymatch f' with
+                     | @type.try_transport => do_vm ()
+                     | @invert_expr.invert_App_Z_cast2 => do_vm ()
+                     | @invert_expr.invert_App_curried => do_vm ()
+                     | @Option.bind => do_vm ()
+                     | @Crypto.Util.Option.bind => do_vm ()
+                     | @IR.OfPHOAS.arith_expr_of_PHOAS_args => do_vm ()
+                     | @IR.OfPHOAS.bounds_check => do_vm ()
+                     | @fst => do_vm ()
+                     | @snd => do_vm ()
+                     | _ => progress cbn [f'] in v
+                     end
+                end.
+      Time repeat lazymatch (eval cbv [v] in v) with
+                  | context C[match ?f ?x with _ => _ end]
+                    => let f' := Tactics.Head.head f in
+                       let fx := constr:(f x) in
+                       (*idtac fx "(" f' ")";*)
+                       let do_vm _ := lazymatch (eval cbv [v] in v) with
+                                      | context C[fx]
+                                        => pose fx as k;
+                                             clear v;
+                                             let C' := context C[k] in
+                                             pose C' as v;
+                                               (vm_compute in k; subst k; cbv beta iota in v)
+                                      end in
+                       lazymatch f' with
+                       | @type.try_transport => do_vm ()
+                       | @invert_expr.invert_App_Z_cast2 => do_vm ()
+                       | @invert_expr.invert_App_curried => do_vm ()
+                       | @Option.bind => do_vm ()
+                       | @Crypto.Util.Option.bind => do_vm ()
+                       | @IR.OfPHOAS.arith_expr_of_PHOAS_args => do_vm ()
+                       | @IR.OfPHOAS.bounds_check => do_vm ()
+                       | @fst => do_vm ()
+                       | @snd => do_vm ()
+                       | _ => progress cbn [f'] in v
+                       end
+                  end;
+        repeat (set (k := option_map _ _) in (value of v) at 1; vm_compute in k; subst k; cbv beta iota in v);
+        cbn -[F] in v.
+      do 2 (time (lazymatch (eval cbv [v] in v) with context[F ?x] => pose (F x) as F'; change (F x) with F' in (value of v); subst F; rename F' into F; cbv beta iota zeta in F, v
+                  end;
+                  lazymatch (eval cbv [F] in F) with @expr.LetIn ?b ?i ?v ?A ?B ?x ?f => pose f as F'; pose x as X; change F with (@expr.LetIn b i v A B X F') in * end;
+                  clear F; rename F' into F; subst X;
+                  cbn [IR.OfPHOAS.expr_of_base_PHOAS] in v);
+            time (repeat lazymatch (eval cbv [v] in v) with
+                         | context C[match ?f ?x with _ => _ end]
+                           => let f' := Tactics.Head.head f in
+                              let fx := constr:(f x) in
+                              (*idtac fx "(" f' ")";*)
+                              let do_vm _ := lazymatch (eval cbv [v] in v) with
+                                             | context C[fx]
+                                               => pose fx as k;
+                                                  clear v;
+                                                  let C' := context C[k] in
+                                                  pose C' as v;
+                                                  (vm_compute in k; subst k; cbv beta iota in v)
+                                             end in
+                              lazymatch f' with
+                              | @type.try_transport => do_vm ()
+                              | @invert_expr.invert_App_Z_cast2 => do_vm ()
+                              | @invert_expr.invert_App_curried => do_vm ()
+                              | @Option.bind => do_vm ()
+                              | @Crypto.Util.Option.bind => do_vm ()
+                              | @IR.OfPHOAS.arith_expr_of_PHOAS_args => do_vm ()
+                              | @IR.OfPHOAS.bounds_check => do_vm ()
+                              | @fst => do_vm ()
+                              | @snd => do_vm ()
+                              | _ => progress cbn [f'] in v
+                              end
+                         end;
+                  repeat (set (k := option_map _ _) in (value of v) at 1; vm_compute in k; subst k; cbv beta iota in v);
+                  cbn -[F] in v)).
+      do 4 (time (lazymatch (eval cbv [v] in v) with context[F ?x] => pose (F x) as F'; change (F x) with F' in (value of v); subst F; rename F' into F; cbv beta iota zeta in F, v
+                  end;
+                  lazymatch (eval cbv [F] in F) with @expr.LetIn ?b ?i ?v ?A ?B ?x ?f => pose f as F'; pose x as X; change F with (@expr.LetIn b i v A B X F') in * end;
+                  clear F; rename F' into F; subst X;
+                  cbn [IR.OfPHOAS.expr_of_base_PHOAS] in v);
+            time (repeat lazymatch (eval cbv [v] in v) with
+                         | context C[match ?f ?x with _ => _ end]
+                           => let f' := Tactics.Head.head f in
+                              let fx := constr:(f x) in
+                              (*idtac fx "(" f' ")";*)
+                              let do_vm _ := lazymatch (eval cbv [v] in v) with
+                                             | context C[fx]
+                                               => pose fx as k;
+                                                  clear v;
+                                                  let C' := context C[k] in
+                                                  pose C' as v;
+                                                  (vm_compute in k; subst k; cbv beta iota in v)
+                                             end in
+                              lazymatch f' with
+                              | @type.try_transport => do_vm ()
+                              | @invert_expr.invert_App_Z_cast2 => do_vm ()
+                              | @invert_expr.invert_App_curried => do_vm ()
+                              | @Option.bind => do_vm ()
+                              | @Crypto.Util.Option.bind => do_vm ()
+                              | @IR.OfPHOAS.arith_expr_of_PHOAS_args => do_vm ()
+                              | @IR.OfPHOAS.bounds_check => do_vm ()
+                              | @fst => do_vm ()
+                              | @snd => do_vm ()
+                              | _ => progress cbn [f'] in v
+                              end
+                         end;
+                  repeat (set (k := option_map _ _) in (value of v) at 1; vm_compute in k; subst k; cbv beta iota in v);
+                  cbn -[F] in v)).
+      Set Printing Depth 10000000.
+      Ltac foo v F X :=
+        (time (lazymatch (eval cbv [v] in v) with context[F ?x] => pose (F x) as F'; change (F x) with F' in (value of v); subst F; rename F' into F; cbv beta iota zeta in F, v
+               end;
+               lazymatch (eval cbv [F] in F) with @expr.LetIn ?b ?i ?v ?A ?B ?x ?f => pose f as F'; pose x as X; change F with (@expr.LetIn b i v A B X F') in * end;
+               clear F; rename F' into F; subst X;
+               cbn [IR.OfPHOAS.expr_of_base_PHOAS] in v);
+         time (repeat lazymatch (eval cbv [v] in v) with
+                      | context C[match ?f ?x with _ => _ end]
+                        => let f' := Tactics.Head.head f in
+                           let fx := constr:(f x) in
+                           (*idtac fx "(" f' ")";*)
+                           let do_vm _ := lazymatch (eval cbv [v] in v) with
+                                          | context C[fx]
+                                            => pose fx as k;
+                                               clear v;
+                                               let C' := context C[k] in
+                                               pose C' as v;
+                                               (vm_compute in k; subst k; cbv beta iota in v)
+                                          end in
+                           lazymatch f' with
+                           | @type.try_transport => do_vm ()
+                           | @invert_expr.invert_App_Z_cast2 => do_vm ()
+                           | @invert_expr.invert_App_curried => do_vm ()
+                           | @Option.bind => do_vm ()
+                           | @Crypto.Util.Option.bind => do_vm ()
+                           | @IR.OfPHOAS.arith_expr_of_PHOAS_args => do_vm ()
+                           | @IR.OfPHOAS.bounds_check => do_vm ()
+                           | @fst => do_vm ()
+                           | @snd => do_vm ()
+                           | _ => progress cbn [f'] in v
+                           end
+                      end;
+               repeat (set (k := option_map _ _) in (value of v) at 1; vm_compute in k; subst k; cbv beta iota in v);
+               cbn -[F] in v));
+        time (repeat match (eval cbv [v] in v) with
+                     | context C[match match ?x with inl l => @?LX l | inr r => @?RX r end with inl l' => @?L l' | inr r' => @?R r' end]
+                       => let C' := context C[match x with inl l => match LX l with inl l' => L l' | inr r' => R r' end | inr r => match RX r with inl l' => L l' | inr r' => R r' end end] in
+                          let C' := (eval cbv beta iota zeta in C') in
+                          clear v; pose C' as v
+                     end).
+      do 2 foo v F X.
+      Import ListNotations.
+      do 4 foo v F X.
+      Ltac bar v F X :=
+        (time (lazymatch (eval cbv [v] in v) with context[F ?x] => pose (F x) as F'; change (F x) with F' in (value of v); subst F; rename F' into F; cbv beta iota zeta in F, v
+               end;
+               lazymatch (eval cbv [F] in F) with @expr.LetIn ?b ?i ?v ?A ?B ?x ?f => pose f as F'; pose x as X; change F with (@expr.LetIn b i v A B X F') in * end;
+               clear F; rename F' into F; subst X;
+               cbn [IR.OfPHOAS.expr_of_base_PHOAS] in v);
+         time (repeat lazymatch (eval cbv [v] in v) with
+                      | context C[match ?f ?x with _ => _ end]
+                        => let f' := Tactics.Head.head f in
+                           let fx := constr:(f x) in
+                           (*idtac fx "(" f' ")";*)
+                           let do_vm _ := lazymatch (eval cbv [v] in v) with
+                                          | context C[fx]
+                                            => pose fx as k;
+                                               clear v;
+                                               let C' := context C[k] in
+                                               pose C' as v;
+                                               (vm_compute in k; subst k; cbv beta iota in v)
+                                          end in
+                           lazymatch f' with
+                           | @type.try_transport => do_vm ()
+                           | @invert_expr.invert_App_Z_cast2 => do_vm ()
+                           | @invert_expr.invert_App_curried => do_vm ()
+                           | @Option.bind => do_vm ()
+                           | @Crypto.Util.Option.bind => do_vm ()
+                           | @IR.OfPHOAS.arith_expr_of_PHOAS_args => do_vm ()
+                           | @IR.OfPHOAS.bounds_check => do_vm ()
+                           | @fst => do_vm ()
+                           | @snd => do_vm ()
+                           | _ => progress cbn [f'] in v
+                           end
+                      end;
+               repeat (set (k := option_map _ _) in (value of v) at 1; vm_compute in k; subst k; cbv beta iota in v);
+               cbn -[F] in v)).
+      bar v F X.
+      match (eval cbv [v] in v) with match ?x with _ => _ end => clear v; pose x as v end.
+      bar v F X.
+      match (eval cbv [v] in v) with match ?x with _ => _ end => clear v; pose x as v end.
+      bar v F X.
+      match (eval cbv [v] in v) with match ?x with _ => _ end => clear v; pose x as v end.
+      do 5 (bar v F X;
+            match (eval cbv [v] in v) with match ?x with _ => _ end => clear v; pose x as v end).
+      do 5 (bar v F X;
+            match (eval cbv [v] in v) with match ?x with _ => _ end => clear v; pose x as v end).
+      do 5 (bar v F X;
+            match (eval cbv [v] in v) with match ?x with _ => _ end => clear v; pose x as v end).
+      do 5 (bar v F X;
+            match (eval cbv [v] in v) with match ?x with _ => _ end => clear v; pose x as v end).
+      do 50 (bar v F X;
+            match (eval cbv [v] in v) with match ?x with _ => _ end => clear v; pose x as v end).
+      Notation "'LL'" := expr.LetIn.
+
+      vm_compute in v.
+      Set Printing All.
+      do 4 foo v F X.
+      do 16 foo v F X.
+      do 4 foo v F X.
+      Arguments
+
+      set (k := option_map _ _) in (value of v) at 1; vm_compute in k; subst k; cbv beta iota in v.
+      cbn [fst snd] in k.
+      clear v.
+      Arguments Z.pow_pos _ / .
+      Arguments Language.Compilers.ToString.int.of_zrange_relaxed _ / .
+      Arguments Language.Compilers.ToString.int.union _ / .
+      Arguments Language.Compilers.ToString.int.bitwidth_of _ / .
+      Arguments Language.Compilers.ToString.int.lgbitwidth_of _ / .
+      cbn [Z.pow Z.sub Z.add Z.mul Z.pow_pos Pos.iter Pos.mul Z.opp Z.pos_sub Pos.pred_double Pos.add Pos.succ Z.log2_up Z.compare Z.eqb Z.ltb Z.eqb Pos.compare Pos.compare_cont Z.pred Z.log2 Z.succ Pos.size Z.max Z.leb Z.to_nat Pos.to_nat Pos.iter_op Nat.add Z.of_nat Pos.iter Z.mul Pos.of_succ_nat Z.max Z.min
+                 Language.Compilers.ToString.int.of_zrange_relaxed
+                 option_map
+                 lower upper
+                 Language.Compilers.ToString.int.union Language.Compilers.ToString.int.to_zrange Language.Compilers.ToString.int.is_signed Language.Compilers.ToString.int.bitwidth_of Language.Compilers.ToString.int.lgbitwidth_of
+                 Operations.ZRange.union
+          ] in k.
+      cbn [Z.pow Z.sub Z.add Z.mul Z.pow_pos Pos.iter Pos.mul Z.opp Z.pos_sub Pos.pred_double Pos.add Pos.succ Z.log2_up Z.compare Z.eqb Z.ltb Z.eqb Pos.compare Pos.compare_cont Z.pred Z.log2 Z.succ Pos.size Z.max Z.leb Z.to_nat Pos.to_nat Pos.iter_op Nat.add Z.of_nat Pos.iter Z.mul Pos.of_succ_nat] in k.
+      cbn [Operations.ZRange.union lower upper] in k.
+      cbn [Z.pow Z.sub Z.add Z.mul Z.pow_pos Pos.iter Pos.mul Z.opp Z.pos_sub Pos.pred_double Pos.add Pos.succ Z.log2_up Z.compare Z.eqb Z.ltb Z.eqb Pos.compare Pos.compare_cont Z.pred Z.log2 Z.succ Pos.size Z.max Z.leb Z.to_nat Pos.to_nat Pos.iter_op Nat.add Z.of_nat Pos.iter Z.mul Pos.of_succ_nat Z.max Z.min] in k.
+      cbn [Language.Compilers.ToString.int.of_zrange_relaxed lower upper] in k.
+      cbn [] in k.
+      .
+
+      cbn in k.
+      cbn in k.
+      subst k; cbv beta iota zeta in v.
+      set (k := option_map _ _) in (value of v) at 1; vm_compute in k.
+      subst k; cbv beta iota zeta in v.
+      cbn -[F] in v.
+      subst X
+      vm_compute in k.
+      vm_compute in k.
+      subst k; cbv beta iota zeta in v.
+
+      vm
+      set (k := (1 + 1)%Z) in (value of v).
+      vm_compute in v.
+      vm_compute in k.
+      cbn [String
+
+
+      vm_compute in v.
+      pose (match snd v as v' return match v' with ErrorT.Error _ => _ | _ => _ end with
+            | ErrorT.Error v => v
+            | _ => I
+            end) as v'.
+      vm_compute in v'; clear v.
+      pose (Show.show_lines false v') as s.
+      cbv [Show.show_lines] in s.
+      cbv [Pipeline.show_lines_ErrorMessage] in s.
+      lazymatch (eval cbv [v'] in v') with context[fun var => @?F var] => set (F' := F) in (value of v') end.
+      subst v'.
+      cbv beta iota zeta in s.
+      cbv [Show.maybe_wrap_parens_lines Show.show_lines Language.Compilers.ToString.PHOAS.expr.show_lines_Expr] in s.
+      cbn [List.app] in s.
+      cbv [Language.Compilers.ToString.PHOAS.expr.show_lines_Expr] in s.
+      subst F'; cbv beta iota zeta in s.
+      match (eval cbv [s] in s) with context G[expr.Abs ?f] => set (F := f) in (value of s) end.
+      cbv [Language.Compilers.ToString.PHOAS.expr.show_lines_expr] in s.
+      cbv [Language.Compilers.ToString.PHOAS.expr.show_eta_cps] in s.
+      progress cbn [Language.Compilers.ToString.PHOAS.expr.show_eta_abs_cps'] in s.
+      lazymatch (eval cbv [s] in s) with context[F ?v] => pose (F v) as F'; change (F v) with F' in (value of s); subst F; rename F' into F; cbv beta iota zeta in F, s
+      end.
+      match (eval cbv [F] in F) with context G[expr.Abs ?f] => set (F' := f) in (value of F) end;
+        subst F; rename F' into F.
+      progress cbn [Language.Compilers.ToString.PHOAS.expr.show_eta_abs_cps'] in s.
+      set (k := Decimal.decimal_string_of_pos 1) in (value of s); vm_compute in k; subst k.
+      set (k := Decimal.decimal_string_of_pos _) in (value of s); vm_compute in k; subst k.
+      cbn [String.append] in s.
+      set (k := Pos.succ 1) in (value of s); vm_compute in k; subst k.
+      set (k := Pos.succ _) in (value of s); vm_compute in k; subst k.
+      cbn [String.append List.map List.app] in s.
+      lazymatch (eval cbv [s] in s) with context[F ?v] => pose (F v) as F'; change (F v) with F' in (value of s); subst F; rename F' into F; cbv beta iota zeta in F, s
+      end.
+      match (eval cbv [F] in F) with context G[expr.LetIn ?x ?f] => set (F' := f) in (value of F); set (X := x) in (value of F) end;
+        subst F; rename F' into F.
+      progress cbn [Language.Compilers.ToString.PHOAS.expr.show_eta_abs_cps'] in s.
+      cbv [Language.Compilers.ToString.PHOAS.expr.get_eta_cps_args] in s.
+      progress cbn [Language.Compilers.ToString.PHOAS.expr.show_expr_lines] in s.
+      cbv [Language.Compilers.ToString.PHOAS.expr.show_eta_cps] in s.
+      set (k := Decimal.decimal_string_of_pos _) in (value of s); vm_compute in k; subst k.
+      set (k := Pos.succ _) in (value of s); vm_compute in k; subst k.
+      cbn [String.append List.map List.app] in s.
+      repeat match (eval cbv [s] in s) with
+             | context C[let '(c, d) := let '(a, b) := ?x in @?F a b in @?G c d]
+               => let C' := context C[let '(a, b) := x in let '(c, d) := F a b in G c d] in
+                  clear s; pose C' as s; cbv beta iota zeta in s
+             end.
+      vm_compute in s.
+      set (XX := Language.Compilers.ToString.PHOAS.expr.show_eta_abs_cps' _ _ X) in (value of s).
+      clear s.
+      subst X.
+      cbn [Language.Compilers.ToString.PHOAS.expr.show_eta_abs_cps'] in XX.
+
+      set (k := Decimal.decimal_string_of_pos _) in (value of XX); vm_compute in k; subst k.
+      cbn [String.append List.map List.app] in XX.
+      cbn [Language.Compilers.ToString.PHOAS.expr.get_eta_cps_args] in XX.
+      cbn [Language.Compilers.ToString.PHOAS.expr.show_expr_lines] in XX.
+      repeat match (eval cbv [XX] in XX) with
+             | context C[let '(c, d) := let '(a, b) := ?x in @?F a b in @?G c d]
+               => let C' := context C[let '(a, b) := x in let '(c, d) := F a b in G c d] in
+                  clear XX; pose C' as XX; cbv beta iota zeta in XX
+             end.
+      unfold Language.Compilers.ToString.PHOAS.expr.show_eta_cps at 1 in (value of XX).
+      cbn [Language.Compilers.ToString.PHOAS.expr.show_eta_abs_cps'] in XX.
+      cbn [Language.Compilers.ToString.PHOAS.expr.get_eta_cps_args] in XX.
+      cbn [String.append List.map List.app String.concat] in XX.
+      repeat match (eval cbv [XX] in XX) with
+             | context C[let '(c, d) := let '(a, b) := ?x in @?F a b in @?G c d]
+               => let C' := context C[let '(a, b) := x in let '(c, d) := F a b in G c d] in
+                  clear XX; pose C' as XX; cbv beta iota zeta in XX
+             end.
+      cbn [Language.Compilers.ToString.PHOAS.expr.show_expr_lines] in XX.
+      cbv [Language.Compilers.ToString.PHOAS.expr.show_eta_cps] in XX.
+      cbn [Language.Compilers.ToString.PHOAS.expr.show_eta_abs_cps'] in XX.
+      cbv [Language.Compilers.ToString.PHOAS.expr.get_eta_cps_args] in XX.
+      set (k := Language.Compilers.ToString.PHOAS.expr.show_expr_lines _ _ _ _) in (value of XX) at 1.
+      vm_compute in k.
+      subst k; cbv beta iota zeta in XX.
+      set (k := Language.Compilers.ToString.PHOAS.expr.show_expr_lines _ _ _ _) in (value of XX) at 1.
+      vm_compute in k.
+      subst k; cbv beta iota zeta in XX.
+      set (k := Language.Compilers.ToString.PHOAS.expr.show_expr_lines _ _ _ _) in (value of XX) at 1.
+      vm_compute in k.
+      subst k; cbv beta iota zeta in XX.
+      set (k := Language.Compilers.ToString.PHOAS.ident.show_ident_lvl _ _ _) in (value of XX).
+      cbn in k.
+      subst k; cbv beta iota zeta in XX.
+      cbv [Ascii.NewLine] in XX.
+      cbn [String.append List.map List.app String.concat] in XX.*)
+    Abort.
+     *)
+  End __.
+End debugging_go_build.
+
+Module debugging_go_output.
+  Import Crypto.PushButtonSynthesis.WordByWordMontgomery.
+  Import Crypto.Arithmetic.WordByWordMontgomery.WordByWordMontgomery.
+  Import Stringification.Go.
+  Section __.
+    Local Existing Instance Go.OutputGoAPI.
+    Local Instance static : static_opt := false.
+    Local Instance : emit_primitives_opt := true.
+    Local Instance : use_mul_for_cmovznz_opt := true.
+    Local Instance : widen_carry_opt := true.
+    Local Instance : widen_bytes_opt := true.
+    Local Instance : should_split_mul_opt := true. (* only for x64 *)
+
+    Context (m : Z := 2^256 - 2^224 + 2^192 + 2^96 - 1)
+            (machine_wordsize : Z := 64).
+
+    (*
+    Goal True.
+      pose (smul m machine_wordsize "p256") as v.
+      cbv [smul] in v.
+      vm_compute in v.
+      pose (match snd v as v' return match v' with ErrorT.Error _ => _ | _ => _ end with
+            | ErrorT.Error v => v
+            | _ => I
+            end) as v'.
+      vm_compute in v'; clear v.
+      pose (Show.show_lines false v') as s.
+      cbv [Show.show_lines] in s.
+      cbv [Pipeline.show_lines_ErrorMessage] in s.
+      (*
+      lazymatch (eval cbv [v'] in v') with context[fun var => @?F var] => set (F' := F) in (value of v') end.
+      subst v'.
+      cbv beta iota zeta in s.
+      cbv [Show.maybe_wrap_parens_lines Show.show_lines Language.Compilers.ToString.PHOAS.expr.show_lines_Expr] in s.
+      cbn [List.app] in s.
+      cbv [Language.Compilers.ToString.PHOAS.expr.show_lines_Expr] in s.
+      subst F'; cbv beta iota zeta in s.
+      match (eval cbv [s] in s) with context G[expr.Abs ?f] => set (F := f) in (value of s) end.
+      cbv [Language.Compilers.ToString.PHOAS.expr.show_lines_expr] in s.
+      cbv [Language.Compilers.ToString.PHOAS.expr.show_eta_cps] in s.
+      progress cbn [Language.Compilers.ToString.PHOAS.expr.show_eta_abs_cps'] in s.
+      Notation "'λ'" := (expr.Abs _).
+      Notation "'LET'" := (expr.LetIn _ _).
+      lazymatch (eval cbv [s] in s) with context[F ?v] => pose (F v) as F'; change (F v) with F' in (value of s); subst F; rename F' into F; cbv beta iota zeta in F, s
+      end.
+      match (eval cbv [F] in F) with context G[expr.Abs ?f] => set (F' := f) in (value of F) end;
+        subst F; rename F' into F.
+      progress cbn [Language.Compilers.ToString.PHOAS.expr.show_eta_abs_cps'] in s.
+      set (k := Decimal.decimal_string_of_pos 1) in (value of s); vm_compute in k; subst k.
+      set (k := Decimal.decimal_string_of_pos _) in (value of s); vm_compute in k; subst k.
+      Arguments String.append !_ !_ / .
+      cbn [String.append] in s.
+      set (k := Pos.succ 1) in (value of s); vm_compute in k; subst k.
+      set (k := Pos.succ _) in (value of s); vm_compute in k; subst k.
+      cbn [String.append List.map List.app] in s.
+      lazymatch (eval cbv [s] in s) with context[F ?v] => pose (F v) as F'; change (F v) with F' in (value of s); subst F; rename F' into F; cbv beta iota zeta in F, s
+      end.
+      match (eval cbv [F] in F) with context G[expr.LetIn ?x ?f] => set (F' := f) in (value of F); set (X := x) in (value of F) end;
+        subst F; rename F' into F.
+      progress cbn [Language.Compilers.ToString.PHOAS.expr.show_eta_abs_cps'] in s.
+      cbv [Language.Compilers.ToString.PHOAS.expr.get_eta_cps_args] in s.
+      progress cbn [Language.Compilers.ToString.PHOAS.expr.show_expr_lines] in s.
+      cbv [Language.Compilers.ToString.PHOAS.expr.show_eta_cps] in s.
+      set (k := Decimal.decimal_string_of_pos _) in (value of s); vm_compute in k; subst k.
+      set (k := Pos.succ _) in (value of s); vm_compute in k; subst k.
+      cbn [String.append List.map List.app] in s.
+      repeat match (eval cbv [s] in s) with
+             | context C[let '(c, d) := let '(a, b) := ?x in @?F a b in @?G c d]
+               => let C' := context C[let '(a, b) := x in let '(c, d) := F a b in G c d] in
+                  clear s; pose C' as s; cbv beta iota zeta in s
+             end.
+      vm_compute in s.
+      set (XX := Language.Compilers.ToString.PHOAS.expr.show_eta_abs_cps' _ _ X) in (value of s).
+      clear s.
+      subst X.
+      cbn [Language.Compilers.ToString.PHOAS.expr.show_eta_abs_cps'] in XX.
+
+      set (k := Decimal.decimal_string_of_pos _) in (value of XX); vm_compute in k; subst k.
+      cbn [String.append List.map List.app] in XX.
+      cbn [Language.Compilers.ToString.PHOAS.expr.get_eta_cps_args] in XX.
+      cbn [Language.Compilers.ToString.PHOAS.expr.show_expr_lines] in XX.
+      repeat match (eval cbv [XX] in XX) with
+             | context C[let '(c, d) := let '(a, b) := ?x in @?F a b in @?G c d]
+               => let C' := context C[let '(a, b) := x in let '(c, d) := F a b in G c d] in
+                  clear XX; pose C' as XX; cbv beta iota zeta in XX
+             end.
+      unfold Language.Compilers.ToString.PHOAS.expr.show_eta_cps at 1 in (value of XX).
+      cbn [Language.Compilers.ToString.PHOAS.expr.show_eta_abs_cps'] in XX.
+      cbn [Language.Compilers.ToString.PHOAS.expr.get_eta_cps_args] in XX.
+      cbn [String.append List.map List.app String.concat] in XX.
+      repeat match (eval cbv [XX] in XX) with
+             | context C[let '(c, d) := let '(a, b) := ?x in @?F a b in @?G c d]
+               => let C' := context C[let '(a, b) := x in let '(c, d) := F a b in G c d] in
+                  clear XX; pose C' as XX; cbv beta iota zeta in XX
+             end.
+      cbn [Language.Compilers.ToString.PHOAS.expr.show_expr_lines] in XX.
+      cbv [Language.Compilers.ToString.PHOAS.expr.show_eta_cps] in XX.
+      cbn [Language.Compilers.ToString.PHOAS.expr.show_eta_abs_cps'] in XX.
+      cbv [Language.Compilers.ToString.PHOAS.expr.get_eta_cps_args] in XX.
+      set (k := Language.Compilers.ToString.PHOAS.expr.show_expr_lines _ _ _ _) in (value of XX) at 1.
+      vm_compute in k.
+      subst k; cbv beta iota zeta in XX.
+      set (k := Language.Compilers.ToString.PHOAS.expr.show_expr_lines _ _ _ _) in (value of XX) at 1.
+      vm_compute in k.
+      subst k; cbv beta iota zeta in XX.
+      set (k := Language.Compilers.ToString.PHOAS.expr.show_expr_lines _ _ _ _) in (value of XX) at 1.
+      vm_compute in k.
+      subst k; cbv beta iota zeta in XX.
+      set (k := Language.Compilers.ToString.PHOAS.ident.show_ident_lvl _ _ _) in (value of XX).
+      cbn in k.
+      subst k; cbv beta iota zeta in XX.
+      cbv [Ascii.NewLine] in XX.
+      cbn [String.append List.map List.app String.concat] in XX.*)
+    Abort.
+    *)
+  End __.
+End debugging_go_output.
+
+Import Stringification.C.
+Import Stringification.C.Compilers.
+
 Local Existing Instance ToString.C.OutputCAPI.
 Local Instance static : static_opt := true.
 Local Instance : use_mul_for_cmovznz_opt := false.
 Local Instance : emit_primitives_opt := true.
-Local Existing Instance default_low_level_rewriter_method.
 
 Module debugging_remove_mul_split_to_C_uint1_carry.
   Section __.
