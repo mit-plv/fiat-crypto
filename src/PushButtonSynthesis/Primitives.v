@@ -598,8 +598,15 @@ Module CorrectnessStringification.
 
   Notation docstring_with_summary_from_lemma_with_ctx ctx summary correctness
     := (fun fname arg_var_data out_var_data
-        => ltac:(let res := stringify ctx correctness fname arg_var_data out_var_data in
-                 refine (List.app (summary fname) res))) (only parsing).
+        => match ctx, summary%list, correctness return _ with
+           | ctx', summary', correctness'
+             => ltac:(let ctx := (eval cbv delta [ctx'] in ctx') in
+                      let summary := (eval cbv delta [summary'] in summary') in
+                      let correctness := (eval cbv delta [correctness'] in correctness') in
+                      clear ctx' summary' correctness';
+                        let res := stringify ctx correctness fname arg_var_data out_var_data in
+                        refine (List.app (summary fname) res))
+           end) (only parsing).
   Notation docstring_with_summary_from_lemma summary correctness
     := (match dyn_context.nil with
         | ctx' => docstring_with_summary_from_lemma_with_ctx ctx' summary correctness
