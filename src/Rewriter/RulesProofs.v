@@ -600,6 +600,9 @@ Proof using Type.
            | |- (_ + _) >> _ mod _ = _ =>
              (* take only high bits *)
              rewrite ?Z.shiftr_div_pow2 by lia; autorewrite with zsimplify; lia
+           | |- (_ + _) / _ = _ =>
+             (* take only high bits *)
+             autorewrite with zsimplify; lia
            end.
 
   (* should have only Z.lor cases now *)
