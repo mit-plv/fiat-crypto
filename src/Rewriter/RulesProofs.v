@@ -597,6 +597,9 @@ Proof using Type.
            | |- ((_ + _) &' _) mod _ = _ =>
              (* addition-and case *)
              rewrite Z.land_add_high by (try apply Z.log2_lt_pow2; lia); lia
+           | |- (_ + _) >> _ mod _ = _ =>
+             (* take only high bits *)
+             rewrite ?Z.shiftr_div_pow2 by lia; autorewrite with zsimplify; lia
            end.
 
   (* should have only Z.lor cases now *)

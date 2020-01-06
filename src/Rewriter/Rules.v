@@ -868,6 +868,10 @@ Section with_bitwidth.
                               dlet h := singlewidth
                                           (singlewidth xh >> singlewidth ('offset)) in
                               cstZsingle_to_double l h))
+              ; (forall xl xh,
+                    0 < bitwidth
+                    -> singlewidth (cstZsingle_to_double xl xh >> singlewidth ('bitwidth))
+                       = singlewidth xh)
              ]
           ].
 End with_bitwidth.
