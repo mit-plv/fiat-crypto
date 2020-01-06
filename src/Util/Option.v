@@ -47,6 +47,9 @@ Definition sequence_return {A} (v1 : option A) (v2 : A) : A
      end.
 Global Arguments sequence {A} !v1 v2.
 Global Arguments sequence_return {A} !v1 v2.
+(* After OCaml's [value] *)
+Notation value := sequence_return (only parsing).
+Notation get_default := sequence_return (only parsing).
 
 Module Export Notations.
   Delimit Scope option_scope with option.
