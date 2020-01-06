@@ -54,7 +54,7 @@ Section Expr.
 
   (* Translate an API.expr (without LetIn statements) into a bedrock2
      Syntax.expr *)
-  Fixpoint translate_inner_expr
+  Fixpoint translate_expr
            (require_cast : bool)
            {t} (e : @API.expr ltype (type.base t)) : base_rtype t :=
     if (require_cast && negb (has_casts e))%bool
@@ -67,13 +67,13 @@ Section Expr.
            (expr.App
               type_range (type.arrow type_Z type_Z)
               (expr.Ident _ ident.Z_cast) _) x) =>
-        translate_inner_expr false x
+        translate_expr false x
       (* Z_cast2 : clear casts because has_casts already checked for them *)
       | (expr.App
            type_ZZ type_ZZ
            (expr.App
               type_range2 (type.arrow type_ZZ type_ZZ)
-              (expr.Ident _ ident.Z_cast2) _) x) => translate_inner_expr false x
+              (expr.Ident _ ident.Z_cast2) _) x) => translate_expr false x
       (* Z_mul_split : compute high and low separately and assign to two
          different variables *)
       (* TODO : don't duplicate argument expressions *)
@@ -88,10 +88,10 @@ Section Expr.
         then
           let low := Syntax.expr.op
                        Syntax.bopname.mul
-                       (translate_inner_expr true x) (translate_inner_expr true y) in
+                       (translate_expr true x) (translate_expr true y) in
           let high := Syntax.expr.op
                         Syntax.bopname.mulhuu
-                        (translate_inner_expr true x) (translate_inner_expr true y) in
+                        (translate_expr true x) (translate_expr true y) in
           (low, high)
         else base_make_error _
       (* Z_add -> bopname.add *)
@@ -99,31 +99,31 @@ Section Expr.
          type_Z type_Z
          (expr.App type_Z (type.arrow type_Z type_Z)
                    (expr.Ident _ ident.Z_add) x) y) =>
-      Syntax.expr.op Syntax.bopname.add (translate_inner_expr true x) (translate_inner_expr true y)
+      Syntax.expr.op Syntax.bopname.add (translate_expr true x) (translate_expr true y)
     (* Z_mul -> bopname.mul *)
     | (expr.App
          type_Z type_Z
          (expr.App type_Z (type.arrow type_Z type_Z)
                    (expr.Ident _ ident.Z_mul) x) y) =>
-      Syntax.expr.op Syntax.bopname.mul (translate_inner_expr true x) (translate_inner_expr true y)
+      Syntax.expr.op Syntax.bopname.mul (translate_expr true x) (translate_expr true y)
     (* Z_land -> bopname.and *)
     | (expr.App
          type_Z type_Z
          (expr.App type_Z (type.arrow type_Z type_Z)
                    (expr.Ident _ ident.Z_land) x) y) =>
-      Syntax.expr.op Syntax.bopname.and (translate_inner_expr true x) (translate_inner_expr true y)
+      Syntax.expr.op Syntax.bopname.and (translate_expr true x) (translate_expr true y)
     (* Z_lor -> bopname.or *)
     | (expr.App
          type_Z type_Z
          (expr.App type_Z (type.arrow type_Z type_Z)
                    (expr.Ident _ ident.Z_lor) x) y) =>
-      Syntax.expr.op Syntax.bopname.or (translate_inner_expr true x) (translate_inner_expr true y)
+      Syntax.expr.op Syntax.bopname.or (translate_expr true x) (translate_expr true y)
     (* Z_shiftr -> bopname.sru *)
     | (expr.App
          type_Z type_Z
          (expr.App type_Z (type.arrow type_Z type_Z)
                    (expr.Ident _ ident.Z_shiftr) x) y) =>
-      Syntax.expr.op Syntax.bopname.sru (translate_inner_expr true x) (translate_inner_expr true y)
+      Syntax.expr.op Syntax.bopname.sru (translate_expr true x) (translate_expr true y)
     (* Z_truncating_shiftl : convert to bopname.slu if the truncation matches *)
     | (expr.App
          type_Z type_Z
@@ -133,20 +133,20 @@ Section Expr.
                              (expr.Ident _ (ident.Literal base.type.Z s)))
                    x) y) =>
       if Z.eqb s Semantics.width
-      then Syntax.expr.op Syntax.bopname.slu (translate_inner_expr true x) (translate_inner_expr true y)
+      then Syntax.expr.op Syntax.bopname.slu (translate_expr true x) (translate_expr true y)
       else base_make_error _
     (* fst : since the [rtype] of a product type is a tuple, simply use Coq's [fst] *)
     | (expr.App
          (type.base (base.type.prod (base.type.type_base base.type.Z) _)) type_Z
          (expr.Ident _ (ident.fst (base.type.type_base base.type.Z) _))
          x) =>
-      fst (translate_inner_expr false x)
+      fst (translate_expr false x)
     (* snd : since the [rtype] of a product type is a tuple, simply Coq's [snd] *)
     | (expr.App
          (type.base (base.type.prod _ (base.type.type_base base.type.Z))) type_Z
          (expr.Ident _ (ident.snd _ (base.type.type_base base.type.Z)))
          x) =>
-      snd (translate_inner_expr false x)
+      snd (translate_expr false x)
     (* List_nth_default : lists are represented by lists of variables, so we
        can perform the nth_default inline. This saves us from having to
        prove that all indexing into lists is in-bounds. *)
@@ -160,7 +160,7 @@ Section Expr.
          (expr.Ident _ (ident.Literal base.type.nat i))) =>
       let l : list Syntax.varname := l in
       let i : nat := i in
-      let d : Syntax.expr.expr := translate_inner_expr true d in
+      let d : Syntax.expr.expr := translate_expr true d in
       nth_default d (map Syntax.expr.var l) i
     (* Literal (Z) -> Syntax.expr.literal *)
     | expr.Ident type_Z (ident.Literal base.type.Z x) =>
@@ -182,24 +182,24 @@ Section Expr.
     Local Instance varname_eqb_spec x y : BoolSpec _ _ _
       := Semantics.varname_eqb_spec x y.
 
-    Inductive valid_inner_expr
+    Inductive valid_expr
       : forall {t},
         bool (* require_casts *) ->
         @API.expr (fun _ => unit) t -> Prop :=
-    | valid_inner_cast1 :
+    | valid_cast1 :
         forall rc r x,
-          valid_inner_expr false x ->
+          valid_expr false x ->
           range_good r = true ->
-          valid_inner_expr (t:=type_Z) rc
+          valid_expr (t:=type_Z) rc
                            (expr.App
                               (expr.App (expr.Ident ident.Z_cast)
                                         (expr.Ident (ident.Literal (t:=base.type.zrange) r))) x)
-    | valid_inner_cast2 :
+    | valid_cast2 :
         forall (rc : bool) r1 r2 x,
-          valid_inner_expr false x ->
+          valid_expr false x ->
           range_good r1 = true ->
           range_good r2 = true ->
-          valid_inner_expr (t:=type_ZZ) rc
+          valid_expr (t:=type_ZZ) rc
                            (expr.App
                               (expr.App (expr.Ident ident.Z_cast2)
                                         (expr.App
@@ -207,28 +207,28 @@ Section Expr.
                                               (expr.Ident ident.pair)
                                               (expr.Ident (ident.Literal (t:=base.type.zrange) r1)))
                                            (expr.Ident (ident.Literal (t:=base.type.zrange) r2)))) x)
-    | valid_inner_literalz :
+    | valid_literalz :
         forall rc z,
           (* either bounded or casts not required *)
           (is_bounded_by_bool z max_range || negb rc = true)%bool ->
-          valid_inner_expr (t:=type_Z) rc (expr.Ident (ident.Literal (t:=base.type.Z) z))
-    | valid_inner_add :
+          valid_expr (t:=type_Z) rc (expr.Ident (ident.Literal (t:=base.type.Z) z))
+    | valid_add :
         forall x y,
-          valid_inner_expr true x ->
-          valid_inner_expr true y ->
-          valid_inner_expr false (expr.App (expr.App (expr.Ident ident.Z_add) x) y)
-    | valid_inner_nth_default :
+          valid_expr true x ->
+          valid_expr true y ->
+          valid_expr false (expr.App (expr.App (expr.Ident ident.Z_add) x) y)
+    | valid_nth_default :
         forall rc d l i,
-          valid_inner_expr true d ->
-          valid_inner_expr
+          valid_expr true d ->
+          valid_expr
             (t:=type_Z)
             rc (* casts not required, since a list of vars must be already cast *)
             (expr.App (expr.App (expr.App (expr.Ident ident.List_nth_default) d)
                                 (expr.Var (t:=type_listZ) l))
             (expr.Ident (ident.Literal i)))
-    | valid_inner_var :
-        forall t v, valid_inner_expr (t:=type.base t) false (expr.Var v)
-    (* TODO: need many more cases here, one for each in translate_inner_expr --
+    | valid_var :
+        forall t v, valid_expr (t:=type.base t) false (expr.Var v)
+    (* TODO: need many more cases here, one for each in translate_expr --
        this is just a small set to test proof strategies *)
     .
 
@@ -241,26 +241,26 @@ Section Expr.
       : Prop :=
       match x with
       | existT (type.base b) (w, x, y) =>
-        forall mem, equivalent x (rtype_of_ltype y) locals mem
+        locally_equivalent x (rtype_of_ltype y) locals
       | existT (type.arrow _ _) _ => False (* no functions allowed *)
       end.
 
     Definition context_equiv {var1} G locals
       : Prop := Forall (equiv3 (var1:= var1) locals) G.
 
-    Lemma translate_inner_expr_correct {t}
+    Lemma translate_expr_correct {t}
           (* three exprs, representing the same Expr with different vars *)
           (e1 : @API.expr (fun _ => unit) (type.base t))
           (e2 : @API.expr API.interp_type (type.base t))
           (e3 : @API.expr ltype (type.base t))
           (require_cast : bool) :
       (* e1 is a valid input to translate_carries_correct *)
-      valid_inner_expr require_cast e1 ->
-      forall G locals mem,
+      valid_expr require_cast e1 ->
+      forall G locals,
         wf3 G e1 e2 e3 ->
-        let out := translate_inner_expr require_cast e3 in
+        let out := translate_expr require_cast e3 in
         context_equiv G locals ->
-        equivalent (API.interp e2) out locals mem.
+        locally_equivalent (API.interp e2) out locals.
     Admitted.
   End Proofs.
 End Expr.
