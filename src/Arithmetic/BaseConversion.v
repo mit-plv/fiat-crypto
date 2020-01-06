@@ -259,3 +259,93 @@ Module BaseConversion.
     Qed.
   End widemul.
 End BaseConversion.
+
+Section base_conversion_mod_ops.
+  Import Positional.
+  Import BaseConversion.
+  Local Coercion Z.of_nat : nat >-> Z.
+  (* Design constraints:
+     - inputs must be [Z] (b/c reification does not support Q)
+     - internal structure must not match on the arguments (b/c reification does not support [positive]) *)
+  Context (src_limbwidth_num src_limbwidth_den : Z)
+          (src_limbwidth_good : 0 < src_limbwidth_den <= src_limbwidth_num)
+          (dst_limbwidth_num dst_limbwidth_den : Z)
+          (dst_limbwidth_good : 0 < dst_limbwidth_den <= dst_limbwidth_num)
+          (src_n : nat)
+          (dst_n : nat)
+          (bitwidth : Z)
+          (Hsrc_n_nz : src_n <> 0%nat)
+          (Hdst_n_nz : dst_n <> 0%nat).
+  Local Notation src_weight := (@weight src_limbwidth_num src_limbwidth_den).
+  Local Notation dst_weight := (@weight dst_limbwidth_num dst_limbwidth_den).
+
+  Local Notation src_wprops := (@wprops src_limbwidth_num src_limbwidth_den src_limbwidth_good).
+  Local Notation dst_wprops := (@wprops dst_limbwidth_num dst_limbwidth_den dst_limbwidth_good).
+
+  Local Notation src_wunique := (@weight_unique src_limbwidth_num src_limbwidth_den src_limbwidth_good).
+  Local Notation dst_wunique := (@weight_unique dst_limbwidth_num dst_limbwidth_den dst_limbwidth_good).
+
+  Local Hint Immediate (src_wprops) : core.
+  Local Hint Immediate (src_wunique) : core.
+  Local Hint Immediate (weight_0 src_wprops) : core.
+  Local Hint Immediate (weight_positive src_wprops) : core.
+  Local Hint Immediate (weight_multiples src_wprops) : core.
+  Local Hint Immediate (weight_divides src_wprops) : core.
+  Local Hint Immediate (dst_wprops) : core.
+  Local Hint Immediate (dst_wunique) : core.
+  Local Hint Immediate (weight_0 dst_wprops) : core.
+  Local Hint Immediate (weight_positive dst_wprops) : core.
+  Local Hint Immediate (weight_multiples dst_wprops) : core.
+  Local Hint Immediate (weight_divides dst_wprops) : core.
+
+  Definition convert_bases (v : list Z)
+    := BaseConversion.convert_bases src_weight dst_weight src_n dst_n v.
+
+  Definition convert_basesmod (f : list Z) : list Z
+    := convert_bases f.
+
+  Lemma eval_convert_bases
+    : forall (f : list Z)
+        (Hf : length f = src_n),
+      eval dst_weight dst_n (convert_bases f) = eval src_weight src_n f.
+  Proof using Hdst_n_nz src_limbwidth_good dst_limbwidth_good.
+    generalize src_wprops dst_wprops; clear -Hdst_n_nz.
+    intros.
+    cbv [convert_bases].
+    rewrite BaseConversion.eval_convert_bases by auto.
+    reflexivity.
+  Qed.
+
+  Lemma convert_bases_partitions
+    : forall (f : list Z)
+             (Hf_small : 0 <= eval src_weight src_n f < dst_weight dst_n),
+      convert_bases f = Partition.partition dst_weight dst_n (Positional.eval src_weight src_n f).
+  Proof using dst_limbwidth_good.
+    clear -dst_limbwidth_good.
+    intros; cbv [convert_bases].
+    apply BaseConversion.convert_bases_partitions; eauto.
+  Qed.
+
+  Lemma eval_convert_basesmod
+    : forall (f : list Z)
+             (Hf : length f = src_n),
+      eval dst_weight dst_n (convert_basesmod f) = eval src_weight src_n f.
+  Proof using Hdst_n_nz src_limbwidth_good dst_limbwidth_good. apply eval_convert_bases. Qed.
+
+  Lemma convert_basesmod_partitions
+    : forall (f : list Z)
+             (Hf_small : 0 <= eval src_weight src_n f < dst_weight dst_n),
+      convert_basesmod f = Partition.partition dst_weight dst_n (Positional.eval src_weight src_n f).
+  Proof using dst_limbwidth_good. apply convert_bases_partitions. Qed.
+
+  Lemma eval_convert_basesmod_and_partitions
+    : forall (f : list Z)
+             (Hf : length f = src_n)
+             (Hf_small : 0 <= eval src_weight src_n f < dst_weight dst_n),
+      eval dst_weight dst_n (convert_basesmod f) = eval src_weight src_n f
+      /\ convert_basesmod f = Partition.partition dst_weight dst_n (Positional.eval src_weight src_n f).
+  Proof using src_limbwidth_good dst_limbwidth_good Hdst_n_nz.
+    now (split; [ apply eval_convert_basesmod | apply convert_bases_partitions ]).
+  Qed.
+End base_conversion_mod_ops.
+Hint Rewrite eval_convert_basesmod eval_convert_bases : push_eval.

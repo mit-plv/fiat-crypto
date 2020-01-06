@@ -13,6 +13,7 @@ Require Import Crypto.Util.Strings.Show.
 Require Crypto.PushButtonSynthesis.SaturatedSolinas.
 Require Crypto.PushButtonSynthesis.UnsaturatedSolinas.
 Require Crypto.PushButtonSynthesis.WordByWordMontgomery.
+Require Crypto.PushButtonSynthesis.BaseConversion.
 Require Import Crypto.UnsaturatedSolinasHeuristics.
 Require Import Crypto.Stringification.Language.
 Require Import Crypto.Stringification.C.
@@ -92,6 +93,13 @@ Module ForExtraction.
   Definition parse_m (s : string) : option Z
     := parseZ_arith s.
 
+  Definition parse_src_n : string -> option nat := parse_nat.
+  Definition parse_limbwidth : string -> option Q := parse_Q.
+  Definition parse_max (s : string) : option (option Z)
+    := option_map (@Some _) (parseZ_arith s).
+  Definition parse_inbounds_multiplier (s : string) : option (option Q)
+    := option_map (@Some _) (parse_Q s).
+
   Definition show_c : Show (list (Z * Z))
     := @show_list _ (@show_prod _ _ PowersOfTwo.show_Z Decimal.show_Z).
 
@@ -158,6 +166,17 @@ Module ForExtraction.
     := "  m                       The prime (e.g., '2^434 - (2^216*3^137 - 1)')".
   Definition machine_wordsize_help
     := "  machine_wordsize        The machine bitwidth (e.g., 32 or 64)".
+  Definition src_n_help
+    := "  src_n                   The number of limbs in the input".
+  Definition src_limbwidth_help
+    := "  src_limbwidth           The limbwidth of the input field element".
+  Definition dst_limbwidth_help
+    := "  dst_limbwidth           The limbwidth of the field element to be returned".
+  Definition max_help
+    := "  max                     The upperbound (strict / exclusive) on the input field element".
+  Definition inbounds_multiplier_help
+    := "  inbounds_multiplier     The (improper) fraction by which the bounds of each limb are scaled".
+
   Definition function_to_synthesize_help (valid_names : string)
     := "  function_to_synthesize  A space-separated list of functions that should be synthesized.  If no functions are given, all functions are synthesized."
          ++ String.NewLine ++
@@ -547,4 +566,67 @@ Module ForExtraction.
       : A
       := Parameterized.PipelineMain argv success error.
   End SaturatedSolinas.
+
+  Module BaseConversion.
+    Local Instance api : PipelineAPI
+      := {
+          parse_args (args : list string)
+          := match args with
+             | src_n::src_limbwidth::dst_limbwidth::machine_wordsize::max::inbounds_multiplier::requests
+               => let str_src_n := src_n in
+                  let str_src_limbwidth := src_limbwidth in
+                  let str_dst_limbwidth := dst_limbwidth in
+                  let str_machine_wordsize := machine_wordsize in
+                  let str_max := max in
+                  let str_inbounds_multiplier := inbounds_multiplier in
+                  let show_requests := match requests with nil => "(all)" | _ => String.concat ", " requests end in
+                  Some
+                    match parse_many [("src_n", src_n, parse_src_n src_n:Dyn)
+                                      ; ("src_limbwidth", src_limbwidth, parse_limbwidth src_limbwidth:Dyn)
+                                      ; ("dst_limbwidth", dst_limbwidth, parse_limbwidth dst_limbwidth:Dyn)
+                                      ; ("machine_wordsize", machine_wordsize, parse_machine_wordsize machine_wordsize:Dyn)
+                                      ; ("max", max, parse_max max:Dyn)
+                                      ; ("inbounds_multiplier", inbounds_multiplier, parse_inbounds_multiplier inbounds_multiplier:Dyn)] with
+                    | inr errs => inr errs
+                    | inl (src_n, src_limbwidth, dst_limbwidth, machine_wordsize, max, inbounds_multiplier)
+                      => inl ((str_src_n, str_src_limbwidth, str_dst_limbwidth, str_machine_wordsize, str_max, str_inbounds_multiplier, show_requests),
+                              (src_n, src_limbwidth, dst_limbwidth, machine_wordsize, max, inbounds_multiplier, requests))
+                    end
+             | _ => None
+             end;
+
+          show_lines_args :=
+            fun '((str_src_n, str_src_limbwidth, str_dst_limbwidth, str_machine_wordsize, str_max, str_inbounds_multiplier, show_requests),
+                  (src_n, src_limbwidth, dst_limbwidth, machine_wordsize, max, inbounds_multiplier, requests))
+            => ["requested operations: " ++ show_requests;
+                  "src_n = " ++ show false src_n ++ " (from """ ++ str_src_n ++ """)";
+                  "src_limbwidth = " ++ show false src_limbwidth ++ " (from """ ++ str_src_limbwidth ++ """)";
+                  "dst_limbwidth = " ++ show false dst_limbwidth ++ " (from """ ++ str_dst_limbwidth ++ """)";
+                  "machine_wordsize = " ++ show false machine_wordsize ++ " (from """ ++ str_machine_wordsize ++ """)";
+                  "max = " ++ @show_option _ PowersOfTwo.show_Z false max ++ " (from """ ++ str_max ++ """)";
+                  "inbounds_multiplier = " ++ show false inbounds_multiplier ++ " (from """ ++ str_inbounds_multiplier ++ """)"];
+
+          pipeline_usage_string := "src_n src_limbwidth dst_limbwidth machine_wordsize max inbounds_multiplier [function_to_synthesize*]";
+
+          help_lines := [src_n_help;
+                           src_limbwidth_help;
+                           dst_limbwidth_help;
+                           machine_wordsize_help;
+                           max_help;
+                           inbounds_multiplier_help;
+                           function_to_synthesize_help BaseConversion.valid_names];
+
+          Synthesize
+          := fun _ opts '(src_n, src_limbwidth, dst_limbwidth, machine_wordsize, max, inbounds_multiplier, requests) comment_header prefix
+             => BaseConversion.Synthesize src_n src_limbwidth dst_limbwidth machine_wordsize max inbounds_multiplier comment_header prefix requests
+        }.
+
+    Definition PipelineMain
+               {A}
+               (argv : list string)
+               (success : list string -> A)
+               (error : list string -> A)
+      : A
+      := Parameterized.PipelineMain argv success error.
+  End BaseConversion.
 End ForExtraction.

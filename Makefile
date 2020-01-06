@@ -262,7 +262,7 @@ Makefile.coq: Makefile _CoqProject
 	$(HIDE)$(COQBIN)coq_makefile -f _CoqProject INSTALLDEFAULTROOT = $(INSTALLDEFAULTROOT) -o Makefile-old && cat Makefile-old | sed s'/^printenv:/printenv::/g' | sed s'/^printenv:::/printenv::/g' | sed s'/OTHERFLAGS        :=/OTHERFLAGS        ?=/g' > $@ && rm -f Makefile-old
 
 
-STANDALONE := unsaturated_solinas saturated_solinas word_by_word_montgomery
+STANDALONE := unsaturated_solinas saturated_solinas word_by_word_montgomery base_conversion
 PERF_STANDALONE := perf_unsaturated_solinas perf_word_by_word_montgomery
 
 STANDALONE_OCAML := $(STANDALONE) $(PERF_STANDALONE)

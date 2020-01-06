@@ -4,6 +4,7 @@ Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
 Require Import Coq.Lists.List.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.ModOps.
+Require Import Crypto.Arithmetic.BaseConversion.
 Require Import Crypto.Arithmetic.Partition.
 Require Import Crypto.Arithmetic.WordByWordMontgomery.
 Require Import Crypto.Util.ZRange.
@@ -139,6 +140,24 @@ Module selectznz.
            /\ list_Z_bounded_by saturated_bounds (selectznz cond x y).
   End __.
 End selectznz.
+
+
+Module BaseConversion.
+  Section __.
+    Context (src_wt dst_wt : nat -> Z)
+            (src_n dst_n : nat)
+            (inbounds : list (option zrange))
+            (length_inbounds : length inbounds = src_n).
+    Local Notation src_eval := (Positional.eval src_wt src_n).
+    Local Notation dst_eval := (Positional.eval dst_wt dst_n).
+
+    Definition convert_bases_correct
+               (convert_bases : list Z -> list Z)
+      := forall x,
+        list_Z_bounded_by inbounds x
+        -> convert_bases x = Partition.partition dst_wt dst_n (src_eval x).
+  End __.
+End BaseConversion.
 
 Module Solinas.
   (** re-export [selectznz_correct] and the primitives.  We
