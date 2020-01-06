@@ -54,7 +54,7 @@ Module Rust.
 
 
   (* Instead of "macros for minimum-width integer constants" we tried to
-     use numeric casts in Rust. It turns out that it wasn't needed an Rust
+     use numeric casts in Rust. It turns out that it wasn't needed and Rust
      will figure out the types of the litterals, so disabling this for
      now *)
   Definition cast_literal (prefix : string) (t : ToString.int.type) : option string :=
