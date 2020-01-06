@@ -143,7 +143,7 @@ static void fiat_25519_carry_mul(uint64_t out1[5], const uint64_t arg1[5], const
   uint64_t x47 = (x46 >> 51);
   uint64_t x48 = (x46 & UINT64_C(0x7ffffffffffff));
   uint64_t x49 = (x47 + x35);
-  uint64_t x50 = (x49 >> 51);
+  fiat_25519_uint1 x50 = (fiat_25519_uint1)(x49 >> 51);
   uint64_t x51 = (x49 & UINT64_C(0x7ffffffffffff));
   uint64_t x52 = (x50 + x38);
   out1[0] = x48;
@@ -211,7 +211,7 @@ static void fiat_25519_carry_square(uint64_t out1[5], const uint64_t arg1[5]) {
   uint64_t x45 = (x44 >> 51);
   uint64_t x46 = (x44 & UINT64_C(0x7ffffffffffff));
   uint64_t x47 = (x45 + x33);
-  uint64_t x48 = (x47 >> 51);
+  fiat_25519_uint1 x48 = (fiat_25519_uint1)(x47 >> 51);
   uint64_t x49 = (x47 & UINT64_C(0x7ffffffffffff));
   uint64_t x50 = (x48 + x36);
   out1[0] = x46;
@@ -253,10 +253,10 @@ static void fiat_25519_carry_scmul_121666(uint64_t out1[5], const uint64_t arg1[
   uint64_t x19 = (uint64_t)(x17 & UINT64_C(0x7ffffffffffff));
   uint64_t x20 = (x18 * (uint64_t)UINT8_C(0x13));
   uint64_t x21 = (x7 + x20);
-  uint64_t x22 = (x21 >> 51);
+  fiat_25519_uint1 x22 = (fiat_25519_uint1)(x21 >> 51);
   uint64_t x23 = (x21 & UINT64_C(0x7ffffffffffff));
   uint64_t x24 = (x22 + x10);
-  uint64_t x25 = (x24 >> 51);
+  fiat_25519_uint1 x25 = (fiat_25519_uint1)(x24 >> 51);
   uint64_t x26 = (x24 & UINT64_C(0x7ffffffffffff));
   uint64_t x27 = (x25 + x13);
   out1[0] = x23;
@@ -283,10 +283,10 @@ static void fiat_25519_carry(uint64_t out1[5], const uint64_t arg1[5]) {
   uint64_t x4 = ((x3 >> 51) + (arg1[3]));
   uint64_t x5 = ((x4 >> 51) + (arg1[4]));
   uint64_t x6 = ((x1 & UINT64_C(0x7ffffffffffff)) + ((x5 >> 51) * (uint64_t)UINT8_C(0x13)));
-  uint64_t x7 = ((x6 >> 51) + (x2 & UINT64_C(0x7ffffffffffff)));
+  uint64_t x7 = ((fiat_25519_uint1)(x6 >> 51) + (x2 & UINT64_C(0x7ffffffffffff)));
   uint64_t x8 = (x6 & UINT64_C(0x7ffffffffffff));
   uint64_t x9 = (x7 & UINT64_C(0x7ffffffffffff));
-  uint64_t x10 = ((x7 >> 51) + (x3 & UINT64_C(0x7ffffffffffff)));
+  uint64_t x10 = ((fiat_25519_uint1)(x7 >> 51) + (x3 & UINT64_C(0x7ffffffffffff)));
   uint64_t x11 = (x4 & UINT64_C(0x7ffffffffffff));
   uint64_t x12 = (x5 & UINT64_C(0x7ffffffffffff));
   out1[0] = x8;

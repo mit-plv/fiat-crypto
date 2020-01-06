@@ -142,6 +142,8 @@ Module ForExtraction.
        "                            Valid options are: " ++ String.concat ", " (List.map (@fst _ _) supported_languages).
   Definition static_help
     := "  --static                Declare the functions as static, i.e., local to the file.".
+  Definition no_wide_int_help
+    := "  --no-wide-int           Don't use integers wider than the bitwidth.".
   Definition no_primitives_help
     := "  --no-primitives         Suppress the generation of the bodies of primitive operations such as addcarryx, subborrowx, cmovznz, mulx, etc.".
   Definition n_help
@@ -220,7 +222,7 @@ Module ForExtraction.
       ; emit_primitives :> emit_primitives_opt
 
       (** Should we split apart oversized operations? *)
-      ; should_split_mul :> should_split_mul_opt := false
+      ; should_split_mul :> should_split_mul_opt
       (** Should we widen the carry to the full bitwidth? *)
       ; widen_carry :> widen_carry_opt := false
       (** Should we widen the byte type to the full bitwidth? *)
@@ -351,6 +353,7 @@ Module ForExtraction.
                                "";
                                lang_help;
                                static_help;
+                               no_wide_int_help;
                                no_primitives_help;
                                curve_description_help]%string)
                              ++ help_lines
@@ -358,6 +361,8 @@ Module ForExtraction.
                end in
            let '(argv, output_language_api) := argv_to_language_and_argv argv in
            let '(argv, staticv) := argv_to_contains_opt_and_argv "--static" argv in
+
+           let '(argv, no_wide_intsv) := argv_to_contains_opt_and_argv "--no-wide-int" argv in
            let '(argv, no_primitivesv) := argv_to_contains_opt_and_argv "--no-primitives" argv in
            match argv with
            | _::curve_description::args
@@ -365,6 +370,7 @@ Module ForExtraction.
                 | Some (inl args)
                   => let opts
                          := {| static := staticv
+                               ; should_split_mul := no_wide_intsv
                                ; emit_primitives := negb no_primitivesv |} in
                      Pipeline curve_description args success error
                 | Some (inr errs)

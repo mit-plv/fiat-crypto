@@ -280,7 +280,7 @@ static void fiat_25519_carry_mul(uint32_t out1[10], const uint32_t arg1[10], con
   uint32_t x142 = (uint32_t)(x141 >> 26);
   uint32_t x143 = (uint32_t)(x141 & UINT32_C(0x3ffffff));
   uint32_t x144 = (x142 + x115);
-  uint32_t x145 = (x144 >> 25);
+  fiat_25519_uint1 x145 = (fiat_25519_uint1)(x144 >> 25);
   uint32_t x146 = (x144 & UINT32_C(0x1ffffff));
   uint32_t x147 = (x145 + x118);
   out1[0] = x143;
@@ -423,7 +423,7 @@ static void fiat_25519_carry_square(uint32_t out1[10], const uint32_t arg1[10]) 
   uint32_t x115 = (uint32_t)(x114 >> 26);
   uint32_t x116 = (uint32_t)(x114 & UINT32_C(0x3ffffff));
   uint32_t x117 = (x115 + x88);
-  uint32_t x118 = (x117 >> 25);
+  fiat_25519_uint1 x118 = (fiat_25519_uint1)(x117 >> 25);
   uint32_t x119 = (x117 & UINT32_C(0x1ffffff));
   uint32_t x120 = (x118 + x91);
   out1[0] = x116;
@@ -490,10 +490,10 @@ static void fiat_25519_carry_scmul_121666(uint32_t out1[10], const uint32_t arg1
   uint32_t x39 = (uint32_t)(x37 & UINT32_C(0x1ffffff));
   uint32_t x40 = (x38 * (uint32_t)UINT8_C(0x13));
   uint32_t x41 = (x12 + x40);
-  uint32_t x42 = (x41 >> 26);
+  fiat_25519_uint1 x42 = (fiat_25519_uint1)(x41 >> 26);
   uint32_t x43 = (x41 & UINT32_C(0x3ffffff));
   uint32_t x44 = (x42 + x15);
-  uint32_t x45 = (x44 >> 25);
+  fiat_25519_uint1 x45 = (fiat_25519_uint1)(x44 >> 25);
   uint32_t x46 = (x44 & UINT32_C(0x1ffffff));
   uint32_t x47 = (x45 + x18);
   out1[0] = x43;
@@ -530,10 +530,10 @@ static void fiat_25519_carry(uint32_t out1[10], const uint32_t arg1[10]) {
   uint32_t x9 = ((x8 >> 25) + (arg1[8]));
   uint32_t x10 = ((x9 >> 26) + (arg1[9]));
   uint32_t x11 = ((x1 & UINT32_C(0x3ffffff)) + ((x10 >> 25) * (uint32_t)UINT8_C(0x13)));
-  uint32_t x12 = ((x11 >> 26) + (x2 & UINT32_C(0x1ffffff)));
+  uint32_t x12 = ((fiat_25519_uint1)(x11 >> 26) + (x2 & UINT32_C(0x1ffffff)));
   uint32_t x13 = (x11 & UINT32_C(0x3ffffff));
   uint32_t x14 = (x12 & UINT32_C(0x1ffffff));
-  uint32_t x15 = ((x12 >> 25) + (x3 & UINT32_C(0x3ffffff)));
+  uint32_t x15 = ((fiat_25519_uint1)(x12 >> 25) + (x3 & UINT32_C(0x3ffffff)));
   uint32_t x16 = (x4 & UINT32_C(0x1ffffff));
   uint32_t x17 = (x5 & UINT32_C(0x3ffffff));
   uint32_t x18 = (x6 & UINT32_C(0x1ffffff));

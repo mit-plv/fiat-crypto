@@ -630,7 +630,7 @@ Section __.
   (* We include [0], so that even after bounds relaxation, we can
        notice where the constant 0s are, and remove them. *)
   Definition possible_values_of_machine_wordsize
-    := [0; machine_wordsize; 2 * machine_wordsize]%Z.
+    := prefix_with_carry [machine_wordsize; 2 * machine_wordsize]%Z.
 
   Definition possible_values_of_machine_wordsize_with_bytes
     := prefix_with_carry_bytes [machine_wordsize; 2 * machine_wordsize]%Z.
