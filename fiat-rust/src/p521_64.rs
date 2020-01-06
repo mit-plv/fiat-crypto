@@ -264,9 +264,9 @@ pub fn fiat_p521_carry_mul(out1: &mut [u64; 9], arg1: &[u64; 9], arg2: &[u64; 9]
   let x118: u64 = ((x117 >> 58) as u64);
   let x119: u64 = ((x117 & (0x3ffffffffffffff as fiat_p521_u128)) as u64);
   let x120: u64 = (x118 + x95);
-  let x121: u64 = (x120 >> 58);
+  let x121: fiat_p521_u1 = ((x120 >> 58) as fiat_p521_u1);
   let x122: u64 = (x120 & 0x3ffffffffffffff);
-  let x123: u64 = (x121 + x98);
+  let x123: u64 = ((x121 as u64) + x98);
   out1[0] = x119;
   out1[1] = x122;
   out1[2] = x123;
@@ -390,9 +390,9 @@ pub fn fiat_p521_carry_square(out1: &mut [u64; 9], arg1: &[u64; 9]) -> () {
   let x98: u64 = ((x97 >> 58) as u64);
   let x99: u64 = ((x97 & (0x3ffffffffffffff as fiat_p521_u128)) as u64);
   let x100: u64 = (x98 + x75);
-  let x101: u64 = (x100 >> 58);
+  let x101: fiat_p521_u1 = ((x100 >> 58) as fiat_p521_u1);
   let x102: u64 = (x100 & 0x3ffffffffffffff);
-  let x103: u64 = (x101 + x78);
+  let x103: u64 = ((x101 as u64) + x78);
   out1[0] = x99;
   out1[1] = x102;
   out1[2] = x103;
@@ -426,10 +426,10 @@ pub fn fiat_p521_carry(out1: &mut [u64; 9], arg1: &[u64; 9]) -> () {
   let x8: u64 = ((x7 >> 58) + (arg1[7]));
   let x9: u64 = ((x8 >> 58) + (arg1[8]));
   let x10: u64 = ((x1 & 0x3ffffffffffffff) + (x9 >> 57));
-  let x11: u64 = ((x10 >> 58) + (x2 & 0x3ffffffffffffff));
+  let x11: u64 = ((((x10 >> 58) as fiat_p521_u1) as u64) + (x2 & 0x3ffffffffffffff));
   let x12: u64 = (x10 & 0x3ffffffffffffff);
   let x13: u64 = (x11 & 0x3ffffffffffffff);
-  let x14: u64 = ((x11 >> 58) + (x3 & 0x3ffffffffffffff));
+  let x14: u64 = ((((x11 >> 58) as fiat_p521_u1) as u64) + (x3 & 0x3ffffffffffffff));
   let x15: u64 = (x4 & 0x3ffffffffffffff);
   let x16: u64 = (x5 & 0x3ffffffffffffff);
   let x17: u64 = (x6 & 0x3ffffffffffffff);

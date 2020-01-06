@@ -498,7 +498,7 @@ static void fiat_p521_carry_mul(uint32_t out1[17], const uint64_t arg1[17], cons
   uint32_t x358 = (uint32_t)(x357 >> 31);
   uint32_t x359 = (uint32_t)(x357 & UINT32_C(0x7fffffff));
   uint32_t x360 = (x358 + x311);
-  uint32_t x361 = (x360 >> 31);
+  fiat_p521_uint1 x361 = (fiat_p521_uint1)(x360 >> 31);
   uint32_t x362 = (x360 & UINT32_C(0x7fffffff));
   uint32_t x363 = (x361 + x314);
   out1[0] = x359;
@@ -787,7 +787,7 @@ static void fiat_p521_carry_square(uint32_t out1[17], const uint64_t arg1[17]) {
   uint32_t x254 = (uint32_t)(x253 >> 31);
   uint32_t x255 = (uint32_t)(x253 & UINT32_C(0x7fffffff));
   uint32_t x256 = (x254 + x207);
-  uint32_t x257 = (x256 >> 31);
+  fiat_p521_uint1 x257 = (fiat_p521_uint1)(x256 >> 31);
   uint32_t x258 = (x256 & UINT32_C(0x7fffffff));
   uint32_t x259 = (x257 + x210);
   out1[0] = x255;
@@ -838,10 +838,10 @@ static void fiat_p521_carry(uint32_t out1[17], const uint64_t arg1[17]) {
   uint64_t x16 = ((x15 >> 30) + (arg1[15]));
   uint32_t x17 = ((uint32_t)(x16 >> 31) + (uint32_t)(arg1[16]));
   uint32_t x18 = ((uint32_t)(x1 & UINT32_C(0x7fffffff)) + (x17 >> 30));
-  uint32_t x19 = ((x18 >> 31) + (uint32_t)(x2 & UINT32_C(0x7fffffff)));
+  uint32_t x19 = ((fiat_p521_uint1)(x18 >> 31) + (uint32_t)(x2 & UINT32_C(0x7fffffff)));
   uint32_t x20 = (x18 & UINT32_C(0x7fffffff));
   uint32_t x21 = (x19 & UINT32_C(0x7fffffff));
-  uint32_t x22 = ((x19 >> 31) + (x3 & UINT32_C(0x3fffffff)));
+  uint32_t x22 = ((fiat_p521_uint1)(x19 >> 31) + (x3 & UINT32_C(0x3fffffff)));
   uint32_t x23 = (uint32_t)(x4 & UINT32_C(0x7fffffff));
   uint32_t x24 = (uint32_t)(x5 & UINT32_C(0x7fffffff));
   uint32_t x25 = (x6 & UINT32_C(0x3fffffff));
