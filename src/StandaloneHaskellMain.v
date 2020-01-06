@@ -71,3 +71,15 @@ Module SaturatedSolinas.
                          (String.concat "" res))
               (fun err => raise_failure _ (String.concat String.NewLine err))).
 End SaturatedSolinas.
+
+Module BaseConversion.
+  Definition main : IO_unit
+    := cast_io
+         (argv <- getArgs;
+            prog <- getProgName;
+            ForExtraction.BaseConversion.PipelineMain
+              (prog::argv)
+              (fun res => printf_string
+                         (String.concat "" res))
+              (fun err => raise_failure _ (String.concat String.NewLine err))).
+End BaseConversion.

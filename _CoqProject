@@ -88,6 +88,8 @@ src/Language/WfExtra.v
 src/Primitives/MxDHRepChange.v
 src/PushButtonSynthesis/BarrettReduction.v
 src/PushButtonSynthesis/BarrettReductionReificationCache.v
+src/PushButtonSynthesis/BaseConversion.v
+src/PushButtonSynthesis/BaseConversionReificationCache.v
 src/PushButtonSynthesis/FancyMontgomeryReduction.v
 src/PushButtonSynthesis/FancyMontgomeryReductionReificationCache.v
 src/PushButtonSynthesis/InvertHighLow.v
