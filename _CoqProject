@@ -56,6 +56,7 @@ src/ArithmeticCPS/ModOps.v
 src/ArithmeticCPS/Saturated.v
 src/ArithmeticCPS/WordByWordMontgomery.v
 src/Bedrock/Types.v
+src/Bedrock/Translation/Cmd.v
 src/Bedrock/Translation/Expr.v
 src/Curves/Edwards/AffineProofs.v
 src/Curves/Edwards/Pre.v

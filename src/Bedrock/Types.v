@@ -74,8 +74,10 @@ Module Types.
           dummy_ltype := nil;
           make_error := [make_error];
           equiv :=
-            fun (x : list Z) (y : list rtype) locals mem =>
-              length x = length y /\ Forall2 (fun a b => equiv a b locals mem) x y
+            fun (x : list Z) (y : list rtype) locals _ =>
+              length x = length y
+              /\ Forall2 (fun a b => forall mem,
+                              equiv a b locals mem) x y
         }.
 
       (* store a list in memory; the list is represented by one Z, which
@@ -107,8 +109,9 @@ Module Types.
           equiv :=
             fun (x : Z) (y : Syntax.expr.expr) locals _ =>
               forall mem, (* not allowed to read *)
-                WeakestPrecondition.expr mem locals y
-                                         (fun w => Interface.word.unsigned w = x)
+                WeakestPrecondition.expr
+                  mem locals y
+                  (fun w => Interface.word.unsigned w = x)
         }.
     End rep.
   End rep.
@@ -207,5 +210,8 @@ Module Types.
       | base_Z => rep.equiv
       |  _ => fun _ _ _ _ => False
       end.
+
+    Definition locally_equivalent {t} x y locals :=
+      forall mem, @equivalent t x y locals mem.
   End defs.
 End Types.
