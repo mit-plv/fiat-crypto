@@ -55,8 +55,7 @@ src/ArithmeticCPS/Freeze.v
 src/ArithmeticCPS/ModOps.v
 src/ArithmeticCPS/Saturated.v
 src/ArithmeticCPS/WordByWordMontgomery.v
-src/Bedrock/Compiler.v
-src/Bedrock/CompilerTest.v
+src/Bedrock/Types.v
 src/Curves/Edwards/AffineProofs.v
 src/Curves/Edwards/Pre.v
 src/Curves/Edwards/XYZT/Basic.v
