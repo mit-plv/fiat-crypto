@@ -58,7 +58,7 @@ Module Types.
           rtype : Type; (* type for RHS of assignment *)
           rtype_of_ltype : ltype -> rtype;
           dummy_ltype : ltype;
-          error : rtype;
+          make_error : rtype;
           equiv :
             base.interp t -> rtype ->
             Interface.map.rep (map:=Semantics.locals) ->
@@ -72,7 +72,7 @@ Module Types.
           rtype := list rtype;
           rtype_of_ltype := map rtype_of_ltype;
           dummy_ltype := nil;
-          error := [error];
+          make_error := [make_error];
           equiv :=
             fun (x : list Z) (y : list rtype) locals mem =>
               length x = length y /\ Forall2 (fun a b => equiv a b locals mem) x y
@@ -85,7 +85,7 @@ Module Types.
           rtype := rtype;
           rtype_of_ltype := rtype_of_ltype;
           dummy_ltype := dummy_ltype;
-          error := error;
+          make_error := make_error;
           equiv :=
             fun (x : list Z) (y : rtype) locals =>
               Lift1Prop.ex1
@@ -98,12 +98,12 @@ Module Types.
                              (map Interface.word.of_Z x)))
         }.
 
-      Instance Z : rep base_Z := 
+      Instance Z : rep base_Z :=
         { ltype := Syntax.varname;
           rtype := Syntax.expr.expr;
           rtype_of_ltype := Syntax.expr.var;
           dummy_ltype := varname_gen 0%nat;
-          error := Top.error;
+          make_error := error;
           equiv :=
             fun (x : Z) (y : Syntax.expr.expr) locals _ =>
               forall mem, (* not allowed to read *)
@@ -129,7 +129,7 @@ Module Types.
       match t with
       | base.type.prod a b => base_ltype a * base_ltype b
       | base_listZ => rep.ltype (rep:=listZ)
-      | _ => Syntax.varname
+      | _ => rep.ltype (rep:=rep.Z)
       end.
     Fixpoint ltype (t : type.type base.type) : Type :=
       match t with
@@ -144,7 +144,7 @@ Module Types.
       match t with
       | base.type.prod a b => base_rtype a * base_rtype b
       | base_listZ => rep.rtype (rep:=listZ)
-      | _ => Syntax.expr.expr
+      | _ => rep.rtype (rep:=rep.Z)
       end.
     Fixpoint rtype (t : type.type base.type) : Type :=
       match t with
@@ -166,8 +166,8 @@ Module Types.
     Fixpoint base_make_error t : base_rtype t :=
       match t with
       | base.type.prod a b => (base_make_error a, base_make_error b)
-      | base_listZ => rep.error 
-      |  _ => error
+      | base_listZ => rep.make_error
+      |  _ => rep.make_error
       end.
     Fixpoint make_error t : rtype t :=
       match t with
@@ -181,7 +181,7 @@ Module Types.
       match t with
       | base.type.prod a b => (dummy_base_ltype a, dummy_base_ltype b)
       | base_listZ => rep.dummy_ltype
-      | _ => varname_gen 0%nat
+      | _ => rep.dummy_ltype
       end.
     Definition dummy_ltype (t : API.type) : ltype t :=
       match t with
@@ -198,7 +198,6 @@ Module Types.
         Interface.map.rep (map:=Semantics.mem) -> (* memory *)
         Prop :=
       match t with
-      (* product case *)
       | base.type.prod a b =>
         fun (x : base.interp a * base.interp b)
             (y : base_rtype a * base_rtype b) locals =>
