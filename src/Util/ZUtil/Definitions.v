@@ -96,4 +96,14 @@ Module Z.
     := if (0 <=? x)%Z
        then 2^(Z.log2_up (x+1))-1
        else -2^(Z.log2_up (-x)).
+
+  Fixpoint log10_fuel (fuel : nat) (v : Z) :=
+    match fuel with
+    | O => 0
+    | S fuel
+      => if v >? 1
+         then 1 + log10_fuel fuel (v / 10)
+         else 0
+    end.
+  Definition log10 (v : Z) : Z := log10_fuel (Z.to_nat (Z.log2 v)) v.
 End Z.
