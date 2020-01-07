@@ -50,10 +50,13 @@ Module ForExtraction.
   Definition parse_nat (s : string) : option nat
     := option_map N.to_nat (parse_N s).
   Definition parse_Q (s : string) : option Q
-    := match List.map parse_Z (String.split "/" s) with
-       | [Some num;Some (Zpos den)] => Some (Qmake num den)
-       | [Some num] => Some (Qmake num 1)
-       | _ => None
+    := match List.map parse_Z (String.split "/" s), List.map parse_Z (String.split "." s), List.map String.length (String.split "." s) with
+       | [Some num;Some (Zpos den)], _, _ => Some (Qmake num den)
+       | _, [Some int_part; Some dec_part], [_; digits]
+         => let den := 10 ^ (Z.of_nat digits) in
+            Some (Qmake (int_part * den + dec_part) (Z.to_pos den))
+       | [Some num], _, _ => Some (Qmake num 1)
+       | _, _, _ => None
        end.
   Definition parse_bool (s : string) : option bool
     := if string_dec s "true"
