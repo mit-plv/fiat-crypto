@@ -118,3 +118,12 @@ Module SaturatedSolinas.
          printf_list_string
          raise_failure.
 End SaturatedSolinas.
+
+Module Barrett.
+  Definition main : unit
+    := let argv := List.map string_to_Coq_string sys_argv in
+       ForExtraction.Barrett.PipelineMain
+         argv
+         printf_list_string
+         raise_failure.
+End Barrett.

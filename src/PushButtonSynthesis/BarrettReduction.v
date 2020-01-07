@@ -7,6 +7,7 @@ Require Import Coq.micromega.Lia.
 Require Import Crypto.Util.ErrorT.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ZRange.
+Require Import Crypto.Util.Strings.Show.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Rewriter.Language.Language.
 Require Import Crypto.Language.API.
@@ -43,6 +44,11 @@ Local Opaque reified_barrett_red_gen. (* needed for making [autorewrite] not tak
 Section rbarrett_red.
   Context {output_language_api : ToString.OutputLanguageAPI}
           {static : static_opt}
+          {emit_primitives : emit_primitives_opt}
+          {should_split_mul : should_split_mul_opt}
+          {widen_carry : widen_carry_opt}
+          {widen_bytes : widen_bytes_opt}
+          (fancy : bool)
           (M machine_wordsize : Z).
 
   Let value_range := r[0 ~> (2^machine_wordsize - 1)%Z]%zrange.
@@ -53,16 +59,22 @@ Section rbarrett_red.
   Let consts_list := [M; muLow].
 
   Definition possible_values_of_machine_wordsize
-    := [1; machine_wordsize / 2; machine_wordsize; 2 * machine_wordsize]%Z.
+    := let vs := [machine_wordsize / 2; machine_wordsize; 2 * machine_wordsize]%Z in
+       if fancy
+       then 1::vs
+       else prefix_with_carry vs.
+
   Let possible_values := possible_values_of_machine_wordsize.
 
-  Local Instance split_mul_to : split_mul_to_opt := None.
+  Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
 
   Let fancy_args
-    := (Some {| Pipeline.invert_low log2wordsize := invert_low log2wordsize consts_list;
-                Pipeline.invert_high log2wordsize := invert_high log2wordsize consts_list;
-                Pipeline.value_range := value_range;
-                Pipeline.flag_range := flag_range |}).
+    := if fancy
+       then Some {| Pipeline.invert_low log2wordsize := invert_low log2wordsize consts_list;
+                    Pipeline.invert_high log2wordsize := invert_high log2wordsize consts_list;
+                    Pipeline.value_range := value_range;
+                    Pipeline.flag_range := flag_range |}
+       else None.
 
   Lemma fancy_args_good
     : match fancy_args with
@@ -73,6 +85,7 @@ Section rbarrett_red.
       end.
   Proof.
     cbv [fancy_args invert_low invert_high constant_to_scalar constant_to_scalar_single consts_list fold_right];
+      destruct fancy;
       split; intros; break_innermost_match_hyps; Z.ltb_to_lt; subst; congruence.
   Qed.
   Local Hint Extern 1 => apply fancy_args_good: typeclass_instances. (* This is a kludge *)
@@ -200,4 +213,31 @@ Section rbarrett_red.
     { cbv [ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by bound is_bounded_by_bool value_range upper lower]. rewrite Bool.andb_true_iff, !Z.leb_le. lia. }
     { cbv [ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by bound is_bounded_by_bool value_range upper lower]. rewrite Bool.andb_true_iff, !Z.leb_le. lia. }
   Qed.
+
+  Section for_stringification.
+    Local Open Scope string_scope.
+    Local Open Scope list_scope.
+
+    Definition known_functions
+      := [("barrett_red", sbarrett_red)].
+
+    Definition valid_names : string
+      := Eval compute in String.concat ", " (List.map (@fst _ _) known_functions).
+
+    (** Note: If you change the name or type signature of this
+          function, you will need to update the code in CLI.v *)
+    Definition Synthesize (comment_header : list string) (function_name_prefix : string) (requests : list string)
+      : list (string * Pipeline.ErrorT (list string))
+      := Primitives.Synthesize
+           machine_wordsize valid_names known_functions (fun _ => nil)
+           check_args
+           ((ToString.comment_block comment_header)
+              ++ [""]
+              ++ (ToString.comment_block
+                    ["Computed values:";
+                       "mu = " ++ show false mu;
+                       "muLow = " ++ show false muLow]%string)
+              ++ [""])
+           function_name_prefix requests.
+  End for_stringification.
 End rbarrett_red.
