@@ -58,6 +58,7 @@ src/ArithmeticCPS/WordByWordMontgomery.v
 src/Bedrock/Types.v
 src/Bedrock/Translation/Cmd.v
 src/Bedrock/Translation/Expr.v
+src/Bedrock/Translation/Func.v
 src/Curves/Edwards/AffineProofs.v
 src/Curves/Edwards/Pre.v
 src/Curves/Edwards/XYZT/Basic.v
