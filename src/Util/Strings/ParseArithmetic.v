@@ -1,5 +1,6 @@
 Require Import Coq.Strings.Ascii Coq.Strings.String Coq.Lists.List.
 Require Import Coq.Numbers.BinNums.
+Require Import Coq.QArith.QArith.
 Require Import Coq.ZArith.BinInt.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Strings.Equality.
@@ -13,6 +14,8 @@ Local Open Scope option_scope.
 Local Open Scope list_scope.
 Local Open Scope char_scope.
 Local Open Scope string_scope.
+Local Open Scope Z_scope.
+Local Open Scope nat_scope.
 
 Definition is_num (ch : ascii) : bool
   := (ascii_beq ch "0"
@@ -223,6 +226,21 @@ Fixpoint eval_Zexpr (v : Zexpr) : Z
      | Zpow b e => Z.pow (eval_Zexpr b) (eval_Zexpr e)
      end.
 
+Fixpoint evalQ_Zexpr (v : Zexpr) : Q
+  := match v with
+     | Zv x => inject_Z x
+     | Zopp a => Qopp (evalQ_Zexpr a)
+     | Zadd a b => Qplus (evalQ_Zexpr a) (evalQ_Zexpr b)
+     | Zsub a b => Qminus (evalQ_Zexpr a) (evalQ_Zexpr b)
+     | Zmul a b => Qmult (evalQ_Zexpr a) (evalQ_Zexpr b)
+     | Zdiv a b => Qdiv (evalQ_Zexpr a) (evalQ_Zexpr b)
+     | Zpow b e => let b := evalQ_Zexpr b in
+                   let e := evalQ_Zexpr e in
+                   let (qe, re) := Z.div_eucl (Qnum e) (Z.pos (Qden e)) in
+                   (* (b^qe)*(b^(re/Qden e)) *)
+                   Qmult (Qpower b qe) (Qpower b (* approximate *) (re / Z.pos (Qden e)))
+     end.
+
 Section gen.
   Context {A}
           (Zadd : A -> A -> A)
@@ -260,6 +278,10 @@ Definition parseZ_arith_prefix : string -> option (Z * string)
 Definition parseZexpr_arith_prefix : string -> option (Zexpr * string)
   := parseZ_gen_arith_prefix Zadd Zsub Zmul Zdiv Zpow id.
 
+Definition parseQ_arith_prefix (s : string) : option (Q * string)
+  := option_map (fun '(e, s) => (evalQ_Zexpr e, s))
+                (parseZexpr_arith_prefix s).
+
 Fixpoint remove_spaces (s : string) : string
   := match s with
      | EmptyString => EmptyString
@@ -276,6 +298,12 @@ Definition parseZ_arith (s : string) : option Z
 
 Definition parseZexpr_arith (s : string) : option Zexpr
   := match parseZexpr_arith_prefix (remove_spaces s) with
+     | Some (z, EmptyString) => Some z
+     | _ => None
+     end.
+
+Definition parseQ_arith (s : string) : option Q
+  := match parseQ_arith_prefix (remove_spaces s) with
      | Some (z, EmptyString) => Some z
      | _ => None
      end.
