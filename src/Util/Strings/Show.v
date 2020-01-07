@@ -2,6 +2,7 @@ Require Import Coq.ZArith.BinInt Coq.NArith.BinNat Coq.QArith.QArith_base.
 Require Import Coq.Lists.List.
 Require Import Coq.Strings.String Coq.Strings.Ascii.
 Require Crypto.Util.Strings.String.
+Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.Strings.HexString.
 Require Import Crypto.Util.Strings.Decimal.
 Import ListNotations. Local Open Scope list_scope. Local Open Scope string_scope.
@@ -98,13 +99,27 @@ Module Export Decimal.
          | Z0 => "0"
          | Zpos p => show false p
          end.
+  Definition show_Q_frac : Show Q
+    := fun parens q
+       => if (Qden q =? 1)%positive
+          then show parens (Qnum q)
+          else maybe_wrap_parens
+                 parens
+                 (show true (Qnum q) ++ " / " ++ show true (Qden q)).
   Global Instance show_Q : Show Q
     := fun parens q
        => if (Qden q =? 1)%positive
-         then show parens (Qnum q)
-         else maybe_wrap_parens
-                parens
-                (show true (Qnum q) ++ " / " ++ show true (Qden q)).
+          then show parens (Qnum q)
+          else let lg10 := Z.log10 (Z.pos (Qden q)) in
+               if (10^lg10 =? Z.pos (Qden q))%Z
+               then let lg10 := Z.to_nat lg10 in
+                    let int_part := show_Z false (Qnum q / Z.pos (Qden q))%Z in
+                    let dec_part := show_Z false (Z.abs (Qnum q) mod (Z.pos (Qden q)))%Z in
+                    int_part
+                      ++ "."
+                      ++ String.of_list (List.repeat "0"%char (lg10 - length dec_part)) ++ dec_part
+               else
+                 show_Q_frac parens q.
 End Decimal.
 
 Module Hex.
