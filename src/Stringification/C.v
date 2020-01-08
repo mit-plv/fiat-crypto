@@ -470,7 +470,9 @@ Module Compilers.
                :: (List.map (fun s => "  " ++ s)%string (to_strings prefix body)))
               ++ ["}"])%list.
 
-      Definition ToFunctionLines (do_bounds_check : bool) (static : bool) (prefix : string) (name : string)
+      Definition ToFunctionLines
+                 {relax_zrange : relax_zrange_opt}
+                 (do_bounds_check : bool) (static : bool) (prefix : string) (name : string)
                  {t}
                  (e : @Compilers.expr.Expr base.type ident.ident t)
                  (comment : type.for_each_lhs_of_arrow var_data t -> var_data (type.base (type.final_codomain t)) -> list string)
@@ -497,7 +499,9 @@ Module Compilers.
              => inr ("Errors in converting " ++ name ++ " to C:" ++ String.NewLine ++ String.concat String.NewLine errs)%string
            end.
 
-      Definition ToFunctionString (do_bounds_check : bool) (static : bool) (prefix : string) (name : string)
+      Definition ToFunctionString
+                 {relax_zrange : relax_zrange_opt}
+                 (do_bounds_check : bool) (static : bool) (prefix : string) (name : string)
                  {t}
                  (e : @Compilers.expr.Expr base.type ident.ident t)
                  (comment : type.for_each_lhs_of_arrow var_data t -> var_data (type.base (type.final_codomain t)) -> list string)
@@ -515,7 +519,7 @@ Module Compilers.
           comment_block s
           := List.map (fun line => "/* " ++ line ++ " */")%string s;
 
-          ToString.ToFunctionLines := ToFunctionLines;
+          ToString.ToFunctionLines := @ToFunctionLines;
 
           ToString.typedef_header := String.typedef_header
         |}.

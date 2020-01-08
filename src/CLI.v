@@ -154,6 +154,10 @@ Module ForExtraction.
     := "  --static                Declare the functions as static, i.e., local to the file.".
   Definition no_wide_int_help
     := "  --no-wide-int           Don't use integers wider than the bitwidth.".
+  Definition widen_carry_help
+    := "  --widen-carry           Widen carry bit integer types to either the byte type, or to the full bitwidth if --widen-bytes is also passed.".
+  Definition widen_bytes_help
+    := "  --widen-bytes           Widen byte types to the full bitwidth.".
   Definition no_primitives_help
     := "  --no-primitives         Suppress the generation of the bodies of primitive operations such as addcarryx, subborrowx, cmovznz, mulx, etc.".
   Definition cmovznz_by_mul_help
@@ -248,9 +252,9 @@ Module ForExtraction.
       (** Should we split apart oversized operations? *)
       ; should_split_mul :> should_split_mul_opt
       (** Should we widen the carry to the full bitwidth? *)
-      ; widen_carry :> widen_carry_opt := false
+      ; widen_carry :> widen_carry_opt
       (** Should we widen the byte type to the full bitwidth? *)
-      ; widen_bytes :> widen_bytes_opt := false
+      ; widen_bytes :> widen_bytes_opt
     }.
 
   (** We define a class for the various operations that are specific to a pipeline *)
@@ -372,13 +376,15 @@ Module ForExtraction.
                match argv with
                | nil => error ["empty argv"]
                | prog::args
-                 => error ((["USAGE: " ++ prog ++ " [--lang=LANGUAGE] [--static] [--no-primitives] [--cmovznz-by-mul] curve_description " ++ pipeline_usage_string;
+                 => error ((["USAGE: " ++ prog ++ " [--lang=LANGUAGE] [--static] [--no-wide-int] [--widen-carry] [--widen-bytes] [--no-primitives] [--cmovznz-by-mul] curve_description " ++ pipeline_usage_string;
                                "Got " ++ show false (List.length args) ++ " arguments.";
                                "";
                                lang_help;
                                static_help;
                                cmovznz_by_mul_help;
                                no_wide_int_help;
+                               widen_carry_help;
+                               widen_bytes_help;
                                no_primitives_help;
                                curve_description_help]%string)
                              ++ help_lines
@@ -386,9 +392,10 @@ Module ForExtraction.
                end in
            let '(argv, output_language_api) := argv_to_language_and_argv argv in
            let '(argv, staticv) := argv_to_contains_opt_and_argv "--static" argv in
-
            let '(argv, no_wide_intsv) := argv_to_contains_opt_and_argv "--no-wide-int" argv in
            let '(argv, use_mul_for_cmovznzv) := argv_to_contains_opt_and_argv "--cmovznz-by-mul" argv in
+           let '(argv, widen_carryv) := argv_to_contains_opt_and_argv "--widen-carry" argv in
+           let '(argv, widen_bytesv) := argv_to_contains_opt_and_argv "--widen-bytes" argv in
            let '(argv, no_primitivesv) := argv_to_contains_opt_and_argv "--no-primitives" argv in
            match argv with
            | _::curve_description::args
@@ -397,6 +404,8 @@ Module ForExtraction.
                   => let opts
                          := {| static := staticv
                                ; use_mul_for_cmovznz := use_mul_for_cmovznzv
+                               ; widen_carry := widen_carryv
+                               ; widen_bytes := widen_bytesv
                                ; should_split_mul := no_wide_intsv
                                ; emit_primitives := negb no_primitivesv |} in
                      Pipeline curve_description args success error
