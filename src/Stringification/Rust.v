@@ -118,7 +118,6 @@ Module Rust.
          "(" ++ arith_to_string prefix x1 ++ " * " ++ arith_to_string prefix x2 ++ ")"
        | (IR.Z_sub @@ (x1, x2)) =>
          "(" ++ arith_to_string prefix x1 ++ " - " ++ arith_to_string prefix x2 ++ ")"
-       | (IR.Z_opp @@ e) => "(-" ++ arith_to_string prefix e ++ ")" (* arithmetic negation *)
        | (IR.Z_bneg @@ e) => "(!" ++ arith_to_string prefix e ++ ")" (* logical negation. XXX this has different semantics for numbers <>
                                                                         0 or 1 than it did before *)
        | (IR.Z_mul_split lg2s @@ args) =>
@@ -231,83 +230,83 @@ Module Rust.
             => to_arg_list prefix In x ++ @to_arg_list_for_each_lhs_of_arrow prefix d xs
        end%list.
 
-  (* Used in comment *)
-  Fixpoint bound_to_string {t : base.type} : var_data (type.base t) -> Compilers.ZRange.type.base.option.interp t -> list string :=
-    match t return var_data (type.base t) -> Compilers.ZRange.type.base.option.interp t -> list string with
-    | tZ
-      => fun '(name, _) arg
-         => [(name ++ ": ")
-               ++ match arg with
-                  | Some arg => show false arg
-                  | None => show false arg
-                  end]%string
-    | base.type.prod A B
-      => fun '(va, vb) '(a, b)
-         => @bound_to_string A va a ++ @bound_to_string B vb b
-    | base.type.list A
-      => fun '(name, _, _) arg
-         => [(name ++ ": ")
-               ++ match Compilers.ZRange.type.base.option.lift_Some arg with
-                  | Some arg => show false arg
-                  | None => show false arg
-                  end]%string
-    | base.type.option _
-    | base.type.unit
-    | base.type.type_base _
-      => fun _ _ => []
-    end%list.
-
-  (* Used in comment *)
-  Fixpoint input_bounds_to_string {t}
-    : type.for_each_lhs_of_arrow var_data t -> type.for_each_lhs_of_arrow Compilers.ZRange.type.option.interp t -> list string :=
-    match t return type.for_each_lhs_of_arrow var_data t ->
-                   type.for_each_lhs_of_arrow Compilers.ZRange.type.option.interp t -> list string
-    with
-    | type.base t => fun _ _ => nil
-    | type.arrow (type.base s) d =>
-      fun '(v, vs) '(arg, args) =>
-        (bound_to_string v arg)
-          ++ @input_bounds_to_string d vs args
-    | type.arrow s d =>
-      fun '(absurd, _) => match absurd : Empty_set with end
-    end%list.
-
-
   (** * Language-specific numeric conversions to be passed to the PHOAS -> IR translation *)
 
-  Definition Rust_bin_op_conversion
-             (desired_type : option ToString.int.type)
-             (args : arith_expr_for (type.base (tZ * tZ)))
-    : arith_expr_for (type.base (tZ * tZ)) * option ToString.int.type :=
-    match desired_type with
-    | None => (args, None)
-    | Some dt =>
-      let '((e1, t1), (e2, t2)) := args in
-      match t1, t2 with
-      | None, _ | _, None => (args, None)
-      | Some t1', Some t2' =>
-        let ct := ToString.int.union t1' t2' in
-        let desired_type' := Some (ToString.int.union ct dt) in
-        ((Zcast_up_if_needed desired_type' (e1, t1),
-          Zcast_up_if_needed desired_type' (e2, t2)),
-         desired_type')
-      end
-    end.
+  Definition Rust_bin_op_natural_output
+    : IR.Z_binop -> ToString.int.type * ToString.int.type -> ToString.int.type
+    := fun idc '(t1, t2)
+       => ToString.int.union t1 t2.
 
-  Definition Rust_un_op_conversion (desired_type : option ToString.int.type)
-             (arg : arith_expr_for (type.base tZ))
-    : arith_expr_for (type.base tZ) :=
-    let '(e, r) := arg in
-    Zcast_up_if_needed desired_type (e, r).
+  Definition Rust_bin_op_casts
+    : IR.Z_binop -> option ToString.int.type -> ToString.int.type * ToString.int.type -> option ToString.int.type * (option ToString.int.type * option ToString.int.type)
+    := fun idc desired_type '(t1, t2)
+       => match desired_type with
+          | Some desired_type
+            => let ct := ToString.int.union t1 t2 in
+               let desired_type' := Some (ToString.int.union ct desired_type) in
+               (Some desired_type,
+                (get_Zcast_up_if_needed desired_type' (Some t1),
+                 get_Zcast_up_if_needed desired_type' (Some t2)))
+          | None => (None, (None, None))
+          end.
 
-  Definition Rust_result_upcast (desired_type : option ToString.int.type) (e : arith_expr_for (type.base tZ))
-    : arith_expr_for (type.base tZ) :=
-    Zcast_up_if_needed desired_type e.
+  Definition Rust_un_op_casts
+    : IR.Z_unop -> option ToString.int.type -> ToString.int.type -> option ToString.int.type * option ToString.int.type
+    := fun idc desired_type t
+       => match idc with
+          | IR.Z_shiftr offset
+            => (** N.B. We must cast the expression up to a large
+                   enough type to fit 2^offset (importantly, not just
+                   2^offset-1), because C considers it to be undefined
+                   behavior to shift >= width of the type.  We should
+                   probably figure out how to not generate these
+                   things in the first place...
 
-  Local Instance CLanguageCasts : LanguageCasts :=
-    {| bin_op_conversion := Rust_bin_op_conversion;
-       un_op_conversion := Rust_un_op_conversion;
-       result_upcast := Rust_result_upcast
+                   N.B. We must preserve signedness of the value being
+                   shifted, because shift does not commute with
+                   mod. *)
+            let t' := ToString.int.union_zrange r[0~>2^offset]%zrange t in
+            ((** We cast the result down to the specified type, if needed *)
+              get_Zcast_down_if_needed desired_type (Some t'),
+              (** We cast the argument up to a large enough type *)
+              get_Zcast_up_if_needed (Some t') (Some t))
+          | IR.Z_shiftl offset
+            => (** N.B. We must cast the expression up to a large
+                   enough type to fit 2^offset (importantly, not just
+                   2^offset-1), because C considers it to be undefined
+                   behavior to shift >= width of the type.  We should
+                   probably figure out how to not generate these
+                   things in the first place...
+
+                   N.B. We make sure that we only left-shift unsigned
+                   values, since shifting into the sign bit is
+                   undefined behavior. *)
+            let rpre_out := match desired_type with
+                            | Some rout => Some (ToString.int.union_zrange r[0~>2^offset] (ToString.int.unsigned_counterpart_of rout))
+                            | None => Some (ToString.int.of_zrange_relaxed r[0~>2^offset]%zrange)
+                            end in
+            ((** We cast the result down to the specified type, if needed *)
+              get_Zcast_down_if_needed desired_type rpre_out,
+              (** We cast the argument up to a large enough type *)
+              get_Zcast_up_if_needed rpre_out (Some t))
+          | IR.Z_lnot ty
+            => ((* if the result is too big, we cast it down; we
+                       don't need to upcast it because it'll get
+                       picked up by implicit casts if necessary *)
+              get_Zcast_down_if_needed desired_type (Some ty),
+              (** always cast to the width of the type, unless we are already exactly that type (which the machinery in IR handles *)
+              Some ty)
+          | Z_bneg
+            => ((* bneg is !, i.e., takes the argument to 1 if its not zero, and to zero if it is zero; so we don't ever need to cast *)
+              None, None)
+          end.
+
+  Local Instance RustLanguageCasts : LanguageCasts :=
+    {| bin_op_natural_output := Rust_bin_op_natural_output
+       ; bin_op_casts := Rust_bin_op_casts
+       ; un_op_casts := Rust_un_op_casts
+       ; upcast_on_assignment := true
+       ; upcast_on_funcall := true
     |}.
 
   Definition to_function_lines (static : bool) (prefix : string) (name : string)
@@ -337,8 +336,6 @@ Module Rust.
               ++ List.map (fun v => " *   "%string ++ v)%string (bound_to_string outdata outbounds)
               ++ [" */"%string]
               ++ to_function_lines static prefix name (indata, outdata, f))%list,
-           (* Zoe: This is a function in the Stringification.C file,
-              consider moving this elsewhere? *)
            IR.ident_infos.collect_infos f)
     | inr nil =>
       inr ("Unknown internal error in converting " ++ name ++ " to Rust")%string

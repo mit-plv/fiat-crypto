@@ -30,6 +30,8 @@ Module Compilers.
   Import invert_expr.
   Import Compilers.API.
 
+  Local Notation tZ := (base.type.type_base base.type.Z).
+
   Module ToString.
     Local Open Scope string_scope.
     Local Open Scope Z_scope.
@@ -852,6 +854,42 @@ Module Compilers.
            | type.base t => names_of_base_var_data
            | type.arrow _ _ => fun x => x
            end.
+
+      Fixpoint bound_to_string {t : base.type} : var_data (type.base t) -> ZRange.type.base.option.interp t -> list string
+        := match t return var_data (type.base t) -> ZRange.type.base.option.interp t -> list string with
+           | tZ
+             => fun '(name, _) arg
+                => [(name ++ ": ")
+                      ++ match arg with
+                         | Some arg => show false arg
+                         | None => show false arg
+                         end]%string
+           | base.type.prod A B
+             => fun '(va, vb) '(a, b)
+                => @bound_to_string A va a ++ @bound_to_string B vb b
+           | base.type.list A
+             => fun '(name, _, _) arg
+                => [(name ++ ": ")
+                      ++ match ZRange.type.base.option.lift_Some arg with
+                         | Some arg => show false arg
+                         | None => show false arg
+                         end]%string
+           | base.type.option _
+           | base.type.unit
+           | base.type.type_base _
+             => fun _ _ => nil
+           end%list.
+
+      Fixpoint input_bounds_to_string {t} : type.for_each_lhs_of_arrow var_data t -> type.for_each_lhs_of_arrow ZRange.type.option.interp t -> list string
+        := match t return type.for_each_lhs_of_arrow var_data t -> type.for_each_lhs_of_arrow ZRange.type.option.interp t -> list string with
+           | type.base t => fun _ _ => nil
+           | type.arrow (type.base s) d
+             => fun '(v, vs) '(arg, args)
+                => (bound_to_string v arg)
+                     ++ @input_bounds_to_string d vs args
+           | type.arrow s d
+             => fun '(absurd, _) => match absurd : Empty_set with end
+           end%list.
     End OfPHOAS.
 
     Class OutputLanguageAPI :=

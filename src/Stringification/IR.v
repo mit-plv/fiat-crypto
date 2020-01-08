@@ -59,21 +59,27 @@ Module Compilers.
 
       Section ident.
         Import type.
+        Inductive Z_binop : Set :=
+        | Z_land
+        | Z_lor
+        | Z_add
+        | Z_mul
+        | Z_sub
+        .
+        Inductive Z_unop : Set :=
+        | Z_shiftr (offset : BinInt.Z)
+        | Z_shiftl (offset : BinInt.Z)
+        (*| Z_opp*)
+        | Z_lnot (ty:int.type)
+        | Z_bneg
+        .
         Inductive ident : type -> type -> Set :=
         | literal (v : BinInt.Z) : ident unit Z
         | List_nth (n : Datatypes.nat) : ident Zptr Z
         | Addr : ident Z Zptr
         | Dereference : ident Zptr Z
-        | Z_shiftr (offset : BinInt.Z) : ident Z Z
-        | Z_shiftl (offset : BinInt.Z) : ident Z Z
-        | Z_land : ident (Z * Z) Z
-        | Z_lor : ident (Z * Z) Z
-        | Z_add : ident (Z * Z) Z
-        | Z_mul : ident (Z * Z) Z
-        | Z_sub : ident (Z * Z) Z
-        | Z_opp : ident Z Z
-        | Z_lnot (ty:int.type) : ident Z Z
-        | Z_bneg : ident Z Z
+        | iunop (op : Z_unop) : ident Z Z
+        | ibinop (op : Z_binop) : ident (Z * Z) Z
         | Z_mul_split (lgs:BinInt.Z) : ident ((Zptr * Zptr) * (Z * Z)) unit
         | Z_add_with_get_carry (lgs:BinInt.Z) : ident ((Zptr * Zptr) * (Z * Z * Z)) unit
         | Z_sub_with_get_borrow (lgs:BinInt.Z) : ident ((Zptr * Zptr) * (Z * Z * Z)) unit
@@ -110,6 +116,8 @@ Module Compilers.
 
         Notation "()" := TT : Cexpr_scope.
         Notation "x ;; y" := (@cons stmt x%Cexpr y%Cexpr) (at level 70, right associativity, format "'[v' x ;; '/' y ']'") : Cexpr_scope.
+        Global Coercion iunop : Z_unop >-> ident.
+        Global Coercion ibinop : Z_binop >-> ident.
       End Notations.
 
       Definition invert_literal {t} (e : arith_expr t) : option (BinInt.Z)
@@ -135,16 +143,8 @@ Module Compilers.
              | List_nth _
              | Addr
              | Dereference
-             | Z_shiftr _
-             | Z_shiftl _
-             | Z_land
-             | Z_lor
-             | Z_add
-             | Z_mul
-             | Z_sub
-             | Z_opp
-             | Z_bneg
-             | Z_lnot _
+             | ibinop _
+             | iunop _
              | Z_add_modulo
                => ident_info_empty
              end.
@@ -206,38 +206,97 @@ Module Compilers.
            numeric conversions *)
         Class LanguageCasts :=
           {
-            (* [bin_op_conversion] returns the arithmetic expression with
-               the required cats and the type of the arithmetic expression
-               that is calculated based on the types of the operands and
-               the desired type *)
-            (* Zoe: My preference would be to expose something like
-               [arith_bin_arith_expr_of_PHOAS_ident] here but
-               unfortunately this seems compilated for unary operators,
-               since many of them seem to require special handling for the
-               final casts. I'm exposing this for now so that we can treat
-               binary and unary operators uniformly. *)
-            bin_op_conversion : option int.type -> arith_expr_for (type.base (tZ * tZ)) ->
-                                arith_expr_for (type.base (tZ * tZ)) * option (int.type);
-            un_op_conversion : option int.type -> arith_expr_for (type.base tZ) -> arith_expr_for (type.base tZ);
-            (* This is used to upcast expressions that are being assigned
-               to variables/arrays or being passed as arguments. *)
-            result_upcast : option int.type -> arith_expr_for (type.base tZ) -> arith_expr_for (type.base tZ);
+            (* [bin_op_natural_output] takes in a binary operation and
+               the known types that the input fits into, and returns
+               the type that the output will land in if no casts are
+               present. *)
+            bin_op_natural_output
+            : Z_binop -> int.type * int.type -> int.type;
+            (* [bin_op_casts] takes in a binary operation, the known
+               type that the output fits in, and the pair of known
+               types that the inputs fit in.  It returns the triple of
+               (output, (input1, intput2)) of casts that are necessary
+               for running the operation.  No-op casts on the inputs
+               will later be discarded; the cast on the output, if
+               given, will always be used. *)
+            bin_op_casts
+            : Z_binop -> option int.type -> int.type * int.type -> option int.type * (option int.type * option int.type);
+            (* [un_op_casts] takes in a unary operation, the known
+               type that the output fits in, and the known types that
+               the input fits in.  It returns the tuple of (output,
+               input) of casts that are necessary for running the
+               operation.  No-op casts on the inputs will later be
+               discarded; the cast on the output, if given, will
+               always be used. *)
+            un_op_casts
+            : Z_unop -> option int.type -> int.type -> option int.type * option int.type;
+            (* Are upcasts necessary on assignments? *)
+            upcast_on_assignment : bool;
+            (* Are upcasts necessary for arguments to function calls? *)
+            upcast_on_funcall : bool
           }.
 
         Section __.
 
           Context {lang_casts : LanguageCasts}.
 
-          Definition Zcast_down_if_needed
+          (* None means unconstrained *)
+          Definition bin_op_natural_output_opt
+            : Z_binop -> option int.type * option int.type -> option int.type
+            := fun idc '(t1, t2)
+               => match t1, t2 with
+                  | Some t1, Some t2 => Some (bin_op_natural_output idc (t1, t2))
+                  | _, _ => None
+                  end.
+          Definition bin_op_casts_opt
+            : Z_binop -> option int.type -> option int.type * option int.type -> option int.type * (option int.type * option int.type)
+            := fun idc tout '(t1, t2)
+               => match t1, t2 with
+                  | Some t1, Some t2
+                    => bin_op_casts idc tout (t1, t2)
+                  | _, _ => (tout, (None, None))
+                  end.
+          Definition un_op_casts_opt
+            : Z_unop -> option int.type -> option int.type -> option int.type * option int.type
+            := fun idc tout t1
+               => match t1 with
+                  | Some t1
+                    => un_op_casts idc tout t1
+                  | None => (tout, None)
+                  end.
+
+          Definition Zcast
             : option int.type -> arith_expr_for_base tZ -> arith_expr_for_base tZ
             := fun desired_type '(e, known_type)
                => match desired_type, known_type with
                   | None, _ => (e, known_type)
                   | Some desired_type, Some known_type
-                    => if int.is_tighter_than known_type desired_type
+                    => if int.type_beq known_type desired_type
                        then (e, Some known_type)
                        else (Z_static_cast desired_type @@ e, Some desired_type)
                   | Some desired_type, None
+                    => (Z_static_cast desired_type @@ e, Some desired_type)
+                  end%core%Cexpr.
+
+          Definition get_Zcast_down_if_needed
+            : option int.type -> option int.type -> option int.type
+            := fun desired_type known_type
+               => match desired_type, known_type with
+                  | None, _ => None
+                  | Some desired_type, Some known_type
+                    => if int.is_tighter_than known_type desired_type
+                       then None
+                       else Some desired_type
+                  | Some desired_type, None
+                    => Some desired_type
+                  end%core%Cexpr.
+
+          Definition Zcast_down_if_needed
+            : option int.type -> arith_expr_for_base tZ -> arith_expr_for_base tZ
+            := fun desired_type '(e, known_type)
+               => match get_Zcast_down_if_needed desired_type known_type with
+                  | None => (e, known_type)
+                  | Some desired_type
                     => (Z_static_cast desired_type @@ e, Some desired_type)
                   end%core%Cexpr.
 
@@ -267,16 +326,29 @@ Module Compilers.
                        end
                end.
 
+          Definition get_Zcast_up_if_needed
+            : option int.type -> option int.type -> option int.type
+            := fun desired_type known_type
+               => match desired_type, known_type with
+                  | None, _ | _, None => None
+                  | Some desired_type, Some known_type
+                    => if int.is_tighter_than desired_type known_type
+                       then None
+                       else Some desired_type
+                  end.
+
           Definition Zcast_up_if_needed
             : option int.type -> arith_expr_for_base tZ -> arith_expr_for_base tZ
             := fun desired_type '(e, known_type)
-               => match desired_type, known_type with
+               => Zcast (get_Zcast_up_if_needed desired_type known_type) (e, known_type).
+
+                                               (*match desired_type, known_type with
                   | None, _ | _, None => (e, known_type)
                   | Some desired_type, Some known_type
                     => if int.is_tighter_than desired_type known_type
                        then (e, Some known_type)
                        else (Z_static_cast desired_type @@ e, Some desired_type)%core%Cexpr
-                  end.
+                  end.*)
 
           Fixpoint cast_up_if_needed {t}
             : int.option.interp t -> arith_expr_for_base t -> arith_expr_for_base t
@@ -304,16 +376,53 @@ Module Compilers.
                        end
                end.
 
+          Fixpoint cast {t}
+            : int.option.interp t -> arith_expr_for_base t -> arith_expr_for_base t
+            := match t with
+               | tZ => Zcast
+               | base.type.type_base _
+               | base.type.unit
+                 => fun _ x => x
+               | base.type.prod A B
+                 => fun '(r1, r2) '(e1, e2) => (@cast A r1 e1,
+                                                @cast B r2 e2)
+               | base.type.list A
+                 => fun r1 ls
+                    => match r1 with
+                       | Some r1 => List.map (fun '(r, e) => @cast A r e)
+                                             (List.combine r1 ls)
+                       | None => ls
+                       end
+               | base.type.option A
+                 => fun r1 ls
+                    => match r1 with
+                       | Some r1 => Option.map (fun '(r, e) => @cast A r e)
+                                               (Option.combine r1 ls)
+                       | None => ls
+                       end
+               end.
 
           Definition arith_bin_arith_expr_of_PHOAS_ident
                      (s:=(tZ * tZ)%etype)
                      (d:=tZ)
-                     (idc : ident (type.Z * type.Z) type.Z)
+                     (idc : Z_binop)
             : option int.type -> arith_expr_for (type.base s) -> arith_expr_for (type.base d)
             := fun desired_type '((e1, t1), (e2, t2)) =>
-                 let '(((e1, t1), (e2, t2)), typ) :=
-                     bin_op_conversion desired_type ((e1, t1), (e2, t2)) in
-                 Zcast_down_if_needed desired_type ((idc @@ (e1, e2))%Cexpr, typ).
+                 let '(cstout, (cst1, cst2)) := bin_op_casts_opt idc desired_type (t1, t2) in
+                 let typ := bin_op_natural_output_opt idc (Option.or_else cst1 t1, Option.or_else cst2 t2) in
+                 let '((e1, t1), (e2, t2)) := (Zcast cst1 (e1, t1), Zcast cst2 (e2, t2)) in
+                 Zcast cstout ((idc @@ (e1, e2))%Cexpr, typ).
+
+          Definition arith_un_arith_expr_of_PHOAS_ident
+                     (s:=tZ)
+                     (d:=tZ)
+                     (idc : Z_unop)
+            : option int.type -> arith_expr_for (type.base s) -> arith_expr_for (type.base d)
+            := fun desired_type '(e, t) =>
+                 let '(cstout, cst) := un_op_casts_opt idc desired_type t in
+                 let typ := (*un_op_natural_output_opt idc*) Option.or_else cst t in
+                 let '(e, t) := Zcast cst (e, t) in
+                 Zcast cstout ((idc @@ e)%Cexpr, typ).
 
           Local Definition fakeprod (A B : Compilers.type.type base.type) : Compilers.type.type base.type
             := match A, B with
@@ -422,112 +531,31 @@ Module Compilers.
                       => List.nth_default (inr ["Invalid list index " ++ show false n]%string)
                                           (List.map (fun x => ret (cast_down_if_needed r x)) ls) n
                  | ident.Z_shiftr
-                   => fun rout '(e, r) '(offset, roffset)
+                   => fun r e '(offset, roffset)
                       => match invert_literal offset with
                          | Some offset
-                           => (** N.B. We must cast the expression up to a
-                                  large enough type to fit 2^offset
-                                  (importantly, not just 2^offset-1),
-                                  because C considers it to be undefined
-                                  behavior to shift >= width of the type.
-                                  We should probably figure out how to not
-                                  generate these things in the first
-                                  place...
-
-                                  N.B. We must preserve signedness of the
-                                  value being shifted, because shift does
-                                  not commute with mod. *)
-                              (* Zoe: This is the only computation that is
-                                      affected by the parametrization
-                                      over the language conversions. In
-                                      particular, in the previous version
-                                      the operand was casted up to
-                                      [(int.union_zrange r[0~>2^offset]%zrange) (promote_type r)]
-                                      whereas now is casted up to
-                                      [(int.union_zrange r[0~>2^offset]%zrange) r)]
-
-                                      AFAICT, this will not change the
-                                      generated code since shifts only
-                                      happen to integers >= 32 bits so
-                                      promotion does not happen.
-
-                                      The only class of examples that I
-                                      can find and alter the generated
-                                      code is the following: Assume r =
-                                      uint8 and offset \in [1, 31].  Then
-
-                                      rin = promote r = int32
-
-                                      int.union_zrange r[0~>2^offset] r = uint32
-
-                                      int.union_zrange r[0~>2^offset] rin = int32
-
-                                      Previously, no coercion was going to
-                                      be generated, but now we are
-                                      coercing the operand to uint32,
-                                      before performing the shift. Note
-                                      that no coercion was going to be
-                                      generated before, only implicit
-                                      promotion to int32. *)
-                           let '(e', rin') := un_op_conversion
-                                                (option_map (int.union_zrange r[0~>2^offset]%zrange) r)
-                                                (e, r) in
-                           ret (cast_down_if_needed rout (Z_shiftr offset @@ e', rin'))
+                           => ret (arith_un_arith_expr_of_PHOAS_ident (Z_shiftr offset) r e)
                          | None => inr ["Invalid right-shift by a non-literal"]%string
                          end
                  | ident.Z_shiftl
-                   => fun rout '(e, r) '(offset, roffset)
+                   => fun r e '(offset, roffset)
                       => match invert_literal offset with
                          | Some offset
-                           => (** N.B. We must cast the expression up to a
-                                large enough type to fit 2^offset
-                                (importantly, not just 2^offset-1),
-                                because C considers it to be undefined
-                                behavior to shift >= width of the type.
-                                We should probably figure out how to not
-                                generate these things in the first
-                                place...
-
-                                N.B. We make sure that we only
-                                left-shift unsigned values, since
-                                shifting into the sign bit is undefined
-                                behavior. *)
-                           let rpre_out := match rout with
-                                           | Some rout => Some (int.union_zrange r[0~>2^offset] (int.unsigned_counterpart_of rout))
-                                           | None => Some (int.of_zrange_relaxed r[0~>2^offset]%zrange)
-                                           end in
-                           let '(e', rin') := un_op_conversion rpre_out (e, r) in
-                           ret (cast_down_if_needed rout (Z_shiftl offset @@ e', rin'))
+                           => ret (arith_un_arith_expr_of_PHOAS_ident (Z_shiftl offset) r e)
                          | None => inr ["Invalid left-shift by a non-literal"]%string
                          end
                  | ident.Z_truncating_shiftl
-                   => fun rout '(bitwidth, rbitwidth) '(e, r) '(offset, roffset)
+                   => fun r '(bitwidth, rbitwidth) e '(offset, roffset)
                       => match invert_literal bitwidth, invert_literal offset with
                          | Some bitwidth, Some offset
-                           => (** N.B. We must cast the expression up to a
-                                large enough type to fit 2^offset
-                                (importantly, not just 2^offset-1),
-                                because C considers it to be undefined
-                                behavior to shift >= width of the type.
-                                We should probably figure out how to not
-                                generate these things in the first
-                                place...
-
-                                N.B. We make sure that we only
-                                left-shift unsigned values, since
-                                shifting into the sign bit is undefined
-                                behavior. *)
-                           let rpre_out := Some (int.of_zrange_relaxed r[0 ~> Z.max (2^offset) (2^bitwidth-1)]%zrange) in
-                           let '(e', rin') := un_op_conversion rpre_out (e, r) in
-                           let shifted := cast_down_if_needed rout (Z_shiftl offset @@ e', rin') in
-                           ret (arith_bin_arith_expr_of_PHOAS_ident Z_land rout (shifted, arith_expr_of_PHOAS_literal_Z (2^bitwidth-1) (Some (int.of_zrange_relaxed r[0~>2^bitwidth - 1]))))
+                           => let rpre_out := Some (int.of_zrange_relaxed r[0 ~> Z.max (2^offset) (2^bitwidth-1)]%zrange) in
+                              let shifted := arith_un_arith_expr_of_PHOAS_ident (Z_shiftl offset) rpre_out e in
+                              let truncated := arith_bin_arith_expr_of_PHOAS_ident Z_land r (shifted, arith_expr_of_PHOAS_literal_Z (2^bitwidth-1) (Some (int.of_zrange_relaxed r[0~>2^bitwidth - 1]))) in
+                              ret truncated
                          | _, None => inr ["Invalid (truncating) left-shift by a non-literal"]%string
                          | None, _ => inr ["Invalid left-shift truncated to a non-literal bitwidth"]%string
                          end
-                 | ident.Z_bneg
-                   => fun rout '(e, r)
-                      => (** N.B. We assume that C will implicitly cast the output of [!e] to whatever integer type it wants it in *)
-                        ret (Z_bneg @@ e, rout)
+                 | ident.Z_bneg => fun r x => ret (arith_un_arith_expr_of_PHOAS_ident Z_bneg r x)
                  | ident.Z_land => fun r x y => ret (arith_bin_arith_expr_of_PHOAS_ident Z_land r (x, y))
                  | ident.Z_lor => fun r x y => ret (arith_bin_arith_expr_of_PHOAS_ident Z_lor r (x, y))
                  | ident.Z_add => fun r x y => ret (arith_bin_arith_expr_of_PHOAS_ident Z_add r (x, y))
@@ -541,7 +569,7 @@ Module Compilers.
                               | Some lgbitwidth
                                 => let ty := int.unsigned lgbitwidth in
                                    let rin' := Some ty in
-                                   let '(e, _) := un_op_conversion rin' (e, r) in
+                                   let '(e, _) := Zcast rin' (e, r) in
                                    ret (cast_down_if_needed rout (cast_up_if_needed rout (Z_lnot ty @@ e, rin')))
                               | None => inr ["Invalid modulus for Z.lnot (not 2^(2^_)): " ++ show false modulus]%string
                               end
@@ -785,6 +813,18 @@ Module Compilers.
               : ErrT (arith_expr_for_base t)
               := (e' <- arith_expr_of_PHOAS e; e' rout).
 
+            Definition result_upcast {t}
+              : int.option.interp t -> arith_expr_for_base t -> arith_expr_for_base t
+              := if upcast_on_assignment
+                 then cast
+                 else fun _ e => e.
+
+            Definition funcall_upcast {t}
+              : int.option.interp t -> arith_expr_for_base t -> arith_expr_for_base t
+              := if upcast_on_funcall
+                 then cast
+                 else fun _ e => e.
+
             Fixpoint make_return_assignment_of_base_arith {t}
               : base_var_data t
                 -> @Compilers.expr.expr base.type ident.ident var_data (type.base t)
@@ -793,7 +833,7 @@ Module Compilers.
                  | tZ
                    => fun '(n, r) e
                       => (rhs <- arith_expr_of_base_PHOAS e r;
-                            let '(e, r) := result_upcast r rhs in
+                            let '(e, r) := result_upcast (t:=tZ) r rhs in
                             ret [AssignZPtr n r e])
                  | base.type.type_base _
                  | base.type.unit
@@ -811,7 +851,7 @@ Module Compilers.
                       => (ls <- arith_expr_of_base_PHOAS e (Some (repeat r len));
                             ret (List.map
                                    (fun '(i, rhs) =>
-                                      let '(e, _) := result_upcast r rhs in
+                                      let '(e, _) := result_upcast (t:=tZ) r rhs in
                                       AssignNth n i e)
                                    (List.combine (List.seq 0 len) ls)))
                  | base.type.list _
@@ -858,15 +898,12 @@ Module Compilers.
                    => fun '((econdv, (econd, rcond)), ((e1v, (e1, r1)), ((e2v, (e2, r2)), tt)))
                       => match rcond with
                          | Some (int.unsigned 0)
-                           => let '(((e1, r1), (e2, r2)), typ) :=
-                                  bin_op_conversion rout ((e1, r1), (e2, r2)) in
-                              ty <- match typ, rout with
-                                    | Some typ, Some rout
-                                      => if int.type_beq typ rout
-                                         then inl typ
-                                         else inr ["Casting the result of Z.zselect to a type other than the common type is not currently supported.  (Cannot cast a pointer to " ++ show false rout ++ " to a pointer to " ++ show false typ ++ ".)"]%string
-                                    | None, _ => inr ["Unexpected None result of common-type calculation for Z.zselect"]
-                                    | _, None => inr ["Missing cast annotation on return of Z.zselect"]
+                           => let '((e1, r1), (e2, r2)) :=
+                                  funcall_upcast (t:=tZ*tZ) (rout, rout) ((e1, r1), (e2, r2)) in
+                              ty <- match rout with
+                                    | Some rout
+                                      => inl rout
+                                    | None => inr ["Missing cast annotation on return of Z.zselect"]
                                     end;
                                 ret (fun retptr => [Call (Z_zselect ty @@ (retptr, (econd, e1, e2)))]%Cexpr)
                          | _ => inr ["Invalid argument to Z.zselect not known to be 0 or 1: " ++ show false econdv]%string
@@ -924,8 +961,8 @@ Module Compilers.
                         bounds_check do_bounds_check "second argument to" idc s e2v r2,
                         bounds_check do_bounds_check "first return value of" idc s e2v (fst rout),
                         bounds_check do_bounds_check "second return value of" idc 1 (* boolean carry/borrow *) e2v (snd rout);
-                       let '(e1, _) := result_upcast (Some (int.of_zrange_relaxed r[0 ~> 2 ^ s - 1])) (e1, r1) in
-                       let '(e2, _) := result_upcast (Some (int.of_zrange_relaxed r[0 ~> 2 ^ s - 1])) (e2, r2) in
+                       let '(e1, _) := result_upcast (t:=tZ) (Some (int.of_zrange_relaxed r[0 ~> 2 ^ s - 1])) (e1, r1) in
+                       let '(e2, _) := result_upcast (t:=tZ) (Some (int.of_zrange_relaxed r[0 ~> 2 ^ s - 1])) (e2, r2) in
                        inl ((round_up_to_split_type s (fst rout), snd rout),
                             fun retptr => [Call (idc' @@ (retptr, (literal 0 @@ TT, e1, e2)))%Cexpr]))
                   | Some _, _ => inr ["Unrecognized identifier when attempting to construct an assignment with 2 arguments: " ++ show true idc]%string
@@ -957,9 +994,9 @@ Module Compilers.
                              bounds_check do_bounds_check "third argument to" idc s e2v r2,
                              bounds_check do_bounds_check "first return value of" idc s e2v (fst rout),
                              bounds_check do_bounds_check "second (carry) return value of" idc 1 (* boolean carry/borrow *) e2v (snd rout));
-                         let '(e1, _) := result_upcast (Some (int.of_zrange_relaxed r[0 ~> 2 ^ 1 - 1])) (e1, r1) in
-                         let '(e2, _) := result_upcast (Some (int.of_zrange_relaxed r[0 ~> 2 ^ s - 1])) (e2, r2) in
-                         let '(e3, _) := result_upcast (Some (int.of_zrange_relaxed r[0 ~> 2 ^ s - 1])) (e3, r3) in
+                         let '(e1, _) := result_upcast (t:=tZ) (Some (int.of_zrange_relaxed r[0 ~> 2 ^ 1 - 1])) (e1, r1) in
+                         let '(e2, _) := result_upcast (t:=tZ) (Some (int.of_zrange_relaxed r[0 ~> 2 ^ s - 1])) (e2, r2) in
+                         let '(e3, _) := result_upcast (t:=tZ) (Some (int.of_zrange_relaxed r[0 ~> 2 ^ s - 1])) (e3, r3) in
                          inl ((round_up_to_split_type s (fst rout), snd rout),
                               fun retptr => [Call (idc' @@ (retptr, (e1, e2, e3)))%Cexpr]))
                  | Some _, _ => inr ["Unrecognized identifier when attempting to construct an assignment with 2 arguments: " ++ show true idc]%string
