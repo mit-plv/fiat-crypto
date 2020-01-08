@@ -21,15 +21,18 @@ Module Barrett256.
   Definition M := Eval lazy in (2^256-2^224+2^192+2^96-1).
   Definition machine_wordsize := 256.
 
+  Local Instance should_split_mul : BoundsPipeline.should_split_mul_opt := false.
+  Local Instance widen_carry : BoundsPipeline.widen_carry_opt := false.
+
   Derive barrett_red256
-         SuchThat (barrett_red M machine_wordsize = ErrorT.Success barrett_red256)
+         SuchThat (barrett_red true (* fancy *) M machine_wordsize = ErrorT.Success barrett_red256)
          As barrett_red256_eq.
   Proof. lazy; reflexivity. Qed.
 
   Lemma barrett_red256_correct :
     COperationSpecifications.BarrettReduction.barrett_red_correct machine_wordsize M (API.Interp barrett_red256).
   Proof.
-    apply barrett_red_correct with (machine_wordsize:=machine_wordsize).
+    apply barrett_red_correct with (fancy:=true) (machine_wordsize:=machine_wordsize).
     { lazy. reflexivity. }
     { apply barrett_red256_eq. }
   Qed.

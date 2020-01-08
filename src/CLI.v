@@ -13,6 +13,7 @@ Require Import Crypto.Util.Strings.Show.
 Require Crypto.PushButtonSynthesis.SaturatedSolinas.
 Require Crypto.PushButtonSynthesis.UnsaturatedSolinas.
 Require Crypto.PushButtonSynthesis.WordByWordMontgomery.
+Require Crypto.PushButtonSynthesis.BarrettReduction.
 Require Import Crypto.UnsaturatedSolinasHeuristics.
 Require Import Crypto.Stringification.Language.
 Require Import Crypto.Stringification.C.
@@ -89,6 +90,8 @@ Module ForExtraction.
     := parse_Z s.
   Definition parse_m (s : string) : option Z
     := parseZ_arith s.
+  Definition parse_M (s : string) : option Z
+    := parseZ_arith s.
 
   Definition show_c : Show (list (Z * Z))
     := @show_list _ (@show_prod _ _ PowersOfTwo.show_Z Decimal.show_Z).
@@ -152,6 +155,8 @@ Module ForExtraction.
     := "  s-c                     The prime, which must be expressed as a difference of a power of two and a small field element (e.g., '2^255 - 19', '2^448 - 2^224 - 1')".
   Definition m_help
     := "  m                       The prime (e.g., '2^434 - (2^216*3^137 - 1)')".
+  Definition M_help
+    := "  M                       The prime (e.g., '2^434 - (2^216*3^137 - 1)')".
   Definition machine_wordsize_help
     := "  machine_wordsize        The machine bitwidth (e.g., 32 or 64)".
   Definition function_to_synthesize_help (valid_names : string)
@@ -539,4 +544,51 @@ Module ForExtraction.
       : A
       := Parameterized.PipelineMain argv success error.
   End SaturatedSolinas.
+
+  Module Barrett.
+    Local Instance api : PipelineAPI
+      := {
+          parse_args (args : list string)
+          := match args with
+             | M::machine_wordsize::requests
+               => let str_machine_wordsize := machine_wordsize in
+                  let str_M := M in
+                  let show_requests := match requests with nil => "(all)" | _ => String.concat ", " requests end in
+                  Some
+                    match parse_many [("machine_wordsize", machine_wordsize, parse_machine_wordsize machine_wordsize:Dyn)
+                                      ; ("M", M, parse_M M:Dyn)] with
+                    | inr errs => inr errs
+                    | inl (machine_wordsize, M)
+                      => inl ((str_machine_wordsize, str_M, show_requests),
+                              (machine_wordsize, M, requests))
+                    end
+             | _ => None
+             end;
+
+          show_lines_args :=
+            fun '((str_machine_wordsize, str_M, show_requests),
+                  (machine_wordsize, M, requests))
+            => ["requested operations: " ++ show_requests;
+                  "M = " ++ Hex.show_Z false M ++ " (from """ ++ str_M ++ """)";
+                  "machine_wordsize = " ++ show false machine_wordsize ++ " (from """ ++ str_machine_wordsize ++ """)"];
+
+          pipeline_usage_string := "M machine_wordsize [function_to_synthesize*]";
+
+          help_lines := [M_help;
+                           machine_wordsize_help;
+                           function_to_synthesize_help BarrettReduction.valid_names];
+
+          Synthesize
+          := fun _ opts '(machine_wordsize, M, requests) comment_header prefix
+             => BarrettReduction.Synthesize false (* not fancy *) M machine_wordsize comment_header prefix requests
+        }.
+
+    Definition PipelineMain
+               {A}
+               (argv : list string)
+               (success : list string -> A)
+               (error : list string -> A)
+      : A
+      := Parameterized.PipelineMain argv success error.
+  End Barrett.
 End ForExtraction.
