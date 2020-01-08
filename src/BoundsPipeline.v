@@ -129,6 +129,9 @@ Qed.
 (** Prefix function definitions with static/non-public? *)
 Class static_opt := static : bool.
 Typeclasses Opaque static_opt.
+(** Use the alternate cmovznz implementation using mul? *)
+Class use_mul_for_cmovznz_opt := use_mul_for_cmovznz : bool.
+Typeclasses Opaque use_mul_for_cmovznz_opt.
 (** Emit the primitive operations? *)
 Class emit_primitives_opt := emit_primitives : bool.
 Typeclasses Opaque emit_primitives_opt.

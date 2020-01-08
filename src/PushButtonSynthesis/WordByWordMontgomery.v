@@ -91,6 +91,7 @@ Local Opaque
 Section __.
   Context {output_language_api : ToString.OutputLanguageAPI}
           {static : static_opt}
+          {use_mul_for_cmovznz : use_mul_for_cmovznz_opt}
           {emit_primitives : emit_primitives_opt}
           {should_split_mul : should_split_mul_opt}
           {widen_carry : widen_carry_opt}

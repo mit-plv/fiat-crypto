@@ -146,6 +146,8 @@ Module ForExtraction.
     := "  --no-wide-int           Don't use integers wider than the bitwidth.".
   Definition no_primitives_help
     := "  --no-primitives         Suppress the generation of the bodies of primitive operations such as addcarryx, subborrowx, cmovznz, mulx, etc.".
+  Definition cmovznz_by_mul_help
+    := "  --cmovznz-by-mul        Use an alternative implementation of cmovznz using multiplication rather than bitwise-and with -1.".
   Definition n_help
     := "  n                       The number of limbs, or the literal '(auto)' or '(autoN)' for a non-negative number N, to automatically guess the number of limbs".
   Definition sc_help
@@ -220,7 +222,8 @@ Module ForExtraction.
 
       (** Should we emit primitive operations *)
       ; emit_primitives :> emit_primitives_opt
-
+      (** Should we use the alternate implementation of cmovznz *)
+      ; use_mul_for_cmovznz :> use_mul_for_cmovznz_opt
       (** Should we split apart oversized operations? *)
       ; should_split_mul :> should_split_mul_opt
       (** Should we widen the carry to the full bitwidth? *)
@@ -348,11 +351,12 @@ Module ForExtraction.
                match argv with
                | nil => error ["empty argv"]
                | prog::args
-                 => error ((["USAGE: " ++ prog ++ " [--lang=LANGUAGE] [--static] [--no-primitives] curve_description " ++ pipeline_usage_string;
+                 => error ((["USAGE: " ++ prog ++ " [--lang=LANGUAGE] [--static] [--no-primitives] [--cmovznz-by-mul] curve_description " ++ pipeline_usage_string;
                                "Got " ++ show false (List.length args) ++ " arguments.";
                                "";
                                lang_help;
                                static_help;
+                               cmovznz_by_mul_help;
                                no_wide_int_help;
                                no_primitives_help;
                                curve_description_help]%string)
@@ -363,6 +367,7 @@ Module ForExtraction.
            let '(argv, staticv) := argv_to_contains_opt_and_argv "--static" argv in
 
            let '(argv, no_wide_intsv) := argv_to_contains_opt_and_argv "--no-wide-int" argv in
+           let '(argv, use_mul_for_cmovznzv) := argv_to_contains_opt_and_argv "--cmovznz-by-mul" argv in
            let '(argv, no_primitivesv) := argv_to_contains_opt_and_argv "--no-primitives" argv in
            match argv with
            | _::curve_description::args
@@ -370,6 +375,7 @@ Module ForExtraction.
                 | Some (inl args)
                   => let opts
                          := {| static := staticv
+                               ; use_mul_for_cmovznz := use_mul_for_cmovznzv
                                ; should_split_mul := no_wide_intsv
                                ; emit_primitives := negb no_primitivesv |} in
                      Pipeline curve_description args success error
