@@ -127,8 +127,6 @@ Module Compilers.
              => "(" ++ @arith_to_string prefix _ x1 ++ " * " ++ @arith_to_string prefix _ x2 ++ ")"
            | (Z_sub @@ (x1, x2))
              => "(" ++ @arith_to_string prefix _ x1 ++ " - " ++ @arith_to_string prefix _ x2 ++ ")"
-           | (Z_opp @@ e)
-             => "(-" ++ @arith_to_string prefix _ e ++ ")"
            | (Z_lnot _ @@ e)
              => "(~" ++ @arith_to_string prefix _ e ++ ")"
            | (Z_bneg @@ e)
@@ -237,45 +235,6 @@ Module Compilers.
            | type.base _ => to_base_retarg_list prefix
            | type.arrow _ _ => fun _ => ["#error arrow;"]
            end.
-
-      Fixpoint bound_to_string {t : base.type} : var_data (type.base t) -> ZRange.type.base.option.interp t -> list string
-        := match t return var_data (type.base t) -> ZRange.type.base.option.interp t -> list string with
-           | tZ
-             => fun '(name, _) arg
-                => [(name ++ ": ")
-                      ++ match arg with
-                         | Some arg => show false arg
-                         | None => show false arg
-                         end]%string
-           | base.type.prod A B
-             => fun '(va, vb) '(a, b)
-                => @bound_to_string A va a ++ @bound_to_string B vb b
-           | base.type.list A
-             => fun '(name, _, _) arg
-                => [(name ++ ": ")
-                      ++ match ZRange.type.base.option.lift_Some arg with
-                         | Some arg => show false arg
-                         | None => show false arg
-                         end]%string
-           | base.type.option _
-           | base.type.unit
-           | base.type.type_base _
-             => fun _ _ => nil
-           end%list.
-
-      Fixpoint input_bounds_to_string {t} : type.for_each_lhs_of_arrow var_data t -> type.for_each_lhs_of_arrow ZRange.type.option.interp t -> list string
-        := match t return type.for_each_lhs_of_arrow var_data t -> type.for_each_lhs_of_arrow ZRange.type.option.interp t -> list string with
-           | type.base t => fun _ _ => nil
-           | type.arrow (type.base s) d
-             => fun '(v, vs) '(arg, args)
-                => (bound_to_string v arg)
-                     ++ @input_bounds_to_string d vs args
-           | type.arrow s d
-             => fun '(absurd, _) => match absurd : Empty_set with end
-           end%list.
-
-
-
 
       (** * Language-specific numeric conversions to be passed to the PHOAS -> IR translation *)
 
@@ -387,42 +346,113 @@ Module Compilers.
            else
              int.unsigned_counterpart_of t2.
 
-      Definition C_bin_op_conversion
-                 (desired_type : option int.type)
-                 (args : arith_expr_for (type.base (tZ * tZ)))
-        : arith_expr_for (type.base (tZ * tZ)) * option int.type
-        := match desired_type with
-           | None => (args, None)
-           | Some _
-             => let '((e1, t1), (e2, t2)) := args in
-                (* Zoe: internalized integer promotions *)
-                let t1 := option_map integer_promote_type t1 in
-                let t2 := option_map integer_promote_type t2 in
-                match t1, t2 with
-                | None, _ | _, None => (args, None)
-                | Some t1', Some t2' =>
-                  let args :=
-                      if int.is_tighter_than t2' t1'
-                      then (Zcast_up_if_needed desired_type (e1, t1), (e2, t2))
-                      else ((e1, t1), Zcast_up_if_needed desired_type (e2, t2))
-                  in
-                  let '((e1, t1), (e2, t2)) := args in
-                  let ct := (t1 <- t1; t2 <- t2; Some (C_common_type t1 t2))%option in
-                  (args, ct)
-                end
+      (** Quoting https://en.cppreference.com/w/c/language/conversion: *)
+      (** Usual arithmetic conversions
+
+          The arguments of the following arithmetic operators undergo
+          implicit conversions for the purpose of obtaining the common
+          real type, which is the type in which the calculation is
+          performed:
+
+          - binary arithmetic *, /, %, +, -
+          - relational operators <, >, <=, >=, ==, !=
+          - binary bitwise arithmetic &, ^, |,
+          - the conditional operator ?: *)
+      Inductive binop_kind := use_common_type.
+      Definition kind_of_binop (idc : Z_binop) : binop_kind
+        := match idc with
+           | Z_land
+           | Z_lor
+           | Z_add
+           | Z_mul
+           | Z_sub
+             => use_common_type
            end.
 
-      Definition C_un_op_conversion (desired_type : option int.type)
-                 (arg : arith_expr_for (type.base tZ))
-        : arith_expr_for (type.base tZ) :=
-        let '(e, r) := arg in
-        let rin := option_map integer_promote_type r in
-        Zcast_up_if_needed desired_type (e, rin).
+      Definition C_bin_op_natural_output
+        : Z_binop -> int.type * int.type -> int.type
+        := fun idc '(t1, t2)
+           => match kind_of_binop idc with
+              | use_common_type => C_common_type t1 t2
+              end.
+
+      Definition C_bin_op_casts
+        : Z_binop -> option int.type -> int.type * int.type -> option int.type * (option int.type * option int.type)
+        := fun idc desired_type '(t1, t2)
+           => match kind_of_binop idc with
+              | use_common_type
+                => match desired_type with
+                   | None => (None, (None, None))
+                   | Some _
+                     => let t1 := integer_promote_type t1 in
+                        let t2 := integer_promote_type t2 in
+                        let '(t1o, t2o)
+                            := if int.is_tighter_than t2 t1
+                               then (get_Zcast_up_if_needed desired_type (Some t1), None)
+                               else (None, get_Zcast_up_if_needed desired_type (Some t2)) in
+                        let ct := C_common_type (Option.value t1o t1) (Option.value t2o t2) in
+                        (get_Zcast_down_if_needed desired_type (Some ct), (t1o, t2o))
+                   end
+              end.
+
+      Definition C_un_op_casts
+        : Z_unop -> option int.type -> int.type -> option int.type * option int.type
+        := fun idc desired_type t
+           => let t := integer_promote_type t in
+              match idc with
+              | Z_shiftr offset
+                => (** N.B. We must cast the expression up to a large
+                       enough type to fit 2^offset (importantly, not
+                       just 2^offset-1), because C considers it to be
+                       undefined behavior to shift >= width of the
+                       type.  We should probably figure out how to not
+                       generate these things in the first place...
+
+                       N.B. We must preserve signedness of the value
+                       being shifted, because shift does not commute
+                       with mod. *)
+                let t' := int.union_zrange r[0~>2^offset]%zrange t in
+                ((** We cast the result down to the specified type, if needed *)
+                  get_Zcast_down_if_needed desired_type (Some t'),
+                 (** We cast the argument up to a large enough type *)
+                  get_Zcast_up_if_needed (Some t') (Some t))
+              | Z_shiftl offset
+                => (** N.B. We must cast the expression up to a large
+                       enough type to fit 2^offset (importantly, not
+                       just 2^offset-1), because C considers it to be
+                       undefined behavior to shift >= width of the
+                       type.  We should probably figure out how to not
+                       generate these things in the first place...
+
+                       N.B. We make sure that we only left-shift
+                       unsigned values, since shifting into the sign
+                       bit is undefined behavior. *)
+                let rpre_out := match desired_type with
+                                | Some rout => Some (int.union_zrange r[0~>2^offset] (int.unsigned_counterpart_of rout))
+                                | None => Some (int.of_zrange_relaxed r[0~>2^offset]%zrange)
+                                end in
+                ((** We cast the result down to the specified type, if needed *)
+                  get_Zcast_down_if_needed desired_type rpre_out,
+                 (** We cast the argument up to a large enough type *)
+                 get_Zcast_up_if_needed rpre_out (Some t))
+              | Z_lnot ty
+                => ((* if the result is too big, we cast it down; we
+                       don't need to upcast it because it'll get
+                       picked up by implicit casts if necessary *)
+                  get_Zcast_down_if_needed desired_type (Some ty),
+                (** always cast to the width of the type, unless we are already exactly that type (which the machinery in IR handles *)
+                  Some ty)
+                | Z_bneg
+                  => ((* bneg is !, i.e., takes the argument to 1 if its not zero, and to zero if it is zero; so we don't ever need to cast *)
+                    None, None)
+              end.
 
       Local Instance CLanguageCasts : LanguageCasts :=
-        {| bin_op_conversion := C_bin_op_conversion;
-           un_op_conversion := C_un_op_conversion;
-           result_upcast := fun _ e => e (* C doesn't need to upcast assignments/functions args*)
+        {| bin_op_natural_output := C_bin_op_natural_output
+           ; bin_op_casts := C_bin_op_casts
+           ; un_op_casts := C_un_op_casts
+           ; upcast_on_assignment := false
+           ; upcast_on_funcall := false
         |}.
 
       (** Top-level printing functions *)
