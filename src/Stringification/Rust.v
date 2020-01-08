@@ -15,6 +15,7 @@ Local Open Scope Z_scope.
 
 Module IR := IR.Compilers.ToString.IR.
 Module ToString := Stringification.Language.Compilers.ToString.
+Import Stringification.Language.Compilers.Options.
 
 Module Rust.
 
@@ -318,7 +319,9 @@ Module Rust.
       "(" ++ String.concat ", " (to_arg_list prefix Out rets ++ to_arg_list_for_each_lhs_of_arrow prefix args) ++
       ") -> () {")%string :: (List.map (fun s => "  " ++ s)%string (to_strings prefix body)) ++ ["}"%string]%list.
 
-  Definition ToFunctionLines (do_bounds_check : bool) (static : bool) (prefix : string) (name : string)
+  Definition ToFunctionLines
+             {relax_zrange : relax_zrange_opt}
+             (do_bounds_check : bool) (static : bool) (prefix : string) (name : string)
              {t}
              (e : API.Expr t)
              (comment : type.for_each_lhs_of_arrow var_data t -> var_data (type.base (type.final_codomain t)) -> list string)
@@ -347,7 +350,7 @@ Module Rust.
 
   Definition OutputRustAPI : ToString.OutputLanguageAPI :=
     {| ToString.comment_block := List.map (fun line => "/* " ++ line ++ " */")%string;
-       ToString.ToFunctionLines := ToFunctionLines;
+       ToString.ToFunctionLines := @ToFunctionLines;
        ToString.typedef_header := typedef_header |}.
 
 End Rust.

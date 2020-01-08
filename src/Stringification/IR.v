@@ -238,7 +238,8 @@ Module Compilers.
 
         Section __.
 
-          Context {lang_casts : LanguageCasts}.
+          Context {lang_casts : LanguageCasts}
+                  {relax_zrange : relax_zrange_opt}.
 
           (* None means unconstrained *)
           Definition bin_op_natural_output_opt
@@ -896,17 +897,22 @@ Module Compilers.
                  match idc with
                  | ident.Z_zselect
                    => fun '((econdv, (econd, rcond)), ((e1v, (e1, r1)), ((e2v, (e2, r2)), tt)))
-                      => match rcond with
-                         | Some (int.unsigned 0)
-                           => let '((e1, r1), (e2, r2)) :=
-                                  funcall_upcast (t:=tZ*tZ) (rout, rout) ((e1, r1), (e2, r2)) in
-                              ty <- match rout with
-                                    | Some rout
-                                      => inl rout
-                                    | None => inr ["Missing cast annotation on return of Z.zselect"]
-                                    end;
-                                ret (fun retptr => [Call (Z_zselect ty @@ (retptr, (econd, e1, e2)))]%Cexpr)
-                         | _ => inr ["Invalid argument to Z.zselect not known to be 0 or 1: " ++ show false econdv]%string
+                      => let err := inr ["Invalid argument to Z.zselect not known to be 0 or 1: " ++ show false econdv]%string in
+                         match rcond with
+                         | Some rcond
+                           => let expected_cond := int.of_zrange_relaxed (relax_zrange r[0~>1]) in
+                              if int.type_beq rcond expected_cond
+                              then
+                                let '((e1, r1), (e2, r2)) :=
+                                    funcall_upcast (t:=tZ*tZ) (rout, rout) ((e1, r1), (e2, r2)) in
+                                ty <- match rout with
+                                      | Some rout
+                                        => inl rout
+                                      | None => inr ["Missing cast annotation on return of Z.zselect"]
+                                      end;
+                                  ret (fun retptr => [Call (Z_zselect ty @@ (retptr, (econd, e1, e2)))]%Cexpr)
+                              else err
+                         | _ => err
                          end
                  | _ => fun _ => inr ["Unrecognized identifier (expecting a 1-pointer-returning function): " ++ show false idc]%string
                  end.
@@ -920,9 +926,9 @@ Module Compilers.
                    match found with
                    | None => inr ["Missing range on " ++ descr ++ " " ++ show true idc ++ ": " ++ show true ev]%string
                    | Some ty
-                     => if int.is_tighter_than ty (int.of_zrange_relaxed r[0~>2^s-1])
+                     => if int.is_tighter_than ty (int.of_zrange_relaxed (relax_zrange r[0~>2^s-1]))
                         then ret tt
-                        else inr ["Final bounds check failed on " ++ descr ++ " " ++ show false idc ++ "; expected an unsigned " ++ decimal_string_of_Z s ++ "-bit number (" ++ show false (int.of_zrange_relaxed r[0~>2^s-1]) ++ "), but found a " ++ show false ty ++ "."]%string
+                        else inr ["Final bounds check failed on " ++ descr ++ " " ++ show false idc ++ "; expected an unsigned " ++ decimal_string_of_Z s ++ "-bit number (relaxed to " ++ show false (int.of_zrange_relaxed (relax_zrange r[0~>2^s-1])) ++ "), but found a " ++ show false ty ++ "."]%string
                    end.
 
             Let round_up_to_split_type (lgs : Z) (t : option int.type) : option int.type
@@ -994,7 +1000,7 @@ Module Compilers.
                              bounds_check do_bounds_check "third argument to" idc s e2v r2,
                              bounds_check do_bounds_check "first return value of" idc s e2v (fst rout),
                              bounds_check do_bounds_check "second (carry) return value of" idc 1 (* boolean carry/borrow *) e2v (snd rout));
-                         let '(e1, _) := result_upcast (t:=tZ) (Some (int.of_zrange_relaxed r[0 ~> 2 ^ 1 - 1])) (e1, r1) in
+                         let '(e1, _) := result_upcast (t:=tZ) (Some (int.of_zrange_relaxed (relax_zrange r[0 ~> 2 ^ 1 - 1]))) (e1, r1) in
                          let '(e2, _) := result_upcast (t:=tZ) (Some (int.of_zrange_relaxed r[0 ~> 2 ^ s - 1])) (e2, r2) in
                          let '(e3, _) := result_upcast (t:=tZ) (Some (int.of_zrange_relaxed r[0 ~> 2 ^ s - 1])) (e3, r3) in
                          inl ((round_up_to_split_type s (fst rout), snd rout),
@@ -1176,7 +1182,7 @@ Module Compilers.
               := match t return ZRange.type.base.option.interp t -> option (positive * var_data (type.base t)) with
                  | tZ
                    => fun r => (n <- make_name count;
-                                  Some (Pos.succ count, (n, option_map int.of_zrange_relaxed r)))
+                                  Some (Pos.succ count, (n, option_map int.of_zrange_relaxed (option_map relax_zrange r))))
                  | base.type.prod A B
                    => fun '(ra, rb)
                       => (va <- @base_var_data_of_bounds A count make_name ra;
@@ -1190,7 +1196,7 @@ Module Compilers.
                             n <- make_name count;
                             Some (Pos.succ count,
                                   (n,
-                                   match List.map (option_map int.of_zrange_relaxed) ls with
+                                   match List.map (option_map (fun r => int.of_zrange_relaxed (relax_zrange r))) ls with
                                    | nil => None
                                    | cons x xs
                                      => List.fold_right

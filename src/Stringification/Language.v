@@ -32,6 +32,12 @@ Module Compilers.
 
   Local Notation tZ := (base.type.type_base base.type.Z).
 
+  Module Export Options.
+    (** How to relax zranges *)
+    Class relax_zrange_opt := relax_zrange : zrange -> zrange.
+    Typeclasses Opaque relax_zrange_opt.
+  End Options.
+
   Module ToString.
     Local Open Scope string_scope.
     Local Open Scope Z_scope.
@@ -906,7 +912,8 @@ Module Compilers.
         (** Converts a PHOAS AST to lines of code * info on which
             primitive functions are called, or else an error string *)
         ToFunctionLines
-        : forall (do_bounds_check : bool) (static : bool) (prefix : string) (name : string)
+        : forall {relax_zrange : relax_zrange_opt}
+                 (do_bounds_check : bool) (static : bool) (prefix : string) (name : string)
                  {t}
                  (e : @Compilers.expr.Expr base.type ident.ident t)
                  (comment : type.for_each_lhs_of_arrow var_data t -> var_data (type.final_codomain t) -> list string)

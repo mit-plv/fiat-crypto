@@ -78,6 +78,8 @@ Import
   MiscCompilerPasses.Compilers
   Stringification.Language.Compilers.
 
+Export Stringification.Language.Compilers.Options.
+
 Import Compilers.API.
 
 Definition round_up_bitwidth_gen (possible_values : list Z) (bitwidth : Z) : option Z
@@ -275,6 +277,7 @@ Module Pipeline.
                 => ((["Computed bounds " ++ show true computed_bounds ++ " are not tight enough (expected bounds not looser than " ++ show true expected_bounds ++ ")."]%string)
                       ++ [explain_too_loose_bounds (t:=type.base _) computed_bounds expected_bounds]
                       ++ match ToString.ToFunctionLines
+                                 (relax_zrange := fun r => r)
                                  false (* do extra bounds check *) false (* static *) "" "f" syntax_tree (fun _ _ => nil) None arg_bounds ZRange.type.base.option.None with
                          | inl (E_lines, types_used)
                            => ["When doing bounds analysis on the syntax tree:"]
@@ -399,6 +402,8 @@ Module Pipeline.
              (with_subst01 : bool)
              (translate_to_fancy : option to_fancy_args)
              (possible_values : list Z)
+             (relax_zrangef : relax_zrange_opt
+              := fun r => Option.value (relax_zrange_gen possible_values r) r)
              {t}
              (E : Expr t)
              (comment : type.for_each_lhs_of_arrow ToString.OfPHOAS.var_data t -> ToString.OfPHOAS.var_data (type.final_codomain t) -> list string)
@@ -430,7 +435,7 @@ Module Pipeline.
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
              (translate_to_fancy : option to_fancy_args)
-             relax_zrange
+             (possible_values : list Z)
              {t}
              (E : Expr t)
              (comment : type.for_each_lhs_of_arrow ToString.OfPHOAS.var_data t -> ToString.OfPHOAS.var_data (type.final_codomain t) -> list string)
@@ -442,7 +447,7 @@ Module Pipeline.
                   (*with_dead_code_elimination*)
                   with_subst01
                   translate_to_fancy
-                  relax_zrange
+                  possible_values
                   E comment arg_bounds out_bounds in
        match E with
        | Success (E, types_used) => Success (ToString.LinesToString E, types_used)
@@ -450,10 +455,13 @@ Module Pipeline.
        end.
 
   Local Notation arg_bounds_of_pipeline result
-    := ((fun a b c d t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d t E arg_bounds out_bounds = result') => arg_bounds) _ _ _ _ _ _ _ _ result eq_refl)
+    := ((fun a b c possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c possible_values t E arg_bounds out_bounds = result') => arg_bounds) _ _ _ _ _ _ _ _ result eq_refl)
          (only parsing).
   Local Notation out_bounds_of_pipeline result
-    := ((fun a b c d t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d t E arg_bounds out_bounds = result') => out_bounds) _ _ _ _ _ _ _ _ result eq_refl)
+    := ((fun a b c possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c possible_values t E arg_bounds out_bounds = result') => out_bounds) _ _ _ _ _ _ _ _ result eq_refl)
+         (only parsing).
+  Local Notation possible_values_of_pipeline result
+    := ((fun a b c possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c possible_values t E arg_bounds out_bounds = result') => possible_values) _ _ _ _ _ _ _ _ result eq_refl)
          (only parsing).
 
   Notation FromPipelineToString prefix name result
@@ -462,6 +470,8 @@ Module Pipeline.
             match result with
             | Success E'
               => let E := ToString.ToFunctionLines
+                            (relax_zrange
+                             := fun r => Option.value (relax_zrange_gen (possible_values_of_pipeline result) r) r)
                             true (_ : static_opt) prefix (prefix ++ name)%string
                             E'
                             (comment (prefix ++ name)%string)

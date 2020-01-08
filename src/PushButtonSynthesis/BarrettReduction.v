@@ -56,6 +56,8 @@ Section rbarrett_red.
     := [1; machine_wordsize / 2; machine_wordsize; 2 * machine_wordsize]%Z.
   Let possible_values := possible_values_of_machine_wordsize.
 
+  Local Instance widen_carry : widen_carry_opt := false.
+  Local Instance widen_bytes : widen_bytes_opt := true.
   Local Instance split_mul_to : split_mul_to_opt := None.
 
   Let fancy_args
