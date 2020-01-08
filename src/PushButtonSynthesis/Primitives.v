@@ -65,7 +65,7 @@ print((indent + '(' + r'''**
 >>
 *''' + ')\n') % open(__file__, 'r').read())
 
-for (op, opmod) in (('id', '(@id (list Z))'), ('selectznz', 'Positional.select'), ('mulx', 'mulx'), ('addcarryx', 'addcarryx'), ('subborrowx', 'subborrowx'), ('cmovznz', 'cmovznz')):
+for (op, opmod) in (('id', '(@id (list Z))'), ('selectznz', 'Positional.select'), ('mulx', 'mulx'), ('addcarryx', 'addcarryx'), ('subborrowx', 'subborrowx'), ('cmovznz', 'cmovznz'), ('cmovznz_by_mul', 'cmovz_nz_by_mul')):
     print((r'''%sDerive reified_%s_gen
        SuchThat (is_reification_of reified_%s_gen %s)
        As reified_%s_gen_correct.
@@ -131,6 +131,15 @@ Hint Extern 1 (_ = _) => apply_cached_reification cmovznz (proj1 reified_cmovznz
 Hint Immediate (proj2 reified_cmovznz_gen_correct) : wf_gen_cache.
 Hint Rewrite (proj1 reified_cmovznz_gen_correct) : interp_gen_cache.
 Local Opaque reified_cmovznz_gen. (* needed for making [autorewrite] not take a very long time *)
+
+Derive reified_cmovznz_by_mul_gen
+       SuchThat (is_reification_of reified_cmovznz_by_mul_gen cmovznz_by_mul)
+       As reified_cmovznz_by_mul_gen_correct.
+Proof. Time cache_reify (). Time Qed.
+Hint Extern 1 (_ = _) => apply_cached_reification cmovznz_by_mul (proj1 reified_cmovznz_by_mul_gen_correct) : reify_cache_gen.
+Hint Immediate (proj2 reified_cmovznz_by_mul_gen_correct) : wf_gen_cache.
+Hint Rewrite (proj1 reified_cmovznz_by_mul_gen_correct) : interp_gen_cache.
+Local Opaque reified_cmovznz_by_mul_gen. (* needed for making [autorewrite] not take a very long time *)
 
 (* needed for making [autorewrite] with [Set Keyed Unification] fast *)
 Local Opaque expr.Interp.
@@ -622,6 +631,7 @@ Notation "'docstring_with_summary_from_lemma!' summary correctness"
 Section __.
   Context {output_language_api : ToString.OutputLanguageAPI}
           {static : static_opt}
+          {use_mul_for_cmovznz : use_mul_for_cmovznz_opt}
           {emit_primitives : emit_primitives_opt}
           {should_split_mul : should_split_mul_opt}
           {widen_carry : widen_carry_opt}
@@ -760,6 +770,25 @@ Section __.
              (fun fname : string => ["The function " ++ fname ++ " is a single-word conditional move."]%string)
              (cmovznz_correct s)).
 
+  Definition cmovznz_by_mul (s : Z)
+    := Pipeline.BoundsPipeline
+         false (* subst01 *)
+         None (* fancy *)
+         possible_values_with_bytes
+         (reified_cmovznz_by_mul_gen
+            @ GallinaReify.Reify s)
+         (Some r[0~>1], (Some r[0~>2^s-1], (Some r[0~>2^s-1], tt)))%zrange
+         (Some r[0~>2^s-1])%zrange.
+
+  Definition scmovznz_by_mul (prefix : string) (s : Z)
+    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    := Eval cbv beta in
+        FromPipelineToString
+          prefix ("cmovznz_u" ++ decimal_string_of_Z s) (cmovznz_by_mul s)
+          (docstring_with_summary_from_lemma!
+             (fun fname : string => ["The function " ++ fname ++ " is a single-word conditional move."]%string)
+             (cmovznz_correct s)).
+
   Local Ltac solve_extra_bounds_side_conditions :=
     cbn [lower upper fst snd] in *; Bool.split_andb; Z.ltb_to_lt; lia.
 
@@ -769,6 +798,7 @@ Section __.
        Arithmetic.Primitives.addcarryx_correct
        Arithmetic.Primitives.subborrowx_correct
        Arithmetic.Primitives.cmovznz_correct
+       Arithmetic.Primitives.cmovznz_by_mul_correct
        Z.zselect_correct
        using solve [ auto | congruence | solve_extra_bounds_side_conditions ] : push_eval.
 
@@ -794,6 +824,12 @@ Section __.
   Lemma cmovznz_correct s' res
         (Hres : cmovznz s' = Success res)
     : cmovznz_correct s' (Interp res).
+  Proof using Type. prove_correctness I. Qed.
+
+  Strategy -1000 [cmovznz_by_mul]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
+  Lemma cmovznz_by_mul_correct s' res
+        (Hres : cmovznz_by_mul s' = Success res)
+    : COperationSpecifications.Primitives.cmovznz_correct s' (Interp res).
   Proof using Type. prove_correctness I. Qed.
 
   Lemma selectznz_correct limbwidth res
@@ -834,7 +870,8 @@ Section __.
                           (fun lg_split:positive => smulx function_name_prefix lg_split)
                           (PositiveSet.elements (ToString.mulx_lg_splits infos)) in
          let ls_cmov := List.map
-                          (fun bitwidth:positive => scmovznz function_name_prefix bitwidth)
+                          (fun bitwidth:positive
+                           => (if use_mul_for_cmovznz then scmovznz_by_mul else scmovznz) function_name_prefix bitwidth)
                           (PositiveSet.elements (ToString.cmovznz_bitwidths infos)) in
          let ls := ls_addcarryx ++ ls_mulx ++ ls_cmov in
          let infos := aggregate_infos ls in
