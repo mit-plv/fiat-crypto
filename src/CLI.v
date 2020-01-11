@@ -26,16 +26,6 @@ Import
   Stringification.C.Compilers.
 
 Module ForExtraction.
-  Definition parse_neg (s : string) : string * Z
-    := match s with
-       | String a b
-         => if Ascii.ascii_dec a "-"
-            then (b, -1)
-            else if Ascii.ascii_dec a "+"
-                 then (b, 1)
-                 else (s, 1)
-       | _ => (s, 1)
-       end.
   Definition parse_Z (s : string) : option Z
     := z <- ParseArithmetic.parse_Z s;
          match snd z with
@@ -156,18 +146,20 @@ Module ForExtraction.
     := "  LANGUAGE                The output language code should be emitted in.  Defaults to C if no language is given.  Case-sensitive."
          ++ String.NewLine ++
        "                            Valid options are: " ++ String.concat ", " (List.map (@fst _ _) supported_languages).
-  Definition static_help
-    := "  --static                Declare the functions as static, i.e., local to the file.".
-  Definition no_wide_int_help
-    := "  --no-wide-int           Don't use integers wider than the bitwidth.".
-  Definition widen_carry_help
-    := "  --widen-carry           Widen carry bit integer types to either the byte type, or to the full bitwidth if --widen-bytes is also passed.".
-  Definition widen_bytes_help
-    := "  --widen-bytes           Widen byte types to the full bitwidth.".
-  Definition no_primitives_help
-    := "  --no-primitives         Suppress the generation of the bodies of primitive operations such as addcarryx, subborrowx, cmovznz, mulx, etc.".
-  Definition cmovznz_by_mul_help
-    := "  --cmovznz-by-mul        Use an alternative implementation of cmovznz using multiplication rather than bitwise-and with -1.".
+  Definition total_help_indent
+    := "                          ".
+  Definition static_and_help
+    := ("--static", "Declare the functions as static, i.e., local to the file.").
+  Definition no_wide_int_and_help
+    := ("--no-wide-int", "Don't use integers wider than the bitwidth.").
+  Definition widen_carry_and_help
+    := ("--widen-carry", "Widen carry bit integer types to either the byte type, or to the full bitwidth if --widen-bytes is also passed.").
+  Definition widen_bytes_and_help
+    := ("--widen-bytes", "Widen byte types to the full bitwidth.").
+  Definition no_primitives_and_help
+    := ("--no-primitives", "Suppress the generation of the bodies of primitive operations such as addcarryx, subborrowx, cmovznz, mulx, etc.").
+  Definition cmovznz_by_mul_and_help
+    := ("--cmovznz-by-mul", "Use an alternative implementation of cmovznz using multiplication rather than bitwise-and with -1.").
   Definition n_help
     := "  n                       The number of limbs, or the literal '(auto)' or '(autoN)' for a non-negative number N, to automatically guess the number of limbs".
   Definition sc_help
@@ -190,7 +182,24 @@ Module ForExtraction.
   Definition function_to_synthesize_help (valid_names : string)
     := "  function_to_synthesize  A space-separated list of functions that should be synthesized.  If no functions are given, all functions are synthesized."
          ++ String.NewLine ++
-       "                            Valid options are " ++ valid_names.
+         "                            Valid options are " ++ valid_names.
+
+  Definition common_optional_options
+    := [static_and_help
+        ; no_wide_int_and_help
+        ; widen_carry_and_help
+        ; widen_bytes_and_help
+        ; no_primitives_and_help
+        ; cmovznz_by_mul_and_help
+       ].
+  Definition common_usage_opts
+    := String.concat " " (List.map (fun '(opt, _) => "[" ++ opt ++ "]") common_optional_options).
+
+  Definition to_help (s : string * string)
+    := let opt := "  " ++ fst s in
+       let descr := snd s in
+       opt ++ String.substring 0 (String.length total_help_indent - String.length opt) total_help_indent ++ descr.
+
 
   Record > Dyn := dyn { dyn_ty : Type ; dyn_val :> option dyn_ty }.
   Arguments dyn {_} _.
@@ -363,17 +372,29 @@ Module ForExtraction.
            | _ => (argv, false)
            end.
 
+      (** return the remainder of all elements of [argv] starting with
+          [opt], and all elements which do not start with [opt] *)
+      Definition argv_to_startswith_opt_and_argv (opt : string) (argv : list string)
+        := let '(opts, argv) := List.partition (String.contains 0 opt) argv in
+           (argv,
+            List.map (fun s => String.substring (String.length opt) (String.length s) s) opts).
+
       Definition argv_to_language_and_argv (argv : list string)
-        : list string * ToString.OutputLanguageAPI
-        := fold_right
-             (fun '(lang, output_api) default
-              => let '(argv, is_lang) := argv_to_contains_opt_and_argv ("--lang=" ++ lang) argv in
-                 if is_lang
-                 then (argv, output_api)
-                 else default)
-             (* if the second argument is not --lang=<something known>, default to C *)
-             (argv, ToString.OutputCAPI)
-             supported_languages.
+        : list string * (ToString.OutputLanguageAPI + list string)
+        := let '(argv, opts) := argv_to_startswith_opt_and_argv "--lang=" argv in
+           (argv,
+            match opts with
+            | [] => inl (* if no is --lang=<something known>, default to C *)
+                      ToString.OutputCAPI
+            | [lang]
+              => match List.filter (fun '(known_lang, _) => String.eqb lang known_lang) supported_languages with
+                 | [] => inr ["Unknown language " ++ lang ++ " requested; supported languages are " ++ String.concat ", " (List.map (@fst _ _) supported_languages)]
+                 | [(_, output_api)] => inl output_api
+                 | _ => inr ["Internal Error: Multiple languages exist with the same name (" ++ lang ++ ")"]
+                 end
+            | _
+              => inr ["Only one language specification with --lang is allowed; multiple languages were requested: " ++ String.concat ", " opts]
+            end).
 
       Definition PipelineMain
                  {A}
@@ -386,17 +407,12 @@ Module ForExtraction.
                match argv with
                | nil => error ["empty argv"]
                | prog::args
-                 => error ((["USAGE: " ++ prog ++ " [--lang=LANGUAGE] [--static] [--no-wide-int] [--widen-carry] [--widen-bytes] [--no-primitives] [--cmovznz-by-mul] curve_description " ++ pipeline_usage_string;
+                 => error ((["USAGE: " ++ prog ++ " [--lang=LANGUAGE] " ++ common_usage_opts ++ " curve_description " ++ pipeline_usage_string;
                                "Got " ++ show false (List.length args) ++ " arguments.";
                                "";
-                               lang_help;
-                               static_help;
-                               cmovznz_by_mul_help;
-                               no_wide_int_help;
-                               widen_carry_help;
-                               widen_bytes_help;
-                               no_primitives_help;
-                               curve_description_help]%string)
+                               lang_help]%string)
+                             ++ List.map to_help common_optional_options
+                             ++ [curve_description_help]
                              ++ help_lines
                              ++ [""])%list
                end in
@@ -407,8 +423,8 @@ Module ForExtraction.
            let '(argv, widen_carryv) := argv_to_contains_opt_and_argv "--widen-carry" argv in
            let '(argv, widen_bytesv) := argv_to_contains_opt_and_argv "--widen-bytes" argv in
            let '(argv, no_primitivesv) := argv_to_contains_opt_and_argv "--no-primitives" argv in
-           match argv with
-           | _::curve_description::args
+           match output_language_api, argv with
+           | inl output_language_api, _::curve_description::args
              => match parse_args args with
                 | Some (inl args)
                   => let opts
@@ -423,7 +439,8 @@ Module ForExtraction.
                   => error errs
                 | None => on_wrong_argv tt
                 end
-           | _ => on_wrong_argv tt
+           | inr errs, _ => error errs
+           | _, _ => on_wrong_argv tt
            end.
     End __.
   End Parameterized.
