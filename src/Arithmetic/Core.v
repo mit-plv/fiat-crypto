@@ -837,6 +837,23 @@ Module Positional.
   Proof using Type. clear -Hf Hf; cbv [add]; distr_length.               Qed.
   Hint Rewrite @length_add : distr_length.
 
+  Section Reduce.
+    Definition reduce n s c (p:list Z) : list Z :=
+      from_associational n (Associational.reduce s c (to_associational n p)).
+
+    Lemma eval_reduce n s c p (s_nz:s<>0) (modulus_nz:s-Associational.eval c<>0) :
+      eval n (reduce n s c p) mod (s - Associational.eval c) = eval n p mod (s - Associational.eval c).
+    Proof using weight_nz weight_0.
+      cbv [reduce]; push; destruct n; auto with lia; [].
+      cbv -[flat_map]; auto using flat_map_const_nil.
+    Qed.
+
+    Lemma length_reduce n s c p : length (reduce n s c p) = n.
+    Proof using Type. clear. cbv [reduce]. distr_length. Qed.
+  End Reduce.
+  Hint Rewrite eval_reduce : push_eval.
+  Hint Rewrite @length_reduce : distr_length.
+
   Section Carries.
     Definition carry n m (index:nat) (p:list Z) : list Z :=
       from_associational
@@ -1417,8 +1434,9 @@ Module Positional.
   End select.
 End Positional.
 (* Hint Rewrite disappears after the end of a section *)
-Hint Rewrite length_zeros length_add_to_nth length_from_associational @length_add @length_carry_reduce @length_carry @length_chained_carries @length_chained_carries_no_reduce @length_encode @length_encode_no_reduce @length_sub @length_opp @length_select @length_zselect @length_select_min @length_extend_to_length @length_drop_high_to_length : distr_length.
-Hint Rewrite @eval_zeros @eval_nil @eval_snoc_S @eval_select @eval_zselect @eval_extend_to_length using solve [auto; distr_length]: push_eval.
+Hint Rewrite length_zeros length_add_to_nth length_from_associational @length_add @length_carry_reduce @length_carry @length_chained_carries @length_chained_carries_no_reduce @length_encode @length_encode_no_reduce @length_sub @length_opp @length_select @length_zselect @length_select_min @length_extend_to_length @length_drop_high_to_length @length_reduce : distr_length.
+Hint Rewrite @eval_zeros @eval_nil @eval_snoc_S @eval_select @eval_zselect @eval_extend_to_length @eval_reduce using solve [auto; distr_length]: push_eval.
+
 Section Positional_nonuniform.
   Context (weight weight' : nat -> Z).
 

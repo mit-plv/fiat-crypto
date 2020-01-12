@@ -2104,14 +2104,14 @@ Section debugging_p448.
                                   let a_a := to_associational weight n a in
                                   let b_a := to_associational weight n b in
                                   let ab_a := mul a_a b_a in
-                                  let abm_a := reduce s c ab_a in
-                                  let abm_a := reduce s c abm_a in
-                                  let abm_a := reduce s c abm_a in
-                                  let abm_a := reduce s c abm_a in
-                                  let abm_a := reduce s c abm_a in
-                                  let abm_a := reduce s c abm_a in
-                                  let abm_a := reduce s c abm_a in
-                                  let abm_a := reduce s c abm_a in
+                                  let abm_a := Associational.reduce s c ab_a in
+                                  let abm_a := Associational.reduce s c abm_a in
+                                  let abm_a := Associational.reduce s c abm_a in
+                                  let abm_a := Associational.reduce s c abm_a in
+                                  let abm_a := Associational.reduce s c abm_a in
+                                  let abm_a := Associational.reduce s c abm_a in
+                                  let abm_a := Associational.reduce s c abm_a in
+                                  let abm_a := Associational.reduce s c abm_a in
                                   from_associational weight n abm_a
 
                                     )) in

@@ -61,6 +61,7 @@ Local Set Keyed Unification. (* needed for making [autorewrite] fast, c.f. COQBU
 (* needed for making [autorewrite] not take a very long time *)
 Local Opaque
       reified_convert_bases_gen
+      reified_canonicalize_gen
       expr.Interp.
 
 Inductive bounds := exactly (_ : list Z) | use_prime | use_bitwidth.
@@ -274,6 +275,30 @@ Section __.
              (fun fname : string => ["The function " ++ fname ++ " converts a field element from base " ++ Decimal.show_Q false src_limbwidth ++ " to base " ++ Decimal.show_Q false dst_limbwidth ++ " in little-endian order."]%string)
              (convert_bases_correct src_weight dst_weight src_n dst_n in_bounds)).
 
+  Definition canonicalize
+    := Pipeline.BoundsPipeline
+         false (* subst01 *)
+         None (* fancy *)
+         possible_values_with_bytes
+         (reified_canonicalize_gen
+            @ GallinaReify.Reify (Qnum src_limbwidth) @ GallinaReify.Reify (Z.pos (Qden src_limbwidth))
+            @ GallinaReify.Reify (Qnum dst_limbwidth) @ GallinaReify.Reify (Z.pos (Qden dst_limbwidth))
+            @ GallinaReify.Reify s
+            @ GallinaReify.Reify c
+            @ GallinaReify.Reify src_n
+            @ GallinaReify.Reify dst_n)
+         (Some in_bounds, tt)
+         (Some out_bounds).
+
+  Definition scanonicalize (prefix : string)
+    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    := Eval cbv beta in
+        FromPipelineToString
+          prefix "canonicalize" canonicalize
+          (docstring_with_summary_from_lemma!
+             (fun fname : string => ["The function " ++ fname ++ " converts a field element from base " ++ Decimal.show_Q false src_limbwidth ++ " to base " ++ Decimal.show_Q false dst_limbwidth ++ " in little-endian order, with reduction."]%string)
+             (canonicalize_correct src_weight dst_weight s c src_n dst_n in_bounds out_bounds)).
+
   Local Ltac solve_extra_bounds_side_conditions :=
     cbn [lower upper fst snd] in *; Bool.split_andb; Z.ltb_to_lt; lia.
 
@@ -314,12 +339,18 @@ Section __.
                       | destruct_head'_and; eapply Z.le_lt_trans; eassumption ].
   Qed.
 
+  Lemma canonicalize_correct res
+        (Hres : canonicalize = Success res)
+    : canonicalize_correct src_weight dst_weight s c src_n dst_n in_bounds out_bounds (Interp res).
+  Proof using curve_good. prove_correctness (). Qed.
+
   Section for_stringification.
     Local Open Scope string_scope.
     Local Open Scope list_scope.
 
     Definition known_functions
-      := [("convert_bases", sconvert_bases)].
+      := [("convert_bases", sconvert_bases)
+          ; ("canonicalize", scanonicalize)].
 
     Definition valid_names : string
       := Eval compute in String.concat ", " (List.map (@fst _ _) known_functions).
