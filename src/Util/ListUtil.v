@@ -2493,3 +2493,6 @@ Lemma eq_update_nth_nat_rect {A} n f xs
         n
         xs.
 Proof using Type. revert xs; induction n, xs; cbn; f_equal; auto. Qed.
+
+Lemma flat_map_const_nil {A B} ls : @flat_map A B (fun _ => nil) ls = nil.
+Proof using Type. induction ls; cbn; auto. Qed.
