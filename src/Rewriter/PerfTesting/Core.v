@@ -64,21 +64,6 @@ Module ModOpsDef := ModOps.ModOps Core.RuntimeDefinitions.
 Module Import WordByWordMontgomeryAx := ArithmeticCPS.WordByWordMontgomery.WordByWordMontgomery Core.RuntimeAxioms.
 Module Import WordByWordMontgomeryDef := ArithmeticCPS.WordByWordMontgomery.WordByWordMontgomery Core.RuntimeDefinitions.
 
-Definition parse_Z (s : string) : option Z
-  := z <- ParseArithmetic.parse_Z s;
-       match snd z with
-       | EmptyString => Some (fst z)
-       | _ => None
-       end.
-Definition parse_N (s : string) : option N
-  := match parse_Z s with
-     | Some Z0 => Some N0
-     | Some (Zpos p) => Some (Npos p)
-     | _ => None
-     end.
-Definition parse_nat (s : string) : option nat
-  := option_map N.to_nat (parse_N s).
-
 Module Import UnsaturatedSolinas.
   Class params :=
     { n : nat;
@@ -143,7 +128,7 @@ Module Import UnsaturatedSolinas.
     : R
     := let str_bitwidth := bitwidth in
        let str_index := index in
-       match parse_Z bitwidth, parse_nat index with
+       match parseZ_arith_strict bitwidth, parsenat_arith_strict index with
        | Some bitwidth, Some index
          => match List.nth_error (of_string prime bitwidth) index with
             | Some p
@@ -293,7 +278,7 @@ Module Import WordByWordMontgomery.
     := fun _ p => ("{| m := " ++ show false m ++ "; machine_wordsize := " ++ show false machine_wordsize ++ "|}")%string.
 
   Definition of_string (p : string) (bitwidth : Z) : option params
-    := match parseZ_arith p with
+    := match parseZ_arith_strict p with
        | Some v => Some {| m := v ; machine_wordsize := bitwidth |}
        | None => None
        end.
@@ -341,7 +326,7 @@ Module Import WordByWordMontgomery.
              (error : list string -> R)
     : R
     := let str_bitwidth := bitwidth in
-       match parse_Z bitwidth with
+       match parseZ_arith_strict bitwidth with
        | Some bitwidth
          => match of_string prime bitwidth with
             | Some p

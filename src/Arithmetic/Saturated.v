@@ -888,7 +888,7 @@ Module Rows.
       Lemma conditional_add_partitions n mask cond p q :
         length p = n -> length q = n -> map (Z.land mask) q = q ->
         fst (conditional_add n mask cond p q)
-        = Partition.partition weight n (Positional.eval weight n p + if dec (cond = 0) then 0 else Positional.eval weight n q).
+        = Partition.partition weight n (Positional.eval weight n p + (if dec (cond = 0) then 0 else Positional.eval weight n q)).
       Proof using wprops.
         cbv [conditional_add]; intros; rewrite add_partitions by (distr_length; auto).
         autorewrite with push_eval; reflexivity.
@@ -896,7 +896,7 @@ Module Rows.
 
       Lemma conditional_add_div n mask cond p q :
         length p = n -> length q = n -> map (Z.land mask) q = q ->
-        snd (conditional_add n mask cond p q) = (Positional.eval weight n p + if dec (cond = 0) then 0 else Positional.eval weight n q) / weight n.
+        snd (conditional_add n mask cond p q) = (Positional.eval weight n p + (if dec (cond = 0) then 0 else Positional.eval weight n q)) / weight n.
       Proof using wprops.
         cbv [conditional_add]; intros; rewrite add_div by (distr_length; auto).
         autorewrite with push_eval; auto.

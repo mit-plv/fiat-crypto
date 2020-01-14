@@ -32,6 +32,10 @@ Reserved Infix "=ₙ?" (at level 70, no associativity).
 Reserved Infix "=ℤ?" (at level 70, no associativity).
 Reserved Infix "=ᶻ?" (at level 70, no associativity).
 Reserved Infix "=ⁿ?" (at level 70, no associativity).
+Reserved Notation "f ?" (at level 9, format "f ?").
+Reserved Notation "f [ ? ]" (at level 9, format "f [ ? ]").
+Reserved Notation "f +" (at level 50, format "f +").
+Reserved Notation "f *" (at level 40, format "f *").
 (* to match with ssreflect *)
 Reserved Notation "x \in A"
   (at level 70, format "'[hv' x '/ '  \in  A ']'", no associativity).
@@ -100,6 +104,9 @@ Reserved Infix "≡₂₅₆" (at level 70, no associativity).
 Reserved Infix "≢₂₅₆" (at level 70, no associativity).
 Reserved Infix "≡₅₁₂" (at level 70, no associativity).
 Reserved Infix "≢₅₁₂" (at level 70, no associativity).
+Reserved Infix "|||" (at level 50, left associativity).
+Reserved Notation "A ||->{ f } B" (at level 50, left associativity). (* would be nice to make these Reserved Infix, but but it doesn't work; cf COQBUG(https://github.com/coq/coq/issues/11402) *)
+Reserved Notation "A |||->{ f } B" (at level 50, left associativity). (* would be nice to make these Reserved Infix, but but it doesn't work; cf COQBUG(https://github.com/coq/coq/issues/11402) *)
 (* Put these at level 71 so they don't conflict with the infix notations at level 70 *)
 Reserved Notation "<" (at level 71).
 Reserved Notation ">" (at level 71).
@@ -118,6 +125,7 @@ Reserved Notation "A <--- X ; B" (at level 70, X at next level, right associativ
 Reserved Notation "A <---- X ; B" (at level 70, X at next level, right associativity, format "'[v' A  <----  X ; '/' B ']'").
 Reserved Notation "A <----- X ; B" (at level 70, X at next level, right associativity, format "'[v' A  <-----  X ; '/' B ']'").
 Reserved Notation "A ;; B" (at level 70, right associativity, format "'[v' A ;; '/' B ']'").
+Reserved Notation "A ;;->{ f } B" (at level 70, right associativity, format "'[v' A ;;->{ f } '/' B ']'").
 Reserved Notation "A ;;; B" (at level 70, right associativity, format "'[v' A ;;; '/' B ']'").
 Reserved Notation "u [ i ]" (at level 30).
 Reserved Notation "v [[ i ]]" (at level 30).

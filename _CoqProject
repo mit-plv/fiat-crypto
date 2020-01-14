@@ -55,8 +55,8 @@ src/ArithmeticCPS/Freeze.v
 src/ArithmeticCPS/ModOps.v
 src/ArithmeticCPS/Saturated.v
 src/ArithmeticCPS/WordByWordMontgomery.v
-src/Bedrock/Types.v
 src/Bedrock/Tactics.v
+src/Bedrock/Types.v
 src/Bedrock/Varnames.v
 src/Bedrock/Translation/Cmd.v
 src/Bedrock/Translation/Expr.v
@@ -223,6 +223,7 @@ src/Util/Strings/Show.v
 src/Util/Strings/String.v
 src/Util/Strings/StringMap.v
 src/Util/Strings/String_as_OT.v
+src/Util/Strings/Parse/Common.v
 src/Util/Tactics/BreakMatch.v
 src/Util/Tactics/CPSId.v
 src/Util/Tactics/CacheTerm.v
