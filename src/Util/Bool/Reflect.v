@@ -392,6 +392,17 @@ Qed.
 Lemma reflect_bool : forall {P b} {Preflect:reflect P b}, b = true -> P.
 Proof. intros P b Preflect; destruct Preflect; solve [ auto | discriminate ]. Qed.
 
+Lemma reflect_bool_neg : forall {P b} {Preflect:reflect P b}, b = false -> ~P.
+Proof. intros P b Preflect; destruct Preflect; solve [ auto | discriminate ]. Qed.
+
+Ltac reflect_hyps_step :=
+  match goal with
+  | [ H : negb ?b = false |- _ ] => rewrite negb_false_iff in H
+  | [ H : ?b = true |- _ ] => apply (@reflect_bool _ b _) in H
+  | [ H : ?b = false |- _ ] => apply (@reflect_bool_neg _ b _) in H
+  end.
+Ltac reflect_hyps := repeat reflect_hyps_step.
+
 Ltac vm_reflect_no_check := apply reflect_bool; vm_cast_no_check (eq_refl true).
 Ltac lazy_reflect_no_check := apply reflect_bool; exact_no_check (eq_refl true).
 
