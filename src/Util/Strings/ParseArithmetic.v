@@ -4,9 +4,10 @@ Require Import Coq.QArith.QArith.
 Require Import Coq.ZArith.BinInt.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Strings.Equality.
-Require Import Crypto.Util.Strings.Decimal.
+Require Crypto.Util.Strings.Decimal.
 Require Crypto.Util.Strings.OctalString.
 Require Crypto.Util.Strings.HexString.
+Require Import Crypto.Util.Strings.Parse.Common.
 Require Import Crypto.Util.Notations.
 Import ListNotations.
 Import BinPosDef.
@@ -35,25 +36,6 @@ Definition is_oct_num (ch : ascii) : bool
 Definition is_hex_num (ch : ascii) : bool
   := match HexString.ascii_to_digit ch with Some _ => true | None => false end.
 
-Fixpoint split_before_first (f : ascii -> bool) (s : string) : string * string
-  := match s with
-     | EmptyString => (EmptyString, EmptyString)
-     | String ch rest
-       => if f ch
-          then (EmptyString, s)
-          else let '(s1, s2) := split_before_first f rest in
-               (String ch s1, s2)
-     end.
-
-Fixpoint split_before_first_skip (f : ascii -> bool) (s : string) (skip : nat) : string * string
-  := match skip, s with
-     | 0, _ => split_before_first f s
-     | _, EmptyString => (EmptyString, EmptyString)
-     | S skip', String ch rest
-       => let '(s1, s2) := split_before_first_skip f rest skip' in
-          (String ch s1, s2)
-     end.
-
 Definition startswith_oct (s : string) : bool
   := match s with
      | String zero (String kind (String d rest))
@@ -68,242 +50,163 @@ Definition startswith_hex (s : string) : bool
      | _ => false
      end.
 
-Definition parse_N (s : string) : option (N * string)
-  := if startswith_oct s
-     then
-       let '(n, rest) := split_before_first_skip (fun ch => negb (is_oct_num ch)) s 2 in
-       Some (OctalString.to_N n, rest)
-     else if startswith_hex s
-          then
-            let '(n, rest) := split_before_first_skip (fun ch => negb (is_hex_num ch)) s 2 in
-            Some (HexString.to_N n, rest)
-          else
-            let '(n, rest) := split_before_first (fun ch => negb (is_num ch)) s in
-            match Z_of_decimal_string n, Nat.eqb (String.length n) 0 with
-            | Zneg _, _ | _, true => None
-            | Z0, _ => Some (N0, rest)
-            | Zpos p, _ => Some (Npos p, rest)
-            end.
+Definition parse_bin_prefix : ParserAction _ := "0b".
+Definition parse_oct_prefix : ParserAction _ := "0o".
+Definition parse_dec_prefix : ParserAction _ := "".
+Definition parse_hex_prefix : ParserAction _ := "0x".
 
-Definition parse_ch {T} (ls : list (ascii * T)) (s : string) : option (T * string)
-  := match s with
-     | EmptyString => None
-     | String ch s
-       => List.fold_right
-            (fun '(ch', t) default
-             => if ascii_beq ch ch' then Some (t, s) else default)
-            None
-            ls
-     end.
+Definition parse_digits_gen_step (base : N) : ParserAction N
+  := (parse_strs
+        (List.flat_map
+           (fun v => if (v <? 10)%N
+                     then [(String (ascii_of_N (v + N_of_ascii "0")) "", v)]
+                     else [(String (ascii_of_N (v - 10 + N_of_ascii "A")) "", v);
+                             (String (ascii_of_N (v - 10 + N_of_ascii "a")) "", v)])
+           (List.map N.of_nat (List.seq 0 (N.to_nat base))))).
 
-Inductive plus_or_minus := PLUS | MINUS.
-Inductive mul_or_div := MUL | DIV.
 
-Definition parse_plus_or_minus := parse_ch [("+", PLUS); ("-", MINUS)]%char.
-Definition parse_mul_or_div := parse_ch [("*", MUL); ("/", DIV)]%char.
-Definition parse_open := parse_ch [("(", tt)]%char.
-Definition parse_close := parse_ch [(")", tt)]%char.
-Definition parse_pow := parse_ch [("^", tt)]%char.
+(*
+Definition parse_oct_digits : ParserAction (list N)
+  := Eval cbv -[ParserAction parse_alt_gen parse_impossible parse_str parse_star] in
+      parse_digits_gen 8.
+Definition parse_dec_digits : ParserAction (list N)
+  := Eval cbv -[ParserAction parse_alt_gen parse_impossible parse_str parse_star] in
+      parse_digits_gen 10.
+Definition parse_hex_digits : ParserAction (list N)
+  := Eval cbv -[ParserAction parse_alt_gen parse_impossible parse_str parse_star] in
+      parse_digits_gen 16.
+ *)
 
-Delimit Scope parse_scope with parse.
+Definition digits_to_N (base : N) (digits : list N) : N
+  := List.fold_left
+       (fun so_far d => base * so_far + d)%N
+       digits
+       0%N.
 
-Definition maybe_parse {A} (parse : string -> option (A * string))
-           (s : string)
-  : option (option A * string)
-  := Some match parse s with
-          | Some (a, rest) => (Some a, rest)
-          | None => (None, s)
-          end.
-Global Arguments maybe_parse {A%type} parse%parse s%string.
+Redirect "log" Check eq_refl : digits_to_N 10 [1;2;3;4;5;6]%N = 123456%N.
 
-Definition bind_parse {A B} (parse_A : string -> option (A * string))
-           (parse_B : A -> string -> option (B * string))
-           (s : string)
-  : option (B * string)
-  := (a <- parse_A s;
-        let '(a, s) := a in
-        parse_B a s).
-Global Arguments bind_parse {A B}%type (parse_A parse_B)%parse s%string.
+Local Coercion N.of_nat : nat >-> N.
+Local Coercion Z.of_N : N >-> Z.
+Local Coercion inject_Z : Z >-> Q.
+Definition parse_num_gen {P} (base : N) (parse_prefix : ParserAction P) : ParserAction Q
+  := ((strip_whitespace_around "-")?)
+       ;;->{ fun n v => if n:option _ then (-v)%Q else v }
+       parse_prefix ;;->{ fun _ v => v }
+       ((((parse_digits_gen_step base)* )
+           ;;->{ fun ds decimals
+                 => (digits_to_N base ds
+                     + digits_to_N base decimals / base^List.length decimals)%Q }
+           "." ;;->{ fun _ v => v }
+           (parse_digits_gen_step base)* )
+        || parse_map (digits_to_N base : _ -> Q) ((parse_digits_gen_step base)+)).
 
-Definition ret {A} (a : A) (s : string) : option (A * string)
-  := Some (a, s).
+Definition parse_num : ParserAction Q
+  := parse_num_gen 2 parse_bin_prefix
+     || parse_num_gen 8 parse_oct_prefix
+     || parse_num_gen 10 parse_dec_prefix
+     || parse_num_gen 16 parse_hex_prefix.
 
-Definition orelse {A}
-           (parse parse' : string -> option (A * string))
-           (s : string)
-  : option (A * string)
-  := match parse s with
-     | Some v => Some v
-     | None => parse' s
-     end.
-Global Arguments orelse {A%type} (parse parse')%parse s%string.
+Redirect "log" Check let ls := [("-1234", -(1234):Q); ("0xF", 15:Q); ("10.5", (10 + 5/10)); ("-10.5", -(10+5/10))]%Q in
+                     eq_refl
+                     : List.map (fun '(s, v) => ((parse_num;;->{fun v _ => v} ε)%parse s )) ls
+                       = List.map (fun '(s, v) => [(v, "")]) ls.
 
-Local Open Scope parse_scope.
-Notation "a <- parse_A ; parse_B" := (bind_parse parse_A%parse (fun a => parse_B%parse)) : parse_scope.
-Infix "||" := orelse : parse_scope.
+Inductive Qexpr := Qv (_ : Q) | Qeopp (a : Qexpr) | Qeadd (a b : Qexpr) | Qesub (a b : Qexpr) | Qemul (a b : Qexpr) | Qediv (a b : Qexpr) | Qepow (b e : Qexpr).
+Coercion Qv : Q >-> Qexpr.
+Delimit Scope Qexpr_scope with Qexpr.
+Bind Scope Qexpr_scope with Qexpr.
+Infix "^" := Qepow : Qexpr_scope.
+Infix "*" := Qemul : Qexpr_scope.
+Infix "+" := Qeadd : Qexpr_scope.
+Infix "/" := Qediv : Qexpr_scope.
+Infix "-" := Qesub : Qexpr_scope.
+Notation "- x" := (Qeopp x) : Qexpr_scope.
 
-Fixpoint parse_Z (s : string) : option (Z * string)
-  := match s with
-     | String ch rest
-       => if ascii_beq ch "+"
-          then parse_Z rest
-          else if ascii_beq ch "-"
-               then match parse_Z rest with
-                    | Some (z, s) => Some (-z, s)%Z
-                    | None => None
-                    end
-               else match parse_N s with
-                    | Some (v, s) => Some (Z.of_N v, s)
-                    | None => None
-                    end
-     | EmptyString => None
-     end.
-
-Fixpoint parse_op_fueled
-         {A B}
-         (ops : list (ascii * (A -> B -> A)))
-         (prev_parse : string -> option (B * string))
-         (fuel : nat) (acc : A) : string -> option (A * string)
-  := match fuel with
-     | O => ret acc
-     | S fuel'
-       => (op <- parse_ch ops;
-             z <- prev_parse;
-             let acc := op acc z in
-             parse_op_fueled ops prev_parse fuel' acc)
-          || ret acc
-     end.
-
-Definition parse_op_from_acc
-           {A B}
-           (ops : list (ascii * (A -> B -> A)))
-           (prev_parse : string -> option (B * string))
-           (acc : A) (s : string) : option (A * string)
-  := parse_op_fueled ops prev_parse (String.length s) acc s.
-
-Definition parse_op
-           {A}
-           (ops : list (ascii * (A -> A -> A)))
-           (prev_parse : string -> option (A * string))
-  : string -> option (A * string)
-  := acc <- prev_parse;
-       parse_op_from_acc ops prev_parse acc.
-
-Fixpoint parse_parens_fueled
-         {A}
-         (inj : Z -> A)
-         (prev_parse : string -> option (A * string))
-         (fuel : nat) : string -> option (A * string)
-  := match fuel with
-     | O => fun _ => None
-     | S fuel'
-       => ((_ <- parse_open;
-              z <- prev_parse;
-              _ <- parse_close;
-              ret z)
-           || (z <- parse_Z; ret (inj z)))
-     end.
-
-Inductive Zexpr := Zv (_ : Z) | Zopp (a : Zexpr) | Zadd (a b : Zexpr) | Zsub (a b : Zexpr) | Zmul (a b : Zexpr) | Zdiv (a b : Zexpr) | Zpow (b e : Zexpr).
-Coercion Zv : Z >-> Zexpr.
-Delimit Scope Zexpr_scope with Zexpr.
-Bind Scope Zexpr_scope with Zexpr.
-Infix "^" := Zpow : Zexpr_scope.
-Infix "*" := Zmul : Zexpr_scope.
-Infix "+" := Zadd : Zexpr_scope.
-Infix "/" := Zdiv : Zexpr_scope.
-Infix "-" := Zsub : Zexpr_scope.
-Notation "- x" := (Zopp x) : Zexpr_scope.
-
-Fixpoint eval_Zexpr (v : Zexpr) : Z
+Fixpoint eval_Qexpr (v : Qexpr) : Q
   := match v with
-     | Zv x => x
-     | Zopp a => Z.opp (eval_Zexpr a)
-     | Zadd a b => Z.add (eval_Zexpr a) (eval_Zexpr b)
-     | Zsub a b => Z.sub (eval_Zexpr a) (eval_Zexpr b)
-     | Zmul a b => Z.mul (eval_Zexpr a) (eval_Zexpr b)
-     | Zdiv a b => Z.div (eval_Zexpr a) (eval_Zexpr b)
-     | Zpow b e => Z.pow (eval_Zexpr b) (eval_Zexpr e)
+     | Qv x => x
+     | Qeopp a => Qopp (eval_Qexpr a)
+     | Qeadd a b => Qplus (eval_Qexpr a) (eval_Qexpr b)
+     | Qesub a b => Qminus (eval_Qexpr a) (eval_Qexpr b)
+     | Qemul a b => Qmult (eval_Qexpr a) (eval_Qexpr b)
+     | Qediv a b => Qdiv (eval_Qexpr a) (eval_Qexpr b)
+     | Qepow b e => let b := eval_Qexpr b in
+                    let e := eval_Qexpr e in
+                    let (qe, re) := Z.div_eucl (Qnum e) (Z.pos (Qden e)) in
+                    (* (b^qe)*(b^(re/Qden e)) *)
+                    Qmult (Qpower b qe) (Qpower b (* approximate *) (re / Z.pos (Qden e)))
      end.
 
-Fixpoint evalQ_Zexpr (v : Zexpr) : Q
+Fixpoint eval_Qexpr_strict (v : Qexpr) : option Q
   := match v with
-     | Zv x => inject_Z x
-     | Zopp a => Qopp (evalQ_Zexpr a)
-     | Zadd a b => Qplus (evalQ_Zexpr a) (evalQ_Zexpr b)
-     | Zsub a b => Qminus (evalQ_Zexpr a) (evalQ_Zexpr b)
-     | Zmul a b => Qmult (evalQ_Zexpr a) (evalQ_Zexpr b)
-     | Zdiv a b => Qdiv (evalQ_Zexpr a) (evalQ_Zexpr b)
-     | Zpow b e => let b := evalQ_Zexpr b in
-                   let e := evalQ_Zexpr e in
-                   let (qe, re) := Z.div_eucl (Qnum e) (Z.pos (Qden e)) in
-                   (* (b^qe)*(b^(re/Qden e)) *)
-                   Qmult (Qpower b qe) (Qpower b (* approximate *) (re / Z.pos (Qden e)))
+     | Qv x => Some x
+     | Qeopp a => option_map Qopp (eval_Qexpr_strict a)
+     | Qeadd a b => a <- eval_Qexpr_strict a; b <- eval_Qexpr_strict b; Some (Qplus a b)
+     | Qesub a b => a <- eval_Qexpr_strict a; b <- eval_Qexpr_strict b; Some (Qminus a b)
+     | Qemul a b => a <- eval_Qexpr_strict a; b <- eval_Qexpr_strict b; Some (Qmult a b)
+     | Qediv a b => a <- eval_Qexpr_strict a; b <- eval_Qexpr_strict b; Some (Qdiv a b)
+     | Qepow b e => b <- eval_Qexpr_strict b;
+                      e <- eval_Qexpr_strict e;
+                      let (qe, re) := Z.div_eucl (Qnum e) (Z.pos (Qden e)) in
+                      if Z.eqb re 0
+                      then Some (Qpower b qe)
+                      else None
      end.
 
-Section gen.
-  Context {A}
-          (Zadd : A -> A -> A)
-          (Zsub : A -> A -> A)
-          (Zmul : A -> A -> A)
-          (Zdiv : A -> A -> A)
-          (Zpow : A -> A -> A)
-          (inj : Z -> A).
-  Section step.
-    Context (parseZ : string -> option (A * string)).
+Definition parse_ops {A} (ls : list (string * (A -> A -> A))) (parse : ParserAction A) : ParserAction A
+  := parse ;;->{fun l fs => List.fold_left (fun v f => f v) fs l}
+           (strip_whitespace_around (parse_strs ls) ;;->{fun f r l => f l r}
+                                    parse)*.
 
-    Definition parseZ_gen_parens (s : string) : option (A * string)
-      := parse_parens_fueled inj parseZ (String.length s) s.
-    Definition parseZ_gen_exp : string -> option (A * string)
-      := parse_op [("^", Zpow)]%char parseZ_gen_parens.
-    Definition parseZ_gen_mul_div : string -> option (A * string)
-      := parse_op [("*", Zmul); ("/", Zdiv)]%char parseZ_gen_exp.
-    Definition parseZ_gen_add_sub : string -> option (A * string)
-      := parse_op [("+", Zadd); ("-", Zsub)]%char parseZ_gen_mul_div.
-  End step.
+Section step.
+  Context (parse : ParserAction Qexpr).
 
-  Fixpoint parseZ_gen_arith_fueled (fuel : nat) : string -> option (A * string)
-    := match fuel with
-       | O => parseZ_gen_add_sub (z <- parse_Z; ret (inj z))
-       | S fuel' => parseZ_gen_add_sub (parseZ_gen_arith_fueled fuel')
-       end.
+  Definition parseQexpr_gen_parens : ParserAction Qexpr
+    := ("(" ;;->{fun _ v => v} strip_whitespace_around parse ;;->{fun v _ => v} ")")
+       || parse_map Qv parse_num.
+  Definition parseQexpr_gen_exp : ParserAction Qexpr
+    := parse_ops [("^", Qepow)] parseQexpr_gen_parens.
+  Definition parseQexpr_gen_mul_div : ParserAction Qexpr
+    := parse_ops [("*", Qemul); ("/", Qediv)] parseQexpr_gen_exp.
+  Definition parseQexpr_gen_add_sub : ParserAction Qexpr
+    := parse_ops [("+", Qeadd); ("-", Qesub)] parseQexpr_gen_mul_div.
+End step.
 
-  Definition parseZ_gen_arith_prefix (s : string) : option (A * string)
-    := parseZ_gen_arith_fueled (String.length s) s.
-End gen.
+Fixpoint parse_Qexpr_fueled (fuel : nat) : ParserAction Qexpr
+  := strip_whitespace_around
+       (parseQexpr_gen_add_sub (match fuel with
+                                | O => parse_impossible
+                                | S fuel => parse_Qexpr_fueled fuel
+                                end)).
 
-Definition parseZ_arith_prefix : string -> option (Z * string)
-  := parseZ_gen_arith_prefix Z.add Z.sub Z.mul Z.div Z.pow id.
+Definition parse_Qexpr : ParserAction Qexpr := fuel parse_Qexpr_fueled.
 
-Definition parseZexpr_arith_prefix : string -> option (Zexpr * string)
-  := parseZ_gen_arith_prefix Zadd Zsub Zmul Zdiv Zpow id.
-
-Definition parseQ_arith_prefix (s : string) : option (Q * string)
-  := option_map (fun '(e, s) => (evalQ_Zexpr e, s))
-                (parseZexpr_arith_prefix s).
-
-Fixpoint remove_spaces (s : string) : string
-  := match s with
-     | EmptyString => EmptyString
-     | String ch s
-       => let s' := remove_spaces s in
-          if ascii_beq ch " " then s' else String ch s'
-     end.
-
-Definition parseZ_arith (s : string) : option Z
-  := match parseZ_arith_prefix (remove_spaces s) with
-     | Some (z, EmptyString) => Some z
-     | _ => None
-     end.
-
-Definition parseZexpr_arith (s : string) : option Zexpr
-  := match parseZexpr_arith_prefix (remove_spaces s) with
-     | Some (z, EmptyString) => Some z
-     | _ => None
-     end.
-
+Definition parseQexpr_arith (s : string) : option Qexpr
+  := finalize parse_Qexpr s.
 Definition parseQ_arith (s : string) : option Q
-  := match parseQ_arith_prefix (remove_spaces s) with
-     | Some (z, EmptyString) => Some z
-     | _ => None
-     end.
+  := option_map eval_Qexpr (parseQexpr_arith s).
+Definition parseZ_arith (s : string) : option Z
+  := (q <- parseQ_arith s; Some (Qnum q / Z.pos (Qden q)))%Z%option.
+Definition parsepositive_arith (s : string) : option positive
+  := (z <- parseZ_arith s; match z with Z0 => None | Zpos p => Some p | Zneg _ => None end).
+Definition parseN_arith (s : string) : option N
+  := (z <- parseZ_arith s; match z with Z0 => Some 0 | Zpos p => Some (Npos p) | Zneg _ => None end)%N%option.
+Definition parsenat_arith (s : string) : option nat
+  := (n <- parseN_arith s; Some (N.to_nat n)).
+
+Definition Q_to_Z_strict (x : Q) : option Z
+  := let '(q, r) := Z.div_eucl (Qnum x) (Zpos (Qden x)) in
+     if Z.eqb r 0
+     then Some q
+     else None.
+
+Definition parseQ_arith_strict (s : string) : option Q
+  := (q <- parseQexpr_arith s; eval_Qexpr_strict q)%option.
+Definition parseZ_arith_strict (s : string) : option Z
+  := (q <- parseQ_arith_strict s; Q_to_Z_strict q)%option.
+Definition parsepositive_arith_strict (s : string) : option positive
+  := (z <- parseZ_arith_strict s; match z with Z0 => None | Zpos p => Some p | Zneg _ => None end).
+Definition parseN_arith_strict (s : string) : option N
+  := (z <- parseZ_arith_strict s; match z with Z0 => Some 0 | Zpos p => Some (Npos p) | Zneg _ => None end)%N%option.
+Definition parsenat_arith_strict (s : string) : option nat
+  := (n <- parseN_arith_strict s; Some (N.to_nat n)).

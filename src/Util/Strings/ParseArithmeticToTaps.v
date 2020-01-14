@@ -1,4 +1,5 @@
 Require Import Coq.Strings.Ascii Coq.Strings.String Coq.Lists.List.
+Require Import Coq.QArith.QArith_base.
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.OptionList.
@@ -50,39 +51,45 @@ def parse_term(t) :
     * "x * y" -> Some (1,x*y)
     * "x" -> Some (1,x)
     *)
-Fixpoint parse_term_of_Zexpr (v : Zexpr) : option (Z * Z)
+Fixpoint parse_term_of_Qexpr (v : Qexpr) : option (Z * Z)
   := match v with
-     | Zv x => Some (1, x)
-     | Zopp a => v <- parse_term_of_Zexpr a; Some (fst v, -snd v)
-     | Zadd a b => None
-     | Zsub a b => None
-     | Zmul a b => b <- parse_term_of_Zexpr b; Some (fst b, eval_Zexpr a * snd b)
-     | Zdiv a b => None
-     | Zpow b e => Some (eval_Zexpr v, 1)
+     | Qv x => q <- Q_to_Z_strict x; Some (1, q)
+     | Qeopp a => v <- parse_term_of_Qexpr a; Some (fst v, -snd v)
+     | Qeadd a b => None
+     | Qesub a b => None
+     | Qemul a b => b <- parse_term_of_Qexpr b;
+                      a <- eval_Qexpr_strict a;
+                      a <- Q_to_Z_strict a;
+                      Some (fst b, a * snd b)
+     | Qediv a b => None
+     | Qepow b e => v <- eval_Qexpr_strict v; v <- Q_to_Z_strict v; Some (v, 1)
      end%option.
 
-Fixpoint Zexpr_to_add_list (v : Zexpr) : list Zexpr
+Fixpoint Qexpr_to_add_list (v : Qexpr) : list Qexpr
   := match v with
-     | Zadd a b => Zexpr_to_add_list a ++ Zexpr_to_add_list b
-     | Zsub a b => Zexpr_to_add_list a ++ [Zopp b]
+     | Qeadd a b => Qexpr_to_add_list a ++ Qexpr_to_add_list b
+     | Qesub a b => Qexpr_to_add_list a ++ [Qeopp b]
      | v => [v]
      end.
 
-(** Given a Zexpr which is a sequence of additions and subtractions,
+(** Given a Qexpr which is a sequence of additions and subtractions,
     we return the value of the first component, and a list of the taps
     for the negation of the other components *)
-Definition parse_prime_and_taps_of_Zexpr (v : Zexpr) : option (Z * list (Z * Z))
-  := match Zexpr_to_add_list v with
+Definition parse_prime_and_taps_of_Qexpr (v : Qexpr) : option (Z * list (Z * Z))
+  := match Qexpr_to_add_list v with
      | nil => None
      | cons p taps
-       => taps <- Option.List.lift (List.map (fun v => parse_term_of_Zexpr (Zopp v)) taps);
-            Some (eval_Zexpr p, taps)
+       => taps <- Option.List.lift (List.map (fun v => parse_term_of_Qexpr (Qeopp v)) taps);
+            p <- eval_Qexpr_strict p;
+            p <- Q_to_Z_strict p;
+            Some (p, taps)
      end.
 
 Definition parseZ_arith_to_taps (s : string) : option (Z * list (Z * Z))
-  := v <- parseZexpr_arith s; parse_prime_and_taps_of_Zexpr v.
+  := v <- parseQexpr_arith s; parse_prime_and_taps_of_Qexpr v.
 
-Local Example parse_v25519 : parse_prime_and_taps_of_Zexpr (2^255 - 19) = Some (2^255, [(1,19)]) := eq_refl.
+Local Coercion QArith_base.inject_Z : Z >-> Q.
+Local Example parse_v25519 : parse_prime_and_taps_of_Qexpr (2^255 - 19) = Some (2^255, [(1,19)]) := eq_refl.
 Local Example parse_25519 : parseZ_arith_to_taps "2^255 - 19" = Some (2^255, [(1,19)]) := eq_refl.
 Local Example parse_p521 : parseZ_arith_to_taps "2^521 - 1" = Some (2^521, [(1,1)]) := eq_refl.
 Local Example parse_p448 : parseZ_arith_to_taps "2^448 - 2^224 - 1" = Some (2^448, [(2^224,1); (1,1)]) := eq_refl.

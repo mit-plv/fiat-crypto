@@ -348,7 +348,7 @@ Module WordByWordMontgomery.
       split; try apply partition_eq_mod; auto; rewrite uweight_eq_alt by omega; subst r; Z.rewrite_mod_small; auto with zarith.
     Qed.
 
-    Local Lemma conditional_sub_correct : forall v, small v -> 0 <= eval v < eval N + R -> canon_rep (eval v + if eval N <=? eval v then -eval N else 0) (conditional_sub v N).
+    Local Lemma conditional_sub_correct : forall v, small v -> 0 <= eval v < eval N + R -> canon_rep (eval v + (if eval N <=? eval v then -eval N else 0)) (conditional_sub v N).
     Proof using small_N lgr_big N_nz N_lt_R.
       pose proof R_plusR_le as R_plusR_le.
       clear - small_N lgr_big N_nz N_lt_R R_plusR_le.
@@ -370,7 +370,7 @@ Module WordByWordMontgomery.
       { split; auto using Z.mod_small with lia. }
     Qed.
 
-    Local Lemma sub_then_maybe_add_correct : forall a b, small a -> small b -> 0 <= eval a < eval N -> 0 <= eval b < eval N -> canon_rep (eval a - eval b + if eval a - eval b <? 0 then eval N else 0) (sub_then_maybe_add a b).
+    Local Lemma sub_then_maybe_add_correct : forall a b, small a -> small b -> 0 <= eval a < eval N -> 0 <= eval b < eval N -> canon_rep (eval a - eval b + (if eval a - eval b <? 0 then eval N else 0)) (sub_then_maybe_add a b).
     Proof using small_N lgr_big R_numlimbs_nz N_nz N_lt_R.
       pose proof mask_r_sub1 as mask_r_sub1.
       clear - small_N lgr_big R_numlimbs_nz N_nz N_lt_R mask_r_sub1.
@@ -397,11 +397,11 @@ Module WordByWordMontgomery.
     Proof using lgr_big. eauto using drop_high_addT'_correct, eval_canon_rep. Qed.
     Local Lemma small_drop_high_addT' : forall n a b, small a -> small b -> small (@drop_high_addT' n a b).
     Proof using lgr_big. eauto using drop_high_addT'_correct, small_canon_rep. Qed.
-    Local Lemma eval_conditional_sub : forall v, small v -> 0 <= eval v < eval N + R -> eval (conditional_sub v N) = eval v + if eval N <=? eval v then -eval N else 0.
+    Local Lemma eval_conditional_sub : forall v, small v -> 0 <= eval v < eval N + R -> eval (conditional_sub v N) = eval v + (if eval N <=? eval v then -eval N else 0).
     Proof using small_N lgr_big R_numlimbs_nz N_nz N_lt_R. eauto using conditional_sub_correct, eval_canon_rep. Qed.
     Local Lemma small_conditional_sub : forall v, small v -> 0 <= eval v < eval N + R -> small (conditional_sub v N).
     Proof using small_N lgr_big R_numlimbs_nz N_nz N_lt_R. eauto using conditional_sub_correct, small_canon_rep. Qed.
-    Local Lemma eval_sub_then_maybe_add : forall a b, small a -> small b -> 0 <= eval a < eval N -> 0 <= eval b < eval N -> eval (sub_then_maybe_add a b) = eval a - eval b + if eval a - eval b <? 0 then eval N else 0.
+    Local Lemma eval_sub_then_maybe_add : forall a b, small a -> small b -> 0 <= eval a < eval N -> 0 <= eval b < eval N -> eval (sub_then_maybe_add a b) = eval a - eval b + (if eval a - eval b <? 0 then eval N else 0).
     Proof using small_N lgr_big R_numlimbs_nz N_nz N_lt_R. eauto using sub_then_maybe_add_correct, eval_canon_rep. Qed.
     Local Lemma small_sub_then_maybe_add : forall a b, small a -> small b -> 0 <= eval a < eval N -> 0 <= eval b < eval N -> small (sub_then_maybe_add a b).
     Proof using small_N lgr_big R_numlimbs_nz N_nz N_lt_R. eauto using sub_then_maybe_add_correct, small_canon_rep. Qed.
@@ -852,7 +852,7 @@ Module WordByWordMontgomery.
 
       Lemma redc_bound_tight A_numlimbs (A : T A_numlimbs)
             (small_A : small A)
-        : 0 <= eval (redc A) < eval N + eval B + if eval N <=? eval (pre_redc A) then -eval N else 0.
+        : 0 <= eval (redc A) < eval N + eval B + (if eval N <=? eval (pre_redc A) then -eval N else 0).
       Proof using small_N small_B lgr_big R_numlimbs_nz N_nz N_lt_R B_bounds.
         clear -small_N small_B lgr_big R_numlimbs_nz N_nz N_lt_R B_bounds r_big' partition_Proper small_A sub_then_maybe_add.
         pose proof (@small_pre_redc _ A small_A).
@@ -920,12 +920,12 @@ Module WordByWordMontgomery.
       Lemma small_opp : small (opp Av).
       Proof using small_N small_Bv small_Av partition_Proper lgr_big R_numlimbs_nz N_nz N_lt_R Av_bound. unfold opp, sub; t_small. Qed.
 
-      Lemma eval_add : eval (add Av Bv) = eval Av + eval Bv + if (eval N <=? eval Av + eval Bv) then -eval N else 0.
+      Lemma eval_add : eval (add Av Bv) = eval Av + eval Bv + (if (eval N <=? eval Av + eval Bv) then -eval N else 0).
       Proof using small_Bv small_Av lgr_big N_lt_R Bv_bound Av_bound small_N ri k R_numlimbs_nz N_nz B_bounds B.
         clear -small_Bv small_Av lgr_big N_lt_R Bv_bound Av_bound partition_Proper r_big' small_N ri k R_numlimbs_nz N_nz B_bounds B sub_then_maybe_add.
         unfold add; autorewrite with push_mont_eval; reflexivity.
       Qed.
-      Lemma eval_sub : eval (sub Av Bv) = eval Av - eval Bv + if (eval Av - eval Bv <? 0) then eval N else 0.
+      Lemma eval_sub : eval (sub Av Bv) = eval Av - eval Bv + (if (eval Av - eval Bv <? 0) then eval N else 0).
       Proof using small_Bv small_Av Bv_bound Av_bound small_N partition_Proper lgr_big R_numlimbs_nz N_nz N_lt_R. unfold sub; autorewrite with push_mont_eval; reflexivity. Qed.
       Lemma eval_opp : eval (opp Av) = (if (eval Av =? 0) then 0 else eval N) - eval Av.
       Proof using small_Av Av_bound small_N partition_Proper lgr_big R_numlimbs_nz N_nz N_lt_R.

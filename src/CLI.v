@@ -26,28 +26,10 @@ Import
   Stringification.C.Compilers.
 
 Module ForExtraction.
-  Definition parse_Z (s : string) : option Z
-    := z <- ParseArithmetic.parse_Z s;
-         match snd z with
-         | EmptyString => Some (fst z)
-         | _ => None
-         end.
-  Definition parse_N (s : string) : option N
-    := match parse_Z s with
-       | Some Z0 => Some N0
-       | Some (Zpos p) => Some (Npos p)
-       | _ => None
-       end.
-  Definition parse_nat (s : string) : option nat
-    := option_map N.to_nat (parse_N s).
-  Definition parse_Q (s : string) : option Q
-    := match parseQ_arith s, List.map parse_Z (String.split "." s), List.map String.length (String.split "." s) with
-       | _, [Some int_part; Some dec_part], [_; digits]
-         => let den := 10 ^ (Z.of_nat digits) in
-            Some (Qmake (int_part * den + dec_part) (Z.to_pos den))
-       | Some num, _, _ => Some num
-       | _, _, _ => None
-       end.
+  Definition parse_Z (s : string) : option Z := parseZ_arith_strict s.
+  Definition parse_N (s : string) : option N := parseN_arith_strict s.
+  Definition parse_nat (s : string) : option nat := parsenat_arith_strict s.
+  Definition parse_Q (s : string) : option Q := parseQ_arith_strict s.
   Definition parse_bool (s : string) : option bool
     := if string_dec s "true"
        then Some true
@@ -81,12 +63,12 @@ Module ForExtraction.
   Definition parse_machine_wordsize (s : string) : option Z
     := parse_Z s.
   Definition parse_m (s : string) : option Z
-    := parseZ_arith s.
+    := parse_Z s.
 
   Definition parse_src_n : string -> option nat := parse_nat.
   Definition parse_limbwidth : string -> option Q := parse_Q.
   Definition parse_max (s : string) : option (option Z)
-    := option_map (@Some _) (parseZ_arith s).
+    := option_map (@Some _) (parse_Z s).
   Definition parse_inbounds_multiplier (s : string) : option (option Q)
     := option_map (@Some _) (parse_Q s).
 

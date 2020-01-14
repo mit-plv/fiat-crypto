@@ -56,6 +56,11 @@ Lemma map_step f s
               end.
 Proof. destruct s; reflexivity. Qed.
 
+
+(** *** Lower and upper case *)
+Definition to_lower (s : string) : string := map Ascii.to_lower s.
+Definition to_upper (s : string) : string := map Ascii.to_upper s.
+
 (** *** string reversal *)
 (** [rev s] reverses the string [s] *)
 Definition rev : string -> string
@@ -130,6 +135,19 @@ Definition contains (n : nat) (s1 s2 : string) : bool :=
   | Some _ => true
   | None => false
   end.
+
+(** [startswith prefix s] returns [true] iff [s] starts with [prefix] *)
+Definition startswith (prefix s : string) : bool
+  := (prefix =? (substring 0 (length prefix) s))%string.
+
+Lemma startswith_correct prefix s
+  : startswith prefix s = true <-> substring 0 (length prefix) s = prefix.
+Proof.
+  cbv [startswith].
+  split; intro H.
+  { apply internal_string_dec_bl in H; congruence. }
+  { apply internal_string_dec_lb; congruence. }
+Qed.
 
 Section strip_prefix_cps.
   Context {R} (found : string -> R)
