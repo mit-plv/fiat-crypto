@@ -108,12 +108,15 @@ WORD_BY_WORD_MONTGOMERY := src/ExtractionOCaml/word_by_word_montgomery
 
 OUTPUT_VOS := \
 	src/Fancy/Montgomery256.vo \
-	src/Bedrock/CompilerTest.vo
+	src/Fancy/Barrett256.vo
 
 OUTPUT_PREOUTS := \
-	Crypto.Bedrock.CompilerTest.X25519_64.mulmod_bedrock \
-	Crypto.Bedrock.CompilerTest.mulmod_bedrock.X25519_32 \
-	Crypto.Fancy.Montgomery256.Prod.MontRed256
+	Crypto.Fancy.Montgomery256.Prod.MontRed256 \
+	Crypto.Fancy.Montgomery256.prod_montred256_correct \
+	Crypto.Fancy.Montgomery256.prod_montred256_correct.Assumptions \
+	Crypto.Fancy.Barrett256.Prod.MulMod \
+	Crypto.Fancy.Barrett256.prod_barrett_red256_correct \
+	Crypto.Fancy.Barrett256.prod_barrett_red256_correct.Assumptions
 
 CHECK_OUTPUTS := $(addprefix check-,$(OUTPUT_PREOUTS))
 ACCEPT_OUTPUTS := $(addprefix accept-,$(OUTPUT_PREOUTS))

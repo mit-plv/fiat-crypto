@@ -260,7 +260,7 @@ Local Notation "i rd x y ; cont" := (Instr i rd (x, y) cont) (at level 40, cont 
 Local Notation "i rd x y z ; cont" := (Instr i rd (x, y, z) cont) (at level 40, cont at level 200, format "i  rd  x  y  z ; '//' cont").
 
 (* Barrett reference code: *)
-Eval cbv beta iota delta [Prod.MulMod Prod.Mul256x256] in Prod.MulMod.
+Redirect "Crypto.Fancy.Barrett256.Prod.MulMod" Eval cbv beta iota delta [Prod.MulMod Prod.Mul256x256] in Prod.MulMod.
 (*
      = fun x xHigh RegMuLow scratchp1 scratchp2 scratchp3 scratchp4 scratchp5 : register =>
        let q1Bottom256 := scratchp1 in
@@ -304,8 +304,6 @@ Eval cbv beta iota delta [Prod.MulMod Prod.Mul256x256] in Prod.MulMod.
        Ret x
  *)
 
-(* Uncomment to see proof statement and remaining admitted statements. *)
-(*
-Check Barrett256.prod_barrett_red256_correct.
-Print Assumptions Barrett256.prod_barrett_red256_correct.
-*)
+(* Remove Redirect to see proof statement and remaining admitted statements. *)
+Redirect "Crypto.Fancy.Barrett256.prod_barrett_red256_correct" Check Barrett256.prod_barrett_red256_correct.
+Redirect "Crypto.Fancy.Barrett256.prod_barrett_red256_correct.Assumptions" Print Assumptions Barrett256.prod_barrett_red256_correct.

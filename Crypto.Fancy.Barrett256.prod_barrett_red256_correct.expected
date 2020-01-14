@@ -1,0 +1,20 @@
+Barrett256.prod_barrett_red256_correct
+     : forall (cc_start_state : CC.state)
+         (start_context : forall H : register, Z)
+         (x xHigh RegMuLow scratchp scratchp0 scratchp1 scratchp2 scratchp3
+          extra_reg : register)
+         (H : NoDup
+                [x; xHigh; RegMuLow; scratchp; scratchp0; scratchp1;
+                scratchp2; scratchp3; extra_reg; RegMod; RegZero])
+         (H0 : 0 <= start_context x < 2 ^ Barrett256.machine_wordsize)
+         (H1 : 0 <= start_context xHigh < Barrett256.M)
+         (H2 : start_context RegMuLow = Barrett256.muLow)
+         (H3 : start_context RegMod = Barrett256.M)
+         (H4 : start_context RegZero = 0)
+         (H5 : CC.cc_m cc_start_state = cc_spec CC.M (start_context xHigh)),
+       let X :=
+         start_context x +
+         2 ^ Barrett256.machine_wordsize * start_context xHigh in
+       interp reg_eqb wordmax cc_spec
+         (MulMod x xHigh RegMuLow scratchp scratchp0 scratchp1 scratchp2
+            scratchp3) cc_start_state start_context = X mod Barrett256.M
