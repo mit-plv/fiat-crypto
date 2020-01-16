@@ -118,19 +118,19 @@ jobs:
       env: COQ_VERSION="master" COQ_PACKAGE="coq libcoq-ocaml-dev"               PPA="ppa:jgross-h/coq-master-daily"
       language: c
       script: PREV=coq CUR=all ./etc/ci/travis.sh -j2 all
-    - stage: coq
+    - stage: all
       env: COQ_VERSION="v8.10"  COQ_PACKAGE="coq libcoq-ocaml-dev"               PPA="ppa:jgross-h/coq-8.10-daily"
       language: c
       script: PREV=coq CUR=all ./etc/ci/travis.sh -j2 all
-    - stage: coq
+    - stage: all
       env: COQ_VERSION="v8.9"   COQ_PACKAGE="coq libcoq-ocaml-dev"               PPA="ppa:jgross-h/coq-8.9-daily"
       language: c
       script: PREV=coq CUR=all ./etc/ci/travis.sh -j2 all
-    - stage: coq
+    - stage: all
       env: COQ_VERSION="8.10.0" COQ_PACKAGE="coq-8.10.0 libcoq-8.10.0-ocaml-dev" PPA="ppa:jgross-h/many-coq-versions-ocaml-4-05"
       language: c
       script: PREV=coq CUR=all ./etc/ci/travis.sh -j2 all
-    - stage: coq
+    - stage: all
       env: COQ_VERSION="8.9.1"  COQ_PACKAGE="coq-8.9.1 libcoq-8.9.1-ocaml-dev"   PPA="ppa:jgross-h/many-coq-versions"
       language: c
       script: PREV=coq CUR=all ./etc/ci/travis.sh -j2 all
