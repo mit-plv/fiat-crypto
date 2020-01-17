@@ -1,45 +1,46 @@
      = fun
-         x xHigh RegMuLow scratchp scratchp0 scratchp1 scratchp2
-          scratchp3 : register =>
-       let q1Bottom := scratchp in
-       let muSelect := scratchp0 in
-       let q := scratchp1 in
-       let q2High := scratchp2 in
-       let q2High0 := scratchp3 in
-       let q0 := scratchp in
-       let r := scratchp0 in
-       let r2High := scratchp1 in
-       let maybeM := scratchp in
+         x xHigh RegMuLow scratchp1 scratchp2 scratchp3 scratchp4
+          scratchp5 : register =>
+       let q1Bottom256 := scratchp1 in
+       let muSelect := scratchp2 in
+       let q2 := scratchp3 in
+       let q2High := scratchp4 in
+       let q2High2 := scratchp5 in
+       let q3 := scratchp1 in
+       let r2 := scratchp2 in
+       let r2High := scratchp3 in
+       let maybeM := scratchp1 in
        SELM muSelect RegMuLow RegZero;
-       RSHI 255 q1Bottom xHigh x;
-       MUL128LL q q1Bottom RegMuLow;
-       MUL128UU q2High q1Bottom RegMuLow;
-       MUL128UL scratchp3 q1Bottom RegMuLow;
-       ADD 128 q q scratchp3;
-       ADDC (-128) q2High q2High scratchp3;
-       MUL128LU scratchp3 q1Bottom RegMuLow;
-       ADD 128 q q scratchp3;
-       ADDC (-128) q2High q2High scratchp3;
-       RSHI 255 q2High0 RegZero xHigh;
-       ADD 0 q2High q2High q1Bottom;
-       ADDC 0 q2High0 q2High0 RegZero;
+       RSHI 255 q1Bottom256 xHigh x;
+       MUL128LL q2 q1Bottom256 RegMuLow;
+       MUL128UU q2High q1Bottom256 RegMuLow;
+       MUL128UL scratchp5 q1Bottom256 RegMuLow;
+       ADD 128 q2 q2 scratchp5;
+       ADDC (-128) q2High q2High scratchp5;
+       MUL128LU scratchp5 q1Bottom256 RegMuLow;
+       ADD 128 q2 q2 scratchp5;
+       ADDC (-128) q2High q2High scratchp5;
+       RSHI 255 q2High2 RegZero xHigh;
+       ADD 0 q2High q2High q1Bottom256;
+       ADDC 0 q2High2 q2High2 RegZero;
        ADD 0 q2High q2High muSelect;
-       ADDC 0 q2High0 q2High0 RegZero;
-       RSHI 1 q0 q2High0 q2High;
-       MUL128LL r RegMod q0;
-       MUL128UU r2High RegMod q0;
-       MUL128UL scratchp2 RegMod q0;
-       ADD 128 r r scratchp2;
-       ADDC (-128) r2High r2High scratchp2;
-       MUL128LU scratchp2 RegMod q0;
-       ADD 128 r r scratchp2;
-       ADDC (-128) r2High r2High scratchp2;
-       SUB 0 muSelect x r;
+       ADDC 0 q2High2 q2High2 RegZero;
+       RSHI 1 q3 q2High2 q2High;
+       MUL128LL r2 RegMod q3;
+       MUL128UU r2High RegMod q3;
+       MUL128UL scratchp4 RegMod q3;
+       ADD 128 r2 r2 scratchp4;
+       ADDC (-128) r2High r2High scratchp4;
+       MUL128LU scratchp4 RegMod q3;
+       ADD 128 r2 r2 scratchp4;
+       ADDC (-128) r2High r2High scratchp4;
+       SUB 0 muSelect x r2;
        SUBC 0 xHigh xHigh r2High;
        SELL maybeM RegMod RegZero;
-       SUB 0 q0 muSelect maybeM;
-       ADDM x q0 RegZero RegMod;
+       SUB 0 q3 muSelect maybeM;
+       ADDM x q3 RegZero RegMod;
        Ret x
-     : forall
-         x xHigh RegMuLow scratchp scratchp0 scratchp1 scratchp2
-          scratchp3 : register, expr
+     : register ->
+       register ->
+       register ->
+       register -> register -> register -> register -> register -> expr

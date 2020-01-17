@@ -1,16 +1,15 @@
 Montgomery256.prod_montred256_correct
-     : forall (cc_start_state : CC.state)
-         (start_context : forall H : register, Z)
-         (lo hi y t t0 scratch RegPInv extra_reg : register)
-         (H : NoDup
-                [lo; hi; y; t; t0; scratch; RegPInv; extra_reg; RegMod;
-                RegZero]) (H0 : start_context RegPInv = Montgomery256.N')
-         (H1 : start_context RegMod = Montgomery256.N)
-         (H2 : start_context RegZero = 0)
-         (H3 : 0 <= start_context lo < Montgomery256.R)
-         (H4 : 0 <= start_context hi < Montgomery256.R),
+     : forall (cc_start_state : CC.state) (start_context : register -> Z)
+         (lo hi y t1 t2 scratch RegPInv extra_reg : register),
+       NoDup
+         [lo; hi; y; t1; t2; scratch; RegPInv; extra_reg; RegMod; RegZero] ->
+       start_context RegPInv = Montgomery256.N' ->
+       start_context RegMod = Montgomery256.N ->
+       start_context RegZero = 0 ->
+       0 <= start_context lo < Montgomery256.R ->
+       0 <= start_context hi < Montgomery256.R ->
        let x := start_context lo + Montgomery256.R * start_context hi in
-       forall H5 : 0 <= x < Montgomery256.R * Montgomery256.N,
+       0 <= x < Montgomery256.R * Montgomery256.N ->
        interp reg_eqb wordmax cc_spec
-         (MontRed256 lo hi y t t0 scratch RegPInv) cc_start_state
+         (MontRed256 lo hi y t1 t2 scratch RegPInv) cc_start_state
          start_context = (x * Montgomery256.R') mod Montgomery256.N
