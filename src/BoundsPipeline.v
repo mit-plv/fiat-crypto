@@ -310,7 +310,7 @@ Module Pipeline.
                      ++ ["Unsupported casts: " ++ @show_list _ (fun p v => show p (projT2 v)) false ls]
               | Stringification_failed t e err => ["Stringification failed on the syntax tree:"] ++ show_lines false e ++ [err]
               | Invalid_argument msg
-                => ["Invalid argument:" ++ msg]%string
+                => ["Invalid argument: " ++ msg]%string
               end.
     Local Instance show_ErrorMessage : Show ErrorMessage
       := fun parens err => String.concat String.NewLine (show_lines parens err).
