@@ -5,7 +5,7 @@ Building
 -----
 [![Build Status](https://api.travis-ci.org/mit-plv/fiat-crypto.png?branch=master)](https://travis-ci.org/mit-plv/fiat-crypto)
 
-This repository requires coq 8.9 or later. 8.7 may work, but we don't use it ourselves.
+This repository requires Coq 8.9 or later. Note that if you install Coq from Ubuntu aptitude packages, you need `libcoq-ocaml-dev` in addition to `coq`.
 
 Git submodules are used for some dependencies. If you did not clone with `--recursive`, run
 
@@ -17,7 +17,7 @@ To build (if your COQPATH variable is empty):
 
 To build:
 
-       export COQPATH="$(pwd)/coqprime/src:$(pwd)/bedrock2/bedrock2/src:$(pwd)/bedrock2/deps/coqutil/src${COQPATH:+:}$COQPATH"
+       export COQPATH="$(pwd)/rewriter/src:$(pwd)/coqprime/src:$(pwd)/bedrock2/bedrock2/src:$(pwd)/bedrock2/deps/coqutil/src${COQPATH:+:}$COQPATH"
        make
 
 Usage
