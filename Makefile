@@ -10,6 +10,8 @@ TIMECMD_FULL?=
 STDTIME_FULL?=/usr/bin/time -f "$@ (real: %e, user: %U, sys: %S, mem: %M ko)"
 TIMER_FULL=$(if $(TIMED), $(STDTIME_FULL), $(TIMECMD_FULL))
 
+BINDIR?=/usr/local/bin # or $(shell opam config var bin) ?
+
 GHC?=ghc
 GHCFLAGS?= # -XStrict
 
@@ -28,6 +30,7 @@ INSTALLDEFAULTROOT := Crypto
 	install-coqprime clean-coqprime coqprime coqprime-all \
 	bedrock2 clean-bedrock2 install-bedrock2 coqutil clean-coqutil install-coqutil \
 	install-standalone install-standalone-ocaml install-standalone-haskell \
+	uninstall-standalone uninstall-standalone-ocaml uninstall-standalone-haskell \
 	util c-files rust-files \
 	deps \
 	nobigmem print-nobigmem \
@@ -585,12 +588,34 @@ cleanall:: clean
 install: coq
 
 install-standalone-ocaml: standalone-ocaml
-	$(MAKE) -f Makefile.coq install FILESTOINSTALL="$(OCAML_BINARIES)"
-
 install-standalone-haskell: standalone-haskell
-	$(MAKE) -f Makefile.coq install FILESTOINSTALL="$(HASKELL_BINARIES)"
 
-install-standalone: install-standalone-ocaml install-standalone-haskell
+install-standalone-ocaml: FILESTOINSTALL="$(OCAML_BINARIES)"
+install-standalone-haskell: FILESTOINSTALL="$(HASKELL_BINARIES)"
+
+uninstall-standalone-ocaml: FILESTOINSTALL="$(OCAML_BINARIES)"
+uninstall-standalone-haskell: FILESTOINSTALL="$(HASKELL_BINARIES)"
+
+install-standalone-ocaml install-standalone-haskell:
+	$(HIDE)code=0; for f in $(FILESTOINSTALL); do\
+	 if ! [ -f "$$f" ]; then >&2 echo $$f does not exist; code=1; fi \
+	done; exit $$code
+	$(HIDE)for f in $(FILESTOINSTALL); do\
+	   install -d "$(BINDIR)/" &&\
+	   install -m 0755 "$$f" "$(BINDIR)/" &&\
+	   echo INSTALL "$$f" "$(BINDIR)/";\
+	 fi;\
+	done
+
+uninstall-standalone-ocaml uninstall-standalone-haskell:
+	$(HIDE)for f in $(FILESTOINSTALL); do \
+	 instf="$(BINDIR)/`basename $$f`" &&\
+	 rm -f "$$instf" &&\
+	 echo RM "$$instf"; \
+	done
+
+install-standalone: install-standalone-ocaml # install-standalone-haskell
+uninstall-standalone: uninstall-standalone-ocaml # uninstall-standalone-haskell
 
 printenv::
 	@echo "COQPATH =        $$COQPATH"
