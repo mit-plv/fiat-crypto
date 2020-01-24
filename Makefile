@@ -10,7 +10,8 @@ TIMECMD_FULL?=
 STDTIME_FULL?=/usr/bin/time -f "$@ (real: %e, user: %U, sys: %S, mem: %M ko)"
 TIMER_FULL=$(if $(TIMED), $(STDTIME_FULL), $(TIMECMD_FULL))
 
-BINDIR?=/usr/local/bin # or $(shell opam config var bin) ?
+BINDIR?=/usr/local/bin
+# or $(shell opam config var bin) ?
 
 GHC?=ghc
 GHCFLAGS?= # -XStrict
