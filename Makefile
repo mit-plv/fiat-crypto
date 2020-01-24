@@ -605,7 +605,6 @@ install-standalone-ocaml install-standalone-haskell:
 	   install -d "$(BINDIR)/" &&\
 	   install -m 0755 "$$f" "$(BINDIR)/" &&\
 	   echo INSTALL "$$f" "$(BINDIR)/";\
-	 fi;\
 	done
 
 uninstall-standalone-ocaml uninstall-standalone-haskell:
