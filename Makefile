@@ -590,11 +590,11 @@ install: coq
 install-standalone-ocaml: standalone-ocaml
 install-standalone-haskell: standalone-haskell
 
-install-standalone-ocaml: FILESTOINSTALL="$(OCAML_BINARIES)"
-install-standalone-haskell: FILESTOINSTALL="$(HASKELL_BINARIES)"
+install-standalone-ocaml: FILESTOINSTALL=$(OCAML_BINARIES)
+install-standalone-haskell: FILESTOINSTALL=$(HASKELL_BINARIES)
 
-uninstall-standalone-ocaml: FILESTOINSTALL="$(OCAML_BINARIES)"
-uninstall-standalone-haskell: FILESTOINSTALL="$(HASKELL_BINARIES)"
+uninstall-standalone-ocaml: FILESTOINSTALL=$(OCAML_BINARIES)
+uninstall-standalone-haskell: FILESTOINSTALL=$(HASKELL_BINARIES)
 
 install-standalone-ocaml install-standalone-haskell:
 	$(HIDE)code=0; for f in $(FILESTOINSTALL); do\
