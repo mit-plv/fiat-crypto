@@ -570,11 +570,11 @@ check-output: $(CHECK_OUTPUTS)
 accept-output: $(ACCEPT_OUTPUTS)
 $(CHECK_OUTPUTS) : check-% : $(OUTPUT_VOS)
 	$(SHOW)'DIFF $*'
-	$(HIDE)diff $*.expected $*.out || (RV=$$?; echo "To accept the new output, run make accept-$*"; exit $$RV)
+	$(HIDE)diff output-tests/$*.expected $*.out || (RV=$$?; echo "To accept the new output, run make accept-$*"; exit $$RV)
 
 $(ACCEPT_OUTPUTS) : accept-% :
 	$(SHOW)'ACCEPT $*.out'
-	$(HIDE)cp -f $*.out $*.expected
+	$(HIDE)cp -f $*.out output-tests/$*.expected
 
 clean::
 	rm -f Makefile.coq
