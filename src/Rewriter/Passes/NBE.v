@@ -16,7 +16,7 @@ Module Compilers.
 
   Module Import RewriteRules.
     Section __.
-      Definition VerifiedRewriterNBE : VerifiedRewriter_with_args true nbe_rewrite_rules_proofs.
+      Definition VerifiedRewriterNBE : VerifiedRewriter_with_args true false nbe_rewrite_rules_proofs.
       Proof using All. make_rewriter. Defined.
 
       Definition RewriteNBE {t} := Eval hnf in @Rewrite VerifiedRewriterNBE t.

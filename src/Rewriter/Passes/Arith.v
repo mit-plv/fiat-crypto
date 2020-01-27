@@ -19,7 +19,7 @@ Module Compilers.
     Section __.
       Context (max_const_val : Z).
 
-      Definition VerifiedRewriterArith : VerifiedRewriter_with_args false (arith_rewrite_rules_proofs max_const_val).
+      Definition VerifiedRewriterArith : VerifiedRewriter_with_args false false (arith_rewrite_rules_proofs max_const_val).
       Proof using All. make_rewriter. Defined.
 
       Definition RewriteArith {t} := Eval hnf in @Rewrite VerifiedRewriterArith t.

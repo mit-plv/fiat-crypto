@@ -20,7 +20,7 @@ Module Compilers.
       Context (bitwidth : Z)
               (lgcarrymax : Z).
 
-      Definition VerifiedRewriterMulSplit : VerifiedRewriter_with_args false (mul_split_rewrite_rules_proofs bitwidth lgcarrymax).
+      Definition VerifiedRewriterMulSplit : VerifiedRewriter_with_args false false (mul_split_rewrite_rules_proofs bitwidth lgcarrymax).
       Proof using All. make_rewriter. Defined.
 
       Definition RewriteMulSplit {t} := Eval hnf in @Rewrite VerifiedRewriterMulSplit t.

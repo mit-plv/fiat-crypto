@@ -16,7 +16,7 @@ Module Compilers.
 
   Module Import RewriteRules.
     Section __.
-      Definition VerifiedRewriterArithWithCasts : VerifiedRewriter_with_args false arith_with_casts_rewrite_rules_proofs.
+      Definition VerifiedRewriterArithWithCasts : VerifiedRewriter_with_args false false arith_with_casts_rewrite_rules_proofs.
       Proof using All. make_rewriter. Defined.
 
       Definition RewriteArithWithCasts {t} := Eval hnf in @Rewrite VerifiedRewriterArithWithCasts t.

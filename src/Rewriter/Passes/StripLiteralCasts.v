@@ -16,7 +16,7 @@ Module Compilers.
 
   Module Import RewriteRules.
     Section __.
-      Definition VerifiedRewriterStripLiteralCasts : VerifiedRewriter_with_args false strip_literal_casts_rewrite_rules_proofs.
+      Definition VerifiedRewriterStripLiteralCasts : VerifiedRewriter_with_args false false strip_literal_casts_rewrite_rules_proofs.
       Proof using All. make_rewriter. Defined.
 
       Definition RewriteStripLiteralCasts {t} := Eval hnf in @Rewrite VerifiedRewriterStripLiteralCasts t.

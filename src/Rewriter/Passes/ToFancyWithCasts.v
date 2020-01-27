@@ -23,7 +23,7 @@ Module Compilers.
               (Hlow : forall s v v', invert_low s v = Some v' -> v = Z.land v' (2^(s/2)-1))
               (Hhigh : forall s v v', invert_high s v = Some v' -> v = Z.shiftr v' (s/2)).
 
-      Definition VerifiedRewriterToFancyWithCasts : VerifiedRewriter_with_args false (@fancy_with_casts_rewrite_rules_proofs invert_low invert_high value_range flag_range Hlow Hhigh).
+      Definition VerifiedRewriterToFancyWithCasts : VerifiedRewriter_with_args false false (@fancy_with_casts_rewrite_rules_proofs invert_low invert_high value_range flag_range Hlow Hhigh).
       Proof using All. make_rewriter. Defined.
 
       Definition RewriteToFancyWithCasts {t} : API.Expr t -> API.Expr t.
