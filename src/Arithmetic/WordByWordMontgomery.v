@@ -650,6 +650,7 @@ Module WordByWordMontgomery.
         Lemma fst_redc_body_mod_N
           : (eval (fst (redc_body A_S))) mod (eval N) = ((eval (fst A_S) - a)*ri) mod (eval N).
         Proof using small_S small_A ri_correct lgr_big S_bound.
+          clear R_numlimbs_nz.
           rewrite fst_redc_body.
           etransitivity; [ eapply Z.div_to_inv_modulo; try eassumption; lia | ].
           unfold a, A_a, A.
