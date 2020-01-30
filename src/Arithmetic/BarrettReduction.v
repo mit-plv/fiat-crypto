@@ -118,8 +118,7 @@ Module Fancy.
     Local Notation w := (uweight width). Local Notation eval := (Positional.eval w).
     Context (mut Mt : list Z) (mut_correct : mut = Partition.partition w (sz+1) mu) (Mt_correct : Mt = Partition.partition w sz M).
     Context (mu_eq : mu = 2 ^ (2 * k) / M) (muHigh_one : mu / w sz = 1) (M_range : 2^(k-1) < M < 2^k).
-
-    Local Lemma wprops : @weight_properties w. Proof. apply uwprops; auto with lia. Qed.
+    Local Lemma wprops : @weight_properties w. Proof using width_ok. clear - width_ok. apply uwprops ; lia. Qed.
     Local Hint Resolve wprops : core.
     Hint Rewrite mut_correct Mt_correct : pull_partition.
 
