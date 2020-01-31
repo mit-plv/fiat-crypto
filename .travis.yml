@@ -194,28 +194,28 @@ jobs:
 
     - stage: selected-specific selected-specific-display
       env: COQ_VERSION="master" COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-master-daily"
-      script: PREV=curves-proofs CUR=selected-specific ./etc/ci/travis.sh selected-specific selected-specific-display
+      script: PREV=curves-proofs CUR=selected-specific ./etc/ci/travis.sh selected-specific selected-specific-display selected-specific-display-test
     - stage: selected-specific selected-specific-display
       env: COQ_VERSION="v8.11"  COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.11-daily"
-      script: PREV=curves-proofs CUR=selected-specific ./etc/ci/travis.sh selected-specific selected-specific-display
+      script: PREV=curves-proofs CUR=selected-specific ./etc/ci/travis.sh selected-specific selected-specific-display selected-specific-display-test
     - stage: selected-specific selected-specific-display
       env: COQ_VERSION="v8.10"  COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.10-daily"
-      script: PREV=curves-proofs CUR=selected-specific ./etc/ci/travis.sh selected-specific selected-specific-display
+      script: PREV=curves-proofs CUR=selected-specific ./etc/ci/travis.sh selected-specific selected-specific-display selected-specific-display-test
     - stage: selected-specific selected-specific-display
       env: COQ_VERSION="v8.9"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.9-daily"
-      script: PREV=curves-proofs CUR=selected-specific ./etc/ci/travis.sh selected-specific selected-specific-display
+      script: PREV=curves-proofs CUR=selected-specific ./etc/ci/travis.sh selected-specific selected-specific-display selected-specific-display-test
     - stage: selected-specific selected-specific-display
       env: COQ_VERSION="v8.8"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.8-daily"
-      script: PREV=curves-proofs CUR=selected-specific ./etc/ci/travis.sh selected-specific selected-specific-display
+      script: PREV=curves-proofs CUR=selected-specific ./etc/ci/travis.sh selected-specific selected-specific-display selected-specific-display-test
     - stage: selected-specific selected-specific-display
       env: COQ_VERSION="v8.7"   COQ_PACKAGE="coq"       PPA="ppa:jgross-h/coq-8.7-daily"
-      script: PREV=curves-proofs CUR=selected-specific ./etc/ci/travis.sh selected-specific selected-specific-display
+      script: PREV=curves-proofs CUR=selected-specific ./etc/ci/travis.sh selected-specific selected-specific-display selected-specific-display-test
     - stage: selected-specific selected-specific-display
       env: COQ_VERSION="8.8.2"  COQ_PACKAGE="coq-8.8.2" PPA="ppa:jgross-h/many-coq-versions"
-      script: PREV=curves-proofs CUR=selected-specific ./etc/ci/travis.sh selected-specific selected-specific-display
+      script: PREV=curves-proofs CUR=selected-specific ./etc/ci/travis.sh selected-specific selected-specific-display selected-specific-display-test
     - stage: selected-specific selected-specific-display
       env: COQ_VERSION="8.7.2"  COQ_PACKAGE="coq-8.7.2" PPA="ppa:jgross-h/many-coq-versions"
-      script: PREV=curves-proofs CUR=selected-specific ./etc/ci/travis.sh selected-specific selected-specific-display
+      script: PREV=curves-proofs CUR=selected-specific ./etc/ci/travis.sh selected-specific selected-specific-display selected-specific-display-test
 
     - stage: build-selected-test build-selected-bench
       env: COQ_VERSION="8.8.2"  COQ_PACKAGE="coq-8.8.2" PPA="ppa:jgross-h/many-coq-versions"
