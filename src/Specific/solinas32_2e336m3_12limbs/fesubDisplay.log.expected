@@ -1,0 +1,7 @@
+λ x x0 : word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32,
+Interp-η
+(λ var : Syntax.base_type → Type,
+ λ '(x24, x25, x23, x21, x19, x17, x15, x13, x11, x9, x7, x5, (x46, x47, x45, x43, x41, x39, x37, x35, x33, x31, x29, x27))%core,
+ (((0x1ffffffe + x24) - x46), ((0x1ffffffe + x25) - x47), ((0x1ffffffe + x23) - x45), ((0x1ffffffe + x21) - x43), ((0x1ffffffe + x19) - x41), ((0x1ffffffe + x17) - x39), ((0x1ffffffe + x15) - x37), ((0x1ffffffe + x13) - x35), ((0x1ffffffe + x11) - x33), ((0x1ffffffe + x9) - x31), ((0x1ffffffe + x7) - x29), ((0x1ffffffa + x5) - x27)))
+(x, x0)%core
+     : word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 → word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 → ReturnType (uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t * uint32_t)

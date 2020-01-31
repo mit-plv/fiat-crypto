@@ -1,0 +1,17 @@
+λ x : word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32,
+Interp-η
+(λ var : Syntax.base_type → Type,
+ λ '(x19, x20, x18, x16, x14, x12, x10, x8, x6, x4, x2)%core,
+ uint32_t x21 = (x20 | x19);
+ uint32_t x22 = (x18 | x21);
+ uint32_t x23 = (x16 | x22);
+ uint32_t x24 = (x14 | x23);
+ uint32_t x25 = (x12 | x24);
+ uint32_t x26 = (x10 | x25);
+ uint32_t x27 = (x8 | x26);
+ uint32_t x28 = (x6 | x27);
+ uint32_t x29 = (x4 | x28);
+ uint32_t x30 = (x2 | x29);
+ return x30)
+x
+     : word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 * word32 → ReturnType uint32_t

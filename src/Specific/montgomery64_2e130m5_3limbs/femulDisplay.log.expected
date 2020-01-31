@@ -1,0 +1,78 @@
+λ x x0 : word64 * word64 * word64,
+Interp-η
+(λ var : Syntax.base_type → Type,
+ λ '(x6, x7, x5, (x10, x11, x9))%core,
+ uint64_t x13, uint64_t x14 = mulx_u64(x5, x9);
+ uint64_t x16, uint64_t x17 = mulx_u64(x5, x11);
+ uint64_t x19, uint64_t x20 = mulx_u64(x5, x10);
+ uint64_t x22, uint8_t/*bool*/ x23 = addcarryx_u64(0x0, x14, x16);
+ uint64_t x25, uint8_t/*bool*/ x26 = addcarryx_u64(x23, x17, x19);
+ uint64_t x28, uint8_t/*bool*/ _ = addcarryx_u64(0x0, x26, x20);
+ uint64_t x31, uint64_t _ = mulx_u64(x13, 0xcccccccccccccccdL);
+ uint64_t x34, uint64_t x35 = mulx_u64(x31, 0xfffffffffffffffbL);
+ uint64_t x37, uint64_t x38 = mulx_u64(x31, 0xffffffffffffffffL);
+ uint64_t x40, uint8_t x41 = mulx_u64_out_u8(x31, 0x3);
+ uint64_t x43, uint8_t/*bool*/ x44 = addcarryx_u64(0x0, x35, x37);
+ uint64_t x46, uint8_t/*bool*/ x47 = addcarryx_u64(x44, x38, x40);
+ uint8_t x48 = ((uint8_t)0x0 + x47);
+ uint8_t x49 = (x48 + x41);
+ uint64_t _, uint8_t/*bool*/ x52 = addcarryx_u64(0x0, x13, x34);
+ uint64_t x54, uint8_t/*bool*/ x55 = addcarryx_u64(x52, x22, x43);
+ uint64_t x57, uint8_t/*bool*/ x58 = addcarryx_u64(x55, x25, x46);
+ uint64_t x60, uint8_t/*bool*/ x61 = addcarryx_u64(x58, x28, x49);
+ uint64_t x63, uint64_t x64 = mulx_u64(x7, x9);
+ uint64_t x66, uint64_t x67 = mulx_u64(x7, x11);
+ uint64_t x69, uint64_t x70 = mulx_u64(x7, x10);
+ uint64_t x72, uint8_t/*bool*/ x73 = addcarryx_u64(0x0, x64, x66);
+ uint64_t x75, uint8_t/*bool*/ x76 = addcarryx_u64(x73, x67, x69);
+ uint64_t x78, uint8_t/*bool*/ _ = addcarryx_u64(0x0, x76, x70);
+ uint64_t x81, uint8_t/*bool*/ x82 = addcarryx_u64(0x0, x54, x63);
+ uint64_t x84, uint8_t/*bool*/ x85 = addcarryx_u64(x82, x57, x72);
+ uint64_t x87, uint8_t/*bool*/ x88 = addcarryx_u64(x85, x60, x75);
+ uint64_t x90, uint8_t/*bool*/ x91 = addcarryx_u64(x88, x61, x78);
+ uint64_t x93, uint64_t _ = mulx_u64(x81, 0xcccccccccccccccdL);
+ uint64_t x96, uint64_t x97 = mulx_u64(x93, 0xfffffffffffffffbL);
+ uint64_t x99, uint64_t x100 = mulx_u64(x93, 0xffffffffffffffffL);
+ uint64_t x102, uint8_t x103 = mulx_u64_out_u8(x93, 0x3);
+ uint64_t x105, uint8_t/*bool*/ x106 = addcarryx_u64(0x0, x97, x99);
+ uint64_t x108, uint8_t/*bool*/ x109 = addcarryx_u64(x106, x100, x102);
+ uint8_t x110 = ((uint8_t)0x0 + x109);
+ uint8_t x111 = (x110 + x103);
+ uint64_t _, uint8_t/*bool*/ x114 = addcarryx_u64(0x0, x81, x96);
+ uint64_t x116, uint8_t/*bool*/ x117 = addcarryx_u64(x114, x84, x105);
+ uint64_t x119, uint8_t/*bool*/ x120 = addcarryx_u64(x117, x87, x108);
+ uint64_t x122, uint8_t/*bool*/ x123 = addcarryx_u64(x120, x90, x111);
+ uint8_t x124 = ((uint8_t)x123 + x91);
+ uint64_t x126, uint64_t x127 = mulx_u64(x6, x9);
+ uint64_t x129, uint64_t x130 = mulx_u64(x6, x11);
+ uint64_t x132, uint64_t x133 = mulx_u64(x6, x10);
+ uint64_t x135, uint8_t/*bool*/ x136 = addcarryx_u64(0x0, x127, x129);
+ uint64_t x138, uint8_t/*bool*/ x139 = addcarryx_u64(x136, x130, x132);
+ uint64_t x141, uint8_t/*bool*/ _ = addcarryx_u64(0x0, x139, x133);
+ uint64_t x144, uint8_t/*bool*/ x145 = addcarryx_u64(0x0, x116, x126);
+ uint64_t x147, uint8_t/*bool*/ x148 = addcarryx_u64(x145, x119, x135);
+ uint64_t x150, uint8_t/*bool*/ x151 = addcarryx_u64(x148, x122, x138);
+ uint64_t x153, uint8_t/*bool*/ x154 = addcarryx_u64(x151, x124, x141);
+ uint64_t x156, uint64_t _ = mulx_u64(x144, 0xcccccccccccccccdL);
+ uint64_t x159, uint64_t x160 = mulx_u64(x156, 0xfffffffffffffffbL);
+ uint64_t x162, uint64_t x163 = mulx_u64(x156, 0xffffffffffffffffL);
+ uint64_t x165, uint8_t x166 = mulx_u64_out_u8(x156, 0x3);
+ uint64_t x168, uint8_t/*bool*/ x169 = addcarryx_u64(0x0, x160, x162);
+ uint64_t x171, uint8_t/*bool*/ x172 = addcarryx_u64(x169, x163, x165);
+ uint8_t x173 = ((uint8_t)0x0 + x172);
+ uint8_t x174 = (x173 + x166);
+ uint64_t _, uint8_t/*bool*/ x177 = addcarryx_u64(0x0, x144, x159);
+ uint64_t x179, uint8_t/*bool*/ x180 = addcarryx_u64(x177, x147, x168);
+ uint64_t x182, uint8_t/*bool*/ x183 = addcarryx_u64(x180, x150, x171);
+ uint64_t x185, uint8_t/*bool*/ x186 = addcarryx_u64(x183, x153, x174);
+ uint8_t x187 = ((uint8_t)x186 + x154);
+ uint64_t x189, uint8_t/*bool*/ x190 = subborrow_u64(0x0, x179, 0xfffffffffffffffbL);
+ uint64_t x192, uint8_t/*bool*/ x193 = subborrow_u64(x190, x182, 0xffffffffffffffffL);
+ uint64_t x195, uint8_t/*bool*/ x196 = subborrow_u64(x193, x185, 0x3);
+ uint64_t _, uint8_t/*bool*/ x199 = subborrow_u64(x196, x187, 0x0);
+ uint64_t x200 = cmovznz64(x199, x195, x185);
+ uint64_t x201 = cmovznz64(x199, x192, x182);
+ uint64_t x202 = cmovznz64(x199, x189, x179);
+ return (x200, x201, x202))
+(x, x0)%core
+     : word64 * word64 * word64 → word64 * word64 * word64 → ReturnType (uint64_t * uint64_t * uint64_t)

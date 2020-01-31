@@ -1,0 +1,21 @@
+λ x : word64 * word64 * word64,
+Interp-η
+(λ var : Syntax.base_type → Type,
+ λ '(x3, x4, x2)%core,
+ uint64_t x5 = (x2 >> 0x32);
+ uint64_t x6 = (x2 & 0x3ffffffffffff);
+ uint64_t x7 = (x5 + x4);
+ uint64_t x8 = (x7 >> 0x32);
+ uint64_t x9 = (x7 & 0x3ffffffffffff);
+ uint64_t x10 = (x8 + x3);
+ uint64_t x11 = (x10 >> 0x32);
+ uint64_t x12 = (x10 & 0x3ffffffffffff);
+ uint64_t x13 = (x6 + (0x5 * x11));
+ uint64_t x14 = (x13 >> 0x32);
+ uint64_t x15 = (x13 & 0x3ffffffffffff);
+ uint64_t x16 = (x14 + x9);
+ uint64_t x17 = (x16 >> 0x32);
+ uint64_t x18 = (x16 & 0x3ffffffffffff);
+ return ((x17 + x12), Return x18, Return x15))
+x
+     : word64 * word64 * word64 → ReturnType (uint64_t * uint64_t * uint64_t)
