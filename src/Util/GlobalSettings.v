@@ -27,4 +27,4 @@ Global Set Uniform Inductive Parameters.
 (** Set SimplIsCbn. *)
 
 (** Faster printing *)
-Global Set Fast Name Printing.
+(*Global Set Fast Name Printing.*)
