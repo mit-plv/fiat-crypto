@@ -27,6 +27,7 @@ HIDE := $(if $(VERBOSE),,@)
 INSTALLDEFAULTROOT := Crypto
 
 .PHONY: coq clean update-_CoqProject cleanall install \
+	coq-without-bedrock2 install-without-bedrock2 \
 	install-rewriter clean-rewriter rewriter \
 	install-coqprime clean-coqprime coqprime coqprime-all \
 	bedrock2 clean-bedrock2 install-bedrock2 coqutil clean-coqutil install-coqutil \
@@ -72,7 +73,10 @@ NOBIGMEM_UNMADE_VOFILES := \
 	src/Curves/Weierstrass/Jacobian.vo \
 	src/Curves/Weierstrass/Projective.vo \
 	$(PERFTESTING_VO)
+BEDROCK2_FILES_PATTERN := \
+	src/Bedrock/% # it's important to catch not just the .vo files, but also the .glob files, etc, because this is used to filter FILESTOINSTALL
 REGULAR_VOFILES := $(filter-out $(SPECIAL_VOFILES),$(VOFILES))
+REGULAR_EXCEPT_BEDROCK2_VOFILES := $(filter-out $(BEDROCK2_FILES_PATTERN),$(REGULAR_VOFILES))
 PRE_STANDALONE_PRE_VOFILES := $(filter src/Standalone%.vo,$(REGULAR_VOFILES))
 UTIL_PRE_VOFILES := $(filter src/Algebra/%.vo src/Tactics/%.vo src/Util/%.vo,$(REGULAR_VOFILES))
 SOME_EARLY_VOFILES := \
@@ -127,6 +131,7 @@ ACCEPT_OUTPUTS := $(addprefix accept-,$(OUTPUT_PREOUTS))
 
 all: coq standalone-ocaml c-files rust-files check-output
 coq: $(REGULAR_VOFILES)
+coq-without-bedrock2: $(REGULAR_EXCEPT_BEDROCK2_VOFILES)
 c-files: $(ALL_C_FILES)
 rust-files: $(ALL_RUST_FILES)
 
@@ -587,6 +592,10 @@ cleanall:: clean
 	rm -rf src/Rewriter/PerfTesting/Specific/generated
 
 install: coq
+install-without-bedrock2: coq-without-bedrock2
+
+install-without-bedrock2:
+	$(HIDE)$(MAKE) -f Makefile.coq FILESTOINSTALL="$(filter-out $(BEDROCK2_FILES_PATTERN),$(FILESTOINSTALL))"
 
 install-standalone-ocaml: standalone-ocaml
 install-standalone-haskell: standalone-haskell
