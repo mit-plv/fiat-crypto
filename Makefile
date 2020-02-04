@@ -82,6 +82,10 @@ UTIL_PRE_VOFILES := $(filter src/Algebra/%.vo src/Tactics/%.vo src/Util/%.vo,$(R
 SOME_EARLY_VOFILES := \
   src/Arithmetic/Core.vo \
   src/Rewriter/AllTacticsExtra.vo
+COPY_TO_FIAT_RUST := \
+	AUTHORS \
+	CONTRIBUTORS \
+	LICENSE
 
 # computing the vo_reverse_closure is slow, so we only do it if we're
 # asked to make the lite target
@@ -477,6 +481,14 @@ $(RS_DIR)p434_64.rs $(RS_DIR)p434_32.rs : $(RS_DIR)p434_%.rs :
 
 test-rust-files: $(ALL_RUST_FILES)
 	cd fiat-rust; $(CARGO_BUILD)
+
+all: $(addprefix fiat-rust/,$(COPY_TO_FIAT_RUST))
+
+# make these .PHONY, so that we copy by contents, not by modification date
+# this ensures that these files are always in sync as long as we run make
+.PHONY: $(addprefix fiat-rust/,$(COPY_TO_FIAT_RUST))
+$(addprefix fiat-rust/,$(COPY_TO_FIAT_RUST)) : fiat-rust/% : %
+	cp -f $< $@
 
 # Perf testing
 PERF_MAKEFILE = src/Rewriter/PerfTesting/Specific/generated/primes.mk
