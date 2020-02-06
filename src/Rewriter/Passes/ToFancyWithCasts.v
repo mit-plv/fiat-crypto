@@ -26,7 +26,7 @@ Module Compilers.
       Definition VerifiedRewriterToFancyWithCasts : VerifiedRewriter_with_args false false (@fancy_with_casts_rewrite_rules_proofs invert_low invert_high value_range flag_range Hlow Hhigh).
       Proof using All. make_rewriter. Defined.
 
-      Definition RewriteToFancyWithCasts {t} : API.Expr t -> API.Expr t.
+      Definition RewriteToFancyWithCasts {t : API.type} : API.Expr t -> API.Expr t.
       Proof using invert_low invert_high value_range flag_range.
         let v := (eval hnf in (@Rewrite VerifiedRewriterToFancyWithCasts t)) in exact v.
       Defined.
@@ -41,6 +41,7 @@ Module Compilers.
 
   Module Export Hints.
     Hint Resolve Wf_RewriteToFancyWithCasts : wf wf_extra.
+    Hint Opaque RewriteToFancyWithCasts : wf wf_extra interp interp_extra rewrite.
     Hint Rewrite @Interp_RewriteToFancyWithCasts : interp interp_extra.
   End Hints.
 End Compilers.

@@ -19,7 +19,7 @@ Module Compilers.
       Definition VerifiedRewriterNBE : VerifiedRewriter_with_args true false nbe_rewrite_rules_proofs.
       Proof using All. make_rewriter. Defined.
 
-      Definition RewriteNBE {t} := Eval hnf in @Rewrite VerifiedRewriterNBE t.
+      Definition RewriteNBE {t : API.type} := Eval hnf in @Rewrite VerifiedRewriterNBE t.
 
       Lemma Wf_RewriteNBE {t} e (Hwf : Wf e) : Wf (@RewriteNBE t e).
       Proof. now apply VerifiedRewriterNBE. Qed.
@@ -29,7 +29,7 @@ Module Compilers.
     End __.
   End RewriteRules.
 
-  Definition PartialEvaluate {t} (e : Expr t) : Expr t := RewriteRules.RewriteNBE e.
+  Definition PartialEvaluate {t : API.type} (e : Expr t) : Expr t := RewriteRules.RewriteNBE e.
 
   Lemma Wf_PartialEvaluate {t} e (Hwf : Wf e) : Wf (@PartialEvaluate t e).
   Proof. apply Wf_RewriteNBE, Hwf. Qed.
@@ -40,6 +40,7 @@ Module Compilers.
 
   Module Export Hints.
     Hint Resolve Wf_PartialEvaluate Wf_RewriteNBE : wf wf_extra.
+    Hint Opaque PartialEvaluate RewriteNBE : wf wf_extra interp interp_extra rewrite.
     Hint Rewrite @Interp_PartialEvaluate @Interp_RewriteNBE : interp interp_extra.
   End Hints.
 End Compilers.

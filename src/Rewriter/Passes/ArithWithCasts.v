@@ -19,7 +19,7 @@ Module Compilers.
       Definition VerifiedRewriterArithWithCasts : VerifiedRewriter_with_args false false arith_with_casts_rewrite_rules_proofs.
       Proof using All. make_rewriter. Defined.
 
-      Definition RewriteArithWithCasts {t} := Eval hnf in @Rewrite VerifiedRewriterArithWithCasts t.
+      Definition RewriteArithWithCasts {t : API.type} := Eval hnf in @Rewrite VerifiedRewriterArithWithCasts t.
 
       Lemma Wf_RewriteArithWithCasts {t} e (Hwf : Wf e) : Wf (@RewriteArithWithCasts t e).
       Proof. now apply VerifiedRewriterArithWithCasts. Qed.
@@ -31,6 +31,7 @@ Module Compilers.
 
   Module Export Hints.
     Hint Resolve Wf_RewriteArithWithCasts : wf wf_extra.
+    Hint Opaque RewriteArithWithCasts : wf wf_extra interp interp_extra rewrite.
     Hint Rewrite @Interp_RewriteArithWithCasts : interp interp_extra.
   End Hints.
 End Compilers.

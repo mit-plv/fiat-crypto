@@ -23,7 +23,7 @@ Module Compilers.
       Definition VerifiedRewriterMulSplit : VerifiedRewriter_with_args false false (mul_split_rewrite_rules_proofs bitwidth lgcarrymax).
       Proof using All. make_rewriter. Defined.
 
-      Definition RewriteMulSplit {t} := Eval hnf in @Rewrite VerifiedRewriterMulSplit t.
+      Definition RewriteMulSplit {t : API.type} := Eval hnf in @Rewrite VerifiedRewriterMulSplit t.
 
       Lemma Wf_RewriteMulSplit {t} e (Hwf : Wf e) : Wf (@RewriteMulSplit t e).
       Proof. now apply VerifiedRewriterMulSplit. Qed.
@@ -35,6 +35,7 @@ Module Compilers.
 
   Module Export Hints.
     Hint Resolve Wf_RewriteMulSplit : wf wf_extra.
+    Hint Opaque RewriteMulSplit : wf wf_extra interp interp_extra rewrite.
     Hint Rewrite @Interp_RewriteMulSplit : interp interp_extra.
   End Hints.
 End Compilers.
