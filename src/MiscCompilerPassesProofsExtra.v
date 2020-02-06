@@ -31,6 +31,7 @@ Module Compilers.
   End Subst01.
 
   Hint Resolve Subst01.Wf_Subst01 : wf_extra.
+  Hint Opaque Subst01.Subst01 : wf_extra interp_extra.
   Hint Rewrite @Subst01.Interp_Subst01 : interp_extra.
 
   Module DeadCodeElimination.
@@ -41,5 +42,6 @@ Module Compilers.
   End DeadCodeElimination.
 
   Hint Resolve DeadCodeElimination.Wf_EliminateDead : wf_extra.
+  Hint Opaque DeadCodeElimination.EliminateDead : wf_extra interp_extra.
   Hint Rewrite @DeadCodeElimination.Interp_EliminateDead : interp_extra.
 End Compilers.

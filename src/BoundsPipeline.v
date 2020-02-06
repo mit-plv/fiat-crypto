@@ -485,15 +485,17 @@ Module Pipeline.
             | Error err => Error err
             end)).
 
-  Local Ltac wf_interp_t :=
-    repeat first [ progress destruct_head'_and
-                 | progress cbv [Classes.base Classes.ident Classes.ident_interp Classes.base_interp Classes.exprInfo] in *
-                 | progress autorewrite with interp
-                 | solve [ eauto with nocore interp_extra wf_extra ]
-                 | solve [ typeclasses eauto ]
-                 | break_innermost_match_step
-                 | solve [ eauto 100 with nocore wf_extra ]
-                 | progress intros ].
+  Local Ltac wf_interp_t_step :=
+    first [ progress destruct_head'_and
+          | progress cbv [Classes.base Classes.ident Classes.ident_interp Classes.base_interp Classes.exprInfo] in *
+          | progress rewrite_strat repeat topdown hints interp
+          | solve [ typeclasses eauto with nocore interp_extra wf_extra ]
+          | solve [ typeclasses eauto ]
+          | break_innermost_match_step
+          | solve [ typeclasses eauto 100 with nocore wf_extra ]
+          | progress intros ].
+
+  Local Ltac wf_interp_t := repeat wf_interp_t_step.
 
   Class bounds_goodT {t} bounds
     := bounds_good :
@@ -528,14 +530,6 @@ Module Pipeline.
 
   Hint Rewrite @Interp_RewriteAndEliminateDeadAndInline : interp interp_extra.
 
-  Local Opaque RewriteAndEliminateDeadAndInline.
-  Local Opaque RewriteRules.RewriteStripLiteralCasts.
-  Local Opaque RewriteRules.RewriteToFancyWithCasts.
-  Local Opaque RewriteRules.RewriteToFancy.
-  Local Opaque RewriteRules.RewriteArith.
-  Local Opaque RewriteRules.RewriteMulSplit.
-  Local Opaque CheckedPartialEvaluateWithBounds.
-  Local Opaque FromFlat ToFlat.
   Lemma BoundsPipeline_correct
              {split_mul_to : split_mul_to_opt}
              (with_dead_code_elimination : bool := true)
@@ -586,9 +580,9 @@ Module Pipeline.
           end.. ].
       { subst; split; [ | solve [ wf_interp_t ] ].
         split_and; simpl in *.
-        split; [ solve [ wf_interp_t; eauto with nocore ] | ].
-        intros; break_innermost_match; autorewrite with interp_extra; try solve [ wf_interp_t ].
-        all: match goal with H : context[type.app_curried _ _ = _] |- _ => erewrite H; clear H end; eauto.
+        split; [ solve [ wf_interp_t; typeclasses eauto with nocore ] | ].
+        intros; break_innermost_match; (rewrite_strat repeat topdown hints interp_extra); try solve [ wf_interp_t ].
+        all: match goal with H : context[type.app_curried _ _ = _] |- _ => erewrite H; clear H end; try typeclasses eauto with core.
         all: transitivity (type.app_curried (Interp (PartialEvaluateWithListInfoFromBounds e arg_bounds)) arg1);
           [ | apply Interp_PartialEvaluateWithListInfoFromBounds; auto ].
         all: apply type.app_curried_Proper; [ | symmetry; eassumption ].
@@ -596,14 +590,6 @@ Module Pipeline.
         all: wf_interp_t. }
       { wf_interp_t. } }
   Qed.
-  Local Transparent RewriteAndEliminateDeadAndInline.
-  Local Transparent RewriteRules.RewriteStripLiteralCasts.
-  Local Transparent RewriteRules.RewriteToFancyWithCasts.
-  Local Transparent RewriteRules.RewriteToFancy.
-  Local Transparent RewriteRules.RewriteArith.
-  Local Transparent RewriteRules.RewriteMulSplit.
-  Local Transparent CheckedPartialEvaluateWithBounds.
-  Local Transparent FromFlat ToFlat.
 
   Definition BoundsPipeline_correct_transT
              {t}
@@ -661,20 +647,23 @@ Module Pipeline.
                  | apply conj
                  | exact eq_refl ].
 
-  Global Instance bounds0_good {t : base.type} {bounds} : @bounds_goodT t bounds.
-  Proof. solve_bounds_good. Qed.
+  Module Export Instances.
+    Global Instance bounds0_good {t : base.type} {bounds} : @bounds_goodT t bounds.
+    Proof. solve_bounds_good. Qed.
 
-  Global Instance bounds1_good {s d : base.type} {bounds} : @bounds_goodT (s -> d) bounds.
-  Proof. solve_bounds_good. Qed.
+    Global Instance bounds1_good {s d : base.type} {bounds} : @bounds_goodT (s -> d) bounds.
+    Proof. solve_bounds_good. Qed.
 
-  Global Instance bounds2_good {a b D : base.type} {bounds} : @bounds_goodT (a -> b -> D) bounds.
-  Proof. solve_bounds_good. Qed.
+    Global Instance bounds2_good {a b D : base.type} {bounds} : @bounds_goodT (a -> b -> D) bounds.
+    Proof. solve_bounds_good. Qed.
 
-  Global Instance bounds3_good {a b c D : base.type} {bounds} : @bounds_goodT (a -> b -> c -> D) bounds.
-  Proof. solve_bounds_good. Qed.
+    Global Instance bounds3_good {a b c D : base.type} {bounds} : @bounds_goodT (a -> b -> c -> D) bounds.
+    Proof. solve_bounds_good. Qed.
+  End Instances.
 End Pipeline.
 
 Module Export Hints.
+  Export Pipeline.Instances.
   Hint Extern 1 (@Pipeline.bounds_goodT _ _) => solve [ Pipeline.solve_bounds_good ] : typeclass_instances.
   Global Strategy -100 [type.interp ZRange.type.option.interp ZRange.type.base.option.interp GallinaReify.Reify_as GallinaReify.reify type_base].
   Global Strategy -10 [type.app_curried type.for_each_lhs_of_arrow type.and_for_each_lhs_of_arrow type.related type.interp Language.Compilers.base.interp base.base_interp type.andb_bool_for_each_lhs_of_arrow fst snd ZRange.type.option.is_bounded_by].
@@ -721,9 +710,12 @@ Module PipelineTactics.
          constr:(lem : T')
     end.
 
+  Create HintDb relax_zrange_gen_good discriminated.
+  Hint Resolve relax_zrange_gen_good : relax_zrange_gen_good.
+
   Ltac use_compilers_correctness Hres :=
     eapply Pipeline.BoundsPipeline_correct in Hres;
-    [ | eauto using relax_zrange_gen_good with typeclass_instances.. ];
+    [ | try typeclasses eauto with core relax_zrange_gen_good typeclass_instances.. ];
     [ do_unfolding;
       let Hres' := fresh in
       destruct Hres as [Hres' _] (* remove Wf conjunct *);
@@ -746,6 +738,6 @@ Module PipelineTactics.
       solve_side_conditions_of_BoundsPipeline_correct
     | match goal with
       | [ |- Wf _ ]
-        => repeat apply expr.Wf_APP; eauto with nocore wf_extra wf_gen_cache; eauto with nocore wf wf_gen_cache
+        => repeat apply expr.Wf_APP; try typeclasses eauto with nocore wf_extra wf_gen_cache; try typeclasses eauto with nocore wf wf_gen_cache
       end ].
 End PipelineTactics.

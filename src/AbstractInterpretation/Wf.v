@@ -981,6 +981,7 @@ Module Compilers.
     End specialized.
   End partial.
   Hint Resolve Wf_Eval Wf_EvalWithBound Wf_EtaExpandWithBound Wf_EtaExpandWithListInfoFromBound : wf.
+  Hint Opaque partial.Eval partial.EvalWithBound partial.EtaExpandWithBound partial.EtaExpandWithListInfoFromBound : wf interp rewrite.
   Import API.
 
   Lemma Wf_PartialEvaluateWithListInfoFromBounds
@@ -991,6 +992,7 @@ Module Compilers.
     : Wf (PartialEvaluateWithListInfoFromBounds E b_in).
   Proof. cbv [PartialEvaluateWithListInfoFromBounds]; eauto with wf. Qed.
   Hint Resolve Wf_PartialEvaluateWithListInfoFromBounds : wf.
+  Hint Opaque PartialEvaluateWithListInfoFromBounds : wf interp rewrite.
 
   Lemma Wf_PartialEvaluateWithBounds
         {relax_zrange} {t} (E : Expr t)
@@ -1000,4 +1002,5 @@ Module Compilers.
     : Wf (PartialEvaluateWithBounds relax_zrange E b_in).
   Proof. cbv [PartialEvaluateWithBounds]; eauto with wf. Qed.
   Hint Resolve Wf_PartialEvaluateWithBounds : wf.
+  Hint Opaque PartialEvaluateWithBounds : wf interp rewrite.
 End Compilers.

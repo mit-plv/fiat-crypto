@@ -19,7 +19,7 @@ Module Compilers.
       Definition VerifiedRewriterStripLiteralCasts : VerifiedRewriter_with_args false false strip_literal_casts_rewrite_rules_proofs.
       Proof using All. make_rewriter. Defined.
 
-      Definition RewriteStripLiteralCasts {t} := Eval hnf in @Rewrite VerifiedRewriterStripLiteralCasts t.
+      Definition RewriteStripLiteralCasts {t : API.type} := Eval hnf in @Rewrite VerifiedRewriterStripLiteralCasts t.
 
       Lemma Wf_RewriteStripLiteralCasts {t} e (Hwf : Wf e) : Wf (@RewriteStripLiteralCasts t e).
       Proof. now apply VerifiedRewriterStripLiteralCasts. Qed.
@@ -31,6 +31,7 @@ Module Compilers.
 
   Module Export Hints.
     Hint Resolve Wf_RewriteStripLiteralCasts : wf wf_extra.
+    Hint Opaque RewriteStripLiteralCasts : wf wf_extra interp interp_extra rewrite.
     Hint Rewrite @Interp_RewriteStripLiteralCasts : interp interp_extra.
   End Hints.
 End Compilers.

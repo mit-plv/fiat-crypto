@@ -22,7 +22,7 @@ Module Compilers.
       Definition VerifiedRewriterArith : VerifiedRewriter_with_args false false (arith_rewrite_rules_proofs max_const_val).
       Proof using All. make_rewriter. Defined.
 
-      Definition RewriteArith {t} := Eval hnf in @Rewrite VerifiedRewriterArith t.
+      Definition RewriteArith {t : API.type} := Eval hnf in @Rewrite VerifiedRewriterArith t.
 
       Lemma Wf_RewriteArith {t} e (Hwf : Wf e) : Wf (@RewriteArith t e).
       Proof. now apply VerifiedRewriterArith. Qed.
@@ -34,6 +34,7 @@ Module Compilers.
 
   Module Export Hints.
     Hint Resolve Wf_RewriteArith : wf wf_extra.
+    Hint Opaque RewriteArith : wf wf_extra interp interp_extra rewrite.
     Hint Rewrite @Interp_RewriteArith : interp interp_extra.
   End Hints.
 End Compilers.

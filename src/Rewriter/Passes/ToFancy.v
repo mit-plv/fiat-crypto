@@ -24,7 +24,7 @@ Module Compilers.
       Definition VerifiedRewriterToFancy : VerifiedRewriter_with_args false false fancy_rewrite_rules_proofs.
       Proof using All. make_rewriter. Defined.
 
-      Definition RewriteToFancy {t} : API.Expr t -> API.Expr t.
+      Definition RewriteToFancy {t : API.type} : API.Expr t -> API.Expr t.
       Proof using invert_low invert_high.
         let v := (eval hnf in (@Rewrite VerifiedRewriterToFancy t)) in exact v.
       Defined.
@@ -39,6 +39,7 @@ Module Compilers.
 
   Module Export Hints.
     Hint Resolve Wf_RewriteToFancy : wf wf_extra.
+    Hint Opaque RewriteToFancy : wf wf_extra interp interp_extra rewrite.
     Hint Rewrite @Interp_RewriteToFancy : interp interp_extra.
   End Hints.
 End Compilers.

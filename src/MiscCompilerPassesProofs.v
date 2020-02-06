@@ -145,6 +145,7 @@ Module Compilers.
   End Subst01.
 
   Hint Resolve Subst01.Wf_Subst01 : wf.
+  Hint Opaque Subst01.Subst01 : wf interp rewrite.
   Hint Rewrite @Subst01.Interp_Subst01 : interp.
 
   Module DeadCodeElimination.
@@ -182,5 +183,6 @@ Module Compilers.
   End DeadCodeElimination.
 
   Hint Resolve DeadCodeElimination.Wf_EliminateDead : wf.
+  Hint Opaque DeadCodeElimination.EliminateDead : wf interp rewrite.
   Hint Rewrite @DeadCodeElimination.Interp_EliminateDead : interp.
 End Compilers.
