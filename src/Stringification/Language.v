@@ -232,7 +232,7 @@ Module Compilers.
           : type.for_each_lhs_of_arrow (fun t => (nat -> string) * ZRange.type.option.interp t)%type t -> (nat -> string) * ZRange.type.base.option.interp (type.final_codomain t)
           := match idc in ident.ident t return type.for_each_lhs_of_arrow (fun t => (nat -> string) * ZRange.type.option.interp t)%type t -> (nat -> string) * ZRange.type.base.option.interp (type.final_codomain t) with
              | ident.Literal base.type.Z v => fun 'tt => (fun lvl => show_compact_Z (Nat.eqb lvl 0) v, ZRange.type.base.option.None)
-             | ident.Literal t v => fun 'tt => (fun lvl => show (Nat.eqb lvl 0) v, ZRange.type.base.option.None)
+             | ident.Literal t v => fun 'tt => (fun lvl => show (Nat.eqb lvl 0) v, ZRange.type.base.option.Some (t:=t) v)
              | ident.tt => fun _ => (fun _ => "()", tt)
              | ident.Nat_succ => fun '((x, xr), tt) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 10) ((x 10%nat) ++ ".+1"), ZRange.type.base.option.None)
              | ident.Nat_pred => fun '((x, xr), tt) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 10) ((x 10%nat) ++ ".-1"), ZRange.type.base.option.None)
@@ -246,7 +246,7 @@ Module Compilers.
              | ident.None _ => fun 'tt => (fun _ => "None", ZRange.type.base.option.None)
              | ident.nil t => fun 'tt => (fun _ => "[]", ZRange.type.base.option.None)
              | ident.cons t => fun '(x, ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 60) (maybe_wrap_cast with_casts x 59%nat ++ " :: " ++ y 60%nat), ZRange.type.base.option.None)
-             | ident.pair A B => fun '(x, (y, tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 201) (maybe_wrap_cast with_casts x 201%nat ++ ", " ++ maybe_wrap_cast with_casts y 200%nat), ZRange.type.base.option.None)
+             | ident.pair A B => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 201) (maybe_wrap_cast with_casts (x, xr) 201%nat ++ ", " ++ maybe_wrap_cast with_casts (y, yr) 200%nat), (xr, yr))
              | ident.fst A B => fun '((x, xr), tt) => (fun _ => x 0%nat ++ "₁", fst xr)
              | ident.snd A B => fun '((x, xr), tt) => (fun _ => x 0%nat ++ "₂", snd xr)
              | ident.prod_rect A B T => fun '((f, fr), ((p, pr), tt)) => (fun _ => "match " ++ p 200%nat ++ " with " ++ f 200%nat ++ " end", ZRange.type.base.option.None)
