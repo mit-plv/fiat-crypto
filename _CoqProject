@@ -1,21 +1,21 @@
 -R src Crypto
--R bbv/theories bbv
-bbv/theories/BinNotation.v
-bbv/theories/BinNotationZ.v
-bbv/theories/DepEq.v
-bbv/theories/DepEqNat.v
-bbv/theories/HexNotation.v
-bbv/theories/HexNotationWord.v
-bbv/theories/HexNotationZ.v
-bbv/theories/NLib.v
-bbv/theories/N_Z_nat_conversions.v
-bbv/theories/NatLib.v
-bbv/theories/Nomega.v
-bbv/theories/ReservedNotations.v
-bbv/theories/Word.v
-bbv/theories/WordScope.v
-bbv/theories/ZHints.v
-bbv/theories/ZLib.v
+-R bbv/src/bbv bbv
+bbv/src/bbv/BinNotation.v
+bbv/src/bbv/BinNotationZ.v
+bbv/src/bbv/DepEq.v
+bbv/src/bbv/DepEqNat.v
+bbv/src/bbv/HexNotation.v
+bbv/src/bbv/HexNotationWord.v
+bbv/src/bbv/HexNotationZ.v
+bbv/src/bbv/NLib.v
+bbv/src/bbv/N_Z_nat_conversions.v
+bbv/src/bbv/NatLib.v
+bbv/src/bbv/Nomega.v
+bbv/src/bbv/ReservedNotations.v
+bbv/src/bbv/Word.v
+bbv/src/bbv/WordScope.v
+bbv/src/bbv/ZHints.v
+bbv/src/bbv/ZLib.v
 src/Demo.v
 src/Algebra/Field.v
 src/Algebra/Field_test.v

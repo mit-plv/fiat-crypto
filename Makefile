@@ -69,7 +69,7 @@ endif
 
 update-_CoqProject::
 	$(SHOW)'ECHO > _CoqProject'
-	$(HIDE)(echo '-R $(SRC_DIR) $(MOD_NAME)'; echo '-R bbv/theories bbv'; ((git ls-files 'src/*.v'; (git submodule foreach 'git ls-files "*.v" 2>/dev/null | sed "s|^|$$path/|"' | grep 'bbv/')) | $(SORT_COQPROJECT))) > _CoqProject
+	$(HIDE)(echo '-R $(SRC_DIR) $(MOD_NAME)'; echo '-R bbv/src/bbv bbv'; ((git ls-files 'src/*.v'; (git submodule foreach 'git ls-files "*.v" 2>/dev/null | sed "s|^|$$path/|"' | grep 'bbv/')) | $(SORT_COQPROJECT))) > _CoqProject
 
 # add files to this list to prevent them from being built by default
 UNMADE_VOFILES :=
