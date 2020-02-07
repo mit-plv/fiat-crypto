@@ -134,7 +134,7 @@ OUTPUT_PREOUTS := \
 CHECK_OUTPUTS := $(addprefix check-,$(OUTPUT_PREOUTS))
 ACCEPT_OUTPUTS := $(addprefix accept-,$(OUTPUT_PREOUTS))
 
-all: coq standalone-ocaml c-files rust-files check-output
+all: coq standalone-ocaml perf-standalone c-files rust-files check-output
 coq: $(REGULAR_VOFILES)
 coq-without-bedrock2: $(REGULAR_EXCEPT_BEDROCK2_VOFILES)
 c-files: $(ALL_C_FILES)
