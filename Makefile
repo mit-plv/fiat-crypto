@@ -320,45 +320,45 @@ $(UNSATURATED_SOLINAS_C_FILES): $(UNSATURATED_SOLINAS) # Makefile
 $(WORD_BY_WORD_MONTGOMERY_C_FILES): $(WORD_BY_WORD_MONTGOMERY) # Makefile
 
 # 2^255 - 19
-curve25519_64.c:
+curve25519_64.c : curve25519_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --static '25519' '5' '2^255 - 19' '64' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --static '25519' '5' '2^255 - 19' '$*' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^255 - 19
-curve25519_32.c:
+curve25519_32.c : curve25519_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --static '25519' '10' '2^255 - 19' '32' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --static '25519' '10' '2^255 - 19' '$*' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^521 - 1
-p521_64.c:
+p521_64.c : p521_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --static 'p521' '9' '2^521 - 1' '64' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --static 'p521' '9' '2^521 - 1' '$*' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^521 - 1
-p521_32.c:
+p521_32.c : p521_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --static 'p521' '17' '2^521 - 1' '32' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --static 'p521' '17' '2^521 - 1' '$*' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 ## 2^224 - 2^96 + 1 ## does not bounds check
-#p224_solinas_64.c:
+#p224_solinas_64.c : p224_solinas_%.c :
 #	$(SHOW)'SYNTHESIZE > $@'
 #	$(HIDE)rm -f $@.ok
-#	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --static 'p224' '4' '2^224 - 2^96 + 1' '64' && touch $@.ok) > $@.tmp
+#	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --static 'p224' '4' '2^224 - 2^96 + 1' '$*' && touch $@.ok) > $@.tmp
 #	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^448 - 2^224 - 1
-p448_solinas_64.c:
+p448_solinas_64.c : p448_solinas_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --static 'p448' '8' '2^448 - 2^224 - 1' '64' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --static 'p448' '8' '2^448 - 2^224 - 1' '$*' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^256 - 2^224 + 2^192 + 2^96 - 1
@@ -406,45 +406,45 @@ $(UNSATURATED_SOLINAS_RUST_FILES): $(UNSATURATED_SOLINAS) # Makefile
 $(WORD_BY_WORD_MONTGOMERY_RUST_FILES): $(WORD_BY_WORD_MONTGOMERY) # Makefile
 
 # 2^255 - 19
-$(RS_DIR)curve25519_64.rs:
+$(RS_DIR)curve25519_64.rs : $(RS_DIR)curve25519_%.rs :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Rust '25519' '5' '2^255 - 19' '64' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Rust '25519' '5' '2^255 - 19' '$*' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^255 - 19
-$(RS_DIR)curve25519_32.rs:
+$(RS_DIR)curve25519_32.rs : $(RS_DIR)curve25519_%.rs :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Rust '25519' '10' '2^255 - 19' '32' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Rust '25519' '10' '2^255 - 19' '$*' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^521 - 1
-$(RS_DIR)p521_64.rs:
+$(RS_DIR)p521_64.rs : $(RS_DIR)p521_%.rs :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Rust 'p521' '9' '2^521 - 1' '64' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Rust 'p521' '9' '2^521 - 1' '$*' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^521 - 1
-$(RS_DIR)p521_32.rs:
+$(RS_DIR)p521_32.rs : $(RS_DIR)p521_%.rs :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Rust 'p521' '17' '2^521 - 1' '32' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Rust 'p521' '17' '2^521 - 1' '$*' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 ## 2^224 - 2^96 + 1 ## does not bounds check
-#$(RS_DIR)p224_solinas_64.rs:
+#$(RS_DIR)p224_solinas_64.rs : $(RS_DIR)p224_solinas_%.rs :
 #	$(SHOW)'SYNTHESIZE > $@'
 #	$(HIDE)rm -f $@.ok
-#	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Rust 'p224' '4' '2^224 - 2^96 + 1' '64' && touch $@.ok) > $@.tmp
+#	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Rust 'p224' '4' '2^224 - 2^96 + 1' '$*' && touch $@.ok) > $@.tmp
 #	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^448 - 2^224 - 1
-$(RS_DIR)p448_solinas_64.rs:
+$(RS_DIR)p448_solinas_64.rs : $(RS_DIR)p448_solinas_%.rs :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Rust 'p448' '8' '2^448 - 2^224 - 1' '64' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Rust 'p448' '8' '2^448 - 2^224 - 1' '$*' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^256 - 2^224 + 2^192 + 2^96 - 1
