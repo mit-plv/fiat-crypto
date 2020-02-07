@@ -23,6 +23,8 @@ tramp
 *.glob
 *.vio
 *.vo
+*.vos
+*.vok
 CoqMakefile.conf
 Makefile.bak
 Makefile.coq
