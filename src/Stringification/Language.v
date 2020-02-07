@@ -642,7 +642,7 @@ Module Compilers.
                   maybe_wrap_parens with_parens ("expr_let _ := " ++ show_x ++ " in _")
              end%string.
         Definition partially_show_expr {var t} : Show (@expr.expr base.type ident var t) := show_var_expr.
-        Local Notation default_with_casts := false.
+        Local Notation default_with_casts := true.
         Global Instance show_lines_expr {t} : ShowLines (@expr.expr base.type ident (fun _ => string) t)
           := fun with_parens e => let '(_, v, _) := show_eta_cps (fun t e args idx => @show_expr_lines default_with_casts t e args idx) 1%positive e in v (if with_parens then 0%nat else 201%nat).
         Global Instance show_lines_Expr {t} : ShowLines (@expr.Expr base.type ident t)
