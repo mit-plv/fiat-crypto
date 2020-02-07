@@ -3,7 +3,7 @@ Fiat-Crypto: Synthesizing Correct-by-Construction Code for Cryptographic Primiti
 
 Building
 -----
-[![Build Status](https://api.travis-ci.org/mit-plv/fiat-crypto.png?branch=master)](https://travis-ci.org/mit-plv/fiat-crypto) ![CI (Coq)](https://github.com/mit-plv/fiat-crypto/workflows/CI%20(Coq)/badge.svg)
+[![Build Status](https://api.travis-ci.org/mit-plv/fiat-crypto.png?branch=master)](https://travis-ci.org/mit-plv/fiat-crypto) [![CI (Coq)](https://github.com/mit-plv/fiat-crypto/workflows/CI%20(Coq)/badge.svg)](https://github.com/mit-plv/fiat-crypto/actions?query=workflow%3A%22CI+%28Coq%29%22+branch%3Amaster)
 
 This repository requires Coq 8.9 or later. Note that if you install Coq from Ubuntu aptitude packages, you need `libcoq-ocaml-dev` in addition to `coq`.
 
