@@ -1,4 +1,4 @@
-name: Test Generated C Files
+name: Test Generated C
 
 on: [push, pull_request]
 
