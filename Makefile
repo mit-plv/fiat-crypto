@@ -39,6 +39,7 @@ INSTALLDEFAULTROOT := Crypto
 	lite only-heavy printlite \
 	some-early pre-standalone standalone standalone-haskell standalone-ocaml \
 	test-c-files test-rust-files \
+	only-test-c-files only-test-rust-files \
 	check-output accept-output
 
 -include Makefile.coq
@@ -396,6 +397,8 @@ p434_64.c p434_32.c : p434_%.c :
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 test-c-files: $(ALL_C_FILES)
+
+test-c-files only-test-c-files:
 	$(CC) -Wall -Wno-unused-function -Werror $(CFLAGS) -c $(ALL_C_FILES)
 
 $(UNSATURATED_SOLINAS_RUST_FILES): $(UNSATURATED_SOLINAS) # Makefile
@@ -480,6 +483,8 @@ $(RS_DIR)p434_64.rs $(RS_DIR)p434_32.rs : $(RS_DIR)p434_%.rs :
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 test-rust-files: $(ALL_RUST_FILES)
+
+test-rust-files only-test-rust-files:
 	cd fiat-rust; $(CARGO_BUILD)
 
 all: $(addprefix fiat-rust/,$(COPY_TO_FIAT_RUST))
