@@ -16,26 +16,29 @@ Module Compilers.
 
   Module Import RewriteRules.
     Section __.
-      Definition VerifiedRewriterNBE : VerifiedRewriter_with_args true false nbe_rewrite_rules_proofs.
+      Definition VerifiedRewriterNBE : VerifiedRewriter_with_args true false true nbe_rewrite_rules_proofs.
       Proof using All. make_rewriter. Defined.
 
-      Definition RewriteNBE {t : API.type} := Eval hnf in @Rewrite VerifiedRewriterNBE t.
+      Definition default_opts := Eval hnf in @default_opts VerifiedRewriterNBE.
+      Let optsT := Eval hnf in optsT VerifiedRewriterNBE.
 
-      Lemma Wf_RewriteNBE {t} e (Hwf : Wf e) : Wf (@RewriteNBE t e).
+      Definition RewriteNBE (opts : optsT) {t : API.type} := Eval hnf in @Rewrite VerifiedRewriterNBE opts t.
+
+      Lemma Wf_RewriteNBE opts {t} e (Hwf : Wf e) : Wf (@RewriteNBE opts t e).
       Proof. now apply VerifiedRewriterNBE. Qed.
 
-      Lemma Interp_RewriteNBE {t} e (Hwf : Wf e) : API.Interp (@RewriteNBE t e) == API.Interp e.
+      Lemma Interp_RewriteNBE opts {t} e (Hwf : Wf e) : API.Interp (@RewriteNBE opts t e) == API.Interp e.
       Proof. now apply VerifiedRewriterNBE. Qed.
     End __.
   End RewriteRules.
 
-  Definition PartialEvaluate {t : API.type} (e : Expr t) : Expr t := RewriteRules.RewriteNBE e.
+  Definition PartialEvaluate opts {t : API.type} (e : Expr t) : Expr t := RewriteRules.RewriteNBE opts e.
 
-  Lemma Wf_PartialEvaluate {t} e (Hwf : Wf e) : Wf (@PartialEvaluate t e).
+  Lemma Wf_PartialEvaluate opts {t} e (Hwf : Wf e) : Wf (@PartialEvaluate opts t e).
   Proof. apply Wf_RewriteNBE, Hwf. Qed.
 
-  Lemma Interp_PartialEvaluate {t} e (Hwf : Wf e)
-    : API.Interp (@PartialEvaluate t e) == API.Interp e.
+  Lemma Interp_PartialEvaluate opts {t} e (Hwf : Wf e)
+    : API.Interp (@PartialEvaluate opts t e) == API.Interp e.
   Proof. apply Interp_RewriteNBE, Hwf. Qed.
 
   Module Export Hints.

@@ -23,18 +23,21 @@ Module Compilers.
               (Hlow : forall s v v', invert_low s v = Some v' -> v = Z.land v' (2^(s/2)-1))
               (Hhigh : forall s v v', invert_high s v = Some v' -> v = Z.shiftr v' (s/2)).
 
-      Definition VerifiedRewriterToFancyWithCasts : VerifiedRewriter_with_args false false (@fancy_with_casts_rewrite_rules_proofs invert_low invert_high value_range flag_range Hlow Hhigh).
+      Definition VerifiedRewriterToFancyWithCasts : VerifiedRewriter_with_args false false true (@fancy_with_casts_rewrite_rules_proofs invert_low invert_high value_range flag_range Hlow Hhigh).
       Proof using All. make_rewriter. Defined.
 
-      Definition RewriteToFancyWithCasts {t : API.type} : API.Expr t -> API.Expr t.
+      Definition default_opts := Eval hnf in @default_opts VerifiedRewriterToFancyWithCasts.
+      Let optsT := Eval hnf in optsT VerifiedRewriterToFancyWithCasts.
+
+      Definition RewriteToFancyWithCasts (opts : optsT) {t : API.type} : API.Expr t -> API.Expr t.
       Proof using invert_low invert_high value_range flag_range.
-        let v := (eval hnf in (@Rewrite VerifiedRewriterToFancyWithCasts t)) in exact v.
+        let v := (eval hnf in (@Rewrite VerifiedRewriterToFancyWithCasts opts t)) in exact v.
       Defined.
 
-      Lemma Wf_RewriteToFancyWithCasts {t} e (Hwf : Wf e) : Wf (@RewriteToFancyWithCasts t e).
+      Lemma Wf_RewriteToFancyWithCasts opts {t} e (Hwf : Wf e) : Wf (@RewriteToFancyWithCasts opts t e).
       Proof using All. now apply VerifiedRewriterToFancyWithCasts. Qed.
 
-      Lemma Interp_RewriteToFancyWithCasts {t} e (Hwf : Wf e) : API.Interp (@RewriteToFancyWithCasts t e) == API.Interp e.
+      Lemma Interp_RewriteToFancyWithCasts opts {t} e (Hwf : Wf e) : API.Interp (@RewriteToFancyWithCasts opts t e) == API.Interp e.
       Proof using All. now apply VerifiedRewriterToFancyWithCasts. Qed.
     End __.
   End RewriteRules.

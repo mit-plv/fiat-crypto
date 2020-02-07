@@ -33,6 +33,7 @@ Local Existing Instance ToString.C.OutputCAPI.
 Local Instance static : static_opt := true.
 Local Instance : use_mul_for_cmovznz_opt := false.
 Local Instance : emit_primitives_opt := true.
+Local Existing Instance default_low_level_rewriter_method.
 
 Module debugging_remove_mul_split_to_C_uint1_carry.
   Section __.
@@ -828,7 +829,7 @@ Module debugging_remove_mul_split2.
       end.
       cbv beta iota in k.
       set (v := Pipeline.RewriteAndEliminateDeadAndInline _ _ _ _) in (value of k).
-      set (v'' := MulSplit.Compilers.RewriteRules.RewriteMulSplit _ _ _) in (value of k).
+      set (v'' := MulSplit.Compilers.RewriteRules.RewriteMulSplit _ _ _ _) in (value of k).
       vm_compute in v; clear v';
       lazymatch (eval cbv [v] in v) with
       | ?x => pose (id x) as v'; change v with v' in (value of v''); clear v

@@ -20,15 +20,18 @@ Module Compilers.
       Context (bitwidth : Z)
               (lgcarrymax : Z).
 
-      Definition VerifiedRewriterMulSplit : VerifiedRewriter_with_args false false (mul_split_rewrite_rules_proofs bitwidth lgcarrymax).
+      Definition VerifiedRewriterMulSplit : VerifiedRewriter_with_args false false true (mul_split_rewrite_rules_proofs bitwidth lgcarrymax).
       Proof using All. make_rewriter. Defined.
 
-      Definition RewriteMulSplit {t : API.type} := Eval hnf in @Rewrite VerifiedRewriterMulSplit t.
+      Definition default_opts := Eval hnf in @default_opts VerifiedRewriterMulSplit.
+      Let optsT := Eval hnf in optsT VerifiedRewriterMulSplit.
 
-      Lemma Wf_RewriteMulSplit {t} e (Hwf : Wf e) : Wf (@RewriteMulSplit t e).
+      Definition RewriteMulSplit (opts : optsT) {t : API.type} := Eval hnf in @Rewrite VerifiedRewriterMulSplit opts t.
+
+      Lemma Wf_RewriteMulSplit opts {t} e (Hwf : Wf e) : Wf (@RewriteMulSplit opts t e).
       Proof. now apply VerifiedRewriterMulSplit. Qed.
 
-      Lemma Interp_RewriteMulSplit {t} e (Hwf : Wf e) : API.Interp (@RewriteMulSplit t e) == API.Interp e.
+      Lemma Interp_RewriteMulSplit opts {t} e (Hwf : Wf e) : API.Interp (@RewriteMulSplit opts t e) == API.Interp e.
       Proof. now apply VerifiedRewriterMulSplit. Qed.
     End __.
   End RewriteRules.
