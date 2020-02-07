@@ -36,7 +36,7 @@ Proof.
   let v := Reify ((fun x => 2^x) 255)%Z in
   pose v as E.
   vm_compute in E.
-  pose (PartialEvaluate E) as E'.
+  pose (PartialEvaluate RewriteRules.default_opts E) as E'.
   vm_compute in E'.
   lazymatch (eval cbv delta [E'] in E') with
   | (fun var => expr.Ident (ident.Literal ?v)) => idtac
@@ -47,21 +47,21 @@ Module testrewrite.
   Import expr.
   Import ident.
 
-  Redirect "log" Eval compute in RewriteRules.RewriteNBE (fun var =>
+  Redirect "log" Eval compute in RewriteRules.RewriteNBE RewriteRules.default_opts (fun var =>
                           (#ident.fst @ (expr_let x := ##10 in ($x, $x)))%expr).
 
   Notation "x + y" := (@expr.Ident base.type ident _ _ ident.Z_add @ x @ y)%expr : expr_scope.
 
-  Redirect "log" Eval compute in RewriteRules.RewriteNBE (fun var =>
+  Redirect "log" Eval compute in RewriteRules.RewriteNBE RewriteRules.default_opts (fun var =>
                           ((\ x , expr_let y := ##5 in #ident.fst @ $x + (#ident.fst @ $x + ($y + $y)))
                              @ (##1, ##1))%expr).
 
-  Redirect "log" Eval compute in RewriteRules.RewriteNBE (fun var =>
+  Redirect "log" Eval compute in RewriteRules.RewriteNBE RewriteRules.default_opts (fun var =>
                           ((\ x , expr_let y := ##5 in $y + ($y + (#ident.fst @ $x + #ident.snd @ $x)))
                              @ (##1, ##7))%expr).
 
   Redirect "log" Eval cbv in partial.eval_with_bound partial.default_relax_zrange
-                                      (RewriteRules.RewriteNBE (fun var =>
+                                      (RewriteRules.RewriteNBE RewriteRules.default_opts (fun var =>
                 (\z , ((\ x , expr_let y := ##5 in $y + ($z + (#ident.fst @ $x + #ident.snd @ $x)))
                          @ (##1, ##7)))%expr) _)
                 (Datatypes.Some r[0~>100]%zrange, Datatypes.tt).
@@ -197,7 +197,7 @@ Module test4.
     pose (partial.EtaExpandWithListInfoFromBound E' bound) as E''.
     lazy in E''.
     clear E'.
-    pose (PartialEvaluate E'') as E'''.
+    pose (PartialEvaluate RewriteRules.default_opts E'') as E'''.
     lazy in E'''.
     pose (partial.EvalWithBound partial.default_relax_zrange E''' bound) as E''''.
     lazy in E''''.
@@ -224,7 +224,7 @@ Module test5.
                         x) in
     pose v as E.
     vm_compute in E.
-    pose (RewriteRules.RewriteArith (2^8) (partial.Eval E)) as E'.
+    pose (RewriteRules.RewriteArith (2^8) RewriteRules.default_opts (partial.Eval E)) as E'.
     lazy in E'.
     clear E.
     lazymatch (eval cbv delta [E'] in E') with
@@ -244,7 +244,7 @@ Module test5.
                         x) in
     pose v as E.
     vm_compute in E.
-    pose (RewriteRules.RewriteArith (2^8) (partial.Eval E)) as E'.
+    pose (RewriteRules.RewriteArith (2^8) RewriteRules.default_opts (partial.Eval E)) as E'.
     lazy in E'.
     clear E.
     lazymatch (eval cbv delta [E'] in E') with
@@ -268,7 +268,7 @@ Module test6.
                        else y) in
     pose v as E.
     vm_compute in E.
-    pose (PartialEvaluate E) as E''.
+    pose (PartialEvaluate RewriteRules.default_opts E) as E''.
     lazy in E''.
     lazymatch eval cbv delta [E''] in E'' with
     | fun var : type -> Type => (λ x : var _, $x)%expr
@@ -320,7 +320,7 @@ Module test9.
     let v := Reify (fun y : list Z => (hd 0%Z y, tl y)) in
     pose v as E.
     vm_compute in E.
-    pose (PartialEvaluate E) as E'.
+    pose (PartialEvaluate RewriteRules.default_opts E) as E'.
     lazy in E'.
     clear E.
     lazymatch (eval cbv delta [E'] in E') with
@@ -388,7 +388,7 @@ Module test12.
     pose v as E.
     vm_compute in E.
     pose (Some (repeat (@None zrange) 3), Datatypes.tt) as bound.
-    pose (PartialEvaluate (partial.EtaExpandWithListInfoFromBound E bound)) as E'.
+    pose (PartialEvaluate RewriteRules.default_opts (partial.EtaExpandWithListInfoFromBound E bound)) as E'.
     lazy in E'.
     clear E.
     lazymatch (eval cbv delta [E'] in E') with
@@ -408,7 +408,7 @@ Module test13.
       pose v0 as exp.
     vm_compute in E.
     vm_compute in exp.
-    pose (PartialEvaluate E) as E'.
+    pose (PartialEvaluate RewriteRules.default_opts E) as E'.
     vm_compute in E'.
     clear E.
     let r := Reify exp in

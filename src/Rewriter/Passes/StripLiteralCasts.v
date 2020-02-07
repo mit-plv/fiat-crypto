@@ -16,15 +16,18 @@ Module Compilers.
 
   Module Import RewriteRules.
     Section __.
-      Definition VerifiedRewriterStripLiteralCasts : VerifiedRewriter_with_args false false strip_literal_casts_rewrite_rules_proofs.
+      Definition VerifiedRewriterStripLiteralCasts : VerifiedRewriter_with_args false false true strip_literal_casts_rewrite_rules_proofs.
       Proof using All. make_rewriter. Defined.
 
-      Definition RewriteStripLiteralCasts {t : API.type} := Eval hnf in @Rewrite VerifiedRewriterStripLiteralCasts t.
+      Definition default_opts := Eval hnf in @default_opts VerifiedRewriterStripLiteralCasts.
+      Let optsT := Eval hnf in optsT VerifiedRewriterStripLiteralCasts.
 
-      Lemma Wf_RewriteStripLiteralCasts {t} e (Hwf : Wf e) : Wf (@RewriteStripLiteralCasts t e).
+      Definition RewriteStripLiteralCasts (opts : optsT) {t : API.type} := Eval hnf in @Rewrite VerifiedRewriterStripLiteralCasts opts t.
+
+      Lemma Wf_RewriteStripLiteralCasts opts {t} e (Hwf : Wf e) : Wf (@RewriteStripLiteralCasts opts t e).
       Proof. now apply VerifiedRewriterStripLiteralCasts. Qed.
 
-      Lemma Interp_RewriteStripLiteralCasts {t} e (Hwf : Wf e) : expr.Interp (@Compilers.ident_interp) (@RewriteStripLiteralCasts t e) == expr.Interp (@Compilers.ident_interp) e.
+      Lemma Interp_RewriteStripLiteralCasts opts {t} e (Hwf : Wf e) : expr.Interp (@Compilers.ident_interp) (@RewriteStripLiteralCasts opts t e) == expr.Interp (@Compilers.ident_interp) e.
       Proof. now apply VerifiedRewriterStripLiteralCasts. Qed.
     End __.
   End RewriteRules.

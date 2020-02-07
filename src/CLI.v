@@ -252,6 +252,9 @@ Module ForExtraction.
       ; widen_carry :> widen_carry_opt
       (** Should we widen the byte type to the full bitwidth? *)
       ; widen_bytes :> widen_bytes_opt
+      (** What method should we use for rewriting? *)
+      ; low_level_rewriter_method :> low_level_rewriter_method_opt
+        := default_low_level_rewriter_method
     }.
 
   (** We define a class for the various operations that are specific to a pipeline *)

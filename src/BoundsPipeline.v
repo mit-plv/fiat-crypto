@@ -80,6 +80,10 @@ Import
   MiscCompilerPasses.Compilers
   Stringification.Language.Compilers.
 
+Import
+  ProofsCommon.Compilers.RewriteRules.GoalType
+  ProofsCommon.Compilers.RewriteRules.GoalType.DefaultOptionType.
+
 Export Stringification.Language.Compilers.Options.
 
 Import Compilers.API.
@@ -136,6 +140,14 @@ Proof.
         try (rewrite <- Z.log2_up_le_pow2_full in *; omega).
 Qed.
 
+(** Which of the rewriter methods do we use? *)
+(** Note that we don't currently generate a precomputed naive method, because it eats too much RAM to do so. *)
+Inductive low_level_rewriter_method_opt :=
+  precomputed_decision_tree | unreduced_decision_tree | unreduced_naive.
+Existing Class low_level_rewriter_method_opt.
+(** We make this an instance later *)
+Definition default_low_level_rewriter_method : low_level_rewriter_method_opt
+  := precomputed_decision_tree.
 (** Prefix function definitions with static/non-public? *)
 Class static_opt := static : bool.
 Typeclasses Opaque static_opt.
@@ -194,6 +206,12 @@ Module Pipeline.
   Section show.
     Context {output_api : ToString.OutputLanguageAPI}.
     Local Open Scope string_scope.
+    Global Instance show_low_level_rewriter_method_opt : Show low_level_rewriter_method_opt
+      := fun _ v => match v with
+                    | precomputed_decision_tree => "precomputed_decision_tree"
+                    | unreduced_decision_tree => "unreduced_decision_tree"
+                    | unreduced_naive => "unreduced_naive"
+                    end.
     Fixpoint find_too_loose_base_bounds {t}
       : ZRange.type.base.option.interp t -> ZRange.type.base.option.interp t-> bool * list (nat * nat) * list (zrange * zrange)
       := match t return ZRange.type.base.option.interp t -> ZRange.type.option.interp t-> bool * list (nat * nat) * list (zrange * zrange) with
@@ -355,7 +373,23 @@ Module Pipeline.
        let E := if with_dead_code_elimination then DeadCodeElimination.EliminateDead E else E in
        E.
 
+  Definition opts_of_method
+             {low_level_rewriter_method : low_level_rewriter_method_opt}
+    := {| use_decision_tree
+          := match low_level_rewriter_method with
+             | precomputed_decision_tree => true
+             | unreduced_decision_tree => true
+             | unreduced_naive => false
+             end;
+          use_precomputed_functions
+          := match low_level_rewriter_method with
+             | precomputed_decision_tree => true
+             | unreduced_decision_tree => false
+             | unreduced_naive => false
+             end; |}.
+
   Definition BoundsPipeline
+             {low_level_rewriter_method : low_level_rewriter_method_opt}
              {split_mul_to : split_mul_to_opt}
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
@@ -368,12 +402,13 @@ Module Pipeline.
              out_bounds
   : ErrorT (Expr t)
     := (*let E := expr.Uncurry E in*)
+      let opts := opts_of_method in
       let E := PartialEvaluateWithListInfoFromBounds E arg_bounds in
-      let E := PartialEvaluate E in
-      let E := RewriteAndEliminateDeadAndInline (RewriteRules.RewriteArith 0) with_dead_code_elimination with_subst01 E in
-      let E := RewriteRules.RewriteArith (2^8) E in (* reassociate small consts *)
+      let E := PartialEvaluate opts E in
+      let E := RewriteAndEliminateDeadAndInline (RewriteRules.RewriteArith 0 opts) with_dead_code_elimination with_subst01 E in
+      let E := RewriteRules.RewriteArith (2^8) opts E in (* reassociate small consts *)
       let E := match translate_to_fancy with
-               | Some {| invert_low := invert_low ; invert_high := invert_high |} => RewriteRules.RewriteToFancy invert_low invert_high E
+               | Some {| invert_low := invert_low ; invert_high := invert_high |} => RewriteRules.RewriteToFancy invert_low invert_high opts E
                | None => E
                end in
       dlet_nd e := ToFlat E in
@@ -381,18 +416,18 @@ Module Pipeline.
       let E' := CheckedPartialEvaluateWithBounds relax_zrange E arg_bounds out_bounds in
       match E' with
       | inl E
-        => let E := RewriteAndEliminateDeadAndInline RewriteRules.RewriteArithWithCasts with_dead_code_elimination with_subst01 E in
+        => let E := RewriteAndEliminateDeadAndInline (RewriteRules.RewriteArithWithCasts opts) with_dead_code_elimination with_subst01 E in
            let E := match split_mul_to with
                     | Some (max_bitwidth, lgcarrymax)
-                      => RewriteRules.RewriteMulSplit max_bitwidth lgcarrymax E
+                      => RewriteRules.RewriteMulSplit max_bitwidth lgcarrymax opts E
                     | None => E
                     end in
            let E := match translate_to_fancy with
                     | Some {| invert_low := invert_low ; invert_high := invert_high ; value_range := value_range ; flag_range := flag_range |}
-                      => RewriteRules.RewriteToFancyWithCasts invert_low invert_high value_range flag_range E
+                      => RewriteRules.RewriteToFancyWithCasts invert_low invert_high value_range flag_range opts E
                     | None => E
                     end in
-           let E := RewriteRules.RewriteStripLiteralCasts E in
+           let E := RewriteRules.RewriteStripLiteralCasts opts E in
            Success E
       | inr (inl (b, E))
         => Error (Computed_bounds_are_not_tight_enough b out_bounds E arg_bounds)
@@ -403,6 +438,7 @@ Module Pipeline.
   Definition BoundsPipelineToStrings
              {output_language_api : ToString.OutputLanguageAPI}
              {static : static_opt}
+             {low_level_rewriter_method : low_level_rewriter_method_opt}
              {split_mul_to : split_mul_to_opt}
              (type_prefix : string)
              (name : string)
@@ -437,6 +473,7 @@ Module Pipeline.
   Definition BoundsPipelineToString
              {output_language_api : ToString.OutputLanguageAPI}
              {static : static_opt}
+             {low_level_rewriter_method : low_level_rewriter_method_opt}
              {split_mul_to : split_mul_to_opt}
              (type_prefix : string)
              (name : string)
@@ -463,13 +500,13 @@ Module Pipeline.
        end.
 
   Local Notation arg_bounds_of_pipeline result
-    := ((fun a b c possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c possible_values t E arg_bounds out_bounds = result') => arg_bounds) _ _ _ _ _ _ _ _ result eq_refl)
+    := ((fun a b c d possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d possible_values t E arg_bounds out_bounds = result') => arg_bounds) _ _ _ _ _ _ _ _ _ result eq_refl)
          (only parsing).
   Local Notation out_bounds_of_pipeline result
-    := ((fun a b c possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c possible_values t E arg_bounds out_bounds = result') => out_bounds) _ _ _ _ _ _ _ _ result eq_refl)
+    := ((fun a b c d possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d possible_values t E arg_bounds out_bounds = result') => out_bounds) _ _ _ _ _ _ _ _ _ result eq_refl)
          (only parsing).
   Local Notation possible_values_of_pipeline result
-    := ((fun a b c possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c possible_values t E arg_bounds out_bounds = result') => possible_values) _ _ _ _ _ _ _ _ result eq_refl)
+    := ((fun a b c d possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d possible_values t E arg_bounds out_bounds = result') => possible_values) _ _ _ _ _ _ _ _ _ result eq_refl)
          (only parsing).
 
   Notation FromPipelineToString prefix name result
@@ -523,6 +560,7 @@ Module Pipeline.
   Proof. cbv [RewriteAndEliminateDeadAndInline Let_In]; wf_interp_t. Qed.
 
   Global Hint Resolve @Wf_RewriteAndEliminateDeadAndInline : wf wf_extra.
+  Global Hint Opaque RewriteAndEliminateDeadAndInline : wf wf_extra.
 
   Lemma Interp_RewriteAndEliminateDeadAndInline {t} DoRewrite with_dead_code_elimination with_subst01
         (Interp_DoRewrite : forall E, Wf E -> Interp (DoRewrite E) == Interp E)
@@ -539,6 +577,7 @@ Module Pipeline.
   Hint Rewrite @Interp_RewriteAndEliminateDeadAndInline : interp interp_extra.
 
   Lemma BoundsPipeline_correct
+             {low_level_rewriter_method : low_level_rewriter_method_opt}
              {split_mul_to : split_mul_to_opt}
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
@@ -613,6 +652,7 @@ Module Pipeline.
        /\ Wf rv.
 
   Lemma BoundsPipeline_correct_trans
+        {low_level_rewriter_method : low_level_rewriter_method_opt}
         {split_mul_to : split_mul_to_opt}
         (with_dead_code_elimination : bool := true)
         (with_subst01 : bool)
@@ -656,6 +696,8 @@ Module Pipeline.
                  | exact eq_refl ].
 
   Module Export Instances.
+    (*Global Existing Instance default_low_level_rewriter_method.*)
+
     Global Instance bounds0_good {t : base.type} {bounds} : @bounds_goodT t bounds.
     Proof. solve_bounds_good. Qed.
 

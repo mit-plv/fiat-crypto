@@ -21,18 +21,21 @@ Module Compilers.
               (Hlow : forall s v v', invert_low s v = Some v' -> v = Z.land v' (2^(s/2)-1))
               (Hhigh : forall s v v', invert_high s v = Some v' -> v = Z.shiftr v' (s/2)).
 
-      Definition VerifiedRewriterToFancy : VerifiedRewriter_with_args false false fancy_rewrite_rules_proofs.
+      Definition VerifiedRewriterToFancy : VerifiedRewriter_with_args false false true fancy_rewrite_rules_proofs.
       Proof using All. make_rewriter. Defined.
 
-      Definition RewriteToFancy {t : API.type} : API.Expr t -> API.Expr t.
+      Definition default_opts := Eval hnf in @default_opts VerifiedRewriterToFancy.
+      Let optsT := Eval hnf in optsT VerifiedRewriterToFancy.
+
+      Definition RewriteToFancy (opts : optsT) {t : API.type} : API.Expr t -> API.Expr t.
       Proof using invert_low invert_high.
-        let v := (eval hnf in (@Rewrite VerifiedRewriterToFancy t)) in exact v.
+        let v := (eval hnf in (@Rewrite VerifiedRewriterToFancy opts t)) in exact v.
       Defined.
 
-      Lemma Wf_RewriteToFancy {t} e (Hwf : Wf e) : Wf (@RewriteToFancy t e).
+      Lemma Wf_RewriteToFancy opts {t} e (Hwf : Wf e) : Wf (@RewriteToFancy opts t e).
       Proof using All. now apply VerifiedRewriterToFancy. Qed.
 
-      Lemma Interp_RewriteToFancy {t} e (Hwf : Wf e) : API.Interp (@RewriteToFancy t e) == API.Interp e.
+      Lemma Interp_RewriteToFancy opts {t} e (Hwf : Wf e) : API.Interp (@RewriteToFancy opts t e) == API.Interp e.
       Proof using All. now apply VerifiedRewriterToFancy. Qed.
     End __.
   End RewriteRules.
