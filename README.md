@@ -1,4 +1,4 @@
-[![Build Status](https://api.travis-ci.org/mit-plv/fiat-crypto.png?branch=sp2019latest)](https://travis-ci.org/mit-plv/fiat-crypto)
+![CI (Coq)](https://github.com/mit-plv/fiat-crypto/workflows/CI%20(Coq)/badge.svg?branch=sp2019latest)
 
 Fiat-Crypto: Synthesizing Correct-by-Construction Code for Cryptographic Primitives
 =====
