@@ -527,7 +527,11 @@ Module Compilers.
 
           ToString.ToFunctionLines := @ToFunctionLines;
 
-          ToString.typedef_header := String.typedef_header
+          ToString.typedef_header := String.typedef_header;
+
+          (** No special handling for any functions *)
+          ToString.strip_special_infos infos := infos;
+
         |}.
     End C.
     Notation ToFunctionLines := C.ToFunctionLines.

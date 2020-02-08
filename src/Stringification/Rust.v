@@ -356,6 +356,8 @@ Module Rust.
   Definition OutputRustAPI : ToString.OutputLanguageAPI :=
     {| ToString.comment_block := List.map (fun line => "/* " ++ line ++ " */")%string;
        ToString.ToFunctionLines := @ToFunctionLines;
-       ToString.typedef_header := typedef_header |}.
+       ToString.typedef_header := typedef_header;
+       (** No special handling for any functions *)
+       ToString.strip_special_infos infos := infos |}.
 
 End Rust.

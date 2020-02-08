@@ -906,7 +906,7 @@ Section __.
                    | requests => List.map (synthesize_of_name function_name_prefix) requests
                    end in
          let infos := aggregate_infos ls in
-         let '(extra_ls, extra_bit_widths) := extra_synthesis function_name_prefix infos in
+         let '(extra_ls, extra_bit_widths) := extra_synthesis function_name_prefix (ToString.strip_special_infos infos) in
          let res := (if emit_primitives then extra_ls else nil) ++ List.map (fun '(name, res) => (name, (res <- res; Success (fst res))%error)) ls in
          let infos := ToString.ident_info_union
                         infos
