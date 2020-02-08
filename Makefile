@@ -344,7 +344,7 @@ p521_64.c : p521_%.c :
 p521_32.c : p521_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --static 'p521' '17' '2^521 - 1' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --static 'p521' '18' '2^521 - 1' '$*' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 ## 2^224 - 2^96 + 1 ## does not bounds check
@@ -430,7 +430,7 @@ $(RS_DIR)p521_64.rs : $(RS_DIR)p521_%.rs :
 $(RS_DIR)p521_32.rs : $(RS_DIR)p521_%.rs :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Rust 'p521' '17' '2^521 - 1' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Rust 'p521' '18' '2^521 - 1' '$*' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 ## 2^224 - 2^96 + 1 ## does not bounds check
