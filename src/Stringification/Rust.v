@@ -319,6 +319,11 @@ Module Rust.
       "(" ++ String.concat ", " (to_arg_list prefix Out rets ++ to_arg_list_for_each_lhs_of_arrow prefix args) ++
       ") -> () {")%string :: (List.map (fun s => "  " ++ s)%string (to_strings prefix body)) ++ ["}"%string]%list.
 
+  (** In Rust, there is no munging of return arguments (they remain
+      passed by pointers), so all variables are live *)
+  Local Instance : consider_retargs_live_opt := fun _ _ _ => true.
+  Local Instance : rename_dead_opt := fun s => s.
+
   Definition ToFunctionLines
              {relax_zrange : relax_zrange_opt}
              (do_bounds_check : bool) (static : bool) (prefix : string) (name : string)

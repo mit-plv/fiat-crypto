@@ -110,6 +110,16 @@ Module Compilers.
       Definition OUGHT_TO_BE_UNUSED {T1 T2} (v : T1) (v' : T2) := v.
       Global Opaque OUGHT_TO_BE_UNUSED.
 
+      Definition ComputeLive {t} (e : expr.Expr t) : PositiveMap.t unit
+        := @Subst01.ComputeLiveCounts unit tt (fun _ => tt) base_type ident _ e.
+      Definition is_live (map : PositiveMap.t unit) (idx : positive) : bool
+        := match PositiveMap.find idx map with
+           | Some tt => true
+           | None => false
+           end.
+      Definition is_dead (map : PositiveMap.t unit) (idx : positive) : bool
+        := negb (is_live map idx).
+
       Definition EliminateDead {t} (e : expr.Expr t) : expr.Expr t
         := @Subst01.Subst0n unit tt (fun _ => tt) base_type ident (@OUGHT_TO_BE_UNUSED) (fun _ => false) t e.
     End with_ident.

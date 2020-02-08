@@ -181,6 +181,103 @@ Module Compilers.
                   e).
       End ident_infos.
 
+      Module name_infos.
+        Notation t := (list string) (only parsing).
+        Definition mem (v : string) (m : t) : bool := existsb (Equality.string_beq v) m.
+        Definition add (v : string) (m : t) : t
+          := if mem v m then m else v :: m.
+        Definition union (m1 m2 : t) : t
+          := let '(l1, l2) := (List.length m1, List.length m2) in
+             let '(m1, m2) := if (l1 <=? l2)%nat then (m1, m2) else (m2, m1) in
+             (* now m1 is shorter, so we recurse over m1 *)
+             List.fold_right add m2 m1.
+        Definition empty : t := nil.
+        Definition singleton (v : string) : t := add v empty.
+
+        Section __.
+          Context (consider_retargs_live : forall s d, ident s d -> bool).
+
+          Let consider_addr_dead s d (idc : ident s d) : bool
+            := match idc with
+               | Addr => false
+               | _ => true
+               end.
+
+          Fixpoint collect_live_of_arith_expr
+                   (consider_args_live : forall s d, ident s d -> bool)
+                   {t'} (e : arith_expr t') : t
+            := match e with
+               | AppIdent s d idc arg
+                 => if consider_args_live s d idc
+                    then @collect_live_of_arith_expr
+                           (if consider_retargs_live s d idc
+                            then consider_args_live
+                            else consider_addr_dead)
+                           _ arg
+                    else empty
+               | Var t v => singleton v
+               | Pair A B a b => union (@collect_live_of_arith_expr consider_args_live _ a) (@collect_live_of_arith_expr consider_args_live _ b)
+               | TT => empty
+               end.
+
+          Fixpoint collect_live_of_stmt (e : stmt) : t
+            := match e with
+               | Assign _ _ _ _ val
+               | AssignZPtr _ _ val
+               | Call val
+               | AssignNth _ _ val
+                 => collect_live_of_arith_expr (fun _ _ _ => true) val
+               | DeclareVar _ _ _ => empty
+               end.
+
+          Fixpoint collect_live (e : expr) : t
+            := fold_right
+                 union
+                 empty
+                 (List.map
+                    collect_live_of_stmt
+                    e).
+
+          Section adjust_dead.
+            Context (rename_dead : string -> string)
+                    (live : t).
+
+            Definition rename_if_dead (v : string) : string
+              := if mem v live then v else rename_dead v.
+
+            Fixpoint adjust_dead_of_arith_expr {t'} (e : arith_expr t') : arith_expr t'
+              := match e with
+                 | AppIdent s d idc arg => AppIdent idc (@adjust_dead_of_arith_expr _ arg)
+                 | Var t v => Var t (rename_if_dead v)
+                 | Pair A B a b => Pair (@adjust_dead_of_arith_expr _ a) (@adjust_dead_of_arith_expr _ b)
+                 | TT => TT
+                 end.
+
+            Fixpoint adjust_dead_of_stmt (e : stmt) : list stmt
+              := match e with
+                 | Call val
+                   => [Call (adjust_dead_of_arith_expr val)]
+                 | Assign declare t sz name val
+                   => [Assign declare t sz name (adjust_dead_of_arith_expr val)]
+                 | AssignZPtr name sz val
+                   => [AssignZPtr name sz (adjust_dead_of_arith_expr val)]
+                 | AssignNth name n val
+                   => [AssignNth name n (adjust_dead_of_arith_expr val)]
+                 | DeclareVar t sz name
+                   => if mem name live
+                      then [DeclareVar t sz name]
+                      else []
+                 end.
+
+            Fixpoint adjust_dead_of_expr (e : expr) : expr
+              := flat_map adjust_dead_of_stmt e.
+          End adjust_dead.
+
+          Definition adjust_dead (rename_dead : string -> string) (e : expr) : expr
+            := adjust_dead_of_expr rename_dead (collect_live e) e.
+        End __.
+      End name_infos.
+
       Module OfPHOAS.
         Export Stringification.Language.Compilers.ToString.OfPHOAS.
 
@@ -236,10 +333,14 @@ Module Compilers.
             upcast_on_funcall : bool
           }.
 
-        Section __.
+        Class consider_retargs_live_opt := consider_retargs_live : forall {s d}, ident s d -> bool.
+        Class rename_dead_opt := rename_dead : string -> string.
 
+        Section __.
           Context {lang_casts : LanguageCasts}
-                  {relax_zrange : relax_zrange_opt}.
+                  {relax_zrange : relax_zrange_opt}
+                  {consider_retargs_live : consider_retargs_live_opt}
+                  {rename_dead : rename_dead_opt}.
 
           (* None means unconstrained *)
           Definition bin_op_natural_output_opt
@@ -1241,7 +1342,7 @@ Module Compilers.
                  | type.base t
                    => fun e tt vd
                       => rv <- expr_of_base_PHOAS do_bounds_check e (in_to_body_count count) make_name vd;
-                           ret (tt, vd, rv)
+                           ret (tt, vd, name_infos.adjust_dead consider_retargs_live rename_dead rv)
                  | type.arrow s d
                    => fun e '(inbound, inbounds) vd
                       => match var_data_of_bounds count make_in_name inbound, invert_Abs e with

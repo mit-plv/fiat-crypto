@@ -470,6 +470,11 @@ Module Compilers.
                :: (List.map (fun s => "  " ++ s)%string (to_strings prefix body)))
               ++ ["}"])%list.
 
+      (** In C, there is no munging of return arguments (they remain
+          passed by pointers), so all variables are live *)
+      Local Instance : consider_retargs_live_opt := fun _ _ _ => true.
+      Local Instance : rename_dead_opt := fun s => s.
+
       Definition ToFunctionLines
                  {relax_zrange : relax_zrange_opt}
                  (do_bounds_check : bool) (static : bool) (prefix : string) (name : string)
