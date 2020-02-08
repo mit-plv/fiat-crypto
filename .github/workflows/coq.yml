@@ -38,7 +38,7 @@ jobs:
       run: |
         if [ ! -z "$PPA" ]; then sudo add-apt-repository "$PPA" -y; fi
         sudo apt-get update -q
-        sudo apt-get install $COQ_PACKAGE -y --allow-unauthenticated
+        sudo apt-get install ocaml-findlib $COQ_PACKAGE -y --allow-unauthenticated
     - name: echo build params
       run: |
         lscpu
