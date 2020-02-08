@@ -1015,7 +1015,11 @@ Module Compilers.
                            type.for_each_lhs_of_arrow (fun t => @Compilers.expr.expr base.type ident.ident var_data t * (arith_expr type.Z * option int.type))%type t
                            -> ErrT (arith_expr type.Zptr -> expr))
               := let _ := @PHOAS.expr.partially_show_expr in
-                 match idc with
+                 match idc in ident.ident t
+                       return option (forall (rout : option int.type),
+                                                        type.for_each_lhs_of_arrow (fun t => @Compilers.expr.expr base.type ident.ident var_data t * (arith_expr type.Z * option int.type))%type t
+                                                        -> ErrT (arith_expr type.Zptr -> expr))
+                 with
                  | ident.Z_zselect
                    => Some
                         (fun rout '((econdv, (econd, rcond)), ((e1v, (e1, r1)), ((e2v, (e2, r2)), tt)))
