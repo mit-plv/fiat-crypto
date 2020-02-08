@@ -8,6 +8,7 @@ Require Import Coq.Lists.List.
 Require Import Coq.Strings.String.
 Require Import Crypto.Util.ZUtil.Log2.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
+Require Import Crypto.Util.ZUtil.Tactics.ReplaceNegWithPos.
 Require Import Crypto.Util.ErrorT.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Option.
@@ -20,6 +21,7 @@ Require Import Crypto.Util.Tactics.HasBody.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.SplitInContext.
+Require Import Crypto.Util.Tactics.UniquePose.
 Require Rewriter.Language.Language.
 Require Crypto.Language.API.
 Require Rewriter.Language.UnderLets.
@@ -106,6 +108,9 @@ Definition relax_zrange_gen (possible_values : list Z) : zrange -> option zrange
       => if (0 <=? l)%Z
          then option_map (fun u => r[0~>2^u-1])
                          (round_up_bitwidth_gen possible_values (Z.log2_up (u+1)))
+         else if ((l <? 0) && (u =? 0))%Z (* This is a hack to get the right relaxation on sbb carries *)
+              then option_map (fun u => r[-(2^u-1)~>0])
+                              (round_up_bitwidth_gen possible_values (Z.log2_up ((-l)+1)))
         else None)%zrange.
 
 Lemma relax_zrange_gen_good
@@ -117,7 +122,7 @@ Proof.
   pose proof (Z.log2_up_nonneg (upper r + 1)).
   rewrite !Bool.andb_true_iff; destruct_head' zrange; cbn [ZRange.lower ZRange.upper] in *.
   cbv [List.fold_right option_map].
-  break_innermost_match; intros; destruct_head'_and;
+  break_innermost_match; intros; destruct_head'_and; Bool.split_andb;
     try match goal with
         | [ H : _ |- _ ] => apply round_up_bitwidth_gen_le in H
         end;
@@ -125,6 +130,9 @@ Proof.
       subst;
       repeat apply conj;
       Z.ltb_to_lt; try omega;
+        repeat match goal with
+               | [ H : context[Z.log2_up ?x] |- _ ] => unique pose proof (Z.log2_up_nonneg x)
+               end;
         try (rewrite <- Z.log2_up_le_pow2_full in *; omega).
 Qed.
 
