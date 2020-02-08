@@ -395,7 +395,7 @@ Module Compilers.
           := option_map ZRange.normalize r.
         Local Notation tZ := (base.type.type_base base.type.Z).
         Definition interp (assume_cast_truncates : bool) {t} (idc : ident t) : type.option.interp t
-          := let interp_Z_cast := if assume_cast_truncates then interp_Z_cast else interp_Z_cast_truncate in
+          := let interp_Z_cast := if assume_cast_truncates then interp_Z_cast_truncate else interp_Z_cast in
              match idc in ident.ident t return type.option.interp t with
              | ident.Literal t v => @of_literal (base.type.type_base t) v
              | ident.tt as idc
