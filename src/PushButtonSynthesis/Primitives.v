@@ -908,10 +908,12 @@ Section __.
          let infos := aggregate_infos ls in
          let '(extra_ls, extra_bit_widths) := extra_synthesis function_name_prefix infos in
          let res := (if emit_primitives then extra_ls else nil) ++ List.map (fun '(name, res) => (name, (res <- res; Success (fst res))%error)) ls in
-         let types_used := PositiveSet.union extra_bit_widths (ToString.bitwidths_used infos) in
+         let infos := ToString.ident_infos.ident_infos_union
+                        infos
+                        (ToString.ident_infos.ident_info_of_bitwidths_used extra_bit_widths) in
          let header :=
              (comment_header
-                ++ ToString.typedef_header static function_name_prefix types_used
+                ++ ToString.typedef_header static function_name_prefix infos
                 ++ [""]) in
          [("check_args" ++ String.NewLine ++ String.concat String.NewLine header,
            check_args (ErrorT.Success header))%string]
