@@ -121,10 +121,12 @@ Section __.
 
   Let possible_values := possible_values_of_machine_wordsize.
   Let possible_values_with_bytes := possible_values_of_machine_wordsize_with_bytes.
+  Let loose_upperbounds : list Z
+    := List.map (fun u => loose_upperbound_extra_multiplicand * u) tight_upperbounds.
   Definition tight_bounds : list (ZRange.type.option.interp base.type.Z)
     := List.map (fun u => Some r[0~>u]%zrange) tight_upperbounds.
   Definition loose_bounds : list (ZRange.type.option.interp base.type.Z)
-    := List.map (fun u => Some r[0 ~> loose_upperbound_extra_multiplicand*u]%zrange) tight_upperbounds.
+    := List.map (fun u => Some r[0~>u]%zrange) loose_upperbounds.
 
   Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
 
@@ -171,7 +173,19 @@ Section __.
              (negb (v1 =? v2)%Z, Pipeline.Values_not_provably_equalZ "eval m_enc ≠ s - Associational.eval c (needed for to_bytes)" v1 v2));
             (let v1 := eval (weight (Qnum limbwidth) (QDen limbwidth)) n tight_upperbounds in
              let v2 := 2 * eval (weight (Qnum limbwidth) (QDen limbwidth)) n m_enc in
-             (negb (v1 <? v2)%Z, Pipeline.Value_not_ltZ "2 * eval m_enc ≤ eval tight_upperbounds (needed for to_bytes)" v1 v2))].
+             (negb (v1 <? v2)%Z, Pipeline.Value_not_ltZ "2 * eval m_enc ≤ eval tight_upperbounds (needed for to_bytes)" v1 v2));
+            (let v1 := List.fold_right Z.max 0 prime_bytes_upperbound_list in
+             let v2 := 2^machine_wordsize-1 in
+             (negb (v1 <=? v2)%Z,
+              Pipeline.Value_not_leZ "max(prime_bytes_upperbounds) > 2^machine_wordsize-1" v1 v2));
+            (let v1 := List.fold_right Z.max 0 tight_upperbounds in
+             let v2 := 2^machine_wordsize-1 in
+             (negb (v1 <=? v2)%Z,
+              Pipeline.Value_not_leZ "max(tight_upperbounds) > 2^machine_wordsize-1" v1 v2));
+            (let v1 := List.fold_right Z.max 0 loose_upperbounds in
+             let v2 := 2^machine_wordsize-1 in
+             (negb (v1 <=? v2)%Z,
+              Pipeline.Value_not_leZ "max(loose_upperbounds) > 2^machine_wordsize-1" v1 v2))].
 
   Local Ltac use_curve_good_t :=
     repeat first [ assumption

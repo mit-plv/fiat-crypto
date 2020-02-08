@@ -220,7 +220,15 @@ Section __.
              let dst_weight_n := dst_weight dst_n in
              (negb (eval_in_upperbounds <? dst_weight_n)%Z,
               Pipeline.Value_not_ltZ "dst_weight dst_n ≤ src_eval in_upperbounds" eval_in_upperbounds dst_weight_n));
-            ((negb (0 <? machine_wordsize)), Pipeline.Value_not_ltZ "machine_wordsize ≤ 0" 0 machine_wordsize)].
+            ((negb (0 <? machine_wordsize)), Pipeline.Value_not_ltZ "machine_wordsize ≤ 0" 0 machine_wordsize);
+            (let v1 := List.fold_right Z.max 0 in_upperbounds in
+             let v2 := 2^machine_wordsize-1 in
+             (negb (v1 <=? v2)%Z,
+              Pipeline.Value_not_leZ "max(in_upperbounds) > 2^machine_wordsize-1" v1 v2));
+            (let v1 := List.fold_right Z.max 0 out_upperbounds in
+             let v2 := 2^machine_wordsize-1 in
+             (negb (v1 <=? v2)%Z,
+              Pipeline.Value_not_leZ "max(out_upperbounds) > 2^machine_wordsize-1" v1 v2))].
 
   Local Ltac use_curve_good_t :=
     repeat first [ assumption
