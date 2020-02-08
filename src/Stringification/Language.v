@@ -661,6 +661,22 @@ Module Compilers.
         cmovznz_bitwidths : PositiveSet.t }.
     Definition ident_info_empty : ident_infos
       := Build_ident_infos PositiveSet.empty PositiveSet.empty PositiveSet.empty PositiveSet.empty.
+    Definition ident_info_diff (x y : ident_infos) : ident_infos
+      := let (x0, x1, x2, x3) := x in
+         let (y0, y1, y2, y3) := y in
+         Build_ident_infos
+           (PositiveSet.diff x0 y0)
+           (PositiveSet.diff x1 y1)
+           (PositiveSet.diff x2 y2)
+           (PositiveSet.diff x3 y3).
+    Definition ident_info_diff_except_bitwidths (x y : ident_infos) : ident_infos
+      := let (x0, x1, x2, x3) := x in
+         let (y0, y1, y2, y3) := y in
+         Build_ident_infos
+           x0
+           (PositiveSet.diff x1 y1)
+           (PositiveSet.diff x2 y2)
+           (PositiveSet.diff x3 y3).
     Definition ident_info_union (x y : ident_infos) : ident_infos
       := let (x0, x1, x2, x3) := x in
          let (y0, y1, y2, y3) := y in
