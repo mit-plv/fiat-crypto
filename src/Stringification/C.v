@@ -45,9 +45,10 @@ Module Compilers.
 
     Module C.
       Module String.
-        Definition typedef_header (static : bool) (prefix : string) (bitwidths_used : PositiveSet.t)
+        Definition typedef_header (static : bool) (prefix : string) (infos : ident_infos)
         : list string
-          := (["#include <stdint.h>"]
+          := let bitwidths_used := bitwidths_used infos in
+             (["#include <stdint.h>"]
                 ++ (if PositiveSet.mem 1 bitwidths_used
                     then ["typedef unsigned char " ++ prefix ++ "uint1;";
                             "typedef signed char " ++ prefix ++ "int1;"]%string

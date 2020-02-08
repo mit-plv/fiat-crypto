@@ -24,10 +24,10 @@ Module Rust.
     "#[allow(non_camel_case_types)]" ++ String.NewLine.
 
   (* Header imports and type defs *)
-  (* TODO thread static flag in order to append pub *)
-  Definition typedef_header (static : bool) (prefix : string) (bitwidths_used : PositiveSet.t)
+  Definition typedef_header (static : bool) (prefix : string) (infos : ToString.ident_infos)
     : list string
-    := let type_prefix := ((if static then "type " else "pub type ") ++ prefix)%string in
+    := let bitwidths_used := ToString.bitwidths_used infos in
+       let type_prefix := ((if static then "type " else "pub type ") ++ prefix)%string in
        ([header]
           ++ (if PositiveSet.mem 1 bitwidths_used
               then [type_prefix ++ "u1 = u8;"; (* C: typedef unsigned char prefix_uint1 *)
