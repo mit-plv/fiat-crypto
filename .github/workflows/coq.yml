@@ -72,4 +72,4 @@ jobs:
     - name: standalone-ocaml c-files test-c-files CC=gcc
       run: etc/ci/github-actions-make.sh -j2 standalone-ocaml c-files test-c-files CC=gcc
     - name: selected-test selected-bench
-      run: etc/ci/github-actions-make.sh -j2 selected-test selected-bench
+      run: ALLOW_DIFF=1 etc/ci/github-actions-make.sh -j2 selected-test selected-bench
