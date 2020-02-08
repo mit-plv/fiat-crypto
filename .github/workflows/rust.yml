@@ -7,13 +7,13 @@ on:
     - cron: '0 0 1 * *'
 
 jobs:
-  build:
+  test-rust:
 
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v2
-    - name: Build
+    - name: cargo build
       run: (cd fiat-rust; cargo build --verbose)
-    - name: Run tests
+    - name: cargo test
       run: (cd fiat-rust; cargo test --verbose)

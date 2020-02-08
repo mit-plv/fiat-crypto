@@ -7,7 +7,7 @@ on:
     - cron: '0 0 1 * *'
 
 jobs:
-  build:
+  test-c:
 
     runs-on: ubuntu-latest
 
