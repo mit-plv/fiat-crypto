@@ -451,6 +451,11 @@ Module Compilers.
                                             | inl x => f
                                             | inr err => inr err
                                             end).
+            Local Delimit Scope err_scope with err.
+            Local Notation "x <- v ; f" := (match v with
+                                            | inl x => f
+                                            | inr err => inr err
+                                            end) : err_scope.
             Reserved Notation "A1 ,, A2 <- X ; B" (at level 70, A2 at next level, right associativity, format "'[v' A1 ,,  A2  <-  X ; '/' B ']'").
             Reserved Notation "A1 ,, A2 <- X1 , X2 ; B" (at level 70, A2 at next level, right associativity, format "'[v' A1 ,,  A2  <-  X1 ,  X2 ; '/' B ']'").
             Reserved Notation "A1 ,, A2 ,, A3 <- X ; B" (at level 70, A2 at next level, A3 at next level, right associativity, format "'[v' A1 ,,  A2 ,,  A3  <-  X ; '/' B ']'").
@@ -887,36 +892,6 @@ Module Compilers.
                            inr ["Impossible! (type error got lost somewhere)"]
                  end.
 
-            Let recognize_1ref_ident
-                {t}
-                (idc : ident.ident t)
-                (rout : option int.type)
-              : type.for_each_lhs_of_arrow (fun t => @Compilers.expr.expr base.type ident.ident var_data t * (arith_expr type.Z * option int.type))%type t
-                -> ErrT (arith_expr type.Zptr -> expr)
-              := let _ := @PHOAS.expr.partially_show_expr in
-                 match idc with
-                 | ident.Z_zselect
-                   => fun '((econdv, (econd, rcond)), ((e1v, (e1, r1)), ((e2v, (e2, r2)), tt)))
-                      => let err := inr ["Invalid argument to Z.zselect not known to be 0 or 1: " ++ show false econdv]%string in
-                         match rcond with
-                         | Some rcond
-                           => let expected_cond := int.of_zrange_relaxed (relax_zrange r[0~>1]) in
-                              if int.type_beq rcond expected_cond
-                              then
-                                let '((e1, r1), (e2, r2)) :=
-                                    funcall_upcast (t:=tZ*tZ) (rout, rout) ((e1, r1), (e2, r2)) in
-                                ty <- match rout with
-                                      | Some rout
-                                        => inl rout
-                                      | None => inr ["Missing cast annotation on return of Z.zselect"]
-                                      end;
-                                  ret (fun retptr => [Call (Z_zselect ty @@ (retptr, (econd, e1, e2)))]%Cexpr)
-                              else err
-                         | _ => err
-                         end
-                 | _ => fun _ => inr ["Unrecognized identifier (expecting a 1-pointer-returning function): " ++ show false idc]%string
-                 end.
-
             Definition bounds_check (do_bounds_check : bool) (descr : string) {t} (idc : ident.ident t) (s : BinInt.Z) {t'} (ev : @Compilers.expr.expr base.type ident.ident var_data t') (found : option int.type)
               : ErrT unit
               := if negb do_bounds_check
@@ -930,6 +905,31 @@ Module Compilers.
                         then ret tt
                         else inr ["Final bounds check failed on " ++ descr ++ " " ++ show false idc ++ "; expected an unsigned " ++ decimal_string_of_Z s ++ "-bit number (relaxed to " ++ show false (int.of_zrange_relaxed (relax_zrange r[0~>2^s-1])) ++ "), but found a " ++ show false ty ++ "."]%string
                    end.
+
+            Let recognize_1ref_ident
+                (do_bounds_check : bool)
+                {t}
+                (idc : ident.ident t)
+              : option (forall (rout : option int.type),
+                           type.for_each_lhs_of_arrow (fun t => @Compilers.expr.expr base.type ident.ident var_data t * (arith_expr type.Z * option int.type))%type t
+                           -> ErrT (arith_expr type.Zptr -> expr))
+              := let _ := @PHOAS.expr.partially_show_expr in
+                 match idc with
+                 | ident.Z_zselect
+                   => Some
+                        (fun rout '((econdv, (econd, rcond)), ((e1v, (e1, r1)), ((e2v, (e2, r2)), tt)))
+                         => (*let err := inr ["Invalid argument to Z.zselect not known to be 0 or 1: " ++ show false econdv]%string in*)
+                           _ <- bounds_check do_bounds_check "first argument to" idc 1 econdv rcond;
+                             let '((e1, r1), (e2, r2)) :=
+                                 funcall_upcast (t:=tZ*tZ) (rout, rout) ((e1, r1), (e2, r2)) in
+                             ty <- match rout with
+                                   | Some rout
+                                     => inl rout
+                                   | None => inr ["Missing cast annotation on return of Z.zselect"]
+                                   end;
+                               ret (fun retptr => [Call (Z_zselect ty @@ (retptr, (econd, e1, e2)))]%Cexpr))
+                 | _ => None (* fun _ => inr ["Unrecognized identifier (expecting a 1-pointer-returning function): " ++ show false idc]%string *)
+                 end.
 
             Let round_up_to_split_type (lgs : Z) (t : option int.type) : option int.type
               := option_map (int.union (int.of_zrange_relaxed r[0~>2^lgs-1])) t.
@@ -1041,6 +1041,7 @@ Module Compilers.
                     ret ([DeclareVar type.Z (Some r) n], n, (Addr @@ Var type.Z n)%Cexpr)).
 
             Let make_assign_arg_1ref_opt
+                (do_bounds_check : bool)
                 (e : @Compilers.expr.expr base.type ident.ident var_data tZ)
                 (count : positive)
                 (make_name : positive -> option string)
@@ -1052,18 +1053,19 @@ Module Compilers.
                                    | None => (None, e)
                                    end%core in
                  let res_ref
-                     := match invert_AppIdent_curried e with
-                        | Some (existT _ (idc, args))
-                          => args <- arith_expr_of_PHOAS_args args;
-                               idce <- recognize_1ref_ident idc rout args;
-                               v <- declare_name (show false idc) count make_name rout;
-                               let '(decls, n, retv) := v in
-                               ret ((decls ++ (idce retv))%list, (n, rout))
-                        | None => inr ["Invalid assignment of non-identifier-application: " ++ show false e]%string
-                        end in
+                     := (idc_args <- invert_AppIdent_curried e;
+                           let '(existT _ (idc, args)) := idc_args in
+                           recognize <- recognize_1ref_ident do_bounds_check idc;
+                             Some
+                               (args <- arith_expr_of_PHOAS_args args;
+                                  idce <- recognize rout args;
+                                  v <- declare_name (show false idc) count make_name rout;
+                                  let '(decls, n, retv) := v in
+                                  ret ((decls ++ (idce retv))%list, (n, rout)))%err)%option in
                  match res_ref with
-                 | inl res => ret res
-                 | inr _
+                 | Some (inl res) => ret res
+                 | Some (inr err) => inr err
+                 | None
                    => e1 <- arith_expr_of_base_PHOAS e1 None;
                         let '(e1, r1) := e1 in
                         match make_name count with
@@ -1107,7 +1109,7 @@ Module Compilers.
                 ErrT (expr * var_data t)
               := let _ := @PHOAS.expr.partially_show_expr in
                  match t with
-                 | type.base tZ => make_assign_arg_1ref_opt
+                 | type.base tZ => make_assign_arg_1ref_opt do_bounds_check
                  | type.base (tZ * tZ)%etype => make_assign_arg_2ref do_bounds_check
                  | _ => fun e _ _ => inr ["Invalid type of assignment expression: " ++ show false t ++ " (with expression " ++ show true e ++ ")"]
                  end.
