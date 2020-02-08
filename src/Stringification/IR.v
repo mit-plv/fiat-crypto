@@ -552,7 +552,7 @@ Module Compilers.
                                             | inl x => f
                                             | inr err => inr err
                                             end).
-            Local Delimit Scope err_scope with err.
+            (*Local*) Delimit Scope err_scope with err.
             Local Notation "x <- v ; f" := (match v with
                                             | inl x => f
                                             | inr err => inr err
