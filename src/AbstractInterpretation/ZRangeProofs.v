@@ -70,22 +70,25 @@ Module Compilers.
       Module option.
         (** First we prove relatedness for some particularly complicated identifiers separately *)
         Section interp_related.
+          Context (assume_cast_truncates : bool).
           Local Notation interp_is_related idc
             := (type.related_hetero
                   (fun t st v => ZRange.type.base.option.is_bounded_by st v = true)
-                  (ZRange.ident.option.interp idc)
+                  (ZRange.ident.option.interp assume_cast_truncates idc)
                   (ident.interp idc)).
 
           Local Ltac z_cast_t :=
             cbn [type.related_hetero ZRange.ident.option.interp ident.interp respectful_hetero type.interp ZRange.type.base.option.interp ZRange.type.base.interp base.interp base.base_interp ZRange.type.base.option.Some];
-            cbv [ZRange.ident.option.interp_Z_cast ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by respectful_hetero];
-            cbn [base.interp_beq base.base_interp_beq] in *;
+            cbv [ZRange.ident.option.interp_Z_cast ZRange.ident.option.interp_Z_cast_truncate ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by respectful_hetero];
+            cbn [base.interp_beq base.base_interp_beq option_map] in *;
             cbv [ident.cast2] in *; cbn [fst snd] in *;
             intros; break_innermost_match; break_innermost_match_hyps; trivial;
+            cbn [option_map] in *; inversion_option;
             rewrite ?Bool.andb_true_iff, ?Bool.andb_false_iff in *; destruct_head'_and; destruct_head'_or; repeat apply conj; Z.ltb_to_lt;
             reflect_beq_to_eq zrange_beq; subst;
             rewrite ?ident.cast_in_bounds by (eapply ZRange.is_bounded_by_iff_is_tighter_than; eauto);
-            try reflexivity; try lia; try assumption.
+            try reflexivity; try lia; try assumption;
+            auto using ident.cast_always_bounded.
 
           Lemma interp_related_Z_cast : interp_is_related ident.Z_cast.
           Proof. z_cast_t. Qed.

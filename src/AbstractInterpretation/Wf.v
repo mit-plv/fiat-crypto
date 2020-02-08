@@ -741,8 +741,8 @@ Module Compilers.
       Global Instance bottom'_Proper {t} : Proper (abstract_domain'_R t) (bottom' t).
       Proof. reflexivity. Qed.
 
-      Global Instance abstract_interp_ident_Proper {t}
-        : Proper (eq ==> @abstract_domain_R t) (abstract_interp_ident t).
+      Global Instance abstract_interp_ident_Proper {assume_cast_truncates : bool} {t}
+        : Proper (eq ==> @abstract_domain_R t) (abstract_interp_ident assume_cast_truncates t).
       Proof.
         cbv [abstract_interp_ident abstract_domain_R type.related respectful type.interp]; intros idc idc' ?; subst idc'; destruct idc;
           repeat first [ reflexivity

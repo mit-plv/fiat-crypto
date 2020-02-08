@@ -991,8 +991,8 @@ Module Compilers.
         rewrite Bool.andb_true_iff; split; auto.
       Qed.
 
-      Lemma abstract_interp_ident_related {t} (idc : ident t)
-        : type.related_hetero (@abstraction_relation') (@abstract_interp_ident t idc) (ident.interp idc).
+      Lemma abstract_interp_ident_related {assume_cast_truncates : bool} {t} (idc : ident t)
+        : type.related_hetero (@abstraction_relation') (@abstract_interp_ident assume_cast_truncates t idc) (ident.interp idc).
       Proof using Type. apply ZRange.ident.option.interp_related. Qed.
 
       Lemma extract_list_state_related {t} st v ls
@@ -1019,10 +1019,10 @@ Module Compilers.
         cbv [abstraction_relation' extract_option_state option_eq]; intros; subst; cbn in *; cbv [option_beq_hetero] in *; break_match; break_match_hyps; auto; congruence.
       Qed.
 
-      Lemma Extract_FromFlat_ToFlat' {t} (e : Expr t) (Hwf : Wf e) b_in1 b_in2
+      Lemma Extract_FromFlat_ToFlat' {assume_cast_truncates : bool} {t} (e : Expr t) (Hwf : Wf e) b_in1 b_in2
             (Hb : type.and_for_each_lhs_of_arrow (fun t => type.eqv) b_in1 b_in2)
-        : partial.Extract (GeneralizeVar.FromFlat (GeneralizeVar.ToFlat e)) b_in1
-          = partial.Extract e b_in2.
+        : partial.Extract assume_cast_truncates (GeneralizeVar.FromFlat (GeneralizeVar.ToFlat e)) b_in1
+          = partial.Extract assume_cast_truncates e b_in2.
       Proof using Type.
         cbv [partial.Extract partial.ident.extract partial.extract_gen].
         revert b_in1 b_in2 Hb.
@@ -1031,10 +1031,10 @@ Module Compilers.
         apply GeneralizeVar.wf_from_flat_to_flat, Hwf.
       Qed.
 
-      Lemma Extract_FromFlat_ToFlat {t} (e : Expr t) (Hwf : Wf e) b_in
+      Lemma Extract_FromFlat_ToFlat {assume_cast_truncates : bool} {t} (e : Expr t) (Hwf : Wf e) b_in
             (Hb : Proper (type.and_for_each_lhs_of_arrow (fun t => type.eqv)) b_in)
-        : partial.Extract (GeneralizeVar.FromFlat (GeneralizeVar.ToFlat e)) b_in
-          = partial.Extract e b_in.
+        : partial.Extract assume_cast_truncates (GeneralizeVar.FromFlat (GeneralizeVar.ToFlat e)) b_in
+          = partial.Extract assume_cast_truncates e b_in.
       Proof using Type. apply Extract_FromFlat_ToFlat'; assumption. Qed.
 
       Section with_relax.
@@ -1096,7 +1096,7 @@ Module Compilers.
                        (Harg11 : type.and_for_each_lhs_of_arrow (@type.eqv) arg1 arg1)
                        (Harg1 : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) st arg1 = true),
                    abstraction_relation'
-                     (extract e_st st)
+                     (extract false e_st st)
                      (type.app_curried (expr.interp (@ident.interp) (eval_with_bound relax_zrange e1 st)) arg1)).
         Proof using Hrelax.
           cbv [eval_with_bound]; split;
@@ -1140,7 +1140,7 @@ Module Compilers.
                        (Harg11 : type.and_for_each_lhs_of_arrow (@type.eqv) arg1 arg1)
                        (Harg1 : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) st arg1 = true),
                    abstraction_relation'
-                     (Extract e st)
+                     (Extract false e st)
                      (type.app_curried (expr.Interp (@ident.interp) (EvalWithBound relax_zrange e st)) arg1)).
         Proof using Hrelax. cbv [Extract EvalWithBound]; apply interp_eval_with_bound; auto. Qed.
 
@@ -1256,7 +1256,7 @@ Module Compilers.
              (Harg11 : Proper (type.and_for_each_lhs_of_arrow (@type.eqv)) arg1)
              (Harg1 : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) b_in arg1 = true),
       ZRange.type.base.option.is_bounded_by
-        (partial.Extract E b_in)
+        (partial.Extract false E b_in)
         (type.app_curried (expr.Interp (@ident.interp) (PartialEvaluateWithBounds relax_zrange E b_in)) arg1)
       = true.
   Proof.

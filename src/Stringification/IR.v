@@ -1382,7 +1382,7 @@ Module Compilers.
                        (name_list : option (list string))
                        (inbounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
               : ErrT (type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * expr)
-              := (let outbounds := partial.Extract e inbounds in
+              := (let outbounds := partial.Extract true (* assume the output has casts around it *) e inbounds in
                   let make_name_gen prefix := match name_list with
                                               | None => fun p => Some (prefix ++ decimal_string_of_Z (Zpos p))
                                               | Some ls => fun p => List.nth_error ls (pred (Pos.to_nat p))
