@@ -1,12 +1,16 @@
 name: CI (Coq)
 
-on: [push, pull_request]
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '0 0 1 * *'
 
 jobs:
   build:
 
     runs-on: ubuntu-latest
-    
+
     strategy:
       matrix:
         env:
@@ -19,7 +23,7 @@ jobs:
         - { COQ_VERSION: "v8.9"  , COQ_PACKAGE: "coq libcoq-ocaml-dev"              , PPA: "ppa:jgross-h/coq-8.9-daily" }
 
     env: ${{ matrix.env }}
-    
+
     steps:
     - name: install Coq
       run: |
