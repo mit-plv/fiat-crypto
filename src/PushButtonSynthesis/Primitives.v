@@ -373,7 +373,6 @@ Module CorrectnessStringification.
     | S ?x => is_literal x
     | _ => false
     end.
-
   Ltac stringify_rec0 ctx correctness lvl :=
     let recurse v lvl := stringify_rec0 ctx v lvl in
     let name_of_var := find_head_in_ctx ctx correctness in
@@ -386,6 +385,8 @@ Module CorrectnessStringification.
         maybe_parenthesize (Show.Decimal.show_Z false correctness) 1 lvl in
     let show_nat _ :=
         maybe_parenthesize (Show.Decimal.show_nat false correctness) 1 lvl in
+    let show_list_Z_Z _ :=
+        maybe_parenthesize (@Show.show_list _ (@Show.show_prod _ _ Show.Decimal.show_Z Show.Decimal.show_Z) false correctness) 1 lvl in
     let stringify_prefix f natural arg_lvl :=
         lazymatch correctness with
         | ?F ?x
@@ -449,6 +450,9 @@ Module CorrectnessStringification.
          | eval (weight 8 1) _ ?v
            => let sv := recurse v 9 in
               maybe_parenthesize (("bytes_eval " ++ sv)%string) 10 lvl
+         | Associational.eval ?c
+           => let sc := recurse c 9 in
+              maybe_parenthesize (("Associational.eval " ++ sc)%string) 10 lvl
          | uweight ?machine_wordsize ?v
            => recurse (2^(machine_wordsize * Z.of_nat v)) lvl
          | weight 8 1 ?i
@@ -520,6 +524,7 @@ Module CorrectnessStringification.
                    lazymatch (eval hnf in T) with
                    | Z => show_Z ()
                    | nat => show_nat ()
+                   | list (Z * Z) => show_list_Z_Z ()
                    | _
                      => constr_fail_with ltac:(fun _ => idtac "Error: Unrecognized var:" v " in " ctx;
                                                         fail 1 "Error: Unrecognized var:" v " in " ctx)

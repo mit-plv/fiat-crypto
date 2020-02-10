@@ -8,7 +8,9 @@ Require Import Crypto.Util.Strings.Decimal.
 Require Import Crypto.Util.Strings.HexString.
 Require Import Crypto.Util.Strings.ParseArithmetic.
 Require Import Crypto.Util.Strings.ParseArithmeticToTaps.
+Require Import Crypto.Util.Strings.Parse.Common.
 Require Import Crypto.Util.Option.
+Require Import Crypto.Util.OptionList.
 Require Import Crypto.Util.Strings.Show.
 Require Crypto.PushButtonSynthesis.SaturatedSolinas.
 Require Crypto.PushButtonSynthesis.UnsaturatedSolinas.
@@ -37,6 +39,11 @@ Module ForExtraction.
        else if string_dec s "false"
             then Some false
             else None.
+  Definition parse_list_Z (s : string) : option (list Z)
+    := (ls <- finalize (parse_list ParseArithmetic.parse_Qexpr) s;
+          ls <-- List.map ParseArithmetic.eval_Qexpr_strict ls;
+          ls <-- List.map ParseArithmetic.Q_to_Z_strict ls;
+          Some ls).
 
   (* Workaround for lack of notation in 8.8 *)
   Local Notation "x =? y" := (if string_dec x y then true else false) : string_scope.
@@ -70,8 +77,60 @@ Module ForExtraction.
   Definition parse_limbwidth : string -> option Q := parse_Q.
   Definition parse_max (s : string) : option (option Z)
     := option_map (@Some _) (parse_Z s).
-  Definition parse_inbounds_multiplier (s : string) : option (option Q)
-    := option_map (@Some _) (parse_Q s).
+  Definition parse_bounds_multiplier (s : option string) : string * option (option Q)
+    := let s := Option.value s "" in
+       (s,
+        if string_dec s ""
+        then Some None
+        else option_map (@Some _) (parse_Q s)).
+  Definition parse_dirbounds_multiplier (dir : string) (s : option string + list string) : string * (option Q + list string)
+    := match s with
+       | inl s
+         => let '(s, q) := parse_bounds_multiplier s in
+            (s,
+             match q with
+             | Some q => inl q
+             | None => inr ["Could not parse '" ++ s ++ "' as a Q for --" ++ dir ++ "bounds-multiplier"]%string
+             end)
+       | inr opts
+         => ("", inr ["Argument --" ++ dir ++ "bounds-multiplier can only be passed once; passed multiple times with values: " ++ String.concat ", " opts])
+       end.
+
+  Definition parse_bounds_list (s : option string) : string * option (option (list Z))
+    := match s with
+       | None => ("", Some None)
+       | Some s
+         => (s,
+             option_map (@Some _) (parse_list_Z s))
+       end.
+
+  Definition parse_dirbounds (dir : string) (s : option string + list string) (use_bitwidth : bool) : string * (BaseConversion.bounds + list string)
+    := match s with
+       | inl s
+         => let '(s, ls) := parse_bounds_list s in
+            (s,
+             match ls, use_bitwidth with
+             | Some (Some ls), false => inl (BaseConversion.exactly ls)
+             | Some None, false => inl BaseConversion.use_prime
+             | Some None, true => inl BaseConversion.use_bitwidth
+             | _, _
+               => let err1 := match ls, use_bitwidth with
+                              | Some _, true => ["Cannot pass both --use-bitwidth-" ++ dir ++ " and --" ++ dir ++ "bounds=" ++ s]%string
+                              | _, _ => []
+                              end in
+                  let err2 := match ls with
+                              | None => ["Could not parse " ++ dir ++ "bounds (" ++ s ++ ")"]%string
+                              | _ => []
+                              end in
+                  inr (err1 ++ err2)%list
+             end)
+       | inr opts
+         => ("",
+             inr ((["Argument --" ++ dir ++ "bounds can only be passed once; passed multiple times with values: " ++ String.concat ", " opts]%string)
+                    ++ if use_bitwidth
+                       then ["Cannot pass both --use-bitwidth-" ++ dir ++ " and --" ++ dir ++ "bounds"]%string
+                       else [])%list)
+       end.
 
   Definition show_c : Show (list (Z * Z))
     := @show_list _ (@show_prod _ _ PowersOfTwo.show_Z Decimal.show_Z).
@@ -158,10 +217,18 @@ Module ForExtraction.
     := "  src_limbwidth           The limbwidth of the input field element".
   Definition dst_limbwidth_help
     := "  dst_limbwidth           The limbwidth of the field element to be returned".
-  Definition max_help
-    := "  max                     The upperbound (strict / exclusive) on the input field element".
+  Definition use_bitwidth_in_and_help
+    := ("--use-bitwidth-in", "Instead of using an upper bound of s-1 on the input, use the maximum number that can be properly represented with the given base").
+  Definition use_bitwidth_out_and_help
+    := ("--use-bitwidth-out", "Instead of using an upper bound of s-1 on the output, use the maximum number that can be properly represented with the given base").
   Definition inbounds_multiplier_help
-    := "  inbounds_multiplier     The (improper) fraction by which the bounds of each limb are scaled".
+    := "  inbounds_multiplier     The (improper) fraction by which the bounds of each input limb are scaled (default: 1)".
+  Definition outbounds_multiplier_help
+    := "  outbounds_multiplier    The (improper) fraction by which the bounds of each output limb are scaled (default: 1)".
+  Definition inbounds_help
+    := "  inbounds                A semicolon-separated, square-bracked-surrounded list of integer expressions describing the input bounds.  Incompatible with --use-bitwidth-in.".
+  Definition outbounds_help
+    := "  outbounds               A semicolon-separated, square-bracked-surrounded list of integer expressions describing the output bounds.  Incompatible with --use-bitwidth-out.".
 
   Definition function_to_synthesize_help (valid_names : string)
     := "  function_to_synthesize  A space-separated list of functions that should be synthesized.  If no functions are given, all functions are synthesized."
@@ -176,8 +243,9 @@ Module ForExtraction.
         ; no_primitives_and_help
         ; cmovznz_by_mul_and_help
        ].
-  Definition common_usage_opts
-    := String.concat " " (List.map (fun '(opt, _) => "[" ++ opt ++ "]") common_optional_options).
+  Definition optional_options_to_usage {T} opt_options
+    := String.concat " " (List.map (fun '((opt, _) : _ * T) => "[" ++ opt ++ "]") opt_options).
+  Definition common_usage_opts := optional_options_to_usage common_optional_options.
 
   Definition to_help (s : string * string)
     := let opt := "  " ++ fst s in
@@ -187,6 +255,13 @@ Module ForExtraction.
 
   Record > Dyn := dyn { dyn_ty : Type ; dyn_val :> option dyn_ty }.
   Arguments dyn {_} _.
+
+  Definition join_errors {A B} (x : A + list string) (y : B + list string) : (A * B) + list string
+    := match x, y with
+       | inr errs1, inr errs2 => inr (errs1 ++ errs2)%list
+       | inr err, inl _ | inl _, inr err => inr err
+       | inl x, inl y => inl (x, y)
+       end.
 
   Fixpoint parse_resultL' (acc : Type) (ls : list (string (* name *) * string (* string value *) * Dyn))
     : Type
@@ -237,6 +312,35 @@ Module ForExtraction.
                           end in
             transform_err _ (inr ((name ++ " (" ++ str_val ++ ")")%string :: err_ls))
        end.
+
+  (** if [opt] is in [tl argv], remove all instances of it, and return
+      [(filter-out opt argv, true)]; otherwise, return [(argv, false)]
+      *)
+  Definition argv_to_contains_opt_and_argv (opt : string) (argv : list string)
+    : list string * bool
+    := match argv with
+       | prog_name :: rest
+         => let is_opt arg := (arg =? opt)%string in
+            (prog_name :: filter (fun arg => negb (is_opt arg)) rest,
+             existsb is_opt rest)
+       | _ => (argv, false)
+       end.
+
+  (** return the remainder of all elements of [argv] starting with
+      [opt], and all elements which do not start with [opt] *)
+  Definition argv_to_startswith_opt_and_argv (opt : string) (argv : list string)
+    := let '(opts, argv) := List.partition (String.contains 0 opt) argv in
+       (argv,
+        List.map (fun s => String.substring (String.length opt) (String.length s) s) opts).
+
+  Definition argv_to_single_startswith_opt_and_argv (opt : string) (argv : list string)
+    := let '(argv, opts) := argv_to_startswith_opt_and_argv opt argv in
+       (argv,
+        match opts with
+        | [] => inl None
+        | [opt] => inl (Some opt)
+        | _ => inr opts
+        end).
 
   (** We define a class for holding the various options we might pass to [Synthesize] *)
   Class SynthesizeOptions :=
@@ -345,26 +449,6 @@ Module ForExtraction.
            | inl s => success s
            | inr s => error s
            end.
-
-      (** if [opt] is in [tl argv], remove all instances of it, and
-          return [(filter-out opt argv, true)]; otherwise, return
-          [(argv, false)] *)
-      Definition argv_to_contains_opt_and_argv (opt : string) (argv : list string)
-        : list string * bool
-        := match argv with
-           | prog_name :: rest
-             => let is_opt arg := (arg =? opt)%string in
-                (prog_name :: filter (fun arg => negb (is_opt arg)) rest,
-                 existsb is_opt rest)
-           | _ => (argv, false)
-           end.
-
-      (** return the remainder of all elements of [argv] starting with
-          [opt], and all elements which do not start with [opt] *)
-      Definition argv_to_startswith_opt_and_argv (opt : string) (argv : list string)
-        := let '(opts, argv) := List.partition (String.contains 0 opt) argv in
-           (argv,
-            List.map (fun s => String.substring (String.length opt) (String.length s) s) opts).
 
       Definition argv_to_language_and_argv (argv : list string)
         : list string * (ToString.OutputLanguageAPI + list string)
@@ -594,54 +678,78 @@ Module ForExtraction.
     Local Instance api : PipelineAPI
       := {
           parse_args (args : list string)
-          := match args with
-             | src_n::src_limbwidth::dst_limbwidth::machine_wordsize::max::inbounds_multiplier::requests
+          := let '(args, inbounds_multiplier) := argv_to_single_startswith_opt_and_argv "--inbounds-multiplier=" args in
+             let '(args, outbounds_multiplier) := argv_to_single_startswith_opt_and_argv "--outbounds-multiplier=" args in
+             let '(args, inbounds) := argv_to_single_startswith_opt_and_argv "--inbounds=" args in
+             let '(args, outbounds) := argv_to_single_startswith_opt_and_argv "--outbounds=" args in
+             let '(args, use_bitwidth_in) := argv_to_contains_opt_and_argv "--use-bitwidth-in" args in
+             let '(args, use_bitwidth_out) := argv_to_contains_opt_and_argv "--use-bitwidth-out" args in
+             let '(str_inbounds_multiplier, inbounds_multiplier) := parse_dirbounds_multiplier "in" inbounds_multiplier in
+             let '(str_outbounds_multiplier, outbounds_multiplier) := parse_dirbounds_multiplier "out" outbounds_multiplier in
+             let '(str_inbounds, inbounds) := parse_dirbounds "in" inbounds use_bitwidth_in in
+             let '(str_outbounds, outbounds) := parse_dirbounds "out" outbounds use_bitwidth_out in
+             match args with
+             | src_n::sc::src_limbwidth::dst_limbwidth::machine_wordsize::requests
                => let str_src_n := src_n in
+                  let str_sc := sc in
                   let str_src_limbwidth := src_limbwidth in
                   let str_dst_limbwidth := dst_limbwidth in
                   let str_machine_wordsize := machine_wordsize in
-                  let str_max := max in
-                  let str_inbounds_multiplier := inbounds_multiplier in
                   let show_requests := match requests with nil => "(all)" | _ => String.concat ", " requests end in
                   Some
-                    match parse_many [("src_n", src_n, parse_src_n src_n:Dyn)
-                                      ; ("src_limbwidth", src_limbwidth, parse_limbwidth src_limbwidth:Dyn)
-                                      ; ("dst_limbwidth", dst_limbwidth, parse_limbwidth dst_limbwidth:Dyn)
-                                      ; ("machine_wordsize", machine_wordsize, parse_machine_wordsize machine_wordsize:Dyn)
-                                      ; ("max", max, parse_max max:Dyn)
-                                      ; ("inbounds_multiplier", inbounds_multiplier, parse_inbounds_multiplier inbounds_multiplier:Dyn)] with
+                    match join_errors
+                            (parse_many [("src_n", src_n, parse_src_n src_n:Dyn)
+                                         ; ("s-c", sc, parse_sc sc:Dyn)
+                                         ; ("src_limbwidth", src_limbwidth, parse_limbwidth src_limbwidth:Dyn)
+                                         ; ("dst_limbwidth", dst_limbwidth, parse_limbwidth dst_limbwidth:Dyn)
+                                         ; ("machine_wordsize", machine_wordsize, parse_machine_wordsize machine_wordsize:Dyn)])
+                            (join_errors
+                               (join_errors
+                                  inbounds_multiplier
+                                  outbounds_multiplier)
+                               (join_errors
+                                  inbounds
+                                  outbounds))
+                    with
                     | inr errs => inr errs
-                    | inl (src_n, src_limbwidth, dst_limbwidth, machine_wordsize, max, inbounds_multiplier)
-                      => inl ((str_src_n, str_src_limbwidth, str_dst_limbwidth, str_machine_wordsize, str_max, str_inbounds_multiplier, show_requests),
-                              (src_n, src_limbwidth, dst_limbwidth, machine_wordsize, max, inbounds_multiplier, requests))
+                    | inl ((src_n, (s, c), src_limbwidth, dst_limbwidth, machine_wordsize), ((inbounds_multiplier, outbounds_multiplier), (inbounds, outbounds)))
+                      => inl ((str_src_n, str_sc, str_src_limbwidth, str_dst_limbwidth, str_machine_wordsize, str_inbounds_multiplier, str_outbounds_multiplier, use_bitwidth_in, use_bitwidth_out, str_inbounds, str_outbounds, show_requests),
+                              (src_n, s, c, src_limbwidth, dst_limbwidth, machine_wordsize, inbounds_multiplier, outbounds_multiplier, inbounds, outbounds, requests))
                     end
              | _ => None
              end;
 
           show_lines_args :=
-            fun '((str_src_n, str_src_limbwidth, str_dst_limbwidth, str_machine_wordsize, str_max, str_inbounds_multiplier, show_requests),
-                  (src_n, src_limbwidth, dst_limbwidth, machine_wordsize, max, inbounds_multiplier, requests))
+            fun '((str_src_n, str_sc, str_src_limbwidth, str_dst_limbwidth, str_machine_wordsize, str_inbounds_multiplier, str_outbounds_multiplier, use_bitwidth_in, use_bitwidth_out, str_inbounds, str_outbounds, show_requests),
+                  (src_n, s, c, src_limbwidth, dst_limbwidth, machine_wordsize, inbounds_multiplier, outbounds_multiplier, inbounds, outbounds, requests))
             => ["requested operations: " ++ show_requests;
                   "src_n = " ++ show false src_n ++ " (from """ ++ str_src_n ++ """)";
+                  "s-c = " ++ PowersOfTwo.show_Z false s ++ " - " ++ show_c false c ++ " (from """ ++ str_sc ++ """)";
                   "src_limbwidth = " ++ show false src_limbwidth ++ " (from """ ++ str_src_limbwidth ++ """)";
                   "dst_limbwidth = " ++ show false dst_limbwidth ++ " (from """ ++ str_dst_limbwidth ++ """)";
                   "machine_wordsize = " ++ show false machine_wordsize ++ " (from """ ++ str_machine_wordsize ++ """)";
-                  "max = " ++ @show_option _ PowersOfTwo.show_Z false max ++ " (from """ ++ str_max ++ """)";
-                  "inbounds_multiplier = " ++ show false inbounds_multiplier ++ " (from """ ++ str_inbounds_multiplier ++ """)"];
+                  "inbounds_multiplier = " ++ show false inbounds_multiplier ++ " (from """ ++ str_inbounds_multiplier ++ """)";
+                  "outbounds_multiplier = " ++ show false outbounds_multiplier ++ " (from """ ++ str_outbounds_multiplier ++ """)";
+                  "inbounds = " ++ show false inbounds ++ " (from """ ++ str_inbounds ++ """ and use_bithwidth_in = " ++ show false use_bitwidth_in ++ ")";
+                  "outbounds = " ++ show false outbounds ++ " (from """ ++ str_outbounds ++ """ and use_bithwidth_out = " ++ show false use_bitwidth_out ++ ")"];
 
-          pipeline_usage_string := "src_n src_limbwidth dst_limbwidth machine_wordsize max inbounds_multiplier [function_to_synthesize*]";
+          pipeline_usage_string := "src_n s-c src_limbwidth dst_limbwidth machine_wordsize [--inbounds-multipler=inbounds_multiplier] [--outbounds-multiplier=outbounds_multiplier] [--inbounds=inbounds] [--outbounds=outbounds] " ++ optional_options_to_usage [use_bitwidth_in_and_help; use_bitwidth_out_and_help] ++ " [function_to_synthesize*]";
 
           help_lines := [src_n_help;
                            src_limbwidth_help;
                            dst_limbwidth_help;
                            machine_wordsize_help;
-                           max_help;
                            inbounds_multiplier_help;
+                           outbounds_multiplier_help;
+                           to_help use_bitwidth_in_and_help;
+                           to_help use_bitwidth_out_and_help;
+                           inbounds_help;
+                           outbounds_help;
                            function_to_synthesize_help BaseConversion.valid_names];
 
           Synthesize
-          := fun _ opts '(src_n, src_limbwidth, dst_limbwidth, machine_wordsize, max, inbounds_multiplier, requests) comment_header prefix
-             => BaseConversion.Synthesize src_n src_limbwidth dst_limbwidth machine_wordsize max inbounds_multiplier comment_header prefix requests
+          := fun _ opts '(src_n, s, c, src_limbwidth, dst_limbwidth, machine_wordsize, inbounds_multiplier, outbounds_multiplier, inbounds, outbounds, requests) comment_header prefix
+             => BaseConversion.Synthesize s c src_n src_limbwidth dst_limbwidth machine_wordsize inbounds_multiplier outbounds_multiplier inbounds outbounds comment_header prefix requests
         }.
 
     Definition PipelineMain
