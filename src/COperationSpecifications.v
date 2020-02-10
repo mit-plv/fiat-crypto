@@ -145,9 +145,12 @@ End selectznz.
 Module BaseConversion.
   Section __.
     Context (src_wt dst_wt : nat -> Z)
+            (s : Z) (c : list (Z * Z))
             (src_n dst_n : nat)
             (inbounds : list (option zrange))
-            (length_inbounds : length inbounds = src_n).
+            (outbounds : list (option zrange))
+            (length_inbounds : length inbounds = src_n)
+            (length_outbounds : length outbounds = dst_n).
     Local Notation src_eval := (Positional.eval src_wt src_n).
     Local Notation dst_eval := (Positional.eval dst_wt dst_n).
 
