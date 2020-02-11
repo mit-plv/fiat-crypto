@@ -1,20 +1,20 @@
 OLD_PIPELINE_NOBIGMEM_VOFILES := \
-	bbv/theories/BinNotation.vo \
-	bbv/theories/BinNotationZ.vo \
-	bbv/theories/DepEq.vo \
-	bbv/theories/DepEqNat.vo \
-	bbv/theories/HexNotation.vo \
-	bbv/theories/HexNotationWord.vo \
-	bbv/theories/HexNotationZ.vo \
-	bbv/theories/NLib.vo \
-	bbv/theories/N_Z_nat_conversions.vo \
-	bbv/theories/NatLib.vo \
-	bbv/theories/Nomega.vo \
-	bbv/theories/ReservedNotations.vo \
-	bbv/theories/Word.vo \
-	bbv/theories/WordScope.vo \
-	bbv/theories/ZHints.vo \
-	bbv/theories/ZLib.vo \
+	bbv/src/bbv/BinNotation.vo \
+	bbv/src/bbv/BinNotationZ.vo \
+	bbv/src/bbv/DepEq.vo \
+	bbv/src/bbv/DepEqNat.vo \
+	bbv/src/bbv/HexNotation.vo \
+	bbv/src/bbv/HexNotationWord.vo \
+	bbv/src/bbv/HexNotationZ.vo \
+	bbv/src/bbv/NLib.vo \
+	bbv/src/bbv/N_Z_nat_conversions.vo \
+	bbv/src/bbv/NatLib.vo \
+	bbv/src/bbv/Nomega.vo \
+	bbv/src/bbv/ReservedNotations.vo \
+	bbv/src/bbv/Word.vo \
+	bbv/src/bbv/WordScope.vo \
+	bbv/src/bbv/ZHints.vo \
+	bbv/src/bbv/ZLib.vo \
 	src/Algebra/Field.vo \
 	src/Algebra/Field_test.vo \
 	src/Algebra/Group.vo \
