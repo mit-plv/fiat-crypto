@@ -77,9 +77,9 @@ jobs:
       run: etc/ci/github-actions-make.sh -j2 test-c-files
       if: env.SKIP_DISPLAY_TEST != '1'
     - name: test for adx
-      run: 'if ! etc/assert-adx.sh; then echo -e "\e[31mWARNING: adx instruction not found\e[0m"; export SKIP_ICC=1; false; fi'
+      run: etc/assert-adx.sh
       continue-on-error: true
       if: env.SKIP_DISPLAY_TEST != '1'
     - name: selected-test selected-bench
-      run: ALLOW_DIFF=1 etc/ci/github-actions-make.sh -j2 selected-test selected-bench
+      run: ALLOW_DIFF=1 SKIP_ICC="$(etc/assert-adx.sh || echo 1)" etc/ci/github-actions-make.sh -j2 selected-test selected-bench
       if: env.SKIP_DISPLAY_TEST != '1'
