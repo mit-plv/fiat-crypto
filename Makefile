@@ -19,6 +19,9 @@ SHOW := $(if $(VERBOSE),@true "",@echo "")
 HIDE := $(if $(VERBOSE),,@)
 INSTALLDEFAULTROOT := Crypto
 
+# Set this is ADX is not present
+SKIP_ICC?=
+
 .PHONY: coq clean update-_CoqProject cleanall install \
 	install-coqprime clean-coqprime coqprime coqprime-all \
 	old-pipeline-nobigmem print-old-pipeline-nobigmem \
@@ -400,9 +403,7 @@ TEST_BINARIES := \
 	src/Specific/X25519/C64/test \
 	src/Specific/NISTP256/AMD64/test/feadd_test \
 	src/Specific/NISTP256/AMD64/test/femul_test \
-	src/Specific/NISTP256/AMD64/test/p256_test \
-	src/Specific/NISTP256/AMD64/icc/p256_test
-RUN_TEST_BINARIES := $(addsuffix -run,$(TEST_BINARIES))
+	src/Specific/NISTP256/AMD64/test/p256_test
 MEASUREMENTS := \
 	src/Specific/X25519/C64/measurements.txt \
 	third_party/openssl-curve25519/measurements.txt \
@@ -410,8 +411,12 @@ MEASUREMENTS := \
 	third_party/openssl-nistz256-amd64/measurements.txt \
 	third_party/openssl-nistz256-adx/measurements.txt \
 	third_party/openssl-nistp256c64/measurements.txt \
-	src/Specific/NISTP256/AMD64/measurements.txt \
-	src/Specific/NISTP256/AMD64/icc/measurements.txt
+	src/Specific/NISTP256/AMD64/measurements.txt
+ifeq ($(SKIP_ICC),)
+TEST_BINARIES += src/Specific/NISTP256/AMD64/icc/p256_test
+MEASUREMENTS += src/Specific/NISTP256/AMD64/icc/measurements.txt
+endif
+RUN_TEST_BINARIES := $(addsuffix -run,$(TEST_BINARIES))
 MEASURE_BINARIES := $(addsuffix measure,$(dir $(MEASUREMENTS)))
 
 SELECTED_TEST_BINARIES := $(filter $(SELECTED_PATTERN),$(TEST_BINARIES))
