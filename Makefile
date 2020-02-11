@@ -114,7 +114,7 @@ C_DIR :=
 RS_DIR := fiat-rust/src/
 GO_DIR := fiat-go/src/
 
-UNSATURATED_SOLINAS_BASE_FILES := curve25519_64 curve25519_32 p521_64 p521_32 p448_solinas_64 # p224_solinas_64
+UNSATURATED_SOLINAS_BASE_FILES := curve25519_64 curve25519_32 p521_64 p448_solinas_64 # p224_solinas_64
 WORD_BY_WORD_MONTGOMERY_BASE_FILES := p256_64 p256_32 p384_64 p384_32 secp256k1_64 secp256k1_32 p224_64 p224_32 p434_64 # p434_32
 ALL_BASE_FILES := $(UNSATURATED_SOLINAS_BASE_FILES) $(WORD_BY_WORD_MONTGOMERY_BASE_FILES)
 
@@ -126,11 +126,9 @@ UNSATURATED_SOLINAS_RUST_FILES := $(patsubst %,$(RS_DIR)%.rs,$(UNSATURATED_SOLIN
 WORD_BY_WORD_MONTGOMERY_RUST_FILES := $(patsubst %,$(RS_DIR)%.rs,$(WORD_BY_WORD_MONTGOMERY_BASE_FILES))
 ALL_RUST_FILES := $(patsubst %,$(RS_DIR)%.rs,$(ALL_BASE_FILES))
 
-UNMADE_GO_FILES := p521_32 # uses uint128 when it's not allowed to; see https://github.com/mit-plv/fiat-crypto/issues/655
-
-UNSATURATED_SOLINAS_GO_FILES := $(patsubst %,$(GO_DIR)%.go,$(filter-out $(UNMADE_GO_FILES),$(UNSATURATED_SOLINAS_BASE_FILES)))
-WORD_BY_WORD_MONTGOMERY_GO_FILES := $(patsubst %,$(GO_DIR)%.go,$(filter-out $(UNMADE_GO_FILES),$(WORD_BY_WORD_MONTGOMERY_BASE_FILES)))
-ALL_GO_FILES := $(patsubst %,$(GO_DIR)%.go,$(filter-out $(UNMADE_GO_FILES),$(ALL_BASE_FILES)))
+UNSATURATED_SOLINAS_GO_FILES := $(patsubst %,$(GO_DIR)%.go,$(UNSATURATED_SOLINAS_BASE_FILES))
+WORD_BY_WORD_MONTGOMERY_GO_FILES := $(patsubst %,$(GO_DIR)%.go,$(WORD_BY_WORD_MONTGOMERY_BASE_FILES))
+ALL_GO_FILES := $(patsubst %,$(GO_DIR)%.go,$(ALL_BASE_FILES))
 
 FUNCTIONS_FOR_25519 := carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes
 UNSATURATED_SOLINAS := src/ExtractionOCaml/unsaturated_solinas
@@ -366,13 +364,6 @@ p521_64.c : p521_%.c :
 	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --static 'p521' '9' '2^521 - 1' '$*' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
-# 2^521 - 1
-p521_32.c : p521_%.c :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --static 'p521' '18' '2^521 - 1' '$*' && touch $@.ok) > $@.tmp
-	$(HIDE)rm $@.ok && mv $@.tmp $@
-
 ## 2^224 - 2^96 + 1 ## does not bounds check
 #p224_solinas_64.c : p224_solinas_%.c :
 #	$(SHOW)'SYNTHESIZE > $@'
@@ -450,13 +441,6 @@ $(RS_DIR)p521_64.rs : $(RS_DIR)p521_%.rs :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
 	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Rust 'p521' '9' '2^521 - 1' '$*' && touch $@.ok) > $@.tmp
-	$(HIDE)rm $@.ok && mv $@.tmp $@
-
-# 2^521 - 1
-$(RS_DIR)p521_32.rs : $(RS_DIR)p521_%.rs :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Rust 'p521' '18' '2^521 - 1' '$*' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 ## 2^224 - 2^96 + 1 ## does not bounds check
@@ -544,13 +528,6 @@ $(GO_DIR)p521_64.go : $(GO_DIR)p521_%.go :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
 	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Go $(GO_EXTRA_ARGS_$*) 'p521' '9' '2^521 - 1' '$*' $(GO_UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
-	$(HIDE)rm $@.ok && mv $@.tmp $@
-
-# 2^521 - 1
-$(GO_DIR)p521_32.go : $(GO_DIR)p521_%.go :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Go $(GO_EXTRA_ARGS_$*) 'p521' '18' '2^521 - 1' '$*' $(GO_UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 ## 2^224 - 2^96 + 1 ## does not bounds check

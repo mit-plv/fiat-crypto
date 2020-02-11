@@ -1,7 +1,6 @@
 pub mod curve25519_64;
 pub mod curve25519_32;
 pub mod p521_64; // Zoe: Has assignments from u32 to u64
-pub mod p521_32; // Zoe: Has assignments from u32 to u64
 pub mod p448_solinas_64;
 pub mod p256_64; // Zoe: Calls function thats expects u64 with u8
 pub mod p256_32; // Zoe: Calls function thats expects u64 with u8
