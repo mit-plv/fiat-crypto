@@ -11,6 +11,7 @@ Require Import Crypto.PushButtonSynthesis.UnsaturatedSolinas.
 Require Crypto.PushButtonSynthesis.WordByWordMontgomery.
 Require Crypto.Stringification.C.
 Require Crypto.Stringification.Go.
+Require Crypto.Stringification.Java.
 Require Import Crypto.BoundsPipeline.
 Require Import Crypto.Util.ZUtil.ModInv.
 
@@ -30,9 +31,212 @@ Local Coercion QArith_base.inject_Z : Z >-> Q.
 Local Coercion Z.pos : positive >-> Z.
 
 Local Existing Instance default_low_level_rewriter_method.
-Local Instance : only_signed_opt := false.
 Local Instance : should_split_multiret_opt := false.
 Local Instance : split_multiret_to_opt := None.
+
+Module debugging_25519_to_bytes_java.
+  Import Crypto.PushButtonSynthesis.UnsaturatedSolinas.
+  Import Stringification.Java.
+  Section __.
+    Local Existing Instance Java.OutputJavaAPI.
+    Local Instance static : static_opt := false.
+    Local Instance : internal_static_opt := true.
+    Local Instance : emit_primitives_opt := true.
+    Local Instance : use_mul_for_cmovznz_opt := true.
+    Local Instance : widen_carry_opt := true.
+    Local Instance : widen_bytes_opt := true.
+    Local Instance : only_signed_opt := true.
+    Local Instance : should_split_mul_opt := false. (* only for x64 *)
+
+    Definition n := 2%nat (*10%nat*).
+    Definition s := 2^51 (* 255*).
+    Definition c := [(1, 19)].
+    Definition machine_wordsize := 32.
+
+    Goal True.
+      pose (sto_bytes n s c machine_wordsize "curve25519") as v.
+      cbv [sto_bytes] in v.
+      set (k := to_bytes _ _ _ _) in (value of v).
+      vm_compute in k.
+      subst k.
+      cbv beta iota zeta in v.
+      set (k := Language.Compilers.ToString.ToFunctionLines _ _ _ _ _ _ _ _ _) in (value of v).
+      clear v.
+      cbv [Language.Compilers.ToString.ToFunctionLines] in k.
+      cbv [Java.OutputJavaAPI] in k.
+      cbv [Language.Compilers.ToString.ToFunctionLines] in k.
+      cbv [Java.ToFunctionLines] in k.
+      set (k' := IR.OfPHOAS.ExprOfPHOAS _ _ _ _) in (value of k).
+      clear k.
+      cbv [IR.OfPHOAS.ExprOfPHOAS] in k'.
+      cbv [IR.OfPHOAS.expr_of_PHOAS] in k'.
+      set (k := IR.OfPHOAS.var_data_of_bounds _ _ _ _) in (value of k').
+      vm_compute in k.
+      subst k.
+      cbv beta iota zeta in k'.
+      cbv [IR.OfPHOAS.expr_of_PHOAS'] in k'.
+      set (k := IR.OfPHOAS.var_data_of_bounds _ _ _ _) in (value of k').
+      vm_compute in k.
+      subst k.
+      cbv beta iota zeta in k'.
+      cbv [invert_expr.invert_Abs] in k'.
+      cbv [IR.OfPHOAS.expr_of_base_PHOAS] in k'.
+      set (k := IR.OfPHOAS.make_assign_expr_of_PHOAS _ _) in (value of k') at 1.
+      cbv [IR.OfPHOAS.make_assign_expr_of_PHOAS] in k.
+      clear k'.
+      set (k' := type.try_transport _ _ _) in (value of k).
+      vm_compute in k'.
+      subst k'.
+      cbv beta iota zeta in k.
+      set (k' := invert_expr.invert_App_Z_cast2 _) in (value of k).
+      vm_compute in k'.
+
+      subst k'.
+      cbv beta iota zeta in k.
+      set (k' := invert_expr.invert_AppIdent_curried _) in (value of k); vm_compute in k'; subst k'.
+      cbv beta iota in k.
+      set (k' := IR.OfPHOAS.arith_expr_of_PHOAS_args _) in (value of k).
+      cbv [IR.OfPHOAS.arith_expr_of_PHOAS_args] in k'.
+      (*clear k.
+      set (k := IR.OfPHOAS.arith_expr_of_base_PHOAS _ _) in (value of k') at 1.
+      cbv [Language.Compilers.ToString.int.option.None] in k.
+      cbv [IR.OfPHOAS.arith_expr_for_base] in k.
+      cbv [IR.OfPHOAS.arith_expr_of_base_PHOAS] in k.
+      cbv [IR.OfPHOAS.arith_expr_of_PHOAS] in k.
+      cbv [IR.OfPHOAS.arith_expr_of_PHOAS_ident] in k.
+      cbv [IR.OfPHOAS.arith_expr_of_PHOAS_literal_Z] in k.
+      vm_compute in k.*)
+      vm_compute in k'.
+      subst k'.
+      cbv beta iota zeta in k.
+      set (k' := Crypto.Util.Option.bind _ _) in (value of k) at 1; vm_compute in k'; subst k'.
+      cbv beta iota zeta in k.
+      set (k' := IR.OfPHOAS.bounds_check _ _ _ _ _ _) in (value of k) at 1; vm_compute in k'; subst k'.
+      cbv beta iota zeta in k.
+      set (k' := IR.OfPHOAS.bounds_check _ _ _ _ _ _) in (value of k) at 1; vm_compute in k'; subst k'.
+      cbv beta iota zeta in k.
+      set (k' := IR.OfPHOAS.bounds_check _ _ _ _ _ _) in (value of k) at 1; vm_compute in k'; subst k'.
+      cbv beta iota zeta in k.
+      set (k' := Language.Compilers.ToString.int.of_zrange_relaxed _) in (value of k) at 1; vm_compute in k'; subst k'.
+      set (k' := Language.Compilers.ToString.int.of_zrange_relaxed _) in (value of k) at 1; vm_compute in k'; subst k'.
+      set (k' := IR.OfPHOAS.bounds_check _ _ _ _ _ _) in (value of k) at 1; vm_compute in k'; subst k'.
+      cbv beta iota zeta in k.
+      set (k' := IR.OfPHOAS.bounds_check _ _ _ _ _ _) in (value of k) at 1; vm_compute in k'; subst k'.
+      cbv beta iota zeta in k.
+      set (k' := IR.OfPHOAS.result_upcast _ _) in (value of k) at 1; vm_compute in k'; subst k'.
+      cbv beta iota zeta in k.
+      set (k' := IR.OfPHOAS.result_upcast _ _) in (value of k) at 1; vm_compute in k'; subst k'.
+      cbv beta iota zeta in k.
+      set (k' := IR.OfPHOAS.result_upcast _ _) in (value of k) at 1; vm_compute in k'; subst k'.
+      (*cbv
+      vm_compute in k.
+      vm_compute in k'.
+      vm_compute in k'.
+      cbv -[Language.Compilers.ToString.ToFunctionLines] in v.
+      clear v.
+      cbv [to_bytes] in k.
+      cbv [possible_values_of_machine_wordsize] in k.
+      cbv [possible_values_of_machine_wordsize_with_bytes] in k.
+      cbv [widen_bytes] in k.
+      cbv [widen_bytes_opt_instance_0] in k.
+      cbv [widen_carry] in k.
+      cbv [widen_carry_opt_instance_0] in k.
+      cbv [Pipeline.BoundsPipeline] in k.
+      cbv [Rewriter.Util.LetIn.Let_In] in k.
+      set (k' := GeneralizeVar.FromFlat _) in (value of k); vm_compute in k'; subst k'.
+      cbv [CheckedPartialEvaluateWithBounds] in k.
+      cbv [Rewriter.Util.LetIn.Let_In] in k.
+      set (k' := GeneralizeVar.FromFlat (GeneralizeVar.ToFlat _)) in (value of k).
+      vm_compute in k'.
+      subst k'.
+      set (k' := CheckCasts.GetUnsupportedCasts _) in (value of k).
+      vm_compute in k'.
+      subst k'.
+      cbv beta iota in k.
+      set (k' := ZRange.type.base.option.is_tighter_than _ _) in (value of k).
+      vm_compute in k'; subst k'.
+      cbv beta iota in k.
+      set (k' := ZRange.type.base.option.is_tighter_than _ _) in (value of k).
+      vm_compute in k'; subst k'.
+      cbv beta iota in k.
+      cbv [split_multiret_to] in k.
+      cbv [should_split_multiret] in k.
+      cbv [should_split_multiret_opt_instance_0] in k.
+      cbv [split_mul_to] in k.
+      cbv [should_split_mul] in k.
+      cbv [should_split_mul_opt_instance_0] in k.
+      cbv [only_signed_opt_instance_0] in k.
+      set (k' := GeneralizeVar.FromFlat (GeneralizeVar.ToFlat _)) in (value of k) at 2.
+      vm_compute in k'.
+      subst k'.
+      set (k' := GeneralizeVar.FromFlat (GeneralizeVar.ToFlat _)) in (value of k) at 1.
+      vm_compute in k'.
+      subst k'.
+      set (k' := PartialEvaluateWithBounds _ _ _ _) in (value of k).
+      vm_compute in k'.
+      subst k'.*)
+    Abort.
+  End __.
+End debugging_25519_to_bytes_java.
+
+Local Instance : only_signed_opt := false.
+
+Module debugging_p256_uint1.
+  Import Crypto.PushButtonSynthesis.WordByWordMontgomery.
+  Import Crypto.Arithmetic.WordByWordMontgomery.WordByWordMontgomery.
+  Import Stringification.Java.
+  Section __.
+    Local Existing Instance Java.OutputJavaAPI.
+    Local Instance static : static_opt := false.
+    Local Instance : internal_static_opt := true.
+    Local Instance : emit_primitives_opt := true.
+    Local Instance : use_mul_for_cmovznz_opt := true.
+    Local Instance : widen_carry_opt := true.
+    Local Instance : widen_bytes_opt := true.
+    Local Instance : should_split_mul_opt := false. (* only for x64 *)
+
+    Context (m : Z := 2^256 - 2^224 + 2^192 + 2^96 - 1)
+            (machine_wordsize : Z := 128).
+
+    Goal True.
+      pose (smul m machine_wordsize "p256") as v.
+      cbv [smul] in v.
+      set (k := WordByWordMontgomery.mul m machine_wordsize) in (value of v).
+      cbv [WordByWordMontgomery.mul] in k.
+      cbv [possible_values_of_machine_wordsize] in k.
+      cbv [widen_carry] in k.
+      cbv [widen_carry_opt_instance_0] in k.
+      cbv [Pipeline.BoundsPipeline] in k.
+      cbv [Rewriter.Util.LetIn.Let_In] in k.
+      clear v.
+      set (k' := GeneralizeVar.FromFlat _) in (value of k); vm_compute in k'; subst k'.
+      cbv [CheckedPartialEvaluateWithBounds] in k.
+      cbv [Rewriter.Util.LetIn.Let_In] in k.
+      set (k' := GeneralizeVar.FromFlat (GeneralizeVar.ToFlat _)) in (value of k).
+      vm_compute in k'.
+      subst k'.
+      set (k' := CheckCasts.GetUnsupportedCasts _) in (value of k).
+      vm_compute in k'.
+      subst k'.
+      cbv beta iota in k.
+      set (k' := ZRange.type.base.option.is_tighter_than _ _) in (value of k).
+      vm_compute in k'; subst k'.
+      cbv beta iota in k.
+      cbv [split_mul_to] in k.
+      cbv [should_split_mul] in k.
+      cbv [should_split_mul_opt_instance_0] in k.
+      set (k' := ZRange.type.base.option.is_tighter_than _ _) in (value of k).
+      vm_compute in k'; subst k'.
+      cbv beta iota in k.
+      cbv [split_mul_to] in k.
+      cbv [should_split_mul] in k.
+      cbv [should_split_mul_opt_instance_0] in k.
+      cbv [split_multiret_to should_split_multiret should_split_multiret_opt_instance_0] in k.
+      set (k' := PartialEvaluateWithBounds _ _ _ _) in (value of k).
+      vm_compute in k'.
+    Abort.
+  End __.
+End debugging_p256_uint1.
 
 Module debugging_go_build0.
   Import Stringification.Go.
