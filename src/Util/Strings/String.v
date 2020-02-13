@@ -318,3 +318,12 @@ Definition replace (from to s : string) : string
   := concat to (split from s).
 
 Notation NewLine := (String Ascii.NewLine "").
+
+(** Title case makes all words after a space begin with a capital letter *)
+Definition capitalize_first_letter (s : string) : string
+  := match s with
+     | "" => ""
+     | String ch s => String (Ascii.to_upper ch) s
+     end.
+Definition to_title_case (s : string) : string
+  := concat " " (List.map capitalize_first_letter (split " " s)).
