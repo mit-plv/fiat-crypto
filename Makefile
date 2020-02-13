@@ -20,6 +20,8 @@ CFLAGS?=
 
 CARGO_BUILD := cargo build
 
+SKIP_BEDROCK2?=
+
 PROFILE?=
 VERBOSE?=
 SHOW := $(if $(VERBOSE),@true "",@echo "")
@@ -34,6 +36,7 @@ INSTALLDEFAULTROOT := Crypto
 	install-standalone install-standalone-ocaml install-standalone-haskell \
 	uninstall-standalone uninstall-standalone-ocaml uninstall-standalone-haskell \
 	util c-files rust-files go-files \
+	bedrock2-backend \
 	deps \
 	nobigmem print-nobigmem \
 	lite only-heavy printlite \
@@ -63,6 +66,13 @@ GREP_EXCLUDE_SPECIAL_VOFILES := grep -v '^src/Extraction\(OCaml\|Haskell\)/'
 PERFTESTING_VO := \
 	src/Rewriter/PerfTesting/Core.vo \
 	src/Rewriter/PerfTesting/StandaloneOCamlMain.vo
+BEDROCK2_FILES_PATTERN := \
+	src/Bedrock/% # it's important to catch not just the .vo files, but also the .glob files, etc, because this is used to filter FILESTOINSTALL
+EXCLUDE_PATTERN :=
+ifeq ($(SKIP_BEDROCK2),1)
+EXCLUDE_PATTERN += $(BEDROCK2_FILES_PATTERN)
+endif
+EXCLUDED_VOFILES := $(filter $(EXCLUDE_PATTERN),$(VOFILES))
 # add files to this list to prevent them from being built as final
 # targets by the "lite" target
 LITE_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo \
@@ -70,16 +80,17 @@ LITE_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo \
 	src/Curves/Weierstrass/Projective.vo \
 	src/Rewriter/RulesGood.vo \
 	src/Rewriter/All.vo \
-	$(PERFTESTING_VO)
+	$(PERFTESTING_VO) \
+	$(EXCLUDED_VO)
 NOBIGMEM_UNMADE_VOFILES := \
 	src/Curves/Weierstrass/AffineProofs.vo \
 	src/Curves/Weierstrass/Jacobian.vo \
 	src/Curves/Weierstrass/Projective.vo \
-	$(PERFTESTING_VO)
-BEDROCK2_FILES_PATTERN := \
-	src/Bedrock/% # it's important to catch not just the .vo files, but also the .glob files, etc, because this is used to filter FILESTOINSTALL
-REGULAR_VOFILES := $(filter-out $(SPECIAL_VOFILES),$(VOFILES))
+	$(PERFTESTING_VO) \
+	$(EXCLUDED_VO)
+REGULAR_VOFILES := $(filter-out $(EXCLUDE_PATTERN) $(SPECIAL_VOFILES),$(VOFILES))
 REGULAR_EXCEPT_BEDROCK2_VOFILES := $(filter-out $(BEDROCK2_FILES_PATTERN),$(REGULAR_VOFILES))
+BEDROCK2_VOFILES := $(filter $(BEDROCK2_FILES_PATTERN),$(REGULAR_VOFILES))
 PRE_STANDALONE_PRE_VOFILES := $(filter src/Standalone%.vo,$(REGULAR_VOFILES))
 UTIL_PRE_VOFILES := $(filter src/Algebra/%.vo src/Tactics/%.vo src/Util/%.vo,$(REGULAR_VOFILES))
 SOME_EARLY_VOFILES := \
@@ -160,6 +171,7 @@ ACCEPT_OUTPUTS := $(addprefix accept-,$(OUTPUT_PREOUTS))
 all: coq standalone-ocaml perf-standalone c-files rust-files go-files check-output
 coq: $(REGULAR_VOFILES)
 coq-without-bedrock2: $(REGULAR_EXCEPT_BEDROCK2_VOFILES)
+bedrock2-backend: $(BEDROCK2_VOFILES)
 c-files: $(ALL_C_FILES)
 rust-files: $(ALL_RUST_FILES)
 go-files: $(ALL_GO_FILES)
@@ -236,6 +248,7 @@ cleanall:: clean-rewriter
 install: install-rewriter
 endif
 
+ifneq ($(SKIP_BEDROCK2),1)
 ifneq ($(EXTERNAL_BEDROCK2),1)
 COQPATH_TEMP:=${CURDIR_SAFE}/$(BEDROCK2_SRC):${CURDIR_SAFE}/$(COQUTIL_SRC):$(COQPATH_TEMP)
 deps: coqutil bedrock2
@@ -243,6 +256,7 @@ $(VOFILES): | coqutil bedrock2
 $(ALLDFILES): | coqutil bedrock2
 cleanall:: clean-bedrock2 clean-coqutil
 install: install-bedrock2 install-coqutil
+endif
 endif
 
 ifneq ($(EXTERNAL_COQPRIME),1)
