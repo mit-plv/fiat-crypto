@@ -11,7 +11,7 @@
 /*   All functions also ensure that these two properties are true of  */
 /*   return values.                                                   */
 
-package fiat_p256_
+package fiat_p256
 
 import "math/bits"
 

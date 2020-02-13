@@ -938,9 +938,13 @@ Module Compilers.
                  (outbounds : ZRange.type.base.option.interp (type.final_codomain t)),
             (list string * ident_infos) + string;
 
-        (** Generates a header of any needed typedefs based on the idents used and the curve-specific prefix *)
-        (** TODO: should we pick a more generic name than "typedef_header"? *)
-        typedef_header
+        (** Generates a header of any needed typedefs, etc based on the idents used and the curve-specific prefix *)
+        header
+        : forall (static : bool) (prefix : string) (ident_info : ident_infos),
+            list string;
+
+        (** The footer on the file, if any *)
+        footer
         : forall (static : bool) (prefix : string) (ident_info : ident_infos),
             list string;
 

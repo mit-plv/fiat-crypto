@@ -20,15 +20,16 @@ Import Stringification.Language.Compilers.Options.
 Module Go.
 
   (* Header imports and type defs *)
-  Definition typedef_header (static : bool) (prefix : string) (infos : ToString.ident_infos)
+  Definition header (static : bool) (prefix : string) (infos : ToString.ident_infos)
   : list string
-         (* N.B. We don't do anything with static; we never export anything *)
+    (* N.B. We don't do anything with static; we never export anything *)
     := let bitwidths_used := ToString.bitwidths_used infos in
        let needs_bits_import (* we only need the bits import if we use addcarryx/subborrowx/mulx *)
            := negb ((PositiveSet.is_empty (ToString.addcarryx_lg_splits infos))
                       && (PositiveSet.is_empty (ToString.mulx_lg_splits infos))) in
        let type_prefix := ("type " ++ prefix)%string in
-       ((["package " ++ prefix;
+       let pkg_name := if endswith "_" prefix then substring 0 (String.length prefix - 1) prefix else prefix in
+       ((["package " ++ pkg_name;
             ""]%string)
           ++ (if needs_bits_import then ["import ""math/bits"""]%string else [])
           ++ (if PositiveSet.mem 1 bitwidths_used
@@ -428,7 +429,8 @@ Module Go.
   Definition OutputGoAPI : ToString.OutputLanguageAPI :=
     {| ToString.comment_block := List.map (fun line => "/* " ++ line ++ " */")%string;
        ToString.ToFunctionLines := @ToFunctionLines;
-       ToString.typedef_header := typedef_header;
+       ToString.header := header;
+       ToString.footer := fun _ _ _ => [];
        ToString.strip_special_infos := strip_special_infos |}.
 
 End Go.

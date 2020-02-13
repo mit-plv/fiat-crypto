@@ -19,16 +19,14 @@ Import Stringification.Language.Compilers.Options.
 
 Module Rust.
 
-  Definition header : string :=
-    "#![allow(unused_parens)]" ++ String.NewLine ++
-    "#[allow(non_camel_case_types)]" ++ String.NewLine.
-
   (* Header imports and type defs *)
-  Definition typedef_header (static : bool) (prefix : string) (infos : ToString.ident_infos)
+  Definition header (static : bool) (prefix : string) (infos : ToString.ident_infos)
     : list string
     := let bitwidths_used := ToString.bitwidths_used infos in
        let type_prefix := ((if static then "type " else "pub type ") ++ prefix)%string in
-       ([header]
+       (["#![allow(unused_parens)]";
+        "#[allow(non_camel_case_types)]";
+        ""]%string
           ++ (if PositiveSet.mem 1 bitwidths_used
               then [type_prefix ++ "u1 = u8;"; (* C: typedef unsigned char prefix_uint1 *)
                       type_prefix ++ "i1 = i8;" ]%string (* C: typedef signed char prefix_int1 *)
@@ -356,7 +354,8 @@ Module Rust.
   Definition OutputRustAPI : ToString.OutputLanguageAPI :=
     {| ToString.comment_block := List.map (fun line => "/* " ++ line ++ " */")%string;
        ToString.ToFunctionLines := @ToFunctionLines;
-       ToString.typedef_header := typedef_header;
+       ToString.header := header;
+       ToString.footer := fun _ _ _ => [];
        (** No special handling for any functions *)
        ToString.strip_special_infos infos := infos |}.
 

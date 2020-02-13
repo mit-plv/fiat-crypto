@@ -919,10 +919,16 @@ Section __.
                         (ToString.ident_info_of_bitwidths_used extra_bit_widths) in
          let header :=
              (comment_header
-                ++ ToString.typedef_header static function_name_prefix infos
+                ++ ToString.header static function_name_prefix infos
                 ++ [""]) in
+         let footer :=
+             ToString.footer static function_name_prefix infos in
          [("check_args" ++ String.NewLine ++ String.concat String.NewLine header,
            check_args (ErrorT.Success header))%string]
-           ++ res.
+           ++ res
+           ++ match footer with
+              | nil => nil
+              | _ => [("footer", ErrorT.Success footer)]
+              end.
   End for_stringification.
 End __.

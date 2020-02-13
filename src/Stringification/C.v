@@ -45,7 +45,7 @@ Module Compilers.
 
     Module C.
       Module String.
-        Definition typedef_header (static : bool) (prefix : string) (infos : ident_infos)
+        Definition header (static : bool) (prefix : string) (infos : ident_infos)
         : list string
           := let bitwidths_used := bitwidths_used infos in
              (["#include <stdint.h>"]
@@ -527,7 +527,9 @@ Module Compilers.
 
           ToString.ToFunctionLines := @ToFunctionLines;
 
-          ToString.typedef_header := String.typedef_header;
+          ToString.header := String.header;
+
+          ToString.footer := fun _ _ _ => [];
 
           (** No special handling for any functions *)
           ToString.strip_special_infos infos := infos;

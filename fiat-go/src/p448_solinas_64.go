@@ -8,7 +8,7 @@
 /* Computed values: */
 /* carry_chain = [3, 7, 4, 0, 5, 1, 6, 2, 7, 3, 4, 0] */
 
-package fiat_p448_
+package fiat_p448
 
 import "math/bits"
 
