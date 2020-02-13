@@ -192,7 +192,7 @@ Module Compilers.
       Fixpoint to_base_arg_list (prefix : string) {t} : base_var_data t -> list string
         := match t return base_var_data t -> _ with
            | tZ
-             => fun '(n, r) => [String.type.primitive.to_string prefix type.Z r ++ " " ++ n]
+             => fun '(n, is_ptr, r) => [String.type.primitive.to_string prefix type.Z r ++ " " ++ n]
            | base.type.prod A B
              => fun '(va, vb) => (@to_base_arg_list prefix A va ++ @to_base_arg_list prefix B vb)%list
            | base.type.list tZ
@@ -220,7 +220,7 @@ Module Compilers.
       Fixpoint to_base_retarg_list prefix {t} : base_var_data t -> list string
         := match t return base_var_data t -> _ with
            | tZ
-             => fun '(n, r) => [String.type.primitive.to_string prefix type.Zptr r ++ " " ++ n]
+             => fun '(n, is_ptr, r) => [String.type.primitive.to_string prefix type.Zptr r ++ " " ++ n]
            | base.type.prod A B
              => fun '(va, vb) => (@to_base_retarg_list prefix A va ++ @to_base_retarg_list prefix B vb)%list
            | base.type.list tZ
@@ -454,6 +454,7 @@ Module Compilers.
            ; un_op_casts := C_un_op_casts
            ; upcast_on_assignment := false
            ; upcast_on_funcall := false
+           ; explicit_pointer_variables := false
         |}.
 
       (** Top-level printing functions *)

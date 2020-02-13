@@ -830,7 +830,7 @@ Module Compilers.
         := match t with
            | base.type.unit
              => unit
-           | base.type.type_base base.type.Z => string * option int.type
+           | base.type.type_base base.type.Z => string * bool (* is pointer *) * option int.type
            | base.type.prod A B => base_var_data A * base_var_data B
            | base.type.list A => string * option int.type * nat
            | base.type.type_base _
@@ -862,7 +862,7 @@ Module Compilers.
 
       Fixpoint names_of_base_var_data {t} : base_var_data t -> base_var_names t
         := match t return base_var_data t -> base_var_names t with
-           | base.type.type_base base.type.Z => @fst _ _
+           | base.type.type_base base.type.Z => fun '(n, is_ptr, _) => n
            | base.type.prod A B
              => fun xy => (@names_of_base_var_data A (fst xy), @names_of_base_var_data B (snd xy))
            | base.type.list A => fun x => fst (fst x)
@@ -880,7 +880,7 @@ Module Compilers.
       Fixpoint bound_to_string {t : base.type} : var_data (type.base t) -> ZRange.type.base.option.interp t -> list string
         := match t return var_data (type.base t) -> ZRange.type.base.option.interp t -> list string with
            | tZ
-             => fun '(name, _) arg
+             => fun '(name, _, _) arg
                 => [(name ++ ": ")
                       ++ match arg with
                          | Some arg => show false arg

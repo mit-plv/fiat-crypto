@@ -330,7 +330,10 @@ Module Compilers.
             (* Are upcasts necessary on assignments? *)
             upcast_on_assignment : bool;
             (* Are upcasts necessary for arguments to function calls? *)
-            upcast_on_funcall : bool
+            upcast_on_funcall : bool;
+
+            (* Should we declare pointer variables explicitly (rather than declaring non-pointer variables and taking references to them *)
+            explicit_pointer_variables : bool;
           }.
 
         Class consider_retargs_live_opt := consider_retargs_live : forall {s d}, ident s d -> bool.
@@ -863,7 +866,11 @@ Module Compilers.
               : base_var_data t -> int.option.interp t -> ErrT (arith_expr_for_base t)
               := match t with
                  | tZ
-                   => fun '(n, r) r' => ret (cast_down_if_needed r' (Var type.Z n, r))
+                   => fun '(n, is_ptr, r) r'
+                      => let v := if is_ptr
+                                  then (Dereference @@ Var type.Zptr n)%Cexpr
+                                  else Var type.Z n in
+                         ret (cast_down_if_needed r' (v, r))
                  | base.type.prod A B
                    => fun '(da, db) '(ra, rb)
                       => (ea,, eb <- @arith_expr_of_base_PHOAS_Var A da ra, @arith_expr_of_base_PHOAS_Var B db rb;
@@ -938,10 +945,12 @@ Module Compilers.
                 -> ErrT expr
               := match t return base_var_data t -> expr.expr (type.base t) -> ErrT expr with
                  | tZ
-                   => fun '(n, r) e
+                   => fun '(n, is_ptr, r) e
                       => (rhs <- arith_expr_of_base_PHOAS e r;
                             let '(e, r) := result_upcast (t:=tZ) r rhs in
-                            ret [AssignZPtr n r e])
+                            ret (if is_ptr
+                                 then [AssignZPtr n r e]
+                                 else [Assign false type.Z r n e]))
                  | base.type.type_base _
                  | base.type.unit
                    => fun _ _ => inr ["Invalid type " ++ show false t]%string
@@ -1134,7 +1143,7 @@ Module Compilers.
                        (count : positive)
                        (make_name : positive -> option string)
                        (r : option int.type)
-              : ErrT (expr * string * arith_expr type.Zptr)
+              : ErrT (expr * string * bool (* is pointer *) * arith_expr type.Zptr)
               := (n ,, r <- (match make_name count with
                              | Some n => ret n
                              | None => inr ["Variable naming-function does not support the index " ++ show false count]%string
@@ -1143,7 +1152,9 @@ Module Compilers.
                              | Some r => ret r
                              | None => inr ["Missing return type annotation for " ++ descr]%string
                              end);
-                    ret ([DeclareVar type.Z (Some r) n], n, (Addr @@ Var type.Z n)%Cexpr)).
+                 ret (if explicit_pointer_variables
+                      then ([DeclareVar type.Zptr (Some r) n], n, true, (Var type.Zptr n)%Cexpr)
+                      else ([DeclareVar type.Z (Some r) n], n, false, (Addr @@ Var type.Z n)%Cexpr))).
 
             Let make_assign_arg_1ref_opt
                 (do_bounds_check : bool)
@@ -1165,8 +1176,8 @@ Module Compilers.
                                (args <- arith_expr_of_PHOAS_args args;
                                   idce <- recognize rout args;
                                   v <- declare_name (show false idc) count make_name rout;
-                                  let '(decls, n, retv) := v in
-                                  ret ((decls ++ (idce retv))%list, (n, rout)))%err)%option in
+                                  let '(decls, n, is_ptr, retv) := v in
+                                  ret ((decls ++ (idce retv))%list, (n, is_ptr, rout)))%err)%option in
                  match res_ref with
                  | Some (inl res) => ret res
                  | Some (inr err) => inr err
@@ -1175,7 +1186,7 @@ Module Compilers.
                         let '(e1, r1) := e1 in
                         match make_name count with
                         | Some n1
-                          => ret ([Assign true type.Z r1 n1 e1], (n1, r1))
+                          => ret ([Assign true type.Z r1 n1 e1], (n1, false, r1))
                         | None => inr ["Variable naming-function does not support the index " ++ show false count]%string
                         end
                  end.
@@ -1199,9 +1210,9 @@ Module Compilers.
                         let '((rout1, rout2), idce) := idce in
                         v1,, v2 <- (declare_name (show false idc) count make_name rout1,
                                     declare_name (show false idc) (Pos.succ count) make_name rout2);
-                          let '(decls1, n1, retv1) := v1 in
-                          let '(decls2, n2, retv2) := v2 in
-                          ret (decls1 ++ decls2 ++ (idce (retv1, retv2)%Cexpr), ((n1, rout1), (n2, rout2)))%list
+                          let '(decls1, n1, is_ptr1, retv1) := v1 in
+                          let '(decls2, n2, is_ptr2, retv2) := v2 in
+                          ret (decls1 ++ decls2 ++ (idce (retv1, retv2)%Cexpr), ((n1, is_ptr1, rout1), (n2, is_ptr2, rout2)))%list
                  | None => inr ["Invalid assignment of non-identifier-application: " ++ show false e]%string
                  end.
 
@@ -1282,6 +1293,7 @@ Module Compilers.
                  end%expr_pat%option.
 
             Fixpoint base_var_data_of_bounds {t}
+                     (is_ptr : bool)
                      (count : positive)
                      (make_name : positive -> option string)
                      {struct t}
@@ -1289,12 +1301,12 @@ Module Compilers.
               := match t return ZRange.type.base.option.interp t -> option (positive * var_data (type.base t)) with
                  | tZ
                    => fun r => (n <- make_name count;
-                                  Some (Pos.succ count, (n, option_map int.of_zrange_relaxed (option_map relax_zrange r))))
+                                  Some (Pos.succ count, (n, is_ptr, option_map int.of_zrange_relaxed (option_map relax_zrange r))))
                  | base.type.prod A B
                    => fun '(ra, rb)
-                      => (va <- @base_var_data_of_bounds A count make_name ra;
+                      => (va <- @base_var_data_of_bounds A is_ptr count make_name ra;
                             let '(count, va) := va in
-                            vb <- @base_var_data_of_bounds B count make_name rb;
+                            vb <- @base_var_data_of_bounds B is_ptr count make_name rb;
                               let '(count, vb) := vb in
                               Some (count, (va, vb)))
                  | base.type.list tZ
@@ -1321,11 +1333,12 @@ Module Compilers.
                  end%option.
 
             Definition var_data_of_bounds {t}
+                       (is_ptr : bool)
                        (count : positive)
                        (make_name : positive -> option string)
               : ZRange.type.option.interp t -> option (positive * var_data t)
               := match t with
-                 | type.base t => base_var_data_of_bounds count make_name
+                 | type.base t => base_var_data_of_bounds is_ptr count make_name
                  | type.arrow s d => fun _ => None
                  end.
 
@@ -1349,7 +1362,7 @@ Module Compilers.
                            ret (tt, vd, name_infos.adjust_dead consider_retargs_live rename_dead rv)
                  | type.arrow s d
                    => fun e '(inbound, inbounds) vd
-                      => match var_data_of_bounds count make_in_name inbound, invert_Abs e with
+                      => match var_data_of_bounds false count make_in_name inbound, invert_Abs e with
                          | Some (count, vs), Some f
                            => retv <- @expr_of_PHOAS' do_bounds_check d (f vs) make_in_name make_name inbounds vd count in_to_body_count;
                                 let '(vss, vd, rv) := retv in
@@ -1371,7 +1384,7 @@ Module Compilers.
                        (count : positive)
                        (in_to_body_count out_to_in_count : positive -> positive)
               : ErrT (type.for_each_lhs_of_arrow var_data t * var_data (type.final_codomain t) * expr)
-              := match var_data_of_bounds count make_out_name outbounds with
+              := match var_data_of_bounds true count make_out_name outbounds with
                  | Some vd
                    => let '(count, vd) := vd in
                       let count := out_to_in_count count in

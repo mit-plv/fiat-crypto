@@ -245,7 +245,7 @@ Module Go.
     match t return base_var_data t -> _ with
     | tZ =>
       let typ := match mode with In => IR.type.Z | Out => IR.type.Zptr end in
-      fun '(n, r) => [n ++ " " ++ primitive_type_to_string prefix typ r]
+      fun '(n, is_ptr, r) => [n ++ " " ++ primitive_type_to_string prefix typ r]
     | base.type.prod A B =>
       fun '(va, vb) => (to_base_arg_list prefix mode va ++ to_base_arg_list prefix mode vb)%list
     | base.type.list tZ =>
@@ -373,6 +373,7 @@ Module Go.
        ; un_op_casts := Go_un_op_casts
        ; upcast_on_assignment := true
        ; upcast_on_funcall := true
+       ; explicit_pointer_variables := false
     |}.
 
   Definition to_function_lines (static : bool) (prefix : string) (name : string)
