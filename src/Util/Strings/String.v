@@ -149,6 +149,19 @@ Proof.
   { apply internal_string_dec_lb; congruence. }
 Qed.
 
+(** [endswith postfix s] returns [true] iff [s] ends with [postfix] *)
+Definition endswith (postfix s : string) : bool
+  := (postfix =? (substring (length s - length postfix) (length postfix) s))%string.
+
+Lemma endswith_correct postfix s
+  : endswith postfix s = true <-> substring (length s - length postfix) (length postfix) s = postfix.
+Proof.
+  cbv [endswith].
+  split; intro H.
+  { apply internal_string_dec_bl in H; congruence. }
+  { apply internal_string_dec_lb; congruence. }
+Qed.
+
 Section strip_prefix_cps.
   Context {R} (found : string -> R)
           (remaining : string -> string -> R).
