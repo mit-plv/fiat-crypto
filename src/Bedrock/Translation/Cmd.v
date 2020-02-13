@@ -1,6 +1,7 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Lists.List.
 Require Import Coq.micromega.Lia.
+Require Import Coq.Strings.String.
 Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Map.SeparationLogic.
 Require Import bedrock2.WeakestPreconditionProperties.
@@ -86,7 +87,7 @@ Section Cmd.
 
   Section Proofs.
     Context {p_ok : @ok p}.
-    Context (call : Syntax.funname ->
+    Context (call : string ->
                     Semantics.trace ->
                     Interface.map.rep (map:=Semantics.mem) ->
                     list Interface.word.rep ->
@@ -95,7 +96,7 @@ Section Cmd.
                     Prop).
     Context (Proper_call :
                Morphisms.pointwise_relation
-                 Syntax.funname
+                 string
                  (Morphisms.pointwise_relation
                     Semantics.trace
                     (Morphisms.pointwise_relation
@@ -117,7 +118,7 @@ Section Cmd.
     Local Instance mem_ok : Interface.map.ok Semantics.mem
       := Semantics.mem_ok.
     Local Instance varname_eqb_spec x y : BoolSpec _ _ _
-      := Semantics.varname_eqb_spec x y.
+      := Decidable.String.eqb_spec x y.
 
     Inductive valid_cmd : forall {t}, @API.expr (fun _ => unit) (type.base t) -> Prop :=
     | valid_LetIn_with_set :
@@ -469,7 +470,7 @@ Section Cmd.
                    locally_equivalent equivalent] in *.
           cleanup.
           rewrite ?map_length in *.
-          repeat split; cbn [length]; [ congruence | | assumption ].
+          repeat split; cbn [Datatypes.length]; [ congruence | | assumption ].
           apply Forall2_cons; [|eassumption].
 
           cbn [rep.equiv rep.Z] in *.

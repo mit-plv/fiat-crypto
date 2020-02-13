@@ -158,7 +158,7 @@ Section Expr.
                       (expr.Ident _ (ident.List_nth_default _))
                       d) (expr.Var type_listZ l))
          (expr.Ident _ (ident.Literal base.type.nat i))) =>
-      let l : list Syntax.varname := l in
+      let l : list String.string := l in
       let i : nat := i in
       let d : Syntax.expr.expr := translate_expr true d in
       nth_default d (map Syntax.expr.var l) i
@@ -180,7 +180,7 @@ Section Expr.
     Local Instance mem_ok : Interface.map.ok Semantics.mem
       := Semantics.mem_ok.
     Local Instance varname_eqb_spec x y : BoolSpec _ _ _
-      := Semantics.varname_eqb_spec x y.
+      := Decidable.String.eqb_spec x y.
 
     Inductive valid_expr
       : forall {t},

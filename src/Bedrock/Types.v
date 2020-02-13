@@ -16,7 +16,7 @@ system, the parameter class, and some shorthand notations. ***)
 Class parameters :=
   {
     semantics :> Semantics.parameters;
-    varname_gen : nat -> Syntax.varname;
+    varname_gen : nat -> String.string;
     error : Syntax.expr.expr;
     word_size_in_bytes : Z;
     maxint := 2 ^ Semantics.width;
@@ -101,7 +101,7 @@ Module Types.
         }.
 
       Instance Z : rep base_Z :=
-        { ltype := Syntax.varname;
+        { ltype := String.string;
           rtype := Syntax.expr.expr;
           rtype_of_ltype := Syntax.expr.var;
           dummy_ltype := varname_gen 0%nat;
@@ -124,7 +124,7 @@ Module Types.
 
     (* Types that appear in the bedrock2 expressions on the left-hand-side of
      assignments (or in return values). For example, if we want to assign three
-     integers, we need three [Syntax.varname]s.
+     integers, we need three strings.
 
      Functions can't appear on the left-hand-side, so we return garbage output
      (the unit type). *)

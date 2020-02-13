@@ -1,6 +1,7 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Lists.List.
 Require Import Coq.micromega.Lia.
+Require Import Coq.Strings.String.
 Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Map.SeparationLogic.
 Require Import bedrock2.WeakestPreconditionProperties.
@@ -76,7 +77,7 @@ Section ExprWithSet.
                                         (expr.Ident (ident.Literal (t:=base.type.Z) s)))
                                      c) x) y)).
 
-  Definition translate_add_get_carry (sum carry : Syntax.varname)
+  Definition translate_add_get_carry (sum carry : String.string)
              r1 r2 s (x y : API.expr type_Z) : Syntax.cmd.cmd :=
     if (range_good r1 && range_good r2)%bool
     then if Z.eqb s maxint
@@ -93,7 +94,7 @@ Section ExprWithSet.
          else Syntax.cmd.skip
     else Syntax.cmd.skip.
 
-  Definition translate_add_with_get_carry (sum carry : Syntax.varname)
+  Definition translate_add_with_get_carry (sum carry : String.string)
              r1 r2 s (c x y : API.expr type_Z) : Syntax.cmd.cmd :=
     if (range_good r1 && range_good r2)%bool
     then if Z.eqb s maxint
@@ -138,7 +139,7 @@ Section ExprWithSet.
 
   Section Proofs.
     Context {p_ok : @ok p}.
-    Context (call : Syntax.funname ->
+    Context (call : string ->
                     Semantics.trace ->
                     Interface.map.rep (map:=Semantics.mem) ->
                     list Interface.word.rep ->
@@ -147,7 +148,7 @@ Section ExprWithSet.
                     Prop).
     Context (Proper_call :
                Morphisms.pointwise_relation
-                 Syntax.funname
+                 string
                  (Morphisms.pointwise_relation
                     Semantics.trace
                     (Morphisms.pointwise_relation
@@ -169,7 +170,7 @@ Section ExprWithSet.
     Local Instance mem_ok : Interface.map.ok Semantics.mem
       := Semantics.mem_ok.
     Local Instance varname_eqb_spec x y : BoolSpec _ _ _
-      := Semantics.varname_eqb_spec x y.
+      := Decidable.String.eqb_spec x y.
 
     (* TODO : fill this in *)
     Axiom valid_expr_wset :

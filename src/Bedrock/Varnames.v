@@ -1,5 +1,6 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Lists.List.
+Require Import Coq.Strings.String.
 Require Import Coq.micromega.Lia.
 Require Import bedrock2.Syntax.
 Require Import bedrock2.Map.Separation.
@@ -58,7 +59,8 @@ Section Varnames.
   Local Instance mem_ok : map.ok Semantics.mem
     := Semantics.mem_ok.
   Local Instance varname_eqb_spec x y : BoolSpec _ _ _
-    := Semantics.varname_eqb_spec x y.
+    := Decidable.String.eqb_spec x y.
+  Local Notation varname := String.string.
 
   Fixpoint varname_set {t} : base_ltype t -> set varname :=
     match t with

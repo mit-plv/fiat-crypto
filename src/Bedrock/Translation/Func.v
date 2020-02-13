@@ -1,5 +1,6 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Lists.List.
+Require Import Coq.Strings.String.
 Require Import bedrock2.Syntax.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Translation.Cmd.
@@ -37,7 +38,7 @@ Section Func.
       expr.load access_size.word loc.
 
     Definition load_list (start : Syntax.expr.expr) (len nextn : nat)
-      : nat * list varname * Syntax.cmd.cmd :=
+      : nat * list string * Syntax.cmd.cmd :=
       let exprs := map (load_list_item start) (seq 0 len) in
       let varnames := map varname_gen (seq nextn len) in
       let sets := map2 cmd.set varnames exprs in
@@ -57,10 +58,10 @@ Section Func.
           (nvars, (snd (fst load1), snd (fst load2)),
            cmd.seq (snd load1) (snd load2))
       | base_listZ =>
-        fun (x : varname) (l : nat) =>
+        fun (x : string) (l : nat) =>
           load_list (expr.var x) l nextn
       | _ =>
-        fun (x : varname) (l : unit) => (0%nat, x, cmd.skip)
+        fun (x : string) (l : unit) => (0%nat, x, cmd.skip)
       end.
 
     (* read lists from arguments; changes the type system from in-memory
@@ -102,7 +103,7 @@ Section Func.
                (values : list Syntax.expr.expr)
       : Syntax.cmd.cmd :=
       let stores := map2 (store_list_item start)
-                         values (seq 0 (length values)) in
+                         values (seq 0 (Datatypes.length values)) in
       fold_right cmd.seq cmd.skip stores.
 
     Fixpoint store_return_values {t : base.type}
@@ -116,11 +117,11 @@ Section Func.
                   (store_return_values (snd x) (snd y))
       | base_listZ =>
         (* store list in memory *)
-        fun (x : list varname) (y : varname) =>
+        fun (x : list string) (y : string) =>
           store_list (expr.var y) (map expr.var x)
       | _ =>
         (* rename variable *)
-        fun (x y : varname) => cmd.set y (expr.var x)
+        fun (x y : string) => cmd.set y (expr.var x)
       end.
   End Lists.
 
@@ -185,7 +186,7 @@ Section Func.
     Local Instance mem_ok : Interface.map.ok Semantics.mem
       := Semantics.mem_ok.
     Local Instance varname_eqb_spec x y : BoolSpec _ _ _
-      := Semantics.varname_eqb_spec x y.
+      := Decidable.String.eqb_spec x y.
 
 
   Inductive valid_func : forall {t}, @API.expr (fun _ => unit) t -> Prop :=
