@@ -17,6 +17,10 @@ tramp
 # misc
 *.pyc
 
+# java
+*.class
+fiat-java/doc
+
 # coq
 *.aux
 *.d

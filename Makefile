@@ -35,16 +35,15 @@ INSTALLDEFAULTROOT := Crypto
 	bedrock2 clean-bedrock2 install-bedrock2 coqutil clean-coqutil install-coqutil \
 	install-standalone install-standalone-ocaml install-standalone-haskell \
 	uninstall-standalone uninstall-standalone-ocaml uninstall-standalone-haskell \
-	util c-files rust-files go-files \
+	util c-files rust-files go-files java-files \
 	bedrock2-backend \
 	deps \
 	nobigmem print-nobigmem \
 	lite only-heavy printlite \
 	some-early pre-standalone standalone standalone-haskell standalone-ocaml \
-	test-c-files test-rust-files \
-	only-test-c-files only-test-rust-files \
-	test-c-files test-rust-files test-go-files \
-	only-test-c-files only-test-rust-files only-test-go-files \
+	test-c-files test-rust-files test-go-files test-java-files \
+	only-test-c-files only-test-rust-files only-test-go-files only-test-java-files \
+	javadoc only-javadoc \
 	check-output accept-output
 
 -include Makefile.coq
@@ -125,6 +124,8 @@ endif
 C_DIR :=
 RS_DIR := fiat-rust/src/
 GO_DIR := fiat-go/src/
+JAVA_DIR := fiat-java/src/
+JAVADOC_DIR := fiat-java/doc/
 
 UNSATURATED_SOLINAS_BASE_FILES := curve25519_64 curve25519_32 p521_64 p448_solinas_64 # p224_solinas_64
 WORD_BY_WORD_MONTGOMERY_BASE_FILES := p256_64 p256_32 p384_64 p384_32 secp256k1_64 secp256k1_32 p224_64 p224_32 p434_64 # p434_32
@@ -142,6 +143,15 @@ UNSATURATED_SOLINAS_GO_FILES := $(patsubst %,$(GO_DIR)%.go,$(UNSATURATED_SOLINAS
 WORD_BY_WORD_MONTGOMERY_GO_FILES := $(patsubst %,$(GO_DIR)%.go,$(WORD_BY_WORD_MONTGOMERY_BASE_FILES))
 ALL_GO_FILES := $(patsubst %,$(GO_DIR)%.go,$(ALL_BASE_FILES))
 
+# Java only really supports 32-bit builds, because we have neither 64x64->64x64 multiplication, nor uint128
+# Java also requires that class names match file names
+# from https://stackoverflow.com/q/42925485/377022
+to_title_case = $(shell echo '$(1)' | sed 's/.*/\L&/; s/[a-z]*/\u&/g')
+JAVA_RENAME = $(foreach i,$(patsubst %_32,%,$(filter %_32,$(1))),Fiat$(call to_title_case,$(subst _, ,$(i))))
+UNSATURATED_SOLINAS_JAVA_FILES := $(patsubst %,$(JAVA_DIR)%.java,$(call JAVA_RENAME,$(UNSATURATED_SOLINAS_BASE_FILES)))
+WORD_BY_WORD_MONTGOMERY_JAVA_FILES := $(patsubst %,$(JAVA_DIR)%.java,$(call JAVA_RENAME,$(WORD_BY_WORD_MONTGOMERY_BASE_FILES)))
+ALL_JAVA_FILES := $(UNSATURATED_SOLINAS_JAVA_FILES) $(WORD_BY_WORD_MONTGOMERY_JAVA_FILES)
+
 UNSATURATED_SOLINAS_FUNCTIONS := carry_mul carry_square carry add sub opp selectznz to_bytes from_bytes
 FUNCTIONS_FOR_25519 := $(UNSATURATED_SOLINAS_FUNCTIONS) carry_scmul121666
 UNSATURATED_SOLINAS := src/ExtractionOCaml/unsaturated_solinas
@@ -150,6 +160,10 @@ WORD_BY_WORD_MONTGOMERY := src/ExtractionOCaml/word_by_word_montgomery
 GO_EXTRA_ARGS_ALL := --cmovznz-by-mul --widen-carry --widen-bytes
 GO_EXTRA_ARGS_64  := --no-wide-int $(GO_EXTRA_ARGS_ALL)
 GO_EXTRA_ARGS_32  := $(GO_EXTRA_ARGS_ALL)
+
+JAVA_EXTRA_ARGS_ALL := --cmovznz-by-mul --widen-carry --widen-bytes --internal-static --only-signed
+JAVA_EXTRA_ARGS_64  := --no-wide-int $(JAVA_EXTRA_ARGS_ALL)
+JAVA_EXTRA_ARGS_32  := $(JAVA_EXTRA_ARGS_ALL)
 
 OUTPUT_VOS := \
 	src/Fancy/Montgomery256.vo \
@@ -166,13 +180,14 @@ OUTPUT_PREOUTS := \
 CHECK_OUTPUTS := $(addprefix check-,$(OUTPUT_PREOUTS))
 ACCEPT_OUTPUTS := $(addprefix accept-,$(OUTPUT_PREOUTS))
 
-all: coq standalone-ocaml perf-standalone c-files rust-files go-files check-output
+all: coq standalone-ocaml perf-standalone c-files rust-files go-files java-files check-output
 coq: $(REGULAR_VOFILES)
 coq-without-bedrock2: $(REGULAR_EXCEPT_BEDROCK2_VOFILES)
 bedrock2-backend: $(BEDROCK2_VOFILES)
 c-files: $(ALL_C_FILES)
 rust-files: $(ALL_RUST_FILES)
 go-files: $(ALL_GO_FILES)
+java-files: $(ALL_JAVA_FILES)
 
 lite: $(LITE_VOFILES)
 nobigmem: $(NOBIGMEM_VOFILES)
@@ -602,6 +617,70 @@ $(addprefix only-test-,$(ALL_GO_FILES)) : only-test-% :
 
 test-go-files: $(addprefix test-,$(ALL_GO_FILES))
 only-test-go-files: $(addprefix only-test-,$(ALL_GO_FILES))
+
+$(UNSATURATED_SOLINAS_JAVA_FILES): $(UNSATURATED_SOLINAS) # Makefile
+
+$(WORD_BY_WORD_MONTGOMERY_JAVA_FILES): $(WORD_BY_WORD_MONTGOMERY) # Makefile
+
+# 2^255 - 19
+$(JAVA_DIR)FiatCurve25519.java : $(JAVA_DIR)Fiat%.java :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Java $(JAVA_EXTRA_ARGS_32) '$*' '10' '2^255 - 19' '32' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
+	$(HIDE)rm $@.ok && mv $@.tmp $@
+
+# 2^256 - 2^224 + 2^192 + 2^96 - 1
+$(JAVA_DIR)FiatP256.java : $(JAVA_DIR)Fiat%.java :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) --lang=Java $(JAVA_EXTRA_ARGS_32) '$*' '2^256 - 2^224 + 2^192 + 2^96 - 1' '32' && touch $@.ok) > $@.tmp
+	$(HIDE)rm $@.ok && mv $@.tmp $@
+
+# 2^256 - 2^32 - 977
+$(JAVA_DIR)FiatSecp256K1.java : $(JAVA_DIR)Fiat%.java :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) --lang=Java $(JAVA_EXTRA_ARGS_32) '$*' '2^256 - 2^32 - 977' '32' && touch $@.ok) > $@.tmp
+	$(HIDE)rm $@.ok && mv $@.tmp $@
+
+# 2^384 - 2^128 - 2^96 + 2^32 - 1
+$(JAVA_DIR)FiatP384.java: $(JAVA_DIR)Fiat%.java :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) --lang=Java $(JAVA_EXTRA_ARGS_32) '$*' '2^384 - 2^128 - 2^96 + 2^32 - 1' '32' && touch $@.ok) > $@.tmp
+	$(HIDE)rm $@.ok && mv $@.tmp $@
+
+# 2^224 - 2^96 + 1
+$(JAVA_DIR)FiatP224.java : $(JAVA_DIR)Fiat%.java :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) --lang=Java $(JAVA_EXTRA_ARGS_32) '$*' '2^224 - 2^96 + 1' '32' && touch $@.ok) > $@.tmp
+	$(HIDE)rm $@.ok && mv $@.tmp $@
+
+# 2^216 * 3^137 - 1
+$(JAVA_DIR)FiatP434.java : $(JAVA_DIR)Fiat%.java :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) --lang=Java $(JAVA_EXTRA_ARGS_32) '$*' '2^216 * 3^137 - 1' '32' && touch $@.ok) > $@.tmp
+	$(HIDE)rm $@.ok && mv $@.tmp $@
+
+.PHONY: $(addprefix test-,$(ALL_JAVA_FILES))
+.PHONY: $(addprefix only-test-,$(ALL_JAVA_FILES))
+
+$(addprefix test-,$(ALL_JAVA_FILES)) : test-% : %
+	javac $*
+
+$(addprefix only-test-,$(ALL_JAVA_FILES)) : only-test-% :
+	javac $*
+
+test-java-files: $(addprefix test-,$(ALL_JAVA_FILES))
+only-test-java-files: $(addprefix only-test-,$(ALL_JAVA_FILES))
+
+javadoc: $(ALL_JAVA_FILES)
+
+javadoc only-javadoc:
+	mkdir -p $(JAVADOC_DIR)
+	(cd $(JAVADOC_DIR); javadoc $(addprefix $(realpath .)/,$(ALL_JAVA_FILES)))
 
 # Perf testing
 PERF_MAKEFILE = src/Rewriter/PerfTesting/Specific/generated/primes.mk
