@@ -71,6 +71,7 @@ BEDROCK2_FILES_PATTERN := \
 EXCLUDE_PATTERN :=
 ifeq ($(SKIP_BEDROCK2),1)
 EXCLUDE_PATTERN += $(BEDROCK2_FILES_PATTERN)
+$(warning Skipping bedrock2)
 endif
 EXCLUDED_VOFILES := $(filter $(EXCLUDE_PATTERN),$(VOFILES))
 # add files to this list to prevent them from being built as final
