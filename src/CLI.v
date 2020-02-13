@@ -193,6 +193,8 @@ Module ForExtraction.
     := "                          ".
   Definition static_and_help
     := ("--static", "Declare the functions as static, i.e., local to the file.").
+  Definition internal_static_and_help
+    := ("--internal-static", "Declare internal functions as static, i.e., local to the file.").
   Definition no_wide_int_and_help
     := ("--no-wide-int", "Don't use integers wider than the bitwidth.").
   Definition widen_carry_and_help
@@ -237,6 +239,7 @@ Module ForExtraction.
 
   Definition common_optional_options
     := [static_and_help
+        ; internal_static_and_help
         ; no_wide_int_and_help
         ; widen_carry_and_help
         ; widen_bytes_and_help
@@ -347,7 +350,8 @@ Module ForExtraction.
     {
       (** Is the code static / inlined *)
       static :> static_opt
-
+      (** Is the internal code static / inlined *)
+      ; internal_static :> internal_static_opt
       (** Should we emit primitive operations *)
       ; emit_primitives :> emit_primitives_opt
       (** Should we use the alternate implementation of cmovznz *)
@@ -489,6 +493,7 @@ Module ForExtraction.
                end in
            let '(argv, output_language_api) := argv_to_language_and_argv argv in
            let '(argv, staticv) := argv_to_contains_opt_and_argv "--static" argv in
+           let '(argv, internal_staticv) := argv_to_contains_opt_and_argv "--internal-static" argv in
            let '(argv, no_wide_intsv) := argv_to_contains_opt_and_argv "--no-wide-int" argv in
            let '(argv, use_mul_for_cmovznzv) := argv_to_contains_opt_and_argv "--cmovznz-by-mul" argv in
            let '(argv, widen_carryv) := argv_to_contains_opt_and_argv "--widen-carry" argv in
@@ -500,6 +505,7 @@ Module ForExtraction.
                 | Some (inl args)
                   => let opts
                          := {| static := staticv
+                               ; internal_static := internal_staticv
                                ; use_mul_for_cmovznz := use_mul_for_cmovznzv
                                ; widen_carry := widen_carryv
                                ; widen_bytes := widen_bytesv

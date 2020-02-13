@@ -43,6 +43,7 @@ Local Opaque reified_barrett_red_gen. (* needed for making [autorewrite] not tak
 Section rbarrett_red.
   Context {output_language_api : ToString.OutputLanguageAPI}
           {static : static_opt}
+          {internal_static : internal_static_opt}
           (M machine_wordsize : Z).
 
   Let value_range := r[0 ~> (2^machine_wordsize - 1)%Z]%zrange.

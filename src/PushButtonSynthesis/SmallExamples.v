@@ -65,6 +65,7 @@ Time Redirect "log" Compute
 
 Local Existing Instance ToString.C.OutputCAPI.
 Local Instance : static_opt := true.
+Local Instance : internal_static_opt := true.
 Local Instance : emit_primitives_opt := true.
 
 Time Redirect "log" Compute

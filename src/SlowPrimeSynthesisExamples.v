@@ -36,6 +36,7 @@ Module debugging_go_build0.
   Section __.
     Local Existing Instance Go.OutputGoAPI.
     Local Instance static : static_opt := false.
+    Local Instance : internal_static_opt := false.
     Local Instance : emit_primitives_opt := true.
     Local Instance : use_mul_for_cmovznz_opt := true.
     Local Instance : widen_carry_opt := true.
@@ -146,6 +147,7 @@ Module debugging_go_build.
   Section __.
     Local Existing Instance Go.OutputGoAPI.
     Local Instance static : static_opt := false.
+    Local Instance : internal_static_opt := false.
     Local Instance : emit_primitives_opt := true.
     Local Instance : use_mul_for_cmovznz_opt := true.
     Local Instance : widen_carry_opt := true.
@@ -970,6 +972,7 @@ Module debugging_go_output.
   Section __.
     Local Existing Instance Go.OutputGoAPI.
     Local Instance static : static_opt := false.
+    Local Instance : internal_static_opt := false.
     Local Instance : emit_primitives_opt := true.
     Local Instance : use_mul_for_cmovznz_opt := true.
     Local Instance : widen_carry_opt := true.
@@ -1086,6 +1089,7 @@ Import Stringification.C.Compilers.
 
 Local Existing Instance ToString.C.OutputCAPI.
 Local Instance static : static_opt := true.
+Local Instance : internal_static_opt := true.
 Local Instance : use_mul_for_cmovznz_opt := false.
 Local Instance : emit_primitives_opt := true.
 

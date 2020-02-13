@@ -153,6 +153,8 @@ Local Notation out_bounds_of_pipeline result
 
 Notation FromPipelineToString prefix name result
   := (Pipeline.FromPipelineToString prefix name result).
+Notation FromPipelineToInternalString prefix name result
+  := (Pipeline.FromPipelineToInternalString prefix name result).
 
 Ltac prove_correctness' should_not_clear use_curve_good :=
   let Hres := match goal with H : _ = Success _ |- _ => H end in
@@ -636,6 +638,7 @@ Notation "'docstring_with_summary_from_lemma!' summary correctness"
 Section __.
   Context {output_language_api : ToString.OutputLanguageAPI}
           {static : static_opt}
+          {internal_static : internal_static_opt}
           {low_level_rewriter_method : low_level_rewriter_method_opt}
           {use_mul_for_cmovznz : use_mul_for_cmovznz_opt}
           {emit_primitives : emit_primitives_opt}
@@ -711,7 +714,7 @@ Section __.
   Definition smulx (prefix : string) (s : Z)
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToInternalString
           prefix ("mulx_u" ++ decimal_string_of_Z s) (mulx s)
           (docstring_with_summary_from_lemma!
              (fun fname : string => ["The function " ++ fname ++ " is a multiplication, returning the full double-width result."]%string)
@@ -731,7 +734,7 @@ Section __.
   Definition saddcarryx (prefix : string) (s : Z)
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToInternalString
           prefix ("addcarryx_u" ++ decimal_string_of_Z s) (addcarryx s)
           (docstring_with_summary_from_lemma!
              (fun fname : string => ["The function " ++ fname ++ " is an addition with carry."]%string)
@@ -750,7 +753,7 @@ Section __.
   Definition ssubborrowx (prefix : string) (s : Z)
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToInternalString
           prefix ("subborrowx_u" ++ decimal_string_of_Z s) (subborrowx s)
           (docstring_with_summary_from_lemma!
              (fun fname : string => ["The function " ++ fname ++ " is a subtraction with borrow."]%string)
@@ -770,7 +773,7 @@ Section __.
   Definition scmovznz (prefix : string) (s : Z)
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToInternalString
           prefix ("cmovznz_u" ++ decimal_string_of_Z s) (cmovznz s)
           (docstring_with_summary_from_lemma!
              (fun fname : string => ["The function " ++ fname ++ " is a single-word conditional move."]%string)
@@ -789,7 +792,7 @@ Section __.
   Definition scmovznz_by_mul (prefix : string) (s : Z)
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToInternalString
           prefix ("cmovznz_u" ++ decimal_string_of_Z s) (cmovznz_by_mul s)
           (docstring_with_summary_from_lemma!
              (fun fname : string => ["The function " ++ fname ++ " is a single-word conditional move."]%string)

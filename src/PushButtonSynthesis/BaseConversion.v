@@ -78,6 +78,7 @@ Definition default_bounds : bounds := use_prime.
 Section __.
   Context {output_language_api : ToString.OutputLanguageAPI}
           {static : static_opt}
+          {internal_static : internal_static_opt}
           {low_level_rewriter_method : low_level_rewriter_method_opt}
           {use_mul_for_cmovznz : use_mul_for_cmovznz_opt}
           {emit_primitives : emit_primitives_opt}

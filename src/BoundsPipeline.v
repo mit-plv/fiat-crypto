@@ -151,6 +151,9 @@ Definition default_low_level_rewriter_method : low_level_rewriter_method_opt
 (** Prefix function definitions with static/non-public? *)
 Class static_opt := static : bool.
 Typeclasses Opaque static_opt.
+(** Prefix internal function definitions with static/non-public? *)
+Class internal_static_opt := internal_static : bool.
+Typeclasses Opaque internal_static_opt.
 (** Use the alternate cmovznz implementation using mul? *)
 Class use_mul_for_cmovznz_opt := use_mul_for_cmovznz : bool.
 Typeclasses Opaque use_mul_for_cmovznz_opt.
@@ -509,7 +512,7 @@ Module Pipeline.
     := ((fun a b c d possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d possible_values t E arg_bounds out_bounds = result') => possible_values) _ _ _ _ _ _ _ _ _ result eq_refl)
          (only parsing).
 
-  Notation FromPipelineToString prefix name result
+  Notation FromPipelineToString_gen is_internal prefix name result
     := (fun comment
         => ((prefix ++ name)%string,
             match result with
@@ -517,7 +520,11 @@ Module Pipeline.
               => let E := ToString.ToFunctionLines
                             (relax_zrange
                              := fun r => Option.value (relax_zrange_gen (possible_values_of_pipeline result) r) r)
-                            true (_ : static_opt) prefix (prefix ++ name)%string
+                            true match is_internal return bool with
+                                 | true => orb (_ : static_opt) (_ : internal_static_opt)
+                                 | false => _ : static_opt
+                                 end
+                            prefix (prefix ++ name)%string
                             E'
                             (comment (prefix ++ name)%string)
                             None
@@ -529,6 +536,11 @@ Module Pipeline.
                  end
             | Error err => Error err
             end)).
+
+  Notation FromPipelineToString prefix name result
+    := (FromPipelineToString_gen false prefix name result).
+  Notation FromPipelineToInternalString prefix name result
+    := (FromPipelineToString_gen true prefix name result).
 
   Local Ltac wf_interp_t_step :=
     first [ progress destruct_head'_and

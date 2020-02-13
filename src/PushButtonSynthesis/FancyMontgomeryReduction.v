@@ -45,6 +45,7 @@ Local Opaque reified_montred_gen. (* needed for making [autorewrite] not take a 
 Section rmontred.
   Context {output_language_api : ToString.OutputLanguageAPI}
           {static : static_opt}
+          {internal_static : internal_static_opt}
           (N R N' : Z) (n : nat)
           (machine_wordsize : Z).
 
