@@ -35,6 +35,7 @@ Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.SplitInContext.
 Require Import Crypto.Util.Tactics.SpecializeAllWays.
 Require Import Crypto.Util.Tactics.SpecializeBy.
+Require Import Crypto.Util.Tactics.UniquePose.
 Require Import Crypto.Util.Tactics.RewriteHyp.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.SetEvars.
@@ -124,6 +125,8 @@ Local Ltac interp_good_t_step_related :=
             => rewrite (surjective_pairing (Z.add_get_carry_full a b c)), Z.add_get_carry_full_div, Z.add_get_carry_full_mod
           | [ |- context[Z.add_with_get_carry_full ?a ?b ?c ?d] ]
             => rewrite (surjective_pairing (Z.add_with_get_carry_full a b c d)), Z.add_with_get_carry_full_div, Z.add_with_get_carry_full_mod
+          | [ |- context[Z.mul_high ?a ?b ?c] ]
+            => rewrite Z.mul_high_div
           | [ |- pair _ _ = pair _ _ ] => apply f_equal2
           | [ |- ?a mod ?b = ?a' mod ?b ] => apply f_equal2; lia
           | [ |- ?a / ?b = ?a' / ?b ] => apply f_equal2; lia
@@ -625,4 +628,32 @@ Proof using Type.
   all:rewrite ?(Z.mul_comm (2 ^ _)), <-?Z.shiftl_mul_pow2, <-?Z.shiftr_div_pow2 by auto with zarith.
   all:rewrite Z.shiftr_add_shiftl_high by use_shiftr_range.
   all:autorewrite with zsimplify; lia.
+Qed.
+
+Lemma multiret_split_rewrite_rules_proofs (bitwidth : Z) (lgcarrymax : Z)
+  : PrimitiveHList.hlist (@snd bool Prop) (multiret_split_rewrite_rulesT bitwidth lgcarrymax).
+Proof using Type.
+  assert (0 <= lgcarrymax <= bitwidth -> 0 < 2^lgcarrymax <= 2^bitwidth) by auto with zarith.
+
+  start_proof; auto; intros; try lia.
+  all: repeat interp_good_t_step_related.
+  all: systematically_handle_casts; try reflexivity.
+  all: rewrite !ident.platform_specific_cast_0_is_mod, ?Z.sub_add, ?Z.mod_mod by lia; try reflexivity.
+  all: push_Zmod; pull_Zmod; try reflexivity.
+  all: lazymatch goal with
+       | [ |- ?x mod ?y = _ mod ?y ]
+         => apply f_equal2; [ | reflexivity ];
+              progress cbv [Z.ltz]; break_innermost_match; Z.ltb_to_lt; Z.div_mod_to_quot_rem; try nia
+       end.
+  all: repeat match goal with
+              | [ H : ?x + ?y = ?d * ?q + ?r, H' : ?r < ?y |- _ ]
+                => is_var q; unique assert (q = 1) by nia; subst
+              | [ H : ?x + ?y = ?d * ?q + ?r, H' : ?r >= ?y |- _ ]
+                => is_var q; unique assert (q = 0) by nia; subst
+              | [ H : ?x - ?y = ?d * ?q + ?r, H' : ?x < ?r |- _ ]
+                => is_var q; unique assert (q = -1) by nia; subst
+              | [ H : ?x - ?y = ?d * ?q + ?r, H' : ?x >= ?r |- _ ]
+                => is_var q; unique assert (q = 0) by nia; subst
+              end;
+    try nia.
 Qed.

@@ -874,4 +874,50 @@ Section with_bitwidth.
                        = singlewidth xh)
              ]
           ]%Z%zrange.
+
+  Definition multiret_split_rewrite_rulesT : Datatypes.list (Datatypes.bool * Prop)
+    := Eval cbv [myapp mymap myflatten] in
+        myflatten
+          [mymap
+             dont_do_again
+             [(forall x y,
+                  0 <= lgcarrymax <= bitwidth
+                  -> singlewidth_carry (Z.add_get_carry_full ('(2^bitwidth)) (singlewidth x) (singlewidth y))
+                     = (dlet sum_xy := singlewidth (singlewidth x + singlewidth y) in
+                            dlet carry_xy := carrywidth (Z.ltz (singlewidth sum_xy) (singlewidth x)) in
+                            (singlewidth sum_xy, carrywidth carry_xy)))
+              ; (forall c x y,
+                    0 <= lgcarrymax <= bitwidth
+                    -> singlewidth_carry (Z.add_with_get_carry_full ('(2^bitwidth)) (carrywidth c) (singlewidth x) (singlewidth y))
+                       = (dlet sum_cx := singlewidth (carrywidth c + singlewidth x) in
+                              dlet carry_cx := carrywidth (Z.ltz (singlewidth sum_cx) (singlewidth x)) in
+                              dlet sum_cxy := singlewidth (singlewidth sum_cx + singlewidth y) in
+                              dlet carry_cx_y := carrywidth (Z.ltz (singlewidth sum_cxy) (singlewidth y)) in
+                              dlet carry_cxy := carrywidth (carrywidth carry_cx + carrywidth carry_cx_y) in
+                              (singlewidth sum_cxy, carrywidth carry_cxy)))
+
+              ; (forall x y,
+                    0 <= lgcarrymax <= bitwidth
+                    -> singlewidth_carry (Z.sub_get_borrow_full ('(2^bitwidth)) (singlewidth x) (singlewidth y))
+                       = (dlet diff_xy := singlewidth (singlewidth x - singlewidth y) in
+                              dlet borrow_xy := carrywidth (Z.ltz (singlewidth x) (singlewidth diff_xy)) in
+                              (singlewidth diff_xy, carrywidth borrow_xy)))
+              ; (forall c x y,
+                    0 <= lgcarrymax <= bitwidth
+                    -> singlewidth_carry (Z.sub_with_get_borrow_full ('(2^bitwidth)) (carrywidth c) (singlewidth x) (singlewidth y))
+                       = (dlet diff_xy := singlewidth (singlewidth x - singlewidth y) in
+                              dlet borrow_xy := carrywidth (Z.ltz (singlewidth x) (singlewidth diff_xy)) in
+                              dlet diff_xyc := singlewidth (singlewidth diff_xy - carrywidth c) in
+                              dlet borrow_xy_c := carrywidth (Z.ltz (singlewidth diff_xy) (singlewidth diff_xyc)) in
+                              dlet borrow_xyc := carrywidth (carrywidth borrow_xy + carrywidth borrow_xy_c) in
+                              (singlewidth diff_xyc, carrywidth borrow_xyc)))
+
+              ; (forall x y,
+                    0 <= lgcarrymax <= bitwidth
+                    -> pairsinglewidth (Z.mul_split ('(2^bitwidth)) (singlewidth x) (singlewidth y))
+                       = (dlet low := singlewidth (singlewidth x * singlewidth y) in
+                              dlet high := singlewidth (Z.mul_high ('(2^bitwidth)) (singlewidth x) (singlewidth y)) in
+                              (singlewidth low, singlewidth high)))
+             ]
+          ]%Z%zrange.
 End with_bitwidth.

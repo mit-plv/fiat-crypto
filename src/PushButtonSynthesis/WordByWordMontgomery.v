@@ -96,6 +96,7 @@ Section __.
           {use_mul_for_cmovznz : use_mul_for_cmovznz_opt}
           {emit_primitives : emit_primitives_opt}
           {should_split_mul : should_split_mul_opt}
+          {should_split_multiret : should_split_multiret_opt}
           {widen_carry : widen_carry_opt}
           {widen_bytes : widen_bytes_opt}
           (m : Z)
@@ -142,6 +143,7 @@ Section __.
     := Option.invert_Some saturated_bounds (*List.map (fun u => Some r[0~>u]%zrange) upperbounds*).
 
   Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
+  Local Instance split_multiret_to : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
 
   (** Note: If you change the name or type signature of this
         function, you will need to update the code in CLI.v *)

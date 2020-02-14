@@ -110,11 +110,13 @@ Definition all_ident_named_interped : InductiveHList.hlist
       ; with_name ident_Z_min Z.min
       ; with_name ident_Z_max Z.max
       ; with_name ident_Z_mul_split Z.mul_split
+      ; with_name ident_Z_mul_high Z.mul_high
       ; with_name ident_Z_add_get_carry Z.add_get_carry_full
       ; with_name ident_Z_add_with_carry Z.add_with_carry
       ; with_name ident_Z_add_with_get_carry Z.add_with_get_carry_full
       ; with_name ident_Z_sub_get_borrow Z.sub_get_borrow_full
       ; with_name ident_Z_sub_with_get_borrow Z.sub_with_get_borrow_full
+      ; with_name ident_Z_ltz Z.ltz
       ; with_name ident_Z_zselect Z.zselect
       ; with_name ident_Z_add_modulo Z.add_modulo
       ; with_name ident_Z_truncating_shiftl Z.truncating_shiftl

@@ -28,4 +28,11 @@ Module Z.
       [ rewrite mul_split_at_bitwidth_div; congruence | reflexivity ].
   Qed.
   Hint Rewrite mul_split_div : to_div_mod.
+
+  Lemma mul_high_div s x y : Z.mul_high s x y = (x * y) / s.
+  Proof. cbv [Z.mul_high]; now apply mul_split_div. Qed.
+  Hint Rewrite mul_high_div : to_div_mod.
+
+  Lemma mul_split_high s x y : snd (Z.mul_split s x y) = Z.mul_high s x y.
+  Proof. reflexivity. Qed.
 End Z.

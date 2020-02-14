@@ -333,6 +333,8 @@ Module Compilers.
              | ident.Z_lor => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 50) (x 50%nat ++ " | " ++ y 49%nat), ZRange.type.base.option.None)
              | ident.Z_mul_split
                => fun args => (show_application with_casts (fun _ => "Z.mul_split") args, ZRange.type.base.option.None)
+             | ident.Z_mul_high
+               => fun args => (show_application with_casts (fun _ => "Z.mul_high") args, ZRange.type.base.option.None)
              | ident.Z_add_get_carry
                => fun args => (show_application with_casts (fun _ => "Z.add_get_carry") args, ZRange.type.base.option.None)
              | ident.Z_add_with_carry
@@ -343,6 +345,8 @@ Module Compilers.
                => fun args => (show_application with_casts (fun _ => "Z.sub_get_borrow") args, ZRange.type.base.option.None)
              | ident.Z_sub_with_get_borrow
                => fun args => (show_application with_casts (fun _ => "Z.sub_with_get_borrow") args, ZRange.type.base.option.None)
+             | ident.Z_ltz
+               => fun args => (show_application with_casts (fun _ => "Z.ltz") args, ZRange.type.base.option.None)
              | ident.Z_zselect
                => fun args => (show_application with_casts (fun _ => "Z.zselect") args, ZRange.type.base.option.None)
              | ident.Z_add_modulo
@@ -460,11 +464,13 @@ Module Compilers.
                 | ident.Z_lnot_modulo => "~"
                 | ident.Z_bneg => "!"
                 | ident.Z_mul_split => "Z.mul_split"
+                | ident.Z_mul_high => "Z.mul_high"
                 | ident.Z_add_get_carry => "Z.add_get_carry"
                 | ident.Z_add_with_carry => "Z.add_with_carry"
                 | ident.Z_add_with_get_carry => "Z.add_with_get_carry"
                 | ident.Z_sub_get_borrow => "Z.sub_get_borrow"
                 | ident.Z_sub_with_get_borrow => "Z.sub_with_get_borrow"
+                | ident.Z_ltz => "Z.ltz"
                 | ident.Z_zselect => "Z.zselect"
                 | ident.Z_add_modulo => "Z.add_modulo"
                 | ident.Z_truncating_shiftl => "Z.truncating_shiftl"

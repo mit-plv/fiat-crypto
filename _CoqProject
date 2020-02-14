@@ -114,6 +114,7 @@ src/Rewriter/RulesProofs.v
 src/Rewriter/Passes/Arith.v
 src/Rewriter/Passes/ArithWithCasts.v
 src/Rewriter/Passes/MulSplit.v
+src/Rewriter/Passes/MultiRetSplit.v
 src/Rewriter/Passes/NBE.v
 src/Rewriter/Passes/StripLiteralCasts.v
 src/Rewriter/Passes/ToFancy.v

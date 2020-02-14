@@ -88,6 +88,13 @@ Module Z.
        then mul_split_at_bitwidth (Z.log2 s) x y
        else ((x * y) mod s, (x * y) / s).
 
+  Definition mul_high (s x y : Z) : Z
+    := snd (mul_split s x y).
+
+  (** returns [1] iff [x < y] *)
+  Definition ltz (x y : Z) : Z
+    := if x <? y then 1 else 0.
+
   Definition combine_at_bitwidth (bitwidth lo hi : Z) : Z
     := lo + (hi << bitwidth).
 

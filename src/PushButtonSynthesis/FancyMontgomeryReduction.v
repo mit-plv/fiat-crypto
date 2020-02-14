@@ -67,6 +67,7 @@ Section rmontred.
   Local Instance widen_carry : widen_carry_opt := false.
   Local Instance widen_bytes : widen_bytes_opt := true.
   Local Instance split_mul_to : split_mul_to_opt := None.
+  Local Instance split_multiret_to : split_multiret_to_opt := None.
   Local Instance low_level_rewriter_method : low_level_rewriter_method_opt := default_low_level_rewriter_method.
 
   Let fancy_args
