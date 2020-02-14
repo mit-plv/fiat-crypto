@@ -68,4 +68,13 @@ Module ZRange.
     all: rewrite is_bounded_by_bool_split_bounds_pos by (rewrite ?ZRange.is_bounded_by_bool_opp; try assumption; omega).
     all: reflexivity.
   Qed.
+
+  Lemma is_bounded_by_bool_split_bounds_and x r m
+    : is_bounded_by_bool x r = true
+      -> and (is_bounded_by_bool (x mod m) (fst (Operations.ZRange.split_bounds r m)) = true)
+             (is_bounded_by_bool (x / m) (snd (Operations.ZRange.split_bounds r m)) = true).
+  Proof.
+    intro H; pose proof (@is_bounded_by_bool_split_bounds x r m H).
+    Bool.split_andb; split; assumption.
+  Qed.
 End ZRange.
