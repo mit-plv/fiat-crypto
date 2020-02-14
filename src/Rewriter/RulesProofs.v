@@ -10,6 +10,7 @@ Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
 Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
+Require Import Crypto.Util.ZUtil.Tactics.LinearSubstitute.
 Require Import Crypto.Util.ZUtil.Hints.
 Require Import Crypto.Util.ZUtil.Hints.Core.
 Require Import Crypto.Util.ZUtil.ZSimplify.Core.
@@ -442,6 +443,42 @@ Local Ltac fin_with_nia :=
   | _ => reflexivity || (Z.div_mod_to_quot_rem; (lia + nia))
   end.
 
+Local Ltac do_clear_nia x y r H H' :=
+  let rec find_H x :=
+      lazymatch goal with
+      | [ H : _ <= x < _ |- _ ] => H
+      | [ H : _ <= x <= _ |- _ ] => H
+      | _ => lazymatch x with
+             | ?x0 + ?x1
+               => let H0 := find_H x0 in
+                  let H1 := find_H x1 in
+                  let m0 := lazymatch type of H0 with 0 <= _ <= ?m => m end in
+                  let m1 := lazymatch type of H1 with 0 <= _ <= ?m => m end in
+                  let H := fresh in
+                  let __ := lazymatch goal with
+                            | _ => assert (H : 0 <= x <= m0 + m1) by (clear -H0 H1; lia)
+                            end in
+                  H
+             | ?x0 - ?x1
+               => let H0 := find_H x0 in
+                  let H1 := find_H x1 in
+                  let m0 := lazymatch type of H0 with 0 <= _ <= ?m => m end in
+                  let m1 := lazymatch type of H1 with 0 <= _ <= ?m => m end in
+                  let H := fresh in
+                  let __ := lazymatch goal with
+                            | _ => assert (H : -m1 <= x <= m0) by (clear -H0 H1; lia)
+                            end in
+                  H
+             end
+      end in
+  idtac;
+  let Hx := find_H x in
+  let Hy := find_H y in
+  lazymatch goal with
+  | [ Hm : 0 < 2^_ <= 2^_, Hr : 0 <= r < _ |- _ ]
+    => clear -Hx Hy Hm Hr H' H; nia
+  end.
+
 Lemma arith_with_casts_rewrite_rules_proofs
   : PrimitiveHList.hlist (@snd bool Prop) arith_with_casts_rewrite_rulesT.
 Proof using Type.
@@ -640,20 +677,29 @@ Proof using Type.
   all: systematically_handle_casts; try reflexivity.
   all: rewrite !ident.platform_specific_cast_0_is_mod, ?Z.sub_add, ?Z.mod_mod by lia; try reflexivity.
   all: push_Zmod; pull_Zmod; try reflexivity.
+  all: progress specialize_by auto.
   all: lazymatch goal with
        | [ |- ?x mod ?y = _ mod ?y ]
          => apply f_equal2; [ | reflexivity ];
-              progress cbv [Z.ltz]; break_innermost_match; Z.ltb_to_lt; Z.div_mod_to_quot_rem; try nia
+              progress cbv [Z.ltz]; break_innermost_match; Z.ltb_to_lt; Z.div_mod_to_quot_rem
        end.
   all: repeat match goal with
               | [ H : ?x + ?y = ?d * ?q + ?r, H' : ?r < ?y |- _ ]
-                => is_var q; unique assert (q = 1) by nia; subst
+                => is_var q; unique assert (q = 1) by do_clear_nia x y r H H'; subst
               | [ H : ?x + ?y = ?d * ?q + ?r, H' : ?r >= ?y |- _ ]
-                => is_var q; unique assert (q = 0) by nia; subst
+                => is_var q; unique assert (q = 0) by do_clear_nia x y r H H'; subst
               | [ H : ?x - ?y = ?d * ?q + ?r, H' : ?x < ?r |- _ ]
-                => is_var q; unique assert (q = -1) by nia; subst
+                => is_var q; unique assert (q = -1) by do_clear_nia x y r H H'; subst
               | [ H : ?x - ?y = ?d * ?q + ?r, H' : ?x >= ?r |- _ ]
-                => is_var q; unique assert (q = 0) by nia; subst
-              end;
-    try nia.
+                => is_var q; unique assert (q = 0) by do_clear_nia x y r H H'; subst
+              | [ H0 : ?x = ?d * ?q0 + ?r0, H : ?x - ?y = ?d * ?q + ?r, H' : ?r0 < ?r |- _ ]
+                => (* ugh, this is kind-of complicated; we could just let [nia] handle it, but it runs out of memory on 8.9 *)
+                let x' := fresh "x" in
+                (remember x as x' eqn:?);
+                  symmetry in H0; destruct H0;
+                    assert (r0 - y = d * (q - q0) + r) by (clear -H; nia); clear H;
+                      let q' := fresh "q" in
+                      remember (q - q0) as q' eqn:?; (tryif is_var q then Z.linear_substitute q else idtac)
+              | _ => nia
+              end.
 Qed.
