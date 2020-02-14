@@ -231,11 +231,13 @@ Module Compilers.
     Notation Z_lnot_modulo := Compilers.ident_Z_lnot_modulo (only parsing).
     Notation Z_truncating_shiftl := Compilers.ident_Z_truncating_shiftl (only parsing).
     Notation Z_mul_split := Compilers.ident_Z_mul_split (only parsing).
+    Notation Z_mul_high := Compilers.ident_Z_mul_high (only parsing).
     Notation Z_add_get_carry := Compilers.ident_Z_add_get_carry (only parsing).
     Notation Z_add_with_carry := Compilers.ident_Z_add_with_carry (only parsing).
     Notation Z_add_with_get_carry := Compilers.ident_Z_add_with_get_carry (only parsing).
     Notation Z_sub_get_borrow := Compilers.ident_Z_sub_get_borrow (only parsing).
     Notation Z_sub_with_get_borrow := Compilers.ident_Z_sub_with_get_borrow (only parsing).
+    Notation Z_ltz := Compilers.ident_Z_ltz (only parsing).
     Notation Z_zselect := Compilers.ident_Z_zselect (only parsing).
     Notation Z_add_modulo := Compilers.ident_Z_add_modulo (only parsing).
     Notation Z_rshi := Compilers.ident_Z_rshi (only parsing).

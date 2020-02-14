@@ -743,8 +743,10 @@ Module Compilers.
                  | ident.Z_log2_up
                  | ident.Z_of_nat
                  | ident.Z_to_nat
+                 | ident.Z_ltz
                  | ident.Z_zselect
                  | ident.Z_mul_split
+                 | ident.Z_mul_high
                  | ident.Z_add_get_carry
                  | ident.Z_add_with_carry
                  | ident.Z_add_with_get_carry

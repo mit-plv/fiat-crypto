@@ -462,6 +462,11 @@ Module Compilers.
                              | Some x, Some y => of_literal (ident.interp idc x y)
                              | _, _ => ZRange.type.base.option.None
                              end
+             | ident.Z_ltz as idc
+               => fun x y => match to_literal x, to_literal y with
+                             | Some x, Some y => of_literal (ident.interp idc x y)
+                             | _, _ => Some r[0~>1]
+                             end
              | ident.Z_bneg as idc
                => fun x => match to_literal x with
                            | Some x => of_literal (ident.interp idc x)
@@ -634,6 +639,15 @@ Module Compilers.
                          (ZRange.split_bounds (ZRange.four_corners Z.mul x y) split_at)
                    | _, _, _ => ZRange.type.base.option.None
                    end
+             | ident.Z_mul_high
+               => fun split_at x y
+                 => match to_literal split_at, x, y with
+                   | Some split_at, Some x, Some y
+                     => ZRange.type.base.option.Some
+                         (t:=tZ)
+                         (snd (ZRange.split_bounds (ZRange.four_corners Z.mul x y) split_at))
+                   | _, _, _ => ZRange.type.base.option.None
+                    end
              | ident.Z_add_get_carry
                => fun split_at x y
                  => match to_literal split_at, x, y with

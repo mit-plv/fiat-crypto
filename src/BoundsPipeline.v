@@ -166,6 +166,12 @@ Typeclasses Opaque should_split_mul_opt.
 (** If [None], don't split apart multiplications; if [Some (w, wc)], split apart multiplications to use wordsize [w] and widen carries to width [wc] *)
 Class split_mul_to_opt := split_mul_to : option (Z * Z).
 Typeclasses Opaque split_mul_to_opt.
+(** Split apart multi-return functions? *)
+Class should_split_multiret_opt := should_split_multiret : bool.
+Typeclasses Opaque should_split_multiret_opt.
+(** If [None], don't split apart multi-return functions; if [Some (w, wc)], split apart multi-return functions to use wordsize [w] and widen carries to width [wc] *)
+Class split_multiret_to_opt := split_multiret_to : option (Z * Z).
+Typeclasses Opaque split_multiret_to_opt.
 (** Widen carries to the machine wordsize? *)
 Class widen_carry_opt := widen_carry : bool.
 Typeclasses Opaque widen_carry_opt.
@@ -174,6 +180,10 @@ Class widen_bytes_opt := widen_bytes : bool.
 Typeclasses Opaque widen_bytes_opt.
 Notation split_mul_to_of_should_split_mul machine_wordsize possible_bitwidths
   := (if should_split_mul return split_mul_to_opt
+      then Some (machine_wordsize, fold_right Z.min machine_wordsize (filter (fun x => (1 <=? x)%Z) possible_bitwidths))
+      else None) (only parsing).
+Notation split_multiret_to_of_should_split_multiret machine_wordsize possible_bitwidths
+  := (if should_split_multiret return split_multiret_to_opt
       then Some (machine_wordsize, fold_right Z.min machine_wordsize (filter (fun x => (1 <=? x)%Z) possible_bitwidths))
       else None) (only parsing).
 (* We include [0], so that even after bounds relaxation, we can
@@ -394,6 +404,7 @@ Module Pipeline.
   Definition BoundsPipeline
              {low_level_rewriter_method : low_level_rewriter_method_opt}
              {split_mul_to : split_mul_to_opt}
+             {split_multiret_to : split_multiret_to_opt}
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
              (translate_to_fancy : option to_fancy_args)
@@ -425,6 +436,11 @@ Module Pipeline.
                       => RewriteRules.RewriteMulSplit max_bitwidth lgcarrymax opts E
                     | None => E
                     end in
+           let E := match split_multiret_to with
+                    | Some (max_bitwidth, lgcarrymax)
+                      => RewriteRules.RewriteMultiRetSplit max_bitwidth lgcarrymax opts E
+                    | None => E
+                    end in
            let E := match translate_to_fancy with
                     | Some {| invert_low := invert_low ; invert_high := invert_high ; value_range := value_range ; flag_range := flag_range |}
                       => RewriteRules.RewriteToFancyWithCasts invert_low invert_high value_range flag_range opts E
@@ -443,6 +459,7 @@ Module Pipeline.
              {static : static_opt}
              {low_level_rewriter_method : low_level_rewriter_method_opt}
              {split_mul_to : split_mul_to_opt}
+             {split_multiret_to : split_multiret_to_opt}
              (type_prefix : string)
              (name : string)
              (with_dead_code_elimination : bool := true)
@@ -478,6 +495,7 @@ Module Pipeline.
              {static : static_opt}
              {low_level_rewriter_method : low_level_rewriter_method_opt}
              {split_mul_to : split_mul_to_opt}
+             {split_multiret_to : split_multiret_to_opt}
              (type_prefix : string)
              (name : string)
              (with_dead_code_elimination : bool := true)
@@ -503,13 +521,13 @@ Module Pipeline.
        end.
 
   Local Notation arg_bounds_of_pipeline result
-    := ((fun a b c d possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d possible_values t E arg_bounds out_bounds = result') => arg_bounds) _ _ _ _ _ _ _ _ _ result eq_refl)
+    := ((fun a b c d e possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e possible_values t E arg_bounds out_bounds = result') => arg_bounds) _ _ _ _ _ _ _ _ _ _ result eq_refl)
          (only parsing).
   Local Notation out_bounds_of_pipeline result
-    := ((fun a b c d possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d possible_values t E arg_bounds out_bounds = result') => out_bounds) _ _ _ _ _ _ _ _ _ result eq_refl)
+    := ((fun a b c d e possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e possible_values t E arg_bounds out_bounds = result') => out_bounds) _ _ _ _ _ _ _ _ _ _ result eq_refl)
          (only parsing).
   Local Notation possible_values_of_pipeline result
-    := ((fun a b c d possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d possible_values t E arg_bounds out_bounds = result') => possible_values) _ _ _ _ _ _ _ _ _ result eq_refl)
+    := ((fun a b c d e possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e possible_values t E arg_bounds out_bounds = result') => possible_values) _ _ _ _ _ _ _ _ _ _ result eq_refl)
          (only parsing).
 
   Notation FromPipelineToString_gen is_internal prefix name result
@@ -591,6 +609,7 @@ Module Pipeline.
   Lemma BoundsPipeline_correct
              {low_level_rewriter_method : low_level_rewriter_method_opt}
              {split_mul_to : split_mul_to_opt}
+             {split_multiret_to : split_multiret_to_opt}
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
              (translate_to_fancy : option to_fancy_args)
@@ -666,6 +685,7 @@ Module Pipeline.
   Lemma BoundsPipeline_correct_trans
         {low_level_rewriter_method : low_level_rewriter_method_opt}
         {split_mul_to : split_mul_to_opt}
+        {split_multiret_to : split_multiret_to_opt}
         (with_dead_code_elimination : bool := true)
         (with_subst01 : bool)
         (translate_to_fancy : option to_fancy_args)

@@ -576,6 +576,8 @@ Module Compilers.
                                 | [ |- andb (is_bounded_by_bool (_ mod ?m) (fst (Operations.ZRange.split_bounds _ ?m)))
                                            (is_bounded_by_bool (_ / ?m) (snd (Operations.ZRange.split_bounds _ ?m))) = true ]
                                   => apply ZRange.is_bounded_by_bool_split_bounds
+                                | [ |- is_bounded_by_bool (_ / ?m) (snd (Operations.ZRange.split_bounds _ ?m)) = true ]
+                                  => apply ZRange.is_bounded_by_bool_split_bounds_and
                                 | [ |- is_bounded_by_bool (_ mod _) r[_ ~> _] = true ] => cbv [is_bounded_by_bool]; rewrite Bool.andb_true_iff
                                 | [ H : is_bounded_by_bool ?v ?r1 = true, H' : is_tighter_than_bool ?r1 ?r2 = true |- _ ]
                                   => pose proof (@ZRange.is_bounded_by_of_is_tighter_than r1 r2 H' v H);
@@ -584,9 +586,11 @@ Module Compilers.
                                   => break_innermost_match
                                 | [ |- context[ZRange.constant ?x] ] => unique pose proof (ZRange.is_bounded_by_bool_constant x)
                                 | [ |- context[r[?x~>?x]%zrange] ] => unique pose proof (ZRange.is_bounded_by_bool_constant x)
+                                | [ |- is_bounded_by_bool (Definitions.Z.ltz _ _) r[0 ~> 1] = true ]
+                                  => cbv [Definitions.Z.ltz]; break_innermost_match; cbv
                                 end
                               | progress Z.ltb_to_lt
-                              | progress rewrite ?Z.mul_split_div, ?Z.mul_split_mod, ?Z.add_get_carry_full_div, ?Z.add_get_carry_full_mod, ?Z.add_with_get_carry_full_div, ?Z.add_with_get_carry_full_mod, ?Z.sub_get_borrow_full_div, ?Z.sub_get_borrow_full_mod, ?Z.sub_with_get_borrow_full_div, ?Z.sub_with_get_borrow_full_mod, ?Z.zselect_correct, ?Z.add_modulo_correct, ?Z.rshi_correct_full, ?Z.truncating_shiftl_correct_land_ones ].
+                              | progress rewrite ?Z.mul_split_div, ?Z.mul_split_mod, ?Z.mul_high_div, ?Z.add_get_carry_full_div, ?Z.add_get_carry_full_mod, ?Z.add_with_get_carry_full_div, ?Z.add_with_get_carry_full_mod, ?Z.sub_get_borrow_full_div, ?Z.sub_get_borrow_full_mod, ?Z.sub_with_get_borrow_full_div, ?Z.sub_with_get_borrow_full_mod, ?Z.zselect_correct, ?Z.add_modulo_correct, ?Z.rshi_correct_full, ?Z.truncating_shiftl_correct_land_ones ].
             all: repeat lazymatch goal with
                         | [ |- is_bounded_by_bool (Z.land _ _) (ZRange.land_bounds _ _) = true ]
                           => apply ZRange.is_bounded_by_bool_land_bounds; auto

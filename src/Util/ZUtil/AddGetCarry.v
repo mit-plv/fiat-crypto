@@ -7,6 +7,8 @@ Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.Tactics.DestructHead.
+Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.RewriteHyp.
 Local Open Scope Z_scope.
 
@@ -110,4 +112,42 @@ Module Z.
   Proof. easypeasy. Qed.
   Hint Rewrite sub_with_get_borrow_full_div : to_div_mod.
 
+  Local Ltac fin_div_ltz :=
+    intros; cbv [Z.ltz]; Z.div_mod_to_quot_rem; break_innermost_match; Z.ltb_to_lt; try nia.
+
+  Lemma add_div_ltz_1 s x y :
+    0 <= x < s
+    -> 0 <= y < s
+    -> (x + y) / s = Z.ltz ((x + y) mod s) x.
+  Proof. fin_div_ltz. Qed.
+
+  Lemma add_div_ltz_2 s x y :
+    0 <= x < s
+    -> 0 <= y < s
+    -> (x + y) / s = Z.ltz ((x + y) mod s) y.
+  Proof. fin_div_ltz. Qed.
+
+  Lemma add_get_carry_full_ltz_1 s x y :
+    0 <= x < s
+    -> 0 <= y < s
+    -> snd (Z.add_get_carry_full s x y) = Z.ltz ((x + y) mod s) x.
+  Proof. rewrite add_get_carry_full_div; fin_div_ltz. Qed.
+
+  Lemma add_get_carry_full_ltz_2 s x y :
+    0 <= x < s
+    -> 0 <= y < s
+    -> snd (Z.add_get_carry_full s x y) = Z.ltz ((x + y) mod s) y.
+  Proof. rewrite add_get_carry_full_div; fin_div_ltz. Qed.
+
+  Lemma sub_div_ltz s x y :
+    0 <= x < s
+    -> 0 <= y < s
+    -> - ((x - y) / s) = Z.ltz x ((x - y) mod s).
+  Proof. fin_div_ltz. Qed.
+
+  Lemma sub_get_borrow_full_ltz s x y :
+    0 <= x < s
+    -> 0 <= y < s
+    -> snd (Z.sub_get_borrow_full s x y) = Z.ltz x ((x - y) mod s).
+  Proof. rewrite sub_get_borrow_full_div; fin_div_ltz. Qed.
 End Z.
