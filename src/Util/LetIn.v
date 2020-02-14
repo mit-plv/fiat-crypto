@@ -34,6 +34,9 @@ Definition app_Let_In_nd {A B T} (f:B->T) (e:A) (C:A->B)
 Definition Let_app_In_nd {A B T} (f:A->B) (e:A) (C:B->T)
   : Let_In (f e) C = Let_In e (fun v => C (f v)) := eq_refl.
 
+Lemma unfold_Let_In {A B} v f : @Let_In A B v f = f v.
+Proof. reflexivity. Qed.
+
 Class _call_let_in_to_Let_In {T} (e:T) := _let_in_to_Let_In_return : T.
 (* : forall T, gallina T -> gallina T, structurally recursive in the argument *)
 Ltac let_in_to_Let_In e :=
