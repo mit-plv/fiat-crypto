@@ -73,26 +73,6 @@ Section Expr.
            (expr.App
               type_range2 (type.arrow type_ZZ type_ZZ)
               (expr.Ident _ ident.Z_cast2) _) x) => translate_expr false x
-      (* Z_mul_split : compute high and low separately and assign to two
-         different variables *)
-      (* TODO : don't duplicate argument expressions *)
-      | (expr.App
-           type_Z type_ZZ
-           (expr.App type_Z (type.arrow type_Z type_ZZ)
-                     (expr.App type_Z (type.arrow type_Z (type.arrow type_Z type_ZZ))
-                               (expr.Ident _ ident.Z_mul_split)
-                               (expr.Ident _ (ident.Literal base.type.Z s)))
-                     x) y) =>
-        if Z.eqb s maxint
-        then
-          let low := Syntax.expr.op
-                       Syntax.bopname.mul
-                       (translate_expr true x) (translate_expr true y) in
-          let high := Syntax.expr.op
-                        Syntax.bopname.mulhuu
-                        (translate_expr true x) (translate_expr true y) in
-          (low, high)
-        else base_make_error _
       (* Z_add -> bopname.add *)
       | (expr.App
          type_Z type_Z
@@ -105,6 +85,12 @@ Section Expr.
          (expr.App type_Z (type.arrow type_Z type_Z)
                    (expr.Ident _ ident.Z_mul) x) y) =>
       Syntax.expr.op Syntax.bopname.mul (translate_expr true x) (translate_expr true y)
+    (* Z_ltz -> bopname.ltu *)
+    | (expr.App
+         type_Z type_Z
+         (expr.App type_Z (type.arrow type_Z type_Z)
+                   (expr.Ident _ ident.Z_ltz) x) y) =>
+      Syntax.expr.op Syntax.bopname.ltu (translate_expr true x) (translate_expr true y)
     (* Z_land -> bopname.and *)
     | (expr.App
          type_Z type_Z
@@ -134,6 +120,41 @@ Section Expr.
       if Z.eqb s Semantics.width
       then Syntax.expr.op Syntax.bopname.slu (translate_expr true x) (translate_expr true y)
       else base_make_error _
+    (* Z_mul_high -> bopname.mulhuu if truncation matches *)
+    | (expr.App
+         type_Z type_Z
+         (expr.App type_Z (type.arrow type_Z type_Z)
+                   (expr.App type_Z (type.arrow type_Z (type.arrow type_Z type_Z))
+                             (expr.Ident _ ident.Z_mul_high)
+                             (expr.Ident _ (ident.Literal base.type.Z s)))
+                   x) y) =>
+      if Z.eqb s maxint
+      then Syntax.expr.op Syntax.bopname.mulhuu (translate_expr true x) (translate_expr true y)
+      else base_make_error _
+    (* fst of a literal tuple -> inline and recurse *)
+    (* TODO: is this supposed to happen in the input? seems wrong *)
+    | (expr.App
+         (type.base (base.type.prod (base.type.type_base base.type.Z) _)) type_Z
+         (expr.Ident _ (ident.fst (base.type.type_base base.type.Z) _))
+         (expr.App
+            type_Z type_ZZ
+            (expr.App
+               type_Z (type.arrow type_Z type_ZZ)
+               (expr.Ident _ (ident.pair base_Z base_Z )) x)
+          y)) =>
+      translate_expr false x
+    (* snd of a literal tuple -> inline and recurse *)
+    (* TODO: is this supposed to happen in the input? seems wrong *)
+    | (expr.App
+         (type.base (base.type.prod (base.type.type_base base.type.Z) _)) type_Z
+         (expr.Ident _ (ident.snd (base.type.type_base base.type.Z) _))
+         (expr.App
+            type_Z type_ZZ
+            (expr.App
+               type_Z (type.arrow type_Z type_ZZ)
+               (expr.Ident _ (ident.pair base_Z base_Z )) x)
+          y)) =>
+      translate_expr false y
     (* fst : since the [rtype] of a product type is a tuple, simply use Coq's [fst] *)
     | (expr.App
          (type.base (base.type.prod (base.type.type_base base.type.Z) _)) type_Z
