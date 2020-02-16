@@ -880,7 +880,9 @@ Section with_bitwidth.
         myflatten
           [mymap
              dont_do_again
-             [(forall x y,
+             [(forall A B x y, @fst A B (x, y) = x)
+              ; (forall A B x y, @snd A B (x, y) = y)
+              ; (forall x y,
                   0 <= lgcarrymax <= bitwidth
                   -> singlewidth_carry (Z.add_get_carry_full ('(2^bitwidth)) (singlewidth x) (singlewidth y))
                      = (dlet sum_xy := singlewidth (singlewidth x + singlewidth y) in

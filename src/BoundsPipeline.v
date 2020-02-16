@@ -438,7 +438,7 @@ Module Pipeline.
                     end in
            let E := match split_multiret_to with
                     | Some (max_bitwidth, lgcarrymax)
-                      => RewriteRules.RewriteMultiRetSplit max_bitwidth lgcarrymax opts E
+                      => RewriteAndEliminateDeadAndInline (RewriteRules.RewriteMultiRetSplit max_bitwidth lgcarrymax opts) with_dead_code_elimination with_subst01 E
                     | None => E
                     end in
            let E := match translate_to_fancy with
