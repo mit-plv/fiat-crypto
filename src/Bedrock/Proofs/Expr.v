@@ -1,7 +1,7 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Lists.List.
 Require Import Crypto.Bedrock.Types.
-Require Import Crypto.Bedrock.Varnames.
+Require Import Crypto.Bedrock.Proofs.Varnames.
 Require Import Crypto.Bedrock.Translation.Expr.
 Require Import Crypto.Language.API.
 Require Import Crypto.Util.ZRange.

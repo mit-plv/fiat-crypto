@@ -37,7 +37,6 @@ Section Func.
   Local Instance varname_eqb_spec x y : BoolSpec _ _ _
     := Decidable.String.eqb_spec x y.
 
-
   Inductive valid_func : forall {t}, @API.expr (fun _ => unit) t -> Prop :=
   | validf_Abs :
       forall {s d} f, valid_func (f tt) ->

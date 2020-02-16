@@ -7,12 +7,12 @@ Require Import bedrock2.Map.SeparationLogic.
 Require Import bedrock2.WeakestPreconditionProperties.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Tactics.
-Require Import Crypto.Bedrock.Varnames.
+Require Import Crypto.Bedrock.Proofs.Expr.
+Require Import Crypto.Bedrock.Proofs.ExprWithSet.
+Require Import Crypto.Bedrock.Proofs.Varnames.
 Require Import Crypto.Bedrock.Translation.Cmd.
 Require Import Crypto.Bedrock.Translation.Expr.
 Require Import Crypto.Bedrock.Translation.ExprWithSet.
-Require Import Crypto.Bedrock.Proofs.Expr.
-Require Import Crypto.Bedrock.Proofs.ExprWithSet.
 Require Import Crypto.Language.API.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.Notations.
