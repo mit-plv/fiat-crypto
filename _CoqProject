@@ -61,6 +61,8 @@ src/Bedrock/Varnames.v
 src/Bedrock/Translation/Cmd.v
 src/Bedrock/Translation/Expr.v
 src/Bedrock/Translation/ExprWithSet.v
+src/Bedrock/Translation/Dexprs.v
+src/Bedrock/Translation/Flatten.v
 src/Bedrock/Translation/Func.v
 src/Curves/Edwards/AffineProofs.v
 src/Curves/Edwards/Pre.v
