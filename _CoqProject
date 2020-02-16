@@ -64,6 +64,7 @@ src/Bedrock/Translation/ExprWithSet.v
 src/Bedrock/Translation/Dexprs.v
 src/Bedrock/Translation/Flatten.v
 src/Bedrock/Translation/Func.v
+src/Bedrock/Translation/LoadStoreList.v
 src/Curves/Edwards/AffineProofs.v
 src/Curves/Edwards/Pre.v
 src/Curves/Edwards/XYZT/Basic.v
