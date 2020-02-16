@@ -10,7 +10,6 @@ Require Import coqutil.Word.Interface.
 Require Import coqutil.Datatypes.PropSet.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Tactics.
-Require Import Crypto.Bedrock.Translation.Expr.
 Require Import Crypto.Language.API.
 Require Import Crypto.Util.ListUtil.
 
@@ -18,6 +17,7 @@ Require Import Crypto.Util.ListUtil.
 Require Import Crypto.BoundsPipeline.
 
 Import API.Compilers.
+Import Wf.Compilers.expr.
 Import Types.Notations Types.Types.
 
 (* General-purpose lemmas about maps that should be later moved to coqutil *)
@@ -50,8 +50,25 @@ End Maps.
 (* Reasoning about various collections of variable names *)
 Section Varnames.
   Context {p : Types.parameters} {ok : @ok p}.
-  Existing Instance Types.rep.Z.
-  Existing Instance Types.rep.listZ_local. (* local list representation *)
+  Local Existing Instance Types.rep.Z.
+  Local Existing Instance Types.rep.listZ_local. (* local list representation *)
+
+  (* 3-way equivalence (for single elements of the context list G
+       from wf3 preconditions) *)
+  Definition equiv3 {var1}
+             (locals : Interface.map.rep (map:=Semantics.locals))
+             (x : {t : API.type
+                       & (var1 t * API.interp_type t * ltype t)%type})
+    : Prop :=
+    match x with
+    | existT (type.base b) (w, x, y) =>
+      locally_equivalent x (rtype_of_ltype y) locals
+    | existT (type.arrow _ _) _ => False (* no functions allowed *)
+    end.
+
+  Definition context_equiv {var1} G locals
+    : Prop := Forall (equiv3 (var1:= var1) locals) G.
+
 
   (* TODO: are these all needed? *)
   Local Instance sem_ok : Semantics.parameters_ok semantics
