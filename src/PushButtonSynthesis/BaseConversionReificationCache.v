@@ -17,4 +17,13 @@ Module Export BaseConversion.
   Hint Immediate (proj2 reified_convert_bases_gen_correct) : wf_gen_cache.
   Hint Rewrite (proj1 reified_convert_bases_gen_correct) : interp_gen_cache.
   Local Opaque reified_convert_bases_gen. (* needed for making [autorewrite] not take a very long time *)
+
+  Derive reified_canonicalize_gen
+         SuchThat (is_reification_of reified_canonicalize_gen canonicalizemod)
+         As reified_canonicalize_gen_correct.
+  Proof. Time cache_reify (). Time Qed.
+  Hint Extern 1 (_ = _) => apply_cached_reification canonicalizemod (proj1 reified_canonicalize_gen_correct) : reify_cache_gen.
+  Hint Immediate (proj2 reified_canonicalize_gen_correct) : wf_gen_cache.
+  Hint Rewrite (proj1 reified_canonicalize_gen_correct) : interp_gen_cache.
+  Local Opaque reified_canonicalize_gen. (* needed for making [autorewrite] not take a very long time *)
 End BaseConversion.

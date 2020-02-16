@@ -9,18 +9,23 @@ Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.ListUtil.
 
 Require Import Crypto.Util.Notations.
+Import ListNotations.
 Local Open Scope Z_scope.
 
 Module BaseConversion.
   Import Positional.
   Section BaseConversion.
     Context (sw dw : nat -> Z) (* source/destination weight functions *)
+            (s : Z) (c : list (Z * Z))
             {swprops : @weight_properties sw}
             {dwprops : @weight_properties dw}.
 
     Definition convert_bases (sn dn : nat) (p : list Z) : list Z :=
       let p' := Positional.from_associational dw dn (Positional.to_associational sw sn p) in
       chained_carries_no_reduce dw dn p' (seq 0 (pred dn)).
+
+    Definition canonicalize (sn dn : nat) (p : list Z) : list Z :=
+      Positional.reduce dw dn s c (convert_bases sn dn p).
 
     Lemma eval_convert_bases sn dn p :
       (dn <> 0%nat) -> length p = sn ->
@@ -31,12 +36,28 @@ Module BaseConversion.
       rewrite eval_from_associational; auto with zarith.
     Qed.
 
+    Lemma eval_canonicalize sn dn p :
+      s <> 0 -> s - Associational.eval c <> 0 -> (dn <> 0%nat) -> length p = sn ->
+      eval dw dn (canonicalize sn dn p) mod (s - Associational.eval c)
+      = eval sw sn p mod (s - Associational.eval c).
+    Proof using dwprops.
+      cbv [canonicalize]; intros.
+      rewrite eval_reduce, eval_convert_bases; auto with zarith.
+    Qed.
+
     Lemma length_convert_bases sn dn p
       : length (convert_bases sn dn p) = dn.
     Proof using Type.
       cbv [convert_bases]; now repeat autorewrite with distr_length.
     Qed.
     Hint Rewrite length_convert_bases : distr_length.
+
+    Lemma length_canonicalize sn dn p
+      : length (canonicalize sn dn p) = dn.
+    Proof using Type.
+      cbv [canonicalize]; now repeat autorewrite with distr_length.
+    Qed.
+    Hint Rewrite length_canonicalize : distr_length.
 
     Lemma convert_bases_partitions sn dn p
           (dw_unique : forall i j : nat, (i <= dn)%nat -> (j <= dn)%nat -> dw i = dw j -> i = j)
@@ -62,7 +83,9 @@ Module BaseConversion.
          @Associational.eval_mul
          @Positional.eval_to_associational
          Associational.eval_carryterm
-         @eval_convert_bases using solve [auto with zarith] : push_eval.
+         @eval_convert_bases
+         @eval_canonicalize
+         using solve [auto with zarith] : push_eval.
 
     Ltac push_eval := intros; autorewrite with push_eval; auto with zarith.
 
@@ -271,11 +294,14 @@ Section base_conversion_mod_ops.
           (src_limbwidth_good : 0 < src_limbwidth_den <= src_limbwidth_num)
           (dst_limbwidth_num dst_limbwidth_den : Z)
           (dst_limbwidth_good : 0 < dst_limbwidth_den <= dst_limbwidth_num)
+          (s : Z) (c : list (Z * Z))
           (src_n : nat)
           (dst_n : nat)
           (bitwidth : Z)
           (Hsrc_n_nz : src_n <> 0%nat)
-          (Hdst_n_nz : dst_n <> 0%nat).
+          (Hdst_n_nz : dst_n <> 0%nat)
+          (s_good : s <> 0)
+          (sc_good : s - Associational.eval c <> 0).
   Local Notation src_weight := (@weight src_limbwidth_num src_limbwidth_den).
   Local Notation dst_weight := (@weight dst_limbwidth_num dst_limbwidth_den).
 
@@ -304,6 +330,12 @@ Section base_conversion_mod_ops.
   Definition convert_basesmod (f : list Z) : list Z
     := convert_bases f.
 
+  Definition canonicalize (v : list Z)
+    := BaseConversion.canonicalize src_weight dst_weight s c src_n dst_n v.
+
+  Definition canonicalizemod (f : list Z) : list Z
+    := canonicalize f.
+
   Lemma eval_convert_bases
     : forall (f : list Z)
         (Hf : length f = src_n),
@@ -313,6 +345,19 @@ Section base_conversion_mod_ops.
     intros.
     cbv [convert_bases].
     rewrite BaseConversion.eval_convert_bases by auto.
+    reflexivity.
+  Qed.
+
+  Lemma eval_canonicalize
+    : forall (f : list Z)
+        (Hf : length f = src_n),
+      eval dst_weight dst_n (canonicalize f) mod (s - Associational.eval c)
+      = eval src_weight src_n f mod (s - Associational.eval c).
+  Proof using Hdst_n_nz src_limbwidth_good dst_limbwidth_good s_good sc_good.
+    generalize src_wprops dst_wprops; clear -Hdst_n_nz s_good sc_good.
+    intros.
+    cbv [canonicalize].
+    rewrite BaseConversion.eval_canonicalize by auto.
     reflexivity.
   Qed.
 
@@ -332,6 +377,13 @@ Section base_conversion_mod_ops.
       eval dst_weight dst_n (convert_basesmod f) = eval src_weight src_n f.
   Proof using Hdst_n_nz src_limbwidth_good dst_limbwidth_good. apply eval_convert_bases. Qed.
 
+  Lemma eval_canonicalizemod
+    : forall (f : list Z)
+             (Hf : length f = src_n),
+      eval dst_weight dst_n (canonicalizemod f) mod (s - Associational.eval c)
+      = eval src_weight src_n f mod (s - Associational.eval c).
+  Proof using Hdst_n_nz src_limbwidth_good dst_limbwidth_good s_good sc_good. apply eval_canonicalize. Qed.
+
   Lemma convert_basesmod_partitions
     : forall (f : list Z)
              (Hf_small : 0 <= eval src_weight src_n f < dst_weight dst_n),
@@ -348,4 +400,4 @@ Section base_conversion_mod_ops.
     now (split; [ apply eval_convert_basesmod | apply convert_bases_partitions ]).
   Qed.
 End base_conversion_mod_ops.
-Hint Rewrite eval_convert_basesmod eval_convert_bases : push_eval.
+Hint Rewrite eval_convert_basesmod eval_canonicalizemod eval_convert_bases eval_canonicalize : push_eval.

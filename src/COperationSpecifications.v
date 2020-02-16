@@ -159,6 +159,14 @@ Module BaseConversion.
       := forall x,
         list_Z_bounded_by inbounds x
         -> convert_bases x = Partition.partition dst_wt dst_n (src_eval x).
+
+    Definition canonicalize_correct
+               (canonicalize : list Z -> list Z)
+      := forall x,
+        list_Z_bounded_by inbounds x
+        -> dst_eval (canonicalize x) mod (s - Associational.eval c)
+           = src_eval x mod (s - Associational.eval c)
+           /\ list_Z_bounded_by outbounds (canonicalize x).
   End __.
 End BaseConversion.
 
