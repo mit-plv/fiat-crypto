@@ -97,8 +97,7 @@ Section Cmd.
            (rhs : base_rtype t)
            (nextn : nat)
            (tr : Semantics.trace)
-           (mem locals : Interface.map.rep)
-           (R : Interface.map.rep -> Prop),
+           (mem locals : Interface.map.rep),
       (* rhs == x *)
       locally_equivalent x rhs locals ->
       let a := assign nextn rhs in
@@ -115,7 +114,7 @@ Section Cmd.
            (* new locals only differ in the values of LHS variables *)
            /\ Interface.map.only_differ locals (varname_set (snd (fst a))) locals'
            (* evaluating lhs == x *)
-           /\ sep (emp (locally_equivalent x (rtype_of_ltype (snd (fst a))) locals')) R mem').
+           /\ locally_equivalent x (rtype_of_ltype (snd (fst a))) locals').
   Admitted.
 
   (* if e is a valid_expr, it will hit the cases that call translate_expr *)
@@ -131,6 +130,42 @@ Section Cmd.
     inversion 1; cleanup_wf; try reflexivity;
       inversion 1; cleanup_wf; reflexivity.
   Qed.
+
+  Ltac setsimplify :=
+    repeat match goal with
+           | _ => progress cbv [PropSet.union PropSet.singleton_set PropSet.elem_of] in *
+           | H : PropSet.sameset _ _ |- _ => rewrite sameset_iff in H; rewrite H
+           end.
+
+  (* prove that context doesn't include overwritable variables *)
+  Ltac context_not_overwritable :=
+    repeat match goal with
+           | _ => progress (intros; cleanup)
+           | _ => progress cbn [ltype base_ltype assign varname_not_in_context
+                                      varname_set fst snd] in *
+           | _ => progress setsimplify
+           | _ => apply Forall_cons; [ | solve [eauto with lia] ]
+           | _ => setoid_rewrite varname_gen_unique
+           | _ => solve [eauto using used_varnames_le with lia]
+           end.
+
+  (* prove that paired variable values in the context are equivalent *)
+  Ltac context_equiv_ok :=
+    repeat match goal with
+           | _ => progress (intros; cleanup)
+           | |- context_equiv (_ :: _) _ =>
+             apply Forall_cons; [ solve [eauto] | ]
+           | _ =>
+             eapply equivalent_not_in_context_forall; eauto;
+             intro; setsimplify; rewrite used_varnames_iff
+           | _ => solve [subst; eauto]
+           end.
+
+  Ltac new_context_ok :=
+    match goal with
+    | |- context_equiv _ _ => context_equiv_ok
+    | _ => context_not_overwritable
+    end.
 
   Lemma translate_cmd_correct {t'} (t:=type.base t')
         (* three exprs, representing the same Expr with different vars *)
@@ -157,13 +192,10 @@ Section Cmd.
           (nextn <= n)%nat ->
           Forall (varname_not_in_context (varname_gen n)) G) ->
       forall (tr : Semantics.trace)
-             (mem : Interface.map.rep)
-             (R : Interface.map.rep -> Prop),
+             (mem : Interface.map.rep),
         (* contexts are equivalent; for every variable in the context list G,
              the fiat-crypto and bedrock2 results match *)
         context_equiv G locals ->
-        (* TODO: does this need to be a separation-logic condition? *)
-        R mem ->
         (* executing translation output is equivalent to interpreting e *)
         WeakestPrecondition.cmd
           call body tr mem locals
@@ -172,169 +204,92 @@ Section Cmd.
              mem = mem' /\
              Interface.map.only_differ
                locals (used_varnames nextn nvars) locals' /\
-             sep (emp (locally_equivalent ret1 ret2 locals')) R mem').
+             locally_equivalent ret1 ret2 locals').
   Proof.
-    revert e2 e3 G.
-    subst t.
-    induction e1_valid; try (inversion 1; [ ]); cbv zeta in *; intros.
-    all:cleanup_wf. (* get rid of the wf nonsense *)
+    revert e2 e3 G. subst t. cbv zeta.
+    induction e1_valid; try (inversion 1; [ ]).
+
+    (* inversion on wf3 leaves a mess; clean up hypotheses *)
+    all:repeat match goal with
+               | _ => progress cleanup_wf
+               | H : wf3 _ ?x _ _ |- _ =>
+                 (* for the cons case, repeatedly do inversion until the cons is exposed *)
+                 progress match x with context [Compilers.ident.cons] =>
+                                       inversion H; clear H
+                          end
+               end.
+
+    (* simplify goals *)
+    all:repeat match goal with
+               | _ => progress (intros; cleanup)
+               | _ => progress cbv [Rewriter.Util.LetIn.Let_In] in *
+               | _ => progress cbn [translate_cmd expr.interp type.app_curried
+                                                  WeakestPrecondition.cmd
+                                                  WeakestPrecondition.cmd_body] in *
+               | _ => erewrite translate_cmd_valid_expr by eauto
+               | _ => eapply Proper_cmd;
+                        [ eapply Proper_call | repeat intro
+                          | eapply assign_correct, translate_expr_correct; solve [eauto] ]
+               end.
 
     { (* let-in (product of base types) *)
-      (* simplify one translation step *)
-      cbn [translate_cmd].
-      cleanup.
-
-      (* simplify fiat-crypto step *)
-      intros; cbn [expr.interp type.app_curried] in *.
-      cbv [Rewriter.Util.LetIn.Let_In] in *. cleanup.
-
-      (* simplify bedrock2 step *)
-      cbn [WeakestPrecondition.cmd WeakestPrecondition.cmd_body].
-      eapply Proper_cmd;
-        [ eapply Proper_call | repeat intro | ].
-      (* N.B. putting below line in the [ | | ] above makes eassumption fail *)
-      2 : eapply assign_correct; try eassumption; [ ];
-        eapply translate_expr_correct; eassumption.
-
-      (* use inductive hypothesis *)
-      cleanup.
-      eapply Proper_cmd;
-        [ eapply Proper_call | repeat intro | ].
-      2: { eapply IHe1_valid with (R:=R);
-           clear IHe1_valid;
-           try match goal with H : _ |- _ => solve [apply H] end;
-           match goal with H : sep (emp _) _ _ |- _ => apply sep_emp_l in H end;
-           cleanup; eauto with lia.
-           { (* proof that new context doesn't contain variables that could be
-                  overwritten in the future *)
-             intros; apply Forall_cons; eauto with lia; [ ].
-             cbn [varname_not_in_context ltype base_ltype] in *.
-             match goal with H : PropSet.sameset _ _ |- _ =>
-                             rewrite sameset_iff in H; rewrite H end.
-             eauto using used_varnames_le. }
-           { (* proof that context_list_equiv continues to hold *)
-             cbv [context_equiv] in *; apply Forall_cons; eauto; [ ].
-             eapply equivalent_not_in_context_forall; eauto. intro.
-             match goal with H : PropSet.sameset _ _ |- _ =>
-                             rewrite sameset_iff in H; rewrite H end.
-             rewrite used_varnames_iff. intros; cleanup.
-             subst. eauto. } }
+      eapply Proper_cmd; [ eapply Proper_call | repeat intro | ].
+      2: {
+        eapply IHe1_valid; clear IHe1_valid;
+        repeat match goal with
+               | _ => progress (intros; cleanup)
+               | _ => solve [new_context_ok]
+               | H : _ |- _ => solve [apply H]
+               | _ => congruence
+               end. }
       { intros; cleanup; subst; repeat split; try tauto; [ ].
         (* remaining case : only_differ *)
         eapply only_differ_step; try eassumption; [ ].
         eapply only_differ_sameset; eauto. } }
     { (* let-in (base type) *)
-      (* simplify one translation step *)
-      cbn [translate_cmd].
-      cleanup.
-
-      (* simplify fiat-crypto step *)
-      intros; cbn [expr.interp type.app_curried] in *.
-      cbv [Rewriter.Util.LetIn.Let_In] in *. cleanup.
-
-      (* simplify bedrock2 step *)
-      cbn [WeakestPrecondition.cmd WeakestPrecondition.cmd_body].
-      eapply Proper_cmd;
-        [ eapply Proper_call | repeat intro | ].
-      (* N.B. putting below line in the [ | | ] above makes eassumption fail *)
-      2 : eapply assign_correct; try eassumption; [ ];
-        eapply translate_expr_correct; eassumption.
-
-      (* use inductive hypothesis *)
-      cleanup.
-      eapply Proper_cmd;
-        [ eapply Proper_call | repeat intro | ].
-      2: { eapply IHe1_valid with (R:=R);
-           clear IHe1_valid;
-           try match goal with H : _ |- _ => solve [apply H] end;
-           match goal with H : sep (emp _) _ _ |- _ => apply sep_emp_l in H end;
-           cleanup; eauto with lia.
-
-           { (* proof that new context doesn't contain variables that could be
-                overwritten in the future *)
-             intros; apply Forall_cons; eauto with lia; [ ].
-             cbn [assign fst] in *.
-             cbn [varname_not_in_context varname_set fst snd].
-             cbv [PropSet.union PropSet.singleton_set PropSet.elem_of].
-             setoid_rewrite varname_gen_unique.
-             lia. }
-           { (* proof that context_list_equiv continues to hold *)
-             cbv [context_equiv] in *; apply Forall_cons; eauto; [ ].
-             eapply equivalent_not_in_context_forall; eauto.
-             cbn [assign snd fst varname_set].
-             cbv [PropSet.union PropSet.singleton_set PropSet.elem_of].
-             intros; subst; eauto. } }
+      eapply Proper_cmd; [ eapply Proper_call | repeat intro | ].
+      2: {
+        eapply IHe1_valid; clear IHe1_valid;
+        repeat match goal with
+               | _ => progress (intros; cleanup)
+               | _ => solve [new_context_ok]
+               | H : _ |- _ => solve [apply H]
+               | _ => congruence
+               end. }
       { intros; cleanup; subst; repeat split; try tauto; [ ].
         (* remaining case : only_differ *)
         eapply only_differ_step; try eassumption; [ ].
         eapply only_differ_sameset; eauto. } }
     { (* cons *)
-
-      (* repeatedly do inversion until the cons is exposed *)
-      repeat match goal with
-             | H : wf3 _ _ _ _ |- _ =>
-               match type of H with context [Compilers.ident.cons] =>
-                                    inversion H; cleanup_wf
-               end
-             end.
-
-      (* simplify one translation step *)
-      cbn [translate_cmd]. cleanup.
-
-      (* simplify fiat-crypto step *)
-      intros; cbn [expr.interp type.app_curried Compilers.ident_interp] in *.
-      cbv [Rewriter.Util.LetIn.Let_In] in *. cleanup.
-
-      (* simplify bedrock2 step *)
-      cbn [WeakestPrecondition.cmd WeakestPrecondition.cmd_body].
-      eapply Proper_cmd;
-        [ eapply Proper_call | repeat intro | ].
-      (* N.B. putting below line in the [ | | ] above makes eassumption fail *)
-      2 : eapply assign_correct; try eassumption; [ ];
-        eapply translate_expr_correct; eassumption.
-
-      (* use inductive hypothesis *)
-      cleanup.
-      eapply Proper_cmd;
-        [ eapply Proper_call | repeat intro | ].
-      2: { eapply IHe1_valid with (R:=R); clear IHe1_valid.
-           all:try match goal with H : _ |- _ => solve [apply H] end.
-           all: match goal with
-                  H : sep (emp _) _ _ |- _ => apply sep_emp_l in H end.
-           all:cleanup.
-           all: try solve [eauto with lia].
-           { (* proof that context_list_equiv continues to hold *)
-             cbv [context_equiv] in *.
-             eapply equivalent_not_in_context_forall; eauto.
-             cbn [assign snd fst varname_set].
-             cbv [PropSet.union PropSet.singleton_set PropSet.elem_of].
-             intros; subst; eauto. } }
-      { intros; cleanup; subst; repeat split; try tauto; [ | ].
+      eapply Proper_cmd; [ eapply Proper_call | repeat intro | ].
+      2: {
+        eapply IHe1_valid with (G:=G); clear IHe1_valid;
+        repeat match goal with
+               | _ => progress (intros; cleanup)
+               | H : _ |- _ => solve [apply H]
+               | _ => solve [new_context_ok]
+               | _ => congruence
+               end. }
+      { intros; cleanup; subst;
+          repeat match goal with |- _ /\ _ => split end;
+          try tauto; [ | ].
         all:cbn [assign fst snd varname_set] in *.
         { (* only_differ *)
           rewrite <-(Nat.add_1_r nextn) in *.
           eapply only_differ_step; try eassumption; [ ].
           eapply only_differ_sameset; eauto. }
         { (* equivalence of output holds *)
-          clear IHe1_valid.
-          apply sep_emp_l.
-          repeat match goal with H : sep (emp _) _ _ |- _ => apply sep_emp_l in H end.
-          destruct_head'_and.
-          match goal with H : locally_equivalent _ _ _ |- _ =>
-                          cbv [locally_equivalent] in *;
-                            (* plug in just anything for locally_equivalent mem *)
-                            specialize (H ltac:(auto))
+          clear IHe1_valid. intro.
+          repeat match goal with H : locally_equivalent _ _ _ |- _ =>
+                          (* plug in just anything for locally_equivalent mem *)
+                          specialize (H ltac:(auto))
           end.
           cbn [fst snd rtype_of_ltype rep.rtype_of_ltype rep.equiv rep.listZ_local
-                   locally_equivalent equivalent] in *.
-          cleanup.
-          rewrite ?map_length in *.
-          repeat split; cbn [Datatypes.length]; [ congruence | | assumption ].
-          apply Forall2_cons; [|eassumption].
-
-          cbn [rep.equiv rep.Z] in *.
-          let mem := fresh "mem" in
-          intros ? mem; eapply (expr_untouched mem mem); eauto; [ ].
+                   rep.Z rep.equiv base_ltype equivalent] in *.
+          cleanup. cbn [map Compilers.ident_interp].
+          split; cbn [Datatypes.length]; [ congruence | ].
+          apply Forall2_cons; [intros|eassumption].
+          eapply (expr_untouched ltac:(eassumption) ltac:(eassumption)); eauto; [ ].
           cbv [used_varnames PropSet.of_list PropSet.elem_of].
           rewrite in_map_iff. intro; cleanup.
           match goal with H : varname_gen ?x = varname_gen _ |- _ =>
@@ -343,32 +298,13 @@ Section Cmd.
                           apply in_seq in H end.
           lia. } } }
     { (* nil *)
-      (* simplify one translation step *)
-      cbn [translate_cmd assign fst snd]. cleanup.
-
-      (* simplify fiat-crypto step *)
-      intros; cbn [expr.interp type.app_curried Compilers.ident_interp] in *.
-
-      (* simplify bedrock2 step *)
-      cbn [WeakestPrecondition.cmd WeakestPrecondition.cmd_body].
-
       repeat split; eauto; [ | ].
       { cbv [Interface.map.only_differ]. right; reflexivity. }
-      { apply sep_emp_l. cbv [locally_equivalent].
-        cbn [equivalent rep.Z rep.listZ_local rep.equiv
-                        rep.rtype_of_ltype rtype_of_ltype map].
+      { cbn [map locally_equivalent equivalent rep.equiv
+                 rep.Z rep.listZ_local rep.rtype_of_ltype rtype_of_ltype
+                 Compilers.ident_interp].
         eauto. } }
     { (* valid expr *)
-      erewrite translate_cmd_valid_expr by eauto.
-
-      (* simplify bedrock2 cmd *)
-      cbn [WeakestPrecondition.cmd WeakestPrecondition.cmd_body].
-      eapply Proper_cmd;
-        [ eapply Proper_call | repeat intro | ].
-      (* N.B. putting below line in the [ | | ] above makes eassumption fail *)
-      2 : eapply assign_correct; try eassumption; [ ];
-        eapply translate_expr_correct; eassumption.
-
       cleanup. repeat split; eauto.
       eapply only_differ_sameset; eauto. }
   Qed.
