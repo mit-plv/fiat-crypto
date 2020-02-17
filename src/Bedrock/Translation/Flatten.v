@@ -60,10 +60,10 @@ Section Flatten.
     end.
 
   Definition flatten_retnames {t}
-    : base_ltype (type.final_codomain t) -> list string :=
+    : base_ltype t -> list string :=
     flatten_base_ltype.
 
   Definition flatten_rets {t}
-    : base_rtype (type.final_codomain t) -> list Syntax.expr :=
+    : base_rtype t -> list Syntax.expr :=
     flatten_base_rtype.
 End Flatten.

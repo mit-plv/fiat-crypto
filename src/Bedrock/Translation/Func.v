@@ -21,26 +21,24 @@ Section Func.
   (* Feeds arguments to function one by one and then calls translate_cmd *)
   Fixpoint translate_func' {t} (e : @API.expr ltype t) (nextn : nat)
     : type.for_each_lhs_of_arrow ltype t -> (* args *)
-      type.for_each_lhs_of_arrow list_lengths t -> (* list lengths *)
       nat * base_ltype (type.final_codomain t) * cmd.cmd :=
     match e with
     | expr.Abs (type.base s) d f =>
       (* if we have an abs, peel off one argument and recurse *)
-      fun (args : base_ltype s * type.for_each_lhs_of_arrow _ d)
-          (lengths : base_list_lengths s * _) =>
-        translate_func' (f (fst args)) nextn (snd args) (snd lengths)
+      fun (args : base_ltype s * type.for_each_lhs_of_arrow _ d) =>
+        translate_func' (f (fst args)) nextn (snd args)
     (* if any expression that outputs a base type, call translate_cmd *)
     | expr.Ident (type.base b) idc =>
-      fun (_ _:unit) => translate_cmd (expr.Ident idc) nextn
+      fun (_:unit) => translate_cmd (expr.Ident idc) nextn
     | expr.Var (type.base b) v =>
-      fun (_ _:unit) => translate_cmd (expr.Var v) nextn
+      fun (_:unit) => translate_cmd (expr.Var v) nextn
     | expr.App _ (type.base b) f x =>
-      fun (_ _:unit) => translate_cmd (expr.App f x) nextn
+      fun (_:unit) => translate_cmd (expr.App f x) nextn
     | expr.LetIn _ (type.base b) x f =>
-      fun (_ _:unit) => translate_cmd (expr.LetIn x f) nextn
+      fun (_:unit) => translate_cmd (expr.LetIn x f) nextn
     (* if the expression does not have a base type and is not an Abs,
        return garbage *)
-    | _ => fun _ _ => (0%nat, dummy_base_ltype _, cmd.skip)
+    | _ => fun _ => (0%nat, dummy_base_ltype _, cmd.skip)
     end.
 
   (* Translates functions in 3 steps:
@@ -55,7 +53,8 @@ Section Func.
     about the memory. Since fiat-crypto doesn't do any list
     manipulations in the middle of functions, but only uses lists in
     arguments/return values, it's a convenient formalization. *)
-  Definition translate_func {t} (e : @API.expr ltype t)
+  Definition translate_func {t}
+             (e : API.Expr t)
              (argnames : type.for_each_lhs_of_arrow ltype t)
              (lengths : type.for_each_lhs_of_arrow list_lengths t)
              (rets : base_ltype (type.final_codomain t))
@@ -66,7 +65,7 @@ Section Func.
     let args := snd (fst load_args_out) in
     let load_args_cmd := snd load_args_out in
     (* translate *)
-    let out := translate_func' e nextn args lengths in
+    let out := translate_func' (e _) nextn args in
     (* store return values *)
     let store_rets_cmd := store_return_values (snd (fst out)) rets in
     (* assemble function (arg varnames, return varnames, executable body) *)

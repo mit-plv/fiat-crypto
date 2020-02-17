@@ -12,6 +12,7 @@ Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Language.API.
 Require Import Crypto.Util.ListUtil.
+Require Import Crypto.Util.Tactics.DestructHead.
 
 (* for [eauto with lia] *)
 Require Import Crypto.BoundsPipeline.
@@ -19,6 +20,51 @@ Require Import Crypto.BoundsPipeline.
 Import API.Compilers.
 Import Wf.Compilers.expr.
 Import Types.Notations Types.Types.
+
+(* General-purpose lemmas about maps that should be later moved to coqutil *)
+(* TODO: move *)
+Section Sets.
+  Context {E : Type}.
+
+  Lemma disjoint_union_r_iff (s1 s2 s3 : set E) :
+    disjoint s1 (union s2 s3) <-> disjoint s1 s2 /\ disjoint s1 s3.
+  Proof.
+    cbv [disjoint union elem_of];
+      repeat match goal with
+             | _ => progress intros
+             | H : forall _, _ |- _ =>
+               specialize (H ltac:(eassumption))
+             | H : _ \/ _ |- _ => destruct H
+             | H : _ /\ _ |- _ => destruct H
+             | _ => split
+             | _ => tauto
+             end.
+  Qed.
+
+  Lemma disjoint_cons (s : set E) x l :
+    disjoint s (of_list (x :: l)) ->
+    disjoint s (of_list l) /\ disjoint s (singleton_set x).
+  Proof.
+    cbv [disjoint of_list elem_of]; cbn [In].
+    repeat match goal with
+           | _ => progress intros
+           | H : _ \/ _ |- _ => destruct H
+           | H : _ /\ _ |- _ => destruct H
+           | _ => split
+           | _ => tauto
+           | H : forall _, _ |- context[s ?x] =>
+             specialize (H x); tauto
+           end.
+  Qed.
+
+  Lemma sameset_iff (s1 s2 : set E) :
+    sameset s1 s2 <-> (forall e, s1 e <-> s2 e).
+  Proof.
+    cbv [sameset subset elem_of]. split.
+    { destruct 1; split; eauto. }
+    { intro Hiff; split; apply Hiff; eauto. }
+  Qed.
+End Sets.
 
 (* General-purpose lemmas about maps that should be later moved to coqutil *)
 (* TODO: move *)
@@ -30,21 +76,12 @@ Section Maps.
     map.only_differ m3 (union ks1 ks2) m1.
   Admitted.
 
-  (* TODO: move *)
   Lemma only_differ_sameset {key value} {map: map.map key value}
         m1 m2 ks1 ks2 :
     sameset ks1 ks2 ->
     map.only_differ m2 ks1 m1 ->
     map.only_differ m2 ks2 m1.
   Admitted.
-
-  Lemma sameset_iff {E} (s1 s2 : set E) :
-    sameset s1 s2 <-> (forall e, s1 e <-> s2 e).
-  Proof.
-    cbv [sameset subset elem_of]. split.
-    { destruct 1; split; eauto. }
-    { intro Hiff; split; apply Hiff; eauto. }
-  Qed.
 End Maps.
 
 (* Reasoning about various collections of variable names *)
@@ -112,58 +149,82 @@ Section Varnames.
     | existT (type.arrow _ _) _ => False (* no functions allowed *)
     end.
 
-  Lemma equivalent_not_varname_set {t}
+  Lemma equiv_Z_only_differ
+        locals1 locals2 vset (varname : base_ltype base_Z) x :
+    map.only_differ locals1 vset locals2 ->
+    (forall v, vset v -> ~ varname_set varname v) ->
+    forall mem,
+      rep.equiv x (rep.rtype_of_ltype varname) locals1 mem ->
+      rep.equiv x (rep.rtype_of_ltype varname) locals2 mem.
+  Admitted.
+
+  Lemma equiv_listZ_only_differ
+        locals1 locals2 vset (varnames : base_ltype base_listZ) x mem :
+      map.only_differ locals1 vset locals2 ->
+      (forall v, vset v -> ~ varname_set varnames v) ->
+      rep.equiv x (rep.rtype_of_ltype varnames) locals1 mem ->
+      rep.equiv x (rep.rtype_of_ltype varnames) locals2 mem.
+  Proof.
+    cbn [rep.equiv rep.rtype_of_ltype rep.listZ_local varname_set].
+    rewrite !Forall.Forall2_map_r_iff.
+    revert x; induction varnames; intros;
+      match goal with H : Forall2 _ _ _ |- _ =>
+                      inversion H; subst; clear H end;
+      [ solve [eauto] | ].
+    match goal with H : context [of_list (_ :: _)] |- _ =>
+                    cbn [of_list In] in H
+    end.
+    cleanup. constructor; eauto using equiv_Z_only_differ.
+    { eapply equiv_Z_only_differ; eauto.
+      cbv [varname_set singleton_set].
+      match goal with H : _ |- _ =>
+                      let x1 := fresh in
+                      let x2 := fresh in
+                      intros x1 x2; specialize (H x1 x2)
+      end.
+      tauto. }
+    { apply IHvarnames; eauto.
+      match goal with H : _ |- _ =>
+                      let x1 := fresh in
+                      let x2 := fresh in
+                      intros x1 x2; specialize (H x1 x2)
+      end.
+      tauto. }
+  Qed.
+
+  Lemma equivalent_only_differ {t}
         locals1 locals2 vset (varnames : base_ltype t) x :
     map.only_differ locals1 vset locals2 ->
-    (forall v : varname, vset v -> ~ varname_set varnames v) ->
+    (forall v, vset v -> ~ varname_set varnames v) ->
     forall mem,
       equivalent x (rtype_of_ltype varnames) locals1 mem ->
       equivalent x (rtype_of_ltype varnames) locals2 mem.
   Proof.
-    (* TODO : clean up this proof *)
     intros Hdiffer Hexcl.
     induction t;
-      cbn [fst snd rtype_of_ltype varname_set
-               equivalent rep.Z rep.listZ_local rep.equiv]; intros;
-        BreakMatch.break_match; DestructHead.destruct_head'_and; try tauto.
+      cbn [fst snd rtype_of_ltype varname_set equivalent] in *; intros;
+        BreakMatch.break_match; destruct_head'_and; try tauto.
     { (* base case *)
-      cbv [singleton_set
-             elem_of
-             varname_set
-             WeakestPrecondition.expr
-             WeakestPrecondition.expr_body
-             WeakestPrecondition.get ] in *.
-      specialize (Hexcl varnames); intros;
-        destruct (Hdiffer varnames) as [? | Heq];
-        [ tauto | rewrite <-Heq; eauto ]. }
+      eapply equiv_Z_only_differ; eauto. }
     { (* prod case *)
-      cbn [varname_set] in Hexcl; cbv [union elem_of] in Hexcl.
-      eapply Proper_sep_impl1;
-        cbv [Lift1Prop.impl1]; intros;
-          [ | | eassumption ];
-          [ apply IHt1 | apply IHt2]; auto;
-            let x := fresh in
-            let y := fresh in
-            intros x y; specialize (Hexcl x y); tauto. }
+      cbv [union elem_of] in *.
+      eapply Proper_sep_impl1; [ | | eassumption]; repeat intro; eauto.
+      { apply IHt1; eauto.
+        match goal with H : _ |- _ =>
+                        let x1 := fresh in
+                        let x2 := fresh in
+                        intros x1 x2; specialize (H x1 x2)
+        end.
+        tauto. }
+      { apply IHt2; eauto.
+        match goal with H : _ |- _ =>
+                        let x1 := fresh in
+                        let x2 := fresh in
+                        intros x1 x2; specialize (H x1 x2)
+        end.
+        tauto. } }
     { (* list case *)
-      split; [ assumption | ].
-      cbn [varname_set] in Hexcl; cbv [union of_list] in Hexcl.
-      cbn [Language.Compilers.base.interp Compilers.base_interp base_rtype] in *. (* simplify types *)
-      cbn [rep.rtype rep.Z] in *.
-      eapply Forall2_forall_iff with (d1:=0%Z) (d2:=expr.literal 0); auto.
-      match goal with H : _ |- _ =>
-                      intros i Hi;
-                        rewrite Forall2_forall_iff
-                          with (d1:=0%Z) (d2:=expr.literal 0) in H by auto;
-                        specialize (H i Hi); revert H
-      end.
-      apply nth_default_preserves_properties_length_dep; try lia.
-      cbn [equivalent base_ltype rep.Z rep.listZ_local rep.ltype rep.equiv
-                      rep.rtype_of_ltype rtype_of_ltype] in *.
-      intros *. rewrite in_map_iff. intros; cleanup. subst.
-      apply IHt; intros; auto.
-      match goal with H : vset _ |- _ => apply Hexcl in H end.
-      congruence. }
+      eapply equiv_listZ_only_differ; eauto. }
   Qed.
 
   Lemma equivalent_not_in_context {var1} locals1 locals2 vset x :
@@ -174,7 +235,7 @@ Section Varnames.
   Proof.
     intros; cbv [equiv3 varname_not_in_context locally_equivalent] in *.
     destruct x as [x [ [? ?] ?] ]; destruct x; [ | tauto ].
-    eauto using equivalent_not_varname_set.
+    eauto using equivalent_only_differ.
   Qed.
 
   Lemma equivalent_not_in_context_forall {var1} locals1 locals2 vset G :
