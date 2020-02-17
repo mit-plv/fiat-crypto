@@ -15,6 +15,7 @@ Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Strings.Show.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.Show.
+Require Import Crypto.Util.Sum.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.HasBody.
@@ -427,11 +428,23 @@ Module Pipeline.
                end in
       dlet_nd e := ToFlat E in
       let E := FromFlat e in
-      let E' := CheckedPartialEvaluateWithBounds relax_zrange E arg_bounds out_bounds in
+      (** We first do bounds analysis with no relaxation so that we
+          can do rewriting with casts, and then once that's out of the
+          way, we do bounds analysis again to relax the bounds. *)
+      let E' := CheckedPartialEvaluateWithBounds (fun _ => None) false E arg_bounds out_bounds in
+      let E'
+          := match E' with
+             | inl E
+               => let E := RewriteAndEliminateDeadAndInline (RewriteRules.RewriteArithWithCasts opts) with_dead_code_elimination with_subst01 E in
+                  dlet_nd e := ToFlat E in
+                  let E := FromFlat e in
+                  let E' := CheckedPartialEvaluateWithBounds relax_zrange true (* strip pre-existing casts *) E arg_bounds out_bounds in
+                  E'
+             | inr v => inr v
+             end in
       match E' with
       | inl E
-        => let E := RewriteAndEliminateDeadAndInline (RewriteRules.RewriteArithWithCasts opts) with_dead_code_elimination with_subst01 E in
-           let E := match split_mul_to with
+        => let E := match split_mul_to with
                     | Some (max_bitwidth, lgcarrymax)
                       => RewriteRules.RewriteMulSplit max_bitwidth lgcarrymax opts E
                     | None => E
@@ -441,6 +454,7 @@ Module Pipeline.
                       => RewriteAndEliminateDeadAndInline (RewriteRules.RewriteMultiRetSplit max_bitwidth lgcarrymax opts) with_dead_code_elimination with_subst01 E
                     | None => E
                     end in
+
            let E := match translate_to_fancy with
                     | Some {| invert_low := invert_low ; invert_high := invert_high ; value_range := value_range ; flag_range := flag_range |}
                       => RewriteRules.RewriteToFancyWithCasts invert_low invert_high value_range flag_range opts E
@@ -643,30 +657,35 @@ Module Pipeline.
                     let H' := fresh in
                     inversion H as [H']; clear H; rename H' into H
              end.
-    { intros;
-        match goal with
-        | [ H : _ = _ |- _ ]
-          => let H' := fresh in
-             pose proof H as H';
-               eapply CheckedPartialEvaluateWithBounds_Correct in H';
-               [ destruct H' as [H01 Hwf'] | .. ]
-        end;
-        [
-        | lazymatch goal with
-          | [ |- Wf _ ] => idtac
-          | _ => eassumption || reflexivity || apply relax_zrange_gen_good
-          end.. ].
-      { subst; split; [ | solve [ wf_interp_t ] ].
-        split_and; simpl in *.
-        split; [ solve [ wf_interp_t; typeclasses eauto with nocore ] | ].
-        intros; break_innermost_match; (rewrite_strat repeat topdown hints interp_extra); try solve [ wf_interp_t ].
-        all: match goal with H : context[type.app_curried _ _ = _] |- _ => erewrite H; clear H end; try typeclasses eauto with core.
-        all: transitivity (type.app_curried (Interp (PartialEvaluateWithListInfoFromBounds e arg_bounds)) arg1);
-          [ | apply Interp_PartialEvaluateWithListInfoFromBounds; auto ].
-        all: apply type.app_curried_Proper; [ | symmetry; eassumption ].
-        all: clear dependent arg1; clear dependent arg2; clear dependent out_bounds.
-        all: wf_interp_t. }
-      { wf_interp_t. } }
+    break_match_hyps_when_head (@sum); inversion_sum.
+    all: repeat first [ assumption
+                      | match goal with
+                        | [ |- Wf _ ] => solve [ wf_interp_t ]
+                        | [ |- ZRange.type.base.option.is_bounded_by _ _ = true ]
+                          => solve [ wf_interp_t; typeclasses eauto with nocore ]
+                        | [ |- type.related _ ?x ?x ] => solve [ wf_interp_t ]
+                        | [ H : CheckedPartialEvaluateWithBounds _ _ _ _ _ = inl _ |- _ ]
+                          => apply CheckedPartialEvaluateWithBounds_Correct in H;
+                             [ destruct H | clear H.. ]
+                        | [ |- type.app_curried (expr.Interp _ (PartialEvaluateWithListInfoFromBounds _ _)) _ = _ ]
+                          => apply Interp_PartialEvaluateWithListInfoFromBounds
+                        | [ |- context[None = Some _] ] => intros; discriminate
+                        | [ H : type.andb_bool_for_each_lhs_of_arrow ?R ?argb ?arg1 = true,
+                                H' : type.and_for_each_lhs_of_arrow _ ?arg1 ?arg2
+                            |- type.andb_bool_for_each_lhs_of_arrow ?R ?argb ?arg2 = true ]
+                          => rewrite <- H'
+                        | [ |- _ /\ _ ] => split
+                        end
+                      | solve [ apply relax_zrange_gen_good ]
+                      | progress split_and
+                      | progress intros
+                      | break_innermost_match_step
+                      | progress (rewrite_strat repeat topdown hints interp_extra)
+                      | match goal with
+                        | [ H : (forall x y Hx Hy, type.app_curried (expr.Interp _ ?e) x = _)
+                            |- type.app_curried (expr.Interp _ ?e) _ = _ ]
+                          => erewrite H; clear dependent e; [ | solve [ (idtac + symmetry); typeclasses eauto with core ] | ]
+                        end ].
   Qed.
 
   Definition BoundsPipeline_correct_transT
