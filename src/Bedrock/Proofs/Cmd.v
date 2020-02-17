@@ -128,8 +128,8 @@ Section Cmd.
     wf3 G e1 e2 e3 ->
     translate_cmd e3 nextn = assign nextn (translate_expr true e3).
   Proof.
-    inversion 1; hammer_wf; try reflexivity;
-      inversion 1; hammer_wf; reflexivity.
+    inversion 1; cleanup_wf; try reflexivity;
+      inversion 1; cleanup_wf; reflexivity.
   Qed.
 
   Lemma translate_cmd_correct {t'} (t:=type.base t')
@@ -177,7 +177,7 @@ Section Cmd.
     revert e2 e3 G.
     subst t.
     induction e1_valid; try (inversion 1; [ ]); cbv zeta in *; intros.
-    all:hammer_wf. (* get rid of the wf nonsense *)
+    all:cleanup_wf. (* get rid of the wf nonsense *)
 
     { (* let-in (product of base types) *)
       (* simplify one translation step *)
@@ -274,7 +274,7 @@ Section Cmd.
       repeat match goal with
              | H : wf3 _ _ _ _ |- _ =>
                match type of H with context [Compilers.ident.cons] =>
-                                    inversion H; hammer_wf
+                                    inversion H; cleanup_wf
                end
              end.
 
