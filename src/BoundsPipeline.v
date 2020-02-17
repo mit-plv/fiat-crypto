@@ -14,7 +14,6 @@ Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Strings.Show.
 Require Import Crypto.Util.ZRange.
-Require Import Crypto.Util.ZRange.BasicLemmas.
 Require Import Crypto.Util.ZRange.Show.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.DestructHead.
@@ -89,55 +88,57 @@ Export Stringification.Language.Compilers.Options.
 
 Import Compilers.API.
 
-Definition relax_zrange_gen_ranges (possible_ranges : list zrange)
-  : zrange -> option zrange
-  := fun r
-     => List.fold_right
-          (fun r' default
-           => if (r <=? r')%zrange then Some r' else default)
-          None
-          possible_ranges.
+Definition round_up_bitwidth_gen (possible_values : list Z) (bitwidth : Z) : option Z
+  := List.fold_right
+       (fun allowed cur
+        => if bitwidth <=? allowed
+           then Some allowed
+           else cur)
+       None
+       possible_values.
 
-Inductive kind_of_range := signed | unsigned.
-
-Definition ranges_of_bitwidths (bws : list (Z * kind_of_range))
-  : list zrange
-  := List.map (fun '(bw, k)
-               => match k with
-                  | unsigned => r[0~>2^bw-1]
-                  | signed => r[-2^(bw-1) ~> 2^(bw-1)-1]
-                  end%zrange)
-              bws.
-
-Definition relax_zrange_gen (only_signed : bool) (possible_values : list Z)
-  : zrange -> option zrange
-  := relax_zrange_gen_ranges
-       (ranges_of_bitwidths
-          (List.flat_map
-             (fun k => List.map (fun bw => (bw, k)) possible_values)
-             (if only_signed
-              then [signed]
-              else [unsigned; signed] (* put [unsigned] first so we prefer unsigned ranges to signed ranges *)))).
-
-Lemma relax_zrange_gen_ranges_good
-      (possible_ranges : list zrange)
-  : forall r r' z : zrange,
-    is_true (z <=? r)%zrange -> relax_zrange_gen_ranges possible_ranges r = Some r' -> is_true (z <=? r')%zrange.
+Lemma round_up_bitwidth_gen_le possible_values bitwidth v
+  : round_up_bitwidth_gen possible_values bitwidth = Some v
+    -> bitwidth <= v.
 Proof.
-  intros r r' z Hzr.
-  cbv [relax_zrange_gen_ranges].
-  induction possible_ranges as [|R Rs IHRs]; cbn [List.fold_right]; [ congruence | ].
-  intros; break_innermost_match_hyps; inversion_option; subst.
-  { etransitivity; eassumption. }
-  { eauto. }
+  cbv [round_up_bitwidth_gen].
+  induction possible_values as [|x xs IHxs]; cbn; intros; inversion_option.
+  break_innermost_match_hyps; Z.ltb_to_lt; inversion_option; subst; trivial.
+  specialize_by_assumption; omega.
 Qed.
 
+Definition relax_zrange_gen (possible_values : list Z) : zrange -> option zrange
+  := (fun '(r[ l ~> u ])
+      => if (0 <=? l)%Z
+         then option_map (fun u => r[0~>2^u-1])
+                         (round_up_bitwidth_gen possible_values (Z.log2_up (u+1)))
+         else if ((l <? 0) && (u =? 0))%Z (* This is a hack to get the right relaxation on sbb carries *)
+              then option_map (fun u => r[-(2^u-1)~>0])
+                              (round_up_bitwidth_gen possible_values (Z.log2_up ((-l)+1)))
+        else None)%zrange.
+
 Lemma relax_zrange_gen_good
-      (only_signed : bool)
       (possible_values : list Z)
   : forall r r' z : zrange,
-    (z <=? r)%zrange = true -> relax_zrange_gen only_signed possible_values r = Some r' -> (z <=? r')%zrange = true.
-Proof. apply relax_zrange_gen_ranges_good. Qed.
+    (z <=? r)%zrange = true -> relax_zrange_gen possible_values r = Some r' -> (z <=? r')%zrange = true.
+Proof.
+  cbv [is_tighter_than_bool relax_zrange_gen]; intros *.
+  pose proof (Z.log2_up_nonneg (upper r + 1)).
+  rewrite !Bool.andb_true_iff; destruct_head' zrange; cbn [ZRange.lower ZRange.upper] in *.
+  cbv [List.fold_right option_map].
+  break_innermost_match; intros; destruct_head'_and; Bool.split_andb;
+    try match goal with
+        | [ H : _ |- _ ] => apply round_up_bitwidth_gen_le in H
+        end;
+    inversion_option; inversion_zrange;
+      subst;
+      repeat apply conj;
+      Z.ltb_to_lt; try omega;
+        repeat match goal with
+               | [ H : context[Z.log2_up ?x] |- _ ] => unique pose proof (Z.log2_up_nonneg x)
+               end;
+        try (rewrite <- Z.log2_up_le_pow2_full in *; omega).
+Qed.
 
 (** Which of the rewriter methods do we use? *)
 (** Note that we don't currently generate a precomputed naive method, because it eats too much RAM to do so. *)
@@ -159,9 +160,6 @@ Typeclasses Opaque use_mul_for_cmovznz_opt.
 (** Emit the primitive operations? *)
 Class emit_primitives_opt := emit_primitives : bool.
 Typeclasses Opaque emit_primitives_opt.
-(** Only allow signed integers in the output *)
-Class only_signed_opt := only_signed : bool.
-Typeclasses Opaque only_signed_opt.
 (** Split apart multiplications? *)
 Class should_split_mul_opt := should_split_mul : bool.
 Typeclasses Opaque should_split_mul_opt.
@@ -405,14 +403,13 @@ Module Pipeline.
 
   Definition BoundsPipeline
              {low_level_rewriter_method : low_level_rewriter_method_opt}
-             {only_signed : only_signed_opt}
              {split_mul_to : split_mul_to_opt}
              {split_multiret_to : split_multiret_to_opt}
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
              (translate_to_fancy : option to_fancy_args)
              (possible_values : list Z)
-             (relax_zrange := relax_zrange_gen only_signed possible_values)
+             (relax_zrange := relax_zrange_gen possible_values)
              {t}
              (E : Expr t)
              arg_bounds
@@ -461,7 +458,6 @@ Module Pipeline.
              {output_language_api : ToString.OutputLanguageAPI}
              {static : static_opt}
              {low_level_rewriter_method : low_level_rewriter_method_opt}
-             {only_signed : only_signed_opt}
              {split_mul_to : split_mul_to_opt}
              {split_multiret_to : split_multiret_to_opt}
              (type_prefix : string)
@@ -471,7 +467,7 @@ Module Pipeline.
              (translate_to_fancy : option to_fancy_args)
              (possible_values : list Z)
              (relax_zrangef : relax_zrange_opt
-              := fun r => Option.value (relax_zrange_gen only_signed possible_values r) r)
+              := fun r => Option.value (relax_zrange_gen possible_values r) r)
              {t}
              (E : Expr t)
              (comment : type.for_each_lhs_of_arrow ToString.OfPHOAS.var_data t -> ToString.OfPHOAS.var_data (type.final_codomain t) -> list string)
@@ -498,7 +494,6 @@ Module Pipeline.
              {output_language_api : ToString.OutputLanguageAPI}
              {static : static_opt}
              {low_level_rewriter_method : low_level_rewriter_method_opt}
-             {only_signed : only_signed_opt}
              {split_mul_to : split_mul_to_opt}
              {split_multiret_to : split_multiret_to_opt}
              (type_prefix : string)
@@ -526,13 +521,13 @@ Module Pipeline.
        end.
 
   Local Notation arg_bounds_of_pipeline result
-    := ((fun a b c d e f possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e f possible_values t E arg_bounds out_bounds = result') => arg_bounds) _ _ _ _ _ _ _ _ _ _ _ result eq_refl)
+    := ((fun a b c d e possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e possible_values t E arg_bounds out_bounds = result') => arg_bounds) _ _ _ _ _ _ _ _ _ _ result eq_refl)
          (only parsing).
   Local Notation out_bounds_of_pipeline result
-    := ((fun a b c d e f possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e f possible_values t E arg_bounds out_bounds = result') => out_bounds) _ _ _ _ _ _ _ _ _ _ _ result eq_refl)
+    := ((fun a b c d e possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e possible_values t E arg_bounds out_bounds = result') => out_bounds) _ _ _ _ _ _ _ _ _ _ result eq_refl)
          (only parsing).
   Local Notation possible_values_of_pipeline result
-    := ((fun a b c d e f possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e f possible_values t E arg_bounds out_bounds = result') => possible_values) _ _ _ _ _ _ _ _ _ _ _ result eq_refl)
+    := ((fun a b c d e possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e possible_values t E arg_bounds out_bounds = result') => possible_values) _ _ _ _ _ _ _ _ _ _ result eq_refl)
          (only parsing).
 
   Notation FromPipelineToString_gen is_internal prefix name result
@@ -542,7 +537,7 @@ Module Pipeline.
             | Success E'
               => let E := ToString.ToFunctionLines
                             (relax_zrange
-                             := fun r => Option.value (relax_zrange_gen (_ : only_signed_opt) (possible_values_of_pipeline result) r) r)
+                             := fun r => Option.value (relax_zrange_gen (possible_values_of_pipeline result) r) r)
                             true match is_internal return bool with
                                  | true => orb (_ : static_opt) (_ : internal_static_opt)
                                  | false => _ : static_opt
@@ -613,7 +608,6 @@ Module Pipeline.
 
   Lemma BoundsPipeline_correct
              {low_level_rewriter_method : low_level_rewriter_method_opt}
-             {only_signed : only_signed_opt}
              {split_mul_to : split_mul_to_opt}
              {split_multiret_to : split_multiret_to_opt}
              (with_dead_code_elimination : bool := true)
@@ -690,7 +684,6 @@ Module Pipeline.
 
   Lemma BoundsPipeline_correct_trans
         {low_level_rewriter_method : low_level_rewriter_method_opt}
-        {only_signed : only_signed_opt}
         {split_mul_to : split_mul_to_opt}
         {split_multiret_to : split_multiret_to_opt}
         (with_dead_code_elimination : bool := true)

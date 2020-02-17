@@ -35,7 +35,6 @@ Module X25519_64.
             (machine_wordsize : Z := 64).
 
     Local Existing Instance default_low_level_rewriter_method.
-    Local Instance only_signed : only_signed_opt := false.
     Local Instance should_split_mul : should_split_mul_opt := true.
     Local Instance should_split_multiret : should_split_multiret_opt := true.
     Local Instance widen_carry : widen_carry_opt := true.

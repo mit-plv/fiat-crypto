@@ -22,7 +22,6 @@ Import Associational Positional.
 
 Local Instance : split_mul_to_opt := None.
 Local Instance : split_multiret_to_opt := None.
-Local Instance : only_signed_opt := false.
 Local Existing Instance default_low_level_rewriter_method.
 
 Time Redirect "log" Compute

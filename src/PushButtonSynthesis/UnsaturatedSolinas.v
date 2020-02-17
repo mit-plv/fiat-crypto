@@ -77,7 +77,6 @@ Section __.
           {static : static_opt}
           {internal_static : internal_static_opt}
           {low_level_rewriter_method : low_level_rewriter_method_opt}
-          {only_signed : only_signed_opt}
           {use_mul_for_cmovznz : use_mul_for_cmovznz_opt}
           {emit_primitives : emit_primitives_opt}
           {should_split_mul : should_split_mul_opt}

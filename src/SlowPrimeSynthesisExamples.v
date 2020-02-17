@@ -30,7 +30,6 @@ Local Coercion QArith_base.inject_Z : Z >-> Q.
 Local Coercion Z.pos : positive >-> Z.
 
 Local Existing Instance default_low_level_rewriter_method.
-Local Instance : only_signed_opt := false.
 Local Instance : should_split_multiret_opt := false.
 Local Instance : split_multiret_to_opt := None.
 
