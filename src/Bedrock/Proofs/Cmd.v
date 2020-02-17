@@ -131,14 +131,26 @@ Section Cmd.
       inversion 1; cleanup_wf; reflexivity.
   Qed.
 
-  Ltac setsimplify :=
+  Local Ltac simplify :=
+    repeat
+      first [ progress (intros; cleanup)
+            | progress
+                cbn [fst snd assign varname_not_in_context varname_set
+                         ltype rtype base_ltype base_rtype rtype_of_ltype
+                         rep.rtype_of_ltype rep.equiv rep.listZ_local rep.Z
+                         locally_equivalent equivalent
+                         map Datatypes.length Compilers.ident_interp] in *
+            | match goal with |- _ /\ _ => split end ].
+
+  Local Ltac setsimplify :=
     repeat match goal with
-           | _ => progress cbv [PropSet.union PropSet.singleton_set PropSet.elem_of] in *
+           | _ => progress cbv [PropSet.union PropSet.of_list
+                                              PropSet.singleton_set PropSet.elem_of] in *
            | H : PropSet.sameset _ _ |- _ => rewrite sameset_iff in H; rewrite H
            end.
 
   (* prove that context doesn't include overwritable variables *)
-  Ltac context_not_overwritable :=
+  Local Ltac context_not_overwritable :=
     repeat match goal with
            | _ => progress (intros; cleanup)
            | _ => progress cbn [ltype base_ltype assign varname_not_in_context
@@ -150,7 +162,7 @@ Section Cmd.
            end.
 
   (* prove that paired variable values in the context are equivalent *)
-  Ltac context_equiv_ok :=
+  Local Ltac context_equiv_ok :=
     repeat match goal with
            | _ => progress (intros; cleanup)
            | |- context_equiv (_ :: _) _ =>
@@ -161,11 +173,17 @@ Section Cmd.
            | _ => solve [subst; eauto]
            end.
 
-  Ltac new_context_ok :=
+  Local Ltac new_context_ok :=
     match goal with
     | |- context_equiv _ _ => context_equiv_ok
     | _ => context_not_overwritable
     end.
+
+  Local Ltac only_differ_ok :=
+       repeat match goal with
+              | _ => eapply only_differ_step; try eassumption; [ ]
+              | _ => eapply only_differ_sameset; solve [eauto]
+              end.
 
   Lemma translate_cmd_correct {t'} (t:=type.base t')
         (* three exprs, representing the same Expr with different vars *)
@@ -242,10 +260,7 @@ Section Cmd.
                | H : _ |- _ => solve [apply H]
                | _ => congruence
                end. }
-      { intros; cleanup; subst; repeat split; try tauto; [ ].
-        (* remaining case : only_differ *)
-        eapply only_differ_step; try eassumption; [ ].
-        eapply only_differ_sameset; eauto. } }
+      { simplify; subst; eauto; only_differ_ok. } }
     { (* let-in (base type) *)
       eapply Proper_cmd; [ eapply Proper_call | repeat intro | ].
       2: {
@@ -256,10 +271,7 @@ Section Cmd.
                | H : _ |- _ => solve [apply H]
                | _ => congruence
                end. }
-      { intros; cleanup; subst; repeat split; try tauto; [ ].
-        (* remaining case : only_differ *)
-        eapply only_differ_step; try eassumption; [ ].
-        eapply only_differ_sameset; eauto. } }
+      { simplify; subst; eauto; only_differ_ok. } }
     { (* cons *)
       eapply Proper_cmd; [ eapply Proper_call | repeat intro | ].
       2: {
@@ -270,27 +282,22 @@ Section Cmd.
                | _ => solve [new_context_ok]
                | _ => congruence
                end. }
-      { intros; cleanup; subst;
-          repeat match goal with |- _ /\ _ => split end;
-          try tauto; [ | ].
-        all:cbn [assign fst snd varname_set] in *.
+      { simplify; subst; eauto; [ | ].
         { (* only_differ *)
           rewrite <-(Nat.add_1_r nextn) in *.
-          eapply only_differ_step; try eassumption; [ ].
-          eapply only_differ_sameset; eauto. }
+          only_differ_ok. }
         { (* equivalence of output holds *)
           clear IHe1_valid. intro.
-          repeat match goal with H : locally_equivalent _ _ _ |- _ =>
-                          (* plug in just anything for locally_equivalent mem *)
-                          specialize (H ltac:(auto))
-          end.
-          cbn [fst snd rtype_of_ltype rep.rtype_of_ltype rep.equiv rep.listZ_local
-                   rep.Z rep.equiv base_ltype equivalent] in *.
-          cleanup. cbn [map Compilers.ident_interp].
-          split; cbn [Datatypes.length]; [ congruence | ].
-          apply Forall2_cons; [intros|eassumption].
-          eapply (expr_untouched ltac:(eassumption) ltac:(eassumption)); eauto; [ ].
-          cbv [used_varnames PropSet.of_list PropSet.elem_of].
+          repeat match goal with
+                   H : locally_equivalent _ _ _ |- _ =>
+                   (* plug in just anything for locally_equivalent mem *)
+                   specialize (H ltac:(auto))
+                 end.
+          simplify; [ congruence | ].
+          apply Forall2_cons; [intros | eassumption].
+          eapply (expr_untouched ltac:(eassumption)
+                                        ltac:(eassumption)); eauto; [ ].
+          cbv [used_varnames]. setsimplify.
           rewrite in_map_iff. intro; cleanup.
           match goal with H : varname_gen ?x = varname_gen _ |- _ =>
                           apply varname_gen_unique in H; subst x end.
@@ -298,14 +305,9 @@ Section Cmd.
                           apply in_seq in H end.
           lia. } } }
     { (* nil *)
-      repeat split; eauto; [ | ].
-      { cbv [Interface.map.only_differ]. right; reflexivity. }
-      { cbn [map locally_equivalent equivalent rep.equiv
-                 rep.Z rep.listZ_local rep.rtype_of_ltype rtype_of_ltype
-                 Compilers.ident_interp].
-        eauto. } }
+      cbv [locally_equivalent]; simplify; eauto.
+      right; reflexivity. }
     { (* valid expr *)
-      cleanup. repeat split; eauto.
-      eapply only_differ_sameset; eauto. }
+      simplify; subst; eauto; only_differ_ok. }
   Qed.
 End Cmd.
