@@ -154,11 +154,9 @@ GO_EXTRA_ARGS_32  := $(GO_EXTRA_ARGS_ALL)
 GO_FUNCTIONS_FOR_25519 := $(filter-out to_bytes,$(FUNCTIONS_FOR_25519))
 GO_UNSATURATED_SOLINAS_FUNCTIONS := $(filter-out to_bytes,$(UNSATURATED_SOLINAS_FUNCTIONS))
 
-
 OUTPUT_VOS := \
 	src/Fancy/Montgomery256.vo \
-	src/Fancy/Barrett256.vo \
-	src/Bedrock/Test_X25519_64.vo
+	src/Fancy/Barrett256.vo
 
 OUTPUT_PREOUTS := \
 	Crypto.Fancy.Montgomery256.Prod.MontRed256 \
@@ -166,8 +164,12 @@ OUTPUT_PREOUTS := \
 	Crypto.Fancy.Montgomery256.prod_montred256_correct.Assumptions \
 	Crypto.Fancy.Barrett256.Prod.MulMod \
 	Crypto.Fancy.Barrett256.prod_barrett_red256_correct \
-	Crypto.Fancy.Barrett256.prod_barrett_red256_correct.Assumptions \
-	Crypto.Bedrock.Test_X25519_64.mulmod_bedrock
+	Crypto.Fancy.Barrett256.prod_barrett_red256_correct.Assumptions
+
+ifneq ($(SKIP_BEDROCK2),1)
+OUTPUT_VOS := $(OUTPUT_VOS) src/Bedrock/Test_X25519_64.vo
+OUTPUT_PREOUTS := $(OUTPUT_PREOUTS) Crypto.Bedrock.Test_X25519_64.mulmod_bedrock
+endif
 
 CHECK_OUTPUTS := $(addprefix check-,$(OUTPUT_PREOUTS))
 ACCEPT_OUTPUTS := $(addprefix accept-,$(OUTPUT_PREOUTS))
