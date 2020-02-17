@@ -436,7 +436,11 @@ Module Compilers.
              end.
         (** Here we guarantee truncating/modular behavior of casting *)
         Definition interp_Z_cast_truncate (r : option zrange) (v : option zrange) : option zrange
-          := option_map ZRange.normalize r.
+          := match interp_Z_cast r v, r with
+             | Some x, _ => Some x
+             | None, Some r => Some (ZRange.normalize r)
+             | None, None => None
+             end.
         Local Notation tZ := (base.type.type_base base.type.Z).
         Definition interp (assume_cast_truncates : bool) {t} (idc : ident t) : type.option.interp t
           := let interp_Z_cast := if assume_cast_truncates then interp_Z_cast_truncate else interp_Z_cast in
@@ -1000,12 +1004,15 @@ Module Compilers.
         Local Notation UnderLets := (@UnderLets base.type ident var).
         Context (abstract_domain' : base.type -> Type).
         Local Notation abstract_domain := (@abstract_domain base.type abstract_domain').
+        Local Notation value_with_lets := (@value_with_lets base.type ident var abstract_domain').
+        Local Notation value := (@value base.type ident var abstract_domain').
         Context (annotate_expr : forall t, abstract_domain' t -> option (@expr var (t -> t)))
                 (bottom' : forall A, abstract_domain' A)
                 (abstract_interp_ident : forall t, ident t -> type.interp abstract_domain' t)
                 (extract_list_state : forall A, abstract_domain' (base.type.list A) -> option (list (abstract_domain' A)))
                 (extract_option_state : forall A, abstract_domain' (base.type.option A) -> option (option (abstract_domain' A)))
-                (is_annotated_for : forall t t', @expr var t -> abstract_domain' t' -> bool).
+                (is_annotated_for : forall t t', @expr var t -> abstract_domain' t' -> bool)
+                (strip_annotation : forall t, ident t -> option (value t)).
 
         (** TODO: Is it okay to commute annotations? *)
         Definition update_annotation {t} (st : abstract_domain' t) (e : @expr var t) : @expr var t
@@ -1080,7 +1087,6 @@ Module Compilers.
                      end
              end%under_lets.
 
-        Local Notation value_with_lets := (@value_with_lets base.type ident var abstract_domain').
         Local Notation reify := (@reify base.type ident var abstract_domain' annotate bottom').
         Local Notation reflect := (@reflect base.type ident var abstract_domain' annotate bottom').
 
@@ -1106,7 +1112,11 @@ Module Compilers.
                                                => nth_default (snd default_arg) ls n
                                              | _, _ => snd default
                                              end))))
-             | idc => Base (reflect annotate_with_state (###idc) (abstract_interp_ident _ idc))
+             | idc => Base
+                        match strip_annotation _ idc with
+                        | Some v => v
+                        | None => reflect annotate_with_state (###idc) (abstract_interp_ident _ idc)
+                        end
              end%core%under_lets%expr.
 
         Definition eval_with_bound (annotate_with_state : bool) {t} (e : @expr value_with_lets t)
@@ -1132,6 +1142,8 @@ Module Compilers.
     Section specialized.
       Local Notation abstract_domain' := ZRange.type.base.option.interp.
       Local Notation abstract_domain := (@partial.abstract_domain base.type abstract_domain').
+      Local Notation value_with_lets var := (@value_with_lets base.type ident var abstract_domain').
+      Local Notation value var := (@value base.type ident var abstract_domain').
       Notation expr := (@expr base.type ident).
       Notation Expr := (@expr.Expr base.type ident).
       Local Notation type := (type base.type).
@@ -1173,6 +1185,39 @@ Module Compilers.
              | _ => fun _ => None
              end%option%etype.
 
+        Definition abstract_interp_ident (assume_cast_truncates : bool) t (idc : ident t) : type.interp abstract_domain' t
+          := ZRange.ident.option.interp assume_cast_truncates idc.
+
+        Definition always_strip_annotation (assume_cast_truncates : bool) {var} t (idc : ident t) : option (value var t)
+          := match idc in ident t return option (value var t) with
+             | ident.Z_cast as idc
+             | ident.Z_cast2 as idc
+               => let tZ_type := (fun t (idc : ident (type.base _ -> type.base t -> type.base t)) => t) _ idc in (* we want Coq to pick up the Z type for bounds tightness, not the zrange type (where "tighter" means "equal") *)
+                  Some
+                    (fun '(r_orig, re)
+                     => Base
+                          (fun '(r_known, e)
+                           => Base
+                                ((abstract_interp_ident assume_cast_truncates _ idc r_orig r_known,
+                                  let do_strip
+                                      := match ZRange.type.base.option.lift_Some r_known, ZRange.type.base.option.lift_Some r_orig with
+                                         | Some r_known, Some r_orig
+                                           => ZRange.type.base.is_tighter_than
+                                                (t:=tZ_type)
+                                                r_known r_orig
+                                         | _, _ => false
+                                         end in
+                                  if do_strip
+                                  then e
+                                  else (###idc @ re @ e)%expr))))
+             | _ => None
+             end.
+
+        Definition strip_annotation (assume_cast_truncates : bool) (strip_annotations : bool) {var} : forall t, ident t -> option (value var t)
+          := if strip_annotations
+             then always_strip_annotation assume_cast_truncates
+             else fun _ _ => None.
+
         Definition is_annotated_for {var} t t' (idc : @expr var t) : abstract_domain' t' -> bool
           := match invert_Z_cast idc, invert_Z_cast2 idc, t' with
              | Some r, _, tZ
@@ -1194,30 +1239,32 @@ Module Compilers.
              end.
         Definition bottom' T : abstract_domain' T
           := ZRange.type.base.option.None.
-        Definition abstract_interp_ident (assume_cast_truncates : bool) t (idc : ident t) : type.interp abstract_domain' t
-          := ZRange.ident.option.interp assume_cast_truncates idc.
         Definition extract_list_state A (st : abstract_domain' (base.type.list A)) : option (list (abstract_domain' A))
           := st.
         Definition extract_option_state A (st : abstract_domain' (base.type.option A)) : option (option (abstract_domain' A))
           := st.
 
-        Definition eval_with_bound {var} {t} (e : @expr _ t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : expr t
-          := (@partial.ident.eval_with_bound)
-               var abstract_domain' annotate_expr bottom' (abstract_interp_ident false) extract_list_state extract_option_state is_annotated_for true t e bound.
+        Definition eval_with_bound (strip_preexisting_annotations : bool) {var} {t} (e : @expr _ t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : expr t
+          := let assume_cast_truncates := false in
+             (@partial.ident.eval_with_bound)
+               var abstract_domain' annotate_expr bottom' (abstract_interp_ident assume_cast_truncates) extract_list_state extract_option_state is_annotated_for (strip_annotation assume_cast_truncates strip_preexisting_annotations) true t e bound.
 
         Definition eta_expand_with_bound {var} {t} (e : @expr _ t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : expr t
-          := (@partial.ident.eta_expand_with_bound)
-               var abstract_domain' annotate_expr bottom' (abstract_interp_ident false) extract_list_state extract_option_state is_annotated_for t e bound.
+          := let assume_cast_truncates := false in
+             (@partial.ident.eta_expand_with_bound)
+               var abstract_domain' annotate_expr bottom' (abstract_interp_ident assume_cast_truncates) extract_list_state extract_option_state is_annotated_for t e bound.
 
-        Definition EvalWithBound {t} (e : Expr t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : Expr t
-          := fun var => eval_with_bound (e _) bound.
+        Definition EvalWithBound (strip_preexisting_annotations : bool) {t} (e : Expr t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : Expr t
+          := fun var => eval_with_bound strip_preexisting_annotations (e _) bound.
         Definition EtaExpandWithBound {t} (e : Expr t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : Expr t
           := fun var => eta_expand_with_bound (e _) bound.
       End with_relax.
 
       Definition eval {var} {t} (e : @expr _ t) : expr t
-        := (@partial.ident.eval)
-             var abstract_domain' (annotate_expr default_relax_zrange) bottom' (abstract_interp_ident false) extract_list_state extract_option_state (is_annotated_for default_relax_zrange) t e.
+        := let assume_cast_truncates := false in
+           let strip_preexisting_annotations := false in
+           (@partial.ident.eval)
+             var abstract_domain' (annotate_expr default_relax_zrange) bottom' (abstract_interp_ident assume_cast_truncates) extract_list_state extract_option_state (is_annotated_for default_relax_zrange) (strip_annotation assume_cast_truncates strip_preexisting_annotations)  t e.
       Definition Eval {t} (e : Expr t) : Expr t
         := fun var => eval (e _).
       Definition EtaExpandWithListInfoFromBound {t} (e : Expr t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : Expr t
@@ -1249,10 +1296,12 @@ Module Compilers.
   End CheckCasts.
 
   Definition PartialEvaluateWithBounds
-             (relax_zrange : zrange -> option zrange) {t} (e : Expr t)
+             (relax_zrange : zrange -> option zrange)
+             (strip_preexisting_annotations : bool)
+             {t} (e : Expr t)
              (bound : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
     : Expr t
-    := partial.EvalWithBound relax_zrange (GeneralizeVar.GeneralizeVar (e _)) bound.
+    := partial.EvalWithBound relax_zrange strip_preexisting_annotations (GeneralizeVar.GeneralizeVar (e _)) bound.
   Definition PartialEvaluateWithListInfoFromBounds {t} (e : Expr t)
              (bound : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
     : Expr t
@@ -1260,6 +1309,7 @@ Module Compilers.
 
   Definition CheckedPartialEvaluateWithBounds
              (relax_zrange : zrange -> option zrange)
+             (strip_preexisting_annotations : bool)
              {t} (E : Expr t)
              (b_in : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
              (b_out : ZRange.type.base.option.interp (type.final_codomain t))
@@ -1267,8 +1317,11 @@ Module Compilers.
     := dlet_nd e := GeneralizeVar.ToFlat E in
        let E := GeneralizeVar.FromFlat e in
        let b_computed := partial.Extract false E b_in in
-       match CheckCasts.GetUnsupportedCasts E with
-       | nil => (let E := PartialEvaluateWithBounds relax_zrange E b_in in
+       let unsupported_casts := if strip_preexisting_annotations
+                                then nil
+                                else CheckCasts.GetUnsupportedCasts E in
+       match unsupported_casts with
+       | nil => (let E := PartialEvaluateWithBounds relax_zrange strip_preexisting_annotations E b_in in
                 if ZRange.type.base.option.is_tighter_than b_computed b_out
                 then @inl (Expr t) _ E
                 else inr (@inl (ZRange.type.base.option.interp (type.final_codomain t) * Expr t) _ (b_computed, E)))

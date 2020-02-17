@@ -1880,7 +1880,7 @@ Module debugging_remove_mul_split2.
       Import WordByWordMontgomeryReificationCache.
       cbv -[Pipeline.BoundsPipeline reified_mul_gen] in k.
       cbv [Pipeline.BoundsPipeline LetIn.Let_In] in k.
-      set (v := CheckedPartialEvaluateWithBounds _ _ _ _) in (value of k).
+      set (v := CheckedPartialEvaluateWithBounds _ _ _ _ _) in (value of k).
       Notation INL := (inl _).
       vm_compute in v.
       Notation IDD := (id _).
@@ -1888,7 +1888,13 @@ Module debugging_remove_mul_split2.
       | @inl ?A ?B ?x => pose (id x) as v'; change v with (@inl A B v') in (value of k); clear v
       end.
       cbv beta iota in k.
-      set (v := Pipeline.RewriteAndEliminateDeadAndInline _ _ _ _) in (value of k).
+      set (v := Pipeline.RewriteAndEliminateDeadAndInline _ _ _ _) in (value of k) at 1.
+      vm_compute in v; clear v';
+      lazymatch (eval cbv [v] in v) with
+      | ?x => pose (id x) as v'; change v with v' in (value of k); clear v
+      end.
+      cbv beta iota in k.
+      (*
       set (v'' := MulSplit.Compilers.RewriteRules.RewriteMulSplit _ _ _ _) in (value of k).
       vm_compute in v; clear v';
       lazymatch (eval cbv [v] in v) with
@@ -1896,6 +1902,7 @@ Module debugging_remove_mul_split2.
       end.
       cbv [id] in v'.
       vm_compute in v''.
+       *)
     Abort.
   End __.
 End debugging_remove_mul_split2.

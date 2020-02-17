@@ -60,7 +60,7 @@ Module testrewrite.
                           ((\ x , expr_let y := ##5 in $y + ($y + (#ident.fst @ $x + #ident.snd @ $x)))
                              @ (##1, ##7))%expr).
 
-  Redirect "log" Eval cbv in partial.eval_with_bound partial.default_relax_zrange
+  Redirect "log" Eval cbv in partial.eval_with_bound partial.default_relax_zrange false
                                       (RewriteRules.RewriteNBE RewriteRules.default_opts (fun var =>
                 (\z , ((\ x , expr_let y := ##5 in $y + ($z + (#ident.fst @ $x + #ident.snd @ $x)))
                          @ (##1, ##7)))%expr) _)
@@ -85,7 +85,7 @@ Module testpartial.
 
 
   Redirect "log" Eval cbv in partial.eval_with_bound
-                partial.default_relax_zrange
+                partial.default_relax_zrange false
                 (\z , ((\ x , expr_let y := ##5 in $y + ($z + (#ident.fst @ $x + #ident.snd @ $x)))
                          @ (##1, ##7)))%expr
                 (Datatypes.Some r[0~>100]%zrange, Datatypes.tt).
@@ -111,7 +111,7 @@ Module test2.
               expr_let x1 := ($x0 * $x0) in
               ($x1, $x1))%expr) => idtac
     end.
-    pose (partial.EvalWithBound partial.default_relax_zrange E' (Some r[0~>10]%zrange, tt)) as E''.
+    pose (partial.EvalWithBound partial.default_relax_zrange false E' (Some r[0~>10]%zrange, tt)) as E''.
     lazy in E''.
      lazymatch (eval cbv delta [E''] in E'') with
      | (fun var : type -> Type =>
@@ -147,7 +147,7 @@ Module test3.
               $x3 * $x3)%expr)
       => idtac
     end.
-    pose (partial.EvalWithBound partial.default_relax_zrange E' (Some r[0~>10]%zrange, tt)) as E'''.
+    pose (partial.EvalWithBound partial.default_relax_zrange false E' (Some r[0~>10]%zrange, tt)) as E'''.
     lazy in E'''.
     lazymatch (eval cbv delta [E'''] in E''') with
     | (fun var : type -> Type =>
@@ -168,7 +168,7 @@ Module test3point5.
     let v := Reify (fun y : (list Z) => List.nth_default (-1) y 0) in
     pose v as E.
     vm_compute in E.
-    pose (partial.EvalWithBound partial.default_relax_zrange E (Some [Some r[0~>10]%zrange], tt)) as E'.
+    pose (partial.EvalWithBound partial.default_relax_zrange false E (Some [Some r[0~>10]%zrange], tt)) as E'.
     lazy in E'.
     clear E.
     lazymatch (eval cbv delta [E'] in E') with
@@ -199,7 +199,7 @@ Module test4.
     clear E'.
     pose (PartialEvaluate RewriteRules.default_opts E'') as E'''.
     lazy in E'''.
-    pose (partial.EvalWithBound partial.default_relax_zrange E''' bound) as E''''.
+    pose (partial.EvalWithBound partial.default_relax_zrange false E''' bound) as E''''.
     lazy in E''''.
     clear E'' E'''.
     lazymatch (eval cbv delta [E''''] in E'''') with
