@@ -5,6 +5,8 @@ Require bedrock2.Semantics.
 Require bedrock2.WeakestPrecondition.
 Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Array bedrock2.Scalars.
+Require Import coqutil.Map.Interface.
+Require Import coqutil.Word.Interface.
 Require Import Crypto.Language.API.
 Import ListNotations. Local Open Scope Z_scope.
 
@@ -75,9 +77,7 @@ Module Types.
           make_error := [make_error];
           equiv :=
             fun (x : list Z) (y : list rtype) locals _ =>
-              length x = length y
-              /\ Forall2 (fun a b => forall mem,
-                              equiv a b locals mem) x y
+              Forall2 (fun a b => equiv a b locals map.empty) x y
         }.
 
       (* store a list in memory; the list is represented by one Z, which
@@ -107,11 +107,9 @@ Module Types.
           dummy_ltype := varname_gen 0%nat;
           make_error := error;
           equiv :=
-            fun (x : Z) (y : Syntax.expr.expr) locals _ =>
-              forall mem, (* not allowed to read *)
-                WeakestPrecondition.expr
-                  mem locals y
-                  (fun w => Interface.word.unsigned w = x)
+            fun (x : Z) (y : Syntax.expr.expr) locals =>
+              emp (WeakestPrecondition.dexpr
+                     map.empty locals y (word.of_Z x))
         }.
     End rep.
   End rep.
@@ -211,7 +209,26 @@ Module Types.
       |  _ => fun _ _ _ _ => False
       end.
 
+    (* produces a separation-logic condition stating that the values of arguments are equivalent *)
+    Fixpoint equivalent_args {t}
+      : type.for_each_lhs_of_arrow API.interp_type t -> (* fiat-crypto value *)
+        type.for_each_lhs_of_arrow rtype t -> (* bedrock2 value *)
+        Interface.map.rep (map:=Semantics.locals) -> (* local variables *)
+        Interface.map.rep (map:=Semantics.mem) -> (* memory *)
+        Prop :=
+      match t with
+      | type.base b => fun _ _ _ _ => True
+      | type.arrow (type.base a) b =>
+        fun (x : base.interp a * _) (y : base_rtype a * _) locals =>
+          sep (equivalent (fst x) (fst y) locals)
+              (equivalent_args (snd x) (snd y) locals)
+      | _ => fun _ _ _ _ => False
+      end.
+
     Definition locally_equivalent {t} x y locals :=
       forall mem, @equivalent t x y locals mem.
+
+    Definition locally_equivalent_args {t} x y locals :=
+      forall mem, @equivalent_args t x y locals mem.
   End defs.
 End Types.

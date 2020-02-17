@@ -5,6 +5,8 @@ Require Import Coq.Strings.String.
 Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Map.SeparationLogic.
 Require Import bedrock2.WeakestPreconditionProperties.
+Require Import coqutil.Map.Interface.
+Require Import coqutil.Word.Interface.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Proofs.Expr.
@@ -293,8 +295,12 @@ Section Cmd.
                    (* plug in just anything for locally_equivalent mem *)
                    specialize (H ltac:(auto))
                  end.
-          simplify; [ congruence | ].
+          simplify. cbv [WeakestPrecondition.dexpr] in *.
           apply Forall2_cons; [intros | eassumption].
+          match goal with
+          | H : emp _ _ |- _ => inversion H; subst; clear H
+          end.
+          split; [ reflexivity | ].
           eapply (expr_untouched ltac:(eassumption)
                                         ltac:(eassumption)); eauto; [ ].
           cbv [used_varnames]. setsimplify.
