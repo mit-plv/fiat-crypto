@@ -60,14 +60,12 @@ src/Bedrock/Types.v
 src/Bedrock/Test_X25519_64.v
 src/Bedrock/Proofs/Cmd.v
 src/Bedrock/Proofs/Expr.v
-src/Bedrock/Proofs/ExprWithSet.v
 src/Bedrock/Proofs/Dexprs.v
 src/Bedrock/Proofs/Flatten.v
 src/Bedrock/Proofs/Func.v
 src/Bedrock/Proofs/Varnames.v
 src/Bedrock/Translation/Cmd.v
 src/Bedrock/Translation/Expr.v
-src/Bedrock/Translation/ExprWithSet.v
 src/Bedrock/Translation/Flatten.v
 src/Bedrock/Translation/Func.v
 src/Bedrock/Translation/LoadStoreList.v

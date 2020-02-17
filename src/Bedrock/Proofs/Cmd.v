@@ -8,11 +8,9 @@ Require Import bedrock2.WeakestPreconditionProperties.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Proofs.Expr.
-Require Import Crypto.Bedrock.Proofs.ExprWithSet.
 Require Import Crypto.Bedrock.Proofs.Varnames.
 Require Import Crypto.Bedrock.Translation.Cmd.
 Require Import Crypto.Bedrock.Translation.Expr.
-Require Import Crypto.Bedrock.Translation.ExprWithSet.
 Require Import Crypto.Language.API.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.Notations.
@@ -63,10 +61,6 @@ Section Cmd.
     := Decidable.String.eqb_spec x y.
 
   Inductive valid_cmd : forall {t}, @API.expr (fun _ => unit) (type.base t) -> Prop :=
-  | valid_LetIn_with_set :
-      forall {b} x f,
-        valid_expr_wset x -> valid_cmd (f tt) ->
-        valid_cmd (expr.LetIn (A:=type_ZZ) (B:=type.base b) x f)
   (* N.B. LetIn is split into cases so that only pairs of type_base and type_base are
       allowed; this is primarily because we don't want lists on the LHS *)
   | valid_LetIn_prod :
@@ -123,30 +117,6 @@ Section Cmd.
            (* evaluating lhs == x *)
            /\ sep (emp (locally_equivalent x (rtype_of_ltype (snd (fst a))) locals')) R mem').
   Admitted.
-
-  (* N.B. technically, x2 and f2 are not needed in the following
-       lemmas, it just makes things easier *)
-  Lemma translate_cmd_expr_with_set {t1 t2 : base.type}
-        G x1 x2 x3 f1 f2 f3 nextn
-        (trx : nat * base_ltype t1 * Syntax.cmd.cmd) :
-    wf3 G x1 x2 x3 ->
-    (forall v1 v2 v3,
-        wf3
-          (existT (fun t => (unit * API.interp_type t * ltype t)%type)
-                  (type.base t1) (v1, v2, v3) :: G)
-          (f1 v1) (f2 v2) (f3 v3)) ->
-    valid_cmd (f1 tt) ->
-    translate_expr_with_set (t:=type.base t1) x3 nextn = Some trx ->
-    let trf := translate_cmd (f3 (snd (fst trx))) (nextn + fst (fst trx)) in
-    let nvars := (fst (fst trx) + fst (fst trf))%nat in
-    translate_cmd (expr.LetIn (A:=type.base t1) (B:=type.base t2) x3 f3) nextn =
-    (nvars, snd (fst trf), Syntax.cmd.seq (snd trx) (snd trf)).
-  Proof.
-    intros. subst nvars trf. cbn [translate_cmd].
-    match goal with H : _ = Some _ |- _ => rewrite H end.
-    reflexivity.
-  Qed.
-
 
   (* if e is a valid_expr, it will hit the cases that call translate_expr *)
   Lemma translate_cmd_valid_expr {t}
@@ -209,61 +179,9 @@ Section Cmd.
     induction e1_valid; try (inversion 1; [ ]); cbv zeta in *; intros.
     all:hammer_wf. (* get rid of the wf nonsense *)
 
-    { (* let-in with an expr-with-set *)
-      (* posit the existence of a return value from translate_expr_with_set and use
-           it to rewrite translate_expr *)
-      match goal with H : valid_expr_wset _ |- _ =>
-                      pose proof H;
-                      eapply translate_expr_with_set_Some in H;
-                      [ destruct H | eassumption .. ]
-      end.
-      erewrite @translate_cmd_expr_with_set by eassumption.
-      cleanup.
-
-      (* simplify fiat-crypto step *)
-      intros; cbn [expr.interp type.app_curried] in *.
-      cbv [Rewriter.Util.LetIn.Let_In] in *. cleanup.
-
-      (* simplify bedrock2 step *)
-      cbn [WeakestPrecondition.cmd WeakestPrecondition.cmd_body].
-      eapply WeakestPreconditionProperties.Proper_cmd;
-        [ eapply Proper_call | repeat intro | ].
-      (* N.B. putting below line in the [ | | ] above makes eassumption fail *)
-      2 : eapply translate_expr_with_set_correct with (R0:=R); try eassumption.
-
-      (* use inductive hypothesis *)
-      cleanup.
-      eapply WeakestPreconditionProperties.Proper_cmd;
-        [ eapply Proper_call | repeat intro | ].
-
-      2: { eapply IHe1_valid with (R:=R);
-           clear IHe1_valid;
-           try match goal with H : _ |- _ => solve [apply H] end;
-           repeat match goal with H : sep (emp _) _ _ |- _ => apply sep_emp_l in H end;
-           cleanup; eauto with lia.
-
-           { (* proof that new context doesn't contain variables that could be
-                  overwritten in the future *)
-             intros; apply Forall_cons; eauto with lia; [ ].
-             cbn [varname_not_in_context].
-             match goal with H : PropSet.sameset _ _ |- _ =>
-                             rewrite sameset_iff in H; rewrite H end.
-             eauto using used_varnames_le. }
-           { (* proof that context_list_equiv continues to hold *)
-             cbv [context_equiv] in *; apply Forall_cons; [ eassumption | ].
-             eapply equivalent_not_in_context_forall; eauto. intro.
-             match goal with H : PropSet.sameset _ _ |- _ =>
-                             rewrite sameset_iff in H; rewrite H end.
-             rewrite used_varnames_iff. intros; cleanup.
-             subst. eauto. } }
-      { intros; cleanup; subst; repeat split; try tauto; [ ].
-        (* remaining case : only_differ *)
-        eapply only_differ_step; try eassumption; [ ].
-        eapply only_differ_sameset; eauto. } }
     { (* let-in (product of base types) *)
       (* simplify one translation step *)
       cbn [translate_cmd].
-      erewrite translate_expr_with_set_None by eassumption.
       cleanup.
 
       (* simplify fiat-crypto step *)
@@ -272,7 +190,7 @@ Section Cmd.
 
       (* simplify bedrock2 step *)
       cbn [WeakestPrecondition.cmd WeakestPrecondition.cmd_body].
-      eapply WeakestPreconditionProperties.Proper_cmd;
+      eapply Proper_cmd;
         [ eapply Proper_call | repeat intro | ].
       (* N.B. putting below line in the [ | | ] above makes eassumption fail *)
       2 : eapply assign_correct; try eassumption; [ ];
@@ -280,7 +198,7 @@ Section Cmd.
 
       (* use inductive hypothesis *)
       cleanup.
-      eapply WeakestPreconditionProperties.Proper_cmd;
+      eapply Proper_cmd;
         [ eapply Proper_call | repeat intro | ].
       2: { eapply IHe1_valid with (R:=R);
            clear IHe1_valid;
@@ -308,7 +226,6 @@ Section Cmd.
     { (* let-in (base type) *)
       (* simplify one translation step *)
       cbn [translate_cmd].
-      erewrite translate_expr_with_set_None by eassumption.
       cleanup.
 
       (* simplify fiat-crypto step *)
@@ -317,7 +234,7 @@ Section Cmd.
 
       (* simplify bedrock2 step *)
       cbn [WeakestPrecondition.cmd WeakestPrecondition.cmd_body].
-      eapply WeakestPreconditionProperties.Proper_cmd;
+      eapply Proper_cmd;
         [ eapply Proper_call | repeat intro | ].
       (* N.B. putting below line in the [ | | ] above makes eassumption fail *)
       2 : eapply assign_correct; try eassumption; [ ];
@@ -325,7 +242,7 @@ Section Cmd.
 
       (* use inductive hypothesis *)
       cleanup.
-      eapply WeakestPreconditionProperties.Proper_cmd;
+      eapply Proper_cmd;
         [ eapply Proper_call | repeat intro | ].
       2: { eapply IHe1_valid with (R:=R);
            clear IHe1_valid;
@@ -370,7 +287,7 @@ Section Cmd.
 
       (* simplify bedrock2 step *)
       cbn [WeakestPrecondition.cmd WeakestPrecondition.cmd_body].
-      eapply WeakestPreconditionProperties.Proper_cmd;
+      eapply Proper_cmd;
         [ eapply Proper_call | repeat intro | ].
       (* N.B. putting below line in the [ | | ] above makes eassumption fail *)
       2 : eapply assign_correct; try eassumption; [ ];
@@ -378,7 +295,7 @@ Section Cmd.
 
       (* use inductive hypothesis *)
       cleanup.
-      eapply WeakestPreconditionProperties.Proper_cmd;
+      eapply Proper_cmd;
         [ eapply Proper_call | repeat intro | ].
       2: { eapply IHe1_valid with (R:=R); clear IHe1_valid.
            all:try match goal with H : _ |- _ => solve [apply H] end.
@@ -446,7 +363,7 @@ Section Cmd.
 
       (* simplify bedrock2 cmd *)
       cbn [WeakestPrecondition.cmd WeakestPrecondition.cmd_body].
-      eapply WeakestPreconditionProperties.Proper_cmd;
+      eapply Proper_cmd;
         [ eapply Proper_call | repeat intro | ].
       (* N.B. putting below line in the [ | | ] above makes eassumption fail *)
       2 : eapply assign_correct; try eassumption; [ ];

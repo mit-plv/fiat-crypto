@@ -3,7 +3,6 @@ Require Import Coq.Lists.List.
 Require Import Coq.Strings.String.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Translation.Expr.
-Require Import Crypto.Bedrock.Translation.ExprWithSet.
 Require Import Crypto.Language.API.
 Require Import Crypto.Util.Notations.
 Import ListNotations. Local Open Scope Z_scope.
@@ -46,11 +45,7 @@ Section Cmd.
       * Syntax.cmd.cmd (* actual program *) :=
     match e in expr.expr t0 return (nat * ltype t0 * Syntax.cmd.cmd) with
     | expr.LetIn (type.base t1) (type.base t2) x f =>
-      let trx :=
-          match translate_expr_with_set x nextn with
-          | Some trx => trx
-          | None => assign nextn (translate_expr true x)
-          end in
+      let trx := assign nextn (translate_expr true x) in
       let trf := translate_cmd (f (snd (fst trx))) (nextn + fst (fst trx)) in
       ((fst (fst trx) + fst (fst trf))%nat,
        snd (fst trf),
