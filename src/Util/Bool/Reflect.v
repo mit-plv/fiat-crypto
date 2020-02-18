@@ -389,6 +389,29 @@ Proof.
   repeat intro; eapply reflect_Proper_iff; try eassumption; easy.
 Qed.
 
+Lemma reflect_f_equal2_inverts {A B C a1 a2 b1 b2 Aeqb Beqb}
+      {HA : Bool.reflect (@eq A a1 a2) Aeqb}
+      {HB : Bool.reflect (@eq B b1 b2) Beqb}
+      (f : A -> B -> C)
+      (finv : f a1 b1 = f a2 b2 -> a1 = a2 /\ b1 = b2)
+  : Bool.reflect (f a1 b1 = f a2 b2) (andb Aeqb Beqb).
+Proof.
+  destruct HA, HB; constructor; subst; try reflexivity.
+  all: intro H; destruct (finv H); eauto with nocore.
+Defined.
+
+Global Instance reflect_eq_pair {A B a1 a2 b1 b2 Aeqb Beqb}
+       {HA : Bool.reflect (@eq A a1 a2) Aeqb}
+       {HB : Bool.reflect (@eq B b1 b2) Beqb}
+  : Bool.reflect ((a1, b1) = (a2, b2)) (andb Aeqb Beqb).
+Proof. apply reflect_f_equal2_inverts; now inversion 1. Defined.
+
+Global Instance reflect_eq_cons {A x y xs ys eqb eqbs}
+       {HA : Bool.reflect (@eq A x y) eqb}
+       {HB : Bool.reflect (@eq (list A) xs ys) eqbs}
+  : Bool.reflect (cons x xs = cons y ys) (andb eqb eqbs).
+Proof. apply reflect_f_equal2_inverts; now inversion 1. Defined.
+
 Lemma reflect_bool : forall {P b} {Preflect:reflect P b}, b = true -> P.
 Proof. intros P b Preflect; destruct Preflect; solve [ auto | discriminate ]. Qed.
 

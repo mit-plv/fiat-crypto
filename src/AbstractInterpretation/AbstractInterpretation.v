@@ -5,6 +5,7 @@ Require Import Crypto.Util.ZRange.Operations.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.OptionList.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
+Require Import Crypto.Util.Bool.Reflect.
 Require Import Crypto.Util.LetIn.
 Require Import Rewriter.Language.Language.
 Require Import Crypto.Language.InversionExtra.
@@ -70,6 +71,31 @@ Module Compilers.
              | base.type.option A
                => option_beq_hetero (@is_bounded_by A)
              end.
+        Fixpoint interp_beq {t} : interp t -> interp t -> bool
+          := match t return interp t -> interp t -> bool with
+             | base.type.type_base base.type.Z => zrange_beq
+             | base.type.type_base _ as t
+             | base.type.unit as t
+               => base.interp_beq (@base.base_interp_beq)
+             | base.type.prod A B
+               => fun '(a, b) '(a', b')
+                  => @interp_beq A a a' && @interp_beq B b b'
+             | base.type.list A
+               => list_beq _ (@interp_beq A)
+             | base.type.option A
+               => option_beq (@interp_beq A)
+             end%bool.
+
+        Global Instance reflect_interp_eq {t} : reflect_rel (@eq _) (@interp_beq t).
+        Proof.
+          induction t; cbn [interp_beq]; intros; break_innermost_match; try exact _.
+        Defined.
+
+        Lemma interp_beq_bl {t x y} : @interp_beq t x y = true -> x = y.
+        Proof. apply reflect_to_beq; exact _. Qed.
+        Lemma interp_beq_lb {t x y} : x = y -> @interp_beq t x y = true.
+        Proof. apply reflect_to_beq; exact _. Qed.
+
         Module option.
           (** turn a [base.type] into a [Set] describing the type
               of optional bounds on that primitive; bounds on a [Z]
@@ -77,7 +103,6 @@ Module Compilers.
               that the [Z] is unbounded. *)
           Fixpoint interp (t : base.type) : Type
             := match t with
-               | base.type.type_base base.type.Z => option zrange
                | base.type.type_base _ as t
                  => option (base.interp t)
                | base.type.prod A B => interp A * interp B
@@ -90,7 +115,6 @@ Module Compilers.
                | base.type.unit => tt
                | base.type.list _
                | base.type.option _
-               | base.type.type_base base.type.Z
                | base.type.type_base _
                  => Datatypes.None
                | base.type.prod A B
@@ -100,7 +124,6 @@ Module Compilers.
             := match t with
                | base.type.unit
                  => fun _ => tt
-               | base.type.type_base base.type.Z
                | base.type.type_base _
                  => Datatypes.Some
                | base.type.list A
@@ -113,7 +136,6 @@ Module Compilers.
                end.
           Fixpoint lift_Some {t} : interp t -> option (base.interp t)
             := match t with
-               | base.type.type_base base.type.Z
                | base.type.type_base _
                  => fun x => x
                | base.type.unit
@@ -151,7 +173,6 @@ Module Compilers.
                end.
           Fixpoint is_tighter_than {t} : interp t -> interp t -> bool
             := match t with
-               | base.type.type_base base.type.Z as t
                | base.type.type_base _ as t
                  => fun r1 r2
                     => match r1, r2 with
@@ -180,6 +201,29 @@ Module Compilers.
                        end
                | base.type.unit => fun 'tt 'tt => true
                end.
+          Fixpoint interp_beq {t} : interp t -> interp t -> bool
+            := match t return interp t -> interp t -> bool with
+               | base.type.type_base _ as t => option_beq base.interp_beq
+               | base.type.prod A B
+                 => fun '(a, b) '(a', b')
+                    => @interp_beq A a a' && @interp_beq B b b'
+               | base.type.list A
+                 => option_beq (list_beq _ (@interp_beq A))
+               | base.type.option A
+                 => option_beq (option_beq (@interp_beq A))
+               | base.type.unit => fun 'tt 'tt => true
+               end.
+
+          Global Instance reflect_interp_eq {t} : reflect_rel (@eq _) (@interp_beq t).
+          Proof.
+            induction t; cbn [interp_beq]; intros; break_innermost_match; try exact _.
+          Defined.
+
+          Lemma interp_beq_bl {t x y} : @interp_beq t x y = true -> x = y.
+          Proof. apply reflect_to_beq; exact _. Qed.
+          Lemma interp_beq_lb {t x y} : x = y -> @interp_beq t x y = true.
+          Proof. apply reflect_to_beq; exact _. Qed.
+
           Fixpoint is_bounded_by {t} : interp t -> binterp t -> bool
             := match t with
                | base.type.type_base base.type.Z as t
@@ -242,10 +286,10 @@ Module Compilers.
                            | apply conj
                            | Z.ltb_to_lt; omega
                            | match goal with
-                             | [ H : context[@base.interp_beq _ _ ?base_interp_beq ?t] |- _ ]
-                               => progress Reflect.reflect_beq_to_eq (@base.interp_beq _ _ base_interp_beq t)
-                             | [ |- context[@base.interp_beq _ _ ?base_interp_beq ?t] ]
-                               => progress Reflect.reflect_beq_to_eq (@base.interp_beq _ _ base_interp_beq t)
+                             | [ H : context[@Compilers.base.interp_beq _ _ ?base_interp_beq ?t] |- _ ]
+                               => progress Reflect.reflect_beq_to_eq (@Compilers.base.interp_beq _ _ base_interp_beq t)
+                             | [ |- context[@Compilers.base.interp_beq _ _ ?base_interp_beq ?t] ]
+                               => progress Reflect.reflect_beq_to_eq (@Compilers.base.interp_beq _ _ base_interp_beq t)
                              end ].
             { lazymatch goal with
               | [ r1 : list (interp t), r2 : list (interp t), val : list (binterp t) |- _ ]
