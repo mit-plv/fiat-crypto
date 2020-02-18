@@ -408,14 +408,14 @@ Lemma reflect_eq_pair {A B a1 a2 b1 b2 Aeqb Beqb}
        {HB : Bool.reflect (@eq B b1 b2) Beqb}
   : Bool.reflect ((a1, b1) = (a2, b2)) (andb Aeqb Beqb).
 Proof. apply reflect_f_equal2_inverts; now inversion 1. Defined.
-Hint Extern 2 (reflect ((_, _) = (_, _)) _) => simple apply @reflect_eq_pair : typeclass_instances.
+Hint Extern 2 (reflect (@pair ?A ?B _ _ = pair _ _) _) => simple eapply (@reflect_eq_pair A B) : typeclass_instances.
 
 Lemma reflect_eq_cons {A x y xs ys eqb eqbs}
        {HA : Bool.reflect (@eq A x y) eqb}
        {HB : Bool.reflect (@eq (list A) xs ys) eqbs}
   : Bool.reflect (cons x xs = cons y ys) (andb eqb eqbs).
 Proof. apply reflect_f_equal2_inverts; now inversion 1. Defined.
-Hint Extern 2 (reflect (cons _ _ = cons _ _) _) => simple apply @reflect_eq_pair : typeclass_instances.
+Hint Extern 2 (reflect (@cons ?T _ _ = cons _ _) _) => simple eapply (@reflect_eq_cons T) : typeclass_instances.
 
 Lemma reflect_bool : forall {P b} {Preflect:reflect P b}, b = true -> P.
 Proof. intros P b Preflect; destruct Preflect; solve [ auto | discriminate ]. Qed.
