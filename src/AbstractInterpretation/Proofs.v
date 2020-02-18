@@ -63,6 +63,26 @@ Module Compilers.
   Local Notation related_bounded
     := (@type.related_hetero3 _ _ _ _ (fun t b v1 v2 => related_bounded' b v1 v2)).
 
+  Module ZRange.
+    Module type.
+      Global Instance is_bounded_by_Proper_related_eq {t}
+      : Proper (eq ==> type.eqv ==> eq) (@ZRange.type.is_bounded_by t).
+      Proof.
+        cbv [Proper respectful]; destruct t; [ cbn | reflexivity ];
+          intros; subst; reflexivity.
+      Qed.
+
+      Module option.
+        Global Instance is_bounded_by_Proper_related_eq {t}
+        : Proper (eq ==> type.eqv ==> eq) (@ZRange.type.option.is_bounded_by t).
+        Proof.
+          cbv [Proper respectful]; destruct t; [ cbn | reflexivity ];
+            intros; subst; reflexivity.
+        Qed.
+      End option.
+    End type.
+  End ZRange.
+
   Module Import partial.
     Import AbstractInterpretation.Compilers.partial.
     Import UnderLets.Compilers.UnderLets.
