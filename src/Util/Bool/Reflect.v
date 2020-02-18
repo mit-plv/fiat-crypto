@@ -400,17 +400,22 @@ Proof.
   all: intro H; destruct (finv H); eauto with nocore.
 Defined.
 
-Global Instance reflect_eq_pair {A B a1 a2 b1 b2 Aeqb Beqb}
+(** We register the typeclass instances explicitly for the following
+    instances, so that typeclass resolution doesn't unfold things and
+    doesn't pick the wrong equalities for random conjunctions *)
+Lemma reflect_eq_pair {A B a1 a2 b1 b2 Aeqb Beqb}
        {HA : Bool.reflect (@eq A a1 a2) Aeqb}
        {HB : Bool.reflect (@eq B b1 b2) Beqb}
   : Bool.reflect ((a1, b1) = (a2, b2)) (andb Aeqb Beqb).
 Proof. apply reflect_f_equal2_inverts; now inversion 1. Defined.
+Hint Extern 2 (reflect ((_, _) = (_, _)) _) => simple apply @reflect_eq_pair : typeclass_instances.
 
-Global Instance reflect_eq_cons {A x y xs ys eqb eqbs}
+Lemma reflect_eq_cons {A x y xs ys eqb eqbs}
        {HA : Bool.reflect (@eq A x y) eqb}
        {HB : Bool.reflect (@eq (list A) xs ys) eqbs}
   : Bool.reflect (cons x xs = cons y ys) (andb eqb eqbs).
 Proof. apply reflect_f_equal2_inverts; now inversion 1. Defined.
+Hint Extern 2 (reflect (cons _ _ = cons _ _) _) => simple apply @reflect_eq_pair : typeclass_instances.
 
 Lemma reflect_bool : forall {P b} {Preflect:reflect P b}, b = true -> P.
 Proof. intros P b Preflect; destruct Preflect; solve [ auto | discriminate ]. Qed.
