@@ -64,6 +64,10 @@ Section Sets.
     { destruct 1; split; eauto. }
     { intro Hiff; split; apply Hiff; eauto. }
   Qed.
+
+  Lemma not_union_iff (s1 s2 : set E) x :
+    ~ union s1 s2 x <-> ~ s1 x /\ ~ s2 x.
+  Proof. cbv [union elem_of]. tauto. Qed.
 End Sets.
 
 (* General-purpose lemmas about maps that should be later moved to coqutil *)
@@ -99,7 +103,7 @@ Section Varnames.
     : Prop :=
     match x with
     | existT (type.base b) (w, x, y) =>
-      locally_equivalent x (rtype_of_ltype y) locals
+      locally_equivalent x (base_rtype_of_ltype y) locals
     | existT (type.arrow _ _) _ => False (* no functions allowed *)
     end.
 
@@ -115,15 +119,6 @@ Section Varnames.
   Local Instance varname_eqb_spec x y : BoolSpec _ _ _
     := Decidable.String.eqb_spec x y.
   Local Notation varname := String.string.
-
-  Fixpoint varname_set {t} : base_ltype t -> set varname :=
-    match t with
-    | base.type.prod a b =>
-      fun x => union (varname_set (fst x)) (varname_set (snd x))
-    | base.type.list (base.type.type_base base.type.Z) =>
-      PropSet.of_list
-    | _ => fun x => singleton_set x
-    end.
 
   Definition used_varnames nextn nvars : set varname :=
     of_list (map varname_gen (seq nextn nvars)).
@@ -160,34 +155,37 @@ Section Varnames.
 
   Lemma equiv_listZ_only_differ
         locals1 locals2 vset (varnames : base_ltype base_listZ) x mem :
-      map.only_differ locals1 vset locals2 ->
-      (forall v, vset v -> ~ varname_set varnames v) ->
-      rep.equiv x (rep.rtype_of_ltype varnames) locals1 mem ->
-      rep.equiv x (rep.rtype_of_ltype varnames) locals2 mem.
+    map.only_differ locals1 vset locals2 ->
+    (forall v, vset v -> ~ varname_set varnames v) ->
+    rep.equiv x (rep.rtype_of_ltype varnames) locals1 mem ->
+    rep.equiv x (rep.rtype_of_ltype varnames) locals2 mem.
   Proof.
-    cbn [rep.equiv rep.rtype_of_ltype rep.listZ_local varname_set].
+    cbn [rep.equiv rep.rtype_of_ltype rep.listZ_local
+                   rep.Z varname_set rep.varname_set].
     rewrite !Forall.Forall2_map_r_iff.
     revert x; induction varnames; intros;
       match goal with H : Forall2 _ _ _ |- _ =>
                       inversion H; subst; clear H end;
       [ solve [eauto] | ].
-    match goal with H : context [of_list (_ :: _)] |- _ =>
-                    cbn [of_list In] in H
-    end.
-    cleanup. constructor; eauto using equiv_Z_only_differ.
-    { eapply equiv_Z_only_differ; eauto.
-      cbv [varname_set singleton_set].
+    cbn [fold_right] in *; cbv [emp] in *. cleanup.
+    constructor.
+    { eapply equiv_Z_only_differ;
+        cbn [rep.equiv rep.Z]; cbv [emp];
+        destruct_head'_and; eauto.
+      cbv [varname_set rep.varname_set rep.Z] in *.
       match goal with H : _ |- _ =>
                       let x1 := fresh in
                       let x2 := fresh in
-                      intros x1 x2; specialize (H x1 x2)
+                      intros x1 x2; specialize (H x1 x2);
+                        apply not_union_iff in H
       end.
       tauto. }
     { apply IHvarnames; eauto.
       match goal with H : _ |- _ =>
                       let x1 := fresh in
                       let x2 := fresh in
-                      intros x1 x2; specialize (H x1 x2)
+                      intros x1 x2; specialize (H x1 x2);
+                        apply not_union_iff in H
       end.
       tauto. }
   Qed.
@@ -197,8 +195,8 @@ Section Varnames.
     map.only_differ locals1 vset locals2 ->
     (forall v, vset v -> ~ varname_set varnames v) ->
     forall mem,
-      equivalent x (rtype_of_ltype varnames) locals1 mem ->
-      equivalent x (rtype_of_ltype varnames) locals2 mem.
+      equivalent x (base_rtype_of_ltype varnames) locals1 mem ->
+      equivalent x (base_rtype_of_ltype varnames) locals2 mem.
   Proof.
     intros Hdiffer Hexcl.
     induction t;
@@ -259,7 +257,7 @@ Section Varnames.
     map.only_differ l1 (used_varnames nextn (nvars + nvars')) l3.
   Proof.
     cbv [map.only_differ used_varnames of_list
-                                   elem_of].
+                         elem_of].
     let H1 := fresh in
     let H2 := fresh in
     let x := fresh "x" in

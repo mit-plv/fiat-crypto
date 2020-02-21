@@ -73,128 +73,6 @@ Section Func.
     end.
 
   (* TODO : move *)
-  Lemma load_arguments_correct {t} :
-    forall (argnames : type.for_each_lhs_of_arrow ltype t)
-           (arglengths : type.for_each_lhs_of_arrow list_lengths t)
-           (args1 : type.for_each_lhs_of_arrow API.interp_type t)
-           (args2 : type.for_each_lhs_of_arrow rtype t)
-           (flat_args : list Semantics.word)
-           (functions : list _)
-           (tr : Semantics.trace)
-           (locals : Semantics.locals)
-           (mem : Semantics.mem)
-           (nextn : nat)
-           (R : Semantics.mem -> Prop),
-        (* argument values (in their 3 forms) are equivalent *)
-        sep (equivalent_args args1 args2 map.empty) R mem ->
-        WeakestPrecondition.dexprs
-          mem map.empty (flatten_args args2) flat_args ->
-        (* locals have just been formed from arguments *)
-        map.of_list_zip (flatten_argnames argnames) flat_args = Some locals ->
-        (* load_arguments returns triple : # fresh variables used,
-           new argnames with local lists, and cmd *)
-        let out := load_arguments nextn argnames arglengths in
-        (* translated function produces equivalent results *)
-        WeakestPrecondition.cmd
-          (WeakestPrecondition.call functions)
-          (snd out)
-          tr mem locals
-          (fun tr' mem' locals' =>
-             tr = tr' /\
-             mem = mem' /\
-             locally_equivalent_args args1 args2 locals').
-  Proof.
-  Admitted.
-
-  Search list_lengths.
-
-  (* idea: pull return list lengths from fiat-crypto type *)
-  (* TODO : move *)
-  Lemma store_return_values_correct {t} :
-    forall (retnames_local : base_ltype t)
-           (retnames_mem : base_ltype t)
-           (retlengths : base_list_lengths t)
-           (rets : base.interp t)
-           (functions : list _)
-           (tr : Semantics.trace)
-           (locals : Semantics.locals)
-           (mem : Semantics.mem)
-           (R : Semantics.mem -> Prop),
-        (* use old values of memory to set up frame for return values *)
-        sep (lists_reserved retlengths) R mem ->
-        (* rets are stored in local retnames *)
-        locally_equivalent rets (rtype_of_ltype retnames_local) locals ->
-        (* translated function produces equivalent results *)
-        WeakestPrecondition.cmd
-          (WeakestPrecondition.call functions)
-          (store_return_values retnames_local retnames_mem)
-          tr mem locals
-          (fun tr' mem' locals' =>
-             tr = tr' /\
-             sep (equivalent rets (rtype_of_ltype retnames_mem) locals') R mem').
-  Proof.
-  Admitted.
-
-  Fixpoint init_context {t} {listZ:rep.rep base_listZ}:
-    type.for_each_lhs_of_arrow API.interp_type t ->
-    type.for_each_lhs_of_arrow (ltype (listZ:=listZ)) t ->
-    list {t' & (unit * API.interp_type t' * ltype t')%type} :=
-            match t with
-            | type.base b => fun _ _ => []
-            | type.arrow (type.base a) b =>
-              fun args argnames =>
-                (existT _ (type.base a) (tt, fst args, fst argnames)
-                        :: init_context (snd args) (snd argnames))
-            | _ => fun _ _ => []
-            end.
-
-  Lemma translate_func'_correct {t}
-        (* three exprs, representing the same Expr with different vars *)
-        (e0 : @API.expr (fun _ => unit) t)
-        (e1 : @API.expr API.interp_type t)
-        (e2 : @API.expr ltype t)
-        (* expressions are valid input to translate_func' *)
-        (e0_valid : valid_func e0)
-        (* context list (consists only of arguments) *)
-        (G : list _) :
-    (* exprs are all related *)
-    wf3 G e0 e1 e2 ->
-    forall (argnames : type.for_each_lhs_of_arrow ltype t)
-           (args : type.for_each_lhs_of_arrow API.interp_type t)
-           (nextn : nat),
-      (* ret1 := fiat-crypto interpretation of e1 applied to args1 *)
-      let ret1 : base.interp (type.final_codomain t) :=
-          type.app_curried (API.interp e1) args in
-      (* out := translation output for e2; triple of
-         (# varnames used, return values, cmd) *)
-      let out := translate_func' e2 nextn argnames in
-      let nvars := fst (fst out) in
-      let ret2 := rtype_of_ltype (snd (fst out)) in
-      let body := snd out in
-      (* G doesn't contain variables we could accidentally overwrite *)
-      (forall n,
-          (nextn <= n)%nat ->
-          Forall (varname_not_in_context (varname_gen n)) G) ->
-      forall (tr : Semantics.trace)
-             (locals : Semantics.locals)
-             (mem : Semantics.mem)
-             (functions : list bedrock_func),
-        (* contexts are equivalent; for every variable in the context list G,
-             the fiat-crypto and bedrock2 results match *)
-        context_equiv G locals ->
-        (* executing translation output is equivalent to interpreting e *)
-        WeakestPrecondition.cmd
-          (WeakestPrecondition.call functions)
-          body tr mem locals
-          (fun tr' mem' locals' =>
-             tr = tr' /\
-             mem = mem' /\
-             Interface.map.only_differ
-               locals (used_varnames nextn nvars) locals' /\
-             locally_equivalent (listZ:=rep.listZ_local) ret1 ret2 locals').
-  Admitted.
-
-  (* TODO : move *)
   Fixpoint list_lengths_from_value {t}
     : base.interp t -> base_list_lengths t :=
     match t as t0 return base.interp t0 -> base_list_lengths t0 with
@@ -219,6 +97,189 @@ Section Func.
       fun x => (tt, list_lengths_from_args (snd x))
     end.
 
+  (* TODO : move *)
+  Lemma load_arguments_correct {t} :
+    forall (argnames : type.for_each_lhs_of_arrow ltype t)
+           (args : type.for_each_lhs_of_arrow API.interp_type t)
+           (flat_args : list Semantics.word)
+           (functions : list _)
+           (tr : Semantics.trace)
+           (locals : Semantics.locals)
+           (mem : Semantics.mem)
+           (nextn : nat)
+           (R : Semantics.mem -> Prop),
+        (* lengths of any lists in the arguments *)
+        let arglengths := list_lengths_from_args args in
+        (* look up variables in argnames *)
+        let argvalues :=
+            type.map_for_each_lhs_of_arrow rtype_of_ltype argnames in
+        (* argnames don't contain variables we could later overwrite *)
+        (forall n,
+            (nextn <= n)%nat ->
+            ~ varname_set_args argnames (varname_gen n)) ->
+        (* argument values (in their 3 forms) are equivalent *)
+        sep (equivalent_args args argvalues map.empty) R mem ->
+        WeakestPrecondition.dexprs
+          mem map.empty (flatten_args argvalues) flat_args ->
+        (* load_arguments returns triple : # fresh variables used,
+           new argnames with local lists, and cmd *)
+        let out := load_arguments nextn argnames arglengths in
+        let nvars := fst (fst out) in
+        (* extract loaded argument values *)
+        let argnames' := snd (fst out) in
+        let argvalues' :=
+            type.map_for_each_lhs_of_arrow rtype_of_ltype argnames' in
+        (* translated function produces equivalent results *)
+        WeakestPrecondition.cmd
+          (WeakestPrecondition.call functions)
+          (snd out)
+          tr mem locals
+          (fun tr' mem' locals' =>
+             tr = tr' /\
+             mem = mem' /\
+             (forall n,
+                 (nvars <= n)%nat ->
+                 ~ varname_set_args argnames' (varname_gen n)) /\
+             locally_equivalent_args args argvalues' locals').
+  Proof.
+  Admitted.
+
+  (* idea: pull return list lengths from fiat-crypto type *)
+  (* TODO : move *)
+  Lemma store_return_values_correct {t} :
+    forall (retnames_local : base_ltype t)
+           (retnames_mem : base_ltype t)
+           (retlengths : base_list_lengths t)
+           (rets : base.interp t)
+           (functions : list _)
+           (tr : Semantics.trace)
+           (locals : Semantics.locals)
+           (mem : Semantics.mem)
+           (R : Semantics.mem -> Prop),
+        (* use old values of memory to set up frame for return values *)
+        sep (lists_reserved retlengths) R mem ->
+        (* rets are stored in local retnames *)
+        locally_equivalent
+          rets (base_rtype_of_ltype retnames_local) locals ->
+        (* translated function produces equivalent results *)
+        WeakestPrecondition.cmd
+          (WeakestPrecondition.call functions)
+          (store_return_values retnames_local retnames_mem)
+          tr mem locals
+          (fun tr' mem' locals' =>
+             tr = tr' /\
+             sep (equivalent
+                    rets (base_rtype_of_ltype retnames_mem) locals')
+                 R mem').
+  Proof.
+  Admitted.
+
+  (* TODO: move *)
+  Lemma sep_empty_iff (q r : Semantics.mem -> Prop) :
+    sep q r map.empty <-> q map.empty /\ r map.empty.
+  Proof.
+    cbv [sep].
+    repeat match goal with
+           | _ => progress (intros; cleanup)
+           | _ => progress subst
+           | H : _ |- _ => apply map.split_empty in H
+           | _ => rewrite map.split_empty in *
+           | _ => exists map.empty
+           | _ => tauto
+           | _ => split
+           end.
+  Qed.
+
+  Lemma translate_func'_correct {t}
+        (* three exprs, representing the same Expr with different vars *)
+        (e0 : @API.expr (fun _ => unit) t)
+        (e1 : @API.expr API.interp_type t)
+        (e2 : @API.expr ltype t)
+        (* expressions are valid input to translate_func' *)
+        (e0_valid : valid_func e0)
+        (* context list (consists only of arguments) *)
+        (G : list _) :
+    (* exprs are all related *)
+    wf3 G e0 e1 e2 ->
+    forall (argnames : type.for_each_lhs_of_arrow ltype t)
+           (args : type.for_each_lhs_of_arrow API.interp_type t)
+           (nextn : nat),
+      (* ret1 := fiat-crypto interpretation of e1 applied to args1 *)
+      let ret1 : base.interp (type.final_codomain t) :=
+          type.app_curried (API.interp e1) args in
+      (* out := translation output for e2; triple of
+         (# varnames used, return values, cmd) *)
+      let out := translate_func' e2 nextn argnames in
+      let nvars := fst (fst out) in
+      let ret2 := base_rtype_of_ltype (snd (fst out)) in
+      let body := snd out in
+      (* look up variables in argnames *)
+      let argvalues :=
+          type.map_for_each_lhs_of_arrow rtype_of_ltype argnames in
+      (* argnames don't contain variables we could later overwrite *)
+      (forall n,
+        (nextn <= n)%nat ->
+        ~ varname_set_args argnames (varname_gen n)) ->
+      (* G doesn't contain variables we could later overwrite *)
+      (forall n,
+        (nextn <= n)%nat ->
+        Forall (varname_not_in_context (varname_gen n)) G) ->
+      forall (tr : Semantics.trace)
+             (locals : Semantics.locals)
+             (mem : Semantics.mem)
+             (functions : list bedrock_func),
+        (* argument values are equivalent *)
+        locally_equivalent_args args argvalues locals ->
+        (* contexts are equivalent; for every variable in the context list G,
+           the fiat-crypto and bedrock2 results match *)
+        context_equiv G locals ->
+        (* executing translation output is equivalent to interpreting e *)
+        WeakestPrecondition.cmd
+          (WeakestPrecondition.call functions)
+          body tr mem locals
+          (fun tr' mem' locals' =>
+             tr = tr' /\
+             mem = mem' /\
+             Interface.map.only_differ
+               locals (used_varnames nextn nvars) locals' /\
+             locally_equivalent (listZ:=rep.listZ_local) ret1 ret2 locals').
+  Proof.
+    revert G. cbv zeta.
+    induction e0_valid; intros *.
+    { (* Abs *)
+      inversion 1; cleanup_wf.
+      cbn [translate_func']; intros.
+      match goal with
+      | H : context [varname_set_args] |- _ =>
+        cbn [varname_set_args] in H;
+          setoid_rewrite not_union_iff in H;
+          match type of H with
+            forall x y, ?P /\ ?Q =>
+            assert (forall x y, P) by (apply H);
+            assert (forall x y, Q) by (apply H);
+            clear H
+          end
+      end.
+      destruct argnames.
+      cbv [locally_equivalent_args] in *.
+      cbn [fst snd equivalent_args
+               type.map_for_each_lhs_of_arrow] in *.
+      match goal with H : sep _ _ map.empty |- _ =>
+                      apply sep_empty_iff in H; cleanup
+      end.
+      eapply IHe0_valid; cbv [varname_not_in_context]; eauto;
+        eapply Forall_cons; eauto. }
+    { (* base case *)
+      inversion 1; cleanup_wf;
+      cbv [translate_func']; intros.
+      all:eapply Proper_cmd;
+        [solve [apply Proper_call]
+        | repeat intro
+        | eapply translate_cmd_correct;
+          solve [eauto using Proper_call] ];
+        cbv beta in *; cleanup; subst;
+          tauto. }
+  Qed.
 
   (* This lemma handles looking up the return values *)
   (* TODO : rename *)
@@ -228,13 +289,14 @@ Section Func.
            (locals : Semantics.locals)
            (mem : Semantics.mem)
            (R : Semantics.mem -> Prop),
-    sep (equivalent ret (rtype_of_ltype retnames) locals) R mem ->
+    sep (equivalent ret (base_rtype_of_ltype retnames) locals) R mem ->
+    let retvalues := base_rtype_of_ltype retnames in
     WeakestPrecondition.list_map
       (WeakestPrecondition.get locals) (flatten_retnames retnames)
       (fun flat_rets =>
-         exists ret',
-           WeakestPrecondition.dexprs mem map.empty (flatten_rets ret') flat_rets /\
-           sep (equivalent ret ret' map.empty) R mem).
+         WeakestPrecondition.dexprs
+           mem map.empty (flatten_rets retvalues) flat_rets /\
+         sep (equivalent ret retvalues map.empty) R mem).
   Proof.
     cbv [flatten_retnames].
     induction t; cbn [flatten_base_ltype equivalent]; break_match;
@@ -258,27 +320,32 @@ Section Func.
     forall (fname : string)
            (retnames : base_ltype (type.final_codomain t))
            (argnames : type.for_each_lhs_of_arrow ltype t)
-           (args1 : type.for_each_lhs_of_arrow API.interp_type t)
-           (args2 : type.for_each_lhs_of_arrow rtype t),
-      (* rets1 := fiat-crypto interpretation of e1 applied to args1 *)
+           (args : type.for_each_lhs_of_arrow API.interp_type t),
+      (* rets1 := fiat-crypto interpretation of e1 applied to args *)
       let rets1 : base.interp (type.final_codomain t) :=
-          type.app_curried (API.interp (e _)) args1 in
+          type.app_curried (API.interp (e _)) args in
       (* extract list lengths from fiat-crypto arguments/return values *)
-      let arglengths := list_lengths_from_args args1 in
+      let arglengths := list_lengths_from_args args in
       let retlengths := list_lengths_from_value rets1 in
+      (* look up variables in argnames *)
+      let argvalues :=
+          type.map_for_each_lhs_of_arrow rtype_of_ltype argnames in
       (* out := translation output for e2; triple of
          (function arguments, function return variable names, body) *)
       let out := translate_func e argnames arglengths retnames in
       let f : bedrock_func := (fname, out) in
+      let rets2 := base_rtype_of_ltype retnames in
       forall (tr : Semantics.trace)
              (mem : Semantics.mem)
              (flat_args : list Semantics.word)
              (functions : list bedrock_func)
              (P Ra Rr : Semantics.mem -> Prop),
+        (* argnames don't contain variables we could later overwrite *)
+        (forall n, ~ varname_set_args argnames (varname_gen n)) ->
         (* argument values (in their 3 forms) are equivalent *)
-        sep (equivalent_args args1 args2 map.empty) Ra mem ->
+        sep (equivalent_args args argvalues map.empty) Ra mem ->
         WeakestPrecondition.dexprs
-          mem map.empty (flatten_args args2) flat_args ->
+          mem map.empty (flatten_args argvalues) flat_args ->
         (* seplogic frame for return values *)
         sep (lists_reserved retlengths) Rr mem ->
         (* translated function produces equivalent results *)
@@ -286,13 +353,12 @@ Section Func.
           ((fname, out) :: functions) fname tr mem flat_args
           (fun tr' mem' flat_rets =>
              tr = tr' /\
-             exists rets2 : base_rtype (type.final_codomain t),
-               (* rets2 is a valid representation of flat_rets with no local
-                  variables in context *)
-               WeakestPrecondition.dexprs
-                 mem' map.empty (flatten_rets rets2) flat_rets /\
-               (* return values are equivalent *)
-               sep (equivalent (listZ:=rep.listZ_mem) rets1 rets2 map.empty) Rr mem').
+             (* rets2 is a valid representation of flat_rets with no local
+                variables in context *)
+             WeakestPrecondition.dexprs
+               mem' map.empty (flatten_rets rets2) flat_rets /\
+             (* return values are equivalent *)
+             sep (equivalent (listZ:=rep.listZ_mem) rets1 rets2 map.empty) Rr mem').
   Proof.
     cbv [translate_func Wf3]; intros.
     cbn [WeakestPrecondition.call WeakestPrecondition.call_body WeakestPrecondition.func].
@@ -305,17 +371,19 @@ Section Func.
     cbn [WeakestPrecondition.cmd WeakestPrecondition.cmd_body].
     eapply Proper_cmd; [ solve [apply Proper_call] | repeat intro | ].
     2 : {
-      eapply load_arguments_correct; eassumption. }
+      eapply load_arguments_correct; try eassumption; eauto. }
     cbv beta in *. cleanup; subst.
     eapply Proper_cmd; [ solve [apply Proper_call] | repeat intro | ].
-    2 : { eapply translate_func'_correct with (args:=args1); cbv [context_equiv]; eauto. }
+    2 : { eapply translate_func'_correct with (args0:=args);
+          cbv [context_equiv]; eauto. }
     cbv beta in *. cleanup; subst.
     eapply Proper_cmd; [ solve [apply Proper_call] | repeat intro | ].
     2 : { eapply store_return_values_correct; eauto. }
     cbv beta in *. cleanup; subst.
 
     eapply Proper_list_map; [ solve [apply Proper_get]
-                            | | eapply look_up_return_values; solve [eauto] ].
-    repeat intro; eauto.
+                            | | eapply look_up_return_values;
+                                solve [eauto] ].
+    repeat intro; cleanup; eauto.
   Qed.
 End Func.
