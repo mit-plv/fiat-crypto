@@ -1,4 +1,5 @@
 Require Import Coq.ZArith.ZArith.
+Require Import Coq.Strings.String.
 Require Import Coq.Lists.List.
 Require bedrock2.Syntax.
 Require bedrock2.Semantics.
@@ -61,6 +62,7 @@ Module Types.
           rtype_of_ltype : ltype -> rtype;
           dummy_ltype : ltype;
           make_error : rtype;
+          varname_set : ltype -> PropSet.set string;
           equiv :
             base.interp t -> rtype ->
             Interface.map.rep (map:=Semantics.locals) ->
@@ -75,6 +77,10 @@ Module Types.
           rtype_of_ltype := map rtype_of_ltype;
           dummy_ltype := nil;
           make_error := [make_error];
+          varname_set :=
+            fold_right
+              (fun x s =>
+                 PropSet.union (varname_set x) s) PropSet.empty_set;
           equiv :=
             fun (x : list Z) (y : list rtype) locals _ =>
               Forall2 (fun a b => equiv a b locals map.empty) x y
@@ -88,6 +94,7 @@ Module Types.
           rtype_of_ltype := rtype_of_ltype;
           dummy_ltype := dummy_ltype;
           make_error := make_error;
+          varname_set := varname_set;
           equiv :=
             fun (x : list Z) (y : rtype) locals =>
               Lift1Prop.ex1
@@ -106,6 +113,7 @@ Module Types.
           rtype_of_ltype := Syntax.expr.var;
           dummy_ltype := varname_gen 0%nat;
           make_error := error;
+          varname_set := PropSet.singleton_set;
           equiv :=
             fun (x : Z) (y : Syntax.expr.expr) locals =>
               emp (WeakestPrecondition.dexpr
@@ -153,16 +161,6 @@ Module Types.
       | type.arrow a b => rtype a -> rtype b
       end.
 
-    (* convert ltypes to rtypes (used for renaming variables) - the opposite
-     direction is not permitted *)
-    Fixpoint rtype_of_ltype {t} : base_ltype t -> base_rtype t :=
-      match t with
-      | base.type.prod a b =>
-        fun x => (rtype_of_ltype (fst x), rtype_of_ltype (snd x))
-      | base_listZ => rep.rtype_of_ltype
-      | _ => Syntax.expr.var
-      end.
-
     (* error creation *)
     Fixpoint base_make_error t : base_rtype t :=
       match t with
@@ -188,6 +186,49 @@ Module Types.
       match t with
       | type.base a => dummy_base_ltype a
       | type.arrow a b => tt
+      end.
+
+    (* convert ltypes to rtypes (used for renaming variables) - the opposite
+     direction is not permitted *)
+    Fixpoint base_rtype_of_ltype {t} : base_ltype t -> base_rtype t :=
+      match t with
+      | base.type.prod a b =>
+        fun x => (base_rtype_of_ltype (fst x),
+                  base_rtype_of_ltype (snd x))
+      | base_listZ => rep.rtype_of_ltype
+      | _ => Syntax.expr.var
+      end.
+    Fixpoint rtype_of_ltype t
+      : ltype t -> rtype t :=
+      match t as t0 return ltype t0 -> rtype t0 with
+      | type.base b => base_rtype_of_ltype
+      | type.arrow a b =>
+        (* garbage; not a valid ltype *)
+        fun (_:unit) =>
+          fun (x : rtype a) =>
+            rtype_of_ltype b (dummy_ltype b)
+      end.
+
+    (* Set of variable names used by an ltype *)
+    Fixpoint varname_set {t}
+      : base_ltype t -> PropSet.set string :=
+      match t with
+      | base.type.prod a b =>
+        fun x => PropSet.union (varname_set (fst x))
+                               (varname_set (snd x))
+      | base_listZ => rep.varname_set
+      | _ => rep.varname_set
+      end.
+    Fixpoint varname_set_args {t}
+      : type.for_each_lhs_of_arrow ltype t ->
+        PropSet.set string :=
+      match t as t0 return type.for_each_lhs_of_arrow _ t0 -> _ with
+      | type.base b => fun _:unit => PropSet.empty_set 
+      | type.arrow (type.base a) b =>
+        fun (x:base_ltype a * _) =>
+          PropSet.union (varname_set (fst x))
+                        (varname_set_args (snd x))
+      | _ => fun _ => PropSet.empty_set (* garbage; invalid argument *)
       end.
 
     (* relation that states whether a fiat-crypto value and a bedrock2 value are
@@ -226,9 +267,9 @@ Module Types.
       end.
 
     Definition locally_equivalent {t} x y locals :=
-      forall mem, @equivalent t x y locals mem.
+      @equivalent t x y locals map.empty.
 
     Definition locally_equivalent_args {t} x y locals :=
-      forall mem, @equivalent_args t x y locals mem.
+      @equivalent_args t x y locals map.empty.
   End defs.
 End Types.

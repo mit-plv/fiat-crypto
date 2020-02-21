@@ -116,7 +116,8 @@ Section Cmd.
            (* new locals only differ in the values of LHS variables *)
            /\ Interface.map.only_differ locals (varname_set (snd (fst a))) locals'
            (* evaluating lhs == x *)
-           /\ locally_equivalent x (rtype_of_ltype (snd (fst a))) locals').
+           /\ locally_equivalent
+                x (base_rtype_of_ltype (snd (fst a))) locals').
   Admitted.
 
   (* if e is a valid_expr, it will hit the cases that call translate_expr *)
@@ -139,7 +140,8 @@ Section Cmd.
             | progress
                 cbn [fst snd assign varname_not_in_context varname_set
                          ltype rtype base_ltype base_rtype rtype_of_ltype
-                         rep.rtype_of_ltype rep.equiv rep.listZ_local rep.Z
+                         base_rtype_of_ltype rep.rtype_of_ltype
+                         rep.equiv rep.listZ_local rep.Z
                          locally_equivalent equivalent
                          map Datatypes.length Compilers.ident_interp] in *
             | match goal with |- _ /\ _ => split end ].
@@ -205,7 +207,7 @@ Section Cmd.
       (* out := translation output for e3 *)
       let out := translate_cmd e3 nextn in
       let nvars := fst (fst out) in
-      let ret2 := rtype_of_ltype (snd (fst out)) in
+      let ret2 := base_rtype_of_ltype (snd (fst out)) in
       let body := snd out in
       (* G doesn't contain variables we could accidentally overwrite *)
       (forall n,
@@ -289,12 +291,7 @@ Section Cmd.
           rewrite <-(Nat.add_1_r nextn) in *.
           only_differ_ok. }
         { (* equivalence of output holds *)
-          clear IHe1_valid. intro.
-          repeat match goal with
-                   H : locally_equivalent _ _ _ |- _ =>
-                   (* plug in just anything for locally_equivalent mem *)
-                   specialize (H ltac:(auto))
-                 end.
+          clear IHe1_valid.
           simplify. cbv [WeakestPrecondition.dexpr] in *.
           apply Forall2_cons; [intros | eassumption].
           match goal with

@@ -162,7 +162,7 @@ Section Expr.
       | expr.Ident type_Z (ident.Literal base.type.Z x) =>
         Syntax.expr.literal x
       (* Var : use rtype_of_ltype to convert the expression *)
-      | expr.Var (type.base _) x => rtype_of_ltype x
+      | expr.Var (type.base _) x => base_rtype_of_ltype x
       (* if no clauses matched the expression, return an error *)
       | _ => make_error _
       end.
