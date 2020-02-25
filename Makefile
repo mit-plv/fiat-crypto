@@ -374,7 +374,7 @@ PERF_T_ARG:=
 endif
 
 # apparently ulimit -m doesn't work anymore https://superuser.com/a/1497437/59575 / https://thirld.com/blog/2012/02/09/things-to-remember-when-using-ulimit/
-PERF_SET_LIMITS = ulimit -S -m $(PERF_MAX_KB); ulimit -S -v $(PERF_MAX_KB);
+PERF_SET_LIMITS = ulimit -S -m $(MAX_PERF_KB); ulimit -S -v $(MAX_PERF_KB);
 TIMEOUT_SHOW:=TIMEOUT -m $(MAX_PERF_KB) $(PERF_T_ARG)
 endif
 
