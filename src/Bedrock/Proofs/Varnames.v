@@ -5,7 +5,7 @@ Require Import Coq.micromega.Lia.
 Require Import bedrock2.Syntax.
 Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Map.SeparationLogic.
-Require Import coqutil.Map.Interface.
+Require Import coqutil.Map.Interface coqutil.Map.Properties.
 Require Import coqutil.Word.Interface.
 Require Import coqutil.Datatypes.PropSet.
 Require Import Crypto.Bedrock.Types.
@@ -80,6 +80,12 @@ Section Maps.
     map.only_differ m3 (union ks1 ks2) m1.
   Admitted.
 
+  Lemma only_differ_sym {key value} {map: map.map key value}
+        m1 m2 ks :
+    map.only_differ m2 ks m1 ->
+    map.only_differ m1 ks m2.
+  Admitted.
+
   Lemma only_differ_sameset {key value} {map: map.map key value}
         m1 m2 ks1 ks2 :
     sameset ks1 ks2 ->
@@ -88,28 +94,34 @@ Section Maps.
   Admitted.
 End Maps.
 
+(* General-purpose lemmas about sep that should be later moved to bedrock2 *)
+(* TODO: move *)
+Section Separation.
+  Context `{map_ok : map.ok}
+           {key_eqb : forall H H0 : key, bool}
+           {key_eq_dec :
+              forall x y : key,
+                BoolSpec (x = y) (x <> y) (key_eqb x y)}.
+  Lemma sep_empty_iff (q r : map.rep -> Prop) :
+    sep q r map.empty <-> q map.empty /\ r map.empty.
+  Proof.
+    cbv [sep].
+    repeat match goal with
+           | _ => progress (intros; cleanup)
+           | _ => progress subst
+           | H : _ |- _ => apply map.split_empty in H
+           | _ => rewrite map.split_empty
+           | _ => exists map.empty
+           | _ => tauto
+           | _ => split
+           end.
+  Qed.
+End Separation.
+
 (* Reasoning about various collections of variable names *)
 Section Varnames.
   Context {p : Types.parameters} {ok : @ok p}.
   Local Existing Instance Types.rep.Z.
-  Local Existing Instance Types.rep.listZ_local. (* local list representation *)
-
-  (* 3-way equivalence (for single elements of the context list G
-       from wf3 preconditions) *)
-  Definition equiv3 {var1}
-             (locals : Interface.map.rep (map:=Semantics.locals))
-             (x : {t : API.type
-                       & (var1 t * API.interp_type t * ltype t)%type})
-    : Prop :=
-    match x with
-    | existT (type.base b) (w, x, y) =>
-      locally_equivalent x (base_rtype_of_ltype y) locals
-    | existT (type.arrow _ _) _ => False (* no functions allowed *)
-    end.
-
-  Definition context_equiv {var1} G locals
-    : Prop := Forall (equiv3 (var1:= var1) locals) G.
-
 
   (* TODO: are these all needed? *)
   Local Instance sem_ok : Semantics.parameters_ok semantics
@@ -120,110 +132,209 @@ Section Varnames.
     := Decidable.String.eqb_spec x y.
   Local Notation varname := String.string.
 
-  Definition used_varnames nextn nvars : set varname :=
-    of_list (map varname_gen (seq nextn nvars)).
+  Section Equivalence.
+    Lemma equiv_Z_only_differ_iff1
+          {listZ : rep.rep base_listZ}
+          locals1 locals2 vset (varname : base_ltype base_Z) x :
+      map.only_differ locals1 vset locals2 ->
+      (forall v, vset v -> ~ varname_set varname v) ->
+      Lift1Prop.iff1
+        (rep.equiv x (rep.rtype_of_ltype varname) locals1)
+        (rep.equiv x (rep.rtype_of_ltype varname) locals2).
+    Admitted.
 
-  Lemma used_varnames_iff nextn nvars v :
-    used_varnames nextn nvars v <->
-    (exists n,
-        v = varname_gen n /\ nextn <= n < nextn + nvars)%nat.
-  Admitted.
+    Section Local.
+      Local Existing Instance rep.listZ_local.
 
-  Lemma used_varnames_le nextn nvars n :
-    (nextn + nvars <= n)%nat ->
-    ~ used_varnames nextn nvars (varname_gen n).
-  Admitted.
+      Lemma equiv_listZ_only_differ_local
+            locals1 locals2 vset (varnames : base_ltype base_listZ) x mem :
+        map.only_differ locals1 vset locals2 ->
+        (forall v, vset v -> ~ varname_set varnames v) ->
+        rep.equiv x (rep.rtype_of_ltype varnames) locals1 mem ->
+        rep.equiv x (rep.rtype_of_ltype varnames) locals2 mem.
+      Proof.
+        cbn [rep.equiv rep.rtype_of_ltype rep.listZ_local
+                       varname_set rep.varname_set].
+        rewrite !Forall.Forall2_map_r_iff.
+        revert x; induction varnames; intros;
+          match goal with H : Forall2 _ _ _ |- _ =>
+                          inversion H; subst; clear H end;
+          [ solve [eauto] | ].
+        cbn [fold_right] in *; cbv [emp] in *. cleanup.
+        constructor.
+        { eapply equiv_Z_only_differ_iff1;
+            cbn [rep.equiv rep.Z]; cbv [emp];
+              destruct_head'_and; eauto using only_differ_sym.
+          cbv [varname_set rep.varname_set rep.Z] in *.
+          match goal with H : _ |- _ =>
+                   setoid_rewrite not_union_iff in H;
+                     apply H; eauto
+          end. }
+        { apply IHvarnames; eauto.
+          match goal with H : _ |- _ =>
+                   setoid_rewrite not_union_iff in H;
+                     apply H; eauto
+          end. }
+      Qed.
+    End Local.
 
-  Definition varname_not_in_context {var1}
-             (v : varname)
-             (x : {t : API.type & (var1 t * API.interp_type t * ltype t)%type})
-    : Prop :=
-    match x with
-    | existT (type.base b) (w, x, y) =>
-      ~ (varname_set y) v
-    | existT (type.arrow _ _) _ => False (* no functions allowed *)
-    end.
+    Section InMemory.
+      Local Existing Instance rep.listZ_mem.
 
-  Lemma equiv_Z_only_differ
-        locals1 locals2 vset (varname : base_ltype base_Z) x :
-    map.only_differ locals1 vset locals2 ->
-    (forall v, vset v -> ~ varname_set varname v) ->
-    forall mem,
-      rep.equiv x (rep.rtype_of_ltype varname) locals1 mem ->
-      rep.equiv x (rep.rtype_of_ltype varname) locals2 mem.
-  Admitted.
-
-  Lemma equiv_listZ_only_differ
-        locals1 locals2 vset (varnames : base_ltype base_listZ) x mem :
-    map.only_differ locals1 vset locals2 ->
-    (forall v, vset v -> ~ varname_set varnames v) ->
-    rep.equiv x (rep.rtype_of_ltype varnames) locals1 mem ->
-    rep.equiv x (rep.rtype_of_ltype varnames) locals2 mem.
-  Proof.
-    cbn [rep.equiv rep.rtype_of_ltype rep.listZ_local
-                   rep.Z varname_set rep.varname_set].
-    rewrite !Forall.Forall2_map_r_iff.
-    revert x; induction varnames; intros;
-      match goal with H : Forall2 _ _ _ |- _ =>
-                      inversion H; subst; clear H end;
-      [ solve [eauto] | ].
-    cbn [fold_right] in *; cbv [emp] in *. cleanup.
-    constructor.
-    { eapply equiv_Z_only_differ;
-        cbn [rep.equiv rep.Z]; cbv [emp];
-        destruct_head'_and; eauto.
-      cbv [varname_set rep.varname_set rep.Z] in *.
-      match goal with H : _ |- _ =>
-                      let x1 := fresh in
-                      let x2 := fresh in
-                      intros x1 x2; specialize (H x1 x2);
-                        apply not_union_iff in H
-      end.
-      tauto. }
-    { apply IHvarnames; eauto.
-      match goal with H : _ |- _ =>
-                      let x1 := fresh in
-                      let x2 := fresh in
-                      intros x1 x2; specialize (H x1 x2);
-                        apply not_union_iff in H
-      end.
-      tauto. }
-  Qed.
-
-  Lemma equivalent_only_differ {t}
-        locals1 locals2 vset (varnames : base_ltype t) x :
-    map.only_differ locals1 vset locals2 ->
-    (forall v, vset v -> ~ varname_set varnames v) ->
-    forall mem,
-      equivalent x (base_rtype_of_ltype varnames) locals1 mem ->
-      equivalent x (base_rtype_of_ltype varnames) locals2 mem.
-  Proof.
-    intros Hdiffer Hexcl.
-    induction t;
-      cbn [fst snd rtype_of_ltype varname_set equivalent] in *; intros;
-        BreakMatch.break_match; destruct_head'_and; try tauto.
-    { (* base case *)
-      eapply equiv_Z_only_differ; eauto. }
-    { (* prod case *)
-      cbv [union elem_of] in *.
-      eapply Proper_sep_impl1; [ | | eassumption]; repeat intro; eauto.
-      { apply IHt1; eauto.
-        match goal with H : _ |- _ =>
-                        let x1 := fresh in
-                        let x2 := fresh in
-                        intros x1 x2; specialize (H x1 x2)
+      Lemma equiv_listZ_only_differ_mem
+            locals1 locals2 vset (varnames : base_ltype base_listZ) x mem :
+        map.only_differ locals1 vset locals2 ->
+        (forall v, vset v -> ~ varname_set varnames v) ->
+        rep.equiv x (rep.rtype_of_ltype varnames) locals1 mem ->
+        rep.equiv x (rep.rtype_of_ltype varnames) locals2 mem.
+      Proof.
+        cbn [rep.equiv rep.rtype_of_ltype rep.listZ_mem
+                       varname_set rep.varname_set].
+        intros.
+        match goal with
+          H : Lift1Prop.ex1 _ _ |- Lift1Prop.ex1 _ _ =>
+          let x := fresh in
+          destruct H as [x ?]; exists x
         end.
-        tauto. }
-      { apply IHt2; eauto.
-        match goal with H : _ |- _ =>
-                        let x1 := fresh in
-                        let x2 := fresh in
-                        intros x1 x2; specialize (H x1 x2)
-        end.
-        tauto. } }
-    { (* list case *)
-      eapply equiv_listZ_only_differ; eauto. }
-  Qed.
+        eapply Proper_sep_iff1; [ | reflexivity | eassumption ].
+        eapply equiv_Z_only_differ_iff1; eauto using only_differ_sym.
+      Qed.
+    End InMemory.
+
+    Section Generic.
+      Context {listZ : rep.rep base_listZ}
+              (equiv_listZ_only_differ :
+                 forall
+                   locals1 locals2 vset
+                   (varnames : base_ltype base_listZ) x mem,
+                   map.only_differ locals1 vset locals2 ->
+                   (forall v, vset v -> ~ varname_set varnames v) ->
+                   rep.equiv x (rep.rtype_of_ltype varnames) locals1 mem ->
+                   rep.equiv x (rep.rtype_of_ltype varnames) locals2 mem).
+      
+      Lemma equivalent_only_differ {t}
+            locals1 locals2 vset (varnames : base_ltype t) x :
+        map.only_differ locals1 vset locals2 ->
+        (forall v, vset v -> ~ varname_set varnames v) ->
+        forall mem,
+          equivalent x (base_rtype_of_ltype varnames) locals1 mem ->
+          equivalent x (base_rtype_of_ltype varnames) locals2 mem.
+      Proof.
+        intros Hdiffer Hexcl.
+        induction t;
+          cbn [fst snd rtype_of_ltype varname_set equivalent] in *; intros;
+            BreakMatch.break_match; destruct_head'_and; try tauto.
+        { (* base case *)
+          eapply equiv_Z_only_differ_iff1; eauto using only_differ_sym. }
+        { (* prod case *)
+          cbv [union elem_of] in *.
+          eapply Proper_sep_impl1; [ | | eassumption]; repeat intro; eauto.
+          { apply IHt1; eauto.
+            match goal with H : _ |- _ =>
+                            let x1 := fresh in
+                            let x2 := fresh in
+                            intros x1 x2; specialize (H x1 x2)
+            end.
+            tauto. }
+          { apply IHt2; eauto.
+            match goal with H : _ |- _ =>
+                            let x1 := fresh in
+                            let x2 := fresh in
+                            intros x1 x2; specialize (H x1 x2)
+            end.
+            tauto. } }
+        { (* list case *)
+          eapply equiv_listZ_only_differ; eauto. }
+      Qed.
+
+      Lemma equivalent_only_differ_iff1 {t}
+            locals1 locals2 vset (varnames : base_ltype t) x :
+        map.only_differ locals1 vset locals2 ->
+        (forall v, vset v -> ~ varname_set varnames v) ->
+        Lift1Prop.iff1
+          (equivalent x (base_rtype_of_ltype varnames) locals1)
+          (equivalent x (base_rtype_of_ltype varnames) locals2).
+      Proof.
+        repeat intro. split; intros.
+        all:eapply equivalent_only_differ; eauto using only_differ_sym.
+      Qed.
+
+      Lemma equivalent_args_only_differ_iff1 {t}
+            locals1 locals2 vset
+            (argnames : type.for_each_lhs_of_arrow ltype t)
+            x :
+        map.only_differ locals1 vset locals2 ->
+        (forall v, vset v -> ~ varname_set_args argnames v) ->
+        let argvalues :=
+            type.map_for_each_lhs_of_arrow
+              rtype_of_ltype argnames in
+        Lift1Prop.iff1
+          (equivalent_args x argvalues locals1)
+          (equivalent_args x argvalues locals2).
+      Proof.
+        induction t;
+          cbv [Lift1Prop.iff1];
+          cbn [fst snd rtype_of_ltype varname_set_args
+                   type.map_for_each_lhs_of_arrow
+                   equivalent_args];
+          intros; break_match; cbn [fst snd] in *;
+            try tauto.
+        eapply Proper_sep_iff1;
+          repeat match goal with
+                 | _ => eapply equivalent_only_differ_iff1; eauto
+                 | _ => eapply IHt2; eauto
+                 | H : _ |- _ =>
+                   setoid_rewrite not_union_iff in H;
+                     apply H; eauto
+                 end.
+      Qed.
+    End Generic.
+  End Equivalence.
+
+  Section UsedVarnames.
+    Definition used_varnames nextn nvars : set varname :=
+      of_list (map varname_gen (seq nextn nvars)).
+
+    Lemma used_varnames_iff nextn nvars v :
+      used_varnames nextn nvars v <->
+      (exists n,
+          v = varname_gen n /\ nextn <= n < nextn + nvars)%nat.
+    Admitted.
+
+    Lemma used_varnames_le nextn nvars n :
+      (nextn + nvars <= n)%nat ->
+      ~ used_varnames nextn nvars (varname_gen n).
+    Admitted.
+  End UsedVarnames.
+
+  Section Local.
+    Local Existing Instance Types.rep.listZ_local.
+    (* 3-way equivalence (for single elements of the context list G
+       from wf3 preconditions) *)
+    Definition equiv3 {var1}
+               (locals : Interface.map.rep (map:=Semantics.locals))
+               (x : {t : API.type
+                         & (var1 t * API.interp_type t * ltype t)%type})
+      : Prop :=
+      match x with
+      | existT (type.base b) (w, x, y) =>
+        locally_equivalent x (base_rtype_of_ltype y) locals
+      | existT (type.arrow _ _) _ => False (* no functions allowed *)
+      end.
+
+    Definition context_equiv {var1} G locals
+      : Prop := Forall (equiv3 (var1:= var1) locals) G.
+
+    Definition varname_not_in_context {var1}
+               (v : varname)
+               (x : {t : API.type & (var1 t * API.interp_type t * ltype t)%type})
+      : Prop :=
+      match x with
+      | existT (type.base b) (w, x, y) =>
+        ~ (varname_set y) v
+      | existT (type.arrow _ _) _ => False (* no functions allowed *)
+      end.
+  End Local.
 
   Lemma equivalent_not_in_context {var1} locals1 locals2 vset x :
     map.only_differ locals1 vset locals2 ->
@@ -233,7 +344,7 @@ Section Varnames.
   Proof.
     intros; cbv [equiv3 varname_not_in_context locally_equivalent] in *.
     destruct x as [x [ [? ?] ?] ]; destruct x; [ | tauto ].
-    eauto using equivalent_only_differ.
+    eauto using equivalent_only_differ, equiv_listZ_only_differ_local.
   Qed.
 
   Lemma equivalent_not_in_context_forall {var1} locals1 locals2 vset G :
@@ -249,6 +360,13 @@ Section Varnames.
       intros x y; specialize (Hexcl x y); inversion Hexcl; auto. }
     { apply IHG; auto.
       intros x y; specialize (Hexcl x y); inversion Hexcl; auto. }
+  Qed.
+
+  Lemma only_differ_zero nextn l :
+    map.only_differ l (used_varnames nextn 0) l.
+  Proof.
+    cbv [map.only_differ used_varnames of_list elem_of].
+    tauto.
   Qed.
 
   Lemma only_differ_step nvars nvars' nextn l1 l2 l3 :

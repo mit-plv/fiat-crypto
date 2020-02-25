@@ -2,6 +2,8 @@ Require Import Coq.Strings.String.
 Require Import Coq.Lists.List.
 Require Import Coq.micromega.Lia.
 Require Import Coq.ZArith.ZArith.
+Require Import bedrock2.Array.
+Require Import bedrock2.Scalars.
 Require Import bedrock2.Syntax.
 Require Import bedrock2.WeakestPreconditionProperties.
 Require Import Crypto.Bedrock.Types.
@@ -22,13 +24,14 @@ Import Types.Notations Types.Types.
    then returns local variables which we store. This file handles the
    loading/storing part of that process. *)
 Section Lists.
-  Context {p : parameters}.
-  Existing Instance rep.Z.
-  Local Notation bedrock_func := (string * (list string * list string * cmd))%type.
+  Context {p : parameters} {p_ok : ok}.
+  Local Existing Instance rep.Z.
 
-  Fixpoint base_list_lengths t : Type :=
+  Fixpoint base_list_lengths (t : base.type)
+    : Type :=
     match t with
-    | base.type.prod a b => base_list_lengths a * base_list_lengths b
+    | base.type.prod a b =>
+      base_list_lengths a * base_list_lengths b
     | base_listZ => nat
     | _ => unit
     end.
