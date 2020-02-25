@@ -367,7 +367,7 @@ PERF_SET_LIMITS?=
 
 ifeq (,$(NO_LIMIT_PERF))
 ifneq (,$(MAX_PERF_SEC))
-TMEDOUT_CMD:=timeout $(MAX_PERF_SEC)
+TIMEOUT_CMD:=timeout $(MAX_PERF_SEC)
 PERF_T_ARG:=-t $(MAX_PERF_SEC) # trailing space important
 else
 PERF_T_ARG:=
