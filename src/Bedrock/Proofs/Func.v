@@ -2,8 +2,6 @@ Require Import Coq.ZArith.ZArith.
 Require Import Coq.Strings.String.
 Require Import Coq.Lists.List.
 Require Import Coq.micromega.Lia.
-Require Import bedrock2.Array.
-Require Import bedrock2.Scalars.
 Require Import bedrock2.Syntax.
 Require Import bedrock2.ProgramLogic.
 Require Import bedrock2.Map.Separation.
@@ -18,6 +16,7 @@ Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Proofs.Cmd.
 Require Import Crypto.Bedrock.Proofs.Flatten.
 Require Import Crypto.Bedrock.Proofs.Varnames.
+Require Import Crypto.Bedrock.Proofs.LoadStoreList.
 Require Import Crypto.Bedrock.Translation.Func.
 Require Import Crypto.Bedrock.Translation.Flatten.
 Require Import Crypto.Bedrock.Translation.LoadStoreList.
@@ -49,146 +48,6 @@ Section Func.
   | validf_base :
       forall {b} e, valid_cmd e -> valid_func (t:=type.base b) e
   .
-
-  (* TODO : move *)
-  (* separation-logic relation that says space exists in memory for lists
-     (other values are ignored) *)
-  Fixpoint lists_reserved {t}
-    : base_list_lengths t ->
-      Interface.map.rep (map:=Semantics.mem) -> (* memory *)
-      Prop :=
-    match t with
-    | base.type.prod a b =>
-      fun x => sep (lists_reserved (fst x)) (lists_reserved (snd x))
-    | base_listZ =>
-      fun n =>
-        Lift1Prop.ex1
-          (fun start : Semantics.word =>
-             Lift1Prop.ex1
-               (fun oldvalues : list Semantics.word =>
-                  let size := Interface.word.of_Z (Z.of_nat n) in
-                  array scalar size start oldvalues))
-    | base_Z => fun _ _ => True
-    |  _ => fun _ _ => False
-    end.
-
-  (* TODO : move *)
-  Fixpoint list_lengths_from_value {t}
-    : base.interp t -> base_list_lengths t :=
-    match t as t0 return base.interp t0 -> base_list_lengths t0 with
-    | base.type.prod a b =>
-      fun x : base.interp a * base.interp b =>
-        (list_lengths_from_value (fst x),
-         list_lengths_from_value (snd x))
-    | base_listZ => fun x : list Z => length x
-    | _ => fun _ => tt
-    end.
-
-  (* TODO : move *)
-  Fixpoint list_lengths_from_args {t}
-    : type.for_each_lhs_of_arrow API.interp_type t ->
-      type.for_each_lhs_of_arrow list_lengths t :=
-    match t with
-    | type.base b => fun _ => tt
-    | type.arrow (type.base a) b =>
-      fun x =>
-        (list_lengths_from_value (fst x), list_lengths_from_args (snd x))
-    | type.arrow a b =>
-      fun x => (tt, list_lengths_from_args (snd x))
-    end.
-
-  (* TODO : move *)
-  Lemma load_arguments_correct {t} :
-    forall (argnames : type.for_each_lhs_of_arrow ltype t)
-           (args : type.for_each_lhs_of_arrow API.interp_type t)
-           (flat_args : list Semantics.word)
-           (functions : list _)
-           (tr : Semantics.trace)
-           (locals : Semantics.locals)
-           (mem : Semantics.mem)
-           (nextn : nat)
-           (R : Semantics.mem -> Prop),
-        (* lengths of any lists in the arguments *)
-        let arglengths := list_lengths_from_args args in
-        (* look up variables in argnames *)
-        let argvalues :=
-            type.map_for_each_lhs_of_arrow rtype_of_ltype argnames in
-        (* argnames don't contain variables we could later overwrite *)
-        (forall n,
-            (nextn <= n)%nat ->
-            ~ varname_set_args argnames (varname_gen n)) ->
-        (* argument values (in their 3 forms) are equivalent *)
-        sep (equivalent_args args argvalues map.empty) R mem ->
-        WeakestPrecondition.dexprs
-          mem map.empty (flatten_args argvalues) flat_args ->
-        (* load_arguments returns triple : # fresh variables used,
-           new argnames with local lists, and cmd *)
-        let out := load_arguments nextn argnames arglengths in
-        let nvars := fst (fst out) in
-        (* extract loaded argument values *)
-        let argnames' := snd (fst out) in
-        let argvalues' :=
-            type.map_for_each_lhs_of_arrow rtype_of_ltype argnames' in
-        (* translated function produces equivalent results *)
-        WeakestPrecondition.cmd
-          (WeakestPrecondition.call functions)
-          (snd out)
-          tr mem locals
-          (fun tr' mem' locals' =>
-             tr = tr' /\
-             mem = mem' /\
-             (forall n,
-                 (nvars <= n)%nat ->
-                 ~ varname_set_args argnames' (varname_gen n)) /\
-             locally_equivalent_args args argvalues' locals').
-  Proof.
-  Admitted.
-
-  (* idea: pull return list lengths from fiat-crypto type *)
-  (* TODO : move *)
-  Lemma store_return_values_correct {t} :
-    forall (retnames_local : base_ltype t)
-           (retnames_mem : base_ltype t)
-           (retlengths : base_list_lengths t)
-           (rets : base.interp t)
-           (functions : list _)
-           (tr : Semantics.trace)
-           (locals : Semantics.locals)
-           (mem : Semantics.mem)
-           (R : Semantics.mem -> Prop),
-        (* use old values of memory to set up frame for return values *)
-        sep (lists_reserved retlengths) R mem ->
-        (* rets are stored in local retnames *)
-        locally_equivalent
-          rets (base_rtype_of_ltype retnames_local) locals ->
-        (* translated function produces equivalent results *)
-        WeakestPrecondition.cmd
-          (WeakestPrecondition.call functions)
-          (store_return_values retnames_local retnames_mem)
-          tr mem locals
-          (fun tr' mem' locals' =>
-             tr = tr' /\
-             sep (equivalent
-                    rets (base_rtype_of_ltype retnames_mem) locals')
-                 R mem').
-  Proof.
-  Admitted.
-
-  (* TODO: move *)
-  Lemma sep_empty_iff (q r : Semantics.mem -> Prop) :
-    sep q r map.empty <-> q map.empty /\ r map.empty.
-  Proof.
-    cbv [sep].
-    repeat match goal with
-           | _ => progress (intros; cleanup)
-           | _ => progress subst
-           | H : _ |- _ => apply map.split_empty in H
-           | _ => rewrite map.split_empty in *
-           | _ => exists map.empty
-           | _ => tauto
-           | _ => split
-           end.
-  Qed.
 
   Lemma translate_func'_correct {t}
         (* three exprs, representing the same Expr with different vars *)
