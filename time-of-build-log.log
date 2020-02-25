@@ -1,0 +1,2 @@
+make --no-print-directory -C coqprime src/Coqprime/PrimalityTest/Zp.vo
+make[1]: 'src/Coqprime/PrimalityTest/Zp.vo' is up to date.
