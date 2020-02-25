@@ -1,0 +1,2161 @@
+make: *** No rule to make target 'bbv/src/bbv/BinNotation.v', needed by 'bbv/src/bbv/BinNotation.vo'.
+make --no-print-directory -C coqprime src/Coqprime/PrimalityTest/Zp.vo
+make: *** No rule to make target 'bbv/src/bbv/BinNotationZ.v', needed by 'bbv/src/bbv/BinNotationZ.vo'.
+make: *** No rule to make target 'bbv/src/bbv/DepEq.v', needed by 'bbv/src/bbv/DepEq.vo'.
+make: *** No rule to make target 'bbv/src/bbv/DepEqNat.v', needed by 'bbv/src/bbv/DepEqNat.vo'.
+make: *** No rule to make target 'bbv/src/bbv/HexNotation.v', needed by 'bbv/src/bbv/HexNotation.vo'.
+make: *** No rule to make target 'bbv/src/bbv/HexNotationWord.v', needed by 'bbv/src/bbv/HexNotationWord.vo'.
+make: *** No rule to make target 'bbv/src/bbv/HexNotationZ.v', needed by 'bbv/src/bbv/HexNotationZ.vo'.
+make: *** No rule to make target 'bbv/src/bbv/NLib.v', needed by 'bbv/src/bbv/NLib.vo'.
+make: *** No rule to make target 'bbv/src/bbv/N_Z_nat_conversions.v', needed by 'bbv/src/bbv/N_Z_nat_conversions.vo'.
+make: *** No rule to make target 'bbv/src/bbv/NatLib.v', needed by 'bbv/src/bbv/NatLib.vo'.
+make: *** No rule to make target 'bbv/src/bbv/Nomega.v', needed by 'bbv/src/bbv/Nomega.vo'.
+make: *** No rule to make target 'bbv/src/bbv/ReservedNotations.v', needed by 'bbv/src/bbv/ReservedNotations.vo'.
+make: *** No rule to make target 'bbv/src/bbv/Word.v', needed by 'bbv/src/bbv/Word.vo'.
+make: *** No rule to make target 'bbv/src/bbv/WordScope.v', needed by 'bbv/src/bbv/WordScope.vo'.
+make: *** No rule to make target 'bbv/src/bbv/ZHints.v', needed by 'bbv/src/bbv/ZHints.vo'.
+make: *** No rule to make target 'bbv/src/bbv/ZLib.v', needed by 'bbv/src/bbv/ZLib.vo'.
+make[1]: 'src/Coqprime/PrimalityTest/Zp.vo' is up to date.
+COQC src/Algebra/Field_test.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Algebra/Field_test.v", line 2, characters 15-36:
+Error: Unable to locate library Crypto.Util.Decidable.
+
+Command exited with non-zero status 1
+src/Algebra/Field_test.vo (real: 0.09, user: 0.02, sys: 0.06, mem: 64504 ko)
+Makefile.coq:656: recipe for target 'src/Algebra/Field_test.vo' failed
+make: *** [src/Algebra/Field_test.vo] Error 1
+COQC src/Algebra/Hierarchy.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Algebra/Hierarchy.v", line 1, characters 15-41:
+Error: Unable to locate library Crypto.Util.FixCoqMistakes.
+
+Command exited with non-zero status 1
+src/Algebra/Hierarchy.vo (real: 0.09, user: 0.04, sys: 0.04, mem: 62860 ko)
+Makefile.coq:656: recipe for target 'src/Algebra/Hierarchy.vo' failed
+make: *** [src/Algebra/Hierarchy.vo] Error 1
+COQC src/Algebra/Group.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Algebra/Group.v", line 1, characters 37-58:
+Error: Unable to locate library Crypto.Util.Relations.
+
+Command exited with non-zero status 1
+src/Algebra/Group.vo (real: 0.09, user: 0.04, sys: 0.04, mem: 62656 ko)
+Makefile.coq:656: recipe for target 'src/Algebra/Group.vo' failed
+make: *** [src/Algebra/Group.vo] Error 1
+COQC src/Algebra/Field.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Algebra/Field.v", line 1, characters 15-36:
+Error: Unable to locate library Crypto.Util.Relations.
+
+Command exited with non-zero status 1
+src/Algebra/Field.vo (real: 0.10, user: 0.06, sys: 0.04, mem: 62720 ko)
+Makefile.coq:656: recipe for target 'src/Algebra/Field.vo' failed
+make: *** [src/Algebra/Field.vo] Error 1
+COQC src/Algebra/ScalarMult.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Algebra/ScalarMult.v", line 1, characters 49-72:
+Error: Unable to locate library Crypto.Util.ZUtil.Peano.
+
+Command exited with non-zero status 1
+src/Algebra/ScalarMult.vo (real: 0.08, user: 0.05, sys: 0.03, mem: 62700 ko)
+Makefile.coq:656: recipe for target 'src/Algebra/ScalarMult.vo' failed
+make: *** [src/Algebra/ScalarMult.vo] Error 1
+COQC src/Algebra/Monoid.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Algebra/Monoid.v", line 2, characters 15-45:
+Error: Unable to locate library Crypto.Util.Tactics.RewriteHyp.
+
+Command exited with non-zero status 1
+src/Algebra/Monoid.vo (real: 0.09, user: 0.06, sys: 0.02, mem: 69960 ko)
+Makefile.coq:656: recipe for target 'src/Algebra/Monoid.vo' failed
+make: *** [src/Algebra/Monoid.vo] Error 1
+COQC src/Algebra/Ring.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Algebra/Ring.v", line 4, characters 15-45:
+Error: Unable to locate library Crypto.Util.Tactics.BreakMatch.
+
+Command exited with non-zero status 1
+src/Algebra/Ring.vo (real: 0.35, user: 0.25, sys: 0.09, mem: 296916 ko)
+Makefile.coq:656: recipe for target 'src/Algebra/Ring.vo' failed
+make: *** [src/Algebra/Ring.vo] Error 1
+COQC src/Demo.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Demo.v", line 3, characters 15-45:
+Error: Unable to locate library Crypto.Util.Tactics.UniquePose.
+
+Command exited with non-zero status 1
+src/Demo.vo (real: 0.56, user: 0.41, sys: 0.15, mem: 431984 ko)
+Makefile.coq:656: recipe for target 'src/Demo.vo' failed
+make: *** [src/Demo.vo] Error 1
+COQC src/Algebra/SubsetoidRing.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Algebra/SubsetoidRing.v", line 4, characters 15-45:
+Error: Unable to locate library Crypto.Util.Tactics.BreakMatch.
+
+Command exited with non-zero status 1
+src/Algebra/SubsetoidRing.vo (real: 0.35, user: 0.23, sys: 0.12, mem: 296952 ko)
+Makefile.coq:656: recipe for target 'src/Algebra/SubsetoidRing.vo' failed
+make: *** [src/Algebra/SubsetoidRing.vo] Error 1
+COQC src/Algebra/IntegralDomain.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Algebra/IntegralDomain.v", line 4, characters 15-39:
+Error: Unable to locate library Crypto.Algebra.Hierarchy.
+
+Command exited with non-zero status 1
+src/Algebra/IntegralDomain.vo (real: 0.54, user: 0.42, sys: 0.11, mem: 409944 ko)
+Makefile.coq:656: recipe for target 'src/Algebra/IntegralDomain.vo' failed
+make: *** [src/Algebra/IntegralDomain.vo] Error 1
+COQC src/Arithmetic/Core.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Arithmetic/Core.v", line 248, characters 15-36:
+Error: Unable to locate library Crypto.Util.Decidable.
+
+Command exited with non-zero status 1
+src/Arithmetic/Core.vo (real: 0.57, user: 0.43, sys: 0.13, mem: 433972 ko)
+Makefile.coq:656: recipe for target 'src/Arithmetic/Core.vo' failed
+make: *** [src/Arithmetic/Core.vo] Error 1
+COQC src/Arithmetic/CoreUnfolder.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Arithmetic/CoreUnfolder.v", line 2, characters 15-32:
+Error: Unable to locate library Crypto.Util.LetIn.
+
+Command exited with non-zero status 1
+src/Arithmetic/CoreUnfolder.vo (real: 0.37, user: 0.25, sys: 0.11, mem: 303956 ko)
+Makefile.coq:656: recipe for target 'src/Arithmetic/CoreUnfolder.vo' failed
+make: *** [src/Arithmetic/CoreUnfolder.vo] Error 1
+COQC src/Arithmetic/PrimeFieldTheorems.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Arithmetic/PrimeFieldTheorems.v", line 1, characters 15-44:
+Error: Unable to locate library Crypto.Spec.ModularArithmetic.
+
+Command exited with non-zero status 1
+src/Arithmetic/PrimeFieldTheorems.vo (real: 0.09, user: 0.05, sys: 0.03, mem: 62740 ko)
+Makefile.coq:656: recipe for target 'src/Arithmetic/PrimeFieldTheorems.vo' failed
+make: *** [src/Arithmetic/PrimeFieldTheorems.vo] Error 1
+COQC src/Arithmetic/ModularArithmeticPre.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Arithmetic/ModularArithmeticPre.v", line 6, characters 15-40:
+Error: Unable to locate library Crypto.Util.NumTheoryUtil.
+
+Command exited with non-zero status 1
+src/Arithmetic/ModularArithmeticPre.vo (real: 0.37, user: 0.25, sys: 0.11, mem: 307252 ko)
+Makefile.coq:656: recipe for target 'src/Arithmetic/ModularArithmeticPre.vo' failed
+make: *** [src/Arithmetic/ModularArithmeticPre.vo] Error 1
+COQC src/Arithmetic/ModularArithmeticTheorems.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Arithmetic/ModularArithmeticTheorems.v", line 2, characters 15-44:
+Error: Unable to locate library Crypto.Spec.ModularArithmetic.
+
+Command exited with non-zero status 1
+src/Arithmetic/ModularArithmeticTheorems.vo (real: 0.36, user: 0.27, sys: 0.09, mem: 298152 ko)
+Makefile.coq:656: recipe for target 'src/Arithmetic/ModularArithmeticTheorems.vo' failed
+make: *** [src/Arithmetic/ModularArithmeticTheorems.vo] Error 1
+COQC src/Arithmetic/BarrettReduction/RidiculousFish.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Arithmetic/BarrettReduction/RidiculousFish.v", line 1, characters 15-36:
+Error: Unable to locate library Crypto.Util.Notations.
+
+Command exited with non-zero status 1
+src/Arithmetic/BarrettReduction/RidiculousFish.vo (real: 0.09, user: 0.04, sys: 0.04, mem: 62716 ko)
+Makefile.coq:656: recipe for target 'src/Arithmetic/BarrettReduction/RidiculousFish.vo' failed
+make: *** [src/Arithmetic/BarrettReduction/RidiculousFish.vo] Error 1
+COQC src/Arithmetic/Karatsuba.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Arithmetic/Karatsuba.v", line 4, characters 15-32:
+Error: Unable to locate library Crypto.Util.LetIn.
+
+Command exited with non-zero status 1
+src/Arithmetic/Karatsuba.vo (real: 0.55, user: 0.39, sys: 0.15, mem: 431764 ko)
+Makefile.coq:656: recipe for target 'src/Arithmetic/Karatsuba.vo' failed
+make: *** [src/Arithmetic/Karatsuba.vo] Error 1
+COQC src/Arithmetic/BarrettReduction/Generalized.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Arithmetic/BarrettReduction/Generalized.v", line 12, characters 15-36:
+Error: Unable to locate library Crypto.Util.ZUtil.Div.
+
+Command exited with non-zero status 1
+src/Arithmetic/BarrettReduction/Generalized.vo (real: 0.43, user: 0.29, sys: 0.14, mem: 350540 ko)
+Makefile.coq:656: recipe for target 'src/Arithmetic/BarrettReduction/Generalized.vo' failed
+make: *** [src/Arithmetic/BarrettReduction/Generalized.vo] Error 1
+COQC src/Arithmetic/BarrettReduction/HAC.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Arithmetic/BarrettReduction/HAC.v", line 12, characters 15-45:
+Error: Unable to locate library Crypto.Util.Tactics.BreakMatch.
+
+Command exited with non-zero status 1
+src/Arithmetic/BarrettReduction/HAC.vo (real: 0.45, user: 0.30, sys: 0.14, mem: 350616 ko)
+Makefile.coq:656: recipe for target 'src/Arithmetic/BarrettReduction/HAC.vo' failed
+make: *** [src/Arithmetic/BarrettReduction/HAC.vo] Error 1
+COQC src/Arithmetic/MontgomeryReduction/Definition.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Arithmetic/MontgomeryReduction/Definition.v", line 5, characters 15-44:
+Error: Unable to locate library Crypto.Util.ZUtil.EquivModulo.
+
+Command exited with non-zero status 1
+src/Arithmetic/MontgomeryReduction/Definition.vo (real: 0.36, user: 0.24, sys: 0.12, mem: 303984 ko)
+Makefile.coq:656: recipe for target 'src/Arithmetic/MontgomeryReduction/Definition.vo' failed
+make: *** [src/Arithmetic/MontgomeryReduction/Definition.vo] Error 1
+COQC src/Arithmetic/BarrettReduction/Wikipedia.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Arithmetic/BarrettReduction/Wikipedia.v", line 4, characters 15-51:
+Error: Unable to locate library Crypto.Util.ZUtil.Tactics.ZeroBounds.
+
+Command exited with non-zero status 1
+src/Arithmetic/BarrettReduction/Wikipedia.vo (real: 0.45, user: 0.29, sys: 0.15, mem: 350760 ko)
+Makefile.coq:656: recipe for target 'src/Arithmetic/BarrettReduction/Wikipedia.vo' failed
+make: *** [src/Arithmetic/BarrettReduction/Wikipedia.vo] Error 1
+COQC src/Arithmetic/MontgomeryReduction/Proofs.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Arithmetic/MontgomeryReduction/Proofs.v", line 6, characters 15-63:
+Error:
+Unable to locate library Crypto.Arithmetic.MontgomeryReduction.Definition.
+
+Command exited with non-zero status 1
+src/Arithmetic/MontgomeryReduction/Proofs.vo (real: 0.43, user: 0.35, sys: 0.08, mem: 351276 ko)
+Makefile.coq:656: recipe for target 'src/Arithmetic/MontgomeryReduction/Proofs.vo' failed
+make: *** [src/Arithmetic/MontgomeryReduction/Proofs.vo] Error 1
+COQC src/Arithmetic/MontgomeryReduction/WordByWord/Definition.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Arithmetic/MontgomeryReduction/WordByWord/Definition.v", line 8, characters 15-56:
+Error: Unable to locate library Crypto.Arithmetic.Saturated.MontgomeryAPI.
+
+Command exited with non-zero status 1
+src/Arithmetic/MontgomeryReduction/WordByWord/Definition.vo (real: 0.36, user: 0.26, sys: 0.09, mem: 304008 ko)
+Makefile.coq:656: recipe for target 'src/Arithmetic/MontgomeryReduction/WordByWord/Definition.vo' failed
+make: *** [src/Arithmetic/MontgomeryReduction/WordByWord/Definition.vo] Error 1
+COQC src/Arithmetic/MontgomeryReduction/WordByWord/Proofs.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Arithmetic/MontgomeryReduction/WordByWord/Proofs.v", line 4, characters 15-56:
+Error: Unable to locate library Crypto.Arithmetic.Saturated.UniformWeight.
+
+Command exited with non-zero status 1
+src/Arithmetic/MontgomeryReduction/WordByWord/Proofs.vo (real: 0.39, user: 0.25, sys: 0.13, mem: 317600 ko)
+Makefile.coq:656: recipe for target 'src/Arithmetic/MontgomeryReduction/WordByWord/Proofs.vo' failed
+make: *** [src/Arithmetic/MontgomeryReduction/WordByWord/Proofs.vo] Error 1
+COQC src/Arithmetic/MontgomeryReduction/WordByWord/Abstract/Definition.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Arithmetic/MontgomeryReduction/WordByWord/Abstract/Definition.v", line 8, characters 15-36:
+Error: Unable to locate library Crypto.Util.Notations.
+
+Command exited with non-zero status 1
+src/Arithmetic/MontgomeryReduction/WordByWord/Abstract/Definition.vo (real: 0.37, user: 0.26, sys: 0.10, mem: 303956 ko)
+Makefile.coq:656: recipe for target 'src/Arithmetic/MontgomeryReduction/WordByWord/Abstract/Definition.vo' failed
+make: *** [src/Arithmetic/MontgomeryReduction/WordByWord/Abstract/Definition.vo] Error 1
+COQC src/Arithmetic/MontgomeryReduction/WordByWord/Abstract/Proofs.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Arithmetic/MontgomeryReduction/WordByWord/Abstract/Proofs.v", line 4, characters 15-32:
+Error: Unable to locate library Crypto.Util.LetIn.
+
+Command exited with non-zero status 1
+src/Arithmetic/MontgomeryReduction/WordByWord/Abstract/Proofs.vo (real: 0.43, user: 0.30, sys: 0.12, mem: 338804 ko)
+Makefile.coq:656: recipe for target 'src/Arithmetic/MontgomeryReduction/WordByWord/Abstract/Proofs.vo' failed
+make: *** [src/Arithmetic/MontgomeryReduction/WordByWord/Abstract/Proofs.vo] Error 1
+COQC src/Arithmetic/MontgomeryReduction/WordByWord/Abstract/Dependent/Definition.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Arithmetic/MontgomeryReduction/WordByWord/Abstract/Dependent/Definition.v", line 8, characters 15-36:
+Error: Unable to locate library Crypto.Util.Notations.
+
+Command exited with non-zero status 1
+src/Arithmetic/MontgomeryReduction/WordByWord/Abstract/Dependent/Definition.vo (real: 0.37, user: 0.26, sys: 0.10, mem: 304048 ko)
+Makefile.coq:656: recipe for target 'src/Arithmetic/MontgomeryReduction/WordByWord/Abstract/Dependent/Definition.vo' failed
+make: *** [src/Arithmetic/MontgomeryReduction/WordByWord/Abstract/Dependent/Definition.vo] Error 1
+COQC src/Arithmetic/Saturated/CoreUnfolder.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Arithmetic/Saturated/CoreUnfolder.v", line 1, characters 15-45:
+Error: Unable to locate library Crypto.Arithmetic.CoreUnfolder.
+
+Command exited with non-zero status 1
+src/Arithmetic/Saturated/CoreUnfolder.vo (real: 0.09, user: 0.05, sys: 0.04, mem: 62560 ko)
+Makefile.coq:656: recipe for target 'src/Arithmetic/Saturated/CoreUnfolder.vo' failed
+make: *** [src/Arithmetic/Saturated/CoreUnfolder.vo] Error 1
+COQC src/Arithmetic/MontgomeryReduction/WordByWord/Abstract/Dependent/Proofs.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Arithmetic/MontgomeryReduction/WordByWord/Abstract/Dependent/Proofs.v", line 4, characters 15-32:
+Error: Unable to locate library Crypto.Util.LetIn.
+
+Command exited with non-zero status 1
+src/Arithmetic/MontgomeryReduction/WordByWord/Abstract/Dependent/Proofs.vo (real: 0.42, user: 0.26, sys: 0.15, mem: 338772 ko)
+Makefile.coq:656: recipe for target 'src/Arithmetic/MontgomeryReduction/WordByWord/Abstract/Dependent/Proofs.vo' failed
+make: *** [src/Arithmetic/MontgomeryReduction/WordByWord/Abstract/Dependent/Proofs.vo] Error 1
+COQC src/Arithmetic/Saturated/FreezeUnfolder.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Arithmetic/Saturated/FreezeUnfolder.v", line 1, characters 15-45:
+Error: Unable to locate library Crypto.Arithmetic.CoreUnfolder.
+
+Command exited with non-zero status 1
+src/Arithmetic/Saturated/FreezeUnfolder.vo (real: 0.09, user: 0.06, sys: 0.02, mem: 62656 ko)
+Makefile.coq:656: recipe for target 'src/Arithmetic/Saturated/FreezeUnfolder.vo' failed
+make: *** [src/Arithmetic/Saturated/FreezeUnfolder.vo] Error 1
+COQC src/Arithmetic/Saturated/AddSub.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Arithmetic/Saturated/AddSub.v", line 5, characters 15-37:
+Error: Unable to locate library Crypto.Arithmetic.Core.
+
+Command exited with non-zero status 1
+src/Arithmetic/Saturated/AddSub.vo (real: 0.37, user: 0.25, sys: 0.12, mem: 304708 ko)
+Makefile.coq:656: recipe for target 'src/Arithmetic/Saturated/AddSub.vo' failed
+make: *** [src/Arithmetic/Saturated/AddSub.vo] Error 1
+COQC src/Arithmetic/Saturated/MulSplitUnfolder.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Arithmetic/Saturated/MulSplitUnfolder.v", line 1, characters 15-45:
+Error: Unable to locate library Crypto.Arithmetic.CoreUnfolder.
+
+Command exited with non-zero status 1
+src/Arithmetic/Saturated/MulSplitUnfolder.vo (real: 0.08, user: 0.03, sys: 0.05, mem: 62692 ko)
+Makefile.coq:656: recipe for target 'src/Arithmetic/Saturated/MulSplitUnfolder.vo' failed
+make: *** [src/Arithmetic/Saturated/MulSplitUnfolder.vo] Error 1
+COQC src/Arithmetic/Saturated/Freeze.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Arithmetic/Saturated/Freeze.v", line 5, characters 15-37:
+Error: Unable to locate library Crypto.Arithmetic.Core.
+
+Command exited with non-zero status 1
+src/Arithmetic/Saturated/Freeze.vo (real: 0.36, user: 0.24, sys: 0.11, mem: 304704 ko)
+Makefile.coq:656: recipe for target 'src/Arithmetic/Saturated/Freeze.vo' failed
+make: *** [src/Arithmetic/Saturated/Freeze.vo] Error 1
+COQC src/Arithmetic/Saturated/Core.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Arithmetic/Saturated/Core.v", line 8, characters 15-37:
+Error: Unable to locate library Crypto.Arithmetic.Core.
+
+Command exited with non-zero status 1
+src/Arithmetic/Saturated/Core.vo (real: 0.56, user: 0.43, sys: 0.12, mem: 432700 ko)
+Makefile.coq:656: recipe for target 'src/Arithmetic/Saturated/Core.vo' failed
+make: *** [src/Arithmetic/Saturated/Core.vo] Error 1
+COQC src/Arithmetic/Saturated/MulSplit.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Arithmetic/Saturated/MulSplit.v", line 5, characters 15-37:
+Error: Unable to locate library Crypto.Arithmetic.Core.
+
+Command exited with non-zero status 1
+src/Arithmetic/Saturated/MulSplit.vo (real: 0.37, user: 0.27, sys: 0.10, mem: 304924 ko)
+Makefile.coq:656: recipe for target 'src/Arithmetic/Saturated/MulSplit.vo' failed
+make: *** [src/Arithmetic/Saturated/MulSplit.vo] Error 1
+COQC src/Arithmetic/Saturated/MontgomeryAPI.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Arithmetic/Saturated/MontgomeryAPI.v", line 6, characters 15-37:
+Error: Unable to locate library Crypto.Arithmetic.Core.
+
+Command exited with non-zero status 1
+src/Arithmetic/Saturated/MontgomeryAPI.vo (real: 0.43, user: 0.30, sys: 0.12, mem: 339528 ko)
+Makefile.coq:656: recipe for target 'src/Arithmetic/Saturated/MontgomeryAPI.vo' failed
+make: *** [src/Arithmetic/Saturated/MontgomeryAPI.vo] Error 1
+COQC src/Arithmetic/Saturated/UniformWeight.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Arithmetic/Saturated/UniformWeight.v", line 5, characters 15-37:
+Error: Unable to locate library Crypto.Arithmetic.Core.
+
+Command exited with non-zero status 1
+src/Arithmetic/Saturated/UniformWeight.vo (real: 0.37, user: 0.23, sys: 0.13, mem: 304668 ko)
+Makefile.coq:656: recipe for target 'src/Arithmetic/Saturated/UniformWeight.vo' failed
+make: *** [src/Arithmetic/Saturated/UniformWeight.vo] Error 1
+COQC src/Arithmetic/Saturated/UniformWeightInstances.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Arithmetic/Saturated/UniformWeightInstances.v", line 2, characters 15-56:
+Error: Unable to locate library Crypto.Arithmetic.Saturated.UniformWeight.
+
+Command exited with non-zero status 1
+src/Arithmetic/Saturated/UniformWeightInstances.vo (real: 0.27, user: 0.19, sys: 0.07, mem: 240224 ko)
+Makefile.coq:656: recipe for target 'src/Arithmetic/Saturated/UniformWeightInstances.vo' failed
+make: *** [src/Arithmetic/Saturated/UniformWeightInstances.vo] Error 1
+COQC src/Arithmetic/Saturated/WrappersUnfolder.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Arithmetic/Saturated/WrappersUnfolder.v", line 1, characters 15-45:
+Error: Unable to locate library Crypto.Arithmetic.CoreUnfolder.
+
+Command exited with non-zero status 1
+src/Arithmetic/Saturated/WrappersUnfolder.vo (real: 0.09, user: 0.03, sys: 0.05, mem: 62672 ko)
+Makefile.coq:656: recipe for target 'src/Arithmetic/Saturated/WrappersUnfolder.vo' failed
+make: *** [src/Arithmetic/Saturated/WrappersUnfolder.vo] Error 1
+COQC src/Compilers/CommonSubexpressionElimination.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/CommonSubexpressionElimination.v", line 4, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/CommonSubexpressionElimination.vo (real: 0.17, user: 0.10, sys: 0.07, mem: 154256 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/CommonSubexpressionElimination.vo' failed
+make: *** [src/Compilers/CommonSubexpressionElimination.vo] Error 1
+COQC src/Arithmetic/Saturated/Wrappers.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Arithmetic/Saturated/Wrappers.v", line 5, characters 15-37:
+Error: Unable to locate library Crypto.Arithmetic.Core.
+
+Command exited with non-zero status 1
+src/Arithmetic/Saturated/Wrappers.vo (real: 0.37, user: 0.23, sys: 0.13, mem: 304892 ko)
+Makefile.coq:656: recipe for target 'src/Arithmetic/Saturated/Wrappers.vo' failed
+make: *** [src/Arithmetic/Saturated/Wrappers.vo] Error 1
+COQC src/Compilers/CommonSubexpressionEliminationInterp.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/CommonSubexpressionEliminationInterp.v", line 3, characters 15-45:
+Error: Unable to locate library Crypto.Compilers.Named.Context.
+
+Command exited with non-zero status 1
+src/Compilers/CommonSubexpressionEliminationInterp.vo (real: 0.16, user: 0.08, sys: 0.08, mem: 147968 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/CommonSubexpressionEliminationInterp.vo' failed
+make: *** [src/Compilers/CommonSubexpressionEliminationInterp.vo] Error 1
+COQC src/Compilers/CommonSubexpressionEliminationDenote.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/CommonSubexpressionEliminationDenote.v", line 3, characters 15-45:
+Error: Unable to locate library Crypto.Compilers.Named.Context.
+
+Command exited with non-zero status 1
+src/Compilers/CommonSubexpressionEliminationDenote.vo (real: 0.17, user: 0.07, sys: 0.09, mem: 148016 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/CommonSubexpressionEliminationDenote.vo' failed
+make: *** [src/Compilers/CommonSubexpressionEliminationDenote.vo] Error 1
+COQC src/Compilers/Conversion.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Conversion.v", line 2, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Conversion.vo (real: 0.09, user: 0.06, sys: 0.02, mem: 62608 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Conversion.vo' failed
+make: *** [src/Compilers/Conversion.vo] Error 1
+COQC src/Compilers/Equality.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Equality.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Equality.vo (real: 0.08, user: 0.05, sys: 0.03, mem: 62620 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Equality.vo' failed
+make: *** [src/Compilers/Equality.vo] Error 1
+COQC src/Compilers/CountLets.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/CountLets.v", line 2, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/CountLets.vo (real: 0.09, user: 0.05, sys: 0.03, mem: 62784 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/CountLets.vo' failed
+make: *** [src/Compilers/CountLets.vo] Error 1
+COQC src/Compilers/CommonSubexpressionEliminationWf.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/CommonSubexpressionEliminationWf.v", line 3, characters 15-45:
+Error: Unable to locate library Crypto.Compilers.Named.Context.
+
+Command exited with non-zero status 1
+src/Compilers/CommonSubexpressionEliminationWf.vo (real: 0.17, user: 0.11, sys: 0.06, mem: 148200 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/CommonSubexpressionEliminationWf.vo' failed
+make: *** [src/Compilers/CommonSubexpressionEliminationWf.vo] Error 1
+COQC src/Compilers/Eta.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Eta.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Eta.vo (real: 0.08, user: 0.05, sys: 0.03, mem: 62612 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Eta.vo' failed
+make: *** [src/Compilers/Eta.vo] Error 1
+COQC src/Compilers/EtaInterp.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/EtaInterp.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/EtaInterp.vo (real: 0.09, user: 0.05, sys: 0.03, mem: 62860 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/EtaInterp.vo' failed
+make: *** [src/Compilers/EtaInterp.vo] Error 1
+COQC src/Compilers/EtaWf.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/EtaWf.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/EtaWf.vo (real: 0.08, user: 0.04, sys: 0.04, mem: 62756 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/EtaWf.vo' failed
+make: *** [src/Compilers/EtaWf.vo] Error 1
+COQC src/Compilers/CommonSubexpressionEliminationProperties.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/CommonSubexpressionEliminationProperties.v", line 5, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/CommonSubexpressionEliminationProperties.vo (real: 0.36, user: 0.25, sys: 0.11, mem: 305188 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/CommonSubexpressionEliminationProperties.vo' failed
+make: *** [src/Compilers/CommonSubexpressionEliminationProperties.vo] Error 1
+COQC src/Compilers/ExprInversion.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/ExprInversion.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/ExprInversion.vo (real: 0.09, user: 0.04, sys: 0.04, mem: 62900 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/ExprInversion.vo' failed
+make: *** [src/Compilers/ExprInversion.vo] Error 1
+COQC src/Compilers/FilterLive.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/FilterLive.v", line 2, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/FilterLive.vo (real: 0.08, user: 0.04, sys: 0.04, mem: 62672 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/FilterLive.vo' failed
+make: *** [src/Compilers/FilterLive.vo] Error 1
+COQC src/Compilers/FoldTypes.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/FoldTypes.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/FoldTypes.vo (real: 0.09, user: 0.06, sys: 0.02, mem: 62832 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/FoldTypes.vo' failed
+make: *** [src/Compilers/FoldTypes.vo] Error 1
+COQC src/Compilers/GeneralizeVarInterp.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/GeneralizeVarInterp.v", line 1, characters 15-40:
+Error: Unable to locate library Crypto.Compilers.SmartMap.
+
+Command exited with non-zero status 1
+src/Compilers/GeneralizeVarInterp.vo (real: 0.08, user: 0.03, sys: 0.05, mem: 62712 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/GeneralizeVarInterp.vo' failed
+make: *** [src/Compilers/GeneralizeVarInterp.vo] Error 1
+COQC src/Compilers/Inline.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Inline.v", line 2, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Inline.vo (real: 0.08, user: 0.04, sys: 0.03, mem: 62720 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Inline.vo' failed
+make: *** [src/Compilers/Inline.vo] Error 1
+COQC src/Compilers/GeneralizeVar.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/GeneralizeVar.v", line 3, characters 15-45:
+Error: Unable to locate library Crypto.Compilers.Named.Context.
+
+Command exited with non-zero status 1
+src/Compilers/GeneralizeVar.vo (real: 0.18, user: 0.13, sys: 0.04, mem: 155112 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/GeneralizeVar.vo' failed
+make: *** [src/Compilers/GeneralizeVar.vo] Error 1
+COQC src/Compilers/InlineConstAndOp.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/InlineConstAndOp.v", line 2, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/InlineConstAndOp.vo (real: 0.08, user: 0.05, sys: 0.03, mem: 62600 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/InlineConstAndOp.vo' failed
+make: *** [src/Compilers/InlineConstAndOp.vo] Error 1
+COQC src/Compilers/InlineConstAndOpByRewrite.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/InlineConstAndOpByRewrite.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/InlineConstAndOpByRewrite.vo (real: 0.08, user: 0.04, sys: 0.04, mem: 62652 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/InlineConstAndOpByRewrite.vo' failed
+make: *** [src/Compilers/InlineConstAndOpByRewrite.vo] Error 1
+COQC src/Compilers/GeneralizeVarWf.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/GeneralizeVarWf.v", line 2, characters 15-40:
+Error: Unable to locate library Crypto.Compilers.SmartMap.
+
+Command exited with non-zero status 1
+src/Compilers/GeneralizeVarWf.vo (real: 0.17, user: 0.10, sys: 0.06, mem: 155144 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/GeneralizeVarWf.vo' failed
+make: *** [src/Compilers/GeneralizeVarWf.vo] Error 1
+COQC src/Compilers/InlineConstAndOpByRewriteInterp.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/InlineConstAndOpByRewriteInterp.v", line 2, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/InlineConstAndOpByRewriteInterp.vo (real: 0.08, user: 0.03, sys: 0.04, mem: 62680 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/InlineConstAndOpByRewriteInterp.vo' failed
+make: *** [src/Compilers/InlineConstAndOpByRewriteInterp.vo] Error 1
+COQC src/Compilers/InlineConstAndOpWf.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/InlineConstAndOpWf.v", line 2, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/InlineConstAndOpWf.vo (real: 0.08, user: 0.04, sys: 0.04, mem: 62724 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/InlineConstAndOpWf.vo' failed
+make: *** [src/Compilers/InlineConstAndOpWf.vo] Error 1
+COQC src/Compilers/InlineConstAndOpByRewriteWf.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/InlineConstAndOpByRewriteWf.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/InlineConstAndOpByRewriteWf.vo (real: 0.08, user: 0.03, sys: 0.05, mem: 62664 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/InlineConstAndOpByRewriteWf.vo' failed
+make: *** [src/Compilers/InlineConstAndOpByRewriteWf.vo] Error 1
+COQC src/Compilers/InlineConstAndOpInterp.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/InlineConstAndOpInterp.v", line 2, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/InlineConstAndOpInterp.vo (real: 0.08, user: 0.04, sys: 0.04, mem: 62620 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/InlineConstAndOpInterp.vo' failed
+make: *** [src/Compilers/InlineConstAndOpInterp.vo] Error 1
+COQC src/Compilers/InlineInterp.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/InlineInterp.v", line 2, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/InlineInterp.vo (real: 0.08, user: 0.04, sys: 0.04, mem: 62688 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/InlineInterp.vo' failed
+make: *** [src/Compilers/InlineInterp.vo] Error 1
+COQC src/Compilers/InlineWf.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/InlineWf.v", line 2, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/InlineWf.vo (real: 0.08, user: 0.02, sys: 0.05, mem: 62876 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/InlineWf.vo' failed
+make: *** [src/Compilers/InlineWf.vo] Error 1
+COQC src/Compilers/InterpByIso.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/InterpByIso.v", line 2, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/InterpByIso.vo (real: 0.08, user: 0.03, sys: 0.04, mem: 62768 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/InterpByIso.vo' failed
+make: *** [src/Compilers/InterpByIso.vo] Error 1
+COQC src/Compilers/InterpByIsoProofs.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/InterpByIsoProofs.v", line 2, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/InterpByIsoProofs.vo (real: 0.09, user: 0.06, sys: 0.02, mem: 62684 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/InterpByIsoProofs.vo' failed
+make: *** [src/Compilers/InterpByIsoProofs.vo] Error 1
+COQC src/Compilers/InterpProofs.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/InterpProofs.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/InterpProofs.vo (real: 0.09, user: 0.02, sys: 0.06, mem: 62824 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/InterpProofs.vo' failed
+make: *** [src/Compilers/InterpProofs.vo] Error 1
+COQC src/Compilers/InterpRewriting.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/InterpRewriting.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/InterpRewriting.vo (real: 0.08, user: 0.04, sys: 0.04, mem: 62844 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/InterpRewriting.vo' failed
+make: *** [src/Compilers/InterpRewriting.vo] Error 1
+COQC src/Compilers/InterpSideConditions.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/InterpSideConditions.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/InterpSideConditions.vo (real: 0.09, user: 0.04, sys: 0.04, mem: 62624 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/InterpSideConditions.vo' failed
+make: *** [src/Compilers/InterpSideConditions.vo] Error 1
+COQC src/Compilers/Intros.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Intros.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Intros.vo (real: 0.08, user: 0.05, sys: 0.02, mem: 62716 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Intros.vo' failed
+make: *** [src/Compilers/Intros.vo] Error 1
+COQC src/Compilers/Linearize.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Linearize.v", line 2, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Linearize.vo (real: 0.08, user: 0.02, sys: 0.06, mem: 62636 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Linearize.vo' failed
+make: *** [src/Compilers/Linearize.vo] Error 1
+COQC src/Compilers/InputSyntax.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/InputSyntax.v", line 3, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/InputSyntax.vo (real: 0.29, user: 0.20, sys: 0.09, mem: 253840 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/InputSyntax.vo' failed
+make: *** [src/Compilers/InputSyntax.vo] Error 1
+COQC src/Compilers/LinearizeInterp.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/LinearizeInterp.v", line 2, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/LinearizeInterp.vo (real: 0.09, user: 0.03, sys: 0.05, mem: 62524 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/LinearizeInterp.vo' failed
+make: *** [src/Compilers/LinearizeInterp.vo] Error 1
+COQC src/Compilers/LinearizeWf.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/LinearizeWf.v", line 2, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/LinearizeWf.vo (real: 0.08, user: 0.04, sys: 0.04, mem: 62656 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/LinearizeWf.vo' failed
+make: *** [src/Compilers/LinearizeWf.vo] Error 1
+COQC src/Compilers/Map.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Map.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Map.vo (real: 0.09, user: 0.05, sys: 0.03, mem: 62676 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Map.vo' failed
+make: *** [src/Compilers/Map.vo] Error 1
+COQC src/Compilers/InterpWfRel.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/InterpWfRel.v", line 2, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/InterpWfRel.vo (real: 0.29, user: 0.20, sys: 0.08, mem: 254216 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/InterpWfRel.vo' failed
+make: *** [src/Compilers/InterpWfRel.vo] Error 1
+COQC src/Compilers/InterpWf.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/InterpWf.v", line 2, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/InterpWf.vo (real: 0.29, user: 0.16, sys: 0.12, mem: 254072 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/InterpWf.vo' failed
+make: *** [src/Compilers/InterpWf.vo] Error 1
+COQC src/Compilers/MapBaseType.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/MapBaseType.v", line 2, characters 15-40:
+Error: Unable to locate library Crypto.Compilers.SmartMap.
+
+Command exited with non-zero status 1
+src/Compilers/MapBaseType.vo (real: 0.09, user: 0.04, sys: 0.04, mem: 62980 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/MapBaseType.vo' failed
+make: *** [src/Compilers/MapBaseType.vo] Error 1
+COQC src/Compilers/MapBaseTypeWf.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/MapBaseTypeWf.v", line 2, characters 15-40:
+Error: Unable to locate library Crypto.Compilers.SmartMap.
+
+Command exited with non-zero status 1
+src/Compilers/MapBaseTypeWf.vo (real: 0.08, user: 0.04, sys: 0.04, mem: 62988 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/MapBaseTypeWf.vo' failed
+make: *** [src/Compilers/MapBaseTypeWf.vo] Error 1
+COQC src/Compilers/MapCastByDeBruijn.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/MapCastByDeBruijn.v", line 1, characters 15-40:
+Error: Unable to locate library Crypto.Compilers.SmartMap.
+
+Command exited with non-zero status 1
+src/Compilers/MapCastByDeBruijn.vo (real: 0.08, user: 0.04, sys: 0.03, mem: 62880 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/MapCastByDeBruijn.vo' failed
+make: *** [src/Compilers/MapCastByDeBruijn.vo] Error 1
+COQC src/Compilers/MapCastByDeBruijnInterp.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/MapCastByDeBruijnInterp.v", line 1, characters 15-40:
+Error: Unable to locate library Crypto.Compilers.SmartMap.
+
+Command exited with non-zero status 1
+src/Compilers/MapCastByDeBruijnInterp.vo (real: 0.08, user: 0.04, sys: 0.04, mem: 62812 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/MapCastByDeBruijnInterp.vo' failed
+make: *** [src/Compilers/MapCastByDeBruijnInterp.vo] Error 1
+COQC src/Compilers/MapCastByDeBruijnWf.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/MapCastByDeBruijnWf.v", line 1, characters 15-40:
+Error: Unable to locate library Crypto.Compilers.SmartMap.
+
+Command exited with non-zero status 1
+src/Compilers/MapCastByDeBruijnWf.vo (real: 0.08, user: 0.04, sys: 0.03, mem: 62628 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/MapCastByDeBruijnWf.vo' failed
+make: *** [src/Compilers/MapCastByDeBruijnWf.vo] Error 1
+COQC src/Compilers/RenameBinders.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/RenameBinders.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/RenameBinders.vo (real: 0.08, user: 0.03, sys: 0.05, mem: 62708 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/RenameBinders.vo' failed
+make: *** [src/Compilers/RenameBinders.vo] Error 1
+COQC src/Compilers/Rewriter.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Rewriter.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Rewriter.vo (real: 0.09, user: 0.05, sys: 0.03, mem: 62560 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Rewriter.vo' failed
+make: *** [src/Compilers/Rewriter.vo] Error 1
+COQC src/Compilers/Relations.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Relations.v", line 2, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Relations.vo (real: 0.16, user: 0.08, sys: 0.08, mem: 148936 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Relations.vo' failed
+make: *** [src/Compilers/Relations.vo] Error 1
+COQC src/Compilers/RewriterInterp.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/RewriterInterp.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/RewriterInterp.vo (real: 0.09, user: 0.05, sys: 0.03, mem: 62624 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/RewriterInterp.vo' failed
+make: *** [src/Compilers/RewriterInterp.vo] Error 1
+COQC src/Compilers/RewriterWf.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/RewriterWf.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/RewriterWf.vo (real: 0.08, user: 0.03, sys: 0.05, mem: 62672 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/RewriterWf.vo' failed
+make: *** [src/Compilers/RewriterWf.vo] Error 1
+COQC src/Compilers/Reify.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Reify.v", line 5, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Reify.vo (real: 0.29, user: 0.19, sys: 0.09, mem: 253892 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Reify.vo' failed
+make: *** [src/Compilers/Reify.vo] Error 1
+COQC src/Compilers/SmartMap.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/SmartMap.v", line 2, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/SmartMap.vo (real: 0.09, user: 0.06, sys: 0.03, mem: 69964 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/SmartMap.vo' failed
+make: *** [src/Compilers/SmartMap.vo] Error 1
+COQC src/Compilers/StripExpr.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/StripExpr.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/StripExpr.vo (real: 0.08, user: 0.04, sys: 0.03, mem: 62764 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/StripExpr.vo' failed
+make: *** [src/Compilers/StripExpr.vo] Error 1
+COQC src/Compilers/Syntax.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Syntax.v", line 2, characters 15-32:
+Error: Unable to locate library Crypto.Util.LetIn.
+
+Command exited with non-zero status 1
+src/Compilers/Syntax.vo (real: 0.09, user: 0.03, sys: 0.05, mem: 62732 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Syntax.vo' failed
+make: *** [src/Compilers/Syntax.vo] Error 1
+COQC src/Compilers/MultiSizeTest.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/MultiSizeTest.v", line 2, characters 15-40:
+Error: Unable to locate library Crypto.Compilers.SmartMap.
+
+Command exited with non-zero status 1
+src/Compilers/MultiSizeTest.vo (real: 0.36, user: 0.24, sys: 0.12, mem: 298248 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/MultiSizeTest.vo' failed
+make: *** [src/Compilers/MultiSizeTest.vo] Error 1
+COQC src/Compilers/Tuple.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Tuple.v", line 1, characters 15-32:
+Error: Unable to locate library Crypto.Util.Tuple.
+
+Command exited with non-zero status 1
+src/Compilers/Tuple.vo (real: 0.08, user: 0.02, sys: 0.05, mem: 62716 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Tuple.vo' failed
+make: *** [src/Compilers/Tuple.vo] Error 1
+COQC src/Compilers/TypeInversion.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/TypeInversion.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/TypeInversion.vo (real: 0.08, user: 0.04, sys: 0.04, mem: 62836 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/TypeInversion.vo' failed
+make: *** [src/Compilers/TypeInversion.vo] Error 1
+COQC src/Compilers/TypeUtil.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/TypeUtil.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/TypeUtil.vo (real: 0.08, user: 0.05, sys: 0.03, mem: 62644 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/TypeUtil.vo' failed
+make: *** [src/Compilers/TypeUtil.vo] Error 1
+COQC src/Compilers/WfInversion.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/WfInversion.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/WfInversion.vo (real: 0.08, user: 0.03, sys: 0.04, mem: 62888 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/WfInversion.vo' failed
+make: *** [src/Compilers/WfInversion.vo] Error 1
+COQC src/Compilers/Wf.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Wf.v", line 2, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Wf.vo (real: 0.16, user: 0.09, sys: 0.07, mem: 148124 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Wf.vo' failed
+make: *** [src/Compilers/Wf.vo] Error 1
+COQC src/Compilers/WfProofs.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/WfProofs.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/WfProofs.vo (real: 0.09, user: 0.05, sys: 0.03, mem: 62752 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/WfProofs.vo' failed
+make: *** [src/Compilers/WfProofs.vo] Error 1
+COQC src/Compilers/InSet/Syntax.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/InSet/Syntax.v", line 2, characters 15-32:
+Error: Unable to locate library Crypto.Util.LetIn.
+
+Command exited with non-zero status 1
+src/Compilers/InSet/Syntax.vo (real: 0.08, user: 0.03, sys: 0.04, mem: 62752 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/InSet/Syntax.vo' failed
+make: *** [src/Compilers/InSet/Syntax.vo] Error 1
+COQC src/Compilers/InSet/Typeify.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/InSet/Typeify.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/InSet/Typeify.vo (real: 0.09, user: 0.05, sys: 0.03, mem: 62464 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/InSet/Typeify.vo' failed
+make: *** [src/Compilers/InSet/Typeify.vo] Error 1
+COQC src/Compilers/InSet/TypeifyInterp.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/InSet/TypeifyInterp.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/InSet/TypeifyInterp.vo (real: 0.08, user: 0.05, sys: 0.03, mem: 62796 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/InSet/TypeifyInterp.vo' failed
+make: *** [src/Compilers/InSet/TypeifyInterp.vo] Error 1
+COQC src/Compilers/WfReflective.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/WfReflective.v", line 51, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/WfReflective.vo (real: 0.30, user: 0.20, sys: 0.09, mem: 262880 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/WfReflective.vo' failed
+make: *** [src/Compilers/WfReflective.vo] Error 1
+COQC src/Compilers/TestCase.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/TestCase.v", line 3, characters 15-45:
+Error: Unable to locate library Crypto.Compilers.Named.Context.
+
+Command exited with non-zero status 1
+src/Compilers/TestCase.vo (real: 0.45, user: 0.29, sys: 0.15, mem: 352960 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/TestCase.vo' failed
+make: *** [src/Compilers/TestCase.vo] Error 1
+COQC src/Compilers/Named/AListContext.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/AListContext.v", line 4, characters 15-45:
+Error: Unable to locate library Crypto.Compilers.Named.Context.
+
+Command exited with non-zero status 1
+src/Compilers/Named/AListContext.vo (real: 0.17, user: 0.12, sys: 0.05, mem: 148532 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/AListContext.vo' failed
+make: *** [src/Compilers/Named/AListContext.vo] Error 1
+COQC src/Compilers/Named/Compile.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/Compile.v", line 2, characters 15-44:
+Error: Unable to locate library Crypto.Compilers.Named.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Named/Compile.vo (real: 0.08, user: 0.03, sys: 0.05, mem: 62572 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/Compile.vo' failed
+make: *** [src/Compilers/Named/Compile.vo] Error 1
+COQC src/Compilers/WfReflectiveGen.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/WfReflectiveGen.v", line 51, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/WfReflectiveGen.vo (real: 0.30, user: 0.20, sys: 0.09, mem: 262856 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/WfReflectiveGen.vo' failed
+make: *** [src/Compilers/WfReflectiveGen.vo] Error 1
+COQC src/Compilers/Named/CompileInterp.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/CompileInterp.v", line 2, characters 15-45:
+Error: Unable to locate library Crypto.Compilers.Named.Context.
+
+Command exited with non-zero status 1
+src/Compilers/Named/CompileInterp.vo (real: 0.09, user: 0.04, sys: 0.04, mem: 62676 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/CompileInterp.vo' failed
+make: *** [src/Compilers/Named/CompileInterp.vo] Error 1
+COQC src/Compilers/Named/CompileInterpSideConditions.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/CompileInterpSideConditions.v", line 1, characters 15-45:
+Error: Unable to locate library Crypto.Compilers.Named.Context.
+
+Command exited with non-zero status 1
+src/Compilers/Named/CompileInterpSideConditions.vo (real: 0.09, user: 0.05, sys: 0.03, mem: 62720 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/CompileInterpSideConditions.vo' failed
+make: *** [src/Compilers/Named/CompileInterpSideConditions.vo] Error 1
+COQC src/Compilers/Named/CompileWf.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/CompileWf.v", line 2, characters 15-45:
+Error: Unable to locate library Crypto.Compilers.Named.Context.
+
+Command exited with non-zero status 1
+src/Compilers/Named/CompileWf.vo (real: 0.08, user: 0.04, sys: 0.04, mem: 62728 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/CompileWf.vo' failed
+make: *** [src/Compilers/Named/CompileWf.vo] Error 1
+COQC src/Compilers/Named/Context.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/Context.v", line 2, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Named/Context.vo (real: 0.08, user: 0.07, sys: 0.01, mem: 62664 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/Context.vo' failed
+make: *** [src/Compilers/Named/Context.vo] Error 1
+COQC src/Compilers/Named/ContextDefinitions.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/ContextDefinitions.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Named/ContextDefinitions.vo (real: 0.08, user: 0.04, sys: 0.04, mem: 62672 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/ContextDefinitions.vo' failed
+make: *** [src/Compilers/Named/ContextDefinitions.vo] Error 1
+COQC src/Compilers/Named/ContextOn.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/ContextOn.v", line 2, characters 15-45:
+Error: Unable to locate library Crypto.Compilers.Named.Context.
+
+Command exited with non-zero status 1
+src/Compilers/Named/ContextOn.vo (real: 0.09, user: 0.04, sys: 0.04, mem: 62804 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/ContextOn.vo' failed
+make: *** [src/Compilers/Named/ContextOn.vo] Error 1
+COQC src/Compilers/Named/ContextProperties.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/ContextProperties.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Named/ContextProperties.vo (real: 0.08, user: 0.05, sys: 0.03, mem: 62776 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/ContextProperties.vo' failed
+make: *** [src/Compilers/Named/ContextProperties.vo] Error 1
+COQC src/Compilers/Named/CountLets.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/CountLets.v", line 2, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Named/CountLets.vo (real: 0.09, user: 0.04, sys: 0.04, mem: 62712 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/CountLets.vo' failed
+make: *** [src/Compilers/Named/CountLets.vo] Error 1
+COQC src/Compilers/Named/ExprInversion.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/ExprInversion.v", line 1, characters 15-45:
+Error: Unable to locate library Crypto.Compilers.TypeInversion.
+
+Command exited with non-zero status 1
+src/Compilers/Named/ExprInversion.vo (real: 0.09, user: 0.05, sys: 0.03, mem: 62732 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/ExprInversion.vo' failed
+make: *** [src/Compilers/Named/ExprInversion.vo] Error 1
+COQC src/Compilers/Named/DeadCodeElimination.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/DeadCodeElimination.v", line 3, characters 15-45:
+Error: Unable to locate library Crypto.Compilers.Named.Context.
+
+Command exited with non-zero status 1
+src/Compilers/Named/DeadCodeElimination.vo (real: 0.18, user: 0.12, sys: 0.06, mem: 161180 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/DeadCodeElimination.vo' failed
+make: *** [src/Compilers/Named/DeadCodeElimination.vo] Error 1
+COQC src/Compilers/Named/DeadCodeEliminationInterp.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/DeadCodeEliminationInterp.v", line 2, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Named/DeadCodeEliminationInterp.vo (real: 0.18, user: 0.11, sys: 0.07, mem: 155140 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/DeadCodeEliminationInterp.vo' failed
+make: *** [src/Compilers/Named/DeadCodeEliminationInterp.vo] Error 1
+COQC src/Compilers/Named/CompileProperties.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/CompileProperties.v", line 2, characters 15-44:
+Error: Unable to locate library Crypto.Compilers.Named.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Named/CompileProperties.vo (real: 0.36, user: 0.22, sys: 0.14, mem: 297960 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/CompileProperties.vo' failed
+make: *** [src/Compilers/Named/CompileProperties.vo] Error 1
+COQC src/Compilers/Named/EstablishLiveness.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/EstablishLiveness.v", line 3, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Named/EstablishLiveness.vo (real: 0.17, user: 0.10, sys: 0.07, mem: 148216 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/EstablishLiveness.vo' failed
+make: *** [src/Compilers/Named/EstablishLiveness.vo] Error 1
+COQC src/Compilers/Named/InterpSideConditions.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/InterpSideConditions.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Named/InterpSideConditions.vo (real: 0.08, user: 0.04, sys: 0.03, mem: 62844 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/InterpSideConditions.vo' failed
+make: *** [src/Compilers/Named/InterpSideConditions.vo] Error 1
+COQC src/Compilers/Named/InterpSideConditionsInterp.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/InterpSideConditionsInterp.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Named/InterpSideConditionsInterp.vo (real: 0.08, user: 0.06, sys: 0.02, mem: 62588 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/InterpSideConditionsInterp.vo' failed
+make: *** [src/Compilers/Named/InterpSideConditionsInterp.vo] Error 1
+COQC src/Compilers/Named/GetNames.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/GetNames.v", line 2, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Named/GetNames.vo (real: 0.16, user: 0.10, sys: 0.06, mem: 148248 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/GetNames.vo' failed
+make: *** [src/Compilers/Named/GetNames.vo] Error 1
+COQC src/Compilers/Named/IdContext.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/IdContext.v", line 2, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Named/IdContext.vo (real: 0.16, user: 0.08, sys: 0.07, mem: 147996 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/IdContext.vo' failed
+make: *** [src/Compilers/Named/IdContext.vo] Error 1
+COQC src/Compilers/Named/InterpretToPHOAS.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/InterpretToPHOAS.v", line 1, characters 15-45:
+Error: Unable to locate library Crypto.Compilers.Named.Context.
+
+Command exited with non-zero status 1
+src/Compilers/Named/InterpretToPHOAS.vo (real: 0.08, user: 0.05, sys: 0.02, mem: 62576 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/InterpretToPHOAS.vo' failed
+make: *** [src/Compilers/Named/InterpretToPHOAS.vo] Error 1
+COQC src/Compilers/Named/InterpretToPHOASInterp.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/InterpretToPHOASInterp.v", line 1, characters 15-45:
+Error: Unable to locate library Crypto.Compilers.Named.Context.
+
+Command exited with non-zero status 1
+src/Compilers/Named/InterpretToPHOASInterp.vo (real: 0.08, user: 0.03, sys: 0.05, mem: 62600 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/InterpretToPHOASInterp.vo' failed
+make: *** [src/Compilers/Named/InterpretToPHOASInterp.vo] Error 1
+COQC src/Compilers/Named/InterpretToPHOASWf.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/InterpretToPHOASWf.v", line 1, characters 15-45:
+Error: Unable to locate library Crypto.Compilers.Named.Context.
+
+Command exited with non-zero status 1
+src/Compilers/Named/InterpretToPHOASWf.vo (real: 0.08, user: 0.04, sys: 0.04, mem: 62740 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/InterpretToPHOASWf.vo' failed
+make: *** [src/Compilers/Named/InterpretToPHOASWf.vo] Error 1
+COQC src/Compilers/Named/MapCast.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/MapCast.v", line 2, characters 15-40:
+Error: Unable to locate library Crypto.Compilers.SmartMap.
+
+Command exited with non-zero status 1
+src/Compilers/Named/MapCast.vo (real: 0.08, user: 0.04, sys: 0.03, mem: 62960 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/MapCast.vo' failed
+make: *** [src/Compilers/Named/MapCast.vo] Error 1
+COQC src/Compilers/Named/MapCastInterp.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/MapCastInterp.v", line 3, characters 15-40:
+Error: Unable to locate library Crypto.Compilers.SmartMap.
+
+Command exited with non-zero status 1
+src/Compilers/Named/MapCastInterp.vo (real: 0.09, user: 0.05, sys: 0.03, mem: 65272 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/MapCastInterp.vo' failed
+make: *** [src/Compilers/Named/MapCastInterp.vo] Error 1
+COQC src/Compilers/Named/MapCastWf.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/MapCastWf.v", line 3, characters 15-40:
+Error: Unable to locate library Crypto.Compilers.SmartMap.
+
+Command exited with non-zero status 1
+src/Compilers/Named/MapCastWf.vo (real: 0.09, user: 0.06, sys: 0.03, mem: 65236 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/MapCastWf.vo' failed
+make: *** [src/Compilers/Named/MapCastWf.vo] Error 1
+COQC src/Compilers/Named/MapType.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/MapType.v", line 2, characters 15-40:
+Error: Unable to locate library Crypto.Compilers.SmartMap.
+
+Command exited with non-zero status 1
+src/Compilers/Named/MapType.vo (real: 0.09, user: 0.05, sys: 0.03, mem: 62896 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/MapType.vo' failed
+make: *** [src/Compilers/Named/MapType.vo] Error 1
+COQC src/Compilers/Named/FMapContext.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/FMapContext.v", line 4, characters 15-45:
+Error: Unable to locate library Crypto.Compilers.Named.Context.
+
+Command exited with non-zero status 1
+src/Compilers/Named/FMapContext.vo (real: 0.35, user: 0.25, sys: 0.10, mem: 291440 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/FMapContext.vo' failed
+make: *** [src/Compilers/Named/FMapContext.vo] Error 1
+COQC src/Compilers/Named/RegisterAssign.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/RegisterAssign.v", line 2, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Named/RegisterAssign.vo (real: 0.08, user: 0.05, sys: 0.03, mem: 62572 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/RegisterAssign.vo' failed
+make: *** [src/Compilers/Named/RegisterAssign.vo] Error 1
+COQC src/Compilers/Named/RegisterAssignInterp.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/RegisterAssignInterp.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Named/RegisterAssignInterp.vo (real: 0.08, user: 0.05, sys: 0.02, mem: 62712 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/RegisterAssignInterp.vo' failed
+make: *** [src/Compilers/Named/RegisterAssignInterp.vo] Error 1
+COQC src/Compilers/Named/NameUtil.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/NameUtil.v", line 2, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Named/NameUtil.vo (real: 0.16, user: 0.10, sys: 0.06, mem: 148260 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/NameUtil.vo' failed
+make: *** [src/Compilers/Named/NameUtil.vo] Error 1
+COQC src/Compilers/Named/Syntax.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/Syntax.v", line 2, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Named/Syntax.vo (real: 0.08, user: 0.03, sys: 0.04, mem: 62660 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/Syntax.vo' failed
+make: *** [src/Compilers/Named/Syntax.vo] Error 1
+COQC src/Compilers/Named/SmartMap.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/SmartMap.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Named/SmartMap.vo (real: 0.09, user: 0.05, sys: 0.03, mem: 62704 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/SmartMap.vo' failed
+make: *** [src/Compilers/Named/SmartMap.vo] Error 1
+COQC src/Compilers/Named/Wf.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/Wf.v", line 1, characters 15-40:
+Error: Unable to locate library Crypto.Compilers.SmartMap.
+
+Command exited with non-zero status 1
+src/Compilers/Named/Wf.vo (real: 0.09, user: 0.05, sys: 0.03, mem: 62664 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/Wf.vo' failed
+make: *** [src/Compilers/Named/Wf.vo] Error 1
+COQC src/Compilers/Named/WfFromUnit.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/WfFromUnit.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Named/WfFromUnit.vo (real: 0.09, user: 0.04, sys: 0.04, mem: 62628 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/WfFromUnit.vo' failed
+make: *** [src/Compilers/Named/WfFromUnit.vo] Error 1
+COQC src/Compilers/Named/WeakListContext.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/WeakListContext.v", line 4, characters 15-49:
+Error: Unable to locate library Crypto.Compilers.Named.FMapContext.
+
+Command exited with non-zero status 1
+src/Compilers/Named/WeakListContext.vo (real: 0.18, user: 0.11, sys: 0.07, mem: 159500 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/WeakListContext.vo' failed
+make: *** [src/Compilers/Named/WeakListContext.vo] Error 1
+COQC src/Compilers/Named/NameUtilProperties.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/NameUtilProperties.v", line 4, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Named/NameUtilProperties.vo (real: 0.35, user: 0.25, sys: 0.09, mem: 299588 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/NameUtilProperties.vo' failed
+make: *** [src/Compilers/Named/NameUtilProperties.vo] Error 1
+COQC src/Compilers/Named/PositiveContext.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/PositiveContext.v", line 2, characters 15-49:
+Error: Unable to locate library Crypto.Compilers.Named.FMapContext.
+
+Command exited with non-zero status 1
+src/Compilers/Named/PositiveContext.vo (real: 0.35, user: 0.26, sys: 0.08, mem: 291496 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/PositiveContext.vo' failed
+make: *** [src/Compilers/Named/PositiveContext.vo] Error 1
+COQC src/Compilers/Named/WfInterp.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/WfInterp.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Named/WfInterp.vo (real: 0.08, user: 0.04, sys: 0.04, mem: 62752 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/WfInterp.vo' failed
+make: *** [src/Compilers/Named/WfInterp.vo] Error 1
+COQC src/Compilers/Named/ContextProperties/Proper.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/ContextProperties/Proper.v", line 2, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Named/ContextProperties/Proper.vo (real: 0.09, user: 0.05, sys: 0.03, mem: 69932 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/ContextProperties/Proper.vo' failed
+make: *** [src/Compilers/Named/ContextProperties/Proper.vo] Error 1
+COQC src/Compilers/Named/ContextProperties/SmartMap.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/ContextProperties/SmartMap.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Named/ContextProperties/SmartMap.vo (real: 0.08, user: 0.02, sys: 0.06, mem: 62780 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/ContextProperties/SmartMap.vo' failed
+make: *** [src/Compilers/Named/ContextProperties/SmartMap.vo] Error 1
+COQC src/Compilers/Named/ContextProperties/Tactics.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/ContextProperties/Tactics.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Named/ContextProperties/Tactics.vo (real: 0.09, user: 0.03, sys: 0.05, mem: 62592 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/ContextProperties/Tactics.vo' failed
+make: *** [src/Compilers/Named/ContextProperties/Tactics.vo] Error 1
+COQC src/Compilers/Named/PositiveContext/Defaults.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/PositiveContext/Defaults.v", line 3, characters 15-44:
+Error: Unable to locate library Crypto.Compilers.Named.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Named/PositiveContext/Defaults.vo (real: 0.17, user: 0.10, sys: 0.07, mem: 148536 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/PositiveContext/Defaults.vo' failed
+make: *** [src/Compilers/Named/PositiveContext/Defaults.vo] Error 1
+COQC src/Compilers/Named/PositiveContext/DefaultsProperties.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/PositiveContext/DefaultsProperties.v", line 3, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Named/PositiveContext/DefaultsProperties.vo (real: 0.17, user: 0.08, sys: 0.08, mem: 148528 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/PositiveContext/DefaultsProperties.vo' failed
+make: *** [src/Compilers/Named/PositiveContext/DefaultsProperties.vo] Error 1
+COQC src/Compilers/Z/ArithmeticSimplifierUtil.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/ArithmeticSimplifierUtil.v", line 1, characters 15-40:
+Error: Unable to locate library Crypto.Compilers.Z.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/ArithmeticSimplifierUtil.vo (real: 0.08, user: 0.04, sys: 0.04, mem: 62560 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/ArithmeticSimplifierUtil.vo' failed
+make: *** [src/Compilers/Z/ArithmeticSimplifierUtil.vo] Error 1
+COQC src/Compilers/Named/ContextProperties/NameUtil.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Named/ContextProperties/NameUtil.v", line 2, characters 15-41:
+Error: Unable to locate library Crypto.Util.FixCoqMistakes.
+
+Command exited with non-zero status 1
+src/Compilers/Named/ContextProperties/NameUtil.vo (real: 0.36, user: 0.25, sys: 0.10, mem: 297900 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Named/ContextProperties/NameUtil.vo' failed
+make: *** [src/Compilers/Named/ContextProperties/NameUtil.vo] Error 1
+COQC src/Compilers/Z/ArithmeticSimplifierWf.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/ArithmeticSimplifierWf.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/ArithmeticSimplifierWf.vo (real: 0.09, user: 0.05, sys: 0.03, mem: 62628 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/ArithmeticSimplifierWf.vo' failed
+make: *** [src/Compilers/Z/ArithmeticSimplifierWf.vo] Error 1
+COQC src/Compilers/Z/CNotations.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/CNotations.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/CNotations.vo (real: 0.10, user: 0.06, sys: 0.03, mem: 62912 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/CNotations.vo' failed
+make: *** [src/Compilers/Z/CNotations.vo] Error 1
+COQC src/Compilers/Z/ArithmeticSimplifier.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/ArithmeticSimplifier.v", line 3, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/ArithmeticSimplifier.vo (real: 0.37, user: 0.23, sys: 0.14, mem: 304168 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/ArithmeticSimplifier.vo' failed
+make: *** [src/Compilers/Z/ArithmeticSimplifier.vo] Error 1
+COQC src/Compilers/Z/ArithmeticSimplifierInterp.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/ArithmeticSimplifierInterp.v", line 3, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/ArithmeticSimplifierInterp.vo (real: 0.44, user: 0.33, sys: 0.11, mem: 350520 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/ArithmeticSimplifierInterp.vo' failed
+make: *** [src/Compilers/Z/ArithmeticSimplifierInterp.vo] Error 1
+COQC src/Compilers/Z/CommonSubexpressionEliminationWf.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/CommonSubexpressionEliminationWf.v", line 2, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/CommonSubexpressionEliminationWf.vo (real: 0.08, user: 0.03, sys: 0.05, mem: 62652 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/CommonSubexpressionEliminationWf.vo' failed
+make: *** [src/Compilers/Z/CommonSubexpressionEliminationWf.vo] Error 1
+COQC src/Compilers/Z/CommonSubexpressionEliminationInterp.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/CommonSubexpressionEliminationInterp.v", line 3, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/CommonSubexpressionEliminationInterp.vo (real: 0.17, user: 0.10, sys: 0.06, mem: 148124 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/CommonSubexpressionEliminationInterp.vo' failed
+make: *** [src/Compilers/Z/CommonSubexpressionEliminationInterp.vo] Error 1
+COQC src/Compilers/Z/FoldTypes.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/FoldTypes.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/FoldTypes.vo (real: 0.08, user: 0.04, sys: 0.04, mem: 62560 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/FoldTypes.vo' failed
+make: *** [src/Compilers/Z/FoldTypes.vo] Error 1
+COQC src/Compilers/Z/BinaryNotationConstants.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/BinaryNotationConstants.v", line 2, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/BinaryNotationConstants.vo (real: 0.37, user: 0.23, sys: 0.13, mem: 304436 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/BinaryNotationConstants.vo' failed
+make: *** [src/Compilers/Z/BinaryNotationConstants.vo] Error 1
+COQC src/Compilers/Z/CommonSubexpressionElimination.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/CommonSubexpressionElimination.v", line 5, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/CommonSubexpressionElimination.vo (real: 0.38, user: 0.23, sys: 0.14, mem: 310444 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/CommonSubexpressionElimination.vo' failed
+make: *** [src/Compilers/Z/CommonSubexpressionElimination.vo] Error 1
+COQC src/Compilers/Z/Inline.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/Inline.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/Inline.vo (real: 0.08, user: 0.03, sys: 0.04, mem: 62676 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/Inline.vo' failed
+make: *** [src/Compilers/Z/Inline.vo] Error 1
+COQC src/Compilers/Z/GeneralizeVar.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/GeneralizeVar.v", line 3, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/GeneralizeVar.vo (real: 0.27, user: 0.17, sys: 0.10, mem: 239884 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/GeneralizeVar.vo' failed
+make: *** [src/Compilers/Z/GeneralizeVar.vo] Error 1
+COQC src/Compilers/Z/GeneralizeVarInterp.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/GeneralizeVarInterp.v", line 2, characters 15-34:
+Error: Unable to locate library Crypto.Compilers.Wf.
+
+Command exited with non-zero status 1
+src/Compilers/Z/GeneralizeVarInterp.vo (real: 0.27, user: 0.17, sys: 0.09, mem: 240024 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/GeneralizeVarInterp.vo' failed
+make: *** [src/Compilers/Z/GeneralizeVarInterp.vo] Error 1
+COQC src/Compilers/Z/InlineConstAndOp.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/InlineConstAndOp.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/InlineConstAndOp.vo (real: 0.08, user: 0.04, sys: 0.04, mem: 62676 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/InlineConstAndOp.vo' failed
+make: *** [src/Compilers/Z/InlineConstAndOp.vo] Error 1
+COQC src/Compilers/Z/GeneralizeVarWf.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/GeneralizeVarWf.v", line 2, characters 15-34:
+Error: Unable to locate library Crypto.Compilers.Wf.
+
+Command exited with non-zero status 1
+src/Compilers/Z/GeneralizeVarWf.vo (real: 0.28, user: 0.19, sys: 0.08, mem: 239992 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/GeneralizeVarWf.vo' failed
+make: *** [src/Compilers/Z/GeneralizeVarWf.vo] Error 1
+COQC src/Compilers/Z/InlineConstAndOpByRewrite.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/InlineConstAndOpByRewrite.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/InlineConstAndOpByRewrite.vo (real: 0.08, user: 0.05, sys: 0.03, mem: 62692 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/InlineConstAndOpByRewrite.vo' failed
+make: *** [src/Compilers/Z/InlineConstAndOpByRewrite.vo] Error 1
+COQC src/Compilers/Z/InlineConstAndOpByRewriteInterp.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/InlineConstAndOpByRewriteInterp.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/InlineConstAndOpByRewriteInterp.vo (real: 0.09, user: 0.04, sys: 0.04, mem: 62636 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/InlineConstAndOpByRewriteInterp.vo' failed
+make: *** [src/Compilers/Z/InlineConstAndOpByRewriteInterp.vo] Error 1
+COQC src/Compilers/Z/InlineConstAndOpByRewriteWf.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/InlineConstAndOpByRewriteWf.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/InlineConstAndOpByRewriteWf.vo (real: 0.08, user: 0.05, sys: 0.03, mem: 62672 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/InlineConstAndOpByRewriteWf.vo' failed
+make: *** [src/Compilers/Z/InlineConstAndOpByRewriteWf.vo] Error 1
+COQC src/Compilers/Z/InlineConstAndOpInterp.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/InlineConstAndOpInterp.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/InlineConstAndOpInterp.vo (real: 0.08, user: 0.04, sys: 0.04, mem: 62640 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/InlineConstAndOpInterp.vo' failed
+make: *** [src/Compilers/Z/InlineConstAndOpInterp.vo] Error 1
+COQC src/Compilers/Z/InlineConstAndOpWf.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/InlineConstAndOpWf.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/InlineConstAndOpWf.vo (real: 0.08, user: 0.04, sys: 0.04, mem: 62816 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/InlineConstAndOpWf.vo' failed
+make: *** [src/Compilers/Z/InlineConstAndOpWf.vo] Error 1
+COQC src/Compilers/Z/InlineInterp.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/InlineInterp.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/InlineInterp.vo (real: 0.08, user: 0.05, sys: 0.03, mem: 62640 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/InlineInterp.vo' failed
+make: *** [src/Compilers/Z/InlineInterp.vo] Error 1
+COQC src/Compilers/Z/HexNotationConstants.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/HexNotationConstants.v", line 2, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/HexNotationConstants.vo (real: 0.37, user: 0.24, sys: 0.13, mem: 304204 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/HexNotationConstants.vo' failed
+make: *** [src/Compilers/Z/HexNotationConstants.vo] Error 1
+COQC src/Compilers/Z/InlineWf.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/InlineWf.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/InlineWf.vo (real: 0.08, user: 0.03, sys: 0.05, mem: 62680 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/InlineWf.vo' failed
+make: *** [src/Compilers/Z/InlineWf.vo] Error 1
+COQC src/Compilers/Z/InterpSideConditions.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/InterpSideConditions.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/InterpSideConditions.vo (real: 0.09, user: 0.05, sys: 0.03, mem: 62780 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/InterpSideConditions.vo' failed
+make: *** [src/Compilers/Z/InterpSideConditions.vo] Error 1
+COQC src/Compilers/Z/JavaNotations.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/JavaNotations.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/JavaNotations.vo (real: 0.08, user: 0.04, sys: 0.04, mem: 62776 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/JavaNotations.vo' failed
+make: *** [src/Compilers/Z/JavaNotations.vo] Error 1
+COQC src/Compilers/Z/MapCastByDeBruijnInterp.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/MapCastByDeBruijnInterp.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/MapCastByDeBruijnInterp.vo (real: 0.08, user: 0.05, sys: 0.03, mem: 62576 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/MapCastByDeBruijnInterp.vo' failed
+make: *** [src/Compilers/Z/MapCastByDeBruijnInterp.vo] Error 1
+COQC src/Compilers/Z/MapCastByDeBruijnWf.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/MapCastByDeBruijnWf.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/MapCastByDeBruijnWf.vo (real: 0.09, user: 0.04, sys: 0.04, mem: 62580 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/MapCastByDeBruijnWf.vo' failed
+make: *** [src/Compilers/Z/MapCastByDeBruijnWf.vo] Error 1
+COQC src/Compilers/Z/OpInversion.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/OpInversion.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/OpInversion.vo (real: 0.08, user: 0.06, sys: 0.02, mem: 62624 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/OpInversion.vo' failed
+make: *** [src/Compilers/Z/OpInversion.vo] Error 1
+COQC src/Compilers/Z/RewriteAddToAdcInterp.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/RewriteAddToAdcInterp.v", line 1, characters 15-53:
+Error: Unable to locate library Crypto.Compilers.Named.PositiveContext.
+
+Command exited with non-zero status 1
+src/Compilers/Z/RewriteAddToAdcInterp.vo (real: 0.09, user: 0.05, sys: 0.04, mem: 62600 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/RewriteAddToAdcInterp.vo' failed
+make: *** [src/Compilers/Z/RewriteAddToAdcInterp.vo] Error 1
+COQC src/Compilers/Z/RewriteAddToAdcWf.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/RewriteAddToAdcWf.v", line 1, characters 15-53:
+Error: Unable to locate library Crypto.Compilers.Named.PositiveContext.
+
+Command exited with non-zero status 1
+src/Compilers/Z/RewriteAddToAdcWf.vo (real: 0.09, user: 0.05, sys: 0.03, mem: 62688 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/RewriteAddToAdcWf.vo' failed
+make: *** [src/Compilers/Z/RewriteAddToAdcWf.vo] Error 1
+COQC src/Compilers/Z/TypeInversion.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/TypeInversion.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/TypeInversion.vo (real: 0.08, user: 0.04, sys: 0.04, mem: 62788 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/TypeInversion.vo' failed
+make: *** [src/Compilers/Z/TypeInversion.vo] Error 1
+COQC src/Compilers/Z/MapCastByDeBruijn.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/MapCastByDeBruijn.v", line 2, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/MapCastByDeBruijn.vo (real: 0.37, user: 0.24, sys: 0.12, mem: 304144 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/MapCastByDeBruijn.vo' failed
+make: *** [src/Compilers/Z/MapCastByDeBruijn.vo] Error 1
+COQC src/Compilers/Z/Reify.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/Reify.v", line 2, characters 15-43:
+Error: Unable to locate library Crypto.Compilers.InputSyntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/Reify.vo (real: 0.37, user: 0.24, sys: 0.12, mem: 303860 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/Reify.vo' failed
+make: *** [src/Compilers/Z/Reify.vo] Error 1
+COQC src/Compilers/Z/RewriteAddToAdc.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/RewriteAddToAdc.v", line 2, characters 15-45:
+Error: Unable to locate library Crypto.Compilers.Named.Context.
+
+Command exited with non-zero status 1
+src/Compilers/Z/RewriteAddToAdc.vo (real: 0.36, user: 0.24, sys: 0.12, mem: 303872 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/RewriteAddToAdc.vo' failed
+make: *** [src/Compilers/Z/RewriteAddToAdc.vo] Error 1
+COQC src/Compilers/Z/Bounds/MapCastByDeBruijn.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/Bounds/MapCastByDeBruijn.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/Bounds/MapCastByDeBruijn.vo (real: 0.09, user: 0.05, sys: 0.03, mem: 62672 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/Bounds/MapCastByDeBruijn.vo' failed
+make: *** [src/Compilers/Z/Bounds/MapCastByDeBruijn.vo] Error 1
+COQC src/Compilers/Z/Bounds/MapCastByDeBruijnInterp.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/Bounds/MapCastByDeBruijnInterp.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/Bounds/MapCastByDeBruijnInterp.vo (real: 0.08, user: 0.06, sys: 0.02, mem: 62628 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/Bounds/MapCastByDeBruijnInterp.vo' failed
+make: *** [src/Compilers/Z/Bounds/MapCastByDeBruijnInterp.vo] Error 1
+COQC src/Compilers/Z/Bounds/MapCastByDeBruijnWf.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/Bounds/MapCastByDeBruijnWf.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/Bounds/MapCastByDeBruijnWf.vo (real: 0.08, user: 0.06, sys: 0.02, mem: 62864 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/Bounds/MapCastByDeBruijnWf.vo' failed
+make: *** [src/Compilers/Z/Bounds/MapCastByDeBruijnWf.vo] Error 1
+COQC src/Compilers/Z/Syntax.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/Syntax.v", line 3, characters 15-28:
+Error: Cannot find a physical path bound to logical path matching suffix bbv.
+
+Command exited with non-zero status 1
+src/Compilers/Z/Syntax.vo (real: 0.37, user: 0.26, sys: 0.10, mem: 303948 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/Syntax.vo' failed
+make: *** [src/Compilers/Z/Syntax.vo] Error 1
+COQC src/Compilers/Z/Bounds/Pipeline.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/Bounds/Pipeline.v", line 3, characters 15-54:
+Error: Unable to locate library Crypto.Compilers.Z.Bounds.Pipeline.Glue.
+
+Command exited with non-zero status 1
+src/Compilers/Z/Bounds/Pipeline.vo (real: 0.16, user: 0.10, sys: 0.06, mem: 147924 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/Bounds/Pipeline.vo' failed
+make: *** [src/Compilers/Z/Bounds/Pipeline.vo] Error 1
+COQC src/Compilers/Z/Bounds/Interpretation.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/Bounds/Interpretation.v", line 2, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/Bounds/Interpretation.vo (real: 0.37, user: 0.23, sys: 0.13, mem: 304212 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/Bounds/Interpretation.vo' failed
+make: *** [src/Compilers/Z/Bounds/Interpretation.vo] Error 1
+COQC src/Compilers/Z/Bounds/Relax.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/Bounds/Relax.v", line 4, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/Bounds/Relax.vo (real: 0.37, user: 0.26, sys: 0.10, mem: 304696 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/Bounds/Relax.vo' failed
+make: *** [src/Compilers/Z/Bounds/Relax.vo] Error 1
+COQC src/Compilers/Z/Bounds/RoundUpLemmas.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/Bounds/RoundUpLemmas.v", line 2, characters 15-55:
+Error: Unable to locate library Crypto.Compilers.Z.Bounds.Interpretation.
+
+Command exited with non-zero status 1
+src/Compilers/Z/Bounds/RoundUpLemmas.vo (real: 0.36, user: 0.28, sys: 0.07, mem: 297928 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/Bounds/RoundUpLemmas.vo' failed
+make: *** [src/Compilers/Z/Bounds/RoundUpLemmas.vo] Error 1
+COQC src/Compilers/Z/Bounds/Pipeline/Definition.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/Bounds/Pipeline/Definition.v", line 2, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/Bounds/Pipeline/Definition.vo (real: 0.09, user: 0.04, sys: 0.04, mem: 62748 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/Bounds/Pipeline/Definition.vo' failed
+make: *** [src/Compilers/Z/Bounds/Pipeline/Definition.vo] Error 1
+COQC src/Compilers/Z/Bounds/Pipeline/Glue.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/Bounds/Pipeline/Glue.v", line 4, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/Bounds/Pipeline/Glue.vo (real: 0.08, user: 0.05, sys: 0.03, mem: 62776 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/Bounds/Pipeline/Glue.vo' failed
+make: *** [src/Compilers/Z/Bounds/Pipeline/Glue.vo] Error 1
+COQC src/Compilers/Z/Bounds/InterpretationLemmas/IsBoundedBy.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/Bounds/InterpretationLemmas/IsBoundedBy.v", line 4, characters 15-40:
+Error: Unable to locate library Crypto.Compilers.Z.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/Bounds/InterpretationLemmas/IsBoundedBy.vo (real: 0.45, user: 0.31, sys: 0.13, mem: 350560 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/Bounds/InterpretationLemmas/IsBoundedBy.vo' failed
+make: *** [src/Compilers/Z/Bounds/InterpretationLemmas/IsBoundedBy.vo] Error 1
+COQC src/Compilers/Z/Bounds/InterpretationLemmas/PullCast.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/Bounds/InterpretationLemmas/PullCast.v", line 3, characters 15-40:
+Error: Unable to locate library Crypto.Compilers.Z.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/Bounds/InterpretationLemmas/PullCast.vo (real: 0.44, user: 0.33, sys: 0.10, mem: 350092 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/Bounds/InterpretationLemmas/PullCast.vo' failed
+make: *** [src/Compilers/Z/Bounds/InterpretationLemmas/PullCast.vo] Error 1
+COQC src/Compilers/Z/Bounds/Pipeline/OutputType.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/Bounds/Pipeline/OutputType.v", line 4, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/Bounds/Pipeline/OutputType.vo (real: 0.08, user: 0.04, sys: 0.03, mem: 62696 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/Bounds/Pipeline/OutputType.vo' failed
+make: *** [src/Compilers/Z/Bounds/Pipeline/OutputType.vo] Error 1
+COQC src/Compilers/Z/Bounds/InterpretationLemmas/Tactics.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/Bounds/InterpretationLemmas/Tactics.v", line 3, characters 15-55:
+Error: Unable to locate library Crypto.Compilers.Z.Bounds.Interpretation.
+
+Command exited with non-zero status 1
+src/Compilers/Z/Bounds/InterpretationLemmas/Tactics.vo (real: 0.44, user: 0.32, sys: 0.11, mem: 350492 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/Bounds/InterpretationLemmas/Tactics.vo' failed
+make: *** [src/Compilers/Z/Bounds/InterpretationLemmas/Tactics.vo] Error 1
+COQC src/Compilers/Z/Named/DeadCodeElimination.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/Named/DeadCodeElimination.v", line 2, characters 15-45:
+Error: Unable to locate library Crypto.Compilers.Named.Context.
+
+Command exited with non-zero status 1
+src/Compilers/Z/Named/DeadCodeElimination.vo (real: 0.19, user: 0.12, sys: 0.07, mem: 155140 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/Named/DeadCodeElimination.vo' failed
+make: *** [src/Compilers/Z/Named/DeadCodeElimination.vo] Error 1
+COQC src/Compilers/Z/Named/DeadCodeEliminationInterp.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/Named/DeadCodeEliminationInterp.v", line 2, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/Named/DeadCodeEliminationInterp.vo (real: 0.17, user: 0.08, sys: 0.09, mem: 155056 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/Named/DeadCodeEliminationInterp.vo' failed
+make: *** [src/Compilers/Z/Named/DeadCodeEliminationInterp.vo] Error 1
+COQC src/Compilers/Z/Bounds/Pipeline/ReflectiveTactics.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/Bounds/Pipeline/ReflectiveTactics.v", line 13, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/Bounds/Pipeline/ReflectiveTactics.vo (real: 0.37, user: 0.23, sys: 0.13, mem: 304128 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/Bounds/Pipeline/ReflectiveTactics.vo' failed
+make: *** [src/Compilers/Z/Bounds/Pipeline/ReflectiveTactics.vo] Error 1
+COQC src/Compilers/Z/Named/RewriteAddToAdc.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/Named/RewriteAddToAdc.v", line 2, characters 15-45:
+Error: Unable to locate library Crypto.Compilers.Named.Context.
+
+Command exited with non-zero status 1
+src/Compilers/Z/Named/RewriteAddToAdc.vo (real: 0.38, user: 0.26, sys: 0.11, mem: 303908 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/Named/RewriteAddToAdc.vo' failed
+make: *** [src/Compilers/Z/Named/RewriteAddToAdc.vo] Error 1
+COQC src/Compilers/ZExtended/InlineConstAndOp.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/ZExtended/InlineConstAndOp.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/ZExtended/InlineConstAndOp.vo (real: 0.08, user: 0.05, sys: 0.03, mem: 62680 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/ZExtended/InlineConstAndOp.vo' failed
+make: *** [src/Compilers/ZExtended/InlineConstAndOp.vo] Error 1
+COQC src/Compilers/Z/Named/RewriteAddToAdcInterp.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/Named/RewriteAddToAdcInterp.v", line 2, characters 15-45:
+Error: Unable to locate library Crypto.Compilers.Named.Context.
+
+Command exited with non-zero status 1
+src/Compilers/Z/Named/RewriteAddToAdcInterp.vo (real: 0.37, user: 0.24, sys: 0.12, mem: 304348 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/Named/RewriteAddToAdcInterp.vo' failed
+make: *** [src/Compilers/Z/Named/RewriteAddToAdcInterp.vo] Error 1
+COQC src/Compilers/ZExtended/InlineConstAndOpByRewrite.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/ZExtended/InlineConstAndOpByRewrite.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/ZExtended/InlineConstAndOpByRewrite.vo (real: 0.08, user: 0.02, sys: 0.06, mem: 62768 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/ZExtended/InlineConstAndOpByRewrite.vo' failed
+make: *** [src/Compilers/ZExtended/InlineConstAndOpByRewrite.vo] Error 1
+COQC src/Compilers/ZExtended/InlineConstAndOpByRewriteInterp.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/ZExtended/InlineConstAndOpByRewriteInterp.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/ZExtended/InlineConstAndOpByRewriteInterp.vo (real: 0.08, user: 0.04, sys: 0.03, mem: 62688 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/ZExtended/InlineConstAndOpByRewriteInterp.vo' failed
+make: *** [src/Compilers/ZExtended/InlineConstAndOpByRewriteInterp.vo] Error 1
+COQC src/Compilers/ZExtended/InlineConstAndOpByRewriteWf.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/ZExtended/InlineConstAndOpByRewriteWf.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/ZExtended/InlineConstAndOpByRewriteWf.vo (real: 0.08, user: 0.05, sys: 0.03, mem: 62796 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/ZExtended/InlineConstAndOpByRewriteWf.vo' failed
+make: *** [src/Compilers/ZExtended/InlineConstAndOpByRewriteWf.vo] Error 1
+COQC src/Compilers/Z/Syntax/Equality.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/Syntax/Equality.v", line 2, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/Syntax/Equality.vo (real: 0.38, user: 0.26, sys: 0.11, mem: 303996 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/Syntax/Equality.vo' failed
+make: *** [src/Compilers/Z/Syntax/Equality.vo] Error 1
+COQC src/Compilers/ZExtended/InlineConstAndOpInterp.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/ZExtended/InlineConstAndOpInterp.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/ZExtended/InlineConstAndOpInterp.vo (real: 0.08, user: 0.04, sys: 0.03, mem: 62692 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/ZExtended/InlineConstAndOpInterp.vo' failed
+make: *** [src/Compilers/ZExtended/InlineConstAndOpInterp.vo] Error 1
+COQC src/Compilers/ZExtended/InlineConstAndOpWf.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/ZExtended/InlineConstAndOpWf.v", line 1, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/ZExtended/InlineConstAndOpWf.vo (real: 0.08, user: 0.04, sys: 0.03, mem: 62876 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/ZExtended/InlineConstAndOpWf.vo' failed
+make: *** [src/Compilers/ZExtended/InlineConstAndOpWf.vo] Error 1
+COQC src/Compilers/Z/Syntax/Util.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/Z/Syntax/Util.v", line 3, characters 15-38:
+Error: Unable to locate library Crypto.Compilers.Syntax.
+
+Command exited with non-zero status 1
+src/Compilers/Z/Syntax/Util.vo (real: 0.43, user: 0.28, sys: 0.15, mem: 338576 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/Z/Syntax/Util.vo' failed
+make: *** [src/Compilers/Z/Syntax/Util.vo] Error 1
+COQC src/Compilers/ZExtended/Syntax/Util.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/ZExtended/Syntax/Util.v", line 1, characters 15-40:
+Error: Unable to locate library Crypto.Compilers.SmartMap.
+
+Command exited with non-zero status 1
+src/Compilers/ZExtended/Syntax/Util.vo (real: 0.08, user: 0.06, sys: 0.02, mem: 62684 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/ZExtended/Syntax/Util.vo' failed
+make: *** [src/Compilers/ZExtended/Syntax/Util.vo] Error 1
+COQC src/Curves/Edwards/AffineProofs.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Curves/Edwards/AffineProofs.v", line 1, characters 15-47:
+Error: Unable to locate library Crypto.Spec.CompleteEdwardsCurve.
+
+Command exited with non-zero status 1
+src/Curves/Edwards/AffineProofs.vo (real: 0.09, user: 0.05, sys: 0.03, mem: 62720 ko)
+Makefile.coq:656: recipe for target 'src/Curves/Edwards/AffineProofs.vo' failed
+make: *** [src/Curves/Edwards/AffineProofs.vo] Error 1
+COQC src/Curves/Edwards/Pre.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Curves/Edwards/Pre.v", line 1, characters 65-86:
+Error: Unable to locate library Crypto.Util.Relations.
+
+Command exited with non-zero status 1
+src/Curves/Edwards/Pre.vo (real: 0.09, user: 0.05, sys: 0.04, mem: 69916 ko)
+Makefile.coq:656: recipe for target 'src/Curves/Edwards/Pre.vo' failed
+make: *** [src/Curves/Edwards/Pre.vo] Error 1
+COQC src/Compilers/ZExtended/MapBaseType.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/ZExtended/MapBaseType.v", line 2, characters 15-40:
+Error: Unable to locate library Crypto.Compilers.SmartMap.
+
+Command exited with non-zero status 1
+src/Compilers/ZExtended/MapBaseType.vo (real: 0.20, user: 0.12, sys: 0.07, mem: 175720 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/ZExtended/MapBaseType.vo' failed
+make: *** [src/Compilers/ZExtended/MapBaseType.vo] Error 1
+COQC src/Curves/Edwards/XYZT/Precomputed.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Curves/Edwards/XYZT/Precomputed.v", line 1, characters 15-36:
+Error: Unable to locate library Crypto.Util.Decidable.
+
+Command exited with non-zero status 1
+src/Curves/Edwards/XYZT/Precomputed.vo (real: 0.08, user: 0.04, sys: 0.04, mem: 62764 ko)
+Makefile.coq:656: recipe for target 'src/Curves/Edwards/XYZT/Precomputed.vo' failed
+make: *** [src/Curves/Edwards/XYZT/Precomputed.vo] Error 1
+COQC src/Curves/Edwards/XYZT/Basic.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Curves/Edwards/XYZT/Basic.v", line 3, characters 15-47:
+Error: Unable to locate library Crypto.Spec.CompleteEdwardsCurve.
+
+Command exited with non-zero status 1
+src/Curves/Edwards/XYZT/Basic.vo (real: 0.09, user: 0.05, sys: 0.04, mem: 69940 ko)
+Makefile.coq:656: recipe for target 'src/Curves/Edwards/XYZT/Basic.vo' failed
+make: *** [src/Curves/Edwards/XYZT/Basic.vo] Error 1
+COQC src/Curves/Montgomery/Affine.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Curves/Montgomery/Affine.v", line 2, characters 15-35:
+Error: Unable to locate library Crypto.Algebra.Field.
+
+Command exited with non-zero status 1
+src/Curves/Montgomery/Affine.vo (real: 0.09, user: 0.04, sys: 0.04, mem: 64224 ko)
+Makefile.coq:656: recipe for target 'src/Curves/Montgomery/Affine.vo' failed
+make: *** [src/Curves/Montgomery/Affine.vo] Error 1
+COQC src/Curves/Montgomery/AffineInstances.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Curves/Montgomery/AffineInstances.v", line 2, characters 15-35:
+Error: Unable to locate library Crypto.Algebra.Field.
+
+Command exited with non-zero status 1
+src/Curves/Montgomery/AffineInstances.vo (real: 0.08, user: 0.06, sys: 0.02, mem: 64356 ko)
+Makefile.coq:656: recipe for target 'src/Curves/Montgomery/AffineInstances.vo' failed
+make: *** [src/Curves/Montgomery/AffineInstances.vo] Error 1
+COQC src/Curves/Montgomery/AffineProofs.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Curves/Montgomery/AffineProofs.v", line 2, characters 15-35:
+Error: Unable to locate library Crypto.Algebra.Field.
+
+Command exited with non-zero status 1
+src/Curves/Montgomery/AffineProofs.vo (real: 0.09, user: 0.03, sys: 0.05, mem: 64400 ko)
+Makefile.coq:656: recipe for target 'src/Curves/Montgomery/AffineProofs.vo' failed
+make: *** [src/Curves/Montgomery/AffineProofs.vo] Error 1
+COQC src/Curves/Montgomery/XZProofs.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Curves/Montgomery/XZProofs.v", line 1, characters 15-35:
+Error: Unable to locate library Crypto.Algebra.Field.
+
+Command exited with non-zero status 1
+src/Curves/Montgomery/XZProofs.vo (real: 0.08, user: 0.03, sys: 0.05, mem: 62592 ko)
+Makefile.coq:656: recipe for target 'src/Curves/Montgomery/XZProofs.vo' failed
+make: *** [src/Curves/Montgomery/XZProofs.vo] Error 1
+COQC src/Curves/Weierstrass/Affine.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Curves/Weierstrass/Affine.v", line 1, characters 15-43:
+Error: Unable to locate library Crypto.Spec.WeierstrassCurve.
+
+Command exited with non-zero status 1
+src/Curves/Weierstrass/Affine.vo (real: 0.08, user: 0.05, sys: 0.02, mem: 62632 ko)
+Makefile.coq:656: recipe for target 'src/Curves/Weierstrass/Affine.vo' failed
+make: *** [src/Curves/Weierstrass/Affine.vo] Error 1
+COQC src/Compilers/ZExtended/Syntax.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Compilers/ZExtended/Syntax.v", line 3, characters 15-32:
+Error: Unable to locate library Crypto.Util.Curry.
+
+Command exited with non-zero status 1
+src/Compilers/ZExtended/Syntax.vo (real: 0.37, user: 0.23, sys: 0.13, mem: 304204 ko)
+Makefile.coq:656: recipe for target 'src/Compilers/ZExtended/Syntax.vo' failed
+make: *** [src/Compilers/ZExtended/Syntax.vo] Error 1
+COQC src/Curves/Weierstrass/AffineProofs.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Curves/Weierstrass/AffineProofs.v", line 3, characters 15-43:
+Error: Unable to locate library Crypto.Spec.WeierstrassCurve.
+
+Command exited with non-zero status 1
+src/Curves/Weierstrass/AffineProofs.vo (real: 0.09, user: 0.04, sys: 0.04, mem: 70444 ko)
+Makefile.coq:656: recipe for target 'src/Curves/Weierstrass/AffineProofs.vo' failed
+make: *** [src/Curves/Weierstrass/AffineProofs.vo] Error 1
+COQC src/Curves/Montgomery/XZ.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Curves/Montgomery/XZ.v", line 3, characters 15-35:
+Error: Unable to locate library Crypto.Algebra.Field.
+
+Command exited with non-zero status 1
+src/Curves/Montgomery/XZ.vo (real: 0.20, user: 0.12, sys: 0.08, mem: 175752 ko)
+Makefile.coq:656: recipe for target 'src/Curves/Montgomery/XZ.vo' failed
+make: *** [src/Curves/Montgomery/XZ.vo] Error 1
+COQC src/Curves/Weierstrass/Projective.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Curves/Weierstrass/Projective.v", line 1, characters 15-43:
+Error: Unable to locate library Crypto.Spec.WeierstrassCurve.
+
+Command exited with non-zero status 1
+src/Curves/Weierstrass/Projective.vo (real: 0.08, user: 0.03, sys: 0.05, mem: 62656 ko)
+Makefile.coq:656: recipe for target 'src/Curves/Weierstrass/Projective.vo' failed
+make: *** [src/Curves/Weierstrass/Projective.vo] Error 1
+COQC src/Curves/Weierstrass/Jacobian.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Curves/Weierstrass/Jacobian.v", line 3, characters 15-43:
+Error: Unable to locate library Crypto.Spec.WeierstrassCurve.
+
+Command exited with non-zero status 1
+src/Curves/Weierstrass/Jacobian.vo (real: 0.10, user: 0.04, sys: 0.05, mem: 70132 ko)
+Makefile.coq:656: recipe for target 'src/Curves/Weierstrass/Jacobian.vo' failed
+make: *** [src/Curves/Weierstrass/Jacobian.vo] Error 1
+COQC src/Experiments/PartialEvaluationWithLetIn.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Experiments/PartialEvaluationWithLetIn.v", line 2, characters 15-33:
+Error: Unable to locate library Crypto.Util.Option.
+
+Command exited with non-zero status 1
+src/Experiments/PartialEvaluationWithLetIn.vo (real: 0.17, user: 0.11, sys: 0.06, mem: 148360 ko)
+Makefile.coq:656: recipe for target 'src/Experiments/PartialEvaluationWithLetIn.vo' failed
+make: *** [src/Experiments/PartialEvaluationWithLetIn.vo] Error 1
+COQC src/Experiments/NewPipeline/AbstractInterpretation.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Experiments/NewPipeline/AbstractInterpretation.v", line 2, characters 15-35:
+Error: Unable to locate library Crypto.Util.ListUtil.
+
+Command exited with non-zero status 1
+src/Experiments/NewPipeline/AbstractInterpretation.vo (real: 0.36, user: 0.21, sys: 0.14, mem: 304036 ko)
+Makefile.coq:656: recipe for target 'src/Experiments/NewPipeline/AbstractInterpretation.vo' failed
+make: *** [src/Experiments/NewPipeline/AbstractInterpretation.vo] Error 1
+COQC src/Experiments/NewPipeline/AbstractInterpretationWf.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Experiments/NewPipeline/AbstractInterpretationWf.v", line 6, characters 15-33:
+Error: Unable to locate library Crypto.Util.ZRange.
+
+Command exited with non-zero status 1
+src/Experiments/NewPipeline/AbstractInterpretationWf.vo (real: 0.43, user: 0.28, sys: 0.14, mem: 348092 ko)
+Makefile.coq:656: recipe for target 'src/Experiments/NewPipeline/AbstractInterpretationWf.vo' failed
+make: *** [src/Experiments/NewPipeline/AbstractInterpretationWf.vo] Error 1
+COQC src/Experiments/NewPipeline/AbstractInterpretationProofs.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Experiments/NewPipeline/AbstractInterpretationProofs.v", line 6, characters 15-33:
+Error: Unable to locate library Crypto.Util.ZRange.
+
+Command exited with non-zero status 1
+src/Experiments/NewPipeline/AbstractInterpretationProofs.vo (real: 0.45, user: 0.31, sys: 0.13, mem: 348032 ko)
+Makefile.coq:656: recipe for target 'src/Experiments/NewPipeline/AbstractInterpretationProofs.vo' failed
+make: *** [src/Experiments/NewPipeline/AbstractInterpretationProofs.vo] Error 1
+COQC src/Experiments/NewPipeline/AbstractInterpretationZRangeProofs.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Experiments/NewPipeline/AbstractInterpretationZRangeProofs.v", line 6, characters 15-33:
+Error: Unable to locate library Crypto.Util.ZRange.
+
+Command exited with non-zero status 1
+src/Experiments/NewPipeline/AbstractInterpretationZRangeProofs.vo (real: 0.44, user: 0.31, sys: 0.13, mem: 348308 ko)
+Makefile.coq:656: recipe for target 'src/Experiments/NewPipeline/AbstractInterpretationZRangeProofs.vo' failed
+make: *** [src/Experiments/NewPipeline/AbstractInterpretationZRangeProofs.vo] Error 1
+COQC src/Experiments/SimplyTypedArithmetic.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Experiments/SimplyTypedArithmetic.v", line 7, characters 15-45:
+Error: Unable to locate library Crypto.Util.Tactics.UniquePose.
+
+Command exited with non-zero status 1
+src/Experiments/SimplyTypedArithmetic.vo (real: 0.83, user: 0.64, sys: 0.18, mem: 496608 ko)
+Makefile.coq:656: recipe for target 'src/Experiments/SimplyTypedArithmetic.vo' failed
+make: *** [src/Experiments/SimplyTypedArithmetic.vo] Error 1
+COQC src/Experiments/NewPipeline/BoundsPipeline.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Experiments/NewPipeline/BoundsPipeline.v", line 9, characters 15-37:
+Error: Unable to locate library Crypto.Util.ZUtil.Log2.
+
+Command exited with non-zero status 1
+src/Experiments/NewPipeline/BoundsPipeline.vo (real: 0.37, user: 0.23, sys: 0.13, mem: 310120 ko)
+Makefile.coq:656: recipe for target 'src/Experiments/NewPipeline/BoundsPipeline.vo' failed
+make: *** [src/Experiments/NewPipeline/BoundsPipeline.vo] Error 1
+COQC src/Experiments/NewPipeline/CLI.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Experiments/NewPipeline/CLI.v", line 6, characters 8-34:
+Error: Unable to locate library Crypto.Util.Strings.String.
+
+Command exited with non-zero status 1
+src/Experiments/NewPipeline/CLI.vo (real: 0.38, user: 0.28, sys: 0.09, mem: 319568 ko)
+Makefile.coq:656: recipe for target 'src/Experiments/NewPipeline/CLI.vo' failed
+make: *** [src/Experiments/NewPipeline/CLI.vo] Error 1
+COQC src/Experiments/NewPipeline/Arithmetic.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Experiments/NewPipeline/Arithmetic.v", line 7, characters 15-45:
+Error: Unable to locate library Crypto.Util.Tactics.UniquePose.
+
+Command exited with non-zero status 1
+src/Experiments/NewPipeline/Arithmetic.vo (real: 0.58, user: 0.47, sys: 0.11, mem: 437256 ko)
+Makefile.coq:656: recipe for target 'src/Experiments/NewPipeline/Arithmetic.vo' failed
+make: *** [src/Experiments/NewPipeline/Arithmetic.vo] Error 1
+COQC src/Experiments/NewPipeline/COperationSpecifications.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Experiments/NewPipeline/COperationSpecifications.v", line 5, characters 15-33:
+Error: Unable to locate library Crypto.Util.ZRange.
+
+Command exited with non-zero status 1
+src/Experiments/NewPipeline/COperationSpecifications.vo (real: 0.43, user: 0.28, sys: 0.14, mem: 339600 ko)
+Makefile.coq:656: recipe for target 'src/Experiments/NewPipeline/COperationSpecifications.vo' failed
+make: *** [src/Experiments/NewPipeline/COperationSpecifications.vo] Error 1
+COQC src/Experiments/NewPipeline/CompilersTestCases.v
+Warning: Cannot open bbv/src/bbv [cannot-open-path,filesystem]
+File "./src/Experiments/NewPipeline/CompilersTestCases.v", line 3, characters 15-33:
+Error: Unable to locate library Crypto.Util.ZRange.
+
+Command exited with non-zero status 1
+src/Experiments/NewPipeline/CompilersTestCases.vo (real: 0.37, user: 0.26, sys: 0.10, mem: 304376 ko)
+Makefile.coq:656: recipe for target 'src/Experiments/NewPipeline/CompilersTestCases.vo' failed
+make: *** [src/Experiments/NewPipeline/CompilersTestCases.vo] Error 1
