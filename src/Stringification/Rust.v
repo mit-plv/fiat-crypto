@@ -231,13 +231,31 @@ Module Rust.
     := fun idc '(t1, t2)
        => ToString.int.union t1 t2.
 
+  (* Does the binary operation commute with (-- mod 2^bw)? *)
+  Definition bin_op_commutes_with_mod_pow2 (idc : IR.Z_binop)
+    := match idc with
+       | IR.Z_land
+       | IR.Z_lor
+       | IR.Z_add
+       | IR.Z_mul
+       | IR.Z_sub
+         => true
+       end.
+
   Definition Rust_bin_op_casts
     : IR.Z_binop -> option ToString.int.type -> ToString.int.type * ToString.int.type -> option ToString.int.type * (option ToString.int.type * option ToString.int.type)
     := fun idc desired_type '(t1, t2)
        => match desired_type with
           | Some desired_type
             => let ct := ToString.int.union t1 t2 in
-               let desired_type' := Some (ToString.int.union ct desired_type) in
+              let desired_type' := Some (ToString.int.union ct desired_type) in
+              if bin_op_commutes_with_mod_pow2 idc
+              then
+                (* these operations commute with mod under modulo, so we just *)
+                (* pre-cast them to their upper bound with the desired type   *)
+                (None, (desired_type', desired_type'))
+              else
+
                (Some desired_type,
                 (get_Zcast_up_if_needed desired_type' (Some t1),
                  get_Zcast_up_if_needed desired_type' (Some t2)))
