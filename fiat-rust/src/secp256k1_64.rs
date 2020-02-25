@@ -37,9 +37,9 @@ pub type fiat_secp256k1_i2 = i8;
 #[inline]
 pub fn fiat_secp256k1_addcarryx_u64(out1: &mut u64, out2: &mut fiat_secp256k1_u1, arg1: fiat_secp256k1_u1, arg2: u64, arg3: u64) -> () {
   let x1: u128 = (((arg1 as u128) + (arg2 as u128)) + (arg3 as u128));
-  let x2: u64 = ((x1 & (0xffffffffffffffff as u128)) as u64);
+  let x2: u128 = (x1 & (0xffffffffffffffff as u128));
   let x3: fiat_secp256k1_u1 = ((x1 >> 64) as fiat_secp256k1_u1);
-  *out1 = x2;
+  *out1 = (x2 as u64);
   *out2 = x3;
 }
 
@@ -61,8 +61,8 @@ pub fn fiat_secp256k1_addcarryx_u64(out1: &mut u64, out2: &mut fiat_secp256k1_u1
 pub fn fiat_secp256k1_subborrowx_u64(out1: &mut u64, out2: &mut fiat_secp256k1_u1, arg1: fiat_secp256k1_u1, arg2: u64, arg3: u64) -> () {
   let x1: i128 = (((arg2 as i128) - (arg1 as i128)) - (arg3 as i128));
   let x2: fiat_secp256k1_i1 = ((x1 >> 64) as fiat_secp256k1_i1);
-  let x3: u64 = ((x1 & (0xffffffffffffffff as i128)) as u64);
-  *out1 = x3;
+  let x3: i128 = (x1 & (0xffffffffffffffff as i128));
+  *out1 = (x3 as u64);
   *out2 = (((0x0 as fiat_secp256k1_i2) - (x2 as fiat_secp256k1_i2)) as fiat_secp256k1_u1);
 }
 
@@ -82,9 +82,9 @@ pub fn fiat_secp256k1_subborrowx_u64(out1: &mut u64, out2: &mut fiat_secp256k1_u
 #[inline]
 pub fn fiat_secp256k1_mulx_u64(out1: &mut u64, out2: &mut u64, arg1: u64, arg2: u64) -> () {
   let x1: u128 = ((arg1 as u128) * (arg2 as u128));
-  let x2: u64 = ((x1 & (0xffffffffffffffff as u128)) as u64);
+  let x2: u128 = (x1 & (0xffffffffffffffff as u128));
   let x3: u64 = ((x1 >> 64) as u64);
-  *out1 = x2;
+  *out1 = (x2 as u64);
   *out2 = x3;
 }
 
@@ -103,8 +103,8 @@ pub fn fiat_secp256k1_mulx_u64(out1: &mut u64, out2: &mut u64, arg1: u64, arg2: 
 #[inline]
 pub fn fiat_secp256k1_cmovznz_u64(out1: &mut u64, arg1: fiat_secp256k1_u1, arg2: u64, arg3: u64) -> () {
   let x1: fiat_secp256k1_u1 = (!(!arg1));
-  let x2: u64 = ((((((0x0 as fiat_secp256k1_i2) - (x1 as fiat_secp256k1_i2)) as fiat_secp256k1_i1) as i128) & (0xffffffffffffffff as i128)) as u64);
-  let x3: u64 = ((x2 & arg3) | ((!x2) & arg2));
+  let x2: i128 = ((((0x0 as fiat_secp256k1_i2) - (x1 as fiat_secp256k1_i2)) as i128) & (0xffffffffffffffff as i128));
+  let x3: u64 = (((x2 as u64) & arg3) | ((!(x2 as u64)) & arg2));
   *out1 = x3;
 }
 
@@ -1337,95 +1337,95 @@ pub fn fiat_secp256k1_to_bytes(out1: &mut [u8; 32], arg1: &[u64; 4]) -> () {
   let x3: u64 = (arg1[1]);
   let x4: u64 = (arg1[0]);
   let x5: u64 = (x4 >> 8);
-  let x6: u8 = ((x4 & (0xff as u64)) as u8);
+  let x6: u64 = (x4 & (0xff as u64));
   let x7: u64 = (x5 >> 8);
-  let x8: u8 = ((x5 & (0xff as u64)) as u8);
+  let x8: u64 = (x5 & (0xff as u64));
   let x9: u64 = (x7 >> 8);
-  let x10: u8 = ((x7 & (0xff as u64)) as u8);
+  let x10: u64 = (x7 & (0xff as u64));
   let x11: u64 = (x9 >> 8);
-  let x12: u8 = ((x9 & (0xff as u64)) as u8);
+  let x12: u64 = (x9 & (0xff as u64));
   let x13: u64 = (x11 >> 8);
-  let x14: u8 = ((x11 & (0xff as u64)) as u8);
+  let x14: u64 = (x11 & (0xff as u64));
   let x15: u64 = (x13 >> 8);
-  let x16: u8 = ((x13 & (0xff as u64)) as u8);
+  let x16: u64 = (x13 & (0xff as u64));
   let x17: u8 = ((x15 >> 8) as u8);
-  let x18: u8 = ((x15 & (0xff as u64)) as u8);
+  let x18: u64 = (x15 & (0xff as u64));
   let x19: u8 = (x17 & 0xff);
   let x20: u64 = (x3 >> 8);
-  let x21: u8 = ((x3 & (0xff as u64)) as u8);
+  let x21: u64 = (x3 & (0xff as u64));
   let x22: u64 = (x20 >> 8);
-  let x23: u8 = ((x20 & (0xff as u64)) as u8);
+  let x23: u64 = (x20 & (0xff as u64));
   let x24: u64 = (x22 >> 8);
-  let x25: u8 = ((x22 & (0xff as u64)) as u8);
+  let x25: u64 = (x22 & (0xff as u64));
   let x26: u64 = (x24 >> 8);
-  let x27: u8 = ((x24 & (0xff as u64)) as u8);
+  let x27: u64 = (x24 & (0xff as u64));
   let x28: u64 = (x26 >> 8);
-  let x29: u8 = ((x26 & (0xff as u64)) as u8);
+  let x29: u64 = (x26 & (0xff as u64));
   let x30: u64 = (x28 >> 8);
-  let x31: u8 = ((x28 & (0xff as u64)) as u8);
+  let x31: u64 = (x28 & (0xff as u64));
   let x32: u8 = ((x30 >> 8) as u8);
-  let x33: u8 = ((x30 & (0xff as u64)) as u8);
+  let x33: u64 = (x30 & (0xff as u64));
   let x34: u8 = (x32 & 0xff);
   let x35: u64 = (x2 >> 8);
-  let x36: u8 = ((x2 & (0xff as u64)) as u8);
+  let x36: u64 = (x2 & (0xff as u64));
   let x37: u64 = (x35 >> 8);
-  let x38: u8 = ((x35 & (0xff as u64)) as u8);
+  let x38: u64 = (x35 & (0xff as u64));
   let x39: u64 = (x37 >> 8);
-  let x40: u8 = ((x37 & (0xff as u64)) as u8);
+  let x40: u64 = (x37 & (0xff as u64));
   let x41: u64 = (x39 >> 8);
-  let x42: u8 = ((x39 & (0xff as u64)) as u8);
+  let x42: u64 = (x39 & (0xff as u64));
   let x43: u64 = (x41 >> 8);
-  let x44: u8 = ((x41 & (0xff as u64)) as u8);
+  let x44: u64 = (x41 & (0xff as u64));
   let x45: u64 = (x43 >> 8);
-  let x46: u8 = ((x43 & (0xff as u64)) as u8);
+  let x46: u64 = (x43 & (0xff as u64));
   let x47: u8 = ((x45 >> 8) as u8);
-  let x48: u8 = ((x45 & (0xff as u64)) as u8);
+  let x48: u64 = (x45 & (0xff as u64));
   let x49: u8 = (x47 & 0xff);
   let x50: u64 = (x1 >> 8);
-  let x51: u8 = ((x1 & (0xff as u64)) as u8);
+  let x51: u64 = (x1 & (0xff as u64));
   let x52: u64 = (x50 >> 8);
-  let x53: u8 = ((x50 & (0xff as u64)) as u8);
+  let x53: u64 = (x50 & (0xff as u64));
   let x54: u64 = (x52 >> 8);
-  let x55: u8 = ((x52 & (0xff as u64)) as u8);
+  let x55: u64 = (x52 & (0xff as u64));
   let x56: u64 = (x54 >> 8);
-  let x57: u8 = ((x54 & (0xff as u64)) as u8);
+  let x57: u64 = (x54 & (0xff as u64));
   let x58: u64 = (x56 >> 8);
-  let x59: u8 = ((x56 & (0xff as u64)) as u8);
+  let x59: u64 = (x56 & (0xff as u64));
   let x60: u64 = (x58 >> 8);
-  let x61: u8 = ((x58 & (0xff as u64)) as u8);
+  let x61: u64 = (x58 & (0xff as u64));
   let x62: u8 = ((x60 >> 8) as u8);
-  let x63: u8 = ((x60 & (0xff as u64)) as u8);
-  out1[0] = x6;
-  out1[1] = x8;
-  out1[2] = x10;
-  out1[3] = x12;
-  out1[4] = x14;
-  out1[5] = x16;
-  out1[6] = x18;
+  let x63: u64 = (x60 & (0xff as u64));
+  out1[0] = (x6 as u8);
+  out1[1] = (x8 as u8);
+  out1[2] = (x10 as u8);
+  out1[3] = (x12 as u8);
+  out1[4] = (x14 as u8);
+  out1[5] = (x16 as u8);
+  out1[6] = (x18 as u8);
   out1[7] = x19;
-  out1[8] = x21;
-  out1[9] = x23;
-  out1[10] = x25;
-  out1[11] = x27;
-  out1[12] = x29;
-  out1[13] = x31;
-  out1[14] = x33;
+  out1[8] = (x21 as u8);
+  out1[9] = (x23 as u8);
+  out1[10] = (x25 as u8);
+  out1[11] = (x27 as u8);
+  out1[12] = (x29 as u8);
+  out1[13] = (x31 as u8);
+  out1[14] = (x33 as u8);
   out1[15] = x34;
-  out1[16] = x36;
-  out1[17] = x38;
-  out1[18] = x40;
-  out1[19] = x42;
-  out1[20] = x44;
-  out1[21] = x46;
-  out1[22] = x48;
+  out1[16] = (x36 as u8);
+  out1[17] = (x38 as u8);
+  out1[18] = (x40 as u8);
+  out1[19] = (x42 as u8);
+  out1[20] = (x44 as u8);
+  out1[21] = (x46 as u8);
+  out1[22] = (x48 as u8);
   out1[23] = x49;
-  out1[24] = x51;
-  out1[25] = x53;
-  out1[26] = x55;
-  out1[27] = x57;
-  out1[28] = x59;
-  out1[29] = x61;
-  out1[30] = x63;
+  out1[24] = (x51 as u8);
+  out1[25] = (x53 as u8);
+  out1[26] = (x55 as u8);
+  out1[27] = (x57 as u8);
+  out1[28] = (x59 as u8);
+  out1[29] = (x61 as u8);
+  out1[30] = (x63 as u8);
   out1[31] = x62;
 }
 
