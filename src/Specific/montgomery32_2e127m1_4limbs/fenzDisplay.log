@@ -1,3 +1,5 @@
+unlimited
+unlimited
 λ x : word32 * word32 * word32 * word32,
 Interp-η
 (λ var : Syntax.base_type → Type,
