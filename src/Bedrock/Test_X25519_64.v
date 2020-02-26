@@ -102,7 +102,7 @@ Module X25519_64.
     Definition mulmod_bedrock : cmd :=
       match mulmod with
       | ErrorT.Success e =>
-        snd (translate_func (e Types.ltype)
+        snd (translate_func e
                             ("y0", ("y1", tt)) (* argument names *)
                             (n, (n, tt)) (* lengths for list arguments *)
                             "ret") (* return value name *)
