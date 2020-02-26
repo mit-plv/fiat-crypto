@@ -251,4 +251,23 @@ Section Func.
                                 solve [eauto] ].
     repeat intro; cleanup; eauto.
   Qed.
+
+  (*
+    TODO : prove assumptions shown by:
+    Print Assumptions translate_func_correct.
+
+    used_varnames_le (easy)
+    used_varnames_iff (easy)
+    only_differ_trans (easy)
+    only_differ_sym (easy)
+    only_differ_sameset (easy)
+    only_differ_put (easy)
+    equiv_Z_only_differ_iff1 (medium)
+    get_untouched (medium)
+    look_up_return_values (medium)
+    assign_correct (medium/hard)
+    translate_expr_correct (hard)
+    store_return_values_correct (hard)
+
+  *)
 End Func.
