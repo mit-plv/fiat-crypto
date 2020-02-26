@@ -92,7 +92,29 @@ Section Maps.
     map.only_differ m2 ks1 m1 ->
     map.only_differ m2 ks2 m1.
   Admitted.
+
+  Lemma only_differ_put {key value} {map: map.map key value}
+        m k v :
+    map.only_differ (map.put m k v) (singleton_set k) m.
+  Admitted.
 End Maps.
+
+(* General-purpose lemmas about lists that should be later moved to coqutil *)
+(* TODO: move *)
+Section Lists.
+  Context {A : Type}.
+
+  Lemma hd_map {B} (f : A -> B) x l :
+    hd (f x) (map f l) = f (hd x l).
+  Proof. destruct l; reflexivity. Qed.
+
+  Lemma hd_skipn_nth_default (d:A) l i :
+    nth_default d l i = hd d (skipn i l).
+  Proof.
+    revert i; induction l; destruct i; try reflexivity.
+    rewrite nth_default_cons_S, skipn_cons_S. eauto.
+  Qed.
+End Lists.
 
 (* General-purpose lemmas about sep that should be later moved to bedrock2 *)
 (* TODO: move *)
@@ -176,6 +198,18 @@ Section Varnames.
                      apply H; eauto
           end. }
       Qed.
+
+      Lemma equiv_listZ_only_differ_local_iff1
+            locals1 locals2 vset (varnames : base_ltype base_listZ) x :
+        map.only_differ locals1 vset locals2 ->
+        (forall v, vset v -> ~ varname_set varnames v) ->
+        Lift1Prop.iff1
+          (rep.equiv x (rep.rtype_of_ltype varnames) locals1)
+          (rep.equiv x (rep.rtype_of_ltype varnames) locals2).
+      Proof.
+        cbv [Lift1Prop.iff1]; split; intros;
+          eapply equiv_listZ_only_differ_local; eauto using only_differ_sym.
+      Qed.
     End Local.
 
     Section InMemory.
@@ -198,6 +232,19 @@ Section Varnames.
         end.
         eapply Proper_sep_iff1; [ | reflexivity | eassumption ].
         eapply equiv_Z_only_differ_iff1; eauto using only_differ_sym.
+      Qed.
+
+      Lemma equiv_listZ_only_differ_mem_iff1
+            locals1 locals2 vset (varnames : base_ltype base_listZ) x :
+        map.only_differ locals1 vset locals2 ->
+        (forall v, vset v -> ~ varname_set varnames v) ->
+        Lift1Prop.iff1
+          (rep.equiv x (rep.rtype_of_ltype varnames) locals1)
+          (rep.equiv x (rep.rtype_of_ltype varnames) locals2).
+      Proof.
+        cbv [Lift1Prop.iff1]; split; intros;
+          eapply equiv_listZ_only_differ_mem;
+          eauto using only_differ_sym.
       Qed.
     End InMemory.
 
@@ -366,6 +413,21 @@ Section Varnames.
     map.only_differ l (used_varnames nextn 0) l.
   Proof.
     cbv [map.only_differ used_varnames of_list elem_of].
+    tauto.
+  Qed.
+
+  Lemma only_differ_succ nextn nvars l1 l2 v :
+    map.only_differ (map.put l1 (varname_gen nextn) v)
+                    (used_varnames (S nextn) nvars) l2 ->
+    map.only_differ l1 (used_varnames nextn (S nvars)) l2.
+  Proof.
+    intros.
+    eapply only_differ_sameset;
+    [ | eapply only_differ_trans;
+        eauto using only_differ_sym, only_differ_put ].
+    eapply sameset_iff; intros.
+    cbv [used_varnames of_list elem_of union singleton_set].
+    cbn [seq map In].
     tauto.
   Qed.
 
