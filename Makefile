@@ -356,26 +356,26 @@ etc/tscfreq: etc/tscfreq.c
 
 Makefile.coq: Makefile _CoqProject
 	$(SHOW)'COQ_MAKEFILE -f _CoqProject > $@'
-	$(HIDE)$(COQBIN)coq_makefile -f _CoqProject INSTALLDEFAULTROOT = $(INSTALLDEFAULTROOT) -o Makefile-old && cat Makefile-old | sed s'/^printenv:/printenv::/g' | sed s'/^printenv:::/printenv::/g' > $@ && rm -f Makefile-old
+	$(HIDE)$(COQBIN)coq_makefile -f _CoqProject INSTALLDEFAULTROOT = $(INSTALLDEFAULTROOT) -o Makefile-old && cat Makefile-old | sed s'/^printenv:/printenv::/g' | sed s'/^printenv:::/printenv::/g' | sed s'/\$$(TIMER) \$$(COQC)/$$(SET_LIMITS) $$(TIMER) $$(TIMEOUT_CMD) $$(COQC)/g' | sed s'/\$$(SHOW)COQC/$$(SHOW)$$(TIMEOUT_SHOW)COQC/g' > $@ && rm -f Makefile-old
 
 NO_LIMIT_PERF?=
-MAX_PERF_KB?=10000000 # 10 GB
-MAX_PERF_SEC?=
+MAX_KB?=10000000 # 10 GB
+MAX_SEC?=
 TIMEOUT_CMD?=
 TIMEOUT_SHOW?=
-PERF_SET_LIMITS?=
+SET_LIMITS?=
 
 ifeq (,$(NO_LIMIT_PERF))
-ifneq (,$(MAX_PERF_SEC))
-TIMEOUT_CMD:=timeout $(MAX_PERF_SEC)
-PERF_T_ARG:=-t $(MAX_PERF_SEC) # trailing space important
+ifneq (,$(MAX_SEC))
+TIMEOUT_CMD:=timeout $(MAX_SEC)
+PERF_T_ARG:=-t $(MAX_SEC) # trailing space important
 else
 PERF_T_ARG:=
 endif
 
 # apparently ulimit -m doesn't work anymore https://superuser.com/a/1497437/59575 / https://thirld.com/blog/2012/02/09/things-to-remember-when-using-ulimit/
-PERF_SET_LIMITS = ulimit -S -m $(MAX_PERF_KB); ulimit -S -v $(MAX_PERF_KB);
-TIMEOUT_SHOW:=TIMEOUT -m $(MAX_PERF_KB) $(PERF_T_ARG)
+SET_LIMITS = ulimit -S -m $(MAX_KB); ulimit -S -v $(MAX_KB);
+TIMEOUT_SHOW:=TIMEOUT -m $(strip $(MAX_KB)) $(PERF_T_ARG)
 endif
 
 $(DISPLAY_NON_JAVA_VO:.vo=.log) : %Display.log : %.vo src/Compilers/Z/CNotations.vo src/Specific/Framework/IntegrationTestDisplayCommon.vo
@@ -384,7 +384,7 @@ $(DISPLAY_JAVA_VO:.vo=.log) : %JavaDisplay.log : %.vo src/Compilers/Z/JavaNotati
 $(DISPLAY_JAVA_VO:.vo=.log) $(DISPLAY_NON_JAVA_VO:.vo=.log) : %.log : %.v
 	$(SHOW)'$(TIMEOUT_SHOW)COQC $< > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(PERF_SET_LIMITS) $(TIMER) $(TIMEOUT_CMD) $(COQC) $(COQDEBUG) $(COQFLAGS) $(COQLIBS) $< && touch $@.ok) > $@.tmp
+	$(HIDE)($(SET_LIMITS) $(TIMER) $(TIMEOUT_CMD) $(COQC) $(COQDEBUG) $(COQFLAGS) $(COQLIBS) $< && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok
 	$(HIDE)sed s'/\r\n/\n/g' $@.tmp > $@ && rm -f $@.tmp
 
