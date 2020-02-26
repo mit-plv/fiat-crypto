@@ -166,7 +166,16 @@ Section LoadStoreList.
                               (base_rtype_of_ltype names') locals').
   Proof.
     induction rem; cbn [fst snd load_list]; intros.
-    { admit. }
+    { straightline.
+      cbv [locally_equivalent].
+      cbn [rep.Z rep.listZ_local fold_right map
+                 equivalent rep.equiv
+                 base_rtype_of_ltype rep.rtype_of_ltype
+                 varname_set rep.varname_set].
+        repeat split.
+      { eapply only_differ_zero. }
+      { intros. cbv [PropSet.empty_set]. tauto. }
+      { rewrite skipn_all by lia. econstructor. } }
     { cbn [WeakestPrecondition.cmd WeakestPrecondition.cmd_body].
       eexists; split; cbv [dlet.dlet].
       { eapply load_list_item_correct; try eassumption.
@@ -208,7 +217,7 @@ Section LoadStoreList.
         split; [ reflexivity | ].
         eexists; split; [ | reflexivity ].
         rewrite map.get_put_same, hd_skipn_nth_default.
-        reflexivity. }
+        reflexivity. } }
   Qed.
 
   Lemma load_all_lists_correct {t} :
