@@ -258,7 +258,7 @@ Section Varnames.
                    (forall v, vset v -> ~ varname_set varnames v) ->
                    rep.equiv x (rep.rtype_of_ltype varnames) locals1 mem ->
                    rep.equiv x (rep.rtype_of_ltype varnames) locals2 mem).
-      
+
       Lemma equivalent_only_differ {t}
             locals1 locals2 vset (varnames : base_ltype t) x :
         map.only_differ locals1 vset locals2 ->

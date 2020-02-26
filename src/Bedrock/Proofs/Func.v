@@ -199,12 +199,19 @@ Section Func.
              (flat_args : list Semantics.word)
              (functions : list bedrock_func)
              (P Ra Rr : Semantics.mem -> Prop),
+        let init_locals :=
+            match
+              map.of_list_zip (flatten_argnames argnames) flat_args with
+            | Some x => x
+            | None => map.empty
+            end in
         (* argnames don't contain variables we could later overwrite *)
         (forall n, ~ varname_set_args argnames (varname_gen n)) ->
         (* argument values (in their 3 forms) are equivalent *)
-        sep (equivalent_args args argvalues map.empty) Ra mem ->
-        WeakestPrecondition.dexprs
-          mem map.empty (flatten_args argvalues) flat_args ->
+        sep (equivalent_args args argvalues init_locals) Ra mem ->
+        (forall locals,
+            WeakestPrecondition.dexprs
+              mem locals (flatten_args argvalues) flat_args) ->
         (* seplogic frame for return values *)
         sep (lists_reserved retlengths) Rr mem ->
         (* translated function produces equivalent results *)
@@ -224,13 +231,12 @@ Section Func.
     rewrite eqb_refl.
     match goal with H : _ |- _ =>
                     pose proof H; eapply of_list_zip_flatten_argnames in H;
-                      destruct H
+                      destruct H as [? H]; rewrite H in * |-
     end.
     eexists; split; [ eassumption | ].
     cbn [WeakestPrecondition.cmd WeakestPrecondition.cmd_body].
     eapply Proper_cmd; [ solve [apply Proper_call] | repeat intro | ].
-    2 : {
-      eapply load_arguments_correct; try eassumption; eauto. }
+    2 : { eapply load_arguments_correct; try eassumption; eauto. }
     cbv beta in *. cleanup; subst.
     eapply Proper_cmd; [ solve [apply Proper_call] | repeat intro | ].
     2 : { eapply translate_func'_correct with (args0:=args);
