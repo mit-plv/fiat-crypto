@@ -99,10 +99,9 @@ Module Types.
             fun (x : list Z) (y : rtype) locals =>
               Lift1Prop.ex1
                 (fun start : Z =>
-                  let size := Interface.word.of_Z (Z.of_nat (length x)) in
                   sep (fun mem : Interface.map.rep (map:=Semantics.mem) =>
                          equiv start y locals mem)
-                      (array scalar size
+                      (array scalar (word.of_Z word_size_in_bytes)
                              (Interface.word.of_Z start)
                              (map Interface.word.of_Z x)))
         }.

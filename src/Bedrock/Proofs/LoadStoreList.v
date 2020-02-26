@@ -81,39 +81,71 @@ Section LoadStoreList.
       fun x => (tt, list_lengths_from_args (snd x))
     end.
 
-  (* TODO : remove
+  Lemma load_list_item_correct
+        (name : base_ltype (listZ:=rep.listZ_mem) base_listZ)
+        i l :
+    forall mem locals R,
+      (i < length l)%nat ->
+      sep (rep.equiv (t:=base_listZ)
+                     l (base_rtype_of_ltype name) locals) R mem ->
+      WeakestPrecondition.dexpr mem locals
+                                (load_list_item (expr.var name) i)
+                                (word.of_Z (hd 0%Z (skipn i l))).
+  Proof.
+    cbv [load_list_item];
+      cbn [rep.equiv rep.listZ_mem rep.Z base_rtype_of_ltype
+                     rep.rtype_of_ltype rep.listZ_mem ]; intros.
+    cbn [WeakestPrecondition.dexpr
+           WeakestPrecondition.expr WeakestPrecondition.expr_body] in *.
+    repeat match goal with
+           | H : sep (Lift1Prop.ex1 _) _ _ |- _ =>
+             apply sep_ex1_l in H; destruct H; cbv zeta in *
+           | H : context [emp] |- _ =>
+             apply sep_assoc, sep_emp_l in H; cleanup
+           end.
+    match goal with
+    | H : context[array] |- _ =>
+      eapply Proper_sep_iff1 in H;
+        [ | symmetry; apply array_index_nat_inbounds
+                        with (n:=i) (default:=word.of_Z 0);
+            rewrite map_length; eauto
+          | reflexivity]
+    end.
+    match goal with
+    | H : context[array] |- _ =>
+      rewrite !word.ring_morph_mul, !word.of_Z_unsigned in H;
+      rewrite <-!word.ring_morph_mul in H
+    end.
+    straightline.
+    eapply Proper_get; [ repeat intro |  eassumption ].
+    subst.
+    eexists; split.
+    { eapply load_word_of_sep.
+      match goal with
+        H : sep _ _ _ |- _ =>
+        simple refine (Lift1Prop.subrelation_iff1_impl1 _ _ _ _ _ H);
+          ecancel
+      end. }
+    { rewrite skipn_map, hd_map. reflexivity. }
+  Qed.
 
-  Definition load_list (start : Syntax.expr.expr) (len nextn : nat)
-    : nat * list string * Syntax.cmd.cmd :=
-    let exprs := map (load_list_item start) (seq 0 len) in
-    let varnames := map varname_gen (seq nextn len) in
-    let sets := map2 cmd.set varnames exprs in
-    (len, varnames, fold_right cmd.seq cmd.skip sets). *)
-  Eval simpl in
- ( Language.Compilers.base.interp Compilers.base_interp
-                                  base_listZ).
-  Eval cbn in (fun mem (x : base_ltype (listZ:=rep.listZ_mem) base_listZ) (y : _) =>
-                   WeakestPrecondition.dexprs mem map.empty (flatten_base_rtype (base_rtype_of_ltype x)) [y]).
-  Print WeakestPrecondition.dexprs.
-  About WeakestPrecondition.expr.
-  Print rep.listZ_mem.
-  Print rep.equiv.
-  Lemma load_list_correct :
-    forall (len nextn : nat)
+  Lemma load_list_correct rem l :
+    forall (i nextn : nat)
            (name : base_ltype (listZ:=rep.listZ_mem) base_listZ)
            (start : Semantics.word)
-           (l : list Z)
            (tr : Semantics.trace)
            (locals : Semantics.locals)
            (mem : Semantics.mem)
            (functions : list _)
            (R : Semantics.mem -> Prop),
       (forall (n : nat) (H : nextn <= n), name <> varname_gen n) ->
-      sep (rep.equiv (t:=base_listZ) l (base_rtype_of_ltype name) locals) R mem ->
+      length l = i + rem ->
+      sep (rep.equiv (t:=base_listZ)
+                     l (base_rtype_of_ltype name) locals) R mem ->
       WeakestPrecondition.expr
         mem map.empty (expr.var name) (eq start) ->
       (* load_list returns # vars used, variable names, cmd *)
-      let out := load_list (expr.var name) len nextn in
+      let out := load_list (expr.var name) i rem nextn in
       let nvars := fst (fst out) in
       let names' : base_ltype (listZ:=rep.listZ_local) base_listZ
           := snd (fst out) in
@@ -130,8 +162,54 @@ Section LoadStoreList.
                (nextn + nvars <= n)%nat ->
                ~ varname_set names' (varname_gen n)) /\
            locally_equivalent (t:=base_listZ)
-                              l (base_rtype_of_ltype names') locals').
-  Admitted.
+                              (skipn i l)
+                              (base_rtype_of_ltype names') locals').
+  Proof.
+    induction rem; cbn [fst snd load_list]; intros.
+    { admit. }
+    { cbn [WeakestPrecondition.cmd WeakestPrecondition.cmd_body].
+      eexists; split; cbv [dlet.dlet].
+      { eapply load_list_item_correct; try eassumption.
+        cbn [Datatypes.length]; lia. }
+      eapply Proper_cmd; [ solve [apply Proper_call] | | ].
+      2:{
+        eapply IHrem; eauto with lia.
+        eapply Proper_sep_iff1; [ | reflexivity | eassumption ].
+        eapply equiv_listZ_only_differ_mem_iff1;
+          eauto using only_differ_put.
+        cbn [varname_set rep.varname_set rep.listZ_mem rep.Z].
+        cbv [PropSet.singleton_set]; intros; subst.
+        eauto with lia. }
+      repeat intro. cleanup; subst.
+      repeat match goal with |- _ /\ _ => split end;
+        eauto using only_differ_succ.
+      { intros.
+        cbn [varname_set rep.varname_set rep.listZ_local rep.Z
+                         fold_right] in *.
+        apply not_union_iff; split; eauto with lia.
+        cbv [PropSet.singleton_set].
+        rewrite varname_gen_unique; lia. }
+      { cbv [locally_equivalent] in *.
+        cbn [map base_rtype_of_ltype
+                 Compilers.base_interp
+                 rep.rtype_of_ltype rep.listZ_local
+                 equivalent rep.equiv ] in *.
+        rewrite skipn_nth_default with (d:=0%Z) by lia.
+        eapply Forall2_cons; eauto.
+        eapply (equiv_Z_only_differ_iff1 (listZ:=rep.listZ_mem)); eauto.
+        { eauto using only_differ_sym, only_differ_put. }
+        { intros.
+          match goal with H : _ |- _ =>
+                          apply used_varnames_iff in H; cleanup; subst
+          end.
+          cbn [varname_set rep.varname_set rep.Z].
+          cbv [PropSet.singleton_set PropSet.elem_of].
+          rewrite varname_gen_unique; lia. }
+        split; [ reflexivity | ].
+        eexists; split; [ | reflexivity ].
+        rewrite map.get_put_same, hd_skipn_nth_default.
+        reflexivity. }
+  Qed.
 
   Lemma load_all_lists_correct {t} :
     forall (argnames : base_ltype t)
@@ -177,6 +255,7 @@ Section LoadStoreList.
                  ~ varname_set argnames' (varname_gen n)) /\
              locally_equivalent args argvalues' locals').
   Proof.
+    (* TODO: lots of repeated steps in this proof; automate *)
     induction t;
       cbn [fst snd load_all_lists varname_set
                locally_equivalent equivalent rep.equiv
@@ -266,9 +345,21 @@ Section LoadStoreList.
         cleanup. subst.
         match goal with H : _ |- _ => apply H; lia end. } }
   { (* base_listZ *)
-     clear IHt.
-
-    }
+    clear IHt.
+     cbn [flatten_base_rtype
+            base_rtype_of_ltype] in *.
+    match goal with
+      H : WeakestPrecondition.dexprs _ _ (_ :: nil) ?x |- _ =>
+        destruct x;
+          [ exfalso; apply dexprs_cons_nil in H; tauto
+          | apply dexprs_cons_iff in H; destruct H as [? _] ]
+    end.
+    eapply Proper_cmd;
+      [ solve [apply Proper_call]
+      | | eapply load_list_correct; eauto; reflexivity ].
+    repeat intro. cleanup; subst.
+    repeat match goal with |- _ /\ _ => split end;
+      eauto using only_differ_step. }
   Qed.
 
   Lemma load_arguments_correct {t} :

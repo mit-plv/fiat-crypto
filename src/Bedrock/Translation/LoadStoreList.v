@@ -44,16 +44,20 @@ Section Lists.
 
   Definition load_list_item (start : Syntax.expr.expr) (i : nat)
     : Syntax.expr.expr :=
-    let offset := expr.literal (Z.of_nat i * word_size_in_bytes) in
+    let offset := expr.literal (word_size_in_bytes * Z.of_nat i) in
     let loc := expr.op bopname.add start offset in
     expr.load access_size.word loc.
 
-  Definition load_list (start : Syntax.expr.expr) (len nextn : nat)
+  Fixpoint load_list (start : Syntax.expr.expr) (i rem nextn : nat)
     : nat * list string * Syntax.cmd.cmd :=
-    let exprs := map (load_list_item start) (seq 0 len) in
-    let varnames := map varname_gen (seq nextn len) in
-    let sets := map2 cmd.set varnames exprs in
-    (len, varnames, fold_right cmd.seq cmd.skip sets).
+    match rem with
+    | O => (0%nat, [], cmd.skip)
+    | S rem' =>
+      let rec := load_list start (S i) rem' (S nextn) in
+      (S (fst (fst rec)), (varname_gen nextn) :: snd (fst rec),
+       cmd.seq (cmd.set (varname_gen nextn) (load_list_item start i))
+               (snd rec))
+    end.
 
   Fixpoint load_all_lists {t : base.type} (nextn : nat)
     : base_ltype (listZ:=rep.listZ_mem) t ->
@@ -70,7 +74,7 @@ Section Lists.
          cmd.seq (snd load1) (snd load2))
     | base_listZ =>
       fun (x : string) (l : nat) =>
-        load_list (expr.var x) l nextn
+        load_list (expr.var x) 0 l nextn
     | _ =>
       fun (x : string) (l : unit) => (0%nat, x, cmd.skip)
     end.
