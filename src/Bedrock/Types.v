@@ -274,17 +274,16 @@ Module Types.
     Fixpoint equivalent_flat_base {t}
       : base.interp t ->
         list Semantics.word ->
-        Semantics.locals ->
         Semantics.mem -> Prop :=
       match t as t0 return base.interp t0 -> _ with
       | base.type.prod a b =>
-        fun (x : base.interp a * base.interp b) words locals =>
+        fun (x : base.interp a * base.interp b) words =>
           Lift1Prop.ex1
             (fun i =>
-               sep (equivalent_flat_base (fst x) (firstn i words) locals)
-                   (equivalent_flat_base (snd x) (skipn i words) locals))
+               sep (equivalent_flat_base (fst x) (firstn i words))
+                   (equivalent_flat_base (snd x) (skipn i words)))
       | base_listZ =>
-        fun (x : list Z) words locals =>
+        fun (x : list Z) words =>
           (* since this is in-memory representation, [words] should be one word
         that indicates the memory location of the head of the list *)
           sep
@@ -292,32 +291,31 @@ Module Types.
             (emp (length words = 1%nat))
             (let addr := word.unsigned (hd (word.of_Z 0%Z) words) in
              rep.equiv (rep:=rep.listZ_mem)
-                       x (Syntax.expr.literal addr) locals)
+                       x (Syntax.expr.literal addr) map.empty)
       | base_Z =>
-        fun (x : Z) words locals =>
+        fun (x : Z) words =>
           sep
             (map:=Semantics.mem)
             (emp (length words = 1%nat))
             (let w := word.unsigned (hd (word.of_Z 0%Z) words) in
-             rep.equiv (t:=base_Z) x (Syntax.expr.literal w) locals)
-      | _ => fun _ _ _ => emp False
+             rep.equiv (t:=base_Z) x (Syntax.expr.literal w) map.empty)
+      | _ => fun _ _ => emp False
       end.
 
     Fixpoint equivalent_flat_args {t}
       : type.for_each_lhs_of_arrow API.interp_type t ->
         list Semantics.word ->
-        Semantics.locals ->
         Semantics.mem -> Prop :=
       match t as t0 return type.for_each_lhs_of_arrow _ t0 -> _ with
-      | type.base _ => fun (_:unit) words _ => emp (words = nil)
+      | type.base _ => fun (_:unit) words => emp (words = nil)
       | type.arrow (type.base a) b =>
-        fun x words locals =>
+        fun x words =>
           Lift1Prop.ex1
             (fun i =>
                sep
-                 (equivalent_flat_base (fst x) (firstn i words) locals)
-                 (equivalent_flat_args (snd x) (skipn i words) locals))
-      | _ => fun _ _ _ => emp False (* invalid argument *)
+                 (equivalent_flat_base (fst x) (firstn i words))
+                 (equivalent_flat_args (snd x) (skipn i words)))
+      | _ => fun _ _ => emp False (* invalid argument *)
       end.
   End defs.
 End Types.

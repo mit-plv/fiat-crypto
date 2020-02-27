@@ -33,8 +33,8 @@ Section Flatten.
   Lemma flatten_base_samelength {t}
         (names : base_ltype t)
         (value : base.interp t) :
-    forall (words : list Semantics.word) R locals mem,
-      sep (equivalent_flat_base value words locals) R mem ->
+    forall (words : list Semantics.word) R mem,
+      sep (equivalent_flat_base value words) R mem ->
       length words = length (flatten_base_ltype names).
   Proof.
     induction t; cbn [flatten_base_ltype equivalent_flat_base];
@@ -51,12 +51,7 @@ Section Flatten.
              | H : False |- _ => tauto
              | _ => solve [eauto]
              end.
-    erewrite <-IHt1, <-IHt2
-      by match goal with
-           H : sep _ _ _ |- _ =>
-           simple refine (Lift1Prop.subrelation_iff1_impl1 _ _ _ _ _ H);
-             ecancel
-         end.
+    erewrite <-IHt1, <-IHt2 by ecancel_assumption.
     rewrite skipn_length, firstn_length.
     apply Min.min_case_strong; intros; lia.
   Qed.
@@ -66,8 +61,8 @@ Section Flatten.
   Lemma flatten_args_samelength {t}
         (argnames : type.for_each_lhs_of_arrow ltype t)
         (args : type.for_each_lhs_of_arrow API.interp_type t) :
-    forall (flat_args : list Semantics.word) R locals mem,
-      sep (equivalent_flat_args args flat_args locals) R mem ->
+    forall (flat_args : list Semantics.word) R mem,
+      sep (equivalent_flat_args args flat_args) R mem ->
       length flat_args = length (flatten_argnames argnames).
   Proof.
     induction t;
@@ -85,12 +80,7 @@ Section Flatten.
              | H : False |- _ => tauto
              | _ => solve [eauto]
              end.
-    erewrite <-IHt2, <-flatten_base_samelength
-      by match goal with
-           H : sep _ _ _ |- _ =>
-           simple refine (Lift1Prop.subrelation_iff1_impl1 _ _ _ _ _ H);
-             ecancel
-         end.
+    erewrite <-IHt2, <-flatten_base_samelength by ecancel_assumption.
     rewrite skipn_length, firstn_length.
     apply Min.min_case_strong; intros; lia.
   Qed.
@@ -98,8 +88,8 @@ Section Flatten.
   Lemma of_list_zip_flatten_argnames {t}
         (argnames : type.for_each_lhs_of_arrow ltype t)
         (args : type.for_each_lhs_of_arrow API.interp_type t)
-        (flat_args : list Semantics.word) R locals mem :
-    sep (equivalent_flat_args args flat_args locals) R mem ->
+        (flat_args : list Semantics.word) R mem :
+    sep (equivalent_flat_args args flat_args) R mem ->
     (exists l,
         map.of_list_zip (flatten_argnames argnames) flat_args = Some l).
   Proof.

@@ -177,27 +177,125 @@ Section Func.
     (* TODO *)
   Admitted.
 
+  Lemma initial_context_correct' {t} :
+    forall (names : base_ltype t)
+           (values : base.interp t)
+           (flat_values : list Semantics.word)
+           (locals locals' : Semantics.locals),
+      map.putmany_of_list_zip
+        (flatten_base_ltype names) flat_values locals = Some locals' ->
+      Lift1Prop.iff1
+        (equivalent_flat_base values flat_values) 
+        (equivalent values (base_rtype_of_ltype names) locals').
+  Proof.
+    induction t; 
+      cbn [rep.Z rep.equiv base_rtype_of_ltype
+                 equivalent equivalent_flat_base
+                 flatten_base_ltype];
+      break_match; cbn [fst snd]; intros; try reflexivity; [ | | ].
+    all:match goal with
+          H : _ |- _ =>
+          pose proof H;
+            eapply map.putmany_of_list_zip_sameLength in H;
+            cbn [length] in H
+        end.
+    { repeat intro. rewrite sep_emp_l.
+      destruct flat_values as [| ? [|? ?] ]; cbn [length] in *; try lia.
+      cbv [emp List.hd
+               WeakestPrecondition.literal dlet.dlet
+               WeakestPrecondition.get WeakestPrecondition.dexpr
+               WeakestPrecondition.expr WeakestPrecondition.expr_body].
+      repeat match goal with
+             | _ => progress cbn [map.putmany_of_list_zip] in *
+             | H : Some _ = Some _ |- _ => inversion H; clear H; subst
+             | _ => rewrite map.get_put_same, word.of_Z_unsigned
+             | _ => split; intros; cleanup; subst
+             | _ => solve [eauto]
+             end. }
+    { match goal with
+      | H : _ |- _ =>
+        rewrite putmany_of_list_zip_app_l in H;
+          pose proof H;
+          rewrite putmany_of_list_zip_bind_comm in H
+      end.
+      cbv [Option.bind] in *.
+      break_match_hyps; try congruence.
+      repeat intro; split; intros.
+      { match goal with
+        | H : Lift1Prop.ex1 _ _ |- _ => destruct H end.
+        eapply Proper_sep_iff1;
+          [ symmetry; eapply IHt1; eassumption
+          | symmetry; eapply IHt2; eassumption | ].
+        erewrite <-flatten_base_samelength by ecancel_assumption.
+        rewrite firstn_length_firstn, skipn_length_firstn.
+        assumption. }
+      { eexists. 
+        eapply Proper_sep_iff1;
+          [ eapply IHt1; eassumption
+          | eapply IHt2; eassumption | ].
+        eapply Proper_sep_iff1;
+          [ eapply equivalent_only_differ_iff1;
+            eauto using equiv_listZ_only_differ_mem
+          | reflexivity | ].
+        (* now we're going to need "no duplicate argnames" *)
+        
+  Qed.
 
-  (* Need to rethink args/rets and environments again.
+  (* When arguments are loaded into initial locals, the new argument names map
+     to the correct values *)
+  Lemma initial_context_correct {t} :
+    forall (argnames : type.for_each_lhs_of_arrow ltype t)
+           (args : type.for_each_lhs_of_arrow API.interp_type t)
+           (flat_args : list Semantics.word)
+           (locals locals' : Semantics.locals),
+      map.putmany_of_list_zip
+        (flatten_argnames argnames) flat_args locals = Some locals' ->
+      let argvalues :=
+          type.map_for_each_lhs_of_arrow rtype_of_ltype argnames in
+      Lift1Prop.iff1
+        (equivalent_flat_args args flat_args) 
+        (equivalent_args args argvalues locals').
+  Proof.
+    induction t;
+      cbn [equivalent_args
+             equivalent_flat_args
+             flatten_argnames type.map_for_each_lhs_of_arrow];
+      break_match; intros; try reflexivity; [ | ].
+    all:match goal with
+          H : _ |- _ =>
+          pose proof H;
+            eapply map.putmany_of_list_zip_sameLength in H
+        end.
+    { 
+      destruct flat_args; cbn [length] in *; try lia; [ ].
+      repeat intro; cbv [emp]; tauto. }
+    { destruct argnames. cbn [fst snd] in *.
+      repeat intro; split; intros.
+      {
+        match goal with
+        | H : Lift1Prop.ex1 _ _ |- _ => destruct H end.
+        match goal with
+        | H : _ |- _ => rewrite putmany_of_list_zip_app_l in H
+        end.
+        cbv [Option.bind] in *.
+        break_match_hyps; try congruence.
+        eapply Proper_sep_iff1;
+          [ reflexivity | symmetry; eapply IHt2; eassumption | ].
 
-     At the start, we get an initial environment mapping argnames ->
-     flat_args. FC args need to be equivalent to argnames in this context.
 
-     Return values - store_return_values end condition should be list_map over (flatten_rets rets)
-
-
-     argnames - variable names, structured
-     args - values (API.interp_type), structured
-     flat_args - values (word), flat
-     
-     equivalent should be between args and flat_args -- need some kind of equivalent_flat
-     current code flattens args and does dexprs between flatten_args (map expr.var argnames) and args, not ideal
-
-     Instead, we want to ignore the locals and just compare args and flat_args.
-     Make flatten_args take in the interp_type
-
-     Where does argnames come in? maybe it doesn't?
-   *)
+        erewrite <-IHt2.
+        erewrite IHt2 in  H1.
+      Search Lift1Prop.iff1 Lift1Prop.ex1.
+      apply 
+      repeat intro.
+      cbv [Lift1Prop.ex1].
+      destruct flat_args; cbn [length] in *.
+      { destruct argnames. cbn [fst snd].
+    
+    
+    Search map.of_list_zip.
+    Search map.putmany_of_list_zip.
+  Qed.
 
   Lemma translate_func_correct {t}
         (e : API.Expr t)
@@ -208,12 +306,12 @@ Section Func.
            (retnames : base_ltype (type.final_codomain t))
            (argnames : type.for_each_lhs_of_arrow ltype t)
            (args : type.for_each_lhs_of_arrow API.interp_type t),
-      (* rets1 := fiat-crypto interpretation of e1 applied to args *)
-      let rets1 : base.interp (type.final_codomain t) :=
+      (* rets := fiat-crypto interpretation of e1 applied to args *)
+      let rets : base.interp (type.final_codomain t) :=
           type.app_curried (API.interp (e _)) args in
       (* extract list lengths from fiat-crypto arguments/return values *)
       let arglengths := list_lengths_from_args args in
-      let retlengths := list_lengths_from_value rets1 in
+      let retlengths := list_lengths_from_value rets in
       (* out := translation output for e2; triple of
          (function arguments, function return variable names, body) *)
       let out := translate_func e argnames arglengths retnames in
@@ -235,15 +333,17 @@ Section Func.
           (fun tr' mem' flat_rets =>
              tr = tr' /\
              (* return values are equivalent *)
-             sep (equivalent_flat_base rets1 flat_rets) Rr mem).
+             sep (equivalent_flat_base rets flat_rets) Rr mem).
   Proof.
     cbv [translate_func Wf3]; intros.
     cbn [WeakestPrecondition.call
            WeakestPrecondition.call_body WeakestPrecondition.func].
     rewrite eqb_refl.
     match goal with H : _ |- _ =>
-                    pose proof H; eapply of_list_zip_flatten_argnames in H;
-                      destruct H as [? H]; rewrite H in * |-
+                    pose proof H;
+                      eapply of_list_zip_flatten_argnames
+                        with (argnames0:=argnames) in H;
+                      cleanup
     end.
     eexists; split; [ eassumption | ].
     cbn [WeakestPrecondition.cmd WeakestPrecondition.cmd_body].
