@@ -154,22 +154,50 @@ Section Func.
       (WeakestPrecondition.get locals) (flatten_retnames retnames)
       (fun flat_rets =>
          WeakestPrecondition.dexprs
-           mem map.empty (flatten_rets retvalues) flat_rets /\
+           mem locals (flatten_rets retvalues) flat_rets /\
          sep (equivalent ret retvalues map.empty) R mem).
   Proof.
     cbv [flatten_retnames].
-    induction t; cbn [flatten_base_ltype equivalent]; break_match;
-      repeat match goal with
-             | _ => progress (intros; cleanup)
-             | _ => progress subst
-             | _ => progress cbn [rep.equiv rep.listZ_mem rep.Z] in *
-             | _ => progress cbn [WeakestPrecondition.list_map WeakestPrecondition.list_map_body]
-             | H : sep (emp _) _ _ |- _ => apply sep_emp_l in H
-             | H : WeakestPrecondition.dexpr _ _ _ _ |- _ => destruct H
-             | |- WeakestPrecondition.get _ _ _ => eexists; split; [ eassumption | ]
-             end.
+    induction t;
+      cbn [flatten_base_ltype
+             flatten_rets base_rtype_of_ltype rep.rtype_of_ltype
+             flatten_base_rtype
+             rep.listZ_mem rep.Z equivalent]; break_match;
+        repeat match goal with
+               | _ => progress (intros; cleanup)
+               | _ => progress subst
+               | _ => progress cbn [rep.equiv rep.listZ_mem rep.Z] in *
+               | _ => progress cbn [WeakestPrecondition.list_map WeakestPrecondition.list_map_body WeakestPrecondition.dexprs WeakestPrecondition.expr WeakestPrecondition.expr_body]
+               | H : sep (emp _) _ _ |- _ => apply sep_emp_l in H
+               | H : WeakestPrecondition.dexpr _ _ _ _ |- _ => destruct H
+               | |- WeakestPrecondition.get _ _ _ => eexists; split; [ eassumption | ]
+               | |- _ /\ _ => split
+               | _ => reflexivity
+               end.
     (* TODO *)
   Admitted.
+
+
+  (* Need to rethink args/rets and environments again.
+
+     At the start, we get an initial environment mapping argnames ->
+     flat_args. FC args need to be equivalent to argnames in this context.
+
+     Return values - store_return_values end condition should be list_map over (flatten_rets rets)
+
+
+     argnames - variable names, structured
+     args - values (API.interp_type), structured
+     flat_args - values (word), flat
+     
+     equivalent should be between args and flat_args -- need some kind of equivalent_flat
+     current code flattens args and does dexprs between flatten_args (map expr.var argnames) and args, not ideal
+
+     Instead, we want to ignore the locals and just compare args and flat_args.
+     Make flatten_args take in the interp_type
+
+     Where does argnames come in? maybe it doesn't?
+   *)
 
   Lemma translate_func_correct {t}
         (e : API.Expr t)
@@ -186,32 +214,19 @@ Section Func.
       (* extract list lengths from fiat-crypto arguments/return values *)
       let arglengths := list_lengths_from_args args in
       let retlengths := list_lengths_from_value rets1 in
-      (* look up variables in argnames *)
-      let argvalues :=
-          type.map_for_each_lhs_of_arrow rtype_of_ltype argnames in
       (* out := translation output for e2; triple of
          (function arguments, function return variable names, body) *)
       let out := translate_func e argnames arglengths retnames in
       let f : bedrock_func := (fname, out) in
-      let rets2 := base_rtype_of_ltype retnames in
       forall (tr : Semantics.trace)
              (mem : Semantics.mem)
              (flat_args : list Semantics.word)
              (functions : list bedrock_func)
              (P Ra Rr : Semantics.mem -> Prop),
-        let init_locals :=
-            match
-              map.of_list_zip (flatten_argnames argnames) flat_args with
-            | Some x => x
-            | None => map.empty
-            end in
         (* argnames don't contain variables we could later overwrite *)
         (forall n, ~ varname_set_args argnames (varname_gen n)) ->
-        (* argument values (in their 3 forms) are equivalent *)
-        sep (equivalent_args args argvalues init_locals) Ra mem ->
-        (forall locals,
-            WeakestPrecondition.dexprs
-              mem locals (flatten_args argvalues) flat_args) ->
+        (* argument values are equivalent *)
+        sep (equivalent_flat_args args flat_args) Ra mem ->
         (* seplogic frame for return values *)
         sep (lists_reserved retlengths) Rr mem ->
         (* translated function produces equivalent results *)
@@ -219,15 +234,12 @@ Section Func.
           ((fname, out) :: functions) fname tr mem flat_args
           (fun tr' mem' flat_rets =>
              tr = tr' /\
-             (* rets2 is a valid representation of flat_rets with no local
-                variables in context *)
-             WeakestPrecondition.dexprs
-               mem' map.empty (flatten_rets rets2) flat_rets /\
              (* return values are equivalent *)
-             sep (equivalent (listZ:=rep.listZ_mem) rets1 rets2 map.empty) Rr mem').
+             sep (equivalent_flat_base rets1 flat_rets) Rr mem).
   Proof.
     cbv [translate_func Wf3]; intros.
-    cbn [WeakestPrecondition.call WeakestPrecondition.call_body WeakestPrecondition.func].
+    cbn [WeakestPrecondition.call
+           WeakestPrecondition.call_body WeakestPrecondition.func].
     rewrite eqb_refl.
     match goal with H : _ |- _ =>
                     pose proof H; eapply of_list_zip_flatten_argnames in H;

@@ -2,6 +2,8 @@ Require Import Coq.Strings.String.
 Require Import Coq.Lists.List.
 Require Import Coq.micromega.Lia.
 Require Import bedrock2.Syntax.
+Require Import bedrock2.Map.Separation.
+Require Import bedrock2.Map.SeparationLogic.
 Require Import coqutil.Word.Interface coqutil.Word.Properties.
 Require Import coqutil.Map.Interface coqutil.Map.Properties.
 Require Import Crypto.Bedrock.Types.
@@ -28,45 +30,80 @@ Section Flatten.
   Local Instance sem_ok : Semantics.parameters_ok semantics
     := semantics_ok.
 
-  Lemma flatten_base_samelength {t} (lhs : base_ltype t) (rhs : base_rtype t) :
-    length (flatten_base_ltype lhs) = length (flatten_base_rtype rhs).
+  Lemma flatten_base_samelength {t}
+        (names : base_ltype t)
+        (value : base.interp t) :
+    forall (words : list Semantics.word) R locals mem,
+      sep (equivalent_flat_base value words locals) R mem ->
+      length words = length (flatten_base_ltype names).
   Proof.
-    induction t;
+    induction t; cbn [flatten_base_ltype equivalent_flat_base];
+      break_match;
       repeat match goal with
-             | _ => progress cbn [flatten_base_ltype flatten_base_rtype]
-             | _ => progress break_match 
+             | _ => progress (intros; subst)
+             | H : sep (sep (emp _) _) _ _ |- _ =>
+               apply sep_assoc in H; [ ]
+             | H : sep (emp _) _ _ |- _ =>
+               apply sep_emp_l in H; destruct H
+             | H : sep (Lift1Prop.ex1 _) _ _ |- _ =>
+               apply sep_ex1_l in H; destruct H
              | _ => rewrite app_length
+             | H : False |- _ => tauto
              | _ => solve [eauto]
              end.
+    erewrite <-IHt1, <-IHt2
+      by match goal with
+           H : sep _ _ _ |- _ =>
+           simple refine (Lift1Prop.subrelation_iff1_impl1 _ _ _ _ _ H);
+             ecancel
+         end.
+    rewrite skipn_length, firstn_length.
+    apply Min.min_case_strong; intros; lia.
   Qed.
 
   (* given these structures have the same type, they'll have the same size in
        flattened form *)
   Lemma flatten_args_samelength {t}
         (argnames : type.for_each_lhs_of_arrow ltype t)
-        (args : type.for_each_lhs_of_arrow rtype t) :
-    length (flatten_args args) = length (flatten_argnames argnames).
+        (args : type.for_each_lhs_of_arrow API.interp_type t) :
+    forall (flat_args : list Semantics.word) R locals mem,
+      sep (equivalent_flat_args args flat_args locals) R mem ->
+      length flat_args = length (flatten_argnames argnames).
   Proof.
     induction t;
       repeat match goal with
-             | _ => progress cbn [flatten_args flatten_argnames]
+             | _ => progress (intros; subst)
+             | _ => progress cbn [equivalent_flat_args
+                                    equivalent_flat_base
+                                    flatten_argnames] in *
              | _ => progress break_match 
-             | _ => erewrite flatten_base_samelength
+             | H : sep (emp _) _ _ |- _ =>
+               apply sep_emp_l in H; destruct H
+             | H : sep (Lift1Prop.ex1 _) _ _ |- _ =>
+               apply sep_ex1_l in H; destruct H
              | _ => rewrite app_length
+             | H : False |- _ => tauto
              | _ => solve [eauto]
              end.
+    erewrite <-IHt2, <-flatten_base_samelength
+      by match goal with
+           H : sep _ _ _ |- _ =>
+           simple refine (Lift1Prop.subrelation_iff1_impl1 _ _ _ _ _ H);
+             ecancel
+         end.
+    rewrite skipn_length, firstn_length.
+    apply Min.min_case_strong; intros; lia.
   Qed.
 
   Lemma of_list_zip_flatten_argnames {t}
         (argnames : type.for_each_lhs_of_arrow ltype t)
-        (args : type.for_each_lhs_of_arrow rtype t)
-        (flat_args : list Semantics.word) mem :
-    WeakestPrecondition.dexprs mem map.empty (flatten_args args) flat_args ->
-    (exists l, map.of_list_zip (flatten_argnames argnames) flat_args = Some l).
+        (args : type.for_each_lhs_of_arrow API.interp_type t)
+        (flat_args : list Semantics.word) R locals mem :
+    sep (equivalent_flat_args args flat_args locals) R mem ->
+    (exists l,
+        map.of_list_zip (flatten_argnames argnames) flat_args = Some l).
   Proof.
-    pose proof (flatten_args_samelength argnames args).
-    let H := fresh in intro H; apply dexprs_length in H.
-    apply map.sameLength_putmany_of_list.
-    lia.
+    intros. apply map.sameLength_putmany_of_list.
+    erewrite flatten_args_samelength; eauto.
   Qed.
 End Flatten.

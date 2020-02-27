@@ -238,10 +238,12 @@ Section LoadStoreList.
         (forall n,
             (nextn <= n)%nat ->
             ~ varname_set argnames (varname_gen n)) ->
-        (* argument values (in their 3 forms) are equivalent *)
-        sep (equivalent args argvalues locals) R mem ->
+        (* argument values are equivalent *)
+        (* TODO: genuinely figure this argument-equivalence mess out *)
+        sep (equivalent_flat_base args flat_args locals) R mem ->
         WeakestPrecondition.dexprs
-          mem map.empty (flatten_base_rtype argvalues) flat_args ->
+          mem locals (map expr.var (flatten_base_ltype argnames))
+          flat_args ->
         (* load_all_lists returns triple : # fresh variables used,
            new argnames with local lists, and cmd *)
         let out := load_all_lists nextn argnames arglengths in
@@ -266,22 +268,40 @@ Section LoadStoreList.
   Proof.
     (* TODO: lots of repeated steps in this proof; automate *)
     induction t;
-      cbn [fst snd load_all_lists varname_set
+      cbn [fst snd map load_all_lists varname_set
                locally_equivalent equivalent rep.equiv
+               flatten_base_ltype equivalent_flat_base
+               base_rtype_of_ltype
                rep.varname_set rep.Z
           ]; break_match; intros;
         repeat match goal with
                  | _ => progress cleanup
+                 | H : sep (sep (emp _) _) _ _ |- _ =>
+                   apply sep_assoc in H
                  | H : sep (emp _) _ _ |- _ =>
                    apply sep_emp_l in H
-                 | H : sep (fun _ => False) _ _ |- _ =>
-                   exfalso; cbv [sep] in H; cleanup; tauto
+                 | H : sep (Lift1Prop.ex1 _) _ _ |- _ =>
+                   apply sep_ex1_l in H; destruct H
+                 | H : False |- _ => tauto
                end.
     { (* base_Z *)
-      straightline.
+      repeat straightline. cbv [emp].
       repeat match goal with
                |- _ /\ _ => split end;
-        cbv [emp]; eauto using only_differ_zero with lia. }
+        eauto using only_differ_zero with lia.
+      destruct flat_args; cbn [length] in *; [ lia | ].
+      match goal with H : _ |- _ =>
+                      rewrite dexprs_cons_iff in H; destruct H
+      end.
+      cbv [dlet.dlet List.hd
+             WeakestPrecondition.dexpr
+             WeakestPrecondition.expr
+             WeakestPrecondition.expr_body
+             WeakestPrecondition.literal] in *.
+      match goal with H : _ |- _ =>
+                      rewrite word.of_Z_unsigned in H end.
+      cbv [WeakestPrecondition.get] in *.
+      cleanup; subst. eauto. }
     { (* product *)
       straightline.
       eapply Proper_cmd; [ solve [apply Proper_call] | | ].
@@ -295,14 +315,25 @@ Section LoadStoreList.
           { cbn [base_rtype_of_ltype fst snd] in *.
             match goal with
               H : sep _ _ _ |- _ =>
-              simple refine (Lift1Prop.subrelation_iff1_impl1 _ _ _ _ _ H)
-            end.
-            ecancel. }
+              simple refine (Lift1Prop.subrelation_iff1_impl1 _ _ _ _ _ H);
+                ecancel
+            end. }
           { cbn [flatten_base_rtype base_rtype_of_ltype fst snd] in *.
+            rewrite !map_app in *.
             match goal with
               H : WeakestPrecondition.dexprs _ _ (_ ++ _) _ |- _ =>
               apply dexprs_app_l in H; cleanup
             end.
+            rewrite map_length in *.
+            match goal with
+              H : _ |- _ =>
+              erewrite <-flatten_base_samelength in H1
+                by match goal with
+                     H : sep _ _ _ |- _ =>
+                     simple refine (Lift1Prop.subrelation_iff1_impl1 _ _ _ _ _ H);
+                       ecancel
+                   end end.
+            rewrite firstn_length, <-List.firstn_firstn, List.firstn_all in *.
             eassumption. } }
       repeat intro. cleanup; subst.
       eapply Proper_cmd; [ solve [apply Proper_call] | | ].
@@ -315,7 +346,9 @@ Section LoadStoreList.
             end. }
           { cbn [base_rtype_of_ltype fst snd] in *.
             eapply Proper_sep_iff1; [ | reflexivity | ].
-            { eapply equivalent_only_differ_iff1;
+            { (* TODO: need equivalent_only_differ for flat args *)
+              (* TODO: check if the changes to these preconditions actually work before doing that *)
+              eapply equivalent_only_differ_iff1;
                 eauto using equiv_listZ_only_differ_mem, only_differ_sym.
               intros.
               match goal with H : _ |- _ =>

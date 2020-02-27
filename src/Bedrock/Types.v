@@ -246,7 +246,7 @@ Module Types.
               (equivalent (snd x) (snd y) locals)
       | base_listZ => rep.equiv
       | base_Z => rep.equiv
-      |  _ => fun _ _ _ _ => False
+      |  _ => fun _ _ _ => emp False
       end.
 
     (* produces a separation-logic condition stating that the values of arguments are equivalent *)
@@ -257,12 +257,12 @@ Module Types.
         Interface.map.rep (map:=Semantics.mem) -> (* memory *)
         Prop :=
       match t with
-      | type.base b => fun _ _ _ _ => True
+      | type.base b => fun _ _ _ => emp True
       | type.arrow (type.base a) b =>
         fun (x : base.interp a * _) (y : base_rtype a * _) locals =>
           sep (equivalent (fst x) (fst y) locals)
               (equivalent_args (snd x) (snd y) locals)
-      | _ => fun _ _ _ _ => False
+      | _ => fun _ _ _ => emp False
       end.
 
     Definition locally_equivalent {t} x y locals :=
@@ -270,5 +270,54 @@ Module Types.
 
     Definition locally_equivalent_args {t} x y locals :=
       @equivalent_args t x y locals map.empty.
+
+    Fixpoint equivalent_flat_base {t}
+      : base.interp t ->
+        list Semantics.word ->
+        Semantics.locals ->
+        Semantics.mem -> Prop :=
+      match t as t0 return base.interp t0 -> _ with
+      | base.type.prod a b =>
+        fun (x : base.interp a * base.interp b) words locals =>
+          Lift1Prop.ex1
+            (fun i =>
+               sep (equivalent_flat_base (fst x) (firstn i words) locals)
+                   (equivalent_flat_base (snd x) (skipn i words) locals))
+      | base_listZ =>
+        fun (x : list Z) words locals =>
+          (* since this is in-memory representation, [words] should be one word
+        that indicates the memory location of the head of the list *)
+          sep
+            (map:=Semantics.mem)
+            (emp (length words = 1%nat))
+            (let addr := word.unsigned (hd (word.of_Z 0%Z) words) in
+             rep.equiv (rep:=rep.listZ_mem)
+                       x (Syntax.expr.literal addr) locals)
+      | base_Z =>
+        fun (x : Z) words locals =>
+          sep
+            (map:=Semantics.mem)
+            (emp (length words = 1%nat))
+            (let w := word.unsigned (hd (word.of_Z 0%Z) words) in
+             rep.equiv (t:=base_Z) x (Syntax.expr.literal w) locals)
+      | _ => fun _ _ _ => emp False
+      end.
+
+    Fixpoint equivalent_flat_args {t}
+      : type.for_each_lhs_of_arrow API.interp_type t ->
+        list Semantics.word ->
+        Semantics.locals ->
+        Semantics.mem -> Prop :=
+      match t as t0 return type.for_each_lhs_of_arrow _ t0 -> _ with
+      | type.base _ => fun (_:unit) words _ => emp (words = nil)
+      | type.arrow (type.base a) b =>
+        fun x words locals =>
+          Lift1Prop.ex1
+            (fun i =>
+               sep
+                 (equivalent_flat_base (fst x) (firstn i words) locals)
+                 (equivalent_flat_args (snd x) (skipn i words) locals))
+      | _ => fun _ _ _ => emp False (* invalid argument *)
+      end.
   End defs.
 End Types.
