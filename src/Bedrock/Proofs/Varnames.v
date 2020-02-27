@@ -1,5 +1,4 @@
 Require Import Coq.ZArith.ZArith.
-Require Import Coq.Lists.List.
 Require Import Coq.Strings.String.
 Require Import Coq.micromega.Lia.
 Require Import bedrock2.Syntax.
@@ -8,6 +7,7 @@ Require Import bedrock2.Map.SeparationLogic.
 Require Import coqutil.Map.Interface coqutil.Map.Properties.
 Require Import coqutil.Word.Interface.
 Require Import coqutil.Datatypes.PropSet.
+Require Import Coq.Lists.List. (* after SeparationLogic *)
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Language.API.
@@ -73,29 +73,45 @@ End Sets.
 (* General-purpose lemmas about maps that should be later moved to coqutil *)
 (* TODO: move *)
 Section Maps.
-  Lemma only_differ_trans {key value} {map: map.map key value}
-        m1 m2 m3 ks1 ks2 :
+  Context {key value} {map : map.map key value}.
+
+  Lemma only_differ_trans m1 m2 m3 ks1 ks2 :
     map.only_differ m2 ks1 m1 ->
     map.only_differ m3 ks2 m2 ->
     map.only_differ m3 (union ks1 ks2) m1.
   Admitted.
 
-  Lemma only_differ_sym {key value} {map: map.map key value}
-        m1 m2 ks :
+  Lemma only_differ_sym m1 m2 ks :
     map.only_differ m2 ks m1 ->
     map.only_differ m1 ks m2.
   Admitted.
 
-  Lemma only_differ_sameset {key value} {map: map.map key value}
-        m1 m2 ks1 ks2 :
+  Lemma only_differ_sameset m1 m2 ks1 ks2 :
     sameset ks1 ks2 ->
     map.only_differ m2 ks1 m1 ->
     map.only_differ m2 ks2 m1.
   Admitted.
 
-  Lemma only_differ_put {key value} {map: map.map key value}
-        m k v :
+  Lemma only_differ_put m k v :
     map.only_differ (map.put m k v) (singleton_set k) m.
+  Admitted.
+
+  Lemma putmany_of_list_zip_app_l m ks1 ks2 vs :
+    map.putmany_of_list_zip (ks1 ++ ks2) vs m =
+    Option.bind
+      (map.putmany_of_list_zip
+         ks1 (List.firstn (Datatypes.length ks1) vs) m)
+      (map.putmany_of_list_zip
+         ks2 (List.skipn (Datatypes.length ks1) vs)).
+  Admitted.
+
+  Lemma putmany_of_list_zip_bind_comm m ks1 ks2 vs1 vs2 :
+    Option.bind
+      (map.putmany_of_list_zip ks1 vs1 m)
+      (map.putmany_of_list_zip ks2 vs2) =
+    Option.bind
+      (map.putmany_of_list_zip ks2 vs2 m)
+      (map.putmany_of_list_zip ks1 vs1).
   Admitted.
 End Maps.
 
@@ -113,6 +129,20 @@ Section Lists.
   Proof.
     revert i; induction l; destruct i; try reflexivity.
     rewrite nth_default_cons_S, skipn_cons_S. eauto.
+  Qed.
+
+  Lemma firstn_length_firstn n (l : list A) :
+    firstn (length (firstn n l)) l = firstn n l.
+  Proof.
+    revert l; induction n; destruct l;
+      cbn [firstn length]; rewrite ?IHn; reflexivity.
+  Qed.
+ 
+  Lemma skipn_length_firstn n (l : list A) :
+    skipn (length (firstn n l)) l = skipn n l.
+  Proof.
+    revert l; induction n; destruct l;
+      cbn [skipn firstn length]; rewrite ?IHn; reflexivity.
   Qed.
 End Lists.
 
