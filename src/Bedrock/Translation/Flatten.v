@@ -1,6 +1,8 @@
 Require Import Coq.Strings.String.
 Require Import Coq.Lists.List.
+Require Import bedrock2.Array.
 Require Import bedrock2.Syntax.
+Require Import bedrock2.Semantics.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Language.API.
 Import ListNotations. Local Open Scope Z_scope.
@@ -29,6 +31,7 @@ Section Flatten.
     | _ => fun x : string => [x] 
     end.
 
+  (* TODO: delete if unused *)
   Fixpoint flatten_base_rtype {t}
     : base_rtype t -> list Syntax.expr :=
     match t as t0 return base_rtype t0 -> _ with
