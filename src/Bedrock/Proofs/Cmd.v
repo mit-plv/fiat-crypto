@@ -138,7 +138,7 @@ Section Cmd.
     repeat
       first [ progress (intros; cleanup)
             | progress
-                cbn [fst snd assign varname_not_in_context varname_set
+                cbn [fst snd assign context_varname_set varname_set
                          ltype rtype base_ltype base_rtype rtype_of_ltype
                          base_rtype_of_ltype rep.rtype_of_ltype
                          rep.equiv rep.listZ_local rep.Z
@@ -157,12 +157,19 @@ Section Cmd.
   Local Ltac context_not_overwritable :=
     repeat match goal with
            | _ => progress (intros; cleanup)
-           | _ => progress cbn [ltype base_ltype assign varname_not_in_context
-                                      varname_set fst snd] in *
+           | _ => progress
+                    cbn [ltype base_ltype assign context_varname_set
+                               varname_set fst snd] in *
            | _ => progress setsimplify
            | _ => apply Forall_cons; [ | solve [eauto with lia] ]
-           | _ => setoid_rewrite varname_gen_unique
-           | _ => solve [eauto using used_varnames_le with lia]
+           | _ => rewrite used_varnames_iff
+           | H : varname_gen _ = varname_gen _ |- _ =>
+             apply varname_gen_unique in H; subst
+           | |- ~ (_ \/ _) =>
+             let X := fresh in intro X; destruct X; cleanup
+           | H : context [context_varname_set] |- _ =>
+             eapply H; try eassumption; lia
+           | _ => lia
            end.
 
   (* prove that paired variable values in the context are equivalent *)
@@ -172,8 +179,8 @@ Section Cmd.
            | |- context_equiv (_ :: _) _ =>
              apply Forall_cons; [ solve [eauto] | ]
            | _ =>
-             eapply equivalent_not_in_context_forall; eauto;
-             intro; setsimplify; rewrite used_varnames_iff
+             eapply equivalent_not_in_context_forall;
+               eauto using disjoint_sameset, disjoint_used_varnames_lt
            | _ => solve [subst; eauto]
            end.
 
@@ -212,7 +219,7 @@ Section Cmd.
       (* G doesn't contain variables we could accidentally overwrite *)
       (forall n,
           (nextn <= n)%nat ->
-          Forall (varname_not_in_context (varname_gen n)) G) ->
+          ~ context_varname_set G (varname_gen n)) ->
       forall (tr : Semantics.trace)
              (mem : Interface.map.rep),
         (* contexts are equivalent; for every variable in the context list G,

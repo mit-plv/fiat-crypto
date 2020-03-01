@@ -82,7 +82,7 @@ Section Func.
       (* G doesn't contain variables we could later overwrite *)
       (forall n,
         (nextn <= n)%nat ->
-        Forall (varname_not_in_context (varname_gen n)) G) ->
+        ~ context_varname_set G (varname_gen n)) ->
       forall (tr : Semantics.trace)
              (locals : Semantics.locals)
              (mem : Semantics.mem)
@@ -126,8 +126,11 @@ Section Func.
       match goal with H : sep _ _ map.empty |- _ =>
                       apply sep_empty_iff in H; cleanup
       end.
-      eapply IHe0_valid; cbv [varname_not_in_context]; eauto;
-        eapply Forall_cons; eauto. }
+      eapply IHe0_valid; eauto; [ | ].
+      { destruct args; cbn [fst snd].
+        cbn [context_varname_set]; intros.
+        apply not_union_iff; eauto with lia. }
+      { eapply Forall_cons; eauto. } }
     { (* base case *)
       inversion 1; cleanup_wf;
       cbv [translate_func']; intros.
@@ -153,9 +156,7 @@ Section Func.
     WeakestPrecondition.list_map
       (WeakestPrecondition.get locals) (flatten_retnames retnames)
       (fun flat_rets =>
-         WeakestPrecondition.dexprs
-           mem locals (flatten_rets retvalues) flat_rets /\
-         sep (equivalent ret retvalues map.empty) R mem).
+         sep (equivalent_flat_base ret flat_rets) R mem).
   Proof.
     cbv [flatten_retnames].
     induction t;
@@ -177,11 +178,73 @@ Section Func.
     (* TODO *)
   Admitted.
 
+  (* TODO : move *)
+  Lemma NoDup_app_iff {A} (l1 l2 : list A) :
+    NoDup (l1 ++ l2) <-> (NoDup l1 /\ NoDup l2
+                          /\ (forall x, In x l1 -> ~ In x l2)
+                          /\ (forall x, In x l2 -> ~ In x l1)).
+  Proof.
+    revert l2; induction l1;
+      repeat match goal with
+             | _ => progress (intros; cleanup; subst)
+             | _ => progress cbn [In]
+             | _ => rewrite app_nil_l
+             | _ => rewrite <-app_comm_cons
+             | _ => split
+             | H : _ \/ _ |- _ => destruct H
+             | H: ~ In _ (_ ++ _) |- _ =>
+               rewrite in_app_iff in H;
+                 apply Decidable.not_or in H
+             | H: NoDup (_ ++ _) |- _ =>
+               apply IHl1 in H; cleanup
+             | H: NoDup (_ :: _) |- _ =>
+               inversion H; clear H; subst
+             | |- ~ (_ \/ _) => intro
+             | |- ~ In _ (_ ++_) =>
+               rewrite in_app_iff
+             | |- NoDup (_ ++ _) => apply IHl1
+             | |- NoDup (_ :: _) => constructor
+             | |- NoDup [] => constructor
+             | H1 : (forall x (H:In x ?l), _),
+                    H2 : In _ ?l |- _ => apply H1 in H2; tauto
+             | H : forall x (_:?a = x \/ _), _ |- _ =>
+               specialize (H a ltac:(tauto)); tauto
+             | _ => solve [eauto]
+             | _ => tauto
+             end.
+  Qed.
+
+  (* TODO : move *)
+  Lemma disjoint_cons {E} x (l : list E)
+        (eq_dec : forall a b : E, {a = b} + {a <> b}) :
+    ~ In x l ->
+    PropSet.disjoint (PropSet.singleton_set x) (PropSet.of_list l).
+  Proof.
+    intros. symmetry. apply disjoint_singleton_r_iff; eauto.
+  Qed.
+
+  (* TODO : move *)
+  Lemma NoDup_disjoint {E} (l1 l2 : list E)
+        (eq_dec : forall a b : E, {a = b} + {a <> b}) :
+    NoDup (l1 ++ l2) ->
+    PropSet.disjoint (PropSet.of_list l1) (PropSet.of_list l2).
+  Proof.
+    revert l2; induction l1; intros *;
+      rewrite ?app_nil_l, <-?app_comm_cons;
+      [ solve [firstorder idtac] | ].
+    inversion 1; intros; subst.
+    rewrite PropSet.of_list_cons.
+    apply disjoint_union_l_iff; split; eauto.
+    apply disjoint_cons; eauto. 
+    rewrite in_app_iff in *. tauto.
+  Qed.
+
   Lemma initial_context_correct' {t} :
     forall (names : base_ltype t)
            (values : base.interp t)
            (flat_values : list Semantics.word)
            (locals locals' : Semantics.locals),
+      NoDup (flatten_base_ltype names) ->
       map.putmany_of_list_zip
         (flatten_base_ltype names) flat_values locals = Some locals' ->
       Lift1Prop.iff1
@@ -218,6 +281,11 @@ Section Func.
           pose proof H;
           rewrite putmany_of_list_zip_bind_comm in H
       end.
+      match goal with
+        H : NoDup (_ ++ _) |- _ =>
+        pose proof H;
+        apply NoDup_app_iff in H; cleanup
+      end.
       cbv [Option.bind] in *.
       break_match_hyps; try congruence.
       repeat intro; split; intros.
@@ -233,12 +301,46 @@ Section Func.
         eapply Proper_sep_iff1;
           [ eapply IHt1; eassumption
           | eapply IHt2; eassumption | ].
-        eapply Proper_sep_iff1;
-          [ eapply equivalent_only_differ_iff1;
-            eauto using equiv_listZ_only_differ_mem
-          | reflexivity | ].
-        (* now we're going to need "no duplicate argnames" *)
-        
+        eapply Proper_sep_iff1; [ | reflexivity | ].
+        { eapply (equivalent_only_differ_iff1
+                    ltac:(eapply equiv_listZ_only_differ_mem)
+                 _ locals');
+            eauto using only_differ_sym, map.only_differ_putmany.
+          symmetry.
+          eapply disjoint_sameset; eauto using varname_set_flatten.
+          apply NoDup_disjoint; eauto using string_dec. }
+        { eauto. } } }
+    { repeat intro. rewrite sep_emp_l.
+      destruct flat_values as [| ? [|? ?] ]; cbn [length] in *; try lia.
+      cbv [List.hd
+             rep.equiv rep.rtype_of_ltype rep.listZ_mem rep.Z
+             WeakestPrecondition.literal dlet.dlet
+             WeakestPrecondition.get WeakestPrecondition.dexpr
+             WeakestPrecondition.expr WeakestPrecondition.expr_body].
+      match goal with
+        H : map.putmany_of_list_zip _ _ _ = _ |- _ =>
+        cbn [map.putmany_of_list_zip] in H; inversion H; clear H; subst
+      end.
+      split; intros;
+        repeat match goal with
+               | _ => progress cleanup
+               | _ => progress subst
+               | H : Lift1Prop.ex1 _ _ |- _ => destruct H
+               | H : sep (fun _ => emp _ _) _ _ |- _ =>
+                 apply sep_emp_l in H
+               | H : Some _ = Some _ |- _ =>
+                 inversion H; clear H; subst
+               | H : _ |- _ => rewrite word.of_Z_unsigned in H
+               | H : _ |- _ => rewrite map.get_put_same in H
+               | _ => rewrite map.get_put_same
+               | _ => rewrite word.of_Z_unsigned
+               | |- sep (fun _ => emp _ _) _ _ => eapply sep_emp_l
+               | |- Lift1Prop.ex1 _ _ => eexists
+               | |- exists _, _ => eexists
+               | |- _ /\ _ => split
+               | _ => solve [eauto]
+               | _ => congruence
+               end. }
   Qed.
 
   (* When arguments are loaded into initial locals, the new argument names map
@@ -248,6 +350,7 @@ Section Func.
            (args : type.for_each_lhs_of_arrow API.interp_type t)
            (flat_args : list Semantics.word)
            (locals locals' : Semantics.locals),
+      NoDup (flatten_argnames argnames) ->
       map.putmany_of_list_zip
         (flatten_argnames argnames) flat_args locals = Some locals' ->
       let argvalues :=
@@ -269,32 +372,44 @@ Section Func.
     { 
       destruct flat_args; cbn [length] in *; try lia; [ ].
       repeat intro; cbv [emp]; tauto. }
-    { destruct argnames. cbn [fst snd] in *.
+    { destruct argnames. cbn [fst snd rtype_of_ltype] in *.
+      match goal with
+      | H : _ |- _ =>
+        pose proof H; rewrite putmany_of_list_zip_app_l in H
+      end.
+      match goal with
+      | H : NoDup (_ ++ _) |- _ =>
+        pose proof H; apply NoDup_app_iff in H; cleanup
+      end.
+      cbv [Option.bind] in *. break_match_hyps; try congruence.
       repeat intro; split; intros.
-      {
-        match goal with
-        | H : Lift1Prop.ex1 _ _ |- _ => destruct H end.
-        match goal with
-        | H : _ |- _ => rewrite putmany_of_list_zip_app_l in H
-        end.
-        cbv [Option.bind] in *.
-        break_match_hyps; try congruence.
+      { repeat match goal with
+               | _ => progress cleanup
+               | H : Lift1Prop.ex1 _ _ |- _ => destruct H
+               | H: _ |- _ =>
+                 erewrite <-flatten_base_samelength in H by eauto;
+                   rewrite ?firstn_length_firstn, ?skipn_length_firstn in H
+               end.
         eapply Proper_sep_iff1;
-          [ reflexivity | symmetry; eapply IHt2; eassumption | ].
-
-
-        erewrite <-IHt2.
-        erewrite IHt2 in  H1.
-      Search Lift1Prop.iff1 Lift1Prop.ex1.
-      apply 
-      repeat intro.
-      cbv [Lift1Prop.ex1].
-      destruct flat_args; cbn [length] in *.
-      { destruct argnames. cbn [fst snd].
-    
-    
-    Search map.of_list_zip.
-    Search map.putmany_of_list_zip.
+          [ | symmetry; eapply IHt2; eassumption | eassumption ].
+        { symmetry.
+          erewrite equivalent_only_differ_iff1 by
+            (eauto using only_differ_sym, map.only_differ_putmany
+               with equiv;
+             rewrite varname_set_flatten; symmetry;
+             apply NoDup_disjoint; eauto using string_dec).
+          eapply initial_context_correct'; eauto. } }
+      { eexists.
+        eapply Proper_sep_iff1;
+          [ | eapply IHt2; solve [eauto] | eassumption ].
+        match goal with
+          H : map.putmany_of_list_zip _ (List.skipn _ _) ?x = _ |- _ =>
+          erewrite equivalent_only_differ_iff1 with (locals2:=x) by
+              (eauto using only_differ_sym, map.only_differ_putmany
+                 with equiv; rewrite varname_set_flatten; symmetry;
+               apply NoDup_disjoint; eauto using string_dec)
+        end.
+        eapply initial_context_correct'; solve[eauto]. } }
   Qed.
 
   Lemma translate_func_correct {t}
@@ -323,6 +438,8 @@ Section Func.
              (P Ra Rr : Semantics.mem -> Prop),
         (* argnames don't contain variables we could later overwrite *)
         (forall n, ~ varname_set_args argnames (varname_gen n)) ->
+        (* argnames don't have duplicates *)
+        NoDup (flatten_argnames argnames) ->
         (* argument values are equivalent *)
         sep (equivalent_flat_args args flat_args) Ra mem ->
         (* seplogic frame for return values *)
@@ -333,7 +450,7 @@ Section Func.
           (fun tr' mem' flat_rets =>
              tr = tr' /\
              (* return values are equivalent *)
-             sep (equivalent_flat_base rets flat_rets) Rr mem).
+             sep (equivalent_flat_base rets flat_rets) Rr mem').
   Proof.
     cbv [translate_func Wf3]; intros.
     cbn [WeakestPrecondition.call
@@ -348,7 +465,10 @@ Section Func.
     eexists; split; [ eassumption | ].
     cbn [WeakestPrecondition.cmd WeakestPrecondition.cmd_body].
     eapply Proper_cmd; [ solve [apply Proper_call] | repeat intro | ].
-    2 : { eapply load_arguments_correct; try eassumption; eauto. }
+    2 : { eapply load_arguments_correct; try eassumption; eauto.
+          eapply Proper_sep_iff1;
+            [ symmetry; eapply initial_context_correct; solve [eauto]
+            | reflexivity | eassumption ]. }
     cbv beta in *. cleanup; subst.
     eapply Proper_cmd; [ solve [apply Proper_call] | repeat intro | ].
     2 : { eapply translate_func'_correct with (args0:=args);
@@ -359,27 +479,26 @@ Section Func.
     cbv beta in *. cleanup; subst.
 
     eapply Proper_list_map; [ solve [apply Proper_get]
-                            | | eapply look_up_return_values;
-                                solve [eauto] ].
+                            | | eapply look_up_return_values; eauto ].
     repeat intro; cleanup; eauto.
   Qed.
 
   (*
     TODO : prove assumptions shown by:
     Print Assumptions translate_func_correct.
-
-    used_varnames_le (easy)
+    
     used_varnames_iff (easy)
+    putmany_of_list_zip_bind_comm (easy)
+    putmany_of_list_zip_app_l (easy)
     only_differ_trans (easy)
     only_differ_sym (easy)
     only_differ_sameset (easy)
     only_differ_put (easy)
     equiv_Z_only_differ_iff1 (medium)
-    get_untouched (medium)
     look_up_return_values (medium)
+    get_untouched (medium)
     assign_correct (medium/hard)
     translate_expr_correct (hard)
     store_return_values_correct (hard)
-
   *)
 End Func.
