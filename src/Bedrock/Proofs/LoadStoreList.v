@@ -179,14 +179,14 @@ Section LoadStoreList.
         eapply equiv_listZ_only_differ_mem_iff1;
           eauto using only_differ_put.
         cbn [varname_set rep.varname_set rep.listZ_mem rep.Z].
-        cbv [PropSet.singleton_set]; intros; subst.
-        eauto with lia. }
-      repeat intro. cleanup; subst.
+        apply disjoint_singleton_singleton; eauto using string_dec. }
+      repeat intro.
+      cbv beta in *; cleanup; subst.
       repeat match goal with |- _ /\ _ => split end;
         eauto using only_differ_succ.
-      { intros.
-        cbn [varname_set rep.varname_set rep.listZ_local rep.Z
+      { cbn [varname_set rep.varname_set rep.listZ_local rep.Z
                          fold_right] in *.
+        intros.
         apply not_union_iff; split; eauto with lia.
         cbv [PropSet.singleton_set].
         rewrite varname_gen_unique; lia. }
@@ -199,17 +199,12 @@ Section LoadStoreList.
         eapply Forall2_cons; eauto.
         eapply (equiv_Z_only_differ_iff1 (listZ:=rep.listZ_mem)); eauto.
         { eauto using only_differ_sym, only_differ_put. }
-        { intros.
-          match goal with H : _ |- _ =>
-                          apply used_varnames_iff in H; cleanup; subst
-          end.
-          cbn [varname_set rep.varname_set rep.Z].
-          cbv [PropSet.singleton_set PropSet.elem_of].
-          rewrite varname_gen_unique; lia. }
-        split; [ reflexivity | ].
-        eexists; split; [ | reflexivity ].
-        rewrite map.get_put_same, hd_skipn_nth_default.
-        reflexivity. } }
+        { eapply disjoint_used_varnames_singleton.
+          lia. }
+        { split;[reflexivity|].
+          eexists; split; [ | reflexivity ].
+          rewrite map.get_put_same, hd_skipn_nth_default.
+          reflexivity. } } }
   Qed.
 
   Lemma load_all_lists_correct {t} :
@@ -301,10 +296,7 @@ Section LoadStoreList.
             eapply Proper_sep_iff1; [ | reflexivity | ].
             { eapply equivalent_only_differ_iff1;
                 eauto using equiv_listZ_only_differ_mem, only_differ_sym.
-              intros.
-              match goal with H : _ |- _ =>
-                              rewrite used_varnames_iff in H end.
-              cleanup. subst.
+              eapply disjoint_used_varnames_lt.
               match goal with
               | H : _ |- _ =>
                 setoid_rewrite not_union_iff in H;
@@ -323,8 +315,7 @@ Section LoadStoreList.
         eapply equivalent_only_differ_iff1;
           eauto using equiv_listZ_only_differ_local, only_differ_sym.
         intros.
-        match goal with H : _ |- _ =>
-                        rewrite used_varnames_iff in H end.
+        eapply disjoint_used_varnames_lt.
         cleanup. subst.
         match goal with H : _ |- _ => apply H; lia end. } }
   { (* base_listZ *)
@@ -432,8 +423,7 @@ Section LoadStoreList.
           eapply equivalent_args_only_differ_iff1;
             eauto using equiv_listZ_only_differ_mem, only_differ_sym.
           intros.
-          match goal with H : _ |- _ =>
-                          rewrite used_varnames_iff in H end.
+          eapply disjoint_used_varnames_lt.
           cleanup. subst.
           match goal with
             | H : _ |- _ =>
@@ -450,10 +440,8 @@ Section LoadStoreList.
             apply sep_empty_iff; split; eauto.
             eapply equivalent_only_differ_iff1;
               eauto using equiv_listZ_only_differ_local, only_differ_sym.
-            intros.
-            match goal with H : _ |- _ =>
-                            rewrite used_varnames_iff in H end.
-            cleanup. subst.
+            eapply disjoint_used_varnames_lt.
+            intros; cleanup. subst.
             eauto with lia. } } } }
     { (* arrow (arrow _ _) _ *)
       match goal with

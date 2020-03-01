@@ -9,6 +9,7 @@ Require Import coqutil.Map.Interface coqutil.Map.Properties.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Language.API.
 Require Import Crypto.Bedrock.Proofs.Dexprs.
+Require Import Crypto.Bedrock.Proofs.Varnames.
 Require Import Crypto.Bedrock.Translation.Flatten.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Import ListNotations. Local Open Scope Z_scope.
@@ -95,5 +96,21 @@ Section Flatten.
   Proof.
     intros. apply map.sameLength_putmany_of_list.
     erewrite flatten_args_samelength; eauto.
+  Qed.
+
+  Lemma varname_set_flatten {t} (names : base_ltype t) :
+    PropSet.sameset (varname_set names)
+                    (PropSet.of_list (flatten_base_ltype names)).
+  Proof.
+    apply sameset_iff.
+    induction t;
+      cbn [varname_set
+             flatten_base_ltype rep.varname_set rep.Z rep.listZ_mem];
+      break_match;
+      cbv [PropSet.singleton_set
+             PropSet.of_list PropSet.union PropSet.elem_of];
+      cbn [In]; try tauto; [ ].
+    intros. rewrite in_app_iff, IHt1, IHt2.
+    cbv [PropSet.of_list]. reflexivity.
   Qed.
 End Flatten.

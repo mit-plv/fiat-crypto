@@ -1,6 +1,8 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Strings.String.
 Require Import Coq.micromega.Lia.
+Require Import Coq.Classes.Morphisms.
+Require Import Coq.Classes.RelationClasses.
 Require Import bedrock2.Syntax.
 Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Map.SeparationLogic.
@@ -26,59 +28,90 @@ Import Types.Notations Types.Types.
 Section Sets.
   Context {E : Type}.
 
+  Lemma disjoint_union_l_iff (s1 s2 s3 : set E) :
+    disjoint (union s1 s2) s3 <-> disjoint s1 s3 /\ disjoint s2 s3.
+  Proof. firstorder idtac. Qed.
+
   Lemma disjoint_union_r_iff (s1 s2 s3 : set E) :
     disjoint s1 (union s2 s3) <-> disjoint s1 s2 /\ disjoint s1 s3.
-  Proof.
-    cbv [disjoint union elem_of];
-      repeat match goal with
-             | _ => progress intros
-             | H : forall _, _ |- _ =>
-               specialize (H ltac:(eassumption))
-             | H : _ \/ _ |- _ => destruct H
-             | H : _ /\ _ |- _ => destruct H
-             | _ => split
-             | _ => tauto
-             end.
-  Qed.
+  Proof. firstorder idtac. Qed.
 
   Lemma disjoint_cons (s : set E) x l :
     disjoint s (of_list (x :: l)) ->
     disjoint s (of_list l) /\ disjoint s (singleton_set x).
+  Proof. firstorder idtac. Qed.
+
+  Lemma disjoint_singleton_r_iff
+        (x : E) (s : set E)
+        (eq_dec : forall a b : E, {a = b} + {a <> b}):
+    ~ s x <->
+    disjoint s (singleton_set x).
   Proof.
-    cbv [disjoint of_list elem_of]; cbn [In].
-    repeat match goal with
-           | _ => progress intros
-           | H : _ \/ _ |- _ => destruct H
-           | H : _ /\ _ |- _ => destruct H
-           | _ => split
-           | _ => tauto
-           | H : forall _, _ |- context[s ?x] =>
-             specialize (H x); tauto
-           end.
+    intros. split; [|firstorder idtac].
+    intros. intro y.
+    destruct (eq_dec x y);
+      subst; try firstorder idtac.
   Qed.
+
+  Lemma disjoint_singleton_singleton
+        (x y : E)
+        (eq_dec : forall a b : E, {a = b} + {a <> b}):
+    y <> x ->
+    disjoint (singleton_set x) (singleton_set y).
+  Proof.
+    intros.
+    apply disjoint_singleton_r_iff;
+      firstorder congruence.
+  Qed.
+
+  Lemma disjoint_sameset (s1 s2 s3 : set E) :
+    sameset s3 s1 ->
+    disjoint s1 s2 ->
+    disjoint s3 s2.
+  Proof. firstorder idtac. Qed.
+
+  Global Instance disjoint_sym : Symmetric (@disjoint E).
+  Proof. firstorder idtac. Defined.
+  Global Instance disjoint_Proper
+    : Proper (sameset ==> sameset ==> iff) (@disjoint E).
+  Proof. firstorder idtac. Defined.
+
+  Global Instance sameset_sym : Symmetric (@sameset E).
+  Proof. firstorder idtac. Defined.
+  Global Instance sameset_trans : Transitive (@sameset E).
+  Proof. firstorder idtac. Defined.
+  Global Instance sameset_ref : Reflexive (@sameset E).
+  Proof. firstorder idtac. Defined.
 
   Lemma sameset_iff (s1 s2 : set E) :
     sameset s1 s2 <-> (forall e, s1 e <-> s2 e).
-  Proof.
-    cbv [sameset subset elem_of]. split.
-    { destruct 1; split; eauto. }
-    { intro Hiff; split; apply Hiff; eauto. }
-  Qed.
+  Proof. firstorder idtac. Qed.
 
   Lemma not_union_iff (s1 s2 : set E) x :
     ~ union s1 s2 x <-> ~ s1 x /\ ~ s2 x.
-  Proof. cbv [union elem_of]. tauto. Qed.
+  Proof. firstorder idtac. Qed.
 End Sets.
 
 (* General-purpose lemmas about maps that should be later moved to coqutil *)
 (* TODO: move *)
 Section Maps.
-  Context {key value} {map : map.map key value}.
+  Context {key value} {key_eqb}
+          {map : map.map key value}
+          {key_eq_dec :
+             forall x y : key,
+               BoolSpec (x = y) (x <> y) (key_eqb x y)}
+          {map_ok : map.ok map}.
 
   Lemma only_differ_trans m1 m2 m3 ks1 ks2 :
     map.only_differ m2 ks1 m1 ->
     map.only_differ m3 ks2 m2 ->
     map.only_differ m3 (union ks1 ks2) m1.
+  Proof.
+    (* TODO: map_solver should help with these but fails *)
+    (* 
+       Require Import coqutil.Map.Solver.
+       map_solver map_ok.
+    *)
   Admitted.
 
   Lemma only_differ_sym m1 m2 ks :
@@ -189,7 +222,7 @@ Section Varnames.
           {listZ : rep.rep base_listZ}
           locals1 locals2 vset (varname : base_ltype base_Z) x :
       map.only_differ locals1 vset locals2 ->
-      (forall v, vset v -> ~ varname_set varname v) ->
+      disjoint vset (varname_set varname) ->
       Lift1Prop.iff1
         (rep.equiv x (rep.rtype_of_ltype varname) locals1)
         (rep.equiv x (rep.rtype_of_ltype varname) locals2).
@@ -201,7 +234,7 @@ Section Varnames.
       Lemma equiv_listZ_only_differ_local
             locals1 locals2 vset (varnames : base_ltype base_listZ) x mem :
         map.only_differ locals1 vset locals2 ->
-        (forall v, vset v -> ~ varname_set varnames v) ->
+        disjoint vset (varname_set varnames) ->
         rep.equiv x (rep.rtype_of_ltype varnames) locals1 mem ->
         rep.equiv x (rep.rtype_of_ltype varnames) locals2 mem.
       Proof.
@@ -216,29 +249,31 @@ Section Varnames.
         constructor.
         { eapply equiv_Z_only_differ_iff1;
             cbn [rep.equiv rep.Z]; cbv [emp];
-              destruct_head'_and; eauto using only_differ_sym.
+              destruct_head'_and;
+              eauto using only_differ_sym.
           cbv [varname_set rep.varname_set rep.Z] in *.
-          match goal with H : _ |- _ =>
-                   setoid_rewrite not_union_iff in H;
-                     apply H; eauto
-          end. }
+          match goal with H : disjoint _ _ |- _ =>
+                          apply disjoint_union_r_iff in H;
+                            cleanup
+          end. eauto. }
         { apply IHvarnames; eauto.
-          match goal with H : _ |- _ =>
-                   setoid_rewrite not_union_iff in H;
-                     apply H; eauto
-          end. }
+          match goal with H : disjoint _ _ |- _ =>
+                          apply disjoint_union_r_iff in H;
+                            cleanup
+          end. eauto. }
       Qed.
 
       Lemma equiv_listZ_only_differ_local_iff1
             locals1 locals2 vset (varnames : base_ltype base_listZ) x :
         map.only_differ locals1 vset locals2 ->
-        (forall v, vset v -> ~ varname_set varnames v) ->
+        disjoint vset (varname_set varnames) ->
         Lift1Prop.iff1
           (rep.equiv x (rep.rtype_of_ltype varnames) locals1)
           (rep.equiv x (rep.rtype_of_ltype varnames) locals2).
       Proof.
         cbv [Lift1Prop.iff1]; split; intros;
-          eapply equiv_listZ_only_differ_local; eauto using only_differ_sym.
+          eapply equiv_listZ_only_differ_local;
+          eauto using only_differ_sym.
       Qed.
     End Local.
 
@@ -248,7 +283,7 @@ Section Varnames.
       Lemma equiv_listZ_only_differ_mem
             locals1 locals2 vset (varnames : base_ltype base_listZ) x mem :
         map.only_differ locals1 vset locals2 ->
-        (forall v, vset v -> ~ varname_set varnames v) ->
+        disjoint vset (varname_set varnames) ->
         rep.equiv x (rep.rtype_of_ltype varnames) locals1 mem ->
         rep.equiv x (rep.rtype_of_ltype varnames) locals2 mem.
       Proof.
@@ -267,7 +302,7 @@ Section Varnames.
       Lemma equiv_listZ_only_differ_mem_iff1
             locals1 locals2 vset (varnames : base_ltype base_listZ) x :
         map.only_differ locals1 vset locals2 ->
-        (forall v, vset v -> ~ varname_set varnames v) ->
+        disjoint vset (varname_set varnames) ->
         Lift1Prop.iff1
           (rep.equiv x (rep.rtype_of_ltype varnames) locals1)
           (rep.equiv x (rep.rtype_of_ltype varnames) locals2).
@@ -285,14 +320,14 @@ Section Varnames.
                    locals1 locals2 vset
                    (varnames : base_ltype base_listZ) x mem,
                    map.only_differ locals1 vset locals2 ->
-                   (forall v, vset v -> ~ varname_set varnames v) ->
+                   disjoint vset (varname_set varnames) ->
                    rep.equiv x (rep.rtype_of_ltype varnames) locals1 mem ->
                    rep.equiv x (rep.rtype_of_ltype varnames) locals2 mem).
 
       Lemma equivalent_only_differ {t}
             locals1 locals2 vset (varnames : base_ltype t) x :
         map.only_differ locals1 vset locals2 ->
-        (forall v, vset v -> ~ varname_set varnames v) ->
+        disjoint vset (varname_set varnames) ->
         forall mem,
           equivalent x (base_rtype_of_ltype varnames) locals1 mem ->
           equivalent x (base_rtype_of_ltype varnames) locals2 mem.
@@ -304,22 +339,13 @@ Section Varnames.
         { (* base case *)
           eapply equiv_Z_only_differ_iff1; eauto using only_differ_sym. }
         { (* prod case *)
-          cbv [union elem_of] in *.
+          match goal with H : disjoint _ (union _ _) |- _ =>
+                          apply disjoint_union_r_iff in H
+          end.
+          cleanup.
           eapply Proper_sep_impl1; [ | | eassumption]; repeat intro; eauto.
-          { apply IHt1; eauto.
-            match goal with H : _ |- _ =>
-                            let x1 := fresh in
-                            let x2 := fresh in
-                            intros x1 x2; specialize (H x1 x2)
-            end.
-            tauto. }
-          { apply IHt2; eauto.
-            match goal with H : _ |- _ =>
-                            let x1 := fresh in
-                            let x2 := fresh in
-                            intros x1 x2; specialize (H x1 x2)
-            end.
-            tauto. } }
+          { apply IHt1; eauto. }
+          { apply IHt2; eauto. } }
         { (* list case *)
           eapply equiv_listZ_only_differ; eauto. }
       Qed.
@@ -327,7 +353,7 @@ Section Varnames.
       Lemma equivalent_only_differ_iff1 {t}
             locals1 locals2 vset (varnames : base_ltype t) x :
         map.only_differ locals1 vset locals2 ->
-        (forall v, vset v -> ~ varname_set varnames v) ->
+        disjoint vset (varname_set varnames) ->
         Lift1Prop.iff1
           (equivalent x (base_rtype_of_ltype varnames) locals1)
           (equivalent x (base_rtype_of_ltype varnames) locals2).
@@ -341,7 +367,7 @@ Section Varnames.
             (argnames : type.for_each_lhs_of_arrow ltype t)
             x :
         map.only_differ locals1 vset locals2 ->
-        (forall v, vset v -> ~ varname_set_args argnames v) ->
+        disjoint vset (varname_set_args argnames) ->
         let argvalues :=
             type.map_for_each_lhs_of_arrow
               rtype_of_ltype argnames in
@@ -360,13 +386,15 @@ Section Varnames.
           repeat match goal with
                  | _ => eapply equivalent_only_differ_iff1; eauto
                  | _ => eapply IHt2; eauto
-                 | H : _ |- _ =>
-                   setoid_rewrite not_union_iff in H;
-                     apply H; eauto
+                 | H : disjoint _ (union _ _) |- _ =>
+                   apply disjoint_union_r_iff in H;
+                     cleanup; eauto
                  end.
       Qed.
     End Generic.
   End Equivalence.
+  Hint Resolve equiv_listZ_only_differ_local
+       equiv_listZ_only_differ_mem : equiv.
 
   Section UsedVarnames.
     Definition used_varnames nextn nvars : set varname :=
@@ -402,41 +430,48 @@ Section Varnames.
     Definition context_equiv {var1} G locals
       : Prop := Forall (equiv3 (var1:= var1) locals) G.
 
-    Definition varname_not_in_context {var1}
-               (v : varname)
-               (x : {t : API.type & (var1 t * API.interp_type t * ltype t)%type})
-      : Prop :=
-      match x with
-      | existT (type.base b) (w, x, y) =>
-        ~ (varname_set y) v
-      | existT (type.arrow _ _) _ => False (* no functions allowed *)
+    Fixpoint context_varname_set {var1}
+             (G : list {t : API.type & (var1 t * API.interp_type t * ltype t)%type})
+      : PropSet.set varname :=
+      match G with
+      | (existT (type.base b) (w, x, y)) :: G' =>
+        union (varname_set y) (context_varname_set G')
+      |  _ => PropSet.empty_set (* no functions allowed *)
       end.
   End Local.
 
   Lemma equivalent_not_in_context {var1} locals1 locals2 vset x :
     map.only_differ locals1 vset locals2 ->
-    (forall v, vset v -> varname_not_in_context v x) ->
-    equiv3 (var1:=var1) locals1 x ->
+    disjoint vset (@context_varname_set var1 (x :: nil)) ->
+    equiv3 locals1 x ->
     equiv3 locals2 x.
   Proof.
-    intros; cbv [equiv3 varname_not_in_context locally_equivalent] in *.
+    intros; cbv [equiv3 context_varname_set locally_equivalent] in *.
     destruct x as [x [ [? ?] ?] ]; destruct x; [ | tauto ].
-    eauto using equivalent_only_differ, equiv_listZ_only_differ_local.
+    eapply equivalent_only_differ; eauto with equiv. 
+    match goal with H : _ |- _ =>
+                    apply disjoint_union_r_iff in H end.
+    cleanup; eauto.
   Qed.
 
   Lemma equivalent_not_in_context_forall {var1} locals1 locals2 vset G :
     map.only_differ locals1 vset locals2 ->
-    (forall v, vset v -> Forall (varname_not_in_context v) G) ->
-    Forall (equiv3 (var1:=var1) locals1) G ->
+    disjoint vset (@context_varname_set var1 G) ->
+    Forall (equiv3 locals1) G ->
     Forall (equiv3 locals2) G.
   Proof.
-    intros Hdiffer Hexcl; induction G; intros; constructor;
-      match goal with
-      | H : Forall _ (_ :: _) |- _ => inversion H; subst; clear H end.
-    { eapply equivalent_not_in_context; eauto.
-      intros x y; specialize (Hexcl x y); inversion Hexcl; auto. }
-    { apply IHG; auto.
-      intros x y; specialize (Hexcl x y); inversion Hexcl; auto. }
+    induction G; intros; constructor;
+      repeat match goal with
+               | _ => progress cbn [context_varname_set equiv3] in *
+               | _ => progress break_match_hyps
+               | H : disjoint _ (union _ _) |- _ =>
+                 apply disjoint_union_r_iff in H; cleanup
+               | H : Forall _ (_ :: _) |- _ =>
+                 inversion H; subst; clear H
+               | _ => tauto
+               | _ => eapply equivalent_only_differ;
+                        solve [eauto with equiv]
+             end.
   Qed.
 
   Lemma only_differ_zero nextn l :
@@ -466,6 +501,28 @@ Section Varnames.
     map.only_differ l2 (used_varnames (nextn + nvars) nvars') l3 ->
     map.only_differ l1 (used_varnames nextn (nvars + nvars')) l3.
   Proof.
+
+    (* if you want to change the definition of used_varnames:
+    replace used_varnames with
+        (fun nextn nvars v => 
+           (exists n : nat, v = varname_gen n /\ nextn <= n < nextn + nvars)).
+    2:admit.
+    intros.
+    pose proof (only_differ_trans _ _ _ _ _ H0 H).
+    clear H0 H.
+    eapply only_differ_sameset. 2:eassumption.
+    clear H1.
+    apply sameset_iff.
+    intros. cbv [union elem_of].
+    intuition (cleanup; subst; try lia).
+    1-2:(exists x; split; [trivial | lia ]).
+    
+    destruct (le_dec (nextn + nvars) x);
+      [ left | right].
+    all:exists x; split; [trivial | lia ].
+               
+    firstorder lia. *)
+    
     cbv [map.only_differ used_varnames of_list
                          elem_of].
     let H1 := fresh in
@@ -488,6 +545,32 @@ Section Varnames.
            end.
   Qed.
 
+  Lemma disjoint_used_varnames_lt n nvars (vset : set varname) :
+    (forall x, n <= x -> ~ vset (varname_gen x)) ->
+    disjoint (used_varnames n nvars) vset.
+  Proof.
+    cbv [disjoint elem_of]; intros.
+    apply Decidable.imp_simp.
+    { cbv [used_varnames Decidable.decidable of_list ].
+      match goal with
+        |- In ?x ?l \/ ~ In ?x ?l =>
+        destruct (in_dec string_dec x l); [left|right]
+      end; tauto. }
+    rewrite used_varnames_iff.
+    intros; cleanup; subst.
+    eauto with lia.
+  Qed.
+
+  Lemma disjoint_used_varnames_singleton n nvars m :
+    m < n ->
+    disjoint (used_varnames n nvars)
+             (singleton_set (varname_gen m)).
+  Proof.
+    cbv [singleton_set elem_of]; intros.
+    eapply disjoint_used_varnames_lt. intros.
+    rewrite varname_gen_unique. lia.
+  Qed.
+
   (* if two maps only differ on some keys, and we get a key that
          is not in the differing set, then any proposition that holds
          on one result should hold on the other. *)
@@ -508,3 +591,5 @@ Section Varnames.
     rewrite get_untouched; eauto; reflexivity.
   Qed.
 End Varnames.
+Hint Resolve equiv_listZ_only_differ_local
+     equiv_listZ_only_differ_mem : equiv.
