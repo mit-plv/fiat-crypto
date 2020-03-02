@@ -166,11 +166,6 @@ OUTPUT_PREOUTS := \
 	Crypto.Fancy.Barrett256.prod_barrett_red256_correct \
 	Crypto.Fancy.Barrett256.prod_barrett_red256_correct.Assumptions
 
-ifneq ($(SKIP_BEDROCK2),1)
-OUTPUT_VOS += src/Bedrock/Test_X25519_64.vo
-OUTPUT_PREOUTS += Crypto.Bedrock.Test_X25519_64.mulmod_bedrock
-endif
-
 CHECK_OUTPUTS := $(addprefix check-,$(OUTPUT_PREOUTS))
 ACCEPT_OUTPUTS := $(addprefix accept-,$(OUTPUT_PREOUTS))
 
