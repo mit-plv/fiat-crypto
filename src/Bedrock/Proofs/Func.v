@@ -14,6 +14,7 @@ Require Import coqutil.Map.Properties.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Proofs.Cmd.
+Require Import Crypto.Bedrock.Proofs.Dexprs.
 Require Import Crypto.Bedrock.Proofs.Flatten.
 Require Import Crypto.Bedrock.Proofs.Varnames.
 Require Import Crypto.Bedrock.Proofs.LoadStoreList.
@@ -162,21 +163,57 @@ Section Func.
     induction t;
       cbn [flatten_base_ltype
              flatten_rets base_rtype_of_ltype rep.rtype_of_ltype
-             flatten_base_rtype
+             flatten_base_rtype equivalent_flat_base
              rep.listZ_mem rep.Z equivalent]; break_match;
         repeat match goal with
                | _ => progress (intros; cleanup)
                | _ => progress subst
                | _ => progress cbn [rep.equiv rep.listZ_mem rep.Z] in *
-               | _ => progress cbn [WeakestPrecondition.list_map WeakestPrecondition.list_map_body WeakestPrecondition.dexprs WeakestPrecondition.expr WeakestPrecondition.expr_body]
+               | _ => progress cbn [List.hd
+                                      WeakestPrecondition.list_map
+                                      WeakestPrecondition.list_map_body
+                                      WeakestPrecondition.literal
+                                      WeakestPrecondition.dexpr
+                                      WeakestPrecondition.dexprs
+                                      WeakestPrecondition.expr
+                                      WeakestPrecondition.expr_body]
+               | _ => rewrite word.of_Z_unsigned
                | H : sep (emp _) _ _ |- _ => apply sep_emp_l in H
+               | H : sep (fun _ => emp _ _) _ _ |- _ => apply sep_emp_l in H
+               | H : sep (sep (fun _ => emp _ _) _) _ _ |- _ => apply sep_assoc in H
+               | H : sep (Lift1Prop.ex1 _) _ _ |- _ => apply sep_ex1_l in H; destruct H
                | H : WeakestPrecondition.dexpr _ _ _ _ |- _ => destruct H
                | |- WeakestPrecondition.get _ _ _ => eexists; split; [ eassumption | ]
+               | |- WeakestPrecondition.literal _ _ =>
+                 cbv [WeakestPrecondition.literal dlet.dlet]
+               | |- sep (emp _) _ _ => apply sep_emp_l
+               | |- sep (sep (emp _) _) _ _ => apply sep_assoc
                | |- _ /\ _ => split
+               | H : False |- _ => tauto
                | _ => reflexivity
+               | _ => solve [eauto]
                end.
-    (* TODO *)
-  Admitted.
+    { apply list_map_app_iff; [ solve [split; intros; propers] | ].
+      eapply Proper_list_map; [ solve [apply Proper_get] | repeat intro | ].
+      2:{ eapply IHt1;
+          (* TODO: why does ecancel_assumption not work here? *)
+          use_sep_assumption; rewrite sep_assoc; reflexivity. }
+      cbv beta in *.
+      eapply Proper_list_map; [ solve [apply Proper_get] | repeat intro | ].
+      2:{ eapply IHt2.
+          (* TODO: why does ecancel_assumption not work here? *)
+          use_sep_assumption; rewrite sep_comm,sep_assoc; reflexivity. }
+      cbv beta in *.
+      apply sep_ex1_l.
+      match goal with |- context[List.firstn _ (?x ++ ?y)] =>
+                      exists (length x) end.
+      rewrite firstn_app_sharp, skipn_app_sharp by reflexivity.
+      ecancel_assumption. }
+    { apply sep_ex1_l; eexists.
+      apply sep_assoc, sep_emp_l. split; eauto.
+      cbv [WeakestPrecondition.literal dlet.dlet].
+      rewrite word.of_Z_unsigned. reflexivity. }
+  Qed.
 
   (* TODO : move *)
   Lemma NoDup_app_iff {A} (l1 l2 : list A) :
@@ -495,7 +532,6 @@ Section Func.
     only_differ_sameset (easy)
     only_differ_put (easy)
     equiv_Z_only_differ_iff1 (medium)
-    look_up_return_values (medium)
     get_untouched (medium)
     assign_correct (medium/hard)
     translate_expr_correct (hard)

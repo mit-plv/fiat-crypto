@@ -84,4 +84,31 @@ Section Dexprs.
              end.
     rewrite IHvs; auto.
   Qed.
+
+  Lemma list_map_app_iff {A B}
+        (f : A -> (B -> Prop) -> Prop)
+        (f_ext :
+           forall a H1 H2,
+             (forall b, H1 b <-> H2 b) ->
+             f a H1 <-> f a H2)
+        xs ys post :
+    WeakestPrecondition.list_map f (xs ++ ys) post <->
+    WeakestPrecondition.list_map
+      f xs (fun xx =>
+              WeakestPrecondition.list_map
+                f ys (fun yy => post (xx ++ yy))).
+  Proof.
+    revert ys post; induction xs;
+      repeat match goal with
+             | _ => progress intros
+             | _ => progress cbn [WeakestPrecondition.list_map
+                                    WeakestPrecondition.list_map_body] in *
+             | _ => rewrite app_nil_l
+             | _ => rewrite <-app_comm_cons
+             | |- f _ _ <-> f _ _ => apply f_ext
+             | _ => reflexivity
+             end.
+    apply IHxs.
+  Qed.
+
 End Dexprs.
