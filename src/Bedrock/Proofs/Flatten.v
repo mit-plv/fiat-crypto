@@ -6,10 +6,11 @@ Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Map.SeparationLogic.
 Require Import coqutil.Word.Interface coqutil.Word.Properties.
 Require Import coqutil.Map.Interface coqutil.Map.Properties.
+Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Language.API.
+Require Import Crypto.Bedrock.Util.
 Require Import Crypto.Bedrock.Proofs.Dexprs.
-Require Import Crypto.Bedrock.Proofs.Varnames.
 Require Import Crypto.Bedrock.Translation.Flatten.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Import ListNotations. Local Open Scope Z_scope.
@@ -42,14 +43,8 @@ Section Flatten.
       break_match;
       repeat match goal with
              | _ => progress (intros; subst)
-             | H : sep (sep (emp _) _) _ _ |- _ =>
-               apply sep_assoc in H; [ ]
-             | H : sep (emp _) _ _ |- _ =>
-               apply sep_emp_l in H; destruct H
-             | H : sep (Lift1Prop.ex1 _) _ _ |- _ =>
-               apply sep_ex1_l in H; destruct H
+             | _ => progress sepsimpl
              | _ => rewrite app_length
-             | H : False |- _ => tauto
              | _ => solve [eauto]
              end.
     erewrite <-IHt1, <-IHt2 by ecancel_assumption.
@@ -73,12 +68,8 @@ Section Flatten.
                                     equivalent_flat_base
                                     flatten_argnames] in *
              | _ => progress break_match 
-             | H : sep (emp _) _ _ |- _ =>
-               apply sep_emp_l in H; destruct H
-             | H : sep (Lift1Prop.ex1 _) _ _ |- _ =>
-               apply sep_ex1_l in H; destruct H
+             | _ => progress sepsimpl 
              | _ => rewrite app_length
-             | H : False |- _ => tauto
              | _ => solve [eauto]
              end.
     erewrite <-IHt2, <-flatten_base_samelength by ecancel_assumption.

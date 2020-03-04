@@ -55,9 +55,14 @@ Section Func.
     arguments/return values, it's a convenient formalization. *)
   Definition translate_func {t}
              (e : API.Expr t)
+             (* argument variables *)
              (argnames : type.for_each_lhs_of_arrow ltype t)
+             (* lengths of argument lists *)
              (lengths : type.for_each_lhs_of_arrow list_lengths t)
+             (* return variables *)
              (rets : base_ltype (type.final_codomain t))
+             (* locations in memory for returned lists *)
+             (locs : list_locs (type.final_codomain t))
     : list string * list string * cmd :=
     (* load arguments *)
     let load_args_out := load_arguments 0%nat argnames lengths in
@@ -67,7 +72,7 @@ Section Func.
     (* translate *)
     let out := translate_func' (e _) nextn args in
     (* store return values *)
-    let store_rets_cmd := store_return_values (snd (fst out)) rets in
+    let store_rets_cmd := store_return_values (snd (fst out)) rets locs in
     (* assemble function (arg varnames, return varnames, executable body) *)
     let body := cmd.seq (cmd.seq load_args_cmd (snd out)) store_rets_cmd in
     (flatten_argnames argnames, flatten_retnames rets, body).

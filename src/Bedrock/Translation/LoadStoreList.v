@@ -6,6 +6,7 @@ Require Import bedrock2.Array.
 Require Import bedrock2.Scalars.
 Require Import bedrock2.Syntax.
 Require Import bedrock2.WeakestPreconditionProperties.
+Require Import coqutil.Word.Interface.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Language.API.
 Require Import Crypto.Util.ListUtil.
@@ -39,6 +40,14 @@ Section Lists.
   Fixpoint list_lengths t : Type :=
     match t with
     | type.base t => base_list_lengths t
+    | _ => unit
+    end.
+
+  Fixpoint list_locs (t : base.type)
+    : Type :=
+    match t with
+    | base.type.prod a b => list_locs a * list_locs b
+    | base_listZ => Interface.word.rep (word:=Semantics.word) 
     | _ => unit
     end.
 
@@ -113,29 +122,37 @@ Section Lists.
     let loc := expr.op bopname.add start offset in
     cmd.store access_size.word loc value.
 
-  Definition store_list
+  Fixpoint store_list
              (start : Syntax.expr.expr)
              (values : list Syntax.expr.expr)
+             (i : nat)
     : Syntax.cmd.cmd :=
-    let stores := map2 (store_list_item start)
-                       values (seq 0 (Datatypes.length values)) in
-    fold_right cmd.seq cmd.skip stores.
+    match values with
+    | [] => cmd.skip
+    | v :: values' =>
+      cmd.seq (store_list_item start v i)
+              (store_list start values' (S i))
+    end.
 
   Fixpoint store_return_values {t : base.type}
     : base_ltype (listZ:=rep.listZ_local) t ->
       base_ltype (listZ:=rep.listZ_mem) t ->
+      list_locs t ->
       cmd.cmd :=
-    match t with
+    match t as t0 return
+          base_ltype t0 -> base_ltype t0 -> list_locs t0 -> _ with
     | base.type.prod a b =>
-      fun x y =>
-        cmd.seq (store_return_values (fst x) (fst y))
-                (store_return_values (snd x) (snd y))
+      fun x y starts =>
+        cmd.seq (store_return_values (fst x) (fst y) (fst starts))
+                (store_return_values (snd x) (snd y) (snd starts))
     | base_listZ =>
       (* store list in memory *)
-      fun (x : list string) (y : string) =>
-        store_list (expr.var y) (map expr.var x)
+      fun (x : list string) (y : string) start =>
+        cmd.seq
+          (cmd.set y (expr.literal (word.unsigned start)))
+          (store_list (expr.var y) (map expr.var x) 0)
     | _ =>
       (* rename variable *)
-      fun (x y : string) => cmd.set y (expr.var x)
+      fun (x y : string) _ => cmd.set y (expr.var x)
     end.
 End Lists.

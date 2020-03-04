@@ -9,6 +9,7 @@ Require Import coqutil.Map.Interface.
 Require Import coqutil.Word.Interface.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Tactics.
+Require Import Crypto.Bedrock.Util.
 Require Import Crypto.Bedrock.Proofs.Expr.
 Require Import Crypto.Bedrock.Proofs.Varnames.
 Require Import Crypto.Bedrock.Translation.Cmd.
@@ -193,7 +194,8 @@ Section Cmd.
   Local Ltac only_differ_ok :=
        repeat match goal with
               | _ => eapply only_differ_step; try eassumption; [ ]
-              | _ => eapply only_differ_sameset; solve [eauto]
+              | _ => eapply Proper_only_differ; eauto;
+                     solve[symmetry; eauto]
               end.
 
   Lemma translate_cmd_correct {t'} (t:=type.base t')
