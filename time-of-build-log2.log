@@ -1,0 +1,89 @@
+make --no-print-directory -C coqprime src/Coqprime/PrimalityTest/Zp.vo
+make[1]: 'src/Coqprime/PrimalityTest/Zp.vo' is up to date.
+TIMEOUT -m 40000000 COQC src/Specific/montgomery64_2e389m21_7limbs/femul.v
+Finished transaction in 1317.545 secs (1284.184u,8.492s) (successful)
+total time:   1292.676s
+
+ tactic                                   local  total   calls       max 
+────────────────────────────────────────┴──────┴──────┴───────┴─────────┘
+─synthesize_mul ------------------------   0.0% 100.0%       0 1292.676s
+─synthesize_carry_mul ------------------   0.0% 100.0%       0 1292.676s
+─synthesize_2arg_choice_with_carry -----   0.0% 100.0%       0 1292.676s
+─synthesize_narg_choice_gen ------------   0.0% 100.0%       0 1292.676s
+─Pipeline.refine_reflectively_gen ------   0.0%  99.5%       1 1286.836s
+─ReflectiveTactics.do_reflective_pipelin   0.0%  99.4%       1 1285.452s
+─ReflectiveTactics.solve_side_conditions   0.0%  99.4%       1 1284.368s
+─ReflectiveTactics.do_reify ------------   0.0%  96.4%       1 1246.208s
+─Reify.Reify_rhs_gen -------------------   0.1%  96.3%       1 1245.218s
+─Reify ---------------------------------   0.0%  94.7%       0 1224.548s
+─Compilers.Reify.Reify -----------------   0.0%  94.7%       0 1224.527s
+─Compilers.Reify.Reify' ----------------   0.0%  94.7%       0 1224.201s
+─Reify.do_reify_abs_goal ---------------   0.0%  94.7%       2 1224.108s
+─Reify.reify_abs -----------------------  94.7%  94.7%       0 1223.801s
+─ReflectiveTactics.solve_post_reified_si   0.0%   3.0%       1   38.160s
+─UnifyAbstractReflexivity.unify_transfor   0.0%   2.7%       7    9.302s
+─abstract exact_no_check eq_refl -------   2.1%   2.1%       8    5.709s
+
+ tactic                                   local  total   calls       max 
+────────────────────────────────────────┴──────┴──────┴───────┴─────────┘
+─synthesize_mul ------------------------   0.0% 100.0%       0 1292.676s
+└synthesize_carry_mul ------------------   0.0% 100.0%       0 1292.676s
+└synthesize_2arg_choice_with_carry -----   0.0% 100.0%       0 1292.676s
+└synthesize_narg_choice_gen ------------   0.0% 100.0%       0 1292.676s
+└Pipeline.refine_reflectively_gen ------   0.0%  99.5%       1 1286.836s
+└ReflectiveTactics.do_reflective_pipelin   0.0%  99.4%       1 1285.452s
+└ReflectiveTactics.solve_side_conditions   0.0%  99.4%       1 1284.368s
+ ├─ReflectiveTactics.do_reify ----------   0.0%  96.4%       1 1246.208s
+ │└Reify.Reify_rhs_gen -----------------   0.1%  96.3%       1 1245.218s
+ │└Reify -------------------------------   0.0%  94.7%       0 1224.548s
+ │└Compilers.Reify.Reify ---------------   0.0%  94.7%       0 1224.527s
+ │└Compilers.Reify.Reify' --------------   0.0%  94.7%       0 1224.201s
+ │└Reify.do_reify_abs_goal -------------   0.0%  94.7%       2 1224.108s
+ │└Reify.reify_abs ---------------------  94.7%  94.7%       0 1223.801s
+ └─ReflectiveTactics.solve_post_reified_   0.0%   3.0%       1   38.160s
+  └UnifyAbstractReflexivity.unify_transf   0.0%   2.7%       7    9.302s
+
+Finished transaction in 147.263 secs (145.786u,0.491s) (successful)
+Closed under the global context
+total time:   1292.676s
+
+ tactic                                   local  total   calls       max 
+────────────────────────────────────────┴──────┴──────┴───────┴─────────┘
+─synthesize_mul ------------------------   0.0% 100.0%       0 1292.676s
+─synthesize_carry_mul ------------------   0.0% 100.0%       0 1292.676s
+─synthesize_2arg_choice_with_carry -----   0.0% 100.0%       0 1292.676s
+─synthesize_narg_choice_gen ------------   0.0% 100.0%       0 1292.676s
+─Pipeline.refine_reflectively_gen ------   0.0%  99.5%       1 1286.836s
+─ReflectiveTactics.do_reflective_pipelin   0.0%  99.4%       1 1285.452s
+─ReflectiveTactics.solve_side_conditions   0.0%  99.4%       1 1284.368s
+─ReflectiveTactics.do_reify ------------   0.0%  96.4%       1 1246.208s
+─Reify.Reify_rhs_gen -------------------   0.1%  96.3%       1 1245.218s
+─Reify ---------------------------------   0.0%  94.7%       0 1224.548s
+─Compilers.Reify.Reify -----------------   0.0%  94.7%       0 1224.527s
+─Compilers.Reify.Reify' ----------------   0.0%  94.7%       0 1224.201s
+─Reify.do_reify_abs_goal ---------------   0.0%  94.7%       2 1224.108s
+─Reify.reify_abs -----------------------  94.7%  94.7%       0 1223.801s
+─ReflectiveTactics.solve_post_reified_si   0.0%   3.0%       1   38.160s
+─UnifyAbstractReflexivity.unify_transfor   0.0%   2.7%       7    9.302s
+─abstract exact_no_check eq_refl -------   2.1%   2.1%       8    5.709s
+
+ tactic                                   local  total   calls       max 
+────────────────────────────────────────┴──────┴──────┴───────┴─────────┘
+─synthesize_mul ------------------------   0.0% 100.0%       0 1292.676s
+└synthesize_carry_mul ------------------   0.0% 100.0%       0 1292.676s
+└synthesize_2arg_choice_with_carry -----   0.0% 100.0%       0 1292.676s
+└synthesize_narg_choice_gen ------------   0.0% 100.0%       0 1292.676s
+└Pipeline.refine_reflectively_gen ------   0.0%  99.5%       1 1286.836s
+└ReflectiveTactics.do_reflective_pipelin   0.0%  99.4%       1 1285.452s
+└ReflectiveTactics.solve_side_conditions   0.0%  99.4%       1 1284.368s
+ ├─ReflectiveTactics.do_reify ----------   0.0%  96.4%       1 1246.208s
+ │└Reify.Reify_rhs_gen -----------------   0.1%  96.3%       1 1245.218s
+ │└Reify -------------------------------   0.0%  94.7%       0 1224.548s
+ │└Compilers.Reify.Reify ---------------   0.0%  94.7%       0 1224.527s
+ │└Compilers.Reify.Reify' --------------   0.0%  94.7%       0 1224.201s
+ │└Reify.do_reify_abs_goal -------------   0.0%  94.7%       2 1224.108s
+ │└Reify.reify_abs ---------------------  94.7%  94.7%       0 1223.801s
+ └─ReflectiveTactics.solve_post_reified_   0.0%   3.0%       1   38.160s
+  └UnifyAbstractReflexivity.unify_transf   0.0%   2.7%       7    9.302s
+
+src/Specific/montgomery64_2e389m21_7limbs/femul.vo (real: 1499.93, user: 1463.22, sys: 10.51, mem: 19319152 ko)
