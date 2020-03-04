@@ -13,6 +13,7 @@ Require Import coqutil.Map.Interface.
 Require Import coqutil.Map.Properties.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Tactics.
+Require Import Crypto.Bedrock.Util.
 Require Import Crypto.Bedrock.Proofs.Cmd.
 Require Import Crypto.Bedrock.Proofs.Dexprs.
 Require Import Crypto.Bedrock.Proofs.Flatten.
@@ -23,6 +24,7 @@ Require Import Crypto.Bedrock.Translation.Flatten.
 Require Import Crypto.Bedrock.Translation.LoadStoreList.
 Require Import Crypto.Language.API.
 Require Import Crypto.Util.ListUtil.
+Require Import Crypto.Util.Option.
 Import ListNotations. Local Open Scope Z_scope.
 
 Import API.Compilers.
@@ -100,6 +102,8 @@ Section Func.
           (fun tr' mem' locals' =>
              tr = tr' /\
              mem = mem' /\
+             PropSet.subset (varname_set (snd (fst out)))
+                            (used_varnames nextn nvars) /\
              Interface.map.only_differ
                locals (used_varnames nextn nvars) locals' /\
              locally_equivalent (listZ:=rep.listZ_local) ret1 ret2 locals').
@@ -215,67 +219,6 @@ Section Func.
       rewrite word.of_Z_unsigned. reflexivity. }
   Qed.
 
-  (* TODO : move *)
-  Lemma NoDup_app_iff {A} (l1 l2 : list A) :
-    NoDup (l1 ++ l2) <-> (NoDup l1 /\ NoDup l2
-                          /\ (forall x, In x l1 -> ~ In x l2)
-                          /\ (forall x, In x l2 -> ~ In x l1)).
-  Proof.
-    revert l2; induction l1;
-      repeat match goal with
-             | _ => progress (intros; cleanup; subst)
-             | _ => progress cbn [In]
-             | _ => rewrite app_nil_l
-             | _ => rewrite <-app_comm_cons
-             | _ => split
-             | H : _ \/ _ |- _ => destruct H
-             | H: ~ In _ (_ ++ _) |- _ =>
-               rewrite in_app_iff in H;
-                 apply Decidable.not_or in H
-             | H: NoDup (_ ++ _) |- _ =>
-               apply IHl1 in H; cleanup
-             | H: NoDup (_ :: _) |- _ =>
-               inversion H; clear H; subst
-             | |- ~ (_ \/ _) => intro
-             | |- ~ In _ (_ ++_) =>
-               rewrite in_app_iff
-             | |- NoDup (_ ++ _) => apply IHl1
-             | |- NoDup (_ :: _) => constructor
-             | |- NoDup [] => constructor
-             | H1 : (forall x (H:In x ?l), _),
-                    H2 : In _ ?l |- _ => apply H1 in H2; tauto
-             | H : forall x (_:?a = x \/ _), _ |- _ =>
-               specialize (H a ltac:(tauto)); tauto
-             | _ => solve [eauto]
-             | _ => tauto
-             end.
-  Qed.
-
-  (* TODO : move *)
-  Lemma disjoint_cons {E} x (l : list E)
-        (eq_dec : forall a b : E, {a = b} + {a <> b}) :
-    ~ In x l ->
-    PropSet.disjoint (PropSet.singleton_set x) (PropSet.of_list l).
-  Proof.
-    intros. symmetry. apply disjoint_singleton_r_iff; eauto.
-  Qed.
-
-  (* TODO : move *)
-  Lemma NoDup_disjoint {E} (l1 l2 : list E)
-        (eq_dec : forall a b : E, {a = b} + {a <> b}) :
-    NoDup (l1 ++ l2) ->
-    PropSet.disjoint (PropSet.of_list l1) (PropSet.of_list l2).
-  Proof.
-    revert l2; induction l1; intros *;
-      rewrite ?app_nil_l, <-?app_comm_cons;
-      [ solve [firstorder idtac] | ].
-    inversion 1; intros; subst.
-    rewrite PropSet.of_list_cons.
-    apply disjoint_union_l_iff; split; eauto.
-    apply disjoint_cons; eauto. 
-    rewrite in_app_iff in *. tauto.
-  Qed.
-
   Lemma initial_context_correct' {t} :
     forall (names : base_ltype t)
            (values : base.interp t)
@@ -323,7 +266,7 @@ Section Func.
         pose proof H;
         apply NoDup_app_iff in H; cleanup
       end.
-      cbv [Option.bind] in *.
+      cbv [bind] in *.
       break_match_hyps; try congruence.
       repeat intro; split; intros.
       { match goal with
@@ -360,18 +303,14 @@ Section Func.
       end.
       split; intros;
         repeat match goal with
-               | _ => progress cleanup
+               | _ => progress sepsimpl 
                | _ => progress subst
-               | H : Lift1Prop.ex1 _ _ |- _ => destruct H
-               | H : sep (fun _ => emp _ _) _ _ |- _ =>
-                 apply sep_emp_l in H
                | H : Some _ = Some _ |- _ =>
                  inversion H; clear H; subst
                | H : _ |- _ => rewrite word.of_Z_unsigned in H
                | H : _ |- _ => rewrite map.get_put_same in H
                | _ => rewrite map.get_put_same
                | _ => rewrite word.of_Z_unsigned
-               | |- sep (fun _ => emp _ _) _ _ => eapply sep_emp_l
                | |- Lift1Prop.ex1 _ _ => eexists
                | |- exists _, _ => eexists
                | |- _ /\ _ => split
@@ -418,7 +357,7 @@ Section Func.
       | H : NoDup (_ ++ _) |- _ =>
         pose proof H; apply NoDup_app_iff in H; cleanup
       end.
-      cbv [Option.bind] in *. break_match_hyps; try congruence.
+      cbv [bind] in *. break_match_hyps; try congruence.
       repeat intro; split; intros.
       { repeat match goal with
                | _ => progress cleanup
@@ -455,6 +394,7 @@ Section Func.
         (e_valid : valid_func (e _)) :
     Wf3 e ->
     forall (fname : string)
+           (locs : list_locs (type.final_codomain t))
            (retnames : base_ltype (type.final_codomain t))
            (argnames : type.for_each_lhs_of_arrow ltype t)
            (args : type.for_each_lhs_of_arrow API.interp_type t),
@@ -466,7 +406,7 @@ Section Func.
       let retlengths := list_lengths_from_value rets in
       (* out := translation output for e2; triple of
          (function arguments, function return variable names, body) *)
-      let out := translate_func e argnames arglengths retnames in
+      let out := translate_func e argnames arglengths retnames locs in
       let f : bedrock_func := (fname, out) in
       forall (tr : Semantics.trace)
              (mem : Semantics.mem)
@@ -475,12 +415,16 @@ Section Func.
              (P Ra Rr : Semantics.mem -> Prop),
         (* argnames don't contain variables we could later overwrite *)
         (forall n, ~ varname_set_args argnames (varname_gen n)) ->
-        (* argnames don't have duplicates *)
-        NoDup (flatten_argnames argnames) ->
         (* argument values are equivalent *)
         sep (equivalent_flat_args args flat_args) Ra mem ->
+        (* argnames don't have duplicates *)
+        NoDup (flatten_argnames argnames) ->
+        (* retnames don't contain variables we could later overwrite *)
+        (forall n, ~ varname_set retnames (varname_gen n)) ->
+        (* retnames don't have duplicates *)
+        NoDup (flatten_base_ltype retnames) ->
         (* seplogic frame for return values *)
-        sep (lists_reserved retlengths) Rr mem ->
+        sep (lists_reserved retlengths locs) Rr mem ->
         (* translated function produces equivalent results *)
         WeakestPrecondition.call
           ((fname, out) :: functions) fname tr mem flat_args
@@ -512,7 +456,10 @@ Section Func.
           cbv [context_equiv]; eauto. }
     cbv beta in *. cleanup; subst.
     eapply Proper_cmd; [ solve [apply Proper_call] | repeat intro | ].
-    2 : { eapply store_return_values_correct; eauto. }
+    2 : { eapply store_return_values_correct; eauto.
+          
+    }
+    
     cbv beta in *. cleanup; subst.
 
     eapply Proper_list_map; [ solve [apply Proper_get]
