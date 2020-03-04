@@ -230,6 +230,28 @@ Section Varnames.
       (nextn + nvars <= n)%nat ->
       ~ used_varnames nextn nvars (varname_gen n).
     Admitted.
+
+    Lemma used_varnames_shift n m l :
+      subset (used_varnames (n + m) l)
+             (used_varnames n (m + l)).
+    Proof.
+      cbv [subset]. intros.
+      match goal with H : _ |- _ =>
+                      apply used_varnames_iff in H end.
+      apply used_varnames_iff.
+      cleanup; subst. eexists; split; eauto.
+      lia.
+    Qed.
+
+    Lemma used_varnames_subset_singleton n m l :
+      n <= m < n + l ->
+      subset (singleton_set (varname_gen m))
+             (used_varnames n l).
+    Proof.
+      cbv [subset singleton_set elem_of]. intros.
+      apply used_varnames_iff; subst.
+      eexists; split; eauto; lia.
+    Qed.
   End UsedVarnames.
 
   Section Local.
@@ -258,6 +280,19 @@ Section Varnames.
         union (varname_set y) (context_varname_set G')
       |  _ => PropSet.empty_set (* no functions allowed *)
       end.
+
+    Lemma varname_set_local x :
+      sameset
+        (rep.varname_set (rep:=rep.listZ_local) x)
+        (of_list x).
+    Proof.
+      apply sameset_iff.
+      cbn [rep.varname_set rep.listZ_local rep.Z].
+      induction x; cbn [fold_right of_list In];
+        [ solve [firstorder idtac] | ].
+      intros. cbv [of_list] in *.
+      rewrite <-IHx. firstorder idtac.
+    Qed.
   End Local.
 
   Lemma equivalent_not_in_context {var1} locals1 locals2 vset x :

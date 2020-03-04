@@ -30,10 +30,10 @@ Section Cmd.
   Context {p : Types.parameters} {p_ok : @ok p}.
   Context (call : string ->
                   Semantics.trace ->
-                  Interface.map.rep (map:=Semantics.mem) ->
-                  list Interface.word.rep ->
-                  (Semantics.trace -> Interface.map.rep (map:=Semantics.mem) ->
-                   list Interface.word.rep -> Prop) ->
+                  Semantics.mem ->
+                  list Semantics.word ->
+                  (Semantics.trace -> Semantics.mem ->
+                   list Semantics.word -> Prop) ->
                   Prop).
   Context (Proper_call :
              Morphisms.pointwise_relation
@@ -58,7 +58,7 @@ Section Cmd.
   Local Existing Instance Types.rep.listZ_local. (* local list representation *)
   Local Instance sem_ok : Semantics.parameters_ok semantics
     := semantics_ok.
-  Local Instance mem_ok : Interface.map.ok Semantics.mem
+  Local Instance mem_ok : map.ok Semantics.mem
     := Semantics.mem_ok.
   Local Instance varname_eqb_spec x y : BoolSpec _ _ _
     := Decidable.String.eqb_spec x y.
@@ -100,7 +100,8 @@ Section Cmd.
            (rhs : base_rtype t)
            (nextn : nat)
            (tr : Semantics.trace)
-           (mem locals : Interface.map.rep),
+           (mem : Semantics.mem)
+           (locals : Semantics.locals),
       (* rhs == x *)
       locally_equivalent x rhs locals ->
       let a := assign nextn rhs in
@@ -115,7 +116,7 @@ Section Cmd.
            /\ PropSet.sameset (varname_set (snd (fst a)))
                               (used_varnames nextn (fst (fst a)))
            (* new locals only differ in the values of LHS variables *)
-           /\ Interface.map.only_differ locals (varname_set (snd (fst a))) locals'
+           /\ map.only_differ locals (varname_set (snd (fst a))) locals'
            (* evaluating lhs == x *)
            /\ locally_equivalent
                 x (base_rtype_of_ltype (snd (fst a))) locals').
@@ -209,7 +210,7 @@ Section Cmd.
         (G : list _) :
     (* exprs are all related *)
     wf3 G e1 e2 e3 ->
-    forall (locals : Interface.map.rep)
+    forall (locals : Semantics.locals)
            (nextn : nat),
       (* ret := fiat-crypto interpretation of e2 *)
       let ret1 : base.interp t' := API.interp e2 in
@@ -223,7 +224,7 @@ Section Cmd.
           (nextn <= n)%nat ->
           ~ context_varname_set G (varname_gen n)) ->
       forall (tr : Semantics.trace)
-             (mem : Interface.map.rep),
+             (mem : Semantics.mem),
         (* contexts are equivalent; for every variable in the context list G,
              the fiat-crypto and bedrock2 results match *)
         context_equiv G locals ->
@@ -233,7 +234,10 @@ Section Cmd.
           (fun tr' mem' locals' =>
              tr = tr' /\
              mem = mem' /\
-             Interface.map.only_differ
+             PropSet.subset
+               (varname_set (snd (fst out)))
+               (used_varnames nextn nvars) /\
+             map.only_differ
                locals (used_varnames nextn nvars) locals' /\
              locally_equivalent ret1 ret2 locals').
   Proof.
@@ -273,7 +277,9 @@ Section Cmd.
                | H : _ |- _ => solve [apply H]
                | _ => congruence
                end. }
-      { simplify; subst; eauto; only_differ_ok. } }
+      { simplify; subst; eauto; only_differ_ok.
+        etransitivity; [ eassumption | ].
+        apply used_varnames_shift. } }
     { (* let-in (base type) *)
       eapply Proper_cmd; [ eapply Proper_call | repeat intro | ].
       2: {
@@ -284,7 +290,9 @@ Section Cmd.
                | H : _ |- _ => solve [apply H]
                | _ => congruence
                end. }
-      { simplify; subst; eauto; only_differ_ok. } }
+      { simplify; subst; eauto; only_differ_ok.
+        etransitivity; [ eassumption | ].
+        apply used_varnames_shift. } }
     { (* cons *)
       eapply Proper_cmd; [ eapply Proper_call | repeat intro | ].
       2: {
@@ -295,7 +303,17 @@ Section Cmd.
                | _ => solve [new_context_ok]
                | _ => congruence
                end. }
-      { simplify; subst; eauto; [ | ].
+      { simplify; subst; eauto; [ | | ].
+        { (* varnames subset *)
+          rewrite varname_set_local.
+          rewrite PropSet.of_list_cons.
+          rewrite add_union_singleton.
+          apply subset_union_l;
+            [ apply used_varnames_subset_singleton; lia | ].
+          rewrite <-varname_set_local.
+          etransitivity; [eassumption|].
+          rewrite <-Nat.add_1_r.
+          apply used_varnames_shift. }
         { (* only_differ *)
           rewrite <-(Nat.add_1_r nextn) in *.
           only_differ_ok. }
@@ -317,9 +335,12 @@ Section Cmd.
                           apply in_seq in H end.
           lia. } } }
     { (* nil *)
-      cbv [locally_equivalent]; simplify; eauto.
+      cbv [locally_equivalent]; simplify; eauto;
+        try reflexivity.
       right; reflexivity. }
     { (* valid expr *)
-      simplify; subst; eauto; only_differ_ok. }
+      simplify; subst; eauto; only_differ_ok.
+      match goal with H : PropSet.sameset _ _ |- _ =>
+                      rewrite H end; reflexivity. }
   Qed.
 End Cmd.
