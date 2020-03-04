@@ -147,12 +147,9 @@ FUNCTIONS_FOR_25519 := $(UNSATURATED_SOLINAS_FUNCTIONS) carry_scmul121666
 UNSATURATED_SOLINAS := src/ExtractionOCaml/unsaturated_solinas
 WORD_BY_WORD_MONTGOMERY := src/ExtractionOCaml/word_by_word_montgomery
 
-# to_bytes doesn't work yet for Go
 GO_EXTRA_ARGS_ALL := --cmovznz-by-mul --widen-carry --widen-bytes
 GO_EXTRA_ARGS_64  := --no-wide-int $(GO_EXTRA_ARGS_ALL)
 GO_EXTRA_ARGS_32  := $(GO_EXTRA_ARGS_ALL)
-GO_FUNCTIONS_FOR_25519 := $(filter-out to_bytes,$(FUNCTIONS_FOR_25519))
-GO_UNSATURATED_SOLINAS_FUNCTIONS := $(filter-out to_bytes,$(UNSATURATED_SOLINAS_FUNCTIONS))
 
 OUTPUT_VOS := \
 	src/Fancy/Montgomery256.vo \
@@ -528,35 +525,35 @@ $(WORD_BY_WORD_MONTGOMERY_GO_FILES): $(WORD_BY_WORD_MONTGOMERY) # Makefile
 $(GO_DIR)curve25519_64.go : $(GO_DIR)curve25519_%.go :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Go $(GO_EXTRA_ARGS_$*) '25519' '5' '2^255 - 19' '$*' $(GO_FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Go $(GO_EXTRA_ARGS_$*) '25519' '5' '2^255 - 19' '$*' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^255 - 19
 $(GO_DIR)curve25519_32.go : $(GO_DIR)curve25519_%.go :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Go $(GO_EXTRA_ARGS_$*) '25519' '10' '2^255 - 19' '$*' $(GO_FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Go $(GO_EXTRA_ARGS_$*) '25519' '10' '2^255 - 19' '$*' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^521 - 1
 $(GO_DIR)p521_64.go : $(GO_DIR)p521_%.go :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Go $(GO_EXTRA_ARGS_$*) 'p521' '9' '2^521 - 1' '$*' $(GO_UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Go $(GO_EXTRA_ARGS_$*) 'p521' '9' '2^521 - 1' '$*' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 ## 2^224 - 2^96 + 1 ## does not bounds check
 #$(GO_DIR)p224_solinas_64.go : $(GO_DIR)p224_%.go :
 #	$(SHOW)'SYNTHESIZE > $@'
 #	$(HIDE)rm -f $@.ok
-#	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Go $(GO_EXTRA_ARGS_$*) 'p224' '4' '2^224 - 2^96 + 1' '$*' $(GO_UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
+#	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Go $(GO_EXTRA_ARGS_$*) 'p224' '4' '2^224 - 2^96 + 1' '$*' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
 #	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^448 - 2^224 - 1
 $(GO_DIR)p448_solinas_64.go : $(GO_DIR)p448_solinas_%.go :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Go $(GO_EXTRA_ARGS_$*) 'p448' '8' '2^448 - 2^224 - 1' '$*' $(GO_UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Go $(GO_EXTRA_ARGS_$*) 'p448' '8' '2^448 - 2^224 - 1' '$*' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^256 - 2^224 + 2^192 + 2^96 - 1
