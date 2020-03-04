@@ -457,11 +457,11 @@ Section Func.
     cbv beta in *. cleanup; subst.
     eapply Proper_cmd; [ solve [apply Proper_call] | repeat intro | ].
     2 : { eapply store_return_values_correct; eauto.
-          
-    }
+          eapply subset_disjoint'; try eassumption.
+          symmetry.
+          eauto using disjoint_used_varnames_lt. }
     
     cbv beta in *. cleanup; subst.
-
     eapply Proper_list_map; [ solve [apply Proper_get]
                             | | eapply look_up_return_values; eauto ].
     repeat intro; cleanup; eauto.
@@ -474,14 +474,9 @@ Section Func.
     used_varnames_iff (easy)
     putmany_of_list_zip_bind_comm (easy)
     putmany_of_list_zip_app_l (easy)
-    only_differ_trans (easy)
-    only_differ_sym (easy)
-    only_differ_sameset (easy)
-    only_differ_put (easy)
     equiv_Z_only_differ_iff1 (medium)
     get_untouched (medium)
     assign_correct (medium/hard)
     translate_expr_correct (hard)
-    store_return_values_correct (hard)
   *)
 End Func.

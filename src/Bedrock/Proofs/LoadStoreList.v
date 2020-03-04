@@ -664,20 +664,6 @@ Section LoadStoreList.
       constructor; eauto using in_eq, in_cons.
   Qed.
 
-  (* TODO: move *)
-  Lemma varname_set_local x :
-    PropSet.sameset
-      (rep.varname_set (rep:=rep.listZ_local) x)
-      (PropSet.of_list x).
-  Proof.
-    apply sameset_iff.
-    cbn [rep.varname_set rep.listZ_local rep.Z].
-    induction x; cbn [fold_right PropSet.of_list In];
-      [ solve [firstorder idtac] | ].
-    intros. cbv [PropSet.of_list] in *.
-    rewrite <-IHx. firstorder idtac.
-  Qed.
-
   Lemma store_return_values_correct {t} :
     forall (retnames_local : base_ltype t)
            (retnames_mem : base_ltype t)

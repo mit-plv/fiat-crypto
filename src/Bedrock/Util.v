@@ -134,6 +134,14 @@ Section Sets.
     : Proper (sameset ==> sameset ==> iff) (@disjoint E).
   Proof. firstorder idtac. Defined.
 
+  Global Instance subset_trans : Transitive (@subset E).
+  Proof. firstorder idtac. Defined.
+  Global Instance subset_ref : Reflexive (@subset E).
+  Proof. firstorder idtac. Defined.
+  Global Instance subset_Proper
+    : Proper (sameset ==> sameset ==> iff) (@subset E).
+  Proof. firstorder idtac. Defined.
+
   Global Instance sameset_sym : Symmetric (@sameset E).
   Proof. firstorder idtac. Defined.
   Global Instance sameset_trans : Transitive (@sameset E).
@@ -147,6 +155,34 @@ Section Sets.
 
   Lemma not_union_iff (s1 s2 : set E) x :
     ~ union s1 s2 x <-> ~ s1 x /\ ~ s2 x.
+  Proof. firstorder idtac. Qed.
+
+  Lemma add_union_singleton (x : E) s :
+    add s x = union (singleton_set x) s.
+  Proof. reflexivity. Qed.
+
+  Lemma subset_union_l (s1 s2 s3 : set E) :
+    subset s1 s3 ->
+    subset s2 s3 ->
+    subset (union s1 s2) s3.
+  Proof. firstorder idtac. Qed.
+
+  Lemma subset_union_r (s1 s2 s3 : set E) :
+    subset s1 s2 ->
+    subset s1 s3 ->
+    subset s1 (union s2 s3).
+  Proof. firstorder idtac. Qed.
+
+  Lemma subset_disjoint (s1 s2 s3 : set E) :
+    subset s2 s3 ->
+    disjoint s1 s3 ->
+    disjoint s1 s2.
+  Proof. firstorder idtac. Qed.
+
+  Lemma subset_disjoint' (s1 s2 s3 : set E) :
+    subset s1 s3 ->
+    disjoint s2 s3 ->
+    disjoint s1 s2.
   Proof. firstorder idtac. Qed.
 
   Lemma disjoint_not_in x (l : list E)
