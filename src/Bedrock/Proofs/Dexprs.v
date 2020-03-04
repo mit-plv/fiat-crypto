@@ -1,5 +1,7 @@
 Require Import Coq.Lists.List.
+Require Import bedrock2.Syntax.
 Require Import bedrock2.WeakestPreconditionProperties.
+Require Import coqutil.Map.Interface.
 Require Import coqutil.Word.Interface.
 Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Util.ListUtil.
@@ -111,4 +113,23 @@ Section Dexprs.
     apply IHxs.
   Qed.
 
+  Lemma dexpr_equiv m l n x1 x2 :
+    WeakestPrecondition.dexpr m l (expr.var n) x1 ->
+    WeakestPrecondition.dexpr m l (expr.var n) x2 ->
+    x1 = x2.
+  Proof.
+    destruct 1; destruct 1; cleanup; congruence.
+  Qed.
+
+  Lemma dexpr_put_same m l n x :
+    WeakestPrecondition.dexpr m (map.put l n x) (expr.var n) x.
+  Proof. eexists; rewrite map.get_put_same; tauto. Qed.
+
+  Lemma dexpr_put_diff m l n1 n2 x y :
+    n1 <> n2 ->
+    WeakestPrecondition.dexpr m l (expr.var n1) x ->
+    WeakestPrecondition.dexpr m (map.put l n2 y) (expr.var n1) x.
+  Proof.
+    destruct 2; intros; eexists; rewrite map.get_put_diff; eauto.
+  Qed.
 End Dexprs.

@@ -85,6 +85,28 @@ Section LoadStoreList.
       fun x => (tt, list_lengths_from_args (snd x))
     end.
 
+  Lemma lists_reserved_0 loc:
+    Lift1Prop.iff1
+      (lists_reserved (t:=base_listZ) 0%nat loc)
+      (emp True).
+  Proof.
+    cbv [lists_reserved].
+    split; intros;
+      repeat match goal with
+             | _ => progress (sepsimpl; subst)
+             | H : Datatypes.length _ = 0%nat |- _ =>
+               apply length0_nil in H; subst
+             | H : rep.equiv _ _ _ _ |- _ => apply equiv_nil_iff1 in H
+             | H : rep.equiv _ (expr.literal _) _ _ |- _ =>
+               destruct H; subst
+             | |- Lift1Prop.ex1 _ _ => eexists
+             | |- _ /\ _ => split
+             | _ => solve [eauto using List.length_nil]
+             end.
+    apply equiv_nil_iff1.
+    eexists; eexists; reflexivity.
+  Qed.
+
   Lemma load_list_item_correct
         (name : base_ltype (listZ:=rep.listZ_mem) base_listZ)
         i l :
@@ -435,55 +457,6 @@ Section LoadStoreList.
       sepsimpl. }
   Qed.
 
-  (* TODO: move? *)
-  Lemma equiv_nil_iff1 y locals :
-    Lift1Prop.iff1
-      (rep.equiv (rep:=rep.listZ_mem) [] y locals)
-      (Lift1Prop.ex1
-         (fun x => rep.equiv (rep:=rep.Z) x y locals)).
-  Proof.
-    cbv [rep.equiv rep.listZ_mem rep.Z array map].
-    intro; split; intros;
-      repeat match goal with
-             | _ => progress subst
-             | _ => progress sepsimpl
-             | |- Lift1Prop.ex1 _ _ => eexists
-             | |- _ /\ _ => split
-             | _ => solve [eauto]
-             end.
-  Qed.
-
-  Lemma lists_reserved_0 loc:
-    Lift1Prop.iff1
-      (lists_reserved (t:=base_listZ) 0%nat loc)
-      (emp True).
-  Proof.
-    cbv [lists_reserved].
-    split; intros;
-      repeat match goal with
-             | _ => progress (sepsimpl; subst)
-             | H : Datatypes.length _ = 0%nat |- _ =>
-               apply length0_nil in H; subst
-             | H : rep.equiv _ _ _ _ |- _ => apply equiv_nil_iff1 in H
-             | H : rep.equiv _ (expr.literal _) _ _ |- _ =>
-               destruct H; subst
-             | |- Lift1Prop.ex1 _ _ => eexists
-             | |- _ /\ _ => split
-             | _ => solve [eauto using List.length_nil]
-             end.
-    apply equiv_nil_iff1.
-    eexists; eexists; reflexivity.
-  Qed.
-
-  (* TODO: move? *)
-  Lemma dexpr_equiv m l n x1 x2 :
-    WeakestPrecondition.dexpr m l (expr.var n) x1 ->
-    WeakestPrecondition.dexpr m l (expr.var n) x2 ->
-    x1 = x2.
-  Proof.
-    destruct 1; destruct 1; cleanup; congruence.
-  Qed.
-
   Lemma store_list_correct :
     forall (start : string)
            (loc : list_locs base_listZ)
@@ -637,31 +610,6 @@ Section LoadStoreList.
         eauto.
       rewrite app_cons_app_app.
       eassumption. }
-  Qed.
-
-  (* TODO: move *)
-  Lemma dexpr_put_same m l n x :
-    WeakestPrecondition.dexpr m (map.put l n x) (expr.var n) x.
-  Proof. eexists; rewrite map.get_put_same; tauto. Qed.
-
-  (* TODO: move *)
-  Lemma dexpr_put_diff m l n1 n2 x y :
-    n1 <> n2 ->
-    WeakestPrecondition.dexpr m l (expr.var n1) x ->
-    WeakestPrecondition.dexpr m (map.put l n2 y) (expr.var n1) x.
-  Proof.
-    destruct 2; intros; eexists; rewrite map.get_put_diff; eauto.
-  Qed.
-
-  (* TODO: move *)
-  Lemma Forall2_impl_strong {A B} (R1 R2 : A -> B -> Prop) xs ys :
-    (forall x y, R1 x y -> In x xs -> In y ys -> R2 x y) ->
-    Forall2 R1 xs ys -> Forall2 R2 xs ys.
-  Proof.
-    revert ys; induction xs; destruct ys; intros;
-      match goal with H : Forall2 _ _ _ |- _ =>
-                      inversion H; subst; clear H end;
-      constructor; eauto using in_eq, in_cons.
   Qed.
 
   Lemma store_return_values_correct {t} :

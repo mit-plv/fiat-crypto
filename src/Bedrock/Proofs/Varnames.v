@@ -131,6 +131,23 @@ Section Varnames.
           eapply equiv_listZ_only_differ_mem;
           eauto using only_differ_sym.
       Qed.
+
+      Lemma equiv_nil_iff1 y locals :
+        Lift1Prop.iff1
+          (rep.equiv (rep:=rep.listZ_mem) [] y locals)
+          (Lift1Prop.ex1
+             (fun x => rep.equiv (rep:=rep.Z) x y locals)).
+      Proof.
+        cbv [rep.equiv rep.listZ_mem rep.Z Array.array map].
+        intro; split; intros;
+          repeat match goal with
+                 | _ => progress subst
+                 | _ => progress sepsimpl
+                 | |- Lift1Prop.ex1 _ _ => eexists
+                 | |- _ /\ _ => split
+                 | _ => solve [eauto]
+                 end.
+      Qed.
     End InMemory.
 
     Section Generic.
