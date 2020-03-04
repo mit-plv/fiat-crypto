@@ -1,0 +1,80 @@
+name: CI (Coq, MacOS)
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '0 0 1 * *'
+
+jobs:
+  build:
+
+    runs-on: macos-latest
+
+    env:
+      NJOBS: "2"
+      COQ_VERSION: "master"
+
+    # initial steps copied from https://github.com/coq/coq/blob/cfc41cb79e2364f19d97e7e5c94262132972b0b2/azure-pipelines.yml#L41-L110
+    steps:
+    - name: Install system dependencies
+      run: |
+        set -e
+        brew update
+        (cd $(brew --repository)/Library/Taps/homebrew/homebrew-core/ && git fetch --shallow-since=${HBCORE_DATE} && git checkout ${HBCORE_REF})
+        brew install gnu-time opam pkg-config gtksourceview3 adwaita-icon-theme
+        pip3 install macpack
+      env:
+        HOMEBREW_NO_AUTO_UPDATE: "1"
+        HBCORE_DATE: "2019-09-03"
+        HBCORE_REF: "44ee64cf4b9f2d2bf000758d356db0c77425e42e"
+
+    - name: Install OCaml dependencies
+      run: |
+        set -e
+        export PKG_CONFIG_PATH=/usr/local/opt/libffi/lib/pkgconfig
+        opam init -a -j "$NJOBS" --compiler=ocaml-base-compiler.$COMPILER
+        opam switch set ocaml-base-compiler.$COMPILER
+        eval $(opam env)
+        opam update
+        opam install -j "$NJOBS" num ocamlfind${FINDLIB_VER} ounit lablgtk3-sourceview3
+        opam list
+      env:
+        COMPILER: "4.09.0"
+        FINDLIB_VER: ".1.8.1"
+        OPAMYES: "true"
+
+    - name: Build Coq
+      run: |
+        set -e
+        git clone https://github.com/coq/coq.git --branch=${COQ_VERSION}
+        eval $(opam env)
+        (cd coq && ./configure -prefix /usr/local/ -warn-error yes -native-compiler no -coqide no)
+        (cd coq && make -j "$NJOBS")
+
+    - name: Install Coq
+      run: |
+        (cd coq && make install)
+
+    - name: echo build params
+      run: |
+        sysctl -n machdep.cpu.brand_string
+        sysctl -a | grep machdep.cpu
+        uname -a
+        sw_vers -productVersion
+        system_profiler SPSoftwareDataType
+        coqc --version
+        echo | coqtop
+    - uses: actions/checkout@v2
+    - name: submodules-init
+      uses: snickerbockers/submodules-init@v4
+    - name: deps
+      run: |
+        eval $(opam env)
+        etc/ci/github-actions-make.sh -j2 deps
+    - name: all
+      run: |
+        eval $(opam env)
+        etc/ci/github-actions-make.sh -j2 all
+    - name: display timing info
+      run: cat time-of-build-pretty.log
