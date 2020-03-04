@@ -94,16 +94,16 @@ static void fiat_25519_cmovznz_u64(uint64_t* out1, fiat_25519_uint1 arg1, uint64
  *   out1: [[0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc]]
  */
 static void fiat_25519_carry_mul(uint64_t out1[5], const uint64_t arg1[5], const uint64_t arg2[5]) {
-  fiat_25519_uint128 x1 = ((fiat_25519_uint128)(arg1[4]) * ((arg2[4]) * (uint64_t)UINT8_C(0x13)));
-  fiat_25519_uint128 x2 = ((fiat_25519_uint128)(arg1[4]) * ((arg2[3]) * (uint64_t)UINT8_C(0x13)));
-  fiat_25519_uint128 x3 = ((fiat_25519_uint128)(arg1[4]) * ((arg2[2]) * (uint64_t)UINT8_C(0x13)));
-  fiat_25519_uint128 x4 = ((fiat_25519_uint128)(arg1[4]) * ((arg2[1]) * (uint64_t)UINT8_C(0x13)));
-  fiat_25519_uint128 x5 = ((fiat_25519_uint128)(arg1[3]) * ((arg2[4]) * (uint64_t)UINT8_C(0x13)));
-  fiat_25519_uint128 x6 = ((fiat_25519_uint128)(arg1[3]) * ((arg2[3]) * (uint64_t)UINT8_C(0x13)));
-  fiat_25519_uint128 x7 = ((fiat_25519_uint128)(arg1[3]) * ((arg2[2]) * (uint64_t)UINT8_C(0x13)));
-  fiat_25519_uint128 x8 = ((fiat_25519_uint128)(arg1[2]) * ((arg2[4]) * (uint64_t)UINT8_C(0x13)));
-  fiat_25519_uint128 x9 = ((fiat_25519_uint128)(arg1[2]) * ((arg2[3]) * (uint64_t)UINT8_C(0x13)));
-  fiat_25519_uint128 x10 = ((fiat_25519_uint128)(arg1[1]) * ((arg2[4]) * (uint64_t)UINT8_C(0x13)));
+  fiat_25519_uint128 x1 = ((fiat_25519_uint128)(arg1[4]) * ((arg2[4]) * UINT8_C(0x13)));
+  fiat_25519_uint128 x2 = ((fiat_25519_uint128)(arg1[4]) * ((arg2[3]) * UINT8_C(0x13)));
+  fiat_25519_uint128 x3 = ((fiat_25519_uint128)(arg1[4]) * ((arg2[2]) * UINT8_C(0x13)));
+  fiat_25519_uint128 x4 = ((fiat_25519_uint128)(arg1[4]) * ((arg2[1]) * UINT8_C(0x13)));
+  fiat_25519_uint128 x5 = ((fiat_25519_uint128)(arg1[3]) * ((arg2[4]) * UINT8_C(0x13)));
+  fiat_25519_uint128 x6 = ((fiat_25519_uint128)(arg1[3]) * ((arg2[3]) * UINT8_C(0x13)));
+  fiat_25519_uint128 x7 = ((fiat_25519_uint128)(arg1[3]) * ((arg2[2]) * UINT8_C(0x13)));
+  fiat_25519_uint128 x8 = ((fiat_25519_uint128)(arg1[2]) * ((arg2[4]) * UINT8_C(0x13)));
+  fiat_25519_uint128 x9 = ((fiat_25519_uint128)(arg1[2]) * ((arg2[3]) * UINT8_C(0x13)));
+  fiat_25519_uint128 x10 = ((fiat_25519_uint128)(arg1[1]) * ((arg2[4]) * UINT8_C(0x13)));
   fiat_25519_uint128 x11 = ((fiat_25519_uint128)(arg1[4]) * (arg2[0]));
   fiat_25519_uint128 x12 = ((fiat_25519_uint128)(arg1[3]) * (arg2[1]));
   fiat_25519_uint128 x13 = ((fiat_25519_uint128)(arg1[3]) * (arg2[0]));
@@ -138,7 +138,7 @@ static void fiat_25519_carry_mul(uint64_t out1[5], const uint64_t arg1[5], const
   fiat_25519_uint128 x42 = (x40 + x29);
   uint64_t x43 = (uint64_t)(x42 >> 51);
   uint64_t x44 = (uint64_t)(x42 & UINT64_C(0x7ffffffffffff));
-  uint64_t x45 = (x43 * (uint64_t)UINT8_C(0x13));
+  uint64_t x45 = (x43 * UINT8_C(0x13));
   uint64_t x46 = (x28 + x45);
   uint64_t x47 = (x46 >> 51);
   uint64_t x48 = (x46 & UINT64_C(0x7ffffffffffff));
@@ -164,14 +164,14 @@ static void fiat_25519_carry_mul(uint64_t out1[5], const uint64_t arg1[5], const
  *   out1: [[0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc]]
  */
 static void fiat_25519_carry_square(uint64_t out1[5], const uint64_t arg1[5]) {
-  uint64_t x1 = ((arg1[4]) * (uint64_t)UINT8_C(0x13));
-  uint64_t x2 = (x1 * (uint64_t)0x2);
-  uint64_t x3 = ((arg1[4]) * (uint64_t)0x2);
-  uint64_t x4 = ((arg1[3]) * (uint64_t)UINT8_C(0x13));
-  uint64_t x5 = (x4 * (uint64_t)0x2);
-  uint64_t x6 = ((arg1[3]) * (uint64_t)0x2);
-  uint64_t x7 = ((arg1[2]) * (uint64_t)0x2);
-  uint64_t x8 = ((arg1[1]) * (uint64_t)0x2);
+  uint64_t x1 = ((arg1[4]) * UINT8_C(0x13));
+  uint64_t x2 = (x1 * 0x2);
+  uint64_t x3 = ((arg1[4]) * 0x2);
+  uint64_t x4 = ((arg1[3]) * UINT8_C(0x13));
+  uint64_t x5 = (x4 * 0x2);
+  uint64_t x6 = ((arg1[3]) * 0x2);
+  uint64_t x7 = ((arg1[2]) * 0x2);
+  uint64_t x8 = ((arg1[1]) * 0x2);
   fiat_25519_uint128 x9 = ((fiat_25519_uint128)(arg1[4]) * x1);
   fiat_25519_uint128 x10 = ((fiat_25519_uint128)(arg1[3]) * x2);
   fiat_25519_uint128 x11 = ((fiat_25519_uint128)(arg1[3]) * x4);
@@ -206,7 +206,7 @@ static void fiat_25519_carry_square(uint64_t out1[5], const uint64_t arg1[5]) {
   fiat_25519_uint128 x40 = (x38 + x27);
   uint64_t x41 = (uint64_t)(x40 >> 51);
   uint64_t x42 = (uint64_t)(x40 & UINT64_C(0x7ffffffffffff));
-  uint64_t x43 = (x41 * (uint64_t)UINT8_C(0x13));
+  uint64_t x43 = (x41 * UINT8_C(0x13));
   uint64_t x44 = (x26 + x43);
   uint64_t x45 = (x44 >> 51);
   uint64_t x46 = (x44 & UINT64_C(0x7ffffffffffff));
@@ -237,7 +237,7 @@ static void fiat_25519_carry(uint64_t out1[5], const uint64_t arg1[5]) {
   uint64_t x3 = ((x2 >> 51) + (arg1[2]));
   uint64_t x4 = ((x3 >> 51) + (arg1[3]));
   uint64_t x5 = ((x4 >> 51) + (arg1[4]));
-  uint64_t x6 = ((x1 & UINT64_C(0x7ffffffffffff)) + ((x5 >> 51) * (uint64_t)UINT8_C(0x13)));
+  uint64_t x6 = ((x1 & UINT64_C(0x7ffffffffffff)) + ((x5 >> 51) * UINT8_C(0x13)));
   uint64_t x7 = ((fiat_25519_uint1)(x6 >> 51) + (x2 & UINT64_C(0x7ffffffffffff)));
   uint64_t x8 = (x6 & UINT64_C(0x7ffffffffffff));
   uint64_t x9 = (x7 & UINT64_C(0x7ffffffffffff));
@@ -577,11 +577,11 @@ static void fiat_25519_from_bytes(uint64_t out1[5], const uint8_t arg1[32]) {
  *   out1: [[0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc]]
  */
 static void fiat_25519_carry_scmul_121666(uint64_t out1[5], const uint64_t arg1[5]) {
-  fiat_25519_uint128 x1 = (UINT32_C(0x1db42) * (fiat_25519_uint128)(arg1[4]));
-  fiat_25519_uint128 x2 = (UINT32_C(0x1db42) * (fiat_25519_uint128)(arg1[3]));
-  fiat_25519_uint128 x3 = (UINT32_C(0x1db42) * (fiat_25519_uint128)(arg1[2]));
-  fiat_25519_uint128 x4 = (UINT32_C(0x1db42) * (fiat_25519_uint128)(arg1[1]));
-  fiat_25519_uint128 x5 = (UINT32_C(0x1db42) * (fiat_25519_uint128)(arg1[0]));
+  fiat_25519_uint128 x1 = ((fiat_25519_uint128)UINT32_C(0x1db42) * (arg1[4]));
+  fiat_25519_uint128 x2 = ((fiat_25519_uint128)UINT32_C(0x1db42) * (arg1[3]));
+  fiat_25519_uint128 x3 = ((fiat_25519_uint128)UINT32_C(0x1db42) * (arg1[2]));
+  fiat_25519_uint128 x4 = ((fiat_25519_uint128)UINT32_C(0x1db42) * (arg1[1]));
+  fiat_25519_uint128 x5 = ((fiat_25519_uint128)UINT32_C(0x1db42) * (arg1[0]));
   uint64_t x6 = (uint64_t)(x5 >> 51);
   uint64_t x7 = (uint64_t)(x5 & UINT64_C(0x7ffffffffffff));
   fiat_25519_uint128 x8 = (x6 + x4);
@@ -596,7 +596,7 @@ static void fiat_25519_carry_scmul_121666(uint64_t out1[5], const uint64_t arg1[
   fiat_25519_uint128 x17 = (x15 + x1);
   uint64_t x18 = (uint64_t)(x17 >> 51);
   uint64_t x19 = (uint64_t)(x17 & UINT64_C(0x7ffffffffffff));
-  uint64_t x20 = (x18 * (uint64_t)UINT8_C(0x13));
+  uint64_t x20 = (x18 * UINT8_C(0x13));
   uint64_t x21 = (x7 + x20);
   fiat_25519_uint1 x22 = (fiat_25519_uint1)(x21 >> 51);
   uint64_t x23 = (x21 & UINT64_C(0x7ffffffffffff));

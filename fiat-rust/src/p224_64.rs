@@ -437,7 +437,7 @@ pub fn fiat_p224_mul(out1: &mut [u64; 4], arg1: &[u64; 4], arg2: &[u64; 4]) -> (
   fiat_p224_subborrowx_u64(&mut x207, &mut x208, x206, x197, 0xffffffffffffffff);
   let mut x209: u64 = 0;
   let mut x210: fiat_p224_u1 = 0;
-  fiat_p224_subborrowx_u64(&mut x209, &mut x210, x208, x199, (0xffffffff as u64));
+  fiat_p224_subborrowx_u64(&mut x209, &mut x210, x208, x199, 0xffffffff);
   let mut x211: u64 = 0;
   let mut x212: fiat_p224_u1 = 0;
   fiat_p224_subborrowx_u64(&mut x211, &mut x212, x210, x201, (0x0 as u64));
@@ -782,7 +782,7 @@ pub fn fiat_p224_square(out1: &mut [u64; 4], arg1: &[u64; 4]) -> () {
   fiat_p224_subborrowx_u64(&mut x207, &mut x208, x206, x197, 0xffffffffffffffff);
   let mut x209: u64 = 0;
   let mut x210: fiat_p224_u1 = 0;
-  fiat_p224_subborrowx_u64(&mut x209, &mut x210, x208, x199, (0xffffffff as u64));
+  fiat_p224_subborrowx_u64(&mut x209, &mut x210, x208, x199, 0xffffffff);
   let mut x211: u64 = 0;
   let mut x212: fiat_p224_u1 = 0;
   fiat_p224_subborrowx_u64(&mut x211, &mut x212, x210, x201, (0x0 as u64));
@@ -840,7 +840,7 @@ pub fn fiat_p224_add(out1: &mut [u64; 4], arg1: &[u64; 4], arg2: &[u64; 4]) -> (
   fiat_p224_subborrowx_u64(&mut x13, &mut x14, x12, x5, 0xffffffffffffffff);
   let mut x15: u64 = 0;
   let mut x16: fiat_p224_u1 = 0;
-  fiat_p224_subborrowx_u64(&mut x15, &mut x16, x14, x7, (0xffffffff as u64));
+  fiat_p224_subborrowx_u64(&mut x15, &mut x16, x14, x7, 0xffffffff);
   let mut x17: u64 = 0;
   let mut x18: fiat_p224_u1 = 0;
   fiat_p224_subborrowx_u64(&mut x17, &mut x18, x16, (x8 as u64), (0x0 as u64));
@@ -900,7 +900,7 @@ pub fn fiat_p224_sub(out1: &mut [u64; 4], arg1: &[u64; 4], arg2: &[u64; 4]) -> (
   fiat_p224_addcarryx_u64(&mut x14, &mut x15, x13, x5, (x9 & 0xffffffffffffffff));
   let mut x16: u64 = 0;
   let mut x17: fiat_p224_u1 = 0;
-  fiat_p224_addcarryx_u64(&mut x16, &mut x17, x15, x7, (x9 & (0xffffffff as u64)));
+  fiat_p224_addcarryx_u64(&mut x16, &mut x17, x15, x7, (x9 & 0xffffffff));
   out1[0] = x10;
   out1[1] = x12;
   out1[2] = x14;
@@ -947,7 +947,7 @@ pub fn fiat_p224_opp(out1: &mut [u64; 4], arg1: &[u64; 4]) -> () {
   fiat_p224_addcarryx_u64(&mut x14, &mut x15, x13, x5, (x9 & 0xffffffffffffffff));
   let mut x16: u64 = 0;
   let mut x17: fiat_p224_u1 = 0;
-  fiat_p224_addcarryx_u64(&mut x16, &mut x17, x15, x7, (x9 & (0xffffffff as u64)));
+  fiat_p224_addcarryx_u64(&mut x16, &mut x17, x15, x7, (x9 & 0xffffffff));
   out1[0] = x10;
   out1[1] = x12;
   out1[2] = x14;
@@ -1161,7 +1161,7 @@ pub fn fiat_p224_from_montgomery(out1: &mut [u64; 4], arg1: &[u64; 4]) -> () {
   fiat_p224_subborrowx_u64(&mut x126, &mut x127, x125, x116, 0xffffffffffffffff);
   let mut x128: u64 = 0;
   let mut x129: fiat_p224_u1 = 0;
-  fiat_p224_subborrowx_u64(&mut x128, &mut x129, x127, x120, (0xffffffff as u64));
+  fiat_p224_subborrowx_u64(&mut x128, &mut x129, x127, x120, 0xffffffff);
   let mut x130: u64 = 0;
   let mut x131: fiat_p224_u1 = 0;
   fiat_p224_subborrowx_u64(&mut x130, &mut x131, x129, (0x0 as u64), (0x0 as u64));

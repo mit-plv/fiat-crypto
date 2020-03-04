@@ -620,7 +620,7 @@ Module Compilers.
               := fun r
                  => cast_down_if_needed
                       r
-                      (literal v @@ TT, Some (int.of_zrange_relaxed r[v~>v]))%core%Cexpr%option%zrange.
+                      (literal v @@ TT, Some (int.of_zrange_relaxed (relax_zrange r[v~>v])))%core%Cexpr%option%zrange.
 
             Definition arith_expr_of_PHOAS_ident
                        {t}
@@ -689,7 +689,7 @@ Module Compilers.
                    => fun _ _ _ => inr ["Invalid identifier in arithmetic expression " ++ show true idc]%string
                  | ident.Z_opp (* we pretend this is [0 - _] *)
                    => fun r x =>
-                        let zero := (literal 0 @@ TT, Some (int.of_zrange_relaxed r[0~>0])) in
+                        let zero := (literal 0 @@ TT, Some (int.of_zrange_relaxed (relax_zrange r[0~>0]))) in
                         ret (arith_bin_arith_expr_of_PHOAS_ident Z_sub r (zero, x))
                  | ident.Literal _ v
                    => fun _ => ret v
@@ -1048,7 +1048,7 @@ Module Compilers.
                  end.
 
             Let round_up_to_split_type (lgs : Z) (t : option int.type) : option int.type
-              := option_map (int.union (int.of_zrange_relaxed r[0~>2^lgs-1])) t.
+              := option_map (int.union (int.of_zrange_relaxed (relax_zrange r[0~>2^lgs-1]))) t.
 
             Let recognize_3arg_2ref_ident
                 (do_bounds_check : bool)
@@ -1117,8 +1117,8 @@ Module Compilers.
                              bounds_check do_bounds_check "first return value of" idc s e2v (fst rout),
                              bounds_check do_bounds_check "second (carry) return value of" idc 1 (* boolean carry/borrow *) e2v (snd rout));
                          let '(e1, _) := result_upcast (t:=tZ) (Some (int.of_zrange_relaxed (relax_zrange r[0 ~> 2 ^ 1 - 1]))) (e1, r1) in
-                         let '(e2, _) := result_upcast (t:=tZ) (Some (int.of_zrange_relaxed r[0 ~> 2 ^ s - 1])) (e2, r2) in
-                         let '(e3, _) := result_upcast (t:=tZ) (Some (int.of_zrange_relaxed r[0 ~> 2 ^ s - 1])) (e3, r3) in
+                         let '(e2, _) := result_upcast (t:=tZ) (Some (int.of_zrange_relaxed (relax_zrange r[0 ~> 2 ^ s - 1]))) (e2, r2) in
+                         let '(e3, _) := result_upcast (t:=tZ) (Some (int.of_zrange_relaxed (relax_zrange r[0 ~> 2 ^ s - 1]))) (e3, r3) in
                          inl ((round_up_to_split_type s (fst rout), snd rout),
                               fun retptr => [Call (idc' @@ (retptr, (e1, e2, e3)))%Cexpr]))
                  | Some _, _ => inr ["Unrecognized identifier when attempting to construct an assignment with 2 arguments: " ++ show true idc]%string

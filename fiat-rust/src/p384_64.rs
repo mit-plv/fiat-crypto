@@ -832,7 +832,7 @@ pub fn fiat_p384_mul(out1: &mut [u64; 6], arg1: &[u64; 6], arg2: &[u64; 6]) -> (
   fiat_p384_addcarryx_u64(&mut x471, &mut x472, x470, (x430 as u64), (0x0 as u64));
   let mut x473: u64 = 0;
   let mut x474: fiat_p384_u1 = 0;
-  fiat_p384_subborrowx_u64(&mut x473, &mut x474, 0x0, x459, (0xffffffff as u64));
+  fiat_p384_subborrowx_u64(&mut x473, &mut x474, 0x0, x459, 0xffffffff);
   let mut x475: u64 = 0;
   let mut x476: fiat_p384_u1 = 0;
   fiat_p384_subborrowx_u64(&mut x475, &mut x476, x474, x461, 0xffffffff00000000);
@@ -1593,7 +1593,7 @@ pub fn fiat_p384_square(out1: &mut [u64; 6], arg1: &[u64; 6]) -> () {
   fiat_p384_addcarryx_u64(&mut x471, &mut x472, x470, (x430 as u64), (0x0 as u64));
   let mut x473: u64 = 0;
   let mut x474: fiat_p384_u1 = 0;
-  fiat_p384_subborrowx_u64(&mut x473, &mut x474, 0x0, x459, (0xffffffff as u64));
+  fiat_p384_subborrowx_u64(&mut x473, &mut x474, 0x0, x459, 0xffffffff);
   let mut x475: u64 = 0;
   let mut x476: fiat_p384_u1 = 0;
   fiat_p384_subborrowx_u64(&mut x475, &mut x476, x474, x461, 0xffffffff00000000);
@@ -1669,7 +1669,7 @@ pub fn fiat_p384_add(out1: &mut [u64; 6], arg1: &[u64; 6], arg2: &[u64; 6]) -> (
   fiat_p384_addcarryx_u64(&mut x11, &mut x12, x10, (arg1[5]), (arg2[5]));
   let mut x13: u64 = 0;
   let mut x14: fiat_p384_u1 = 0;
-  fiat_p384_subborrowx_u64(&mut x13, &mut x14, 0x0, x1, (0xffffffff as u64));
+  fiat_p384_subborrowx_u64(&mut x13, &mut x14, 0x0, x1, 0xffffffff);
   let mut x15: u64 = 0;
   let mut x16: fiat_p384_u1 = 0;
   fiat_p384_subborrowx_u64(&mut x15, &mut x16, x14, x3, 0xffffffff00000000);
@@ -1747,7 +1747,7 @@ pub fn fiat_p384_sub(out1: &mut [u64; 6], arg1: &[u64; 6], arg2: &[u64; 6]) -> (
   fiat_p384_cmovznz_u64(&mut x13, x12, (0x0 as u64), 0xffffffffffffffff);
   let mut x14: u64 = 0;
   let mut x15: fiat_p384_u1 = 0;
-  fiat_p384_addcarryx_u64(&mut x14, &mut x15, 0x0, x1, (x13 & (0xffffffff as u64)));
+  fiat_p384_addcarryx_u64(&mut x14, &mut x15, 0x0, x1, (x13 & 0xffffffff));
   let mut x16: u64 = 0;
   let mut x17: fiat_p384_u1 = 0;
   fiat_p384_addcarryx_u64(&mut x16, &mut x17, x15, x3, (x13 & 0xffffffff00000000));
@@ -1808,7 +1808,7 @@ pub fn fiat_p384_opp(out1: &mut [u64; 6], arg1: &[u64; 6]) -> () {
   fiat_p384_cmovznz_u64(&mut x13, x12, (0x0 as u64), 0xffffffffffffffff);
   let mut x14: u64 = 0;
   let mut x15: fiat_p384_u1 = 0;
-  fiat_p384_addcarryx_u64(&mut x14, &mut x15, 0x0, x1, (x13 & (0xffffffff as u64)));
+  fiat_p384_addcarryx_u64(&mut x14, &mut x15, 0x0, x1, (x13 & 0xffffffff));
   let mut x16: u64 = 0;
   let mut x17: fiat_p384_u1 = 0;
   fiat_p384_addcarryx_u64(&mut x16, &mut x17, x15, x3, (x13 & 0xffffffff00000000));
@@ -2330,7 +2330,7 @@ pub fn fiat_p384_from_montgomery(out1: &mut [u64; 6], arg1: &[u64; 6]) -> () {
   fiat_p384_addcarryx_u64(&mut x320, &mut x321, x313, x318, x314);
   let mut x322: u64 = 0;
   let mut x323: fiat_p384_u1 = 0;
-  fiat_p384_subborrowx_u64(&mut x322, &mut x323, 0x0, x304, (0xffffffff as u64));
+  fiat_p384_subborrowx_u64(&mut x322, &mut x323, 0x0, x304, 0xffffffff);
   let mut x324: u64 = 0;
   let mut x325: fiat_p384_u1 = 0;
   fiat_p384_subborrowx_u64(&mut x324, &mut x325, x323, x306, 0xffffffff00000000);

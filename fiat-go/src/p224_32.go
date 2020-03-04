@@ -842,7 +842,7 @@ func fiat_p224_mul(out1 *[7]uint32, arg1 *[7]uint32, arg2 *[7]uint32) {
   x550, _ = bits.Add32(x515, uint32(0x0), x549)
   var x552 uint32
   var x553 uint32
-  x552, x553 = bits.Sub32(x536, uint32(0x1), uint32(0x0))
+  x552, x553 = bits.Sub32(x536, 0x1, uint32(0x0))
   var x554 uint32
   var x555 uint32
   x554, x555 = bits.Sub32(x538, uint32(0x0), x553)
@@ -1691,7 +1691,7 @@ func fiat_p224_square(out1 *[7]uint32, arg1 *[7]uint32) {
   x550, _ = bits.Add32(x515, uint32(0x0), x549)
   var x552 uint32
   var x553 uint32
-  x552, x553 = bits.Sub32(x536, uint32(0x1), uint32(0x0))
+  x552, x553 = bits.Sub32(x536, 0x1, uint32(0x0))
   var x554 uint32
   var x555 uint32
   x554, x555 = bits.Sub32(x538, uint32(0x0), x553)
@@ -1775,7 +1775,7 @@ func fiat_p224_add(out1 *[7]uint32, arg1 *[7]uint32, arg2 *[7]uint32) {
   x13, x14 = bits.Add32((arg1[6]), (arg2[6]), x12)
   var x15 uint32
   var x16 uint32
-  x15, x16 = bits.Sub32(x1, uint32(0x1), uint32(0x0))
+  x15, x16 = bits.Sub32(x1, 0x1, uint32(0x0))
   var x17 uint32
   var x18 uint32
   x17, x18 = bits.Sub32(x3, uint32(0x0), x16)
@@ -1861,7 +1861,7 @@ func fiat_p224_sub(out1 *[7]uint32, arg1 *[7]uint32, arg2 *[7]uint32) {
   fiat_p224_cmovznz_u32(&x15, x14, uint32(0x0), 0xffffffff)
   var x16 uint32
   var x17 uint32
-  x16, x17 = bits.Add32(x1, (x15 & uint32(0x1)), 0x0)
+  x16, x17 = bits.Add32(x1, (x15 & 0x1), 0x0)
   var x18 uint32
   var x19 uint32
   x18, x19 = bits.Add32(x3, uint32(0x0), x17)
@@ -1928,7 +1928,7 @@ func fiat_p224_opp(out1 *[7]uint32, arg1 *[7]uint32) {
   fiat_p224_cmovznz_u32(&x15, x14, uint32(0x0), 0xffffffff)
   var x16 uint32
   var x17 uint32
-  x16, x17 = bits.Add32(x1, (x15 & uint32(0x1)), 0x0)
+  x16, x17 = bits.Add32(x1, (x15 & 0x1), 0x0)
   var x18 uint32
   var x19 uint32
   x18, x19 = bits.Add32(x3, uint32(0x0), x17)
@@ -2416,7 +2416,7 @@ func fiat_p224_from_montgomery(out1 *[7]uint32, arg1 *[7]uint32) {
   x318, x319 = bits.Add32(x316, x312, x311)
   var x320 uint32
   var x321 uint32
-  x320, x321 = bits.Sub32(x300, uint32(0x1), uint32(0x0))
+  x320, x321 = bits.Sub32(x300, 0x1, uint32(0x0))
   var x322 uint32
   var x323 uint32
   x322, x323 = bits.Sub32(x302, uint32(0x0), x321)
@@ -2539,53 +2539,53 @@ func fiat_p224_to_bytes(out1 *[28]uint32, arg1 *[7]uint32) {
   var x6 uint32 = (arg1[1])
   var x7 uint32 = (arg1[0])
   var x8 uint32 = (x7 >> 8)
-  var x9 uint32 = (x7 & uint32(0xff))
+  var x9 uint32 = (x7 & 0xff)
   var x10 uint32 = (x8 >> 8)
-  var x11 uint32 = (x8 & uint32(0xff))
+  var x11 uint32 = (x8 & 0xff)
   var x12 uint32 = (x10 >> 8)
-  var x13 uint32 = (x10 & uint32(0xff))
-  var x14 uint32 = (x12 & uint32(0xff))
+  var x13 uint32 = (x10 & 0xff)
+  var x14 uint32 = (x12 & 0xff)
   var x15 uint32 = (x6 >> 8)
-  var x16 uint32 = (x6 & uint32(0xff))
+  var x16 uint32 = (x6 & 0xff)
   var x17 uint32 = (x15 >> 8)
-  var x18 uint32 = (x15 & uint32(0xff))
+  var x18 uint32 = (x15 & 0xff)
   var x19 uint32 = (x17 >> 8)
-  var x20 uint32 = (x17 & uint32(0xff))
-  var x21 uint32 = (x19 & uint32(0xff))
+  var x20 uint32 = (x17 & 0xff)
+  var x21 uint32 = (x19 & 0xff)
   var x22 uint32 = (x5 >> 8)
-  var x23 uint32 = (x5 & uint32(0xff))
+  var x23 uint32 = (x5 & 0xff)
   var x24 uint32 = (x22 >> 8)
-  var x25 uint32 = (x22 & uint32(0xff))
+  var x25 uint32 = (x22 & 0xff)
   var x26 uint32 = (x24 >> 8)
-  var x27 uint32 = (x24 & uint32(0xff))
-  var x28 uint32 = (x26 & uint32(0xff))
+  var x27 uint32 = (x24 & 0xff)
+  var x28 uint32 = (x26 & 0xff)
   var x29 uint32 = (x4 >> 8)
-  var x30 uint32 = (x4 & uint32(0xff))
+  var x30 uint32 = (x4 & 0xff)
   var x31 uint32 = (x29 >> 8)
-  var x32 uint32 = (x29 & uint32(0xff))
+  var x32 uint32 = (x29 & 0xff)
   var x33 uint32 = (x31 >> 8)
-  var x34 uint32 = (x31 & uint32(0xff))
-  var x35 uint32 = (x33 & uint32(0xff))
+  var x34 uint32 = (x31 & 0xff)
+  var x35 uint32 = (x33 & 0xff)
   var x36 uint32 = (x3 >> 8)
-  var x37 uint32 = (x3 & uint32(0xff))
+  var x37 uint32 = (x3 & 0xff)
   var x38 uint32 = (x36 >> 8)
-  var x39 uint32 = (x36 & uint32(0xff))
+  var x39 uint32 = (x36 & 0xff)
   var x40 uint32 = (x38 >> 8)
-  var x41 uint32 = (x38 & uint32(0xff))
-  var x42 uint32 = (x40 & uint32(0xff))
+  var x41 uint32 = (x38 & 0xff)
+  var x42 uint32 = (x40 & 0xff)
   var x43 uint32 = (x2 >> 8)
-  var x44 uint32 = (x2 & uint32(0xff))
+  var x44 uint32 = (x2 & 0xff)
   var x45 uint32 = (x43 >> 8)
-  var x46 uint32 = (x43 & uint32(0xff))
+  var x46 uint32 = (x43 & 0xff)
   var x47 uint32 = (x45 >> 8)
-  var x48 uint32 = (x45 & uint32(0xff))
-  var x49 uint32 = (x47 & uint32(0xff))
+  var x48 uint32 = (x45 & 0xff)
+  var x49 uint32 = (x47 & 0xff)
   var x50 uint32 = (x1 >> 8)
-  var x51 uint32 = (x1 & uint32(0xff))
+  var x51 uint32 = (x1 & 0xff)
   var x52 uint32 = (x50 >> 8)
-  var x53 uint32 = (x50 & uint32(0xff))
+  var x53 uint32 = (x50 & 0xff)
   var x54 uint32 = (x52 >> 8)
-  var x55 uint32 = (x52 & uint32(0xff))
+  var x55 uint32 = (x52 & 0xff)
   out1[0] = x9
   out1[1] = x11
   out1[2] = x13

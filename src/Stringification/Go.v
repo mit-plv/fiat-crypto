@@ -19,14 +19,23 @@ Import Stringification.Language.Compilers.Options.
 
 Module Go.
 
+  (* Supported integer bitwidths *)
+  Definition stdint_bitwidths : list Z := [8; 16; 32; 64].
+  (* supported bitwidth for things like bits.Mul64 *)
+  Definition bits_std_bitwidths : list Z := [32; 64].
+  Definition is_standard_bitwidth (bw : Z) := existsb (Z.eqb bw) stdint_bitwidths.
+  Definition is_special_bitwidth (bw : Z) := negb (is_standard_bitwidth bw).
+
   (* Header imports and type defs *)
   Definition header (static : bool) (prefix : string) (infos : ToString.ident_infos)
   : list string
     (* N.B. We don't do anything with static; we never export anything *)
     := let bitwidths_used := ToString.bitwidths_used infos in
-       let needs_bits_import (* we only need the bits import if we use addcarryx/subborrowx/mulx *)
-           := negb ((PositiveSet.is_empty (ToString.addcarryx_lg_splits infos))
-                      && (PositiveSet.is_empty (ToString.mulx_lg_splits infos))) in
+       let needs_bits_import (* we only need the bits import if we use addcarryx/subborrowx/mulx with a standard bitwidth *)
+           := PositiveSet.exists_
+                (fun bw => is_standard_bitwidth (Z.pos bw))
+                (PositiveSet.union (ToString.addcarryx_lg_splits infos)
+                                   (ToString.mulx_lg_splits infos)) in
        let type_prefix := ("type " ++ prefix)%string in
        let pkg_name := if endswith "_" prefix then substring 0 (String.length prefix - 1) prefix else prefix in
        ((["package " ++ pkg_name;
@@ -43,13 +52,6 @@ Module Go.
           ++ (if PositiveSet.mem 128 bitwidths_used
               then ["var _ = error_Go_output_does_not_support_128_bit_integers___instead_use_rewriting_rules_for_removing_128_bit_integers"]%string
               else []))%list.
-
-  (* Supported integer bitwidths *)
-  Definition stdint_bitwidths : list Z := [8; 16; 32; 64].
-  (* supported bitwidth for things like bits.Mul64 *)
-  Definition bits_std_bitwidths : list Z := [32; 64].
-  Definition is_special_bitwidth (bw : Z) := negb (existsb (Z.eqb bw) stdint_bitwidths).
-
 
   Definition int_type_to_string (prefix : string) (t : ToString.int.type) : string :=
     ((if is_special_bitwidth (ToString.int.bitwidth_of t) then prefix else "")
@@ -125,7 +127,7 @@ Module Go.
          "(" ++ arith_to_string prefix x1 ++ " - " ++ arith_to_string prefix x2 ++ ")"
        | (IR.Z_bneg @@ e) => "(!/* TODO: FIX ME */ " ++ arith_to_string prefix e ++ ")"
        | (IR.Z_mul_split lg2s @@ args) =>
-         match List.existsb (Z.eqb lg2s) bits_std_bitwidths, args with
+         match is_standard_bitwidth lg2s, args with
          | true, ((IR.Addr @@ hi, IR.Addr @@ lo), args)
            => (arith_to_string prefix hi ++ ", " ++ arith_to_string prefix lo)
                 ++ " = bits.Mul"
@@ -136,7 +138,7 @@ Module Go.
                 ++ decimal_string_of_Z lg2s ++ "(" ++ arith_to_string prefix args ++ ")"
          end
        | (IR.Z_add_with_get_carry lg2s @@ args) =>
-         match List.existsb (Z.eqb lg2s) bits_std_bitwidths, args with
+         match is_standard_bitwidth lg2s, args with
          | true, ((IR.Addr @@ v, IR.Addr @@ c), (cin, x, y))
            => (arith_to_string prefix v ++ ", " ++ arith_to_string prefix c)
                 ++ " = bits.Add"
@@ -147,7 +149,7 @@ Module Go.
                 ++ decimal_string_of_Z lg2s ++ "(" ++ arith_to_string prefix args ++ ")"
          end
        | (IR.Z_sub_with_get_borrow lg2s @@ args) =>
-         match List.existsb (Z.eqb lg2s) bits_std_bitwidths, args with
+         match is_standard_bitwidth lg2s, args with
          | true, ((IR.Addr @@ v, IR.Addr @@ b), (bin, x, y))
            => (arith_to_string prefix v ++ ", " ++ arith_to_string prefix b)
                 ++ " = bits.Sub"
@@ -183,12 +185,12 @@ Module Go.
   Local Instance : IR.OfPHOAS.consider_retargs_live_opt
     := fun _ _ idc
        => match idc with
-          | IR.Z_mul_split _
-          | IR.Z_add_with_get_carry _
-          | IR.Z_sub_with_get_borrow _
+          | IR.Z_mul_split lg2s
+          | IR.Z_add_with_get_carry lg2s
+          | IR.Z_sub_with_get_borrow lg2s
             (* these are munged; having a variable be used as a return
                from these functions doesn't imply that it is live *)
-            => false
+            => is_special_bitwidth lg2s
           | IR.literal _
           | IR.List_nth _
           | IR.Addr
