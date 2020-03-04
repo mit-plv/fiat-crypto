@@ -4,10 +4,26 @@ MOD_NAME := Crypto
 SRC_DIR  := src
 TIMED?=
 TIMECMD?=
-STDTIME?=/usr/bin/time -f "$@ (real: %e, user: %U, sys: %S, mem: %M ko)"
-TIMER=$(if $(TIMED), $(STDTIME), $(TIMECMD))
 TIMECMD_FULL?=
-STDTIME_FULL?=/usr/bin/time -f "$@ (real: %e, user: %U, sys: %S, mem: %M ko)"
+TIMEFMT?="$@ (real: %e, user: %U, sys: %S, mem: %M ko)"
+ifneq (,$(TIMED))
+ifeq (0,$(shell command time -f $(TIMEFMT) true >/dev/null 2>/dev/null; echo $$?))
+STDTIME?=command time -f $(TIMEFMT)
+STDTIME_FULL?=command time -f $(TIMEFMT)
+else
+ifeq (0,$(shell gtime -f $(TIMEFMT) true >/dev/null 2>/dev/null; echo $$?))
+STDTIME?=gtime -f $(TIMEFMT)
+STDTIME_FULL?=gtime -f $(TIMEFMT)
+else
+STDTIME?=command time
+STDTIME_FULL?=command time
+endif
+endif
+else
+STDTIME?=command time -f $(TIMEFMT)
+STDTIME_FULL?=command time -f $(TIMEFMT)
+endif
+TIMER=$(if $(TIMED), $(STDTIME), $(TIMECMD))
 TIMER_FULL=$(if $(TIMED), $(STDTIME_FULL), $(TIMECMD_FULL))
 
 BINDIR?=/usr/local/bin
