@@ -81,6 +81,17 @@ Section Lists.
              | _ => tauto
              end.
   Qed.
+
+  Lemma Forall2_impl_strong {B} (R1 R2 : A -> B -> Prop) xs ys :
+    (forall x y, R1 x y -> In x xs -> In y ys -> R2 x y) ->
+    Forall2 R1 xs ys -> Forall2 R2 xs ys.
+  Proof.
+    revert ys; induction xs; destruct ys; intros;
+      match goal with H : Forall2 _ _ _ |- _ =>
+                      inversion H; subst; clear H end;
+      constructor; eauto using in_eq, in_cons.
+  Qed.
+
 End Lists.
 
 Section Sets.
