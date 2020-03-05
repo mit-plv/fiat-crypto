@@ -94,6 +94,27 @@ Section Lists.
       constructor; eauto using in_eq, in_cons.
   Qed.
 
+  Lemma Forall2_app_inv {B} (R : A -> B -> Prop)
+        xs1 xs2 ys1 ys2 :
+    length xs1 = length ys1 ->
+    Forall2 R (xs1 ++ xs2) (ys1 ++ ys2) ->
+    Forall2 R xs1 ys1 /\ Forall2 R xs2 ys2.
+  Proof.
+    revert xs2 ys1 ys2; induction xs1;
+      destruct ys1; cbn [length]; intros; try lia.
+    all:repeat match goal with
+               | _ => rewrite app_nil_l in *
+               | _ => rewrite <-app_comm_cons in *
+               | H : Forall2 _ (_ :: _) _ |- _ =>
+                 inversion H; subst; clear H
+               | |- _ /\ _ => split
+               | |- Forall2 _ _ _ => constructor
+               | _ => solve [eauto]
+               | H : Forall2 _ (_ ++ _) _ |- _ =>
+                 apply IHxs1 in H; [ | lia .. ];
+                   destruct H
+               end.
+  Qed.
 End Lists.
 
 Section Sets.
@@ -261,8 +282,28 @@ Section Maps.
          ks1 (List.firstn (Datatypes.length ks1) vs) m)
       (map.putmany_of_list_zip
          ks2 (List.skipn (Datatypes.length ks1) vs)).
-  Admitted.
+  Proof.
+    revert m ks2 vs; induction ks1; destruct vs;
+      rewrite ?app_nil_l, <-?app_comm_cons;
+      try reflexivity; [ ].
+    apply IHks1.
+  Qed.
 
+  Lemma putmany_of_list_zip_None ks vs m :
+    map.putmany_of_list_zip ks vs m = None <->
+    length ks <> length vs.
+  Proof.
+    revert m vs; induction ks; destruct vs;
+      cbn [map.putmany_of_list_zip length];
+      split; intros; try congruence;
+        match goal with
+        | H : _ |- _ => apply IHks in H; lia
+        | _ => apply IHks; lia
+        end.
+  Qed.
+
+  (* This is only true if you have NoDup -- might want to have a different
+     phrasing (e.g. Forall2/only_differ) after all *)
   Lemma putmany_of_list_zip_bind_comm m ks1 ks2 vs1 vs2 :
     Option.bind
       (map.putmany_of_list_zip ks1 vs1 m)
@@ -270,7 +311,64 @@ Section Maps.
     Option.bind
       (map.putmany_of_list_zip ks2 vs2 m)
       (map.putmany_of_list_zip ks1 vs1).
-  Admitted.
+  Proof.
+    cbv [Option.bind]; break_match; try reflexivity;
+      [ | apply putmany_of_list_zip_None
+        | symmetry; apply putmany_of_list_zip_None ];
+      try match goal with
+            H : _ |- _ =>
+            apply putmany_of_list_zip_None in H
+          end; try lia; [ ].
+    match goal with |- ?lhs = ?rhs =>
+                    case_eq lhs; case_eq rhs;
+                      intros; try congruence
+    end;
+      try solve [
+            repeat match goal with
+                   | H : _ |- _ =>
+                     apply map.putmany_of_list_zip_sameLength in H
+                   | H : _ |- _ => apply putmany_of_list_zip_None in H
+                   | _ => congruence
+                   end].
+    f_equal. apply map.map_ext.
+    intro k.
+    Search map.putmany_of_list_zip.
+    Search map.get map.only_differ.
+    
+    Search map.putmany.
+    About map.putmany_of_list.
+    transitivity (map.putmany
+
+      match goal with
+      | H : map.putmany_of_list_zip _ _ _ = Some _ |- _ =>
+        apply map.putmany_of_list_zip_to_putmany in H;
+          destruct H as [? [? ?] ]; subst
+      end.
+      match goal with
+      | H : map.putmany_of_list_zip _ _ m = Some _ |- _ =>
+        apply map.putmany_of_list_zip_to_putmany in H;
+          destruct H as [? [? ?] ]; subst
+      end.
+      Search map.putmany_of_list_zip map.empty.
+      cleanup.
+    Search map.putmany map.putmany_of_list_zip.
+      
+  Search map.putmany_of_list_zip map.get.
+  Lemma get_putmany_of_list_zip ks vs m k :
+    map.get (map.putmany_of_list_zip ks vs m) k =
+    if (in_dec key_eq_dec k ks)
+         then 
+
+    
+    revert m ks2 vs1 vs2; induction ks1;
+      destruct vs1; intros;
+      cbn [map.putmany_of_list_zip Option.bind];
+      try first [ reflexivity
+                | cbv [Option.bind]; break_match;
+                  reflexivity ]; [ ].
+    rewrite IHks1.
+    apply IHks1.
+  Qed.
 End Maps.
 
 (* These lemmas should be moved to bedrock2, not coqutil *)
