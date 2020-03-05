@@ -473,7 +473,6 @@ Section Func.
     TODO : prove assumptions shown by:
     Print Assumptions translate_func_correct.
     
-    used_varnames_iff (easy)
     equiv_Z_only_differ_iff1 (medium)
     assign_correct (medium/hard)
     translate_expr_correct (hard)
