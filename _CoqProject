@@ -36,6 +36,7 @@ src/Arithmetic/BaseConversion.v
 src/Arithmetic/Core.v
 src/Arithmetic/FancyMontgomeryReduction.v
 src/Arithmetic/Freeze.v
+src/Arithmetic/Inv.v
 src/Arithmetic/ModOps.v
 src/Arithmetic/ModularArithmeticPre.v
 src/Arithmetic/ModularArithmeticTheorems.v
@@ -153,6 +154,7 @@ src/PushButtonSynthesis/BaseConversion.v
 src/PushButtonSynthesis/BaseConversionReificationCache.v
 src/PushButtonSynthesis/FancyMontgomeryReduction.v
 src/PushButtonSynthesis/FancyMontgomeryReductionReificationCache.v
+src/PushButtonSynthesis/InversionReificationCache.v
 src/PushButtonSynthesis/InvertHighLow.v
 src/PushButtonSynthesis/Primitives.v
 src/PushButtonSynthesis/ReificationCache.v
@@ -361,6 +363,7 @@ src/Util/ZRange/SplitRangeBounds.v
 src/Util/ZUtil/AddGetCarry.v
 src/Util/ZUtil/AddModulo.v
 src/Util/ZUtil/Bitwise.v
+src/Util/ZUtil/ArithmeticShiftr.v
 src/Util/ZUtil/CC.v
 src/Util/ZUtil/CPS.v
 src/Util/ZUtil/Combine.v

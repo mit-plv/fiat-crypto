@@ -2,6 +2,7 @@ Require Import Coq.ZArith.ZArith.
 Require Import Coq.micromega.Lia.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.Notations.
+Require Import Crypto.Util.ZUtil.Pow.
 Local Open Scope Z_scope.
 
 Module Z.
@@ -23,4 +24,11 @@ Module Z.
     rewrite truncating_shiftl_correct_land_ones, Z.ones_equiv, <- Z.sub_1_r.
     reflexivity.
   Qed.
+
+  Lemma truncating_shiftl_mod a b (Hb : 0 < b):
+    Z.truncating_shiftl b a (b - 1) = 2 ^ (b - 1) * (a mod 2).
+  Proof.
+    unfold Definitions.Z.truncating_shiftl. rewrite Z.shiftl_mul_pow2 by lia.
+    replace (2^b) with (2 * 2^(b-1)) by (rewrite Pow.Z.pow_mul_base, Z.sub_simpl_r; lia).
+    rewrite Zmult_mod_distr_r; ring. Qed.
 End Z.

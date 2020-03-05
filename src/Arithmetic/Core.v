@@ -1027,6 +1027,13 @@ Module Positional.
       length p = n -> length q = n ->
       length (select cond p q) = n.
     Proof using Type. clear dependent weight. distr_length; lia **. Qed.
+
+    Lemma select_push cond a b f (H : length a = length b) :
+      f (select cond a b) = Z.zselect cond (f a) (f b).
+    Proof using Type. unfold select, Z.zselect.
+                      destruct (Z.eqb_spec cond 0); subst; simpl.
+                      - rewrite (map_ext _ fst), ListUtil.map_fst_combine, <- H, firstn_all; reflexivity.
+                      - rewrite (map_ext _ snd), ListUtil.map_snd_combine, H, firstn_all; reflexivity. Qed.
   End select.
 End Positional.
 (* Hint Rewrite disappears after the end of a section *)

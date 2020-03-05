@@ -57,6 +57,10 @@ Proof.
   rewrite !uweight_eq_alt by lia.
   rewrite Nat2Z.inj_add; auto using Z.pow_add_r with zarith.
 Qed.
+Lemma uweight_0 lgr : uweight lgr 0 = 1.
+Proof.
+  rewrite uweight_eq_alt', Z.mul_0_r; reflexivity.
+Qed.
 Lemma uweight_1 lgr : uweight lgr 1 = 2^lgr.
 Proof using Type.
   cbv [uweight weight].

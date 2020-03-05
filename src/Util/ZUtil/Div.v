@@ -10,6 +10,7 @@ Require Import Crypto.Util.ZUtil.Hints.PullPush.
 Require Import Crypto.Util.ZUtil.Hints.
 Require Import Crypto.Util.ZUtil.ZSimplify.Core.
 Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.ZUtil.Pow.
 Local Open Scope Z_scope.
 
 Module Z.
@@ -426,4 +427,14 @@ Module Z.
 
   Lemma div_between_0_if a b : b <> 0 -> 0 <= a < 2 * b -> a / b = if b <=? a then 1 else 0.
   Proof. intros; rewrite (div_between_if 0) by lia; autorewrite with zsimplify_const; reflexivity. Qed.
+
+  Lemma div2_split a b c (Hc : 0 < c) :
+  (a + 2 ^ c * b) / 2 = a / 2 + 2 ^ (c - 1) * (b mod 2) + 2 ^ c * (b / 2).
+  Proof.
+    replace (2^c * b) with (2 * (2^(c - 1) * b)).
+    rewrite Div.Z.div_add',  <- (Z.div2_div b) by lia.
+    destruct (Z.odd b) eqn:E; rewrite Zmod_odd, E;
+      rewrite (Zdiv2_odd_eqn b) at 1; rewrite E; ring_simplify;
+        rewrite Pow.Z.pow_mul_base, Z.sub_simpl_r; lia.
+    rewrite Z.mul_assoc, Pow.Z.pow_mul_base, Z.sub_simpl_r; lia. Qed.
 End Z.

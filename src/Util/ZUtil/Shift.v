@@ -63,6 +63,15 @@ Module Z.
   Qed.
   Hint Rewrite testbit_add_shiftl_high using zutil_arith : Ztestbit.
 
+  Lemma testbit_add_shiftl i a b n
+        (Ha : 0 <= a < 2^n)
+        (Hb : 0 <= n)
+        (Hn : 0 <= i) :
+    Z.testbit (a + Z.shiftl b n) i = if (i <? n)
+                                then Z.testbit a i
+                                else Z.testbit b (i - n).
+  Proof. destruct (Z.ltb_spec i n); autorewrite with Ztestbit; reflexivity. Qed.
+  
   Lemma shiftr_succ : forall n x,
     Z.shiftr n (Z.succ x) = Z.shiftr (Z.shiftr n x) 1.
   Proof.

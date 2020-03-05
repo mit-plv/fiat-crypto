@@ -12,6 +12,8 @@ Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.SplitInContext.
 Require Import Crypto.Util.Tactics.DestructHead.
+Require Import Crypto.Util.ZUtil.Log2.
+Require Import Crypto.Util.ZUtil.Pow.
 Local Open Scope Z_scope.
 
 Module Z.
@@ -204,4 +206,27 @@ Module Z.
                           => apply bits_const_iff in H
                         end ].
   Qed.
+  
+  Lemma testbit_small_neg a b
+        (Ha : - 2^b <= a < 0)
+        (Hb : 0 < b) :
+    Z.testbit a b = true.
+  Proof.
+    destruct Ha; apply Z_le_lt_eq_dec in H; destruct H.
+    - apply Z.bits_iff_neg with (n:=b) in H0; [assumption|].
+      apply Log2.Z.log2_lt_pow2_alt; try lia.
+    - subst; replace (- 2 ^ b) with ((-1) * 2 ^ b) by ring.
+      rewrite Z.mul_pow2_bits, Z.sub_diag, Z.bit0_odd by lia; reflexivity. Qed.
+
+  Lemma testbit_large a b 
+        (Ha : 2^(b - 1) <= a <= 2^b - 1)
+        (Hb : 0 < b) :
+    Z.testbit a (b - 1) = true.
+  Proof.
+    destruct (Z.testbit a (b - 1)) eqn:E; try reflexivity.
+    rewrite Z.testbit_false in * by lia.
+    apply Z.div_exact in E; [|lia].
+    rewrite Div.Z.div_between_1 in E; auto with zarith. 
+    rewrite Pow.Z.pow_mul_base, Z.sub_simpl_r; lia. Qed.
+  
 End Z.

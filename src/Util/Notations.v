@@ -73,6 +73,7 @@ Reserved Infix ">>" (at level 30, no associativity).
 Reserved Infix ">>>" (at level 30, no associativity).
 Reserved Infix "&'" (at level 50). (* N.B.  If we used '&', it would conflict with [{ a : T & P}] for [sigT] *)
 Reserved Infix "&''" (at level 50).
+Reserved Infix "|'" (at level 50).
 Reserved Infix "∣" (at level 50).
 Reserved Infix "∣'" (at level 50).
 Reserved Infix "~=" (at level 70).

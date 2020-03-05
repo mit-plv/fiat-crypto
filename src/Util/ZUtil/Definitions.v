@@ -119,4 +119,24 @@ Module Z.
 
   (** Special identity function for constant-time cmov *)
   Definition value_barrier (x : Z) := x.
+  
+  (* arithmetic right shift *)
+  Definition arithmetic_shiftr (m a : Z) :=
+    (a &' 2^(m - 1)) |' (a >> 1).
+
+  (* Negation in twos complement *)
+  Definition twos_complement_opp m a :=
+    ((Z.lnot_modulo a (2 ^ m)) + 1) mod (2 ^ m).
+
+  (* Check if a number considered in twos complement of bitwidth m is negative *)
+  Definition twos_complement_neg m a :=
+    a >> (m - 1).
+
+  (* note the corner case condition: when f is exactly 2 to the mw-1'th power, then -f = f and 
+   so checking that -f is negative does not work in that case. 
+   This is not really an issue, since it just requires that our integers are small (which they are)
+   Long term, we would like to add comparison operators to the supported C language *)
+  Definition twos_complement_pos m a :=
+    dlet b := twos_complement_opp m a in
+          (b >> (m - 1)).
 End Z.
