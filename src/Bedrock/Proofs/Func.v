@@ -259,9 +259,7 @@ Section Func.
              end. }
     { match goal with
       | H : _ |- _ =>
-        rewrite putmany_of_list_zip_app_l in H;
-          pose proof H;
-          rewrite putmany_of_list_zip_bind_comm in H
+        rewrite putmany_of_list_zip_app_l in H
       end.
       match goal with
         H : NoDup (_ ++ _) |- _ =>
