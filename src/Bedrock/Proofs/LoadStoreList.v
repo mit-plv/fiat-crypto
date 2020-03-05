@@ -14,7 +14,6 @@ Require Import coqutil.Map.Interface coqutil.Map.Properties.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Util.
-Require Import Crypto.Bedrock.Proofs.Dexprs.
 Require Import Crypto.Bedrock.Proofs.Flatten.
 Require Import Crypto.Bedrock.Proofs.Varnames.
 Require Import Crypto.Bedrock.Translation.Flatten.

@@ -61,7 +61,6 @@ src/Bedrock/Util.v
 src/Bedrock/Test_X25519_64.v
 src/Bedrock/Proofs/Cmd.v
 src/Bedrock/Proofs/Expr.v
-src/Bedrock/Proofs/Dexprs.v
 src/Bedrock/Proofs/Flatten.v
 src/Bedrock/Proofs/Func.v
 src/Bedrock/Proofs/LoadStoreList.v

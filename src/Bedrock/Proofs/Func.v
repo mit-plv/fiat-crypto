@@ -15,7 +15,6 @@ Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Util.
 Require Import Crypto.Bedrock.Proofs.Cmd.
-Require Import Crypto.Bedrock.Proofs.Dexprs.
 Require Import Crypto.Bedrock.Proofs.Flatten.
 Require Import Crypto.Bedrock.Proofs.Varnames.
 Require Import Crypto.Bedrock.Proofs.LoadStoreList.
@@ -197,7 +196,10 @@ Section Func.
                | _ => reflexivity
                | _ => solve [eauto]
                end.
-    { apply list_map_app_iff; [ solve [split; intros; propers] | ].
+    { apply list_map_app_iff;
+        [ split; intros;
+          (eapply Proper_get; [|eassumption]); repeat intro;
+          match goal with H : _ |- _ => apply H; solve [eauto] end |  ].
       eapply Proper_list_map; [ solve [apply Proper_get] | repeat intro | ].
       2:{ eapply IHt1;
           (* TODO: why does ecancel_assumption not work here? *)
@@ -475,7 +477,6 @@ Section Func.
     putmany_of_list_zip_bind_comm (easy)
     putmany_of_list_zip_app_l (easy)
     equiv_Z_only_differ_iff1 (medium)
-    get_untouched (medium)
     assign_correct (medium/hard)
     translate_expr_correct (hard)
   *)

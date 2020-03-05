@@ -443,26 +443,6 @@ Section Varnames.
     eapply disjoint_used_varnames_lt. intros.
     rewrite varname_gen_unique. lia.
   Qed.
-
-  (* if two maps only differ on some keys, and we get a key that
-         is not in the differing set, then any proposition that holds
-         on one result should hold on the other. *)
-  Lemma get_untouched m1 m2 ks k P :
-    map.only_differ m2 ks m1 ->
-    ~ ks k ->
-    WeakestPrecondition.get m1 k P <-> WeakestPrecondition.get m2 k P.
-  Admitted.
-
-  Lemma expr_untouched mem1 mem2 l1 l2 vars v P :
-    map.only_differ l2 vars l1 ->
-    ~ vars v ->
-    WeakestPrecondition.expr mem1 l1 (expr.var v) P <->
-    WeakestPrecondition.expr mem2 l2 (expr.var v) P.
-  Proof.
-    intros.
-    cbv [WeakestPrecondition.expr WeakestPrecondition.expr_body].
-    rewrite get_untouched; eauto; reflexivity.
-  Qed.
 End Varnames.
 Hint Resolve equiv_listZ_only_differ_local
      equiv_listZ_only_differ_mem : equiv.
