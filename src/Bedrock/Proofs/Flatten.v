@@ -10,7 +10,6 @@ Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Language.API.
 Require Import Crypto.Bedrock.Util.
-Require Import Crypto.Bedrock.Proofs.Dexprs.
 Require Import Crypto.Bedrock.Translation.Flatten.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Import ListNotations. Local Open Scope Z_scope.

@@ -6,6 +6,8 @@ Require Import Coq.Classes.RelationClasses.
 Require Import bedrock2.Syntax.
 Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Map.SeparationLogic.
+Require Import bedrock2.WeakestPrecondition.
+Require Import bedrock2.WeakestPreconditionProperties.
 Require Import coqutil.Tactics.destr.
 Require Import coqutil.Map.Interface coqutil.Map.Properties.
 Require Import coqutil.Word.Interface.
@@ -294,3 +296,199 @@ Section Separation.
            end.
   Qed.
 End Separation.
+
+(* These lemmas should be moved to bedrock2, not coqutil *)
+Section WeakestPrecondition.
+  Context {p : Semantics.parameters} {p_ok : Semantics.parameters_ok p}.
+
+  Lemma expr_untouched mem1 mem2 l1 l2 vars v P :
+    map.only_differ l2 vars l1 ->
+    ~ vars v ->
+    expr mem1 l1 (expr.var v) P <->
+    expr mem2 l2 (expr.var v) P.
+  Proof.
+    cbv [map.only_differ
+           elem_of
+           expr
+           expr_body
+           get].
+    let H := fresh in
+    intro H; specialize (H v).
+    split; intros;
+      repeat match goal with
+             | H : exists _, _ |- _ => destruct H
+             | H : _ \/ _ |- _ => destruct H
+             | H : _ /\ _ |- _ => destruct H
+             | H : map.get _ _ = map.get _ _ |- _ =>
+               rewrite H in *
+             | |- exists _, _ => eexists
+             | |- _ /\ _ => split
+             | _ => eassumption
+             | _ => tauto
+             end.
+  Qed.
+
+  Section ListMap.
+    Context {A B} (f : A -> (B -> Prop) -> Prop)
+            (f_ext :
+               forall a H1 H2,
+                 (forall b, H1 b <-> H2 b) ->
+                 f a H1 <-> f a H2).
+    Lemma list_map_app_iff xs ys post :
+      list_map f (xs ++ ys) post <->
+      list_map
+        f xs (fun xx =>
+                list_map
+                  f ys (fun yy => post (xx ++ yy))).
+    Proof.
+      revert ys post; induction xs;
+        repeat match goal with
+               | _ => progress intros
+               | _ => progress cbn [list_map
+                                      list_map_body] in *
+               | _ => rewrite app_nil_l
+               | _ => rewrite <-app_comm_cons
+               | |- f _ _ <-> f _ _ => apply f_ext
+               | _ => reflexivity
+               end.
+      apply IHxs.
+    Qed.
+
+    Lemma list_map_cons_iff x xs post :
+      list_map f (x :: xs) post <->
+      f x (fun y => list_map f xs (fun ys => post (y :: ys))).
+    Proof. reflexivity. Qed.
+  End ListMap.
+
+  Section Dexpr.
+    Lemma dexpr_equiv m l n x1 x2 :
+      dexpr m l (expr.var n) x1 ->
+      dexpr m l (expr.var n) x2 ->
+      x1 = x2.
+    Proof.
+      destruct 1; destruct 1; destruct_head'_and; congruence.
+    Qed.
+
+    Lemma dexpr_put_same m l n x :
+      dexpr m (map.put l n x) (expr.var n) x.
+    Proof. eexists; rewrite map.get_put_same; tauto. Qed.
+
+    Lemma dexpr_put_diff m l n1 n2 x y :
+      n1 <> n2 ->
+      dexpr m l (expr.var n1) x ->
+      dexpr m (map.put l n2 y) (expr.var n1) x.
+    Proof.
+      destruct 2; intros; eexists; rewrite map.get_put_diff; eauto.
+    Qed.
+  End Dexpr.
+
+  (* TODO: some of these may be unused *)
+  Section Dexprs.
+    Local Ltac peel_expr :=
+      progress (
+          repeat
+            progress match goal with
+                     | H : expr ?m ?l ?e _ |- _ =>
+                       match goal with
+                       | |- expr m l e _ => idtac
+                       | _ =>
+                         apply expr_sound with (mc:=MetricLogging.EmptyMetricLog) in H;
+                         destruct H as [? [_ [_ H] ] ]
+                       end
+                     end).
+
+    Local Ltac propers_step :=
+      match goal with
+      | H : get ?l ?x _
+        |- get ?l ?x _ =>
+        eapply Proper_get
+      | H : expr ?m ?l ?e _
+        |- expr ?m ?l ?e _ =>
+        eapply Proper_expr
+      | H : list_map ?f ?xs _
+        |- list_map ?f ?xs _ =>
+        eapply Proper_list_map
+      end; [ repeat intro .. | eassumption ]; cbv beta in *.
+
+    Local Ltac propers :=
+      propers_step;
+      match goal with
+      | _ => solve [propers]
+      | H : _ |- _ => apply H; solve [eauto]
+      | _ => congruence
+      end.
+
+    Lemma dexprs_cons_iff m l e es v vs :
+      dexprs m l (e :: es) (v :: vs) <->
+      (expr m l e (eq v)
+       /\ dexprs m l es vs).
+    Proof.
+      cbv [dexprs].
+      revert es v vs; induction es; split; intros;
+        repeat match goal with
+               | _ => progress cbn [list_map
+                                      list_map_body] in *
+               | _ => progress cbv beta in *
+               | H : _ :: _ = _ :: _ |- _ => inversion H; clear H; subst
+               | |- _ /\ _ => split
+               | _ => progress destruct_head'_and
+               | _ => solve [propers]
+               | _ => reflexivity
+               | _ => peel_expr
+               end.
+      eapply IHes with (vs := tl vs).
+      propers_step. peel_expr.
+      destruct vs; cbn [tl]; propers.
+    Qed.
+
+    Lemma dexprs_cons_nil m l e es :
+      dexprs m l (e :: es) [] -> False.
+    Proof.
+      cbv [dexprs].
+      induction es; intros;
+        repeat match goal with
+               | _ => progress cbn [list_map
+                                      list_map_body] in *
+               | _ => congruence
+               | _ => solve [propers]
+               | _ => apply IHes
+               | _ => peel_expr
+               end.
+      propers_step. peel_expr. propers.
+    Qed.
+
+    Lemma dexprs_app_l m l es1 :
+      forall es2 vs,
+        dexprs m l (es1 ++ es2) vs ->
+        (dexprs m l es1 (firstn (length es1) vs)) /\
+        (dexprs m l es2 (skipn (length es1) vs)).
+    Proof.
+      induction es1; intros.
+      { cbn [Datatypes.length skipn firstn]; rewrite app_nil_l in *.
+        split; eauto; reflexivity. }
+      { destruct vs; rewrite <-app_comm_cons in *;
+          [ match goal with H : _ |- _ => apply dexprs_cons_nil in H; tauto end | ].
+        cbn [Datatypes.length skipn firstn].
+        rewrite !dexprs_cons_iff in *.
+        destruct_head'_and.
+        repeat split; try eapply IHes1; eauto. }
+    Qed.
+
+    Lemma dexprs_length m l :
+      forall vs es,
+        dexprs m l es vs ->
+        length es = length vs.
+    Proof.
+      induction vs; destruct es; intros;
+        repeat match goal with
+               | _ => progress cbn [Datatypes.length]
+               | _ => progress destruct_head'_and
+               | H : _ |- _ => apply dexprs_cons_nil in H; tauto
+               | H : _ |- _ => apply dexprs_cons_iff in H
+               | _ => reflexivity
+               | _ => congruence
+               end.
+      rewrite IHvs; auto.
+    Qed.
+  End Dexprs.
+End WeakestPrecondition.
