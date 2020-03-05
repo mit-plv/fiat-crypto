@@ -115,6 +115,15 @@ Section Lists.
                    destruct H
                end.
   Qed.
+
+  Lemma NoDup_combine_l {B} xs ys :
+    NoDup xs -> NoDup (@combine A B xs ys).
+  Proof.
+    revert ys; induction xs; destruct ys; inversion 1;
+      intros; subst; cbn [combine]; constructor; auto; [ ].
+    let H := fresh in intro H; apply in_combine_l in H.
+    contradiction.
+  Qed.
 End Lists.
 
 Section Sets.
@@ -302,9 +311,73 @@ Section Maps.
         end.
   Qed.
 
-  (* This is only true if you have NoDup -- might want to have a different
-     phrasing (e.g. Forall2/only_differ) after all *)
-  Lemma putmany_of_list_zip_bind_comm m ks1 ks2 vs1 vs2 :
+  Lemma putmany_of_list_zip_combine m ks vs :
+    length ks = length vs ->
+    map.putmany_of_list_zip ks vs m =
+    Some (map.putmany_of_list (combine ks vs) m).
+  Proof.
+    revert m vs; induction ks; destruct vs; intros;
+      cbn [length] in *; try lia; try reflexivity; [ ].
+    cbn [map.putmany_of_list_zip map.putmany_of_list combine].
+    rewrite IHks; auto.
+  Qed.
+
+  Lemma put_put_comm k1 k2 v1 v2 m :
+    k1 <> k2 ->
+    map.put (map.put m k1 v1) k2 v2 =
+    map.put (map.put m k2 v2) k1 v1.
+  Proof.
+    intros.
+    apply map.map_ext; intro k;
+      destruct (key_eq_dec k1 k);
+      destruct (key_eq_dec k2 k);
+      subst; try congruence;
+        repeat first [ rewrite map.get_put_same
+                     | rewrite map.get_put_diff by congruence
+                     | reflexivity ].
+  Qed.
+
+  Lemma putmany_of_list_put_comm kv k v m :
+    ~ In k (List.map fst kv) ->
+    map.putmany_of_list kv (map.put m k v) =
+    map.put (map.putmany_of_list kv m) k v.
+  Proof.
+    revert m k v; induction kv; intros;
+      [ reflexivity | ].
+    cbn [map.putmany_of_list]. break_match.
+    cbn [List.map In fst] in *.
+    match goal with H : _ |- _ =>
+                    apply Decidable.not_or in H; destruct H end.
+    rewrite <-IHkv by auto.
+    rewrite put_put_comm by congruence.
+    reflexivity.
+  Qed.
+
+  Lemma putmany_of_list_comm kv1 kv2 m :
+    NoDup (List.map fst (kv1 ++ kv2)) ->
+    map.putmany_of_list kv1 (map.putmany_of_list kv2 m) =
+    map.putmany_of_list kv2 (map.putmany_of_list kv1 m).
+  Proof.
+    revert kv2 m; induction kv1; destruct kv2; intros;
+      try reflexivity; [ ].
+    rewrite map_app in *. cbn [List.map] in *.
+    cbn [map.putmany_of_list]. break_match.
+    repeat match goal with
+           | H : NoDup (_ ++ _) |- _ =>
+             apply NoDup_app_iff in H
+           | H : _ /\ _ |- _ => destruct H
+           | H : NoDup (_ :: _) |- _ => inversion H; subst; clear H
+           end.
+    cbn [In fst] in *.
+    rewrite !putmany_of_list_put_comm by firstorder idtac.
+    rewrite put_put_comm by firstorder idtac.
+    rewrite IHkv1; [ reflexivity | ].
+    rewrite map_app. apply NoDup_app_iff.
+    firstorder idtac.
+  Qed.
+
+  Lemma putmany_of_list_zip_bind_comm ks1 ks2 vs1 vs2 m :
+    NoDup (ks1 ++ ks2) ->
     Option.bind
       (map.putmany_of_list_zip ks1 vs1 m)
       (map.putmany_of_list_zip ks2 vs2) =
@@ -312,62 +385,29 @@ Section Maps.
       (map.putmany_of_list_zip ks2 vs2 m)
       (map.putmany_of_list_zip ks1 vs1).
   Proof.
-    cbv [Option.bind]; break_match; try reflexivity;
-      [ | apply putmany_of_list_zip_None
-        | symmetry; apply putmany_of_list_zip_None ];
-      try match goal with
-            H : _ |- _ =>
-            apply putmany_of_list_zip_None in H
-          end; try lia; [ ].
-    match goal with |- ?lhs = ?rhs =>
-                    case_eq lhs; case_eq rhs;
-                      intros; try congruence
-    end;
+    intros.
+    destruct (Nat.eq_dec (length ks1) (length vs1));
+      destruct (Nat.eq_dec (length ks2) (length vs2));
       try solve [
+            cbv [Option.bind]; break_match; try reflexivity;
             repeat match goal with
-                   | H : _ |- _ =>
+                   | H : _ = Some _ |- _ =>
                      apply map.putmany_of_list_zip_sameLength in H
-                   | H : _ |- _ => apply putmany_of_list_zip_None in H
+                   | H : _ = None |- _ =>
+                     apply putmany_of_list_zip_None in H
+                   | _ => apply putmany_of_list_zip_None
+                   | _ => symmetry; apply putmany_of_list_zip_None
                    | _ => congruence
-                   end].
-    f_equal. apply map.map_ext.
-    intro k.
-    Search map.putmany_of_list_zip.
-    Search map.get map.only_differ.
-    
-    Search map.putmany.
-    About map.putmany_of_list.
-    transitivity (map.putmany
-
-      match goal with
-      | H : map.putmany_of_list_zip _ _ _ = Some _ |- _ =>
-        apply map.putmany_of_list_zip_to_putmany in H;
-          destruct H as [? [? ?] ]; subst
-      end.
-      match goal with
-      | H : map.putmany_of_list_zip _ _ m = Some _ |- _ =>
-        apply map.putmany_of_list_zip_to_putmany in H;
-          destruct H as [? [? ?] ]; subst
-      end.
-      Search map.putmany_of_list_zip map.empty.
-      cleanup.
-    Search map.putmany map.putmany_of_list_zip.
-      
-  Search map.putmany_of_list_zip map.get.
-  Lemma get_putmany_of_list_zip ks vs m k :
-    map.get (map.putmany_of_list_zip ks vs m) k =
-    if (in_dec key_eq_dec k ks)
-         then 
-
-    
-    revert m ks2 vs1 vs2; induction ks1;
-      destruct vs1; intros;
-      cbn [map.putmany_of_list_zip Option.bind];
-      try first [ reflexivity
-                | cbv [Option.bind]; break_match;
-                  reflexivity ]; [ ].
-    rewrite IHks1.
-    apply IHks1.
+                   end ]; [ ].
+    repeat match goal with
+           | _ => rewrite putmany_of_list_zip_combine by auto
+           | _ => progress cbn [Option.bind]
+           end.
+    rewrite <-putmany_of_list_comm; [ reflexivity | ].
+    rewrite <-combine_app_samelength by congruence.
+    rewrite map_fst_combine.
+    rewrite firstn_all2 by (rewrite !app_length; lia).
+    assumption.
   Qed.
 End Maps.
 

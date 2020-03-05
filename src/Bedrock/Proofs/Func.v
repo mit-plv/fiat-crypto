@@ -259,7 +259,9 @@ Section Func.
              end. }
     { match goal with
       | H : _ |- _ =>
-        rewrite putmany_of_list_zip_app_l in H
+        rewrite putmany_of_list_zip_app_l in H;
+          pose proof H;
+          rewrite putmany_of_list_zip_bind_comm in H by auto
       end.
       match goal with
         H : NoDup (_ ++ _) |- _ =>
@@ -472,8 +474,6 @@ Section Func.
     Print Assumptions translate_func_correct.
     
     used_varnames_iff (easy)
-    putmany_of_list_zip_bind_comm (easy)
-    putmany_of_list_zip_app_l (easy)
     equiv_Z_only_differ_iff1 (medium)
     assign_correct (medium/hard)
     translate_expr_correct (hard)
