@@ -241,12 +241,24 @@ Section Varnames.
       used_varnames nextn nvars v <->
       (exists n,
           v = varname_gen n /\ nextn <= n < nextn + nvars)%nat.
-    Admitted.
-
-    Lemma used_varnames_le nextn nvars n :
-      (nextn + nvars <= n)%nat ->
-      ~ used_varnames nextn nvars (varname_gen n).
-    Admitted.
+    Proof.
+      cbv [used_varnames of_list]. revert nextn v.
+      induction nvars; intros; cbn [seq map In];
+        [ split; try tauto; intros; cleanup; lia | ].
+      rewrite IHnvars.
+      split; intros;
+        repeat match goal with
+               | _ => progress cleanup
+               | _ => progress subst
+               | H : _ \/ _ |- _ => destruct H
+               | |- exists _, _ => eexists; solve [eauto with lia]
+               end; [ ].
+      match goal with H : _ <= _ |- _ =>
+                      apply le_lt_or_eq in H; destruct H; [right | left]
+      end.
+      { eexists; eauto with lia. }
+      { congruence. }
+    Qed.
 
     Lemma used_varnames_shift n m l :
       subset (used_varnames (n + m) l)
