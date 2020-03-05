@@ -40,11 +40,13 @@ Require Import Crypto.Arithmetic.Freeze.
 Require Import Crypto.Arithmetic.Partition.
 Require Import Crypto.Arithmetic.WordByWordMontgomery.
 Require Import Crypto.Arithmetic.UniformWeight.
+Require Import Crypto.Arithmetic.Inv.
 Require Import Crypto.BoundsPipeline.
 Require Import Crypto.COperationSpecifications.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.
 Require Import Crypto.PushButtonSynthesis.Primitives.
 Require Import Crypto.PushButtonSynthesis.WordByWordMontgomeryReificationCache.
+Require Import Crypto.PushButtonSynthesis.InversionReificationCache.
 Import ListNotations.
 Local Open Scope Z_scope. Local Open Scope list_scope. Local Open Scope bool_scope.
 
@@ -64,6 +66,7 @@ Import Associational Positional.
 Import Arithmetic.WordByWordMontgomery.WordByWordMontgomery.
 
 Import WordByWordMontgomeryReificationCache.WordByWordMontgomery.
+Import InversionReificationCache.WordByWordMontgomeryInversion.
 
 Local Coercion Z.of_nat : nat >-> Z.
 Local Coercion QArith_base.inject_Z : Z >-> Q.
@@ -108,6 +111,7 @@ Section __.
   Definition s := 2^Z.log2_up m.
   Definition c := s - m.
   Definition n : nat := Z.to_nat (Qceiling (Z.log2_up s / machine_wordsize)).
+  Definition sat_limbs := (n + 1)%nat.   (* to represent m in twos complement we might need another bit *)
   Definition r := 2^machine_wordsize.
   Definition r'
     := match Z.modinv r m with
@@ -133,6 +137,21 @@ Section __.
     := Some (List.map (fun v => Some r[0 ~> v]%zrange) prime_bytes_upperbound_list).
   Local Notation saturated_bounds_list := (saturated_bounds_list n machine_wordsize).
   Local Notation saturated_bounds := (saturated_bounds n machine_wordsize).
+  Local Notation larger_saturated_bounds := (Primitives.saturated_bounds sat_limbs machine_wordsize).
+
+  Definition divstep_input :=
+    (Some r[0~>2^machine_wordsize-1],
+     (Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) sat_limbs),
+      (Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) sat_limbs),
+       (Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) n),
+        (Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) n),tt)))))%zrange.
+
+  Definition divstep_output :=
+    (Some r[0~>2^machine_wordsize-1],
+     Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) sat_limbs),
+     Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) sat_limbs),
+     Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) n),
+     Some (repeat (Some r[0 ~> 2^machine_wordsize-1]) n))%zrange.
 
   (* We include [0], so that even after bounds relaxation, we can
        notice where the constant 0s are, and remove them. *)
@@ -146,6 +165,8 @@ Section __.
   Let possible_values_with_bytes := possible_values_of_machine_wordsize_with_bytes.
   Definition bounds : list (ZRange.type.option.interp base.type.Z)
     := Option.invert_Some saturated_bounds (*List.map (fun u => Some r[0~>u]%zrange) upperbounds*).
+  Definition larger_bounds : list (ZRange.type.option.interp base.type.Z)
+    := Option.invert_Some larger_saturated_bounds (*List.map (fun u => Some r[0~>u]%zrange) upperbounds*).
 
   Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
   Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
@@ -254,7 +275,11 @@ Section __.
                     (@eval machine_wordsize n) "eval"
                     (CorrectnessStringification.dyn_context.cons
                        (@eval 8 n_bytes) "bytes_eval"
-                       CorrectnessStringification.dyn_context.nil)))))%string)
+                            (CorrectnessStringification.dyn_context.cons
+                               (Z.log2 m) "(log2 m)"
+                               (CorrectnessStringification.dyn_context.cons
+                                  (@eval_twosc machine_wordsize n) "twos_complement_eval"
+                                  CorrectnessStringification.dyn_context.nil)))))))%string)
          (only parsing).
   Local Notation "'docstring_with_summary_from_lemma!' prefix summary correctness"
     := (docstring_with_summary_from_lemma_with_ctx!
@@ -554,6 +579,70 @@ Section __.
   Definition sselectznz (prefix : string)
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Primitives.sselectznz n machine_wordsize prefix.
+
+  Definition msat
+    := Pipeline.BoundsPipeline
+         true (* subst01 *)
+         None (* fancy *)
+         possible_values
+         (reified_msat_gen
+            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify sat_limbs @ GallinaReify.Reify m)
+         tt
+         (Some larger_bounds).
+
+  Definition smsat (prefix : string)
+    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    := Eval cbv beta in
+        FromPipelineToString
+          machine_wordsize prefix "msat" msat
+          (docstring_with_summary_from_lemma!
+             prefix
+             (fun fname => ["The function " ++ fname ++ " returns the saturated represtation of the prime modulus."]%string)
+             (one_correct machine_wordsize n m valid from_montgomery_res)).
+             (* this results in unrecognized term/bounds component and I am unsure how to fix? Note perhaps that i have tried fixing it on L265 in notations_for_docstring *)
+             (* (msat_correct machine_wordsize n m)). *)
+
+  Definition precomp
+    := Pipeline.BoundsPipeline
+         true (* subst01 *)
+         None (* fancy *)
+         possible_values
+         (reified_precomp_gen
+            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
+         tt
+         (Some bounds).
+
+  Definition sprecomp (prefix : string)
+    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    := Eval cbv beta in
+        FromPipelineToString
+          machine_wordsize prefix "precomp" precomp
+          (docstring_with_summary_from_lemma!
+             prefix
+             (fun fname => ["The function " ++ fname ++ " returns the precomputed value for Bernstein-Yang-inversion (in montgomery form)."]%string)
+             (precomp_correct machine_wordsize n m valid from_montgomery_res)).
+
+  Definition divstep
+    := Pipeline.BoundsPipeline
+         false (* subst01 *)
+         None (* fancy *)
+         possible_values
+         (reified_divstep_gen
+            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify sat_limbs @ GallinaReify.Reify n @ GallinaReify.Reify m)
+         (divstep_input)
+         (divstep_output).
+
+  Definition sdivstep (prefix : string)
+    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    := Eval cbv beta in
+        FromPipelineToString
+          machine_wordsize prefix "divstep" divstep
+          (docstring_with_summary_from_lemma!
+             prefix
+             (fun fname : string => ["The function " ++ fname ++ " computes a divstep."]%string)
+             (forall a, valid a)).
+             (* the following results in 'unrecognized bounds component' or 'unrecognized term' and I am unsure how to fix it // Benjamin  *)
+             (* (divstep_correct machine_wordsize n m valid from_montgomery_res)). *)
 
   Lemma bounded_by_of_valid x
         (H : valid x)
@@ -911,7 +1000,11 @@ Section __.
             ("nonzero", snonzero);
             ("selectznz", sselectznz);
             ("to_bytes", sto_bytes);
-            ("from_bytes", sfrom_bytes)].
+            ("from_bytes", sfrom_bytes);
+            ("one", sone);
+            ("msat", smsat);
+            ("precomp", sprecomp);
+            ("divstep", sdivstep)].
 
     Definition valid_names : string := Eval compute in String.concat ", " (List.map (@fst _ _) known_functions).
 

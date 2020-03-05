@@ -1,6 +1,7 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.micromega.Lia.
 Require Import Crypto.Util.ZUtil.Hints.Core.
+Require Import Lists.List.
 Local Open Scope Z_scope.
 
 Module Z.
@@ -65,4 +66,15 @@ Module Z.
   Lemma pow_mul_base a b : 0 <= b -> a * a ^ b = a ^ (b + 1).
   Proof. intros; rewrite <-Z.pow_succ_r, <-Z.add_1_r by lia; reflexivity. Qed.
   Hint Rewrite pow_mul_base using zutil_arith : pull_Zpow.
+
+  (* faster modular exponentation for computing (not sure where to put this) *)
+  Definition sq_and_multiply_mod a p m :=
+    fold_right
+      (fun i res =>
+         ((a - 1) * ((p / (2 ^ (Z.of_nat i))) mod 2) + 1) * (res ^ 2) mod m)
+      a (seq 0 (Z.to_nat (Z.log2 p))).
+
+  Lemma sq_and_multiply_mod_correct a p m (Hp : p >= 1) : sq_and_multiply_mod a p m = a ^ p mod m.
+  Proof. Admitted.
+
 End Z.
