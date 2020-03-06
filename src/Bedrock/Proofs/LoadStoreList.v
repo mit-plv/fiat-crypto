@@ -42,23 +42,22 @@ Section LoadStoreList.
   Fixpoint lists_reserved {t}
     : base_list_lengths t ->
       list_locs t ->
+      Semantics.locals ->
       Semantics.mem ->
       Prop :=
     match t as t0 return base_list_lengths t0 -> list_locs t0 -> _ with
     | base.type.prod a b =>
-      fun x y => sep (lists_reserved (fst x) (fst y))
-                            (lists_reserved (snd x) (snd y))
+      fun x y locals => sep (lists_reserved (fst x) (fst y) locals)
+                            (lists_reserved (snd x) (snd y) locals)
     | base_listZ =>
-      fun n loc =>
+      fun n loc locals =>
         (Lift1Prop.ex1
            (fun oldvalues : list Z =>
-              sep (map:=Semantics.mem)
-                  (emp (length oldvalues = n))
-                  (rep.equiv (rep:=rep.listZ_mem) oldvalues
-                             (expr.literal (word.unsigned loc))
-                             map.empty)))
-    | base_Z => fun _ _ => emp True
-    |  _ => fun _ _ => emp False
+              sep (emp (length oldvalues = n))
+                  (equivalent (t:=base_listZ) (listZ:=rep.listZ_mem)
+                              oldvalues loc locals)))
+    | base_Z => fun _ _ _ => emp True
+    |  _ => fun _ _ _ => emp False
     end.
 
   Fixpoint list_lengths_from_value {t}
@@ -84,26 +83,25 @@ Section LoadStoreList.
       fun x => (tt, list_lengths_from_args (snd x))
     end.
 
-  Lemma lists_reserved_0 loc:
+  Lemma lists_reserved_0 {listZ:rep.rep base_listZ} start locals:
     Lift1Prop.iff1
-      (lists_reserved (t:=base_listZ) 0%nat loc)
-      (emp True).
+      (lists_reserved (t:=base_listZ) 0%nat start locals)
+      (emp (exists x, locally_equivalent (t:=base_Z) x start locals)).
   Proof.
     cbv [lists_reserved].
     split; intros;
       repeat match goal with
              | _ => progress (sepsimpl; subst)
+             | _ => progress cbn [locally_equivalent equivalent rep.equiv rep.Z] in *
              | H : Datatypes.length _ = 0%nat |- _ =>
                apply length0_nil in H; subst
              | H : rep.equiv _ _ _ _ |- _ => apply equiv_nil_iff1 in H
-             | H : rep.equiv _ (expr.literal _) _ _ |- _ =>
-               destruct H; subst
              | |- Lift1Prop.ex1 _ _ => eexists
              | |- _ /\ _ => split
+             | |- rep.equiv [] _ _ _ => apply equiv_nil_iff1
              | _ => solve [eauto using List.length_nil]
+             | _ => eexists; split; solve [eauto]
              end.
-    apply equiv_nil_iff1.
-    eexists; eexists; reflexivity.
   Qed.
 
   Lemma load_list_item_correct
@@ -269,8 +267,7 @@ Section LoadStoreList.
              locally_equivalent args argvalues' locals').
   Proof.
     (* TODO: lots of repeated steps in this proof; automate *)
-    induction t;
-      cbn [fst snd map load_all_lists varname_set
+    induction t;      cbn [fst snd map load_all_lists varname_set
                locally_equivalent equivalent rep.equiv
                flatten_base_ltype equivalent_flat_base
                base_rtype_of_ltype
@@ -458,7 +455,6 @@ Section LoadStoreList.
 
   Lemma store_list_correct :
     forall (start : string)
-           (loc : list_locs base_listZ)
            (functions : list _)
            (value_names2 value_names1 : list string)
            (rets1 rets2 rets : base.interp base_listZ)
@@ -469,23 +465,23 @@ Section LoadStoreList.
            (R : Semantics.mem -> Prop),
       let retlengths :=
           list_lengths_from_value (t:=base_listZ) rets2 in
-      let loc' :=
-          word.add loc (word.of_Z (Z.of_nat i * word_size_in_bytes)) in
+      let loc : list_locs base_listZ := expr.var start in
+      let offset := (Z.of_nat i * word_size_in_bytes)%Z in
+      let loc' := expr.op bopname.add loc (expr.literal offset) in
       let values1 := map expr.var value_names1 in
       let values2 := map expr.var value_names2 in
       rets = rets1 ++ rets2 ->
       length rets1 = length value_names1 ->
       length rets2 = length value_names2 ->
       length value_names1 = i ->
-      sep (map:=Semantics.mem)
-          (rep.equiv (rep:=rep.Z) (word.unsigned loc) (expr.var start) locals)
-          (rep.equiv (rep:=rep.listZ_local) rets2 values2 locals) mem ->
-      (* use old values of memory to set up frame for return values *)
+      (* yet-to-be-stored values *)
+      locally_equivalent (listZ:=rep.listZ_local) rets2 values2 locals ->
+      (* already-stored values *)
       sep (map:=Semantics.mem)
           (sep (map:=Semantics.mem)
                (rep.equiv (rep:=rep.listZ_mem)
                           rets1 (expr.var start) locals)
-               (lists_reserved retlengths loc')) R mem ->
+               (lists_reserved retlengths loc' locals)) R mem ->
       WeakestPrecondition.cmd
         (WeakestPrecondition.call functions)
         (store_list (expr.var start) values2 i) tr mem locals
@@ -498,7 +494,7 @@ Section LoadStoreList.
   Proof.
     cbv zeta.
     induction value_names2 as [|n0 ?]; destruct rets2 as [|r0 rets2];
-      cbn [store_list Datatypes.length
+      cbn [store_list Datatypes.length locally_equivalent equivalent
                       rep.equiv rep.listZ_local rep.Z rep.listZ_mem];
       intros; subst; try lia; sepsimpl.
     { repeat split; try reflexivity.
@@ -510,18 +506,13 @@ Section LoadStoreList.
              | |- _ /\ _ => split
              | _ => eassumption
              end.
-      match goal with
-      | H: context [array] |- _ =>
-        refine (Lift1Prop.subrelation_iff1_impl1 _ _ _ _ _ H); clear H
-      end.
+      eapply Proper_sep_iff1 in H1;
+        [ | rewrite ?(lists_reserved_0 (listZ:=rep.listZ_local)); reflexivity .. ].
+      sepsimpl.
       rewrite app_nil_r.
-      rewrite lists_reserved_0. cancel. }
+      ecancel_assumption. }
     { repeat match goal with
              | H : _ |- _ => rewrite word.of_Z_unsigned in H end.
-      match goal with H1 : _, H2 : _ |- _ =>
-                      rewrite (dexpr_equiv _ _ _ _ _ H1 H2) in *;
-                        clear H1
-      end.
       subst; eexists; split.
       { cbn [WeakestPrecondition.dexpr
                WeakestPrecondition.expr
@@ -548,25 +539,39 @@ Section LoadStoreList.
         destruct x; cbn [Datatypes.length] in H; [ lia | ]
       end.
       cbn [map array Semantics.interp_binop] in *.
-      eapply store_word_of_sep.
-      { cbn [WeakestPrecondition.dexpr
-               WeakestPrecondition.expr
-               WeakestPrecondition.expr_body] in *.
-        cbv [WeakestPrecondition.literal dlet.dlet] in *.
-        match goal with H : word.of_Z _ = word.of_Z _ |- _ =>
-                        rewrite ?word.of_Z_unsigned in H;
-                          rewrite H in * end.
-        ecancel_assumption. }
+
+      (* we now have a Z in context that should be equivalent to the offsetted
+         location; destruct WeakestPrecondition.dexpr to expose that equivalence *)
+      match goal with
+        H : WeakestPrecondition.dexpr _ _ (expr.op _ _ _) ?v |- _ =>
+          cbn [WeakestPrecondition.dexpr
+                 WeakestPrecondition.expr
+                 WeakestPrecondition.expr_body
+                 Semantics.interp_binop] in H;
+          cbv [dlet.dlet WeakestPrecondition.literal
+                         WeakestPrecondition.get] in H;
+          cleanup;
+          match goal with H : v = _ |- _ => rewrite H in * end
+      end.
+      match goal with
+      | H1 : (WeakestPrecondition.dexpr _ ?l (expr.var ?x) ?v1),
+             H' : (map.get ?l ?x = Some ?v2) |- _ =>
+        replace v2 with v1 in *
+          by (cbn [WeakestPrecondition.dexpr
+                     WeakestPrecondition.expr
+                     WeakestPrecondition.expr_body] in H;
+              cbv [WeakestPrecondition.get] in H;
+              cleanup; congruence)
+      end.
+
+      eapply store_word_of_sep; [ ecancel_assumption | ].
       intros. sepsimpl.
       eapply Proper_cmd; [ solve [apply Proper_call] | repeat intro | ].
       2:{
         eapply IHvalue_names2 with
             (rets1:= rets1 ++ [r0]) (rets2:=rets2)
             (value_names1:=value_names1 ++ [n0]);
-        rewrite ?app_length; cbn [length]; eauto; try lia; [ | ].
-        { rewrite word.of_Z_unsigned.
-          cbn [rep.equiv rep.Z rep.listZ_local].
-          sepsimpl; eauto using Forall.Forall2_skipn. }
+        rewrite ?app_length; cbn [length]; eauto; try lia; [ ].
         {
           (* look at goal and plug in evars very carefully *)
           sepsimpl.
@@ -577,7 +582,14 @@ Section LoadStoreList.
             H : context [array _ _ (word.add _ _) (map _ ?x)] |- _ =>
             exists x end.
           sepsimpl; auto.
-          eexists; sepsimpl; try reflexivity.
+          eexists. sepsimpl.
+          { eexists; split; [ eassumption | ].
+            cbn [WeakestPrecondition.dexpr
+                   WeakestPrecondition.expr
+                   WeakestPrecondition.expr_body
+                   Semantics.interp_binop].
+            cbv [WeakestPrecondition.literal dlet.dlet].
+            rewrite <-word.ring_morph_add. reflexivity. }
           match goal with
             H : context [array _ _ (word.add (word.add _ _) _) _] |- _ =>
             refine (Lift1Prop.subrelation_iff1_impl1 _ _ _ _ _ H); clear H
@@ -593,7 +605,8 @@ Section LoadStoreList.
                   cbv [word.wrap]; Modulo.pull_Zmod; f_equal; lia)
           end.
           cbn [Compilers.base_interp] in *. (* simplifies implicit types *)
-          rewrite !word.of_Z_unsigned, ?map_length.
+          rewrite !word.ring_morph_add.
+          rewrite !map_length.
           match goal with
           | |- Lift1Prop.iff1 ?L ?R =>
             let la := match L with context [scalar ?la] => la end in
@@ -611,6 +624,49 @@ Section LoadStoreList.
       eassumption. }
   Qed.
 
+  (* TODO : move *)
+  Lemma union_assoc {E} (s1 s2 s3 : PropSet.set E) :
+    PropSet.sameset (PropSet.union s1 (PropSet.union s2 s3))
+                    (PropSet.union (PropSet.union s1 s2) s3).
+  Proof.
+    apply sameset_iff.
+    cbv [PropSet.union PropSet.elem_of].
+    intros. rewrite or_assoc. reflexivity.
+  Qed.
+
+  (* TODO : move *)
+  Lemma undef_on_None m k ks :
+    map.undef_on m ks ->
+    PropSet.elem_of k ks ->
+    map.get m k = None.
+  Proof.
+    intros.
+    match goal with H : map.undef_on _ _ |- _ =>
+                    specialize (H _ ltac:(eassumption));
+                      rewrite map.get_empty in H
+    end.
+    congruence.
+  Qed.
+
+  (* TODO : move *)
+  Lemma only_differ_union_undef_l m1 m2 k1 k2 :
+    map.only_differ m1 (PropSet.union k1 k2) m2 ->
+    map.undef_on m1 k2 ->
+    map.undef_on m2 k2 ->
+    map.only_differ m1 k1 m2.
+  Proof.
+    intros.
+    match goal with H : map.only_differ _ _ _ |- map.only_differ _ _ _ =>
+                    let x := fresh "x" in intro x; specialize (H x);
+                                            destruct H
+    end; [ | tauto ].
+    match goal with H : PropSet.elem_of _ (PropSet.union _ _) |- _ =>
+                    destruct H end;
+      erewrite ?undef_on_None by eauto; tauto.
+  Qed.
+
+  (* TODO : move *)
+
   Lemma store_return_values_correct {t} :
     forall (retnames_local : base_ltype t)
            (retnames_mem : base_ltype t)
@@ -622,8 +678,7 @@ Section LoadStoreList.
            (mem : Semantics.mem)
            (R : Semantics.mem -> Prop),
       let retlengths := list_lengths_from_value rets in
-      (* use old values of memory to set up frame for return values *)
-      sep (lists_reserved retlengths locs) R mem ->
+      sep (lists_reserved retlengths locs locals) R mem ->
       (* rets are stored in local retnames *)
       locally_equivalent
         rets (base_rtype_of_ltype retnames_local) locals ->
@@ -680,11 +735,20 @@ Section LoadStoreList.
              end.
       eapply Proper_cmd;
         [ solve [apply Proper_call] | repeat intro
-          | eapply IHt1; try ecancel_assumption; solve [eauto] ].
+          | eapply IHt1; try ecancel_assumption; eauto ].
+      2:{
+        eapply only_differ_union_undef_l.
+        1:rewrite <-union_assoc; eauto.
+        1-2:admit.
+        }
+      2-3:admit.
       cbv beta in *. cleanup; subst.
       eapply Proper_cmd;
         [ solve [apply Proper_call] | repeat intro | ].
       2:{ eapply IHt2; try ecancel_assumption; eauto.
+          { admit. }
+          { admit. }
+          { admit. }
           cbv [locally_equivalent].
           eapply equivalent_only_differ; eauto with equiv.
           symmetry; eauto. }
@@ -699,6 +763,10 @@ Section LoadStoreList.
     { (* base_listZ *)
       repeat straightline.
       repeat match goal with p := _ |- _ => subst p end.
+      eexists; split.
+      { cbn [rep.equiv rep.listZ_mem rep.Z] in *.
+        sepsimpl.
+        Search WeakestPrecondition.dexpr.
       eapply Proper_cmd;
         [ solve [apply Proper_call] | repeat intro | ].
       2:{

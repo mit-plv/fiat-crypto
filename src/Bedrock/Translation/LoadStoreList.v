@@ -47,7 +47,7 @@ Section Lists.
     : Type :=
     match t with
     | base.type.prod a b => list_locs a * list_locs b
-    | base_listZ => Interface.word.rep (word:=Semantics.word) 
+    | base_listZ => base_rtype (listZ:=rep.listZ_mem) base_listZ
     | _ => unit
     end.
 
@@ -149,7 +149,7 @@ Section Lists.
       (* store list in memory *)
       fun (x : list string) (y : string) start =>
         cmd.seq
-          (cmd.set y (expr.literal (word.unsigned start)))
+          (cmd.set y start)
           (store_list (expr.var y) (map expr.var x) 0)
     | _ =>
       (* rename variable *)
