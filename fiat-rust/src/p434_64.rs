@@ -18,8 +18,6 @@ pub type fiat_p434_u1 = u8;
 pub type fiat_p434_i1 = i8;
 pub type fiat_p434_u2 = u8;
 pub type fiat_p434_i2 = i8;
-pub type fiat_p434_u128 = u128;
-pub type fiat_p434_i128 = i128;
 
 
 /*
@@ -38,8 +36,8 @@ pub type fiat_p434_i128 = i128;
  */
 #[inline]
 pub fn fiat_p434_addcarryx_u64(out1: &mut u64, out2: &mut fiat_p434_u1, arg1: fiat_p434_u1, arg2: u64, arg3: u64) -> () {
-  let x1: fiat_p434_u128 = (((arg1 as fiat_p434_u128) + (arg2 as fiat_p434_u128)) + (arg3 as fiat_p434_u128));
-  let x2: u64 = ((x1 & (0xffffffffffffffff as fiat_p434_u128)) as u64);
+  let x1: u128 = (((arg1 as u128) + (arg2 as u128)) + (arg3 as u128));
+  let x2: u64 = ((x1 & (0xffffffffffffffff as u128)) as u64);
   let x3: fiat_p434_u1 = ((x1 >> 64) as fiat_p434_u1);
   *out1 = x2;
   *out2 = x3;
@@ -61,9 +59,9 @@ pub fn fiat_p434_addcarryx_u64(out1: &mut u64, out2: &mut fiat_p434_u1, arg1: fi
  */
 #[inline]
 pub fn fiat_p434_subborrowx_u64(out1: &mut u64, out2: &mut fiat_p434_u1, arg1: fiat_p434_u1, arg2: u64, arg3: u64) -> () {
-  let x1: fiat_p434_i128 = (((arg2 as fiat_p434_i128) - (arg1 as fiat_p434_i128)) - (arg3 as fiat_p434_i128));
+  let x1: i128 = (((arg2 as i128) - (arg1 as i128)) - (arg3 as i128));
   let x2: fiat_p434_i1 = ((x1 >> 64) as fiat_p434_i1);
-  let x3: u64 = ((x1 & (0xffffffffffffffff as fiat_p434_i128)) as u64);
+  let x3: u64 = ((x1 & (0xffffffffffffffff as i128)) as u64);
   *out1 = x3;
   *out2 = (((0x0 as fiat_p434_i2) - (x2 as fiat_p434_i2)) as fiat_p434_u1);
 }
@@ -83,8 +81,8 @@ pub fn fiat_p434_subborrowx_u64(out1: &mut u64, out2: &mut fiat_p434_u1, arg1: f
  */
 #[inline]
 pub fn fiat_p434_mulx_u64(out1: &mut u64, out2: &mut u64, arg1: u64, arg2: u64) -> () {
-  let x1: fiat_p434_u128 = ((arg1 as fiat_p434_u128) * (arg2 as fiat_p434_u128));
-  let x2: u64 = ((x1 & (0xffffffffffffffff as fiat_p434_u128)) as u64);
+  let x1: u128 = ((arg1 as u128) * (arg2 as u128));
+  let x2: u64 = ((x1 & (0xffffffffffffffff as u128)) as u64);
   let x3: u64 = ((x1 >> 64) as u64);
   *out1 = x2;
   *out2 = x3;
@@ -105,7 +103,7 @@ pub fn fiat_p434_mulx_u64(out1: &mut u64, out2: &mut u64, arg1: u64, arg2: u64) 
 #[inline]
 pub fn fiat_p434_cmovznz_u64(out1: &mut u64, arg1: fiat_p434_u1, arg2: u64, arg3: u64) -> () {
   let x1: fiat_p434_u1 = (!(!arg1));
-  let x2: u64 = ((((((0x0 as fiat_p434_i2) - (x1 as fiat_p434_i2)) as fiat_p434_i1) as fiat_p434_i128) & (0xffffffffffffffff as fiat_p434_i128)) as u64);
+  let x2: u64 = ((((((0x0 as fiat_p434_i2) - (x1 as fiat_p434_i2)) as fiat_p434_i1) as i128) & (0xffffffffffffffff as i128)) as u64);
   let x3: u64 = ((x2 & arg3) | ((!x2) & arg2));
   *out1 = x3;
 }
