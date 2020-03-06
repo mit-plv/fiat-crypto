@@ -390,6 +390,88 @@ Section Func.
         eapply initial_context_correct'; solve[eauto]. } }
   Qed.
 
+  (* TODO: move *)
+  Lemma of_list_nil {E} :
+    PropSet.sameset (@PropSet.of_list E []) PropSet.empty_set.
+  Proof. firstorder idtac. Qed.
+
+  (* TODO: move *)
+  Lemma varname_set_args_flatten {t}
+        (argnames : type.for_each_lhs_of_arrow ltype t) :
+    PropSet.sameset (varname_set_args argnames)
+                    (PropSet.of_list (flatten_argnames argnames)).
+  Proof.
+    revert argnames; induction t; intros;
+      cbn [varname_set_args flatten_argnames];
+      break_match; rewrite ?of_list_nil; try reflexivity; [ ].
+    rewrite PropSet.of_list_app.
+    rewrite varname_set_flatten, IHt2.
+    reflexivity.
+  Qed.
+
+  (* TODO: move *)
+  Lemma put_undef_on k v m s :
+    map.undef_on m s ->
+    ~ s k ->
+    map.undef_on (map.put m k v) s.
+  Proof.
+    cbv [map.undef_on map.agree_on PropSet.elem_of].
+    intros. rewrite map.get_empty.
+    match goal with H : context [map.empty] |- _ =>
+                    setoid_rewrite map.get_empty in H end.
+    match goal with H1 : ~ ?s ?k1, H2 : ?s ?k2 |- _ =>
+                    destruct (string_dec k1 k2); subst;
+                      [ tauto | ]
+    end.
+    rewrite map.get_put_diff by congruence. eauto.
+  Qed.
+
+  (* TODO: move *)
+  Lemma putmany_of_list_zip_undef_on ks vs m1 m2 s :
+    map.putmany_of_list_zip ks vs m1 = Some m2 ->
+    PropSet.disjoint (PropSet.of_list ks) s ->
+    map.undef_on m1 s ->
+    map.undef_on m2 s.
+  Proof.
+    revert vs m1 m2 s; induction ks; destruct vs;
+      cbn [map.putmany_of_list_zip]; intros;
+        try match goal with H : Some _ = Some _ |- _ =>
+                            inversion H; subst; clear H
+            end; try congruence; eauto; [ ].
+    match goal with H : _ |- _ =>
+                    symmetry in H; apply disjoint_cons in H
+    end.
+    cleanup.
+    eapply IHks; eauto.
+    { symmetry; eauto. }
+    { apply put_undef_on; eauto.
+      eapply disjoint_singleton_r_iff; eauto using string_dec. }
+  Qed.
+
+  (* TODO: move *)
+  Lemma of_list_zip_undef_on ks vs m s :
+    map.of_list_zip ks vs = Some m ->
+    PropSet.disjoint (PropSet.of_list ks) s ->
+    map.undef_on m s.
+  Proof.
+    cbv [map.of_list_zip]; intros.
+    eapply putmany_of_list_zip_undef_on; eauto.
+    cbv [map.undef_on map.agree_on]; reflexivity.
+  Qed.
+
+  (* TODO : move *)
+  Definition lists_reserved_with_initial_context {t}
+             (locs : list_locs (type.final_codomain t))
+             (lengths : base_list_lengths (type.final_codomain t))
+             (argnames : type.for_each_lhs_of_arrow ltype t)
+             (flat_args : list Semantics.word)
+    : Semantics.mem -> Prop :=
+    match map.of_list_zip
+            (flatten_argnames argnames) flat_args with
+      | Some init_locals => lists_reserved lengths locs init_locals
+      | None => emp True
+    end.
+
   Lemma translate_func_correct {t}
         (e : API.Expr t)
         (* expressions are valid input to translate_func *)
@@ -408,7 +490,7 @@ Section Func.
       let retlengths := list_lengths_from_value rets in
       (* out := translation output for e2; triple of
          (function arguments, function return variable names, body) *)
-      let out := translate_func e argnames arglengths retnames locs in
+      let out := translate_func e argnames arglengths locs retnames in
       let f : bedrock_func := (fname, out) in
       forall (tr : Semantics.trace)
              (mem : Semantics.mem)
@@ -425,8 +507,11 @@ Section Func.
         (forall n, ~ varname_set retnames (varname_gen n)) ->
         (* retnames don't have duplicates *)
         NoDup (flatten_base_ltype retnames) ->
+        (* argnames and retnames are disjoint *)
+        PropSet.disjoint (varname_set_args argnames) (varname_set retnames) ->
         (* seplogic frame for return values *)
-        sep (lists_reserved retlengths locs) Rr mem ->
+        sep (lists_reserved_with_initial_context
+               locs retlengths argnames flat_args) Rr mem ->
         (* translated function produces equivalent results *)
         WeakestPrecondition.call
           ((fname, out) :: functions) fname tr mem flat_args
@@ -458,11 +543,25 @@ Section Func.
           cbv [context_equiv]; eauto. }
     cbv beta in *. cleanup; subst.
     eapply Proper_cmd; [ solve [apply Proper_call] | repeat intro | ].
-    2 : { eapply store_return_values_correct; eauto.
-          eapply subset_disjoint'; try eassumption.
-          symmetry.
-          eauto using disjoint_used_varnames_lt. }
-    
+    2 : {
+      cbv [lists_reserved_with_initial_context] in *;
+      break_match_hyps; try congruence; [ ].
+      match goal with H : Some _ = Some _ |- _ =>
+                      inversion H; clear H; subst end.
+      eapply store_return_values_correct; eauto using only_differ_trans.
+      { eapply of_list_zip_undef_on; eauto.
+        rewrite <-varname_set_args_flatten.
+        repeat match goal with
+               | |- PropSet.disjoint _ (PropSet.union _ _) =>
+                 apply disjoint_union_r_iff; split; auto
+               | |- PropSet.disjoint _ (used_varnames _ _) =>
+                 symmetry; apply disjoint_used_varnames_lt; intros;
+                   eauto with lia
+               end. }
+      { eapply subset_disjoint'; try eassumption.
+        symmetry.
+        eauto using disjoint_used_varnames_lt. } }
+
     cbv beta in *. cleanup; subst.
     eapply Proper_list_map; [ solve [apply Proper_get]
                             | | eapply look_up_return_values; eauto ].

@@ -104,6 +104,168 @@ Section LoadStoreList.
              end.
   Qed.
 
+  (* TODO : move *)
+  Lemma undef_on_None
+        `{map:map.map} `{ok:map.ok} m k ks :
+    map.undef_on m ks ->
+    PropSet.elem_of k ks ->
+    map.get m k = None.
+  Proof.
+    intros.
+    match goal with H : map.undef_on _ _ |- _ =>
+                    specialize (H _ ltac:(eassumption));
+                      rewrite map.get_empty in H
+    end.
+    congruence.
+  Qed.
+
+  (* TODO : move *)
+  Lemma get_put_same l x y (post:_->Prop) :
+    post y ->
+    WeakestPrecondition.get (map.put l x y) x post.
+  Proof.
+    cbv [WeakestPrecondition.get]; intros.
+    exists y; rewrite map.get_put_same; tauto.
+  Qed.
+
+  (* TODO : move *)
+  Lemma getmany_of_tuple_empty
+        `{map:map.map} `{ok:map.ok} sz keys :
+    sz <> 0%nat ->
+    map.getmany_of_tuple (sz:=sz) map.empty keys = None.
+  Proof.
+    destruct sz; try congruence.
+    cbn; intros. rewrite map.get_empty. reflexivity.
+  Qed.
+
+  (* TODO : move *)
+  Lemma load_empty :
+    forall s m a post,
+      WeakestPrecondition.load s map.empty a post ->
+      WeakestPrecondition.load s m a post.
+  Proof.
+    intros *.
+    cbv [WeakestPrecondition.load
+           Memory.load Memory.load_Z Memory.load_bytes].
+    rewrite getmany_of_tuple_empty; intros;
+      repeat match goal with
+             | H : exists _, _ |- _ => destruct H
+             | H : _ /\ _ |- _ => destruct H
+             | _ => congruence
+             end.
+    cbv [Memory.bytes_per]; break_match; try congruence.
+    change 0%nat with (Z.to_nat 0).
+    pose proof word.width_pos.
+    rewrite Z2Nat.inj_iff by (try apply Div.Z.div_nonneg; lia).
+    rewrite Z.eq_sym_iff.
+    apply Z.lt_neq, Z.div_str_pos; lia.
+  Qed.
+    
+  (* TODO : move *)
+  Lemma expr_empty :
+    forall e m locals post,
+      WeakestPrecondition.expr map.empty locals e post ->
+      WeakestPrecondition.expr m locals e post.
+  Proof.
+    induction e;
+      cbn [WeakestPrecondition.expr
+             WeakestPrecondition.expr_body];
+      cbv [dlet.dlet WeakestPrecondition.literal
+                     WeakestPrecondition.get];
+      intros; eauto; [ | ].
+    { eapply IHe; eauto.
+      eapply Proper_expr; [ repeat intro | eassumption ].
+      eauto using load_empty. }
+    { eapply IHe1; eauto.
+      eapply Proper_expr; [ repeat intro | eassumption ].
+      cbv beta in *. eapply IHe2; eauto. }
+  Qed.
+
+  (* TODO : move *)
+  Lemma get_only_differ_undef
+        `{map:map.map} `{ok:map.ok} m1 m2 ks k v :
+    map.only_differ m1 ks m2 ->
+    map.undef_on m1 ks ->
+    map.get m1 k = Some v ->
+    map.get m2 k = Some v.
+  Proof.
+    repeat match goal with
+           | _ => progress intros
+           | H : map.only_differ _ _ _ |- _ =>
+             specialize (H k); destruct H
+           | H1 : map.undef_on _ ?ks, H2 : PropSet.elem_of ?k ?ks |- _ =>
+             eapply undef_on_None in H2; [ | eassumption .. ]
+           | _ => congruence
+           end.
+  Qed.
+
+  (* TODO : move *)
+  Lemma expr_only_differ_undef :
+    forall e m vset locals locals' post,
+      map.only_differ locals vset locals' ->
+      map.undef_on locals vset ->
+      WeakestPrecondition.expr m locals e post ->
+      WeakestPrecondition.expr m locals' e post.
+  Proof.
+    induction e;
+      cbn [WeakestPrecondition.expr
+             WeakestPrecondition.expr_body];
+      cbv [dlet.dlet WeakestPrecondition.literal
+                     WeakestPrecondition.get];
+      intros; eauto; [ | ].
+    { match goal with H : exists _, _ |- _ => destruct H end.
+      destruct_head'_and. eexists; eauto using get_only_differ_undef. }
+    { eapply IHe1; eauto.
+      eapply Proper_expr; [ repeat intro | eassumption ].
+      cbv beta in *. eapply IHe2; eauto. }
+  Qed.
+
+  (* TODO : move *)
+  Lemma equiv_Z_only_differ_undef {listZ:rep.rep base_listZ} :
+    forall x y locals locals' vset,
+      map.only_differ locals vset locals' ->
+      map.undef_on locals vset ->
+      Lift1Prop.impl1
+        (equivalent (t:=base_Z) x y locals)
+        (equivalent x y locals').
+  Proof.
+    cbv [equivalent rep.equiv rep.Z WeakestPrecondition.dexpr].
+    repeat intro; sepsimpl; subst.
+    eauto using expr_only_differ_undef.
+  Qed.
+
+  (* TODO : move *)
+  Lemma equiv_listZ_mem_only_differ_undef :
+    forall x y locals locals' vset,
+      map.only_differ locals vset locals' ->
+      map.undef_on locals vset ->
+      Lift1Prop.impl1
+        (equivalent (t:=base_listZ) (listZ:=rep.listZ_mem)
+                    x y locals)
+        (equivalent x y locals').
+  Proof.
+    cbn [equivalent rep.equiv rep.listZ_mem]; intros; sepsimpl.
+    repeat intro; sepsimpl. eexists.
+    eapply Proper_sep_impl1; [ | reflexivity | eassumption ].
+    repeat intro.
+    eapply (equiv_Z_only_differ_undef (listZ:=rep.listZ_mem)); eauto.
+  Qed.
+
+  Lemma lists_reserved_only_differ_undef t :
+    forall lengths locs locals locals' vset,
+      map.only_differ locals vset locals' ->
+      map.undef_on locals vset ->
+      Lift1Prop.impl1
+        (lists_reserved (t:=t) lengths locs locals)
+        (lists_reserved lengths locs locals').
+  Proof.
+    induction t; cbn [lists_reserved];
+      break_match; intros; try reflexivity; [ | ].
+    { rewrite IHt1, IHt2; try reflexivity; eauto. }
+    { repeat intro; sepsimpl; eexists; sepsimpl; eauto.
+      eapply equiv_listZ_mem_only_differ_undef; eauto. }
+  Qed.
+
   Lemma load_list_item_correct
         (name : base_ltype (listZ:=rep.listZ_mem) base_listZ)
         i l :
@@ -532,6 +694,7 @@ Section LoadStoreList.
         eassumption. }
       cbn [lists_reserved
              list_lengths_from_value
+             equivalent
              rep.equiv rep.Z rep.listZ_mem] in *.
       sepsimpl.
       match goal with
@@ -625,6 +788,16 @@ Section LoadStoreList.
   Qed.
 
   (* TODO : move *)
+  Lemma union_comm {E} (s1 s2 : PropSet.set E) :
+    PropSet.sameset (PropSet.union s1 s2)
+                    (PropSet.union s2 s1).
+  Proof.
+    apply sameset_iff.
+    cbv [PropSet.union PropSet.elem_of].
+    intros. rewrite or_comm. reflexivity.
+  Qed.
+
+  (* TODO : move *)
   Lemma union_assoc {E} (s1 s2 s3 : PropSet.set E) :
     PropSet.sameset (PropSet.union s1 (PropSet.union s2 s3))
                     (PropSet.union (PropSet.union s1 s2) s3).
@@ -632,20 +805,6 @@ Section LoadStoreList.
     apply sameset_iff.
     cbv [PropSet.union PropSet.elem_of].
     intros. rewrite or_assoc. reflexivity.
-  Qed.
-
-  (* TODO : move *)
-  Lemma undef_on_None m k ks :
-    map.undef_on m ks ->
-    PropSet.elem_of k ks ->
-    map.get m k = None.
-  Proof.
-    intros.
-    match goal with H : map.undef_on _ _ |- _ =>
-                    specialize (H _ ltac:(eassumption));
-                      rewrite map.get_empty in H
-    end.
-    congruence.
   Qed.
 
   (* TODO : move *)
@@ -666,10 +825,18 @@ Section LoadStoreList.
   Qed.
 
   (* TODO : move *)
+  Lemma undef_on_union_iff m k1 k2 :
+    map.undef_on m (PropSet.union k1 k2) <->
+    (map.undef_on m k1 /\ map.undef_on m k2).
+  Proof.
+    cbv [map.undef_on map.agree_on PropSet.union PropSet.elem_of].
+    repeat split; intros; destruct_head'_or; destruct_head'_and; eauto.
+  Qed.
 
-  Lemma store_return_values_correct {t} :
+  Lemma store_return_values_correct {t} init_locals :
     forall (retnames_local : base_ltype t)
            (retnames_mem : base_ltype t)
+           (vset : PropSet.set string)
            (rets : base.interp t)
            (locs : list_locs t)
            (functions : list _)
@@ -678,7 +845,9 @@ Section LoadStoreList.
            (mem : Semantics.mem)
            (R : Semantics.mem -> Prop),
       let retlengths := list_lengths_from_value rets in
-      sep (lists_reserved retlengths locs locals) R mem ->
+      sep (lists_reserved retlengths locs init_locals) R mem ->
+      map.undef_on init_locals (PropSet.union vset (varname_set retnames_mem)) ->
+      map.only_differ init_locals vset locals ->
       (* rets are stored in local retnames *)
       locally_equivalent
         rets (base_rtype_of_ltype retnames_local) locals ->
@@ -732,26 +901,26 @@ Section LoadStoreList.
                apply disjoint_union_l_iff in H
              | H : PropSet.disjoint _ (PropSet.union _ _) |- _ =>
                apply disjoint_union_r_iff in H
+             | H : map.undef_on _ (PropSet.union _ _) |- _ =>
+               apply undef_on_union_iff in H
              end.
       eapply Proper_cmd;
         [ solve [apply Proper_call] | repeat intro
-          | eapply IHt1; try ecancel_assumption; eauto ].
-      2:{
-        eapply only_differ_union_undef_l.
-        1:rewrite <-union_assoc; eauto.
-        1-2:admit.
-        }
-      2-3:admit.
+          | eapply IHt1; try ecancel_assumption;
+            try (apply undef_on_union_iff; split);
+            solve [eauto] ].
       cbv beta in *. cleanup; subst.
       eapply Proper_cmd;
         [ solve [apply Proper_call] | repeat intro | ].
-      2:{ eapply IHt2; try ecancel_assumption; eauto.
-          { admit. }
-          { admit. }
-          { admit. }
-          cbv [locally_equivalent].
-          eapply equivalent_only_differ; eauto with equiv.
-          symmetry; eauto. }
+      2:{ eapply IHt2 with (vset:=PropSet.union vset (varname_set (fst retnames_mem)));
+          try ecancel_assumption; eauto.
+          { apply undef_on_union_iff; split; eauto.
+            apply undef_on_union_iff; split; eauto. }
+          { rewrite union_comm.
+            eapply only_differ_trans; eauto. }
+          { cbv [locally_equivalent].
+            eapply equivalent_only_differ; eauto with equiv.
+            symmetry; eauto. } }
       cbv beta in *. cleanup; subst.
       repeat match goal with |- _ /\ _ => split end;
         eauto using only_differ_sym, only_differ_trans.
@@ -763,10 +932,15 @@ Section LoadStoreList.
     { (* base_listZ *)
       repeat straightline.
       repeat match goal with p := _ |- _ => subst p end.
+      repeat match goal with
+             | H : map.undef_on _ (PropSet.union _ _) |- _ =>
+               apply undef_on_union_iff in H
+             end.
+      cbn [rep.equiv rep.listZ_mem rep.Z] in *.
+      sepsimpl.
       eexists; split.
-      { cbn [rep.equiv rep.listZ_mem rep.Z] in *.
-        sepsimpl.
-        Search WeakestPrecondition.dexpr.
+      { eapply expr_only_differ_undef;
+          eauto using expr_empty. }
       eapply Proper_cmd;
         [ solve [apply Proper_call] | repeat intro | ].
       2:{
@@ -791,6 +965,8 @@ Section LoadStoreList.
                             eauto using string_dec;
                             cbv [PropSet.of_list] in H
           end.
+          cbn [rep.equiv rep.listZ_mem rep.Z].
+          sepsimpl.
           apply dexpr_put_diff; [ | eassumption].
           intro; subst; tauto. }
         { apply sep_assoc.
@@ -799,19 +975,18 @@ Section LoadStoreList.
           sepsimpl. eexists.
           apply sep_emp_l; split;
             [ solve [eauto using dexpr_put_same] | ].
-          cbn [lists_reserved].
+          cbn [lists_reserved equivalent rep.equiv rep.listZ_mem rep.Z].
           sepsimpl. eexists.
           sepsimpl; eauto.
-          match goal with
-            |- context [word.unsigned (word.add ?x ?y)] =>
-            replace (word.unsigned (word.add x y)) with (word.unsigned x)
-          end; [ eassumption | ].
-          rewrite word.unsigned_add, word.unsigned_of_Z.
-          cbv [word.wrap].
-          rewrite Nat2Z.inj_0, Z.mul_0_l, Z.mod_0_l, Z.add_0_r
-            by eauto using Z.pow_nonzero, Z.lt_le_incl, word.width_pos with lia.
-          rewrite Z.mod_small by apply word.unsigned_range.
-          reflexivity. } }
+          eexists; sepsimpl; [ | ecancel_assumption ].
+          cbn [WeakestPrecondition.dexpr
+                 WeakestPrecondition.expr
+                 WeakestPrecondition.expr_body].
+          apply get_put_same.
+          cbn [Semantics.interp_binop].
+          cbv [WeakestPrecondition.literal dlet.dlet].
+          rewrite <-word.ring_morph_add.
+          f_equal; lia. } }
       cbv beta in *. cleanup; subst.
       repeat match goal with |- _ /\ _ => split end;
         eauto using only_differ_sym, only_differ_put. }

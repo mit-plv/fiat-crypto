@@ -59,10 +59,10 @@ Section Func.
              (argnames : type.for_each_lhs_of_arrow ltype t)
              (* lengths of argument lists *)
              (lengths : type.for_each_lhs_of_arrow list_lengths t)
-             (* return variables *)
-             (rets : base_ltype (type.final_codomain t))
              (* locations in memory for returned lists *)
              (locs : list_locs (type.final_codomain t))
+             (* return variables *)
+             (rets : base_ltype (type.final_codomain t))
     : list string * list string * cmd :=
     (* load arguments *)
     let load_args_out := load_arguments 0%nat argnames lengths in
