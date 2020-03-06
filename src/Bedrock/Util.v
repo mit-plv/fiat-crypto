@@ -171,9 +171,13 @@ Section Sets.
     disjoint s3 s2.
   Proof. firstorder idtac. Qed.
 
+  Lemma sameset_iff (s1 s2 : set E) :
+    sameset s1 s2 <-> (forall e, s1 e <-> s2 e).
+  Proof. firstorder idtac. Qed.
+
   Global Instance disjoint_sym : Symmetric (@disjoint E).
   Proof. firstorder idtac. Defined.
-  Global Instance disjoint_Proper
+  Global Instance Proper_disjoint
     : Proper (sameset ==> sameset ==> iff) (@disjoint E).
   Proof. firstorder idtac. Defined.
 
@@ -181,7 +185,7 @@ Section Sets.
   Proof. firstorder idtac. Defined.
   Global Instance subset_ref : Reflexive (@subset E).
   Proof. firstorder idtac. Defined.
-  Global Instance subset_Proper
+  Global Instance Proper_subset
     : Proper (sameset ==> sameset ==> iff) (@subset E).
   Proof. firstorder idtac. Defined.
 
@@ -192,9 +196,15 @@ Section Sets.
   Global Instance sameset_ref : Reflexive (@sameset E).
   Proof. firstorder idtac. Defined.
 
-  Lemma sameset_iff (s1 s2 : set E) :
-    sameset s1 s2 <-> (forall e, s1 e <-> s2 e).
-  Proof. firstorder idtac. Qed.
+  Global Instance Proper_union :
+    Proper (sameset ==> sameset ==> sameset) (@union E).
+  Proof.
+    repeat intro. apply sameset_iff.
+    cbv [elem_of union]; intros.
+    repeat match goal with H : sameset _ _ |- _ =>
+                           rewrite sameset_iff in H; rewrite H end.
+    reflexivity.
+  Qed.
 
   Lemma not_union_iff (s1 s2 : set E) x :
     ~ union s1 s2 x <-> ~ s1 x /\ ~ s2 x.
