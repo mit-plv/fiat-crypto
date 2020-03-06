@@ -127,7 +127,8 @@ Section Lists.
 End Lists.
 
 Section Sets.
-  Context {E : Type}.
+  Context {E : Type} {eqb}
+          {eq_dec : forall x y : E, BoolSpec (x = y) (x <> y) (eqb x y)}.
 
   Lemma disjoint_union_l_iff (s1 s2 s3 : set E) :
     disjoint (union s1 s2) s3 <-> disjoint s1 s3 /\ disjoint s2 s3.
@@ -142,9 +143,7 @@ Section Sets.
     disjoint s (of_list l) /\ disjoint s (singleton_set x).
   Proof. firstorder idtac. Qed.
 
-  Lemma disjoint_singleton_r_iff
-        (x : E) (s : set E)
-        (eq_dec : forall a b : E, {a = b} + {a <> b}):
+  Lemma disjoint_singleton_r_iff (x : E) (s : set E) :
     ~ s x <->
     disjoint s (singleton_set x).
   Proof.
@@ -154,9 +153,7 @@ Section Sets.
       subst; try firstorder idtac.
   Qed.
 
-  Lemma disjoint_singleton_singleton
-        (x y : E)
-        (eq_dec : forall a b : E, {a = b} + {a <> b}):
+  Lemma disjoint_singleton_singleton (x y : E) :
     y <> x ->
     disjoint (singleton_set x) (singleton_set y).
   Proof.
@@ -238,16 +235,14 @@ Section Sets.
     disjoint s1 s2.
   Proof. firstorder idtac. Qed.
 
-  Lemma disjoint_not_in x (l : list E)
-        (eq_dec : forall a b : E, {a = b} + {a <> b}) :
+  Lemma disjoint_not_in x (l : list E) :
     ~ In x l ->
     disjoint (singleton_set x) (of_list l).
   Proof.
     intros. symmetry. apply disjoint_singleton_r_iff; eauto.
   Qed.
 
-  Lemma NoDup_disjoint (l1 l2 : list E)
-        (eq_dec : forall a b : E, {a = b} + {a <> b}) :
+  Lemma NoDup_disjoint (l1 l2 : list E) :
     NoDup (l1 ++ l2) ->
     disjoint (of_list l1) (of_list l2).
   Proof.
@@ -260,6 +255,23 @@ Section Sets.
     apply disjoint_not_in; eauto.
     rewrite in_app_iff in *. tauto.
   Qed.
+
+  Lemma union_comm (s1 s2 : set E) :
+    sameset (union s1 s2) (union s2 s1).
+  Proof.
+    apply sameset_iff. cbv [union elem_of].
+    intros. rewrite or_comm. reflexivity.
+  Qed.
+
+  Lemma union_assoc (s1 s2 s3 : set E) :
+    sameset (union s1 (union s2 s3)) (union (union s1 s2) s3).
+  Proof.
+    apply sameset_iff. cbv [union elem_of].
+    intros. rewrite or_assoc. reflexivity.
+  Qed.
+
+  Lemma of_list_nil : sameset (@of_list E []) empty_set.
+  Proof. firstorder idtac. Qed.
 End Sets.
 
 Section Maps.
@@ -419,6 +431,114 @@ Section Maps.
     rewrite firstn_all2 by (rewrite !app_length; lia).
     assumption.
   Qed.
+
+  Lemma getmany_of_tuple_empty sz keys :
+    sz <> 0%nat ->
+    map.getmany_of_tuple (sz:=sz) map.empty keys = None.
+  Proof.
+    destruct sz; try congruence.
+    cbn; intros. rewrite map.get_empty. reflexivity.
+  Qed.
+
+  Lemma undef_on_None m k ks :
+    map.undef_on m ks ->
+    elem_of k ks ->
+    map.get m k = None.
+  Proof.
+    intros.
+    match goal with H : map.undef_on _ _ |- _ =>
+                    specialize (H _ ltac:(eassumption));
+                      rewrite map.get_empty in H
+    end.
+    congruence.
+  Qed.
+
+  Lemma get_only_differ_undef m1 m2 ks k v :
+    map.only_differ m1 ks m2 ->
+    map.undef_on m1 ks ->
+    map.get m1 k = Some v ->
+    map.get m2 k = Some v.
+  Proof.
+    repeat match goal with
+           | _ => progress intros
+           | H : map.only_differ _ _ _ |- _ =>
+             specialize (H k); destruct H
+           | H1 : map.undef_on _ ?ks, H2 : elem_of ?k ?ks |- _ =>
+             eapply undef_on_None in H2; [ | eassumption .. ]
+           | _ => congruence
+           end.
+  Qed.
+
+  Lemma only_differ_union_undef_l m1 m2 k1 k2 :
+    map.only_differ m1 (union k1 k2) m2 ->
+    map.undef_on m1 k2 ->
+    map.undef_on m2 k2 ->
+    map.only_differ m1 k1 m2.
+  Proof.
+    intros.
+    match goal with H : map.only_differ _ _ _ |- map.only_differ _ _ _ =>
+                    let x := fresh "x" in intro x; specialize (H x);
+                                            destruct H
+    end; [ | tauto ].
+    match goal with H : elem_of _ (union _ _) |- _ =>
+                    destruct H end;
+      erewrite ?undef_on_None by eauto; tauto.
+  Qed.
+
+  Lemma undef_on_union_iff m k1 k2 :
+    map.undef_on m (union k1 k2) <->
+    (map.undef_on m k1 /\ map.undef_on m k2).
+  Proof.
+    cbv [map.undef_on map.agree_on union elem_of].
+    repeat split; intros; destruct_head'_or; destruct_head'_and; eauto.
+  Qed.
+
+  Lemma put_undef_on k v m s :
+    map.undef_on m s ->
+    ~ s k ->
+    map.undef_on (map.put m k v) s.
+  Proof.
+    cbv [map.undef_on map.agree_on elem_of].
+    intros. rewrite map.get_empty.
+    match goal with H : context [map.empty] |- _ =>
+                    setoid_rewrite map.get_empty in H end.
+    match goal with H1 : ~ ?s ?k1, H2 : ?s ?k2 |- _ =>
+                    destruct (key_eq_dec k1 k2); subst;
+                      [ tauto | ]
+    end.
+    rewrite map.get_put_diff by congruence. eauto.
+  Qed.
+
+  Lemma putmany_of_list_zip_undef_on ks vs m1 m2 s :
+    map.putmany_of_list_zip ks vs m1 = Some m2 ->
+    disjoint (of_list ks) s ->
+    map.undef_on m1 s ->
+    map.undef_on m2 s.
+  Proof.
+    revert vs m1 m2 s; induction ks; destruct vs;
+      cbn [map.putmany_of_list_zip]; intros;
+        try match goal with H : Some _ = Some _ |- _ =>
+                            inversion H; subst; clear H
+            end; try congruence; eauto; [ ].
+    match goal with H : _ |- _ =>
+                    symmetry in H; apply disjoint_cons in H
+    end.
+    destruct_head'_and.
+    eapply IHks; eauto.
+    { symmetry; eauto. }
+    { apply put_undef_on; eauto.
+      eapply disjoint_singleton_r_iff; eauto. }
+  Qed.
+
+  Lemma of_list_zip_undef_on ks vs m s :
+    map.of_list_zip ks vs = Some m ->
+    disjoint (of_list ks) s ->
+    map.undef_on m s.
+  Proof.
+    cbv [map.of_list_zip]; intros.
+    eapply putmany_of_list_zip_undef_on; eauto.
+    cbv [map.undef_on map.agree_on]; reflexivity.
+  Qed.
 End Maps.
 
 (* These lemmas should be moved to bedrock2, not coqutil *)
@@ -449,32 +569,100 @@ End Separation.
 Section WeakestPrecondition.
   Context {p : Semantics.parameters} {p_ok : Semantics.parameters_ok p}.
 
-  Lemma expr_untouched mem1 mem2 l1 l2 vars v P :
-    map.only_differ l2 vars l1 ->
-    ~ vars v ->
-    expr mem1 l1 (expr.var v) P <->
-    expr mem2 l2 (expr.var v) P.
-  Proof.
-    cbv [map.only_differ
-           elem_of
-           expr
-           expr_body
-           get].
-    let H := fresh in
-    intro H; specialize (H v).
-    split; intros;
-      repeat match goal with
-             | H : exists _, _ |- _ => destruct H
-             | H : _ \/ _ |- _ => destruct H
-             | H : _ /\ _ |- _ => destruct H
-             | H : map.get _ _ = map.get _ _ |- _ =>
-               rewrite H in *
-             | |- exists _, _ => eexists
-             | |- _ /\ _ => split
-             | _ => eassumption
-             | _ => tauto
-             end.
-  Qed.
+  Section Load.
+    Lemma load_empty :
+      forall s m a post,
+        load s map.empty a post -> load s m a post.
+    Proof.
+      intros *.
+      cbv [load Memory.load Memory.load_Z Memory.load_bytes].
+      rewrite getmany_of_tuple_empty; intros;
+        repeat match goal with
+               | H : exists _, _ |- _ => destruct H
+               | H : _ /\ _ |- _ => destruct H
+               | _ => congruence
+               end.
+      cbv [Memory.bytes_per]; break_match; try congruence.
+      change 0%nat with (Z.to_nat 0).
+      pose proof word.width_pos.
+      rewrite Z2Nat.inj_iff by (try apply Z.div_pos; lia).
+      rewrite Z.eq_sym_iff.
+      apply Z.lt_neq, Z.div_str_pos; lia.
+    Qed.
+  End Load.
+
+  Section Get.
+    Lemma get_put_same l x y (post:_->Prop) :
+      post y -> get (map.put l x y) x post.
+    Proof.
+      cbv [get]; intros.
+      exists y; rewrite map.get_put_same; tauto.
+    Qed.
+  End Get.
+    
+  Section Expr.
+    Lemma expr_empty :
+      forall e m locals post,
+        expr map.empty locals e post ->
+        expr m locals e post.
+    Proof.
+      induction e;
+        cbn [expr expr_body];
+        cbv [dlet.dlet literal get];
+        intros; eauto; [ | ].
+      { eapply IHe; eauto.
+        eapply Proper_expr; [ repeat intro | eassumption ].
+        eauto using load_empty. }
+      { eapply IHe1; eauto.
+        eapply Proper_expr; [ repeat intro | eassumption ].
+        cbv beta in *. eapply IHe2; eauto. }
+    Qed.
+
+    Lemma expr_untouched mem1 mem2 l1 l2 vars v P :
+      map.only_differ l2 vars l1 ->
+      ~ vars v ->
+      expr mem1 l1 (expr.var v) P <->
+      expr mem2 l2 (expr.var v) P.
+    Proof.
+      cbv [map.only_differ
+             elem_of
+             expr
+             expr_body
+             get].
+      let H := fresh in
+      intro H; specialize (H v).
+      split; intros;
+        repeat match goal with
+               | H : exists _, _ |- _ => destruct H
+               | H : _ \/ _ |- _ => destruct H
+               | H : _ /\ _ |- _ => destruct H
+               | H : map.get _ _ = map.get _ _ |- _ =>
+                 rewrite H in *
+               | |- exists _, _ => eexists
+               | |- _ /\ _ => split
+               | _ => eassumption
+               | _ => tauto
+               end.
+    Qed.
+
+    Lemma expr_only_differ_undef :
+      forall e m vset locals locals' post,
+        map.only_differ locals vset locals' ->
+        map.undef_on locals vset ->
+        expr m locals e post ->
+        expr m locals' e post.
+    Proof.
+      induction e;
+        cbn [expr expr_body];
+        cbv [dlet.dlet literal get];
+        intros; eauto; [ | ].
+      { match goal with H : exists _, _ |- _ => destruct H end.
+        destruct_head'_and. eexists; eauto using get_only_differ_undef. }
+      { eapply IHe1; eauto.
+        eapply Proper_expr; [ repeat intro | eassumption ].
+        cbv beta in *. eapply IHe2; eauto. }
+    Qed.
+  End Expr.
 
   Section ListMap.
     Context {A B} (f : A -> (B -> Prop) -> Prop)

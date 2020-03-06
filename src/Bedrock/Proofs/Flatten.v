@@ -103,4 +103,17 @@ Section Flatten.
     intros. rewrite in_app_iff, IHt1, IHt2.
     cbv [PropSet.of_list]. reflexivity.
   Qed.
+
+  Lemma varname_set_args_flatten {t}
+        (argnames : type.for_each_lhs_of_arrow ltype t) :
+    PropSet.sameset (varname_set_args argnames)
+                    (PropSet.of_list (flatten_argnames argnames)).
+  Proof.
+    revert argnames; induction t; intros;
+      cbn [varname_set_args flatten_argnames];
+      break_match; rewrite ?of_list_nil; try reflexivity; [ ].
+    rewrite PropSet.of_list_app.
+    rewrite varname_set_flatten, IHt2.
+    reflexivity.
+  Qed.
 End Flatten.
