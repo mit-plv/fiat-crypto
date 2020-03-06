@@ -104,6 +104,7 @@ Module X25519_64.
         snd (translate_func e
                             ("y0", ("y1", tt)) (* argument names *)
                             (n, (n, tt)) (* lengths for list arguments *)
+                            (expr.var "y0") (* location(s) for returned lists (can be in terms of arguments) *)
                             "ret") (* return value name *)
       | ErrorT.Error _ => Syntax.cmd.skip
       end.
