@@ -34,15 +34,10 @@ Module Rust.
           ++ (if PositiveSet.mem 2 bitwidths_used
               then [type_prefix ++ "u2 = u8;";
                       type_prefix ++ "i2 = i8;" ]%string
-              else [])
-          ++ (if PositiveSet.mem 128 bitwidths_used
-              then [type_prefix ++ "u128 = u128;"; (* Since 128 bit integers exist in (nightly) rust consider removing the *)
-                      (* type synonym and extending stdint_ditwidths *)
-                      type_prefix ++ "i128 = i128;"]%string
               else []))%list.
 
   (* Supported integer bitwidths *)
-  Definition stdint_bitwidths : list Z := [8; 16; 32; 64].
+  Definition stdint_bitwidths : list Z := [8; 16; 32; 64; 128].
   Definition is_special_bitwidth (bw : Z) := negb (existsb (Z.eqb bw) stdint_bitwidths).
 
 
