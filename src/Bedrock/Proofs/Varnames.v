@@ -46,7 +46,13 @@ Section Varnames.
       Lift1Prop.iff1
         (rep.equiv x (rep.rtype_of_ltype varname) locals1)
         (rep.equiv x (rep.rtype_of_ltype varname) locals2).
-    Admitted.
+    Proof.
+      cbn [varname_set rep.varname_set rep.equiv rep.rtype_of_ltype rep.Z].
+      cbv [WeakestPrecondition.dexpr].
+      rewrite <-disjoint_singleton_r_iff by eauto using string_dec.
+      split; intros; sepsimpl; subst;
+        eapply expr_untouched; eauto using only_differ_sym.
+    Qed.
 
     Section Local.
       Local Existing Instance rep.listZ_local.
