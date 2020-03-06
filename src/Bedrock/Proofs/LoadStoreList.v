@@ -83,6 +83,18 @@ Section LoadStoreList.
       fun x => (tt, list_lengths_from_args (snd x))
     end.
 
+  Definition lists_reserved_with_initial_context {t}
+             (locs : list_locs (type.final_codomain t))
+             (lengths : base_list_lengths (type.final_codomain t))
+             (argnames : type.for_each_lhs_of_arrow ltype t)
+             (flat_args : list Semantics.word)
+    : Semantics.mem -> Prop :=
+    match map.of_list_zip
+            (flatten_argnames argnames) flat_args with
+      | Some init_locals => lists_reserved lengths locs init_locals
+      | None => emp True
+    end.
+
   Lemma lists_reserved_0 {listZ:rep.rep base_listZ} start locals:
     Lift1Prop.iff1
       (lists_reserved (t:=base_listZ) 0%nat start locals)
@@ -102,153 +114,6 @@ Section LoadStoreList.
              | _ => solve [eauto using List.length_nil]
              | _ => eexists; split; solve [eauto]
              end.
-  Qed.
-
-  (* TODO : move *)
-  Lemma undef_on_None
-        `{map:map.map} `{ok:map.ok} m k ks :
-    map.undef_on m ks ->
-    PropSet.elem_of k ks ->
-    map.get m k = None.
-  Proof.
-    intros.
-    match goal with H : map.undef_on _ _ |- _ =>
-                    specialize (H _ ltac:(eassumption));
-                      rewrite map.get_empty in H
-    end.
-    congruence.
-  Qed.
-
-  (* TODO : move *)
-  Lemma get_put_same l x y (post:_->Prop) :
-    post y ->
-    WeakestPrecondition.get (map.put l x y) x post.
-  Proof.
-    cbv [WeakestPrecondition.get]; intros.
-    exists y; rewrite map.get_put_same; tauto.
-  Qed.
-
-  (* TODO : move *)
-  Lemma getmany_of_tuple_empty
-        `{map:map.map} `{ok:map.ok} sz keys :
-    sz <> 0%nat ->
-    map.getmany_of_tuple (sz:=sz) map.empty keys = None.
-  Proof.
-    destruct sz; try congruence.
-    cbn; intros. rewrite map.get_empty. reflexivity.
-  Qed.
-
-  (* TODO : move *)
-  Lemma load_empty :
-    forall s m a post,
-      WeakestPrecondition.load s map.empty a post ->
-      WeakestPrecondition.load s m a post.
-  Proof.
-    intros *.
-    cbv [WeakestPrecondition.load
-           Memory.load Memory.load_Z Memory.load_bytes].
-    rewrite getmany_of_tuple_empty; intros;
-      repeat match goal with
-             | H : exists _, _ |- _ => destruct H
-             | H : _ /\ _ |- _ => destruct H
-             | _ => congruence
-             end.
-    cbv [Memory.bytes_per]; break_match; try congruence.
-    change 0%nat with (Z.to_nat 0).
-    pose proof word.width_pos.
-    rewrite Z2Nat.inj_iff by (try apply Div.Z.div_nonneg; lia).
-    rewrite Z.eq_sym_iff.
-    apply Z.lt_neq, Z.div_str_pos; lia.
-  Qed.
-    
-  (* TODO : move *)
-  Lemma expr_empty :
-    forall e m locals post,
-      WeakestPrecondition.expr map.empty locals e post ->
-      WeakestPrecondition.expr m locals e post.
-  Proof.
-    induction e;
-      cbn [WeakestPrecondition.expr
-             WeakestPrecondition.expr_body];
-      cbv [dlet.dlet WeakestPrecondition.literal
-                     WeakestPrecondition.get];
-      intros; eauto; [ | ].
-    { eapply IHe; eauto.
-      eapply Proper_expr; [ repeat intro | eassumption ].
-      eauto using load_empty. }
-    { eapply IHe1; eauto.
-      eapply Proper_expr; [ repeat intro | eassumption ].
-      cbv beta in *. eapply IHe2; eauto. }
-  Qed.
-
-  (* TODO : move *)
-  Lemma get_only_differ_undef
-        `{map:map.map} `{ok:map.ok} m1 m2 ks k v :
-    map.only_differ m1 ks m2 ->
-    map.undef_on m1 ks ->
-    map.get m1 k = Some v ->
-    map.get m2 k = Some v.
-  Proof.
-    repeat match goal with
-           | _ => progress intros
-           | H : map.only_differ _ _ _ |- _ =>
-             specialize (H k); destruct H
-           | H1 : map.undef_on _ ?ks, H2 : PropSet.elem_of ?k ?ks |- _ =>
-             eapply undef_on_None in H2; [ | eassumption .. ]
-           | _ => congruence
-           end.
-  Qed.
-
-  (* TODO : move *)
-  Lemma expr_only_differ_undef :
-    forall e m vset locals locals' post,
-      map.only_differ locals vset locals' ->
-      map.undef_on locals vset ->
-      WeakestPrecondition.expr m locals e post ->
-      WeakestPrecondition.expr m locals' e post.
-  Proof.
-    induction e;
-      cbn [WeakestPrecondition.expr
-             WeakestPrecondition.expr_body];
-      cbv [dlet.dlet WeakestPrecondition.literal
-                     WeakestPrecondition.get];
-      intros; eauto; [ | ].
-    { match goal with H : exists _, _ |- _ => destruct H end.
-      destruct_head'_and. eexists; eauto using get_only_differ_undef. }
-    { eapply IHe1; eauto.
-      eapply Proper_expr; [ repeat intro | eassumption ].
-      cbv beta in *. eapply IHe2; eauto. }
-  Qed.
-
-  (* TODO : move *)
-  Lemma equiv_Z_only_differ_undef {listZ:rep.rep base_listZ} :
-    forall x y locals locals' vset,
-      map.only_differ locals vset locals' ->
-      map.undef_on locals vset ->
-      Lift1Prop.impl1
-        (equivalent (t:=base_Z) x y locals)
-        (equivalent x y locals').
-  Proof.
-    cbv [equivalent rep.equiv rep.Z WeakestPrecondition.dexpr].
-    repeat intro; sepsimpl; subst.
-    eauto using expr_only_differ_undef.
-  Qed.
-
-  (* TODO : move *)
-  Lemma equiv_listZ_mem_only_differ_undef :
-    forall x y locals locals' vset,
-      map.only_differ locals vset locals' ->
-      map.undef_on locals vset ->
-      Lift1Prop.impl1
-        (equivalent (t:=base_listZ) (listZ:=rep.listZ_mem)
-                    x y locals)
-        (equivalent x y locals').
-  Proof.
-    cbn [equivalent rep.equiv rep.listZ_mem]; intros; sepsimpl.
-    repeat intro; sepsimpl. eexists.
-    eapply Proper_sep_impl1; [ | reflexivity | eassumption ].
-    repeat intro.
-    eapply (equiv_Z_only_differ_undef (listZ:=rep.listZ_mem)); eauto.
   Qed.
 
   Lemma lists_reserved_only_differ_undef t :
@@ -785,52 +650,6 @@ Section LoadStoreList.
         eauto.
       rewrite app_cons_app_app.
       eassumption. }
-  Qed.
-
-  (* TODO : move *)
-  Lemma union_comm {E} (s1 s2 : PropSet.set E) :
-    PropSet.sameset (PropSet.union s1 s2)
-                    (PropSet.union s2 s1).
-  Proof.
-    apply sameset_iff.
-    cbv [PropSet.union PropSet.elem_of].
-    intros. rewrite or_comm. reflexivity.
-  Qed.
-
-  (* TODO : move *)
-  Lemma union_assoc {E} (s1 s2 s3 : PropSet.set E) :
-    PropSet.sameset (PropSet.union s1 (PropSet.union s2 s3))
-                    (PropSet.union (PropSet.union s1 s2) s3).
-  Proof.
-    apply sameset_iff.
-    cbv [PropSet.union PropSet.elem_of].
-    intros. rewrite or_assoc. reflexivity.
-  Qed.
-
-  (* TODO : move *)
-  Lemma only_differ_union_undef_l m1 m2 k1 k2 :
-    map.only_differ m1 (PropSet.union k1 k2) m2 ->
-    map.undef_on m1 k2 ->
-    map.undef_on m2 k2 ->
-    map.only_differ m1 k1 m2.
-  Proof.
-    intros.
-    match goal with H : map.only_differ _ _ _ |- map.only_differ _ _ _ =>
-                    let x := fresh "x" in intro x; specialize (H x);
-                                            destruct H
-    end; [ | tauto ].
-    match goal with H : PropSet.elem_of _ (PropSet.union _ _) |- _ =>
-                    destruct H end;
-      erewrite ?undef_on_None by eauto; tauto.
-  Qed.
-
-  (* TODO : move *)
-  Lemma undef_on_union_iff m k1 k2 :
-    map.undef_on m (PropSet.union k1 k2) <->
-    (map.undef_on m k1 /\ map.undef_on m k2).
-  Proof.
-    cbv [map.undef_on map.agree_on PropSet.union PropSet.elem_of].
-    repeat split; intros; destruct_head'_or; destruct_head'_and; eauto.
   Qed.
 
   Lemma store_return_values_correct {t} init_locals :

@@ -54,6 +54,19 @@ Section Varnames.
         eapply expr_untouched; eauto using only_differ_sym.
     Qed.
 
+    Lemma equiv_Z_only_differ_undef {listZ:rep.rep base_listZ} :
+      forall x y locals locals' vset,
+        map.only_differ locals vset locals' ->
+        map.undef_on locals vset ->
+        Lift1Prop.impl1
+          (equivalent (t:=base_Z) x y locals)
+          (equivalent x y locals').
+    Proof.
+      cbv [equivalent rep.equiv rep.Z WeakestPrecondition.dexpr].
+      repeat intro; sepsimpl; subst.
+      eauto using expr_only_differ_undef.
+    Qed.
+
     Section Local.
       Local Existing Instance rep.listZ_local.
 
@@ -136,6 +149,22 @@ Section Varnames.
         cbv [Lift1Prop.iff1]; split; intros;
           eapply equiv_listZ_only_differ_mem;
           eauto using only_differ_sym.
+      Qed.
+
+      Lemma equiv_listZ_mem_only_differ_undef :
+        forall x y locals locals' vset,
+          map.only_differ locals vset locals' ->
+          map.undef_on locals vset ->
+          Lift1Prop.impl1
+            (equivalent (t:=base_listZ) (listZ:=rep.listZ_mem)
+                        x y locals)
+            (equivalent x y locals').
+      Proof.
+        cbn [equivalent rep.equiv rep.listZ_mem]; intros; sepsimpl.
+        repeat intro; sepsimpl. eexists.
+        eapply Proper_sep_impl1; [ | reflexivity | eassumption ].
+        repeat intro.
+        eapply (equiv_Z_only_differ_undef (listZ:=rep.listZ_mem)); eauto.
       Qed.
 
       Lemma equiv_nil_iff1 y locals :
