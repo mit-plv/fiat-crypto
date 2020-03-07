@@ -317,5 +317,83 @@ Module Types.
                  (equivalent_flat_args (snd x) (skipn i words)))
       | _ => fun _ _ => emp False (* invalid argument *)
       end.
+
+    (* Types for partitioning return values into list and non-list *)
+    Fixpoint base_listonly (T : Type) t : Type :=
+      match t with
+      | base.type.prod a b =>
+        (base_listonly T a * base_listonly T b)
+      | base_listZ => T
+      | _ => unit
+      end.
+    Fixpoint base_listexcl (f : base.type -> Type) t : Type :=
+      match t with
+      | base.type.prod a b =>
+        base_listexcl f a * base_listexcl f b
+      | base_listZ => unit
+      | _ => f t
+      end.
+
+    Fixpoint baseonly (f : base.type -> Type) t : Type :=
+      match t with
+      | type.base b => f b
+      | type.arrow _ _ => unit
+      end.
+    Definition listonly T := baseonly (base_listonly T).
+    Definition listexcl f := baseonly (base_listexcl f).
+
+    Definition list_lengths (t : API.type) :=
+      listonly nat t.
+    Definition listonly_base_ltype t :=
+      base_listonly (base_ltype base_listZ) t.
+    Definition listexcl_base_ltype t :=
+      base_listexcl base_ltype t.
+    Definition listonly_base_rtype t :=
+      base_listonly (base_rtype base_listZ) t.
+    Definition listexcl_base_rtype t :=
+      base_listexcl base_rtype t.
+
+    Fixpoint map_listonly {A B t} (f : A -> B)
+      : base_listonly A t -> base_listonly B t :=
+      match t as t0 return
+            base_listonly A t0 -> base_listonly B t0 with
+      | base.type.prod a b =>
+        fun x => 
+          (map_listonly f (fst x), map_listonly f (snd x))
+      | base_listZ => f
+      | _ => fun _ => tt
+      end.
+
+    Fixpoint equivalent_listonly {t}
+      : base.interp t -> (* fiat-crypto value *)
+        listonly_base_rtype t -> (* bedrock2 value *)
+        Interface.map.rep (map:=Semantics.locals) -> (* local variables *)
+        Interface.map.rep (map:=Semantics.mem) -> (* memory *)
+        Prop :=
+      match t with
+      | base.type.prod a b =>
+        fun x y locals =>
+          sep (equivalent_listonly (fst x) (fst y) locals)
+              (equivalent_listonly (snd x) (snd y) locals)
+      | base_listZ => rep.equiv
+      | base_Z => fun _ _ _ => emp True
+      |  _ => fun _ _ _ => emp False
+      end.
+
+    Fixpoint equivalent_listexcl {t}
+      : base.interp t -> (* fiat-crypto value *)
+        listexcl_base_rtype t -> (* bedrock2 value *)
+        Interface.map.rep (map:=Semantics.locals) -> (* local variables *)
+        Interface.map.rep (map:=Semantics.mem) -> (* memory *)
+        Prop :=
+      match t with
+      | base.type.prod a b =>
+        fun x y locals =>
+          sep (equivalent_listexcl (fst x) (fst y) locals)
+              (equivalent_listexcl (snd x) (snd y) locals)
+      | base_listZ => fun _ _ _ => emp True
+      | base_Z => rep.equiv
+      |  _ => fun _ _ _ => emp False
+      end.
   End defs.
 End Types.

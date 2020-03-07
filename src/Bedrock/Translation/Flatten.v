@@ -69,4 +69,26 @@ Section Flatten.
   Definition flatten_rets {t}
     : base_rtype t -> list Syntax.expr :=
     flatten_base_rtype.
+
+  Fixpoint flatten_listonly_base_ltype {t}
+    : listonly_base_ltype t -> list string :=
+    match t with
+    | base.type.prod a b =>
+      fun x =>
+        (flatten_listonly_base_ltype (fst x))
+          ++ flatten_listonly_base_ltype (snd x)
+    | base_listZ => fun x => [x]
+    | _ => fun _ => []
+    end.
+
+  Fixpoint flatten_listexcl_base_ltype {t}
+    : listexcl_base_ltype t -> list string :=
+    match t with
+    | base.type.prod a b =>
+      fun x =>
+        (flatten_listexcl_base_ltype (fst x))
+          ++ flatten_listexcl_base_ltype (snd x)
+    | base_listZ => fun _ => []
+    | _ => fun x => [x]
+    end.
 End Flatten.

@@ -10,24 +10,13 @@ Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Translation.Func.
 Require Import Crypto.Bedrock.Util.
-Require Import Crypto.Bedrock.Proofs.Func.
 Require Import Crypto.Language.API.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZUtil.ModInv.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import bedrock2.Syntax.
 Require Import bedrock2.Semantics.
-Require Import coqutil.Word.Interface.
-Require Import coqutil.Word.Properties.
-Require Import coqutil.Map.Interface.
-Require Import coqutil.Map.Properties.
-Require Import bedrock2.Array.
-Require Import bedrock2.Scalars.
 Require Import bedrock2.BasicC64Semantics.
-Require Import bedrock2.ProgramLogic.
-Require Import bedrock2.WeakestPrecondition.
-Require Import bedrock2.WeakestPreconditionProperties.
-Require Import bedrock2.Map.Separation.
 Require bedrock2.NotationsCustomEntry.
 
 Import Language.Compilers.
@@ -125,10 +114,25 @@ Module X25519_64.
          translate_func e
                         ("in0", ("in1", tt)) (* argument names *)
                         (n, (n, tt)) (* lengths for list arguments *)
-                        (expr.var "in0") (* location(s) for returned lists (can be in terms of arguments) *)
-                        "ret" (* return value name *)
+                        "out0" (* return value name *)
        | ErrorT.Error _ => (nil, nil, Syntax.cmd.skip)
        end).
+
+    Import NotationsCustomEntry.
+    Local Set Printing Width 150.
+    Compute mulmod_bedrock.
+
+    Require Import Crypto.Bedrock.Proofs.Func.
+    Require Import coqutil.Word.Interface.
+    Require Import coqutil.Word.Properties.
+    Require Import coqutil.Map.Interface.
+    Require Import coqutil.Map.Properties.
+    Require Import bedrock2.Array.
+    Require Import bedrock2.Scalars.
+    Require Import bedrock2.ProgramLogic.
+    Require Import bedrock2.WeakestPrecondition.
+    Require Import bedrock2.WeakestPreconditionProperties.
+    Require Import bedrock2.Map.Separation.
 
     Section Proofs.
 
