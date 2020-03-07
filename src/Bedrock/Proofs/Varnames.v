@@ -114,6 +114,21 @@ Section Varnames.
           eapply equiv_listZ_only_differ_local;
           eauto using only_differ_sym.
       Qed.
+
+      Lemma equiv_listZ_only_differ_undef_local :
+        forall x y locals locals' vset,
+          map.only_differ locals vset locals' ->
+          map.undef_on locals vset ->
+          Lift1Prop.impl1
+            (equivalent (t:=base_listZ) x y locals)
+            (equivalent x y locals').
+      Proof.
+        cbn [equivalent rep.equiv rep.listZ_local]; intros; sepsimpl.
+        repeat intro; sepsimpl.
+        eapply Forall.Forall2_Proper_impl;
+          try eassumption; try reflexivity; repeat intro.
+        eapply (equiv_Z_only_differ_undef (listZ:=rep.listZ_local)); eauto.
+      Qed.
     End Local.
 
     Section InMemory.
@@ -151,7 +166,7 @@ Section Varnames.
           eauto using only_differ_sym.
       Qed.
 
-      Lemma equiv_listZ_mem_only_differ_undef :
+      Lemma equiv_listZ_only_differ_undef_mem :
         forall x y locals locals' vset,
           map.only_differ locals vset locals' ->
           map.undef_on locals vset ->
@@ -187,6 +202,13 @@ Section Varnames.
 
     Section Generic.
       Context {listZ : rep.rep base_listZ}
+              (equiv_listZ_only_differ_undef :
+                 forall x y locals1 locals2 vset,
+                   map.only_differ locals1 vset locals2 ->
+                   map.undef_on locals1 vset ->
+                   Lift1Prop.impl1
+                     (rep.equiv (rep:=listZ) x y locals1)
+                     (rep.equiv x y locals2))
               (equiv_listZ_only_differ :
                  forall
                    locals1 locals2 vset
@@ -263,9 +285,28 @@ Section Varnames.
                      cleanup; eauto
                  end.
       Qed.
+
+      Lemma equivalent_only_differ_undef {t} :
+        forall locals1 locals2 vset x y,
+          map.only_differ locals1 vset locals2 ->
+          map.undef_on locals1 vset ->
+          Lift1Prop.impl1
+            (equivalent (t:=t) x y locals1)
+            (equivalent x y locals2).
+      Proof.
+        induction t;
+          cbn [equivalent];
+          break_match; intros; try reflexivity; [ | | ].
+        { eapply equiv_Z_only_differ_undef; eauto. }
+        { apply Proper_sep_impl1; eauto. }
+        { eapply equiv_listZ_only_differ_undef; eauto. }
+      Qed.
     End Generic.
   End Equivalence.
-  Hint Resolve equiv_listZ_only_differ_local
+  Hint Resolve
+       equiv_listZ_only_differ_undef_local
+       equiv_listZ_only_differ_undef_mem
+       equiv_listZ_only_differ_local
        equiv_listZ_only_differ_mem : equiv.
 
   Section UsedVarnames.
@@ -293,6 +334,55 @@ Section Varnames.
       end.
       { eexists; eauto with lia. }
       { congruence. }
+    Qed.
+
+    Lemma used_varnames_disjoint n1 n2 l1 l2 :
+      n1 + l1 <= n2 ->
+      disjoint (used_varnames n1 l1) (used_varnames n2 l2).
+    Proof.
+      cbv [used_varnames].
+      revert n1 n2 l2; induction l1; cbn [map seq]; intros;
+        rewrite ?of_list_nil, ?of_list_cons;
+          eauto using disjoint_empty_l.
+      rewrite add_union_singleton.
+      apply disjoint_union_l_iff; split; eauto with lia; [ ].
+      apply disjoint_not_in. intro.
+      repeat match goal with
+             | _ => progress cleanup
+             | H : In _ (map _ _) |- _ => rewrite in_map_iff in H
+             | H : In _ (seq _ _) |- _ => rewrite in_seq in H
+             | H : varname_gen _ = varname_gen _ |- _ =>
+               apply varname_gen_unique in H
+             | _ => lia
+             end.
+    Qed.
+
+    Lemma used_varnames_succ_high n l :
+      sameset (used_varnames n (S l))
+              (add (used_varnames n l) (varname_gen (n + l))).
+    Proof.
+      intros. cbv [used_varnames].
+      rewrite seq_snoc, map_app. cbn [map].
+      rewrite of_list_app, of_list_cons.
+      rewrite !add_union_singleton, of_list_nil, union_empty_r.
+      apply union_comm.
+    Qed.
+
+    Lemma used_varnames_union n m l :
+      sameset (used_varnames n (m + l))
+              (union (used_varnames n m) (used_varnames (n + m) l)).
+    Proof.
+      cbv [used_varnames].
+      revert n m; induction l; cbn [map seq]; intros;
+        rewrite ?Nat.add_0_r, ?of_list_nil, ?union_empty_r;
+        try reflexivity; [ ].
+      rewrite of_list_cons, add_union_singleton, union_assoc.
+      rewrite <-Nat.add_succ_comm. rewrite IHl.
+      rewrite seq_snoc, map_app. cbn [map].
+      rewrite of_list_app, of_list_cons.
+      rewrite !add_union_singleton, of_list_nil, union_empty_r.
+      rewrite Nat.add_succ_r.
+      reflexivity.
     Qed.
 
     Lemma used_varnames_shift n m l :
@@ -491,5 +581,8 @@ Section Varnames.
     rewrite varname_gen_unique. lia.
   Qed.
 End Varnames.
-Hint Resolve equiv_listZ_only_differ_local
+Hint Resolve
+     equiv_listZ_only_differ_undef_local
+     equiv_listZ_only_differ_undef_mem
+     equiv_listZ_only_differ_local
      equiv_listZ_only_differ_mem : equiv.

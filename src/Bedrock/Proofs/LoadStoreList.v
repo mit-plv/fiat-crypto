@@ -128,7 +128,7 @@ Section LoadStoreList.
       break_match; intros; try reflexivity; [ | ].
     { rewrite IHt1, IHt2; try reflexivity; eauto. }
     { repeat intro; sepsimpl; eexists; sepsimpl; eauto.
-      eapply equiv_listZ_mem_only_differ_undef; eauto. }
+      eapply equiv_listZ_only_differ_undef_mem; eauto. }
   Qed.
 
   Lemma load_list_item_correct
