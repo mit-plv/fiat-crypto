@@ -403,12 +403,13 @@ Section Func.
            (locs : list_locs (type.final_codomain t))
            (retnames : base_ltype (type.final_codomain t))
            (argnames : type.for_each_lhs_of_arrow ltype t)
+           (arglengths : type.for_each_lhs_of_arrow list_lengths t)
            (args : type.for_each_lhs_of_arrow API.interp_type t),
       (* rets := fiat-crypto interpretation of e1 applied to args *)
       let rets : base.interp (type.final_codomain t) :=
           type.app_curried (API.interp (e _)) args in
       (* extract list lengths from fiat-crypto arguments/return values *)
-      let arglengths := list_lengths_from_args args in
+      arglengths = list_lengths_from_args args ->
       let retlengths := list_lengths_from_value rets in
       (* out := translation output for e2; triple of
          (function arguments, function return variable names, body) *)
@@ -418,7 +419,7 @@ Section Func.
              (mem : Semantics.mem)
              (flat_args : list Semantics.word)
              (functions : list bedrock_func)
-             (P Ra Rr : Semantics.mem -> Prop),
+             (Ra Rr : Semantics.mem -> Prop),
         (* argnames don't contain variables we could later overwrite *)
         (forall n, ~ varname_set_args argnames (varname_gen n)) ->
         (* argument values are equivalent *)
@@ -442,7 +443,7 @@ Section Func.
              (* return values are equivalent *)
              sep (equivalent_flat_base rets flat_rets) Rr mem').
   Proof.
-    cbv [translate_func Wf3]; intros.
+    cbv [translate_func Wf3]; intros. subst.
     cbn [WeakestPrecondition.call
            WeakestPrecondition.call_body WeakestPrecondition.func].
     rewrite eqb_refl.

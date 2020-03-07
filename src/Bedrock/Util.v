@@ -641,6 +641,17 @@ Section WeakestPrecondition.
       cbv [get]; intros.
       exists y; rewrite map.get_put_same; tauto.
     Qed.
+
+    Lemma get_put_diff l x1 x2 y (post:_->Prop) :
+      x1 <> x2 ->
+      get l x1 post ->
+      get (map.put l x2 y) x1 post.
+    Proof.
+      cbv [get]; intros.
+      match goal with H : exists _, _ |- _ =>
+                      destruct H end.
+      eexists; rewrite map.get_put_diff; eauto.
+    Qed.
   End Get.
     
   Section Expr.
