@@ -81,7 +81,7 @@ Section Func.
       (forall n,
         (nextn <= n)%nat ->
         ~ varname_set_args argnames (varname_gen n)) ->
-      (* G doesn't contain variables we could later overwrite *)
+      (* G doesn't contain variables we could overwrite *)
       (forall n,
         (nextn <= n)%nat ->
         ~ context_varname_set G (varname_gen n)) ->
@@ -89,6 +89,10 @@ Section Func.
              (locals : Semantics.locals)
              (mem : Semantics.mem)
              (functions : list bedrock_func),
+        (* locals doesn't contain variables we could overwrite *)
+        (forall n nvars,
+            (nextn <= n)%nat ->
+            map.undef_on locals (used_varnames n nvars)) ->
         (* argument values are equivalent *)
         locally_equivalent_args args argvalues locals ->
         (* contexts are equivalent; for every variable in the context list G,
@@ -458,7 +462,14 @@ Section Func.
     cbv beta in *. cleanup; subst.
     eapply Proper_cmd; [ solve [apply Proper_call] | repeat intro | ].
     2 : { eapply translate_func'_correct with (args0:=args);
-          cbv [context_equiv]; eauto. }
+          cbv [context_equiv]; intros; eauto; [ ].
+          eapply only_differ_disjoint_undef_on; eauto;
+            [ eapply used_varnames_disjoint; lia | ].
+          eapply of_list_zip_undef_on; eauto; [ ].
+          rewrite <-varname_set_args_flatten.
+          symmetry.
+          eapply disjoint_used_varnames_lt.
+          eauto with lia. }
     cbv beta in *. cleanup; subst.
     eapply Proper_cmd; [ solve [apply Proper_call] | repeat intro | ].
     2 : {
