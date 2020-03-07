@@ -501,7 +501,6 @@ Section Func.
     TODO : prove assumptions shown by:
     Print Assumptions translate_func_correct.
     
-    assign_correct (medium/hard)
     translate_expr_correct (hard)
   *)
 End Func.

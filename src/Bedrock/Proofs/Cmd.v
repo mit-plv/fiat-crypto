@@ -93,6 +93,88 @@ Section Cmd.
       valid_expr true e -> valid_cmd (t:=t) e
   .
 
+  Lemma assign_list_correct :
+    forall (rhs : base_rtype base_listZ)
+           (xs : base.interp base_listZ)
+           (nextn : nat)
+           (tr : Semantics.trace)
+           (mem : Semantics.mem)
+           (locals : Semantics.locals),
+      (* rhs == x *)
+      locally_equivalent xs rhs locals ->
+      (* locals don't contain any variables we can overwrite *)
+      (forall n nvars,
+          (nextn <= n)%nat ->
+          map.undef_on locals (used_varnames n nvars)) ->
+      let out := assign_list nextn rhs in
+      let nvars := fst (fst out) in
+      let lhs := snd (fst out) in
+      WeakestPrecondition.cmd
+        call (snd out)
+        tr mem locals
+        (fun tr' mem' locals' =>
+           tr = tr'
+           /\ mem = mem'
+           /\ PropSet.sameset (varname_set lhs)
+                              (used_varnames nextn nvars)
+           /\ map.only_differ locals (varname_set lhs) locals'
+           /\ locally_equivalent xs (base_rtype_of_ltype lhs) locals').
+  Proof.
+    cbn [locally_equivalent equivalent rep.equiv rep.listZ_local].
+    induction rhs; intros; cbn [assign_list fst snd].
+    { repeat straightline.
+      repeat match goal with
+             | |- _ /\ _ => split
+             | H : _ |- _ => apply H
+             | _ => apply only_differ_empty
+             | _ => reflexivity
+             end. }
+    { match goal with
+        H : Forall2 _ ?x (_ :: _) |- _ =>
+        destruct x; inversion H; subst; clear H; [ ]
+      end.
+      cbn [rep.equiv rep.Z] in *. sepsimpl.
+      repeat straightline.
+      eexists; split; [ eapply expr_empty; eassumption | ].
+      eapply Proper_cmd; [ solve [apply Proper_call] | repeat intro | ].
+      2:{
+        eapply IHrhs; eauto.
+        { eapply Forall2_impl_strong; eauto.
+          intros; sepsimpl.
+          eapply expr_only_differ_undef; eauto.
+          rewrite used_varnames_1.
+          eauto using only_differ_sym, only_differ_put. }
+        { intros. apply put_undef_on; eauto with lia.
+          rewrite used_varnames_iff; intro; cleanup.
+          match goal with H : varname_gen _ = varname_gen _ |- _ =>
+                          apply varname_gen_unique in H end.
+          lia. } }
+      cbv beta in *. cleanup; subst.
+      repeat match goal with |- _ /\ _ => split end;
+        try reflexivity.
+      { cbn [varname_set rep.varname_set rep.listZ_local rep.Z
+                         fold_right] in *.
+        rewrite used_varnames_succ_low, add_union_singleton.
+        match goal with H : PropSet.sameset _ _ |- _ =>
+                        rewrite H end.
+        reflexivity. }
+      { cbn [varname_set rep.varname_set rep.listZ_local rep.Z
+                         fold_right] in *.
+        eauto using only_differ_sym, only_differ_put, only_differ_trans. }
+      { constructor; eauto; [ ].
+        sepsimpl. cbn [rep.rtype_of_ltype rep.Z].
+        eapply expr_untouched with (mem2:=map.empty); eauto;
+          [ | solve [apply dexpr_put_same] ].
+        match goal with H : PropSet.sameset _ _ |- _ =>
+                        rewrite sameset_iff in H;
+                          rewrite H
+        end.
+        rewrite used_varnames_iff; intro; cleanup.
+        match goal with H : varname_gen _ = varname_gen _ |- _ =>
+                        apply varname_gen_unique in H end.
+        lia. } }
+  Qed.
+
   Lemma assign_correct {t} :
     forall (x : base.interp t)
            (rhs : base_rtype t)
@@ -103,8 +185,9 @@ Section Cmd.
       (* rhs == x *)
       locally_equivalent x rhs locals ->
       (* locals don't contain any variables we can overwrite *)
-      (forall nvars,
-          map.undef_on locals (used_varnames nextn nvars)) ->
+      (forall n nvars,
+          (nextn <= n)%nat ->
+          map.undef_on locals (used_varnames n nvars)) ->
       let out := assign nextn rhs in
       let nvars := fst (fst out) in
       let lhs := snd (fst out) in
@@ -156,7 +239,8 @@ Section Cmd.
            eauto. }
          { intros.
            eapply only_differ_disjoint_undef_on;
-             try eapply undef_on_subset; eauto using used_varnames_shift.
+             try eapply undef_on_subset;
+             eauto using used_varnames_subset with lia.
            match goal with H : PropSet.sameset _ _ |- _ =>
                            rewrite H end.
            apply used_varnames_disjoint; lia. } }
@@ -175,8 +259,8 @@ Section Cmd.
         symmetry.
         apply used_varnames_disjoint; lia. } }
     { (* base_listZ *)
-      admit. }
-  Admitted.
+      eapply assign_list_correct; eauto. }
+  Qed.
 
   (* if e is a valid_expr, it will hit the cases that call translate_expr *)
   Lemma translate_cmd_valid_expr {t}

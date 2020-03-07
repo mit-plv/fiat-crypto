@@ -368,6 +368,33 @@ Section Varnames.
       apply union_comm.
     Qed.
 
+    Lemma used_varnames_succ_low n m :
+      PropSet.sameset (used_varnames n (S m))
+                      (PropSet.add (used_varnames (S n) m)
+                                   (varname_gen n)).
+    Proof.
+      apply sameset_iff. cbn. firstorder idtac.
+    Qed.
+
+    Lemma used_varnames_1 n :
+      PropSet.sameset (used_varnames n 1)
+                      (PropSet.singleton_set (varname_gen n)).
+    Proof.
+      apply sameset_iff. cbn. firstorder idtac.
+    Qed.
+
+    Lemma used_varnames_subset n1 n2 l1 l2 :
+      (n2 <= n1)%nat ->
+      (n1 + l1 <= n2 + l2)%nat ->
+      PropSet.subset (used_varnames n1 l1)
+                     (used_varnames n2 l2).
+    Proof.
+      cbv [PropSet.subset PropSet.elem_of];
+        intros; rewrite !used_varnames_iff in *.
+      cleanup; subst.
+      eexists; split; [ reflexivity | lia ].
+    Qed.
+
     Lemma used_varnames_union n m l :
       sameset (used_varnames n (m + l))
               (union (used_varnames n m) (used_varnames (n + m) l)).
