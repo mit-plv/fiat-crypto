@@ -28,29 +28,6 @@ Section Lists.
   Context {p : parameters} {p_ok : ok}.
   Local Existing Instance rep.Z.
 
-  Fixpoint base_list_lengths (t : base.type)
-    : Type :=
-    match t with
-    | base.type.prod a b =>
-      base_list_lengths a * base_list_lengths b
-    | base_listZ => nat
-    | _ => unit
-    end.
-
-  Fixpoint list_lengths t : Type :=
-    match t with
-    | type.base t => base_list_lengths t
-    | _ => unit
-    end.
-
-  Fixpoint list_locs (t : base.type)
-    : Type :=
-    match t with
-    | base.type.prod a b => list_locs a * list_locs b
-    | base_listZ => base_rtype (listZ:=rep.listZ_mem) base_listZ
-    | _ => unit
-    end.
-
   Definition load_list_item (start : Syntax.expr.expr) (i : nat)
     : Syntax.expr.expr :=
     let offset := expr.literal (word_size_in_bytes * Z.of_nat i) in
@@ -70,7 +47,7 @@ Section Lists.
 
   Fixpoint load_all_lists {t : base.type} (nextn : nat)
     : base_ltype (listZ:=rep.listZ_mem) t ->
-      base_list_lengths t ->
+      base_listonly nat t ->
       nat * base_ltype (listZ:=rep.listZ_local) t * cmd.cmd :=
     match t with
     | base.type.prod a b =>
@@ -101,7 +78,7 @@ Section Lists.
       fun (args : unit) llengths => (0%nat, args, cmd.skip)
     | type.arrow (type.base s) d =>
       fun (args : base_ltype s * type.for_each_lhs_of_arrow _ d)
-          (llengths : base_list_lengths s * type.for_each_lhs_of_arrow _ d) =>
+          (llengths : base_listonly nat s * type.for_each_lhs_of_arrow _ d) =>
         let load_fst := load_all_lists nextn (fst args) (fst llengths) in
         let nextn' := (nextn + fst (fst load_fst))%nat in
         let load_snd := load_arguments nextn' (snd args) (snd llengths) in
@@ -137,22 +114,19 @@ Section Lists.
   Fixpoint store_return_values {t : base.type}
     : base_ltype (listZ:=rep.listZ_local) t ->
       base_ltype (listZ:=rep.listZ_mem) t ->
-      list_locs t ->
       cmd.cmd :=
     match t as t0 return
-          base_ltype t0 -> base_ltype t0 -> list_locs t0 -> _ with
+          base_ltype t0 -> base_ltype t0 -> _ with
     | base.type.prod a b =>
-      fun x y starts =>
-        cmd.seq (store_return_values (fst x) (fst y) (fst starts))
-                (store_return_values (snd x) (snd y) (snd starts))
+      fun x y =>
+        cmd.seq (store_return_values (fst x) (fst y))
+                (store_return_values (snd x) (snd y))
     | base_listZ =>
-      (* store list in memory *)
-      fun (x : list string) (y : string) start =>
-        cmd.seq
-          (cmd.set y start)
-          (store_list (expr.var y) (map expr.var x) 0)
+      (* store list at location pointed to by y *)
+      fun (x : list string) (y : string) =>
+        store_list (expr.var y) (map expr.var x) 0
     | _ =>
       (* rename variable *)
-      fun (x y : string) _ => cmd.set y (expr.var x)
+      fun (x y : string) => cmd.set y (expr.var x)
     end.
 End Lists.
