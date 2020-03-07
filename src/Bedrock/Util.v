@@ -272,6 +272,28 @@ Section Sets.
 
   Lemma of_list_nil : sameset (@of_list E []) empty_set.
   Proof. firstorder idtac. Qed.
+
+  Lemma disjoint_empty_l (s : set E) :
+    disjoint empty_set s.
+  Proof. firstorder idtac. Qed.
+
+  Lemma disjoint_empty_r (s : set E) :
+    disjoint s empty_set.
+  Proof. symmetry. apply disjoint_empty_l. Qed.
+
+  Lemma union_empty_l (s : set E) :
+    sameset (union empty_set s) s.
+  Proof.
+    apply sameset_iff.
+    cbv [union empty_set elem_of]; tauto.
+  Qed.
+
+  Lemma union_empty_r (s : set E) :
+    sameset (union s empty_set) s.
+  Proof.
+    rewrite union_comm. apply union_empty_l.
+  Qed.
+
 End Sets.
 
 Section Maps.
@@ -295,6 +317,10 @@ Section Maps.
 
   Global Instance Proper_only_differ :
     Proper (eq ==> sameset ==> eq ==> iff) map.only_differ.
+  Proof. firstorder congruence. Qed.
+
+  Global Instance Proper_undef_on :
+    Proper (eq ==> sameset ==> iff) map.undef_on.
   Proof. firstorder congruence. Qed.
 
   Lemma only_differ_put m k v :
@@ -484,6 +510,19 @@ Section Maps.
                     destruct H end;
       erewrite ?undef_on_None by eauto; tauto.
   Qed.
+
+  Lemma undef_on_subset m k1 k2 :
+    subset k1 k2 ->
+    map.undef_on m k2 ->
+    map.undef_on m k1.
+  Proof. firstorder congruence. Qed.
+
+  Lemma only_differ_disjoint_undef_on m1 m2 ks s :
+    map.only_differ m1 ks m2 ->
+    disjoint ks s ->
+    map.undef_on m1 s ->
+    map.undef_on m2 s.
+  Proof. firstorder congruence. Qed.
 
   Lemma undef_on_union_iff m k1 k2 :
     map.undef_on m (union k1 k2) <->
