@@ -192,15 +192,6 @@ Section Cmd.
       inversion 1; cleanup_wf; reflexivity.
   Qed.
 
-  (* TODO : move *)
-  Lemma context_equiv_undef {var1} nextn G locals nvars :
-    (forall n,
-        (nextn <= n)%nat ->
-        ~ context_varname_set G (varname_gen n)) ->
-    context_equiv (var1:=var1) G locals ->
-    map.undef_on locals (used_varnames nextn nvars).
-  Admitted.
-
   Local Ltac simplify :=
     repeat
       first [ progress (intros; cleanup)
@@ -288,6 +279,10 @@ Section Cmd.
       (forall n,
           (nextn <= n)%nat ->
           ~ context_varname_set G (varname_gen n)) ->
+      (* locals don't contain any variables we can overwrite *)
+      (forall n nvars,
+          (nextn <= n)%nat ->
+          map.undef_on locals (used_varnames n nvars)) ->
       forall (tr : Semantics.trace)
              (mem : Semantics.mem),
         (* contexts are equivalent; for every variable in the context list G,
@@ -329,8 +324,7 @@ Section Cmd.
                | _ => erewrite translate_cmd_valid_expr by eauto
                | _ => eapply Proper_cmd;
                         [ eapply Proper_call | repeat intro
-                          | eapply assign_correct;
-                            eauto using context_equiv_undef;
+                          | eapply assign_correct; eauto;
                             eapply translate_expr_correct; solve [eauto] ]
                end.
 
@@ -343,7 +337,11 @@ Section Cmd.
                | _ => solve [new_context_ok]
                | H : _ |- _ => solve [apply H]
                | _ => congruence
-               end. }
+               end; [ ].
+        eapply only_differ_disjoint_undef_on; eauto with lia; [ ].
+        match goal with H : PropSet.sameset _ _ |- _ =>
+                        rewrite H end.
+        apply used_varnames_disjoint; lia. }
       { simplify; subst; eauto; only_differ_ok.
         etransitivity; [ eassumption | ].
         apply used_varnames_shift. } }
@@ -356,7 +354,11 @@ Section Cmd.
                | _ => solve [new_context_ok]
                | H : _ |- _ => solve [apply H]
                | _ => congruence
-               end. }
+               end; [ ].
+        eapply only_differ_disjoint_undef_on; eauto with lia; [ ].
+        match goal with H : PropSet.sameset _ _ |- _ =>
+                        rewrite H end.
+        apply used_varnames_disjoint; lia. }
       { simplify; subst; eauto; only_differ_ok.
         etransitivity; [ eassumption | ].
         apply used_varnames_shift. } }
@@ -369,7 +371,11 @@ Section Cmd.
                | H : _ |- _ => solve [apply H]
                | _ => solve [new_context_ok]
                | _ => congruence
-               end. }
+               end; [ ].
+        eapply only_differ_disjoint_undef_on; eauto with lia; [ ].
+        match goal with H : PropSet.sameset _ _ |- _ =>
+                        rewrite H end.
+        apply used_varnames_disjoint; cbn; lia. }
       { simplify; subst; eauto; [ | | ].
         { (* varnames subset *)
           rewrite varname_set_local.
