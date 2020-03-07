@@ -304,6 +304,10 @@ Section Maps.
                BoolSpec (x = y) (x <> y) (key_eqb x y)}
           {map_ok : map.ok map}.
 
+  Lemma only_differ_empty m :
+    map.only_differ m PropSet.empty_set m.
+  Proof. right; reflexivity. Qed.
+
   Lemma only_differ_sym m1 m2 ks :
     map.only_differ m1 ks m2 ->
     map.only_differ m2 ks m1.

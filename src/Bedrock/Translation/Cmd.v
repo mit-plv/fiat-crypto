@@ -18,6 +18,16 @@ Section Cmd.
   Existing Instance Types.rep.Z.
   Existing Instance Types.rep.listZ_local. (* local list representation *)
 
+  Fixpoint assign_list (nextn : nat) (xs : base_rtype base_listZ)
+    : nat * base_ltype base_listZ * Syntax.cmd.cmd :=
+    match xs with
+      | [] => (0%nat, [], Syntax.cmd.skip)
+      | x :: xs' =>
+        let rec := assign_list (S nextn) xs' in
+        (S (fst (fst rec)), varname_gen nextn :: snd (fst rec),
+         Syntax.cmd.seq (Syntax.cmd.set (varname_gen nextn) x) (snd rec))
+    end.
+
   Fixpoint assign {t : base.type} (nextn : nat)
     : base_rtype t -> (nat * base_ltype t * Syntax.cmd.cmd) :=
     match t with
@@ -29,9 +39,7 @@ Section Cmd.
          (snd (fst assign1), snd (fst assign2)),
          Syntax.cmd.seq (snd assign1) (snd assign2))
     | base.type.list (base.type.type_base base.type.Z) =>
-      fun _ =>
-        (* not allowed to assign to a list; return garbage *)
-        (0%nat, dummy_base_ltype _, Syntax.cmd.skip)
+      assign_list nextn
     | base.type.list _ | base.type.option _ | base.type.unit
     | base.type.type_base _ =>
       fun rhs =>
