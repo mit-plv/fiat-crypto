@@ -256,6 +256,27 @@ Section Sets.
     rewrite in_app_iff in *. tauto.
   Qed.
 
+  Lemma disjoint_NoDup (l1 l2 : list E) :
+    NoDup l1 ->
+    NoDup l2 ->
+    disjoint (of_list l1) (of_list l2) ->
+    NoDup (l1 ++ l2).
+  Proof.
+    revert l2; induction l1; intros *;
+      rewrite ?app_nil_l, <-?app_comm_cons;
+      [ solve [firstorder idtac] | ].
+    inversion 1; intros; subst.
+    match goal with H : disjoint (of_list (_ :: _)) _ |- _ =>
+                    symmetry in H;
+                    apply disjoint_cons in H; destruct H end.
+    match goal with H : disjoint _ (singleton_set _) |- _ =>
+                    apply disjoint_singleton_r_iff in H1;
+                      cbv [of_list] in H1
+    end.
+    constructor; [ rewrite in_app_iff; tauto | ].
+    apply IHl1; eauto using disjoint_sym.
+  Qed.
+
   Lemma union_comm (s1 s2 : set E) :
     sameset (union s1 s2) (union s2 s1).
   Proof.
@@ -483,6 +504,10 @@ Section Maps.
     congruence.
   Qed.
 
+  Lemma undef_on_empty ks :
+    map.undef_on map.empty ks.
+  Proof. firstorder idtac. Qed.
+
   Lemma get_only_differ_undef m1 m2 ks k v :
     map.only_differ m1 ks m2 ->
     map.undef_on m1 ks ->
@@ -550,6 +575,16 @@ Section Maps.
                       [ tauto | ]
     end.
     rewrite map.get_put_diff by congruence. eauto.
+  Qed.
+
+  Lemma of_list_zip_app ks1 ks2 vs1 vs2 :
+    length ks1 = length vs1 ->
+    length ks2 = length vs2 ->
+    (exists l,
+        map.of_list_zip (ks1 ++ ks2) (vs1 ++ vs2) = Some l).
+  Proof.
+    intros. apply map.sameLength_putmany_of_list.
+    rewrite !app_length; lia.
   Qed.
 
   Lemma putmany_of_list_zip_undef_on ks vs m1 m2 s :
@@ -652,6 +687,19 @@ Section WeakestPrecondition.
                       destruct H end.
       eexists; rewrite map.get_put_diff; eauto.
     Qed.
+
+    (* TODO: make module around Maps to stop name collision *)
+    Lemma WP_get_only_differ_undef :
+      forall e vset locals locals' post,
+        map.only_differ locals vset locals' ->
+        map.undef_on locals vset ->
+        get locals e post ->
+        get locals' e post.
+    Proof.
+      cbv [get]; intros.
+      match goal with H : exists _, _ |- _ => destruct H end.
+      destruct_head'_and. eexists; eauto using get_only_differ_undef.
+    Qed.
   End Get.
     
   Section Expr.
@@ -707,11 +755,8 @@ Section WeakestPrecondition.
         expr m locals' e post.
     Proof.
       induction e;
-        cbn [expr expr_body];
-        cbv [dlet.dlet literal get];
-        intros; eauto; [ | ].
-      { match goal with H : exists _, _ |- _ => destruct H end.
-        destruct_head'_and. eexists; eauto using get_only_differ_undef. }
+        cbn [expr expr_body]; cbv [dlet.dlet literal];
+        intros; eauto using WP_get_only_differ_undef; [ ].
       { eapply IHe1; eauto.
         eapply Proper_expr; [ repeat intro | eassumption ].
         cbv beta in *. eapply IHe2; eauto. }

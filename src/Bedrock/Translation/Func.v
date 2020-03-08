@@ -61,23 +61,6 @@ Section Func.
      - they should not set variables; they should assume already defined
    *)
 
-  Fixpoint partition_retnames {t}
-    : base_ltype (listZ:=rep.listZ_mem) t ->
-      listonly_base_ltype t * listexcl_base_ltype t
-    :=
-      match t as t0 return
-            base_ltype t0 ->
-            listonly_base_ltype t0
-            * listexcl_base_ltype t0 with
-      | base.type.prod a b =>
-        fun x =>
-          let p1 := partition_retnames (fst x) in
-          let p2 := partition_retnames (snd x) in
-          ((fst p1, fst p2), (snd p1, snd p2))
-      | base_listZ => fun x => (x, tt)
-      | _ => fun x => (tt, x)
-      end.
-
   (* now store_return_values wants not locs, but the
      listonly_base_ltype *)
 
@@ -112,7 +95,7 @@ Section Func.
     (* store return values *)
     let store_rets_cmd := store_return_values (snd (fst out)) rets in
     (* make new arguments for pointers to returned lists *)
-    let part := partition_retnames rets in
+    let part := extract_listnames rets in
     let out_ptrs := flatten_listonly_base_ltype (fst part) in
     let innames := flatten_argnames argnames ++ out_ptrs in
     let outnames := flatten_listexcl_base_ltype (snd part) in

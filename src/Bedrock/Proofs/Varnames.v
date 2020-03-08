@@ -198,6 +198,10 @@ Section Varnames.
                  | _ => solve [eauto]
                  end.
       Qed.
+
+      Lemma varname_set_listexcl_subset {t} (names : base_ltype t) :
+        subset (varname_set_listexcl names) (varname_set names).
+      Admitted.
     End InMemory.
 
     Section Generic.
@@ -301,6 +305,9 @@ Section Varnames.
         { apply Proper_sep_impl1; eauto. }
         { eapply equiv_listZ_only_differ_undef; eauto. }
       Qed.
+    (* TODO
+     equivalent <-> sep (equivalent_listonly ) (equivalent_listexcl)
+     *)
     End Generic.
   End Equivalence.
   Hint Resolve

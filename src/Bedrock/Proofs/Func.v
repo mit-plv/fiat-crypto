@@ -151,24 +151,27 @@ Section Func.
           tauto. }
   Qed.
 
-  (* This lemma handles looking up the return values *)
-  (* TODO : rename *)
   Lemma look_up_return_values {t} :
     forall (ret : base.interp t)
-           (retnames : base_ltype (listZ:=rep.listZ_mem) t)
+           (retnames : listexcl_base_ltype (listZ:=rep.listZ_mem) t)
            (locals : Semantics.locals)
            (mem : Semantics.mem)
            (R : Semantics.mem -> Prop),
-    sep (equivalent ret (base_rtype_of_ltype retnames) locals) R mem ->
-    let retvalues := base_rtype_of_ltype retnames in
-    WeakestPrecondition.list_map
-      (WeakestPrecondition.get locals) (flatten_retnames retnames)
-      (fun flat_rets =>
-         sep (equivalent_flat_base ret flat_rets) R mem).
+      sep (equivalent_listexcl
+             ret (map_listexcl (@base_rtype_of_ltype _ _) retnames)
+             locals) R mem ->
+      WeakestPrecondition.list_map
+        (WeakestPrecondition.get locals)
+        (flatten_listexcl_base_ltype retnames)
+        (fun flat_rets =>
+           sep (equivalent_listexcl_flat_base ret flat_rets) R mem).
   Proof.
     cbv [flatten_retnames].
     induction t;
       cbn [flatten_base_ltype
+             flatten_listexcl_base_ltype
+             equivalent_listexcl_flat_base
+             equivalent_listexcl
              flatten_rets base_rtype_of_ltype rep.rtype_of_ltype
              flatten_base_rtype equivalent_flat_base
              rep.listZ_mem rep.Z equivalent]; break_match;
@@ -204,6 +207,7 @@ Section Func.
         [ split; intros;
           (eapply Proper_get; [|eassumption]); repeat intro;
           match goal with H : _ |- _ => apply H; solve [eauto] end |  ].
+      fold (@Language.Compilers.base.interp) in *.
       eapply Proper_list_map; [ solve [apply Proper_get] | repeat intro | ].
       2:{ eapply IHt1;
           (* TODO: why does ecancel_assumption not work here? *)
@@ -219,10 +223,6 @@ Section Func.
                       exists (length x) end.
       rewrite firstn_app_sharp, skipn_app_sharp by reflexivity.
       ecancel_assumption. }
-    { apply sep_ex1_l; eexists.
-      apply sep_assoc, sep_emp_l. split; eauto.
-      cbv [WeakestPrecondition.literal dlet.dlet].
-      rewrite word.of_Z_unsigned. reflexivity. }
   Qed.
 
   Lemma initial_context_correct' {t} :
@@ -400,7 +400,6 @@ Section Func.
         (e_valid : valid_func (e _)) :
     Wf3 e ->
     forall (fname : string)
-           (locs : list_locs (type.final_codomain t))
            (retnames : base_ltype (type.final_codomain t))
            (argnames : type.for_each_lhs_of_arrow ltype t)
            (arglengths : type.for_each_lhs_of_arrow list_lengths t)
@@ -413,13 +412,21 @@ Section Func.
       let retlengths := list_lengths_from_value rets in
       (* out := translation output for e2; triple of
          (function arguments, function return variable names, body) *)
-      let out := translate_func e argnames arglengths locs retnames in
+      let out := translate_func e argnames arglengths retnames in
       let f : bedrock_func := (fname, out) in
       forall (tr : Semantics.trace)
              (mem : Semantics.mem)
              (flat_args : list Semantics.word)
+             (out_ptrs : list Semantics.word)
+             (argvalues : list Semantics.word)
              (functions : list bedrock_func)
              (Ra Rr : Semantics.mem -> Prop),
+        (* argument values are the concatenation of true argument values
+           and output pointer values *)
+        argvalues = flat_args ++ out_ptrs ->
+        length out_ptrs =
+        length (flatten_listonly_base_ltype
+                  (fst (extract_listnames retnames))) ->
         (* argnames don't contain variables we could later overwrite *)
         (forall n, ~ varname_set_args argnames (varname_gen n)) ->
         (* argument values are equivalent *)
@@ -431,29 +438,53 @@ Section Func.
         (* retnames don't have duplicates *)
         NoDup (flatten_base_ltype retnames) ->
         (* argnames and retnames are disjoint *)
-        PropSet.disjoint (varname_set_args argnames) (varname_set retnames) ->
+        PropSet.disjoint (varname_set_args argnames)
+                         (varname_set retnames) ->
         (* seplogic frame for return values *)
         sep (lists_reserved_with_initial_context
-               locs retlengths argnames flat_args) Rr mem ->
+               retlengths argnames retnames argvalues) Rr mem ->
         (* translated function produces equivalent results *)
         WeakestPrecondition.call
-          ((fname, out) :: functions) fname tr mem flat_args
+          ((fname, out) :: functions) fname tr mem argvalues
           (fun tr' mem' flat_rets =>
              tr = tr' /\
              (* return values are equivalent *)
-             sep (equivalent_flat_base rets flat_rets) Rr mem').
+             sep (sep (equivalent_listexcl_flat_base rets flat_rets)
+                      (equivalent_listonly_flat_base rets out_ptrs))
+                 Rr mem').
   Proof.
     cbv [translate_func Wf3]; intros. subst.
     cbn [WeakestPrecondition.call
            WeakestPrecondition.call_body WeakestPrecondition.func].
     rewrite eqb_refl.
+    match goal with
+      |- exists l, map.of_list_zip ?ks ?vs = Some l /\ _ =>
+      assert (NoDup ks);
+        [ | assert (exists m, map.of_list_zip ks vs = Some m);
+            [ | cleanup; eexists; split; [ eassumption | ] ] ]
+    end.
+    { apply disjoint_NoDup; eauto using flatten_listonly_NoDup.
+      eapply subset_disjoint;
+        [ | rewrite <-varname_set_args_flatten; solve [eauto] ].
+      eapply flatten_listonly_subset. }
+    { eapply of_list_zip_app; try lia; [ ].
+      erewrite flatten_args_samelength; eauto. }
     match goal with H : _ |- _ =>
                     pose proof H;
                       eapply of_list_zip_flatten_argnames
                         with (argnames0:=argnames) in H;
                       cleanup
     end.
-    eexists; split; [ eassumption | ].
+    match goal with
+    | H : map.of_list_zip _ _ = Some _ |- _ =>
+      pose proof H;
+      cbv [map.of_list_zip] in H;
+        rewrite putmany_of_list_zip_app_l in H;
+        rewrite firstn_app_sharp, skipn_app_sharp in H
+          by eauto using flatten_args_samelength;
+        erewrite putmany_of_list_zip_bind_comm in H by eauto;
+        cbv [bind] in H; repeat break_match_hyps; try congruence; [ ]
+    end.
     cbn [WeakestPrecondition.cmd WeakestPrecondition.cmd_body].
     eapply Proper_cmd; [ solve [apply Proper_call] | repeat intro | ].
     2 : { eapply load_arguments_correct; try eassumption; eauto.
@@ -466,36 +497,75 @@ Section Func.
           cbv [context_equiv]; intros; eauto; [ ].
           eapply only_differ_disjoint_undef_on; eauto;
             [ eapply used_varnames_disjoint; lia | ].
-          eapply of_list_zip_undef_on; eauto; [ ].
-          rewrite <-varname_set_args_flatten.
-          symmetry.
-          eapply disjoint_used_varnames_lt.
-          eauto with lia. }
+          eapply putmany_of_list_zip_undef_on
+            with (ks:=flatten_argnames _); eauto;
+            [ rewrite <-varname_set_args_flatten;
+              symmetry; eapply disjoint_used_varnames_lt;
+              eauto with lia | ].
+          eapply putmany_of_list_zip_undef_on;
+            eauto using undef_on_empty.
+          eapply subset_disjoint';
+            eauto using flatten_listonly_subset.
+          eapply disjoint_used_varnames_lt; eauto with lia. }
     cbv beta in *. cleanup; subst.
     eapply Proper_cmd; [ solve [apply Proper_call] | repeat intro | ].
     2 : {
-      cbv [lists_reserved_with_initial_context] in *;
+      cbv [lists_reserved_with_initial_context] in *.
       break_match_hyps; try congruence; [ ].
       match goal with H : Some _ = Some _ |- _ =>
                       inversion H; clear H; subst end.
       eapply store_return_values_correct; eauto using only_differ_trans.
       { eapply of_list_zip_undef_on; eauto.
+        rewrite PropSet.of_list_app.
         rewrite <-varname_set_args_flatten.
         repeat match goal with
+               | |- PropSet.disjoint (PropSet.union _ _) _ =>
+                 apply disjoint_union_l_iff; split; auto
                | |- PropSet.disjoint _ (PropSet.union _ _) =>
                  apply disjoint_union_r_iff; split; auto
-               | |- PropSet.disjoint _ (used_varnames _ _) =>
-                 symmetry; apply disjoint_used_varnames_lt; intros;
-                   eauto with lia
-               end. }
+               | |- PropSet.disjoint
+                      (PropSet.of_list
+                         (flatten_listonly_base_ltype _))
+                      (used_varnames _ _) =>
+                 eapply subset_disjoint';
+                   [ solve [apply flatten_listonly_subset] | ]
+               end;
+          (* solvers *)
+          try match goal with
+              | |- PropSet.disjoint _ (varname_set_listexcl _) =>
+                eapply subset_disjoint;
+                  solve [eauto using varname_set_listexcl_subset]
+              | |- PropSet.disjoint (used_varnames _ _) _ =>
+                apply disjoint_used_varnames_lt; intros;
+                  solve [eauto with lia]
+              | |- PropSet.disjoint _ (used_varnames _ _) =>
+                symmetry; apply disjoint_used_varnames_lt; intros;
+                  solve [eauto with lia]
+              | _ => solve [eauto using flatten_listonly_disjoint]
+              end. }
       { eapply subset_disjoint'; try eassumption.
         symmetry.
         eauto using disjoint_used_varnames_lt. } }
 
     cbv beta in *. cleanup; subst.
-    eapply Proper_list_map; [ solve [apply Proper_get]
-                            | | eapply look_up_return_values; eauto ].
-    repeat intro; cleanup; eauto.
+    eapply Proper_list_map;
+      [ solve [apply Proper_get]
+      | | eapply look_up_return_values; eauto;
+          apply equivalent_extract_listnames; eauto ].
+    repeat intro; cleanup; subst; eauto.
+    split; eauto.
+
+    use_sep_assumption.
+    cancel.
+    (* we know
+       - equivalent_listonly with locals=a5
+       we need
+       equivalent_listonly_flat with no locals, just out_ptrs
+
+       we can get this because we know that list retnames were set to out_ptrs in the initial context, which hasn't changed, so they're still the same in a5. therefore, if the list retnames are equivalent to x in a5, x is equivalent to out_ptrs.
+       Probably want a separate lemma.
+     *)
+    
   Qed.
 
   (*

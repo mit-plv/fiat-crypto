@@ -28,6 +28,23 @@ Section Lists.
   Context {p : parameters} {p_ok : ok}.
   Local Existing Instance rep.Z.
 
+  Fixpoint extract_listnames {t}
+    : base_ltype (listZ:=rep.listZ_mem) t ->
+      listonly_base_ltype t * listexcl_base_ltype t
+    :=
+      match t as t0 return
+            base_ltype t0 ->
+            listonly_base_ltype t0
+            * listexcl_base_ltype t0 with
+      | base.type.prod a b =>
+        fun x =>
+          let p1 := extract_listnames (fst x) in
+          let p2 := extract_listnames (snd x) in
+          ((fst p1, fst p2), (snd p1, snd p2))
+      | base_listZ => fun x => (x, tt)
+      | _ => fun x => (tt, x)
+      end.
+
   Definition load_list_item (start : Syntax.expr.expr) (i : nat)
     : Syntax.expr.expr :=
     let offset := expr.literal (word_size_in_bytes * Z.of_nat i) in

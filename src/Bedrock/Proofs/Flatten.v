@@ -11,6 +11,7 @@ Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Language.API.
 Require Import Crypto.Bedrock.Util.
 Require Import Crypto.Bedrock.Translation.Flatten.
+Require Import Crypto.Bedrock.Translation.LoadStoreList.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Import ListNotations. Local Open Scope Z_scope.
 
@@ -116,4 +117,24 @@ Section Flatten.
     rewrite varname_set_flatten, IHt2.
     reflexivity.
   Qed.
+
+  Lemma flatten_listonly_NoDup {t} names :
+    NoDup (flatten_base_ltype (t:=t) names) ->
+    NoDup (flatten_listonly_base_ltype (fst (extract_listnames names))).
+  Admitted.
+
+  Lemma flatten_listonly_subset {t} names :
+    PropSet.subset
+      (PropSet.of_list (flatten_listonly_base_ltype (t:=t)
+                          (fst (extract_listnames names))))
+      (varname_set names).
+  Admitted.
+
+  Lemma flatten_listonly_disjoint {t} (names : _ t) :
+    NoDup (flatten_base_ltype names) ->
+    PropSet.disjoint
+      (PropSet.of_list
+         (flatten_listonly_base_ltype (fst (extract_listnames names))))
+      (varname_set_listexcl names).
+  Admitted.
 End Flatten.
