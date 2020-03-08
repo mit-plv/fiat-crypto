@@ -364,6 +364,30 @@ Module Types.
       | _ => fun _ => tt
       end.
 
+    Fixpoint map_listexcl {t}
+             {f g : base.type -> Type}
+             (F : forall t, f t -> g t)
+      : base_listexcl f t -> base_listexcl g t :=
+      match t as t0 return
+            base_listexcl f t0 -> base_listexcl g t0 with
+      | base.type.prod a b =>
+        fun x =>
+          (map_listexcl F (fst x), map_listexcl F (snd x))
+      | base_listZ => fun _ => tt
+      | _ => F _
+      end.
+
+    Fixpoint varname_set_listexcl {t}
+      : base_ltype t ->
+        PropSet.set string :=
+      match t with
+      | base.type.prod a b =>
+        fun x => PropSet.union (varname_set_listexcl (fst x))
+                               (varname_set_listexcl (snd x))
+      | base_listZ => fun _ => PropSet.empty_set
+      | _ => rep.varname_set 
+      end.
+
     Fixpoint equivalent_listonly {t}
       : base.interp t -> (* fiat-crypto value *)
         listonly_base_rtype t -> (* bedrock2 value *)
@@ -394,6 +418,38 @@ Module Types.
       | base_listZ => fun _ _ _ => emp True
       | base_Z => rep.equiv
       |  _ => fun _ _ _ => emp False
+      end.
+
+    Fixpoint equivalent_listexcl_flat_base {t}
+      : base.interp t ->
+        list Semantics.word ->
+        Semantics.mem -> Prop :=
+      match t as t0 return base.interp t0 -> _ with
+      | base.type.prod a b =>
+        fun (x : base.interp a * base.interp b) words =>
+          Lift1Prop.ex1
+            (fun i =>
+               sep (equivalent_listexcl_flat_base (fst x) (firstn i words))
+                   (equivalent_listexcl_flat_base (snd x) (skipn i words)))
+      | base_listZ => fun _ _ => emp True
+      | base_Z => equivalent_flat_base
+      | _ => fun _ _ => emp False
+      end.
+
+    Fixpoint equivalent_listonly_flat_base {t}
+      : base.interp t ->
+        list Semantics.word ->
+        Semantics.mem -> Prop :=
+      match t as t0 return base.interp t0 -> _ with
+      | base.type.prod a b =>
+        fun (x : base.interp a * base.interp b) words =>
+          Lift1Prop.ex1
+            (fun i =>
+               sep (equivalent_listonly_flat_base (fst x) (firstn i words))
+                   (equivalent_listonly_flat_base (snd x) (skipn i words)))
+      | base_listZ => equivalent_flat_base 
+      | base_Z => fun _ _ => emp True
+      | _ => fun _ _ => emp False
       end.
   End defs.
 End Types.

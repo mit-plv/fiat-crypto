@@ -40,12 +40,13 @@ Section LoadStoreList.
   (* separation-logic relation that says space exists in memory for lists
      (other values are ignored) *)
   Fixpoint lists_reserved {t}
-    : base_list_lengths t ->
-      list_locs t ->
+    : base_listonly nat t ->
+      base_rtype (listZ:=rep.listZ_mem) t ->
       Semantics.locals ->
       Semantics.mem ->
       Prop :=
-    match t as t0 return base_list_lengths t0 -> list_locs t0 -> _ with
+    match t as t0 return
+          base_listonly nat t0 -> base_rtype t0 -> _ with
     | base.type.prod a b =>
       fun x y locals => sep (lists_reserved (fst x) (fst y) locals)
                             (lists_reserved (snd x) (snd y) locals)
@@ -54,15 +55,15 @@ Section LoadStoreList.
         (Lift1Prop.ex1
            (fun oldvalues : list Z =>
               sep (emp (length oldvalues = n))
-                  (equivalent (t:=base_listZ) (listZ:=rep.listZ_mem)
+                  (rep.equiv (rep:=rep.listZ_mem)
                               oldvalues loc locals)))
     | base_Z => fun _ _ _ => emp True
     |  _ => fun _ _ _ => emp False
     end.
 
   Fixpoint list_lengths_from_value {t}
-    : base.interp t -> base_list_lengths t :=
-    match t as t0 return base.interp t0 -> base_list_lengths t0 with
+    : base.interp t -> base_listonly nat t :=
+    match t as t0 return base.interp t0 -> base_listonly nat t0 with
     | base.type.prod a b =>
       fun x : base.interp a * base.interp b =>
         (list_lengths_from_value (fst x),
@@ -84,15 +85,20 @@ Section LoadStoreList.
     end.
 
   Definition lists_reserved_with_initial_context {t}
-             (locs : list_locs (type.final_codomain t))
-             (lengths : base_list_lengths (type.final_codomain t))
-             (argnames : type.for_each_lhs_of_arrow ltype t)
+             (lengths : base_listonly nat (type.final_codomain t))
+             (argnames : type.for_each_lhs_of_arrow
+                           (ltype (listZ:=rep.listZ_mem)) t)
+             (retnames : base_ltype (type.final_codomain t))
              (flat_args : list Semantics.word)
     : Semantics.mem -> Prop :=
+    let outptrs :=
+        flatten_listonly_base_ltype (fst (extract_listnames retnames)) in
     match map.of_list_zip
-            (flatten_argnames argnames) flat_args with
-      | Some init_locals => lists_reserved lengths locs init_locals
-      | None => emp True
+            ((flatten_argnames argnames) ++ outptrs)
+            flat_args with
+    | Some init_locals =>
+      lists_reserved lengths (base_rtype_of_ltype retnames) init_locals
+    | None => emp True
     end.
 
   Lemma lists_reserved_0 {listZ:rep.rep base_listZ} start locals:
@@ -129,6 +135,44 @@ Section LoadStoreList.
     { rewrite IHt1, IHt2; try reflexivity; eauto. }
     { repeat intro; sepsimpl; eexists; sepsimpl; eauto.
       eapply equiv_listZ_only_differ_undef_mem; eauto. }
+  Qed.
+
+  Lemma equivalent_extract_listnames {t} :
+    forall (x : base.interp t)
+           (names : base_ltype t)
+           (locals : Semantics.locals)
+           (R : Semantics.mem -> Prop),
+    Lift1Prop.iff1
+      (sep (equivalent x (base_rtype_of_ltype names) locals) R)
+      (sep (equivalent_listexcl
+              x (map_listexcl (@base_rtype_of_ltype _ rep.listZ_mem)
+                              (snd (extract_listnames names))) locals)
+           (sep (equivalent_listonly
+                   x (map_listonly
+                        (base_rtype_of_ltype)
+                        (fst (extract_listnames names))) locals) R)).
+  Proof.
+    induction t;
+      cbn [fst snd equivalent extract_listnames
+               base_rtype_of_ltype rep.rtype_of_ltype
+               equivalent_listexcl map_listexcl
+               equivalent_listonly map_listonly];
+      break_match; intros;
+        try match goal with
+              |- context [emp False] =>
+              split; intros; sepsimpl
+            end; [ solve [cancel] | | ].
+    { rewrite sep_assoc. (* needed for rewrites for some reason *)
+      rewrite IHt1. rewrite IHt2.
+      rewrite !sep_assoc.
+      cancel.
+      (* TODO : this should go by associativity/commutativity; is there a better
+      way than manually selecting indices? *)
+      cancel_seps_at_indices 0 0; [ reflexivity | ].
+      cancel_seps_at_indices 0 1; [ reflexivity | ].
+      cancel_seps_at_indices 0 0; [ reflexivity | ].
+      reflexivity. }
+    { cancel. reflexivity. }
   Qed.
 
   Lemma load_list_item_correct
@@ -492,7 +536,7 @@ Section LoadStoreList.
            (R : Semantics.mem -> Prop),
       let retlengths :=
           list_lengths_from_value (t:=base_listZ) rets2 in
-      let loc : list_locs base_listZ := expr.var start in
+      let loc := expr.var start in
       let offset := (Z.of_nat i * word_size_in_bytes)%Z in
       let loc' := expr.op bopname.add loc (expr.literal offset) in
       let values1 := map expr.var value_names1 in
@@ -657,15 +701,19 @@ Section LoadStoreList.
            (retnames_mem : base_ltype t)
            (vset : PropSet.set string)
            (rets : base.interp t)
-           (locs : list_locs t)
            (functions : list _)
            (tr : Semantics.trace)
            (locals : Semantics.locals)
            (mem : Semantics.mem)
            (R : Semantics.mem -> Prop),
       let retlengths := list_lengths_from_value rets in
-      sep (lists_reserved retlengths locs init_locals) R mem ->
-      map.undef_on init_locals (PropSet.union vset (varname_set retnames_mem)) ->
+      sep (lists_reserved retlengths
+                          (base_rtype_of_ltype retnames_mem)
+                          init_locals) R mem ->
+      map.undef_on
+        init_locals
+        (PropSet.union vset
+                       (varname_set_listexcl retnames_mem)) ->
       map.only_differ init_locals vset locals ->
       (* rets are stored in local retnames *)
       locally_equivalent
@@ -678,11 +726,12 @@ Section LoadStoreList.
       (* translated function produces equivalent results *)
       WeakestPrecondition.cmd
         (WeakestPrecondition.call functions)
-        (store_return_values retnames_local retnames_mem locs)
+        (store_return_values retnames_local retnames_mem)
         tr mem locals
         (fun tr' mem' locals' =>
            tr = tr' /\
-           map.only_differ locals (varname_set retnames_mem) locals' /\
+           map.only_differ
+             locals (varname_set_listexcl retnames_mem) locals' /\
            sep (equivalent
                   rets (base_rtype_of_ltype retnames_mem) locals')
                R mem').
@@ -690,7 +739,8 @@ Section LoadStoreList.
     cbv zeta.
     induction t;
       cbn [fst snd store_return_values lists_reserved
-               locally_equivalent equivalent varname_set
+               locally_equivalent equivalent
+               varname_set varname_set_listexcl
                base_rtype_of_ltype rep.rtype_of_ltype
                rep.equiv rep.varname_set rep.Z
                flatten_base_ltype list_lengths_from_value
@@ -731,7 +781,9 @@ Section LoadStoreList.
       cbv beta in *. cleanup; subst.
       eapply Proper_cmd;
         [ solve [apply Proper_call] | repeat intro | ].
-      2:{ eapply IHt2 with (vset:=PropSet.union vset (varname_set (fst retnames_mem)));
+      2:{ eapply IHt2 with
+              (vset:=PropSet.union
+                       vset (varname_set_listexcl (fst retnames_mem)));
           try ecancel_assumption; eauto.
           { apply undef_on_union_iff; split; eauto.
             apply undef_on_union_iff; split; eauto. }
@@ -739,14 +791,16 @@ Section LoadStoreList.
             eapply only_differ_trans; eauto. }
           { cbv [locally_equivalent].
             eapply equivalent_only_differ; eauto with equiv.
-            symmetry; eauto. } }
+            eapply subset_disjoint';
+              eauto using varname_set_listexcl_subset. } }
       cbv beta in *. cleanup; subst.
       repeat match goal with |- _ /\ _ => split end;
         eauto using only_differ_sym, only_differ_trans.
       use_sep_assumption. cancel.
       eapply equivalent_only_differ_iff1; eauto with equiv.
+      eapply subset_disjoint';
+        eauto using varname_set_listexcl_subset; [ ].
       rewrite !varname_set_flatten.
-      symmetry.
       eapply NoDup_disjoint; eauto using string_dec. }
     { (* base_listZ *)
       repeat straightline.
@@ -755,59 +809,39 @@ Section LoadStoreList.
              | H : map.undef_on _ (PropSet.union _ _) |- _ =>
                apply undef_on_union_iff in H
              end.
-      cbn [rep.equiv rep.listZ_mem rep.Z] in *.
+      cbn [rep.Z rep.listZ_mem rep.equiv rep.rtype_of_ltype] in *.
       sepsimpl.
-      eexists; split.
-      { eapply expr_only_differ_undef;
-          eauto using expr_empty. }
       eapply Proper_cmd;
         [ solve [apply Proper_call] | repeat intro | ].
       2:{
         eapply store_list_correct with
             (rets:=rets) (rets1:=[]) (rets2:=rets)
-            (value_names1:=nil); auto using List.length_nil; [ | | ].
+            (value_names1:=nil); auto using List.length_nil; [ | ].
         { cbn [rep.equiv rep.rtype_of_ltype rep.listZ_local] in *.
           eapply Forall.eq_length_Forall2, Forall.Forall2_map_r_iff.
           eauto. }
-        { cbn [rep.equiv rep.Z rep.rtype_of_ltype rep.listZ_local] in *.
-          sepsimpl; eauto using dexpr_put_same.
-          eapply Forall2_impl_strong; eauto.
-          intros; sepsimpl.
-          match goal with H : _ |- _ => apply in_map_iff in H end.
-          cleanup; subst.
-
-          cbn [rep.varname_set rep.listZ_mem rep.Z] in *.
-          match goal with H : _ |- _ =>
-                          rewrite varname_set_local in H end.
-          match goal with H : PropSet.disjoint _ _ |- _ =>
-                          apply disjoint_singleton_r_iff in H;
-                            eauto using string_dec;
-                            cbv [PropSet.of_list] in H
-          end.
-          cbn [rep.equiv rep.listZ_mem rep.Z].
-          sepsimpl.
-          apply dexpr_put_diff; [ | eassumption].
-          intro; subst; tauto. }
         { apply sep_assoc.
           eapply Proper_sep_iff1;
             [ apply equiv_nil_iff1 | reflexivity | ].
           sepsimpl. eexists.
           apply sep_emp_l; split;
-            [ solve [eauto using dexpr_put_same] | ].
+            [ eapply expr_only_differ_undef; solve [eauto] | ].
           cbn [lists_reserved equivalent rep.equiv rep.listZ_mem rep.Z].
           sepsimpl. eexists.
           sepsimpl; eauto.
           eexists; sepsimpl; [ | ecancel_assumption ].
           cbn [WeakestPrecondition.dexpr
                  WeakestPrecondition.expr
-                 WeakestPrecondition.expr_body].
-          apply get_put_same.
+                 WeakestPrecondition.expr_body] in *.
+          eapply WP_get_only_differ_undef; eauto.
+          eapply Proper_get; [ repeat intro | eassumption ].
           cbn [Semantics.interp_binop].
           cbv [WeakestPrecondition.literal dlet.dlet].
-          rewrite <-word.ring_morph_add.
+          subst. rewrite <-word.ring_morph_add.
           f_equal; lia. } }
       cbv beta in *. cleanup; subst.
       repeat match goal with |- _ /\ _ => split end;
-        eauto using only_differ_sym, only_differ_put. }
+        eauto using only_differ_sym, only_differ_put,
+        only_differ_empty. }
   Qed.
 End LoadStoreList.
