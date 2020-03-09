@@ -219,6 +219,10 @@ Section Sets.
 
   Lemma subset_union_r (s1 s2 s3 : set E) :
     subset s1 s2 ->
+    subset s1 (union s2 s3).
+  Proof. firstorder idtac. Qed.
+
+  Lemma subset_union_r' (s1 s2 s3 : set E) :
     subset s1 s3 ->
     subset s1 (union s2 s3).
   Proof. firstorder idtac. Qed.
@@ -291,7 +295,8 @@ Section Sets.
     intros. rewrite or_assoc. reflexivity.
   Qed.
 
-  Lemma of_list_nil : sameset (@of_list E []) empty_set.
+  Lemma subset_empty_l (s : set E) :
+    subset empty_set s.
   Proof. firstorder idtac. Qed.
 
   Lemma disjoint_empty_l (s : set E) :
@@ -315,6 +320,11 @@ Section Sets.
     rewrite union_comm. apply union_empty_l.
   Qed.
 
+  Lemma of_list_nil : sameset (@of_list E []) empty_set.
+  Proof. firstorder idtac. Qed.
+
+  Lemma of_list_singleton x: sameset (@of_list E [x]) (singleton_set x).
+  Proof. firstorder idtac. Qed.
 End Sets.
 
 Section Maps.
