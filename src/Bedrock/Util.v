@@ -617,6 +617,18 @@ Section Maps.
     eapply putmany_of_list_zip_undef_on; eauto.
     cbv [map.undef_on map.agree_on]; reflexivity.
   Qed.
+
+  Lemma only_differ_notin k ks m m' :
+    map.only_differ m ks m' ->
+    ~ ks k ->
+    map.get m' k = map.get m k.
+  Proof.
+    cbv [map.only_differ PropSet.elem_of].
+    let H := fresh in
+    intro H; specialize (H k); destruct H.
+    { tauto. }
+    { auto. } 
+  Qed.
 End Maps.
 
 (* These lemmas should be moved to bedrock2, not coqutil *)
@@ -640,6 +652,14 @@ Section Separation.
            | _ => tauto
            | _ => split
            end.
+  Qed.
+
+  Lemma iff1_sep_cancel_both p1 p2 q1 q2 :
+    Lift1Prop.iff1 p1 p2 ->
+    Lift1Prop.iff1 q1 q2 ->
+    Lift1Prop.iff1 (sep p1 q1) (sep p2 q2).
+  Proof.
+    intros Hp Hq. rewrite Hp, Hq. reflexivity.
   Qed.
 End Separation.
 
