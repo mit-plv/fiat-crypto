@@ -14,6 +14,17 @@ Require Import Crypto.Language.API.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZUtil.ModInv.
 Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Bedrock.Proofs.Func.
+Require Import coqutil.Word.Interface.
+Require Import coqutil.Word.Properties.
+Require Import coqutil.Map.Interface.
+Require Import coqutil.Map.Properties.
+Require Import bedrock2.Array.
+Require Import bedrock2.Scalars.
+Require Import bedrock2.ProgramLogic.
+Require Import bedrock2.WeakestPrecondition.
+Require Import bedrock2.WeakestPreconditionProperties.
+Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Syntax.
 Require Import bedrock2.Semantics.
 Require Import bedrock2.BasicC64Semantics.
@@ -118,22 +129,6 @@ Module X25519_64.
        | ErrorT.Error _ => (nil, nil, Syntax.cmd.skip)
        end).
 
-    Import NotationsCustomEntry.
-    Local Set Printing Width 150.
-    Compute mulmod_bedrock.
-
-    Require Import Crypto.Bedrock.Proofs.Func.
-    Require Import coqutil.Word.Interface.
-    Require Import coqutil.Word.Properties.
-    Require Import coqutil.Map.Interface.
-    Require Import coqutil.Map.Properties.
-    Require Import bedrock2.Array.
-    Require Import bedrock2.Scalars.
-    Require Import bedrock2.ProgramLogic.
-    Require Import bedrock2.WeakestPrecondition.
-    Require Import bedrock2.WeakestPreconditionProperties.
-    Require Import bedrock2.Map.Separation.
-
     Section Proofs.
 
       (* requires some kind of proof about decimal stringification *)
@@ -170,18 +165,18 @@ Module X25519_64.
 
       Instance spec_of_mulmod_bedrock : spec_of mulmod_bedrock :=
         fun functions =>
-          forall x y px py t m
-                 (R : Semantics.mem -> Prop),
-            sep (sep (Bignum px x) (Bignum py y)) R m ->
+          forall x y px py pout old_out t m
+                 (Ra Rr : Semantics.mem -> Prop),
+            sep (sep (Bignum px x) (Bignum py y)) Ra m ->
+            sep (Bignum pout old_out) Rr m ->
             WeakestPrecondition.call
               (p:=@semantics p)
               functions mulmod_bedrock t m
-              (px :: py :: nil)
+              (px :: py :: pout :: nil)
               (fun t' m' rets =>
                  t = t' /\
-                 rets = [px]%list /\
-                 sep (sep (Bignum px ((x * y) mod M)%Z)
-                          (Bignum py y)) R m').
+                 rets = []%list /\
+                 sep (Bignum pout ((x * y) mod M)%Z) Rr m').
 
       (* TODO: maybe make a computable condition for this *)
       (* Won't pass right now because valid_expr isn't complete *)
@@ -275,7 +270,9 @@ Module X25519_64.
                       ys end in
           apply translate_func_correct
             with (args:=(xs, (ys, tt)))
-                 (Ra:=R) (Rr:=sep (Bignum py y) R).
+                 (flat_args:=[px;py]%list)
+                 (out_ptrs:=[pout]%list)
+                 (Ra0:=Ra) (Rr0:=Rr).
           { apply mulmod_valid_func; eauto. }
           { apply mulmod_Wf; eauto. }
           { cbn [LoadStoreList.list_lengths_from_args
@@ -285,6 +282,8 @@ Module X25519_64.
             repeat match goal with H : length _ = n |- _ =>
                                    rewrite H end.
             reflexivity. }
+          { reflexivity. }
+          { reflexivity. }
           { intros.
             cbn [fst snd Types.varname_set_args Types.varname_set
                      Types.rep.varname_set Types.rep.listZ_mem
@@ -338,22 +337,22 @@ Module X25519_64.
             cbv [Bignum].
             sepsimpl.
             (let xs := (match goal with
-                          Hx : eval ?xs = x |- _ =>
+                          Hx : eval ?xs = old_out |- _ =>
                           xs end) in
              exists xs).
             sepsimpl;
               [ rewrite map_length, mulmod_length by assumption;
                 congruence | ].
-            exists (word.unsigned px). sepsimpl.
-            { apply get_put_diff; [ congruence | ].
-              apply get_put_same, word.of_Z_unsigned. }
+            rewrite map_of_Z_unsigned.
+            eexists. sepsimpl.
+            { apply get_put_same, word.of_Z_unsigned. }
+            rewrite word.of_Z_unsigned.
+            assumption. } }
 
-            eexists. sepsimpl; eauto; [ ].
-            rewrite map_of_Z_unsigned, word.of_Z_unsigned.
-            change parameters with semantics in *.
-            SeparationLogic.ecancel_assumption. } }
         repeat intro; cbv beta in *.
         cbn [Types.equivalent_flat_base
+               Types.equivalent_listexcl_flat_base
+               Types.equivalent_listonly_flat_base
                Types.rep.equiv Types.rep.listZ_mem Types.rep.Z
                type.final_codomain] in *.
         repeat match goal with
@@ -362,12 +361,6 @@ Module X25519_64.
                | H : _ /\ _ |- _ => destruct H
                | |- _ /\ _ => split; [ reflexivity | ]
                end.
-        (* see TODO above spec *)
-        match goal with
-          |- ?rets = [px]%list /\ _ =>
-          assert (rets = [px]%list) by admit;
-            split; [ assumption | subst ]
-        end.
         sepsimpl.
         match goal with
         | H : dexpr _ _ (expr.literal _) _ |- _ =>
@@ -375,30 +368,20 @@ Module X25519_64.
             cbv [literal] in H; rewrite word.of_Z_unsigned in H;
               inversion H; clear H; subst
         end.
-        match goal with
-        | H : sep ?p (sep ?q ?r) ?m
-          |- sep (sep _ ?q) ?r ?m =>
-          eapply SeparationLogic.sep_assoc;
-            eapply SeparationLogic.Proper_sep_impl1;
-            [ | reflexivity | eapply H ]; [ ];
-            clear H; repeat intro
-        end.
         cbv [Bignum].
-        eexists; sepsimpl;
-          [ | | eassumption];
+        sepsimpl.
+        eexists; sepsimpl; [ | | eassumption];
           [ | cbn [type.app_curried];
               rewrite map_length, mulmod_length; solve [eauto] ].
-        clear H.
         cbn [type.app_curried fst snd].
         rewrite map_unsigned_of_Z.
         apply mulmod_correct; eauto.
-      Admitted.
-
+      Qed.
+      (* Print Assumptions mulmod_bedrock_correct. *)
     End Proofs.
 
     Import NotationsCustomEntry.
     Local Set Printing Width 150.
     Redirect "Crypto.Bedrock.Test_X25519_64.mulmod_bedrock" Compute mulmod_bedrock.
-
   End __.
 End X25519_64.
