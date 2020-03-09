@@ -202,6 +202,7 @@ Section Varnames.
       Lemma varname_set_listexcl_subset {t} (names : base_ltype t) :
         subset (varname_set_listexcl names) (varname_set names).
       Admitted.
+
     End InMemory.
 
     Section Generic.

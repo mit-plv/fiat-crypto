@@ -394,6 +394,91 @@ Section Func.
         eapply initial_context_correct'; solve[eauto]. } }
   Qed.
 
+  (* TODO: move? *)
+  (* TODO: rename initial_context_correct to coordinate with this *)
+  Lemma equivalent_listonly_flat_iff1 {t} :
+    forall (names : listonly_base_ltype t) (values : list Semantics.word)
+           (l locals init_locals : Semantics.locals)
+           (vset : PropSet.set string) (x : base.interp t),
+      NoDup (flatten_listonly_base_ltype names) ->
+      map.putmany_of_list_zip (flatten_listonly_base_ltype names) values l = Some init_locals ->
+      map.only_differ init_locals vset locals ->
+      PropSet.disjoint vset (PropSet.of_list (flatten_listonly_base_ltype names)) ->
+      Lift1Prop.iff1
+        (equivalent_listonly x (map_listonly base_rtype_of_ltype names) locals)
+        (equivalent_listonly_flat_base x values).
+  Proof.
+    induction t;
+      cbn [fst snd equivalent_listonly equivalent_listonly_flat_base
+               flatten_listonly_base_ltype 
+               equivalent_flat_base map_listonly];
+      intros; break_match; try reflexivity; [ | | ].
+    { cbn [map.putmany_of_list_zip] in *.
+      break_match_hyps; try congruence; [ ].
+      split; intros; sepsimpl; tauto. }
+    { destruct names. cbn [fst snd] in *.
+      match goal with
+      | H : _ |- _ =>
+        pose proof H; rewrite putmany_of_list_zip_app_l in H
+      end.
+      match goal with
+      | H : NoDup (_ ++ _) |- _ =>
+        pose proof H; apply NoDup_app_iff in H; cleanup
+      end.
+      cbv [bind] in *. break_match_hyps; try congruence; [ ].
+      match goal with
+      | H : _ |- _ => rewrite PropSet.of_list_app in H;
+                        rewrite disjoint_union_r_iff in H
+      end.
+      cleanup.
+
+      match goal with
+      | H : map.putmany_of_list_zip _ (List.firstn _ _) _ = Some _ |- _ =>
+        pose proof H; apply map.only_differ_putmany in H
+      end.
+      match goal with
+      | H : map.putmany_of_list_zip _ (List.skipn _ _) _ = Some _ |- _ =>
+        pose proof H; apply map.only_differ_putmany in H
+      end.
+
+      erewrite IHt1; eauto using only_differ_trans;
+        [ | apply disjoint_union_l_iff; split; eauto;
+            symmetry; solve [eauto using NoDup_disjoint] ].
+      erewrite IHt2 by eauto using only_differ_trans.
+      split; intros; [ eexists; eassumption | ].
+      sepsimpl.
+      erewrite <-flatten_listonly_samelength by ecancel_assumption.
+      rewrite firstn_length_firstn, skipn_length_firstn.
+      fold (@Language.Compilers.base.interp) in *.
+      ecancel_assumption. }
+    { cbn [map.putmany_of_list_zip] in *.
+      break_match_hyps; try congruence; [ ].
+      match goal with H : Some _ = Some _ |- _ =>
+                      inversion H; subst; clear H end.
+      cbn [rep.Z rep.listZ_mem base_rtype_of_ltype rep.rtype_of_ltype
+                 rep.equiv length List.hd].
+      cbn [WeakestPrecondition.dexpr
+             WeakestPrecondition.expr WeakestPrecondition.expr_body].
+      cbv [WeakestPrecondition.literal dlet.dlet].
+      repeat match goal with
+             | H : _ |- _ => rewrite map.get_put_same in H
+             | H : context [PropSet.of_list [_] ] |- _ =>
+               rewrite PropSet.of_list_cons, add_union_singleton in H;
+                 rewrite of_list_nil, union_empty_r in H
+             | H : map.only_differ (map.put _ ?k ?v) _ ?m' |- _ =>
+               eapply only_differ_notin in H;
+                 [ | eapply disjoint_singleton_r_iff; eassumption ]
+             end.
+      cbv [WeakestPrecondition.get].
+      split; intros; sepsimpl; subst; try reflexivity.
+      { eexists. sepsimpl; eauto; [ ].
+        rewrite word.of_Z_unsigned; congruence. }
+      { eexists; sepsimpl; eauto; [ ].
+        match goal with H : _ |- _ => 
+                        erewrite word.of_Z_unsigned in H end.
+        eexists; split; eauto. } }
+  Qed.
+
   Lemma translate_func_correct {t}
         (e : API.Expr t)
         (* expressions are valid input to translate_func *)
@@ -482,8 +567,9 @@ Section Func.
         rewrite putmany_of_list_zip_app_l in H;
         rewrite firstn_app_sharp, skipn_app_sharp in H
           by eauto using flatten_args_samelength;
+        pose proof H; (* preserve original ordering *)
         erewrite putmany_of_list_zip_bind_comm in H by eauto;
-        cbv [bind] in H; repeat break_match_hyps; try congruence; [ ]
+        cbv [bind] in *; repeat break_match_hyps; try congruence; [ ]
     end.
     cbn [WeakestPrecondition.cmd WeakestPrecondition.cmd_body].
     eapply Proper_cmd; [ solve [apply Proper_call] | repeat intro | ].
@@ -557,15 +643,23 @@ Section Func.
 
     use_sep_assumption.
     cancel.
-    (* we know
-       - equivalent_listonly with locals=a5
-       we need
-       equivalent_listonly_flat with no locals, just out_ptrs
 
-       we can get this because we know that list retnames were set to out_ptrs in the initial context, which hasn't changed, so they're still the same in a5. therefore, if the list retnames are equivalent to x in a5, x is equivalent to out_ptrs.
-       Probably want a separate lemma.
-     *)
-    
+    repeat match goal with H : NoDup (_ ++ _) |- _ =>
+                           apply NoDup_app_iff in H end.
+    cleanup.
+
+    eapply equivalent_listonly_flat_iff1; eauto using only_differ_trans; [ ].
+    repeat match goal with
+             |- PropSet.disjoint (PropSet.union _ _) _ =>
+             eapply disjoint_union_l_iff; split
+           | _ =>
+             solve[eauto using flatten_listonly_disjoint,
+                   subset_disjoint, flatten_listonly_subset, disjoint_used_varnames_lt]
+           | _ =>
+             symmetry;
+               solve[eauto using flatten_listonly_disjoint,
+                     subset_disjoint, flatten_listonly_subset, disjoint_used_varnames_lt]
+           end.
   Qed.
 
   (*

@@ -137,4 +137,25 @@ Section Flatten.
          (flatten_listonly_base_ltype (fst (extract_listnames names))))
       (varname_set_listexcl names).
   Admitted.
+
+  Lemma flatten_listonly_samelength {t}
+        (names : listonly_base_ltype t) (value : base.interp t) :
+    forall (words : list Semantics.word) R mem,
+      sep (equivalent_listonly_flat_base value words) R mem ->
+      length words = length (flatten_listonly_base_ltype names).
+  Proof.
+    induction t;
+      cbn [flatten_listonly_base_ltype equivalent_listonly_flat_base
+                                       equivalent_flat_base];
+      break_match;
+      repeat match goal with
+             | _ => progress (intros; subst)
+             | _ => progress sepsimpl
+             | _ => rewrite app_length
+             | _ => solve [eauto]
+             end.
+    erewrite <-IHt1, <-IHt2 by ecancel_assumption.
+    rewrite skipn_length, firstn_length.
+    apply Min.min_case_strong; intros; lia.
+  Qed.
 End Flatten.

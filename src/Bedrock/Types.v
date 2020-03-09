@@ -363,7 +363,6 @@ Module Types.
       | base_listZ => f
       | _ => fun _ => tt
       end.
-
     Fixpoint map_listexcl {t}
              {f g : base.type -> Type}
              (F : forall t, f t -> g t)
@@ -377,6 +376,17 @@ Module Types.
       | _ => F _
       end.
 
+
+    Fixpoint varname_set_listonly {t}
+      : base_ltype t ->
+        PropSet.set string :=
+      match t with
+      | base.type.prod a b =>
+        fun x => PropSet.union (varname_set_listonly (fst x))
+                               (varname_set_listonly (snd x))
+      | base_listZ => rep.varname_set
+      | _ => fun _ => PropSet.empty_set 
+      end.
     Fixpoint varname_set_listexcl {t}
       : base_ltype t ->
         PropSet.set string :=
@@ -431,7 +441,7 @@ Module Types.
             (fun i =>
                sep (equivalent_listexcl_flat_base (fst x) (firstn i words))
                    (equivalent_listexcl_flat_base (snd x) (skipn i words)))
-      | base_listZ => fun _ _ => emp True
+      | base_listZ => fun _ words => emp (words = nil) 
       | base_Z => equivalent_flat_base
       | _ => fun _ _ => emp False
       end.
@@ -448,7 +458,7 @@ Module Types.
                sep (equivalent_listonly_flat_base (fst x) (firstn i words))
                    (equivalent_listonly_flat_base (snd x) (skipn i words)))
       | base_listZ => equivalent_flat_base 
-      | base_Z => fun _ _ => emp True
+      | base_Z => fun _ words => emp (words = nil)
       | _ => fun _ _ => emp False
       end.
   End defs.
