@@ -199,10 +199,27 @@ Section Varnames.
                  end.
       Qed.
 
+      Lemma varname_set_listonly_listexcl {t} (names : _ t) :
+        sameset
+          (varname_set names)
+          (union (varname_set_listonly names) (varname_set_listexcl names)).
+      Proof.
+        induction t;
+          cbn [fst snd varname_set varname_set_listexcl
+                   varname_set_listonly];
+          break_match; intros;
+            rewrite ?union_empty_l, ?union_empty_r;
+            try reflexivity; [ ].
+        rewrite IHt1, IHt2.
+        clear. firstorder idtac.
+      Qed.
+
       Lemma varname_set_listexcl_subset {t} (names : base_ltype t) :
         subset (varname_set_listexcl names) (varname_set names).
-      Admitted.
-
+      Proof.
+        rewrite varname_set_listonly_listexcl.
+        clear. firstorder idtac.
+      Qed.
     End InMemory.
 
     Section Generic.

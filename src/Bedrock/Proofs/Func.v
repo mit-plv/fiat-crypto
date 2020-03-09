@@ -463,8 +463,7 @@ Section Func.
       repeat match goal with
              | H : _ |- _ => rewrite map.get_put_same in H
              | H : context [PropSet.of_list [_] ] |- _ =>
-               rewrite PropSet.of_list_cons, add_union_singleton in H;
-                 rewrite of_list_nil, union_empty_r in H
+               rewrite of_list_singleton in H
              | H : map.only_differ (map.put _ ?k ?v) _ ?m' |- _ =>
                eapply only_differ_notin in H;
                  [ | eapply disjoint_singleton_r_iff; eassumption ]

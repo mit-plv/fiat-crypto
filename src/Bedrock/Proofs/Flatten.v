@@ -12,6 +12,7 @@ Require Import Crypto.Language.API.
 Require Import Crypto.Bedrock.Util.
 Require Import Crypto.Bedrock.Translation.Flatten.
 Require Import Crypto.Bedrock.Translation.LoadStoreList.
+Require Import Crypto.Bedrock.Proofs.Varnames.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Import ListNotations. Local Open Scope Z_scope.
 
@@ -118,17 +119,130 @@ Section Flatten.
     reflexivity.
   Qed.
 
-  Lemma flatten_listonly_NoDup {t} names :
-    NoDup (flatten_base_ltype (t:=t) names) ->
-    NoDup (flatten_listonly_base_ltype (fst (extract_listnames names))).
-  Admitted.
-
   Lemma flatten_listonly_subset {t} names :
     PropSet.subset
       (PropSet.of_list (flatten_listonly_base_ltype (t:=t)
                           (fst (extract_listnames names))))
       (varname_set names).
-  Admitted.
+  Proof.
+    induction t;
+      cbn [fst snd varname_set extract_listnames
+               flatten_listonly_base_ltype];
+      break_match; intros; cbn [fst snd];
+        eauto using subset_empty_l; [ | ].
+    { rewrite PropSet.of_list_app.
+      eauto using subset_union_l, subset_union_r, subset_union_r'. }
+    { rewrite of_list_singleton. reflexivity. }
+  Qed.
+
+  Lemma flatten_listonly_sublist {t} names :
+    forall x,
+      In x (flatten_listonly_base_ltype (fst (extract_listnames names))) ->
+      In x (flatten_base_ltype (t:=t) names).
+  Proof.
+    intros.
+    pose proof (flatten_listonly_subset names) as Hsubset.
+    rewrite varname_set_flatten in Hsubset.
+    apply Hsubset. assumption.
+  Qed.
+
+  Lemma flatten_listonly_NoDup {t} names :
+    NoDup (flatten_base_ltype (t:=t) names) ->
+    NoDup (flatten_listonly_base_ltype (fst (extract_listnames names))).
+  Proof.
+    induction t;
+      cbn [extract_listnames fst snd flatten_base_ltype
+                             flatten_listonly_base_ltype];
+      intros; break_match;
+        repeat match goal with
+               | |- NoDup [] => constructor
+               | |- NoDup (_ :: _) => constructor
+               | H : NoDup (_ :: _) |- _ => inversion H; subst; clear H
+               | H : NoDup (_ ++ _) |- _ =>
+                 apply NoDup_app_iff in H; cleanup
+               | |- ~ (In _ []) => cbv [In]; tauto
+               end; [ ].
+    apply NoDup_app_iff; repeat split; eauto; repeat intro;
+      repeat match goal with
+             | H : In _ (flatten_listonly_base_ltype _) |- _ =>
+               apply flatten_listonly_sublist in H
+             | H : context [~ In _ _] |- _ =>
+               eapply H; solve [eauto]
+             end.
+  Qed.
+
+  Lemma varname_set_flatten_listonly {t} (names : _ t) :
+    PropSet.sameset
+      (PropSet.of_list
+         (flatten_listonly_base_ltype (fst (extract_listnames names))))
+      (varname_set_listonly names).
+  Proof.
+    induction t;
+      cbn [extract_listnames fst snd varname_set_listonly 
+                             flatten_listonly_base_ltype];
+      break_match; intros; rewrite ?of_list_nil; try reflexivity;
+        [ | ].
+    { rewrite PropSet.of_list_app.
+      rewrite IHt1, IHt2. reflexivity. }
+    { rewrite of_list_singleton. reflexivity. }
+  Qed.
+
+  Lemma varname_set_flatten_listexcl {t} (names : _ t) :
+    PropSet.sameset
+      (PropSet.of_list
+         (flatten_listexcl_base_ltype (snd (extract_listnames names))))
+      (varname_set_listexcl names).
+  Proof.
+    induction t;
+      cbn [extract_listnames fst snd varname_set_listexcl
+                             flatten_listexcl_base_ltype];
+      break_match; intros; cbn [fst snd];
+        rewrite ?of_list_singleton; try reflexivity; [ ].
+    rewrite PropSet.of_list_app.
+    rewrite IHt1, IHt2.
+    reflexivity.
+  Qed.
+
+  Lemma flatten_listonly_flatten_listexcl_disjoint {t} (names : _ t) :
+    NoDup (flatten_base_ltype names) ->
+    PropSet.disjoint
+      (PropSet.of_list
+         (flatten_listonly_base_ltype (fst (extract_listnames names))))
+      (PropSet.of_list
+         (flatten_listexcl_base_ltype (snd (extract_listnames names)))).
+  Proof.
+    induction t;
+      cbn [extract_listnames fst snd flatten_base_ltype
+                             flatten_listexcl_base_ltype
+                             flatten_listonly_base_ltype];
+      intros; break_match;
+        try match goal with
+            | H : NoDup (_ ++ _) |- _ =>
+              let H' := fresh in
+              pose proof H as H'; apply NoDup_disjoint in H
+            end;
+        repeat match goal with
+               | H : NoDup (_ ++ _) |- _ =>
+                 apply NoDup_app_iff in H; cleanup
+               | _ => rewrite of_list_nil
+               | _ => rewrite PropSet.of_list_app
+               | _ => solve [eauto using disjoint_empty_l, disjoint_empty_r]
+               end; [ ].
+    apply disjoint_union_l_iff; split;
+      (apply disjoint_union_r_iff; split; eauto; [ ]);
+    repeat match goal with
+               | H : _ |- _ => erewrite <-!varname_set_flatten in H
+               | H : _ |- _ => erewrite varname_set_listonly_listexcl in H
+               | H : PropSet.disjoint (PropSet.union _ _) _ |- _ =>
+                 apply disjoint_union_l_iff in H; cleanup
+               | H : PropSet.disjoint _ (PropSet.union _ _) |- _ =>
+                 apply disjoint_union_r_iff in H; cleanup
+               | _ => rewrite varname_set_flatten_listonly
+               | _ => rewrite varname_set_flatten_listexcl
+               | _ => solve [eauto]
+               | _ => symmetry; solve [eauto]
+           end.
+  Qed.
 
   Lemma flatten_listonly_disjoint {t} (names : _ t) :
     NoDup (flatten_base_ltype names) ->
@@ -136,7 +250,10 @@ Section Flatten.
       (PropSet.of_list
          (flatten_listonly_base_ltype (fst (extract_listnames names))))
       (varname_set_listexcl names).
-  Admitted.
+  Proof.
+    intros. rewrite <-varname_set_flatten_listexcl.
+    eauto using flatten_listonly_flatten_listexcl_disjoint.
+  Qed.
 
   Lemma flatten_listonly_samelength {t}
         (names : listonly_base_ltype t) (value : base.interp t) :
