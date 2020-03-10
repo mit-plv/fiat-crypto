@@ -1,11 +1,22 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.MSets.MSetPositive.
 Require Import Coq.FSets.FMapPositive.
+Require Import Coq.micromega.Lia.
 Require Import Coq.Strings.String.
 Require Import Coq.Strings.Ascii.
 Require Import Coq.Bool.Bool.
+Require Import Coq.Structures.Orders.
+Require Import Coq.Structures.OrdersEx.
+Require Import Coq.MSets.MSetInterface.
+Require Import Coq.MSets.MSetPositive.
 Require Import Crypto.Util.ListUtil Coq.Lists.List.
 Require Crypto.Util.Strings.String.
+Require Import Crypto.Util.Structures.Equalities.Sum.
+Require Import Crypto.Util.Structures.Equalities.Iso.
+Require Import Crypto.Util.Structures.Orders.Sum.
+Require Import Crypto.Util.Structures.Orders.Iso.
+Require Import Crypto.Util.MSets.Iso.
+Require Import Crypto.Util.MSets.Sum.
 Require Import Crypto.Util.Strings.Decimal.
 Require Import Crypto.Util.Strings.HexString.
 Require Import Crypto.Util.Strings.Show.
@@ -17,6 +28,7 @@ Require Import Crypto.Util.OptionList.
 Require Import Rewriter.Language.Language.
 Require Import Crypto.Language.API.
 Require Import Crypto.AbstractInterpretation.AbstractInterpretation.
+Require Import Crypto.Util.Sum.
 Require Import Crypto.Util.Bool.Equality.
 Require Import Crypto.Util.Notations.
 Import Coq.Lists.List ListNotations. Local Open Scope zrange_scope. Local Open Scope Z_scope.
@@ -660,58 +672,6 @@ Module Compilers.
       End expr.
     End PHOAS.
 
-    Record ident_infos :=
-      { bitwidths_used : PositiveSet.t;
-        addcarryx_lg_splits : PositiveSet.t;
-        mulx_lg_splits : PositiveSet.t;
-        cmovznz_bitwidths : PositiveSet.t }.
-    Definition ident_info_empty : ident_infos
-      := Build_ident_infos PositiveSet.empty PositiveSet.empty PositiveSet.empty PositiveSet.empty.
-    Definition ident_info_diff (x y : ident_infos) : ident_infos
-      := let (x0, x1, x2, x3) := x in
-         let (y0, y1, y2, y3) := y in
-         Build_ident_infos
-           (PositiveSet.diff x0 y0)
-           (PositiveSet.diff x1 y1)
-           (PositiveSet.diff x2 y2)
-           (PositiveSet.diff x3 y3).
-    Definition ident_info_diff_except_bitwidths (x y : ident_infos) : ident_infos
-      := let (x0, x1, x2, x3) := x in
-         let (y0, y1, y2, y3) := y in
-         Build_ident_infos
-           x0
-           (PositiveSet.diff x1 y1)
-           (PositiveSet.diff x2 y2)
-           (PositiveSet.diff x3 y3).
-    Definition ident_info_union (x y : ident_infos) : ident_infos
-      := let (x0, x1, x2, x3) := x in
-         let (y0, y1, y2, y3) := y in
-         Build_ident_infos
-           (PositiveSet.union x0 y0)
-           (PositiveSet.union x1 y1)
-           (PositiveSet.union x2 y2)
-           (PositiveSet.union x3 y3).
-    Definition ident_info_of_bitwidths_used (v : PositiveSet.t) : ident_infos
-      := {| bitwidths_used := v;
-            addcarryx_lg_splits := PositiveSet.empty;
-            mulx_lg_splits := PositiveSet.empty;
-            cmovznz_bitwidths := PositiveSet.empty |}.
-    Definition ident_info_of_addcarryx (v : PositiveSet.t) : ident_infos
-      := {| bitwidths_used := PositiveSet.empty;
-            addcarryx_lg_splits := v;
-            mulx_lg_splits := PositiveSet.empty;
-            cmovznz_bitwidths := PositiveSet.empty |}.
-    Definition ident_info_of_mulx (v : PositiveSet.t) : ident_infos
-      := {| bitwidths_used := PositiveSet.empty;
-            addcarryx_lg_splits := PositiveSet.empty;
-            mulx_lg_splits := v;
-            cmovznz_bitwidths := PositiveSet.empty |}.
-    Definition ident_info_of_cmovznz (v : PositiveSet.t) : ident_infos
-      := {| bitwidths_used := PositiveSet.empty;
-            addcarryx_lg_splits := PositiveSet.empty;
-            mulx_lg_splits := PositiveSet.empty;
-            cmovznz_bitwidths := v |}.
-
     Definition LinesToString (lines : list string)
       : string
       := String.concat String.NewLine lines.
@@ -724,7 +684,11 @@ Module Compilers.
            | signed lgbitwidth => lgbitwidth
            | unsigned lgbitwidth => lgbitwidth
            end.
+      Definition of_lgbitwidth (is_signed : bool) (lgbitwidth : nat) : type
+        := if is_signed then signed lgbitwidth else unsigned lgbitwidth.
       Definition bitwidth_of (t : type) : Z := 2^Z.of_nat (lgbitwidth_of t).
+      Definition of_bitwidth (is_signed : bool) (bitwidth : Z) : type
+        := of_lgbitwidth is_signed (Z.to_nat (Z.log2 bitwidth)).
       Definition is_signed (t : type) : bool := match t with signed _ => true | unsigned _ => false end.
       Definition is_unsigned (t : type) : bool := negb (is_signed t).
       Definition to_zrange (t : type) : zrange
@@ -753,6 +717,28 @@ Module Compilers.
         := unsigned (lgbitwidth_of t).
       Definition signed_counterpart_of (t : type) : type
         := signed (lgbitwidth_of t).
+
+      Lemma bitwidth_of_pos v : 0 < bitwidth_of v.
+      Proof. cbv [bitwidth_of]; apply Z.pow_pos_nonneg; lia. Qed.
+
+      Lemma of_lgbitwidth_of v : of_lgbitwidth (is_signed v) (lgbitwidth_of v) = v.
+      Proof. case v; reflexivity. Qed.
+
+      Lemma lgbitwidth_of_lgbitwidth b v : lgbitwidth_of (of_lgbitwidth b v) = v.
+      Proof. case b; reflexivity. Qed.
+
+      Lemma is_signed_of_lgbitwidth b v : is_signed (of_lgbitwidth b v) = b.
+      Proof. case b; reflexivity. Qed.
+
+      Lemma of_bitwidth_of v : of_bitwidth (is_signed v) (bitwidth_of v) = v.
+      Proof.
+        cbv [of_bitwidth bitwidth_of].
+        rewrite Z.log2_pow2, Nat2Z.id by lia.
+        apply of_lgbitwidth_of.
+      Qed.
+
+      Lemma is_signed_of_bitwidth b v : is_signed (of_bitwidth b v) = b.
+      Proof. apply is_signed_of_lgbitwidth. Qed.
 
       Global Instance show_type : Show type
         := fun with_parens t
@@ -830,6 +816,95 @@ Module Compilers.
     Example of_zrange_int64' : int.of_zrange_relaxed r[-2^31 ~> 2^31] = int64 := eq_refl.
     Example of_zrange_uint32 : int.of_zrange_relaxed r[0 ~> 2^32-1] = uint32 := eq_refl.
     Example of_zrange_uint64 : int.of_zrange_relaxed r[0 ~> 2^32] = uint64 := eq_refl.
+
+    Module SumPositiveSet := SumSets PositiveSet PositiveSet.
+
+    Module IntAsDecidableType <: IsoDecidableType SumPositiveSet.E.
+      Definition t := int.type.
+      Definition eq : t -> t -> Prop := eq.
+      Definition eq_equiv : Equivalence eq := _.
+      Definition eq_dec := int.type_eq_dec.
+      Definition to_ (v : t) : positive + positive
+        := (if int.is_signed v then inl else inr)
+             (Pos.of_succ_nat (int.lgbitwidth_of v)).
+      Definition of_ (v : positive + positive) : t
+        := let is_signed := match v with inl _ => true | inr _ => false end in
+           let lgbitwidth := match v with inl v => v | inr v => v end in
+           int.of_lgbitwidth is_signed (Nat.pred (Pos.to_nat lgbitwidth)).
+      Lemma of_to v : of_ (to_ v) = v.
+      Proof.
+        destruct v; cbv [of_ to_]; cbn;
+          now rewrite SuccNat2Pos.pred_id.
+      Qed.
+      Lemma to_of v : SumPositiveSet.E.eq (to_ (of_ v)) v.
+      Proof.
+        destruct v; cbv [of_ to_ SumPositiveSet.E.eq sumwise];
+          rewrite int.lgbitwidth_of_lgbitwidth, int.is_signed_of_lgbitwidth;
+          f_equal;
+          lia.
+      Qed.
+      Global Instance Proper_to_ : Proper (eq ==> SumPositiveSet.E.eq) to_.
+      Proof. cbv [eq]; intros ???; subst; reflexivity. Qed.
+      Global Instance Proper_of_ : Proper (SumPositiveSet.E.eq ==> eq) of_.
+      Proof. cbv [eq SumPositiveSet.E.eq sumwise]; intros [?|?] [?|?] ?; subst; tauto. Qed.
+    End IntAsDecidableType.
+
+    Module IntSet <: WSets := WIsoSets SumPositiveSet IntAsDecidableType.
+
+    (* Work around COQBUG(https://github.com/coq/coq/issues/11942) *)
+    Local Unset Decidable Equality Schemes.
+    Record ident_infos :=
+      { bitwidths_used : IntSet.t;
+        addcarryx_lg_splits : PositiveSet.t;
+        mulx_lg_splits : PositiveSet.t;
+        cmovznz_bitwidths : IntSet.t }.
+    Local Set Decidable Equality Schemes.
+    Definition ident_info_empty : ident_infos
+      := Build_ident_infos IntSet.empty PositiveSet.empty PositiveSet.empty IntSet.empty.
+    Definition ident_info_diff (x y : ident_infos) : ident_infos
+      := let (x0, x1, x2, x3) := x in
+         let (y0, y1, y2, y3) := y in
+         Build_ident_infos
+           (IntSet.diff x0 y0)
+           (PositiveSet.diff x1 y1)
+           (PositiveSet.diff x2 y2)
+           (IntSet.diff x3 y3).
+    Definition ident_info_diff_except_bitwidths (x y : ident_infos) : ident_infos
+      := let (x0, x1, x2, x3) := x in
+         let (y0, y1, y2, y3) := y in
+         Build_ident_infos
+           x0
+           (PositiveSet.diff x1 y1)
+           (PositiveSet.diff x2 y2)
+           (IntSet.diff x3 y3).
+    Definition ident_info_union (x y : ident_infos) : ident_infos
+      := let (x0, x1, x2, x3) := x in
+         let (y0, y1, y2, y3) := y in
+         Build_ident_infos
+           (IntSet.union x0 y0)
+           (PositiveSet.union x1 y1)
+           (PositiveSet.union x2 y2)
+           (IntSet.union x3 y3).
+    Definition ident_info_of_bitwidths_used (v : IntSet.t) : ident_infos
+      := {| bitwidths_used := v;
+            addcarryx_lg_splits := PositiveSet.empty;
+            mulx_lg_splits := PositiveSet.empty;
+            cmovznz_bitwidths := IntSet.empty |}.
+    Definition ident_info_of_addcarryx (v : PositiveSet.t) : ident_infos
+      := {| bitwidths_used := IntSet.empty;
+            addcarryx_lg_splits := v;
+            mulx_lg_splits := PositiveSet.empty;
+            cmovznz_bitwidths := IntSet.empty |}.
+    Definition ident_info_of_mulx (v : PositiveSet.t) : ident_infos
+      := {| bitwidths_used := IntSet.empty;
+            addcarryx_lg_splits := PositiveSet.empty;
+            mulx_lg_splits := v;
+            cmovznz_bitwidths := IntSet.empty |}.
+    Definition ident_info_of_cmovznz (v : IntSet.t) : ident_infos
+      := {| bitwidths_used := IntSet.empty;
+            addcarryx_lg_splits := PositiveSet.empty;
+            mulx_lg_splits := PositiveSet.empty;
+            cmovznz_bitwidths := v |}.
 
     Module Import OfPHOAS.
       Fixpoint base_var_data (t : base.type) : Set

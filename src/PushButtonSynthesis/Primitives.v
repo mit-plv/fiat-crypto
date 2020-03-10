@@ -39,7 +39,8 @@ Import
   Language.WfExtra.Compilers
   Language.Compilers
   API.Compilers
-  Stringification.Language.Compilers.
+  Stringification.Language.Compilers
+  Stringification.Language.Compilers.ToString.
 Import Compilers.API.
 
 Import COperationSpecifications.Primitives.
@@ -780,7 +781,7 @@ Section __.
           prefix ("cmovznz_u" ++ decimal_string_of_Z s) (cmovznz s)
           (docstring_with_summary_from_lemma!
              (fun fname : string => ["The function " ++ fname ++ " is a single-word conditional move."]%string)
-             (cmovznz_correct s)).
+             (cmovznz_correct false s)).
 
   Definition cmovznz_by_mul (s : Z)
     := Pipeline.BoundsPipeline
@@ -799,7 +800,7 @@ Section __.
           prefix ("cmovznz_u" ++ decimal_string_of_Z s) (cmovznz_by_mul s)
           (docstring_with_summary_from_lemma!
              (fun fname : string => ["The function " ++ fname ++ " is a single-word conditional move."]%string)
-             (cmovznz_correct s)).
+             (cmovznz_correct false s)).
 
   Local Ltac solve_extra_bounds_side_conditions :=
     cbn [lower upper fst snd] in *; Bool.split_andb; Z.ltb_to_lt; lia.
@@ -835,13 +836,13 @@ Section __.
   Strategy -1000 [cmovznz]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
   Lemma cmovznz_correct s' res
         (Hres : cmovznz s' = Success res)
-    : cmovznz_correct s' (Interp res).
+    : cmovznz_correct false s' (Interp res).
   Proof using Type. prove_correctness I. Qed.
 
   Strategy -1000 [cmovznz_by_mul]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
   Lemma cmovznz_by_mul_correct s' res
         (Hres : cmovznz_by_mul s' = Success res)
-    : COperationSpecifications.Primitives.cmovznz_correct s' (Interp res).
+    : COperationSpecifications.Primitives.cmovznz_correct false s' (Interp res).
   Proof using Type. prove_correctness I. Qed.
 
   Lemma selectznz_correct limbwidth res
@@ -874,7 +875,7 @@ Section __.
               ls).
 
     Definition extra_synthesis (function_name_prefix : string) (infos : ToString.ident_infos)
-      : list (string * Pipeline.ErrorT (list string)) * PositiveSet.t
+      : list (string * Pipeline.ErrorT (list string)) * IntSet.t
       := let ls_addcarryx := List.flat_map
                                (fun lg_split:positive => [saddcarryx function_name_prefix lg_split; ssubborrowx function_name_prefix lg_split])
                                (PositiveSet.elements (ToString.addcarryx_lg_splits infos)) in
@@ -882,9 +883,9 @@ Section __.
                           (fun lg_split:positive => smulx function_name_prefix lg_split)
                           (PositiveSet.elements (ToString.mulx_lg_splits infos)) in
          let ls_cmov := List.map
-                          (fun bitwidth:positive
-                           => (if use_mul_for_cmovznz then scmovznz_by_mul else scmovznz) function_name_prefix bitwidth)
-                          (PositiveSet.elements (ToString.cmovznz_bitwidths infos)) in
+                          (fun ty:int.type
+                           => (if use_mul_for_cmovznz then scmovznz_by_mul else scmovznz) function_name_prefix (int.bitwidth_of ty))
+                          (IntSet.elements (cmovznz_bitwidths infos)) in
          let ls := ls_addcarryx ++ ls_mulx ++ ls_cmov in
          let infos := aggregate_infos ls in
          (List.map (fun '(name, res) => (name, (res <- res; Success (fst res))%error)) ls,
