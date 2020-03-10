@@ -43,6 +43,14 @@ Section Proofs.
           (c : list (Z * Z) := [(1,19)])
           (machine_wordsize : Z := 64).
 
+  Lemma barrett_red256_correct :
+    COperationSpecifications.Solinas.barrett_red_correct machine_wordsize M (API.Interp barrett_red256).
+  Proof.
+    apply barrett_red_correct with (machine_wordsize:=machine_wordsize).
+    { lazy. reflexivity. }
+    { apply barrett_red256_eq. }
+  Qed.
+
   (* requires some kind of proof about decimal stringification *)
   Lemma decimal_varname_gen_unique :
     forall i j : nat, varname_gen i = varname_gen j <-> i = j.

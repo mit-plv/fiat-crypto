@@ -1,4 +1,5 @@
 Require Import Coq.ZArith.ZArith.
+Require Import Coq.derive.Derive.
 Require Import Coq.QArith.QArith.
 Require Import Coq.QArith.Qround.
 Require Import Coq.Strings.String.
@@ -87,15 +88,19 @@ Module X25519_64.
               exact r)
                (Some loose_bounds, (Some loose_bounds, tt))
                (Some tight_bounds).
-    Definition mulmod := Eval vm_compute in mulmod_.
+    Derive mulmod
+           SuchThat (mulmod_ = ErrorT.Success mulmod)
+           As mulmod_eq.
+    Proof. vm_compute; reflexivity. Qed.
 
     Local Existing Instances Types.rep.Z Types.rep.listZ_mem.
     Let wordsize_bytes := Eval vm_compute in (machine_wordsize / 8)%Z.
 
+    Local Definition ERROR := "ERROR".
     Instance p : Types.parameters :=
       {| semantics := BasicC64Semantics.parameters;
          varname_gen := fun i => String.append "x" (Decimal.decimal_string_of_Z (Z.of_nat i));
-         error := expr.var "ERROR";
+         error := expr.var ERROR;
          word_size_in_bytes := wordsize_bytes;
       |}.
 
@@ -104,17 +109,39 @@ Module X25519_64.
 
     Definition mulmod_bedrock : bedrock_func :=
       ("mulmod_bedrock",
-       match mulmod with
-       | ErrorT.Success e =>
-         translate_func e
-                        ("in0", ("in1", tt)) (* argument names *)
-                        (n, (n, tt)) (* lengths for list arguments *)
-                        "out0" (* return value name *)
-       | ErrorT.Error _ => (nil, nil, Syntax.cmd.skip)
-       end).
+       translate_func mulmod
+                      ("in0", ("in1", tt)) (* argument names *)
+                      (n, (n, tt)) (* lengths for list arguments *)
+                      "out0" (* return value name *)).
+
+    (* quick check to make sure the expression produced no errors *)
+    Fixpoint error_free_expr (x : Syntax.expr) : bool :=
+      match x with
+      | expr.literal _ => true
+      | expr.var x => negb (String.eqb x ERROR)
+      | expr.load _ a => error_free_expr a
+      | expr.op _ x y => (error_free_expr x && error_free_expr y)%bool
+      end.
+    Fixpoint error_free_cmd (x : cmd.cmd) : bool :=
+      match x with
+      | cmd.skip => true
+      | cmd.unset _ => true 
+      | cmd.set _ v => error_free_expr v
+      | cmd.store _ a v =>
+        (error_free_expr a && error_free_expr v)%bool
+      | cmd.cond c t f =>
+        (error_free_expr c && error_free_cmd t && error_free_cmd f)%bool
+      | cmd.seq x y => (error_free_cmd x && error_free_cmd y)%bool
+      | cmd.while c b => (error_free_expr c && error_free_cmd b)
+      | cmd.call _ _ args => forallb error_free_expr args
+      | cmd.interact _ _ args => forallb error_free_expr args
+      end.
+    Goal (error_free_cmd (snd (snd mulmod_bedrock)) = true).
+    Proof. vm_compute. reflexivity. Qed.
 
     Import NotationsCustomEntry.
     Local Set Printing Width 150.
+    (* Compute mulmod_bedrock. *)
     Redirect "Crypto.Bedrock.Tests.X25519_64.mulmod_bedrock" Compute mulmod_bedrock.
   End __.
 End X25519_64.
