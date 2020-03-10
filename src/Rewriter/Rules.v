@@ -470,11 +470,11 @@ Section fancy.
           [mymap
              dont_do_again
              [(*
-(Z.add_get_carry_concrete 2^256) @@ (?x, ?y << 128) --> (add 128) @@ (x, y)
-(Z.add_get_carry_concrete 2^256) @@ (?x << 128, ?y) --> (add 128) @@ (y, x)
-(Z.add_get_carry_concrete 2^256) @@ (?x, ?y >> 128) --> (add (- 128)) @@ (x, y)
-(Z.add_get_carry_concrete 2^256) @@ (?x >> 128, ?y) --> (add (- 128)) @@ (y, x)
-(Z.add_get_carry_concrete 2^256) @@ (?x, ?y)        --> (add 0) @@ (y, x)
+(Z.add_get_carry_concrete 2^256) @@@ (?x, ?y << 128) --> (add 128) @@@ (x, y)
+(Z.add_get_carry_concrete 2^256) @@@ (?x << 128, ?y) --> (add 128) @@@ (y, x)
+(Z.add_get_carry_concrete 2^256) @@@ (?x, ?y >> 128) --> (add (- 128)) @@@ (x, y)
+(Z.add_get_carry_concrete 2^256) @@@ (?x >> 128, ?y) --> (add (- 128)) @@@ (y, x)
+(Z.add_get_carry_concrete 2^256) @@@ (?x, ?y)        --> (add 0) @@@ (y, x)
                *)
                (forall r1 r2 rs s rx x rshiftl rland ry y rmask mask roffset offset,
                    s = 2^Z.log2 s -> s ∈ rs -> offset ∈ roffset -> mask ∈ rmask -> shiftl_good rshiftl rland offset -> land_good rland ry mask -> range_in_bitwidth rshiftl s -> (mask = Z.ones (Z.log2 s - offset)) -> (0 <= offset <= Z.log2 s)
@@ -506,11 +506,11 @@ Section fancy.
                         = cstZZ r1 r2 (ident.fancy.add (('(Z.log2 s), '0), (cstZ rx x, cstZ ry y))))
 
                (*
-(Z.add_with_get_carry_concrete 2^256) @@ (?c, ?x, ?y << 128) --> (addc 128) @@ (c, x, y)
-(Z.add_with_get_carry_concrete 2^256) @@ (?c, ?x << 128, ?y) --> (addc 128) @@ (c, y, x)
-(Z.add_with_get_carry_concrete 2^256) @@ (?c, ?x, ?y >> 128) --> (addc (- 128)) @@ (c, x, y)
-(Z.add_with_get_carry_concrete 2^256) @@ (?c, ?x >> 128, ?y) --> (addc (- 128)) @@ (c, y, x)
-(Z.add_with_get_carry_concrete 2^256) @@ (?c, ?x, ?y)        --> (addc 0) @@ (c, y, x)
+(Z.add_with_get_carry_concrete 2^256) @@@ (?c, ?x, ?y << 128) --> (addc 128) @@@ (c, x, y)
+(Z.add_with_get_carry_concrete 2^256) @@@ (?c, ?x << 128, ?y) --> (addc 128) @@@ (c, y, x)
+(Z.add_with_get_carry_concrete 2^256) @@@ (?c, ?x, ?y >> 128) --> (addc (- 128)) @@@ (c, x, y)
+(Z.add_with_get_carry_concrete 2^256) @@@ (?c, ?x >> 128, ?y) --> (addc (- 128)) @@@ (c, y, x)
+(Z.add_with_get_carry_concrete 2^256) @@@ (?c, ?x, ?y)        --> (addc 0) @@@ (c, y, x)
                 *)
                ; (forall r1 r2 rs s rc c rx x rshiftl rland ry y rmask mask roffset offset,
                      s ∈ rs -> mask ∈ rmask -> offset ∈ roffset -> (s = 2^Z.log2 s) -> shiftl_good rshiftl rland offset -> land_good rland ry mask -> range_in_bitwidth rshiftl s -> (mask = Z.ones (Z.log2 s - offset)) -> (0 <= offset <= Z.log2 s)
@@ -538,9 +538,9 @@ Section fancy.
                         = cstZZ r1 r2 (ident.fancy.addc (('(Z.log2 s), '0), (cstZ rc c, cstZ rx x, cstZ ry y))))
 
                (*
-(Z.sub_get_borrow_concrete 2^256) @@ (?x, ?y << 128) --> (sub 128) @@ (x, y)
-(Z.sub_get_borrow_concrete 2^256) @@ (?x, ?y >> 128) --> (sub (- 128)) @@ (x, y)
-(Z.sub_get_borrow_concrete 2^256) @@ (?x, ?y)        --> (sub 0) @@ (y, x)
+(Z.sub_get_borrow_concrete 2^256) @@@ (?x, ?y << 128) --> (sub 128) @@@ (x, y)
+(Z.sub_get_borrow_concrete 2^256) @@@ (?x, ?y >> 128) --> (sub (- 128)) @@@ (x, y)
+(Z.sub_get_borrow_concrete 2^256) @@@ (?x, ?y)        --> (sub 0) @@@ (y, x)
                 *)
 
                ; (forall r1 r2 rs s rx x rshiftl rland ry y rmask mask roffset offset,
@@ -559,9 +559,9 @@ Section fancy.
                         = cstZZ r1 r2 (ident.fancy.sub (('(Z.log2 s), '0), (cstZ rx x, cstZ ry y))))
 
                (*
-(Z.sub_with_get_borrow_concrete 2^256) @@ (?c, ?x, ?y << 128) --> (subb 128) @@ (c, x, y)
-(Z.sub_with_get_borrow_concrete 2^256) @@ (?c, ?x, ?y >> 128) --> (subb (- 128)) @@ (c, x, y)
-(Z.sub_with_get_borrow_concrete 2^256) @@ (?c, ?x, ?y)        --> (subb 0) @@ (c, y, x)
+(Z.sub_with_get_borrow_concrete 2^256) @@@ (?c, ?x, ?y << 128) --> (subb 128) @@@ (c, x, y)
+(Z.sub_with_get_borrow_concrete 2^256) @@@ (?c, ?x, ?y >> 128) --> (subb (- 128)) @@@ (c, x, y)
+(Z.sub_with_get_borrow_concrete 2^256) @@@ (?c, ?x, ?y)        --> (subb 0) @@@ (c, y, x)
                 *)
 
                ; (forall r1 r2 rs s rb b rx x rshiftl rland ry y rmask mask roffset offset,
@@ -579,7 +579,7 @@ Section fancy.
                      -> cstZZ r1 r2 (Z.sub_with_get_borrow_full (cstZ rs ('s)) (cstZ rb b) (cstZ rx x) (cstZ ry y))
                         = cstZZ r1 r2 (ident.fancy.subb (('(Z.log2 s), '0), (cstZ rb b, cstZ rx x, cstZ ry y))))
 
-               (*(Z.rshi_concrete 2^256 ?n) @@ (?c, ?x, ?y) --> (rshi n) @@ (x, y)*)
+               (*(Z.rshi_concrete 2^256 ?n) @@@ (?c, ?x, ?y) --> (rshi n) @@@ (x, y)*)
 
                ; (forall r rs s rx x ry y rn n,
                      s ∈ rs -> n ∈ rn -> (s = 2^Z.log2 s)
@@ -587,9 +587,9 @@ Section fancy.
                         = cstZ r (ident.fancy.rshi (('(Z.log2 s), 'n), (cstZ rx x, cstZ ry y))))
 
                (*
-Z.zselect @@ (Z.cc_m_concrete 2^256 ?c, ?x, ?y) --> selm @@ (c, x, y)
-Z.zselect @@ (?c &' 1, ?x, ?y)                  --> sell @@ (c, x, y)
-Z.zselect @@ (?c, ?x, ?y)                       --> selc @@ (c, x, y)
+Z.zselect @@@ (Z.cc_m_concrete 2^256 ?c, ?x, ?y) --> selm @@@ (c, x, y)
+Z.zselect @@@ (?c &' 1, ?x, ?y)                  --> sell @@@ (c, x, y)
+Z.zselect @@@ (?c, ?x, ?y)                       --> selc @@@ (c, x, y)
                 *)
                ; (forall r rccm rs s rc c rx x ry y,
                      s ∈ rs -> (s = 2^Z.log2 s) -> cc_m_good rccm s rc
@@ -610,16 +610,16 @@ Z.zselect @@ (?c, ?x, ?y)                       --> selc @@ (c, x, y)
                      cstZ r (Z.zselect c x y)
                      = cstZ r (ident.fancy.selc (c, x, y)))
 
-               (*Z.add_modulo @@ (?x, ?y, ?m) --> addm @@ (x, y, m)*)
+               (*Z.add_modulo @@@ (?x, ?y, ?m) --> addm @@@ (x, y, m)*)
                ; (forall x y m,
                      Z.add_modulo x y m
                      = ident.fancy.addm (x, y, m))
 
                (*
-Z.mul @@ (?x &' (2^128-1), ?y &' (2^128-1)) --> mulll @@ (x, y)
-Z.mul @@ (?x &' (2^128-1), ?y >> 128)       --> mullh @@ (x, y)
-Z.mul @@ (?x >> 128, ?y &' (2^128-1))       --> mulhl @@ (x, y)
-Z.mul @@ (?x >> 128, ?y >> 128)             --> mulhh @@ (x, y)
+Z.mul @@@ (?x &' (2^128-1), ?y &' (2^128-1)) --> mulll @@@ (x, y)
+Z.mul @@@ (?x &' (2^128-1), ?y >> 128)       --> mullh @@@ (x, y)
+Z.mul @@@ (?x >> 128, ?y &' (2^128-1))       --> mulhl @@@ (x, y)
+Z.mul @@@ (?x >> 128, ?y >> 128)             --> mulhh @@@ (x, y)
                 *)
                (* literal on left *)
                ; (forall r rx x rland ry y rmask mask,

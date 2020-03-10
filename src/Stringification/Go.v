@@ -102,33 +102,33 @@ Module Go.
   Fixpoint arith_to_string (prefix : string) {t} (e : IR.arith_expr t) : string
     := match e with
        (* integer literals *)
-       | (IR.literal v @@ _) => int_literal_to_string prefix IR.type.Z v
+       | (IR.literal v @@@ _) => int_literal_to_string prefix IR.type.Z v
        (* array dereference *)
-       | (IR.List_nth n @@ IR.Var _ v) => "(" ++ v ++ "[" ++ decimal_string_of_Z (Z.of_nat n) ++ "])"
+       | (IR.List_nth n @@@ IR.Var _ v) => "(" ++ v ++ "[" ++ decimal_string_of_Z (Z.of_nat n) ++ "])"
        (* (de)referencing *)
-       | (IR.Addr @@ IR.Var _ v) => "&" ++ v
-       | (IR.Dereference @@ e) => "( *" ++ arith_to_string prefix e ++ " )"
+       | (IR.Addr @@@ IR.Var _ v) => "&" ++ v
+       | (IR.Dereference @@@ e) => "( *" ++ arith_to_string prefix e ++ " )"
        (* bitwise operations *)
-       | (IR.Z_shiftr offset @@ e) =>
+       | (IR.Z_shiftr offset @@@ e) =>
          "(" ++ arith_to_string prefix e ++ " >> " ++ decimal_string_of_Z offset ++ ")"
-       | (IR.Z_shiftl offset @@ e) =>
+       | (IR.Z_shiftl offset @@@ e) =>
          "(" ++ arith_to_string prefix e ++ " << " ++ decimal_string_of_Z offset ++ ")"
-       | (IR.Z_land @@ (e1, e2)) =>
+       | (IR.Z_land @@@ (e1, e2)) =>
          "(" ++ arith_to_string prefix e1 ++ " & " ++ arith_to_string prefix e2 ++ ")"
-       | (IR.Z_lor @@ (e1, e2)) =>
+       | (IR.Z_lor @@@ (e1, e2)) =>
          "(" ++ arith_to_string prefix e1 ++ " | " ++ arith_to_string prefix e2 ++ ")"
-       | (IR.Z_lnot _ @@ e) => "(^" ++ arith_to_string prefix e ++ ")"
+       | (IR.Z_lnot _ @@@ e) => "(^" ++ arith_to_string prefix e ++ ")"
        (* arithmetic operations *)
-       | (IR.Z_add @@ (x1, x2)) =>
+       | (IR.Z_add @@@ (x1, x2)) =>
          "(" ++ arith_to_string prefix x1 ++ " + " ++ arith_to_string prefix x2 ++ ")"
-       | (IR.Z_mul @@ (x1, x2)) =>
+       | (IR.Z_mul @@@ (x1, x2)) =>
          "(" ++ arith_to_string prefix x1 ++ " * " ++ arith_to_string prefix x2 ++ ")"
-       | (IR.Z_sub @@ (x1, x2)) =>
+       | (IR.Z_sub @@@ (x1, x2)) =>
          "(" ++ arith_to_string prefix x1 ++ " - " ++ arith_to_string prefix x2 ++ ")"
-       | (IR.Z_bneg @@ e) => "(!/* TODO: FIX ME */ " ++ arith_to_string prefix e ++ ")"
-       | (IR.Z_mul_split lg2s @@ args) =>
+       | (IR.Z_bneg @@@ e) => "(!/* TODO: FIX ME */ " ++ arith_to_string prefix e ++ ")"
+       | (IR.Z_mul_split lg2s @@@ args) =>
          match is_standard_bitwidth lg2s, args with
-         | true, ((IR.Addr @@ hi, IR.Addr @@ lo), args)
+         | true, ((IR.Addr @@@ hi, IR.Addr @@@ lo), args)
            => (arith_to_string prefix hi ++ ", " ++ arith_to_string prefix lo)
                 ++ " = bits.Mul"
                 ++ decimal_string_of_Z lg2s ++ "(" ++ arith_to_string prefix args ++ ")"
@@ -137,9 +137,9 @@ Module Go.
                 ++ "mulx_u"
                 ++ decimal_string_of_Z lg2s ++ "(" ++ arith_to_string prefix args ++ ")"
          end
-       | (IR.Z_add_with_get_carry lg2s @@ args) =>
+       | (IR.Z_add_with_get_carry lg2s @@@ args) =>
          match is_standard_bitwidth lg2s, args with
-         | true, ((IR.Addr @@ v, IR.Addr @@ c), (cin, x, y))
+         | true, ((IR.Addr @@@ v, IR.Addr @@@ c), (cin, x, y))
            => (arith_to_string prefix v ++ ", " ++ arith_to_string prefix c)
                 ++ " = bits.Add"
                 ++ decimal_string_of_Z lg2s ++ "(" ++ arith_to_string prefix x ++ ", " ++ arith_to_string prefix y ++ ", " ++ arith_to_string prefix cin ++ ")"
@@ -148,9 +148,9 @@ Module Go.
                 ++ "addcarryx_u"
                 ++ decimal_string_of_Z lg2s ++ "(" ++ arith_to_string prefix args ++ ")"
          end
-       | (IR.Z_sub_with_get_borrow lg2s @@ args) =>
+       | (IR.Z_sub_with_get_borrow lg2s @@@ args) =>
          match is_standard_bitwidth lg2s, args with
-         | true, ((IR.Addr @@ v, IR.Addr @@ b), (bin, x, y))
+         | true, ((IR.Addr @@@ v, IR.Addr @@@ b), (bin, x, y))
            => (arith_to_string prefix v ++ ", " ++ arith_to_string prefix b)
                 ++ " = bits.Sub"
                 ++ decimal_string_of_Z lg2s ++ "(" ++ arith_to_string prefix x ++ ", " ++ arith_to_string prefix y ++ ", " ++ arith_to_string prefix bin ++ ")"
@@ -159,24 +159,24 @@ Module Go.
                 ++ "subborrowx_u"
                 ++ decimal_string_of_Z lg2s ++ "(" ++ arith_to_string prefix args ++ ")"
          end
-       | (IR.Z_zselect ty @@ args) =>
+       | (IR.Z_zselect ty @@@ args) =>
          prefix
            ++ "cmovznz_"
            ++ (if ToString.int.is_unsigned ty then "u" else "")
            ++ decimal_string_of_Z (ToString.int.bitwidth_of ty) ++ "(" ++ @arith_to_string prefix _ args ++ ")"
-       | (IR.Z_static_cast int_t @@ e) =>
+       | (IR.Z_static_cast int_t @@@ e) =>
          primitive_type_to_string prefix IR.type.Z (Some int_t) ++ "(" ++ arith_to_string prefix e ++ ")"
        | IR.Var _ v => v
        | IR.Pair A B a b => arith_to_string prefix a ++ ", " ++ arith_to_string prefix b
-       | (IR.Z_add_modulo @@ (x1, x2, x3)) => "var _error = error_addmodulo"
-       | (IR.List_nth _ @@ _)
-       | (IR.Addr @@ _)
-       | (IR.Z_add @@ _)
-       | (IR.Z_mul @@ _)
-       | (IR.Z_sub @@ _)
-       | (IR.Z_land @@ _)
-       | (IR.Z_lor @@ _)
-       | (IR.Z_add_modulo @@ _) => "var _error = error_bad_arg"
+       | (IR.Z_add_modulo @@@ (x1, x2, x3)) => "var _error = error_addmodulo"
+       | (IR.List_nth _ @@@ _)
+       | (IR.Addr @@@ _)
+       | (IR.Z_add @@@ _)
+       | (IR.Z_mul @@@ _)
+       | (IR.Z_sub @@@ _)
+       | (IR.Z_land @@@ _)
+       | (IR.Z_lor @@@ _)
+       | (IR.Z_add_modulo @@@ _) => "var _error = error_bad_arg"
        | TT => "var _error = error_tt"
        end%string%Cexpr.
 

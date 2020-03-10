@@ -352,9 +352,9 @@ Module test10.
     lazymatch (eval cbv delta [E'] in E') with
     | (fun var =>
          (λ v,
-          ident.fst @@ $v @
-                    (ident.fst @@ (ident.snd @@ $v) + ident.snd @@ (ident.snd @@ $v)) @
-                    (ident.fst @@ (ident.snd @@ $v) * ident.snd @@ (ident.snd @@ $v)))%expr)
+          ident.fst @@@ $v @
+                    (ident.fst @@@ (ident.snd @@@ $v) + ident.snd @@@ (ident.snd @@@ $v)) @
+                    (ident.fst @@@ (ident.snd @@@ $v) * ident.snd @@@ (ident.snd @@@ $v)))%expr)
       => idtac
     end.
     constructor.
@@ -374,7 +374,7 @@ Module test11.
     lazymatch (eval cbv delta [E'] in E') with
     | (fun var =>
          (λ x,
-          ident.fst @@ $x + ident.snd @@ $x + ident.fst @@ $x * ident.snd @@ $x)%expr)
+          ident.fst @@@ $x + ident.snd @@@ $x + ident.fst @@@ $x * ident.snd @@@ $x)%expr)
       => idtac
     end.
     constructor.
