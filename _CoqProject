@@ -58,7 +58,8 @@ src/ArithmeticCPS/WordByWordMontgomery.v
 src/Bedrock/Tactics.v
 src/Bedrock/Types.v
 src/Bedrock/Util.v
-src/Bedrock/Test_X25519_64.v
+src/Bedrock/Tests/X25519_64.v
+src/Bedrock/Tests/Proofs/X25519_64.v
 src/Bedrock/Proofs/Cmd.v
 src/Bedrock/Proofs/Expr.v
 src/Bedrock/Proofs/Flatten.v
