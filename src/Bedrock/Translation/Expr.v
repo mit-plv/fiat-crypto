@@ -1,5 +1,6 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Lists.List.
+Require Import bedrock2.Syntax.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Language.API.
 Require Import Crypto.Util.ZRange.
@@ -51,6 +52,27 @@ Section Expr.
       end.
   End Casts.
 
+  Definition translate_binop {t} (i : ident.ident t)
+    : option bopname :=
+    match i with
+    | ident.Z_add => Some bopname.add
+    | ident.Z_sub => Some bopname.sub
+    | ident.Z_mul => Some bopname.mul
+    | ident.Z_ltz => Some bopname.ltu
+    | ident.Z_land => Some bopname.and
+    | ident.Z_lor => Some bopname.or
+    | ident.Z_shiftr => Some bopname.sru
+    | _ => None
+    end.
+
+  Definition translate_truncating_binop {t} (i : ident.ident t)
+    : option bopname :=
+    match i with
+    | ident.Z_truncating_shiftl => Some bopname.slu
+    | ident.Z_mul_high => Some bopname.mulhuu
+    | _ => None
+    end.
+
   (* Translate an API.expr (without LetIn statements) into a bedrock2
      Syntax.expr *)
   Fixpoint translate_expr
@@ -73,64 +95,6 @@ Section Expr.
            (expr.App
               type_range2 (type.arrow type_ZZ type_ZZ)
               (expr.Ident _ ident.Z_cast2) _) x) => translate_expr false x
-      (* Z_add -> bopname.add *)
-      | (expr.App
-           type_Z type_Z
-           (expr.App type_Z (type.arrow type_Z type_Z)
-                     (expr.Ident _ ident.Z_add) x) y) =>
-        Syntax.expr.op Syntax.bopname.add (translate_expr true x) (translate_expr true y)
-      (* Z_mul -> bopname.mul *)
-      | (expr.App
-           type_Z type_Z
-           (expr.App type_Z (type.arrow type_Z type_Z)
-                     (expr.Ident _ ident.Z_mul) x) y) =>
-        Syntax.expr.op Syntax.bopname.mul (translate_expr true x) (translate_expr true y)
-      (* Z_ltz -> bopname.ltu *)
-      | (expr.App
-           type_Z type_Z
-           (expr.App type_Z (type.arrow type_Z type_Z)
-                     (expr.Ident _ ident.Z_ltz) x) y) =>
-        Syntax.expr.op Syntax.bopname.ltu (translate_expr true x) (translate_expr true y)
-      (* Z_land -> bopname.and *)
-      | (expr.App
-           type_Z type_Z
-           (expr.App type_Z (type.arrow type_Z type_Z)
-                     (expr.Ident _ ident.Z_land) x) y) =>
-        Syntax.expr.op Syntax.bopname.and (translate_expr true x) (translate_expr true y)
-      (* Z_lor -> bopname.or *)
-      | (expr.App
-           type_Z type_Z
-           (expr.App type_Z (type.arrow type_Z type_Z)
-                     (expr.Ident _ ident.Z_lor) x) y) =>
-        Syntax.expr.op Syntax.bopname.or (translate_expr true x) (translate_expr true y)
-      (* Z_shiftr -> bopname.sru *)
-      | (expr.App
-           type_Z type_Z
-           (expr.App type_Z (type.arrow type_Z type_Z)
-                     (expr.Ident _ ident.Z_shiftr) x) y) =>
-        Syntax.expr.op Syntax.bopname.sru (translate_expr true x) (translate_expr true y)
-      (* Z_truncating_shiftl : convert to bopname.slu if the truncation matches *)
-      | (expr.App
-           type_Z type_Z
-           (expr.App type_Z (type.arrow type_Z type_Z)
-                     (expr.App type_Z (type.arrow type_Z (type.arrow type_Z type_Z))
-                               (expr.Ident _ ident.Z_truncating_shiftl)
-                               (expr.Ident _ (ident.Literal base.type.Z s)))
-                     x) y) =>
-        if Z.eqb s Semantics.width
-        then Syntax.expr.op Syntax.bopname.slu (translate_expr true x) (translate_expr true y)
-        else base_make_error _
-      (* Z_mul_high -> bopname.mulhuu if truncation matches *)
-      | (expr.App
-           type_Z type_Z
-           (expr.App type_Z (type.arrow type_Z type_Z)
-                     (expr.App type_Z (type.arrow type_Z (type.arrow type_Z type_Z))
-                               (expr.Ident _ ident.Z_mul_high)
-                               (expr.Ident _ (ident.Literal base.type.Z s)))
-                     x) y) =>
-        if Z.eqb s maxint
-        then Syntax.expr.op Syntax.bopname.mulhuu (translate_expr true x) (translate_expr true y)
-        else base_make_error _
       (* fst : since the [rtype] of a product type is a tuple, simply use Coq's [fst] *)
       | (expr.App
            (type.base (base.type.prod base_Z _)) type_Z
@@ -157,12 +121,36 @@ Section Expr.
         let l : list String.string := l in
         let i : nat := i in
         let d : Syntax.expr.expr := translate_expr true d in
-        nth_default d (map Syntax.expr.var l) i
+        nth_default d (map expr.var l) i
       (* Literal (Z) -> Syntax.expr.literal *)
       | expr.Ident type_Z (ident.Literal base.type.Z x) =>
-        Syntax.expr.literal x
+        expr.literal x
       (* Var : use rtype_of_ltype to convert the expression *)
       | expr.Var (type.base _) x => base_rtype_of_ltype x
+      (* basic binary operation *)
+      | (expr.App
+           type_Z type_Z
+           (expr.App type_Z (type.arrow type_Z type_Z)
+                     (expr.Ident _ i) x) y) =>
+        match translate_binop i with
+        | Some op => expr.op op (translate_expr true x) (translate_expr true y)
+        | None => base_make_error _
+        end
+      (* truncating binary operation *)
+      | (expr.App
+           type_Z type_Z
+           (expr.App type_Z (type.arrow type_Z type_Z)
+                     (expr.App type_Z (type.arrow type_Z (type.arrow type_Z type_Z))
+                               (expr.Ident _ i)
+                               (expr.Ident _ (ident.Literal base.type.Z s)))
+                     x) y) =>
+        if Z.eqb s Semantics.width
+        then
+          match translate_truncating_binop i with
+          | Some op => expr.op op (translate_expr true x) (translate_expr true y)
+          | None => base_make_error _
+          end
+        else base_make_error _
       (* if no clauses matched the expression, return an error *)
       | _ => make_error _
       end.
