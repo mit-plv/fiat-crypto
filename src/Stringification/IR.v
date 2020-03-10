@@ -127,18 +127,16 @@ Module Compilers.
            end.
 
       Module ident_infos.
-        Definition collect_bitwidths_of_int_type (t : int.type) : PositiveSet.t
-          := PositiveSet.add (Z.to_pos (int.bitwidth_of t)) PositiveSet.empty.
         Definition collect_infos_of_ident {s d} (idc : ident s d) : ident_infos
           := match idc with
-             | Z_static_cast ty => ident_info_of_bitwidths_used (collect_bitwidths_of_int_type ty)
+             | Z_static_cast ty => ident_info_of_bitwidths_used (IntSet.singleton ty)
              | Z_mul_split lg2s
                => ident_info_of_mulx (PositiveSet.add (Z.to_pos lg2s) PositiveSet.empty)
              | Z_add_with_get_carry lg2s
              | Z_sub_with_get_borrow lg2s
                => ident_info_of_addcarryx (PositiveSet.add (Z.to_pos lg2s) PositiveSet.empty)
              | Z_zselect ty
-               => ident_info_of_cmovznz (collect_bitwidths_of_int_type ty)
+               => ident_info_of_cmovznz (IntSet.singleton ty)
              | literal _
              | List_nth _
              | Addr
@@ -160,14 +158,14 @@ Module Compilers.
           := match e with
              | Assign _ _ (Some sz) _ val
              | AssignZPtr _ (Some sz) val
-               => ident_info_union (ident_info_of_bitwidths_used (collect_bitwidths_of_int_type sz)) (collect_infos_of_arith_expr val)
+               => ident_info_union (ident_info_of_bitwidths_used (IntSet.singleton sz)) (collect_infos_of_arith_expr val)
              | Call val
              | Assign _ _ None _ val
              | AssignZPtr _ None val
              | AssignNth _ _ val
                => collect_infos_of_arith_expr val
              | DeclareVar _ (Some sz) _
-               => ident_info_of_bitwidths_used (collect_bitwidths_of_int_type sz)
+               => ident_info_of_bitwidths_used (IntSet.singleton sz)
              | DeclareVar _ None _
                => ident_info_empty
              end.

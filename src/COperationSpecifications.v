@@ -112,14 +112,20 @@ Module Primitives.
       -> subborrowx b x y = ((-b + x + -y) mod 2^s, -((-b + x + -y) / 2^s))
          /\ is_bounded_by2 (r[0~>2^s-1], r[0~>1]) (subborrowx b x y) = true.
 
-  Definition cmovznz_correct s
+  Definition cmovznz_correct (is_signed : bool) s
              (cmovznz : Z -> Z -> Z -> Z)
-    := forall cond z nz,
-      is_bounded_by0 r[0~>1] cond = true
-      -> is_bounded_by0 r[0~>2^s-1] z = true
-      -> is_bounded_by0 r[0~>2^s-1] nz = true
-      -> cmovznz cond z nz = (if Decidable.dec (cond = 0) then z else nz)
-         /\ is_bounded_by0 r[0~>2^s-1] (cmovznz cond z nz) = true.
+    := match (if is_signed
+              then r[-2^(s-1) ~> 2^(s-1) - 1]
+              else r[0 ~> 2^s - 1])%zrange with
+       | rs
+         =>
+         forall cond z nz,
+           is_bounded_by0 r[0~>1] cond = true
+           -> is_bounded_by0 rs z = true
+           -> is_bounded_by0 rs nz = true
+           -> cmovznz cond z nz = (if Decidable.dec (cond = 0) then z else nz)
+              /\ is_bounded_by0 rs (cmovznz cond z nz) = true
+       end.
 End Primitives.
 
 Module selectznz.

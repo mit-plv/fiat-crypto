@@ -18,6 +18,8 @@ Local Open Scope Z_scope.
 Import IR.Compilers.ToString.
 Import Stringification.Language.Compilers.
 Import Stringification.Language.Compilers.Options.
+Import Stringification.Language.Compilers.ToString.
+Import Stringification.Language.Compilers.ToString.int.Notations.
 
 Module Java.
 

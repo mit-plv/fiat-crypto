@@ -49,11 +49,11 @@ Module Compilers.
         : list string
           := let bitwidths_used := bitwidths_used infos in
              (["#include <stdint.h>"]
-                ++ (if PositiveSet.mem 1 bitwidths_used
+                ++ (if IntSet.mem _Bool bitwidths_used || IntSet.mem (int.signed_counterpart_of _Bool) bitwidths_used
                     then ["typedef unsigned char " ++ prefix ++ "uint1;";
                             "typedef signed char " ++ prefix ++ "int1;"]%string
                     else [])
-                ++ (if PositiveSet.mem 128 bitwidths_used
+                ++ (if IntSet.mem uint128 bitwidths_used || IntSet.mem int128 bitwidths_used
                     then ["typedef signed __int128 " ++ prefix ++ "int128;";
                             "typedef unsigned __int128 " ++ prefix ++ "uint128;"]%string
                     else [])

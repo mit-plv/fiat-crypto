@@ -16,6 +16,8 @@ Local Open Scope Z_scope.
 Import IR.Compilers.ToString.
 Import Stringification.Language.Compilers.
 Import Stringification.Language.Compilers.Options.
+Import Stringification.Language.Compilers.ToString.
+Import Stringification.Language.Compilers.ToString.int.Notations.
 
 Module Rust.
 
@@ -27,11 +29,11 @@ Module Rust.
        (["#![allow(unused_parens)]";
         "#[allow(non_camel_case_types)]";
         ""]%string
-          ++ (if PositiveSet.mem 1 bitwidths_used
+          ++ (if IntSet.mem _Bool bitwidths_used || IntSet.mem (ToString.int.signed_counterpart_of _Bool) bitwidths_used
               then [type_prefix ++ "u1 = u8;"; (* C: typedef unsigned char prefix_uint1 *)
                       type_prefix ++ "i1 = i8;" ]%string (* C: typedef signed char prefix_int1 *)
               else [])
-          ++ (if PositiveSet.mem 2 bitwidths_used
+          ++ (if IntSet.mem (int.of_bitwidth false 2) bitwidths_used || IntSet.mem (int.of_bitwidth true 2) bitwidths_used
               then [type_prefix ++ "u2 = u8;";
                       type_prefix ++ "i2 = i8;" ]%string
               else []))%list.

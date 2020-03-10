@@ -16,6 +16,8 @@ Local Open Scope Z_scope.
 Import IR.Compilers.ToString.
 Import Stringification.Language.Compilers.
 Import Stringification.Language.Compilers.Options.
+Import Stringification.Language.Compilers.ToString.
+Import Stringification.Language.Compilers.ToString.int.Notations.
 
 Module Go.
 
@@ -41,15 +43,15 @@ Module Go.
        ((["package " ++ pkg_name;
             ""]%string)
           ++ (if needs_bits_import then ["import ""math/bits"""]%string else [])
-          ++ (if PositiveSet.mem 1 bitwidths_used
+          ++ (if IntSet.mem _Bool bitwidths_used || IntSet.mem (ToString.int.signed_counterpart_of _Bool) bitwidths_used
               then [type_prefix ++ "uint1 int"; (* C: typedef unsigned char prefix_uint1 *)
                       type_prefix ++ "int1 int" ]%string (* C: typedef signed char prefix_int1 *)
               else [])
-          ++ (if PositiveSet.mem 2 bitwidths_used
+          ++ (if IntSet.mem (int.of_bitwidth false 2) bitwidths_used || IntSet.mem (int.of_bitwidth true 2) bitwidths_used
               then [type_prefix ++ "uint2 uint8";
                       type_prefix ++ "int2 int8" ]%string
               else [])
-          ++ (if PositiveSet.mem 128 bitwidths_used
+          ++ (if IntSet.mem uint128 bitwidths_used || IntSet.mem int128 bitwidths_used
               then ["var _ = error_Go_output_does_not_support_128_bit_integers___instead_use_rewriting_rules_for_removing_128_bit_integers"]%string
               else []))%list.
 
