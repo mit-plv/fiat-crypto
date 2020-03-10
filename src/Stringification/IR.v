@@ -110,7 +110,7 @@ Module Compilers.
         Bind Scope Cexpr_scope with expr.
         Bind Scope Cexpr_scope with stmt.
         Bind Scope Cexpr_scope with arith_expr.
-        Infix "@@" := AppIdent : Cexpr_scope.
+        Infix "@@@" := AppIdent : Cexpr_scope.
         Notation "( x , y , .. , z )" := (Pair .. (Pair x%Cexpr y%Cexpr) .. z%Cexpr) : Cexpr_scope.
         Notation "( )" := TT : Cexpr_scope.
 
@@ -378,9 +378,9 @@ Module Compilers.
                   | Some desired_type, Some known_type
                     => if int.type_beq known_type desired_type
                        then (e, Some known_type)
-                       else (Z_static_cast desired_type @@ e, Some desired_type)
+                       else (Z_static_cast desired_type @@@ e, Some desired_type)
                   | Some desired_type, None
-                    => (Z_static_cast desired_type @@ e, Some desired_type)
+                    => (Z_static_cast desired_type @@@ e, Some desired_type)
                   end%core%Cexpr.
 
           Definition get_Zcast_down_if_needed
@@ -402,7 +402,7 @@ Module Compilers.
                => match get_Zcast_down_if_needed desired_type known_type with
                   | None => (e, known_type)
                   | Some desired_type
-                    => (Z_static_cast desired_type @@ e, Some desired_type)
+                    => (Z_static_cast desired_type @@@ e, Some desired_type)
                   end%core%Cexpr.
 
           Fixpoint cast_down_if_needed {t}
@@ -452,7 +452,7 @@ Module Compilers.
                   | Some desired_type, Some known_type
                     => if int.is_tighter_than desired_type known_type
                        then (e, Some known_type)
-                       else (Z_static_cast desired_type @@ e, Some desired_type)%core%Cexpr
+                       else (Z_static_cast desired_type @@@ e, Some desired_type)%core%Cexpr
                   end.*)
 
           Fixpoint cast_up_if_needed {t}
@@ -516,7 +516,7 @@ Module Compilers.
                  let '(cstout, (cst1, cst2)) := bin_op_casts_opt idc desired_type (t1, t2) in
                  let typ := bin_op_natural_output_opt idc (Option.or_else cst1 t1, Option.or_else cst2 t2) in
                  let '((e1, t1), (e2, t2)) := (Zcast cst1 (e1, t1), Zcast cst2 (e2, t2)) in
-                 Zcast cstout ((idc @@ (e1, e2))%Cexpr, typ).
+                 Zcast cstout ((idc @@@ (e1, e2))%Cexpr, typ).
 
           Definition arith_un_arith_expr_of_PHOAS_ident
                      (s:=tZ)
@@ -527,7 +527,7 @@ Module Compilers.
                  let '(cstout, cst) := un_op_casts_opt idc desired_type t in
                  let typ := (*un_op_natural_output_opt idc*) Option.or_else cst t in
                  let '(e, t) := Zcast cst (e, t) in
-                 Zcast cstout ((idc @@ e)%Cexpr, typ).
+                 Zcast cstout ((idc @@@ e)%Cexpr, typ).
 
           Local Definition fakeprod (A B : Compilers.type.type base.type) : Compilers.type.type base.type
             := match A, B with
@@ -620,7 +620,7 @@ Module Compilers.
               := fun r
                  => cast_down_if_needed
                       r
-                      (literal v @@ TT, Some (int.of_zrange_relaxed (relax_zrange r[v~>v])))%core%Cexpr%option%zrange.
+                      (literal v @@@ TT, Some (int.of_zrange_relaxed (relax_zrange r[v~>v])))%core%Cexpr%option%zrange.
 
             Definition arith_expr_of_PHOAS_ident
                        {t}
@@ -680,7 +680,7 @@ Module Compilers.
                                 => let ty := int.unsigned lgbitwidth in
                                    let rin' := Some ty in
                                    let '(e, _) := Zcast rin' (e, r) in
-                                   ret (cast_down_if_needed rout (cast_up_if_needed rout (Z_lnot ty @@ e, rin')))
+                                   ret (cast_down_if_needed rout (cast_up_if_needed rout (Z_lnot ty @@@ e, rin')))
                               | None => inr ["Invalid modulus for Z.lnot (not 2^(2^_)): " ++ show false modulus]%string
                               end
                          | None => inr ["Invalid non-literal modulus for Z.lnot"]%string
@@ -689,7 +689,7 @@ Module Compilers.
                    => fun _ _ _ => inr ["Invalid identifier in arithmetic expression " ++ show true idc]%string
                  | ident.Z_opp (* we pretend this is [0 - _] *)
                    => fun r x =>
-                        let zero := (literal 0 @@ TT, Some (int.of_zrange_relaxed (relax_zrange r[0~>0]))) in
+                        let zero := (literal 0 @@@ TT, Some (int.of_zrange_relaxed (relax_zrange r[0~>0]))) in
                         ret (arith_bin_arith_expr_of_PHOAS_ident Z_sub r (zero, x))
                  | ident.Literal _ v
                    => fun _ => ret v
@@ -870,7 +870,7 @@ Module Compilers.
                  | tZ
                    => fun '(n, is_ptr, r) r'
                       => let v := if is_ptr
-                                  then (Dereference @@ Var type.Zptr n)%Cexpr
+                                  then (Dereference @@@ Var type.Zptr n)%Cexpr
                                   else Var type.Z n in
                          ret (cast_down_if_needed r' (v, r))
                  | base.type.prod A B
@@ -880,7 +880,7 @@ Module Compilers.
                  | base.type.list tZ
                    => fun '(n, r, len) r'
                       => ret (List.map
-                                (fun i => (List_nth i @@ Var type.Zptr n, r))%core%Cexpr
+                                (fun i => (List_nth i @@@ Var type.Zptr n, r))%core%Cexpr
                                 (List.seq 0 len))
                  | base.type.list _
                  | base.type.option _
@@ -1043,7 +1043,7 @@ Module Compilers.
                                      => inl rout
                                    | None => inr ["Missing cast annotation on return of Z.zselect"]
                                    end;
-                               ret (fun retptr => [Call (Z_zselect ty @@ (retptr, (econd, e1, e2)))]%Cexpr))
+                               ret (fun retptr => [Call (Z_zselect ty @@@ (retptr, (econd, e1, e2)))]%Cexpr))
                  | _ => None (* fun _ => inr ["Unrecognized identifier (expecting a 1-pointer-returning function): " ++ show false idc]%string *)
                  end.
 
@@ -1069,7 +1069,7 @@ Module Compilers.
                         bounds_check do_bounds_check "first return value of" idc s e2v (fst rout),
                         bounds_check do_bounds_check "second return value of" idc s e2v (snd rout);
                           inl ((round_up_to_split_type s (fst rout), round_up_to_split_type s (snd rout)),
-                               fun retptr => [Call (Z_mul_split s @@ (retptr, (e1, e2)))%Cexpr]))
+                               fun retptr => [Call (Z_mul_split s @@@ (retptr, (e1, e2)))%Cexpr]))
                   | Some s, ident.Z_add_get_carry as idc
                   | Some s, ident.Z_sub_get_borrow as idc
                     => let idc' : ident _ _ := Option.invert_Some
@@ -1086,7 +1086,7 @@ Module Compilers.
                        let '(e1, _) := result_upcast (t:=tZ) (Some (int.of_zrange_relaxed r[0 ~> 2 ^ s - 1])) (e1, r1) in
                        let '(e2, _) := result_upcast (t:=tZ) (Some (int.of_zrange_relaxed r[0 ~> 2 ^ s - 1])) (e2, r2) in
                        inl ((round_up_to_split_type s (fst rout), snd rout),
-                            fun retptr => [Call (idc' @@ (retptr, (literal 0 @@ TT, e1, e2)))%Cexpr]))
+                            fun retptr => [Call (idc' @@@ (retptr, (literal 0 @@@ TT, e1, e2)))%Cexpr]))
                   | Some _, _ => inr ["Unrecognized identifier when attempting to construct an assignment with 2 arguments: " ++ show true idc]%string
                   | None, _ => inr ["Expression is not a literal power of two of type ℤ: " ++ show true s ++ " (when trying to parse the first argument of " ++ show true idc ++ ")"]%string
                   end.
@@ -1120,7 +1120,7 @@ Module Compilers.
                          let '(e2, _) := result_upcast (t:=tZ) (Some (int.of_zrange_relaxed (relax_zrange r[0 ~> 2 ^ s - 1]))) (e2, r2) in
                          let '(e3, _) := result_upcast (t:=tZ) (Some (int.of_zrange_relaxed (relax_zrange r[0 ~> 2 ^ s - 1]))) (e3, r3) in
                          inl ((round_up_to_split_type s (fst rout), snd rout),
-                              fun retptr => [Call (idc' @@ (retptr, (e1, e2, e3)))%Cexpr]))
+                              fun retptr => [Call (idc' @@@ (retptr, (e1, e2, e3)))%Cexpr]))
                  | Some _, _ => inr ["Unrecognized identifier when attempting to construct an assignment with 2 arguments: " ++ show true idc]%string
                  | None, _ => inr ["Expression is not a literal power of two of type ℤ: " ++ show true s ++ " (when trying to parse the first argument of " ++ show true idc ++ ")"]%string
                  end.
@@ -1156,7 +1156,7 @@ Module Compilers.
                              end);
                  ret (if explicit_pointer_variables
                       then ([DeclareVar type.Zptr (Some r) n], n, true, (Var type.Zptr n)%Cexpr)
-                      else ([DeclareVar type.Z (Some r) n], n, false, (Addr @@ Var type.Z n)%Cexpr))).
+                      else ([DeclareVar type.Z (Some r) n], n, false, (Addr @@@ Var type.Z n)%Cexpr))).
 
             Let make_assign_arg_1ref_opt
                 (do_bounds_check : bool)

@@ -109,61 +109,61 @@ Module Compilers.
 
       Fixpoint arith_to_string (prefix : string) {t} (e : arith_expr t) : string
         := match e with
-           | (literal v @@ _) => primitive.to_string prefix type.Z v
-           | (List_nth n @@ Var _ v)
+           | (literal v @@@ _) => primitive.to_string prefix type.Z v
+           | (List_nth n @@@ Var _ v)
              => "(" ++ v ++ "[" ++ decimal_string_of_Z (Z.of_nat n) ++ "])"
-           | (Addr @@ Var _ v) => "&" ++ v
-           | (Dereference @@ e) => "( *" ++ @arith_to_string prefix _ e ++ " )"
-           | (Z_shiftr offset @@ e)
+           | (Addr @@@ Var _ v) => "&" ++ v
+           | (Dereference @@@ e) => "( *" ++ @arith_to_string prefix _ e ++ " )"
+           | (Z_shiftr offset @@@ e)
              => "(" ++ @arith_to_string prefix _ e ++ " >> " ++ decimal_string_of_Z offset ++ ")"
-           | (Z_shiftl offset @@ e)
+           | (Z_shiftl offset @@@ e)
              => "(" ++ @arith_to_string prefix _ e ++ " << " ++ decimal_string_of_Z offset ++ ")"
-           | (Z_land @@ (e1, e2))
+           | (Z_land @@@ (e1, e2))
              => "(" ++ @arith_to_string prefix _ e1 ++ " & " ++ @arith_to_string prefix _ e2 ++ ")"
-           | (Z_lor @@ (e1, e2))
+           | (Z_lor @@@ (e1, e2))
              => "(" ++ @arith_to_string prefix _ e1 ++ " | " ++ @arith_to_string prefix _ e2 ++ ")"
-           | (Z_add @@ (x1, x2))
+           | (Z_add @@@ (x1, x2))
              => "(" ++ @arith_to_string prefix _ x1 ++ " + " ++ @arith_to_string prefix _ x2 ++ ")"
-           | (Z_mul @@ (x1, x2))
+           | (Z_mul @@@ (x1, x2))
              => "(" ++ @arith_to_string prefix _ x1 ++ " * " ++ @arith_to_string prefix _ x2 ++ ")"
-           | (Z_sub @@ (x1, x2))
+           | (Z_sub @@@ (x1, x2))
              => "(" ++ @arith_to_string prefix _ x1 ++ " - " ++ @arith_to_string prefix _ x2 ++ ")"
-           | (Z_lnot _ @@ e)
+           | (Z_lnot _ @@@ e)
              => "(~" ++ @arith_to_string prefix _ e ++ ")"
-           | (Z_bneg @@ e)
+           | (Z_bneg @@@ e)
              => "(!" ++ @arith_to_string prefix _ e ++ ")"
-           | (Z_mul_split lg2s @@ args)
+           | (Z_mul_split lg2s @@@ args)
              => prefix
                  ++ "mulx_u"
                  ++ decimal_string_of_Z lg2s ++ "(" ++ @arith_to_string prefix _ args ++ ")"
-           | (Z_add_with_get_carry lg2s @@ args)
+           | (Z_add_with_get_carry lg2s @@@ args)
              => prefix
                  ++ "addcarryx_u"
                  ++ decimal_string_of_Z lg2s ++ "(" ++ @arith_to_string prefix _ args ++ ")"
-           | (Z_sub_with_get_borrow lg2s @@ args)
+           | (Z_sub_with_get_borrow lg2s @@@ args)
              => prefix
                  ++ "subborrowx_u"
                  ++ decimal_string_of_Z lg2s ++ "(" ++ @arith_to_string prefix _ args ++ ")"
-           | (Z_zselect ty @@ args)
+           | (Z_zselect ty @@@ args)
              => prefix
                  ++ "cmovznz_"
                  ++ (if int.is_unsigned ty then "u" else "")
                  ++ decimal_string_of_Z (int.bitwidth_of ty) ++ "(" ++ @arith_to_string prefix _ args ++ ")"
-           | (Z_add_modulo @@ (x1, x2, x3)) => "#error addmodulo;"
-           | (Z_static_cast int_t @@ e)
+           | (Z_add_modulo @@@ (x1, x2, x3)) => "#error addmodulo;"
+           | (Z_static_cast int_t @@@ e)
              => "(" ++ String.type.primitive.to_string prefix type.Z (Some int_t) ++ ")"
                     ++ @arith_to_string prefix _ e
            | Var _ v => v
            | Pair A B a b
              => @arith_to_string prefix A a ++ ", " ++ @arith_to_string prefix B b
-           | (List_nth _ @@ _)
-           | (Addr @@ _)
-           | (Z_add @@ _)
-           | (Z_mul @@ _)
-           | (Z_sub @@ _)
-           | (Z_land @@ _)
-           | (Z_lor @@ _)
-           | (Z_add_modulo @@ _)
+           | (List_nth _ @@@ _)
+           | (Addr @@@ _)
+           | (Z_add @@@ _)
+           | (Z_mul @@@ _)
+           | (Z_sub @@@ _)
+           | (Z_land @@@ _)
+           | (Z_lor @@@ _)
+           | (Z_add_modulo @@@ _)
              => "#error bad_arg;"
            | TT
              => "#error tt;"

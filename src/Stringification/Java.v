@@ -89,60 +89,60 @@ Module Java.
   Fixpoint arith_to_string (prefix : string) {t} (e : IR.arith_expr t) : string
     := match e with
        (* integer literals *)
-       | (IR.literal v @@ _) => int_literal_to_string prefix IR.type.Z v
+       | (IR.literal v @@@ _) => int_literal_to_string prefix IR.type.Z v
        (* array dereference *)
-       | (IR.List_nth n @@ IR.Var _ v) => "(" ++ v ++ "[" ++ decimal_string_of_Z (Z.of_nat n) ++ "])"
+       | (IR.List_nth n @@@ IR.Var _ v) => "(" ++ v ++ "[" ++ decimal_string_of_Z (Z.of_nat n) ++ "])"
        (* (de)referencing *)
-       | (IR.Dereference @@ e) => "(" ++ arith_to_string prefix e ++ ").get()"
+       | (IR.Dereference @@@ e) => "(" ++ arith_to_string prefix e ++ ").get()"
        (* bitwise operations *)
-       | (IR.Z_shiftr offset @@ e) =>
+       | (IR.Z_shiftr offset @@@ e) =>
          (* We assume that shift is always unsigned *)
          "(" ++ arith_to_string prefix e ++ " >>> " ++ decimal_string_of_Z offset ++ ")"
-       | (IR.Z_shiftl offset @@ e) =>
+       | (IR.Z_shiftl offset @@@ e) =>
          "(" ++ arith_to_string prefix e ++ " << " ++ decimal_string_of_Z offset ++ ")"
-       | (IR.Z_land @@ (e1, e2)) =>
+       | (IR.Z_land @@@ (e1, e2)) =>
          "(" ++ arith_to_string prefix e1 ++ " & " ++ arith_to_string prefix e2 ++ ")"
-       | (IR.Z_lor @@ (e1, e2)) =>
+       | (IR.Z_lor @@@ (e1, e2)) =>
          "(" ++ arith_to_string prefix e1 ++ " | " ++ arith_to_string prefix e2 ++ ")"
-       | (IR.Z_lnot _ @@ e) => "(~" ++ arith_to_string prefix e ++ ")"
+       | (IR.Z_lnot _ @@@ e) => "(~" ++ arith_to_string prefix e ++ ")"
        (* arithmetic operations *)
-       | (IR.Z_add @@ (x1, x2)) =>
+       | (IR.Z_add @@@ (x1, x2)) =>
          "(" ++ arith_to_string prefix x1 ++ " + " ++ arith_to_string prefix x2 ++ ")"
-       | (IR.Z_mul @@ (x1, x2)) =>
+       | (IR.Z_mul @@@ (x1, x2)) =>
          "(" ++ arith_to_string prefix x1 ++ " * " ++ arith_to_string prefix x2 ++ ")"
-       | (IR.Z_sub @@ (x1, x2)) =>
+       | (IR.Z_sub @@@ (x1, x2)) =>
          "(" ++ arith_to_string prefix x1 ++ " - " ++ arith_to_string prefix x2 ++ ")"
-       | (IR.Z_bneg @@ e) => "(!/* TODO: FIX ME */ " ++ arith_to_string prefix e ++ ")"
-       | (IR.Z_mul_split lg2s @@ args) =>
+       | (IR.Z_bneg @@@ e) => "(!/* TODO: FIX ME */ " ++ arith_to_string prefix e ++ ")"
+       | (IR.Z_mul_split lg2s @@@ args) =>
          prefix
            ++ "mulx_u"
            ++ decimal_string_of_Z lg2s ++ "(" ++ arith_to_string prefix args ++ ")"
-       | (IR.Z_add_with_get_carry lg2s @@ args) =>
+       | (IR.Z_add_with_get_carry lg2s @@@ args) =>
          prefix
            ++ "addcarryx_u"
            ++ decimal_string_of_Z lg2s ++ "(" ++ arith_to_string prefix args ++ ")"
-       | (IR.Z_sub_with_get_borrow lg2s @@ args) =>
+       | (IR.Z_sub_with_get_borrow lg2s @@@ args) =>
          prefix
            ++ "subborrowx_u"
            ++ decimal_string_of_Z lg2s ++ "(" ++ arith_to_string prefix args ++ ")"
-       | (IR.Z_zselect ty @@ args) =>
+       | (IR.Z_zselect ty @@@ args) =>
          prefix
            ++ "cmovznz_u"
            ++ decimal_string_of_Z (ToString.int.bitwidth_of ty) ++ "(" ++ @arith_to_string prefix _ args ++ ")"
-       | (IR.Z_static_cast int_t @@ e) =>
+       | (IR.Z_static_cast int_t @@@ e) =>
          "Long.valueOf(" ++ arith_to_string prefix e ++ ")." ++ primitive_type_to_string false prefix IR.type.Z (Some int_t) ++ "Value()"
        | IR.Var _ v => v
        | IR.Pair A B a b => arith_to_string prefix a ++ ", " ++ arith_to_string prefix b
-       | (IR.Addr @@ IR.Var _ v) => "error_cannot_take_reference_in_Java_to_" ++ v
-       | (IR.Z_add_modulo @@ (x1, x2, x3)) => "int _error = error_addmodulo"
-       | (IR.List_nth _ @@ _)
-       | (IR.Addr @@ _)
-       | (IR.Z_add @@ _)
-       | (IR.Z_mul @@ _)
-       | (IR.Z_sub @@ _)
-       | (IR.Z_land @@ _)
-       | (IR.Z_lor @@ _)
-       | (IR.Z_add_modulo @@ _) => "int _error = error_bad_arg"
+       | (IR.Addr @@@ IR.Var _ v) => "error_cannot_take_reference_in_Java_to_" ++ v
+       | (IR.Z_add_modulo @@@ (x1, x2, x3)) => "int _error = error_addmodulo"
+       | (IR.List_nth _ @@@ _)
+       | (IR.Addr @@@ _)
+       | (IR.Z_add @@@ _)
+       | (IR.Z_mul @@@ _)
+       | (IR.Z_sub @@@ _)
+       | (IR.Z_land @@@ _)
+       | (IR.Z_lor @@@ _)
+       | (IR.Z_add_modulo @@@ _) => "int _error = error_bad_arg"
        | TT => "error_tt"
        end%string%Cexpr.
 
