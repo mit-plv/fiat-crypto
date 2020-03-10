@@ -15,8 +15,8 @@ Section Expr.
   Existing Instance Types.rep.listZ_local. (* local list representation *)
 
   Section Casts.
-    Definition max_range : zrange := {| lower := 0; upper := 2 ^ Semantics.width |}.
-    Definition range_good (r : zrange) : bool := is_tighter_than_bool r max_range.
+    Definition max_range : zrange := {| lower := 0; upper := 2 ^ Semantics.width - 1 |}.
+    Definition range_good (r : zrange) : bool := zrange_beq r max_range.
 
     (* checks that the expression is either a) a literal nat or Z that
        falls within the allowed range or b) an expression surrounded by
@@ -61,15 +61,23 @@ Section Expr.
     | ident.Z_ltz => Some bopname.ltu
     | ident.Z_land => Some bopname.and
     | ident.Z_lor => Some bopname.or
-    | ident.Z_shiftr => Some bopname.sru
     | _ => None
     end.
 
-  Definition translate_truncating_binop {t} (i : ident.ident t)
+  (* Note: mul_high and truncating_shiftl use different expressions for
+     truncation (width vs 2 ^ width). If that changes, and they use the same
+     structure, put the ifs in translate_expr and don't pass s. *)
+  Definition translate_truncating_binop {t} (i : ident.ident t) (s : Z)
     : option bopname :=
     match i with
-    | ident.Z_truncating_shiftl => Some bopname.slu
-    | ident.Z_mul_high => Some bopname.mulhuu
+    | ident.Z_truncating_shiftl =>
+      if Z.eqb s Semantics.width
+      then Some bopname.slu
+      else None
+    | ident.Z_mul_high =>
+      if Z.eqb s (2 ^ Semantics.width)
+      then Some bopname.mulhuu
+      else None
     | _ => None
     end.
 
@@ -100,13 +108,13 @@ Section Expr.
            (type.base (base.type.prod base_Z _)) type_Z
            (expr.Ident _ (ident.fst base_Z _))
            x) =>
-        fst (translate_expr false x)
+        fst (translate_expr true x)
       (* snd : since the [rtype] of a product type is a tuple, simply Coq's [snd] *)
       | (expr.App
            (type.base (base.type.prod _ base_Z)) type_Z
            (expr.Ident _ (ident.snd _ base_Z))
            x) =>
-        snd (translate_expr false x)
+        snd (translate_expr true x)
       (* List_nth_default : lists are represented by lists of variables, so we
          can perform the nth_default inline. This saves us from having to
          prove that all indexing into lists is in-bounds. *)
@@ -127,6 +135,17 @@ Section Expr.
         expr.literal x
       (* Var : use rtype_of_ltype to convert the expression *)
       | expr.Var (type.base _) x => base_rtype_of_ltype x
+      (* Special case for shiftr, because second argument needs to be < width
+         instead of < 2 ^ width. This means we can only accept right-shifts by
+         literals. *)
+      | (expr.App
+           type_Z type_Z
+           (expr.App type_Z (type.arrow type_Z type_Z)
+                     (expr.Ident _ ident.Z_shiftr) x)
+           (expr.Ident _ (ident.Literal base.type.Z y))) =>
+         if is_bounded_by_bool y r[0~>Semantics.width]%zrange
+         then expr.op bopname.sru (translate_expr true x) (expr.literal y)
+         else base_make_error _
       (* basic binary operation *)
       | (expr.App
            type_Z type_Z
@@ -144,13 +163,10 @@ Section Expr.
                                (expr.Ident _ i)
                                (expr.Ident _ (ident.Literal base.type.Z s)))
                      x) y) =>
-        if Z.eqb s Semantics.width
-        then
-          match translate_truncating_binop i with
-          | Some op => expr.op op (translate_expr true x) (translate_expr true y)
-          | None => base_make_error _
-          end
-        else base_make_error _
+        match translate_truncating_binop i s with
+        | Some op => expr.op op (translate_expr true x) (translate_expr true y)
+        | None => base_make_error _
+        end
       (* if no clauses matched the expression, return an error *)
       | _ => make_error _
       end.

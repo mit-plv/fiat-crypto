@@ -391,10 +391,14 @@ Section Cmd.
     (* inversion on wf3 leaves a mess; clean up hypotheses *)
     all:repeat match goal with
                | _ => progress cleanup_wf
-               | H : wf3 _ ?x _ _ |- _ =>
+               | H : wf3 _ ?x ?y _ |- _ =>
                  (* for the cons case, repeatedly do inversion until the cons is exposed *)
-                 progress match x with context [Compilers.ident.cons] =>
-                                       inversion H; clear H
+                 progress match x with
+                            context [Compilers.ident.cons] =>
+                            progress match y with
+                                     | expr.App _ _ => idtac (* don't invert original, already-inverted one *)
+                                     | _ => inversion H; clear H
+                                     end
                           end
                end.
 
