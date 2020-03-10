@@ -273,7 +273,7 @@ Section Cmd.
     translate_cmd e3 nextn = assign nextn (translate_expr true e3).
   Proof.
     inversion 1; cleanup_wf; try reflexivity;
-      inversion 1; cleanup_wf; reflexivity.
+      inversion 1; cleanup_wf; try reflexivity.
   Qed.
 
   Local Ltac simplify :=
