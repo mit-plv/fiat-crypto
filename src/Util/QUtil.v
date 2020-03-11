@@ -3,6 +3,7 @@ Require Import Coq.micromega.Lia.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
 Require Import Crypto.Util.ZUtil.Morphisms.
+Require Import Crypto.Util.Bool.Reflect.
 
 Local Open Scope Z_scope.
 
@@ -133,3 +134,31 @@ Section pow_ceil_mul_nat2.
     reflexivity.
   Qed.
 End pow_ceil_mul_nat2.
+
+Scheme Equality for Q.
+Scheme Induction for Q Sort Prop.
+Scheme Induction for Q Sort Set.
+Scheme Induction for Q Sort Type.
+Scheme Minimality for Q Sort Prop.
+Scheme Minimality for Q Sort Set.
+Scheme Minimality for Q Sort Type.
+
+Global Instance reflect_eq_Q : reflect_rel (@eq Q) Q_beq | 10
+  := reflect_of_brel internal_Q_dec_bl internal_Q_dec_lb.
+
+Global Instance Q_rect_Proper {P}
+  : Proper (forall_relation (fun _ => forall_relation (fun _ => eq)) ==> forall_relation (fun _ => eq)) (Q_rect P).
+Proof.
+  intros f g Hfg [? ?]; cbn; apply Hfg.
+Qed.
+
+Global Instance Q_rect_Proper_nondep {T}
+  : Proper (pointwise_relation _ (pointwise_relation _ eq) ==> eq ==> eq) (Q_rect (fun _ => T)).
+Proof.
+  intros f g Hfg [? ?] y ?; subst y; cbn; apply Hfg.
+Qed.
+
+Global Instance Q_rect_Proper_nondep_gen {P} (R : relation P) : Proper ((eq ==> eq ==> R) ==> eq ==> R) (@Q_rect (fun _ => P)) | 100.
+Proof.
+  intros f g Hfg [? ?] y ?; subst y; cbn; now apply Hfg.
+Qed.
