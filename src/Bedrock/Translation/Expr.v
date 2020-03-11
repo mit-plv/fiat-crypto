@@ -52,9 +52,49 @@ Section Expr.
       end.
   End Casts.
 
-  (* Special case for shiftr, because second argument needs to be < width
-     instead of < 2 ^ width. This means we can only accept right-shifts by
-     literals. *)
+  Definition translate_binop {t}
+             (i : ident.ident t)
+    :  option bopname :=
+    match i with
+    | ident.Z_add =>  Some bopname.add
+    | ident.Z_sub =>  Some bopname.sub
+    | ident.Z_mul =>  Some bopname.mul
+    | ident.Z_ltz =>  Some bopname.ltu
+    | ident.Z_land => Some bopname.and
+    | ident.Z_lor =>  Some bopname.or
+    | _ => None
+    end.
+
+  Definition translate_mul_high {t} (i : ident.ident t) (s : Z)
+    : option bopname :=
+    match i with
+    | ident.Z_mul_high =>
+      if Z.eqb s (2 ^ Semantics.width)
+      then Some bopname.mulhuu
+      else None
+    | _ => None
+    end.
+
+  (* second argument is required to be < width *)
+  Definition translate_shiftl {var t}
+             (i : ident.ident t) (s : Z)
+    : (@API.expr var type_Z) -> option bopname :=
+    match i with
+    | ident.Z_truncating_shiftl =>
+      fun n =>
+        match n return option bopname with
+        | expr.Ident _ (ident.Literal base.type.Z z) =>
+          if is_bounded_by_bool z r[0~>Semantics.width]%zrange
+          then if Z.eqb s Semantics.width
+               then Some bopname.slu
+               else None
+          else None
+        | _ => None
+        end
+    | _ => fun _ => None
+    end.
+
+  (* second argument is required to be < width *)
   Definition translate_shiftr {var t}
              (i : ident.ident t)
     : (@API.expr var type_Z) -> option bopname :=
@@ -71,61 +111,6 @@ Section Expr.
     | _ => fun _ => None
     end.
 
-  Definition translate_binop {t}
-             (i : ident.ident t)
-    :  option bopname :=
-    match i with
-    | ident.Z_add =>  Some bopname.add
-    | ident.Z_sub =>  Some bopname.sub
-    | ident.Z_mul =>  Some bopname.mul
-    | ident.Z_ltz =>  Some bopname.ltu
-    | ident.Z_land => Some bopname.and
-    | ident.Z_lor =>  Some bopname.or
-    | _ => None
-    end.
-
-  (* Note: mul_high and truncating_shiftl use different expressions for
-     truncation (width vs 2 ^ width). If that changes, and they use the same
-     structure, put the ifs in translate_expr and don't pass s. *)
-  Definition translate_truncating_binop {t} (i : ident.ident t) (s : Z)
-    : option bopname :=
-    match i with
-    | ident.Z_truncating_shiftl =>
-      if Z.eqb s Semantics.width
-      then Some bopname.slu
-      else None
-    | ident.Z_mul_high =>
-      if Z.eqb s (2 ^ Semantics.width)
-      then Some bopname.mulhuu
-      else None
-    | _ => None
-    end.
-
-  (*
-  (* TODO : remove if unused *)
-  Fixpoint translate_binop2 {t} (e : @API.expr ltype (type.base t))
-    : option Syntax.bopname :=
-    match e with
-    (* basic binary operation *)
-    | (expr.App
-         type_Z type_Z
-         (expr.App type_Z (type.arrow type_Z type_Z)
-                   (expr.Ident
-                      (type.arrow type_Z (type.arrow type_Z type_Z))
-                      i) x) y) =>
-      translate_binop (t:=type_Z -> type_Z -> type_Z) i (x, (y, tt))
-    (* truncating binary operation *)
-    | (expr.App
-         type_Z type_Z
-         (expr.App type_Z (type.arrow type_Z type_Z)
-                   (expr.App type_Z (type.arrow type_Z (type.arrow type_Z type_Z))
-                             (expr.Ident _ i)
-                             (expr.Ident _ (ident.Literal base.type.Z s)))
-                   x) y) =>
-      translate_truncating_binop i s
-    | _ => None
-    end.
-   *)
 
   (* Translate an API.expr (without LetIn statements) into a bedrock2
      Syntax.expr *)
@@ -202,21 +187,16 @@ Section Expr.
                                (expr.Ident _ i)
                                (expr.Ident _ (ident.Literal base.type.Z s)))
                      x) y) =>
-        match translate_truncating_binop i s with
-        | Some op => expr.op op (translate_expr true x) (translate_expr true y)
-        | None => base_make_error _
+        match translate_mul_high i s with
+        | Some op => expr.op op (translate_expr true x)
+                             (translate_expr true y)
+        | None => match translate_shiftl i s y with
+                  | Some op =>
+                    expr.op op (translate_expr true x)
+                            (translate_expr true y)
+                  | None => base_make_error _
+                  end
         end
-
-          (* TODO: remove if unused
-      (* binary operation *)
-      | expr.App type_Z type_Z
-                 (expr.App type_Z (type.arrow type_Z type_Z)
-                           f x) y =>
-        match translate_binop2 (expr.App (expr.App f x) y) with
-        | Some op => expr.op op (translate_expr true x) (translate_expr true y)
-        | None => base_make_error _
-        end
-*)
       (* if no clauses matched the expression, return an error *)
       | _ => make_error _
       end.

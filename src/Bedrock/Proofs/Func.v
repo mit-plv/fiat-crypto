@@ -660,11 +660,4 @@ Section Func.
                      subset_disjoint, flatten_listonly_subset, disjoint_used_varnames_lt]
            end.
   Qed.
-
-  (*
-    TODO : prove assumptions shown by:
-    Print Assumptions translate_func_correct.
-    
-    translate_expr_correct (hard)
-  *)
 End Func.
