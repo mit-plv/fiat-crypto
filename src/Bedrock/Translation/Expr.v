@@ -52,15 +52,35 @@ Section Expr.
       end.
   End Casts.
 
-  Definition translate_binop {t} (i : ident.ident t)
-    : option bopname :=
+  (* Special case for shiftr, because second argument needs to be < width
+     instead of < 2 ^ width. This means we can only accept right-shifts by
+     literals. *)
+  Definition translate_shiftr {var t}
+             (i : ident.ident t)
+    : (@API.expr var type_Z) -> option bopname :=
     match i with
-    | ident.Z_add => Some bopname.add
-    | ident.Z_sub => Some bopname.sub
-    | ident.Z_mul => Some bopname.mul
-    | ident.Z_ltz => Some bopname.ltu
+    | ident.Z_shiftr =>
+      fun n =>
+        match n return option bopname with
+        | expr.Ident _ (ident.Literal base.type.Z z) =>
+          if is_bounded_by_bool z r[0~>Semantics.width]%zrange
+          then Some bopname.sru
+          else None
+        | _ => None
+        end
+    | _ => fun _ => None
+    end.
+
+  Definition translate_binop {t}
+             (i : ident.ident t)
+    :  option bopname :=
+    match i with
+    | ident.Z_add =>  Some bopname.add
+    | ident.Z_sub =>  Some bopname.sub
+    | ident.Z_mul =>  Some bopname.mul
+    | ident.Z_ltz =>  Some bopname.ltu
     | ident.Z_land => Some bopname.and
-    | ident.Z_lor => Some bopname.or
+    | ident.Z_lor =>  Some bopname.or
     | _ => None
     end.
 
@@ -80,6 +100,32 @@ Section Expr.
       else None
     | _ => None
     end.
+
+  (*
+  (* TODO : remove if unused *)
+  Fixpoint translate_binop2 {t} (e : @API.expr ltype (type.base t))
+    : option Syntax.bopname :=
+    match e with
+    (* basic binary operation *)
+    | (expr.App
+         type_Z type_Z
+         (expr.App type_Z (type.arrow type_Z type_Z)
+                   (expr.Ident
+                      (type.arrow type_Z (type.arrow type_Z type_Z))
+                      i) x) y) =>
+      translate_binop (t:=type_Z -> type_Z -> type_Z) i (x, (y, tt))
+    (* truncating binary operation *)
+    | (expr.App
+         type_Z type_Z
+         (expr.App type_Z (type.arrow type_Z type_Z)
+                   (expr.App type_Z (type.arrow type_Z (type.arrow type_Z type_Z))
+                             (expr.Ident _ i)
+                             (expr.Ident _ (ident.Literal base.type.Z s)))
+                   x) y) =>
+      translate_truncating_binop i s
+    | _ => None
+    end.
+   *)
 
   (* Translate an API.expr (without LetIn statements) into a bedrock2
      Syntax.expr *)
@@ -135,25 +181,18 @@ Section Expr.
         expr.literal x
       (* Var : use rtype_of_ltype to convert the expression *)
       | expr.Var (type.base _) x => base_rtype_of_ltype x
-      (* Special case for shiftr, because second argument needs to be < width
-         instead of < 2 ^ width. This means we can only accept right-shifts by
-         literals. *)
-      | (expr.App
-           type_Z type_Z
-           (expr.App type_Z (type.arrow type_Z type_Z)
-                     (expr.Ident _ ident.Z_shiftr) x)
-           (expr.Ident _ (ident.Literal base.type.Z y))) =>
-         if is_bounded_by_bool y r[0~>Semantics.width]%zrange
-         then expr.op bopname.sru (translate_expr true x) (expr.literal y)
-         else base_make_error _
       (* basic binary operation *)
       | (expr.App
            type_Z type_Z
            (expr.App type_Z (type.arrow type_Z type_Z)
-                     (expr.Ident _ i) x) y) =>
+                     (expr.Ident (type.arrow type_Z (type.arrow type_Z type_Z)) i) x) y) =>
         match translate_binop i with
         | Some op => expr.op op (translate_expr true x) (translate_expr true y)
-        | None => base_make_error _
+        | None =>
+          match translate_shiftr i y with
+          | Some op => expr.op op (translate_expr true x) (translate_expr true y)
+          | None => base_make_error _
+          end
         end
       (* truncating binary operation *)
       | (expr.App
@@ -167,6 +206,17 @@ Section Expr.
         | Some op => expr.op op (translate_expr true x) (translate_expr true y)
         | None => base_make_error _
         end
+
+          (* TODO: remove if unused
+      (* binary operation *)
+      | expr.App type_Z type_Z
+                 (expr.App type_Z (type.arrow type_Z type_Z)
+                           f x) y =>
+        match translate_binop2 (expr.App (expr.App f x) y) with
+        | Some op => expr.op op (translate_expr true x) (translate_expr true y)
+        | None => base_make_error _
+        end
+*)
       (* if no clauses matched the expression, return an error *)
       | _ => make_error _
       end.

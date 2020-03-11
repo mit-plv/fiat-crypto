@@ -140,7 +140,7 @@ Section Cmd.
       2:{
         eapply IHrhs; eauto.
         { eapply Forall2_impl_strong; eauto.
-          intros; sepsimpl.
+          intros; sepsimpl; [ lia .. | ].
           eapply expr_only_differ_undef; eauto.
           rewrite used_varnames_1.
           eauto using only_differ_sym, only_differ_put. }
@@ -162,7 +162,8 @@ Section Cmd.
                          fold_right] in *.
         eauto using only_differ_sym, only_differ_put, only_differ_trans. }
       { constructor; eauto; [ ].
-        sepsimpl. cbn [rep.rtype_of_ltype rep.Z].
+        sepsimpl; [ lia .. | ].
+        cbn [rep.rtype_of_ltype rep.Z].
         eapply expr_untouched with (mem2:=map.empty); eauto;
           [ | solve [apply dexpr_put_same] ].
         match goal with H : PropSet.sameset _ _ |- _ =>
@@ -485,7 +486,9 @@ Section Cmd.
           match goal with
           | H : emp _ _ |- _ => inversion H; subst; clear H
           end.
+          cleanup.
           split; [ reflexivity | ].
+          split; [ lia | ].
           eapply (expr_untouched ltac:(eassumption)
                                         ltac:(eassumption)); eauto; [ ].
           cbv [used_varnames]. setsimplify.

@@ -50,7 +50,7 @@ Section Varnames.
       cbn [varname_set rep.varname_set rep.equiv rep.rtype_of_ltype rep.Z].
       cbv [WeakestPrecondition.dexpr].
       rewrite <-disjoint_singleton_r_iff by eauto using string_dec.
-      split; intros; sepsimpl; subst;
+      split; intros; sepsimpl; subst; eauto;
         eapply expr_untouched; eauto using only_differ_sym.
     Qed.
 
@@ -63,7 +63,7 @@ Section Varnames.
           (equivalent x y locals').
     Proof.
       cbv [equivalent rep.equiv rep.Z WeakestPrecondition.dexpr].
-      repeat intro; sepsimpl; subst.
+      repeat intro; sepsimpl; subst; eauto.
       eauto using expr_only_differ_undef.
     Qed.
 
@@ -150,6 +150,7 @@ Section Varnames.
           destruct H as [x ?]; exists x
         end.
         eapply Proper_sep_iff1; [ | reflexivity | eassumption ].
+        cancel.
         eapply equiv_Z_only_differ_iff1; eauto using only_differ_sym.
       Qed.
 
@@ -178,7 +179,7 @@ Section Varnames.
         cbn [equivalent rep.equiv rep.listZ_mem]; intros; sepsimpl.
         repeat intro; sepsimpl. eexists.
         eapply Proper_sep_impl1; [ | reflexivity | eassumption ].
-        repeat intro.
+        repeat intro; sepsimpl; eauto.
         eapply (equiv_Z_only_differ_undef (listZ:=rep.listZ_mem)); eauto.
       Qed.
 

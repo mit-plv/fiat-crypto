@@ -92,8 +92,8 @@ Section Expr.
   | valid_basic_binop :
       forall i (x y : API.expr type_Z),
         translate_binop i <> None ->
-        valid_expr true x ->
-        valid_expr true y ->
+        valid_expr (t:=base_Z) true x ->
+        valid_expr (t:=base_Z) true y ->
         valid_expr (t:=base_Z) false (expr.App (expr.App (expr.Ident i) x) y)
   | valid_truncating_binop :
       forall i (s : Z) (x y : API.expr type_Z),
@@ -117,12 +117,13 @@ Section Expr.
     assert (0 <= Semantics.width) as X by (pose proof word.width_pos; lia);
       pose proof (Z.pow_pos_nonneg 2 Semantics.width ltac:(lia) X).
     intros; progress reflect_beq_to_eq zrange_beq; subst r.
-    sepsimpl.
+    cbv [ident.literal].
+    rewrite ident.cast_out_of_bounds_simple_0_mod, Z.sub_simpl_r by lia.
+    sepsimpl; try apply Z.mod_pos_bound; eauto; [ ].
     cbv [ident.literal WeakestPrecondition.dexpr] in *.
+    rewrite Z.mod_small by lia.
     eapply Proper_expr; [ | eassumption ].
     repeat intro; subst. apply word.of_Z_inj_mod.
-    rewrite ident.cast_out_of_bounds_simple_0_mod by lia.
-    rewrite Z.sub_simpl_r, Z.mod_mod by lia.
     reflexivity.
   Qed.
 
@@ -138,12 +139,14 @@ Section Expr.
     assert (0 <= Semantics.width) as X by (pose proof word.width_pos; lia);
       pose proof (Z.pow_pos_nonneg 2 Semantics.width ltac:(lia) X).
     intros; progress reflect_beq_to_eq zrange_beq; subst r1 r2.
-    cbv [ident.cast2 ident.literal WeakestPrecondition.dexpr] in *.
-    sepsimpl.
+    cbv [fst snd ident.cast2 ident.literal
+             WeakestPrecondition.dexpr] in *.
+    break_match; [ ].
+    rewrite !ident.cast_out_of_bounds_simple_0_mod, Z.sub_simpl_r by lia.
+    sepsimpl; try apply Z.mod_pos_bound; eauto; [ | ].
     all:eapply Proper_expr; [ | eassumption ].
     all:repeat intro; subst; apply word.of_Z_inj_mod.
-    all:rewrite ident.cast_out_of_bounds_simple_0_mod by lia.
-    all:rewrite Z.sub_simpl_r, Z.mod_mod by lia.
+    all:rewrite Z.mod_mod by lia.
     all:reflexivity.
   Qed.
 
@@ -151,11 +154,11 @@ Section Expr.
   (* version generalized to any t, necessary to destruct i *)
   Lemma translate_binop_correct' {t} :
     forall (i : ident.ident t)
-           (xs : type.for_each_lhs_of_arrow API.interp_type t)
-           (ys : type.for_each_lhs_of_arrow rtype t)
+           (xargs : type.for_each_lhs_of_arrow API.interp_type t)
+           (yargs : type.for_each_lhs_of_arrow rtype t)
            op locals,
       translate_binop i = Some op ->
-      locally_equivalent_args xs ys locals ->
+      locally_equivalent_args xargs yargs locals ->
       let rhs : type.for_each_lhs_of_arrow rtype t -> base_rtype (type.final_codomain t)
           := match t as t0 return
                    type.for_each_lhs_of_arrow rtype t0 ->
@@ -167,35 +170,36 @@ Section Expr.
                  expr.op op y1 y2
              | _ => fun _ => base_rtype_of_ltype (dummy_base_ltype _)
              end in
-      locally_equivalent (type.app_curried (Compilers.ident_interp i) xs) 
-                         (rhs ys) locals.
+      locally_equivalent (type.app_curried (Compilers.ident_interp i) xargs) 
+                         (rhs yargs) locals.
   Proof.
     cbv [translate_binop]; intros *.
     break_match; try congruence; intros.
     all:repeat match goal with
                | _ => progress sepsimpl
-               | _ => progress cbn [fst snd
-                                        Compilers.ident_interp
-                                        type.app_curried
-                                        type.final_codomain
-                                        locally_equivalent
-                                        equivalent rep.Z rep.equiv
-                                        equivalent_args
-                                        Semantics.interp_binop
-                                        locally_equivalent_args] in *
+               | _ => progress
+                        cbn [fst snd
+                                 Compilers.ident_interp
+                                 type.map_for_each_lhs_of_arrow
+                                 type.app_curried
+                                 type.final_codomain
+                                 locally_equivalent
+                                 equivalent rep.Z rep.equiv
+                                 equivalent_args
+                                 Semantics.interp_binop
+                                 locally_equivalent_args] in *
                | _ => progress
                         (cbv [WeakestPrecondition.dexpr] in *;
                          cbn [WeakestPrecondition.expr WeakestPrecondition.expr_body])
                | H : Some _ = Some _ |- _ => inversion H; subst; clear H
+               | _ => break_match; [ ]; cbn [fst snd]
                end.
     all: (do 2 (eapply Proper_expr; [ | eassumption]; repeat intro; subst)).
     all:autorewrite with rew_word_morphism; try reflexivity.
-      
+
     { apply word.unsigned_inj.
       rewrite word.unsigned_and.
       rewrite !word.unsigned_of_Z.
-      Search word.and.
-    
 
   Lemma translate_binop_correct
         (i : ident.ident (type_Z -> type_Z -> type_Z))
@@ -268,20 +272,26 @@ Section Expr.
       cbn [negb]. rewrite !Bool.andb_true_r.
       specialize (IHvalid_expr _ _ _ _ ltac:(eassumption) ltac:(eassumption)).
       cbn [locally_equivalent equivalent rep.equiv rep.Z] in *.
-      sepsimpl. eauto. }
+      sepsimpl; eauto. }
     { (* snd *)
       cbn [translate_expr has_casts expr.interp Compilers.ident_interp].
       cbn [negb]. rewrite !Bool.andb_true_r.
       specialize (IHvalid_expr _ _ _ _ ltac:(eassumption) ltac:(eassumption)).
       cbn [locally_equivalent equivalent rep.equiv rep.Z] in *.
-      sepsimpl. eauto. }
+      sepsimpl; eauto. }
     { (* literal *)
       cbn [translate_expr has_casts expr.interp Compilers.ident_interp].
       repeat match goal with H : is_bounded_by_bool _ _ = true |- _ =>
                              rewrite H end.
       cbn [negb]. rewrite !Bool.andb_false_r.
       cbn [locally_equivalent equivalent rep.equiv rep.Z].
-      sepsimpl. reflexivity. }
+      cbv [is_bounded_by_bool] in *. cbn [upper lower max_range] in *.
+      match goal with
+        H : (_ && _)%bool = true |- _ =>
+        apply Bool.andb_true_iff in H; cleanup
+      end; Z.ltb_to_lt.
+      cbv [ident.literal].
+      sepsimpl; eauto with lia; reflexivity. }
     { (* var *)
       cbn [translate_expr has_casts expr.interp Compilers.ident_interp].
       cbn [negb]. rewrite !Bool.andb_true_r.
@@ -316,23 +326,31 @@ Section Expr.
       cbn [translate_expr has_casts expr.interp Compilers.ident_interp].
       cbn [negb]. rewrite !Bool.andb_true_r.
       specialize (IHvalid_expr _ _ _ _ ltac:(eassumption) ltac:(eassumption)).
-      cbv [is_bounded_by_bool]. cbn [upper lower].
+      cbn [translate_binop translate_shiftr].
+      rewrite !Bool.andb_true_l, Bool.if_negb.
+      cbv [is_bounded_by_bool]. cbn [upper lower max_range].
+      assert (Semantics.width < 2 ^ Semantics.width) by
+          (apply Z.pow_gt_lin_r; lia).
       break_match;
-        try match goal with
-            | H : (_ && _)%bool = true |- _ =>
-              apply Bool.andb_true_iff in H; cleanup
-            | H : (_ && _)%bool = false |- _ =>
-              apply Bool.andb_false_iff in H; destruct H
-            end; Z.ltb_to_lt; try lia; [ ].
+        repeat match goal with
+               | H : (_ && _)%bool = true |- _ =>
+                 apply Bool.andb_true_iff in H; cleanup
+               | H : (_ && _)%bool = false |- _ =>
+                 apply Bool.andb_false_iff in H; destruct H
+               end; Z.ltb_to_lt; try lia; [ ].
       cbn [locally_equivalent equivalent rep.equiv rep.Z ident.literal] in *.
       cbv [WeakestPrecondition.dexpr] in *.
       cbn [WeakestPrecondition.expr WeakestPrecondition.expr_body
                                     Semantics.interp_binop].
-      sepsimpl. eapply Proper_expr; [ | eassumption ].
+      sepsimpl.
+      1-2:admit.
+      eapply Proper_expr; [ | eassumption ].
       repeat intro; subst.
       cbv [WeakestPrecondition.literal dlet.dlet ident.literal].
       apply word.unsigned_inj.
       rewrite word.unsigned_sru, !word.unsigned_of_Z.
+  Admitted.
+  (*
       (* need a proof that says if valid_expr true, then bounded. Or maybe if in
          context, then bounded *)
       all:admit. }
@@ -344,5 +362,5 @@ Section Expr.
       break_match; try congruence; [ ].
       apply translate_binop_correct; eauto. }
 
-  Qed.
+  Qed. *)
 End Expr.
