@@ -99,11 +99,17 @@ Module Types.
             fun (x : list Z) (y : rtype) locals =>
               Lift1Prop.ex1
                 (fun start : Z =>
-                  sep (fun mem : Interface.map.rep (map:=Semantics.mem) =>
-                         equiv start y locals mem)
-                      (array scalar (word.of_Z word_size_in_bytes)
-                             (Interface.word.of_Z start)
-                             (map Interface.word.of_Z x)))
+                   sep (map:=Semantics.mem)
+                     (sep
+                        (emp
+                           (Forall
+                              (fun z => (0 <= z < 2 ^ Semantics.width)%Z)
+                              x))
+                           (fun mem : Interface.map.rep (map:=Semantics.mem) =>
+                              equiv start y locals mem))
+                        (array scalar (word.of_Z word_size_in_bytes)
+                               (Interface.word.of_Z start)
+                               (map Interface.word.of_Z x)))
         }.
 
       Instance Z : rep base_Z :=
@@ -115,7 +121,8 @@ Module Types.
           varname_set := PropSet.singleton_set;
           equiv :=
             fun (x : Z) (y : Syntax.expr.expr) locals =>
-              emp (WeakestPrecondition.dexpr
+              emp ((0 <= x < 2 ^ Semantics.width)%Z /\
+                   WeakestPrecondition.dexpr
                      map.empty locals y (word.of_Z x))
         }.
     End rep.

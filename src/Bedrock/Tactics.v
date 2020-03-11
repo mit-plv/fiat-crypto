@@ -50,6 +50,8 @@ Ltac sepsimpl_step :=
   match goal with
   | _ => sepsimpl_step'
   | |- sep (sep _ _) _ _ => apply sep_assoc; sepsimpl_step'
+  | |- sep (sep (sep _ _) _) _ _ =>
+    apply sep_assoc; apply sep_assoc; sepsimpl_step'
   | |- sep _ (sep _ _) _ => apply sep_comm, sep_assoc; sepsimpl_step'
   | |- sep _ _ _ => apply sep_comm; sepsimpl_step'
   end.
@@ -79,6 +81,10 @@ Ltac sepsimpl_hyps_step :=
   | H : Lift1Prop.ex1 _ _ |- _ => destruct H
   | H : sep (sep ?p ?q) _ _ |- _ =>
     eapply (sep_assoc p q) in H; sepsimpl_in H
+  | H : sep (sep (sep ?p ?q) ?r) _ _ |- _ =>
+    eapply (sep_assoc (sep p q) r) in H;
+    eapply (sep_assoc p q) in H;
+    sepsimpl_in H
   | H : sep _ _ _ |- _ => sepsimpl_in H
   | H : sep _ (sep ?p ?q) _ |- _ =>
     eapply sep_comm, (sep_assoc p q) in H; sepsimpl_in H

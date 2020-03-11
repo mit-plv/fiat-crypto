@@ -43,14 +43,6 @@ Section Proofs.
           (c : list (Z * Z) := [(1,19)])
           (machine_wordsize : Z := 64).
 
-  Lemma barrett_red256_correct :
-    COperationSpecifications.Solinas.barrett_red_correct machine_wordsize M (API.Interp barrett_red256).
-  Proof.
-    apply barrett_red_correct with (machine_wordsize:=machine_wordsize).
-    { lazy. reflexivity. }
-    { apply barrett_red256_eq. }
-  Qed.
-
   (* requires some kind of proof about decimal stringification *)
   Lemma decimal_varname_gen_unique :
     forall i j : nat, varname_gen i = varname_gen j <-> i = j.
@@ -95,37 +87,32 @@ Section Proofs.
 
   (* TODO: maybe make a computable condition for this *)
   (* Won't pass right now because valid_expr isn't complete *)
-  Lemma mulmod_valid_func v :
-    mulmod = ErrorT.Success v ->
-    valid_func (v (fun H3 : API.type => unit)).
+  Lemma mulmod_valid_func :
+    valid_func (mulmod (fun H3 : API.type => unit)).
   Admitted.
 
   (* TODO: ask Jason for help *)
-  Lemma mulmod_Wf v :
-    mulmod = ErrorT.Success v ->
-    Wf.Compilers.expr.Wf3 v.
+  Lemma mulmod_Wf :
+    Wf.Compilers.expr.Wf3 mulmod.
   Admitted.
 
-  Lemma mulmod_length v (x y : API.interp_type type_listZ) :
-    mulmod = ErrorT.Success v ->
+  Lemma mulmod_length (x y : API.interp_type type_listZ) :
     length
-      (expr.interp (@Compilers.ident_interp) (v API.interp_type)
+      (expr.interp (@Compilers.ident_interp)
+                   (mulmod API.interp_type)
                    x y) = n.
   Proof.
-    intro Hmm. vm_compute in Hmm.
-    inversion Hmm.
     vm_compute. reflexivity.
   Qed.
 
   (* TODO: here's where we need to use the FC pipeline to say things about
          correctness *)
   (* this can be changed to use type.app_curried if that's easier *)
-  Lemma mulmod_correct v x y :
-    mulmod = ErrorT.Success v ->
+  Lemma mulmod_correct x y :
     eval
       (map word.wrap
            (expr.interp
-              (@Compilers.ident_interp) (v API.interp_type)
+              (@Compilers.ident_interp) (mulmod API.interp_type)
               (map word.unsigned x) (map word.unsigned y))) =
     ((eval (map word.unsigned x) * eval (map word.unsigned y)) mod M)%Z.
   Admitted.
@@ -165,15 +152,21 @@ Section Proofs.
     exact word.unsigned_of_Z.
   Qed.
 
+  (* TODO: move *)
+  Lemma Forall_map_unsigned x :
+    Forall (fun z : Z => 0 <= z < 2 ^ Semantics.width)
+           (map word.unsigned x).
+  Proof.
+    induction x; intros; cbn [map]; constructor;
+      auto using word.unsigned_range.
+  Qed.
+
   Lemma mulmod_bedrock_correct :
     program_logic_goal_for_function! mulmod_bedrock.
   Proof.
     cbv [program_logic_goal_for spec_of_mulmod_bedrock].
     cbn [name_of_func mulmod_bedrock fst]. intros.
     cbv [mulmod_bedrock].
-    case_eq mulmod;
-      [ | let H := fresh in
-          intros ? H; vm_compute in H; congruence ].
     intros. cbv [Bignum] in * |-. sepsimpl.
     eapply Proper_call.
     2:{
@@ -221,12 +214,24 @@ Section Proofs.
         exists 1%nat. cbn [firstn skipn length hd].
         apply SeparationLogic.sep_assoc.
         sepsimpl; try reflexivity; [ ].
-        eexists. sepsimpl; try reflexivity; [ ].
+        eexists.
+        sepsimpl;
+          try match goal with
+              | |- dexpr _ _ (Syntax.expr.literal _) _ => reflexivity
+              | _ => apply word.unsigned_range
+              end;
+          eauto using Forall_map_unsigned; [ ].
         apply SeparationLogic.sep_comm.
         apply SeparationLogic.sep_assoc.
         apply SeparationLogic.sep_comm.
         sepsimpl; try reflexivity; [ ].
-        eexists. sepsimpl; try reflexivity; [ ].
+        eexists.
+        sepsimpl;
+          try match goal with
+              | |- dexpr _ _ (Syntax.expr.literal _) _ => reflexivity
+              | _ => apply word.unsigned_range
+              end;
+          eauto using Forall_map_unsigned; [ ].
         rewrite !map_of_Z_unsigned.
         rewrite !word.of_Z_unsigned in *.
         change BasicC64Semantics.parameters with semantics in *.
@@ -248,8 +253,15 @@ Section Proofs.
         apply disjoint_singleton_r_iff.
         cbv [PropSet.singleton_set PropSet.elem_of PropSet.union].
         destruct 1; congruence. }
-      { cbn - [semantics Semantics.word p].
-        cbv [Bignum].
+      { cbn [LoadStoreList.lists_reserved_with_initial_context
+               LoadStoreList.list_lengths_from_value
+               LoadStoreList.extract_listnames
+               LoadStoreList.lists_reserved
+               Flatten.flatten_listonly_base_ltype
+               Flatten.flatten_base_ltype
+               Flatten.flatten_argnames List.app
+               map.of_list_zip map.putmany_of_list_zip
+               type.app_curried type.final_codomain fst snd].
         sepsimpl.
         (let xs := (match goal with
                       Hx : eval ?xs = old_out |- _ =>
@@ -258,9 +270,17 @@ Section Proofs.
         sepsimpl;
           [ rewrite map_length, mulmod_length by assumption;
             congruence | ].
+        cbn [Types.rep.equiv Types.base_rtype_of_ltype
+                             Types.rep.Z Types.rep.listZ_mem].
         rewrite map_of_Z_unsigned.
-        eexists. sepsimpl.
-        { apply get_put_same, word.of_Z_unsigned. }
+        sepsimpl.
+        eexists.
+        sepsimpl;
+          try match goal with
+                | |- dexpr _ _ _ _ =>
+                  apply get_put_same, word.of_Z_unsigned
+                | _ => apply word.unsigned_range
+              end; eauto using Forall_map_unsigned; [ ].
         rewrite word.of_Z_unsigned.
         assumption. } }
 

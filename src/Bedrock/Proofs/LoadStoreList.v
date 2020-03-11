@@ -291,6 +291,10 @@ Section LoadStoreList.
         { eapply disjoint_used_varnames_singleton.
           lia. }
         { split;[reflexivity|].
+          split.
+          { cbn [rep.equiv rep.listZ_mem rep.Z] in *.
+            sepsimpl_hyps.
+            eapply Forall_nth_default; eauto; lia. }
           eexists; split; [ | reflexivity ].
           rewrite map.get_put_same, hd_skipn_nth_default.
           reflexivity. } } }
@@ -573,14 +577,18 @@ Section LoadStoreList.
              | _ => progress sepsimpl
              | H : _ |- _ =>
                rewrite List.firstn_all, List.skipn_all_exact in H
+             | _ => rewrite app_nil_r
              | |- Lift1Prop.ex1 _ _ => eexists
              | |- _ /\ _ => split
              | _ => eassumption
              end.
-      eapply Proper_sep_iff1 in H1;
-        [ | rewrite ?(lists_reserved_0 (listZ:=rep.listZ_local)); reflexivity .. ].
+      match goal with
+        H : sep _ _ _ |- _ =>
+        eapply Proper_sep_iff1 in H;
+          [ | rewrite ?(lists_reserved_0 (listZ:=rep.listZ_local));
+              reflexivity .. ]
+      end.
       sepsimpl.
-      rewrite app_nil_r.
       ecancel_assumption. }
     { repeat match goal with
              | H : _ |- _ => rewrite word.of_Z_unsigned in H end.
@@ -625,14 +633,15 @@ Section LoadStoreList.
           cleanup;
           match goal with H : v = _ |- _ => rewrite H in * end
       end.
+      cleanup.
       match goal with
       | H1 : (WeakestPrecondition.dexpr _ ?l (expr.var ?x) ?v1),
-             H' : (map.get ?l ?x = Some ?v2) |- _ =>
+             H2 : (map.get ?l ?x = Some ?v2) |- _ =>
         replace v2 with v1 in *
           by (cbn [WeakestPrecondition.dexpr
                      WeakestPrecondition.expr
-                     WeakestPrecondition.expr_body] in H;
-              cbv [WeakestPrecondition.get] in H;
+                     WeakestPrecondition.expr_body] in H1;
+              cbv [WeakestPrecondition.get] in H1;
               cleanup; congruence)
       end.
 
@@ -649,33 +658,32 @@ Section LoadStoreList.
           sepsimpl.
           match goal with H: ?P (expr.var start) (word.of_Z ?x) |- _ =>
                           exists x end.
-          sepsimpl; auto.
+          sepsimpl; [ solve [eauto using Forall_snoc] .. | ].
           match goal with
             H : context [array _ _ (word.add _ _) (map _ ?x)] |- _ =>
             exists x end.
           sepsimpl; auto.
-          eexists. sepsimpl.
+          match goal with H : Forall _ (_ :: _) |- _ =>
+                          inversion H; subst; clear H end.
+          match goal with
+            H : context [array _ _ (word.add ?a ?b) (map _ ?x)] |- _ =>
+            exists (word.unsigned (word.add a b)) end.
+          sepsimpl; auto;
+            rewrite <-?word.ring_morph_add, ?word.of_Z_unsigned;
+            try solve [apply word.unsigned_range; auto]; [ | ].
           { eexists; split; [ eassumption | ].
             cbn [WeakestPrecondition.dexpr
                    WeakestPrecondition.expr
                    WeakestPrecondition.expr_body
                    Semantics.interp_binop].
             cbv [WeakestPrecondition.literal dlet.dlet].
-            rewrite <-word.ring_morph_add. reflexivity. }
+            rewrite <-!word.ring_morph_add.
+            f_equal. clear; lia. }
           match goal with
             H : context [array _ _ (word.add (word.add _ _) _) _] |- _ =>
             refine (Lift1Prop.subrelation_iff1_impl1 _ _ _ _ _ H); clear H
           end.
           rewrite map_app, array_append. cbn [map array].
-          match goal with
-            |- context [word.add (word.add ?a (word.of_Z (Z.of_nat ?b * ?c))) (word.of_Z ?c)] =>
-            replace (word.add (word.add a (word.of_Z (Z.of_nat b * c))) (word.of_Z c)) with
-              (word.add a (word.of_Z (Z.of_nat (S b) * c)))
-              by (apply word.unsigned_inj;
-                  rewrite Nat2Z.inj_succ, <-Z.add_1_r;
-                  rewrite !word.unsigned_add, !word.unsigned_of_Z;
-                  cbv [word.wrap]; Modulo.pull_Zmod; f_equal; lia)
-          end.
           cbn [Compilers.base_interp] in *. (* simplifies implicit types *)
           rewrite !word.ring_morph_add.
           rewrite !map_length.
@@ -756,7 +764,9 @@ Section LoadStoreList.
              WeakestPrecondition.expr
              WeakestPrecondition.expr_body
              WeakestPrecondition.get] in *.
-      cleanup; subst. eexists.
+      cleanup; subst.
+      split; [ lia | ].
+      eexists.
       rewrite map.get_put_same.
       split; reflexivity. }
     { (* prod *)
@@ -824,12 +834,13 @@ Section LoadStoreList.
           eapply Proper_sep_iff1;
             [ apply equiv_nil_iff1 | reflexivity | ].
           sepsimpl. eexists.
-          apply sep_emp_l; split;
-            [ eapply expr_only_differ_undef; solve [eauto] | ].
+          apply sep_emp_l; split; [ split | ];
+            [ | eapply expr_only_differ_undef; solve [eauto] | ];
+            [ lia | ].
           cbn [lists_reserved equivalent rep.equiv rep.listZ_mem rep.Z].
           sepsimpl. eexists.
           sepsimpl; eauto.
-          eexists; sepsimpl; [ | ecancel_assumption ].
+          eexists; sepsimpl; try ecancel_assumption; eauto.
           cbn [WeakestPrecondition.dexpr
                  WeakestPrecondition.expr
                  WeakestPrecondition.expr_body] in *.

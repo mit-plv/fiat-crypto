@@ -124,6 +124,27 @@ Section Lists.
     let H := fresh in intro H; apply in_combine_l in H.
     contradiction.
   Qed.
+
+  Lemma Forall_nth_default (R : A -> Prop) d xs i :
+    Forall R xs -> R d ->
+    R (nth_default d xs i).
+  Proof.
+    apply nth_default_preserves_properties; intros;
+      try match goal with H : _ |- _ =>
+                          rewrite Forall_forall in H end;
+      auto.
+  Qed.
+
+  Lemma Forall_snoc (R : A -> Prop) xs x :
+    Forall R xs -> R x ->
+    Forall R (xs ++ [x]).
+  Proof.
+    induction xs; intros;
+      rewrite ?app_nil_l, <-?app_comm_cons;
+      try match goal with H : Forall _ (_ :: _) |- _ =>
+                          inversion H; clear H; subst end;
+      constructor; auto.
+  Qed.
 End Lists.
 
 Section Sets.
