@@ -15,7 +15,9 @@ Require Import Crypto.Language.API.
 Require Import Rewriter.Util.Bool.Reflect.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.ZUtil.LandLorShiftBounds.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
+Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
 Local Open Scope Z_scope.
 
 Import API.Compilers.
@@ -82,6 +84,12 @@ Section Expr.
           (expr.App (expr.App (expr.App (expr.Ident ident.List_nth_default) d)
                               (expr.Var (t:=type_listZ) l))
                     (expr.Ident (ident.Literal i)))
+  | valid_basic_binop :
+      forall i (x y : API.expr type_Z),
+        translate_binop i <> None ->
+        valid_expr (t:=base_Z) true x ->
+        valid_expr (t:=base_Z) true y ->
+        valid_expr (t:=base_Z) false (expr.App (expr.App (expr.Ident i) x) y)
   | valid_shiftr :
       forall (x : API.expr type_Z) n,
         valid_expr true x ->
@@ -89,68 +97,28 @@ Section Expr.
         valid_expr (t:=base_Z) false
                    (expr.App (expr.App (expr.Ident ident.Z_shiftr) x)
                    (expr.Ident (ident.Literal (t:=base.type.Z) n)))
-  | valid_basic_binop :
-      forall i (x y : API.expr type_Z),
-        translate_binop i <> None ->
-        valid_expr (t:=base_Z) true x ->
-        valid_expr (t:=base_Z) true y ->
-        valid_expr (t:=base_Z) false (expr.App (expr.App (expr.Ident i) x) y)
-  | valid_truncating_binop :
-      forall i (s : Z) (x y : API.expr type_Z),
-        translate_truncating_binop i s <> None ->
+  | valid_mul_high :
+      forall (s : Z) (x y : API.expr type_Z),
+        s = 2 ^ Semantics.width ->
         valid_expr true x ->
         valid_expr true y ->
         valid_expr (t:=base_Z) false
                    (expr.App (expr.App
-                                (expr.App (expr.Ident i)
+                                (expr.App (expr.Ident ident.Z_mul_high)
                                           (expr.Ident (ident.Literal (t:=base.type.Z) s)))
                                 x) y)
+  | valid_shiftl :
+      forall (s n : Z) (x : API.expr type_Z),
+        s = Semantics.width ->
+        0 <= n < Semantics.width ->
+        valid_expr true x ->
+        valid_expr (t:=base_Z) false
+                   (expr.App (expr.App
+                                (expr.App (expr.Ident ident.Z_truncating_shiftl)
+                                          (expr.Ident (ident.Literal (t:=base.type.Z) s)))
+                                x) (expr.Ident (ident.Literal (t:=base.type.Z) n)))
   .
 
-  Lemma equivalent_cast1 r x y locals:
-    range_good r = true ->
-    locally_equivalent (t:=base_Z) x y locals ->
-    locally_equivalent (t:=base_Z) (ident.cast (ident.literal r) x) y locals.
-  Proof.
-    cbv [range_good max_range]. cbn [locally_equivalent equivalent rep.equiv rep.Z].
-    let X := fresh in
-    assert (0 <= Semantics.width) as X by (pose proof word.width_pos; lia);
-      pose proof (Z.pow_pos_nonneg 2 Semantics.width ltac:(lia) X).
-    intros; progress reflect_beq_to_eq zrange_beq; subst r.
-    cbv [ident.literal].
-    rewrite ident.cast_out_of_bounds_simple_0_mod, Z.sub_simpl_r by lia.
-    sepsimpl; try apply Z.mod_pos_bound; eauto; [ ].
-    cbv [ident.literal WeakestPrecondition.dexpr] in *.
-    rewrite Z.mod_small by lia.
-    eapply Proper_expr; [ | eassumption ].
-    repeat intro; subst. apply word.of_Z_inj_mod.
-    reflexivity.
-  Qed.
-
-  Lemma equivalent_cast2 r1 r2 x y locals :
-    range_good r1 = true ->
-    range_good r2 = true ->
-    locally_equivalent (t:=base_ZZ) x y locals ->
-    locally_equivalent (t:=base_ZZ)
-                       (ident.cast2 (ident.literal r1, ident.literal r2) x) y locals.
-  Proof.
-    cbv [range_good max_range]. cbn [locally_equivalent equivalent rep.equiv rep.Z ].
-    let X := fresh in
-    assert (0 <= Semantics.width) as X by (pose proof word.width_pos; lia);
-      pose proof (Z.pow_pos_nonneg 2 Semantics.width ltac:(lia) X).
-    intros; progress reflect_beq_to_eq zrange_beq; subst r1 r2.
-    cbv [fst snd ident.cast2 ident.literal
-             WeakestPrecondition.dexpr] in *.
-    break_match; [ ].
-    rewrite !ident.cast_out_of_bounds_simple_0_mod, Z.sub_simpl_r by lia.
-    sepsimpl; try apply Z.mod_pos_bound; eauto; [ | ].
-    all:eapply Proper_expr; [ | eassumption ].
-    all:repeat intro; subst; apply word.of_Z_inj_mod.
-    all:rewrite Z.mod_mod by lia.
-    all:reflexivity.
-  Qed.
-
-  (*
   (* version generalized to any t, necessary to destruct i *)
   Lemma translate_binop_correct' {t} :
     forall (i : ident.ident t)
@@ -159,19 +127,24 @@ Section Expr.
            op locals,
       translate_binop i = Some op ->
       locally_equivalent_args xargs yargs locals ->
-      let rhs : type.for_each_lhs_of_arrow rtype t -> base_rtype (type.final_codomain t)
-          := match t as t0 return
-                   type.for_each_lhs_of_arrow rtype t0 ->
-                   base_rtype (type.final_codomain t0) with
-             | (type_Z -> type_Z -> type_Z)%etype =>
-               fun (y : (Syntax.expr * (Syntax.expr * unit))) =>
-                 let y1 := fst y in
-                 let y2 := fst (snd y) in
-                 expr.op op y1 y2
-             | _ => fun _ => base_rtype_of_ltype (dummy_base_ltype _)
-             end in
-      locally_equivalent (type.app_curried (Compilers.ident_interp i) xargs) 
-                         (rhs yargs) locals.
+      (match t as t0
+            return
+            API.interp_type t0 ->
+            type.for_each_lhs_of_arrow API.interp_type t0 ->
+            type.for_each_lhs_of_arrow rtype t0 ->
+            Prop with
+      | (type_Z -> type_Z -> type_Z)%etype =>
+        fun (f : Z -> Z -> Z) (x : Z * (Z * unit))
+            (y : (Syntax.expr * (Syntax.expr * unit))) =>
+          let x1 := fst x in
+          let x2 := fst (snd x) in
+          let y1 := fst y in
+          let y2 := fst (snd y) in
+          WeakestPrecondition.dexpr
+            map.empty locals (expr.op op y1 y2)
+            (word.of_Z (f x1 x2))
+      | _ => fun _ _ _ => False
+       end) (Compilers.ident_interp i) xargs yargs.
   Proof.
     cbv [translate_binop]; intros *.
     break_match; try congruence; intros.
@@ -180,14 +153,12 @@ Section Expr.
                | _ => progress
                         cbn [fst snd
                                  Compilers.ident_interp
-                                 type.map_for_each_lhs_of_arrow
                                  type.app_curried
                                  type.final_codomain
-                                 locally_equivalent
-                                 equivalent rep.Z rep.equiv
+                                 equivalent rep.equiv rep.Z
                                  equivalent_args
-                                 Semantics.interp_binop
-                                 locally_equivalent_args] in *
+                                 locally_equivalent_args
+                                 Semantics.interp_binop] in *
                | _ => progress
                         (cbv [WeakestPrecondition.dexpr] in *;
                          cbn [WeakestPrecondition.expr WeakestPrecondition.expr_body])
@@ -195,11 +166,24 @@ Section Expr.
                | _ => break_match; [ ]; cbn [fst snd]
                end.
     all: (do 2 (eapply Proper_expr; [ | eassumption]; repeat intro; subst)).
+    (* solves goals for ring operations *)
     all:autorewrite with rew_word_morphism; try reflexivity.
 
-    { apply word.unsigned_inj.
-      rewrite word.unsigned_and.
+    (* solves and/or *)
+    all: try (apply word.unsigned_inj;
+              rewrite ?word.unsigned_and, ?word.unsigned_or;
+              rewrite !word.unsigned_of_Z; cbv [word.wrap];
+              Z.rewrite_mod_small; reflexivity).
+
+    (* last goal: ltu *)
+    { cbv [Definitions.Z.ltz].
+      rewrite word.unsigned_ltu.
       rewrite !word.unsigned_of_Z.
+      cbv [word.wrap].
+      Z.rewrite_mod_small.
+      cbn [API.interp_type base.interp Compilers.base_interp].
+      break_match; try congruence. }
+  Qed.
 
   Lemma translate_binop_correct
         (i : ident.ident (type_Z -> type_Z -> type_Z))
@@ -209,22 +193,54 @@ Section Expr.
     translate_binop i = Some op ->
     locally_equivalent (t:=base_Z) x1 y1 locals ->
     locally_equivalent (t:=base_Z) x2 y2 locals ->
-    locally_equivalent (Compilers.ident_interp i x1 x2) 
-                       (expr.op op y1 y2) locals.
+    WeakestPrecondition.dexpr
+      map.empty locals 
+      (expr.op op y1 y2) (word.of_Z (Compilers.ident_interp i x1 x2)).
   Proof.
     intros.
-    let H := fresh in
-    pose proof (translate_binop_correct'
-                  i (x1, (x2, tt)) (y1, (y2, tt))) as H;
-      apply H; clear H; eauto; [ ].
-    cbn [locally_equivalent_args equivalent_args fst snd].
+    apply (translate_binop_correct'
+             i (x1, (x2, tt)) (y1, (y2, tt)));
+      eauto; [ ].
     cbv [locally_equivalent] in *.
+    cbn [locally_equivalent_args equivalent_args fst snd].
     eapply sep_empty_iff.
     sepsimpl; eauto.
   Qed.
 
-  Qed.*)
-  Lemma translate_expr_correct {t}
+  (* TODO: move? *)
+  Fixpoint locally_equivalent_nobounds {t}
+    : base.interp t -> base_rtype t -> Semantics.locals -> Prop :=
+    match t as t0 return
+          base.interp t0 ->
+          base_rtype t0 ->
+          Semantics.locals -> Prop with
+    | base.type.prod a b =>
+      fun x y locals =>
+        locally_equivalent_nobounds (fst x) (fst y) locals /\
+        locally_equivalent_nobounds (snd x) (snd y) locals
+    | base_Z =>
+      fun x y locals =>
+        WeakestPrecondition.dexpr
+          map.empty locals y (word.of_Z x)
+    | base_listZ =>
+      (* we never assign to lists, so they get a pass *)
+      fun _ _ _ => True
+    | _ => fun _ _ _ => False
+    end.
+
+  Lemma locally_equivalent_nobounds_impl {t} :
+    forall x y locals,
+      locally_equivalent (t:=t) x y locals ->
+      locally_equivalent_nobounds x y locals.
+  Proof.
+    induction t;
+      cbn [equivalent locally_equivalent
+                      locally_equivalent_nobounds
+                      rep.equiv rep.Z rep.listZ_local];
+      break_match; intros; sepsimpl; eauto.
+  Qed.
+
+  Lemma translate_expr_correct' {t}
         (* three exprs, representing the same Expr with different vars *)
         (e1 : @API.expr (fun _ => unit) (type.base t))
         (e2 : @API.expr API.interp_type (type.base t))
@@ -236,9 +252,17 @@ Section Expr.
       wf3 G e1 e2 e3 ->
       let out := translate_expr require_cast e3 in
       context_equiv G locals ->
-      locally_equivalent (API.interp e2) out locals.
+      if require_cast
+      then locally_equivalent (API.interp e2) out locals
+      else locally_equivalent_nobounds (API.interp e2) out locals.
   Proof.
     cbv zeta.
+
+    (* prove 0 <= 2 ^ Semantics.width *)
+    let X := fresh in
+    assert (0 <= Semantics.width) as X by (pose proof word.width_pos; lia);
+      pose proof (Z.pow_pos_nonneg 2 Semantics.width ltac:(lia) X).
+
     induction 1; inversion 1; cleanup_wf; intros.
 
     all:repeat match goal with
@@ -260,23 +284,46 @@ Section Expr.
       match goal with H : range_good _ = true |- _ =>
                       rewrite H end.
       cbn [negb]; rewrite Bool.andb_false_r.
-      eauto using equivalent_cast1. }
+      specialize (IHvalid_expr _ _ _ _
+                               ltac:(eassumption) ltac:(eassumption)).
+      cbn [locally_equivalent equivalent rep.equiv rep.Z
+                              locally_equivalent_nobounds] in *.
+      cbv [range_good max_range ident.literal] in *.
+      intros; progress reflect_beq_to_eq zrange_beq; subst.
+      rewrite ident.cast_out_of_bounds_simple_0_mod by lia.
+      rewrite Z.sub_simpl_r.
+      erewrite word.of_Z_inj_mod
+        by (rewrite Z.mod_mod by lia; reflexivity).
+      destruct rc; sepsimpl; try apply Z.mod_pos_bound; try lia;
+        eauto. }
     { (* cast2 *)
       cbn [translate_expr has_casts expr.interp Compilers.ident_interp].
       repeat match goal with H : range_good _ = true |- _ =>
                              rewrite H end.
       cbn [negb andb]; rewrite Bool.andb_false_r.
-      eauto using equivalent_cast2. }
+      specialize (IHvalid_expr _ _ _ _
+                               ltac:(eassumption) ltac:(eassumption)).
+      cbv [range_good max_range ident.literal ident.cast2] in *.
+      cbn [locally_equivalent equivalent rep.equiv rep.Z fst snd
+                              locally_equivalent_nobounds] in *.
+      intros; progress reflect_beq_to_eq zrange_beq; subst.
+      rewrite !ident.cast_out_of_bounds_simple_0_mod by lia.
+      rewrite Z.sub_simpl_r.
+      destruct rc; sepsimpl; try apply Z.mod_pos_bound; try lia;
+        erewrite word.of_Z_inj_mod by
+          (rewrite Z.mod_mod by lia; reflexivity); eauto. }
     { (* fst *)
       cbn [translate_expr has_casts expr.interp Compilers.ident_interp].
       cbn [negb]. rewrite !Bool.andb_true_r.
-      specialize (IHvalid_expr _ _ _ _ ltac:(eassumption) ltac:(eassumption)).
+      specialize (IHvalid_expr _ _ _ _
+                               ltac:(eassumption) ltac:(eassumption)).
       cbn [locally_equivalent equivalent rep.equiv rep.Z] in *.
       sepsimpl; eauto. }
     { (* snd *)
       cbn [translate_expr has_casts expr.interp Compilers.ident_interp].
       cbn [negb]. rewrite !Bool.andb_true_r.
-      specialize (IHvalid_expr _ _ _ _ ltac:(eassumption) ltac:(eassumption)).
+      specialize (IHvalid_expr _ _ _ _
+                               ltac:(eassumption) ltac:(eassumption)).
       cbn [locally_equivalent equivalent rep.equiv rep.Z] in *.
       sepsimpl; eauto. }
     { (* literal *)
@@ -284,14 +331,15 @@ Section Expr.
       repeat match goal with H : is_bounded_by_bool _ _ = true |- _ =>
                              rewrite H end.
       cbn [negb]. rewrite !Bool.andb_false_r.
-      cbn [locally_equivalent equivalent rep.equiv rep.Z].
+      cbn [locally_equivalent_nobounds
+             locally_equivalent equivalent rep.equiv rep.Z].
       cbv [is_bounded_by_bool] in *. cbn [upper lower max_range] in *.
       match goal with
         H : (_ && _)%bool = true |- _ =>
         apply Bool.andb_true_iff in H; cleanup
       end; Z.ltb_to_lt.
       cbv [ident.literal].
-      sepsimpl; eauto with lia; reflexivity. }
+      destruct rc; sepsimpl; eauto with lia; reflexivity. }
     { (* var *)
       cbn [translate_expr has_casts expr.interp Compilers.ident_interp].
       cbn [negb]. rewrite !Bool.andb_true_r.
@@ -301,14 +349,19 @@ Section Expr.
           rewrite Forall_forall in H;
           specialize (H _ ltac:(eassumption))
       end.
-      eauto. }
+      cbv [equiv3 locally_equivalent] in *.
+      cbn [locally_equivalent_nobounds equivalent rep.equiv rep.Z] in *.
+      sepsimpl; eauto. }
     { (* nth_default *)
       cbn [translate_expr has_casts expr.interp Compilers.ident_interp].
       cbn [negb]. rewrite !Bool.andb_true_r.
       cbv [ident.literal].
+      apply locally_equivalent_nobounds_impl.
       match goal with
-        |- locally_equivalent (nth_default ?d1 ?l1 ?i) (nth_default ?d2 ?l2 ?i) ?locals =>
-        let R := constr:(fun x y => locally_equivalent (t:=base_Z) x y locals) in
+        |- locally_equivalent
+             (nth_default ?d1 ?l1 ?i) (nth_default ?d2 ?l2 ?i) ?locals =>
+        let R := constr:(fun x y =>
+                           locally_equivalent (t:=base_Z) x y locals) in
         assert (length l1 = length l2 /\
                 (forall i,
                     R (nth_default d1 l1 i) (nth_default d2 l2 i)));
@@ -322,10 +375,16 @@ Section Expr.
           specialize (H _ ltac:(eassumption))
       end.
       eauto. }
+    { (* basic binop *)
+      cbn [translate_expr has_casts expr.interp Compilers.ident_interp].
+      cbn [negb]. rewrite !Bool.andb_true_r.
+      break_match; try congruence; [ ].
+      apply translate_binop_correct; eauto. }
     { (* shiftr *) 
       cbn [translate_expr has_casts expr.interp Compilers.ident_interp].
       cbn [negb]. rewrite !Bool.andb_true_r.
-      specialize (IHvalid_expr _ _ _ _ ltac:(eassumption) ltac:(eassumption)).
+      specialize (IHvalid_expr _ _ _ _
+                               ltac:(eassumption) ltac:(eassumption)).
       cbn [translate_binop translate_shiftr].
       rewrite !Bool.andb_true_l, Bool.if_negb.
       cbv [is_bounded_by_bool]. cbn [upper lower max_range].
@@ -338,29 +397,110 @@ Section Expr.
                | H : (_ && _)%bool = false |- _ =>
                  apply Bool.andb_false_iff in H; destruct H
                end; Z.ltb_to_lt; try lia; [ ].
-      cbn [locally_equivalent equivalent rep.equiv rep.Z ident.literal] in *.
-      cbv [WeakestPrecondition.dexpr] in *.
+      cbn [locally_equivalent_nobounds
+             locally_equivalent equivalent
+             rep.equiv rep.Z ident.literal] in *.
+      cbv [WeakestPrecondition.dexpr ident.literal] in *.
       cbn [WeakestPrecondition.expr WeakestPrecondition.expr_body
                                     Semantics.interp_binop].
-      sepsimpl.
-      1-2:admit.
+      sepsimpl_hyps.
+      match goal with
+        |- context [Z.shiftr ?x ?n] =>
+        assert (2 ^ Semantics.width <= 2 ^ (n + Semantics.width))
+          by (apply Z.pow_le_mono_r; lia);
+          assert (0 <= Z.shiftr x n < 2 ^ Semantics.width)
+          by (apply Z.shiftr_range; lia)
+      end.
+      sepsimpl; [ lia .. | ].
       eapply Proper_expr; [ | eassumption ].
       repeat intro; subst.
       cbv [WeakestPrecondition.literal dlet.dlet ident.literal].
       apply word.unsigned_inj.
-      rewrite word.unsigned_sru, !word.unsigned_of_Z.
-  Admitted.
-  (*
-      (* need a proof that says if valid_expr true, then bounded. Or maybe if in
-         context, then bounded *)
-      all:admit. }
-    { (* basic binop *)
-      (* GROSS -- shiftr special case vomits all over this *)
+      rewrite word.unsigned_sru, !word.unsigned_of_Z
+        by (rewrite word.unsigned_of_Z; cbv [word.wrap];
+            Z.rewrite_mod_small; lia).
+      cbv [word.wrap]. Z.rewrite_mod_small.
+      reflexivity. }
+    { (* mul_high *)
       cbn [translate_expr has_casts expr.interp Compilers.ident_interp].
       cbn [negb]. rewrite !Bool.andb_true_r.
-      break_match.
-      break_match; try congruence; [ ].
-      apply translate_binop_correct; eauto. }
+      cbv [translate_shiftl translate_mul_high] in *.
+      break_match_hyps; try congruence.
+      rewrite Z.eqb_refl.
+      match goal with
+        |- context [_ (translate_expr _ ?a) (translate_expr _ ?b)] =>
+        specialize (IHvalid_expr1 _ a _ _
+                                  ltac:(eassumption) ltac:(eassumption));
+        specialize (IHvalid_expr2 _ b _ _
+                                  ltac:(eassumption) ltac:(eassumption))
+      end.
+      cbn [locally_equivalent_nobounds
+             locally_equivalent equivalent
+             rep.equiv rep.Z ident.literal] in *.
+      cbv [WeakestPrecondition.dexpr ident.literal] in *.
+      cbn [WeakestPrecondition.expr WeakestPrecondition.expr_body
+                                    Semantics.interp_binop].
+      sepsimpl_hyps.
+      eapply Proper_expr; [ | eassumption ].
+      repeat intro; subst.
+      eapply Proper_expr; [ | eassumption ].
+      repeat intro; subst.
+      rewrite MulSplit.Z.mul_high_div.
+      apply word.unsigned_inj.
+      rewrite word.unsigned_mulhuu, !word.unsigned_of_Z.
+      cbv [word.wrap]. Z.rewrite_mod_small.
+      reflexivity. }
+    { (* shiftl *)
+      cbn [translate_expr has_casts expr.interp Compilers.ident_interp].
+      cbn [negb]. rewrite !Bool.andb_true_r.
+      cbv [translate_shiftl translate_mul_high] in *.
+      break_match_hyps; try congruence.
+      rewrite Z.eqb_refl.
+      cbv [is_bounded_by_bool] in *. cbn [upper lower max_range] in *.
+      rewrite Bool.andb_true_l, Bool.negb_if.
+      assert (Semantics.width < 2 ^ Semantics.width) by
+          (apply Z.pow_gt_lin_r; lia).
+      break_match;
+        repeat match goal with
+               | H : (_ && _)%bool = true |- _ =>
+                 apply Bool.andb_true_iff in H; cleanup
+               | H : (_ && _)%bool = false |- _ =>
+                 apply Bool.andb_false_iff in H; destruct H
+               end; Z.ltb_to_lt; try lia; [ ].
+      specialize (IHvalid_expr _ _ _ _
+                                ltac:(eassumption) ltac:(eassumption)).
+      cbn [locally_equivalent_nobounds
+             locally_equivalent equivalent
+             rep.equiv rep.Z ident.literal] in *.
+      cbv [WeakestPrecondition.dexpr ident.literal] in *.
+      cbn [WeakestPrecondition.expr WeakestPrecondition.expr_body
+                                    Semantics.interp_binop].
+      sepsimpl_hyps.
+      eapply Proper_expr; [ | eassumption ].
+      repeat intro; subst.
+      cbv [WeakestPrecondition.literal dlet.dlet].
+      rewrite TruncatingShiftl.Z.truncating_shiftl_correct.
+      apply word.unsigned_inj.
+      rewrite word.unsigned_slu, !word.unsigned_of_Z
+        by (rewrite word.unsigned_of_Z; cbv [word.wrap];
+            Z.rewrite_mod_small; lia).
+      cbv [word.wrap]. Z.rewrite_mod_small.
+      reflexivity. }
+  Qed.
 
-  Qed. *)
+  Lemma translate_expr_correct {t}
+        (* three exprs, representing the same Expr with different vars *)
+        (e1 : @API.expr (fun _ => unit) (type.base t))
+        (e2 : @API.expr API.interp_type (type.base t))
+        (e3 : @API.expr ltype (type.base t)) :
+    (* e1 is a valid input to translate_expr *)
+    valid_expr true e1 ->
+    forall G locals,
+      wf3 G e1 e2 e3 ->
+      let out := translate_expr true e3 in
+      context_equiv G locals ->
+      locally_equivalent (API.interp e2) out locals.
+  Proof.
+    apply (translate_expr_correct' _ _ _ true).
+  Qed.
 End Expr.
