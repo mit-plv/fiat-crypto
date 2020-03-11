@@ -23,7 +23,6 @@ Import Types.Notations Types.Types.
    structure while bedrock2 expects flat lists; this file contains mechanical
    conversions between the two. *)
 
-
 Section Flatten.
   Context {p : parameters} {p_ok : @ok p}.
   (* these conversions should happen before loading arguments and after
