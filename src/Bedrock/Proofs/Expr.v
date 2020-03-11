@@ -27,15 +27,10 @@ Import Types.Notations Types.Types.
 Section Expr.
   Context {p : Types.parameters} {p_ok : @ok p}.
 
-  (* TODO: are these all needed? *)
   Local Existing Instance Types.rep.Z.
-  Local Existing Instance Types.rep.listZ_local. (* local list representation *)
+  Local Existing Instance Types.rep.listZ_local.
   Local Instance sem_ok : Semantics.parameters_ok semantics
     := semantics_ok.
-  Local Instance mem_ok : Interface.map.ok Semantics.mem
-    := Semantics.mem_ok.
-  Local Instance varname_eqb_spec x y : BoolSpec _ _ _
-    := Decidable.String.eqb_spec x y.
 
   Inductive valid_expr
     : forall {t},
@@ -207,7 +202,6 @@ Section Expr.
     sepsimpl; eauto.
   Qed.
 
-  (* TODO: move? *)
   Fixpoint locally_equivalent_nobounds {t}
     : base.interp t -> base_rtype t -> Semantics.locals -> Prop :=
     match t as t0 return

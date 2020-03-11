@@ -34,14 +34,9 @@ Section Func.
   Context {p : parameters} {p_ok : @ok p}.
   Local Notation bedrock_func := (string * (list string * list string * cmd))%type.
 
-  (* TODO: are these all needed? *)
   Local Existing Instance rep.Z.
   Local Instance sem_ok : Semantics.parameters_ok semantics
     := semantics_ok.
-  Local Instance mem_ok : map.ok Semantics.mem
-    := Semantics.mem_ok.
-  Local Instance varname_eqb_spec x y : BoolSpec _ _ _
-    := Decidable.String.eqb_spec x y.
 
   Inductive valid_func : forall {t}, @API.expr (fun _ => unit) t -> Prop :=
   | validf_Abs :
@@ -225,7 +220,7 @@ Section Func.
       ecancel_assumption. }
   Qed.
 
-  Lemma initial_context_correct' {t} :
+  Lemma equivalent_flat_base_iff1 {t} :
     forall (names : base_ltype t)
            (values : base.interp t)
            (flat_values : list Semantics.word)
@@ -327,7 +322,7 @@ Section Func.
 
   (* When arguments are loaded into initial locals, the new argument names map
      to the correct values *)
-  Lemma initial_context_correct {t} :
+  Lemma equivalent_flat_args_iff1 {t} :
     forall (argnames : type.for_each_lhs_of_arrow ltype t)
            (args : type.for_each_lhs_of_arrow API.interp_type t)
            (flat_args : list Semantics.word)
@@ -380,7 +375,7 @@ Section Func.
                with equiv;
              rewrite varname_set_flatten; symmetry;
              apply NoDup_disjoint; eauto using string_dec).
-          eapply initial_context_correct'; eauto. } }
+          eapply equivalent_flat_base_iff1; eauto. } }
       { eexists.
         eapply Proper_sep_iff1;
           [ | eapply IHt2; solve [eauto] | eassumption ].
@@ -391,11 +386,9 @@ Section Func.
                  with equiv; rewrite varname_set_flatten; symmetry;
                apply NoDup_disjoint; eauto using string_dec)
         end.
-        eapply initial_context_correct'; solve[eauto]. } }
+        eapply equivalent_flat_base_iff1; solve[eauto]. } }
   Qed.
 
-  (* TODO: move? *)
-  (* TODO: rename initial_context_correct to coordinate with this *)
   Lemma equivalent_listonly_flat_iff1 {t} :
     forall (names : listonly_base_ltype t) (values : list Semantics.word)
            (l locals init_locals : Semantics.locals)
@@ -574,7 +567,7 @@ Section Func.
     eapply Proper_cmd; [ solve [apply Proper_call] | repeat intro | ].
     2 : { eapply load_arguments_correct; try eassumption; eauto.
           eapply Proper_sep_iff1;
-            [ symmetry; eapply initial_context_correct; solve [eauto]
+            [ symmetry; eapply equivalent_flat_args_iff1; solve [eauto]
             | reflexivity | eassumption ]. }
     cbv beta in *. cleanup; subst.
     eapply Proper_cmd; [ solve [apply Proper_call] | repeat intro | ].

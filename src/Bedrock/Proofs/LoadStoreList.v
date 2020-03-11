@@ -28,14 +28,9 @@ Import Types.Notations Types.Types.
 Section LoadStoreList.
   Context {p : parameters} {p_ok : @ok p}.
 
-  (* TODO: are these all needed? *)
   Local Existing Instance rep.Z.
   Local Instance sem_ok : Semantics.parameters_ok semantics
     := semantics_ok.
-  Local Instance mem_ok : map.ok Semantics.mem
-    := Semantics.mem_ok.
-  Local Instance varname_eqb_spec x y : BoolSpec _ _ _
-    := Decidable.String.eqb_spec x y.
 
   (* separation-logic relation that says space exists in memory for lists
      (other values are ignored) *)

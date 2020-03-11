@@ -28,11 +28,8 @@ Section Varnames.
   Context {p : Types.parameters} {ok : @ok p}.
   Local Existing Instance Types.rep.Z.
 
-  (* TODO: are these all needed? *)
   Local Instance sem_ok : Semantics.parameters_ok semantics
     := semantics_ok.
-  Local Instance mem_ok : map.ok Semantics.mem
-    := Semantics.mem_ok.
   Local Instance varname_eqb_spec x y : BoolSpec _ _ _
     := Decidable.String.eqb_spec x y.
   Local Notation varname := String.string.
@@ -324,9 +321,6 @@ Section Varnames.
         { apply Proper_sep_impl1; eauto. }
         { eapply equiv_listZ_only_differ_undef; eauto. }
       Qed.
-    (* TODO
-     equivalent <-> sep (equivalent_listonly ) (equivalent_listexcl)
-     *)
     End Generic.
   End Equivalence.
   Hint Resolve

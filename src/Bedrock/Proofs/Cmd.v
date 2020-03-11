@@ -29,40 +29,11 @@ Import Types.Notations Types.Types.
 
 Section Cmd.
   Context {p : Types.parameters} {p_ok : @ok p}.
-  Context (call : string ->
-                  Semantics.trace ->
-                  Semantics.mem ->
-                  list Semantics.word ->
-                  (Semantics.trace -> Semantics.mem ->
-                   list Semantics.word -> Prop) ->
-                  Prop).
-  Context (Proper_call :
-             Morphisms.pointwise_relation
-               string
-               (Morphisms.pointwise_relation
-                  Semantics.trace
-                  (Morphisms.pointwise_relation
-                     Interface.map.rep
-                     (Morphisms.pointwise_relation
-                        (list Interface.word.rep)
-                        (Morphisms.respectful
-                           (Morphisms.pointwise_relation
-                              Semantics.trace
-                              (Morphisms.pointwise_relation
-                                 Interface.map.rep
-                                 (Morphisms.pointwise_relation
-                                    (list Interface.word.rep) Basics.impl)))
-                           Basics.impl)))) call call).
 
-  (* TODO: are these all needed? *)
   Local Existing Instance Types.rep.Z.
-  Local Existing Instance Types.rep.listZ_local. (* local list representation *)
+  Local Existing Instance Types.rep.listZ_local.
   Local Instance sem_ok : Semantics.parameters_ok semantics
     := semantics_ok.
-  Local Instance mem_ok : map.ok Semantics.mem
-    := Semantics.mem_ok.
-  Local Instance varname_eqb_spec x y : BoolSpec _ _ _
-    := Decidable.String.eqb_spec x y.
 
   Inductive valid_cmd : forall {t}, @API.expr (fun _ => unit) (type.base t) -> Prop :=
   (* N.B. LetIn is split into cases so that only pairs of type_base and type_base are
@@ -99,7 +70,8 @@ Section Cmd.
            (nextn : nat)
            (tr : Semantics.trace)
            (mem : Semantics.mem)
-           (locals : Semantics.locals),
+           (locals : Semantics.locals)
+           functions,
       (* rhs == x *)
       locally_equivalent xs rhs locals ->
       (* locals don't contain any variables we can overwrite *)
@@ -110,7 +82,8 @@ Section Cmd.
       let nvars := fst (fst out) in
       let lhs := snd (fst out) in
       WeakestPrecondition.cmd
-        call (snd out)
+        (WeakestPrecondition.call functions)
+        (snd out)
         tr mem locals
         (fun tr' mem' locals' =>
            tr = tr'
@@ -182,7 +155,8 @@ Section Cmd.
            (nextn : nat)
            (tr : Semantics.trace)
            (mem : Semantics.mem)
-           (locals : Semantics.locals),
+           (locals : Semantics.locals)
+           functions,
       (* rhs == x *)
       locally_equivalent x rhs locals ->
       (* locals don't contain any variables we can overwrite *)
@@ -193,8 +167,8 @@ Section Cmd.
       let nvars := fst (fst out) in
       let lhs := snd (fst out) in
       WeakestPrecondition.cmd
-        call (snd out)
-        tr mem locals
+        (WeakestPrecondition.call functions)
+        (snd out) tr mem locals
         (fun tr' mem' locals' =>
            tr = tr'
            (* assign never stores anything -- mem unchanged *)
@@ -351,7 +325,8 @@ Section Cmd.
         (G : list _) :
     (* exprs are all related *)
     wf3 G e1 e2 e3 ->
-    forall (locals : Semantics.locals)
+    forall functions
+           (locals : Semantics.locals)
            (nextn : nat),
       (* ret := fiat-crypto interpretation of e2 *)
       let ret1 : base.interp t' := API.interp e2 in
@@ -375,7 +350,8 @@ Section Cmd.
         context_equiv G locals ->
         (* executing translation output is equivalent to interpreting e *)
         WeakestPrecondition.cmd
-          call body tr mem locals
+          (WeakestPrecondition.call functions)
+          body tr mem locals
           (fun tr' mem' locals' =>
              tr = tr' /\
              mem = mem' /\
