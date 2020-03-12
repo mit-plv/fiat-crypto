@@ -60,6 +60,8 @@ PERFTESTING_VO := \
 	src/Rewriter/PerfTesting/Core.vo \
 	src/Rewriter/PerfTesting/StandaloneOCamlMain.vo
 BEDROCK2_FILES_PATTERN := \
+	src/ExtractionOCaml/bedrock2_% \
+	src/ExtractionHaskell/bedrock2_% \
 	src/Bedrock/% # it's important to catch not just the .vo files, but also the .glob files, etc, because this is used to filter FILESTOINSTALL
 EXCLUDE_PATTERN :=
 ifeq ($(SKIP_BEDROCK2),1)
@@ -332,6 +334,10 @@ Makefile.coq: Makefile _CoqProject
 
 
 STANDALONE := unsaturated_solinas saturated_solinas word_by_word_montgomery base_conversion
+BEDROCK2_STANDALONE := $(addprefix bedrock2_,$(STANDALONE))
+ifneq ($(SKIP_BEDROCK2),1)
+STANDALONE += $(BEDROCK2_STANDALONE)
+endif
 PERF_STANDALONE := perf_unsaturated_solinas perf_word_by_word_montgomery
 
 STANDALONE_OCAML := $(STANDALONE) $(PERF_STANDALONE)
@@ -341,8 +347,10 @@ OCAML_BINARIES := $(STANDALONE:%=src/ExtractionOCaml/%)
 HASKELL_BINARIES := $(STANDALONE:%=src/ExtractionHaskell/%)
 
 $(STANDALONE:%=src/ExtractionOCaml/%.ml): src/StandaloneOCamlMain.vo
+$(BEDROCK2_STANDALONE:%=src/ExtractionOCaml/%.ml): src/Bedrock/StandaloneOCamlMain.vo
 $(PERF_STANDALONE:%=src/ExtractionOCaml/%.ml): src/Rewriter/PerfTesting/StandaloneOCamlMain.vo
 $(STANDALONE:%=src/ExtractionHaskell/%.hs): src/StandaloneHaskellMain.vo
+$(BEDROCK2_STANDALONE:%=src/ExtractionHaskell/%.hs): src/Bedrock/StandaloneHaskellMain.vo
 # $(PERF_STANDALONE:%=src/ExtractionHaskell/%.hs): src/Rewriter/PerfTesting/StandaloneHaskellMain.vo
 
 $(STANDALONE_OCAML:%=src/ExtractionOCaml/%.ml) : %.ml : %.v
