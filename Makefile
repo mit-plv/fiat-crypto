@@ -2,29 +2,6 @@
 
 MOD_NAME := Crypto
 SRC_DIR  := src
-TIMED?=
-TIMECMD?=
-TIMECMD_FULL?=
-TIMEFMT?="$@ (real: %e, user: %U, sys: %S, mem: %M ko)"
-ifneq (,$(TIMED))
-ifeq (0,$(shell command time -f $(TIMEFMT) true >/dev/null 2>/dev/null; echo $$?))
-STDTIME?=command time -f $(TIMEFMT)
-STDTIME_FULL?=command time -f $(TIMEFMT)
-else
-ifeq (0,$(shell gtime -f $(TIMEFMT) true >/dev/null 2>/dev/null; echo $$?))
-STDTIME?=gtime -f $(TIMEFMT)
-STDTIME_FULL?=gtime -f $(TIMEFMT)
-else
-STDTIME?=command time
-STDTIME_FULL?=command time
-endif
-endif
-else
-STDTIME?=command time -f $(TIMEFMT)
-STDTIME_FULL?=command time -f $(TIMEFMT)
-endif
-TIMER=$(if $(TIMED), $(STDTIME), $(TIMECMD))
-TIMER_FULL=$(if $(TIMED), $(STDTIME_FULL), $(TIMECMD_FULL))
 
 BINDIR?=/usr/local/bin
 # or $(shell opam config var bin) ?
@@ -362,21 +339,21 @@ $(STANDALONE:%=src/ExtractionHaskell/%.hs): src/StandaloneHaskellMain.vo
 
 $(STANDALONE_OCAML:%=src/ExtractionOCaml/%.ml) : %.ml : %.v
 	$(SHOW)'COQC $< > $@'
-	$(HIDE)$(TIMER_FULL) $(COQC) $(COQDEBUG) $(COQFLAGS) $(COQLIBS) $< > $@.tmp
+	$(HIDE)$(TIMER) $(COQC) $(COQDEBUG) $(COQFLAGS) $(COQLIBS) $< > $@.tmp
 	$(HIDE)sed 's/\r\n/\n/g; s/\r//g' $@.tmp > $@ && rm -f $@.tmp
 
 $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%.hs) : %.hs : %.v src/haskell.sed
 	$(SHOW)'COQC $< > $@'
-	$(HIDE)$(TIMER_FULL) $(COQC) $(COQDEBUG) $(COQFLAGS) $(COQLIBS) $< > $@.tmp
+	$(HIDE)$(TIMER) $(COQC) $(COQDEBUG) $(COQFLAGS) $(COQLIBS) $< > $@.tmp
 	$(HIDE)sed 's/\r\n/\n/g; s/\r//g' $@.tmp | sed -f src/haskell.sed > $@ && rm -f $@.tmp
 
 # pass -w -20 to disable the unused argument warning
 # unix package needed for Unix.gettimeofday for the perf_* binaries
 $(STANDALONE_OCAML:%=src/ExtractionOCaml/%) : % : %.ml
-	$(TIMER_FULL) ocamlfind ocamlopt -package unix -linkpkg -w -20 -o $@ $<
+	$(TIMER) ocamlfind ocamlopt -package unix -linkpkg -w -20 -o $@ $<
 
 $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%) : % : %.hs
-	$(TIMER_FULL) $(GHC) $(GHCFLAGS) -o $@ $<
+	$(TIMER) $(GHC) $(GHCFLAGS) -o $@ $<
 
 standalone: standalone-haskell standalone-ocaml
 standalone-haskell: $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%)
@@ -390,70 +367,70 @@ $(WORD_BY_WORD_MONTGOMERY_C_FILES): $(WORD_BY_WORD_MONTGOMERY) # Makefile
 curve25519_64.c : curve25519_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --static '25519' '5' '2^255 - 19' '$*' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --static '25519' '5' '2^255 - 19' '$*' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^255 - 19
 curve25519_32.c : curve25519_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --static '25519' '10' '2^255 - 19' '$*' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --static '25519' '10' '2^255 - 19' '$*' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^521 - 1
 p521_64.c : p521_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --static 'p521' '9' '2^521 - 1' '$*' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --static 'p521' '9' '2^521 - 1' '$*' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 ## 2^224 - 2^96 + 1 ## does not bounds check
 #p224_solinas_64.c : p224_solinas_%.c :
 #	$(SHOW)'SYNTHESIZE > $@'
 #	$(HIDE)rm -f $@.ok
-#	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --static 'p224' '4' '2^224 - 2^96 + 1' '$*' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
+#	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --static 'p224' '4' '2^224 - 2^96 + 1' '$*' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
 #	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^448 - 2^224 - 1
 p448_solinas_64.c : p448_solinas_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --static 'p448' '8' '2^448 - 2^224 - 1' '$*' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --static 'p448' '8' '2^448 - 2^224 - 1' '$*' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^256 - 2^224 + 2^192 + 2^96 - 1
 p256_64.c p256_32.c : p256_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) --static 'p256' '2^256 - 2^224 + 2^192 + 2^96 - 1' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --static 'p256' '2^256 - 2^224 + 2^192 + 2^96 - 1' '$*' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^256 - 2^32 - 977
 secp256k1_64.c secp256k1_32.c : secp256k1_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) --static 'secp256k1' '2^256 - 2^32 - 977' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --static 'secp256k1' '2^256 - 2^32 - 977' '$*' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^384 - 2^128 - 2^96 + 2^32 - 1
 p384_64.c p384_32.c : p384_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) --static 'p384' '2^384 - 2^128 - 2^96 + 2^32 - 1' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --static 'p384' '2^384 - 2^128 - 2^96 + 2^32 - 1' '$*' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^224 - 2^96 + 1
 p224_64.c p224_32.c : p224_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) --static 'p224' '2^224 - 2^96 + 1' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --static 'p224' '2^224 - 2^96 + 1' '$*' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^216 * 3^137 - 1
 p434_64.c p434_32.c : p434_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) --static 'p434' '2^216 * 3^137 - 1' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --static 'p434' '2^216 * 3^137 - 1' '$*' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 test-c-files: $(ALL_C_FILES)
@@ -469,70 +446,70 @@ $(WORD_BY_WORD_MONTGOMERY_RUST_FILES): $(WORD_BY_WORD_MONTGOMERY) # Makefile
 $(RS_DIR)curve25519_64.rs : $(RS_DIR)curve25519_%.rs :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Rust '25519' '5' '2^255 - 19' '$*' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang=Rust '25519' '5' '2^255 - 19' '$*' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^255 - 19
 $(RS_DIR)curve25519_32.rs : $(RS_DIR)curve25519_%.rs :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Rust '25519' '10' '2^255 - 19' '$*' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang=Rust '25519' '10' '2^255 - 19' '$*' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^521 - 1
 $(RS_DIR)p521_64.rs : $(RS_DIR)p521_%.rs :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Rust 'p521' '9' '2^521 - 1' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang=Rust 'p521' '9' '2^521 - 1' '$*' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 ## 2^224 - 2^96 + 1 ## does not bounds check
 #$(RS_DIR)p224_solinas_64.rs : $(RS_DIR)p224_solinas_%.rs :
 #	$(SHOW)'SYNTHESIZE > $@'
 #	$(HIDE)rm -f $@.ok
-#	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Rust 'p224' '4' '2^224 - 2^96 + 1' '$*' && touch $@.ok) > $@.tmp
+#	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang=Rust 'p224' '4' '2^224 - 2^96 + 1' '$*' && touch $@.ok) > $@.tmp
 #	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^448 - 2^224 - 1
 $(RS_DIR)p448_solinas_64.rs : $(RS_DIR)p448_solinas_%.rs :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Rust 'p448' '8' '2^448 - 2^224 - 1' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang=Rust 'p448' '8' '2^448 - 2^224 - 1' '$*' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^256 - 2^224 + 2^192 + 2^96 - 1
 $(RS_DIR)p256_64.rs $(RS_DIR)p256_32.rs : $(RS_DIR)p256_%.rs :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) --lang=Rust 'p256' '2^256 - 2^224 + 2^192 + 2^96 - 1' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang=Rust 'p256' '2^256 - 2^224 + 2^192 + 2^96 - 1' '$*' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^256 - 2^32 - 977
 $(RS_DIR)secp256k1_64.rs $(RS_DIR)secp256k1_32.rs : $(RS_DIR)secp256k1_%.rs :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) --lang=Rust 'secp256k1' '2^256 - 2^32 - 977' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang=Rust 'secp256k1' '2^256 - 2^32 - 977' '$*' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^384 - 2^128 - 2^96 + 2^32 - 1
 $(RS_DIR)p384_64.rs $(RS_DIR)p384_32.rs : $(RS_DIR)p384_%.rs :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) --lang=Rust 'p384' '2^384 - 2^128 - 2^96 + 2^32 - 1' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang=Rust 'p384' '2^384 - 2^128 - 2^96 + 2^32 - 1' '$*' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^224 - 2^96 + 1
 $(RS_DIR)p224_64.rs $(RS_DIR)p224_32.rs : $(RS_DIR)p224_%.rs :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) --lang=Rust 'p224' '2^224 - 2^96 + 1' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang=Rust 'p224' '2^224 - 2^96 + 1' '$*' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^216 * 3^137 - 1
 $(RS_DIR)p434_64.rs $(RS_DIR)p434_32.rs : $(RS_DIR)p434_%.rs :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) --lang=Rust 'p434' '2^216 * 3^137 - 1' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang=Rust 'p434' '2^216 * 3^137 - 1' '$*' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 test-rust-files: $(ALL_RUST_FILES)
@@ -556,70 +533,70 @@ $(WORD_BY_WORD_MONTGOMERY_GO_FILES): $(WORD_BY_WORD_MONTGOMERY) # Makefile
 $(GO_DIR)curve25519_64.go : $(GO_DIR)curve25519_%.go :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Go $(GO_EXTRA_ARGS_$*) '25519' '5' '2^255 - 19' '$*' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang=Go $(GO_EXTRA_ARGS_$*) '25519' '5' '2^255 - 19' '$*' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^255 - 19
 $(GO_DIR)curve25519_32.go : $(GO_DIR)curve25519_%.go :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Go $(GO_EXTRA_ARGS_$*) '25519' '10' '2^255 - 19' '$*' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang=Go $(GO_EXTRA_ARGS_$*) '25519' '10' '2^255 - 19' '$*' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^521 - 1
 $(GO_DIR)p521_64.go : $(GO_DIR)p521_%.go :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Go $(GO_EXTRA_ARGS_$*) 'p521' '9' '2^521 - 1' '$*' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang=Go $(GO_EXTRA_ARGS_$*) 'p521' '9' '2^521 - 1' '$*' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 ## 2^224 - 2^96 + 1 ## does not bounds check
 #$(GO_DIR)p224_solinas_64.go : $(GO_DIR)p224_%.go :
 #	$(SHOW)'SYNTHESIZE > $@'
 #	$(HIDE)rm -f $@.ok
-#	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Go $(GO_EXTRA_ARGS_$*) 'p224' '4' '2^224 - 2^96 + 1' '$*' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
+#	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang=Go $(GO_EXTRA_ARGS_$*) 'p224' '4' '2^224 - 2^96 + 1' '$*' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
 #	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^448 - 2^224 - 1
 $(GO_DIR)p448_solinas_64.go : $(GO_DIR)p448_solinas_%.go :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Go $(GO_EXTRA_ARGS_$*) 'p448' '8' '2^448 - 2^224 - 1' '$*' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang=Go $(GO_EXTRA_ARGS_$*) 'p448' '8' '2^448 - 2^224 - 1' '$*' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^256 - 2^224 + 2^192 + 2^96 - 1
 $(GO_DIR)p256_64.go $(GO_DIR)p256_32.go : $(GO_DIR)p256_%.go :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) --lang=Go $(GO_EXTRA_ARGS_$*) 'p256' '2^256 - 2^224 + 2^192 + 2^96 - 1' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang=Go $(GO_EXTRA_ARGS_$*) 'p256' '2^256 - 2^224 + 2^192 + 2^96 - 1' '$*' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^256 - 2^32 - 977
 $(GO_DIR)secp256k1_64.go $(GO_DIR)secp256k1_32.go : $(GO_DIR)secp256k1_%.go :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) --lang=Go $(GO_EXTRA_ARGS_$*) 'secp256k1' '2^256 - 2^32 - 977' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang=Go $(GO_EXTRA_ARGS_$*) 'secp256k1' '2^256 - 2^32 - 977' '$*' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^384 - 2^128 - 2^96 + 2^32 - 1
 $(GO_DIR)p384_64.go $(GO_DIR)p384_32.go : $(GO_DIR)p384_%.go :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) --lang=Go $(GO_EXTRA_ARGS_$*) 'p384' '2^384 - 2^128 - 2^96 + 2^32 - 1' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang=Go $(GO_EXTRA_ARGS_$*) 'p384' '2^384 - 2^128 - 2^96 + 2^32 - 1' '$*' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^224 - 2^96 + 1
 $(GO_DIR)p224_64.go $(GO_DIR)p224_32.go : $(GO_DIR)p224_%.go :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) --lang=Go $(GO_EXTRA_ARGS_$*) 'p224' '2^224 - 2^96 + 1' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang=Go $(GO_EXTRA_ARGS_$*) 'p224' '2^224 - 2^96 + 1' '$*' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^216 * 3^137 - 1
 $(GO_DIR)p434_64.go $(GO_DIR)p434_32.go : $(GO_DIR)p434_%.go :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) --lang=Go $(GO_EXTRA_ARGS_$*) 'p434' '2^216 * 3^137 - 1' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang=Go $(GO_EXTRA_ARGS_$*) 'p434' '2^216 * 3^137 - 1' '$*' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 .PHONY: $(addprefix test-,$(ALL_GO_FILES))
@@ -642,42 +619,42 @@ $(WORD_BY_WORD_MONTGOMERY_JAVA_FILES): $(WORD_BY_WORD_MONTGOMERY) # Makefile
 $(JAVA_DIR)FiatCurve25519.java : $(JAVA_DIR)Fiat%.java :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(UNSATURATED_SOLINAS) --lang=Java $(JAVA_EXTRA_ARGS_32) '$*' '10' '2^255 - 19' '32' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang=Java $(JAVA_EXTRA_ARGS_32) '$*' '10' '2^255 - 19' '32' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^256 - 2^224 + 2^192 + 2^96 - 1
 $(JAVA_DIR)FiatP256.java : $(JAVA_DIR)Fiat%.java :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) --lang=Java $(JAVA_EXTRA_ARGS_32) '$*' '2^256 - 2^224 + 2^192 + 2^96 - 1' '32' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang=Java $(JAVA_EXTRA_ARGS_32) '$*' '2^256 - 2^224 + 2^192 + 2^96 - 1' '32' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^256 - 2^32 - 977
 $(JAVA_DIR)FiatSecp256K1.java : $(JAVA_DIR)Fiat%.java :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) --lang=Java $(JAVA_EXTRA_ARGS_32) '$*' '2^256 - 2^32 - 977' '32' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang=Java $(JAVA_EXTRA_ARGS_32) '$*' '2^256 - 2^32 - 977' '32' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^384 - 2^128 - 2^96 + 2^32 - 1
 $(JAVA_DIR)FiatP384.java: $(JAVA_DIR)Fiat%.java :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) --lang=Java $(JAVA_EXTRA_ARGS_32) '$*' '2^384 - 2^128 - 2^96 + 2^32 - 1' '32' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang=Java $(JAVA_EXTRA_ARGS_32) '$*' '2^384 - 2^128 - 2^96 + 2^32 - 1' '32' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^224 - 2^96 + 1
 $(JAVA_DIR)FiatP224.java : $(JAVA_DIR)Fiat%.java :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) --lang=Java $(JAVA_EXTRA_ARGS_32) '$*' '2^224 - 2^96 + 1' '32' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang=Java $(JAVA_EXTRA_ARGS_32) '$*' '2^224 - 2^96 + 1' '32' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^216 * 3^137 - 1
 $(JAVA_DIR)FiatP434.java : $(JAVA_DIR)Fiat%.java :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) --lang=Java $(JAVA_EXTRA_ARGS_32) '$*' '2^216 * 3^137 - 1' '32' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang=Java $(JAVA_EXTRA_ARGS_32) '$*' '2^216 * 3^137 - 1' '32' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 .PHONY: $(addprefix test-,$(ALL_JAVA_FILES))
@@ -781,13 +758,13 @@ clean-tmp-native-work-around-bug-10495::
 
 $(PERF_PRIME_VOS:.vo=.log) : %.log : %.v src/Rewriter/PerfTesting/Core.vo
 	$(SHOW)'PERF COQC $< > $@'
-	$(HIDE)($(PERF_SET_LIMITS) $(TIMER_FULL) $(PERF_TIMEOUT) $(COQC) $(COQDEBUG) $(COQFLAGS) $(COQLIBS) $< && touch $@.ok) > $@.tmp
+	$(HIDE)($(PERF_SET_LIMITS) $(TIMER) $(PERF_TIMEOUT) $(COQC) $(COQDEBUG) $(COQFLAGS) $(COQLIBS) $< && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok
 	$(HIDE)sed 's/\r\n/\n/g; s/\r//g; s/\s*$$//g' $@.tmp > $@ && rm -f $@.tmp
 
 $(PERF_PRIME_SHS:.sh=.log) : %.log : %.sh $(PERF_STANDALONE:%=src/ExtractionOCaml/%)
 	$(SHOW)'PERF SH $< > $@'
-	$(HIDE)($(PERF_SET_LIMITS) $(TIMER_FULL) $(PERF_TIMEOUT) bash $< && touch $@.ok) > $@.tmp
+	$(HIDE)($(PERF_SET_LIMITS) $(TIMER) $(PERF_TIMEOUT) bash $< && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok
 	$(HIDE)sed 's/\r\n/\n/g; s/\r//g; s/\s*$$//g' $@.tmp > $@ && rm -f $@.tmp
 
