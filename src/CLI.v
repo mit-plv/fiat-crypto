@@ -137,7 +137,6 @@ Module ForExtraction.
     := @show_list _ (@show_prod _ _ PowersOfTwo.show_Z Decimal.show_Z).
 
   Local Open Scope string_scope.
-  Local Notation NewLine := (String "010" "") (only parsing).
 
   (** TODO: Write a better quoter and maybe move this elsewhere *)
   Definition quote (s : string) : string
@@ -439,12 +438,12 @@ Module ForExtraction.
         := match CollectErrors (PipelineLines invocation curve_description args) with
            | inl ls
              => inl
-                  (List.map (fun s => String.concat NewLine s ++ NewLine ++ NewLine)
+                  (List.map (fun s => String.concat String.NewLine s ++ String.NewLine ++ String.NewLine)
                             ls)
            | inr nil => inr nil
            | inr (l :: ls)
              => inr (l ++ (List.flat_map
-                             (fun e => NewLine :: e)
+                             (fun e => String.NewLine :: e)
                              ls))%list
            end.
 
