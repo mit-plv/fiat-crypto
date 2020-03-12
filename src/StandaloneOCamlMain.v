@@ -92,38 +92,38 @@ Definition raise_failure {A} (msg : list String.string) : A
   := seq (fun _ => printf_list_string_with_newlines msg)
          (fun _ => raise_Failure _ (string_of_Coq_string "Synthesis failed")).
 
+Definition main_gen
+           {supported_languages : ForExtraction.supported_languagesT}
+           (PipelineMain : forall (A := _)
+                                  (argv : list String.string)
+                                  (success : list String.string -> A)
+                                  (error : list String.string -> A),
+               A)
+  : unit
+  := let argv := List.map string_to_Coq_string sys_argv in
+     PipelineMain
+       argv
+       printf_list_string
+       raise_failure.
+
+Local Existing Instance ForExtraction.default_supported_languages.
+
 Module UnsaturatedSolinas.
   Definition main : unit
-    := let argv := List.map string_to_Coq_string sys_argv in
-       ForExtraction.UnsaturatedSolinas.PipelineMain
-         argv
-         printf_list_string
-         raise_failure.
+    := main_gen ForExtraction.UnsaturatedSolinas.PipelineMain.
 End UnsaturatedSolinas.
 
 Module WordByWordMontgomery.
   Definition main : unit
-    := let argv := List.map string_to_Coq_string sys_argv in
-       ForExtraction.WordByWordMontgomery.PipelineMain
-         argv
-         printf_list_string
-         raise_failure.
+    := main_gen ForExtraction.WordByWordMontgomery.PipelineMain.
 End WordByWordMontgomery.
 
 Module SaturatedSolinas.
   Definition main : unit
-    := let argv := List.map string_to_Coq_string sys_argv in
-       ForExtraction.SaturatedSolinas.PipelineMain
-         argv
-         printf_list_string
-         raise_failure.
+    := main_gen ForExtraction.SaturatedSolinas.PipelineMain.
 End SaturatedSolinas.
 
 Module BaseConversion.
   Definition main : unit
-    := let argv := List.map string_to_Coq_string sys_argv in
-       ForExtraction.BaseConversion.PipelineMain
-         argv
-         printf_list_string
-         raise_failure.
+    := main_gen ForExtraction.BaseConversion.PipelineMain.
 End BaseConversion.
