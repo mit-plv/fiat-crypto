@@ -178,7 +178,9 @@ Module ForExtraction.
          => inr [res]
        end.
 
-  Definition supported_languages : list (string * ToString.OutputLanguageAPI)
+  Class supported_languagesT := supported_languages : list (string * ToString.OutputLanguageAPI).
+
+  Definition default_supported_languages : supported_languagesT
     := [("C", ToString.OutputCAPI)
        ; ("Rust", Rust.OutputRustAPI)
        ; ("Go", Go.OutputGoAPI)
@@ -186,7 +188,7 @@ Module ForExtraction.
 
   Definition curve_description_help
     := "  curve_description       A string which will be prefixed to every function name generated".
-  Definition lang_help
+  Definition lang_help {supported_languages : supported_languagesT}
     := "  LANGUAGE                The output language code should be emitted in.  Defaults to C if no language is given.  Case-sensitive."
          ++ String.NewLine ++
        "                            Valid options are: " ++ String.concat ", " (List.map (@fst _ _) supported_languages).
@@ -410,6 +412,10 @@ Module ForExtraction.
           list (string * Pipeline.ErrorT (list string))
     }.
 
+  Module Export Notations.
+    Bind Scope list_scope with supported_languagesT.
+  End Notations.
+
   Module Parameterized.
     Section __.
       Context {api : PipelineAPI}.
@@ -462,7 +468,9 @@ Module ForExtraction.
            | inr s => error s
            end.
 
-      Definition argv_to_language_and_argv (argv : list string)
+      Definition argv_to_language_and_argv
+                 {supported_languages : supported_languagesT}
+                 (argv : list string)
         : list string * (ToString.OutputLanguageAPI + list string)
         := let '(argv, opts) := argv_to_startswith_opt_and_argv "--lang=" argv in
            (argv,
@@ -480,6 +488,7 @@ Module ForExtraction.
             end).
 
       Definition PipelineMain
+                 {supported_languages : supported_languagesT}
                  {A}
                  (argv : list string)
                  (success : list string -> A)
@@ -581,6 +590,7 @@ Module ForExtraction.
         }.
 
     Definition PipelineMain
+               {supported_languages : supported_languagesT}
                {A}
                (argv : list string)
                (success : list string -> A)
@@ -635,6 +645,7 @@ Module ForExtraction.
         }.
 
     Definition PipelineMain
+               {supported_languages : supported_languagesT}
                {A}
                (argv : list string)
                (success : list string -> A)
@@ -682,6 +693,7 @@ Module ForExtraction.
         }.
 
     Definition PipelineMain
+               {supported_languages : supported_languagesT}
                {A}
                (argv : list string)
                (success : list string -> A)
@@ -769,6 +781,7 @@ Module ForExtraction.
         }.
 
     Definition PipelineMain
+               {supported_languages : supported_languagesT}
                {A}
                (argv : list string)
                (success : list string -> A)

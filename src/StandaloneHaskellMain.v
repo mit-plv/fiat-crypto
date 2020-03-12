@@ -36,50 +36,41 @@ Extract Inlined Constant cast_io => "".
 
 Local Notation "x <- y ; f" := (_IO_bind _ _ y (fun x => f)).
 
+Definition main_gen
+           {supported_languages : ForExtraction.supported_languagesT}
+           (PipelineMain : forall (A := _)
+                                  (argv : list String.string)
+                                  (success : list String.string -> A)
+                                  (error : list String.string -> A),
+               A)
+  : IO_unit
+  := cast_io
+       (argv <- getArgs;
+       prog <- getProgName;
+       PipelineMain
+         (prog::argv)
+         (fun res => printf_string
+                       (String.concat "" res))
+         (fun err => raise_failure _ (String.concat String.NewLine err))).
+
+Local Existing Instance ForExtraction.default_supported_languages.
+
 Module UnsaturatedSolinas.
   Definition main : IO_unit
-    := cast_io
-         (argv <- getArgs;
-            prog <- getProgName;
-            ForExtraction.UnsaturatedSolinas.PipelineMain
-              (prog::argv)
-              (fun res => printf_string
-                         (String.concat "" res))
-              (fun err => raise_failure _ (String.concat String.NewLine err))).
+    := main_gen ForExtraction.UnsaturatedSolinas.PipelineMain.
 End UnsaturatedSolinas.
 
 Module WordByWordMontgomery.
   Definition main : IO_unit
-    := cast_io
-         (argv <- getArgs;
-            prog <- getProgName;
-            ForExtraction.WordByWordMontgomery.PipelineMain
-              (prog::argv)
-              (fun res => printf_string
-                         (String.concat "" res))
-              (fun err => raise_failure _ (String.concat String.NewLine err))).
+    := main_gen ForExtraction.WordByWordMontgomery.PipelineMain.
 End WordByWordMontgomery.
 
 Module SaturatedSolinas.
   Definition main : IO_unit
-    := cast_io
-         (argv <- getArgs;
-            prog <- getProgName;
-            ForExtraction.SaturatedSolinas.PipelineMain
-              (prog::argv)
-              (fun res => printf_string
-                         (String.concat "" res))
-              (fun err => raise_failure _ (String.concat String.NewLine err))).
+    := main_gen ForExtraction.SaturatedSolinas.PipelineMain.
 End SaturatedSolinas.
 
 Module BaseConversion.
   Definition main : IO_unit
-    := cast_io
-         (argv <- getArgs;
-            prog <- getProgName;
-            ForExtraction.BaseConversion.PipelineMain
-              (prog::argv)
-              (fun res => printf_string
-                         (String.concat "" res))
-              (fun err => raise_failure _ (String.concat String.NewLine err))).
+    := main_gen ForExtraction.BaseConversion.PipelineMain.
 End BaseConversion.
