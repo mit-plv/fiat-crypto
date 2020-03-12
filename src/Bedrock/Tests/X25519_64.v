@@ -37,10 +37,17 @@ Module X25519_64.
             (machine_wordsize : Z := 64).
 
     Local Existing Instance default_low_level_rewriter_method.
+    (* Split multiplications into two outputs, not just one huge word *)
     Local Instance should_split_mul : should_split_mul_opt := true.
+    (* For functions that return multiple values, split into two LetIns (this is
+       because bedrock2 does not support multiple-sets, so they would have to be
+       split anyway) *)
     Local Instance should_split_multiret : should_split_multiret_opt := true.
+    (* Make all words 64-bit, even if they could be smaller *)
     Local Instance widen_carry : widen_carry_opt := true.
     Local Instance widen_bytes : widen_bytes_opt := true.
+    (* Unsigned integers *)
+    Local Instance only_signed : only_signed_opt := false.
 
     Let limbwidth := (Z.log2_up (s - Associational.eval c) / Z.of_nat n)%Q.
     Let idxs := (List.seq 0 n ++ [0; 1])%list%nat.
