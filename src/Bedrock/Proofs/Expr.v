@@ -79,12 +79,6 @@ Section Expr.
           (expr.App (expr.App (expr.App (expr.Ident ident.List_nth_default) d)
                               (expr.Var (t:=type_listZ) l))
                     (expr.Ident (ident.Literal i)))
-  | valid_basic_binop :
-      forall i (x y : API.expr type_Z),
-        translate_binop i <> None ->
-        valid_expr (t:=base_Z) true x ->
-        valid_expr (t:=base_Z) true y ->
-        valid_expr (t:=base_Z) false (expr.App (expr.App (expr.Ident i) x) y)
   | valid_shiftr :
       forall (x : API.expr type_Z) n,
         valid_expr true x ->
@@ -112,6 +106,12 @@ Section Expr.
                                 (expr.App (expr.Ident ident.Z_truncating_shiftl)
                                           (expr.Ident (ident.Literal (t:=base.type.Z) s)))
                                 x) (expr.Ident (ident.Literal (t:=base.type.Z) n)))
+  | valid_binop :
+      forall i (x y : API.expr type_Z),
+        translate_binop i <> None ->
+        valid_expr (t:=base_Z) true x ->
+        valid_expr (t:=base_Z) true y ->
+        valid_expr (t:=base_Z) false (expr.App (expr.App (expr.Ident i) x) y)
   .
 
   (* version generalized to any t, necessary to destruct i *)
@@ -124,22 +124,23 @@ Section Expr.
       locally_equivalent_args xargs yargs locals ->
       (match t as t0
             return
+            rtype t0 ->
             API.interp_type t0 ->
             type.for_each_lhs_of_arrow API.interp_type t0 ->
             type.for_each_lhs_of_arrow rtype t0 ->
             Prop with
       | (type_Z -> type_Z -> type_Z)%etype =>
-        fun (f : Z -> Z -> Z) (x : Z * (Z * unit))
+        fun op (f : Z -> Z -> Z) (x : Z * (Z * unit))
             (y : (Syntax.expr * (Syntax.expr * unit))) =>
           let x1 := fst x in
           let x2 := fst (snd x) in
           let y1 := fst y in
           let y2 := fst (snd y) in
           WeakestPrecondition.dexpr
-            map.empty locals (expr.op op y1 y2)
+            map.empty locals (op y1 y2)
             (word.of_Z (f x1 x2))
-      | _ => fun _ _ _ => False
-       end) (Compilers.ident_interp i) xargs yargs.
+      | _ => fun _ _ _ _ => False
+       end) op (Compilers.ident_interp i) xargs yargs.
   Proof.
     cbv [translate_binop]; intros *.
     break_match; try congruence; intros.
@@ -190,7 +191,7 @@ Section Expr.
     locally_equivalent (t:=base_Z) x2 y2 locals ->
     WeakestPrecondition.dexpr
       map.empty locals 
-      (expr.op op y1 y2) (word.of_Z (Compilers.ident_interp i x1 x2)).
+      (op y1 y2) (word.of_Z (Compilers.ident_interp i x1 x2)).
   Proof.
     intros.
     apply (translate_binop_correct'
@@ -274,7 +275,11 @@ Section Expr.
                           end
                end.
     Time
-    all:cbn [translate_expr has_casts expr.interp Compilers.ident_interp].
+      all:cbn [translate_expr translate_ident is_cast cast_exempt
+                              negb andb
+                              invert_expr.invert_Z_cast
+                              invert_expr.invert_Z_cast2
+                              expr.interp Compilers.ident_interp].
     { (* cast1 *)
       cbn [translate_expr has_casts expr.interp Compilers.ident_interp].
       match goal with H : range_good _ = true |- _ =>
