@@ -4120,10 +4120,12 @@ Module WordByWordMontgomery.
         Proof using S_bound small_A small_S lgr_big. destruct A_S; apply small_A'; assumption. Qed.
         Lemma small_snd_redc_body : small (snd (redc_body A_S)).
         Proof using small_S small_N small_B small_A lgr_big S_bound B_bounds N_nz N_lt_R.
+          clear -small_S small_N small_B small_A lgr_big S_bound B_bounds N_nz N_lt_R zero conditional_sub sub_then_maybe_add partition_Proper r_big'.
           destruct A_S; unfold redc_body; apply small_S3; assumption.
         Qed.
         Lemma snd_redc_body_nonneg : 0 <= eval (snd (redc_body A_S)).
         Proof using small_S small_N small_B small_A lgr_big S_bound N_nz N_lt_R B_bounds.
+          clear -small_S small_N small_B small_A lgr_big S_bound N_nz N_lt_R B_bounds zero conditional_sub sub_then_maybe_add partition_Proper r_big'.
           destruct A_S; apply S3_nonneg; assumption.
         Qed.
 
@@ -4137,6 +4139,7 @@ Module WordByWordMontgomery.
         Lemma fst_redc_body
           : (eval (fst (redc_body A_S))) = eval (fst A_S) / r.
         Proof using small_S small_A S_bound lgr_big.
+          clear -small_S small_A S_bound lgr_big zero conditional_sub sub_then_maybe_add partition_Proper r_big'.
           destruct A_S; simpl; repeat autounfold with word_by_word_montgomery; simpl.
           autorewrite with push_mont_eval.
           reflexivity.
@@ -4145,6 +4148,7 @@ Module WordByWordMontgomery.
         Lemma fst_redc_body_mod_N
           : (eval (fst (redc_body A_S))) mod (eval N) = ((eval (fst A_S) - a)*ri) mod (eval N).
         Proof using small_S small_A ri_correct lgr_big S_bound.
+          clear -small_S small_A ri_correct lgr_big S_bound zero conditional_sub sub_then_maybe_add partition_Proper r_big' R.
           rewrite fst_redc_body.
           etransitivity; [ eapply Z.div_to_inv_modulo; try eassumption; lia | ].
           unfold a, A_a, A.
@@ -4171,6 +4175,7 @@ Module WordByWordMontgomery.
         : (small (fst (redc_loop count A_S)) /\ small (snd (redc_loop count A_S)))
           /\ 0 <= eval (snd (redc_loop count A_S)) < eval N + eval B.
       Proof using small_N small_B lgr_big N_nz N_lt_R B_bounds.
+        clear -small_N small_B lgr_big N_nz N_lt_R B_bounds Hsmall Hbound r_big' partition_Proper sub_then_maybe_add.
         induction_loop count IHcount; auto; [].
         change (id (0 <= eval B < R)) in B_bounds (* don't let [destruct_head'_and] loop *).
         destruct_head'_and.
@@ -4335,6 +4340,7 @@ Module WordByWordMontgomery.
       Lemma redc_mod_N A_numlimbs (A : T A_numlimbs) (small_A : small A) (A_bound : 0 <= eval A < r ^ Z.of_nat A_numlimbs)
         : (eval (redc A)) mod (eval N) = (eval A * eval B * ri^(Z.of_nat A_numlimbs)) mod (eval N).
       Proof using small_N small_B ri_correct lgr_big k_correct R_numlimbs_nz N_nz N_lt_R B_bounds.
+        clear -small_N small_B ri_correct lgr_big k_correct R_numlimbs_nz N_nz N_lt_R B_bounds small_A A_bound sub_then_maybe_add partition_Proper r_big'.
         pose proof (@small_pre_redc _ A small_A).
         pose proof (@pre_redc_bound _ A small_A).
         unfold redc.
@@ -4448,15 +4454,17 @@ Module WordByWordMontgomery.
 
       Lemma add_bound : 0 <= eval (add Av Bv) < eval N.
       Proof using small_Bv small_Av lgr_big R_numlimbs_nz N_lt_R Bv_bound Av_bound small_N ri k N_nz B_bounds B.
+        clear -small_Bv small_Av lgr_big R_numlimbs_nz N_lt_R Bv_bound Av_bound small_N ri k N_nz B_bounds B zero divmod scmul drop_high_addT' sub_then_maybe_add partition_Proper r_big'.
         generalize eval_add; break_innermost_match; Z.ltb_to_lt; lia.
       Qed.
       Lemma sub_bound : 0 <= eval (sub Av Bv) < eval N.
       Proof using small_Bv small_Av R_numlimbs_nz Bv_bound Av_bound small_N r_big' partition_Proper lgr_big N_nz N_lt_R.
+        clear -small_Bv small_Av R_numlimbs_nz Bv_bound Av_bound small_N r_big' partition_Proper lgr_big N_nz N_lt_R.
         generalize eval_sub; break_innermost_match; Z.ltb_to_lt; lia.
       Qed.
       Lemma opp_bound : 0 <= eval (opp Av) < eval N.
       Proof using small_Av R_numlimbs_nz Av_bound small_N r_big' partition_Proper lgr_big N_nz N_lt_R.
-        clear Bv small_Bv Bv_bound.
+        clear -small_Av R_numlimbs_nz Av_bound small_N r_big' partition_Proper lgr_big N_nz N_lt_R.
         generalize eval_opp; break_innermost_match; Z.ltb_to_lt; lia.
       Qed.
     End add_sub.
@@ -4547,6 +4555,7 @@ Module WordByWordMontgomery.
           /\ (eval b < m -> 0 <= eval (mulmod a b) < m)
           /\ (eval (mulmod a b) mod m = (eval a * eval b * r'^n) mod m).
     Proof using r'_correct n_nz m_small m_big m'_correct bitwidth_big.
+      clear -r'_correct n_nz m_small m_big m'_correct bitwidth_big.
       intros a b Ha Hb; repeat apply conj; cbv [small mulmod eval];
         [ eapply small_redc
         | rewrite m_enc_correct_montgomery; eapply redc_bound_N
@@ -4603,6 +4612,7 @@ Module WordByWordMontgomery.
                                             = (eval (from_montgomerymod a) * eval (from_montgomerymod b)) mod m)
         /\ (forall a (_ : valid a) b (_ : valid b), valid (mulmod a b)).
     Proof using r'_correct r' n_nz m_small m_big m'_correct bitwidth_big.
+      clear -r'_correct r' n_nz m_small m_big m'_correct bitwidth_big.
       repeat apply conj; intros;
         push_Zmod; rewrite ?eval_from_montgomerymod; pull_Zmod; repeat apply conj;
           try apply mulmod_correct0; cbv [valid] in *; destruct_head'_and; auto; [].
@@ -4646,6 +4656,7 @@ Module WordByWordMontgomery.
       : (forall v, 0 <= v < m -> eval (from_montgomerymod (encodemod v)) mod m = v mod m)
         /\ (forall v, 0 <= v < m -> valid (encodemod v)).
     Proof using r'_correct n_nz m_small m_big m'_correct bitwidth_big.
+      clear -r'_correct n_nz m_small m_big m'_correct bitwidth_big.
       split; intros v ?; cbv [encodemod R2mod]; [ rewrite (proj1 mulmod_correct) | apply mulmod_correct ];
         [ | now t_valid v.. ].
       push_Zmod; rewrite !eval_from_montgomerymod; [ | now t_valid v.. ].
@@ -4671,6 +4682,7 @@ Module WordByWordMontgomery.
                                             = (eval (from_montgomerymod a) + eval (from_montgomerymod b)) mod m)
         /\ (forall a (_ : valid a) b (_ : valid b), valid (addmod a b)).
     Proof using r'_correct n_nz m_small m_big m'_correct bitwidth_big.
+      clear -r'_correct n_nz m_small m_big m'_correct bitwidth_big.
       repeat apply conj; intros;
         push_Zmod; rewrite ?eval_from_montgomerymod; pull_Zmod; repeat apply conj;
           cbv [valid addmod] in *; destruct_head'_and; auto;
@@ -4693,6 +4705,7 @@ Module WordByWordMontgomery.
                                             = (eval (from_montgomerymod a) - eval (from_montgomerymod b)) mod m)
         /\ (forall a (_ : valid a) b (_ : valid b), valid (submod a b)).
     Proof using r'_correct n_nz m_small m_big m'_correct bitwidth_big.
+      clear -r'_correct n_nz m_small m_big m'_correct bitwidth_big.
       repeat apply conj; intros;
         push_Zmod; rewrite ?eval_from_montgomerymod; pull_Zmod; repeat apply conj;
           cbv [valid submod] in *; destruct_head'_and; auto;
@@ -4715,6 +4728,7 @@ Module WordByWordMontgomery.
                             = (-eval (from_montgomerymod a)) mod m)
         /\ (forall a (_ : valid a), valid (oppmod a)).
     Proof using r'_correct n_nz m_small m_big m'_correct bitwidth_big.
+      clear -r'_correct n_nz m_small m_big m'_correct bitwidth_big.
       repeat apply conj; intros;
         push_Zmod; rewrite ?eval_from_montgomerymod; pull_Zmod; repeat apply conj;
           cbv [valid oppmod] in *; destruct_head'_and; auto;
@@ -4735,6 +4749,7 @@ Module WordByWordMontgomery.
     Lemma nonzeromod_correct
       : (forall a (_ : valid a), (nonzeromod a = 0) <-> ((eval (from_montgomerymod a)) mod m = 0)).
     Proof using r'_correct n_nz m_small m_big m'_correct bitwidth_big.
+      clear -r'_correct n_nz m_small m_big m'_correct bitwidth_big.
       intros a Ha; rewrite eval_from_montgomerymod by assumption.
       cbv [nonzeromod valid] in *; destruct_head'_and.
       rewrite eval_nonzero; try eassumption; [ | subst r; apply conj; try eassumption; omega.. ].
