@@ -273,6 +273,8 @@ Section Expr.
                                  end
                           end
                end.
+    Time
+    all:cbn [translate_expr has_casts expr.interp Compilers.ident_interp].
     { (* cast1 *)
       cbn [translate_expr has_casts expr.interp Compilers.ident_interp].
       match goal with H : range_good _ = true |- _ =>
