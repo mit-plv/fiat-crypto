@@ -1,0 +1,93 @@
+name: CI (Coq, Windows)
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '0 0 1 * *'
+
+jobs:
+  build:
+
+    runs-on: windows-latest
+
+    env:
+      NJOBS: "2"
+      COQ_VERSION: "master"
+
+    # initial steps copied from https://github.com/coq/coq/blob/76d8a38a4591c604795c5429ffcbbe9daaa8945d/azure-pipelines.yml#L9-L39
+    steps:
+    - uses: actions/checkout@v2
+    - name: submodules-init
+      uses: snickerbockers/submodules-init@v4
+    - name: Install cygwin
+      run: |
+        @ECHO ON
+        powershell -Command "(New-Object Net.WebClient).DownloadFile('http://www.cygwin.com/setup-x86_64.exe', 'setup-x86_64.exe')"
+        SET CYGROOT=C:\cygwin64
+        SET CYGCACHE=%CYGROOT%\var\cache\setup
+        setup-x86_64.exe -qnNdO -R %CYGROOT% -l %CYGCACHE% -s %CYGMIRROR% -P rsync -P patch -P diffutils -P make -P unzip -P m4 -P findutils -P time -P wget -P curl -P git -P mingw64-x86_64-binutils,mingw64-x86_64-gcc-core,mingw64-x86_64-gcc-g++,mingw64-x86_64-pkg-config,mingw64-x86_64-windows_default_manifest -P mingw64-x86_64-headers,mingw64-x86_64-runtime,mingw64-x86_64-pthreads,mingw64-x86_64-zlib -P python3 -P python2
+        SET TARGET_ARCH=x86_64-w64-mingw32
+        SET CD_MFMT=%cd:\=/%
+        SET RESULT_INSTALLDIR_CFMT=%CD_MFMT:C:/=/cygdrive/c/%
+      env:
+        CYGMIRROR: "http://mirror.easyname.at/cygwin"
+      shell: cmd
+
+    - name: Clone Coq
+      run: |
+        C:\cygwin64\bin\bash -l -c 'git clone "https://github.com/coq/coq.git" --branch=${COQ_VERSION}'
+      shell: cmd
+
+    - name: Set up cygwin profile
+      run: |
+        C:\cygwin64\bin\bash -l coq\dev\build\windows\configure_profile.sh
+      shell: cmd
+
+    - name: Install opam
+      run: |
+        C:\cygwin64\bin\bash -l coq\dev\ci\azure-opam.sh
+      shell: cmd
+
+    - name: Configure Coq
+      run: |
+        C:\cygwin64\bin\bash -l -c 'cd coq; ./configure -prefix=/usr/local'
+      shell: cmd
+
+    - name: Build Coq
+      run: |
+        C:\cygwin64\bin\bash -l -c 'cd coq; make -j${NJOBS}'
+      shell: cmd
+
+    - name: Install Coq
+      run: |
+        C:\cygwin64\bin\bash -l -c 'cd coq; make install'
+      shell: cmd
+
+    - name: echo build params
+      run: |
+        @ECHO ON
+        wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
+        wmic cpu list /format:list
+        C:\cygwin64\bin\bash -l -c 'git config -l'
+        C:\cygwin64\bin\bash -l -c 'git config --global -l'
+        C:\cygwin64\bin\bash -l -c 'coqc --config'
+        C:\cygwin64\bin\bash -l -c 'coqc --version'
+        true | C:\cygwin64\bin\bash -l -c 'coqtop'
+        C:\cygwin64\bin\bash -l -c 'cd "%cd%"; make printenv'
+        C:\cygwin64\bin\bash -l -c 'cd "%cd%"; echo "${PATH}"'
+      shell: cmd
+    - name: deps
+      run: C:\cygwin64\bin\bash -l -c 'cd "%cd%"; etc/ci/github-actions-make.sh -j%NJOBS% deps'
+      shell: cmd
+    - name: all
+      run: C:\cygwin64\bin\bash -l -c 'cd "%cd%"; etc/ci/github-actions-make.sh -j%NJOBS% all'
+      shell: cmd
+    - name: upload OCaml files
+      uses: actions/upload-artifact@v1
+      with:
+        name: ExtractionOCaml
+        path: src/ExtractionOCaml
+    - name: display timing info
+      run: C:\cygwin64\bin\bash -l -c 'cd "%cd%"; cat time-of-build-pretty.log'
+      shell: cmd
