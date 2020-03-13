@@ -235,6 +235,53 @@ Section Expr.
       break_match; intros; sepsimpl; eauto.
   Qed.
 
+  Lemma require_cast_for_arg_binop {t} :
+    forall i : ident.ident t,
+      translate_binop i <> None ->
+      require_cast_for_arg (expr.Ident i) = true.
+  Proof.
+    destruct i;
+      cbn [translate_binop require_cast_for_arg];
+      congruence.
+  Qed.
+
+  Lemma translate_ident_binop {t} :
+    forall i : ident.ident t,
+      translate_binop i <> None ->
+      translate_binop i = Some (translate_ident i).
+  Proof.
+    destruct i;
+      cbn [translate_binop]; try congruence.
+    all:cbn [translate_ident translate_binop].
+    all:reflexivity.
+  Qed.
+
+  Lemma is_bounded_by_bool_max_range n :
+    0 <= n < 2 ^ Semantics.width ->
+    is_bounded_by_bool n max_range = true.
+  Proof.
+    intros; cbv [is_bounded_by_bool upper lower max_range].
+    apply Bool.andb_true_iff; split; apply Z.leb_le; lia.
+  Qed.
+
+  Lemma is_bounded_by_bool_width_range n :
+    0 <= n < Semantics.width ->
+    is_bounded_by_bool n width_range = true.
+  Proof.
+    intros; cbv [is_bounded_by_bool upper lower width_range].
+    apply Bool.andb_true_iff; split; apply Z.leb_le; lia.
+  Qed.
+
+  (* useful fact to say anything in width_range is also in max_range *)
+  Lemma width_lt_pow2width : Semantics.width < 2 ^ Semantics.width.
+  Proof. pose proof word.width_pos. apply Z.pow_gt_lin_r; lia. Qed.
+
+  Lemma pow2width_pos : 0 < 2 ^ Semantics.width.
+  Proof.
+    pose proof word.width_pos.
+    apply Z.pow_pos_nonneg; lia.
+  Qed.
+
   Lemma translate_expr_correct' {t}
         (* three exprs, representing the same Expr with different vars *)
         (e1 : @API.expr (fun _ => unit) (type.base t))
@@ -252,11 +299,8 @@ Section Expr.
       else locally_equivalent_nobounds (API.interp e2) out locals.
   Proof.
     cbv zeta.
-
-    (* prove 0 <= 2 ^ Semantics.width *)
-    let X := fresh in
-    assert (0 <= Semantics.width) as X by (pose proof word.width_pos; lia);
-      pose proof (Z.pow_pos_nonneg 2 Semantics.width ltac:(lia) X).
+    pose proof width_lt_pow2width.
+    pose proof pow2width_pos.
 
     induction 1; inversion 1; cleanup_wf; intros.
 
@@ -274,17 +318,32 @@ Section Expr.
                                  end
                           end
                end.
-    Time
-      all:cbn [translate_expr translate_ident is_cast cast_exempt
-                              negb andb
-                              invert_expr.invert_Z_cast
-                              invert_expr.invert_Z_cast2
-                              expr.interp Compilers.ident_interp].
+
+    all:cbn [expr.interp Compilers.ident_interp].
+    all:cbn [translate_expr is_cast cast_exempt negb andb].
+    all:rewrite ?require_cast_for_arg_binop by auto.
+    all:cbn [require_cast_for_arg].
+
+    all:repeat match goal with
+               | H : range_good _ = _ |- _ =>
+                 rewrite H
+               | H : is_bounded_by_bool _ _ = true |- _ =>
+                 rewrite H
+               | _ => rewrite is_bounded_by_bool_width_range by lia
+               | _ => rewrite is_bounded_by_bool_max_range by lia
+               end.
+    all:cbn [negb andb];
+      rewrite ?Bool.andb_false_r, ?Bool.andb_true_r.
+
+    (* solve the binop goal first (nasty when translate_ident unfolded) *)
+    all: try match goal with
+             | H : translate_binop _ <> None |- _ =>
+               apply translate_binop_correct;
+                 eauto using translate_ident_binop end.
+
+    all:cbn [translate_ident translate_binop].
+
     { (* cast1 *)
-      cbn [translate_expr has_casts expr.interp Compilers.ident_interp].
-      match goal with H : range_good _ = true |- _ =>
-                      rewrite H end.
-      cbn [negb]; rewrite Bool.andb_false_r.
       specialize (IHvalid_expr _ _ _ _
                                ltac:(eassumption) ltac:(eassumption)).
       cbn [locally_equivalent equivalent rep.equiv rep.Z
@@ -298,10 +357,6 @@ Section Expr.
       destruct rc; sepsimpl; try apply Z.mod_pos_bound; try lia;
         eauto. }
     { (* cast2 *)
-      cbn [translate_expr has_casts expr.interp Compilers.ident_interp].
-      repeat match goal with H : range_good _ = true |- _ =>
-                             rewrite H end.
-      cbn [negb andb]; rewrite Bool.andb_false_r.
       specialize (IHvalid_expr _ _ _ _
                                ltac:(eassumption) ltac:(eassumption)).
       cbv [range_good max_range ident.literal ident.cast2] in *.
@@ -314,24 +369,16 @@ Section Expr.
         erewrite word.of_Z_inj_mod by
           (rewrite Z.mod_mod by lia; reflexivity); eauto. }
     { (* fst *)
-      cbn [translate_expr has_casts expr.interp Compilers.ident_interp].
-      cbn [negb]. rewrite !Bool.andb_true_r.
       specialize (IHvalid_expr _ _ _ _
                                ltac:(eassumption) ltac:(eassumption)).
       cbn [locally_equivalent equivalent rep.equiv rep.Z] in *.
       sepsimpl; eauto. }
     { (* snd *)
-      cbn [translate_expr has_casts expr.interp Compilers.ident_interp].
-      cbn [negb]. rewrite !Bool.andb_true_r.
       specialize (IHvalid_expr _ _ _ _
                                ltac:(eassumption) ltac:(eassumption)).
       cbn [locally_equivalent equivalent rep.equiv rep.Z] in *.
       sepsimpl; eauto. }
     { (* literal *)
-      cbn [translate_expr has_casts expr.interp Compilers.ident_interp].
-      repeat match goal with H : is_bounded_by_bool _ _ = true |- _ =>
-                             rewrite H end.
-      cbn [negb]. rewrite !Bool.andb_false_r.
       cbn [locally_equivalent_nobounds
              locally_equivalent equivalent rep.equiv rep.Z].
       cbv [is_bounded_by_bool] in *. cbn [upper lower max_range] in *.
@@ -342,8 +389,6 @@ Section Expr.
       cbv [ident.literal].
       destruct rc; sepsimpl; eauto with lia; reflexivity. }
     { (* var *)
-      cbn [translate_expr has_casts expr.interp Compilers.ident_interp].
-      cbn [negb]. rewrite !Bool.andb_true_r.
       match goal with
       | H : context_equiv _ _ |- _ =>
         cbv [context_equiv] in H;
@@ -354,9 +399,7 @@ Section Expr.
       cbn [locally_equivalent_nobounds equivalent rep.equiv rep.Z] in *.
       sepsimpl; eauto. }
     { (* nth_default *)
-      cbn [translate_expr has_casts expr.interp Compilers.ident_interp].
-      cbn [negb]. rewrite !Bool.andb_true_r.
-      cbv [ident.literal].
+      cbv [ident.literal rnth_default]. rewrite Nat2Z.id.
       apply locally_equivalent_nobounds_impl.
       match goal with
         |- locally_equivalent
@@ -366,7 +409,8 @@ Section Expr.
         assert (length l1 = length l2 /\
                 (forall i,
                     R (nth_default d1 l1 i) (nth_default d2 l2 i)));
-          [ apply (@Forall.Forall2_forall_iff'' _ _ R) | cleanup; solve [eauto] ]
+          [ apply (@Forall.Forall2_forall_iff'' _ _ R)
+          | cleanup; solve [eauto] ]
       end.
       split; [ | solve [eauto] ].
       match goal with
@@ -376,28 +420,11 @@ Section Expr.
           specialize (H _ ltac:(eassumption))
       end.
       eauto. }
-    { (* basic binop *)
-      cbn [translate_expr has_casts expr.interp Compilers.ident_interp].
-      cbn [negb]. rewrite !Bool.andb_true_r.
-      break_match; try congruence; [ ].
-      apply translate_binop_correct; eauto. }
     { (* shiftr *) 
-      cbn [translate_expr has_casts expr.interp Compilers.ident_interp].
-      cbn [negb]. rewrite !Bool.andb_true_r.
       specialize (IHvalid_expr _ _ _ _
                                ltac:(eassumption) ltac:(eassumption)).
-      cbn [translate_binop translate_shiftr].
-      rewrite !Bool.andb_true_l, Bool.if_negb.
-      cbv [is_bounded_by_bool]. cbn [upper lower max_range].
-      assert (Semantics.width < 2 ^ Semantics.width) by
-          (apply Z.pow_gt_lin_r; lia).
-      break_match;
-        repeat match goal with
-               | H : (_ && _)%bool = true |- _ =>
-                 apply Bool.andb_true_iff in H; cleanup
-               | H : (_ && _)%bool = false |- _ =>
-                 apply Bool.andb_false_iff in H; destruct H
-               end; Z.ltb_to_lt; try lia; [ ].
+      cbv [rshiftr literal_ltwidth invert_literal].
+      rewrite is_bounded_by_bool_width_range by lia.
       cbn [locally_equivalent_nobounds
              locally_equivalent equivalent
              rep.equiv rep.Z ident.literal] in *.
@@ -423,10 +450,7 @@ Section Expr.
       cbv [word.wrap]. Z.rewrite_mod_small.
       reflexivity. }
     { (* mul_high *)
-      cbn [translate_expr has_casts expr.interp Compilers.ident_interp].
-      cbn [negb]. rewrite !Bool.andb_true_r.
-      cbv [translate_shiftl translate_mul_high] in *.
-      break_match_hyps; try congruence.
+      cbv [ident.literal rmul_high literal_eqb invert_literal].
       rewrite Z.eqb_refl.
       match goal with
         |- context [_ (translate_expr _ ?a) (translate_expr _ ?b)] =>
@@ -452,22 +476,8 @@ Section Expr.
       cbv [word.wrap]. Z.rewrite_mod_small.
       reflexivity. }
     { (* shiftl *)
-      cbn [translate_expr has_casts expr.interp Compilers.ident_interp].
-      cbn [negb]. rewrite !Bool.andb_true_r.
-      cbv [translate_shiftl translate_mul_high] in *.
-      break_match_hyps; try congruence.
-      rewrite Z.eqb_refl.
-      cbv [is_bounded_by_bool] in *. cbn [upper lower max_range] in *.
-      rewrite Bool.andb_true_l, Bool.negb_if.
-      assert (Semantics.width < 2 ^ Semantics.width) by
-          (apply Z.pow_gt_lin_r; lia).
-      break_match;
-        repeat match goal with
-               | H : (_ && _)%bool = true |- _ =>
-                 apply Bool.andb_true_iff in H; cleanup
-               | H : (_ && _)%bool = false |- _ =>
-                 apply Bool.andb_false_iff in H; destruct H
-               end; Z.ltb_to_lt; try lia; [ ].
+      cbv [rshiftl literal_eqb literal_ltwidth invert_literal].
+      rewrite Z.eqb_refl, is_bounded_by_bool_width_range by lia.
       specialize (IHvalid_expr _ _ _ _
                                 ltac:(eassumption) ltac:(eassumption)).
       cbn [locally_equivalent_nobounds

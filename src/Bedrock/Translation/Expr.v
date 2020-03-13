@@ -19,26 +19,22 @@ Section Expr.
   (* for the second argument of shifts *)
   Definition width_range :=  r[0~>Semantics.width]%zrange.
 
-  Local Notation App_Zcast r x :=
+  Local Notation Zcast r :=
     (@expr.App
-       _ _ _ type_Z type_Z
-         (@expr.App
-            _ _ _ type_range (type.arrow type_Z type_Z)
-            (expr.Ident ident.Z_cast)
-            (expr.Ident (@ident.Literal base.type.zrange r))) x).
-  Local Notation App_Zcast2 r1 r2 x :=
+       _ _ _ type_range (type.arrow type_Z type_Z)
+       (expr.Ident ident.Z_cast)
+       (expr.Ident (@ident.Literal base.type.zrange r))).
+  Local Notation Zcast2 r1 r2 :=
     (@expr.App
-       _ _ _ type_ZZ type_ZZ
+       _ _ _ type_range2 (type.arrow type_ZZ type_ZZ)
+       (expr.Ident ident.Z_cast2)
        (@expr.App
-          _ _ _ type_range2 (type.arrow type_ZZ type_ZZ)
-          (expr.Ident ident.Z_cast2)
+          _ _ _ type_range type_range2
           (@expr.App
-             _ _ _ type_range type_range2
-             (@expr.App
-                _ _ _ type_range (type.arrow type_range type_range2)
-                (expr.Ident ident.pair)
-                (expr.Ident (@ident.Literal base.type.zrange r1)))
-             (expr.Ident (@ident.Literal base.type.zrange r2)))) x).
+             _ _ _ type_range (type.arrow type_range type_range2)
+             (expr.Ident ident.pair)
+             (expr.Ident (@ident.Literal base.type.zrange r1)))
+          (expr.Ident (@ident.Literal base.type.zrange r2)))).
 
   (* Literal Zs that are in bounds and lists do not need casts *)
   Definition cast_exempt {t} (e : @API.expr ltype t)
@@ -46,20 +42,11 @@ Section Expr.
     match e with
     | (expr.Ident _ (ident.Literal base.type.Z z)) =>
       is_bounded_by_bool z max_range
-    | (expr.App _ (type.base (base.type.list _)) _ _) =>
+    | (expr.Ident _ (ident.Literal base.type.nat n)) =>
+      true
+    | expr.Var (type.base (base.type.list _)) _ =>
       true
     | _ => false 
-    end.
-
-  Definition is_cast {t} (e : @API.expr ltype t) : bool :=
-    match invert_expr.invert_Z_cast e with
-    | Some r => range_good r
-    | None =>
-        match invert_expr.invert_Z_cast2 e with
-        | Some (r1, r2) =>
-          (range_good r1 && range_good r2)%bool
-        | None => false
-        end
     end.
 
   Definition invert_literal (x : Syntax.expr) : option Z :=
@@ -85,13 +72,6 @@ Section Expr.
       then expr.op bopname.sru x n
       else base_make_error _.
 
-  Definition rmul_high
-    : rtype (type_Z -> type_Z -> type_Z -> type_Z) :=
-    fun s x y =>
-      if literal_eqb s (2 ^ Semantics.width)
-      then expr.op bopname.mulhuu x y
-      else base_make_error _. 
-
   Definition rshiftl
     : rtype (type_Z -> type_Z -> type_Z -> type_Z) :=
     fun s x n =>
@@ -109,6 +89,34 @@ Section Expr.
         nth_default d l (Z.to_nat i)
       | _ => base_make_error _
       end.
+
+  Definition rmul_high
+    : rtype (type_Z -> type_Z -> type_Z -> type_Z) :=
+    fun s x y =>
+      if literal_eqb s (2 ^ Semantics.width)
+      then expr.op bopname.mulhuu x y
+      else base_make_error _.
+
+  Definition is_cast
+             {t} (e : @API.expr ltype t) : bool :=
+    match e with
+    | Zcast r => range_good r
+    | Zcast2 r1 r2 => range_good r1 && range_good r2
+    | _ => false
+    end.
+
+  (* only require cast for the argument of App if:
+     - f is not a cast
+     - f is not mul_high (bc then arg = 2^width) *)
+  Definition require_cast_for_arg
+             {t} (e : @API.expr ltype t) : bool :=
+    match e with
+    | Zcast r => negb (range_good r)
+    | Zcast2 r1 r2 => 
+      negb (range_good r1 && range_good r2)
+    | expr.Ident _ ident.Z_mul_high => false
+    | _ => true
+    end.
 
   Definition translate_binop {t} (i : ident.ident t)
     : option (rtype t) :=
@@ -131,8 +139,10 @@ Section Expr.
     | ident.snd _ _ => snd
     | ident.List_nth_default base_Z => rnth_default
     | ident.Z_shiftr => rshiftr
-    | ident.Z_mul_high => rmul_high
     | ident.Z_truncating_shiftl => rshiftl
+    | ident.Z_mul_high => rmul_high
+    | ident.Z_cast => fun _ x => x
+    | ident.Z_cast2 => fun _ x => x
     | i => match translate_binop i with
            | Some x => x
            | None => make_error _
@@ -142,26 +152,22 @@ Section Expr.
   Fixpoint translate_expr
            (require_cast : bool)
            {t} (e : @API.expr ltype t) : rtype t :=
-    if (negb (cast_exempt e) && require_cast)%bool
-    then match e with
-         | expr.App type_Z type_Z f x =>
-           if is_cast f
-           then translate_expr false x
-           else make_error _
-         | expr.App type_ZZ type_ZZ f x =>
-           if is_cast f
-           then translate_expr false x
-           else make_error _
-         | _ => make_error _
-         end
+    if (require_cast && negb (cast_exempt e))%bool
+    then
+      match e in expr.expr t0 return rtype t0 with
+      | expr.App _ _ f x =>
+        if is_cast f
+        then translate_expr false f (translate_expr false x)
+        else make_error _
+      | _ => make_error _
+      end
     else
       match e in expr.expr t0 return rtype t0 with
       | expr.App _ _ f x =>
-        translate_expr false f (translate_expr true x)
+        let rc := require_cast_for_arg f in
+        translate_expr false f (translate_expr rc x)
       | expr.Ident _ i => translate_ident i
       | expr.Var _ x => rtype_of_ltype _ x
       | _ => make_error _
       end.
-  Time Print translate_expr.
-  (* 0.03 *)
 End Expr.
