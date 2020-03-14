@@ -21,6 +21,8 @@ jobs:
         - { COQ_VERSION: "v8.11" , COQ_PACKAGE: "coq libcoq-ocaml-dev"              , SKIP_BEDROCK2: "" , PPA: "ppa:jgross-h/coq-8.11-daily" }
         - { COQ_VERSION: "v8.10" , COQ_PACKAGE: "coq libcoq-ocaml-dev"              , SKIP_BEDROCK2: "" , PPA: "ppa:jgross-h/coq-8.10-daily" }
         - { COQ_VERSION: "v8.9"  , COQ_PACKAGE: "coq libcoq-ocaml-dev"              , SKIP_BEDROCK2: "1", PPA: "ppa:jgross-h/coq-8.9-daily" }
+        ghc: [ '8.2.2' ]
+        cabal: [ '3.0' ]
 
     env: ${{ matrix.env }}
 
@@ -40,6 +42,10 @@ jobs:
     - uses: actions/checkout@v2
     - name: submodules-init
       uses: snickerbockers/submodules-init@v4
+    - uses: actions/setup-haskell@v1
+      with:
+        ghc-version: ${{ matrix.ghc }}
+        cabal-version: ${{ matrix.cabal }}
     - name: deps
       run: etc/ci/github-actions-make.sh -j2 deps
     - name: all
@@ -49,5 +55,12 @@ jobs:
       with:
         name: ExtractionOCaml
         path: src/ExtractionOCaml
+    - name: standalone-haskell
+      run: etc/ci/github-actions-make.sh -j2 standalone-haskell
+    - name: upload Haskell files
+      uses: actions/upload-artifact@v1
+      with:
+        name: ExtractionHaskell
+        path: src/ExtractionHaskell
     - name: display timing info
       run: cat time-of-build-pretty.log
