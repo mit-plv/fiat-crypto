@@ -13,8 +13,8 @@ Import ListNotations.
 Local Open Scope zrange_scope.
 Local Open Scope Z_scope.
 
-Module IR := IR.Compilers.ToString.IR.
-Module ToString := Stringification.Language.Compilers.ToString.
+Import IR.Compilers.ToString.
+Import Stringification.Language.Compilers.
 Import Stringification.Language.Compilers.Options.
 
 Module Rust.
