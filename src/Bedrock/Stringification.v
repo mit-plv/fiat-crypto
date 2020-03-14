@@ -1,6 +1,7 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Lists.List.
 Require Import Coq.Strings.String.
+Require Import bedrock2.Syntax.
 Require Import bedrock2.BasicC64Semantics.
 Require Import Crypto.Stringification.Language.
 Require Import Crypto.Stringification.IR.
@@ -14,14 +15,6 @@ Import Types.
 Import ListNotations Types.Notations.
 Local Open Scope string_scope.
 Local Open Scope list_scope.
-
-About option_map.
-Locate ltype.
-Import Compilers.ToString.IR.OfPHOAS.
-Print ExprOfPHOAS.
-About type.map_for_each_lhs_of_arrow.
-Print expr_of_PHOAS.
-Print Compilers.ToString.IR.expr.
 
 Fixpoint make_names (prefix : string)
          (nextn : nat) (t : base.type) : option (nat * base_ltype t) :=
@@ -74,7 +67,7 @@ Fixpoint list_lengths_from_bounds {t}
       Option.bind
         (list_lengths_from_bounds (fst x))
         (fun x1 =>
-           option_map 
+           option_map
              (fun x2 => (x1, x2))
              (list_lengths_from_bounds (snd x)))
   | base_listZ =>
@@ -93,15 +86,121 @@ Fixpoint list_lengths_from_argbounds {t}
       Option.bind
         (list_lengths_from_bounds (fst x))
         (fun x1 =>
-           option_map 
+           option_map
              (fun x2 => (x1, x2))
              (list_lengths_from_argbounds (snd x)))
   | type.arrow a b => fun _ => None
   end.
 
+(* TODO: replace this with something real? *)
+Definition dummy_ident_infos : ToString.ident_infos.
+  constructor; apply MSetPositive.PositiveSet.empty.
+Defined.
+
+Definition Zdecl : string :=
+  ("uint" ++ Decimal.decimal_string_of_Z machine_wordsize)%string.
+
+Definition join (join_with : string) (strings : list string) :=
+  match strings with
+  | nil => ""%string
+  | s :: strings' =>
+    fold_right
+      (fun out s => (out ++ join_with ++ s)%string)
+      s strings'
+  end.
+
+Definition bedrock_func_decl_lines
+           (funname : string)
+           (innames : list string)
+  : list string :=
+  let arg_decl := join ", " innames in
+  [("FUNC " ++ funname ++ " (" ++ arg_decl ++ ") {")%string].
+
+Definition indent_lines: list string -> list string :=
+  map (fun s => ("  " ++ s)%string).
+
+Definition bedrock_size_string (sz : Syntax.access_size) : string :=
+  match sz with
+  | access_size.one => "1"
+  | access_size.two => "2"
+  | access_size.four => "4"
+  | access_size.word =>
+    Decimal.decimal_string_of_Z word_size_in_bytes
+  end.
+
+Definition bedrock_op_string (op : Syntax.bopname.bopname) : string :=
+  match op with
+  | bopname.add    => "+"
+  | bopname.sub    => "-"
+  | bopname.mul    => "*"
+  | bopname.mulhuu => "*/"  (* TODO: better symbol for this? *)
+  | bopname.divu   => "/"
+  | bopname.remu   => "%"
+  | bopname.and    => "&"
+  | bopname.or     => "|"
+  | bopname.xor    => "^"
+  | bopname.sru    => ">>"
+  | bopname.slu    => "<<"
+  | bopname.srs    => ">>"
+  | bopname.lts    => "<"
+  | bopname.ltu    => "<"
+  | bopname.eq     => "=="
+  end.
+
+Fixpoint bedrock_expr_string (e : Syntax.expr) : string :=
+  match e with
+  | expr.literal z => Decimal.decimal_string_of_Z z
+  | expr.var x => x
+  | expr.load sz addr =>
+    ("LOAD" ++ (bedrock_size_string sz)
+            ++ "(" ++ bedrock_expr_string addr ++ ")")%string
+  | expr.op op x y =>
+    ((bedrock_expr_string x)
+       ++ " " ++ (bedrock_op_string op) ++ " "
+       ++ (bedrock_expr_string y))%string
+  end.
+
+Fixpoint bedrock_cmd_lines (c : Syntax.cmd) : list string :=
+  match c with
+  | cmd.skip => []
+  | cmd.set x e =>
+    [(x ++ " = " ++ bedrock_expr_string e ++ ";")%string]
+  | cmd.unset x => [("clear " ++ x ++ ";")%string]
+  | cmd.store sz addr e =>
+    [("STORE" ++ (bedrock_size_string sz)
+             ++ "(" ++ (bedrock_expr_string addr) ++ ", "
+             ++ (bedrock_expr_string e) ++ ");")%string]
+  | cmd.cond cond t f =>
+    (("if (" ++ (bedrock_expr_string cond) ++ ") {")%string)
+      :: (indent_lines (bedrock_cmd_lines t))
+      ++ ("} else {" :: indent_lines (bedrock_cmd_lines f))
+      ++ ["}"]
+  | cmd.seq c1 c2 =>
+    bedrock_cmd_lines c1 ++ bedrock_cmd_lines c2
+  | cmd.while test body =>
+    (("while (" ++ bedrock_expr_string test ++ ") {")%string)
+      :: indent_lines (bedrock_cmd_lines body) ++ ["}"]
+  | cmd.call binds f args =>
+    let args := join ", " (map bedrock_expr_string args) in
+    [(join ", " binds ++ " = " ++ f ++ "(" ++ args ++ ");")%string]
+  | cmd.interact binds a args =>
+    let args := join ", " (map bedrock_expr_string args) in
+    [(join ", " binds ++ " = " ++ a ++ "(" ++ args ++ ");")%string]
+  end.
+
+Definition bedrock_ret_lines (outnames : list string) :=
+  [("RETURN " ++ join ", " outnames ++ ";")%string].
+
+Definition bedrock_func_to_lines (f : bedrock_func)
+  : list string :=
+  let '(innames, outnames, cmd) := snd f in
+  (bedrock_func_decl_lines (fst f) innames)
+    ++ (indent_lines (bedrock_cmd_lines cmd))
+    ++ (indent_lines (bedrock_ret_lines outnames)).
+
 (* TODO: for now, name_list is just ignored -- could probably make it not ignored *)
 Definition Bedrock2_ToFunctionLines
-  : forall {relax_zrange : relax_zrange_opt}
+           {relax_zrange : relax_zrange_opt}
            (do_bounds_check : bool) (static : bool) (prefix : string) (name : string)
            {t}
            (e : @API.Expr t)
@@ -109,44 +208,23 @@ Definition Bedrock2_ToFunctionLines
                       ToString.OfPHOAS.var_data (type.base (type.final_codomain t)) -> list string)
            (name_list : option (list string))
            (inbounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
-           (outbounds : ZRange.type.base.option.interp (type.final_codomain t)),
-    (list string * ToString.ident_infos) + string
+           (outbounds : ZRange.type.base.option.interp (type.final_codomain t))
+  : (list string * ToString.ident_infos) + string
   :=
-    match make_innames t, make_outnames t, lengths_from_argbounds inbounds with
-    | (Some innames, Some outnames, Some lengths) =>
-        (name, translate_func e innames lengths outbounds)
-    | _ => (* Error *) 
+    match make_innames t, make_outnames (type.final_codomain t),
+          list_lengths_from_argbounds inbounds with
+    | Some innames, Some outnames, Some lengths =>
+      let f := (name, translate_func e innames lengths outnames) in
+      if error_free_cmd (snd (snd f))
+      then inl (bedrock_func_to_lines f, dummy_ident_infos)
+      else inr ("Error occured during translation to bedrock2")
+    | None, _, _ =>
+      inr ("Error determining argument names")
+    | _, None, _ =>
+      inr ("Error determining return value names")
+    | _, _, None =>
+      inr ("Error determining argument lengths")
     end.
-
-
-Definition ToFunctionLines
-                 {relax_zrange : relax_zrange_opt}
-                 (do_bounds_check : bool) (static : bool) (prefix : string) (name : string)
-                 {t}
-                 (e : @Compilers.expr.Expr base.type ident.ident t)
-                 (comment : type.for_each_lhs_of_arrow var_data t -> var_data (type.base (type.final_codomain t)) -> list string)
-                 (name_list : option (list string))
-                 (inbounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
-                 (outbounds : ZRange.type.base.option.interp (type.final_codomain t))
-        : (list string * ident_infos) + string
-        := match ExprOfPHOAS do_bounds_check e name_list inbounds with
-           | inl (indata, outdata, f)
-             => inl ((["/*"]
-                        ++ (List.map (fun s => if (String.length s =? 0)%nat then " *" else (" * " ++ s))%string (comment indata outdata))
-                        ++ [" * Input Bounds:"]
-                        ++ List.map (fun v => " *   " ++ v)%string (input_bounds_to_string indata inbounds)
-                        ++ [" * Output Bounds:"]
-                        ++ List.map (fun v => " *   " ++ v)%string (bound_to_string outdata outbounds)
-                        ++ [" */"]
-                        ++ to_function_lines static prefix name (indata, outdata, f))%list,
-                     ident_infos.collect_infos f)
-           | inr nil
-             => inr ("Unknown internal error in converting " ++ name ++ " to C")%string
-           | inr [err]
-             => inr ("Error in converting " ++ name ++ " to C:" ++ String.NewLine ++ err)%string
-           | inr errs
-             => inr ("Errors in converting " ++ name ++ " to C:" ++ String.NewLine ++ String.concat String.NewLine errs)%string
-           end.
 
 Definition OutputBedrock2API : ToString.OutputLanguageAPI :=
   {|
