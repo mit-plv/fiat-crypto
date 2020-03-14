@@ -44,5 +44,10 @@ jobs:
       run: etc/ci/github-actions-make.sh -j2 deps
     - name: all
       run: etc/ci/github-actions-make.sh -j2 all
+    - name: upload OCaml files
+    - uses: actions/upload-artifact@v1
+      with:
+        name: ExtractionOCaml
+        path: src/ExtractionOCaml
     - name: display timing info
       run: cat time-of-build-pretty.log
