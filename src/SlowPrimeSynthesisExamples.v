@@ -53,6 +53,8 @@ Module debugging_25519_to_bytes_java.
     Definition c := [(1, 19)].
     Definition machine_wordsize := 32.
 
+    Import IR.Compilers.ToString.
+
     Goal True.
       pose (sto_bytes n s c machine_wordsize "curve25519") as v.
       cbv [sto_bytes] in v.
