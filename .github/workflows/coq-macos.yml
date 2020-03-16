@@ -68,6 +68,8 @@ jobs:
     - uses: actions/checkout@v2
     - name: submodules-init
       uses: snickerbockers/submodules-init@v4
+    - name: add Coq matcher
+      run: echo "::add-matcher::.github/coq.json"
     - name: deps
       run: |
         eval $(opam env)

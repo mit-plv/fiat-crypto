@@ -46,6 +46,8 @@ jobs:
       with:
         ghc-version: ${{ matrix.ghc }}
         cabal-version: ${{ matrix.cabal }}
+    - name: add Coq matcher
+      run: echo "::add-matcher::.github/coq.json"
     - name: deps
       run: etc/ci/github-actions-make.sh -j2 deps
     - name: all
