@@ -11,6 +11,3 @@
 [submodule "rewriter"]
 	path = rewriter
 	url = https://github.com/mit-plv/rewriter.git
-[submodule "etc/timeout"]
-	path = etc/timeout
-	url = https://github.com/pshved/timeout.git
