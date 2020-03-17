@@ -85,6 +85,7 @@ setup.log
 _opam/
 
 # compilation outputs
+etc/sys_os_type.exe
 /*.o
 etc/tscfreq
 src/Specific/NISTP256/AMD64/feadd.c

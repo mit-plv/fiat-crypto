@@ -240,13 +240,17 @@ BEDROCK2_NAME := bedrock2
 COQUTIL_FOLDER := bedrock2/deps/coqutil
 COQUTIL_SRC := $(COQUTIL_FOLDER)/src
 COQUTIL_NAME := coqutil
-# If we want to work on windows, we should probably figure out how to
-# use `;` rather than `:` when both we are on Windows AND OCaml is NOT
-# compiled via cygwin
+# Work around COQBUG(https://github.com/coq/coq/issues/11834)
+SYS_OS_TYPE := $(shell "$(OCAMLFIND)" ocamlc etc/sys_os_type.ml -o etc/sys_os_type.exe && etc/sys_os_type.exe)
 COQPATH_TEMP:=
+ifeq ($(SYS_OS_TYPE),Win32)
+COQPATH_SEP:=;
+else
+COQPATH_SEP:=:
+endif
 
 ifneq ($(EXTERNAL_REWRITER),1)
-COQPATH_TEMP:=${CURDIR_SAFE}/$(REWRITER_SRC):$(COQPATH_TEMP)
+COQPATH_TEMP:=${CURDIR_SAFE}/$(REWRITER_SRC)$(COQPATH_SEP)$(COQPATH_TEMP)
 deps: rewriter
 $(VOFILES): | rewriter
 $(ALLDFILES): | rewriter
@@ -256,7 +260,7 @@ endif
 
 ifneq ($(SKIP_BEDROCK2),1)
 ifneq ($(EXTERNAL_BEDROCK2),1)
-COQPATH_TEMP:=${CURDIR_SAFE}/$(BEDROCK2_SRC):${CURDIR_SAFE}/$(COQUTIL_SRC):$(COQPATH_TEMP)
+COQPATH_TEMP:=${CURDIR_SAFE}/$(BEDROCK2_SRC)$(COQPATH_SEP)${CURDIR_SAFE}/$(COQUTIL_SRC)$(COQPATH_SEP)$(COQPATH_TEMP)
 deps: coqutil bedrock2
 $(VOFILES): | coqutil bedrock2
 $(ALLDFILES): | coqutil bedrock2
@@ -266,7 +270,7 @@ endif
 endif
 
 ifneq ($(EXTERNAL_COQPRIME),1)
-COQPATH_TEMP:=${CURDIR_SAFE}/$(COQPRIME_SRC):$(COQPATH_TEMP)
+COQPATH_TEMP:=${CURDIR_SAFE}/$(COQPRIME_SRC)$(COQPATH_SEP)$(COQPATH_TEMP)
 deps: coqprime
 $(VOFILES): | coqprime
 $(ALLDFILES): | coqprime
@@ -274,7 +278,7 @@ cleanall:: clean-coqprime
 install: install-coqprime
 endif
 
-COQPATH?=$(patsubst %:,%,$(COQPATH_TEMP))
+COQPATH?=$(patsubst %$(COQPATH_SEP),%,$(COQPATH_TEMP))
 export COQPATH
 
 coqprime:
