@@ -17,7 +17,7 @@ Section Expr.
   Definition range_good (r : zrange) : bool := zrange_beq r max_range.
 
   (* for the second argument of shifts *)
-  Definition width_range :=  r[0~>Semantics.width]%zrange.
+  Definition width_range :=  r[0~>Semantics.width-1]%zrange.
 
   Local Notation Zcast r :=
     (@expr.App
@@ -36,12 +36,12 @@ Section Expr.
              (expr.Ident (@ident.Literal base.type.zrange r1)))
           (expr.Ident (@ident.Literal base.type.zrange r2)))).
 
-  (* Literal Zs that are in bounds and lists do not need casts *)
-  Definition cast_exempt {t} (e : @API.expr ltype t)
+  (* Literal Zs or nats, and lists, do not need casts *)
+  Definition cast_exempt {var t} (e : @API.expr var t)
     : bool :=
     match e with
     | (expr.Ident _ (ident.Literal base.type.Z z)) =>
-      is_bounded_by_bool z max_range
+      true
     | (expr.Ident _ (ident.Literal base.type.nat n)) =>
       true
     | expr.Var (type.base (base.type.list _)) _ =>
@@ -97,24 +97,90 @@ Section Expr.
       then expr.op bopname.mulhuu x y
       else base_make_error _.
 
-  Definition is_cast
-             {t} (e : @API.expr ltype t) : bool :=
+  Definition is_cast_literal_ident {t} (i : ident.ident t) : bool :=
+    match i with
+    | ident.Literal base.type.zrange r =>
+      range_good r
+    | _ => false
+    end.
+  Definition is_cast_literal
+             {var t} (e : @API.expr var t) : bool :=
     match e with
-    | Zcast r => range_good r
-    | Zcast2 r1 r2 => range_good r1 && range_good r2
+    | expr.Ident type_range i =>
+      is_cast_literal_ident i
     | _ => false
     end.
 
-  (* only require cast for the argument of App if:
+  Definition is_pair_range {t} (i : ident.ident t) : bool :=
+    match i with
+    | ident.pair base_range base_range => true
+    | _ => false
+    end.
+  Definition is_cast2_literal_App2
+             {var t} (e : @API.expr var t) : bool :=
+    match e with
+    | expr.Ident (type.arrow type_range
+                             (type.arrow type_range type_range2))
+                 i =>
+      is_pair_range i
+    | _ => false
+    end.
+  Definition is_cast2_literal_App1
+             {var t} (e : @API.expr var t) : bool :=
+    match e with
+    | expr.App
+        type_range (type.arrow type_range type_range2)
+        f r1 =>
+      is_cast2_literal_App2 f && is_cast_literal r1
+    | _ => false
+    end.
+  Definition is_cast2_literal
+             {var t} (e : @API.expr var t) : bool :=
+    match e with
+    | expr.App type_range type_range2 f r2 =>
+      is_cast2_literal_App1 f && is_cast_literal r2
+    | _ => false
+    end.
+
+  Definition is_cast_ident {t} (i : ident.ident t) : bool :=
+    match i with
+    | ident.Z_cast => true
+    | ident.Z_cast2 => true
+    | _ => false
+    end.
+
+  Definition is_cast_ident_expr {var t}
+             (e : @API.expr var t) : bool :=
+    match e with
+    | expr.Ident _ i => is_cast_ident i
+    | _ => false
+    end.
+
+  Definition is_cast
+             {var t} (e : @API.expr var t) : bool :=
+    match e with
+    | expr.App type_range (type.arrow type_Z type_Z) f r =>
+      is_cast_ident_expr f && is_cast_literal r
+    | expr.App type_range2 (type.arrow type_ZZ type_ZZ) f r =>
+      is_cast_ident_expr f && is_cast2_literal r
+    | _ => false
+    end.
+
+  (* only require cast for the argument of (App f x) if:
      - f is not a cast
-     - f is not mul_high (bc then arg = 2^width) *)
+     - f is not mul_high (then, x = 2^width)
+     - f is not (nth_default ?d ?l) (i doesn't need to fit in a word) *)
   Definition require_cast_for_arg
-             {t} (e : @API.expr ltype t) : bool :=
+             {var t} (e : @API.expr var t) : bool :=
     match e with
     | Zcast r => negb (range_good r)
     | Zcast2 r1 r2 => 
       negb (range_good r1 && range_good r2)
     | expr.Ident _ ident.Z_mul_high => false
+    | expr.App
+        _ _ (expr.App
+               _ _ (expr.Ident _ (ident.List_nth_default _))
+                      _) _ => false
     | _ => true
     end.
 
@@ -133,8 +199,6 @@ Section Expr.
   Fixpoint translate_ident
            {t} (i : ident.ident t) : rtype t :=
     match i in ident.ident t0 return rtype t0 with
-    | ident.Literal base.type.Z x => expr.literal x
-    | ident.Literal base.type.nat x => expr.literal (Z.of_nat x)
     | ident.fst _ _ => fst
     | ident.snd _ _ => snd
     | ident.List_nth_default base_Z => rnth_default
@@ -149,25 +213,44 @@ Section Expr.
            end
     end.
 
+  Definition translate_cast_exempt {t}
+             (require_in_bounds : bool)
+             (e : @API.expr ltype t) : rtype t :=
+    match e in expr.expr t0 return rtype t0 with
+    | (expr.Ident type_Z (ident.Literal base.type.Z z)) =>
+      if require_in_bounds
+      then if is_bounded_by_bool z max_range
+           then expr.literal z
+           else make_error _
+      else expr.literal z
+    | (expr.Ident type_nat (ident.Literal base.type.nat n)) =>
+      expr.literal (Z.of_nat n)
+    | expr.Var type_listZ x =>
+      map expr.var x
+    | _ => make_error _
+    end.
+
   Fixpoint translate_expr
            (require_cast : bool)
            {t} (e : @API.expr ltype t) : rtype t :=
-    if (require_cast && negb (cast_exempt e))%bool
-    then
-      match e in expr.expr t0 return rtype t0 with
-      | expr.App _ _ f x =>
-        if is_cast f
-        then translate_expr false f (translate_expr false x)
-        else make_error _
-      | _ => make_error _
-      end
-    else
-      match e in expr.expr t0 return rtype t0 with
-      | expr.App _ _ f x =>
-        let rc := require_cast_for_arg f in
-        translate_expr false f (translate_expr rc x)
-      | expr.Ident _ i => translate_ident i
-      | expr.Var _ x => rtype_of_ltype _ x
-      | _ => make_error _
-      end.
+    if cast_exempt e
+    then translate_cast_exempt require_cast e
+    else if require_cast
+         then
+           match e in expr.expr t0 return rtype t0 with
+           | expr.App _ _ f x =>
+             if is_cast f
+             then translate_expr false f (translate_expr false x)
+             else make_error _
+           | _ => make_error _
+           end
+         else
+           match e in expr.expr t0 return rtype t0 with
+           | expr.App _ _ f x =>
+             let rc := require_cast_for_arg f in
+             translate_expr false f (translate_expr rc x)
+           | expr.Ident _ i => translate_ident i
+           | expr.Var _ x => rtype_of_ltype _ x
+           | _ => make_error _
+           end.
 End Expr.

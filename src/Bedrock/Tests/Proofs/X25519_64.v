@@ -60,7 +60,6 @@ Section Proofs.
   Local Notation eval :=
     (eval (weight limbwidth_num limbwidth_den) n).
 
-  
   Definition Bignum (addr : Semantics.word) (x : Z) :
     Semantics.mem -> Prop :=
     Lift1Prop.ex1
@@ -89,7 +88,10 @@ Section Proofs.
   (* Won't pass right now because valid_expr isn't complete *)
   Lemma mulmod_valid_func :
     valid_func (mulmod (fun H3 : API.type => unit)).
-  Admitted.
+  Proof.
+    Decidable.vm_decide.
+    Locate vm_decide.
+  Qed.
 
   (* TODO: ask Jason for help *)
   Lemma mulmod_Wf :
