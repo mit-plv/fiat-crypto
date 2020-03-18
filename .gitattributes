@@ -1,3 +1,7 @@
 * text=auto
 
 *.sh   text eol=lf
+*.c    text
+*.h    text
+*.rs   text
+*.go   text
