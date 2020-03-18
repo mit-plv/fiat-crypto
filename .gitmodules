@@ -8,7 +8,6 @@
 [submodule "bedrock2"]
 	path = bedrock2
 	url = https://github.com/mit-plv/bedrock2.git
-        ignore = dirty
 [submodule "rewriter"]
 	path = rewriter
 	url = https://github.com/mit-plv/rewriter.git
