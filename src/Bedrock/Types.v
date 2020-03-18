@@ -278,6 +278,20 @@ Module Types.
     Definition locally_equivalent_args {t} x y locals :=
       @equivalent_args t x y locals map.empty.
 
+    (* wrapper that uses non-base types *)
+    Fixpoint equivalent' {t : API.type}
+      : API.interp_type t -> (* fiat-crypto value *)
+        rtype t -> (* bedrock2 value *)
+        Interface.map.rep (map:=Semantics.locals) -> (* local variables *)
+        Interface.map.rep (map:=Semantics.mem) -> (* memory *)
+        Prop :=
+      match t with
+      | type.base b => equivalent
+      | _ => fun _ _ _ _ => False
+      end.
+    Definition locally_equivalent' {t} x y locals :=
+      @equivalent' t x y locals map.empty.
+
     Fixpoint equivalent_flat_base {t}
       : base.interp t ->
         list Semantics.word ->
