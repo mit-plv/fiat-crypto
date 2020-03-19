@@ -405,19 +405,39 @@ $(DISPLAY_VO:.vo=.log.diff) : %.log.diff : %.log %.log.expected
 c: $(filter-out $(UNMADE_C_FILES),$(DISPLAY_NON_JAVA_VO:Display.vo=.c) $(DISPLAY_NON_GENERATED_VO:Display.vo=.h))
 
 $(DISPLAY_NON_JAVA_C64_VO:Display.vo=.c) : %.c : %Display.log extract-function.sh
-	BITWIDTH=64 FIAT_CRYPTO_EXTRACT_FUNCTION_IS_ASM="" ./extract-function.sh $(patsubst %Display.log,%,$(notdir $<)) < $< > $@
+	$(SHOW)'EXTRACT-FUNCTION < $< > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)(BITWIDTH=64 FIAT_CRYPTO_EXTRACT_FUNCTION_IS_ASM="" ./extract-function.sh $(patsubst %Display.log,%,$(notdir $<)) && touch $@.ok) < $< > $@.tmp
+	$(HIDE)rm $@.ok
+	$(HIDE)mv $@.tmp $@
 
 $(DISPLAY_NON_JAVA_C32_VO:Display.vo=.c) : %.c : %Display.log extract-function.sh
-	BITWIDTH=32 FIAT_CRYPTO_EXTRACT_FUNCTION_IS_ASM="" ./extract-function.sh $(patsubst %Display.log,%,$(notdir $<)) < $< > $@
+	$(SHOW)'EXTRACT-FUNCTION < $< > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)(BITWIDTH=32 FIAT_CRYPTO_EXTRACT_FUNCTION_IS_ASM="" ./extract-function.sh $(patsubst %Display.log,%,$(notdir $<)) && touch $@.ok) < $< > $@.tmp
+	$(HIDE)rm $@.ok
+	$(HIDE)mv $@.tmp $@
 
 $(DISPLAY_NON_JAVA_C64_VO:Display.vo=.h) : %.h : %Display.log extract-function-header.sh
-	BITWIDTH=64 ./extract-function-header.sh $(patsubst %Display.log,%,$(notdir $<)) < $< > $@
+	$(SHOW)'EXTRACT-FUNCTION-HEADER < $< > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)(BITWIDTH=64 ./extract-function-header.sh $(patsubst %Display.log,%,$(notdir $<)) && touch $@.ok) < $< > $@.tmp
+	$(HIDE)rm $@.ok
+	$(HIDE)mv $@.tmp $@
 
 $(DISPLAY_NON_JAVA_C32_VO:Display.vo=.h) : %.h : %Display.log extract-function-header.sh
-	BITWIDTH=32 ./extract-function-header.sh $(patsubst %Display.log,%,$(notdir $<)) < $< > $@
+	$(SHOW)'EXTRACT-FUNCTION-HEADER < $< > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)(BITWIDTH=32 ./extract-function-header.sh $(patsubst %Display.log,%,$(notdir $<)) && touch $@.ok) < $< > $@.tmp
+	$(HIDE)rm $@.ok
+	$(HIDE)mv $@.tmp $@
 
 $(DISPLAY_GENERATED_VO:Display.vo=.c) : %.c : %Display.log src/Specific/Framework/bench/prettyprint.py
-	./src/Specific/Framework/bench/prettyprint.py $(patsubst %Display.log,%,$(notdir $<)) < $< > $@
+	$(SHOW)'PRETTYPRINT < $< > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)(./src/Specific/Framework/bench/prettyprint.py $(patsubst %Display.log,%,$(notdir $<)) && touch $@.ok) < $< > $@.tmp
+	$(HIDE)rm $@.ok
+	$(HIDE)mv $@.tmp $@
 
 TEST_BINARIES := \
 	src/Specific/X25519/C64/test \
