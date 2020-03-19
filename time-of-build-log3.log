@@ -1411,3 +1411,52 @@ total time:  70041.881s
 └reflexivity ---------------------------  60.0%  60.0%       142000.327s
 
 src/Specific/montgomery32_2e256m4294968273_8limbs/fesub.vo (real: 70086.97, user: 70062.41, sys: 12.09, mem: 1025680 ko)
+TIMEOUT -m 10000000 COQC src/Specific/montgomery32_2e256m88x2e240m1_8limbs/fesub.v
+Finished transaction in 70753.994 secs (70721.44u,12.223s) (successful)
+total time:  70733.663s
+
+ tactic                                   local  total   calls       max 
+────────────────────────────────────────┴──────┴──────┴───────┴─────────┘
+─synthesize_sub ------------------------   0.0% 100.0%       070733.663s
+─synthesize_narg_choice ----------------   0.0% 100.0%       070733.663s
+─synthesize_narg_choice_gen ------------   0.0% 100.0%       070733.663s
+─synthesize_montgomery -----------------   0.0% 100.0%       170724.518s
+─IntegrationTestTemporaryMiscCommon.fact   0.0% 100.0%       170722.735s
+─abstract reflexivity ------------------  40.1% 100.0%       170721.031s
+─reflexivity ---------------------------  59.9%  59.9%       842375.682s
+
+ tactic                                   local  total   calls       max 
+────────────────────────────────────────┴──────┴──────┴───────┴─────────┘
+─synthesize_sub ------------------------   0.0% 100.0%       070733.663s
+└synthesize_narg_choice ----------------   0.0% 100.0%       070733.663s
+└synthesize_narg_choice_gen ------------   0.0% 100.0%       070733.663s
+└synthesize_montgomery -----------------   0.0% 100.0%       170724.518s
+└IntegrationTestTemporaryMiscCommon.fact   0.0% 100.0%       170722.735s
+└abstract reflexivity ------------------  40.1% 100.0%       170721.031s
+└reflexivity ---------------------------  59.9%  59.9%       142375.682s
+
+Finished transaction in 21.05 secs (21.05u,0.s) (successful)
+Closed under the global context
+total time:  70733.663s
+
+ tactic                                   local  total   calls       max 
+────────────────────────────────────────┴──────┴──────┴───────┴─────────┘
+─synthesize_sub ------------------------   0.0% 100.0%       070733.663s
+─synthesize_narg_choice ----------------   0.0% 100.0%       070733.663s
+─synthesize_narg_choice_gen ------------   0.0% 100.0%       070733.663s
+─synthesize_montgomery -----------------   0.0% 100.0%       170724.518s
+─IntegrationTestTemporaryMiscCommon.fact   0.0% 100.0%       170722.735s
+─abstract reflexivity ------------------  40.1% 100.0%       170721.031s
+─reflexivity ---------------------------  59.9%  59.9%       842375.682s
+
+ tactic                                   local  total   calls       max 
+────────────────────────────────────────┴──────┴──────┴───────┴─────────┘
+─synthesize_sub ------------------------   0.0% 100.0%       070733.663s
+└synthesize_narg_choice ----------------   0.0% 100.0%       070733.663s
+└synthesize_narg_choice_gen ------------   0.0% 100.0%       070733.663s
+└synthesize_montgomery -----------------   0.0% 100.0%       170724.518s
+└IntegrationTestTemporaryMiscCommon.fact   0.0% 100.0%       170722.735s
+└abstract reflexivity ------------------  40.1% 100.0%       170721.031s
+└reflexivity ---------------------------  59.9%  59.9%       142375.682s
+
+src/Specific/montgomery32_2e256m88x2e240m1_8limbs/fesub.vo (real: 70786.89, user: 70753.97, sys: 12.58, mem: 1012832 ko)
