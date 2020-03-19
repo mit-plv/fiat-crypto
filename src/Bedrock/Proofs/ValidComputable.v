@@ -200,7 +200,7 @@ Section Expr.
           (valid_expr_App1_bool require_casts f)
             && valid_expr_bool' false false false x
         | expr.Ident _ (ident.Literal base.type.Z z) =>
-          negb require_casts || is_bounded_by_bool z max_range
+          is_bounded_by_bool z max_range || negb require_casts
         | expr.Ident _ (ident.Literal base.type.nat n) =>
           negb require_casts
         | expr.Var type_Z v => negb require_casts
@@ -859,5 +859,37 @@ Section Expr.
     match goal with H : _ = true |- _ =>
                     apply valid_expr_bool'_impl1 in H end.
     eauto.
+  Qed.
+
+  Lemma valid_expr_bool_impl2 {t} (e : API.expr t) :
+    forall rc,
+      valid_expr rc e ->
+      valid_expr_bool rc e = true.
+  Proof.
+    cbv [valid_expr_bool].
+    induction 1; intros; subst; cbn;
+      repeat match goal with
+             | _ => progress cbn [andb]
+             | H : valid_expr_bool' _ _ _ _ = true |- _ =>
+               rewrite H
+             | _ => rewrite Z.eqb_refl
+             end;
+      auto using
+           Bool.andb_true_iff, Bool.orb_true_iff,
+      is_bounded_by_bool_max_range,
+      is_bounded_by_bool_width_range; [ ].
+    (* remaining case : binop *)
+    match goal with
+    | H : translate_binop ?i <> None
+      |- context [match translate_binop ?i with _ => _ end] =>
+      destruct (translate_binop i)
+    end; cbn [andb]; congruence.
+  Qed.
+
+  Lemma valid_expr_bool_iff {t} (e : API.expr (type.base t)) :
+    forall rc,
+      valid_expr_bool rc e = true <-> valid_expr rc e.
+  Proof.
+    split; eauto using valid_expr_bool_impl1, valid_expr_bool_impl2.
   Qed.
 End Expr.
