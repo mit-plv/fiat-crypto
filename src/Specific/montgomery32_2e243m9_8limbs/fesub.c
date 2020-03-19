@@ -24,7 +24,7 @@ static void fesub(uint32_t out[8], const uint32_t in1[8], const uint32_t in2[8])
   { uint32_t x51; uint8_t/*bool*/ x52 = _subborrow_u32(x49, x17, x31, &x51);
   { uint32_t x54; uint8_t/*bool*/ x55 = _subborrow_u32(x52, x16, x30, &x54);
   { uint32_t x56 = cmovznz32(x55, 0x0, 0xffffffff);
-  { uint32_t x57 = (x56 & 0xffffffff);
+  { uint32_t x57 = (x56 & 0xfffffff7);
   { uint32_t x59; uint8_t/*bool*/ x60 = _addcarryx_u32(0x0, x33, x57, &x59);
   { uint32_t x61 = (x56 & 0xffffffff);
   { uint32_t x63; uint8_t/*bool*/ x64 = _addcarryx_u32(x60, x36, x61, &x63);
@@ -38,7 +38,7 @@ static void fesub(uint32_t out[8], const uint32_t in1[8], const uint32_t in2[8])
   { uint32_t x79; uint8_t/*bool*/ x80 = _addcarryx_u32(x76, x48, x77, &x79);
   { uint32_t x81 = (x56 & 0xffffffff);
   { uint32_t x83; uint8_t/*bool*/ x84 = _addcarryx_u32(x80, x51, x81, &x83);
-  { uint32_t x85 = (x56 & 0x3f80ffff);
+  { uint32_t x85 = (x56 & 0x7ffff);
   { uint32_t x87; uint8_t/*bool*/ _ = _addcarryx_u32(x84, x54, x85, &x87);
   out[0] = x59;
   out[1] = x63;

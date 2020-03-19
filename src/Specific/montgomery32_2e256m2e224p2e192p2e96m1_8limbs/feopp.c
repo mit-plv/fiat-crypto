@@ -22,23 +22,20 @@ static void feopp(uint32_t out[8], const uint32_t in1[8]) {
   { uint32_t x46; uint8_t/*bool*/ x47 = _addcarryx_u32(x43, x19, x44, &x46);
   { uint32_t x48 = (x39 & 0xffffffff);
   { uint32_t x50; uint8_t/*bool*/ x51 = _addcarryx_u32(x47, x22, x48, &x50);
-  { uint32_t x52 = (x39 & 0xffffffff);
-  { uint32_t x54; uint8_t/*bool*/ x55 = _addcarryx_u32(x51, x25, x52, &x54);
-  { uint32_t x56 = (x39 & 0xffffffff);
-  { uint32_t x58; uint8_t/*bool*/ x59 = _addcarryx_u32(x55, x28, x56, &x58);
-  { uint32_t x60 = (x39 & 0xffffffff);
-  { uint32_t x62; uint8_t/*bool*/ x63 = _addcarryx_u32(x59, x31, x60, &x62);
-  { uint32_t x64 = (x39 & 0xffffffff);
-  { uint32_t x66; uint8_t/*bool*/ x67 = _addcarryx_u32(x63, x34, x64, &x66);
-  { uint32_t x68 = (x39 & 0x3f80ffff);
-  { uint32_t x70; uint8_t/*bool*/ _ = _addcarryx_u32(x67, x37, x68, &x70);
+  { uint32_t x53; uint8_t/*bool*/ x54 = _addcarryx_u32(x51, x25, 0x0, &x53);
+  { uint32_t x56; uint8_t/*bool*/ x57 = _addcarryx_u32(x54, x28, 0x0, &x56);
+  { uint32_t x59; uint8_t/*bool*/ x60 = _addcarryx_u32(x57, x31, 0x0, &x59);
+  { uint8_t/*bool*/ x61 = (1&(uint8_t/*bool*/)x39 & 0x1);
+  { uint32_t x63; uint8_t/*bool*/ x64 = _addcarryx_u32(x60, x34, x61, &x63);
+  { uint32_t x65 = (x39 & 0xffffffff);
+  { uint32_t x67; uint8_t/*bool*/ _ = _addcarryx_u32(x64, x37, x65, &x67);
   out[0] = x42;
   out[1] = x46;
   out[2] = x50;
-  out[3] = x54;
-  out[4] = x58;
-  out[5] = x62;
-  out[6] = x66;
-  out[7] = x70;
-  }}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}
+  out[3] = x53;
+  out[4] = x56;
+  out[5] = x59;
+  out[6] = x63;
+  out[7] = x67;
+  }}}}}}}}}}}}}}}}}}}}}}}}}}}}}}
 }

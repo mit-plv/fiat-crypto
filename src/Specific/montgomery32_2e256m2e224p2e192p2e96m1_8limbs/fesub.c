@@ -30,23 +30,20 @@ static void fesub(uint32_t out[8], const uint32_t in1[8], const uint32_t in2[8])
   { uint32_t x63; uint8_t/*bool*/ x64 = _addcarryx_u32(x60, x36, x61, &x63);
   { uint32_t x65 = (x56 & 0xffffffff);
   { uint32_t x67; uint8_t/*bool*/ x68 = _addcarryx_u32(x64, x39, x65, &x67);
-  { uint32_t x69 = (x56 & 0xffffffff);
-  { uint32_t x71; uint8_t/*bool*/ x72 = _addcarryx_u32(x68, x42, x69, &x71);
-  { uint32_t x73 = (x56 & 0xffffffff);
-  { uint32_t x75; uint8_t/*bool*/ x76 = _addcarryx_u32(x72, x45, x73, &x75);
-  { uint32_t x77 = (x56 & 0xffffffff);
-  { uint32_t x79; uint8_t/*bool*/ x80 = _addcarryx_u32(x76, x48, x77, &x79);
-  { uint32_t x81 = (x56 & 0xffffffff);
-  { uint32_t x83; uint8_t/*bool*/ x84 = _addcarryx_u32(x80, x51, x81, &x83);
-  { uint32_t x85 = (x56 & 0x3f80ffff);
-  { uint32_t x87; uint8_t/*bool*/ _ = _addcarryx_u32(x84, x54, x85, &x87);
+  { uint32_t x70; uint8_t/*bool*/ x71 = _addcarryx_u32(x68, x42, 0x0, &x70);
+  { uint32_t x73; uint8_t/*bool*/ x74 = _addcarryx_u32(x71, x45, 0x0, &x73);
+  { uint32_t x76; uint8_t/*bool*/ x77 = _addcarryx_u32(x74, x48, 0x0, &x76);
+  { uint8_t/*bool*/ x78 = (1&(uint8_t/*bool*/)x56 & 0x1);
+  { uint32_t x80; uint8_t/*bool*/ x81 = _addcarryx_u32(x77, x51, x78, &x80);
+  { uint32_t x82 = (x56 & 0xffffffff);
+  { uint32_t x84; uint8_t/*bool*/ _ = _addcarryx_u32(x81, x54, x82, &x84);
   out[0] = x59;
   out[1] = x63;
   out[2] = x67;
-  out[3] = x71;
-  out[4] = x75;
-  out[5] = x79;
-  out[6] = x83;
-  out[7] = x87;
-  }}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}
+  out[3] = x70;
+  out[4] = x73;
+  out[5] = x76;
+  out[6] = x80;
+  out[7] = x84;
+  }}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}
 }

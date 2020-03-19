@@ -16,7 +16,7 @@ static void feopp(uint32_t out[8], const uint32_t in1[8]) {
   { uint32_t x34; uint8_t/*bool*/ x35 = _subborrow_u32(x32, 0x0, x14, &x34);
   { uint32_t x37; uint8_t/*bool*/ x38 = _subborrow_u32(x35, 0x0, x13, &x37);
   { uint32_t x39 = cmovznz32(x38, 0x0, 0xffffffff);
-  { uint32_t x40 = (x39 & 0xffffffff);
+  { uint32_t x40 = (x39 & 0xffffffe5);
   { uint32_t x42; uint8_t/*bool*/ x43 = _addcarryx_u32(0x0, x16, x40, &x42);
   { uint32_t x44 = (x39 & 0xffffffff);
   { uint32_t x46; uint8_t/*bool*/ x47 = _addcarryx_u32(x43, x19, x44, &x46);
@@ -30,7 +30,7 @@ static void feopp(uint32_t out[8], const uint32_t in1[8]) {
   { uint32_t x62; uint8_t/*bool*/ x63 = _addcarryx_u32(x59, x31, x60, &x62);
   { uint32_t x64 = (x39 & 0xffffffff);
   { uint32_t x66; uint8_t/*bool*/ x67 = _addcarryx_u32(x63, x34, x64, &x66);
-  { uint32_t x68 = (x39 & 0x3f80ffff);
+  { uint8_t x68 = ((uint8_t)x39 & 0x3f);
   { uint32_t x70; uint8_t/*bool*/ _ = _addcarryx_u32(x67, x37, x68, &x70);
   out[0] = x42;
   out[1] = x46;

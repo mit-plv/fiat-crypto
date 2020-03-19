@@ -11,7 +11,7 @@ Interp-η
  uint32_t x34, uint8_t/*bool*/ x35 = subborrow_u32(x32, 0x0, x14);
  uint32_t x37, uint8_t/*bool*/ x38 = subborrow_u32(x35, 0x0, x13);
  uint32_t x39 = cmovznz32(x38, 0x0, 0xffffffff);
- uint32_t x40 = (x39 & 0xffffffff);
+ uint32_t x40 = (x39 & 0xffffffe5);
  uint32_t x42, uint8_t/*bool*/ x43 = addcarryx_u32(0x0, x16, x40);
  uint32_t x44 = (x39 & 0xffffffff);
  uint32_t x46, uint8_t/*bool*/ x47 = addcarryx_u32(x43, x19, x44);
@@ -25,7 +25,7 @@ Interp-η
  uint32_t x62, uint8_t/*bool*/ x63 = addcarryx_u32(x59, x31, x60);
  uint32_t x64 = (x39 & 0xffffffff);
  uint32_t x66, uint8_t/*bool*/ x67 = addcarryx_u32(x63, x34, x64);
- uint32_t x68 = (x39 & 0x3f80ffff);
+ uint8_t x68 = ((uint8_t)x39 & 0x3f);
  uint32_t x70, uint8_t/*bool*/ _ = addcarryx_u32(x67, x37, x68);
  (Return x70, Return x66, Return x62, Return x58, Return x54, Return x50, Return x46, Return x42))
 x
