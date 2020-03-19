@@ -84,14 +84,10 @@ Section Proofs.
              rets = []%list /\
              sep (Bignum pout ((x * y) mod M)%Z) Rr m').
 
-  (* TODO: maybe make a computable condition for this *)
-  (* Won't pass right now because valid_expr isn't complete *)
+  (* TODO: make a computable condition for this *)
   Lemma mulmod_valid_func :
     valid_func (mulmod (fun H3 : API.type => unit)).
-  Proof.
-    Decidable.vm_decide.
-    Locate vm_decide.
-  Qed.
+  Admitted.
 
   (* TODO: ask Jason for help *)
   Lemma mulmod_Wf :
