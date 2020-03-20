@@ -47,11 +47,23 @@ Section Cmd.
         (1%nat, v, Syntax.cmd.set v rhs)
     end.
 
-  Fixpoint translate_cmd {t} (e : @API.expr ltype (type.base t)) (nextn : nat)
+  Fixpoint assign' {t} (nextn : nat)
+    : rtype t -> (nat * ltype t * Syntax.cmd.cmd) :=
+    match t as t0 return
+          rtype t0 -> nat * ltype t0 * _ with
+    | type.base b => assign (t:=b) nextn
+    | _ =>
+      fun _ =>
+        (0%nat, dummy_ltype _, Syntax.cmd.skip)
+    end.
+
+  Fixpoint translate_cmd
+           {t} (e : @API.expr ltype t) (nextn : nat)
     : nat (* number of variable names used *)
-      * base_ltype t (* variables in which return values are stored *)
+      * ltype t (* variables in which return values are stored *)
       * Syntax.cmd.cmd (* actual program *) :=
-    match e in expr.expr t0 return (nat * ltype t0 * Syntax.cmd.cmd) with
+    match e in expr.expr t0
+          return (nat * ltype t0 * Syntax.cmd.cmd) with
     | expr.LetIn (type.base t1) (type.base t2) x f =>
       let trx := assign nextn (translate_expr true x) in
       let trf := translate_cmd (f (snd (fst trx))) (nextn + fst (fst trx)) in
@@ -66,17 +78,17 @@ Section Cmd.
       ((fst (fst trx) + fst (fst trl))%nat,
        snd (fst trx) :: snd (fst trl),
        Syntax.cmd.seq (snd trx) (snd trl))
-    | expr.App _ (type.base t) f x =>
-      let v := translate_expr true (expr.App f x) in
-      assign nextn v
     | expr.Ident type_listZ (ident.nil _) =>
       (0%nat, [], Syntax.cmd.skip)
-    | expr.Ident (type.base _) x =>
-      let v := translate_expr true (expr.Ident x) in
-      assign nextn v
-    | expr.Var (type.base _) x =>
-      let v := translate_expr true (expr.Var x) in
-      assign nextn v
+    | expr.App _ _ f x =>
+      let v := translate_expr true (expr.App f x) in
+      assign' nextn v
+    | expr.Ident _ i =>
+      let v := translate_expr true (expr.Ident i) in
+      assign' nextn v
+    | expr.Var _ v =>
+      let v := translate_expr true (expr.Var v) in
+      assign' nextn v
     | _ => (0%nat, dummy_ltype _, Syntax.cmd.skip)
     end.
 End Cmd.
