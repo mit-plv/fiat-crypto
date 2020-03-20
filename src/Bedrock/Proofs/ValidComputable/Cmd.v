@@ -168,7 +168,7 @@ Section Cmd.
              end.
   Qed.
 
-  Lemma valid_cmd_impl1 {t} e :
+  Lemma valid_cmd_bool_impl1 {t} e :
     @valid_cmd_bool t e = true -> valid_cmd e.
   Proof.
     induction e; cbn [valid_cmd_bool]; break_match; intros;
@@ -188,5 +188,33 @@ Section Cmd.
               solve [eauto]
           | _ => constructor; solve [eauto]
           end.
+  Qed.
+
+  Lemma valid_cmd_bool_valid_expr {t} e :
+    valid_expr_bool_if_base (t:=t) e = true ->
+    valid_cmd_bool e = true.
+  Proof.
+    destruct e; cbn [valid_cmd_bool]; cbv [valid_expr_bool_if_base];
+    break_match; congruence.
+  Qed.
+
+  Lemma valid_cmd_bool_impl2 {t} e :
+    valid_cmd e -> @valid_cmd_bool t e = true.
+  Proof.
+    induction 1; intros; subst; cbn;
+      repeat match goal with
+             | H : valid_expr true _ |- _ =>
+               apply valid_expr_bool_iff in H
+             end;
+      auto using Bool.andb_true_iff; [ ].
+    { apply valid_cmd_bool_valid_expr.
+      assumption. }
+  Qed.
+
+  Lemma valid_cmd_bool_iff {t} e :
+    @valid_cmd_bool t e = true <-> valid_cmd e.
+  Proof.
+    split;
+      auto using valid_cmd_bool_impl1, valid_cmd_bool_impl2.
   Qed.
 End Cmd.
