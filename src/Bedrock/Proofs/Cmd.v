@@ -35,7 +35,16 @@ Section Cmd.
   Local Instance sem_ok : Semantics.parameters_ok semantics
     := semantics_ok.
 
-  Inductive valid_cmd : forall {t}, @API.expr (fun _ => unit) (type.base t) -> Prop :=
+  (* TODO: move *)
+  Definition varname_set' {t} : ltype t -> PropSet.set string :=
+    match t with
+    | type.base _ => varname_set
+    | _ => fun _ => PropSet.empty_set
+    end.
+
+
+  Inductive valid_cmd :
+    forall {t}, @API.expr (fun _ => unit) t -> Prop :=
   (* N.B. LetIn is split into cases so that only pairs of type_base and type_base are
       allowed; this is primarily because we don't want lists on the LHS *)
   | valid_LetIn_prod :
@@ -60,8 +69,10 @@ Section Cmd.
                    (ident.cons (t:=base.type.type_base base.type.Z))) x) l)
   | valid_nil :
       valid_cmd (expr.Ident (ident.nil (t:=base.type.type_base base.type.Z)))
-  | valid_inner : forall {t} e,
-      valid_expr true e -> valid_cmd (t:=t) e
+  | valid_inner :
+      forall {t} e,
+        valid_expr (t:=type.base t) true e ->
+        valid_cmd e
   .
 
   Lemma assign_list_correct :
@@ -237,15 +248,52 @@ Section Cmd.
       eapply assign_list_correct; eauto. }
   Qed.
 
+  Lemma assign'_correct {t} :
+    forall (x : API.interp_type t)
+           (rhs : rtype t)
+           (nextn : nat)
+           (tr : Semantics.trace)
+           (mem : Semantics.mem)
+           (locals : Semantics.locals)
+           functions,
+      (* rhs == x *)
+      locally_equivalent' x rhs locals ->
+      (* locals don't contain any variables we can overwrite *)
+      (forall n nvars,
+          (nextn <= n)%nat ->
+          map.undef_on locals (used_varnames n nvars)) ->
+      let out := assign' nextn rhs in
+      let nvars := fst (fst out) in
+      let lhs := snd (fst out) in
+      WeakestPrecondition.cmd
+        (WeakestPrecondition.call functions)
+        (snd out) tr mem locals
+        (fun tr' mem' locals' =>
+           tr = tr'
+           (* assign never stores anything -- mem unchanged *)
+           /\ mem = mem'
+           (* return values match the number of variables used *)
+           /\ PropSet.sameset (varname_set' lhs)
+                              (used_varnames nextn nvars)
+           (* new locals only differ in the values of LHS variables *)
+           /\ map.only_differ locals (varname_set' lhs) locals'
+           (* evaluating lhs == x *)
+           /\ locally_equivalent' x (rtype_of_ltype _ lhs) locals').
+  Proof.
+    destruct t;
+      cbn [locally_equivalent' equivalent' varname_set'];
+      [ apply assign_correct | tauto ].
+  Qed.
+
   (* if e is a valid_expr, it will hit the cases that call translate_expr *)
   Lemma translate_cmd_valid_expr {t}
-        (e1 : @API.expr (fun _ => unit) (type.base t))
-        (e2 : @API.expr API.interp_type (type.base t))
-        (e3 : @API.expr ltype (type.base t))
+        (e1 : @API.expr (fun _ => unit) t)
+        (e2 : @API.expr API.interp_type t)
+        (e3 : @API.expr ltype t)
         G nextn :
     valid_expr true e1 ->
     wf3 G e1 e2 e3 ->
-    translate_cmd e3 nextn = assign nextn (translate_expr true e3).
+    translate_cmd e3 nextn = assign' nextn (translate_expr true e3).
   Proof.
     inversion 1; cleanup_wf; try reflexivity;
       inversion 1; cleanup_wf; try reflexivity.
@@ -314,7 +362,7 @@ Section Cmd.
                      solve[symmetry; eauto]
               end.
 
-  Lemma translate_cmd_correct {t'} (t:=type.base t')
+  Lemma translate_cmd_correct {t}
         (* three exprs, representing the same Expr with different vars *)
         (e1 : @API.expr (fun _ => unit) t)
         (e2 : @API.expr API.interp_type t)
@@ -329,11 +377,11 @@ Section Cmd.
            (locals : Semantics.locals)
            (nextn : nat),
       (* ret := fiat-crypto interpretation of e2 *)
-      let ret1 : base.interp t' := API.interp e2 in
+      let ret1 : API.interp_type t := API.interp e2 in
       (* out := translation output for e3 *)
       let out := translate_cmd e3 nextn in
       let nvars := fst (fst out) in
-      let ret2 := base_rtype_of_ltype (snd (fst out)) in
+      let ret2 := rtype_of_ltype _ (snd (fst out)) in
       let body := snd out in
       (* G doesn't contain variables we could accidentally overwrite *)
       (forall n,
@@ -356,18 +404,19 @@ Section Cmd.
              tr = tr' /\
              mem = mem' /\
              PropSet.subset
-               (varname_set (snd (fst out)))
+               (varname_set' (snd (fst out)))
                (used_varnames nextn nvars) /\
              map.only_differ
                locals (used_varnames nextn nvars) locals' /\
-             locally_equivalent ret1 ret2 locals').
+             locally_equivalent' ret1 ret2 locals').
   Proof.
-    revert e2 e3 G. subst t. cbv zeta.
+    revert e2 e3 G. cbv zeta.
     induction e1_valid; try (inversion 1; [ ]).
 
     (* inversion on wf3 leaves a mess; clean up hypotheses *)
     all:repeat match goal with
                | _ => progress cleanup_wf
+               | _ => progress cbn [varname_set']
                | H : wf3 _ ?x ?y _ |- _ =>
                  (* for the cons case, repeatedly do inversion until the cons is exposed *)
                  progress match x with
@@ -383,10 +432,10 @@ Section Cmd.
     all:repeat match goal with
                | _ => progress (intros; cleanup)
                | _ => progress cbv [Rewriter.Util.LetIn.Let_In] in *
+               | _ => erewrite translate_cmd_valid_expr by eauto
                | _ => progress cbn [translate_cmd expr.interp type.app_curried
                                                   WeakestPrecondition.cmd
                                                   WeakestPrecondition.cmd_body] in *
-               | _ => erewrite translate_cmd_valid_expr by eauto
                | _ => eapply Proper_cmd;
                         [ eapply Proper_call | repeat intro
                           | eapply assign_correct; eauto;
@@ -475,7 +524,7 @@ Section Cmd.
                           apply in_seq in H end.
           lia. } } }
     { (* nil *)
-      cbv [locally_equivalent]; simplify; eauto;
+      cbv [locally_equivalent' equivalent']; simplify; eauto;
         try reflexivity.
       right; reflexivity. }
     { (* valid expr *)
