@@ -138,12 +138,10 @@ Section Func.
       inversion 1; cleanup_wf;
       cbv [translate_func']; intros.
       all:eapply Proper_cmd;
-        [solve [apply Proper_call]
-        | repeat intro
-        | eapply translate_cmd_correct;
-          solve [eauto using Proper_call] ];
-        cbv beta in *; cleanup; subst;
-          tauto. }
+        [solve [apply Proper_call] | repeat intro
+         | eapply (translate_cmd_correct (t:=type.base _));
+           solve [eauto] ];
+        cbv beta in *; cleanup; subst; tauto. }
   Qed.
 
   Lemma look_up_return_values {t} :

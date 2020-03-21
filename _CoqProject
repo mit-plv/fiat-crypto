@@ -66,6 +66,7 @@ src/Bedrock/Proofs/LoadStoreList.v
 src/Bedrock/Proofs/Varnames.v
 src/Bedrock/Proofs/ValidComputable/Cmd.v
 src/Bedrock/Proofs/ValidComputable/Expr.v
+src/Bedrock/Proofs/ValidComputable/Func.v
 src/Bedrock/Tests/X25519_64.v
 src/Bedrock/Tests/Proofs/X25519_64.v
 src/Bedrock/Translation/Cmd.v
