@@ -18,6 +18,7 @@ Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Proofs.Func.
+Require Import Crypto.Bedrock.Proofs.ValidComputable.Func.
 Require Import Crypto.Bedrock.Util.
 Require Import Crypto.Language.API.
 Require Import Crypto.Util.Tactics.BreakMatch.
@@ -84,10 +85,12 @@ Section Proofs.
              rets = []%list /\
              sep (Bignum pout ((x * y) mod M)%Z) Rr m').
 
-  (* TODO: make a computable condition for this *)
   Lemma mulmod_valid_func :
     valid_func (mulmod (fun H3 : API.type => unit)).
-  Admitted.
+  Proof.
+    apply valid_func_bool_iff.
+    vm_compute; reflexivity.
+  Qed.
 
   (* TODO: ask Jason for help *)
   Lemma mulmod_Wf :
