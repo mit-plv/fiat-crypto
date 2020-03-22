@@ -215,6 +215,7 @@ src/Util/Logic/ImplAnd.v
 src/Util/Logic/ProdForall.v
 src/Util/MSetPositive/Equality.v
 src/Util/MSetPositive/Facts.v
+src/Util/MSets/Iso.v
 src/Util/NUtil/WithoutReferenceToZ.v
 src/Util/SideConditions/AdmitPackage.v
 src/Util/SideConditions/Autosolve.v
@@ -239,6 +240,8 @@ src/Util/Strings/String.v
 src/Util/Strings/StringMap.v
 src/Util/Strings/String_as_OT.v
 src/Util/Strings/Parse/Common.v
+src/Util/Structures/Equalities/Iso.v
+src/Util/Structures/Orders/Iso.v
 src/Util/Tactics/BreakMatch.v
 src/Util/Tactics/CPSId.v
 src/Util/Tactics/CacheTerm.v
