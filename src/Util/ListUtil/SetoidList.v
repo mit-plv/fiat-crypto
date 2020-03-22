@@ -91,12 +91,19 @@ Proof.
                 | constructor; eauto ]. }
 Qed.
 
+(** We could just use [now typeclasses eauto with core] in Coq >= 8.10, but it doesn't work in 8.9 :-( *)
+Local Ltac grepeat_eapply :=
+  multimatch goal with
+  | [ H : _ |- _ ] => eapply H; clear H
+  end;
+  solve [ grepeat_eapply ].
+
 Global Instance InA_Proper_iff {A} {eqA : relation A}
        {eqA_Proper : Proper (eqA ==> eqA ==> iff) eqA}
   : Proper (eqA ==> eqlistA eqA ==> iff) (@InA A eqA) | 10.
 Proof.
   unshelve (split; (eapply InA_Proper_impl + eapply InA_Proper_flip_impl); assumption).
-  all: repeat intro; solve [ edestruct eqA_Proper as [H'1 H'2]; typeclasses eauto with core ].
+  all: repeat intro; solve [ edestruct eqA_Proper; grepeat_eapply ].
 Qed.
 
 Global Instance NoDupA_Proper_eqlistA_impl {A eqA}
@@ -134,5 +141,5 @@ Global Instance NoDupA_Proper_eqlistA_iff {A eqA}
   : Proper (eqlistA eqA ==> iff) (@NoDupA A eqA) | 10.
 Proof.
   unshelve (split; (eapply NoDupA_Proper_eqlistA_impl + eapply NoDupA_Proper_eqlistA_flip_impl); assumption).
-  all: repeat intro; solve [ edestruct eqA_Proper as [H'1 H'2]; typeclasses eauto with core ].
+  all: repeat intro; solve [ edestruct eqA_Proper; grepeat_eapply ].
 Qed.
