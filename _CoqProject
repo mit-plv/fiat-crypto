@@ -150,6 +150,7 @@ src/Util/CPSNotations.v
 src/Util/CPSUtil.v
 src/Util/ChangeInAll.v
 src/Util/Comparison.v
+src/Util/Compose.v
 src/Util/Curry.v
 src/Util/Decidable.v
 src/Util/DefaultedTypes.v
@@ -207,7 +208,9 @@ src/Util/ListUtil/FoldBool.v
 src/Util/ListUtil/Forall.v
 src/Util/ListUtil/ForallIn.v
 src/Util/ListUtil/SetoidList.v
+src/Util/Logic/Exists.v
 src/Util/Logic/ExistsEqAnd.v
+src/Util/Logic/Forall.v
 src/Util/Logic/ImplAnd.v
 src/Util/Logic/ProdForall.v
 src/Util/MSetPositive/Equality.v
