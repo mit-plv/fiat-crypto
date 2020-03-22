@@ -12,6 +12,13 @@ Definition sumwise {A B} (RA:relation A) (RB : relation B) : relation (A + B)
                 | _, _ => False
                 end.
 
+Global Instance inl_Proper_sumwise {A B RA RB}
+  : Proper (RA ==> sumwise RA RB) (@inl A B).
+Proof. repeat intro; cbv; assumption. Qed.
+Global Instance inr_Proper_sumwise {A B RA RB}
+  : Proper (RB ==> sumwise RA RB) (@inr A B).
+Proof. repeat intro; cbv; assumption. Qed.
+
 Global Instance Equivalence_sumwise
   : forall {A B} {RA:relation A} {RB:relation B}
            {RA_equiv:Equivalence RA} {RB_equiv:Equivalence RB},

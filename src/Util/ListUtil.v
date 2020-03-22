@@ -2496,3 +2496,7 @@ Proof using Type. revert xs; induction n, xs; cbn; f_equal; auto. Qed.
 
 Lemma flat_map_const_nil {A B} ls : @flat_map A B (fun _ => nil) ls = nil.
 Proof using Type. induction ls; cbn; auto. Qed.
+
+Lemma fold_left_map A B C f f' l a
+  : @fold_left A B f (@List.map C _ f' l) a = fold_left (fun x y => f x (f' y)) l a.
+Proof using Type. revert a; induction l; cbn [List.map List.fold_left]; auto. Qed.
