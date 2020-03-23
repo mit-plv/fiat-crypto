@@ -43,7 +43,7 @@ Local Hint Extern 0 => solve [ solve_decidable_transparent ] : typeclass_instanc
 Global Instance dec_sumwise {A B RA RB} {HA : DecidableRel RA} {HB : DecidableRel RB} : DecidableRel (@sumwise A B RA RB) | 10.
 Proof.
   intros [x|x] [y|y]; exact _.
-Qed.
+Defined.
 
 (** ** Equality for [sum] *)
 Section sum.
