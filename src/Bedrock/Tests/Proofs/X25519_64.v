@@ -194,7 +194,7 @@ Section Proofs.
       { reflexivity. }
       { reflexivity. }
       { intros.
-        cbn [fst snd Types.varname_set_args Types.varname_set
+        cbn [fst snd Types.varname_set_args Types.varname_set_base
                  Types.rep.varname_set Types.rep.listZ_mem
                  Types.rep.Z].
         cbv [PropSet.union PropSet.singleton_set PropSet.elem_of
@@ -240,7 +240,7 @@ Section Proofs.
       { cbn. repeat constructor; cbn [In]; try tauto.
         destruct 1; congruence. }
       { intros.
-        cbn [fst snd Types.varname_set type.final_codomain
+        cbn [fst snd Types.varname_set_base type.final_codomain
                  Types.rep.varname_set Types.rep.listZ_mem
                  Types.rep.Z].
         cbv [PropSet.singleton_set PropSet.elem_of PropSet.empty_set].

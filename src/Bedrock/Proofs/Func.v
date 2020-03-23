@@ -100,11 +100,12 @@ Section Func.
           (fun tr' mem' locals' =>
              tr = tr' /\
              mem = mem' /\
-             PropSet.subset (varname_set (snd (fst out)))
+             PropSet.subset (varname_set_base (snd (fst out)))
                             (used_varnames nextn nvars) /\
              Interface.map.only_differ
                locals (used_varnames nextn nvars) locals' /\
-             locally_equivalent (listZ:=rep.listZ_local) ret1 ret2 locals').
+             locally_equivalent_base
+               (listZ:=rep.listZ_local) ret1 ret2 locals').
   Proof.
     revert G. cbv zeta.
     induction e0_valid; intros *.
@@ -228,11 +229,11 @@ Section Func.
         (flatten_base_ltype names) flat_values locals = Some locals' ->
       Lift1Prop.iff1
         (equivalent_flat_base values flat_values) 
-        (equivalent values (base_rtype_of_ltype names) locals').
+        (equivalent_base values (base_rtype_of_ltype names) locals').
   Proof.
     induction t; 
       cbn [rep.Z rep.equiv base_rtype_of_ltype
-                 equivalent equivalent_flat_base
+                 equivalent_base equivalent_flat_base
                  flatten_base_ltype];
       break_match; cbn [fst snd]; intros; try reflexivity; [ | | ].
     all:match goal with
@@ -509,12 +510,12 @@ Section Func.
         (* argnames don't have duplicates *)
         NoDup (flatten_argnames argnames) ->
         (* retnames don't contain variables we could later overwrite *)
-        (forall n, ~ varname_set retnames (varname_gen n)) ->
+        (forall n, ~ varname_set_base retnames (varname_gen n)) ->
         (* retnames don't have duplicates *)
         NoDup (flatten_base_ltype retnames) ->
         (* argnames and retnames are disjoint *)
         PropSet.disjoint (varname_set_args argnames)
-                         (varname_set retnames) ->
+                         (varname_set_base retnames) ->
         (* seplogic frame for return values *)
         sep (lists_reserved_with_initial_context
                retlengths argnames retnames argvalues) Rr mem ->
