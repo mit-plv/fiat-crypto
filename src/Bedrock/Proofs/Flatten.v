@@ -90,12 +90,12 @@ Section Flatten.
   Qed.
 
   Lemma varname_set_flatten {t} (names : base_ltype t) :
-    PropSet.sameset (varname_set names)
+    PropSet.sameset (varname_set_base names)
                     (PropSet.of_list (flatten_base_ltype names)).
   Proof.
     apply sameset_iff.
     induction t;
-      cbn [varname_set
+      cbn [varname_set_base
              flatten_base_ltype rep.varname_set rep.Z rep.listZ_mem];
       break_match;
       cbv [PropSet.singleton_set
@@ -122,7 +122,7 @@ Section Flatten.
     PropSet.subset
       (PropSet.of_list (flatten_listonly_base_ltype (t:=t)
                           (fst (extract_listnames names))))
-      (varname_set names).
+      (varname_set_base names).
   Proof.
     induction t;
       cbn [fst snd varname_set extract_listnames

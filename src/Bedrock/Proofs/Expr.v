@@ -163,7 +163,8 @@ Section Expr.
                                  Compilers.ident_interp
                                  type.app_curried
                                  type.final_codomain
-                                 equivalent rep.equiv rep.Z
+                                 equivalent_base
+                                 rep.equiv rep.Z
                                  equivalent_args
                                  locally_equivalent_args
                                  Semantics.interp_binop] in *
@@ -199,8 +200,8 @@ Section Expr.
         (y1 y2 : Syntax.expr)
         op locals :
     translate_binop i = Some op ->
-    locally_equivalent' (t:=type_Z) x1 y1 locals ->
-    locally_equivalent' (t:=type_Z) x2 y2 locals ->
+    locally_equivalent (t:=type_Z) x1 y1 locals ->
+    locally_equivalent (t:=type_Z) x2 y2 locals ->
     WeakestPrecondition.dexpr
       map.empty locals 
       (op y1 y2) (word.of_Z (Compilers.ident_interp i x1 x2)).
@@ -209,13 +210,13 @@ Section Expr.
     apply (translate_binop_correct'
              i (x1, (x2, tt)) (y1, (y2, tt)));
       eauto; [ ].
-    cbv [locally_equivalent'] in *.
+    cbv [locally_equivalent] in *.
     cbn [locally_equivalent_args equivalent_args fst snd].
     eapply sep_empty_iff.
     sepsimpl; eauto.
   Qed.
 
-  Fixpoint locally_equivalent'_nobounds_base {t}
+  Fixpoint locally_equivalent_nobounds_base {t}
     : base.interp t -> base_rtype t -> Semantics.locals -> Prop :=
     match t as t0 return
           base.interp t0 ->
@@ -223,8 +224,8 @@ Section Expr.
           Semantics.locals -> Prop with
     | base.type.prod a b =>
       fun x y locals =>
-        locally_equivalent'_nobounds_base (fst x) (fst y) locals /\
-        locally_equivalent'_nobounds_base (snd x) (snd y) locals
+        locally_equivalent_nobounds_base (fst x) (fst y) locals /\
+        locally_equivalent_nobounds_base (snd x) (snd y) locals
     | base_Z =>
       fun x y locals =>
         WeakestPrecondition.dexpr
@@ -238,23 +239,24 @@ Section Expr.
       fun _ _ _ => True
     | _ => fun _ _ _ => False
     end.
-  Fixpoint locally_equivalent'_nobounds {t}
+  Fixpoint locally_equivalent_nobounds {t}
     : API.interp_type t -> rtype t -> Semantics.locals -> Prop :=
     match t with
-    | type.base b => locally_equivalent'_nobounds_base
+    | type.base b => locally_equivalent_nobounds_base
     | type.arrow _ _ => fun _ _ _ => False
     end.
 
-  Lemma locally_equivalent'_nobounds_impl {t} :
+  Lemma locally_equivalent_nobounds_impl {t} :
     forall x y locals,
-      locally_equivalent' (t:=type.base t) x y locals ->
-      locally_equivalent'_nobounds x y locals.
+      locally_equivalent (t:=type.base t) x y locals ->
+      locally_equivalent_nobounds x y locals.
   Proof.
-    cbv [locally_equivalent' equivalent' locally_equivalent'_nobounds].
+    cbv [locally_equivalent equivalent locally_equivalent_nobounds].
     induction t;
-      cbn [equivalent locally_equivalent'
-                      locally_equivalent'_nobounds_base
-                      rep.equiv rep.Z rep.listZ_local];
+      cbn [equivalent_base
+             locally_equivalent
+             locally_equivalent_nobounds_base
+             rep.equiv rep.Z rep.listZ_local];
       break_match; intros; sepsimpl; eauto.
   Qed.
 
@@ -328,8 +330,8 @@ Section Expr.
       let out := translate_expr require_cast e3 in
       context_equiv G locals ->
       if require_cast
-      then locally_equivalent' (API.interp e2) out locals
-      else locally_equivalent'_nobounds (API.interp e2) out locals.
+      then locally_equivalent (API.interp e2) out locals
+      else locally_equivalent_nobounds (API.interp e2) out locals.
   Proof.
     cbv zeta.
     pose proof width_lt_pow2width.
@@ -352,8 +354,8 @@ Section Expr.
                           end
                end.
 
-    all:cbv [locally_equivalent' equivalent'].
-    all:cbn [locally_equivalent'_nobounds] in *.
+    all:cbv [locally_equivalent equivalent].
+    all:cbn [locally_equivalent_nobounds] in *.
     all:cbn [expr.interp Compilers.ident_interp].
     all:cbn [translate_expr is_cast is_cast_literal_ident
                             is_cast_literal is_cast2_literal
@@ -387,8 +389,8 @@ Section Expr.
     { (* cast1 *)
       specialize (IHvalid_expr _ _ _ _
                                ltac:(eassumption) ltac:(eassumption)).
-      cbn [locally_equivalent' equivalent rep.equiv rep.Z
-                              locally_equivalent'_nobounds_base] in *.
+      cbn [locally_equivalent equivalent_base rep.equiv rep.Z
+                              locally_equivalent_nobounds_base] in *.
       cbv [range_good max_range ident.literal] in *.
       intros; progress reflect_beq_to_eq zrange_beq; subst.
       rewrite ident.cast_out_of_bounds_simple_0_mod by lia.
@@ -401,8 +403,8 @@ Section Expr.
       specialize (IHvalid_expr _ _ _ _
                                ltac:(eassumption) ltac:(eassumption)).
       cbv [range_good max_range ident.literal ident.cast2] in *.
-      cbn [locally_equivalent' equivalent rep.equiv rep.Z fst snd
-                              locally_equivalent'_nobounds_base] in *.
+      cbn [locally_equivalent equivalent_base rep.equiv rep.Z fst snd
+                              locally_equivalent_nobounds_base] in *.
       intros; progress reflect_beq_to_eq zrange_beq; subst.
       rewrite !ident.cast_out_of_bounds_simple_0_mod by lia.
       rewrite Z.sub_simpl_r.
@@ -412,22 +414,22 @@ Section Expr.
     { (* fst *)
       specialize (IHvalid_expr _ _ _ _
                                ltac:(eassumption) ltac:(eassumption)).
-      cbn [locally_equivalent' equivalent'] in *.
-      cbn [locally_equivalent'_nobounds_base
-             locally_equivalent'_nobounds
-             equivalent rep.equiv rep.Z] in *.
+      cbn [locally_equivalent equivalent] in *.
+      cbn [locally_equivalent_nobounds_base
+             locally_equivalent_nobounds
+             equivalent_base rep.equiv rep.Z] in *.
       sepsimpl; eauto. }
     { (* snd *)
       specialize (IHvalid_expr _ _ _ _
                                ltac:(eassumption) ltac:(eassumption)).
-      cbn [locally_equivalent' equivalent'] in *.
-      cbn [locally_equivalent'_nobounds_base
-             locally_equivalent'_nobounds
-             equivalent rep.equiv rep.Z] in *.
+      cbn [locally_equivalent equivalent] in *.
+      cbn [locally_equivalent_nobounds_base
+             locally_equivalent_nobounds
+             equivalent_base rep.equiv rep.Z] in *.
       sepsimpl; eauto. }
     { (* literal Z *)
-      cbn [locally_equivalent'_nobounds_base
-             locally_equivalent' equivalent rep.equiv rep.Z].
+      cbn [locally_equivalent_nobounds_base
+             locally_equivalent equivalent_base rep.equiv rep.Z].
       cbv [ident.literal] in *.
       repeat match goal with
              | H : (_ || _)%bool = true |- _ =>
@@ -449,8 +451,8 @@ Section Expr.
           rewrite Forall_forall in H;
           specialize (H _ ltac:(eassumption))
       end.
-      cbv [equiv3 locally_equivalent'] in *.
-      apply locally_equivalent'_nobounds_impl.
+      cbv [equiv3 locally_equivalent] in *.
+      apply locally_equivalent_nobounds_impl.
       eauto. }
     { (* var (list Z) *)
       match goal with
@@ -459,18 +461,18 @@ Section Expr.
           rewrite Forall_forall in H;
           specialize (H _ ltac:(eassumption))
       end.
-      cbv [equiv3 locally_equivalent'] in *.
+      cbv [equiv3 locally_equivalent] in *.
       destruct rc;
-      try apply locally_equivalent'_nobounds_impl;
+      try apply locally_equivalent_nobounds_impl;
       eauto. }
     { (* nth_default *)
       cbv [ident.literal rnth_default]. rewrite Nat2Z.id.
-      apply locally_equivalent'_nobounds_impl.
+      apply locally_equivalent_nobounds_impl.
       match goal with
-        |- locally_equivalent'
+        |- locally_equivalent
              (nth_default ?d1 ?l1 ?i) (nth_default ?d2 ?l2 ?i) ?locals =>
         let R := constr:(fun x y =>
-                           locally_equivalent' (t:=type_Z) x y locals) in
+                           locally_equivalent (t:=type_Z) x y locals) in
         assert (length l1 = length l2 /\
                 (forall i,
                     R (nth_default d1 l1 i) (nth_default d2 l2 i)));
@@ -485,9 +487,9 @@ Section Expr.
             specialize (H _ ltac:(eassumption))
         end.
         eauto. }
-      { cbn [locally_equivalent'_nobounds
-               locally_equivalent'_nobounds_base
-               locally_equivalent' equivalent'
+      { cbn [locally_equivalent_nobounds
+               locally_equivalent_nobounds_base
+               locally_equivalent equivalent_base
                equivalent rep.equiv rep.Z ident.literal] in *.
         sepsimpl; try lia; reflexivity. } }
     { (* shiftr *)
@@ -495,10 +497,10 @@ Section Expr.
                                ltac:(eassumption) ltac:(eassumption)).
       cbv [rshiftr literal_ltwidth invert_literal].
       rewrite is_bounded_by_bool_width_range by lia.
-      cbn [locally_equivalent'_nobounds
-             locally_equivalent'_nobounds_base
-             locally_equivalent' equivalent'
-             equivalent rep.equiv rep.Z ident.literal] in *.
+      cbn [locally_equivalent_nobounds
+             locally_equivalent_nobounds_base
+             locally_equivalent equivalent
+             equivalent_base rep.equiv rep.Z ident.literal] in *.
       cbv [WeakestPrecondition.dexpr ident.literal] in *.
       cbn [WeakestPrecondition.expr WeakestPrecondition.expr_body
                                     Semantics.interp_binop].
@@ -530,10 +532,10 @@ Section Expr.
         specialize (IHvalid_expr2 _ b _ _
                                   ltac:(eassumption) ltac:(eassumption))
       end.
-      cbn [locally_equivalent'_nobounds
-             locally_equivalent'_nobounds_base
-             locally_equivalent' equivalent'
-             equivalent rep.equiv rep.Z ident.literal] in *.
+      cbn [locally_equivalent_nobounds
+             locally_equivalent_nobounds_base
+             locally_equivalent equivalent
+             equivalent_base rep.equiv rep.Z ident.literal] in *.
       cbv [WeakestPrecondition.dexpr ident.literal] in *.
       cbn [WeakestPrecondition.expr WeakestPrecondition.expr_body
                                     Semantics.interp_binop].
@@ -552,10 +554,10 @@ Section Expr.
       rewrite Z.eqb_refl, is_bounded_by_bool_width_range by lia.
       specialize (IHvalid_expr _ _ _ _
                                 ltac:(eassumption) ltac:(eassumption)).
-      cbn [locally_equivalent'_nobounds
-             locally_equivalent'_nobounds_base
-             locally_equivalent' equivalent'
-             equivalent rep.equiv rep.Z ident.literal] in *.
+      cbn [locally_equivalent_nobounds
+             locally_equivalent_nobounds_base
+             locally_equivalent equivalent
+             equivalent_base rep.equiv rep.Z ident.literal] in *.
       cbv [WeakestPrecondition.dexpr ident.literal] in *.
       cbn [WeakestPrecondition.expr WeakestPrecondition.expr_body
                                     Semantics.interp_binop].
