@@ -28,13 +28,13 @@ Section Cmd.
          Syntax.cmd.seq (Syntax.cmd.set (varname_gen nextn) x) (snd rec))
     end.
 
-  Fixpoint assign {t : base.type} (nextn : nat)
+  Fixpoint assign_base {t : base.type} (nextn : nat)
     : base_rtype t -> (nat * base_ltype t * Syntax.cmd.cmd) :=
     match t with
     | base.type.prod a b =>
       fun rhs =>
-        let assign1 := assign nextn (fst rhs) in
-        let assign2 := assign (nextn + fst (fst assign1)) (snd rhs) in
+        let assign1 := assign_base nextn (fst rhs) in
+        let assign2 := assign_base (nextn + fst (fst assign1)) (snd rhs) in
         ((fst (fst assign1) + fst (fst assign2))%nat,
          (snd (fst assign1), snd (fst assign2)),
          Syntax.cmd.seq (snd assign1) (snd assign2))
@@ -47,11 +47,11 @@ Section Cmd.
         (1%nat, v, Syntax.cmd.set v rhs)
     end.
 
-  Fixpoint assign' {t} (nextn : nat)
+  Fixpoint assign {t} (nextn : nat)
     : rtype t -> (nat * ltype t * Syntax.cmd.cmd) :=
     match t as t0 return
           rtype t0 -> nat * ltype t0 * _ with
-    | type.base b => assign (t:=b) nextn
+    | type.base b => assign_base (t:=b) nextn
     | _ =>
       fun _ =>
         (0%nat, dummy_ltype _, Syntax.cmd.skip)
@@ -82,13 +82,13 @@ Section Cmd.
       (0%nat, [], Syntax.cmd.skip)
     | expr.App _ _ f x =>
       let v := translate_expr true (expr.App f x) in
-      assign' nextn v
+      assign nextn v
     | expr.Ident _ i =>
       let v := translate_expr true (expr.Ident i) in
-      assign' nextn v
+      assign nextn v
     | expr.Var _ v =>
       let v := translate_expr true (expr.Var v) in
-      assign' nextn v
+      assign nextn v
     | _ => (0%nat, dummy_ltype _, Syntax.cmd.skip)
     end.
 End Cmd.

@@ -216,12 +216,12 @@ Module Types.
       end.
 
     (* Set of variable names used by an ltype *)
-    Fixpoint varname_set {t}
+    Fixpoint varname_set_base {t}
       : base_ltype t -> PropSet.set string :=
       match t with
       | base.type.prod a b =>
-        fun x => PropSet.union (varname_set (fst x))
-                               (varname_set (snd x))
+        fun x => PropSet.union (varname_set_base (fst x))
+                               (varname_set_base (snd x))
       | base_listZ => rep.varname_set
       | _ => rep.varname_set
       end.
@@ -232,14 +232,19 @@ Module Types.
       | type.base b => fun _:unit => PropSet.empty_set 
       | type.arrow (type.base a) b =>
         fun (x:base_ltype a * _) =>
-          PropSet.union (varname_set (fst x))
+          PropSet.union (varname_set_base (fst x))
                         (varname_set_args (snd x))
       | _ => fun _ => PropSet.empty_set (* garbage; invalid argument *)
+      end.
+    Definition varname_set {t} : ltype t -> PropSet.set string :=
+      match t with
+      | type.base _ => varname_set_base
+      | _ => fun _ => PropSet.empty_set
       end.
 
     (* relation that states whether a fiat-crypto value and a bedrock2 value are
        equivalent in a given bedrock2 context *)
-    Fixpoint equivalent {t}
+    Fixpoint equivalent_base {t}
       : base.interp t -> (* fiat-crypto value *)
         base_rtype t -> (* bedrock2 value *)
         Interface.map.rep (map:=Semantics.locals) -> (* local variables *)
@@ -249,8 +254,8 @@ Module Types.
       | base.type.prod a b =>
         fun (x : base.interp a * base.interp b)
             (y : base_rtype a * base_rtype b) locals =>
-          sep (equivalent (fst x) (fst y) locals)
-              (equivalent (snd x) (snd y) locals)
+          sep (equivalent_base (fst x) (fst y) locals)
+              (equivalent_base (snd x) (snd y) locals)
       | base_listZ => rep.equiv
       | base_Z => rep.equiv
       |  _ => fun _ _ _ => emp False
@@ -267,30 +272,30 @@ Module Types.
       | type.base b => fun _ _ _ => emp True
       | type.arrow (type.base a) b =>
         fun (x : base.interp a * _) (y : base_rtype a * _) locals =>
-          sep (equivalent (fst x) (fst y) locals)
+          sep (equivalent_base (fst x) (fst y) locals)
               (equivalent_args (snd x) (snd y) locals)
       | _ => fun _ _ _ => emp False
       end.
 
-    Definition locally_equivalent {t} x y locals :=
-      @equivalent t x y locals map.empty.
+    Definition locally_equivalent_base {t} x y locals :=
+      @equivalent_base t x y locals map.empty.
 
     Definition locally_equivalent_args {t} x y locals :=
       @equivalent_args t x y locals map.empty.
 
     (* wrapper that uses non-base types *)
-    Fixpoint equivalent' {t : API.type}
+    Fixpoint equivalent {t : API.type}
       : API.interp_type t -> (* fiat-crypto value *)
         rtype t -> (* bedrock2 value *)
         Interface.map.rep (map:=Semantics.locals) -> (* local variables *)
         Interface.map.rep (map:=Semantics.mem) -> (* memory *)
         Prop :=
       match t with
-      | type.base b => equivalent
+      | type.base b => equivalent_base
       | _ => fun _ _ _ _ => False
       end.
-    Definition locally_equivalent' {t} x y locals :=
-      @equivalent' t x y locals map.empty.
+    Definition locally_equivalent {t} x y locals :=
+      @equivalent t x y locals map.empty.
 
     Fixpoint equivalent_flat_base {t}
       : base.interp t ->

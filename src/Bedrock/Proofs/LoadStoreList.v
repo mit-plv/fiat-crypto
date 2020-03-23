@@ -99,13 +99,14 @@ Section LoadStoreList.
   Lemma lists_reserved_0 {listZ:rep.rep base_listZ} start locals:
     Lift1Prop.iff1
       (lists_reserved (t:=base_listZ) 0%nat start locals)
-      (emp (exists x, locally_equivalent (t:=base_Z) x start locals)).
+      (emp (exists x, locally_equivalent_base (t:=base_Z) x start locals)).
   Proof.
     cbv [lists_reserved].
     split; intros;
       repeat match goal with
              | _ => progress (sepsimpl; subst)
-             | _ => progress cbn [locally_equivalent equivalent rep.equiv rep.Z] in *
+             | _ => progress cbn [locally_equivalent_base
+                                    equivalent_base rep.equiv rep.Z] in *
              | H : Datatypes.length _ = 0%nat |- _ =>
                apply length0_nil in H; subst
              | H : rep.equiv _ _ _ _ |- _ => apply equiv_nil_iff1 in H
@@ -138,7 +139,7 @@ Section LoadStoreList.
            (locals : Semantics.locals)
            (R : Semantics.mem -> Prop),
     Lift1Prop.iff1
-      (sep (equivalent x (base_rtype_of_ltype names) locals) R)
+      (sep (equivalent_base x (base_rtype_of_ltype names) locals) R)
       (sep (equivalent_listexcl
               x (map_listexcl (@base_rtype_of_ltype _ rep.listZ_mem)
                               (snd (extract_listnames names))) locals)
@@ -148,7 +149,7 @@ Section LoadStoreList.
                         (fst (extract_listnames names))) locals) R)).
   Proof.
     induction t;
-      cbn [fst snd equivalent extract_listnames
+      cbn [fst snd equivalent_base extract_listnames
                base_rtype_of_ltype rep.rtype_of_ltype
                equivalent_listexcl map_listexcl
                equivalent_listonly map_listonly];
@@ -236,16 +237,17 @@ Section LoadStoreList.
              locals (used_varnames nextn nvars) locals' /\
            (forall n,
                (nextn + nvars <= n)%nat ->
-               ~ varname_set names' (varname_gen n)) /\
-           locally_equivalent (t:=base_listZ)
-                              (skipn i l)
-                              (base_rtype_of_ltype names') locals').
+               ~ varname_set_base names' (varname_gen n)) /\
+           locally_equivalent_base
+             (t:=base_listZ)
+             (skipn i l)
+             (base_rtype_of_ltype names') locals').
   Proof.
     induction rem; cbn [fst snd load_list]; intros.
     { straightline.
-      cbv [locally_equivalent].
+      cbv [locally_equivalent_base].
       cbn [rep.Z rep.listZ_local fold_right map
-                 equivalent rep.equiv
+                 equivalent_base rep.equiv
                  base_rtype_of_ltype rep.rtype_of_ltype
                  varname_set rep.varname_set].
         repeat split.
@@ -268,8 +270,8 @@ Section LoadStoreList.
       cbv beta in *; cleanup; subst.
       repeat match goal with |- _ /\ _ => split end;
         eauto using only_differ_succ.
-      { cbn [varname_set rep.varname_set rep.listZ_local rep.Z
-                         fold_right] in *.
+      { cbn [varname_set_base
+               rep.varname_set rep.listZ_local rep.Z fold_right] in *.
         intros.
         apply not_union_iff; split; eauto with lia.
         cbv [PropSet.singleton_set].
@@ -311,9 +313,9 @@ Section LoadStoreList.
         (* argnames don't contain variables we could later overwrite *)
         (forall n,
             (nextn <= n)%nat ->
-            ~ varname_set argnames (varname_gen n)) ->
+            ~ varname_set_base argnames (varname_gen n)) ->
         (* argument values are equivalent *)
-        sep (equivalent args argvalues locals) R mem ->
+        sep (equivalent_base args argvalues locals) R mem ->
         (* load_all_lists returns triple : # fresh variables used,
            new argnames with local lists, and cmd *)
         let out := load_all_lists nextn argnames arglengths in
@@ -333,12 +335,12 @@ Section LoadStoreList.
                locals (used_varnames nextn nvars) locals' /\
              (forall n,
                  (nextn + nvars <= n)%nat ->
-                 ~ varname_set argnames' (varname_gen n)) /\
-             locally_equivalent args argvalues' locals').
+                 ~ varname_set_base argnames' (varname_gen n)) /\
+             locally_equivalent_base args argvalues' locals').
   Proof.
     (* TODO: lots of repeated steps in this proof; automate *)
     induction t;      cbn [fst snd map load_all_lists varname_set
-               locally_equivalent equivalent rep.equiv
+               locally_equivalent_base equivalent_base rep.equiv
                flatten_base_ltype equivalent_flat_base
                base_rtype_of_ltype
                rep.varname_set rep.Z
@@ -545,7 +547,8 @@ Section LoadStoreList.
       length rets2 = length value_names2 ->
       length value_names1 = i ->
       (* yet-to-be-stored values *)
-      locally_equivalent (listZ:=rep.listZ_local) rets2 values2 locals ->
+      locally_equivalent_base
+        (listZ:=rep.listZ_local) rets2 values2 locals ->
       (* already-stored values *)
       sep (map:=Semantics.mem)
           (sep (map:=Semantics.mem)
@@ -564,7 +567,8 @@ Section LoadStoreList.
   Proof.
     cbv zeta.
     induction value_names2 as [|n0 ?]; destruct rets2 as [|r0 rets2];
-      cbn [store_list Datatypes.length locally_equivalent equivalent
+      cbn [store_list Datatypes.length
+                      locally_equivalent_base equivalent_base
                       rep.equiv rep.listZ_local rep.Z rep.listZ_mem];
       intros; subst; try lia; sepsimpl.
     { repeat split; try reflexivity.
@@ -719,11 +723,11 @@ Section LoadStoreList.
                        (varname_set_listexcl retnames_mem)) ->
       map.only_differ init_locals vset locals ->
       (* rets are stored in local retnames *)
-      locally_equivalent
+      locally_equivalent_base
         rets (base_rtype_of_ltype retnames_local) locals ->
       (* retnames are disjoint *)
-      PropSet.disjoint (varname_set retnames_local)
-                       (varname_set retnames_mem) ->
+      PropSet.disjoint (varname_set_base retnames_local)
+                       (varname_set_base retnames_mem) ->
       (* retnames don't contain duplicates *)
       NoDup (flatten_base_ltype retnames_mem) ->
       (* translated function produces equivalent results *)
@@ -735,15 +739,15 @@ Section LoadStoreList.
            tr = tr' /\
            map.only_differ
              locals (varname_set_listexcl retnames_mem) locals' /\
-           sep (equivalent
+           sep (equivalent_base
                   rets (base_rtype_of_ltype retnames_mem) locals')
                R mem').
   Proof.
     cbv zeta.
     induction t;
       cbn [fst snd store_return_values lists_reserved
-               locally_equivalent equivalent
-               varname_set varname_set_listexcl
+               locally_equivalent_base equivalent_base
+               varname_set_base varname_set_listexcl
                base_rtype_of_ltype rep.rtype_of_ltype
                rep.equiv rep.varname_set rep.Z
                flatten_base_ltype list_lengths_from_value
