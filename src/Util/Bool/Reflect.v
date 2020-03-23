@@ -289,6 +289,10 @@ Proof. destruct ls; [ left; reflexivity | right; abstract congruence ]. Qed.
 Global Instance reflect_eq_list_nil_l {A eqA} {ls} : reflect (@nil A = ls) (list_beq A eqA (@nil A) ls) | 10.
 Proof. destruct ls; [ left; reflexivity | right; abstract congruence ]. Qed.
 Global Instance reflect_eq_sum {A B eqA eqB} `{reflect_rel (@eq A) eqA, reflect_rel (@eq B) eqB} : reflect_rel (@eq (A + B)) (sum_beq A B eqA eqB) | 10. exact _. Qed.
+Global Instance reflect_sumwise {A B RA RB eqA eqB} `{reflect_rel RA eqA, reflect_rel RB eqB} : reflect_rel (@sumwise A B RA RB) (@sum_beq A B eqA eqB) | 100.
+Proof. intros [?|?] [?|?]; cbn; exact _. Qed.
+Global Instance reflect_sum_le {A B RA RB leA leB} `{reflect_rel RA leA, reflect_rel RB leB} : reflect_rel (@sum_le A B RA RB) (@sum_leb A B leA leB) | 10.
+Proof. intros [?|?] [?|?]; cbn; exact _. Qed.
 Global Instance reflect_eq_sigT_hprop {A P eqA} `{reflect_rel (@eq A) eqA, forall a : A, IsHProp (P a)} : reflect_rel (@eq (@sigT A P)) (sigT_beq eqA (fun _ _ _ _ => true)) | 10. exact _. Qed.
 Global Instance reflect_eq_sig_hprop {A eqA} {P : A -> Prop} `{reflect_rel (@eq A) eqA, forall a : A, IsHProp (P a)} : reflect_rel (@eq (@sig A P)) (sig_beq eqA (fun _ _ _ _ => true)) | 10. exact _. Qed.
 Global Instance reflect_eq_comparison : reflect_rel (@eq comparison) comparison_beq | 10. exact _. Qed.
