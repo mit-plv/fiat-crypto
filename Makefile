@@ -39,6 +39,7 @@ INSTALLDEFAULTROOT := Crypto
 	javadoc only-javadoc \
 	check-output accept-output
 
+TIMEFMT?="$@ (real: %e, user: %U, sys: %S, mem: %M ko)"
 -include Makefile.coq
 include etc/coq-scripts/Makefile.vo_closure
 
