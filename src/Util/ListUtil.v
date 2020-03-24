@@ -13,6 +13,7 @@ Require Export Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.RewriteHyp.
 Require Import Crypto.Util.Tactics.ConstrFail.
+Require Import Crypto.Util.Tactics.SplitInContext.
 Import ListNotations.
 Local Open Scope list_scope.
 
@@ -2500,3 +2501,16 @@ Proof using Type. induction ls; cbn; auto. Qed.
 Lemma fold_left_map A B C f f' l a
   : @fold_left A B f (@List.map C _ f' l) a = fold_left (fun x y => f x (f' y)) l a.
 Proof using Type. revert a; induction l; cbn [List.map List.fold_left]; auto. Qed.
+
+Lemma Forall_map_iff {A B} (f : A -> B) ls P
+  : Forall P (List.map f ls) <-> Forall (fun x => P (f x)) ls.
+Proof.
+  induction ls as [|?? IH]; cbn [List.map]; split; intro H; inversion_clear H; constructor; split_iff; auto.
+Qed.
+
+Lemma ForallOrdPairs_map_iff {A B} (f : A -> B) ls P
+  : ForallOrdPairs P (List.map f ls) <-> ForallOrdPairs (fun x y => P (f x) (f y)) ls.
+Proof.
+  pose proof (@Forall_map_iff A B f) as HF.
+  induction ls as [|?? IH]; cbn [List.map]; split; intro H; inversion_clear H; constructor; split_iff; auto.
+Qed.
