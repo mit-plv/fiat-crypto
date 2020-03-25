@@ -2514,3 +2514,16 @@ Proof.
   pose proof (@Forall_map_iff A B f) as HF.
   induction ls as [|?? IH]; cbn [List.map]; split; intro H; inversion_clear H; constructor; split_iff; auto.
 Qed.
+
+Lemma HdRel_map_iff {A B} (f : A -> B) R x xs
+  : HdRel R (f x) (List.map f xs) <-> HdRel (fun x y => R (f x) (f y)) x xs.
+Proof.
+  destruct xs; split; intro H; inversion_clear H; constructor; auto.
+Qed.
+
+Lemma Sorted_map_iff {A B} (f : A -> B) R ls
+  : Sorted R (List.map f ls) <-> Sorted (fun x y => R (f x) (f y)) ls.
+Proof.
+  induction ls as [|?? IH]; cbn [List.map]; split; intro H; inversion_clear H;
+    constructor; split_iff; auto; now apply HdRel_map_iff.
+Qed.
