@@ -58,6 +58,9 @@ Require Import Crypto.Util.CPSNotations.
 Require Import Crypto.Util.Equality.
 Import ListNotations. Local Open Scope Z_scope.
 
+(** Kludgy hack to get this file to be faster *)
+Strategy 0 [LetIn.Let_In LetIn.Let_In_pf].
+
 Module Associational.
   Definition eval (p:list (Z*Z)) : Z :=
     fold_right (fun x y => x + y) 0%Z (map (fun t => fst t * snd t) p).

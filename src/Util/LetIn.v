@@ -9,6 +9,8 @@ Notation "'dlet_nd' x .. y := v 'in' f" := (Let_In (P:=fun _ => _) v (fun x => .
 Notation "'dlet' x .. y := v 'in' f" := (Let_In v (fun x => .. (fun y => f) .. )).
 Notation "'pflet' x , pf := y 'in' f" := (Let_In_pf y (fun x pf => f)).
 
+Strategy 100 [Let_In Let_In_pf].
+
 Module Bug5107WorkAround.
   Notation "'dlet' x .. y := v 'in' f" := (Let_In (P:=fun _ => _) v (fun x => .. (fun y => f) .. )).
 End Bug5107WorkAround.
