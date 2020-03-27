@@ -517,8 +517,12 @@ Module ForExtraction.
            let '(argv, widen_carryv) := argv_to_contains_opt_and_argv "--widen-carry" argv in
            let '(argv, widen_bytesv) := argv_to_contains_opt_and_argv "--widen-bytes" argv in
            let '(argv, no_primitivesv) := argv_to_contains_opt_and_argv "--no-primitives" argv in
-           match output_language_api, argv with
-           | inl output_language_api, _::curve_description::args
+           (** must come last *)
+           let '(argv, unrecognized_args) := argv_to_startswith_opt_and_argv "--" argv in
+           match List.map (fun s => "Unrecognized argument: --" ++ s)%string unrecognized_args,
+                 output_language_api,
+                 argv with
+           | nil, inl output_language_api, _::curve_description::args
              => match parse_args args with
                 | Some (inl args)
                   => let opts
@@ -535,8 +539,9 @@ Module ForExtraction.
                   => error errs
                 | None => on_wrong_argv tt
                 end
-           | inr errs, _ => error errs
-           | _, _ => on_wrong_argv tt
+           | nil, inl _, _ => on_wrong_argv tt
+           | unrecognized_args_errs, inr errs, _ => error (errs ++ unrecognized_args_errs)%list
+           | unrecognized_args_errs, inl _, _ => error unrecognized_args_errs
            end.
     End __.
   End Parameterized.
