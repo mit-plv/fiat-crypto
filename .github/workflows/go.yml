@@ -21,4 +21,7 @@ jobs:
     - name: submodules-init
       uses: snickerbockers/submodules-init@v4
     - name: make only-test-go-files
-      run: make only-test-go-files EXTERNAL_DEPENDENCIES=1
+      run: |
+        # remove the go matcher, cf https://github.com/actions/setup-go/issues/46
+        echo "::remove-matcher owner=go::"
+        make only-test-go-files EXTERNAL_DEPENDENCIES=1
