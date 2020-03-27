@@ -92,28 +92,14 @@ Fixpoint list_lengths_from_argbounds {t}
   | type.arrow a b => fun _ => None
   end.
 
-(* TODO: replace this with something real? *)
-Definition dummy_ident_infos : ToString.ident_infos.
-  constructor; apply MSetPositive.PositiveSet.empty.
-Defined.
-
 Definition Zdecl : string :=
   ("uint" ++ Decimal.decimal_string_of_Z machine_wordsize)%string.
-
-Definition join (join_with : string) (strings : list string) :=
-  match strings with
-  | nil => ""%string
-  | s :: strings' =>
-    fold_right
-      (fun out s => (out ++ join_with ++ s)%string)
-      s strings'
-  end.
 
 Definition bedrock_func_decl_lines
            (funname : string)
            (innames : list string)
   : list string :=
-  let arg_decl := join ", " innames in
+  let arg_decl := String.concat ", " innames in
   [("FUNC " ++ funname ++ " (" ++ arg_decl ++ ") {")%string].
 
 Definition indent_lines: list string -> list string :=
@@ -181,15 +167,15 @@ Fixpoint bedrock_cmd_lines (c : Syntax.cmd) : list string :=
     (("while (" ++ bedrock_expr_string test ++ ") {")%string)
       :: indent_lines (bedrock_cmd_lines body) ++ ["}"]
   | cmd.call binds f args =>
-    let args := join ", " (map bedrock_expr_string args) in
-    [(join ", " binds ++ " = " ++ f ++ "(" ++ args ++ ");")%string]
+    let args := String.concat ", " (map bedrock_expr_string args) in
+    [(String.concat ", " binds ++ " = " ++ f ++ "(" ++ args ++ ");")%string]
   | cmd.interact binds a args =>
-    let args := join ", " (map bedrock_expr_string args) in
-    [(join ", " binds ++ " = " ++ a ++ "(" ++ args ++ ");")%string]
+    let args := String.concat ", " (map bedrock_expr_string args) in
+    [(String.concat ", " binds ++ " = " ++ a ++ "(" ++ args ++ ");")%string]
   end.
 
 Definition bedrock_ret_lines (outnames : list string) :=
-  [("RETURN " ++ join ", " outnames ++ ";")%string].
+  [("RETURN " ++ String.concat ", " outnames ++ ";")%string].
 
 Definition bedrock_func_to_lines (f : bedrock_func)
   : list string :=
@@ -216,8 +202,13 @@ Definition Bedrock2_ToFunctionLines
     | Some innames, Some outnames, Some lengths =>
       let f := (name, translate_func e innames lengths outnames) in
       if error_free_cmd (snd (snd f))
-      then inl (bedrock_func_to_lines f, dummy_ident_infos)
-      else inr ("Error occured during translation to bedrock2")
+      then inl (bedrock_func_to_lines f, ToString.ident_info_empty)
+      else inr
+             (String.concat
+                String.NewLine
+                ("ERROR-CONTAINING OUTPUT:"
+                 :: (bedrock_func_to_lines f)
+                 ++ ["Error occured during translation to bedrock2. This is likely because a part of the input expression either had unsupported integer types (bedrock2 requires that all integers have the same size) or contained an unsupported operation."]))
     | None, _, _ =>
       inr ("Error determining argument names")
     | _, None, _ =>
