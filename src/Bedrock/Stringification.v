@@ -2,6 +2,7 @@ Require Import Coq.ZArith.ZArith.
 Require Import Coq.Lists.List.
 Require Import Coq.Strings.String.
 Require Import bedrock2.Syntax.
+Require Import bedrock2.ToCString.
 Require Import bedrock2.BasicC64Semantics.
 Require Import Crypto.Stringification.Language.
 Require Import Crypto.Stringification.IR.
@@ -92,97 +93,9 @@ Fixpoint list_lengths_from_argbounds {t}
   | type.arrow a b => fun _ => None
   end.
 
-Definition Zdecl : string :=
-  ("uint" ++ Decimal.decimal_string_of_Z machine_wordsize)%string.
-
-Definition bedrock_func_decl_lines
-           (funname : string)
-           (innames : list string)
-  : list string :=
-  let arg_decl := String.concat ", " innames in
-  [("FUNC " ++ funname ++ " (" ++ arg_decl ++ ") {")%string].
-
-Definition indent_lines: list string -> list string :=
-  map (fun s => ("  " ++ s)%string).
-
-Definition bedrock_size_string (sz : Syntax.access_size) : string :=
-  match sz with
-  | access_size.one => "1"
-  | access_size.two => "2"
-  | access_size.four => "4"
-  | access_size.word =>
-    Decimal.decimal_string_of_Z word_size_in_bytes
-  end.
-
-Definition bedrock_op_string (op : Syntax.bopname.bopname) : string :=
-  match op with
-  | bopname.add    => "+"
-  | bopname.sub    => "-"
-  | bopname.mul    => "*"
-  | bopname.mulhuu => "*/"  (* TODO: better symbol for this? *)
-  | bopname.divu   => "/"
-  | bopname.remu   => "%"
-  | bopname.and    => "&"
-  | bopname.or     => "|"
-  | bopname.xor    => "^"
-  | bopname.sru    => ">>"
-  | bopname.slu    => "<<"
-  | bopname.srs    => ">>"
-  | bopname.lts    => "<"
-  | bopname.ltu    => "<"
-  | bopname.eq     => "=="
-  end.
-
-Fixpoint bedrock_expr_string (e : Syntax.expr) : string :=
-  match e with
-  | expr.literal z => Decimal.decimal_string_of_Z z
-  | expr.var x => x
-  | expr.load sz addr =>
-    ("LOAD" ++ (bedrock_size_string sz)
-            ++ "(" ++ bedrock_expr_string addr ++ ")")%string
-  | expr.op op x y =>
-    ((bedrock_expr_string x)
-       ++ " " ++ (bedrock_op_string op) ++ " "
-       ++ (bedrock_expr_string y))%string
-  end.
-
-Fixpoint bedrock_cmd_lines (c : Syntax.cmd) : list string :=
-  match c with
-  | cmd.skip => []
-  | cmd.set x e =>
-    [(x ++ " = " ++ bedrock_expr_string e ++ ";")%string]
-  | cmd.unset x => [("clear " ++ x ++ ";")%string]
-  | cmd.store sz addr e =>
-    [("STORE" ++ (bedrock_size_string sz)
-             ++ "(" ++ (bedrock_expr_string addr) ++ ", "
-             ++ (bedrock_expr_string e) ++ ");")%string]
-  | cmd.cond cond t f =>
-    (("if (" ++ (bedrock_expr_string cond) ++ ") {")%string)
-      :: (indent_lines (bedrock_cmd_lines t))
-      ++ ("} else {" :: indent_lines (bedrock_cmd_lines f))
-      ++ ["}"]
-  | cmd.seq c1 c2 =>
-    bedrock_cmd_lines c1 ++ bedrock_cmd_lines c2
-  | cmd.while test body =>
-    (("while (" ++ bedrock_expr_string test ++ ") {")%string)
-      :: indent_lines (bedrock_cmd_lines body) ++ ["}"]
-  | cmd.call binds f args =>
-    let args := String.concat ", " (map bedrock_expr_string args) in
-    [(String.concat ", " binds ++ " = " ++ f ++ "(" ++ args ++ ");")%string]
-  | cmd.interact binds a args =>
-    let args := String.concat ", " (map bedrock_expr_string args) in
-    [(String.concat ", " binds ++ " = " ++ a ++ "(" ++ args ++ ");")%string]
-  end.
-
-Definition bedrock_ret_lines (outnames : list string) :=
-  [("RETURN " ++ String.concat ", " outnames ++ ";")%string].
-
 Definition bedrock_func_to_lines (f : bedrock_func)
   : list string :=
-  let '(innames, outnames, cmd) := snd f in
-  (bedrock_func_decl_lines (fst f) innames)
-    ++ (indent_lines (bedrock_cmd_lines cmd))
-    ++ (indent_lines (bedrock_ret_lines outnames)).
+  [@c_func BasicCSyntax.to_c_parameters f].
 
 (* TODO: for now, name_list is just ignored -- could probably make it not ignored *)
 Definition Bedrock2_ToFunctionLines
