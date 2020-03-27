@@ -206,6 +206,8 @@ Module ForExtraction.
     := ("--widen-carry", "Widen carry bit integer types to either the byte type, or to the full bitwidth if --widen-bytes is also passed.").
   Definition widen_bytes_and_help
     := ("--widen-bytes", "Widen byte types to the full bitwidth.").
+  Definition split_multiret_and_help
+    := ("--split-multiret", "Don't allow instructions to return two results. This should always be set for bedrock2.").
   Definition no_primitives_and_help
     := ("--no-primitives", "Suppress the generation of the bodies of primitive operations such as addcarryx, subborrowx, cmovznz, mulx, etc.").
   Definition cmovznz_by_mul_and_help
@@ -248,6 +250,7 @@ Module ForExtraction.
         ; no_wide_int_and_help
         ; widen_carry_and_help
         ; widen_bytes_and_help
+        ; split_multiret_and_help
         ; no_primitives_and_help
         ; cmovznz_by_mul_and_help
        ].
@@ -367,7 +370,6 @@ Module ForExtraction.
       ; should_split_mul :> should_split_mul_opt
       (** Should we split apart multi-return operations? *)
       ; should_split_multiret :> should_split_multiret_opt
-        := false
       (** Should we widen the carry to the full bitwidth? *)
       ; widen_carry :> widen_carry_opt
       (** Should we widen the byte type to the full bitwidth? *)
@@ -516,6 +518,7 @@ Module ForExtraction.
            let '(argv, use_mul_for_cmovznzv) := argv_to_contains_opt_and_argv "--cmovznz-by-mul" argv in
            let '(argv, widen_carryv) := argv_to_contains_opt_and_argv "--widen-carry" argv in
            let '(argv, widen_bytesv) := argv_to_contains_opt_and_argv "--widen-bytes" argv in
+           let '(argv, split_multiretv) := argv_to_contains_opt_and_argv "--split-multiret" argv in
            let '(argv, no_primitivesv) := argv_to_contains_opt_and_argv "--no-primitives" argv in
            (** must come last *)
            let '(argv, unrecognized_args) := argv_to_startswith_opt_and_argv "--" argv in
@@ -533,6 +536,7 @@ Module ForExtraction.
                                ; widen_carry := widen_carryv
                                ; widen_bytes := widen_bytesv
                                ; should_split_mul := no_wide_intsv
+                               ; should_split_multiret := split_multiretv
                                ; emit_primitives := negb no_primitivesv |} in
                      Pipeline invocation curve_description args success error
                 | Some (inr errs)
