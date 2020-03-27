@@ -27,4 +27,5 @@ Global Set Uniform Inductive Parameters.
 (** Set SimplIsCbn. *)
 
 (** Faster printing *)
-Global Set Fast Name Printing.
+(** Would be nice, but has a lot of issues, c.f. https://github.com/mit-plv/fiat-crypto/issues/700 *)
+(** Global Set Fast Name Printing. *)
