@@ -22,6 +22,8 @@ jobs:
       uses: snickerbockers/submodules-init@v4
     - name: make only-test-go-files
       run: |
-        # remove the go matcher, cf https://github.com/actions/setup-go/issues/46
-        echo "::remove-matcher owner=go::"
+        # Work around cf https://github.com/actions/setup-go/issues/46
+        mkdir -p src/Rewriter/PerfTesting/Specific/generated
+        touch src/Rewriter/PerfTesting/Specific/generated/primes.mk
+        # echo "::remove-matcher owner=go::"
         make only-test-go-files EXTERNAL_DEPENDENCIES=1
