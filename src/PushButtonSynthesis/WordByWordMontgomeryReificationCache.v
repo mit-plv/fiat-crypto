@@ -86,9 +86,10 @@ for i in ('mul', 'add', 'sub', 'opp', 'to_bytes', 'from_bytes', 'nonzero'):
        As reified_%s_gen_correct.
 Proof. Time cache_reify (). Time Qed.
 Hint Extern 1 (_ = _) => apply_cached_reification %smod (proj1 reified_%s_gen_correct) : reify_cache_gen.
-Hint Immediate (proj2 reified_%s_gen_correct) : wf_gen_cache.
+Definition reified_%s_gen_correct_proj2 := proj2 reified_%s_gen_correct.
+Hint Immediate reified_%s_gen_correct_proj2 : wf_gen_cache.
 Hint Rewrite (proj1 reified_%s_gen_correct) : interp_gen_cache.
-Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very long time *)''' % (indent, i, i, i, i, i, i, i, i, i)).replace('\n', '\n%s' % indent) + '\n')
+Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very long time *)''' % (indent, i, i, i, i, i, i, i, i, i, i)).replace('\n', '\n%s' % indent) + '\n')
 
 for i in ('square', 'encode', 'from_montgomery'):
     print((r'''%sDerive reified_%s_gen
@@ -100,9 +101,10 @@ Proof.
   (* Time cache_reify_faster_2arg (). *)
 Time Qed.
 Hint Extern 1 (_ = _) => apply_cached_reification %smod (proj1 reified_%s_gen_correct) : reify_cache_gen.
-Hint Immediate (proj2 reified_%s_gen_correct) : wf_gen_cache.
+Definition reified_%s_gen_correct_proj2 := proj2 reified_%s_gen_correct.
+Hint Immediate reified_%s_gen_correct_proj2 : wf_gen_cache.
 Hint Rewrite (proj1 reified_%s_gen_correct) : interp_gen_cache.
-Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very long time *)''' % (indent, i, i, i, i, i, i, i, i, i)).replace('\n', '\n%s' % indent) + '\n')
+Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very long time *)''' % (indent, i, i, i, i, i, i, i, i, i, i)).replace('\n', '\n%s' % indent) + '\n')
 
 
 for i in ('zero', 'one'):
@@ -115,9 +117,10 @@ Proof.
   Time cache_reify_faster_1arg ().
 Time Qed.
 Hint Extern 1 (_ = _) => apply_cached_reification %smod (proj1 reified_%s_gen_correct) : reify_cache_gen.
-Hint Immediate (proj2 reified_%s_gen_correct) : wf_gen_cache.
+Definition reified_%s_gen_correct_proj2 := proj2 reified_%s_gen_correct.
+Hint Immediate reified_%s_gen_correct_proj2 : wf_gen_cache.
 Hint Rewrite (proj1 reified_%s_gen_correct) : interp_gen_cache.
-Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very long time *)''' % (indent, i, i, i, i, i, i, i, i, i)).replace('\n', '\n%s' % indent) + '\n')
+Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very long time *)''' % (indent, i, i, i, i, i, i, i, i, i, i)).replace('\n', '\n%s' % indent) + '\n')
 
 >>
 *)
@@ -127,7 +130,8 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
          As reified_mul_gen_correct.
   Proof. Time cache_reify (). Time Qed.
   Hint Extern 1 (_ = _) => apply_cached_reification mulmod (proj1 reified_mul_gen_correct) : reify_cache_gen.
-  Hint Immediate (proj2 reified_mul_gen_correct) : wf_gen_cache.
+  Definition reified_mul_gen_correct_proj2 := proj2 reified_mul_gen_correct.
+  Hint Immediate reified_mul_gen_correct_proj2 : wf_gen_cache.
   Hint Rewrite (proj1 reified_mul_gen_correct) : interp_gen_cache.
   Local Opaque reified_mul_gen. (* needed for making [autorewrite] not take a very long time *)
 
@@ -136,7 +140,8 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
          As reified_add_gen_correct.
   Proof. Time cache_reify (). Time Qed.
   Hint Extern 1 (_ = _) => apply_cached_reification addmod (proj1 reified_add_gen_correct) : reify_cache_gen.
-  Hint Immediate (proj2 reified_add_gen_correct) : wf_gen_cache.
+  Definition reified_add_gen_correct_proj2 := proj2 reified_add_gen_correct.
+  Hint Immediate reified_add_gen_correct_proj2 : wf_gen_cache.
   Hint Rewrite (proj1 reified_add_gen_correct) : interp_gen_cache.
   Local Opaque reified_add_gen. (* needed for making [autorewrite] not take a very long time *)
 
@@ -145,7 +150,8 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
          As reified_sub_gen_correct.
   Proof. Time cache_reify (). Time Qed.
   Hint Extern 1 (_ = _) => apply_cached_reification submod (proj1 reified_sub_gen_correct) : reify_cache_gen.
-  Hint Immediate (proj2 reified_sub_gen_correct) : wf_gen_cache.
+  Definition reified_sub_gen_correct_proj2 := proj2 reified_sub_gen_correct.
+  Hint Immediate reified_sub_gen_correct_proj2 : wf_gen_cache.
   Hint Rewrite (proj1 reified_sub_gen_correct) : interp_gen_cache.
   Local Opaque reified_sub_gen. (* needed for making [autorewrite] not take a very long time *)
 
@@ -154,7 +160,8 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
          As reified_opp_gen_correct.
   Proof. Time cache_reify (). Time Qed.
   Hint Extern 1 (_ = _) => apply_cached_reification oppmod (proj1 reified_opp_gen_correct) : reify_cache_gen.
-  Hint Immediate (proj2 reified_opp_gen_correct) : wf_gen_cache.
+  Definition reified_opp_gen_correct_proj2 := proj2 reified_opp_gen_correct.
+  Hint Immediate reified_opp_gen_correct_proj2 : wf_gen_cache.
   Hint Rewrite (proj1 reified_opp_gen_correct) : interp_gen_cache.
   Local Opaque reified_opp_gen. (* needed for making [autorewrite] not take a very long time *)
 
@@ -163,7 +170,8 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
          As reified_to_bytes_gen_correct.
   Proof. Time cache_reify (). Time Qed.
   Hint Extern 1 (_ = _) => apply_cached_reification to_bytesmod (proj1 reified_to_bytes_gen_correct) : reify_cache_gen.
-  Hint Immediate (proj2 reified_to_bytes_gen_correct) : wf_gen_cache.
+  Definition reified_to_bytes_gen_correct_proj2 := proj2 reified_to_bytes_gen_correct.
+  Hint Immediate reified_to_bytes_gen_correct_proj2 : wf_gen_cache.
   Hint Rewrite (proj1 reified_to_bytes_gen_correct) : interp_gen_cache.
   Local Opaque reified_to_bytes_gen. (* needed for making [autorewrite] not take a very long time *)
 
@@ -172,7 +180,8 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
          As reified_from_bytes_gen_correct.
   Proof. Time cache_reify (). Time Qed.
   Hint Extern 1 (_ = _) => apply_cached_reification from_bytesmod (proj1 reified_from_bytes_gen_correct) : reify_cache_gen.
-  Hint Immediate (proj2 reified_from_bytes_gen_correct) : wf_gen_cache.
+  Definition reified_from_bytes_gen_correct_proj2 := proj2 reified_from_bytes_gen_correct.
+  Hint Immediate reified_from_bytes_gen_correct_proj2 : wf_gen_cache.
   Hint Rewrite (proj1 reified_from_bytes_gen_correct) : interp_gen_cache.
   Local Opaque reified_from_bytes_gen. (* needed for making [autorewrite] not take a very long time *)
 
@@ -181,7 +190,8 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
          As reified_nonzero_gen_correct.
   Proof. Time cache_reify (). Time Qed.
   Hint Extern 1 (_ = _) => apply_cached_reification nonzeromod (proj1 reified_nonzero_gen_correct) : reify_cache_gen.
-  Hint Immediate (proj2 reified_nonzero_gen_correct) : wf_gen_cache.
+  Definition reified_nonzero_gen_correct_proj2 := proj2 reified_nonzero_gen_correct.
+  Hint Immediate reified_nonzero_gen_correct_proj2 : wf_gen_cache.
   Hint Rewrite (proj1 reified_nonzero_gen_correct) : interp_gen_cache.
   Local Opaque reified_nonzero_gen. (* needed for making [autorewrite] not take a very long time *)
 
@@ -194,7 +204,8 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
     (* Time cache_reify_faster_2arg (). *)
   Time Qed.
   Hint Extern 1 (_ = _) => apply_cached_reification squaremod (proj1 reified_square_gen_correct) : reify_cache_gen.
-  Hint Immediate (proj2 reified_square_gen_correct) : wf_gen_cache.
+  Definition reified_square_gen_correct_proj2 := proj2 reified_square_gen_correct.
+  Hint Immediate reified_square_gen_correct_proj2 : wf_gen_cache.
   Hint Rewrite (proj1 reified_square_gen_correct) : interp_gen_cache.
   Local Opaque reified_square_gen. (* needed for making [autorewrite] not take a very long time *)
 
@@ -207,7 +218,8 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
     (* Time cache_reify_faster_2arg (). *)
   Time Qed.
   Hint Extern 1 (_ = _) => apply_cached_reification encodemod (proj1 reified_encode_gen_correct) : reify_cache_gen.
-  Hint Immediate (proj2 reified_encode_gen_correct) : wf_gen_cache.
+  Definition reified_encode_gen_correct_proj2 := proj2 reified_encode_gen_correct.
+  Hint Immediate reified_encode_gen_correct_proj2 : wf_gen_cache.
   Hint Rewrite (proj1 reified_encode_gen_correct) : interp_gen_cache.
   Local Opaque reified_encode_gen. (* needed for making [autorewrite] not take a very long time *)
 
@@ -220,7 +232,8 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
     (* Time cache_reify_faster_2arg (). *)
   Time Qed.
   Hint Extern 1 (_ = _) => apply_cached_reification from_montgomerymod (proj1 reified_from_montgomery_gen_correct) : reify_cache_gen.
-  Hint Immediate (proj2 reified_from_montgomery_gen_correct) : wf_gen_cache.
+  Definition reified_from_montgomery_gen_correct_proj2 := proj2 reified_from_montgomery_gen_correct.
+  Hint Immediate reified_from_montgomery_gen_correct_proj2 : wf_gen_cache.
   Hint Rewrite (proj1 reified_from_montgomery_gen_correct) : interp_gen_cache.
   Local Opaque reified_from_montgomery_gen. (* needed for making [autorewrite] not take a very long time *)
 
@@ -233,7 +246,8 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
     Time cache_reify_faster_1arg ().
   Time Qed.
   Hint Extern 1 (_ = _) => apply_cached_reification zeromod (proj1 reified_zero_gen_correct) : reify_cache_gen.
-  Hint Immediate (proj2 reified_zero_gen_correct) : wf_gen_cache.
+  Definition reified_zero_gen_correct_proj2 := proj2 reified_zero_gen_correct.
+  Hint Immediate reified_zero_gen_correct_proj2 : wf_gen_cache.
   Hint Rewrite (proj1 reified_zero_gen_correct) : interp_gen_cache.
   Local Opaque reified_zero_gen. (* needed for making [autorewrite] not take a very long time *)
 
@@ -246,7 +260,8 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
     Time cache_reify_faster_1arg ().
   Time Qed.
   Hint Extern 1 (_ = _) => apply_cached_reification onemod (proj1 reified_one_gen_correct) : reify_cache_gen.
-  Hint Immediate (proj2 reified_one_gen_correct) : wf_gen_cache.
+  Definition reified_one_gen_correct_proj2 := proj2 reified_one_gen_correct.
+  Hint Immediate reified_one_gen_correct_proj2 : wf_gen_cache.
   Hint Rewrite (proj1 reified_one_gen_correct) : interp_gen_cache.
   Local Opaque reified_one_gen. (* needed for making [autorewrite] not take a very long time *)
 End WordByWordMontgomery.

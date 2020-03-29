@@ -264,6 +264,7 @@ Module ForExtraction.
        opt ++ String.substring 0 (String.length total_help_indent - String.length opt) total_help_indent ++ descr.
 
 
+  Local Set Primitive Projections.
   Record > Dyn := dyn { dyn_ty : Type ; dyn_val :> option dyn_ty }.
   Arguments dyn {_} _.
 

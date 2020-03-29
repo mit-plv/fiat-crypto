@@ -140,7 +140,7 @@ Module Compilers.
       Lemma bottom_related t v : @abstraction_relation t bottom v.
       Proof using bottom'_related. cbv [abstraction_relation]; induction t; cbn; cbv [respectful_hetero]; eauto. Qed.
 
-      Local Hint Resolve (@bottom_related) : core typeclass_instances.
+      Local Hint Resolve bottom_related : core typeclass_instances.
 
       Lemma bottom_for_each_lhs_of_arrow_related t v : type.and_for_each_lhs_of_arrow (@abstraction_relation) (@bottom_for_each_lhs_of_arrow t) v.
       Proof using bottom'_related. induction t; cbn; eauto using bottom_related. Qed.

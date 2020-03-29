@@ -19,7 +19,7 @@ Module Compilers.
   Module expr.
     Import Language.Wf.Compilers.expr.
     Global Hint Constructors wf : wf_extra.
-    Global Hint Resolve @Wf_APP : wf_extra.
+    Global Hint Resolve Wf_APP : wf_extra.
     Global Hint Opaque expr.APP : wf_extra interp_extra.
     Hint Rewrite @expr.Interp_APP : interp_extra.
     Global Hint Resolve Wf_of_Wf3 : wf_extra.
@@ -50,7 +50,7 @@ Module Compilers.
   End expr.
 
   Hint Constructors expr.wf : wf_extra.
-  Hint Resolve @expr.Wf_APP @expr.Wf_Reify_as @expr.Wf_reify : wf_extra.
+  Hint Resolve expr.Wf_APP expr.Wf_Reify_as expr.Wf_reify : wf_extra.
   (** Work around COQBUG(https://github.com/coq/coq/issues/11536) *)
   Hint Extern 0 (expr.Wf (GallinaReify.base.Reify_as _ _)) => simple apply (@expr.Wf_Reify) : wf_extra.
   (** Work around COQBUG(https://github.com/coq/coq/issues/11536) *)

@@ -261,7 +261,6 @@ Local Notation "i rd x y z ; cont" := (Instr i rd (x, y, z) cont) (at level 40, 
 
 (* Barrett reference code: *)
 Local Set Printing Width 150.
-Local Unset Fast Name Printing.
 Redirect "Crypto.Fancy.Barrett256.Prod.MulMod" Eval cbv beta iota delta [Prod.MulMod Prod.Mul256x256] in Prod.MulMod.
 (*
      = fun x xHigh RegMuLow scratchp1 scratchp2 scratchp3 scratchp4 scratchp5 : register =>

@@ -10,13 +10,21 @@ Scheme Equality for nat.
 Create HintDb natsimplify discriminated.
 
 Hint Resolve mod_bound_pos plus_le_compat : arith.
-Hint Resolve (fun x y p q => proj1 (@Nat.mod_bound_pos x y p q)) (fun x y p q => proj2 (@Nat.mod_bound_pos x y p q)) : arith.
-
 Hint Rewrite @mod_small @mod_mod @mod_1_l @mod_1_r succ_pred using omega : natsimplify.
 
 Hint Rewrite sub_diag add_0_l add_0_r sub_0_r sub_succ : natsimplify.
 
 Local Open Scope nat_scope.
+
+Lemma mod_bound_nonneg x y : 0 <= x mod y.
+Proof.
+  destruct y; [ reflexivity | apply Nat.mod_bound_pos ]; lia.
+Qed.
+
+Lemma mod_bound_lt x y : 0 < y -> x mod y < y.
+Proof. apply Nat.mod_bound_pos; lia. Qed.
+
+Hint Resolve mod_bound_nonneg mod_bound_lt : arith.
 
 Lemma min_def {x y} : min x y = x - (x - y).
 Proof. apply Min.min_case_strong; omega. Qed.
