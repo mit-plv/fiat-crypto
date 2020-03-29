@@ -1209,7 +1209,7 @@ Proof.
   assumption.
 Qed.
 
-Hint Resolve @nth_default_in_bounds : simpl_nth_default.
+Hint Resolve nth_default_in_bounds : simpl_nth_default.
 
 Lemma cons_eq_head : forall {T} (x y:T) xs ys, x::xs = y::ys -> x=y.
 Proof.

@@ -352,8 +352,9 @@ Module Z.
       instantiate; autorewrite with zsimplify; try reflexivity.
   Qed.
 
-  Hint Resolve (fun a b X H0 H1 => proj1 (Z.sub_pos_bound_div a b X H0 H1))
-       (fun a b X H0 H1 => proj1 (Z.sub_pos_bound_div a b X H0 H1)) : zarith.
+  Definition sub_pos_bound_div_proj1 := (fun a b X H0 H1 => proj1 (Z.sub_pos_bound_div a b X H0 H1)).
+  Definition sub_pos_bound_div_proj2 := (fun a b X H0 H1 => proj2 (Z.sub_pos_bound_div a b X H0 H1)).
+  Hint Resolve sub_pos_bound_div_proj1 sub_pos_bound_div_proj2 : zarith.
 
   Lemma sub_pos_bound_div_eq a b X : 0 <= a < X -> 0 <= b < X -> (a - b) / X = if a <? b then -1 else 0.
   Proof.

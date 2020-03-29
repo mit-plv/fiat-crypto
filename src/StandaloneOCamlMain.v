@@ -50,6 +50,7 @@ Fixpoint int_of_nat (x : nat) : int
      | O => int_O
      | S x' => int_S (int_of_nat x')
      end.
+Global Set Warnings Append "-ambiguous-paths".
 Coercion nat_of_int : int >-> nat.
 Coercion int_of_nat : nat >-> int.
 

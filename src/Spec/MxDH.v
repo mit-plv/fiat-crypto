@@ -8,7 +8,7 @@ Module MxDH. (* from RFC7748 *)
     Local Infix "=" := Feq : type_scope. Local Notation "a <> b" := (not (a = b)) : type_scope.
     Local Infix "+" := Fadd. Local Infix "*" := Fmul.
     Local Infix "-" := Fsub. Local Infix "/" := Fdiv.
-    Local Notation "x ^ 2" := (x*x) (at level 30).
+    Local Notation "x ^ 2" := (x*x).
     Local Notation "0" := Fzero.  Local Notation "1" := Fone.
     Local Notation "2" := (1+1). Local Notation "4" := (2+2).
 

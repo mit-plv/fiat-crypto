@@ -476,8 +476,8 @@ Module Tuple.
         (f: nat->T->A->forall {R}, (T*B->R)->R) (start:T)
     : @mapi_with'_cps T A B n i f start
       = match n as n0 return (tuple' A n0 -> forall {R}, (T * tuple' B n0->R)->R) with
-        | O => fun ys {T} ret => f i start ys ret
-        | S n' => fun ys {T} ret =>
+        | O => fun ys T ret => f i start ys ret
+        | S n' => fun ys T ret =>
                     f i start (hd ys) (fun sb =>
                     mapi_with'_cps (S i) f (fst sb) (tl ys)
                         (fun r => ret (fst r, (snd r, snd sb))))
@@ -529,8 +529,8 @@ Module Tuple.
         (f: nat->T->A->forall {R}, (T*B->R)->R) (start:T)
     : @mapi_with'_cps2 T A B n i f start
       = match n as n0 return (tuple' A n0 -> forall {R}, (T * tuple' B n0->R)->R) with
-        | O => fun ys {T} ret => f i start ys ret
-        | S n' => fun ys {T} ret =>
+        | O => fun ys T ret => f i start ys ret
+        | S n' => fun ys T ret =>
                     f i start (hd ys) (fun sb =>
                     mapi_with'_cps2 (S i) f (fst sb) (tl ys)
                         (fun r => ret (fst r, (snd r, snd sb))))

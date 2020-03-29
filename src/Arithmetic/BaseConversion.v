@@ -285,18 +285,7 @@ Section base_conversion_mod_ops.
   Local Notation src_wunique := (@weight_unique src_limbwidth_num src_limbwidth_den src_limbwidth_good).
   Local Notation dst_wunique := (@weight_unique dst_limbwidth_num dst_limbwidth_den dst_limbwidth_good).
 
-  Local Hint Immediate (src_wprops) : core.
-  Local Hint Immediate (src_wunique) : core.
-  Local Hint Immediate (weight_0 src_wprops) : core.
-  Local Hint Immediate (weight_positive src_wprops) : core.
-  Local Hint Immediate (weight_multiples src_wprops) : core.
-  Local Hint Immediate (weight_divides src_wprops) : core.
-  Local Hint Immediate (dst_wprops) : core.
-  Local Hint Immediate (dst_wunique) : core.
-  Local Hint Immediate (weight_0 dst_wprops) : core.
-  Local Hint Immediate (weight_positive dst_wprops) : core.
-  Local Hint Immediate (weight_multiples dst_wprops) : core.
-  Local Hint Immediate (weight_divides dst_wprops) : core.
+  Local Hint Resolve weight_unique weight_0 weight_positive weight_multiples weight_divides wprops : core.
 
   Definition convert_bases (v : list Z)
     := BaseConversion.convert_bases src_weight dst_weight src_n dst_n v.

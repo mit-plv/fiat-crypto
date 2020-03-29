@@ -62,7 +62,7 @@ Section Expr.
                  i => is_mul_high_ident i
     | _ => false
     end.
-  
+
   Definition valid_expr_binop_bool {t} (require_casts : bool)
            (e : @API.expr (fun _ => unit) t) : bool :=
     match e with
@@ -85,7 +85,7 @@ Section Expr.
     | ident.Z_truncating_shiftl => true
     | _ => false
     end.
-  Definition is_shiftl_ident_expr 
+  Definition is_shiftl_ident_expr
              {t} (e : @API.expr (fun _ => unit) t) :=
     match e with
     | expr.Ident
@@ -172,7 +172,7 @@ Section Expr.
                && valid_expr_bool' false false true x
            | _ => false
            end
-      else 
+      else
         match e with
         | expr.App type_nat _ f x =>
           (* only thing accepting nat is nth_default *)
@@ -766,7 +766,7 @@ Section Expr.
             | type.arrow type_Z type_Z =>
               fun f =>
                 forall x,
-                  valid_expr true x -> 
+                  valid_expr true x ->
                   valid_expr rc (expr.App f x)
             | _ => fun _ => False
             end) e
@@ -775,7 +775,7 @@ Section Expr.
                  | type.arrow type_Z type_Z =>
                    fun f =>
                      forall x,
-                       valid_shifter x = true -> 
+                       valid_shifter x = true ->
                        valid_expr rc (expr.App f x)
                  | _ => fun _ => False
                  end) e
@@ -804,6 +804,8 @@ Section Expr.
     { break_match_hyps; congruence. }
     { remember s.
       remember d.
+      (** Work around COQBUG(https://github.com/coq/coq/issues/11959); suppress warning *)
+      Local Set Warnings Append "-variable-collision".
       break_match_hyps; try congruence;
           repeat match goal with
                  | H : _ && _ = true |- _ =>
