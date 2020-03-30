@@ -44,7 +44,7 @@ Section Expr.
       true
     | (expr.Ident _ (ident.Literal base.type.nat n)) =>
       true
-    | expr.Var (type.base (base.type.list _)) _ =>
+    | expr.Var _ _ =>
       true
     | _ => false 
     end.
@@ -225,8 +225,8 @@ Section Expr.
       else expr.literal z
     | (expr.Ident type_nat (ident.Literal base.type.nat n)) =>
       expr.literal (Z.of_nat n)
-    | expr.Var type_listZ x =>
-      map expr.var x
+    | expr.Var type_listZ x => map expr.var x
+    | expr.Var type_Z x => expr.var x
     | _ => make_error _
     end.
 

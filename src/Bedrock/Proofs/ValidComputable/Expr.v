@@ -203,7 +203,7 @@ Section Expr.
           is_bounded_by_bool z max_range || negb require_casts
         | expr.Ident _ (ident.Literal base.type.nat n) =>
           negb require_casts
-        | expr.Var type_Z v => negb require_casts
+        | expr.Var type_Z v => true
         | expr.Var type_listZ v => true
         | _ => false
         end.
@@ -798,8 +798,7 @@ Section Expr.
       { destruct rc; cbn [negb] in *; try congruence.
         constructor. } }
     { break_match_hyps; try congruence.
-      { destruct rc; cbn [negb] in *; try congruence.
-        constructor. }
+      { constructor. }
       { constructor. } }
     { break_match_hyps; congruence. }
     { remember s.
