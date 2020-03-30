@@ -111,7 +111,7 @@ Section Lists.
     end.
 
   Definition store_list_item (start value : Syntax.expr.expr) (i : nat)
-    : Syntax.cmd.cmd :=
+    : cmd.cmd :=
     let offset := expr.literal (Z.of_nat i * word_size_in_bytes) in
     let loc := expr.op bopname.add start offset in
     cmd.store access_size.word loc value.
@@ -120,7 +120,7 @@ Section Lists.
              (start : Syntax.expr.expr)
              (values : list Syntax.expr.expr)
              (i : nat)
-    : Syntax.cmd.cmd :=
+    : cmd.cmd :=
     match values with
     | [] => cmd.skip
     | v :: values' =>
@@ -131,19 +131,21 @@ Section Lists.
   Fixpoint store_return_values {t : base.type}
     : base_ltype (listZ:=rep.listZ_local) t ->
       base_ltype (listZ:=rep.listZ_mem) t ->
-      cmd.cmd :=
+      list_lengths (type.base t) * cmd.cmd :=
     match t as t0 return
-          base_ltype t0 -> base_ltype t0 -> _ with
+          base_ltype t0 -> base_ltype t0 ->
+          list_lengths (type.base t0) * _ with
     | base.type.prod a b =>
       fun x y =>
-        cmd.seq (store_return_values (fst x) (fst y))
-                (store_return_values (snd x) (snd y))
+        let a := store_return_values (fst x) (fst y) in
+        let b := store_return_values (snd x) (snd y) in
+        ((fst a, fst b), cmd.seq (snd a) (snd b))
     | base_listZ =>
       (* store list at location pointed to by y *)
       fun (x : list string) (y : string) =>
-        store_list (expr.var y) (map expr.var x) 0
+        (length x, store_list (expr.var y) (map expr.var x) 0)
     | _ =>
       (* rename variable *)
-      fun (x y : string) => cmd.set y (expr.var x)
+      fun (x y : string) => (tt, cmd.set y (expr.var x))
     end.
 End Lists.

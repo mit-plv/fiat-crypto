@@ -72,10 +72,10 @@ Module X25519_64.
 
     Definition mulmod_bedrock : bedrock_func :=
       ("mulmod_bedrock",
-       translate_func mulmod
-                      ("in0", ("in1", tt)) (* argument names *)
-                      (n, (n, tt)) (* lengths for list arguments *)
-                      "out0" (* return value name *)).
+       fst (translate_func mulmod
+                           ("in0", ("in1", tt)) (* argument names *)
+                           (n, (n, tt)) (* lengths for list arguments *)
+                           "out0" (* return value name *))).
 
     Goal (error_free_cmd (snd (snd mulmod_bedrock)) = true).
     Proof. vm_compute. reflexivity. Qed.

@@ -61,7 +61,8 @@ Section Func.
              (lengths : type.for_each_lhs_of_arrow list_lengths t)
              (* return variables *)
              (rets : base_ltype (type.final_codomain t))
-    : list string * list string * cmd :=
+    : list string * list string * cmd (* bedrock function *)
+      * list_lengths (type.base (type.final_codomain t)) (* output list lengths *) :=
     (* load arguments *)
     let load_args_out := load_arguments 0%nat argnames lengths in
     let nextn := fst (fst load_args_out) in
@@ -70,14 +71,15 @@ Section Func.
     (* translate *)
     let out := translate_func' (e _) nextn args in
     (* store return values *)
-    let store_rets_cmd := store_return_values (snd (fst out)) rets in
+    let store_rets := store_return_values (snd (fst out)) rets in
     (* make new arguments for pointers to returned lists *)
     let part := extract_listnames rets in
     let out_ptrs := flatten_listonly_base_ltype (fst part) in
     let innames := flatten_argnames argnames ++ out_ptrs in
     let outnames := flatten_listexcl_base_ltype (snd part) in
     (* assemble executable body: load arguments, function body, store rets *)
-    let body := cmd.seq (cmd.seq load_args_cmd (snd out)) store_rets_cmd in
-    (* assemble func (arg varnames, return varnames, executable body) *)
-    (innames, outnames, body).
+    let body := cmd.seq (cmd.seq load_args_cmd (snd out)) (snd store_rets) in
+    (* assemble func (arg varnames, return varnames, executable body),
+       also add in output list lengths *)
+    (innames, outnames, body, fst store_rets).
 End Func.
