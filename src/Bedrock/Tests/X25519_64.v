@@ -58,7 +58,7 @@ Module X25519_64.
 
     Definition mulmod_ : Pipeline.ErrorT (Expr _) :=
       Pipeline.BoundsPipeline
-        false (* subst01 *)
+        true (* subst01 *)
         None (* fancy *)
         possible_values
         ltac:(let r := Reify ((carry_mulmod limbwidth_num limbwidth_den s c n idxs)) in
