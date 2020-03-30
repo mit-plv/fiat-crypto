@@ -155,6 +155,30 @@ Fixpoint make_var_data_of_args {t}
   | type.base b => fun _ _ => Some tt
   end.
 
+Definition make_header {t}
+           (innames : type.for_each_lhs_of_arrow ltype t)
+           (inlengths : type.for_each_lhs_of_arrow list_lengths t)
+           (inbounds : type.for_each_lhs_of_arrow
+                         ZRange.type.option.interp t)
+           (outnames : ltype (type.base (type.final_codomain t)))
+           (outlengths : list_lengths (type.base (type.final_codomain t)))
+           (outbounds : ZRange.type.option.interp
+                          (type.base (type.final_codomain t)))
+  : option (list string) :=
+  match make_var_data_of_args innames inlengths,
+        make_base_var_data outnames outlengths with
+  | Some indata, Some outdata =>
+    Some (["/*"]
+            ++ [" * Input Bounds:"]
+            ++ (List.map (fun v => " *   " ++ v)%string
+                         (input_bounds_to_string indata inbounds))
+            ++ [" * Output Bounds:"]
+            ++ (List.map (fun v => " *   " ++ v)%string
+                         (bound_to_string outdata outbounds))
+            ++ [" */"])
+  | _, _ => None
+  end.
+
 (* TODO: for now, name_list is just ignored -- could probably make it not ignored *)
 Definition Bedrock2_ToFunctionLines
            {relax_zrange : relax_zrange_opt}
@@ -176,29 +200,30 @@ Definition Bedrock2_ToFunctionLines
       let outlengths := snd out in
       if error_free_cmd (snd (snd f))
       then
-        match make_var_data_of_args innames inlengths,
-              make_base_var_data outnames outlengths with
-        | Some indata, Some outdata =>
-          inl (["/*"]
-                 ++ [" * Input Bounds:"]
-                 ++ List.map (fun v => " *   " ++ v)%string (input_bounds_to_string indata inbounds)
-                 ++ [" * Output Bounds:"]
-                 ++ List.map (fun v => " *   " ++ v)%string (bound_to_string outdata outbounds)
-                 ++ [" */"]
-                 ++ bedrock_func_to_lines f, ToString.ident_info_empty)
-        | _, _ =>
+        match make_header innames inlengths inbounds
+                          outnames outlengths outbounds with
+        | Some header =>
+          inl (header ++ bedrock_func_to_lines f,
+               ToString.ident_info_empty)
+        | None =>
           inr
             (String.concat
                String.NewLine
                ("Failed to generate header for function:"
                   :: bedrock_func_to_lines f))
         end
-      else inr
+      else
+        let header :=
+            match make_header innames inlengths inbounds
+                              outnames outlengths outbounds with
+            | Some x => x | None => [] end in
+        inr
              (String.concat
                 String.NewLine
-                ("ERROR-CONTAINING OUTPUT:"
-                 :: (bedrock_func_to_lines f)
-                 ++ ["Error occured during translation to bedrock2. This is likely because a part of the input expression either had unsupported integer types (bedrock2 requires that all integers have the same size) or contained an unsupported operation."]))
+                (["ERROR-CONTAINING OUTPUT:"]
+                   ++ header
+                   ++ bedrock_func_to_lines f
+                   ++ ["Error occured during translation to bedrock2. This is likely because a part of the input expression either had unsupported integer types (bedrock2 requires that all integers have the same size) or contained an unsupported operation."]))
     | None, _, _ =>
       inr ("Error determining argument names")
     | _, None, _ =>
