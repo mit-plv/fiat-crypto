@@ -15,6 +15,7 @@ Require Import bedrock2.Map.Separation.
 Require Import Crypto.BoundsPipeline.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.ModOps.
+Require Import Crypto.Bedrock.Defaults.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Proofs.Func.
@@ -35,7 +36,6 @@ Local Open Scope string_scope.
 
 Require Import Crypto.Bedrock.Tests.X25519_64.
 Import X25519_64.
-Existing Instance p.
 Local Coercion name_of_func (f : bedrock_func) := fst f.
 
 Section Proofs.
@@ -77,7 +77,7 @@ Section Proofs.
         sep (sep (Bignum px x) (Bignum py y)) Ra m ->
         sep (Bignum pout old_out) Rr m ->
         WeakestPrecondition.call
-          (p:=@semantics p)
+          (p:=@semantics default_parameters)
           functions mulmod_bedrock t m
           (px :: py :: pout :: nil)
           (fun t' m' rets =>
@@ -129,7 +129,7 @@ Section Proofs.
     v = varname_gen i ->
     String.startswith "x" v = true.
   Proof.
-    cbn [varname_gen p]. intro.
+    cbn [varname_gen default_parameters]. intro.
     subst. cbn. rewrite substring_0_0.
     reflexivity.
   Qed.
