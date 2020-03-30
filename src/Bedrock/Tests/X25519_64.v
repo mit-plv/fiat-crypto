@@ -80,6 +80,30 @@ Module X25519_64.
     Goal (error_free_cmd (snd (snd mulmod_bedrock)) = true).
     Proof. vm_compute. reflexivity. Qed.
 
+    Definition addmod_ : Pipeline.ErrorT (Expr _) :=
+      Pipeline.BoundsPipeline
+        true (* subst01 *)
+        None (* fancy *)
+        possible_values
+        ltac:(let r := Reify (addmod limbwidth_num limbwidth_den n) in
+              exact r)
+               (Some tight_bounds, (Some tight_bounds, tt))
+               (Some loose_bounds).
+    Derive addmod
+           SuchThat (addmod_ = ErrorT.Success addmod)
+           As addmod_eq.
+    Proof. vm_compute; reflexivity. Qed.
+
+    Definition addmod_bedrock : bedrock_func :=
+      ("addmod_bedrock",
+       fst (translate_func addmod
+                           ("in0", ("in1", tt)) (* argument names *)
+                           (n, (n, tt)) (* lengths for list arguments *)
+                           "out0" (* return value name *))).
+
+    Goal (error_free_cmd (snd (snd addmod_bedrock)) = true).
+    Proof. vm_compute. reflexivity. Qed.
+
     Import NotationsCustomEntry.
     Local Set Printing Width 150.
     (* Compute mulmod_bedrock. *)
