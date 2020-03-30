@@ -713,6 +713,7 @@ Section LoadStoreList.
            (locals : Semantics.locals)
            (mem : Semantics.mem)
            (R : Semantics.mem -> Prop),
+      let out := store_return_values retnames_local retnames_mem in
       let retlengths := list_lengths_from_value rets in
       sep (lists_reserved retlengths
                           (base_rtype_of_ltype retnames_mem)
@@ -733,10 +734,11 @@ Section LoadStoreList.
       (* translated function produces equivalent results *)
       WeakestPrecondition.cmd
         (WeakestPrecondition.call functions)
-        (store_return_values retnames_local retnames_mem)
+        (snd out)
         tr mem locals
         (fun tr' mem' locals' =>
            tr = tr' /\
+           retlengths = fst out /\
            map.only_differ
              locals (varname_set_listexcl retnames_mem) locals' /\
            sep (equivalent_base
@@ -756,6 +758,7 @@ Section LoadStoreList.
       repeat straightline.
       eexists; split; [eassumption|].
       cbv [dlet.dlet]; split; [reflexivity|].
+      split; [reflexivity|].
       split;
         [ solve [eauto using only_differ_sym, only_differ_put] | ].
       apply sep_emp_l. split; [|assumption].
@@ -803,6 +806,8 @@ Section LoadStoreList.
             eapply subset_disjoint';
               eauto using varname_set_listexcl_subset. } }
       cbv beta in *. cleanup; subst.
+      repeat match goal with H : list_lengths_from_value _ = _ |- _ =>
+                             rewrite H end.
       repeat match goal with |- _ /\ _ => split end;
         eauto using only_differ_sym, only_differ_trans.
       use_sep_assumption. cancel.
@@ -850,6 +855,13 @@ Section LoadStoreList.
           subst. rewrite <-word.ring_morph_add.
           f_equal; lia. } }
       cbv beta in *. cleanup; subst.
+      match goal with
+      | H : rep.equiv ?x ?y _ _ |- _ =>
+        assert  (length x = length y) by
+            (eapply Forall.eq_length_Forall2; apply H)
+      end.
+      cbn [rep.rtype_of_ltype rep.listZ_local rep.Z] in *.
+      rewrite !map_length in *.
       repeat match goal with |- _ /\ _ => split end;
         eauto using only_differ_sym, only_differ_put,
         only_differ_empty. }

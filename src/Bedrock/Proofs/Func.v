@@ -489,7 +489,8 @@ Section Func.
       (* out := translation output for e2; triple of
          (function arguments, function return variable names, body) *)
       let out := translate_func e argnames arglengths retnames in
-      let f : bedrock_func := (fname, out) in
+      let f : bedrock_func := (fname, fst out) in
+      let lengths := snd out in
       forall (tr : Semantics.trace)
              (mem : Semantics.mem)
              (flat_args : list Semantics.word)
@@ -521,17 +522,20 @@ Section Func.
                retlengths argnames retnames argvalues) Rr mem ->
         (* translated function produces equivalent results *)
         WeakestPrecondition.call
-          ((fname, out) :: functions) fname tr mem argvalues
+          (f :: functions) fname tr mem argvalues
           (fun tr' mem' flat_rets =>
              tr = tr' /\
+             (* lengths of output lists match *)
+             retlengths = snd out /\
              (* return values are equivalent *)
              sep (sep (equivalent_listexcl_flat_base rets flat_rets)
                       (equivalent_listonly_flat_base rets out_ptrs))
                  Rr mem').
   Proof.
     cbv [translate_func Wf3]; intros. subst.
-    cbn [WeakestPrecondition.call
-           WeakestPrecondition.call_body WeakestPrecondition.func].
+    cbn [fst snd
+             WeakestPrecondition.call
+             WeakestPrecondition.call_body WeakestPrecondition.func].
     rewrite eqb_refl.
     match goal with
       |- exists l, map.of_list_zip ?ks ?vs = Some l /\ _ =>
@@ -625,11 +629,14 @@ Section Func.
         eauto using disjoint_used_varnames_lt. } }
 
     cbv beta in *. cleanup; subst.
+    match goal with H : list_lengths_from_value _ = _ |- _ =>
+                    rewrite H end.
     eapply Proper_list_map;
       [ solve [apply Proper_get]
       | | eapply look_up_return_values; eauto;
           apply equivalent_extract_listnames; eauto ].
     repeat intro; cleanup; subst; eauto.
+    split; eauto.
     split; eauto.
 
     use_sep_assumption.
