@@ -73,7 +73,7 @@ Section Expr.
       forall n,
         valid_expr false (expr.Ident (ident.Literal (t:=base.type.nat) n))
   | valid_var_z :
-      forall v, valid_expr (t:=type_Z) false (expr.Var v)
+      forall rc v, valid_expr (t:=type_Z) rc (expr.Var v)
   | valid_var_listz :
       forall rc v, valid_expr (t:=type_listZ) rc (expr.Var v)
   | valid_nth_default :
@@ -452,7 +452,8 @@ Section Expr.
           specialize (H _ ltac:(eassumption))
       end.
       cbv [equiv3 locally_equivalent] in *.
-      apply locally_equivalent_nobounds_impl.
+      destruct rc;
+      try apply locally_equivalent_nobounds_impl;
       eauto. }
     { (* var (list Z) *)
       match goal with
