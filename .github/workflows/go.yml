@@ -13,7 +13,7 @@ jobs:
 
     steps:
     - name: Set up Go 1.13
-      uses: actions/setup-go@v1
+      uses: actions/setup-go@matcher
       with:
         go-version: 1.13
       id: go
@@ -21,9 +21,4 @@ jobs:
     - name: submodules-init
       uses: snickerbockers/submodules-init@v4
     - name: make only-test-go-files
-      run: |
-        # Work around cf https://github.com/actions/setup-go/issues/46
-        mkdir -p src/Rewriter/PerfTesting/Specific/generated
-        touch src/Rewriter/PerfTesting/Specific/generated/primes.mk
-        # echo "::remove-matcher owner=go::"
-        make only-test-go-files EXTERNAL_DEPENDENCIES=1
+      run: make only-test-go-files EXTERNAL_DEPENDENCIES=1
