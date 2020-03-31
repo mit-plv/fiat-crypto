@@ -1,5 +1,5 @@
 -R src Crypto
--arg -w -arg +implicit-core-hint-db,+implicits-in-term,+non-reversible-notation,+deprecated-intros-until-0,+deprecated-focus,+unused-intro-pattern,+deprecated-hint-constr,+variable-collision,+unexpected-implicit-declaration
+-arg -w -arg +implicit-core-hint-db,+implicits-in-term,+non-reversible-notation,+deprecated-intros-until-0,+deprecated-focus,+unused-intro-pattern,+variable-collision,-deprecated-hint-constr
 src/BoundsPipeline.v
 src/CLI.v
 src/COperationSpecifications.v

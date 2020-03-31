@@ -72,10 +72,9 @@ for (op, opmod) in (('id', '(@id (list Z))'), ('selectznz', 'Positional.select')
        As reified_%s_gen_correct.
 Proof. Time cache_reify (). Time Qed.
 Hint Extern 1 (_ = _) => apply_cached_reification %s (proj1 reified_%s_gen_correct) : reify_cache_gen.
-Definition reified_%s_gen_correct_proj2 := proj2 reified_%s_gen_correct.
-Hint Immediate reified_%s_gen_correct_proj2 : wf_gen_cache.
+Hint Immediate (proj2 reified_%s_gen_correct) : wf_gen_cache.
 Hint Rewrite (proj1 reified_%s_gen_correct) : interp_gen_cache.
-Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very long time *)''' % (indent, op, op, opmod, op, opmod, op, op, op, op, op)).replace('\n', '\n%s' % indent) + '\n')
+Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very long time *)''' % (indent, op, op, opmod, op, opmod, op, op, op, op)).replace('\n', '\n%s' % indent) + '\n')
 
 >>
 *)
@@ -85,8 +84,7 @@ Derive reified_id_gen
        As reified_id_gen_correct.
 Proof. Time cache_reify (). Time Qed.
 Hint Extern 1 (_ = _) => apply_cached_reification (@id (list Z)) (proj1 reified_id_gen_correct) : reify_cache_gen.
-Definition reified_id_gen_correct_proj2 := proj2 reified_id_gen_correct.
-Hint Immediate reified_id_gen_correct_proj2 : wf_gen_cache.
+Hint Immediate (proj2 reified_id_gen_correct) : wf_gen_cache.
 Hint Rewrite (proj1 reified_id_gen_correct) : interp_gen_cache.
 Local Opaque reified_id_gen. (* needed for making [autorewrite] not take a very long time *)
 
@@ -95,8 +93,7 @@ Derive reified_selectznz_gen
        As reified_selectznz_gen_correct.
 Proof. Time cache_reify (). Time Qed.
 Hint Extern 1 (_ = _) => apply_cached_reification Positional.select (proj1 reified_selectznz_gen_correct) : reify_cache_gen.
-Definition reified_selectznz_gen_correct_proj2 := proj2 reified_selectznz_gen_correct.
-Hint Immediate reified_selectznz_gen_correct_proj2 : wf_gen_cache.
+Hint Immediate (proj2 reified_selectznz_gen_correct) : wf_gen_cache.
 Hint Rewrite (proj1 reified_selectznz_gen_correct) : interp_gen_cache.
 Local Opaque reified_selectznz_gen. (* needed for making [autorewrite] not take a very long time *)
 
@@ -105,8 +102,7 @@ Derive reified_mulx_gen
        As reified_mulx_gen_correct.
 Proof. Time cache_reify (). Time Qed.
 Hint Extern 1 (_ = _) => apply_cached_reification mulx (proj1 reified_mulx_gen_correct) : reify_cache_gen.
-Definition reified_mulx_gen_correct_proj2 := proj2 reified_mulx_gen_correct.
-Hint Immediate reified_mulx_gen_correct_proj2 : wf_gen_cache.
+Hint Immediate (proj2 reified_mulx_gen_correct) : wf_gen_cache.
 Hint Rewrite (proj1 reified_mulx_gen_correct) : interp_gen_cache.
 Local Opaque reified_mulx_gen. (* needed for making [autorewrite] not take a very long time *)
 
@@ -115,8 +111,7 @@ Derive reified_addcarryx_gen
        As reified_addcarryx_gen_correct.
 Proof. Time cache_reify (). Time Qed.
 Hint Extern 1 (_ = _) => apply_cached_reification addcarryx (proj1 reified_addcarryx_gen_correct) : reify_cache_gen.
-Definition reified_addcarryx_gen_correct_proj2 := proj2 reified_addcarryx_gen_correct.
-Hint Immediate reified_addcarryx_gen_correct_proj2 : wf_gen_cache.
+Hint Immediate (proj2 reified_addcarryx_gen_correct) : wf_gen_cache.
 Hint Rewrite (proj1 reified_addcarryx_gen_correct) : interp_gen_cache.
 Local Opaque reified_addcarryx_gen. (* needed for making [autorewrite] not take a very long time *)
 
@@ -125,8 +120,7 @@ Derive reified_subborrowx_gen
        As reified_subborrowx_gen_correct.
 Proof. Time cache_reify (). Time Qed.
 Hint Extern 1 (_ = _) => apply_cached_reification subborrowx (proj1 reified_subborrowx_gen_correct) : reify_cache_gen.
-Definition reified_subborrowx_gen_correct_proj2 := proj2 reified_subborrowx_gen_correct.
-Hint Immediate reified_subborrowx_gen_correct_proj2 : wf_gen_cache.
+Hint Immediate (proj2 reified_subborrowx_gen_correct) : wf_gen_cache.
 Hint Rewrite (proj1 reified_subborrowx_gen_correct) : interp_gen_cache.
 Local Opaque reified_subborrowx_gen. (* needed for making [autorewrite] not take a very long time *)
 
@@ -135,8 +129,7 @@ Derive reified_cmovznz_gen
        As reified_cmovznz_gen_correct.
 Proof. Time cache_reify (). Time Qed.
 Hint Extern 1 (_ = _) => apply_cached_reification cmovznz (proj1 reified_cmovznz_gen_correct) : reify_cache_gen.
-Definition reified_cmovznz_gen_correct_proj2 := proj2 reified_cmovznz_gen_correct.
-Hint Immediate reified_cmovznz_gen_correct_proj2 : wf_gen_cache.
+Hint Immediate (proj2 reified_cmovznz_gen_correct) : wf_gen_cache.
 Hint Rewrite (proj1 reified_cmovznz_gen_correct) : interp_gen_cache.
 Local Opaque reified_cmovznz_gen. (* needed for making [autorewrite] not take a very long time *)
 
@@ -145,8 +138,7 @@ Derive reified_cmovznz_by_mul_gen
        As reified_cmovznz_by_mul_gen_correct.
 Proof. Time cache_reify (). Time Qed.
 Hint Extern 1 (_ = _) => apply_cached_reification cmovznz_by_mul (proj1 reified_cmovznz_by_mul_gen_correct) : reify_cache_gen.
-Definition reified_cmovznz_by_mul_gen_correct_proj2 := proj2 reified_cmovznz_by_mul_gen_correct.
-Hint Immediate reified_cmovznz_by_mul_gen_correct_proj2 : wf_gen_cache.
+Hint Immediate (proj2 reified_cmovznz_by_mul_gen_correct) : wf_gen_cache.
 Hint Rewrite (proj1 reified_cmovznz_by_mul_gen_correct) : interp_gen_cache.
 Local Opaque reified_cmovznz_by_mul_gen. (* needed for making [autorewrite] not take a very long time *)
 
