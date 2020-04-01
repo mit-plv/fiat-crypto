@@ -73,6 +73,13 @@ Section Expr.
       else base_make_error _.
 
   Definition rshiftl
+    : rtype (type_Z -> type_Z -> type_Z) :=
+    fun x n =>
+      if literal_ltwidth n
+      then expr.op bopname.slu x n
+      else base_make_error _.
+
+  Definition rtruncating_shiftl
     : rtype (type_Z -> type_Z -> type_Z -> type_Z) :=
     fun s x n =>
       if literal_eqb s Semantics.width
@@ -203,7 +210,8 @@ Section Expr.
     | ident.snd _ _ => snd
     | ident.List_nth_default base_Z => rnth_default
     | ident.Z_shiftr => rshiftr
-    | ident.Z_truncating_shiftl => rshiftl
+    | ident.Z_shiftl => rshiftl
+    | ident.Z_truncating_shiftl => rtruncating_shiftl
     | ident.Z_mul_high => rmul_high
     | ident.Z_cast => fun _ x => x
     | ident.Z_cast2 => fun _ x => x
