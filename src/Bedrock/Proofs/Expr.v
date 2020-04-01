@@ -98,6 +98,13 @@ Section Expr.
         valid_expr (t:=type_Z) false
                    (expr.App (expr.App (expr.Ident ident.Z_shiftr) x)
                    (expr.Ident (ident.Literal (t:=base.type.Z) n)))
+  | valid_shiftl :
+      forall (x : API.expr type_Z) n,
+        valid_expr true x ->
+        0 <= n < Semantics.width ->
+        valid_expr (t:=type_Z) false
+                   (expr.App (expr.App (expr.Ident ident.Z_shiftl) x)
+                   (expr.Ident (ident.Literal (t:=base.type.Z) n)))
   | valid_mul_high :
       forall (s : Z) (x y : API.expr type_Z),
         s = 2 ^ Semantics.width ->
@@ -108,7 +115,7 @@ Section Expr.
                                 (expr.App (expr.Ident ident.Z_mul_high)
                                           (expr.Ident (ident.Literal (t:=base.type.Z) s)))
                                 x) y)
-  | valid_shiftl :
+  | valid_truncating_shiftl :
       forall (s n : Z) (x : API.expr type_Z),
         s = Semantics.width ->
         0 <= n < Semantics.width ->
@@ -523,6 +530,28 @@ Section Expr.
             Z.rewrite_mod_small; lia).
       cbv [word.wrap]. Z.rewrite_mod_small.
       reflexivity. }
+    { (* shiftl *)
+      specialize (IHvalid_expr _ _ _ _
+                               ltac:(eassumption) ltac:(eassumption)).
+      cbv [rshiftl literal_ltwidth invert_literal].
+      rewrite is_bounded_by_bool_width_range by lia.
+      cbn [locally_equivalent_nobounds
+             locally_equivalent_nobounds_base
+             locally_equivalent equivalent
+             equivalent_base rep.equiv rep.Z ident.literal] in *.
+      cbv [WeakestPrecondition.dexpr ident.literal] in *.
+      cbn [WeakestPrecondition.expr WeakestPrecondition.expr_body
+                                    Semantics.interp_binop].
+      sepsimpl; [ lia .. | ].
+      eapply Proper_expr; [ | eassumption ].
+      repeat intro; subst.
+      cbv [WeakestPrecondition.literal dlet.dlet ident.literal].
+      apply word.unsigned_inj.
+      rewrite word.unsigned_slu, !word.unsigned_of_Z
+        by (rewrite word.unsigned_of_Z; cbv [word.wrap];
+            Z.rewrite_mod_small; lia).
+      cbv [word.wrap]. Z.rewrite_mod_small.
+      reflexivity. }
     { (* mul_high *)
       cbv [ident.literal rmul_high literal_eqb invert_literal].
       rewrite Z.eqb_refl.
@@ -550,8 +579,8 @@ Section Expr.
       rewrite word.unsigned_mulhuu, !word.unsigned_of_Z.
       cbv [word.wrap]. Z.rewrite_mod_small.
       reflexivity. }
-    { (* shiftl *)
-      cbv [rshiftl literal_eqb literal_ltwidth invert_literal].
+    { (* truncating_shiftl *)
+      cbv [rtruncating_shiftl literal_eqb literal_ltwidth invert_literal].
       rewrite Z.eqb_refl, is_bounded_by_bool_width_range by lia.
       specialize (IHvalid_expr _ _ _ _
                                 ltac:(eassumption) ltac:(eassumption)).

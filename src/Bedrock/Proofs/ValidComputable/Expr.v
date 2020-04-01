@@ -104,6 +104,8 @@ Section Expr.
         && Z.eqb s Semantics.width
     | expr.Ident _ ident.Z_shiftr =>
       negb require_casts
+    | expr.Ident _ ident.Z_shiftl =>
+      negb require_casts
     | _ => false
     end.
 
@@ -737,7 +739,7 @@ Section Expr.
      end) f.
   Proof.
     cbv [valid_expr_shift_bool].
-    break_match; try congruence; [ | ];
+    break_match; try congruence; [ | | ];
       intros;
       repeat match goal with
              | H : _ && _ = true |- _ =>
@@ -752,6 +754,8 @@ Section Expr.
                apply valid_shifter_eq in H;
                  destruct H as [? [? ?] ]; subst
              end.
+    { Z.ltb_to_lt.
+      constructor; eauto; lia. }
     { Z.ltb_to_lt.
       constructor; eauto; lia. }
     { Z.ltb_to_lt.
