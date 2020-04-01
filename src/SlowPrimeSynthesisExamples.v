@@ -31,6 +31,522 @@ Local Coercion QArith_base.inject_Z : Z >-> Q.
 Local Coercion Z.pos : positive >-> Z.
 
 Local Existing Instance default_low_level_rewriter_method.
+(*Require Import Crypto.Bedrock.Stringification.*)
+Module debugging_p256_mul_bedrock2.
+  Import Crypto.PushButtonSynthesis.WordByWordMontgomery.
+  Import Stringification.C.
+  Import Stringification.C.Compilers.
+  Import Stringification.C.Compilers.ToString.
+  Section __.
+    Local Existing Instance (*OutputBedrock2API*) C.OutputCAPI.
+    Local Instance static : static_opt := false.
+    Local Instance : internal_static_opt := true.
+    Local Instance : emit_primitives_opt := false.
+    Local Instance : use_mul_for_cmovznz_opt := false.
+    Local Instance : widen_carry_opt := true.
+    Local Instance : widen_bytes_opt := true.
+    Local Instance : only_signed_opt := false.
+    Local Instance : should_split_mul_opt := true.
+    Local Instance : should_split_multiret_opt := true.
+
+    Definition m := (2^64 - 1)%Z. (*(2^256 - 2^224 + 2^192 + 2^96 - 1)%Z.*)
+    Definition machine_wordsize := 64.
+
+    Import IR.Compilers.ToString.
+
+    Goal True.
+      pose (smul m machine_wordsize "p256") as v.
+      Import IdentifiersBasicGENERATED.Compilers.
+      cbv [smul] in v.
+      set (k := mul _ _) in (value of v).
+      vm_compute in v.
+      clear v.
+      cbv [mul] in k.
+      cbv -[Pipeline.BoundsPipeline WordByWordMontgomeryReificationCache.WordByWordMontgomery.reified_mul_gen] in k.
+      cbv [Pipeline.BoundsPipeline Rewriter.Util.LetIn.Let_In] in k.
+      set (k' := CheckedPartialEvaluateWithBounds _ _ _ _ _) in (value of k).
+      vm_compute in k'.
+      subst k'; cbv beta iota zeta in k.
+      cbv [Pipeline.RewriteAndEliminateDeadAndInline] in k.
+      (*
+      set (k' := ArithWithCasts.Compilers.RewriteRules.RewriteArithWithCasts _ _ _) in (value of k).
+      vm_compute in k'.
+      Notation uint64 := (expr.Ident (ident_Literal r[0 ~> 18446744073709551615]%zrange)).
+      Notation "'(uint64)' x" := (#ident_Z_cast @ uint64 @ x)%expr (at level 0) : expr_scope.
+      Notation "'(uint64,uint64)' x" := (#ident_Z_cast2 @ (uint64, uint64) @ x)%expr (at level 0) : expr_scope.
+      subst k'; cbv beta iota zeta in k.
+      cbv [Rewriter.Util.LetIn.Let_In] in k.
+      set (k' := UnderLets.LetBindReturn _ _) in (value of k) at 1.
+      vm_compute in k'; subst k'.
+      set (k' := ArithWithCasts.Compilers.RewriteRules.RewriteArithWithCasts _ _ _) in (value of k).
+      vm_compute in k'.
+      subst k'; cbv beta iota zeta in k.
+      set (k' := CheckedPartialEvaluateWithBounds _ _ _ _ _) in (value of k).
+      vm_compute in k'.
+      subst k'; cbv beta iota zeta in k.
+      set (k' := MulSplit.Compilers.RewriteRules.RewriteMulSplit _ _ _ _) in (value of k) at 1.
+      vm_compute in k'.
+      subst k'.
+      set (k' := MultiRetSplit.Compilers.RewriteRules.RewriteMultiRetSplit _ _ _ _) in (value of k) at 2.
+      vm_compute in k'.
+      vm_compute in k.
+      vm_compute in k'.
+      Import IdentifiersBasicGENERATED.Compilers.
+      subst k'; cbv beta iota zeta in k.
+       *)
+    Abort.
+  End __.
+End debugging_p256_mul_bedrock2.
+
+Module debugging_25519_to_bytes_bedrock2.
+  Import Crypto.PushButtonSynthesis.UnsaturatedSolinas.
+  Import Stringification.C.
+  Import Stringification.C.Compilers.
+  Import Stringification.C.Compilers.ToString.
+  Section __.
+    Local Existing Instance C.OutputCAPI.
+    Local Instance static : static_opt := false.
+    Local Instance : internal_static_opt := true.
+    Local Instance : emit_primitives_opt := false.
+    Local Instance : use_mul_for_cmovznz_opt := false.
+    Local Instance : widen_carry_opt := true.
+    Local Instance : widen_bytes_opt := true.
+    Local Instance : only_signed_opt := false.
+    Local Instance : should_split_mul_opt := true.
+    Local Instance : should_split_multiret_opt := true.
+
+    Definition n := 2%nat (*5%nat*).
+    Definition s := 2^127 (* 255*).
+    Definition c := [(1, 1(*9*))].
+    Definition machine_wordsize := 64.
+
+    Import IR.Compilers.ToString.
+
+    Goal True.
+      pose (sto_bytes n s c machine_wordsize "curve25519") as v.
+      cbv [sto_bytes] in v.
+      set (k := to_bytes _ _ _ _) in (value of v).
+      clear v.
+      (*
+      cbv [to_bytes] in k.
+      cbv [Pipeline.BoundsPipeline] in k.
+      set (k' := Arith.Compilers.RewriteRules.RewriteArith _ _ _) in (value of k).
+      vm_compute in k'.
+      cbv [Rewriter.Util.LetIn.Let_In] in k.
+      set (k'' := CheckedPartialEvaluateWithBounds _ _ _ _ _) in (value of k).
+      vm_compute in k''.
+      set (uint64 := r[0 ~> 18446744073709551615]%zrange) in (value of k'').
+      subst k''.
+      cbv beta iota zeta in k.
+      set (k'' := Pipeline.RewriteAndEliminateDeadAndInline _ _ _ _) in (value of k).
+      vm_compute in k''.
+      Compute Z.log2 9223372036854775808.
+      clear -k''.
+      set (k'' := CheckedPartialEvaluateWithBounds _ _ _ _ _) in (value of k).
+      vm_compute in k''.
+      subst k''.
+      cbv beta iota zeta in k.
+      subst k'.
+      set (v := split_multiret_to machine_wordsize) in (value of k); vm_compute in v; subst v.
+      set (v := split_mul_to machine_wordsize) in (value of k); vm_compute in v; subst v.
+      cbv beta iota zeta in k.
+      set (k' := MulSplit.Compilers.RewriteRules.RewriteMulSplit _ _ _ _) in (value of k).
+      vm_compute in k'.
+      cbv [Pipeline.RewriteAndEliminateDeadAndInline] in k.
+      cbv [Rewriter.Util.LetIn.Let_In] in k.
+      set (k'' := MultiRetSplit.Compilers.RewriteRules.RewriteMultiRetSplit _ _ _ k') in (value of k).
+      clear k.
+      evar (varT : Type); evar (var : varT); subst varT.
+      evar (xT : Type); evar (x : xT); subst xT.
+      pose ((*Option.invert_Some*) (option_map (fun f => f x) (invert_expr.invert_Abs (k'' var)))) as k; subst k'' var x.
+      cbv [option_map Option.invert_Some invert_expr.invert_Abs MultiRetSplit.Compilers.RewriteRules.RewriteMultiRetSplit] in k.
+      cbv [Rewriter.Compilers.RewriteRules.Make.GoalType.rewrite_head_gen] in k.
+      set (v := ProofsCommon.Compilers.RewriteRules.GoalType.DefaultOptionType.use_precomputed_functions _) in (value of k); vm_compute in v; subst v.
+      set (v := ProofsCommon.Compilers.RewriteRules.GoalType.DefaultOptionType.use_decision_tree _) in (value of k); vm_compute in v; subst v.
+      cbv [Rewriter.Compilers.RewriteRules.Compile.Rewrite] in k.
+      cbv [Rewriter.Compilers.RewriteRules.Make.GoalType.rewrite_head] in k.
+      cbv [Rewriter.Compilers.RewriteRules.Compile.rewrite] in k.
+      set (fuel := 6%nat) in (value of k).
+      cbn [Rewriter.Compilers.RewriteRules.Compile.repeat_rewrite] in k.
+      set (k'' := k' _) in (value of k).
+      match (eval cbv delta [k'] in k') with
+      | fun var : ?T => expr.Abs ?f
+        => evar (var' : T);
+             pose (match var' return _ with var => f end) as F; subst var';
+               assert (k'' = expr.Abs F) by reflexivity; clearbody k''; subst k''
+      end.
+      cbn [Rewriter.Compilers.RewriteRules.Compile.rewrite_bottomup] in k.
+      cbn [Rewriter.Compilers.RewriteRules.Compile.reify] in k.
+      set (v := F _) in (value of k).
+      clear k'.
+      match (eval cbv delta [F] in F) with
+      | fun x : ?T => ?f
+        => evar (x' : T);
+             pose (match x' return _ with x => f end) as f'; subst x';
+               assert (v = f') by refine eq_refl; clearbody v; subst F v
+      end.
+      match (eval cbv delta [f'] in f') with
+      | expr.LetIn ?v ?f =>
+        pose v as V; pose f as F;
+          assert (f' = expr.LetIn V F) by refine eq_refl; clearbody f'; subst f'; rename F into f'
+      end.
+      cbn [Rewriter.Compilers.RewriteRules.Compile.rewrite_bottomup] in k;
+        cbv [Rewriter.Compilers.RewriteRules.Compile.splice_value_with_lets Rewriter.Compilers.RewriteRules.Compile.splice_under_lets_with_value Rewriter.Compilers.RewriteRules.Compile.reify_and_let_binds_cps] in k.
+      set (k'' := Rewriter.Compilers.RewriteRules.Compile.rewrite_bottomup _ _ _) in (value of k).
+      vm_compute in k''.
+      subst k''.
+      cbn [UnderLets.splice] in k.
+      set (k' := UnderLets.reify_and_let_binds_base_cps _ _ _ _) in (value of k).
+      vm_compute in k'.
+      subst k'.
+      cbn [UnderLets.splice] in k.
+      subst V.
+      match (eval cbv delta [f'] in f') with
+      | fun x : ?T => expr.LetIn ?v ?f =>
+        pose (fun x : T => v) as V; pose (fun x : T => f) as F;
+          assert (f' = fun x : T => expr.LetIn (V x) (F x)) by refine eq_refl; clearbody f'; subst f'; rename F into f'
+      end.
+      cbn [Rewriter.Compilers.RewriteRules.Compile.rewrite_bottomup] in k;
+        cbv [Rewriter.Compilers.RewriteRules.Compile.splice_value_with_lets Rewriter.Compilers.RewriteRules.Compile.splice_under_lets_with_value Rewriter.Compilers.RewriteRules.Compile.reify_and_let_binds_cps] in k.
+      subst V.
+      cbn [Rewriter.Compilers.RewriteRules.Compile.rewrite_bottomup] in k.
+      cbn [Rewriter.Compilers.RewriteRules.Compile.rewrite_bottomup] in k;
+        cbv [Rewriter.Compilers.RewriteRules.Compile.splice_value_with_lets Rewriter.Compilers.RewriteRules.Compile.splice_under_lets_with_value Rewriter.Compilers.RewriteRules.Compile.reify_and_let_binds_cps] in k.
+      set (v := MultiRetSplit.Compilers.RewriteRules.rewrite_head _ _ _ _ _ _) in (value of k) at 1.
+      vm_compute in v.
+      subst v.
+      set (v := MultiRetSplit.Compilers.RewriteRules.rewrite_head _ _ _ _ _ _) in (value of k) at 1.
+      vm_compute in v.
+      subst v.
+      cbn [UnderLets.splice] in k.
+      set (v := MultiRetSplit.Compilers.RewriteRules.rewrite_head _ _ _ _ _ _) in (value of k) at 1.
+      vm_compute in v.
+      subst v.
+      cbn [UnderLets.splice] in k.
+      set (v := MultiRetSplit.Compilers.RewriteRules.rewrite_head _ _ _ _ _ _) in (value of k) at 1.
+      vm_compute in v.
+      subst v.
+      cbn [UnderLets.splice] in k.
+      set (v := MultiRetSplit.Compilers.RewriteRules.rewrite_head _ _ _ _ _ _) in (value of k) at 1.
+      vm_compute in v.
+      subst v.
+      cbn [UnderLets.splice] in k.
+      set (v := MultiRetSplit.Compilers.RewriteRules.rewrite_head _ _ _ _ _ _) in (value of k) at 1.
+      vm_compute in v.
+      subst v.
+      cbn [UnderLets.splice] in k.
+      cbv [Rewriter.Compilers.RewriteRules.Compile.Base_value] in k.
+      cbn [UnderLets.splice] in k.
+      set (v := MultiRetSplit.Compilers.RewriteRules.rewrite_head _ _ _ _ _ _) in (value of k) at 1.
+      vm_compute in v.
+      subst v.
+      cbn [UnderLets.splice] in k.
+      set (v := MultiRetSplit.Compilers.RewriteRules.rewrite_head _ _ _ _ _ _) in (value of k) at 1.
+      vm_compute in v.
+      subst v.
+      cbn [UnderLets.splice] in k.
+      set (v := MultiRetSplit.Compilers.RewriteRules.rewrite_head _ _ _ _ _ _) in (value of k) at 1.
+      vm_compute in v.
+      subst v.
+      cbn [UnderLets.splice] in k.
+      set (v := MultiRetSplit.Compilers.RewriteRules.rewrite_head _ _ _ _ _ _) in (value of k) at 1.
+      vm_compute in v.
+      subst v.
+      cbn [UnderLets.splice] in k.
+      set (v := MultiRetSplit.Compilers.RewriteRules.rewrite_head _ _ _ _ _ _) in (value of k) at 1.
+      vm_compute in v.
+      subst v.
+      cbn [UnderLets.splice] in k.
+      unfold MultiRetSplit.Compilers.RewriteRules.rewrite_head in (value of k) at 1.
+      cbn [IdentifiersGENERATED.Compilers.pattern.ident.raw_invert_bind_args] in k;
+        cbv [Option.sequence_return Option.bind] in k.
+      cbn [UnderLets.splice] in k.
+      cbn [Rewriter.Compilers.RewriteRules.Compile.reflect] in k.
+      cbn [UnderLets.splice] in k.
+      unfold MultiRetSplit.Compilers.RewriteRules.rewrite_head in (value of k) at 1.
+      cbn [IdentifiersGENERATED.Compilers.pattern.ident.raw_invert_bind_args] in k;
+        cbv [Option.sequence_return Option.bind] in k.
+      cbn [UnderLets.splice] in k.
+      set (v := MultiRetSplit.Compilers.RewriteRules.rewrite_head _ _ _ _ _ _) in (value of k) at 1.
+      vm_compute in v.
+      subst v.
+      cbn [UnderLets.splice] in k.
+      set (v := MultiRetSplit.Compilers.RewriteRules.rewrite_head _ _ _ _ _ _) in (value of k) at 1.
+      vm_compute in v.
+      subst v.
+      cbn [UnderLets.splice] in k.
+      set (v := MultiRetSplit.Compilers.RewriteRules.rewrite_head _ _ _ _ _ _) in (value of k) at 1.
+      vm_compute in v.
+      subst v.
+      cbn [UnderLets.splice] in k.
+      set (v := MultiRetSplit.Compilers.RewriteRules.rewrite_head _ _ _ _ _ _) in (value of k) at 1.
+      vm_compute in v.
+      subst v.
+      cbn [UnderLets.splice] in k.
+      set (v := MultiRetSplit.Compilers.RewriteRules.rewrite_head _ _ _ _ _ _) in (value of k) at 1.
+      vm_compute in v.
+      subst v.
+      cbn [UnderLets.splice] in k.
+      set (v := MultiRetSplit.Compilers.RewriteRules.rewrite_head _ _ _ _ _ _) in (value of k) at 1.
+      vm_compute in v.
+      subst v.
+      cbn [UnderLets.splice] in k.
+      set (v := MultiRetSplit.Compilers.RewriteRules.rewrite_head _ _ _ _ _ _) in (value of k) at 1.
+      vm_compute in v.
+      subst v.
+      cbn [UnderLets.splice] in k.
+      set (v := MultiRetSplit.Compilers.RewriteRules.rewrite_head _ _ _ _ _ _) in (value of k) at 1.
+      vm_compute in v.
+      subst v.
+      cbn [UnderLets.splice] in k.
+      set (v := MultiRetSplit.Compilers.RewriteRules.rewrite_head _ _ _ _ _ _) in (value of k) at 1.
+      vm_compute in v.
+      subst v.
+      cbn [UnderLets.splice] in k.
+      set (v := MultiRetSplit.Compilers.RewriteRules.rewrite_head _ _ _ _ _ _) in (value of k) at 1.
+      set (v' := v _) in (value of k); subst v; rename v' into v.
+      cbn [UnderLets.to_expr] in k.
+      lazymatch (eval cbv delta [k] in k) with
+      | Some (expr.LetIn ?V (fun v : ?T => ?f))
+        => evar (v' : T); pose (match v' return _ with v => f end) as F;
+             subst v'
+      end.
+      clear k; rename F into k.
+      set (v' := v _) in (value of k); subst v; rename v' into v.
+      cbv beta iota zeta in v.
+      Import Util.Option.
+      set (uint64 := r[0 ~> 18446744073709551615]%zrange) in (value of v).
+      Arguments type.base {_ _}.
+      Arguments type.arrow {_ _ _}.
+      set (b := expr.App _ _) in (value of v) at 3.
+      cbn [MultiRetSplit.Compilers.RewriteRules.rewrite_head] in v.
+      Ltac separate H do_subst :=
+        lazymatch (eval cbv delta [H] in H) with
+        | expr.App ?x ?y => let x' := fresh in
+                            let y' := fresh in
+                            set (x' := x) in (value of H);
+                            set (y' := y) in (value of H);
+                            separate x' true; separate y' false;
+                            lazymatch do_subst with
+                            | true => subst H
+                            | false => idtac
+                            end
+        | _ => idtac
+        end.
+      separate b false.
+      subst b.
+      cbv beta iota in v.
+      subst H5.
+      clear -v.
+      cbv beta iota in v.
+      subst H9 H10 H8.
+      subst H6.
+      cbv beta iota in v.
+      subst H11 H12 H7.
+      subst H4.
+      cbv beta iota in v.
+      revert v; repeat match goal with H : _ |- _ => clear H end; intro v.
+      subst H18 H22 H14.
+      subst H2.
+      cbv beta iota in v.
+      subst H24 H28 H1.
+      subst H0.
+      cbv beta iota in v.
+      cbn [IdentifiersGENERATED.Compilers.pattern.ident.raw_invert_bind_args Option.bind Option.sequence_return Option.sequence] in v.
+      cbn [Rewriter.Compilers.pattern.type.unify_extracted Rewriter.Compilers.pattern.base.unify_extracted] in v.
+      cbn [IdentifiersGENERATED.Compilers.pattern.ident.raw_invert_bind_args Option.bind Option.sequence_return Option.sequence] in v.
+      cbn [type.type_beq base.type.type_beq andb] in v.
+      cbn [IdentifiersGENERATED.Compilers.pattern.ident.unify] in v.
+      cbn [Option.bind] in v.
+      cbv [type.try_make_transport_cps base.try_make_transport_cps type.try_make_transport_cpsv Compilers.try_make_base_transport_cps Compilers.eta_base_cps Compilers.eta_base_cps_gen proj1_sig Compilers.base_eq_dec Compilers.base_rec Compilers.base_rect Rewriter.Util.CPSNotations.cpsreturn id eq_rect Rewriter.Util.CPSNotations.cps_option_bind Rewriter.Util.CPSNotations.cpsbind Rewriter.Util.CPSNotations.cpscall] in v.
+      set (k' := andb _ _) in (value of v).
+      Compute is_bounded_by_bool (2 ^ 64) (Operations.ZRange.normalize uint64).
+      vm_compute in k'.
+      do 9 (unfold IdentifiersGENERATED.Compilers.pattern.ident.raw_invert_bind_args in (value of v) at 1;
+            c
+            unfold Option.bind in (value of v) at 1).
+         do 5 (unfold IdentifiersGENERATED.Compilers.pattern.ident.raw_invert_bind_args in (value of v) at 1;
+            unfold Option.bind in (value of v) at 1).
+      do 5 (unfold IdentifiersGENERATED.Compilers.pattern.ident.raw_invert_bind_args in (value of v) at 1;
+            unfold Option.bind in (value of v) at 1).
+      unfold Option.bind in (value of v) at 1.
+      unfold Option.bind in (value of v) at 1.
+      unfold Option.bind in (value of v) at 1.
+      unfold Option.bind in (value of v) at 1.
+      unfold Option.bind in (value of v) at 1.
+      unfold Option.bind in (value of v) at 1.
+      unfold Option.bind in (value of v) at 1.
+      unfold Option.bind in (value of v) at 1.
+      unfold Option.bind in (value of v) at 1.
+      cbn [Option.bind] in v.
+      cbn [
+      vm_compute in v.
+
+      set (idc := Compilers.ident_Z_sub_with_get_borrow) in (value of b).
+
+      subst b.
+
+      cbv beta iota in v.
+      cbv beta delta [MultiRetSplit.Compilers.RewriteRules.rewrite_head] in v.
+
+      cbv iota in v; cbv beta in v.
+      cbv iota in v; cbv beta in v.
+      cbv iota in v; cbv beta in v.
+      cbv iota in v; cbv beta in v.
+      cbv iota in v; cbv beta in v.
+      cbv iota in v; cbv beta in v.
+      vm_compute in v.
+      subst v.
+      cbn [UnderLets.splice] in k.
+
+
+
+      cbn [Rewriter.Compilers.RewriteRules.Compile.repeat_rewrite] in k.
+
+
+      subst k'; cbv beta in k''.
+      cbv [Rewriter.Compilers.RewriteRules.Compile.rewrite_bottomup] in k.
+      cbv [Rewriter.Compilers.RewriteRules.Compile.splice_value_with_lets] in k.
+      cbv [Rewriter.Compilers.RewriteRules.Compile.splice_under_lets_with_value] in k.
+      cbv [Rewriter.Compilers.RewriteRules.Compile.reify] in k.
+      subst k'.
+      cbv beta iota zeta in k.
+      set (v := fun x => UnderLets.to_expr _) in (value of k); clear k.
+      evar (xT : Type); evar (x : varT); subst
+      epose (var : _).
+      set (v := MultiRetSplit.Compilers.RewriteRules.rewrite_head _ _ _ _ _) in (value of k'').
+
+      Print Rewriter.Compilers.RewriteRules.Compile.repeat_rewrite.
+      cbv [Rewriter.Compilers.RewriteRules.Compile.repeat_rewrite] in k''.
+      cbv [Rewriter.Compilers.RewriteRules.Compile.rewrite_bottomup] in k''.
+      vm_compute in k''.
+      cbv [split_multiret_to split_mul_to] in k.
+      cbv [should_split_multiret should_split_mul] in k.
+
+      vm_
+      vm_compute in k.
+      subst k.
+      cbv beta iota zeta in v.
+      set (k := Language.Compilers.ToString.ToFunctionLines _ _ _ _ _ _ _ _ _) in (value of v).
+      clear v.
+      cbv [Language.Compilers.ToString.ToFunctionLines] in k.
+      cbv [Java.OutputJavaAPI] in k.
+      cbv [Language.Compilers.ToString.ToFunctionLines] in k.
+      cbv [Java.ToFunctionLines] in k.
+      set (k' := IR.OfPHOAS.ExprOfPHOAS _ _ _ _) in (value of k).
+      clear k.
+      cbv [IR.OfPHOAS.ExprOfPHOAS] in k'.
+      cbv [IR.OfPHOAS.expr_of_PHOAS] in k'.
+      set (k := IR.OfPHOAS.var_data_of_bounds _ _ _ _) in (value of k').
+      vm_compute in k.
+      subst k.
+      cbv beta iota zeta in k'.
+      cbv [IR.OfPHOAS.expr_of_PHOAS'] in k'.
+      set (k := IR.OfPHOAS.var_data_of_bounds _ _ _ _) in (value of k').
+      vm_compute in k.
+      subst k.
+      cbv beta iota zeta in k'.
+      cbv [invert_expr.invert_Abs] in k'.
+      cbv [IR.OfPHOAS.expr_of_base_PHOAS] in k'.
+      set (k := IR.OfPHOAS.make_assign_expr_of_PHOAS _ _) in (value of k') at 1.
+      cbv [IR.OfPHOAS.make_assign_expr_of_PHOAS] in k.
+      clear k'.
+      set (k' := type.try_transport _ _ _) in (value of k).
+      vm_compute in k'.
+      subst k'.
+      cbv beta iota zeta in k.
+      set (k' := invert_expr.invert_App_Z_cast2 _) in (value of k).
+      vm_compute in k'.
+
+      subst k'.
+      cbv beta iota zeta in k.
+      set (k' := invert_expr.invert_AppIdent_curried _) in (value of k); vm_compute in k'; subst k'.
+      cbv beta iota in k.
+      set (k' := IR.OfPHOAS.arith_expr_of_PHOAS_args _) in (value of k).
+      cbv [IR.OfPHOAS.arith_expr_of_PHOAS_args] in k'.
+      (*clear k.
+      set (k := IR.OfPHOAS.arith_expr_of_base_PHOAS _ _) in (value of k') at 1.
+      cbv [Language.Compilers.ToString.int.option.None] in k.
+      cbv [IR.OfPHOAS.arith_expr_for_base] in k.
+      cbv [IR.OfPHOAS.arith_expr_of_base_PHOAS] in k.
+      cbv [IR.OfPHOAS.arith_expr_of_PHOAS] in k.
+      cbv [IR.OfPHOAS.arith_expr_of_PHOAS_ident] in k.
+      cbv [IR.OfPHOAS.arith_expr_of_PHOAS_literal_Z] in k.
+      vm_compute in k.*)
+      vm_compute in k'.
+      subst k'.
+      cbv beta iota zeta in k.
+      set (k' := Crypto.Util.Option.bind _ _) in (value of k) at 1; vm_compute in k'; subst k'.
+      cbv beta iota zeta in k.
+      set (k' := IR.OfPHOAS.bounds_check _ _ _ _ _ _) in (value of k) at 1; vm_compute in k'; subst k'.
+      cbv beta iota zeta in k.
+      set (k' := IR.OfPHOAS.bounds_check _ _ _ _ _ _) in (value of k) at 1; vm_compute in k'; subst k'.
+      cbv beta iota zeta in k.
+      set (k' := IR.OfPHOAS.bounds_check _ _ _ _ _ _) in (value of k) at 1; vm_compute in k'; subst k'.
+      cbv beta iota zeta in k.
+      set (k' := Language.Compilers.ToString.int.of_zrange_relaxed _) in (value of k) at 1; vm_compute in k'; subst k'.
+      set (k' := Language.Compilers.ToString.int.of_zrange_relaxed _) in (value of k) at 1; vm_compute in k'; subst k'.
+      set (k' := IR.OfPHOAS.bounds_check _ _ _ _ _ _) in (value of k) at 1; vm_compute in k'; subst k'.
+      cbv beta iota zeta in k.
+      set (k' := IR.OfPHOAS.bounds_check _ _ _ _ _ _) in (value of k) at 1; vm_compute in k'; subst k'.
+      cbv beta iota zeta in k.
+      set (k' := IR.OfPHOAS.result_upcast _ _) in (value of k) at 1; vm_compute in k'; subst k'.
+      cbv beta iota zeta in k.
+      set (k' := IR.OfPHOAS.result_upcast _ _) in (value of k) at 1; vm_compute in k'; subst k'.
+      cbv beta iota zeta in k.
+      set (k' := IR.OfPHOAS.result_upcast _ _) in (value of k) at 1; vm_compute in k'; subst k'.
+      (*cbv
+      vm_compute in k.
+      vm_compute in k'.
+      vm_compute in k'.
+      cbv -[Language.Compilers.ToString.ToFunctionLines] in v.
+      clear v.
+      cbv [to_bytes] in k.
+      cbv [possible_values_of_machine_wordsize] in k.
+      cbv [possible_values_of_machine_wordsize_with_bytes] in k.
+      cbv [widen_bytes] in k.
+      cbv [widen_bytes_opt_instance_0] in k.
+      cbv [widen_carry] in k.
+      cbv [widen_carry_opt_instance_0] in k.
+      cbv [Pipeline.BoundsPipeline] in k.
+      cbv [Rewriter.Util.LetIn.Let_In] in k.
+      set (k' := GeneralizeVar.FromFlat _) in (value of k); vm_compute in k'; subst k'.
+      cbv [CheckedPartialEvaluateWithBounds] in k.
+      cbv [Rewriter.Util.LetIn.Let_In] in k.
+      set (k' := GeneralizeVar.FromFlat (GeneralizeVar.ToFlat _)) in (value of k).
+      vm_compute in k'.
+      subst k'.
+      set (k' := CheckCasts.GetUnsupportedCasts _) in (value of k).
+      vm_compute in k'.
+      subst k'.
+      cbv beta iota in k.
+      set (k' := ZRange.type.base.option.is_tighter_than _ _) in (value of k).
+      vm_compute in k'; subst k'.
+      cbv beta iota in k.
+      set (k' := ZRange.type.base.option.is_tighter_than _ _) in (value of k).
+      vm_compute in k'; subst k'.
+      cbv beta iota in k.
+      cbv [split_multiret_to] in k.
+      cbv [should_split_multiret] in k.
+      cbv [should_split_multiret_opt_instance_0] in k.
+      cbv [split_mul_to] in k.
+      cbv [should_split_mul] in k.
+      cbv [should_split_mul_opt_instance_0] in k.
+      cbv [only_signed_opt_instance_0] in k.
+      set (k' := GeneralizeVar.FromFlat (GeneralizeVar.ToFlat _)) in (value of k) at 2.
+      vm_compute in k'.
+      subst k'.
+      set (k' := GeneralizeVar.FromFlat (GeneralizeVar.ToFlat _)) in (value of k) at 1.
+      vm_compute in k'.
+      subst k'.
+      set (k' := PartialEvaluateWithBounds _ _ _ _) in (value of k).
+      vm_compute in k'.
+      subst k'.*)
+*)
+    Abort.
+  End __.
+End debugging_25519_to_bytes_bedrock2.
+
 Local Instance : should_split_multiret_opt := false.
 Local Instance : split_multiret_to_opt := None.
 
