@@ -836,3 +836,6 @@ printdeps::
 
 printreversedeps::
 	$(HIDE)$(foreach vo,$(filter %.vo,$(MAKECMDGOALS)),echo '$(vo): $(call vo_reverse_closure,$(VOFILES),$(vo))'; )
+
+etc/tscfreq: etc/tscfreq.c
+	$(CC) etc/tscfreq.c -s -Os -o etc/tscfreq
