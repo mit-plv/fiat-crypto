@@ -47,6 +47,9 @@ Module ZRange.
   Lemma union_comm r1 r2 : union r1 r2 = union r2 r1.
   Proof. t. Qed.
 
+  Lemma normalize_union_normalize r1 r2 : normalize (union (normalize r1) (normalize r2)) = union (normalize r1) (normalize r2).
+  Proof. t. Qed.
+
   Local Ltac t2_step :=
     first [ t_step
           | rewrite !Bool.andb_true_iff
@@ -216,4 +219,132 @@ Module ZRange.
 
   Lemma is_tighter_than_bool_union_r r1 r2 : is_tighter_than_bool r2 (union r1 r2).
   Proof. repeat t2_step. Qed.
+
+  Section goodb.
+    Local Open Scope Z_scope.
+    Local Open Scope zrange_scope.
+
+    Lemma goodb_constant v : goodb (constant v) = true.
+    Proof. repeat t2_step. Qed.
+
+    Lemma goodb_apply_to_range f r
+      : goodb (f (lower r)) = true -> goodb (f (upper r)) = true -> goodb (apply_to_range f r) = true.
+    Proof. repeat t2_step. Qed.
+
+    Lemma goodb_union r1 r2
+      : goodb r1 = true -> goodb r2 = true -> goodb (union r1 r2) = true.
+    Proof. repeat t2_step. Qed.
+
+    Lemma goodb_apply_to_split_range f r
+      : (lower r < 0 -> upper r <= -1 -> goodb (f r) = true)
+        -> (lower r < 0 -> -1 < upper r -> goodb (f r[lower r ~> -1]) = true)
+        -> (lower r <= 0 -> 0 <= upper r -> goodb (f r[0 ~> 0]) = true)
+        -> (lower r < 1 -> 0 < upper r -> goodb (f r[1 ~> upper r]) = true)
+        -> (1 <= lower r -> 0 < upper r -> goodb (f r) = true)
+        -> goodb r = true \/ goodb (f r) = true
+        -> goodb (apply_to_split_range f r) = true.
+    Proof.
+      cbv [apply_to_split_range split_range_at_0 lower upper orb andb]; break_innermost_match; Z.ltb_to_lt; intros.
+      all: repeat first [ assumption
+                        | match goal with
+                          | [ H : goodb r[?l ~> ?u] = true |- _ ]
+                            => let H' := fresh in
+                               assert (H' : u < l) by lia; exfalso; clear -H H'; cbv [goodb ZRange.lower ZRange.upper] in H
+                          end
+                        | lia
+                        | apply goodb_union
+                        | progress specialize_by lia
+                        | progress split_min_max
+                        | progress destruct_head'_or
+                        | progress Z.ltb_to_lt ].
+    Qed.
+
+    Local Ltac corners_t :=
+      repeat ((apply goodb_apply_to_split_range + apply goodb_apply_to_range + apply goodb_constant); intros);
+      try (constructor; solve [ corners_t ]).
+
+    Lemma goodb_two_corners f r : goodb (two_corners f r) = true.
+    Proof. corners_t. Qed.
+
+    Lemma goodb_four_corners f r1 r2 : goodb (four_corners f r1 r2) = true.
+    Proof. corners_t. Qed.
+
+    Lemma goodb_eight_corners f r1 r2 r3 : goodb (eight_corners f r1 r2 r3) = true.
+    Proof. corners_t. Qed.
+
+    Lemma goodb_two_corners_and_zero f r1 : goodb (two_corners_and_zero f r1) = true.
+    Proof. corners_t. Qed.
+
+    Lemma goodb_four_corners_and_zero f r1 r2 : goodb (four_corners_and_zero f r1 r2) = true.
+    Proof. corners_t. Qed.
+
+    Lemma goodb_eight_corners_and_zero f r1 r2 r3 : goodb (eight_corners_and_zero f r1 r2 r3) = true.
+    Proof. corners_t. Qed.
+
+    Lemma goodb_log2 r : goodb (ZRange.log2 r) = true.
+    Proof. apply goodb_two_corners. Qed.
+    Lemma goodb_log2_up r : goodb (ZRange.log2_up r) = true.
+    Proof. apply goodb_two_corners. Qed.
+    Lemma goodb_add r1 r2 : goodb (ZRange.add r1 r2) = true.
+    Proof. apply goodb_four_corners. Qed.
+    Lemma goodb_sub r1 r2 : goodb (ZRange.sub r1 r2) = true.
+    Proof. apply goodb_four_corners. Qed.
+    Lemma goodb_mul r1 r2 : goodb (ZRange.mul r1 r2) = true.
+    Proof. apply goodb_four_corners. Qed.
+    Lemma goodb_div r1 r2 : goodb (ZRange.div r1 r2) = true.
+    Proof. apply goodb_four_corners_and_zero. Qed.
+    Lemma goodb_shiftr r1 r2 : goodb (ZRange.shiftr r1 r2) = true.
+    Proof. apply goodb_four_corners_and_zero. Qed.
+    Lemma goodb_shiftl r1 r2 : goodb (ZRange.shiftl r1 r2) = true.
+    Proof. apply goodb_four_corners_and_zero. Qed.
+    Lemma goodb_land r1 r2 : goodb (ZRange.land r1 r2) = true.
+    Proof. apply goodb_four_corners_and_zero. Qed.
+    Lemma goodb_lor r1 r2 : goodb (ZRange.lor r1 r2) = true.
+    Proof. apply goodb_four_corners_and_zero. Qed.
+    Lemma goodb_cc_m s r : goodb (ZRange.cc_m s r) = true.
+    Proof. apply goodb_two_corners. Qed.
+  End goodb.
+
+  Section normalize.
+    Lemma normalize_two_corners f r : normalize (two_corners f r) = two_corners f r.
+    Proof. now rewrite (proj1 normalize_id_iff_goodb) by apply goodb_two_corners. Qed.
+
+    Lemma normalize_four_corners f r1 r2 : normalize (four_corners f r1 r2) = four_corners f r1 r2.
+    Proof. now rewrite (proj1 normalize_id_iff_goodb) by apply goodb_four_corners. Qed.
+
+    Lemma normalize_eight_corners f r1 r2 r3 : normalize (eight_corners f r1 r2 r3) = eight_corners f r1 r2 r3.
+    Proof. now rewrite (proj1 normalize_id_iff_goodb) by apply goodb_eight_corners. Qed.
+
+    Lemma normalize_two_corners_and_zero f r1 : normalize (two_corners_and_zero f r1) = two_corners_and_zero f r1.
+    Proof. now rewrite (proj1 normalize_id_iff_goodb) by apply goodb_two_corners_and_zero. Qed.
+
+    Lemma normalize_four_corners_and_zero f r1 r2 : normalize (four_corners_and_zero f r1 r2) = four_corners_and_zero f r1 r2.
+    Proof. now rewrite (proj1 normalize_id_iff_goodb) by apply goodb_four_corners_and_zero. Qed.
+
+    Lemma normalize_eight_corners_and_zero f r1 r2 r3 : normalize (eight_corners_and_zero f r1 r2 r3) = eight_corners_and_zero f r1 r2 r3.
+    Proof. now rewrite (proj1 normalize_id_iff_goodb) by apply goodb_eight_corners_and_zero. Qed.
+
+    Lemma normalize_log2 r : normalize (ZRange.log2 r) = ZRange.log2 r.
+    Proof. apply normalize_two_corners. Qed.
+    Lemma normalize_log2_up r : normalize (ZRange.log2_up r) = ZRange.log2_up r.
+    Proof. apply normalize_two_corners. Qed.
+    Lemma normalize_add r1 r2 : normalize (ZRange.add r1 r2) = ZRange.add r1 r2.
+    Proof. apply normalize_four_corners. Qed.
+    Lemma normalize_sub r1 r2 : normalize (ZRange.sub r1 r2) = ZRange.sub r1 r2.
+    Proof. apply normalize_four_corners. Qed.
+    Lemma normalize_mul r1 r2 : normalize (ZRange.mul r1 r2) = ZRange.mul r1 r2.
+    Proof. apply normalize_four_corners. Qed.
+    Lemma normalize_div r1 r2 : normalize (ZRange.div r1 r2) = ZRange.div r1 r2.
+    Proof. apply normalize_four_corners_and_zero. Qed.
+    Lemma normalize_shiftr r1 r2 : normalize (ZRange.shiftr r1 r2) = ZRange.shiftr r1 r2.
+    Proof. apply normalize_four_corners_and_zero. Qed.
+    Lemma normalize_shiftl r1 r2 : normalize (ZRange.shiftl r1 r2) = ZRange.shiftl r1 r2.
+    Proof. apply normalize_four_corners_and_zero. Qed.
+    Lemma normalize_land r1 r2 : normalize (ZRange.land r1 r2) = ZRange.land r1 r2.
+    Proof. apply normalize_four_corners_and_zero. Qed.
+    Lemma normalize_lor r1 r2 : normalize (ZRange.lor r1 r2) = ZRange.lor r1 r2.
+    Proof. apply normalize_four_corners_and_zero. Qed.
+    Lemma normalize_cc_m s r : normalize (ZRange.cc_m s r) = ZRange.cc_m s r.
+    Proof. apply normalize_two_corners. Qed.
+  End normalize.
 End ZRange.
