@@ -115,7 +115,7 @@ ifneq ($(filter pre-standalone,$(MAKECMDGOALS)),)
 PRE_STANDALONE_VOFILES := $(call vo_closure,$(PRE_STANDALONE_PRE_VOFILES))
 endif
 
-C_DIR :=
+C_DIR := fiat-c/src/
 RS_DIR := fiat-rust/src/
 GO_DIR := fiat-go/src/
 JAVA_DIR := fiat-java/src/
@@ -125,9 +125,9 @@ UNSATURATED_SOLINAS_BASE_FILES := curve25519_64 curve25519_32 p521_64 p448_solin
 WORD_BY_WORD_MONTGOMERY_BASE_FILES := p256_64 p256_32 p384_64 p384_32 secp256k1_64 secp256k1_32 p224_64 p224_32 p434_64 # p434_32
 ALL_BASE_FILES := $(UNSATURATED_SOLINAS_BASE_FILES) $(WORD_BY_WORD_MONTGOMERY_BASE_FILES)
 
-UNSATURATED_SOLINAS_C_FILES := $(patsubst %,%.c,$(UNSATURATED_SOLINAS_BASE_FILES))
-WORD_BY_WORD_MONTGOMERY_C_FILES := $(patsubst %,%.c,$(WORD_BY_WORD_MONTGOMERY_BASE_FILES))
-ALL_C_FILES := $(patsubst %,%.c,$(ALL_BASE_FILES))
+UNSATURATED_SOLINAS_C_FILES := $(patsubst %,$(C_DIR)%.c,$(UNSATURATED_SOLINAS_BASE_FILES))
+WORD_BY_WORD_MONTGOMERY_C_FILES := $(patsubst %,$(C_DIR)%.c,$(WORD_BY_WORD_MONTGOMERY_BASE_FILES))
+ALL_C_FILES := $(patsubst %,$(C_DIR)%.c,$(ALL_BASE_FILES))
 
 UNSATURATED_SOLINAS_RUST_FILES := $(patsubst %,$(RS_DIR)%.rs,$(UNSATURATED_SOLINAS_BASE_FILES))
 WORD_BY_WORD_MONTGOMERY_RUST_FILES := $(patsubst %,$(RS_DIR)%.rs,$(WORD_BY_WORD_MONTGOMERY_BASE_FILES))
@@ -369,70 +369,70 @@ $(UNSATURATED_SOLINAS_C_FILES): $(UNSATURATED_SOLINAS) # Makefile
 $(WORD_BY_WORD_MONTGOMERY_C_FILES): $(WORD_BY_WORD_MONTGOMERY) # Makefile
 
 # 2^255 - 19
-curve25519_64.c : curve25519_%.c :
+$(C_DIR)curve25519_64.c : $(C_DIR)curve25519_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
 	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --static '25519' '5' '2^255 - 19' '$*' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^255 - 19
-curve25519_32.c : curve25519_%.c :
+$(C_DIR)curve25519_32.c : $(C_DIR)curve25519_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
 	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --static '25519' '10' '2^255 - 19' '$*' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^521 - 1
-p521_64.c : p521_%.c :
+$(C_DIR)p521_64.c : $(C_DIR)p521_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
 	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --static 'p521' '9' '2^521 - 1' '$*' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 ## 2^224 - 2^96 + 1 ## does not bounds check
-#p224_solinas_64.c : p224_solinas_%.c :
+#$(C_DIR)p224_solinas_64.c : $(C_DIR)p224_solinas_%.c :
 #	$(SHOW)'SYNTHESIZE > $@'
 #	$(HIDE)rm -f $@.ok
 #	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --static 'p224' '4' '2^224 - 2^96 + 1' '$*' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
 #	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^448 - 2^224 - 1
-p448_solinas_64.c : p448_solinas_%.c :
+$(C_DIR)p448_solinas_64.c : $(C_DIR)p448_solinas_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
 	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --static 'p448' '8' '2^448 - 2^224 - 1' '$*' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^256 - 2^224 + 2^192 + 2^96 - 1
-p256_64.c p256_32.c : p256_%.c :
+$(C_DIR)p256_64.c $(C_DIR)p256_32.c : $(C_DIR)p256_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
 	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --static 'p256' '2^256 - 2^224 + 2^192 + 2^96 - 1' '$*' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^256 - 2^32 - 977
-secp256k1_64.c secp256k1_32.c : secp256k1_%.c :
+$(C_DIR)secp256k1_64.c $(C_DIR)secp256k1_32.c : $(C_DIR)secp256k1_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
 	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --static 'secp256k1' '2^256 - 2^32 - 977' '$*' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^384 - 2^128 - 2^96 + 2^32 - 1
-p384_64.c p384_32.c : p384_%.c :
+$(C_DIR)p384_64.c $(C_DIR)p384_32.c : $(C_DIR)p384_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
 	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --static 'p384' '2^384 - 2^128 - 2^96 + 2^32 - 1' '$*' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^224 - 2^96 + 1
-p224_64.c p224_32.c : p224_%.c :
+$(C_DIR)p224_64.c $(C_DIR)p224_32.c : $(C_DIR)p224_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
 	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --static 'p224' '2^224 - 2^96 + 1' '$*' && touch $@.ok) > $@.tmp
 	$(HIDE)rm $@.ok && mv $@.tmp $@
 
 # 2^216 * 3^137 - 1
-p434_64.c p434_32.c : p434_%.c :
+$(C_DIR)p434_64.c $(C_DIR)p434_32.c : $(C_DIR)p434_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
 	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --static 'p434' '2^216 * 3^137 - 1' '$*' && touch $@.ok) > $@.tmp
