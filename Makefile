@@ -167,9 +167,11 @@ OUTPUT_PREOUTS := \
 	Crypto.Fancy.Montgomery256.Prod.MontRed256 \
 	Crypto.Fancy.Montgomery256.prod_montred256_correct \
 	Crypto.Fancy.Montgomery256.prod_montred256_correct.Assumptions \
+	Crypto.Fancy.Montgomery256.montred256 \
 	Crypto.Fancy.Barrett256.Prod.MulMod \
 	Crypto.Fancy.Barrett256.prod_barrett_red256_correct \
-	Crypto.Fancy.Barrett256.prod_barrett_red256_correct.Assumptions
+	Crypto.Fancy.Barrett256.prod_barrett_red256_correct.Assumptions \
+	Crypto.Fancy.Barrett256.barrett_red256
 
 CHECK_OUTPUTS := $(addprefix check-,$(OUTPUT_PREOUTS))
 ACCEPT_OUTPUTS := $(addprefix accept-,$(OUTPUT_PREOUTS))

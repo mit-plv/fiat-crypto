@@ -253,6 +253,17 @@ Module Barrett256.
   Qed.
 End Barrett256.
 
+Section with_notations.
+  Import Crypto.Language.IdentifiersBasicGENERATED.Compilers.
+  Import Crypto.Util.ZRange.
+  Local Open Scope zrange_scope.
+  Local Open Scope Z_scope.
+  Local Open Scope expr_scope.
+  Local Notation uint256 := r[0 ~> 115792089237316195423570985008687907853269984665640564039457584007913129639935]%zrange.
+  Local Set Printing Width 500.
+  Redirect "Crypto.Fancy.Barrett256.barrett_red256" Print Barrett256.barrett_red256.
+End with_notations.
+
 Import Registers.
 
 (* Notations to make code more readable *)
