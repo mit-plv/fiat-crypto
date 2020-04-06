@@ -133,2444 +133,2407 @@ func fiat_p384_mul(out1 *[12]uint32, arg1 *[12]uint32, arg2 *[12]uint32) {
   var x57 uint32
   var x58 uint32
   x57, x58 = bits.Add32(x16, x13, x56)
-  var x59 uint32
-  x59, _ = bits.Add32(x14, uint32(0x0), x58)
+  var x59 uint32 = (x58 + x14)
+  var x60 uint32
   var x61 uint32
+  x60, x61 = bits.Mul32(x35, 0xffffffff)
   var x62 uint32
-  x61, x62 = bits.Mul32(x35, 0xffffffff)
   var x63 uint32
+  x62, x63 = bits.Mul32(x35, 0xffffffff)
   var x64 uint32
-  x63, x64 = bits.Mul32(x35, 0xffffffff)
   var x65 uint32
+  x64, x65 = bits.Mul32(x35, 0xffffffff)
   var x66 uint32
-  x65, x66 = bits.Mul32(x35, 0xffffffff)
   var x67 uint32
+  x66, x67 = bits.Mul32(x35, 0xffffffff)
   var x68 uint32
-  x67, x68 = bits.Mul32(x35, 0xffffffff)
   var x69 uint32
+  x68, x69 = bits.Mul32(x35, 0xffffffff)
   var x70 uint32
-  x69, x70 = bits.Mul32(x35, 0xffffffff)
   var x71 uint32
+  x70, x71 = bits.Mul32(x35, 0xffffffff)
   var x72 uint32
-  x71, x72 = bits.Mul32(x35, 0xffffffff)
   var x73 uint32
+  x72, x73 = bits.Mul32(x35, 0xffffffff)
   var x74 uint32
-  x73, x74 = bits.Mul32(x35, 0xffffffff)
   var x75 uint32
+  x74, x75 = bits.Mul32(x35, 0xfffffffe)
   var x76 uint32
-  x75, x76 = bits.Mul32(x35, 0xfffffffe)
   var x77 uint32
+  x76, x77 = bits.Mul32(x35, 0xffffffff)
   var x78 uint32
-  x77, x78 = bits.Mul32(x35, 0xffffffff)
   var x79 uint32
+  x78, x79 = bits.Mul32(x35, 0xffffffff)
   var x80 uint32
-  x79, x80 = bits.Mul32(x35, 0xffffffff)
   var x81 uint32
+  x80, x81 = bits.Add32(x77, x74, 0x0)
   var x82 uint32
-  x81, x82 = bits.Add32(x78, x75, 0x0)
   var x83 uint32
+  x82, x83 = bits.Add32(x75, x72, x81)
   var x84 uint32
-  x83, x84 = bits.Add32(x76, x73, x82)
   var x85 uint32
+  x84, x85 = bits.Add32(x73, x70, x83)
   var x86 uint32
-  x85, x86 = bits.Add32(x74, x71, x84)
   var x87 uint32
+  x86, x87 = bits.Add32(x71, x68, x85)
   var x88 uint32
-  x87, x88 = bits.Add32(x72, x69, x86)
   var x89 uint32
+  x88, x89 = bits.Add32(x69, x66, x87)
   var x90 uint32
-  x89, x90 = bits.Add32(x70, x67, x88)
   var x91 uint32
+  x90, x91 = bits.Add32(x67, x64, x89)
   var x92 uint32
-  x91, x92 = bits.Add32(x68, x65, x90)
   var x93 uint32
+  x92, x93 = bits.Add32(x65, x62, x91)
   var x94 uint32
-  x93, x94 = bits.Add32(x66, x63, x92)
   var x95 uint32
-  var x96 uint32
-  x95, x96 = bits.Add32(x64, x61, x94)
-  var x97 uint32
-  x97, _ = bits.Add32(x62, uint32(0x0), x96)
+  x94, x95 = bits.Add32(x63, x60, x93)
+  var x96 uint32 = (x95 + x61)
+  var x98 uint32
+  _, x98 = bits.Add32(x35, x78, 0x0)
+  var x99 uint32
   var x100 uint32
-  _, x100 = bits.Add32(x35, x79, 0x0)
+  x99, x100 = bits.Add32(x37, x79, x98)
   var x101 uint32
   var x102 uint32
-  x101, x102 = bits.Add32(x37, x80, x100)
+  x101, x102 = bits.Add32(x39, uint32(0x0), x100)
   var x103 uint32
   var x104 uint32
-  x103, x104 = bits.Add32(x39, uint32(0x0), x102)
+  x103, x104 = bits.Add32(x41, x76, x102)
   var x105 uint32
   var x106 uint32
-  x105, x106 = bits.Add32(x41, x77, x104)
+  x105, x106 = bits.Add32(x43, x80, x104)
   var x107 uint32
   var x108 uint32
-  x107, x108 = bits.Add32(x43, x81, x106)
+  x107, x108 = bits.Add32(x45, x82, x106)
   var x109 uint32
   var x110 uint32
-  x109, x110 = bits.Add32(x45, x83, x108)
+  x109, x110 = bits.Add32(x47, x84, x108)
   var x111 uint32
   var x112 uint32
-  x111, x112 = bits.Add32(x47, x85, x110)
+  x111, x112 = bits.Add32(x49, x86, x110)
   var x113 uint32
   var x114 uint32
-  x113, x114 = bits.Add32(x49, x87, x112)
+  x113, x114 = bits.Add32(x51, x88, x112)
   var x115 uint32
   var x116 uint32
-  x115, x116 = bits.Add32(x51, x89, x114)
+  x115, x116 = bits.Add32(x53, x90, x114)
   var x117 uint32
   var x118 uint32
-  x117, x118 = bits.Add32(x53, x91, x116)
+  x117, x118 = bits.Add32(x55, x92, x116)
   var x119 uint32
   var x120 uint32
-  x119, x120 = bits.Add32(x55, x93, x118)
+  x119, x120 = bits.Add32(x57, x94, x118)
   var x121 uint32
   var x122 uint32
-  x121, x122 = bits.Add32(x57, x95, x120)
+  x121, x122 = bits.Add32(x59, x96, x120)
   var x123 uint32
   var x124 uint32
-  x123, x124 = bits.Add32(x59, x97, x122)
+  x123, x124 = bits.Mul32(x1, (arg2[11]))
   var x125 uint32
-  x125, _ = bits.Add32(uint32(0x0), uint32(0x0), x124)
+  var x126 uint32
+  x125, x126 = bits.Mul32(x1, (arg2[10]))
   var x127 uint32
   var x128 uint32
-  x127, x128 = bits.Mul32(x1, (arg2[11]))
+  x127, x128 = bits.Mul32(x1, (arg2[9]))
   var x129 uint32
   var x130 uint32
-  x129, x130 = bits.Mul32(x1, (arg2[10]))
+  x129, x130 = bits.Mul32(x1, (arg2[8]))
   var x131 uint32
   var x132 uint32
-  x131, x132 = bits.Mul32(x1, (arg2[9]))
+  x131, x132 = bits.Mul32(x1, (arg2[7]))
   var x133 uint32
   var x134 uint32
-  x133, x134 = bits.Mul32(x1, (arg2[8]))
+  x133, x134 = bits.Mul32(x1, (arg2[6]))
   var x135 uint32
   var x136 uint32
-  x135, x136 = bits.Mul32(x1, (arg2[7]))
+  x135, x136 = bits.Mul32(x1, (arg2[5]))
   var x137 uint32
   var x138 uint32
-  x137, x138 = bits.Mul32(x1, (arg2[6]))
+  x137, x138 = bits.Mul32(x1, (arg2[4]))
   var x139 uint32
   var x140 uint32
-  x139, x140 = bits.Mul32(x1, (arg2[5]))
+  x139, x140 = bits.Mul32(x1, (arg2[3]))
   var x141 uint32
   var x142 uint32
-  x141, x142 = bits.Mul32(x1, (arg2[4]))
+  x141, x142 = bits.Mul32(x1, (arg2[2]))
   var x143 uint32
   var x144 uint32
-  x143, x144 = bits.Mul32(x1, (arg2[3]))
+  x143, x144 = bits.Mul32(x1, (arg2[1]))
   var x145 uint32
   var x146 uint32
-  x145, x146 = bits.Mul32(x1, (arg2[2]))
+  x145, x146 = bits.Mul32(x1, (arg2[0]))
   var x147 uint32
   var x148 uint32
-  x147, x148 = bits.Mul32(x1, (arg2[1]))
+  x147, x148 = bits.Add32(x146, x143, 0x0)
   var x149 uint32
   var x150 uint32
-  x149, x150 = bits.Mul32(x1, (arg2[0]))
+  x149, x150 = bits.Add32(x144, x141, x148)
   var x151 uint32
   var x152 uint32
-  x151, x152 = bits.Add32(x150, x147, 0x0)
+  x151, x152 = bits.Add32(x142, x139, x150)
   var x153 uint32
   var x154 uint32
-  x153, x154 = bits.Add32(x148, x145, x152)
+  x153, x154 = bits.Add32(x140, x137, x152)
   var x155 uint32
   var x156 uint32
-  x155, x156 = bits.Add32(x146, x143, x154)
+  x155, x156 = bits.Add32(x138, x135, x154)
   var x157 uint32
   var x158 uint32
-  x157, x158 = bits.Add32(x144, x141, x156)
+  x157, x158 = bits.Add32(x136, x133, x156)
   var x159 uint32
   var x160 uint32
-  x159, x160 = bits.Add32(x142, x139, x158)
+  x159, x160 = bits.Add32(x134, x131, x158)
   var x161 uint32
   var x162 uint32
-  x161, x162 = bits.Add32(x140, x137, x160)
+  x161, x162 = bits.Add32(x132, x129, x160)
   var x163 uint32
   var x164 uint32
-  x163, x164 = bits.Add32(x138, x135, x162)
+  x163, x164 = bits.Add32(x130, x127, x162)
   var x165 uint32
   var x166 uint32
-  x165, x166 = bits.Add32(x136, x133, x164)
+  x165, x166 = bits.Add32(x128, x125, x164)
   var x167 uint32
   var x168 uint32
-  x167, x168 = bits.Add32(x134, x131, x166)
-  var x169 uint32
+  x167, x168 = bits.Add32(x126, x123, x166)
+  var x169 uint32 = (x168 + x124)
   var x170 uint32
-  x169, x170 = bits.Add32(x132, x129, x168)
   var x171 uint32
+  x170, x171 = bits.Add32(x99, x145, 0x0)
   var x172 uint32
-  x171, x172 = bits.Add32(x130, x127, x170)
   var x173 uint32
-  x173, _ = bits.Add32(x128, uint32(0x0), x172)
+  x172, x173 = bits.Add32(x101, x147, x171)
+  var x174 uint32
   var x175 uint32
+  x174, x175 = bits.Add32(x103, x149, x173)
   var x176 uint32
-  x175, x176 = bits.Add32(x101, x149, 0x0)
   var x177 uint32
+  x176, x177 = bits.Add32(x105, x151, x175)
   var x178 uint32
-  x177, x178 = bits.Add32(x103, x151, x176)
   var x179 uint32
+  x178, x179 = bits.Add32(x107, x153, x177)
   var x180 uint32
-  x179, x180 = bits.Add32(x105, x153, x178)
   var x181 uint32
+  x180, x181 = bits.Add32(x109, x155, x179)
   var x182 uint32
-  x181, x182 = bits.Add32(x107, x155, x180)
   var x183 uint32
+  x182, x183 = bits.Add32(x111, x157, x181)
   var x184 uint32
-  x183, x184 = bits.Add32(x109, x157, x182)
   var x185 uint32
+  x184, x185 = bits.Add32(x113, x159, x183)
   var x186 uint32
-  x185, x186 = bits.Add32(x111, x159, x184)
   var x187 uint32
+  x186, x187 = bits.Add32(x115, x161, x185)
   var x188 uint32
-  x187, x188 = bits.Add32(x113, x161, x186)
   var x189 uint32
+  x188, x189 = bits.Add32(x117, x163, x187)
   var x190 uint32
-  x189, x190 = bits.Add32(x115, x163, x188)
   var x191 uint32
+  x190, x191 = bits.Add32(x119, x165, x189)
   var x192 uint32
-  x191, x192 = bits.Add32(x117, x165, x190)
   var x193 uint32
+  x192, x193 = bits.Add32(x121, x167, x191)
   var x194 uint32
-  x193, x194 = bits.Add32(x119, x167, x192)
   var x195 uint32
+  x194, x195 = bits.Add32(x122, x169, x193)
   var x196 uint32
-  x195, x196 = bits.Add32(x121, x169, x194)
   var x197 uint32
+  x196, x197 = bits.Mul32(x170, 0xffffffff)
   var x198 uint32
-  x197, x198 = bits.Add32(x123, x171, x196)
   var x199 uint32
+  x198, x199 = bits.Mul32(x170, 0xffffffff)
   var x200 uint32
-  x199, x200 = bits.Add32(x125, x173, x198)
   var x201 uint32
+  x200, x201 = bits.Mul32(x170, 0xffffffff)
   var x202 uint32
-  x201, x202 = bits.Mul32(x175, 0xffffffff)
   var x203 uint32
+  x202, x203 = bits.Mul32(x170, 0xffffffff)
   var x204 uint32
-  x203, x204 = bits.Mul32(x175, 0xffffffff)
   var x205 uint32
+  x204, x205 = bits.Mul32(x170, 0xffffffff)
   var x206 uint32
-  x205, x206 = bits.Mul32(x175, 0xffffffff)
   var x207 uint32
+  x206, x207 = bits.Mul32(x170, 0xffffffff)
   var x208 uint32
-  x207, x208 = bits.Mul32(x175, 0xffffffff)
   var x209 uint32
+  x208, x209 = bits.Mul32(x170, 0xffffffff)
   var x210 uint32
-  x209, x210 = bits.Mul32(x175, 0xffffffff)
   var x211 uint32
+  x210, x211 = bits.Mul32(x170, 0xfffffffe)
   var x212 uint32
-  x211, x212 = bits.Mul32(x175, 0xffffffff)
   var x213 uint32
+  x212, x213 = bits.Mul32(x170, 0xffffffff)
   var x214 uint32
-  x213, x214 = bits.Mul32(x175, 0xffffffff)
   var x215 uint32
+  x214, x215 = bits.Mul32(x170, 0xffffffff)
   var x216 uint32
-  x215, x216 = bits.Mul32(x175, 0xfffffffe)
   var x217 uint32
+  x216, x217 = bits.Add32(x213, x210, 0x0)
   var x218 uint32
-  x217, x218 = bits.Mul32(x175, 0xffffffff)
   var x219 uint32
+  x218, x219 = bits.Add32(x211, x208, x217)
   var x220 uint32
-  x219, x220 = bits.Mul32(x175, 0xffffffff)
   var x221 uint32
+  x220, x221 = bits.Add32(x209, x206, x219)
   var x222 uint32
-  x221, x222 = bits.Add32(x218, x215, 0x0)
   var x223 uint32
+  x222, x223 = bits.Add32(x207, x204, x221)
   var x224 uint32
-  x223, x224 = bits.Add32(x216, x213, x222)
   var x225 uint32
+  x224, x225 = bits.Add32(x205, x202, x223)
   var x226 uint32
-  x225, x226 = bits.Add32(x214, x211, x224)
   var x227 uint32
+  x226, x227 = bits.Add32(x203, x200, x225)
   var x228 uint32
-  x227, x228 = bits.Add32(x212, x209, x226)
   var x229 uint32
+  x228, x229 = bits.Add32(x201, x198, x227)
   var x230 uint32
-  x229, x230 = bits.Add32(x210, x207, x228)
   var x231 uint32
-  var x232 uint32
-  x231, x232 = bits.Add32(x208, x205, x230)
-  var x233 uint32
+  x230, x231 = bits.Add32(x199, x196, x229)
+  var x232 uint32 = (x231 + x197)
   var x234 uint32
-  x233, x234 = bits.Add32(x206, x203, x232)
+  _, x234 = bits.Add32(x170, x214, 0x0)
   var x235 uint32
   var x236 uint32
-  x235, x236 = bits.Add32(x204, x201, x234)
+  x235, x236 = bits.Add32(x172, x215, x234)
   var x237 uint32
-  x237, _ = bits.Add32(x202, uint32(0x0), x236)
+  var x238 uint32
+  x237, x238 = bits.Add32(x174, uint32(0x0), x236)
+  var x239 uint32
   var x240 uint32
-  _, x240 = bits.Add32(x175, x219, 0x0)
+  x239, x240 = bits.Add32(x176, x212, x238)
   var x241 uint32
   var x242 uint32
-  x241, x242 = bits.Add32(x177, x220, x240)
+  x241, x242 = bits.Add32(x178, x216, x240)
   var x243 uint32
   var x244 uint32
-  x243, x244 = bits.Add32(x179, uint32(0x0), x242)
+  x243, x244 = bits.Add32(x180, x218, x242)
   var x245 uint32
   var x246 uint32
-  x245, x246 = bits.Add32(x181, x217, x244)
+  x245, x246 = bits.Add32(x182, x220, x244)
   var x247 uint32
   var x248 uint32
-  x247, x248 = bits.Add32(x183, x221, x246)
+  x247, x248 = bits.Add32(x184, x222, x246)
   var x249 uint32
   var x250 uint32
-  x249, x250 = bits.Add32(x185, x223, x248)
+  x249, x250 = bits.Add32(x186, x224, x248)
   var x251 uint32
   var x252 uint32
-  x251, x252 = bits.Add32(x187, x225, x250)
+  x251, x252 = bits.Add32(x188, x226, x250)
   var x253 uint32
   var x254 uint32
-  x253, x254 = bits.Add32(x189, x227, x252)
+  x253, x254 = bits.Add32(x190, x228, x252)
   var x255 uint32
   var x256 uint32
-  x255, x256 = bits.Add32(x191, x229, x254)
+  x255, x256 = bits.Add32(x192, x230, x254)
   var x257 uint32
   var x258 uint32
-  x257, x258 = bits.Add32(x193, x231, x256)
-  var x259 uint32
+  x257, x258 = bits.Add32(x194, x232, x256)
+  var x259 uint32 = (x258 + x195)
   var x260 uint32
-  x259, x260 = bits.Add32(x195, x233, x258)
   var x261 uint32
+  x260, x261 = bits.Mul32(x2, (arg2[11]))
   var x262 uint32
-  x261, x262 = bits.Add32(x197, x235, x260)
   var x263 uint32
+  x262, x263 = bits.Mul32(x2, (arg2[10]))
   var x264 uint32
-  x263, x264 = bits.Add32(x199, x237, x262)
   var x265 uint32
-  x265, _ = bits.Add32(x200, uint32(0x0), x264)
+  x264, x265 = bits.Mul32(x2, (arg2[9]))
+  var x266 uint32
   var x267 uint32
+  x266, x267 = bits.Mul32(x2, (arg2[8]))
   var x268 uint32
-  x267, x268 = bits.Mul32(x2, (arg2[11]))
   var x269 uint32
+  x268, x269 = bits.Mul32(x2, (arg2[7]))
   var x270 uint32
-  x269, x270 = bits.Mul32(x2, (arg2[10]))
   var x271 uint32
+  x270, x271 = bits.Mul32(x2, (arg2[6]))
   var x272 uint32
-  x271, x272 = bits.Mul32(x2, (arg2[9]))
   var x273 uint32
+  x272, x273 = bits.Mul32(x2, (arg2[5]))
   var x274 uint32
-  x273, x274 = bits.Mul32(x2, (arg2[8]))
   var x275 uint32
+  x274, x275 = bits.Mul32(x2, (arg2[4]))
   var x276 uint32
-  x275, x276 = bits.Mul32(x2, (arg2[7]))
   var x277 uint32
+  x276, x277 = bits.Mul32(x2, (arg2[3]))
   var x278 uint32
-  x277, x278 = bits.Mul32(x2, (arg2[6]))
   var x279 uint32
+  x278, x279 = bits.Mul32(x2, (arg2[2]))
   var x280 uint32
-  x279, x280 = bits.Mul32(x2, (arg2[5]))
   var x281 uint32
+  x280, x281 = bits.Mul32(x2, (arg2[1]))
   var x282 uint32
-  x281, x282 = bits.Mul32(x2, (arg2[4]))
   var x283 uint32
+  x282, x283 = bits.Mul32(x2, (arg2[0]))
   var x284 uint32
-  x283, x284 = bits.Mul32(x2, (arg2[3]))
   var x285 uint32
+  x284, x285 = bits.Add32(x283, x280, 0x0)
   var x286 uint32
-  x285, x286 = bits.Mul32(x2, (arg2[2]))
   var x287 uint32
+  x286, x287 = bits.Add32(x281, x278, x285)
   var x288 uint32
-  x287, x288 = bits.Mul32(x2, (arg2[1]))
   var x289 uint32
+  x288, x289 = bits.Add32(x279, x276, x287)
   var x290 uint32
-  x289, x290 = bits.Mul32(x2, (arg2[0]))
   var x291 uint32
+  x290, x291 = bits.Add32(x277, x274, x289)
   var x292 uint32
-  x291, x292 = bits.Add32(x290, x287, 0x0)
   var x293 uint32
+  x292, x293 = bits.Add32(x275, x272, x291)
   var x294 uint32
-  x293, x294 = bits.Add32(x288, x285, x292)
   var x295 uint32
+  x294, x295 = bits.Add32(x273, x270, x293)
   var x296 uint32
-  x295, x296 = bits.Add32(x286, x283, x294)
   var x297 uint32
+  x296, x297 = bits.Add32(x271, x268, x295)
   var x298 uint32
-  x297, x298 = bits.Add32(x284, x281, x296)
   var x299 uint32
+  x298, x299 = bits.Add32(x269, x266, x297)
   var x300 uint32
-  x299, x300 = bits.Add32(x282, x279, x298)
   var x301 uint32
+  x300, x301 = bits.Add32(x267, x264, x299)
   var x302 uint32
-  x301, x302 = bits.Add32(x280, x277, x300)
   var x303 uint32
+  x302, x303 = bits.Add32(x265, x262, x301)
   var x304 uint32
-  x303, x304 = bits.Add32(x278, x275, x302)
   var x305 uint32
-  var x306 uint32
-  x305, x306 = bits.Add32(x276, x273, x304)
+  x304, x305 = bits.Add32(x263, x260, x303)
+  var x306 uint32 = (x305 + x261)
   var x307 uint32
   var x308 uint32
-  x307, x308 = bits.Add32(x274, x271, x306)
+  x307, x308 = bits.Add32(x235, x282, 0x0)
   var x309 uint32
   var x310 uint32
-  x309, x310 = bits.Add32(x272, x269, x308)
+  x309, x310 = bits.Add32(x237, x284, x308)
   var x311 uint32
   var x312 uint32
-  x311, x312 = bits.Add32(x270, x267, x310)
+  x311, x312 = bits.Add32(x239, x286, x310)
   var x313 uint32
-  x313, _ = bits.Add32(x268, uint32(0x0), x312)
+  var x314 uint32
+  x313, x314 = bits.Add32(x241, x288, x312)
   var x315 uint32
   var x316 uint32
-  x315, x316 = bits.Add32(x241, x289, 0x0)
+  x315, x316 = bits.Add32(x243, x290, x314)
   var x317 uint32
   var x318 uint32
-  x317, x318 = bits.Add32(x243, x291, x316)
+  x317, x318 = bits.Add32(x245, x292, x316)
   var x319 uint32
   var x320 uint32
-  x319, x320 = bits.Add32(x245, x293, x318)
+  x319, x320 = bits.Add32(x247, x294, x318)
   var x321 uint32
   var x322 uint32
-  x321, x322 = bits.Add32(x247, x295, x320)
+  x321, x322 = bits.Add32(x249, x296, x320)
   var x323 uint32
   var x324 uint32
-  x323, x324 = bits.Add32(x249, x297, x322)
+  x323, x324 = bits.Add32(x251, x298, x322)
   var x325 uint32
   var x326 uint32
-  x325, x326 = bits.Add32(x251, x299, x324)
+  x325, x326 = bits.Add32(x253, x300, x324)
   var x327 uint32
   var x328 uint32
-  x327, x328 = bits.Add32(x253, x301, x326)
+  x327, x328 = bits.Add32(x255, x302, x326)
   var x329 uint32
   var x330 uint32
-  x329, x330 = bits.Add32(x255, x303, x328)
+  x329, x330 = bits.Add32(x257, x304, x328)
   var x331 uint32
   var x332 uint32
-  x331, x332 = bits.Add32(x257, x305, x330)
+  x331, x332 = bits.Add32(x259, x306, x330)
   var x333 uint32
   var x334 uint32
-  x333, x334 = bits.Add32(x259, x307, x332)
+  x333, x334 = bits.Mul32(x307, 0xffffffff)
   var x335 uint32
   var x336 uint32
-  x335, x336 = bits.Add32(x261, x309, x334)
+  x335, x336 = bits.Mul32(x307, 0xffffffff)
   var x337 uint32
   var x338 uint32
-  x337, x338 = bits.Add32(x263, x311, x336)
+  x337, x338 = bits.Mul32(x307, 0xffffffff)
   var x339 uint32
   var x340 uint32
-  x339, x340 = bits.Add32(x265, x313, x338)
+  x339, x340 = bits.Mul32(x307, 0xffffffff)
   var x341 uint32
   var x342 uint32
-  x341, x342 = bits.Mul32(x315, 0xffffffff)
+  x341, x342 = bits.Mul32(x307, 0xffffffff)
   var x343 uint32
   var x344 uint32
-  x343, x344 = bits.Mul32(x315, 0xffffffff)
+  x343, x344 = bits.Mul32(x307, 0xffffffff)
   var x345 uint32
   var x346 uint32
-  x345, x346 = bits.Mul32(x315, 0xffffffff)
+  x345, x346 = bits.Mul32(x307, 0xffffffff)
   var x347 uint32
   var x348 uint32
-  x347, x348 = bits.Mul32(x315, 0xffffffff)
+  x347, x348 = bits.Mul32(x307, 0xfffffffe)
   var x349 uint32
   var x350 uint32
-  x349, x350 = bits.Mul32(x315, 0xffffffff)
+  x349, x350 = bits.Mul32(x307, 0xffffffff)
   var x351 uint32
   var x352 uint32
-  x351, x352 = bits.Mul32(x315, 0xffffffff)
+  x351, x352 = bits.Mul32(x307, 0xffffffff)
   var x353 uint32
   var x354 uint32
-  x353, x354 = bits.Mul32(x315, 0xffffffff)
+  x353, x354 = bits.Add32(x350, x347, 0x0)
   var x355 uint32
   var x356 uint32
-  x355, x356 = bits.Mul32(x315, 0xfffffffe)
+  x355, x356 = bits.Add32(x348, x345, x354)
   var x357 uint32
   var x358 uint32
-  x357, x358 = bits.Mul32(x315, 0xffffffff)
+  x357, x358 = bits.Add32(x346, x343, x356)
   var x359 uint32
   var x360 uint32
-  x359, x360 = bits.Mul32(x315, 0xffffffff)
+  x359, x360 = bits.Add32(x344, x341, x358)
   var x361 uint32
   var x362 uint32
-  x361, x362 = bits.Add32(x358, x355, 0x0)
+  x361, x362 = bits.Add32(x342, x339, x360)
   var x363 uint32
   var x364 uint32
-  x363, x364 = bits.Add32(x356, x353, x362)
+  x363, x364 = bits.Add32(x340, x337, x362)
   var x365 uint32
   var x366 uint32
-  x365, x366 = bits.Add32(x354, x351, x364)
+  x365, x366 = bits.Add32(x338, x335, x364)
   var x367 uint32
   var x368 uint32
-  x367, x368 = bits.Add32(x352, x349, x366)
-  var x369 uint32
-  var x370 uint32
-  x369, x370 = bits.Add32(x350, x347, x368)
+  x367, x368 = bits.Add32(x336, x333, x366)
+  var x369 uint32 = (x368 + x334)
   var x371 uint32
+  _, x371 = bits.Add32(x307, x351, 0x0)
   var x372 uint32
-  x371, x372 = bits.Add32(x348, x345, x370)
   var x373 uint32
+  x372, x373 = bits.Add32(x309, x352, x371)
   var x374 uint32
-  x373, x374 = bits.Add32(x346, x343, x372)
   var x375 uint32
+  x374, x375 = bits.Add32(x311, uint32(0x0), x373)
   var x376 uint32
-  x375, x376 = bits.Add32(x344, x341, x374)
   var x377 uint32
-  x377, _ = bits.Add32(x342, uint32(0x0), x376)
+  x376, x377 = bits.Add32(x313, x349, x375)
+  var x378 uint32
+  var x379 uint32
+  x378, x379 = bits.Add32(x315, x353, x377)
   var x380 uint32
-  _, x380 = bits.Add32(x315, x359, 0x0)
   var x381 uint32
+  x380, x381 = bits.Add32(x317, x355, x379)
   var x382 uint32
-  x381, x382 = bits.Add32(x317, x360, x380)
   var x383 uint32
+  x382, x383 = bits.Add32(x319, x357, x381)
   var x384 uint32
-  x383, x384 = bits.Add32(x319, uint32(0x0), x382)
   var x385 uint32
+  x384, x385 = bits.Add32(x321, x359, x383)
   var x386 uint32
-  x385, x386 = bits.Add32(x321, x357, x384)
   var x387 uint32
+  x386, x387 = bits.Add32(x323, x361, x385)
   var x388 uint32
-  x387, x388 = bits.Add32(x323, x361, x386)
   var x389 uint32
+  x388, x389 = bits.Add32(x325, x363, x387)
   var x390 uint32
-  x389, x390 = bits.Add32(x325, x363, x388)
   var x391 uint32
+  x390, x391 = bits.Add32(x327, x365, x389)
   var x392 uint32
-  x391, x392 = bits.Add32(x327, x365, x390)
   var x393 uint32
+  x392, x393 = bits.Add32(x329, x367, x391)
   var x394 uint32
-  x393, x394 = bits.Add32(x329, x367, x392)
   var x395 uint32
-  var x396 uint32
-  x395, x396 = bits.Add32(x331, x369, x394)
+  x394, x395 = bits.Add32(x331, x369, x393)
+  var x396 uint32 = (x395 + x332)
   var x397 uint32
   var x398 uint32
-  x397, x398 = bits.Add32(x333, x371, x396)
+  x397, x398 = bits.Mul32(x3, (arg2[11]))
   var x399 uint32
   var x400 uint32
-  x399, x400 = bits.Add32(x335, x373, x398)
+  x399, x400 = bits.Mul32(x3, (arg2[10]))
   var x401 uint32
   var x402 uint32
-  x401, x402 = bits.Add32(x337, x375, x400)
+  x401, x402 = bits.Mul32(x3, (arg2[9]))
   var x403 uint32
   var x404 uint32
-  x403, x404 = bits.Add32(x339, x377, x402)
+  x403, x404 = bits.Mul32(x3, (arg2[8]))
   var x405 uint32
-  x405, _ = bits.Add32(x340, uint32(0x0), x404)
+  var x406 uint32
+  x405, x406 = bits.Mul32(x3, (arg2[7]))
   var x407 uint32
   var x408 uint32
-  x407, x408 = bits.Mul32(x3, (arg2[11]))
+  x407, x408 = bits.Mul32(x3, (arg2[6]))
   var x409 uint32
   var x410 uint32
-  x409, x410 = bits.Mul32(x3, (arg2[10]))
+  x409, x410 = bits.Mul32(x3, (arg2[5]))
   var x411 uint32
   var x412 uint32
-  x411, x412 = bits.Mul32(x3, (arg2[9]))
+  x411, x412 = bits.Mul32(x3, (arg2[4]))
   var x413 uint32
   var x414 uint32
-  x413, x414 = bits.Mul32(x3, (arg2[8]))
+  x413, x414 = bits.Mul32(x3, (arg2[3]))
   var x415 uint32
   var x416 uint32
-  x415, x416 = bits.Mul32(x3, (arg2[7]))
+  x415, x416 = bits.Mul32(x3, (arg2[2]))
   var x417 uint32
   var x418 uint32
-  x417, x418 = bits.Mul32(x3, (arg2[6]))
+  x417, x418 = bits.Mul32(x3, (arg2[1]))
   var x419 uint32
   var x420 uint32
-  x419, x420 = bits.Mul32(x3, (arg2[5]))
+  x419, x420 = bits.Mul32(x3, (arg2[0]))
   var x421 uint32
   var x422 uint32
-  x421, x422 = bits.Mul32(x3, (arg2[4]))
+  x421, x422 = bits.Add32(x420, x417, 0x0)
   var x423 uint32
   var x424 uint32
-  x423, x424 = bits.Mul32(x3, (arg2[3]))
+  x423, x424 = bits.Add32(x418, x415, x422)
   var x425 uint32
   var x426 uint32
-  x425, x426 = bits.Mul32(x3, (arg2[2]))
+  x425, x426 = bits.Add32(x416, x413, x424)
   var x427 uint32
   var x428 uint32
-  x427, x428 = bits.Mul32(x3, (arg2[1]))
+  x427, x428 = bits.Add32(x414, x411, x426)
   var x429 uint32
   var x430 uint32
-  x429, x430 = bits.Mul32(x3, (arg2[0]))
+  x429, x430 = bits.Add32(x412, x409, x428)
   var x431 uint32
   var x432 uint32
-  x431, x432 = bits.Add32(x430, x427, 0x0)
+  x431, x432 = bits.Add32(x410, x407, x430)
   var x433 uint32
   var x434 uint32
-  x433, x434 = bits.Add32(x428, x425, x432)
+  x433, x434 = bits.Add32(x408, x405, x432)
   var x435 uint32
   var x436 uint32
-  x435, x436 = bits.Add32(x426, x423, x434)
+  x435, x436 = bits.Add32(x406, x403, x434)
   var x437 uint32
   var x438 uint32
-  x437, x438 = bits.Add32(x424, x421, x436)
+  x437, x438 = bits.Add32(x404, x401, x436)
   var x439 uint32
   var x440 uint32
-  x439, x440 = bits.Add32(x422, x419, x438)
+  x439, x440 = bits.Add32(x402, x399, x438)
   var x441 uint32
   var x442 uint32
-  x441, x442 = bits.Add32(x420, x417, x440)
-  var x443 uint32
+  x441, x442 = bits.Add32(x400, x397, x440)
+  var x443 uint32 = (x442 + x398)
   var x444 uint32
-  x443, x444 = bits.Add32(x418, x415, x442)
   var x445 uint32
+  x444, x445 = bits.Add32(x372, x419, 0x0)
   var x446 uint32
-  x445, x446 = bits.Add32(x416, x413, x444)
   var x447 uint32
+  x446, x447 = bits.Add32(x374, x421, x445)
   var x448 uint32
-  x447, x448 = bits.Add32(x414, x411, x446)
   var x449 uint32
+  x448, x449 = bits.Add32(x376, x423, x447)
   var x450 uint32
-  x449, x450 = bits.Add32(x412, x409, x448)
   var x451 uint32
+  x450, x451 = bits.Add32(x378, x425, x449)
   var x452 uint32
-  x451, x452 = bits.Add32(x410, x407, x450)
   var x453 uint32
-  x453, _ = bits.Add32(x408, uint32(0x0), x452)
+  x452, x453 = bits.Add32(x380, x427, x451)
+  var x454 uint32
   var x455 uint32
+  x454, x455 = bits.Add32(x382, x429, x453)
   var x456 uint32
-  x455, x456 = bits.Add32(x381, x429, 0x0)
   var x457 uint32
+  x456, x457 = bits.Add32(x384, x431, x455)
   var x458 uint32
-  x457, x458 = bits.Add32(x383, x431, x456)
   var x459 uint32
+  x458, x459 = bits.Add32(x386, x433, x457)
   var x460 uint32
-  x459, x460 = bits.Add32(x385, x433, x458)
   var x461 uint32
+  x460, x461 = bits.Add32(x388, x435, x459)
   var x462 uint32
-  x461, x462 = bits.Add32(x387, x435, x460)
   var x463 uint32
+  x462, x463 = bits.Add32(x390, x437, x461)
   var x464 uint32
-  x463, x464 = bits.Add32(x389, x437, x462)
   var x465 uint32
+  x464, x465 = bits.Add32(x392, x439, x463)
   var x466 uint32
-  x465, x466 = bits.Add32(x391, x439, x464)
   var x467 uint32
+  x466, x467 = bits.Add32(x394, x441, x465)
   var x468 uint32
-  x467, x468 = bits.Add32(x393, x441, x466)
   var x469 uint32
+  x468, x469 = bits.Add32(x396, x443, x467)
   var x470 uint32
-  x469, x470 = bits.Add32(x395, x443, x468)
   var x471 uint32
+  x470, x471 = bits.Mul32(x444, 0xffffffff)
   var x472 uint32
-  x471, x472 = bits.Add32(x397, x445, x470)
   var x473 uint32
+  x472, x473 = bits.Mul32(x444, 0xffffffff)
   var x474 uint32
-  x473, x474 = bits.Add32(x399, x447, x472)
   var x475 uint32
+  x474, x475 = bits.Mul32(x444, 0xffffffff)
   var x476 uint32
-  x475, x476 = bits.Add32(x401, x449, x474)
   var x477 uint32
+  x476, x477 = bits.Mul32(x444, 0xffffffff)
   var x478 uint32
-  x477, x478 = bits.Add32(x403, x451, x476)
   var x479 uint32
+  x478, x479 = bits.Mul32(x444, 0xffffffff)
   var x480 uint32
-  x479, x480 = bits.Add32(x405, x453, x478)
   var x481 uint32
+  x480, x481 = bits.Mul32(x444, 0xffffffff)
   var x482 uint32
-  x481, x482 = bits.Mul32(x455, 0xffffffff)
   var x483 uint32
+  x482, x483 = bits.Mul32(x444, 0xffffffff)
   var x484 uint32
-  x483, x484 = bits.Mul32(x455, 0xffffffff)
   var x485 uint32
+  x484, x485 = bits.Mul32(x444, 0xfffffffe)
   var x486 uint32
-  x485, x486 = bits.Mul32(x455, 0xffffffff)
   var x487 uint32
+  x486, x487 = bits.Mul32(x444, 0xffffffff)
   var x488 uint32
-  x487, x488 = bits.Mul32(x455, 0xffffffff)
   var x489 uint32
+  x488, x489 = bits.Mul32(x444, 0xffffffff)
   var x490 uint32
-  x489, x490 = bits.Mul32(x455, 0xffffffff)
   var x491 uint32
+  x490, x491 = bits.Add32(x487, x484, 0x0)
   var x492 uint32
-  x491, x492 = bits.Mul32(x455, 0xffffffff)
   var x493 uint32
+  x492, x493 = bits.Add32(x485, x482, x491)
   var x494 uint32
-  x493, x494 = bits.Mul32(x455, 0xffffffff)
   var x495 uint32
+  x494, x495 = bits.Add32(x483, x480, x493)
   var x496 uint32
-  x495, x496 = bits.Mul32(x455, 0xfffffffe)
   var x497 uint32
+  x496, x497 = bits.Add32(x481, x478, x495)
   var x498 uint32
-  x497, x498 = bits.Mul32(x455, 0xffffffff)
   var x499 uint32
+  x498, x499 = bits.Add32(x479, x476, x497)
   var x500 uint32
-  x499, x500 = bits.Mul32(x455, 0xffffffff)
   var x501 uint32
+  x500, x501 = bits.Add32(x477, x474, x499)
   var x502 uint32
-  x501, x502 = bits.Add32(x498, x495, 0x0)
   var x503 uint32
+  x502, x503 = bits.Add32(x475, x472, x501)
   var x504 uint32
-  x503, x504 = bits.Add32(x496, x493, x502)
   var x505 uint32
-  var x506 uint32
-  x505, x506 = bits.Add32(x494, x491, x504)
-  var x507 uint32
+  x504, x505 = bits.Add32(x473, x470, x503)
+  var x506 uint32 = (x505 + x471)
   var x508 uint32
-  x507, x508 = bits.Add32(x492, x489, x506)
+  _, x508 = bits.Add32(x444, x488, 0x0)
   var x509 uint32
   var x510 uint32
-  x509, x510 = bits.Add32(x490, x487, x508)
+  x509, x510 = bits.Add32(x446, x489, x508)
   var x511 uint32
   var x512 uint32
-  x511, x512 = bits.Add32(x488, x485, x510)
+  x511, x512 = bits.Add32(x448, uint32(0x0), x510)
   var x513 uint32
   var x514 uint32
-  x513, x514 = bits.Add32(x486, x483, x512)
+  x513, x514 = bits.Add32(x450, x486, x512)
   var x515 uint32
   var x516 uint32
-  x515, x516 = bits.Add32(x484, x481, x514)
+  x515, x516 = bits.Add32(x452, x490, x514)
   var x517 uint32
-  x517, _ = bits.Add32(x482, uint32(0x0), x516)
+  var x518 uint32
+  x517, x518 = bits.Add32(x454, x492, x516)
+  var x519 uint32
   var x520 uint32
-  _, x520 = bits.Add32(x455, x499, 0x0)
+  x519, x520 = bits.Add32(x456, x494, x518)
   var x521 uint32
   var x522 uint32
-  x521, x522 = bits.Add32(x457, x500, x520)
+  x521, x522 = bits.Add32(x458, x496, x520)
   var x523 uint32
   var x524 uint32
-  x523, x524 = bits.Add32(x459, uint32(0x0), x522)
+  x523, x524 = bits.Add32(x460, x498, x522)
   var x525 uint32
   var x526 uint32
-  x525, x526 = bits.Add32(x461, x497, x524)
+  x525, x526 = bits.Add32(x462, x500, x524)
   var x527 uint32
   var x528 uint32
-  x527, x528 = bits.Add32(x463, x501, x526)
+  x527, x528 = bits.Add32(x464, x502, x526)
   var x529 uint32
   var x530 uint32
-  x529, x530 = bits.Add32(x465, x503, x528)
+  x529, x530 = bits.Add32(x466, x504, x528)
   var x531 uint32
   var x532 uint32
-  x531, x532 = bits.Add32(x467, x505, x530)
-  var x533 uint32
+  x531, x532 = bits.Add32(x468, x506, x530)
+  var x533 uint32 = (x532 + x469)
   var x534 uint32
-  x533, x534 = bits.Add32(x469, x507, x532)
   var x535 uint32
+  x534, x535 = bits.Mul32(x4, (arg2[11]))
   var x536 uint32
-  x535, x536 = bits.Add32(x471, x509, x534)
   var x537 uint32
+  x536, x537 = bits.Mul32(x4, (arg2[10]))
   var x538 uint32
-  x537, x538 = bits.Add32(x473, x511, x536)
   var x539 uint32
+  x538, x539 = bits.Mul32(x4, (arg2[9]))
   var x540 uint32
-  x539, x540 = bits.Add32(x475, x513, x538)
   var x541 uint32
+  x540, x541 = bits.Mul32(x4, (arg2[8]))
   var x542 uint32
-  x541, x542 = bits.Add32(x477, x515, x540)
   var x543 uint32
+  x542, x543 = bits.Mul32(x4, (arg2[7]))
   var x544 uint32
-  x543, x544 = bits.Add32(x479, x517, x542)
   var x545 uint32
-  x545, _ = bits.Add32(x480, uint32(0x0), x544)
+  x544, x545 = bits.Mul32(x4, (arg2[6]))
+  var x546 uint32
   var x547 uint32
+  x546, x547 = bits.Mul32(x4, (arg2[5]))
   var x548 uint32
-  x547, x548 = bits.Mul32(x4, (arg2[11]))
   var x549 uint32
+  x548, x549 = bits.Mul32(x4, (arg2[4]))
   var x550 uint32
-  x549, x550 = bits.Mul32(x4, (arg2[10]))
   var x551 uint32
+  x550, x551 = bits.Mul32(x4, (arg2[3]))
   var x552 uint32
-  x551, x552 = bits.Mul32(x4, (arg2[9]))
   var x553 uint32
+  x552, x553 = bits.Mul32(x4, (arg2[2]))
   var x554 uint32
-  x553, x554 = bits.Mul32(x4, (arg2[8]))
   var x555 uint32
+  x554, x555 = bits.Mul32(x4, (arg2[1]))
   var x556 uint32
-  x555, x556 = bits.Mul32(x4, (arg2[7]))
   var x557 uint32
+  x556, x557 = bits.Mul32(x4, (arg2[0]))
   var x558 uint32
-  x557, x558 = bits.Mul32(x4, (arg2[6]))
   var x559 uint32
+  x558, x559 = bits.Add32(x557, x554, 0x0)
   var x560 uint32
-  x559, x560 = bits.Mul32(x4, (arg2[5]))
   var x561 uint32
+  x560, x561 = bits.Add32(x555, x552, x559)
   var x562 uint32
-  x561, x562 = bits.Mul32(x4, (arg2[4]))
   var x563 uint32
+  x562, x563 = bits.Add32(x553, x550, x561)
   var x564 uint32
-  x563, x564 = bits.Mul32(x4, (arg2[3]))
   var x565 uint32
+  x564, x565 = bits.Add32(x551, x548, x563)
   var x566 uint32
-  x565, x566 = bits.Mul32(x4, (arg2[2]))
   var x567 uint32
+  x566, x567 = bits.Add32(x549, x546, x565)
   var x568 uint32
-  x567, x568 = bits.Mul32(x4, (arg2[1]))
   var x569 uint32
+  x568, x569 = bits.Add32(x547, x544, x567)
   var x570 uint32
-  x569, x570 = bits.Mul32(x4, (arg2[0]))
   var x571 uint32
+  x570, x571 = bits.Add32(x545, x542, x569)
   var x572 uint32
-  x571, x572 = bits.Add32(x570, x567, 0x0)
   var x573 uint32
+  x572, x573 = bits.Add32(x543, x540, x571)
   var x574 uint32
-  x573, x574 = bits.Add32(x568, x565, x572)
   var x575 uint32
+  x574, x575 = bits.Add32(x541, x538, x573)
   var x576 uint32
-  x575, x576 = bits.Add32(x566, x563, x574)
   var x577 uint32
+  x576, x577 = bits.Add32(x539, x536, x575)
   var x578 uint32
-  x577, x578 = bits.Add32(x564, x561, x576)
   var x579 uint32
-  var x580 uint32
-  x579, x580 = bits.Add32(x562, x559, x578)
+  x578, x579 = bits.Add32(x537, x534, x577)
+  var x580 uint32 = (x579 + x535)
   var x581 uint32
   var x582 uint32
-  x581, x582 = bits.Add32(x560, x557, x580)
+  x581, x582 = bits.Add32(x509, x556, 0x0)
   var x583 uint32
   var x584 uint32
-  x583, x584 = bits.Add32(x558, x555, x582)
+  x583, x584 = bits.Add32(x511, x558, x582)
   var x585 uint32
   var x586 uint32
-  x585, x586 = bits.Add32(x556, x553, x584)
+  x585, x586 = bits.Add32(x513, x560, x584)
   var x587 uint32
   var x588 uint32
-  x587, x588 = bits.Add32(x554, x551, x586)
+  x587, x588 = bits.Add32(x515, x562, x586)
   var x589 uint32
   var x590 uint32
-  x589, x590 = bits.Add32(x552, x549, x588)
+  x589, x590 = bits.Add32(x517, x564, x588)
   var x591 uint32
   var x592 uint32
-  x591, x592 = bits.Add32(x550, x547, x590)
+  x591, x592 = bits.Add32(x519, x566, x590)
   var x593 uint32
-  x593, _ = bits.Add32(x548, uint32(0x0), x592)
+  var x594 uint32
+  x593, x594 = bits.Add32(x521, x568, x592)
   var x595 uint32
   var x596 uint32
-  x595, x596 = bits.Add32(x521, x569, 0x0)
+  x595, x596 = bits.Add32(x523, x570, x594)
   var x597 uint32
   var x598 uint32
-  x597, x598 = bits.Add32(x523, x571, x596)
+  x597, x598 = bits.Add32(x525, x572, x596)
   var x599 uint32
   var x600 uint32
-  x599, x600 = bits.Add32(x525, x573, x598)
+  x599, x600 = bits.Add32(x527, x574, x598)
   var x601 uint32
   var x602 uint32
-  x601, x602 = bits.Add32(x527, x575, x600)
+  x601, x602 = bits.Add32(x529, x576, x600)
   var x603 uint32
   var x604 uint32
-  x603, x604 = bits.Add32(x529, x577, x602)
+  x603, x604 = bits.Add32(x531, x578, x602)
   var x605 uint32
   var x606 uint32
-  x605, x606 = bits.Add32(x531, x579, x604)
+  x605, x606 = bits.Add32(x533, x580, x604)
   var x607 uint32
   var x608 uint32
-  x607, x608 = bits.Add32(x533, x581, x606)
+  x607, x608 = bits.Mul32(x581, 0xffffffff)
   var x609 uint32
   var x610 uint32
-  x609, x610 = bits.Add32(x535, x583, x608)
+  x609, x610 = bits.Mul32(x581, 0xffffffff)
   var x611 uint32
   var x612 uint32
-  x611, x612 = bits.Add32(x537, x585, x610)
+  x611, x612 = bits.Mul32(x581, 0xffffffff)
   var x613 uint32
   var x614 uint32
-  x613, x614 = bits.Add32(x539, x587, x612)
+  x613, x614 = bits.Mul32(x581, 0xffffffff)
   var x615 uint32
   var x616 uint32
-  x615, x616 = bits.Add32(x541, x589, x614)
+  x615, x616 = bits.Mul32(x581, 0xffffffff)
   var x617 uint32
   var x618 uint32
-  x617, x618 = bits.Add32(x543, x591, x616)
+  x617, x618 = bits.Mul32(x581, 0xffffffff)
   var x619 uint32
   var x620 uint32
-  x619, x620 = bits.Add32(x545, x593, x618)
+  x619, x620 = bits.Mul32(x581, 0xffffffff)
   var x621 uint32
   var x622 uint32
-  x621, x622 = bits.Mul32(x595, 0xffffffff)
+  x621, x622 = bits.Mul32(x581, 0xfffffffe)
   var x623 uint32
   var x624 uint32
-  x623, x624 = bits.Mul32(x595, 0xffffffff)
+  x623, x624 = bits.Mul32(x581, 0xffffffff)
   var x625 uint32
   var x626 uint32
-  x625, x626 = bits.Mul32(x595, 0xffffffff)
+  x625, x626 = bits.Mul32(x581, 0xffffffff)
   var x627 uint32
   var x628 uint32
-  x627, x628 = bits.Mul32(x595, 0xffffffff)
+  x627, x628 = bits.Add32(x624, x621, 0x0)
   var x629 uint32
   var x630 uint32
-  x629, x630 = bits.Mul32(x595, 0xffffffff)
+  x629, x630 = bits.Add32(x622, x619, x628)
   var x631 uint32
   var x632 uint32
-  x631, x632 = bits.Mul32(x595, 0xffffffff)
+  x631, x632 = bits.Add32(x620, x617, x630)
   var x633 uint32
   var x634 uint32
-  x633, x634 = bits.Mul32(x595, 0xffffffff)
+  x633, x634 = bits.Add32(x618, x615, x632)
   var x635 uint32
   var x636 uint32
-  x635, x636 = bits.Mul32(x595, 0xfffffffe)
+  x635, x636 = bits.Add32(x616, x613, x634)
   var x637 uint32
   var x638 uint32
-  x637, x638 = bits.Mul32(x595, 0xffffffff)
+  x637, x638 = bits.Add32(x614, x611, x636)
   var x639 uint32
   var x640 uint32
-  x639, x640 = bits.Mul32(x595, 0xffffffff)
+  x639, x640 = bits.Add32(x612, x609, x638)
   var x641 uint32
   var x642 uint32
-  x641, x642 = bits.Add32(x638, x635, 0x0)
-  var x643 uint32
-  var x644 uint32
-  x643, x644 = bits.Add32(x636, x633, x642)
+  x641, x642 = bits.Add32(x610, x607, x640)
+  var x643 uint32 = (x642 + x608)
   var x645 uint32
+  _, x645 = bits.Add32(x581, x625, 0x0)
   var x646 uint32
-  x645, x646 = bits.Add32(x634, x631, x644)
   var x647 uint32
+  x646, x647 = bits.Add32(x583, x626, x645)
   var x648 uint32
-  x647, x648 = bits.Add32(x632, x629, x646)
   var x649 uint32
+  x648, x649 = bits.Add32(x585, uint32(0x0), x647)
   var x650 uint32
-  x649, x650 = bits.Add32(x630, x627, x648)
   var x651 uint32
+  x650, x651 = bits.Add32(x587, x623, x649)
   var x652 uint32
-  x651, x652 = bits.Add32(x628, x625, x650)
   var x653 uint32
+  x652, x653 = bits.Add32(x589, x627, x651)
   var x654 uint32
-  x653, x654 = bits.Add32(x626, x623, x652)
   var x655 uint32
+  x654, x655 = bits.Add32(x591, x629, x653)
   var x656 uint32
-  x655, x656 = bits.Add32(x624, x621, x654)
   var x657 uint32
-  x657, _ = bits.Add32(x622, uint32(0x0), x656)
+  x656, x657 = bits.Add32(x593, x631, x655)
+  var x658 uint32
+  var x659 uint32
+  x658, x659 = bits.Add32(x595, x633, x657)
   var x660 uint32
-  _, x660 = bits.Add32(x595, x639, 0x0)
   var x661 uint32
+  x660, x661 = bits.Add32(x597, x635, x659)
   var x662 uint32
-  x661, x662 = bits.Add32(x597, x640, x660)
   var x663 uint32
+  x662, x663 = bits.Add32(x599, x637, x661)
   var x664 uint32
-  x663, x664 = bits.Add32(x599, uint32(0x0), x662)
   var x665 uint32
+  x664, x665 = bits.Add32(x601, x639, x663)
   var x666 uint32
-  x665, x666 = bits.Add32(x601, x637, x664)
   var x667 uint32
+  x666, x667 = bits.Add32(x603, x641, x665)
   var x668 uint32
-  x667, x668 = bits.Add32(x603, x641, x666)
   var x669 uint32
-  var x670 uint32
-  x669, x670 = bits.Add32(x605, x643, x668)
+  x668, x669 = bits.Add32(x605, x643, x667)
+  var x670 uint32 = (x669 + x606)
   var x671 uint32
   var x672 uint32
-  x671, x672 = bits.Add32(x607, x645, x670)
+  x671, x672 = bits.Mul32(x5, (arg2[11]))
   var x673 uint32
   var x674 uint32
-  x673, x674 = bits.Add32(x609, x647, x672)
+  x673, x674 = bits.Mul32(x5, (arg2[10]))
   var x675 uint32
   var x676 uint32
-  x675, x676 = bits.Add32(x611, x649, x674)
+  x675, x676 = bits.Mul32(x5, (arg2[9]))
   var x677 uint32
   var x678 uint32
-  x677, x678 = bits.Add32(x613, x651, x676)
+  x677, x678 = bits.Mul32(x5, (arg2[8]))
   var x679 uint32
   var x680 uint32
-  x679, x680 = bits.Add32(x615, x653, x678)
+  x679, x680 = bits.Mul32(x5, (arg2[7]))
   var x681 uint32
   var x682 uint32
-  x681, x682 = bits.Add32(x617, x655, x680)
+  x681, x682 = bits.Mul32(x5, (arg2[6]))
   var x683 uint32
   var x684 uint32
-  x683, x684 = bits.Add32(x619, x657, x682)
+  x683, x684 = bits.Mul32(x5, (arg2[5]))
   var x685 uint32
-  x685, _ = bits.Add32(x620, uint32(0x0), x684)
+  var x686 uint32
+  x685, x686 = bits.Mul32(x5, (arg2[4]))
   var x687 uint32
   var x688 uint32
-  x687, x688 = bits.Mul32(x5, (arg2[11]))
+  x687, x688 = bits.Mul32(x5, (arg2[3]))
   var x689 uint32
   var x690 uint32
-  x689, x690 = bits.Mul32(x5, (arg2[10]))
+  x689, x690 = bits.Mul32(x5, (arg2[2]))
   var x691 uint32
   var x692 uint32
-  x691, x692 = bits.Mul32(x5, (arg2[9]))
+  x691, x692 = bits.Mul32(x5, (arg2[1]))
   var x693 uint32
   var x694 uint32
-  x693, x694 = bits.Mul32(x5, (arg2[8]))
+  x693, x694 = bits.Mul32(x5, (arg2[0]))
   var x695 uint32
   var x696 uint32
-  x695, x696 = bits.Mul32(x5, (arg2[7]))
+  x695, x696 = bits.Add32(x694, x691, 0x0)
   var x697 uint32
   var x698 uint32
-  x697, x698 = bits.Mul32(x5, (arg2[6]))
+  x697, x698 = bits.Add32(x692, x689, x696)
   var x699 uint32
   var x700 uint32
-  x699, x700 = bits.Mul32(x5, (arg2[5]))
+  x699, x700 = bits.Add32(x690, x687, x698)
   var x701 uint32
   var x702 uint32
-  x701, x702 = bits.Mul32(x5, (arg2[4]))
+  x701, x702 = bits.Add32(x688, x685, x700)
   var x703 uint32
   var x704 uint32
-  x703, x704 = bits.Mul32(x5, (arg2[3]))
+  x703, x704 = bits.Add32(x686, x683, x702)
   var x705 uint32
   var x706 uint32
-  x705, x706 = bits.Mul32(x5, (arg2[2]))
+  x705, x706 = bits.Add32(x684, x681, x704)
   var x707 uint32
   var x708 uint32
-  x707, x708 = bits.Mul32(x5, (arg2[1]))
+  x707, x708 = bits.Add32(x682, x679, x706)
   var x709 uint32
   var x710 uint32
-  x709, x710 = bits.Mul32(x5, (arg2[0]))
+  x709, x710 = bits.Add32(x680, x677, x708)
   var x711 uint32
   var x712 uint32
-  x711, x712 = bits.Add32(x710, x707, 0x0)
+  x711, x712 = bits.Add32(x678, x675, x710)
   var x713 uint32
   var x714 uint32
-  x713, x714 = bits.Add32(x708, x705, x712)
+  x713, x714 = bits.Add32(x676, x673, x712)
   var x715 uint32
   var x716 uint32
-  x715, x716 = bits.Add32(x706, x703, x714)
-  var x717 uint32
+  x715, x716 = bits.Add32(x674, x671, x714)
+  var x717 uint32 = (x716 + x672)
   var x718 uint32
-  x717, x718 = bits.Add32(x704, x701, x716)
   var x719 uint32
+  x718, x719 = bits.Add32(x646, x693, 0x0)
   var x720 uint32
-  x719, x720 = bits.Add32(x702, x699, x718)
   var x721 uint32
+  x720, x721 = bits.Add32(x648, x695, x719)
   var x722 uint32
-  x721, x722 = bits.Add32(x700, x697, x720)
   var x723 uint32
+  x722, x723 = bits.Add32(x650, x697, x721)
   var x724 uint32
-  x723, x724 = bits.Add32(x698, x695, x722)
   var x725 uint32
+  x724, x725 = bits.Add32(x652, x699, x723)
   var x726 uint32
-  x725, x726 = bits.Add32(x696, x693, x724)
   var x727 uint32
+  x726, x727 = bits.Add32(x654, x701, x725)
   var x728 uint32
-  x727, x728 = bits.Add32(x694, x691, x726)
   var x729 uint32
+  x728, x729 = bits.Add32(x656, x703, x727)
   var x730 uint32
-  x729, x730 = bits.Add32(x692, x689, x728)
   var x731 uint32
+  x730, x731 = bits.Add32(x658, x705, x729)
   var x732 uint32
-  x731, x732 = bits.Add32(x690, x687, x730)
   var x733 uint32
-  x733, _ = bits.Add32(x688, uint32(0x0), x732)
+  x732, x733 = bits.Add32(x660, x707, x731)
+  var x734 uint32
   var x735 uint32
+  x734, x735 = bits.Add32(x662, x709, x733)
   var x736 uint32
-  x735, x736 = bits.Add32(x661, x709, 0x0)
   var x737 uint32
+  x736, x737 = bits.Add32(x664, x711, x735)
   var x738 uint32
-  x737, x738 = bits.Add32(x663, x711, x736)
   var x739 uint32
+  x738, x739 = bits.Add32(x666, x713, x737)
   var x740 uint32
-  x739, x740 = bits.Add32(x665, x713, x738)
   var x741 uint32
+  x740, x741 = bits.Add32(x668, x715, x739)
   var x742 uint32
-  x741, x742 = bits.Add32(x667, x715, x740)
   var x743 uint32
+  x742, x743 = bits.Add32(x670, x717, x741)
   var x744 uint32
-  x743, x744 = bits.Add32(x669, x717, x742)
   var x745 uint32
+  x744, x745 = bits.Mul32(x718, 0xffffffff)
   var x746 uint32
-  x745, x746 = bits.Add32(x671, x719, x744)
   var x747 uint32
+  x746, x747 = bits.Mul32(x718, 0xffffffff)
   var x748 uint32
-  x747, x748 = bits.Add32(x673, x721, x746)
   var x749 uint32
+  x748, x749 = bits.Mul32(x718, 0xffffffff)
   var x750 uint32
-  x749, x750 = bits.Add32(x675, x723, x748)
   var x751 uint32
+  x750, x751 = bits.Mul32(x718, 0xffffffff)
   var x752 uint32
-  x751, x752 = bits.Add32(x677, x725, x750)
   var x753 uint32
+  x752, x753 = bits.Mul32(x718, 0xffffffff)
   var x754 uint32
-  x753, x754 = bits.Add32(x679, x727, x752)
   var x755 uint32
+  x754, x755 = bits.Mul32(x718, 0xffffffff)
   var x756 uint32
-  x755, x756 = bits.Add32(x681, x729, x754)
   var x757 uint32
+  x756, x757 = bits.Mul32(x718, 0xffffffff)
   var x758 uint32
-  x757, x758 = bits.Add32(x683, x731, x756)
   var x759 uint32
+  x758, x759 = bits.Mul32(x718, 0xfffffffe)
   var x760 uint32
-  x759, x760 = bits.Add32(x685, x733, x758)
   var x761 uint32
+  x760, x761 = bits.Mul32(x718, 0xffffffff)
   var x762 uint32
-  x761, x762 = bits.Mul32(x735, 0xffffffff)
   var x763 uint32
+  x762, x763 = bits.Mul32(x718, 0xffffffff)
   var x764 uint32
-  x763, x764 = bits.Mul32(x735, 0xffffffff)
   var x765 uint32
+  x764, x765 = bits.Add32(x761, x758, 0x0)
   var x766 uint32
-  x765, x766 = bits.Mul32(x735, 0xffffffff)
   var x767 uint32
+  x766, x767 = bits.Add32(x759, x756, x765)
   var x768 uint32
-  x767, x768 = bits.Mul32(x735, 0xffffffff)
   var x769 uint32
+  x768, x769 = bits.Add32(x757, x754, x767)
   var x770 uint32
-  x769, x770 = bits.Mul32(x735, 0xffffffff)
   var x771 uint32
+  x770, x771 = bits.Add32(x755, x752, x769)
   var x772 uint32
-  x771, x772 = bits.Mul32(x735, 0xffffffff)
   var x773 uint32
+  x772, x773 = bits.Add32(x753, x750, x771)
   var x774 uint32
-  x773, x774 = bits.Mul32(x735, 0xffffffff)
   var x775 uint32
+  x774, x775 = bits.Add32(x751, x748, x773)
   var x776 uint32
-  x775, x776 = bits.Mul32(x735, 0xfffffffe)
   var x777 uint32
+  x776, x777 = bits.Add32(x749, x746, x775)
   var x778 uint32
-  x777, x778 = bits.Mul32(x735, 0xffffffff)
   var x779 uint32
-  var x780 uint32
-  x779, x780 = bits.Mul32(x735, 0xffffffff)
-  var x781 uint32
+  x778, x779 = bits.Add32(x747, x744, x777)
+  var x780 uint32 = (x779 + x745)
   var x782 uint32
-  x781, x782 = bits.Add32(x778, x775, 0x0)
+  _, x782 = bits.Add32(x718, x762, 0x0)
   var x783 uint32
   var x784 uint32
-  x783, x784 = bits.Add32(x776, x773, x782)
+  x783, x784 = bits.Add32(x720, x763, x782)
   var x785 uint32
   var x786 uint32
-  x785, x786 = bits.Add32(x774, x771, x784)
+  x785, x786 = bits.Add32(x722, uint32(0x0), x784)
   var x787 uint32
   var x788 uint32
-  x787, x788 = bits.Add32(x772, x769, x786)
+  x787, x788 = bits.Add32(x724, x760, x786)
   var x789 uint32
   var x790 uint32
-  x789, x790 = bits.Add32(x770, x767, x788)
+  x789, x790 = bits.Add32(x726, x764, x788)
   var x791 uint32
   var x792 uint32
-  x791, x792 = bits.Add32(x768, x765, x790)
+  x791, x792 = bits.Add32(x728, x766, x790)
   var x793 uint32
   var x794 uint32
-  x793, x794 = bits.Add32(x766, x763, x792)
+  x793, x794 = bits.Add32(x730, x768, x792)
   var x795 uint32
   var x796 uint32
-  x795, x796 = bits.Add32(x764, x761, x794)
+  x795, x796 = bits.Add32(x732, x770, x794)
   var x797 uint32
-  x797, _ = bits.Add32(x762, uint32(0x0), x796)
+  var x798 uint32
+  x797, x798 = bits.Add32(x734, x772, x796)
+  var x799 uint32
   var x800 uint32
-  _, x800 = bits.Add32(x735, x779, 0x0)
+  x799, x800 = bits.Add32(x736, x774, x798)
   var x801 uint32
   var x802 uint32
-  x801, x802 = bits.Add32(x737, x780, x800)
+  x801, x802 = bits.Add32(x738, x776, x800)
   var x803 uint32
   var x804 uint32
-  x803, x804 = bits.Add32(x739, uint32(0x0), x802)
+  x803, x804 = bits.Add32(x740, x778, x802)
   var x805 uint32
   var x806 uint32
-  x805, x806 = bits.Add32(x741, x777, x804)
-  var x807 uint32
+  x805, x806 = bits.Add32(x742, x780, x804)
+  var x807 uint32 = (x806 + x743)
   var x808 uint32
-  x807, x808 = bits.Add32(x743, x781, x806)
   var x809 uint32
+  x808, x809 = bits.Mul32(x6, (arg2[11]))
   var x810 uint32
-  x809, x810 = bits.Add32(x745, x783, x808)
   var x811 uint32
+  x810, x811 = bits.Mul32(x6, (arg2[10]))
   var x812 uint32
-  x811, x812 = bits.Add32(x747, x785, x810)
   var x813 uint32
+  x812, x813 = bits.Mul32(x6, (arg2[9]))
   var x814 uint32
-  x813, x814 = bits.Add32(x749, x787, x812)
   var x815 uint32
+  x814, x815 = bits.Mul32(x6, (arg2[8]))
   var x816 uint32
-  x815, x816 = bits.Add32(x751, x789, x814)
   var x817 uint32
+  x816, x817 = bits.Mul32(x6, (arg2[7]))
   var x818 uint32
-  x817, x818 = bits.Add32(x753, x791, x816)
   var x819 uint32
+  x818, x819 = bits.Mul32(x6, (arg2[6]))
   var x820 uint32
-  x819, x820 = bits.Add32(x755, x793, x818)
   var x821 uint32
+  x820, x821 = bits.Mul32(x6, (arg2[5]))
   var x822 uint32
-  x821, x822 = bits.Add32(x757, x795, x820)
   var x823 uint32
+  x822, x823 = bits.Mul32(x6, (arg2[4]))
   var x824 uint32
-  x823, x824 = bits.Add32(x759, x797, x822)
   var x825 uint32
-  x825, _ = bits.Add32(x760, uint32(0x0), x824)
+  x824, x825 = bits.Mul32(x6, (arg2[3]))
+  var x826 uint32
   var x827 uint32
+  x826, x827 = bits.Mul32(x6, (arg2[2]))
   var x828 uint32
-  x827, x828 = bits.Mul32(x6, (arg2[11]))
   var x829 uint32
+  x828, x829 = bits.Mul32(x6, (arg2[1]))
   var x830 uint32
-  x829, x830 = bits.Mul32(x6, (arg2[10]))
   var x831 uint32
+  x830, x831 = bits.Mul32(x6, (arg2[0]))
   var x832 uint32
-  x831, x832 = bits.Mul32(x6, (arg2[9]))
   var x833 uint32
+  x832, x833 = bits.Add32(x831, x828, 0x0)
   var x834 uint32
-  x833, x834 = bits.Mul32(x6, (arg2[8]))
   var x835 uint32
+  x834, x835 = bits.Add32(x829, x826, x833)
   var x836 uint32
-  x835, x836 = bits.Mul32(x6, (arg2[7]))
   var x837 uint32
+  x836, x837 = bits.Add32(x827, x824, x835)
   var x838 uint32
-  x837, x838 = bits.Mul32(x6, (arg2[6]))
   var x839 uint32
+  x838, x839 = bits.Add32(x825, x822, x837)
   var x840 uint32
-  x839, x840 = bits.Mul32(x6, (arg2[5]))
   var x841 uint32
+  x840, x841 = bits.Add32(x823, x820, x839)
   var x842 uint32
-  x841, x842 = bits.Mul32(x6, (arg2[4]))
   var x843 uint32
+  x842, x843 = bits.Add32(x821, x818, x841)
   var x844 uint32
-  x843, x844 = bits.Mul32(x6, (arg2[3]))
   var x845 uint32
+  x844, x845 = bits.Add32(x819, x816, x843)
   var x846 uint32
-  x845, x846 = bits.Mul32(x6, (arg2[2]))
   var x847 uint32
+  x846, x847 = bits.Add32(x817, x814, x845)
   var x848 uint32
-  x847, x848 = bits.Mul32(x6, (arg2[1]))
   var x849 uint32
+  x848, x849 = bits.Add32(x815, x812, x847)
   var x850 uint32
-  x849, x850 = bits.Mul32(x6, (arg2[0]))
   var x851 uint32
+  x850, x851 = bits.Add32(x813, x810, x849)
   var x852 uint32
-  x851, x852 = bits.Add32(x850, x847, 0x0)
   var x853 uint32
-  var x854 uint32
-  x853, x854 = bits.Add32(x848, x845, x852)
+  x852, x853 = bits.Add32(x811, x808, x851)
+  var x854 uint32 = (x853 + x809)
   var x855 uint32
   var x856 uint32
-  x855, x856 = bits.Add32(x846, x843, x854)
+  x855, x856 = bits.Add32(x783, x830, 0x0)
   var x857 uint32
   var x858 uint32
-  x857, x858 = bits.Add32(x844, x841, x856)
+  x857, x858 = bits.Add32(x785, x832, x856)
   var x859 uint32
   var x860 uint32
-  x859, x860 = bits.Add32(x842, x839, x858)
+  x859, x860 = bits.Add32(x787, x834, x858)
   var x861 uint32
   var x862 uint32
-  x861, x862 = bits.Add32(x840, x837, x860)
+  x861, x862 = bits.Add32(x789, x836, x860)
   var x863 uint32
   var x864 uint32
-  x863, x864 = bits.Add32(x838, x835, x862)
+  x863, x864 = bits.Add32(x791, x838, x862)
   var x865 uint32
   var x866 uint32
-  x865, x866 = bits.Add32(x836, x833, x864)
+  x865, x866 = bits.Add32(x793, x840, x864)
   var x867 uint32
   var x868 uint32
-  x867, x868 = bits.Add32(x834, x831, x866)
+  x867, x868 = bits.Add32(x795, x842, x866)
   var x869 uint32
   var x870 uint32
-  x869, x870 = bits.Add32(x832, x829, x868)
+  x869, x870 = bits.Add32(x797, x844, x868)
   var x871 uint32
   var x872 uint32
-  x871, x872 = bits.Add32(x830, x827, x870)
+  x871, x872 = bits.Add32(x799, x846, x870)
   var x873 uint32
-  x873, _ = bits.Add32(x828, uint32(0x0), x872)
+  var x874 uint32
+  x873, x874 = bits.Add32(x801, x848, x872)
   var x875 uint32
   var x876 uint32
-  x875, x876 = bits.Add32(x801, x849, 0x0)
+  x875, x876 = bits.Add32(x803, x850, x874)
   var x877 uint32
   var x878 uint32
-  x877, x878 = bits.Add32(x803, x851, x876)
+  x877, x878 = bits.Add32(x805, x852, x876)
   var x879 uint32
   var x880 uint32
-  x879, x880 = bits.Add32(x805, x853, x878)
+  x879, x880 = bits.Add32(x807, x854, x878)
   var x881 uint32
   var x882 uint32
-  x881, x882 = bits.Add32(x807, x855, x880)
+  x881, x882 = bits.Mul32(x855, 0xffffffff)
   var x883 uint32
   var x884 uint32
-  x883, x884 = bits.Add32(x809, x857, x882)
+  x883, x884 = bits.Mul32(x855, 0xffffffff)
   var x885 uint32
   var x886 uint32
-  x885, x886 = bits.Add32(x811, x859, x884)
+  x885, x886 = bits.Mul32(x855, 0xffffffff)
   var x887 uint32
   var x888 uint32
-  x887, x888 = bits.Add32(x813, x861, x886)
+  x887, x888 = bits.Mul32(x855, 0xffffffff)
   var x889 uint32
   var x890 uint32
-  x889, x890 = bits.Add32(x815, x863, x888)
+  x889, x890 = bits.Mul32(x855, 0xffffffff)
   var x891 uint32
   var x892 uint32
-  x891, x892 = bits.Add32(x817, x865, x890)
+  x891, x892 = bits.Mul32(x855, 0xffffffff)
   var x893 uint32
   var x894 uint32
-  x893, x894 = bits.Add32(x819, x867, x892)
+  x893, x894 = bits.Mul32(x855, 0xffffffff)
   var x895 uint32
   var x896 uint32
-  x895, x896 = bits.Add32(x821, x869, x894)
+  x895, x896 = bits.Mul32(x855, 0xfffffffe)
   var x897 uint32
   var x898 uint32
-  x897, x898 = bits.Add32(x823, x871, x896)
+  x897, x898 = bits.Mul32(x855, 0xffffffff)
   var x899 uint32
   var x900 uint32
-  x899, x900 = bits.Add32(x825, x873, x898)
+  x899, x900 = bits.Mul32(x855, 0xffffffff)
   var x901 uint32
   var x902 uint32
-  x901, x902 = bits.Mul32(x875, 0xffffffff)
+  x901, x902 = bits.Add32(x898, x895, 0x0)
   var x903 uint32
   var x904 uint32
-  x903, x904 = bits.Mul32(x875, 0xffffffff)
+  x903, x904 = bits.Add32(x896, x893, x902)
   var x905 uint32
   var x906 uint32
-  x905, x906 = bits.Mul32(x875, 0xffffffff)
+  x905, x906 = bits.Add32(x894, x891, x904)
   var x907 uint32
   var x908 uint32
-  x907, x908 = bits.Mul32(x875, 0xffffffff)
+  x907, x908 = bits.Add32(x892, x889, x906)
   var x909 uint32
   var x910 uint32
-  x909, x910 = bits.Mul32(x875, 0xffffffff)
+  x909, x910 = bits.Add32(x890, x887, x908)
   var x911 uint32
   var x912 uint32
-  x911, x912 = bits.Mul32(x875, 0xffffffff)
+  x911, x912 = bits.Add32(x888, x885, x910)
   var x913 uint32
   var x914 uint32
-  x913, x914 = bits.Mul32(x875, 0xffffffff)
+  x913, x914 = bits.Add32(x886, x883, x912)
   var x915 uint32
   var x916 uint32
-  x915, x916 = bits.Mul32(x875, 0xfffffffe)
-  var x917 uint32
-  var x918 uint32
-  x917, x918 = bits.Mul32(x875, 0xffffffff)
+  x915, x916 = bits.Add32(x884, x881, x914)
+  var x917 uint32 = (x916 + x882)
   var x919 uint32
+  _, x919 = bits.Add32(x855, x899, 0x0)
   var x920 uint32
-  x919, x920 = bits.Mul32(x875, 0xffffffff)
   var x921 uint32
+  x920, x921 = bits.Add32(x857, x900, x919)
   var x922 uint32
-  x921, x922 = bits.Add32(x918, x915, 0x0)
   var x923 uint32
+  x922, x923 = bits.Add32(x859, uint32(0x0), x921)
   var x924 uint32
-  x923, x924 = bits.Add32(x916, x913, x922)
   var x925 uint32
+  x924, x925 = bits.Add32(x861, x897, x923)
   var x926 uint32
-  x925, x926 = bits.Add32(x914, x911, x924)
   var x927 uint32
+  x926, x927 = bits.Add32(x863, x901, x925)
   var x928 uint32
-  x927, x928 = bits.Add32(x912, x909, x926)
   var x929 uint32
+  x928, x929 = bits.Add32(x865, x903, x927)
   var x930 uint32
-  x929, x930 = bits.Add32(x910, x907, x928)
   var x931 uint32
+  x930, x931 = bits.Add32(x867, x905, x929)
   var x932 uint32
-  x931, x932 = bits.Add32(x908, x905, x930)
   var x933 uint32
+  x932, x933 = bits.Add32(x869, x907, x931)
   var x934 uint32
-  x933, x934 = bits.Add32(x906, x903, x932)
   var x935 uint32
+  x934, x935 = bits.Add32(x871, x909, x933)
   var x936 uint32
-  x935, x936 = bits.Add32(x904, x901, x934)
   var x937 uint32
-  x937, _ = bits.Add32(x902, uint32(0x0), x936)
+  x936, x937 = bits.Add32(x873, x911, x935)
+  var x938 uint32
+  var x939 uint32
+  x938, x939 = bits.Add32(x875, x913, x937)
   var x940 uint32
-  _, x940 = bits.Add32(x875, x919, 0x0)
   var x941 uint32
+  x940, x941 = bits.Add32(x877, x915, x939)
   var x942 uint32
-  x941, x942 = bits.Add32(x877, x920, x940)
   var x943 uint32
-  var x944 uint32
-  x943, x944 = bits.Add32(x879, uint32(0x0), x942)
+  x942, x943 = bits.Add32(x879, x917, x941)
+  var x944 uint32 = (x943 + x880)
   var x945 uint32
   var x946 uint32
-  x945, x946 = bits.Add32(x881, x917, x944)
+  x945, x946 = bits.Mul32(x7, (arg2[11]))
   var x947 uint32
   var x948 uint32
-  x947, x948 = bits.Add32(x883, x921, x946)
+  x947, x948 = bits.Mul32(x7, (arg2[10]))
   var x949 uint32
   var x950 uint32
-  x949, x950 = bits.Add32(x885, x923, x948)
+  x949, x950 = bits.Mul32(x7, (arg2[9]))
   var x951 uint32
   var x952 uint32
-  x951, x952 = bits.Add32(x887, x925, x950)
+  x951, x952 = bits.Mul32(x7, (arg2[8]))
   var x953 uint32
   var x954 uint32
-  x953, x954 = bits.Add32(x889, x927, x952)
+  x953, x954 = bits.Mul32(x7, (arg2[7]))
   var x955 uint32
   var x956 uint32
-  x955, x956 = bits.Add32(x891, x929, x954)
+  x955, x956 = bits.Mul32(x7, (arg2[6]))
   var x957 uint32
   var x958 uint32
-  x957, x958 = bits.Add32(x893, x931, x956)
+  x957, x958 = bits.Mul32(x7, (arg2[5]))
   var x959 uint32
   var x960 uint32
-  x959, x960 = bits.Add32(x895, x933, x958)
+  x959, x960 = bits.Mul32(x7, (arg2[4]))
   var x961 uint32
   var x962 uint32
-  x961, x962 = bits.Add32(x897, x935, x960)
+  x961, x962 = bits.Mul32(x7, (arg2[3]))
   var x963 uint32
   var x964 uint32
-  x963, x964 = bits.Add32(x899, x937, x962)
+  x963, x964 = bits.Mul32(x7, (arg2[2]))
   var x965 uint32
-  x965, _ = bits.Add32(x900, uint32(0x0), x964)
+  var x966 uint32
+  x965, x966 = bits.Mul32(x7, (arg2[1]))
   var x967 uint32
   var x968 uint32
-  x967, x968 = bits.Mul32(x7, (arg2[11]))
+  x967, x968 = bits.Mul32(x7, (arg2[0]))
   var x969 uint32
   var x970 uint32
-  x969, x970 = bits.Mul32(x7, (arg2[10]))
+  x969, x970 = bits.Add32(x968, x965, 0x0)
   var x971 uint32
   var x972 uint32
-  x971, x972 = bits.Mul32(x7, (arg2[9]))
+  x971, x972 = bits.Add32(x966, x963, x970)
   var x973 uint32
   var x974 uint32
-  x973, x974 = bits.Mul32(x7, (arg2[8]))
+  x973, x974 = bits.Add32(x964, x961, x972)
   var x975 uint32
   var x976 uint32
-  x975, x976 = bits.Mul32(x7, (arg2[7]))
+  x975, x976 = bits.Add32(x962, x959, x974)
   var x977 uint32
   var x978 uint32
-  x977, x978 = bits.Mul32(x7, (arg2[6]))
+  x977, x978 = bits.Add32(x960, x957, x976)
   var x979 uint32
   var x980 uint32
-  x979, x980 = bits.Mul32(x7, (arg2[5]))
+  x979, x980 = bits.Add32(x958, x955, x978)
   var x981 uint32
   var x982 uint32
-  x981, x982 = bits.Mul32(x7, (arg2[4]))
+  x981, x982 = bits.Add32(x956, x953, x980)
   var x983 uint32
   var x984 uint32
-  x983, x984 = bits.Mul32(x7, (arg2[3]))
+  x983, x984 = bits.Add32(x954, x951, x982)
   var x985 uint32
   var x986 uint32
-  x985, x986 = bits.Mul32(x7, (arg2[2]))
+  x985, x986 = bits.Add32(x952, x949, x984)
   var x987 uint32
   var x988 uint32
-  x987, x988 = bits.Mul32(x7, (arg2[1]))
+  x987, x988 = bits.Add32(x950, x947, x986)
   var x989 uint32
   var x990 uint32
-  x989, x990 = bits.Mul32(x7, (arg2[0]))
-  var x991 uint32
+  x989, x990 = bits.Add32(x948, x945, x988)
+  var x991 uint32 = (x990 + x946)
   var x992 uint32
-  x991, x992 = bits.Add32(x990, x987, 0x0)
   var x993 uint32
+  x992, x993 = bits.Add32(x920, x967, 0x0)
   var x994 uint32
-  x993, x994 = bits.Add32(x988, x985, x992)
   var x995 uint32
+  x994, x995 = bits.Add32(x922, x969, x993)
   var x996 uint32
-  x995, x996 = bits.Add32(x986, x983, x994)
   var x997 uint32
+  x996, x997 = bits.Add32(x924, x971, x995)
   var x998 uint32
-  x997, x998 = bits.Add32(x984, x981, x996)
   var x999 uint32
+  x998, x999 = bits.Add32(x926, x973, x997)
   var x1000 uint32
-  x999, x1000 = bits.Add32(x982, x979, x998)
   var x1001 uint32
+  x1000, x1001 = bits.Add32(x928, x975, x999)
   var x1002 uint32
-  x1001, x1002 = bits.Add32(x980, x977, x1000)
   var x1003 uint32
+  x1002, x1003 = bits.Add32(x930, x977, x1001)
   var x1004 uint32
-  x1003, x1004 = bits.Add32(x978, x975, x1002)
   var x1005 uint32
+  x1004, x1005 = bits.Add32(x932, x979, x1003)
   var x1006 uint32
-  x1005, x1006 = bits.Add32(x976, x973, x1004)
   var x1007 uint32
+  x1006, x1007 = bits.Add32(x934, x981, x1005)
   var x1008 uint32
-  x1007, x1008 = bits.Add32(x974, x971, x1006)
   var x1009 uint32
+  x1008, x1009 = bits.Add32(x936, x983, x1007)
   var x1010 uint32
-  x1009, x1010 = bits.Add32(x972, x969, x1008)
   var x1011 uint32
+  x1010, x1011 = bits.Add32(x938, x985, x1009)
   var x1012 uint32
-  x1011, x1012 = bits.Add32(x970, x967, x1010)
   var x1013 uint32
-  x1013, _ = bits.Add32(x968, uint32(0x0), x1012)
+  x1012, x1013 = bits.Add32(x940, x987, x1011)
+  var x1014 uint32
   var x1015 uint32
+  x1014, x1015 = bits.Add32(x942, x989, x1013)
   var x1016 uint32
-  x1015, x1016 = bits.Add32(x941, x989, 0x0)
   var x1017 uint32
+  x1016, x1017 = bits.Add32(x944, x991, x1015)
   var x1018 uint32
-  x1017, x1018 = bits.Add32(x943, x991, x1016)
   var x1019 uint32
+  x1018, x1019 = bits.Mul32(x992, 0xffffffff)
   var x1020 uint32
-  x1019, x1020 = bits.Add32(x945, x993, x1018)
   var x1021 uint32
+  x1020, x1021 = bits.Mul32(x992, 0xffffffff)
   var x1022 uint32
-  x1021, x1022 = bits.Add32(x947, x995, x1020)
   var x1023 uint32
+  x1022, x1023 = bits.Mul32(x992, 0xffffffff)
   var x1024 uint32
-  x1023, x1024 = bits.Add32(x949, x997, x1022)
   var x1025 uint32
+  x1024, x1025 = bits.Mul32(x992, 0xffffffff)
   var x1026 uint32
-  x1025, x1026 = bits.Add32(x951, x999, x1024)
   var x1027 uint32
+  x1026, x1027 = bits.Mul32(x992, 0xffffffff)
   var x1028 uint32
-  x1027, x1028 = bits.Add32(x953, x1001, x1026)
   var x1029 uint32
+  x1028, x1029 = bits.Mul32(x992, 0xffffffff)
   var x1030 uint32
-  x1029, x1030 = bits.Add32(x955, x1003, x1028)
   var x1031 uint32
+  x1030, x1031 = bits.Mul32(x992, 0xffffffff)
   var x1032 uint32
-  x1031, x1032 = bits.Add32(x957, x1005, x1030)
   var x1033 uint32
+  x1032, x1033 = bits.Mul32(x992, 0xfffffffe)
   var x1034 uint32
-  x1033, x1034 = bits.Add32(x959, x1007, x1032)
   var x1035 uint32
+  x1034, x1035 = bits.Mul32(x992, 0xffffffff)
   var x1036 uint32
-  x1035, x1036 = bits.Add32(x961, x1009, x1034)
   var x1037 uint32
+  x1036, x1037 = bits.Mul32(x992, 0xffffffff)
   var x1038 uint32
-  x1037, x1038 = bits.Add32(x963, x1011, x1036)
   var x1039 uint32
+  x1038, x1039 = bits.Add32(x1035, x1032, 0x0)
   var x1040 uint32
-  x1039, x1040 = bits.Add32(x965, x1013, x1038)
   var x1041 uint32
+  x1040, x1041 = bits.Add32(x1033, x1030, x1039)
   var x1042 uint32
-  x1041, x1042 = bits.Mul32(x1015, 0xffffffff)
   var x1043 uint32
+  x1042, x1043 = bits.Add32(x1031, x1028, x1041)
   var x1044 uint32
-  x1043, x1044 = bits.Mul32(x1015, 0xffffffff)
   var x1045 uint32
+  x1044, x1045 = bits.Add32(x1029, x1026, x1043)
   var x1046 uint32
-  x1045, x1046 = bits.Mul32(x1015, 0xffffffff)
   var x1047 uint32
+  x1046, x1047 = bits.Add32(x1027, x1024, x1045)
   var x1048 uint32
-  x1047, x1048 = bits.Mul32(x1015, 0xffffffff)
   var x1049 uint32
+  x1048, x1049 = bits.Add32(x1025, x1022, x1047)
   var x1050 uint32
-  x1049, x1050 = bits.Mul32(x1015, 0xffffffff)
   var x1051 uint32
+  x1050, x1051 = bits.Add32(x1023, x1020, x1049)
   var x1052 uint32
-  x1051, x1052 = bits.Mul32(x1015, 0xffffffff)
   var x1053 uint32
-  var x1054 uint32
-  x1053, x1054 = bits.Mul32(x1015, 0xffffffff)
-  var x1055 uint32
+  x1052, x1053 = bits.Add32(x1021, x1018, x1051)
+  var x1054 uint32 = (x1053 + x1019)
   var x1056 uint32
-  x1055, x1056 = bits.Mul32(x1015, 0xfffffffe)
+  _, x1056 = bits.Add32(x992, x1036, 0x0)
   var x1057 uint32
   var x1058 uint32
-  x1057, x1058 = bits.Mul32(x1015, 0xffffffff)
+  x1057, x1058 = bits.Add32(x994, x1037, x1056)
   var x1059 uint32
   var x1060 uint32
-  x1059, x1060 = bits.Mul32(x1015, 0xffffffff)
+  x1059, x1060 = bits.Add32(x996, uint32(0x0), x1058)
   var x1061 uint32
   var x1062 uint32
-  x1061, x1062 = bits.Add32(x1058, x1055, 0x0)
+  x1061, x1062 = bits.Add32(x998, x1034, x1060)
   var x1063 uint32
   var x1064 uint32
-  x1063, x1064 = bits.Add32(x1056, x1053, x1062)
+  x1063, x1064 = bits.Add32(x1000, x1038, x1062)
   var x1065 uint32
   var x1066 uint32
-  x1065, x1066 = bits.Add32(x1054, x1051, x1064)
+  x1065, x1066 = bits.Add32(x1002, x1040, x1064)
   var x1067 uint32
   var x1068 uint32
-  x1067, x1068 = bits.Add32(x1052, x1049, x1066)
+  x1067, x1068 = bits.Add32(x1004, x1042, x1066)
   var x1069 uint32
   var x1070 uint32
-  x1069, x1070 = bits.Add32(x1050, x1047, x1068)
+  x1069, x1070 = bits.Add32(x1006, x1044, x1068)
   var x1071 uint32
   var x1072 uint32
-  x1071, x1072 = bits.Add32(x1048, x1045, x1070)
+  x1071, x1072 = bits.Add32(x1008, x1046, x1070)
   var x1073 uint32
   var x1074 uint32
-  x1073, x1074 = bits.Add32(x1046, x1043, x1072)
+  x1073, x1074 = bits.Add32(x1010, x1048, x1072)
   var x1075 uint32
   var x1076 uint32
-  x1075, x1076 = bits.Add32(x1044, x1041, x1074)
+  x1075, x1076 = bits.Add32(x1012, x1050, x1074)
   var x1077 uint32
-  x1077, _ = bits.Add32(x1042, uint32(0x0), x1076)
+  var x1078 uint32
+  x1077, x1078 = bits.Add32(x1014, x1052, x1076)
+  var x1079 uint32
   var x1080 uint32
-  _, x1080 = bits.Add32(x1015, x1059, 0x0)
-  var x1081 uint32
+  x1079, x1080 = bits.Add32(x1016, x1054, x1078)
+  var x1081 uint32 = (x1080 + x1017)
   var x1082 uint32
-  x1081, x1082 = bits.Add32(x1017, x1060, x1080)
   var x1083 uint32
+  x1082, x1083 = bits.Mul32(x8, (arg2[11]))
   var x1084 uint32
-  x1083, x1084 = bits.Add32(x1019, uint32(0x0), x1082)
   var x1085 uint32
+  x1084, x1085 = bits.Mul32(x8, (arg2[10]))
   var x1086 uint32
-  x1085, x1086 = bits.Add32(x1021, x1057, x1084)
   var x1087 uint32
+  x1086, x1087 = bits.Mul32(x8, (arg2[9]))
   var x1088 uint32
-  x1087, x1088 = bits.Add32(x1023, x1061, x1086)
   var x1089 uint32
+  x1088, x1089 = bits.Mul32(x8, (arg2[8]))
   var x1090 uint32
-  x1089, x1090 = bits.Add32(x1025, x1063, x1088)
   var x1091 uint32
+  x1090, x1091 = bits.Mul32(x8, (arg2[7]))
   var x1092 uint32
-  x1091, x1092 = bits.Add32(x1027, x1065, x1090)
   var x1093 uint32
+  x1092, x1093 = bits.Mul32(x8, (arg2[6]))
   var x1094 uint32
-  x1093, x1094 = bits.Add32(x1029, x1067, x1092)
   var x1095 uint32
+  x1094, x1095 = bits.Mul32(x8, (arg2[5]))
   var x1096 uint32
-  x1095, x1096 = bits.Add32(x1031, x1069, x1094)
   var x1097 uint32
+  x1096, x1097 = bits.Mul32(x8, (arg2[4]))
   var x1098 uint32
-  x1097, x1098 = bits.Add32(x1033, x1071, x1096)
   var x1099 uint32
+  x1098, x1099 = bits.Mul32(x8, (arg2[3]))
   var x1100 uint32
-  x1099, x1100 = bits.Add32(x1035, x1073, x1098)
   var x1101 uint32
+  x1100, x1101 = bits.Mul32(x8, (arg2[2]))
   var x1102 uint32
-  x1101, x1102 = bits.Add32(x1037, x1075, x1100)
   var x1103 uint32
+  x1102, x1103 = bits.Mul32(x8, (arg2[1]))
   var x1104 uint32
-  x1103, x1104 = bits.Add32(x1039, x1077, x1102)
   var x1105 uint32
-  x1105, _ = bits.Add32(x1040, uint32(0x0), x1104)
+  x1104, x1105 = bits.Mul32(x8, (arg2[0]))
+  var x1106 uint32
   var x1107 uint32
+  x1106, x1107 = bits.Add32(x1105, x1102, 0x0)
   var x1108 uint32
-  x1107, x1108 = bits.Mul32(x8, (arg2[11]))
   var x1109 uint32
+  x1108, x1109 = bits.Add32(x1103, x1100, x1107)
   var x1110 uint32
-  x1109, x1110 = bits.Mul32(x8, (arg2[10]))
   var x1111 uint32
+  x1110, x1111 = bits.Add32(x1101, x1098, x1109)
   var x1112 uint32
-  x1111, x1112 = bits.Mul32(x8, (arg2[9]))
   var x1113 uint32
+  x1112, x1113 = bits.Add32(x1099, x1096, x1111)
   var x1114 uint32
-  x1113, x1114 = bits.Mul32(x8, (arg2[8]))
   var x1115 uint32
+  x1114, x1115 = bits.Add32(x1097, x1094, x1113)
   var x1116 uint32
-  x1115, x1116 = bits.Mul32(x8, (arg2[7]))
   var x1117 uint32
+  x1116, x1117 = bits.Add32(x1095, x1092, x1115)
   var x1118 uint32
-  x1117, x1118 = bits.Mul32(x8, (arg2[6]))
   var x1119 uint32
+  x1118, x1119 = bits.Add32(x1093, x1090, x1117)
   var x1120 uint32
-  x1119, x1120 = bits.Mul32(x8, (arg2[5]))
   var x1121 uint32
+  x1120, x1121 = bits.Add32(x1091, x1088, x1119)
   var x1122 uint32
-  x1121, x1122 = bits.Mul32(x8, (arg2[4]))
   var x1123 uint32
+  x1122, x1123 = bits.Add32(x1089, x1086, x1121)
   var x1124 uint32
-  x1123, x1124 = bits.Mul32(x8, (arg2[3]))
   var x1125 uint32
+  x1124, x1125 = bits.Add32(x1087, x1084, x1123)
   var x1126 uint32
-  x1125, x1126 = bits.Mul32(x8, (arg2[2]))
   var x1127 uint32
-  var x1128 uint32
-  x1127, x1128 = bits.Mul32(x8, (arg2[1]))
+  x1126, x1127 = bits.Add32(x1085, x1082, x1125)
+  var x1128 uint32 = (x1127 + x1083)
   var x1129 uint32
   var x1130 uint32
-  x1129, x1130 = bits.Mul32(x8, (arg2[0]))
+  x1129, x1130 = bits.Add32(x1057, x1104, 0x0)
   var x1131 uint32
   var x1132 uint32
-  x1131, x1132 = bits.Add32(x1130, x1127, 0x0)
+  x1131, x1132 = bits.Add32(x1059, x1106, x1130)
   var x1133 uint32
   var x1134 uint32
-  x1133, x1134 = bits.Add32(x1128, x1125, x1132)
+  x1133, x1134 = bits.Add32(x1061, x1108, x1132)
   var x1135 uint32
   var x1136 uint32
-  x1135, x1136 = bits.Add32(x1126, x1123, x1134)
+  x1135, x1136 = bits.Add32(x1063, x1110, x1134)
   var x1137 uint32
   var x1138 uint32
-  x1137, x1138 = bits.Add32(x1124, x1121, x1136)
+  x1137, x1138 = bits.Add32(x1065, x1112, x1136)
   var x1139 uint32
   var x1140 uint32
-  x1139, x1140 = bits.Add32(x1122, x1119, x1138)
+  x1139, x1140 = bits.Add32(x1067, x1114, x1138)
   var x1141 uint32
   var x1142 uint32
-  x1141, x1142 = bits.Add32(x1120, x1117, x1140)
+  x1141, x1142 = bits.Add32(x1069, x1116, x1140)
   var x1143 uint32
   var x1144 uint32
-  x1143, x1144 = bits.Add32(x1118, x1115, x1142)
+  x1143, x1144 = bits.Add32(x1071, x1118, x1142)
   var x1145 uint32
   var x1146 uint32
-  x1145, x1146 = bits.Add32(x1116, x1113, x1144)
+  x1145, x1146 = bits.Add32(x1073, x1120, x1144)
   var x1147 uint32
   var x1148 uint32
-  x1147, x1148 = bits.Add32(x1114, x1111, x1146)
+  x1147, x1148 = bits.Add32(x1075, x1122, x1146)
   var x1149 uint32
   var x1150 uint32
-  x1149, x1150 = bits.Add32(x1112, x1109, x1148)
+  x1149, x1150 = bits.Add32(x1077, x1124, x1148)
   var x1151 uint32
   var x1152 uint32
-  x1151, x1152 = bits.Add32(x1110, x1107, x1150)
+  x1151, x1152 = bits.Add32(x1079, x1126, x1150)
   var x1153 uint32
-  x1153, _ = bits.Add32(x1108, uint32(0x0), x1152)
+  var x1154 uint32
+  x1153, x1154 = bits.Add32(x1081, x1128, x1152)
   var x1155 uint32
   var x1156 uint32
-  x1155, x1156 = bits.Add32(x1081, x1129, 0x0)
+  x1155, x1156 = bits.Mul32(x1129, 0xffffffff)
   var x1157 uint32
   var x1158 uint32
-  x1157, x1158 = bits.Add32(x1083, x1131, x1156)
+  x1157, x1158 = bits.Mul32(x1129, 0xffffffff)
   var x1159 uint32
   var x1160 uint32
-  x1159, x1160 = bits.Add32(x1085, x1133, x1158)
+  x1159, x1160 = bits.Mul32(x1129, 0xffffffff)
   var x1161 uint32
   var x1162 uint32
-  x1161, x1162 = bits.Add32(x1087, x1135, x1160)
+  x1161, x1162 = bits.Mul32(x1129, 0xffffffff)
   var x1163 uint32
   var x1164 uint32
-  x1163, x1164 = bits.Add32(x1089, x1137, x1162)
+  x1163, x1164 = bits.Mul32(x1129, 0xffffffff)
   var x1165 uint32
   var x1166 uint32
-  x1165, x1166 = bits.Add32(x1091, x1139, x1164)
+  x1165, x1166 = bits.Mul32(x1129, 0xffffffff)
   var x1167 uint32
   var x1168 uint32
-  x1167, x1168 = bits.Add32(x1093, x1141, x1166)
+  x1167, x1168 = bits.Mul32(x1129, 0xffffffff)
   var x1169 uint32
   var x1170 uint32
-  x1169, x1170 = bits.Add32(x1095, x1143, x1168)
+  x1169, x1170 = bits.Mul32(x1129, 0xfffffffe)
   var x1171 uint32
   var x1172 uint32
-  x1171, x1172 = bits.Add32(x1097, x1145, x1170)
+  x1171, x1172 = bits.Mul32(x1129, 0xffffffff)
   var x1173 uint32
   var x1174 uint32
-  x1173, x1174 = bits.Add32(x1099, x1147, x1172)
+  x1173, x1174 = bits.Mul32(x1129, 0xffffffff)
   var x1175 uint32
   var x1176 uint32
-  x1175, x1176 = bits.Add32(x1101, x1149, x1174)
+  x1175, x1176 = bits.Add32(x1172, x1169, 0x0)
   var x1177 uint32
   var x1178 uint32
-  x1177, x1178 = bits.Add32(x1103, x1151, x1176)
+  x1177, x1178 = bits.Add32(x1170, x1167, x1176)
   var x1179 uint32
   var x1180 uint32
-  x1179, x1180 = bits.Add32(x1105, x1153, x1178)
+  x1179, x1180 = bits.Add32(x1168, x1165, x1178)
   var x1181 uint32
   var x1182 uint32
-  x1181, x1182 = bits.Mul32(x1155, 0xffffffff)
+  x1181, x1182 = bits.Add32(x1166, x1163, x1180)
   var x1183 uint32
   var x1184 uint32
-  x1183, x1184 = bits.Mul32(x1155, 0xffffffff)
+  x1183, x1184 = bits.Add32(x1164, x1161, x1182)
   var x1185 uint32
   var x1186 uint32
-  x1185, x1186 = bits.Mul32(x1155, 0xffffffff)
+  x1185, x1186 = bits.Add32(x1162, x1159, x1184)
   var x1187 uint32
   var x1188 uint32
-  x1187, x1188 = bits.Mul32(x1155, 0xffffffff)
+  x1187, x1188 = bits.Add32(x1160, x1157, x1186)
   var x1189 uint32
   var x1190 uint32
-  x1189, x1190 = bits.Mul32(x1155, 0xffffffff)
-  var x1191 uint32
-  var x1192 uint32
-  x1191, x1192 = bits.Mul32(x1155, 0xffffffff)
+  x1189, x1190 = bits.Add32(x1158, x1155, x1188)
+  var x1191 uint32 = (x1190 + x1156)
   var x1193 uint32
+  _, x1193 = bits.Add32(x1129, x1173, 0x0)
   var x1194 uint32
-  x1193, x1194 = bits.Mul32(x1155, 0xffffffff)
   var x1195 uint32
+  x1194, x1195 = bits.Add32(x1131, x1174, x1193)
   var x1196 uint32
-  x1195, x1196 = bits.Mul32(x1155, 0xfffffffe)
   var x1197 uint32
+  x1196, x1197 = bits.Add32(x1133, uint32(0x0), x1195)
   var x1198 uint32
-  x1197, x1198 = bits.Mul32(x1155, 0xffffffff)
   var x1199 uint32
+  x1198, x1199 = bits.Add32(x1135, x1171, x1197)
   var x1200 uint32
-  x1199, x1200 = bits.Mul32(x1155, 0xffffffff)
   var x1201 uint32
+  x1200, x1201 = bits.Add32(x1137, x1175, x1199)
   var x1202 uint32
-  x1201, x1202 = bits.Add32(x1198, x1195, 0x0)
   var x1203 uint32
+  x1202, x1203 = bits.Add32(x1139, x1177, x1201)
   var x1204 uint32
-  x1203, x1204 = bits.Add32(x1196, x1193, x1202)
   var x1205 uint32
+  x1204, x1205 = bits.Add32(x1141, x1179, x1203)
   var x1206 uint32
-  x1205, x1206 = bits.Add32(x1194, x1191, x1204)
   var x1207 uint32
+  x1206, x1207 = bits.Add32(x1143, x1181, x1205)
   var x1208 uint32
-  x1207, x1208 = bits.Add32(x1192, x1189, x1206)
   var x1209 uint32
+  x1208, x1209 = bits.Add32(x1145, x1183, x1207)
   var x1210 uint32
-  x1209, x1210 = bits.Add32(x1190, x1187, x1208)
   var x1211 uint32
+  x1210, x1211 = bits.Add32(x1147, x1185, x1209)
   var x1212 uint32
-  x1211, x1212 = bits.Add32(x1188, x1185, x1210)
   var x1213 uint32
+  x1212, x1213 = bits.Add32(x1149, x1187, x1211)
   var x1214 uint32
-  x1213, x1214 = bits.Add32(x1186, x1183, x1212)
   var x1215 uint32
+  x1214, x1215 = bits.Add32(x1151, x1189, x1213)
   var x1216 uint32
-  x1215, x1216 = bits.Add32(x1184, x1181, x1214)
   var x1217 uint32
-  x1217, _ = bits.Add32(x1182, uint32(0x0), x1216)
+  x1216, x1217 = bits.Add32(x1153, x1191, x1215)
+  var x1218 uint32 = (x1217 + x1154)
+  var x1219 uint32
   var x1220 uint32
-  _, x1220 = bits.Add32(x1155, x1199, 0x0)
+  x1219, x1220 = bits.Mul32(x9, (arg2[11]))
   var x1221 uint32
   var x1222 uint32
-  x1221, x1222 = bits.Add32(x1157, x1200, x1220)
+  x1221, x1222 = bits.Mul32(x9, (arg2[10]))
   var x1223 uint32
   var x1224 uint32
-  x1223, x1224 = bits.Add32(x1159, uint32(0x0), x1222)
+  x1223, x1224 = bits.Mul32(x9, (arg2[9]))
   var x1225 uint32
   var x1226 uint32
-  x1225, x1226 = bits.Add32(x1161, x1197, x1224)
+  x1225, x1226 = bits.Mul32(x9, (arg2[8]))
   var x1227 uint32
   var x1228 uint32
-  x1227, x1228 = bits.Add32(x1163, x1201, x1226)
+  x1227, x1228 = bits.Mul32(x9, (arg2[7]))
   var x1229 uint32
   var x1230 uint32
-  x1229, x1230 = bits.Add32(x1165, x1203, x1228)
+  x1229, x1230 = bits.Mul32(x9, (arg2[6]))
   var x1231 uint32
   var x1232 uint32
-  x1231, x1232 = bits.Add32(x1167, x1205, x1230)
+  x1231, x1232 = bits.Mul32(x9, (arg2[5]))
   var x1233 uint32
   var x1234 uint32
-  x1233, x1234 = bits.Add32(x1169, x1207, x1232)
+  x1233, x1234 = bits.Mul32(x9, (arg2[4]))
   var x1235 uint32
   var x1236 uint32
-  x1235, x1236 = bits.Add32(x1171, x1209, x1234)
+  x1235, x1236 = bits.Mul32(x9, (arg2[3]))
   var x1237 uint32
   var x1238 uint32
-  x1237, x1238 = bits.Add32(x1173, x1211, x1236)
+  x1237, x1238 = bits.Mul32(x9, (arg2[2]))
   var x1239 uint32
   var x1240 uint32
-  x1239, x1240 = bits.Add32(x1175, x1213, x1238)
+  x1239, x1240 = bits.Mul32(x9, (arg2[1]))
   var x1241 uint32
   var x1242 uint32
-  x1241, x1242 = bits.Add32(x1177, x1215, x1240)
+  x1241, x1242 = bits.Mul32(x9, (arg2[0]))
   var x1243 uint32
   var x1244 uint32
-  x1243, x1244 = bits.Add32(x1179, x1217, x1242)
+  x1243, x1244 = bits.Add32(x1242, x1239, 0x0)
   var x1245 uint32
-  x1245, _ = bits.Add32(x1180, uint32(0x0), x1244)
+  var x1246 uint32
+  x1245, x1246 = bits.Add32(x1240, x1237, x1244)
   var x1247 uint32
   var x1248 uint32
-  x1247, x1248 = bits.Mul32(x9, (arg2[11]))
+  x1247, x1248 = bits.Add32(x1238, x1235, x1246)
   var x1249 uint32
   var x1250 uint32
-  x1249, x1250 = bits.Mul32(x9, (arg2[10]))
+  x1249, x1250 = bits.Add32(x1236, x1233, x1248)
   var x1251 uint32
   var x1252 uint32
-  x1251, x1252 = bits.Mul32(x9, (arg2[9]))
+  x1251, x1252 = bits.Add32(x1234, x1231, x1250)
   var x1253 uint32
   var x1254 uint32
-  x1253, x1254 = bits.Mul32(x9, (arg2[8]))
+  x1253, x1254 = bits.Add32(x1232, x1229, x1252)
   var x1255 uint32
   var x1256 uint32
-  x1255, x1256 = bits.Mul32(x9, (arg2[7]))
+  x1255, x1256 = bits.Add32(x1230, x1227, x1254)
   var x1257 uint32
   var x1258 uint32
-  x1257, x1258 = bits.Mul32(x9, (arg2[6]))
+  x1257, x1258 = bits.Add32(x1228, x1225, x1256)
   var x1259 uint32
   var x1260 uint32
-  x1259, x1260 = bits.Mul32(x9, (arg2[5]))
+  x1259, x1260 = bits.Add32(x1226, x1223, x1258)
   var x1261 uint32
   var x1262 uint32
-  x1261, x1262 = bits.Mul32(x9, (arg2[4]))
+  x1261, x1262 = bits.Add32(x1224, x1221, x1260)
   var x1263 uint32
   var x1264 uint32
-  x1263, x1264 = bits.Mul32(x9, (arg2[3]))
-  var x1265 uint32
+  x1263, x1264 = bits.Add32(x1222, x1219, x1262)
+  var x1265 uint32 = (x1264 + x1220)
   var x1266 uint32
-  x1265, x1266 = bits.Mul32(x9, (arg2[2]))
   var x1267 uint32
+  x1266, x1267 = bits.Add32(x1194, x1241, 0x0)
   var x1268 uint32
-  x1267, x1268 = bits.Mul32(x9, (arg2[1]))
   var x1269 uint32
+  x1268, x1269 = bits.Add32(x1196, x1243, x1267)
   var x1270 uint32
-  x1269, x1270 = bits.Mul32(x9, (arg2[0]))
   var x1271 uint32
+  x1270, x1271 = bits.Add32(x1198, x1245, x1269)
   var x1272 uint32
-  x1271, x1272 = bits.Add32(x1270, x1267, 0x0)
   var x1273 uint32
+  x1272, x1273 = bits.Add32(x1200, x1247, x1271)
   var x1274 uint32
-  x1273, x1274 = bits.Add32(x1268, x1265, x1272)
   var x1275 uint32
+  x1274, x1275 = bits.Add32(x1202, x1249, x1273)
   var x1276 uint32
-  x1275, x1276 = bits.Add32(x1266, x1263, x1274)
   var x1277 uint32
+  x1276, x1277 = bits.Add32(x1204, x1251, x1275)
   var x1278 uint32
-  x1277, x1278 = bits.Add32(x1264, x1261, x1276)
   var x1279 uint32
+  x1278, x1279 = bits.Add32(x1206, x1253, x1277)
   var x1280 uint32
-  x1279, x1280 = bits.Add32(x1262, x1259, x1278)
   var x1281 uint32
+  x1280, x1281 = bits.Add32(x1208, x1255, x1279)
   var x1282 uint32
-  x1281, x1282 = bits.Add32(x1260, x1257, x1280)
   var x1283 uint32
+  x1282, x1283 = bits.Add32(x1210, x1257, x1281)
   var x1284 uint32
-  x1283, x1284 = bits.Add32(x1258, x1255, x1282)
   var x1285 uint32
+  x1284, x1285 = bits.Add32(x1212, x1259, x1283)
   var x1286 uint32
-  x1285, x1286 = bits.Add32(x1256, x1253, x1284)
   var x1287 uint32
+  x1286, x1287 = bits.Add32(x1214, x1261, x1285)
   var x1288 uint32
-  x1287, x1288 = bits.Add32(x1254, x1251, x1286)
   var x1289 uint32
+  x1288, x1289 = bits.Add32(x1216, x1263, x1287)
   var x1290 uint32
-  x1289, x1290 = bits.Add32(x1252, x1249, x1288)
   var x1291 uint32
+  x1290, x1291 = bits.Add32(x1218, x1265, x1289)
   var x1292 uint32
-  x1291, x1292 = bits.Add32(x1250, x1247, x1290)
   var x1293 uint32
-  x1293, _ = bits.Add32(x1248, uint32(0x0), x1292)
+  x1292, x1293 = bits.Mul32(x1266, 0xffffffff)
+  var x1294 uint32
   var x1295 uint32
+  x1294, x1295 = bits.Mul32(x1266, 0xffffffff)
   var x1296 uint32
-  x1295, x1296 = bits.Add32(x1221, x1269, 0x0)
   var x1297 uint32
+  x1296, x1297 = bits.Mul32(x1266, 0xffffffff)
   var x1298 uint32
-  x1297, x1298 = bits.Add32(x1223, x1271, x1296)
   var x1299 uint32
+  x1298, x1299 = bits.Mul32(x1266, 0xffffffff)
   var x1300 uint32
-  x1299, x1300 = bits.Add32(x1225, x1273, x1298)
   var x1301 uint32
+  x1300, x1301 = bits.Mul32(x1266, 0xffffffff)
   var x1302 uint32
-  x1301, x1302 = bits.Add32(x1227, x1275, x1300)
   var x1303 uint32
+  x1302, x1303 = bits.Mul32(x1266, 0xffffffff)
   var x1304 uint32
-  x1303, x1304 = bits.Add32(x1229, x1277, x1302)
   var x1305 uint32
+  x1304, x1305 = bits.Mul32(x1266, 0xffffffff)
   var x1306 uint32
-  x1305, x1306 = bits.Add32(x1231, x1279, x1304)
   var x1307 uint32
+  x1306, x1307 = bits.Mul32(x1266, 0xfffffffe)
   var x1308 uint32
-  x1307, x1308 = bits.Add32(x1233, x1281, x1306)
   var x1309 uint32
+  x1308, x1309 = bits.Mul32(x1266, 0xffffffff)
   var x1310 uint32
-  x1309, x1310 = bits.Add32(x1235, x1283, x1308)
   var x1311 uint32
+  x1310, x1311 = bits.Mul32(x1266, 0xffffffff)
   var x1312 uint32
-  x1311, x1312 = bits.Add32(x1237, x1285, x1310)
   var x1313 uint32
+  x1312, x1313 = bits.Add32(x1309, x1306, 0x0)
   var x1314 uint32
-  x1313, x1314 = bits.Add32(x1239, x1287, x1312)
   var x1315 uint32
+  x1314, x1315 = bits.Add32(x1307, x1304, x1313)
   var x1316 uint32
-  x1315, x1316 = bits.Add32(x1241, x1289, x1314)
   var x1317 uint32
+  x1316, x1317 = bits.Add32(x1305, x1302, x1315)
   var x1318 uint32
-  x1317, x1318 = bits.Add32(x1243, x1291, x1316)
   var x1319 uint32
+  x1318, x1319 = bits.Add32(x1303, x1300, x1317)
   var x1320 uint32
-  x1319, x1320 = bits.Add32(x1245, x1293, x1318)
   var x1321 uint32
+  x1320, x1321 = bits.Add32(x1301, x1298, x1319)
   var x1322 uint32
-  x1321, x1322 = bits.Mul32(x1295, 0xffffffff)
   var x1323 uint32
+  x1322, x1323 = bits.Add32(x1299, x1296, x1321)
   var x1324 uint32
-  x1323, x1324 = bits.Mul32(x1295, 0xffffffff)
   var x1325 uint32
+  x1324, x1325 = bits.Add32(x1297, x1294, x1323)
   var x1326 uint32
-  x1325, x1326 = bits.Mul32(x1295, 0xffffffff)
   var x1327 uint32
-  var x1328 uint32
-  x1327, x1328 = bits.Mul32(x1295, 0xffffffff)
-  var x1329 uint32
+  x1326, x1327 = bits.Add32(x1295, x1292, x1325)
+  var x1328 uint32 = (x1327 + x1293)
   var x1330 uint32
-  x1329, x1330 = bits.Mul32(x1295, 0xffffffff)
+  _, x1330 = bits.Add32(x1266, x1310, 0x0)
   var x1331 uint32
   var x1332 uint32
-  x1331, x1332 = bits.Mul32(x1295, 0xffffffff)
+  x1331, x1332 = bits.Add32(x1268, x1311, x1330)
   var x1333 uint32
   var x1334 uint32
-  x1333, x1334 = bits.Mul32(x1295, 0xffffffff)
+  x1333, x1334 = bits.Add32(x1270, uint32(0x0), x1332)
   var x1335 uint32
   var x1336 uint32
-  x1335, x1336 = bits.Mul32(x1295, 0xfffffffe)
+  x1335, x1336 = bits.Add32(x1272, x1308, x1334)
   var x1337 uint32
   var x1338 uint32
-  x1337, x1338 = bits.Mul32(x1295, 0xffffffff)
+  x1337, x1338 = bits.Add32(x1274, x1312, x1336)
   var x1339 uint32
   var x1340 uint32
-  x1339, x1340 = bits.Mul32(x1295, 0xffffffff)
+  x1339, x1340 = bits.Add32(x1276, x1314, x1338)
   var x1341 uint32
   var x1342 uint32
-  x1341, x1342 = bits.Add32(x1338, x1335, 0x0)
+  x1341, x1342 = bits.Add32(x1278, x1316, x1340)
   var x1343 uint32
   var x1344 uint32
-  x1343, x1344 = bits.Add32(x1336, x1333, x1342)
+  x1343, x1344 = bits.Add32(x1280, x1318, x1342)
   var x1345 uint32
   var x1346 uint32
-  x1345, x1346 = bits.Add32(x1334, x1331, x1344)
+  x1345, x1346 = bits.Add32(x1282, x1320, x1344)
   var x1347 uint32
   var x1348 uint32
-  x1347, x1348 = bits.Add32(x1332, x1329, x1346)
+  x1347, x1348 = bits.Add32(x1284, x1322, x1346)
   var x1349 uint32
   var x1350 uint32
-  x1349, x1350 = bits.Add32(x1330, x1327, x1348)
+  x1349, x1350 = bits.Add32(x1286, x1324, x1348)
   var x1351 uint32
   var x1352 uint32
-  x1351, x1352 = bits.Add32(x1328, x1325, x1350)
+  x1351, x1352 = bits.Add32(x1288, x1326, x1350)
   var x1353 uint32
   var x1354 uint32
-  x1353, x1354 = bits.Add32(x1326, x1323, x1352)
-  var x1355 uint32
+  x1353, x1354 = bits.Add32(x1290, x1328, x1352)
+  var x1355 uint32 = (x1354 + x1291)
   var x1356 uint32
-  x1355, x1356 = bits.Add32(x1324, x1321, x1354)
   var x1357 uint32
-  x1357, _ = bits.Add32(x1322, uint32(0x0), x1356)
+  x1356, x1357 = bits.Mul32(x10, (arg2[11]))
+  var x1358 uint32
+  var x1359 uint32
+  x1358, x1359 = bits.Mul32(x10, (arg2[10]))
   var x1360 uint32
-  _, x1360 = bits.Add32(x1295, x1339, 0x0)
   var x1361 uint32
+  x1360, x1361 = bits.Mul32(x10, (arg2[9]))
   var x1362 uint32
-  x1361, x1362 = bits.Add32(x1297, x1340, x1360)
   var x1363 uint32
+  x1362, x1363 = bits.Mul32(x10, (arg2[8]))
   var x1364 uint32
-  x1363, x1364 = bits.Add32(x1299, uint32(0x0), x1362)
   var x1365 uint32
+  x1364, x1365 = bits.Mul32(x10, (arg2[7]))
   var x1366 uint32
-  x1365, x1366 = bits.Add32(x1301, x1337, x1364)
   var x1367 uint32
+  x1366, x1367 = bits.Mul32(x10, (arg2[6]))
   var x1368 uint32
-  x1367, x1368 = bits.Add32(x1303, x1341, x1366)
   var x1369 uint32
+  x1368, x1369 = bits.Mul32(x10, (arg2[5]))
   var x1370 uint32
-  x1369, x1370 = bits.Add32(x1305, x1343, x1368)
   var x1371 uint32
+  x1370, x1371 = bits.Mul32(x10, (arg2[4]))
   var x1372 uint32
-  x1371, x1372 = bits.Add32(x1307, x1345, x1370)
   var x1373 uint32
+  x1372, x1373 = bits.Mul32(x10, (arg2[3]))
   var x1374 uint32
-  x1373, x1374 = bits.Add32(x1309, x1347, x1372)
   var x1375 uint32
+  x1374, x1375 = bits.Mul32(x10, (arg2[2]))
   var x1376 uint32
-  x1375, x1376 = bits.Add32(x1311, x1349, x1374)
   var x1377 uint32
+  x1376, x1377 = bits.Mul32(x10, (arg2[1]))
   var x1378 uint32
-  x1377, x1378 = bits.Add32(x1313, x1351, x1376)
   var x1379 uint32
+  x1378, x1379 = bits.Mul32(x10, (arg2[0]))
   var x1380 uint32
-  x1379, x1380 = bits.Add32(x1315, x1353, x1378)
   var x1381 uint32
+  x1380, x1381 = bits.Add32(x1379, x1376, 0x0)
   var x1382 uint32
-  x1381, x1382 = bits.Add32(x1317, x1355, x1380)
   var x1383 uint32
+  x1382, x1383 = bits.Add32(x1377, x1374, x1381)
   var x1384 uint32
-  x1383, x1384 = bits.Add32(x1319, x1357, x1382)
   var x1385 uint32
-  x1385, _ = bits.Add32(x1320, uint32(0x0), x1384)
+  x1384, x1385 = bits.Add32(x1375, x1372, x1383)
+  var x1386 uint32
   var x1387 uint32
+  x1386, x1387 = bits.Add32(x1373, x1370, x1385)
   var x1388 uint32
-  x1387, x1388 = bits.Mul32(x10, (arg2[11]))
   var x1389 uint32
+  x1388, x1389 = bits.Add32(x1371, x1368, x1387)
   var x1390 uint32
-  x1389, x1390 = bits.Mul32(x10, (arg2[10]))
   var x1391 uint32
+  x1390, x1391 = bits.Add32(x1369, x1366, x1389)
   var x1392 uint32
-  x1391, x1392 = bits.Mul32(x10, (arg2[9]))
   var x1393 uint32
+  x1392, x1393 = bits.Add32(x1367, x1364, x1391)
   var x1394 uint32
-  x1393, x1394 = bits.Mul32(x10, (arg2[8]))
   var x1395 uint32
+  x1394, x1395 = bits.Add32(x1365, x1362, x1393)
   var x1396 uint32
-  x1395, x1396 = bits.Mul32(x10, (arg2[7]))
   var x1397 uint32
+  x1396, x1397 = bits.Add32(x1363, x1360, x1395)
   var x1398 uint32
-  x1397, x1398 = bits.Mul32(x10, (arg2[6]))
   var x1399 uint32
+  x1398, x1399 = bits.Add32(x1361, x1358, x1397)
   var x1400 uint32
-  x1399, x1400 = bits.Mul32(x10, (arg2[5]))
   var x1401 uint32
-  var x1402 uint32
-  x1401, x1402 = bits.Mul32(x10, (arg2[4]))
+  x1400, x1401 = bits.Add32(x1359, x1356, x1399)
+  var x1402 uint32 = (x1401 + x1357)
   var x1403 uint32
   var x1404 uint32
-  x1403, x1404 = bits.Mul32(x10, (arg2[3]))
+  x1403, x1404 = bits.Add32(x1331, x1378, 0x0)
   var x1405 uint32
   var x1406 uint32
-  x1405, x1406 = bits.Mul32(x10, (arg2[2]))
+  x1405, x1406 = bits.Add32(x1333, x1380, x1404)
   var x1407 uint32
   var x1408 uint32
-  x1407, x1408 = bits.Mul32(x10, (arg2[1]))
+  x1407, x1408 = bits.Add32(x1335, x1382, x1406)
   var x1409 uint32
   var x1410 uint32
-  x1409, x1410 = bits.Mul32(x10, (arg2[0]))
+  x1409, x1410 = bits.Add32(x1337, x1384, x1408)
   var x1411 uint32
   var x1412 uint32
-  x1411, x1412 = bits.Add32(x1410, x1407, 0x0)
+  x1411, x1412 = bits.Add32(x1339, x1386, x1410)
   var x1413 uint32
   var x1414 uint32
-  x1413, x1414 = bits.Add32(x1408, x1405, x1412)
+  x1413, x1414 = bits.Add32(x1341, x1388, x1412)
   var x1415 uint32
   var x1416 uint32
-  x1415, x1416 = bits.Add32(x1406, x1403, x1414)
+  x1415, x1416 = bits.Add32(x1343, x1390, x1414)
   var x1417 uint32
   var x1418 uint32
-  x1417, x1418 = bits.Add32(x1404, x1401, x1416)
+  x1417, x1418 = bits.Add32(x1345, x1392, x1416)
   var x1419 uint32
   var x1420 uint32
-  x1419, x1420 = bits.Add32(x1402, x1399, x1418)
+  x1419, x1420 = bits.Add32(x1347, x1394, x1418)
   var x1421 uint32
   var x1422 uint32
-  x1421, x1422 = bits.Add32(x1400, x1397, x1420)
+  x1421, x1422 = bits.Add32(x1349, x1396, x1420)
   var x1423 uint32
   var x1424 uint32
-  x1423, x1424 = bits.Add32(x1398, x1395, x1422)
+  x1423, x1424 = bits.Add32(x1351, x1398, x1422)
   var x1425 uint32
   var x1426 uint32
-  x1425, x1426 = bits.Add32(x1396, x1393, x1424)
+  x1425, x1426 = bits.Add32(x1353, x1400, x1424)
   var x1427 uint32
   var x1428 uint32
-  x1427, x1428 = bits.Add32(x1394, x1391, x1426)
+  x1427, x1428 = bits.Add32(x1355, x1402, x1426)
   var x1429 uint32
   var x1430 uint32
-  x1429, x1430 = bits.Add32(x1392, x1389, x1428)
+  x1429, x1430 = bits.Mul32(x1403, 0xffffffff)
   var x1431 uint32
   var x1432 uint32
-  x1431, x1432 = bits.Add32(x1390, x1387, x1430)
+  x1431, x1432 = bits.Mul32(x1403, 0xffffffff)
   var x1433 uint32
-  x1433, _ = bits.Add32(x1388, uint32(0x0), x1432)
+  var x1434 uint32
+  x1433, x1434 = bits.Mul32(x1403, 0xffffffff)
   var x1435 uint32
   var x1436 uint32
-  x1435, x1436 = bits.Add32(x1361, x1409, 0x0)
+  x1435, x1436 = bits.Mul32(x1403, 0xffffffff)
   var x1437 uint32
   var x1438 uint32
-  x1437, x1438 = bits.Add32(x1363, x1411, x1436)
+  x1437, x1438 = bits.Mul32(x1403, 0xffffffff)
   var x1439 uint32
   var x1440 uint32
-  x1439, x1440 = bits.Add32(x1365, x1413, x1438)
+  x1439, x1440 = bits.Mul32(x1403, 0xffffffff)
   var x1441 uint32
   var x1442 uint32
-  x1441, x1442 = bits.Add32(x1367, x1415, x1440)
+  x1441, x1442 = bits.Mul32(x1403, 0xffffffff)
   var x1443 uint32
   var x1444 uint32
-  x1443, x1444 = bits.Add32(x1369, x1417, x1442)
+  x1443, x1444 = bits.Mul32(x1403, 0xfffffffe)
   var x1445 uint32
   var x1446 uint32
-  x1445, x1446 = bits.Add32(x1371, x1419, x1444)
+  x1445, x1446 = bits.Mul32(x1403, 0xffffffff)
   var x1447 uint32
   var x1448 uint32
-  x1447, x1448 = bits.Add32(x1373, x1421, x1446)
+  x1447, x1448 = bits.Mul32(x1403, 0xffffffff)
   var x1449 uint32
   var x1450 uint32
-  x1449, x1450 = bits.Add32(x1375, x1423, x1448)
+  x1449, x1450 = bits.Add32(x1446, x1443, 0x0)
   var x1451 uint32
   var x1452 uint32
-  x1451, x1452 = bits.Add32(x1377, x1425, x1450)
+  x1451, x1452 = bits.Add32(x1444, x1441, x1450)
   var x1453 uint32
   var x1454 uint32
-  x1453, x1454 = bits.Add32(x1379, x1427, x1452)
+  x1453, x1454 = bits.Add32(x1442, x1439, x1452)
   var x1455 uint32
   var x1456 uint32
-  x1455, x1456 = bits.Add32(x1381, x1429, x1454)
+  x1455, x1456 = bits.Add32(x1440, x1437, x1454)
   var x1457 uint32
   var x1458 uint32
-  x1457, x1458 = bits.Add32(x1383, x1431, x1456)
+  x1457, x1458 = bits.Add32(x1438, x1435, x1456)
   var x1459 uint32
   var x1460 uint32
-  x1459, x1460 = bits.Add32(x1385, x1433, x1458)
+  x1459, x1460 = bits.Add32(x1436, x1433, x1458)
   var x1461 uint32
   var x1462 uint32
-  x1461, x1462 = bits.Mul32(x1435, 0xffffffff)
+  x1461, x1462 = bits.Add32(x1434, x1431, x1460)
   var x1463 uint32
   var x1464 uint32
-  x1463, x1464 = bits.Mul32(x1435, 0xffffffff)
-  var x1465 uint32
-  var x1466 uint32
-  x1465, x1466 = bits.Mul32(x1435, 0xffffffff)
+  x1463, x1464 = bits.Add32(x1432, x1429, x1462)
+  var x1465 uint32 = (x1464 + x1430)
   var x1467 uint32
+  _, x1467 = bits.Add32(x1403, x1447, 0x0)
   var x1468 uint32
-  x1467, x1468 = bits.Mul32(x1435, 0xffffffff)
   var x1469 uint32
+  x1468, x1469 = bits.Add32(x1405, x1448, x1467)
   var x1470 uint32
-  x1469, x1470 = bits.Mul32(x1435, 0xffffffff)
   var x1471 uint32
+  x1470, x1471 = bits.Add32(x1407, uint32(0x0), x1469)
   var x1472 uint32
-  x1471, x1472 = bits.Mul32(x1435, 0xffffffff)
   var x1473 uint32
+  x1472, x1473 = bits.Add32(x1409, x1445, x1471)
   var x1474 uint32
-  x1473, x1474 = bits.Mul32(x1435, 0xffffffff)
   var x1475 uint32
+  x1474, x1475 = bits.Add32(x1411, x1449, x1473)
   var x1476 uint32
-  x1475, x1476 = bits.Mul32(x1435, 0xfffffffe)
   var x1477 uint32
+  x1476, x1477 = bits.Add32(x1413, x1451, x1475)
   var x1478 uint32
-  x1477, x1478 = bits.Mul32(x1435, 0xffffffff)
   var x1479 uint32
+  x1478, x1479 = bits.Add32(x1415, x1453, x1477)
   var x1480 uint32
-  x1479, x1480 = bits.Mul32(x1435, 0xffffffff)
   var x1481 uint32
+  x1480, x1481 = bits.Add32(x1417, x1455, x1479)
   var x1482 uint32
-  x1481, x1482 = bits.Add32(x1478, x1475, 0x0)
   var x1483 uint32
+  x1482, x1483 = bits.Add32(x1419, x1457, x1481)
   var x1484 uint32
-  x1483, x1484 = bits.Add32(x1476, x1473, x1482)
   var x1485 uint32
+  x1484, x1485 = bits.Add32(x1421, x1459, x1483)
   var x1486 uint32
-  x1485, x1486 = bits.Add32(x1474, x1471, x1484)
   var x1487 uint32
+  x1486, x1487 = bits.Add32(x1423, x1461, x1485)
   var x1488 uint32
-  x1487, x1488 = bits.Add32(x1472, x1469, x1486)
   var x1489 uint32
+  x1488, x1489 = bits.Add32(x1425, x1463, x1487)
   var x1490 uint32
-  x1489, x1490 = bits.Add32(x1470, x1467, x1488)
   var x1491 uint32
-  var x1492 uint32
-  x1491, x1492 = bits.Add32(x1468, x1465, x1490)
+  x1490, x1491 = bits.Add32(x1427, x1465, x1489)
+  var x1492 uint32 = (x1491 + x1428)
   var x1493 uint32
   var x1494 uint32
-  x1493, x1494 = bits.Add32(x1466, x1463, x1492)
+  x1493, x1494 = bits.Mul32(x11, (arg2[11]))
   var x1495 uint32
   var x1496 uint32
-  x1495, x1496 = bits.Add32(x1464, x1461, x1494)
+  x1495, x1496 = bits.Mul32(x11, (arg2[10]))
   var x1497 uint32
-  x1497, _ = bits.Add32(x1462, uint32(0x0), x1496)
+  var x1498 uint32
+  x1497, x1498 = bits.Mul32(x11, (arg2[9]))
+  var x1499 uint32
   var x1500 uint32
-  _, x1500 = bits.Add32(x1435, x1479, 0x0)
+  x1499, x1500 = bits.Mul32(x11, (arg2[8]))
   var x1501 uint32
   var x1502 uint32
-  x1501, x1502 = bits.Add32(x1437, x1480, x1500)
+  x1501, x1502 = bits.Mul32(x11, (arg2[7]))
   var x1503 uint32
   var x1504 uint32
-  x1503, x1504 = bits.Add32(x1439, uint32(0x0), x1502)
+  x1503, x1504 = bits.Mul32(x11, (arg2[6]))
   var x1505 uint32
   var x1506 uint32
-  x1505, x1506 = bits.Add32(x1441, x1477, x1504)
+  x1505, x1506 = bits.Mul32(x11, (arg2[5]))
   var x1507 uint32
   var x1508 uint32
-  x1507, x1508 = bits.Add32(x1443, x1481, x1506)
+  x1507, x1508 = bits.Mul32(x11, (arg2[4]))
   var x1509 uint32
   var x1510 uint32
-  x1509, x1510 = bits.Add32(x1445, x1483, x1508)
+  x1509, x1510 = bits.Mul32(x11, (arg2[3]))
   var x1511 uint32
   var x1512 uint32
-  x1511, x1512 = bits.Add32(x1447, x1485, x1510)
+  x1511, x1512 = bits.Mul32(x11, (arg2[2]))
   var x1513 uint32
   var x1514 uint32
-  x1513, x1514 = bits.Add32(x1449, x1487, x1512)
+  x1513, x1514 = bits.Mul32(x11, (arg2[1]))
   var x1515 uint32
   var x1516 uint32
-  x1515, x1516 = bits.Add32(x1451, x1489, x1514)
+  x1515, x1516 = bits.Mul32(x11, (arg2[0]))
   var x1517 uint32
   var x1518 uint32
-  x1517, x1518 = bits.Add32(x1453, x1491, x1516)
+  x1517, x1518 = bits.Add32(x1516, x1513, 0x0)
   var x1519 uint32
   var x1520 uint32
-  x1519, x1520 = bits.Add32(x1455, x1493, x1518)
+  x1519, x1520 = bits.Add32(x1514, x1511, x1518)
   var x1521 uint32
   var x1522 uint32
-  x1521, x1522 = bits.Add32(x1457, x1495, x1520)
+  x1521, x1522 = bits.Add32(x1512, x1509, x1520)
   var x1523 uint32
   var x1524 uint32
-  x1523, x1524 = bits.Add32(x1459, x1497, x1522)
+  x1523, x1524 = bits.Add32(x1510, x1507, x1522)
   var x1525 uint32
-  x1525, _ = bits.Add32(x1460, uint32(0x0), x1524)
+  var x1526 uint32
+  x1525, x1526 = bits.Add32(x1508, x1505, x1524)
   var x1527 uint32
   var x1528 uint32
-  x1527, x1528 = bits.Mul32(x11, (arg2[11]))
+  x1527, x1528 = bits.Add32(x1506, x1503, x1526)
   var x1529 uint32
   var x1530 uint32
-  x1529, x1530 = bits.Mul32(x11, (arg2[10]))
+  x1529, x1530 = bits.Add32(x1504, x1501, x1528)
   var x1531 uint32
   var x1532 uint32
-  x1531, x1532 = bits.Mul32(x11, (arg2[9]))
+  x1531, x1532 = bits.Add32(x1502, x1499, x1530)
   var x1533 uint32
   var x1534 uint32
-  x1533, x1534 = bits.Mul32(x11, (arg2[8]))
+  x1533, x1534 = bits.Add32(x1500, x1497, x1532)
   var x1535 uint32
   var x1536 uint32
-  x1535, x1536 = bits.Mul32(x11, (arg2[7]))
+  x1535, x1536 = bits.Add32(x1498, x1495, x1534)
   var x1537 uint32
   var x1538 uint32
-  x1537, x1538 = bits.Mul32(x11, (arg2[6]))
-  var x1539 uint32
+  x1537, x1538 = bits.Add32(x1496, x1493, x1536)
+  var x1539 uint32 = (x1538 + x1494)
   var x1540 uint32
-  x1539, x1540 = bits.Mul32(x11, (arg2[5]))
   var x1541 uint32
+  x1540, x1541 = bits.Add32(x1468, x1515, 0x0)
   var x1542 uint32
-  x1541, x1542 = bits.Mul32(x11, (arg2[4]))
   var x1543 uint32
+  x1542, x1543 = bits.Add32(x1470, x1517, x1541)
   var x1544 uint32
-  x1543, x1544 = bits.Mul32(x11, (arg2[3]))
   var x1545 uint32
+  x1544, x1545 = bits.Add32(x1472, x1519, x1543)
   var x1546 uint32
-  x1545, x1546 = bits.Mul32(x11, (arg2[2]))
   var x1547 uint32
+  x1546, x1547 = bits.Add32(x1474, x1521, x1545)
   var x1548 uint32
-  x1547, x1548 = bits.Mul32(x11, (arg2[1]))
   var x1549 uint32
+  x1548, x1549 = bits.Add32(x1476, x1523, x1547)
   var x1550 uint32
-  x1549, x1550 = bits.Mul32(x11, (arg2[0]))
   var x1551 uint32
+  x1550, x1551 = bits.Add32(x1478, x1525, x1549)
   var x1552 uint32
-  x1551, x1552 = bits.Add32(x1550, x1547, 0x0)
   var x1553 uint32
+  x1552, x1553 = bits.Add32(x1480, x1527, x1551)
   var x1554 uint32
-  x1553, x1554 = bits.Add32(x1548, x1545, x1552)
   var x1555 uint32
+  x1554, x1555 = bits.Add32(x1482, x1529, x1553)
   var x1556 uint32
-  x1555, x1556 = bits.Add32(x1546, x1543, x1554)
   var x1557 uint32
+  x1556, x1557 = bits.Add32(x1484, x1531, x1555)
   var x1558 uint32
-  x1557, x1558 = bits.Add32(x1544, x1541, x1556)
   var x1559 uint32
+  x1558, x1559 = bits.Add32(x1486, x1533, x1557)
   var x1560 uint32
-  x1559, x1560 = bits.Add32(x1542, x1539, x1558)
   var x1561 uint32
+  x1560, x1561 = bits.Add32(x1488, x1535, x1559)
   var x1562 uint32
-  x1561, x1562 = bits.Add32(x1540, x1537, x1560)
   var x1563 uint32
+  x1562, x1563 = bits.Add32(x1490, x1537, x1561)
   var x1564 uint32
-  x1563, x1564 = bits.Add32(x1538, x1535, x1562)
   var x1565 uint32
+  x1564, x1565 = bits.Add32(x1492, x1539, x1563)
   var x1566 uint32
-  x1565, x1566 = bits.Add32(x1536, x1533, x1564)
   var x1567 uint32
+  x1566, x1567 = bits.Mul32(x1540, 0xffffffff)
   var x1568 uint32
-  x1567, x1568 = bits.Add32(x1534, x1531, x1566)
   var x1569 uint32
+  x1568, x1569 = bits.Mul32(x1540, 0xffffffff)
   var x1570 uint32
-  x1569, x1570 = bits.Add32(x1532, x1529, x1568)
   var x1571 uint32
+  x1570, x1571 = bits.Mul32(x1540, 0xffffffff)
   var x1572 uint32
-  x1571, x1572 = bits.Add32(x1530, x1527, x1570)
   var x1573 uint32
-  x1573, _ = bits.Add32(x1528, uint32(0x0), x1572)
+  x1572, x1573 = bits.Mul32(x1540, 0xffffffff)
+  var x1574 uint32
   var x1575 uint32
+  x1574, x1575 = bits.Mul32(x1540, 0xffffffff)
   var x1576 uint32
-  x1575, x1576 = bits.Add32(x1501, x1549, 0x0)
   var x1577 uint32
+  x1576, x1577 = bits.Mul32(x1540, 0xffffffff)
   var x1578 uint32
-  x1577, x1578 = bits.Add32(x1503, x1551, x1576)
   var x1579 uint32
+  x1578, x1579 = bits.Mul32(x1540, 0xffffffff)
   var x1580 uint32
-  x1579, x1580 = bits.Add32(x1505, x1553, x1578)
   var x1581 uint32
+  x1580, x1581 = bits.Mul32(x1540, 0xfffffffe)
   var x1582 uint32
-  x1581, x1582 = bits.Add32(x1507, x1555, x1580)
   var x1583 uint32
+  x1582, x1583 = bits.Mul32(x1540, 0xffffffff)
   var x1584 uint32
-  x1583, x1584 = bits.Add32(x1509, x1557, x1582)
   var x1585 uint32
+  x1584, x1585 = bits.Mul32(x1540, 0xffffffff)
   var x1586 uint32
-  x1585, x1586 = bits.Add32(x1511, x1559, x1584)
   var x1587 uint32
+  x1586, x1587 = bits.Add32(x1583, x1580, 0x0)
   var x1588 uint32
-  x1587, x1588 = bits.Add32(x1513, x1561, x1586)
   var x1589 uint32
+  x1588, x1589 = bits.Add32(x1581, x1578, x1587)
   var x1590 uint32
-  x1589, x1590 = bits.Add32(x1515, x1563, x1588)
   var x1591 uint32
+  x1590, x1591 = bits.Add32(x1579, x1576, x1589)
   var x1592 uint32
-  x1591, x1592 = bits.Add32(x1517, x1565, x1590)
   var x1593 uint32
+  x1592, x1593 = bits.Add32(x1577, x1574, x1591)
   var x1594 uint32
-  x1593, x1594 = bits.Add32(x1519, x1567, x1592)
   var x1595 uint32
+  x1594, x1595 = bits.Add32(x1575, x1572, x1593)
   var x1596 uint32
-  x1595, x1596 = bits.Add32(x1521, x1569, x1594)
   var x1597 uint32
+  x1596, x1597 = bits.Add32(x1573, x1570, x1595)
   var x1598 uint32
-  x1597, x1598 = bits.Add32(x1523, x1571, x1596)
   var x1599 uint32
+  x1598, x1599 = bits.Add32(x1571, x1568, x1597)
   var x1600 uint32
-  x1599, x1600 = bits.Add32(x1525, x1573, x1598)
   var x1601 uint32
-  var x1602 uint32
-  x1601, x1602 = bits.Mul32(x1575, 0xffffffff)
-  var x1603 uint32
+  x1600, x1601 = bits.Add32(x1569, x1566, x1599)
+  var x1602 uint32 = (x1601 + x1567)
   var x1604 uint32
-  x1603, x1604 = bits.Mul32(x1575, 0xffffffff)
+  _, x1604 = bits.Add32(x1540, x1584, 0x0)
   var x1605 uint32
   var x1606 uint32
-  x1605, x1606 = bits.Mul32(x1575, 0xffffffff)
+  x1605, x1606 = bits.Add32(x1542, x1585, x1604)
   var x1607 uint32
   var x1608 uint32
-  x1607, x1608 = bits.Mul32(x1575, 0xffffffff)
+  x1607, x1608 = bits.Add32(x1544, uint32(0x0), x1606)
   var x1609 uint32
   var x1610 uint32
-  x1609, x1610 = bits.Mul32(x1575, 0xffffffff)
+  x1609, x1610 = bits.Add32(x1546, x1582, x1608)
   var x1611 uint32
   var x1612 uint32
-  x1611, x1612 = bits.Mul32(x1575, 0xffffffff)
+  x1611, x1612 = bits.Add32(x1548, x1586, x1610)
   var x1613 uint32
   var x1614 uint32
-  x1613, x1614 = bits.Mul32(x1575, 0xffffffff)
+  x1613, x1614 = bits.Add32(x1550, x1588, x1612)
   var x1615 uint32
   var x1616 uint32
-  x1615, x1616 = bits.Mul32(x1575, 0xfffffffe)
+  x1615, x1616 = bits.Add32(x1552, x1590, x1614)
   var x1617 uint32
   var x1618 uint32
-  x1617, x1618 = bits.Mul32(x1575, 0xffffffff)
+  x1617, x1618 = bits.Add32(x1554, x1592, x1616)
   var x1619 uint32
   var x1620 uint32
-  x1619, x1620 = bits.Mul32(x1575, 0xffffffff)
+  x1619, x1620 = bits.Add32(x1556, x1594, x1618)
   var x1621 uint32
   var x1622 uint32
-  x1621, x1622 = bits.Add32(x1618, x1615, 0x0)
+  x1621, x1622 = bits.Add32(x1558, x1596, x1620)
   var x1623 uint32
   var x1624 uint32
-  x1623, x1624 = bits.Add32(x1616, x1613, x1622)
+  x1623, x1624 = bits.Add32(x1560, x1598, x1622)
   var x1625 uint32
   var x1626 uint32
-  x1625, x1626 = bits.Add32(x1614, x1611, x1624)
+  x1625, x1626 = bits.Add32(x1562, x1600, x1624)
   var x1627 uint32
   var x1628 uint32
-  x1627, x1628 = bits.Add32(x1612, x1609, x1626)
-  var x1629 uint32
+  x1627, x1628 = bits.Add32(x1564, x1602, x1626)
+  var x1629 uint32 = (x1628 + x1565)
   var x1630 uint32
-  x1629, x1630 = bits.Add32(x1610, x1607, x1628)
   var x1631 uint32
+  x1630, x1631 = bits.Sub32(x1605, 0xffffffff, uint32(0x0))
   var x1632 uint32
-  x1631, x1632 = bits.Add32(x1608, x1605, x1630)
   var x1633 uint32
+  x1632, x1633 = bits.Sub32(x1607, uint32(0x0), x1631)
   var x1634 uint32
-  x1633, x1634 = bits.Add32(x1606, x1603, x1632)
   var x1635 uint32
+  x1634, x1635 = bits.Sub32(x1609, uint32(0x0), x1633)
   var x1636 uint32
-  x1635, x1636 = bits.Add32(x1604, x1601, x1634)
   var x1637 uint32
-  x1637, _ = bits.Add32(x1602, uint32(0x0), x1636)
+  x1636, x1637 = bits.Sub32(x1611, 0xffffffff, x1635)
+  var x1638 uint32
+  var x1639 uint32
+  x1638, x1639 = bits.Sub32(x1613, 0xfffffffe, x1637)
   var x1640 uint32
-  _, x1640 = bits.Add32(x1575, x1619, 0x0)
   var x1641 uint32
+  x1640, x1641 = bits.Sub32(x1615, 0xffffffff, x1639)
   var x1642 uint32
-  x1641, x1642 = bits.Add32(x1577, x1620, x1640)
   var x1643 uint32
+  x1642, x1643 = bits.Sub32(x1617, 0xffffffff, x1641)
   var x1644 uint32
-  x1643, x1644 = bits.Add32(x1579, uint32(0x0), x1642)
   var x1645 uint32
+  x1644, x1645 = bits.Sub32(x1619, 0xffffffff, x1643)
   var x1646 uint32
-  x1645, x1646 = bits.Add32(x1581, x1617, x1644)
   var x1647 uint32
+  x1646, x1647 = bits.Sub32(x1621, 0xffffffff, x1645)
   var x1648 uint32
-  x1647, x1648 = bits.Add32(x1583, x1621, x1646)
   var x1649 uint32
+  x1648, x1649 = bits.Sub32(x1623, 0xffffffff, x1647)
   var x1650 uint32
-  x1649, x1650 = bits.Add32(x1585, x1623, x1648)
   var x1651 uint32
+  x1650, x1651 = bits.Sub32(x1625, 0xffffffff, x1649)
   var x1652 uint32
-  x1651, x1652 = bits.Add32(x1587, x1625, x1650)
   var x1653 uint32
-  var x1654 uint32
-  x1653, x1654 = bits.Add32(x1589, x1627, x1652)
+  x1652, x1653 = bits.Sub32(x1627, 0xffffffff, x1651)
   var x1655 uint32
+  _, x1655 = bits.Sub32(x1629, uint32(0x0), x1653)
   var x1656 uint32
-  x1655, x1656 = bits.Add32(x1591, x1629, x1654)
+  fiat_p384_cmovznz_u32(&x1656, x1655, x1630, x1605)
   var x1657 uint32
+  fiat_p384_cmovznz_u32(&x1657, x1655, x1632, x1607)
   var x1658 uint32
-  x1657, x1658 = bits.Add32(x1593, x1631, x1656)
+  fiat_p384_cmovznz_u32(&x1658, x1655, x1634, x1609)
   var x1659 uint32
+  fiat_p384_cmovznz_u32(&x1659, x1655, x1636, x1611)
   var x1660 uint32
-  x1659, x1660 = bits.Add32(x1595, x1633, x1658)
+  fiat_p384_cmovznz_u32(&x1660, x1655, x1638, x1613)
   var x1661 uint32
+  fiat_p384_cmovznz_u32(&x1661, x1655, x1640, x1615)
   var x1662 uint32
-  x1661, x1662 = bits.Add32(x1597, x1635, x1660)
+  fiat_p384_cmovznz_u32(&x1662, x1655, x1642, x1617)
   var x1663 uint32
+  fiat_p384_cmovznz_u32(&x1663, x1655, x1644, x1619)
   var x1664 uint32
-  x1663, x1664 = bits.Add32(x1599, x1637, x1662)
+  fiat_p384_cmovznz_u32(&x1664, x1655, x1646, x1621)
   var x1665 uint32
-  x1665, _ = bits.Add32(x1600, uint32(0x0), x1664)
+  fiat_p384_cmovznz_u32(&x1665, x1655, x1648, x1623)
+  var x1666 uint32
+  fiat_p384_cmovznz_u32(&x1666, x1655, x1650, x1625)
   var x1667 uint32
-  var x1668 uint32
-  x1667, x1668 = bits.Sub32(x1641, 0xffffffff, uint32(0x0))
-  var x1669 uint32
-  var x1670 uint32
-  x1669, x1670 = bits.Sub32(x1643, uint32(0x0), x1668)
-  var x1671 uint32
-  var x1672 uint32
-  x1671, x1672 = bits.Sub32(x1645, uint32(0x0), x1670)
-  var x1673 uint32
-  var x1674 uint32
-  x1673, x1674 = bits.Sub32(x1647, 0xffffffff, x1672)
-  var x1675 uint32
-  var x1676 uint32
-  x1675, x1676 = bits.Sub32(x1649, 0xfffffffe, x1674)
-  var x1677 uint32
-  var x1678 uint32
-  x1677, x1678 = bits.Sub32(x1651, 0xffffffff, x1676)
-  var x1679 uint32
-  var x1680 uint32
-  x1679, x1680 = bits.Sub32(x1653, 0xffffffff, x1678)
-  var x1681 uint32
-  var x1682 uint32
-  x1681, x1682 = bits.Sub32(x1655, 0xffffffff, x1680)
-  var x1683 uint32
-  var x1684 uint32
-  x1683, x1684 = bits.Sub32(x1657, 0xffffffff, x1682)
-  var x1685 uint32
-  var x1686 uint32
-  x1685, x1686 = bits.Sub32(x1659, 0xffffffff, x1684)
-  var x1687 uint32
-  var x1688 uint32
-  x1687, x1688 = bits.Sub32(x1661, 0xffffffff, x1686)
-  var x1689 uint32
-  var x1690 uint32
-  x1689, x1690 = bits.Sub32(x1663, 0xffffffff, x1688)
-  var x1692 uint32
-  _, x1692 = bits.Sub32(x1665, uint32(0x0), x1690)
-  var x1693 uint32
-  fiat_p384_cmovznz_u32(&x1693, x1692, x1667, x1641)
-  var x1694 uint32
-  fiat_p384_cmovznz_u32(&x1694, x1692, x1669, x1643)
-  var x1695 uint32
-  fiat_p384_cmovznz_u32(&x1695, x1692, x1671, x1645)
-  var x1696 uint32
-  fiat_p384_cmovznz_u32(&x1696, x1692, x1673, x1647)
-  var x1697 uint32
-  fiat_p384_cmovznz_u32(&x1697, x1692, x1675, x1649)
-  var x1698 uint32
-  fiat_p384_cmovznz_u32(&x1698, x1692, x1677, x1651)
-  var x1699 uint32
-  fiat_p384_cmovznz_u32(&x1699, x1692, x1679, x1653)
-  var x1700 uint32
-  fiat_p384_cmovznz_u32(&x1700, x1692, x1681, x1655)
-  var x1701 uint32
-  fiat_p384_cmovznz_u32(&x1701, x1692, x1683, x1657)
-  var x1702 uint32
-  fiat_p384_cmovznz_u32(&x1702, x1692, x1685, x1659)
-  var x1703 uint32
-  fiat_p384_cmovznz_u32(&x1703, x1692, x1687, x1661)
-  var x1704 uint32
-  fiat_p384_cmovznz_u32(&x1704, x1692, x1689, x1663)
-  out1[0] = x1693
-  out1[1] = x1694
-  out1[2] = x1695
-  out1[3] = x1696
-  out1[4] = x1697
-  out1[5] = x1698
-  out1[6] = x1699
-  out1[7] = x1700
-  out1[8] = x1701
-  out1[9] = x1702
-  out1[10] = x1703
-  out1[11] = x1704
+  fiat_p384_cmovznz_u32(&x1667, x1655, x1652, x1627)
+  out1[0] = x1656
+  out1[1] = x1657
+  out1[2] = x1658
+  out1[3] = x1659
+  out1[4] = x1660
+  out1[5] = x1661
+  out1[6] = x1662
+  out1[7] = x1663
+  out1[8] = x1664
+  out1[9] = x1665
+  out1[10] = x1666
+  out1[11] = x1667
 }
 
 /*
@@ -2669,2444 +2632,2407 @@ func fiat_p384_square(out1 *[12]uint32, arg1 *[12]uint32) {
   var x57 uint32
   var x58 uint32
   x57, x58 = bits.Add32(x16, x13, x56)
-  var x59 uint32
-  x59, _ = bits.Add32(x14, uint32(0x0), x58)
+  var x59 uint32 = (x58 + x14)
+  var x60 uint32
   var x61 uint32
+  x60, x61 = bits.Mul32(x35, 0xffffffff)
   var x62 uint32
-  x61, x62 = bits.Mul32(x35, 0xffffffff)
   var x63 uint32
+  x62, x63 = bits.Mul32(x35, 0xffffffff)
   var x64 uint32
-  x63, x64 = bits.Mul32(x35, 0xffffffff)
   var x65 uint32
+  x64, x65 = bits.Mul32(x35, 0xffffffff)
   var x66 uint32
-  x65, x66 = bits.Mul32(x35, 0xffffffff)
   var x67 uint32
+  x66, x67 = bits.Mul32(x35, 0xffffffff)
   var x68 uint32
-  x67, x68 = bits.Mul32(x35, 0xffffffff)
   var x69 uint32
+  x68, x69 = bits.Mul32(x35, 0xffffffff)
   var x70 uint32
-  x69, x70 = bits.Mul32(x35, 0xffffffff)
   var x71 uint32
+  x70, x71 = bits.Mul32(x35, 0xffffffff)
   var x72 uint32
-  x71, x72 = bits.Mul32(x35, 0xffffffff)
   var x73 uint32
+  x72, x73 = bits.Mul32(x35, 0xffffffff)
   var x74 uint32
-  x73, x74 = bits.Mul32(x35, 0xffffffff)
   var x75 uint32
+  x74, x75 = bits.Mul32(x35, 0xfffffffe)
   var x76 uint32
-  x75, x76 = bits.Mul32(x35, 0xfffffffe)
   var x77 uint32
+  x76, x77 = bits.Mul32(x35, 0xffffffff)
   var x78 uint32
-  x77, x78 = bits.Mul32(x35, 0xffffffff)
   var x79 uint32
+  x78, x79 = bits.Mul32(x35, 0xffffffff)
   var x80 uint32
-  x79, x80 = bits.Mul32(x35, 0xffffffff)
   var x81 uint32
+  x80, x81 = bits.Add32(x77, x74, 0x0)
   var x82 uint32
-  x81, x82 = bits.Add32(x78, x75, 0x0)
   var x83 uint32
+  x82, x83 = bits.Add32(x75, x72, x81)
   var x84 uint32
-  x83, x84 = bits.Add32(x76, x73, x82)
   var x85 uint32
+  x84, x85 = bits.Add32(x73, x70, x83)
   var x86 uint32
-  x85, x86 = bits.Add32(x74, x71, x84)
   var x87 uint32
+  x86, x87 = bits.Add32(x71, x68, x85)
   var x88 uint32
-  x87, x88 = bits.Add32(x72, x69, x86)
   var x89 uint32
+  x88, x89 = bits.Add32(x69, x66, x87)
   var x90 uint32
-  x89, x90 = bits.Add32(x70, x67, x88)
   var x91 uint32
+  x90, x91 = bits.Add32(x67, x64, x89)
   var x92 uint32
-  x91, x92 = bits.Add32(x68, x65, x90)
   var x93 uint32
+  x92, x93 = bits.Add32(x65, x62, x91)
   var x94 uint32
-  x93, x94 = bits.Add32(x66, x63, x92)
   var x95 uint32
-  var x96 uint32
-  x95, x96 = bits.Add32(x64, x61, x94)
-  var x97 uint32
-  x97, _ = bits.Add32(x62, uint32(0x0), x96)
+  x94, x95 = bits.Add32(x63, x60, x93)
+  var x96 uint32 = (x95 + x61)
+  var x98 uint32
+  _, x98 = bits.Add32(x35, x78, 0x0)
+  var x99 uint32
   var x100 uint32
-  _, x100 = bits.Add32(x35, x79, 0x0)
+  x99, x100 = bits.Add32(x37, x79, x98)
   var x101 uint32
   var x102 uint32
-  x101, x102 = bits.Add32(x37, x80, x100)
+  x101, x102 = bits.Add32(x39, uint32(0x0), x100)
   var x103 uint32
   var x104 uint32
-  x103, x104 = bits.Add32(x39, uint32(0x0), x102)
+  x103, x104 = bits.Add32(x41, x76, x102)
   var x105 uint32
   var x106 uint32
-  x105, x106 = bits.Add32(x41, x77, x104)
+  x105, x106 = bits.Add32(x43, x80, x104)
   var x107 uint32
   var x108 uint32
-  x107, x108 = bits.Add32(x43, x81, x106)
+  x107, x108 = bits.Add32(x45, x82, x106)
   var x109 uint32
   var x110 uint32
-  x109, x110 = bits.Add32(x45, x83, x108)
+  x109, x110 = bits.Add32(x47, x84, x108)
   var x111 uint32
   var x112 uint32
-  x111, x112 = bits.Add32(x47, x85, x110)
+  x111, x112 = bits.Add32(x49, x86, x110)
   var x113 uint32
   var x114 uint32
-  x113, x114 = bits.Add32(x49, x87, x112)
+  x113, x114 = bits.Add32(x51, x88, x112)
   var x115 uint32
   var x116 uint32
-  x115, x116 = bits.Add32(x51, x89, x114)
+  x115, x116 = bits.Add32(x53, x90, x114)
   var x117 uint32
   var x118 uint32
-  x117, x118 = bits.Add32(x53, x91, x116)
+  x117, x118 = bits.Add32(x55, x92, x116)
   var x119 uint32
   var x120 uint32
-  x119, x120 = bits.Add32(x55, x93, x118)
+  x119, x120 = bits.Add32(x57, x94, x118)
   var x121 uint32
   var x122 uint32
-  x121, x122 = bits.Add32(x57, x95, x120)
+  x121, x122 = bits.Add32(x59, x96, x120)
   var x123 uint32
   var x124 uint32
-  x123, x124 = bits.Add32(x59, x97, x122)
+  x123, x124 = bits.Mul32(x1, (arg1[11]))
   var x125 uint32
-  x125, _ = bits.Add32(uint32(0x0), uint32(0x0), x124)
+  var x126 uint32
+  x125, x126 = bits.Mul32(x1, (arg1[10]))
   var x127 uint32
   var x128 uint32
-  x127, x128 = bits.Mul32(x1, (arg1[11]))
+  x127, x128 = bits.Mul32(x1, (arg1[9]))
   var x129 uint32
   var x130 uint32
-  x129, x130 = bits.Mul32(x1, (arg1[10]))
+  x129, x130 = bits.Mul32(x1, (arg1[8]))
   var x131 uint32
   var x132 uint32
-  x131, x132 = bits.Mul32(x1, (arg1[9]))
+  x131, x132 = bits.Mul32(x1, (arg1[7]))
   var x133 uint32
   var x134 uint32
-  x133, x134 = bits.Mul32(x1, (arg1[8]))
+  x133, x134 = bits.Mul32(x1, (arg1[6]))
   var x135 uint32
   var x136 uint32
-  x135, x136 = bits.Mul32(x1, (arg1[7]))
+  x135, x136 = bits.Mul32(x1, (arg1[5]))
   var x137 uint32
   var x138 uint32
-  x137, x138 = bits.Mul32(x1, (arg1[6]))
+  x137, x138 = bits.Mul32(x1, (arg1[4]))
   var x139 uint32
   var x140 uint32
-  x139, x140 = bits.Mul32(x1, (arg1[5]))
+  x139, x140 = bits.Mul32(x1, (arg1[3]))
   var x141 uint32
   var x142 uint32
-  x141, x142 = bits.Mul32(x1, (arg1[4]))
+  x141, x142 = bits.Mul32(x1, (arg1[2]))
   var x143 uint32
   var x144 uint32
-  x143, x144 = bits.Mul32(x1, (arg1[3]))
+  x143, x144 = bits.Mul32(x1, (arg1[1]))
   var x145 uint32
   var x146 uint32
-  x145, x146 = bits.Mul32(x1, (arg1[2]))
+  x145, x146 = bits.Mul32(x1, (arg1[0]))
   var x147 uint32
   var x148 uint32
-  x147, x148 = bits.Mul32(x1, (arg1[1]))
+  x147, x148 = bits.Add32(x146, x143, 0x0)
   var x149 uint32
   var x150 uint32
-  x149, x150 = bits.Mul32(x1, (arg1[0]))
+  x149, x150 = bits.Add32(x144, x141, x148)
   var x151 uint32
   var x152 uint32
-  x151, x152 = bits.Add32(x150, x147, 0x0)
+  x151, x152 = bits.Add32(x142, x139, x150)
   var x153 uint32
   var x154 uint32
-  x153, x154 = bits.Add32(x148, x145, x152)
+  x153, x154 = bits.Add32(x140, x137, x152)
   var x155 uint32
   var x156 uint32
-  x155, x156 = bits.Add32(x146, x143, x154)
+  x155, x156 = bits.Add32(x138, x135, x154)
   var x157 uint32
   var x158 uint32
-  x157, x158 = bits.Add32(x144, x141, x156)
+  x157, x158 = bits.Add32(x136, x133, x156)
   var x159 uint32
   var x160 uint32
-  x159, x160 = bits.Add32(x142, x139, x158)
+  x159, x160 = bits.Add32(x134, x131, x158)
   var x161 uint32
   var x162 uint32
-  x161, x162 = bits.Add32(x140, x137, x160)
+  x161, x162 = bits.Add32(x132, x129, x160)
   var x163 uint32
   var x164 uint32
-  x163, x164 = bits.Add32(x138, x135, x162)
+  x163, x164 = bits.Add32(x130, x127, x162)
   var x165 uint32
   var x166 uint32
-  x165, x166 = bits.Add32(x136, x133, x164)
+  x165, x166 = bits.Add32(x128, x125, x164)
   var x167 uint32
   var x168 uint32
-  x167, x168 = bits.Add32(x134, x131, x166)
-  var x169 uint32
+  x167, x168 = bits.Add32(x126, x123, x166)
+  var x169 uint32 = (x168 + x124)
   var x170 uint32
-  x169, x170 = bits.Add32(x132, x129, x168)
   var x171 uint32
+  x170, x171 = bits.Add32(x99, x145, 0x0)
   var x172 uint32
-  x171, x172 = bits.Add32(x130, x127, x170)
   var x173 uint32
-  x173, _ = bits.Add32(x128, uint32(0x0), x172)
+  x172, x173 = bits.Add32(x101, x147, x171)
+  var x174 uint32
   var x175 uint32
+  x174, x175 = bits.Add32(x103, x149, x173)
   var x176 uint32
-  x175, x176 = bits.Add32(x101, x149, 0x0)
   var x177 uint32
+  x176, x177 = bits.Add32(x105, x151, x175)
   var x178 uint32
-  x177, x178 = bits.Add32(x103, x151, x176)
   var x179 uint32
+  x178, x179 = bits.Add32(x107, x153, x177)
   var x180 uint32
-  x179, x180 = bits.Add32(x105, x153, x178)
   var x181 uint32
+  x180, x181 = bits.Add32(x109, x155, x179)
   var x182 uint32
-  x181, x182 = bits.Add32(x107, x155, x180)
   var x183 uint32
+  x182, x183 = bits.Add32(x111, x157, x181)
   var x184 uint32
-  x183, x184 = bits.Add32(x109, x157, x182)
   var x185 uint32
+  x184, x185 = bits.Add32(x113, x159, x183)
   var x186 uint32
-  x185, x186 = bits.Add32(x111, x159, x184)
   var x187 uint32
+  x186, x187 = bits.Add32(x115, x161, x185)
   var x188 uint32
-  x187, x188 = bits.Add32(x113, x161, x186)
   var x189 uint32
+  x188, x189 = bits.Add32(x117, x163, x187)
   var x190 uint32
-  x189, x190 = bits.Add32(x115, x163, x188)
   var x191 uint32
+  x190, x191 = bits.Add32(x119, x165, x189)
   var x192 uint32
-  x191, x192 = bits.Add32(x117, x165, x190)
   var x193 uint32
+  x192, x193 = bits.Add32(x121, x167, x191)
   var x194 uint32
-  x193, x194 = bits.Add32(x119, x167, x192)
   var x195 uint32
+  x194, x195 = bits.Add32(x122, x169, x193)
   var x196 uint32
-  x195, x196 = bits.Add32(x121, x169, x194)
   var x197 uint32
+  x196, x197 = bits.Mul32(x170, 0xffffffff)
   var x198 uint32
-  x197, x198 = bits.Add32(x123, x171, x196)
   var x199 uint32
+  x198, x199 = bits.Mul32(x170, 0xffffffff)
   var x200 uint32
-  x199, x200 = bits.Add32(x125, x173, x198)
   var x201 uint32
+  x200, x201 = bits.Mul32(x170, 0xffffffff)
   var x202 uint32
-  x201, x202 = bits.Mul32(x175, 0xffffffff)
   var x203 uint32
+  x202, x203 = bits.Mul32(x170, 0xffffffff)
   var x204 uint32
-  x203, x204 = bits.Mul32(x175, 0xffffffff)
   var x205 uint32
+  x204, x205 = bits.Mul32(x170, 0xffffffff)
   var x206 uint32
-  x205, x206 = bits.Mul32(x175, 0xffffffff)
   var x207 uint32
+  x206, x207 = bits.Mul32(x170, 0xffffffff)
   var x208 uint32
-  x207, x208 = bits.Mul32(x175, 0xffffffff)
   var x209 uint32
+  x208, x209 = bits.Mul32(x170, 0xffffffff)
   var x210 uint32
-  x209, x210 = bits.Mul32(x175, 0xffffffff)
   var x211 uint32
+  x210, x211 = bits.Mul32(x170, 0xfffffffe)
   var x212 uint32
-  x211, x212 = bits.Mul32(x175, 0xffffffff)
   var x213 uint32
+  x212, x213 = bits.Mul32(x170, 0xffffffff)
   var x214 uint32
-  x213, x214 = bits.Mul32(x175, 0xffffffff)
   var x215 uint32
+  x214, x215 = bits.Mul32(x170, 0xffffffff)
   var x216 uint32
-  x215, x216 = bits.Mul32(x175, 0xfffffffe)
   var x217 uint32
+  x216, x217 = bits.Add32(x213, x210, 0x0)
   var x218 uint32
-  x217, x218 = bits.Mul32(x175, 0xffffffff)
   var x219 uint32
+  x218, x219 = bits.Add32(x211, x208, x217)
   var x220 uint32
-  x219, x220 = bits.Mul32(x175, 0xffffffff)
   var x221 uint32
+  x220, x221 = bits.Add32(x209, x206, x219)
   var x222 uint32
-  x221, x222 = bits.Add32(x218, x215, 0x0)
   var x223 uint32
+  x222, x223 = bits.Add32(x207, x204, x221)
   var x224 uint32
-  x223, x224 = bits.Add32(x216, x213, x222)
   var x225 uint32
+  x224, x225 = bits.Add32(x205, x202, x223)
   var x226 uint32
-  x225, x226 = bits.Add32(x214, x211, x224)
   var x227 uint32
+  x226, x227 = bits.Add32(x203, x200, x225)
   var x228 uint32
-  x227, x228 = bits.Add32(x212, x209, x226)
   var x229 uint32
+  x228, x229 = bits.Add32(x201, x198, x227)
   var x230 uint32
-  x229, x230 = bits.Add32(x210, x207, x228)
   var x231 uint32
-  var x232 uint32
-  x231, x232 = bits.Add32(x208, x205, x230)
-  var x233 uint32
+  x230, x231 = bits.Add32(x199, x196, x229)
+  var x232 uint32 = (x231 + x197)
   var x234 uint32
-  x233, x234 = bits.Add32(x206, x203, x232)
+  _, x234 = bits.Add32(x170, x214, 0x0)
   var x235 uint32
   var x236 uint32
-  x235, x236 = bits.Add32(x204, x201, x234)
+  x235, x236 = bits.Add32(x172, x215, x234)
   var x237 uint32
-  x237, _ = bits.Add32(x202, uint32(0x0), x236)
+  var x238 uint32
+  x237, x238 = bits.Add32(x174, uint32(0x0), x236)
+  var x239 uint32
   var x240 uint32
-  _, x240 = bits.Add32(x175, x219, 0x0)
+  x239, x240 = bits.Add32(x176, x212, x238)
   var x241 uint32
   var x242 uint32
-  x241, x242 = bits.Add32(x177, x220, x240)
+  x241, x242 = bits.Add32(x178, x216, x240)
   var x243 uint32
   var x244 uint32
-  x243, x244 = bits.Add32(x179, uint32(0x0), x242)
+  x243, x244 = bits.Add32(x180, x218, x242)
   var x245 uint32
   var x246 uint32
-  x245, x246 = bits.Add32(x181, x217, x244)
+  x245, x246 = bits.Add32(x182, x220, x244)
   var x247 uint32
   var x248 uint32
-  x247, x248 = bits.Add32(x183, x221, x246)
+  x247, x248 = bits.Add32(x184, x222, x246)
   var x249 uint32
   var x250 uint32
-  x249, x250 = bits.Add32(x185, x223, x248)
+  x249, x250 = bits.Add32(x186, x224, x248)
   var x251 uint32
   var x252 uint32
-  x251, x252 = bits.Add32(x187, x225, x250)
+  x251, x252 = bits.Add32(x188, x226, x250)
   var x253 uint32
   var x254 uint32
-  x253, x254 = bits.Add32(x189, x227, x252)
+  x253, x254 = bits.Add32(x190, x228, x252)
   var x255 uint32
   var x256 uint32
-  x255, x256 = bits.Add32(x191, x229, x254)
+  x255, x256 = bits.Add32(x192, x230, x254)
   var x257 uint32
   var x258 uint32
-  x257, x258 = bits.Add32(x193, x231, x256)
-  var x259 uint32
+  x257, x258 = bits.Add32(x194, x232, x256)
+  var x259 uint32 = (x258 + x195)
   var x260 uint32
-  x259, x260 = bits.Add32(x195, x233, x258)
   var x261 uint32
+  x260, x261 = bits.Mul32(x2, (arg1[11]))
   var x262 uint32
-  x261, x262 = bits.Add32(x197, x235, x260)
   var x263 uint32
+  x262, x263 = bits.Mul32(x2, (arg1[10]))
   var x264 uint32
-  x263, x264 = bits.Add32(x199, x237, x262)
   var x265 uint32
-  x265, _ = bits.Add32(x200, uint32(0x0), x264)
+  x264, x265 = bits.Mul32(x2, (arg1[9]))
+  var x266 uint32
   var x267 uint32
+  x266, x267 = bits.Mul32(x2, (arg1[8]))
   var x268 uint32
-  x267, x268 = bits.Mul32(x2, (arg1[11]))
   var x269 uint32
+  x268, x269 = bits.Mul32(x2, (arg1[7]))
   var x270 uint32
-  x269, x270 = bits.Mul32(x2, (arg1[10]))
   var x271 uint32
+  x270, x271 = bits.Mul32(x2, (arg1[6]))
   var x272 uint32
-  x271, x272 = bits.Mul32(x2, (arg1[9]))
   var x273 uint32
+  x272, x273 = bits.Mul32(x2, (arg1[5]))
   var x274 uint32
-  x273, x274 = bits.Mul32(x2, (arg1[8]))
   var x275 uint32
+  x274, x275 = bits.Mul32(x2, (arg1[4]))
   var x276 uint32
-  x275, x276 = bits.Mul32(x2, (arg1[7]))
   var x277 uint32
+  x276, x277 = bits.Mul32(x2, (arg1[3]))
   var x278 uint32
-  x277, x278 = bits.Mul32(x2, (arg1[6]))
   var x279 uint32
+  x278, x279 = bits.Mul32(x2, (arg1[2]))
   var x280 uint32
-  x279, x280 = bits.Mul32(x2, (arg1[5]))
   var x281 uint32
+  x280, x281 = bits.Mul32(x2, (arg1[1]))
   var x282 uint32
-  x281, x282 = bits.Mul32(x2, (arg1[4]))
   var x283 uint32
+  x282, x283 = bits.Mul32(x2, (arg1[0]))
   var x284 uint32
-  x283, x284 = bits.Mul32(x2, (arg1[3]))
   var x285 uint32
+  x284, x285 = bits.Add32(x283, x280, 0x0)
   var x286 uint32
-  x285, x286 = bits.Mul32(x2, (arg1[2]))
   var x287 uint32
+  x286, x287 = bits.Add32(x281, x278, x285)
   var x288 uint32
-  x287, x288 = bits.Mul32(x2, (arg1[1]))
   var x289 uint32
+  x288, x289 = bits.Add32(x279, x276, x287)
   var x290 uint32
-  x289, x290 = bits.Mul32(x2, (arg1[0]))
   var x291 uint32
+  x290, x291 = bits.Add32(x277, x274, x289)
   var x292 uint32
-  x291, x292 = bits.Add32(x290, x287, 0x0)
   var x293 uint32
+  x292, x293 = bits.Add32(x275, x272, x291)
   var x294 uint32
-  x293, x294 = bits.Add32(x288, x285, x292)
   var x295 uint32
+  x294, x295 = bits.Add32(x273, x270, x293)
   var x296 uint32
-  x295, x296 = bits.Add32(x286, x283, x294)
   var x297 uint32
+  x296, x297 = bits.Add32(x271, x268, x295)
   var x298 uint32
-  x297, x298 = bits.Add32(x284, x281, x296)
   var x299 uint32
+  x298, x299 = bits.Add32(x269, x266, x297)
   var x300 uint32
-  x299, x300 = bits.Add32(x282, x279, x298)
   var x301 uint32
+  x300, x301 = bits.Add32(x267, x264, x299)
   var x302 uint32
-  x301, x302 = bits.Add32(x280, x277, x300)
   var x303 uint32
+  x302, x303 = bits.Add32(x265, x262, x301)
   var x304 uint32
-  x303, x304 = bits.Add32(x278, x275, x302)
   var x305 uint32
-  var x306 uint32
-  x305, x306 = bits.Add32(x276, x273, x304)
+  x304, x305 = bits.Add32(x263, x260, x303)
+  var x306 uint32 = (x305 + x261)
   var x307 uint32
   var x308 uint32
-  x307, x308 = bits.Add32(x274, x271, x306)
+  x307, x308 = bits.Add32(x235, x282, 0x0)
   var x309 uint32
   var x310 uint32
-  x309, x310 = bits.Add32(x272, x269, x308)
+  x309, x310 = bits.Add32(x237, x284, x308)
   var x311 uint32
   var x312 uint32
-  x311, x312 = bits.Add32(x270, x267, x310)
+  x311, x312 = bits.Add32(x239, x286, x310)
   var x313 uint32
-  x313, _ = bits.Add32(x268, uint32(0x0), x312)
+  var x314 uint32
+  x313, x314 = bits.Add32(x241, x288, x312)
   var x315 uint32
   var x316 uint32
-  x315, x316 = bits.Add32(x241, x289, 0x0)
+  x315, x316 = bits.Add32(x243, x290, x314)
   var x317 uint32
   var x318 uint32
-  x317, x318 = bits.Add32(x243, x291, x316)
+  x317, x318 = bits.Add32(x245, x292, x316)
   var x319 uint32
   var x320 uint32
-  x319, x320 = bits.Add32(x245, x293, x318)
+  x319, x320 = bits.Add32(x247, x294, x318)
   var x321 uint32
   var x322 uint32
-  x321, x322 = bits.Add32(x247, x295, x320)
+  x321, x322 = bits.Add32(x249, x296, x320)
   var x323 uint32
   var x324 uint32
-  x323, x324 = bits.Add32(x249, x297, x322)
+  x323, x324 = bits.Add32(x251, x298, x322)
   var x325 uint32
   var x326 uint32
-  x325, x326 = bits.Add32(x251, x299, x324)
+  x325, x326 = bits.Add32(x253, x300, x324)
   var x327 uint32
   var x328 uint32
-  x327, x328 = bits.Add32(x253, x301, x326)
+  x327, x328 = bits.Add32(x255, x302, x326)
   var x329 uint32
   var x330 uint32
-  x329, x330 = bits.Add32(x255, x303, x328)
+  x329, x330 = bits.Add32(x257, x304, x328)
   var x331 uint32
   var x332 uint32
-  x331, x332 = bits.Add32(x257, x305, x330)
+  x331, x332 = bits.Add32(x259, x306, x330)
   var x333 uint32
   var x334 uint32
-  x333, x334 = bits.Add32(x259, x307, x332)
+  x333, x334 = bits.Mul32(x307, 0xffffffff)
   var x335 uint32
   var x336 uint32
-  x335, x336 = bits.Add32(x261, x309, x334)
+  x335, x336 = bits.Mul32(x307, 0xffffffff)
   var x337 uint32
   var x338 uint32
-  x337, x338 = bits.Add32(x263, x311, x336)
+  x337, x338 = bits.Mul32(x307, 0xffffffff)
   var x339 uint32
   var x340 uint32
-  x339, x340 = bits.Add32(x265, x313, x338)
+  x339, x340 = bits.Mul32(x307, 0xffffffff)
   var x341 uint32
   var x342 uint32
-  x341, x342 = bits.Mul32(x315, 0xffffffff)
+  x341, x342 = bits.Mul32(x307, 0xffffffff)
   var x343 uint32
   var x344 uint32
-  x343, x344 = bits.Mul32(x315, 0xffffffff)
+  x343, x344 = bits.Mul32(x307, 0xffffffff)
   var x345 uint32
   var x346 uint32
-  x345, x346 = bits.Mul32(x315, 0xffffffff)
+  x345, x346 = bits.Mul32(x307, 0xffffffff)
   var x347 uint32
   var x348 uint32
-  x347, x348 = bits.Mul32(x315, 0xffffffff)
+  x347, x348 = bits.Mul32(x307, 0xfffffffe)
   var x349 uint32
   var x350 uint32
-  x349, x350 = bits.Mul32(x315, 0xffffffff)
+  x349, x350 = bits.Mul32(x307, 0xffffffff)
   var x351 uint32
   var x352 uint32
-  x351, x352 = bits.Mul32(x315, 0xffffffff)
+  x351, x352 = bits.Mul32(x307, 0xffffffff)
   var x353 uint32
   var x354 uint32
-  x353, x354 = bits.Mul32(x315, 0xffffffff)
+  x353, x354 = bits.Add32(x350, x347, 0x0)
   var x355 uint32
   var x356 uint32
-  x355, x356 = bits.Mul32(x315, 0xfffffffe)
+  x355, x356 = bits.Add32(x348, x345, x354)
   var x357 uint32
   var x358 uint32
-  x357, x358 = bits.Mul32(x315, 0xffffffff)
+  x357, x358 = bits.Add32(x346, x343, x356)
   var x359 uint32
   var x360 uint32
-  x359, x360 = bits.Mul32(x315, 0xffffffff)
+  x359, x360 = bits.Add32(x344, x341, x358)
   var x361 uint32
   var x362 uint32
-  x361, x362 = bits.Add32(x358, x355, 0x0)
+  x361, x362 = bits.Add32(x342, x339, x360)
   var x363 uint32
   var x364 uint32
-  x363, x364 = bits.Add32(x356, x353, x362)
+  x363, x364 = bits.Add32(x340, x337, x362)
   var x365 uint32
   var x366 uint32
-  x365, x366 = bits.Add32(x354, x351, x364)
+  x365, x366 = bits.Add32(x338, x335, x364)
   var x367 uint32
   var x368 uint32
-  x367, x368 = bits.Add32(x352, x349, x366)
-  var x369 uint32
-  var x370 uint32
-  x369, x370 = bits.Add32(x350, x347, x368)
+  x367, x368 = bits.Add32(x336, x333, x366)
+  var x369 uint32 = (x368 + x334)
   var x371 uint32
+  _, x371 = bits.Add32(x307, x351, 0x0)
   var x372 uint32
-  x371, x372 = bits.Add32(x348, x345, x370)
   var x373 uint32
+  x372, x373 = bits.Add32(x309, x352, x371)
   var x374 uint32
-  x373, x374 = bits.Add32(x346, x343, x372)
   var x375 uint32
+  x374, x375 = bits.Add32(x311, uint32(0x0), x373)
   var x376 uint32
-  x375, x376 = bits.Add32(x344, x341, x374)
   var x377 uint32
-  x377, _ = bits.Add32(x342, uint32(0x0), x376)
+  x376, x377 = bits.Add32(x313, x349, x375)
+  var x378 uint32
+  var x379 uint32
+  x378, x379 = bits.Add32(x315, x353, x377)
   var x380 uint32
-  _, x380 = bits.Add32(x315, x359, 0x0)
   var x381 uint32
+  x380, x381 = bits.Add32(x317, x355, x379)
   var x382 uint32
-  x381, x382 = bits.Add32(x317, x360, x380)
   var x383 uint32
+  x382, x383 = bits.Add32(x319, x357, x381)
   var x384 uint32
-  x383, x384 = bits.Add32(x319, uint32(0x0), x382)
   var x385 uint32
+  x384, x385 = bits.Add32(x321, x359, x383)
   var x386 uint32
-  x385, x386 = bits.Add32(x321, x357, x384)
   var x387 uint32
+  x386, x387 = bits.Add32(x323, x361, x385)
   var x388 uint32
-  x387, x388 = bits.Add32(x323, x361, x386)
   var x389 uint32
+  x388, x389 = bits.Add32(x325, x363, x387)
   var x390 uint32
-  x389, x390 = bits.Add32(x325, x363, x388)
   var x391 uint32
+  x390, x391 = bits.Add32(x327, x365, x389)
   var x392 uint32
-  x391, x392 = bits.Add32(x327, x365, x390)
   var x393 uint32
+  x392, x393 = bits.Add32(x329, x367, x391)
   var x394 uint32
-  x393, x394 = bits.Add32(x329, x367, x392)
   var x395 uint32
-  var x396 uint32
-  x395, x396 = bits.Add32(x331, x369, x394)
+  x394, x395 = bits.Add32(x331, x369, x393)
+  var x396 uint32 = (x395 + x332)
   var x397 uint32
   var x398 uint32
-  x397, x398 = bits.Add32(x333, x371, x396)
+  x397, x398 = bits.Mul32(x3, (arg1[11]))
   var x399 uint32
   var x400 uint32
-  x399, x400 = bits.Add32(x335, x373, x398)
+  x399, x400 = bits.Mul32(x3, (arg1[10]))
   var x401 uint32
   var x402 uint32
-  x401, x402 = bits.Add32(x337, x375, x400)
+  x401, x402 = bits.Mul32(x3, (arg1[9]))
   var x403 uint32
   var x404 uint32
-  x403, x404 = bits.Add32(x339, x377, x402)
+  x403, x404 = bits.Mul32(x3, (arg1[8]))
   var x405 uint32
-  x405, _ = bits.Add32(x340, uint32(0x0), x404)
+  var x406 uint32
+  x405, x406 = bits.Mul32(x3, (arg1[7]))
   var x407 uint32
   var x408 uint32
-  x407, x408 = bits.Mul32(x3, (arg1[11]))
+  x407, x408 = bits.Mul32(x3, (arg1[6]))
   var x409 uint32
   var x410 uint32
-  x409, x410 = bits.Mul32(x3, (arg1[10]))
+  x409, x410 = bits.Mul32(x3, (arg1[5]))
   var x411 uint32
   var x412 uint32
-  x411, x412 = bits.Mul32(x3, (arg1[9]))
+  x411, x412 = bits.Mul32(x3, (arg1[4]))
   var x413 uint32
   var x414 uint32
-  x413, x414 = bits.Mul32(x3, (arg1[8]))
+  x413, x414 = bits.Mul32(x3, (arg1[3]))
   var x415 uint32
   var x416 uint32
-  x415, x416 = bits.Mul32(x3, (arg1[7]))
+  x415, x416 = bits.Mul32(x3, (arg1[2]))
   var x417 uint32
   var x418 uint32
-  x417, x418 = bits.Mul32(x3, (arg1[6]))
+  x417, x418 = bits.Mul32(x3, (arg1[1]))
   var x419 uint32
   var x420 uint32
-  x419, x420 = bits.Mul32(x3, (arg1[5]))
+  x419, x420 = bits.Mul32(x3, (arg1[0]))
   var x421 uint32
   var x422 uint32
-  x421, x422 = bits.Mul32(x3, (arg1[4]))
+  x421, x422 = bits.Add32(x420, x417, 0x0)
   var x423 uint32
   var x424 uint32
-  x423, x424 = bits.Mul32(x3, (arg1[3]))
+  x423, x424 = bits.Add32(x418, x415, x422)
   var x425 uint32
   var x426 uint32
-  x425, x426 = bits.Mul32(x3, (arg1[2]))
+  x425, x426 = bits.Add32(x416, x413, x424)
   var x427 uint32
   var x428 uint32
-  x427, x428 = bits.Mul32(x3, (arg1[1]))
+  x427, x428 = bits.Add32(x414, x411, x426)
   var x429 uint32
   var x430 uint32
-  x429, x430 = bits.Mul32(x3, (arg1[0]))
+  x429, x430 = bits.Add32(x412, x409, x428)
   var x431 uint32
   var x432 uint32
-  x431, x432 = bits.Add32(x430, x427, 0x0)
+  x431, x432 = bits.Add32(x410, x407, x430)
   var x433 uint32
   var x434 uint32
-  x433, x434 = bits.Add32(x428, x425, x432)
+  x433, x434 = bits.Add32(x408, x405, x432)
   var x435 uint32
   var x436 uint32
-  x435, x436 = bits.Add32(x426, x423, x434)
+  x435, x436 = bits.Add32(x406, x403, x434)
   var x437 uint32
   var x438 uint32
-  x437, x438 = bits.Add32(x424, x421, x436)
+  x437, x438 = bits.Add32(x404, x401, x436)
   var x439 uint32
   var x440 uint32
-  x439, x440 = bits.Add32(x422, x419, x438)
+  x439, x440 = bits.Add32(x402, x399, x438)
   var x441 uint32
   var x442 uint32
-  x441, x442 = bits.Add32(x420, x417, x440)
-  var x443 uint32
+  x441, x442 = bits.Add32(x400, x397, x440)
+  var x443 uint32 = (x442 + x398)
   var x444 uint32
-  x443, x444 = bits.Add32(x418, x415, x442)
   var x445 uint32
+  x444, x445 = bits.Add32(x372, x419, 0x0)
   var x446 uint32
-  x445, x446 = bits.Add32(x416, x413, x444)
   var x447 uint32
+  x446, x447 = bits.Add32(x374, x421, x445)
   var x448 uint32
-  x447, x448 = bits.Add32(x414, x411, x446)
   var x449 uint32
+  x448, x449 = bits.Add32(x376, x423, x447)
   var x450 uint32
-  x449, x450 = bits.Add32(x412, x409, x448)
   var x451 uint32
+  x450, x451 = bits.Add32(x378, x425, x449)
   var x452 uint32
-  x451, x452 = bits.Add32(x410, x407, x450)
   var x453 uint32
-  x453, _ = bits.Add32(x408, uint32(0x0), x452)
+  x452, x453 = bits.Add32(x380, x427, x451)
+  var x454 uint32
   var x455 uint32
+  x454, x455 = bits.Add32(x382, x429, x453)
   var x456 uint32
-  x455, x456 = bits.Add32(x381, x429, 0x0)
   var x457 uint32
+  x456, x457 = bits.Add32(x384, x431, x455)
   var x458 uint32
-  x457, x458 = bits.Add32(x383, x431, x456)
   var x459 uint32
+  x458, x459 = bits.Add32(x386, x433, x457)
   var x460 uint32
-  x459, x460 = bits.Add32(x385, x433, x458)
   var x461 uint32
+  x460, x461 = bits.Add32(x388, x435, x459)
   var x462 uint32
-  x461, x462 = bits.Add32(x387, x435, x460)
   var x463 uint32
+  x462, x463 = bits.Add32(x390, x437, x461)
   var x464 uint32
-  x463, x464 = bits.Add32(x389, x437, x462)
   var x465 uint32
+  x464, x465 = bits.Add32(x392, x439, x463)
   var x466 uint32
-  x465, x466 = bits.Add32(x391, x439, x464)
   var x467 uint32
+  x466, x467 = bits.Add32(x394, x441, x465)
   var x468 uint32
-  x467, x468 = bits.Add32(x393, x441, x466)
   var x469 uint32
+  x468, x469 = bits.Add32(x396, x443, x467)
   var x470 uint32
-  x469, x470 = bits.Add32(x395, x443, x468)
   var x471 uint32
+  x470, x471 = bits.Mul32(x444, 0xffffffff)
   var x472 uint32
-  x471, x472 = bits.Add32(x397, x445, x470)
   var x473 uint32
+  x472, x473 = bits.Mul32(x444, 0xffffffff)
   var x474 uint32
-  x473, x474 = bits.Add32(x399, x447, x472)
   var x475 uint32
+  x474, x475 = bits.Mul32(x444, 0xffffffff)
   var x476 uint32
-  x475, x476 = bits.Add32(x401, x449, x474)
   var x477 uint32
+  x476, x477 = bits.Mul32(x444, 0xffffffff)
   var x478 uint32
-  x477, x478 = bits.Add32(x403, x451, x476)
   var x479 uint32
+  x478, x479 = bits.Mul32(x444, 0xffffffff)
   var x480 uint32
-  x479, x480 = bits.Add32(x405, x453, x478)
   var x481 uint32
+  x480, x481 = bits.Mul32(x444, 0xffffffff)
   var x482 uint32
-  x481, x482 = bits.Mul32(x455, 0xffffffff)
   var x483 uint32
+  x482, x483 = bits.Mul32(x444, 0xffffffff)
   var x484 uint32
-  x483, x484 = bits.Mul32(x455, 0xffffffff)
   var x485 uint32
+  x484, x485 = bits.Mul32(x444, 0xfffffffe)
   var x486 uint32
-  x485, x486 = bits.Mul32(x455, 0xffffffff)
   var x487 uint32
+  x486, x487 = bits.Mul32(x444, 0xffffffff)
   var x488 uint32
-  x487, x488 = bits.Mul32(x455, 0xffffffff)
   var x489 uint32
+  x488, x489 = bits.Mul32(x444, 0xffffffff)
   var x490 uint32
-  x489, x490 = bits.Mul32(x455, 0xffffffff)
   var x491 uint32
+  x490, x491 = bits.Add32(x487, x484, 0x0)
   var x492 uint32
-  x491, x492 = bits.Mul32(x455, 0xffffffff)
   var x493 uint32
+  x492, x493 = bits.Add32(x485, x482, x491)
   var x494 uint32
-  x493, x494 = bits.Mul32(x455, 0xffffffff)
   var x495 uint32
+  x494, x495 = bits.Add32(x483, x480, x493)
   var x496 uint32
-  x495, x496 = bits.Mul32(x455, 0xfffffffe)
   var x497 uint32
+  x496, x497 = bits.Add32(x481, x478, x495)
   var x498 uint32
-  x497, x498 = bits.Mul32(x455, 0xffffffff)
   var x499 uint32
+  x498, x499 = bits.Add32(x479, x476, x497)
   var x500 uint32
-  x499, x500 = bits.Mul32(x455, 0xffffffff)
   var x501 uint32
+  x500, x501 = bits.Add32(x477, x474, x499)
   var x502 uint32
-  x501, x502 = bits.Add32(x498, x495, 0x0)
   var x503 uint32
+  x502, x503 = bits.Add32(x475, x472, x501)
   var x504 uint32
-  x503, x504 = bits.Add32(x496, x493, x502)
   var x505 uint32
-  var x506 uint32
-  x505, x506 = bits.Add32(x494, x491, x504)
-  var x507 uint32
+  x504, x505 = bits.Add32(x473, x470, x503)
+  var x506 uint32 = (x505 + x471)
   var x508 uint32
-  x507, x508 = bits.Add32(x492, x489, x506)
+  _, x508 = bits.Add32(x444, x488, 0x0)
   var x509 uint32
   var x510 uint32
-  x509, x510 = bits.Add32(x490, x487, x508)
+  x509, x510 = bits.Add32(x446, x489, x508)
   var x511 uint32
   var x512 uint32
-  x511, x512 = bits.Add32(x488, x485, x510)
+  x511, x512 = bits.Add32(x448, uint32(0x0), x510)
   var x513 uint32
   var x514 uint32
-  x513, x514 = bits.Add32(x486, x483, x512)
+  x513, x514 = bits.Add32(x450, x486, x512)
   var x515 uint32
   var x516 uint32
-  x515, x516 = bits.Add32(x484, x481, x514)
+  x515, x516 = bits.Add32(x452, x490, x514)
   var x517 uint32
-  x517, _ = bits.Add32(x482, uint32(0x0), x516)
+  var x518 uint32
+  x517, x518 = bits.Add32(x454, x492, x516)
+  var x519 uint32
   var x520 uint32
-  _, x520 = bits.Add32(x455, x499, 0x0)
+  x519, x520 = bits.Add32(x456, x494, x518)
   var x521 uint32
   var x522 uint32
-  x521, x522 = bits.Add32(x457, x500, x520)
+  x521, x522 = bits.Add32(x458, x496, x520)
   var x523 uint32
   var x524 uint32
-  x523, x524 = bits.Add32(x459, uint32(0x0), x522)
+  x523, x524 = bits.Add32(x460, x498, x522)
   var x525 uint32
   var x526 uint32
-  x525, x526 = bits.Add32(x461, x497, x524)
+  x525, x526 = bits.Add32(x462, x500, x524)
   var x527 uint32
   var x528 uint32
-  x527, x528 = bits.Add32(x463, x501, x526)
+  x527, x528 = bits.Add32(x464, x502, x526)
   var x529 uint32
   var x530 uint32
-  x529, x530 = bits.Add32(x465, x503, x528)
+  x529, x530 = bits.Add32(x466, x504, x528)
   var x531 uint32
   var x532 uint32
-  x531, x532 = bits.Add32(x467, x505, x530)
-  var x533 uint32
+  x531, x532 = bits.Add32(x468, x506, x530)
+  var x533 uint32 = (x532 + x469)
   var x534 uint32
-  x533, x534 = bits.Add32(x469, x507, x532)
   var x535 uint32
+  x534, x535 = bits.Mul32(x4, (arg1[11]))
   var x536 uint32
-  x535, x536 = bits.Add32(x471, x509, x534)
   var x537 uint32
+  x536, x537 = bits.Mul32(x4, (arg1[10]))
   var x538 uint32
-  x537, x538 = bits.Add32(x473, x511, x536)
   var x539 uint32
+  x538, x539 = bits.Mul32(x4, (arg1[9]))
   var x540 uint32
-  x539, x540 = bits.Add32(x475, x513, x538)
   var x541 uint32
+  x540, x541 = bits.Mul32(x4, (arg1[8]))
   var x542 uint32
-  x541, x542 = bits.Add32(x477, x515, x540)
   var x543 uint32
+  x542, x543 = bits.Mul32(x4, (arg1[7]))
   var x544 uint32
-  x543, x544 = bits.Add32(x479, x517, x542)
   var x545 uint32
-  x545, _ = bits.Add32(x480, uint32(0x0), x544)
+  x544, x545 = bits.Mul32(x4, (arg1[6]))
+  var x546 uint32
   var x547 uint32
+  x546, x547 = bits.Mul32(x4, (arg1[5]))
   var x548 uint32
-  x547, x548 = bits.Mul32(x4, (arg1[11]))
   var x549 uint32
+  x548, x549 = bits.Mul32(x4, (arg1[4]))
   var x550 uint32
-  x549, x550 = bits.Mul32(x4, (arg1[10]))
   var x551 uint32
+  x550, x551 = bits.Mul32(x4, (arg1[3]))
   var x552 uint32
-  x551, x552 = bits.Mul32(x4, (arg1[9]))
   var x553 uint32
+  x552, x553 = bits.Mul32(x4, (arg1[2]))
   var x554 uint32
-  x553, x554 = bits.Mul32(x4, (arg1[8]))
   var x555 uint32
+  x554, x555 = bits.Mul32(x4, (arg1[1]))
   var x556 uint32
-  x555, x556 = bits.Mul32(x4, (arg1[7]))
   var x557 uint32
+  x556, x557 = bits.Mul32(x4, (arg1[0]))
   var x558 uint32
-  x557, x558 = bits.Mul32(x4, (arg1[6]))
   var x559 uint32
+  x558, x559 = bits.Add32(x557, x554, 0x0)
   var x560 uint32
-  x559, x560 = bits.Mul32(x4, (arg1[5]))
   var x561 uint32
+  x560, x561 = bits.Add32(x555, x552, x559)
   var x562 uint32
-  x561, x562 = bits.Mul32(x4, (arg1[4]))
   var x563 uint32
+  x562, x563 = bits.Add32(x553, x550, x561)
   var x564 uint32
-  x563, x564 = bits.Mul32(x4, (arg1[3]))
   var x565 uint32
+  x564, x565 = bits.Add32(x551, x548, x563)
   var x566 uint32
-  x565, x566 = bits.Mul32(x4, (arg1[2]))
   var x567 uint32
+  x566, x567 = bits.Add32(x549, x546, x565)
   var x568 uint32
-  x567, x568 = bits.Mul32(x4, (arg1[1]))
   var x569 uint32
+  x568, x569 = bits.Add32(x547, x544, x567)
   var x570 uint32
-  x569, x570 = bits.Mul32(x4, (arg1[0]))
   var x571 uint32
+  x570, x571 = bits.Add32(x545, x542, x569)
   var x572 uint32
-  x571, x572 = bits.Add32(x570, x567, 0x0)
   var x573 uint32
+  x572, x573 = bits.Add32(x543, x540, x571)
   var x574 uint32
-  x573, x574 = bits.Add32(x568, x565, x572)
   var x575 uint32
+  x574, x575 = bits.Add32(x541, x538, x573)
   var x576 uint32
-  x575, x576 = bits.Add32(x566, x563, x574)
   var x577 uint32
+  x576, x577 = bits.Add32(x539, x536, x575)
   var x578 uint32
-  x577, x578 = bits.Add32(x564, x561, x576)
   var x579 uint32
-  var x580 uint32
-  x579, x580 = bits.Add32(x562, x559, x578)
+  x578, x579 = bits.Add32(x537, x534, x577)
+  var x580 uint32 = (x579 + x535)
   var x581 uint32
   var x582 uint32
-  x581, x582 = bits.Add32(x560, x557, x580)
+  x581, x582 = bits.Add32(x509, x556, 0x0)
   var x583 uint32
   var x584 uint32
-  x583, x584 = bits.Add32(x558, x555, x582)
+  x583, x584 = bits.Add32(x511, x558, x582)
   var x585 uint32
   var x586 uint32
-  x585, x586 = bits.Add32(x556, x553, x584)
+  x585, x586 = bits.Add32(x513, x560, x584)
   var x587 uint32
   var x588 uint32
-  x587, x588 = bits.Add32(x554, x551, x586)
+  x587, x588 = bits.Add32(x515, x562, x586)
   var x589 uint32
   var x590 uint32
-  x589, x590 = bits.Add32(x552, x549, x588)
+  x589, x590 = bits.Add32(x517, x564, x588)
   var x591 uint32
   var x592 uint32
-  x591, x592 = bits.Add32(x550, x547, x590)
+  x591, x592 = bits.Add32(x519, x566, x590)
   var x593 uint32
-  x593, _ = bits.Add32(x548, uint32(0x0), x592)
+  var x594 uint32
+  x593, x594 = bits.Add32(x521, x568, x592)
   var x595 uint32
   var x596 uint32
-  x595, x596 = bits.Add32(x521, x569, 0x0)
+  x595, x596 = bits.Add32(x523, x570, x594)
   var x597 uint32
   var x598 uint32
-  x597, x598 = bits.Add32(x523, x571, x596)
+  x597, x598 = bits.Add32(x525, x572, x596)
   var x599 uint32
   var x600 uint32
-  x599, x600 = bits.Add32(x525, x573, x598)
+  x599, x600 = bits.Add32(x527, x574, x598)
   var x601 uint32
   var x602 uint32
-  x601, x602 = bits.Add32(x527, x575, x600)
+  x601, x602 = bits.Add32(x529, x576, x600)
   var x603 uint32
   var x604 uint32
-  x603, x604 = bits.Add32(x529, x577, x602)
+  x603, x604 = bits.Add32(x531, x578, x602)
   var x605 uint32
   var x606 uint32
-  x605, x606 = bits.Add32(x531, x579, x604)
+  x605, x606 = bits.Add32(x533, x580, x604)
   var x607 uint32
   var x608 uint32
-  x607, x608 = bits.Add32(x533, x581, x606)
+  x607, x608 = bits.Mul32(x581, 0xffffffff)
   var x609 uint32
   var x610 uint32
-  x609, x610 = bits.Add32(x535, x583, x608)
+  x609, x610 = bits.Mul32(x581, 0xffffffff)
   var x611 uint32
   var x612 uint32
-  x611, x612 = bits.Add32(x537, x585, x610)
+  x611, x612 = bits.Mul32(x581, 0xffffffff)
   var x613 uint32
   var x614 uint32
-  x613, x614 = bits.Add32(x539, x587, x612)
+  x613, x614 = bits.Mul32(x581, 0xffffffff)
   var x615 uint32
   var x616 uint32
-  x615, x616 = bits.Add32(x541, x589, x614)
+  x615, x616 = bits.Mul32(x581, 0xffffffff)
   var x617 uint32
   var x618 uint32
-  x617, x618 = bits.Add32(x543, x591, x616)
+  x617, x618 = bits.Mul32(x581, 0xffffffff)
   var x619 uint32
   var x620 uint32
-  x619, x620 = bits.Add32(x545, x593, x618)
+  x619, x620 = bits.Mul32(x581, 0xffffffff)
   var x621 uint32
   var x622 uint32
-  x621, x622 = bits.Mul32(x595, 0xffffffff)
+  x621, x622 = bits.Mul32(x581, 0xfffffffe)
   var x623 uint32
   var x624 uint32
-  x623, x624 = bits.Mul32(x595, 0xffffffff)
+  x623, x624 = bits.Mul32(x581, 0xffffffff)
   var x625 uint32
   var x626 uint32
-  x625, x626 = bits.Mul32(x595, 0xffffffff)
+  x625, x626 = bits.Mul32(x581, 0xffffffff)
   var x627 uint32
   var x628 uint32
-  x627, x628 = bits.Mul32(x595, 0xffffffff)
+  x627, x628 = bits.Add32(x624, x621, 0x0)
   var x629 uint32
   var x630 uint32
-  x629, x630 = bits.Mul32(x595, 0xffffffff)
+  x629, x630 = bits.Add32(x622, x619, x628)
   var x631 uint32
   var x632 uint32
-  x631, x632 = bits.Mul32(x595, 0xffffffff)
+  x631, x632 = bits.Add32(x620, x617, x630)
   var x633 uint32
   var x634 uint32
-  x633, x634 = bits.Mul32(x595, 0xffffffff)
+  x633, x634 = bits.Add32(x618, x615, x632)
   var x635 uint32
   var x636 uint32
-  x635, x636 = bits.Mul32(x595, 0xfffffffe)
+  x635, x636 = bits.Add32(x616, x613, x634)
   var x637 uint32
   var x638 uint32
-  x637, x638 = bits.Mul32(x595, 0xffffffff)
+  x637, x638 = bits.Add32(x614, x611, x636)
   var x639 uint32
   var x640 uint32
-  x639, x640 = bits.Mul32(x595, 0xffffffff)
+  x639, x640 = bits.Add32(x612, x609, x638)
   var x641 uint32
   var x642 uint32
-  x641, x642 = bits.Add32(x638, x635, 0x0)
-  var x643 uint32
-  var x644 uint32
-  x643, x644 = bits.Add32(x636, x633, x642)
+  x641, x642 = bits.Add32(x610, x607, x640)
+  var x643 uint32 = (x642 + x608)
   var x645 uint32
+  _, x645 = bits.Add32(x581, x625, 0x0)
   var x646 uint32
-  x645, x646 = bits.Add32(x634, x631, x644)
   var x647 uint32
+  x646, x647 = bits.Add32(x583, x626, x645)
   var x648 uint32
-  x647, x648 = bits.Add32(x632, x629, x646)
   var x649 uint32
+  x648, x649 = bits.Add32(x585, uint32(0x0), x647)
   var x650 uint32
-  x649, x650 = bits.Add32(x630, x627, x648)
   var x651 uint32
+  x650, x651 = bits.Add32(x587, x623, x649)
   var x652 uint32
-  x651, x652 = bits.Add32(x628, x625, x650)
   var x653 uint32
+  x652, x653 = bits.Add32(x589, x627, x651)
   var x654 uint32
-  x653, x654 = bits.Add32(x626, x623, x652)
   var x655 uint32
+  x654, x655 = bits.Add32(x591, x629, x653)
   var x656 uint32
-  x655, x656 = bits.Add32(x624, x621, x654)
   var x657 uint32
-  x657, _ = bits.Add32(x622, uint32(0x0), x656)
+  x656, x657 = bits.Add32(x593, x631, x655)
+  var x658 uint32
+  var x659 uint32
+  x658, x659 = bits.Add32(x595, x633, x657)
   var x660 uint32
-  _, x660 = bits.Add32(x595, x639, 0x0)
   var x661 uint32
+  x660, x661 = bits.Add32(x597, x635, x659)
   var x662 uint32
-  x661, x662 = bits.Add32(x597, x640, x660)
   var x663 uint32
+  x662, x663 = bits.Add32(x599, x637, x661)
   var x664 uint32
-  x663, x664 = bits.Add32(x599, uint32(0x0), x662)
   var x665 uint32
+  x664, x665 = bits.Add32(x601, x639, x663)
   var x666 uint32
-  x665, x666 = bits.Add32(x601, x637, x664)
   var x667 uint32
+  x666, x667 = bits.Add32(x603, x641, x665)
   var x668 uint32
-  x667, x668 = bits.Add32(x603, x641, x666)
   var x669 uint32
-  var x670 uint32
-  x669, x670 = bits.Add32(x605, x643, x668)
+  x668, x669 = bits.Add32(x605, x643, x667)
+  var x670 uint32 = (x669 + x606)
   var x671 uint32
   var x672 uint32
-  x671, x672 = bits.Add32(x607, x645, x670)
+  x671, x672 = bits.Mul32(x5, (arg1[11]))
   var x673 uint32
   var x674 uint32
-  x673, x674 = bits.Add32(x609, x647, x672)
+  x673, x674 = bits.Mul32(x5, (arg1[10]))
   var x675 uint32
   var x676 uint32
-  x675, x676 = bits.Add32(x611, x649, x674)
+  x675, x676 = bits.Mul32(x5, (arg1[9]))
   var x677 uint32
   var x678 uint32
-  x677, x678 = bits.Add32(x613, x651, x676)
+  x677, x678 = bits.Mul32(x5, (arg1[8]))
   var x679 uint32
   var x680 uint32
-  x679, x680 = bits.Add32(x615, x653, x678)
+  x679, x680 = bits.Mul32(x5, (arg1[7]))
   var x681 uint32
   var x682 uint32
-  x681, x682 = bits.Add32(x617, x655, x680)
+  x681, x682 = bits.Mul32(x5, (arg1[6]))
   var x683 uint32
   var x684 uint32
-  x683, x684 = bits.Add32(x619, x657, x682)
+  x683, x684 = bits.Mul32(x5, (arg1[5]))
   var x685 uint32
-  x685, _ = bits.Add32(x620, uint32(0x0), x684)
+  var x686 uint32
+  x685, x686 = bits.Mul32(x5, (arg1[4]))
   var x687 uint32
   var x688 uint32
-  x687, x688 = bits.Mul32(x5, (arg1[11]))
+  x687, x688 = bits.Mul32(x5, (arg1[3]))
   var x689 uint32
   var x690 uint32
-  x689, x690 = bits.Mul32(x5, (arg1[10]))
+  x689, x690 = bits.Mul32(x5, (arg1[2]))
   var x691 uint32
   var x692 uint32
-  x691, x692 = bits.Mul32(x5, (arg1[9]))
+  x691, x692 = bits.Mul32(x5, (arg1[1]))
   var x693 uint32
   var x694 uint32
-  x693, x694 = bits.Mul32(x5, (arg1[8]))
+  x693, x694 = bits.Mul32(x5, (arg1[0]))
   var x695 uint32
   var x696 uint32
-  x695, x696 = bits.Mul32(x5, (arg1[7]))
+  x695, x696 = bits.Add32(x694, x691, 0x0)
   var x697 uint32
   var x698 uint32
-  x697, x698 = bits.Mul32(x5, (arg1[6]))
+  x697, x698 = bits.Add32(x692, x689, x696)
   var x699 uint32
   var x700 uint32
-  x699, x700 = bits.Mul32(x5, (arg1[5]))
+  x699, x700 = bits.Add32(x690, x687, x698)
   var x701 uint32
   var x702 uint32
-  x701, x702 = bits.Mul32(x5, (arg1[4]))
+  x701, x702 = bits.Add32(x688, x685, x700)
   var x703 uint32
   var x704 uint32
-  x703, x704 = bits.Mul32(x5, (arg1[3]))
+  x703, x704 = bits.Add32(x686, x683, x702)
   var x705 uint32
   var x706 uint32
-  x705, x706 = bits.Mul32(x5, (arg1[2]))
+  x705, x706 = bits.Add32(x684, x681, x704)
   var x707 uint32
   var x708 uint32
-  x707, x708 = bits.Mul32(x5, (arg1[1]))
+  x707, x708 = bits.Add32(x682, x679, x706)
   var x709 uint32
   var x710 uint32
-  x709, x710 = bits.Mul32(x5, (arg1[0]))
+  x709, x710 = bits.Add32(x680, x677, x708)
   var x711 uint32
   var x712 uint32
-  x711, x712 = bits.Add32(x710, x707, 0x0)
+  x711, x712 = bits.Add32(x678, x675, x710)
   var x713 uint32
   var x714 uint32
-  x713, x714 = bits.Add32(x708, x705, x712)
+  x713, x714 = bits.Add32(x676, x673, x712)
   var x715 uint32
   var x716 uint32
-  x715, x716 = bits.Add32(x706, x703, x714)
-  var x717 uint32
+  x715, x716 = bits.Add32(x674, x671, x714)
+  var x717 uint32 = (x716 + x672)
   var x718 uint32
-  x717, x718 = bits.Add32(x704, x701, x716)
   var x719 uint32
+  x718, x719 = bits.Add32(x646, x693, 0x0)
   var x720 uint32
-  x719, x720 = bits.Add32(x702, x699, x718)
   var x721 uint32
+  x720, x721 = bits.Add32(x648, x695, x719)
   var x722 uint32
-  x721, x722 = bits.Add32(x700, x697, x720)
   var x723 uint32
+  x722, x723 = bits.Add32(x650, x697, x721)
   var x724 uint32
-  x723, x724 = bits.Add32(x698, x695, x722)
   var x725 uint32
+  x724, x725 = bits.Add32(x652, x699, x723)
   var x726 uint32
-  x725, x726 = bits.Add32(x696, x693, x724)
   var x727 uint32
+  x726, x727 = bits.Add32(x654, x701, x725)
   var x728 uint32
-  x727, x728 = bits.Add32(x694, x691, x726)
   var x729 uint32
+  x728, x729 = bits.Add32(x656, x703, x727)
   var x730 uint32
-  x729, x730 = bits.Add32(x692, x689, x728)
   var x731 uint32
+  x730, x731 = bits.Add32(x658, x705, x729)
   var x732 uint32
-  x731, x732 = bits.Add32(x690, x687, x730)
   var x733 uint32
-  x733, _ = bits.Add32(x688, uint32(0x0), x732)
+  x732, x733 = bits.Add32(x660, x707, x731)
+  var x734 uint32
   var x735 uint32
+  x734, x735 = bits.Add32(x662, x709, x733)
   var x736 uint32
-  x735, x736 = bits.Add32(x661, x709, 0x0)
   var x737 uint32
+  x736, x737 = bits.Add32(x664, x711, x735)
   var x738 uint32
-  x737, x738 = bits.Add32(x663, x711, x736)
   var x739 uint32
+  x738, x739 = bits.Add32(x666, x713, x737)
   var x740 uint32
-  x739, x740 = bits.Add32(x665, x713, x738)
   var x741 uint32
+  x740, x741 = bits.Add32(x668, x715, x739)
   var x742 uint32
-  x741, x742 = bits.Add32(x667, x715, x740)
   var x743 uint32
+  x742, x743 = bits.Add32(x670, x717, x741)
   var x744 uint32
-  x743, x744 = bits.Add32(x669, x717, x742)
   var x745 uint32
+  x744, x745 = bits.Mul32(x718, 0xffffffff)
   var x746 uint32
-  x745, x746 = bits.Add32(x671, x719, x744)
   var x747 uint32
+  x746, x747 = bits.Mul32(x718, 0xffffffff)
   var x748 uint32
-  x747, x748 = bits.Add32(x673, x721, x746)
   var x749 uint32
+  x748, x749 = bits.Mul32(x718, 0xffffffff)
   var x750 uint32
-  x749, x750 = bits.Add32(x675, x723, x748)
   var x751 uint32
+  x750, x751 = bits.Mul32(x718, 0xffffffff)
   var x752 uint32
-  x751, x752 = bits.Add32(x677, x725, x750)
   var x753 uint32
+  x752, x753 = bits.Mul32(x718, 0xffffffff)
   var x754 uint32
-  x753, x754 = bits.Add32(x679, x727, x752)
   var x755 uint32
+  x754, x755 = bits.Mul32(x718, 0xffffffff)
   var x756 uint32
-  x755, x756 = bits.Add32(x681, x729, x754)
   var x757 uint32
+  x756, x757 = bits.Mul32(x718, 0xffffffff)
   var x758 uint32
-  x757, x758 = bits.Add32(x683, x731, x756)
   var x759 uint32
+  x758, x759 = bits.Mul32(x718, 0xfffffffe)
   var x760 uint32
-  x759, x760 = bits.Add32(x685, x733, x758)
   var x761 uint32
+  x760, x761 = bits.Mul32(x718, 0xffffffff)
   var x762 uint32
-  x761, x762 = bits.Mul32(x735, 0xffffffff)
   var x763 uint32
+  x762, x763 = bits.Mul32(x718, 0xffffffff)
   var x764 uint32
-  x763, x764 = bits.Mul32(x735, 0xffffffff)
   var x765 uint32
+  x764, x765 = bits.Add32(x761, x758, 0x0)
   var x766 uint32
-  x765, x766 = bits.Mul32(x735, 0xffffffff)
   var x767 uint32
+  x766, x767 = bits.Add32(x759, x756, x765)
   var x768 uint32
-  x767, x768 = bits.Mul32(x735, 0xffffffff)
   var x769 uint32
+  x768, x769 = bits.Add32(x757, x754, x767)
   var x770 uint32
-  x769, x770 = bits.Mul32(x735, 0xffffffff)
   var x771 uint32
+  x770, x771 = bits.Add32(x755, x752, x769)
   var x772 uint32
-  x771, x772 = bits.Mul32(x735, 0xffffffff)
   var x773 uint32
+  x772, x773 = bits.Add32(x753, x750, x771)
   var x774 uint32
-  x773, x774 = bits.Mul32(x735, 0xffffffff)
   var x775 uint32
+  x774, x775 = bits.Add32(x751, x748, x773)
   var x776 uint32
-  x775, x776 = bits.Mul32(x735, 0xfffffffe)
   var x777 uint32
+  x776, x777 = bits.Add32(x749, x746, x775)
   var x778 uint32
-  x777, x778 = bits.Mul32(x735, 0xffffffff)
   var x779 uint32
-  var x780 uint32
-  x779, x780 = bits.Mul32(x735, 0xffffffff)
-  var x781 uint32
+  x778, x779 = bits.Add32(x747, x744, x777)
+  var x780 uint32 = (x779 + x745)
   var x782 uint32
-  x781, x782 = bits.Add32(x778, x775, 0x0)
+  _, x782 = bits.Add32(x718, x762, 0x0)
   var x783 uint32
   var x784 uint32
-  x783, x784 = bits.Add32(x776, x773, x782)
+  x783, x784 = bits.Add32(x720, x763, x782)
   var x785 uint32
   var x786 uint32
-  x785, x786 = bits.Add32(x774, x771, x784)
+  x785, x786 = bits.Add32(x722, uint32(0x0), x784)
   var x787 uint32
   var x788 uint32
-  x787, x788 = bits.Add32(x772, x769, x786)
+  x787, x788 = bits.Add32(x724, x760, x786)
   var x789 uint32
   var x790 uint32
-  x789, x790 = bits.Add32(x770, x767, x788)
+  x789, x790 = bits.Add32(x726, x764, x788)
   var x791 uint32
   var x792 uint32
-  x791, x792 = bits.Add32(x768, x765, x790)
+  x791, x792 = bits.Add32(x728, x766, x790)
   var x793 uint32
   var x794 uint32
-  x793, x794 = bits.Add32(x766, x763, x792)
+  x793, x794 = bits.Add32(x730, x768, x792)
   var x795 uint32
   var x796 uint32
-  x795, x796 = bits.Add32(x764, x761, x794)
+  x795, x796 = bits.Add32(x732, x770, x794)
   var x797 uint32
-  x797, _ = bits.Add32(x762, uint32(0x0), x796)
+  var x798 uint32
+  x797, x798 = bits.Add32(x734, x772, x796)
+  var x799 uint32
   var x800 uint32
-  _, x800 = bits.Add32(x735, x779, 0x0)
+  x799, x800 = bits.Add32(x736, x774, x798)
   var x801 uint32
   var x802 uint32
-  x801, x802 = bits.Add32(x737, x780, x800)
+  x801, x802 = bits.Add32(x738, x776, x800)
   var x803 uint32
   var x804 uint32
-  x803, x804 = bits.Add32(x739, uint32(0x0), x802)
+  x803, x804 = bits.Add32(x740, x778, x802)
   var x805 uint32
   var x806 uint32
-  x805, x806 = bits.Add32(x741, x777, x804)
-  var x807 uint32
+  x805, x806 = bits.Add32(x742, x780, x804)
+  var x807 uint32 = (x806 + x743)
   var x808 uint32
-  x807, x808 = bits.Add32(x743, x781, x806)
   var x809 uint32
+  x808, x809 = bits.Mul32(x6, (arg1[11]))
   var x810 uint32
-  x809, x810 = bits.Add32(x745, x783, x808)
   var x811 uint32
+  x810, x811 = bits.Mul32(x6, (arg1[10]))
   var x812 uint32
-  x811, x812 = bits.Add32(x747, x785, x810)
   var x813 uint32
+  x812, x813 = bits.Mul32(x6, (arg1[9]))
   var x814 uint32
-  x813, x814 = bits.Add32(x749, x787, x812)
   var x815 uint32
+  x814, x815 = bits.Mul32(x6, (arg1[8]))
   var x816 uint32
-  x815, x816 = bits.Add32(x751, x789, x814)
   var x817 uint32
+  x816, x817 = bits.Mul32(x6, (arg1[7]))
   var x818 uint32
-  x817, x818 = bits.Add32(x753, x791, x816)
   var x819 uint32
+  x818, x819 = bits.Mul32(x6, (arg1[6]))
   var x820 uint32
-  x819, x820 = bits.Add32(x755, x793, x818)
   var x821 uint32
+  x820, x821 = bits.Mul32(x6, (arg1[5]))
   var x822 uint32
-  x821, x822 = bits.Add32(x757, x795, x820)
   var x823 uint32
+  x822, x823 = bits.Mul32(x6, (arg1[4]))
   var x824 uint32
-  x823, x824 = bits.Add32(x759, x797, x822)
   var x825 uint32
-  x825, _ = bits.Add32(x760, uint32(0x0), x824)
+  x824, x825 = bits.Mul32(x6, (arg1[3]))
+  var x826 uint32
   var x827 uint32
+  x826, x827 = bits.Mul32(x6, (arg1[2]))
   var x828 uint32
-  x827, x828 = bits.Mul32(x6, (arg1[11]))
   var x829 uint32
+  x828, x829 = bits.Mul32(x6, (arg1[1]))
   var x830 uint32
-  x829, x830 = bits.Mul32(x6, (arg1[10]))
   var x831 uint32
+  x830, x831 = bits.Mul32(x6, (arg1[0]))
   var x832 uint32
-  x831, x832 = bits.Mul32(x6, (arg1[9]))
   var x833 uint32
+  x832, x833 = bits.Add32(x831, x828, 0x0)
   var x834 uint32
-  x833, x834 = bits.Mul32(x6, (arg1[8]))
   var x835 uint32
+  x834, x835 = bits.Add32(x829, x826, x833)
   var x836 uint32
-  x835, x836 = bits.Mul32(x6, (arg1[7]))
   var x837 uint32
+  x836, x837 = bits.Add32(x827, x824, x835)
   var x838 uint32
-  x837, x838 = bits.Mul32(x6, (arg1[6]))
   var x839 uint32
+  x838, x839 = bits.Add32(x825, x822, x837)
   var x840 uint32
-  x839, x840 = bits.Mul32(x6, (arg1[5]))
   var x841 uint32
+  x840, x841 = bits.Add32(x823, x820, x839)
   var x842 uint32
-  x841, x842 = bits.Mul32(x6, (arg1[4]))
   var x843 uint32
+  x842, x843 = bits.Add32(x821, x818, x841)
   var x844 uint32
-  x843, x844 = bits.Mul32(x6, (arg1[3]))
   var x845 uint32
+  x844, x845 = bits.Add32(x819, x816, x843)
   var x846 uint32
-  x845, x846 = bits.Mul32(x6, (arg1[2]))
   var x847 uint32
+  x846, x847 = bits.Add32(x817, x814, x845)
   var x848 uint32
-  x847, x848 = bits.Mul32(x6, (arg1[1]))
   var x849 uint32
+  x848, x849 = bits.Add32(x815, x812, x847)
   var x850 uint32
-  x849, x850 = bits.Mul32(x6, (arg1[0]))
   var x851 uint32
+  x850, x851 = bits.Add32(x813, x810, x849)
   var x852 uint32
-  x851, x852 = bits.Add32(x850, x847, 0x0)
   var x853 uint32
-  var x854 uint32
-  x853, x854 = bits.Add32(x848, x845, x852)
+  x852, x853 = bits.Add32(x811, x808, x851)
+  var x854 uint32 = (x853 + x809)
   var x855 uint32
   var x856 uint32
-  x855, x856 = bits.Add32(x846, x843, x854)
+  x855, x856 = bits.Add32(x783, x830, 0x0)
   var x857 uint32
   var x858 uint32
-  x857, x858 = bits.Add32(x844, x841, x856)
+  x857, x858 = bits.Add32(x785, x832, x856)
   var x859 uint32
   var x860 uint32
-  x859, x860 = bits.Add32(x842, x839, x858)
+  x859, x860 = bits.Add32(x787, x834, x858)
   var x861 uint32
   var x862 uint32
-  x861, x862 = bits.Add32(x840, x837, x860)
+  x861, x862 = bits.Add32(x789, x836, x860)
   var x863 uint32
   var x864 uint32
-  x863, x864 = bits.Add32(x838, x835, x862)
+  x863, x864 = bits.Add32(x791, x838, x862)
   var x865 uint32
   var x866 uint32
-  x865, x866 = bits.Add32(x836, x833, x864)
+  x865, x866 = bits.Add32(x793, x840, x864)
   var x867 uint32
   var x868 uint32
-  x867, x868 = bits.Add32(x834, x831, x866)
+  x867, x868 = bits.Add32(x795, x842, x866)
   var x869 uint32
   var x870 uint32
-  x869, x870 = bits.Add32(x832, x829, x868)
+  x869, x870 = bits.Add32(x797, x844, x868)
   var x871 uint32
   var x872 uint32
-  x871, x872 = bits.Add32(x830, x827, x870)
+  x871, x872 = bits.Add32(x799, x846, x870)
   var x873 uint32
-  x873, _ = bits.Add32(x828, uint32(0x0), x872)
+  var x874 uint32
+  x873, x874 = bits.Add32(x801, x848, x872)
   var x875 uint32
   var x876 uint32
-  x875, x876 = bits.Add32(x801, x849, 0x0)
+  x875, x876 = bits.Add32(x803, x850, x874)
   var x877 uint32
   var x878 uint32
-  x877, x878 = bits.Add32(x803, x851, x876)
+  x877, x878 = bits.Add32(x805, x852, x876)
   var x879 uint32
   var x880 uint32
-  x879, x880 = bits.Add32(x805, x853, x878)
+  x879, x880 = bits.Add32(x807, x854, x878)
   var x881 uint32
   var x882 uint32
-  x881, x882 = bits.Add32(x807, x855, x880)
+  x881, x882 = bits.Mul32(x855, 0xffffffff)
   var x883 uint32
   var x884 uint32
-  x883, x884 = bits.Add32(x809, x857, x882)
+  x883, x884 = bits.Mul32(x855, 0xffffffff)
   var x885 uint32
   var x886 uint32
-  x885, x886 = bits.Add32(x811, x859, x884)
+  x885, x886 = bits.Mul32(x855, 0xffffffff)
   var x887 uint32
   var x888 uint32
-  x887, x888 = bits.Add32(x813, x861, x886)
+  x887, x888 = bits.Mul32(x855, 0xffffffff)
   var x889 uint32
   var x890 uint32
-  x889, x890 = bits.Add32(x815, x863, x888)
+  x889, x890 = bits.Mul32(x855, 0xffffffff)
   var x891 uint32
   var x892 uint32
-  x891, x892 = bits.Add32(x817, x865, x890)
+  x891, x892 = bits.Mul32(x855, 0xffffffff)
   var x893 uint32
   var x894 uint32
-  x893, x894 = bits.Add32(x819, x867, x892)
+  x893, x894 = bits.Mul32(x855, 0xffffffff)
   var x895 uint32
   var x896 uint32
-  x895, x896 = bits.Add32(x821, x869, x894)
+  x895, x896 = bits.Mul32(x855, 0xfffffffe)
   var x897 uint32
   var x898 uint32
-  x897, x898 = bits.Add32(x823, x871, x896)
+  x897, x898 = bits.Mul32(x855, 0xffffffff)
   var x899 uint32
   var x900 uint32
-  x899, x900 = bits.Add32(x825, x873, x898)
+  x899, x900 = bits.Mul32(x855, 0xffffffff)
   var x901 uint32
   var x902 uint32
-  x901, x902 = bits.Mul32(x875, 0xffffffff)
+  x901, x902 = bits.Add32(x898, x895, 0x0)
   var x903 uint32
   var x904 uint32
-  x903, x904 = bits.Mul32(x875, 0xffffffff)
+  x903, x904 = bits.Add32(x896, x893, x902)
   var x905 uint32
   var x906 uint32
-  x905, x906 = bits.Mul32(x875, 0xffffffff)
+  x905, x906 = bits.Add32(x894, x891, x904)
   var x907 uint32
   var x908 uint32
-  x907, x908 = bits.Mul32(x875, 0xffffffff)
+  x907, x908 = bits.Add32(x892, x889, x906)
   var x909 uint32
   var x910 uint32
-  x909, x910 = bits.Mul32(x875, 0xffffffff)
+  x909, x910 = bits.Add32(x890, x887, x908)
   var x911 uint32
   var x912 uint32
-  x911, x912 = bits.Mul32(x875, 0xffffffff)
+  x911, x912 = bits.Add32(x888, x885, x910)
   var x913 uint32
   var x914 uint32
-  x913, x914 = bits.Mul32(x875, 0xffffffff)
+  x913, x914 = bits.Add32(x886, x883, x912)
   var x915 uint32
   var x916 uint32
-  x915, x916 = bits.Mul32(x875, 0xfffffffe)
-  var x917 uint32
-  var x918 uint32
-  x917, x918 = bits.Mul32(x875, 0xffffffff)
+  x915, x916 = bits.Add32(x884, x881, x914)
+  var x917 uint32 = (x916 + x882)
   var x919 uint32
+  _, x919 = bits.Add32(x855, x899, 0x0)
   var x920 uint32
-  x919, x920 = bits.Mul32(x875, 0xffffffff)
   var x921 uint32
+  x920, x921 = bits.Add32(x857, x900, x919)
   var x922 uint32
-  x921, x922 = bits.Add32(x918, x915, 0x0)
   var x923 uint32
+  x922, x923 = bits.Add32(x859, uint32(0x0), x921)
   var x924 uint32
-  x923, x924 = bits.Add32(x916, x913, x922)
   var x925 uint32
+  x924, x925 = bits.Add32(x861, x897, x923)
   var x926 uint32
-  x925, x926 = bits.Add32(x914, x911, x924)
   var x927 uint32
+  x926, x927 = bits.Add32(x863, x901, x925)
   var x928 uint32
-  x927, x928 = bits.Add32(x912, x909, x926)
   var x929 uint32
+  x928, x929 = bits.Add32(x865, x903, x927)
   var x930 uint32
-  x929, x930 = bits.Add32(x910, x907, x928)
   var x931 uint32
+  x930, x931 = bits.Add32(x867, x905, x929)
   var x932 uint32
-  x931, x932 = bits.Add32(x908, x905, x930)
   var x933 uint32
+  x932, x933 = bits.Add32(x869, x907, x931)
   var x934 uint32
-  x933, x934 = bits.Add32(x906, x903, x932)
   var x935 uint32
+  x934, x935 = bits.Add32(x871, x909, x933)
   var x936 uint32
-  x935, x936 = bits.Add32(x904, x901, x934)
   var x937 uint32
-  x937, _ = bits.Add32(x902, uint32(0x0), x936)
+  x936, x937 = bits.Add32(x873, x911, x935)
+  var x938 uint32
+  var x939 uint32
+  x938, x939 = bits.Add32(x875, x913, x937)
   var x940 uint32
-  _, x940 = bits.Add32(x875, x919, 0x0)
   var x941 uint32
+  x940, x941 = bits.Add32(x877, x915, x939)
   var x942 uint32
-  x941, x942 = bits.Add32(x877, x920, x940)
   var x943 uint32
-  var x944 uint32
-  x943, x944 = bits.Add32(x879, uint32(0x0), x942)
+  x942, x943 = bits.Add32(x879, x917, x941)
+  var x944 uint32 = (x943 + x880)
   var x945 uint32
   var x946 uint32
-  x945, x946 = bits.Add32(x881, x917, x944)
+  x945, x946 = bits.Mul32(x7, (arg1[11]))
   var x947 uint32
   var x948 uint32
-  x947, x948 = bits.Add32(x883, x921, x946)
+  x947, x948 = bits.Mul32(x7, (arg1[10]))
   var x949 uint32
   var x950 uint32
-  x949, x950 = bits.Add32(x885, x923, x948)
+  x949, x950 = bits.Mul32(x7, (arg1[9]))
   var x951 uint32
   var x952 uint32
-  x951, x952 = bits.Add32(x887, x925, x950)
+  x951, x952 = bits.Mul32(x7, (arg1[8]))
   var x953 uint32
   var x954 uint32
-  x953, x954 = bits.Add32(x889, x927, x952)
+  x953, x954 = bits.Mul32(x7, (arg1[7]))
   var x955 uint32
   var x956 uint32
-  x955, x956 = bits.Add32(x891, x929, x954)
+  x955, x956 = bits.Mul32(x7, (arg1[6]))
   var x957 uint32
   var x958 uint32
-  x957, x958 = bits.Add32(x893, x931, x956)
+  x957, x958 = bits.Mul32(x7, (arg1[5]))
   var x959 uint32
   var x960 uint32
-  x959, x960 = bits.Add32(x895, x933, x958)
+  x959, x960 = bits.Mul32(x7, (arg1[4]))
   var x961 uint32
   var x962 uint32
-  x961, x962 = bits.Add32(x897, x935, x960)
+  x961, x962 = bits.Mul32(x7, (arg1[3]))
   var x963 uint32
   var x964 uint32
-  x963, x964 = bits.Add32(x899, x937, x962)
+  x963, x964 = bits.Mul32(x7, (arg1[2]))
   var x965 uint32
-  x965, _ = bits.Add32(x900, uint32(0x0), x964)
+  var x966 uint32
+  x965, x966 = bits.Mul32(x7, (arg1[1]))
   var x967 uint32
   var x968 uint32
-  x967, x968 = bits.Mul32(x7, (arg1[11]))
+  x967, x968 = bits.Mul32(x7, (arg1[0]))
   var x969 uint32
   var x970 uint32
-  x969, x970 = bits.Mul32(x7, (arg1[10]))
+  x969, x970 = bits.Add32(x968, x965, 0x0)
   var x971 uint32
   var x972 uint32
-  x971, x972 = bits.Mul32(x7, (arg1[9]))
+  x971, x972 = bits.Add32(x966, x963, x970)
   var x973 uint32
   var x974 uint32
-  x973, x974 = bits.Mul32(x7, (arg1[8]))
+  x973, x974 = bits.Add32(x964, x961, x972)
   var x975 uint32
   var x976 uint32
-  x975, x976 = bits.Mul32(x7, (arg1[7]))
+  x975, x976 = bits.Add32(x962, x959, x974)
   var x977 uint32
   var x978 uint32
-  x977, x978 = bits.Mul32(x7, (arg1[6]))
+  x977, x978 = bits.Add32(x960, x957, x976)
   var x979 uint32
   var x980 uint32
-  x979, x980 = bits.Mul32(x7, (arg1[5]))
+  x979, x980 = bits.Add32(x958, x955, x978)
   var x981 uint32
   var x982 uint32
-  x981, x982 = bits.Mul32(x7, (arg1[4]))
+  x981, x982 = bits.Add32(x956, x953, x980)
   var x983 uint32
   var x984 uint32
-  x983, x984 = bits.Mul32(x7, (arg1[3]))
+  x983, x984 = bits.Add32(x954, x951, x982)
   var x985 uint32
   var x986 uint32
-  x985, x986 = bits.Mul32(x7, (arg1[2]))
+  x985, x986 = bits.Add32(x952, x949, x984)
   var x987 uint32
   var x988 uint32
-  x987, x988 = bits.Mul32(x7, (arg1[1]))
+  x987, x988 = bits.Add32(x950, x947, x986)
   var x989 uint32
   var x990 uint32
-  x989, x990 = bits.Mul32(x7, (arg1[0]))
-  var x991 uint32
+  x989, x990 = bits.Add32(x948, x945, x988)
+  var x991 uint32 = (x990 + x946)
   var x992 uint32
-  x991, x992 = bits.Add32(x990, x987, 0x0)
   var x993 uint32
+  x992, x993 = bits.Add32(x920, x967, 0x0)
   var x994 uint32
-  x993, x994 = bits.Add32(x988, x985, x992)
   var x995 uint32
+  x994, x995 = bits.Add32(x922, x969, x993)
   var x996 uint32
-  x995, x996 = bits.Add32(x986, x983, x994)
   var x997 uint32
+  x996, x997 = bits.Add32(x924, x971, x995)
   var x998 uint32
-  x997, x998 = bits.Add32(x984, x981, x996)
   var x999 uint32
+  x998, x999 = bits.Add32(x926, x973, x997)
   var x1000 uint32
-  x999, x1000 = bits.Add32(x982, x979, x998)
   var x1001 uint32
+  x1000, x1001 = bits.Add32(x928, x975, x999)
   var x1002 uint32
-  x1001, x1002 = bits.Add32(x980, x977, x1000)
   var x1003 uint32
+  x1002, x1003 = bits.Add32(x930, x977, x1001)
   var x1004 uint32
-  x1003, x1004 = bits.Add32(x978, x975, x1002)
   var x1005 uint32
+  x1004, x1005 = bits.Add32(x932, x979, x1003)
   var x1006 uint32
-  x1005, x1006 = bits.Add32(x976, x973, x1004)
   var x1007 uint32
+  x1006, x1007 = bits.Add32(x934, x981, x1005)
   var x1008 uint32
-  x1007, x1008 = bits.Add32(x974, x971, x1006)
   var x1009 uint32
+  x1008, x1009 = bits.Add32(x936, x983, x1007)
   var x1010 uint32
-  x1009, x1010 = bits.Add32(x972, x969, x1008)
   var x1011 uint32
+  x1010, x1011 = bits.Add32(x938, x985, x1009)
   var x1012 uint32
-  x1011, x1012 = bits.Add32(x970, x967, x1010)
   var x1013 uint32
-  x1013, _ = bits.Add32(x968, uint32(0x0), x1012)
+  x1012, x1013 = bits.Add32(x940, x987, x1011)
+  var x1014 uint32
   var x1015 uint32
+  x1014, x1015 = bits.Add32(x942, x989, x1013)
   var x1016 uint32
-  x1015, x1016 = bits.Add32(x941, x989, 0x0)
   var x1017 uint32
+  x1016, x1017 = bits.Add32(x944, x991, x1015)
   var x1018 uint32
-  x1017, x1018 = bits.Add32(x943, x991, x1016)
   var x1019 uint32
+  x1018, x1019 = bits.Mul32(x992, 0xffffffff)
   var x1020 uint32
-  x1019, x1020 = bits.Add32(x945, x993, x1018)
   var x1021 uint32
+  x1020, x1021 = bits.Mul32(x992, 0xffffffff)
   var x1022 uint32
-  x1021, x1022 = bits.Add32(x947, x995, x1020)
   var x1023 uint32
+  x1022, x1023 = bits.Mul32(x992, 0xffffffff)
   var x1024 uint32
-  x1023, x1024 = bits.Add32(x949, x997, x1022)
   var x1025 uint32
+  x1024, x1025 = bits.Mul32(x992, 0xffffffff)
   var x1026 uint32
-  x1025, x1026 = bits.Add32(x951, x999, x1024)
   var x1027 uint32
+  x1026, x1027 = bits.Mul32(x992, 0xffffffff)
   var x1028 uint32
-  x1027, x1028 = bits.Add32(x953, x1001, x1026)
   var x1029 uint32
+  x1028, x1029 = bits.Mul32(x992, 0xffffffff)
   var x1030 uint32
-  x1029, x1030 = bits.Add32(x955, x1003, x1028)
   var x1031 uint32
+  x1030, x1031 = bits.Mul32(x992, 0xffffffff)
   var x1032 uint32
-  x1031, x1032 = bits.Add32(x957, x1005, x1030)
   var x1033 uint32
+  x1032, x1033 = bits.Mul32(x992, 0xfffffffe)
   var x1034 uint32
-  x1033, x1034 = bits.Add32(x959, x1007, x1032)
   var x1035 uint32
+  x1034, x1035 = bits.Mul32(x992, 0xffffffff)
   var x1036 uint32
-  x1035, x1036 = bits.Add32(x961, x1009, x1034)
   var x1037 uint32
+  x1036, x1037 = bits.Mul32(x992, 0xffffffff)
   var x1038 uint32
-  x1037, x1038 = bits.Add32(x963, x1011, x1036)
   var x1039 uint32
+  x1038, x1039 = bits.Add32(x1035, x1032, 0x0)
   var x1040 uint32
-  x1039, x1040 = bits.Add32(x965, x1013, x1038)
   var x1041 uint32
+  x1040, x1041 = bits.Add32(x1033, x1030, x1039)
   var x1042 uint32
-  x1041, x1042 = bits.Mul32(x1015, 0xffffffff)
   var x1043 uint32
+  x1042, x1043 = bits.Add32(x1031, x1028, x1041)
   var x1044 uint32
-  x1043, x1044 = bits.Mul32(x1015, 0xffffffff)
   var x1045 uint32
+  x1044, x1045 = bits.Add32(x1029, x1026, x1043)
   var x1046 uint32
-  x1045, x1046 = bits.Mul32(x1015, 0xffffffff)
   var x1047 uint32
+  x1046, x1047 = bits.Add32(x1027, x1024, x1045)
   var x1048 uint32
-  x1047, x1048 = bits.Mul32(x1015, 0xffffffff)
   var x1049 uint32
+  x1048, x1049 = bits.Add32(x1025, x1022, x1047)
   var x1050 uint32
-  x1049, x1050 = bits.Mul32(x1015, 0xffffffff)
   var x1051 uint32
+  x1050, x1051 = bits.Add32(x1023, x1020, x1049)
   var x1052 uint32
-  x1051, x1052 = bits.Mul32(x1015, 0xffffffff)
   var x1053 uint32
-  var x1054 uint32
-  x1053, x1054 = bits.Mul32(x1015, 0xffffffff)
-  var x1055 uint32
+  x1052, x1053 = bits.Add32(x1021, x1018, x1051)
+  var x1054 uint32 = (x1053 + x1019)
   var x1056 uint32
-  x1055, x1056 = bits.Mul32(x1015, 0xfffffffe)
+  _, x1056 = bits.Add32(x992, x1036, 0x0)
   var x1057 uint32
   var x1058 uint32
-  x1057, x1058 = bits.Mul32(x1015, 0xffffffff)
+  x1057, x1058 = bits.Add32(x994, x1037, x1056)
   var x1059 uint32
   var x1060 uint32
-  x1059, x1060 = bits.Mul32(x1015, 0xffffffff)
+  x1059, x1060 = bits.Add32(x996, uint32(0x0), x1058)
   var x1061 uint32
   var x1062 uint32
-  x1061, x1062 = bits.Add32(x1058, x1055, 0x0)
+  x1061, x1062 = bits.Add32(x998, x1034, x1060)
   var x1063 uint32
   var x1064 uint32
-  x1063, x1064 = bits.Add32(x1056, x1053, x1062)
+  x1063, x1064 = bits.Add32(x1000, x1038, x1062)
   var x1065 uint32
   var x1066 uint32
-  x1065, x1066 = bits.Add32(x1054, x1051, x1064)
+  x1065, x1066 = bits.Add32(x1002, x1040, x1064)
   var x1067 uint32
   var x1068 uint32
-  x1067, x1068 = bits.Add32(x1052, x1049, x1066)
+  x1067, x1068 = bits.Add32(x1004, x1042, x1066)
   var x1069 uint32
   var x1070 uint32
-  x1069, x1070 = bits.Add32(x1050, x1047, x1068)
+  x1069, x1070 = bits.Add32(x1006, x1044, x1068)
   var x1071 uint32
   var x1072 uint32
-  x1071, x1072 = bits.Add32(x1048, x1045, x1070)
+  x1071, x1072 = bits.Add32(x1008, x1046, x1070)
   var x1073 uint32
   var x1074 uint32
-  x1073, x1074 = bits.Add32(x1046, x1043, x1072)
+  x1073, x1074 = bits.Add32(x1010, x1048, x1072)
   var x1075 uint32
   var x1076 uint32
-  x1075, x1076 = bits.Add32(x1044, x1041, x1074)
+  x1075, x1076 = bits.Add32(x1012, x1050, x1074)
   var x1077 uint32
-  x1077, _ = bits.Add32(x1042, uint32(0x0), x1076)
+  var x1078 uint32
+  x1077, x1078 = bits.Add32(x1014, x1052, x1076)
+  var x1079 uint32
   var x1080 uint32
-  _, x1080 = bits.Add32(x1015, x1059, 0x0)
-  var x1081 uint32
+  x1079, x1080 = bits.Add32(x1016, x1054, x1078)
+  var x1081 uint32 = (x1080 + x1017)
   var x1082 uint32
-  x1081, x1082 = bits.Add32(x1017, x1060, x1080)
   var x1083 uint32
+  x1082, x1083 = bits.Mul32(x8, (arg1[11]))
   var x1084 uint32
-  x1083, x1084 = bits.Add32(x1019, uint32(0x0), x1082)
   var x1085 uint32
+  x1084, x1085 = bits.Mul32(x8, (arg1[10]))
   var x1086 uint32
-  x1085, x1086 = bits.Add32(x1021, x1057, x1084)
   var x1087 uint32
+  x1086, x1087 = bits.Mul32(x8, (arg1[9]))
   var x1088 uint32
-  x1087, x1088 = bits.Add32(x1023, x1061, x1086)
   var x1089 uint32
+  x1088, x1089 = bits.Mul32(x8, (arg1[8]))
   var x1090 uint32
-  x1089, x1090 = bits.Add32(x1025, x1063, x1088)
   var x1091 uint32
+  x1090, x1091 = bits.Mul32(x8, (arg1[7]))
   var x1092 uint32
-  x1091, x1092 = bits.Add32(x1027, x1065, x1090)
   var x1093 uint32
+  x1092, x1093 = bits.Mul32(x8, (arg1[6]))
   var x1094 uint32
-  x1093, x1094 = bits.Add32(x1029, x1067, x1092)
   var x1095 uint32
+  x1094, x1095 = bits.Mul32(x8, (arg1[5]))
   var x1096 uint32
-  x1095, x1096 = bits.Add32(x1031, x1069, x1094)
   var x1097 uint32
+  x1096, x1097 = bits.Mul32(x8, (arg1[4]))
   var x1098 uint32
-  x1097, x1098 = bits.Add32(x1033, x1071, x1096)
   var x1099 uint32
+  x1098, x1099 = bits.Mul32(x8, (arg1[3]))
   var x1100 uint32
-  x1099, x1100 = bits.Add32(x1035, x1073, x1098)
   var x1101 uint32
+  x1100, x1101 = bits.Mul32(x8, (arg1[2]))
   var x1102 uint32
-  x1101, x1102 = bits.Add32(x1037, x1075, x1100)
   var x1103 uint32
+  x1102, x1103 = bits.Mul32(x8, (arg1[1]))
   var x1104 uint32
-  x1103, x1104 = bits.Add32(x1039, x1077, x1102)
   var x1105 uint32
-  x1105, _ = bits.Add32(x1040, uint32(0x0), x1104)
+  x1104, x1105 = bits.Mul32(x8, (arg1[0]))
+  var x1106 uint32
   var x1107 uint32
+  x1106, x1107 = bits.Add32(x1105, x1102, 0x0)
   var x1108 uint32
-  x1107, x1108 = bits.Mul32(x8, (arg1[11]))
   var x1109 uint32
+  x1108, x1109 = bits.Add32(x1103, x1100, x1107)
   var x1110 uint32
-  x1109, x1110 = bits.Mul32(x8, (arg1[10]))
   var x1111 uint32
+  x1110, x1111 = bits.Add32(x1101, x1098, x1109)
   var x1112 uint32
-  x1111, x1112 = bits.Mul32(x8, (arg1[9]))
   var x1113 uint32
+  x1112, x1113 = bits.Add32(x1099, x1096, x1111)
   var x1114 uint32
-  x1113, x1114 = bits.Mul32(x8, (arg1[8]))
   var x1115 uint32
+  x1114, x1115 = bits.Add32(x1097, x1094, x1113)
   var x1116 uint32
-  x1115, x1116 = bits.Mul32(x8, (arg1[7]))
   var x1117 uint32
+  x1116, x1117 = bits.Add32(x1095, x1092, x1115)
   var x1118 uint32
-  x1117, x1118 = bits.Mul32(x8, (arg1[6]))
   var x1119 uint32
+  x1118, x1119 = bits.Add32(x1093, x1090, x1117)
   var x1120 uint32
-  x1119, x1120 = bits.Mul32(x8, (arg1[5]))
   var x1121 uint32
+  x1120, x1121 = bits.Add32(x1091, x1088, x1119)
   var x1122 uint32
-  x1121, x1122 = bits.Mul32(x8, (arg1[4]))
   var x1123 uint32
+  x1122, x1123 = bits.Add32(x1089, x1086, x1121)
   var x1124 uint32
-  x1123, x1124 = bits.Mul32(x8, (arg1[3]))
   var x1125 uint32
+  x1124, x1125 = bits.Add32(x1087, x1084, x1123)
   var x1126 uint32
-  x1125, x1126 = bits.Mul32(x8, (arg1[2]))
   var x1127 uint32
-  var x1128 uint32
-  x1127, x1128 = bits.Mul32(x8, (arg1[1]))
+  x1126, x1127 = bits.Add32(x1085, x1082, x1125)
+  var x1128 uint32 = (x1127 + x1083)
   var x1129 uint32
   var x1130 uint32
-  x1129, x1130 = bits.Mul32(x8, (arg1[0]))
+  x1129, x1130 = bits.Add32(x1057, x1104, 0x0)
   var x1131 uint32
   var x1132 uint32
-  x1131, x1132 = bits.Add32(x1130, x1127, 0x0)
+  x1131, x1132 = bits.Add32(x1059, x1106, x1130)
   var x1133 uint32
   var x1134 uint32
-  x1133, x1134 = bits.Add32(x1128, x1125, x1132)
+  x1133, x1134 = bits.Add32(x1061, x1108, x1132)
   var x1135 uint32
   var x1136 uint32
-  x1135, x1136 = bits.Add32(x1126, x1123, x1134)
+  x1135, x1136 = bits.Add32(x1063, x1110, x1134)
   var x1137 uint32
   var x1138 uint32
-  x1137, x1138 = bits.Add32(x1124, x1121, x1136)
+  x1137, x1138 = bits.Add32(x1065, x1112, x1136)
   var x1139 uint32
   var x1140 uint32
-  x1139, x1140 = bits.Add32(x1122, x1119, x1138)
+  x1139, x1140 = bits.Add32(x1067, x1114, x1138)
   var x1141 uint32
   var x1142 uint32
-  x1141, x1142 = bits.Add32(x1120, x1117, x1140)
+  x1141, x1142 = bits.Add32(x1069, x1116, x1140)
   var x1143 uint32
   var x1144 uint32
-  x1143, x1144 = bits.Add32(x1118, x1115, x1142)
+  x1143, x1144 = bits.Add32(x1071, x1118, x1142)
   var x1145 uint32
   var x1146 uint32
-  x1145, x1146 = bits.Add32(x1116, x1113, x1144)
+  x1145, x1146 = bits.Add32(x1073, x1120, x1144)
   var x1147 uint32
   var x1148 uint32
-  x1147, x1148 = bits.Add32(x1114, x1111, x1146)
+  x1147, x1148 = bits.Add32(x1075, x1122, x1146)
   var x1149 uint32
   var x1150 uint32
-  x1149, x1150 = bits.Add32(x1112, x1109, x1148)
+  x1149, x1150 = bits.Add32(x1077, x1124, x1148)
   var x1151 uint32
   var x1152 uint32
-  x1151, x1152 = bits.Add32(x1110, x1107, x1150)
+  x1151, x1152 = bits.Add32(x1079, x1126, x1150)
   var x1153 uint32
-  x1153, _ = bits.Add32(x1108, uint32(0x0), x1152)
+  var x1154 uint32
+  x1153, x1154 = bits.Add32(x1081, x1128, x1152)
   var x1155 uint32
   var x1156 uint32
-  x1155, x1156 = bits.Add32(x1081, x1129, 0x0)
+  x1155, x1156 = bits.Mul32(x1129, 0xffffffff)
   var x1157 uint32
   var x1158 uint32
-  x1157, x1158 = bits.Add32(x1083, x1131, x1156)
+  x1157, x1158 = bits.Mul32(x1129, 0xffffffff)
   var x1159 uint32
   var x1160 uint32
-  x1159, x1160 = bits.Add32(x1085, x1133, x1158)
+  x1159, x1160 = bits.Mul32(x1129, 0xffffffff)
   var x1161 uint32
   var x1162 uint32
-  x1161, x1162 = bits.Add32(x1087, x1135, x1160)
+  x1161, x1162 = bits.Mul32(x1129, 0xffffffff)
   var x1163 uint32
   var x1164 uint32
-  x1163, x1164 = bits.Add32(x1089, x1137, x1162)
+  x1163, x1164 = bits.Mul32(x1129, 0xffffffff)
   var x1165 uint32
   var x1166 uint32
-  x1165, x1166 = bits.Add32(x1091, x1139, x1164)
+  x1165, x1166 = bits.Mul32(x1129, 0xffffffff)
   var x1167 uint32
   var x1168 uint32
-  x1167, x1168 = bits.Add32(x1093, x1141, x1166)
+  x1167, x1168 = bits.Mul32(x1129, 0xffffffff)
   var x1169 uint32
   var x1170 uint32
-  x1169, x1170 = bits.Add32(x1095, x1143, x1168)
+  x1169, x1170 = bits.Mul32(x1129, 0xfffffffe)
   var x1171 uint32
   var x1172 uint32
-  x1171, x1172 = bits.Add32(x1097, x1145, x1170)
+  x1171, x1172 = bits.Mul32(x1129, 0xffffffff)
   var x1173 uint32
   var x1174 uint32
-  x1173, x1174 = bits.Add32(x1099, x1147, x1172)
+  x1173, x1174 = bits.Mul32(x1129, 0xffffffff)
   var x1175 uint32
   var x1176 uint32
-  x1175, x1176 = bits.Add32(x1101, x1149, x1174)
+  x1175, x1176 = bits.Add32(x1172, x1169, 0x0)
   var x1177 uint32
   var x1178 uint32
-  x1177, x1178 = bits.Add32(x1103, x1151, x1176)
+  x1177, x1178 = bits.Add32(x1170, x1167, x1176)
   var x1179 uint32
   var x1180 uint32
-  x1179, x1180 = bits.Add32(x1105, x1153, x1178)
+  x1179, x1180 = bits.Add32(x1168, x1165, x1178)
   var x1181 uint32
   var x1182 uint32
-  x1181, x1182 = bits.Mul32(x1155, 0xffffffff)
+  x1181, x1182 = bits.Add32(x1166, x1163, x1180)
   var x1183 uint32
   var x1184 uint32
-  x1183, x1184 = bits.Mul32(x1155, 0xffffffff)
+  x1183, x1184 = bits.Add32(x1164, x1161, x1182)
   var x1185 uint32
   var x1186 uint32
-  x1185, x1186 = bits.Mul32(x1155, 0xffffffff)
+  x1185, x1186 = bits.Add32(x1162, x1159, x1184)
   var x1187 uint32
   var x1188 uint32
-  x1187, x1188 = bits.Mul32(x1155, 0xffffffff)
+  x1187, x1188 = bits.Add32(x1160, x1157, x1186)
   var x1189 uint32
   var x1190 uint32
-  x1189, x1190 = bits.Mul32(x1155, 0xffffffff)
-  var x1191 uint32
-  var x1192 uint32
-  x1191, x1192 = bits.Mul32(x1155, 0xffffffff)
+  x1189, x1190 = bits.Add32(x1158, x1155, x1188)
+  var x1191 uint32 = (x1190 + x1156)
   var x1193 uint32
+  _, x1193 = bits.Add32(x1129, x1173, 0x0)
   var x1194 uint32
-  x1193, x1194 = bits.Mul32(x1155, 0xffffffff)
   var x1195 uint32
+  x1194, x1195 = bits.Add32(x1131, x1174, x1193)
   var x1196 uint32
-  x1195, x1196 = bits.Mul32(x1155, 0xfffffffe)
   var x1197 uint32
+  x1196, x1197 = bits.Add32(x1133, uint32(0x0), x1195)
   var x1198 uint32
-  x1197, x1198 = bits.Mul32(x1155, 0xffffffff)
   var x1199 uint32
+  x1198, x1199 = bits.Add32(x1135, x1171, x1197)
   var x1200 uint32
-  x1199, x1200 = bits.Mul32(x1155, 0xffffffff)
   var x1201 uint32
+  x1200, x1201 = bits.Add32(x1137, x1175, x1199)
   var x1202 uint32
-  x1201, x1202 = bits.Add32(x1198, x1195, 0x0)
   var x1203 uint32
+  x1202, x1203 = bits.Add32(x1139, x1177, x1201)
   var x1204 uint32
-  x1203, x1204 = bits.Add32(x1196, x1193, x1202)
   var x1205 uint32
+  x1204, x1205 = bits.Add32(x1141, x1179, x1203)
   var x1206 uint32
-  x1205, x1206 = bits.Add32(x1194, x1191, x1204)
   var x1207 uint32
+  x1206, x1207 = bits.Add32(x1143, x1181, x1205)
   var x1208 uint32
-  x1207, x1208 = bits.Add32(x1192, x1189, x1206)
   var x1209 uint32
+  x1208, x1209 = bits.Add32(x1145, x1183, x1207)
   var x1210 uint32
-  x1209, x1210 = bits.Add32(x1190, x1187, x1208)
   var x1211 uint32
+  x1210, x1211 = bits.Add32(x1147, x1185, x1209)
   var x1212 uint32
-  x1211, x1212 = bits.Add32(x1188, x1185, x1210)
   var x1213 uint32
+  x1212, x1213 = bits.Add32(x1149, x1187, x1211)
   var x1214 uint32
-  x1213, x1214 = bits.Add32(x1186, x1183, x1212)
   var x1215 uint32
+  x1214, x1215 = bits.Add32(x1151, x1189, x1213)
   var x1216 uint32
-  x1215, x1216 = bits.Add32(x1184, x1181, x1214)
   var x1217 uint32
-  x1217, _ = bits.Add32(x1182, uint32(0x0), x1216)
+  x1216, x1217 = bits.Add32(x1153, x1191, x1215)
+  var x1218 uint32 = (x1217 + x1154)
+  var x1219 uint32
   var x1220 uint32
-  _, x1220 = bits.Add32(x1155, x1199, 0x0)
+  x1219, x1220 = bits.Mul32(x9, (arg1[11]))
   var x1221 uint32
   var x1222 uint32
-  x1221, x1222 = bits.Add32(x1157, x1200, x1220)
+  x1221, x1222 = bits.Mul32(x9, (arg1[10]))
   var x1223 uint32
   var x1224 uint32
-  x1223, x1224 = bits.Add32(x1159, uint32(0x0), x1222)
+  x1223, x1224 = bits.Mul32(x9, (arg1[9]))
   var x1225 uint32
   var x1226 uint32
-  x1225, x1226 = bits.Add32(x1161, x1197, x1224)
+  x1225, x1226 = bits.Mul32(x9, (arg1[8]))
   var x1227 uint32
   var x1228 uint32
-  x1227, x1228 = bits.Add32(x1163, x1201, x1226)
+  x1227, x1228 = bits.Mul32(x9, (arg1[7]))
   var x1229 uint32
   var x1230 uint32
-  x1229, x1230 = bits.Add32(x1165, x1203, x1228)
+  x1229, x1230 = bits.Mul32(x9, (arg1[6]))
   var x1231 uint32
   var x1232 uint32
-  x1231, x1232 = bits.Add32(x1167, x1205, x1230)
+  x1231, x1232 = bits.Mul32(x9, (arg1[5]))
   var x1233 uint32
   var x1234 uint32
-  x1233, x1234 = bits.Add32(x1169, x1207, x1232)
+  x1233, x1234 = bits.Mul32(x9, (arg1[4]))
   var x1235 uint32
   var x1236 uint32
-  x1235, x1236 = bits.Add32(x1171, x1209, x1234)
+  x1235, x1236 = bits.Mul32(x9, (arg1[3]))
   var x1237 uint32
   var x1238 uint32
-  x1237, x1238 = bits.Add32(x1173, x1211, x1236)
+  x1237, x1238 = bits.Mul32(x9, (arg1[2]))
   var x1239 uint32
   var x1240 uint32
-  x1239, x1240 = bits.Add32(x1175, x1213, x1238)
+  x1239, x1240 = bits.Mul32(x9, (arg1[1]))
   var x1241 uint32
   var x1242 uint32
-  x1241, x1242 = bits.Add32(x1177, x1215, x1240)
+  x1241, x1242 = bits.Mul32(x9, (arg1[0]))
   var x1243 uint32
   var x1244 uint32
-  x1243, x1244 = bits.Add32(x1179, x1217, x1242)
+  x1243, x1244 = bits.Add32(x1242, x1239, 0x0)
   var x1245 uint32
-  x1245, _ = bits.Add32(x1180, uint32(0x0), x1244)
+  var x1246 uint32
+  x1245, x1246 = bits.Add32(x1240, x1237, x1244)
   var x1247 uint32
   var x1248 uint32
-  x1247, x1248 = bits.Mul32(x9, (arg1[11]))
+  x1247, x1248 = bits.Add32(x1238, x1235, x1246)
   var x1249 uint32
   var x1250 uint32
-  x1249, x1250 = bits.Mul32(x9, (arg1[10]))
+  x1249, x1250 = bits.Add32(x1236, x1233, x1248)
   var x1251 uint32
   var x1252 uint32
-  x1251, x1252 = bits.Mul32(x9, (arg1[9]))
+  x1251, x1252 = bits.Add32(x1234, x1231, x1250)
   var x1253 uint32
   var x1254 uint32
-  x1253, x1254 = bits.Mul32(x9, (arg1[8]))
+  x1253, x1254 = bits.Add32(x1232, x1229, x1252)
   var x1255 uint32
   var x1256 uint32
-  x1255, x1256 = bits.Mul32(x9, (arg1[7]))
+  x1255, x1256 = bits.Add32(x1230, x1227, x1254)
   var x1257 uint32
   var x1258 uint32
-  x1257, x1258 = bits.Mul32(x9, (arg1[6]))
+  x1257, x1258 = bits.Add32(x1228, x1225, x1256)
   var x1259 uint32
   var x1260 uint32
-  x1259, x1260 = bits.Mul32(x9, (arg1[5]))
+  x1259, x1260 = bits.Add32(x1226, x1223, x1258)
   var x1261 uint32
   var x1262 uint32
-  x1261, x1262 = bits.Mul32(x9, (arg1[4]))
+  x1261, x1262 = bits.Add32(x1224, x1221, x1260)
   var x1263 uint32
   var x1264 uint32
-  x1263, x1264 = bits.Mul32(x9, (arg1[3]))
-  var x1265 uint32
+  x1263, x1264 = bits.Add32(x1222, x1219, x1262)
+  var x1265 uint32 = (x1264 + x1220)
   var x1266 uint32
-  x1265, x1266 = bits.Mul32(x9, (arg1[2]))
   var x1267 uint32
+  x1266, x1267 = bits.Add32(x1194, x1241, 0x0)
   var x1268 uint32
-  x1267, x1268 = bits.Mul32(x9, (arg1[1]))
   var x1269 uint32
+  x1268, x1269 = bits.Add32(x1196, x1243, x1267)
   var x1270 uint32
-  x1269, x1270 = bits.Mul32(x9, (arg1[0]))
   var x1271 uint32
+  x1270, x1271 = bits.Add32(x1198, x1245, x1269)
   var x1272 uint32
-  x1271, x1272 = bits.Add32(x1270, x1267, 0x0)
   var x1273 uint32
+  x1272, x1273 = bits.Add32(x1200, x1247, x1271)
   var x1274 uint32
-  x1273, x1274 = bits.Add32(x1268, x1265, x1272)
   var x1275 uint32
+  x1274, x1275 = bits.Add32(x1202, x1249, x1273)
   var x1276 uint32
-  x1275, x1276 = bits.Add32(x1266, x1263, x1274)
   var x1277 uint32
+  x1276, x1277 = bits.Add32(x1204, x1251, x1275)
   var x1278 uint32
-  x1277, x1278 = bits.Add32(x1264, x1261, x1276)
   var x1279 uint32
+  x1278, x1279 = bits.Add32(x1206, x1253, x1277)
   var x1280 uint32
-  x1279, x1280 = bits.Add32(x1262, x1259, x1278)
   var x1281 uint32
+  x1280, x1281 = bits.Add32(x1208, x1255, x1279)
   var x1282 uint32
-  x1281, x1282 = bits.Add32(x1260, x1257, x1280)
   var x1283 uint32
+  x1282, x1283 = bits.Add32(x1210, x1257, x1281)
   var x1284 uint32
-  x1283, x1284 = bits.Add32(x1258, x1255, x1282)
   var x1285 uint32
+  x1284, x1285 = bits.Add32(x1212, x1259, x1283)
   var x1286 uint32
-  x1285, x1286 = bits.Add32(x1256, x1253, x1284)
   var x1287 uint32
+  x1286, x1287 = bits.Add32(x1214, x1261, x1285)
   var x1288 uint32
-  x1287, x1288 = bits.Add32(x1254, x1251, x1286)
   var x1289 uint32
+  x1288, x1289 = bits.Add32(x1216, x1263, x1287)
   var x1290 uint32
-  x1289, x1290 = bits.Add32(x1252, x1249, x1288)
   var x1291 uint32
+  x1290, x1291 = bits.Add32(x1218, x1265, x1289)
   var x1292 uint32
-  x1291, x1292 = bits.Add32(x1250, x1247, x1290)
   var x1293 uint32
-  x1293, _ = bits.Add32(x1248, uint32(0x0), x1292)
+  x1292, x1293 = bits.Mul32(x1266, 0xffffffff)
+  var x1294 uint32
   var x1295 uint32
+  x1294, x1295 = bits.Mul32(x1266, 0xffffffff)
   var x1296 uint32
-  x1295, x1296 = bits.Add32(x1221, x1269, 0x0)
   var x1297 uint32
+  x1296, x1297 = bits.Mul32(x1266, 0xffffffff)
   var x1298 uint32
-  x1297, x1298 = bits.Add32(x1223, x1271, x1296)
   var x1299 uint32
+  x1298, x1299 = bits.Mul32(x1266, 0xffffffff)
   var x1300 uint32
-  x1299, x1300 = bits.Add32(x1225, x1273, x1298)
   var x1301 uint32
+  x1300, x1301 = bits.Mul32(x1266, 0xffffffff)
   var x1302 uint32
-  x1301, x1302 = bits.Add32(x1227, x1275, x1300)
   var x1303 uint32
+  x1302, x1303 = bits.Mul32(x1266, 0xffffffff)
   var x1304 uint32
-  x1303, x1304 = bits.Add32(x1229, x1277, x1302)
   var x1305 uint32
+  x1304, x1305 = bits.Mul32(x1266, 0xffffffff)
   var x1306 uint32
-  x1305, x1306 = bits.Add32(x1231, x1279, x1304)
   var x1307 uint32
+  x1306, x1307 = bits.Mul32(x1266, 0xfffffffe)
   var x1308 uint32
-  x1307, x1308 = bits.Add32(x1233, x1281, x1306)
   var x1309 uint32
+  x1308, x1309 = bits.Mul32(x1266, 0xffffffff)
   var x1310 uint32
-  x1309, x1310 = bits.Add32(x1235, x1283, x1308)
   var x1311 uint32
+  x1310, x1311 = bits.Mul32(x1266, 0xffffffff)
   var x1312 uint32
-  x1311, x1312 = bits.Add32(x1237, x1285, x1310)
   var x1313 uint32
+  x1312, x1313 = bits.Add32(x1309, x1306, 0x0)
   var x1314 uint32
-  x1313, x1314 = bits.Add32(x1239, x1287, x1312)
   var x1315 uint32
+  x1314, x1315 = bits.Add32(x1307, x1304, x1313)
   var x1316 uint32
-  x1315, x1316 = bits.Add32(x1241, x1289, x1314)
   var x1317 uint32
+  x1316, x1317 = bits.Add32(x1305, x1302, x1315)
   var x1318 uint32
-  x1317, x1318 = bits.Add32(x1243, x1291, x1316)
   var x1319 uint32
+  x1318, x1319 = bits.Add32(x1303, x1300, x1317)
   var x1320 uint32
-  x1319, x1320 = bits.Add32(x1245, x1293, x1318)
   var x1321 uint32
+  x1320, x1321 = bits.Add32(x1301, x1298, x1319)
   var x1322 uint32
-  x1321, x1322 = bits.Mul32(x1295, 0xffffffff)
   var x1323 uint32
+  x1322, x1323 = bits.Add32(x1299, x1296, x1321)
   var x1324 uint32
-  x1323, x1324 = bits.Mul32(x1295, 0xffffffff)
   var x1325 uint32
+  x1324, x1325 = bits.Add32(x1297, x1294, x1323)
   var x1326 uint32
-  x1325, x1326 = bits.Mul32(x1295, 0xffffffff)
   var x1327 uint32
-  var x1328 uint32
-  x1327, x1328 = bits.Mul32(x1295, 0xffffffff)
-  var x1329 uint32
+  x1326, x1327 = bits.Add32(x1295, x1292, x1325)
+  var x1328 uint32 = (x1327 + x1293)
   var x1330 uint32
-  x1329, x1330 = bits.Mul32(x1295, 0xffffffff)
+  _, x1330 = bits.Add32(x1266, x1310, 0x0)
   var x1331 uint32
   var x1332 uint32
-  x1331, x1332 = bits.Mul32(x1295, 0xffffffff)
+  x1331, x1332 = bits.Add32(x1268, x1311, x1330)
   var x1333 uint32
   var x1334 uint32
-  x1333, x1334 = bits.Mul32(x1295, 0xffffffff)
+  x1333, x1334 = bits.Add32(x1270, uint32(0x0), x1332)
   var x1335 uint32
   var x1336 uint32
-  x1335, x1336 = bits.Mul32(x1295, 0xfffffffe)
+  x1335, x1336 = bits.Add32(x1272, x1308, x1334)
   var x1337 uint32
   var x1338 uint32
-  x1337, x1338 = bits.Mul32(x1295, 0xffffffff)
+  x1337, x1338 = bits.Add32(x1274, x1312, x1336)
   var x1339 uint32
   var x1340 uint32
-  x1339, x1340 = bits.Mul32(x1295, 0xffffffff)
+  x1339, x1340 = bits.Add32(x1276, x1314, x1338)
   var x1341 uint32
   var x1342 uint32
-  x1341, x1342 = bits.Add32(x1338, x1335, 0x0)
+  x1341, x1342 = bits.Add32(x1278, x1316, x1340)
   var x1343 uint32
   var x1344 uint32
-  x1343, x1344 = bits.Add32(x1336, x1333, x1342)
+  x1343, x1344 = bits.Add32(x1280, x1318, x1342)
   var x1345 uint32
   var x1346 uint32
-  x1345, x1346 = bits.Add32(x1334, x1331, x1344)
+  x1345, x1346 = bits.Add32(x1282, x1320, x1344)
   var x1347 uint32
   var x1348 uint32
-  x1347, x1348 = bits.Add32(x1332, x1329, x1346)
+  x1347, x1348 = bits.Add32(x1284, x1322, x1346)
   var x1349 uint32
   var x1350 uint32
-  x1349, x1350 = bits.Add32(x1330, x1327, x1348)
+  x1349, x1350 = bits.Add32(x1286, x1324, x1348)
   var x1351 uint32
   var x1352 uint32
-  x1351, x1352 = bits.Add32(x1328, x1325, x1350)
+  x1351, x1352 = bits.Add32(x1288, x1326, x1350)
   var x1353 uint32
   var x1354 uint32
-  x1353, x1354 = bits.Add32(x1326, x1323, x1352)
-  var x1355 uint32
+  x1353, x1354 = bits.Add32(x1290, x1328, x1352)
+  var x1355 uint32 = (x1354 + x1291)
   var x1356 uint32
-  x1355, x1356 = bits.Add32(x1324, x1321, x1354)
   var x1357 uint32
-  x1357, _ = bits.Add32(x1322, uint32(0x0), x1356)
+  x1356, x1357 = bits.Mul32(x10, (arg1[11]))
+  var x1358 uint32
+  var x1359 uint32
+  x1358, x1359 = bits.Mul32(x10, (arg1[10]))
   var x1360 uint32
-  _, x1360 = bits.Add32(x1295, x1339, 0x0)
   var x1361 uint32
+  x1360, x1361 = bits.Mul32(x10, (arg1[9]))
   var x1362 uint32
-  x1361, x1362 = bits.Add32(x1297, x1340, x1360)
   var x1363 uint32
+  x1362, x1363 = bits.Mul32(x10, (arg1[8]))
   var x1364 uint32
-  x1363, x1364 = bits.Add32(x1299, uint32(0x0), x1362)
   var x1365 uint32
+  x1364, x1365 = bits.Mul32(x10, (arg1[7]))
   var x1366 uint32
-  x1365, x1366 = bits.Add32(x1301, x1337, x1364)
   var x1367 uint32
+  x1366, x1367 = bits.Mul32(x10, (arg1[6]))
   var x1368 uint32
-  x1367, x1368 = bits.Add32(x1303, x1341, x1366)
   var x1369 uint32
+  x1368, x1369 = bits.Mul32(x10, (arg1[5]))
   var x1370 uint32
-  x1369, x1370 = bits.Add32(x1305, x1343, x1368)
   var x1371 uint32
+  x1370, x1371 = bits.Mul32(x10, (arg1[4]))
   var x1372 uint32
-  x1371, x1372 = bits.Add32(x1307, x1345, x1370)
   var x1373 uint32
+  x1372, x1373 = bits.Mul32(x10, (arg1[3]))
   var x1374 uint32
-  x1373, x1374 = bits.Add32(x1309, x1347, x1372)
   var x1375 uint32
+  x1374, x1375 = bits.Mul32(x10, (arg1[2]))
   var x1376 uint32
-  x1375, x1376 = bits.Add32(x1311, x1349, x1374)
   var x1377 uint32
+  x1376, x1377 = bits.Mul32(x10, (arg1[1]))
   var x1378 uint32
-  x1377, x1378 = bits.Add32(x1313, x1351, x1376)
   var x1379 uint32
+  x1378, x1379 = bits.Mul32(x10, (arg1[0]))
   var x1380 uint32
-  x1379, x1380 = bits.Add32(x1315, x1353, x1378)
   var x1381 uint32
+  x1380, x1381 = bits.Add32(x1379, x1376, 0x0)
   var x1382 uint32
-  x1381, x1382 = bits.Add32(x1317, x1355, x1380)
   var x1383 uint32
+  x1382, x1383 = bits.Add32(x1377, x1374, x1381)
   var x1384 uint32
-  x1383, x1384 = bits.Add32(x1319, x1357, x1382)
   var x1385 uint32
-  x1385, _ = bits.Add32(x1320, uint32(0x0), x1384)
+  x1384, x1385 = bits.Add32(x1375, x1372, x1383)
+  var x1386 uint32
   var x1387 uint32
+  x1386, x1387 = bits.Add32(x1373, x1370, x1385)
   var x1388 uint32
-  x1387, x1388 = bits.Mul32(x10, (arg1[11]))
   var x1389 uint32
+  x1388, x1389 = bits.Add32(x1371, x1368, x1387)
   var x1390 uint32
-  x1389, x1390 = bits.Mul32(x10, (arg1[10]))
   var x1391 uint32
+  x1390, x1391 = bits.Add32(x1369, x1366, x1389)
   var x1392 uint32
-  x1391, x1392 = bits.Mul32(x10, (arg1[9]))
   var x1393 uint32
+  x1392, x1393 = bits.Add32(x1367, x1364, x1391)
   var x1394 uint32
-  x1393, x1394 = bits.Mul32(x10, (arg1[8]))
   var x1395 uint32
+  x1394, x1395 = bits.Add32(x1365, x1362, x1393)
   var x1396 uint32
-  x1395, x1396 = bits.Mul32(x10, (arg1[7]))
   var x1397 uint32
+  x1396, x1397 = bits.Add32(x1363, x1360, x1395)
   var x1398 uint32
-  x1397, x1398 = bits.Mul32(x10, (arg1[6]))
   var x1399 uint32
+  x1398, x1399 = bits.Add32(x1361, x1358, x1397)
   var x1400 uint32
-  x1399, x1400 = bits.Mul32(x10, (arg1[5]))
   var x1401 uint32
-  var x1402 uint32
-  x1401, x1402 = bits.Mul32(x10, (arg1[4]))
+  x1400, x1401 = bits.Add32(x1359, x1356, x1399)
+  var x1402 uint32 = (x1401 + x1357)
   var x1403 uint32
   var x1404 uint32
-  x1403, x1404 = bits.Mul32(x10, (arg1[3]))
+  x1403, x1404 = bits.Add32(x1331, x1378, 0x0)
   var x1405 uint32
   var x1406 uint32
-  x1405, x1406 = bits.Mul32(x10, (arg1[2]))
+  x1405, x1406 = bits.Add32(x1333, x1380, x1404)
   var x1407 uint32
   var x1408 uint32
-  x1407, x1408 = bits.Mul32(x10, (arg1[1]))
+  x1407, x1408 = bits.Add32(x1335, x1382, x1406)
   var x1409 uint32
   var x1410 uint32
-  x1409, x1410 = bits.Mul32(x10, (arg1[0]))
+  x1409, x1410 = bits.Add32(x1337, x1384, x1408)
   var x1411 uint32
   var x1412 uint32
-  x1411, x1412 = bits.Add32(x1410, x1407, 0x0)
+  x1411, x1412 = bits.Add32(x1339, x1386, x1410)
   var x1413 uint32
   var x1414 uint32
-  x1413, x1414 = bits.Add32(x1408, x1405, x1412)
+  x1413, x1414 = bits.Add32(x1341, x1388, x1412)
   var x1415 uint32
   var x1416 uint32
-  x1415, x1416 = bits.Add32(x1406, x1403, x1414)
+  x1415, x1416 = bits.Add32(x1343, x1390, x1414)
   var x1417 uint32
   var x1418 uint32
-  x1417, x1418 = bits.Add32(x1404, x1401, x1416)
+  x1417, x1418 = bits.Add32(x1345, x1392, x1416)
   var x1419 uint32
   var x1420 uint32
-  x1419, x1420 = bits.Add32(x1402, x1399, x1418)
+  x1419, x1420 = bits.Add32(x1347, x1394, x1418)
   var x1421 uint32
   var x1422 uint32
-  x1421, x1422 = bits.Add32(x1400, x1397, x1420)
+  x1421, x1422 = bits.Add32(x1349, x1396, x1420)
   var x1423 uint32
   var x1424 uint32
-  x1423, x1424 = bits.Add32(x1398, x1395, x1422)
+  x1423, x1424 = bits.Add32(x1351, x1398, x1422)
   var x1425 uint32
   var x1426 uint32
-  x1425, x1426 = bits.Add32(x1396, x1393, x1424)
+  x1425, x1426 = bits.Add32(x1353, x1400, x1424)
   var x1427 uint32
   var x1428 uint32
-  x1427, x1428 = bits.Add32(x1394, x1391, x1426)
+  x1427, x1428 = bits.Add32(x1355, x1402, x1426)
   var x1429 uint32
   var x1430 uint32
-  x1429, x1430 = bits.Add32(x1392, x1389, x1428)
+  x1429, x1430 = bits.Mul32(x1403, 0xffffffff)
   var x1431 uint32
   var x1432 uint32
-  x1431, x1432 = bits.Add32(x1390, x1387, x1430)
+  x1431, x1432 = bits.Mul32(x1403, 0xffffffff)
   var x1433 uint32
-  x1433, _ = bits.Add32(x1388, uint32(0x0), x1432)
+  var x1434 uint32
+  x1433, x1434 = bits.Mul32(x1403, 0xffffffff)
   var x1435 uint32
   var x1436 uint32
-  x1435, x1436 = bits.Add32(x1361, x1409, 0x0)
+  x1435, x1436 = bits.Mul32(x1403, 0xffffffff)
   var x1437 uint32
   var x1438 uint32
-  x1437, x1438 = bits.Add32(x1363, x1411, x1436)
+  x1437, x1438 = bits.Mul32(x1403, 0xffffffff)
   var x1439 uint32
   var x1440 uint32
-  x1439, x1440 = bits.Add32(x1365, x1413, x1438)
+  x1439, x1440 = bits.Mul32(x1403, 0xffffffff)
   var x1441 uint32
   var x1442 uint32
-  x1441, x1442 = bits.Add32(x1367, x1415, x1440)
+  x1441, x1442 = bits.Mul32(x1403, 0xffffffff)
   var x1443 uint32
   var x1444 uint32
-  x1443, x1444 = bits.Add32(x1369, x1417, x1442)
+  x1443, x1444 = bits.Mul32(x1403, 0xfffffffe)
   var x1445 uint32
   var x1446 uint32
-  x1445, x1446 = bits.Add32(x1371, x1419, x1444)
+  x1445, x1446 = bits.Mul32(x1403, 0xffffffff)
   var x1447 uint32
   var x1448 uint32
-  x1447, x1448 = bits.Add32(x1373, x1421, x1446)
+  x1447, x1448 = bits.Mul32(x1403, 0xffffffff)
   var x1449 uint32
   var x1450 uint32
-  x1449, x1450 = bits.Add32(x1375, x1423, x1448)
+  x1449, x1450 = bits.Add32(x1446, x1443, 0x0)
   var x1451 uint32
   var x1452 uint32
-  x1451, x1452 = bits.Add32(x1377, x1425, x1450)
+  x1451, x1452 = bits.Add32(x1444, x1441, x1450)
   var x1453 uint32
   var x1454 uint32
-  x1453, x1454 = bits.Add32(x1379, x1427, x1452)
+  x1453, x1454 = bits.Add32(x1442, x1439, x1452)
   var x1455 uint32
   var x1456 uint32
-  x1455, x1456 = bits.Add32(x1381, x1429, x1454)
+  x1455, x1456 = bits.Add32(x1440, x1437, x1454)
   var x1457 uint32
   var x1458 uint32
-  x1457, x1458 = bits.Add32(x1383, x1431, x1456)
+  x1457, x1458 = bits.Add32(x1438, x1435, x1456)
   var x1459 uint32
   var x1460 uint32
-  x1459, x1460 = bits.Add32(x1385, x1433, x1458)
+  x1459, x1460 = bits.Add32(x1436, x1433, x1458)
   var x1461 uint32
   var x1462 uint32
-  x1461, x1462 = bits.Mul32(x1435, 0xffffffff)
+  x1461, x1462 = bits.Add32(x1434, x1431, x1460)
   var x1463 uint32
   var x1464 uint32
-  x1463, x1464 = bits.Mul32(x1435, 0xffffffff)
-  var x1465 uint32
-  var x1466 uint32
-  x1465, x1466 = bits.Mul32(x1435, 0xffffffff)
+  x1463, x1464 = bits.Add32(x1432, x1429, x1462)
+  var x1465 uint32 = (x1464 + x1430)
   var x1467 uint32
+  _, x1467 = bits.Add32(x1403, x1447, 0x0)
   var x1468 uint32
-  x1467, x1468 = bits.Mul32(x1435, 0xffffffff)
   var x1469 uint32
+  x1468, x1469 = bits.Add32(x1405, x1448, x1467)
   var x1470 uint32
-  x1469, x1470 = bits.Mul32(x1435, 0xffffffff)
   var x1471 uint32
+  x1470, x1471 = bits.Add32(x1407, uint32(0x0), x1469)
   var x1472 uint32
-  x1471, x1472 = bits.Mul32(x1435, 0xffffffff)
   var x1473 uint32
+  x1472, x1473 = bits.Add32(x1409, x1445, x1471)
   var x1474 uint32
-  x1473, x1474 = bits.Mul32(x1435, 0xffffffff)
   var x1475 uint32
+  x1474, x1475 = bits.Add32(x1411, x1449, x1473)
   var x1476 uint32
-  x1475, x1476 = bits.Mul32(x1435, 0xfffffffe)
   var x1477 uint32
+  x1476, x1477 = bits.Add32(x1413, x1451, x1475)
   var x1478 uint32
-  x1477, x1478 = bits.Mul32(x1435, 0xffffffff)
   var x1479 uint32
+  x1478, x1479 = bits.Add32(x1415, x1453, x1477)
   var x1480 uint32
-  x1479, x1480 = bits.Mul32(x1435, 0xffffffff)
   var x1481 uint32
+  x1480, x1481 = bits.Add32(x1417, x1455, x1479)
   var x1482 uint32
-  x1481, x1482 = bits.Add32(x1478, x1475, 0x0)
   var x1483 uint32
+  x1482, x1483 = bits.Add32(x1419, x1457, x1481)
   var x1484 uint32
-  x1483, x1484 = bits.Add32(x1476, x1473, x1482)
   var x1485 uint32
+  x1484, x1485 = bits.Add32(x1421, x1459, x1483)
   var x1486 uint32
-  x1485, x1486 = bits.Add32(x1474, x1471, x1484)
   var x1487 uint32
+  x1486, x1487 = bits.Add32(x1423, x1461, x1485)
   var x1488 uint32
-  x1487, x1488 = bits.Add32(x1472, x1469, x1486)
   var x1489 uint32
+  x1488, x1489 = bits.Add32(x1425, x1463, x1487)
   var x1490 uint32
-  x1489, x1490 = bits.Add32(x1470, x1467, x1488)
   var x1491 uint32
-  var x1492 uint32
-  x1491, x1492 = bits.Add32(x1468, x1465, x1490)
+  x1490, x1491 = bits.Add32(x1427, x1465, x1489)
+  var x1492 uint32 = (x1491 + x1428)
   var x1493 uint32
   var x1494 uint32
-  x1493, x1494 = bits.Add32(x1466, x1463, x1492)
+  x1493, x1494 = bits.Mul32(x11, (arg1[11]))
   var x1495 uint32
   var x1496 uint32
-  x1495, x1496 = bits.Add32(x1464, x1461, x1494)
+  x1495, x1496 = bits.Mul32(x11, (arg1[10]))
   var x1497 uint32
-  x1497, _ = bits.Add32(x1462, uint32(0x0), x1496)
+  var x1498 uint32
+  x1497, x1498 = bits.Mul32(x11, (arg1[9]))
+  var x1499 uint32
   var x1500 uint32
-  _, x1500 = bits.Add32(x1435, x1479, 0x0)
+  x1499, x1500 = bits.Mul32(x11, (arg1[8]))
   var x1501 uint32
   var x1502 uint32
-  x1501, x1502 = bits.Add32(x1437, x1480, x1500)
+  x1501, x1502 = bits.Mul32(x11, (arg1[7]))
   var x1503 uint32
   var x1504 uint32
-  x1503, x1504 = bits.Add32(x1439, uint32(0x0), x1502)
+  x1503, x1504 = bits.Mul32(x11, (arg1[6]))
   var x1505 uint32
   var x1506 uint32
-  x1505, x1506 = bits.Add32(x1441, x1477, x1504)
+  x1505, x1506 = bits.Mul32(x11, (arg1[5]))
   var x1507 uint32
   var x1508 uint32
-  x1507, x1508 = bits.Add32(x1443, x1481, x1506)
+  x1507, x1508 = bits.Mul32(x11, (arg1[4]))
   var x1509 uint32
   var x1510 uint32
-  x1509, x1510 = bits.Add32(x1445, x1483, x1508)
+  x1509, x1510 = bits.Mul32(x11, (arg1[3]))
   var x1511 uint32
   var x1512 uint32
-  x1511, x1512 = bits.Add32(x1447, x1485, x1510)
+  x1511, x1512 = bits.Mul32(x11, (arg1[2]))
   var x1513 uint32
   var x1514 uint32
-  x1513, x1514 = bits.Add32(x1449, x1487, x1512)
+  x1513, x1514 = bits.Mul32(x11, (arg1[1]))
   var x1515 uint32
   var x1516 uint32
-  x1515, x1516 = bits.Add32(x1451, x1489, x1514)
+  x1515, x1516 = bits.Mul32(x11, (arg1[0]))
   var x1517 uint32
   var x1518 uint32
-  x1517, x1518 = bits.Add32(x1453, x1491, x1516)
+  x1517, x1518 = bits.Add32(x1516, x1513, 0x0)
   var x1519 uint32
   var x1520 uint32
-  x1519, x1520 = bits.Add32(x1455, x1493, x1518)
+  x1519, x1520 = bits.Add32(x1514, x1511, x1518)
   var x1521 uint32
   var x1522 uint32
-  x1521, x1522 = bits.Add32(x1457, x1495, x1520)
+  x1521, x1522 = bits.Add32(x1512, x1509, x1520)
   var x1523 uint32
   var x1524 uint32
-  x1523, x1524 = bits.Add32(x1459, x1497, x1522)
+  x1523, x1524 = bits.Add32(x1510, x1507, x1522)
   var x1525 uint32
-  x1525, _ = bits.Add32(x1460, uint32(0x0), x1524)
+  var x1526 uint32
+  x1525, x1526 = bits.Add32(x1508, x1505, x1524)
   var x1527 uint32
   var x1528 uint32
-  x1527, x1528 = bits.Mul32(x11, (arg1[11]))
+  x1527, x1528 = bits.Add32(x1506, x1503, x1526)
   var x1529 uint32
   var x1530 uint32
-  x1529, x1530 = bits.Mul32(x11, (arg1[10]))
+  x1529, x1530 = bits.Add32(x1504, x1501, x1528)
   var x1531 uint32
   var x1532 uint32
-  x1531, x1532 = bits.Mul32(x11, (arg1[9]))
+  x1531, x1532 = bits.Add32(x1502, x1499, x1530)
   var x1533 uint32
   var x1534 uint32
-  x1533, x1534 = bits.Mul32(x11, (arg1[8]))
+  x1533, x1534 = bits.Add32(x1500, x1497, x1532)
   var x1535 uint32
   var x1536 uint32
-  x1535, x1536 = bits.Mul32(x11, (arg1[7]))
+  x1535, x1536 = bits.Add32(x1498, x1495, x1534)
   var x1537 uint32
   var x1538 uint32
-  x1537, x1538 = bits.Mul32(x11, (arg1[6]))
-  var x1539 uint32
+  x1537, x1538 = bits.Add32(x1496, x1493, x1536)
+  var x1539 uint32 = (x1538 + x1494)
   var x1540 uint32
-  x1539, x1540 = bits.Mul32(x11, (arg1[5]))
   var x1541 uint32
+  x1540, x1541 = bits.Add32(x1468, x1515, 0x0)
   var x1542 uint32
-  x1541, x1542 = bits.Mul32(x11, (arg1[4]))
   var x1543 uint32
+  x1542, x1543 = bits.Add32(x1470, x1517, x1541)
   var x1544 uint32
-  x1543, x1544 = bits.Mul32(x11, (arg1[3]))
   var x1545 uint32
+  x1544, x1545 = bits.Add32(x1472, x1519, x1543)
   var x1546 uint32
-  x1545, x1546 = bits.Mul32(x11, (arg1[2]))
   var x1547 uint32
+  x1546, x1547 = bits.Add32(x1474, x1521, x1545)
   var x1548 uint32
-  x1547, x1548 = bits.Mul32(x11, (arg1[1]))
   var x1549 uint32
+  x1548, x1549 = bits.Add32(x1476, x1523, x1547)
   var x1550 uint32
-  x1549, x1550 = bits.Mul32(x11, (arg1[0]))
   var x1551 uint32
+  x1550, x1551 = bits.Add32(x1478, x1525, x1549)
   var x1552 uint32
-  x1551, x1552 = bits.Add32(x1550, x1547, 0x0)
   var x1553 uint32
+  x1552, x1553 = bits.Add32(x1480, x1527, x1551)
   var x1554 uint32
-  x1553, x1554 = bits.Add32(x1548, x1545, x1552)
   var x1555 uint32
+  x1554, x1555 = bits.Add32(x1482, x1529, x1553)
   var x1556 uint32
-  x1555, x1556 = bits.Add32(x1546, x1543, x1554)
   var x1557 uint32
+  x1556, x1557 = bits.Add32(x1484, x1531, x1555)
   var x1558 uint32
-  x1557, x1558 = bits.Add32(x1544, x1541, x1556)
   var x1559 uint32
+  x1558, x1559 = bits.Add32(x1486, x1533, x1557)
   var x1560 uint32
-  x1559, x1560 = bits.Add32(x1542, x1539, x1558)
   var x1561 uint32
+  x1560, x1561 = bits.Add32(x1488, x1535, x1559)
   var x1562 uint32
-  x1561, x1562 = bits.Add32(x1540, x1537, x1560)
   var x1563 uint32
+  x1562, x1563 = bits.Add32(x1490, x1537, x1561)
   var x1564 uint32
-  x1563, x1564 = bits.Add32(x1538, x1535, x1562)
   var x1565 uint32
+  x1564, x1565 = bits.Add32(x1492, x1539, x1563)
   var x1566 uint32
-  x1565, x1566 = bits.Add32(x1536, x1533, x1564)
   var x1567 uint32
+  x1566, x1567 = bits.Mul32(x1540, 0xffffffff)
   var x1568 uint32
-  x1567, x1568 = bits.Add32(x1534, x1531, x1566)
   var x1569 uint32
+  x1568, x1569 = bits.Mul32(x1540, 0xffffffff)
   var x1570 uint32
-  x1569, x1570 = bits.Add32(x1532, x1529, x1568)
   var x1571 uint32
+  x1570, x1571 = bits.Mul32(x1540, 0xffffffff)
   var x1572 uint32
-  x1571, x1572 = bits.Add32(x1530, x1527, x1570)
   var x1573 uint32
-  x1573, _ = bits.Add32(x1528, uint32(0x0), x1572)
+  x1572, x1573 = bits.Mul32(x1540, 0xffffffff)
+  var x1574 uint32
   var x1575 uint32
+  x1574, x1575 = bits.Mul32(x1540, 0xffffffff)
   var x1576 uint32
-  x1575, x1576 = bits.Add32(x1501, x1549, 0x0)
   var x1577 uint32
+  x1576, x1577 = bits.Mul32(x1540, 0xffffffff)
   var x1578 uint32
-  x1577, x1578 = bits.Add32(x1503, x1551, x1576)
   var x1579 uint32
+  x1578, x1579 = bits.Mul32(x1540, 0xffffffff)
   var x1580 uint32
-  x1579, x1580 = bits.Add32(x1505, x1553, x1578)
   var x1581 uint32
+  x1580, x1581 = bits.Mul32(x1540, 0xfffffffe)
   var x1582 uint32
-  x1581, x1582 = bits.Add32(x1507, x1555, x1580)
   var x1583 uint32
+  x1582, x1583 = bits.Mul32(x1540, 0xffffffff)
   var x1584 uint32
-  x1583, x1584 = bits.Add32(x1509, x1557, x1582)
   var x1585 uint32
+  x1584, x1585 = bits.Mul32(x1540, 0xffffffff)
   var x1586 uint32
-  x1585, x1586 = bits.Add32(x1511, x1559, x1584)
   var x1587 uint32
+  x1586, x1587 = bits.Add32(x1583, x1580, 0x0)
   var x1588 uint32
-  x1587, x1588 = bits.Add32(x1513, x1561, x1586)
   var x1589 uint32
+  x1588, x1589 = bits.Add32(x1581, x1578, x1587)
   var x1590 uint32
-  x1589, x1590 = bits.Add32(x1515, x1563, x1588)
   var x1591 uint32
+  x1590, x1591 = bits.Add32(x1579, x1576, x1589)
   var x1592 uint32
-  x1591, x1592 = bits.Add32(x1517, x1565, x1590)
   var x1593 uint32
+  x1592, x1593 = bits.Add32(x1577, x1574, x1591)
   var x1594 uint32
-  x1593, x1594 = bits.Add32(x1519, x1567, x1592)
   var x1595 uint32
+  x1594, x1595 = bits.Add32(x1575, x1572, x1593)
   var x1596 uint32
-  x1595, x1596 = bits.Add32(x1521, x1569, x1594)
   var x1597 uint32
+  x1596, x1597 = bits.Add32(x1573, x1570, x1595)
   var x1598 uint32
-  x1597, x1598 = bits.Add32(x1523, x1571, x1596)
   var x1599 uint32
+  x1598, x1599 = bits.Add32(x1571, x1568, x1597)
   var x1600 uint32
-  x1599, x1600 = bits.Add32(x1525, x1573, x1598)
   var x1601 uint32
-  var x1602 uint32
-  x1601, x1602 = bits.Mul32(x1575, 0xffffffff)
-  var x1603 uint32
+  x1600, x1601 = bits.Add32(x1569, x1566, x1599)
+  var x1602 uint32 = (x1601 + x1567)
   var x1604 uint32
-  x1603, x1604 = bits.Mul32(x1575, 0xffffffff)
+  _, x1604 = bits.Add32(x1540, x1584, 0x0)
   var x1605 uint32
   var x1606 uint32
-  x1605, x1606 = bits.Mul32(x1575, 0xffffffff)
+  x1605, x1606 = bits.Add32(x1542, x1585, x1604)
   var x1607 uint32
   var x1608 uint32
-  x1607, x1608 = bits.Mul32(x1575, 0xffffffff)
+  x1607, x1608 = bits.Add32(x1544, uint32(0x0), x1606)
   var x1609 uint32
   var x1610 uint32
-  x1609, x1610 = bits.Mul32(x1575, 0xffffffff)
+  x1609, x1610 = bits.Add32(x1546, x1582, x1608)
   var x1611 uint32
   var x1612 uint32
-  x1611, x1612 = bits.Mul32(x1575, 0xffffffff)
+  x1611, x1612 = bits.Add32(x1548, x1586, x1610)
   var x1613 uint32
   var x1614 uint32
-  x1613, x1614 = bits.Mul32(x1575, 0xffffffff)
+  x1613, x1614 = bits.Add32(x1550, x1588, x1612)
   var x1615 uint32
   var x1616 uint32
-  x1615, x1616 = bits.Mul32(x1575, 0xfffffffe)
+  x1615, x1616 = bits.Add32(x1552, x1590, x1614)
   var x1617 uint32
   var x1618 uint32
-  x1617, x1618 = bits.Mul32(x1575, 0xffffffff)
+  x1617, x1618 = bits.Add32(x1554, x1592, x1616)
   var x1619 uint32
   var x1620 uint32
-  x1619, x1620 = bits.Mul32(x1575, 0xffffffff)
+  x1619, x1620 = bits.Add32(x1556, x1594, x1618)
   var x1621 uint32
   var x1622 uint32
-  x1621, x1622 = bits.Add32(x1618, x1615, 0x0)
+  x1621, x1622 = bits.Add32(x1558, x1596, x1620)
   var x1623 uint32
   var x1624 uint32
-  x1623, x1624 = bits.Add32(x1616, x1613, x1622)
+  x1623, x1624 = bits.Add32(x1560, x1598, x1622)
   var x1625 uint32
   var x1626 uint32
-  x1625, x1626 = bits.Add32(x1614, x1611, x1624)
+  x1625, x1626 = bits.Add32(x1562, x1600, x1624)
   var x1627 uint32
   var x1628 uint32
-  x1627, x1628 = bits.Add32(x1612, x1609, x1626)
-  var x1629 uint32
+  x1627, x1628 = bits.Add32(x1564, x1602, x1626)
+  var x1629 uint32 = (x1628 + x1565)
   var x1630 uint32
-  x1629, x1630 = bits.Add32(x1610, x1607, x1628)
   var x1631 uint32
+  x1630, x1631 = bits.Sub32(x1605, 0xffffffff, uint32(0x0))
   var x1632 uint32
-  x1631, x1632 = bits.Add32(x1608, x1605, x1630)
   var x1633 uint32
+  x1632, x1633 = bits.Sub32(x1607, uint32(0x0), x1631)
   var x1634 uint32
-  x1633, x1634 = bits.Add32(x1606, x1603, x1632)
   var x1635 uint32
+  x1634, x1635 = bits.Sub32(x1609, uint32(0x0), x1633)
   var x1636 uint32
-  x1635, x1636 = bits.Add32(x1604, x1601, x1634)
   var x1637 uint32
-  x1637, _ = bits.Add32(x1602, uint32(0x0), x1636)
+  x1636, x1637 = bits.Sub32(x1611, 0xffffffff, x1635)
+  var x1638 uint32
+  var x1639 uint32
+  x1638, x1639 = bits.Sub32(x1613, 0xfffffffe, x1637)
   var x1640 uint32
-  _, x1640 = bits.Add32(x1575, x1619, 0x0)
   var x1641 uint32
+  x1640, x1641 = bits.Sub32(x1615, 0xffffffff, x1639)
   var x1642 uint32
-  x1641, x1642 = bits.Add32(x1577, x1620, x1640)
   var x1643 uint32
+  x1642, x1643 = bits.Sub32(x1617, 0xffffffff, x1641)
   var x1644 uint32
-  x1643, x1644 = bits.Add32(x1579, uint32(0x0), x1642)
   var x1645 uint32
+  x1644, x1645 = bits.Sub32(x1619, 0xffffffff, x1643)
   var x1646 uint32
-  x1645, x1646 = bits.Add32(x1581, x1617, x1644)
   var x1647 uint32
+  x1646, x1647 = bits.Sub32(x1621, 0xffffffff, x1645)
   var x1648 uint32
-  x1647, x1648 = bits.Add32(x1583, x1621, x1646)
   var x1649 uint32
+  x1648, x1649 = bits.Sub32(x1623, 0xffffffff, x1647)
   var x1650 uint32
-  x1649, x1650 = bits.Add32(x1585, x1623, x1648)
   var x1651 uint32
+  x1650, x1651 = bits.Sub32(x1625, 0xffffffff, x1649)
   var x1652 uint32
-  x1651, x1652 = bits.Add32(x1587, x1625, x1650)
   var x1653 uint32
-  var x1654 uint32
-  x1653, x1654 = bits.Add32(x1589, x1627, x1652)
+  x1652, x1653 = bits.Sub32(x1627, 0xffffffff, x1651)
   var x1655 uint32
+  _, x1655 = bits.Sub32(x1629, uint32(0x0), x1653)
   var x1656 uint32
-  x1655, x1656 = bits.Add32(x1591, x1629, x1654)
+  fiat_p384_cmovznz_u32(&x1656, x1655, x1630, x1605)
   var x1657 uint32
+  fiat_p384_cmovznz_u32(&x1657, x1655, x1632, x1607)
   var x1658 uint32
-  x1657, x1658 = bits.Add32(x1593, x1631, x1656)
+  fiat_p384_cmovznz_u32(&x1658, x1655, x1634, x1609)
   var x1659 uint32
+  fiat_p384_cmovznz_u32(&x1659, x1655, x1636, x1611)
   var x1660 uint32
-  x1659, x1660 = bits.Add32(x1595, x1633, x1658)
+  fiat_p384_cmovznz_u32(&x1660, x1655, x1638, x1613)
   var x1661 uint32
+  fiat_p384_cmovznz_u32(&x1661, x1655, x1640, x1615)
   var x1662 uint32
-  x1661, x1662 = bits.Add32(x1597, x1635, x1660)
+  fiat_p384_cmovznz_u32(&x1662, x1655, x1642, x1617)
   var x1663 uint32
+  fiat_p384_cmovznz_u32(&x1663, x1655, x1644, x1619)
   var x1664 uint32
-  x1663, x1664 = bits.Add32(x1599, x1637, x1662)
+  fiat_p384_cmovznz_u32(&x1664, x1655, x1646, x1621)
   var x1665 uint32
-  x1665, _ = bits.Add32(x1600, uint32(0x0), x1664)
+  fiat_p384_cmovznz_u32(&x1665, x1655, x1648, x1623)
+  var x1666 uint32
+  fiat_p384_cmovznz_u32(&x1666, x1655, x1650, x1625)
   var x1667 uint32
-  var x1668 uint32
-  x1667, x1668 = bits.Sub32(x1641, 0xffffffff, uint32(0x0))
-  var x1669 uint32
-  var x1670 uint32
-  x1669, x1670 = bits.Sub32(x1643, uint32(0x0), x1668)
-  var x1671 uint32
-  var x1672 uint32
-  x1671, x1672 = bits.Sub32(x1645, uint32(0x0), x1670)
-  var x1673 uint32
-  var x1674 uint32
-  x1673, x1674 = bits.Sub32(x1647, 0xffffffff, x1672)
-  var x1675 uint32
-  var x1676 uint32
-  x1675, x1676 = bits.Sub32(x1649, 0xfffffffe, x1674)
-  var x1677 uint32
-  var x1678 uint32
-  x1677, x1678 = bits.Sub32(x1651, 0xffffffff, x1676)
-  var x1679 uint32
-  var x1680 uint32
-  x1679, x1680 = bits.Sub32(x1653, 0xffffffff, x1678)
-  var x1681 uint32
-  var x1682 uint32
-  x1681, x1682 = bits.Sub32(x1655, 0xffffffff, x1680)
-  var x1683 uint32
-  var x1684 uint32
-  x1683, x1684 = bits.Sub32(x1657, 0xffffffff, x1682)
-  var x1685 uint32
-  var x1686 uint32
-  x1685, x1686 = bits.Sub32(x1659, 0xffffffff, x1684)
-  var x1687 uint32
-  var x1688 uint32
-  x1687, x1688 = bits.Sub32(x1661, 0xffffffff, x1686)
-  var x1689 uint32
-  var x1690 uint32
-  x1689, x1690 = bits.Sub32(x1663, 0xffffffff, x1688)
-  var x1692 uint32
-  _, x1692 = bits.Sub32(x1665, uint32(0x0), x1690)
-  var x1693 uint32
-  fiat_p384_cmovznz_u32(&x1693, x1692, x1667, x1641)
-  var x1694 uint32
-  fiat_p384_cmovznz_u32(&x1694, x1692, x1669, x1643)
-  var x1695 uint32
-  fiat_p384_cmovznz_u32(&x1695, x1692, x1671, x1645)
-  var x1696 uint32
-  fiat_p384_cmovznz_u32(&x1696, x1692, x1673, x1647)
-  var x1697 uint32
-  fiat_p384_cmovznz_u32(&x1697, x1692, x1675, x1649)
-  var x1698 uint32
-  fiat_p384_cmovznz_u32(&x1698, x1692, x1677, x1651)
-  var x1699 uint32
-  fiat_p384_cmovznz_u32(&x1699, x1692, x1679, x1653)
-  var x1700 uint32
-  fiat_p384_cmovznz_u32(&x1700, x1692, x1681, x1655)
-  var x1701 uint32
-  fiat_p384_cmovznz_u32(&x1701, x1692, x1683, x1657)
-  var x1702 uint32
-  fiat_p384_cmovznz_u32(&x1702, x1692, x1685, x1659)
-  var x1703 uint32
-  fiat_p384_cmovznz_u32(&x1703, x1692, x1687, x1661)
-  var x1704 uint32
-  fiat_p384_cmovznz_u32(&x1704, x1692, x1689, x1663)
-  out1[0] = x1693
-  out1[1] = x1694
-  out1[2] = x1695
-  out1[3] = x1696
-  out1[4] = x1697
-  out1[5] = x1698
-  out1[6] = x1699
-  out1[7] = x1700
-  out1[8] = x1701
-  out1[9] = x1702
-  out1[10] = x1703
-  out1[11] = x1704
+  fiat_p384_cmovznz_u32(&x1667, x1655, x1652, x1627)
+  out1[0] = x1656
+  out1[1] = x1657
+  out1[2] = x1658
+  out1[3] = x1659
+  out1[4] = x1660
+  out1[5] = x1661
+  out1[6] = x1662
+  out1[7] = x1663
+  out1[8] = x1664
+  out1[9] = x1665
+  out1[10] = x1666
+  out1[11] = x1667
 }
 
 /*
@@ -5517,209 +5443,213 @@ func fiat_p384_from_montgomery(out1 *[12]uint32, arg1 *[12]uint32) {
   var x39 uint32
   _, x39 = bits.Add32(x1, x20, 0x0)
   var x40 uint32
-  x40, _ = bits.Add32(uint32(0x0), x21, x39)
+  var x41 uint32
+  x40, x41 = bits.Add32((x39 + x21), (arg1[1]), 0x0)
   var x42 uint32
   var x43 uint32
-  x42, x43 = bits.Add32(x40, (arg1[1]), 0x0)
+  x42, x43 = bits.Mul32(x40, 0xffffffff)
   var x44 uint32
   var x45 uint32
-  x44, x45 = bits.Mul32(x42, 0xffffffff)
+  x44, x45 = bits.Mul32(x40, 0xffffffff)
   var x46 uint32
   var x47 uint32
-  x46, x47 = bits.Mul32(x42, 0xffffffff)
+  x46, x47 = bits.Mul32(x40, 0xffffffff)
   var x48 uint32
   var x49 uint32
-  x48, x49 = bits.Mul32(x42, 0xffffffff)
+  x48, x49 = bits.Mul32(x40, 0xffffffff)
   var x50 uint32
   var x51 uint32
-  x50, x51 = bits.Mul32(x42, 0xffffffff)
+  x50, x51 = bits.Mul32(x40, 0xffffffff)
   var x52 uint32
   var x53 uint32
-  x52, x53 = bits.Mul32(x42, 0xffffffff)
+  x52, x53 = bits.Mul32(x40, 0xffffffff)
   var x54 uint32
   var x55 uint32
-  x54, x55 = bits.Mul32(x42, 0xffffffff)
+  x54, x55 = bits.Mul32(x40, 0xffffffff)
   var x56 uint32
   var x57 uint32
-  x56, x57 = bits.Mul32(x42, 0xffffffff)
+  x56, x57 = bits.Mul32(x40, 0xfffffffe)
   var x58 uint32
   var x59 uint32
-  x58, x59 = bits.Mul32(x42, 0xfffffffe)
+  x58, x59 = bits.Mul32(x40, 0xffffffff)
   var x60 uint32
   var x61 uint32
-  x60, x61 = bits.Mul32(x42, 0xffffffff)
+  x60, x61 = bits.Mul32(x40, 0xffffffff)
   var x62 uint32
   var x63 uint32
-  x62, x63 = bits.Mul32(x42, 0xffffffff)
+  x62, x63 = bits.Add32(x59, x56, 0x0)
   var x64 uint32
   var x65 uint32
-  x64, x65 = bits.Add32(x61, x58, 0x0)
+  x64, x65 = bits.Add32(x57, x54, x63)
   var x66 uint32
   var x67 uint32
-  x66, x67 = bits.Add32(x59, x56, x65)
+  x66, x67 = bits.Add32(x55, x52, x65)
   var x68 uint32
   var x69 uint32
-  x68, x69 = bits.Add32(x57, x54, x67)
+  x68, x69 = bits.Add32(x53, x50, x67)
   var x70 uint32
   var x71 uint32
-  x70, x71 = bits.Add32(x55, x52, x69)
+  x70, x71 = bits.Add32(x51, x48, x69)
   var x72 uint32
   var x73 uint32
-  x72, x73 = bits.Add32(x53, x50, x71)
+  x72, x73 = bits.Add32(x49, x46, x71)
   var x74 uint32
   var x75 uint32
-  x74, x75 = bits.Add32(x51, x48, x73)
+  x74, x75 = bits.Add32(x47, x44, x73)
   var x76 uint32
   var x77 uint32
-  x76, x77 = bits.Add32(x49, x46, x75)
-  var x78 uint32
+  x76, x77 = bits.Add32(x45, x42, x75)
   var x79 uint32
-  x78, x79 = bits.Add32(x47, x44, x77)
+  _, x79 = bits.Add32(x40, x60, 0x0)
   var x80 uint32
-  x80, _ = bits.Add32(uint32(0x0), uint32(0x0), x43)
+  var x81 uint32
+  x80, x81 = bits.Add32(x41, x61, x79)
+  var x82 uint32
   var x83 uint32
-  _, x83 = bits.Add32(x42, x62, 0x0)
+  x82, x83 = bits.Add32(x18, uint32(0x0), x81)
   var x84 uint32
   var x85 uint32
-  x84, x85 = bits.Add32(x80, x63, x83)
+  x84, x85 = bits.Add32(x22, x58, x83)
   var x86 uint32
   var x87 uint32
-  x86, x87 = bits.Add32(x18, uint32(0x0), x85)
+  x86, x87 = bits.Add32(x24, x62, x85)
   var x88 uint32
   var x89 uint32
-  x88, x89 = bits.Add32(x22, x60, x87)
+  x88, x89 = bits.Add32(x26, x64, x87)
   var x90 uint32
   var x91 uint32
-  x90, x91 = bits.Add32(x24, x64, x89)
+  x90, x91 = bits.Add32(x28, x66, x89)
   var x92 uint32
   var x93 uint32
-  x92, x93 = bits.Add32(x26, x66, x91)
+  x92, x93 = bits.Add32(x30, x68, x91)
   var x94 uint32
   var x95 uint32
-  x94, x95 = bits.Add32(x28, x68, x93)
+  x94, x95 = bits.Add32(x32, x70, x93)
   var x96 uint32
   var x97 uint32
-  x96, x97 = bits.Add32(x30, x70, x95)
+  x96, x97 = bits.Add32(x34, x72, x95)
   var x98 uint32
   var x99 uint32
-  x98, x99 = bits.Add32(x32, x72, x97)
+  x98, x99 = bits.Add32(x36, x74, x97)
   var x100 uint32
   var x101 uint32
-  x100, x101 = bits.Add32(x34, x74, x99)
+  x100, x101 = bits.Add32((x37 + x3), x76, x99)
   var x102 uint32
   var x103 uint32
-  x102, x103 = bits.Add32(x36, x76, x101)
+  x102, x103 = bits.Add32(uint32(0x0), (x77 + x43), x101)
   var x104 uint32
-  x104, _ = bits.Add32(x3, uint32(0x0), x37)
+  var x105 uint32
+  x104, x105 = bits.Add32(x80, (arg1[2]), 0x0)
   var x106 uint32
   var x107 uint32
-  x106, x107 = bits.Add32(x104, x78, x103)
+  x106, x107 = bits.Add32(x82, uint32(0x0), x105)
   var x108 uint32
-  x108, _ = bits.Add32(x45, uint32(0x0), x79)
+  var x109 uint32
+  x108, x109 = bits.Add32(x84, uint32(0x0), x107)
   var x110 uint32
   var x111 uint32
-  x110, x111 = bits.Add32(uint32(0x0), x108, x107)
+  x110, x111 = bits.Add32(x86, uint32(0x0), x109)
   var x112 uint32
   var x113 uint32
-  x112, x113 = bits.Add32(x84, (arg1[2]), 0x0)
+  x112, x113 = bits.Add32(x88, uint32(0x0), x111)
   var x114 uint32
   var x115 uint32
-  x114, x115 = bits.Add32(x86, uint32(0x0), x113)
+  x114, x115 = bits.Add32(x90, uint32(0x0), x113)
   var x116 uint32
   var x117 uint32
-  x116, x117 = bits.Add32(x88, uint32(0x0), x115)
+  x116, x117 = bits.Add32(x92, uint32(0x0), x115)
   var x118 uint32
   var x119 uint32
-  x118, x119 = bits.Add32(x90, uint32(0x0), x117)
+  x118, x119 = bits.Add32(x94, uint32(0x0), x117)
   var x120 uint32
   var x121 uint32
-  x120, x121 = bits.Add32(x92, uint32(0x0), x119)
+  x120, x121 = bits.Add32(x96, uint32(0x0), x119)
   var x122 uint32
   var x123 uint32
-  x122, x123 = bits.Add32(x94, uint32(0x0), x121)
+  x122, x123 = bits.Add32(x98, uint32(0x0), x121)
   var x124 uint32
   var x125 uint32
-  x124, x125 = bits.Add32(x96, uint32(0x0), x123)
+  x124, x125 = bits.Add32(x100, uint32(0x0), x123)
   var x126 uint32
   var x127 uint32
-  x126, x127 = bits.Add32(x98, uint32(0x0), x125)
+  x126, x127 = bits.Add32(x102, uint32(0x0), x125)
   var x128 uint32
   var x129 uint32
-  x128, x129 = bits.Add32(x100, uint32(0x0), x127)
+  x128, x129 = bits.Mul32(x104, 0xffffffff)
   var x130 uint32
   var x131 uint32
-  x130, x131 = bits.Add32(x102, uint32(0x0), x129)
+  x130, x131 = bits.Mul32(x104, 0xffffffff)
   var x132 uint32
   var x133 uint32
-  x132, x133 = bits.Add32(x106, uint32(0x0), x131)
+  x132, x133 = bits.Mul32(x104, 0xffffffff)
   var x134 uint32
   var x135 uint32
-  x134, x135 = bits.Add32(x110, uint32(0x0), x133)
+  x134, x135 = bits.Mul32(x104, 0xffffffff)
   var x136 uint32
   var x137 uint32
-  x136, x137 = bits.Mul32(x112, 0xffffffff)
+  x136, x137 = bits.Mul32(x104, 0xffffffff)
   var x138 uint32
   var x139 uint32
-  x138, x139 = bits.Mul32(x112, 0xffffffff)
+  x138, x139 = bits.Mul32(x104, 0xffffffff)
   var x140 uint32
   var x141 uint32
-  x140, x141 = bits.Mul32(x112, 0xffffffff)
+  x140, x141 = bits.Mul32(x104, 0xffffffff)
   var x142 uint32
   var x143 uint32
-  x142, x143 = bits.Mul32(x112, 0xffffffff)
+  x142, x143 = bits.Mul32(x104, 0xfffffffe)
   var x144 uint32
   var x145 uint32
-  x144, x145 = bits.Mul32(x112, 0xffffffff)
+  x144, x145 = bits.Mul32(x104, 0xffffffff)
   var x146 uint32
   var x147 uint32
-  x146, x147 = bits.Mul32(x112, 0xffffffff)
+  x146, x147 = bits.Mul32(x104, 0xffffffff)
   var x148 uint32
   var x149 uint32
-  x148, x149 = bits.Mul32(x112, 0xffffffff)
+  x148, x149 = bits.Add32(x145, x142, 0x0)
   var x150 uint32
   var x151 uint32
-  x150, x151 = bits.Mul32(x112, 0xfffffffe)
+  x150, x151 = bits.Add32(x143, x140, x149)
   var x152 uint32
   var x153 uint32
-  x152, x153 = bits.Mul32(x112, 0xffffffff)
+  x152, x153 = bits.Add32(x141, x138, x151)
   var x154 uint32
   var x155 uint32
-  x154, x155 = bits.Mul32(x112, 0xffffffff)
+  x154, x155 = bits.Add32(x139, x136, x153)
   var x156 uint32
   var x157 uint32
-  x156, x157 = bits.Add32(x153, x150, 0x0)
+  x156, x157 = bits.Add32(x137, x134, x155)
   var x158 uint32
   var x159 uint32
-  x158, x159 = bits.Add32(x151, x148, x157)
+  x158, x159 = bits.Add32(x135, x132, x157)
   var x160 uint32
   var x161 uint32
-  x160, x161 = bits.Add32(x149, x146, x159)
+  x160, x161 = bits.Add32(x133, x130, x159)
   var x162 uint32
   var x163 uint32
-  x162, x163 = bits.Add32(x147, x144, x161)
-  var x164 uint32
+  x162, x163 = bits.Add32(x131, x128, x161)
   var x165 uint32
-  x164, x165 = bits.Add32(x145, x142, x163)
+  _, x165 = bits.Add32(x104, x146, 0x0)
   var x166 uint32
   var x167 uint32
-  x166, x167 = bits.Add32(x143, x140, x165)
+  x166, x167 = bits.Add32(x106, x147, x165)
   var x168 uint32
   var x169 uint32
-  x168, x169 = bits.Add32(x141, x138, x167)
+  x168, x169 = bits.Add32(x108, uint32(0x0), x167)
   var x170 uint32
   var x171 uint32
-  x170, x171 = bits.Add32(x139, x136, x169)
+  x170, x171 = bits.Add32(x110, x144, x169)
+  var x172 uint32
   var x173 uint32
-  _, x173 = bits.Add32(x112, x154, 0x0)
+  x172, x173 = bits.Add32(x112, x148, x171)
   var x174 uint32
   var x175 uint32
-  x174, x175 = bits.Add32(x114, x155, x173)
+  x174, x175 = bits.Add32(x114, x150, x173)
   var x176 uint32
   var x177 uint32
-  x176, x177 = bits.Add32(x116, uint32(0x0), x175)
+  x176, x177 = bits.Add32(x116, x152, x175)
   var x178 uint32
   var x179 uint32
-  x178, x179 = bits.Add32(x118, x152, x177)
+  x178, x179 = bits.Add32(x118, x154, x177)
   var x180 uint32
   var x181 uint32
   x180, x181 = bits.Add32(x120, x156, x179)
@@ -5734,1307 +5664,1233 @@ func fiat_p384_from_montgomery(out1 *[12]uint32, arg1 *[12]uint32) {
   x186, x187 = bits.Add32(x126, x162, x185)
   var x188 uint32
   var x189 uint32
-  x188, x189 = bits.Add32(x128, x164, x187)
+  x188, x189 = bits.Add32((x127 + x103), (x163 + x129), x187)
   var x190 uint32
   var x191 uint32
-  x190, x191 = bits.Add32(x130, x166, x189)
+  x190, x191 = bits.Add32(x166, (arg1[3]), 0x0)
   var x192 uint32
   var x193 uint32
-  x192, x193 = bits.Add32(x132, x168, x191)
+  x192, x193 = bits.Add32(x168, uint32(0x0), x191)
   var x194 uint32
   var x195 uint32
-  x194, x195 = bits.Add32(x134, x170, x193)
+  x194, x195 = bits.Add32(x170, uint32(0x0), x193)
   var x196 uint32
-  x196, _ = bits.Add32(x137, uint32(0x0), x171)
+  var x197 uint32
+  x196, x197 = bits.Add32(x172, uint32(0x0), x195)
   var x198 uint32
-  x198, _ = bits.Add32(uint32(0x0), uint32(0x0), x111)
+  var x199 uint32
+  x198, x199 = bits.Add32(x174, uint32(0x0), x197)
   var x200 uint32
-  x200, _ = bits.Add32(x198, uint32(0x0), x135)
+  var x201 uint32
+  x200, x201 = bits.Add32(x176, uint32(0x0), x199)
   var x202 uint32
   var x203 uint32
-  x202, x203 = bits.Add32(x200, x196, x195)
+  x202, x203 = bits.Add32(x178, uint32(0x0), x201)
   var x204 uint32
   var x205 uint32
-  x204, x205 = bits.Add32(x174, (arg1[3]), 0x0)
+  x204, x205 = bits.Add32(x180, uint32(0x0), x203)
   var x206 uint32
   var x207 uint32
-  x206, x207 = bits.Add32(x176, uint32(0x0), x205)
+  x206, x207 = bits.Add32(x182, uint32(0x0), x205)
   var x208 uint32
   var x209 uint32
-  x208, x209 = bits.Add32(x178, uint32(0x0), x207)
+  x208, x209 = bits.Add32(x184, uint32(0x0), x207)
   var x210 uint32
   var x211 uint32
-  x210, x211 = bits.Add32(x180, uint32(0x0), x209)
+  x210, x211 = bits.Add32(x186, uint32(0x0), x209)
   var x212 uint32
   var x213 uint32
-  x212, x213 = bits.Add32(x182, uint32(0x0), x211)
+  x212, x213 = bits.Add32(x188, uint32(0x0), x211)
   var x214 uint32
   var x215 uint32
-  x214, x215 = bits.Add32(x184, uint32(0x0), x213)
+  x214, x215 = bits.Mul32(x190, 0xffffffff)
   var x216 uint32
   var x217 uint32
-  x216, x217 = bits.Add32(x186, uint32(0x0), x215)
+  x216, x217 = bits.Mul32(x190, 0xffffffff)
   var x218 uint32
   var x219 uint32
-  x218, x219 = bits.Add32(x188, uint32(0x0), x217)
+  x218, x219 = bits.Mul32(x190, 0xffffffff)
   var x220 uint32
   var x221 uint32
-  x220, x221 = bits.Add32(x190, uint32(0x0), x219)
+  x220, x221 = bits.Mul32(x190, 0xffffffff)
   var x222 uint32
   var x223 uint32
-  x222, x223 = bits.Add32(x192, uint32(0x0), x221)
+  x222, x223 = bits.Mul32(x190, 0xffffffff)
   var x224 uint32
   var x225 uint32
-  x224, x225 = bits.Add32(x194, uint32(0x0), x223)
+  x224, x225 = bits.Mul32(x190, 0xffffffff)
   var x226 uint32
   var x227 uint32
-  x226, x227 = bits.Add32(x202, uint32(0x0), x225)
+  x226, x227 = bits.Mul32(x190, 0xffffffff)
   var x228 uint32
   var x229 uint32
-  x228, x229 = bits.Mul32(x204, 0xffffffff)
+  x228, x229 = bits.Mul32(x190, 0xfffffffe)
   var x230 uint32
   var x231 uint32
-  x230, x231 = bits.Mul32(x204, 0xffffffff)
+  x230, x231 = bits.Mul32(x190, 0xffffffff)
   var x232 uint32
   var x233 uint32
-  x232, x233 = bits.Mul32(x204, 0xffffffff)
+  x232, x233 = bits.Mul32(x190, 0xffffffff)
   var x234 uint32
   var x235 uint32
-  x234, x235 = bits.Mul32(x204, 0xffffffff)
+  x234, x235 = bits.Add32(x231, x228, 0x0)
   var x236 uint32
   var x237 uint32
-  x236, x237 = bits.Mul32(x204, 0xffffffff)
+  x236, x237 = bits.Add32(x229, x226, x235)
   var x238 uint32
   var x239 uint32
-  x238, x239 = bits.Mul32(x204, 0xffffffff)
+  x238, x239 = bits.Add32(x227, x224, x237)
   var x240 uint32
   var x241 uint32
-  x240, x241 = bits.Mul32(x204, 0xffffffff)
+  x240, x241 = bits.Add32(x225, x222, x239)
   var x242 uint32
   var x243 uint32
-  x242, x243 = bits.Mul32(x204, 0xfffffffe)
+  x242, x243 = bits.Add32(x223, x220, x241)
   var x244 uint32
   var x245 uint32
-  x244, x245 = bits.Mul32(x204, 0xffffffff)
+  x244, x245 = bits.Add32(x221, x218, x243)
   var x246 uint32
   var x247 uint32
-  x246, x247 = bits.Mul32(x204, 0xffffffff)
+  x246, x247 = bits.Add32(x219, x216, x245)
   var x248 uint32
   var x249 uint32
-  x248, x249 = bits.Add32(x245, x242, 0x0)
-  var x250 uint32
+  x248, x249 = bits.Add32(x217, x214, x247)
   var x251 uint32
-  x250, x251 = bits.Add32(x243, x240, x249)
+  _, x251 = bits.Add32(x190, x232, 0x0)
   var x252 uint32
   var x253 uint32
-  x252, x253 = bits.Add32(x241, x238, x251)
+  x252, x253 = bits.Add32(x192, x233, x251)
   var x254 uint32
   var x255 uint32
-  x254, x255 = bits.Add32(x239, x236, x253)
+  x254, x255 = bits.Add32(x194, uint32(0x0), x253)
   var x256 uint32
   var x257 uint32
-  x256, x257 = bits.Add32(x237, x234, x255)
+  x256, x257 = bits.Add32(x196, x230, x255)
   var x258 uint32
   var x259 uint32
-  x258, x259 = bits.Add32(x235, x232, x257)
+  x258, x259 = bits.Add32(x198, x234, x257)
   var x260 uint32
   var x261 uint32
-  x260, x261 = bits.Add32(x233, x230, x259)
+  x260, x261 = bits.Add32(x200, x236, x259)
   var x262 uint32
   var x263 uint32
-  x262, x263 = bits.Add32(x231, x228, x261)
+  x262, x263 = bits.Add32(x202, x238, x261)
+  var x264 uint32
   var x265 uint32
-  _, x265 = bits.Add32(x204, x246, 0x0)
+  x264, x265 = bits.Add32(x204, x240, x263)
   var x266 uint32
   var x267 uint32
-  x266, x267 = bits.Add32(x206, x247, x265)
+  x266, x267 = bits.Add32(x206, x242, x265)
   var x268 uint32
   var x269 uint32
-  x268, x269 = bits.Add32(x208, uint32(0x0), x267)
+  x268, x269 = bits.Add32(x208, x244, x267)
   var x270 uint32
   var x271 uint32
-  x270, x271 = bits.Add32(x210, x244, x269)
+  x270, x271 = bits.Add32(x210, x246, x269)
   var x272 uint32
   var x273 uint32
   x272, x273 = bits.Add32(x212, x248, x271)
   var x274 uint32
   var x275 uint32
-  x274, x275 = bits.Add32(x214, x250, x273)
+  x274, x275 = bits.Add32((x213 + x189), (x249 + x215), x273)
   var x276 uint32
   var x277 uint32
-  x276, x277 = bits.Add32(x216, x252, x275)
+  x276, x277 = bits.Add32(x252, (arg1[4]), 0x0)
   var x278 uint32
   var x279 uint32
-  x278, x279 = bits.Add32(x218, x254, x277)
+  x278, x279 = bits.Add32(x254, uint32(0x0), x277)
   var x280 uint32
   var x281 uint32
-  x280, x281 = bits.Add32(x220, x256, x279)
+  x280, x281 = bits.Add32(x256, uint32(0x0), x279)
   var x282 uint32
   var x283 uint32
-  x282, x283 = bits.Add32(x222, x258, x281)
+  x282, x283 = bits.Add32(x258, uint32(0x0), x281)
   var x284 uint32
   var x285 uint32
-  x284, x285 = bits.Add32(x224, x260, x283)
+  x284, x285 = bits.Add32(x260, uint32(0x0), x283)
   var x286 uint32
   var x287 uint32
-  x286, x287 = bits.Add32(x226, x262, x285)
+  x286, x287 = bits.Add32(x262, uint32(0x0), x285)
   var x288 uint32
-  x288, _ = bits.Add32(x229, uint32(0x0), x263)
+  var x289 uint32
+  x288, x289 = bits.Add32(x264, uint32(0x0), x287)
   var x290 uint32
-  x290, _ = bits.Add32(uint32(0x0), uint32(0x0), x203)
+  var x291 uint32
+  x290, x291 = bits.Add32(x266, uint32(0x0), x289)
   var x292 uint32
-  x292, _ = bits.Add32(x290, uint32(0x0), x227)
+  var x293 uint32
+  x292, x293 = bits.Add32(x268, uint32(0x0), x291)
   var x294 uint32
   var x295 uint32
-  x294, x295 = bits.Add32(x292, x288, x287)
+  x294, x295 = bits.Add32(x270, uint32(0x0), x293)
   var x296 uint32
   var x297 uint32
-  x296, x297 = bits.Add32(x266, (arg1[4]), 0x0)
+  x296, x297 = bits.Add32(x272, uint32(0x0), x295)
   var x298 uint32
   var x299 uint32
-  x298, x299 = bits.Add32(x268, uint32(0x0), x297)
+  x298, x299 = bits.Add32(x274, uint32(0x0), x297)
   var x300 uint32
   var x301 uint32
-  x300, x301 = bits.Add32(x270, uint32(0x0), x299)
+  x300, x301 = bits.Mul32(x276, 0xffffffff)
   var x302 uint32
   var x303 uint32
-  x302, x303 = bits.Add32(x272, uint32(0x0), x301)
+  x302, x303 = bits.Mul32(x276, 0xffffffff)
   var x304 uint32
   var x305 uint32
-  x304, x305 = bits.Add32(x274, uint32(0x0), x303)
+  x304, x305 = bits.Mul32(x276, 0xffffffff)
   var x306 uint32
   var x307 uint32
-  x306, x307 = bits.Add32(x276, uint32(0x0), x305)
+  x306, x307 = bits.Mul32(x276, 0xffffffff)
   var x308 uint32
   var x309 uint32
-  x308, x309 = bits.Add32(x278, uint32(0x0), x307)
+  x308, x309 = bits.Mul32(x276, 0xffffffff)
   var x310 uint32
   var x311 uint32
-  x310, x311 = bits.Add32(x280, uint32(0x0), x309)
+  x310, x311 = bits.Mul32(x276, 0xffffffff)
   var x312 uint32
   var x313 uint32
-  x312, x313 = bits.Add32(x282, uint32(0x0), x311)
+  x312, x313 = bits.Mul32(x276, 0xffffffff)
   var x314 uint32
   var x315 uint32
-  x314, x315 = bits.Add32(x284, uint32(0x0), x313)
+  x314, x315 = bits.Mul32(x276, 0xfffffffe)
   var x316 uint32
   var x317 uint32
-  x316, x317 = bits.Add32(x286, uint32(0x0), x315)
+  x316, x317 = bits.Mul32(x276, 0xffffffff)
   var x318 uint32
   var x319 uint32
-  x318, x319 = bits.Add32(x294, uint32(0x0), x317)
+  x318, x319 = bits.Mul32(x276, 0xffffffff)
   var x320 uint32
   var x321 uint32
-  x320, x321 = bits.Mul32(x296, 0xffffffff)
+  x320, x321 = bits.Add32(x317, x314, 0x0)
   var x322 uint32
   var x323 uint32
-  x322, x323 = bits.Mul32(x296, 0xffffffff)
+  x322, x323 = bits.Add32(x315, x312, x321)
   var x324 uint32
   var x325 uint32
-  x324, x325 = bits.Mul32(x296, 0xffffffff)
+  x324, x325 = bits.Add32(x313, x310, x323)
   var x326 uint32
   var x327 uint32
-  x326, x327 = bits.Mul32(x296, 0xffffffff)
+  x326, x327 = bits.Add32(x311, x308, x325)
   var x328 uint32
   var x329 uint32
-  x328, x329 = bits.Mul32(x296, 0xffffffff)
+  x328, x329 = bits.Add32(x309, x306, x327)
   var x330 uint32
   var x331 uint32
-  x330, x331 = bits.Mul32(x296, 0xffffffff)
+  x330, x331 = bits.Add32(x307, x304, x329)
   var x332 uint32
   var x333 uint32
-  x332, x333 = bits.Mul32(x296, 0xffffffff)
+  x332, x333 = bits.Add32(x305, x302, x331)
   var x334 uint32
   var x335 uint32
-  x334, x335 = bits.Mul32(x296, 0xfffffffe)
-  var x336 uint32
+  x334, x335 = bits.Add32(x303, x300, x333)
   var x337 uint32
-  x336, x337 = bits.Mul32(x296, 0xffffffff)
+  _, x337 = bits.Add32(x276, x318, 0x0)
   var x338 uint32
   var x339 uint32
-  x338, x339 = bits.Mul32(x296, 0xffffffff)
+  x338, x339 = bits.Add32(x278, x319, x337)
   var x340 uint32
   var x341 uint32
-  x340, x341 = bits.Add32(x337, x334, 0x0)
+  x340, x341 = bits.Add32(x280, uint32(0x0), x339)
   var x342 uint32
   var x343 uint32
-  x342, x343 = bits.Add32(x335, x332, x341)
+  x342, x343 = bits.Add32(x282, x316, x341)
   var x344 uint32
   var x345 uint32
-  x344, x345 = bits.Add32(x333, x330, x343)
+  x344, x345 = bits.Add32(x284, x320, x343)
   var x346 uint32
   var x347 uint32
-  x346, x347 = bits.Add32(x331, x328, x345)
+  x346, x347 = bits.Add32(x286, x322, x345)
   var x348 uint32
   var x349 uint32
-  x348, x349 = bits.Add32(x329, x326, x347)
+  x348, x349 = bits.Add32(x288, x324, x347)
   var x350 uint32
   var x351 uint32
-  x350, x351 = bits.Add32(x327, x324, x349)
+  x350, x351 = bits.Add32(x290, x326, x349)
   var x352 uint32
   var x353 uint32
-  x352, x353 = bits.Add32(x325, x322, x351)
+  x352, x353 = bits.Add32(x292, x328, x351)
   var x354 uint32
   var x355 uint32
-  x354, x355 = bits.Add32(x323, x320, x353)
+  x354, x355 = bits.Add32(x294, x330, x353)
+  var x356 uint32
   var x357 uint32
-  _, x357 = bits.Add32(x296, x338, 0x0)
+  x356, x357 = bits.Add32(x296, x332, x355)
   var x358 uint32
   var x359 uint32
-  x358, x359 = bits.Add32(x298, x339, x357)
+  x358, x359 = bits.Add32(x298, x334, x357)
   var x360 uint32
   var x361 uint32
-  x360, x361 = bits.Add32(x300, uint32(0x0), x359)
+  x360, x361 = bits.Add32((x299 + x275), (x335 + x301), x359)
   var x362 uint32
   var x363 uint32
-  x362, x363 = bits.Add32(x302, x336, x361)
+  x362, x363 = bits.Add32(x338, (arg1[5]), 0x0)
   var x364 uint32
   var x365 uint32
-  x364, x365 = bits.Add32(x304, x340, x363)
+  x364, x365 = bits.Add32(x340, uint32(0x0), x363)
   var x366 uint32
   var x367 uint32
-  x366, x367 = bits.Add32(x306, x342, x365)
+  x366, x367 = bits.Add32(x342, uint32(0x0), x365)
   var x368 uint32
   var x369 uint32
-  x368, x369 = bits.Add32(x308, x344, x367)
+  x368, x369 = bits.Add32(x344, uint32(0x0), x367)
   var x370 uint32
   var x371 uint32
-  x370, x371 = bits.Add32(x310, x346, x369)
+  x370, x371 = bits.Add32(x346, uint32(0x0), x369)
   var x372 uint32
   var x373 uint32
-  x372, x373 = bits.Add32(x312, x348, x371)
+  x372, x373 = bits.Add32(x348, uint32(0x0), x371)
   var x374 uint32
   var x375 uint32
-  x374, x375 = bits.Add32(x314, x350, x373)
+  x374, x375 = bits.Add32(x350, uint32(0x0), x373)
   var x376 uint32
   var x377 uint32
-  x376, x377 = bits.Add32(x316, x352, x375)
+  x376, x377 = bits.Add32(x352, uint32(0x0), x375)
   var x378 uint32
   var x379 uint32
-  x378, x379 = bits.Add32(x318, x354, x377)
+  x378, x379 = bits.Add32(x354, uint32(0x0), x377)
   var x380 uint32
-  x380, _ = bits.Add32(x321, uint32(0x0), x355)
+  var x381 uint32
+  x380, x381 = bits.Add32(x356, uint32(0x0), x379)
   var x382 uint32
-  x382, _ = bits.Add32(uint32(0x0), uint32(0x0), x295)
+  var x383 uint32
+  x382, x383 = bits.Add32(x358, uint32(0x0), x381)
   var x384 uint32
-  x384, _ = bits.Add32(x382, uint32(0x0), x319)
+  var x385 uint32
+  x384, x385 = bits.Add32(x360, uint32(0x0), x383)
   var x386 uint32
   var x387 uint32
-  x386, x387 = bits.Add32(x384, x380, x379)
+  x386, x387 = bits.Mul32(x362, 0xffffffff)
   var x388 uint32
   var x389 uint32
-  x388, x389 = bits.Add32(x358, (arg1[5]), 0x0)
+  x388, x389 = bits.Mul32(x362, 0xffffffff)
   var x390 uint32
   var x391 uint32
-  x390, x391 = bits.Add32(x360, uint32(0x0), x389)
+  x390, x391 = bits.Mul32(x362, 0xffffffff)
   var x392 uint32
   var x393 uint32
-  x392, x393 = bits.Add32(x362, uint32(0x0), x391)
+  x392, x393 = bits.Mul32(x362, 0xffffffff)
   var x394 uint32
   var x395 uint32
-  x394, x395 = bits.Add32(x364, uint32(0x0), x393)
+  x394, x395 = bits.Mul32(x362, 0xffffffff)
   var x396 uint32
   var x397 uint32
-  x396, x397 = bits.Add32(x366, uint32(0x0), x395)
+  x396, x397 = bits.Mul32(x362, 0xffffffff)
   var x398 uint32
   var x399 uint32
-  x398, x399 = bits.Add32(x368, uint32(0x0), x397)
+  x398, x399 = bits.Mul32(x362, 0xffffffff)
   var x400 uint32
   var x401 uint32
-  x400, x401 = bits.Add32(x370, uint32(0x0), x399)
+  x400, x401 = bits.Mul32(x362, 0xfffffffe)
   var x402 uint32
   var x403 uint32
-  x402, x403 = bits.Add32(x372, uint32(0x0), x401)
+  x402, x403 = bits.Mul32(x362, 0xffffffff)
   var x404 uint32
   var x405 uint32
-  x404, x405 = bits.Add32(x374, uint32(0x0), x403)
+  x404, x405 = bits.Mul32(x362, 0xffffffff)
   var x406 uint32
   var x407 uint32
-  x406, x407 = bits.Add32(x376, uint32(0x0), x405)
+  x406, x407 = bits.Add32(x403, x400, 0x0)
   var x408 uint32
   var x409 uint32
-  x408, x409 = bits.Add32(x378, uint32(0x0), x407)
+  x408, x409 = bits.Add32(x401, x398, x407)
   var x410 uint32
   var x411 uint32
-  x410, x411 = bits.Add32(x386, uint32(0x0), x409)
+  x410, x411 = bits.Add32(x399, x396, x409)
   var x412 uint32
   var x413 uint32
-  x412, x413 = bits.Mul32(x388, 0xffffffff)
+  x412, x413 = bits.Add32(x397, x394, x411)
   var x414 uint32
   var x415 uint32
-  x414, x415 = bits.Mul32(x388, 0xffffffff)
+  x414, x415 = bits.Add32(x395, x392, x413)
   var x416 uint32
   var x417 uint32
-  x416, x417 = bits.Mul32(x388, 0xffffffff)
+  x416, x417 = bits.Add32(x393, x390, x415)
   var x418 uint32
   var x419 uint32
-  x418, x419 = bits.Mul32(x388, 0xffffffff)
+  x418, x419 = bits.Add32(x391, x388, x417)
   var x420 uint32
   var x421 uint32
-  x420, x421 = bits.Mul32(x388, 0xffffffff)
-  var x422 uint32
+  x420, x421 = bits.Add32(x389, x386, x419)
   var x423 uint32
-  x422, x423 = bits.Mul32(x388, 0xffffffff)
+  _, x423 = bits.Add32(x362, x404, 0x0)
   var x424 uint32
   var x425 uint32
-  x424, x425 = bits.Mul32(x388, 0xffffffff)
+  x424, x425 = bits.Add32(x364, x405, x423)
   var x426 uint32
   var x427 uint32
-  x426, x427 = bits.Mul32(x388, 0xfffffffe)
+  x426, x427 = bits.Add32(x366, uint32(0x0), x425)
   var x428 uint32
   var x429 uint32
-  x428, x429 = bits.Mul32(x388, 0xffffffff)
+  x428, x429 = bits.Add32(x368, x402, x427)
   var x430 uint32
   var x431 uint32
-  x430, x431 = bits.Mul32(x388, 0xffffffff)
+  x430, x431 = bits.Add32(x370, x406, x429)
   var x432 uint32
   var x433 uint32
-  x432, x433 = bits.Add32(x429, x426, 0x0)
+  x432, x433 = bits.Add32(x372, x408, x431)
   var x434 uint32
   var x435 uint32
-  x434, x435 = bits.Add32(x427, x424, x433)
+  x434, x435 = bits.Add32(x374, x410, x433)
   var x436 uint32
   var x437 uint32
-  x436, x437 = bits.Add32(x425, x422, x435)
+  x436, x437 = bits.Add32(x376, x412, x435)
   var x438 uint32
   var x439 uint32
-  x438, x439 = bits.Add32(x423, x420, x437)
+  x438, x439 = bits.Add32(x378, x414, x437)
   var x440 uint32
   var x441 uint32
-  x440, x441 = bits.Add32(x421, x418, x439)
+  x440, x441 = bits.Add32(x380, x416, x439)
   var x442 uint32
   var x443 uint32
-  x442, x443 = bits.Add32(x419, x416, x441)
+  x442, x443 = bits.Add32(x382, x418, x441)
   var x444 uint32
   var x445 uint32
-  x444, x445 = bits.Add32(x417, x414, x443)
+  x444, x445 = bits.Add32(x384, x420, x443)
   var x446 uint32
   var x447 uint32
-  x446, x447 = bits.Add32(x415, x412, x445)
+  x446, x447 = bits.Add32((x385 + x361), (x421 + x387), x445)
+  var x448 uint32
   var x449 uint32
-  _, x449 = bits.Add32(x388, x430, 0x0)
+  x448, x449 = bits.Add32(x424, (arg1[6]), 0x0)
   var x450 uint32
   var x451 uint32
-  x450, x451 = bits.Add32(x390, x431, x449)
+  x450, x451 = bits.Add32(x426, uint32(0x0), x449)
   var x452 uint32
   var x453 uint32
-  x452, x453 = bits.Add32(x392, uint32(0x0), x451)
+  x452, x453 = bits.Add32(x428, uint32(0x0), x451)
   var x454 uint32
   var x455 uint32
-  x454, x455 = bits.Add32(x394, x428, x453)
+  x454, x455 = bits.Add32(x430, uint32(0x0), x453)
   var x456 uint32
   var x457 uint32
-  x456, x457 = bits.Add32(x396, x432, x455)
+  x456, x457 = bits.Add32(x432, uint32(0x0), x455)
   var x458 uint32
   var x459 uint32
-  x458, x459 = bits.Add32(x398, x434, x457)
+  x458, x459 = bits.Add32(x434, uint32(0x0), x457)
   var x460 uint32
   var x461 uint32
-  x460, x461 = bits.Add32(x400, x436, x459)
+  x460, x461 = bits.Add32(x436, uint32(0x0), x459)
   var x462 uint32
   var x463 uint32
-  x462, x463 = bits.Add32(x402, x438, x461)
+  x462, x463 = bits.Add32(x438, uint32(0x0), x461)
   var x464 uint32
   var x465 uint32
-  x464, x465 = bits.Add32(x404, x440, x463)
+  x464, x465 = bits.Add32(x440, uint32(0x0), x463)
   var x466 uint32
   var x467 uint32
-  x466, x467 = bits.Add32(x406, x442, x465)
+  x466, x467 = bits.Add32(x442, uint32(0x0), x465)
   var x468 uint32
   var x469 uint32
-  x468, x469 = bits.Add32(x408, x444, x467)
+  x468, x469 = bits.Add32(x444, uint32(0x0), x467)
   var x470 uint32
   var x471 uint32
-  x470, x471 = bits.Add32(x410, x446, x469)
+  x470, x471 = bits.Add32(x446, uint32(0x0), x469)
   var x472 uint32
-  x472, _ = bits.Add32(x413, uint32(0x0), x447)
+  var x473 uint32
+  x472, x473 = bits.Mul32(x448, 0xffffffff)
   var x474 uint32
-  x474, _ = bits.Add32(uint32(0x0), uint32(0x0), x387)
+  var x475 uint32
+  x474, x475 = bits.Mul32(x448, 0xffffffff)
   var x476 uint32
-  x476, _ = bits.Add32(x474, uint32(0x0), x411)
+  var x477 uint32
+  x476, x477 = bits.Mul32(x448, 0xffffffff)
   var x478 uint32
   var x479 uint32
-  x478, x479 = bits.Add32(x476, x472, x471)
+  x478, x479 = bits.Mul32(x448, 0xffffffff)
   var x480 uint32
   var x481 uint32
-  x480, x481 = bits.Add32(x450, (arg1[6]), 0x0)
+  x480, x481 = bits.Mul32(x448, 0xffffffff)
   var x482 uint32
   var x483 uint32
-  x482, x483 = bits.Add32(x452, uint32(0x0), x481)
+  x482, x483 = bits.Mul32(x448, 0xffffffff)
   var x484 uint32
   var x485 uint32
-  x484, x485 = bits.Add32(x454, uint32(0x0), x483)
+  x484, x485 = bits.Mul32(x448, 0xffffffff)
   var x486 uint32
   var x487 uint32
-  x486, x487 = bits.Add32(x456, uint32(0x0), x485)
+  x486, x487 = bits.Mul32(x448, 0xfffffffe)
   var x488 uint32
   var x489 uint32
-  x488, x489 = bits.Add32(x458, uint32(0x0), x487)
+  x488, x489 = bits.Mul32(x448, 0xffffffff)
   var x490 uint32
   var x491 uint32
-  x490, x491 = bits.Add32(x460, uint32(0x0), x489)
+  x490, x491 = bits.Mul32(x448, 0xffffffff)
   var x492 uint32
   var x493 uint32
-  x492, x493 = bits.Add32(x462, uint32(0x0), x491)
+  x492, x493 = bits.Add32(x489, x486, 0x0)
   var x494 uint32
   var x495 uint32
-  x494, x495 = bits.Add32(x464, uint32(0x0), x493)
+  x494, x495 = bits.Add32(x487, x484, x493)
   var x496 uint32
   var x497 uint32
-  x496, x497 = bits.Add32(x466, uint32(0x0), x495)
+  x496, x497 = bits.Add32(x485, x482, x495)
   var x498 uint32
   var x499 uint32
-  x498, x499 = bits.Add32(x468, uint32(0x0), x497)
+  x498, x499 = bits.Add32(x483, x480, x497)
   var x500 uint32
   var x501 uint32
-  x500, x501 = bits.Add32(x470, uint32(0x0), x499)
+  x500, x501 = bits.Add32(x481, x478, x499)
   var x502 uint32
   var x503 uint32
-  x502, x503 = bits.Add32(x478, uint32(0x0), x501)
+  x502, x503 = bits.Add32(x479, x476, x501)
   var x504 uint32
   var x505 uint32
-  x504, x505 = bits.Mul32(x480, 0xffffffff)
+  x504, x505 = bits.Add32(x477, x474, x503)
   var x506 uint32
   var x507 uint32
-  x506, x507 = bits.Mul32(x480, 0xffffffff)
-  var x508 uint32
+  x506, x507 = bits.Add32(x475, x472, x505)
   var x509 uint32
-  x508, x509 = bits.Mul32(x480, 0xffffffff)
+  _, x509 = bits.Add32(x448, x490, 0x0)
   var x510 uint32
   var x511 uint32
-  x510, x511 = bits.Mul32(x480, 0xffffffff)
+  x510, x511 = bits.Add32(x450, x491, x509)
   var x512 uint32
   var x513 uint32
-  x512, x513 = bits.Mul32(x480, 0xffffffff)
+  x512, x513 = bits.Add32(x452, uint32(0x0), x511)
   var x514 uint32
   var x515 uint32
-  x514, x515 = bits.Mul32(x480, 0xffffffff)
+  x514, x515 = bits.Add32(x454, x488, x513)
   var x516 uint32
   var x517 uint32
-  x516, x517 = bits.Mul32(x480, 0xffffffff)
+  x516, x517 = bits.Add32(x456, x492, x515)
   var x518 uint32
   var x519 uint32
-  x518, x519 = bits.Mul32(x480, 0xfffffffe)
+  x518, x519 = bits.Add32(x458, x494, x517)
   var x520 uint32
   var x521 uint32
-  x520, x521 = bits.Mul32(x480, 0xffffffff)
+  x520, x521 = bits.Add32(x460, x496, x519)
   var x522 uint32
   var x523 uint32
-  x522, x523 = bits.Mul32(x480, 0xffffffff)
+  x522, x523 = bits.Add32(x462, x498, x521)
   var x524 uint32
   var x525 uint32
-  x524, x525 = bits.Add32(x521, x518, 0x0)
+  x524, x525 = bits.Add32(x464, x500, x523)
   var x526 uint32
   var x527 uint32
-  x526, x527 = bits.Add32(x519, x516, x525)
+  x526, x527 = bits.Add32(x466, x502, x525)
   var x528 uint32
   var x529 uint32
-  x528, x529 = bits.Add32(x517, x514, x527)
+  x528, x529 = bits.Add32(x468, x504, x527)
   var x530 uint32
   var x531 uint32
-  x530, x531 = bits.Add32(x515, x512, x529)
+  x530, x531 = bits.Add32(x470, x506, x529)
   var x532 uint32
   var x533 uint32
-  x532, x533 = bits.Add32(x513, x510, x531)
+  x532, x533 = bits.Add32((x471 + x447), (x507 + x473), x531)
   var x534 uint32
   var x535 uint32
-  x534, x535 = bits.Add32(x511, x508, x533)
+  x534, x535 = bits.Add32(x510, (arg1[7]), 0x0)
   var x536 uint32
   var x537 uint32
-  x536, x537 = bits.Add32(x509, x506, x535)
+  x536, x537 = bits.Add32(x512, uint32(0x0), x535)
   var x538 uint32
   var x539 uint32
-  x538, x539 = bits.Add32(x507, x504, x537)
+  x538, x539 = bits.Add32(x514, uint32(0x0), x537)
+  var x540 uint32
   var x541 uint32
-  _, x541 = bits.Add32(x480, x522, 0x0)
+  x540, x541 = bits.Add32(x516, uint32(0x0), x539)
   var x542 uint32
   var x543 uint32
-  x542, x543 = bits.Add32(x482, x523, x541)
+  x542, x543 = bits.Add32(x518, uint32(0x0), x541)
   var x544 uint32
   var x545 uint32
-  x544, x545 = bits.Add32(x484, uint32(0x0), x543)
+  x544, x545 = bits.Add32(x520, uint32(0x0), x543)
   var x546 uint32
   var x547 uint32
-  x546, x547 = bits.Add32(x486, x520, x545)
+  x546, x547 = bits.Add32(x522, uint32(0x0), x545)
   var x548 uint32
   var x549 uint32
-  x548, x549 = bits.Add32(x488, x524, x547)
+  x548, x549 = bits.Add32(x524, uint32(0x0), x547)
   var x550 uint32
   var x551 uint32
-  x550, x551 = bits.Add32(x490, x526, x549)
+  x550, x551 = bits.Add32(x526, uint32(0x0), x549)
   var x552 uint32
   var x553 uint32
-  x552, x553 = bits.Add32(x492, x528, x551)
+  x552, x553 = bits.Add32(x528, uint32(0x0), x551)
   var x554 uint32
   var x555 uint32
-  x554, x555 = bits.Add32(x494, x530, x553)
+  x554, x555 = bits.Add32(x530, uint32(0x0), x553)
   var x556 uint32
   var x557 uint32
-  x556, x557 = bits.Add32(x496, x532, x555)
+  x556, x557 = bits.Add32(x532, uint32(0x0), x555)
   var x558 uint32
   var x559 uint32
-  x558, x559 = bits.Add32(x498, x534, x557)
+  x558, x559 = bits.Mul32(x534, 0xffffffff)
   var x560 uint32
   var x561 uint32
-  x560, x561 = bits.Add32(x500, x536, x559)
+  x560, x561 = bits.Mul32(x534, 0xffffffff)
   var x562 uint32
   var x563 uint32
-  x562, x563 = bits.Add32(x502, x538, x561)
+  x562, x563 = bits.Mul32(x534, 0xffffffff)
   var x564 uint32
-  x564, _ = bits.Add32(x505, uint32(0x0), x539)
+  var x565 uint32
+  x564, x565 = bits.Mul32(x534, 0xffffffff)
   var x566 uint32
-  x566, _ = bits.Add32(uint32(0x0), uint32(0x0), x479)
+  var x567 uint32
+  x566, x567 = bits.Mul32(x534, 0xffffffff)
   var x568 uint32
-  x568, _ = bits.Add32(x566, uint32(0x0), x503)
+  var x569 uint32
+  x568, x569 = bits.Mul32(x534, 0xffffffff)
   var x570 uint32
   var x571 uint32
-  x570, x571 = bits.Add32(x568, x564, x563)
+  x570, x571 = bits.Mul32(x534, 0xffffffff)
   var x572 uint32
   var x573 uint32
-  x572, x573 = bits.Add32(x542, (arg1[7]), 0x0)
+  x572, x573 = bits.Mul32(x534, 0xfffffffe)
   var x574 uint32
   var x575 uint32
-  x574, x575 = bits.Add32(x544, uint32(0x0), x573)
+  x574, x575 = bits.Mul32(x534, 0xffffffff)
   var x576 uint32
   var x577 uint32
-  x576, x577 = bits.Add32(x546, uint32(0x0), x575)
+  x576, x577 = bits.Mul32(x534, 0xffffffff)
   var x578 uint32
   var x579 uint32
-  x578, x579 = bits.Add32(x548, uint32(0x0), x577)
+  x578, x579 = bits.Add32(x575, x572, 0x0)
   var x580 uint32
   var x581 uint32
-  x580, x581 = bits.Add32(x550, uint32(0x0), x579)
+  x580, x581 = bits.Add32(x573, x570, x579)
   var x582 uint32
   var x583 uint32
-  x582, x583 = bits.Add32(x552, uint32(0x0), x581)
+  x582, x583 = bits.Add32(x571, x568, x581)
   var x584 uint32
   var x585 uint32
-  x584, x585 = bits.Add32(x554, uint32(0x0), x583)
+  x584, x585 = bits.Add32(x569, x566, x583)
   var x586 uint32
   var x587 uint32
-  x586, x587 = bits.Add32(x556, uint32(0x0), x585)
+  x586, x587 = bits.Add32(x567, x564, x585)
   var x588 uint32
   var x589 uint32
-  x588, x589 = bits.Add32(x558, uint32(0x0), x587)
+  x588, x589 = bits.Add32(x565, x562, x587)
   var x590 uint32
   var x591 uint32
-  x590, x591 = bits.Add32(x560, uint32(0x0), x589)
+  x590, x591 = bits.Add32(x563, x560, x589)
   var x592 uint32
   var x593 uint32
-  x592, x593 = bits.Add32(x562, uint32(0x0), x591)
-  var x594 uint32
+  x592, x593 = bits.Add32(x561, x558, x591)
   var x595 uint32
-  x594, x595 = bits.Add32(x570, uint32(0x0), x593)
+  _, x595 = bits.Add32(x534, x576, 0x0)
   var x596 uint32
   var x597 uint32
-  x596, x597 = bits.Mul32(x572, 0xffffffff)
+  x596, x597 = bits.Add32(x536, x577, x595)
   var x598 uint32
   var x599 uint32
-  x598, x599 = bits.Mul32(x572, 0xffffffff)
+  x598, x599 = bits.Add32(x538, uint32(0x0), x597)
   var x600 uint32
   var x601 uint32
-  x600, x601 = bits.Mul32(x572, 0xffffffff)
+  x600, x601 = bits.Add32(x540, x574, x599)
   var x602 uint32
   var x603 uint32
-  x602, x603 = bits.Mul32(x572, 0xffffffff)
+  x602, x603 = bits.Add32(x542, x578, x601)
   var x604 uint32
   var x605 uint32
-  x604, x605 = bits.Mul32(x572, 0xffffffff)
+  x604, x605 = bits.Add32(x544, x580, x603)
   var x606 uint32
   var x607 uint32
-  x606, x607 = bits.Mul32(x572, 0xffffffff)
+  x606, x607 = bits.Add32(x546, x582, x605)
   var x608 uint32
   var x609 uint32
-  x608, x609 = bits.Mul32(x572, 0xffffffff)
+  x608, x609 = bits.Add32(x548, x584, x607)
   var x610 uint32
   var x611 uint32
-  x610, x611 = bits.Mul32(x572, 0xfffffffe)
+  x610, x611 = bits.Add32(x550, x586, x609)
   var x612 uint32
   var x613 uint32
-  x612, x613 = bits.Mul32(x572, 0xffffffff)
+  x612, x613 = bits.Add32(x552, x588, x611)
   var x614 uint32
   var x615 uint32
-  x614, x615 = bits.Mul32(x572, 0xffffffff)
+  x614, x615 = bits.Add32(x554, x590, x613)
   var x616 uint32
   var x617 uint32
-  x616, x617 = bits.Add32(x613, x610, 0x0)
+  x616, x617 = bits.Add32(x556, x592, x615)
   var x618 uint32
   var x619 uint32
-  x618, x619 = bits.Add32(x611, x608, x617)
+  x618, x619 = bits.Add32((x557 + x533), (x593 + x559), x617)
   var x620 uint32
   var x621 uint32
-  x620, x621 = bits.Add32(x609, x606, x619)
+  x620, x621 = bits.Add32(x596, (arg1[8]), 0x0)
   var x622 uint32
   var x623 uint32
-  x622, x623 = bits.Add32(x607, x604, x621)
+  x622, x623 = bits.Add32(x598, uint32(0x0), x621)
   var x624 uint32
   var x625 uint32
-  x624, x625 = bits.Add32(x605, x602, x623)
+  x624, x625 = bits.Add32(x600, uint32(0x0), x623)
   var x626 uint32
   var x627 uint32
-  x626, x627 = bits.Add32(x603, x600, x625)
+  x626, x627 = bits.Add32(x602, uint32(0x0), x625)
   var x628 uint32
   var x629 uint32
-  x628, x629 = bits.Add32(x601, x598, x627)
+  x628, x629 = bits.Add32(x604, uint32(0x0), x627)
   var x630 uint32
   var x631 uint32
-  x630, x631 = bits.Add32(x599, x596, x629)
+  x630, x631 = bits.Add32(x606, uint32(0x0), x629)
+  var x632 uint32
   var x633 uint32
-  _, x633 = bits.Add32(x572, x614, 0x0)
+  x632, x633 = bits.Add32(x608, uint32(0x0), x631)
   var x634 uint32
   var x635 uint32
-  x634, x635 = bits.Add32(x574, x615, x633)
+  x634, x635 = bits.Add32(x610, uint32(0x0), x633)
   var x636 uint32
   var x637 uint32
-  x636, x637 = bits.Add32(x576, uint32(0x0), x635)
+  x636, x637 = bits.Add32(x612, uint32(0x0), x635)
   var x638 uint32
   var x639 uint32
-  x638, x639 = bits.Add32(x578, x612, x637)
+  x638, x639 = bits.Add32(x614, uint32(0x0), x637)
   var x640 uint32
   var x641 uint32
-  x640, x641 = bits.Add32(x580, x616, x639)
+  x640, x641 = bits.Add32(x616, uint32(0x0), x639)
   var x642 uint32
   var x643 uint32
-  x642, x643 = bits.Add32(x582, x618, x641)
+  x642, x643 = bits.Add32(x618, uint32(0x0), x641)
   var x644 uint32
   var x645 uint32
-  x644, x645 = bits.Add32(x584, x620, x643)
+  x644, x645 = bits.Mul32(x620, 0xffffffff)
   var x646 uint32
   var x647 uint32
-  x646, x647 = bits.Add32(x586, x622, x645)
+  x646, x647 = bits.Mul32(x620, 0xffffffff)
   var x648 uint32
   var x649 uint32
-  x648, x649 = bits.Add32(x588, x624, x647)
+  x648, x649 = bits.Mul32(x620, 0xffffffff)
   var x650 uint32
   var x651 uint32
-  x650, x651 = bits.Add32(x590, x626, x649)
+  x650, x651 = bits.Mul32(x620, 0xffffffff)
   var x652 uint32
   var x653 uint32
-  x652, x653 = bits.Add32(x592, x628, x651)
+  x652, x653 = bits.Mul32(x620, 0xffffffff)
   var x654 uint32
   var x655 uint32
-  x654, x655 = bits.Add32(x594, x630, x653)
+  x654, x655 = bits.Mul32(x620, 0xffffffff)
   var x656 uint32
-  x656, _ = bits.Add32(x597, uint32(0x0), x631)
+  var x657 uint32
+  x656, x657 = bits.Mul32(x620, 0xffffffff)
   var x658 uint32
-  x658, _ = bits.Add32(uint32(0x0), uint32(0x0), x571)
+  var x659 uint32
+  x658, x659 = bits.Mul32(x620, 0xfffffffe)
   var x660 uint32
-  x660, _ = bits.Add32(x658, uint32(0x0), x595)
+  var x661 uint32
+  x660, x661 = bits.Mul32(x620, 0xffffffff)
   var x662 uint32
   var x663 uint32
-  x662, x663 = bits.Add32(x660, x656, x655)
+  x662, x663 = bits.Mul32(x620, 0xffffffff)
   var x664 uint32
   var x665 uint32
-  x664, x665 = bits.Add32(x634, (arg1[8]), 0x0)
+  x664, x665 = bits.Add32(x661, x658, 0x0)
   var x666 uint32
   var x667 uint32
-  x666, x667 = bits.Add32(x636, uint32(0x0), x665)
+  x666, x667 = bits.Add32(x659, x656, x665)
   var x668 uint32
   var x669 uint32
-  x668, x669 = bits.Add32(x638, uint32(0x0), x667)
+  x668, x669 = bits.Add32(x657, x654, x667)
   var x670 uint32
   var x671 uint32
-  x670, x671 = bits.Add32(x640, uint32(0x0), x669)
+  x670, x671 = bits.Add32(x655, x652, x669)
   var x672 uint32
   var x673 uint32
-  x672, x673 = bits.Add32(x642, uint32(0x0), x671)
+  x672, x673 = bits.Add32(x653, x650, x671)
   var x674 uint32
   var x675 uint32
-  x674, x675 = bits.Add32(x644, uint32(0x0), x673)
+  x674, x675 = bits.Add32(x651, x648, x673)
   var x676 uint32
   var x677 uint32
-  x676, x677 = bits.Add32(x646, uint32(0x0), x675)
+  x676, x677 = bits.Add32(x649, x646, x675)
   var x678 uint32
   var x679 uint32
-  x678, x679 = bits.Add32(x648, uint32(0x0), x677)
-  var x680 uint32
+  x678, x679 = bits.Add32(x647, x644, x677)
   var x681 uint32
-  x680, x681 = bits.Add32(x650, uint32(0x0), x679)
+  _, x681 = bits.Add32(x620, x662, 0x0)
   var x682 uint32
   var x683 uint32
-  x682, x683 = bits.Add32(x652, uint32(0x0), x681)
+  x682, x683 = bits.Add32(x622, x663, x681)
   var x684 uint32
   var x685 uint32
-  x684, x685 = bits.Add32(x654, uint32(0x0), x683)
+  x684, x685 = bits.Add32(x624, uint32(0x0), x683)
   var x686 uint32
   var x687 uint32
-  x686, x687 = bits.Add32(x662, uint32(0x0), x685)
+  x686, x687 = bits.Add32(x626, x660, x685)
   var x688 uint32
   var x689 uint32
-  x688, x689 = bits.Mul32(x664, 0xffffffff)
+  x688, x689 = bits.Add32(x628, x664, x687)
   var x690 uint32
   var x691 uint32
-  x690, x691 = bits.Mul32(x664, 0xffffffff)
+  x690, x691 = bits.Add32(x630, x666, x689)
   var x692 uint32
   var x693 uint32
-  x692, x693 = bits.Mul32(x664, 0xffffffff)
+  x692, x693 = bits.Add32(x632, x668, x691)
   var x694 uint32
   var x695 uint32
-  x694, x695 = bits.Mul32(x664, 0xffffffff)
+  x694, x695 = bits.Add32(x634, x670, x693)
   var x696 uint32
   var x697 uint32
-  x696, x697 = bits.Mul32(x664, 0xffffffff)
+  x696, x697 = bits.Add32(x636, x672, x695)
   var x698 uint32
   var x699 uint32
-  x698, x699 = bits.Mul32(x664, 0xffffffff)
+  x698, x699 = bits.Add32(x638, x674, x697)
   var x700 uint32
   var x701 uint32
-  x700, x701 = bits.Mul32(x664, 0xffffffff)
+  x700, x701 = bits.Add32(x640, x676, x699)
   var x702 uint32
   var x703 uint32
-  x702, x703 = bits.Mul32(x664, 0xfffffffe)
+  x702, x703 = bits.Add32(x642, x678, x701)
   var x704 uint32
   var x705 uint32
-  x704, x705 = bits.Mul32(x664, 0xffffffff)
+  x704, x705 = bits.Add32((x643 + x619), (x679 + x645), x703)
   var x706 uint32
   var x707 uint32
-  x706, x707 = bits.Mul32(x664, 0xffffffff)
+  x706, x707 = bits.Add32(x682, (arg1[9]), 0x0)
   var x708 uint32
   var x709 uint32
-  x708, x709 = bits.Add32(x705, x702, 0x0)
+  x708, x709 = bits.Add32(x684, uint32(0x0), x707)
   var x710 uint32
   var x711 uint32
-  x710, x711 = bits.Add32(x703, x700, x709)
+  x710, x711 = bits.Add32(x686, uint32(0x0), x709)
   var x712 uint32
   var x713 uint32
-  x712, x713 = bits.Add32(x701, x698, x711)
+  x712, x713 = bits.Add32(x688, uint32(0x0), x711)
   var x714 uint32
   var x715 uint32
-  x714, x715 = bits.Add32(x699, x696, x713)
+  x714, x715 = bits.Add32(x690, uint32(0x0), x713)
   var x716 uint32
   var x717 uint32
-  x716, x717 = bits.Add32(x697, x694, x715)
+  x716, x717 = bits.Add32(x692, uint32(0x0), x715)
   var x718 uint32
   var x719 uint32
-  x718, x719 = bits.Add32(x695, x692, x717)
+  x718, x719 = bits.Add32(x694, uint32(0x0), x717)
   var x720 uint32
   var x721 uint32
-  x720, x721 = bits.Add32(x693, x690, x719)
+  x720, x721 = bits.Add32(x696, uint32(0x0), x719)
   var x722 uint32
   var x723 uint32
-  x722, x723 = bits.Add32(x691, x688, x721)
+  x722, x723 = bits.Add32(x698, uint32(0x0), x721)
+  var x724 uint32
   var x725 uint32
-  _, x725 = bits.Add32(x664, x706, 0x0)
+  x724, x725 = bits.Add32(x700, uint32(0x0), x723)
   var x726 uint32
   var x727 uint32
-  x726, x727 = bits.Add32(x666, x707, x725)
+  x726, x727 = bits.Add32(x702, uint32(0x0), x725)
   var x728 uint32
   var x729 uint32
-  x728, x729 = bits.Add32(x668, uint32(0x0), x727)
+  x728, x729 = bits.Add32(x704, uint32(0x0), x727)
   var x730 uint32
   var x731 uint32
-  x730, x731 = bits.Add32(x670, x704, x729)
+  x730, x731 = bits.Mul32(x706, 0xffffffff)
   var x732 uint32
   var x733 uint32
-  x732, x733 = bits.Add32(x672, x708, x731)
+  x732, x733 = bits.Mul32(x706, 0xffffffff)
   var x734 uint32
   var x735 uint32
-  x734, x735 = bits.Add32(x674, x710, x733)
+  x734, x735 = bits.Mul32(x706, 0xffffffff)
   var x736 uint32
   var x737 uint32
-  x736, x737 = bits.Add32(x676, x712, x735)
+  x736, x737 = bits.Mul32(x706, 0xffffffff)
   var x738 uint32
   var x739 uint32
-  x738, x739 = bits.Add32(x678, x714, x737)
+  x738, x739 = bits.Mul32(x706, 0xffffffff)
   var x740 uint32
   var x741 uint32
-  x740, x741 = bits.Add32(x680, x716, x739)
+  x740, x741 = bits.Mul32(x706, 0xffffffff)
   var x742 uint32
   var x743 uint32
-  x742, x743 = bits.Add32(x682, x718, x741)
+  x742, x743 = bits.Mul32(x706, 0xffffffff)
   var x744 uint32
   var x745 uint32
-  x744, x745 = bits.Add32(x684, x720, x743)
+  x744, x745 = bits.Mul32(x706, 0xfffffffe)
   var x746 uint32
   var x747 uint32
-  x746, x747 = bits.Add32(x686, x722, x745)
+  x746, x747 = bits.Mul32(x706, 0xffffffff)
   var x748 uint32
-  x748, _ = bits.Add32(x689, uint32(0x0), x723)
+  var x749 uint32
+  x748, x749 = bits.Mul32(x706, 0xffffffff)
   var x750 uint32
-  x750, _ = bits.Add32(uint32(0x0), uint32(0x0), x663)
+  var x751 uint32
+  x750, x751 = bits.Add32(x747, x744, 0x0)
   var x752 uint32
-  x752, _ = bits.Add32(x750, uint32(0x0), x687)
+  var x753 uint32
+  x752, x753 = bits.Add32(x745, x742, x751)
   var x754 uint32
   var x755 uint32
-  x754, x755 = bits.Add32(x752, x748, x747)
+  x754, x755 = bits.Add32(x743, x740, x753)
   var x756 uint32
   var x757 uint32
-  x756, x757 = bits.Add32(x726, (arg1[9]), 0x0)
+  x756, x757 = bits.Add32(x741, x738, x755)
   var x758 uint32
   var x759 uint32
-  x758, x759 = bits.Add32(x728, uint32(0x0), x757)
+  x758, x759 = bits.Add32(x739, x736, x757)
   var x760 uint32
   var x761 uint32
-  x760, x761 = bits.Add32(x730, uint32(0x0), x759)
+  x760, x761 = bits.Add32(x737, x734, x759)
   var x762 uint32
   var x763 uint32
-  x762, x763 = bits.Add32(x732, uint32(0x0), x761)
+  x762, x763 = bits.Add32(x735, x732, x761)
   var x764 uint32
   var x765 uint32
-  x764, x765 = bits.Add32(x734, uint32(0x0), x763)
-  var x766 uint32
+  x764, x765 = bits.Add32(x733, x730, x763)
   var x767 uint32
-  x766, x767 = bits.Add32(x736, uint32(0x0), x765)
+  _, x767 = bits.Add32(x706, x748, 0x0)
   var x768 uint32
   var x769 uint32
-  x768, x769 = bits.Add32(x738, uint32(0x0), x767)
+  x768, x769 = bits.Add32(x708, x749, x767)
   var x770 uint32
   var x771 uint32
-  x770, x771 = bits.Add32(x740, uint32(0x0), x769)
+  x770, x771 = bits.Add32(x710, uint32(0x0), x769)
   var x772 uint32
   var x773 uint32
-  x772, x773 = bits.Add32(x742, uint32(0x0), x771)
+  x772, x773 = bits.Add32(x712, x746, x771)
   var x774 uint32
   var x775 uint32
-  x774, x775 = bits.Add32(x744, uint32(0x0), x773)
+  x774, x775 = bits.Add32(x714, x750, x773)
   var x776 uint32
   var x777 uint32
-  x776, x777 = bits.Add32(x746, uint32(0x0), x775)
+  x776, x777 = bits.Add32(x716, x752, x775)
   var x778 uint32
   var x779 uint32
-  x778, x779 = bits.Add32(x754, uint32(0x0), x777)
+  x778, x779 = bits.Add32(x718, x754, x777)
   var x780 uint32
   var x781 uint32
-  x780, x781 = bits.Mul32(x756, 0xffffffff)
+  x780, x781 = bits.Add32(x720, x756, x779)
   var x782 uint32
   var x783 uint32
-  x782, x783 = bits.Mul32(x756, 0xffffffff)
+  x782, x783 = bits.Add32(x722, x758, x781)
   var x784 uint32
   var x785 uint32
-  x784, x785 = bits.Mul32(x756, 0xffffffff)
+  x784, x785 = bits.Add32(x724, x760, x783)
   var x786 uint32
   var x787 uint32
-  x786, x787 = bits.Mul32(x756, 0xffffffff)
+  x786, x787 = bits.Add32(x726, x762, x785)
   var x788 uint32
   var x789 uint32
-  x788, x789 = bits.Mul32(x756, 0xffffffff)
+  x788, x789 = bits.Add32(x728, x764, x787)
   var x790 uint32
   var x791 uint32
-  x790, x791 = bits.Mul32(x756, 0xffffffff)
+  x790, x791 = bits.Add32((x729 + x705), (x765 + x731), x789)
   var x792 uint32
   var x793 uint32
-  x792, x793 = bits.Mul32(x756, 0xffffffff)
+  x792, x793 = bits.Add32(x768, (arg1[10]), 0x0)
   var x794 uint32
   var x795 uint32
-  x794, x795 = bits.Mul32(x756, 0xfffffffe)
+  x794, x795 = bits.Add32(x770, uint32(0x0), x793)
   var x796 uint32
   var x797 uint32
-  x796, x797 = bits.Mul32(x756, 0xffffffff)
+  x796, x797 = bits.Add32(x772, uint32(0x0), x795)
   var x798 uint32
   var x799 uint32
-  x798, x799 = bits.Mul32(x756, 0xffffffff)
+  x798, x799 = bits.Add32(x774, uint32(0x0), x797)
   var x800 uint32
   var x801 uint32
-  x800, x801 = bits.Add32(x797, x794, 0x0)
+  x800, x801 = bits.Add32(x776, uint32(0x0), x799)
   var x802 uint32
   var x803 uint32
-  x802, x803 = bits.Add32(x795, x792, x801)
+  x802, x803 = bits.Add32(x778, uint32(0x0), x801)
   var x804 uint32
   var x805 uint32
-  x804, x805 = bits.Add32(x793, x790, x803)
+  x804, x805 = bits.Add32(x780, uint32(0x0), x803)
   var x806 uint32
   var x807 uint32
-  x806, x807 = bits.Add32(x791, x788, x805)
+  x806, x807 = bits.Add32(x782, uint32(0x0), x805)
   var x808 uint32
   var x809 uint32
-  x808, x809 = bits.Add32(x789, x786, x807)
+  x808, x809 = bits.Add32(x784, uint32(0x0), x807)
   var x810 uint32
   var x811 uint32
-  x810, x811 = bits.Add32(x787, x784, x809)
+  x810, x811 = bits.Add32(x786, uint32(0x0), x809)
   var x812 uint32
   var x813 uint32
-  x812, x813 = bits.Add32(x785, x782, x811)
+  x812, x813 = bits.Add32(x788, uint32(0x0), x811)
   var x814 uint32
   var x815 uint32
-  x814, x815 = bits.Add32(x783, x780, x813)
+  x814, x815 = bits.Add32(x790, uint32(0x0), x813)
+  var x816 uint32
   var x817 uint32
-  _, x817 = bits.Add32(x756, x798, 0x0)
+  x816, x817 = bits.Mul32(x792, 0xffffffff)
   var x818 uint32
   var x819 uint32
-  x818, x819 = bits.Add32(x758, x799, x817)
+  x818, x819 = bits.Mul32(x792, 0xffffffff)
   var x820 uint32
   var x821 uint32
-  x820, x821 = bits.Add32(x760, uint32(0x0), x819)
+  x820, x821 = bits.Mul32(x792, 0xffffffff)
   var x822 uint32
   var x823 uint32
-  x822, x823 = bits.Add32(x762, x796, x821)
+  x822, x823 = bits.Mul32(x792, 0xffffffff)
   var x824 uint32
   var x825 uint32
-  x824, x825 = bits.Add32(x764, x800, x823)
+  x824, x825 = bits.Mul32(x792, 0xffffffff)
   var x826 uint32
   var x827 uint32
-  x826, x827 = bits.Add32(x766, x802, x825)
+  x826, x827 = bits.Mul32(x792, 0xffffffff)
   var x828 uint32
   var x829 uint32
-  x828, x829 = bits.Add32(x768, x804, x827)
+  x828, x829 = bits.Mul32(x792, 0xffffffff)
   var x830 uint32
   var x831 uint32
-  x830, x831 = bits.Add32(x770, x806, x829)
+  x830, x831 = bits.Mul32(x792, 0xfffffffe)
   var x832 uint32
   var x833 uint32
-  x832, x833 = bits.Add32(x772, x808, x831)
+  x832, x833 = bits.Mul32(x792, 0xffffffff)
   var x834 uint32
   var x835 uint32
-  x834, x835 = bits.Add32(x774, x810, x833)
+  x834, x835 = bits.Mul32(x792, 0xffffffff)
   var x836 uint32
   var x837 uint32
-  x836, x837 = bits.Add32(x776, x812, x835)
+  x836, x837 = bits.Add32(x833, x830, 0x0)
   var x838 uint32
   var x839 uint32
-  x838, x839 = bits.Add32(x778, x814, x837)
+  x838, x839 = bits.Add32(x831, x828, x837)
   var x840 uint32
-  x840, _ = bits.Add32(x781, uint32(0x0), x815)
+  var x841 uint32
+  x840, x841 = bits.Add32(x829, x826, x839)
   var x842 uint32
-  x842, _ = bits.Add32(uint32(0x0), uint32(0x0), x755)
+  var x843 uint32
+  x842, x843 = bits.Add32(x827, x824, x841)
   var x844 uint32
-  x844, _ = bits.Add32(x842, uint32(0x0), x779)
+  var x845 uint32
+  x844, x845 = bits.Add32(x825, x822, x843)
   var x846 uint32
   var x847 uint32
-  x846, x847 = bits.Add32(x844, x840, x839)
+  x846, x847 = bits.Add32(x823, x820, x845)
   var x848 uint32
   var x849 uint32
-  x848, x849 = bits.Add32(x818, (arg1[10]), 0x0)
+  x848, x849 = bits.Add32(x821, x818, x847)
   var x850 uint32
   var x851 uint32
-  x850, x851 = bits.Add32(x820, uint32(0x0), x849)
-  var x852 uint32
+  x850, x851 = bits.Add32(x819, x816, x849)
   var x853 uint32
-  x852, x853 = bits.Add32(x822, uint32(0x0), x851)
+  _, x853 = bits.Add32(x792, x834, 0x0)
   var x854 uint32
   var x855 uint32
-  x854, x855 = bits.Add32(x824, uint32(0x0), x853)
+  x854, x855 = bits.Add32(x794, x835, x853)
   var x856 uint32
   var x857 uint32
-  x856, x857 = bits.Add32(x826, uint32(0x0), x855)
+  x856, x857 = bits.Add32(x796, uint32(0x0), x855)
   var x858 uint32
   var x859 uint32
-  x858, x859 = bits.Add32(x828, uint32(0x0), x857)
+  x858, x859 = bits.Add32(x798, x832, x857)
   var x860 uint32
   var x861 uint32
-  x860, x861 = bits.Add32(x830, uint32(0x0), x859)
+  x860, x861 = bits.Add32(x800, x836, x859)
   var x862 uint32
   var x863 uint32
-  x862, x863 = bits.Add32(x832, uint32(0x0), x861)
+  x862, x863 = bits.Add32(x802, x838, x861)
   var x864 uint32
   var x865 uint32
-  x864, x865 = bits.Add32(x834, uint32(0x0), x863)
+  x864, x865 = bits.Add32(x804, x840, x863)
   var x866 uint32
   var x867 uint32
-  x866, x867 = bits.Add32(x836, uint32(0x0), x865)
+  x866, x867 = bits.Add32(x806, x842, x865)
   var x868 uint32
   var x869 uint32
-  x868, x869 = bits.Add32(x838, uint32(0x0), x867)
+  x868, x869 = bits.Add32(x808, x844, x867)
   var x870 uint32
   var x871 uint32
-  x870, x871 = bits.Add32(x846, uint32(0x0), x869)
+  x870, x871 = bits.Add32(x810, x846, x869)
   var x872 uint32
   var x873 uint32
-  x872, x873 = bits.Mul32(x848, 0xffffffff)
+  x872, x873 = bits.Add32(x812, x848, x871)
   var x874 uint32
   var x875 uint32
-  x874, x875 = bits.Mul32(x848, 0xffffffff)
+  x874, x875 = bits.Add32(x814, x850, x873)
   var x876 uint32
   var x877 uint32
-  x876, x877 = bits.Mul32(x848, 0xffffffff)
+  x876, x877 = bits.Add32((x815 + x791), (x851 + x817), x875)
   var x878 uint32
   var x879 uint32
-  x878, x879 = bits.Mul32(x848, 0xffffffff)
+  x878, x879 = bits.Add32(x854, (arg1[11]), 0x0)
   var x880 uint32
   var x881 uint32
-  x880, x881 = bits.Mul32(x848, 0xffffffff)
+  x880, x881 = bits.Add32(x856, uint32(0x0), x879)
   var x882 uint32
   var x883 uint32
-  x882, x883 = bits.Mul32(x848, 0xffffffff)
+  x882, x883 = bits.Add32(x858, uint32(0x0), x881)
   var x884 uint32
   var x885 uint32
-  x884, x885 = bits.Mul32(x848, 0xffffffff)
+  x884, x885 = bits.Add32(x860, uint32(0x0), x883)
   var x886 uint32
   var x887 uint32
-  x886, x887 = bits.Mul32(x848, 0xfffffffe)
+  x886, x887 = bits.Add32(x862, uint32(0x0), x885)
   var x888 uint32
   var x889 uint32
-  x888, x889 = bits.Mul32(x848, 0xffffffff)
+  x888, x889 = bits.Add32(x864, uint32(0x0), x887)
   var x890 uint32
   var x891 uint32
-  x890, x891 = bits.Mul32(x848, 0xffffffff)
+  x890, x891 = bits.Add32(x866, uint32(0x0), x889)
   var x892 uint32
   var x893 uint32
-  x892, x893 = bits.Add32(x889, x886, 0x0)
+  x892, x893 = bits.Add32(x868, uint32(0x0), x891)
   var x894 uint32
   var x895 uint32
-  x894, x895 = bits.Add32(x887, x884, x893)
+  x894, x895 = bits.Add32(x870, uint32(0x0), x893)
   var x896 uint32
   var x897 uint32
-  x896, x897 = bits.Add32(x885, x882, x895)
+  x896, x897 = bits.Add32(x872, uint32(0x0), x895)
   var x898 uint32
   var x899 uint32
-  x898, x899 = bits.Add32(x883, x880, x897)
+  x898, x899 = bits.Add32(x874, uint32(0x0), x897)
   var x900 uint32
   var x901 uint32
-  x900, x901 = bits.Add32(x881, x878, x899)
+  x900, x901 = bits.Add32(x876, uint32(0x0), x899)
   var x902 uint32
   var x903 uint32
-  x902, x903 = bits.Add32(x879, x876, x901)
+  x902, x903 = bits.Mul32(x878, 0xffffffff)
   var x904 uint32
   var x905 uint32
-  x904, x905 = bits.Add32(x877, x874, x903)
+  x904, x905 = bits.Mul32(x878, 0xffffffff)
   var x906 uint32
   var x907 uint32
-  x906, x907 = bits.Add32(x875, x872, x905)
+  x906, x907 = bits.Mul32(x878, 0xffffffff)
+  var x908 uint32
   var x909 uint32
-  _, x909 = bits.Add32(x848, x890, 0x0)
+  x908, x909 = bits.Mul32(x878, 0xffffffff)
   var x910 uint32
   var x911 uint32
-  x910, x911 = bits.Add32(x850, x891, x909)
+  x910, x911 = bits.Mul32(x878, 0xffffffff)
   var x912 uint32
   var x913 uint32
-  x912, x913 = bits.Add32(x852, uint32(0x0), x911)
+  x912, x913 = bits.Mul32(x878, 0xffffffff)
   var x914 uint32
   var x915 uint32
-  x914, x915 = bits.Add32(x854, x888, x913)
+  x914, x915 = bits.Mul32(x878, 0xffffffff)
   var x916 uint32
   var x917 uint32
-  x916, x917 = bits.Add32(x856, x892, x915)
+  x916, x917 = bits.Mul32(x878, 0xfffffffe)
   var x918 uint32
   var x919 uint32
-  x918, x919 = bits.Add32(x858, x894, x917)
+  x918, x919 = bits.Mul32(x878, 0xffffffff)
   var x920 uint32
   var x921 uint32
-  x920, x921 = bits.Add32(x860, x896, x919)
+  x920, x921 = bits.Mul32(x878, 0xffffffff)
   var x922 uint32
   var x923 uint32
-  x922, x923 = bits.Add32(x862, x898, x921)
+  x922, x923 = bits.Add32(x919, x916, 0x0)
   var x924 uint32
   var x925 uint32
-  x924, x925 = bits.Add32(x864, x900, x923)
+  x924, x925 = bits.Add32(x917, x914, x923)
   var x926 uint32
   var x927 uint32
-  x926, x927 = bits.Add32(x866, x902, x925)
+  x926, x927 = bits.Add32(x915, x912, x925)
   var x928 uint32
   var x929 uint32
-  x928, x929 = bits.Add32(x868, x904, x927)
+  x928, x929 = bits.Add32(x913, x910, x927)
   var x930 uint32
   var x931 uint32
-  x930, x931 = bits.Add32(x870, x906, x929)
+  x930, x931 = bits.Add32(x911, x908, x929)
   var x932 uint32
-  x932, _ = bits.Add32(x873, uint32(0x0), x907)
+  var x933 uint32
+  x932, x933 = bits.Add32(x909, x906, x931)
   var x934 uint32
-  x934, _ = bits.Add32(uint32(0x0), uint32(0x0), x847)
+  var x935 uint32
+  x934, x935 = bits.Add32(x907, x904, x933)
   var x936 uint32
-  x936, _ = bits.Add32(x934, uint32(0x0), x871)
-  var x938 uint32
+  var x937 uint32
+  x936, x937 = bits.Add32(x905, x902, x935)
   var x939 uint32
-  x938, x939 = bits.Add32(x936, x932, x931)
+  _, x939 = bits.Add32(x878, x920, 0x0)
   var x940 uint32
   var x941 uint32
-  x940, x941 = bits.Add32(x910, (arg1[11]), 0x0)
+  x940, x941 = bits.Add32(x880, x921, x939)
   var x942 uint32
   var x943 uint32
-  x942, x943 = bits.Add32(x912, uint32(0x0), x941)
+  x942, x943 = bits.Add32(x882, uint32(0x0), x941)
   var x944 uint32
   var x945 uint32
-  x944, x945 = bits.Add32(x914, uint32(0x0), x943)
+  x944, x945 = bits.Add32(x884, x918, x943)
   var x946 uint32
   var x947 uint32
-  x946, x947 = bits.Add32(x916, uint32(0x0), x945)
+  x946, x947 = bits.Add32(x886, x922, x945)
   var x948 uint32
   var x949 uint32
-  x948, x949 = bits.Add32(x918, uint32(0x0), x947)
+  x948, x949 = bits.Add32(x888, x924, x947)
   var x950 uint32
   var x951 uint32
-  x950, x951 = bits.Add32(x920, uint32(0x0), x949)
+  x950, x951 = bits.Add32(x890, x926, x949)
   var x952 uint32
   var x953 uint32
-  x952, x953 = bits.Add32(x922, uint32(0x0), x951)
+  x952, x953 = bits.Add32(x892, x928, x951)
   var x954 uint32
   var x955 uint32
-  x954, x955 = bits.Add32(x924, uint32(0x0), x953)
+  x954, x955 = bits.Add32(x894, x930, x953)
   var x956 uint32
   var x957 uint32
-  x956, x957 = bits.Add32(x926, uint32(0x0), x955)
+  x956, x957 = bits.Add32(x896, x932, x955)
   var x958 uint32
   var x959 uint32
-  x958, x959 = bits.Add32(x928, uint32(0x0), x957)
+  x958, x959 = bits.Add32(x898, x934, x957)
   var x960 uint32
   var x961 uint32
-  x960, x961 = bits.Add32(x930, uint32(0x0), x959)
+  x960, x961 = bits.Add32(x900, x936, x959)
   var x962 uint32
   var x963 uint32
-  x962, x963 = bits.Add32(x938, uint32(0x0), x961)
+  x962, x963 = bits.Add32((x901 + x877), (x937 + x903), x961)
   var x964 uint32
   var x965 uint32
-  x964, x965 = bits.Mul32(x940, 0xffffffff)
+  x964, x965 = bits.Sub32(x940, 0xffffffff, uint32(0x0))
   var x966 uint32
   var x967 uint32
-  x966, x967 = bits.Mul32(x940, 0xffffffff)
+  x966, x967 = bits.Sub32(x942, uint32(0x0), x965)
   var x968 uint32
   var x969 uint32
-  x968, x969 = bits.Mul32(x940, 0xffffffff)
+  x968, x969 = bits.Sub32(x944, uint32(0x0), x967)
   var x970 uint32
   var x971 uint32
-  x970, x971 = bits.Mul32(x940, 0xffffffff)
+  x970, x971 = bits.Sub32(x946, 0xffffffff, x969)
   var x972 uint32
   var x973 uint32
-  x972, x973 = bits.Mul32(x940, 0xffffffff)
+  x972, x973 = bits.Sub32(x948, 0xfffffffe, x971)
   var x974 uint32
   var x975 uint32
-  x974, x975 = bits.Mul32(x940, 0xffffffff)
+  x974, x975 = bits.Sub32(x950, 0xffffffff, x973)
   var x976 uint32
   var x977 uint32
-  x976, x977 = bits.Mul32(x940, 0xffffffff)
+  x976, x977 = bits.Sub32(x952, 0xffffffff, x975)
   var x978 uint32
   var x979 uint32
-  x978, x979 = bits.Mul32(x940, 0xfffffffe)
+  x978, x979 = bits.Sub32(x954, 0xffffffff, x977)
   var x980 uint32
   var x981 uint32
-  x980, x981 = bits.Mul32(x940, 0xffffffff)
+  x980, x981 = bits.Sub32(x956, 0xffffffff, x979)
   var x982 uint32
   var x983 uint32
-  x982, x983 = bits.Mul32(x940, 0xffffffff)
+  x982, x983 = bits.Sub32(x958, 0xffffffff, x981)
   var x984 uint32
   var x985 uint32
-  x984, x985 = bits.Add32(x981, x978, 0x0)
+  x984, x985 = bits.Sub32(x960, 0xffffffff, x983)
   var x986 uint32
   var x987 uint32
-  x986, x987 = bits.Add32(x979, x976, x985)
-  var x988 uint32
+  x986, x987 = bits.Sub32(x962, 0xffffffff, x985)
   var x989 uint32
-  x988, x989 = bits.Add32(x977, x974, x987)
+  _, x989 = bits.Sub32(x963, uint32(0x0), x987)
   var x990 uint32
+  fiat_p384_cmovznz_u32(&x990, x989, x964, x940)
   var x991 uint32
-  x990, x991 = bits.Add32(x975, x972, x989)
+  fiat_p384_cmovznz_u32(&x991, x989, x966, x942)
   var x992 uint32
+  fiat_p384_cmovznz_u32(&x992, x989, x968, x944)
   var x993 uint32
-  x992, x993 = bits.Add32(x973, x970, x991)
+  fiat_p384_cmovznz_u32(&x993, x989, x970, x946)
   var x994 uint32
+  fiat_p384_cmovznz_u32(&x994, x989, x972, x948)
   var x995 uint32
-  x994, x995 = bits.Add32(x971, x968, x993)
+  fiat_p384_cmovznz_u32(&x995, x989, x974, x950)
   var x996 uint32
+  fiat_p384_cmovznz_u32(&x996, x989, x976, x952)
   var x997 uint32
-  x996, x997 = bits.Add32(x969, x966, x995)
+  fiat_p384_cmovznz_u32(&x997, x989, x978, x954)
   var x998 uint32
+  fiat_p384_cmovznz_u32(&x998, x989, x980, x956)
   var x999 uint32
-  x998, x999 = bits.Add32(x967, x964, x997)
+  fiat_p384_cmovznz_u32(&x999, x989, x982, x958)
+  var x1000 uint32
+  fiat_p384_cmovznz_u32(&x1000, x989, x984, x960)
   var x1001 uint32
-  _, x1001 = bits.Add32(x940, x982, 0x0)
-  var x1002 uint32
-  var x1003 uint32
-  x1002, x1003 = bits.Add32(x942, x983, x1001)
-  var x1004 uint32
-  var x1005 uint32
-  x1004, x1005 = bits.Add32(x944, uint32(0x0), x1003)
-  var x1006 uint32
-  var x1007 uint32
-  x1006, x1007 = bits.Add32(x946, x980, x1005)
-  var x1008 uint32
-  var x1009 uint32
-  x1008, x1009 = bits.Add32(x948, x984, x1007)
-  var x1010 uint32
-  var x1011 uint32
-  x1010, x1011 = bits.Add32(x950, x986, x1009)
-  var x1012 uint32
-  var x1013 uint32
-  x1012, x1013 = bits.Add32(x952, x988, x1011)
-  var x1014 uint32
-  var x1015 uint32
-  x1014, x1015 = bits.Add32(x954, x990, x1013)
-  var x1016 uint32
-  var x1017 uint32
-  x1016, x1017 = bits.Add32(x956, x992, x1015)
-  var x1018 uint32
-  var x1019 uint32
-  x1018, x1019 = bits.Add32(x958, x994, x1017)
-  var x1020 uint32
-  var x1021 uint32
-  x1020, x1021 = bits.Add32(x960, x996, x1019)
-  var x1022 uint32
-  var x1023 uint32
-  x1022, x1023 = bits.Add32(x962, x998, x1021)
-  var x1024 uint32
-  x1024, _ = bits.Add32(x965, uint32(0x0), x999)
-  var x1026 uint32
-  x1026, _ = bits.Add32(uint32(0x0), uint32(0x0), x939)
-  var x1028 uint32
-  x1028, _ = bits.Add32(x1026, uint32(0x0), x963)
-  var x1030 uint32
-  var x1031 uint32
-  x1030, x1031 = bits.Add32(x1028, x1024, x1023)
-  var x1032 uint32
-  var x1033 uint32
-  x1032, x1033 = bits.Sub32(x1002, 0xffffffff, uint32(0x0))
-  var x1034 uint32
-  var x1035 uint32
-  x1034, x1035 = bits.Sub32(x1004, uint32(0x0), x1033)
-  var x1036 uint32
-  var x1037 uint32
-  x1036, x1037 = bits.Sub32(x1006, uint32(0x0), x1035)
-  var x1038 uint32
-  var x1039 uint32
-  x1038, x1039 = bits.Sub32(x1008, 0xffffffff, x1037)
-  var x1040 uint32
-  var x1041 uint32
-  x1040, x1041 = bits.Sub32(x1010, 0xfffffffe, x1039)
-  var x1042 uint32
-  var x1043 uint32
-  x1042, x1043 = bits.Sub32(x1012, 0xffffffff, x1041)
-  var x1044 uint32
-  var x1045 uint32
-  x1044, x1045 = bits.Sub32(x1014, 0xffffffff, x1043)
-  var x1046 uint32
-  var x1047 uint32
-  x1046, x1047 = bits.Sub32(x1016, 0xffffffff, x1045)
-  var x1048 uint32
-  var x1049 uint32
-  x1048, x1049 = bits.Sub32(x1018, 0xffffffff, x1047)
-  var x1050 uint32
-  var x1051 uint32
-  x1050, x1051 = bits.Sub32(x1020, 0xffffffff, x1049)
-  var x1052 uint32
-  var x1053 uint32
-  x1052, x1053 = bits.Sub32(x1022, 0xffffffff, x1051)
-  var x1054 uint32
-  var x1055 uint32
-  x1054, x1055 = bits.Sub32(x1030, 0xffffffff, x1053)
-  var x1056 uint32
-  x1056, _ = bits.Add32(uint32(0x0), uint32(0x0), x1031)
-  var x1059 uint32
-  _, x1059 = bits.Sub32(x1056, uint32(0x0), x1055)
-  var x1060 uint32
-  fiat_p384_cmovznz_u32(&x1060, x1059, x1032, x1002)
-  var x1061 uint32
-  fiat_p384_cmovznz_u32(&x1061, x1059, x1034, x1004)
-  var x1062 uint32
-  fiat_p384_cmovznz_u32(&x1062, x1059, x1036, x1006)
-  var x1063 uint32
-  fiat_p384_cmovznz_u32(&x1063, x1059, x1038, x1008)
-  var x1064 uint32
-  fiat_p384_cmovznz_u32(&x1064, x1059, x1040, x1010)
-  var x1065 uint32
-  fiat_p384_cmovznz_u32(&x1065, x1059, x1042, x1012)
-  var x1066 uint32
-  fiat_p384_cmovznz_u32(&x1066, x1059, x1044, x1014)
-  var x1067 uint32
-  fiat_p384_cmovznz_u32(&x1067, x1059, x1046, x1016)
-  var x1068 uint32
-  fiat_p384_cmovznz_u32(&x1068, x1059, x1048, x1018)
-  var x1069 uint32
-  fiat_p384_cmovznz_u32(&x1069, x1059, x1050, x1020)
-  var x1070 uint32
-  fiat_p384_cmovznz_u32(&x1070, x1059, x1052, x1022)
-  var x1071 uint32
-  fiat_p384_cmovznz_u32(&x1071, x1059, x1054, x1030)
-  out1[0] = x1060
-  out1[1] = x1061
-  out1[2] = x1062
-  out1[3] = x1063
-  out1[4] = x1064
-  out1[5] = x1065
-  out1[6] = x1066
-  out1[7] = x1067
-  out1[8] = x1068
-  out1[9] = x1069
-  out1[10] = x1070
-  out1[11] = x1071
+  fiat_p384_cmovznz_u32(&x1001, x989, x986, x962)
+  out1[0] = x990
+  out1[1] = x991
+  out1[2] = x992
+  out1[3] = x993
+  out1[4] = x994
+  out1[5] = x995
+  out1[6] = x996
+  out1[7] = x997
+  out1[8] = x998
+  out1[9] = x999
+  out1[10] = x1000
+  out1[11] = x1001
 }
 
 /*

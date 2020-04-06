@@ -77,312 +77,299 @@ func fiat_secp256k1_mul(out1 *[4]uint64, arg1 *[4]uint64, arg2 *[4]uint64) {
   var x17 uint64
   var x18 uint64
   x17, x18 = bits.Add64(x8, x5, x16)
-  var x19 uint64
-  x19, _ = bits.Add64(x6, uint64(0x0), x18)
-  var x21 uint64
-  x21, _ = bits.Mul64(x11, 0xd838091dd2253531)
+  var x19 uint64 = (x18 + x6)
+  var x20 uint64
+  x20, _ = bits.Mul64(x11, 0xd838091dd2253531)
+  var x22 uint64
   var x23 uint64
+  x22, x23 = bits.Mul64(x20, 0xffffffffffffffff)
   var x24 uint64
-  x23, x24 = bits.Mul64(x21, 0xffffffffffffffff)
   var x25 uint64
+  x24, x25 = bits.Mul64(x20, 0xffffffffffffffff)
   var x26 uint64
-  x25, x26 = bits.Mul64(x21, 0xffffffffffffffff)
   var x27 uint64
+  x26, x27 = bits.Mul64(x20, 0xffffffffffffffff)
   var x28 uint64
-  x27, x28 = bits.Mul64(x21, 0xffffffffffffffff)
   var x29 uint64
+  x28, x29 = bits.Mul64(x20, 0xfffffffefffffc2f)
   var x30 uint64
-  x29, x30 = bits.Mul64(x21, 0xfffffffefffffc2f)
   var x31 uint64
+  x30, x31 = bits.Add64(x29, x26, 0x0)
   var x32 uint64
-  x31, x32 = bits.Add64(x30, x27, 0x0)
   var x33 uint64
+  x32, x33 = bits.Add64(x27, x24, x31)
   var x34 uint64
-  x33, x34 = bits.Add64(x28, x25, x32)
   var x35 uint64
-  var x36 uint64
-  x35, x36 = bits.Add64(x26, x23, x34)
-  var x37 uint64
-  x37, _ = bits.Add64(x24, uint64(0x0), x36)
+  x34, x35 = bits.Add64(x25, x22, x33)
+  var x36 uint64 = (x35 + x23)
+  var x38 uint64
+  _, x38 = bits.Add64(x11, x28, 0x0)
+  var x39 uint64
   var x40 uint64
-  _, x40 = bits.Add64(x11, x29, 0x0)
+  x39, x40 = bits.Add64(x13, x30, x38)
   var x41 uint64
   var x42 uint64
-  x41, x42 = bits.Add64(x13, x31, x40)
+  x41, x42 = bits.Add64(x15, x32, x40)
   var x43 uint64
   var x44 uint64
-  x43, x44 = bits.Add64(x15, x33, x42)
+  x43, x44 = bits.Add64(x17, x34, x42)
   var x45 uint64
   var x46 uint64
-  x45, x46 = bits.Add64(x17, x35, x44)
+  x45, x46 = bits.Add64(x19, x36, x44)
   var x47 uint64
   var x48 uint64
-  x47, x48 = bits.Add64(x19, x37, x46)
+  x47, x48 = bits.Mul64(x1, (arg2[3]))
   var x49 uint64
-  x49, _ = bits.Add64(uint64(0x0), uint64(0x0), x48)
+  var x50 uint64
+  x49, x50 = bits.Mul64(x1, (arg2[2]))
   var x51 uint64
   var x52 uint64
-  x51, x52 = bits.Mul64(x1, (arg2[3]))
+  x51, x52 = bits.Mul64(x1, (arg2[1]))
   var x53 uint64
   var x54 uint64
-  x53, x54 = bits.Mul64(x1, (arg2[2]))
+  x53, x54 = bits.Mul64(x1, (arg2[0]))
   var x55 uint64
   var x56 uint64
-  x55, x56 = bits.Mul64(x1, (arg2[1]))
+  x55, x56 = bits.Add64(x54, x51, 0x0)
   var x57 uint64
   var x58 uint64
-  x57, x58 = bits.Mul64(x1, (arg2[0]))
+  x57, x58 = bits.Add64(x52, x49, x56)
   var x59 uint64
   var x60 uint64
-  x59, x60 = bits.Add64(x58, x55, 0x0)
-  var x61 uint64
+  x59, x60 = bits.Add64(x50, x47, x58)
+  var x61 uint64 = (x60 + x48)
   var x62 uint64
-  x61, x62 = bits.Add64(x56, x53, x60)
   var x63 uint64
+  x62, x63 = bits.Add64(x39, x53, 0x0)
   var x64 uint64
-  x63, x64 = bits.Add64(x54, x51, x62)
   var x65 uint64
-  x65, _ = bits.Add64(x52, uint64(0x0), x64)
+  x64, x65 = bits.Add64(x41, x55, x63)
+  var x66 uint64
   var x67 uint64
+  x66, x67 = bits.Add64(x43, x57, x65)
   var x68 uint64
-  x67, x68 = bits.Add64(x41, x57, 0x0)
   var x69 uint64
+  x68, x69 = bits.Add64(x45, x59, x67)
   var x70 uint64
-  x69, x70 = bits.Add64(x43, x59, x68)
   var x71 uint64
+  x70, x71 = bits.Add64(x46, x61, x69)
   var x72 uint64
-  x71, x72 = bits.Add64(x45, x61, x70)
-  var x73 uint64
+  x72, _ = bits.Mul64(x62, 0xd838091dd2253531)
   var x74 uint64
-  x73, x74 = bits.Add64(x47, x63, x72)
   var x75 uint64
+  x74, x75 = bits.Mul64(x72, 0xffffffffffffffff)
   var x76 uint64
-  x75, x76 = bits.Add64(x49, x65, x74)
   var x77 uint64
-  x77, _ = bits.Mul64(x67, 0xd838091dd2253531)
+  x76, x77 = bits.Mul64(x72, 0xffffffffffffffff)
+  var x78 uint64
   var x79 uint64
+  x78, x79 = bits.Mul64(x72, 0xffffffffffffffff)
   var x80 uint64
-  x79, x80 = bits.Mul64(x77, 0xffffffffffffffff)
   var x81 uint64
+  x80, x81 = bits.Mul64(x72, 0xfffffffefffffc2f)
   var x82 uint64
-  x81, x82 = bits.Mul64(x77, 0xffffffffffffffff)
   var x83 uint64
+  x82, x83 = bits.Add64(x81, x78, 0x0)
   var x84 uint64
-  x83, x84 = bits.Mul64(x77, 0xffffffffffffffff)
   var x85 uint64
+  x84, x85 = bits.Add64(x79, x76, x83)
   var x86 uint64
-  x85, x86 = bits.Mul64(x77, 0xfffffffefffffc2f)
   var x87 uint64
-  var x88 uint64
-  x87, x88 = bits.Add64(x86, x83, 0x0)
-  var x89 uint64
+  x86, x87 = bits.Add64(x77, x74, x85)
+  var x88 uint64 = (x87 + x75)
   var x90 uint64
-  x89, x90 = bits.Add64(x84, x81, x88)
+  _, x90 = bits.Add64(x62, x80, 0x0)
   var x91 uint64
   var x92 uint64
-  x91, x92 = bits.Add64(x82, x79, x90)
+  x91, x92 = bits.Add64(x64, x82, x90)
   var x93 uint64
-  x93, _ = bits.Add64(x80, uint64(0x0), x92)
+  var x94 uint64
+  x93, x94 = bits.Add64(x66, x84, x92)
+  var x95 uint64
   var x96 uint64
-  _, x96 = bits.Add64(x67, x85, 0x0)
+  x95, x96 = bits.Add64(x68, x86, x94)
   var x97 uint64
   var x98 uint64
-  x97, x98 = bits.Add64(x69, x87, x96)
-  var x99 uint64
+  x97, x98 = bits.Add64(x70, x88, x96)
+  var x99 uint64 = (x98 + x71)
   var x100 uint64
-  x99, x100 = bits.Add64(x71, x89, x98)
   var x101 uint64
+  x100, x101 = bits.Mul64(x2, (arg2[3]))
   var x102 uint64
-  x101, x102 = bits.Add64(x73, x91, x100)
   var x103 uint64
+  x102, x103 = bits.Mul64(x2, (arg2[2]))
   var x104 uint64
-  x103, x104 = bits.Add64(x75, x93, x102)
   var x105 uint64
-  x105, _ = bits.Add64(x76, uint64(0x0), x104)
+  x104, x105 = bits.Mul64(x2, (arg2[1]))
+  var x106 uint64
   var x107 uint64
+  x106, x107 = bits.Mul64(x2, (arg2[0]))
   var x108 uint64
-  x107, x108 = bits.Mul64(x2, (arg2[3]))
   var x109 uint64
+  x108, x109 = bits.Add64(x107, x104, 0x0)
   var x110 uint64
-  x109, x110 = bits.Mul64(x2, (arg2[2]))
   var x111 uint64
+  x110, x111 = bits.Add64(x105, x102, x109)
   var x112 uint64
-  x111, x112 = bits.Mul64(x2, (arg2[1]))
   var x113 uint64
-  var x114 uint64
-  x113, x114 = bits.Mul64(x2, (arg2[0]))
+  x112, x113 = bits.Add64(x103, x100, x111)
+  var x114 uint64 = (x113 + x101)
   var x115 uint64
   var x116 uint64
-  x115, x116 = bits.Add64(x114, x111, 0x0)
+  x115, x116 = bits.Add64(x91, x106, 0x0)
   var x117 uint64
   var x118 uint64
-  x117, x118 = bits.Add64(x112, x109, x116)
+  x117, x118 = bits.Add64(x93, x108, x116)
   var x119 uint64
   var x120 uint64
-  x119, x120 = bits.Add64(x110, x107, x118)
+  x119, x120 = bits.Add64(x95, x110, x118)
   var x121 uint64
-  x121, _ = bits.Add64(x108, uint64(0x0), x120)
+  var x122 uint64
+  x121, x122 = bits.Add64(x97, x112, x120)
   var x123 uint64
   var x124 uint64
-  x123, x124 = bits.Add64(x97, x113, 0x0)
+  x123, x124 = bits.Add64(x99, x114, x122)
   var x125 uint64
-  var x126 uint64
-  x125, x126 = bits.Add64(x99, x115, x124)
+  x125, _ = bits.Mul64(x115, 0xd838091dd2253531)
   var x127 uint64
   var x128 uint64
-  x127, x128 = bits.Add64(x101, x117, x126)
+  x127, x128 = bits.Mul64(x125, 0xffffffffffffffff)
   var x129 uint64
   var x130 uint64
-  x129, x130 = bits.Add64(x103, x119, x128)
+  x129, x130 = bits.Mul64(x125, 0xffffffffffffffff)
   var x131 uint64
   var x132 uint64
-  x131, x132 = bits.Add64(x105, x121, x130)
+  x131, x132 = bits.Mul64(x125, 0xffffffffffffffff)
   var x133 uint64
-  x133, _ = bits.Mul64(x123, 0xd838091dd2253531)
+  var x134 uint64
+  x133, x134 = bits.Mul64(x125, 0xfffffffefffffc2f)
   var x135 uint64
   var x136 uint64
-  x135, x136 = bits.Mul64(x133, 0xffffffffffffffff)
+  x135, x136 = bits.Add64(x134, x131, 0x0)
   var x137 uint64
   var x138 uint64
-  x137, x138 = bits.Mul64(x133, 0xffffffffffffffff)
+  x137, x138 = bits.Add64(x132, x129, x136)
   var x139 uint64
   var x140 uint64
-  x139, x140 = bits.Mul64(x133, 0xffffffffffffffff)
-  var x141 uint64
-  var x142 uint64
-  x141, x142 = bits.Mul64(x133, 0xfffffffefffffc2f)
+  x139, x140 = bits.Add64(x130, x127, x138)
+  var x141 uint64 = (x140 + x128)
   var x143 uint64
+  _, x143 = bits.Add64(x115, x133, 0x0)
   var x144 uint64
-  x143, x144 = bits.Add64(x142, x139, 0x0)
   var x145 uint64
+  x144, x145 = bits.Add64(x117, x135, x143)
   var x146 uint64
-  x145, x146 = bits.Add64(x140, x137, x144)
   var x147 uint64
+  x146, x147 = bits.Add64(x119, x137, x145)
   var x148 uint64
-  x147, x148 = bits.Add64(x138, x135, x146)
   var x149 uint64
-  x149, _ = bits.Add64(x136, uint64(0x0), x148)
-  var x152 uint64
-  _, x152 = bits.Add64(x123, x141, 0x0)
+  x148, x149 = bits.Add64(x121, x139, x147)
+  var x150 uint64
+  var x151 uint64
+  x150, x151 = bits.Add64(x123, x141, x149)
+  var x152 uint64 = (x151 + x124)
   var x153 uint64
   var x154 uint64
-  x153, x154 = bits.Add64(x125, x143, x152)
+  x153, x154 = bits.Mul64(x3, (arg2[3]))
   var x155 uint64
   var x156 uint64
-  x155, x156 = bits.Add64(x127, x145, x154)
+  x155, x156 = bits.Mul64(x3, (arg2[2]))
   var x157 uint64
   var x158 uint64
-  x157, x158 = bits.Add64(x129, x147, x156)
+  x157, x158 = bits.Mul64(x3, (arg2[1]))
   var x159 uint64
   var x160 uint64
-  x159, x160 = bits.Add64(x131, x149, x158)
+  x159, x160 = bits.Mul64(x3, (arg2[0]))
   var x161 uint64
-  x161, _ = bits.Add64(x132, uint64(0x0), x160)
+  var x162 uint64
+  x161, x162 = bits.Add64(x160, x157, 0x0)
   var x163 uint64
   var x164 uint64
-  x163, x164 = bits.Mul64(x3, (arg2[3]))
+  x163, x164 = bits.Add64(x158, x155, x162)
   var x165 uint64
   var x166 uint64
-  x165, x166 = bits.Mul64(x3, (arg2[2]))
-  var x167 uint64
+  x165, x166 = bits.Add64(x156, x153, x164)
+  var x167 uint64 = (x166 + x154)
   var x168 uint64
-  x167, x168 = bits.Mul64(x3, (arg2[1]))
   var x169 uint64
+  x168, x169 = bits.Add64(x144, x159, 0x0)
   var x170 uint64
-  x169, x170 = bits.Mul64(x3, (arg2[0]))
   var x171 uint64
+  x170, x171 = bits.Add64(x146, x161, x169)
   var x172 uint64
-  x171, x172 = bits.Add64(x170, x167, 0x0)
   var x173 uint64
+  x172, x173 = bits.Add64(x148, x163, x171)
   var x174 uint64
-  x173, x174 = bits.Add64(x168, x165, x172)
   var x175 uint64
+  x174, x175 = bits.Add64(x150, x165, x173)
   var x176 uint64
-  x175, x176 = bits.Add64(x166, x163, x174)
   var x177 uint64
-  x177, _ = bits.Add64(x164, uint64(0x0), x176)
-  var x179 uint64
+  x176, x177 = bits.Add64(x152, x167, x175)
+  var x178 uint64
+  x178, _ = bits.Mul64(x168, 0xd838091dd2253531)
   var x180 uint64
-  x179, x180 = bits.Add64(x153, x169, 0x0)
   var x181 uint64
+  x180, x181 = bits.Mul64(x178, 0xffffffffffffffff)
   var x182 uint64
-  x181, x182 = bits.Add64(x155, x171, x180)
   var x183 uint64
+  x182, x183 = bits.Mul64(x178, 0xffffffffffffffff)
   var x184 uint64
-  x183, x184 = bits.Add64(x157, x173, x182)
   var x185 uint64
+  x184, x185 = bits.Mul64(x178, 0xffffffffffffffff)
   var x186 uint64
-  x185, x186 = bits.Add64(x159, x175, x184)
   var x187 uint64
+  x186, x187 = bits.Mul64(x178, 0xfffffffefffffc2f)
   var x188 uint64
-  x187, x188 = bits.Add64(x161, x177, x186)
   var x189 uint64
-  x189, _ = bits.Mul64(x179, 0xd838091dd2253531)
+  x188, x189 = bits.Add64(x187, x184, 0x0)
+  var x190 uint64
   var x191 uint64
+  x190, x191 = bits.Add64(x185, x182, x189)
   var x192 uint64
-  x191, x192 = bits.Mul64(x189, 0xffffffffffffffff)
   var x193 uint64
-  var x194 uint64
-  x193, x194 = bits.Mul64(x189, 0xffffffffffffffff)
-  var x195 uint64
+  x192, x193 = bits.Add64(x183, x180, x191)
+  var x194 uint64 = (x193 + x181)
   var x196 uint64
-  x195, x196 = bits.Mul64(x189, 0xffffffffffffffff)
+  _, x196 = bits.Add64(x168, x186, 0x0)
   var x197 uint64
   var x198 uint64
-  x197, x198 = bits.Mul64(x189, 0xfffffffefffffc2f)
+  x197, x198 = bits.Add64(x170, x188, x196)
   var x199 uint64
   var x200 uint64
-  x199, x200 = bits.Add64(x198, x195, 0x0)
+  x199, x200 = bits.Add64(x172, x190, x198)
   var x201 uint64
   var x202 uint64
-  x201, x202 = bits.Add64(x196, x193, x200)
+  x201, x202 = bits.Add64(x174, x192, x200)
   var x203 uint64
   var x204 uint64
-  x203, x204 = bits.Add64(x194, x191, x202)
-  var x205 uint64
-  x205, _ = bits.Add64(x192, uint64(0x0), x204)
+  x203, x204 = bits.Add64(x176, x194, x202)
+  var x205 uint64 = (x204 + x177)
+  var x206 uint64
+  var x207 uint64
+  x206, x207 = bits.Sub64(x197, 0xfffffffefffffc2f, uint64(0x0))
   var x208 uint64
-  _, x208 = bits.Add64(x179, x197, 0x0)
   var x209 uint64
+  x208, x209 = bits.Sub64(x199, 0xffffffffffffffff, x207)
   var x210 uint64
-  x209, x210 = bits.Add64(x181, x199, x208)
   var x211 uint64
+  x210, x211 = bits.Sub64(x201, 0xffffffffffffffff, x209)
   var x212 uint64
-  x211, x212 = bits.Add64(x183, x201, x210)
   var x213 uint64
-  var x214 uint64
-  x213, x214 = bits.Add64(x185, x203, x212)
+  x212, x213 = bits.Sub64(x203, 0xffffffffffffffff, x211)
   var x215 uint64
+  _, x215 = bits.Sub64(x205, uint64(0x0), x213)
   var x216 uint64
-  x215, x216 = bits.Add64(x187, x205, x214)
+  fiat_secp256k1_cmovznz_u64(&x216, x215, x206, x197)
   var x217 uint64
-  x217, _ = bits.Add64(x188, uint64(0x0), x216)
+  fiat_secp256k1_cmovznz_u64(&x217, x215, x208, x199)
+  var x218 uint64
+  fiat_secp256k1_cmovznz_u64(&x218, x215, x210, x201)
   var x219 uint64
-  var x220 uint64
-  x219, x220 = bits.Sub64(x209, 0xfffffffefffffc2f, uint64(0x0))
-  var x221 uint64
-  var x222 uint64
-  x221, x222 = bits.Sub64(x211, 0xffffffffffffffff, x220)
-  var x223 uint64
-  var x224 uint64
-  x223, x224 = bits.Sub64(x213, 0xffffffffffffffff, x222)
-  var x225 uint64
-  var x226 uint64
-  x225, x226 = bits.Sub64(x215, 0xffffffffffffffff, x224)
-  var x228 uint64
-  _, x228 = bits.Sub64(x217, uint64(0x0), x226)
-  var x229 uint64
-  fiat_secp256k1_cmovznz_u64(&x229, x228, x219, x209)
-  var x230 uint64
-  fiat_secp256k1_cmovznz_u64(&x230, x228, x221, x211)
-  var x231 uint64
-  fiat_secp256k1_cmovznz_u64(&x231, x228, x223, x213)
-  var x232 uint64
-  fiat_secp256k1_cmovznz_u64(&x232, x228, x225, x215)
-  out1[0] = x229
-  out1[1] = x230
-  out1[2] = x231
-  out1[3] = x232
+  fiat_secp256k1_cmovznz_u64(&x219, x215, x212, x203)
+  out1[0] = x216
+  out1[1] = x217
+  out1[2] = x218
+  out1[3] = x219
 }
 
 /*
@@ -425,312 +412,299 @@ func fiat_secp256k1_square(out1 *[4]uint64, arg1 *[4]uint64) {
   var x17 uint64
   var x18 uint64
   x17, x18 = bits.Add64(x8, x5, x16)
-  var x19 uint64
-  x19, _ = bits.Add64(x6, uint64(0x0), x18)
-  var x21 uint64
-  x21, _ = bits.Mul64(x11, 0xd838091dd2253531)
+  var x19 uint64 = (x18 + x6)
+  var x20 uint64
+  x20, _ = bits.Mul64(x11, 0xd838091dd2253531)
+  var x22 uint64
   var x23 uint64
+  x22, x23 = bits.Mul64(x20, 0xffffffffffffffff)
   var x24 uint64
-  x23, x24 = bits.Mul64(x21, 0xffffffffffffffff)
   var x25 uint64
+  x24, x25 = bits.Mul64(x20, 0xffffffffffffffff)
   var x26 uint64
-  x25, x26 = bits.Mul64(x21, 0xffffffffffffffff)
   var x27 uint64
+  x26, x27 = bits.Mul64(x20, 0xffffffffffffffff)
   var x28 uint64
-  x27, x28 = bits.Mul64(x21, 0xffffffffffffffff)
   var x29 uint64
+  x28, x29 = bits.Mul64(x20, 0xfffffffefffffc2f)
   var x30 uint64
-  x29, x30 = bits.Mul64(x21, 0xfffffffefffffc2f)
   var x31 uint64
+  x30, x31 = bits.Add64(x29, x26, 0x0)
   var x32 uint64
-  x31, x32 = bits.Add64(x30, x27, 0x0)
   var x33 uint64
+  x32, x33 = bits.Add64(x27, x24, x31)
   var x34 uint64
-  x33, x34 = bits.Add64(x28, x25, x32)
   var x35 uint64
-  var x36 uint64
-  x35, x36 = bits.Add64(x26, x23, x34)
-  var x37 uint64
-  x37, _ = bits.Add64(x24, uint64(0x0), x36)
+  x34, x35 = bits.Add64(x25, x22, x33)
+  var x36 uint64 = (x35 + x23)
+  var x38 uint64
+  _, x38 = bits.Add64(x11, x28, 0x0)
+  var x39 uint64
   var x40 uint64
-  _, x40 = bits.Add64(x11, x29, 0x0)
+  x39, x40 = bits.Add64(x13, x30, x38)
   var x41 uint64
   var x42 uint64
-  x41, x42 = bits.Add64(x13, x31, x40)
+  x41, x42 = bits.Add64(x15, x32, x40)
   var x43 uint64
   var x44 uint64
-  x43, x44 = bits.Add64(x15, x33, x42)
+  x43, x44 = bits.Add64(x17, x34, x42)
   var x45 uint64
   var x46 uint64
-  x45, x46 = bits.Add64(x17, x35, x44)
+  x45, x46 = bits.Add64(x19, x36, x44)
   var x47 uint64
   var x48 uint64
-  x47, x48 = bits.Add64(x19, x37, x46)
+  x47, x48 = bits.Mul64(x1, (arg1[3]))
   var x49 uint64
-  x49, _ = bits.Add64(uint64(0x0), uint64(0x0), x48)
+  var x50 uint64
+  x49, x50 = bits.Mul64(x1, (arg1[2]))
   var x51 uint64
   var x52 uint64
-  x51, x52 = bits.Mul64(x1, (arg1[3]))
+  x51, x52 = bits.Mul64(x1, (arg1[1]))
   var x53 uint64
   var x54 uint64
-  x53, x54 = bits.Mul64(x1, (arg1[2]))
+  x53, x54 = bits.Mul64(x1, (arg1[0]))
   var x55 uint64
   var x56 uint64
-  x55, x56 = bits.Mul64(x1, (arg1[1]))
+  x55, x56 = bits.Add64(x54, x51, 0x0)
   var x57 uint64
   var x58 uint64
-  x57, x58 = bits.Mul64(x1, (arg1[0]))
+  x57, x58 = bits.Add64(x52, x49, x56)
   var x59 uint64
   var x60 uint64
-  x59, x60 = bits.Add64(x58, x55, 0x0)
-  var x61 uint64
+  x59, x60 = bits.Add64(x50, x47, x58)
+  var x61 uint64 = (x60 + x48)
   var x62 uint64
-  x61, x62 = bits.Add64(x56, x53, x60)
   var x63 uint64
+  x62, x63 = bits.Add64(x39, x53, 0x0)
   var x64 uint64
-  x63, x64 = bits.Add64(x54, x51, x62)
   var x65 uint64
-  x65, _ = bits.Add64(x52, uint64(0x0), x64)
+  x64, x65 = bits.Add64(x41, x55, x63)
+  var x66 uint64
   var x67 uint64
+  x66, x67 = bits.Add64(x43, x57, x65)
   var x68 uint64
-  x67, x68 = bits.Add64(x41, x57, 0x0)
   var x69 uint64
+  x68, x69 = bits.Add64(x45, x59, x67)
   var x70 uint64
-  x69, x70 = bits.Add64(x43, x59, x68)
   var x71 uint64
+  x70, x71 = bits.Add64(x46, x61, x69)
   var x72 uint64
-  x71, x72 = bits.Add64(x45, x61, x70)
-  var x73 uint64
+  x72, _ = bits.Mul64(x62, 0xd838091dd2253531)
   var x74 uint64
-  x73, x74 = bits.Add64(x47, x63, x72)
   var x75 uint64
+  x74, x75 = bits.Mul64(x72, 0xffffffffffffffff)
   var x76 uint64
-  x75, x76 = bits.Add64(x49, x65, x74)
   var x77 uint64
-  x77, _ = bits.Mul64(x67, 0xd838091dd2253531)
+  x76, x77 = bits.Mul64(x72, 0xffffffffffffffff)
+  var x78 uint64
   var x79 uint64
+  x78, x79 = bits.Mul64(x72, 0xffffffffffffffff)
   var x80 uint64
-  x79, x80 = bits.Mul64(x77, 0xffffffffffffffff)
   var x81 uint64
+  x80, x81 = bits.Mul64(x72, 0xfffffffefffffc2f)
   var x82 uint64
-  x81, x82 = bits.Mul64(x77, 0xffffffffffffffff)
   var x83 uint64
+  x82, x83 = bits.Add64(x81, x78, 0x0)
   var x84 uint64
-  x83, x84 = bits.Mul64(x77, 0xffffffffffffffff)
   var x85 uint64
+  x84, x85 = bits.Add64(x79, x76, x83)
   var x86 uint64
-  x85, x86 = bits.Mul64(x77, 0xfffffffefffffc2f)
   var x87 uint64
-  var x88 uint64
-  x87, x88 = bits.Add64(x86, x83, 0x0)
-  var x89 uint64
+  x86, x87 = bits.Add64(x77, x74, x85)
+  var x88 uint64 = (x87 + x75)
   var x90 uint64
-  x89, x90 = bits.Add64(x84, x81, x88)
+  _, x90 = bits.Add64(x62, x80, 0x0)
   var x91 uint64
   var x92 uint64
-  x91, x92 = bits.Add64(x82, x79, x90)
+  x91, x92 = bits.Add64(x64, x82, x90)
   var x93 uint64
-  x93, _ = bits.Add64(x80, uint64(0x0), x92)
+  var x94 uint64
+  x93, x94 = bits.Add64(x66, x84, x92)
+  var x95 uint64
   var x96 uint64
-  _, x96 = bits.Add64(x67, x85, 0x0)
+  x95, x96 = bits.Add64(x68, x86, x94)
   var x97 uint64
   var x98 uint64
-  x97, x98 = bits.Add64(x69, x87, x96)
-  var x99 uint64
+  x97, x98 = bits.Add64(x70, x88, x96)
+  var x99 uint64 = (x98 + x71)
   var x100 uint64
-  x99, x100 = bits.Add64(x71, x89, x98)
   var x101 uint64
+  x100, x101 = bits.Mul64(x2, (arg1[3]))
   var x102 uint64
-  x101, x102 = bits.Add64(x73, x91, x100)
   var x103 uint64
+  x102, x103 = bits.Mul64(x2, (arg1[2]))
   var x104 uint64
-  x103, x104 = bits.Add64(x75, x93, x102)
   var x105 uint64
-  x105, _ = bits.Add64(x76, uint64(0x0), x104)
+  x104, x105 = bits.Mul64(x2, (arg1[1]))
+  var x106 uint64
   var x107 uint64
+  x106, x107 = bits.Mul64(x2, (arg1[0]))
   var x108 uint64
-  x107, x108 = bits.Mul64(x2, (arg1[3]))
   var x109 uint64
+  x108, x109 = bits.Add64(x107, x104, 0x0)
   var x110 uint64
-  x109, x110 = bits.Mul64(x2, (arg1[2]))
   var x111 uint64
+  x110, x111 = bits.Add64(x105, x102, x109)
   var x112 uint64
-  x111, x112 = bits.Mul64(x2, (arg1[1]))
   var x113 uint64
-  var x114 uint64
-  x113, x114 = bits.Mul64(x2, (arg1[0]))
+  x112, x113 = bits.Add64(x103, x100, x111)
+  var x114 uint64 = (x113 + x101)
   var x115 uint64
   var x116 uint64
-  x115, x116 = bits.Add64(x114, x111, 0x0)
+  x115, x116 = bits.Add64(x91, x106, 0x0)
   var x117 uint64
   var x118 uint64
-  x117, x118 = bits.Add64(x112, x109, x116)
+  x117, x118 = bits.Add64(x93, x108, x116)
   var x119 uint64
   var x120 uint64
-  x119, x120 = bits.Add64(x110, x107, x118)
+  x119, x120 = bits.Add64(x95, x110, x118)
   var x121 uint64
-  x121, _ = bits.Add64(x108, uint64(0x0), x120)
+  var x122 uint64
+  x121, x122 = bits.Add64(x97, x112, x120)
   var x123 uint64
   var x124 uint64
-  x123, x124 = bits.Add64(x97, x113, 0x0)
+  x123, x124 = bits.Add64(x99, x114, x122)
   var x125 uint64
-  var x126 uint64
-  x125, x126 = bits.Add64(x99, x115, x124)
+  x125, _ = bits.Mul64(x115, 0xd838091dd2253531)
   var x127 uint64
   var x128 uint64
-  x127, x128 = bits.Add64(x101, x117, x126)
+  x127, x128 = bits.Mul64(x125, 0xffffffffffffffff)
   var x129 uint64
   var x130 uint64
-  x129, x130 = bits.Add64(x103, x119, x128)
+  x129, x130 = bits.Mul64(x125, 0xffffffffffffffff)
   var x131 uint64
   var x132 uint64
-  x131, x132 = bits.Add64(x105, x121, x130)
+  x131, x132 = bits.Mul64(x125, 0xffffffffffffffff)
   var x133 uint64
-  x133, _ = bits.Mul64(x123, 0xd838091dd2253531)
+  var x134 uint64
+  x133, x134 = bits.Mul64(x125, 0xfffffffefffffc2f)
   var x135 uint64
   var x136 uint64
-  x135, x136 = bits.Mul64(x133, 0xffffffffffffffff)
+  x135, x136 = bits.Add64(x134, x131, 0x0)
   var x137 uint64
   var x138 uint64
-  x137, x138 = bits.Mul64(x133, 0xffffffffffffffff)
+  x137, x138 = bits.Add64(x132, x129, x136)
   var x139 uint64
   var x140 uint64
-  x139, x140 = bits.Mul64(x133, 0xffffffffffffffff)
-  var x141 uint64
-  var x142 uint64
-  x141, x142 = bits.Mul64(x133, 0xfffffffefffffc2f)
+  x139, x140 = bits.Add64(x130, x127, x138)
+  var x141 uint64 = (x140 + x128)
   var x143 uint64
+  _, x143 = bits.Add64(x115, x133, 0x0)
   var x144 uint64
-  x143, x144 = bits.Add64(x142, x139, 0x0)
   var x145 uint64
+  x144, x145 = bits.Add64(x117, x135, x143)
   var x146 uint64
-  x145, x146 = bits.Add64(x140, x137, x144)
   var x147 uint64
+  x146, x147 = bits.Add64(x119, x137, x145)
   var x148 uint64
-  x147, x148 = bits.Add64(x138, x135, x146)
   var x149 uint64
-  x149, _ = bits.Add64(x136, uint64(0x0), x148)
-  var x152 uint64
-  _, x152 = bits.Add64(x123, x141, 0x0)
+  x148, x149 = bits.Add64(x121, x139, x147)
+  var x150 uint64
+  var x151 uint64
+  x150, x151 = bits.Add64(x123, x141, x149)
+  var x152 uint64 = (x151 + x124)
   var x153 uint64
   var x154 uint64
-  x153, x154 = bits.Add64(x125, x143, x152)
+  x153, x154 = bits.Mul64(x3, (arg1[3]))
   var x155 uint64
   var x156 uint64
-  x155, x156 = bits.Add64(x127, x145, x154)
+  x155, x156 = bits.Mul64(x3, (arg1[2]))
   var x157 uint64
   var x158 uint64
-  x157, x158 = bits.Add64(x129, x147, x156)
+  x157, x158 = bits.Mul64(x3, (arg1[1]))
   var x159 uint64
   var x160 uint64
-  x159, x160 = bits.Add64(x131, x149, x158)
+  x159, x160 = bits.Mul64(x3, (arg1[0]))
   var x161 uint64
-  x161, _ = bits.Add64(x132, uint64(0x0), x160)
+  var x162 uint64
+  x161, x162 = bits.Add64(x160, x157, 0x0)
   var x163 uint64
   var x164 uint64
-  x163, x164 = bits.Mul64(x3, (arg1[3]))
+  x163, x164 = bits.Add64(x158, x155, x162)
   var x165 uint64
   var x166 uint64
-  x165, x166 = bits.Mul64(x3, (arg1[2]))
-  var x167 uint64
+  x165, x166 = bits.Add64(x156, x153, x164)
+  var x167 uint64 = (x166 + x154)
   var x168 uint64
-  x167, x168 = bits.Mul64(x3, (arg1[1]))
   var x169 uint64
+  x168, x169 = bits.Add64(x144, x159, 0x0)
   var x170 uint64
-  x169, x170 = bits.Mul64(x3, (arg1[0]))
   var x171 uint64
+  x170, x171 = bits.Add64(x146, x161, x169)
   var x172 uint64
-  x171, x172 = bits.Add64(x170, x167, 0x0)
   var x173 uint64
+  x172, x173 = bits.Add64(x148, x163, x171)
   var x174 uint64
-  x173, x174 = bits.Add64(x168, x165, x172)
   var x175 uint64
+  x174, x175 = bits.Add64(x150, x165, x173)
   var x176 uint64
-  x175, x176 = bits.Add64(x166, x163, x174)
   var x177 uint64
-  x177, _ = bits.Add64(x164, uint64(0x0), x176)
-  var x179 uint64
+  x176, x177 = bits.Add64(x152, x167, x175)
+  var x178 uint64
+  x178, _ = bits.Mul64(x168, 0xd838091dd2253531)
   var x180 uint64
-  x179, x180 = bits.Add64(x153, x169, 0x0)
   var x181 uint64
+  x180, x181 = bits.Mul64(x178, 0xffffffffffffffff)
   var x182 uint64
-  x181, x182 = bits.Add64(x155, x171, x180)
   var x183 uint64
+  x182, x183 = bits.Mul64(x178, 0xffffffffffffffff)
   var x184 uint64
-  x183, x184 = bits.Add64(x157, x173, x182)
   var x185 uint64
+  x184, x185 = bits.Mul64(x178, 0xffffffffffffffff)
   var x186 uint64
-  x185, x186 = bits.Add64(x159, x175, x184)
   var x187 uint64
+  x186, x187 = bits.Mul64(x178, 0xfffffffefffffc2f)
   var x188 uint64
-  x187, x188 = bits.Add64(x161, x177, x186)
   var x189 uint64
-  x189, _ = bits.Mul64(x179, 0xd838091dd2253531)
+  x188, x189 = bits.Add64(x187, x184, 0x0)
+  var x190 uint64
   var x191 uint64
+  x190, x191 = bits.Add64(x185, x182, x189)
   var x192 uint64
-  x191, x192 = bits.Mul64(x189, 0xffffffffffffffff)
   var x193 uint64
-  var x194 uint64
-  x193, x194 = bits.Mul64(x189, 0xffffffffffffffff)
-  var x195 uint64
+  x192, x193 = bits.Add64(x183, x180, x191)
+  var x194 uint64 = (x193 + x181)
   var x196 uint64
-  x195, x196 = bits.Mul64(x189, 0xffffffffffffffff)
+  _, x196 = bits.Add64(x168, x186, 0x0)
   var x197 uint64
   var x198 uint64
-  x197, x198 = bits.Mul64(x189, 0xfffffffefffffc2f)
+  x197, x198 = bits.Add64(x170, x188, x196)
   var x199 uint64
   var x200 uint64
-  x199, x200 = bits.Add64(x198, x195, 0x0)
+  x199, x200 = bits.Add64(x172, x190, x198)
   var x201 uint64
   var x202 uint64
-  x201, x202 = bits.Add64(x196, x193, x200)
+  x201, x202 = bits.Add64(x174, x192, x200)
   var x203 uint64
   var x204 uint64
-  x203, x204 = bits.Add64(x194, x191, x202)
-  var x205 uint64
-  x205, _ = bits.Add64(x192, uint64(0x0), x204)
+  x203, x204 = bits.Add64(x176, x194, x202)
+  var x205 uint64 = (x204 + x177)
+  var x206 uint64
+  var x207 uint64
+  x206, x207 = bits.Sub64(x197, 0xfffffffefffffc2f, uint64(0x0))
   var x208 uint64
-  _, x208 = bits.Add64(x179, x197, 0x0)
   var x209 uint64
+  x208, x209 = bits.Sub64(x199, 0xffffffffffffffff, x207)
   var x210 uint64
-  x209, x210 = bits.Add64(x181, x199, x208)
   var x211 uint64
+  x210, x211 = bits.Sub64(x201, 0xffffffffffffffff, x209)
   var x212 uint64
-  x211, x212 = bits.Add64(x183, x201, x210)
   var x213 uint64
-  var x214 uint64
-  x213, x214 = bits.Add64(x185, x203, x212)
+  x212, x213 = bits.Sub64(x203, 0xffffffffffffffff, x211)
   var x215 uint64
+  _, x215 = bits.Sub64(x205, uint64(0x0), x213)
   var x216 uint64
-  x215, x216 = bits.Add64(x187, x205, x214)
+  fiat_secp256k1_cmovznz_u64(&x216, x215, x206, x197)
   var x217 uint64
-  x217, _ = bits.Add64(x188, uint64(0x0), x216)
+  fiat_secp256k1_cmovznz_u64(&x217, x215, x208, x199)
+  var x218 uint64
+  fiat_secp256k1_cmovznz_u64(&x218, x215, x210, x201)
   var x219 uint64
-  var x220 uint64
-  x219, x220 = bits.Sub64(x209, 0xfffffffefffffc2f, uint64(0x0))
-  var x221 uint64
-  var x222 uint64
-  x221, x222 = bits.Sub64(x211, 0xffffffffffffffff, x220)
-  var x223 uint64
-  var x224 uint64
-  x223, x224 = bits.Sub64(x213, 0xffffffffffffffff, x222)
-  var x225 uint64
-  var x226 uint64
-  x225, x226 = bits.Sub64(x215, 0xffffffffffffffff, x224)
-  var x228 uint64
-  _, x228 = bits.Sub64(x217, uint64(0x0), x226)
-  var x229 uint64
-  fiat_secp256k1_cmovznz_u64(&x229, x228, x219, x209)
-  var x230 uint64
-  fiat_secp256k1_cmovznz_u64(&x230, x228, x221, x211)
-  var x231 uint64
-  fiat_secp256k1_cmovznz_u64(&x231, x228, x223, x213)
-  var x232 uint64
-  fiat_secp256k1_cmovznz_u64(&x232, x228, x225, x215)
-  out1[0] = x229
-  out1[1] = x230
-  out1[2] = x231
-  out1[3] = x232
+  fiat_secp256k1_cmovznz_u64(&x219, x215, x212, x203)
+  out1[0] = x216
+  out1[1] = x217
+  out1[2] = x218
+  out1[3] = x219
 }
 
 /*
@@ -935,47 +909,48 @@ func fiat_secp256k1_from_montgomery(out1 *[4]uint64, arg1 *[4]uint64) {
   var x25 uint64
   x24, x25 = bits.Add64(uint64(0x0), x16, x23)
   var x26 uint64
-  x26, _ = bits.Add64(x5, uint64(0x0), x17)
+  var x27 uint64
+  x26, x27 = bits.Add64(uint64(0x0), (x17 + x5), x25)
   var x28 uint64
   var x29 uint64
-  x28, x29 = bits.Add64(uint64(0x0), x26, x25)
+  x28, x29 = bits.Add64(x20, (arg1[1]), 0x0)
   var x30 uint64
   var x31 uint64
-  x30, x31 = bits.Add64(x20, (arg1[1]), 0x0)
+  x30, x31 = bits.Add64(x22, uint64(0x0), x29)
   var x32 uint64
   var x33 uint64
-  x32, x33 = bits.Add64(x22, uint64(0x0), x31)
+  x32, x33 = bits.Add64(x24, uint64(0x0), x31)
   var x34 uint64
   var x35 uint64
-  x34, x35 = bits.Add64(x24, uint64(0x0), x33)
+  x34, x35 = bits.Add64(x26, uint64(0x0), x33)
   var x36 uint64
-  var x37 uint64
-  x36, x37 = bits.Add64(x28, uint64(0x0), x35)
+  x36, _ = bits.Mul64(x28, 0xd838091dd2253531)
   var x38 uint64
-  x38, _ = bits.Mul64(x30, 0xd838091dd2253531)
+  var x39 uint64
+  x38, x39 = bits.Mul64(x36, 0xffffffffffffffff)
   var x40 uint64
   var x41 uint64
-  x40, x41 = bits.Mul64(x38, 0xffffffffffffffff)
+  x40, x41 = bits.Mul64(x36, 0xffffffffffffffff)
   var x42 uint64
   var x43 uint64
-  x42, x43 = bits.Mul64(x38, 0xffffffffffffffff)
+  x42, x43 = bits.Mul64(x36, 0xffffffffffffffff)
   var x44 uint64
   var x45 uint64
-  x44, x45 = bits.Mul64(x38, 0xffffffffffffffff)
+  x44, x45 = bits.Mul64(x36, 0xfffffffefffffc2f)
   var x46 uint64
   var x47 uint64
-  x46, x47 = bits.Mul64(x38, 0xfffffffefffffc2f)
+  x46, x47 = bits.Add64(x45, x42, 0x0)
   var x48 uint64
   var x49 uint64
-  x48, x49 = bits.Add64(x47, x44, 0x0)
+  x48, x49 = bits.Add64(x43, x40, x47)
   var x50 uint64
   var x51 uint64
-  x50, x51 = bits.Add64(x45, x42, x49)
-  var x52 uint64
+  x50, x51 = bits.Add64(x41, x38, x49)
   var x53 uint64
-  x52, x53 = bits.Add64(x43, x40, x51)
+  _, x53 = bits.Add64(x28, x44, 0x0)
+  var x54 uint64
   var x55 uint64
-  _, x55 = bits.Add64(x30, x46, 0x0)
+  x54, x55 = bits.Add64(x30, x46, x53)
   var x56 uint64
   var x57 uint64
   x56, x57 = bits.Add64(x32, x48, x55)
@@ -984,154 +959,131 @@ func fiat_secp256k1_from_montgomery(out1 *[4]uint64, arg1 *[4]uint64) {
   x58, x59 = bits.Add64(x34, x50, x57)
   var x60 uint64
   var x61 uint64
-  x60, x61 = bits.Add64(x36, x52, x59)
+  x60, x61 = bits.Add64((x35 + x27), (x51 + x39), x59)
   var x62 uint64
-  x62, _ = bits.Add64(x41, uint64(0x0), x53)
+  var x63 uint64
+  x62, x63 = bits.Add64(x54, (arg1[2]), 0x0)
   var x64 uint64
-  x64, _ = bits.Add64(uint64(0x0), uint64(0x0), x29)
+  var x65 uint64
+  x64, x65 = bits.Add64(x56, uint64(0x0), x63)
   var x66 uint64
-  x66, _ = bits.Add64(x64, uint64(0x0), x37)
+  var x67 uint64
+  x66, x67 = bits.Add64(x58, uint64(0x0), x65)
   var x68 uint64
   var x69 uint64
-  x68, x69 = bits.Add64(x66, x62, x61)
+  x68, x69 = bits.Add64(x60, uint64(0x0), x67)
   var x70 uint64
-  var x71 uint64
-  x70, x71 = bits.Add64(x56, (arg1[2]), 0x0)
+  x70, _ = bits.Mul64(x62, 0xd838091dd2253531)
   var x72 uint64
   var x73 uint64
-  x72, x73 = bits.Add64(x58, uint64(0x0), x71)
+  x72, x73 = bits.Mul64(x70, 0xffffffffffffffff)
   var x74 uint64
   var x75 uint64
-  x74, x75 = bits.Add64(x60, uint64(0x0), x73)
+  x74, x75 = bits.Mul64(x70, 0xffffffffffffffff)
   var x76 uint64
   var x77 uint64
-  x76, x77 = bits.Add64(x68, uint64(0x0), x75)
+  x76, x77 = bits.Mul64(x70, 0xffffffffffffffff)
   var x78 uint64
-  x78, _ = bits.Mul64(x70, 0xd838091dd2253531)
+  var x79 uint64
+  x78, x79 = bits.Mul64(x70, 0xfffffffefffffc2f)
   var x80 uint64
   var x81 uint64
-  x80, x81 = bits.Mul64(x78, 0xffffffffffffffff)
+  x80, x81 = bits.Add64(x79, x76, 0x0)
   var x82 uint64
   var x83 uint64
-  x82, x83 = bits.Mul64(x78, 0xffffffffffffffff)
+  x82, x83 = bits.Add64(x77, x74, x81)
   var x84 uint64
   var x85 uint64
-  x84, x85 = bits.Mul64(x78, 0xffffffffffffffff)
-  var x86 uint64
+  x84, x85 = bits.Add64(x75, x72, x83)
   var x87 uint64
-  x86, x87 = bits.Mul64(x78, 0xfffffffefffffc2f)
+  _, x87 = bits.Add64(x62, x78, 0x0)
   var x88 uint64
   var x89 uint64
-  x88, x89 = bits.Add64(x87, x84, 0x0)
+  x88, x89 = bits.Add64(x64, x80, x87)
   var x90 uint64
   var x91 uint64
-  x90, x91 = bits.Add64(x85, x82, x89)
+  x90, x91 = bits.Add64(x66, x82, x89)
   var x92 uint64
   var x93 uint64
-  x92, x93 = bits.Add64(x83, x80, x91)
+  x92, x93 = bits.Add64(x68, x84, x91)
+  var x94 uint64
   var x95 uint64
-  _, x95 = bits.Add64(x70, x86, 0x0)
+  x94, x95 = bits.Add64((x69 + x61), (x85 + x73), x93)
   var x96 uint64
   var x97 uint64
-  x96, x97 = bits.Add64(x72, x88, x95)
+  x96, x97 = bits.Add64(x88, (arg1[3]), 0x0)
   var x98 uint64
   var x99 uint64
-  x98, x99 = bits.Add64(x74, x90, x97)
+  x98, x99 = bits.Add64(x90, uint64(0x0), x97)
   var x100 uint64
   var x101 uint64
-  x100, x101 = bits.Add64(x76, x92, x99)
+  x100, x101 = bits.Add64(x92, uint64(0x0), x99)
   var x102 uint64
-  x102, _ = bits.Add64(x81, uint64(0x0), x93)
+  var x103 uint64
+  x102, x103 = bits.Add64(x94, uint64(0x0), x101)
   var x104 uint64
-  x104, _ = bits.Add64(uint64(0x0), uint64(0x0), x69)
+  x104, _ = bits.Mul64(x96, 0xd838091dd2253531)
   var x106 uint64
-  x106, _ = bits.Add64(x104, uint64(0x0), x77)
+  var x107 uint64
+  x106, x107 = bits.Mul64(x104, 0xffffffffffffffff)
   var x108 uint64
   var x109 uint64
-  x108, x109 = bits.Add64(x106, x102, x101)
+  x108, x109 = bits.Mul64(x104, 0xffffffffffffffff)
   var x110 uint64
   var x111 uint64
-  x110, x111 = bits.Add64(x96, (arg1[3]), 0x0)
+  x110, x111 = bits.Mul64(x104, 0xffffffffffffffff)
   var x112 uint64
   var x113 uint64
-  x112, x113 = bits.Add64(x98, uint64(0x0), x111)
+  x112, x113 = bits.Mul64(x104, 0xfffffffefffffc2f)
   var x114 uint64
   var x115 uint64
-  x114, x115 = bits.Add64(x100, uint64(0x0), x113)
+  x114, x115 = bits.Add64(x113, x110, 0x0)
   var x116 uint64
   var x117 uint64
-  x116, x117 = bits.Add64(x108, uint64(0x0), x115)
+  x116, x117 = bits.Add64(x111, x108, x115)
   var x118 uint64
-  x118, _ = bits.Mul64(x110, 0xd838091dd2253531)
-  var x120 uint64
+  var x119 uint64
+  x118, x119 = bits.Add64(x109, x106, x117)
   var x121 uint64
-  x120, x121 = bits.Mul64(x118, 0xffffffffffffffff)
+  _, x121 = bits.Add64(x96, x112, 0x0)
   var x122 uint64
   var x123 uint64
-  x122, x123 = bits.Mul64(x118, 0xffffffffffffffff)
+  x122, x123 = bits.Add64(x98, x114, x121)
   var x124 uint64
   var x125 uint64
-  x124, x125 = bits.Mul64(x118, 0xffffffffffffffff)
+  x124, x125 = bits.Add64(x100, x116, x123)
   var x126 uint64
   var x127 uint64
-  x126, x127 = bits.Mul64(x118, 0xfffffffefffffc2f)
+  x126, x127 = bits.Add64(x102, x118, x125)
   var x128 uint64
   var x129 uint64
-  x128, x129 = bits.Add64(x127, x124, 0x0)
+  x128, x129 = bits.Add64((x103 + x95), (x119 + x107), x127)
   var x130 uint64
   var x131 uint64
-  x130, x131 = bits.Add64(x125, x122, x129)
+  x130, x131 = bits.Sub64(x122, 0xfffffffefffffc2f, uint64(0x0))
   var x132 uint64
   var x133 uint64
-  x132, x133 = bits.Add64(x123, x120, x131)
+  x132, x133 = bits.Sub64(x124, 0xffffffffffffffff, x131)
+  var x134 uint64
   var x135 uint64
-  _, x135 = bits.Add64(x110, x126, 0x0)
+  x134, x135 = bits.Sub64(x126, 0xffffffffffffffff, x133)
   var x136 uint64
   var x137 uint64
-  x136, x137 = bits.Add64(x112, x128, x135)
-  var x138 uint64
+  x136, x137 = bits.Sub64(x128, 0xffffffffffffffff, x135)
   var x139 uint64
-  x138, x139 = bits.Add64(x114, x130, x137)
+  _, x139 = bits.Sub64(x129, uint64(0x0), x137)
   var x140 uint64
+  fiat_secp256k1_cmovznz_u64(&x140, x139, x130, x122)
   var x141 uint64
-  x140, x141 = bits.Add64(x116, x132, x139)
+  fiat_secp256k1_cmovznz_u64(&x141, x139, x132, x124)
   var x142 uint64
-  x142, _ = bits.Add64(x121, uint64(0x0), x133)
-  var x144 uint64
-  x144, _ = bits.Add64(uint64(0x0), uint64(0x0), x109)
-  var x146 uint64
-  x146, _ = bits.Add64(x144, uint64(0x0), x117)
-  var x148 uint64
-  var x149 uint64
-  x148, x149 = bits.Add64(x146, x142, x141)
-  var x150 uint64
-  var x151 uint64
-  x150, x151 = bits.Sub64(x136, 0xfffffffefffffc2f, uint64(0x0))
-  var x152 uint64
-  var x153 uint64
-  x152, x153 = bits.Sub64(x138, 0xffffffffffffffff, x151)
-  var x154 uint64
-  var x155 uint64
-  x154, x155 = bits.Sub64(x140, 0xffffffffffffffff, x153)
-  var x156 uint64
-  var x157 uint64
-  x156, x157 = bits.Sub64(x148, 0xffffffffffffffff, x155)
-  var x158 uint64
-  x158, _ = bits.Add64(uint64(0x0), uint64(0x0), x149)
-  var x161 uint64
-  _, x161 = bits.Sub64(x158, uint64(0x0), x157)
-  var x162 uint64
-  fiat_secp256k1_cmovznz_u64(&x162, x161, x150, x136)
-  var x163 uint64
-  fiat_secp256k1_cmovznz_u64(&x163, x161, x152, x138)
-  var x164 uint64
-  fiat_secp256k1_cmovznz_u64(&x164, x161, x154, x140)
-  var x165 uint64
-  fiat_secp256k1_cmovznz_u64(&x165, x161, x156, x148)
-  out1[0] = x162
-  out1[1] = x163
-  out1[2] = x164
-  out1[3] = x165
+  fiat_secp256k1_cmovznz_u64(&x142, x139, x134, x126)
+  var x143 uint64
+  fiat_secp256k1_cmovznz_u64(&x143, x139, x136, x128)
+  out1[0] = x140
+  out1[1] = x141
+  out1[2] = x142
+  out1[3] = x143
 }
 
 /*
