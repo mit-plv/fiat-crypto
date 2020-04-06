@@ -308,125 +308,127 @@ Definition arith_with_casts_rewrite_rulesT : list (bool * Prop)
                   1 ∈ r1 -> s ∈ rs -> (ry <= r[0~>s-1])%zrange
                   -> Z.mul_split (cstZ rs ('s)) (cstZ ry y) (cstZ r1 1)
                      = (cstZ ry y, cstZ r[0~>0] 0))
-
-            ; (forall rv rc s rny ry y x,
+           ]
+         ; mymap
+             dont_do_again
+             [(forall rv rc s rny ry y x,
                   (ry <= -n rny)%zrange
                   -> cstZZ rv rc (Z.add_get_carry_full s (cstZ rny (-cstZ ry y)) x)
                      = dlet2_opp2 rv rc (Z.sub_get_borrow_full s x (cstZ ry y)))
-            ; (forall rv rc s rny ry y x,
-                  (ry <= -n rny)%zrange
-                  -> cstZZ rv rc (Z.add_get_carry_full s x (cstZ rny (-cstZ ry y)))
-                     = dlet2_opp2 rv rc (Z.sub_get_borrow_full s x (cstZ ry y)))
-            ; (forall rv rc s ryy yy x,
-                  yy ∈ ryy -> yy < 0
-                  -> cstZZ rv rc (Z.add_get_carry_full s (cstZ ryy ('yy)) x)
-                     = dlet2_opp2 rv rc (Z.sub_get_borrow_full s x (cstZ (-ryy) ('(-yy)))))
-            ; (forall rv rc s ryy yy x,
-                  yy ∈ ryy -> yy < 0
-                  -> cstZZ rv rc (Z.add_get_carry_full s x (cstZ ryy ('yy)))
-                     = dlet2_opp2 rv rc (Z.sub_get_borrow_full s x (cstZ (-ryy) ('(-yy)))))
-            ; (forall rv rc s rnc rc' c' rny ry y x,
-                  (ry <= -n rny)%zrange -> (rc' <= -n rnc)%zrange
-                  -> cstZZ rv rc (Z.add_with_get_carry_full s (cstZ rnc (-cstZ rc' c')) (cstZ rny (-cstZ ry y)) x)
-                     = dlet2_opp2 rv rc (Z.sub_with_get_borrow_full s (cstZ rc' c') x (cstZ ry y)))
-            ; (forall rv rc s rnc rc' c' rny ry y x,
-                  (ry <= -n rny)%zrange -> (rc' <= -n rnc)%zrange
-                  -> cstZZ rv rc (Z.add_with_get_carry_full s (cstZ rnc (-cstZ rc' c')) x (cstZ rny (-cstZ ry y)))
-                     = dlet2_opp2 rv rc (Z.sub_with_get_borrow_full s (cstZ rc' c') x (cstZ ry y)))
-            ; (forall rv rc s r0 rny ry y x,
-                  0 ∈ r0 -> (ry <= -n rny)%zrange
-                  -> cstZZ rv rc (Z.add_with_get_carry_full s (cstZ r0 0) (cstZ rny (-cstZ ry y)) x)
-                     = dlet2_opp2 rv rc (Z.sub_get_borrow_full s x (cstZ ry y)))
-            ; (forall rv rc s rcc cc rny ry y x,
-                  cc < 0 -> cc ∈ rcc -> (ry <= -n rny)%zrange
-                  -> cstZZ rv rc (Z.add_with_get_carry_full s (cstZ rcc ('cc)) (cstZ rny (-cstZ ry y)) x)
-                     = dlet2_opp2 rv rc (Z.sub_with_get_borrow_full s (cstZ (-rcc) ('(-cc))) x (cstZ ry y)))
-            ; (forall rv rc s r0 rny ry y x,
-                  0 ∈ r0 -> (ry <= -n rny)%zrange
-                  -> cstZZ rv rc (Z.add_with_get_carry_full s (cstZ r0 0) x (cstZ rny (-cstZ ry y)))
-                     = dlet2_opp2 rv rc (Z.sub_get_borrow_full s x (cstZ ry y)))
-            ; (forall rv rc s rcc cc rny ry y x,
-                  cc < 0 -> cc ∈ rcc -> (ry <= -n rny)%zrange
-                  -> cstZZ rv rc (Z.add_with_get_carry_full s (cstZ rcc ('cc)) x (cstZ rny (-cstZ ry y)))
-                     = dlet2_opp2 rv rc (Z.sub_with_get_borrow_full s (cstZ (-rcc) ('(-cc))) x (cstZ ry y)))
-            ; (forall rv rc s rnc rc' c' ryy yy x,
-                  yy <= 0 -> yy ∈ ryy -> (rc' <= -n rnc)%zrange
-                  -> cstZZ rv rc (Z.add_with_get_carry_full s (cstZ rnc (-cstZ rc' c')) (cstZ ryy ('yy)) x)
-                     = dlet2_opp2 rv rc (Z.sub_with_get_borrow_full s (cstZ rc' c') x (cstZ (-ryy) ('(-yy)))))
-            ; (forall rv rc s rnc rc' c' ryy yy x,
-                  yy <= 0 -> yy ∈ ryy -> (rc' <= -n rnc)%zrange
-                  -> cstZZ rv rc (Z.add_with_get_carry_full s (cstZ rnc (-cstZ rc' c')) x (cstZ ryy ('yy)))
-                     = dlet2_opp2 rv rc (Z.sub_with_get_borrow_full s (cstZ rc' c') x (cstZ (-ryy) ('(-yy)))))
-            ; (forall rv rc s rcc cc ryy yy x,
-                  yy <= 0 -> cc <= 0 -> yy + cc < 0 (* at least one must be strictly negative *) -> yy ∈ ryy -> cc ∈ rcc
-                  -> cstZZ rv rc (Z.add_with_get_carry_full s (cstZ rcc ('cc)) (cstZ ryy ('yy)) x)
-                     = dlet2_opp2 rv rc (Z.sub_with_get_borrow_full s (cstZ (-rcc) ('(-cc))) x (cstZ (-ryy) ('(-yy)))))
-            ; (forall rv rc s rcc cc ryy yy x,
-                  yy <= 0 -> cc <= 0 -> yy + cc < 0 (* at least one must be strictly negative *) -> yy ∈ ryy -> cc ∈ rcc
-                  -> cstZZ rv rc (Z.add_with_get_carry_full s (cstZ rcc ('cc)) x (cstZ ryy ('yy)))
-                     = dlet2_opp2 rv rc (Z.sub_with_get_borrow_full s (cstZ (-rcc) ('(-cc))) x (cstZ (-ryy) ('(-yy)))))
+              ; (forall rv rc s rny ry y x,
+                    (ry <= -n rny)%zrange
+                    -> cstZZ rv rc (Z.add_get_carry_full s x (cstZ rny (-cstZ ry y)))
+                       = dlet2_opp2 rv rc (Z.sub_get_borrow_full s x (cstZ ry y)))
+              ; (forall rv rc s ryy yy x,
+                    yy ∈ ryy -> yy < 0
+                    -> cstZZ rv rc (Z.add_get_carry_full s (cstZ ryy ('yy)) x)
+                       = dlet2_opp2 rv rc (Z.sub_get_borrow_full s x (cstZ (-ryy) ('(-yy)))))
+              ; (forall rv rc s ryy yy x,
+                    yy ∈ ryy -> yy < 0
+                    -> cstZZ rv rc (Z.add_get_carry_full s x (cstZ ryy ('yy)))
+                       = dlet2_opp2 rv rc (Z.sub_get_borrow_full s x (cstZ (-ryy) ('(-yy)))))
+              ; (forall rv rc s rnc rc' c' rny ry y x,
+                    (ry <= -n rny)%zrange -> (rc' <= -n rnc)%zrange
+                    -> cstZZ rv rc (Z.add_with_get_carry_full s (cstZ rnc (-cstZ rc' c')) (cstZ rny (-cstZ ry y)) x)
+                       = dlet2_opp2 rv rc (Z.sub_with_get_borrow_full s (cstZ rc' c') x (cstZ ry y)))
+              ; (forall rv rc s rnc rc' c' rny ry y x,
+                    (ry <= -n rny)%zrange -> (rc' <= -n rnc)%zrange
+                    -> cstZZ rv rc (Z.add_with_get_carry_full s (cstZ rnc (-cstZ rc' c')) x (cstZ rny (-cstZ ry y)))
+                       = dlet2_opp2 rv rc (Z.sub_with_get_borrow_full s (cstZ rc' c') x (cstZ ry y)))
+              ; (forall rv rc s r0 rny ry y x,
+                    0 ∈ r0 -> (ry <= -n rny)%zrange
+                    -> cstZZ rv rc (Z.add_with_get_carry_full s (cstZ r0 0) (cstZ rny (-cstZ ry y)) x)
+                       = dlet2_opp2 rv rc (Z.sub_get_borrow_full s x (cstZ ry y)))
+              ; (forall rv rc s rcc cc rny ry y x,
+                    cc < 0 -> cc ∈ rcc -> (ry <= -n rny)%zrange
+                    -> cstZZ rv rc (Z.add_with_get_carry_full s (cstZ rcc ('cc)) (cstZ rny (-cstZ ry y)) x)
+                       = dlet2_opp2 rv rc (Z.sub_with_get_borrow_full s (cstZ (-rcc) ('(-cc))) x (cstZ ry y)))
+              ; (forall rv rc s r0 rny ry y x,
+                    0 ∈ r0 -> (ry <= -n rny)%zrange
+                    -> cstZZ rv rc (Z.add_with_get_carry_full s (cstZ r0 0) x (cstZ rny (-cstZ ry y)))
+                       = dlet2_opp2 rv rc (Z.sub_get_borrow_full s x (cstZ ry y)))
+              ; (forall rv rc s rcc cc rny ry y x,
+                    cc < 0 -> cc ∈ rcc -> (ry <= -n rny)%zrange
+                    -> cstZZ rv rc (Z.add_with_get_carry_full s (cstZ rcc ('cc)) x (cstZ rny (-cstZ ry y)))
+                       = dlet2_opp2 rv rc (Z.sub_with_get_borrow_full s (cstZ (-rcc) ('(-cc))) x (cstZ ry y)))
+              ; (forall rv rc s rnc rc' c' ryy yy x,
+                    yy <= 0 -> yy ∈ ryy -> (rc' <= -n rnc)%zrange
+                    -> cstZZ rv rc (Z.add_with_get_carry_full s (cstZ rnc (-cstZ rc' c')) (cstZ ryy ('yy)) x)
+                       = dlet2_opp2 rv rc (Z.sub_with_get_borrow_full s (cstZ rc' c') x (cstZ (-ryy) ('(-yy)))))
+              ; (forall rv rc s rnc rc' c' ryy yy x,
+                    yy <= 0 -> yy ∈ ryy -> (rc' <= -n rnc)%zrange
+                    -> cstZZ rv rc (Z.add_with_get_carry_full s (cstZ rnc (-cstZ rc' c')) x (cstZ ryy ('yy)))
+                       = dlet2_opp2 rv rc (Z.sub_with_get_borrow_full s (cstZ rc' c') x (cstZ (-ryy) ('(-yy)))))
+              ; (forall rv rc s rcc cc ryy yy x,
+                    yy <= 0 -> cc <= 0 -> yy + cc < 0 (* at least one must be strictly negative *) -> yy ∈ ryy -> cc ∈ rcc
+                    -> cstZZ rv rc (Z.add_with_get_carry_full s (cstZ rcc ('cc)) (cstZ ryy ('yy)) x)
+                       = dlet2_opp2 rv rc (Z.sub_with_get_borrow_full s (cstZ (-rcc) ('(-cc))) x (cstZ (-ryy) ('(-yy)))))
+              ; (forall rv rc s rcc cc ryy yy x,
+                    yy <= 0 -> cc <= 0 -> yy + cc < 0 (* at least one must be strictly negative *) -> yy ∈ ryy -> cc ∈ rcc
+                    -> cstZZ rv rc (Z.add_with_get_carry_full s (cstZ rcc ('cc)) x (cstZ ryy ('yy)))
+                       = dlet2_opp2 rv rc (Z.sub_with_get_borrow_full s (cstZ (-rcc) ('(-cc))) x (cstZ (-ryy) ('(-yy)))))
 
 
-            ; (forall rs s rxx xx ryy yy,
-                  s ∈ rs -> xx ∈ rxx -> yy ∈ ryy
-                  -> Z.add_get_carry_full (cstZ rs ('s)) (cstZ rxx ('xx)) (cstZ ryy ('yy))
-                     = litZZ (Z.add_get_carry_full s xx yy))
-            ; (forall rs s r0 ry y,
-                  s ∈ rs -> 0 ∈ r0 -> (ry <= r[0~>s-1])%zrange
-                  -> Z.add_get_carry_full (cstZ rs ('s)) (cstZ r0 0) (cstZ ry y)
-                     = (cstZ ry y, cstZ r[0~>0] 0))
-            ; (forall rs s r0 ry y,
-                  s ∈ rs -> 0 ∈ r0 -> (ry <= r[0~>s-1])%zrange
-                  -> Z.add_get_carry_full (cstZ rs ('s)) (cstZ ry y) (cstZ r0 0)
-                     = (cstZ ry y, cstZ r[0~>0] 0))
+              ; (forall rs s rxx xx ryy yy,
+                    s ∈ rs -> xx ∈ rxx -> yy ∈ ryy
+                    -> Z.add_get_carry_full (cstZ rs ('s)) (cstZ rxx ('xx)) (cstZ ryy ('yy))
+                       = litZZ (Z.add_get_carry_full s xx yy))
+              ; (forall rs s r0 ry y,
+                    s ∈ rs -> 0 ∈ r0 -> (ry <= r[0~>s-1])%zrange
+                    -> Z.add_get_carry_full (cstZ rs ('s)) (cstZ r0 0) (cstZ ry y)
+                       = (cstZ ry y, cstZ r[0~>0] 0))
+              ; (forall rs s r0 ry y,
+                    s ∈ rs -> 0 ∈ r0 -> (ry <= r[0~>s-1])%zrange
+                    -> Z.add_get_carry_full (cstZ rs ('s)) (cstZ ry y) (cstZ r0 0)
+                       = (cstZ ry y, cstZ r[0~>0] 0))
 
-            ; (forall r0 x y, 0 ∈ r0 -> Z.add_with_carry (cstZ r0 0) x y = x + y)
+              ; (forall r0 x y, 0 ∈ r0 -> Z.add_with_carry (cstZ r0 0) x y = x + y)
 
-            ; (forall rs s rcc cc rxx xx ryy yy,
-                  s ∈ rs -> cc ∈ rcc -> xx ∈ rxx -> yy ∈ ryy
-                  -> Z.add_with_get_carry_full (cstZ rs ('s)) (cstZ rcc ('cc)) (cstZ rxx ('xx)) (cstZ ryy ('yy))
-                     = litZZ (Z.add_with_get_carry_full s cc xx yy))
-            ; (forall rs s r0c r0x ry y,
-                  s ∈ rs -> 0 ∈ r0c -> 0 ∈ r0x -> (ry <= r[0~>s-1])%zrange
-                  -> Z.add_with_get_carry_full (cstZ rs ('s)) (cstZ r0c 0) (cstZ r0x 0) (cstZ ry y)
-                     = (cstZ ry y, cstZ r[0~>0] 0))
-            ; (forall rs s r0c r0x ry y,
-                  s ∈ rs -> 0 ∈ r0c -> 0 ∈ r0x -> (ry <= r[0~>s-1])%zrange
-                  -> Z.add_with_get_carry_full (cstZ rs ('s)) (cstZ r0c 0) (cstZ ry y) (cstZ r0x 0)
-                     = (cstZ ry y, cstZ r[0~>0] 0))
+              ; (forall rs s rcc cc rxx xx ryy yy,
+                    s ∈ rs -> cc ∈ rcc -> xx ∈ rxx -> yy ∈ ryy
+                    -> Z.add_with_get_carry_full (cstZ rs ('s)) (cstZ rcc ('cc)) (cstZ rxx ('xx)) (cstZ ryy ('yy))
+                       = litZZ (Z.add_with_get_carry_full s cc xx yy))
+              ; (forall rs s r0c r0x ry y,
+                    s ∈ rs -> 0 ∈ r0c -> 0 ∈ r0x -> (ry <= r[0~>s-1])%zrange
+                    -> Z.add_with_get_carry_full (cstZ rs ('s)) (cstZ r0c 0) (cstZ r0x 0) (cstZ ry y)
+                       = (cstZ ry y, cstZ r[0~>0] 0))
+              ; (forall rs s r0c r0x ry y,
+                    s ∈ rs -> 0 ∈ r0c -> 0 ∈ r0x -> (ry <= r[0~>s-1])%zrange
+                    -> Z.add_with_get_carry_full (cstZ rs ('s)) (cstZ r0c 0) (cstZ ry y) (cstZ r0x 0)
+                       = (cstZ ry y, cstZ r[0~>0] 0))
 
-            ; (forall rv rc s r0 x y, (* carry = 0: ADC x y -> ADD x y *)
-                  0 ∈ r0
-                  -> cstZZ rv rc (Z.add_with_get_carry_full s (cstZ r0 0) x y)
-                     = dlet2 rv rc (Z.add_get_carry_full s x y))
-            ; (forall rv rc rs s rc' c' r0x r0y, (* ADC 0 0 -> (ADX 0 0, 0) *) (* except we don't do ADX, because C stringification doesn't handle it *)
-                  0 ∈ r0x -> 0 ∈ r0y -> (rc' <= r[0~>s-1])%zrange -> 0 ∈ rc -> s ∈ rs
-                  -> cstZZ rv rc (Z.add_with_get_carry_full (cstZ rs ('s)) (cstZ rc' c') (cstZ r0x 0) (cstZ r0y 0))
-                     = (dlet vc := (cstZZ rv rc (Z.add_with_get_carry_full (cstZ rs ('s)) (cstZ rc' c') (cstZ r0x 0) (cstZ r0y 0))) in
-                            (cstZ rv (fst (cstZZ rv rc vc)),
-                             cstZ r[0~>0] 0)))
+              ; (forall rv rc s r0 x y, (* carry = 0: ADC x y -> ADD x y *)
+                    0 ∈ r0
+                    -> cstZZ rv rc (Z.add_with_get_carry_full s (cstZ r0 0) x y)
+                       = dlet2 rv rc (Z.add_get_carry_full s x y))
+              ; (forall rv rc rs s rc' c' r0x r0y, (* ADC 0 0 -> (ADX 0 0, 0) *) (* except we don't do ADX, because C stringification doesn't handle it *)
+                    0 ∈ r0x -> 0 ∈ r0y -> (rc' <= r[0~>s-1])%zrange -> 0 ∈ rc -> s ∈ rs
+                    -> cstZZ rv rc (Z.add_with_get_carry_full (cstZ rs ('s)) (cstZ rc' c') (cstZ r0x 0) (cstZ r0y 0))
+                       = (dlet vc := (cstZZ rv rc (Z.add_with_get_carry_full (cstZ rs ('s)) (cstZ rc' c') (cstZ r0x 0) (cstZ r0y 0))) in
+                              (cstZ rv (fst (cstZZ rv rc vc)),
+                               cstZ r[0~>0] 0)))
 
-            (* let-bind any adc/sbb/mulx *)
-            ; (forall rv rc s c x y,
-                  cstZZ rv rc (Z.add_with_get_carry_full s c x y)
-                  = dlet2 rv rc (Z.add_with_get_carry_full s c x y))
-            ; (forall rv c x y,
-                  cstZ rv (Z.add_with_carry c x y)
-                  = (dlet vc := cstZ rv (Z.add_with_carry c x y) in
-                         cstZ rv vc))
-            ; (forall rv rc s x y,
-                  cstZZ rv rc (Z.add_get_carry_full s x y)
-                  = dlet2 rv rc (Z.add_get_carry_full s x y))
-            ; (forall rv rc s c x y,
-                  cstZZ rv rc (Z.sub_with_get_borrow_full s c x y)
-                  = dlet2 rv rc (Z.sub_with_get_borrow_full s c x y))
-            ; (forall rv rc s x y,
-                  cstZZ rv rc (Z.sub_get_borrow_full s x y)
-                  = dlet2 rv rc (Z.sub_get_borrow_full s x y))
-            ; (forall rv rc s x y,
-                  cstZZ rv rc (Z.mul_split s x y)
-                  = dlet2 rv rc (Z.mul_split s x y))
-           ]%Z%zrange
+                  (* let-bind any adc/sbb/mulx *)
+              ; (forall rv rc s c x y,
+                    cstZZ rv rc (Z.add_with_get_carry_full s c x y)
+                    = dlet2 rv rc (Z.add_with_get_carry_full s c x y))
+              ; (forall rv c x y,
+                    cstZ rv (Z.add_with_carry c x y)
+                    = (dlet vc := cstZ rv (Z.add_with_carry c x y) in
+                           cstZ rv vc))
+              ; (forall rv rc s x y,
+                    cstZZ rv rc (Z.add_get_carry_full s x y)
+                    = dlet2 rv rc (Z.add_get_carry_full s x y))
+              ; (forall rv rc s c x y,
+                    cstZZ rv rc (Z.sub_with_get_borrow_full s c x y)
+                    = dlet2 rv rc (Z.sub_with_get_borrow_full s c x y))
+              ; (forall rv rc s x y,
+                    cstZZ rv rc (Z.sub_get_borrow_full s x y)
+                    = dlet2 rv rc (Z.sub_get_borrow_full s x y))
+              ; (forall rv rc s x y,
+                    cstZZ rv rc (Z.mul_split s x y)
+                    = dlet2 rv rc (Z.mul_split s x y))
+             ]
          ; mymap
              do_again
              [ (* [do_again], so that if one of the arguments is concrete, we automatically get the rewrite rule for [Z_cast] applying to it *)
@@ -435,8 +437,8 @@ Definition arith_with_casts_rewrite_rulesT : list (bool * Prop)
          ; mymap
              dont_do_again
              [(forall r1 r2 x, (r2 <= n r1)%zrange -> cstZ r1 (cstZ r2 x) = cstZ r2 x)
-             ]%Z%zrange
-        ].
+             ]
+        ]%Z%zrange.
 
 Definition strip_literal_casts_rewrite_rulesT : list (bool * Prop)
   := [dont_do_again (forall rx x, x ∈ rx -> cstZ rx ('x) = 'x)]%Z%zrange.
@@ -787,13 +789,14 @@ Section with_bitwidth.
   Context (bitwidth : Z)
           (lgcarrymax : Z).
 
+  Local Notation singlewidth_range := r[0~>2^bitwidth - 1]%zrange.
   Local Notation doublewidth := (cstZ r[0~>2^(2*bitwidth) - 1]).
-  Local Notation singlewidth := (cstZ r[0~>2^bitwidth - 1]).
+  Local Notation singlewidth := (cstZ singlewidth_range).
   Local Notation carrymax := (2^lgcarrymax-1).
   Local Notation carrywidth := (cstZ r[0~>carrymax]).
-  Local Notation singlewidth_carry := (cstZZ r[0~>2^bitwidth - 1] r[0~>carrymax]).
-  Local Notation alt_singlewidth_carry := (cstZZ r[0~>2^bitwidth - 1] r[0~>2^bitwidth-1]).
-  Local Notation pairsinglewidth := (cstZZ r[0~>2^bitwidth - 1] r[0~>2^bitwidth - 1]).
+  Local Notation singlewidth_carry := (cstZZ singlewidth_range r[0~>carrymax]).
+  Local Notation alt_singlewidth_carry := (cstZZ singlewidth_range r[0~>2^bitwidth-1]).
+  Local Notation pairsinglewidth := (cstZZ singlewidth_range singlewidth_range).
   Local Notation cstZsingle_to_double l h
     := (doublewidth (Z.combine_at_bitwidth ('bitwidth) (singlewidth l) (singlewidth h))).
   Local Notation cstZsingle_to_double_pair lh
@@ -884,6 +887,10 @@ Section with_bitwidth.
              dont_do_again
              [(forall A B x y, @fst A B (x, y) = x)
               ; (forall A B x y, @snd A B (x, y) = y)
+              ; ((** At this point, we need zeros to be casted up to bitwidth range, rather than to 0-range, so we add a rule to widen the casts *)
+               forall c rc,
+                 c ∈ rc -> c ∈ singlewidth_range -> rc <> singlewidth_range
+                 -> cstZ rc ('c) = singlewidth ('c))
               ; (forall x y rpow2_bitwidth,
                   0 <= lgcarrymax <= bitwidth -> 2^bitwidth ∈ rpow2_bitwidth
                   -> singlewidth_carry (Z.add_get_carry_full (cstZ rpow2_bitwidth ('(2^bitwidth))) (singlewidth x) (singlewidth y))
@@ -923,5 +930,10 @@ Section with_bitwidth.
                               dlet high := singlewidth (Z.mul_high (cstZ rpow2_bitwidth ('(2^bitwidth))) (singlewidth x) (singlewidth y)) in
                               (singlewidth low, singlewidth high)))
              ]
+           ; mymap
+               do_again
+               [ (* [do_again], so that if one of the arguments is concrete, we automatically get the rewrite rule for [Z_cast] applying to it *)
+                 (forall rx ry x y, cstZZ rx ry (x, y) = (cstZ rx x, cstZ ry y))
+               ]
           ]%Z%zrange.
 End with_bitwidth.
