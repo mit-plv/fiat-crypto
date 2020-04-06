@@ -292,15 +292,15 @@ Module Compilers.
       Notation "## x" := (Compilers.ident_Literal (t:=base.reify_base_type_of x) x) (only parsing) : ident_scope.
       Notation "## x" := (expr.Ident (Compilers.ident_Literal x)) (only printing) : expr_scope.
       Notation "## x" := (smart_Literal (base_interp:=base_interp) (t:=base.reify_type_of x) x) (only parsing) : expr_scope.
-      Notation "# x" := (expr.Ident x) : expr_pat_scope.
+      Notation "# x" := (expr.Ident x) (only parsing) : expr_pat_scope.
       Notation "# x" := (@expr.Ident base.type _ _ _ x) : expr_scope.
-      Notation "x @ y" := (expr.App x%expr_pat y%expr_pat) : expr_pat_scope.
+      Notation "x @ y" := (expr.App x%expr_pat y%expr_pat) (only parsing) : expr_pat_scope.
       Notation "( x , y , .. , z )" := (expr.App (expr.App (#Compilers.ident_pair) .. (expr.App (expr.App (#Compilers.ident_pair) x%expr) y%expr) .. ) z%expr) : expr_scope.
-      Notation "( x , y , .. , z )" := (expr.App (expr.App (#Compilers.ident_pair)%expr_pat .. (expr.App (expr.App (#Compilers.ident_pair)%expr_pat x%expr_pat) y%expr_pat) .. ) z%expr_pat) : expr_pat_scope.
+      Notation "( x , y , .. , z )" := (expr.App (expr.App (#Compilers.ident_pair)%expr_pat .. (expr.App (expr.App (#Compilers.ident_pair)%expr_pat x%expr_pat) y%expr_pat) .. ) z%expr_pat) (only parsing) : expr_pat_scope.
       Notation "x :: y" := (#Compilers.ident_cons @ x @ y)%expr : expr_scope.
       Notation "[ ]" := (#Compilers.ident_nil)%expr : expr_scope.
-      Notation "x :: y" := (#Compilers.ident_cons @ x @ y)%expr_pat : expr_pat_scope.
-      Notation "[ ]" := (#Compilers.ident_nil)%expr_pat : expr_pat_scope.
+      Notation "x :: y" := (#Compilers.ident_cons @ x @ y)%expr_pat (only parsing) : expr_pat_scope.
+      Notation "[ ]" := (#Compilers.ident_nil)%expr_pat (only parsing) : expr_pat_scope.
       Notation "[ x ]" := (x :: [])%expr : expr_scope.
       Notation "[ x ; y ; .. ; z ]" := (#Compilers.ident_cons @ x @ (#Compilers.ident_cons @ y @ .. (#Compilers.ident_cons @ z @ #Compilers.ident_nil) ..))%expr : expr_scope.
       Notation "ls [[ n ]]"
