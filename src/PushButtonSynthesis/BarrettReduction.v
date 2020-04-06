@@ -195,6 +195,7 @@ Section rbarrett_red.
                  | rewrite Z.pow_mul_r by lia ].
 
   Local Strategy -100 [barrett_red]. (* needed for making Qed not take forever *)
+  Local Opaque expr.Interp. (* to prevent [autorewrite with interp_gen_cache] from taking forever *)
   Lemma barrett_red_correct res (Hres : barrett_red = Success res)
     : barrett_red_correct machine_wordsize M (API.Interp res).
   Proof using M curve_good.
@@ -202,7 +203,9 @@ Section rbarrett_red.
     assert (1 < machine_wordsize) by apply use_curve_good.
     pose proof (Z.mod_pos_bound mu (2^machine_wordsize) ltac:(lia)).
     rewrite <-Fancy.fancy_reduce_correct with (mu := muLow + 2^machine_wordsize) (width:=machine_wordsize) (sz:=1%nat) (mut:=[muLow;1]) (Mt:=[M]) by solve_barrett_red_preconditions.
+    remember Fancy.fancy_reduce eqn:?. (* to prevent [reflexivity] from taking forever *)
     prove_correctness' ltac:(fun _ => idtac) use_curve_good.
+    { subst; reflexivity. }
     { cbv [ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by bound is_bounded_by_bool value_range upper lower]. rewrite Bool.andb_true_iff, !Z.leb_le. lia. }
     { cbv [ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by bound is_bounded_by_bool value_range upper lower]. rewrite Bool.andb_true_iff, !Z.leb_le. lia. }
   Qed.
