@@ -355,10 +355,12 @@ $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%.hs) : %.hs : %.v src/haskell.sed
 # pass -w -20 to disable the unused argument warning
 # unix package needed for Unix.gettimeofday for the perf_* binaries
 $(STANDALONE_OCAML:%=src/ExtractionOCaml/%) : % : %.ml
-	$(TIMER) ocamlfind ocamlopt -package unix -linkpkg -w -20 -o $@ $<
+	$(SHOW)'OCAMLOPT $< -o $@'
+	$(HIDE)$(TIMER) ocamlfind ocamlopt -package unix -linkpkg -w -20 -o $@ $<
 
 $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%) : % : %.hs
-	$(TIMER) $(GHC) $(GHCFLAGS) -o $@ $<
+	$(SHOW)'GHC $< -o $@'
+	$(HIDE)$(TIMER) $(GHC) $(GHCFLAGS) -o $@ $<
 
 standalone: standalone-haskell standalone-ocaml
 standalone-haskell: $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%)
