@@ -31,6 +31,70 @@ Local Coercion QArith_base.inject_Z : Z >-> Q.
 Local Coercion Z.pos : positive >-> Z.
 
 Local Existing Instance default_low_level_rewriter_method.
+(*Require Import Crypto.Bedrock.Stringification.*)
+Module debugging_p256_mul_bedrock2.
+  Import Crypto.PushButtonSynthesis.WordByWordMontgomery.
+  Import Stringification.C.
+  Import Stringification.C.Compilers.
+  Import Stringification.C.Compilers.ToString.
+  Section __.
+    Local Existing Instance (*OutputBedrock2API*) C.OutputCAPI.
+    Local Instance static : static_opt := false.
+    Local Instance : internal_static_opt := true.
+    Local Instance : emit_primitives_opt := false.
+    Local Instance : use_mul_for_cmovznz_opt := false.
+    Local Instance : widen_carry_opt := true.
+    Local Instance : widen_bytes_opt := true.
+    Local Instance : only_signed_opt := false.
+    Local Instance : should_split_mul_opt := true.
+    Local Instance : should_split_multiret_opt := true.
+
+    Definition m := (2^64 - 1)%Z. (*(2^256 - 2^224 + 2^192 + 2^96 - 1)%Z.*)
+    Definition machine_wordsize := 64.
+
+    Import IR.Compilers.ToString.
+
+    Goal True.
+      pose (smul m machine_wordsize "p256") as v.
+      Import IdentifiersBasicGENERATED.Compilers.
+      cbv [smul] in v.
+      set (k := mul _ _) in (value of v).
+      vm_compute in v.
+      clear v.
+      cbv [mul] in k.
+      cbv -[Pipeline.BoundsPipeline WordByWordMontgomeryReificationCache.WordByWordMontgomery.reified_mul_gen] in k.
+      cbv [Pipeline.BoundsPipeline Rewriter.Util.LetIn.Let_In] in k.
+      set (k' := CheckedPartialEvaluateWithBounds _ _ _ _ _) in (value of k).
+      vm_compute in k'.
+      subst k'; cbv beta iota zeta in k.
+      cbv [Pipeline.RewriteAndEliminateDeadAndInline] in k.
+      set (k' := ArithWithCasts.Compilers.RewriteRules.RewriteArithWithCasts _ _) in (value of k).
+      vm_compute in k'.
+      Notation uint64 := (expr.Ident (ident_Literal r[0 ~> 18446744073709551615]%zrange)).
+      Notation "'(uint64)' x" := (#ident_Z_cast @ uint64 @ x)%expr (at level 0) : expr_scope.
+      Notation "'(uint64,uint64)' x" := (#ident_Z_cast2 @ (uint64, uint64) @ x)%expr (at level 0) : expr_scope.
+      subst k'; cbv beta iota zeta in k.
+      cbv [Rewriter.Util.LetIn.Let_In] in k.
+      set (k' := UnderLets.LetBindReturn _ _) in (value of k) at 1.
+      vm_compute in k'; subst k'.
+      set (k' := ArithWithCasts.Compilers.RewriteRules.RewriteArithWithCasts _ _) in (value of k).
+      vm_compute in k'.
+      subst k'; cbv beta iota zeta in k.
+      set (k' := CheckedPartialEvaluateWithBounds _ _ _ _ _) in (value of k).
+      vm_compute in k'.
+      subst k'; cbv beta iota zeta in k.
+      set (k' := MulSplit.Compilers.RewriteRules.RewriteMulSplit _ _ _ _) in (value of k) at 1.
+      vm_compute in k'.
+      subst k'.
+      set (k' := MultiRetSplit.Compilers.RewriteRules.RewriteMultiRetSplit _ _ _ _) in (value of k) at 2.
+      vm_compute in k'.
+      vm_compute in k.
+      vm_compute in k'.
+      Import IdentifiersBasicGENERATED.Compilers.
+      subst k'; cbv beta iota zeta in k.
+    Abort.
+  End __.
+End debugging_p256_mul_bedrock2.
 
 Module debugging_25519_to_bytes_bedrock2.
   Import Crypto.PushButtonSynthesis.UnsaturatedSolinas.
