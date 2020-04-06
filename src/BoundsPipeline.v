@@ -417,6 +417,8 @@ Module Pipeline.
              (translate_to_fancy : option to_fancy_args)
              (possible_values : list Z)
              (relax_zrange := relax_zrange_gen only_signed possible_values)
+             ((** convert adc/sbb which generates no carry to add/sub iff we're not fancy *)
+               adc_no_carry_to_add := match translate_to_fancy with Some _ => false | None => true end)
              {t}
              (E : Expr t)
              arg_bounds
@@ -441,7 +443,7 @@ Module Pipeline.
       let E'
           := match E' with
              | inl E
-               => let E := RewriteAndEliminateDeadAndInline (RewriteRules.RewriteArithWithCasts opts) with_dead_code_elimination with_subst01 E in
+               => let E := RewriteAndEliminateDeadAndInline (RewriteRules.RewriteArithWithCasts adc_no_carry_to_add opts) with_dead_code_elimination with_subst01 E in
                   dlet_nd e := ToFlat E in
                   let E := FromFlat e in
                   let E' := CheckedPartialEvaluateWithBounds relax_zrange true (* strip pre-existing casts *) E arg_bounds out_bounds in
@@ -466,7 +468,7 @@ Module Pipeline.
                   | None, None => false
                   end in
            let E := if rewrote_E_so_should_rewrite_arith_again
-                    then RewriteAndEliminateDeadAndInline (RewriteRules.RewriteArithWithCasts opts) with_dead_code_elimination with_subst01 E
+                    then RewriteAndEliminateDeadAndInline (RewriteRules.RewriteArithWithCasts adc_no_carry_to_add opts) with_dead_code_elimination with_subst01 E
                     else E in
 
            let E := match translate_to_fancy with

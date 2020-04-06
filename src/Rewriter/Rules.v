@@ -279,7 +279,7 @@ Definition arith_rewrite_rulesT (max_const_val : Z) : list (bool * Prop)
            ]
         ].
 
-Definition arith_with_casts_rewrite_rulesT : list (bool * Prop)
+Definition arith_with_casts_rewrite_rulesT (adc_no_carry_to_add : bool) : list (bool * Prop)
   := Eval cbv [myapp mymap myflatten] in
       myflatten
         [mymap
@@ -317,6 +317,27 @@ Definition arith_with_casts_rewrite_rulesT : list (bool * Prop)
                   -> Z.mul_split (cstZ rs ('s)) (cstZ ry y) (cstZ r1 1)
                      = (cstZ ry y, cstZ r[0~>0] 0))
            ]
+         ; mymap
+             do_again
+             [ (* [do_again], so that we can trigger add/sub rules on the output *)
+               (** flatten add/sub which incurs no carry/borrow *)
+               (forall rv rs s rx x ry y,
+                   adc_no_carry_to_add = true -> s ∈ rs -> (n rx + n ry <= r[0~>s-1])%zrange
+                   -> cstZZ rv r[0~>0] (Z.add_get_carry_full (cstZ rs ('s)) (cstZ rx x) (cstZ ry y))
+                      = (cstZ rv (cstZ rx x + cstZ ry y), cstZ r[0~>0] ('0)))
+               ; (forall rv rs s rc c rx x ry y,
+                     adc_no_carry_to_add = true -> s ∈ rs -> (n rc + n rx + n ry <= r[0~>s-1])%zrange
+                     -> cstZZ rv r[0~>0] (Z.add_with_get_carry_full (cstZ rs ('s)) (cstZ rc c) (cstZ rx x) (cstZ ry y))
+                        = (cstZ rv (cstZ rc c + cstZ rx x + cstZ ry y), cstZ r[0~>0] ('0)))
+               ; (forall rv rs s rx x ry y,
+                     adc_no_carry_to_add = true -> s ∈ rs -> (n rx - n ry <= r[0~>s-1])%zrange
+                     -> cstZZ rv r[0~>0] (Z.sub_get_borrow_full (cstZ rs ('s)) (cstZ rx x) (cstZ ry y))
+                        = (cstZ rv (cstZ rx x - cstZ ry y), (cstZ r[0~>0] ('0))))
+               ; (forall rv rs s rc c rx x ry y,
+                     adc_no_carry_to_add = true -> s ∈ rs -> (n rx - n ry - n rc <= r[0~>s-1])%zrange
+                     -> cstZZ rv r[0~>0] (Z.sub_with_get_borrow_full (cstZ rs ('s)) (cstZ rc c) (cstZ rx x) (cstZ ry y))
+                        = (cstZ rv (cstZ rx x - cstZ ry y - cstZ rc c), (cstZ r[0~>0] ('0))))
+             ]%Z%zrange
          ; mymap
              dont_do_again
              [(forall rv rc s rny ry y x,

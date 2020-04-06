@@ -165,6 +165,41 @@ Proof using Type.
   cbv [is_tighter_than_bool]; intro; split_andb; Z.ltb_to_lt; split; assumption.
 Qed.
 
+Local Ltac saturate_add_sub_bounds_step :=
+  match goal with
+  | [ H : (ZRange.normalize ?r <=? r[0~>?s-1])%zrange = true |- context[?v mod ?s] ]
+    => unique assert (is_bounded_by_bool v (ZRange.normalize r) = true -> 0 <= v <= s - 1)
+      by (let H' := fresh in
+          intros H';
+          eapply ZRange.is_bounded_by_of_is_tighter_than in H; [ apply unfold_is_bounded_by_bool in H; exact H | exact H' ])
+  | [ H : is_bounded_by_bool (?x + ?y) (ZRange.normalize (ZRange.add ?rx ?ry)) = true -> ?T |- _ ]
+    => unique assert (is_bounded_by_bool x rx = true -> is_bounded_by_bool y ry = true -> T)
+      by (let Hx := fresh in
+          let Hy := fresh in
+          intros Hx Hy; apply H; clear -Hx Hy;
+          rewrite !ZRange.normalize_add in *; now apply ZRange.is_bounded_by_bool_add)
+  | [ H : is_bounded_by_bool (?x + ?y) (ZRange.add ?rx ?ry) = true -> ?T |- _ ]
+    => unique assert (is_bounded_by_bool x rx = true -> is_bounded_by_bool y ry = true -> T)
+      by (let Hx := fresh in
+          let Hy := fresh in
+          intros Hx Hy; apply H; clear -Hx Hy;
+          now apply ZRange.is_bounded_by_bool_add)
+  | [ H : is_bounded_by_bool (?x - ?y) (ZRange.normalize (ZRange.sub ?rx ?ry)) = true -> ?T |- _ ]
+    => unique assert (is_bounded_by_bool x rx = true -> is_bounded_by_bool y ry = true -> T)
+      by (let Hx := fresh in
+          let Hy := fresh in
+          intros Hx Hy; apply H; clear -Hx Hy;
+          rewrite !ZRange.normalize_sub in *; now apply ZRange.is_bounded_by_bool_sub)
+  | [ H : is_bounded_by_bool (?x - ?y) (ZRange.sub ?rx ?ry) = true -> ?T |- _ ]
+    => unique assert (is_bounded_by_bool x rx = true -> is_bounded_by_bool y ry = true -> T)
+      by (let Hx := fresh in
+          let Hy := fresh in
+          intros Hx Hy; apply H; clear -Hx Hy;
+          now apply ZRange.is_bounded_by_bool_sub)
+  | [ H : is_bounded_by_bool ?x ?r = true, H' : is_bounded_by_bool ?x ?r = true -> _ |- _ ]
+    => unique pose proof (H' H)
+  end.
+
 Local Ltac interp_good_t_step_arith :=
   first [ lazymatch goal with
           | [ |- ?x = ?x ] => reflexivity
@@ -210,6 +245,8 @@ Local Ltac interp_good_t_step_arith :=
             => cbv [Z.ltz];
                apply unfold_is_bounded_by_bool in Hx;
                apply unfold_is_bounded_by_bool in Hy
+          | [ |- context[ident.cast r[0~>0] ?v] ]
+            => rewrite (ident.platform_specific_cast_0_is_mod 0 v) by reflexivity
           end
         | progress intros
         | progress subst
@@ -327,7 +364,8 @@ Local Ltac interp_good_t_step_arith :=
           | [ |- - ident.cast (-?r) (- (?x / ?y)) = ident.cast ?r (?x' / ?y) ]
             => tryif constr_eq x x' then fail else replace x with x' by lia
           | [ |- _ = _ :> BinInt.Z ] => progress autorewrite with zsimplify_fast
-          end ].
+          end
+        | saturate_add_sub_bounds_step ].
 
 Local Ltac remove_casts :=
   repeat match goal with
@@ -484,8 +522,8 @@ Local Ltac do_clear_nia x y r H H' :=
     => clear -Hx Hy Hm Hr H' H; nia
   end.
 
-Lemma arith_with_casts_rewrite_rules_proofs
-  : PrimitiveHList.hlist (@snd bool Prop) arith_with_casts_rewrite_rulesT.
+Lemma arith_with_casts_rewrite_rules_proofs (adc_no_carry_to_add : bool)
+  : PrimitiveHList.hlist (@snd bool Prop) (arith_with_casts_rewrite_rulesT adc_no_carry_to_add).
 Proof using Type.
   start_proof; auto; intros; try lia.
   all: repeat interp_good_t_step_related.

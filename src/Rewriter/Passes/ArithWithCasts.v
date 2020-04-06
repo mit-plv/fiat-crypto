@@ -16,7 +16,9 @@ Module Compilers.
 
   Module Import RewriteRules.
     Section __.
-      Definition VerifiedRewriterArithWithCasts : VerifiedRewriter_with_args false false true arith_with_casts_rewrite_rules_proofs.
+      Context (adc_no_carry_to_add : bool).
+
+      Definition VerifiedRewriterArithWithCasts : VerifiedRewriter_with_args false false true (arith_with_casts_rewrite_rules_proofs adc_no_carry_to_add).
       Proof using All. make_rewriter. Defined.
 
       Definition default_opts := Eval hnf in @default_opts VerifiedRewriterArithWithCasts.
