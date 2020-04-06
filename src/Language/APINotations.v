@@ -5,6 +5,7 @@ Require Import Coq.Classes.Morphisms.
 Require Import Coq.Relations.Relation_Definitions.
 Require Import Crypto.Language.PreExtra.
 Require Import Rewriter.Language.Language.
+Require Import Rewriter.Language.Reify.
 Require Import Crypto.Language.IdentifiersBasicGENERATED.
 Require Import Crypto.Util.Tuple Crypto.Util.Prod Crypto.Util.LetIn.
 Require Import Crypto.Util.ListUtil Coq.Lists.List Crypto.Util.NatUtil.
@@ -24,12 +25,14 @@ Require Import Crypto.Util.Tactics.Head.
 Import Coq.Lists.List ListNotations. Local Open Scope bool_scope. Local Open Scope Z_scope.
 Export Language.Pre.
 Export Language.
+Export Language.Reify.
 Export IdentifiersBasicGENERATED.
 
 Import EqNotations.
 Module Compilers.
   Export Language.Pre.
   Export Language.Compilers.
+  Export Reify.Compilers.
   Import IdentifiersBasicLibrary.Compilers.
   Import IdentifiersBasicLibrary.Compilers.Basic.
   Import IdentifiersBasicGenerate.Compilers.Basic.Tactic.
@@ -323,12 +326,19 @@ Module Compilers.
   Export ident.Notations.
   Notation ident := IdentifiersBasicGENERATED.Compilers.ident (only parsing).
 
+  Definition from_flat_for_reify : forall t, GeneralizeVar.Flat.expr t -> Expr t
+    := Eval cbv [HelperLemmas.from_flat_of_exprExtraInfo
+                   Classes.base Classes.ident Classes.try_make_transport_cps Classes.defaultExpr Classes.base_interp Classes.defaultBase Classes.buildIdent Classes.try_make_transport_base_cps
+                   exprInfo exprExtraInfo
+                   GeneralizeVar.FromFlat] in
+        @HelperLemmas.from_flat_of_exprExtraInfo exprInfo exprExtraInfo.
+
   Ltac reify var term :=
-    expr.reify constr:(base.type) ident ltac:(reify_base_type) ltac:(reify_ident) var term.
+    expr.reify constr:(base.type) ident from_flat_for_reify ltac:(reify_base_type) ltac:(reify_ident) var term.
   Ltac Reify term :=
-    expr.Reify constr:(base.type) ident ltac:(reify_base_type) ltac:(reify_ident) term.
+    expr.Reify constr:(base.type) ident from_flat_for_reify ltac:(reify_base_type) ltac:(reify_ident) term.
   Ltac Reify_rhs _ :=
-    expr.Reify_rhs constr:(base.type) ident ltac:(reify_base_type) ltac:(reify_ident) (@base.interp) (@ident_interp) ().
+    expr.Reify_rhs constr:(base.type) ident from_flat_for_reify ltac:(reify_base_type) ltac:(reify_ident) (@base.interp) (@ident_interp) ().
 
   Global Hint Extern 1 (@expr.Reified_of _ _ _ _ ?t ?v ?rv)
   => cbv [expr.Reified_of]; Reify_rhs (); reflexivity : typeclass_instances.
