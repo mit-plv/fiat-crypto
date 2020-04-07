@@ -7,9 +7,11 @@ Import ListNotations.
 Local Open Scope string_scope.
 Local Open Scope list_scope.
 
+(** N.B. We put bedrock2 first so that the default for these binaries
+    is bedrock2 *)
 Local Instance bedrock2_supported_languages : ForExtraction.supported_languagesT
-  := ForExtraction.default_supported_languages
-       ++ [("bedrock2", OutputBedrock2API)].
+  := [("bedrock2", OutputBedrock2API)]
+       ++ ForExtraction.default_supported_languages.
 
 Module UnsaturatedSolinas.
   Definition main : IO_unit
