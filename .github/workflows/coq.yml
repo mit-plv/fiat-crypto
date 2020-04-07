@@ -69,3 +69,10 @@ jobs:
         path: src/ExtractionHaskell
     - name: display timing info
       run: cat time-of-build-pretty.log
+    - name: display per-line timing info
+      run: etc/ci/github-actions-display-per-line-timing.sh
+    - name: upload timing and .vo info
+      uses: actions/upload-artifact@v1
+      with:
+        name: build-outputs
+        path: .

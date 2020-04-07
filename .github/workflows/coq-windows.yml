@@ -97,3 +97,11 @@ jobs:
     - name: display timing info
       run: C:\cygwin64\bin\bash -l -c 'cd "%cd%"; cat time-of-build-pretty.log'
       shell: cmd
+    - name: display per-line timing info
+      run: C:\cygwin64\bin\bash -l -c 'cd "%cd%"; etc/ci/github-actions-display-per-line-timing.sh'
+      shell: cmd
+    - name: upload timing and .vo info
+      uses: actions/upload-artifact@v1
+      with:
+        name: build-outputs
+        path: .
