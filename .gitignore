@@ -29,6 +29,7 @@ fiat-java/doc
 *.vo
 *.vos
 *.vok
+*.v.timing
 CoqMakefile.conf
 Makefile.bak
 Makefile.coq
