@@ -180,6 +180,8 @@ Module ForExtraction.
 
   Class supported_languagesT := supported_languages : list (string * ToString.OutputLanguageAPI).
 
+  (** N.B. The order matters, as the first element of the supported
+      languages list is used as the default. *)
   Definition default_supported_languages : supported_languagesT
     := [("C", ToString.OutputCAPI)
        ; ("Rust", Rust.OutputRustAPI)
@@ -189,9 +191,10 @@ Module ForExtraction.
   Definition curve_description_help
     := "  curve_description       A string which will be prefixed to every function name generated".
   Definition lang_help {supported_languages : supported_languagesT}
-    := "  LANGUAGE                The output language code should be emitted in.  Defaults to C if no language is given.  Case-sensitive."
+    := let supported_language_names := List.map (@fst _ _) supported_languages in
+       "  LANGUAGE                The output language code should be emitted in.  Defaults to " ++ List.hd "C" supported_language_names ++ " if no language is given.  Case-sensitive."
          ++ String.NewLine ++
-       "                            Valid options are: " ++ String.concat ", " (List.map (@fst _ _) supported_languages).
+       "                            Valid options are: " ++ String.concat ", " supported_language_names.
   Definition total_help_indent
     := "                          ".
   Definition static_and_help
@@ -478,8 +481,8 @@ Module ForExtraction.
         := let '(argv, opts) := argv_to_startswith_opt_and_argv "--lang=" argv in
            (argv,
             match opts with
-            | [] => inl (* if no is --lang=<something known>, default to C *)
-                      ToString.OutputCAPI
+            | [] => inl (* if no is --lang=<something known>, default to the first element of the list, or else C if supported languages are empty *)
+                      (List.hd ToString.OutputCAPI (List.map (@snd _ _) supported_languages))
             | [lang]
               => match List.filter (fun '(known_lang, _) => String.eqb lang known_lang) supported_languages with
                  | [] => inr ["Unknown language " ++ lang ++ " requested; supported languages are " ++ String.concat ", " (List.map (@fst _ _) supported_languages)]
