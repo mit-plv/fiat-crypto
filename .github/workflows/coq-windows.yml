@@ -72,6 +72,7 @@ jobs:
         wmic cpu list /format:list
         C:\cygwin64\bin\bash -l -c 'git config -l'
         C:\cygwin64\bin\bash -l -c 'git config --global -l'
+        C:\cygwin64\bin\bash -l -c 'ocamlc -config'
         C:\cygwin64\bin\bash -l -c 'coqc --config'
         C:\cygwin64\bin\bash -l -c 'coqc --version'
         true | C:\cygwin64\bin\bash -l -c 'coqtop'

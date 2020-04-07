@@ -34,9 +34,11 @@ jobs:
         sudo apt-get install ocaml-findlib $COQ_PACKAGE -y --allow-unauthenticated
     - name: echo build params
       run: |
+        set -e
         lscpu
         uname -a
         lsb_release -a
+        ocamlc -config
         coqc --version
         echo | coqtop
     - uses: actions/checkout@v2

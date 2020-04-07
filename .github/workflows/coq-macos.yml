@@ -58,11 +58,14 @@ jobs:
 
     - name: echo build params
       run: |
+        set -e
+        eval $(opam env)
         sysctl -n machdep.cpu.brand_string
         sysctl -a | grep machdep.cpu
         uname -a
         sw_vers -productVersion
         system_profiler SPSoftwareDataType
+        ocamlc -config
         coqc --version
         echo | coqtop
     - uses: actions/checkout@v2
