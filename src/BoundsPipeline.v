@@ -17,7 +17,9 @@ Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.BasicLemmas.
 Require Import Crypto.Util.ZRange.Show.
 Require Import Crypto.Util.Sum.
+Require Import Crypto.Util.Tactics.ConstrFail.
 Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.Tactics.SetoidSubst.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.HasBody.
 Require Import Crypto.Util.Tactics.Head.
@@ -364,6 +366,7 @@ Module Pipeline.
        | Error msg => msg
        end.
 
+  Local Set Primitive Projections.
   Record to_fancy_args := { invert_low : Z (*log2wordmax*) -> Z -> option Z ; invert_high : Z (*log2wordmax*) -> Z -> option Z ; value_range : zrange ; flag_range : zrange }.
 
   Definition RewriteAndEliminateDeadAndInline {t}
@@ -633,6 +636,148 @@ Module Pipeline.
 
   Hint Rewrite @Interp_RewriteAndEliminateDeadAndInline : interp interp_extra.
 
+  Local Notation interp_correctT V1 V2 arg_bounds
+    := (forall arg1 arg2
+               (Harg12 : type.and_for_each_lhs_of_arrow (@type.eqv) arg1 arg2)
+               (Harg1 : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds arg1 = true),
+           type.app_curried V1 arg1 = type.app_curried V2 arg2)
+         (only parsing).
+
+  Local Lemma interp_correctT_trans {t} (arg_bounds : type.for_each_lhs_of_arrow _ t)
+    : Transitive (fun x y => interp_correctT x y arg_bounds).
+  Proof using Type.
+    intros V1 V2 V3 H1 H2; intros arg1 arg2 Harg12 Harg1; etransitivity; [ eapply H1 | eapply H2 ]; clear H1 H2; try eassumption.
+    { etransitivity; (idtac + symmetry); eassumption. }
+    { rewrite <- Harg12; assumption. }
+  Qed.
+
+  Local Lemma correct_of_final_iff_correct_of_initial {t} {rv intermediate e : Expr t} {arg_bounds out_bounds}
+        (Hintermediate : interp_correctT (Interp intermediate) (Interp e) arg_bounds)
+        (Hwf : Wf e)
+    : ((forall arg1 arg2
+               (Harg12 : type.and_for_each_lhs_of_arrow (@type.eqv) arg1 arg2)
+               (Harg1 : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds arg1 = true),
+           ZRange.type.base.option.is_bounded_by out_bounds (type.app_curried (Interp rv) arg1) = true
+           /\ type.app_curried (Interp rv) arg1 = type.app_curried (Interp intermediate) arg2)
+       /\ Wf rv)
+      <-> ((forall arg1 arg2
+                   (Harg12 : type.and_for_each_lhs_of_arrow (@type.eqv) arg1 arg2)
+                   (Harg1 : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds arg1 = true),
+               ZRange.type.base.option.is_bounded_by out_bounds (type.app_curried (Interp e) arg1) = true
+               /\ type.app_curried (Interp rv) arg1 = type.app_curried (Interp e) arg2)
+           /\ Wf rv).
+  Proof using Type.
+    split; intros [H1 H2]; (split; [ | exact H2 ]);
+      repeat (let x := fresh in intro x; specialize (H1 x));
+      destruct H1 as [H1' H2']; (split; [ rewrite <- H1', ?H2'; apply f_equal | ]);
+        rewrite ?H2';
+        try (erewrite ?Hintermediate; [ | (idtac + symmetry); eassumption | ]);
+        try reflexivity.
+    all: repeat match goal with
+                | [ |- type.app_curried ?f ?x = type.app_curried ?f ?y ]
+                  => apply type.app_curried_Proper; [ now apply expr.Wf_Interp_Proper | (idtac + symmetry); assumption ]
+                | [ H' : ?R ?y ?x |- type.andb_bool_for_each_lhs_of_arrow _ _ ?x = true ]
+                  => rewrite <- H'; assumption
+                end.
+  Qed.
+
+  (** It would be nice if [eauto] were faster, cf
+      COQBUG(https://github.com/coq/coq/issues/12052).  It doesn't
+      share subterms, though, so we carefully build the proof term
+      with forward reasoning *)
+  Local Ltac fwd Hrv Hwf Hinterp :=
+    cbv beta iota in Hrv;
+    lazymatch type of Hrv with
+    | Success ?x = Success ?y
+      => let H' := fresh in
+         assert (H : x = y) by (clear -Hrv; congruence);
+         clear Hrv; rename H into Hrv
+    | context G[(let x : ?T := ?v in @?F x) ?y]
+      => let G' := context G[let x : T := v in F x y] in
+         let G' := (eval cbv beta in G') in
+         change G' in Hrv;
+         fwd Hrv Hwf Hinterp
+    | (let x := @inl ?A ?B ?v in ?F) = Success ?rv
+      => let x' := fresh in
+         change ((let x' := v in match @inl A B x' with x => F end) = Success rv) in Hrv;
+         fwd Hrv Hwf Hinterp
+    | (let x := @inr ?A ?B ?v in ?F) = Success ?rv
+      => let x' := fresh in
+         change ((let x' := v in match @inr A B x' with x => F end) = Success rv) in Hrv;
+         fwd Hrv Hwf Hinterp
+    | (let x := let y := ?v in ?F1 in @?F2 x) = ?rhs
+      => change ((let y := v in let x := F1 in F2 x) = rhs) in Hrv;
+         fwd Hrv Hwf Hinterp
+    | (let x : Expr _ := ?v in ?F) = Success ?rv
+      => let e' := fresh "e" in
+         pose v as e';
+         change (match e' with x => F end = Success rv) in Hrv;
+         let e := lazymatch type of Hwf with Wf ?e => e | ?T => constr_fail_with ltac:(fun _ => fail 1 "Expected Wf, got" T) end in
+         let Hwf' := fresh "Hwf" in
+         let Hinterp' := fresh "Hinterp" in
+         lazymatch type of Hinterp with
+         | interp_correctT _ ?rhs ?arg_bounds
+           => assert (Hwf' : Wf e');
+              [ | assert (Hinterp' : interp_correctT (Interp e') rhs arg_bounds) ];
+              [ clear Hrv; subst e' ..
+              | lazymatch type of Hrv with
+                | context[e] => idtac (* keep interp and wf *)
+                | _ => clear Hwf Hinterp; try clear e
+                end;
+                fwd Hrv Hwf' Hinterp' ]
+         | ?T => constr_fail_with ltac:(fun _ => fail 1 "Expected related, got" T)
+         end
+    | (let x : Expr _ + _ := ?v in ?F) = Success ?rv
+      => let H := fresh in
+         let e' := fresh "e" in
+         destruct v as [e'|e'] eqn:H;
+         cbv beta iota in Hrv;
+         [ apply CheckedPartialEvaluateWithBounds_Correct in H;
+           [ let Hwf' := fresh "Hwf" in
+             rewrite (correct_of_final_iff_correct_of_initial Hinterp) in H by assumption;
+             destruct H as [? Hwf']; split_and;
+             lazymatch type of Hinterp with
+             | interp_correctT _ ?rhs ?arg_bounds
+               => let Hinterp' := fresh "Hinterp" in
+                  assert (Hinterp' : interp_correctT (Interp e') rhs arg_bounds) by assumption;
+                  fwd Hrv Hwf' Hinterp'
+             end
+           | clear H; try solve [ assumption | congruence | apply relax_zrange_gen_good ] .. ]
+         | cbv beta iota zeta in Hrv;
+           try (clear -Hrv; break_innermost_match_hyps; discriminate) ]
+    | (let x : ?T := ?v in ?F) = Success ?rv
+      => let rec good_ty T
+             := lazymatch T with
+                | bool => idtac
+                | zrange => idtac
+                | RewriterOptions => idtac
+                | Flat.expr _ => idtac
+                | ?A -> ?B => good_ty A; good_ty B
+                | option ?A => good_ty A
+                | (?A * ?B)%type => good_ty A; good_ty B
+                | _ => fail 0 "Unrecognized type" T "in" v
+                end in
+         tryif good_ty T
+         then (change (match v with x => F end = Success rv) in Hrv;
+               fwd Hrv Hwf Hinterp)
+         else (let T := type of Hrv in idtac T)
+    | ?T => idtac T
+    end.
+  Local Ltac fwd_side_condition_step :=
+    first [ assumption
+          | progress intros
+          | solve [ auto with nocore wf wf_extra ]
+          | progress (rewrite_strat repeat topdown hints interp_extra)
+          | match goal with
+            | [ |- ?x = ?x ] => reflexivity
+            | [ |- context[match ?x with Some _ => _ | _ => _ end] ] => destruct x
+            | [ |- context[match ?x with (a, b) => _ end] ] => destruct x
+            | [ |- type.app_curried (Interp (PartialEvaluateWithListInfoFromBounds _ _)) _ = _ ]
+              => erewrite Interp_PartialEvaluateWithListInfoFromBounds by eassumption
+            end
+          | progress cbv beta zeta in *
+          | progress destruct_head'_and ].
+
   Lemma BoundsPipeline_correct
              {low_level_rewriter_method : low_level_rewriter_method_opt}
              {only_signed : only_signed_opt}
@@ -664,42 +809,14 @@ Module Pipeline.
       /\ Wf rv.
   Proof.
     assert (Hbounds_Proper : bounds_goodT arg_bounds) by (apply type.and_eqv_for_each_lhs_of_arrow_not_higher_order, type_good).
-    cbv [BoundsPipeline Let_In bounds_goodT] in *;
-      repeat match goal with
-             | [ H : match ?x with _ => _ end = Success _ |- _ ]
-               => destruct x eqn:?; cbv beta iota in H; [ | break_innermost_match_hyps; congruence ];
-                    let H' := fresh in
-                    inversion H as [H']; clear H; rename H' into H
-             end.
-    break_match_hyps_when_head (@sum); inversion_sum.
-    all: repeat first [ assumption
-                      | match goal with
-                        | [ |- Wf _ ] => solve [ wf_interp_t ]
-                        | [ |- ZRange.type.base.option.is_bounded_by _ _ = true ]
-                          => solve [ wf_interp_t; typeclasses eauto with nocore ]
-                        | [ |- type.related _ ?x ?x ] => solve [ wf_interp_t ]
-                        | [ H : CheckedPartialEvaluateWithBounds _ _ _ _ _ = inl _ |- _ ]
-                          => apply CheckedPartialEvaluateWithBounds_Correct in H;
-                             [ destruct H | clear H.. ]
-                        | [ |- type.app_curried (expr.Interp _ (PartialEvaluateWithListInfoFromBounds _ _)) _ = _ ]
-                          => apply Interp_PartialEvaluateWithListInfoFromBounds
-                        | [ |- context[None = Some _] ] => intros; discriminate
-                        | [ H : type.andb_bool_for_each_lhs_of_arrow ?R ?argb ?arg1 = true,
-                                H' : type.and_for_each_lhs_of_arrow _ ?arg1 ?arg2
-                            |- type.andb_bool_for_each_lhs_of_arrow ?R ?argb ?arg2 = true ]
-                          => rewrite <- H'
-                        | [ |- _ /\ _ ] => split
-                        end
-                      | solve [ apply relax_zrange_gen_good ]
-                      | progress split_and
-                      | progress intros
-                      | break_innermost_match_step
-                      | progress (rewrite_strat repeat topdown hints interp_extra)
-                      | match goal with
-                        | [ H : (forall x y Hx Hy, type.app_curried (expr.Interp _ ?e) x = _)
-                            |- type.app_curried (expr.Interp _ ?e) _ = _ ]
-                          => erewrite H; clear dependent e; [ | solve [ (idtac + symmetry); typeclasses eauto with core ] | ]
-                        end ].
+    assert (Hinterp : interp_correctT (Interp e) (Interp e) arg_bounds)
+      by (intros; apply type.app_curried_Proper; [ now apply expr.Wf_Interp_Proper | assumption ]).
+    (* talk about initial interp rather than final one *)
+    rewrite (correct_of_final_iff_correct_of_initial Hinterp) by assumption.
+    pose proof Hwf as Hwf'. (* keep an extra copy so it's not cleared *)
+    cbv beta delta [BoundsPipeline Let_In] in Hrv.
+    fwd Hrv Hwf Hinterp; [ repeat fwd_side_condition_step .. | subst ].
+    solve [ eauto using conj with nocore ].
   Qed.
 
   Definition BoundsPipeline_correct_transT
