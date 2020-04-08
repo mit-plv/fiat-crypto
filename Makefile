@@ -148,6 +148,7 @@ ALL_JAVA_FILES := $(UNSATURATED_SOLINAS_JAVA_FILES) $(WORD_BY_WORD_MONTGOMERY_JA
 
 UNSATURATED_SOLINAS_FUNCTIONS := carry_mul carry_square carry add sub opp selectznz to_bytes from_bytes
 FUNCTIONS_FOR_25519 := $(UNSATURATED_SOLINAS_FUNCTIONS) carry_scmul121666
+WORD_BY_WORD_MONTGOMERY_FUNCTIONS := mul square add sub opp from_montgomery nonzero selectznz to_bytes from_bytes
 UNSATURATED_SOLINAS := src/ExtractionOCaml/unsaturated_solinas
 WORD_BY_WORD_MONTGOMERY := src/ExtractionOCaml/word_by_word_montgomery
 
@@ -411,35 +412,35 @@ $(C_DIR)p448_solinas_64.c : $(C_DIR)p448_solinas_%.c :
 $(C_DIR)p256_64.c $(C_DIR)p256_32.c : $(C_DIR)p256_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --static 'p256' '2^256 - 2^224 + 2^192 + 2^96 - 1' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --static 'p256' '2^256 - 2^224 + 2^192 + 2^96 - 1' '$*' $(WORD_BY_WORD_MONTGOMERY_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 # 2^256 - 2^32 - 977
 $(C_DIR)secp256k1_64.c $(C_DIR)secp256k1_32.c : $(C_DIR)secp256k1_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --static 'secp256k1' '2^256 - 2^32 - 977' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --static 'secp256k1' '2^256 - 2^32 - 977' '$*' $(WORD_BY_WORD_MONTGOMERY_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 # 2^384 - 2^128 - 2^96 + 2^32 - 1
 $(C_DIR)p384_64.c $(C_DIR)p384_32.c : $(C_DIR)p384_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --static 'p384' '2^384 - 2^128 - 2^96 + 2^32 - 1' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --static 'p384' '2^384 - 2^128 - 2^96 + 2^32 - 1' '$*' $(WORD_BY_WORD_MONTGOMERY_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 # 2^224 - 2^96 + 1
 $(C_DIR)p224_64.c $(C_DIR)p224_32.c : $(C_DIR)p224_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --static 'p224' '2^224 - 2^96 + 1' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --static 'p224' '2^224 - 2^96 + 1' '$*' $(WORD_BY_WORD_MONTGOMERY_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 # 2^216 * 3^137 - 1
 $(C_DIR)p434_64.c $(C_DIR)p434_32.c : $(C_DIR)p434_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --static 'p434' '2^216 * 3^137 - 1' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --static 'p434' '2^216 * 3^137 - 1' '$*' $(WORD_BY_WORD_MONTGOMERY_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 test-c-files: $(ALL_C_FILES)
@@ -469,56 +470,56 @@ $(RS_DIR)curve25519_32.rs : $(RS_DIR)curve25519_%.rs :
 $(RS_DIR)p521_64.rs : $(RS_DIR)p521_%.rs :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang=Rust 'p521' '9' '2^521 - 1' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang=Rust 'p521' '9' '2^521 - 1' '$*' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 ## 2^224 - 2^96 + 1 ## does not bounds check
 #$(RS_DIR)p224_solinas_64.rs : $(RS_DIR)p224_solinas_%.rs :
 #	$(SHOW)'SYNTHESIZE > $@'
 #	$(HIDE)rm -f $@.ok
-#	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang=Rust 'p224' '4' '2^224 - 2^96 + 1' '$*' && touch $@.ok) > $@.tmp
+#	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang=Rust 'p224' '4' '2^224 - 2^96 + 1' '$*' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
 #	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 # 2^448 - 2^224 - 1
 $(RS_DIR)p448_solinas_64.rs : $(RS_DIR)p448_solinas_%.rs :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang=Rust 'p448' '8' '2^448 - 2^224 - 1' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang=Rust 'p448' '8' '2^448 - 2^224 - 1' '$*' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 # 2^256 - 2^224 + 2^192 + 2^96 - 1
 $(RS_DIR)p256_64.rs $(RS_DIR)p256_32.rs : $(RS_DIR)p256_%.rs :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang=Rust 'p256' '2^256 - 2^224 + 2^192 + 2^96 - 1' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang=Rust 'p256' '2^256 - 2^224 + 2^192 + 2^96 - 1' '$*' $(WORD_BY_WORD_MONTGOMERY_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 # 2^256 - 2^32 - 977
 $(RS_DIR)secp256k1_64.rs $(RS_DIR)secp256k1_32.rs : $(RS_DIR)secp256k1_%.rs :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang=Rust 'secp256k1' '2^256 - 2^32 - 977' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang=Rust 'secp256k1' '2^256 - 2^32 - 977' '$*' $(WORD_BY_WORD_MONTGOMERY_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 # 2^384 - 2^128 - 2^96 + 2^32 - 1
 $(RS_DIR)p384_64.rs $(RS_DIR)p384_32.rs : $(RS_DIR)p384_%.rs :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang=Rust 'p384' '2^384 - 2^128 - 2^96 + 2^32 - 1' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang=Rust 'p384' '2^384 - 2^128 - 2^96 + 2^32 - 1' '$*' $(WORD_BY_WORD_MONTGOMERY_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 # 2^224 - 2^96 + 1
 $(RS_DIR)p224_64.rs $(RS_DIR)p224_32.rs : $(RS_DIR)p224_%.rs :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang=Rust 'p224' '2^224 - 2^96 + 1' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang=Rust 'p224' '2^224 - 2^96 + 1' '$*' $(WORD_BY_WORD_MONTGOMERY_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 # 2^216 * 3^137 - 1
 $(RS_DIR)p434_64.rs $(RS_DIR)p434_32.rs : $(RS_DIR)p434_%.rs :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang=Rust 'p434' '2^216 * 3^137 - 1' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang=Rust 'p434' '2^216 * 3^137 - 1' '$*' $(WORD_BY_WORD_MONTGOMERY_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 test-rust-files: $(ALL_RUST_FILES)
@@ -577,35 +578,35 @@ $(GO_DIR)p448_solinas_64.go : $(GO_DIR)p448_solinas_%.go :
 $(GO_DIR)p256_64.go $(GO_DIR)p256_32.go : $(GO_DIR)p256_%.go :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang=Go $(GO_EXTRA_ARGS_$*) 'p256' '2^256 - 2^224 + 2^192 + 2^96 - 1' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang=Go $(GO_EXTRA_ARGS_$*) 'p256' '2^256 - 2^224 + 2^192 + 2^96 - 1' '$*' $(WORD_BY_WORD_MONTGOMERY_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 # 2^256 - 2^32 - 977
 $(GO_DIR)secp256k1_64.go $(GO_DIR)secp256k1_32.go : $(GO_DIR)secp256k1_%.go :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang=Go $(GO_EXTRA_ARGS_$*) 'secp256k1' '2^256 - 2^32 - 977' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang=Go $(GO_EXTRA_ARGS_$*) 'secp256k1' '2^256 - 2^32 - 977' '$*' $(WORD_BY_WORD_MONTGOMERY_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 # 2^384 - 2^128 - 2^96 + 2^32 - 1
 $(GO_DIR)p384_64.go $(GO_DIR)p384_32.go : $(GO_DIR)p384_%.go :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang=Go $(GO_EXTRA_ARGS_$*) 'p384' '2^384 - 2^128 - 2^96 + 2^32 - 1' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang=Go $(GO_EXTRA_ARGS_$*) 'p384' '2^384 - 2^128 - 2^96 + 2^32 - 1' '$*' $(WORD_BY_WORD_MONTGOMERY_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 # 2^224 - 2^96 + 1
 $(GO_DIR)p224_64.go $(GO_DIR)p224_32.go : $(GO_DIR)p224_%.go :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang=Go $(GO_EXTRA_ARGS_$*) 'p224' '2^224 - 2^96 + 1' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang=Go $(GO_EXTRA_ARGS_$*) 'p224' '2^224 - 2^96 + 1' '$*' $(WORD_BY_WORD_MONTGOMERY_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 # 2^216 * 3^137 - 1
 $(GO_DIR)p434_64.go $(GO_DIR)p434_32.go : $(GO_DIR)p434_%.go :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang=Go $(GO_EXTRA_ARGS_$*) 'p434' '2^216 * 3^137 - 1' '$*' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang=Go $(GO_EXTRA_ARGS_$*) 'p434' '2^216 * 3^137 - 1' '$*' $(WORD_BY_WORD_MONTGOMERY_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 .PHONY: $(addprefix test-,$(ALL_GO_FILES))
