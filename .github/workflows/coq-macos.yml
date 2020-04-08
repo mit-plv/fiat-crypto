@@ -115,3 +115,5 @@ jobs:
         name: build-outputs
         path: .
       if: always ()
+    - name: validate
+      run: make TIMED=1 validate COQCHKFLAGS="-o"

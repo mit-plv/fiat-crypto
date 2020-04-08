@@ -128,3 +128,6 @@ jobs:
         name: build-outputs
         path: .
       if: always ()
+    - name: validate
+      run: C:\cygwin64\bin\bash -l -c 'cd "%cd%"; make TIMED=1 validate COQCHKFLAGS="-o"'
+      shell: cmd
