@@ -17,3 +17,5 @@ jobs:
       run: (cd fiat-rust; cargo build --verbose)
     - name: cargo test
       run: (cd fiat-rust; cargo test --verbose)
+    - name: curve25519-dalek test
+      run: etc/ci/test-fiat-rust.sh
