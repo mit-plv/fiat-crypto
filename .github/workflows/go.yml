@@ -13,7 +13,7 @@ jobs:
 
     steps:
     - name: Set up Go 1.13
-      uses: actions/setup-go@matcher
+      uses: actions/setup-go@v2-beta
       with:
         go-version: 1.13
       id: go
