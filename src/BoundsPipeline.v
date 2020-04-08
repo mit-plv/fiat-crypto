@@ -457,6 +457,14 @@ Module Pipeline.
                       => RewriteAndEliminateDeadAndInline (RewriteRules.RewriteMultiRetSplit max_bitwidth lgcarrymax opts) with_dead_code_elimination with_subst01 E
                     | None => E
                     end in
+           let rewrote_E_so_should_rewrite_arith_again
+               := match split_mul_to, split_multiret_to with
+                  | Some _, _ | _, Some _ => true
+                  | None, None => false
+                  end in
+           let E := if rewrote_E_so_should_rewrite_arith_again
+                    then RewriteAndEliminateDeadAndInline (RewriteRules.RewriteArithWithCasts opts) with_dead_code_elimination with_subst01 E
+                    else E in
 
            let E := match translate_to_fancy with
                     | Some {| invert_low := invert_low ; invert_high := invert_high ; value_range := value_range ; flag_range := flag_range |}
