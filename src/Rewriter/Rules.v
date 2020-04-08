@@ -289,6 +289,7 @@ Definition arith_with_casts_rewrite_rulesT : list (bool * Prop)
             ; (forall r v, lower r = upper r -> cstZ r v = cstZ r ('(lower r)))
             ; (forall r0 v, 0 ∈ r0 -> cstZ r0 0 + v = v)
             ; (forall r0 v, 0 ∈ r0 -> v + cstZ r0 0 = v)
+            ; (forall r0 v, 0 ∈ r0 -> v - cstZ r0 0 = v)
             ; (forall r0 v, 0 ∈ r0 -> cstZ r0 0 - v = -v)
             ; (forall r0 v, 0 ∈ r0 -> cstZ r0 0 << v = 0)
             ; (forall r0 rnv rv v,
