@@ -33,22 +33,24 @@ jobs:
         if [ ! -z "$PPA" ]; then sudo add-apt-repository "$PPA" -y; fi
         sudo apt-get -o Acquire::Retries=30 update -q
         sudo apt-get -o Acquire::Retries=30 install ocaml-findlib $COQ_PACKAGE -y --allow-unauthenticated
+    - uses: actions/setup-haskell@v1
+      with:
+        ghc-version: ${{ matrix.ghc }}
+        cabal-version: ${{ matrix.cabal }}
     - name: echo build params
       run: |
-        set -e
+        set -x
         lscpu
         uname -a
         lsb_release -a
+        ghc --version
+        gcc -v
         ocamlc -config
         coqc --version
         echo | coqtop
     - uses: actions/checkout@v2
     - name: submodules-init
       uses: snickerbockers/submodules-init@v4
-    - uses: actions/setup-haskell@v1
-      with:
-        ghc-version: ${{ matrix.ghc }}
-        cabal-version: ${{ matrix.cabal }}
     - name: add Coq matcher
       run: echo "::add-matcher::.github/coq.json"
     - name: deps
