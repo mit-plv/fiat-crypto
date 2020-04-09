@@ -107,3 +107,4 @@ jobs:
       with:
         name: build-outputs
         path: .
+      if: always ()
