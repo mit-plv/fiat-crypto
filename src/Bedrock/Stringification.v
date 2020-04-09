@@ -10,6 +10,7 @@ Require Import Crypto.Bedrock.Defaults.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Translation.Func.
 Require Import Crypto.Language.API.
+Require Import Crypto.Util.Option.
 Import Stringification.Language.Compilers.
 Import Types.
 
@@ -22,14 +23,9 @@ Fixpoint make_names (prefix : string)
          (nextn : nat) (t : base.type) : option (nat * base_ltype t) :=
   match t as t0 return option (nat * base_ltype t0) with
   | base.type.prod a b =>
-    match make_names prefix nextn a with
-    | Some (nextn, anames) =>
-      match make_names prefix nextn b with
-      | Some (nextn, bnames) => Some (nextn, (anames, bnames))
-      | None => None
-      end
-    | None => None
-    end
+    (olet '(nextn, anames) <- make_names prefix nextn a;
+    olet '(nextn, bnames) <- make_names prefix nextn b;
+    Some (nextn, (anames, bnames)))%option
   | base_listZ =>
     let num := Decimal.decimal_string_of_Z (Z.of_nat nextn) in
     Some (S nextn, String.append prefix num)
@@ -43,15 +39,9 @@ Fixpoint make_innames' (nextn : nat) (t : API.type)
   match t with
   | type.base _ => Some (nextn, tt)
   | type.arrow (type.base s) d =>
-    match make_names "in" nextn s with
-    | Some (nextn, snames) =>
-      match make_innames' nextn d with
-      | Some (nextn, dnames) =>
-        Some (nextn, (snames, dnames))
-      | None => None
-      end
-    | None => None
-    end
+    (olet '(nextn, snames) <- make_names "in" nextn s;
+    olet '(nextn, dnames) <- make_innames' nextn d;
+    Some (nextn, (snames, dnames)))%option
   | type.arrow _ _ => None
   end.
 Definition make_innames t : option (type.for_each_lhs_of_arrow ltype t) :=
@@ -66,12 +56,9 @@ Fixpoint list_lengths_from_bounds {t}
         ZRange.type.base.option.interp t0 -> option (base_listonly nat t0) with
   | base.type.prod a b =>
     fun x =>
-      Option.bind
-        (list_lengths_from_bounds (fst x))
-        (fun x1 =>
-           option_map
-             (fun x2 => (x1, x2))
-             (list_lengths_from_bounds (snd x)))
+      (x1 <- list_lengths_from_bounds (fst x);
+      x2 <- list_lengths_from_bounds (snd x);
+      Some (x1, x2))%option
   | base_listZ =>
     fun x : option (list _) => option_map (@List.length _) x
   | _ => fun _ => Some tt
@@ -85,12 +72,9 @@ Fixpoint list_lengths_from_argbounds {t}
   | type.base b => fun _ => Some tt
   | type.arrow (type.base a) b =>
     fun x =>
-      Option.bind
-        (list_lengths_from_bounds (fst x))
-        (fun x1 =>
-           option_map
-             (fun x2 => (x1, x2))
-             (list_lengths_from_argbounds (snd x)))
+      (x1 <- list_lengths_from_bounds (fst x);
+      x2 <- list_lengths_from_argbounds (snd x);
+       Some (x1, x2))%option
   | type.arrow a b => fun _ => None
   end.
 
@@ -109,14 +93,9 @@ Fixpoint make_base_var_data {t}
         option (base_var_data t0) with
   | base.type.prod A B =>
     fun x ll =>
-      match make_base_var_data (fst x) (fst ll) with
-      | Some x1 =>
-        match make_base_var_data (snd x) (snd ll) with
-        | Some x2 => Some (x1, x2)
-        | None => None
-        end
-      | None => None
-      end
+      (x1 <- make_base_var_data (fst x) (fst ll);
+      x2 <- make_base_var_data (snd x) (snd ll);
+      Some (x1, x2))%option
   | base_Z =>
     fun name _ =>
       let is_pointer := false in (* never a pointer *)
@@ -144,14 +123,9 @@ Fixpoint make_var_data_of_args {t}
   with
   | type.arrow s d =>
     fun names lengths =>
-      match make_var_data (fst names) (fst lengths) with
-      | Some x =>
-        match make_var_data_of_args (snd names) (snd lengths) with
-        | Some y => Some (x, y)
-        | None => None
-        end
-      | None => None
-      end
+      (x <- make_var_data (fst names) (fst lengths);
+      y <- make_var_data_of_args (snd names) (snd lengths);
+      Some (x, y))%option
   | type.base b => fun _ _ => Some tt
   end.
 
