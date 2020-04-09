@@ -78,3 +78,4 @@ jobs:
       with:
         name: build-outputs-${{ matrix.env.COQ_VERSION }}
         path: .
+      if: always ()
