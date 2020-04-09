@@ -28,14 +28,14 @@ INSTALLDEFAULTROOT := Crypto
 	bedrock2 clean-bedrock2 install-bedrock2 coqutil clean-coqutil install-coqutil \
 	install-standalone install-standalone-ocaml install-standalone-haskell \
 	uninstall-standalone uninstall-standalone-ocaml uninstall-standalone-haskell \
-	util c-files rust-files go-files java-files \
+	util c-files bedrock2-files rust-files go-files java-files \
 	bedrock2-backend \
 	deps \
 	nobigmem print-nobigmem \
 	lite only-heavy printlite \
 	some-early pre-standalone standalone standalone-haskell standalone-ocaml \
-	test-c-files test-rust-files test-go-files test-java-files \
-	only-test-c-files only-test-rust-files only-test-go-files only-test-java-files \
+	test-c-files test-bedrock2-files test-rust-files test-go-files test-java-files \
+	only-test-c-files only-test-bedrock2-files only-test-rust-files only-test-go-files only-test-java-files \
 	javadoc only-javadoc \
 	check-output accept-output
 
@@ -118,6 +118,7 @@ PRE_STANDALONE_VOFILES := $(call vo_closure,$(PRE_STANDALONE_PRE_VOFILES))
 endif
 
 C_DIR := fiat-c/src/
+BEDROCK2_DIR := fiat-bedrock2/src/
 RS_DIR := fiat-rust/src/
 GO_DIR := fiat-go/src/
 JAVA_DIR := fiat-java/src/
@@ -130,6 +131,10 @@ ALL_BASE_FILES := $(UNSATURATED_SOLINAS_BASE_FILES) $(WORD_BY_WORD_MONTGOMERY_BA
 UNSATURATED_SOLINAS_C_FILES := $(patsubst %,$(C_DIR)%.c,$(UNSATURATED_SOLINAS_BASE_FILES))
 WORD_BY_WORD_MONTGOMERY_C_FILES := $(patsubst %,$(C_DIR)%.c,$(WORD_BY_WORD_MONTGOMERY_BASE_FILES))
 ALL_C_FILES := $(patsubst %,$(C_DIR)%.c,$(ALL_BASE_FILES))
+
+UNSATURATED_SOLINAS_BEDROCK2_FILES := $(patsubst %,$(BEDROCK2_DIR)%.c,$(UNSATURATED_SOLINAS_BASE_FILES))
+WORD_BY_WORD_MONTGOMERY_BEDROCK2_FILES := $(patsubst %,$(BEDROCK2_DIR)%.c,$(WORD_BY_WORD_MONTGOMERY_BASE_FILES))
+ALL_BEDROCK2_FILES := $(patsubst %,$(BEDROCK2_DIR)%.c,$(ALL_BASE_FILES))
 
 UNSATURATED_SOLINAS_RUST_FILES := $(patsubst %,$(RS_DIR)%.rs,$(UNSATURATED_SOLINAS_BASE_FILES))
 WORD_BY_WORD_MONTGOMERY_RUST_FILES := $(patsubst %,$(RS_DIR)%.rs,$(WORD_BY_WORD_MONTGOMERY_BASE_FILES))
@@ -153,6 +158,15 @@ FUNCTIONS_FOR_25519 := $(UNSATURATED_SOLINAS_FUNCTIONS) carry_scmul121666
 WORD_BY_WORD_MONTGOMERY_FUNCTIONS := mul square add sub opp from_montgomery nonzero selectznz to_bytes from_bytes
 UNSATURATED_SOLINAS := src/ExtractionOCaml/unsaturated_solinas
 WORD_BY_WORD_MONTGOMERY := src/ExtractionOCaml/word_by_word_montgomery
+
+BEDROCK2_UNSATURATED_SOLINAS := src/ExtractionOCaml/bedrock2_unsaturated_solinas
+BEDROCK2_WORD_BY_WORD_MONTGOMERY := src/ExtractionOCaml/bedrock2_word_by_word_montgomery
+
+# XXX TODO FIXME: support these functions in bedrock2
+BEDROCK2_UNSUPPORTED_SOLINAS_FUNCTIONS := selectznz to_bytes
+BEDROCK2_UNSUPPORTED_WORD_BY_WORD_MONTGOMERY_FUNCTIONS := mul square add sub opp from_montgomery selectznz
+
+BEDROCK2_ARGS := --no-wide-int --widen-carry --widen-bytes --split-multiret
 
 GO_EXTRA_ARGS_ALL := --cmovznz-by-mul --widen-carry --widen-bytes
 GO_EXTRA_ARGS_64  := --no-wide-int $(GO_EXTRA_ARGS_ALL)
@@ -180,10 +194,14 @@ CHECK_OUTPUTS := $(addprefix check-,$(OUTPUT_PREOUTS))
 ACCEPT_OUTPUTS := $(addprefix accept-,$(OUTPUT_PREOUTS))
 
 all: coq standalone-ocaml perf-standalone c-files rust-files go-files java-files check-output
+ifneq ($(SKIP_BEDROCK2),1)
+all: bedrock2-files
+endif
 coq: $(REGULAR_VOFILES)
 coq-without-bedrock2: $(REGULAR_EXCEPT_BEDROCK2_VOFILES)
 bedrock2-backend: $(BEDROCK2_VOFILES)
 c-files: $(ALL_C_FILES)
+bedrock2-files: $(ALL_BEDROCK2_FILES)
 rust-files: $(ALL_RUST_FILES)
 go-files: $(ALL_GO_FILES)
 java-files: $(ALL_JAVA_FILES)
@@ -455,6 +473,78 @@ test-c-files: $(ALL_C_FILES)
 
 test-c-files only-test-c-files:
 	$(CC) -Wall -Wno-unused-function -Werror $(CFLAGS) -c $(ALL_C_FILES)
+
+$(UNSATURATED_SOLINAS_BEDROCK2_FILES): $(BEDROCK2_UNSATURATED_SOLINAS) # Makefile
+
+$(WORD_BY_WORD_MONTGOMERY_BEDROCK2_FILES): $(BEDROCK2_WORD_BY_WORD_MONTGOMERY) # Makefile
+
+# 2^255 - 19
+$(BEDROCK2_DIR)curve25519_64.c : $(BEDROCK2_DIR)curve25519_%.c :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER) $(BEDROCK2_UNSATURATED_SOLINAS) --lang=bedrock2 $(BEDROCK2_ARGS) '25519' '5' '2^255 - 19' '$*' $(filter-out $(BEDROCK2_UNSUPPORTED_SOLINAS_FUNCTIONS),$(FUNCTIONS_FOR_25519)) && touch $@.ok) > $@.tmp
+	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
+
+# 2^521 - 1
+$(BEDROCK2_DIR)p521_64.c : $(BEDROCK2_DIR)p521_%.c :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER) $(BEDROCK2_UNSATURATED_SOLINAS) --lang=bedrock2 $(BEDROCK2_ARGS) 'p521' '9' '2^521 - 1' '$*' $(filter-out $(BEDROCK2_UNSUPPORTED_SOLINAS_FUNCTIONS),$(UNSATURATED_SOLINAS_FUNCTIONS)) && touch $@.ok) > $@.tmp
+	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
+
+## 2^224 - 2^96 + 1 ## does not bounds check
+#$(BEDROCK2_DIR)p224_solinas_64.c : $(BEDROCK2_DIR)p224_solinas_%.c :
+#	$(SHOW)'SYNTHESIZE > $@'
+#	$(HIDE)rm -f $@.ok
+#	$(HIDE)($(TIMER) $(BEDROCK2_UNSATURATED_SOLINAS) --lang=bedrock2 $(BEDROCK2_ARGS) 'p224' '4' '2^224 - 2^96 + 1' '$*' $(filter-out $(BEDROCK2_UNSUPPORTED_SOLINAS_FUNCTIONS),$(UNSATURATED_SOLINAS_FUNCTIONS)) && touch $@.ok) > $@.tmp
+#	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
+
+# 2^448 - 2^224 - 1
+$(BEDROCK2_DIR)p448_solinas_64.c : $(BEDROCK2_DIR)p448_solinas_%.c :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER) $(BEDROCK2_UNSATURATED_SOLINAS) --lang=bedrock2 $(BEDROCK2_ARGS) 'p448' '8' '2^448 - 2^224 - 1' '$*' $(filter-out $(BEDROCK2_UNSUPPORTED_SOLINAS_FUNCTIONS),$(UNSATURATED_SOLINAS_FUNCTIONS)) && touch $@.ok) > $@.tmp
+	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
+
+# 2^256 - 2^224 + 2^192 + 2^96 - 1
+$(BEDROCK2_DIR)p256_64.c : $(BEDROCK2_DIR)p256_%.c :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER) $(BEDROCK2_WORD_BY_WORD_MONTGOMERY) --lang=bedrock2 $(BEDROCK2_ARGS) 'p256' '2^256 - 2^224 + 2^192 + 2^96 - 1' '$*' $(filter-out $(BEDROCK2_UNSUPPORTED_WORD_BY_WORD_MONTGOMERY_FUNCTIONS),$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS)) && touch $@.ok) > $@.tmp
+	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
+
+# 2^256 - 2^32 - 977
+$(BEDROCK2_DIR)secp256k1_64.c : $(BEDROCK2_DIR)secp256k1_%.c :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER) $(BEDROCK2_WORD_BY_WORD_MONTGOMERY) --lang=bedrock2 $(BEDROCK2_ARGS) 'secp256k1' '2^256 - 2^32 - 977' '$*' $(filter-out $(BEDROCK2_UNSUPPORTED_WORD_BY_WORD_MONTGOMERY_FUNCTIONS),$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS)) && touch $@.ok) > $@.tmp
+	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
+
+# 2^384 - 2^128 - 2^96 + 2^32 - 1
+$(BEDROCK2_DIR)p384_64.c : $(BEDROCK2_DIR)p384_%.c :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER) $(BEDROCK2_WORD_BY_WORD_MONTGOMERY) --lang=bedrock2 $(BEDROCK2_ARGS) 'p384' '2^384 - 2^128 - 2^96 + 2^32 - 1' '$*' $(filter-out $(BEDROCK2_UNSUPPORTED_WORD_BY_WORD_MONTGOMERY_FUNCTIONS),$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS)) && touch $@.ok) > $@.tmp
+	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
+
+# 2^224 - 2^96 + 1
+$(BEDROCK2_DIR)p224_64.c : $(BEDROCK2_DIR)p224_%.c :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER) $(BEDROCK2_WORD_BY_WORD_MONTGOMERY) --lang=bedrock2 $(BEDROCK2_ARGS) 'p224' '2^224 - 2^96 + 1' '$*' $(filter-out $(BEDROCK2_UNSUPPORTED_WORD_BY_WORD_MONTGOMERY_FUNCTIONS),$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS)) && touch $@.ok) > $@.tmp
+	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
+
+# 2^216 * 3^137 - 1
+$(BEDROCK2_DIR)p434_64.c : $(BEDROCK2_DIR)p434_%.c :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER) $(BEDROCK2_WORD_BY_WORD_MONTGOMERY) --lang=bedrock2 $(BEDROCK2_ARGS) 'p434' '2^216 * 3^137 - 1' '$*' $(filter-out $(BEDROCK2_UNSUPPORTED_WORD_BY_WORD_MONTGOMERY_FUNCTIONS),$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS)) && touch $@.ok) > $@.tmp
+	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
+
+test-bedrock2-files: $(ALL_BEDROCK2_FILES)
+
+test-bedrock2-files only-test-bedrock2-files:
+	$(CC) -Wall -Wno-unused-function -Werror $(CFLAGS) -c $(ALL_BEDROCK2_FILES)
 
 $(UNSATURATED_SOLINAS_RUST_FILES): $(UNSATURATED_SOLINAS) # Makefile
 

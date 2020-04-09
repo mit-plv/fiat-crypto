@@ -23,3 +23,5 @@ jobs:
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 60 --slave /usr/bin/g++ g++ /usr/bin/g++-7
     - name: make only-test-c-files CC=gcc
       run: make only-test-c-files CC=gcc EXTERNAL_DEPENDENCIES=1
+    - name: make only-test-bedrock2-files CC=gcc
+      run: make only-test-bedrock2-files CC=gcc EXTERNAL_DEPENDENCIES=1
