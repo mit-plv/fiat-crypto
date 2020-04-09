@@ -299,6 +299,13 @@ Definition arith_with_casts_rewrite_rulesT : list (bool * Prop)
                   (rv <= -n rnv)%zrange
                   -> -(cstZ rnv (-(cstZ rv v))) = cstZ rv v)
 
+            ; (forall rx x ry y, upper (n rx) < lower (n ry) -> Z.ltz (cstZ rx x) (cstZ ry y) = 1)
+            ; (forall rx x ry y, upper (n ry) <= lower (n rx) -> Z.ltz (cstZ rx x) (cstZ ry y) = 0)
+            ; (forall rx x rc c, c ∈ rc -> upper (n rx) < c -> Z.ltz (cstZ rx x) (cstZ rc ('c)) = 1)
+            ; (forall rx x rc c, c ∈ rc -> c <= lower (n rx) -> Z.ltz (cstZ rx x) (cstZ rc ('c)) = 0)
+            ; (forall rc c ry y, c ∈ rc -> c < lower (n ry) -> Z.ltz (cstZ rc ('c)) (cstZ ry y) = 1)
+            ; (forall rc c ry y, c ∈ rc -> upper (n ry) <= c -> Z.ltz (cstZ rc ('c)) (cstZ ry y) = 0)
+
             ; (forall s r0 y, 0 ∈ r0 -> Z.mul_split s (cstZ r0 0) y = (cstZ r[0~>0] 0, cstZ r[0~>0] 0))
             ; (forall s r0 y, 0 ∈ r0 -> Z.mul_split s y (cstZ r0 0) = (cstZ r[0~>0] 0, cstZ r[0~>0] 0))
             ; (forall rs s r1 ry y,
