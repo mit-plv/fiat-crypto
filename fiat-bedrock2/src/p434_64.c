@@ -11,6 +11,7 @@
 /*   All functions also ensure that these two properties are true of  */
 /*   return values.                                                   */
 
+#include <stdint.h>
 
 
 /*

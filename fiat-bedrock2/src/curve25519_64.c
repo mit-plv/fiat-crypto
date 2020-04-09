@@ -8,6 +8,7 @@
 /* Computed values: */
 /* carry_chain = [0, 1, 2, 3, 4, 0, 1] */
 
+#include <stdint.h>
 
 
 /*

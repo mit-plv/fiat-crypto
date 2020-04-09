@@ -213,7 +213,7 @@ Definition OutputBedrock2API : ToString.OutputLanguageAPI :=
 
     ToString.ToFunctionLines := @Bedrock2_ToFunctionLines;
 
-    ToString.header := fun _ _ _ => [];
+    ToString.header := fun _ _ _ => ["#include <stdint.h>"];
 
     ToString.footer := fun _ _ _ => [];
 
