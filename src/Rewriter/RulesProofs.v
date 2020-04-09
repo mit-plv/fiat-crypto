@@ -153,6 +153,18 @@ Proof using Type.
                     | interp_good_t_step_related ].
 Qed.
 
+Local Lemma unfold_is_bounded_by_bool v r
+  : is_bounded_by_bool v r = true -> lower r <= v <= upper r.
+Proof using Type.
+  cbv [is_bounded_by_bool]; intro; split_andb; Z.ltb_to_lt; split; assumption.
+Qed.
+
+Local Lemma unfold_is_tighter_than_bool r1 r2
+  : is_tighter_than_bool r1 r2 = true -> lower r2 <= lower r1 /\ upper r1 <= upper r2.
+Proof using Type.
+  cbv [is_tighter_than_bool]; intro; split_andb; Z.ltb_to_lt; split; assumption.
+Qed.
+
 Local Ltac interp_good_t_step_arith :=
   first [ lazymatch goal with
           | [ |- ?x = ?x ] => reflexivity
@@ -379,18 +391,6 @@ Local Ltac remove_casts :=
          | _ => progress Z.ltb_to_lt
          | _ => progress subst
          end.
-
-Local Lemma unfold_is_bounded_by_bool v r
-  : is_bounded_by_bool v r = true -> lower r <= v <= upper r.
-Proof using Type.
-  cbv [is_bounded_by_bool]; intro; split_andb; Z.ltb_to_lt; split; assumption.
-Qed.
-
-Local Lemma unfold_is_tighter_than_bool r1 r2
-  : is_tighter_than_bool r1 r2 = true -> lower r2 <= lower r1 /\ upper r1 <= upper r2.
-Proof using Type.
-  cbv [is_tighter_than_bool]; intro; split_andb; Z.ltb_to_lt; split; assumption.
-Qed.
 
 Local Ltac unfold_cast_lemmas :=
   repeat match goal with
