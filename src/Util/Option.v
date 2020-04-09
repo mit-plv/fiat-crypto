@@ -56,6 +56,7 @@ Module Export Notations.
   Delimit Scope option_scope with option.
   Bind Scope option_scope with option.
 
+  Notation "'olet' x .. y <- X ; B" := (bind X (fun x => .. (fun y => B%option) .. )) : option_scope.
   Notation "A <- X ; B" := (bind X (fun A => B%option)) : option_scope.
   Infix ";;" := sequence : option_scope.
   Infix ";;;" := sequence_return : option_scope.
