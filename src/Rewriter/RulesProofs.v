@@ -205,6 +205,11 @@ Local Ltac interp_good_t_step_arith :=
             => apply ZRange.is_bounded_by_bool_normalize_constant_iff in H
           | [ H : is_bounded_by_bool ?x r[?y~>?y] = true |- _ ]
             => apply ZRange.is_bounded_by_bool_constant_iff in H
+          | [ Hx : is_bounded_by_bool ?x _ = true, Hy : is_bounded_by_bool ?y _ = true
+              |- Z.ltz ?x ?y = _ ]
+            => cbv [Z.ltz];
+               apply unfold_is_bounded_by_bool in Hx;
+               apply unfold_is_bounded_by_bool in Hy
           end
         | progress intros
         | progress subst
