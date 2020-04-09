@@ -168,6 +168,7 @@ BEDROCK2_UNSUPPORTED_SOLINAS_FUNCTIONS := selectznz to_bytes
 BEDROCK2_UNSUPPORTED_WORD_BY_WORD_MONTGOMERY_FUNCTIONS := mul square add sub opp from_montgomery selectznz
 
 BEDROCK2_ARGS := --no-wide-int --widen-carry --widen-bytes --split-multiret
+BEDROCK2_EXTRA_CFLAGS := -Wno-error=unused-but-set-variable
 
 GO_EXTRA_ARGS_ALL := --cmovznz-by-mul --widen-carry --widen-bytes
 GO_EXTRA_ARGS_64  := --no-wide-int $(GO_EXTRA_ARGS_ALL)
@@ -545,7 +546,7 @@ $(BEDROCK2_DIR)p434_64.c : $(BEDROCK2_DIR)p434_%.c :
 test-bedrock2-files: $(ALL_BEDROCK2_FILES)
 
 test-bedrock2-files only-test-bedrock2-files:
-	$(CC) -Wall -Wno-unused-function -Werror $(CFLAGS) -c $(ALL_BEDROCK2_FILES)
+	$(CC) -Wall -Wno-unused-function -Werror $(BEDROCK2_EXTRA_CFLAGS) $(CFLAGS) -c $(ALL_BEDROCK2_FILES)
 
 $(UNSATURATED_SOLINAS_RUST_FILES): $(UNSATURATED_SOLINAS) # Makefile
 
