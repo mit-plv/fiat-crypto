@@ -40,6 +40,7 @@ jobs:
     - name: Clone Coq
       run: |
         C:\cygwin64\bin\bash -l -c 'git clone "https://github.com/coq/coq.git" --branch=${COQ_VERSION}'
+        C:\cygwin64\bin\bash -l -c 'cd coq && git log -1'
       shell: cmd
 
     - name: Set up cygwin profile
