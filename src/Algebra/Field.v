@@ -76,46 +76,6 @@ Section Field.
   Qed.
 End Field.
 
-Lemma isomorphism_to_subfield_field
-      {T EQ ZERO ONE OPP ADD SUB MUL INV DIV}
-      {Equivalence_EQ: @Equivalence T EQ}
-      {Proper_OPP:Proper(EQ==>EQ)OPP}
-      {Proper_ADD:Proper(EQ==>EQ==>EQ)ADD}
-      {Proper_SUB:Proper(EQ==>EQ==>EQ)SUB}
-      {Proper_MUL:Proper(EQ==>EQ==>EQ)MUL}
-      {Proper_INV:Proper(EQ==>EQ)INV}
-      {Proper_DIV:Proper(EQ==>EQ==>EQ)DIV}
-      {R eq zero one opp add sub mul inv div} {fieldR:@field R eq zero one opp add sub mul inv div}
-      {phi}
-      {eq_phi_EQ: forall x y, eq (phi x) (phi y) -> EQ x y}
-      {neq_zero_one : (not (EQ ZERO ONE))}
-      {phi_opp : forall a, eq (phi (OPP a)) (opp (phi a))}
-      {phi_add : forall a b, eq (phi (ADD a b)) (add (phi a) (phi b))}
-      {phi_sub : forall a b, eq (phi (SUB a b)) (sub (phi a) (phi b))}
-      {phi_mul : forall a b, eq (phi (MUL a b)) (mul (phi a) (phi b))}
-      {phi_inv : forall a, eq (phi (INV a)) (inv (phi a))}
-      {phi_div : forall a b, eq (phi (DIV a b)) (div (phi a) (phi b))}
-      {phi_zero : eq (phi ZERO) zero}
-      {phi_one : eq (phi ONE) one}
-  : @field T EQ ZERO ONE OPP ADD SUB MUL INV DIV.
-Admitted. (* TODO: remove all uses of this theorem *)
-
-Lemma equivalent_operations_field
-      {T EQ ZERO ONE OPP ADD SUB MUL INV DIV}
-      {EQ_equivalence : Equivalence EQ}
-      {zero one opp add sub mul inv div}
-      {fieldR:@field T EQ zero one opp add sub mul inv div}
-      {EQ_opp : forall a, EQ (OPP a) (opp a)}
-      {EQ_inv : forall a, EQ (INV a) (inv a)}
-      {EQ_add : forall a b, EQ (ADD a b) (add a b)}
-      {EQ_sub : forall a b, EQ (SUB a b) (sub a b)}
-      {EQ_mul : forall a b, EQ (MUL a b) (mul a b)}
-      {EQ_div : forall a b, EQ (DIV a b) (div a b)}
-      {EQ_zero : EQ ZERO zero}
-      {EQ_one : EQ ONE one}
-  : @field T EQ ZERO ONE OPP ADD SUB MUL INV DIV.
-Proof. Admitted. (* TODO: remove all uses of this theorem *)
-
 Section Homomorphism.
   Context {F EQ ZERO ONE OPP ADD MUL SUB INV DIV} `{@field F EQ ZERO ONE OPP ADD SUB MUL INV DIV}.
   Context {K eq zero one opp add mul sub inv div} `{@field K eq zero one opp add sub mul inv div}.
