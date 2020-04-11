@@ -38,7 +38,7 @@ Definition time : forall A, String.string -> (unit -> A) -> unit
 
 Definition error : list String.string -> unit
   := fun msg => _ <- printf_list_string_with_newlines msg;
-                  raise_Failure _ (string_of_Coq_string (String.concat String.NewLine msg)).
+                  raise_Failure (string_of_Coq_string (String.concat String.NewLine msg)).
 
 Module UnsaturatedSolinas.
   Definition main : unit
