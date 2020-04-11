@@ -19,7 +19,7 @@ Axiom _IO : Set -> Set.
 Axiom printf_string : string -> _IO unit.
 Axiom getArgs : _IO (list string).
 Axiom getProgName : _IO string.
-Axiom raise_failure : forall A, string -> A.
+Axiom raise_failure : string -> _IO unit.
 Axiom _IO_bind : forall A B, _IO A -> (A -> _IO B) -> _IO B.
 Axiom _IO_return : forall A : Set, A -> _IO A.
 Axiom cast_io : _IO unit -> IO_unit.
@@ -51,7 +51,7 @@ Definition main_gen
          (prog::argv)
          (fun res => printf_string
                        (String.concat "" res))
-         (fun err => raise_failure _ (String.concat String.NewLine err))).
+         (fun err => raise_failure (String.concat String.NewLine err))).
 
 Local Existing Instance ForExtraction.default_supported_languages.
 

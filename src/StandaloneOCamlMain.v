@@ -24,7 +24,7 @@ Axiom string_length : string -> int.
 Axiom string_get : string -> int -> Ascii.ascii.
 Axiom sys_argv : list string.
 Axiom string_init : int -> (int -> Ascii.ascii) -> string.
-Axiom raise_Failure : forall A, string -> A.
+Axiom raise_Failure : string -> unit.
 
 Extract Inductive int
 => int [ "0" "Pervasives.succ" ]
@@ -89,9 +89,9 @@ Definition printf_list_string_with_newlines (strs : list String.string) : unit
                                               ++ [String.NewLine; String.NewLine])%list
      end.
 
-Definition raise_failure {A} (msg : list String.string) : A
+Definition raise_failure (msg : list String.string)
   := seq (fun _ => printf_list_string_with_newlines msg)
-         (fun _ => raise_Failure _ (string_of_Coq_string "Synthesis failed")).
+         (fun _ => raise_Failure (string_of_Coq_string "Synthesis failed")).
 
 Definition main_gen
            {supported_languages : ForExtraction.supported_languagesT}
