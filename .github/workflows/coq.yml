@@ -39,15 +39,36 @@ jobs:
         cabal-version: ${{ matrix.cabal }}
     - name: echo build params
       run: |
-        set -x
+        echo "::group::lscpu"
         lscpu
+        echo "::endgroup::"
+        echo "::group::uname -a"
         uname -a
+        echo "::endgroup::"
+        echo "::group::lsb_release -a"
         lsb_release -a
+        echo "::endgroup::"
+        echo "::group::cat ~/.cabal/config"
+        cat ~/.cabal/config
+        echo "::endgroup::"
+        echo "::group::ghc --version"
         ghc --version
+        echo "::endgroup::"
+        echo "::group::gcc -v"
         gcc -v
+        echo "::endgroup::"
+        echo "::group::ocamlc -config"
         ocamlc -config
+        echo "::endgroup::"
+        echo "::group::coqc --config"
+        coqc --config
+        echo "::endgroup::"
+        echo "::group::coqc --version"
         coqc --version
+        echo "::endgroup::"
+        echo "::group::echo | coqtop"
         echo | coqtop
+        echo "::endgroup::"
     - uses: actions/checkout@v2
     - name: submodules-init
       uses: snickerbockers/submodules-init@v4

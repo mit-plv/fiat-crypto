@@ -70,17 +70,36 @@ jobs:
 
     - name: echo build params
       run: |
-        @ECHO ON
+        ECHO ::group::wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
         wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
+        ECHO ::endgroup::
+        ECHO ::group::wmic cpu list /format:list
         wmic cpu list /format:list
+        ECHO ::endgroup::
+        ECHO ::group::git config -l
         C:\cygwin64\bin\bash -l -c 'git config -l'
+        ECHO ::endgroup::
+        ECHO ::group::git config --global -l
         C:\cygwin64\bin\bash -l -c 'git config --global -l'
+        ECHO ::endgroup::
+        ECHO ::group::ocamlc -config
         C:\cygwin64\bin\bash -l -c 'ocamlc -config'
+        ECHO ::endgroup::
+        ECHO ::group::coqc --config
         C:\cygwin64\bin\bash -l -c 'coqc --config'
+        ECHO ::endgroup::
+        ECHO ::group::coqc --version
         C:\cygwin64\bin\bash -l -c 'coqc --version'
+        ECHO ::endgroup::
+        ECHO ::group::coqtop version
         true | C:\cygwin64\bin\bash -l -c 'coqtop'
+        ECHO ::endgroup::
+        ECHO ::group::make printenv
         C:\cygwin64\bin\bash -l -c 'cd "%cd%"; make printenv'
+        ECHO ::endgroup::
+        ECHO ::group::PATH
         C:\cygwin64\bin\bash -l -c 'cd "%cd%"; echo "${PATH}"'
+        ECHO ::endgroup::
       shell: cmd
     - name: add Coq matcher
       run: |
