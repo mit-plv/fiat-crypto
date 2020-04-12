@@ -74,7 +74,7 @@ jobs:
 
     - name: Build Coq
       run: |
-        C:\cygwin64\bin\bash -l -c 'cd coq; make -j${NJOBS}'
+        C:\cygwin64\bin\bash -l -c 'cd coq; make -j1'
       shell: cmd
 
     - name: Install Coq
