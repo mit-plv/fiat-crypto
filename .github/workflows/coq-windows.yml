@@ -53,19 +53,14 @@ jobs:
         C:\cygwin64\bin\bash -l coq\dev\ci\azure-opam.sh
       shell: cmd
 
-    - name: Configure Coq
-      run: |
-        C:\cygwin64\bin\bash -l -c 'cd coq; ./configure -prefix=/usr/local'
-      shell: cmd
-
     - name: Build Coq
       run: |
-        C:\cygwin64\bin\bash -l -c 'cd coq; make -j${NJOBS}'
+        C:\cygwin64\bin\bash -l coq\dev\ci\azure-opam.sh
       shell: cmd
 
     - name: Install Coq
       run: |
-        C:\cygwin64\bin\bash -l -c 'cd coq; make install'
+        C:\cygwin64\bin\bash -l -c 'cd coq; dune build @install && dune install'
       shell: cmd
 
     - name: echo build params
