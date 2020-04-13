@@ -12,7 +12,7 @@ jobs:
     runs-on: windows-latest
 
     env:
-      NJOBS: "2"
+      NJOBS: "1"
       COQ_VERSION: "master"
       SKIP_BEDROCK2: "1"
 
@@ -74,7 +74,7 @@ jobs:
 
     - name: Build Coq
       run: |
-        C:\cygwin64\bin\bash -l -c 'cd coq; make -j1'
+        C:\cygwin64\bin\bash -l -c 'cd coq; make -j%NJOBS%'
       shell: cmd
 
     - name: Install Coq
