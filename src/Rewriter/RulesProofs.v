@@ -775,7 +775,7 @@ Proof using Type.
         by auto with zarith.
     match goal with
     | |- context[(?x / ?y) mod ?z] =>
-      assert (0 <= x / y < z)
+      assert (0 <= x / y < 2^lgcarrymax)
         by (split; auto with zarith;
             apply Z.div_lt_upper_bound; auto with zarith;
             rewrite <-Z.pow_add_r by lia; auto with zarith)
