@@ -13,7 +13,7 @@ jobs:
 
     env:
       NJOBS: "2"
-      COQ_VERSION: "V8.11.1"
+      COQ_VERSION: "master"
       SKIP_BEDROCK2: "1"
 
     # initial steps copied from https://github.com/coq/coq/blob/76d8a38a4591c604795c5429ffcbbe9daaa8945d/azure-pipelines.yml#L9-L39
