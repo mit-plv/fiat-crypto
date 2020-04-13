@@ -962,7 +962,7 @@ Section with_bitwidth.
                     0 <= lgcarrymax <= bitwidth
                     -> 0 < n < bitwidth
                     -> 0 < bitwidth < n + lgcarrymax
-                    -> singlewidth_carry (Z.add_get_carry_full ('(2^n)) (singlewidth x) (singlewidth y))
+                    -> pairsinglewidth (Z.add_get_carry_full ('(2^n)) (singlewidth x) (singlewidth y))
                        = (dlet sum_xy := singlewidth (singlewidth x + singlewidth y) in
                               dlet carry_xy := carrywidth (Z.ltz (singlewidth sum_xy) (singlewidth x)) in
                               dlet low := singlewidth (Z.land (singlewidth sum_xy) ('(2^n - 1))) in
@@ -970,7 +970,7 @@ Section with_bitwidth.
                             singlewidth
                               (Z.add (singlewidth (Z.shiftr (singlewidth sum_xy) ('n)))
                                      (singlewidth (Z.shiftl (carrywidth carry_xy) ('(bitwidth - n)))))
-                                in
+                            in
                               (singlewidth low, singlewidth high)))
              ]
            ; mymap
