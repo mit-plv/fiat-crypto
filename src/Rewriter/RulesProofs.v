@@ -22,6 +22,7 @@ Require Import Crypto.Util.ZUtil.MulSplit.
 Require Import Crypto.Util.ZUtil.TruncatingShiftl.
 Require Import Crypto.Util.ZUtil.Zselect.
 Require Import Crypto.Util.ZUtil.Div.
+Require Import Crypto.Util.ZUtil.Divide.
 Require Import Crypto.Util.ZUtil.Modulo.
 Require Import Crypto.Util.ZUtil.Pow.
 Require Import Crypto.Util.ZUtil.Land.
@@ -710,6 +711,30 @@ Proof using Type.
   all:autorewrite with zsimplify; lia.
 Qed.
 
+(* TODO: move *)
+Lemma Z_mod_pow_same_base_larger a b n m :
+  0 <= n < m -> 0 < b ->
+  (a mod (b^n)) mod (b^m) = a mod b^n.
+Proof.
+  intros.
+  pose proof Z.mod_pos_bound a (b^n) ltac:(auto with zarith).
+  assert (b^n <= b^m) by auto with zarith.
+  apply Z.mod_small. auto with zarith.
+Qed.
+
+(* TODO: move *)
+Lemma Z_mod_pow_same_base_smaller a b n m :
+  0 <= m < n -> 0 < b ->
+  (a mod (b^n)) mod (b^m) = a mod b^m.
+Proof.
+  intros.
+  replace n with (m+(n-m)) by lia.
+  rewrite Z.pow_add_r by lia.
+  rewrite Z.rem_mul_r by auto with zarith.
+  push_Zmod; pull_Zmod.
+  autorewrite with zsimplify_fast; reflexivity.
+Qed.
+
 Lemma multiret_split_rewrite_rules_proofs (bitwidth : Z) (lgcarrymax : Z)
   : PrimitiveHList.hlist (@snd bool Prop) (multiret_split_rewrite_rulesT bitwidth lgcarrymax).
 Proof using Type.
@@ -719,14 +744,27 @@ Proof using Type.
   all: repeat interp_good_t_step_related.
   all: systematically_handle_casts; try reflexivity.
   all: rewrite !ident.platform_specific_cast_0_is_mod, ?Z.sub_add, ?Z.mod_mod by lia; try reflexivity.
+  all:
+    try
+      (match goal with
+      | |- context [Z.land ?x (2^?n - 1)] =>
+        replace (2^n-1) with (Z.ones n) by
+            (rewrite Z.sub_1_r, <-Z.ones_equiv; reflexivity);
+          rewrite !Z.land_ones by lia
+       end).
+  all: rewrite ?Z.shiftr_div_pow2, ?Z.shiftl_mul_pow2 by lia.
+  all: rewrite ?Z_mod_pow_same_base_larger,
+       ?Z_mod_pow_same_base_smaller by lia.
+  all: try reflexivity.
   all: push_Zmod; pull_Zmod; try reflexivity.
   all: progress specialize_by auto.
-  all: lazymatch goal with
+  all: try solve[
+  lazymatch goal with
        | [ |- ?x mod ?y = _ mod ?y ]
          => apply f_equal2; [ | reflexivity ];
-              progress cbv [Z.ltz]; break_innermost_match; Z.ltb_to_lt; Z.div_mod_to_quot_rem
-       end.
-  all: repeat match goal with
+              cbv [Z.ltz]; break_innermost_match; Z.ltb_to_lt; Z.div_mod_to_quot_rem
+       end;
+   repeat match goal with
               | [ H : ?x + ?y = ?d * ?q + ?r, H' : ?r < ?y |- _ ]
                 => is_var q; unique assert (q = 1) by do_clear_nia x y r H H'; subst
               | [ H : ?x + ?y = ?d * ?q + ?r, H' : ?r >= ?y |- _ ]
@@ -744,5 +782,46 @@ Proof using Type.
                       let q' := fresh "q" in
                       remember (q - q0) as q' eqn:?; (tryif is_var q then Z.linear_substitute q else idtac)
               | _ => nia
-              end.
+          end].
+  { (* TODO : long and manual; fix *)
+    push_Zmod; pull_Zmod.
+    Z.rewrite_mod_small.
+    rewrite <-Z.add_mul_mod by
+        (rewrite <-?Z.add_div_ltz_1 by lia;
+         try split; auto with zarith; rewrite Z.pow_sub_r by lia;
+         apply Z.div_lt_upper_bound; auto with zarith;
+         rewrite Z.mul_div_eq, Z.mod_same_pow by auto with zarith;
+         autorewrite with zsimplify_fast; auto with zarith).
+    rewrite <-Z.div_add by auto with zarith.
+    match goal with
+      |- context [?x * 2 ^ (?y - ?z) * 2^?z] =>
+      replace (x * 2^(y-z) * 2^z) with (x * 2^y);
+        [ | transitivity (x * (2^(y-z) * 2^z)); [ | lia];
+            rewrite <-Z.pow_add_r by lia; repeat (f_equal; try lia) ]
+    end.
+    rewrite <-Z.add_div_ltz_1, <-Z.div_mod''', <-!Z.pow_add_r
+      by auto with zarith.
+
+    match goal with
+    | H : 0 <= ?x <= 2^?y-1, H' : 0 <= ?z <= 2^?y-1 |-
+      context [?x + ?z] =>
+      let P := fresh "H" in
+      assert (0 <= x + z < 2^y + 2^y) as P by auto with zarith;
+        rewrite Z.add_diag, Z.pow_mul_base in P by lia
+    end.
+    assert (2 ^ (bitwidth+1) <= 2 ^ (n+lgcarrymax))
+        by auto with zarith.
+    match goal with
+    | |- context[(?x / ?y) mod ?z] =>
+      assert (0 <= x / y < z)
+        by (split; auto with zarith;
+            apply Z.div_lt_upper_bound; auto with zarith;
+            rewrite <-Z.pow_add_r by lia; auto with zarith)
+    end.
+    match goal with
+    | |- context[_ mod (2 ^ (?x + ?y))] =>
+      assert (2^x < 2^(x+y)) by auto with zarith
+    end.
+    Z.rewrite_mod_small.
+    reflexivity. }
 Qed.
