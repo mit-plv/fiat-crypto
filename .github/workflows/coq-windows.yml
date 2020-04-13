@@ -21,12 +21,26 @@ jobs:
     - uses: actions/checkout@v2
     - name: submodules-init
       uses: snickerbockers/submodules-init@v4
+    - name: Download cygwin
+      run: |
+        & cmd /c 'nslookup www.cygwin.com 2>&1'
+        while ($true)
+        {
+            try
+            {
+                (New-Object Net.WebClient).DownloadFile('http://www.cygwin.com/setup-x86_64.exe', 'setup-x86_64.exe')
+                break
+            }
+            catch
+            {
+                Write-Host "There is an error during package downloading:`n $_"
+            }
+        }
+        & cmd /c 'nslookup www.cygwin.com 8.8.8.8 2>&1'
+      shell: powershell
     - name: Install cygwin
       run: |
         @ECHO ON
-        nslookup www.cygwin.com
-        powershell -Command "(New-Object Net.WebClient).DownloadFile('http://www.cygwin.com/setup-x86_64.exe', 'setup-x86_64.exe')"
-        nslookup www.cygwin.com 8.8.8.8
         SET CYGROOT=C:\cygwin64
         SET CYGCACHE=%CYGROOT%\var\cache\setup
         setup-x86_64.exe -qnNdO -R %CYGROOT% -l %CYGCACHE% -s %CYGMIRROR% -P rsync -P patch -P diffutils -P make -P unzip -P m4 -P findutils -P time -P wget -P curl -P git -P mingw64-x86_64-binutils,mingw64-x86_64-gcc-core,mingw64-x86_64-gcc-g++,mingw64-x86_64-pkg-config,mingw64-x86_64-windows_default_manifest -P mingw64-x86_64-headers,mingw64-x86_64-runtime,mingw64-x86_64-pthreads,mingw64-x86_64-zlib -P python3 -P python2
