@@ -739,25 +739,34 @@ Lemma multiret_split_rewrite_rules_proofs (bitwidth : Z) (lgcarrymax : Z)
   : PrimitiveHList.hlist (@snd bool Prop) (multiret_split_rewrite_rulesT bitwidth lgcarrymax).
 Proof using Type.
   assert (0 <= lgcarrymax <= bitwidth -> 0 < 2^lgcarrymax <= 2^bitwidth) by auto with zarith.
+  assert (0 <= bitwidth -> bitwidth < 2^bitwidth)
+    by (intros; apply Z.pow_gt_lin_r; auto with zarith).
 
   start_proof; auto; intros; try lia.
   all: repeat interp_good_t_step_related.
   all: systematically_handle_casts; try reflexivity.
   all: rewrite !ident.platform_specific_cast_0_is_mod, ?Z.sub_add, ?Z.mod_mod by lia; try reflexivity.
+  all: progress specialize_by lia.
   all:
-    try
-      (match goal with
-      | |- context [Z.land ?x (2^?n - 1)] =>
-        replace (2^n-1) with (Z.ones n) by
-            (rewrite Z.sub_1_r, <-Z.ones_equiv; reflexivity);
-          rewrite !Z.land_ones by lia
-       end).
+    try match goal with
+        | |- context [(2^?n - 1) mod 2^?bw] =>
+          assert (0 < 2^n < 2^bw) by auto with zarith;
+            Z.rewrite_mod_small
+        end.
+  all: try
+         (match goal with
+          | |- context [Z.land ?x (2^?n - 1)] =>
+            replace (2^n-1) with (Z.ones n) by
+                (rewrite Z.sub_1_r, <-Z.ones_equiv; reflexivity);
+            rewrite !Z.land_ones by lia
+          end).
+  all: push_Zmod; pull_Zmod; try reflexivity.
+  all: Z.rewrite_mod_small.
   all: rewrite ?Z.shiftr_div_pow2, ?Z.shiftl_mul_pow2 by lia.
   all: rewrite ?Z_mod_pow_same_base_larger,
        ?Z_mod_pow_same_base_smaller by lia.
   all: try reflexivity.
   all: push_Zmod; pull_Zmod; try reflexivity.
-  all: progress specialize_by auto.
   all: try solve[
   lazymatch goal with
        | [ |- ?x mod ?y = _ mod ?y ]

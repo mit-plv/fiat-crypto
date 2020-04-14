@@ -961,15 +961,18 @@ Section with_bitwidth.
               ; (forall x y n,
                     0 <= lgcarrymax <= bitwidth
                     -> 0 < n < bitwidth
-                    -> 0 < bitwidth < n + lgcarrymax
-                    -> pairsinglewidth (Z.add_get_carry_full ('(2^n)) (singlewidth x) (singlewidth y))
+                    -> bitwidth < n + lgcarrymax
+                    -> singlewidth_carry
+                         (Z.add_get_carry_full (singlewidth ('(2^n))) (singlewidth x) (singlewidth y))
                        = (dlet sum_xy := singlewidth (singlewidth x + singlewidth y) in
                               dlet carry_xy := carrywidth (Z.ltz (singlewidth sum_xy) (singlewidth x)) in
-                              dlet low := singlewidth (Z.land (singlewidth sum_xy) ('(2^n - 1))) in
+                              dlet low := singlewidth
+                                            (Z.land (singlewidth sum_xy) (singlewidth ('(2^n - 1)))) in
                               dlet high :=
                             singlewidth
-                              (Z.add (singlewidth (Z.shiftr (singlewidth sum_xy) ('n)))
-                                     (singlewidth (Z.shiftl (carrywidth carry_xy) ('(bitwidth - n)))))
+                              (Z.add (singlewidth (Z.shiftr (singlewidth sum_xy) (singlewidth ('n))))
+                                     (singlewidth (Z.shiftl (carrywidth carry_xy)
+                                                            (singlewidth ('(bitwidth - n))))))
                             in
                               (singlewidth low, singlewidth high)))
              ]
