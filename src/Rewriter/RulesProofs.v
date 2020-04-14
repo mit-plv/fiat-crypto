@@ -709,6 +709,10 @@ Proof using Type.
   all: systematically_handle_casts; try reflexivity.
   all: rewrite !ident.platform_specific_cast_0_is_mod, ?Z.sub_add, ?Z.mod_mod by lia; try reflexivity.
   all: progress specialize_by lia.
+  all: try match goal with
+           | H : ?x = 2 ^ Z.log2 ?x |- _ =>
+             rewrite H
+           end.
   all:
     try match goal with
         | |- context [(2^?n - 1) mod 2^?bw] =>
@@ -723,6 +727,9 @@ Proof using Type.
             rewrite !Z.land_ones by lia
           end).
   all: push_Zmod; pull_Zmod; try reflexivity.
+  all: Z.rewrite_mod_small.
+  all: rewrite ?Z.shiftr_div_pow2, ?Z.shiftl_mul_pow2 by lia.
+  all: rewrite ?Z.log2_pow2 by lia.
   all: Z.rewrite_mod_small.
   all: rewrite ?Z.shiftr_div_pow2, ?Z.shiftl_mul_pow2 by lia.
   all: rewrite ?Z_mod_pow_same_base_larger,
@@ -757,6 +764,7 @@ Proof using Type.
   { (* TODO : long and manual; fix *)
     push_Zmod; pull_Zmod.
     Z.rewrite_mod_small.
+    subst.
     rewrite <-Z.add_mul_mod by
         (rewrite <-?Z.add_div_ltz_1 by lia;
          try split; auto with zarith; rewrite Z.pow_sub_r by lia;
@@ -780,7 +788,7 @@ Proof using Type.
       assert (0 <= x + z < 2^y + 2^y) as P by auto with zarith;
         rewrite Z.add_diag, Z.pow_mul_base in P by lia
     end.
-    assert (2 ^ (bitwidth+1) <= 2 ^ (n+lgcarrymax))
+    assert (2 ^ (bitwidth+1) <= 2 ^ (Z.log2 two_pow_n+lgcarrymax))
         by auto with zarith.
     match goal with
     | |- context[(?x / ?y) mod ?z] =>
