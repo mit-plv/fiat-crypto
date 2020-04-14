@@ -958,22 +958,24 @@ Section with_bitwidth.
                        = (dlet low := singlewidth (singlewidth x * singlewidth y) in
                               dlet high := singlewidth (Z.mul_high (cstZ rpow2_bitwidth ('(2^bitwidth))) (singlewidth x) (singlewidth y)) in
                               (singlewidth low, singlewidth high)))
-              ; (forall x y n rpow2_n,
+              ; (forall x y two_pow_n r,
                     0 <= lgcarrymax <= bitwidth
-                    -> 0 < n < bitwidth
-                    -> bitwidth < n + lgcarrymax
-                    -> 2^n ∈ rpow2_n
+                    -> two_pow_n = 2 ^ Z.log2 two_pow_n
+                    -> 0 < Z.log2 two_pow_n < bitwidth
+                    -> bitwidth < Z.log2 two_pow_n + lgcarrymax
+                    -> two_pow_n ∈ r
                     -> singlewidth_carry
-                         (Z.add_get_carry_full (cstZ rpow2_n ('(2^n))) (singlewidth x) (singlewidth y))
+                         (Z.add_get_carry_full (cstZ r ('(two_pow_n))) (singlewidth x) (singlewidth y))
                        = (dlet sum_xy := singlewidth (singlewidth x + singlewidth y) in
                               dlet carry_xy := carrywidth (Z.ltz (singlewidth sum_xy) (singlewidth x)) in
                               dlet low := singlewidth
-                                            (Z.land (singlewidth sum_xy) (singlewidth ('(2^n - 1)))) in
+                                            (Z.land (singlewidth sum_xy) (singlewidth ('(two_pow_n - 1)))) in
                               dlet high :=
                             singlewidth
-                              (Z.add (singlewidth (Z.shiftr (singlewidth sum_xy) (singlewidth ('n))))
+                              (Z.add (singlewidth (Z.shiftr (singlewidth sum_xy)
+                                                            (singlewidth ('(Z.log2 two_pow_n)))))
                                      (singlewidth (Z.shiftl (carrywidth carry_xy)
-                                                            (singlewidth ('(bitwidth - n))))))
+                                                            (singlewidth ('(bitwidth - Z.log2 two_pow_n))))))
                             in
                               (singlewidth low, singlewidth high)))
              ]
