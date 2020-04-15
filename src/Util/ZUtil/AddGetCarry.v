@@ -157,6 +157,18 @@ Module Z.
     -> - ((x - y) / s) = Z.ltz x ((x - y) mod s).
   Proof. fin_div_ltz. Qed.
 
+  Lemma sub_sub_div_ltz s x y c :
+    0 <= c < s
+    -> 0 <= x < s
+    -> 0 <= y < s
+    -> - ((x - y - c) / s) =
+       Z.ltz x ((x - y) mod s) + Z.ltz ((x - y) mod s) ((x - y - c) mod s).
+  Proof.
+    intros. rewrite (PullPush.Z.sub_mod_l (x-y)).
+    rewrite <-!sub_div_ltz by auto with zarith.
+    fin_div_ltz.
+  Qed.
+
   Lemma sub_get_borrow_full_ltz s x y :
     0 <= x < s
     -> 0 <= y < s
