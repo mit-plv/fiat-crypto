@@ -957,6 +957,27 @@ Section with_bitwidth.
                                                             (singlewidth ('(bitwidth - Z.log2 two_pow_n))))))
                             in
                               (singlewidth low, singlewidth high)))
+              ; (forall c x y two_pow_n r,
+                    0 <= lgcarrymax <= bitwidth
+                    -> two_pow_n = 2 ^ Z.log2 two_pow_n
+                    -> 0 < Z.log2 two_pow_n < bitwidth
+                    -> bitwidth + 1 < Z.log2 two_pow_n + lgcarrymax
+                    -> two_pow_n ∈ r
+                    -> singlewidth_carry
+                         (Z.add_with_get_carry_full (cstZ r ('(two_pow_n))) (carrywidth c) (singlewidth x) (singlewidth y))
+                       = (dlet sum_cx := singlewidth (carrywidth c + singlewidth x) in
+                              dlet carry_cx := carrywidth (Z.ltz (singlewidth sum_cx) (singlewidth x)) in
+                              dlet sum_cxy := singlewidth (singlewidth sum_cx + singlewidth y) in
+                              dlet carry_cxy := carrywidth (Z.ltz (singlewidth sum_cxy) (singlewidth y)) in
+                              dlet carry := singlewidth (Z.add (carrywidth carry_cx) (carrywidth carry_cxy)) in
+                              dlet low := singlewidth
+                                            (Z.land (singlewidth sum_cxy) (singlewidth ('(two_pow_n - 1)))) in
+                              dlet high := singlewidth
+                                             (Z.add (singlewidth (Z.shiftr (singlewidth sum_cxy)
+                                                                           (singlewidth ('(Z.log2 two_pow_n)))))
+                                                    (singlewidth (Z.shiftl (carrywidth carry)
+                                                                           (singlewidth ('(bitwidth - Z.log2 two_pow_n)))))) in
+                              (singlewidth low, singlewidth high)))
              ]
            ; mymap
                do_again
