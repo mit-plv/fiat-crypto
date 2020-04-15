@@ -127,6 +127,18 @@ Module Z.
     -> (x + y) / s = Z.ltz ((x + y) mod s) y.
   Proof. fin_div_ltz. Qed.
 
+  Lemma add_add_div_ltz_2 s c x y :
+    0 <= c < s
+    -> 0 <= x < s
+    -> 0 <= y < s
+    -> (c + x + y) / s =
+       Z.ltz ((c + x) mod s) x + Z.ltz ((c + x + y) mod s) y.
+  Proof.
+    intros. rewrite <-(Z.add_mod_idemp_l (c + x)) by lia.
+    rewrite <-!add_div_ltz_2 by auto with zarith.
+    fin_div_ltz.
+  Qed.
+
   Lemma add_get_carry_full_ltz_1 s x y :
     0 <= x < s
     -> 0 <= y < s
