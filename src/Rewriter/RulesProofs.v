@@ -24,6 +24,7 @@ Require Import Crypto.Util.ZUtil.Zselect.
 Require Import Crypto.Util.ZUtil.Div.
 Require Import Crypto.Util.ZUtil.Divide.
 Require Import Crypto.Util.ZUtil.Modulo.
+Require Import Crypto.Util.ZUtil.Opp.
 Require Import Crypto.Util.ZUtil.Pow.
 Require Import Crypto.Util.ZUtil.Land.
 Require Import Crypto.Util.ZUtil.LandLorShiftBounds.
@@ -800,10 +801,14 @@ Proof using Type.
   all: rewrite ?Z.shiftr_div_pow2, ?Z.shiftl_mul_pow2 by lia.
   all: rewrite ?Z_mod_pow_same_base_larger,
        ?Z_mod_pow_same_base_smaller by lia.
+  all: rewrite ?Z_ltz_mod_pow2_small by lia.
   all: rewrite <-?Z.add_div_ltz_1 by lia.
   all: try reflexivity.
   all: push_Zmod; pull_Zmod; try reflexivity.
   all: rewrite ?Z.mod_pull_div, <-?Z.pow_add_r by auto with zarith.
+  all: rewrite <-?Z.sub_sub_div_ltz by lia.
+  all: rewrite <-?Z.sub_div_ltz by lia.
+  all: try rewrite Z.mul_opp_l, Z.sub_opp_l, Opp.Z.opp_sub.
   all:
     repeat match goal with
            | Hx : 0 <= ?x <= 2^?n - 1,
@@ -827,7 +832,6 @@ Proof using Type.
                by auto with zarith
            | _ => progress Z.rewrite_mod_small
            end.
-
   all: try solve[
   try lazymatch goal with
        | [ |- ?x mod ?y = _ mod ?y ]

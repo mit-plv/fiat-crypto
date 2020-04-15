@@ -8,4 +8,7 @@ Module Z.
   Lemma opp_eq_0_iff a : -a = 0 <-> a = 0.
   Proof. omega. Qed.
   Hint Rewrite opp_eq_0_iff : zsimplify.
+
+  Lemma opp_sub n m : - n - m = - (n + m).
+  Proof. lia. Qed.
 End Z.
