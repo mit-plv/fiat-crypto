@@ -751,6 +751,7 @@ Module Compilers.
                  | ident.Z_sub_get_borrow
                  | ident.Z_sub_with_get_borrow
                  | ident.Z_add_modulo
+                 | ident.Z_lxor
                  | ident.Z_rshi
                  | ident.Z_cc_m
                  | ident.Z_combine_at_bitwidth

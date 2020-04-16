@@ -122,6 +122,7 @@ Definition all_ident_named_interped : InductiveHList.hlist
       ; with_name ident_Z_truncating_shiftl Z.truncating_shiftl
       ; with_name ident_Z_bneg Z.bneg
       ; with_name ident_Z_lnot_modulo Z.lnot_modulo
+      ; with_name ident_Z_lxor Z.lxor
       ; with_name ident_Z_rshi Z.rshi
       ; with_name ident_Z_cc_m Z.cc_m
       ; with_name ident_Z_combine_at_bitwidth Z.combine_at_bitwidth
