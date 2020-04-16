@@ -320,6 +320,7 @@ Module Compilers.
              | ident.Z_opp => fun '((x, xr), tt) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 35) ("-" ++ x 35%nat), ZRange.type.base.option.None)
              | ident.Z_bneg => fun '((x, xr), tt) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 75) ("!" ++ x 75%nat), ZRange.type.base.option.None)
              | ident.Z_lnot_modulo => fun '((x, xr), ((m, mr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 75) ("~" ++ x 75%nat ++ (if with_casts then " (mod " ++ m 200%nat ++ ")" else "")), ZRange.type.base.option.None)
+             | ident.Z_lxor => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 50) (x 50%nat ++ " ⊕ " ++ y 49%nat), ZRange.type.base.option.None)
              | ident.Z_div => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 40) (x 40%nat ++ " / " ++ y 39%nat), ZRange.type.base.option.None)
              | ident.Z_modulo => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 40) (x 40%nat ++ " mod " ++ y 39%nat), ZRange.type.base.option.None)
              | ident.Z_eqb => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 70) (x 69%nat ++ " = " ++ y 69%nat), ZRange.type.base.option.None)
@@ -474,6 +475,7 @@ Module Compilers.
                 | ident.Z_land => "(&)"
                 | ident.Z_lor => "(|)"
                 | ident.Z_lnot_modulo => "~"
+                | ident.Z_lxor => "⊕"
                 | ident.Z_bneg => "!"
                 | ident.Z_mul_split => "Z.mul_split"
                 | ident.Z_mul_high => "Z.mul_high"

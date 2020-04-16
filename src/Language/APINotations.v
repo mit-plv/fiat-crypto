@@ -229,6 +229,7 @@ Module Compilers.
     Notation Z_max := Compilers.ident_Z_max (only parsing).
     Notation Z_bneg := Compilers.ident_Z_bneg (only parsing).
     Notation Z_lnot_modulo := Compilers.ident_Z_lnot_modulo (only parsing).
+    Notation Z_lxor := Compilers.ident_Z_lxor (only parsing).
     Notation Z_truncating_shiftl := Compilers.ident_Z_truncating_shiftl (only parsing).
     Notation Z_mul_split := Compilers.ident_Z_mul_split (only parsing).
     Notation Z_mul_high := Compilers.ident_Z_mul_high (only parsing).

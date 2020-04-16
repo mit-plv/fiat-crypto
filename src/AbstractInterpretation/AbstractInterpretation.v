@@ -504,6 +504,7 @@ Module Compilers.
              | ident.Z_max as idc
              | ident.Z_min as idc
              | ident.Z_pow as idc
+             | ident.Z_lxor as idc
              | ident.Z_modulo as idc
              | ident.Build_zrange as idc
                => fun x y => match to_literal x, to_literal y with
