@@ -8,6 +8,7 @@ Require Import Crypto.BoundsPipeline.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Bedrock.Defaults.
+Require Import Crypto.Bedrock.Defaults64.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Translation.Func.
 Require Import Crypto.Language.API.
@@ -20,7 +21,7 @@ Require bedrock2.NotationsCustomEntry.
 
 Import Language.Compilers.
 Import Associational Positional.
-Import Types.Notations Defaults.Notations.
+Import Types.Notations Defaults64.Notations.
 
 Require Import Crypto.Util.Notations.
 Import ListNotations. Local Open Scope Z_scope.

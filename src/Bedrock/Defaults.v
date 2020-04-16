@@ -1,62 +1,34 @@
-Require Import Coq.ZArith.ZArith.
 Require Import Coq.Strings.String.
 Require Import Coq.Lists.List.
 Require Import bedrock2.Syntax.
-Require Import bedrock2.Semantics.
-Require Import bedrock2.BasicC64Semantics.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.BoundsPipeline.
-Require Import Crypto.Language.API.
 Require Crypto.Util.Strings.Decimal.
-Require Import Crypto.Util.ZRange.
-Import API.Compilers.
 
-Require Import Crypto.Util.Notations.
-Import Types.Notations ListNotations.
-Local Open Scope Z_scope.
-Local Open Scope string_scope.
+(* Declares default parameters for the bedrock2 backend that apply to all
+   machine word sizes. Do NOT import this file unless you're prepared to have a
+   bunch of global typeclass instances declared for you. *)
 
-(* Declares default parameters for the bedrock2 backend and includes useful
-   definitions/proofs that apply specifically to the defaults. Do NOT import
-   this file unless you're prepared to have a bunch of global typeclass
-   instances and notations declared for you. *)
-
-Section Defaults.
-  Definition machine_wordsize := 64.
-
-  (* Reification/bounds pipeline options *)
-  Global Existing Instance default_low_level_rewriter_method.
-  (* Split multiplications into two outputs, not just one huge word *)
-  Global Instance should_split_mul : should_split_mul_opt := true.
-  (* For functions that return multiple values, split into two LetIns (this is
+(* Reification/bounds pipeline options *)
+Global Existing Instance default_low_level_rewriter_method.
+(* Split multiplications into two outputs, not just one huge word *)
+Global Instance should_split_mul : should_split_mul_opt := true.
+(* For functions that return multiple values, split into two LetIns (this is
      because bedrock2 does not support multiple-sets, so they would have to be
      split anyway) *)
-  Global Instance should_split_multiret : should_split_multiret_opt := true.
-  (* Make all words 64-bit, even if they could be smaller *)
-  Global Instance widen_carry : widen_carry_opt := true.
-  Global Instance widen_bytes : widen_bytes_opt := true.
-  (* Unsigned integers *)
-  Global Instance only_signed : only_signed_opt := false.
+Global Instance should_split_multiret : should_split_multiret_opt := true.
+(* Make all words full-size, even if they could be smaller *)
+Global Instance widen_carry : widen_carry_opt := true.
+Global Instance widen_bytes : widen_bytes_opt := true.
+(* Unsigned integers *)
+Global Instance only_signed : only_signed_opt := false.
 
-  (* Define how to split mul/multi-return functions *)
-  Definition possible_values
-    := prefix_with_carry [machine_wordsize; 2 * machine_wordsize]%Z.
-  Global Instance split_mul_to : split_mul_to_opt :=
-    split_mul_to_of_should_split_mul machine_wordsize possible_values.
-  Global Instance split_multiret_to : split_multiret_to_opt :=
-    split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
+(* bedrock2 backend parameters *)
+Global Existing Instances Types.rep.Z Types.rep.listZ_mem.
 
-  (* bedrock2 backend parameters *)
-  Global Existing Instances Types.rep.Z Types.rep.listZ_mem.
-  Let wordsize_bytes := Eval vm_compute in (machine_wordsize / 8)%Z.
-  Local Definition ERROR := "ERROR".
-  Global Instance default_parameters : Types.parameters :=
-    {| semantics := BasicC64Semantics.parameters;
-       varname_gen := fun i => String.append "x" (Decimal.Z.to_string (Z.of_nat i));
-       error := expr.var ERROR;
-       word_size_in_bytes := wordsize_bytes;
-    |}.
+Local Definition ERROR := "ERROR"%string.
 
+Section Defs.
   Definition bedrock_func : Type :=
     string * (list string * list string * cmd.cmd).
 
@@ -82,12 +54,4 @@ Section Defaults.
     | cmd.call _ _ args => forallb error_free_expr args
     | cmd.interact _ _ args => forallb error_free_expr args
     end.
-End Defaults.
-
-Module Notations.
-  Notation "'uint64,uint64'" := (ident.Literal
-                                   (r[0 ~> 18446744073709551615]%zrange,
-                                    r[0 ~> 18446744073709551615]%zrange)%core) : expr_scope.
-  Notation "'uint64'" :=
-    (ident.Literal (t:=Compilers.zrange) r[0 ~> 18446744073709551615]%zrange) : expr_scope.
-End Notations.
+End Defs.
