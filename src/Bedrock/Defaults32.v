@@ -1,0 +1,49 @@
+Require Import Coq.ZArith.ZArith.
+Require Import Coq.Strings.String.
+Require Import Coq.Lists.List.
+Require Import bedrock2.Syntax.
+Require Import bedrock2.Semantics.
+Require Import bedrock2.BasicC32Semantics.
+Require Import Crypto.Bedrock.Defaults.
+Require Import Crypto.Bedrock.Types.
+Require Import Crypto.BoundsPipeline.
+Require Import Crypto.Language.API.
+Require Import Crypto.Util.ZRange.
+Import API.Compilers.
+
+Require Import Crypto.Util.Notations.
+Import Types.Notations ListNotations.
+Local Open Scope Z_scope.
+Local Open Scope string_scope.
+
+(* Declares default parameters for the bedrock2 backend and includes useful
+   definitions/proofs that apply specifically to the defaults. Do NOT import
+   this file unless you're prepared to have a bunch of global typeclass
+   instances and notations declared for you. *)
+
+Section Defaults_32.
+  Definition machine_wordsize := 32.
+
+  (* Define how to split mul/multi-return functions *)
+  Definition possible_values
+    := prefix_with_carry [machine_wordsize; 2 * machine_wordsize]%Z.
+  Global Instance split_mul_to : split_mul_to_opt :=
+    split_mul_to_of_should_split_mul machine_wordsize possible_values.
+  Global Instance split_multiret_to : split_multiret_to_opt :=
+    split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
+  Let wordsize_bytes := Eval vm_compute in (machine_wordsize / 8)%Z.
+  Global Instance default_parameters : Types.parameters :=
+    {| semantics := BasicC32Semantics.parameters;
+       varname_gen := fun i => String.append "x" (Decimal.decimal_string_of_Z (Z.of_nat i));
+       error := expr.var Defaults.ERROR;
+       word_size_in_bytes := wordsize_bytes;
+    |}.
+End Defaults_32.
+
+Module Notations.
+  Notation "'uint32,uint32'" := (ident.Literal
+                                   (r[0 ~> 4294967295]%zrange,
+                                    r[0 ~> 4294967295]%zrange)%core) : expr_scope.
+  Notation "'uint32'" :=
+    (ident.Literal (t:=Compilers.zrange) r[0 ~> 4294967295]%zrange) : expr_scope.
+End Notations.

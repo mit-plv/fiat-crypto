@@ -16,6 +16,7 @@ Require Import Crypto.BoundsPipeline.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Bedrock.Defaults.
+Require Import Crypto.Bedrock.Defaults64.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Proofs.Func.
