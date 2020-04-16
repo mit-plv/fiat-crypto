@@ -132,10 +132,9 @@ UNSATURATED_SOLINAS_C_FILES := $(patsubst %,$(C_DIR)%.c,$(UNSATURATED_SOLINAS_BA
 WORD_BY_WORD_MONTGOMERY_C_FILES := $(patsubst %,$(C_DIR)%.c,$(WORD_BY_WORD_MONTGOMERY_BASE_FILES))
 ALL_C_FILES := $(patsubst %,$(C_DIR)%.c,$(ALL_BASE_FILES))
 
-# bedrock2 currently only supports 64-bit outputs, AFAIK
-UNSATURATED_SOLINAS_BEDROCK2_FILES := $(patsubst %,$(BEDROCK2_DIR)%.c,$(filter %_64,$(UNSATURATED_SOLINAS_BASE_FILES)))
-WORD_BY_WORD_MONTGOMERY_BEDROCK2_FILES := $(patsubst %,$(BEDROCK2_DIR)%.c,$(filter %_64,$(WORD_BY_WORD_MONTGOMERY_BASE_FILES)))
-ALL_BEDROCK2_FILES := $(patsubst %,$(BEDROCK2_DIR)%.c,$(filter %_64,$(ALL_BASE_FILES)))
+UNSATURATED_SOLINAS_BEDROCK2_FILES := $(patsubst %,$(BEDROCK2_DIR)%.c,$(UNSATURATED_SOLINAS_BASE_FILES))
+WORD_BY_WORD_MONTGOMERY_BEDROCK2_FILES := $(patsubst %,$(BEDROCK2_DIR)%.c,$(WORD_BY_WORD_MONTGOMERY_BASE_FILES))
+ALL_BEDROCK2_FILES := $(patsubst %,$(BEDROCK2_DIR)%.c,$(ALL_BASE_FILES))
 
 UNSATURATED_SOLINAS_RUST_FILES := $(patsubst %,$(RS_DIR)%.rs,$(UNSATURATED_SOLINAS_BASE_FILES))
 WORD_BY_WORD_MONTGOMERY_RUST_FILES := $(patsubst %,$(RS_DIR)%.rs,$(WORD_BY_WORD_MONTGOMERY_BASE_FILES))
@@ -487,6 +486,13 @@ $(BEDROCK2_DIR)curve25519_64.c : $(BEDROCK2_DIR)curve25519_%.c :
 	$(HIDE)($(TIMER) $(BEDROCK2_UNSATURATED_SOLINAS) --lang=bedrock2 $(BEDROCK2_ARGS) '25519' '5' '2^255 - 19' '$*' $(filter-out $(BEDROCK2_UNSUPPORTED_SOLINAS_FUNCTIONS),$(FUNCTIONS_FOR_25519)) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
+# 2^255 - 19
+$(BEDROCK2_DIR)curve25519_32.c : $(BEDROCK2_DIR)curve25519_%.c :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER) $(BEDROCK2_UNSATURATED_SOLINAS) --lang=bedrock2 $(BEDROCK2_ARGS) '25519' '10' '2^255 - 19' '$*' $(filter-out $(BEDROCK2_UNSUPPORTED_SOLINAS_FUNCTIONS),$(FUNCTIONS_FOR_25519)) && touch $@.ok) > $@.tmp
+	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
+
 # 2^521 - 1
 $(BEDROCK2_DIR)p521_64.c : $(BEDROCK2_DIR)p521_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
@@ -509,35 +515,35 @@ $(BEDROCK2_DIR)p448_solinas_64.c : $(BEDROCK2_DIR)p448_solinas_%.c :
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 # 2^256 - 2^224 + 2^192 + 2^96 - 1
-$(BEDROCK2_DIR)p256_64.c : $(BEDROCK2_DIR)p256_%.c :
+$(BEDROCK2_DIR)p256_64.c $(BEDROCK2_DIR)p256_32.c : $(BEDROCK2_DIR)p256_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
 	$(HIDE)($(TIMER) $(BEDROCK2_WORD_BY_WORD_MONTGOMERY) --lang=bedrock2 $(BEDROCK2_ARGS) 'p256' '2^256 - 2^224 + 2^192 + 2^96 - 1' '$*' $(filter-out $(BEDROCK2_UNSUPPORTED_WORD_BY_WORD_MONTGOMERY_FUNCTIONS),$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS)) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 # 2^256 - 2^32 - 977
-$(BEDROCK2_DIR)secp256k1_64.c : $(BEDROCK2_DIR)secp256k1_%.c :
+$(BEDROCK2_DIR)secp256k1_64.c $(BEDROCK2_DIR)secp256k1_32.c : $(BEDROCK2_DIR)secp256k1_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
 	$(HIDE)($(TIMER) $(BEDROCK2_WORD_BY_WORD_MONTGOMERY) --lang=bedrock2 $(BEDROCK2_ARGS) 'secp256k1' '2^256 - 2^32 - 977' '$*' $(filter-out $(BEDROCK2_UNSUPPORTED_WORD_BY_WORD_MONTGOMERY_FUNCTIONS),$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS)) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 # 2^384 - 2^128 - 2^96 + 2^32 - 1
-$(BEDROCK2_DIR)p384_64.c : $(BEDROCK2_DIR)p384_%.c :
+$(BEDROCK2_DIR)p384_64.c $(BEDROCK2_DIR)p384_32.c : $(BEDROCK2_DIR)p384_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
 	$(HIDE)($(TIMER) $(BEDROCK2_WORD_BY_WORD_MONTGOMERY) --lang=bedrock2 $(BEDROCK2_ARGS) 'p384' '2^384 - 2^128 - 2^96 + 2^32 - 1' '$*' $(filter-out $(BEDROCK2_UNSUPPORTED_WORD_BY_WORD_MONTGOMERY_FUNCTIONS),$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS)) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 # 2^224 - 2^96 + 1
-$(BEDROCK2_DIR)p224_64.c : $(BEDROCK2_DIR)p224_%.c :
+$(BEDROCK2_DIR)p224_64.c $(BEDROCK2_DIR)p224_32.c : $(BEDROCK2_DIR)p224_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
 	$(HIDE)($(TIMER) $(BEDROCK2_WORD_BY_WORD_MONTGOMERY) --lang=bedrock2 $(BEDROCK2_ARGS) 'p224' '2^224 - 2^96 + 1' '$*' $(filter-out $(BEDROCK2_UNSUPPORTED_WORD_BY_WORD_MONTGOMERY_FUNCTIONS),$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS)) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 # 2^216 * 3^137 - 1
-$(BEDROCK2_DIR)p434_64.c : $(BEDROCK2_DIR)p434_%.c :
+$(BEDROCK2_DIR)p434_64.c $(BEDROCK2_DIR)p434_32.c : $(BEDROCK2_DIR)p434_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
 	$(HIDE)($(TIMER) $(BEDROCK2_WORD_BY_WORD_MONTGOMERY) --lang=bedrock2 $(BEDROCK2_ARGS) 'p434' '2^216 * 3^137 - 1' '$*' $(filter-out $(BEDROCK2_UNSUPPORTED_WORD_BY_WORD_MONTGOMERY_FUNCTIONS),$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS)) && touch $@.ok) > $@.tmp
