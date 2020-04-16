@@ -712,58 +712,6 @@ Proof using Type.
   all:autorewrite with zsimplify; lia.
 Qed.
 
-(* TODO: move *)
-Lemma Z_mod_pow_same_base_larger a b n m :
-  0 <= n < m -> 0 < b ->
-  (a mod (b^n)) mod (b^m) = a mod b^n.
-Proof.
-  intros.
-  pose proof Z.mod_pos_bound a (b^n) ltac:(auto with zarith).
-  assert (b^n <= b^m) by auto with zarith.
-  apply Z.mod_small. auto with zarith.
-Qed.
-
-(* TODO: move *)
-Lemma Z_mod_pow_same_base_smaller a b n m :
-  0 <= m <= n -> 0 < b ->
-  (a mod (b^n)) mod (b^m) = a mod b^m.
-Proof.
-  intros.
-  replace n with (m+(n-m)) by lia.
-  rewrite Z.pow_add_r by lia.
-  rewrite Z.rem_mul_r by auto with zarith.
-  push_Zmod; pull_Zmod.
-  autorewrite with zsimplify_fast; reflexivity.
-Qed.
-
-(* TODO: move *)
-(* This sequence actually performs a bitwise or. In terms of
-   bit ranges,
-       b...a + a...c << a-b = b...c *)
-Lemma Z_add_div_pow2 x a b :
-  0 <= b <= a ->
-  (x mod (2 ^ a)) / 2 ^ b + x / 2 ^ a * 2 ^ (a - b)
-  = x / 2 ^ b.
-Proof.
-  intros.
-  rewrite <-Z.div_add by auto with zarith.
-  match goal with
-    |- context [?x * 2^(?a-?b) * 2^?b] =>
-    replace (x * 2^(a-b) * 2^b) with (x * 2^a)
-      by (rewrite <-Z.mul_assoc, <-Z.pow_add_r by auto with zarith;
-          repeat (f_equal; try lia))
-  end.
-  rewrite <-Z.div_mod'''; auto with zarith.
-Qed.
-
-Lemma Z_ltz_mod_pow2_small x y z :
-  0 < z ->
-  (Z.ltz x y) mod (2 ^ z) = Z.ltz x y.
-Proof.
-  cbv [Z.ltz]; break_match; intros; Z.ltb_to_lt;
-    apply Z.mod_small; auto with zarith.
-Qed.
-
 Lemma multiret_split_rewrite_rules_proofs (bitwidth : Z) (lgcarrymax : Z)
   : PrimitiveHList.hlist (@snd bool Prop) (multiret_split_rewrite_rulesT bitwidth lgcarrymax).
 Proof using Type.
@@ -799,9 +747,9 @@ Proof using Type.
   all: rewrite ?Z.log2_pow2 by lia.
   all: Z.rewrite_mod_small.
   all: rewrite ?Z.shiftr_div_pow2, ?Z.shiftl_mul_pow2 by lia.
-  all: rewrite ?Z_mod_pow_same_base_larger,
-       ?Z_mod_pow_same_base_smaller by lia.
-  all: rewrite ?Z_ltz_mod_pow2_small by lia.
+  all: rewrite ?Z.mod_pow_same_base_larger,
+       ?Z.mod_pow_same_base_smaller by lia.
+  all: rewrite ?Z.ltz_mod_pow2_small by lia.
   all: rewrite <-?Z.add_div_ltz_1 by lia.
   all: try reflexivity.
   all: push_Zmod; pull_Zmod; try reflexivity.
@@ -825,8 +773,8 @@ Proof using Type.
            | H : 0 <= ?x < 2 ^ ?z |- context [?x mod 2 ^ ?y] =>
              unique assert (2 ^ z <= 2 ^ y) by auto with zarith;
                unique assert (0 <= x <= 2 ^ y) by auto with zarith
-           | _ => rewrite Z_ltz_mod_pow2_small by lia
-           | _ => rewrite Z_add_div_pow2 by auto with zarith
+           | _ => rewrite Z.ltz_mod_pow2_small by lia
+           | _ => rewrite Z.add_div_pow2 by auto with zarith
            | _ => rewrite <-Z.add_add_div_ltz_2 by lia
            | _ => rewrite Z.mod_pull_div, <-?Z.pow_add_r
                by auto with zarith

@@ -380,4 +380,24 @@ Module Z.
     rewrite Z.rem_mul_r by auto with zarith.
     reflexivity.
   Qed.
+
+  Lemma mod_pow_same_base_larger a b n m :
+    0 <= n < m -> 0 < b ->
+    (a mod (b^n)) mod (b^m) = a mod b^n.
+  Proof.
+    intros.
+    pose proof Z.mod_pos_bound a (b^n) ltac:(auto with zarith).
+    assert (b^n <= b^m) by auto with zarith.
+    apply Z.mod_small. auto with zarith.
+  Qed.
+
+  Lemma mod_pow_same_base_smaller a b n m :
+    0 <= m <= n -> 0 < b ->
+    (a mod (b^n)) mod (b^m) = a mod b^m.
+  Proof.
+    intros. replace n with (m+(n-m)) by lia.
+    rewrite Z.pow_add_r, Z.rem_mul_r by auto with zarith.
+    push_Zmod; pull_Zmod.
+    autorewrite with zsimplify_fast; reflexivity.
+  Qed.
 End Z.
