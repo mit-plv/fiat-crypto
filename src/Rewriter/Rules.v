@@ -944,7 +944,7 @@ Section with_bitwidth.
                     -> bitwidth < Z.log2 two_pow_n + lgcarrymax
                     -> two_pow_n ∈ r
                     -> singlewidth_carry
-                         (Z.add_get_carry_full (cstZ r ('(two_pow_n))) (singlewidth x) (singlewidth y))
+                         (Z.add_get_carry_full (cstZ r ('two_pow_n)) (singlewidth x) (singlewidth y))
                        = (dlet sum_xy := singlewidth (singlewidth x + singlewidth y) in
                               dlet carry_xy := carrywidth (Z.ltz (singlewidth sum_xy) (singlewidth x)) in
                               dlet low := singlewidth
@@ -964,7 +964,7 @@ Section with_bitwidth.
                     -> bitwidth + 1 < Z.log2 two_pow_n + lgcarrymax
                     -> two_pow_n ∈ r
                     -> singlewidth_carry
-                         (Z.add_with_get_carry_full (cstZ r ('(two_pow_n))) (carrywidth c) (singlewidth x) (singlewidth y))
+                         (Z.add_with_get_carry_full (cstZ r ('two_pow_n)) (carrywidth c) (singlewidth x) (singlewidth y))
                        = (dlet sum_cx := singlewidth (carrywidth c + singlewidth x) in
                               dlet carry_cx := carrywidth (Z.ltz (singlewidth sum_cx) (singlewidth x)) in
                               dlet sum_cxy := singlewidth (singlewidth sum_cx + singlewidth y) in
@@ -985,7 +985,7 @@ Section with_bitwidth.
                     -> bitwidth < Z.log2 two_pow_n + lgcarrymax
                     -> two_pow_n ∈ r
                     -> singlewidth_carry
-                         (Z.sub_get_borrow_full (cstZ r ('(two_pow_n))) (singlewidth x) (singlewidth y))
+                         (Z.sub_get_borrow_full (cstZ r ('two_pow_n)) (singlewidth x) (singlewidth y))
                        = (dlet diff_xy := singlewidth (singlewidth x - singlewidth y) in
                               dlet borrow_xy := carrywidth (Z.ltz (singlewidth x) (singlewidth diff_xy)) in
                               dlet low := singlewidth
@@ -1005,7 +1005,7 @@ Section with_bitwidth.
                     -> bitwidth < Z.log2 two_pow_n + lgcarrymax
                     -> two_pow_n ∈ r
                     -> singlewidth_carry
-                         (Z.sub_with_get_borrow_full (cstZ r ('(two_pow_n))) (carrywidth c) (singlewidth x) (singlewidth y))
+                         (Z.sub_with_get_borrow_full (cstZ r ('two_pow_n)) (carrywidth c) (singlewidth x) (singlewidth y))
                        = (dlet diff_xy := singlewidth (singlewidth x - singlewidth y) in
                               dlet borrow_xy := carrywidth (Z.ltz (singlewidth x) (singlewidth diff_xy)) in
                               dlet diff_xyc := singlewidth (singlewidth diff_xy - carrywidth c) in

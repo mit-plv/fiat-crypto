@@ -1,6 +1,7 @@
 Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.Hints.ZArith.
+Require Import Crypto.Util.ZUtil.Modulo.PullPush.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
@@ -164,7 +165,7 @@ Module Z.
     -> - ((x - y - c) / s) =
        Z.ltz x ((x - y) mod s) + Z.ltz ((x - y) mod s) ((x - y - c) mod s).
   Proof.
-    intros. rewrite (PullPush.Z.sub_mod_l (x-y)).
+    intros. rewrite (Z.sub_mod_l (x-y)).
     rewrite <-!sub_div_ltz by auto with zarith.
     fin_div_ltz.
   Qed.
@@ -182,25 +183,5 @@ Module Z.
   Proof.
     cbv [Z.ltz]; break_match; intros; Z.ltb_to_lt;
       apply Z.mod_small; auto with zarith.
-  Qed.
-
-  (* TODO: should this lemma go elsewhere? Where? *)
-  (* Useful lemma for add-get-carry patterns.
-     This expression performs a bitwise or. In terms of bit ranges,
-       b...a + a...c << a-b = b...c *)
-  Lemma add_div_pow2 x a b :
-    0 <= b <= a ->
-    (x mod (2 ^ a)) / 2 ^ b + x / 2 ^ a * 2 ^ (a - b)
-    = x / 2 ^ b.
-  Proof.
-    intros.
-    rewrite <-Z.div_add by auto with zarith.
-    match goal with
-      |- context [?x * 2^(?a-?b) * 2^?b] =>
-      replace (x * 2^(a-b) * 2^b) with (x * 2^a)
-        by (rewrite <-Z.mul_assoc, <-Z.pow_add_r by auto with zarith;
-            repeat (f_equal; try lia))
-    end.
-    fin_div_ltz.
   Qed.
 End Z.
