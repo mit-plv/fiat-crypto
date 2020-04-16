@@ -6,6 +6,7 @@ Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.ReplaceNegWithPos.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Crypto.Util.ZUtil.Div.
+Require Import Crypto.Util.ZUtil.Divide.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.DestructHead.
 Local Open Scope Z_scope.
@@ -399,5 +400,22 @@ Module Z.
     rewrite Z.pow_add_r, Z.rem_mul_r by auto with zarith.
     push_Zmod; pull_Zmod.
     autorewrite with zsimplify_fast; reflexivity.
+  Qed.
+
+  (* Useful lemma for add-get-carry patterns.
+     This expression performs a bitwise or. In terms of bit ranges,
+       b...a + a...c << a-b = b...c *)
+  Lemma add_div_pow2 x a b :
+    0 <= b <= a ->
+    (x mod (2 ^ a)) / 2 ^ b + x / 2 ^ a * 2 ^ (a - b)
+    = x / 2 ^ b.
+  Proof.
+    intros. rewrite Z.pow_sub_r by auto with zarith.
+    rewrite <-Z.divide_div_mul_exact
+      by auto using Z.divide_pow_le with zarith.
+    rewrite <-Z.div_add by auto with zarith.
+    rewrite Z.mul_div_eq', Z.mul_mod, Z.mod_same_pow by auto with zarith.
+    autorewrite with zsimplify.
+    Z.div_mod_to_quot_rem; nia.
   Qed.
 End Z.
