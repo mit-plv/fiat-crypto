@@ -174,4 +174,33 @@ Module Z.
     -> 0 <= y < s
     -> snd (Z.sub_get_borrow_full s x y) = Z.ltz x ((x - y) mod s).
   Proof. rewrite sub_get_borrow_full_div; fin_div_ltz. Qed.
+
+  (* TODO: should this lemma go elsewhere? Where? *)
+  Lemma ltz_mod_pow2_small x y z :
+    0 < z ->
+    (Z.ltz x y) mod (2 ^ z) = Z.ltz x y.
+  Proof.
+    cbv [Z.ltz]; break_match; intros; Z.ltb_to_lt;
+      apply Z.mod_small; auto with zarith.
+  Qed.
+
+  (* TODO: should this lemma go elsewhere? Where? *)
+  (* Useful lemma for add-get-carry patterns.
+     This expression performs a bitwise or. In terms of bit ranges,
+       b...a + a...c << a-b = b...c *)
+  Lemma add_div_pow2 x a b :
+    0 <= b <= a ->
+    (x mod (2 ^ a)) / 2 ^ b + x / 2 ^ a * 2 ^ (a - b)
+    = x / 2 ^ b.
+  Proof.
+    intros.
+    rewrite <-Z.div_add by auto with zarith.
+    match goal with
+      |- context [?x * 2^(?a-?b) * 2^?b] =>
+      replace (x * 2^(a-b) * 2^b) with (x * 2^a)
+        by (rewrite <-Z.mul_assoc, <-Z.pow_add_r by auto with zarith;
+            repeat (f_equal; try lia))
+    end.
+    fin_div_ltz.
+  Qed.
 End Z.
