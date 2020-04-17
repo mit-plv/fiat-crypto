@@ -851,6 +851,13 @@ Section with_bitwidth.
                               dlet h2 := singlewidth (singlewidth xh * singlewidth y) in
                               dlet h := singlewidth (singlewidth (snd lh1) + singlewidth h2) in
                               cstZsingle_to_double (fst lh1) h))
+              ; (forall x yl yh,
+                    0 <= bitwidth
+                    -> doublewidth (singlewidth x * cstZsingle_to_double yl yh)
+                       = (dlet lh1 := pairsinglewidth (Z.mul_split cstZ_pow2_bitwidth (singlewidth x) (singlewidth yl)) in
+                              dlet h2 := singlewidth (singlewidth x * singlewidth yh) in
+                              dlet h := singlewidth (singlewidth (snd lh1) + singlewidth h2) in
+                              cstZsingle_to_double (fst lh1) h))
               ; (forall xl xh yl yh,
                     0 <= bitwidth
                     -> 1 <= lgcarrymax
