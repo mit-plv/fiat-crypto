@@ -39,6 +39,7 @@ Require Import Crypto.Bedrock.Tests.X25519_32.
 Import X25519_32.
 Local Coercion name_of_func (f : bedrock_func) := fst f.
 
+Existing Instance Defaults32.default_parameters.
 Axiom BasicC32Semantics_parameters_ok : Semantics.parameters_ok BasicC32Semantics.parameters.
 (* TODO: why does BasicC32Semantics not have a Semantics.parameters_ok instance? *) }
 Existing Instance BasicC32Semantics_parameters_ok.

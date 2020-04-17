@@ -33,6 +33,9 @@ Local Coercion Z.of_nat : nat >-> Z.
 Local Coercion QArith_base.inject_Z : Z >-> Q.
 Local Coercion Z.pos : positive >-> Z.
 
+Existing Instances split_mul_to split_multiret_to.
+Existing Instance Defaults64.default_parameters.
+
 (* Curve25519 64-bit *)
 Module X25519_64.
   Section __.
