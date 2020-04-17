@@ -1012,6 +1012,7 @@ Module Compilers.
             primitive functions are called, or else an error string *)
         ToFunctionLines
         : forall {relax_zrange : relax_zrange_opt}
+                 (machine_wordsize : Z)
                  (do_bounds_check : bool) (static : bool) (prefix : string) (name : string)
                  {t}
                  (e : @Compilers.expr.Expr base.type ident.ident t)
@@ -1023,18 +1024,20 @@ Module Compilers.
 
         (** Generates a header of any needed typedefs, etc based on the idents used and the curve-specific prefix *)
         header
-        : forall (static : bool) (prefix : string) (ident_info : ident_infos),
+        : forall (machine_wordsize : Z) (static : bool) (prefix : string) (ident_info : ident_infos),
             list string;
 
         (** The footer on the file, if any *)
         footer
-        : forall (static : bool) (prefix : string) (ident_info : ident_infos),
+        : forall (machine_wordsize : Z) (static : bool) (prefix : string) (ident_info : ident_infos),
             list string;
 
         (** Filters [ident_infos] to strip out primitive functions
             that we don't want to request (because they have special
             language handling *)
-        strip_special_infos : ident_infos -> ident_infos;
+        strip_special_infos
+        : forall (machine_wordsize : Z),
+            ident_infos -> ident_infos;
 
       }.
   End ToString.

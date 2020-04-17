@@ -178,7 +178,7 @@ Section rbarrett_red.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          prefix "barrett_red" barrett_red
+          machine_wordsize prefix "barrett_red" barrett_red
           (fun _ _ _ => @nil string).
 
   Local Ltac solve_barrett_red_preconditions :=

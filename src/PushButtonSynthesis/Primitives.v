@@ -152,10 +152,10 @@ Local Notation out_bounds_of_pipeline result
   := ((fun a b c d e arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e arg_bounds out_bounds = result') => out_bounds) _ _ _ _ _ _ _ result eq_refl)
        (only parsing).
 
-Notation FromPipelineToString prefix name result
-  := (Pipeline.FromPipelineToString prefix name result).
-Notation FromPipelineToInternalString prefix name result
-  := (Pipeline.FromPipelineToInternalString prefix name result).
+Notation FromPipelineToString machine_wordsize prefix name result
+  := (Pipeline.FromPipelineToString machine_wordsize prefix name result).
+Notation FromPipelineToInternalString machine_wordsize prefix name result
+  := (Pipeline.FromPipelineToInternalString machine_wordsize prefix name result).
 
 Ltac prove_correctness' should_not_clear use_curve_good :=
   let Hres := match goal with H : _ = Success _ |- _ => H end in
@@ -700,7 +700,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          prefix "selectznz" selectznz
+          machine_wordsize prefix "selectznz" selectznz
           (docstring_with_summary_from_lemma!
              (fun fname : string => ["The function " ++ fname ++ " is a multi-limb conditional select."]%string)
              (selectznz_correct dummy_weight n saturated_bounds_list)).
@@ -719,7 +719,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToInternalString
-          prefix ("mulx_u" ++ decimal_string_of_Z s) (mulx s)
+          machine_wordsize prefix ("mulx_u" ++ decimal_string_of_Z s) (mulx s)
           (docstring_with_summary_from_lemma!
              (fun fname : string => ["The function " ++ fname ++ " is a multiplication, returning the full double-width result."]%string)
              (mulx_correct s)).
@@ -739,7 +739,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToInternalString
-          prefix ("addcarryx_u" ++ decimal_string_of_Z s) (addcarryx s)
+          machine_wordsize prefix ("addcarryx_u" ++ decimal_string_of_Z s) (addcarryx s)
           (docstring_with_summary_from_lemma!
              (fun fname : string => ["The function " ++ fname ++ " is an addition with carry."]%string)
              (addcarryx_correct s)).
@@ -758,7 +758,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToInternalString
-          prefix ("subborrowx_u" ++ decimal_string_of_Z s) (subborrowx s)
+          machine_wordsize prefix ("subborrowx_u" ++ decimal_string_of_Z s) (subborrowx s)
           (docstring_with_summary_from_lemma!
              (fun fname : string => ["The function " ++ fname ++ " is a subtraction with borrow."]%string)
              (subborrowx_correct s)).
@@ -778,7 +778,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToInternalString
-          prefix ("cmovznz_u" ++ decimal_string_of_Z s) (cmovznz s)
+          machine_wordsize prefix ("cmovznz_u" ++ decimal_string_of_Z s) (cmovznz s)
           (docstring_with_summary_from_lemma!
              (fun fname : string => ["The function " ++ fname ++ " is a single-word conditional move."]%string)
              (cmovznz_correct false s)).
@@ -797,7 +797,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToInternalString
-          prefix ("cmovznz_u" ++ decimal_string_of_Z s) (cmovznz_by_mul s)
+          machine_wordsize prefix ("cmovznz_u" ++ decimal_string_of_Z s) (cmovznz_by_mul s)
           (docstring_with_summary_from_lemma!
              (fun fname : string => ["The function " ++ fname ++ " is a single-word conditional move."]%string)
              (cmovznz_correct false s)).
@@ -919,17 +919,17 @@ Section __.
                    | requests => List.map (synthesize_of_name function_name_prefix) requests
                    end in
          let infos := aggregate_infos ls in
-         let '(extra_ls, extra_bit_widths) := extra_synthesis function_name_prefix (ToString.strip_special_infos infos) in
+         let '(extra_ls, extra_bit_widths) := extra_synthesis function_name_prefix (ToString.strip_special_infos machine_wordsize infos) in
          let res := (if emit_primitives then extra_ls else nil) ++ List.map (fun '(name, res) => (name, (res <- res; Success (fst res))%error)) ls in
          let infos := ToString.ident_info_union
                         infos
                         (ToString.ident_info_of_bitwidths_used extra_bit_widths) in
          let header :=
              (comment_header
-                ++ ToString.header static function_name_prefix infos
+                ++ ToString.header machine_wordsize static function_name_prefix infos
                 ++ [""]) in
          let footer :=
-             ToString.footer static function_name_prefix infos in
+             ToString.footer machine_wordsize static function_name_prefix infos in
          [("check_args" ++ String.NewLine ++ String.concat String.NewLine header,
            check_args (ErrorT.Success header))%string]
            ++ res

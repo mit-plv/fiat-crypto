@@ -145,6 +145,7 @@ Module ForExtraction.
        else s.
 
   Definition CollectErrors
+             {machine_wordsize : machine_wordsize_opt}
              {output_language_api : ToString.OutputLanguageAPI}
              (res : list (string * Pipeline.ErrorT (list string)) + list string)
     : list (list string) + list (list string)
@@ -381,11 +382,16 @@ Module ForExtraction.
       (** What method should we use for rewriting? *)
       ; low_level_rewriter_method :> low_level_rewriter_method_opt
         := default_low_level_rewriter_method
+      (** What's the bitwidth? *)
+      ; machine_wordsize :> machine_wordsize_opt
     }.
 
   (** We define a class for the various operations that are specific to a pipeline *)
   Class PipelineAPI :=
     {
+      (** The type of special arguments that all pipelines need access to *)
+      SpecialParsedArgsT : Type
+      := machine_wordsize_opt;
       (** Type of arguments parsed from the command line *)
       ParsedArgsT : Type;
       (** Type of (unparsed) arguments remembered from the command line *)
@@ -398,6 +404,9 @@ Module ForExtraction.
           value)], [Some (inr errors)], or [None] if there are not
           enough arguments and the usage string should be displayed. *)
       parse_args : list string -> option (ArgsT + list string);
+
+      (** Takes in parsed args and computes common arguments *)
+      extract_known_args : ParsedArgsT -> SpecialParsedArgsT;
 
       (** Renders a header at the top displaying the command line
           arguments.  Will be wrapped in a comment block *)
@@ -532,7 +541,8 @@ Module ForExtraction.
            | nil, inl output_language_api, _::curve_description::args
              => match parse_args args with
                 | Some (inl args)
-                  => let opts
+                  => let machine_wordsizev := extract_known_args (snd args) in
+                     let opts
                          := {| static := staticv
                                ; internal_static := internal_staticv
                                ; only_signed := only_signedv
@@ -541,7 +551,8 @@ Module ForExtraction.
                                ; widen_bytes := widen_bytesv
                                ; should_split_mul := no_wide_intsv
                                ; should_split_multiret := split_multiretv
-                               ; emit_primitives := negb no_primitivesv |} in
+                               ; emit_primitives := negb no_primitivesv
+                               ; machine_wordsize := machine_wordsizev |} in
                      Pipeline invocation curve_description args success error
                 | Some (inr errs)
                   => error errs
@@ -581,6 +592,10 @@ Module ForExtraction.
                     end
              | _ => None
              end;
+
+          extract_known_args :=
+            fun '(n, machine_wordsize, s, c, requests)
+            => machine_wordsize;
 
           show_lines_args :=
             fun '((str_n, str_machine_wordsize, str_sc, show_requests),
@@ -631,6 +646,10 @@ Module ForExtraction.
                     end
              | _ => None
              end;
+
+          extract_known_args :=
+            fun '(machine_wordsize, m, requests)
+            => machine_wordsize;
 
           show_lines_args :=
             fun '((str_machine_wordsize, str_m, show_requests),
@@ -686,6 +705,10 @@ Module ForExtraction.
                     end
              | _ => None
              end;
+
+          extract_known_args :=
+            fun '(machine_wordsize, s, c, requests)
+            => machine_wordsize;
 
           show_lines_args :=
             fun '((str_machine_wordsize, str_sc, show_requests),
@@ -759,6 +782,10 @@ Module ForExtraction.
                     end
              | _ => None
              end;
+
+          extract_known_args :=
+            fun '(src_n, s, c, src_limbwidth, dst_limbwidth, machine_wordsize, inbounds_multiplier, outbounds_multiplier, inbounds, outbounds, requests)
+            => machine_wordsize;
 
           show_lines_args :=
             fun '((str_src_n, str_sc, str_src_limbwidth, str_dst_limbwidth, str_machine_wordsize, str_inbounds_multiplier, str_outbounds_multiplier, use_bitwidth_in, use_bitwidth_out, str_inbounds, str_outbounds, show_requests),

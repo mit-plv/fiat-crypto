@@ -1864,6 +1864,7 @@ Module debugging_remove_mul_split_to_C_uint1_carry.
       false (* subst01 *)
       None (* fancy *)
       possible_values
+      machine_wordsize
       ltac:(let r := Reify ((carry_mulmod limbwidth_num limbwidth_den s c n idxs)) in
             exact r)
              (fun _ _ => []) (* comment *)
@@ -2789,7 +2790,7 @@ Section debugging_p448.
        "mul"
        false (* subst01 *)
        None (* fancy *)
-       possible_values
+       possible_values machine_wordsize
        ltac:(let r := Reify ((carry_mulmod limbwidth_num limbwidth_den s c n [3; 7; 4; 0; 5; 1; 6; 2; 7; 3; 4; 0]%nat)) in
              exact r)
               (fun _ _ => []) (* comment *)
