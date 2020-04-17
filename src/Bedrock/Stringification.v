@@ -11,6 +11,8 @@ Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Translation.Func.
 Require Import Crypto.Language.API.
 Require Import Crypto.Util.Option.
+Require Crypto.Bedrock.Defaults32.
+Require Crypto.Bedrock.Defaults64.
 Import Stringification.Language.Compilers.
 Import Types.
 
@@ -19,9 +21,67 @@ Import ToString.OfPHOAS.
 Local Open Scope string_scope.
 Local Open Scope list_scope.
 
+(* pairs machine word size choices with parameters instances *)
+Definition parameter_choices : list (Z * parameters) :=
+  [(32%Z, Defaults32.default_parameters);
+     (64%Z, Defaults64.default_parameters)].
+
+(* TODO: this is a very hacky technique, inferring the machine word size based
+on the output bounds -- instead, it should be passed to ToFunctionLines
+somewhere *)
+Fixpoint infer_machine_wordsize {t : base.type}
+  : ZRange.type.base.option.interp t -> option Z :=
+  match t as t0 return
+        ZRange.type.base.option.interp t0 -> option Z with
+  | base_Z =>
+    fun x =>
+      match x with
+      | Some r =>
+        let max := (ZRange.upper r + 1)%Z in
+        if ((ZRange.lower r =? 0)%Z && (2 ^ (Z.log2 max) =? max)%Z)%bool
+        then Some (Z.log2 max)
+        else None
+      | None => None
+      end
+  | base.type.prod a b =>
+    fun x =>
+      match infer_machine_wordsize (fst x),
+            infer_machine_wordsize (snd x) with
+      | Some z, _ => Some z
+      | _, Some z => Some z
+      | None, None => None
+      end
+  | base.type.list t =>
+    fun l =>
+      match l with
+      | None => None
+      | Some [] => None
+      | Some (x :: _) => infer_machine_wordsize x
+      end
+  | _ => fun _ => None
+  end.
+
+Definition select_parameters wordsize : parameters + string :=
+  match find (fun x => Z.eqb wordsize (fst x)) parameter_choices with
+  | Some x => inl (snd x)
+  | None =>
+    let wordsize_choices := List.map fst parameter_choices in
+    let wordsize_choices_str :=
+        List.map Decimal.decimal_string_of_Z wordsize_choices in
+    inr ("Invalid machine word size ("
+           ++  Decimal.decimal_string_of_Z wordsize
+           ++ "); valid choices are "
+           ++ concat "," wordsize_choices_str)%string
+  end.
+
+Section with_parameters.
+  Context {p : parameters}.
 Fixpoint make_names (prefix : string)
-         (nextn : nat) (t : base.type) : option (nat * base_ltype t) :=
-  match t as t0 return option (nat * base_ltype t0) with
+         (nextn : nat) (t : base.type)
+  : option (nat * base_ltype t) :=
+  match t as t0 return
+        option (nat * base_ltype t0)
+  with
   | base.type.prod a b =>
     (olet '(nextn, anames) <- make_names prefix nextn a;
     olet '(nextn, bnames) <- make_names prefix nextn b;
@@ -78,15 +138,11 @@ Fixpoint list_lengths_from_argbounds {t}
   | type.arrow a b => fun _ => None
   end.
 
-Definition bedrock_func_to_lines (f : bedrock_func)
-  : list string :=
-  [@c_func BasicCSyntax.to_c_parameters f].
-
 Fixpoint make_base_var_data {t}
   : base_ltype t -> list_lengths (type.base t) ->
     option (base_var_data t) :=
   let int_type :=
-      ToString.int.unsigned (Z.to_nat machine_wordsize) in
+      ToString.int.unsigned (Z.to_nat Semantics.width) in
   match t as t0 return
         base_ltype t0 ->
         list_lengths (type.base t0) ->
@@ -152,6 +208,11 @@ Definition make_header {t}
             ++ [" */"])
   | _, _ => None
   end.
+End with_parameters.
+
+Definition bedrock_func_to_lines (f : bedrock_func)
+  : list string :=
+  [@c_func BasicCSyntax.to_c_parameters f].
 
 (* TODO: for now, name_list is just ignored -- could probably make it not ignored *)
 Definition Bedrock2_ToFunctionLines
@@ -167,6 +228,12 @@ Definition Bedrock2_ToFunctionLines
            (outbounds : ZRange.type.base.option.interp (type.final_codomain t))
   : (list string * ToString.ident_infos) + string
   :=
+    match infer_machine_wordsize outbounds with
+    | None => inr ("Unable to infer machine word size.")
+    | Some wordsize =>
+    match select_parameters wordsize with
+    | inr err => inr err
+    | inl p =>
     match make_innames t, make_outnames (type.final_codomain t),
           list_lengths_from_argbounds inbounds with
     | Some innames, Some outnames, Some inlengths =>
@@ -205,6 +272,8 @@ Definition Bedrock2_ToFunctionLines
       inr ("Error determining return value names")
     | _, _, None =>
       inr ("Error determining argument lengths")
+    end
+    end
     end.
 
 Definition OutputBedrock2API : ToString.OutputLanguageAPI :=
