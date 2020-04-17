@@ -37,9 +37,8 @@ Fixpoint infer_machine_wordsize {t : base.type}
     fun x =>
       match x with
       | Some r =>
-        let max := (ZRange.upper r + 1)%Z in
-        if ((ZRange.lower r =? 0)%Z && (2 ^ (Z.log2 max) =? max)%Z)%bool
-        then Some (Z.log2 max)
+        if (ZRange.lower r =? 0)%Z
+        then Some (32 * (Z.log2 (ZRange.upper r) / 32 + 1))%Z
         else None
       | None => None
       end
