@@ -26,40 +26,6 @@ Definition parameter_choices : list (Z * parameters) :=
   [(32%Z, Defaults32.default_parameters);
      (64%Z, Defaults64.default_parameters)].
 
-(* TODO: this is a very hacky technique, inferring the machine word size based
-on the output bounds -- instead, it should be passed to ToFunctionLines
-somewhere *)
-Fixpoint infer_machine_wordsize {t : base.type}
-  : ZRange.type.base.option.interp t -> option Z :=
-  match t as t0 return
-        ZRange.type.base.option.interp t0 -> option Z with
-  | base_Z =>
-    fun x =>
-      match x with
-      | Some r =>
-        if (ZRange.lower r =? 0)%Z
-        then Some (32 * (Z.log2 (ZRange.upper r) / 32 + 1))%Z
-        else None
-      | None => None
-      end
-  | base.type.prod a b =>
-    fun x =>
-      match infer_machine_wordsize (fst x),
-            infer_machine_wordsize (snd x) with
-      | Some z, _ => Some z
-      | _, Some z => Some z
-      | None, None => None
-      end
-  | base.type.list t =>
-    fun l =>
-      match l with
-      | None => None
-      | Some [] => None
-      | Some (x :: _) => infer_machine_wordsize x
-      end
-  | _ => fun _ => None
-  end.
-
 Definition select_parameters wordsize : parameters + string :=
   match find (fun x => Z.eqb wordsize (fst x)) parameter_choices with
   | Some x => inl (snd x)
@@ -227,51 +193,47 @@ Definition Bedrock2_ToFunctionLines
            (outbounds : ZRange.type.base.option.interp (type.final_codomain t))
   : (list string * ToString.ident_infos) + string
   :=
-    match infer_machine_wordsize outbounds with
-    | None => inr ("Unable to infer machine word size.")
-    | Some wordsize =>
-      match select_parameters wordsize with
-      | inr err => inr err
-      | inl p =>
-        match make_innames t, make_outnames (type.final_codomain t),
-              list_lengths_from_argbounds inbounds with
-        | Some innames, Some outnames, Some inlengths =>
-          let out := translate_func e innames inlengths outnames in
-          let f : bedrock_func := (name, fst out) in
-          let outlengths := snd out in
-          if error_free_cmd (snd (snd f))
-          then
-            match make_header innames inlengths inbounds
-                              outnames outlengths outbounds with
-            | Some header =>
-              inl (header ++ bedrock_func_to_lines f,
-                   ToString.ident_info_empty)
-            | None =>
-              inr
-                (String.concat
-                   String.NewLine
-                   ("Failed to generate header for function:"
-                      :: bedrock_func_to_lines f))
-            end
-          else
-            let header :=
-                match make_header innames inlengths inbounds
-                                  outnames outlengths outbounds with
-                | Some x => x | None => [] end in
+    match select_parameters machine_wordsize with
+    | inr err => inr err
+    | inl p =>
+      match make_innames t, make_outnames (type.final_codomain t),
+            list_lengths_from_argbounds inbounds with
+      | Some innames, Some outnames, Some inlengths =>
+        let out := translate_func e innames inlengths outnames in
+        let f : bedrock_func := (name, fst out) in
+        let outlengths := snd out in
+        if error_free_cmd (snd (snd f))
+        then
+          match make_header innames inlengths inbounds
+                            outnames outlengths outbounds with
+          | Some header =>
+            inl (header ++ bedrock_func_to_lines f,
+                 ToString.ident_info_empty)
+          | None =>
             inr
               (String.concat
                  String.NewLine
-                 (["ERROR-CONTAINING OUTPUT:"]
-                    ++ header
-                    ++ bedrock_func_to_lines f
-                    ++ ["Error occured during translation to bedrock2. This is likely because a part of the input expression either had unsupported integer types (bedrock2 requires that all integers have the same size) or contained an unsupported operation."]))
-        | None, _, _ =>
-          inr ("Error determining argument names")
-        | _, None, _ =>
-          inr ("Error determining return value names")
-        | _, _, None =>
-          inr ("Error determining argument lengths")
-        end
+                 ("Failed to generate header for function:"
+                    :: bedrock_func_to_lines f))
+          end
+        else
+          let header :=
+              match make_header innames inlengths inbounds
+                                outnames outlengths outbounds with
+              | Some x => x | None => [] end in
+          inr
+            (String.concat
+               String.NewLine
+               (["ERROR-CONTAINING OUTPUT:"]
+                  ++ header
+                  ++ bedrock_func_to_lines f
+                  ++ ["Error occured during translation to bedrock2. This is likely because a part of the input expression either had unsupported integer types (bedrock2 requires that all integers have the same size) or contained an unsupported operation."]))
+      | None, _, _ =>
+        inr ("Error determining argument names")
+      | _, None, _ =>
+        inr ("Error determining return value names")
+      | _, _, None =>
+        inr ("Error determining argument lengths")
       end
     end.
 
