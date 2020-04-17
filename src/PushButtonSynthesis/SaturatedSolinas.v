@@ -183,7 +183,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          prefix "mul" mul
+          machine_wordsize prefix "mul" mul
           (docstring_with_summary_from_lemma!
              (fun fname : string => ["The function " ++ fname ++ " multiplies two field elements."]%string)
              (mul_correct weightf n m boundsn)).

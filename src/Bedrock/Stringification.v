@@ -156,6 +156,7 @@ Definition make_header {t}
 (* TODO: for now, name_list is just ignored -- could probably make it not ignored *)
 Definition Bedrock2_ToFunctionLines
            {relax_zrange : relax_zrange_opt}
+           (machine_wordsize : Z)
            (do_bounds_check : bool) (static : bool) (prefix : string) (name : string)
            {t}
            (e : @API.Expr t)
@@ -213,11 +214,11 @@ Definition OutputBedrock2API : ToString.OutputLanguageAPI :=
 
     ToString.ToFunctionLines := @Bedrock2_ToFunctionLines;
 
-    ToString.header := fun _ _ _ => ["#include <stdint.h>"];
+    ToString.header := fun _ _ _ _ => ["#include <stdint.h>"];
 
-    ToString.footer := fun _ _ _ => [];
+    ToString.footer := fun _ _ _ _ => [];
 
     (** No special handling for any functions *)
-    ToString.strip_special_infos infos := infos;
+    ToString.strip_special_infos machine_wordsize infos := infos;
 
   |}.

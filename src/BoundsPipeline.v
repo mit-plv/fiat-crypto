@@ -150,6 +150,9 @@ Existing Class low_level_rewriter_method_opt.
 (** We make this an instance later *)
 Definition default_low_level_rewriter_method : low_level_rewriter_method_opt
   := precomputed_decision_tree.
+(** What's the bitwidth? *)
+Class machine_wordsize_opt := machine_wordsize : Z.
+Typeclasses Opaque machine_wordsize_opt.
 (** Prefix function definitions with static/non-public? *)
 Class static_opt := static : bool.
 Typeclasses Opaque static_opt.
@@ -222,7 +225,8 @@ Module Pipeline.
   Notation ErrorT := (ErrorT ErrorMessage).
 
   Section show.
-    Context {output_api : ToString.OutputLanguageAPI}.
+    Context {machine_wordsize : machine_wordsize_opt}
+            {output_api : ToString.OutputLanguageAPI}.
     Local Open Scope string_scope.
     Global Instance show_low_level_rewriter_method_opt : Show low_level_rewriter_method_opt
       := fun _ v => match v with
@@ -322,6 +326,7 @@ Module Pipeline.
                       ++ [explain_too_loose_bounds (t:=type.base _) computed_bounds expected_bounds]
                       ++ match ToString.ToFunctionLines
                                  (relax_zrange := fun r => r)
+                                 machine_wordsize
                                  false (* do extra bounds check *) false (* static *) "" "f" syntax_tree (fun _ _ => nil) None arg_bounds ZRange.type.base.option.None with
                          | inl (E_lines, types_used)
                            => ["When doing bounds analysis on the syntax tree:"]
@@ -499,6 +504,7 @@ Module Pipeline.
              (possible_values : list Z)
              (relax_zrangef : relax_zrange_opt
               := fun r => Option.value (relax_zrange_gen only_signed possible_values r) r)
+             (machine_wordsize : Z)
              {t}
              (E : Expr t)
              (comment : type.for_each_lhs_of_arrow ToString.OfPHOAS.var_data t -> ToString.OfPHOAS.var_data (type.final_codomain t) -> list string)
@@ -513,7 +519,7 @@ Module Pipeline.
                   E arg_bounds out_bounds in
        match E with
        | Success E' => let E := ToString.ToFunctionLines
-                                  true static type_prefix name E' comment None arg_bounds out_bounds in
+                                  machine_wordsize true static type_prefix name E' comment None arg_bounds out_bounds in
                       match E with
                       | inl E => Success E
                       | inr err => Error (Stringification_failed E' err)
@@ -534,6 +540,7 @@ Module Pipeline.
              (with_subst01 : bool)
              (translate_to_fancy : option to_fancy_args)
              (possible_values : list Z)
+             (machine_wordsize : Z)
              {t}
              (E : Expr t)
              (comment : type.for_each_lhs_of_arrow ToString.OfPHOAS.var_data t -> ToString.OfPHOAS.var_data (type.final_codomain t) -> list string)
@@ -546,6 +553,7 @@ Module Pipeline.
                   with_subst01
                   translate_to_fancy
                   possible_values
+                  machine_wordsize
                   E comment arg_bounds out_bounds in
        match E with
        | Success (E, types_used) => Success (ToString.LinesToString E, types_used)
@@ -562,7 +570,7 @@ Module Pipeline.
     := ((fun a b c d e f possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e f possible_values t E arg_bounds out_bounds = result') => possible_values) _ _ _ _ _ _ _ _ _ _ _ result eq_refl)
          (only parsing).
 
-  Notation FromPipelineToString_gen is_internal prefix name result
+  Notation FromPipelineToString_gen machine_wordsize is_internal prefix name result
     := (fun comment
         => ((prefix ++ name)%string,
             match result with
@@ -570,6 +578,7 @@ Module Pipeline.
               => let E := ToString.ToFunctionLines
                             (relax_zrange
                              := fun r => Option.value (relax_zrange_gen (_ : only_signed_opt) (possible_values_of_pipeline result) r) r)
+                            machine_wordsize
                             true match is_internal return bool with
                                  | true => orb (_ : static_opt) (_ : internal_static_opt)
                                  | false => _ : static_opt
@@ -587,10 +596,10 @@ Module Pipeline.
             | Error err => Error err
             end)).
 
-  Notation FromPipelineToString prefix name result
-    := (FromPipelineToString_gen false prefix name result).
-  Notation FromPipelineToInternalString prefix name result
-    := (FromPipelineToString_gen true prefix name result).
+  Notation FromPipelineToString machine_wordsize prefix name result
+    := (FromPipelineToString_gen machine_wordsize false prefix name result).
+  Notation FromPipelineToInternalString machine_wordsize prefix name result
+    := (FromPipelineToString_gen machine_wordsize true prefix name result).
 
   Local Ltac wf_interp_t_step :=
     first [ progress destruct_head'_and

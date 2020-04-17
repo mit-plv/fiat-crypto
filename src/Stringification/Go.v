@@ -29,7 +29,7 @@ Module Go.
   Definition is_special_bitwidth (bw : Z) := negb (is_standard_bitwidth bw).
 
   (* Header imports and type defs *)
-  Definition header (static : bool) (prefix : string) (infos : ToString.ident_infos)
+  Definition header (machine_wordsize : Z) (static : bool) (prefix : string) (infos : ToString.ident_infos)
   : list string
     (* N.B. We don't do anything with static; we never export anything *)
     := let bitwidths_used := ToString.bitwidths_used infos in
@@ -404,6 +404,7 @@ Module Go.
 
   Definition ToFunctionLines
              {relax_zrange : relax_zrange_opt}
+             (machine_wordsize : Z)
              (do_bounds_check : bool) (static : bool) (prefix : string) (name : string)
              {t}
              (e : API.Expr t)
@@ -435,7 +436,7 @@ Module Go.
     {| ToString.comment_block := List.map (fun line => "/* " ++ line ++ " */")%string;
        ToString.ToFunctionLines := @ToFunctionLines;
        ToString.header := header;
-       ToString.footer := fun _ _ _ => [];
-       ToString.strip_special_infos := strip_special_infos |}.
+       ToString.footer := fun _ _ _ _ => [];
+       ToString.strip_special_infos machine_wordsize := strip_special_infos |}.
 
 End Go.

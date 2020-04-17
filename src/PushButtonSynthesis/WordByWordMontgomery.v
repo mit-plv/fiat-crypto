@@ -283,7 +283,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          prefix "mul" mul
+          machine_wordsize prefix "mul" mul
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => ["The function " ++ fname ++ " multiplies two field elements in the Montgomery domain."]%string)
@@ -303,7 +303,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          prefix "square" square
+          machine_wordsize prefix "square" square
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => ["The function " ++ fname ++ " squares a field element in the Montgomery domain."]%string)
@@ -323,7 +323,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          prefix "add" add
+          machine_wordsize prefix "add" add
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => ["The function " ++ fname ++ " adds two field elements in the Montgomery domain."]%string)
@@ -343,7 +343,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          prefix "sub" sub
+          machine_wordsize prefix "sub" sub
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => ["The function " ++ fname ++ " subtracts two field elements in the Montgomery domain."]%string)
@@ -363,7 +363,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          prefix "opp" opp
+          machine_wordsize prefix "opp" opp
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => ["The function " ++ fname ++ " negates a field element in the Montgomery domain."]%string)
@@ -383,7 +383,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          prefix "from_montgomery" from_montgomery
+          machine_wordsize prefix "from_montgomery" from_montgomery
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => ["The function " ++ fname ++ " translates a field element out of the Montgomery domain."]%string)
@@ -402,7 +402,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          prefix "nonzero" nonzero
+          machine_wordsize prefix "nonzero" nonzero
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => ["The function " ++ fname ++ " outputs a single non-zero word if the input is non-zero and zero otherwise."]%string)
@@ -422,7 +422,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          prefix "to_bytes" to_bytes
+          machine_wordsize prefix "to_bytes" to_bytes
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => ["The function " ++ fname ++ " serializes a field element in the Montgomery domain to bytes in little-endian order."]%string)
@@ -442,7 +442,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          prefix "from_bytes" from_bytes
+          machine_wordsize prefix "from_bytes" from_bytes
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => ["The function " ++ fname ++ " deserializes a field element in the Montgomery domain from bytes in little-endian order."]%string)
@@ -462,7 +462,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          prefix "encode" encode
+          machine_wordsize prefix "encode" encode
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => ["The function " ++ fname ++ " encodes an integer as a field element in the Montgomery domain."]%string)
@@ -482,7 +482,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          prefix "zero" zero
+          machine_wordsize prefix "zero" zero
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname => ["The function " ++ fname ++ " returns the field element zero in the Montgomery domain."]%string)
@@ -502,7 +502,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          prefix "one" one
+          machine_wordsize prefix "one" one
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname => ["The function " ++ fname ++ " returns the field element one in the Montgomery domain."]%string)

@@ -24,7 +24,7 @@ Import Stringification.Language.Compilers.ToString.int.Notations.
 Module Java.
 
   (* Header imports and type defs *)
-  Definition header (static : bool) (prefix : string) (infos : ToString.ident_infos)
+  Definition header (machine_wordsize : Z) (static : bool) (prefix : string) (infos : ToString.ident_infos)
   : list string
     (* N.B. We don't do anything with static; we always export everything *)
     := let bitwidths_used := ToString.bitwidths_used infos in
@@ -42,7 +42,7 @@ Module Java.
          "  public T get() { return this.value; }";
          "}";
          ""]%string)).
-  Definition footer (static : bool) (prefix : string) (infos : ToString.ident_infos)
+  Definition footer (machine_wordsize : Z) (static : bool) (prefix : string) (infos : ToString.ident_infos)
     : list string
     := ["}"]%string.
 
@@ -345,6 +345,7 @@ Module Java.
 
   Definition ToFunctionLines
              {relax_zrange : relax_zrange_opt}
+             (machine_wordsize : Z)
              (do_bounds_check : bool) (internal : bool) (prefix : string) (name : string)
              {t}
              (e : API.Expr t)
@@ -376,6 +377,6 @@ Module Java.
        ToString.ToFunctionLines := @ToFunctionLines;
        ToString.header := header;
        ToString.footer := footer;
-       ToString.strip_special_infos infos := infos |}.
+       ToString.strip_special_infos machine_wordsize infos := infos |}.
 
 End Java.

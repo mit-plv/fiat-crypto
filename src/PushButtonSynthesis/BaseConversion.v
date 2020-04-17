@@ -273,7 +273,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          prefix "convert_bases" convert_bases
+          machine_wordsize prefix "convert_bases" convert_bases
           (docstring_with_summary_from_lemma!
              (fun fname : string => ["The function " ++ fname ++ " converts a field element from base " ++ Decimal.show_Q false src_limbwidth ++ " to base " ++ Decimal.show_Q false dst_limbwidth ++ " in little-endian order."]%string)
              (convert_bases_correct src_weight dst_weight src_n dst_n in_bounds)).

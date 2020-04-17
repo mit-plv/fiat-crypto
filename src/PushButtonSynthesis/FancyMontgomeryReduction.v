@@ -170,7 +170,7 @@ Section rmontred.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          prefix "montred" montred
+          machine_wordsize prefix "montred" montred
           (fun _ _ _ => @nil string).
 
   Local Ltac solve_montred_preconditions :=

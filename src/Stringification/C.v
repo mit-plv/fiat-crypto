@@ -45,7 +45,7 @@ Module Compilers.
 
     Module C.
       Module String.
-        Definition header (static : bool) (prefix : string) (infos : ident_infos)
+        Definition header (machine_wordsize : Z) (static : bool) (prefix : string) (infos : ident_infos)
         : list string
           := let bitwidths_used := bitwidths_used infos in
              (["#include <stdint.h>"]
@@ -479,6 +479,7 @@ Module Compilers.
 
       Definition ToFunctionLines
                  {relax_zrange : relax_zrange_opt}
+                 (machine_wordsize : Z)
                  (do_bounds_check : bool) (static : bool) (prefix : string) (name : string)
                  {t}
                  (e : @Compilers.expr.Expr base.type ident.ident t)
@@ -508,6 +509,7 @@ Module Compilers.
 
       Definition ToFunctionString
                  {relax_zrange : relax_zrange_opt}
+                 (machine_wordsize : Z)
                  (do_bounds_check : bool) (static : bool) (prefix : string) (name : string)
                  {t}
                  (e : @Compilers.expr.Expr base.type ident.ident t)
@@ -516,7 +518,7 @@ Module Compilers.
                  (inbounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
                  (outbounds : ZRange.type.option.interp (type.base (type.final_codomain t)))
         : (string * ident_infos) + string
-        := match ToFunctionLines do_bounds_check static prefix name e comment name_list inbounds outbounds with
+        := match ToFunctionLines machine_wordsize do_bounds_check static prefix name e comment name_list inbounds outbounds with
            | inl (ls, used_types) => inl (LinesToString ls, used_types)
            | inr err => inr err
            end.
@@ -530,10 +532,10 @@ Module Compilers.
 
           ToString.header := String.header;
 
-          ToString.footer := fun _ _ _ => [];
+          ToString.footer := fun _ _ _ _ => [];
 
           (** No special handling for any functions *)
-          ToString.strip_special_infos infos := infos;
+          ToString.strip_special_infos machine_wordsize infos := infos;
 
         |}.
     End C.
