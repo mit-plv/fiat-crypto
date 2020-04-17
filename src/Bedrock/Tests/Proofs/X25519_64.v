@@ -39,6 +39,8 @@ Require Import Crypto.Bedrock.Tests.X25519_64.
 Import X25519_64.
 Local Coercion name_of_func (f : bedrock_func) := fst f.
 
+Existing Instance Defaults64.default_parameters.
+
 Section Proofs.
   Context (n : nat := 5%nat)
           (s : Z := 2^255)

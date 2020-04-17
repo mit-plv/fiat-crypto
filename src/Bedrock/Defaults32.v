@@ -16,10 +16,8 @@ Import Types.Notations ListNotations.
 Local Open Scope Z_scope.
 Local Open Scope string_scope.
 
-(* Declares default parameters for the bedrock2 backend and includes useful
-   definitions/proofs that apply specifically to the defaults. Do NOT import
-   this file unless you're prepared to have a bunch of global typeclass
-   instances and notations declared for you. *)
+(* Declares default parameters for the bedrock2 backend specific to systems with
+a 32-bit word size. *)
 
 Section Defaults_32.
   Definition machine_wordsize := 32.
@@ -27,12 +25,12 @@ Section Defaults_32.
   (* Define how to split mul/multi-return functions *)
   Definition possible_values
     := prefix_with_carry [machine_wordsize; 2 * machine_wordsize]%Z.
-  Global Instance split_mul_to : split_mul_to_opt :=
+  Instance split_mul_to : split_mul_to_opt :=
     split_mul_to_of_should_split_mul machine_wordsize possible_values.
-  Global Instance split_multiret_to : split_multiret_to_opt :=
+  Instance split_multiret_to : split_multiret_to_opt :=
     split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
   Let wordsize_bytes := Eval vm_compute in (machine_wordsize / 8)%Z.
-  Global Instance default_parameters : Types.parameters :=
+  Instance default_parameters : Types.parameters :=
     {| semantics := BasicC32Semantics.parameters;
        varname_gen := fun i => String.append "x" (Decimal.decimal_string_of_Z (Z.of_nat i));
        error := expr.var Defaults.ERROR;

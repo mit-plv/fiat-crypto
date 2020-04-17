@@ -9,6 +9,9 @@ Require Crypto.Util.Strings.Decimal.
    machine word sizes. Do NOT import this file unless you're prepared to have a
    bunch of global typeclass instances declared for you. *)
 
+(* use in-memory lists; local ones are only used internally *)
+Global Existing Instances Types.rep.Z Types.rep.listZ_mem.
+
 (* Reification/bounds pipeline options *)
 Global Existing Instance default_low_level_rewriter_method.
 (* Split multiplications into two outputs, not just one huge word *)
