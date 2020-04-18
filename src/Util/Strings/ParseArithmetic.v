@@ -3,10 +3,10 @@ Require Import Coq.Numbers.BinNums.
 Require Import Coq.QArith.QArith.
 Require Import Coq.ZArith.BinInt.
 Require Import Crypto.Util.Option.
-Require Import Crypto.Util.Strings.Equality.
-Require Crypto.Util.Strings.Decimal.
-Require Crypto.Util.Strings.OctalString.
-Require Crypto.Util.Strings.HexString.
+Require Coq.Strings.BinaryString.
+Require Coq.Strings.OctalString.
+Require Coq.Strings.HexString.
+Require Import Crypto.Util.Strings.Decimal.
 Require Import Crypto.Util.Strings.Parse.Common.
 Require Import Crypto.Util.Notations.
 Import ListNotations.
@@ -19,16 +19,7 @@ Local Open Scope Z_scope.
 Local Open Scope nat_scope.
 
 Definition is_num (ch : ascii) : bool
-  := (ascii_beq ch "0"
-      || ascii_beq ch "1"
-      || ascii_beq ch "2"
-      || ascii_beq ch "3"
-      || ascii_beq ch "4"
-      || ascii_beq ch "5"
-      || ascii_beq ch "6"
-      || ascii_beq ch "7"
-      || ascii_beq ch "8"
-      || ascii_beq ch "9")%bool.
+  := match DecimalString.uint_of_char ch (Some Decimal.Nil) with Some _ => true | None => false end.
 
 Definition is_oct_num (ch : ascii) : bool
   := match OctalString.ascii_to_digit ch with Some _ => true | None => false end.
@@ -39,14 +30,14 @@ Definition is_hex_num (ch : ascii) : bool
 Definition startswith_oct (s : string) : bool
   := match s with
      | String zero (String kind (String d rest))
-       => ascii_beq zero "0" && ascii_beq kind "o" && is_oct_num d
+       => (zero =? "0")%char && (kind =? "o")%char && is_oct_num d
      | _ => false
      end.
 
 Definition startswith_hex (s : string) : bool
   := match s with
      | String zero (String kind (String d rest))
-       => ascii_beq zero "0" && ascii_beq kind "x" && is_hex_num d
+       => (zero =? "0")%char && (kind =? "x")%char && is_hex_num d
      | _ => false
      end.
 

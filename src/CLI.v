@@ -3,9 +3,9 @@ Require Import Coq.ZArith.ZArith.
 Require Import Coq.Strings.Ascii.
 Require Import Coq.Lists.List.
 Require Import Coq.Strings.String.
+Require Import Coq.Strings.HexString.
 Require Crypto.Util.Strings.String.
 Require Import Crypto.Util.Strings.Decimal.
-Require Import Crypto.Util.Strings.HexString.
 Require Import Crypto.Util.Strings.ParseArithmetic.
 Require Import Crypto.Util.Strings.ParseArithmeticToTaps.
 Require Import Crypto.Util.Strings.Parse.Common.
@@ -140,7 +140,7 @@ Module ForExtraction.
 
   (** TODO: Write a better quoter and maybe move this elsewhere *)
   Definition quote (s : string) : string
-    := if List.existsb (Ascii.eqb " ") (String.to_list s)
+    := if List.existsb (fun ch => " " =? ch)%char (String.list_ascii_of_string s)
        then "'" ++ s ++ "'"
        else s.
 

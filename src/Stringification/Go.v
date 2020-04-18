@@ -1,8 +1,8 @@
 From Coq Require Import ZArith.ZArith MSets.MSetPositive FSets.FMapPositive
-     Strings.String Strings.Ascii Bool.Bool Lists.List.
+     Strings.String Strings.Ascii Bool.Bool Lists.List Strings.HexString.
 From Crypto.Util Require Import
      ListUtil
-     Strings.String Strings.Decimal Strings.HexString Strings.Show
+     Strings.String Strings.Decimal Strings.Show
      ZRange ZRange.Operations ZRange.Show
      Option OptionList Bool.Equality.
 
@@ -58,7 +58,7 @@ Module Go.
   Definition int_type_to_string (prefix : string) (t : ToString.int.type) : string :=
     ((if is_special_bitwidth (ToString.int.bitwidth_of t) then prefix else "")
        ++ (if ToString.int.is_unsigned t then "uint" else "int")
-       ++ decimal_string_of_Z (ToString.int.bitwidth_of t))%string.
+       ++ Decimal.Z.to_string (ToString.int.bitwidth_of t))%string.
 
 
   (* Instead of "macros for minimum-width integer constants" we tried to
@@ -106,15 +106,15 @@ Module Go.
        (* integer literals *)
        | (IR.literal v @@@ _) => int_literal_to_string prefix IR.type.Z v
        (* array dereference *)
-       | (IR.List_nth n @@@ IR.Var _ v) => "(" ++ v ++ "[" ++ decimal_string_of_Z (Z.of_nat n) ++ "])"
+       | (IR.List_nth n @@@ IR.Var _ v) => "(" ++ v ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "])"
        (* (de)referencing *)
        | (IR.Addr @@@ IR.Var _ v) => "&" ++ v
        | (IR.Dereference @@@ e) => "( *" ++ arith_to_string prefix e ++ " )"
        (* bitwise operations *)
        | (IR.Z_shiftr offset @@@ e) =>
-         "(" ++ arith_to_string prefix e ++ " >> " ++ decimal_string_of_Z offset ++ ")"
+         "(" ++ arith_to_string prefix e ++ " >> " ++ Decimal.Z.to_string offset ++ ")"
        | (IR.Z_shiftl offset @@@ e) =>
-         "(" ++ arith_to_string prefix e ++ " << " ++ decimal_string_of_Z offset ++ ")"
+         "(" ++ arith_to_string prefix e ++ " << " ++ Decimal.Z.to_string offset ++ ")"
        | (IR.Z_land @@@ (e1, e2)) =>
          "(" ++ arith_to_string prefix e1 ++ " & " ++ arith_to_string prefix e2 ++ ")"
        | (IR.Z_lor @@@ (e1, e2)) =>
@@ -133,39 +133,39 @@ Module Go.
          | true, ((IR.Addr @@@ hi, IR.Addr @@@ lo), args)
            => (arith_to_string prefix hi ++ ", " ++ arith_to_string prefix lo)
                 ++ " = bits.Mul"
-                ++ decimal_string_of_Z lg2s ++ "(" ++ arith_to_string prefix args ++ ")"
+                ++ Decimal.Z.to_string lg2s ++ "(" ++ arith_to_string prefix args ++ ")"
          | _, _
            => prefix
                 ++ "mulx_u"
-                ++ decimal_string_of_Z lg2s ++ "(" ++ arith_to_string prefix args ++ ")"
+                ++ Decimal.Z.to_string lg2s ++ "(" ++ arith_to_string prefix args ++ ")"
          end
        | (IR.Z_add_with_get_carry lg2s @@@ args) =>
          match is_standard_bitwidth lg2s, args with
          | true, ((IR.Addr @@@ v, IR.Addr @@@ c), (cin, x, y))
            => (arith_to_string prefix v ++ ", " ++ arith_to_string prefix c)
                 ++ " = bits.Add"
-                ++ decimal_string_of_Z lg2s ++ "(" ++ arith_to_string prefix x ++ ", " ++ arith_to_string prefix y ++ ", " ++ arith_to_string prefix cin ++ ")"
+                ++ Decimal.Z.to_string lg2s ++ "(" ++ arith_to_string prefix x ++ ", " ++ arith_to_string prefix y ++ ", " ++ arith_to_string prefix cin ++ ")"
          | _, _
            => prefix
                 ++ "addcarryx_u"
-                ++ decimal_string_of_Z lg2s ++ "(" ++ arith_to_string prefix args ++ ")"
+                ++ Decimal.Z.to_string lg2s ++ "(" ++ arith_to_string prefix args ++ ")"
          end
        | (IR.Z_sub_with_get_borrow lg2s @@@ args) =>
          match is_standard_bitwidth lg2s, args with
          | true, ((IR.Addr @@@ v, IR.Addr @@@ b), (bin, x, y))
            => (arith_to_string prefix v ++ ", " ++ arith_to_string prefix b)
                 ++ " = bits.Sub"
-                ++ decimal_string_of_Z lg2s ++ "(" ++ arith_to_string prefix x ++ ", " ++ arith_to_string prefix y ++ ", " ++ arith_to_string prefix bin ++ ")"
+                ++ Decimal.Z.to_string lg2s ++ "(" ++ arith_to_string prefix x ++ ", " ++ arith_to_string prefix y ++ ", " ++ arith_to_string prefix bin ++ ")"
          | _, _
            => prefix
                 ++ "subborrowx_u"
-                ++ decimal_string_of_Z lg2s ++ "(" ++ arith_to_string prefix args ++ ")"
+                ++ Decimal.Z.to_string lg2s ++ "(" ++ arith_to_string prefix args ++ ")"
          end
        | (IR.Z_zselect ty @@@ args) =>
          prefix
            ++ "cmovznz_"
            ++ (if ToString.int.is_unsigned ty then "u" else "")
-           ++ decimal_string_of_Z (ToString.int.bitwidth_of ty) ++ "(" ++ @arith_to_string prefix _ args ++ ")"
+           ++ Decimal.Z.to_string (ToString.int.bitwidth_of ty) ++ "(" ++ @arith_to_string prefix _ args ++ ")"
        | (IR.Z_static_cast int_t @@@ e) =>
          primitive_type_to_string prefix IR.type.Z (Some int_t) ++ "(" ++ arith_to_string prefix e ++ ")"
        | IR.Var _ v => v
@@ -230,7 +230,7 @@ Module Go.
          have a non-pointer an integer type *)
       "var " ++ name ++ " " ++ primitive_type_to_string prefix t sz
     | IR.AssignNth name n val =>
-      name ++ "[" ++ decimal_string_of_Z (Z.of_nat n) ++ "] = " ++ arith_to_string prefix val
+      name ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "] = " ++ arith_to_string prefix val
     end.
 
   Definition to_strings (prefix : string) (e : IR.expr) : list string :=
@@ -257,11 +257,11 @@ Module Go.
         match mode with
         | In => (* arrays for inputs are immutable borrows *)
           [ n ++ " " ++
-              "*[" ++ decimal_string_of_Z (Z.of_nat len) ++ "]" ++
+              "*[" ++ Decimal.Z.to_string (Z.of_nat len) ++ "]" ++
               primitive_type_to_string prefix IR.type.Z r ]
         | Out => (* arrays for outputs are mutable borrows *)
           [ n ++ " " ++
-              "*[" ++ decimal_string_of_Z (Z.of_nat len) ++ "]" ++
+              "*[" ++ Decimal.Z.to_string (Z.of_nat len) ++ "]" ++
               primitive_type_to_string prefix IR.type.Z r ]
         end
     | base.type.list _ => fun _ => ["var _error = error_complex_list"]

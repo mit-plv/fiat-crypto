@@ -4,10 +4,10 @@ Require Import Coq.FSets.FMapPositive.
 Require Import Coq.Strings.String.
 Require Import Coq.Strings.Ascii.
 Require Import Coq.Bool.Bool.
+Require Import Coq.Strings.HexString.
 Require Import Crypto.Util.ListUtil Coq.Lists.List.
 Require Crypto.Util.Strings.String.
 Require Import Crypto.Util.Strings.Decimal.
-Require Import Crypto.Util.Strings.HexString.
 Require Import Crypto.Util.Strings.Show.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.Operations.
@@ -181,7 +181,7 @@ Module Compilers.
 
       Module name_infos.
         Notation t := (list string) (only parsing).
-        Definition mem (v : string) (m : t) : bool := existsb (Equality.string_beq v) m.
+        Definition mem (v : string) (m : t) : bool := existsb (fun s => v =? s)%string m.
         Definition add (v : string) (m : t) : t
           := if mem v m then m else v :: m.
         Definition union (m1 m2 : t) : t
@@ -1014,7 +1014,7 @@ Module Compilers.
                    | Some ty
                      => if int.is_tighter_than ty (int.of_zrange_relaxed (relax_zrange r[0~>2^s-1]))
                         then ret tt
-                        else inr ["Final bounds check failed on " ++ descr ++ " " ++ show false idc ++ "; expected an unsigned " ++ decimal_string_of_Z s ++ "-bit number (relaxed to " ++ show false (int.of_zrange_relaxed (relax_zrange r[0~>2^s-1])) ++ "), but found a " ++ show false ty ++ "."]%string
+                        else inr ["Final bounds check failed on " ++ descr ++ " " ++ show false idc ++ "; expected an unsigned " ++ Decimal.Z.to_string s ++ "-bit number (relaxed to " ++ show false (int.of_zrange_relaxed (relax_zrange r[0~>2^s-1])) ++ "), but found a " ++ show false ty ++ "."]%string
                    end.
 
             Let recognize_1ref_ident
@@ -1402,7 +1402,7 @@ Module Compilers.
               : ErrT (type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * expr)
               := (let outbounds := partial.Extract true (* assume the output has casts around it *) e inbounds in
                   let make_name_gen prefix := match name_list with
-                                              | None => fun p => Some (prefix ++ decimal_string_of_Z (Zpos p))
+                                              | None => fun p => Some (prefix ++ Decimal.Z.to_string (Zpos p))
                                               | Some ls => fun p => List.nth_error ls (pred (Pos.to_nat p))
                                               end in
                   let make_in_name := make_name_gen "arg" in

@@ -1,5 +1,4 @@
 Require Import Coq.NArith.NArith.
-Require Import Crypto.Util.Strings.Equality.
 Require Import Coq.Strings.Ascii.
 Require Import Crypto.Util.Notations.
 

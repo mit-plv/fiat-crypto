@@ -1,8 +1,8 @@
 From Coq Require Import ZArith.ZArith MSets.MSetPositive FSets.FMapPositive
-     Strings.String Strings.Ascii Bool.Bool Lists.List.
+     Strings.String Strings.Ascii Bool.Bool Lists.List Strings.HexString.
 From Crypto.Util Require Import
      ListUtil
-     Strings.String Strings.Decimal Strings.HexString Strings.Show
+     Strings.String Strings.Decimal Strings.Show
      ZRange ZRange.Operations ZRange.Show
      Option OptionList Bool.Equality.
 
@@ -46,7 +46,7 @@ Module Rust.
   Definition int_type_to_string (prefix : string) (t : ToString.int.type) : string :=
     ((if is_special_bitwidth (ToString.int.bitwidth_of t) then prefix else "")
        ++ (if ToString.int.is_unsigned t then "u" else "i")
-       ++ decimal_string_of_Z (ToString.int.bitwidth_of t))%string.
+       ++ Decimal.Z.to_string (ToString.int.bitwidth_of t))%string.
 
 
   (* Instead of "macros for minimum-width integer constants" we tried to
@@ -93,15 +93,15 @@ Module Rust.
        (* integer literals *)
        | (IR.literal v @@@ _) => int_literal_to_string prefix IR.type.Z v
        (* array dereference *)
-       | (IR.List_nth n @@@ IR.Var _ v) => "(" ++ v ++ "[" ++ decimal_string_of_Z (Z.of_nat n) ++ "])"
+       | (IR.List_nth n @@@ IR.Var _ v) => "(" ++ v ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "])"
        (* (de)referencing *)
        | (IR.Addr @@@ IR.Var _ v) => "&mut " ++ v (* borrow a mutable ref to v *)
        | (IR.Dereference @@@ e) => "( *" ++ arith_to_string prefix e ++ " )"
        (* bitwise operations *)
        | (IR.Z_shiftr offset @@@ e) =>
-         "(" ++ arith_to_string prefix e ++ " >> " ++ decimal_string_of_Z offset ++ ")"
+         "(" ++ arith_to_string prefix e ++ " >> " ++ Decimal.Z.to_string offset ++ ")"
        | (IR.Z_shiftl offset @@@ e) =>
-         "(" ++ arith_to_string prefix e ++ " << " ++ decimal_string_of_Z offset ++ ")"
+         "(" ++ arith_to_string prefix e ++ " << " ++ Decimal.Z.to_string offset ++ ")"
        | (IR.Z_land @@@ (e1, e2)) =>
          "(" ++ arith_to_string prefix e1 ++ " & " ++ arith_to_string prefix e2 ++ ")"
        | (IR.Z_lor @@@ (e1, e2)) =>
@@ -119,20 +119,20 @@ Module Rust.
        | (IR.Z_mul_split lg2s @@@ args) =>
          prefix
            ++ "mulx_u"
-           ++ decimal_string_of_Z lg2s ++ "(" ++ arith_to_string prefix args ++ ")"
+           ++ Decimal.Z.to_string lg2s ++ "(" ++ arith_to_string prefix args ++ ")"
        | (IR.Z_add_with_get_carry lg2s @@@ args) =>
          prefix
            ++ "addcarryx_u"
-           ++ decimal_string_of_Z lg2s ++ "(" ++ arith_to_string prefix args ++ ")"
+           ++ Decimal.Z.to_string lg2s ++ "(" ++ arith_to_string prefix args ++ ")"
        | (IR.Z_sub_with_get_borrow lg2s @@@ args) =>
          prefix
            ++ "subborrowx_u"
-           ++ decimal_string_of_Z lg2s ++ "(" ++ arith_to_string prefix args ++ ")"
+           ++ Decimal.Z.to_string lg2s ++ "(" ++ arith_to_string prefix args ++ ")"
        | (IR.Z_zselect ty @@@ args) =>
          prefix
            ++ "cmovznz_"
            ++ (if ToString.int.is_unsigned ty then "u" else "")
-           ++ decimal_string_of_Z (ToString.int.bitwidth_of ty) ++ "(" ++ @arith_to_string prefix _ args ++ ")"
+           ++ Decimal.Z.to_string (ToString.int.bitwidth_of ty) ++ "(" ++ @arith_to_string prefix _ args ++ ")"
        | (IR.Z_static_cast int_t @@@ e) =>
          "(" ++ arith_to_string prefix e ++ " as " ++ primitive_type_to_string prefix IR.type.Z (Some int_t) ++ ")"
        | IR.Var _ v => v
@@ -172,7 +172,7 @@ Module Rust.
          have a non-pointer an integer type *)
       "let mut " ++ name ++ ": " ++ primitive_type_to_string prefix t sz ++ " = 0;"
     | IR.AssignNth name n val =>
-      name ++ "[" ++ decimal_string_of_Z (Z.of_nat n) ++ "] = " ++ arith_to_string prefix val ++ ";"
+      name ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "] = " ++ arith_to_string prefix val ++ ";"
     end.
 
   Definition to_strings (prefix : string) (e : IR.expr) : list string :=
@@ -200,11 +200,11 @@ Module Rust.
         | In => (* arrays for inputs are immutable borrows *)
           [ n ++ ": " ++
               "&[" ++ primitive_type_to_string prefix IR.type.Z r  ++
-              "; " ++ decimal_string_of_Z (Z.of_nat len) ++ "]" ]
+              "; " ++ Decimal.Z.to_string (Z.of_nat len) ++ "]" ]
         | Out => (* arrays for outputs are mutable borrows *)
           [ n ++ ": " ++
               "&mut [" ++ primitive_type_to_string prefix IR.type.Z r ++
-              "; " ++ decimal_string_of_Z (Z.of_nat len) ++ "]" ]
+              "; " ++ Decimal.Z.to_string (Z.of_nat len) ++ "]" ]
         end
     | base.type.list _ => fun _ => ["#error ""complex list"";"]
     | base.type.option _ => fun _ => ["#error option;"]

@@ -9,7 +9,6 @@ Require Import Coq.derive.Derive.
 Require Import Crypto.Util.ErrorT.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.Strings.Decimal.
-Require Import Crypto.Util.Strings.Equality.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.Zselect.
@@ -333,7 +332,7 @@ Module CorrectnessStringification.
          | _ => n
          end
     | _
-      => let n := (eval cbv in ("x" ++ decimal_string_of_Z start_val)) in
+      => let n := (eval cbv in ("x" ++ Decimal.Z.to_string start_val)) in
          lazymatch ctx with
          | context[dyn_context.cons _ n]
            => fresh_from' ctx check_list (Z.succ start_val)
@@ -719,7 +718,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToInternalString
-          machine_wordsize prefix ("mulx_u" ++ decimal_string_of_Z s) (mulx s)
+          machine_wordsize prefix ("mulx_u" ++ Decimal.Z.to_string s) (mulx s)
           (docstring_with_summary_from_lemma!
              (fun fname : string => ["The function " ++ fname ++ " is a multiplication, returning the full double-width result."]%string)
              (mulx_correct s)).
@@ -739,7 +738,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToInternalString
-          machine_wordsize prefix ("addcarryx_u" ++ decimal_string_of_Z s) (addcarryx s)
+          machine_wordsize prefix ("addcarryx_u" ++ Decimal.Z.to_string s) (addcarryx s)
           (docstring_with_summary_from_lemma!
              (fun fname : string => ["The function " ++ fname ++ " is an addition with carry."]%string)
              (addcarryx_correct s)).
@@ -758,7 +757,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToInternalString
-          machine_wordsize prefix ("subborrowx_u" ++ decimal_string_of_Z s) (subborrowx s)
+          machine_wordsize prefix ("subborrowx_u" ++ Decimal.Z.to_string s) (subborrowx s)
           (docstring_with_summary_from_lemma!
              (fun fname : string => ["The function " ++ fname ++ " is a subtraction with borrow."]%string)
              (subborrowx_correct s)).
@@ -778,7 +777,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToInternalString
-          machine_wordsize prefix ("cmovznz_u" ++ decimal_string_of_Z s) (cmovznz s)
+          machine_wordsize prefix ("cmovznz_u" ++ Decimal.Z.to_string s) (cmovznz s)
           (docstring_with_summary_from_lemma!
              (fun fname : string => ["The function " ++ fname ++ " is a single-word conditional move."]%string)
              (cmovznz_correct false s)).
@@ -797,7 +796,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToInternalString
-          machine_wordsize prefix ("cmovznz_u" ++ decimal_string_of_Z s) (cmovznz_by_mul s)
+          machine_wordsize prefix ("cmovznz_u" ++ Decimal.Z.to_string s) (cmovznz_by_mul s)
           (docstring_with_summary_from_lemma!
              (fun fname : string => ["The function " ++ fname ++ " is a single-word conditional move."]%string)
              (cmovznz_correct false s)).
@@ -905,7 +904,7 @@ Section __.
                (Pipeline.Invalid_argument
                   ("Unrecognized request to synthesize """ ++ name ++ """; valid names are " ++ valid_names ++ "."))))
            ((map
-               (fun '(expected_name, resf) => if string_beq name expected_name then Some (resf function_name_prefix) else None)
+               (fun '(expected_name, resf) => if (name =? expected_name)%string then Some (resf function_name_prefix) else None)
                known_functions)
               ++ extra_special_synthesis name).
 

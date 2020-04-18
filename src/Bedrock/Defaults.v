@@ -7,6 +7,7 @@ Require Import bedrock2.BasicC64Semantics.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.BoundsPipeline.
 Require Import Crypto.Language.API.
+Require Crypto.Util.Strings.Decimal.
 Require Import Crypto.Util.ZRange.
 Import API.Compilers.
 
@@ -51,7 +52,7 @@ Section Defaults.
   Local Definition ERROR := "ERROR".
   Global Instance default_parameters : Types.parameters :=
     {| semantics := BasicC64Semantics.parameters;
-       varname_gen := fun i => String.append "x" (Decimal.decimal_string_of_Z (Z.of_nat i));
+       varname_gen := fun i => String.append "x" (Decimal.Z.to_string (Z.of_nat i));
        error := expr.var ERROR;
        word_size_in_bytes := wordsize_bytes;
     |}.
@@ -70,7 +71,7 @@ Section Defaults.
   Fixpoint error_free_cmd (x : cmd.cmd) : bool :=
     match x with
     | cmd.skip => true
-    | cmd.unset _ => true 
+    | cmd.unset _ => true
     | cmd.set _ v => error_free_expr v
     | cmd.store _ a v =>
       (error_free_expr a && error_free_expr v)%bool

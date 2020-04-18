@@ -1,48 +1,46 @@
 Require Import Coq.omega.Omega.
 Require Import Coq.Strings.String.
 Require Import Coq.Strings.Ascii.
-Require Import Crypto.Util.Strings.Equality.
 Require Import Crypto.Util.Strings.Ascii.
 
 Local Open Scope list_scope.
 Local Open Scope string_scope.
 
-(** *** String concatenation *)
-(** [concat sep sl] concatenates the list of strings [sl], inserting
-    the separator string [sep] between each. *)
 
-Definition concat (sep : string) : list string -> string
-  := fix concat (sl : list string) : string
-       := match sl with
-          | nil => EmptyString
-          | cons x nil => x
-          | cons x xs => x ++ sep ++ concat xs
-          end.
+(** TODO: Remove this once we drop support for Coq 8.9 (it's in the stdlib in Coq 8.10 *)
+(** *** Conversion to/from [list ascii] *)
 
-(** *** Conversion to and from lists *)
-Fixpoint to_list (s : string) : list ascii
-  := match s with
-     | EmptyString => nil
-     | String x xs => cons x (to_list xs)
-     end.
-Fixpoint of_list (s : list ascii) : string
+Fixpoint string_of_list_ascii (s : list ascii) : string
   := match s with
      | nil => EmptyString
-     | cons x xs => String x (of_list xs)
+     | cons ch s => String ch (string_of_list_ascii s)
      end.
 
-Lemma to_of_list s : to_list (of_list s) = s.
-Proof. induction s as [|x xs IHxs]; cbn; [ | rewrite IHxs ]; reflexivity. Qed.
-Lemma of_to_list s : of_list (to_list s) = s.
-Proof. induction s as [|x xs IHxs]; cbn; [ | rewrite IHxs ]; reflexivity. Qed.
+Fixpoint list_ascii_of_string (s : string) : list ascii
+  := match s with
+     | EmptyString => nil
+     | String ch s => cons ch (list_ascii_of_string s)
+     end.
 
-Lemma of_list_app s1 s2 : of_list (s1 ++ s2) = of_list s1 ++ of_list s2.
+Lemma string_of_list_ascii_of_string s : string_of_list_ascii (list_ascii_of_string s) = s.
+Proof.
+  induction s as [|? ? IHs]; [ reflexivity | cbn; apply f_equal, IHs ].
+Defined.
+
+Lemma list_ascii_of_string_of_list_ascii s : list_ascii_of_string (string_of_list_ascii s) = s.
+Proof.
+  induction s as [|? ? IHs]; [ reflexivity | cbn; apply f_equal, IHs ].
+Defined.
+
+(** *** String concatenation *)
+
+Lemma string_of_list_ascii_app s1 s2 : string_of_list_ascii (s1 ++ s2) = string_of_list_ascii s1 ++ string_of_list_ascii s2.
 Proof. induction s1 as [|x xs IHxs]; cbn; [ | rewrite IHxs ]; reflexivity. Qed.
-Lemma to_list_app s1 s2 : to_list (s1 ++ s2) = (to_list s1 ++ to_list s2)%list.
+Lemma list_ascii_of_string_app s1 s2 : list_ascii_of_string (s1 ++ s2) = (list_ascii_of_string s1 ++ list_ascii_of_string s2)%list.
 Proof. induction s1 as [|x xs IHxs]; cbn; [ | rewrite IHxs ]; reflexivity. Qed.
 
 Definition lift_list_function (f : list ascii -> list ascii) (s : string) : string
-  := of_list (f (to_list s)).
+  := string_of_list_ascii (f (list_ascii_of_string s)).
 
 (** *** Mapping over a string *)
 (** [map f s] applies function [f] in turn to all the characters of
@@ -72,7 +70,7 @@ Lemma rev_step s
       | EmptyString => EmptyString
       | String x xs => rev xs ++ String x EmptyString
       end.
-Proof. destruct s; cbn; rewrite ?of_list_app; reflexivity. Qed.
+Proof. destruct s; cbn; rewrite ?string_of_list_ascii_app; reflexivity. Qed.
 
 (** *** trimming a string *)
 (** [trim s] returns a copy of the argument, without leading and trailing
@@ -103,15 +101,15 @@ Definition rindex (n : nat) (s1 s2 : string) : option nat :=
     (index (length s2 - n - 1) (rev s1) (rev s2)).
 
 
-Lemma append_alt s1 s2 : s1 ++ s2 = of_list (to_list s1 ++ to_list s2).
-Proof. rewrite of_list_app, !of_to_list; reflexivity. Qed.
+Lemma append_alt s1 s2 : s1 ++ s2 = string_of_list_ascii (list_ascii_of_string s1 ++ list_ascii_of_string s2).
+Proof. rewrite string_of_list_ascii_app, !string_of_list_ascii_of_string; reflexivity. Qed.
 Lemma append_empty_r s : s ++ "" = s.
 Proof.
-  rewrite append_alt; cbn; rewrite List.app_nil_r, of_to_list. reflexivity.
+  rewrite append_alt; cbn; rewrite List.app_nil_r, string_of_list_ascii_of_string. reflexivity.
 Qed.
 Lemma append_assoc s1 s2 s3 : s1 ++ (s2 ++ s3) = (s1 ++ s2) ++ s3.
 Proof.
-  rewrite !append_alt, ?to_of_list; cbn; rewrite List.app_assoc; reflexivity.
+  rewrite !append_alt, !list_ascii_of_string_of_list_ascii; cbn; rewrite List.app_assoc; reflexivity.
 Qed.
 
 Lemma length_substring n1 n2 s
@@ -143,10 +141,9 @@ Definition startswith (prefix s : string) : bool
 Lemma startswith_correct prefix s
   : startswith prefix s = true <-> substring 0 (length prefix) s = prefix.
 Proof.
+  pose proof (String.eqb_spec prefix (substring 0 (length prefix) s)) as H'.
   cbv [startswith].
-  split; intro H.
-  { apply internal_string_dec_bl in H; congruence. }
-  { apply internal_string_dec_lb; congruence. }
+  split; intro H; destruct H'; congruence.
 Qed.
 
 (** [endswith postfix s] returns [true] iff [s] ends with [postfix] *)
@@ -156,10 +153,9 @@ Definition endswith (postfix s : string) : bool
 Lemma endswith_correct postfix s
   : endswith postfix s = true <-> substring (length s - length postfix) (length postfix) s = postfix.
 Proof.
+  pose proof (String.eqb_spec postfix (substring (length s - length postfix) (length postfix) s)) as H'.
   cbv [endswith].
-  split; intro H.
-  { apply internal_string_dec_bl in H; congruence. }
-  { apply internal_string_dec_lb; congruence. }
+  split; intro H; destruct H'; congruence.
 Qed.
 
 Section strip_prefix_cps.
@@ -170,7 +166,7 @@ Section strip_prefix_cps.
     := match s2 with
        | EmptyString => remaining (String sepch sep) s2
        | String x xs
-         => if ascii_beq sepch x
+         => if (sepch =? x)%char
             then match sep with
                  | EmptyString => found xs
                  | String sepch sep
@@ -195,7 +191,7 @@ End strip_prefix_cps.
 
     - No string in the result contains [sep] as a substring, unless
       [sep] is the empty string, in which case this function returns
-      [map (fun ch => String ch "") (to_list s)] if [s] is non-empty,
+      [map (fun ch => String ch "") (list_ascii_of_string s)] if [s] is non-empty,
       and [""::nil] if [s] is also empty. *)
 
 Fixpoint split_helper (sepch : ascii) (sep : string) (s : string) (rev_acc : string) {struct s}
@@ -213,9 +209,9 @@ Fixpoint split_helper (sepch : ascii) (sep : string) (s : string) (rev_acc : str
 Definition split (sep : string) (s : string) : list string
   := match sep with
      | EmptyString
-       => if string_beq s EmptyString
+       => if (s =? "")%string
           then "" :: nil
-          else List.map (fun ch => String ch "") (to_list s)
+          else List.map (fun ch => String ch "") (list_ascii_of_string s)
      | String sepch sep
        => split_helper sepch sep s ""
      end.
@@ -248,7 +244,7 @@ Lemma split_empty_empty : split EmptyString EmptyString = "" :: nil.
 Proof. reflexivity. Qed.
 Lemma split_empty_non_empty s
   : s <> EmptyString
-    -> split EmptyString s = List.map (fun ch => String ch "") (to_list s).
+    -> split EmptyString s = List.map (fun ch => String ch "") (list_ascii_of_string s).
 Proof.
   intro H; destruct s; cbn; congruence.
 Qed.
@@ -295,14 +291,13 @@ Proof.
   fix H' 3.
   intros sepch' sep' s'; intros.
   destruct s' as [|a s']; cbn; [ assumption | ].
-  destruct (sepch' =? a)%char eqn:Hsep, sep'; try (clear H' concat_split_helper; congruence).
+  destruct (Ascii.eqb_spec sepch' a), sep'; try (clear H' concat_split_helper; congruence).
   { cbn [concat].
     rewrite (concat_split_helper sepch' "" s').
     destruct (split_helper sepch' "" s' "") eqn:H''.
     { apply split_helper_non_empty in H''; exfalso; assumption. }
-    { cbn.
-      apply internal_ascii_dec_bl in Hsep; subst; reflexivity. } }
-  { apply internal_ascii_dec_bl in Hsep; subst.
+    { cbn; subst; reflexivity. } }
+  { subst.
 Abort.
 
 Lemma concat_split sep s : concat sep (split sep s) = s.

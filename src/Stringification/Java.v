@@ -1,8 +1,8 @@
 From Coq Require Import ZArith.ZArith MSets.MSetPositive FSets.FMapPositive
-     Strings.String Strings.Ascii Bool.Bool Lists.List.
+     Strings.String Strings.Ascii Bool.Bool Lists.List Strings.HexString.
 From Crypto.Util Require Import
      ListUtil
-     Strings.String Strings.Decimal Strings.HexString Strings.Show
+     Strings.String Strings.Decimal Strings.Show
      ZRange ZRange.Operations ZRange.Show
      Option OptionList Bool.Equality.
 
@@ -61,7 +61,7 @@ Module Java.
                    else if bw =? 64 then if use_class then "Long" else "long"
                         else (prefix
                                 ++ (if ToString.int.is_unsigned t then "uint" else "int")
-                                ++ decimal_string_of_Z (ToString.int.bitwidth_of t))%string.
+                                ++ Decimal.Z.to_string (ToString.int.bitwidth_of t))%string.
 
   Definition primitive_type_to_string (use_class : bool) (prefix : string) (t : IR.type.primitive)
              (r : option ToString.int.type) : string :=
@@ -93,15 +93,15 @@ Module Java.
        (* integer literals *)
        | (IR.literal v @@@ _) => int_literal_to_string prefix IR.type.Z v
        (* array dereference *)
-       | (IR.List_nth n @@@ IR.Var _ v) => "(" ++ v ++ "[" ++ decimal_string_of_Z (Z.of_nat n) ++ "])"
+       | (IR.List_nth n @@@ IR.Var _ v) => "(" ++ v ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "])"
        (* (de)referencing *)
        | (IR.Dereference @@@ e) => "(" ++ arith_to_string prefix e ++ ").get()"
        (* bitwise operations *)
        | (IR.Z_shiftr offset @@@ e) =>
          (* We assume that shift is always unsigned *)
-         "(" ++ arith_to_string prefix e ++ " >>> " ++ decimal_string_of_Z offset ++ ")"
+         "(" ++ arith_to_string prefix e ++ " >>> " ++ Decimal.Z.to_string offset ++ ")"
        | (IR.Z_shiftl offset @@@ e) =>
-         "(" ++ arith_to_string prefix e ++ " << " ++ decimal_string_of_Z offset ++ ")"
+         "(" ++ arith_to_string prefix e ++ " << " ++ Decimal.Z.to_string offset ++ ")"
        | (IR.Z_land @@@ (e1, e2)) =>
          "(" ++ arith_to_string prefix e1 ++ " & " ++ arith_to_string prefix e2 ++ ")"
        | (IR.Z_lor @@@ (e1, e2)) =>
@@ -118,19 +118,19 @@ Module Java.
        | (IR.Z_mul_split lg2s @@@ args) =>
          prefix
            ++ "mulx_u"
-           ++ decimal_string_of_Z lg2s ++ "(" ++ arith_to_string prefix args ++ ")"
+           ++ Decimal.Z.to_string lg2s ++ "(" ++ arith_to_string prefix args ++ ")"
        | (IR.Z_add_with_get_carry lg2s @@@ args) =>
          prefix
            ++ "addcarryx_u"
-           ++ decimal_string_of_Z lg2s ++ "(" ++ arith_to_string prefix args ++ ")"
+           ++ Decimal.Z.to_string lg2s ++ "(" ++ arith_to_string prefix args ++ ")"
        | (IR.Z_sub_with_get_borrow lg2s @@@ args) =>
          prefix
            ++ "subborrowx_u"
-           ++ decimal_string_of_Z lg2s ++ "(" ++ arith_to_string prefix args ++ ")"
+           ++ Decimal.Z.to_string lg2s ++ "(" ++ arith_to_string prefix args ++ ")"
        | (IR.Z_zselect ty @@@ args) =>
          prefix
            ++ "cmovznz_u"
-           ++ decimal_string_of_Z (ToString.int.bitwidth_of ty) ++ "(" ++ @arith_to_string prefix _ args ++ ")"
+           ++ Decimal.Z.to_string (ToString.int.bitwidth_of ty) ++ "(" ++ @arith_to_string prefix _ args ++ ")"
        | (IR.Z_static_cast int_t @@@ e) =>
          "Long.valueOf(" ++ arith_to_string prefix e ++ ")." ++ primitive_type_to_string false prefix IR.type.Z (Some int_t) ++ "Value()"
        | IR.Var _ v => v
@@ -176,7 +176,7 @@ Module Java.
          have a non-pointer an integer type *)
       primitive_type_to_string true prefix IR.type.Zptr sz ++ " " ++ name ++ " = new " ++ primitive_type_to_string true prefix IR.type.Zptr sz ++ "((" ++ primitive_type_to_string false prefix IR.type.Z sz ++ ")0);"
     | IR.AssignNth name n val =>
-      name ++ "[" ++ decimal_string_of_Z (Z.of_nat n) ++ "] = " ++ arith_to_string prefix val ++ ";"
+      name ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "] = " ++ arith_to_string prefix val ++ ";"
     end.
 
   Definition to_strings (prefix : string) (e : IR.expr) : list string :=
@@ -203,11 +203,11 @@ Module Java.
         match mode with
         | In => (* arrays for inputs are immutable borrows *)
           [("final " ++ primitive_type_to_string false prefix IR.type.Z r)
-             ++ "[] " (* ++ decimal_string_of_Z (Z.of_nat len) ++ "] "*)
+             ++ "[] " (* ++ Decimal.Z.to_string (Z.of_nat len) ++ "] "*)
              ++ n]
         | Out => (* arrays for outputs are mutable borrows *)
           [(primitive_type_to_string false prefix IR.type.Z r)
-             ++ "[] " (* ++ decimal_string_of_Z (Z.of_nat len) ++ "] "*)
+             ++ "[] " (* ++ Decimal.Z.to_string (Z.of_nat len) ++ "] "*)
              ++ n]
         end
     | base.type.list _ => fun _ => ["error_complex_list"]

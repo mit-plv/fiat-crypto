@@ -3,7 +3,7 @@ Require Import Coq.Lists.List.
 Require Import Coq.Strings.String Coq.Strings.Ascii.
 Require Crypto.Util.Strings.String.
 Require Import Crypto.Util.ZUtil.Definitions.
-Require Import Crypto.Util.Strings.HexString.
+Require Import Coq.Strings.HexString.
 Require Import Crypto.Util.Strings.Decimal.
 Import ListNotations. Local Open Scope list_scope. Local Open Scope string_scope.
 
@@ -83,22 +83,22 @@ Global Instance show_lines_prod {A B} `{ShowLines A, ShowLines B} : ShowLines (A
 Module Export Decimal.
   Global Instance show_positive : Show positive
     := fun _ p
-       => decimal_string_of_pos p.
+       => Decimal.Pos.to_string p.
   Global Instance show_N : Show N
     := fun _ n
        => match n with
-         | N0 => "0"
-         | Npos p => show false p
-         end.
+          | N0 => "0"
+          | Npos p => show false p
+          end.
   Global Instance show_nat : Show nat
     := fun _ n => show false (N.of_nat n).
   Global Instance show_Z : Show Z
     := fun _ z
        => match z with
-         | Zneg p => "-" ++ show false p
-         | Z0 => "0"
-         | Zpos p => show false p
-         end.
+          | Zneg p => "-" ++ show false p
+          | Z0 => "0"
+          | Zpos p => show false p
+          end.
   Definition show_Q_frac : Show Q
     := fun parens q
        => if (Qden q =? 1)%positive
@@ -117,7 +117,7 @@ Module Export Decimal.
                     let dec_part := show_Z false (Z.abs (Qnum q) mod (Z.pos (Qden q)))%Z in
                     int_part
                       ++ "."
-                      ++ String.of_list (List.repeat "0"%char (lg10 - length dec_part)) ++ dec_part
+                      ++ String.string_of_list_ascii (List.repeat "0"%char (lg10 - length dec_part)) ++ dec_part
                else
                  show_Q_frac parens q.
 End Decimal.

@@ -10,7 +10,6 @@ Require Import Crypto.Util.ErrorT.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ListUtil.FoldBool.
 Require Import Crypto.Util.Strings.Decimal.
-Require Import Crypto.Util.Strings.Equality.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.Zselect.

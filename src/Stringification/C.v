@@ -4,10 +4,10 @@ Require Import Coq.FSets.FMapPositive.
 Require Import Coq.Strings.String.
 Require Import Coq.Strings.Ascii.
 Require Import Coq.Bool.Bool.
+Require Import Coq.Strings.HexString.
 Require Import Crypto.Util.ListUtil Coq.Lists.List.
 Require Crypto.Util.Strings.String.
 Require Import Crypto.Util.Strings.Decimal.
-Require Import Crypto.Util.Strings.HexString.
 Require Import Crypto.Util.Strings.Show.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.Operations.
@@ -71,14 +71,14 @@ Module Compilers.
               := ((if is_special_bitwidth (int.bitwidth_of t) then prefix else "")
                     ++ (if int.is_unsigned t then "u" else "")
                     ++ "int"
-                    ++ decimal_string_of_Z (int.bitwidth_of t)
+                    ++ Decimal.Z.to_string (int.bitwidth_of t)
                     ++ (if is_special_bitwidth (int.bitwidth_of t) then "" else "_t"))%string.
             Definition to_literal_macro_string (t : int.type) : option string
               := if Z.ltb (int.bitwidth_of t) 8
                  then None
                  else Some ((if int.is_unsigned t then "U" else "")
                               ++ "INT"
-                              ++ decimal_string_of_Z (int.bitwidth_of t)
+                              ++ Decimal.Z.to_string (int.bitwidth_of t)
                               ++ "_C")%string.
           End type.
         End int.
@@ -111,13 +111,13 @@ Module Compilers.
         := match e with
            | (literal v @@@ _) => primitive.to_string prefix type.Z v
            | (List_nth n @@@ Var _ v)
-             => "(" ++ v ++ "[" ++ decimal_string_of_Z (Z.of_nat n) ++ "])"
+             => "(" ++ v ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "])"
            | (Addr @@@ Var _ v) => "&" ++ v
            | (Dereference @@@ e) => "( *" ++ @arith_to_string prefix _ e ++ " )"
            | (Z_shiftr offset @@@ e)
-             => "(" ++ @arith_to_string prefix _ e ++ " >> " ++ decimal_string_of_Z offset ++ ")"
+             => "(" ++ @arith_to_string prefix _ e ++ " >> " ++ Decimal.Z.to_string offset ++ ")"
            | (Z_shiftl offset @@@ e)
-             => "(" ++ @arith_to_string prefix _ e ++ " << " ++ decimal_string_of_Z offset ++ ")"
+             => "(" ++ @arith_to_string prefix _ e ++ " << " ++ Decimal.Z.to_string offset ++ ")"
            | (Z_land @@@ (e1, e2))
              => "(" ++ @arith_to_string prefix _ e1 ++ " & " ++ @arith_to_string prefix _ e2 ++ ")"
            | (Z_lor @@@ (e1, e2))
@@ -135,20 +135,20 @@ Module Compilers.
            | (Z_mul_split lg2s @@@ args)
              => prefix
                  ++ "mulx_u"
-                 ++ decimal_string_of_Z lg2s ++ "(" ++ @arith_to_string prefix _ args ++ ")"
+                 ++ Decimal.Z.to_string lg2s ++ "(" ++ @arith_to_string prefix _ args ++ ")"
            | (Z_add_with_get_carry lg2s @@@ args)
              => prefix
                  ++ "addcarryx_u"
-                 ++ decimal_string_of_Z lg2s ++ "(" ++ @arith_to_string prefix _ args ++ ")"
+                 ++ Decimal.Z.to_string lg2s ++ "(" ++ @arith_to_string prefix _ args ++ ")"
            | (Z_sub_with_get_borrow lg2s @@@ args)
              => prefix
                  ++ "subborrowx_u"
-                 ++ decimal_string_of_Z lg2s ++ "(" ++ @arith_to_string prefix _ args ++ ")"
+                 ++ Decimal.Z.to_string lg2s ++ "(" ++ @arith_to_string prefix _ args ++ ")"
            | (Z_zselect ty @@@ args)
              => prefix
                  ++ "cmovznz_"
                  ++ (if int.is_unsigned ty then "u" else "")
-                 ++ decimal_string_of_Z (int.bitwidth_of ty) ++ "(" ++ @arith_to_string prefix _ args ++ ")"
+                 ++ Decimal.Z.to_string (int.bitwidth_of ty) ++ "(" ++ @arith_to_string prefix _ args ++ ")"
            | (Z_add_modulo @@@ (x1, x2, x3)) => "#error addmodulo;"
            | (Z_static_cast int_t @@@ e)
              => "(" ++ String.type.primitive.to_string prefix type.Z (Some int_t) ++ ")"
@@ -182,7 +182,7 @@ Module Compilers.
            | DeclareVar t sz name
              => String.type.primitive.to_string prefix t sz ++ " " ++ name ++ ";"
            | AssignNth name n val
-             => name ++ "[" ++ decimal_string_of_Z (Z.of_nat n) ++ "] = " ++ arith_to_string prefix val ++ ";"
+             => name ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "] = " ++ arith_to_string prefix val ++ ";"
            end.
       Definition to_strings (prefix : string) (e : expr) : list string
         := List.map (stmt_to_string prefix) e.
@@ -196,7 +196,7 @@ Module Compilers.
            | base.type.prod A B
              => fun '(va, vb) => (@to_base_arg_list prefix A va ++ @to_base_arg_list prefix B vb)%list
            | base.type.list tZ
-             => fun '(n, r, len) => ["const " ++ String.type.primitive.to_string prefix type.Z r ++ " " ++ n ++ "[" ++ decimal_string_of_Z (Z.of_nat len) ++ "]"]
+             => fun '(n, r, len) => ["const " ++ String.type.primitive.to_string prefix type.Z r ++ " " ++ n ++ "[" ++ Decimal.Z.to_string (Z.of_nat len) ++ "]"]
            | base.type.list _ => fun _ => ["#error ""complex list"";"]
            | base.type.option _ => fun _ => ["#error option;"]
            | base.type.unit => fun _ => ["#error unit;"]
@@ -224,7 +224,7 @@ Module Compilers.
            | base.type.prod A B
              => fun '(va, vb) => (@to_base_retarg_list prefix A va ++ @to_base_retarg_list prefix B vb)%list
            | base.type.list tZ
-             => fun '(n, r, len) => [String.type.primitive.to_string prefix type.Z r ++ " " ++ n ++ "[" ++ decimal_string_of_Z (Z.of_nat len) ++ "]"]
+             => fun '(n, r, len) => [String.type.primitive.to_string prefix type.Z r ++ " " ++ n ++ "[" ++ Decimal.Z.to_string (Z.of_nat len) ++ "]"]
            | base.type.list _ => fun _ => ["#error ""complex list"";"]
            | base.type.option _ => fun _ => ["#error option;"]
            | base.type.unit => fun _ => ["#error unit;"]
