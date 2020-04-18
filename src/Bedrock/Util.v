@@ -10,7 +10,7 @@ Require Import bedrock2.WeakestPrecondition.
 Require Import bedrock2.WeakestPreconditionProperties.
 Require Import coqutil.Tactics.destr.
 Require Import coqutil.Map.Interface coqutil.Map.Properties.
-Require Import coqutil.Word.Interface.
+Require Import coqutil.Word.Interface coqutil.Word.Properties.
 Require Import coqutil.Datatypes.PropSet.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.ListUtil.
@@ -661,6 +661,35 @@ Section Maps.
     { auto. } 
   Qed.
 End Maps.
+
+Section Words.
+  Context {width} {word : word.word width} {ok : word.ok word}.
+
+  Lemma map_of_Z_unsigned x :
+    map word.of_Z (map word.unsigned x) = x.
+  Proof.
+    rewrite map_map.
+    rewrite map_ext with (g:=id);
+      [ solve [apply map_id] | ].
+    intros. rewrite word.of_Z_unsigned.
+    reflexivity.
+  Qed.
+
+  Lemma map_unsigned_of_Z x :
+    map word.unsigned (map word.of_Z x) = map word.wrap x.
+  Proof.
+    rewrite map_map. apply map_ext.
+    exact word.unsigned_of_Z.
+  Qed.
+
+  Lemma Forall_map_unsigned x :
+    Forall (fun z : Z => (0 <= z < 2 ^ width)%Z)
+           (map word.unsigned x).
+  Proof.
+    induction x; intros; cbn [map]; constructor;
+      auto using word.unsigned_range.
+  Qed.
+End Words.
 
 (* These lemmas should be moved to bedrock2, not coqutil *)
 Section Separation.

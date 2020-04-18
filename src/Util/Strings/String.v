@@ -322,3 +322,7 @@ Definition capitalize_first_letter (s : string) : string
      end.
 Definition to_title_case (s : string) : string
   := concat " " (List.map capitalize_first_letter (split " " s)).
+
+Lemma substring_0_0 :
+  forall s, substring 0 0 s = "".
+Proof. destruct s; reflexivity. Qed.

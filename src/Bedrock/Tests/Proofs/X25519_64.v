@@ -47,11 +47,6 @@ Section Proofs.
           (c : list (Z * Z) := [(1,19)])
           (machine_wordsize : Z := 64).
 
-  (* requires some kind of proof about decimal stringification *)
-  Lemma decimal_varname_gen_unique :
-    forall i j : nat, varname_gen i = varname_gen j <-> i = j.
-  Admitted.
-
   Instance p_ok : Types.ok.
   Proof.
     constructor.
@@ -120,50 +115,6 @@ Section Proofs.
               (map word.unsigned x) (map word.unsigned y))) =
     ((eval (map word.unsigned x) * eval (map word.unsigned y)) mod M)%Z.
   Admitted.
-
-  (* TODO : move *)
-  Lemma substring_0_0 :
-    forall s, substring 0 0 s = "".
-  Proof.
-    clear. destruct s; reflexivity.
-  Qed.
-
-  Lemma varname_gen_startswith v i :
-    v = varname_gen i ->
-    String.startswith "x" v = true.
-  Proof.
-    cbn [varname_gen default_parameters]. intro.
-    subst. cbn. rewrite substring_0_0.
-    reflexivity.
-  Qed.
-
-  (* TODO : move *)
-  Lemma map_of_Z_unsigned x :
-    map word.of_Z (map word.unsigned x) = x.
-  Proof.
-    rewrite map_map.
-    rewrite map_ext with (g:=id);
-      [ solve [apply map_id] | ].
-    intros. rewrite word.of_Z_unsigned.
-    reflexivity.
-  Qed.
-
-  (* TODO : move *)
-  Lemma map_unsigned_of_Z x :
-    map word.unsigned (map word.of_Z x) = map word.wrap x.
-  Proof.
-    rewrite map_map. apply map_ext.
-    exact word.unsigned_of_Z.
-  Qed.
-
-  (* TODO: move *)
-  Lemma Forall_map_unsigned x :
-    Forall (fun z : Z => 0 <= z < 2 ^ Semantics.width)
-           (map word.unsigned x).
-  Proof.
-    induction x; intros; cbn [map]; constructor;
-      auto using word.unsigned_range.
-  Qed.
 
   Lemma mulmod_bedrock_correct :
     program_logic_goal_for_function! mulmod_bedrock.
