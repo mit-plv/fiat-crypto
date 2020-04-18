@@ -39,7 +39,7 @@ Section Defs.
     string * (list string * list string * cmd.cmd).
 
   Definition varname_gen (i : nat) : string :=
-    String.append "x" (Decimal.decimal_string_of_Z (Z.of_nat i)).
+    String.append "x" (Decimal.Z.to_string (Z.of_nat i)).
 
   (* quick check to make sure the expression produced no errors *)
   Fixpoint error_free_expr (x : Syntax.expr) : bool :=
@@ -66,10 +66,16 @@ Section Defs.
 End Defs.
 
 Section Proofs.
-  (* requires some kind of proof about decimal stringification *)
-  Lemma decimal_varname_gen_unique :
-    forall i j : nat, varname_gen i = varname_gen j <-> i = j.
-  Admitted.
+  Lemma decimal_varname_gen_unique i j :
+    varname_gen i = varname_gen j <-> i = j.
+  Proof.
+    cbv [varname_gen].
+    pose proof (Decimal.Z.of_to (Z.of_nat i)).
+    pose proof (Decimal.Z.of_to (Z.of_nat j)).
+    split; [ | intros; subst; reflexivity ].
+    cbn [String.append]; inversion 1.
+    apply Nat2Z.inj. congruence.
+  Qed.
 
   Lemma varname_gen_startswith v i :
     v = varname_gen i ->

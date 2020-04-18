@@ -32,9 +32,9 @@ Definition select_parameters wordsize : parameters + string :=
   | None =>
     let wordsize_choices := List.map fst parameter_choices in
     let wordsize_choices_str :=
-        List.map Decimal.decimal_string_of_Z wordsize_choices in
+        List.map Decimal.Z.to_string wordsize_choices in
     inr ("Invalid machine word size ("
-           ++  Decimal.decimal_string_of_Z wordsize
+           ++  Decimal.Z.to_string wordsize
            ++ "); valid choices are "
            ++ concat "," wordsize_choices_str)%string
   end.
