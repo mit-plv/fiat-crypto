@@ -11,8 +11,8 @@ Require Import Crypto.Util.ErrorT.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ListUtil.FoldBool.
 Require Import Crypto.Util.Strings.Decimal.
-Require Import Crypto.Util.Strings.Equality.
 Require Import Crypto.Util.ZRange.
+Require Crypto.Util.Option.
 Require Import Crypto.Util.Strings.Show.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.Zselect.
@@ -35,6 +35,7 @@ Require Import Crypto.UnsaturatedSolinasHeuristics.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.
 Require Import Crypto.PushButtonSynthesis.Primitives.
 Require Import Crypto.PushButtonSynthesis.UnsaturatedSolinasReificationCache.
+Import Option.Notations.
 Import ListNotations.
 Local Open Scope Z_scope. Local Open Scope list_scope. Local Open Scope bool_scope.
 
@@ -332,9 +333,9 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          machine_wordsize prefix ("carry_scmul_" ++ decimal_string_of_Z x) (carry_scmul_const x)
+          machine_wordsize prefix ("carry_scmul_" ++ Decimal.Z.to_string x) (carry_scmul_const x)
           (docstring_with_summary_from_lemma!
-             (fun fname : string => ["The function " ++ fname ++ " multiplies a field element by " ++ decimal_string_of_Z x ++ " and reduces the result."]%string)
+             (fun fname : string => ["The function " ++ fname ++ " multiplies a field element by " ++ Decimal.Z.to_string x ++ " and reduces the result."]%string)
              (carry_scmul_const_correct weightf n m tight_bounds loose_bounds x)).
 
   Definition carry
@@ -700,10 +701,10 @@ Section __.
       : list (option (string * Pipeline.ErrorT (list string * ToString.ident_infos)))
       := [if prefix "carry_scmul" name
           then let sc := substring (String.length "carry_scmul") (String.length name) name in
-               let scZ := Z_of_decimal_string sc in
-               if string_beq sc (decimal_string_of_Z scZ)
+               (scZ <- Decimal.Z.of_string sc;
+               if (sc =? Decimal.Z.to_string scZ)%string
                then Some (scarry_scmul_const function_name_prefix scZ)
-               else None
+               else None)%option
           else None].
 
     (** Note: If you change the name or type signature of this

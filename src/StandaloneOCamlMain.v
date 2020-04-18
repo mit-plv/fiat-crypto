@@ -5,8 +5,6 @@ Require Import Coq.Lists.List.
 Require Import Coq.Strings.Ascii.
 Require Import Coq.Strings.String.
 Require Crypto.Util.Strings.String.
-Require Import Crypto.Util.Strings.Decimal.
-Require Import Crypto.Util.Strings.HexString.
 Require Import Crypto.CLI.
 Require Import Crypto.Util.Notations.
 Import ListNotations. Local Open Scope string_scope.
@@ -55,13 +53,13 @@ Coercion nat_of_int : int >-> nat.
 Coercion int_of_nat : nat >-> int.
 
 Definition string_of_Coq_string (s : String.string) : string
-  := let s := String.to_list s in
+  := let s := String.list_ascii_of_string s in
      string_init
        (List.length s)
        (fun n => List.nth n s "?"%char).
 
 Definition string_to_Coq_string (s : string) : String.string
-  := String.of_list
+  := String.string_of_list_ascii
        (List.map (fun n:nat => string_get s n) (List.seq 0 (string_length s))).
 
 Definition seq {A B} (x : unit -> A) (f : A -> B) : B := let y := x tt in f y.
@@ -80,7 +78,7 @@ Fixpoint list_iter {A} (f : A -> unit) (ls : list A) : unit
 Definition printf_list_string (strs : list String.string) : unit
   := list_iter
        (fun ls
-        => list_iter printf_char (String.to_list ls))
+        => list_iter printf_char (String.list_ascii_of_string ls))
        strs.
 Definition printf_list_string_with_newlines (strs : list String.string) : unit
   := match strs with

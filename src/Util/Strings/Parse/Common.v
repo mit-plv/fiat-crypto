@@ -1,7 +1,6 @@
 Require Import Coq.Strings.Ascii Coq.Strings.String Coq.Lists.List.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Strings.String.
-Require Import Crypto.Util.Strings.Equality.
 Require Import Crypto.Util.Notations.
 Import ListNotations.
 Local Open Scope list_scope.
@@ -41,7 +40,7 @@ Definition parse_ascii (prefix : ascii) : ParserAction ascii
   := fun s
      => match s with
         | EmptyString => []
-        | String ch s' => if ascii_beq ch prefix
+        | String ch s' => if (ch =? prefix)%char
                           then [(ch, s')]
                           else []
         end.

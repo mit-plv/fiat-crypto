@@ -2,15 +2,15 @@
 Require Import Coq.Lists.List.
 Require Import Coq.Strings.String.
 Require Import Coq.ZArith.ZArith.
+Require Import Coq.Strings.OctalString.
+Require Import Coq.Strings.HexString.
+Require Import Coq.Strings.BinaryString.
 Require Import Crypto.Util.Strings.Ascii.
 Require Import Crypto.Util.Strings.String.
-Require Import Crypto.Util.Strings.Equality.
 Require Import Crypto.Util.Strings.Decimal.
-Require Import Crypto.Util.Strings.OctalString.
-Require Import Crypto.Util.Strings.HexString.
-Require Import Crypto.Util.Strings.BinaryString.
 Require Import Crypto.Util.Strings.Show.
 Require Import Crypto.Util.ErrorT.
+Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Notations.
 Import ListNotations.
 Local Open Scope string_scope.
@@ -119,15 +119,15 @@ Local Definition help_specs : list (list key * spec * doc)
        [" Display this list of options"])].
 
 Definition arg_matches_key (arg : string) (k : key) : bool
-  := string_beq arg (print_key k).
+  := (arg =? print_key k)%string.
 
 Definition arg_matches_key_list (arg : string) (k : list key) : bool
   := List.fold_right orb false (List.map (arg_matches_key arg) k).
 
 Definition parse_bool_opt (s : string) : option bool
-  := if string_beq s "true"
+  := if (s =? "true")%string
      then Some true
-     else if string_beq s "false"
+     else if (s =? "false")%string
           then Some false
           else None.
 
@@ -152,11 +152,11 @@ Definition parse_int_as_opt (b : base_system) (s : string) : option Z
                           | bin => (BinaryString.to_Z, BinaryString.of_Z)
                           | hex => (HexString.to_Z, HexString.of_Z)
                           | oct => (OctalString.to_Z, OctalString.of_Z)
-                          | dec => (Z_of_decimal_string, decimal_string_of_Z)
+                          | dec => (fun s => Option.sequence_return (Decimal.Z.of_string s) 0%Z, Decimal.Z.to_string)
                           end in
      let v := to_Z s in
      let s' := of_Z v in
-     if string_beq s s'
+     if (s =? s')%string
      then Some v
      else None.
 
@@ -232,7 +232,7 @@ Fixpoint parse_args_via_spec (s : spec) (argv : list string)
               lv
               argv
      | Symbol syms, arg::argv
-       => if List.existsb (string_beq arg) syms
+       => if List.existsb (fun s => arg =? s)%string syms
           then Success (arg, argv)
           else Error (wrong arg ("one of: " ++ (make_symlist "" " " "" syms))%string)
      | Bool, nil

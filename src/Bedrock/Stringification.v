@@ -27,10 +27,10 @@ Fixpoint make_names (prefix : string)
     olet '(nextn, bnames) <- make_names prefix nextn b;
     Some (nextn, (anames, bnames)))%option
   | base_listZ =>
-    let num := Decimal.decimal_string_of_Z (Z.of_nat nextn) in
+    let num := Decimal.Z.to_string (Z.of_nat nextn) in
     Some (S nextn, String.append prefix num)
   | base_Z =>
-    let num := Decimal.decimal_string_of_Z (Z.of_nat nextn) in
+    let num := Decimal.Z.to_string (Z.of_nat nextn) in
     Some (S nextn, String.append prefix num)
   | _ => None
   end.

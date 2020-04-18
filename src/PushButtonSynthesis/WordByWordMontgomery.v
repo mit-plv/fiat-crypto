@@ -11,7 +11,6 @@ Require Import Crypto.Util.ErrorT.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ListUtil.FoldBool.
 Require Import Crypto.Util.Strings.Decimal.
-Require Import Crypto.Util.Strings.Equality.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.Zselect.
@@ -253,7 +252,7 @@ Section __.
     := ((CorrectnessStringification.dyn_context.cons
            m "m"
            (CorrectnessStringification.dyn_context.cons
-              r' ("((2^" ++ decimal_string_of_Z machine_wordsize ++ ")⁻¹ mod m)")
+              r' ("((2^" ++ Decimal.Z.to_string machine_wordsize ++ ")⁻¹ mod m)")
               (CorrectnessStringification.dyn_context.cons
                  from_montgomery_res "from_montgomery"
                  (CorrectnessStringification.dyn_context.cons

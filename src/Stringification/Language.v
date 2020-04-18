@@ -9,6 +9,7 @@ Require Import Coq.Structures.Orders.
 Require Import Coq.Structures.OrdersEx.
 Require Import Coq.MSets.MSetInterface.
 Require Import Coq.MSets.MSetPositive.
+Require Import Coq.Strings.HexString.
 Require Import Crypto.Util.ListUtil Coq.Lists.List.
 Require Crypto.Util.Strings.String.
 Require Import Crypto.Util.Structures.Equalities.Sum.
@@ -18,7 +19,6 @@ Require Import Crypto.Util.Structures.Orders.Iso.
 Require Import Crypto.Util.MSets.Iso.
 Require Import Crypto.Util.MSets.Sum.
 Require Import Crypto.Util.Strings.Decimal.
-Require Import Crypto.Util.Strings.HexString.
 Require Import Crypto.Util.Strings.Show.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.Operations.
@@ -179,24 +179,24 @@ Module Compilers.
       End type.
 
       Definition bitwidth_to_string (v : Z) : string
-        := (if v =? 2^Z.log2 v then "2^" ++ decimal_string_of_Z (Z.log2 v) else HexString.of_Z v).
+        := (if v =? 2^Z.log2 v then "2^" ++ Decimal.Z.to_string (Z.log2 v) else HexString.of_Z v).
       Definition show_range_or_ctype (v : zrange) : string
         := if (v.(lower) =? 0) && (v.(upper) =? 2^(Z.log2 (v.(upper) + 1)) - 1)
-           then ("uint" ++ decimal_string_of_Z (Z.log2 (v.(upper) + 1)) ++ "_t")%string
+           then ("uint" ++ Decimal.Z.to_string (Z.log2 (v.(upper) + 1)) ++ "_t")%string
            else let lg2 := 1 + Z.log2 (-v.(lower)) in
                 if (v.(lower) =? -2^(lg2-1)) && (v.(upper) =? 2^(lg2-1)-1)
-                then ("int" ++ decimal_string_of_Z lg2 ++ "_t")%string
+                then ("int" ++ Decimal.Z.to_string lg2 ++ "_t")%string
                 else show false v.
       Definition show_compact_Z (with_parens : bool) (v : Z) : string
         := let is_neg := v <? 0 in
            (if is_neg then "-" else "")
              ++ (let v := Z.abs v in
                  (if v <=? 2^8
-                  then decimal_string_of_Z v
+                  then Decimal.Z.to_string v
                   else if v =? 2^(Z.log2 v)
-                       then "2^" ++ (decimal_string_of_Z (Z.log2 v))
+                       then "2^" ++ (Decimal.Z.to_string (Z.log2 v))
                        else if v =? 2^(Z.log2_up v) - 1
-                            then maybe_wrap_parens is_neg ("2^" ++ (decimal_string_of_Z (Z.log2_up v)) ++ "-1")
+                            then maybe_wrap_parens is_neg ("2^" ++ (Decimal.Z.to_string (Z.log2_up v)) ++ "-1")
                             else Hex.show_Z with_parens v)).
 
       Fixpoint make_castb {t} : ZRange.type.base.option.interp t -> option string
@@ -519,7 +519,7 @@ Module Compilers.
           := match t with
              | type.arrow s d
                => fun k
-                  => let n := "x" ++ decimal_string_of_pos idx in
+                  => let n := "x" ++ Decimal.Pos.to_string idx in
                      let '(args, show_f) := @get_eta_cps_args A d (Pos.succ idx) (fun arglist => k (((fun _ => n), ZRange.type.option.None), arglist)) in
                      (n :: args, show_f)
              | type.base _
@@ -532,7 +532,7 @@ Module Compilers.
             := match e in expr.expr t return (unit -> _ * ZRange.type.base.option.interp (type.final_codomain t)) -> _ * ZRange.type.base.option.interp (type.final_codomain t) with
                | expr.Abs s d f
                  => fun _
-                    => let n := "x" ++ decimal_string_of_pos idx in
+                    => let n := "x" ++ Decimal.Pos.to_string idx in
                        let '(_, (args, show_f), r) := @show_eta_abs_cps' d (Pos.succ idx) (f n) in
                        (idx,
                         (n :: args, show_f),
@@ -597,7 +597,7 @@ Module Compilers.
                        idx
              | expr.LetIn A (type.base B) x f
                => fun 'tt
-                  => let n := "x" ++ decimal_string_of_pos idx in
+                  => let n := "x" ++ Decimal.Pos.to_string idx in
                      let '(_, show_x, xr) := show_eta_cps (fun t e args idx => @show_expr_lines with_casts t e args idx) idx x in
                      let '(idx, show_f, fr) := show_eta_cps (fun t e args idx => @show_expr_lines with_casts t e args idx) (Pos.succ idx) (f n) in
                      let ty_str := match make_cast xr with
@@ -612,7 +612,7 @@ Module Compilers.
                           | show_x::nil => [expr_let_line ++ show_x ++ " (*" ++ ty_str ++ " *) in"]%string ++ show_f 200%nat
                           | show_x::rest
                             => ([expr_let_line ++ show_x]%string)
-                                 ++ (List.map (fun l => String.of_list (List.repeat " "%char (String.length expr_let_line)) ++ l)%string
+                                 ++ (List.map (fun l => String.string_of_list_ascii (List.repeat " "%char (String.length expr_let_line)) ++ l)%string
                                               rest)
                                  ++ ["(*" ++ ty_str ++ " *)"]%string
                                  ++ ["in"]
@@ -621,7 +621,7 @@ Module Compilers.
                       fr)
              | expr.LetIn A B x f
                => fun args
-                  => let n := "x" ++ decimal_string_of_pos idx in
+                  => let n := "x" ++ Decimal.Pos.to_string idx in
                      let '(_, show_x, xr) := show_eta_cps (fun t e args idx => @show_expr_lines with_casts t e args idx) idx x in
                      let '(idx, show_f, fr) := show_eta_cps (fun t e args idx => @show_expr_lines with_casts t e args idx) (Pos.succ idx) (f n) in
                      let ty_str := match make_cast xr with
@@ -639,7 +639,7 @@ Module Compilers.
                                    | show_x::nil => [expr_let_line ++ show_x ++ " (*" ++ ty_str ++ " *) in"]%string ++ show_f 200%nat
                                    | show_x::rest
                                      => ([expr_let_line ++ show_x]%string)
-                                          ++ (List.map (fun l => String.of_list (List.repeat " "%char (String.length expr_let_line)) ++ l)%string
+                                          ++ (List.map (fun l => String.string_of_list_ascii (List.repeat " "%char (String.length expr_let_line)) ++ l)%string
                                                        rest)
                                           ++ ["(*" ++ ty_str ++ " *)"]%string
                                           ++ ["in"]
@@ -746,7 +746,7 @@ Module Compilers.
         := fun with_parens t
            => maybe_wrap_parens
                 with_parens
-                ((if is_unsigned t then "u" else "") ++ "int" ++ decimal_string_of_Z (bitwidth_of t)).
+                ((if is_unsigned t then "u" else "") ++ "int" ++ Decimal.Z.to_string (bitwidth_of t)).
 
       Definition union (t1 t2 : type) : type := of_zrange_relaxed (ZRange.union (to_zrange t1) (to_zrange t2)).
 
