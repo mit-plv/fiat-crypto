@@ -1,9 +1,11 @@
+Require Import Coq.ZArith.ZArith.
 Require Import Coq.Strings.String.
 Require Import Coq.Lists.List.
 Require Import bedrock2.Syntax.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.BoundsPipeline.
 Require Crypto.Util.Strings.Decimal.
+Require Import Crypto.Util.Strings.String.
 
 (* Declares default parameters for the bedrock2 backend that apply to all
    machine word sizes. Do NOT import this file unless you're prepared to have a
@@ -35,6 +37,9 @@ Section Defs.
   Definition bedrock_func : Type :=
     string * (list string * list string * cmd.cmd).
 
+  Definition varname_gen (i : nat) : string :=
+    String.append "x" (Decimal.decimal_string_of_Z (Z.of_nat i)).
+
   (* quick check to make sure the expression produced no errors *)
   Fixpoint error_free_expr (x : Syntax.expr) : bool :=
     match x with
@@ -58,3 +63,19 @@ Section Defs.
     | cmd.interact _ _ args => forallb error_free_expr args
     end.
 End Defs.
+
+Section Proofs.
+  (* requires some kind of proof about decimal stringification *)
+  Lemma decimal_varname_gen_unique :
+    forall i j : nat, varname_gen i = varname_gen j <-> i = j.
+  Admitted.
+
+  Lemma varname_gen_startswith v i :
+    v = varname_gen i ->
+    String.startswith "x" v = true.
+  Proof.
+    cbn [varname_gen]. intro.
+    subst. cbn. rewrite substring_0_0.
+    reflexivity.
+  Qed.
+End Proofs.
