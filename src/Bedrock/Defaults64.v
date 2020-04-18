@@ -32,7 +32,7 @@ Section Defaults_64.
   Let wordsize_bytes := Eval vm_compute in (machine_wordsize / 8)%Z.
   Instance default_parameters : Types.parameters :=
     {| semantics := BasicC64Semantics.parameters;
-       varname_gen := fun i => String.append "x" (Decimal.decimal_string_of_Z (Z.of_nat i));
+       varname_gen := Defaults.varname_gen;
        error := expr.var Defaults.ERROR;
        word_size_in_bytes := wordsize_bytes;
     |}.
