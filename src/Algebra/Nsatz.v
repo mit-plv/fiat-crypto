@@ -9,8 +9,6 @@ Require Import Coq.Lists.List.
 Module Nsatz.
   Import nsatz.Nsatz.
   Notation check_correct := check_correct.
-  Ltac Nsatz_nsatz := nsatz.
-  Ltac nsatz := Nsatz_nsatz.
   Notation PEevalR := PEevalR.
   Notation psos_r1 := psos_r1.
   Notation psos_r1b := psos_r1b.
