@@ -5,6 +5,17 @@
 Require Coq.nsatz.Nsatz.
 Require Import Coq.Lists.List.
 
+(** For compat with https://github.com/coq/coq/pull/12073 *)
+Module Nsatz.
+  Import nsatz.Nsatz.
+  Notation check_correct := check_correct.
+  Ltac Nsatz_nsatz := nsatz.
+  Ltac nsatz := Nsatz_nsatz.
+  Notation PEevalR := PEevalR.
+  Notation psos_r1 := psos_r1.
+  Notation psos_r1b := psos_r1b.
+End Nsatz.
+
 Generalizable All Variables.
 Lemma cring_sub_diag_iff {R zero eq sub} `{cring:Cring.Cring (R:=R) (ring0:=zero) (ring_eq:=eq) (sub:=sub)}
   : forall x y, eq (sub x y) zero <-> eq x y.
@@ -44,7 +55,7 @@ Ltac nsatz_get_reified_goal reified_package :=
 Require Import Coq.setoid_ring.Ring_polynom.
 (* Kludge for 8.4/8.5 compatibility *)
 Module Import mynsatz_compute.
-  Import Nsatz.
+  Import nsatz.Nsatz.
   Global Ltac mynsatz_compute x := nsatz_compute x.
 End mynsatz_compute.
 Ltac nsatz_compute x := mynsatz_compute x.
