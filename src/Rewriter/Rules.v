@@ -1056,4 +1056,33 @@ Section with_bitwidth.
                  (forall rx ry x y, cstZZ rx ry (x, y) = (cstZ rx x, cstZ ry y))
                ]
           ]%Z%zrange.
+
+  Definition noselect_rewrite_rulesT : list (bool * Prop)
+    := Eval cbv [myapp mymap myflatten] in
+        mymap
+          dont_do_again
+          [(* no-op rule to prevent firing on selects between 0 and mask (since
+               these can be succinctly expressed as 0-c *)
+            (forall rc c,
+                singlewidth (Z.zselect (cstZ rc c)
+                                  (singlewidth ('0))
+                                  (singlewidth ('(2^bitwidth - 1))))
+                = singlewidth (Z.zselect (cstZ rc c)
+                                    (singlewidth ('0))
+                                    (singlewidth ('(2^bitwidth - 1)))))
+            ; (forall rc c x y,
+                  (0 <= bitwidth) ->
+                  singlewidth (Z.zselect (cstZ rc c) (singlewidth x) (singlewidth y))
+                  = (dlet a :=
+                       singlewidth
+                         (Z.zselect (cstZ rc c)
+                                    (singlewidth ('0))
+                                    (singlewidth ('(2^bitwidth - 1)))) in
+                         dlet b :=
+                         singlewidth (Z.lxor (singlewidth a)
+                                             (singlewidth ('(2^bitwidth-1)))) in
+                           singlewidth
+                             (Z.lor (singlewidth (Z.land (singlewidth y) (singlewidth a)))
+                                    (singlewidth (Z.land (singlewidth x) (singlewidth b))))))
+          ]%Z.
 End with_bitwidth.

@@ -641,6 +641,7 @@ Section __.
           {internal_static : internal_static_opt}
           {low_level_rewriter_method : low_level_rewriter_method_opt}
           {only_signed : only_signed_opt}
+          {no_select : no_select_opt}
           {use_mul_for_cmovznz : use_mul_for_cmovznz_opt}
           {emit_primitives : emit_primitives_opt}
           {should_split_mul : should_split_mul_opt}
@@ -666,6 +667,7 @@ Section __.
   Let possible_values := possible_values_of_machine_wordsize.
   Let possible_values_with_bytes := possible_values_of_machine_wordsize_with_bytes.
 
+  Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
   Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
   Local Instance split_multiret_to : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
 

@@ -168,6 +168,12 @@ Typeclasses Opaque emit_primitives_opt.
 (** Only allow signed integers in the output *)
 Class only_signed_opt := only_signed : bool.
 Typeclasses Opaque only_signed_opt.
+(** Rewrite zselect into expressions that don't require cmov? *)
+Class no_select_opt := no_select : bool.
+Typeclasses Opaque no_select_opt.
+(** If [None], don't rewrite zselects. If [Some w], rewrite zselects assuming w-bit words *)
+Class no_select_size_opt := no_select_size : option Z.
+Typeclasses Opaque no_select_size_opt.
 (** Split apart multiplications? *)
 Class should_split_mul_opt := should_split_mul : bool.
 Typeclasses Opaque should_split_mul_opt.
@@ -186,6 +192,10 @@ Typeclasses Opaque widen_carry_opt.
 (** Widen uint8 / bytes types to machine wordsize? *)
 Class widen_bytes_opt := widen_bytes : bool.
 Typeclasses Opaque widen_bytes_opt.
+Notation no_select_size_of_no_select machine_wordsize
+  := (if no_select return no_select_size_opt
+      then Some machine_wordsize
+      else None) (only parsing).
 Notation split_mul_to_of_should_split_mul machine_wordsize possible_bitwidths
   := (if should_split_mul return split_mul_to_opt
       then Some (machine_wordsize, fold_right Z.min machine_wordsize (filter (fun x => (1 <=? x)%Z) possible_bitwidths))
@@ -415,6 +425,7 @@ Module Pipeline.
   Definition BoundsPipeline
              {low_level_rewriter_method : low_level_rewriter_method_opt}
              {only_signed : only_signed_opt}
+             {no_select_size : no_select_size_opt}
              {split_mul_to : split_mul_to_opt}
              {split_multiret_to : split_multiret_to_opt}
              (with_dead_code_elimination : bool := true)
@@ -481,6 +492,10 @@ Module Pipeline.
                       => RewriteRules.RewriteToFancyWithCasts invert_low invert_high value_range flag_range opts E
                     | None => E
                     end in
+           let E := match no_select_size with
+                    | Some bitwidth =>
+                      RewriteRules.RewriteNoSelect bitwidth opts E
+                    | None => E end in
            let E := RewriteRules.RewriteStripLiteralCasts opts E in
            Success E
       | inr (inl (b, E))
@@ -494,6 +509,7 @@ Module Pipeline.
              {static : static_opt}
              {low_level_rewriter_method : low_level_rewriter_method_opt}
              {only_signed : only_signed_opt}
+             {no_select_size : no_select_size_opt}
              {split_mul_to : split_mul_to_opt}
              {split_multiret_to : split_multiret_to_opt}
              (type_prefix : string)
@@ -532,6 +548,7 @@ Module Pipeline.
              {static : static_opt}
              {low_level_rewriter_method : low_level_rewriter_method_opt}
              {only_signed : only_signed_opt}
+             {no_select_size : no_select_size_opt}
              {split_mul_to : split_mul_to_opt}
              {split_multiret_to : split_multiret_to_opt}
              (type_prefix : string)
@@ -561,13 +578,13 @@ Module Pipeline.
        end.
 
   Local Notation arg_bounds_of_pipeline result
-    := ((fun a b c d e f possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e f possible_values t E arg_bounds out_bounds = result') => arg_bounds) _ _ _ _ _ _ _ _ _ _ _ result eq_refl)
+    := ((fun a b c d e f g possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e f g possible_values t E arg_bounds out_bounds = result') => arg_bounds) _ _ _ _ _ _ _ _ _ _ _ _ result eq_refl)
          (only parsing).
   Local Notation out_bounds_of_pipeline result
-    := ((fun a b c d e f possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e f possible_values t E arg_bounds out_bounds = result') => out_bounds) _ _ _ _ _ _ _ _ _ _ _ result eq_refl)
+    := ((fun a b c d e f g possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e f g possible_values t E arg_bounds out_bounds = result') => out_bounds) _ _ _ _ _ _ _ _ _ _ _ _ result eq_refl)
          (only parsing).
   Local Notation possible_values_of_pipeline result
-    := ((fun a b c d e f possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e f possible_values t E arg_bounds out_bounds = result') => possible_values) _ _ _ _ _ _ _ _ _ _ _ result eq_refl)
+    := ((fun a b c d e f g possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e f g possible_values t E arg_bounds out_bounds = result') => possible_values) _ _ _ _ _ _ _ _ _ _ _ _ result eq_refl)
          (only parsing).
 
   Notation FromPipelineToString_gen machine_wordsize is_internal prefix name result
@@ -792,6 +809,7 @@ Module Pipeline.
   Lemma BoundsPipeline_correct
              {low_level_rewriter_method : low_level_rewriter_method_opt}
              {only_signed : only_signed_opt}
+             {no_select_size : no_select_size_opt}
              {split_mul_to : split_mul_to_opt}
              {split_multiret_to : split_multiret_to_opt}
              (with_dead_code_elimination : bool := true)
@@ -846,6 +864,7 @@ Module Pipeline.
   Lemma BoundsPipeline_correct_trans
         {low_level_rewriter_method : low_level_rewriter_method_opt}
         {only_signed : only_signed_opt}
+        {no_select_size : no_select_size_opt}
         {split_mul_to : split_mul_to_opt}
         {split_multiret_to : split_multiret_to_opt}
         (with_dead_code_elimination : bool := true)

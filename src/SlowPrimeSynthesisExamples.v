@@ -46,6 +46,7 @@ Module debugging_p256_mul_bedrock2.
     Local Instance : widen_carry_opt := true.
     Local Instance : widen_bytes_opt := true.
     Local Instance : only_signed_opt := false.
+    Local Instance : no_select_opt := false.
     Local Instance : should_split_mul_opt := true.
     Local Instance : should_split_multiret_opt := true.
 
@@ -112,6 +113,7 @@ Module debugging_25519_to_bytes_bedrock2.
     Local Instance : widen_carry_opt := true.
     Local Instance : widen_bytes_opt := true.
     Local Instance : only_signed_opt := false.
+    Local Instance : no_select_opt := false.
     Local Instance : should_split_mul_opt := true.
     Local Instance : should_split_multiret_opt := true.
 
@@ -562,6 +564,7 @@ Module debugging_25519_to_bytes_java.
     Local Instance : widen_carry_opt := true.
     Local Instance : widen_bytes_opt := true.
     Local Instance : only_signed_opt := true.
+    Local Instance : no_select_opt := false.
     Local Instance : should_split_mul_opt := false. (* only for x64 *)
 
     Definition n := 2%nat (*10%nat*).
@@ -698,6 +701,7 @@ Module debugging_25519_to_bytes_java.
 End debugging_25519_to_bytes_java.
 
 Local Instance : only_signed_opt := false.
+Local Instance : no_select_opt := false.
 
 Module debugging_p256_uint1.
   Import Crypto.PushButtonSynthesis.WordByWordMontgomery.

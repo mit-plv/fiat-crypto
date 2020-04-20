@@ -28,6 +28,8 @@ Global Instance widen_carry : widen_carry_opt := true.
 Global Instance widen_bytes : widen_bytes_opt := true.
 (* Unsigned integers *)
 Global Instance only_signed : only_signed_opt := false.
+(* Rewrite selects into expressions that don't require cmov *)
+Global Instance no_select : no_select_opt := true.
 
 (* bedrock2 backend parameters *)
 Global Existing Instances Types.rep.Z Types.rep.listZ_mem.

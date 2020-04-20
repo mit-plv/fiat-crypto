@@ -49,6 +49,7 @@ Local Instance : internal_static_opt := true.
 Local Instance : use_mul_for_cmovznz_opt := false.
 Local Instance : emit_primitives_opt := true.
 Local Instance : only_signed_opt := false.
+Local Instance : no_select_opt := false.
 Local Instance : should_split_mul_opt := false.
 Local Instance : should_split_multiret_opt := false.
 Local Instance : widen_bytes_opt := false.
