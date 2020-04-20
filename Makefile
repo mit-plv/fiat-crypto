@@ -124,7 +124,7 @@ GO_DIR := fiat-go/src/
 JAVA_DIR := fiat-java/src/
 JAVADOC_DIR := fiat-java/doc/
 
-UNSATURATED_SOLINAS_BASE_FILES := curve25519_64 curve25519_32 p521_64 p448_solinas_64 # p224_solinas_64
+UNSATURATED_SOLINAS_BASE_FILES := curve25519_64 curve25519_32 poly1305_64 poly1305_32 p521_64 p448_solinas_64 # p224_solinas_64
 WORD_BY_WORD_MONTGOMERY_BASE_FILES := p256_64 p256_32 p384_64 p384_32 secp256k1_64 secp256k1_32 p224_64 p224_32 p434_64 # p434_32
 ALL_BASE_FILES := $(UNSATURATED_SOLINAS_BASE_FILES) $(WORD_BY_WORD_MONTGOMERY_BASE_FILES)
 
@@ -414,6 +414,20 @@ $(C_DIR)curve25519_32.c : $(C_DIR)curve25519_%.c :
 	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --static '25519' '10' '2^255 - 19' '$*' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
+# 2^130 - 5
+$(C_DIR)poly1305_64.c : $(C_DIR)poly1305_%.c :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --static 'poly1305' '3' '2^130 - 5' '$*' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
+
+# 2^130 - 5
+$(C_DIR)poly1305_32.c : $(C_DIR)poly1305_%.c :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --static 'poly1305' '5' '2^130 - 5' '$*' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
+
 # 2^521 - 1
 $(C_DIR)p521_64.c : $(C_DIR)p521_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
@@ -493,6 +507,20 @@ $(BEDROCK2_DIR)curve25519_32.c : $(BEDROCK2_DIR)curve25519_%.c :
 	$(HIDE)($(TIMER) $(BEDROCK2_UNSATURATED_SOLINAS) --lang=bedrock2 $(BEDROCK2_ARGS) '25519' '10' '2^255 - 19' '$*' $(filter-out $(BEDROCK2_UNSUPPORTED_SOLINAS_FUNCTIONS),$(FUNCTIONS_FOR_25519)) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
+# 2^130 - 5
+$(BEDROCK2_DIR)poly1305_64.c : $(BEDROCK2_DIR)poly1305_%.c :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER) $(BEDROCK2_UNSATURATED_SOLINAS) --lang=bedrock2 $(BEDROCK2_ARGS) 'poly1305' '3' '2^130 - 5' '$*' $(filter-out $(BEDROCK2_UNSUPPORTED_SOLINAS_FUNCTIONS),$(UNSATURATED_SOLINAS_FUNCTIONS)) && touch $@.ok) > $@.tmp
+	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
+
+# 2^130 - 5
+$(BEDROCK2_DIR)poly1305_32.c : $(BEDROCK2_DIR)poly1305_%.c :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER) $(BEDROCK2_UNSATURATED_SOLINAS) --lang=bedrock2 $(BEDROCK2_ARGS) 'poly1305' '5' '2^130 - 5' '$*' $(filter-out $(BEDROCK2_UNSUPPORTED_SOLINAS_FUNCTIONS),$(UNSATURATED_SOLINAS_FUNCTIONS)) && touch $@.ok) > $@.tmp
+	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
+
 # 2^521 - 1
 $(BEDROCK2_DIR)p521_64.c : $(BEDROCK2_DIR)p521_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
@@ -570,6 +598,20 @@ $(RS_DIR)curve25519_32.rs : $(RS_DIR)curve25519_%.rs :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
 	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang=Rust '25519' '10' '2^255 - 19' '$*' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
+	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
+
+# 2^130 - 5
+$(RS_DIR)poly1305_64.rs : $(RS_DIR)poly1305_%.rs :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang=Rust 'poly1305' '3' '2^130 - 5' '$*' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
+
+# 2^130 - 5
+$(RS_DIR)poly1305_32.rs : $(RS_DIR)poly1305_%.rs :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang=Rust 'poly1305' '5' '2^130 - 5' '$*' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 # 2^521 - 1
@@ -659,6 +701,20 @@ $(GO_DIR)curve25519_32.go : $(GO_DIR)curve25519_%.go :
 	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang=Go $(GO_EXTRA_ARGS_$*) '25519' '10' '2^255 - 19' '$*' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
+# 2^130 - 5
+$(GO_DIR)poly1305_64.go : $(GO_DIR)poly1305_%.go :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang=Go $(GO_EXTRA_ARGS_$*) 'poly1305' '3' '2^130 - 5' '$*' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
+
+# 2^130 - 5
+$(GO_DIR)poly1305_32.go : $(GO_DIR)poly1305_%.go :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang=Go $(GO_EXTRA_ARGS_$*) 'poly1305' '5' '2^130 - 5' '$*' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
+
 # 2^521 - 1
 $(GO_DIR)p521_64.go : $(GO_DIR)p521_%.go :
 	$(SHOW)'SYNTHESIZE > $@'
@@ -736,6 +792,13 @@ $(JAVA_DIR)FiatCurve25519.java : $(JAVA_DIR)Fiat%.java :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
 	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang=Java $(JAVA_EXTRA_ARGS_32) '$*' '10' '2^255 - 19' '32' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
+	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
+
+# 2^130 - 5
+$(JAVA_DIR)FiatPoly1305.java : $(JAVA_DIR)Fiat%.java :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang=Java $(JAVA_EXTRA_ARGS_32) '$*' '5' '2^130 - 5' '32' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 # 2^256 - 2^224 + 2^192 + 2^96 - 1
