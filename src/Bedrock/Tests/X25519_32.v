@@ -11,6 +11,7 @@ Require Import Crypto.Bedrock.Defaults.
 Require Import Crypto.Bedrock.Defaults32.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Translation.Func.
+Require Import Crypto.PushButtonSynthesis.UnsaturatedSolinas.
 Require Import Crypto.Language.API.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZUtil.ModInv.
@@ -43,34 +44,9 @@ Module X25519_32.
             (s : Z := 2^255)
             (c : list (Z * Z) := [(1,19)]%list).
 
-    Let limbwidth := (Z.log2_up (s - Associational.eval c) / Z.of_nat n)%Q.
-    Let idxs := (List.seq 0 n ++ [0; 1])%list%nat.
-
-    Let prime_upperbound_list : list Z
-      := encode_no_reduce (weight (Qnum limbwidth) (Qden limbwidth)) n (s-1).
-    Let tight_upperbounds : list Z
-      := List.map
-           (fun v : Z => Qceiling (11/10 * v))
-           prime_upperbound_list.
-    Definition tight_bounds : list (ZRange.type.option.interp (type.base (base.type.type_base base.type.Z)))
-      := List.map (fun u => Some r[0~>u]%zrange) tight_upperbounds.
-    Definition loose_bounds : list (ZRange.type.option.interp (type.base (base.type.type_base base.type.Z)))
-      := List.map (fun u => Some r[0 ~> 3*u]%zrange) tight_upperbounds.
-
-    Definition limbwidth_num := Eval vm_compute in Qnum limbwidth.
-    Definition limbwidth_den := Eval vm_compute in QDen limbwidth.
-
-    Definition mulmod_ : Pipeline.ErrorT (Expr _) :=
-      Pipeline.BoundsPipeline
-        true (* subst01 *)
-        None (* fancy *)
-        possible_values
-        ltac:(let r := Reify ((carry_mulmod limbwidth_num limbwidth_den s c n idxs)) in
-              exact r)
-               (Some loose_bounds, (Some loose_bounds, tt))
-               (Some tight_bounds).
     Derive mulmod
-           SuchThat (mulmod_ = ErrorT.Success mulmod)
+           SuchThat
+           (carry_mul n s c machine_wordsize = ErrorT.Success mulmod)
            As mulmod_eq.
     Proof. vm_compute; reflexivity. Qed.
 
@@ -84,17 +60,10 @@ Module X25519_32.
     Goal (error_free_cmd (snd (snd mulmod_bedrock)) = true).
     Proof. vm_compute. reflexivity. Qed.
 
-    Definition addmod_ : Pipeline.ErrorT (Expr _) :=
-      Pipeline.BoundsPipeline
-        true (* subst01 *)
-        None (* fancy *)
-        possible_values
-        ltac:(let r := Reify (addmod limbwidth_num limbwidth_den n) in
-              exact r)
-               (Some tight_bounds, (Some tight_bounds, tt))
-               (Some loose_bounds).
     Derive addmod
-           SuchThat (addmod_ = ErrorT.Success addmod)
+           SuchThat
+           (UnsaturatedSolinas.add
+              n s c machine_wordsize = ErrorT.Success addmod)
            As addmod_eq.
     Proof. vm_compute; reflexivity. Qed.
 
