@@ -22,7 +22,9 @@ Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Proofs.Func.
 Require Import Crypto.Bedrock.Proofs.ValidComputable.Func.
 Require Import Crypto.Bedrock.Util.
+Require Import Crypto.COperationSpecifications.
 Require Import Crypto.Language.API.
+Require Import Crypto.PushButtonSynthesis.UnsaturatedSolinas.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
@@ -59,8 +61,17 @@ Section Proofs.
 
   Local Notation M := (s - Associational.eval c)%Z.
   Local Notation eval :=
-    (eval (weight limbwidth_num limbwidth_den) n).
-  Local Notation idxs := ((List.seq 0 n ++ [0; 1])%list%nat).
+    (eval (weight
+         (QArith_base.Qnum
+            (QArith_base.Qdiv (QArith_base.inject_Z (Z.log2_up M))
+                              (QArith_base.inject_Z (Z.of_nat n))))
+         (Z.pos
+            (QArith_base.Qden
+               (QArith_base.Qdiv (QArith_base.inject_Z (Z.log2_up M))
+                                 (QArith_base.inject_Z (Z.of_nat n))))))
+          n).
+  Local Notation loose_bounds := (UnsaturatedSolinas.loose_bounds n s c).
+  Local Notation tight_bounds := (UnsaturatedSolinas.tight_bounds n s c).
 
   Definition Bignum
              bounds
@@ -70,9 +81,8 @@ Section Proofs.
       (fun xs =>
          sep (emp (eval (map word.unsigned xs) = x))
              (sep (emp (length xs = n
-                        /\ ZRange.type.option.is_bounded_by
-                             (t:=type_listZ) bounds
-                             (map word.unsigned xs) = true))
+                        /\ list_Z_bounded_by
+                             bounds (map word.unsigned xs)))
                   (array scalar (word.of_Z word_size_in_bytes)
                          addr xs))).
 
@@ -80,9 +90,9 @@ Section Proofs.
     fun functions =>
       forall x y px py pout old_out t m
              (Ra Rr : Semantics.mem -> Prop),
-        sep (sep (Bignum (Some loose_bounds) px x)
-                 (Bignum (Some loose_bounds) py y)) Ra m ->
-        sep (Bignum None pout old_out) Rr m ->
+        sep (sep (Bignum loose_bounds px x)
+                 (Bignum loose_bounds py y)) Ra m ->
+        sep (Bignum (repeat None n) pout old_out) Rr m ->
         WeakestPrecondition.call
           (p:=@semantics default_parameters)
           functions mulmod_bedrock t m
@@ -90,7 +100,10 @@ Section Proofs.
           (fun t' m' rets =>
              t = t' /\
              rets = []%list /\
-             sep (Bignum (Some tight_bounds) pout ((x * y) mod M)%Z) Rr m').
+             sep (Lift1Prop.ex1
+                    (fun out =>
+                       sep (emp (out mod M = (x * y) mod M)%Z)
+                           (Bignum tight_bounds pout out))) Rr m').
 
   Lemma mulmod_valid_func :
     valid_func (mulmod (fun H3 : API.type => unit)).
@@ -115,18 +128,19 @@ Section Proofs.
 
   Lemma map_word_wrap_bounded x :
     length x = n ->
-    ZRange.type.base.option.is_bounded_by
-      (t:=base_listZ) (Some tight_bounds) x = true ->
+    list_Z_bounded_by tight_bounds x ->
     map word.wrap x = x.
   Proof.
     cbv [n]. intro.
     repeat (destruct x; cbn [length] in *; try congruence).
-    let x := eval vm_compute in tight_bounds in
-        change tight_bounds with x.
-    let H := fresh in intro H; cbn in H.
-    cbv [ZRange.is_bounded_by_bool
-           ZRange.is_tighter_than_bool] in *;
-      cbn [ZRange.upper ZRange.lower] in *.
+    match goal with
+      | |- context [list_Z_bounded_by ?b _] =>
+        let x := eval vm_compute in b in
+            change b with x
+    end.
+    cbv [list_Z_bounded_by FoldBool.fold_andb_map];
+      cbn [ZRange.upper ZRange.lower].
+    intros.
     repeat match goal with
            | H : (_ && _)%bool = true |- _ =>
              apply Bool.andb_true_iff in H;
@@ -135,75 +149,55 @@ Section Proofs.
     Z.ltb_to_lt. cbv [map word.wrap].
     let x := eval vm_compute in (2^Semantics.width) in
         change (2^Semantics.width) with x.
-    RewriteModSmall.Z.rewrite_mod_small.
+    Z.rewrite_mod_small.
     reflexivity.
   Qed.
 
-  (* TODO: here's where we need to use the FC pipeline to say things about
-         correctness *)
-  (* this can be changed to use type.app_curried if that's easier *)
+
+  Lemma mulmod_carry_mul_correct :
+    Solinas.carry_mul_correct
+      (weight
+         (QArith_base.Qnum
+            (QArith_base.Qdiv (QArith_base.inject_Z (Z.log2_up M))
+                              (QArith_base.inject_Z (Z.of_nat n))))
+         (Z.pos
+            (QArith_base.Qden
+               (QArith_base.Qdiv (QArith_base.inject_Z (Z.log2_up M))
+                                 (QArith_base.inject_Z (Z.of_nat n))))))
+      n M
+      (UnsaturatedSolinas.tight_bounds n s c)
+      (UnsaturatedSolinas.loose_bounds n s c)
+      (expr.Interp (@Compilers.ident_interp) mulmod).
+  Proof.
+    apply carry_mul_correct with (machine_wordsize0:=machine_wordsize).
+    { subst n s c machine_wordsize. vm_compute. reflexivity. }
+    { apply mulmod_eq. }
+  Qed.
+
   Lemma mulmod_correct x y :
     length x = n ->
     length y = n ->
-    ZRange.type.option.is_bounded_by
-      (t:=type_listZ) (Some loose_bounds) x = true ->
-    ZRange.type.option.is_bounded_by
-      (t:=type_listZ) (Some loose_bounds) y = true ->
-    ZRange.type.base.option.is_bounded_by
-      (t:=base_listZ)
-      (Some tight_bounds)
-      (map word.wrap
-           (type.app_curried
-              (expr.Interp (@Compilers.ident_interp) mulmod)
-              (x, (y, tt)))) = true /\
-    eval
-      (map word.wrap
-           (type.app_curried
-              (expr.interp
-                 (@Compilers.ident_interp) (mulmod API.interp_type))
-              (x, (y, tt)))) =
-    (eval x * eval y) mod M.
+    list_Z_bounded_by loose_bounds x ->
+    list_Z_bounded_by loose_bounds y ->
+    let xy :=
+        map word.wrap
+            (type.app_curried
+               (expr.interp (@Compilers.ident_interp)
+                            (mulmod API.interp_type))
+               (x, (y, tt))) in
+    list_Z_bounded_by tight_bounds xy /\
+    eval xy mod M = (eval x * eval y) mod M.
   Proof.
+    cbv zeta.
     intros ? ? Hxbounds Hybounds.
     pose proof mulmod_length x y.
-    pose proof mulmod_eq as Hmm.
-    cbv [mulmod_] in *.
-    match type of Hmm with
-      Pipeline.BoundsPipeline ?a ?b ?c ?e _ _ = _ =>
-      let Heq := fresh "Heq" in
-      remember e as E eqn:Heq;
-        assert (Wf.Compilers.expr.Wf E)
-        by (subst E; Wf.Compilers.prove_Wf ());
-        pose proof Pipeline.BoundsPipeline_correct a b c E
-          as Hpipeline
-    end.
-    specialize
-      (Hpipeline _ _ (ltac:(reflexivity)) _ Hmm
-                 (ltac:(assumption)) (ltac:(reflexivity))).
-    destruct Hpipeline as [Hpipeline _].
-    specialize
-      (Hpipeline (x, (y, tt)) (x, (y, tt))
-                 (ltac:(cbn [fst snd type.and_for_each_lhs_of_arrow
-                                 type.related]; tauto))).
-    cbv [fst snd type.andb_bool_for_each_lhs_of_arrow] in Hpipeline.
-    rewrite Hxbounds, Hybounds in Hpipeline.
-    specialize (Hpipeline ltac:(reflexivity)).
-    cbv [expr.Interp] in *.
-    destruct Hpipeline as [? Hequiv];
-      rewrite map_word_wrap_bounded by assumption;
-      split; [ assumption | ].
-    rewrite Hequiv in *.
-    cbn [type.app_curried fst snd] in Hequiv.
-    rewrite Hequiv in *.
-    rewrite <-eval_carry_mulmod with (idxs:=idxs)
-      by (rewrite ?map_length; auto; try split;
-          vm_compute; congruence).
-    fold (API.Interp E).
-    erewrite @expr.reified_ok.
-    (* TODO: figure out how to get an expr.Reified_of out of the call to Reify
-       in the mulmod_ definition, or how to get it here *)
-    (* TODO: once this proof is done, make one for 32-bit *)
-  Admitted.
+    pose proof mulmod_carry_mul_correct x y Hxbounds Hybounds
+      as Hspec.
+    cbv [expr.Interp] in Hspec. destruct Hspec.
+    rewrite map_word_wrap_bounded by assumption.
+    cbn [type.app_curried fst snd] in *.
+    split; assumption.
+  Qed.
 
   Lemma mulmod_bedrock_correct :
     program_logic_goal_for_function! mulmod_bedrock.
@@ -347,14 +341,23 @@ Section Proofs.
         cbv [literal] in H; rewrite word.of_Z_unsigned in H;
           inversion H; clear H; subst
     end.
-    cbv [Bignum].
-    sepsimpl.
-    eexists; sepsimpl; [ | | | eassumption];
-      [ | cbn [type.app_curried];
-          rewrite map_length, mulmod_length; solve [eauto] | ];
-      rewrite !map_unsigned_of_Z.
-    all:apply mulmod_correct.
-    all:rewrite ?map_length; assumption.
+    match goal with
+    | |- context [eval ?x * eval ?y] =>
+      let H := fresh in
+      pose proof mulmod_correct x y as H;
+        rewrite !map_length in H;
+        repeat (specialize (H (ltac:(auto))));
+        cbv zeta in H
+    end.
+    repeat match goal with
+           | H : _ /\ _ |- _ => destruct H
+           end.
+    eexists; cbv [Bignum]; sepsimpl; [ eassumption | ].
+    eexists; sepsimpl.
+    { rewrite <-map_unsigned_of_Z. reflexivity. }
+    { rewrite map_length. assumption. }
+    { rewrite map_unsigned_of_Z; assumption. }
+    { assumption. }
   Qed.
   (* Print Assumptions mulmod_bedrock_correct. *)
 End Proofs.
