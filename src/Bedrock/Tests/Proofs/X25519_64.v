@@ -28,6 +28,7 @@ Require Import Crypto.PushButtonSynthesis.UnsaturatedSolinas.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
+Require Import Rewriter.Language.Wf.
 Require bedrock2.Map.SeparationLogic. (* if imported, list firstn/skipn get overwritten and it's annoying *)
 Local Open Scope Z_scope.
 
@@ -112,10 +113,9 @@ Section Proofs.
     vm_compute; reflexivity.
   Qed.
 
-  (* TODO: ask Jason for help *)
   Lemma mulmod_Wf :
     Wf.Compilers.expr.Wf3 mulmod.
-  Admitted.
+  Proof. Compilers.prove_Wf3 (). Qed.
 
   Lemma mulmod_length (x y : API.interp_type type_listZ) :
     length
