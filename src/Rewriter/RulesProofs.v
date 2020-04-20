@@ -737,13 +737,7 @@ Proof using Type.
           assert (0 < 2^n < 2^bw) by auto with zarith;
             Z.rewrite_mod_small
         end.
-  all: try
-         (match goal with
-          | |- context [Z.land ?x (2^?n - 1)] =>
-            replace (2^n-1) with (Z.ones n) by
-                (rewrite Z.sub_1_r, <-Z.ones_equiv; reflexivity);
-            rewrite !Z.land_ones by lia
-          end).
+  all: rewrite ?Z.land_pow2 by auto with zarith.
   all: push_Zmod; pull_Zmod; try reflexivity.
   all: Z.rewrite_mod_small.
   all: rewrite ?Z.shiftr_div_pow2, ?Z.shiftl_mul_pow2 by lia.
@@ -808,4 +802,28 @@ Proof using Type.
                       remember (q - q0) as q' eqn:?; (tryif is_var q then Z.linear_substitute q else idtac)
               | _ => nia
           end].
+Qed.
+
+Lemma noselect_rewrite_rules_proofs (bitwidth : Z)
+  : PrimitiveHList.hlist (@snd bool Prop) (noselect_rewrite_rulesT bitwidth).
+Proof.
+  assert (0 <= bitwidth -> 0 < 2^bitwidth) by auto with zarith.
+  start_proof; auto; intros; try lia.
+  all: repeat interp_good_t_step_related.
+  all: systematically_handle_casts; try reflexivity.
+  all: specialize_by auto.
+  all: rewrite !ident.platform_specific_cast_0_is_mod by lia.
+  all: rewrite ?Z.sub_simpl_r by auto.
+  all: autorewrite with zsimplify_fast.
+  Time
+  all: repeat match goal with
+              | _ => progress rewrite ?Z.lxor_0_l, ?Z.lxor_0_r
+              | _ => progress rewrite ?Z.lor_0_l, ?Z.lor_0_r
+              | _ => progress rewrite ?Z.land_0_l, ?Z.land_0_r
+              | _ => rewrite Z.lxor_nilpotent
+              | _ => rewrite Z.land_pow2 by auto with zarith
+              | _ => progress Z.rewrite_mod_small
+              | _ => progress (push_Zmod; pull_Zmod)
+              | _ => reflexivity
+              end.
 Qed.

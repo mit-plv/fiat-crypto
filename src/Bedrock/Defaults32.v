@@ -25,6 +25,8 @@ Section Defaults_32.
   (* Define how to split mul/multi-return functions *)
   Definition possible_values
     := prefix_with_carry [machine_wordsize; 2 * machine_wordsize]%Z.
+  Instance no_select_size : no_select_size_opt :=
+    no_select_size_of_no_select machine_wordsize.
   Instance split_mul_to : split_mul_to_opt :=
     split_mul_to_of_should_split_mul machine_wordsize possible_values.
   Instance split_multiret_to : split_multiret_to_opt :=

@@ -4,6 +4,7 @@ Require Import Crypto.Rewriter.Passes.ArithWithCasts.
 Require Import Crypto.Rewriter.Passes.StripLiteralCasts.
 Require Import Crypto.Rewriter.Passes.MulSplit.
 Require Import Crypto.Rewriter.Passes.MultiRetSplit.
+Require Import Crypto.Rewriter.Passes.NoSelect.
 Require Import Crypto.Rewriter.Passes.ToFancy.
 Require Import Crypto.Rewriter.Passes.ToFancyWithCasts.
 
@@ -14,6 +15,7 @@ Module Compilers.
   Export StripLiteralCasts.Compilers.
   Export MulSplit.Compilers.
   Export MultiRetSplit.Compilers.
+  Export NoSelect.Compilers.
   Export ToFancy.Compilers.
   Export ToFancyWithCasts.Compilers.
 
@@ -24,6 +26,7 @@ Module Compilers.
     Export StripLiteralCasts.Compilers.RewriteRules.
     Export MulSplit.Compilers.RewriteRules.
     Export MultiRetSplit.Compilers.RewriteRules.
+    Export NoSelect.Compilers.RewriteRules.
     Export ToFancy.Compilers.RewriteRules.
     Export ToFancyWithCasts.Compilers.RewriteRules.
   End RewriteRules.

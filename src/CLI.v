@@ -204,6 +204,8 @@ Module ForExtraction.
     := ("--internal-static", "Declare internal functions as static, i.e., local to the file.").
   Definition only_signed_and_help
     := ("--only-signed", "Only allow signed integer types.").
+  Definition no_select_and_help
+    := ("--no-select", "Use expressions that don't require cmov.").
   Definition no_wide_int_and_help
     := ("--no-wide-int", "Don't use integers wider than the bitwidth.").
   Definition widen_carry_and_help
@@ -254,6 +256,7 @@ Module ForExtraction.
         ; no_wide_int_and_help
         ; widen_carry_and_help
         ; widen_bytes_and_help
+        ; no_select_and_help
         ; split_multiret_and_help
         ; no_primitives_and_help
         ; cmovznz_by_mul_and_help
@@ -367,6 +370,8 @@ Module ForExtraction.
       ; internal_static :> internal_static_opt
       (** Should we only use signed integers *)
       ; only_signed :> only_signed_opt
+      (** Should we emit expressions requiring cmov *)
+      ; no_select :> no_select_opt
       (** Should we emit primitive operations *)
       ; emit_primitives :> emit_primitives_opt
       (** Should we use the alternate implementation of cmovznz *)
@@ -527,6 +532,7 @@ Module ForExtraction.
            let '(argv, staticv) := argv_to_contains_opt_and_argv "--static" argv in
            let '(argv, internal_staticv) := argv_to_contains_opt_and_argv "--internal-static" argv in
            let '(argv, only_signedv) := argv_to_contains_opt_and_argv "--only-signed" argv in
+           let '(argv, no_selectv) := argv_to_contains_opt_and_argv "--no-select" argv in
            let '(argv, no_wide_intsv) := argv_to_contains_opt_and_argv "--no-wide-int" argv in
            let '(argv, use_mul_for_cmovznzv) := argv_to_contains_opt_and_argv "--cmovznz-by-mul" argv in
            let '(argv, widen_carryv) := argv_to_contains_opt_and_argv "--widen-carry" argv in
@@ -546,6 +552,7 @@ Module ForExtraction.
                          := {| static := staticv
                                ; internal_static := internal_staticv
                                ; only_signed := only_signedv
+                               ; no_select := no_selectv
                                ; use_mul_for_cmovznz := use_mul_for_cmovznzv
                                ; widen_carry := widen_carryv
                                ; widen_bytes := widen_bytesv
