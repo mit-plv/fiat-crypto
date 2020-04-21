@@ -1,4 +1,5 @@
 Require Import Coq.ZArith.ZArith.
+Require Import Coq.QArith.QArith.
 Require Import Coq.Strings.String. (* should go before lists *)
 Require Import Coq.Lists.List.
 Require Import coqutil.Word.Interface.
@@ -33,16 +34,22 @@ Require bedrock2.Map.SeparationLogic. (* if imported, list firstn/skipn get over
 Local Open Scope Z_scope.
 
 Import Language.Compilers.
+Import Language.Wf.Compilers.
 Import Associational Positional.
 
 Require Import Crypto.Util.Notations.
 Import Types.Notations ListNotations.
+Import QArith_base.
 Local Open Scope Z_scope.
 Local Open Scope string_scope.
 
 Require Import Crypto.Bedrock.Tests.X25519_32.
 Import X25519_32.
 Local Coercion name_of_func (f : bedrock_func) := fst f.
+Local Coercion Z.of_nat : nat >-> Z.
+Local Coercion inject_Z : Z >-> Q.
+Local Coercion Z.pos : positive >-> Z.
+
 
 Existing Instance Defaults32.default_parameters.
 
@@ -66,15 +73,8 @@ Section Proofs.
 
   Local Notation M := (s - Associational.eval c)%Z.
   Local Notation eval :=
-    (eval (weight
-         (QArith_base.Qnum
-            (QArith_base.Qdiv (QArith_base.inject_Z (Z.log2_up M))
-                              (QArith_base.inject_Z (Z.of_nat n))))
-         (Z.pos
-            (QArith_base.Qden
-               (QArith_base.Qdiv (QArith_base.inject_Z (Z.log2_up M))
-                                 (QArith_base.inject_Z (Z.of_nat n))))))
-          n).
+    (eval (weight (Qnum (inject_Z (Z.log2_up M) / inject_Z (Z.of_nat n)))
+                  (QDen (inject_Z (Z.log2_up M) / inject_Z (Z.of_nat n)))) n).
   Local Notation loose_bounds := (UnsaturatedSolinas.loose_bounds n s c).
   Local Notation tight_bounds := (UnsaturatedSolinas.tight_bounds n s c).
 
@@ -117,18 +117,12 @@ Section Proofs.
     vm_compute; reflexivity.
   Qed.
 
-  Lemma mulmod_Wf :
-    Wf.Compilers.expr.Wf3 mulmod.
-  Proof. Compilers.prove_Wf3 (). Qed.
+  Lemma mulmod_Wf : expr.Wf3 mulmod.
+  Proof. prove_Wf3 (). Qed.
 
   Lemma mulmod_length (x y : API.interp_type type_listZ) :
-    length
-      (expr.interp (@Compilers.ident_interp)
-                   (mulmod API.interp_type)
-                   x y) = n.
-  Proof.
-    vm_compute. reflexivity.
-  Qed.
+    length (API.interp (mulmod _) x y) = n.
+  Proof. vm_compute. reflexivity. Qed.
 
   Lemma map_word_wrap_bounded x :
     length x = n ->
@@ -160,18 +154,11 @@ Section Proofs.
 
   Lemma mulmod_carry_mul_correct :
     Solinas.carry_mul_correct
-      (weight
-         (QArith_base.Qnum
-            (QArith_base.Qdiv (QArith_base.inject_Z (Z.log2_up M))
-                              (QArith_base.inject_Z (Z.of_nat n))))
-         (Z.pos
-            (QArith_base.Qden
-               (QArith_base.Qdiv (QArith_base.inject_Z (Z.log2_up M))
-                                 (QArith_base.inject_Z (Z.of_nat n))))))
+      (weight (Qnum (Z.log2_up M / n)) (Qden (Z.log2_up M / n)))
       n M
       (UnsaturatedSolinas.tight_bounds n s c)
       (UnsaturatedSolinas.loose_bounds n s c)
-      (expr.Interp (@Compilers.ident_interp) mulmod).
+      (API.Interp mulmod).
   Proof.
     apply carry_mul_correct with (machine_wordsize0:=machine_wordsize).
     { subst n s c machine_wordsize. vm_compute. reflexivity. }
@@ -186,8 +173,7 @@ Section Proofs.
     let xy :=
         map word.wrap
             (type.app_curried
-               (expr.interp (@Compilers.ident_interp)
-                            (mulmod API.interp_type))
+               (API.Interp mulmod)
                (x, (y, tt))) in
     list_Z_bounded_by tight_bounds xy /\
     eval xy mod M = (eval x * eval y) mod M.
