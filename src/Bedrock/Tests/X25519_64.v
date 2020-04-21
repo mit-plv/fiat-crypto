@@ -1,27 +1,19 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.derive.Derive.
-Require Import Coq.QArith.QArith.
-Require Import Coq.QArith.Qround.
 Require Import Coq.Strings.String.
 Require Import Coq.Lists.List.
 Require Import Crypto.BoundsPipeline.
-Require Import Crypto.Arithmetic.Core.
-Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Bedrock.Defaults.
 Require Import Crypto.Bedrock.Defaults64.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Translation.Func.
 Require Import Crypto.Language.API.
 Require Import Crypto.PushButtonSynthesis.UnsaturatedSolinas.
-Require Import Crypto.Util.ZRange.
-Require Import Crypto.Util.ZUtil.ModInv.
 Require Import bedrock2.Syntax.
 Require Import bedrock2.Semantics.
-Require Import bedrock2.BasicC64Semantics.
 Require bedrock2.NotationsCustomEntry.
 
 Import Language.Compilers.
-Import Associational Positional.
 Import Types.Notations Defaults64.Notations.
 
 Require Import Crypto.Util.Notations.
@@ -29,10 +21,6 @@ Import ListNotations. Local Open Scope Z_scope.
 Local Open Scope string_scope.
 Local Open Scope expr_scope.
 Local Open Scope core_scope.
-
-Local Coercion Z.of_nat : nat >-> Z.
-Local Coercion QArith_base.inject_Z : Z >-> Q.
-Local Coercion Z.pos : positive >-> Z.
 
 Existing Instances split_mul_to split_multiret_to.
 Existing Instance Defaults64.default_parameters.
