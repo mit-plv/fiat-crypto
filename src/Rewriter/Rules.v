@@ -1071,7 +1071,7 @@ Section with_bitwidth.
                                          (singlewidth ('0))
                                          (singlewidth ('(2^bitwidth - 1)))))
             ; (forall rc c x y,
-                  (0 <= bitwidth) ->
+                  0 <= bitwidth ->
                   singlewidth (Z.zselect (cstZ rc c) (singlewidth x) (singlewidth y))
                   = (dlet a :=
                        singlewidth
