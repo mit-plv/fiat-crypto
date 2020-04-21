@@ -328,6 +328,7 @@ src/Util/ZUtil/LandLorShiftBounds.v
 src/Util/ZUtil/Le.v
 src/Util/ZUtil/Lnot.v
 src/Util/ZUtil/Log2.v
+src/Util/ZUtil/Ltz.v
 src/Util/ZUtil/ModInv.v
 src/Util/ZUtil/Modulo.v
 src/Util/ZUtil/Morphisms.v

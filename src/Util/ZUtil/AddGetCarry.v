@@ -1,5 +1,6 @@
 Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
 Require Import Crypto.Util.ZUtil.Definitions.
+Require Import Crypto.Util.ZUtil.Ltz.
 Require Import Crypto.Util.ZUtil.Hints.ZArith.
 Require Import Crypto.Util.ZUtil.Modulo.PullPush.
 Require Import Crypto.Util.Prod.
@@ -113,75 +114,27 @@ Module Z.
   Proof. easypeasy. Qed.
   Hint Rewrite sub_with_get_borrow_full_div : to_div_mod.
 
-  Local Ltac fin_div_ltz :=
-    intros; cbv [Z.ltz]; Z.div_mod_to_quot_rem; break_innermost_match; Z.ltb_to_lt; try nia.
-
-  Lemma add_div_ltz_1 s x y :
-    0 <= x < s
-    -> 0 <= y < s
-    -> (x + y) / s = Z.ltz ((x + y) mod s) x.
-  Proof. fin_div_ltz. Qed.
-
-  Lemma add_div_ltz_2 s x y :
-    0 <= x < s
-    -> 0 <= y < s
-    -> (x + y) / s = Z.ltz ((x + y) mod s) y.
-  Proof. fin_div_ltz. Qed.
-
-  Lemma add_add_div_ltz_2 s c x y :
-    0 <= c < s
-    -> 0 <= x < s
-    -> 0 <= y < s
-    -> (c + x + y) / s =
-       Z.ltz ((c + x) mod s) x + Z.ltz ((c + x + y) mod s) y.
-  Proof.
-    intros. rewrite <-(Z.add_mod_idemp_l (c + x)) by lia.
-    rewrite <-!add_div_ltz_2 by auto with zarith.
-    fin_div_ltz.
-  Qed.
-
   Lemma add_get_carry_full_ltz_1 s x y :
     0 <= x < s
     -> 0 <= y < s
     -> snd (Z.add_get_carry_full s x y) = Z.ltz ((x + y) mod s) x.
-  Proof. rewrite add_get_carry_full_div; fin_div_ltz. Qed.
+  Proof.
+    intros; rewrite add_get_carry_full_div, Z.add_div_ltz_1; lia.
+  Qed.
 
   Lemma add_get_carry_full_ltz_2 s x y :
     0 <= x < s
     -> 0 <= y < s
     -> snd (Z.add_get_carry_full s x y) = Z.ltz ((x + y) mod s) y.
-  Proof. rewrite add_get_carry_full_div; fin_div_ltz. Qed.
-
-  Lemma sub_div_ltz s x y :
-    0 <= x < s
-    -> 0 <= y < s
-    -> - ((x - y) / s) = Z.ltz x ((x - y) mod s).
-  Proof. fin_div_ltz. Qed.
-
-  Lemma sub_sub_div_ltz s x y c :
-    0 <= c < s
-    -> 0 <= x < s
-    -> 0 <= y < s
-    -> - ((x - y - c) / s) =
-       Z.ltz x ((x - y) mod s) + Z.ltz ((x - y) mod s) ((x - y - c) mod s).
   Proof.
-    intros. rewrite (Z.sub_mod_l (x-y)).
-    rewrite <-!sub_div_ltz by auto with zarith.
-    fin_div_ltz.
+    intros; rewrite add_get_carry_full_div, Z.add_div_ltz_2; lia.
   Qed.
 
   Lemma sub_get_borrow_full_ltz s x y :
     0 <= x < s
     -> 0 <= y < s
     -> snd (Z.sub_get_borrow_full s x y) = Z.ltz x ((x - y) mod s).
-  Proof. rewrite sub_get_borrow_full_div; fin_div_ltz. Qed.
-
-  (* TODO: should this lemma go elsewhere? Where? *)
-  Lemma ltz_mod_pow2_small x y z :
-    0 < z ->
-    (Z.ltz x y) mod (2 ^ z) = Z.ltz x y.
   Proof.
-    cbv [Z.ltz]; break_match; intros; Z.ltb_to_lt;
-      apply Z.mod_small; auto with zarith.
+    intros; rewrite sub_get_borrow_full_div, Z.sub_div_ltz; lia.
   Qed.
 End Z.
