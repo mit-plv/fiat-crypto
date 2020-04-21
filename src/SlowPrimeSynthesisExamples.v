@@ -702,6 +702,7 @@ End debugging_25519_to_bytes_java.
 
 Local Instance : only_signed_opt := false.
 Local Instance : no_select_opt := false.
+Local Instance : no_select_size_opt := None.
 
 Module debugging_p256_uint1.
   Import Crypto.PushButtonSynthesis.WordByWordMontgomery.
