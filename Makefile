@@ -163,10 +163,9 @@ BEDROCK2_UNSATURATED_SOLINAS := src/ExtractionOCaml/bedrock2_unsaturated_solinas
 BEDROCK2_WORD_BY_WORD_MONTGOMERY := src/ExtractionOCaml/bedrock2_word_by_word_montgomery
 
 # XXX TODO FIXME: support these functions in bedrock2
-BEDROCK2_UNSUPPORTED_SOLINAS_FUNCTIONS := selectznz to_bytes
-BEDROCK2_UNSUPPORTED_WORD_BY_WORD_MONTGOMERY_FUNCTIONS := mul square add sub opp from_montgomery selectznz
+BEDROCK2_UNSUPPORTED_WORD_BY_WORD_MONTGOMERY_FUNCTIONS := opp from_montgomery
 
-BEDROCK2_ARGS := --no-wide-int --widen-carry --widen-bytes --split-multiret
+BEDROCK2_ARGS := --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select
 BEDROCK2_EXTRA_CFLAGS := -Wno-error=unused-but-set-variable
 
 GO_EXTRA_ARGS_ALL := --cmovznz-by-mul --widen-carry --widen-bytes
@@ -497,14 +496,14 @@ $(WORD_BY_WORD_MONTGOMERY_BEDROCK2_FILES): $(BEDROCK2_WORD_BY_WORD_MONTGOMERY) #
 $(BEDROCK2_DIR)curve25519_64.c : $(BEDROCK2_DIR)curve25519_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(BEDROCK2_UNSATURATED_SOLINAS) --lang=bedrock2 $(BEDROCK2_ARGS) '25519' '5' '2^255 - 19' '$*' $(filter-out $(BEDROCK2_UNSUPPORTED_SOLINAS_FUNCTIONS),$(FUNCTIONS_FOR_25519)) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(BEDROCK2_UNSATURATED_SOLINAS) --lang=bedrock2 $(BEDROCK2_ARGS) '25519' '5' '2^255 - 19' '$*' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 # 2^255 - 19
 $(BEDROCK2_DIR)curve25519_32.c : $(BEDROCK2_DIR)curve25519_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(BEDROCK2_UNSATURATED_SOLINAS) --lang=bedrock2 $(BEDROCK2_ARGS) '25519' '10' '2^255 - 19' '$*' $(filter-out $(BEDROCK2_UNSUPPORTED_SOLINAS_FUNCTIONS),$(FUNCTIONS_FOR_25519)) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(BEDROCK2_UNSATURATED_SOLINAS) --lang=bedrock2 $(BEDROCK2_ARGS) '25519' '10' '2^255 - 19' '$*' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 # 2^130 - 5
@@ -525,21 +524,21 @@ $(BEDROCK2_DIR)poly1305_32.c : $(BEDROCK2_DIR)poly1305_%.c :
 $(BEDROCK2_DIR)p521_64.c : $(BEDROCK2_DIR)p521_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(BEDROCK2_UNSATURATED_SOLINAS) --lang=bedrock2 $(BEDROCK2_ARGS) 'p521' '9' '2^521 - 1' '$*' $(filter-out $(BEDROCK2_UNSUPPORTED_SOLINAS_FUNCTIONS),$(UNSATURATED_SOLINAS_FUNCTIONS)) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(BEDROCK2_UNSATURATED_SOLINAS) --lang=bedrock2 $(BEDROCK2_ARGS) 'p521' '9' '2^521 - 1' '$*' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 ## 2^224 - 2^96 + 1 ## does not bounds check
 #$(BEDROCK2_DIR)p224_solinas_64.c : $(BEDROCK2_DIR)p224_solinas_%.c :
 #	$(SHOW)'SYNTHESIZE > $@'
 #	$(HIDE)rm -f $@.ok
-#	$(HIDE)($(TIMER) $(BEDROCK2_UNSATURATED_SOLINAS) --lang=bedrock2 $(BEDROCK2_ARGS) 'p224' '4' '2^224 - 2^96 + 1' '$*' $(filter-out $(BEDROCK2_UNSUPPORTED_SOLINAS_FUNCTIONS),$(UNSATURATED_SOLINAS_FUNCTIONS)) && touch $@.ok) > $@.tmp
+#	$(HIDE)($(TIMER) $(BEDROCK2_UNSATURATED_SOLINAS) --lang=bedrock2 $(BEDROCK2_ARGS) 'p224' '4' '2^224 - 2^96 + 1' '$*' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
 #	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 # 2^448 - 2^224 - 1
 $(BEDROCK2_DIR)p448_solinas_64.c : $(BEDROCK2_DIR)p448_solinas_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(BEDROCK2_UNSATURATED_SOLINAS) --lang=bedrock2 $(BEDROCK2_ARGS) 'p448' '8' '2^448 - 2^224 - 1' '$*' $(filter-out $(BEDROCK2_UNSUPPORTED_SOLINAS_FUNCTIONS),$(UNSATURATED_SOLINAS_FUNCTIONS)) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(BEDROCK2_UNSATURATED_SOLINAS) --lang=bedrock2 $(BEDROCK2_ARGS) 'p448' '8' '2^448 - 2^224 - 1' '$*' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 # 2^256 - 2^224 + 2^192 + 2^96 - 1
