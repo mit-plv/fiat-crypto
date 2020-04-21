@@ -88,6 +88,16 @@ Section Expr.
            else make_error type_Z
       else base_make_error _.
 
+  Definition rselect
+    : rtype (type_Z -> type_Z -> type_Z -> type_Z) :=
+    fun c x y =>
+      if literal_eqb x 0
+      then if literal_eqb y (2^Semantics.width - 1)
+           then expr.op bopname.add (expr.literal (-1))
+                        (expr.op bopname.eq c (expr.literal 0))
+           else base_make_error _
+      else base_make_error _.
+
   Definition rnth_default
     : rtype (type_Z -> type_listZ -> type_nat -> type_Z) :=
     fun d l i =>
@@ -200,6 +210,7 @@ Section Expr.
     | ident.Z_ltz => Some (expr.op bopname.ltu)
     | ident.Z_lor => Some (expr.op bopname.or)
     | ident.Z_land => Some (expr.op bopname.and)
+    | ident.Z_lxor => Some (expr.op bopname.xor)
     | _ => None 
     end.
 
@@ -212,6 +223,7 @@ Section Expr.
     | ident.Z_shiftr => rshiftr
     | ident.Z_shiftl => rshiftl
     | ident.Z_truncating_shiftl => rtruncating_shiftl
+    | ident.Z_zselect => rselect
     | ident.Z_mul_high => rmul_high
     | ident.Z_cast => fun _ x => x
     | ident.Z_cast2 => fun _ x => x

@@ -18,6 +18,7 @@ Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.ZUtil.LandLorShiftBounds.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
+Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Local Open Scope Z_scope.
 
 Import API.Compilers.
@@ -125,6 +126,16 @@ Section Expr.
                                 (expr.App (expr.Ident ident.Z_truncating_shiftl)
                                           (expr.Ident (ident.Literal (t:=base.type.Z) s)))
                                 x) (expr.Ident (ident.Literal (t:=base.type.Z) n)))
+  | valid_zselect :
+      forall (c : API.expr type_Z) (x y : Z),
+        x = 0 ->
+        y = 2^Semantics.width-1 ->
+        valid_expr true c ->
+        valid_expr (t:=type_Z) false
+                   (expr.App (expr.App
+                                (expr.App (expr.Ident ident.Z_zselect) c)
+                                (expr.Ident (ident.Literal (t:=base.type.Z) x)))
+                                (expr.Ident (ident.Literal (t:=base.type.Z) y)))
   | valid_binop :
       forall i (x y : API.expr type_Z),
         translate_binop i <> None ->
@@ -185,9 +196,10 @@ Section Expr.
     (* solves goals for ring operations *)
     all:autorewrite with rew_word_morphism; try reflexivity.
 
-    (* solves and/or *)
+    (* solves and/or/xor *)
     all: try (apply word.unsigned_inj;
-              rewrite ?word.unsigned_and, ?word.unsigned_or;
+              rewrite ?word.unsigned_and,
+              ?word.unsigned_or, ?word.unsigned_xor;
               rewrite !word.unsigned_of_Z; cbv [word.wrap];
               Z.rewrite_mod_small; reflexivity).
 
@@ -601,6 +613,35 @@ Section Expr.
         by (rewrite word.unsigned_of_Z; cbv [word.wrap];
             Z.rewrite_mod_small; lia).
       cbv [word.wrap]. Z.rewrite_mod_small.
+      reflexivity. }
+    { (* select *)
+      cbv [ident.literal rselect literal_eqb invert_literal].
+      rewrite !Z.eqb_refl.
+      specialize (IHvalid_expr _ _ _ _
+                               ltac:(eassumption) ltac:(eassumption)).
+      cbn [locally_equivalent_nobounds
+             locally_equivalent_nobounds_base
+             locally_equivalent equivalent
+             equivalent_base rep.equiv rep.Z ident.literal] in *.
+      cbv [WeakestPrecondition.dexpr ident.literal] in *.
+      cbn [WeakestPrecondition.expr WeakestPrecondition.expr_body
+                                    Semantics.interp_binop].
+      sepsimpl_hyps.
+      eapply Proper_expr; [ | eassumption ].
+      repeat intro; subst.
+      rewrite Zselect.Z.zselect_correct.
+      apply word.unsigned_inj.
+      rewrite word.unsigned_add, word.unsigned_eqb.
+      rewrite <-Bool.pull_bool_if, !word.unsigned_of_Z.
+      cbv [word.wrap]. Z.rewrite_mod_small.
+      break_match; subst; Z.rewrite_mod_small;
+        Z.ltb_to_lt; try lia.
+      all:pull_Zmod.
+      all:autorewrite with zsimplify_fast.
+      all:try reflexivity.
+      rewrite Z.mod_opp_l_nz
+        by (rewrite ?Z.mod_1_l; auto with zarith).
+      Z.rewrite_mod_small.
       reflexivity. }
   Qed.
 

@@ -153,17 +153,31 @@ Section Expr.
     | _ => false
     end.
 
+  Definition is_literalz {t}
+             (e : @API.expr (fun _ => unit) t) (z : Z) : bool :=
+    match e with
+    | expr.Ident _ (ident.Literal base.type.Z x) => Z.eqb x z
+    | _ => false
+    end.
+  Definition valid_expr_select_bool {t}
+             rc (e : @API.expr (fun _ => unit) t) : bool :=
+    match e with
+    | expr.Ident _ ident.Z_zselect => negb rc
+    | _ => false
+    end.
+
+  (* TODO: too many boolean arguments, change to a "mode" inductive *)
   (* add an extra flag to translate binops because otherwise the inductive
      hypothesis won't be strong enough to give information about *both*
      arguments to a binop *)
   Fixpoint valid_expr_bool' {t}
-           (binop_only shift_only require_casts : bool)
+           (binop_only shift_only select_only require_casts : bool)
            (e : @API.expr (fun _ => unit) t) {struct e} : bool :=
     if binop_only
     then match e with
          | expr.App type_Z (type.arrow type_Z type_Z) f x =>
            (valid_expr_binop_bool require_casts f)
-             && valid_expr_bool' false false true x
+             && valid_expr_bool' false false false true x
          | _ => false
          end
     else
@@ -171,10 +185,23 @@ Section Expr.
       then match e with
            | expr.App type_Z (type.arrow type_Z type_Z) f x =>
              (valid_expr_shift_bool require_casts f)
-               && valid_expr_bool' false false true x
+               && valid_expr_bool' false false false true x
            | _ => false
            end
       else
+        if select_only
+        then match e with
+             | expr.App type_Z (type.arrow type_Z type_Z) f x =>
+               (valid_expr_bool' false false true require_casts f)
+                 && is_literalz x 0
+             | expr.App type_Z
+                        (type.arrow type_Z
+                                    (type.arrow type_Z type_Z)) f x =>
+               (valid_expr_select_bool require_casts f)
+                 && valid_expr_bool' false false false true x
+             | _ => false
+             end
+        else
         match e with
         | expr.App type_nat _ f x =>
           (* only thing accepting nat is nth_default *)
@@ -182,25 +209,28 @@ Section Expr.
           then false
           else valid_expr_nth_default_bool (expr.App f x)
         | expr.App type_Z type_Z f x =>
-          if valid_expr_bool' true false require_casts f
+          if valid_expr_bool' true false false require_casts f
           then (* f is a binop applied to one valid argument;
                 check that x (second argument) is also valid *)
-            valid_expr_bool' false false true x
-          else if valid_expr_bool' false true require_casts f
+            valid_expr_bool' false false false true x
+          else if valid_expr_bool' false true false require_casts f
                then (* f is a shift applied to one valid
                        argument; check that x (shifting index) is a
                        valid shifter *)
                  valid_shifter x
-               else (* must be a cast *)
-                 (valid_expr_App1_bool require_casts f)
-                   && valid_expr_bool' false false false x
+               else if valid_expr_bool' false false true require_casts f
+                    then (* f is a select; make sure x = 2^w-1 *)
+                      is_literalz x (2^Semantics.width-1)
+                    else (* must be a cast *)
+                      (valid_expr_App1_bool require_casts f)
+                        && valid_expr_bool' false false false false x
         | expr.App type_ZZ type_Z f x =>
           (* fst or snd *)
           (valid_expr_App1_bool require_casts f)
-            && valid_expr_bool' false false true x
+            && valid_expr_bool' false false false true x
         | expr.App type_ZZ type_ZZ f x =>
           (valid_expr_App1_bool require_casts f)
-            && valid_expr_bool' false false false x
+            && valid_expr_bool' false false false false x
         | expr.Ident _ (ident.Literal base.type.Z z) =>
           is_bounded_by_bool z max_range || negb require_casts
         | expr.Ident _ (ident.Literal base.type.nat n) =>
@@ -210,7 +240,7 @@ Section Expr.
         | _ => false
         end.
 
-  Definition valid_expr_bool {t} := @valid_expr_bool' t false false.
+  Definition valid_expr_bool {t} := @valid_expr_bool' t false false false.
 
   Lemma valid_expr_App1_bool_type {t} rc (e : API.expr t) :
     valid_expr_App1_bool rc e = true ->
@@ -762,9 +792,50 @@ Section Expr.
       constructor; eauto; lia. }
   Qed.
 
+  Lemma is_literalz_impl1 {t} (e : API.expr t) (x : Z) :
+    is_literalz e x = true ->
+    (match t as t0 return expr.expr t0 -> Prop with
+     | type_Z =>
+       fun e => e = expr.Ident (ident.Literal (t:=base.type.Z) x)
+     | _ => fun _ => False
+     end) e.
+  Proof.
+    cbv [is_literalz].
+    break_match; try congruence; intros.
+    Z.ltb_to_lt; subst; congruence.
+  Qed.
+
+  Lemma valid_expr_select_bool_impl1 {t}
+        rc (f : API.expr t) :
+    valid_expr_select_bool rc f = true ->
+    (match t as t0 return expr.expr t0 -> Prop with
+     | type.arrow type_Z (type.arrow type_Z (type.arrow type_Z type_Z)) =>
+       fun f =>
+         forall c x y : API.expr type_Z,
+           valid_expr true c ->
+           is_literalz x 0 = true ->
+           is_literalz y (2^Semantics.width-1) = true ->
+           valid_expr rc
+                      (expr.App
+                         (expr.App
+                            (expr.App f c) x) y)
+     | _ => fun _ => False
+     end) f.
+  Proof.
+    cbv [valid_expr_select_bool].
+    break_match; try congruence; [ ]; intros.
+    repeat match goal with
+           | H : negb ?rc = true |- _ =>
+             destruct rc; cbn [negb] in *; try congruence; [ ]
+           | H : is_literalz _ _ = true |- _ =>
+             apply is_literalz_impl1 in H
+           end.
+    subst; constructor; eauto.
+  Qed.
+
   Lemma valid_expr_bool'_impl1 {t} (e : API.expr t) :
-    forall binop_only shift_only rc,
-      valid_expr_bool' binop_only shift_only rc e = true ->
+    forall binop_only shift_only select_only rc,
+      valid_expr_bool' binop_only shift_only select_only rc e = true ->
       if binop_only
       then (match t as t0 return expr.expr t0 -> Prop with
             | type.arrow type_Z type_Z =>
@@ -783,7 +854,32 @@ Section Expr.
                        valid_expr rc (expr.App f x)
                  | _ => fun _ => False
                  end) e
-           else
+           else if select_only
+                then (match t as t0 return expr.expr t0 -> Prop with
+                      | type.arrow type_Z type_Z =>
+                        fun f =>
+                          forall x,
+                            is_literalz x (2^Semantics.width-1) = true ->
+                            valid_expr rc (expr.App f x)
+                      | type.arrow type_Z (type.arrow type_Z type_Z) =>
+                        fun f =>
+                          forall x y,
+                            is_literalz x 0 = true ->
+                            is_literalz y (2^Semantics.width-1) = true ->
+                            valid_expr rc (expr.App (expr.App f x) y)
+                      | type.arrow
+                          type_Z
+                          (type.arrow type_Z (type.arrow type_Z type_Z)) =>
+                        fun f =>
+                          forall c x y,
+                            valid_expr true c ->
+                            valid_expr_select_bool rc f = true ->
+                            is_literalz x 0 = true ->
+                            is_literalz y (2^Semantics.width-1) = true ->
+                            valid_expr rc (expr.App (expr.App (expr.App f c) x) y)
+                      | _ => fun _ => False
+                      end) e
+                else
              (exists b, t = type.base b) -> valid_expr rc e.
   Proof.
     induction e; intros;
@@ -816,13 +912,18 @@ Section Expr.
                  | H: valid_expr_App1_bool _ _ = true |- _ =>
                    apply valid_expr_App1_bool_type in H;
                      destruct H; destruct H; congruence
-                 | IH : forall binop_only shift_only _ _,
+                 | IH : forall binop_only shift_only select_only _ _,
                      if binop_only
                      then False
                      else if shift_only
                           then False
                           else _ |- _ =>
                    specialize (IH false false); cbn in IH
+                 | IH : forall select_only _ _,
+                     if select_only
+                     then False
+                     else _ |- _ =>
+                   specialize (IH false); cbn in IH
                  end.
       { (* only_binop case *)
         intros.
@@ -832,12 +933,22 @@ Section Expr.
         intros.
         apply (valid_expr_shift_bool_impl1
                  (t:=type_Z -> type_Z -> type_Z)); eauto. }
+      { (* only_select case (last 2 arguments) *)
+        intros.
+        apply (IHe1 true); eauto. }
+      { (* only_select case (all 3 arguments) *)
+        intros.
+        apply (valid_expr_select_bool_impl1
+                 (t:=type_Z -> type_Z -> type_Z -> type_Z)); eauto. }
       { (* fully-applied binop case *)
         intros.
-        apply (IHe1 true false); eauto. }
+        apply (IHe1 true false false); eauto. }
       { (* fully-applied shift case *)
         intros.
-        apply (IHe1 false true); eauto. }
+        apply (IHe1 false true false); eauto. }
+      { (* fully-applied select case *)
+        intros.
+        apply (IHe1 false false true); eauto. }
       { (* cast Z case *)
         intros.
         apply (valid_expr_App1_bool_impl1
@@ -875,20 +986,26 @@ Section Expr.
     induction 1; intros; subst; cbn;
       repeat match goal with
              | _ => progress cbn [andb]
-             | H : valid_expr_bool' _ _ _ _ = true |- _ =>
+             | H : valid_expr_bool' _ _ _ _ _ = true |- _ =>
                rewrite H
              | _ => rewrite Z.eqb_refl
              end;
       auto using
            Bool.andb_true_iff, Bool.orb_true_iff,
       is_bounded_by_bool_max_range,
-      is_bounded_by_bool_width_range; [ ].
-    (* remaining case : binop *)
-    match goal with
-    | H : translate_binop ?i <> None
-      |- context [match translate_binop ?i with _ => _ end] =>
-      destruct (translate_binop i)
-    end; cbn [andb]; congruence.
+      is_bounded_by_bool_width_range; [ | ].
+    { (* select *)
+      break_match;
+        repeat match goal with
+               | H : (_ && _)%bool = true  |- _ =>
+                 apply Bool.andb_true_iff in H; destruct H
+               end; congruence. }
+    { (* binop *)
+      match goal with
+      | H : translate_binop ?i <> None
+        |- context [match translate_binop ?i with _ => _ end] =>
+        destruct (translate_binop i)
+      end; cbn [andb]; congruence. }
   Qed.
 
   Lemma valid_expr_bool_iff {t} (e : API.expr (type.base t)) :

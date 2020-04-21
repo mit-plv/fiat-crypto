@@ -1065,11 +1065,11 @@ Section with_bitwidth.
                these can be succinctly expressed as 0-c *)
             (forall rc c,
                 singlewidth (Z.zselect (cstZ rc c)
-                                  (singlewidth ('0))
-                                  (singlewidth ('(2^bitwidth - 1))))
+                                       (singlewidth ('0))
+                                       (singlewidth ('(2^bitwidth - 1))))
                 = singlewidth (Z.zselect (cstZ rc c)
-                                    (singlewidth ('0))
-                                    (singlewidth ('(2^bitwidth - 1)))))
+                                         (singlewidth ('0))
+                                         (singlewidth ('(2^bitwidth - 1)))))
             ; (forall rc c x y,
                   (0 <= bitwidth) ->
                   singlewidth (Z.zselect (cstZ rc c) (singlewidth x) (singlewidth y))
