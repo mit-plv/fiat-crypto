@@ -219,6 +219,7 @@ Section Expr.
     match i in ident.ident t0 return rtype t0 with
     | ident.fst _ _ => fst
     | ident.snd _ _ => snd
+    | ident.Z_opp => fun x => expr.op bopname.sub (expr.literal 0) x
     | ident.List_nth_default base_Z => rnth_default
     | ident.Z_shiftr => rshiftr
     | ident.Z_shiftl => rshiftl
