@@ -1,6 +1,7 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.derive.Derive.
 Require Import Coq.Strings.String.
+Require Import Coq.micromega.Lia.
 Require Import coqutil.Word.Interface.
 Require Import coqutil.Word.Properties.
 Require Import coqutil.Map.Interface.
@@ -100,7 +101,6 @@ Local Coercion Z.pos : positive >-> Z.
 Section __.
   Context {p : Types.parameters}
           (n : nat) (s : Z) (c : list (Z * Z)).
-  Context (check_args_ok : check_args n s c Semantics.width (ErrorT.Success tt) = ErrorT.Success tt).
 
   Definition make_bedrock_func {t} (res : API.Expr t) :=
     fst (translate_func res (make_innames _)
@@ -113,6 +113,9 @@ Section __.
                                                      type_listZ)))
     : bedrock_func :=
     ("carry_mul", make_bedrock_func res).
+
+  Definition max_bounds : list (option ZRange.zrange) :=
+    repeat (Some {|ZRange.lower:=0; ZRange.upper:=2^Semantics.width-1|}) n.
 
   Section Proofs.
     Context {ok : Types.ok}.
@@ -127,11 +130,78 @@ Section __.
     Local Notation loose_bounds := (UnsaturatedSolinas.loose_bounds n s c).
     Local Notation tight_bounds := (UnsaturatedSolinas.tight_bounds n s c).
 
+    Context
+      (* loose_bounds_ok could be proven in parameterized form, but is a pain
+      and is easily computable with parameters plugged in. So for now, leaving
+      as a precondition. *)
+      (loose_bounds_ok :
+         ZRange.type.option.is_tighter_than
+           (t:=type_listZ) (Some loose_bounds) (Some max_bounds) = true)
+      (check_args_ok :
+         check_args n s c Semantics.width (ErrorT.Success tt)
+         = ErrorT.Success tt).
+
     Definition Bignum (addr : Semantics.word) (xs : list Z) :
       Semantics.mem -> Prop :=
       array scalar (word.of_Z word_size_in_bytes)
             addr (map word.of_Z xs).
 
+    (* TODO: move to ListUtil or somewhere else common *)
+    Fixpoint partition_equal_size' {T}
+             (n : nat) (xs acc : list T) (i : nat)
+      : list (list T) :=
+      match xs with
+      | [] => [acc]
+      | x :: xs' =>
+        match i with
+        | O => acc :: partition_equal_size' n xs' [x] (n-1)
+        | S i' => partition_equal_size' n xs' (acc ++ [x])%list i'
+        end
+      end.
+    Definition partition_equal_size {T} (n : nat) (xs : list T) :=
+      partition_equal_size' n xs [] n.
+
+    Definition eval_bytes (bs : list Byte.byte) : list Z :=
+      map (fun l => LittleEndian.combine _ (HList.tuple.of_list l))
+          (partition_equal_size (Z.to_nat word_size_in_bytes) bs).
+
+    Lemma scalar_of_bytes
+          a l (H : length l = Z.to_nat word_size_in_bytes) :
+      Lift1Prop.iff1 (array ptsto (word.of_Z 1) a l)
+                     (scalar a (word.of_Z (LittleEndian.combine _ (HList.tuple.of_list l)))).
+    Admitted. (* TODO *)
+
+    Lemma Bignum_of_bytes addr bs :
+      length bs = (n * Z.to_nat word_size_in_bytes)%nat ->
+      Lift1Prop.iff1 (array ptsto (word.of_Z 1) addr bs)
+                     (Bignum addr (eval_bytes bs)).
+    Admitted. (* TODO *)
+
+    (* TODO: surely there is a general lemma somewhere about this; if not, make
+       one using is_tighter_than *)
+    Lemma relax_to_max_bounds x :
+      list_Z_bounded_by loose_bounds x ->
+      list_Z_bounded_by max_bounds x.
+    Admitted.
+
+    (* helper lemma to use list_Z_bounded_by to get the format
+       needed by rep.listZ_mem *)
+    Lemma list_Z_bounded_by_in_range x :
+      list_Z_bounded_by max_bounds x ->
+      Forall (fun z : Z => 0 <= z < 2 ^ Semantics.width) x.
+    Proof.
+      intro.
+      pose proof length_list_Z_bounded_by max_bounds x ltac:(assumption).
+      cbv [list_Z_bounded_by max_bounds] in *.
+      rewrite repeat_length in *.
+      generalize dependent n.
+      induction n; intros;
+        destruct x; intros; cbn [length] in *; subst.
+      (* TODO *)
+    Admitted.
+
+    Lemma eval_bytes_in_range x :
+      Forall (fun z : Z => 0 <= z < 2 ^ Semantics.width) (eval_bytes bs).
     (* TODO: should Bignums be just arrays of the correct number of bytes, and
     have the value computed? *)
     Instance spec_of_carry_mul : spec_of "carry_mul" :=
