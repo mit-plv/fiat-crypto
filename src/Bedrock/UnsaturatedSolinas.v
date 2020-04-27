@@ -19,6 +19,7 @@ Require Import Crypto.BoundsPipeline.
 Require Import Crypto.Bedrock.Defaults.
 Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Types.
+Require Import Crypto.Bedrock.Proofs.Func.
 Require Import Crypto.Bedrock.Translation.Func.
 Require Import Crypto.COperationSpecifications.
 Require Import Crypto.PushButtonSynthesis.UnsaturatedSolinas.
@@ -99,7 +100,7 @@ Local Coercion Z.pos : positive >-> Z.
 Section __.
   Context {p : Types.parameters}
           (n : nat) (s : Z) (c : list (Z * Z)).
-  Context (check_args_ok : check_args n s c Semantics.width (ErrorT.Success tt) = ErrorT.Success tt). (* TODO: is this needed? *)
+  Context (check_args_ok : check_args n s c Semantics.width (ErrorT.Success tt) = ErrorT.Success tt).
 
   Definition make_bedrock_func {t} (res : API.Expr t) :=
     fst (translate_func res (make_innames _)
@@ -126,27 +127,21 @@ Section __.
     Local Notation loose_bounds := (UnsaturatedSolinas.loose_bounds n s c).
     Local Notation tight_bounds := (UnsaturatedSolinas.tight_bounds n s c).
 
-    Definition Bignum bounds (addr : Semantics.word) (xs : list Z) :
+    Definition Bignum (addr : Semantics.word) (xs : list Z) :
       Semantics.mem -> Prop :=
-      Lift1Prop.ex1
-        (fun ws =>
-           sep (emp (map word.unsigned ws = xs))
-               (sep (emp (list_Z_bounded_by bounds xs))
-                    (array scalar (word.of_Z word_size_in_bytes)
-                           addr ws))).
+      array scalar (word.of_Z word_size_in_bytes)
+            addr (map word.of_Z xs).
 
-    Print Solinas.carry_mul_correct.
-    Print list_Z_bounded_by.
-    Search FoldBool.fold_andb_map.
     (* TODO: should Bignums be just arrays of the correct number of bytes, and
     have the value computed? *)
     Instance spec_of_carry_mul : spec_of "carry_mul" :=
       fun functions =>
         forall x y px py pout old_out t m
                (Ra Rr : Semantics.mem -> Prop),
-          sep (sep (Bignum loose_bounds px x)
-                   (Bignum loose_bounds py y)) Ra m ->
-          sep (Bignum (repeat None n) pout old_out) Rr m ->
+          list_Z_bounded_by loose_bounds x ->
+          list_Z_bounded_by loose_bounds y ->
+          sep (sep (Bignum px x) (Bignum py y)) Ra m ->
+          sep (Bignum pout old_out) Rr m ->
           WeakestPrecondition.call
             (p:=semantics)
             functions "carry_mul" t m
@@ -156,8 +151,10 @@ Section __.
                rets = []%list /\
                Lift1Prop.ex1
                  (fun out =>
-                    sep (sep (emp (eval out mod M = (eval x * eval y) mod M)%Z)
-                             (Bignum tight_bounds pout out)) Rr) m').
+                    sep
+                      (sep (emp (eval out mod M = (eval x * eval y) mod M
+                                 /\ list_Z_bounded_by tight_bounds out))
+                             (Bignum pout out)) Rr) m').
 
     Lemma carry_mul_correct :
       forall carry_mul_res :
@@ -173,16 +170,42 @@ Section __.
       cbv [spec_of_carry_mul]; intros.
       cbv [make_bedrock_func].
 
+      match goal with H : _ = ErrorT.Success _ |- _ =>
+                      apply UnsaturatedSolinas.carry_mul_correct in H;
+                        [ | assumption ]
+      end.
+
       eapply Proper_call.
       2:
         eapply translate_func_correct with
             (Ra0:=Ra) (Rr0:=Rr) (out_ptrs:=[pout])
             (args:=(x, (y, tt))) (flat_args := [px; py]).
       { repeat intro.
-        cbn in H4.
+        match goal with
+          H : context [sep _ _ ?m] |- context [_ ?m] =>
+          cbn in H
+        end.
         sepsimpl_hyps.
         ssplit; [ congruence | congruence | ].
-        (* need to incorporate COS here somehow *)
+
+        clear H7. (* TODO : clean up *)
+        subst.
+
+        eexists.
+        sepsimpl;
+          try match goal with
+              | H : context [Solinas.carry_mul_correct] |- _ =>
+               apply H; eauto
+              end; [ ].
+        cbv [Bignum expr.Interp].
+        match goal with
+        | H : literal (word.unsigned _) (eq (word.of_Z _)) |- _ =>
+          let H' := fresh in
+          cbv [literal] in H; inversion H as [H']; clear H;
+            rewrite ?word.of_Z_unsigned in H';
+            rewrite <-H'
+        end.
+        assumption.
     Qed.
 
   End Proofs.
