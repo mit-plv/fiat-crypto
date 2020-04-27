@@ -175,11 +175,10 @@ Section __.
                         [ | assumption ]
       end.
 
-      eapply Proper_call.
-      2:
-        eapply translate_func_correct with
-            (Ra0:=Ra) (Rr0:=Rr) (out_ptrs:=[pout])
-            (args:=(x, (y, tt))) (flat_args := [px; py]).
+      eapply Proper_call;
+        [ | eapply translate_func_correct with
+                (Ra0:=Ra) (Rr0:=Rr) (out_ptrs:=[pout])
+                (args:=(x, (y, tt))) (flat_args := [px; py]) ].
       { repeat intro.
         match goal with
           H : context [sep _ _ ?m] |- context [_ ?m] =>
@@ -187,9 +186,6 @@ Section __.
         end.
         sepsimpl_hyps.
         ssplit; [ congruence | congruence | ].
-
-        clear H7. (* TODO : clean up *)
-        subst.
 
         eexists.
         sepsimpl;
@@ -205,7 +201,73 @@ Section __.
             rewrite ?word.of_Z_unsigned in H';
             rewrite <-H'
         end.
-        assumption.
+        assumption. }
+
+      (* now we prove translate_func preconditions *)
+      all: try assumption.
+      all: try reflexivity.
+
+      { (* list_lengths_repeat_args correct *)
+        (* use list_Z_bounded_by *)
+        cbn.
+        admit. }
+      { (* varname_gen doesn't collide with make_innames
+           (need to think about this one -- maybe find a way of constructing
+           parameters that guarantees the same varname_gen? Or some varname_gen
+           that is parameterized over the prefix, and a proof that the prefix is
+           not in or out? *)
+        admit. }
+      { (* arg pointers are correct *)
+        cbn; sepsimpl.
+        exists 1%nat; sepsimpl;
+          cbn [firstn skipn];
+          [ solve [eauto using firstn_length_le] | ].
+        exists (word.unsigned px); sepsimpl.
+        { (* make a general lemma to get this from list_Z_bounded_by *)
+          admit. }
+        { apply word.unsigned_range. }
+        { apply word.unsigned_range. }
+        { reflexivity. }
+        exists 1%nat; sepsimpl;
+          cbn [firstn skipn];
+          [ solve [eauto using firstn_length_le] | ].
+        exists (word.unsigned py); sepsimpl.
+        { (* make a general lemma to get this from list_Z_bounded_by *)
+          admit. }
+        { apply word.unsigned_range. }
+        { apply word.unsigned_range. }
+        { reflexivity. }
+        { reflexivity. }
+        cbv [Bignum] in *.
+        rewrite !word.of_Z_unsigned.
+        ecancel_assumption. }
+      { (* no duplicates in argnames *)
+        cbn; repeat constructor; cbn; try tauto.
+        destruct 1; congruence. }
+      { (* outnames and varname_gen don't collide *)
+        admit. }
+      { (* no duplicates in outnames *)
+        cbn; repeat constructor; cbn. tauto. }
+      { (* innames and outnames are disjoint --
+           probably can make a separate lemma for this *)
+        admit. }
+      { cbn. sepsimpl.
+        exists (old_out).
+        sepsimpl.
+        { (* todo: length of old_out, can get length of expr.interp from carry_mul_correct *)
+          admit. }
+        (* todo: tactic for this pattern, used in args above as well *)
+        exists (word.unsigned pout); sepsimpl.
+        { (* make a general lemma to get this from list_Z_bounded_by *)
+          admit. }
+        { apply word.unsigned_range. }
+        { apply word.unsigned_range. }
+        { rewrite word.of_Z_unsigned. eexists.
+          rewrite ?map.get_put_diff, map.get_put_same by congruence.
+          ssplit; reflexivity. }
+        { rewrite !word.of_Z_unsigned.
+          cbv [Bignum] in *.
+          ecancel_assumption. }
     Qed.
 
   End Proofs.
