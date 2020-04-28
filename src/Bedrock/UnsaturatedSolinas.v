@@ -24,6 +24,7 @@ Require Import Crypto.Bedrock.Proofs.Func.
 Require Import Crypto.Bedrock.Translation.Func.
 Require Import Crypto.COperationSpecifications.
 Require Import Crypto.PushButtonSynthesis.UnsaturatedSolinas.
+Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Language.API.
 Require Import Coq.Lists.List. (* after SeparationLogic *)
 
@@ -165,16 +166,43 @@ Section __.
       map (fun l => LittleEndian.combine _ (HList.tuple.of_list l))
           (partition_equal_size (Z.to_nat word_size_in_bytes) bs).
 
+    Definition encode_bytes (xs : list Semantics.word) : list Byte.byte :=
+      flat_map
+        (fun x => HList.tuple.to_list
+                    (LittleEndian.split (Z.to_nat word_size_in_bytes)
+                                        (word.unsigned x)))
+        xs.
+
+    Lemma scalar_to_bytes a x :
+      Lift1Prop.iff1
+        (array ptsto (word.of_Z 1) a
+               (HList.tuple.to_list
+                  (LittleEndian.split (Z.to_nat word_size_in_bytes)
+                                      (word.unsigned x))))
+        (scalar a x).
+    Admitted.
+
+    (* TODO: move upstream *)
     Lemma scalar_of_bytes
           a l (H : length l = Z.to_nat word_size_in_bytes) :
       Lift1Prop.iff1 (array ptsto (word.of_Z 1) a l)
-                     (scalar a (word.of_Z (LittleEndian.combine _ (HList.tuple.of_list l)))).
+                     (scalar a (word.of_Z
+                                  (LittleEndian.combine
+                                     _ (HList.tuple.of_list l)))).
     Admitted. (* TODO *)
 
     Lemma Bignum_of_bytes addr bs :
       length bs = (n * Z.to_nat word_size_in_bytes)%nat ->
       Lift1Prop.iff1 (array ptsto (word.of_Z 1) addr bs)
                      (Bignum addr (eval_bytes bs)).
+    Admitted. (* TODO *)
+
+    Lemma Bignum_to_bytes addr x :
+      length x = n ->
+      list_Z_bounded_by max_bounds x ->
+      Lift1Prop.iff1
+        (array ptsto (word.of_Z 1) addr (encode_bytes (map word.of_Z x)))
+        (Bignum addr x).
     Admitted. (* TODO *)
 
     (* TODO: surely there is a general lemma somewhere about this; if not, make
@@ -184,34 +212,58 @@ Section __.
       list_Z_bounded_by max_bounds x.
     Admitted.
 
-    (* helper lemma to use list_Z_bounded_by to get the format
-       needed by rep.listZ_mem *)
-    Lemma list_Z_bounded_by_in_range x :
-      list_Z_bounded_by max_bounds x ->
-      Forall (fun z : Z => 0 <= z < 2 ^ Semantics.width) x.
+    (* TODO: maybe upstream? *)
+    Lemma list_Z_bounded_by_Forall x r m :
+      list_Z_bounded_by (repeat (Some r) m) x ->
+      Forall (fun z : Z => ZRange.lower r <= z <= ZRange.upper r) x.
     Proof.
-      intro.
-      pose proof length_list_Z_bounded_by max_bounds x ltac:(assumption).
-      cbv [list_Z_bounded_by max_bounds] in *.
+      intros.
+      pose proof length_list_Z_bounded_by _ x ltac:(eassumption).
+      cbv [list_Z_bounded_by] in *.
       rewrite repeat_length in *.
-      generalize dependent n.
-      induction n; intros;
-        destruct x; intros; cbn [length] in *; subst.
-      (* TODO *)
+      generalize dependent x.
+      generalize dependent m.
+      induction m; intros;
+        destruct x; intros; cbn [length] in *; subst;
+          try lia; [ | ]; constructor;
+            [ | apply IHm; [ | lia] ].
+      all: cbn [repeat FoldBool.fold_andb_map] in *.
+      all: repeat match goal with
+               | _ => progress cleanup
+               | _ => progress Z.ltb_to_lt
+               | H : _ && _ = true |- _ =>
+                 apply Bool.andb_true_iff in H
+               | _ => solve [auto]
+               | _ => lia
+               end.
+    Qed.
+
+    Lemma max_bounds_range x :
+      list_Z_bounded_by max_bounds x ->
+      Forall (fun z : Z => 0 <= z < 2^Semantics.width) x.
+    Proof.
+      cbv [max_bounds]; intros.
+      eapply Forall_impl;
+        [ | eapply list_Z_bounded_by_Forall; eassumption ].
+      cbn [ZRange.lower ZRange.upper].
+      intros. lia.
+    Qed.
+
+    Lemma eval_bytes_range bs :
+      Forall (fun z : Z => 0 <= z < 2 ^ Semantics.width) (eval_bytes bs).
     Admitted.
 
-    Lemma eval_bytes_in_range x :
-      Forall (fun z : Z => 0 <= z < 2 ^ Semantics.width) (eval_bytes bs).
-    (* TODO: should Bignums be just arrays of the correct number of bytes, and
-    have the value computed? *)
+    (* For out, you can get an array of bytes from a bignum using
+       Bignum_to_bytes. *)
     Instance spec_of_carry_mul : spec_of "carry_mul" :=
       fun functions =>
-        forall x y px py pout old_out t m
+        forall x y px py pout bs t m
                (Ra Rr : Semantics.mem -> Prop),
           list_Z_bounded_by loose_bounds x ->
           list_Z_bounded_by loose_bounds y ->
+          length bs = (n * Z.to_nat word_size_in_bytes)%nat ->
           sep (sep (Bignum px x) (Bignum py y)) Ra m ->
-          sep (Bignum pout old_out) Rr m ->
+          sep (array ptsto (word.of_Z 1) pout bs) Rr m ->
           WeakestPrecondition.call
             (p:=semantics)
             functions "carry_mul" t m
@@ -293,8 +345,8 @@ Section __.
           cbn [firstn skipn];
           [ solve [eauto using firstn_length_le] | ].
         exists (word.unsigned px); sepsimpl.
-        { (* make a general lemma to get this from list_Z_bounded_by *)
-          admit. }
+        { apply max_bounds_range;
+            auto using relax_to_max_bounds. }
         { apply word.unsigned_range. }
         { apply word.unsigned_range. }
         { reflexivity. }
@@ -302,8 +354,8 @@ Section __.
           cbn [firstn skipn];
           [ solve [eauto using firstn_length_le] | ].
         exists (word.unsigned py); sepsimpl.
-        { (* make a general lemma to get this from list_Z_bounded_by *)
-          admit. }
+        { apply max_bounds_range;
+            auto using relax_to_max_bounds. }
         { apply word.unsigned_range. }
         { apply word.unsigned_range. }
         { reflexivity. }
@@ -322,14 +374,17 @@ Section __.
            probably can make a separate lemma for this *)
         admit. }
       { cbn. sepsimpl.
-        exists (old_out).
+        match goal with
+        | H : context [array ptsto _ _ ?bs] |- _ =>
+          seprewrite_in Bignum_of_bytes H; [ assumption | ];
+            exists (eval_bytes bs)
+        end.
         sepsimpl.
         { (* todo: length of old_out, can get length of expr.interp from carry_mul_correct *)
           admit. }
         (* todo: tactic for this pattern, used in args above as well *)
         exists (word.unsigned pout); sepsimpl.
-        { (* make a general lemma to get this from list_Z_bounded_by *)
-          admit. }
+        { apply eval_bytes_range. }
         { apply word.unsigned_range. }
         { apply word.unsigned_range. }
         { rewrite word.of_Z_unsigned. eexists.
