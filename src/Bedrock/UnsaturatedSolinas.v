@@ -146,11 +146,11 @@ Section __.
     Existing Instance semantics_ok.
 
     Local Notation M := (s - Associational.eval c)%Z.
-    Local Notation wt :=
+    Definition weight :=
       (ModOps.weight
          (Qnum (inject_Z (Z.log2_up M) / inject_Z (Z.of_nat n)))
          (QDen (inject_Z (Z.log2_up M) / inject_Z (Z.of_nat n)))).
-    Local Notation eval := (eval wt n).
+    Local Notation eval := (eval weight n).
     Local Notation loose_bounds := (UnsaturatedSolinas.loose_bounds n s c).
     Local Notation tight_bounds := (UnsaturatedSolinas.tight_bounds n s c).
 
@@ -724,7 +724,7 @@ Section __.
 
     (* For out, you can get an array of bytes from a bignum using
        Bignum_to_bytes. *)
-    Instance spec_of_carry_mul : spec_of "carry_mul" :=
+    Definition spec_of_carry_mul name : spec_of name :=
       fun functions =>
         forall x y px py pout bs t m
                (Ra Rr : Semantics.mem -> Prop),
@@ -735,7 +735,7 @@ Section __.
           sep (array ptsto (word.of_Z 1) pout bs) Rr m ->
           WeakestPrecondition.call
             (p:=semantics)
-            functions "carry_mul" t m
+            functions name t m
             (px :: py :: pout :: nil)
             (fun t' m' rets =>
                t = t' /\
@@ -747,7 +747,7 @@ Section __.
                                  /\ list_Z_bounded_by tight_bounds out))
                              (Bignum pout out)) Rr) m').
 
-    Lemma carry_mul_correct :
+    Lemma carry_mul_correct carry_mul_name:
       forall carry_mul_res :
                API.Expr (type_listZ -> type_listZ -> type_listZ),
         UnsaturatedSolinas.carry_mul n s c Semantics.width
@@ -755,8 +755,8 @@ Section __.
         expr.Wf3 carry_mul_res ->
         valid_func (carry_mul_res (fun _ : API.type => unit)) ->
         forall functions,
-          spec_of_carry_mul
-            (("carry_mul", make_bedrock_func carry_mul_res) :: functions).
+          spec_of_carry_mul carry_mul_name
+            ((carry_mul_name, make_bedrock_func carry_mul_res) :: functions).
     Proof.
       cbv [spec_of_carry_mul make_bedrock_func]; intros.
 
