@@ -56,22 +56,13 @@ Local Coercion inject_Z : Z >-> Q.
 Local Coercion Z.pos : positive >-> Z.
 
 Existing Instance Defaults64.default_parameters.
+Existing Instance Defaults64.default_parameters_ok.
 
 Section Proofs.
   Context (n : nat := 5%nat)
           (s : Z := 2^255)
           (c : list (Z * Z) := [(1,19)])
           (machine_wordsize : Z := 64).
-
-  Instance p_ok : Types.ok.
-  Proof.
-    constructor.
-    { exact BasicC64Semantics.parameters_ok. }
-    { reflexivity. }
-    { reflexivity. }
-    { reflexivity. }
-    { exact decimal_varname_gen_unique. }
-  Defined.
 
   Local Notation M := (s - Associational.eval c)%Z.
   Local Notation eval :=
