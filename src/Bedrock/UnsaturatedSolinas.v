@@ -24,7 +24,9 @@ Require Import Crypto.Bedrock.Proofs.Func.
 Require Import Crypto.Bedrock.Translation.Func.
 Require Import Crypto.COperationSpecifications.
 Require Import Crypto.PushButtonSynthesis.UnsaturatedSolinas.
+Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
+Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Language.API.
 Require Import Coq.Lists.List. (* after SeparationLogic *)
 
@@ -152,7 +154,10 @@ Section __.
              (n : nat) (xs acc : list T) (i : nat)
       : list (list T) :=
       match xs with
-      | [] => [acc]
+      | [] => match i with
+              | O => [acc]
+              | S _ => [] (* if the last acc is incomplete, drop it *)
+              end
       | x :: xs' =>
         match i with
         | O => acc :: partition_equal_size' n xs' [x] (n-1)
@@ -198,19 +203,58 @@ Section __.
     Admitted. (* TODO *)
 
     Lemma Bignum_to_bytes addr x :
-      length x = n ->
       list_Z_bounded_by max_bounds x ->
       Lift1Prop.iff1
         (array ptsto (word.of_Z 1) addr (encode_bytes (map word.of_Z x)))
         (Bignum addr x).
     Admitted. (* TODO *)
 
-    (* TODO: surely there is a general lemma somewhere about this; if not, make
-       one using is_tighter_than *)
+    (* TODO: clean up and move *)
+    Lemma relax_list_Z_bounded_by r1 r2 x :
+      ZRange.type.option.is_tighter_than
+        (t:=type_listZ) (Some r1) (Some r2) = true ->
+      list_Z_bounded_by r1 x ->
+      list_Z_bounded_by r2 x.
+    Proof.
+      cbn in r1, r2 |- *. intros.
+      pose proof length_list_Z_bounded_by _ x ltac:(eassumption).
+      match goal with H : FoldBool.fold_andb_map _ _ _ = true |- _ =>
+                      pose proof H;
+                        apply FoldBool.fold_andb_map_length in H
+      end.
+      generalize dependent r1; generalize dependent r2.
+      generalize dependent x; induction x; cbn [length].
+      { destruct r2; cbn [length]; intros; [ | lia].
+        reflexivity. }
+      { destruct r1, r2; cbn [length]; intros; try lia; [ ].
+        cbv [list_Z_bounded_by] in *. cbn [FoldBool.fold_andb_map] in *.
+        repeat match goal with
+               | _ => progress cleanup
+               | H : _ && _ = true |- _ =>
+                 apply Bool.andb_true_iff in H
+               end.
+        apply Bool.andb_true_iff; split.
+        { break_innermost_match; [ | reflexivity].
+          break_innermost_match_hyps; [ | congruence ].
+          cbv [ZRange.is_tighter_than_bool] in *.
+          repeat match goal with
+                 | _ => progress cleanup
+                 | H : _ && _ = true |- _ =>
+                   apply Bool.andb_true_iff in H
+                 end.
+          apply Bool.andb_true_iff; split; Z.ltb_to_lt; lia. }
+        { eapply IHx;
+            match goal with
+            | |- length _ = length _ =>
+              idtac (* no eassumption on length goals *)
+            | _ => try eassumption
+            end; lia. } }
+    Qed.
+
     Lemma relax_to_max_bounds x :
       list_Z_bounded_by loose_bounds x ->
       list_Z_bounded_by max_bounds x.
-    Admitted.
+    Proof. apply relax_list_Z_bounded_by; auto. Qed.
 
     (* TODO: maybe upstream? *)
     Lemma list_Z_bounded_by_Forall x r m :
@@ -249,9 +293,106 @@ Section __.
       intros. lia.
     Qed.
 
+    Lemma bounded_by_loose_bounds_length x :
+      list_Z_bounded_by loose_bounds x -> length x = n.
+    Proof.
+      intros. pose proof length_list_Z_bounded_by _ _ ltac:(eassumption).
+      rewrite length_loose_bounds in *. lia.
+    Qed.
+
+    (* TODO: move *)
+    Lemma length_partition_equal_size' {A} :
+      forall n (xs : list A) acc i,
+        n <> 0%nat -> (i <= n)%nat ->
+        length (partition_equal_size' n xs acc i) = ((length xs + (n-i)) / n)%nat.
+    Proof.
+      induction xs; destruct i; cbn [partition_equal_size' length];
+        intros; rewrite ?IHxs by lia; autorewrite with natsimplify;
+          repeat match goal with
+                 | _ => rewrite Nat.div_same by lia
+                 | _ => rewrite Nat.div_small by lia
+                 | _ => rewrite NatUtil.div_minus, Nat.add_1_r by lia
+                 | |- (_ / ?x)%nat = (_ / ?x)%nat => repeat (f_equal; try lia)
+                 | |- S _ = S _ => repeat (f_equal; try lia)
+                 | _ => lia
+                 end.
+    Qed.
+
+    (* TODO: move *)
+    Lemma length_partition_equal_size {A} :
+      forall n (xs : list A),
+        n <> 0%nat ->
+        length (partition_equal_size n xs) = (length xs / n)%nat.
+    Proof.
+      cbv [partition_equal_size]; intros.
+      rewrite length_partition_equal_size' by lia.
+      autorewrite with natsimplify. reflexivity.
+    Qed.
+
+    (* TODO: move *)
+    Lemma partition_equal_size'_equal_size {A} :
+      forall n (xs : list A) acc i,
+        n <> 0%nat -> (length acc = n - i)%nat -> (i <= n)%nat ->
+        Forall (fun l => length l = n) (partition_equal_size' n xs acc i).
+    Proof.
+      induction xs; destruct i; cbn [partition_equal_size']; intros;
+          repeat match goal with
+                 | _ => apply Forall_nil
+                 | _ => apply Forall_cons
+                 | _ => lia
+                 | _ => progress autorewrite with natsimplify in *
+                 end.
+      { eapply Forall_impl; [ | apply IHxs; cbn [length]; lia ].
+        intros; lia. }
+      { eapply Forall_impl; [ | apply IHxs; rewrite ?app_length;
+                                cbn [length]; lia ].
+        intros; lia. }
+    Qed.
+
+    (* TODO: move *)
+    Lemma partition_equal_size_equal_size {A} :
+      forall n (xs : list A),
+        n <> 0%nat ->
+        Forall (fun l => length l = n) (partition_equal_size n xs).
+    Proof.
+      intros.
+      apply partition_equal_size'_equal_size; cbn [length]; lia.
+    Qed.
+
+    Lemma eval_bytes_length bs :
+      length bs = (n * Z.to_nat word_size_in_bytes)%nat ->
+      length (eval_bytes bs) = n.
+    Proof.
+      intro Hlength. pose proof word_size_in_bytes_pos.
+      assert (Z.to_nat word_size_in_bytes <> 0%nat)
+        by (rewrite <-Z2Nat.inj_0, Z2Nat.inj_iff; lia).
+      rewrite <-(Nat.div_mul n (Z.to_nat word_size_in_bytes)) by lia.
+      cbv [eval_bytes]. rewrite <-Hlength, map_length.
+      apply length_partition_equal_size; lia.
+    Qed.
+
     Lemma eval_bytes_range bs :
       Forall (fun z : Z => 0 <= z < 2 ^ Semantics.width) (eval_bytes bs).
-    Admitted.
+    Proof.
+      pose proof word_size_in_bytes_pos.
+      assert (Z.to_nat word_size_in_bytes <> 0%nat)
+        by (rewrite <-Z2Nat.inj_0, Z2Nat.inj_iff; lia).
+      cbv [eval_bytes]. apply Forall_map_iff.
+      eapply Forall_impl;
+        [ | apply partition_equal_size_equal_size; solve [auto] ].
+      cbv beta; intros.
+      rewrite word_size_in_bytes_eq.
+      match goal with
+      | |- context [LittleEndian.combine ?n ?t] =>
+        pose proof LittleEndian.combine_bound t
+      end.
+      match goal with
+      | H : length ?x = Z.to_nat ?y |- _ =>
+        assert (Z.of_nat (length x) = y)
+          by (rewrite H, Z2Nat.id; lia)
+      end.
+      congruence.
+    Qed.
 
     (* For out, you can get an array of bytes from a bignum using
        Bignum_to_bytes. *)
@@ -329,10 +470,8 @@ Section __.
       all: try assumption.
       all: try reflexivity.
 
-      { (* list_lengths_repeat_args correct *)
-        (* use list_Z_bounded_by *)
-        cbn.
-        admit. }
+      { cbn. rewrite !bounded_by_loose_bounds_length by auto.
+        reflexivity. }
       { (* varname_gen doesn't collide with make_innames
            (need to think about this one -- maybe find a way of constructing
            parameters that guarantees the same varname_gen? Or some varname_gen
@@ -380,8 +519,16 @@ Section __.
             exists (eval_bytes bs)
         end.
         sepsimpl.
-        { (* todo: length of old_out, can get length of expr.interp from carry_mul_correct *)
-          admit. }
+        { match goal with
+          | H : context [Solinas.carry_mul_correct _ _ _ _ _ ?e] |- _ =>
+            specialize (H x y ltac:(eauto) ltac:(eauto));
+              cleanup;
+              pose proof length_list_Z_bounded_by _ (e x y)
+                   ltac:(eassumption)
+          end.
+          rewrite eval_bytes_length by lia.
+          rewrite length_tight_bounds in *.
+          cbv [expr.Interp] in *. congruence. }
         (* todo: tactic for this pattern, used in args above as well *)
         exists (word.unsigned pout); sepsimpl.
         { apply eval_bytes_range. }
