@@ -670,6 +670,12 @@ Section __.
       cleanup. eexists; eauto.
     Qed.
 
+    Lemma flatten_make_outnames_NoDup t :
+      NoDup
+        (Flatten.flatten_base_ltype
+           (make_outnames (outname_gen:=outname_gen) t)).
+    Proof. apply flatten_make_names_NoDup; auto. Qed.
+
     (* TODO: when make_innames is moved, move this too *)
     Lemma make_innames_make_outnames_disjoint t1 t2 :
       PropSet.disjoint
@@ -693,6 +699,28 @@ Section __.
                              flatten_make_names_NoDup]
                end.
     Qed.
+
+    Ltac crush_list_ptr_subgoals :=
+      repeat match goal with
+             | _ => progress cbv [WeakestPrecondition.literal]
+             | _ => rewrite word.of_Z_unsigned
+             | _ => rewrite map.get_put_diff by congruence
+             | _ => rewrite map.get_put_same by auto
+             | |- WeakestPrecondition.get _ _ _ =>
+               eexists
+             | _ => apply max_bounds_range;
+                    solve [auto using relax_to_max_bounds]
+             | _ => solve [apply word.unsigned_range]
+             | _ => solve [auto using eval_bytes_range]
+             | _ => reflexivity
+             end.
+    Ltac exists_list_ptr p :=
+      (exists (word.unsigned p)); sepsimpl;
+      [ solve [crush_list_ptr_subgoals] .. | ].
+
+    Ltac next_argument :=
+      (exists 1%nat); sepsimpl; cbn [firstn skipn];
+      [ solve [eauto using firstn_length_le] | ].
 
     (* For out, you can get an array of bytes from a bignum using
        Bignum_to_bytes. *)
@@ -730,32 +758,29 @@ Section __.
           spec_of_carry_mul
             (("carry_mul", make_bedrock_func carry_mul_res) :: functions).
     Proof.
-      cbv [spec_of_carry_mul]; intros.
-      cbv [make_bedrock_func].
+      cbv [spec_of_carry_mul make_bedrock_func]; intros.
 
+      (* get the carry_mul correctness proof *)
       match goal with H : _ = ErrorT.Success _ |- _ =>
                       apply UnsaturatedSolinas.carry_mul_correct in H;
                         [ | assumption ]
       end.
 
+      (* use translate_func_correct to get the translation postcondition *)
       eapply Proper_call;
         [ | eapply translate_func_correct with
                 (Ra0:=Ra) (Rr0:=Rr) (out_ptrs:=[pout])
                 (args:=(x, (y, tt))) (flat_args := [px; py]) ].
-      { repeat intro.
-        match goal with
-          H : context [sep _ _ ?m] |- context [_ ?m] =>
-          cbn in H
-        end.
-        sepsimpl_hyps.
-        ssplit; [ congruence | congruence | ].
 
-        eexists.
-        sepsimpl;
-          try match goal with
-              | H : context [Solinas.carry_mul_correct] |- _ =>
-               apply H; eauto
-              end; [ ].
+      { (* prove that the translation postcondition is sufficient *)
+        repeat intro.
+        match goal with
+          H : context [sep _ _ ?m] |- context [_ ?m] => cbn in H
+        end.
+        sepsimpl_hyps; ssplit; [ congruence | congruence | eexists ].
+        sepsimpl; try match goal with
+                      | H : context [Solinas.carry_mul_correct] |- _ =>
+                        apply H; eauto end; [ ].
         cbv [Bignum expr.Interp].
         match goal with
         | H : literal (word.unsigned _) (eq (word.of_Z _)) |- _ =>
@@ -766,71 +791,44 @@ Section __.
         end.
         assumption. }
 
-      (* now we prove translate_func preconditions *)
-      all: try assumption.
-      all: try reflexivity.
-
-      { cbn. rewrite !bounded_by_loose_bounds_length by auto.
+      (* Now, we prove translate_func preconditions.
+         First, take care of all the easy ones. *)
+      all: try first [ solve [apply make_innames_varname_gen_disjoint]
+                     | solve [apply make_outnames_varname_gen_disjoint]
+                     | solve [apply make_innames_make_outnames_disjoint]
+                     | solve [apply flatten_make_innames_NoDup]
+                     | solve [apply flatten_make_outnames_NoDup]
+                     | assumption
+                     | reflexivity
+                     ].
+      { (* list lengths are correct *)
+        cbn. rewrite !bounded_by_loose_bounds_length by auto.
         reflexivity. }
-      { apply make_innames_varname_gen_disjoint. }
       { (* arg pointers are correct *)
         cbn; sepsimpl.
-        exists 1%nat; sepsimpl;
-          cbn [firstn skipn];
-          [ solve [eauto using firstn_length_le] | ].
-        exists (word.unsigned px); sepsimpl.
-        { apply max_bounds_range;
-            auto using relax_to_max_bounds. }
-        { apply word.unsigned_range. }
-        { apply word.unsigned_range. }
-        { reflexivity. }
-        exists 1%nat; sepsimpl;
-          cbn [firstn skipn];
-          [ solve [eauto using firstn_length_le] | ].
-        exists (word.unsigned py); sepsimpl.
-        { apply max_bounds_range;
-            auto using relax_to_max_bounds. }
-        { apply word.unsigned_range. }
-        { apply word.unsigned_range. }
-        { reflexivity. }
-        { reflexivity. }
-        cbv [Bignum] in *.
-        rewrite !word.of_Z_unsigned.
+        next_argument. exists_list_ptr px.
+        next_argument. exists_list_ptr py.
+        cbv [Bignum] in *. rewrite !word.of_Z_unsigned.
         ecancel_assumption. }
-      { (* no duplicates in argnames *)
-        apply flatten_make_innames_NoDup. }
-      { apply make_outnames_varname_gen_disjoint. }
-      { (* no duplicates in outnames *)
-        apply flatten_make_names_NoDup; auto. }
-      { apply make_innames_make_outnames_disjoint. }
-      { cbn. sepsimpl.
-        match goal with
-        | H : context [array ptsto _ _ ?bs] |- _ =>
-          seprewrite_in Bignum_of_bytes H; [ assumption | ];
-            exists (eval_bytes bs)
-        end.
-        sepsimpl.
-        { match goal with
-          | H : context [Solinas.carry_mul_correct _ _ _ _ _ ?e] |- _ =>
-            specialize (H x y ltac:(eauto) ltac:(eauto));
-              cleanup;
-              pose proof length_list_Z_bounded_by _ (e x y)
-                   ltac:(eassumption)
-          end.
-          rewrite eval_bytes_length by lia.
-          rewrite length_tight_bounds in *.
-          cbv [expr.Interp] in *. congruence. }
-        (* todo: tactic for this pattern, used in args above as well *)
-        exists (word.unsigned pout); sepsimpl.
-        { apply eval_bytes_range. }
-        { apply word.unsigned_range. }
-        { apply word.unsigned_range. }
-        { rewrite word.of_Z_unsigned. eexists.
-          rewrite ?map.get_put_diff, map.get_put_same by congruence.
-          ssplit; reflexivity. }
-        { rewrite !word.of_Z_unsigned.
-          cbv [Bignum] in *.
-          ecancel_assumption. } }
+      { (* space is reserved for output lists *)
+        cbn. sepsimpl.
+        repeat match goal with
+               | _ => progress cbv [expr.Interp] in *
+               | _ => rewrite eval_bytes_length by lia
+               | _ => rewrite length_tight_bounds in *
+               | H : context [array ptsto _ _ ?bs] |- _ =>
+                 seprewrite_in Bignum_of_bytes H; [ assumption | ];
+                   exists (eval_bytes bs)
+               | H : context [Solinas.carry_mul_correct _ _ _ _ _ ?e] |- _ =>
+                 specialize (H x y ltac:(eauto) ltac:(eauto));
+                   cleanup;
+                   pose proof length_list_Z_bounded_by _ (e x y)
+                        ltac:(eassumption)
+               end.
+        sepsimpl; [ congruence | ].
+        exists_list_ptr pout.
+        cbv [Bignum] in *. rewrite !word.of_Z_unsigned.
+        ecancel_assumption. }
     Qed.
   End Proofs.
 End __.
