@@ -38,6 +38,14 @@ Section Defaults_64.
        error := expr.var Defaults.ERROR;
        word_size_in_bytes := wordsize_bytes;
     |}.
+  Instance default_parameters_ok : Types.ok.
+  Proof.
+    constructor.
+    { exact BasicC64Semantics.parameters_ok. }
+    { reflexivity. }
+    { reflexivity. }
+    { exact decimal_varname_gen_unique. }
+  Defined.
 End Defaults_64.
 
 Module Notations.

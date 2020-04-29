@@ -8,12 +8,11 @@ Require Import Crypto.Stringification.Language.
 Require Import Crypto.Stringification.IR.
 Require Import Crypto.Bedrock.Defaults.
 Require Import Crypto.Bedrock.MakeAccessSizes.
+Require Import Crypto.Bedrock.SelectParameters.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Translation.Func.
 Require Import Crypto.Language.API.
 Require Import Crypto.Util.Option.
-Require Crypto.Bedrock.Defaults32.
-Require Crypto.Bedrock.Defaults64.
 Import Stringification.Language.Compilers.
 Import Types.
 
@@ -21,24 +20,6 @@ Import ListNotations Types.Notations.
 Import ToString.OfPHOAS.
 Local Open Scope string_scope.
 Local Open Scope list_scope.
-
-(* pairs machine word size choices with parameters instances *)
-Definition parameter_choices : list (Z * parameters) :=
-  [(32%Z, Defaults32.default_parameters);
-     (64%Z, Defaults64.default_parameters)].
-
-Definition select_parameters wordsize : parameters + string :=
-  match find (fun x => Z.eqb wordsize (fst x)) parameter_choices with
-  | Some x => inl (snd x)
-  | None =>
-    let wordsize_choices := List.map fst parameter_choices in
-    let wordsize_choices_str :=
-        List.map Decimal.Z.to_string wordsize_choices in
-    inr ("Invalid machine word size ("
-           ++  Decimal.Z.to_string wordsize
-           ++ "); valid choices are "
-           ++ concat "," wordsize_choices_str)%string
-  end.
 
 Section with_parameters.
   Context {p : parameters}.

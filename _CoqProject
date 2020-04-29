@@ -60,12 +60,12 @@ src/Bedrock/Defaults.v
 src/Bedrock/Defaults32.v
 src/Bedrock/Defaults64.v
 src/Bedrock/MakeAccessSizes.v
+src/Bedrock/SelectParameters.v
 src/Bedrock/StandaloneHaskellMain.v
 src/Bedrock/StandaloneOCamlMain.v
 src/Bedrock/Stringification.v
 src/Bedrock/Tactics.v
 src/Bedrock/Types.v
-src/Bedrock/MakeAccessSizes.v
 src/Bedrock/UnsaturatedSolinas.v
 src/Bedrock/Util.v
 src/Bedrock/Proofs/Cmd.v

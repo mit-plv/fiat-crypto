@@ -53,26 +53,13 @@ Local Coercion inject_Z : Z >-> Q.
 Local Coercion Z.pos : positive >-> Z.
 
 Existing Instance Defaults32.default_parameters.
-
-Axiom BasicC32Semantics_parameters_ok : Semantics.parameters_ok BasicC32Semantics.parameters.
-(* TODO: why does BasicC32Semantics not have a Semantics.parameters_ok instance? *)
-Existing Instance BasicC32Semantics_parameters_ok.
+Existing Instance Defaults32.default_parameters_ok.
 
 Section Proofs.
   Context (n : nat := 5%nat)
           (s : Z := 2^130)
           (c : list (Z * Z) := [(1,5)])
           (machine_wordsize : Z := 32).
-
-  Instance p_ok : Types.ok.
-  Proof.
-    constructor.
-    { exact BasicC32Semantics_parameters_ok. }
-    { reflexivity. }
-    { reflexivity. }
-    { reflexivity. }
-    { exact decimal_varname_gen_unique. }
-  Defined.
 
   Local Notation M := (s - Associational.eval c)%Z.
   Local Notation eval :=
