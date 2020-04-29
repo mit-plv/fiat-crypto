@@ -374,12 +374,12 @@ Section __.
                  | _ => apply Forall_cons
                  | _ => lia
                  | _ => progress autorewrite with natsimplify in *
-                 end.
+                 end; [ | ].
       { eapply Forall_impl; [ | apply IHxs; cbn [length]; lia ].
-        intros; lia. }
+        cbv beta; auto. }
       { eapply Forall_impl; [ | apply IHxs; rewrite ?app_length;
                                 cbn [length]; lia ].
-        intros; lia. }
+        cbv beta; auto. }
     Qed.
 
     (* TODO: move *)
