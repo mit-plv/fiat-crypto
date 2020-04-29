@@ -1,27 +1,36 @@
 Fiat-Crypto: Synthesizing Correct-by-Construction Code for Cryptographic Primitives
-=====
+===================================================================================
 
 Building
------
+--------
 [![CI (Coq)](https://github.com/mit-plv/fiat-crypto/workflows/CI%20(Coq)/badge.svg)](https://github.com/mit-plv/fiat-crypto/actions?query=workflow%3A%22CI+%28Coq%29%22+branch%3Amaster)
 
-This repository requires Coq 8.9 or later. Note that if you install Coq from Ubuntu aptitude packages, you need `libcoq-ocaml-dev` in addition to `coq`.
+This repository requires [Coq](https://coq.inria.fr/) [8.9](https://github.com/coq/coq/releases/tag/V8.9.0) or later.
+Note that if you install Coq from Ubuntu aptitude packages, you need `libcoq-ocaml-dev` in addition to `coq`.
+If you want to build the bedrock2 code, you need [Coq 8.10](https://github.com/coq/coq/releases/tag/V8.10.0) or later (otherwise you can pass `SKIP_BEDROCK2=1` to `make`).
+We suggest downloading [the latest version of Coq](https://coq.inria.fr/download).
+
+You can clone this repository with
+
+    git clone --recursive https://github.com/mit-plv/fiat-crypto.git
 
 Git submodules are used for some dependencies. If you did not clone with `--recursive`, run
 
     git submodule update --init --recursive
 
-To build (if your COQPATH variable is empty):
+from inside the repository.
+Then run:
 
-       make
+    make
 
-To build:
+You can check out [our CI](https://github.com/mit-plv/fiat-crypto/actions?query=branch%3Amaster+workflow%3A%22CI+%28Coq%29%22) to see how long the build should take; as of the last update to this line in the README, it takes about 1h10m to run `make -j2` on Coq 8.11.1.
 
-       export COQPATH="$(pwd)/rewriter/src:$(pwd)/coqprime/src:$(pwd)/bedrock2/bedrock2/src:$(pwd)/bedrock2/deps/coqutil/src${COQPATH:+:}$COQPATH"
-       make
+If you want to build only the command-line binaries used for generating code, you can save a bit of time by making only the `standalone-ocaml` target with
 
-Usage
------
+    make standalone-ocaml
+
+Usage (Generating C Files)
+--------------------------
 
 The Coq development builds binary compilers that generate code using some implementation strategy.
 The parameters (modulus, hardware multiplication input bitwidth, etc.) are are specified on the command line of the compiler.
@@ -31,13 +40,13 @@ A collection of C files for popular curves can be made with
 
     make c-files
 
-The C files will appear in the top-level directory.
+The C files will appear in [`fiat-c/src/`](./fiat-c/src/).
 
 Just the compilers generating these C files can be made with
 
-    make standalone
+    make standalone-ocaml
 
-or `make standalone-haskell` or `make standalone-ocaml` for binaries generated with just one compiler.
+or `make standalone-haskell` for binaries generated with Haskell, or `make standalone` for both the Haskell and OCaml binaries.
 The binaries are located in `src/ExtractionOcaml/` and `src/ExtractionHaskell` respectively.
 
 There is a separate compiler binary for each implementation strategy:
@@ -59,6 +68,58 @@ Here are some examples of ways to invoke the binaries (from the directories that
     ./word_by_word_montgomery 'p256' '2^256 - 2^224 + 2^192 + 2^96 - 1' '64' > p256_64.c
 
 You can find more examples in the `Makefile`.
+
+Usage (Generating Bedrock2 Files)
+---------------------------------
+
+The Coq development builds binary compilers that generate code using some implementation strategy.
+The parameters (modulus, hardware multiplication input bitwidth, etc.) are are specified on the command line of the compiler.
+The generated bedrock2/C code is written to standard output.
+
+A collection of bedrock2/C files for popular curves can be made with
+
+    make bedrock2-files
+
+The bedrock2/C files will appear in [`fiat-bedrock2/src/`](./fiat-bedrock2/src/).
+
+Just the compilers generating these bedrock2/C files can be made with
+
+    make standalone-ocaml
+
+or `make standalone-haskell` for binaries generated with Haskell, or `make standalone` for both the Haskell and OCaml binaries.
+The binaries are located in `src/ExtractionOcaml/` and `src/ExtractionHaskell` respectively.
+
+There is a separate compiler binary for each implementation strategy:
+
+ - `bedrock2_saturated_solinas`
+ - `bedrock2_unsaturated_solinas`
+ - `bedrock2_word_by_word_montgomery`
+
+Passing no arguments, or passing `-h` or `--help` (or any other invalid arguments) will result in a usage message being printed.  These binaries output bedrock2/C code on stdout.
+
+Here are some examples of ways to invoke the binaries (from the directories that they live in):
+
+    # Generate code for 2^255-19
+    ./bedrock2_unsaturated_solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select '25519' '5' '2^255 - 19' '64' carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes > curve25519_64.c
+    ./bedrock2_unsaturated_solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select '25519' '10' '2^255 - 19' '32' carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes > curve25519_32.c
+
+    # Generate code for NIST-P256 (2^256 - 2^224 + 2^192 + 2^96 - 1)
+    ./bedrock2_word_by_word_montgomery --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'p256' '2^256 - 2^224 + 2^192 + 2^96 - 1' '32' > p256_32.c
+    ./bedrock2_word_by_word_montgomery --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'p256' '2^256 - 2^224 + 2^192 + 2^96 - 1' '64' > p256_64.c
+
+    # Generate code for 2^130 - 5
+    ./bedrock2_unsaturated_solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'poly1305' '3' '2^130 - 5' '64' > poly1305_64.c
+    ./bedrock2_unsaturated_solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'poly1305' '5' '2^130 - 5' '32' > poly1305_32.c
+
+You can find more examples in the `Makefile`.
+
+Extended Build Instructions
+---------------------------
+
+If your `COQPATH` variable is not empty, you can build with:
+
+    export COQPATH="$(pwd)/rewriter/src:$(pwd)/coqprime/src:$(pwd)/bedrock2/bedrock2/src:$(pwd)/bedrock2/deps/coqutil/src${COQPATH:+:}$COQPATH"
+    make
 
 Reading About The Code
 ----------------------
