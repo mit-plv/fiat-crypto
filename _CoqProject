@@ -65,6 +65,8 @@ src/Bedrock/StandaloneOCamlMain.v
 src/Bedrock/Stringification.v
 src/Bedrock/Tactics.v
 src/Bedrock/Types.v
+src/Bedrock/MakeAccessSizes.v
+src/Bedrock/UnsaturatedSolinas.v
 src/Bedrock/Util.v
 src/Bedrock/Proofs/Cmd.v
 src/Bedrock/Proofs/Expr.v
