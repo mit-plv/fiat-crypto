@@ -28,10 +28,21 @@ Arguments carry_mul {_ _ _ _ _}.
 Arguments spec_of_carry_mul {_ _ _ _ _}.
 Arguments carry_mul_correct {_ _ _ _ _}.
 
-Record reified_op {p t}
+(* TODO: replace with prefix-based generators *)
+Definition inname_gen :=
+  fun n => ("in" ++ Decimal.Z.to_string (Z.of_nat n))%string.
+Definition outname_gen :=
+  fun n => ("out" ++ Decimal.Z.to_string (Z.of_nat n))%string.
+Local Notation make_bedrock_func :=
+  (@make_bedrock_func _ inname_gen outname_gen).
+
+Record reified_op {p t} (n : nat)
        (start : ErrorT.ErrorT BoundsPipeline.Pipeline.ErrorMessage
                               (API.Expr t)) :=
   { res : API.Expr t;
+    computed_bedrock_func : list string * list string * cmd;
+    computed_bedrock_func_eq :
+      computed_bedrock_func = make_bedrock_func n res;
     reified_eq : start = ErrorT.Success res;
     reified_Wf3 : expr.Wf3 res;
     reified_valid : Func.valid_func (p:=p) (res (fun _ => unit)) }.
@@ -40,13 +51,6 @@ Arguments reified_eq {_ _ _}.
 Arguments reified_Wf3 {_ _ _}.
 Arguments reified_valid {_ _ _}.
 
-(* TODO: replace with prefix-based generators *)
-Definition inname_gen :=
-  fun n => ("in" ++ Decimal.Z.to_string (Z.of_nat n))%string.
-Definition outname_gen :=
-  fun n => ("out" ++ Decimal.Z.to_string (Z.of_nat n))%string.
-Local Notation make_bedrock_func :=
-  (@make_bedrock_func _ inname_gen outname_gen).
 (* TODO: remove these axioms once there's a nice general proof for
      prefix-based varname generators *)
 Axiom outname_gen_inname_gen_ok :
@@ -77,11 +81,15 @@ Ltac handle_easy_preconditions :=
   | |- ?g => fail "Unrecognized goal" g
   end.
 
-Ltac make_reified_op start :=
-  assert (reified_op start)
-  by (econstructor; [ | | apply valid_func_bool_iff ];
-      [ vm_compute; reflexivity | | ];
-      [ abstract (prove_Wf3 ())
+Ltac make_reified_op n start :=
+  assert (reified_op n start)
+  by (econstructor; try apply valid_func_bool_iff;
+      try match goal with
+          | |- ?start = ErrorT.Success _ =>
+            vm_compute; reflexivity
+          end;
+      [ vm_compute; reflexivity
+      | abstract (prove_Wf3 ())
       | abstract (vm_compute; reflexivity) ]).
 
 Ltac parameters_from_wordsize machine_wordsize :=
@@ -95,32 +103,33 @@ Ltac parameters_from_wordsize machine_wordsize :=
 
 Ltac make_all_reified_ops n s c machine_wordsize :=
   make_reified_op
-    (PushButtonSynthesis.UnsaturatedSolinas.carry_mul
-       n s c machine_wordsize).
+    n (PushButtonSynthesis.UnsaturatedSolinas.carry_mul
+         n s c machine_wordsize).
 
 Ltac instantiate_ops carry_mul_name :=
   let n :=
       lazymatch goal with
       | |- bedrock2_unsaturated_solinas _ ?n _ _ => n end in
-  let carry_mul_res := fresh "carry_mul_res" in
+  let carry_mul_func := fresh "carry_mul_func" in
+  let carry_mul_func_eq := fresh "carry_mul_func_eq" in
   lazymatch goal with
   | X : reified_op
+          _
           (PushButtonSynthesis.UnsaturatedSolinas.carry_mul _ _ _ _)
     |- _ =>
-    destruct X as [carry_mul_res ?]
+    destruct X as [? carry_mul_func carry_mul_func_eq ]
   end;
-  let carry_mul_func :=
-      constr:(make_bedrock_func n carry_mul_res) in
   apply Build_bedrock2_unsaturated_solinas
-    with (carry_mul:= (carry_mul_name, carry_mul_func)).
+    with (carry_mul:= (carry_mul_name, carry_mul_func));
+  rewrite carry_mul_func_eq.
 
-Section __.
+Section X25519_64.
   Let n := 10%nat.
   Let s := 2^255.
   Let c := [(1, 19)].
   Let machine_wordsize := 64.
 
-  Definition carry_mul_name := "carry_mul"%string.
+  Definition carry_mul_name := "curve25519_carry_mul"%string.
 
   Instance p : Types.parameters.
   let p := parameters_from_wordsize machine_wordsize in
@@ -133,8 +142,8 @@ Section __.
     make_all_reified_ops n s c machine_wordsize.
     instantiate_ops carry_mul_name.
     apply UnsaturatedSolinas.carry_mul_correct.
-
     all: try assumption.
     all: abstract (handle_easy_preconditions).
-  Qed.
-End __.
+  Defined.
+  (* Eval cbv [carry_mul test] in carry_mul. *)
+End X25519_64.
