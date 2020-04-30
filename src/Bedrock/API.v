@@ -123,7 +123,7 @@ Ltac instantiate_ops carry_mul_name :=
     with (carry_mul:= (carry_mul_name, carry_mul_func));
   rewrite carry_mul_func_eq.
 
-Section X25519_64.
+Module X25519_64.
   Let n := 10%nat.
   Let s := 2^255.
   Let c := [(1, 19)].
@@ -131,13 +131,13 @@ Section X25519_64.
 
   Definition carry_mul_name := "curve25519_carry_mul"%string.
 
-  Instance p : Types.parameters.
+  Local Instance p : Types.parameters.
   let p := parameters_from_wordsize machine_wordsize in
   exact p. Defined.
 
-  Instance p_ok : Types.ok. typeclasses eauto. Qed.
+  Local Instance p_ok : Types.ok. typeclasses eauto. Qed.
 
-  Instance test : bedrock2_unsaturated_solinas p n s c.
+  Instance curve25519_bedrock2 : bedrock2_unsaturated_solinas p n s c.
   Proof.
     make_all_reified_ops n s c machine_wordsize.
     instantiate_ops carry_mul_name.
@@ -145,5 +145,30 @@ Section X25519_64.
     all: try assumption.
     all: abstract (handle_easy_preconditions).
   Defined.
-  (* Eval cbv [carry_mul test] in carry_mul. *)
+  (* Eval cbv [carry_mul curve25519_bedrock2] in carry_mul. *)
 End X25519_64.
+
+Module X1305_32.
+  Let n := 5%nat.
+  Let s := 2^130.
+  Let c := [(1, 5)].
+  Let machine_wordsize := 32.
+
+  Definition carry_mul_name := "poly1305_carry_mul"%string.
+
+  Local Instance p : Types.parameters.
+  let p := parameters_from_wordsize machine_wordsize in
+  exact p. Defined.
+
+  Local Instance p_ok : Types.ok. typeclasses eauto. Qed.
+
+  Instance poly1305_bedrock2 : bedrock2_unsaturated_solinas p n s c.
+  Proof.
+    make_all_reified_ops n s c machine_wordsize.
+    instantiate_ops carry_mul_name.
+    apply UnsaturatedSolinas.carry_mul_correct.
+
+    all: try assumption.
+    all: abstract (handle_easy_preconditions).
+  Qed.
+End X1305_32.
