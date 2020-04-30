@@ -8,7 +8,7 @@ Building
 This repository requires [Coq](https://coq.inria.fr/) [8.9](https://github.com/coq/coq/releases/tag/V8.9.0) or later.
 Note that if you install Coq from Ubuntu aptitude packages, you need `libcoq-ocaml-dev` in addition to `coq`.
 If you want to build the bedrock2 code, you need [Coq 8.10](https://github.com/coq/coq/releases/tag/V8.10.0) or later (otherwise you can pass `SKIP_BEDROCK2=1` to `make`).
-We suggest downloading [the latest version of Coq](https://coq.inria.fr/download).
+We suggest downloading [the latest version of Coq](https://github.com/coq/coq/wiki#coq-installation).
 
 You can clone this repository with
 
@@ -46,7 +46,7 @@ Just the compilers generating these C files can be made with
 
     make standalone-ocaml
 
-or `make standalone-haskell` for binaries generated with Haskell, or `make standalone` for both the Haskell and OCaml binaries.
+or `make standalone-haskell` for compiler binaries generated with Haskell, or `make standalone` for both the Haskell and OCaml compiler binaries.
 The binaries are located in `src/ExtractionOcaml/` and `src/ExtractionHaskell` respectively.
 
 There is a separate compiler binary for each implementation strategy:
@@ -74,7 +74,7 @@ Usage (Generating Bedrock2 Files)
 
 The Coq development builds binary compilers that generate code using some implementation strategy.
 The parameters (modulus, hardware multiplication input bitwidth, etc.) are are specified on the command line of the compiler.
-The generated bedrock2/C code is written to standard output.
+The generated bedrock2 code is then written to standard output using the bedrock2 C backend.
 
 A collection of bedrock2/C files for popular curves can be made with
 
