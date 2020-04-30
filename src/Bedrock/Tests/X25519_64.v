@@ -65,8 +65,26 @@ Module X25519_64.
     Goal (error_free_cmd (snd (snd addmod_bedrock)) = true).
     Proof. vm_compute. reflexivity. Qed.
 
+    Derive from_bytes
+           SuchThat
+           (UnsaturatedSolinas.from_bytes
+              n s c machine_wordsize = ErrorT.Success from_bytes)
+           As from_bytes_eq.
+    Proof. vm_compute; reflexivity. Qed.
+
+    Definition from_bytes_bedrock : bedrock_func :=
+      ("from_bytes_bedrock",
+       fst (translate_func from_bytes
+                           ("in0", tt) (* argument names *)
+                           (n, tt) (* lengths for list arguments *)
+                           "out0" (* return value name *))).
+
+    Goal (error_free_cmd (snd (snd from_bytes_bedrock)) = true).
+    Proof. vm_compute. reflexivity. Qed.
+
     Import NotationsCustomEntry.
     Local Set Printing Width 150.
+    Local Set Printing Width 500.
     (* Compute mulmod_bedrock. *)
     Redirect "Crypto.Bedrock.Tests.X25519_64.mulmod_bedrock" Compute mulmod_bedrock.
   End __.
