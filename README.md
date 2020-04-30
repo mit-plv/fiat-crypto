@@ -71,7 +71,7 @@ You can find more examples in the `Makefile`.
 
 Usage (Generating Bedrock2 Files)
 ---------------------------------
-
+Output is supported to the research language [bedrock2](https://github.com/mit-plv/bedrock2).
 The Coq development builds binary compilers that generate code using some implementation strategy.
 The parameters (modulus, hardware multiplication input bitwidth, etc.) are are specified on the command line of the compiler.
 The generated bedrock2 code is then written to standard output using the bedrock2 C backend.
