@@ -33,7 +33,7 @@ Usage (Generating C Files)
 --------------------------
 
 The Coq development builds binary compilers that generate code using some implementation strategy.
-The parameters (modulus, hardware multiplication input bitwidth, etc.) are are specified on the command line of the compiler.
+The parameters (modulus, hardware multiplication input bitwidth, etc.) are specified on the command line of the compiler.
 The generated C code is written to standard output.
 
 A collection of C files for popular curves can be made with
@@ -73,7 +73,7 @@ Usage (Generating Bedrock2 Files)
 ---------------------------------
 Output is supported to the research language [bedrock2](https://github.com/mit-plv/bedrock2).
 The Coq development builds binary compilers that generate code using some implementation strategy.
-The parameters (modulus, hardware multiplication input bitwidth, etc.) are are specified on the command line of the compiler.
+The parameters (modulus, hardware multiplication input bitwidth, etc.) are specified on the command line of the compiler.
 The generated bedrock2 code is then written to standard output using the bedrock2 C backend.
 
 A collection of bedrock2/C files for popular curves can be made with
