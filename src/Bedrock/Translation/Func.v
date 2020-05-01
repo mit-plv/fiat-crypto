@@ -59,19 +59,23 @@ Section Func.
              (argnames : type.for_each_lhs_of_arrow ltype t)
              (* lengths of argument lists *)
              (lengths : type.for_each_lhs_of_arrow list_lengths t)
+             (* integer sizes of argument lists *)
+             (argsizes : type.for_each_lhs_of_arrow access_sizes t)
              (* return variables *)
              (rets : base_ltype (type.final_codomain t))
+             (* integer sizes of return lists *)
+             (retsizes : base_listonly access_size (type.final_codomain t))
     : list string * list string * cmd (* bedrock function *)
       * list_lengths (type.base (type.final_codomain t)) (* output list lengths *) :=
     (* load arguments *)
-    let load_args_out := load_arguments 0%nat argnames lengths in
+    let load_args_out := load_arguments 0%nat argnames lengths argsizes in
     let nextn := fst (fst load_args_out) in
     let args := snd (fst load_args_out) in
     let load_args_cmd := snd load_args_out in
     (* translate *)
     let out := translate_func' (e _) nextn args in
     (* store return values *)
-    let store_rets := store_return_values (snd (fst out)) rets in
+    let store_rets := store_return_values (snd (fst out)) rets retsizes in
     (* make new arguments for pointers to returned lists *)
     let part := extract_listnames rets in
     let out_ptrs := flatten_listonly_base_ltype (fst part) in

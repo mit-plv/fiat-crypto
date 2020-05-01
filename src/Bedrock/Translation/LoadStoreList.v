@@ -10,10 +10,15 @@ Require Import coqutil.Word.Interface.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Language.API.
 Require Import Crypto.Util.ListUtil.
+Require Import Crypto.Util.ZRange.
 Import ListNotations. Local Open Scope Z_scope.
 
 Import API.Compilers.
 Import Types.Notations Types.Types.
+
+(* TODO : move *)
+Definition access_sizes (t : API.type) : Type :=
+  listonly access_size t.
 
 (* For proofs, it's ideal to assume that at the "cmd" level of abstraction, the
    memory doesn't change. This is actually true for fiat-crypto functions, which
@@ -45,41 +50,48 @@ Section Lists.
       | _ => fun x => (tt, x)
       end.
 
-  Definition load_list_item (start : Syntax.expr.expr) (i : nat)
+  Definition load_list_item
+             (load_size : access_size)
+             (start : Syntax.expr.expr) (i : nat)
     : Syntax.expr.expr :=
-    let offset := expr.literal (word_size_in_bytes * Z.of_nat i) in
+    let nbytes := Memory.bytes_per (width:=Semantics.width) load_size in
+    let offset := expr.literal (Z.of_nat (nbytes * i)) in
     let loc := expr.op bopname.add start offset in
-    expr.load access_size.word loc.
+    expr.load load_size loc.
 
-  Fixpoint load_list (start : Syntax.expr.expr) (i rem nextn : nat)
+  Fixpoint load_list
+           (load_size : access_size)
+           (start : Syntax.expr.expr) (i rem nextn : nat)
     : nat * list string * Syntax.cmd.cmd :=
     match rem with
     | O => (0%nat, [], cmd.skip)
     | S rem' =>
-      let rec := load_list start (S i) rem' (S nextn) in
+      let rec := load_list load_size start (S i) rem' (S nextn) in
       (S (fst (fst rec)), (varname_gen nextn) :: snd (fst rec),
-       cmd.seq (cmd.set (varname_gen nextn) (load_list_item start i))
+       cmd.seq (cmd.set (varname_gen nextn)
+                        (load_list_item load_size start i))
                (snd rec))
     end.
 
   Fixpoint load_all_lists {t : base.type} (nextn : nat)
     : base_ltype (listZ:=rep.listZ_mem) t ->
       base_listonly nat t ->
+      base_listonly access_size t ->
       nat * base_ltype (listZ:=rep.listZ_local) t * cmd.cmd :=
     match t with
     | base.type.prod a b =>
-      fun x l =>
-        let load1 :=  load_all_lists nextn (fst x) (fst l) in
+      fun x l s =>
+        let load1 :=  load_all_lists nextn (fst x) (fst l) (fst s) in
         let nextn1 := (nextn + fst (fst load1))%nat in
-        let load2 := load_all_lists nextn1 (snd x) (snd l) in
+        let load2 := load_all_lists nextn1 (snd x) (snd l) (snd s) in
         let nvars := (fst (fst load1) + fst (fst load2))%nat in
         (nvars, (snd (fst load1), snd (fst load2)),
          cmd.seq (snd load1) (snd load2))
     | base_listZ =>
-      fun (x : string) (l : nat) =>
-        load_list (expr.var x) 0 l nextn
+      fun (x : string) (l : nat) (s : access_size.access_size) =>
+        load_list s (expr.var x) 0 l nextn
     | _ =>
-      fun (x : string) (l : unit) => (0%nat, x, cmd.skip)
+      fun (x : string) (l s : unit) => (0%nat, x, cmd.skip)
     end.
 
   (* read lists from arguments; changes the type system from in-memory
@@ -87,36 +99,46 @@ Section Lists.
   Fixpoint load_arguments {t} (nextn : nat)
     : type.for_each_lhs_of_arrow (ltype (listZ:=rep.listZ_mem)) t ->
       type.for_each_lhs_of_arrow list_lengths t ->
+      type.for_each_lhs_of_arrow access_sizes t ->
       nat (* number of fresh variable names used *)
       * type.for_each_lhs_of_arrow (ltype (listZ:=rep.listZ_local)) t
       * cmd.cmd :=
     match t with
     | type.base b =>
-      fun (args : unit) llengths => (0%nat, args, cmd.skip)
+      fun (args bounds sizes : unit) => (0%nat, args, cmd.skip)
     | type.arrow (type.base s) d =>
       fun (args : base_ltype s * type.for_each_lhs_of_arrow _ d)
-          (llengths : base_listonly nat s * type.for_each_lhs_of_arrow _ d) =>
-        let load_fst := load_all_lists nextn (fst args) (fst llengths) in
+          (llengths : base_listonly nat s * type.for_each_lhs_of_arrow _ d)
+          (sizes : base_listonly access_size s
+                   * type.for_each_lhs_of_arrow _ d) =>
+        let load_fst :=
+            load_all_lists nextn (fst args) (fst llengths) (fst sizes) in
         let nextn' := (nextn + fst (fst load_fst))%nat in
-        let load_snd := load_arguments nextn' (snd args) (snd llengths) in
+        let load_snd :=
+            load_arguments nextn' (snd args) (snd llengths) (snd sizes) in
         let nvars := (fst (fst load_fst) + fst (fst load_snd))%nat in
         let args' := (snd (fst load_fst), snd (fst load_snd)) in
         let cmd := cmd.seq (snd load_fst) (snd load_snd) in
         (nvars, args', cmd)
     | type.arrow _ d =>
       (* no arrow arguments allowed; insert unit type *)
-      fun args llengths =>
-        let load_snd := load_arguments nextn (snd args) (snd llengths) in
+      fun args bounds sizes =>
+        let load_snd :=
+            load_arguments nextn (snd args) (snd bounds) (snd sizes) in
         (fst (fst load_snd), (tt, snd (fst load_snd)), snd load_snd)
     end.
 
-  Definition store_list_item (start value : Syntax.expr.expr) (i : nat)
+  Definition store_list_item
+             (size : access_size)
+             (start value : Syntax.expr.expr) (i : nat)
     : cmd.cmd :=
-    let offset := expr.literal (Z.of_nat i * word_size_in_bytes) in
+    let nbytes := Memory.bytes_per (width:=Semantics.width) size in
+    let offset := expr.literal (Z.of_nat (nbytes * i)) in
     let loc := expr.op bopname.add start offset in
-    cmd.store access_size.word loc value.
+    cmd.store size loc value.
 
   Fixpoint store_list
+             (size : access_size)
              (start : Syntax.expr.expr)
              (values : list Syntax.expr.expr)
              (i : nat)
@@ -124,28 +146,29 @@ Section Lists.
     match values with
     | [] => cmd.skip
     | v :: values' =>
-      cmd.seq (store_list_item start v i)
-              (store_list start values' (S i))
+      cmd.seq (store_list_item size start v i)
+              (store_list size start values' (S i))
     end.
 
   Fixpoint store_return_values {t : base.type}
     : base_ltype (listZ:=rep.listZ_local) t ->
       base_ltype (listZ:=rep.listZ_mem) t ->
+      access_sizes (type.base t) ->
       list_lengths (type.base t) * cmd.cmd :=
     match t as t0 return
-          base_ltype t0 -> base_ltype t0 ->
+          base_ltype t0 -> base_ltype t0 -> access_sizes (type.base t0) ->
           list_lengths (type.base t0) * _ with
     | base.type.prod a b =>
-      fun x y =>
-        let a := store_return_values (fst x) (fst y) in
-        let b := store_return_values (snd x) (snd y) in
+      fun x y s =>
+        let a := store_return_values (fst x) (fst y) (fst s) in
+        let b := store_return_values (snd x) (snd y) (snd s) in
         ((fst a, fst b), cmd.seq (snd a) (snd b))
     | base_listZ =>
       (* store list at location pointed to by y *)
-      fun (x : list string) (y : string) =>
-        (length x, store_list (expr.var y) (map expr.var x) 0)
+      fun (x : list string) (y : string) (s : access_size) =>
+        (length x, store_list s (expr.var y) (map expr.var x) 0)
     | _ =>
       (* rename variable *)
-      fun (x y : string) => (tt, cmd.set y (expr.var x))
+      fun (x y : string) (s : unit) => (tt, cmd.set y (expr.var x))
     end.
 End Lists.
