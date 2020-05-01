@@ -21,6 +21,7 @@ Class parameters :=
     semantics :> Semantics.parameters;
     varname_gen : nat -> String.string;
     error : Syntax.expr.expr;
+    (* TODO: define word_size_in_bytes using Memory.bytes_per *)
     word_size_in_bytes : Z;
     maxint := 2 ^ Semantics.width;
   }.
