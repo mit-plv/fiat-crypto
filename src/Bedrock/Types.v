@@ -66,9 +66,9 @@ Module Types.
           varname_set : ltype -> PropSet.set string;
           equiv :
             base.interp t -> rtype ->
-            Interface.map.rep (map:=Semantics.locals) ->
-            Interface.map.rep (map:=Semantics.mem) ->
-            Prop }.
+            option Syntax.access_size -> (* memory size, if applicable *)
+            Semantics.locals ->
+            Semantics.mem -> Prop }.
 
       (* store a list in local variables; each element of the list is
        represented as a separate variable *)
@@ -83,12 +83,12 @@ Module Types.
               (fun x s =>
                  PropSet.union (varname_set x) s) PropSet.empty_set;
           equiv :=
-            fun (x : list Z) (y : list rtype) locals _ =>
-              Forall2 (fun a b => equiv a b locals map.empty) x y
+            fun (x : list Z) (y : list rtype) _ locals _ =>
+              Forall2 (fun a b => equiv a b None locals map.empty) x y
         }.
 
       (* store a list in memory; the list is represented by one Z, which
-       is the location of the head of the list *)
+         is the location of the head of the list *)
       Instance listZ_mem {zrep : rep base_Z} : rep base_listZ :=
         { ltype := ltype;
           rtype := rtype;
@@ -97,20 +97,25 @@ Module Types.
           make_error := make_error;
           varname_set := varname_set;
           equiv :=
-            fun (x : list Z) (y : rtype) locals =>
-              Lift1Prop.ex1
-                (fun start : Z =>
-                   sep (map:=Semantics.mem)
-                     (sep
-                        (emp
-                           (Forall
-                              (fun z => (0 <= z < 2 ^ Semantics.width)%Z)
-                              x))
-                           (fun mem : Interface.map.rep (map:=Semantics.mem) =>
-                              equiv start y locals mem))
-                        (array scalar (word.of_Z word_size_in_bytes)
-                               (Interface.word.of_Z start)
-                               (map Interface.word.of_Z x)))
+            fun (x : list Z) (y : rtype) size locals =>
+              match size with
+              | Some sz =>
+                Lift1Prop.ex1
+                  (fun start : Semantics.word =>
+                     sep (map:=Semantics.mem)
+                         (sep
+                            (emp
+                               (Forall
+                                  (fun z => (0 <= z < 2 ^ Semantics.width)%Z)
+                                  x))
+                            (fun mem : Semantics.mem =>
+                               forall sz,
+                                 equiv (word.unsigned start) y sz locals mem))
+                         (array (truncated_scalar sz)
+                                (word.of_Z word_size_in_bytes)
+                                start x))
+              | None => emp False
+              end
         }.
 
       Instance Z : rep base_Z :=
@@ -121,7 +126,7 @@ Module Types.
           make_error := error;
           varname_set := PropSet.singleton_set;
           equiv :=
-            fun (x : Z) (y : Syntax.expr.expr) locals =>
+            fun (x : Z) (y : Syntax.expr.expr) _ locals =>
               emp ((0 <= x < 2 ^ Semantics.width)%Z /\
                    WeakestPrecondition.dexpr
                      map.empty locals y (word.of_Z x))
@@ -230,7 +235,7 @@ Module Types.
       : type.for_each_lhs_of_arrow ltype t ->
         PropSet.set string :=
       match t as t0 return type.for_each_lhs_of_arrow _ t0 -> _ with
-      | type.base b => fun _:unit => PropSet.empty_set 
+      | type.base b => fun _:unit => PropSet.empty_set
       | type.arrow (type.base a) b =>
         fun (x:base_ltype a * _) =>
           PropSet.union (varname_set_base (fst x))
@@ -243,106 +248,149 @@ Module Types.
       | _ => fun _ => PropSet.empty_set
       end.
 
+    Fixpoint base_access_sizes t :=
+      match t with
+      | base.type.prod a b =>
+        (base_access_sizes a * base_access_sizes b)%type
+      | base_listZ => option Syntax.access_size
+      | _ => option Syntax.access_size
+      end.
+    Definition access_sizes t :=
+      match t with
+      | type.base b => base_access_sizes b
+      | _ => unit
+      end.
+
+    Fixpoint base_empty_access_sizes t : base_access_sizes t :=
+      match t with
+      | base.type.prod a b =>
+        (base_empty_access_sizes a, base_empty_access_sizes b)
+      | base_listZ => None
+      | _ => None
+      end.
+    Definition empty_access_sizes t : access_sizes t :=
+      match t with
+      | type.base b => base_empty_access_sizes b
+      | _ => tt
+      end.
+    Fixpoint empty_access_sizes_args t :
+      type.for_each_lhs_of_arrow access_sizes t :=
+      match t with
+      | type.base _ => tt
+      | type.arrow s d =>
+        (empty_access_sizes s, empty_access_sizes_args d)
+      end.
+
     (* relation that states whether a fiat-crypto value and a bedrock2 value are
        equivalent in a given bedrock2 context *)
     Fixpoint equivalent_base {t}
       : base.interp t -> (* fiat-crypto value *)
         base_rtype t -> (* bedrock2 value *)
-        Interface.map.rep (map:=Semantics.locals) -> (* local variables *)
-        Interface.map.rep (map:=Semantics.mem) -> (* memory *)
-        Prop :=
+        base_access_sizes t -> (* size in memory (if applicable) *)
+        Semantics.locals ->
+        Semantics.mem -> Prop :=
       match t with
       | base.type.prod a b =>
         fun (x : base.interp a * base.interp b)
-            (y : base_rtype a * base_rtype b) locals =>
-          sep (equivalent_base (fst x) (fst y) locals)
-              (equivalent_base (snd x) (snd y) locals)
+            (y : base_rtype a * base_rtype b)
+            (s : base_access_sizes a * base_access_sizes b)
+            locals =>
+          sep (equivalent_base (fst x) (fst y) (fst s) locals)
+              (equivalent_base (snd x) (snd y) (snd s) locals)
       | base_listZ => rep.equiv
       | base_Z => rep.equiv
-      |  _ => fun _ _ _ => emp False
+      |  _ => fun _ _ _ _ => emp False
       end.
 
     (* produces a separation-logic condition stating that the values of arguments are equivalent *)
     Fixpoint equivalent_args {t}
-      : type.for_each_lhs_of_arrow API.interp_type t -> (* fiat-crypto value *)
+      : type.for_each_lhs_of_arrow
+          API.interp_type t -> (* fiat-crypto value *)
         type.for_each_lhs_of_arrow rtype t -> (* bedrock2 value *)
-        Interface.map.rep (map:=Semantics.locals) -> (* local variables *)
-        Interface.map.rep (map:=Semantics.mem) -> (* memory *)
-        Prop :=
+        type.for_each_lhs_of_arrow
+          access_sizes t -> (* sizes in memory *)
+        Semantics.locals ->
+        Semantics.mem -> Prop :=
       match t with
-      | type.base b => fun _ _ _ => emp True
+      | type.base b => fun _ _ _ _ => emp True
       | type.arrow (type.base a) b =>
-        fun (x : base.interp a * _) (y : base_rtype a * _) locals =>
-          sep (equivalent_base (fst x) (fst y) locals)
-              (equivalent_args (snd x) (snd y) locals)
-      | _ => fun _ _ _ => emp False
+        fun (x : base.interp a * _) (y : base_rtype a * _)
+            (s : base_access_sizes a * _) locals =>
+          sep (equivalent_base (fst x) (fst y) (fst s) locals)
+              (equivalent_args (snd x) (snd y) (snd s) locals)
+      | _ => fun _ _ _ _ => emp False
       end.
 
     Definition locally_equivalent_base {t} x y locals :=
-      @equivalent_base t x y locals map.empty.
+      @equivalent_base t x y (base_empty_access_sizes t) locals map.empty.
 
     Definition locally_equivalent_args {t} x y locals :=
-      @equivalent_args t x y locals map.empty.
+      @equivalent_args t x y (empty_access_sizes_args t) locals map.empty.
 
     (* wrapper that uses non-base types *)
     Fixpoint equivalent {t : API.type}
       : API.interp_type t -> (* fiat-crypto value *)
         rtype t -> (* bedrock2 value *)
-        Interface.map.rep (map:=Semantics.locals) -> (* local variables *)
-        Interface.map.rep (map:=Semantics.mem) -> (* memory *)
-        Prop :=
+        access_sizes t -> (* sizes in memory *)
+        Semantics.locals ->
+        Semantics.mem -> Prop :=
       match t with
       | type.base b => equivalent_base
-      | _ => fun _ _ _ _ => False
+      | _ => fun _ _ _ _ _ => False
       end.
     Definition locally_equivalent {t} x y locals :=
-      @equivalent t x y locals map.empty.
+      @equivalent t x y (empty_access_sizes t) locals map.empty.
 
     Fixpoint equivalent_flat_base {t}
       : base.interp t ->
         list Semantics.word ->
+        base_access_sizes t ->
         Semantics.mem -> Prop :=
-      match t as t0 return base.interp t0 -> _ with
+      match t with
       | base.type.prod a b =>
-        fun (x : base.interp a * base.interp b) words =>
+        fun (x : base.interp a * base.interp b) words sizes =>
           Lift1Prop.ex1
             (fun i =>
-               sep (equivalent_flat_base (fst x) (firstn i words))
-                   (equivalent_flat_base (snd x) (skipn i words)))
+               sep (equivalent_flat_base (fst x) (firstn i words) (fst sizes))
+                   (equivalent_flat_base (snd x) (skipn i words) (snd sizes)))
       | base_listZ =>
-        fun (x : list Z) words =>
+        fun (x : list Z) words (sizes : option Syntax.access_size) =>
           (* since this is in-memory representation, [words] should be one word
-        that indicates the memory location of the head of the list *)
+             that indicates the memory location of the head of the list *)
           sep
             (map:=Semantics.mem)
             (emp (length words = 1%nat))
             (let addr := word.unsigned (hd (word.of_Z 0%Z) words) in
              rep.equiv (rep:=rep.listZ_mem)
-                       x (Syntax.expr.literal addr) map.empty)
+                       x (Syntax.expr.literal addr) sizes map.empty)
       | base_Z =>
-        fun (x : Z) words =>
+        fun (x : Z) words sizes =>
           sep
             (map:=Semantics.mem)
             (emp (length words = 1%nat))
             (let w := word.unsigned (hd (word.of_Z 0%Z) words) in
-             rep.equiv (t:=base_Z) x (Syntax.expr.literal w) map.empty)
-      | _ => fun _ _ => emp False
+             rep.equiv (t:=base_Z) x (Syntax.expr.literal w) None map.empty)
+      | _ => fun _ _ _ => emp False
       end.
 
     Fixpoint equivalent_flat_args {t}
       : type.for_each_lhs_of_arrow API.interp_type t ->
         list Semantics.word ->
+        type.for_each_lhs_of_arrow access_sizes t ->
         Semantics.mem -> Prop :=
-      match t as t0 return type.for_each_lhs_of_arrow _ t0 -> _ with
-      | type.base _ => fun (_:unit) words => emp (words = nil)
+      match t as t0
+            return type.for_each_lhs_of_arrow _ t0 -> _ ->
+                   type.for_each_lhs_of_arrow _ t0 -> _
+      with
+      | type.base _ => fun (_:unit) words _ => emp (words = nil)
       | type.arrow (type.base a) b =>
-        fun x words =>
+        fun x words sizes =>
           Lift1Prop.ex1
             (fun i =>
                sep
-                 (equivalent_flat_base (fst x) (firstn i words))
-                 (equivalent_flat_args (snd x) (skipn i words)))
-      | _ => fun _ _ => emp False (* invalid argument *)
+                 (equivalent_flat_base (fst x) (firstn i words) (fst sizes))
+                 (equivalent_flat_args (snd x) (skipn i words) (snd sizes)))
+      | _ => fun _ _ _ => emp False (* invalid argument *)
       end.
 
     (* Types for partitioning return values into list and non-list *)
@@ -385,7 +433,7 @@ Module Types.
       match t as t0 return
             base_listonly A t0 -> base_listonly B t0 with
       | base.type.prod a b =>
-        fun x => 
+        fun x =>
           (map_listonly f (fst x), map_listonly f (snd x))
       | base_listZ => f
       | _ => fun _ => tt
@@ -412,7 +460,7 @@ Module Types.
         fun x => PropSet.union (varname_set_listonly (fst x))
                                (varname_set_listonly (snd x))
       | base_listZ => rep.varname_set
-      | _ => fun _ => PropSet.empty_set 
+      | _ => fun _ => PropSet.empty_set
       end.
     Fixpoint varname_set_listexcl {t}
       : base_ltype t ->
@@ -422,71 +470,81 @@ Module Types.
         fun x => PropSet.union (varname_set_listexcl (fst x))
                                (varname_set_listexcl (snd x))
       | base_listZ => fun _ => PropSet.empty_set
-      | _ => rep.varname_set 
+      | _ => rep.varname_set
       end.
 
     Fixpoint equivalent_listonly {t}
       : base.interp t -> (* fiat-crypto value *)
         listonly_base_rtype t -> (* bedrock2 value *)
-        Interface.map.rep (map:=Semantics.locals) -> (* local variables *)
-        Interface.map.rep (map:=Semantics.mem) -> (* memory *)
-        Prop :=
+        base_access_sizes t ->
+        Semantics.locals ->
+        Semantics.mem -> Prop :=
       match t with
       | base.type.prod a b =>
-        fun x y locals =>
-          sep (equivalent_listonly (fst x) (fst y) locals)
-              (equivalent_listonly (snd x) (snd y) locals)
+        fun x y s locals =>
+          sep (equivalent_listonly (fst x) (fst y) (fst s) locals)
+              (equivalent_listonly (snd x) (snd y) (snd s) locals)
       | base_listZ => rep.equiv
-      | base_Z => fun _ _ _ => emp True
-      |  _ => fun _ _ _ => emp False
+      | base_Z => fun _ _ _ _ => emp True
+      |  _ => fun _ _ _ _ => emp False
       end.
 
     Fixpoint equivalent_listexcl {t}
       : base.interp t -> (* fiat-crypto value *)
         listexcl_base_rtype t -> (* bedrock2 value *)
-        Interface.map.rep (map:=Semantics.locals) -> (* local variables *)
-        Interface.map.rep (map:=Semantics.mem) -> (* memory *)
-        Prop :=
+        base_access_sizes t ->
+        Semantics.locals ->
+        Semantics.mem -> Prop :=
       match t with
       | base.type.prod a b =>
-        fun x y locals =>
-          sep (equivalent_listexcl (fst x) (fst y) locals)
-              (equivalent_listexcl (snd x) (snd y) locals)
-      | base_listZ => fun _ _ _ => emp True
+        fun x y s locals =>
+          sep (equivalent_listexcl (fst x) (fst y) (fst s) locals)
+              (equivalent_listexcl (snd x) (snd y) (snd s) locals)
+      | base_listZ => fun _ _ _ _ => emp True
       | base_Z => rep.equiv
-      |  _ => fun _ _ _ => emp False
+      |  _ => fun _ _ _ _ => emp False
       end.
 
     Fixpoint equivalent_listexcl_flat_base {t}
       : base.interp t ->
         list Semantics.word ->
+        base_access_sizes t ->
         Semantics.mem -> Prop :=
-      match t as t0 return base.interp t0 -> _ with
+      match t as t0 return
+            base.interp t0 -> _ -> base_access_sizes t0
+            -> Semantics.mem -> Prop with
       | base.type.prod a b =>
-        fun (x : base.interp a * base.interp b) words =>
+        fun (x : base.interp a * base.interp b) words s=>
           Lift1Prop.ex1
             (fun i =>
-               sep (equivalent_listexcl_flat_base (fst x) (firstn i words))
-                   (equivalent_listexcl_flat_base (snd x) (skipn i words)))
-      | base_listZ => fun _ words => emp (words = nil) 
+               sep (equivalent_listexcl_flat_base
+                      (fst x) (firstn i words) (fst s))
+                   (equivalent_listexcl_flat_base
+                      (snd x) (skipn i words) (snd s)))
+      | base_listZ => fun _ words _ => emp (words = nil)
       | base_Z => equivalent_flat_base
-      | _ => fun _ _ => emp False
+      | _ => fun _ _ _ => emp False
       end.
 
     Fixpoint equivalent_listonly_flat_base {t}
       : base.interp t ->
         list Semantics.word ->
+        base_access_sizes t ->
         Semantics.mem -> Prop :=
-      match t as t0 return base.interp t0 -> _ with
+      match t as t0 return
+            base.interp t0 -> _ -> base_access_sizes t0
+            -> Semantics.mem -> Prop with
       | base.type.prod a b =>
-        fun (x : base.interp a * base.interp b) words =>
+        fun (x : base.interp a * base.interp b) words sizes =>
           Lift1Prop.ex1
             (fun i =>
-               sep (equivalent_listonly_flat_base (fst x) (firstn i words))
-                   (equivalent_listonly_flat_base (snd x) (skipn i words)))
-      | base_listZ => equivalent_flat_base 
-      | base_Z => fun _ words => emp (words = nil)
-      | _ => fun _ _ => emp False
+               sep (equivalent_listonly_flat_base
+                      (fst x) (firstn i words) (fst sizes))
+                   (equivalent_listonly_flat_base
+                      (snd x) (skipn i words) (snd sizes)))
+      | base_listZ => equivalent_flat_base
+      | base_Z => fun _ words _ => emp (words = nil)
+      | _ => fun _ _ _ => emp False
       end.
   End defs.
 End Types.

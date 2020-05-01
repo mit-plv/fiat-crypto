@@ -16,10 +16,6 @@ Import ListNotations. Local Open Scope Z_scope.
 Import API.Compilers.
 Import Types.Notations Types.Types.
 
-(* TODO : move *)
-Definition access_sizes (t : API.type) : Type :=
-  listonly access_size t.
-
 (* For proofs, it's ideal to assume that at the "cmd" level of abstraction, the
    memory doesn't change. This is actually true for fiat-crypto functions, which
    follow a pattern in which they read all their from input lists, then only deal
