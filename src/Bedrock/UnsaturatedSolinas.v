@@ -177,10 +177,8 @@ Section __.
             (outname_gen_unique :
                forall i j : nat, outname_gen i = outname_gen j <-> i = j).
 
-    Definition Bignum (addr : Semantics.word) (xs : list Z) :
-      Semantics.mem -> Prop :=
-      array scalar (word.of_Z word_size_in_bytes)
-            addr (map word.of_Z xs).
+    Definition Bignum :=
+      array scalar (word.of_Z word_size_in_bytes).
 
     (* TODO: move to ListUtil or somewhere else common *)
     Fixpoint partition_equal_size' {T}
@@ -232,13 +230,13 @@ Section __.
     Lemma Bignum_of_bytes addr bs :
       length bs = (n * Z.to_nat word_size_in_bytes)%nat ->
       Lift1Prop.iff1 (array ptsto (word.of_Z 1) addr bs)
-                     (Bignum addr (eval_bytes bs)).
+                     (Bignum addr (map word.of_Z (eval_bytes bs))).
     Admitted. (* TODO *)
 
     Lemma Bignum_to_bytes addr x :
-      list_Z_bounded_by max_bounds x ->
+      list_Z_bounded_by max_bounds (map word.unsigned x) ->
       Lift1Prop.iff1
-        (array ptsto (word.of_Z 1) addr (encode_bytes (map word.of_Z x)))
+        (array ptsto (word.of_Z 1) addr (encode_bytes x))
         (Bignum addr x).
     Admitted. (* TODO *)
 
@@ -722,30 +720,42 @@ Section __.
       (exists 1%nat); sepsimpl; cbn [firstn skipn];
       [ solve [eauto using firstn_length_le] | ].
 
+    (* TODO: figure where to put this and if we want to do this strategy *)
+    Definition Solinas_carry_mul_correct x y out :=
+      list_Z_bounded_by loose_bounds x
+      -> list_Z_bounded_by loose_bounds y
+      -> eval out mod M = (Z.mul (eval x) (eval y)) mod M
+         /\ list_Z_bounded_by tight_bounds out.
+
+    Lemma carry_mul_correct_iff carry_mul :
+      Solinas.carry_mul_correct
+        weight n M tight_bounds loose_bounds carry_mul
+      <-> (forall x y, Solinas_carry_mul_correct x y (carry_mul x y)).
+    Proof. reflexivity. Qed.
+
     (* For out, you can get an array of bytes from a bignum using
        Bignum_to_bytes. *)
     Definition spec_of_carry_mul name : spec_of name :=
       fun functions =>
-        forall x y px py pout bs t m
+        forall wx wy px py pout wold_out t m
                (Ra Rr : Semantics.mem -> Prop),
-          list_Z_bounded_by loose_bounds x ->
-          list_Z_bounded_by loose_bounds y ->
-          length bs = (n * Z.to_nat word_size_in_bytes)%nat ->
-          sep (sep (Bignum px x) (Bignum py y)) Ra m ->
-          sep (array ptsto (word.of_Z 1) pout bs) Rr m ->
+          let x := map word.unsigned wx in
+          let y := map word.unsigned wy in
+          sep (sep (Bignum px wx) (Bignum py wy)) Ra m ->
+          sep (Bignum pout wold_out) Rr m ->
           WeakestPrecondition.call
-            (p:=semantics)
             functions name t m
             (px :: py :: pout :: nil)
             (fun t' m' rets =>
                t = t' /\
                rets = []%list /\
                Lift1Prop.ex1
-                 (fun out =>
+                 (fun wout =>
+                    let out := map word.unsigned wout in
                     sep
-                      (sep (emp (eval out mod M = (eval x * eval y) mod M
-                                 /\ list_Z_bounded_by tight_bounds out))
-                             (Bignum pout out)) Rr) m').
+                      (sep
+                         (emp (Solinas_carry_mul_correct x y out))
+                         (Bignum pout wout)) Rr) m').
 
     Lemma carry_mul_correct carry_mul_name:
       forall carry_mul_res :
@@ -763,14 +773,16 @@ Section __.
       (* get the carry_mul correctness proof *)
       match goal with H : _ = ErrorT.Success _ |- _ =>
                       apply UnsaturatedSolinas.carry_mul_correct in H;
-                        [ | assumption ]
+                        [ | assumption ];
+                        rewrite carry_mul_correct_iff in H
       end.
 
       (* use translate_func_correct to get the translation postcondition *)
       eapply Proper_call;
         [ | eapply translate_func_correct with
                 (Ra0:=Ra) (Rr0:=Rr) (out_ptrs:=[pout])
-                (args:=(x, (y, tt))) (flat_args := [px; py]) ].
+                (args:=(map word.unsigned wx, (map word.unsigned wy, tt)))
+                (flat_args := [px; py]) ].
 
       { (* prove that the translation postcondition is sufficient *)
         repeat intro.
@@ -778,9 +790,12 @@ Section __.
           H : context [sep _ _ ?m] |- context [_ ?m] => cbn in H
         end.
         sepsimpl_hyps; ssplit; [ congruence | congruence | eexists ].
+        fold Bignum in *.
         sepsimpl; try match goal with
-                      | H : context [Solinas.carry_mul_correct] |- _ =>
-                        apply H; eauto end; [ ].
+                      | H : context [Solinas_carry_mul_correct] |- _ =>
+                        apply H; eauto end.
+
+        [ ].
         cbv [Bignum expr.Interp].
         match goal with
         | H : literal (word.unsigned _) (eq (word.of_Z _)) |- _ =>
