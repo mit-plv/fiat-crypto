@@ -299,6 +299,7 @@ Section LoadStoreList.
 
   Lemma load_all_lists_correct {t} :
     forall (argnames : base_ltype t)
+           (argsizes : base_listonly access_size t)
            (args : base.interp t)
            (functions : list _)
            (tr : Semantics.trace)
