@@ -217,6 +217,7 @@ src/Util/Bool/IsTrue.v
 src/Util/Bool/Reflect.v
 src/Util/Decidable/Bool2Prop.v
 src/Util/Decidable/Decidable2Bool.v
+src/Util/ErrorT/Show.v
 src/Util/FMapPositive/Equality.v
 src/Util/ListUtil/FoldBool.v
 src/Util/ListUtil/Forall.v
@@ -229,7 +230,9 @@ src/Util/Logic/ImplAnd.v
 src/Util/Logic/ProdForall.v
 src/Util/MSetPositive/Equality.v
 src/Util/MSetPositive/Facts.v
+src/Util/MSetPositive/Show.v
 src/Util/MSets/Iso.v
+src/Util/MSets/Show.v
 src/Util/MSets/Sum.v
 src/Util/NUtil/WithoutReferenceToZ.v
 src/Util/SideConditions/Autosolve.v

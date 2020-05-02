@@ -17,6 +17,7 @@ Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.BasicLemmas.
 Require Import Crypto.Util.ZRange.Show.
 Require Import Crypto.Util.Sum.
+Require Import Crypto.Util.ErrorT.Show.
 Require Import Crypto.Util.Tactics.ConstrFail.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.SetoidSubst.

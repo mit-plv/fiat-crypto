@@ -25,6 +25,8 @@ Require Import Crypto.Util.ZRange.Operations.
 Require Import Crypto.Util.ZRange.Show.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.OptionList.
+Require Import Crypto.Util.MSetPositive.Show.
+Require Import Crypto.Util.MSets.Show.
 Require Import Rewriter.Language.Language.
 Require Import Crypto.Language.API.
 Require Import Crypto.AbstractInterpretation.AbstractInterpretation.
@@ -852,6 +854,9 @@ Module Compilers.
     End IntAsDecidableType.
 
     Module IntSet <: WSets := WIsoSets SumPositiveSet IntAsDecidableType.
+    Module Import IntSetShow := ShowWSets IntSet.
+    Global Instance show_IntSet : Show IntSet.t := _.
+    Global Instance show_lines_IntSet : ShowLines IntSet.t := _.
 
     (* Work around COQBUG(https://github.com/coq/coq/issues/11942) *)
     Local Unset Decidable Equality Schemes.
@@ -861,6 +866,14 @@ Module Compilers.
         mulx_lg_splits : PositiveSet.t;
         cmovznz_bitwidths : IntSet.t }.
     Local Set Decidable Equality Schemes.
+    Global Instance show_lines_ident_infos : ShowLines ident_infos
+      := fun _ v
+         => ["{| bitwidths_used := " ++ show false (bitwidths_used v)
+             ; " ; addcarryx_lg_splits := " ++ show false (addcarryx_lg_splits v)
+             ; " ; mulx_lg_splits := " ++ show false (mulx_lg_splits v)
+             ; " ; cmovznz_bitwidths := " ++ show false (cmovznz_bitwidths v) ++ " |}"].
+    Global Instance show_ident_infos : Show ident_infos
+      := fun _ v => String.concat "" (show_lines false v).
     Definition ident_info_empty : ident_infos
       := Build_ident_infos IntSet.empty PositiveSet.empty PositiveSet.empty IntSet.empty.
     Definition ident_info_diff (x y : ident_infos) : ident_infos
