@@ -905,10 +905,16 @@ Module debugging_sat_solinas_25519_expanded.
           let q_a := to_associational weight n q in
           let pq_a := Associational.sat_mul base p_a q_a in
           let pq_r := fst (Rows.flatten weight (n+n) (Rows.from_associational weight (n+n) pq_a)) in
+
           let pq_a := to_associational weight (n+n) pq_r in
-          let r_a :=
-              Rows.repeat_sat_reduce weight base s c pq_a nreductions in
-          Rows.flatten weight n (Rows.from_associational weight n r_a).
+          let pq_a := Rows.sat_reduce weight base s c 1 pq_a in
+          let pq_r := fst (Rows.flatten weight (n+1) (Rows.from_associational weight (n+1) pq_a)) in
+
+          let pq_a := to_associational weight (n+1) pq_r in
+          let pq_a := Rows.sat_reduce weight base s c 1 pq_a in
+          let pq_r := Rows.flatten weight n (Rows.from_associational weight n pq_a) in
+
+          pq_r.
     End Rows.
   End Saturated.
 
@@ -989,7 +995,8 @@ Module debugging_sat_solinas_25519_expanded.
  *   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  *   out2: None
  */
-static void mul(uint64_t out1[4], uint64_t* out2, const uint64_t arg1[4], const uint64_t arg2[4]) {
+static void mul(uint64_t out1[4], fiatuint1* out2, const uint64_t arg1[4], const uint64_t arg2[4]) {
+// 16 mulx
   uint64_t x1;
   uint64_t x2;
   fiatmulx_u64(&x1, &x2, (arg1[3]), (arg2[3]));
@@ -1038,6 +1045,7 @@ static void mul(uint64_t out1[4], uint64_t* out2, const uint64_t arg1[4], const 
   uint64_t x31;
   uint64_t x32;
   fiatmulx_u64(&x31, &x32, (arg1[0]), (arg2[0]));
+// 30 addcarryx and some normal additions
   uint64_t x33;
   fiatuint1 x34;
   fiataddcarryx_u64(&x33, &x34, 0x0, x28, x7);
@@ -1144,38 +1152,48 @@ static void mul(uint64_t out1[4], uint64_t* out2, const uint64_t arg1[4], const 
   uint64_t x103;
   fiatmulx_u64(&x102, &x103, UINT8_C(0x26), x88);
   uint64_t x104;
-  uint64_t x105;
-  fiatmulx_u64(&x104, &x105, UINT8_C(0x26), x97);
+  fiatuint1 x105;
+  fiataddcarryx_u64(&x104, &x105, 0x0, x82, x100);
   uint64_t x106;
   fiatuint1 x107;
-  fiataddcarryx_u64(&x106, &x107, 0x0, x31, x104);
+  fiataddcarryx_u64(&x106, &x107, x105, x84, x98);
   uint64_t x108;
   fiatuint1 x109;
-  fiataddcarryx_u64(&x108, &x109, x107, x82, x100);
-  uint64_t x110;
-  fiatuint1 x111;
-  fiataddcarryx_u64(&x110, &x111, x109, x84, x98);
-  uint64_t x112;
-  fiatuint1 x113;
-  fiataddcarryx_u64(&x112, &x113, x111, x86, x96);
-  uint64_t x114;
-  fiatuint1 x115;
-  fiataddcarryx_u64(&x114, &x115, 0x0, x106, x102);
-  uint64_t x116;
-  fiatuint1 x117;
-  fiataddcarryx_u64(&x116, &x117, x115, x108, x103);
-  uint64_t x118;
-  fiatuint1 x119;
-  fiataddcarryx_u64(&x118, &x119, x117, x110, x101);
+  fiataddcarryx_u64(&x108, &x109, x107, x86, x96);
+  uint64_t x110 = (x109 + x97);
+  uint64_t x111;
+  fiatuint1 x112;
+  fiataddcarryx_u64(&x111, &x112, 0x0, x31, x102);
+  uint64_t x113;
+  fiatuint1 x114;
+  fiataddcarryx_u64(&x113, &x114, x112, x104, x103);
+  uint64_t x115;
+  fiatuint1 x116;
+  fiataddcarryx_u64(&x115, &x116, x114, x106, x101);
+  uint64_t x117;
+  fiatuint1 x118;
+  fiataddcarryx_u64(&x117, &x118, x116, x108, x99);
+  uint64_t x119 = (x118 + x110);
   uint64_t x120;
-  fiatuint1 x121;
-  fiataddcarryx_u64(&x120, &x121, x119, x112, x99);
-  uint64_t x122 = ((uint64_t)x113 + x121);
-  out1[0] = x114;
-  out1[1] = x116;
-  out1[2] = x118;
-  out1[3] = x120;
-  *out2 = x122;
+  uint64_t x121;
+  fiatmulx_u64(&x120, &x121, UINT8_C(0x26), x119);
+  uint64_t x122;
+  fiatuint1 x123;
+  fiataddcarryx_u64(&x122, &x123, 0x0, x111, x120);
+  uint64_t x124;
+  fiatuint1 x125;
+  fiataddcarryx_u64(&x124, &x125, x123, x113, 0x0);
+  uint64_t x126;
+  fiatuint1 x127;
+  fiataddcarryx_u64(&x126, &x127, x125, x115, 0x0);
+  uint64_t x128;
+  fiatuint1 x129;
+  fiataddcarryx_u64(&x128, &x129, x127, x117, 0x0);
+  out1[0] = x122;
+  out1[1] = x124;
+  out1[2] = x126;
+  out1[3] = x128;
+  *out2 = x129;
 }"", {| bitwidths_used := [uint1, uint64] ; addcarryx_lg_splits := [64] ; mulx_lg_splits := [64] ; cmovznz_bitwidths := [] |})"%string
      : string
 *)
