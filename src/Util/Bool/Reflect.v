@@ -1,5 +1,7 @@
 (** * Some lemmas about [Bool.reflect] *)
 Require Import Coq.Classes.CMorphisms.
+Require Import Coq.Strings.String.
+Require Import Coq.Strings.Ascii.
 Require Import Coq.Bool.Bool.
 Require Import Coq.Arith.Arith.
 Require Import Coq.ZArith.BinInt Coq.ZArith.ZArith_dec.
@@ -281,6 +283,7 @@ Hint Extern 0 (reflect _ (negb ?b)) => eapply (@reflect_not _ b) : typeclass_ins
 Global Instance reflect_eq_unit : reflect_rel (@eq unit) (fun _ _ => true) | 10. exact _. Qed.
 Global Instance reflect_eq_bool : reflect_rel (@eq bool) Bool.eqb | 10. exact _. Qed.
 Global Instance reflect_eq_Empty_set : reflect_rel (@eq Empty_set) (fun _ _ => true) | 10. exact _. Qed.
+Global Existing Instances Ascii.eqb_spec String.eqb_spec | 10.
 Global Instance reflect_eq_prod {A B eqA eqB} `{reflect_rel (@eq A) eqA, reflect_rel (@eq B) eqB} : reflect_rel (@eq (A * B)) (prod_beq A B eqA eqB) | 10. exact _. Qed.
 Global Instance reflect_eq_option {A eqA} `{reflect_rel (@eq A) eqA} : reflect_rel (@eq (option A)) (option_beq eqA) | 10. exact _. Qed.
 Global Instance reflect_eq_list {A eqA} `{reflect_rel (@eq A) eqA} : reflect_rel (@eq (list A)) (list_beq A eqA) | 10. exact _. Qed.
