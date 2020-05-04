@@ -242,171 +242,6 @@ Module Compilers.
            end args.
 
       Module ident.
-        Definition show_ident_lvl (with_casts : bool) {t} (idc : ident.ident t)
-          : type.for_each_lhs_of_arrow (fun t => (nat -> string) * ZRange.type.option.interp t)%type t -> (nat -> string) * ZRange.type.base.option.interp (type.final_codomain t)
-          := match idc in ident.ident t return type.for_each_lhs_of_arrow (fun t => (nat -> string) * ZRange.type.option.interp t)%type t -> (nat -> string) * ZRange.type.base.option.interp (type.final_codomain t) with
-             | ident.Literal base.type.Z v => fun 'tt => (fun lvl => show_compact_Z (Nat.eqb lvl 0) v, ZRange.type.base.option.None)
-             | ident.Literal t v => fun 'tt => (fun lvl => show (Nat.eqb lvl 0) v, ZRange.type.base.option.Some (t:=t) v)
-             | ident.tt => fun _ => (fun _ => "()", tt)
-             | ident.Nat_succ => fun '((x, xr), tt) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 10) ((x 10%nat) ++ ".+1"), ZRange.type.base.option.None)
-             | ident.Nat_pred => fun '((x, xr), tt) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 10) ((x 10%nat) ++ ".-1"), ZRange.type.base.option.None)
-             | ident.Nat_max => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 10) ("Nat.max " ++ x 9%nat ++ " " ++ y 9%nat), ZRange.type.base.option.None)
-             | ident.Nat_mul => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 40) (x 40%nat ++ " *ℕ " ++ y 39%nat), ZRange.type.base.option.None)
-             | ident.Nat_add => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 50) (x 50%nat ++ " +ℕ " ++ y 49%nat), ZRange.type.base.option.None)
-             | ident.Nat_sub => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 50) (x 50%nat ++ " -ℕ " ++ y 49%nat), ZRange.type.base.option.None)
-             | ident.Nat_eqb => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 70) (x 69%nat ++ " =ℕ " ++ y 69%nat), ZRange.type.base.option.None)
-             | ident.Some _
-               => fun args => (show_application with_casts (fun _ => "Some") args, ZRange.type.base.option.None)
-             | ident.None _ => fun 'tt => (fun _ => "None", ZRange.type.base.option.None)
-             | ident.nil t => fun 'tt => (fun _ => "[]", ZRange.type.base.option.None)
-             | ident.cons t => fun '(x, ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 60) (maybe_wrap_cast with_casts x 59%nat ++ " :: " ++ y 60%nat), ZRange.type.base.option.None)
-             | ident.pair A B => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 201) (maybe_wrap_cast with_casts (x, xr) 201%nat ++ ", " ++ maybe_wrap_cast with_casts (y, yr) 200%nat), (xr, yr))
-             | ident.fst A B => fun '((x, xr), tt) => (fun _ => x 0%nat ++ "₁", fst xr)
-             | ident.snd A B => fun '((x, xr), tt) => (fun _ => x 0%nat ++ "₂", snd xr)
-             | ident.prod_rect A B T => fun '((f, fr), ((p, pr), tt)) => (fun _ => "match " ++ p 200%nat ++ " with " ++ f 200%nat ++ " end", ZRange.type.base.option.None)
-             | ident.bool_rect T => fun '(t, (f, ((b, br), tt))) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 200) ("if " ++ b 200%nat ++ " then " ++ maybe_wrap_cast with_casts t 200%nat ++ " else " ++ maybe_wrap_cast with_casts f 200%nat), ZRange.type.base.option.None)
-             | ident.nat_rect P
-               => fun args => (show_application with_casts (fun _ => "nat_rect") args, ZRange.type.base.option.None)
-             | ident.eager_nat_rect P
-               => fun args => (show_application with_casts (fun _ => "eager_nat_rect") args, ZRange.type.base.option.None)
-             | ident.eager_nat_rect_arrow P Q
-               => fun args => (show_application with_casts (fun _ => "eager_nat_rect(→)") args, ZRange.type.base.option.None)
-             | ident.nat_rect_arrow P Q
-               => fun args => (show_application with_casts (fun _ => "nat_rect(→)") args, ZRange.type.base.option.None)
-             | ident.option_rect A P
-               => fun args => (show_application with_casts (fun _ => "option_rect") args, ZRange.type.base.option.None)
-             | ident.list_rect A P
-               => fun args => (show_application with_casts (fun _ => "list_rect") args, ZRange.type.base.option.None)
-             | ident.eager_list_rect A P
-               => fun args => (show_application with_casts (fun _ => "eager_list_rect") args, ZRange.type.base.option.None)
-             | ident.list_rect_arrow A P Q
-               => fun args => (show_application with_casts (fun _ => "list_rect(→)") args, ZRange.type.base.option.None)
-             | ident.eager_list_rect_arrow A P Q
-               => fun args => (show_application with_casts (fun _ => "eager_list_rect(→)") args, ZRange.type.base.option.None)
-             | ident.list_case A P
-               => fun args => (show_application with_casts (fun _ => "list_case") args, ZRange.type.base.option.None)
-             | ident.List_length T
-               => fun args => (show_application with_casts (fun _ => "len") args, ZRange.type.base.option.None)
-             | ident.List_seq
-               => fun args => (show_application with_casts (fun _ => "seq") args, ZRange.type.base.option.None)
-             | ident.List_repeat A
-               => fun args => (show_application with_casts (fun _ => "repeat") args, ZRange.type.base.option.None)
-             | ident.List_firstn A
-               => fun args => (show_application with_casts (fun _ => "firstn") args, ZRange.type.base.option.None)
-             | ident.List_skipn A
-               => fun args => (show_application with_casts (fun _ => "skipn") args, ZRange.type.base.option.None)
-             | ident.List_combine A B
-               => fun args => (show_application with_casts (fun _ => "combine") args, ZRange.type.base.option.None)
-             | ident.List_map A B
-               => fun args => (show_application with_casts (fun _ => "map") args, ZRange.type.base.option.None)
-             | ident.List_app A
-               => fun '((xs, xsr), ((ys, ysr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 60) (xs 59%nat ++ " ++ " ++ ys 60%nat), ZRange.type.base.option.None)
-             | ident.List_rev A
-               => fun args => (show_application with_casts (fun _ => "rev") args, ZRange.type.base.option.None)
-             | ident.List_flat_map A B
-               => fun args => (show_application with_casts (fun _ => "flat_map") args, ZRange.type.base.option.None)
-             | ident.List_partition A
-               => fun args => (show_application with_casts (fun _ => "partition") args, ZRange.type.base.option.None)
-             | ident.List_fold_right A B
-               => fun args => (show_application with_casts (fun _ => "fold_right") args, ZRange.type.base.option.None)
-             | ident.List_update_nth T
-               => fun args => (show_application with_casts (fun _ => "update_nth") args, ZRange.type.base.option.None)
-             | ident.eager_List_nth_default T
-               => fun '((d, dr), ((ls, lsr), ((i, ir), tt))) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 10) (ls 10%nat ++ "[[" ++ i 200%nat ++ "]]"), ZRange.type.base.option.None)
-             | ident.List_nth_default T
-               => fun '((d, dr), ((ls, lsr), ((i, ir), tt))) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 10) (ls 10%nat ++ "[" ++ i 200%nat ++ "]"), ZRange.type.base.option.None)
-             | ident.Z_mul => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 40) (x 40%nat ++ " * " ++ y 39%nat), ZRange.type.base.option.None)
-             | ident.Z_add => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 50) (x 50%nat ++ " + " ++ y 49%nat), ZRange.type.base.option.None)
-             | ident.Z_sub => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 50) (x 50%nat ++ " - " ++ y 49%nat), ZRange.type.base.option.None)
-             | ident.Z_pow => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 30) (x 30%nat ++ " ^ " ++ y 29%nat), ZRange.type.base.option.None)
-             | ident.Z_opp => fun '((x, xr), tt) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 35) ("-" ++ x 35%nat), ZRange.type.base.option.None)
-             | ident.Z_bneg => fun '((x, xr), tt) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 75) ("!" ++ x 75%nat), ZRange.type.base.option.None)
-             | ident.Z_lnot_modulo => fun '((x, xr), ((m, mr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 75) ("~" ++ x 75%nat ++ (if with_casts then " (mod " ++ m 200%nat ++ ")" else "")), ZRange.type.base.option.None)
-             | ident.Z_lxor => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 50) (x 50%nat ++ " ⊕ " ++ y 49%nat), ZRange.type.base.option.None)
-             | ident.Z_div => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 40) (x 40%nat ++ " / " ++ y 39%nat), ZRange.type.base.option.None)
-             | ident.Z_modulo => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 40) (x 40%nat ++ " mod " ++ y 39%nat), ZRange.type.base.option.None)
-             | ident.Z_eqb => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 70) (x 69%nat ++ " = " ++ y 69%nat), ZRange.type.base.option.None)
-             | ident.Z_ltb => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 70) (x 69%nat ++ " < " ++ y 69%nat), ZRange.type.base.option.None)
-             | ident.Z_leb => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 70) (x 69%nat ++ " ≤ " ++ y 69%nat), ZRange.type.base.option.None)
-             | ident.Z_gtb => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 70) (x 69%nat ++ " > " ++ y 69%nat), ZRange.type.base.option.None)
-             | ident.Z_geb => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 70) (x 69%nat ++ " ≥ " ++ y 69%nat), ZRange.type.base.option.None)
-             | ident.Z_log2
-               => fun args => (show_application with_casts (fun _ => "Z.log2") args, ZRange.type.base.option.None)
-             | ident.Z_log2_up
-               => fun args => (show_application with_casts (fun _ => "Z.log2_up") args, ZRange.type.base.option.None)
-             | ident.Z_of_nat
-               => fun args => (show_application with_casts (fun _ => "(ℕ→ℤ)") args, ZRange.type.base.option.None)
-             | ident.Z_to_nat
-               => fun args => (show_application with_casts (fun _ => "(ℤ→ℕ)") args, ZRange.type.base.option.None)
-             | ident.Z_min
-               => fun args => (show_application with_casts (fun _ => "Z.min") args, ZRange.type.base.option.None)
-             | ident.Z_max
-               => fun args => (show_application with_casts (fun _ => "Z.max") args, ZRange.type.base.option.None)
-             | ident.Z_shiftr => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 30) (x 30%nat ++ " >> " ++ y 29%nat), ZRange.type.base.option.None)
-             | ident.Z_shiftl => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 30) (x 30%nat ++ " << " ++ y 29%nat), ZRange.type.base.option.None)
-             | ident.Z_land => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 50) (x 50%nat ++ " & " ++ y 49%nat), ZRange.type.base.option.None)
-             | ident.Z_lor => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 50) (x 50%nat ++ " | " ++ y 49%nat), ZRange.type.base.option.None)
-             | ident.Z_mul_split
-               => fun args => (show_application with_casts (fun _ => "Z.mul_split") args, ZRange.type.base.option.None)
-             | ident.Z_mul_high
-               => fun args => (show_application with_casts (fun _ => "Z.mul_high") args, ZRange.type.base.option.None)
-             | ident.Z_add_get_carry
-               => fun args => (show_application with_casts (fun _ => "Z.add_get_carry") args, ZRange.type.base.option.None)
-             | ident.Z_add_with_carry
-               => fun args => (show_application with_casts (fun _ => "Z.add_with_carry") args, ZRange.type.base.option.None)
-             | ident.Z_add_with_get_carry
-               => fun args => (show_application with_casts (fun _ => "Z.add_with_get_carry") args, ZRange.type.base.option.None)
-             | ident.Z_sub_get_borrow
-               => fun args => (show_application with_casts (fun _ => "Z.sub_get_borrow") args, ZRange.type.base.option.None)
-             | ident.Z_sub_with_get_borrow
-               => fun args => (show_application with_casts (fun _ => "Z.sub_with_get_borrow") args, ZRange.type.base.option.None)
-             | ident.Z_ltz
-               => fun args => (show_application with_casts (fun _ => "Z.ltz") args, ZRange.type.base.option.None)
-             | ident.Z_zselect
-               => fun args => (show_application with_casts (fun _ => "Z.zselect") args, ZRange.type.base.option.None)
-             | ident.Z_add_modulo
-               => fun args => (show_application with_casts (fun _ => "Z.add_modulo") args, ZRange.type.base.option.None)
-             | ident.Z_truncating_shiftl
-               => fun args => (show_application with_casts (fun _ => "Z.truncating_shiftl") args, ZRange.type.base.option.None)
-             | ident.Z_rshi
-               => fun args => (show_application with_casts (fun _ => "Z.rshi") args, ZRange.type.base.option.None)
-             | ident.Z_cc_m
-               => fun args => (show_application with_casts (fun _ => "Z.cc_m") args, ZRange.type.base.option.None)
-             | ident.Z_combine_at_bitwidth
-               => fun args => (show_application with_casts (fun _ => "Z.combine_at_bitwidth") args, ZRange.type.base.option.None)
-             | ident.Z_cast
-             | ident.Z_cast2
-               => fun '((_, range), ((x, xr), tt)) => (x, range)
-             | ident.Build_zrange => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 0) ("r[" ++ x 60%nat ++ " ~> " ++ y 200%nat), ZRange.type.base.option.None)
-             | ident.zrange_rect A
-               => fun args => (show_application with_casts (fun _ => "zrange_rect") args, ZRange.type.base.option.None)
-             | ident.fancy_add
-               => fun args => (show_application with_casts (fun _ => "fancy.add") args, ZRange.type.base.option.None)
-             | ident.fancy_addc
-               => fun args => (show_application with_casts (fun _ => "fancy.addc") args, ZRange.type.base.option.None)
-             | ident.fancy_sub
-               => fun args => (show_application with_casts (fun _ => "fancy.sub") args, ZRange.type.base.option.None)
-             | ident.fancy_subb
-               => fun args => (show_application with_casts (fun _ => "fancy.subb") args, ZRange.type.base.option.None)
-             | ident.fancy_mulll
-               => fun args => (show_application with_casts (fun _ => "fancy.mulll") args, ZRange.type.base.option.None)
-             | ident.fancy_mullh
-               => fun args => (show_application with_casts (fun _ => "fancy.mullh") args, ZRange.type.base.option.None)
-             | ident.fancy_mulhl
-               => fun args => (show_application with_casts (fun _ => "fancy.mulhl") args, ZRange.type.base.option.None)
-             | ident.fancy_mulhh
-               => fun args => (show_application with_casts (fun _ => "fancy.mulhh") args, ZRange.type.base.option.None)
-             | ident.fancy_rshi
-               => fun args => (show_application with_casts (fun _ => "fancy.rshi") args, ZRange.type.base.option.None)
-             | ident.fancy_selc
-               => fun args => (show_application with_casts (fun _ => "fancy.selc") args, ZRange.type.base.option.None)
-             | ident.fancy_selm
-               => fun args => (show_application with_casts (fun _ => "fancy.selm") args, ZRange.type.base.option.None)
-             | ident.fancy_sell
-               => fun args => (show_application with_casts (fun _ => "fancy.sell") args, ZRange.type.base.option.None)
-             | ident.fancy_addm
-               => fun args => (show_application with_casts (fun _ => "fancy.addm") args, ZRange.type.base.option.None)
-             end.
         Global Instance show_ident {t} : Show (ident.ident t)
           := fun with_parens idc
              => match idc with
@@ -511,6 +346,116 @@ Module Compilers.
                 | ident.fancy_sell => "fancy.sell"
                 | ident.fancy_addm => "fancy.addm"
                 end.
+
+        Definition show_ident_lvl (with_casts : bool) {t} (idc : ident.ident t)
+          : type.for_each_lhs_of_arrow (fun t => (nat -> string) * ZRange.type.option.interp t)%type t -> (nat -> string) * ZRange.type.base.option.interp (type.final_codomain t)
+          := match idc in ident.ident t return type.for_each_lhs_of_arrow (fun t => (nat -> string) * ZRange.type.option.interp t)%type t -> (nat -> string) * ZRange.type.base.option.interp (type.final_codomain t) with
+             | ident.Literal base.type.Z v => fun 'tt => (fun lvl => show_compact_Z (Nat.eqb lvl 0) v, ZRange.type.base.option.None)
+             | ident.Literal t v => fun 'tt => (fun lvl => show (Nat.eqb lvl 0) v, ZRange.type.base.option.Some (t:=t) v)
+             | ident.tt => fun _ => (fun _ => "()", tt)
+             | ident.Nat_succ => fun '((x, xr), tt) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 10) ((x 10%nat) ++ ".+1"), ZRange.type.base.option.None)
+             | ident.Nat_pred => fun '((x, xr), tt) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 10) ((x 10%nat) ++ ".-1"), ZRange.type.base.option.None)
+             | ident.Nat_max => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 10) ("Nat.max " ++ x 9%nat ++ " " ++ y 9%nat), ZRange.type.base.option.None)
+             | ident.Nat_mul => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 40) (x 40%nat ++ " *ℕ " ++ y 39%nat), ZRange.type.base.option.None)
+             | ident.Nat_add => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 50) (x 50%nat ++ " +ℕ " ++ y 49%nat), ZRange.type.base.option.None)
+             | ident.Nat_sub => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 50) (x 50%nat ++ " -ℕ " ++ y 49%nat), ZRange.type.base.option.None)
+             | ident.Nat_eqb => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 70) (x 69%nat ++ " =ℕ " ++ y 69%nat), ZRange.type.base.option.None)
+             | ident.None _ => fun 'tt => (fun _ => "None", ZRange.type.base.option.None)
+             | ident.nil t => fun 'tt => (fun _ => "[]", ZRange.type.base.option.None)
+             | ident.cons t => fun '(x, ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 60) (maybe_wrap_cast with_casts x 59%nat ++ " :: " ++ y 60%nat), ZRange.type.base.option.None)
+             | ident.pair A B => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 201) (maybe_wrap_cast with_casts (x, xr) 201%nat ++ ", " ++ maybe_wrap_cast with_casts (y, yr) 200%nat), (xr, yr))
+             | ident.fst A B => fun '((x, xr), tt) => (fun _ => x 0%nat ++ "₁", fst xr)
+             | ident.snd A B => fun '((x, xr), tt) => (fun _ => x 0%nat ++ "₂", snd xr)
+             | ident.prod_rect A B T => fun '((f, fr), ((p, pr), tt)) => (fun _ => "match " ++ p 200%nat ++ " with " ++ f 200%nat ++ " end", ZRange.type.base.option.None)
+             | ident.bool_rect T => fun '(t, (f, ((b, br), tt))) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 200) ("if " ++ b 200%nat ++ " then " ++ maybe_wrap_cast with_casts t 200%nat ++ " else " ++ maybe_wrap_cast with_casts f 200%nat), ZRange.type.base.option.None)
+             | ident.List_app _
+               => fun '((xs, xsr), ((ys, ysr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 60) (xs 59%nat ++ " ++ " ++ ys 60%nat), ZRange.type.base.option.None)
+             | ident.eager_List_nth_default T
+               => fun '((d, dr), ((ls, lsr), ((i, ir), tt))) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 10) (ls 10%nat ++ "[[" ++ i 200%nat ++ "]]"), ZRange.type.base.option.None)
+             | ident.List_nth_default T
+               => fun '((d, dr), ((ls, lsr), ((i, ir), tt))) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 10) (ls 10%nat ++ "[" ++ i 200%nat ++ "]"), ZRange.type.base.option.None)
+             | ident.Z_mul => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 40) (x 40%nat ++ " * " ++ y 39%nat), ZRange.type.base.option.None)
+             | ident.Z_add => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 50) (x 50%nat ++ " + " ++ y 49%nat), ZRange.type.base.option.None)
+             | ident.Z_sub => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 50) (x 50%nat ++ " - " ++ y 49%nat), ZRange.type.base.option.None)
+             | ident.Z_pow => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 30) (x 30%nat ++ " ^ " ++ y 29%nat), ZRange.type.base.option.None)
+             | ident.Z_opp => fun '((x, xr), tt) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 35) ("-" ++ x 35%nat), ZRange.type.base.option.None)
+             | ident.Z_bneg => fun '((x, xr), tt) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 75) ("!" ++ x 75%nat), ZRange.type.base.option.None)
+             | ident.Z_lnot_modulo => fun '((x, xr), ((m, mr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 75) ("~" ++ x 75%nat ++ (if with_casts then " (mod " ++ m 200%nat ++ ")" else "")), ZRange.type.base.option.None)
+             | ident.Z_lxor => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 50) (x 50%nat ++ " ⊕ " ++ y 49%nat), ZRange.type.base.option.None)
+             | ident.Z_div => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 40) (x 40%nat ++ " / " ++ y 39%nat), ZRange.type.base.option.None)
+             | ident.Z_modulo => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 40) (x 40%nat ++ " mod " ++ y 39%nat), ZRange.type.base.option.None)
+             | ident.Z_eqb => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 70) (x 69%nat ++ " = " ++ y 69%nat), ZRange.type.base.option.None)
+             | ident.Z_ltb => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 70) (x 69%nat ++ " < " ++ y 69%nat), ZRange.type.base.option.None)
+             | ident.Z_leb => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 70) (x 69%nat ++ " ≤ " ++ y 69%nat), ZRange.type.base.option.None)
+             | ident.Z_gtb => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 70) (x 69%nat ++ " > " ++ y 69%nat), ZRange.type.base.option.None)
+             | ident.Z_geb => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 70) (x 69%nat ++ " ≥ " ++ y 69%nat), ZRange.type.base.option.None)
+             | ident.Z_shiftr => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 30) (x 30%nat ++ " >> " ++ y 29%nat), ZRange.type.base.option.None)
+             | ident.Z_shiftl => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 30) (x 30%nat ++ " << " ++ y 29%nat), ZRange.type.base.option.None)
+             | ident.Z_land => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 50) (x 50%nat ++ " & " ++ y 49%nat), ZRange.type.base.option.None)
+             | ident.Z_lor => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 50) (x 50%nat ++ " | " ++ y 49%nat), ZRange.type.base.option.None)
+             | ident.Z_cast
+             | ident.Z_cast2
+               => fun '((_, range), ((x, xr), tt)) => (x, range)
+             | ident.Build_zrange => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 0) ("r[" ++ x 60%nat ++ " ~> " ++ y 200%nat), ZRange.type.base.option.None)
+             | ident.Some _ as idc
+             | ident.nat_rect _ as idc
+             | ident.eager_nat_rect _ as idc
+             | ident.eager_nat_rect_arrow _ _ as idc
+             | ident.nat_rect_arrow _ _ as idc
+             | ident.option_rect _ _ as idc
+             | ident.list_rect _ _ as idc
+             | ident.eager_list_rect _ _ as idc
+             | ident.list_rect_arrow _ _ _ as idc
+             | ident.eager_list_rect_arrow _ _ _ as idc
+             | ident.list_case _ _ as idc
+             | ident.List_length _ as idc
+             | ident.List_seq as idc
+             | ident.List_repeat _ as idc
+             | ident.List_firstn _ as idc
+             | ident.List_skipn _ as idc
+             | ident.List_combine _ _ as idc
+             | ident.List_map _ _ as idc
+             | ident.List_rev _ as idc
+             | ident.List_flat_map _ _ as idc
+             | ident.List_partition _ as idc
+             | ident.List_fold_right _ _ as idc
+             | ident.List_update_nth _ as idc
+             | ident.Z_log2 as idc
+             | ident.Z_log2_up as idc
+             | ident.Z_of_nat as idc
+             | ident.Z_to_nat as idc
+             | ident.Z_min as idc
+             | ident.Z_max as idc
+             | ident.Z_mul_split as idc
+             | ident.Z_mul_high as idc
+             | ident.Z_add_get_carry as idc
+             | ident.Z_add_with_carry as idc
+             | ident.Z_add_with_get_carry as idc
+             | ident.Z_sub_get_borrow as idc
+             | ident.Z_sub_with_get_borrow as idc
+             | ident.Z_ltz as idc
+             | ident.Z_zselect as idc
+             | ident.Z_add_modulo as idc
+             | ident.Z_truncating_shiftl as idc
+             | ident.Z_rshi as idc
+             | ident.Z_cc_m as idc
+             | ident.Z_combine_at_bitwidth as idc
+             | ident.zrange_rect _ as idc
+             | ident.fancy_add as idc
+             | ident.fancy_addc as idc
+             | ident.fancy_sub as idc
+             | ident.fancy_subb as idc
+             | ident.fancy_mulll as idc
+             | ident.fancy_mullh as idc
+             | ident.fancy_mulhl as idc
+             | ident.fancy_mulhh as idc
+             | ident.fancy_rshi as idc
+             | ident.fancy_selc as idc
+             | ident.fancy_selm as idc
+             | ident.fancy_sell as idc
+             | ident.fancy_addm as idc
+               => fun args => (show_application with_casts (fun _ => show false idc) args, ZRange.type.base.option.None)
+             end.
       End ident.
 
       Module expr.
