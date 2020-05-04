@@ -20,6 +20,7 @@ Require Import Crypto.Util.Notations.
 Import ListNotations. Local Open Scope Z_scope.
 
 Import
+  AbstractInterpretation.Compilers
   Language.Compilers
   Language.API.Compilers.
 
