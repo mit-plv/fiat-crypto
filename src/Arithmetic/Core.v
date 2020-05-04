@@ -1327,7 +1327,7 @@ Module Positional.
         eval n (sub a b) mod (s - Associational.eval c)
         = (eval n a - eval n b) mod (s - Associational.eval c).
     Proof using s_nz m_nz weight_0 weight_nz.
-      destruct (zerop n); subst; try reflexivity.
+      destruct (zerop n) as [->|]; try reflexivity.
       intros; cbv [sub balance scmul negate_snd]; push; repeat distr_length;
         eauto with omega.
       push_Zmod; push; pull_Zmod; push_Zmod; pull_Zmod; distr_length; eauto.
