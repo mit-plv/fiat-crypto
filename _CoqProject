@@ -18,6 +18,7 @@ src/AbstractInterpretation/AbstractInterpretation.v
 src/AbstractInterpretation/Proofs.v
 src/AbstractInterpretation/Wf.v
 src/AbstractInterpretation/WfExtra.v
+src/AbstractInterpretation/ZRange.v
 src/AbstractInterpretation/ZRangeProofs.v
 src/Algebra/Field.v
 src/Algebra/Field_test.v

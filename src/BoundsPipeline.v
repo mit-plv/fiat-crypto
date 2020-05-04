@@ -31,6 +31,7 @@ Require Rewriter.Language.Language.
 Require Crypto.Language.API.
 Require Rewriter.Language.UnderLets.
 Require Crypto.AbstractInterpretation.AbstractInterpretation.
+Require Crypto.AbstractInterpretation.ZRange.
 Require Rewriter.Rewriter.Rewriter.
 Require Crypto.MiscCompilerPasses.
 Require Crypto.Stringification.Language.
@@ -62,6 +63,7 @@ Import
   Crypto.Language.API
   Rewriter.Language.UnderLets
   Crypto.AbstractInterpretation.AbstractInterpretation
+  AbstractInterpretation.ZRange
   Rewriter.Rewriter.Rewriter
   Crypto.MiscCompilerPasses
   Crypto.Stringification.Language.
@@ -80,6 +82,7 @@ Import
   Language.Compilers
   Language.API.Compilers
   UnderLets.Compilers
+  AbstractInterpretation.ZRange.Compilers
   AbstractInterpretation.Compilers
   Rewriter.Compilers
   MiscCompilerPasses.Compilers

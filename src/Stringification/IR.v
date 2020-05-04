@@ -17,6 +17,7 @@ Require Import Crypto.Util.OptionList.
 Require Import Rewriter.Language.Language.
 Require Import Crypto.Language.API.
 Require Import Crypto.Stringification.Language.
+Require Import Crypto.AbstractInterpretation.ZRange.
 Require Import Crypto.AbstractInterpretation.AbstractInterpretation.
 Require Import Crypto.Util.Bool.Equality.
 Require Import Crypto.Util.Notations.
@@ -28,6 +29,7 @@ Module Compilers.
   Export Language.Compilers.
   Export Language.API.Compilers.
   Export AbstractInterpretation.Compilers.
+  Export AbstractInterpretation.ZRange.Compilers.
   Export Stringification.Language.Compilers.
   Import invert_expr.
   Import Compilers.API.

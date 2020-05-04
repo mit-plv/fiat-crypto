@@ -18,7 +18,7 @@ Require Import Rewriter.Language.Language.
 Require Import Crypto.Language.API.
 Require Import Crypto.Stringification.Language.
 Require Import Crypto.Stringification.IR.
-Require Import Crypto.AbstractInterpretation.AbstractInterpretation.
+Require Import Crypto.AbstractInterpretation.ZRange.
 Require Import Crypto.Util.Bool.Equality.
 Require Import Crypto.Util.Notations.
 Import Coq.Lists.List ListNotations. Local Open Scope zrange_scope. Local Open Scope Z_scope.
@@ -29,7 +29,7 @@ Module Compilers.
   Local Set Decidable Equality Schemes.
   Export Language.Compilers.
   Export Language.API.Compilers.
-  Export AbstractInterpretation.Compilers.
+  Export AbstractInterpretation.ZRange.Compilers.
   Export Stringification.Language.Compilers.
   Import invert_expr.
   Import Compilers.API.

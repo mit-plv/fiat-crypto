@@ -3,10 +3,12 @@ From Coq Require Import ZArith.ZArith MSets.MSetPositive FSets.FMapPositive
 From Crypto.Util Require Import
      ListUtil
      Strings.String Strings.Decimal Strings.Show
-     ZRange ZRange.Operations ZRange.Show
+     ZRange.Operations ZRange.Show
      Option OptionList Bool.Equality.
+(* Work around COQBUG(https://github.com/coq/coq/issues/12251) *)
+Require Import Crypto.Util.ZRange.
 
-From Crypto Require Import IR Stringification.Language AbstractInterpretation.
+From Crypto Require Import IR Stringification.Language AbstractInterpretation.ZRange.
 
 Import ListNotations.
 

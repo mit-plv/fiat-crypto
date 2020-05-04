@@ -43,10 +43,10 @@ Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.PrintGoal.
 Require Import Crypto.Language.PreExtra.
 Require Import Crypto.CastLemmas.
-Require Import Crypto.AbstractInterpretation.AbstractInterpretation.
+Require Import Crypto.AbstractInterpretation.ZRange.
 
 Module Compilers.
-  Import AbstractInterpretation.Compilers.
+  Import AbstractInterpretation.ZRange.Compilers.
 
   Module ZRange.
     Module type.

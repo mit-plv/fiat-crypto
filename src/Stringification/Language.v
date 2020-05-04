@@ -29,7 +29,7 @@ Require Import Crypto.Util.MSetPositive.Show.
 Require Import Crypto.Util.MSets.Show.
 Require Import Rewriter.Language.Language.
 Require Import Crypto.Language.API.
-Require Import Crypto.AbstractInterpretation.AbstractInterpretation.
+Require Import Crypto.AbstractInterpretation.ZRange.
 Require Import Crypto.Util.Sum.
 Require Import Crypto.Util.Bool.Equality.
 Require Import Crypto.Util.Notations.
@@ -40,7 +40,7 @@ Module Compilers.
   Local Set Decidable Equality Schemes.
   Export Language.Language.Compilers.
   Export Language.API.Compilers.
-  Export AbstractInterpretation.Compilers.
+  Export AbstractInterpretation.ZRange.Compilers.
   Import invert_expr.
   Import Compilers.API.
 
