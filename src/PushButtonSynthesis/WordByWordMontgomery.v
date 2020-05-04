@@ -166,6 +166,20 @@ Section __.
             (negb (uweight machine_wordsize n =? uweight 8 n_bytes), Pipeline.Values_not_provably_equalZ "weight n ≠ bytes_weight n_bytes (needed for from_bytes)" (uweight machine_wordsize n) (uweight 8 n_bytes))].
 
   Local Arguments Z.mul !_ !_.
+  Local Ltac prepare_use_curve_good _ :=
+    let curve_good := lazymatch goal with | curve_good : check_args _ = Success _ |- _ => curve_good end in
+    clear -curve_good;
+    cbv [check_args] in curve_good |- *;
+    cbn [fold_right] in curve_good |- *;
+    repeat first [ match goal with
+                   | [ H : context[match ?b with true => _ | false => _ end ] |- _ ] => destruct b eqn:?
+                   end
+                 | discriminate
+                 | progress Reflect.reflect_hyps
+                 | assumption
+                 | apply conj
+                 | progress destruct_head'_and ].
+
   Local Ltac use_curve_good_t :=
     repeat first [ assumption
                  | progress rewrite ?map_length, ?Z.mul_0_r, ?Pos.mul_1_r, ?Z.mul_1_r in *
@@ -205,31 +219,8 @@ Section __.
       /\ s <= uweight 8 n_bytes
       /\ uweight machine_wordsize n = uweight 8 n_bytes.
   Proof.
-    clear -curve_good.
-    cbv [check_args fold_right] in curve_good.
-    cbv [bounds prime_bound prime_bounds saturated_bounds] in *.
-    break_innermost_match_hyps; try discriminate.
-    rewrite negb_false_iff in *.
-    Z.ltb_to_lt.
-    rewrite NPeano.Nat.eqb_neq in *.
-    intros.
-    cbv [Qnum Qden Qceiling Qfloor Qopp Qdiv Qplus inject_Z Qmult Qinv] in *.
-    rewrite ?map_length, ?Z.mul_0_r, ?Pos.mul_1_r, ?Z.mul_1_r in *.
-    specialize_by lia.
-    repeat match goal with H := _ |- _ => subst H end.
-    repeat match goal with
-           | [ H : list_beq _ _ _ _ = true |- _ ] => apply internal_list_dec_bl in H; [ | intros; Z.ltb_to_lt; omega.. ]
-           end.
-    repeat apply conj.
+    prepare_use_curve_good ().
     { destruct m eqn:?; cbn; lia. }
-    { use_curve_good_t. }
-    { use_curve_good_t. }
-    { use_curve_good_t. }
-    { use_curve_good_t. }
-    { use_curve_good_t. }
-    { use_curve_good_t. }
-    { use_curve_good_t. }
-    { use_curve_good_t. }
     { use_curve_good_t. }
     { use_curve_good_t. }
     { use_curve_good_t. }

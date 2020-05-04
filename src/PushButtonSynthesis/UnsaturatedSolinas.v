@@ -194,6 +194,20 @@ Section __.
              (negb (v1 <=? v2)%Z,
               Pipeline.Value_not_leZ "max(loose_upperbounds) > 2^machine_wordsize-1" v1 v2))].
 
+  Local Ltac prepare_use_curve_good _ :=
+    let curve_good := lazymatch goal with | curve_good : check_args _ = Success _ |- _ => curve_good end in
+    clear -curve_good;
+    cbv [check_args] in curve_good |- *;
+    cbn [fold_right] in curve_good |- *;
+    repeat first [ match goal with
+                   | [ H : context[match ?b with true => _ | false => _ end ] |- _ ] => destruct b eqn:?
+                   end
+                 | discriminate
+                 | progress Reflect.reflect_hyps
+                 | assumption
+                 | apply conj
+                 | progress destruct_head'_and ].
+
   Local Ltac use_curve_good_t :=
     repeat first [ assumption
                  | progress rewrite ?map_length, ?Z.mul_0_r, ?Pos.mul_1_r, ?Z.mul_1_r in *
@@ -201,6 +215,7 @@ Section __.
                  | lia
                  | rewrite expr.interp_reify_list, ?map_map
                  | rewrite map_ext with (g:=id), map_id
+                 | progress autorewrite with distr_length
                  | progress distr_length
                  | progress cbv [Qceiling Qfloor Qopp Qdiv Qplus inject_Z Qmult Qinv] in *
                  | progress cbv [Qle] in *
@@ -229,32 +244,7 @@ Section __.
       /\ eval tight_upperbounds < 2 * eval m_enc
       /\ 0 < m.
   Proof using curve_good.
-    clear -curve_good.
-    cbv [check_args fold_right] in curve_good.
-    cbv [tight_bounds loose_bounds prime_bound m_enc] in *.
-    break_innermost_match_hyps; try discriminate.
-    rewrite negb_false_iff in *.
-    Z.ltb_to_lt.
-    rewrite Qle_bool_iff in *.
-    rewrite NPeano.Nat.eqb_neq in *.
-    intros.
-    cbv [Qnum Qden limbwidth Qceiling Qfloor Qopp Qdiv Qplus inject_Z Qmult Qinv] in *.
-    rewrite ?map_length, ?Z.mul_0_r, ?Pos.mul_1_r, ?Z.mul_1_r in *.
-    specialize_by lia.
-    repeat match goal with H := _ |- _ => subst H end.
-    repeat match goal with
-           | [ H : list_beq _ _ _ _ = true |- _ ] => apply internal_list_dec_bl in H; [ | intros; Z.ltb_to_lt; omega.. ]
-           end.
-    repeat apply conj.
-    { destruct (s - Associational.eval c) eqn:?; cbn; lia. }
-    { use_curve_good_t. }
-    { use_curve_good_t. }
-    { use_curve_good_t. }
-    { use_curve_good_t. }
-    { use_curve_good_t. }
-    { use_curve_good_t. }
-    { use_curve_good_t. }
-    { use_curve_good_t. }
+    prepare_use_curve_good ().
     { use_curve_good_t. }
     { use_curve_good_t. }
     { use_curve_good_t. }

@@ -112,6 +112,20 @@ Section rmontred.
             ((negb (2 <=? machine_wordsize))%Z, Pipeline.Value_not_leZ "machine_wordsize < 2" 2 machine_wordsize)].
 
   Local Arguments Z.mul !_ !_.
+  Local Ltac prepare_use_curve_good _ :=
+    let curve_good := lazymatch goal with | curve_good : check_args _ = Success _ |- _ => curve_good end in
+    clear -curve_good;
+    cbv [check_args] in curve_good |- *;
+    cbn [fold_right] in curve_good |- *;
+    repeat first [ match goal with
+                   | [ H : context[match ?b with true => _ | false => _ end ] |- _ ] => destruct b eqn:?
+                   end
+                 | discriminate
+                 | progress Reflect.reflect_hyps
+                 | assumption
+                 | apply conj
+                 | progress destruct_head'_and ].
+
   Local Ltac use_curve_good_t :=
     repeat first [ assumption
                  | progress cbv [EquivModulo.Z.equiv_modulo]
@@ -136,22 +150,7 @@ Section rmontred.
       /\ 2 <= machine_wordsize
       /\ 2 ^ machine_wordsize = R.
   Proof using curve_good.
-    clear -curve_good.
-    cbv [check_args fold_right] in curve_good.
-    break_innermost_match_hyps; try discriminate.
-    rewrite Bool.negb_false_iff in *.
-    Z.ltb_to_lt.
-    rewrite NPeano.Nat.eqb_neq in *.
-    intros.
-    repeat apply conj.
-    { use_curve_good_t. }
-    { use_curve_good_t. }
-    { use_curve_good_t. }
-    { use_curve_good_t. }
-    { use_curve_good_t. }
-    { use_curve_good_t. }
-    { use_curve_good_t. }
-    { use_curve_good_t. }
+    prepare_use_curve_good ().
     { use_curve_good_t. }
     { use_curve_good_t. }
     { use_curve_good_t. }

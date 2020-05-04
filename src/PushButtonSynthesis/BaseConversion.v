@@ -179,6 +179,20 @@ Section __.
              (negb (v1 <=? v2)%Z,
               Pipeline.Value_not_leZ "max(out_upperbounds) > 2^machine_wordsize-1" v1 v2))].
 
+  Local Ltac prepare_use_curve_good _ :=
+    let curve_good := lazymatch goal with | curve_good : check_args _ = Success _ |- _ => curve_good end in
+    clear -curve_good;
+    cbv [check_args] in curve_good |- *;
+    cbn [fold_right] in curve_good |- *;
+    repeat first [ match goal with
+                   | [ H : context[match ?b with true => _ | false => _ end ] |- _ ] => destruct b eqn:?
+                   end
+                 | discriminate
+                 | progress Reflect.reflect_hyps
+                 | assumption
+                 | apply conj
+                 | progress destruct_head'_and ].
+
   Local Ltac use_curve_good_t :=
     repeat first [ assumption
                  | progress rewrite ?map_length, ?Z.mul_0_r, ?Pos.mul_1_r, ?Z.mul_1_r in *
@@ -196,19 +210,6 @@ Section __.
                  | progress specialize_by (exact eq_refl)
                  | solve [ auto ]
                  | progress break_innermost_match_hyps ].
-
-  Ltac prepare_use_curve_good _ :=
-    let curve_good := lazymatch goal with | curve_good : check_args _ = Success _ |- _ => curve_good end in
-    clear -curve_good;
-    cbv [check_args fold_right] in curve_good |- *;
-    repeat first [ match goal with
-                   | [ H : context[match ?b with true => _ | false => _ end ] |- _ ] => destruct b eqn:?
-                   end
-                 | discriminate
-                 | progress Reflect.reflect_hyps
-                 | assumption
-                 | apply conj
-                 | progress destruct_head'_and ].
 
   Context (curve_good : check_args (Success tt) = Success tt).
 

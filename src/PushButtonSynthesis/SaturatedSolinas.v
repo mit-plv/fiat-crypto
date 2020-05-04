@@ -111,6 +111,20 @@ Section __.
             ((n =? 0)%nat, Pipeline.Values_not_provably_distinctZ "n ≠ 0" n 0);
             ((negb (0 <? machine_wordsize)), Pipeline.Value_not_ltZ "0 < machine_wordsize" 0 machine_wordsize)].
 
+  Local Ltac prepare_use_curve_good _ :=
+    let curve_good := lazymatch goal with | curve_good : check_args _ = Success _ |- _ => curve_good end in
+    clear -curve_good;
+    cbv [check_args] in curve_good |- *;
+    cbn [fold_right] in curve_good |- *;
+    repeat first [ match goal with
+                   | [ H : context[match ?b with true => _ | false => _ end ] |- _ ] => destruct b eqn:?
+                   end
+                 | discriminate
+                 | progress Reflect.reflect_hyps
+                 | assumption
+                 | apply conj
+                 | progress destruct_head'_and ].
+
   Local Ltac use_curve_good_t :=
     repeat first [ assumption
                  | progress rewrite ?map_length, ?Z.mul_0_r, ?Pos.mul_1_r, ?Z.mul_1_r in *
@@ -134,24 +148,7 @@ Section __.
       /\ 0 < machine_wordsize
       /\ n <> 0%nat.
   Proof using curve_good.
-    clear -curve_good.
-    cbv [check_args fold_right] in curve_good.
-    break_innermost_match_hyps; try discriminate.
-    rewrite negb_false_iff in *.
-    Z.ltb_to_lt.
-    rewrite NPeano.Nat.eqb_neq in *.
-    intros.
-    rewrite ?map_length, ?Z.mul_0_r, ?Pos.mul_1_r, ?Z.mul_1_r in *.
-    specialize_by lia.
-    repeat match goal with H := _ |- _ => subst H end.
-    repeat match goal with
-           | [ H : list_beq _ _ _ _ = true |- _ ] => apply internal_list_dec_bl in H; [ | intros; Z.ltb_to_lt; omega.. ]
-           end.
-    repeat apply conj.
-    { destruct (s - Associational.eval c) eqn:?; cbn; lia. }
-    { use_curve_good_t. }
-    { use_curve_good_t. }
-    { use_curve_good_t. }
+    prepare_use_curve_good ().
     { use_curve_good_t. }
   Qed.
 
