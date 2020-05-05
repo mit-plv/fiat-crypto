@@ -55,6 +55,10 @@ Proof. case p; reflexivity. Defined.
 Definition ap_transport {A} {P Q : A -> Type} {x y : A} (p : x = y) (f : forall x, P x -> Q x) (z : P x)
   : f _ (@eq_rect A x P z y p) = @eq_rect A x Q (f _ z) y p.
 Proof. case p; reflexivity. Defined.
+(** TODO: Remove [rew_map] when we drop support for Coq 8.9, since it's in the standard library there *)
+Lemma rew_map A B P (f : A -> B) x1 x2 (H : x1 = x2) y
+  : rew [fun x => P (f x)] H in y = rew [P] f_equal f H in y.
+Proof. case H; reflexivity. Defined.
 
 (** To classify the equalities of a type [A] at a point [a : A], we
     must give a "code" that stands in for the type [a = x] for each
