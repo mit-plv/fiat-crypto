@@ -43,7 +43,10 @@ Module X25519_32.
        fst (translate_func mulmod
                            ("in0", ("in1", tt)) (* argument names *)
                            (n, (n, tt)) (* lengths for list arguments *)
-                           "out0" (* return value name *))).
+                           (access_size.word, (access_size.word, tt)) (* sizes for argument arrays *)
+                           "out0" (* return value name *)
+                           access_size.word (* sizes for output arrays *)
+                           )).
 
     Goal (error_free_cmd (snd (snd mulmod_bedrock)) = true).
     Proof. vm_compute. reflexivity. Qed.
@@ -60,7 +63,10 @@ Module X25519_32.
        fst (translate_func addmod
                            ("in0", ("in1", tt)) (* argument names *)
                            (n, (n, tt)) (* lengths for list arguments *)
-                           "out0" (* return value name *))).
+                           (access_size.word, (access_size.word, tt)) (* sizes for argument arrays *)
+                           "out0" (* return value name *)
+                           access_size.word (* sizes for output arrays *)
+                           )).
 
     Goal (error_free_cmd (snd (snd addmod_bedrock)) = true).
     Proof. vm_compute. reflexivity. Qed.
