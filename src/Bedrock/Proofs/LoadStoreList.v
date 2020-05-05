@@ -12,7 +12,6 @@ Require Import bedrock2.WeakestPreconditionProperties.
 Require Import coqutil.Word.Interface coqutil.Word.Properties.
 Require Import coqutil.Map.Interface coqutil.Map.Properties.
 Require Import Crypto.AbstractInterpretation.AbstractInterpretation.
-Require Import Crypto.COperationSpecifications. (* for list_Z_bounded_by *)
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Util.
@@ -46,7 +45,7 @@ Section LoadStoreList.
     | base_listZ =>
       fun s =>
         (Z.of_nat (Memory.bytes_per
-                     (width:=Semantics.width) s * 8) < Semantics.width)%Z
+                     (width:=Semantics.width) s * 8) <= Semantics.width)%Z
     | _ => fun _ => True
     end.
   Fixpoint access_sizes_good {t}
