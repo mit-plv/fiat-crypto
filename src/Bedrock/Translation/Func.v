@@ -64,7 +64,7 @@ Section Func.
              (* return variables *)
              (rets : base_ltype (type.final_codomain t))
              (* integer sizes of return lists *)
-             (retsizes : base_listonly access_size (type.final_codomain t))
+             (retsizes : base_access_sizes (type.final_codomain t))
     : list string * list string * cmd (* bedrock function *)
       * list_lengths (type.base (type.final_codomain t)) (* output list lengths *) :=
     (* load arguments *)

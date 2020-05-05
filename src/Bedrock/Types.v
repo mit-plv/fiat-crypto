@@ -21,7 +21,6 @@ Class parameters :=
     semantics :> Semantics.parameters;
     varname_gen : nat -> String.string;
     error : Syntax.expr.expr;
-    (* TODO: define word_size_in_bytes using Memory.bytes_per *)
     word_size_in_bytes : Z;
     maxint := 2 ^ Semantics.width;
   }.
@@ -29,7 +28,11 @@ Class parameters :=
 Class ok {p:parameters} :=
   {
     semantics_ok : Semantics.parameters_ok semantics;
-    word_size_in_bytes_ok : 0 < word_size_in_bytes;
+    word_size_in_bytes_pos : 0 < word_size_in_bytes;
+    word_size_in_bytes_eq :
+      word_size_in_bytes = Z.of_nat (Memory.bytes_per
+                                       (width:=Semantics.width)
+                                       Syntax.access_size.word);
     varname_gen_unique :
       forall i j : nat, varname_gen i = varname_gen j <-> i = j;
   }.
@@ -104,19 +107,21 @@ Module Types.
             fun (x : list Z) (y : rtype) sz locals =>
               Lift1Prop.ex1
                 (fun start : Semantics.word =>
+                   let bytes :=
+                       Z.of_nat (Memory.bytes_per (width:=Semantics.width) sz) in
                    sep (map:=Semantics.mem)
                        (sep
+                          (* TODO : need to think harder about this! removing the condition caused issues with store, changing it to width caused issues with load *)
                           (emp
                              (Forall
-                                (fun z => (0 <= z < 2 ^ Semantics.width)%Z)
+                                (fun z => (0 <= z < 2 ^ (bytes * 8))%Z)
                                 x))
                           (fun mem : Semantics.mem =>
                                equiv (word.unsigned start) y
                                      (dummy_size (rep:=zrep))
                                      locals mem))
                        (array (truncated_scalar sz)
-                              (word.of_Z word_size_in_bytes)
-                              start x))
+                              (word.of_Z bytes) start x))
         }.
 
       Instance Z : rep base_Z :=
