@@ -1,11 +1,13 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.QArith.QArith.
+Require Import Coq.micromega.Lia.
 Require Import Coq.Strings.String. (* should go before lists *)
 Require Import Coq.Lists.List.
 Require Import coqutil.Word.Interface.
 Require Import coqutil.Word.Properties.
 Require Import coqutil.Map.Interface.
 Require Import coqutil.Map.Properties.
+Require Import coqutil.Tactics.Tactics.
 Require Import bedrock2.Array.
 Require Import bedrock2.BasicC32Semantics.
 Require Import bedrock2.Scalars.
@@ -67,6 +69,7 @@ Section Proofs.
     constructor.
     { exact BasicC32Semantics_parameters_ok. }
     { reflexivity. }
+    { reflexivity. }
     { exact decimal_varname_gen_unique. }
   Defined.
 
@@ -87,8 +90,9 @@ Section Proofs.
              (sep (emp (length xs = n
                         /\ list_Z_bounded_by
                              bounds (map word.unsigned xs)))
-                  (array scalar (word.of_Z word_size_in_bytes)
-                         addr xs))).
+                  (array (truncated_scalar Syntax.access_size.word)
+                         (word.of_Z word_size_in_bytes)
+                         addr (map word.unsigned xs)))).
 
   Instance spec_of_mulmod_bedrock : spec_of mulmod_bedrock :=
     fun functions =>
@@ -150,6 +154,36 @@ Section Proofs.
     reflexivity.
   Qed.
 
+  Lemma loose_bounds_within_base_access_sizes xs :
+    list_Z_bounded_by loose_bounds xs ->
+    LoadStoreList.within_base_access_sizes
+      (t:=base_listZ) xs Syntax.access_size.word.
+  Proof.
+    cbn [LoadStoreList.within_base_access_sizes
+           LoadStoreList.within_access_sizes_args].
+    intro.
+    assert (length xs = n) by
+        (erewrite <-length_loose_bounds;
+         eauto using length_list_Z_bounded_by).
+    generalize dependent xs.
+    set (b:=loose_bounds).
+    vm_compute in b. subst b. subst n.
+    repeat (destruct xs as [| ? xs]; intros; cbn [length] in *;
+            try congruence; [ ]).
+    cbv [list_Z_bounded_by FoldBool.fold_andb_map] in *.
+    cbn [ZRange.lower ZRange.upper] in *.
+    repeat match goal with
+           | H : (_ && _) = true |- _ =>
+             apply Bool.andb_true_iff in H; destruct H
+           end.
+    Z.ltb_to_lt.
+    match goal with
+      |- context [0 <= _ < ?w] =>
+      let w' := (eval vm_compute in w) in
+      change w with w'
+    end.
+    repeat constructor; lia.
+  Qed.
 
   Lemma mulmod_carry_mul_correct :
     Solinas.carry_mul_correct
@@ -170,10 +204,9 @@ Section Proofs.
     list_Z_bounded_by loose_bounds x ->
     list_Z_bounded_by loose_bounds y ->
     let xy :=
-        map word.wrap
-            (type.app_curried
-               (API.Interp mulmod)
-               (x, (y, tt))) in
+        type.app_curried
+          (API.Interp mulmod)
+          (x, (y, tt)) in
     list_Z_bounded_by tight_bounds xy /\
     eval xy mod M = (eval x * eval y) mod M.
   Proof.
@@ -183,7 +216,6 @@ Section Proofs.
     pose proof mulmod_carry_mul_correct x y Hxbounds Hybounds
       as Hspec.
     cbv [expr.Interp] in Hspec. destruct Hspec.
-    rewrite map_word_wrap_bounded by assumption.
     cbn [type.app_curried fst snd] in *.
     split; assumption.
   Qed.
@@ -195,6 +227,20 @@ Section Proofs.
     cbn [name_of_func mulmod_bedrock fst]. intros.
     cbv [mulmod_bedrock].
     intros. cbv [Bignum] in * |-. sepsimpl.
+
+    let xs := match goal with
+              | H : eval ?xs = x |- _ => xs end in
+    let ys := match goal with
+              | H : eval ?ys = y |- _ => ys end in
+    assert (length xs = n) by (rewrite map_length; eauto);
+    assert (length ys = n) by (rewrite map_length; eauto);
+    pose proof mulmod_correct xs ys
+         (ltac:(assumption)) (ltac:(assumption))
+         (ltac:(assumption)) (ltac:(assumption)) as Hcorrect.
+    cbn [type.app_curried fst snd] in Hcorrect.
+    cbv [expr.Interp] in Hcorrect.
+    destruct Hcorrect as [Hcorrect_bounds Hcorrect_eval].
+
     eapply Proper_call.
     2:{
       let xs := match goal with
@@ -259,12 +305,15 @@ Section Proofs.
               | _ => apply word.unsigned_range
               end;
           eauto using Forall_map_unsigned; [ ].
-        rewrite !map_of_Z_unsigned.
-        rewrite !word.of_Z_unsigned in *.
+        rewrite @word_size_in_bytes_eq in * by typeclasses eauto.
         change BasicC32Semantics.parameters with semantics in *.
         SeparationLogic.ecancel_assumption. }
       { cbn. repeat constructor; cbn [In]; try tauto.
         destruct 1; congruence. }
+      { cbn. ssplit; reflexivity. }
+      { cbn [LoadStoreList.within_access_sizes_args fst snd].
+        ssplit; try apply loose_bounds_within_base_access_sizes;
+          auto. }
       { intros.
         cbn [fst snd Types.varname_set_base type.final_codomain
                  Types.rep.varname_set Types.rep.listZ_mem
@@ -276,6 +325,11 @@ Section Proofs.
                             vm_compute in H; congruence
           end. }
       { cbn. repeat constructor; cbn [In]; tauto. }
+      { cbn. reflexivity. }
+      { cbn [type.app_curried fst snd].
+        apply loose_bounds_within_base_access_sizes.
+        apply relax_correct.
+        apply Hcorrect_bounds. }
       { cbn. rewrite union_empty_r.
         apply disjoint_singleton_r_iff.
         cbv [PropSet.singleton_set PropSet.elem_of PropSet.union].
@@ -299,7 +353,6 @@ Section Proofs.
             congruence | ].
         cbn [Types.rep.equiv Types.base_rtype_of_ltype
                              Types.rep.Z Types.rep.listZ_mem].
-        rewrite map_of_Z_unsigned.
         sepsimpl.
         eexists.
         sepsimpl;
@@ -307,9 +360,7 @@ Section Proofs.
                 | |- dexpr _ _ _ _ =>
                   apply get_put_same, word.of_Z_unsigned
                 | _ => apply word.unsigned_range
-              end; eauto using Forall_map_unsigned; [ ].
-        rewrite word.of_Z_unsigned.
-        assumption. } }
+              end; eauto using Forall_map_unsigned. } }
 
     repeat intro; cbv beta in *.
     cbn [Types.equivalent_flat_base
@@ -330,23 +381,21 @@ Section Proofs.
         cbv [literal] in H; rewrite word.of_Z_unsigned in H;
           inversion H; clear H; subst
     end.
-    match goal with
-    | |- context [eval ?x * eval ?y] =>
-      let H := fresh in
-      pose proof mulmod_correct x y as H;
-        rewrite !map_length in H;
-        repeat (specialize (H (ltac:(auto))));
-        cbv zeta in H
-    end.
-    repeat match goal with
-           | H : _ /\ _ |- _ => destruct H
-           end.
     eexists; cbv [Bignum]; sepsimpl; [ eassumption | ].
     eexists; sepsimpl.
-    { rewrite <-map_unsigned_of_Z. reflexivity. }
+    { rewrite <-(map_word_wrap_bounded
+                   (expr.interp _ (mulmod API.interp_type) _ _))
+        by auto.
+      rewrite <-map_unsigned_of_Z. reflexivity. }
     { rewrite map_length. assumption. }
-    { rewrite map_unsigned_of_Z; assumption. }
-    { assumption. }
+    { rewrite map_unsigned_of_Z.
+      rewrite map_word_wrap_bounded by auto.
+      assumption. }
+    { rewrite map_unsigned_of_Z.
+      rewrite map_word_wrap_bounded by auto.
+      cbn [type.app_curried fst snd] in *.
+      rewrite word_size_in_bytes_eq, ?word.of_Z_unsigned.
+      assumption. }
   Qed.
   (* Print Assumptions mulmod_bedrock_correct. *)
 End Proofs.
