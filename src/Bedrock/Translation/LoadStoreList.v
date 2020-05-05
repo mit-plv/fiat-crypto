@@ -72,7 +72,7 @@ Section Lists.
   Fixpoint load_all_lists {t : base.type} (nextn : nat)
     : base_ltype (listZ:=rep.listZ_mem) t ->
       base_listonly nat t ->
-      base_listonly access_size t ->
+      base_access_sizes (listZ:=rep.listZ_mem) t ->
       nat * base_ltype (listZ:=rep.listZ_local) t * cmd.cmd :=
     match t with
     | base.type.prod a b =>
@@ -84,7 +84,7 @@ Section Lists.
         (nvars, (snd (fst load1), snd (fst load2)),
          cmd.seq (snd load1) (snd load2))
     | base_listZ =>
-      fun (x : string) (l : nat) (s : access_size.access_size) =>
+      fun (x : string) (l : nat) (s : access_size) =>
         load_list s (expr.var x) 0 l nextn
     | _ =>
       fun (x : string) (l s : unit) => (0%nat, x, cmd.skip)
@@ -99,13 +99,18 @@ Section Lists.
       nat (* number of fresh variable names used *)
       * type.for_each_lhs_of_arrow (ltype (listZ:=rep.listZ_local)) t
       * cmd.cmd :=
-    match t with
+    match t as t0 return
+          type.for_each_lhs_of_arrow _ t0 ->
+          type.for_each_lhs_of_arrow _ t0 ->
+          type.for_each_lhs_of_arrow _ t0 ->
+          _ * type.for_each_lhs_of_arrow _ t0 * _
+    with
     | type.base b =>
       fun (args bounds sizes : unit) => (0%nat, args, cmd.skip)
     | type.arrow (type.base s) d =>
       fun (args : base_ltype s * type.for_each_lhs_of_arrow _ d)
           (llengths : base_listonly nat s * type.for_each_lhs_of_arrow _ d)
-          (sizes : base_listonly access_size s
+          (sizes : base_access_sizes s
                    * type.for_each_lhs_of_arrow _ d) =>
         let load_fst :=
             load_all_lists nextn (fst args) (fst llengths) (fst sizes) in
@@ -149,7 +154,7 @@ Section Lists.
   Fixpoint store_return_values {t : base.type}
     : base_ltype (listZ:=rep.listZ_local) t ->
       base_ltype (listZ:=rep.listZ_mem) t ->
-      access_sizes (type.base t) ->
+      access_sizes (listZ:=rep.listZ_mem) (type.base t) ->
       list_lengths (type.base t) * cmd.cmd :=
     match t as t0 return
           base_ltype t0 -> base_ltype t0 -> access_sizes (type.base t0) ->
@@ -165,6 +170,6 @@ Section Lists.
         (length x, store_list s (expr.var y) (map expr.var x) 0)
     | _ =>
       (* rename variable *)
-      fun (x y : string) (s : unit) => (tt, cmd.set y (expr.var x))
+      fun (x y : string) _ => (tt, cmd.set y (expr.var x))
     end.
 End Lists.

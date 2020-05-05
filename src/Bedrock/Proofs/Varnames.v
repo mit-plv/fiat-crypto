@@ -5,7 +5,7 @@ Require Import bedrock2.Syntax.
 Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Map.SeparationLogic.
 Require Import coqutil.Map.Interface coqutil.Map.Properties.
-Require Import coqutil.Word.Interface.
+Require Import coqutil.Word.Interface coqutil.Word.Properties.
 Require Import coqutil.Datatypes.PropSet.
 Require Import Coq.Lists.List. (* after SeparationLogic *)
 Require Import Crypto.Bedrock.Types.
@@ -37,12 +37,12 @@ Section Varnames.
   Section Equivalence.
     Lemma equiv_Z_only_differ_iff1
           {listZ : rep.rep base_listZ}
-          locals1 locals2 vset (varname : base_ltype base_Z) x :
+          locals1 locals2 vset (varname : base_ltype base_Z) s x :
       map.only_differ locals1 vset locals2 ->
       disjoint vset (varname_set_base varname) ->
       Lift1Prop.iff1
-        (rep.equiv x (rep.rtype_of_ltype varname) locals1)
-        (rep.equiv x (rep.rtype_of_ltype varname) locals2).
+        (rep.equiv x (rep.rtype_of_ltype varname) s locals1)
+        (rep.equiv x (rep.rtype_of_ltype varname) s locals2).
     Proof.
       cbn [varname_set_base
              rep.varname_set rep.equiv rep.rtype_of_ltype rep.Z].
@@ -53,12 +53,12 @@ Section Varnames.
     Qed.
 
     Lemma equiv_Z_only_differ_undef {listZ:rep.rep base_listZ} :
-      forall x y locals locals' vset,
+      forall x y s locals locals' vset,
         map.only_differ locals vset locals' ->
         map.undef_on locals vset ->
         Lift1Prop.impl1
-          (equivalent_base (t:=base_Z) x y locals)
-          (equivalent_base x y locals').
+          (equivalent_base (t:=base_Z) x y s locals)
+          (equivalent_base x y s locals').
     Proof.
       cbv [equivalent_base rep.equiv rep.Z WeakestPrecondition.dexpr].
       repeat intro; sepsimpl; subst; eauto.
@@ -69,11 +69,11 @@ Section Varnames.
       Local Existing Instance rep.listZ_local.
 
       Lemma equiv_listZ_only_differ_local
-            locals1 locals2 vset (varnames : base_ltype base_listZ) x mem :
+            locals1 locals2 vset (varnames : base_ltype base_listZ) s x mem :
         map.only_differ locals1 vset locals2 ->
         disjoint vset (varname_set_base varnames) ->
-        rep.equiv x (rep.rtype_of_ltype varnames) locals1 mem ->
-        rep.equiv x (rep.rtype_of_ltype varnames) locals2 mem.
+        rep.equiv x (rep.rtype_of_ltype varnames) s locals1 mem ->
+        rep.equiv x (rep.rtype_of_ltype varnames) s locals2 mem.
       Proof.
         cbn [rep.equiv rep.rtype_of_ltype rep.listZ_local
                        varname_set rep.varname_set].
@@ -101,12 +101,12 @@ Section Varnames.
       Qed.
 
       Lemma equiv_listZ_only_differ_local_iff1
-            locals1 locals2 vset (varnames : base_ltype base_listZ) x :
+            locals1 locals2 vset (varnames : base_ltype base_listZ) s x :
         map.only_differ locals1 vset locals2 ->
         disjoint vset (varname_set_base varnames) ->
         Lift1Prop.iff1
-          (rep.equiv x (rep.rtype_of_ltype varnames) locals1)
-          (rep.equiv x (rep.rtype_of_ltype varnames) locals2).
+          (rep.equiv x (rep.rtype_of_ltype varnames) s locals1)
+          (rep.equiv x (rep.rtype_of_ltype varnames) s locals2).
       Proof.
         cbv [Lift1Prop.iff1]; split; intros;
           eapply equiv_listZ_only_differ_local;
@@ -114,12 +114,12 @@ Section Varnames.
       Qed.
 
       Lemma equiv_listZ_only_differ_undef_local :
-        forall x y locals locals' vset,
+        forall x y s locals locals' vset,
           map.only_differ locals vset locals' ->
           map.undef_on locals vset ->
           Lift1Prop.impl1
-            (equivalent_base (t:=base_listZ) x y locals)
-            (equivalent_base x y locals').
+            (equivalent_base (t:=base_listZ) x y s locals)
+            (equivalent_base x y s locals').
       Proof.
         cbn [equivalent_base rep.equiv rep.listZ_local]; intros; sepsimpl.
         repeat intro; sepsimpl.
@@ -133,11 +133,11 @@ Section Varnames.
       Local Existing Instance rep.listZ_mem.
 
       Lemma equiv_listZ_only_differ_mem
-            locals1 locals2 vset (varnames : base_ltype base_listZ) x mem :
+            locals1 locals2 vset (varnames : base_ltype base_listZ) s x mem :
         map.only_differ locals1 vset locals2 ->
         disjoint vset (varname_set_base varnames) ->
-        rep.equiv x (rep.rtype_of_ltype varnames) locals1 mem ->
-        rep.equiv x (rep.rtype_of_ltype varnames) locals2 mem.
+        rep.equiv x (rep.rtype_of_ltype varnames) s locals1 mem ->
+        rep.equiv x (rep.rtype_of_ltype varnames) s locals2 mem.
       Proof.
         cbn [rep.equiv rep.rtype_of_ltype rep.listZ_mem
                        varname_set rep.varname_set].
@@ -153,12 +153,12 @@ Section Varnames.
       Qed.
 
       Lemma equiv_listZ_only_differ_mem_iff1
-            locals1 locals2 vset (varnames : base_ltype base_listZ) x :
+            locals1 locals2 vset (varnames : base_ltype base_listZ) s x :
         map.only_differ locals1 vset locals2 ->
         disjoint vset (varname_set_base varnames) ->
         Lift1Prop.iff1
-          (rep.equiv x (rep.rtype_of_ltype varnames) locals1)
-          (rep.equiv x (rep.rtype_of_ltype varnames) locals2).
+          (rep.equiv x (rep.rtype_of_ltype varnames) s locals1)
+          (rep.equiv x (rep.rtype_of_ltype varnames) s locals2).
       Proof.
         cbv [Lift1Prop.iff1]; split; intros;
           eapply equiv_listZ_only_differ_mem;
@@ -166,14 +166,14 @@ Section Varnames.
       Qed.
 
       Lemma equiv_listZ_only_differ_undef_mem :
-        forall x y locals locals' vset,
+        forall x y s locals locals' vset,
           map.only_differ locals vset locals' ->
           map.undef_on locals vset ->
           Lift1Prop.impl1
             (equivalent_base
                (t:=base_listZ) (listZ:=rep.listZ_mem)
-               x y locals)
-            (equivalent_base x y locals').
+               x y s locals)
+            (equivalent_base x y s locals').
       Proof.
         cbn [equivalent_base rep.equiv rep.listZ_mem]; intros; sepsimpl.
         repeat intro; sepsimpl. eexists.
@@ -182,19 +182,21 @@ Section Varnames.
         eapply (equiv_Z_only_differ_undef (listZ:=rep.listZ_mem)); eauto.
       Qed.
 
-      Lemma equiv_nil_iff1 y locals :
+      Lemma equiv_nil_iff1 y s locals :
         Lift1Prop.iff1
-          (rep.equiv (rep:=rep.listZ_mem) [] y locals)
+          (rep.equiv (rep:=rep.listZ_mem) [] y s locals)
           (Lift1Prop.ex1
-             (fun x => rep.equiv (rep:=rep.Z) x y locals)).
+             (fun x => rep.equiv (rep:=rep.Z) x y tt locals)).
       Proof.
         cbv [rep.equiv rep.listZ_mem rep.Z Array.array map].
         intro; split; intros;
           repeat match goal with
                  | _ => progress subst
                  | _ => progress sepsimpl
+                 | _ => rewrite word.of_Z_unsigned in *
                  | |- Lift1Prop.ex1 _ _ => eexists
                  | |- _ /\ _ => split
+                 | _ => solve [apply word.unsigned_range]
                  | _ => solve [eauto]
                  end.
       Qed.
@@ -226,28 +228,28 @@ Section Varnames.
     Section Generic.
       Context {listZ : rep.rep base_listZ}
               (equiv_listZ_only_differ_undef :
-                 forall x y locals1 locals2 vset,
+                 forall x y s locals1 locals2 vset,
                    map.only_differ locals1 vset locals2 ->
                    map.undef_on locals1 vset ->
                    Lift1Prop.impl1
-                     (rep.equiv (rep:=listZ) x y locals1)
-                     (rep.equiv x y locals2))
+                     (rep.equiv (rep:=listZ) x y s locals1)
+                     (rep.equiv x y s locals2))
               (equiv_listZ_only_differ :
                  forall
                    locals1 locals2 vset
-                   (varnames : base_ltype base_listZ) x mem,
+                   (varnames : base_ltype base_listZ) s x mem,
                    map.only_differ locals1 vset locals2 ->
                    disjoint vset (varname_set_base varnames) ->
-                   rep.equiv x (rep.rtype_of_ltype varnames) locals1 mem ->
-                   rep.equiv x (rep.rtype_of_ltype varnames) locals2 mem).
+                   rep.equiv x (rep.rtype_of_ltype varnames) s locals1 mem ->
+                   rep.equiv x (rep.rtype_of_ltype varnames) s locals2 mem).
 
       Lemma equivalent_only_differ {t}
-            locals1 locals2 vset (varnames : base_ltype t) x :
+            locals1 locals2 vset (varnames : base_ltype t) s x :
         map.only_differ locals1 vset locals2 ->
         disjoint vset (varname_set_base varnames) ->
         forall mem,
-          equivalent_base x (base_rtype_of_ltype varnames) locals1 mem ->
-          equivalent_base x (base_rtype_of_ltype varnames) locals2 mem.
+          equivalent_base x (base_rtype_of_ltype varnames) s locals1 mem ->
+          equivalent_base x (base_rtype_of_ltype varnames) s locals2 mem.
       Proof.
         intros Hdiffer Hexcl.
         induction t;
@@ -268,12 +270,12 @@ Section Varnames.
       Qed.
 
       Lemma equivalent_only_differ_iff1 {t}
-            locals1 locals2 vset (varnames : base_ltype t) x :
+            locals1 locals2 vset (varnames : base_ltype t) s x :
         map.only_differ locals1 vset locals2 ->
         disjoint vset (varname_set_base varnames) ->
         Lift1Prop.iff1
-          (equivalent_base x (base_rtype_of_ltype varnames) locals1)
-          (equivalent_base x (base_rtype_of_ltype varnames) locals2).
+          (equivalent_base x (base_rtype_of_ltype varnames) s locals1)
+          (equivalent_base x (base_rtype_of_ltype varnames) s locals2).
       Proof.
         repeat intro. split; intros.
         all:eapply equivalent_only_differ; eauto using only_differ_sym.
@@ -282,15 +284,15 @@ Section Varnames.
       Lemma equivalent_args_only_differ_iff1 {t}
             locals1 locals2 vset
             (argnames : type.for_each_lhs_of_arrow ltype t)
-            x :
+            s x :
         map.only_differ locals1 vset locals2 ->
         disjoint vset (varname_set_args argnames) ->
         let argvalues :=
             type.map_for_each_lhs_of_arrow
               rtype_of_ltype argnames in
         Lift1Prop.iff1
-          (equivalent_args x argvalues locals1)
-          (equivalent_args x argvalues locals2).
+          (equivalent_args x argvalues s locals1)
+          (equivalent_args x argvalues s locals2).
       Proof.
         induction t;
           cbv [Lift1Prop.iff1];
@@ -310,12 +312,12 @@ Section Varnames.
       Qed.
 
       Lemma equivalent_only_differ_undef {t} :
-        forall locals1 locals2 vset x y,
+        forall locals1 locals2 vset x y s,
           map.only_differ locals1 vset locals2 ->
           map.undef_on locals1 vset ->
           Lift1Prop.impl1
-            (equivalent_base (t:=t) x y locals1)
-            (equivalent_base x y locals2).
+            (equivalent_base (t:=t) x y s locals1)
+            (equivalent_base x y s locals2).
       Proof.
         induction t;
           cbn [equivalent_base];

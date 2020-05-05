@@ -35,8 +35,8 @@ Section Flatten.
   Lemma flatten_base_samelength {t}
         (names : base_ltype t)
         (value : base.interp t) :
-    forall (words : list Semantics.word) R mem,
-      sep (equivalent_flat_base value words) R mem ->
+    forall (words : list Semantics.word) s R mem,
+      sep (equivalent_flat_base value words s) R mem ->
       length words = length (flatten_base_ltype names).
   Proof.
     induction t; cbn [flatten_base_ltype equivalent_flat_base];
@@ -57,8 +57,8 @@ Section Flatten.
   Lemma flatten_args_samelength {t}
         (argnames : type.for_each_lhs_of_arrow ltype t)
         (args : type.for_each_lhs_of_arrow API.interp_type t) :
-    forall (flat_args : list Semantics.word) R mem,
-      sep (equivalent_flat_args args flat_args) R mem ->
+    forall (flat_args : list Semantics.word) s R mem,
+      sep (equivalent_flat_args args flat_args s) R mem ->
       length flat_args = length (flatten_argnames argnames).
   Proof.
     induction t;
@@ -67,8 +67,8 @@ Section Flatten.
              | _ => progress cbn [equivalent_flat_args
                                     equivalent_flat_base
                                     flatten_argnames] in *
-             | _ => progress break_match 
-             | _ => progress sepsimpl 
+             | _ => progress break_match
+             | _ => progress sepsimpl
              | _ => rewrite app_length
              | _ => solve [eauto]
              end.
@@ -80,8 +80,8 @@ Section Flatten.
   Lemma of_list_zip_flatten_argnames {t}
         (argnames : type.for_each_lhs_of_arrow ltype t)
         (args : type.for_each_lhs_of_arrow API.interp_type t)
-        (flat_args : list Semantics.word) R mem :
-    sep (equivalent_flat_args args flat_args) R mem ->
+        (flat_args : list Semantics.word) s R mem :
+    sep (equivalent_flat_args args flat_args s) R mem ->
     (exists l,
         map.of_list_zip (flatten_argnames argnames) flat_args = Some l).
   Proof.
@@ -256,8 +256,8 @@ Section Flatten.
 
   Lemma flatten_listonly_samelength {t}
         (names : listonly_base_ltype t) (value : base.interp t) :
-    forall (words : list Semantics.word) R mem,
-      sep (equivalent_listonly_flat_base value words) R mem ->
+    forall (words : list Semantics.word) s R mem,
+      sep (equivalent_listonly_flat_base value words s) R mem ->
       length words = length (flatten_listonly_base_ltype names).
   Proof.
     induction t;
