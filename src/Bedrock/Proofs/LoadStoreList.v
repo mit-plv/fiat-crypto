@@ -11,6 +11,7 @@ Require Import bedrock2.Map.SeparationLogic.
 Require Import bedrock2.WeakestPreconditionProperties.
 Require Import coqutil.Word.Interface coqutil.Word.Properties.
 Require Import coqutil.Map.Interface coqutil.Map.Properties.
+Require Import Crypto.AbstractInterpretation.AbstractInterpretation.
 Require Import Crypto.COperationSpecifications. (* for list_Z_bounded_by *)
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Tactics.
@@ -24,6 +25,7 @@ Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
 Import ListNotations.
 
+Import AbstractInterpretation.Compilers.
 Import API.Compilers.
 Import Types.Notations Types.Types.
 
@@ -33,6 +35,74 @@ Section LoadStoreList.
   Local Existing Instance rep.Z.
   Local Instance sem_ok : Semantics.parameters_ok semantics
     := semantics_ok.
+
+  (* states that access sizes are within machine integer width *)
+  Fixpoint base_access_sizes_good {t}
+    : base_access_sizes (listZ:=rep.listZ_mem) t -> Prop :=
+    match t with
+    | base.type.prod a b =>
+      fun s => base_access_sizes_good (fst s)
+               /\ base_access_sizes_good (snd s)
+    | base_listZ =>
+      fun s =>
+        (Z.of_nat (Memory.bytes_per
+                     (width:=Semantics.width) s * 8) < Semantics.width)%Z
+    | _ => fun _ => True
+    end.
+  Fixpoint access_sizes_good {t}
+    : access_sizes (listZ:=rep.listZ_mem) t -> Prop :=
+    match t with
+    | type.base _ => base_access_sizes_good
+    | _ => fun _ => True
+    end.
+  Fixpoint access_sizes_good_args {t}
+    : type.for_each_lhs_of_arrow
+        (access_sizes (listZ:=rep.listZ_mem)) t -> Prop :=
+    match t with
+    | type.base _ => fun _ : unit => True
+    | type.arrow _ _ =>
+      fun s => access_sizes_good (fst s) /\ access_sizes_good_args (snd s)
+    end.
+
+  Lemma access_sizes_good_in_range size :
+    base_access_sizes_good (t:=base_listZ) size ->
+    (2 ^ (Z.of_nat (Memory.bytes_per
+                      (width:=Semantics.width) size) * 8)
+     <= 2 ^ Semantics.width)%Z.
+  Proof.
+    cbv [base_access_sizes_good]; intros.
+    apply Z.pow_le_mono_r; lia.
+  Qed.
+
+  (* states that each list Z is within its access size *)
+  Fixpoint within_base_access_sizes {t}
+    : base.interp t ->
+      base_access_sizes (listZ:=rep.listZ_mem) t -> Prop :=
+      match t with
+      | base.type.prod a b =>
+        fun x s =>
+          within_base_access_sizes (fst x) (fst s) /\
+          within_base_access_sizes (snd x) (snd s)
+      | base_listZ =>
+        fun x s =>
+          let bytes :=
+              Z.of_nat (Memory.bytes_per (width:=Semantics.width) s) in
+          Forall (fun z => 0 <= z < 2 ^ (bytes * 8))%Z x
+      | _ => fun _ _ => True
+      end.
+
+  Fixpoint within_access_sizes_args {t}
+    : type.for_each_lhs_of_arrow API.interp_type t ->
+      type.for_each_lhs_of_arrow
+        (access_sizes (listZ:=rep.listZ_mem)) t -> Prop :=
+    match t with
+    | type.base _ => fun _ _ => True
+    | type.arrow (type.base s) _ =>
+      fun x s =>
+        within_base_access_sizes (fst x) (fst s) /\
+        within_access_sizes_args (snd x) (snd s)
+    | _ => fun _ _ => False
+    end.
 
   (* separation-logic relation that says space exists in memory for lists
      (other values are ignored) *)
@@ -177,45 +247,6 @@ Section LoadStoreList.
       cancel_seps_at_indices 0 0; [ reflexivity | ].
       reflexivity. }
     { cancel. reflexivity. }
-  Qed.
-
-  (* TODO : move? *)
-  Fixpoint base_access_sizes_good {t}
-    : base_access_sizes (listZ:=rep.listZ_mem) t -> Prop :=
-    match t with
-    | base.type.prod a b =>
-      fun s => base_access_sizes_good (fst s)
-               /\ base_access_sizes_good (snd s)
-    | base_listZ =>
-      fun s =>
-        (Z.of_nat (Memory.bytes_per
-                     (width:=Semantics.width) s * 8) < Semantics.width)%Z
-    | _ => fun _ => True
-    end.
-  Fixpoint access_sizes_good {t}
-    : access_sizes (listZ:=rep.listZ_mem) t -> Prop :=
-    match t with
-    | type.base _ => base_access_sizes_good
-    | _ => fun _ => True
-    end.
-  Fixpoint access_sizes_good_args {t}
-    : type.for_each_lhs_of_arrow
-        (access_sizes (listZ:=rep.listZ_mem)) t -> Prop :=
-    match t with
-    | type.base _ => fun _ : unit => True
-    | type.arrow _ _ =>
-      fun s => access_sizes_good (fst s) /\ access_sizes_good_args (snd s)
-    end.
-
-  (* TODO: move? *)
-  Lemma access_sizes_good_in_range size :
-    base_access_sizes_good (t:=base_listZ) size ->
-    (2 ^ (Z.of_nat (Memory.bytes_per
-                      (width:=Semantics.width) size) * 8)
-     <= 2 ^ Semantics.width)%Z.
-  Proof.
-    cbv [base_access_sizes_good]; intros.
-    apply Z.pow_le_mono_r; lia.
   Qed.
 
   Lemma load_list_item_correct
@@ -796,22 +827,6 @@ Section LoadStoreList.
       eassumption. }
   Qed.
 
-  (* TODO : move *)
-  Fixpoint within_base_access_sizes {t}
-    : base.interp t ->
-      base_access_sizes (listZ:=rep.listZ_mem) t -> Prop :=
-      match t with
-      | base.type.prod a b =>
-        fun x s =>
-          within_base_access_sizes (fst x) (fst s) /\
-          within_base_access_sizes (snd x) (snd s)
-      | base_listZ =>
-        fun x s =>
-          let bytes :=
-              Z.of_nat (Memory.bytes_per (width:=Semantics.width) s) in
-          Forall (fun z => 0 <= z < 2 ^ (bytes * 8))%Z x
-      | _ => fun _ _ => True
-      end.
 
   Lemma store_return_values_correct {t} init_locals :
     forall (retnames_local : base_ltype t)

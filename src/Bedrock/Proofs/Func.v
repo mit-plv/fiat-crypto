@@ -148,17 +148,19 @@ Section Func.
   Lemma look_up_return_values {t} :
     forall (ret : base.interp t)
            (retnames : listexcl_base_ltype (listZ:=rep.listZ_mem) t)
+           (retsizes : base_access_sizes t)
            (locals : Semantics.locals)
            (mem : Semantics.mem)
            (R : Semantics.mem -> Prop),
       sep (equivalent_listexcl
              ret (map_listexcl (@base_rtype_of_ltype _ _) retnames)
-             locals) R mem ->
+             retsizes locals) R mem ->
       WeakestPrecondition.list_map
         (WeakestPrecondition.get locals)
         (flatten_listexcl_base_ltype retnames)
         (fun flat_rets =>
-           sep (equivalent_listexcl_flat_base ret flat_rets) R mem).
+           sep (equivalent_listexcl_flat_base ret flat_rets retsizes)
+               R mem).
   Proof.
     cbv [flatten_retnames].
     induction t;
@@ -222,16 +224,17 @@ Section Func.
   Lemma equivalent_flat_base_iff1 {t} :
     forall (names : base_ltype t)
            (values : base.interp t)
+           (sizes : base_access_sizes t)
            (flat_values : list Semantics.word)
            (locals locals' : Semantics.locals),
       NoDup (flatten_base_ltype names) ->
       map.putmany_of_list_zip
         (flatten_base_ltype names) flat_values locals = Some locals' ->
       Lift1Prop.iff1
-        (equivalent_flat_base values flat_values) 
-        (equivalent_base values (base_rtype_of_ltype names) locals').
+        (equivalent_flat_base values flat_values sizes)
+        (equivalent_base values (base_rtype_of_ltype names) sizes locals').
   Proof.
-    induction t; 
+    induction t;
       cbn [rep.Z rep.equiv base_rtype_of_ltype
                  equivalent_base equivalent_flat_base
                  flatten_base_ltype];
@@ -277,7 +280,7 @@ Section Func.
         erewrite <-flatten_base_samelength by ecancel_assumption.
         rewrite firstn_length_firstn, skipn_length_firstn.
         assumption. }
-      { eexists. 
+      { eexists.
         eapply Proper_sep_iff1;
           [ eapply IHt1; eassumption
           | eapply IHt2; eassumption | ].
@@ -303,7 +306,7 @@ Section Func.
       end.
       split; intros;
         repeat match goal with
-               | _ => progress sepsimpl 
+               | _ => progress sepsimpl
                | _ => progress subst
                | H : Some _ = Some _ |- _ =>
                  inversion H; clear H; subst
@@ -324,6 +327,7 @@ Section Func.
   Lemma equivalent_flat_args_iff1 {t} :
     forall (argnames : type.for_each_lhs_of_arrow ltype t)
            (args : type.for_each_lhs_of_arrow API.interp_type t)
+           (argsizes : type.for_each_lhs_of_arrow access_sizes t)
            (flat_args : list Semantics.word)
            (locals locals' : Semantics.locals),
       NoDup (flatten_argnames argnames) ->
@@ -332,8 +336,8 @@ Section Func.
       let argvalues :=
           type.map_for_each_lhs_of_arrow rtype_of_ltype argnames in
       Lift1Prop.iff1
-        (equivalent_flat_args args flat_args) 
-        (equivalent_args args argvalues locals').
+        (equivalent_flat_args args flat_args argsizes)
+        (equivalent_args args argvalues argsizes locals').
   Proof.
     induction t;
       cbn [equivalent_args
@@ -345,8 +349,7 @@ Section Func.
           pose proof H;
             eapply map.putmany_of_list_zip_sameLength in H
         end.
-    { 
-      destruct flat_args; cbn [length] in *; try lia; [ ].
+    { destruct flat_args; cbn [length] in *; try lia; [ ].
       repeat intro; cbv [emp]; tauto. }
     { destruct argnames. cbn [fst snd rtype_of_ltype] in *.
       match goal with
@@ -390,6 +393,7 @@ Section Func.
 
   Lemma equivalent_listonly_flat_iff1 {t} :
     forall (names : listonly_base_ltype t) (values : list Semantics.word)
+           (sizes : base_access_sizes t)
            (l locals init_locals : Semantics.locals)
            (vset : PropSet.set string) (x : base.interp t),
       NoDup (flatten_listonly_base_ltype names) ->
@@ -397,12 +401,13 @@ Section Func.
       map.only_differ init_locals vset locals ->
       PropSet.disjoint vset (PropSet.of_list (flatten_listonly_base_ltype names)) ->
       Lift1Prop.iff1
-        (equivalent_listonly x (map_listonly base_rtype_of_ltype names) locals)
-        (equivalent_listonly_flat_base x values).
+        (equivalent_listonly
+           x (map_listonly base_rtype_of_ltype names) sizes locals)
+        (equivalent_listonly_flat_base x values sizes).
   Proof.
     induction t;
       cbn [fst snd equivalent_listonly equivalent_listonly_flat_base
-               flatten_listonly_base_ltype 
+               flatten_listonly_base_ltype
                equivalent_flat_base map_listonly];
       intros; break_match; try reflexivity; [ | | ].
     { cbn [map.putmany_of_list_zip] in *.
@@ -463,10 +468,12 @@ Section Func.
       cbv [WeakestPrecondition.get].
       split; intros; sepsimpl; subst; try reflexivity.
       { eexists. sepsimpl; eauto; [ ].
-        rewrite word.of_Z_unsigned; congruence. }
+        rewrite !word.of_Z_unsigned in *.
+        congruence. }
       { eexists; sepsimpl; eauto; [ ].
-        match goal with H : _ |- _ => 
-                        erewrite word.of_Z_unsigned in H end.
+        rewrite !word.of_Z_unsigned in *.
+        match goal with H : _ |- _ =>
+                        rewrite word.of_Z_unsigned in H end.
         eexists; split; eauto. } }
   Qed.
 
@@ -477,8 +484,10 @@ Section Func.
     Wf3 e ->
     forall (fname : string)
            (retnames : base_ltype (type.final_codomain t))
+           (retsizes : base_access_sizes (type.final_codomain t))
            (argnames : type.for_each_lhs_of_arrow ltype t)
            (arglengths : type.for_each_lhs_of_arrow list_lengths t)
+           (argsizes : type.for_each_lhs_of_arrow access_sizes t)
            (args : type.for_each_lhs_of_arrow API.interp_type t),
       (* rets := fiat-crypto interpretation of e1 applied to args *)
       let rets : base.interp (type.final_codomain t) :=
@@ -488,7 +497,8 @@ Section Func.
       let retlengths := list_lengths_from_value rets in
       (* out := translation output for e2; triple of
          (function arguments, function return variable names, body) *)
-      let out := translate_func e argnames arglengths retnames in
+      let out := translate_func
+                   e argnames arglengths argsizes retnames retsizes in
       let f : bedrock_func := (fname, fst out) in
       let lengths := snd out in
       forall (tr : Semantics.trace)
@@ -507,19 +517,27 @@ Section Func.
         (* argnames don't contain variables we could later overwrite *)
         (forall n, ~ varname_set_args argnames (varname_gen n)) ->
         (* argument values are equivalent *)
-        sep (equivalent_flat_args args flat_args) Ra mem ->
+        sep (equivalent_flat_args args flat_args argsizes) Ra mem ->
         (* argnames don't have duplicates *)
         NoDup (flatten_argnames argnames) ->
+        (* argument bounds are within allowed integer size *)
+        access_sizes_good_args argsizes ->
+        (* argument bounds are obeyed *)
+        within_access_sizes_args args argsizes ->
         (* retnames don't contain variables we could later overwrite *)
         (forall n, ~ varname_set_base retnames (varname_gen n)) ->
         (* retnames don't have duplicates *)
         NoDup (flatten_base_ltype retnames) ->
+        (* return value bounds are within allowed integer size *)
+        base_access_sizes_good retsizes ->
+        (* argument bounds are obeyed *)
+        within_base_access_sizes rets retsizes ->
         (* argnames and retnames are disjoint *)
         PropSet.disjoint (varname_set_args argnames)
                          (varname_set_base retnames) ->
         (* seplogic frame for return values *)
         sep (lists_reserved_with_initial_context
-               retlengths argnames retnames argvalues) Rr mem ->
+               retlengths argnames retnames retsizes argvalues) Rr mem ->
         (* translated function produces equivalent results *)
         WeakestPrecondition.call
           (f :: functions) fname tr mem argvalues
@@ -528,8 +546,10 @@ Section Func.
              (* lengths of output lists match *)
              retlengths = snd out /\
              (* return values are equivalent *)
-             sep (sep (equivalent_listexcl_flat_base rets flat_rets)
-                      (equivalent_listonly_flat_base rets out_ptrs))
+             sep (sep (equivalent_listexcl_flat_base
+                         rets flat_rets retsizes)
+                      (equivalent_listonly_flat_base
+                         rets out_ptrs retsizes))
                  Rr mem').
   Proof.
     cbv [translate_func Wf3]; intros. subst.

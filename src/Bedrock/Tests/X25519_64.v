@@ -43,7 +43,10 @@ Module X25519_64.
        fst (translate_func mulmod
                            ("in0", ("in1", tt)) (* argument names *)
                            (n, (n, tt)) (* lengths for list arguments *)
-                           "out0" (* return value name *))).
+                           (access_size.word, (access_size.word, tt)) (* sizes for argument arrays *)
+                           "out0" (* return value name *)
+                           access_size.word (* sizes for output arrays *)
+                           )).
 
     Goal (error_free_cmd (snd (snd mulmod_bedrock)) = true).
     Proof. vm_compute. reflexivity. Qed.
@@ -60,9 +63,35 @@ Module X25519_64.
        fst (translate_func addmod
                            ("in0", ("in1", tt)) (* argument names *)
                            (n, (n, tt)) (* lengths for list arguments *)
-                           "out0" (* return value name *))).
+                           (access_size.word, (access_size.word, tt)) (* sizes for argument arrays *)
+                           "out0" (* return value name *)
+                           access_size.word (* sizes for output arrays *)
+                           )).
 
     Goal (error_free_cmd (snd (snd addmod_bedrock)) = true).
+    Proof. vm_compute. reflexivity. Qed.
+
+    Let n_bytes :=
+      Eval vm_compute in (n * Z.to_nat word_size_in_bytes)%nat.
+
+    Derive to_bytes
+           SuchThat
+           (UnsaturatedSolinas.to_bytes
+              n s c machine_wordsize = ErrorT.Success to_bytes)
+           As to_bytes_eq.
+    Proof. vm_compute; reflexivity. Qed.
+
+    Definition to_bytes_bedrock : bedrock_func :=
+      ("to_bytes_bedrock",
+       fst (translate_func to_bytes
+                           ("in0", tt) (* argument names *)
+                           (n, tt) (* lengths for list arguments *)
+                           (access_size.word, tt) (* sizes for argument arrays *)
+                           "out0" (* return value name *)
+                           access_size.one (* sizes for output arrays *)
+                           )).
+
+    Goal (error_free_cmd (snd (snd to_bytes_bedrock)) = true).
     Proof. vm_compute. reflexivity. Qed.
 
     Derive from_bytes
@@ -76,15 +105,17 @@ Module X25519_64.
       ("from_bytes_bedrock",
        fst (translate_func from_bytes
                            ("in0", tt) (* argument names *)
-                           (n, tt) (* lengths for list arguments *)
-                           "out0" (* return value name *))).
+                           (n_bytes, tt) (* lengths for list arguments *)
+                           (access_size.one, tt) (* sizes for argument arrays *)
+                           "out0" (* return value name *)
+                           access_size.word (* sizes for output arrays *)
+                           )).
 
     Goal (error_free_cmd (snd (snd from_bytes_bedrock)) = true).
     Proof. vm_compute. reflexivity. Qed.
 
     Import NotationsCustomEntry.
     Local Set Printing Width 150.
-    Local Set Printing Width 500.
     (* Compute mulmod_bedrock. *)
     Redirect "Crypto.Bedrock.Tests.X25519_64.mulmod_bedrock" Compute mulmod_bedrock.
   End __.
