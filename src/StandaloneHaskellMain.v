@@ -31,6 +31,8 @@ Extract Inlined Constant _IO_bind => "(Prelude.>>=)".
 Extract Inlined Constant _IO_return => "return".
 Extract Inlined Constant IO_unit => "GHC.Base.IO ()".
 Extract Inlined Constant cast_io => "".
+(* COQBUG(https://github.com/coq/coq/issues/12258) *)
+Extract Inlined Constant String.eqb => "((Prelude.==) :: Prelude.String -> Prelude.String -> Prelude.Bool)".
 
 Local Notation "x <- y ; f" := (_IO_bind _ _ y (fun x => f)).
 
