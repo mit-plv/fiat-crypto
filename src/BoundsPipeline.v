@@ -345,6 +345,8 @@ Module Pipeline.
                                  false (* do extra bounds check *) false (* static *) "" "f" syntax_tree (fun _ _ => nil) None arg_bounds ZRange.type.base.option.None with
                          | inl (E_lines, types_used)
                            => ["When doing bounds analysis on the syntax tree:"]
+                                ++ show_lines false syntax_tree
+                                ++ [""; "which can be pretty-printed as:"]
                                 ++ E_lines ++ [""]
                                 ++ ["with input bounds " ++ show true arg_bounds ++ "." ++ String.NewLine]%string
                          | inr errs
