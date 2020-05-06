@@ -62,6 +62,8 @@ Module Compilers.
   Bind Scope etype_scope with base.
 
   Global Arguments ident_Literal {_} _ : assert.
+  Global Arguments ident_comment {_} : assert.
+  Global Arguments ident_comment_no_keep {_} : assert.
   Global Arguments ident_nil {_} : assert.
   Global Arguments ident_cons {_} : assert.
   Global Arguments ident_pair {_ _} : assert.
@@ -129,6 +131,7 @@ Module Compilers.
       Notation zrange := zrange (only parsing).
       Notation bool := bool (only parsing).
       Notation base_beq := Compilers.base_beq (only parsing).
+      Notation string := string (only parsing).
 
       Export Language.Compilers.base.type.
       Notation type := (@type base) (only parsing).
@@ -166,6 +169,8 @@ Module Compilers.
     Notation ident := Compilers.ident (only parsing).
 
     Notation Literal := Compilers.ident_Literal (only parsing).
+    Notation comment := Compilers.ident_comment (only parsing).
+    Notation comment_no_keep := Compilers.ident_comment_no_keep (only parsing).
     Notation Nat_succ := Compilers.ident_Nat_succ (only parsing).
     Notation Nat_pred := Compilers.ident_Nat_pred (only parsing).
     Notation Nat_max := Compilers.ident_Nat_max (only parsing).
@@ -282,6 +287,13 @@ Module Compilers.
     Notation buildInterpIdentCorrect := Compilers.buildInterpIdentCorrect (only parsing).
     Notation eqv_Reflexive_Proper := Compilers.eqv_Reflexive_Proper (only parsing).
     Notation interp_Proper := Compilers.ident_interp_Proper (only parsing).
+
+    Definition is_comment t (idc : ident t) : Datatypes.bool
+      := match idc with
+         | comment _ => true
+         | comment_no_keep _ => true
+         | _ => false
+         end.
 
     Module Export Notations.
       Export Language.Compilers.ident.Notations.

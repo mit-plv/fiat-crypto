@@ -14,7 +14,8 @@ Module Compilers.
     Section with_counter.
       Context {t : Type}
               (one : t)
-              (incr : t -> t).
+              (incr : t -> t)
+              (incr_always_live : option t -> t).
 
       Local Notation PositiveMap_incr idx m
         := (PositiveMap.add idx (match PositiveMap.find idx m with
@@ -22,12 +23,29 @@ Module Compilers.
                                  | None => one
                                  end) m).
 
+      Local Notation PositiveMap_incr_always_live idx m
+        := (PositiveMap.add idx (incr_always_live (PositiveMap.find idx m)) m).
+
       Section with_ident.
         Context {base_type : Type}.
         Local Notation type := (type.type base_type).
-        Context {ident : type -> Type}.
+        Context {ident : type -> Type}
+                (** some identifiers, like [comment], might always be live *)
+                (is_ident_always_live : forall t, ident t -> bool).
         Local Notation expr := (@expr.expr base_type ident).
         (** N.B. This does not work well when let-binders are not at top-level *)
+        Fixpoint contains_always_live_ident {var} (dummy : forall t, var t) {t} (e : @expr var t)
+          : bool
+          := match e with
+             | expr.Var _ _ => false
+             | expr.Ident t idc => is_ident_always_live _ idc
+             | expr.App s d f x
+               => contains_always_live_ident dummy f || contains_always_live_ident dummy x
+             | expr.Abs s d f
+               => contains_always_live_ident dummy (f (dummy _))
+             | expr.LetIn tx tC ex eC
+               => contains_always_live_ident dummy ex || contains_always_live_ident dummy (eC (dummy _))
+             end%bool.
         Fixpoint compute_live_counts' {t} (e : @expr (fun _ => positive) t) (cur_idx : positive) (live : PositiveMap.t _)
           : positive * PositiveMap.t _
           := match e with
@@ -42,10 +60,13 @@ Module Compilers.
                   (cur_idx, live)
              | expr.LetIn tx tC ex eC
                => let '(idx, live) := @compute_live_counts' tC (eC cur_idx) (Pos.succ cur_idx) live in
+                  let live := if contains_always_live_ident (fun _ => cur_idx (* dummy *)) ex
+                              then PositiveMap_incr_always_live cur_idx live
+                              else live in
                   if PositiveMap.mem cur_idx live
                   then @compute_live_counts' tx ex idx live
                   else (idx, live)
-             end.
+             end%bool.
         Definition compute_live_counts {t} e : PositiveMap.t _ := snd (@compute_live_counts' t e 1 (PositiveMap.empty _)).
         Definition ComputeLiveCounts {t} (e : expr.Expr t) := compute_live_counts (e _).
 
@@ -95,8 +116,8 @@ Module Compilers.
                     | more => false
                     end.
 
-      Definition Subst01 {base_type ident} {t} (e : expr.Expr t) : expr.Expr t
-        := @Subst0n _ one incr base_type ident (fun _ _ x _ => x) should_subst t e.
+      Definition Subst01 {base_type ident} (is_ident_always_live : forall t, ident t -> bool) {t} (e : expr.Expr t) : expr.Expr t
+        := @Subst0n _ one incr (fun _ => more) base_type ident is_ident_always_live (fun _ _ x _ => x) should_subst t e.
     End for_01.
   End Subst01.
 
@@ -104,14 +125,15 @@ Module Compilers.
     Section with_ident.
       Context {base_type : Type}.
       Local Notation type := (type.type base_type).
-      Context {ident : type -> Type}.
+      Context {ident : type -> Type}
+              (is_ident_always_live : forall t, ident t -> bool).
       Local Notation expr := (@expr.expr base_type ident).
 
       Definition OUGHT_TO_BE_UNUSED {T1 T2} (v : T1) (v' : T2) := v.
       Global Opaque OUGHT_TO_BE_UNUSED.
 
       Definition ComputeLive {t} (e : expr.Expr t) : PositiveMap.t unit
-        := @Subst01.ComputeLiveCounts unit tt (fun _ => tt) base_type ident _ e.
+        := @Subst01.ComputeLiveCounts unit tt (fun _ => tt) (fun _ => tt) base_type ident is_ident_always_live _ e.
       Definition is_live (map : PositiveMap.t unit) (idx : positive) : bool
         := match PositiveMap.find idx map with
            | Some tt => true
@@ -121,7 +143,7 @@ Module Compilers.
         := negb (is_live map idx).
 
       Definition EliminateDead {t} (e : expr.Expr t) : expr.Expr t
-        := @Subst01.Subst0n unit tt (fun _ => tt) base_type ident (@OUGHT_TO_BE_UNUSED) (fun _ => false) t e.
+        := @Subst01.Subst0n unit tt (fun _ => tt) (fun _ => tt) base_type ident is_ident_always_live (@OUGHT_TO_BE_UNUSED) (fun _ => false) t e.
     End with_ident.
   End DeadCodeElimination.
 End Compilers.

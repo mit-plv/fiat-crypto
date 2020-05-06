@@ -23,6 +23,8 @@ Import Stringification.Language.Compilers.ToString.int.Notations.
 
 Module Go.
 
+  Definition comment_block := List.map (fun line => "/* " ++ line ++ " */")%string.
+
   (* Supported integer bitwidths *)
   Definition stdint_bitwidths : list Z := [8; 16; 32; 64].
   (* supported bitwidth for things like bits.Mul64 *)
@@ -231,6 +233,8 @@ Module Go.
          call that will store its result in this variable. 2.) this will
          have a non-pointer an integer type *)
       "var " ++ name ++ " " ++ primitive_type_to_string prefix t sz
+    | IR.Comment lines _ =>
+      String.concat String.NewLine (comment_block lines)
     | IR.AssignNth name n val =>
       name ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "] = " ++ arith_to_string prefix val
     end.
@@ -435,7 +439,7 @@ Module Go.
     end.
 
   Definition OutputGoAPI : ToString.OutputLanguageAPI :=
-    {| ToString.comment_block := List.map (fun line => "/* " ++ line ++ " */")%string;
+    {| ToString.comment_block := comment_block;
        ToString.ToFunctionLines := @ToFunctionLines;
        ToString.header := header;
        ToString.footer := fun _ _ _ _ => [];

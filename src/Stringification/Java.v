@@ -24,6 +24,7 @@ Import Stringification.Language.Compilers.ToString.
 Import Stringification.Language.Compilers.ToString.int.Notations.
 
 Module Java.
+  Definition comment_block := List.map (fun line => "/* " ++ line ++ " */")%string.
 
   (* Header imports and type defs *)
   Definition header (machine_wordsize : Z) (static : bool) (prefix : string) (infos : ToString.ident_infos)
@@ -177,6 +178,8 @@ Module Java.
          call that will store its result in this variable. 2.) this will
          have a non-pointer an integer type *)
       primitive_type_to_string true prefix IR.type.Zptr sz ++ " " ++ name ++ " = new " ++ primitive_type_to_string true prefix IR.type.Zptr sz ++ "((" ++ primitive_type_to_string false prefix IR.type.Z sz ++ ")0);"
+    | IR.Comment lines _ =>
+      String.concat String.NewLine (comment_block lines)
     | IR.AssignNth name n val =>
       name ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "] = " ++ arith_to_string prefix val ++ ";"
     end.
@@ -375,7 +378,7 @@ Module Java.
     end.
 
   Definition OutputJavaAPI : ToString.OutputLanguageAPI :=
-    {| ToString.comment_block := List.map (fun line => "/* " ++ line ++ " */")%string;
+    {| ToString.comment_block := comment_block;
        ToString.ToFunctionLines := @ToFunctionLines;
        ToString.header := header;
        ToString.footer := footer;

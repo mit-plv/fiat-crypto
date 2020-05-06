@@ -256,6 +256,7 @@ Module Pipeline.
          | base.type.type_base base.type.nat
          | base.type.type_base base.type.bool
          | base.type.type_base base.type.zrange
+         | base.type.type_base base.type.string
            => fun _ _ => (false, nil, nil)
          | base.type.type_base base.type.Z
            => fun a b
@@ -401,14 +402,14 @@ Module Pipeline.
           first *)
        dlet_nd e := ToFlat E in
        let E := FromFlat e in
-       let E := if with_subst01 then Subst01.Subst01 E
-                else if with_dead_code_elimination then DeadCodeElimination.EliminateDead E
+       let E := if with_subst01 then Subst01.Subst01 ident.is_comment E
+                else if with_dead_code_elimination then DeadCodeElimination.EliminateDead ident.is_comment E
                      else E in
        let E := UnderLets.LetBindReturn (@ident.is_var_like) E in
        let E := DoRewrite E in (* after inlining, see if any new rewrite redexes are available *)
        dlet_nd e := ToFlat E in
        let E := FromFlat e in
-       let E := if with_dead_code_elimination then DeadCodeElimination.EliminateDead E else E in
+       let E := if with_dead_code_elimination then DeadCodeElimination.EliminateDead ident.is_comment E else E in
        E.
 
   Definition opts_of_method
@@ -459,14 +460,14 @@ Module Pipeline.
       (** We first do bounds analysis with no relaxation so that we
           can do rewriting with casts, and then once that's out of the
           way, we do bounds analysis again to relax the bounds. *)
-      let E' := CheckedPartialEvaluateWithBounds (fun _ => None) false E arg_bounds out_bounds in
+      let E' := CheckedPartialEvaluateWithBounds (fun _ => None) (@ident.is_comment) false E arg_bounds out_bounds in
       let E'
           := match E' with
              | inl E
                => let E := RewriteAndEliminateDeadAndInline (RewriteRules.RewriteArithWithCasts adc_no_carry_to_add opts) with_dead_code_elimination with_subst01 E in
                   dlet_nd e := ToFlat E in
                   let E := FromFlat e in
-                  let E' := CheckedPartialEvaluateWithBounds relax_zrange true (* strip pre-existing casts *) E arg_bounds out_bounds in
+                  let E' := CheckedPartialEvaluateWithBounds relax_zrange (@ident.is_comment) true (* strip pre-existing casts *) E arg_bounds out_bounds in
                   E'
              | inr v => inr v
              end in

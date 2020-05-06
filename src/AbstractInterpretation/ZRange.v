@@ -440,6 +440,9 @@ Module Compilers.
           := let interp_Z_cast := if assume_cast_truncates then interp_Z_cast_truncate else interp_Z_cast in
              match idc in ident.ident t return type.option.interp t with
              | ident.Literal t v => @of_literal (base.type.type_base t) v
+             | ident.comment _
+             | ident.comment_no_keep _
+               => fun _ => tt
              | ident.tt as idc
                => ident.interp idc
              | ident.Nat_succ as idc

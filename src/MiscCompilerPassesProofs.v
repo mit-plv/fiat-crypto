@@ -33,12 +33,14 @@ Module Compilers.
     Section with_counter.
       Context {T : Type}
               (one : T)
-              (incr : T -> T).
+              (incr : T -> T)
+              (incr_always_live : option T -> T).
 
       Section with_ident.
         Context {base_type : Type}.
         Local Notation type := (type.type base_type).
-        Context {ident : type -> Type}.
+        Context {ident : type -> Type}
+                (is_ident_always_live : forall t, ident t -> bool).
         Local Notation expr := (@expr.expr base_type ident).
 
         Section with_var.
@@ -83,7 +85,7 @@ Module Compilers.
               {should_subst : T -> bool}
               (Hdoing_subst : forall T1 T2 x y, doing_subst T1 T2 x y = x)
               {t} (e : @expr.Expr base_type ident t)
-          : expr.Wf e -> expr.Wf (Subst0n one incr doing_subst should_subst e).
+          : expr.Wf e -> expr.Wf (Subst0n one incr incr_always_live is_ident_always_live doing_subst should_subst e).
         Proof using Type. intros Hwf var1 var2; eapply wf_subst0n, Hwf; assumption. Qed.
 
         Section interp.
@@ -116,7 +118,7 @@ Module Compilers.
             Proof using Hdoing_subst interp_ident_Proper. clear -Hwf Hdoing_subst interp_ident_Proper. apply interp_subst0n'_gen with (G:=nil); cbn [In]; eauto with nocore; tauto. Qed.
 
             Lemma Interp_Subst0n {t} (e : @expr.Expr base_type ident t) (Hwf : expr.Wf e)
-              : expr.Interp interp_ident (Subst0n one incr doing_subst should_subst e) == expr.Interp interp_ident e.
+              : expr.Interp interp_ident (Subst0n one incr incr_always_live is_ident_always_live doing_subst should_subst e) == expr.Interp interp_ident e.
             Proof using Hdoing_subst interp_ident_Proper. apply interp_subst0n, Hwf. Qed.
           End with_doing_subst.
         End interp.
@@ -126,11 +128,12 @@ Module Compilers.
     Section with_ident.
       Context {base_type : Type}.
       Local Notation type := (type.type base_type).
-      Context {ident : type -> Type}.
+      Context {ident : type -> Type}
+              (is_ident_always_live : forall t, ident t -> bool).
       Local Notation expr := (@expr.expr base_type ident).
 
       Lemma Wf_Subst01 {t} (e : @expr.Expr base_type ident t)
-        : expr.Wf e -> expr.Wf (Subst01 e).
+        : expr.Wf e -> expr.Wf (Subst01 is_ident_always_live e).
       Proof using Type. eapply Wf_Subst0n; reflexivity. Qed.
 
       Section interp.
@@ -138,7 +141,7 @@ Module Compilers.
                 {interp_ident : forall t, ident t -> type.interp base_interp t}
                 {interp_ident_Proper : forall t, Proper (eq ==> type.eqv) (interp_ident t)}.
         Lemma Interp_Subst01 {t} (e : @expr.Expr base_type ident t) (Hwf : expr.Wf e)
-          : expr.Interp interp_ident (Subst01 e) == expr.Interp interp_ident e.
+          : expr.Interp interp_ident (Subst01 is_ident_always_live e) == expr.Interp interp_ident e.
         Proof using interp_ident_Proper. apply Interp_Subst0n, Hwf; auto. Qed.
       End interp.
     End with_ident.
@@ -163,11 +166,12 @@ Module Compilers.
     Section with_ident.
       Context {base_type : Type}.
       Local Notation type := (type.type base_type).
-      Context {ident : type -> Type}.
+      Context {ident : type -> Type}
+              (is_ident_always_live : forall t, ident t -> bool).
       Local Notation expr := (@expr.expr base_type ident).
 
       Lemma Wf_EliminateDead {t} (e : @expr.Expr base_type ident t)
-        : expr.Wf e -> expr.Wf (EliminateDead e).
+        : expr.Wf e -> expr.Wf (EliminateDead is_ident_always_live e).
       Proof using Type. apply Subst01.Wf_Subst0n, @OUGHT_TO_BE_UNUSED_id. Qed.
 
       Section interp.
@@ -176,7 +180,7 @@ Module Compilers.
                 {interp_ident_Proper : forall t, Proper (eq ==> type.eqv) (interp_ident t)}.
 
         Lemma Interp_EliminateDead {t} (e : @expr.Expr base_type ident t) (Hwf : expr.Wf e)
-          : expr.Interp interp_ident (EliminateDead e) == expr.Interp interp_ident e.
+          : expr.Interp interp_ident (EliminateDead is_ident_always_live e) == expr.Interp interp_ident e.
         Proof using interp_ident_Proper. apply Subst01.Interp_Subst0n, Hwf; auto using @OUGHT_TO_BE_UNUSED_id. Qed.
       End interp.
     End with_ident.

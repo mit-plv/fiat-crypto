@@ -17,6 +17,8 @@ Require Import Crypto.BoundsPipeline.
 Require Import Crypto.Util.ZUtil.ModInv.
 
 Require Import Crypto.Util.Notations.
+Local Open Scope string_scope.
+Local Open Scope list_scope.
 Import ListNotations. Local Open Scope Z_scope.
 
 Import
@@ -99,6 +101,7 @@ Module debugging_sat_solinas_25519.
 End debugging_sat_solinas_25519.
 
 Module debugging_sat_solinas_25519_expanded.
+  Import PreExtra.
   Import Util.LetIn.
   Import ZUtil.Definitions.
   Module Saturated.
@@ -106,6 +109,7 @@ Module debugging_sat_solinas_25519_expanded.
       Definition sat_multerm :=
         fun (s : Z) (t t' : Z * Z) =>
           dlet xy : Z * Z := Z.mul_split s (snd t) (snd t') in
+          dlet _ := ident.comment ("sat_multerm", ("xy", xy)) in
           [(fst t * fst t', fst xy); (fst t * fst t' * s, snd xy)].
       Definition sat_mul :=
         fun (s : Z) (p q : list (Z * Z)) =>
@@ -284,7 +288,8 @@ Module debugging_sat_solinas_25519_expanded.
     Let boundsn : list (ZRange.type.option.interp base.type.Z)
       := repeat bound n.
 
-    Time Redirect "log" Compute
+    Time Redirect "log"
+         Compute
          Show.show (* [show] for pretty-printing of the AST without needing lots of imports *)
          false
          (Pipeline.BoundsPipelineToString
@@ -338,7 +343,7 @@ Module debugging_p256_mul_bedrock2.
       cbv [mul] in k.
       cbv -[Pipeline.BoundsPipeline WordByWordMontgomeryReificationCache.WordByWordMontgomery.reified_mul_gen] in k.
       cbv [Pipeline.BoundsPipeline Rewriter.Util.LetIn.Let_In] in k.
-      set (k' := CheckedPartialEvaluateWithBounds _ _ _ _ _) in (value of k).
+      set (k' := CheckedPartialEvaluateWithBounds _ _ _ _ _ _) in (value of k).
       vm_compute in k'.
       subst k'; cbv beta iota zeta in k.
       cbv [Pipeline.RewriteAndEliminateDeadAndInline] in k.
@@ -355,7 +360,7 @@ Module debugging_p256_mul_bedrock2.
       set (k' := ArithWithCasts.Compilers.RewriteRules.RewriteArithWithCasts _ _ _) in (value of k).
       vm_compute in k'.
       subst k'; cbv beta iota zeta in k.
-      set (k' := CheckedPartialEvaluateWithBounds _ _ _ _ _) in (value of k).
+      set (k' := CheckedPartialEvaluateWithBounds _ _ _ _ _ _) in (value of k).
       vm_compute in k'.
       subst k'; cbv beta iota zeta in k.
       set (k' := MulSplit.Compilers.RewriteRules.RewriteMulSplit _ _ _ _) in (value of k) at 1.
@@ -408,7 +413,7 @@ Module debugging_25519_to_bytes_bedrock2.
       set (k' := Arith.Compilers.RewriteRules.RewriteArith _ _ _) in (value of k).
       vm_compute in k'.
       cbv [Rewriter.Util.LetIn.Let_In] in k.
-      set (k'' := CheckedPartialEvaluateWithBounds _ _ _ _ _) in (value of k).
+      set (k'' := CheckedPartialEvaluateWithBounds _ _ _ _ _ _) in (value of k).
       vm_compute in k''.
       set (uint64 := r[0 ~> 18446744073709551615]%zrange) in (value of k'').
       subst k''.
@@ -417,7 +422,7 @@ Module debugging_25519_to_bytes_bedrock2.
       vm_compute in k''.
       Compute Z.log2 9223372036854775808.
       clear -k''.
-      set (k'' := CheckedPartialEvaluateWithBounds _ _ _ _ _) in (value of k).
+      set (k'' := CheckedPartialEvaluateWithBounds _ _ _ _ _ _) in (value of k).
       vm_compute in k''.
       subst k''.
       cbv beta iota zeta in k.
@@ -814,7 +819,7 @@ Module debugging_25519_to_bytes_bedrock2.
       set (k' := GeneralizeVar.FromFlat (GeneralizeVar.ToFlat _)) in (value of k) at 1.
       vm_compute in k'.
       subst k'.
-      set (k' := PartialEvaluateWithBounds _ _ _ _) in (value of k).
+      set (k' := PartialEvaluateWithBounds _ _ _ _ _) in (value of k).
       vm_compute in k'.
       subst k'.*)
 *)
@@ -966,7 +971,7 @@ Module debugging_25519_to_bytes_java.
       set (k' := GeneralizeVar.FromFlat (GeneralizeVar.ToFlat _)) in (value of k) at 1.
       vm_compute in k'.
       subst k'.
-      set (k' := PartialEvaluateWithBounds _ _ _ _) in (value of k).
+      set (k' := PartialEvaluateWithBounds _ _ _ _ _) in (value of k).
       vm_compute in k'.
       subst k'.*)
     Abort.
@@ -1028,7 +1033,7 @@ Module debugging_p256_uint1.
       cbv [should_split_mul] in k.
       cbv [should_split_mul_opt_instance_0] in k.
       cbv [split_multiret_to should_split_multiret should_split_multiret_opt_instance_0] in k.
-      set (k' := PartialEvaluateWithBounds _ _ _ _) in (value of k).
+      set (k' := PartialEvaluateWithBounds _ _ _ _ _) in (value of k).
       vm_compute in k'.
     Abort.
   End __.
@@ -1189,7 +1194,7 @@ Module debugging_go_build.
       cbv [split_mul_to] in k.
       cbv [should_split_mul] in k.
       cbv [should_split_mul_opt_instance_0] in k.
-      set (k' := PartialEvaluateWithBounds _ _ _) in (value of k).
+      set (k' := PartialEvaluateWithBounds _ _ _ _ _) in (value of k).
       vm_compute in k'.
       subst k'.
       vm_compute in k.
@@ -2097,6 +2102,8 @@ Local Instance : use_mul_for_cmovznz_opt := false.
 Local Instance : emit_primitives_opt := true.
 
 Module debugging_remove_mul_split_to_C_uint1_carry.
+  Import PreExtra.
+  Import LetIn.
   Section __.
     Context (n : nat := 5%nat)
             (s : Z := 2^255)
@@ -2135,7 +2142,9 @@ Module debugging_remove_mul_split_to_C_uint1_carry.
 
     Set Printing Depth 100000.
     Local Open Scope string_scope.
-    Redirect "log" Compute
+
+    Redirect "log"
+      Compute
       Pipeline.BoundsPipelineToString
       "" (* prefix *)
       "mul"
@@ -2143,7 +2152,7 @@ Module debugging_remove_mul_split_to_C_uint1_carry.
       None (* fancy *)
       possible_values
       machine_wordsize
-      ltac:(let r := Reify ((carry_mulmod limbwidth_num limbwidth_den s c n idxs)) in
+      ltac:(let r := Reify ((fun f g => dlet _ := ident.comment ("foo", f, g) in carry_mulmod limbwidth_num limbwidth_den s c n idxs f g)) in
             exact r)
              (fun _ _ => []) (* comment *)
              (Some loose_bounds, (Some loose_bounds, tt))
@@ -2156,6 +2165,7 @@ Module debugging_remove_mul_split_to_C_uint1_carry.
  *   out1: [[0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc], [0x0 ~> 0x8cccccccccccc]]
  */
 static void mul(uint64_t out1[5], const uint64_t arg1[5], const uint64_t arg2[5]) {
+  /* (""foo"", arg1[0] :: arg1[1] :: arg1[2] :: arg1[3] :: arg1[4] :: [], arg2[0] :: arg2[1] :: arg2[2] :: arg2[3] :: arg2[4] :: []) */
   uint64_t x1;
   uint64_t x2;
   mulx_u64(&x1, &x2, (arg1[4]), ((arg2[4]) * (uint64_t)UINT8_C(0x13)));
@@ -2882,7 +2892,7 @@ Module debugging_remove_mul_split2.
       Import WordByWordMontgomeryReificationCache.
       cbv -[Pipeline.BoundsPipeline reified_mul_gen] in k.
       cbv [Pipeline.BoundsPipeline LetIn.Let_In] in k.
-      set (v := CheckedPartialEvaluateWithBounds _ _ _ _ _) in (value of k).
+      set (v := CheckedPartialEvaluateWithBounds _ _ _ _ _ _) in (value of k).
       Notation INL := (inl _).
       vm_compute in v.
       Notation IDD := (id _).
