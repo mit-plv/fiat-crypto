@@ -1162,6 +1162,15 @@ Module Compilers.
             Let round_up_to_split_type (lgs : Z) (t : option int.type) : option int.type
               := option_map (int.union (int.of_zrange_relaxed (relax_zrange r[0~>2^lgs-1]))) t.
 
+            Let check_literal_rangeZ (r : option zrange) (v : Z) (nth : string) {t'} (idc : ident.ident t') : ErrT unit
+              := match r with
+                 | None => inl tt
+                 | Some r
+                   => if ZRange.type.is_bounded_by (t:=tZ) r v
+                      then inl tt
+                      else inr ["Literal value " ++ show true v ++ " is not within the casted range " ++ show true r ++ " (when trying to parse the " ++ nth ++ " argument of " ++ show true idc ++ ")"]%string
+                 end.
+
             Let recognize_3arg_2ref_ident
                 (do_bounds_check : bool)
                 (t:=(tZ -> tZ -> tZ -> tZ * tZ)%etype)
@@ -1172,25 +1181,27 @@ Module Compilers.
               : ErrT ((option int.type * option int.type) * (arith_expr (type.Zptr * type.Zptr) -> expr))
               := let _ := @PHOAS.expr.partially_show_expr in
                  let '((s, _), ((e1v, (e1, r1)), ((e2v, (e2, r2)), tt))) := args in
-                  match (s <- invert_Literal s; maybe_log2 s)%option, idc return ErrT ((option int.type * option int.type) * (arith_expr (type.Zptr * type.Zptr) -> expr))
+                  match (rs <- invert_Literal_through_cast s; lg2s <- maybe_log2 (snd rs); Some (fst rs, lg2s))%option, idc return ErrT ((option int.type * option int.type) * (arith_expr (type.Zptr * type.Zptr) -> expr))
                   with
-                  | Some s, ident.Z_mul_split
-                    => (_ ,, _ ,, _ ,, _
+                  | Some (r, s), ident.Z_mul_split
+                    => (_ <- check_literal_rangeZ r (2^s) "first" idc;
+                       _ ,, _ ,, _ ,, _
                           <- bounds_check do_bounds_check "first argument to" idc s e1v r1,
                         bounds_check do_bounds_check "second argument to" idc s e2v r2,
                         bounds_check do_bounds_check "first return value of" idc s e2v (fst rout),
                         bounds_check do_bounds_check "second return value of" idc s e2v (snd rout);
                           inl ((round_up_to_split_type s (fst rout), round_up_to_split_type s (snd rout)),
                                fun retptr => [Call (Z_mul_split s @@@ (retptr, (e1, e2)))%Cexpr]))
-                  | Some s, ident.Z_add_get_carry as idc
-                  | Some s, ident.Z_sub_get_borrow as idc
+                  | Some (r, s), ident.Z_add_get_carry as idc
+                  | Some (r, s), ident.Z_sub_get_borrow as idc
                     => let idc' : ident _ _ := Option.invert_Some
                                                  match idc with
                                                  | ident.Z_add_get_carry => Some (Z_add_with_get_carry s)
                                                  | ident.Z_sub_get_borrow => Some (Z_sub_with_get_borrow s)
                                                  | _ => None
                                                  end in
-                       (_ ,, _ ,, _ ,, _
+                       (_ <- check_literal_rangeZ r (2^s) "first" idc;
+                       _ ,, _ ,, _ ,, _
                           <- bounds_check do_bounds_check "first argument to" idc s e1v r1,
                         bounds_check do_bounds_check "second argument to" idc s e2v r2,
                         bounds_check do_bounds_check "first return value of" idc s e2v (fst rout),
@@ -1212,17 +1223,18 @@ Module Compilers.
               : ErrT ((option int.type * option int.type) * (arith_expr (type.Zptr * type.Zptr) -> expr))
               := let _ := @PHOAS.expr.partially_show_expr in
                  let '((s, _), ((e1v, (e1, r1)), ((e2v, (e2, r2)), ((e3v, (e3, r3)), tt)))) := args in
-                 match (s <- invert_Literal s; maybe_log2 s)%option, idc return ErrT ((option int.type * option int.type) * (arith_expr (type.Zptr * type.Zptr) -> expr))
+                 match (rs <- invert_Literal_through_cast s; lg2s <- maybe_log2 (snd rs); Some (fst rs, lg2s))%option, idc return ErrT ((option int.type * option int.type) * (arith_expr (type.Zptr * type.Zptr) -> expr))
                  with
-                 | Some s, ident.Z_add_with_get_carry as idc
-                 | Some s, ident.Z_sub_with_get_borrow as idc
+                 | Some (r, s), ident.Z_add_with_get_carry as idc
+                 | Some (r, s), ident.Z_sub_with_get_borrow as idc
                    => let idc' : ident _ _ := Option.invert_Some
                                                 match idc with
                                                 | ident.Z_add_with_get_carry => Some (Z_add_with_get_carry s)
                                                 | ident.Z_sub_with_get_borrow => Some (Z_sub_with_get_borrow s)
                                                 | _ => None
                                                 end in
-                      (_ ,, _ ,, _ ,, _ ,, _
+                      (_ <- check_literal_rangeZ r (2^s) "first" idc;
+                      _ ,, _ ,, _ ,, _ ,, _
                          <- (bounds_check do_bounds_check "first (carry) argument to" idc 1 e1v r1,
                              bounds_check do_bounds_check "second argument to" idc s e2v r2,
                              bounds_check do_bounds_check "third argument to" idc s e2v r2,
@@ -1378,7 +1390,7 @@ Module Compilers.
                        (make_name : positive -> option string)
                        (v : var_data d)
               : ErrT expr
-              := Eval cbv beta iota delta [bind2_err bind3_err bind4_err bind5_err recognize_1ref_ident recognize_3arg_2ref_ident recognize_4arg_2ref_ident recognize_2ref_ident make_assign_arg_1ref_opt make_assign_arg_2ref make_assign_arg_ref make_uniform_assign_expr_of_PHOAS make_uniform_assign_expr_of_PHOAS round_up_to_split_type make_comment] in
+              := Eval cbv beta iota delta [bind2_err bind3_err bind4_err bind5_err recognize_1ref_ident recognize_3arg_2ref_ident recognize_4arg_2ref_ident recognize_2ref_ident make_assign_arg_1ref_opt make_assign_arg_2ref make_assign_arg_ref make_uniform_assign_expr_of_PHOAS make_uniform_assign_expr_of_PHOAS round_up_to_split_type make_comment check_literal_rangeZ] in
                   match type.try_transport _ _ s' e1 with
                   | Some e1 => make_uniform_assign_expr_of_PHOAS do_bounds_check e1 e2 count make_name v
                   | None => inr [report_type_mismatch s' s]

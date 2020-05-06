@@ -406,6 +406,22 @@ Module Compilers.
                   Some (r, v)
            | _ => None
            end.
+
+      Definition invert_App_cast {t} (e : expr t)
+        : option ((type.interp (Language.Compilers.base.interp (fun _ => ZRange.zrange)) t) * expr t)
+        := match t return expr t -> option (type.interp _ t * expr t) with
+           | type.base tZ => invert_App_Z_cast
+           | type.base (tZ * tZ) => invert_App_Z_cast2
+           | _ => fun _ => None
+           end e.
+
+      Definition invert_Literal_through_cast {t} (e : expr t)
+        : option (option (type.interp (Language.Compilers.base.interp (fun _ => ZRange.zrange)) t) * type.interp base.interp t)
+        := match invert_Literal e, invert_App_cast e with
+           | Some v, _ => Some (None, v)
+           | None, Some (r, e) => (v <- invert_Literal e; Some (Some r, v))%option
+           | None, None => None
+           end.
     End with_var.
   End invert_expr.
 
