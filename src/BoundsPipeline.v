@@ -462,15 +462,27 @@ Module Pipeline.
       (** We first do bounds analysis with no relaxation so that we
           can do rewriting with casts, and then once that's out of the
           way, we do bounds analysis again to relax the bounds. *)
-      let E' := CheckedPartialEvaluateWithBounds (fun _ => None) (@ident.is_comment) false E arg_bounds out_bounds in
+      (** To get better error messages, we don't check bounds until
+          after doing some extra rewriting *)
+      let E' := CheckedPartialEvaluateWithBounds (fun _ => None) (@ident.is_comment) false E arg_bounds ZRange.type.base.option.None in
       let E'
           := match E' with
              | inl E
                => let E := RewriteAndEliminateDeadAndInline (RewriteRules.RewriteArithWithCasts adc_no_carry_to_add opts) with_dead_code_elimination with_subst01 E in
                   dlet_nd e := ToFlat E in
                   let E := FromFlat e in
-                  let E' := CheckedPartialEvaluateWithBounds relax_zrange (@ident.is_comment) true (* strip pre-existing casts *) E arg_bounds out_bounds in
-                  E'
+                  (** to give good error messages, we first look at
+                      the version of the syntax tree annotated with
+                      unrelaxed ranges *)
+                  let E' := CheckedPartialEvaluateWithBounds (fun _ => None) (@ident.is_comment) true (* strip pre-existing casts *) E arg_bounds out_bounds in
+                  match E' with
+                  | inl E
+                    => dlet_nd e := ToFlat E in
+                       let E := FromFlat e in
+                       let E' := CheckedPartialEvaluateWithBounds relax_zrange (@ident.is_comment) true (* strip pre-existing casts *) E arg_bounds out_bounds in
+                       E'
+                  | inr v => inr v
+                  end
              | inr v => inr v
              end in
       match E' with
