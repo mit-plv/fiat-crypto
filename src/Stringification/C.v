@@ -44,6 +44,8 @@ Module Compilers.
     Local Notation tZ := (base.type.type_base base.type.Z).
 
     Module C.
+      Definition comment_block := List.map (fun line => "/* " ++ line ++ " */")%string.
+
       Module String.
         Definition header (machine_wordsize : Z) (static : bool) (prefix : string) (infos : ident_infos)
         : list string
@@ -181,6 +183,8 @@ Module Compilers.
              => "*" ++ name ++ " = " ++ arith_to_string prefix val ++ ";"
            | DeclareVar t sz name
              => String.type.primitive.to_string prefix t sz ++ " " ++ name ++ ";"
+           | Comment lines _
+             => String.concat String.NewLine (comment_block lines)
            | AssignNth name n val
              => name ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "] = " ++ arith_to_string prefix val ++ ";"
            end.
@@ -525,8 +529,7 @@ Module Compilers.
 
       Definition OutputCAPI : OutputLanguageAPI :=
         {|
-          comment_block s
-          := List.map (fun line => "/* " ++ line ++ " */")%string s;
+          ToString.comment_block := comment_block;
 
           ToString.ToFunctionLines := @ToFunctionLines;
 

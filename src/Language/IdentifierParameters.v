@@ -1,3 +1,4 @@
+Require Import Coq.Strings.String.
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Util.ListUtil Coq.Lists.List.
 Require Import Crypto.Util.ZRange.
@@ -35,6 +36,7 @@ Definition var_like_idents : InductiveHList.hlist
       ; @Datatypes.pair
       ; @Datatypes.fst
       ; @Datatypes.snd
+      ; Datatypes.tt
       ; Z.opp
       ; ident.cast
       ; ident.cast2
@@ -44,10 +46,13 @@ Definition base_type_list_named : InductiveHList.hlist
   := [with_name Z BinInt.Z
       ; with_name bool Datatypes.bool
       ; with_name nat Datatypes.nat
-      ; with_name zrange ZRange.zrange]%hlist.
+      ; with_name zrange ZRange.zrange
+      ; with_name string String.string]%hlist.
 
 Definition all_ident_named_interped : InductiveHList.hlist
   := [with_name ident_Literal (@ident.literal)
+      ; with_name ident_comment (@ident.comment)
+      ; with_name ident_comment_no_keep (@ident.comment_no_keep)
       ; with_name ident_Nat_succ Nat.succ
       ; with_name ident_Nat_pred Nat.pred
       ; with_name ident_Nat_max Nat.max

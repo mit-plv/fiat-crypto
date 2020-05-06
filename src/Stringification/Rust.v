@@ -22,6 +22,7 @@ Import Stringification.Language.Compilers.ToString.
 Import Stringification.Language.Compilers.ToString.int.Notations.
 
 Module Rust.
+  Definition comment_block := List.map (fun line => "/* " ++ line ++ " */")%string.
 
   (* Header imports and type defs *)
   Definition header (machine_wordsize : Z) (static : bool) (prefix : string) (infos : ToString.ident_infos)
@@ -173,6 +174,8 @@ Module Rust.
          call that will store its result in this variable. 2.) this will
          have a non-pointer an integer type *)
       "let mut " ++ name ++ ": " ++ primitive_type_to_string prefix t sz ++ " = 0;"
+    | IR.Comment lines _ =>
+      String.concat String.NewLine (comment_block lines)
     | IR.AssignNth name n val =>
       name ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "] = " ++ arith_to_string prefix val ++ ";"
     end.
@@ -353,7 +356,7 @@ Module Rust.
     end.
 
   Definition OutputRustAPI : ToString.OutputLanguageAPI :=
-    {| ToString.comment_block := List.map (fun line => "/* " ++ line ++ " */")%string;
+    {| ToString.comment_block := comment_block;
        ToString.ToFunctionLines := @ToFunctionLines;
        ToString.header := header;
        ToString.footer := fun _ _ _ _ => [];

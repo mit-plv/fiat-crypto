@@ -66,6 +66,7 @@ Module Compilers.
                | base.type.type_base base.type.bool => @show bool _
                | base.type.type_base base.type.nat => @show nat _
                | base.type.type_base base.type.zrange => @show zrange _
+               | base.type.type_base base.type.string => @show string _
                | base.type.prod A B
                  => fun _ '(a, b)
                     => "(" ++ @show_interp A false a ++ ", " ++ @show_interp B true b ++ ")"
@@ -85,6 +86,7 @@ Module Compilers.
                  | base.type.type_base base.type.bool => @show (option bool) _
                  | base.type.type_base base.type.nat => @show (option nat) _
                  | base.type.type_base base.type.zrange => @show (option zrange) _
+                 | base.type.type_base base.type.string => @show (option string) _
                  | base.type.prod A B
                    => let SA := @show_interp A in
                       let SB := @show_interp B in
@@ -122,6 +124,7 @@ Module Compilers.
                        | base.type.bool => "𝔹"
                        | base.type.nat => "ℕ"
                        | base.type.zrange => "zrange"
+                       | base.type.string => "string"
                        end.
           Fixpoint show_type (with_parens : bool) (t : base.type) : string
             := match t with
@@ -142,6 +145,7 @@ Module Compilers.
                | base.type.bool => @show bool _
                | base.type.nat => @show nat _
                | base.type.zrange => @show zrange _
+               | base.type.string => @show string _
                end.
           Global Existing Instance show_base_interp.
           Fixpoint show_interp {t} : Show (base.interp t)
@@ -247,6 +251,8 @@ Module Compilers.
              => match idc with
                 | ident.Literal base.type.Z v => show_compact_Z with_parens v
                 | ident.Literal t v => show with_parens v
+                | ident.comment _ => "comment"
+                | ident.comment_no_keep _ => "comment_no_keep"
                 | ident.tt => "()"
                 | ident.Nat_succ => "Nat.succ"
                 | ident.Nat_pred => "Nat.pred"
@@ -397,6 +403,8 @@ Module Compilers.
              | ident.Z_cast2
                => fun '((_, range), ((x, xr), tt)) => (x, range)
              | ident.Build_zrange => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 0) ("r[" ++ x 60%nat ++ " ~> " ++ y 200%nat), ZRange.type.base.option.None)
+             | ident.comment _ as idc
+             | ident.comment_no_keep _ as idc
              | ident.Some _ as idc
              | ident.nat_rect _ as idc
              | ident.eager_nat_rect _ as idc
@@ -473,24 +481,33 @@ Module Compilers.
                => fun k => (nil, k tt idx)
              end.
         Section helper.
-          Context (k : forall t, @expr.expr base.type ident (fun _ => string) t -> type.for_each_lhs_of_arrow (fun t => (nat -> string) * ZRange.type.option.interp t)%type t -> positive -> (positive * (nat -> list string)) * ZRange.type.base.option.interp (type.final_codomain t)).
-          Fixpoint show_eta_abs_cps' {t} (idx : positive) (e : @expr.expr base.type ident (fun _ => string) t)
+          Context {var}
+                  (of_string : forall t, string -> option (var t))
+                  (k : forall t, @expr.expr base.type ident var t -> type.for_each_lhs_of_arrow (fun t => (nat -> string) * ZRange.type.option.interp t)%type t -> positive -> (positive * (nat -> list string)) * ZRange.type.base.option.interp (type.final_codomain t)).
+          Fixpoint show_eta_abs_cps' {t} (idx : positive) (e : @expr.expr base.type ident var t)
             : (positive * (list string * (nat -> list string))) * ZRange.type.base.option.interp (type.final_codomain t)
             := match e in expr.expr t return (unit -> _ * ZRange.type.base.option.interp (type.final_codomain t)) -> _ * ZRange.type.base.option.interp (type.final_codomain t) with
                | expr.Abs s d f
                  => fun _
                     => let n := "x" ++ Decimal.Pos.to_string idx in
-                       let '(_, (args, show_f), r) := @show_eta_abs_cps' d (Pos.succ idx) (f n) in
-                       (idx,
-                        (n :: args, show_f),
-                        r)
+                       match of_string s n with
+                       | Some n'
+                         => let '(_, (args, show_f), r) := @show_eta_abs_cps' d (Pos.succ idx) (f n') in
+                            (idx,
+                             (n :: args, show_f),
+                             r)
+                       | None
+                         => (idx,
+                             ([n], (fun _ => ["λ_(" ++ show false t ++ ")"])),
+                             ZRange.type.base.option.None)
+                       end
                | _
                  => fun default
                     => default tt
                end (fun _
                     => let '(args, (idx, show_f, r)) := get_eta_cps_args _ idx (@k _ e) in
                        ((idx, (args, show_f)), r)).
-          Definition show_eta_abs_cps (with_casts : bool) {t} (idx : positive) (e : @expr.expr base.type ident (fun _ => string) t) (extraargs : type.for_each_lhs_of_arrow (fun t => (nat -> string) * ZRange.type.option.interp t)%type t)
+          Definition show_eta_abs_cps (with_casts : bool) {t} (idx : positive) (e : @expr.expr base.type ident var t) (extraargs : type.for_each_lhs_of_arrow (fun t => (nat -> string) * ZRange.type.option.interp t)%type t)
             : (positive * (nat -> list string)) * ZRange.type.base.option.interp (type.final_codomain t)
             := let '(idx, (args, show_f), r) := @show_eta_abs_cps' t idx e in
                let argstr := String.concat " " args in
@@ -504,7 +521,7 @@ Module Compilers.
                      => ["(λ " ++ argstr ++ ","]%string ++ (List.map (fun v => String " " (String " " v)) show_f) ++ [")" ++ show_application with_casts (fun _ => "") extraargs 11%nat]%string
                    end%list,
                    r).
-          Definition show_eta_cps {t} (idx : positive) (e : @expr.expr base.type ident (fun _ => string) t)
+          Definition show_eta_cps {t} (idx : positive) (e : @expr.expr base.type ident var t)
             : (positive * (nat -> list string)) * ZRange.type.option.interp t
             := let '(idx, (args, show_f), r) := @show_eta_abs_cps' t idx e in
                let argstr := String.concat " " args in
@@ -524,29 +541,33 @@ Module Compilers.
                 end r).
         End helper.
 
-        Fixpoint show_expr_lines (with_casts : bool) {t} (e : @expr.expr base.type ident (fun _ => string) t) (args : type.for_each_lhs_of_arrow (fun t => (nat -> string) * ZRange.type.option.interp t)%type t) (idx : positive) {struct e} : (positive * (nat -> list string)) * ZRange.type.base.option.interp (type.final_codomain t)
+        Fixpoint show_expr_lines_gen (with_casts : bool) {var} (to_string : forall t, var t -> string) (of_string : forall t, string -> option (var t)) {t} (e : @expr.expr base.type ident var t) (args : type.for_each_lhs_of_arrow (fun t => (nat -> string) * ZRange.type.option.interp t)%type t) (idx : positive) {struct e} : (positive * (nat -> list string)) * ZRange.type.base.option.interp (type.final_codomain t)
           := match e in expr.expr t return type.for_each_lhs_of_arrow (fun t => (nat -> string) * ZRange.type.option.interp t)%type t -> (positive * (nat -> list string)) * ZRange.type.base.option.interp (type.final_codomain t) with
              | expr.Ident t idc
                => fun args => let '(v, r) := @show_ident_lvl with_casts t idc args in
                               (idx, fun lvl => [v lvl], r)
              | expr.Var t v
-               => fun args => (idx, fun lvl => [show_application with_casts (fun _ => v) args lvl], ZRange.type.base.option.None)
+               => fun args => (idx, fun lvl => [show_application with_casts (fun _ => to_string _ v) args lvl], ZRange.type.base.option.None)
              | expr.Abs s d f as e
                => fun args
-                  => show_eta_abs_cps (fun t e args idx => let '(idx, v, r) := @show_expr_lines with_casts t e args idx in (idx, fun _ => v 200%nat, r)) with_casts idx e args
+                  => show_eta_abs_cps of_string (fun t e args idx => let '(idx, v, r) := @show_expr_lines_gen with_casts var to_string of_string t e args idx in (idx, fun _ => v 200%nat, r)) with_casts idx e args
              | expr.App s d f x
                => fun args
-                  => let '(idx', x', xr) := show_eta_cps (fun t e args idx => @show_expr_lines with_casts t e args idx) idx x in
-                     @show_expr_lines
-                       with_casts _ f
+                  => let '(idx', x', xr) := show_eta_cps of_string (fun t e args idx => @show_expr_lines_gen with_casts var to_string of_string t e args idx) idx x in
+                     @show_expr_lines_gen
+                       with_casts var to_string of_string _ f
                        (((fun lvl => String.concat String.NewLine (x' lvl)), xr),
                         args)
                        idx
              | expr.LetIn A (type.base B) x f
                => fun 'tt
                   => let n := "x" ++ Decimal.Pos.to_string idx in
-                     let '(_, show_x, xr) := show_eta_cps (fun t e args idx => @show_expr_lines with_casts t e args idx) idx x in
-                     let '(idx, show_f, fr) := show_eta_cps (fun t e args idx => @show_expr_lines with_casts t e args idx) (Pos.succ idx) (f n) in
+                     let '(_, show_x, xr) := show_eta_cps of_string (fun t e args idx => @show_expr_lines_gen with_casts var to_string of_string t e args idx) idx x in
+                     let '(idx, show_f, fr)
+                         := match of_string A n with
+                            | Some n' => show_eta_cps of_string (fun t e args idx => @show_expr_lines_gen with_casts var to_string of_string t e args idx) (Pos.succ idx) (f n')
+                            | None => (idx, (fun _ => ["_"]), ZRange.type.option.None)
+                            end in
                      let ty_str := match make_cast xr with
                                    | Some c => " : " ++ c
                                    | None => ""
@@ -569,8 +590,12 @@ Module Compilers.
              | expr.LetIn A B x f
                => fun args
                   => let n := "x" ++ Decimal.Pos.to_string idx in
-                     let '(_, show_x, xr) := show_eta_cps (fun t e args idx => @show_expr_lines with_casts t e args idx) idx x in
-                     let '(idx, show_f, fr) := show_eta_cps (fun t e args idx => @show_expr_lines with_casts t e args idx) (Pos.succ idx) (f n) in
+                     let '(_, show_x, xr) := show_eta_cps of_string (fun t e args idx => @show_expr_lines_gen with_casts var to_string of_string t e args idx) idx x in
+                     let '(idx, show_f, fr)
+                         := match of_string A n with
+                            | Some n' => show_eta_cps of_string (fun t e args idx => @show_expr_lines_gen with_casts var to_string of_string t e args idx) (Pos.succ idx) (f n')
+                            | None => (idx, (fun _ => ["_"]), ZRange.type.option.None)
+                            end in
                      let ty_str := match make_cast xr with
                                    | Some c => " : " ++ c
                                    | None => ""
@@ -595,6 +620,8 @@ Module Compilers.
                              ++ [")"; show_application with_casts (fun _ => "") args 11%nat])%list),
                       ZRange.type.base.option.None)
              end args.
+        Definition show_expr_lines (with_casts : bool) {t} (e : @expr.expr base.type ident (fun _ => string) t) (args : type.for_each_lhs_of_arrow (fun t => (nat -> string) * ZRange.type.option.interp t)%type t) (idx : positive) : (positive * (nat -> list string)) * ZRange.type.base.option.interp (type.final_codomain t)
+          := @show_expr_lines_gen with_casts (fun _ => string) (fun _ x => x) (fun _ x => Some x) t e args idx.
         Fixpoint show_var_expr {var t} (with_parens : bool) (e : @expr.expr base.type ident var t) : string
           := match e with
              | expr.Ident t idc => show with_parens idc
@@ -610,8 +637,18 @@ Module Compilers.
              end%string.
         Definition partially_show_expr {var t} : Show (@expr.expr base.type ident var t) := show_var_expr.
         Local Notation default_with_casts := true.
+        Section Show_gen.
+          Context {var : type.type base.type -> Type}
+                  (to_string : forall t, var t -> string)
+                  (of_string : forall t, string -> option (var t)).
+
+          Definition show_lines_expr_gen {t} : ShowLines (@expr.expr base.type ident var t)
+            := fun with_parens e => let '(_, v, _) := show_eta_cps of_string (fun t e args idx => @show_expr_lines_gen default_with_casts var to_string of_string t e args idx) 1%positive e in v (if with_parens then 0%nat else 201%nat).
+          Definition show_expr_gen {t} : Show (@expr.expr base.type ident var t)
+            := fun with_parens e => String.concat String.NewLine (show_lines_expr_gen with_parens e).
+        End Show_gen.
         Global Instance show_lines_expr {t} : ShowLines (@expr.expr base.type ident (fun _ => string) t)
-          := fun with_parens e => let '(_, v, _) := show_eta_cps (fun t e args idx => @show_expr_lines default_with_casts t e args idx) 1%positive e in v (if with_parens then 0%nat else 201%nat).
+          := @show_lines_expr_gen (fun _ => string) (fun _ x => x) (fun _ x => Some x) t.
         Global Instance show_lines_Expr {t} : ShowLines (@expr.Expr base.type ident t)
           := fun with_parens e => show_lines with_parens (e _).
         Global Instance show_expr {t} : Show (@expr.expr base.type ident (fun _ => string) t)
@@ -901,6 +938,27 @@ Module Compilers.
            | type.arrow s d => Empty_set
            end.
 
+      Fixpoint names_list_of_base_var_names {t} : base_var_names t -> list string
+        := match t return base_var_names t -> list string with
+           | base.type.unit
+             => fun _ => []
+           | base.type.type_base base.type.Z
+           | base.type.list _
+             => fun n => [n]
+           | base.type.prod A B
+             => fun x : base_var_names A * base_var_names B
+                => @names_list_of_base_var_names A (fst x) ++ @names_list_of_base_var_names B (snd x)
+           | base.type.type_base _
+           | base.type.option _
+             => fun absurd : Empty_set => match absurd with end
+           end%list.
+
+      Definition names_list_of_var_names {t} : var_names t -> list string
+        := match t with
+           | type.base t => @names_list_of_base_var_names t
+           | type.arrow _ _ => fun absurd : Empty_set => match absurd with end
+           end.
+
       Fixpoint names_of_base_var_data {t} : base_var_data t -> base_var_names t
         := match t return base_var_data t -> base_var_names t with
            | base.type.type_base base.type.Z => fun '(n, is_ptr, _) => n
@@ -915,6 +973,29 @@ Module Compilers.
       Definition names_of_var_data {t} : var_data t -> var_names t
         := match t with
            | type.base t => names_of_base_var_data
+           | type.arrow _ _ => fun x => x
+           end.
+
+      Definition names_list_of_base_var_data {t} (v : base_var_data t) : list string
+        := names_list_of_base_var_names (names_of_base_var_data v).
+
+      Definition names_list_of_var_data {t} (v : var_data t) : list string
+        := names_list_of_var_names (names_of_var_data v).
+
+      Fixpoint base_var_data_of_names {t} : base_var_names t -> base_var_data t
+        := match t return base_var_names t -> base_var_data t with
+           | base.type.type_base base.type.Z => fun n => (n, false, None)
+           | base.type.prod A B
+             => fun xy => (@base_var_data_of_names A (fst xy), @base_var_data_of_names B (snd xy))
+           | base.type.list A => fun n => (n, None, 0%nat)
+           | base.type.unit
+           | base.type.type_base _
+           | base.type.option _
+             => fun x => x
+           end.
+      Definition var_data_of_names {t} : var_names t -> var_data t
+        := match t with
+           | type.base t => base_var_data_of_names
            | type.arrow _ _ => fun x => x
            end.
 

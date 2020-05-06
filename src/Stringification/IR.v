@@ -99,6 +99,7 @@ Module Compilers.
 
       Inductive stmt :=
       | Call (val : arith_expr type.unit)
+      | Comment (lines : list string) (mentioned_variables : list { t : _ & OfPHOAS.var_data t})
       | Assign (declare : bool) (t : type.primitive) (sz : option int.type) (name : string) (val : arith_expr t)
       | AssignZPtr (name : string) (sz : option int.type) (val : arith_expr type.Z)
       | DeclareVar (t : type.primitive) (sz : option int.type) (name : string)
@@ -169,6 +170,7 @@ Module Compilers.
              | DeclareVar _ (Some sz) _
                => ident_info_of_bitwidths_used (IntSet.singleton sz)
              | DeclareVar _ None _
+             | Comment _ _
                => ident_info_empty
              end.
 
@@ -193,6 +195,7 @@ Module Compilers.
              List.fold_right add m2 m1.
         Definition empty : t := nil.
         Definition singleton (v : string) : t := add v empty.
+        Definition of_list (v : list string) : t := v.
 
         Section __.
           Context (consider_retargs_live : forall s d, ident s d -> bool).
@@ -227,6 +230,8 @@ Module Compilers.
                | Call val
                | AssignNth _ _ val
                  => collect_live_of_arith_expr (fun _ _ _ => true) val
+               | Comment _ live_vars
+                 => of_list (List.flat_map (fun v => OfPHOAS.names_list_of_var_data (projT2 v)) live_vars)
                | DeclareVar _ _ _ => empty
                end.
 
@@ -267,6 +272,8 @@ Module Compilers.
                    => if mem name live
                       then [DeclareVar t sz name]
                       else []
+                 | Comment _ _ as e
+                   => [e]
                  end.
 
             Fixpoint adjust_dead_of_expr (e : expr) : expr
@@ -693,6 +700,8 @@ Module Compilers.
                         ret (arith_bin_arith_expr_of_PHOAS_ident Z_sub r (zero, x))
                  | ident.Literal _ v
                    => fun _ => ret v
+                 | ident.comment _
+                 | ident.comment_no_keep _
                  | ident.Nat_succ
                  | ident.Nat_pred
                  | ident.Nat_max
@@ -1005,6 +1014,108 @@ Module Compilers.
                            inr ["Impossible! (type error got lost somewhere)"]
                  end.
 
+            Fixpoint base_var_names_of_string_opt {t} (n : string) : option (base_var_names t)
+              := match t return option (base_var_names t) with
+                 | tZ
+                 | base.type.list _
+                   => Some n
+                 | base.type.prod A B
+                   => (a <- @base_var_names_of_string_opt A (n ++ "₁");
+                      b <- @base_var_names_of_string_opt B (n ++ "₂");
+                      Some (a, b))%option
+                 | base.type.unit => Some tt
+                 | base.type.option _
+                 | base.type.type_base _
+                   => None
+                 end.
+
+            Fixpoint string_of_base_var_names {t} : base_var_names t -> string
+              := match t return base_var_names t -> string with
+                 | tZ
+                 | base.type.list _
+                   => fun n => n
+                 | base.type.prod A B
+                   => fun x : base_var_names A * base_var_names B
+                      => let a := @string_of_base_var_names A (fst x) in
+                         let b := @string_of_base_var_names B (snd x) in
+                         let len_a := String.length a in
+                         let len_b := String.length b in
+                         let '(a, a_tl) := (String.substring 0 (len_a - 1) a, String.substring (len_a - 1) 1 a) in
+                         let '(b, b_tl) := (String.substring 0 (len_b - 1) b, String.substring (len_b - 1) 1 b) in
+                         if ((len_a =? len_b)%nat && (a =? b) && (a_tl =? "₁") && (b_tl =? "₂"))
+                         then a
+                         else "(" ++ a ++ "," ++ b ++ ")"
+                 | base.type.unit => fun 'tt => "()"
+                 | base.type.option _
+                 | base.type.type_base _
+                   => fun absurd : Empty_set => match absurd with end
+                 end%string%bool.
+
+            Definition var_names_of_string_opt {t} (n : string) : option (var_names t)
+              := match t with
+                 | type.base _ => @base_var_names_of_string_opt _ n
+                 | type.arrow _ _ => None
+                 end.
+
+            Definition string_of_var_names {t} : var_names t -> string
+              := match t with
+                 | type.base _ => @string_of_base_var_names _
+                 | type.arrow _ _ => fun absurd : Empty_set => match absurd with end
+                 end.
+
+            Definition base_var_data_of_string_opt {t} (n : string) : option (base_var_data t)
+              := option_map base_var_data_of_names (base_var_names_of_string_opt n).
+            Definition var_data_of_string_opt {t} (n : string) : option (var_data t)
+              := option_map var_data_of_names (var_names_of_string_opt n).
+
+            Definition string_of_base_var_data {t} (v : base_var_data t) : string
+              := string_of_base_var_names (names_of_base_var_data v).
+            Definition string_of_var_data {t} (v : var_data t) : string
+              := string_of_var_names (names_of_var_data v).
+
+            Fixpoint extract_var_data_list {t} (e : @Compilers.expr.expr base.type ident.ident var_data t) : list { t : _ & var_data t }
+              := match e with
+                 | expr.Ident t idc => []
+                 | expr.Var t v => [existT _ _ v]
+                 | expr.Abs s d f
+                   => match var_data_of_string_opt "(FAKE_extract_var_data_list)" with
+                      | Some d => extract_var_data_list (f d)
+                      | None => []
+                      end
+                 | expr.App s d f x
+                   => extract_var_data_list f ++ extract_var_data_list x
+                 | expr.LetIn A B x f
+                   => (extract_var_data_list x)
+                        ++ match var_data_of_string_opt "(FAKE_extract_var_data_list)" with
+                           | Some d => extract_var_data_list (f d)
+                           | None => []
+                           end
+                 end.
+
+            Let make_comment
+                {t}
+                (e : @Compilers.expr.expr base.type ident.ident var_data t)
+              : ErrT (expr * var_data t)
+              := let _ := @PHOAS.expr.partially_show_expr in
+                 let ret_err := inr ["Not a comment " ++ show false e]%string in
+                 match invert_AppIdent e, var_data_of_string_opt "()" with
+                 | Some (existT t (idc, arg)), Some retdata
+                   => let should_keep_live := match idc return option bool with
+                                              | ident.comment _ => Some true
+                                              | ident.comment_no_keep _ => Some false
+                                              | _ => None
+                                              end in
+                      match should_keep_live with
+                      | Some should_keep_live
+                        => inl ([Comment
+                                   (PHOAS.expr.show_lines_expr_gen (@string_of_var_data) (@var_data_of_string_opt) false arg) (* comment lines *)
+                                   (if should_keep_live then extract_var_data_list arg else []) (* live variables *)],
+                                retdata)
+                      | None => ret_err
+                      end
+                 | None, _ | _, None => ret_err
+                 end.
+
             Definition bounds_check (do_bounds_check : bool) (descr : string) {t} (idc : ident.ident t) (s : BinInt.Z) {t'} (ev : @Compilers.expr.expr base.type ident.ident var_data t') (found : option int.type)
               : ErrT unit
               := if negb do_bounds_check
@@ -1230,6 +1341,7 @@ Module Compilers.
                  match t with
                  | type.base tZ => make_assign_arg_1ref_opt do_bounds_check
                  | type.base (tZ * tZ)%etype => make_assign_arg_2ref do_bounds_check
+                 | type.base base.type.unit => fun e _ _ => make_comment e
                  | _ => fun e _ _ => inr ["Invalid type of assignment expression: " ++ show false t ++ " (with expression " ++ show true e ++ ")"]
                  end.
 
@@ -1266,7 +1378,7 @@ Module Compilers.
                        (make_name : positive -> option string)
                        (v : var_data d)
               : ErrT expr
-              := Eval cbv beta iota delta [bind2_err bind3_err bind4_err bind5_err recognize_1ref_ident recognize_3arg_2ref_ident recognize_4arg_2ref_ident recognize_2ref_ident make_assign_arg_1ref_opt make_assign_arg_2ref make_assign_arg_ref make_uniform_assign_expr_of_PHOAS make_uniform_assign_expr_of_PHOAS round_up_to_split_type] in
+              := Eval cbv beta iota delta [bind2_err bind3_err bind4_err bind5_err recognize_1ref_ident recognize_3arg_2ref_ident recognize_4arg_2ref_ident recognize_2ref_ident make_assign_arg_1ref_opt make_assign_arg_2ref make_assign_arg_ref make_uniform_assign_expr_of_PHOAS make_uniform_assign_expr_of_PHOAS round_up_to_split_type make_comment] in
                   match type.try_transport _ _ s' e1 with
                   | Some e1 => make_uniform_assign_expr_of_PHOAS do_bounds_check e1 e2 count make_name v
                   | None => inr [report_type_mismatch s' s]

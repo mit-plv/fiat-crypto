@@ -18,8 +18,8 @@ Module Compilers.
   Import AbstractInterpretation.AbstractInterpretation.Compilers.partial.
   Import AbstractInterpretation.Wf.Compilers.partial.
 
-  Hint Resolve Wf_Eval Wf_EvalWithBound Wf_EtaExpandWithBound Wf_EtaExpandWithListInfoFromBound : wf_extra.
-  Hint Opaque partial.Eval EvalWithBound EtaExpandWithBound EtaExpandWithListInfoFromBound : wf_extra interp_extra.
+  Hint Resolve Wf_Eval Wf_EvalWithBound Wf_EtaExpandWithBound Wf_EtaExpandWithListInfoFromBound Wf_StripAnnotations Wf_StripAllAnnotations : wf_extra.
+  Hint Opaque partial.Eval EvalWithBound EtaExpandWithBound EtaExpandWithListInfoFromBound StripAnnotations StripAllAnnotations : wf_extra interp_extra.
 
   Hint Resolve Wf_PartialEvaluateWithListInfoFromBounds : wf_extra.
   Hint Opaque PartialEvaluateWithListInfoFromBounds : wf_extra interp_extra.

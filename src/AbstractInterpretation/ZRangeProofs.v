@@ -262,6 +262,10 @@ Module Compilers.
                                 apply nth_error_error_length in H';
                                 omega
                            | [ |- (0 <= 1)%Z ] => clear; omega
+                           | [ H : ?beq ?x ?y = true |- ?x = ?y ]
+                             => progress reflect_beq_to_eq beq
+                           | [ |- ?beq ?x ?x = true ]
+                             => progress reflect_beq_to_eq beq
                            end
                          | handle_lt_le_t_step_fast
                          | simplify_ranges_t_step_fast
