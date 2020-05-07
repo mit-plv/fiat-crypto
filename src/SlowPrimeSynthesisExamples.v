@@ -1033,7 +1033,9 @@ Module debugging_p256_uint1.
       cbv [should_split_mul] in k.
       cbv [should_split_mul_opt_instance_0] in k.
       cbv [split_multiret_to should_split_multiret should_split_multiret_opt_instance_0] in k.
-      set (k' := PartialEvaluateWithBounds _ _ _ _ _) in (value of k).
+      vm_compute ZRange.type.base.option.is_tighter_than in k.
+      cbv beta iota zeta in k.
+      set (k' := PartialEvaluateWithBounds _ _ _ _ _) in (value of k) at 1.
       vm_compute in k'.
     Abort.
   End __.
