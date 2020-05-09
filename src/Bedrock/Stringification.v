@@ -242,6 +242,9 @@ Definition OutputBedrock2API : ToString.OutputLanguageAPI :=
     ToString.comment_block s
     := List.map (fun line => "/* " ++ line ++ " */")%string s;
 
+    ToString.comment_file_header_block s
+    := List.map (fun line => "/* " ++ line ++ " */")%string s;
+
     ToString.ToFunctionLines := @Bedrock2_ToFunctionLines;
 
     ToString.header := fun _ _ _ _ => ["#include <stdint.h>"];

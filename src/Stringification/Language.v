@@ -1036,6 +1036,9 @@ Module Compilers.
            end%list.
     End OfPHOAS.
 
+    Definition preprocess_comment_block (lines : list string)
+      := String.split String.NewLine (String.concat String.NewLine lines).
+
     Class OutputLanguageAPI :=
       {
         (** [String.concat NewLine (comment_block lines)] should the
@@ -1043,9 +1046,20 @@ Module Compilers.
             NewLines internal to elements in the list are allowed to
             be ignored / can be assumed to not be present.  Callers
             who want to ensure correct commenting on unknown blocks of
-            text should instead run [comment_block (String.split
-            NewLine (String.concat NewLine lines))]. *)
+            text should instead run [comment_block
+            (preprocess_comment_block lines)]. *)
         comment_block : list string -> list string;
+
+        (** [String.concat NewLine (comment_file_header_block lines)]
+            should the the block-commented form of [String.concat
+            NewLine lines] which can be used for the header at the top
+            of the file.  NewLines internal to elements in the list
+            are allowed to be ignored / can be assumed to not be
+            present.  Callers who want to ensure correct commenting on
+            unknown blocks of text should instead run
+            [comment_file_header_block (preprocess_comment_block
+            lines)]. *)
+        comment_file_header_block : list string -> list string;
 
         (** Converts a PHOAS AST to lines of code * info on which
             primitive functions are called, or else an error string *)

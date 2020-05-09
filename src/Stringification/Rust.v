@@ -22,6 +22,7 @@ Import Stringification.Language.Compilers.ToString.
 Import Stringification.Language.Compilers.ToString.int.Notations.
 
 Module Rust.
+  Definition comment_module_header_block := List.map (fun line => "//! " ++ line)%string.
   Definition comment_block := List.map (fun line => "/* " ++ line ++ " */")%string.
 
   (* Header imports and type defs *)
@@ -175,7 +176,7 @@ Module Rust.
          have a non-pointer an integer type *)
       "let mut " ++ name ++ ": " ++ primitive_type_to_string prefix t sz ++ " = 0;"
     | IR.Comment lines _ =>
-      String.concat String.NewLine (comment_block lines)
+      String.concat String.NewLine (comment_block (ToString.preprocess_comment_block lines))
     | IR.AssignNth name n val =>
       name ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "] = " ++ arith_to_string prefix val ++ ";"
     end.
@@ -338,13 +339,11 @@ Module Rust.
     : (list string * ToString.ident_infos) + string :=
     match ExprOfPHOAS do_bounds_check e name_list inbounds with
     | inl (indata, outdata, f) =>
-      inl ((["/*"%string]
-              ++ (List.map (fun s => if (String.length s =? 0)%nat then " *" else (" * " ++ s))%string (comment indata outdata))
-              ++ [" * Input Bounds:"%string]
-              ++ List.map (fun v => " *   "%string ++ v)%string (input_bounds_to_string indata inbounds)
-              ++ [" * Output Bounds:"%string]
-              ++ List.map (fun v => " *   "%string ++ v)%string (bound_to_string outdata outbounds)
-              ++ [" */"%string]
+      inl (((List.map (fun s => if (String.length s =? 0)%nat then "///" else ("/// " ++ s))%string (comment indata outdata))
+              ++ ["/// Input Bounds:"%string]
+              ++ List.map (fun v => "///   "%string ++ v)%string (input_bounds_to_string indata inbounds)
+              ++ ["/// Output Bounds:"%string]
+              ++ List.map (fun v => "///   "%string ++ v)%string (bound_to_string outdata outbounds)
               ++ to_function_lines static prefix name (indata, outdata, f))%list,
            IR.ident_infos.collect_infos f)
     | inr nil =>
@@ -357,6 +356,7 @@ Module Rust.
 
   Definition OutputRustAPI : ToString.OutputLanguageAPI :=
     {| ToString.comment_block := comment_block;
+       ToString.comment_file_header_block := comment_module_header_block;
        ToString.ToFunctionLines := @ToFunctionLines;
        ToString.header := header;
        ToString.footer := fun _ _ _ _ => [];

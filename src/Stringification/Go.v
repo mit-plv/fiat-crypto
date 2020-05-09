@@ -234,7 +234,7 @@ Module Go.
          have a non-pointer an integer type *)
       "var " ++ name ++ " " ++ primitive_type_to_string prefix t sz
     | IR.Comment lines _ =>
-      String.concat String.NewLine (comment_block lines)
+      String.concat String.NewLine (comment_block (ToString.preprocess_comment_block lines))
     | IR.AssignNth name n val =>
       name ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "] = " ++ arith_to_string prefix val
     end.
@@ -440,6 +440,7 @@ Module Go.
 
   Definition OutputGoAPI : ToString.OutputLanguageAPI :=
     {| ToString.comment_block := comment_block;
+       ToString.comment_file_header_block := comment_block;
        ToString.ToFunctionLines := @ToFunctionLines;
        ToString.header := header;
        ToString.footer := fun _ _ _ _ => [];
