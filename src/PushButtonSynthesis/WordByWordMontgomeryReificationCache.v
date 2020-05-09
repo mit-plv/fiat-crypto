@@ -90,7 +90,7 @@ Hint Immediate (proj2 reified_%s_gen_correct) : wf_gen_cache.
 Hint Rewrite (proj1 reified_%s_gen_correct) : interp_gen_cache.
 Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very long time *)''' % (indent, i, i, i, i, i, i, i, i, i)).replace('\n', '\n%s' % indent) + '\n')
 
-for i in ('square', 'encode', 'from_montgomery'):
+for i in ('square', 'encode', 'from_montgomery', 'to_montgomery'):
     print((r'''%sDerive reified_%s_gen
        SuchThat (is_reification_of reified_%s_gen %smod)
        As reified_%s_gen_correct.
@@ -223,6 +223,19 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
   Hint Immediate (proj2 reified_from_montgomery_gen_correct) : wf_gen_cache.
   Hint Rewrite (proj1 reified_from_montgomery_gen_correct) : interp_gen_cache.
   Local Opaque reified_from_montgomery_gen. (* needed for making [autorewrite] not take a very long time *)
+
+  Derive reified_to_montgomery_gen
+         SuchThat (is_reification_of reified_to_montgomery_gen to_montgomerymod)
+         As reified_to_montgomery_gen_correct.
+  Proof.
+    Time cache_reify ().
+    (* we would do something faster, but it breaks extraction COQBUG(https://github.com/coq/coq/issues/7954) *)
+    (* Time cache_reify_faster_2arg (). *)
+  Time Qed.
+  Hint Extern 1 (_ = _) => apply_cached_reification to_montgomerymod (proj1 reified_to_montgomery_gen_correct) : reify_cache_gen.
+  Hint Immediate (proj2 reified_to_montgomery_gen_correct) : wf_gen_cache.
+  Hint Rewrite (proj1 reified_to_montgomery_gen_correct) : interp_gen_cache.
+  Local Opaque reified_to_montgomery_gen. (* needed for making [autorewrite] not take a very long time *)
 
   Derive reified_zero_gen
          SuchThat (is_reification_of reified_zero_gen zeromod)

@@ -381,6 +381,26 @@ Section __.
              (fun fname : string => ["The function " ++ fname ++ " translates a field element out of the Montgomery domain."]%string)
              (from_montgomery_correct machine_wordsize n m r' valid)).
 
+  Definition to_montgomery
+    := Pipeline.BoundsPipeline
+         true (* subst01 *)
+         None (* fancy *)
+         possible_values
+         (reified_to_montgomery_gen
+            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
+         (Some bounds, tt)
+         (Some bounds).
+
+  Definition sto_montgomery (prefix : string)
+    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    := Eval cbv beta in
+        FromPipelineToString
+          machine_wordsize prefix "to_montgomery" to_montgomery
+          (docstring_with_summary_from_lemma!
+             prefix
+             (fun fname : string => ["The function " ++ fname ++ " translates a field element into the Montgomery domain."]%string)
+             (to_montgomery_correct machine_wordsize n m valid from_montgomery_res)).
+
   Definition nonzero
     := Pipeline.BoundsPipeline
          true (* subst01 *)
@@ -660,6 +680,7 @@ Section __.
        (@eval_submod machine_wordsize n m r' m')
        (@eval_oppmod machine_wordsize n m r' m')
        (@eval_from_montgomerymod machine_wordsize n m r' m')
+       (@eval_to_montgomerymod machine_wordsize n m r' m')
        (@eval_encodemod machine_wordsize n m r' m')
        eval_to_bytesmod
        eval_from_bytesmod
@@ -668,6 +689,7 @@ Section __.
   Local Opaque
         WordByWordMontgomery.WordByWordMontgomery.onemod
         WordByWordMontgomery.WordByWordMontgomery.from_montgomerymod
+        WordByWordMontgomery.WordByWordMontgomery.to_montgomerymod
         WordByWordMontgomery.WordByWordMontgomery.mulmod
         WordByWordMontgomery.WordByWordMontgomery.squaremod
         WordByWordMontgomery.WordByWordMontgomery.encodemod
@@ -755,6 +777,11 @@ Section __.
         (Hres : from_montgomery = Success res)
     : from_montgomery_correct machine_wordsize n m r' valid (Interp res).
   Proof using curve_good. prove_correctness from_montgomerymod_correct. Qed.
+
+  Lemma to_montgomery_correct res
+        (Hres : to_montgomery = Success res)
+    : to_montgomery_correct machine_wordsize n m valid from_montgomery_res (Interp res).
+  Proof using curve_good. prove_correctness to_montgomerymod_correct. Qed.
 
   Lemma nonzero_correct res
         (Hres : nonzero = Success res)
@@ -850,6 +877,7 @@ Section __.
             ("sub", ssub);
             ("opp", sopp);
             ("from_montgomery", sfrom_montgomery);
+            ("to_montgomery", sto_montgomery);
             ("nonzero", snonzero);
             ("selectznz", sselectznz);
             ("to_bytes", sto_bytes);
