@@ -179,7 +179,7 @@ Module Java.
          have a non-pointer an integer type *)
       primitive_type_to_string true prefix IR.type.Zptr sz ++ " " ++ name ++ " = new " ++ primitive_type_to_string true prefix IR.type.Zptr sz ++ "((" ++ primitive_type_to_string false prefix IR.type.Z sz ++ ")0);"
     | IR.Comment lines _ =>
-      String.concat String.NewLine (comment_block lines)
+      String.concat String.NewLine (comment_block (ToString.preprocess_comment_block lines))
     | IR.AssignNth name n val =>
       name ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "] = " ++ arith_to_string prefix val ++ ";"
     end.
@@ -379,6 +379,7 @@ Module Java.
 
   Definition OutputJavaAPI : ToString.OutputLanguageAPI :=
     {| ToString.comment_block := comment_block;
+       ToString.comment_file_header_block := comment_block;
        ToString.ToFunctionLines := @ToFunctionLines;
        ToString.header := header;
        ToString.footer := footer;

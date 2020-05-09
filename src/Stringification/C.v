@@ -184,7 +184,7 @@ Module Compilers.
            | DeclareVar t sz name
              => String.type.primitive.to_string prefix t sz ++ " " ++ name ++ ";"
            | Comment lines _
-             => String.concat String.NewLine (comment_block lines)
+             => String.concat String.NewLine (comment_block (ToString.preprocess_comment_block lines))
            | AssignNth name n val
              => name ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "] = " ++ arith_to_string prefix val ++ ";"
            end.
@@ -530,6 +530,8 @@ Module Compilers.
       Definition OutputCAPI : OutputLanguageAPI :=
         {|
           ToString.comment_block := comment_block;
+
+          ToString.comment_file_header_block := comment_block;
 
           ToString.ToFunctionLines := @ToFunctionLines;
 

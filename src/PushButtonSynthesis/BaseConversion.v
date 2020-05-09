@@ -341,11 +341,11 @@ Section __.
       := Primitives.Synthesize
            machine_wordsize valid_names known_functions (extra_special_synthesis function_name_prefix)
            check_args
-           ((ToString.comment_block comment_header)
-              ++ [""]
-              ++ (ToString.comment_block
-                    ["Computed values:";
-                       "dst_n = " ++ show false dst_n]%string)
+           ((ToString.comment_file_header_block
+               (comment_header
+                  ++ ["";
+                     "Computed values:";
+                     "dst_n = " ++ show false dst_n]%string))
               ++ [""])
            function_name_prefix requests.
   End for_stringification.

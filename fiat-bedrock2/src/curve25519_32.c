@@ -4,7 +4,7 @@
 /* n = 10 (from "10") */
 /* s-c = 2^255 - [(1, 19)] (from "2^255 - 19") */
 /* machine_wordsize = 32 (from "32") */
-
+/*  */
 /* Computed values: */
 /* carry_chain = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1] */
 
