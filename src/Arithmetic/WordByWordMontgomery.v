@@ -995,6 +995,9 @@ Module WordByWordMontgomery.
     Local Hint Immediate (weight_multiples wprops) : core.
     Local Hint Immediate (weight_divides wprops) : core.
 
+    Local Lemma r'_correct_alt : ((r mod m) * (r' mod m)) mod m = 1.
+    Proof using r'_correct. pull_Zmod; apply r'_correct. Qed.
+
     Local Lemma m_enc_correct_montgomery : m = eval m_enc.
     Proof using m_small m_big bitwidth_big.
       clear -m_small m_big bitwidth_big.
@@ -1081,6 +1084,9 @@ Module WordByWordMontgomery.
         t_fin.
     Qed.
 
+    Lemma eval_R2mod : eval R2mod mod m = (r^n*r^n) mod m.
+    Proof using n_nz m_small m_big m'_correct bitwidth_big. apply R2mod_correct. Qed.
+
     Definition from_montgomerymod (v : list Z) : list Z
       := mulmod v onemod.
 
@@ -1137,8 +1143,43 @@ Module WordByWordMontgomery.
             = (eval (from_montgomerymod a) * eval (from_montgomerymod a)) mod m).
     Proof. apply squaremod_correct. Qed.
 
+    Local Ltac t_valid_side :=
+      repeat first [ solve [ auto ]
+                   | apply R2mod_correct
+                   | apply mulmod_correct ].
+
+    Definition to_montgomerymod (v : list Z) : list Z
+      := mulmod v R2mod.
+
+    Lemma to_montgomerymod_correct
+      : (forall v (_ : valid v),
+            eval (from_montgomerymod (to_montgomerymod v)) mod m
+            = eval v mod m)
+        /\ (forall v (_ : valid v), valid (to_montgomerymod v)).
+    Proof using r'_correct n_nz m_small m_big m'_correct bitwidth_big.
+      split; intros v ?; cbv [to_montgomerymod]; [ | t_valid_side ].
+      repeat first [ reflexivity
+                   | rewrite !eval_mulmod by t_valid_side
+                   | rewrite !eval_from_montgomerymod by t_valid_side
+                   | rewrite !eval_R2mod by t_valid_side
+                   | rewrite r'_correct_alt
+                   | rewrite Z.mul_1_r
+                   | rewrite Z.mod_mod by lia
+                   | rewrite (Z.mul_comm (r' mod _) (r mod _))
+                   | progress push_Zmod
+                   | progress (pull_Zmod; rewrite Z.mul_1_r; push_Zmod)
+                   | progress (pull_Zmod; rewrite Z.pow_1_l by lia; push_Zmod)
+                   | progress (pull_Zmod; rewrite <- !Z.mul_assoc, <- !Z.pow_mul_l; push_Zmod) ].
+    Qed.
+
+    Lemma eval_to_montgomerymod
+      : forall v (_ : valid v),
+        eval (from_montgomerymod (to_montgomerymod v)) mod m
+        = eval v mod m.
+    Proof. apply to_montgomerymod_correct. Qed.
+
     Definition encodemod (v : Z) : list Z
-      := mulmod (Partition.partition weight n v) R2mod.
+      := to_montgomerymod (Partition.partition weight n v).
 
     Local Ltac t_valid v :=
       cbv [valid]; repeat apply conj;
@@ -1152,18 +1193,12 @@ Module WordByWordMontgomery.
       : (forall v, 0 <= v < m -> eval (from_montgomerymod (encodemod v)) mod m = v mod m)
         /\ (forall v, 0 <= v < m -> valid (encodemod v)).
     Proof using r'_correct n_nz m_small m_big m'_correct bitwidth_big.
-      split; intros v ?; cbv [encodemod R2mod]; [ rewrite (proj1 mulmod_correct) | apply mulmod_correct ];
+      split; intros v ?; cbv [encodemod];
+        [ rewrite eval_to_montgomerymod | apply to_montgomerymod_correct ];
         [ | now t_valid v.. ].
-      push_Zmod; rewrite !eval_from_montgomerymod; [ | now t_valid v.. ].
       cbv [eval]; autorewrite with push_eval; auto.
       rewrite ?uweight_eq_alt by omega.
       rewrite ?(Z.mod_small v) by (subst r; Z.div_mod_to_quot_rem; lia).
-      rewrite ?(Z.mod_small (_ mod m)) by (subst r; Z.div_mod_to_quot_rem; lia).
-      pull_Zmod.
-      rewrite <- !Z.mul_assoc; autorewrite with pull_Zpow.
-      generalize r'_correct; push_Zmod; intro Heq; rewrite Heq; clear Heq; pull_Zmod; autorewrite with zsimplify_const.
-      rewrite (Z.mul_comm r' r); generalize r'_correct; push_Zmod; intro Heq; rewrite Heq; clear Heq; pull_Zmod; autorewrite with zsimplify_const.
-      Z.rewrite_mod_small.
       reflexivity.
     Qed.
 

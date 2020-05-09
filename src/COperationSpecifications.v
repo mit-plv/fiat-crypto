@@ -409,6 +409,7 @@ Module WordByWordMontgomery.
             (bytes_valid : list Z -> Prop)
             (m_pos : 0 < m)
             (from_montgomery : list Z -> list Z)
+            (to_montgomery : list Z -> list Z)
             (* saturated_bounds is only for selectznz *)
             (saturated_bounds : list (option zrange))
             (length_saturated_bounds : length saturated_bounds = n).
@@ -422,6 +423,12 @@ Module WordByWordMontgomery.
         valid v
         -> eval (from_montgomery v) mod m = (eval v * r'^n) mod m
            /\ valid (from_montgomery v).
+
+    Definition to_montgomery_correct
+      := forall v,
+        valid v
+        -> eval (from_montgomery (to_montgomery v)) mod m = (eval v) mod m
+           /\ valid (to_montgomery v).
 
     Definition mul_correct
                (mul : list Z -> list Z -> list Z)

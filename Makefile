@@ -155,7 +155,7 @@ ALL_JAVA_FILES := $(UNSATURATED_SOLINAS_JAVA_FILES) $(WORD_BY_WORD_MONTGOMERY_JA
 
 UNSATURATED_SOLINAS_FUNCTIONS := carry_mul carry_square carry add sub opp selectznz to_bytes from_bytes
 FUNCTIONS_FOR_25519 := $(UNSATURATED_SOLINAS_FUNCTIONS) carry_scmul121666
-WORD_BY_WORD_MONTGOMERY_FUNCTIONS := mul square add sub opp from_montgomery nonzero selectznz to_bytes from_bytes
+WORD_BY_WORD_MONTGOMERY_FUNCTIONS := mul square add sub opp from_montgomery to_montgomery nonzero selectznz to_bytes from_bytes
 UNSATURATED_SOLINAS := src/ExtractionOCaml/unsaturated_solinas
 WORD_BY_WORD_MONTGOMERY := src/ExtractionOCaml/word_by_word_montgomery
 
