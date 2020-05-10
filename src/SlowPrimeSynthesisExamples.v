@@ -69,13 +69,18 @@ Module debugging_sat_solinas_25519.
     Let n : nat := Z.to_nat (Qceiling (Z.log2_up s / machine_wordsize)).
     Let m := s - Associational.eval c.
     (* Number of reductions is calculated as follows :
-       Let i be the highest limb index of c. Then, each reduction
-       decreases the number of extra limbs by (n-i). So, to go from
-       the n extra limbs we have post-multiplication down to 0, we
-       need ceil (n / (n - i)) reductions. *)
-    Let nreductions : nat :=
-      let i := fold_right Z.max 0 (map (fun t => Z.log2 (fst t) / machine_wordsize) c) in
-      Z.to_nat (Qceiling (Z.of_nat n / (Z.of_nat n - i))).
+         Let i be the highest limb index of c. Then, each reduction
+         decreases the number of extra limbs by (n-i-1). (The -1 comes
+         from possibly having an extra high partial product at the end
+         of a reduction.) So, to go from the n extra limbs we have
+         post-multiplication down to 0, we need ceil (n / (n - i - 1))
+         reductions.  In some cases. however, [n - i <= 1], and in
+         this case, we do [n] reductions (is this enough?). *)
+  Let nreductions : nat :=
+    let i := fold_right Z.max 0 (map (fun t => Z.log2 (fst t) / machine_wordsize) c) in
+    if Z.of_nat n - i <=? 1
+    then n
+    else Z.to_nat (Qceiling (Z.of_nat n / (Z.of_nat n - i - 1))).
     Let bound := Some r[0 ~> (2^machine_wordsize - 1)]%zrange.
     Let boundsn : list (ZRange.type.option.interp base.type.Z)
       := repeat bound n.
@@ -277,13 +282,18 @@ Module debugging_sat_solinas_25519_expanded.
     Let n : nat := Z.to_nat (Qceiling (Z.log2_up s / machine_wordsize)).
     Let m := s - Associational.eval c.
     (* Number of reductions is calculated as follows :
-       Let i be the highest limb index of c. Then, each reduction
-       decreases the number of extra limbs by (n-i). So, to go from
-       the n extra limbs we have post-multiplication down to 0, we
-       need ceil (n / (n - i)) reductions. *)
+         Let i be the highest limb index of c. Then, each reduction
+         decreases the number of extra limbs by (n-i-1). (The -1 comes
+         from possibly having an extra high partial product at the end
+         of a reduction.) So, to go from the n extra limbs we have
+         post-multiplication down to 0, we need ceil (n / (n - i - 1))
+         reductions.  In some cases. however, [n - i <= 1], and in
+         this case, we do [n] reductions (is this enough?). *)
     Let nreductions : nat :=
       let i := fold_right Z.max 0 (map (fun t => Z.log2 (fst t) / machine_wordsize) c) in
-      Z.to_nat (Qceiling (Z.of_nat n / (Z.of_nat n - i))).
+      if Z.of_nat n - i <=? 1
+      then n
+      else Z.to_nat (Qceiling (Z.of_nat n / (Z.of_nat n - i - 1))).
     Let bound := Some r[0 ~> (2^machine_wordsize - 1)]%zrange.
     Let boundsn : list (ZRange.type.option.interp base.type.Z)
       := repeat bound n.
