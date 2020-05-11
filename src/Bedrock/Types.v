@@ -33,6 +33,9 @@ Class ok {p:parameters} :=
       word_size_in_bytes = Z.of_nat (Memory.bytes_per
                                        (width:=Semantics.width)
                                        Syntax.access_size.word);
+    (* width needs to be an integer number of bytes, otherwise integers that fit
+       into allotted bytes are not necessarily < 2^Semantics.width *)
+    width_0mod_8 : Semantics.width mod 8 = 0;
     varname_gen_unique :
       forall i j : nat, varname_gen i = varname_gen j <-> i = j;
   }.
