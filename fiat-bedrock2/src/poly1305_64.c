@@ -446,23 +446,23 @@ void fiat_poly1305_to_bytes(uintptr_t in0, uintptr_t out0) {
   x89 = x73;
   x90 = x72;
   /*skip*/
-  *(uintptr_t*)((out0)+((uintptr_t)0ULL)) = x74;
-  *(uintptr_t*)((out0)+((uintptr_t)8ULL)) = x75;
-  *(uintptr_t*)((out0)+((uintptr_t)16ULL)) = x76;
-  *(uintptr_t*)((out0)+((uintptr_t)24ULL)) = x77;
-  *(uintptr_t*)((out0)+((uintptr_t)32ULL)) = x78;
-  *(uintptr_t*)((out0)+((uintptr_t)40ULL)) = x79;
-  *(uintptr_t*)((out0)+((uintptr_t)48ULL)) = x80;
-  *(uintptr_t*)((out0)+((uintptr_t)56ULL)) = x81;
-  *(uintptr_t*)((out0)+((uintptr_t)64ULL)) = x82;
-  *(uintptr_t*)((out0)+((uintptr_t)72ULL)) = x83;
-  *(uintptr_t*)((out0)+((uintptr_t)80ULL)) = x84;
-  *(uintptr_t*)((out0)+((uintptr_t)88ULL)) = x85;
-  *(uintptr_t*)((out0)+((uintptr_t)96ULL)) = x86;
-  *(uintptr_t*)((out0)+((uintptr_t)104ULL)) = x87;
-  *(uintptr_t*)((out0)+((uintptr_t)112ULL)) = x88;
-  *(uintptr_t*)((out0)+((uintptr_t)120ULL)) = x89;
-  *(uintptr_t*)((out0)+((uintptr_t)128ULL)) = x90;
+  *(uint8_t*)((out0)+((uintptr_t)0ULL)) = x74;
+  *(uint8_t*)((out0)+((uintptr_t)1ULL)) = x75;
+  *(uint8_t*)((out0)+((uintptr_t)2ULL)) = x76;
+  *(uint8_t*)((out0)+((uintptr_t)3ULL)) = x77;
+  *(uint8_t*)((out0)+((uintptr_t)4ULL)) = x78;
+  *(uint8_t*)((out0)+((uintptr_t)5ULL)) = x79;
+  *(uint8_t*)((out0)+((uintptr_t)6ULL)) = x80;
+  *(uint8_t*)((out0)+((uintptr_t)7ULL)) = x81;
+  *(uint8_t*)((out0)+((uintptr_t)8ULL)) = x82;
+  *(uint8_t*)((out0)+((uintptr_t)9ULL)) = x83;
+  *(uint8_t*)((out0)+((uintptr_t)10ULL)) = x84;
+  *(uint8_t*)((out0)+((uintptr_t)11ULL)) = x85;
+  *(uint8_t*)((out0)+((uintptr_t)12ULL)) = x86;
+  *(uint8_t*)((out0)+((uintptr_t)13ULL)) = x87;
+  *(uint8_t*)((out0)+((uintptr_t)14ULL)) = x88;
+  *(uint8_t*)((out0)+((uintptr_t)15ULL)) = x89;
+  *(uint8_t*)((out0)+((uintptr_t)16ULL)) = x90;
   /*skip*/
   return;
 }
@@ -476,23 +476,23 @@ void fiat_poly1305_to_bytes(uintptr_t in0, uintptr_t out0) {
  */
 void fiat_poly1305_from_bytes(uintptr_t in0, uintptr_t out0) {
   uintptr_t x16, x15, x14, x13, x12, x11, x10, x9, x8, x7, x6, x5, x4, x3, x2, x1, x0, x33, x32, x31, x30, x29, x28, x34, x22, x21, x20, x19, x18, x17, x27, x26, x25, x24, x23, x35, x38, x39, x40, x37, x36, x41, x42, x43, x44, x45;
-  x0 = *(uintptr_t*)((in0)+((uintptr_t)0ULL));
-  x1 = *(uintptr_t*)((in0)+((uintptr_t)8ULL));
-  x2 = *(uintptr_t*)((in0)+((uintptr_t)16ULL));
-  x3 = *(uintptr_t*)((in0)+((uintptr_t)24ULL));
-  x4 = *(uintptr_t*)((in0)+((uintptr_t)32ULL));
-  x5 = *(uintptr_t*)((in0)+((uintptr_t)40ULL));
-  x6 = *(uintptr_t*)((in0)+((uintptr_t)48ULL));
-  x7 = *(uintptr_t*)((in0)+((uintptr_t)56ULL));
-  x8 = *(uintptr_t*)((in0)+((uintptr_t)64ULL));
-  x9 = *(uintptr_t*)((in0)+((uintptr_t)72ULL));
-  x10 = *(uintptr_t*)((in0)+((uintptr_t)80ULL));
-  x11 = *(uintptr_t*)((in0)+((uintptr_t)88ULL));
-  x12 = *(uintptr_t*)((in0)+((uintptr_t)96ULL));
-  x13 = *(uintptr_t*)((in0)+((uintptr_t)104ULL));
-  x14 = *(uintptr_t*)((in0)+((uintptr_t)112ULL));
-  x15 = *(uintptr_t*)((in0)+((uintptr_t)120ULL));
-  x16 = *(uintptr_t*)((in0)+((uintptr_t)128ULL));
+  x0 = *(uint8_t*)((in0)+((uintptr_t)0ULL));
+  x1 = *(uint8_t*)((in0)+((uintptr_t)1ULL));
+  x2 = *(uint8_t*)((in0)+((uintptr_t)2ULL));
+  x3 = *(uint8_t*)((in0)+((uintptr_t)3ULL));
+  x4 = *(uint8_t*)((in0)+((uintptr_t)4ULL));
+  x5 = *(uint8_t*)((in0)+((uintptr_t)5ULL));
+  x6 = *(uint8_t*)((in0)+((uintptr_t)6ULL));
+  x7 = *(uint8_t*)((in0)+((uintptr_t)7ULL));
+  x8 = *(uint8_t*)((in0)+((uintptr_t)8ULL));
+  x9 = *(uint8_t*)((in0)+((uintptr_t)9ULL));
+  x10 = *(uint8_t*)((in0)+((uintptr_t)10ULL));
+  x11 = *(uint8_t*)((in0)+((uintptr_t)11ULL));
+  x12 = *(uint8_t*)((in0)+((uintptr_t)12ULL));
+  x13 = *(uint8_t*)((in0)+((uintptr_t)13ULL));
+  x14 = *(uint8_t*)((in0)+((uintptr_t)14ULL));
+  x15 = *(uint8_t*)((in0)+((uintptr_t)15ULL));
+  x16 = *(uint8_t*)((in0)+((uintptr_t)16ULL));
   /*skip*/
   /*skip*/
   x17 = (x16)<<((uintptr_t)41ULL);
