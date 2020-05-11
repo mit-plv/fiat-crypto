@@ -7,6 +7,7 @@ Require Import bedrock2.BasicC64Semantics.
 Require Import Crypto.Stringification.Language.
 Require Import Crypto.Stringification.IR.
 Require Import Crypto.Bedrock.Defaults.
+Require Import Crypto.Bedrock.MakeAccessSizes.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Translation.Func.
 Require Import Crypto.Language.API.
@@ -199,35 +200,42 @@ Definition Bedrock2_ToFunctionLines
       match make_innames t, make_outnames (type.final_codomain t),
             list_lengths_from_argbounds inbounds with
       | Some innames, Some outnames, Some inlengths =>
-        let out := translate_func e innames inlengths outnames in
-        let f : bedrock_func := (name, fst out) in
-        let outlengths := snd out in
-        if error_free_cmd (snd (snd f))
-        then
-          match make_header innames inlengths inbounds
-                            outnames outlengths outbounds with
-          | Some header =>
-            inl (header ++ bedrock_func_to_lines f,
-                 ToString.ident_info_empty)
-          | None =>
+        match make_access_sizes_args inbounds,
+              make_base_access_sizes outbounds with
+        | Some insizes, Some outsizes =>
+          let out := translate_func
+                       e innames inlengths insizes outnames outsizes in
+          let f : bedrock_func := (name, fst out) in
+          let outlengths := snd out in
+          if error_free_cmd (snd (snd f))
+          then
+            match make_header innames inlengths inbounds
+                              outnames outlengths outbounds with
+            | Some header =>
+              inl (header ++ bedrock_func_to_lines f,
+                   ToString.ident_info_empty)
+            | None =>
+              inr
+                (String.concat
+                   String.NewLine
+                   ("Failed to generate header for function:"
+                      :: bedrock_func_to_lines f))
+            end
+          else
+            let header :=
+                match make_header innames inlengths inbounds
+                                  outnames outlengths outbounds with
+                | Some x => x | None => [] end in
             inr
               (String.concat
                  String.NewLine
-                 ("Failed to generate header for function:"
-                    :: bedrock_func_to_lines f))
-          end
-        else
-          let header :=
-              match make_header innames inlengths inbounds
-                                outnames outlengths outbounds with
-              | Some x => x | None => [] end in
-          inr
-            (String.concat
-               String.NewLine
-               (["ERROR-CONTAINING OUTPUT:"]
-                  ++ header
-                  ++ bedrock_func_to_lines f
-                  ++ ["Error occured during translation to bedrock2. This is likely because a part of the input expression either had unsupported integer types (bedrock2 requires that all integers have the same size) or contained an unsupported operation."]))
+                 (["ERROR-CONTAINING OUTPUT:"]
+                    ++ header
+                    ++ bedrock_func_to_lines f
+                    ++ ["Error occured during translation to bedrock2. This is likely because a part of the input expression either had unsupported integer types (bedrock2 requires that all integers have the same size) or contained an unsupported operation."]))
+        | None, _ => inr ("Error determining argument sizes for input bounds. Please check that the bounds fit within the machine word size.")
+        | _, None => inr ("Error determining argument sizes for output bounds. Please check that the bounds fit within the machine word size.")
+        end
       | None, _, _ =>
         inr ("Error determining argument names")
       | _, None, _ =>
