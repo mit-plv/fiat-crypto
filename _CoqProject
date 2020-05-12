@@ -59,12 +59,12 @@ src/ArithmeticCPS/WordByWordMontgomery.v
 src/Bedrock/Defaults.v
 src/Bedrock/Defaults32.v
 src/Bedrock/Defaults64.v
+src/Bedrock/MakeAccessSizes.v
 src/Bedrock/StandaloneHaskellMain.v
 src/Bedrock/StandaloneOCamlMain.v
 src/Bedrock/Stringification.v
 src/Bedrock/Tactics.v
 src/Bedrock/Types.v
-src/Bedrock/MakeAccessSizes.v
 src/Bedrock/Util.v
 src/Bedrock/Proofs/Cmd.v
 src/Bedrock/Proofs/Expr.v
@@ -135,6 +135,7 @@ src/Rewriter/All.v
 src/Rewriter/AllTacticsExtra.v
 src/Rewriter/Rules.v
 src/Rewriter/RulesProofs.v
+src/Rewriter/Passes/AddAssocLeft.v
 src/Rewriter/Passes/Arith.v
 src/Rewriter/Passes/ArithWithCasts.v
 src/Rewriter/Passes/MulSplit.v

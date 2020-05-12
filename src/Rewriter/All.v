@@ -1,4 +1,5 @@
 Require Import Crypto.Rewriter.Passes.NBE.
+Require Import Crypto.Rewriter.Passes.AddAssocLeft.
 Require Import Crypto.Rewriter.Passes.Arith.
 Require Import Crypto.Rewriter.Passes.ArithWithCasts.
 Require Import Crypto.Rewriter.Passes.StripLiteralCasts.
@@ -10,6 +11,7 @@ Require Import Crypto.Rewriter.Passes.ToFancyWithCasts.
 
 Module Compilers.
   Export NBE.Compilers.
+  Export AddAssocLeft.Compilers.
   Export Arith.Compilers.
   Export ArithWithCasts.Compilers.
   Export StripLiteralCasts.Compilers.
@@ -21,6 +23,7 @@ Module Compilers.
 
   Module Import RewriteRules.
     Export NBE.Compilers.RewriteRules.
+    Export AddAssocLeft.Compilers.RewriteRules.
     Export Arith.Compilers.RewriteRules.
     Export ArithWithCasts.Compilers.RewriteRules.
     Export StripLiteralCasts.Compilers.RewriteRules.

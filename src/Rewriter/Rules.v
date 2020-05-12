@@ -472,6 +472,16 @@ Definition arith_with_casts_rewrite_rulesT (adc_no_carry_to_add : bool) : list (
 Definition strip_literal_casts_rewrite_rulesT : list (bool * Prop)
   := [dont_do_again (forall rx x, x ∈ rx -> cstZ rx ('x) = 'x)]%Z%zrange.
 
+Definition add_assoc_left_rewrite_rulesT : list (bool * Prop)
+  := Eval cbv [myapp mymap myflatten] in
+      myflatten
+        [mymap
+           dont_do_again
+           [(forall x y z, x + (y + z) = (x + y) + z)
+            ; (forall x y z, x + (y + z) = (x + y) + z)%nat
+           ]
+        ].
+
 Section fancy.
   Context (invert_low invert_high : Z (*log2wordmax*) -> Z -> option Z)
           (value_range flag_range : zrange).

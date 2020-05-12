@@ -10,6 +10,10 @@
 //!   require the input to be in the unique saturated representation.
 //!   All functions also ensure that these two properties are true of
 //!   return values.
+//!
+//! Computed values:
+//! eval z = z[0] + z[1] << 32 + z[2] << 64 + z[3] << 96 + z[4] << 128 + z[5] << 160 + z[6] << 192
+//! bytes_eval z = z[0] + z[1] << 8 + z[2] << 16 + z[3] << 24 + z[4] << 32 + z[5] << 40 + z[6] << 48 + z[7] << 56 + z[8] << 64 + z[9] << 72 + z[10] << 80 + z[11] << 88 + z[12] << 96 + z[13] << 104 + z[14] << 112 + z[15] << 120 + z[16] << 128 + z[17] << 136 + z[18] << 144 + z[19] << 152 + z[20] << 160 + z[21] << 168 + z[22] << 176 + z[23] << 184 + z[24] << 192 + z[25] << 200 + z[26] << 208 + z[27] << 216
 
 #![allow(unused_parens)]
 #[allow(non_camel_case_types)]

@@ -43,7 +43,8 @@ Import
   Language.Wf.Compilers
   Language.Compilers
   AbstractInterpretation.Compilers
-  Stringification.Language.Compilers.
+  Stringification.Language.Compilers
+  Rewriter.All.Compilers.RewriteRules.
 Import Compilers.API.
 
 Import COperationSpecifications.Primitives.
@@ -69,6 +70,8 @@ Local Opaque
       reified_zero_gen
       reified_one_gen
       reified_prime_gen
+      reified_eval_gen
+      reified_bytes_eval_gen
       reified_to_bytes_gen
       reified_from_bytes_gen
       expr.Interp.
@@ -501,6 +504,34 @@ Section __.
              (fun fname => ["The function " ++ fname ++ " returns the field element one."]%string)
              (one_correct weightf n m tight_bounds)).
 
+  Definition reval (* r for reified *)
+    := Pipeline.RepeatRewriteAddAssocLeft
+         n
+         (Pipeline.PreBoundsPipeline
+            true (* subst01 *)
+            false (* let_bind_return *)
+            None (* fancy *)
+            (reified_eval_gen
+               @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify n)
+            (Some loose_bounds, tt)).
+
+  Definition seval (arg_name : string) (with_parens : bool) (* s for string *)
+    := show with_parens (invert_expr.smart_App_curried (reval _) (arg_name, tt)).
+
+  Definition rbytes_eval (* r for reified *)
+    := Pipeline.RepeatRewriteAddAssocLeft
+         n_bytes
+         (Pipeline.PreBoundsPipeline
+            true (* subst01 *)
+            false (* let_bind_return *)
+            None (* fancy *)
+            (reified_bytes_eval_gen
+               @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify n)
+            (prime_bytes_bounds, tt)).
+
+  Definition sbytes_eval (arg_name : string) (with_parens : bool) (* s for string *)
+    := show with_parens (invert_expr.smart_App_curried (rbytes_eval _) (arg_name, tt)).
+
   Definition selectznz : Pipeline.ErrorT _ := Primitives.selectznz n machine_wordsize.
   Definition sselectznz (prefix : string)
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
@@ -708,9 +739,12 @@ Section __.
            check_args
            ((ToString.comment_file_header_block
                (comment_header
-                  ++ ["";
-                     "Computed values:";
-                     "carry_chain = " ++ show false idxs]%string))
+                  ++ [""
+                      ; "Computed values:"
+                      ; "carry_chain = " ++ show false idxs
+                      ; "eval z = " ++ seval "z" false
+                      ; "bytes_eval z = " ++ sbytes_eval "z" false
+                     ]%string))
               ++ [""])
            function_name_prefix requests.
   End for_stringification.

@@ -26,6 +26,8 @@ Module Export WordByWordMontgomery.
 
   Definition zeromod bitwidth n m m' := encodemod bitwidth n m m' 0.
   Definition onemod bitwidth n m m' := encodemod bitwidth n m m' 1.
+  Definition evalmod bitwidth n := @eval bitwidth n.
+  Definition bytes_evalmod bitwidth n := @eval 8 (bytes_n bitwidth 1 n).
 
   (* we would do something faster, but it generally breaks extraction COQBUG(https://github.com/coq/coq/issues/7954) *)
   Local Ltac precache_reify_faster _ :=
@@ -80,7 +82,7 @@ print((indent + '(' + r'''**
 >>
 *''' + ')\n') % open(__file__, 'r').read())
 
-for i in ('mul', 'add', 'sub', 'opp', 'to_bytes', 'from_bytes', 'nonzero'):
+for i in ('mul', 'add', 'sub', 'opp', 'to_bytes', 'from_bytes', 'nonzero', 'eval', 'bytes_eval'):
     print((r'''%sDerive reified_%s_gen
        SuchThat (is_reification_of reified_%s_gen %smod)
        As reified_%s_gen_correct.
@@ -184,6 +186,24 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
   Hint Immediate (proj2 reified_nonzero_gen_correct) : wf_gen_cache.
   Hint Rewrite (proj1 reified_nonzero_gen_correct) : interp_gen_cache.
   Local Opaque reified_nonzero_gen. (* needed for making [autorewrite] not take a very long time *)
+
+  Derive reified_eval_gen
+         SuchThat (is_reification_of reified_eval_gen evalmod)
+         As reified_eval_gen_correct.
+  Proof. Time cache_reify (). Time Qed.
+  Hint Extern 1 (_ = _) => apply_cached_reification evalmod (proj1 reified_eval_gen_correct) : reify_cache_gen.
+  Hint Immediate (proj2 reified_eval_gen_correct) : wf_gen_cache.
+  Hint Rewrite (proj1 reified_eval_gen_correct) : interp_gen_cache.
+  Local Opaque reified_eval_gen. (* needed for making [autorewrite] not take a very long time *)
+
+  Derive reified_bytes_eval_gen
+         SuchThat (is_reification_of reified_bytes_eval_gen bytes_evalmod)
+         As reified_bytes_eval_gen_correct.
+  Proof. Time cache_reify (). Time Qed.
+  Hint Extern 1 (_ = _) => apply_cached_reification bytes_evalmod (proj1 reified_bytes_eval_gen_correct) : reify_cache_gen.
+  Hint Immediate (proj2 reified_bytes_eval_gen_correct) : wf_gen_cache.
+  Hint Rewrite (proj1 reified_bytes_eval_gen_correct) : interp_gen_cache.
+  Local Opaque reified_bytes_eval_gen. (* needed for making [autorewrite] not take a very long time *)
 
   Derive reified_square_gen
          SuchThat (is_reification_of reified_square_gen squaremod)
