@@ -454,6 +454,9 @@ Module ForExtraction.
                   ++ show_lines_args args)%list in
            inl (Synthesize (snd args) header prefix).
 
+      Definition strip_trailing_spaces (s : string) : string
+        := String.concat String.NewLine (List.map String.rtrim (String.split String.NewLine s)).
+
       Definition ProcessedLines
                  {output_language_api : ToString.OutputLanguageAPI}
                  {synthesize_opts : SynthesizeOptions}
@@ -464,7 +467,7 @@ Module ForExtraction.
         := match CollectErrors (PipelineLines invocation curve_description args) with
            | inl ls
              => inl
-                  (List.map (fun s => String.concat String.NewLine s ++ String.NewLine ++ String.NewLine)
+                  (List.map (fun s => String.concat String.NewLine (List.map strip_trailing_spaces s) ++ String.NewLine ++ String.NewLine)
                             ls)
            | inr nil => inr nil
            | inr (l :: ls)

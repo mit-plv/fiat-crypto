@@ -4,7 +4,7 @@
 //! n = 3 (from "3")
 //! s-c = 2^130 - [(1, 5)] (from "2^130 - 5")
 //! machine_wordsize = 64 (from "64")
-//! 
+//!
 //! Computed values:
 //! carry_chain = [0, 1, 2, 0, 1]
 

@@ -3,13 +3,13 @@
 //! requested operations: mul, square, add, sub, opp, from_montgomery, to_montgomery, nonzero, selectznz, to_bytes, from_bytes
 //! m = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffeffffffff0000000000000000ffffffff (from "2^384 - 2^128 - 2^96 + 2^32 - 1")
 //! machine_wordsize = 64 (from "64")
-//!                                                                   
+//!
 //! NOTE: In addition to the bounds specified above each function, all
 //!   functions synthesized for this Montgomery arithmetic require the
-//!   input to be strictly less than the prime modulus (m), and also  
-//!   require the input to be in the unique saturated representation. 
-//!   All functions also ensure that these two properties are true of 
-//!   return values.                                                  
+//!   input to be strictly less than the prime modulus (m), and also
+//!   require the input to be in the unique saturated representation.
+//!   All functions also ensure that these two properties are true of
+//!   return values.
 
 #![allow(unused_parens)]
 #[allow(non_camel_case_types)]
