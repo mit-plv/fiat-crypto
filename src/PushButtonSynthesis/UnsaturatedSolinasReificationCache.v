@@ -15,6 +15,8 @@ Module Export UnsaturatedSolinas.
   Definition zeromod limbwidth_num limbwidth_den s c n := encodemod limbwidth_num limbwidth_den s c n 0.
   Definition onemod limbwidth_num limbwidth_den s c n := encodemod limbwidth_num limbwidth_den s c n 1.
   Definition primemod limbwidth_num limbwidth_den s c n := encodemod limbwidth_num limbwidth_den s c n (s - Associational.eval c).
+  Definition evalmod limbwidth_num limbwidth_den n := Positional.eval (weight limbwidth_num limbwidth_den) n.
+  Definition bytes_evalmod limbwidth_num limbwidth_den n := Positional.eval (weight 8 1) (bytes_n limbwidth_num limbwidth_den n).
 
   (**
 <<
@@ -28,7 +30,7 @@ print((indent + '(' + r'''**
 >>
 *''' + ')\n') % open(__file__, 'r').read())
 
-for i in ('carry_mul', 'carry_square', 'carry_scmul', 'carry', 'encode', 'add', 'sub', 'opp', 'zero', 'one', 'prime'):
+for i in ('carry_mul', 'carry_square', 'carry_scmul', 'carry', 'encode', 'add', 'sub', 'opp', 'zero', 'one', 'prime', 'eval', 'bytes_eval'):
     print((r'''%sDerive reified_%s_gen
        SuchThat (is_reification_of reified_%s_gen %smod)
        As reified_%s_gen_correct.
@@ -149,6 +151,24 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
   Hint Immediate (proj2 reified_prime_gen_correct) : wf_gen_cache.
   Hint Rewrite (proj1 reified_prime_gen_correct) : interp_gen_cache.
   Local Opaque reified_prime_gen. (* needed for making [autorewrite] not take a very long time *)
+
+  Derive reified_eval_gen
+         SuchThat (is_reification_of reified_eval_gen evalmod)
+         As reified_eval_gen_correct.
+  Proof. Time cache_reify (). Time Qed.
+  Hint Extern 1 (_ = _) => apply_cached_reification evalmod (proj1 reified_eval_gen_correct) : reify_cache_gen.
+  Hint Immediate (proj2 reified_eval_gen_correct) : wf_gen_cache.
+  Hint Rewrite (proj1 reified_eval_gen_correct) : interp_gen_cache.
+  Local Opaque reified_eval_gen. (* needed for making [autorewrite] not take a very long time *)
+
+  Derive reified_bytes_eval_gen
+         SuchThat (is_reification_of reified_bytes_eval_gen bytes_evalmod)
+         As reified_bytes_eval_gen_correct.
+  Proof. Time cache_reify (). Time Qed.
+  Hint Extern 1 (_ = _) => apply_cached_reification bytes_evalmod (proj1 reified_bytes_eval_gen_correct) : reify_cache_gen.
+  Hint Immediate (proj2 reified_bytes_eval_gen_correct) : wf_gen_cache.
+  Hint Rewrite (proj1 reified_bytes_eval_gen_correct) : interp_gen_cache.
+  Local Opaque reified_bytes_eval_gen. (* needed for making [autorewrite] not take a very long time *)
 
   Derive reified_to_bytes_gen
          SuchThat (is_reification_of reified_to_bytes_gen freeze_to_bytesmod)

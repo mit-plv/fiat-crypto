@@ -83,6 +83,7 @@ Local Opaque
       reified_square_gen
       reified_encode_gen
       reified_from_montgomery_gen
+      reified_to_montgomery_gen
       reified_zero_gen
       reified_one_gen
       expr.Interp.
@@ -520,6 +521,34 @@ Section __.
              (fun fname => ["The function " ++ fname ++ " returns the field element one in the Montgomery domain."]%string)
              (one_correct machine_wordsize n m valid from_montgomery_res)).
 
+  Definition reval (* r for reified *)
+    := Pipeline.RepeatRewriteAddAssocLeft
+         n
+         (Pipeline.PreBoundsPipeline
+            true (* subst01 *)
+            false (* let_bind_return *)
+            None (* fancy *)
+            (reified_eval_gen
+               @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n)
+            (Some bounds, tt)).
+
+  Definition seval (arg_name : string) (with_parens : bool) (* s for string *)
+    := Show.show with_parens (invert_expr.smart_App_curried (reval _) (arg_name, tt)).
+
+  Definition rbytes_eval (* r for reified *)
+    := Pipeline.RepeatRewriteAddAssocLeft
+         n_bytes
+         (Pipeline.PreBoundsPipeline
+            true (* subst01 *)
+            false (* let_bind_return *)
+            None (* fancy *)
+            (reified_bytes_eval_gen
+               @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n)
+            (prime_bytes_bounds, tt)).
+
+  Definition sbytes_eval (arg_name : string) (with_parens : bool) (* s for string *)
+    := Show.show with_parens (invert_expr.smart_App_curried (rbytes_eval _) (arg_name, tt)).
+
   Definition selectznz : Pipeline.ErrorT _ := Primitives.selectznz n machine_wordsize.
   Definition sselectznz (prefix : string)
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
@@ -892,6 +921,14 @@ Section __.
       := Primitives.Synthesize
            machine_wordsize valid_names known_functions (fun _ => nil)
            check_args
-           (ToString.comment_file_header_block comment_header ++ [""]) function_name_prefix requests.
+           (ToString.comment_file_header_block
+              (comment_header
+                  ++ [""
+                      ; "Computed values:"
+                      ; "eval z = " ++ seval "z" false
+                      ; "bytes_eval z = " ++ sbytes_eval "z" false
+                     ]%string)
+              ++ [""])
+           function_name_prefix requests.
   End for_stringification.
 End __.

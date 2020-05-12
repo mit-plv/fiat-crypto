@@ -395,6 +395,7 @@ Module Pipeline.
              (DoRewrite : Expr t -> Expr t)
              (with_dead_code_elimination : bool)
              (with_subst01 : bool)
+             (with_let_bind_return : bool)
              (E : Expr t)
     : Expr t
     := let E := DoRewrite E in
@@ -407,7 +408,7 @@ Module Pipeline.
        let E := if with_subst01 then Subst01.Subst01 ident.is_comment E
                 else if with_dead_code_elimination then DeadCodeElimination.EliminateDead ident.is_comment E
                      else E in
-       let E := UnderLets.LetBindReturn (@ident.is_var_like) E in
+       let E := if with_let_bind_return then UnderLets.LetBindReturn (@ident.is_var_like) E else E in
        let E := DoRewrite E in (* after inlining, see if any new rewrite redexes are available *)
        dlet_nd e := ToFlat E in
        let E := FromFlat e in
@@ -429,6 +430,41 @@ Module Pipeline.
              | unreduced_naive => false
              end; |}.
 
+  Definition PreBoundsPipeline
+             {low_level_rewriter_method : low_level_rewriter_method_opt}
+             {only_signed : only_signed_opt}
+             (with_dead_code_elimination : bool := true)
+             (with_subst01 : bool)
+             (with_let_bind_return : bool)
+             (translate_to_fancy : option to_fancy_args)
+             {t}
+             (E : Expr t)
+             arg_bounds
+  : Expr t
+    := (*let E := expr.Uncurry E in*)
+      let opts := opts_of_method in
+      let E := PartialEvaluateWithListInfoFromBounds E arg_bounds in
+      let E := PartialEvaluate opts E in
+      let E := RewriteAndEliminateDeadAndInline (RewriteRules.RewriteArith 0 opts) with_dead_code_elimination with_subst01 with_let_bind_return E in
+      let E := RewriteRules.RewriteArith (2^8) opts E in (* reassociate small consts *)
+      let E := match translate_to_fancy with
+               | Some {| invert_low := invert_low ; invert_high := invert_high |} => RewriteRules.RewriteToFancy invert_low invert_high opts E
+               | None => E
+               end in
+      dlet_nd e := ToFlat E in
+      let E := FromFlat e in
+      E.
+
+  (** Useful for rewriting to a prettier form sometimes *)
+  Definition RepeatRewriteAddAssocLeft
+             {low_level_rewriter_method : low_level_rewriter_method_opt}
+             (n : nat)
+             {t}
+             (E : Expr t)
+    : Expr t
+    := let opts := Pipeline.opts_of_method in
+       List.fold_right (fun f v => f v) E (List.repeat (RewriteRules.RewriteAddAssocLeft opts) n).
+
   Definition BoundsPipeline
              {low_level_rewriter_method : low_level_rewriter_method_opt}
              {only_signed : only_signed_opt}
@@ -437,6 +473,7 @@ Module Pipeline.
              {split_multiret_to : split_multiret_to_opt}
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
+             (with_let_bind_return : bool := true)
              (translate_to_fancy : option to_fancy_args)
              (possible_values : list Z)
              (relax_zrange := relax_zrange_gen only_signed possible_values)
@@ -449,16 +486,7 @@ Module Pipeline.
   : ErrorT (Expr t)
     := (*let E := expr.Uncurry E in*)
       let opts := opts_of_method in
-      let E := PartialEvaluateWithListInfoFromBounds E arg_bounds in
-      let E := PartialEvaluate opts E in
-      let E := RewriteAndEliminateDeadAndInline (RewriteRules.RewriteArith 0 opts) with_dead_code_elimination with_subst01 E in
-      let E := RewriteRules.RewriteArith (2^8) opts E in (* reassociate small consts *)
-      let E := match translate_to_fancy with
-               | Some {| invert_low := invert_low ; invert_high := invert_high |} => RewriteRules.RewriteToFancy invert_low invert_high opts E
-               | None => E
-               end in
-      dlet_nd e := ToFlat E in
-      let E := FromFlat e in
+      dlet E := PreBoundsPipeline (* with_dead_code_elimination *) with_subst01 with_let_bind_return translate_to_fancy E arg_bounds in
       (** We first do bounds analysis with no relaxation so that we
           can do rewriting with casts, and then once that's out of the
           way, we do bounds analysis again to relax the bounds. *)
@@ -468,7 +496,7 @@ Module Pipeline.
       let E'
           := match E' with
              | inl E
-               => let E := RewriteAndEliminateDeadAndInline (RewriteRules.RewriteArithWithCasts adc_no_carry_to_add opts) with_dead_code_elimination with_subst01 E in
+               => let E := RewriteAndEliminateDeadAndInline (RewriteRules.RewriteArithWithCasts adc_no_carry_to_add opts) with_dead_code_elimination with_subst01 with_let_bind_return E in
                   dlet_nd e := ToFlat E in
                   let E := FromFlat e in
                   (** to give good error messages, we first look at
@@ -494,7 +522,7 @@ Module Pipeline.
                     end in
            let E := match split_multiret_to with
                     | Some (max_bitwidth, lgcarrymax)
-                      => RewriteAndEliminateDeadAndInline (RewriteRules.RewriteMultiRetSplit max_bitwidth lgcarrymax opts) with_dead_code_elimination with_subst01 E
+                      => RewriteAndEliminateDeadAndInline (RewriteRules.RewriteMultiRetSplit max_bitwidth lgcarrymax opts) with_dead_code_elimination with_subst01 with_let_bind_return E
                     | None => E
                     end in
            let rewrote_E_so_should_rewrite_arith_again
@@ -503,7 +531,7 @@ Module Pipeline.
                   | None, None => false
                   end in
            let E := if rewrote_E_so_should_rewrite_arith_again
-                    then RewriteAndEliminateDeadAndInline (RewriteRules.RewriteArithWithCasts adc_no_carry_to_add opts) with_dead_code_elimination with_subst01 E
+                    then RewriteAndEliminateDeadAndInline (RewriteRules.RewriteArithWithCasts adc_no_carry_to_add opts) with_dead_code_elimination with_subst01 with_let_bind_return E
                     else E in
 
            let E := match translate_to_fancy with
@@ -659,22 +687,22 @@ Module Pipeline.
 
   Hint Extern 1 (type_goodT _) => vm_compute; reflexivity : typeclass_instances.
 
-  Lemma Wf_RewriteAndEliminateDeadAndInline {t} DoRewrite with_dead_code_elimination with_subst01
+  Lemma Wf_RewriteAndEliminateDeadAndInline {t} DoRewrite with_dead_code_elimination with_subst01 with_let_bind_return
         (Wf_DoRewrite : forall E, Wf E -> Wf (DoRewrite E))
         E
         (Hwf : Wf E)
-    : Wf (@RewriteAndEliminateDeadAndInline t DoRewrite with_dead_code_elimination with_subst01 E).
+    : Wf (@RewriteAndEliminateDeadAndInline t DoRewrite with_dead_code_elimination with_subst01 with_let_bind_return E).
   Proof. cbv [RewriteAndEliminateDeadAndInline Let_In]; wf_interp_t. Qed.
 
   Global Hint Resolve @Wf_RewriteAndEliminateDeadAndInline : wf wf_extra.
   Global Hint Opaque RewriteAndEliminateDeadAndInline : wf wf_extra.
 
-  Lemma Interp_RewriteAndEliminateDeadAndInline {t} DoRewrite with_dead_code_elimination with_subst01
+  Lemma Interp_RewriteAndEliminateDeadAndInline {t} DoRewrite with_dead_code_elimination with_subst01 with_let_bind_return
         (Interp_DoRewrite : forall E, Wf E -> Interp (DoRewrite E) == Interp E)
         (Wf_DoRewrite : forall E, Wf E -> Wf (DoRewrite E))
         E
         (Hwf : Wf E)
-    : Interp (@RewriteAndEliminateDeadAndInline t DoRewrite with_dead_code_elimination with_subst01 E)
+    : Interp (@RewriteAndEliminateDeadAndInline t DoRewrite with_dead_code_elimination with_subst01 with_let_bind_return E)
       == Interp E.
   Proof.
     cbv [RewriteAndEliminateDeadAndInline Let_In];
@@ -862,7 +890,7 @@ Module Pipeline.
     (* talk about initial interp rather than final one *)
     rewrite (correct_of_final_iff_correct_of_initial Hinterp) by assumption.
     pose proof Hwf as Hwf'. (* keep an extra copy so it's not cleared *)
-    cbv beta delta [BoundsPipeline Let_In] in Hrv.
+    cbv beta delta [BoundsPipeline PreBoundsPipeline Let_In] in Hrv.
     fwd Hrv Hwf Hinterp; [ repeat fwd_side_condition_step .. | subst ].
     solve [ eauto using conj with nocore ].
   Qed.

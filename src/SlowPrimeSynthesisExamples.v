@@ -342,7 +342,7 @@ Module debugging_p256_mul_bedrock2.
       clear v.
       cbv [mul] in k.
       cbv -[Pipeline.BoundsPipeline WordByWordMontgomeryReificationCache.WordByWordMontgomery.reified_mul_gen] in k.
-      cbv [Pipeline.BoundsPipeline Rewriter.Util.LetIn.Let_In] in k.
+      cbv [Pipeline.BoundsPipeline Pipeline.PreBoundsPipeline Rewriter.Util.LetIn.Let_In] in k.
       set (k' := CheckedPartialEvaluateWithBounds _ _ _ _ _ _) in (value of k).
       vm_compute in k'.
       subst k'; cbv beta iota zeta in k.
@@ -409,7 +409,7 @@ Module debugging_25519_to_bytes_bedrock2.
       clear v.
       (*
       cbv [to_bytes] in k.
-      cbv [Pipeline.BoundsPipeline] in k.
+      cbv [Pipeline.BoundsPipeline Pipeline.PreBoundsPipeline] in k.
       set (k' := Arith.Compilers.RewriteRules.RewriteArith _ _ _) in (value of k).
       vm_compute in k'.
       cbv [Rewriter.Util.LetIn.Let_In] in k.
@@ -418,7 +418,7 @@ Module debugging_25519_to_bytes_bedrock2.
       set (uint64 := r[0 ~> 18446744073709551615]%zrange) in (value of k'').
       subst k''.
       cbv beta iota zeta in k.
-      set (k'' := Pipeline.RewriteAndEliminateDeadAndInline _ _ _ _) in (value of k).
+      set (k'' := Pipeline.RewriteAndEliminateDeadAndInline _ _ _ _ _) in (value of k).
       vm_compute in k''.
       Compute Z.log2 9223372036854775808.
       clear -k''.
@@ -788,7 +788,7 @@ Module debugging_25519_to_bytes_bedrock2.
       cbv [widen_bytes_opt_instance_0] in k.
       cbv [widen_carry] in k.
       cbv [widen_carry_opt_instance_0] in k.
-      cbv [Pipeline.BoundsPipeline] in k.
+      cbv [Pipeline.BoundsPipeline Pipeline.PreBoundsPipeline] in k.
       cbv [Rewriter.Util.LetIn.Let_In] in k.
       set (k' := GeneralizeVar.FromFlat _) in (value of k); vm_compute in k'; subst k'.
       cbv [CheckedPartialEvaluateWithBounds] in k.
@@ -940,7 +940,7 @@ Module debugging_25519_to_bytes_java.
       cbv [widen_bytes_opt_instance_0] in k.
       cbv [widen_carry] in k.
       cbv [widen_carry_opt_instance_0] in k.
-      cbv [Pipeline.BoundsPipeline] in k.
+      cbv [Pipeline.BoundsPipeline Pipeline.PreBoundsPipeline] in k.
       cbv [Rewriter.Util.LetIn.Let_In] in k.
       set (k' := GeneralizeVar.FromFlat _) in (value of k); vm_compute in k'; subst k'.
       cbv [CheckedPartialEvaluateWithBounds] in k.
@@ -1007,7 +1007,7 @@ Module debugging_p256_uint1.
       cbv [possible_values_of_machine_wordsize] in k.
       cbv [widen_carry] in k.
       cbv [widen_carry_opt_instance_0] in k.
-      cbv [Pipeline.BoundsPipeline] in k.
+      cbv [Pipeline.BoundsPipeline Pipeline.PreBoundsPipeline] in k.
       cbv [Rewriter.Util.LetIn.Let_In] in k.
       clear v.
       set (k' := GeneralizeVar.FromFlat _) in (value of k); vm_compute in k'; subst k'.
@@ -1133,7 +1133,7 @@ Module debugging_go_build0.
       cbv [possible_values_of_machine_wordsize] in k.
       cbv [widen_carry] in k.
       cbv [widen_carry_opt_instance_0] in k.
-      cbv [Pipeline.BoundsPipeline] in k.
+      cbv [Pipeline.BoundsPipeline Pipeline.PreBoundsPipeline] in k.
       set (k' := GeneralizeVar.ToFlat _) in (value of k).
       vm_compute in k'; subst k'.
       cbv [Rewriter.Util.LetIn.Let_In] in k.
@@ -1176,7 +1176,7 @@ Module debugging_go_build.
       cbv [possible_values_of_machine_wordsize] in k.
       cbv [widen_carry] in k.
       cbv [widen_carry_opt_instance_0] in k.
-      cbv [Pipeline.BoundsPipeline] in k.
+      cbv [Pipeline.BoundsPipeline Pipeline.PreBoundsPipeline] in k.
       set (k' := GeneralizeVar.ToFlat _) in (value of k).
       vm_compute in k'; subst k'.
       cbv [Rewriter.Util.LetIn.Let_In] in k.
@@ -2893,7 +2893,7 @@ Module debugging_remove_mul_split2.
       cbv [mul] in k.
       Import WordByWordMontgomeryReificationCache.
       cbv -[Pipeline.BoundsPipeline reified_mul_gen] in k.
-      cbv [Pipeline.BoundsPipeline LetIn.Let_In] in k.
+      cbv [Pipeline.BoundsPipeline Pipeline.PreBoundsPipeline LetIn.Let_In] in k.
       set (v := CheckedPartialEvaluateWithBounds _ _ _ _ _ _) in (value of k).
       Notation INL := (inl _).
       vm_compute in v.
@@ -2902,7 +2902,7 @@ Module debugging_remove_mul_split2.
       | @inl ?A ?B ?x => pose (id x) as v'; change v with (@inl A B v') in (value of k); clear v
       end.
       cbv beta iota in k.
-      set (v := Pipeline.RewriteAndEliminateDeadAndInline _ _ _ _) in (value of k) at 1.
+      set (v := Pipeline.RewriteAndEliminateDeadAndInline _ _ _ _ _) in (value of k) at 1.
       vm_compute in v; clear v';
       lazymatch (eval cbv [v] in v) with
       | ?x => pose (id x) as v'; change v with v' in (value of k); clear v
@@ -3016,7 +3016,7 @@ Module debugging_rewriting.
   Goal True.
     pose foo as X; cbv [foo] in X.
     clear -X.
-    cbv [Pipeline.BoundsPipeline LetIn.Let_In] in X.
+    cbv [Pipeline.BoundsPipeline Pipeline.PreBoundsPipeline LetIn.Let_In] in X.
     set (Y := (PartialEvaluateWithListInfoFromBounds _ _)) in (value of X).
     vm_compute in Y.
     subst Y; set (Y := (Rewriter.Compilers.PartialEvaluate _)) in (value of X).

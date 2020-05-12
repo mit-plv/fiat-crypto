@@ -126,7 +126,7 @@ Module Import UnsaturatedSolinas.
 
     Definition PipelineArithOf : Expr _
       := let E := E2 in
-         let E := Pipeline.RewriteAndEliminateDeadAndInline (RewriteRules.RewriteArith 0 opts) true (*with_dead_code_elimination*) false (*with_subst01*) E in
+         let E := Pipeline.RewriteAndEliminateDeadAndInline (RewriteRules.RewriteArith 0 opts) true (*with_dead_code_elimination*) false (*with_subst01*) true (* let_bind_return *) E in
          E.
 
     Definition PipelineFlatArithOf : GeneralizeVar.Flat.expr _
@@ -335,7 +335,7 @@ Module Import WordByWordMontgomery.
 
     Definition PipelineArithOf : Expr _
       := let E := E2 in
-         let E := Pipeline.RewriteAndEliminateDeadAndInline (RewriteRules.RewriteArith 0 opts) true (*with_dead_code_elimination*) false (*with_subst01*) E in
+         let E := Pipeline.RewriteAndEliminateDeadAndInline (RewriteRules.RewriteArith 0 opts) true (*with_dead_code_elimination*) false (*with_subst01*) true (* let_bind_return *) E in
          E.
 
     Definition PipelineFlatArithOf : GeneralizeVar.Flat.expr _

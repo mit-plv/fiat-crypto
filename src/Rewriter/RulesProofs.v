@@ -540,6 +540,10 @@ Proof using Type.
   start_proof; auto; intros; remove_casts; reflexivity.
 Qed.
 
+Lemma add_assoc_left_rewrite_rules_proofs
+  : PrimitiveHList.hlist (@snd bool Prop) add_assoc_left_rewrite_rulesT.
+Proof using Type. start_proof; intros; lia. Qed.
+
 Section fancy.
   Context (invert_low invert_high : Z (*log2wordmax*) -> Z -> option Z)
           (value_range flag_range : zrange).

@@ -7,6 +7,8 @@
 /*  */
 /* Computed values: */
 /* carry_chain = [0, 1, 2, 3, 4, 0, 1] */
+/* eval z = z[0] + z[1] << 26 + z[2] << 52 + z[3] << 78 + z[4] << 104 */
+/* bytes_eval z = z[0] + z[1] << 8 + z[2] << 16 + z[3] << 24 + z[4] << 32 + z[5] << 40 + z[6] << 48 + z[7] << 56 + z[8] << 64 + z[9] << 72 + z[10] << 80 + z[11] << 88 + z[12] << 96 + z[13] << 104 + z[14] << 112 + z[15] << 120 + z[16] << 128 */
 
 #include <stdint.h>
 typedef unsigned char fiat_poly1305_uint1;

@@ -217,6 +217,9 @@ Section __.
       := Primitives.Synthesize
            machine_wordsize valid_names known_functions (fun _ => nil)
            check_args
-           (ToString.comment_file_header_block comment_header ++ [""]) function_name_prefix requests.
+           (ToString.comment_file_header_block
+              comment_header
+              ++ [""])
+           function_name_prefix requests.
   End for_stringification.
 End __.
