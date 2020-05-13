@@ -4,6 +4,7 @@ Require Import Coq.Lists.List.
 Require Import bedrock2.ProgramLogic.
 Require Import bedrock2.Syntax.
 Require Import coqutil.Tactics.forward.
+Require Import coqutil.Word.Interface.
 Require Import Rewriter.Language.Wf.
 Require Import Crypto.AbstractInterpretation.AbstractInterpretation.
 Require Import Crypto.PushButtonSynthesis.UnsaturatedSolinas.
@@ -221,16 +222,16 @@ Module Test.
 
   Instance spec_of_mul_twice : spec_of mul_twice :=
     fun functions =>
-      forall x y px py pout bs t m
+      forall x y old_out px py pout t m
              (R : Interface.map.rep
                     (map:=Semantics.mem) -> Prop),
-        list_Z_bounded_by loose_bounds x ->
-        list_Z_bounded_by loose_bounds y ->
-        length bs = (X25519_64.n * Z.to_nat word_size_in_bytes)%nat ->
-        (* all 3 need to be separate, because we use out as an input with y *)
+        let xz := map word.unsigned x in
+        let yz := map word.unsigned y in
+        list_Z_bounded_by loose_bounds xz ->
+        list_Z_bounded_by loose_bounds yz ->
+        length old_out = X25519_64.n ->
         sep (sep (Bignum px x)
-                 (sep (Bignum py y)
-                      (array ptsto (Interface.word.of_Z 1) pout bs)))
+                 (sep (Bignum py y) (Bignum pout old_out)))
             R m ->
         WeakestPrecondition.call
           (p:=Types.semantics)
@@ -241,10 +242,11 @@ Module Test.
              rets = []%list /\
              Lift1Prop.ex1
                (fun out =>
+                  let outz := map word.unsigned out in
                   sep
-                    (sep (emp (eval out mod M
-                               = (eval x * eval y * eval y) mod M
-                               /\ list_Z_bounded_by tight_bounds out))
+                    (sep (emp (eval outz mod M
+                               = (eval xz * eval yz * eval yz) mod M
+                               /\ list_Z_bounded_by tight_bounds outz))
                          (Bignum pout out))
                     (sep (Bignum px x) (sep (Bignum py y) R))) m').
 
@@ -262,7 +264,7 @@ Module Test.
   Proof.
     (* first step of straightline is inlined here so we can do a [change]
        instead of [replace] *)
-    enter mul_twice. intros.
+    enter mul_twice. cbv zeta. intros.
     WeakestPrecondition.unfold1_call_goal.
     (cbv beta match delta [WeakestPrecondition.call_body]).
     lazymatch goal with
@@ -278,21 +280,19 @@ Module Test.
       [ try ecancel_assumption .. | ];
       [ assumption .. | ].
     sepsimpl.
+    cbv [Solinas_carry_mul_correct] in *.
     repeat straightline.
     straightline_call;
       [ try ecancel_assumption .. | ].
     { apply relax_correct; assumption. }
     { assumption. }
-    { (* TODO: lemma about length of encode_bytes *)
-      admit. }
-    {
-      use_sep_assumption.
-      rewrite (Bignum_to_bytes
-                       (inname_gen:=inname_gen)
-                       (outname_gen:=outname_gen)) by
-          admit. (* currently has a million preconditions because admitted *)
-      ecancel. }
+    { match goal with
+      | H : list_Z_bounded_by tight_bounds (map _ ?x) |- length ?x = _ =>
+        apply relax_correct, bounded_by_loose_bounds_length in H;
+          rewrite map_length in H; apply H
+      end. }
 
+    cbv [Solinas_carry_mul_correct] in *.
     repeat straightline.
 
     repeat split; try reflexivity.
@@ -306,5 +306,5 @@ Module Test.
            | _ => progress Modulo.push_Zmod
            end.
     reflexivity.
-  Admitted.
+  Qed.
 End Test.
