@@ -35,14 +35,16 @@ jobs:
         git config user.name "Automated Publisher"
         git config user.email "actions@users.noreply.github.com"
         git remote add publisher "${remote_repo}"
+        git remote update
         git show-ref # useful for debugging
         git branch --verbose
 
-        git checkout master
+        git checkout -b temp
+        git branch -D master
+        git checkout -b master publisher/master
         git add fiat-rust/Cargo.toml
         timestamp=$(date -u)
         git commit -m "Automated Rust Crate Version Bump: ${timestamp} ${GITHUB_SHA}"
-        git pull --rebase publisher master
         git push publisher master
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
