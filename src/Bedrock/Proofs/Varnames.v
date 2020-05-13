@@ -48,7 +48,7 @@ Section Varnames.
              rep.varname_set rep.equiv rep.rtype_of_ltype rep.Z].
       cbv [WeakestPrecondition.dexpr].
       rewrite <-disjoint_singleton_r_iff by eauto using string_dec.
-      split; intros; sepsimpl; subst; eauto;
+      split; intros; sepsimpl; subst; eexists; sepsimpl; eauto;
         eapply expr_untouched; eauto using only_differ_sym.
     Qed.
 
@@ -61,7 +61,7 @@ Section Varnames.
           (equivalent_base x y s locals').
     Proof.
       cbv [equivalent_base rep.equiv rep.Z WeakestPrecondition.dexpr].
-      repeat intro; sepsimpl; subst; eauto.
+      repeat intro; sepsimpl; subst; eexists; sepsimpl; eauto.
       eauto using expr_only_differ_undef.
     Qed.
 
@@ -142,11 +142,11 @@ Section Varnames.
         cbn [rep.equiv rep.rtype_of_ltype rep.listZ_mem
                        varname_set rep.varname_set].
         intros.
-        match goal with
-          H : Lift1Prop.ex1 _ _ |- Lift1Prop.ex1 _ _ =>
-          let x := fresh in
-          destruct H as [x ?]; exists x
-        end.
+        repeat match goal with
+                 H : Lift1Prop.ex1 _ _ |- Lift1Prop.ex1 _ _ =>
+                 let x := fresh in
+                 destruct H as [x ?]; exists x
+               end.
         eapply Proper_sep_iff1; [ | reflexivity | eassumption ].
         cancel.
         eapply equiv_Z_only_differ_iff1; eauto using only_differ_sym.
@@ -177,6 +177,7 @@ Section Varnames.
       Proof.
         cbn [equivalent_base rep.equiv rep.listZ_mem]; intros; sepsimpl.
         repeat intro; sepsimpl. eexists.
+        repeat intro; sepsimpl. eexists.
         eapply Proper_sep_impl1; [ | reflexivity | eassumption ].
         repeat intro; sepsimpl; eauto.
         eapply (equiv_Z_only_differ_undef (listZ:=rep.listZ_mem)); eauto.
@@ -188,16 +189,20 @@ Section Varnames.
           (Lift1Prop.ex1
              (fun x => rep.equiv (rep:=rep.Z) x y tt locals)).
       Proof.
-        cbv [rep.equiv rep.listZ_mem rep.Z Array.array map].
+        cbn [rep.equiv rep.listZ_mem rep.Z].
         intro; split; intros;
           repeat match goal with
                  | _ => progress subst
+                 | _ => progress cbn [Array.array map] in *
                  | _ => progress sepsimpl
+                 | H : map _ _ = [] |- _ =>
+                   apply map_eq_nil in H
                  | _ => rewrite word.of_Z_unsigned in *
-                 | |- Lift1Prop.ex1 _ _ => eexists
                  | |- _ /\ _ => split
+                 | |- Lift1Prop.ex1 _ _ => eexists
+                 | |- emp _ _ => cbv [emp]
                  | _ => solve [apply word.unsigned_range]
-                 | _ => solve [eauto]
+                 | _ => solve [eauto using map_nil]
                  end.
       Qed.
 

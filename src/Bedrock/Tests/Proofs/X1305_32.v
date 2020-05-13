@@ -20,6 +20,7 @@ Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Bedrock.Defaults.
 Require Import Crypto.Bedrock.Defaults32.
+Require Import Crypto.Bedrock.MakeAccessSizes.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Proofs.Func.
@@ -282,6 +283,12 @@ Section Proofs.
               | _ => apply word.unsigned_range
               end;
           eauto using Forall_map_unsigned; [ ].
+        eexists; sepsimpl;
+          [ reflexivity
+          | rewrite bits_per_word_eq_width;
+            solve [apply Forall_map_unsigned]
+          | ].
+        eexists; sepsimpl; [ reflexivity .. | ].
         apply SeparationLogic.sep_comm.
         apply SeparationLogic.sep_assoc.
         apply SeparationLogic.sep_comm.
@@ -293,8 +300,15 @@ Section Proofs.
               | _ => apply word.unsigned_range
               end;
           eauto using Forall_map_unsigned; [ ].
+        eexists; sepsimpl;
+          [ reflexivity
+          | rewrite bits_per_word_eq_width;
+            solve [apply Forall_map_unsigned]
+          | ].
+        eexists; sepsimpl; [ reflexivity .. | ].
         rewrite @word_size_in_bytes_eq in * by typeclasses eauto.
         change BasicC32Semantics.parameters with semantics in *.
+        rewrite !word.of_Z_unsigned.
         SeparationLogic.ecancel_assumption. }
       { cbn. repeat constructor; cbn [In]; try tauto.
         destruct 1; congruence. }
@@ -348,7 +362,13 @@ Section Proofs.
                 | |- dexpr _ _ _ _ =>
                   apply get_put_same, word.of_Z_unsigned
                 | _ => apply word.unsigned_range
-              end; eauto using Forall_map_unsigned. } }
+              end.
+        eexists; sepsimpl; [ reflexivity
+                           | rewrite bits_per_word_eq_width;
+                             solve [apply Forall_map_unsigned] | ].
+        eexists; sepsimpl; [ reflexivity
+                           | eexists; split; reflexivity | ].
+        eauto using Forall_map_unsigned. } }
 
     repeat intro; cbv beta in *.
     cbn [Types.equivalent_flat_base
@@ -383,6 +403,11 @@ Section Proofs.
       rewrite map_word_wrap_bounded by auto.
       cbn [type.app_curried fst snd] in *.
       rewrite word_size_in_bytes_eq, ?word.of_Z_unsigned.
+      match goal with H : word.unsigned _ = word.unsigned _ |- _ =>
+                      apply word.unsigned_inj in H end.
+      match goal with H : map word.unsigned _ = _ |- _ =>
+                      rewrite <-H end.
+      subst.
       assumption. }
   Qed.
   (* Print Assumptions mulmod_bedrock_correct. *)
