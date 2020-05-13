@@ -40,7 +40,7 @@ jobs:
         git branch --verbose
 
         git checkout -b temp
-        git branch -D master
+        git branch -D master || true
         git checkout -b master publisher/master
         git add fiat-rust/Cargo.toml
         timestamp=$(date -u)
