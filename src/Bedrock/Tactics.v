@@ -43,6 +43,8 @@ Ltac sepsimpl_step' :=
   | |- sep _ (fun m => emp _ m) _ => apply sep_emp_r
   | |- sep (Lift1Prop.ex1 _) _ _ => apply sep_ex1_l
   | |- sep _ (Lift1Prop.ex1 _) _ => apply sep_ex1_r
+  | |- sep (fun m => Lift1Prop.ex1 _ m) _ _ => apply sep_ex1_l
+  | |- sep _ (fun m => Lift1Prop.ex1 _ m) _ => apply sep_ex1_r
   | |- emp _ _ => split; [ congruence | ]
   end.
 
@@ -69,6 +71,10 @@ Ltac sepsimpl_in H :=
   | sep (Lift1Prop.ex1 _) _ _ =>
     eapply sep_ex1_l in H; destruct H
   | sep _ (Lift1Prop.ex1 _) _ =>
+    eapply sep_ex1_r in H; destruct H
+  | sep (fun m => Lift1Prop.ex1 _ m) _ _ =>
+    eapply sep_ex1_l in H; destruct H
+  | sep _ (fun m => Lift1Prop.ex1 _ m) _ =>
     eapply sep_ex1_r in H; destruct H
   | sep _ _ map.empty =>
     apply sep_empty_iff in H

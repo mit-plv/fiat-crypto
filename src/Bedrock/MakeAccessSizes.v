@@ -254,15 +254,24 @@ Section __.
         eauto using zrange_to_access_size_tighter_than_word.
     Qed.
 
+    Lemma bits_per_word_eq_width :
+      let bytes := (Memory.bytes_per
+                      (width:=Semantics.width) access_size.word) in
+      Z.of_nat bytes * 8 = Semantics.width.
+    Proof.
+      pose proof word.width_pos.
+      cbv [Memory.bytes_per]. rewrite Z2Nat.id by auto with zarith.
+      rewrite Z.mul_div_eq' by lia.
+      push_Zmod. rewrite width_0mod_8. pull_Zmod.
+      autorewrite with zsimplify_fast. reflexivity.
+    Qed.
+
     Lemma bits_per_word_le_width :
       (Z.of_nat (Memory.bytes_per
                    (width:=Semantics.width) access_size.word) * 8
        <= Semantics.width).
     Proof.
-      cbv [Memory.bytes_per]. pose proof word.width_pos.
-      rewrite Z2Nat.id, Z.mul_div_eq' by auto with zarith.
-      push_Zmod. rewrite width_0mod_8. autorewrite with zsimplify.
-      reflexivity.
+      rewrite bits_per_word_eq_width. reflexivity.
     Qed.
 
     Lemma make_access_size_good ranges size :
@@ -303,9 +312,8 @@ Section __.
                | _ => progress ssplit
                | H : _ |- _ => eapply H; solve [eauto]
                | |- True => tauto
+               | _ => solve [eauto using make_access_size_good]
                end.
-      rewrite Nat2Z.inj_mul. change (Z.of_nat 8) with 8.
-      eauto using make_access_size_good.
     Qed.
 
     Lemma make_access_sizes_args_good t bounds sizes :

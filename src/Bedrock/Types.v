@@ -110,21 +110,24 @@ Module Types.
             fun (x : list Z) (y : rtype) sz locals =>
               Lift1Prop.ex1
                 (fun start : Semantics.word =>
-                   let bytes :=
-                       Z.of_nat (Memory.bytes_per (width:=Semantics.width) sz) in
-                   sep (map:=Semantics.mem)
-                       (sep
-                          (* TODO : need to think harder about this! removing the condition caused issues with store, changing it to width caused issues with load *)
-                          (emp
-                             (Forall
-                                (fun z => (0 <= z < 2 ^ (bytes * 8))%Z)
-                                x))
-                          (fun mem : Semantics.mem =>
-                               equiv (word.unsigned start) y
-                                     (dummy_size (rep:=zrep))
-                                     locals mem))
-                       (array (truncated_scalar sz)
-                              (word.of_Z bytes) start x))
+                   Lift1Prop.ex1
+                     (fun ws : list Semantics.word =>
+                        let bytes :=
+                            Z.of_nat (Memory.bytes_per (width:=Semantics.width) sz) in
+                        sep (map:=Semantics.mem)
+                            (sep
+                               (emp (map word.unsigned ws = x /\
+                                     Forall
+                                       (fun z =>
+                                          (0 <= z < 2 ^ (bytes * 8))%Z)
+                                       x))
+                               (fun mem : Semantics.mem =>
+                                  equiv (word.unsigned start) y
+                                        (dummy_size (rep:=zrep))
+                                        locals mem))
+                            (array (truncated_scalar sz)
+                                   (word.of_Z bytes) start
+                                   (map word.unsigned ws))))
         }.
 
       Instance Z : rep base_Z :=
@@ -138,9 +141,11 @@ Module Types.
           varname_set := PropSet.singleton_set;
           equiv :=
             fun (x : Z) (y : Syntax.expr.expr) _ locals =>
-              emp ((0 <= x < 2 ^ Semantics.width)%Z /\
-                   WeakestPrecondition.dexpr
-                     map.empty locals y (word.of_Z x))
+              Lift1Prop.ex1
+                (fun w : Semantics.word =>
+                   emp (word.unsigned w = x /\
+                        WeakestPrecondition.dexpr
+                          map.empty locals y w))
         }.
     End rep.
   End rep.

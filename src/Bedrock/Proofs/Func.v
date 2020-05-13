@@ -174,6 +174,7 @@ Section Func.
         repeat match goal with
                | _ => progress (intros; cleanup)
                | _ => progress subst
+               | _ => progress sepsimpl
                | _ => progress cbn [rep.equiv rep.listZ_mem rep.Z] in *
                | _ => progress cbn [List.hd
                                       WeakestPrecondition.list_map
@@ -184,17 +185,11 @@ Section Func.
                                       WeakestPrecondition.expr
                                       WeakestPrecondition.expr_body]
                | _ => rewrite word.of_Z_unsigned
-               | H : sep (emp _) _ _ |- _ => apply sep_emp_l in H
-               | H : sep (fun _ => emp _ _) _ _ |- _ => apply sep_emp_l in H
-               | H : sep (sep (fun _ => emp _ _) _) _ _ |- _ => apply sep_assoc in H
-               | H : sep (Lift1Prop.ex1 _) _ _ |- _ => apply sep_ex1_l in H; destruct H
                | H : WeakestPrecondition.dexpr _ _ _ _ |- _ => destruct H
                | |- WeakestPrecondition.get _ _ _ => eexists; split; [ eassumption | ]
                | |- WeakestPrecondition.literal _ _ =>
                  cbv [WeakestPrecondition.literal dlet.dlet]
-               | |- sep (emp _) _ _ => apply sep_emp_l
-               | |- sep (sep (emp _) _) _ _ => apply sep_assoc
-               | |- _ /\ _ => split
+               | |- Lift1Prop.ex1 _ _ => eexists; sepsimpl; eauto; [ ]
                | H : False |- _ => tauto
                | _ => reflexivity
                | _ => solve [eauto]
@@ -252,10 +247,13 @@ Section Func.
                WeakestPrecondition.get WeakestPrecondition.dexpr
                WeakestPrecondition.expr WeakestPrecondition.expr_body].
       repeat match goal with
+             | _ => progress sepsimpl
+             | _ => progress subst
              | _ => progress cbn [map.putmany_of_list_zip] in *
              | H : Some _ = Some _ |- _ => inversion H; clear H; subst
              | _ => rewrite map.get_put_same, word.of_Z_unsigned
              | _ => split; intros; cleanup; subst
+             | _ => eexists; sepsimpl; [ reflexivity .. | ]
              | _ => solve [eauto]
              end. }
     { match goal with
@@ -469,12 +467,14 @@ Section Func.
       split; intros; sepsimpl; subst; try reflexivity.
       { eexists. sepsimpl; eauto; [ ].
         rewrite !word.of_Z_unsigned in *.
+        eexists; sepsimpl; eauto; [ ].
+        eexists; sepsimpl; eauto; [ ].
         congruence. }
       { eexists; sepsimpl; eauto; [ ].
-        rewrite !word.of_Z_unsigned in *.
-        match goal with H : _ |- _ =>
-                        rewrite word.of_Z_unsigned in H end.
-        eexists; split; eauto. } }
+        eexists; sepsimpl; eauto; [ ].
+        eexists; sepsimpl; eauto; [ ].
+        eexists; split; eauto; [ ].
+        apply word.of_Z_unsigned. } }
   Qed.
 
   Lemma translate_func_correct {t}

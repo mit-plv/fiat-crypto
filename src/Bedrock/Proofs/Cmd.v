@@ -117,6 +117,7 @@ Section Cmd.
         eapply IHrhs; eauto.
         { eapply Forall2_impl_strong; eauto.
           intros; sepsimpl; [ lia .. | ].
+          eexists; sepsimpl; [ eassumption | ].
           eapply expr_only_differ_undef; eauto.
           rewrite used_varnames_1.
           eauto using only_differ_sym, only_differ_put. }
@@ -140,6 +141,7 @@ Section Cmd.
       { constructor; eauto; [ ].
         sepsimpl; [ lia .. | ].
         cbn [rep.rtype_of_ltype rep.Z].
+        eexists; sepsimpl; [ reflexivity | ].
         eapply expr_untouched with (mem2:=map.empty); eauto;
           [ | solve [apply dexpr_put_same] ].
         match goal with H : PropSet.sameset _ _ |- _ =>
@@ -196,12 +198,13 @@ Section Cmd.
       eexists; split;
         [ apply expr_empty; eassumption | ].
       repeat (split; [reflexivity | ]).
-      repeat match goal with |- _ /\ _ => split end; sepsimpl;
+      repeat match goal with |- _ /\ _ => split end;
+        try eexists; sepsimpl;
         eauto using dexpr_put_same, only_differ_sym, only_differ_put.
-      cbv [PropSet.singleton_set]; apply sameset_iff; intros.
-      rewrite used_varnames_iff; split; intros; cleanup; subst; eauto.
-      { eexists; eauto with lia. }
-      { f_equal; lia. } }
+      all:cbv [PropSet.singleton_set]; apply sameset_iff; intros.
+      all:rewrite used_varnames_iff; split; intros; cleanup; subst; eauto;
+        first [ eexists; eauto with lia
+              | f_equal; lia ]. }
     { (* prod *)
       repeat straightline.
       eapply Proper_cmd; [ solve [apply Proper_call]
@@ -502,12 +505,8 @@ Section Cmd.
           clear IHe1_valid.
           simplify. cbv [WeakestPrecondition.dexpr] in *.
           apply Forall2_cons; [intros | eassumption].
-          match goal with
-          | H : emp _ _ |- _ => inversion H; subst; clear H
-          end.
-          cleanup.
-          split; [ reflexivity | ].
-          split; [ lia | ].
+          sepsimpl.
+          eexists; sepsimpl; [ eassumption | ].
           eapply (expr_untouched ltac:(eassumption)
                                         ltac:(eassumption)); eauto; [ ].
           cbv [used_varnames]. setsimplify.

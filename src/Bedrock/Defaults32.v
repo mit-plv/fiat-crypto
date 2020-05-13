@@ -44,6 +44,7 @@ Section Defaults_32.
     { exact BasicC32Semantics.parameters_ok. }
     { reflexivity. }
     { reflexivity. }
+    { reflexivity. }
     { exact decimal_varname_gen_unique. }
   Defined.
 End Defaults_32.
