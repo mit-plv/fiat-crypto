@@ -353,6 +353,12 @@ Module Compilers.
                 | ident.fancy_addm => "fancy.addm"
                 end.
 
+        (** N.B. Even though we are nominally printing Gallina
+             identifiers here, we parenthesize bitwise operators much
+             more frequently.  See, e.g.,
+             https://github.com/mit-plv/fiat-crypto/pull/792#issuecomment-627647069,
+             where Andres makes the point that in C, [+] binds more
+             tightly than [<<]. *)
         Definition show_ident_lvl (with_casts : bool) {t} (idc : ident.ident t)
           : type.for_each_lhs_of_arrow (fun t => (nat -> string) * ZRange.type.option.interp t)%type t -> (nat -> string) * ZRange.type.base.option.interp (type.final_codomain t)
           := match idc in ident.ident t return type.for_each_lhs_of_arrow (fun t => (nat -> string) * ZRange.type.option.interp t)%type t -> (nat -> string) * ZRange.type.base.option.interp (type.final_codomain t) with
@@ -395,10 +401,10 @@ Module Compilers.
              | ident.Z_leb => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 70) (x 69%nat ++ " ≤ " ++ y 69%nat), ZRange.type.base.option.None)
              | ident.Z_gtb => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 70) (x 69%nat ++ " > " ++ y 69%nat), ZRange.type.base.option.None)
              | ident.Z_geb => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 70) (x 69%nat ++ " ≥ " ++ y 69%nat), ZRange.type.base.option.None)
-             | ident.Z_shiftr => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 30) (x 30%nat ++ " >> " ++ y 29%nat), ZRange.type.base.option.None)
-             | ident.Z_shiftl => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 30) (x 30%nat ++ " << " ++ y 29%nat), ZRange.type.base.option.None)
-             | ident.Z_land => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 50) (x 50%nat ++ " & " ++ y 49%nat), ZRange.type.base.option.None)
-             | ident.Z_lor => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 50) (x 50%nat ++ " | " ++ y 49%nat), ZRange.type.base.option.None)
+             | ident.Z_shiftr => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 55) (x 30%nat ++ " >> " ++ y 29%nat), ZRange.type.base.option.None)
+             | ident.Z_shiftl => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 55) (x 30%nat ++ " << " ++ y 29%nat), ZRange.type.base.option.None)
+             | ident.Z_land => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 55) (x 30%nat ++ " & " ++ y 29%nat), ZRange.type.base.option.None)
+             | ident.Z_lor => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 55) (x 30%nat ++ " | " ++ y 29%nat), ZRange.type.base.option.None)
              | ident.Z_cast
              | ident.Z_cast2
                => fun '((_, range), ((x, xr), tt)) => (x, range)
