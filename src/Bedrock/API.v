@@ -27,12 +27,25 @@ Class bedrock2_unsaturated_solinas p n s c :=
       @spec_of_carry_mul p n s c carry_mul_name;
     carry_mul_correct :
       forall functions,
-        spec_of_carry_mul (carry_mul :: functions) }.
+        spec_of_carry_mul (carry_mul :: functions);
+    add_name : string;
+    add_func : (list string * list string * cmd)%type;
+    add : bedrock_func := (add_name, add_func);
+    spec_of_add : spec_of add_name :=
+      @spec_of_add p n s c add_name;
+    add_correct :
+      forall functions,
+        spec_of_add (add :: functions) }.
 Arguments carry_mul_name {_ _ _ _ _}.
 Arguments carry_mul_func {_ _ _ _ _}.
 Arguments carry_mul {_ _ _ _ _}.
 Arguments spec_of_carry_mul {_ _ _ _ _}.
 Arguments carry_mul_correct {_ _ _ _ _}.
+Arguments add_name {_ _ _ _ _}.
+Arguments add_func {_ _ _ _ _}.
+Arguments add {_ _ _ _ _}.
+Arguments spec_of_add {_ _ _ _ _}.
+Arguments add_correct {_ _ _ _ _}.
 
 Local Notation make_bedrock_func :=
   (@make_bedrock_func _ default_inname_gen default_outname_gen).
@@ -87,16 +100,23 @@ Ltac parameters_from_wordsize machine_wordsize :=
   end.
 
 Ltac make_all_reified_ops n s c machine_wordsize :=
+  idtac "computing reified carry_mul (this one can be slow)...";
   make_reified_op
     n (PushButtonSynthesis.UnsaturatedSolinas.carry_mul
+         n s c machine_wordsize);
+  idtac "computing reified add...";
+  make_reified_op
+    n (PushButtonSynthesis.UnsaturatedSolinas.add
          n s c machine_wordsize).
 
-Ltac instantiate_ops carry_mul_name_value :=
+Ltac instantiate_ops carry_mul_name_value add_name_value :=
   let n :=
       lazymatch goal with
       | |- bedrock2_unsaturated_solinas _ ?n _ _ => n end in
   let carry_mul_func_value := fresh "carry_mul_func" in
   let carry_mul_func_eq := fresh "carry_mul_func_eq" in
+  let add_func_value := fresh "add_func" in
+  let add_func_eq := fresh "add_func_eq" in
   lazymatch goal with
   | X : reified_op
           _
@@ -104,11 +124,29 @@ Ltac instantiate_ops carry_mul_name_value :=
     |- _ =>
     destruct X as [? carry_mul_func_value carry_mul_func_eq ]
   end;
-  let name := eval vm_compute in carry_mul_name_value in
+  lazymatch goal with
+  | X : reified_op
+          _
+          (PushButtonSynthesis.UnsaturatedSolinas.add _ _ _ _)
+    |- _ =>
+    destruct X as [? add_func_value add_func_eq ]
+  end;
+  let carry_mul_name_value := eval vm_compute in carry_mul_name_value in
+  let add_name_value := eval vm_compute in add_name_value in
   apply Build_bedrock2_unsaturated_solinas
-    with (carry_mul_name:=name)
-         (carry_mul_func:=carry_mul_func_value);
-  rewrite carry_mul_func_eq.
+    with (carry_mul_name:=carry_mul_name_value)
+         (carry_mul_func:=carry_mul_func_value)
+         (add_name:=add_name_value)
+         (add_func:=add_func_value);
+  rewrite ?carry_mul_func_eq, ?add_func_eq.
+
+Ltac use_correctness_proofs :=
+  match goal with
+  | |- context [UnsaturatedSolinas.spec_of_carry_mul] =>
+    apply UnsaturatedSolinas.carry_mul_correct
+  | |- context [UnsaturatedSolinas.spec_of_add] =>
+    apply UnsaturatedSolinas.add_correct
+  end.
 
 Module X25519_64.
   Let n := 10%nat.
@@ -117,6 +155,7 @@ Module X25519_64.
   Let machine_wordsize := 64.
 
   Definition carry_mul_name := "curve25519_carry_mul"%string.
+  Definition add_name := "curve25519_add"%string.
 
   Local Instance p : Types.parameters.
   let p := parameters_from_wordsize machine_wordsize in
@@ -127,8 +166,8 @@ Module X25519_64.
   Instance curve25519_bedrock2 : bedrock2_unsaturated_solinas p n s c.
   Proof.
     make_all_reified_ops n s c machine_wordsize.
-    instantiate_ops carry_mul_name.
-    apply UnsaturatedSolinas.carry_mul_correct.
+    instantiate_ops carry_mul_name add_name.
+    all: use_correctness_proofs.
     all: try assumption.
     all: abstract (handle_easy_preconditions).
   Defined.
@@ -143,6 +182,7 @@ Module X1305_32.
   Let machine_wordsize := 32.
 
   Definition carry_mul_name := "poly1305_carry_mul"%string.
+  Definition add_name := "poly1305_add"%string.
 
   Local Instance p : Types.parameters.
   let p := parameters_from_wordsize machine_wordsize in
@@ -153,9 +193,8 @@ Module X1305_32.
   Instance poly1305_bedrock2 : bedrock2_unsaturated_solinas p n s c.
   Proof.
     make_all_reified_ops n s c machine_wordsize.
-    instantiate_ops carry_mul_name.
-    apply UnsaturatedSolinas.carry_mul_correct.
-
+    instantiate_ops carry_mul_name add_name.
+    all: use_correctness_proofs.
     all: try assumption.
     all: abstract (handle_easy_preconditions).
   Qed.
