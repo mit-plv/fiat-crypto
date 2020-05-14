@@ -26,6 +26,7 @@ Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Proofs.Func.
 Require Import Crypto.Bedrock.Proofs.ValidComputable.Func.
 Require Import Crypto.Bedrock.Util.
+Require Import Crypto.Bedrock.VarnameGenerator.
 Require Import Crypto.COperationSpecifications.
 Require Import Crypto.Language.API.
 Require Import Crypto.PushButtonSynthesis.UnsaturatedSolinas.
@@ -262,7 +263,8 @@ Section Proofs.
                            PropSet.empty_set].
         destruct 1 as [? | [? | ?] ]; try tauto;
           match goal with H : _ = varname_gen _ |- _ =>
-                          apply varname_gen_startswith in H;
+                          cbv [varname_gen default_parameters] in H;
+                            apply prefix_name_gen_startswith in H;
                             vm_compute in H; congruence
           end. }
       { cbn [fst snd Types.equivalent_flat_args Types.rep.listZ_mem
@@ -285,7 +287,7 @@ Section Proofs.
           eauto using Forall_map_unsigned; [ ].
         eexists; sepsimpl;
           [ reflexivity
-          | rewrite bits_per_word_eq_width;
+          | rewrite bits_per_word_eq_width by auto using width_0mod_8;
             solve [apply Forall_map_unsigned]
           | ].
         eexists; sepsimpl; [ reflexivity .. | ].
@@ -302,7 +304,7 @@ Section Proofs.
           eauto using Forall_map_unsigned; [ ].
         eexists; sepsimpl;
           [ reflexivity
-          | rewrite bits_per_word_eq_width;
+          | rewrite bits_per_word_eq_width by auto using width_0mod_8;
             solve [apply Forall_map_unsigned]
           | ].
         eexists; sepsimpl; [ reflexivity .. | ].
@@ -323,7 +325,8 @@ Section Proofs.
         cbv [PropSet.singleton_set PropSet.elem_of PropSet.empty_set].
         intro;
           match goal with H : _ = varname_gen _ |- _ =>
-                          apply varname_gen_startswith in H;
+                          cbv [varname_gen default_parameters] in H;
+                            apply prefix_name_gen_startswith in H;
                             vm_compute in H; congruence
           end. }
       { cbn. repeat constructor; cbn [In]; tauto. }
@@ -364,7 +367,7 @@ Section Proofs.
                 | _ => apply word.unsigned_range
               end.
         eexists; sepsimpl; [ reflexivity
-                           | rewrite bits_per_word_eq_width;
+                           | rewrite bits_per_word_eq_width by auto using width_0mod_8;
                              solve [apply Forall_map_unsigned] | ].
         eexists; sepsimpl; [ reflexivity
                            | eexists; split; reflexivity | ].

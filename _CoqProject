@@ -61,6 +61,8 @@ src/Bedrock/Defaults.v
 src/Bedrock/Defaults32.v
 src/Bedrock/Defaults64.v
 src/Bedrock/MakeAccessSizes.v
+src/Bedrock/MakeListLengths.v
+src/Bedrock/MakeNames.v
 src/Bedrock/SelectParameters.v
 src/Bedrock/StandaloneHaskellMain.v
 src/Bedrock/StandaloneOCamlMain.v
@@ -69,6 +71,7 @@ src/Bedrock/Tactics.v
 src/Bedrock/Types.v
 src/Bedrock/UnsaturatedSolinas.v
 src/Bedrock/Util.v
+src/Bedrock/VarnameGenerator.v
 src/Bedrock/Proofs/Cmd.v
 src/Bedrock/Proofs/Expr.v
 src/Bedrock/Proofs/Flatten.v

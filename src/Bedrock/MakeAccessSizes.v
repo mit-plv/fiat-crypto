@@ -126,6 +126,23 @@ Section __.
     | _ => fun _ => None
     end.
 
+  Fixpoint access_sizes_repeat_base (s : access_size) t
+    : base_access_sizes t :=
+    match t as t0 return base_access_sizes t0 with
+    | base.type.prod a b =>
+      (access_sizes_repeat_base s a, access_sizes_repeat_base s b)
+    | base_listZ => s
+    | _ => tt
+    end.
+  Fixpoint access_sizes_repeat_args (sz : access_size) t
+    : type.for_each_lhs_of_arrow access_sizes t :=
+    match t as t0 return type.for_each_lhs_of_arrow access_sizes t0 with
+    | type.base b => tt
+    | type.arrow (type.base s) d =>
+      (access_sizes_repeat_base sz s, access_sizes_repeat_args sz d)
+    | type.arrow s d => (tt, access_sizes_repeat_args sz d)
+    end.
+
   Section proofs.
     Context {p_ok : @Types.ok p}.
     Existing Instance semantics_ok.

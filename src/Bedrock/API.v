@@ -11,6 +11,7 @@ Require Import Crypto.PushButtonSynthesis.UnsaturatedSolinas.
 Require Import Crypto.Bedrock.Defaults.
 Require Import Crypto.Bedrock.SelectParameters.
 Require Import Crypto.Bedrock.UnsaturatedSolinas.
+Require Import Crypto.Bedrock.VarnameGenerator.
 Require Import Crypto.Bedrock.Proofs.ValidComputable.Func.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Local Open Scope Z_scope.
@@ -33,13 +34,8 @@ Arguments carry_mul {_ _ _ _ _}.
 Arguments spec_of_carry_mul {_ _ _ _ _}.
 Arguments carry_mul_correct {_ _ _ _ _}.
 
-(* TODO: replace with prefix-based generators *)
-Definition inname_gen :=
-  fun n => ("in" ++ Decimal.Z.to_string (Z.of_nat n))%string.
-Definition outname_gen :=
-  fun n => ("out" ++ Decimal.Z.to_string (Z.of_nat n))%string.
 Local Notation make_bedrock_func :=
-  (@make_bedrock_func _ inname_gen outname_gen).
+  (@make_bedrock_func _ default_inname_gen default_outname_gen).
 
 Record reified_op {p t} (n : nat)
        (start : ErrorT.ErrorT BoundsPipeline.Pipeline.ErrorMessage
@@ -55,21 +51,6 @@ Arguments res {_ _ _}.
 Arguments reified_eq {_ _ _}.
 Arguments reified_Wf3 {_ _ _}.
 Arguments reified_valid {_ _ _}.
-
-(* TODO: remove these axioms once there's a nice general proof for
-     prefix-based varname generators *)
-Axiom outname_gen_inname_gen_ok :
-  forall n m : nat, outname_gen n <> inname_gen m.
-Axiom inname_gen_varname_gen_ok :
-  forall {p : Types.parameters} n m,
-    inname_gen n <> Types.varname_gen m.
-Axiom outname_gen_varname_gen_ok :
-  forall {p : Types.parameters} n m,
-    outname_gen n <> Types.varname_gen m.
-Axiom inname_gen_unique :
-  forall i j : nat, inname_gen i = inname_gen j <-> i = j.
-Axiom outname_gen_unique :
-  forall i j : nat, outname_gen i = outname_gen j <-> i = j.
 
 Ltac handle_easy_preconditions :=
   lazymatch goal with

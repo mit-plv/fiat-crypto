@@ -6,6 +6,7 @@ Require Import bedrock2.Semantics.
 Require Import bedrock2.BasicC32Semantics.
 Require Import Crypto.Bedrock.Defaults.
 Require Import Crypto.Bedrock.Types.
+Require Import Crypto.Bedrock.VarnameGenerator.
 Require Import Crypto.BoundsPipeline.
 Require Import Crypto.Language.API.
 Require Import Crypto.Util.ZRange.
@@ -34,7 +35,7 @@ Section Defaults_32.
   Let wordsize_bytes := Eval vm_compute in (machine_wordsize / 8)%Z.
   Instance default_parameters : Types.parameters :=
     {| semantics := BasicC32Semantics.parameters;
-       varname_gen := Defaults.varname_gen;
+       varname_gen := default_varname_gen;
        error := expr.var Defaults.ERROR;
        word_size_in_bytes := wordsize_bytes;
     |}.
@@ -45,7 +46,7 @@ Section Defaults_32.
     { reflexivity. }
     { reflexivity. }
     { reflexivity. }
-    { exact decimal_varname_gen_unique. }
+    { apply prefix_name_gen_unique. }
   Defined.
 End Defaults_32.
 

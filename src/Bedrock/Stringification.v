@@ -8,8 +8,11 @@ Require Import Crypto.Stringification.Language.
 Require Import Crypto.Stringification.IR.
 Require Import Crypto.Bedrock.Defaults.
 Require Import Crypto.Bedrock.MakeAccessSizes.
+Require Import Crypto.Bedrock.MakeListLengths.
+Require Import Crypto.Bedrock.MakeNames.
 Require Import Crypto.Bedrock.SelectParameters.
 Require Import Crypto.Bedrock.Types.
+Require Import Crypto.Bedrock.VarnameGenerator.
 Require Import Crypto.Bedrock.Translation.Func.
 Require Import Crypto.Language.API.
 Require Import Crypto.Util.Option.
@@ -23,67 +26,6 @@ Local Open Scope list_scope.
 
 Section with_parameters.
   Context {p : parameters}.
-  Fixpoint make_names (prefix : string)
-           (nextn : nat) (t : base.type)
-    : option (nat * base_ltype t) :=
-    match t as t0 return
-          option (nat * base_ltype t0)
-    with
-    | base.type.prod a b =>
-      (olet '(nextn, anames) <- make_names prefix nextn a;
-      olet '(nextn, bnames) <- make_names prefix nextn b;
-      Some (nextn, (anames, bnames)))%option
-    | base_listZ =>
-      let num := Decimal.Z.to_string (Z.of_nat nextn) in
-      Some (S nextn, String.append prefix num)
-    | base_Z =>
-      let num := Decimal.Z.to_string (Z.of_nat nextn) in
-      Some (S nextn, String.append prefix num)
-    | _ => None
-    end.
-  Fixpoint make_innames' (nextn : nat) (t : API.type)
-    : option (nat * type.for_each_lhs_of_arrow ltype t) :=
-    match t with
-    | type.base _ => Some (nextn, tt)
-    | type.arrow (type.base s) d =>
-      (olet '(nextn, snames) <- make_names "in" nextn s;
-      olet '(nextn, dnames) <- make_innames' nextn d;
-      Some (nextn, (snames, dnames)))%option
-    | type.arrow _ _ => None
-    end.
-  Definition make_innames t : option (type.for_each_lhs_of_arrow ltype t) :=
-    option_map snd (make_innames' 0 t).
-  Definition make_outnames t : option (base_ltype t) :=
-    option_map snd (make_names "out" 0 t).
-
-  (* mostly a duplicate of list_lengths_from_value, just with ZRange interp *)
-  Fixpoint list_lengths_from_bounds {t}
-    : ZRange.type.base.option.interp t -> option (base_listonly nat t) :=
-    match t as t0 return
-          ZRange.type.base.option.interp t0 -> option (base_listonly nat t0) with
-    | base.type.prod a b =>
-      fun x =>
-        (x1 <- list_lengths_from_bounds (fst x);
-           x2 <- list_lengths_from_bounds (snd x);
-           Some (x1, x2))%option
-    | base_listZ =>
-      fun x : option (list _) => option_map (@List.length _) x
-    | _ => fun _ => Some tt
-    end.
-  Fixpoint list_lengths_from_argbounds {t}
-    : type.for_each_lhs_of_arrow ZRange.type.option.interp t ->
-      option (type.for_each_lhs_of_arrow list_lengths t) :=
-    match t as t0 return
-          type.for_each_lhs_of_arrow _ t0 ->
-          option (type.for_each_lhs_of_arrow _ t0) with
-    | type.base b => fun _ => Some tt
-    | type.arrow (type.base a) b =>
-      fun x =>
-        (x1 <- list_lengths_from_bounds (fst x);
-           x2 <- list_lengths_from_argbounds (snd x);
-           Some (x1, x2))%option
-    | type.arrow a b => fun _ => None
-    end.
 
   Fixpoint make_base_var_data {t}
     : base_ltype t -> list_lengths (type.base t) ->
@@ -178,9 +120,11 @@ Definition Bedrock2_ToFunctionLines
     match select_parameters machine_wordsize with
     | inr err => inr err
     | inl p =>
-      match make_innames t, make_outnames (type.final_codomain t),
-            list_lengths_from_argbounds inbounds with
-      | Some innames, Some outnames, Some inlengths =>
+      let innames := make_innames (inname_gen:=default_inname_gen) t in
+      let outnames := make_outnames (outname_gen:=default_outname_gen)
+                                    (type.final_codomain t) in
+      match list_lengths_from_argbounds inbounds with
+      | Some inlengths =>
         match make_access_sizes_args inbounds,
               make_base_access_sizes outbounds with
         | Some insizes, Some outsizes =>
@@ -217,12 +161,8 @@ Definition Bedrock2_ToFunctionLines
         | None, _ => inr ("Error determining argument sizes for input bounds. Please check that the bounds fit within the machine word size.")
         | _, None => inr ("Error determining argument sizes for output bounds. Please check that the bounds fit within the machine word size.")
         end
-      | None, _, _ =>
-        inr ("Error determining argument names")
-      | _, None, _ =>
-        inr ("Error determining return value names")
-      | _, _, None =>
-        inr ("Error determining argument lengths")
+      | None =>
+        inr ("Error determining argument lengths from input bounds")
       end
     end.
 
