@@ -3,6 +3,8 @@ Require Import Coq.Strings.String.
 Require Import Coq.micromega.Lia.
 Require Import Coq.Classes.Morphisms.
 Require Import Coq.Classes.RelationClasses.
+Require Import bedrock2.Array.
+Require Import bedrock2.Scalars.
 Require Import bedrock2.Syntax.
 Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Map.SeparationLogic.
@@ -14,6 +16,7 @@ Require Import coqutil.Word.Interface coqutil.Word.Properties.
 Require Import coqutil.Datatypes.PropSet.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.ListUtil.
+Require Import Crypto.Util.ZUtil.Modulo.
 Require Import Coq.Lists.List. (* after SeparationLogic *)
 Import ListNotations.
 
@@ -145,6 +148,80 @@ Section Lists.
                           inversion H; clear H; subst end;
       constructor; auto.
   Qed.
+
+  Section Partition.
+    Fixpoint partition_equal_size' {T}
+             (n : nat) (xs acc : list T) (i : nat)
+    : list (list T) :=
+      match xs with
+      | [] => match i with
+              | O => [acc]
+              | S _ => [] (* if the last acc is incomplete, drop it *)
+              end
+      | x :: xs' =>
+        match i with
+        | O => acc :: partition_equal_size' n xs' [x] (n-1)
+        | S i' => partition_equal_size' n xs' (acc ++ [x])%list i'
+        end
+      end.
+    Definition partition_equal_size {T} (n : nat) (xs : list T) :=
+      partition_equal_size' n xs [] n.
+
+    Lemma length_partition_equal_size' :
+      forall n (xs : list A) acc i,
+        n <> 0%nat -> (i <= n)%nat ->
+        length (partition_equal_size' n xs acc i) = ((length xs + (n-i)) / n)%nat.
+    Proof.
+      induction xs; destruct i; cbn [partition_equal_size' length];
+        intros; rewrite ?IHxs by lia; autorewrite with natsimplify;
+          repeat match goal with
+                 | _ => rewrite Nat.div_same by lia
+                 | _ => rewrite Nat.div_small by lia
+                 | _ => rewrite NatUtil.div_minus, Nat.add_1_r by lia
+                 | |- (_ / ?x)%nat = (_ / ?x)%nat => repeat (f_equal; try lia)
+                 | |- S _ = S _ => repeat (f_equal; try lia)
+                 | _ => lia
+                 end.
+    Qed.
+
+    Lemma length_partition_equal_size :
+      forall n (xs : list A),
+        n <> 0%nat ->
+        length (partition_equal_size n xs) = (length xs / n)%nat.
+    Proof.
+      cbv [partition_equal_size]; intros.
+      rewrite length_partition_equal_size' by lia.
+      autorewrite with natsimplify. reflexivity.
+    Qed.
+
+    Lemma partition_equal_size'_equal_size :
+      forall n (xs : list A) acc i,
+        n <> 0%nat -> (length acc = n - i)%nat -> (i <= n)%nat ->
+        Forall (fun l => length l = n) (partition_equal_size' n xs acc i).
+    Proof.
+      induction xs; destruct i; cbn [partition_equal_size']; intros;
+          repeat match goal with
+                 | _ => apply Forall_nil
+                 | _ => apply Forall_cons
+                 | _ => lia
+                 | _ => progress autorewrite with natsimplify in *
+                 end; [ | ].
+      { eapply Forall_impl; [ | apply IHxs; cbn [length]; lia ].
+        cbv beta; auto. }
+      { eapply Forall_impl; [ | apply IHxs; rewrite ?app_length;
+                                cbn [length]; lia ].
+        cbv beta; auto. }
+    Qed.
+
+    Lemma partition_equal_size_equal_size :
+      forall n (xs : list A),
+        n <> 0%nat ->
+        Forall (fun l => length l = n) (partition_equal_size n xs).
+    Proof.
+      intros.
+      apply partition_equal_size'_equal_size; cbn [length]; lia.
+    Qed.
+  End Partition.
 End Lists.
 
 Section Sets.
@@ -658,9 +735,112 @@ Section Maps.
     let H := fresh in
     intro H; specialize (H k); destruct H.
     { tauto. }
-    { auto. } 
+    { auto. }
   Qed.
 End Maps.
+
+Section BytesAndWords.
+  Context {width : Z} {word : word width} {ok : word.ok word}.
+
+  Local Notation bytes_per_word :=
+    (Memory.bytes_per (width:=width) access_size.word).
+
+  Definition eval_bytes (bs : list Byte.byte) : list Z :=
+    map (fun l => LittleEndian.combine _ (HList.tuple.of_list l))
+        (partition_equal_size bytes_per_word bs).
+
+  Definition encode_bytes (xs : list word) : list Byte.byte :=
+    flat_map
+      (fun x => HList.tuple.to_list
+                  (LittleEndian.split bytes_per_word (word.unsigned x)))
+      xs.
+
+  Lemma bytes_per_word_nz : bytes_per_word <> 0%nat.
+  Proof.
+    pose proof word.width_pos.
+    cbv [Memory.bytes_per]. change 0%nat with (Z.to_nat 0).
+    rewrite Z2Nat.inj_iff by (try apply Z.div_pos; lia).
+    apply not_eq_sym. apply Z.lt_neq, Z.div_str_pos.
+    lia.
+  Qed.
+
+  Lemma bits_per_word_eq_width :
+    (width mod 8 = 0)%Z ->
+    (Z.of_nat bytes_per_word * 8 = width)%Z.
+  Proof.
+    intro width_0mod8. pose proof word.width_pos.
+    cbv [Memory.bytes_per].
+    rewrite Z2Nat.id by (try apply Z.div_pos; lia).
+    rewrite Z.mul_div_eq', Z.add_mod by lia.
+    rewrite width_0mod8, Z.add_0_l.
+    repeat rewrite (Z.mod_small 7 8) by lia.
+    lia.
+  Qed.
+
+  Lemma eval_bytes_length bs n :
+    length bs = (n * bytes_per_word)%nat ->
+    length (eval_bytes bs) = n.
+  Proof.
+    intro Hlength.
+    pose proof bytes_per_word_nz.
+    rewrite <-(Nat.div_mul n bytes_per_word) by lia.
+    cbv [eval_bytes]. rewrite <-Hlength, map_length.
+    apply length_partition_equal_size; lia.
+  Qed.
+
+  Lemma eval_bytes_range bs :
+    (width mod 8 = 0)%Z ->
+    Forall (fun z : Z => (0 <= z < 2 ^ width)%Z) (eval_bytes bs).
+  Proof.
+    pose proof bytes_per_word_nz. intros.
+    cbv [eval_bytes]. apply Forall_map_iff.
+    eapply Forall_impl;
+      [ | apply partition_equal_size_equal_size; solve [auto] ].
+    cbv beta; intros.
+    match goal with
+    | |- context [LittleEndian.combine ?n ?t] =>
+      pose proof LittleEndian.combine_bound t
+    end.
+    rewrite <-bits_per_word_eq_width by lia.
+    rewrite (Z.mul_comm _ 8).
+    congruence.
+  Qed.
+End BytesAndWords.
+
+Section Scalars.
+  Context {p : Semantics.parameters} {ok : Semantics.parameters_ok p}.
+
+  Local Notation bytes_per_word :=
+    (Memory.bytes_per (width:=Semantics.width) access_size.word).
+
+  Lemma scalar_to_bytes a x :
+    Lift1Prop.iff1
+      (array ptsto (word.of_Z 1) a
+             (HList.tuple.to_list
+                (LittleEndian.split bytes_per_word
+                                    (word.unsigned x))))
+      (scalar a x).
+  Admitted. (* TODO *)
+
+  Lemma scalar_of_bytes
+        a l (H : length l = bytes_per_word) :
+    Lift1Prop.iff1 (array ptsto (word.of_Z 1) a l)
+                   (scalar a (word.of_Z
+                                (LittleEndian.combine
+                                   _ (HList.tuple.of_list l)))).
+  Admitted. (* TODO *)
+
+  Lemma array_truncated_scalar_scalar_iff1 :
+    forall xs start size,
+      Lift1Prop.iff1
+        (array (truncated_scalar access_size.word)
+               size start (map word.unsigned xs))
+        (array scalar size start xs).
+  Proof.
+    induction xs; cbn [array map]; intros; [ reflexivity | ].
+    rewrite IHxs by auto. reflexivity.
+  Qed.
+End Scalars.
 
 Section Words.
   Context {width} {word : word.word width} {ok : word.ok word}.

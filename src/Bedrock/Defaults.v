@@ -42,9 +42,6 @@ Section Defs.
   Definition bedrock_func : Type :=
     string * (list string * list string * cmd.cmd).
 
-  Definition varname_gen (i : nat) : string :=
-    String.append "x" (Decimal.Z.to_string (Z.of_nat i)).
-
   (* quick check to make sure the expression produced no errors *)
   Fixpoint error_free_expr (x : Syntax.expr) : bool :=
     match x with
@@ -68,25 +65,3 @@ Section Defs.
     | cmd.interact _ _ args => forallb error_free_expr args
     end.
 End Defs.
-
-Section Proofs.
-  Lemma decimal_varname_gen_unique i j :
-    varname_gen i = varname_gen j <-> i = j.
-  Proof.
-    cbv [varname_gen].
-    pose proof (Decimal.Z.of_to (Z.of_nat i)).
-    pose proof (Decimal.Z.of_to (Z.of_nat j)).
-    split; [ | intros; subst; reflexivity ].
-    cbn [String.append]; inversion 1.
-    apply Nat2Z.inj. congruence.
-  Qed.
-
-  Lemma varname_gen_startswith v i :
-    v = varname_gen i ->
-    String.startswith "x" v = true.
-  Proof.
-    cbn [varname_gen]. intro.
-    subst. cbn. rewrite substring_0_0.
-    reflexivity.
-  Qed.
-End Proofs.
