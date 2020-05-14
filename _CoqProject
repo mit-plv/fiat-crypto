@@ -57,6 +57,7 @@ src/ArithmeticCPS/ModOps.v
 src/ArithmeticCPS/Saturated.v
 src/ArithmeticCPS/WordByWordMontgomery.v
 src/Bedrock/API.v
+src/Bedrock/ByteBounds.v
 src/Bedrock/Defaults.v
 src/Bedrock/Defaults32.v
 src/Bedrock/Defaults64.v

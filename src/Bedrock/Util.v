@@ -814,7 +814,7 @@ Section ListZBoundedBy.
   Qed.
 End ListZBoundedBy.
 
-Section BytesAndWords.
+Section Bytes.
   Context {width : Z} {word : word width} {ok : word.ok word}.
 
   Local Notation bytes_per_word :=
@@ -880,7 +880,14 @@ Section BytesAndWords.
     rewrite (Z.mul_comm _ 8).
     congruence.
   Qed.
-End BytesAndWords.
+
+  Lemma Forall_map_byte_unsigned x :
+    Forall (fun z : Z => 0 <= z < 2 ^ 8)%Z (map Byte.byte.unsigned x).
+  Proof.
+    induction x; cbn [length] in *; constructor; eauto; [ ].
+    apply Byte.byte.unsigned_range.
+  Qed.
+End Bytes.
 
 Section Scalars.
   Context {p : Semantics.parameters} {ok : Semantics.parameters_ok p}.
@@ -895,15 +902,41 @@ Section Scalars.
                 (LittleEndian.split bytes_per_word
                                     (word.unsigned x))))
       (scalar a x).
-  Admitted. (* TODO *)
+  Proof. reflexivity. Qed.
 
   Lemma scalar_of_bytes
-        a l (H : length l = bytes_per_word) :
+        a l (Hlen : length l = bytes_per_word) :
+    (Semantics.width mod 8 = 0)%Z ->
     Lift1Prop.iff1 (array ptsto (word.of_Z 1) a l)
                    (scalar a (word.of_Z
                                 (LittleEndian.combine
                                    _ (HList.tuple.of_list l)))).
-  Admitted. (* TODO *)
+  Proof.
+    intros; cbn. rewrite word.unsigned_of_Z.
+    fold (@Memory.bytes_per Semantics.width access_size.word).
+    rewrite <-Hlen.
+    pose proof bits_per_word_eq_width ltac:(eassumption).
+    match goal with
+      |- context [word.wrap (LittleEndian.combine ?n ?t)] =>
+      let H := fresh in
+      pose proof LittleEndian.combine_bound t as H;
+        match type of H with
+          (_ <= _ < 2 ^ ?x)%Z =>
+          pose proof Z.pow_le_mono_r 2 x Semantics.width
+               ltac:(lia) ltac:(lia)
+        end
+    end.
+    cbv [word.wrap]. rewrite Z.mod_small by lia.
+    rewrite LittleEndian.split_combine.
+    rewrite HList.tuple.to_list_of_list. reflexivity.
+  Qed.
+
+  Lemma truncated_scalar_one_ptsto_iff1 :
+    forall addr x,
+      Lift1Prop.iff1
+        (truncated_scalar access_size.one addr x)
+        (ptsto addr (Byte.byte.of_Z x)).
+  Proof. intros; cbn. cancel. reflexivity. Qed.
 
   Lemma array_truncated_scalar_scalar_iff1 :
     forall xs start size,
@@ -914,6 +947,18 @@ Section Scalars.
   Proof.
     induction xs; cbn [array map]; intros; [ reflexivity | ].
     rewrite IHxs by auto. reflexivity.
+  Qed.
+
+  Lemma array_truncated_scalar_ptsto_iff1 :
+    forall xs start size,
+      Lift1Prop.iff1
+        (array (truncated_scalar access_size.one)
+               size start xs)
+        (array ptsto size start (map Byte.byte.of_Z xs)).
+  Proof.
+    induction xs; cbn [array map]; intros; [ reflexivity | ].
+    rewrite IHxs by auto. rewrite truncated_scalar_one_ptsto_iff1.
+    cancel.
   Qed.
 End Scalars.
 

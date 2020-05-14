@@ -7,6 +7,7 @@ Require Import coqutil.Word.Interface coqutil.Word.Properties.
 Require Import Crypto.AbstractInterpretation.AbstractInterpretation.
 Require Import Crypto.COperationSpecifications. (* for list_Z_bounded_by *)
 Require Import Crypto.Bedrock.Types.
+Require Import Crypto.Bedrock.Util.
 Require Import Crypto.Bedrock.Proofs.LoadStoreList.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZUtil.Modulo.
@@ -271,24 +272,13 @@ Section __.
         eauto using zrange_to_access_size_tighter_than_word.
     Qed.
 
-    Lemma bits_per_word_eq_width :
-      let bytes := (Memory.bytes_per
-                      (width:=Semantics.width) access_size.word) in
-      Z.of_nat bytes * 8 = Semantics.width.
-    Proof.
-      pose proof word.width_pos.
-      cbv [Memory.bytes_per]. rewrite Z2Nat.id by auto with zarith.
-      rewrite Z.mul_div_eq' by lia.
-      push_Zmod. rewrite width_0mod_8. pull_Zmod.
-      autorewrite with zsimplify_fast. reflexivity.
-    Qed.
-
     Lemma bits_per_word_le_width :
       (Z.of_nat (Memory.bytes_per
                    (width:=Semantics.width) access_size.word) * 8
        <= Semantics.width).
     Proof.
-      rewrite bits_per_word_eq_width. reflexivity.
+      rewrite bits_per_word_eq_width by auto using width_0mod_8.
+      reflexivity.
     Qed.
 
     Lemma make_access_size_good ranges size :
@@ -353,6 +343,18 @@ Section __.
                         eassumption
                | H : _ |- _ => eapply H; solve [eauto]
                end.
+    Qed.
+
+    (* useful for proving byte access sizes are legal *)
+    Lemma width_ge_8 : 8 <= Semantics.width.
+    Proof.
+      pose proof word.width_pos.
+      pose proof width_0mod_8.
+      let H := fresh in
+      let x := fresh in
+      pose proof width_0mod_8 as H; apply Z.mod_divide in H;
+        [ | lia ]; destruct H as [x ?];
+          destruct (Z.eq_dec x 0); subst; lia.
     Qed.
   End proofs.
 End __.
