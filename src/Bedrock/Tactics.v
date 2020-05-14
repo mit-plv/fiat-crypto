@@ -48,14 +48,20 @@ Ltac sepsimpl_step' :=
   | |- emp _ _ => split; [ congruence | ]
   end.
 
-Ltac sepsimpl_step :=
+Ltac sepsimpl_step_no_comm :=
   match goal with
   | _ => sepsimpl_step'
   | |- sep (sep _ _) _ _ => apply sep_assoc; sepsimpl_step'
   | |- sep (sep (sep _ _) _) _ _ =>
     apply sep_assoc; apply sep_assoc; sepsimpl_step'
-  | |- sep _ (sep _ _) _ => apply sep_comm, sep_assoc; sepsimpl_step'
-  | |- sep _ _ _ => apply sep_comm; sepsimpl_step'
+  end.
+
+Ltac sepsimpl_step :=
+  match goal with
+  | _ => sepsimpl_step_no_comm
+  | |- sep _ (sep _ _) _ =>
+    apply sep_comm, sep_assoc; sepsimpl_step_no_comm
+  | |- sep _ _ _ => apply sep_comm; sepsimpl_step_no_comm
   end.
 
 Ltac sepsimpl_in H :=
