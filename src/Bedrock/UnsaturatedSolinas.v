@@ -79,6 +79,13 @@ Section __.
     : bedrock_func :=
     ("carry_mul", make_bedrock_func res).
 
+  Definition add
+             (res : API.Expr (type.arrow type_listZ
+                                         (type.arrow type_listZ
+                                                     type_listZ)))
+    : bedrock_func :=
+    ("add", make_bedrock_func res).
+
   Section Proofs.
     Context {ok : Types.ok}.
     Existing Instance semantics_ok.
@@ -113,11 +120,10 @@ Section __.
     Definition Bignum : Semantics.word -> list Semantics.word -> Semantics.mem -> Prop :=
       array scalar (word.of_Z word_size_in_bytes).
 
-    Definition BignumSuchThat
-               (addr : Semantics.word) (ws : list Semantics.word) (P: list Z -> Prop)
-      : Semantics.mem -> Prop :=
-      let xs := map word.unsigned ws in
-      sep (emp (P xs)) (Bignum addr ws).
+    Notation BignumSuchThat :=
+      (fun addr ws P =>
+         let xs := map word.unsigned ws in
+         sep (emp (P xs)) (Bignum addr ws)).
 
     Lemma Bignum_of_bytes addr bs :
       length bs = (n * Z.to_nat word_size_in_bytes)%nat ->
@@ -168,11 +174,38 @@ Section __.
     Ltac next_argument :=
       (exists 1%nat); sepsimpl; cbn [firstn skipn];
       [ solve [eauto using firstn_length_le] | ].
+    Ltac prove_bounds_direct :=
+      match goal with
+      | H : _ |- _ => apply H; solve [auto]
+      end.
+    Ltac assert_bounds x :=
+      match goal with
+      | H: list_Z_bounded_by ?bs x |- _ => idtac
+      | _ => assert (list_Z_bounded_by tight_bounds x) by prove_bounds_direct
+      | _ => assert (list_Z_bounded_by loose_bounds x) by prove_bounds_direct
+      | _ => assert (list_Z_bounded_by (max_bounds n) x) by prove_bounds_direct
+      | _ => fail "could not determine known bounds of " x
+      end.
+    Ltac prove_bounds :=
+      match goal with |- list_Z_bounded_by ?bs ?x => assert_bounds x end;
+      match goal with
+      | H : list_Z_bounded_by ?b1 ?x |- list_Z_bounded_by ?b2 ?x =>
+        first [ unify b1 b2; apply H
+              | unify b1 tight_bounds; unify b2 (max_bounds n);
+                apply relax_to_max_bounds, relax_correct; apply H
+              | unify b1 tight_bounds; unify b2 loose_bounds;
+                apply relax_correct; apply H
+              | unify b1 loose_bounds; unify b2 (max_bounds n);
+                apply relax_to_max_bounds; apply H ]
+      end.
 
     (* TODO: figure where to put this and if we want to do this strategy *)
     Definition Solinas_carry_mul_correct x y out :=
       eval out mod M = (Z.mul (eval x) (eval y)) mod M
       /\ list_Z_bounded_by tight_bounds out.
+    Definition Solinas_add_correct x y out :=
+      eval out mod M = (Z.add (eval x) (eval y)) mod M
+      /\ list_Z_bounded_by loose_bounds out.
 
     Lemma carry_mul_correct_iff carry_mul :
       Solinas.carry_mul_correct
@@ -183,6 +216,19 @@ Section __.
               Solinas_carry_mul_correct x y (carry_mul x y)).
     Proof. reflexivity. Qed.
 
+    Lemma add_correct_iff add :
+      Solinas.add_correct
+        weight n M tight_bounds loose_bounds add
+      <-> (forall x y,
+              list_Z_bounded_by tight_bounds x ->
+              list_Z_bounded_by tight_bounds y ->
+              Solinas_add_correct x y (add x y)).
+    Proof. reflexivity. Qed.
+
+    (* TODO: it would be good if the bounds could go within the correctness
+       proposition, which only works if we can get the length of the output in
+       some other way. *)
+
     (* For out, you can get a Bignum from an array of bytes using
        Bignum_from_bytes. *)
     Definition spec_of_carry_mul name : spec_of name :=
@@ -190,10 +236,32 @@ Section __.
         forall wx wy px py pout wold_out t m
                (Ra Rr : Semantics.mem -> Prop),
           sep (sep (BignumSuchThat px wx (list_Z_bounded_by loose_bounds))
-                   (BignumSuchThat py wy (list_Z_bounded_by loose_bounds))) Ra m ->
-          sep (BignumSuchThat pout wold_out (fun l => length l = n)) Rr m ->
+                   (BignumSuchThat py wy (list_Z_bounded_by loose_bounds)))
+              Ra m ->
+          sep (BignumSuchThat pout wold_out (fun l => length l = n))
+              Rr m ->
           let post := Solinas_carry_mul_correct (map word.unsigned wx)
                                                 (map word.unsigned wy) in
+          WeakestPrecondition.call
+            functions name t m
+            (px :: py :: pout :: nil)
+            (fun t' m' rets =>
+               t = t' /\
+               rets = []%list /\
+               exists wout,
+                 sep (BignumSuchThat pout wout post) Rr m').
+
+    Definition spec_of_add name : spec_of name :=
+      fun functions =>
+        forall wx wy px py pout wold_out t m
+               (Ra Rr : Semantics.mem -> Prop),
+          sep (sep (BignumSuchThat px wx (list_Z_bounded_by tight_bounds))
+                   (BignumSuchThat py wy (list_Z_bounded_by tight_bounds)))
+              Ra m ->
+          sep (BignumSuchThat pout wold_out (fun l => length l = n))
+              Rr m ->
+          let post := Solinas_add_correct (map word.unsigned wx)
+                                          (map word.unsigned wy) in
           WeakestPrecondition.call
             functions name t m
             (px :: py :: pout :: nil)
@@ -215,7 +283,7 @@ Section __.
             ((carry_mul_name, make_bedrock_func carry_mul_res) :: functions).
     Proof.
       cbv [spec_of_carry_mul make_bedrock_func]; intros.
-      cbv [BignumSuchThat] in *. sepsimpl.
+      sepsimpl.
 
       (* get the carry_mul correctness proof *)
       match goal with H : _ = ErrorT.Success _ |- _ =>
@@ -230,8 +298,7 @@ Section __.
       match goal with
         H : context [Solinas_carry_mul_correct _ _ ?e] |- _ =>
         assert (length e = n)
-          by (apply bounded_by_loose_bounds_length, relax_correct;
-              apply H)
+          by (apply bounded_by_loose_bounds_length; prove_bounds)
       end.
 
       (* use translate_func_correct to get the translation postcondition *)
@@ -281,7 +348,7 @@ Section __.
            flatten_make_innames_NoDup, flatten_make_outnames_NoDup.
 
       { (* list lengths are correct *)
-        cbn. rewrite !bounded_by_loose_bounds_length by auto.
+        cbn. rewrite !bounded_by_loose_bounds_length by auto using relax_correct.
         reflexivity. }
       { (* arg pointers are correct *)
         cbn - [Memory.bytes_per]; sepsimpl.
@@ -296,16 +363,13 @@ Section __.
         cbn - [Memory.bytes_per]; tauto. }
       { (* input access sizes are accurate *)
         cbn - [Memory.bytes_per]; ssplit; try tauto;
-          eapply max_bounds_range_iff;
-            auto using relax_to_max_bounds. }
+          eapply max_bounds_range_iff; prove_bounds. }
       { (* output access sizes are legal *)
         pose proof bits_per_word_le_width.
         cbn - [Memory.bytes_per]; tauto. }
       { (* output access sizes are accurate *)
         cbn - [Memory.bytes_per].
-        eapply max_bounds_range_iff;
-          apply relax_to_max_bounds, relax_correct.
-        match goal with H : _ |- _ => apply H end. }
+        eapply max_bounds_range_iff; prove_bounds. }
       { (* space is reserved for output lists *)
         cbn - [Memory.bytes_per]. sepsimpl.
         repeat match goal with
@@ -327,8 +391,148 @@ Section __.
         exists pout; sepsimpl; [ ].
         match goal with
           H : Solinas_carry_mul_correct _ _ ?e |- _ =>
-          assert (list_Z_bounded_by (max_bounds n) e)
-            by (apply relax_to_max_bounds, relax_correct; apply H)
+          assert (list_Z_bounded_by (max_bounds n) e) by prove_bounds
+        end.
+        eexists.
+        sepsimpl; [ reflexivity
+                  | rewrite bits_per_word_eq_width
+                    by auto using width_0mod_8;
+                    solve [apply Forall_map_unsigned]
+                  | ].
+        eexists.
+        sepsimpl; [ reflexivity
+                  | eexists; rewrite ?map.get_put_diff by congruence;
+                    rewrite map.get_put_same; split; reflexivity
+                  | ].
+        cbv [Bignum] in *.
+        rewrite <-word_size_in_bytes_eq.
+        use_sep_assumption.
+        rewrite array_truncated_scalar_scalar_iff1.
+        cancel. }
+    Qed.
+
+    Lemma add_correct add_name:
+      forall add_res :
+               API.Expr (type_listZ -> type_listZ -> type_listZ),
+        UnsaturatedSolinas.add n s c Semantics.width
+        = ErrorT.Success add_res ->
+        expr.Wf3 add_res ->
+        valid_func (add_res (fun _ : API.type => unit)) ->
+        forall functions,
+          spec_of_add add_name
+            ((add_name, make_bedrock_func add_res) :: functions).
+    Proof.
+      cbv [spec_of_add make_bedrock_func]; intros.
+      sepsimpl.
+
+      (* get the add correctness proof *)
+      match goal with H : _ = ErrorT.Success _ |- _ =>
+                      apply UnsaturatedSolinas.add_correct in H;
+                        [ | assumption ];
+                        rewrite add_correct_iff in H;
+                        specialize (H (_ wx) (_ wy)
+                                      ltac:(eassumption) ltac:(eassumption))
+      end.
+
+      (* assert output length for convenience *)
+      match goal with
+        H : context [Solinas_add_correct _ _ ?e] |- _ =>
+        assert (length e = n)
+          by (apply bounded_by_loose_bounds_length; prove_bounds)
+      end.
+
+      (* use translate_func_correct to get the translation postcondition *)
+      eapply Proper_call;
+        [ | eapply translate_func_correct with
+                (Ra0:=Ra) (Rr0:=Rr) (out_ptrs:=[pout])
+                (args:=(map word.unsigned wx, (map word.unsigned wy, tt)))
+                (flat_args := [px; py]) ].
+
+      { (* prove that the translation postcondition is sufficient *)
+        repeat intro.
+        match goal with
+          H : context [sep _ _ ?m] |- context [_ ?m] =>
+          cbn - [Memory.bytes_per translate_func] in H
+        end.
+        sepsimpl_hyps; ssplit; [ congruence | congruence | eexists ].
+        fold Bignum in *.
+        sepsimpl;
+          [ erewrite map_unsigned_of_Z, map_word_wrap_bounded
+            by (eapply max_bounds_range_iff; eauto);
+            match goal with H : _ |- _ => apply H; assumption end | ].
+        subst. cbv [Bignum expr.Interp].
+        match goal with
+        | H : literal (word.unsigned _) (eq _) |- _ =>
+          inversion H as [H']; clear H;
+            rewrite word.of_Z_unsigned in H'
+        end.
+        match goal with H : word.unsigned _ = word.unsigned _ |- _ =>
+                        apply word.unsigned_inj in H end.
+        (* TODO: without the below clear, subst fails, this is dumb *)
+        match goal with H : _ = n |- _ => clear H end.
+        subst.
+        match goal with
+          H : map word.unsigned _ = ?l |- context [map word.of_Z ?l] =>
+          rewrite <-H, map_of_Z_unsigned
+        end.
+        rewrite word_size_in_bytes_eq.
+        use_sep_assumption.
+        rewrite array_truncated_scalar_scalar_iff1.
+        cancel. }
+
+      (* Now, we prove translate_func preconditions.
+         First, take care of all the easy ones. *)
+      all: auto using make_innames_varname_gen_disjoint,
+           make_outnames_varname_gen_disjoint,
+           make_innames_make_outnames_disjoint,
+           flatten_make_innames_NoDup, flatten_make_outnames_NoDup.
+
+      { (* list lengths are correct *)
+        cbn.
+        rewrite !bounded_by_loose_bounds_length by auto using relax_correct.
+        reflexivity. }
+      { (* arg pointers are correct *)
+        cbn - [Memory.bytes_per]; sepsimpl.
+        next_argument. exists_list_ptr px.
+        next_argument. exists_list_ptr py.
+        cbv [Bignum] in *.
+        repeat seprewrite array_truncated_scalar_scalar_iff1.
+        rewrite <-word_size_in_bytes_eq.
+        ecancel_assumption. }
+      { (* input access sizes are legal *)
+        pose proof bits_per_word_le_width.
+        cbn - [Memory.bytes_per]; tauto. }
+      { (* input access sizes are accurate *)
+        cbn - [Memory.bytes_per]; ssplit; try tauto;
+          eapply max_bounds_range_iff; prove_bounds. }
+      { (* output access sizes are legal *)
+        pose proof bits_per_word_le_width.
+        cbn - [Memory.bytes_per]; tauto. }
+      { (* output access sizes are accurate *)
+        cbn - [Memory.bytes_per].
+        eapply max_bounds_range_iff; prove_bounds. }
+      { (* space is reserved for output lists *)
+        cbn - [Memory.bytes_per]. sepsimpl.
+        repeat match goal with
+               | _ => progress cbv [expr.Interp] in *
+               | _ => rewrite eval_bytes_length by lia
+               | _ => rewrite length_tight_bounds in *
+               | H : context [array ptsto _ _ ?bs] |- _ =>
+                 seprewrite_in Bignum_of_bytes H; [ assumption | ];
+                   exists (eval_bytes bs)
+               | H : context [Solinas.add_correct _ _ _ _ _ ?e] |- _ =>
+                 specialize (H x y ltac:(eauto) ltac:(eauto));
+                   cleanup;
+                   pose proof length_list_Z_bounded_by _ (e x y)
+                        ltac:(eassumption)
+               end.
+        cbn [Compilers.base_interp] in *.
+        exists (map word.unsigned wold_out).
+        sepsimpl; [ rewrite map_length in *; congruence | ].
+        exists pout; sepsimpl; [ ].
+        match goal with
+          H : Solinas_add_correct _ _ ?e |- _ =>
+          assert (list_Z_bounded_by (max_bounds n) e) by prove_bounds
         end.
         eexists.
         sepsimpl; [ reflexivity

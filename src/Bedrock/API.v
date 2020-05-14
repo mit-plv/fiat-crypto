@@ -230,7 +230,6 @@ Module Test.
                          (Bignum pout out))
                     (sep (Bignum px x) (sep (Bignum py y) R))) m').
 
-  About spec_of_carry_mul.
   Local Notation function_t := ((String.string * (list String.string * list String.string * Syntax.cmd.cmd))%type).
   Local Notation functions_t := (list function_t).
 
@@ -256,20 +255,20 @@ Module Test.
     (cbv beta match delta [WeakestPrecondition.func]).
 
     repeat straightline.
-    straightline_call;
+    straightline_call; sepsimpl;
       [ try ecancel_assumption .. | ];
-      [ assumption .. | ].
+      [ rewrite ?map_length; assumption .. | ].
     sepsimpl.
     cbv [Solinas_carry_mul_correct] in *.
     repeat straightline.
-    straightline_call;
+    straightline_call; sepsimpl;
       [ try ecancel_assumption .. | ].
     { apply relax_correct; assumption. }
     { assumption. }
     { match goal with
-      | H : list_Z_bounded_by tight_bounds (map _ ?x) |- length ?x = _ =>
+      | H : list_Z_bounded_by tight_bounds ?x |- length ?x = _ =>
         apply relax_correct, bounded_by_loose_bounds_length in H;
-          rewrite map_length in H; apply H
+          apply H
       end. }
 
     cbv [Solinas_carry_mul_correct] in *.
