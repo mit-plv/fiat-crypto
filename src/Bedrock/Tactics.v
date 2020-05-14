@@ -80,7 +80,7 @@ Ltac sepsimpl_in H :=
     apply sep_empty_iff in H
   end.
 
-Ltac sepsimpl_hyps_step :=
+Ltac sepsimpl_hyps_step_no_comm :=
   match goal with
   | H : False |- _ => tauto
   | H : emp _ _ |- _ => cbv [emp] in H; destruct H
@@ -92,8 +92,15 @@ Ltac sepsimpl_hyps_step :=
     eapply (sep_assoc p q) in H;
     sepsimpl_in H
   | H : sep _ _ _ |- _ => sepsimpl_in H
+  end.
+
+Ltac sepsimpl_hyps_step :=
+  match goal with
+  | _ => sepsimpl_hyps_step_no_comm
   | H : sep _ (sep ?p ?q) _ |- _ =>
-    eapply sep_comm, (sep_assoc p q) in H; sepsimpl_in H
+    (* reverse order and try simplifying again *)
+    eapply sep_comm, (sep_assoc p q) in H;
+    sepsimpl_hyps_step_no_comm
   end.
 
 Ltac sepsimpl_hyps :=

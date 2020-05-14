@@ -14,11 +14,16 @@ Require Import coqutil.Tactics.destr.
 Require Import coqutil.Map.Interface coqutil.Map.Properties.
 Require Import coqutil.Word.Interface coqutil.Word.Properties.
 Require Import coqutil.Datatypes.PropSet.
+Require Import Crypto.AbstractInterpretation.AbstractInterpretation.
+Require Import Crypto.COperationSpecifications.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ZUtil.Modulo.
+Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Coq.Lists.List. (* after SeparationLogic *)
 Import ListNotations.
+
+Import AbstractInterpretation.Compilers.
 
 (* This file contains general-purpose lemmas about other libraries that should
    eventually be moved to those libraries or to coqutil *)
@@ -739,6 +744,76 @@ Section Maps.
   Qed.
 End Maps.
 
+(* proofs about list_Z_bounded_by *)
+Section ListZBoundedBy.
+  Lemma relax_list_Z_bounded_by r1 r2 x :
+    ZRange.type.option.is_tighter_than
+      (t:=type.base (base.type.list (base.type.type_base base.type.Z)))
+      (Some r1) (Some r2) = true ->
+    list_Z_bounded_by r1 x ->
+    list_Z_bounded_by r2 x.
+  Proof.
+    cbn in r1, r2 |- *. intros.
+    pose proof length_list_Z_bounded_by _ x ltac:(eassumption).
+    match goal with H : FoldBool.fold_andb_map _ _ _ = true |- _ =>
+                    pose proof H;
+                      apply FoldBool.fold_andb_map_length in H
+    end.
+    generalize dependent r1; generalize dependent r2.
+    generalize dependent x; induction x; cbn [length].
+    { destruct r2; cbn [length]; intros; [ | lia].
+      reflexivity. }
+    { destruct r1, r2; cbn [length]; intros; try lia; [ ].
+      cbv [list_Z_bounded_by] in *. cbn [FoldBool.fold_andb_map] in *.
+      repeat match goal with
+             | H : _ /\ _ |- _ => destruct H
+             | H : (_ && _)%bool = true |- _ =>
+               apply Bool.andb_true_iff in H
+             end.
+      apply Bool.andb_true_iff; split.
+      { break_innermost_match; [ | reflexivity].
+        break_innermost_match_hyps; [ | congruence ].
+        cbv [ZRange.is_tighter_than_bool] in *.
+        repeat match goal with
+               | H : _ /\ _ |- _ => destruct H
+               | H : (_ && _)%bool = true |- _ =>
+                 apply Bool.andb_true_iff in H
+               end.
+        apply Bool.andb_true_iff; split; Z.ltb_to_lt; lia. }
+      { eapply IHx;
+          match goal with
+          | |- length _ = length _ =>
+            idtac (* no eassumption on length goals *)
+          | _ => try eassumption
+          end; lia. } }
+  Qed.
+
+  Lemma list_Z_bounded_by_Forall x r m :
+    list_Z_bounded_by (repeat (Some r) m) x ->
+    Forall (fun z : Z => ZRange.lower r <= z <= ZRange.upper r)%Z x.
+  Proof.
+    intros.
+    pose proof length_list_Z_bounded_by _ x ltac:(eassumption).
+    cbv [list_Z_bounded_by] in *.
+    rewrite repeat_length in *.
+    generalize dependent x.
+    generalize dependent m.
+    induction m; intros;
+      destruct x; intros; cbn [length] in *; subst;
+        try lia; [ | ]; constructor;
+          [ | apply IHm; [ | lia] ].
+    all: cbn [repeat FoldBool.fold_andb_map] in *.
+    all: repeat match goal with
+                | H : _ /\ _ |- _ => destruct H
+                | H : (_ && _)%bool = true |- _ =>
+                  apply Bool.andb_true_iff in H
+                | _ => progress Z.ltb_to_lt
+                | _ => solve [auto]
+                | _ => lia
+                end.
+  Qed.
+End ListZBoundedBy.
+
 Section BytesAndWords.
   Context {width : Z} {word : word width} {ok : word.ok word}.
 
@@ -907,6 +982,9 @@ End Separation.
 Section WeakestPrecondition.
   Context {p : Semantics.parameters} {p_ok : Semantics.parameters_ok p}.
 
+  (* "expr" should not be Compilers.expr; can remove once upstreamed *)
+  Local Notation expr := WeakestPrecondition.expr.
+
   Section Load.
     Lemma load_empty :
       forall s m a post,
@@ -961,7 +1039,7 @@ Section WeakestPrecondition.
       destruct_head'_and. eexists; eauto using get_only_differ_undef.
     Qed.
   End Get.
-    
+
   Section Expr.
     Lemma expr_empty :
       forall e m locals post,
