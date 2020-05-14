@@ -3,8 +3,9 @@ Require Import Coq.Lists.List.
 Require Import Coq.micromega.Lia.
 Require Import coqutil.Word.Interface.
 Require Import coqutil.Word.Properties.
+Require Import coqutil.Byte.
 Require Import bedrock2.Syntax.
-Require Import Crypto.Bedrock.MakeAccessSizes.
+Require Import Crypto.Arithmetic.Partition.
 Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Util.
@@ -15,30 +16,23 @@ Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
 Local Open Scope Z_scope.
 Import ListNotations.
+Import Partition.
 
-Section MaxBounds.
+Section ByteBounds.
   Context {p : Types.parameters} {ok : Types.ok}.
   Context (n : nat).
 
-  Existing Instance semantics_ok.
+  Definition byte_range : ZRange.zrange :=
+    {|ZRange.lower:=0; ZRange.upper:=2^8-1|}.
+  Definition byte_bounds : list (option ZRange.zrange) :=
+    repeat (Some byte_range) n.
 
-  (* TODO: make Expr.v import this *)
-  Definition max_range : ZRange.zrange :=
-    {|ZRange.lower:=0; ZRange.upper:=2^Semantics.width-1|}.
-  Definition max_bounds : list (option ZRange.zrange) :=
-    repeat (Some max_range) n.
-
-  Lemma max_bounds_range_iff x :
-    let bytes := (Memory.bytes_per
-                    (width:=Semantics.width) access_size.word) in
-    list_Z_bounded_by max_bounds x <->
+  Lemma byte_bounds_range_iff x :
+    list_Z_bounded_by byte_bounds x <->
     (length x = n /\
-     Forall
-       (fun z : Z =>
-          0 <= z < 2 ^ (Z.of_nat bytes * 8)) x).
+     Forall (fun z : Z => 0 <= z < 2 ^ 8) x).
   Proof.
-    cbv [max_bounds max_range list_Z_bounded_by].
-    rewrite bits_per_word_eq_width by auto using width_0mod_8.
+    cbv [byte_bounds byte_range list_Z_bounded_by].
     generalize n as m.
     induction x; destruct m; split;
       cbn [FoldBool.fold_andb_map repeat]; try congruence; intros;
@@ -64,15 +58,14 @@ Section MaxBounds.
                end.
   Qed.
 
-
-  Lemma map_word_wrap_bounded' r x m :
-    ZRange.is_tighter_than_bool r max_range = true ->
+  Lemma map_byte_wrap_bounded' r x m :
+    ZRange.is_tighter_than_bool r byte_range = true ->
     list_Z_bounded_by (repeat (Some r) m) x ->
-    map word.wrap x = x.
+    map byte.wrap x = x.
   Proof.
     intros.
     pose proof length_list_Z_bounded_by _ x ltac:(eassumption).
-    cbv [max_bounds max_range list_Z_bounded_by
+    cbv [byte_bounds byte_range list_Z_bounded_by
                     ZRange.is_tighter_than_bool] in *.
     rewrite repeat_length in *.
     generalize dependent m.
@@ -86,35 +79,63 @@ Section MaxBounds.
                                   repeat map] in *
              | H : (_ && _)%bool = true |- _ =>
                apply Bool.andb_true_iff in H
-             | IH : context [map word.wrap ?x = ?x] |- _ =>
+             | IH : context [map byte.wrap ?x = ?x] |- _ =>
                rewrite IH with (m:=m) by (try eassumption; lia)
              | _ => progress Z.ltb_to_lt
-             | |- word.wrap ?x :: ?y = ?x :: ?y =>
-               cbv [word.wrap]; Z.rewrite_mod_small;
+             | |- byte.wrap ?x :: ?y = ?x :: ?y =>
+               cbv [byte.wrap]; Z.rewrite_mod_small;
                  reflexivity
              | _ => congruence
              end.
   Qed.
 
-  Lemma map_word_wrap_bounded x :
-    list_Z_bounded_by max_bounds x ->
-    map word.wrap x = x.
+  Lemma map_byte_wrap_bounded x :
+    list_Z_bounded_by byte_bounds x ->
+    map byte.wrap x = x.
   Proof.
-    intros. eapply map_word_wrap_bounded'; [ | eassumption ].
+    intros. eapply map_byte_wrap_bounded'; [ | eassumption ].
     apply ZRange.is_tighter_than_bool_Reflexive.
   Qed.
 
-  Lemma byte_unsigned_within_max_bounds x :
-    length x = n ->
-    list_Z_bounded_by max_bounds (map Byte.byte.unsigned x).
+  Lemma byte_map_unsigned_of_Z x :
+    map byte.unsigned (map byte.of_Z x) = map byte.wrap x.
   Proof.
-    intros; apply max_bounds_range_iff; split;
-      [ rewrite ?map_length; solve [auto] | ].
-    eapply Forall_impl;
-      [ | apply Forall_map_byte_unsigned ].
-    cbv beta; intros.
-    pose proof Z.pow_le_mono_r 2 8 Semantics.width ltac:(lia) width_ge_8.
-    rewrite bits_per_word_eq_width by auto using width_0mod_8.
-    lia.
+    rewrite map_map. apply map_ext. exact byte.unsigned_of_Z.
   Qed.
-End MaxBounds.
+
+  (* TODO: this should be upstreamed (maybe move to Util for now) *)
+  Lemma byte_of_Z_unsigned b : byte.of_Z (byte.unsigned b) = b.
+  Proof.
+    apply byte.unsigned_inj.
+    rewrite byte.unsigned_of_Z.
+    apply byte.wrap_unsigned.
+  Qed.
+
+  Lemma byte_map_of_Z_unsigned x :
+    map byte.of_Z (map byte.unsigned x) = x.
+  Proof.
+    rewrite map_map.
+    erewrite map_ext; [ apply map_id | ].
+    auto using byte_of_Z_unsigned.
+  Qed.
+
+  Lemma partition_bytes_range :
+    forall x,
+      Forall (fun z => 0 <= z < 2^8)
+             (partition (ModOps.weight 8 1) n x).
+  Proof.
+    induction n; intros; [ solve [constructor] | ].
+    rewrite partition_step. apply Forall_snoc; auto; [ ].
+    fold (UniformWeight.uweight 8).
+    rewrite UniformWeight.uweight_S by lia.
+    rewrite <-Z.mod_pull_div by auto with zarith.
+    apply Z.mod_pos_bound; auto with zarith.
+  Qed.
+
+  Lemma partition_bounded_by x :
+    list_Z_bounded_by byte_bounds (partition (ModOps.weight 8 1) n x).
+  Proof.
+    apply byte_bounds_range_iff; split;
+      auto using partition_bytes_range, length_partition.
+  Qed.
+End ByteBounds.
