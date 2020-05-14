@@ -28,16 +28,20 @@ Proof.
   eapply IHs1; eauto.
 Qed.
 
+Definition unique (gen : nat -> string) : Prop :=
+  forall i j, gen i = gen j <-> i = j.
+Definition disjoint (gen1 gen2 : nat -> string) : Prop :=
+  forall n m, gen1 n <> gen2 m.
+
 Section prefix_generator.
   Context (pre : string).
 
   Definition prefix_name_gen (x : nat) : string :=
     pre ++ Z.to_string (Z.of_nat x).
 
-  Lemma prefix_name_gen_unique i j :
-    prefix_name_gen i = prefix_name_gen j <-> i = j.
+  Lemma prefix_name_gen_unique : unique prefix_name_gen.
   Proof.
-    intros.
+    cbv [unique]; intros.
     pose proof (Decimal.Z.of_to (Z.of_nat i)).
     pose proof (Decimal.Z.of_to (Z.of_nat j)).
     split; intros; [ | subst; reflexivity ].
@@ -65,9 +69,6 @@ Section prefix_generator.
 End prefix_generator.
 
 Section disjoint.
-  Definition disjoint (gen1 gen2 : nat -> string) : Prop :=
-    forall n m, gen1 n <> gen2 m.
-
   Lemma prefix_generator_disjoint pre1 pre2 :
     prefix pre1 pre2 = false ->
     prefix pre2 pre1 = false ->

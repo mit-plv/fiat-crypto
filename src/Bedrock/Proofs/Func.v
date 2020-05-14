@@ -267,7 +267,7 @@ Section Func.
         pose proof H;
         apply NoDup_app_iff in H; cleanup
       end.
-      cbv [bind] in *.
+      cbv [Option.bind] in *.
       break_match_hyps; try congruence.
       repeat intro; split; intros.
       { match goal with
@@ -358,7 +358,7 @@ Section Func.
       | H : NoDup (_ ++ _) |- _ =>
         pose proof H; apply NoDup_app_iff in H; cleanup
       end.
-      cbv [bind] in *. break_match_hyps; try congruence.
+      cbv [Option.bind] in *. break_match_hyps; try congruence.
       repeat intro; split; intros.
       { repeat match goal with
                | _ => progress cleanup
@@ -420,7 +420,7 @@ Section Func.
       | H : NoDup (_ ++ _) |- _ =>
         pose proof H; apply NoDup_app_iff in H; cleanup
       end.
-      cbv [bind] in *. break_match_hyps; try congruence; [ ].
+      cbv [Option.bind] in *. break_match_hyps; try congruence; [ ].
       match goal with
       | H : _ |- _ => rewrite PropSet.of_list_app in H;
                         rewrite disjoint_union_r_iff in H
@@ -584,7 +584,7 @@ Section Func.
           by eauto using flatten_args_samelength;
         pose proof H; (* preserve original ordering *)
         erewrite putmany_of_list_zip_bind_comm in H by eauto;
-        cbv [bind] in *; repeat break_match_hyps; try congruence; [ ]
+        cbv [Option.bind] in *; repeat break_match_hyps; try congruence; [ ]
     end.
     cbn [WeakestPrecondition.cmd WeakestPrecondition.cmd_body].
     eapply Proper_cmd; [ solve [apply Proper_call] | repeat intro | ].

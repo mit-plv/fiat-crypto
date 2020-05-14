@@ -59,11 +59,10 @@ Ltac handle_easy_preconditions :=
   | |- UnsaturatedSolinas.check_args _ _ _ _ _ = _ =>
     abstract (native_compute; reflexivity)
   | |- Types.ok => solve [typeclasses eauto]
-  | _ => first [ apply inname_gen_varname_gen_ok
-               | apply outname_gen_varname_gen_ok
-               | apply outname_gen_inname_gen_ok
-               | apply inname_gen_unique
-               | apply outname_gen_unique ]
+  | _ => first [ apply inname_gen_varname_gen_disjoint
+               | apply outname_gen_varname_gen_disjoint
+               | apply outname_gen_inname_gen_disjoint
+               | apply prefix_name_gen_unique ]
   | |- ?g => fail "Unrecognized goal" g
   end.
 
