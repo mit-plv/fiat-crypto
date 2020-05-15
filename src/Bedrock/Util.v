@@ -916,12 +916,14 @@ Section Scalars.
     fold (@Memory.bytes_per Semantics.width access_size.word).
     rewrite <-Hlen.
     pose proof bits_per_word_eq_width ltac:(eassumption).
+    rewrite <-Hlen in * |-.
     match goal with
       |- context [word.wrap (LittleEndian.combine ?n ?t)] =>
       let H := fresh in
       pose proof LittleEndian.combine_bound t as H;
         match type of H with
           (_ <= _ < 2 ^ ?x)%Z =>
+          let H' := fresh in
           pose proof Z.pow_le_mono_r 2 x Semantics.width
                ltac:(lia) ltac:(lia)
         end
