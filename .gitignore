@@ -53,6 +53,8 @@ nra.cache
 /time-of-build.log
 
 /*.out
+/*.out.processed
+output-tests/*.expected.processed
 
 # OCaml
 *.annot
