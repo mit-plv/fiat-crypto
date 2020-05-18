@@ -530,7 +530,7 @@ Section Func.
         NoDup (flatten_base_ltype retnames) ->
         (* return value bounds are within allowed integer size *)
         base_access_sizes_good retsizes ->
-        (* argument bounds are obeyed *)
+        (* return value bounds are obeyed *)
         within_base_access_sizes rets retsizes ->
         (* argnames and retnames are disjoint *)
         PropSet.disjoint (varname_set_args argnames)
