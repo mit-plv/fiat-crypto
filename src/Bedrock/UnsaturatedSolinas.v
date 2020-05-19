@@ -136,17 +136,14 @@ Section __.
     Local Notation loose_bounds := (UnsaturatedSolinas.loose_bounds n s c).
     Local Notation tight_bounds := (UnsaturatedSolinas.tight_bounds n s c).
 
-    Context
-      (* loose_bounds_ok could be proven in parameterized form, but is a pain
+    (* loose_bounds_ok could be proven in parameterized form, but is a pain
       and is easily computable with parameters plugged in. So for now, leaving
       as a precondition. *)
+    Context
       (loose_bounds_ok :
          ZRange.type.option.is_tighter_than
            (t:=type_listZ) (Some loose_bounds)
-           (Some (max_bounds n)) = true)
-      (check_args_ok :
-         check_args n s c Semantics.width (ErrorT.Success tt)
-         = ErrorT.Success tt).
+           (Some (max_bounds n)) = true).
 
     Context (inname_gen_varname_gen_ok : disjoint inname_gen varname_gen)
             (outname_gen_varname_gen_ok : disjoint outname_gen varname_gen)
@@ -293,6 +290,8 @@ Section __.
           type.for_each_lhs_of_arrow API.interp_type t ->
           API.interp_type (type.base (type.final_codomain t)) -> Prop;
         correctness :
+          check_args
+            n s c Semantics.width (ErrorT.Success tt) = ErrorT.Success tt ->
           forall res,
             pipeline_out = ErrorT.Success res ->
             forall args,
@@ -487,6 +486,10 @@ Section __.
                  sep (EncodedBignumSuchThat pout wout (post to_bytes_op args))
                      Rr m').
 
+    Context (check_args_ok :
+               check_args n s c Semantics.width (ErrorT.Success tt)
+               = ErrorT.Success tt).
+
     Definition output_lengths_ok
                {t} (sig : FunctionSignature t) (res : API.Expr t)
       : Prop :=
@@ -526,7 +529,7 @@ Section __.
     Proof.
       setup.
       match goal with |- context [post ?op ?args] =>
-                      pose proof (correctness op)
+                      pose proof (correctness op) (ltac:(assumption))
                            ltac:(assumption) ltac:(assumption) args
       end.
 
@@ -630,7 +633,7 @@ Section __.
     Proof.
       setup.
       match goal with |- context [post ?op ?args] =>
-                      pose proof (correctness op)
+                      pose proof (correctness op) (ltac:(assumption))
                            ltac:(assumption) ltac:(assumption) args
       end.
 
@@ -735,7 +738,7 @@ Section __.
     Proof.
       setup.
       match goal with |- context [post ?op ?args] =>
-                      pose proof (correctness op)
+                      pose proof (correctness op) (ltac:(assumption))
                            ltac:(assumption) ltac:(assumption) args
       end.
 
