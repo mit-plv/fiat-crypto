@@ -1,4 +1,5 @@
 Require Import Coq.ZArith.ZArith.
+Require Import Coq.micromega.Lia.
 Require Import Coq.Strings.String.
 Require Import Coq.Lists.List.
 Require Import bedrock2.ProgramLogic.
@@ -20,42 +21,30 @@ Import AbstractInterpretation.Compilers.
 Import Language.Wf.Compilers.
 
 Class bedrock2_unsaturated_solinas p n s c :=
-  { carry_mul_name : string;
-    carry_mul_func : (list string * list string * cmd)%type;
-    carry_mul : bedrock_func := (carry_mul_name, carry_mul_func);
-    spec_of_carry_mul : spec_of carry_mul_name :=
-      @spec_of_carry_mul p n s c carry_mul_name;
+  { carry_mul : bedrock_func;
+    spec_of_carry_mul : spec_of (fst carry_mul) :=
+      @spec_of_carry_mul p n s c (fst carry_mul);
     carry_mul_correct :
       forall functions,
         spec_of_carry_mul (carry_mul :: functions);
-    add_name : string;
-    add_func : (list string * list string * cmd)%type;
-    add : bedrock_func := (add_name, add_func);
-    spec_of_add : spec_of add_name :=
-      @spec_of_add p n s c add_name;
+    add : bedrock_func;
+    spec_of_add : spec_of (fst add) :=
+      @spec_of_add p n s c (fst add);
     add_correct :
       forall functions,
         spec_of_add (add :: functions);
-    to_bytes_name : string;
-    to_bytes_func : (list string * list string * cmd)%type;
-    to_bytes : bedrock_func := (to_bytes_name, to_bytes_func);
-    spec_of_to_bytes : spec_of to_bytes_name :=
-      @spec_of_to_bytes p n s c to_bytes_name;
+    to_bytes : bedrock_func;
+    spec_of_to_bytes : spec_of (fst to_bytes) :=
+      @spec_of_to_bytes p n s c (fst to_bytes);
     to_bytes_correct :
       forall functions,
         spec_of_to_bytes (to_bytes :: functions) }.
-Arguments carry_mul_name {_ _ _ _ _}.
-Arguments carry_mul_func {_ _ _ _ _}.
 Arguments carry_mul {_ _ _ _ _}.
 Arguments spec_of_carry_mul {_ _ _ _ _}.
 Arguments carry_mul_correct {_ _ _ _ _}.
-Arguments add_name {_ _ _ _ _}.
-Arguments add_func {_ _ _ _ _}.
 Arguments add {_ _ _ _ _}.
 Arguments spec_of_add {_ _ _ _ _}.
 Arguments add_correct {_ _ _ _ _}.
-Arguments to_bytes_name {_ _ _ _ _}.
-Arguments to_bytes_func {_ _ _ _ _}.
 Arguments to_bytes {_ _ _ _ _}.
 Arguments spec_of_to_bytes {_ _ _ _ _}.
 Arguments to_bytes_correct {_ _ _ _ _}.
@@ -65,22 +54,29 @@ Local Notation make_bedrock_func :=
 Local Notation make_bedrock_func_with_sizes :=
   (@make_bedrock_func_with_sizes _ default_inname_gen default_outname_gen).
 
-Record reified_op {p t} (n : nat)
-       (insize outsize : access_size)
+Record reified_op {p t}
+       (sig : FunctionSignature t)
        (start : ErrorT.ErrorT BoundsPipeline.Pipeline.ErrorMessage
                               (API.Expr t)) :=
   { res : API.Expr t;
-    computed_bedrock_func : list string * list string * cmd;
+    computed_bedrock_func : bedrock_func;
     computed_bedrock_func_eq :
-      computed_bedrock_func =
-      make_bedrock_func_with_sizes n insize outsize res;
+      computed_bedrock_func = make_bedrock_func sig res;
     reified_eq : start = ErrorT.Success res;
     reified_Wf3 : expr.Wf3 res;
-    reified_valid : Func.valid_func (p:=p) (res (fun _ => unit)) }.
+    reified_valid : Func.valid_func (p:=p) (res (fun _ => unit));
+    reified_output_sizes : output_sizes_obeyed sig res;
+  }.
 Arguments res {_ _ _}.
 Arguments reified_eq {_ _ _}.
 Arguments reified_Wf3 {_ _ _}.
 Arguments reified_valid {_ _ _}.
+Arguments reified_output_sizes {_ _ _}.
+
+Class names_of_operations :=
+  { name_of_carry_mul : string;
+    name_of_add : string;
+    name_of_to_bytes : string }.
 
 Ltac handle_easy_preconditions :=
   lazymatch goal with
@@ -96,16 +92,20 @@ Ltac handle_easy_preconditions :=
   | |- ?g => fail "Unrecognized goal" g
   end.
 
-Ltac make_reified_op n insize outsize start :=
-  assert (reified_op n insize outsize start)
+Ltac make_reified_op sig start :=
+  assert (reified_op sig start)
   by (econstructor; try apply valid_func_bool_iff;
-      try match goal with
-          | |- ?start = ErrorT.Success _ =>
-            vm_compute; reflexivity
-          end;
+      (* important to compute the function body first, before solving other
+         subgoals *)
+      lazymatch goal with
+      | |- ?start = ErrorT.Success _ =>
+        vm_compute; reflexivity
+      | _ => idtac
+      end).
+(*
       [ vm_compute; reflexivity
       | abstract (prove_Wf3 ())
-      | abstract (vm_compute; reflexivity) ]).
+      | abstract (vm_compute; reflexivity) ]). *)
 
 Ltac parameters_from_wordsize machine_wordsize :=
   let r := (eval cbv - [Defaults32.default_parameters
@@ -116,65 +116,52 @@ Ltac parameters_from_wordsize machine_wordsize :=
   | inr ?err => fail "Failed to select parameters: " err
   end.
 
-Ltac make_all_reified_ops n s c machine_wordsize :=
+Ltac make_all_reified_ops names n s c machine_wordsize :=
   idtac "computing reified carry_mul (this one can be slow)...";
   make_reified_op
-    n access_size.word access_size.word
+    (UnsaturatedSolinas.carry_mul n (@name_of_carry_mul names))
     (PushButtonSynthesis.UnsaturatedSolinas.carry_mul
        n s c machine_wordsize);
   idtac "computing reified add...";
   make_reified_op
-    n access_size.word access_size.word
+    (UnsaturatedSolinas.add n (@name_of_add names))
     (PushButtonSynthesis.UnsaturatedSolinas.add
        n s c machine_wordsize);
   idtac "computing reified to_bytes...";
   make_reified_op
-    n access_size.word access_size.one
+    (UnsaturatedSolinas.to_bytes n s c (@name_of_to_bytes names))
     (PushButtonSynthesis.UnsaturatedSolinas.to_bytes
        n s c machine_wordsize).
 
-Ltac instantiate_ops
-     carry_mul_name_value add_name_value to_bytes_name_value :=
-  let n :=
+Ltac instantiate_ops names :=
+    let carry_mul_func_value := fresh "carry_mul_func" in
+    let carry_mul_func_eq := fresh "carry_mul_name_eq" in
+    let add_func_value := fresh "add_func" in
+    let add_func_eq := fresh "add_name_eq" in
+    let to_bytes_func_value := fresh "to_bytes_func" in
+    let to_bytes_func_eq := fresh "to_bytes_name_eq" in
+    lazymatch goal with
+    | X : reified_op
+            _ (PushButtonSynthesis.UnsaturatedSolinas.carry_mul _ _ _ _)
+      |- _ =>
+      destruct X as [? carry_mul_func_value carry_mul_func_eq ]
+    end;
       lazymatch goal with
-      | |- bedrock2_unsaturated_solinas _ ?n _ _ => n end in
-  let carry_mul_func_value := fresh "carry_mul_func" in
-  let carry_mul_func_eq := fresh "carry_mul_func_eq" in
-  let add_func_value := fresh "add_func" in
-  let add_func_eq := fresh "add_func_eq" in
-  let to_bytes_func_value := fresh "to_bytes_func" in
-  let to_bytes_func_eq := fresh "to_bytes_func_eq" in
-  lazymatch goal with
-  | X : reified_op
-          _ _ _
-          (PushButtonSynthesis.UnsaturatedSolinas.carry_mul _ _ _ _)
-    |- _ =>
-    destruct X as [? carry_mul_func_value carry_mul_func_eq ]
-  end;
-  lazymatch goal with
-  | X : reified_op
-          _ _ _
-          (PushButtonSynthesis.UnsaturatedSolinas.add _ _ _ _)
-    |- _ =>
-    destruct X as [? add_func_value add_func_eq ]
-  end;
-  lazymatch goal with
-  | X : reified_op
-          _ _ _
-          (PushButtonSynthesis.UnsaturatedSolinas.to_bytes _ _ _ _)
-    |- _ =>
-    destruct X as [? to_bytes_func_value to_bytes_func_eq ]
-  end;
-  let carry_mul_name_value := eval vm_compute in carry_mul_name_value in
-  let add_name_value := eval vm_compute in add_name_value in
-  let to_bytes_name_value := eval vm_compute in to_bytes_name_value in
+      | X : reified_op
+              _ (PushButtonSynthesis.UnsaturatedSolinas.add _ _ _ _)
+        |- _ =>
+        destruct X as [? add_func_value add_func_eq ]
+      end;
+      lazymatch goal with
+      | X : reified_op
+              _ (PushButtonSynthesis.UnsaturatedSolinas.to_bytes _ _ _ _)
+        |- _ =>
+        destruct X as [? to_bytes_func_value to_bytes_func_eq ]
+      end;
   apply Build_bedrock2_unsaturated_solinas
-    with (carry_mul_name:=carry_mul_name_value)
-         (carry_mul_func:=carry_mul_func_value)
-         (add_name:=add_name_value)
-         (add_func:=add_func_value)
-         (to_bytes_name:=to_bytes_name_value)
-         (to_bytes_func:=to_bytes_func_value);
+    with (carry_mul:=carry_mul_func_value)
+         (add:=add_func_value)
+         (to_bytes:=to_bytes_func_value);
   rewrite ?carry_mul_func_eq, ?add_func_eq, ?to_bytes_func_eq.
 
 Ltac use_correctness_proofs :=
@@ -193,9 +180,10 @@ Module X25519_64.
   Let c := [(1, 19)].
   Let machine_wordsize := 64.
 
-  Definition carry_mul_name := "curve25519_carry_mul"%string.
-  Definition add_name := "curve25519_add"%string.
-  Definition to_bytes_name := "curve25519_to_bytes"%string.
+  Definition names : names_of_operations :=
+    {| name_of_carry_mul := "curve25519_carry_mul"%string;
+       name_of_add := "curve25519_add"%string;
+       name_of_to_bytes := "curve25519_to_bytes"%string; |}.
 
   Local Instance p : Types.parameters.
   let p := parameters_from_wordsize machine_wordsize in
@@ -205,11 +193,51 @@ Module X25519_64.
 
   Instance curve25519_bedrock2 : bedrock2_unsaturated_solinas p n s c.
   Proof.
-    make_all_reified_ops n s c machine_wordsize.
-    instantiate_ops carry_mul_name add_name to_bytes_name.
-    all: use_correctness_proofs.
+    let sig :=
+        constr:(UnsaturatedSolinas.add n (@name_of_add names)) in
+    let start := constr:(PushButtonSynthesis.UnsaturatedSolinas.add
+       n s c machine_wordsize) in
+    assert (reified_op sig start).
+     { econstructor; try apply valid_func_bool_iff;
+      lazymatch goal with
+          | |- ?start = ErrorT.Success _ =>
+            vm_compute; reflexivity
+          | _ => idtac
+      end.
+       all:
+         try match goal with
+             | |- _ = make_bedrock_func _ _ =>
+               vm_compute; reflexivity
+             | |- expr.Wf3 _ => abstract (prove_Wf3 ())
+             | |- valid_func_bool ?x = true =>
+               abstract (vm_compute; reflexivity)
+             end.
+       { cbn.
+         cbv [output_sizes_obeyed]. intros.
+         cbn - [Memory.bytes_per Types.semantics].
+         repeat apply Forall_cons; try apply Forall_nil.
+         all:match goal with
+               |- _ <= PreExtra.ident.cast ?r ?x < 2 ^ ?y =>
+               pose proof CastLemmas.ident.cast_bounded r x
+                    ltac:(cbn [ident.literal ZRange.upper ZRange.lower]; lia);
+                 let z := (eval vm_compute in (2 ^ y)) in
+                 change (2 ^ y) with z
+             end.
+         all:cbv [ZRange.is_bounded_by_bool] in *;
+           cbn [ZRange.lower ZRange.upper ident.literal] in *.
+         all:match goal with
+               H : (_ && _)%bool = true |- _ =>
+               apply Bool.andb_true_iff in H; destruct H
+             end;
+           LtbToLt.Z.ltb_to_lt.
+         all:lia. } }
+    make_all_reified_ops names n s c machine_wordsize.
+    instantiate_ops names.
+    all:use_correctness_proofs.
     all: try assumption.
-    all: abstract (handle_easy_preconditions).
+    all: try abstract (handle_easy_preconditions).
+    { cbn.
+      cbv.
   Defined.
 (* Eval cbv [carry_mul API.carry_mul_name carry_mul_func
                       curve25519_bedrock2] in carry_mul. *)
