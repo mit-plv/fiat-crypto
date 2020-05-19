@@ -18,4 +18,6 @@ jobs:
     - name: cargo test
       run: (cd fiat-rust; cargo test --verbose)
     - name: curve25519-dalek test
-      run: etc/ci/test-fiat-rust.sh
+      run: etc/ci/test-fiat-rust-curve25519-dalek.sh
+    - name: crate-crypto/Ed448-Goldilocks test
+      run: etc/ci/test-fiat-rust-crate-crypto-Ed448-Goldilocks.sh
