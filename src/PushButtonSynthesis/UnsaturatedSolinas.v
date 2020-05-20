@@ -17,6 +17,7 @@ Require Import Crypto.Util.Strings.Show.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.Zselect.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
+Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Tactics.HasBody.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.SpecializeBy.
@@ -97,16 +98,14 @@ Section __.
 
   Let limbwidth := (Z.log2_up (s - Associational.eval c) / Z.of_nat n)%Q.
   Let idxs : list nat := carry_chains n s c.
-  Let coef := 2.
   Let n_bytes := bytes_n (Qnum limbwidth) (Qden limbwidth) n.
-  Let prime_upperbound_list : list Z
-    := encode_no_reduce (weight (Qnum limbwidth) (Qden limbwidth)) n (s-1).
+  Local Notation prime_upperbound_list := (prime_upperbound_list n s c) (only parsing).
   Let prime_bytes_upperbound_list : list Z
     := encode_no_reduce (weight 8 1) n_bytes (s-1).
-  Let tight_upperbounds : list Z
-    := List.map
-         (fun v : Z => Qceiling (tight_upperbound_fraction * v))
-         prime_upperbound_list.
+  Local Notation tight_upperbounds := (tight_upperbounds n s c) (only parsing).
+  Local Notation loose_upperbounds := (loose_upperbounds n s c) (only parsing).
+  Local Notation tight_bounds := (tight_bounds n s c) (only parsing).
+  Local Notation loose_bounds := (loose_bounds n s c) (only parsing).
   Definition prime_bound : ZRange.type.option.interp (base.type.Z)
     := Some r[0~>(s - Associational.eval c - 1)]%zrange.
   Definition prime_bounds : ZRange.type.option.interp (base.type.list (base.type.Z))
@@ -130,12 +129,6 @@ Section __.
 
   Let possible_values := possible_values_of_machine_wordsize.
   Let possible_values_with_bytes := possible_values_of_machine_wordsize_with_bytes.
-  Let loose_upperbounds : list Z
-    := List.map (fun u => loose_upperbound_extra_multiplicand * u) tight_upperbounds.
-  Definition tight_bounds : list (ZRange.type.option.interp base.type.Z)
-    := List.map (fun u => Some r[0~>u]%zrange) tight_upperbounds.
-  Definition loose_bounds : list (ZRange.type.option.interp base.type.Z)
-    := List.map (fun u => Some r[0~>u]%zrange) loose_upperbounds.
 
   Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
   Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
@@ -151,7 +144,7 @@ Section __.
   Proof using Type. cbv [tight_bounds]; now autorewrite with distr_length. Qed.
   Hint Rewrite length_tight_bounds : distr_length.
   Lemma length_loose_bounds : List.length loose_bounds = n.
-  Proof using Type. cbv [loose_bounds]; now autorewrite with distr_length. Qed.
+  Proof using Type. cbv [loose_bounds]; now autorewrite with distr_length natsimplify. Qed.
   Hint Rewrite length_loose_bounds : distr_length.
   Lemma length_prime_bytes_upperbound_list : List.length prime_bytes_upperbound_list = bytes_n (Qnum limbwidth) (Qden limbwidth) n.
   Proof using Type. cbv [prime_bytes_upperbound_list]; now autorewrite with distr_length. Qed.
@@ -605,19 +598,7 @@ Section __.
 
   Lemma relax_correct
     : forall x, list_Z_bounded_by tight_bounds x -> list_Z_bounded_by loose_bounds x.
-  Proof using Type.
-    cbv [tight_bounds loose_bounds list_Z_bounded_by].
-    intro.
-    rewrite !fold_andb_map_map1, !fold_andb_map_iff; cbn [upper lower].
-    setoid_rewrite Bool.andb_true_iff.
-    intro H.
-    repeat first [ lazymatch type of H with
-                   | and _ _ => let H' := fresh in destruct H as [H' H]; split; [ assumption | ]
-                   end
-                 | let x := fresh in intro x; specialize (H x) ].
-    cbv [loose_upperbound_extra_multiplicand].
-    Z.ltb_to_lt; lia.
-  Qed.
+  Proof using Type. apply relax_list_Z_bounded_by, tight_bounds_tighter. Qed.
 
   Lemma to_bytes_correct res
         (Hres : to_bytes = Success res)
