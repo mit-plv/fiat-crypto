@@ -104,9 +104,9 @@ Section __.
       pipeline_out : Pipeline.ErrorT (API.Expr t);
       postcondition : foreach_arg API.interp_type t
                       -> foreach_ret API.interp_type t -> Prop;
+      check_args_ok : Prop;
       correctness :
-        check_args
-          n s c Semantics.width (ErrorT.Success tt) = ErrorT.Success tt ->
+        check_args_ok ->
         forall res,
           pipeline_out = ErrorT.Success res ->
           forall args,
@@ -120,6 +120,7 @@ Section __.
   Arguments output_array_lengths {_}.
   Arguments pipeline_out {_}.
   Arguments postcondition {_}.
+  Arguments check_args_ok {_}.
   Arguments correctness {_}.
 
   Definition make_bedrock_func
@@ -247,7 +248,10 @@ Section __.
     eapply (Build_operation
               t name inbounds
               insizes outsizes inlengths outlengths)
-           with (pipeline_out:=out).
+    with (pipeline_out:=out)
+         (check_args_ok:=
+            check_args n s c machine_wordsize (ErrorT.Success tt)
+            = ErrorT.Success tt).
 
   Definition carry_mul
     : operation (type_listZ -> type_listZ -> type_listZ).
@@ -343,7 +347,7 @@ Section __.
                                    (add.(postcondition) args))
                    Rr m').
 
-  Definition spec_of_to_bytes : spec_of add_name :=
+  Definition spec_of_to_bytes : spec_of to_bytes_name :=
     fun functions =>
       forall wx px pout wold_out t m
              (Ra Rr : Semantics.mem -> Prop),
@@ -861,96 +865,3 @@ Section __.
     Qed.
   End Proofs.
 End __.
-
-  (* TODO: delete if unused
-  Fixpoint word_base_interp (t : base.type) : Type :=
-    match t with
-    | base.type.prod a b => word_base_interp a * word_base_interp b
-    | base_listZ => list Semantics.word
-    | _ => Semantics.word
-    end.
-  Definition word_interp := type.interp word_base_interp.
-  Fixpoint ptr_base_interp (t : base.type) : Type :=
-    match t with
-    | base.type.prod a b => ptr_base_interp a * ptr_base_interp b
-    | _ => Semantics.word
-    end.
-  Definition ptr_interp := type.interp ptr_base_interp.
-
-  Fixpoint in_bounds {t}
-    : ZRange.type.base.option.interp t
-      -> ptr_base_interp t -> word_base_interp t
-      -> Semantics.mem -> Prop :=
-    match t with
-    | base.type.prod a b =>
-      fun bounds ptrs values =>
-        sep (in_bounds (fst bounds) (fst ptrs) (fst values))
-            (in_bounds (snd bounds) (snd ptrs) (snd values))
-    | base_listZ =>
-      fun bounds ptr value =>
-        match bounds with
-        | Some bounds =>
-          BignumSuchThat ptr value (list_Z_bounded_by bounds)
-        | None => emp False
-        end
-    | base_Z =>
-      fun bounds ptr value =>
-        sep (emp (ZRange.type.base.option.is_bounded_by
-                    bounds (word.unsigned value) = true))
-            (scalar ptr value)
-    | _ => fun _ _ _ => emp False
-    end.
-  Fixpoint input_ok {t}
-    : foreach_arg ZRange.type.option.interp t
-      -> foreach_arg ptr_interp t
-      -> foreach_arg word_interp t
-      -> Semantics.mem -> Prop :=
-    match t with
-    | type.base b => fun _ _ _ => emp True
-    | type.arrow (type.base s) d =>
-      fun bounds ptrs values =>
-        sep (in_bounds (fst bounds) (fst ptrs) (fst values))
-            (input_ok (snd bounds) (snd ptrs) (snd values))
-    | _ => fun _ _ _ => emp False
-    end.
-
-  (* What would be really nice:
-     In [operation], include
-        in_pre : foreach_arg ptr_interp t ->
-                 foreach_arg word_interp t ->
-                 Semantics.mem -> Prop
-        out_pre: foreach_ret ptr_interp t ->
-                 foreach_ret word_interp t ->
-    and use tactics to infer these
-
-    pros :
-         spec becomes very simple and duplicates across operations
-    cons:
-        makes spec harder to view/modify
-  *)
-
-  Fixpoint lengths_match {t}
-    : base_list_lengths t
-      -> ptr_base_interp t -> word_base_interp t
-      -> Semantics.mem -> Prop :=
-    match t with
-    | base.type.prod a b =>
-      fun lengths ptrs values =>
-        sep (lengths_match (fst lengths) (fst ptrs) (fst values))
-            (lengths_match (snd lengths) (snd ptrs) (snd values))
-    | base_listZ =>
-      fun n ptr value =>
-        BignumSuchThat ptr value (fun l => length l = n)
-    | base_Z =>
-      fun lengths ptr value =>
-        sep (emp (ZRange.type.base.option.is_bounded_by
-                    lengths (word.unsigned value) = true))
-            (scalar ptr value)
-    | _ => fun _ _ _ => emp False
-    end.
-  Definition output_placeholder_ok {t}
-    : foreach_ret list_lengths t
-      -> foreach_ret ptr_interp t
-      -> foreach_ret word_interp t
-      -> Semantics.mem -> Prop :=
-*)

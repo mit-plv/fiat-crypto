@@ -53,25 +53,24 @@ Local Notation make_bedrock_func :=
   (@make_bedrock_func _ default_inname_gen default_outname_gen).
 Local Notation make_bedrock_func_with_sizes :=
   (@make_bedrock_func_with_sizes _ default_inname_gen default_outname_gen).
+About operation.
 
 Record reified_op {p t}
-       (sig : FunctionSignature t)
+       (op : operation t)
        (start : ErrorT.ErrorT BoundsPipeline.Pipeline.ErrorMessage
                               (API.Expr t)) :=
   { res : API.Expr t;
     computed_bedrock_func : bedrock_func;
     computed_bedrock_func_eq :
-      computed_bedrock_func = make_bedrock_func sig res;
+      computed_bedrock_func = make_bedrock_func op res;
     reified_eq : start = ErrorT.Success res;
     reified_Wf3 : expr.Wf3 res;
     reified_valid : Func.valid_func (p:=p) (res (fun _ => unit));
-    reified_output_sizes : output_sizes_obeyed sig res;
   }.
 Arguments res {_ _ _}.
 Arguments reified_eq {_ _ _}.
 Arguments reified_Wf3 {_ _ _}.
 Arguments reified_valid {_ _ _}.
-Arguments reified_output_sizes {_ _ _}.
 
 Class names_of_operations :=
   { name_of_carry_mul : string;
@@ -92,8 +91,8 @@ Ltac handle_easy_preconditions :=
   | |- ?g => fail "Unrecognized goal" g
   end.
 
-Ltac make_reified_op sig start :=
-  assert (reified_op sig start)
+Ltac make_reified_op op start :=
+  assert (reified_op op start)
   by (econstructor; try apply valid_func_bool_iff;
       (* important to compute the function body first, before solving other
          subgoals *)
@@ -101,11 +100,15 @@ Ltac make_reified_op sig start :=
       | |- ?start = ErrorT.Success _ =>
         vm_compute; reflexivity
       | _ => idtac
+      end;
+      idtac "got expression, proving subgoals";
+      match goal with
+      | |- _ = make_bedrock_func _ _ =>
+        vm_compute; reflexivity
+      | |- expr.Wf3 _ => abstract (prove_Wf3 ())
+      | |- valid_func_bool ?x = true =>
+        abstract (vm_compute; reflexivity)
       end).
-(*
-      [ vm_compute; reflexivity
-      | abstract (prove_Wf3 ())
-      | abstract (vm_compute; reflexivity) ]). *)
 
 Ltac parameters_from_wordsize machine_wordsize :=
   let r := (eval cbv - [Defaults32.default_parameters
@@ -119,12 +122,12 @@ Ltac parameters_from_wordsize machine_wordsize :=
 Ltac make_all_reified_ops names n s c machine_wordsize :=
   idtac "computing reified carry_mul (this one can be slow)...";
   make_reified_op
-    (UnsaturatedSolinas.carry_mul n (@name_of_carry_mul names))
+    (UnsaturatedSolinas.carry_mul n s c (@name_of_carry_mul names))
     (PushButtonSynthesis.UnsaturatedSolinas.carry_mul
        n s c machine_wordsize);
   idtac "computing reified add...";
   make_reified_op
-    (UnsaturatedSolinas.add n (@name_of_add names))
+    (UnsaturatedSolinas.add n s c (@name_of_add names))
     (PushButtonSynthesis.UnsaturatedSolinas.add
        n s c machine_wordsize);
   idtac "computing reified to_bytes...";
@@ -193,54 +196,13 @@ Module X25519_64.
 
   Instance curve25519_bedrock2 : bedrock2_unsaturated_solinas p n s c.
   Proof.
-    let sig :=
-        constr:(UnsaturatedSolinas.add n (@name_of_add names)) in
-    let start := constr:(PushButtonSynthesis.UnsaturatedSolinas.add
-       n s c machine_wordsize) in
-    assert (reified_op sig start).
-     { econstructor; try apply valid_func_bool_iff;
-      lazymatch goal with
-          | |- ?start = ErrorT.Success _ =>
-            vm_compute; reflexivity
-          | _ => idtac
-      end.
-       all:
-         try match goal with
-             | |- _ = make_bedrock_func _ _ =>
-               vm_compute; reflexivity
-             | |- expr.Wf3 _ => abstract (prove_Wf3 ())
-             | |- valid_func_bool ?x = true =>
-               abstract (vm_compute; reflexivity)
-             end.
-       { cbn.
-         cbv [output_sizes_obeyed]. intros.
-         cbn - [Memory.bytes_per Types.semantics].
-         repeat apply Forall_cons; try apply Forall_nil.
-         all:match goal with
-               |- _ <= PreExtra.ident.cast ?r ?x < 2 ^ ?y =>
-               pose proof CastLemmas.ident.cast_bounded r x
-                    ltac:(cbn [ident.literal ZRange.upper ZRange.lower]; lia);
-                 let z := (eval vm_compute in (2 ^ y)) in
-                 change (2 ^ y) with z
-             end.
-         all:cbv [ZRange.is_bounded_by_bool] in *;
-           cbn [ZRange.lower ZRange.upper ident.literal] in *.
-         all:match goal with
-               H : (_ && _)%bool = true |- _ =>
-               apply Bool.andb_true_iff in H; destruct H
-             end;
-           LtbToLt.Z.ltb_to_lt.
-         all:lia. } }
     make_all_reified_ops names n s c machine_wordsize.
     instantiate_ops names.
-    all:use_correctness_proofs.
+    all: use_correctness_proofs.
     all: try assumption.
     all: try abstract (handle_easy_preconditions).
-    { cbn.
-      cbv.
-  Defined.
-(* Eval cbv [carry_mul API.carry_mul_name carry_mul_func
-                      curve25519_bedrock2] in carry_mul. *)
+  Time Defined.
+  (* Eval cbv [carry_mul curve25519_bedrock2] in carry_mul. *)
 End X25519_64.
 
 Module X1305_32.
@@ -249,9 +211,10 @@ Module X1305_32.
   Let c := [(1, 5)].
   Let machine_wordsize := 32.
 
-  Definition carry_mul_name := "poly1305_carry_mul"%string.
-  Definition add_name := "poly1305_add"%string.
-  Definition to_bytes_name := "poly1305_to_bytes"%string.
+  Definition names : names_of_operations :=
+    {| name_of_carry_mul := "poly1305_carry_mul"%string;
+       name_of_add := "poly1305_add"%string;
+       name_of_to_bytes := "poly1305_to_bytes"%string; |}.
 
   Local Instance p : Types.parameters.
   let p := parameters_from_wordsize machine_wordsize in
@@ -261,12 +224,12 @@ Module X1305_32.
 
   Instance poly1305_bedrock2 : bedrock2_unsaturated_solinas p n s c.
   Proof.
-    make_all_reified_ops n s c machine_wordsize.
-    instantiate_ops carry_mul_name add_name to_bytes_name.
+    make_all_reified_ops names n s c machine_wordsize.
+    instantiate_ops names.
     all: use_correctness_proofs.
     all: try assumption.
-    all: abstract (handle_easy_preconditions).
-  Qed.
+    all: try abstract (handle_easy_preconditions).
+  Time Defined.
 End X1305_32.
 
 Require Import bedrock2.Array.
@@ -366,21 +329,27 @@ Module Test.
     straightline_call; sepsimpl;
       [ try ecancel_assumption .. | ];
       [ rewrite ?map_length; assumption .. | ].
-    sepsimpl.
-    cbv [Solinas_carry_mul_correct] in *.
     repeat straightline.
+
+    lazymatch goal with
+      H : postcondition _ _ _ ?out |- _ =>
+      cbn [fst snd postcondition UnsaturatedSolinas.carry_mul] in H;
+        repeat specialize (H ltac:(assumption)); cleanup
+    end.
     straightline_call; sepsimpl;
       [ try ecancel_assumption .. | ].
-    { apply relax_correct; assumption. }
+    { apply relax_correct. assumption. }
     { assumption. }
-    { match goal with
-      | H : list_Z_bounded_by tight_bounds ?x |- length ?x = _ =>
-        apply relax_correct, bounded_by_loose_bounds_length in H;
-          apply H
-      end. }
+    { eapply bounded_by_loose_bounds_length.
+      apply relax_correct. eassumption. }
 
-    cbv [Solinas_carry_mul_correct] in *.
     repeat straightline.
+    lazymatch goal with
+      H : postcondition _ _ _ ?out |- _ =>
+      cbn [fst snd postcondition UnsaturatedSolinas.carry_mul] in H;
+        specialize (H ltac:(apply relax_correct; assumption));
+        specialize (H ltac:(assumption)); cleanup
+    end.
 
     repeat split; try reflexivity.
     sepsimpl_hyps.
