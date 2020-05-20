@@ -617,7 +617,7 @@ Section __.
     rewrite nth_error_combine in H.
     break_match_hyps; try discriminate; []; Option.inversion_option; Prod.inversion_prod; subst.
     cbv [Partition.partition] in *.
-    apply nth_error_map in Heqo; apply nth_error_map in Heqo0; destruct Heqo as (?&?&?), Heqo0 as (?&?&?).
+    apply nth_error_map_ex in Heqo; apply nth_error_map_ex in Heqo0; destruct Heqo as (?&?&?), Heqo0 as (?&?&?).
     rewrite nth_error_seq in *.
     break_match_hyps; try discriminate; Option.inversion_option; Prod.inversion_prod; subst.
     rewrite ?Nat.add_0_l.

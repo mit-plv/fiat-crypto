@@ -861,7 +861,7 @@ Module Compilers.
                               | [ H : List.In _ (List.combine _ _) |- _ ] => apply List.In_nth_error in H
                               | [ |- List.In _ (List.combine _ _) ] => eapply nth_error_In
                               | [ H : ?x = Some _, H' : context[?x] |- _ ] => rewrite H in H'
-                              | [ H : List.nth_error (List.map _ _) _ = Some _ |- _ ] => apply nth_error_map in H
+                              | [ H : List.nth_error (List.map _ _) _ = Some _ |- _ ] => apply nth_error_map_ex in H
                               | [ H : List.nth_error _ _ = None |- _ ] => rewrite List.nth_error_None in H
                               | [ H : context[length ?ls] |- _ ] => tryif is_var ls then fail else (progress autorewrite with distr_length in H)
                               | [ |- context[length ?ls] ] => tryif is_var ls then fail else (progress autorewrite with distr_length)

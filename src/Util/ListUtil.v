@@ -412,12 +412,13 @@ Ltac nth_tac' :=
     | [ H: Some _ = None |- _ ] => inversion H
     | [ |- Some _ = Some _ ] => apply f_equal
   end); eauto; try (autorewrite with list in *); try omega; eauto.
-Lemma nth_error_map : forall A B (f:A->B) i xs y,
+Lemma nth_error_map {A B f n l}
+  : nth_error (@map A B f l) n = option_map f (nth_error l n).
+Proof. revert n; induction l, n; nth_tac'. Qed.
+Lemma nth_error_map_ex : forall A B (f:A->B) i xs y,
   nth_error (map f xs) i = Some y ->
   exists x, nth_error xs i = Some x /\ f x = y.
-Proof.
-  induction i; destruct xs; nth_tac'.
-Qed.
+Proof. intros *; rewrite nth_error_map; edestruct nth_error; nth_tac'. Qed.
 
 Lemma nth_error_seq : forall i start len,
   nth_error (seq start len) i =
@@ -465,7 +466,7 @@ Hint Rewrite @map_nth_default using omega : push_nth_default.
 
 Ltac nth_tac :=
   repeat progress (try nth_tac'; try (match goal with
-    | [ H: nth_error (map _ _) _ = Some _ |- _ ] => destruct (nth_error_map _ _ _ _ _ _ H); clear H
+    | [ H: nth_error (map _ _) _ = Some _ |- _ ] => destruct (nth_error_map_ex _ _ _ _ _ _ H); clear H
     | [ H: nth_error (seq _ _) _ = Some _ |- _ ] => rewrite nth_error_seq in H
     | [H: nth_error _ _ = None |- _ ] => specialize (nth_error_error_length _ _ _ H); intro; clear H
   end)).

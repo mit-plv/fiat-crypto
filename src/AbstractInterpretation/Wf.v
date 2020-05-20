@@ -571,7 +571,7 @@ Module Compilers.
                                 | [ |- UnderLets.wf _ _ _ _ ] => constructor
                                 | [ H : abstract_domain'_R _ ?x _ |- _ ] => rewrite !H
                                 | [ |- UnderLets.wf _ _ (UnderLets.splice _ _) (UnderLets.splice _ _) ] => eapply UnderLets.wf_splice
-                                | [ H : List.nth_error (List.map _ _) _ = Some _ |- _ ] => apply nth_error_map in H
+                                | [ H : List.nth_error (List.map _ _) _ = Some _ |- _ ] => apply nth_error_map_ex in H
                                 | [ H : context[List.nth_error (List.combine _ _) _] |- _ ] => rewrite nth_error_combine in H
                                 | [ |- context[List.nth_error (List.combine _ _) _] ] => rewrite nth_error_combine
                                 | [ H : forall x y, Some _ = Some _ -> Some _ = Some _ -> _ |- _ ]
@@ -664,7 +664,7 @@ Module Compilers.
                              | [ H : (?x <= ?y)%nat, H' : (?y < ?x)%nat |- _ ] => exfalso; clear -H H'; lia
                              | [ H : (?x <= ?y)%nat, H' : (?y < ?x')%nat, H'' : ?x' = ?x |- _ ] => exfalso; clear -H H' H''; lia
                              | [ H : length ?x = length ?y |- context[length ?x] ] => rewrite H
-                             | [ H : List.nth_error (List.map _ _) _ = Some _ |- _ ] => apply nth_error_map in H
+                             | [ H : List.nth_error (List.map _ _) _ = Some _ |- _ ] => apply nth_error_map_ex in H
                              | [ H : context[List.nth_error (List.combine _ _) _] |- _ ] => rewrite nth_error_combine in H
                              | [ |- context[List.nth_error (List.combine _ _) _] ] => rewrite nth_error_combine
                              | [ H : forall x y, Some _ = Some _ -> Some _ = Some _ -> _ |- _ ]

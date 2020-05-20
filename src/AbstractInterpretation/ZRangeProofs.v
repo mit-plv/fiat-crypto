@@ -303,7 +303,7 @@ Module Compilers.
                            | [ H : List.In _ (List.combine _ _) |- _ ] => apply List.In_nth_error in H
                            | [ H : context[List.nth_error (List.combine _ _) _] |- _ ] => rewrite nth_error_combine in H
                            | [ |- context[List.nth_error (List.combine _ _) _] ] => rewrite nth_error_combine
-                           | [ H : List.nth_error (List.map _ _) _ = Some _ |- _ ] => apply nth_error_map in H
+                           | [ H : List.nth_error (List.map _ _) _ = Some _ |- _ ] => apply nth_error_map_ex in H
                            | [ H : context[List.nth_error (List.seq _ _) _] |- _ ] => rewrite nth_error_seq in H
                            | [ |- context[List.nth_error (List.seq _ _) _] ] => rewrite nth_error_seq
                            | [ H : context[List.nth_error (List.firstn _ _) _] |- _ ] => rewrite nth_error_firstn in H
