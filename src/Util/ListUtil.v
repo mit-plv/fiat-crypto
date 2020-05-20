@@ -2527,3 +2527,9 @@ Proof.
   induction ls as [|?? IH]; cbn [List.map]; split; intro H; inversion_clear H;
     constructor; split_iff; auto; now apply HdRel_map_iff.
 Qed.
+
+Lemma In_nth_error_iff {A l x}
+  : In x l <-> exists n : nat, @nth_error A l n = Some x.
+Proof.
+  split; [ now apply In_nth_error | intros [? ?]; eapply nth_error_In; eassumption ].
+Qed.
