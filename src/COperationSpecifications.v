@@ -8,6 +8,7 @@ Require Import Crypto.Arithmetic.BaseConversion.
 Require Import Crypto.Arithmetic.Partition.
 Require Import Crypto.Arithmetic.WordByWordMontgomery.
 Require Import Crypto.Util.ZRange.
+Require Import Crypto.Util.ZRange.BasicLemmas.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.Bool.
@@ -32,17 +33,43 @@ Local Notation is_bounded_by0o r
 Local Notation is_bounded_by bounds ls
   := (fold_andb_map (fun r v'' => is_bounded_by0o r v'') bounds ls).
 
+Local Notation is_tighter_than0 x y
+  := ((lower y <=? lower x) && (upper x <=? upper y)).
+Local Notation is_tighter_than2 r v
+  := (let '(v1, v2) := v in is_tighter_than0 (fst r) v1 && is_tighter_than0 (snd r) v2).
+Local Notation is_tighter_than0oo r1 r2
+  := (match r1, r2 with _, None => true | None, Some _ => false | Some r1', Some r2' => is_tighter_than0 r1' r2' end).
+Local Notation is_tighter_than ls1 ls2
+  := (fold_andb_map (fun x y => is_tighter_than0oo x y) ls1 ls2).
+
 Section list_Z_bounded.
   Definition list_Z_bounded_by
              (bounds : list (option zrange))
              (v : list Z)
     := is_bounded_by bounds v = true.
 
+  Definition list_Z_tighter_than
+             (bounds1 bounds2 : list (option zrange))
+    := is_tighter_than bounds1 bounds2 = true.
+
   Lemma length_list_Z_bounded_by bounds ls
     : list_Z_bounded_by bounds ls -> length ls = length bounds.
   Proof using Type.
     intro H.
     apply fold_andb_map_length in H; congruence.
+  Qed.
+
+  Lemma relax_list_Z_bounded_by
+    : forall (bounds1 bounds2 : list (option zrange))
+             (H : list_Z_tighter_than bounds1 bounds2)
+             (v : list Z),
+      list_Z_bounded_by bounds1 v -> list_Z_bounded_by bounds2 v.
+  Proof using Type.
+    cbv [list_Z_bounded_by list_Z_tighter_than].
+    induction bounds1, bounds2, v; cbn in *; try congruence.
+    rewrite ?Bool.andb_true_iff in *; intros; destruct_head'_and.
+    break_innermost_match_hyps; repeat apply conj; try congruence; eauto.
+    eapply ZRange.is_bounded_by_of_is_tighter_than; eassumption.
   Qed.
 
   Lemma eval_list_Z_bounded_by wt n' bounds bounds' f
