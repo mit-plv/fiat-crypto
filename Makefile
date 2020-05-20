@@ -124,33 +124,37 @@ GO_DIR := fiat-go/src/
 JAVA_DIR := fiat-java/src/
 JAVADOC_DIR := fiat-java/doc/
 
-UNSATURATED_SOLINAS_BASE_FILES := curve25519_64 curve25519_32 poly1305_64 poly1305_32 p521_64 p448_solinas_64 # p224_solinas_64
+UNSATURATED_SOLINAS_BASE_FILES := curve25519_64 curve25519_32 poly1305_64 poly1305_32 p521_64 p448_solinas_64 p448_solinas_32 # p224_solinas_64
 WORD_BY_WORD_MONTGOMERY_BASE_FILES := p256_64 p256_32 p384_64 p384_32 secp256k1_64 secp256k1_32 p224_64 p224_32 p434_64 # p434_32
 ALL_BASE_FILES := $(UNSATURATED_SOLINAS_BASE_FILES) $(WORD_BY_WORD_MONTGOMERY_BASE_FILES)
 
+BASE_FILES_NEEDING_INT128 := p448_solinas_32
+
 UNSATURATED_SOLINAS_C_FILES := $(patsubst %,$(C_DIR)%.c,$(UNSATURATED_SOLINAS_BASE_FILES))
 WORD_BY_WORD_MONTGOMERY_C_FILES := $(patsubst %,$(C_DIR)%.c,$(WORD_BY_WORD_MONTGOMERY_BASE_FILES))
-ALL_C_FILES := $(patsubst %,$(C_DIR)%.c,$(ALL_BASE_FILES))
+ALL_C_FILES := $(UNSATURATED_SOLINAS_C_FILES) $(WORD_BY_WORD_MONTGOMERY_C_FILES)
 
-UNSATURATED_SOLINAS_BEDROCK2_FILES := $(patsubst %,$(BEDROCK2_DIR)%.c,$(UNSATURATED_SOLINAS_BASE_FILES))
-WORD_BY_WORD_MONTGOMERY_BEDROCK2_FILES := $(patsubst %,$(BEDROCK2_DIR)%.c,$(WORD_BY_WORD_MONTGOMERY_BASE_FILES))
-ALL_BEDROCK2_FILES := $(patsubst %,$(BEDROCK2_DIR)%.c,$(ALL_BASE_FILES))
+UNSATURATED_SOLINAS_BEDROCK2_FILES := $(patsubst %,$(BEDROCK2_DIR)%.c,$(filter-out $(BASE_FILES_NEEDING_INT128),$(UNSATURATED_SOLINAS_BASE_FILES)))
+WORD_BY_WORD_MONTGOMERY_BEDROCK2_FILES := $(patsubst %,$(BEDROCK2_DIR)%.c,$(filter-out $(BASE_FILES_NEEDING_INT128),$(WORD_BY_WORD_MONTGOMERY_BASE_FILES)))
+ALL_BEDROCK2_FILES := $(UNSATURATED_SOLINAS_BEDROCK2_FILES) $(WORD_BY_WORD_MONTGOMERY_BEDROCK2_FILES)
 
 UNSATURATED_SOLINAS_RUST_FILES := $(patsubst %,$(RS_DIR)%.rs,$(UNSATURATED_SOLINAS_BASE_FILES))
 WORD_BY_WORD_MONTGOMERY_RUST_FILES := $(patsubst %,$(RS_DIR)%.rs,$(WORD_BY_WORD_MONTGOMERY_BASE_FILES))
-ALL_RUST_FILES := $(patsubst %,$(RS_DIR)%.rs,$(ALL_BASE_FILES))
+ALL_RUST_FILES := $(UNSATURATED_SOLINAS_RUST_FILES) $(WORD_BY_WORD_MONTGOMERY_RUST_FILES)
 
-UNSATURATED_SOLINAS_GO_FILES := $(patsubst %,$(GO_DIR)%.go,$(UNSATURATED_SOLINAS_BASE_FILES))
-WORD_BY_WORD_MONTGOMERY_GO_FILES := $(patsubst %,$(GO_DIR)%.go,$(WORD_BY_WORD_MONTGOMERY_BASE_FILES))
-ALL_GO_FILES := $(patsubst %,$(GO_DIR)%.go,$(ALL_BASE_FILES))
+UNSATURATED_SOLINAS_GO_FILES := $(patsubst %,$(GO_DIR)%.go,$(filter-out $(BASE_FILES_NEEDING_INT128),$(UNSATURATED_SOLINAS_BASE_FILES)))
+WORD_BY_WORD_MONTGOMERY_GO_FILES := $(patsubst %,$(GO_DIR)%.go,$(filter-out $(BASE_FILES_NEEDING_INT128),$(WORD_BY_WORD_MONTGOMERY_BASE_FILES)))
+ALL_GO_FILES := $(UNSATURATED_SOLINAS_GO_FILES) $(WORD_BY_WORD_MONTGOMERY_GO_FILES)
 
 # Java only really supports 32-bit builds, because we have neither 64x64->64x64 multiplication, nor uint128
 # Java also requires that class names match file names
 # from https://stackoverflow.com/q/42925485/377022
 to_title_case = $(shell echo '$(1)' | sed 's/.*/\L&/; s/[a-z]*/\u&/g')
-JAVA_RENAME = $(foreach i,$(patsubst %_32,%,$(filter %_32,$(1))),Fiat$(call to_title_case,$(subst _, ,$(i))))
-UNSATURATED_SOLINAS_JAVA_FILES := $(patsubst %,$(JAVA_DIR)%.java,$(call JAVA_RENAME,$(UNSATURATED_SOLINAS_BASE_FILES)))
-WORD_BY_WORD_MONTGOMERY_JAVA_FILES := $(patsubst %,$(JAVA_DIR)%.java,$(call JAVA_RENAME,$(WORD_BY_WORD_MONTGOMERY_BASE_FILES)))
+empty=
+space=$(empty) $(empty)
+JAVA_RENAME = $(foreach i,$(patsubst %_32,%,$(filter %_32,$(1))),Fiat$(subst $(space),,$(call to_title_case,$(subst _, ,$(i)))))
+UNSATURATED_SOLINAS_JAVA_FILES := $(patsubst %,$(JAVA_DIR)%.java,$(call JAVA_RENAME,$(filter-out $(BASE_FILES_NEEDING_INT128),$(UNSATURATED_SOLINAS_BASE_FILES))))
+WORD_BY_WORD_MONTGOMERY_JAVA_FILES := $(patsubst %,$(JAVA_DIR)%.java,$(call JAVA_RENAME,$(filter-out $(BASE_FILES_NEEDING_INT128),$(WORD_BY_WORD_MONTGOMERY_BASE_FILES))))
 ALL_JAVA_FILES := $(UNSATURATED_SOLINAS_JAVA_FILES) $(WORD_BY_WORD_MONTGOMERY_JAVA_FILES)
 
 UNSATURATED_SOLINAS_FUNCTIONS := carry_mul carry_square carry add sub opp selectznz to_bytes from_bytes
@@ -445,6 +449,13 @@ $(C_DIR)p448_solinas_64.c : $(C_DIR)p448_solinas_%.c :
 	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --static 'p448' '8' '2^448 - 2^224 - 1' '$*' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
+# 2^448 - 2^224 - 1
+$(C_DIR)p448_solinas_32.c : $(C_DIR)p448_solinas_%.c :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --static 'p448' '16' '2^448 - 2^224 - 1' '$*' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
+
 # 2^256 - 2^224 + 2^192 + 2^96 - 1
 $(C_DIR)p256_64.c $(C_DIR)p256_32.c : $(C_DIR)p256_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
@@ -538,6 +549,13 @@ $(BEDROCK2_DIR)p448_solinas_64.c : $(BEDROCK2_DIR)p448_solinas_%.c :
 	$(HIDE)($(TIMER) $(BEDROCK2_UNSATURATED_SOLINAS) --lang=bedrock2 $(BEDROCK2_ARGS) 'p448' '8' '2^448 - 2^224 - 1' '$*' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
+# 2^448 - 2^224 - 1
+$(BEDROCK2_DIR)p448_solinas_32.c : $(BEDROCK2_DIR)p448_solinas_%.c :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER) $(BEDROCK2_UNSATURATED_SOLINAS) --lang=bedrock2 $(BEDROCK2_ARGS) 'p448' '16' '2^448 - 2^224 - 1' '$*' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
+
 # 2^256 - 2^224 + 2^192 + 2^96 - 1
 $(BEDROCK2_DIR)p256_64.c $(BEDROCK2_DIR)p256_32.c : $(BEDROCK2_DIR)p256_%.c :
 	$(SHOW)'SYNTHESIZE > $@'
@@ -629,6 +647,13 @@ $(RS_DIR)p448_solinas_64.rs : $(RS_DIR)p448_solinas_%.rs :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
 	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang=Rust 'p448' '8' '2^448 - 2^224 - 1' '$*' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
+
+# 2^448 - 2^224 - 1
+$(RS_DIR)p448_solinas_32.rs : $(RS_DIR)p448_solinas_%.rs :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang=Rust 'p448' '16' '2^448 - 2^224 - 1' '$*' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 # 2^256 - 2^224 + 2^192 + 2^96 - 1
@@ -732,6 +757,13 @@ $(GO_DIR)p448_solinas_64.go : $(GO_DIR)p448_solinas_%.go :
 	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang=Go $(GO_EXTRA_ARGS_$*) 'p448' '8' '2^448 - 2^224 - 1' '$*' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
+# 2^448 - 2^224 - 1
+$(GO_DIR)p448_solinas_32.go : $(GO_DIR)p448_solinas_%.go :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang=Go $(GO_EXTRA_ARGS_$*) 'p448' '16' '2^448 - 2^224 - 1' '$*' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
+
 # 2^256 - 2^224 + 2^192 + 2^96 - 1
 $(GO_DIR)p256_64.go $(GO_DIR)p256_32.go : $(GO_DIR)p256_%.go :
 	$(SHOW)'SYNTHESIZE > $@'
@@ -795,6 +827,13 @@ $(JAVA_DIR)FiatPoly1305.java : $(JAVA_DIR)Fiat%.java :
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
 	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang=Java $(JAVA_EXTRA_ARGS_32) '$*' '5' '2^130 - 5' '32' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
+
+# 2^448 - 2^224 - 1
+$(JAVA_DIR)FiatP448Solinas.java : $(JAVA_DIR)Fiat%.java :
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang=Java $(JAVA_EXTRA_ARGS_32) '$*' '16' '2^448 - 2^224 - 1' '32' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 # 2^256 - 2^224 + 2^192 + 2^96 - 1
