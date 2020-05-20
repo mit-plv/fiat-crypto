@@ -31,6 +31,9 @@ Require Import Crypto.PushButtonSynthesis.UnsaturatedSolinas.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
+Require Import Crypto.Util.Option.
+Import Coq.Lists.List.
+Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Rewriter.Language.Wf.
 Require bedrock2.Map.SeparationLogic. (* if imported, list firstn/skipn get overwritten and it's annoying *)
 Local Open Scope Z_scope.
@@ -74,8 +77,8 @@ Section Proofs.
   Local Notation eval :=
     (eval (weight (Qnum (inject_Z (Z.log2_up M) / inject_Z (Z.of_nat n)))
                   (QDen (inject_Z (Z.log2_up M) / inject_Z (Z.of_nat n)))) n).
-  Local Notation loose_bounds := (UnsaturatedSolinas.loose_bounds n s c).
-  Local Notation tight_bounds := (UnsaturatedSolinas.tight_bounds n s c).
+  Local Notation loose_bounds := (UnsaturatedSolinasHeuristics.loose_bounds n s c).
+  Local Notation tight_bounds := (UnsaturatedSolinasHeuristics.tight_bounds n s c).
 
   Definition Bignum
              bounds
@@ -158,8 +161,8 @@ Section Proofs.
   Proof.
     cbn [LoadStoreList.within_base_access_sizes
            LoadStoreList.within_access_sizes_args].
-    let r := eval vm_compute in (hd None loose_bounds) in
-    change loose_bounds with (repeat r n).
+    let r := (eval vm_compute in (List.fold_right (fun x y => (x <- x; y <- y; Some (Operations.ZRange.union x y))%option) (hd None loose_bounds) loose_bounds)) in
+    intro H; cut (list_Z_bounded_by (repeat r n) xs); [ clear H | revert H; apply relax_list_Z_bounded_by; vm_compute; reflexivity ].
     let H := fresh in
     intro H; pose proof length_list_Z_bounded_by _ _ H.
     rewrite repeat_length in *.
@@ -187,8 +190,8 @@ Section Proofs.
     Solinas.carry_mul_correct
       (weight (Qnum (Z.log2_up M / n)) (Qden (Z.log2_up M / n)))
       n M
-      (UnsaturatedSolinas.tight_bounds n s c)
-      (UnsaturatedSolinas.loose_bounds n s c)
+      tight_bounds
+      loose_bounds
       (API.Interp mulmod).
   Proof.
     apply carry_mul_correct with (machine_wordsize0:=machine_wordsize).

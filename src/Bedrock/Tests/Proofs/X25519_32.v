@@ -79,8 +79,8 @@ Section Proofs.
   Local Notation eval :=
     (eval (weight (Qnum (inject_Z (Z.log2_up M) / inject_Z (Z.of_nat n)))
                   (QDen (inject_Z (Z.log2_up M) / inject_Z (Z.of_nat n)))) n).
-  Local Notation loose_bounds := (UnsaturatedSolinas.loose_bounds n s c).
-  Local Notation tight_bounds := (UnsaturatedSolinas.tight_bounds n s c).
+  Local Notation loose_bounds := (UnsaturatedSolinasHeuristics.loose_bounds n s c).
+  Local Notation tight_bounds := (UnsaturatedSolinasHeuristics.tight_bounds n s c).
 
   Definition Bignum
              bounds
@@ -191,8 +191,8 @@ Section Proofs.
     Solinas.carry_mul_correct
       (weight (Qnum (Z.log2_up M / n)) (Qden (Z.log2_up M / n)))
       n M
-      (UnsaturatedSolinas.tight_bounds n s c)
-      (UnsaturatedSolinas.loose_bounds n s c)
+      tight_bounds
+      loose_bounds
       (API.Interp mulmod).
   Proof.
     apply carry_mul_correct with (machine_wordsize0:=machine_wordsize).
