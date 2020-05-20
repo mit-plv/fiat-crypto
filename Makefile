@@ -949,17 +949,10 @@ curves: $(filter src/Spec/%Curve%.vo,$(REGULAR_VOFILES)) $(filter src/Curves/%.v
 .PHONY: $(CHECK_OUTPUTS) $(ACCEPT_OUTPUTS)
 check-output: $(CHECK_OUTPUTS)
 accept-output: $(ACCEPT_OUTPUTS)
-PROCESS_OUTPUT:={ output="$$(cat)"; \
-	if echo "$${output}" | grep -q '^Axioms:'; then \
-	  echo "$${output}" | tr '\n' ' '; \
-	else \
-	  echo "$${output}"; \
-	fi; \
-	}
 $(CHECK_OUTPUTS) : check-% : $(OUTPUT_VOS)
 	$(SHOW)'DIFF $*'
 	$(HIDE)cat output-tests/$*.expected | $(PROCESS_OUTPUT) > output-tests/$*.expected.processed
-	$(HIDE)cat $*.out | $(PROCESS_OUTPUT) > $*.out.processed
+	$(HIDE)cat $*.out | tr '\n' ' ' > $*.out.processed
 	$(HIDE)diff --ignore-space-change output-tests/$*.expected.processed $*.out.processed || (RV=$$?; echo "To accept the new output, run make accept-$*"; exit $$RV)
 
 $(ACCEPT_OUTPUTS) : accept-% :
