@@ -428,6 +428,7 @@ Section __.
 
     Ltac crush_list_ptr_subgoals :=
       repeat match goal with
+             | _ => progress cbn [hd tl]
              | _ => progress cbv [WeakestPrecondition.literal]
              | _ => rewrite word.of_Z_unsigned
              | _ => rewrite map.get_put_diff by congruence
@@ -520,20 +521,94 @@ Section __.
                apply word.unsigned_inj in H
              end; subst.
 
+    Definition list_lengths_ok {t}
+               (lengths : foreach_ret list_lengths t)
+               (out : foreach_ret API.interp_type t)
+      : Prop :=
+      LoadStoreList.list_lengths_from_value out = lengths.
+
+    Ltac prove_output_length :=
+      ssplit;
+      match goal with
+      | |- length _ = n =>
+        apply bounded_by_loose_bounds_length; prove_bounds
+      | H : postcondition ?op _ ?out |- length ?out = n_bytes =>
+        erewrite <-Partition.length_partition;
+        cbv [n_bytes limbwidth];
+        cbn [fst snd postcondition op] in H;
+        rewrite <-H by prove_bounds;
+        reflexivity
+      end.
+
+    Ltac assert_output_length :=
+      let out := lazymatch goal with
+                 | H : postcondition _ _ ?out |- _ => out end in
+      let op := lazymatch goal with
+                | H : postcondition ?op _ _ |- _ => op end in
+      assert (list_lengths_ok op.(output_array_lengths) out);
+      cbv [list_lengths_ok] in *;
+      cbn [LoadStoreList.list_lengths_from_value
+             type.final_codomain output_array_lengths op] in *;
+      [ prove_output_length | ].
+
+    Ltac translator_simplify :=
+      cbn [fst snd type.final_codomain
+               LoadStoreList.list_lengths_from_args
+               LoadStoreList.list_lengths_from_value
+               LoadStoreList.access_sizes_good_args
+               LoadStoreList.base_access_sizes_good
+               LoadStoreList.access_sizes_good
+               LoadStoreList.base_access_sizes_good
+               LoadStoreList.within_access_sizes_args
+               LoadStoreList.within_base_access_sizes
+               equivalent_flat_args equivalent_flat_base
+               WeakestPrecondition.dexpr
+               WeakestPrecondition.expr
+               WeakestPrecondition.expr_body
+               rep.equiv rep.Z rep.listZ_mem ].
+    Ltac access_size_simplify :=
+      repeat match goal with
+             | |- context [Z.of_nat (Memory.bytes_per access_size.one)] =>
+               progress
+                 change (Z.of_nat (Memory.bytes_per
+                                     (width:=Semantics.width)
+                                     access_size.one)) with 1
+             | |- context [Z.of_nat (Memory.bytes_per access_size.two)] =>
+               progress
+                 change (Z.of_nat (Memory.bytes_per
+                                     (width:=Semantics.width)
+                                     access_size.two)) with 2
+             | |- context [Z.of_nat (Memory.bytes_per access_size.four)] =>
+               progress
+                 change (Z.of_nat (Memory.bytes_per
+                                     (width:=Semantics.width)
+                                     access_size.four)) with 4
+             end.
+
+    Ltac solve_translate_func_subgoals :=
+      repeat match goal with
+             | _ => progress sepsimpl
+             | _ => progress translator_simplify
+             | _ => progress access_size_simplify
+             | _ => rewrite bounded_by_loose_bounds_length by prove_bounds
+             | |- context [expr.interp] =>
+               progress (cbn [fst snd type.app_curried] in *;
+                         cbv [expr.Interp] in * )
+             | |- Forall _ _ =>
+               eapply max_bounds_range_iff; solve [prove_bounds]
+             | |- Forall _ _ =>
+               eapply byte_bounds_range_iff; solve [prove_bounds]
+             | |- context [Z.le] => lia
+             | _ => reflexivity
+             end.
+
     Lemma carry_mul_correct :
       is_correct
         (UnsaturatedSolinas.carry_mul n s c Semantics.width)
         carry_mul spec_of_carry_mul.
     Proof.
       setup.
-
-      (* TODO: put something to this effect in [operation] to make it more
-         uniform? *)
-      (* fetch output length for convenience *)
-      let out := lazymatch goal with
-                 | H : postcondition _ _ ?out |- _ => out end in
-      assert (length out = n)
-        by (apply bounded_by_loose_bounds_length; prove_bounds).
+      assert_output_length.
 
       (* TODO: automate flat_args, out_ptrs? *)
       (* use translate_func_correct to get the translation postcondition *)
@@ -563,11 +638,10 @@ Section __.
            make_outnames_varname_gen_disjoint,
            make_innames_make_outnames_disjoint,
            flatten_make_innames_NoDup, flatten_make_outnames_NoDup.
+      all:pose proof bits_per_word_eq_width width_0mod_8.
+      all:pose proof width_ge_8.
+      all:solve_translate_func_subgoals.
 
-      { (* list lengths are correct *)
-        cbn.
-        rewrite !bounded_by_loose_bounds_length by prove_bounds.
-        reflexivity. }
       { (* arg pointers are correct *)
         cbn - [Memory.bytes_per]; sepsimpl.
         next_argument. exists_list_ptr px.
@@ -576,18 +650,6 @@ Section __.
         repeat seprewrite array_truncated_scalar_scalar_iff1.
         rewrite <-word_size_in_bytes_eq.
         ecancel_assumption. }
-      { (* input access sizes are legal *)
-        pose proof bits_per_word_le_width.
-        cbn - [Memory.bytes_per]; tauto. }
-      { (* input access sizes are accurate *)
-        cbn - [Memory.bytes_per]; ssplit; try tauto;
-          eapply max_bounds_range_iff; prove_bounds. }
-      { (* output access sizes are legal *)
-        pose proof bits_per_word_le_width.
-        cbn - [Memory.bytes_per]; tauto. }
-      { (* output access sizes are accurate *)
-        cbn - [Memory.bytes_per].
-        eapply max_bounds_range_iff; prove_bounds. }
       { (* space is reserved for output lists *)
         cbn - [Memory.bytes_per]. sepsimpl.
         cbv [expr.Interp] in *.
@@ -619,14 +681,7 @@ Section __.
         add spec_of_add.
     Proof.
       setup.
-
-      (* TODO: put something to this effect in [operation] to make it more
-         uniform? *)
-      (* fetch output length for convenience *)
-      let out := lazymatch goal with
-                 | H : postcondition _ _ ?out |- _ => out end in
-      assert (length out = n)
-        by (apply bounded_by_loose_bounds_length; prove_bounds).
+      assert_output_length.
 
       (* TODO: automate flat_args, out_ptrs? *)
       (* use translate_func_correct to get the translation postcondition *)
@@ -656,11 +711,11 @@ Section __.
            make_outnames_varname_gen_disjoint,
            make_innames_make_outnames_disjoint,
            flatten_make_innames_NoDup, flatten_make_outnames_NoDup.
+      all:pose proof bits_per_word_eq_width width_0mod_8.
+      all:pose proof width_ge_8.
+      all:solve_translate_func_subgoals.
 
-      { (* list lengths are correct *)
-        cbn.
-        rewrite !bounded_by_loose_bounds_length by prove_bounds.
-        reflexivity. }
+
       { (* arg pointers are correct *)
         cbn - [Memory.bytes_per]; sepsimpl.
         next_argument. exists_list_ptr px.
@@ -669,18 +724,6 @@ Section __.
         repeat seprewrite array_truncated_scalar_scalar_iff1.
         rewrite <-word_size_in_bytes_eq.
         ecancel_assumption. }
-      { (* input access sizes are legal *)
-        pose proof bits_per_word_le_width.
-        cbn - [Memory.bytes_per]; tauto. }
-      { (* input access sizes are accurate *)
-        cbn - [Memory.bytes_per]; ssplit; try tauto;
-          eapply max_bounds_range_iff; prove_bounds. }
-      { (* output access sizes are legal *)
-        pose proof bits_per_word_le_width.
-        cbn - [Memory.bytes_per]; tauto. }
-      { (* output access sizes are accurate *)
-        cbn - [Memory.bytes_per].
-        eapply max_bounds_range_iff; prove_bounds. }
       { (* space is reserved for output lists *)
         cbn - [Memory.bytes_per]. sepsimpl.
         cbv [expr.Interp] in *.
@@ -712,26 +755,10 @@ Section __.
         to_bytes spec_of_to_bytes.
     Proof.
       setup.
+      assert_output_length.
 
-      (* TODO: put something to this effect in [operation] to make it more
-         uniform? *)
-      (* fetch output length for convenience *)
-      (* differs from add/mul:
-        let out := lazymatch goal with
-                    | H : postcondition _ _ ?out |- _ => out end in
-        assert (length out = n)
-            by (apply bounded_by_loose_bounds_length; prove_bounds). *)
-      lazymatch goal with
-      | H : postcondition ?op _ ?out |- _ =>
-        assert (length out = n_bytes)
-          by (erewrite <-Partition.length_partition;
-              cbv [n_bytes limbwidth];
-              cbn [fst snd postcondition op] in H;
-              rewrite <-H by prove_bounds;
-              reflexivity)
-      end.
-
-      (* assert output bounds for convenience *)
+      (* special for to_bytes:
+         use partition_bounded_by for output bounds *)
       match goal with
       | H : postcondition ?op _ ?e |- _ =>
         assert (list_Z_bounded_by (byte_bounds n_bytes) e)
@@ -739,7 +766,6 @@ Section __.
               rewrite H by prove_bounds;
               apply partition_bounded_by)
       end.
-      (* end differ *)
 
       (* TODO: automate flat_args, out_ptrs? *)
       (* use translate_func_correct to get the translation postcondition *)
@@ -786,13 +812,11 @@ Section __.
            make_outnames_varname_gen_disjoint,
            make_innames_make_outnames_disjoint,
            flatten_make_innames_NoDup, flatten_make_outnames_NoDup.
+      all:pose proof bits_per_word_eq_width width_0mod_8.
+      all:pose proof width_ge_8.
+      all:solve_translate_func_subgoals.
 
-      { (* list lengths are correct *)
-        cbn.
-        rewrite !bounded_by_loose_bounds_length by prove_bounds.
-        reflexivity. }
       { (* arg pointers are correct *)
-        cbn - [Memory.bytes_per]; sepsimpl.
         next_argument. exists_list_ptr px.
         (* differs from add/mul:
             next_argument. exists_list_ptr py.
@@ -802,24 +826,6 @@ Section __.
         repeat seprewrite array_truncated_scalar_scalar_iff1.
         rewrite <-word_size_in_bytes_eq.
         ecancel_assumption. }
-      { (* input access sizes are legal *)
-        pose proof bits_per_word_le_width.
-        cbn - [Memory.bytes_per]; tauto. }
-      { (* input access sizes are accurate *)
-        cbn - [Memory.bytes_per]; ssplit; try tauto;
-          eapply max_bounds_range_iff; prove_bounds. }
-      { (* output access sizes are legal *)
-        (* differs from add/mul:
-            pose proof bits_per_word_le_width.
-            cbn - [Memory.bytes_per]; tauto. *)
-         cbn. apply width_ge_8. (* end differ *) }
-      { (* output access sizes are accurate *)
-        cbn - [Memory.bytes_per].
-        (* differs from add/mul:
-           cbv [expr.Interp] in *.
-           eapply max_bounds_range_iff; prove_bounds. *)
-        cbn [type.app_curried fst snd] in *. cbv [expr.Interp] in *.
-        eapply byte_bounds_range_iff. prove_bounds. (* end differ *)}
       { (* space is reserved for output lists *)
         cbn - [Memory.bytes_per]. sepsimpl.
         cbv [expr.Interp] in *.
