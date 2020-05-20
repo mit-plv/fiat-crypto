@@ -135,8 +135,8 @@ static void fiat_poly1305_cmovznz_u64(uint64_t* out1, fiat_poly1305_uint1 arg1, 
  *   eval out1 mod m = (eval arg1 * eval arg2) mod m
  *
  * Input Bounds:
- *   arg1: [[0x0 ~> 0x34cccccccccb], [0x0 ~> 0x1a6666666664], [0x0 ~> 0x1a6666666664]]
- *   arg2: [[0x0 ~> 0x34cccccccccb], [0x0 ~> 0x1a6666666664], [0x0 ~> 0x1a6666666664]]
+ *   arg1: [[0x0 ~> 0x31999999998f], [0x0 ~> 0x18ccccccccca], [0x0 ~> 0x18ccccccccca]]
+ *   arg2: [[0x0 ~> 0x31999999998f], [0x0 ~> 0x18ccccccccca], [0x0 ~> 0x18ccccccccca]]
  * Output Bounds:
  *   out1: [[0x0 ~> 0x119999999999], [0x0 ~> 0x8cccccccccc], [0x0 ~> 0x8cccccccccc]]
  */
@@ -180,7 +180,7 @@ static void fiat_poly1305_carry_mul(uint64_t out1[3], const uint64_t arg1[3], co
  *   eval out1 mod m = (eval arg1 * eval arg1) mod m
  *
  * Input Bounds:
- *   arg1: [[0x0 ~> 0x34cccccccccb], [0x0 ~> 0x1a6666666664], [0x0 ~> 0x1a6666666664]]
+ *   arg1: [[0x0 ~> 0x31999999998f], [0x0 ~> 0x18ccccccccca], [0x0 ~> 0x18ccccccccca]]
  * Output Bounds:
  *   out1: [[0x0 ~> 0x119999999999], [0x0 ~> 0x8cccccccccc], [0x0 ~> 0x8cccccccccc]]
  */
@@ -225,7 +225,7 @@ static void fiat_poly1305_carry_square(uint64_t out1[3], const uint64_t arg1[3])
  *   eval out1 mod m = eval arg1 mod m
  *
  * Input Bounds:
- *   arg1: [[0x0 ~> 0x34cccccccccb], [0x0 ~> 0x1a6666666664], [0x0 ~> 0x1a6666666664]]
+ *   arg1: [[0x0 ~> 0x31999999998f], [0x0 ~> 0x18ccccccccca], [0x0 ~> 0x18ccccccccca]]
  * Output Bounds:
  *   out1: [[0x0 ~> 0x119999999999], [0x0 ~> 0x8cccccccccc], [0x0 ~> 0x8cccccccccc]]
  */
@@ -252,7 +252,7 @@ static void fiat_poly1305_carry(uint64_t out1[3], const uint64_t arg1[3]) {
  *   arg1: [[0x0 ~> 0x119999999999], [0x0 ~> 0x8cccccccccc], [0x0 ~> 0x8cccccccccc]]
  *   arg2: [[0x0 ~> 0x119999999999], [0x0 ~> 0x8cccccccccc], [0x0 ~> 0x8cccccccccc]]
  * Output Bounds:
- *   out1: [[0x0 ~> 0x34cccccccccb], [0x0 ~> 0x1a6666666664], [0x0 ~> 0x1a6666666664]]
+ *   out1: [[0x0 ~> 0x31999999998f], [0x0 ~> 0x18ccccccccca], [0x0 ~> 0x18ccccccccca]]
  */
 static void fiat_poly1305_add(uint64_t out1[3], const uint64_t arg1[3], const uint64_t arg2[3]) {
   uint64_t x1 = ((arg1[0]) + (arg2[0]));
@@ -272,7 +272,7 @@ static void fiat_poly1305_add(uint64_t out1[3], const uint64_t arg1[3], const ui
  *   arg1: [[0x0 ~> 0x119999999999], [0x0 ~> 0x8cccccccccc], [0x0 ~> 0x8cccccccccc]]
  *   arg2: [[0x0 ~> 0x119999999999], [0x0 ~> 0x8cccccccccc], [0x0 ~> 0x8cccccccccc]]
  * Output Bounds:
- *   out1: [[0x0 ~> 0x34cccccccccb], [0x0 ~> 0x1a6666666664], [0x0 ~> 0x1a6666666664]]
+ *   out1: [[0x0 ~> 0x31999999998f], [0x0 ~> 0x18ccccccccca], [0x0 ~> 0x18ccccccccca]]
  */
 static void fiat_poly1305_sub(uint64_t out1[3], const uint64_t arg1[3], const uint64_t arg2[3]) {
   uint64_t x1 = ((UINT64_C(0x1ffffffffff6) + (arg1[0])) - (arg2[0]));
@@ -291,7 +291,7 @@ static void fiat_poly1305_sub(uint64_t out1[3], const uint64_t arg1[3], const ui
  * Input Bounds:
  *   arg1: [[0x0 ~> 0x119999999999], [0x0 ~> 0x8cccccccccc], [0x0 ~> 0x8cccccccccc]]
  * Output Bounds:
- *   out1: [[0x0 ~> 0x34cccccccccb], [0x0 ~> 0x1a6666666664], [0x0 ~> 0x1a6666666664]]
+ *   out1: [[0x0 ~> 0x31999999998f], [0x0 ~> 0x18ccccccccca], [0x0 ~> 0x18ccccccccca]]
  */
 static void fiat_poly1305_opp(uint64_t out1[3], const uint64_t arg1[3]) {
   uint64_t x1 = (UINT64_C(0x1ffffffffff6) - (arg1[0]));

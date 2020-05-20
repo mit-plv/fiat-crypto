@@ -127,8 +127,8 @@ pub fn fiat_poly1305_cmovznz_u64(out1: &mut u64, arg1: fiat_poly1305_u1, arg2: u
 ///   eval out1 mod m = (eval arg1 * eval arg2) mod m
 ///
 /// Input Bounds:
-///   arg1: [[0x0 ~> 0x34cccccccccb], [0x0 ~> 0x1a6666666664], [0x0 ~> 0x1a6666666664]]
-///   arg2: [[0x0 ~> 0x34cccccccccb], [0x0 ~> 0x1a6666666664], [0x0 ~> 0x1a6666666664]]
+///   arg1: [[0x0 ~> 0x31999999998f], [0x0 ~> 0x18ccccccccca], [0x0 ~> 0x18ccccccccca]]
+///   arg2: [[0x0 ~> 0x31999999998f], [0x0 ~> 0x18ccccccccca], [0x0 ~> 0x18ccccccccca]]
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0x119999999999], [0x0 ~> 0x8cccccccccc], [0x0 ~> 0x8cccccccccc]]
 #[inline]
@@ -171,7 +171,7 @@ pub fn fiat_poly1305_carry_mul(out1: &mut [u64; 3], arg1: &[u64; 3], arg2: &[u64
 ///   eval out1 mod m = (eval arg1 * eval arg1) mod m
 ///
 /// Input Bounds:
-///   arg1: [[0x0 ~> 0x34cccccccccb], [0x0 ~> 0x1a6666666664], [0x0 ~> 0x1a6666666664]]
+///   arg1: [[0x0 ~> 0x31999999998f], [0x0 ~> 0x18ccccccccca], [0x0 ~> 0x18ccccccccca]]
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0x119999999999], [0x0 ~> 0x8cccccccccc], [0x0 ~> 0x8cccccccccc]]
 #[inline]
@@ -215,7 +215,7 @@ pub fn fiat_poly1305_carry_square(out1: &mut [u64; 3], arg1: &[u64; 3]) -> () {
 ///   eval out1 mod m = eval arg1 mod m
 ///
 /// Input Bounds:
-///   arg1: [[0x0 ~> 0x34cccccccccb], [0x0 ~> 0x1a6666666664], [0x0 ~> 0x1a6666666664]]
+///   arg1: [[0x0 ~> 0x31999999998f], [0x0 ~> 0x18ccccccccca], [0x0 ~> 0x18ccccccccca]]
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0x119999999999], [0x0 ~> 0x8cccccccccc], [0x0 ~> 0x8cccccccccc]]
 #[inline]
@@ -241,7 +241,7 @@ pub fn fiat_poly1305_carry(out1: &mut [u64; 3], arg1: &[u64; 3]) -> () {
 ///   arg1: [[0x0 ~> 0x119999999999], [0x0 ~> 0x8cccccccccc], [0x0 ~> 0x8cccccccccc]]
 ///   arg2: [[0x0 ~> 0x119999999999], [0x0 ~> 0x8cccccccccc], [0x0 ~> 0x8cccccccccc]]
 /// Output Bounds:
-///   out1: [[0x0 ~> 0x34cccccccccb], [0x0 ~> 0x1a6666666664], [0x0 ~> 0x1a6666666664]]
+///   out1: [[0x0 ~> 0x31999999998f], [0x0 ~> 0x18ccccccccca], [0x0 ~> 0x18ccccccccca]]
 #[inline]
 pub fn fiat_poly1305_add(out1: &mut [u64; 3], arg1: &[u64; 3], arg2: &[u64; 3]) -> () {
   let x1: u64 = ((arg1[0]) + (arg2[0]));
@@ -260,7 +260,7 @@ pub fn fiat_poly1305_add(out1: &mut [u64; 3], arg1: &[u64; 3], arg2: &[u64; 3]) 
 ///   arg1: [[0x0 ~> 0x119999999999], [0x0 ~> 0x8cccccccccc], [0x0 ~> 0x8cccccccccc]]
 ///   arg2: [[0x0 ~> 0x119999999999], [0x0 ~> 0x8cccccccccc], [0x0 ~> 0x8cccccccccc]]
 /// Output Bounds:
-///   out1: [[0x0 ~> 0x34cccccccccb], [0x0 ~> 0x1a6666666664], [0x0 ~> 0x1a6666666664]]
+///   out1: [[0x0 ~> 0x31999999998f], [0x0 ~> 0x18ccccccccca], [0x0 ~> 0x18ccccccccca]]
 #[inline]
 pub fn fiat_poly1305_sub(out1: &mut [u64; 3], arg1: &[u64; 3], arg2: &[u64; 3]) -> () {
   let x1: u64 = ((0x1ffffffffff6 + (arg1[0])) - (arg2[0]));
@@ -278,7 +278,7 @@ pub fn fiat_poly1305_sub(out1: &mut [u64; 3], arg1: &[u64; 3], arg2: &[u64; 3]) 
 /// Input Bounds:
 ///   arg1: [[0x0 ~> 0x119999999999], [0x0 ~> 0x8cccccccccc], [0x0 ~> 0x8cccccccccc]]
 /// Output Bounds:
-///   out1: [[0x0 ~> 0x34cccccccccb], [0x0 ~> 0x1a6666666664], [0x0 ~> 0x1a6666666664]]
+///   out1: [[0x0 ~> 0x31999999998f], [0x0 ~> 0x18ccccccccca], [0x0 ~> 0x18ccccccccca]]
 #[inline]
 pub fn fiat_poly1305_opp(out1: &mut [u64; 3], arg1: &[u64; 3]) -> () {
   let x1: u64 = (0x1ffffffffff6 - (arg1[0]));
