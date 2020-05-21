@@ -519,6 +519,17 @@ Section __.
              type.final_codomain output_array_lengths op] in *;
       [ prove_output_length | ].
 
+    (* special for to_bytes, because bounds are not included in the
+       postcondition *)
+    Ltac assert_to_bytes_bounds :=
+      match goal with
+      | H : postcondition to_bytes _ ?e |- _ =>
+        assert (list_Z_bounded_by (byte_bounds n_bytes) e)
+          by (cbn [fst snd postcondition to_bytes] in H;
+              rewrite H by prove_bounds;
+              apply partition_bounded_by)
+      end.
+
     Ltac setup :=
       match goal with
         |- is_correct _ ?def ?spec =>
@@ -534,7 +545,7 @@ Section __.
                       repeat specialize (H ltac:(assumption));
                       specialize (H args)
       end; cleanup;
-      assert_output_length.
+      assert_output_length; try assert_to_bytes_bounds.
 
     Ltac simplify_translate_func_postcondition :=
       match goal with
@@ -727,21 +738,22 @@ Section __.
                end;
         ssubst.
 
+    Ltac use_translate_func_correct Rin Rout arg_ptrs out_array_ptrs :=
+      let a := lazymatch goal with
+               | H : postcondition _ ?args _ |- _ => args end in
+      eapply Proper_call;
+      [ | eapply translate_func_correct with
+              (Ra0:=Rin) (Rr0:=Rout) (out_ptrs:=out_array_ptrs)
+              (args:=a) (flat_args := arg_ptrs) ].
+
     Lemma carry_mul_correct :
       is_correct
         (UnsaturatedSolinas.carry_mul n s c Semantics.width)
         carry_mul spec_of_carry_mul.
     Proof.
       setup.
+      use_translate_func_correct Ra Rr [px; py] [pout].
 
-      (* TODO: automate flat_args, out_ptrs? *)
-      (* use translate_func_correct to get the translation postcondition *)
-      let a := lazymatch goal with
-               | H : postcondition _ ?args _ |- _ => args end in
-      eapply Proper_call;
-        [ | eapply translate_func_correct with
-                (Ra0:=Ra) (Rr0:=Rr) (out_ptrs:=[pout])
-                (args:=a) (flat_args := [px; py]) ].
       { (* prove that the translation postcondition is sufficient *)
         post_sufficient.
         canonicalize_arrays.
@@ -774,15 +786,8 @@ Section __.
         add spec_of_add.
     Proof.
       setup.
+      use_translate_func_correct Ra Rr [px; py] [pout].
 
-      (* TODO: automate flat_args, out_ptrs? *)
-      (* use translate_func_correct to get the translation postcondition *)
-      let a := lazymatch goal with
-               | H : postcondition _ ?args _ |- _ => args end in
-      eapply Proper_call;
-        [ | eapply translate_func_correct with
-                (Ra0:=Ra) (Rr0:=Rr) (out_ptrs:=[pout])
-                (args:=a) (flat_args := [px; py]) ].
       { (* prove that the translation postcondition is sufficient *)
         post_sufficient.
         canonicalize_arrays.
@@ -815,33 +820,8 @@ Section __.
         to_bytes spec_of_to_bytes.
     Proof.
       setup.
+      use_translate_func_correct Ra Rr [px] [pout].
 
-      (* special for to_bytes:
-         use partition_bounded_by for output bounds *)
-      match goal with
-      | H : postcondition ?op _ ?e |- _ =>
-        assert (list_Z_bounded_by (byte_bounds n_bytes) e)
-          by (cbn [fst snd postcondition op] in H;
-              rewrite H by prove_bounds;
-              apply partition_bounded_by)
-      end.
-
-      (* TODO: automate flat_args, out_ptrs? *)
-      (* use translate_func_correct to get the translation postcondition *)
-      (* differs from add/mul:
-        let a := lazymatch goal with
-                | H : postcondition _ ?args _ |- _ => args end in
-        eapply Proper_call;
-            [ | eapply translate_func_correct with
-                    (Ra0:=Ra) (Rr0:=Rr) (out_ptrs:=[pout])
-                    (args:=a) (flat_args := [px; py]) ]. *)
-      let a := lazymatch goal with
-               | H : postcondition _ ?args _ |- _ => args end in
-      eapply Proper_call;
-        [ | eapply translate_func_correct with
-                (Ra0:=Ra) (Rr0:=Rr) (out_ptrs:=[pout])
-                (args:=a) (flat_args := [px]) ].
-      (* end differ *)
       { (* prove that the translation postcondition is sufficient *)
         post_sufficient.
         canonicalize_arrays.
