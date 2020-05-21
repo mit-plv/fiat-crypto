@@ -1,5 +1,6 @@
 (** Coq version of OCaml's Arg module *)
 Require Import Coq.Lists.List.
+Require Import Coq.Strings.Ascii.
 Require Import Coq.Strings.String.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Strings.OctalString.
@@ -9,6 +10,7 @@ Require Import Crypto.Util.Strings.Ascii.
 Require Import Crypto.Util.Strings.String.
 Require Import Crypto.Util.Strings.Decimal.
 Require Import Crypto.Util.Strings.Show.
+Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ErrorT.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Notations.
@@ -28,7 +30,8 @@ Inductive spec :=
 | Nat (b : list base_system)
 | Tuple (ls : list spec)
 | Symbol (syms : list string)
-| Custom (dataT : Type) (parse : string -> option dataT) (expected_descr : string)
+| CustomSymbol {dataT : Type} (syms : list (string * dataT))
+| Custom {dataT : Type} (parse : string -> option dataT) (expected_descr : string)
 .
 
 Inductive key := long_key (_ : string) | short_key (_ : string).
@@ -36,6 +39,11 @@ Definition doc := list string.
 Definition usage_msg := list string.
 
 Local Notation type_of_list l ls := (List.fold_left (fun a b : Type => prod a b) ls l).
+Local Notation type_of_list' ls
+  := match ls return Type with
+     | [] => unit
+     | l :: ls' => type_of_list l ls'
+     end.
 
 Fixpoint spec_data (s : spec) : Type
   := match s with
@@ -47,6 +55,7 @@ Fixpoint spec_data (s : spec) : Type
      | Tuple nil => unit
      | Tuple (l :: ls) => type_of_list (spec_data l) (List.map spec_data ls)
      | Symbol syms => string
+     | CustomSymbol dataT syms => dataT
      | Custom dataT parse err_msg => dataT
      end.
 
@@ -58,17 +67,67 @@ Definition opt_spec_data (opt : bool) (s : spec) : Type
   := if opt then option (spec_data s) else spec_data s.
 
 Definition keyed_spec_list_data (s : list (list key * spec * doc)) : Type
-  := match s with
-     | nil => unit
-     | (_, s, _) :: ss
-       => type_of_list (spec_data_with_key s) (List.map (fun '(_, s, _) => spec_data_with_key s) ss)
-     end.
+  := type_of_list' (List.map (fun '(_, s, _) => spec_data_with_key s) s).
 
 Definition spec_list_data (opt : bool) (s : list (string * spec * doc)) : Type
-  := match s with
-     | nil => unit
-     | (_, s, _) :: ss
-       => type_of_list (opt_spec_data opt s) (List.map (fun '(_, s, _) => opt_spec_data opt s) ss)
+  := type_of_list' (List.map (fun '(_, s, _) => opt_spec_data opt s) s).
+
+
+Fixpoint update_type_of_list (T1 T2 : Type) Ts (f : T1 -> T2) {struct Ts}
+  : type_of_list T1 Ts -> type_of_list T2 Ts
+  := match Ts return type_of_list T1 Ts -> type_of_list T2 Ts with
+     | nil => f
+     | cons T Ts
+       => @update_type_of_list _ _ Ts (fun '(t1, t) => (f t1, t))
+     end.
+
+Fixpoint update_type_of_list2 (T1 T2 T : Type) Ts {struct Ts}
+  : (type_of_list T1 Ts -> type_of_list T2 Ts) -> type_of_list (T * T1)%type Ts -> type_of_list (T * T2)%type Ts
+  := match Ts return (type_of_list T1 Ts -> type_of_list T2 Ts) -> type_of_list (T * T1)%type Ts -> type_of_list (T * T2)%type Ts with
+     | nil => fun f '(t, t1) => (t, f t1)
+     | cons T' Ts
+       => fun f v
+          => let v := @update_type_of_list
+                        _ _ Ts (fun '(a, b, c) => (a, (b, c)))
+                        v in
+             @update_type_of_list
+               _ _ Ts (fun '(a, (b, c)) => (a, b, c))
+               (@update_type_of_list2 _ _ _ Ts f v)
+     end.
+
+Definition cons_type_of_list {x x' xs} (v : x)
+  : type_of_list x' xs -> type_of_list x (x' :: xs)
+  := update_type_of_list _ _ _ (@pair _ _ v).
+
+Definition cons_type_of_list' {x xs} (v : x)
+  : type_of_list' xs -> type_of_list x xs
+  := match xs with
+     | [] => fun _ => v
+     | _ :: _ => @cons_type_of_list _ _ _ v
+     end.
+
+Fixpoint uncons_type_of_list {l ls}
+  : type_of_list l ls -> l * type_of_list' ls
+  := match ls return type_of_list l ls -> l * type_of_list' ls with
+     | [] => fun v => (v, tt)
+     | l' :: ls
+       => fun v
+          => let '(v, v', vs) := @uncons_type_of_list (l * l')%type ls v in
+             (v, cons_type_of_list' v' vs)
+     end.
+
+Fixpoint split_type_of_list_' {l1 ls1 ls2} {struct ls1}
+  : type_of_list l1 (ls1 ++ ls2) -> type_of_list l1 ls1 * type_of_list' ls2
+  := match ls1 with
+     | [] => uncons_type_of_list
+     | l1' :: ls1 => @split_type_of_list_' (l1 * l1')%type ls1 ls2
+     end.
+
+Definition split_type_of_list' {ls1 ls2}
+  : type_of_list' (ls1 ++ ls2) -> type_of_list' ls1 * type_of_list' ls2
+  := match ls1 with
+     | [] => @pair _ _ tt
+     | _ :: _ => split_type_of_list_'
      end.
 
 Local Definition make_symlist prefix sep suffix l
@@ -90,33 +149,35 @@ Local Definition print_key_list (k : list key) : string
      | k => String.concat ", " (List.map print_key k)
      end.
 
-Local Definition print_spec : (list key + string) * spec * doc -> list string
+Local Definition print_spec_parts : (list key + string) * spec * doc -> string * list string
   := fun '(k, s, d)
      => if Nat.ltb 0 (doc_length d)
-        then (["  "
+        then (("  "
                  ++ (match k with
                      | inl k => print_key_list k
                      | inr k => k
                      end) ++ " "
                  ++ (match s with
                      | Symbol syms => make_symlist "{" "|" "}" syms
+                     | CustomSymbol _ syms => make_symlist "{" "|" "}" (List.map (@fst _ _) syms)
                      | _ => ""
-                     end)
-                 ++ (hd "" d)
-                 ++ (if Nat.eqb (List.length (tl d)) 0 then String.NewLine else "")]%string)
-               ++ tl d ++ (if Nat.eqb (List.length (tl d)) 0 then nil else [String.NewLine])
-        else nil.
+                     end))%string,
+              ([hd "" d])
+                ++ tl d
+                ++ (if Nat.eqb (List.length (tl d)) 0 then nil else [""]))
+        else ("", nil).
 
 Definition print_spec_short (k : string) (s : spec) : string
   := match s with
      | Symbol syms => make_symlist "{" "|" "}" syms
+     | CustomSymbol _ syms => make_symlist "{" "|" "}" (List.map (@fst _ _) syms)
      | _ => k
      end.
 
 Local Definition help_specs : list (list key * spec * doc)
   := [([short_key "h"; long_key "help"],
        Unit,
-       [" Display this list of options"])].
+       ["Display this list of options"])].
 
 Definition arg_matches_key (arg : string) (k : key) : bool
   := (arg =? print_key k)%string.
@@ -176,9 +237,11 @@ Inductive parse_error :=
 | help (prog_name : string)
 | missing (prog_name : string) (opt_name : string)
 | wrong (prog_name : string) (opt_name : string) (got : string) (expected : string)
+| no_keyed_arg (prog_name : string) (bad_args : list string)
 | missing_prog_name
 | too_many_args (prog_name : string) (remaining : list string)
-| out_of_fuel (prog_name : string).
+| out_of_fuel (prog_name : string)
+| internal_error (prog_name : string) (msg : string).
 
 Definition parse_result T := ErrorT parse_error T.
 
@@ -235,11 +298,17 @@ Fixpoint parse_args_via_spec (s : spec) (argv : list string)
        => if List.existsb (fun s => arg =? s)%string syms
           then Success (arg, argv)
           else Error (wrong arg ("one of: " ++ (make_symlist "" " " "" syms))%string)
+     | CustomSymbol dataT syms, arg::argv
+       => match List.find (fun '(s, v) => arg =? s)%string syms with
+          | Some (s, v) => Success (v, argv)
+          | None => Error (wrong arg ("one of: " ++ (make_symlist "" " " "" (List.map (@fst _ _) syms)))%string)
+          end
      | Bool, nil
      | String, nil
      | Int _, nil
      | Nat _, nil
      | Symbol _, nil
+     | CustomSymbol _ _, nil
      | Custom _ _ _, nil
        => Error missing
      end%error.
@@ -250,13 +319,33 @@ Record arg_spec :=
     anon_opt_args : list (string * spec * doc);
     anon_opt_repeated_arg : option (string * spec * doc) }.
 
-Definition usage_string : arg_spec -> usage_msg -> list string
+Inductive ShouldBlockIndent := NoIndent | ArbitraryIndent | IndentUpTo (n : nat).
+Existing Class ShouldBlockIndent.
+
+Local Definition spaces (n : nat) : string
+  := String.string_of_list_ascii (List.repeat " "%char n).
+
+Local Definition maybe_block_indent {should_block_indent : ShouldBlockIndent} (indent : nat) (lhs : string) (rhs : list string)
+  := let lhs := (lhs ++ "  ")%string in
+     let indent := match should_block_indent with
+                   | NoIndent => spaces (String.length lhs)
+                   | ArbitraryIndent => spaces indent
+                   | IndentUpTo n => spaces (Nat.min indent n)
+                   end in
+     ((lhs ++ String.substring 0 (String.length indent - String.length lhs) indent ++ hd "" rhs)%string)
+       :: List.map (fun s => indent ++ s)%string (tl rhs).
+
+Definition usage_string {should_block_indent : ShouldBlockIndent} : arg_spec -> usage_msg -> list string
   := fun specs err
      => err
           ++ [String.NewLine]
-          ++ List.flat_map (fun '(k, s, d) => print_spec (inl k, s, d)) (specs.(named_args) ++ help_specs)
-          ++ List.flat_map (fun '(k, s, d) => print_spec (inr k, s, d)) (specs.(anon_args) ++ specs.(anon_opt_args) ++ match specs.(anon_opt_repeated_arg) with Some v => [v] | None => nil end).
-
+          ++ (let spec_parts
+                  := ((List.map (fun '(k, s, d) => print_spec_parts (inl k, s, d)) (specs.(named_args) ++ help_specs))
+                        ++ (List.map (fun '(k, s, d) => print_spec_parts (inr k, s, d)) (specs.(anon_args) ++ specs.(anon_opt_args) ++ match specs.(anon_opt_repeated_arg) with Some v => [v] | None => nil end))) in
+              let max_length := List.fold_right Nat.max O (List.map String.length (List.map (@fst _ _) spec_parts)) in
+              List.flat_map
+                (fun '(lhs, rhs) => maybe_block_indent (2 + max_length) lhs rhs)
+                spec_parts).
 
 Definition arg_spec_results (s : arg_spec)
   := (keyed_spec_list_data s.(named_args) * spec_list_data false s.(anon_args) * spec_list_data true s.(anon_opt_args) * (match s.(anon_opt_repeated_arg) with None => unit | Some (k, s, d) => list (spec_data s) end))%type.
@@ -268,33 +357,12 @@ Definition consume_one_named_arg
          (missing : parse_error)
          (wrong : string (* got *) -> string (* expected *) -> parse_error)
   : parse_result (option ((spec_data_with_key (snd (fst named_arg)) -> spec_data_with_key (snd (fst named_arg)))
-                          * list string (* remaining *) * list string (* accumulated positional args *)))
+                          * list string (* remaining *)))
   := (if arg_matches_key_list arg (fst (fst named_arg))
-      then res <- parse_args_via_spec (snd (fst named_arg)) argv missing wrong;
-             Success (Some ((fun data_so_far => data_so_far ++ [(arg, fst res)]), snd res, nil))
+      then (res <- parse_args_via_spec (snd (fst named_arg)) argv missing wrong;
+           Success (Some ((fun data_so_far => data_so_far ++ [(arg, fst res)]), snd res)))
       else Success None)%error.
 
-Fixpoint update_type_of_list (T1 T2 : Type) Ts (f : T1 -> T2) {struct Ts}
-  : type_of_list T1 Ts -> type_of_list T2 Ts
-  := match Ts return type_of_list T1 Ts -> type_of_list T2 Ts with
-     | nil => f
-     | cons T Ts
-       => @update_type_of_list _ _ Ts (fun '(t1, t) => (f t1, t))
-     end.
-
-Fixpoint update_type_of_list2 (T1 T2 T : Type) Ts {struct Ts}
-  : (type_of_list T1 Ts -> type_of_list T2 Ts) -> type_of_list (T * T1)%type Ts -> type_of_list (T * T2)%type Ts
-  := match Ts return (type_of_list T1 Ts -> type_of_list T2 Ts) -> type_of_list (T * T1)%type Ts -> type_of_list (T * T2)%type Ts with
-     | nil => fun f '(t, t1) => (t, f t1)
-     | cons T' Ts
-       => fun f v
-          => let v := @update_type_of_list
-                        _ _ Ts (fun '(a, b, c) => (a, (b, c)))
-                        v in
-             @update_type_of_list
-               _ _ Ts (fun '(a, (b, c)) => (a, b, c))
-               (@update_type_of_list2 _ _ _ Ts f v)
-     end.
 
 Fixpoint consume_named_arg
          (arg : string)
@@ -303,18 +371,18 @@ Fixpoint consume_named_arg
          (missing : string (* key *) -> parse_error)
          (wrong : string (* key *) -> string (* got *) -> string (* expected *) -> parse_error)
          {struct named_args}
-  : parse_result ((keyed_spec_list_data named_args -> keyed_spec_list_data named_args) * list string (* remaining *) * list string (* accumulated positional args *))
-  := (match named_args return parse_result ((keyed_spec_list_data named_args -> keyed_spec_list_data named_args) * list string (* remaining *) * list string (* accumulated positional args *))
+  : parse_result ((keyed_spec_list_data named_args -> keyed_spec_list_data named_args) * list string (* remaining *))
+  := (match named_args return parse_result ((keyed_spec_list_data named_args -> keyed_spec_list_data named_args) * list string (* remaining *))
       with
-      | nil => Success (fun data_so_far => data_so_far, nil, arg::argv)
+      | nil => Success (fun data_so_far => data_so_far, arg::argv)
       | (k, s, d) :: named_args
         => (lv <- consume_one_named_arg arg argv (k, s, d) (missing arg) (wrong arg);
               match lv with
-              | Some (upd, argv, pos_args)
-                => Success (update_type_of_list _ _ _ upd, argv, pos_args)
+              | Some (upd, argv)
+                => Success (update_type_of_list _ _ _ upd, argv)
               | None
                 => (rec <- @consume_named_arg arg argv named_args missing wrong;
-                      let '(upd, argv, pos_args) := rec in
+                      let '(upd, argv) := rec in
                       Success (match named_args
                                      return (keyed_spec_list_data named_args -> keyed_spec_list_data named_args) ->
                                             type_of_list (spec_data_with_key s) (List.map (fun '(_, s0, _) => spec_data_with_key s0) named_args) ->
@@ -323,8 +391,7 @@ Fixpoint consume_named_arg
                                | nil => fun _ x => x
                                | cons (k', s', d') xs => update_type_of_list2 _ _ _ _
                                end upd,
-                               argv,
-                               pos_args))
+                               argv))
               end)
       end%error).
 
@@ -335,30 +402,10 @@ Definition consume_help_or_named_arg
            (missing : string (* key *) -> parse_error)
            (wrong : string (* key *) -> string (* got *) -> string (* expected *) -> parse_error)
            (help : parse_error)
-  : parse_result ((keyed_spec_list_data named_args -> keyed_spec_list_data named_args) * list string (* remaining *) * list string (* accumulated positional args *))
+  : parse_result ((keyed_spec_list_data named_args -> keyed_spec_list_data named_args) * list string (* remaining *))
   := if arg_matches_key_list arg [short_key "h"; long_key "help"]
      then Error help
      else consume_named_arg arg argv named_args missing wrong.
-
-Fixpoint consume_named_args (fuel : nat)
-         (argv : list string)
-         (named_args : list (list key * spec * doc))
-         (missing : string (* key *) -> parse_error)
-         (wrong : string (* key *) -> string (* got *) -> string (* expected *) -> parse_error)
-         (help : parse_error)
-         (out_of_fuel : parse_error)
-         {struct fuel}
-  : parse_result ((keyed_spec_list_data named_args -> keyed_spec_list_data named_args) * list string (* remaining *))
-  := match argv, fuel with
-     | nil, _ => Success (id, nil)
-     | cons _ _, O => Error out_of_fuel
-     | cons arg argv, S fuel'
-       => (res <- consume_help_or_named_arg arg argv named_args missing wrong help;
-             let '(upd0, argv, pos_args) := res in
-             res <- @consume_named_args fuel' argv named_args missing wrong help out_of_fuel;
-               let '(upd_rest, argv) := res in
-               Success (fun st => upd_rest (upd0 st), pos_args ++ argv))
-     end%error.
 
 Definition consume_one_anon_arg (opt : bool) (argv : list string) (s : spec)
            (missing : parse_error)
@@ -378,45 +425,111 @@ Definition consume_one_anon_arg (opt : bool) (argv : list string) (s : spec)
           end
      end.
 
-Fixpoint consume_repeated_anon_arg (fuel : nat)
-         (argv : list string)
-         (s : spec)
-         (missing : parse_error)
-         (wrong : string (* got *) -> string (* expected *) -> parse_error)
-         (out_of_fuel : parse_error)
-         {struct fuel}
-  : parse_result (list (spec_data s) * list string (* remaining *))%type
-  := match argv, fuel with
-     | nil, _ => Success (nil, nil)
-     | cons _ _, O => Error out_of_fuel
-     | cons _ _, S fuel'
-       => (res <- consume_one_anon_arg false argv s missing wrong;
-             let '(v, argv) := res in
-             res <- @consume_repeated_anon_arg fuel' argv s missing wrong out_of_fuel;
-               let '(vs, argv) := res in
-               Success (v :: vs, argv))
-     end%error.
+Fixpoint Build_type_of_list_map {A}
+         {f l ls}
+         (v : l)
+         (vf : forall x, f x)
+         {struct ls}
+  : type_of_list l (@List.map A _ f ls)
+  := match ls with
+     | [] => v
+     | l' :: ls => @Build_type_of_list_map A f _ ls (v, vf _) vf
+     end.
 
-Fixpoint consume_anon_args
-         (opt : bool)
+Definition cons_spec_list_data {opt s1 s2 s3 ss}
+  : opt_spec_data opt s2 -> spec_list_data opt ss -> spec_list_data opt ((s1, s2, s3) :: ss)
+  := match ss with
+     | [] => fun v _ => v
+     | (_, _, _) :: _ => fun v vs => cons_type_of_list v vs
+     end.
+
+Definition empty_spec_list_data_opt
+           {anon_opt_args : list (string * spec * doc)}
+  : spec_list_data true anon_opt_args
+  := match anon_opt_args return spec_list_data true anon_opt_args with
+     | [] => tt
+     | (_, _, _) :: _ => Build_type_of_list_map (f:=fun '(_, _, _) => _) None (fun '(_, _, _) => None)
+     end.
+
+Definition empty_opt_repeated_arg {A B} {v : option (A * _ * B)}
+  : match v with
+    | Some (_, s0, _) => list (spec_data s0)
+    | None => unit
+    end
+  := match v with
+     | Some (_, _, _) => []
+     | None => tt
+     end.
+
+Fixpoint consume_args
+         (fuel : nat)
          (argv : list string)
-         (anon_args : list (string * spec * doc))
+         (s : arg_spec)
          (missing : string (* key *) -> parse_error)
          (wrong : string (* key *) -> string (* got *) -> string (* expected *) -> parse_error)
-         {struct anon_args}
-  : parse_result (spec_list_data opt anon_args * list string (* remaining *))%type
-  := match anon_args return parse_result (spec_list_data opt anon_args * list string)%type with
-     | nil => Success (tt, argv)
-     | cons (k, s, d) anon_args
-       => (res <- consume_one_anon_arg opt argv s (missing k) (wrong k);
-             let '(v, argv) := res in
-             rec <- consume_anon_args opt argv anon_args missing wrong;
-               Success (match anon_args return spec_list_data opt anon_args -> type_of_list (opt_spec_data opt s) (List.map (fun '(_, s0, _) => opt_spec_data opt s0) anon_args) with
-                        | nil => fun _ => v
-                        | cons (k', s', d') anon_args
-                          => fun vs
-                             => update_type_of_list _ _ _ (fun v' => (v, v')) vs
-                        end (fst rec), snd rec))
+         (too_many : list string (* remaining *) -> parse_error)
+         (internal_error : string (* msg *) -> parse_error)
+         (no_keyed_arg : list string (* unrecognized arguments *) -> parse_error)
+         (help : parse_error)
+         (out_of_fuel : parse_error)
+         {struct fuel}
+  : parse_result ((keyed_spec_list_data s.(named_args) -> keyed_spec_list_data s.(named_args)) * spec_list_data false s.(anon_args) * spec_list_data true s.(anon_opt_args) * (match s.(anon_opt_repeated_arg) with None => unit | Some (k, s, d) => list (spec_data s) end))%type
+  := let initial_len := List.length argv in
+     let do_recr s fuel' argv'
+         := if list_beq _ String.eqb argv argv'
+            then (* no progress *)
+              match argv' with
+              | [] => Error (internal_error "Encountered empty argument list when doing recursion in consume_args")
+              | arg :: _
+                => if String.startswith "-" arg
+                   then Error (no_keyed_arg [arg])
+                   else Error (too_many argv')
+              end
+            else
+              @consume_args fuel' argv' s missing wrong too_many internal_error no_keyed_arg help out_of_fuel in
+     let spec := s in
+     match argv, fuel with
+     | nil, _
+       => match s.(anon_args) as saa
+                return parse_result (_ * spec_list_data false saa * _ * _)%type
+          with
+          | [] => Success (fun data => data, tt, empty_spec_list_data_opt, empty_opt_repeated_arg)
+          | (k, s, d) :: _ => Error (missing k)
+          end
+     | cons _ _, O => Error out_of_fuel
+     | cons arg argv, S fuel'
+       => if String.startswith "-" arg
+          then (* named *)
+            (res <- consume_help_or_named_arg arg argv s.(named_args) missing wrong help;
+            let '(upd0, argv) := res in
+            res <- do_recr s fuel' argv;
+            let '(upd1, anon_data, anon_opt_data, anon_opt_repeated_data) := res in
+            Success (fun data => upd1 (upd0 data), anon_data, anon_opt_data, anon_opt_repeated_data))
+          else (* anonymous *)
+            let sna := s.(named_args) in
+            match s.(anon_args) as saa, s.(anon_opt_args) as saoa, s.(anon_opt_repeated_arg) as saora
+                  return parse_result ((keyed_spec_list_data s.(named_args) -> keyed_spec_list_data s.(named_args)) * spec_list_data false saa * spec_list_data true saoa * (match saora with None => unit | Some (k, s, d) => list (spec_data s) end))%type
+            with
+            | [], [], None => Error (too_many (arg :: argv))
+            | [], [], Some (k, s, d)
+              => (res <- consume_one_anon_arg false (arg :: argv) s (missing k) (wrong k);
+                 let '(v, argv) := res in
+                 res <- do_recr {| named_args := sna ; anon_args := [] ; anon_opt_args := [] ; anon_opt_repeated_arg := Some (k, s, d) |} fuel' argv;
+                 let '(upd, tt, tt, vs) := res in
+                 Success (upd, tt, tt, v :: vs))
+            | [], (k, s, d) :: saoa, saora
+              => (res <- consume_one_anon_arg true (arg :: argv) s (missing k) (wrong k);
+                 let '(v, argv) := res in
+                 res <- do_recr {| named_args := sna ; anon_args := [] ; anon_opt_args := saoa ; anon_opt_repeated_arg := saora |} fuel' argv;
+                 let '(upd, tt, vs, rest) := res in
+                 Success (upd, tt, cons_spec_list_data (opt:=true) v vs, rest))
+            | (k, s, d) :: saa, saoa, saora
+              => (res <- consume_one_anon_arg false (arg :: argv) s (missing k) (wrong k);
+                 let '(v, argv) := res in
+                 res <- do_recr {| named_args := sna ; anon_args := saa ; anon_opt_args := saoa ; anon_opt_repeated_arg := saora |} fuel' argv;
+                 let '(upd, vs, rest_opt, rest) := res in
+                 Success (upd, cons_spec_list_data (opt:=false) v vs, rest_opt, rest))
+            end
      end%error.
 
 Definition default_named_result {s} : spec_data_with_key s := nil.
@@ -440,34 +553,15 @@ Definition parse_argv (argv : list string) (arg_spec : arg_spec)
   := match argv with
      | nil => Error missing_prog_name
      | prog_name :: argv
-       => (res <- (consume_named_args (10 + (List.length argv)) argv (arg_spec.(named_args)) (missing prog_name) (wrong prog_name) (help prog_name) (out_of_fuel prog_name));
-             let '(upd, argv) := res in
-             res <- consume_anon_args false argv (arg_spec.(anon_args)) (missing prog_name) (wrong prog_name);
-               let '(anon_data, argv) := res in
-               res <- consume_anon_args true argv (arg_spec.(anon_opt_args)) (missing prog_name) (wrong prog_name);
-                 let '(anon_opt_data, argv) := res in
-                 res <- match anon_opt_repeated_arg arg_spec as r return
-                              parse_result
-                                (match r with
-                                 | None => unit
-                                 | Some (_, s, _) => list (spec_data s)
-                                 end
-                                 * list string)
-                        with
-                        | None => Success (tt, argv)
-                        | Some (k, s, d) => consume_repeated_anon_arg (10 + (List.length argv)) argv s (missing prog_name k) (wrong prog_name k) (out_of_fuel prog_name)
-                        end;
-                   let '(anon_repeated_opt_data, argv) := res in
-                   match argv with
-                   | nil => Success (upd default_named_results, anon_data, anon_opt_data, anon_repeated_opt_data)
-                   | _ => Error (too_many_args prog_name argv)
-                   end)
+       => (res <- consume_args (10 + (List.length argv)) argv arg_spec (missing prog_name) (wrong prog_name) (too_many_args prog_name) (internal_error prog_name) (no_keyed_arg prog_name) (help prog_name) (out_of_fuel prog_name);
+          let '(upd, anon_data, anon_opt_data, anon_opt_repeated_data) := res in
+          Success (upd default_named_results, anon_data, anon_opt_data, anon_opt_repeated_data))
      end%error.
 
 Definition is_real_error (e : parse_error) : bool := match e with help _ => false | _ => true end.
 
 Definition make_usage (prog_name : string) (spec : arg_spec) : string
-  := "USAGE:"
+  := "USAGE: "
        ++ prog_name ++ " [OPTS...] "
        ++ (String.concat
              " "
@@ -478,7 +572,7 @@ Definition make_usage (prog_name : string) (spec : arg_spec) : string
                    | None => nil
                    end)).
 
-Definition show_list_parse_error (spec : arg_spec) (err : parse_error) : list string
+Definition show_list_parse_error {should_block_indent : ShouldBlockIndent} (spec : arg_spec) (err : parse_error) : list string
   := let mk_usage prog_name err := (usage_string spec (err ++ [String.NewLine; make_usage prog_name spec]) ++ [String.NewLine])%list in
      match err with
      | help prog_name
@@ -490,6 +584,12 @@ Definition show_list_parse_error (spec : arg_spec) (err : parse_error) : list st
      | missing_prog_name => ["Empty argv" ++ String.NewLine]%string
      | too_many_args prog_name remaining
        => mk_usage prog_name [prog_name ++ ": unrecognized arguments: " ++ String.concat " " remaining]%string
+     | no_keyed_arg prog_name invalid_args
+       => mk_usage prog_name [prog_name ++ ": unrecognized keyed arguments: " ++ String.concat " " invalid_args]%string
+     | internal_error prog_name msg
+       => mk_usage prog_name [prog_name ++ ": Internal error (please report as a bug): " ++ msg]%string
      | out_of_fuel prog_name
        => mk_usage prog_name [prog_name ++ ": Internal fatal error while parsing command line arguments: Out of fuel (probably a bugged command line argument specification)"]%string
      end.
+
+Instance default_should_block_indent : ShouldBlockIndent := ArbitraryIndent.

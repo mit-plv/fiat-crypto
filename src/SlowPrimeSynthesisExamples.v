@@ -8,6 +8,7 @@ Require Import Crypto.Util.ZRange.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.PushButtonSynthesis.UnsaturatedSolinas.
+Require Import Crypto.UnsaturatedSolinasHeuristics.
 Require Crypto.PushButtonSynthesis.SaturatedSolinas.
 Require Crypto.PushButtonSynthesis.WordByWordMontgomery.
 Require Crypto.Stringification.C.
@@ -35,6 +36,7 @@ Local Coercion QArith_base.inject_Z : Z >-> Q.
 Local Coercion Z.pos : positive >-> Z.
 
 Local Existing Instance default_low_level_rewriter_method.
+Local Instance : tight_upperbound_fraction_opt := default_tight_upperbound_fraction.
 
 Module debugging_sat_solinas_25519.
   Section __.

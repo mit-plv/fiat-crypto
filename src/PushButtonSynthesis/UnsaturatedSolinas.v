@@ -89,6 +89,7 @@ Section __.
           {should_split_multiret : should_split_multiret_opt}
           {widen_carry : widen_carry_opt}
           {widen_bytes : widen_bytes_opt}
+          {tight_upperbound_fraction : tight_upperbound_fraction_opt}
           (n : nat)
           (s : Z)
           (c : list (Z * Z))
