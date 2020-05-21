@@ -11,13 +11,13 @@ Require Import bedrock2.Syntax.
 Require Import bedrock2.WeakestPrecondition.
 Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Map.SeparationLogic.
-Require Import Crypto.Bedrock.ByteBounds.
 Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Types.
-Require Import Crypto.Bedrock.MakeAccessSizes.
-Require Import Crypto.Bedrock.MakeNames.
-Require Import Crypto.Bedrock.MaxBounds.
 Require Import Crypto.Bedrock.Util.
+Require Import Crypto.Bedrock.Arrays.ByteBounds.
+Require Import Crypto.Bedrock.Arrays.MakeAccessSizes.
+Require Import Crypto.Bedrock.Arrays.MaxBounds.
+Require Import Crypto.Bedrock.Names.MakeNames.
 Require Import Crypto.Bedrock.Translation.Func.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Language.API.

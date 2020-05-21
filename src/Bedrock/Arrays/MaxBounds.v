@@ -4,10 +4,10 @@ Require Import Coq.micromega.Lia.
 Require Import coqutil.Word.Interface.
 Require Import coqutil.Word.Properties.
 Require Import bedrock2.Syntax.
-Require Import Crypto.Bedrock.MakeAccessSizes.
 Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Util.
+Require Import Crypto.Bedrock.Arrays.MakeAccessSizes.
 Require Import Crypto.COperationSpecifications.
 Require Import Crypto.Util.ZRange.BasicLemmas.
 Require Import Crypto.Util.ZUtil.Modulo.
