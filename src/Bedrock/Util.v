@@ -914,9 +914,9 @@ Section Scalars.
   Proof.
     intros; cbn. rewrite word.unsigned_of_Z.
     fold (@Memory.bytes_per Semantics.width access_size.word).
-    rewrite <-Hlen.
-    pose proof bits_per_word_eq_width ltac:(eassumption).
-    rewrite <-Hlen in * |-.
+    pose proof (bits_per_word_eq_width (word:=Semantics.word) ltac:(eassumption)) as Hbits.
+    rewrite (Z.mul_comm _ 8) in Hbits. (* N.B. in some Coq version (8.12 but not 8.11) lia fails to handle the mul_comm somehow *)
+    rewrite <-Hlen in *.
     match goal with
       |- context [word.wrap (LittleEndian.combine ?n ?t)] =>
       let H := fresh in
@@ -924,8 +924,8 @@ Section Scalars.
         match type of H with
           (_ <= _ < 2 ^ ?x)%Z =>
           let H' := fresh in
-          pose proof Z.pow_le_mono_r 2 x Semantics.width
-               ltac:(lia) ltac:(lia)
+          pose proof Z.pow_le_mono_r 2 x Semantics.width ltac:(lia) as H';
+            specialize (H' ltac:(rewrite <-Hbits; lia))
         end
     end.
     cbv [word.wrap]. rewrite Z.mod_small by lia.
