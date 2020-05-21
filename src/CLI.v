@@ -23,6 +23,7 @@ Require Import Crypto.BoundsPipeline.
 Require Import Crypto.Stringification.Rust.
 Require Import Crypto.Stringification.Go.
 Require Import Crypto.Stringification.Java.
+Require Crypto.Util.Arg.
 Import ListNotations. Local Open Scope Z_scope. Local Open Scope string_scope.
 
 Import
@@ -30,6 +31,8 @@ Import
   Stringification.C.Compilers.
 
 Module ForExtraction.
+  Definition parse_string_and {T} (parse_T : string -> option T) (s : string) : option (string * T)
+    := option_map (@pair _ _ s) (parse_T s).
   Definition parse_Z (s : string) : option Z := parseZ_arith_strict s.
   Definition parse_N (s : string) : option N := parseN_arith_strict s.
   Definition parse_nat (s : string) : option nat := parsenat_arith_strict s.
@@ -140,7 +143,9 @@ Module ForExtraction.
 
   (** TODO: Write a better quoter and maybe move this elsewhere *)
   Definition quote (s : string) : string
-    := if List.existsb (fun ch => " " =? ch)%char (String.list_ascii_of_string s)
+    := if List.existsb (fun ch => List.existsb (fun badch => badch =? ch)%char
+                                               [" "; "("; ")"]%char)
+                       (String.list_ascii_of_string s)
        then "'" ++ s ++ "'"
        else s.
 
@@ -185,95 +190,111 @@ Module ForExtraction.
       languages list is used as the default. *)
   Definition default_supported_languages : supported_languagesT
     := [("C", ToString.OutputCAPI)
-       ; ("Rust", Rust.OutputRustAPI)
-       ; ("Go", Go.OutputGoAPI)
-       ; ("Java", Java.OutputJavaAPI)].
+        ; ("Rust", Rust.OutputRustAPI)
+        ; ("Go", Go.OutputGoAPI)
+        ; ("Java", Java.OutputJavaAPI)].
 
-  Definition curve_description_help
-    := "  curve_description       A string which will be prefixed to every function name generated".
-  Definition lang_help {supported_languages : supported_languagesT}
+  Local Notation anon_argT := (string * Arg.spec * Arg.doc)%type (only parsing).
+  Local Notation named_argT := (list Arg.key * Arg.spec * Arg.doc)%type (only parsing).
+
+  Definition curve_description_spec : anon_argT
+    := ("curve_description",
+        Arg.String,
+        ["A string which will be prefixed to every function name generated"]).
+  Definition lang_default {supported_languages : supported_languagesT}
+    := List.hd ("C", ToString.OutputCAPI) supported_languages.
+  Definition lang_spec {supported_languages : supported_languagesT} : named_argT
     := let supported_language_names := List.map (@fst _ _) supported_languages in
-       "  LANGUAGE                The output language code should be emitted in.  Defaults to " ++ List.hd "C" supported_language_names ++ " if no language is given.  Case-sensitive."
-         ++ String.NewLine ++
-       "                            Valid options are: " ++ String.concat ", " supported_language_names.
-  Definition total_help_indent
-    := "                          ".
-  Definition static_and_help
-    := ("--static", "Declare the functions as static, i.e., local to the file.").
-  Definition internal_static_and_help
-    := ("--internal-static", "Declare internal functions as static, i.e., local to the file.").
-  Definition only_signed_and_help
-    := ("--only-signed", "Only allow signed integer types.").
-  Definition no_select_and_help
-    := ("--no-select", "Use expressions that don't require cmov.").
-  Definition no_wide_int_and_help
-    := ("--no-wide-int", "Don't use integers wider than the bitwidth.").
-  Definition widen_carry_and_help
-    := ("--widen-carry", "Widen carry bit integer types to either the byte type, or to the full bitwidth if --widen-bytes is also passed.").
-  Definition widen_bytes_and_help
-    := ("--widen-bytes", "Widen byte types to the full bitwidth.").
-  Definition split_multiret_and_help
-    := ("--split-multiret", "Don't allow instructions to return two results. This should always be set for bedrock2.").
-  Definition no_primitives_and_help
-    := ("--no-primitives", "Suppress the generation of the bodies of primitive operations such as addcarryx, subborrowx, cmovznz, mulx, etc.").
-  Definition cmovznz_by_mul_and_help
-    := ("--cmovznz-by-mul", "Use an alternative implementation of cmovznz using multiplication rather than bitwise-and with -1.").
-  Definition n_help
-    := "  n                       The number of limbs, or the literal '(auto)' or '(autoN)' for a non-negative number N, to automatically guess the number of limbs".
-  Definition sc_help
-    := "  s-c                     The prime, which must be expressed as a difference of a power of two and a small field element (e.g., '2^255 - 19', '2^448 - 2^224 - 1')".
-  Definition m_help
-    := "  m                       The prime (e.g., '2^434 - (2^216*3^137 - 1)')".
-  Definition machine_wordsize_help
-    := "  machine_wordsize        The machine bitwidth (e.g., 32 or 64)".
-  Definition src_n_help
-    := "  src_n                   The number of limbs in the input".
-  Definition src_limbwidth_help
-    := "  src_limbwidth           The limbwidth of the input field element".
-  Definition dst_limbwidth_help
-    := "  dst_limbwidth           The limbwidth of the field element to be returned".
-  Definition use_bitwidth_in_and_help
-    := ("--use-bitwidth-in", "Instead of using an upper bound of s-1 on the input, use the maximum number that can be properly represented with the given base").
-  Definition use_bitwidth_out_and_help
-    := ("--use-bitwidth-out", "Instead of using an upper bound of s-1 on the output, use the maximum number that can be properly represented with the given base").
-  Definition inbounds_multiplier_help
-    := "  inbounds_multiplier     The (improper) fraction by which the bounds of each input limb are scaled (default: 1)".
-  Definition outbounds_multiplier_help
-    := "  outbounds_multiplier    The (improper) fraction by which the bounds of each output limb are scaled (default: 1)".
-  Definition inbounds_help
-    := "  inbounds                A semicolon-separated, square-bracked-surrounded list of integer expressions describing the input bounds.  Incompatible with --use-bitwidth-in.".
-  Definition outbounds_help
-    := "  outbounds               A semicolon-separated, square-bracked-surrounded list of integer expressions describing the output bounds.  Incompatible with --use-bitwidth-out.".
+       ([Arg.long_key "lang"],
+        Arg.CustomSymbol supported_languages,
+        ["The output language code should be emitted in.  Defaults to " ++ List.hd "C" supported_language_names ++ " if no language is given.  Case-sensitive."]).
+  Definition static_spec : named_argT
+    := ([Arg.long_key "static"], Arg.Unit, ["Declare the functions as static, i.e., local to the file."]).
+  Definition internal_static_spec : named_argT
+    := ([Arg.long_key "internal-static"], Arg.Unit, ["Declare internal functions as static, i.e., local to the file."]).
+  Definition only_signed_spec : named_argT
+    := ([Arg.long_key "only-signed"], Arg.Unit, ["Only allow signed integer types."]).
+  Definition no_select_spec : named_argT
+    := ([Arg.long_key "no-select"], Arg.Unit, ["Use expressions that don't require cmov."]).
+  Definition no_wide_int_spec : named_argT
+    := ([Arg.long_key "no-wide-int"], Arg.Unit, ["Don't use integers wider than the bitwidth."]).
+  Definition widen_carry_spec : named_argT
+    := ([Arg.long_key "widen-carry"], Arg.Unit, ["Widen carry bit integer types to either the byte type, or to the full bitwidth if --widen-bytes is also passed."]).
+  Definition widen_bytes_spec : named_argT
+    := ([Arg.long_key "widen-bytes"], Arg.Unit, ["Widen byte types to the full bitwidth."]).
+  Definition split_multiret_spec : named_argT
+    := ([Arg.long_key "split-multiret"], Arg.Unit, ["Don't allow instructions to return two results. This should always be set for bedrock2."]).
+  Definition no_primitives_spec : named_argT
+    := ([Arg.long_key "no-primitives"], Arg.Unit, ["Suppress the generation of the bodies of primitive operations such as addcarryx, subborrowx, cmovznz, mulx, etc."]).
+  Definition cmovznz_by_mul_spec : named_argT
+    := ([Arg.long_key "cmovznz-by-mul"], Arg.Unit, ["Use an alternative implementation of cmovznz using multiplication rather than bitwise-and with -1."]).
+  Definition tight_bounds_multiplier_default := default_tight_upperbound_fraction.
+  Definition tight_bounds_multiplier_spec : named_argT
+    := ([Arg.long_key "tight-bounds-mul-by"],
+        Arg.Custom (parse_string_and parse_Q) "ℚ",
+        ["The (improper) fraction by which the (tight) bounds of each limb are scaled"]).
+  Definition n_spec : anon_argT
+    := ("n",
+        Arg.Custom (parse_string_and parse_n) "an ℕ or the literal '(auto)' or '(autoN)' for a non-negative number N",
+        ["The number of limbs, or the literal '(auto)' or '(autoN)' for a non-negative number N, to automatically guess the number of limbs"]).
+  Definition sc_spec : anon_argT
+    := ("s-c",
+        Arg.Custom (parse_string_and parse_sc) "an integer expression",
+        ["The prime, which must be expressed as a difference of a power of two and a small field element (e.g., '2^255 - 19', '2^448 - 2^224 - 1')"]).
+  Definition m_spec : anon_argT
+    := ("m",
+        Arg.Custom (parse_string_and parse_m) "an integer expression",
+        ["The prime (e.g., '2^434 - (2^216*3^137 - 1)')"]).
+  Definition machine_wordsize_spec : anon_argT
+    := ("machine_wordsize",
+        Arg.Custom (parse_string_and parse_machine_wordsize) "an integer",
+        ["The machine bitwidth (e.g., 32 or 64)"]).
+  Definition src_n_spec : anon_argT
+    := ("src_n",
+        Arg.Custom (parse_string_and parse_src_n) "ℕ",
+        ["The number of limbs in the input"]).
+  Definition src_limbwidth_spec : anon_argT
+    := ("src_limbwidth",
+        Arg.Custom (parse_string_and parse_limbwidth) "ℕ",
+        ["The limbwidth of the input field element"]).
+  Definition dst_limbwidth_spec : anon_argT
+    := ("dst_limbwidth",
+        Arg.Custom (parse_string_and parse_limbwidth) "ℕ",
+        ["The limbwidth of the field element to be returned"]).
+  Definition use_bitwidth_in_spec : named_argT
+    := ([Arg.long_key "use-bitwidth-in"],
+        Arg.Unit,
+        ["Instead of using an upper bound of s-1 on the input, use the maximum number that can be properly represented with the given base"]).
+  Definition use_bitwidth_out_spec : named_argT
+    := ([Arg.long_key "use-bitwidth-out"],
+        Arg.Unit,
+        ["Instead of using an upper bound of s-1 on the output, use the maximum number that can be properly represented with the given base"]).
+  Definition default_inbounds_multiplier := 1.
+  Definition inbounds_multiplier_spec : named_argT
+    := ([Arg.long_key "inbounds-multiplier"],
+        Arg.String,
+        ["The (improper) fraction by which the bounds of each input limb are scaled (default: " ++ show false default_inbounds_multiplier ++ ")"]).
+  Definition default_outbounds_multiplier := 1.
+  Definition outbounds_multiplier_spec : named_argT
+    := ([Arg.long_key "outbounds-multiplier"],
+        Arg.String,
+        ["The (improper) fraction by which the bounds of each output limb are scaled (default: " ++ show false default_outbounds_multiplier ++ ")"]).
+  Definition inbounds_spec : named_argT
+    := ([Arg.long_key "inbounds"],
+        Arg.String,
+        ["A semicolon-separated, square-bracked-surrounded list of integer expressions describing the input bounds.  Incompatible with --use-bitwidth-in."]).
+  Definition outbounds_spec : named_argT
+    := ([Arg.long_key "outbounds"],
+        Arg.String,
+        ["A semicolon-separated, square-bracked-surrounded list of integer expressions describing the output bounds.  Incompatible with --use-bitwidth-out."]).
+  Definition function_to_synthesize_spec (valid_names : string) : anon_argT
+    := ("function_to_synthesize",
+        Arg.String,
+        ["A space-separated list of functions that should be synthesized.  If no functions are given, all functions are synthesized."
+         ; "Valid options are " ++ valid_names ++ "."]).
 
-  Definition function_to_synthesize_help (valid_names : string)
-    := "  function_to_synthesize  A space-separated list of functions that should be synthesized.  If no functions are given, all functions are synthesized."
-         ++ String.NewLine ++
-         "                            Valid options are " ++ valid_names.
-
-  Definition common_optional_options
-    := [static_and_help
-        ; internal_static_and_help
-        ; no_wide_int_and_help
-        ; widen_carry_and_help
-        ; widen_bytes_and_help
-        ; no_select_and_help
-        ; split_multiret_and_help
-        ; no_primitives_and_help
-        ; cmovznz_by_mul_and_help
-       ].
-  Definition optional_options_to_usage {T} opt_options
-    := String.concat " " (List.map (fun '((opt, _) : _ * T) => "[" ++ opt ++ "]") opt_options).
-  Definition common_usage_opts := optional_options_to_usage common_optional_options.
-
-  Definition to_help (s : string * string)
-    := let opt := "  " ++ fst s in
-       let descr := snd s in
-       opt ++ String.substring 0 (String.length total_help_indent - String.length opt) total_help_indent ++ descr.
-
-
-  Local Set Primitive Projections.
-  Record > Dyn := dyn { dyn_ty : Type ; dyn_val :> option dyn_ty }.
-  Arguments dyn {_} _.
+  Definition collapse_list_default {A} (default : A) (ls : list A)
+    := List.hd default (List.rev ls).
 
   Definition join_errors {A B} (x : A + list string) (y : B + list string) : (A * B) + list string
     := match x, y with
@@ -281,85 +302,6 @@ Module ForExtraction.
        | inr err, inl _ | inl _, inr err => inr err
        | inl x, inl y => inl (x, y)
        end.
-
-  Fixpoint parse_resultL' (acc : Type) (ls : list (string (* name *) * string (* string value *) * Dyn))
-    : Type
-    := match ls with
-       | nil => acc
-       | cons (_, _, {| dyn_ty := T |}) ls'
-         => parse_resultL' (acc * T) ls'
-       end.
-  Definition parse_resultL (ls : list (string (* name *) * string (* string value *) * Dyn))
-    := match ls return Type with
-       | nil => unit
-       | cons (_, _, {| dyn_ty := T |}) ls'
-         => parse_resultL' T ls' + list string
-       end%type.
-
-  Fixpoint parse_many' {accT : Type} (acc : accT)
-           (ls : list (string (* name *) * string (* string value *) * Dyn))
-    : parse_resultL' accT ls + list string
-    := match ls return parse_resultL' accT ls + list string with
-       | nil => inl acc
-       | cons (_, _, {| dyn_val := Some v |}) ls'
-         => @parse_many' _ (acc, v) ls'
-       | cons (name, str_val, {| dyn_val := None |}) ls'
-         => let err_ls := match @parse_many' _ tt ls' with
-                          | inl _ => nil
-                          | inr err_ls => err_ls
-                          end in
-            inr ((name ++ " (" ++ str_val ++ ")")%string :: err_ls)
-       end.
-
-  Definition parse_many
-             (ls : list (string (* name *) * string (* string value *) * Dyn))
-    : parse_resultL ls
-    := let transform_err T (v : T + list string)
-           := match v with
-              | inl v => inl v
-              | inr nil => inr ["Internal Error: Parse failure without an error message"]
-              | inr ls => inr ["Could not parse " ++ String.concat " nor " ls]
-              end%string in
-       match ls with
-       | nil => tt
-       | cons (_, _, {| dyn_val := Some v |}) ls'
-         => transform_err _ (@parse_many' _ v ls')
-       | cons (name, str_val, {| dyn_val := None |}) ls'
-         => let err_ls := match @parse_many' _ tt ls' with
-                          | inl _ => nil
-                          | inr err_ls => err_ls
-                          end in
-            transform_err _ (inr ((name ++ " (" ++ str_val ++ ")")%string :: err_ls))
-       end.
-
-  (** if [opt] is in [tl argv], remove all instances of it, and return
-      [(filter-out opt argv, true)]; otherwise, return [(argv, false)]
-      *)
-  Definition argv_to_contains_opt_and_argv (opt : string) (argv : list string)
-    : list string * bool
-    := match argv with
-       | prog_name :: rest
-         => let is_opt arg := (arg =? opt)%string in
-            (prog_name :: filter (fun arg => negb (is_opt arg)) rest,
-             existsb is_opt rest)
-       | _ => (argv, false)
-       end.
-
-  (** return the remainder of all elements of [argv] starting with
-      [opt], and all elements which do not start with [opt] *)
-  Definition argv_to_startswith_opt_and_argv (opt : string) (argv : list string)
-    := let '(opts, argv) := List.partition (String.contains 0 opt) argv in
-       (argv,
-        List.map (fun s => String.substring (String.length opt) (String.length s) s) opts).
-
-  Definition argv_to_single_startswith_opt_and_argv (opt : string) (argv : list string)
-    := let '(argv, opts) := argv_to_startswith_opt_and_argv opt argv in
-       (argv,
-        match opts with
-        | [] => inl None
-        | [opt] => inl (Some opt)
-        | _ => inr opts
-        end).
 
   (** We define a class for holding the various options we might pass to [Synthesize] *)
   Class SynthesizeOptions :=
@@ -391,36 +333,75 @@ Module ForExtraction.
       ; machine_wordsize :> machine_wordsize_opt
     }.
 
+  Definition common_optional_options {supported_languages : supported_languagesT}
+    := [lang_spec
+        ; static_spec
+        ; internal_static_spec
+        ; no_wide_int_spec
+        ; widen_carry_spec
+        ; widen_bytes_spec
+        ; no_select_spec
+        ; split_multiret_spec
+        ; no_primitives_spec
+        ; cmovznz_by_mul_spec
+        ; only_signed_spec
+       ].
+
+  Definition parse_common_optional_options
+             {supported_languages : supported_languagesT}
+             {machine_wordsizev : machine_wordsize_opt}
+             (data : Arg.keyed_spec_list_data common_optional_options)
+    : (SynthesizeOptions * ToString.OutputLanguageAPI) + list string
+    := let '(langv
+             , staticv
+             , internal_staticv
+             , no_wide_intv
+             , widen_carryv
+             , widen_bytesv
+             , no_selectv
+             , split_multiretv
+             , no_primitivesv
+             , cmovznz_by_mulv
+             , only_signedv
+            ) := data in
+       let to_bool ls := (0 <? List.length ls)%nat in
+       let res
+           := ({| static := to_bool staticv
+                  ; internal_static := to_bool internal_staticv
+                  ; widen_carry := to_bool widen_carryv
+                  ; widen_bytes := to_bool widen_bytesv
+                  ; no_select := to_bool no_selectv
+                  ; only_signed := to_bool only_signedv
+                  ; should_split_mul := to_bool no_wide_intv
+                  ; should_split_multiret := to_bool split_multiretv
+                  ; use_mul_for_cmovznz := to_bool cmovznz_by_mulv
+                  ; emit_primitives := negb (to_bool no_primitivesv)
+               |},
+               snd (List.hd lang_default langv)) in
+       match langv with
+       | [] | [_] => inl res
+       | opts => inr ["Only one language specification with --lang is allowed; multiple languages were requested: " ++ String.concat ", " (List.map (@fst _ _) opts)]
+       end.
+
   (** We define a class for the various operations that are specific to a pipeline *)
   Class PipelineAPI :=
     {
-      (** The type of special arguments that all pipelines need access to *)
-      SpecialParsedArgsT : Type
-      := machine_wordsize_opt;
+      (** The spec of curve-specific command line arguments *)
+      spec : Arg.arg_spec;
       (** Type of arguments parsed from the command line *)
       ParsedArgsT : Type;
       (** Type of (unparsed) arguments remembered from the command line *)
       StringArgsT : Type;
       ArgsT := (StringArgsT * ParsedArgsT)%type;
 
-      (** Takes in argv except without the binary name and without any
-          general options (such as language), and parses the
-          curve-specific arguments, returning either [Some (inl
-          value)], [Some (inr errors)], or [None] if there are not
-          enough arguments and the usage string should be displayed. *)
-      parse_args : list string -> option (ArgsT + list string);
-
-      (** Takes in parsed args and computes common arguments *)
-      extract_known_args : ParsedArgsT -> SpecialParsedArgsT;
+      (** Takes in args parsed via the spec and post-parses
+          curve-specific arguments, returning either [inl value] or
+          [inr errors] *)
+      parse_args : forall {synthesize_opts : SynthesizeOptions}, Arg.arg_spec_results spec -> ArgsT + list string;
 
       (** Renders a header at the top displaying the command line
           arguments.  Will be wrapped in a comment block *)
       show_lines_args : ArgsT -> list string;
-
-      (** The part of the usage-string for arguments after curve_description *)
-      pipeline_usage_string : string;
-      (** The list of help strings (to be joined by newlines) *)
-      help_lines : list string;
 
       (** The Synthesize function from the pipeline *)
       (** N.B. [comment_header] will be passed in *without* wrapping
@@ -445,12 +426,14 @@ Module ForExtraction.
                  {synthesize_opts : SynthesizeOptions}
                  (invocation : string)
                  (curve_description : string)
+                 (str_machine_wordsize : string)
                  (args : ArgsT)
         : list (string * Pipeline.ErrorT (list string)) + list string
         := let prefix := ("fiat_" ++ curve_description ++ "_")%string in
            let header :=
-               ((["Autogenerated: " ++ invocation;
-                    "curve description: " ++ curve_description]%string)
+               ((["Autogenerated: " ++ invocation
+                  ; "curve description: " ++ curve_description
+                  ; "machine_wordsize = " ++ show false (machine_wordsize:Z) ++ " (from """ ++ str_machine_wordsize ++ """)"]%string)
                   ++ show_lines_args args)%list in
            inl (Synthesize (snd args) header prefix).
 
@@ -462,9 +445,10 @@ Module ForExtraction.
                  {synthesize_opts : SynthesizeOptions}
                  (invocation : string)
                  (curve_description : string)
+                 (str_machine_wordsize : string)
                  (args : ArgsT)
         : list string + list string
-        := match CollectErrors (PipelineLines invocation curve_description args) with
+        := match CollectErrors (PipelineLines invocation curve_description str_machine_wordsize args) with
            | inl ls
              => inl
                   (List.map (fun s => String.concat String.NewLine (List.map strip_trailing_spaces s) ++ String.NewLine ++ String.NewLine)
@@ -482,33 +466,15 @@ Module ForExtraction.
                  {synthesize_opts : SynthesizeOptions}
                  (invocation : string)
                  (curve_description : string)
+                 (str_machine_wordsize : string)
                  (args : ArgsT)
                  (success : list string -> A)
                  (error : list string -> A)
         : A
-        := match ProcessedLines invocation curve_description args with
+        := match ProcessedLines invocation curve_description str_machine_wordsize args with
            | inl s => success s
            | inr s => error s
            end.
-
-      Definition argv_to_language_and_argv
-                 {supported_languages : supported_languagesT}
-                 (argv : list string)
-        : list string * (ToString.OutputLanguageAPI + list string)
-        := let '(argv, opts) := argv_to_startswith_opt_and_argv "--lang=" argv in
-           (argv,
-            match opts with
-            | [] => inl (* if no is --lang=<something known>, default to the first element of the list, or else C if supported languages are empty *)
-                      (List.hd ToString.OutputCAPI (List.map (@snd _ _) supported_languages))
-            | [lang]
-              => match List.filter (fun '(known_lang, _) => String.eqb lang known_lang) supported_languages with
-                 | [] => inr ["Unknown language " ++ lang ++ " requested; supported languages are " ++ String.concat ", " (List.map (@fst _ _) supported_languages)]
-                 | [(_, output_api)] => inl output_api
-                 | _ => inr ["Internal Error: Multiple languages exist with the same name (" ++ lang ++ ")"]
-                 end
-            | _
-              => inr ["Only one language specification with --lang is allowed; multiple languages were requested: " ++ String.concat ", " opts]
-            end).
 
       Definition PipelineMain
                  {supported_languages : supported_languagesT}
@@ -518,59 +484,26 @@ Module ForExtraction.
                  (error : list string -> A)
         : A
         := let invocation := String.concat " " (List.map quote argv) in
-           let on_wrong_argv _ :=
-               match argv with
-               | nil => error ["empty argv"]
-               | prog::args
-                 => error ((["USAGE: " ++ prog ++ " [--lang=LANGUAGE] " ++ common_usage_opts ++ " curve_description " ++ pipeline_usage_string;
-                               "Got " ++ show false (List.length args) ++ " arguments.";
-                               "";
-                               lang_help]%string)
-                             ++ List.map to_help common_optional_options
-                             ++ [curve_description_help]
-                             ++ help_lines
-                             ++ [""])%list
-               end in
-           let '(argv, output_language_api) := argv_to_language_and_argv argv in
-           let '(argv, staticv) := argv_to_contains_opt_and_argv "--static" argv in
-           let '(argv, internal_staticv) := argv_to_contains_opt_and_argv "--internal-static" argv in
-           let '(argv, only_signedv) := argv_to_contains_opt_and_argv "--only-signed" argv in
-           let '(argv, no_selectv) := argv_to_contains_opt_and_argv "--no-select" argv in
-           let '(argv, no_wide_intsv) := argv_to_contains_opt_and_argv "--no-wide-int" argv in
-           let '(argv, use_mul_for_cmovznzv) := argv_to_contains_opt_and_argv "--cmovznz-by-mul" argv in
-           let '(argv, widen_carryv) := argv_to_contains_opt_and_argv "--widen-carry" argv in
-           let '(argv, widen_bytesv) := argv_to_contains_opt_and_argv "--widen-bytes" argv in
-           let '(argv, split_multiretv) := argv_to_contains_opt_and_argv "--split-multiret" argv in
-           let '(argv, no_primitivesv) := argv_to_contains_opt_and_argv "--no-primitives" argv in
-           (** must come last *)
-           let '(argv, unrecognized_args) := argv_to_startswith_opt_and_argv "--" argv in
-           match List.map (fun s => "Unrecognized argument: --" ++ s)%string unrecognized_args,
-                 output_language_api,
-                 argv with
-           | nil, inl output_language_api, _::curve_description::args
-             => match parse_args args with
-                | Some (inl args)
-                  => let machine_wordsizev := extract_known_args (snd args) in
-                     let opts
-                         := {| static := staticv
-                               ; internal_static := internal_staticv
-                               ; only_signed := only_signedv
-                               ; no_select := no_selectv
-                               ; use_mul_for_cmovznz := use_mul_for_cmovznzv
-                               ; widen_carry := widen_carryv
-                               ; widen_bytes := widen_bytesv
-                               ; should_split_mul := no_wide_intsv
-                               ; should_split_multiret := split_multiretv
-                               ; emit_primitives := negb no_primitivesv
-                               ; machine_wordsize := machine_wordsizev |} in
-                     Pipeline invocation curve_description args success error
-                | Some (inr errs)
-                  => error errs
-                | None => on_wrong_argv tt
+           let full_spec
+               := {| Arg.named_args := common_optional_options ++ spec.(Arg.named_args)
+                     ; Arg.anon_args := curve_description_spec :: machine_wordsize_spec :: spec.(Arg.anon_args)
+                     ; Arg.anon_opt_args := spec.(Arg.anon_opt_args)
+                     ; Arg.anon_opt_repeated_arg := spec.(Arg.anon_opt_repeated_arg) |} in
+           match Arg.parse_argv argv full_spec with
+           | ErrorT.Success (named_data, anon_data, anon_opt_data, anon_opt_repeated_data)
+             => let '(common_named_data, named_data) := Arg.split_type_of_list' (ls1:=List.map _ common_optional_options) named_data in
+                let '((curve_description, (str_machine_wordsize, machine_wordsize)), anon_data) := Arg.split_type_of_list' (ls1:=[_;_]) anon_data in
+                let machine_wordsize : machine_wordsize_opt := machine_wordsize in
+                match parse_common_optional_options common_named_data with
+                | inl (opts, output_language_api)
+                  => match parse_args (named_data, anon_data, anon_opt_data, anon_opt_repeated_data) with
+                     | inl args
+                       => Pipeline invocation curve_description str_machine_wordsize args success error
+                     | inr errs => error errs
+                     end
+                | inr errs => error errs
                 end
-           | nil, inl _, _ => on_wrong_argv tt
-           | unrecognized_args_errs, inr errs, _ => error (errs ++ unrecognized_args_errs)%list
-           | unrecognized_args_errs, inl _, _ => error unrecognized_args_errs
+           | ErrorT.Error err => error (Arg.show_list_parse_error full_spec err)
            end.
     End __.
   End Parameterized.
@@ -578,53 +511,37 @@ Module ForExtraction.
   Module UnsaturatedSolinas.
     Local Instance api : PipelineAPI
       := {
-          parse_args (args : list string)
-          := match args with
-             | n::sc::machine_wordsize::requests
-               => let str_n := n in
-                  let str_machine_wordsize := machine_wordsize in
-                  let str_sc := sc in
-                  let show_requests := match requests with nil => "(all)" | _ => String.concat ", " requests end in
-                  Some
-                    match parse_many [("n", n, parse_n n:Dyn)
-                                      ; ("machine_wordsize", machine_wordsize, parse_machine_wordsize machine_wordsize:Dyn)
-                                      ; ("s-c", sc, parse_sc sc:Dyn)] with
-                    | inr errs => inr errs
-                    | inl (n, machine_wordsize, (s, c))
-                      => match get_num_limbs s c machine_wordsize n, n with
-                         | None, NumLimbs n => inr ["Internal error: get_num_limbs (on (" ++ PowersOfTwo.show_Z false s ++ ", " ++ show_c false c ++ ", " ++ show false machine_wordsize ++ ", " ++ show false n ++ ")) returned None even though the argument was NumLimbs"]
-                         | None, Auto idx => inr ["Invalid index " ++ show false idx ++ " when guessing the number of limbs for s-c = " ++ PowersOfTwo.show_Z false s ++ " - " ++ show_c false c ++ "; valid indices must index into the list " ++ show false (get_possible_limbs s c machine_wordsize) ++ "."]
-                         | Some n, _
-                           => inl
-                                ((str_n, str_machine_wordsize, str_sc, show_requests),
-                                 (n, machine_wordsize, s, c, requests))
-                         end
-                    end
-             | _ => None
+          spec :=
+            {| Arg.named_args := [tight_bounds_multiplier_spec]
+               ; Arg.anon_args := [n_spec; sc_spec]
+               ; Arg.anon_opt_args := []
+               ; Arg.anon_opt_repeated_arg := Some (function_to_synthesize_spec UnsaturatedSolinas.valid_names) |};
+
+          parse_args opts args
+          := let '(tight_bounds_multiplier, ((str_n, n), (str_sc, (s, c))), tt, requests) := args in
+             let show_requests := match requests with nil => "(all)" | _ => String.concat ", " requests end in
+             let '(str_tight_bounds_multiplier, tight_bounds_multiplier) := collapse_list_default ("", tight_bounds_multiplier_default) (List.map (@snd _ _) tight_bounds_multiplier) in
+             let tight_bounds_multiplier : tight_upperbound_fraction_opt := tight_bounds_multiplier in
+             match get_num_limbs s c machine_wordsize n, n with
+             | None, NumLimbs n => inr ["Internal error: get_num_limbs (on (" ++ PowersOfTwo.show_Z false s ++ ", " ++ show_c false c ++ ", " ++ show false (machine_wordsize:Z) ++ ", " ++ show false n ++ ")) returned None even though the argument was NumLimbs"]
+             | None, Auto idx => inr ["Invalid index " ++ show false idx ++ " when guessing the number of limbs for s-c = " ++ PowersOfTwo.show_Z false s ++ " - " ++ show_c false c ++ "; valid indices must index into the list " ++ show false (get_possible_limbs s c machine_wordsize) ++ "."]
+             | Some n, _
+               => inl
+                    ((str_n, str_sc, str_tight_bounds_multiplier, show_requests),
+                     (n, s, c, tight_bounds_multiplier, requests))
              end;
 
-          extract_known_args :=
-            fun '(n, machine_wordsize, s, c, requests)
-            => machine_wordsize;
-
           show_lines_args :=
-            fun '((str_n, str_machine_wordsize, str_sc, show_requests),
-                  (n, machine_wordsize, s, c, requests))
+            fun '((str_n, str_sc, str_tight_bounds_multiplier, show_requests),
+                  (n, s, c, tight_bounds_multiplier, requests))
             => ["requested operations: " ++ show_requests;
-                  "n = " ++ show false n ++ " (from """ ++ str_n ++ """)";
-                  "s-c = " ++ PowersOfTwo.show_Z false s ++ " - " ++ show_c false c ++ " (from """ ++ str_sc ++ """)";
-                  "machine_wordsize = " ++ show false machine_wordsize ++ " (from """ ++ str_machine_wordsize ++ """)"]%string;
-
-          pipeline_usage_string := "n s-c machine_wordsize [function_to_synthesize*]";
-
-          help_lines := [n_help;
-                           sc_help;
-                           machine_wordsize_help;
-                           function_to_synthesize_help UnsaturatedSolinas.valid_names];
+               "n = " ++ show false n ++ " (from """ ++ str_n ++ """)";
+               "s-c = " ++ PowersOfTwo.show_Z false s ++ " - " ++ show_c false c ++ " (from """ ++ str_sc ++ """)";
+               "tight_bounds_multiplier = " ++ show false (tight_bounds_multiplier:Q) ++ " (from """ ++ str_tight_bounds_multiplier ++ """)"]%string;
 
           Synthesize
-          := fun _ opts '(n, machine_wordsize, s, c, requests) comment_header prefix
-             => UnsaturatedSolinas.Synthesize n s c machine_wordsize comment_header prefix requests
+          := fun _ opts '(n, s, c, tight_bounds_multiplier, requests) comment_header prefix
+             => UnsaturatedSolinas.Synthesize n s c machine_wordsize comment_header prefix requests;
         }.
 
     Definition PipelineMain
@@ -640,49 +557,33 @@ Module ForExtraction.
   Module WordByWordMontgomery.
     Local Instance api : PipelineAPI
       := {
-          parse_args (args : list string)
-          := match args with
-             | m::machine_wordsize::requests
-               => let str_machine_wordsize := machine_wordsize in
-                  let str_m := m in
-                  let show_requests := match requests with nil => "(all)" | _ => String.concat ", " requests end in
-                  Some
-                    match parse_many [("machine_wordsize", machine_wordsize, parse_machine_wordsize machine_wordsize:Dyn);
-                                        ("m", m, parse_m m:Dyn)] with
-                    | inr errs => inr errs
-                    | inl (machine_wordsize, m)
-                      => inl ((str_machine_wordsize, str_m, show_requests),
-                              (machine_wordsize, m, requests))
-                    end
-             | _ => None
-             end;
+          spec :=
+            {| Arg.named_args := []
+               ; Arg.anon_args := [m_spec]
+               ; Arg.anon_opt_args := []
+               ; Arg.anon_opt_repeated_arg := Some (function_to_synthesize_spec WordByWordMontgomery.valid_names) |};
 
-          extract_known_args :=
-            fun '(machine_wordsize, m, requests)
-            => machine_wordsize;
+          parse_args opts args
+          := let '(tt, (str_m, m), tt, requests) := args in
+             let show_requests := match requests with nil => "(all)" | _ => String.concat ", " requests end in
+             inl ((str_m, show_requests),
+                  (m, requests));
 
           show_lines_args :=
-            fun '((str_machine_wordsize, str_m, show_requests),
-                  (machine_wordsize, m, requests))
+            fun '((str_m, show_requests),
+                  (m, requests))
             => ["requested operations: " ++ show_requests;
-                  "m = " ++ Hex.show_Z false m ++ " (from """ ++ str_m ++ """)";
-                  "machine_wordsize = " ++ show false machine_wordsize ++ " (from """ ++ str_machine_wordsize ++ """)";
-                  "                                                                  ";
-                  "NOTE: In addition to the bounds specified above each function, all";
-                  "  functions synthesized for this Montgomery arithmetic require the";
-                  "  input to be strictly less than the prime modulus (m), and also  ";
-                  "  require the input to be in the unique saturated representation. ";
-                  "  All functions also ensure that these two properties are true of ";
-                  "  return values.                                                  "];
-
-          pipeline_usage_string := "m machine_wordsize [function_to_synthesize*]";
-
-          help_lines := [m_help;
-                           machine_wordsize_help;
-                           function_to_synthesize_help WordByWordMontgomery.valid_names];
+               "m = " ++ Hex.show_Z false m ++ " (from """ ++ str_m ++ """)";
+               "                                                                  ";
+               "NOTE: In addition to the bounds specified above each function, all";
+               "  functions synthesized for this Montgomery arithmetic require the";
+               "  input to be strictly less than the prime modulus (m), and also  ";
+               "  require the input to be in the unique saturated representation. ";
+               "  All functions also ensure that these two properties are true of ";
+               "  return values.                                                  "];
 
           Synthesize
-          := fun _ opts '(machine_wordsize, m, requests) comment_header prefix
+          := fun _ opts '(m, requests) comment_header prefix
              => WordByWordMontgomery.Synthesize m machine_wordsize comment_header prefix requests
         }.
 
@@ -699,42 +600,26 @@ Module ForExtraction.
   Module SaturatedSolinas.
     Local Instance api : PipelineAPI
       := {
-          parse_args (args : list string)
-          := match args with
-             | sc::machine_wordsize::requests
-               => let str_machine_wordsize := machine_wordsize in
-                  let str_sc := sc in
-                  let show_requests := match requests with nil => "(all)" | _ => String.concat ", " requests end in
-                  Some
-                    match parse_many [("machine_wordsize", machine_wordsize, parse_machine_wordsize machine_wordsize:Dyn)
-                                      ; ("s-c", sc, parse_sc sc:Dyn)] with
-                    | inr errs => inr errs
-                    | inl (machine_wordsize, (s, c))
-                      => inl ((str_machine_wordsize, str_sc, show_requests),
-                              (machine_wordsize, s, c, requests))
-                    end
-             | _ => None
-             end;
+          spec :=
+            {| Arg.named_args := []
+               ; Arg.anon_args := [sc_spec]
+               ; Arg.anon_opt_args := []
+               ; Arg.anon_opt_repeated_arg := Some (function_to_synthesize_spec SaturatedSolinas.valid_names) |};
 
-          extract_known_args :=
-            fun '(machine_wordsize, s, c, requests)
-            => machine_wordsize;
+          parse_args opts args
+          := let '(tt, (str_sc, (s, c)), tt, requests) := args in
+             let show_requests := match requests with nil => "(all)" | _ => String.concat ", " requests end in
+             inl ((str_sc, show_requests),
+                  (s, c, requests));
 
           show_lines_args :=
-            fun '((str_machine_wordsize, str_sc, show_requests),
-                  (machine_wordsize, s, c, requests))
+            fun '((str_sc, show_requests),
+                  (s, c, requests))
             => ["requested operations: " ++ show_requests;
-                  "s-c = " ++ PowersOfTwo.show_Z false s ++ " - " ++ show_c false c ++ " (from """ ++ str_sc ++ """)";
-                  "machine_wordsize = " ++ show false machine_wordsize ++ " (from """ ++ str_machine_wordsize ++ """)"];
-
-          pipeline_usage_string := "s-c machine_wordsize [function_to_synthesize*]";
-
-          help_lines := [sc_help;
-                           machine_wordsize_help;
-                           function_to_synthesize_help SaturatedSolinas.valid_names];
+               "s-c = " ++ PowersOfTwo.show_Z false s ++ " - " ++ show_c false c ++ " (from """ ++ str_sc ++ """)"];
 
           Synthesize
-          := fun _ opts '(machine_wordsize, s, c, requests) comment_header prefix
+          := fun _ opts '(s, c, requests) comment_header prefix
              => SaturatedSolinas.Synthesize s c machine_wordsize comment_header prefix requests
         }.
 
@@ -751,82 +636,59 @@ Module ForExtraction.
   Module BaseConversion.
     Local Instance api : PipelineAPI
       := {
-          parse_args (args : list string)
-          := let '(args, inbounds_multiplier) := argv_to_single_startswith_opt_and_argv "--inbounds-multiplier=" args in
-             let '(args, outbounds_multiplier) := argv_to_single_startswith_opt_and_argv "--outbounds-multiplier=" args in
-             let '(args, inbounds) := argv_to_single_startswith_opt_and_argv "--inbounds=" args in
-             let '(args, outbounds) := argv_to_single_startswith_opt_and_argv "--outbounds=" args in
-             let '(args, use_bitwidth_in) := argv_to_contains_opt_and_argv "--use-bitwidth-in" args in
-             let '(args, use_bitwidth_out) := argv_to_contains_opt_and_argv "--use-bitwidth-out" args in
-             let '(str_inbounds_multiplier, inbounds_multiplier) := parse_dirbounds_multiplier "in" inbounds_multiplier in
-             let '(str_outbounds_multiplier, outbounds_multiplier) := parse_dirbounds_multiplier "out" outbounds_multiplier in
-             let '(str_inbounds, inbounds) := parse_dirbounds "in" inbounds use_bitwidth_in in
-             let '(str_outbounds, outbounds) := parse_dirbounds "out" outbounds use_bitwidth_out in
-             match args with
-             | src_n::sc::src_limbwidth::dst_limbwidth::machine_wordsize::requests
-               => let str_src_n := src_n in
-                  let str_sc := sc in
-                  let str_src_limbwidth := src_limbwidth in
-                  let str_dst_limbwidth := dst_limbwidth in
-                  let str_machine_wordsize := machine_wordsize in
-                  let show_requests := match requests with nil => "(all)" | _ => String.concat ", " requests end in
-                  Some
-                    match join_errors
-                            (parse_many [("src_n", src_n, parse_src_n src_n:Dyn)
-                                         ; ("s-c", sc, parse_sc sc:Dyn)
-                                         ; ("src_limbwidth", src_limbwidth, parse_limbwidth src_limbwidth:Dyn)
-                                         ; ("dst_limbwidth", dst_limbwidth, parse_limbwidth dst_limbwidth:Dyn)
-                                         ; ("machine_wordsize", machine_wordsize, parse_machine_wordsize machine_wordsize:Dyn)])
-                            (join_errors
-                               (join_errors
-                                  inbounds_multiplier
-                                  outbounds_multiplier)
-                               (join_errors
-                                  inbounds
-                                  outbounds))
-                    with
-                    | inr errs => inr errs
-                    | inl ((src_n, (s, c), src_limbwidth, dst_limbwidth, machine_wordsize), ((inbounds_multiplier, outbounds_multiplier), (inbounds, outbounds)))
-                      => inl ((str_src_n, str_sc, str_src_limbwidth, str_dst_limbwidth, str_machine_wordsize, str_inbounds_multiplier, str_outbounds_multiplier, use_bitwidth_in, use_bitwidth_out, str_inbounds, str_outbounds, show_requests),
-                              (src_n, s, c, src_limbwidth, dst_limbwidth, machine_wordsize, inbounds_multiplier, outbounds_multiplier, inbounds, outbounds, requests))
-                    end
-             | _ => None
+          spec :=
+            {| Arg.named_args := [inbounds_multiplier_spec; outbounds_multiplier_spec; inbounds_spec; outbounds_spec; use_bitwidth_in_spec; use_bitwidth_out_spec]
+               ; Arg.anon_args := [src_n_spec; sc_spec; src_limbwidth_spec; dst_limbwidth_spec]
+               ; Arg.anon_opt_args := []
+               ; Arg.anon_opt_repeated_arg := Some (function_to_synthesize_spec BaseConversion.valid_names) |};
+
+          parse_args opts args
+          := let '((inbounds_multiplier, outbounds_multiplier, inbounds, outbounds, use_bitwidth_in, use_bitwidth_out),
+                   ((str_src_n, src_n), (str_sc, (s, c)), (str_src_limbwidth, src_limbwidth), (str_dst_limbwidth, dst_limbwidth)),
+                   tt,
+                   requests) := args in
+             let show_requests := match requests with nil => "(all)" | _ => String.concat ", " requests end in
+             let to_bool ls := (0 <? List.length ls)%nat in
+             let to_string_opt ls := List.nth_error (List.map (@snd _ _) ls) 0 in
+             let inbounds_multiplier := to_string_opt inbounds_multiplier in
+             let outbounds_multiplier := to_string_opt outbounds_multiplier in
+             let inbounds := to_string_opt inbounds in
+             let outbounds := to_string_opt outbounds in
+             let use_bitwidth_in := to_bool use_bitwidth_in in
+             let use_bitwidth_out := to_bool use_bitwidth_out in
+             let '(str_inbounds_multiplier, inbounds_multiplier) := parse_dirbounds_multiplier "in" (inl inbounds_multiplier) in
+             let '(str_outbounds_multiplier, outbounds_multiplier) := parse_dirbounds_multiplier "out" (inl outbounds_multiplier) in
+             let '(str_inbounds, inbounds) := parse_dirbounds "in" (inl inbounds) use_bitwidth_in in
+             let '(str_outbounds, outbounds) := parse_dirbounds "out" (inl outbounds) use_bitwidth_out in
+             match join_errors
+                     (join_errors
+                        inbounds_multiplier
+                        outbounds_multiplier)
+                     (join_errors
+                        inbounds
+                        outbounds)
+             with
+             | inr errs => inr errs
+             | inl ((inbounds_multiplier, outbounds_multiplier), (inbounds, outbounds))
+               => inl ((str_src_n, str_sc, str_src_limbwidth, str_dst_limbwidth, str_inbounds_multiplier, str_outbounds_multiplier, use_bitwidth_in, use_bitwidth_out, str_inbounds, str_outbounds, show_requests),
+                       (src_n, s, c, src_limbwidth, dst_limbwidth, inbounds_multiplier, outbounds_multiplier, inbounds, outbounds, requests))
              end;
 
-          extract_known_args :=
-            fun '(src_n, s, c, src_limbwidth, dst_limbwidth, machine_wordsize, inbounds_multiplier, outbounds_multiplier, inbounds, outbounds, requests)
-            => machine_wordsize;
-
           show_lines_args :=
-            fun '((str_src_n, str_sc, str_src_limbwidth, str_dst_limbwidth, str_machine_wordsize, str_inbounds_multiplier, str_outbounds_multiplier, use_bitwidth_in, use_bitwidth_out, str_inbounds, str_outbounds, show_requests),
-                  (src_n, s, c, src_limbwidth, dst_limbwidth, machine_wordsize, inbounds_multiplier, outbounds_multiplier, inbounds, outbounds, requests))
+            fun '((str_src_n, str_sc, str_src_limbwidth, str_dst_limbwidth, str_inbounds_multiplier, str_outbounds_multiplier, use_bitwidth_in, use_bitwidth_out, str_inbounds, str_outbounds, show_requests),
+                  (src_n, s, c, src_limbwidth, dst_limbwidth, inbounds_multiplier, outbounds_multiplier, inbounds, outbounds, requests))
             => ["requested operations: " ++ show_requests;
-                  "src_n = " ++ show false src_n ++ " (from """ ++ str_src_n ++ """)";
-                  "s-c = " ++ PowersOfTwo.show_Z false s ++ " - " ++ show_c false c ++ " (from """ ++ str_sc ++ """)";
-                  "src_limbwidth = " ++ show false src_limbwidth ++ " (from """ ++ str_src_limbwidth ++ """)";
-                  "dst_limbwidth = " ++ show false dst_limbwidth ++ " (from """ ++ str_dst_limbwidth ++ """)";
-                  "machine_wordsize = " ++ show false machine_wordsize ++ " (from """ ++ str_machine_wordsize ++ """)";
-                  "inbounds_multiplier = " ++ show false inbounds_multiplier ++ " (from """ ++ str_inbounds_multiplier ++ """)";
-                  "outbounds_multiplier = " ++ show false outbounds_multiplier ++ " (from """ ++ str_outbounds_multiplier ++ """)";
-                  "inbounds = " ++ show false inbounds ++ " (from """ ++ str_inbounds ++ """ and use_bithwidth_in = " ++ show false use_bitwidth_in ++ ")";
-                  "outbounds = " ++ show false outbounds ++ " (from """ ++ str_outbounds ++ """ and use_bithwidth_out = " ++ show false use_bitwidth_out ++ ")"];
-
-          pipeline_usage_string := "src_n s-c src_limbwidth dst_limbwidth machine_wordsize [--inbounds-multipler=inbounds_multiplier] [--outbounds-multiplier=outbounds_multiplier] [--inbounds=inbounds] [--outbounds=outbounds] " ++ optional_options_to_usage [use_bitwidth_in_and_help; use_bitwidth_out_and_help] ++ " [function_to_synthesize*]";
-
-          help_lines := [src_n_help;
-                           src_limbwidth_help;
-                           dst_limbwidth_help;
-                           machine_wordsize_help;
-                           inbounds_multiplier_help;
-                           outbounds_multiplier_help;
-                           to_help use_bitwidth_in_and_help;
-                           to_help use_bitwidth_out_and_help;
-                           inbounds_help;
-                           outbounds_help;
-                           function_to_synthesize_help BaseConversion.valid_names];
+               "src_n = " ++ show false src_n ++ " (from """ ++ str_src_n ++ """)";
+               "s-c = " ++ PowersOfTwo.show_Z false s ++ " - " ++ show_c false c ++ " (from """ ++ str_sc ++ """)";
+               "src_limbwidth = " ++ show false src_limbwidth ++ " (from """ ++ str_src_limbwidth ++ """)";
+               "dst_limbwidth = " ++ show false dst_limbwidth ++ " (from """ ++ str_dst_limbwidth ++ """)";
+               "inbounds_multiplier = " ++ show false inbounds_multiplier ++ " (from """ ++ str_inbounds_multiplier ++ """)";
+               "outbounds_multiplier = " ++ show false outbounds_multiplier ++ " (from """ ++ str_outbounds_multiplier ++ """)";
+               "inbounds = " ++ show false inbounds ++ " (from """ ++ str_inbounds ++ """ and use_bithwidth_in = " ++ show false use_bitwidth_in ++ ")";
+               "outbounds = " ++ show false outbounds ++ " (from """ ++ str_outbounds ++ """ and use_bithwidth_out = " ++ show false use_bitwidth_out ++ ")"];
 
           Synthesize
-          := fun _ opts '(src_n, s, c, src_limbwidth, dst_limbwidth, machine_wordsize, inbounds_multiplier, outbounds_multiplier, inbounds, outbounds, requests) comment_header prefix
+          := fun _ opts '(src_n, s, c, src_limbwidth, dst_limbwidth, inbounds_multiplier, outbounds_multiplier, inbounds, outbounds, requests) comment_header prefix
              => BaseConversion.Synthesize s c src_n src_limbwidth dst_limbwidth machine_wordsize inbounds_multiplier outbounds_multiplier inbounds outbounds comment_header prefix requests
         }.
 

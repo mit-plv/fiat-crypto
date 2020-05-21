@@ -60,12 +60,12 @@ Passing no arguments, or passing `-h` or `--help` (or any other invalid argument
 Here are some examples of ways to invoke the binaries (from the directories that they live in):
 
     # Generate code for 2^255-19
-    ./unsaturated_solinas '25519' '5' '2^255 - 19' '64' carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes > curve25519_64.c
-    ./unsaturated_solinas '25519' '10' '2^255 - 19' '32' carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes > curve25519_32.c
+    ./unsaturated_solinas '25519' '64' '5' '2^255 - 19' carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes > curve25519_64.c
+    ./unsaturated_solinas '25519' '32' '10' '2^255 - 19' carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes > curve25519_32.c
 
     # Generate code for NIST-P256 (2^256 - 2^224 + 2^192 + 2^96 - 1)
-    ./word_by_word_montgomery 'p256' '2^256 - 2^224 + 2^192 + 2^96 - 1' '32' > p256_32.c
-    ./word_by_word_montgomery 'p256' '2^256 - 2^224 + 2^192 + 2^96 - 1' '64' > p256_64.c
+    ./word_by_word_montgomery 'p256' '32' '2^256 - 2^224 + 2^192 + 2^96 - 1' > p256_32.c
+    ./word_by_word_montgomery 'p256' '64' '2^256 - 2^224 + 2^192 + 2^96 - 1' > p256_64.c
 
 You can find more examples in the `Makefile`.
 
@@ -100,16 +100,16 @@ Passing no arguments, or passing `-h` or `--help` (or any other invalid argument
 Here are some examples of ways to invoke the binaries (from the directories that they live in):
 
     # Generate code for 2^255-19
-    ./bedrock2_unsaturated_solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select '25519' '5' '2^255 - 19' '64' carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes > curve25519_64.c
-    ./bedrock2_unsaturated_solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select '25519' '10' '2^255 - 19' '32' carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes > curve25519_32.c
+    ./bedrock2_unsaturated_solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select '25519' '64' '5' '2^255 - 19' carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes > curve25519_64.c
+    ./bedrock2_unsaturated_solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select '25519' '32' '10' '2^255 - 19' carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes > curve25519_32.c
 
     # Generate code for NIST-P256 (2^256 - 2^224 + 2^192 + 2^96 - 1)
-    ./bedrock2_word_by_word_montgomery --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'p256' '2^256 - 2^224 + 2^192 + 2^96 - 1' '32' > p256_32.c
-    ./bedrock2_word_by_word_montgomery --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'p256' '2^256 - 2^224 + 2^192 + 2^96 - 1' '64' > p256_64.c
+    ./bedrock2_word_by_word_montgomery --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'p256' '32' '2^256 - 2^224 + 2^192 + 2^96 - 1' > p256_32.c
+    ./bedrock2_word_by_word_montgomery --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'p256' '64' '2^256 - 2^224 + 2^192 + 2^96 - 1' > p256_64.c
 
     # Generate code for 2^130 - 5
-    ./bedrock2_unsaturated_solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'poly1305' '3' '2^130 - 5' '64' > poly1305_64.c
-    ./bedrock2_unsaturated_solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'poly1305' '5' '2^130 - 5' '32' > poly1305_32.c
+    ./bedrock2_unsaturated_solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'poly1305' '64' '3' '2^130 - 5' > poly1305_64.c
+    ./bedrock2_unsaturated_solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'poly1305' '32' '5' '2^130 - 5' > poly1305_32.c
 
 You can find more examples in the `Makefile`.
 

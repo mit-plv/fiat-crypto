@@ -5,6 +5,7 @@ Require Import coqutil.Word.Interface.
 Require Import bedrock2.Syntax.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.BoundsPipeline.
+Require Import Crypto.UnsaturatedSolinasHeuristics.
 Require Crypto.Util.Strings.Decimal.
 Require Import Crypto.Util.Strings.String.
 
@@ -30,6 +31,7 @@ Global Instance widen_bytes : widen_bytes_opt := true.
 Global Instance only_signed : only_signed_opt := false.
 (* Rewrite selects into expressions that don't require cmov *)
 Global Instance no_select : no_select_opt := true.
+Global Instance tight_upperbound_fraction : tight_upperbound_fraction_opt := default_tight_upperbound_fraction.
 
 (* bedrock2 backend parameters *)
 Global Existing Instances Types.rep.Z Types.rep.listZ_mem.

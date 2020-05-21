@@ -17,8 +17,13 @@ Local Coercion Z.of_nat : nat >-> Z.
 Local Coercion QArith_base.inject_Z : Z >-> Q.
 Local Coercion Z.pos : positive >-> Z.
 
+(** The fraction by which to multiply upper bounds *)
+Class tight_upperbound_fraction_opt := tight_upperbound_fraction : Q.
+Typeclasses Opaque tight_upperbound_fraction_opt.
+
 Section __.
-  Context (n : nat)
+  Context {tight_upperbound_fraction : tight_upperbound_fraction_opt}
+          (n : nat)
           (s : Z)
           (c : list (Z * Z))
           (machine_wordsize : Z).
@@ -54,7 +59,7 @@ else:
          List.map Z.to_nat (starts ++ chain2 ++ chain3)
        else (List.seq 0 n ++ [0; 1])%list%nat.
 
-  Definition tight_upperbound_fraction : Q := (11/10)%Q.
+  Definition default_tight_upperbound_fraction : Q := (11/10)%Q.
   Definition loose_upperbound_extra_multiplicand : Z := 3.
   Definition prime_upperbound_list : list Z
     := encode_no_reduce (weight (Qnum limbwidth) (Qden limbwidth)) n (s-1).
@@ -93,7 +98,8 @@ End __.
 Inductive MaybeLimbCount := NumLimbs (n : nat) | Auto (idx : nat).
 
 Section ___.
-  Context (s : Z)
+  Context {tight_upperbound_fraction : tight_upperbound_fraction_opt}
+          (s : Z)
           (c : list (Z * Z))
           (machine_wordsize : Z).
   (** given a parsed prime, pick out all plausible numbers of (unsaturated) limbs *)
