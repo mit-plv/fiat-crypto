@@ -159,6 +159,7 @@ src/Stringification/IR.v
 src/Stringification/Java.v
 src/Stringification/Language.v
 src/Stringification/Rust.v
+src/UnsaturatedSolinasHeuristics/Tests.v
 src/Util/AdditionChainExponentiation.v
 src/Util/Arg.v
 src/Util/AutoRewrite.v

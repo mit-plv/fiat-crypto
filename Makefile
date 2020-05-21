@@ -179,7 +179,8 @@ JAVA_EXTRA_ARGS_32  := $(JAVA_EXTRA_ARGS_ALL)
 
 OUTPUT_VOS := \
 	src/Fancy/Montgomery256.vo \
-	src/Fancy/Barrett256.vo
+	src/Fancy/Barrett256.vo \
+	src/UnsaturatedSolinasHeuristics/Tests.vo
 
 OUTPUT_PREOUTS := \
 	Crypto.Fancy.Montgomery256.Prod.MontRed256 \
@@ -189,7 +190,8 @@ OUTPUT_PREOUTS := \
 	Crypto.Fancy.Barrett256.Prod.MulMod \
 	Crypto.Fancy.Barrett256.prod_barrett_red256_correct \
 	Crypto.Fancy.Barrett256.prod_barrett_red256_correct.Assumptions \
-	Crypto.Fancy.Barrett256.barrett_red256
+	Crypto.Fancy.Barrett256.barrett_red256 \
+	Crypto.UnsaturatedSolinasHeuristics.Tests.get_possible_limbs
 
 CHECK_OUTPUTS := $(addprefix check-,$(OUTPUT_PREOUTS))
 ACCEPT_OUTPUTS := $(addprefix accept-,$(OUTPUT_PREOUTS))
