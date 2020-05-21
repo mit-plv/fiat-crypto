@@ -11,8 +11,8 @@ Require Import Crypto.AbstractInterpretation.AbstractInterpretation.
 Require Import Crypto.PushButtonSynthesis.UnsaturatedSolinas.
 Require Import Crypto.Bedrock.Defaults.
 Require Import Crypto.Bedrock.SelectParameters.
-Require Import Crypto.Bedrock.UnsaturatedSolinas.
 Require Import Crypto.Bedrock.VarnameGenerator.
+Require Import Crypto.Bedrock.Interfaces.UnsaturatedSolinas.
 Require Import Crypto.Bedrock.Proofs.ValidComputable.Func.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Local Open Scope Z_scope.
