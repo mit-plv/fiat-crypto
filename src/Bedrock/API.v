@@ -13,6 +13,7 @@ Require Import Crypto.Bedrock.Names.VarnameGenerator.
 Require Import Crypto.Bedrock.Parameters.Defaults.
 Require Import Crypto.Bedrock.Parameters.SelectParameters.
 Require Import Crypto.Bedrock.Interfaces.UnsaturatedSolinas.
+Require Import Crypto.Bedrock.Interfaces.Operation.
 Require Import Crypto.Bedrock.Proofs.ValidComputable.Func.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Local Open Scope Z_scope.
@@ -53,7 +54,6 @@ Local Notation make_bedrock_func :=
   (@make_bedrock_func _ default_inname_gen default_outname_gen).
 Local Notation make_bedrock_func_with_sizes :=
   (@make_bedrock_func_with_sizes _ default_inname_gen default_outname_gen).
-About operation.
 
 Record reified_op {p t}
        (op : operation t)
@@ -332,7 +332,7 @@ Module Test.
     repeat straightline.
 
     lazymatch goal with
-      H : postcondition _ _ _ ?out |- _ =>
+      H : postcondition _ _ ?out |- _ =>
       cbn [fst snd postcondition UnsaturatedSolinas.carry_mul] in H;
         repeat specialize (H ltac:(assumption)); cleanup
     end.
@@ -345,7 +345,7 @@ Module Test.
 
     repeat straightline.
     lazymatch goal with
-      H : postcondition _ _ _ ?out |- _ =>
+      H : postcondition _ _ ?out |- _ =>
       cbn [fst snd postcondition UnsaturatedSolinas.carry_mul] in H;
         specialize (H ltac:(apply relax_correct; assumption));
         specialize (H ltac:(assumption)); cleanup
