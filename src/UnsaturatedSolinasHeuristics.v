@@ -103,14 +103,11 @@ Section ___.
           (c : list (Z * Z))
           (machine_wordsize : Z).
   (** given a parsed prime, pick out all plausible numbers of (unsaturated) limbs *)
-  (** we want to leave enough bits unused to do a full solinas
-      reduction without carrying; the number of bits necessary is the
-      sum of the bits in the negative coefficients of p (other than
-      the most significant digit), i.e., in the positive coefficients
-      of c *)
+  (** an unsaturated implementation will necessarily need at least as many limbs
+      as a saturated one, so search starting there *)
   Let num_bits_p := Z.log2_up s.
-  Let unused_bits := sum (map (fun t => Z.log2_up (fst t)) c).
-  Let min_limbs := Z.to_nat (Qceiling (num_bits_p / (machine_wordsize - unused_bits))).
+  Let nlimbs_saturated := Z.to_nat (Qceiling (num_bits_p / machine_wordsize)).
+  Let min_limbs := nlimbs_saturated.
   (* don't search past 2x as many limbs as saturated representation; that's just wasteful *)
   Let result := filter (fun n => overflow_free n s c machine_wordsize) (seq min_limbs min_limbs).
   Definition get_possible_limbs : list nat
