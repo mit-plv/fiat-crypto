@@ -991,6 +991,19 @@ Section Words.
     induction x; intros; cbn [map]; constructor;
       auto using word.unsigned_range.
   Qed.
+
+  Lemma Forall_word_unsigned_within_access_size x :
+    (width mod 8 = 0)%Z ->
+    Forall
+      (fun z : Z =>
+         0 <= z < 2 ^ (Z.of_nat (Memory.bytes_per (width:=width) access_size.word) * 8))%Z
+      (map word.unsigned x).
+  Proof.
+    intros.
+    eapply Forall_impl; [ | apply Forall_map_unsigned ].
+      cbv beta; intros.
+    rewrite bits_per_word_eq_width by auto; lia.
+  Qed.
 End Words.
 
 (* These lemmas should be moved to bedrock2, not coqutil *)

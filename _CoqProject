@@ -74,6 +74,8 @@ src/Bedrock/Types.v
 src/Bedrock/UnsaturatedSolinas.v
 src/Bedrock/Util.v
 src/Bedrock/VarnameGenerator.v
+src/Bedrock/Interfaces/Tactics.v
+src/Bedrock/Interfaces/Operation.v
 src/Bedrock/Proofs/Cmd.v
 src/Bedrock/Proofs/Expr.v
 src/Bedrock/Proofs/Flatten.v
