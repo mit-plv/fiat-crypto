@@ -843,39 +843,24 @@ Section __.
       use_translate_func_correct Rin Rout arg_ptrs out_ptrs;
       solve_translate_func_subgoals;
       [ exists_arg_pointers; canonicalize_arrays; ecancel_assumption
-      | setup_lists_reserved ].
+      | setup_lists_reserved; solve_lists_reserved out_ptrs ].
 
     Lemma carry_mul_correct :
       is_correct
         (UnsaturatedSolinas.carry_mul n s c Semantics.width)
         carry_mul spec_of_carry_mul.
-    Proof.
-      setup.
-      prove_is_correct Ra Rr.
-      let out_ptrs := constr:([pout]) in
-      solve_lists_reserved out_ptrs.
-    Qed.
+    Proof. setup; prove_is_correct Ra Rr. Qed.
 
     Lemma add_correct :
       is_correct
         (UnsaturatedSolinas.add n s c Semantics.width)
         add spec_of_add.
-    Proof.
-      setup.
-      prove_is_correct Ra Rr.
-      let out_ptrs := constr:([pout]) in
-      solve_lists_reserved out_ptrs.
-    Qed.
+    Proof. setup; prove_is_correct Ra Rr. Qed.
 
     Lemma to_bytes_correct :
       is_correct
         (UnsaturatedSolinas.to_bytes n s c Semantics.width)
         to_bytes spec_of_to_bytes.
-    Proof.
-      setup.
-      prove_is_correct Ra Rr.
-      let out_ptrs := constr:([pout]) in
-      solve_lists_reserved out_ptrs.
-    Qed.
+    Proof. setup; prove_is_correct Ra Rr. Qed.
   End Proofs.
 End __.
