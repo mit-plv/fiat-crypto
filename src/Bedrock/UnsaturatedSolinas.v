@@ -29,15 +29,15 @@ Require Import Crypto.Bedrock.Util.
 Require Import Crypto.Bedrock.VarnameGenerator.
 Require Import Crypto.Bedrock.Proofs.Func.
 Require Import Crypto.Bedrock.Translation.Func.
+Require Import Crypto.Bedrock.Interfaces.Tactics.
+Require Import Crypto.Bedrock.Interfaces.Operation.
 Require Import Crypto.COperationSpecifications.
 Require Import Crypto.PushButtonSynthesis.UnsaturatedSolinas.
 Require Import Crypto.Util.ListUtil.
-Require Import Crypto.Util.ZUtil.Modulo.
 Require Import Crypto.Language.API.
 Require Import Coq.Lists.List. (* after SeparationLogic *)
 
-Import Language.Compilers.
-Import Types Types.Notations.
+Import Types.
 Existing Instances rep.Z rep.listZ_mem.
 
 Import Language.Compilers.
@@ -48,17 +48,44 @@ Require Import Crypto.Util.Notations.
 Import Types.Notations ListNotations.
 Import QArith_base.
 Local Open Scope Z_scope.
-Local Open Scope string_scope.
 
 Local Coercion Z.of_nat : nat >-> Z.
 Local Coercion inject_Z : Z >-> Q.
 Local Coercion Z.pos : positive >-> Z.
+
+Ltac apply_correctness_in H :=
+  match type of H with
+  | context [UnsaturatedSolinas.carry_mul] =>
+    apply UnsaturatedSolinas.carry_mul_correct in H
+  | context [UnsaturatedSolinas.add] =>
+    apply UnsaturatedSolinas.add_correct in H
+  | context [UnsaturatedSolinas.sub] =>
+    apply UnsaturatedSolinas.sub_correct in H
+  | context [UnsaturatedSolinas.opp] =>
+    apply UnsaturatedSolinas.opp_correct in H
+  | context [UnsaturatedSolinas.carry] =>
+    apply UnsaturatedSolinas.carry_correct in H
+  | context [UnsaturatedSolinas.encode] =>
+    apply UnsaturatedSolinas.encode_correct in H
+  | context [UnsaturatedSolinas.zero] =>
+    apply UnsaturatedSolinas.zero_correct in H
+  | context [UnsaturatedSolinas.one] =>
+    apply UnsaturatedSolinas.one_correct in H
+  | context [UnsaturatedSolinas.to_bytes] =>
+    apply UnsaturatedSolinas.to_bytes_correct in H
+  | context [UnsaturatedSolinas.from_bytes] =>
+    apply UnsaturatedSolinas.from_bytes_correct in H
+  end.
 
 Section __.
   Context {p : Types.parameters}
           {inname_gen outname_gen : nat -> string}
           (n : nat) (s : Z) (c : list (Z * Z)).
   Context (carry_mul_name add_name to_bytes_name : string).
+  Local Notation make_bedrock_func :=
+    (@make_bedrock_func p inname_gen outname_gen).
+  Local Notation is_correct :=
+    (@is_correct p inname_gen outname_gen).
   Local Notation loose_bounds := (UnsaturatedSolinas.loose_bounds n s c).
   Local Notation tight_bounds := (UnsaturatedSolinas.tight_bounds n s c).
   Local Notation M := (s - Associational.eval c)%Z.
@@ -79,76 +106,12 @@ Section __.
     map (fun v : Z => Some {| ZRange.lower := 0; ZRange.upper := v |})
         prime_bytes_upperbound_list.
 
-  (* convenience notation for readability *)
-  Local Notation foreach_arg F t :=
-    (type.for_each_lhs_of_arrow F t) (only parsing).
-  Local Notation foreach_ret F t :=
-    (F (type.base (type.final_codomain t))) (only parsing).
-
-  Definition make_bedrock_func_with_sizes
-             {t} insizes outsizes inlengths (res : API.Expr t)
-    : list string * list string * cmd.cmd :=
-    fst (translate_func res
-                        (make_innames (inname_gen:=inname_gen) _)
-                        inlengths insizes
-                        (make_outnames (outname_gen:=outname_gen) _)
-                        outsizes).
-
-  Record operation (t : API.type) :=
-    { name : string;
-      inbounds : foreach_arg ZRange.type.option.interp t;
-      input_array_sizes : foreach_arg access_sizes t;
-      output_array_sizes : foreach_ret access_sizes t;
-      input_array_lengths : foreach_arg list_lengths t;
-      output_array_lengths : foreach_ret list_lengths t;
-      pipeline_out : Pipeline.ErrorT (API.Expr t);
-      postcondition : foreach_arg API.interp_type t
-                      -> foreach_ret API.interp_type t -> Prop;
-      check_args_ok : Prop;
-      correctness :
-        check_args_ok ->
-        forall res,
-          pipeline_out = ErrorT.Success res ->
-          forall args,
-            postcondition args (type.app_curried (API.Interp res) args)
-    }.
-  Arguments name {_}.
-  Arguments inbounds {_}.
-  Arguments input_array_sizes {_}.
-  Arguments output_array_sizes {_}.
-  Arguments input_array_lengths {_}.
-  Arguments output_array_lengths {_}.
-  Arguments pipeline_out {_}.
-  Arguments postcondition {_}.
-  Arguments check_args_ok {_}.
-  Arguments correctness {_}.
-
-  Definition make_bedrock_func
-             {t} (op : operation t) (res : API.Expr t)
-    : bedrock_func :=
-    (op.(name), make_bedrock_func_with_sizes
-                  (op.(input_array_sizes)) (op.(output_array_sizes))
-                  (op.(input_array_lengths)) res).
-
   Ltac select_access_size bounds :=
     lazymatch bounds with
     | Some loose_bounds => constr:(access_size.word)
     | Some tight_bounds => constr:(access_size.word)
     | Some prime_bytes_bounds => constr:(access_size.one)
     | ?b => fail "unable to select access size for bound " b
-    end.
-
-  Ltac sizes_from_bounds bounds :=
-    lazymatch bounds with
-    | (?a, ?b) =>
-      let x := sizes_from_bounds a in
-      let y := sizes_from_bounds b in
-      constr:((x, y))
-    | tt => constr:(tt)
-    | ?b => lazymatch type of b with
-            | option (list _) => select_access_size b
-            | _ => constr:(tt)
-            end
     end.
 
   Ltac select_length bounds :=
@@ -159,78 +122,8 @@ Section __.
     | ?b => fail "unable to select array length for bound " b
     end.
 
-  Ltac lengths_from_bounds bounds :=
-    lazymatch bounds with
-    | (?a, ?b) =>
-      let x := lengths_from_bounds a in
-      let y := lengths_from_bounds b in
-      constr:((x, y))
-    | tt => constr:(tt)
-    | ?b => lazymatch type of b with
-            | option (list _) => select_length b
-            | _ => constr:(tt)
-            end
-    end.
-
-  Ltac apply_correctness_in H :=
-    match type of H with
-    | context [UnsaturatedSolinas.carry_mul] =>
-      apply UnsaturatedSolinas.carry_mul_correct in H
-    | context [UnsaturatedSolinas.add] =>
-      apply UnsaturatedSolinas.add_correct in H
-    | context [UnsaturatedSolinas.sub] =>
-      apply UnsaturatedSolinas.sub_correct in H
-    | context [UnsaturatedSolinas.opp] =>
-      apply UnsaturatedSolinas.opp_correct in H
-    | context [UnsaturatedSolinas.carry] =>
-      apply UnsaturatedSolinas.carry_correct in H
-    | context [UnsaturatedSolinas.encode] =>
-      apply UnsaturatedSolinas.encode_correct in H
-    | context [UnsaturatedSolinas.zero] =>
-      apply UnsaturatedSolinas.zero_correct in H
-    | context [UnsaturatedSolinas.one] =>
-      apply UnsaturatedSolinas.one_correct in H
-    | context [UnsaturatedSolinas.to_bytes] =>
-      apply UnsaturatedSolinas.to_bytes_correct in H
-    | context [UnsaturatedSolinas.from_bytes] =>
-      apply UnsaturatedSolinas.from_bytes_correct in H
-    end.
-  Ltac apply_correctness :=
-    match goal with H : _ = ErrorT.Success _ |- _ =>
-                    apply_correctness_in H;
-                    [ | assumption .. ]
-    end.
-
-  Ltac specialize_to_args Hcorrect :=
-    let A := fresh "A" in
-    let A' := fresh "A" in
-    match goal with
-      a : type.for_each_lhs_of_arrow API.interp_type _ |- _ =>
-      cbn in a; set (A:=a)
-    end;
-    repeat match type of A with
-             (?xt * ?yt)%type =>
-             specialize (Hcorrect (fst A));
-             set (A':=snd A); subst A;
-             rename A' into A
-           end;
-    subst A.
-
-  Ltac postcondition_from_correctness :=
-    cbn [type.app_curried API.interp_type
-                          Language.Compilers.base.interp
-                          Compilers.base_interp] in *;
-  lazymatch goal with
-  | Hcorrect : context [?res] |- ?post ?args ?res =>
-    let T := lazymatch type of Hcorrect with ?T => T end in
-    let F := lazymatch (eval pattern res in T) with
-               ?f _ => f end in
-    let F := lazymatch (eval pattern args in F) with
-               ?f _ => f end in
-    let H := fresh in
-    assert (F args res) as H by exact Hcorrect;
-      exact H
-  end.
+  Ltac sizes_from_bounds := map_bounds_listonly select_access_size.
+  Ltac lengths_from_bounds := map_bounds_listonly select_length.
 
   Ltac prove_operation_correctness :=
     intros;
@@ -414,44 +307,8 @@ Section __.
       rewrite length_loose_bounds in *. lia.
     Qed.
 
-    (* TODO: move *)
-    Lemma Forall_word_unsigned_within_access_size x :
-      Forall
-        (fun z : Z =>
-           0 <= z < 2 ^ (Z.of_nat (Memory.bytes_per (width:=Semantics.width) access_size.word) * 8))
-        (map word.unsigned x).
-    Proof.
-      eapply Forall_impl; [ | solve [apply Forall_map_unsigned] ];
-        cbv beta; intros.
-      rewrite bits_per_word_eq_width by auto using width_0mod_8; lia.
-    Qed.
-
-    Ltac crush_list_ptr_subgoals :=
-      repeat match goal with
-             | _ => progress cbn [hd tl]
-             | _ => progress cbv [WeakestPrecondition.literal]
-             | _ => rewrite word.of_Z_unsigned
-             | _ => rewrite map.get_put_diff by congruence
-             | _ => rewrite map.get_put_same by auto
-             | |- WeakestPrecondition.get _ _ _ => eexists
-             | _ => solve [apply Forall_word_unsigned_within_access_size]
-             | _ => solve [apply word.unsigned_range]
-             | _ => solve [auto using eval_bytes_range]
-             | _ => reflexivity
-             end.
-    Ltac exists_list_ptr p :=
-      exists p; sepsimpl; [ ];
-             eexists; sepsimpl;
-             [ solve [crush_list_ptr_subgoals] .. | ];
-             eexists; sepsimpl;
-             [ solve [crush_list_ptr_subgoals] .. | ].
-    Ltac next_argument :=
-      (exists 1%nat); sepsimpl; cbn [firstn skipn];
-      [ solve [eauto using firstn_length_le] | ].
-    Ltac prove_bounds_direct :=
-      match goal with
-      | H : _ |- _ => apply H; solve [auto]
-      end.
+    (* TODO: maybe make a generalized prove_bounds tactic that takes a list of
+    bounds? *)
     Ltac assert_bounds x :=
       match goal with
       | H: list_Z_bounded_by ?bs x |- _ => idtac
@@ -473,33 +330,15 @@ Section __.
                 apply relax_to_max_bounds; apply H ]
       end.
 
-    Context (check_args_ok :
-               check_args n s c Semantics.width (ErrorT.Success tt)
-               = ErrorT.Success tt).
-
-    Definition is_correct
-               {t : API.type}
-               (start : Pipeline.ErrorT (API.Expr t))
-               (op : operation t)
-               {name : string} (spec : spec_of name) : Prop :=
-      (forall res : API.Expr t,
-          start = ErrorT.Success res ->
-          expr.Wf3 res ->
-          valid_func (res (fun _ : API.type => unit)) ->
-          forall functions,
-            spec (make_bedrock_func op res :: functions)).
-
-    Definition list_lengths_ok {t}
-               (lengths : foreach_ret list_lengths t)
-               (out : foreach_ret API.interp_type t)
-      : Prop :=
-      LoadStoreList.list_lengths_from_value out = lengths.
-
     Ltac prove_output_length :=
       ssplit;
       match goal with
       | |- length _ = n =>
         apply bounded_by_loose_bounds_length; prove_bounds
+      | |- n = length _ =>
+        symmetry; prove_output_length
+      | |- n_bytes = length _ =>
+        symmetry; prove_output_length
       | H : postcondition ?op _ ?out |- length ?out = n_bytes =>
         erewrite <-Partition.length_partition;
         cbv [n_bytes limbwidth];
@@ -507,17 +346,6 @@ Section __.
         rewrite <-H by prove_bounds;
         reflexivity
       end.
-
-    Ltac assert_output_length :=
-      let out := lazymatch goal with
-                 | H : postcondition _ _ ?out |- _ => out end in
-      let op := lazymatch goal with
-                | H : postcondition ?op _ _ |- _ => op end in
-      assert (list_lengths_ok op.(output_array_lengths) out);
-      cbv [list_lengths_ok] in *;
-      cbn [LoadStoreList.list_lengths_from_value
-             type.final_codomain output_array_lengths op] in *;
-      [ prove_output_length | ].
 
     (* special for to_bytes, because bounds are not included in the
        postcondition *)
@@ -531,306 +359,20 @@ Section __.
       end.
 
     Ltac setup :=
-      match goal with
-        |- is_correct _ ?def ?spec =>
-        cbv [is_correct spec make_bedrock_func] in *; intros;
-        sepsimpl;
-        cbn [def name inbounds input_array_sizes output_array_sizes
-                 input_array_lengths output_array_lengths
-                 pipeline_out correctness] in *
-      end;
-      match goal with |- context [postcondition ?op ?args] =>
-                      let H := fresh in
-                      pose proof (correctness op) as H;
-                      repeat specialize (H ltac:(assumption));
-                      specialize (H args)
-      end; cleanup;
-      assert_output_length; try assert_to_bytes_bounds.
-
-    Ltac simplify_translate_func_postcondition :=
-      match goal with
-        H : context [sep _ _ ?m] |- context [_ ?m] =>
-        cbn - [Memory.bytes_per translate_func] in H
-      end;
-    sepsimpl_hyps.
-
-    Ltac find_input_array :=
-      match goal with
-      | H : postcondition ?op ?args ?x |- postcondition ?op ?args ?y =>
-        (* need to set args so the replace doesn't fire on them due to evar
-           silliness *)
-        let A := fresh in
-        set (A:=args);
-        replace y with x; [ exact H | ]; subst A
-      end;
-      repeat
-        first [ erewrite byte_map_unsigned_of_Z,
-                map_byte_wrap_bounded
-                by eauto using byte_bounds_range_iff
-              | congruence
-              | solve [eauto] ].
-
-    Ltac ssubst :=
-      repeat match goal with
-             | H : literal (word.unsigned _) (eq _) |- _ =>
-               inversion H as [H']; clear H;
-               rewrite word.of_Z_unsigned in H'
-             | H : word.unsigned _ = word.unsigned _ |- _ =>
-               apply word.unsigned_inj in H
-             end; subst.
-
-    Ltac map_simplify :=
-      repeat match goal with
-             | _ => rewrite map.get_put_diff by congruence
-             | _ => rewrite map.get_put_same
-             end.
-
-    Ltac type_simplify :=
-        cbv [expr.Interp] in *;
-        cbn [fst snd type.app_curried type.final_codomain
-                 Compilers.base_interp] in *.
-    Ltac lists_reserved_simplify :=
-      cbn [LoadStoreList.lists_reserved_with_initial_context
-             LoadStoreList.extract_listnames
-             LoadStoreList.lists_reserved
-             make_innames make_innames' make_outnames make_names
-             fst snd app type.final_codomain
-             base_rtype_of_ltype
-             rep.rtype_of_ltype rep.equiv rep.Z rep.listZ_mem
-             map.of_list_zip map.putmany_of_list_zip
-             Flatten.flatten_argnames Flatten.flatten_base_ltype
-             Flatten.flatten_listonly_base_ltype ]; type_simplify.
-    Ltac translator_simplify :=
-      cbn [fst snd type.final_codomain
-               LoadStoreList.list_lengths_from_args
-               LoadStoreList.list_lengths_from_value
-               LoadStoreList.access_sizes_good_args
-               LoadStoreList.base_access_sizes_good
-               LoadStoreList.access_sizes_good
-               LoadStoreList.base_access_sizes_good
-               LoadStoreList.within_access_sizes_args
-               LoadStoreList.within_base_access_sizes
-               equivalent_flat_args equivalent_flat_base
-               WeakestPrecondition.dexpr
-               WeakestPrecondition.expr
-               WeakestPrecondition.expr_body
-               rep.equiv rep.Z rep.listZ_mem ].
-    Ltac access_size_simplify :=
-      repeat match goal with
-             | H: context [Z.of_nat (Memory.bytes_per _)]
-               |- _ =>
-               first [ progress
-                         change (Z.of_nat
-                                   (Memory.bytes_per
-                                      (width:=Semantics.width)
-                                      access_size.one)) with 1 in H
-                     | progress
-                         change (Z.of_nat
-                                   (Memory.bytes_per
-                                      (width:=Semantics.width)
-                                      access_size.two)) with 2 in H
-                     | progress
-                         change (Z.of_nat
-                                   (Memory.bytes_per
-                                      (width:=Semantics.width)
-                                      access_size.four)) with 4 in H ]
-             | |- context [Z.of_nat (Memory.bytes_per _)] =>
-               first [ progress
-                         change (Z.of_nat
-                                   (Memory.bytes_per
-                                      (width:=Semantics.width)
-                                      access_size.one)) with 1
-                     | progress
-                         change (Z.of_nat
-                                   (Memory.bytes_per
-                                      (width:=Semantics.width)
-                                      access_size.two)) with 2
-                     | progress
-                         change (Z.of_nat
-                                   (Memory.bytes_per
-                                      (width:=Semantics.width)
-                                      access_size.four)) with 4 ]
-             end.
-
-    Ltac solve_translate_func_subgoals :=
-      auto using make_innames_varname_gen_disjoint,
-      make_outnames_varname_gen_disjoint,
-      make_innames_make_outnames_disjoint,
-      flatten_make_innames_NoDup, flatten_make_outnames_NoDup;
-      pose proof bits_per_word_eq_width width_0mod_8;
-      pose proof width_ge_8;
-      repeat match goal with
-             | _ => progress sepsimpl
-             | _ => progress translator_simplify
-             | _ => progress access_size_simplify
-             | |- context [expr.interp] => progress type_simplify
-             | _ => rewrite bounded_by_loose_bounds_length by prove_bounds
-             | |- Forall _ _ =>
-               eapply max_bounds_range_iff; solve [prove_bounds]
-             | |- Forall _ _ =>
-               eapply byte_bounds_range_iff; solve [prove_bounds]
-             | |- context [Z.le] => lia
-             | _ => reflexivity
-             end.
-
-    Ltac exists_arg_pointers :=
-      repeat match goal with
-             | H : sep _ _ ?m |- @Lift1Prop.ex1 nat _ _ ?m =>
-               match type of H with
-               | context [sep _ (_ ?p _)] =>
-                 next_argument; exists_list_ptr p
-               | context [sep (_ ?p _)] =>
-                 next_argument; exists_list_ptr p
-               end
-             end.
-
-    Ltac canonicalize_arrays :=
-      repeat match goal with
-             | _ => progress cbv [Bignum EncodedBignum] in *
-             | _ => progress access_size_simplify
-             | _ => seprewrite array_truncated_scalar_scalar_iff1
-             | _ => seprewrite array_truncated_scalar_ptsto_iff1
-             | H : sep _ _ ?m |- context [?m] =>
-               seprewrite_in array_truncated_scalar_scalar_iff1 H
-             | H : sep _ _ ?m |- context [?m] =>
-               seprewrite_in array_truncated_scalar_ptsto_iff1 H
-             | _ => rewrite <-@word_size_in_bytes_eq in * by eauto
-             | _ => rewrite byte_map_of_Z_unsigned by auto
-             end.
-
-    Ltac setup_lists_reserved :=
-      lists_reserved_simplify;
-      translator_simplify;
-      try match goal with
-          | H : context [map byte.unsigned ?bs] |- _ =>
-            assert (map byte.unsigned bs
-                    = map word.unsigned
-                          (map word.of_Z (map byte.unsigned bs)))
-              by (erewrite map_unsigned_of_Z, map_word_wrap_bounded;
-                  eauto using byte_unsigned_within_max_bounds)
-          end.
-
-    Ltac handle_lists_reserved :=
-        repeat match goal with
-               | _ => progress sepsimpl;
-                      auto using Forall_map_unsigned,
-                      Forall_map_byte_unsigned
-               | _ => rewrite bits_per_word_eq_width
-                   by auto using width_0mod_8
-               | _ => erewrite map_unsigned_of_Z,map_word_wrap_bounded
-                   by eauto using byte_unsigned_within_max_bounds
-               | |- WeakestPrecondition.get _ _ _ =>
-                 eexists; map_simplify; solve [eauto]
-               | _ => congruence
-               end.
-
-    Ltac post_sufficient :=
-        repeat intro;
-        simplify_translate_func_postcondition;
-        type_simplify;
-        repeat match goal with
-               | _ => progress ssplit; try congruence
-               | |- exists _, _ => eexists
-               | H : map word.unsigned _ = expr.interp _ _ _ |- _ =>
-                 rewrite <-H in *
-               | _ => progress sepsimpl;
-                        [ solve [find_input_array] .. | ]
-               end;
-        ssubst.
-
-    Ltac apply_translate_func_correct Rin Rout arg_ptrs out_array_ptrs :=
-      let a := lazymatch goal with
-               | H : postcondition _ ?args _ |- _ => args end in
-      eapply Proper_call;
-      [ | eapply translate_func_correct with
-              (Ra0:=Rin) (Rr0:=Rout) (out_ptrs:=out_array_ptrs)
-              (args:=a) (flat_args := arg_ptrs) ].
+      begin_proof;
+      assert_output_length prove_output_length;
+      try assert_to_bytes_bounds.
 
     Ltac use_translate_func_correct Rin Rout arg_ptrs out_array_ptrs :=
       apply_translate_func_correct Rin Rout arg_ptrs out_array_ptrs;
-      [ post_sufficient; canonicalize_arrays; ecancel_assumption
+      [ post_sufficient;
+        cbv [Bignum EncodedBignum] in *;
+        canonicalize_arrays; ecancel_assumption
       | .. ].
-
-    Ltac get_pointer wa :=
-      match goal with
-      | H : sep _ _ ?m |- context [?m] =>
-        match type of H with
-          context [_ ?pa wa] => constr:(pa)
-        end
-      | _ => fail "unable to find pointers for " wa
-      end.
-
-    Ltac get_value_of_pointer p :=
-      match goal with
-      | H : sep _ _ ?m |- context [?m] =>
-        match type of H with
-          context [_ p ?x] => constr:(x)
-        end
-      | _ => fail "unable to find value of pointer " p
-      end.
-
-    Ltac get_all_arg_pointers args :=
-      lazymatch args with
-      | (?a, ?b) =>
-        let x := get_all_arg_pointers a in
-        let y := get_all_arg_pointers b in
-        constr:((x :: y)%list)
-      | tt => constr:(@nil (Semantics.word))
-      | ?x =>
-        lazymatch x with
-        | map word.unsigned ?ws =>
-          let p := get_pointer ws in constr:(p)
-        | map byte.unsigned ?bs =>
-          let p := get_pointer bs in constr:(p)
-        | _ => fail "unable to find words or bytes for " x
-        end
-      end.
-
-    Ltac get_out_array_ptrs arg_ptrs all_ptrs :=
-      lazymatch arg_ptrs with
-      | nil => constr:(all_ptrs)
-      | cons ?p ?x =>
-        lazymatch all_ptrs with
-        | cons p ?y =>
-          let ps := get_out_array_ptrs x y in
-          constr:(ps)
-        | _ =>
-          fail "no matching pointer for " p
-        end
-      end.
-
-    Ltac exists_out_array_placeholder zs words ptr :=
-      repeat match goal with
-             | _ => progress handle_lists_reserved
-             | |- Lift1Prop.ex1 _ _ =>
-               first [ exists zs
-                            | exists words
-                            | exists ptr ]
-             end.
-    Ltac exists_all_placeholders out_array_ptrs :=
-      lazymatch out_array_ptrs with
-      | cons ?p ?ptrs' =>
-        let bits := get_value_of_pointer p in
-        let zs :=
-            lazymatch type of bits with
-            | list word.rep => constr:(map word.unsigned bits)
-            | list Byte.byte => constr:(map byte.unsigned bits)
-            | ?t => fail "unexpected placeholder type " t
-            end in
-        let words :=
-            lazymatch type of bits with
-            | list word.rep => constr:(bits)
-            | list Byte.byte =>
-              constr:(map word.of_Z (map byte.unsigned bits))
-            | ?t => fail "unexpected placeholder type " t
-            end in
-        exists_out_array_placeholder zs words p;
-        exists_all_placeholders ptrs'
-      | nil => idtac
-      end.
 
     Ltac solve_lists_reserved out_array_ptrs :=
       exists_all_placeholders out_array_ptrs;
+      cbv [Bignum EncodedBignum] in *;
       canonicalize_arrays; ecancel_assumption.
 
     Ltac prove_is_correct Rin Rout :=
@@ -841,9 +383,15 @@ Section __.
                       | |- call _ _ _ _ ?in_ptrs _ => in_ptrs end in
       let out_ptrs := get_out_array_ptrs arg_ptrs all_ptrs in
       use_translate_func_correct Rin Rout arg_ptrs out_ptrs;
-      solve_translate_func_subgoals;
-      [ exists_arg_pointers; canonicalize_arrays; ecancel_assumption
+      solve_translate_func_subgoals prove_bounds prove_output_length;
+      [ exists_arg_pointers;
+        cbv [Bignum EncodedBignum] in *;
+        canonicalize_arrays; ecancel_assumption
       | setup_lists_reserved; solve_lists_reserved out_ptrs ].
+
+    Context (check_args_ok :
+               check_args n s c Semantics.width (ErrorT.Success tt)
+               = ErrorT.Success tt).
 
     Lemma carry_mul_correct :
       is_correct
