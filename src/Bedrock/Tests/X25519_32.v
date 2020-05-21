@@ -3,8 +3,8 @@ Require Import Coq.derive.Derive.
 Require Import Coq.Strings.String.
 Require Import Coq.Lists.List.
 Require Import Crypto.BoundsPipeline.
-Require Import Crypto.Bedrock.Defaults.
-Require Import Crypto.Bedrock.Defaults32.
+Require Import Crypto.Bedrock.Parameters.Defaults.
+Require Import Crypto.Bedrock.Parameters.Defaults32.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Translation.Func.
 Require Import Crypto.PushButtonSynthesis.UnsaturatedSolinas.

@@ -9,9 +9,9 @@ Require Import coqutil.Word.Interface.
 Require Import Rewriter.Language.Wf.
 Require Import Crypto.AbstractInterpretation.AbstractInterpretation.
 Require Import Crypto.PushButtonSynthesis.UnsaturatedSolinas.
-Require Import Crypto.Bedrock.Defaults.
-Require Import Crypto.Bedrock.SelectParameters.
-Require Import Crypto.Bedrock.VarnameGenerator.
+Require Import Crypto.Bedrock.Names.VarnameGenerator.
+Require Import Crypto.Bedrock.Parameters.Defaults.
+Require Import Crypto.Bedrock.Parameters.SelectParameters.
 Require Import Crypto.Bedrock.Interfaces.UnsaturatedSolinas.
 Require Import Crypto.Bedrock.Proofs.ValidComputable.Func.
 Require Import Crypto.Util.Tactics.SpecializeBy.
