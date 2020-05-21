@@ -489,38 +489,6 @@ Section __.
           forall functions,
             spec (make_bedrock_func op res :: functions)).
 
-    Ltac setup :=
-      match goal with
-        |- is_correct _ ?def ?spec =>
-        cbv [is_correct spec make_bedrock_func] in *; intros;
-        sepsimpl;
-        cbn [def name inbounds input_array_sizes output_array_sizes
-                 input_array_lengths output_array_lengths
-                 pipeline_out correctness] in *
-      end;
-      match goal with |- context [postcondition ?op ?args] =>
-                      let H := fresh in
-                      pose proof (correctness op) as H;
-                      repeat specialize (H ltac:(assumption));
-                      specialize (H args)
-      end; cleanup.
-
-    Ltac simplify_translate_func_postcondition :=
-      match goal with
-        H : context [sep _ _ ?m] |- context [_ ?m] =>
-        cbn - [Memory.bytes_per translate_func] in H
-      end;
-    sepsimpl_hyps.
-
-    Ltac ssubst :=
-      repeat match goal with
-             | H : literal (word.unsigned _) (eq _) |- _ =>
-               inversion H as [H']; clear H;
-               rewrite word.of_Z_unsigned in H'
-             | H : word.unsigned _ = word.unsigned _ |- _ =>
-               apply word.unsigned_inj in H
-             end; subst.
-
     Definition list_lengths_ok {t}
                (lengths : foreach_ret list_lengths t)
                (out : foreach_ret API.interp_type t)
@@ -551,6 +519,76 @@ Section __.
              type.final_codomain output_array_lengths op] in *;
       [ prove_output_length | ].
 
+    Ltac setup :=
+      match goal with
+        |- is_correct _ ?def ?spec =>
+        cbv [is_correct spec make_bedrock_func] in *; intros;
+        sepsimpl;
+        cbn [def name inbounds input_array_sizes output_array_sizes
+                 input_array_lengths output_array_lengths
+                 pipeline_out correctness] in *
+      end;
+      match goal with |- context [postcondition ?op ?args] =>
+                      let H := fresh in
+                      pose proof (correctness op) as H;
+                      repeat specialize (H ltac:(assumption));
+                      specialize (H args)
+      end; cleanup;
+      assert_output_length.
+
+    Ltac simplify_translate_func_postcondition :=
+      match goal with
+        H : context [sep _ _ ?m] |- context [_ ?m] =>
+        cbn - [Memory.bytes_per translate_func] in H
+      end;
+    sepsimpl_hyps.
+
+    Ltac find_input_array :=
+      match goal with
+      | H : postcondition ?op ?args ?x |- postcondition ?op ?args ?y =>
+        (* need to set args so the replace doesn't fire on them due to evar
+           silliness *)
+        let A := fresh in
+        set (A:=args);
+        replace y with x; [ exact H | ]; subst A
+      end;
+      repeat
+        first [ erewrite byte_map_unsigned_of_Z,
+                map_byte_wrap_bounded
+                by eauto using byte_bounds_range_iff
+              | congruence
+              | solve [eauto] ].
+
+    Ltac ssubst :=
+      repeat match goal with
+             | H : literal (word.unsigned _) (eq _) |- _ =>
+               inversion H as [H']; clear H;
+               rewrite word.of_Z_unsigned in H'
+             | H : word.unsigned _ = word.unsigned _ |- _ =>
+               apply word.unsigned_inj in H
+             end; subst.
+
+    Ltac map_simplify :=
+      repeat match goal with
+             | _ => rewrite map.get_put_diff by congruence
+             | _ => rewrite map.get_put_same
+             end.
+
+    Ltac type_simplify :=
+        cbv [expr.Interp] in *;
+        cbn [fst snd type.app_curried type.final_codomain
+                 Compilers.base_interp] in *.
+    Ltac lists_reserved_simplify :=
+      cbn [LoadStoreList.lists_reserved_with_initial_context
+             LoadStoreList.extract_listnames
+             LoadStoreList.lists_reserved
+             make_innames make_innames' make_outnames make_names
+             fst snd app type.final_codomain
+             base_rtype_of_ltype
+             rep.rtype_of_ltype rep.equiv rep.Z rep.listZ_mem
+             map.of_list_zip map.putmany_of_list_zip
+             Flatten.flatten_argnames Flatten.flatten_base_ltype
+             Flatten.flatten_listonly_base_ltype ]; type_simplify.
     Ltac translator_simplify :=
       cbn [fst snd type.final_codomain
                LoadStoreList.list_lengths_from_args
@@ -568,32 +606,54 @@ Section __.
                rep.equiv rep.Z rep.listZ_mem ].
     Ltac access_size_simplify :=
       repeat match goal with
-             | |- context [Z.of_nat (Memory.bytes_per access_size.one)] =>
-               progress
-                 change (Z.of_nat (Memory.bytes_per
-                                     (width:=Semantics.width)
-                                     access_size.one)) with 1
-             | |- context [Z.of_nat (Memory.bytes_per access_size.two)] =>
-               progress
-                 change (Z.of_nat (Memory.bytes_per
-                                     (width:=Semantics.width)
-                                     access_size.two)) with 2
-             | |- context [Z.of_nat (Memory.bytes_per access_size.four)] =>
-               progress
-                 change (Z.of_nat (Memory.bytes_per
-                                     (width:=Semantics.width)
-                                     access_size.four)) with 4
+             | H: context [Z.of_nat (Memory.bytes_per _)]
+               |- _ =>
+               first [ progress
+                         change (Z.of_nat
+                                   (Memory.bytes_per
+                                      (width:=Semantics.width)
+                                      access_size.one)) with 1 in H
+                     | progress
+                         change (Z.of_nat
+                                   (Memory.bytes_per
+                                      (width:=Semantics.width)
+                                      access_size.two)) with 2 in H
+                     | progress
+                         change (Z.of_nat
+                                   (Memory.bytes_per
+                                      (width:=Semantics.width)
+                                      access_size.four)) with 4 in H ]
+             | |- context [Z.of_nat (Memory.bytes_per _)] =>
+               first [ progress
+                         change (Z.of_nat
+                                   (Memory.bytes_per
+                                      (width:=Semantics.width)
+                                      access_size.one)) with 1
+                     | progress
+                         change (Z.of_nat
+                                   (Memory.bytes_per
+                                      (width:=Semantics.width)
+                                      access_size.two)) with 2
+                     | progress
+                         change (Z.of_nat
+                                   (Memory.bytes_per
+                                      (width:=Semantics.width)
+                                      access_size.four)) with 4 ]
              end.
 
     Ltac solve_translate_func_subgoals :=
+      auto using make_innames_varname_gen_disjoint,
+      make_outnames_varname_gen_disjoint,
+      make_innames_make_outnames_disjoint,
+      flatten_make_innames_NoDup, flatten_make_outnames_NoDup;
+      pose proof bits_per_word_eq_width width_0mod_8;
+      pose proof width_ge_8;
       repeat match goal with
              | _ => progress sepsimpl
              | _ => progress translator_simplify
              | _ => progress access_size_simplify
+             | |- context [expr.interp] => progress type_simplify
              | _ => rewrite bounded_by_loose_bounds_length by prove_bounds
-             | |- context [expr.interp] =>
-               progress (cbn [fst snd type.app_curried] in *;
-                         cbv [expr.Interp] in * )
              | |- Forall _ _ =>
                eapply max_bounds_range_iff; solve [prove_bounds]
              | |- Forall _ _ =>
@@ -602,13 +662,77 @@ Section __.
              | _ => reflexivity
              end.
 
+    Ltac exists_arg_pointers :=
+      repeat match goal with
+             | H : sep _ _ ?m |- @Lift1Prop.ex1 nat _ _ ?m =>
+               match type of H with
+               | context [sep _ (_ ?p _)] =>
+                 next_argument; exists_list_ptr p
+               | context [sep (_ ?p _)] =>
+                 next_argument; exists_list_ptr p
+               end
+             end.
+
+    Ltac canonicalize_arrays :=
+      repeat match goal with
+             | _ => progress cbv [Bignum EncodedBignum] in *
+             | _ => progress access_size_simplify
+             | _ => seprewrite array_truncated_scalar_scalar_iff1
+             | _ => seprewrite array_truncated_scalar_ptsto_iff1
+             | H : sep _ _ ?m |- context [?m] =>
+               seprewrite_in array_truncated_scalar_scalar_iff1 H
+             | H : sep _ _ ?m |- context [?m] =>
+               seprewrite_in array_truncated_scalar_ptsto_iff1 H
+             | _ => rewrite <-@word_size_in_bytes_eq in * by eauto
+             | _ => rewrite byte_map_of_Z_unsigned by auto
+             end.
+
+    Ltac setup_lists_reserved :=
+      lists_reserved_simplify;
+      translator_simplify;
+      try match goal with
+          | H : context [map byte.unsigned ?bs] |- _ =>
+            assert (map byte.unsigned bs
+                    = map word.unsigned
+                          (map word.of_Z (map byte.unsigned bs)))
+              by (erewrite map_unsigned_of_Z, map_word_wrap_bounded;
+                  eauto using byte_unsigned_within_max_bounds)
+          end.
+
+    Ltac handle_lists_reserved :=
+        repeat match goal with
+               | _ => progress sepsimpl;
+                      auto using Forall_map_unsigned,
+                      Forall_map_byte_unsigned
+               | _ => rewrite bits_per_word_eq_width
+                   by auto using width_0mod_8
+               | _ => erewrite map_unsigned_of_Z,map_word_wrap_bounded
+                   by eauto using byte_unsigned_within_max_bounds
+               | |- WeakestPrecondition.get _ _ _ =>
+                 eexists; map_simplify; solve [eauto]
+               | _ => congruence
+               end.
+
+    Ltac post_sufficient :=
+        repeat intro;
+        simplify_translate_func_postcondition;
+        type_simplify;
+        repeat match goal with
+               | _ => progress ssplit; try congruence
+               | |- exists _, _ => eexists
+               | H : map word.unsigned _ = expr.interp _ _ _ |- _ =>
+                 rewrite <-H in *
+               | _ => progress sepsimpl;
+                        [ solve [find_input_array] .. | ]
+               end;
+        ssubst.
+
     Lemma carry_mul_correct :
       is_correct
         (UnsaturatedSolinas.carry_mul n s c Semantics.width)
         carry_mul spec_of_carry_mul.
     Proof.
       setup.
-      assert_output_length.
 
       (* TODO: automate flat_args, out_ptrs? *)
       (* use translate_func_correct to get the translation postcondition *)
@@ -619,59 +743,28 @@ Section __.
                 (Ra0:=Ra) (Rr0:=Rr) (out_ptrs:=[pout])
                 (args:=a) (flat_args := [px; py]) ].
       { (* prove that the translation postcondition is sufficient *)
-        repeat intro.
-        simplify_translate_func_postcondition.
-        ssplit; [ congruence | congruence | eexists ].
-        cbn [type.app_curried fst snd] in *; cbv [expr.Interp] in *.
-        sepsimpl;
-          [ match goal with H : map word.unsigned _ = _ |- _ =>
-                            rewrite H; solve [eauto] end | ].
-        ssubst. cbv [Bignum].
-        rewrite word_size_in_bytes_eq.
-        use_sep_assumption.
-        rewrite array_truncated_scalar_scalar_iff1.
-        cancel. }
+        post_sufficient.
+        canonicalize_arrays.
+        ecancel_assumption. }
 
       (* Now, we prove translate_func preconditions.
          First, take care of all the easy ones. *)
-      all: auto using make_innames_varname_gen_disjoint,
-           make_outnames_varname_gen_disjoint,
-           make_innames_make_outnames_disjoint,
-           flatten_make_innames_NoDup, flatten_make_outnames_NoDup.
-      all:pose proof bits_per_word_eq_width width_0mod_8.
-      all:pose proof width_ge_8.
       all:solve_translate_func_subgoals.
 
       { (* arg pointers are correct *)
-        cbn - [Memory.bytes_per]; sepsimpl.
-        next_argument. exists_list_ptr px.
-        next_argument. exists_list_ptr py.
-        cbv [Bignum] in *.
-        repeat seprewrite array_truncated_scalar_scalar_iff1.
-        rewrite <-word_size_in_bytes_eq.
+        exists_arg_pointers.
+        canonicalize_arrays.
         ecancel_assumption. }
       { (* space is reserved for output lists *)
-        cbn - [Memory.bytes_per]. sepsimpl.
-        cbv [expr.Interp] in *.
-        cbn [fst snd type.app_curried Compilers.base_interp] in *.
-        exists (map word.unsigned wold_out).
-        sepsimpl;
-          [ rewrite map_length in *; congruence | ].
-        exists pout; sepsimpl; [ ].
-        eexists.
-        sepsimpl; [ reflexivity
-                  | rewrite bits_per_word_eq_width
-                    by auto using width_0mod_8;
-                    solve [apply Forall_map_unsigned]
-                  | ].
-        eexists.
-        sepsimpl; [ reflexivity
-                  | eexists; rewrite ?map.get_put_diff by congruence;
-                    rewrite map.get_put_same; split; reflexivity
-                  | ].
-        cbv [Bignum] in *.
-        rewrite <-word_size_in_bytes_eq.
-        repeat seprewrite array_truncated_scalar_scalar_iff1.
+        setup_lists_reserved.
+        repeat match goal with
+               | _ => progress handle_lists_reserved
+               | |- Lift1Prop.ex1 _ _ =>
+                 first [ exists (map word.unsigned wold_out)
+                              | exists wold_out
+                              | exists pout ]
+               end.
+        canonicalize_arrays.
         ecancel_assumption. }
     Qed.
 
@@ -681,7 +774,6 @@ Section __.
         add spec_of_add.
     Proof.
       setup.
-      assert_output_length.
 
       (* TODO: automate flat_args, out_ptrs? *)
       (* use translate_func_correct to get the translation postcondition *)
@@ -692,60 +784,28 @@ Section __.
                 (Ra0:=Ra) (Rr0:=Rr) (out_ptrs:=[pout])
                 (args:=a) (flat_args := [px; py]) ].
       { (* prove that the translation postcondition is sufficient *)
-        repeat intro.
-        simplify_translate_func_postcondition.
-        ssplit; [ congruence | congruence | eexists ].
-        cbn [type.app_curried fst snd] in *; cbv [expr.Interp] in *.
-        sepsimpl;
-          [ match goal with H : map word.unsigned _ = _ |- _ =>
-                            rewrite H; solve [eauto] end | ].
-        ssubst. cbv [Bignum].
-        rewrite word_size_in_bytes_eq.
-        use_sep_assumption.
-        rewrite array_truncated_scalar_scalar_iff1.
-        cancel. }
+        post_sufficient.
+        canonicalize_arrays.
+        ecancel_assumption. }
 
       (* Now, we prove translate_func preconditions.
          First, take care of all the easy ones. *)
-      all: auto using make_innames_varname_gen_disjoint,
-           make_outnames_varname_gen_disjoint,
-           make_innames_make_outnames_disjoint,
-           flatten_make_innames_NoDup, flatten_make_outnames_NoDup.
-      all:pose proof bits_per_word_eq_width width_0mod_8.
-      all:pose proof width_ge_8.
       all:solve_translate_func_subgoals.
 
-
       { (* arg pointers are correct *)
-        cbn - [Memory.bytes_per]; sepsimpl.
-        next_argument. exists_list_ptr px.
-        next_argument. exists_list_ptr py.
-        cbv [Bignum] in *.
-        repeat seprewrite array_truncated_scalar_scalar_iff1.
-        rewrite <-word_size_in_bytes_eq.
+        exists_arg_pointers.
+        canonicalize_arrays.
         ecancel_assumption. }
       { (* space is reserved for output lists *)
-        cbn - [Memory.bytes_per]. sepsimpl.
-        cbv [expr.Interp] in *.
-        cbn [fst snd type.app_curried Compilers.base_interp] in *.
-        exists (map word.unsigned wold_out).
-        sepsimpl;
-          [ rewrite map_length in *; congruence | ].
-        exists pout; sepsimpl; [ ].
-        eexists.
-        sepsimpl; [ reflexivity
-                  | rewrite bits_per_word_eq_width
-                    by auto using width_0mod_8;
-                    solve [apply Forall_map_unsigned]
-                  | ].
-        eexists.
-        sepsimpl; [ reflexivity
-                  | eexists; rewrite ?map.get_put_diff by congruence;
-                    rewrite map.get_put_same; split; reflexivity
-                  | ].
-        cbv [Bignum] in *.
-        rewrite <-word_size_in_bytes_eq.
-        repeat seprewrite array_truncated_scalar_scalar_iff1.
+        setup_lists_reserved.
+        repeat match goal with
+               | _ => progress handle_lists_reserved
+               | |- Lift1Prop.ex1 _ _ =>
+                 first [ exists (map word.unsigned wold_out)
+                              | exists wold_out
+                              | exists pout ]
+               end.
+        canonicalize_arrays.
         ecancel_assumption. }
     Qed.
 
@@ -755,7 +815,6 @@ Section __.
         to_bytes spec_of_to_bytes.
     Proof.
       setup.
-      assert_output_length.
 
       (* special for to_bytes:
          use partition_bounded_by for output bounds *)
@@ -782,91 +841,32 @@ Section __.
         [ | eapply translate_func_correct with
                 (Ra0:=Ra) (Rr0:=Rr) (out_ptrs:=[pout])
                 (args:=a) (flat_args := [px]) ].
+      (* end differ *)
       { (* prove that the translation postcondition is sufficient *)
-        repeat intro.
-        simplify_translate_func_postcondition.
-        ssplit; [ congruence | congruence | eexists ].
-        cbn [type.app_curried fst snd] in *; cbv [expr.Interp] in *.
-        (* differs from add/mul:
-            sepsimpl;
-            [ match goal with H : map word.unsigned _ = _ |- _ =>
-                                rewrite H; solve [eauto] end | ].
-            ssubst. cbv [Bignum].
-            rewrite word_size_in_bytes_eq. *)
-        sepsimpl;
-          [ erewrite byte_map_unsigned_of_Z, map_byte_wrap_bounded
-            by (eapply byte_bounds_range_iff; eauto);
-            match goal with H : _ |- _ => apply H; assumption end | ].
-        ssubst. cbv [EncodedBignum].
-        change (Z.of_nat (Memory.bytes_per access_size.one)) with 1 in *.
-        match goal with H : map word.unsigned _ = expr.interp _ _ _ |- _ =>
-                        rewrite <-H in * end.
-        (* end differ *)
-        use_sep_assumption.
-        rewrite array_truncated_scalar_ptsto_iff1.
-        cancel. }
+        post_sufficient.
+        canonicalize_arrays.
+        ecancel_assumption. }
 
       (* Now, we prove translate_func preconditions.
          First, take care of all the easy ones. *)
-      all: auto using make_innames_varname_gen_disjoint,
-           make_outnames_varname_gen_disjoint,
-           make_innames_make_outnames_disjoint,
-           flatten_make_innames_NoDup, flatten_make_outnames_NoDup.
-      all:pose proof bits_per_word_eq_width width_0mod_8.
-      all:pose proof width_ge_8.
       all:solve_translate_func_subgoals.
 
       { (* arg pointers are correct *)
-        next_argument. exists_list_ptr px.
-        (* differs from add/mul:
-            next_argument. exists_list_ptr py.
-         *)
-        (* end differ *)
-        cbv [Bignum] in *.
-        repeat seprewrite array_truncated_scalar_scalar_iff1.
-        rewrite <-word_size_in_bytes_eq.
+        exists_arg_pointers.
+        canonicalize_arrays.
         ecancel_assumption. }
       { (* space is reserved for output lists *)
-        cbn - [Memory.bytes_per]. sepsimpl.
-        cbv [expr.Interp] in *.
-        cbn [fst snd type.app_curried Compilers.base_interp] in *.
-        (* differs from mul/add:
-        exists (map word.unsigned wold_out). *)
-        exists (map byte.unsigned wold_out).
-        (* end differ *)
-        sepsimpl; [ rewrite map_length in *; congruence | ].
-        exists pout; sepsimpl; [ ].
-        (* differs from mul/add:
-        eexists.
-        sepsimpl; [ reflexivity
-                  | rewrite bits_per_word_eq_width
-                    by auto using width_0mod_8;
-                    solve [apply Forall_map_unsigned]
-                  | ]. *)
-        exists (map word.of_Z (map byte.unsigned wold_out)).
-        sepsimpl;
-          [ rewrite map_unsigned_of_Z;
-            solve [eauto using map_word_wrap_bounded,
-                   byte_unsigned_within_max_bounds]
-          | solve [apply Forall_map_byte_unsigned] | ].
-        (* end differ *)
-        eexists.
-        sepsimpl; [ reflexivity
-                  | eexists; rewrite ?map.get_put_diff by congruence;
-                    rewrite map.get_put_same; split; reflexivity
-                  | ].
-        (* differs from mul/add:
-        cbv [Bignum] in *.
-        rewrite <-word_size_in_bytes_eq.
-        repeat seprewrite array_truncated_scalar_scalar_iff1. *)
-        cbv [EncodedBignum] in *.
-        rewrite map_unsigned_of_Z.
-        erewrite map_word_wrap_bounded by
-            auto using byte_unsigned_within_max_bounds.
-        change (Z.of_nat (Memory.bytes_per access_size.one)) with 1 in *.
-        seprewrite array_truncated_scalar_ptsto_iff1.
-        rewrite byte_map_of_Z_unsigned.
-        (* end differ *)
+        setup_lists_reserved.
+        repeat match goal with
+               | _ => progress handle_lists_reserved
+               | |- Lift1Prop.ex1 _ _ =>
+                 first [ exists (map byte.unsigned wold_out)
+                              | exists
+                                  (map word.of_Z
+                                       (map byte.unsigned wold_out))
+                              | exists pout ]
+               end.
+        canonicalize_arrays.
         ecancel_assumption. }
     Qed.
   End Proofs.
