@@ -738,7 +738,7 @@ Section __.
                end;
         ssubst.
 
-    Ltac use_translate_func_correct Rin Rout arg_ptrs out_array_ptrs :=
+    Ltac apply_translate_func_correct Rin Rout arg_ptrs out_array_ptrs :=
       let a := lazymatch goal with
                | H : postcondition _ ?args _ |- _ => args end in
       eapply Proper_call;
@@ -746,38 +746,114 @@ Section __.
               (Ra0:=Rin) (Rr0:=Rout) (out_ptrs:=out_array_ptrs)
               (args:=a) (flat_args := arg_ptrs) ].
 
+    Ltac use_translate_func_correct Rin Rout arg_ptrs out_array_ptrs :=
+      apply_translate_func_correct Rin Rout arg_ptrs out_array_ptrs;
+      [ post_sufficient; canonicalize_arrays; ecancel_assumption
+      | .. ].
+
+    Ltac get_pointer wa :=
+      match goal with
+      | H : sep _ _ ?m |- context [?m] =>
+        match type of H with
+          context [_ ?pa wa] => constr:(pa)
+        end
+      | _ => fail "unable to find pointers for " wa
+      end.
+
+    Ltac get_value_of_pointer p :=
+      match goal with
+      | H : sep _ _ ?m |- context [?m] =>
+        match type of H with
+          context [_ p ?x] => constr:(x)
+        end
+      | _ => fail "unable to find value of pointer " p
+      end.
+
+    Ltac get_all_arg_pointers args :=
+      lazymatch args with
+      | (?a, ?b) =>
+        let x := get_all_arg_pointers a in
+        let y := get_all_arg_pointers b in
+        constr:((x :: y)%list)
+      | tt => constr:(@nil (Semantics.word))
+      | ?x =>
+        lazymatch x with
+        | map word.unsigned ?ws =>
+          let p := get_pointer ws in constr:(p)
+        | map byte.unsigned ?bs =>
+          let p := get_pointer bs in constr:(p)
+        | _ => fail "unable to find words or bytes for " x
+        end
+      end.
+
+    Ltac get_out_array_ptrs arg_ptrs all_ptrs :=
+      lazymatch arg_ptrs with
+      | nil => constr:(all_ptrs)
+      | cons ?p ?x =>
+        lazymatch all_ptrs with
+        | cons p ?y =>
+          let ps := get_out_array_ptrs x y in
+          constr:(ps)
+        | _ =>
+          fail "no matching pointer for " p
+        end
+      end.
+
+    Ltac exists_out_array_placeholder zs words ptr :=
+      repeat match goal with
+             | _ => progress handle_lists_reserved
+             | |- Lift1Prop.ex1 _ _ =>
+               first [ exists zs
+                            | exists words
+                            | exists ptr ]
+             end.
+    Ltac exists_all_placeholders out_array_ptrs :=
+      lazymatch out_array_ptrs with
+      | cons ?p ?ptrs' =>
+        let bits := get_value_of_pointer p in
+        let zs :=
+            lazymatch type of bits with
+            | list word.rep => constr:(map word.unsigned bits)
+            | list Byte.byte => constr:(map byte.unsigned bits)
+            | ?t => fail "unexpected placeholder type " t
+            end in
+        let words :=
+            lazymatch type of bits with
+            | list word.rep => constr:(bits)
+            | list Byte.byte =>
+              constr:(map word.of_Z (map byte.unsigned bits))
+            | ?t => fail "unexpected placeholder type " t
+            end in
+        exists_out_array_placeholder zs words p;
+        exists_all_placeholders ptrs'
+      | nil => idtac
+      end.
+
+    Ltac solve_lists_reserved out_array_ptrs :=
+      exists_all_placeholders out_array_ptrs;
+      canonicalize_arrays; ecancel_assumption.
+
+    Ltac prove_is_correct Rin Rout :=
+      let args := lazymatch goal with
+                  | H : postcondition _ ?args _ |- _ => args end in
+      let arg_ptrs := get_all_arg_pointers args in
+      let all_ptrs := lazymatch goal with
+                      | |- call _ _ _ _ ?in_ptrs _ => in_ptrs end in
+      let out_ptrs := get_out_array_ptrs arg_ptrs all_ptrs in
+      use_translate_func_correct Rin Rout arg_ptrs out_ptrs;
+      solve_translate_func_subgoals;
+      [ exists_arg_pointers; canonicalize_arrays; ecancel_assumption
+      | setup_lists_reserved ].
+
     Lemma carry_mul_correct :
       is_correct
         (UnsaturatedSolinas.carry_mul n s c Semantics.width)
         carry_mul spec_of_carry_mul.
     Proof.
       setup.
-      use_translate_func_correct Ra Rr [px; py] [pout].
-
-      { (* prove that the translation postcondition is sufficient *)
-        post_sufficient.
-        canonicalize_arrays.
-        ecancel_assumption. }
-
-      (* Now, we prove translate_func preconditions.
-         First, take care of all the easy ones. *)
-      all:solve_translate_func_subgoals.
-
-      { (* arg pointers are correct *)
-        exists_arg_pointers.
-        canonicalize_arrays.
-        ecancel_assumption. }
-      { (* space is reserved for output lists *)
-        setup_lists_reserved.
-        repeat match goal with
-               | _ => progress handle_lists_reserved
-               | |- Lift1Prop.ex1 _ _ =>
-                 first [ exists (map word.unsigned wold_out)
-                              | exists wold_out
-                              | exists pout ]
-               end.
-        canonicalize_arrays.
-        ecancel_assumption. }
+      prove_is_correct Ra Rr.
+      let out_ptrs := constr:([pout]) in
+      solve_lists_reserved out_ptrs.
     Qed.
 
     Lemma add_correct :
@@ -786,32 +862,9 @@ Section __.
         add spec_of_add.
     Proof.
       setup.
-      use_translate_func_correct Ra Rr [px; py] [pout].
-
-      { (* prove that the translation postcondition is sufficient *)
-        post_sufficient.
-        canonicalize_arrays.
-        ecancel_assumption. }
-
-      (* Now, we prove translate_func preconditions.
-         First, take care of all the easy ones. *)
-      all:solve_translate_func_subgoals.
-
-      { (* arg pointers are correct *)
-        exists_arg_pointers.
-        canonicalize_arrays.
-        ecancel_assumption. }
-      { (* space is reserved for output lists *)
-        setup_lists_reserved.
-        repeat match goal with
-               | _ => progress handle_lists_reserved
-               | |- Lift1Prop.ex1 _ _ =>
-                 first [ exists (map word.unsigned wold_out)
-                              | exists wold_out
-                              | exists pout ]
-               end.
-        canonicalize_arrays.
-        ecancel_assumption. }
+      prove_is_correct Ra Rr.
+      let out_ptrs := constr:([pout]) in
+      solve_lists_reserved out_ptrs.
     Qed.
 
     Lemma to_bytes_correct :
@@ -820,34 +873,9 @@ Section __.
         to_bytes spec_of_to_bytes.
     Proof.
       setup.
-      use_translate_func_correct Ra Rr [px] [pout].
-
-      { (* prove that the translation postcondition is sufficient *)
-        post_sufficient.
-        canonicalize_arrays.
-        ecancel_assumption. }
-
-      (* Now, we prove translate_func preconditions.
-         First, take care of all the easy ones. *)
-      all:solve_translate_func_subgoals.
-
-      { (* arg pointers are correct *)
-        exists_arg_pointers.
-        canonicalize_arrays.
-        ecancel_assumption. }
-      { (* space is reserved for output lists *)
-        setup_lists_reserved.
-        repeat match goal with
-               | _ => progress handle_lists_reserved
-               | |- Lift1Prop.ex1 _ _ =>
-                 first [ exists (map byte.unsigned wold_out)
-                              | exists
-                                  (map word.of_Z
-                                       (map byte.unsigned wold_out))
-                              | exists pout ]
-               end.
-        canonicalize_arrays.
-        ecancel_assumption. }
+      prove_is_correct Ra Rr.
+      let out_ptrs := constr:([pout]) in
+      solve_lists_reserved out_ptrs.
     Qed.
   End Proofs.
 End __.
