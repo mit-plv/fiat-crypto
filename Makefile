@@ -28,7 +28,9 @@ INSTALLDEFAULTROOT := Crypto
 	bedrock2 clean-bedrock2 install-bedrock2 coqutil clean-coqutil install-coqutil \
 	install-standalone install-standalone-ocaml install-standalone-haskell \
 	uninstall-standalone uninstall-standalone-ocaml uninstall-standalone-haskell \
-	util c-files bedrock2-files rust-files go-files java-files \
+	util all-except-generated \
+	c-files bedrock2-files rust-files go-files java-files generated-files \
+	lite-c-files lite-bedrock2-files lite-rust-files lite-go-files lite-java-files lite-generated-files \
 	bedrock2-backend \
 	deps \
 	nobigmem print-nobigmem \
@@ -119,32 +121,10 @@ endif
 
 C_DIR := fiat-c/src/
 BEDROCK2_DIR := fiat-bedrock2/src/
-RS_DIR := fiat-rust/src/
+RUST_DIR := fiat-rust/src/
 GO_DIR := fiat-go/src/
 JAVA_DIR := fiat-java/src/
 JAVADOC_DIR := fiat-java/doc/
-
-UNSATURATED_SOLINAS_BASE_FILES := curve25519_64 curve25519_32 poly1305_64 poly1305_32 p521_64 p448_solinas_64 p448_solinas_32 # p224_solinas_64
-WORD_BY_WORD_MONTGOMERY_BASE_FILES := p256_64 p256_32 p384_64 p384_32 secp256k1_64 secp256k1_32 p224_64 p224_32 p434_64 # p434_32
-ALL_BASE_FILES := $(UNSATURATED_SOLINAS_BASE_FILES) $(WORD_BY_WORD_MONTGOMERY_BASE_FILES)
-
-BASE_FILES_NEEDING_INT128 := p448_solinas_32
-
-UNSATURATED_SOLINAS_C_FILES := $(patsubst %,$(C_DIR)%.c,$(UNSATURATED_SOLINAS_BASE_FILES))
-WORD_BY_WORD_MONTGOMERY_C_FILES := $(patsubst %,$(C_DIR)%.c,$(WORD_BY_WORD_MONTGOMERY_BASE_FILES))
-ALL_C_FILES := $(UNSATURATED_SOLINAS_C_FILES) $(WORD_BY_WORD_MONTGOMERY_C_FILES)
-
-UNSATURATED_SOLINAS_BEDROCK2_FILES := $(patsubst %,$(BEDROCK2_DIR)%.c,$(filter-out $(BASE_FILES_NEEDING_INT128),$(UNSATURATED_SOLINAS_BASE_FILES)))
-WORD_BY_WORD_MONTGOMERY_BEDROCK2_FILES := $(patsubst %,$(BEDROCK2_DIR)%.c,$(filter-out $(BASE_FILES_NEEDING_INT128),$(WORD_BY_WORD_MONTGOMERY_BASE_FILES)))
-ALL_BEDROCK2_FILES := $(UNSATURATED_SOLINAS_BEDROCK2_FILES) $(WORD_BY_WORD_MONTGOMERY_BEDROCK2_FILES)
-
-UNSATURATED_SOLINAS_RUST_FILES := $(patsubst %,$(RS_DIR)%.rs,$(UNSATURATED_SOLINAS_BASE_FILES))
-WORD_BY_WORD_MONTGOMERY_RUST_FILES := $(patsubst %,$(RS_DIR)%.rs,$(WORD_BY_WORD_MONTGOMERY_BASE_FILES))
-ALL_RUST_FILES := $(UNSATURATED_SOLINAS_RUST_FILES) $(WORD_BY_WORD_MONTGOMERY_RUST_FILES)
-
-UNSATURATED_SOLINAS_GO_FILES := $(patsubst %,$(GO_DIR)%.go,$(filter-out $(BASE_FILES_NEEDING_INT128),$(UNSATURATED_SOLINAS_BASE_FILES)))
-WORD_BY_WORD_MONTGOMERY_GO_FILES := $(patsubst %,$(GO_DIR)%.go,$(filter-out $(BASE_FILES_NEEDING_INT128),$(WORD_BY_WORD_MONTGOMERY_BASE_FILES)))
-ALL_GO_FILES := $(UNSATURATED_SOLINAS_GO_FILES) $(WORD_BY_WORD_MONTGOMERY_GO_FILES)
 
 # Java only really supports 32-bit builds, because we have neither 64x64->64x64 multiplication, nor uint128
 # Java also requires that class names match file names
@@ -153,15 +133,66 @@ to_title_case = $(shell echo '$(1)' | sed 's/.*/\L&/; s/[a-z]*/\u&/g')
 empty=
 space=$(empty) $(empty)
 JAVA_RENAME = $(foreach i,$(patsubst %_32,%,$(filter %_32,$(1))),Fiat$(subst $(space),,$(call to_title_case,$(subst _, ,$(i)))))
-UNSATURATED_SOLINAS_JAVA_FILES := $(patsubst %,$(JAVA_DIR)%.java,$(call JAVA_RENAME,$(filter-out $(BASE_FILES_NEEDING_INT128),$(UNSATURATED_SOLINAS_BASE_FILES))))
-WORD_BY_WORD_MONTGOMERY_JAVA_FILES := $(patsubst %,$(JAVA_DIR)%.java,$(call JAVA_RENAME,$(filter-out $(BASE_FILES_NEEDING_INT128),$(WORD_BY_WORD_MONTGOMERY_BASE_FILES))))
-ALL_JAVA_FILES := $(UNSATURATED_SOLINAS_JAVA_FILES) $(WORD_BY_WORD_MONTGOMERY_JAVA_FILES)
+
+# Keys for looking up curve parameters
+define add_curve_keys
+# add_curve_keys curve_base BINARY_NAME description bitwidth non_bitwidth_args FUNCTIONS
+$(2)_BASE_FILES += $(1)
+ALL_BASE_FILES += $(1)
+$(1)_BINARY_NAME:=$(2)
+$(1)_DESCRIPTION:=$(3)
+$(1)_BITWIDTH:=$(4)
+$(1)_ARGS:=$(4) $(5)
+$(1)_FUNCTIONS:=$(6)
+
+JAVA_$(call JAVA_RENAME,$(1))_BINARY_NAME:=$(2)
+JAVA_$(call JAVA_RENAME,$(1))_DESCRIPTION:=$(patsubst Fiat%,%,$(call JAVA_RENAME,$(1)))
+JAVA_$(call JAVA_RENAME,$(1))_BITWIDTH:=$(4)
+JAVA_$(call JAVA_RENAME,$(1))_ARGS:=$(4) $(5)
+JAVA_$(call JAVA_RENAME,$(1))_FUNCTIONS:=$(6)
+
+endef
 
 UNSATURATED_SOLINAS_FUNCTIONS := carry_mul carry_square carry add sub opp selectznz to_bytes from_bytes
 FUNCTIONS_FOR_25519 := $(UNSATURATED_SOLINAS_FUNCTIONS) carry_scmul121666
 WORD_BY_WORD_MONTGOMERY_FUNCTIONS := mul square add sub opp from_montgomery to_montgomery nonzero selectznz to_bytes from_bytes
 UNSATURATED_SOLINAS := src/ExtractionOCaml/unsaturated_solinas
 WORD_BY_WORD_MONTGOMERY := src/ExtractionOCaml/word_by_word_montgomery
+
+UNSATURATED_SOLINAS_BASE_FILES := # p224_solinas_64
+WORD_BY_WORD_MONTGOMERY_BASE_FILES := # p434_32
+ALL_BASE_FILES := $(UNSATURATED_SOLINAS_BASE_FILES) $(WORD_BY_WORD_MONTGOMERY_BASE_FILES)
+
+BASE_FILES_NEEDING_INT128 := p448_solinas_32
+
+$(foreach bw,64 32,$(eval $(call add_curve_keys,curve25519_$(bw),UNSATURATED_SOLINAS,'25519',$(bw),'(auto)' '2^255 - 19',$(FUNCTIONS_FOR_25519))))
+$(eval $(call add_curve_keys,poly1305_64,UNSATURATED_SOLINAS,'poly1305',64,'3' '2^130 - 5',$(UNSATURATED_SOLINAS_FUNCTIONS)))
+$(eval $(call add_curve_keys,poly1305_32,UNSATURATED_SOLINAS,'poly1305',32,'(auto)' '2^130 - 5',$(UNSATURATED_SOLINAS_FUNCTIONS)))
+$(eval $(call add_curve_keys,p521_64,UNSATURATED_SOLINAS,'p521',64,'9' '2^521 - 1',$(UNSATURATED_SOLINAS_FUNCTIONS)))
+## 2^224 - 2^96 + 1 ## does not bounds check
+#$(eval $(call add_curve_keys,p224_solinas_64,UNSATURATED_SOLINAS,'p224',64,'4' '2^224 - 2^96 + 1',$(UNSATURATED_SOLINAS_FUNCTIONS)))
+$(eval $(call add_curve_keys,p448_solinas_64,UNSATURATED_SOLINAS,'p448',64,'8' '2^448 - 2^224 - 1',$(UNSATURATED_SOLINAS_FUNCTIONS)))
+$(eval $(call add_curve_keys,p448_solinas_32,UNSATURATED_SOLINAS,'p448',32,'16' '2^448 - 2^224 - 1',$(UNSATURATED_SOLINAS_FUNCTIONS)))
+$(foreach bw,64 32,$(eval $(call add_curve_keys,p256_$(bw),WORD_BY_WORD_MONTGOMERY,'p256',$(bw),'2^256 - 2^224 + 2^192 + 2^96 - 1',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS))))
+$(foreach bw,64 32,$(eval $(call add_curve_keys,secp256k1_$(bw),WORD_BY_WORD_MONTGOMERY,'secp256k1',$(bw),'2^256 - 2^32 - 977',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS))))
+$(foreach bw,64 32,$(eval $(call add_curve_keys,p384_$(bw),WORD_BY_WORD_MONTGOMERY,'p384',$(bw),'2^384 - 2^128 - 2^96 + 2^32 - 1',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS))))
+$(foreach bw,64 32,$(eval $(call add_curve_keys,p224_$(bw),WORD_BY_WORD_MONTGOMERY,'p224',$(bw),'2^224 - 2^96 + 1',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS))))
+$(foreach bw,64,$(eval $(call add_curve_keys,p434_$(bw),WORD_BY_WORD_MONTGOMERY,'p434',$(bw),'2^216 * 3^137 - 1',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS)))) # 32 is a bit too heavy
+
+# Files taking 30s or less
+LITE_BASE_FILES := curve25519_64 poly1305_64 poly1305_32 p256_64 secp256k1_64 p384_64 p224_32 p434_64 p448_solinas_64 secp256k1_32 p256_32 p448_solinas_32
+
+ALL_C_FILES := $(patsubst %,$(C_DIR)%.c,$(ALL_BASE_FILES))
+ALL_BEDROCK2_FILES := $(patsubst %,$(BEDROCK2_DIR)%.c,$(filter-out $(BASE_FILES_NEEDING_INT128),$(ALL_BASE_FILES)))
+ALL_RUST_FILES := $(patsubst %,$(RUST_DIR)%.rs,$(ALL_BASE_FILES))
+ALL_GO_FILES := $(patsubst %,$(GO_DIR)%.go,$(filter-out $(BASE_FILES_NEEDING_INT128),$(ALL_BASE_FILES)))
+ALL_JAVA_FILES := $(patsubst %,$(JAVA_DIR)%.java,$(call JAVA_RENAME,$(filter-out $(BASE_FILES_NEEDING_INT128),$(ALL_BASE_FILES))))
+
+LITE_C_FILES := $(patsubst %,$(C_DIR)%.c,$(LITE_BASE_FILES))
+LITE_BEDROCK2_FILES := $(patsubst %,$(BEDROCK2_DIR)%.c,$(filter-out $(BASE_FILES_NEEDING_INT128),$(LITE_BASE_FILES)))
+LITE_RUST_FILES := $(patsubst %,$(RUST_DIR)%.rs,$(LITE_BASE_FILES))
+LITE_GO_FILES := $(patsubst %,$(GO_DIR)%.go,$(filter-out $(BASE_FILES_NEEDING_INT128),$(LITE_BASE_FILES)))
+LITE_JAVA_FILES := $(patsubst %,$(JAVA_DIR)%.java,$(call JAVA_RENAME,$(filter-out $(BASE_FILES_NEEDING_INT128),$(LITE_BASE_FILES))))
 
 BEDROCK2_UNSATURATED_SOLINAS := src/ExtractionOCaml/bedrock2_unsaturated_solinas
 BEDROCK2_WORD_BY_WORD_MONTGOMERY := src/ExtractionOCaml/bedrock2_word_by_word_montgomery
@@ -196,9 +227,13 @@ OUTPUT_PREOUTS := \
 CHECK_OUTPUTS := $(addprefix check-,$(OUTPUT_PREOUTS))
 ACCEPT_OUTPUTS := $(addprefix accept-,$(OUTPUT_PREOUTS))
 
-all: coq standalone-ocaml perf-standalone c-files rust-files go-files java-files check-output
+generated-files: c-files rust-files go-files java-files
+lite-generated-files: lite-c-files lite-rust-files lite-go-files lite-java-files
+all-except-generated: coq standalone-ocaml perf-standalone check-output
+all: all-except-generated generated-files
 ifneq ($(SKIP_BEDROCK2),1)
-all: bedrock2-files
+generated-files: bedrock2-files
+lite-generated-files: lite-bedrock2-files
 endif
 coq: $(REGULAR_VOFILES)
 coq-without-bedrock2: $(REGULAR_EXCEPT_BEDROCK2_VOFILES)
@@ -208,6 +243,12 @@ bedrock2-files: $(ALL_BEDROCK2_FILES)
 rust-files: $(ALL_RUST_FILES)
 go-files: $(ALL_GO_FILES)
 java-files: $(ALL_JAVA_FILES)
+
+lite-c-files: $(LITE_C_FILES)
+lite-bedrock2-files: $(LITE_BEDROCK2_FILES)
+lite-rust-files: $(LITE_RUST_FILES)
+lite-go-files: $(LITE_GO_FILES)
+lite-java-files: $(LITE_JAVA_FILES)
 
 lite: $(LITE_VOFILES)
 nobigmem: $(NOBIGMEM_VOFILES)
@@ -398,92 +439,12 @@ standalone: standalone-haskell standalone-ocaml
 standalone-haskell: $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%)
 standalone-ocaml: $(STANDALONE_OCAML:%=src/ExtractionOCaml/%)
 
-$(UNSATURATED_SOLINAS_C_FILES): $(UNSATURATED_SOLINAS) # Makefile
+.SECONDEXPANSION:
 
-$(WORD_BY_WORD_MONTGOMERY_C_FILES): $(WORD_BY_WORD_MONTGOMERY) # Makefile
-
-# 2^255 - 19
-$(C_DIR)curve25519_64.c $(C_DIR)curve25519_32.c : $(C_DIR)curve25519_%.c :
+$(ALL_C_FILES) : $(C_DIR)%.c : $$($$($$*_BINARY_NAME))
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --static '25519' '$*' '(auto)' '2^255 - 19' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^130 - 5
-$(C_DIR)poly1305_64.c : $(C_DIR)poly1305_%.c :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --static 'poly1305' '$*' '3' '2^130 - 5' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^130 - 5
-$(C_DIR)poly1305_32.c : $(C_DIR)poly1305_%.c :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --static 'poly1305' '$*' '(auto)' '2^130 - 5' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^521 - 1
-$(C_DIR)p521_64.c : $(C_DIR)p521_%.c :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --static 'p521' '$*' '9' '2^521 - 1' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-## 2^224 - 2^96 + 1 ## does not bounds check
-#$(C_DIR)p224_solinas_64.c : $(C_DIR)p224_solinas_%.c :
-#	$(SHOW)'SYNTHESIZE > $@'
-#	$(HIDE)rm -f $@.ok
-#	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --static 'p224' '$*' '4' '2^224 - 2^96 + 1' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
-#	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^448 - 2^224 - 1
-$(C_DIR)p448_solinas_64.c : $(C_DIR)p448_solinas_%.c :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --static 'p448' '$*' '8' '2^448 - 2^224 - 1' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^448 - 2^224 - 1
- : $(C_DIR)p448_solinas_%.c :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --static 'p448' '$*' '16' '2^448 - 2^224 - 1' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^256 - 2^224 + 2^192 + 2^96 - 1
-$(C_DIR)p256_64.c $(C_DIR)p256_32.c : $(C_DIR)p256_%.c :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --static 'p256' '$*' '2^256 - 2^224 + 2^192 + 2^96 - 1' $(WORD_BY_WORD_MONTGOMERY_FUNCTIONS) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^256 - 2^32 - 977
-$(C_DIR)secp256k1_64.c $(C_DIR)secp256k1_32.c : $(C_DIR)secp256k1_%.c :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --static 'secp256k1' '$*' '2^256 - 2^32 - 977' $(WORD_BY_WORD_MONTGOMERY_FUNCTIONS) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^384 - 2^128 - 2^96 + 2^32 - 1
-$(C_DIR)p384_64.c $(C_DIR)p384_32.c : $(C_DIR)p384_%.c :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --static 'p384' '$*' '2^384 - 2^128 - 2^96 + 2^32 - 1' $(WORD_BY_WORD_MONTGOMERY_FUNCTIONS) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^224 - 2^96 + 1
-$(C_DIR)p224_64.c $(C_DIR)p224_32.c : $(C_DIR)p224_%.c :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --static 'p224' '$*' '2^224 - 2^96 + 1' $(WORD_BY_WORD_MONTGOMERY_FUNCTIONS) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^216 * 3^137 - 1
-$(C_DIR)p434_64.c $(C_DIR)p434_32.c : $(C_DIR)p434_%.c :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --static 'p434' '$*' '2^216 * 3^137 - 1' $(WORD_BY_WORD_MONTGOMERY_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $($($*_BINARY_NAME)) --static $($*_DESCRIPTION) $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 test-c-files: $(ALL_C_FILES)
@@ -491,92 +452,10 @@ test-c-files: $(ALL_C_FILES)
 test-c-files only-test-c-files:
 	$(CC) -Wall -Wno-unused-function -Werror $(CFLAGS) -c $(ALL_C_FILES)
 
-$(UNSATURATED_SOLINAS_BEDROCK2_FILES): $(BEDROCK2_UNSATURATED_SOLINAS) # Makefile
-
-$(WORD_BY_WORD_MONTGOMERY_BEDROCK2_FILES): $(BEDROCK2_WORD_BY_WORD_MONTGOMERY) # Makefile
-
-# 2^255 - 19
-$(BEDROCK2_DIR)curve25519_64.c $(BEDROCK2_DIR)curve25519_32.c : $(BEDROCK2_DIR)curve25519_%.c :
+$(ALL_BEDROCK2_FILES) : $(BEDROCK2_DIR)%.c : $$($$(BEDROCK2_$$*_BINARY_NAME))
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(BEDROCK2_UNSATURATED_SOLINAS) --lang bedrock2 $(BEDROCK2_ARGS) '25519' '$*' '(auto)' '2^255 - 19' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^130 - 5
-$(BEDROCK2_DIR)poly1305_64.c : $(BEDROCK2_DIR)poly1305_%.c :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(BEDROCK2_UNSATURATED_SOLINAS) --lang bedrock2 $(BEDROCK2_ARGS) 'poly1305' '$*' '3' '2^130 - 5' $(filter-out $(BEDROCK2_UNSUPPORTED_SOLINAS_FUNCTIONS),$(UNSATURATED_SOLINAS_FUNCTIONS)) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^130 - 5
-$(BEDROCK2_DIR)poly1305_32.c : $(BEDROCK2_DIR)poly1305_%.c :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(BEDROCK2_UNSATURATED_SOLINAS) --lang bedrock2 $(BEDROCK2_ARGS) 'poly1305' '$*' '5' '2^130 - 5' $(filter-out $(BEDROCK2_UNSUPPORTED_SOLINAS_FUNCTIONS),$(UNSATURATED_SOLINAS_FUNCTIONS)) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^521 - 1
-$(BEDROCK2_DIR)p521_64.c : $(BEDROCK2_DIR)p521_%.c :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(BEDROCK2_UNSATURATED_SOLINAS) --lang bedrock2 $(BEDROCK2_ARGS) 'p521' '$*' '9' '2^521 - 1' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-## 2^224 - 2^96 + 1 ## does not bounds check
-#$(BEDROCK2_DIR)p224_solinas_64.c : $(BEDROCK2_DIR)p224_solinas_%.c :
-#	$(SHOW)'SYNTHESIZE > $@'
-#	$(HIDE)rm -f $@.ok
-#	$(HIDE)($(TIMER) $(BEDROCK2_UNSATURATED_SOLINAS) --lang bedrock2 $(BEDROCK2_ARGS) 'p224' '$*' '4' '2^224 - 2^96 + 1' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
-#	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^448 - 2^224 - 1
-$(BEDROCK2_DIR)p448_solinas_64.c : $(BEDROCK2_DIR)p448_solinas_%.c :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(BEDROCK2_UNSATURATED_SOLINAS) --lang bedrock2 $(BEDROCK2_ARGS) 'p448' '$*' '8' '2^448 - 2^224 - 1' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^448 - 2^224 - 1
-$(BEDROCK2_DIR)p448_solinas_32.c : $(BEDROCK2_DIR)p448_solinas_%.c :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(BEDROCK2_UNSATURATED_SOLINAS) --lang bedrock2 $(BEDROCK2_ARGS) 'p448' '$*' '16' '2^448 - 2^224 - 1' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^256 - 2^224 + 2^192 + 2^96 - 1
-$(BEDROCK2_DIR)p256_64.c $(BEDROCK2_DIR)p256_32.c : $(BEDROCK2_DIR)p256_%.c :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(BEDROCK2_WORD_BY_WORD_MONTGOMERY) --lang bedrock2 $(BEDROCK2_ARGS) 'p256' '$*' '2^256 - 2^224 + 2^192 + 2^96 - 1' $(WORD_BY_WORD_MONTGOMERY_FUNCTIONS) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^256 - 2^32 - 977
-$(BEDROCK2_DIR)secp256k1_64.c $(BEDROCK2_DIR)secp256k1_32.c : $(BEDROCK2_DIR)secp256k1_%.c :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(BEDROCK2_WORD_BY_WORD_MONTGOMERY) --lang bedrock2 $(BEDROCK2_ARGS) 'secp256k1' '$*' '2^256 - 2^32 - 977' $(WORD_BY_WORD_MONTGOMERY_FUNCTIONS) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^384 - 2^128 - 2^96 + 2^32 - 1
-$(BEDROCK2_DIR)p384_64.c $(BEDROCK2_DIR)p384_32.c : $(BEDROCK2_DIR)p384_%.c :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(BEDROCK2_WORD_BY_WORD_MONTGOMERY) --lang bedrock2 $(BEDROCK2_ARGS) 'p384' '$*' '2^384 - 2^128 - 2^96 + 2^32 - 1' $(WORD_BY_WORD_MONTGOMERY_FUNCTIONS) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^224 - 2^96 + 1
-$(BEDROCK2_DIR)p224_64.c $(BEDROCK2_DIR)p224_32.c : $(BEDROCK2_DIR)p224_%.c :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(BEDROCK2_WORD_BY_WORD_MONTGOMERY) --lang bedrock2 $(BEDROCK2_ARGS) 'p224' '$*' '2^224 - 2^96 + 1' $(WORD_BY_WORD_MONTGOMERY_FUNCTIONS) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^216 * 3^137 - 1
-$(BEDROCK2_DIR)p434_64.c $(BEDROCK2_DIR)p434_32.c : $(BEDROCK2_DIR)p434_%.c :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(BEDROCK2_WORD_BY_WORD_MONTGOMERY) --lang bedrock2 $(BEDROCK2_ARGS) 'p434' '$*' '2^216 * 3^137 - 1' $(WORD_BY_WORD_MONTGOMERY_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $($(BEDROCK2_$*_BINARY_NAME)) --lang bedrock2 $(BEDROCK2_ARGS) $($*_DESCRIPTION) $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 test-bedrock2-files: $(ALL_BEDROCK2_FILES)
@@ -584,92 +463,10 @@ test-bedrock2-files: $(ALL_BEDROCK2_FILES)
 test-bedrock2-files only-test-bedrock2-files:
 	$(CC) -Wall -Wno-unused-function -Werror $(BEDROCK2_EXTRA_CFLAGS) $(CFLAGS) -c $(ALL_BEDROCK2_FILES)
 
-$(UNSATURATED_SOLINAS_RUST_FILES): $(UNSATURATED_SOLINAS) # Makefile
-
-$(WORD_BY_WORD_MONTGOMERY_RUST_FILES): $(WORD_BY_WORD_MONTGOMERY) # Makefile
-
-# 2^255 - 19
-$(RS_DIR)curve25519_64.rs $(RS_DIR)curve25519_32.rs : $(RS_DIR)curve25519_%.rs :
+$(ALL_RUST_FILES) : $(RUST_DIR)%.rs : $$($$($$*_BINARY_NAME))
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang Rust '25519' '$*' '(auto)' '2^255 - 19' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^130 - 5
-$(RS_DIR)poly1305_64.rs : $(RS_DIR)poly1305_%.rs :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang Rust 'poly1305' '$*' '3' '2^130 - 5' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^130 - 5
-$(RS_DIR)poly1305_32.rs : $(RS_DIR)poly1305_%.rs :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang Rust 'poly1305' '$*' '5' '2^130 - 5' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^521 - 1
-$(RS_DIR)p521_64.rs : $(RS_DIR)p521_%.rs :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang Rust 'p521' '$*' '9' '2^521 - 1' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-## 2^224 - 2^96 + 1 ## does not bounds check
-#$(RS_DIR)p224_solinas_64.rs : $(RS_DIR)p224_solinas_%.rs :
-#	$(SHOW)'SYNTHESIZE > $@'
-#	$(HIDE)rm -f $@.ok
-#	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang Rust 'p224' '$*' '4' '2^224 - 2^96 + 1' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
-#	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^448 - 2^224 - 1
-$(RS_DIR)p448_solinas_64.rs : $(RS_DIR)p448_solinas_%.rs :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang Rust 'p448' '$*' '8' '2^448 - 2^224 - 1' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^448 - 2^224 - 1
-$(RS_DIR)p448_solinas_32.rs : $(RS_DIR)p448_solinas_%.rs :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang Rust 'p448' '$*' '16' '2^448 - 2^224 - 1' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^256 - 2^224 + 2^192 + 2^96 - 1
-$(RS_DIR)p256_64.rs $(RS_DIR)p256_32.rs : $(RS_DIR)p256_%.rs :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang Rust 'p256' '$*' '2^256 - 2^224 + 2^192 + 2^96 - 1' $(WORD_BY_WORD_MONTGOMERY_FUNCTIONS) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^256 - 2^32 - 977
-$(RS_DIR)secp256k1_64.rs $(RS_DIR)secp256k1_32.rs : $(RS_DIR)secp256k1_%.rs :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang Rust 'secp256k1' '$*' '2^256 - 2^32 - 977' $(WORD_BY_WORD_MONTGOMERY_FUNCTIONS) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^384 - 2^128 - 2^96 + 2^32 - 1
-$(RS_DIR)p384_64.rs $(RS_DIR)p384_32.rs : $(RS_DIR)p384_%.rs :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang Rust 'p384' '$*' '2^384 - 2^128 - 2^96 + 2^32 - 1' $(WORD_BY_WORD_MONTGOMERY_FUNCTIONS) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^224 - 2^96 + 1
-$(RS_DIR)p224_64.rs $(RS_DIR)p224_32.rs : $(RS_DIR)p224_%.rs :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang Rust 'p224' '$*' '2^224 - 2^96 + 1' $(WORD_BY_WORD_MONTGOMERY_FUNCTIONS) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^216 * 3^137 - 1
-$(RS_DIR)p434_64.rs $(RS_DIR)p434_32.rs : $(RS_DIR)p434_%.rs :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang Rust 'p434' '$*' '2^216 * 3^137 - 1' $(WORD_BY_WORD_MONTGOMERY_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $($($*_BINARY_NAME)) --lang Rust $($*_DESCRIPTION) $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 test-rust-files: $(ALL_RUST_FILES)
@@ -685,92 +482,10 @@ all: $(addprefix fiat-rust/,$(COPY_TO_FIAT_RUST))
 $(addprefix fiat-rust/,$(COPY_TO_FIAT_RUST)) : fiat-rust/% : %
 	cp -f $< $@
 
-$(UNSATURATED_SOLINAS_GO_FILES): $(UNSATURATED_SOLINAS) # Makefile
-
-$(WORD_BY_WORD_MONTGOMERY_GO_FILES): $(WORD_BY_WORD_MONTGOMERY) # Makefile
-
-# 2^255 - 19
-$(GO_DIR)curve25519_64.go $(GO_DIR)curve25519_32.go : $(GO_DIR)curve25519_%.go :
+$(ALL_GO_FILES) : $(GO_DIR)%.go : $$($$($$*_BINARY_NAME))
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang Go $(GO_EXTRA_ARGS_$*) '25519' '$*' '(auto)' '2^255 - 19' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^130 - 5
-$(GO_DIR)poly1305_64.go : $(GO_DIR)poly1305_%.go :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang Go $(GO_EXTRA_ARGS_$*) 'poly1305' '$*' '3' '2^130 - 5' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^130 - 5
-$(GO_DIR)poly1305_32.go : $(GO_DIR)poly1305_%.go :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang Go $(GO_EXTRA_ARGS_$*) 'poly1305' '$*' '5' '2^130 - 5' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^521 - 1
-$(GO_DIR)p521_64.go : $(GO_DIR)p521_%.go :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang Go $(GO_EXTRA_ARGS_$*) 'p521' '$*' '9' '2^521 - 1' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-## 2^224 - 2^96 + 1 ## does not bounds check
-#$(GO_DIR)p224_solinas_64.go : $(GO_DIR)p224_%.go :
-#	$(SHOW)'SYNTHESIZE > $@'
-#	$(HIDE)rm -f $@.ok
-#	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang Go $(GO_EXTRA_ARGS_$*) 'p224' '$*' '4' '2^224 - 2^96 + 1' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
-#	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^448 - 2^224 - 1
-$(GO_DIR)p448_solinas_64.go : $(GO_DIR)p448_solinas_%.go :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang Go $(GO_EXTRA_ARGS_$*) 'p448' '$*' '8' '2^448 - 2^224 - 1' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^448 - 2^224 - 1
-$(GO_DIR)p448_solinas_32.go : $(GO_DIR)p448_solinas_%.go :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang Go $(GO_EXTRA_ARGS_$*) 'p448' '$*' '16' '2^448 - 2^224 - 1' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^256 - 2^224 + 2^192 + 2^96 - 1
-$(GO_DIR)p256_64.go $(GO_DIR)p256_32.go : $(GO_DIR)p256_%.go :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang Go $(GO_EXTRA_ARGS_$*) 'p256' '$*' '2^256 - 2^224 + 2^192 + 2^96 - 1' $(WORD_BY_WORD_MONTGOMERY_FUNCTIONS) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^256 - 2^32 - 977
-$(GO_DIR)secp256k1_64.go $(GO_DIR)secp256k1_32.go : $(GO_DIR)secp256k1_%.go :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang Go $(GO_EXTRA_ARGS_$*) 'secp256k1' '$*' '2^256 - 2^32 - 977' $(WORD_BY_WORD_MONTGOMERY_FUNCTIONS) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^384 - 2^128 - 2^96 + 2^32 - 1
-$(GO_DIR)p384_64.go $(GO_DIR)p384_32.go : $(GO_DIR)p384_%.go :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang Go $(GO_EXTRA_ARGS_$*) 'p384' '$*' '2^384 - 2^128 - 2^96 + 2^32 - 1' $(WORD_BY_WORD_MONTGOMERY_FUNCTIONS) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^224 - 2^96 + 1
-$(GO_DIR)p224_64.go $(GO_DIR)p224_32.go : $(GO_DIR)p224_%.go :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang Go $(GO_EXTRA_ARGS_$*) 'p224' '$*' '2^224 - 2^96 + 1' $(WORD_BY_WORD_MONTGOMERY_FUNCTIONS) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^216 * 3^137 - 1
-$(GO_DIR)p434_64.go $(GO_DIR)p434_32.go : $(GO_DIR)p434_%.go :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang Go $(GO_EXTRA_ARGS_$*) 'p434' '$*' '2^216 * 3^137 - 1' $(WORD_BY_WORD_MONTGOMERY_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $($($*_BINARY_NAME)) --lang Go $(GO_EXTRA_ARGS_$($*_BITWIDTH)) $($*_DESCRIPTION) $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 .PHONY: $(addprefix test-,$(ALL_GO_FILES))
@@ -785,64 +500,10 @@ $(addprefix only-test-,$(ALL_GO_FILES)) : only-test-% :
 test-go-files: $(addprefix test-,$(ALL_GO_FILES))
 only-test-go-files: $(addprefix only-test-,$(ALL_GO_FILES))
 
-$(UNSATURATED_SOLINAS_JAVA_FILES): $(UNSATURATED_SOLINAS) # Makefile
-
-$(WORD_BY_WORD_MONTGOMERY_JAVA_FILES): $(WORD_BY_WORD_MONTGOMERY) # Makefile
-
-# 2^255 - 19
-$(JAVA_DIR)FiatCurve25519.java : $(JAVA_DIR)Fiat%.java :
+$(ALL_JAVA_FILES) : $(JAVA_DIR)%.java : $$($$(JAVA_$$*_BINARY_NAME))
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang Java $(JAVA_EXTRA_ARGS_32) '$*' '32' '10' '2^255 - 19' $(FUNCTIONS_FOR_25519) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^130 - 5
-$(JAVA_DIR)FiatPoly1305.java : $(JAVA_DIR)Fiat%.java :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang Java $(JAVA_EXTRA_ARGS_32) '$*' '32' '5' '2^130 - 5' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^448 - 2^224 - 1
-$(JAVA_DIR)FiatP448Solinas.java : $(JAVA_DIR)Fiat%.java :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(UNSATURATED_SOLINAS) --lang Java $(JAVA_EXTRA_ARGS_32) '$*' '32' '16' '2^448 - 2^224 - 1' $(UNSATURATED_SOLINAS_FUNCTIONS) && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^256 - 2^224 + 2^192 + 2^96 - 1
-$(JAVA_DIR)FiatP256.java : $(JAVA_DIR)Fiat%.java :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang Java $(JAVA_EXTRA_ARGS_32) '$*' '32' '2^256 - 2^224 + 2^192 + 2^96 - 1' && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^256 - 2^32 - 977
-$(JAVA_DIR)FiatSecp256K1.java : $(JAVA_DIR)Fiat%.java :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang Java $(JAVA_EXTRA_ARGS_32) '$*' '32' '2^256 - 2^32 - 977' && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^384 - 2^128 - 2^96 + 2^32 - 1
-$(JAVA_DIR)FiatP384.java: $(JAVA_DIR)Fiat%.java :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang Java $(JAVA_EXTRA_ARGS_32) '$*' '32' '2^384 - 2^128 - 2^96 + 2^32 - 1' && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^224 - 2^96 + 1
-$(JAVA_DIR)FiatP224.java : $(JAVA_DIR)Fiat%.java :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang Java $(JAVA_EXTRA_ARGS_32) '$*' '32' '2^224 - 2^96 + 1' && touch $@.ok) > $@.tmp
-	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
-
-# 2^216 * 3^137 - 1
-$(JAVA_DIR)FiatP434.java : $(JAVA_DIR)Fiat%.java :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $(WORD_BY_WORD_MONTGOMERY) --lang Java $(JAVA_EXTRA_ARGS_32) '$*' '32' '2^216 * 3^137 - 1' && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $($(JAVA_$*_BINARY_NAME)) --lang Java $(JAVA_EXTRA_ARGS_$(JAVA_$*_BITWIDTH)) $(JAVA_$*_DESCRIPTION) $(JAVA_$*_ARGS) $(JAVA_$*_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 .PHONY: $(addprefix test-,$(ALL_JAVA_FILES))
