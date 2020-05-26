@@ -590,7 +590,7 @@ Section __.
     since there doesn't appear to be any encode_no_reduce_partitions *)
     Lemma relax_to_byte_bounds x :
       list_Z_bounded_by prime_bytes_bounds x ->
-      list_Z_bounded_by (byte_bounds n) x.
+      list_Z_bounded_by (byte_bounds n_bytes) x.
     Proof.
       cbv [prime_bytes_bounds byte_bounds prime_bytes_upperbound_list].
     Admitted.
@@ -618,6 +618,10 @@ Section __.
       rewrite map_length, length_encode_no_reduce in *. lia.
     Qed.
 
+    Lemma bounded_by_byte_bounds_length x :
+      list_Z_bounded_by (byte_bounds n_bytes) x -> length x = n_bytes.
+    Proof. eapply byte_bounds_range_iff. Qed.
+
     (* TODO: maybe make a generalized prove_bounds tactic that takes a list of
     bounds? *)
     Ltac assert_bounds x :=
@@ -625,7 +629,9 @@ Section __.
       | H: list_Z_bounded_by ?bs x |- _ => idtac
       | _ => assert (list_Z_bounded_by tight_bounds x) by prove_bounds_direct
       | _ => assert (list_Z_bounded_by loose_bounds x) by prove_bounds_direct
+      | _ => assert (list_Z_bounded_by prime_bytes_bounds x) by prove_bounds_direct
       | _ => assert (list_Z_bounded_by (max_bounds n) x) by prove_bounds_direct
+      | _ => assert (list_Z_bounded_by (byte_bounds n_bytes) x) by prove_bounds_direct
       | _ => fail "could not determine known bounds of " x
       end.
     (* looks for the following combinations of tighter/looser bounds:
@@ -645,8 +651,19 @@ Section __.
                 apply relax_correct; apply H
               | unify b1 loose_bounds; unify b2 saturated_bounds;
                 apply relax_to_max_bounds; apply H
-              | unify b1 prime_bytes_bounds; unify b2 (byte_bounds n);
+              | unify b1 prime_bytes_bounds; unify b2 (byte_bounds n_bytes);
                 apply relax_to_byte_bounds; apply H ]
+      end.
+
+    (* special for to_bytes, because bounds are not included in the
+       postcondition as with all other operations *)
+    Ltac assert_to_bytes_bounds :=
+      match goal with
+      | H : postcondition to_bytes _ ?e |- _ =>
+        assert (list_Z_bounded_by (byte_bounds n_bytes) e)
+          by (cbn [fst snd postcondition to_bytes] in H;
+              rewrite H by prove_bounds;
+              apply partition_bounded_by)
       end.
 
     Ltac prove_output_length :=
@@ -658,35 +675,20 @@ Section __.
         apply bounded_by_saturated_bounds_length; prove_bounds
       | |- length _ = n_bytes =>
         apply bounded_by_prime_bytes_bounds_length; prove_bounds
+      | |- length _ = n_bytes =>
+        apply bounded_by_byte_bounds_length; prove_bounds
       | |- n = length _ =>
         symmetry; prove_output_length
       | |- n_bytes = length _ =>
         symmetry; prove_output_length
-      | H : postcondition ?op _ ?out |- length ?out = n_bytes =>
-        erewrite <-Partition.length_partition;
-        cbv [n_bytes limbwidth];
-        cbn [fst snd postcondition op] in H;
-        rewrite <-H by prove_bounds;
-        reflexivity
-      | |- ?x => fail "could not prove " x
-      end.
-
-    (* special for to_bytes, because bounds are not included in the
-       postcondition *)
-    Ltac assert_to_bytes_bounds :=
-      match goal with
-      | H : postcondition to_bytes _ ?e |- _ =>
-        assert (list_Z_bounded_by (byte_bounds n_bytes) e)
-          by (cbn [fst snd postcondition to_bytes] in H;
-              rewrite H by prove_bounds;
-              apply partition_bounded_by)
+      | |- ?x => fail "could not prove output length :" x
       end.
 
     Ltac setup :=
       autounfold with defs specs;
       begin_proof;
-      assert_output_length prove_output_length;
-      try assert_to_bytes_bounds.
+      try assert_to_bytes_bounds;
+      assert_output_length prove_output_length.
 
     Ltac use_translate_func_correct Rin Rout arg_ptrs out_array_ptrs :=
       apply_translate_func_correct Rin Rout arg_ptrs out_array_ptrs;
