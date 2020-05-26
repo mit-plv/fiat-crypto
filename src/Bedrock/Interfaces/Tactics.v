@@ -42,7 +42,7 @@ Ltac map_bounds_listonly t bounds :=
           end
   end.
 
-Ltac crush_list_ptr_subgoals :=
+Ltac crush_argument_equivalence_subgoals :=
   repeat match goal with
          | _ => progress cbn [hd tl]
          | _ => progress cbv [WeakestPrecondition.literal]
@@ -50,18 +50,17 @@ Ltac crush_list_ptr_subgoals :=
          | _ => rewrite map.get_put_diff by congruence
          | _ => rewrite map.get_put_same by auto
          | |- WeakestPrecondition.get _ _ _ => eexists
+         | |- map word.unsigned _ = map byte.unsigned _ =>
+           erewrite map_unsigned_of_Z,map_word_wrap_bounded
+             by eauto using byte_unsigned_within_max_bounds
          | _ => solve [apply Forall_word_unsigned_within_access_size;
                        auto using width_0mod_8]
+         | _ => solve [auto using Forall_map_unsigned,
+                       Forall_map_byte_unsigned]
          | _ => solve [apply word.unsigned_range]
          | _ => solve [auto using eval_bytes_range]
          | _ => reflexivity
          end.
-Ltac exists_list_ptr p :=
-  (exists p); sepsimpl; [ ];
-  eexists; sepsimpl;
-  [ solve [crush_list_ptr_subgoals] .. | ];
-  eexists; sepsimpl;
-  [ solve [crush_list_ptr_subgoals] .. | ].
 
 Ltac next_argument :=
   (exists 1%nat); sepsimpl; cbn [firstn skipn];
@@ -74,7 +73,9 @@ Ltac ssubst :=
            rewrite word.of_Z_unsigned in H'
          | H : word.unsigned _ = word.unsigned _ |- _ =>
            apply word.unsigned_inj in H
-         end; subst.
+         | H : ?x = _ |- _ => subst x
+         | H : _ = ?x |- _ => subst x
+         end.
 
 Ltac map_simplify :=
   repeat match goal with
@@ -145,14 +146,22 @@ Ltac access_size_simplify :=
          end.
 
 Ltac exists_arg_pointers :=
-  repeat match goal with
-         | H : sep _ _ ?m |- @Lift1Prop.ex1 nat _ _ ?m =>
-           match type of H with
-           | context [sep _ (_ ?p _)] =>
-             next_argument; exists_list_ptr p
-           | context [sep (_ ?p _)] =>
-             next_argument; exists_list_ptr p
-           end
+  repeat lazymatch goal with
+         | |- @Lift1Prop.ex1 nat _ ?k ?m =>
+           next_argument;
+           let p := lazymatch k with
+                    | context [@firstn word.rep _ ?l] =>
+                      let p := (eval cbn [hd] in (hd (word.of_Z 0) l)) in
+                      constr:(p)
+                    end in
+           (exists p; sepsimpl;
+                   [ solve [crush_argument_equivalence_subgoals] .. | ])
+         | |- @Lift1Prop.ex1 word.rep _ _ ?m =>
+           eexists; sepsimpl;
+           [ solve [crush_argument_equivalence_subgoals] .. | ]
+         | |- @Lift1Prop.ex1 (list word.rep) _ _ ?m =>
+           eexists; sepsimpl;
+           [ solve [crush_argument_equivalence_subgoals] .. | ]
          end.
 
 Ltac simplify_translate_func_postcondition :=
@@ -194,7 +203,7 @@ Ltac get_pointer wa :=
     match type of H with
       context [_ ?pa wa] => constr:(pa)
     end
-  | _ => fail "unable to find pointers for " wa
+  | _ => fail "unable to find pointers for" wa
   end.
 
 Ltac get_value_of_pointer p :=
@@ -203,23 +212,33 @@ Ltac get_value_of_pointer p :=
     match type of H with
       context [_ p ?x] => constr:(x)
     end
-  | _ => fail "unable to find value of pointer " p
+  | _ => fail "unable to find value of pointer" p
   end.
 
-Ltac get_all_arg_pointers args :=
+Ltac get_bedrock2_arglist args :=
   lazymatch args with
   | (?a, ?b) =>
-    let x := get_all_arg_pointers a in
-    let y := get_all_arg_pointers b in
-    constr:((cons x y)%list)
-  | tt => constr:(@nil (Semantics.word))
+    let x := get_bedrock2_arglist a in
+    let y := get_bedrock2_arglist b in
+    let ptrs := (eval cbv [app] in (x ++ y)%list) in
+    constr:(ptrs)
+  | tt => constr:(@nil (Semantics.word)) (* end of args *)
   | ?x =>
-    lazymatch x with
-    | map word.unsigned ?ws =>
-      let p := get_pointer ws in constr:(p)
-    | map byte.unsigned ?bs =>
-      let p := get_pointer bs in constr:(p)
-    | _ => fail "unable to find words or bytes for " x
+    lazymatch type of x with
+    | list _ =>
+      lazymatch x with
+      | map word.unsigned ?ws =>
+        let p := get_pointer ws in constr:(cons p nil)
+      | map byte.unsigned ?bs =>
+        let p := get_pointer bs in constr:(cons p nil)
+      | _ => fail "unable to find words or bytes for the list" x
+      end
+    | Z =>
+      lazymatch x with
+      | word.unsigned ?w => constr:(cons w nil)
+      | _ => fail "expected something of the form (word.unsigned _), got" x
+      end
+    | ?t => fail "unexpected argument type" t "for argument" x
     end
   end.
 
@@ -277,6 +296,9 @@ Ltac canonicalize_arrays :=
            seprewrite_in array_truncated_scalar_ptsto_iff1 H
          | _ => rewrite <-@word_size_in_bytes_eq in * by eauto
          | _ => rewrite byte_map_of_Z_unsigned by auto
+         | _ => rewrite map_unsigned_of_Z by auto
+         | _ => erewrite map_word_wrap_bounded by
+               eauto using byte_unsigned_within_max_bounds
          end.
 
 Ltac solve_translate_func_subgoals prove_bounds t :=

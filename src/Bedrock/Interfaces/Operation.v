@@ -135,11 +135,12 @@ Ltac assert_output_length prove_length :=
              | H : postcondition _ _ ?out |- _ => out end in
   let op := lazymatch goal with
             | H : postcondition ?op _ _ |- _ => op end in
+  let outlens := (eval cbn in (output_array_lengths op)) in
   assert
     (LoadStoreList.list_lengths_from_value out
      = op.(output_array_lengths));
-  cbn [LoadStoreList.list_lengths_from_value
-         type.final_codomain output_array_lengths op] in *;
+  cbn [LoadStoreList.list_lengths_from_value type.final_codomain] in *;
+  change (output_array_lengths op) with outlens in *;
   [ prove_length | ].
 
 Ltac find_input_array :=
@@ -182,12 +183,12 @@ Ltac apply_translate_func_correct Rin Rout arg_ptrs out_array_ptrs :=
 
 Ltac begin_proof :=
   match goal with
-    |- is_correct _ ?def ?spec =>
-    cbv [is_correct spec make_bedrock_func] in *; intros;
+    |- is_correct _ ?def _ =>
+    cbv [is_correct make_bedrock_func] in *; intros;
     sepsimpl;
-    cbn [def name inbounds input_array_sizes output_array_sizes
-             input_array_lengths output_array_lengths
-             pipeline_out correctness] in *
+    cbn [name inbounds input_array_sizes output_array_sizes
+              input_array_lengths output_array_lengths
+              pipeline_out correctness] in *
   end;
   match goal with |- context [postcondition ?op ?args] =>
                   let H := fresh in
