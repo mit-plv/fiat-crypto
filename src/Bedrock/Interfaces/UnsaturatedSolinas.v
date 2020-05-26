@@ -69,6 +69,19 @@ Class names_of_operations :=
     name_of_from_bytes : string;
     name_of_carry_scmul_const : string }.
 
+Definition names_from_prefix (prefix : string) : names_of_operations :=
+  {| name_of_carry_mul := (prefix ++ "carry_mul")%string;
+     name_of_carry_square := (prefix ++ "carry_square")%string;
+     name_of_carry := (prefix ++ "carry")%string;
+     name_of_add := (prefix ++ "add")%string;
+     name_of_sub := (prefix ++ "sub")%string;
+     name_of_opp := (prefix ++ "opp")%string;
+     name_of_selectznz := (prefix ++ "selectznz")%string;
+     name_of_to_bytes := (prefix ++ "to_bytes")%string;
+     name_of_from_bytes := (prefix ++ "from_bytes")%string;
+     name_of_carry_scmul_const := (prefix ++ "carry_scmul_const")%string
+  |}.
+
 Ltac apply_correctness_in H :=
   match type of H with
   | context [UnsaturatedSolinas.carry_mul] =>
