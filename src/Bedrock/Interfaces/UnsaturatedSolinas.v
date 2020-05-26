@@ -720,6 +720,22 @@ Section __.
                check_args n s c Semantics.width (ErrorT.Success tt)
                = ErrorT.Success tt).
 
+    Lemma to_bytes_correct :
+      is_correct
+        (UnsaturatedSolinas.to_bytes n s c Semantics.width)
+        to_bytes spec_of_to_bytes.
+    Proof.
+      autounfold with defs specs; begin_proof.
+      assert_to_bytes_bounds.
+      assert_output_length ltac:(idtac).
+      { match goal with
+          H : list_Z_bounded_by ?bs ?res |- length ?res = _ =>
+          idtac "successfully asserted bounds" bs
+        end.
+        prove_output_length. }
+      prove_is_correct Ra Rr.
+    Qed.
+
     Lemma carry_mul_correct :
       is_correct
         (UnsaturatedSolinas.carry_mul n s c Semantics.width)
