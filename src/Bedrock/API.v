@@ -361,6 +361,17 @@ Module Test.
   Local Open Scope string_scope.
   Local Coercion name_of_func (f : bedrock_func) := fst f.
 
+  (* Notations to make specs more readable *)
+  Local Notation M := (X25519_64.s - Associational.eval X25519_64.c).
+  Local Notation eval :=
+    (Positional.eval
+                (weight X25519_64.n X25519_64.s X25519_64.c)
+                X25519_64.n).
+  Local Notation loose_bounds :=
+    (UnsaturatedSolinas.loose_bounds X25519_64.n X25519_64.s X25519_64.c).
+  Local Notation tight_bounds :=
+    (UnsaturatedSolinas.tight_bounds X25519_64.n X25519_64.s X25519_64.c).
+
   (* test function; computes x * y * y *)
   Definition mul_twice : bedrock_func :=
     let x := "x" in
@@ -373,17 +384,6 @@ Module Test.
       (cmd.seq
          (cmd.call [] "curve25519_carry_mul" [expr.var x; expr.var y; expr.var out])
          (cmd.call [] "curve25519_carry_mul" [expr.var out; expr.var y; expr.var out])))).
-
-  (* Notations to make the spec more readable *)
-  Local Notation M := (X25519_64.s - Associational.eval X25519_64.c).
-  Local Notation eval :=
-    (Positional.eval
-                (weight X25519_64.n X25519_64.s X25519_64.c)
-                X25519_64.n).
-  Local Notation loose_bounds :=
-    (UnsaturatedSolinas.loose_bounds X25519_64.n X25519_64.s X25519_64.c).
-  Local Notation tight_bounds :=
-    (UnsaturatedSolinas.tight_bounds X25519_64.n X25519_64.s X25519_64.c).
 
   Instance spec_of_mul_twice : spec_of mul_twice :=
     fun functions =>
@@ -414,9 +414,6 @@ Module Test.
                                /\ list_Z_bounded_by tight_bounds outz))
                          (Bignum pout out))
                     (sep (Bignum px x) (sep (Bignum py y) R))) m').
-
-  Local Notation function_t := ((String.string * (list String.string * list String.string * Syntax.cmd.cmd))%type).
-  Local Notation functions_t := (list function_t).
 
   (* TODO: currently this extra step is required so the literal string isn't
   hidden *)
@@ -477,4 +474,126 @@ Module Test.
            end.
     reflexivity.
   Qed.
+
+  Definition encode_decode : bedrock_func :=
+    let x := "x" in
+    let tmp := "tmp" in
+    ("encode_decode",
+     ([x; tmp], [],
+      (cmd.seq
+         (cmd.call [] "curve25519_to_bytes" [expr.var x; expr.var tmp])
+         (cmd.call [] "curve25519_from_bytes" [expr.var tmp; expr.var x])))).
+
+  Local Definition n_bytes :=
+    (UnsaturatedSolinas.n_bytes X25519_64.n X25519_64.s X25519_64.c).
+
+  Instance spec_of_encode_decode : spec_of encode_decode :=
+    fun functions =>
+      forall x old_tmp px ptmp t m
+             (R : Interface.map.rep
+                    (map:=Semantics.mem) -> Prop),
+        let xz := map word.unsigned x in
+        list_Z_bounded_by tight_bounds xz ->
+        length old_tmp = n_bytes ->
+        sep (sep (Bignum px x) (EncodedBignum ptmp old_tmp)) R m ->
+        WeakestPrecondition.call
+          (p:=Types.semantics)
+          functions encode_decode t m
+          (px :: ptmp :: nil)
+          (fun t' m' rets =>
+             t = t' /\
+             rets = []%list /\
+             exists out tmp',
+               let outz := map word.unsigned out in
+               eval outz mod M = eval xz mod M
+               /\ list_Z_bounded_by tight_bounds outz
+               /\ length tmp' = n_bytes
+               /\ sep (Bignum px out)
+                      (sep (EncodedBignum ptmp tmp') R) m').
+
+  (* TODO: currently this extra step is required so the literal string isn't
+  hidden *)
+  Instance spec_of_curve25519_to_bytes :
+    spec_of "curve25519_to_bytes" := spec_of_to_bytes.
+  Instance spec_of_curve25519_from_bytes :
+    spec_of "curve25519_from_bytes" := spec_of_from_bytes.
+
+  Lemma encode_decode_correct :
+    program_logic_goal_for_function! encode_decode.
+  Proof.
+    (* first step of straightline is inlined here so we can do a [change]
+       instead of [replace] *)
+    enter encode_decode. cbv zeta. intros.
+    WeakestPrecondition.unfold1_call_goal.
+    (cbv beta match delta [WeakestPrecondition.call_body]).
+    lazymatch goal with
+    | |- if ?test then ?T else _ =>
+      (* this change is a replace in the original straightline, but that hangs
+      here for some reason *)
+      change test with true; change_no_check T
+    end.
+    (cbv beta match delta [WeakestPrecondition.func]).
+
+    repeat straightline.
+    straightline_call; sepsimpl;
+      [ try ecancel_assumption .. | ];
+      [ rewrite ?map_length; assumption .. | ].
+    repeat straightline.
+
+    lazymatch goal with
+      H : postcondition _ _ ?out |- _ =>
+      cbn [fst snd postcondition UnsaturatedSolinas.to_bytes] in H;
+        repeat specialize (H ltac:(assumption)); cleanup;
+          (* TODO: need to prove that encode_no_reduce = partition *)
+          assert
+            (list_Z_bounded_by
+               (map
+                  (fun v : Z =>
+                     Some {| ZRange.lower := 0; ZRange.upper := v |})
+                  (Positional.encode_no_reduce (ModOps.weight 8 1)
+                                               (UnsaturatedSolinas.n_bytes X25519_64.n X25519_64.s
+                                                                           X25519_64.c) (X25519_64.s - 1))) out) by admit
+    end.
+    straightline_call; sepsimpl;
+      [ try ecancel_assumption .. | ].
+    { auto. }
+    { eapply bounded_by_loose_bounds_length.
+      apply relax_correct.
+      match goal with H : context [Positional.encode_no_reduce] |- _ =>
+                      clear H end.
+      Tactics.prove_bounds_direct. }
+
+    repeat straightline.
+    let H := lazymatch goal with
+               H : postcondition _ _ ?out |- _ => H end in
+    cbn [fst snd postcondition UnsaturatedSolinas.from_bytes] in H;
+      specialize (H ltac:(assumption)); cleanup.
+
+    repeat split; try reflexivity.
+    sepsimpl_hyps.
+    do 2 eexists; sepsimpl;
+      [ | | | ecancel_assumption ];
+      try assumption; [ | ].
+    { repeat match goal with
+             | H : eval _ mod M = _ |- _ => rewrite H
+             | H : map Byte.byte.unsigned _ = _ |- _ => rewrite H
+             end.
+      rewrite Partition.eval_partition
+        by (apply UniformWeight.uwprops; lia).
+      match goal with
+        |- context [(((eval ?a) mod ?m1) mod ?m2) mod ?m1] =>
+        let x1 := (eval vm_compute in m1) in
+        let x2 := (eval vm_compute in m2) in
+        change m2 with x2; change m1 with x1;
+          pose proof (Z.mod_pos_bound (eval a) x1 ltac:(lia));
+          rewrite (Z.mod_small _ x2) by lia
+      end.
+      rewrite Z.mod_mod by lia. reflexivity. }
+    { erewrite <-map_length.
+      match goal with
+      | H : map Byte.byte.unsigned _ = _ |- _ => erewrite H
+      end.
+      rewrite Partition.length_partition.
+      reflexivity. }
+  Admitted.
 End Test.
