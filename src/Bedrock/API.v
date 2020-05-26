@@ -94,6 +94,7 @@ Local Notation make_bedrock_func :=
 Local Notation make_bedrock_func_with_sizes :=
   (@make_bedrock_func_with_sizes _ default_inname_gen default_outname_gen).
 
+(* TODO: move to own file *)
 Record reified_op {p t}
        (op : operation t)
        (start : ErrorT.ErrorT BoundsPipeline.Pipeline.ErrorMessage
@@ -153,6 +154,30 @@ Ltac parameters_from_wordsize machine_wordsize :=
   lazymatch r with
   | inl ?p => p
   | inr ?err => fail "Failed to select parameters: " err
+  end.
+
+Ltac use_correctness_proofs :=
+  match goal with
+  | |- context [UnsaturatedSolinas.spec_of_carry_mul] =>
+    apply UnsaturatedSolinas.carry_mul_correct
+  | |- context [UnsaturatedSolinas.spec_of_carry_square] =>
+    apply UnsaturatedSolinas.carry_square_correct
+  | |- context [UnsaturatedSolinas.spec_of_carry] =>
+    apply UnsaturatedSolinas.carry_correct
+  | |- context [UnsaturatedSolinas.spec_of_add] =>
+    apply UnsaturatedSolinas.add_correct
+  | |- context [UnsaturatedSolinas.spec_of_sub] =>
+    apply UnsaturatedSolinas.sub_correct
+  | |- context [UnsaturatedSolinas.spec_of_opp] =>
+    apply UnsaturatedSolinas.opp_correct
+  | |- context [UnsaturatedSolinas.spec_of_selectznz] =>
+    apply UnsaturatedSolinas.selectznz_correct
+  | |- context [UnsaturatedSolinas.spec_of_to_bytes] =>
+    apply UnsaturatedSolinas.to_bytes_correct
+  | |- context [UnsaturatedSolinas.spec_of_from_bytes] =>
+    apply UnsaturatedSolinas.from_bytes_correct
+  | |- context [UnsaturatedSolinas.spec_of_carry_scmul_const] =>
+    apply UnsaturatedSolinas.carry_scmul_const_correct
   end.
 
 Ltac make_all_reified_ops n s c machine_wordsize :=
@@ -248,44 +273,6 @@ Ltac instantiate_ops :=
   subst carry_mul_func_value carry_square_func_value carry_func_value
         add_func_value sub_func_value opp_func_value selectznz_func_value
         to_bytes_func_value from_bytes_func_value.
-
-(* TODO: move *)
-Definition names_from_prefix (prefix : string) : names_of_operations :=
-  {| name_of_carry_mul := (prefix ++ "carry_mul")%string;
-     name_of_carry_square := (prefix ++ "carry_square")%string;
-     name_of_carry := (prefix ++ "carry")%string;
-     name_of_add := (prefix ++ "add")%string;
-     name_of_sub := (prefix ++ "sub")%string;
-     name_of_opp := (prefix ++ "opp")%string;
-     name_of_selectznz := (prefix ++ "selectznz")%string;
-     name_of_to_bytes := (prefix ++ "to_bytes")%string;
-     name_of_from_bytes := (prefix ++ "from_bytes")%string;
-     name_of_carry_scmul_const := (prefix ++ "carry_scmul_const")%string
-  |}.
-(* TODO: move *)
-Ltac use_correctness_proofs :=
-  match goal with
-  | |- context [UnsaturatedSolinas.spec_of_carry_mul] =>
-    apply UnsaturatedSolinas.carry_mul_correct
-  | |- context [UnsaturatedSolinas.spec_of_carry_square] =>
-    apply UnsaturatedSolinas.carry_square_correct
-  | |- context [UnsaturatedSolinas.spec_of_carry] =>
-    apply UnsaturatedSolinas.carry_correct
-  | |- context [UnsaturatedSolinas.spec_of_add] =>
-    apply UnsaturatedSolinas.add_correct
-  | |- context [UnsaturatedSolinas.spec_of_sub] =>
-    apply UnsaturatedSolinas.sub_correct
-  | |- context [UnsaturatedSolinas.spec_of_opp] =>
-    apply UnsaturatedSolinas.opp_correct
-  | |- context [UnsaturatedSolinas.spec_of_selectznz] =>
-    apply UnsaturatedSolinas.selectznz_correct
-  | |- context [UnsaturatedSolinas.spec_of_to_bytes] =>
-    apply UnsaturatedSolinas.to_bytes_correct
-  | |- context [UnsaturatedSolinas.spec_of_from_bytes] =>
-    apply UnsaturatedSolinas.from_bytes_correct
-  | |- context [UnsaturatedSolinas.spec_of_carry_scmul_const] =>
-    apply UnsaturatedSolinas.carry_scmul_const_correct
-  end.
 
 Module X25519_64.
   Let n := 10%nat.
