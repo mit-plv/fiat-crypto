@@ -21,34 +21,73 @@ Import ListNotations.
 Import AbstractInterpretation.Compilers.
 Import Language.Wf.Compilers.
 
-Class bedrock2_unsaturated_solinas p n s c :=
+Class bedrock2_unsaturated_solinas {p names n s c} :=
   { carry_mul : bedrock_func;
+    carry_square : bedrock_func;
+    carry : bedrock_func;
+    add : bedrock_func;
+    sub : bedrock_func;
+    opp : bedrock_func;
+    selectznz : bedrock_func;
+    to_bytes : bedrock_func;
+    from_bytes : bedrock_func;
     spec_of_carry_mul : spec_of (fst carry_mul) :=
-      @spec_of_carry_mul p n s c (fst carry_mul);
+      @spec_of_carry_mul p n s c names;
+    spec_of_carry_square : spec_of (fst carry_square) :=
+      @spec_of_carry_square p n s c names;
+    spec_of_carry : spec_of (fst carry) :=
+      @spec_of_carry p n s c names;
+    spec_of_add : spec_of (fst add) :=
+      @spec_of_add p n s c names;
+    spec_of_sub : spec_of (fst sub) :=
+      @spec_of_sub p n s c names;
+    spec_of_opp : spec_of (fst opp) :=
+      @spec_of_opp p n s c names;
+    spec_of_selectznz : spec_of (fst selectznz) :=
+      @spec_of_selectznz p n s c names;
+    spec_of_to_bytes : spec_of (fst to_bytes) :=
+      @spec_of_to_bytes p n s c names;
+    spec_of_from_bytes : spec_of (fst from_bytes) :=
+      @spec_of_from_bytes p n s c names;
     carry_mul_correct :
       forall functions,
         spec_of_carry_mul (carry_mul :: functions);
-    add : bedrock_func;
-    spec_of_add : spec_of (fst add) :=
-      @spec_of_add p n s c (fst add);
+    carry_square_correct :
+      forall functions,
+        spec_of_carry_square (carry_square :: functions);
+    carry_correct :
+      forall functions,
+        spec_of_carry (carry :: functions);
     add_correct :
       forall functions,
         spec_of_add (add :: functions);
-    to_bytes : bedrock_func;
-    spec_of_to_bytes : spec_of (fst to_bytes) :=
-      @spec_of_to_bytes p n s c (fst to_bytes);
+    sub_correct :
+      forall functions,
+        spec_of_sub (sub :: functions);
+    opp_correct :
+      forall functions,
+        spec_of_opp (opp :: functions);
+    selectznz_correct :
+      forall functions,
+        spec_of_selectznz (selectznz :: functions);
     to_bytes_correct :
       forall functions,
-        spec_of_to_bytes (to_bytes :: functions) }.
-Arguments carry_mul {_ _ _ _ _}.
-Arguments spec_of_carry_mul {_ _ _ _ _}.
-Arguments carry_mul_correct {_ _ _ _ _}.
-Arguments add {_ _ _ _ _}.
-Arguments spec_of_add {_ _ _ _ _}.
-Arguments add_correct {_ _ _ _ _}.
-Arguments to_bytes {_ _ _ _ _}.
-Arguments spec_of_to_bytes {_ _ _ _ _}.
-Arguments to_bytes_correct {_ _ _ _ _}.
+        spec_of_to_bytes (to_bytes :: functions);
+    from_bytes_correct :
+      forall functions,
+        spec_of_from_bytes (from_bytes :: functions) }.
+Arguments bedrock2_unsaturated_solinas {_ _} _ _ _.
+
+(* scalar multiplication is calculated separately since it requires an extra
+   argument *)
+Class bedrock2_unsaturated_solinas_scmul {p names n s c} {x : Z} :=
+  { carry_scmul_const : bedrock_func;
+    spec_of_carry_scmul_const : spec_of (fst carry_scmul_const) :=
+      @spec_of_carry_scmul_const p n s c names x;
+    carry_scmul_const_correct :
+      forall functions,
+        spec_of_carry_scmul_const (carry_scmul_const :: functions) }.
+Arguments bedrock2_unsaturated_solinas_scmul {_ _} _ _ _ _.
 
 Local Notation make_bedrock_func :=
   (@make_bedrock_func _ default_inname_gen default_outname_gen).
@@ -71,11 +110,6 @@ Arguments res {_ _ _}.
 Arguments reified_eq {_ _ _}.
 Arguments reified_Wf3 {_ _ _}.
 Arguments reified_valid {_ _ _}.
-
-Class names_of_operations :=
-  { name_of_carry_mul : string;
-    name_of_add : string;
-    name_of_to_bytes : string }.
 
 Ltac handle_easy_preconditions :=
   lazymatch goal with
@@ -101,10 +135,12 @@ Ltac make_reified_op op start :=
         vm_compute; reflexivity
       | _ => idtac
       end;
-      idtac "got expression, proving subgoals";
+      idtac "  computing bedrock2 translation...";
+      [ match goal with
+        | |- _ = make_bedrock_func _ _ =>
+          vm_compute; reflexivity end | .. ];
+      idtac "  proving Wf3 and valid_func...";
       match goal with
-      | |- _ = make_bedrock_func _ _ =>
-        vm_compute; reflexivity
       | |- expr.Wf3 _ => abstract (prove_Wf3 ())
       | |- valid_func_bool ?x = true =>
         abstract (vm_compute; reflexivity)
@@ -119,62 +155,136 @@ Ltac parameters_from_wordsize machine_wordsize :=
   | inr ?err => fail "Failed to select parameters: " err
   end.
 
-Ltac make_all_reified_ops names n s c machine_wordsize :=
-  idtac "computing reified carry_mul (this one can be slow)...";
+Ltac make_all_reified_ops n s c machine_wordsize :=
+  idtac "computing reified carry_mul (slow)...";
   make_reified_op
-    (UnsaturatedSolinas.carry_mul n s c (@name_of_carry_mul names))
+    (UnsaturatedSolinas.carry_mul n s c)
     (PushButtonSynthesis.UnsaturatedSolinas.carry_mul
+       n s c machine_wordsize);
+  idtac "computing reified carry_square (slow)...";
+  make_reified_op
+    (UnsaturatedSolinas.carry_square n s c)
+    (PushButtonSynthesis.UnsaturatedSolinas.carry_square
+       n s c machine_wordsize);
+  idtac "computing reified carry...";
+  make_reified_op
+    (UnsaturatedSolinas.carry n s c)
+    (PushButtonSynthesis.UnsaturatedSolinas.carry
        n s c machine_wordsize);
   idtac "computing reified add...";
   make_reified_op
-    (UnsaturatedSolinas.add n s c (@name_of_add names))
+    (UnsaturatedSolinas.add n s c)
     (PushButtonSynthesis.UnsaturatedSolinas.add
        n s c machine_wordsize);
-  idtac "computing reified to_bytes...";
+  idtac "computing reified sub...";
   make_reified_op
-    (UnsaturatedSolinas.to_bytes n s c (@name_of_to_bytes names))
+    (UnsaturatedSolinas.sub n s c)
+    (PushButtonSynthesis.UnsaturatedSolinas.sub
+       n s c machine_wordsize);
+  idtac "computing reified opp...";
+  make_reified_op
+    (UnsaturatedSolinas.opp n s c)
+    (PushButtonSynthesis.UnsaturatedSolinas.opp
+       n s c machine_wordsize);
+  idtac "computing reified selectznz...";
+  make_reified_op
+    (UnsaturatedSolinas.selectznz n s c)
+    (PushButtonSynthesis.UnsaturatedSolinas.selectznz
+       n machine_wordsize);
+  idtac "computing reified to_bytes (slow)...";
+  make_reified_op
+    (UnsaturatedSolinas.to_bytes n s c)
     (PushButtonSynthesis.UnsaturatedSolinas.to_bytes
+       n s c machine_wordsize);
+  idtac "computing reified from_bytes (slow)...";
+  make_reified_op
+    (UnsaturatedSolinas.from_bytes n s c)
+    (PushButtonSynthesis.UnsaturatedSolinas.from_bytes
        n s c machine_wordsize).
 
-Ltac instantiate_ops names :=
-    let carry_mul_func_value := fresh "carry_mul_func" in
-    let carry_mul_func_eq := fresh "carry_mul_name_eq" in
-    let add_func_value := fresh "add_func" in
-    let add_func_eq := fresh "add_name_eq" in
-    let to_bytes_func_value := fresh "to_bytes_func" in
-    let to_bytes_func_eq := fresh "to_bytes_name_eq" in
-    lazymatch goal with
-    | X : reified_op
-            _ (PushButtonSynthesis.UnsaturatedSolinas.carry_mul _ _ _ _)
-      |- _ =>
-      destruct X as [? carry_mul_func_value carry_mul_func_eq ]
-    end;
-      lazymatch goal with
-      | X : reified_op
-              _ (PushButtonSynthesis.UnsaturatedSolinas.add _ _ _ _)
-        |- _ =>
-        destruct X as [? add_func_value add_func_eq ]
-      end;
-      lazymatch goal with
-      | X : reified_op
-              _ (PushButtonSynthesis.UnsaturatedSolinas.to_bytes _ _ _ _)
-        |- _ =>
-        destruct X as [? to_bytes_func_value to_bytes_func_eq ]
-      end;
+Ltac instantiate_ops :=
+  let carry_mul_func_value := fresh "carry_mul_func" in
+  let carry_square_func_value := fresh "carry_square_func" in
+  let carry_func_value := fresh "carry_func" in
+  let add_func_value := fresh "add_func" in
+  let sub_func_value := fresh "sub_func" in
+  let opp_func_value := fresh "opp_func" in
+  let selectznz_func_value := fresh "selectznz_func" in
+  let to_bytes_func_value := fresh "to_bytes_func" in
+  let from_bytes_func_value := fresh "from_bytes_func" in
+  repeat match goal with
+         | X : reified_op ?op _ |- _ =>
+           lazymatch op with
+           | context [UnsaturatedSolinas.carry_mul] =>
+             destruct X as [? carry_mul_func_value ?]
+           | context [UnsaturatedSolinas.carry_square] =>
+             destruct X as [? carry_square_func_value ?]
+           | context [UnsaturatedSolinas.carry] =>
+             destruct X as [? carry_func_value ?]
+           | context [UnsaturatedSolinas.add] =>
+             destruct X as [? add_func_value ?]
+           | context [UnsaturatedSolinas.sub] =>
+             destruct X as [? sub_func_value ?]
+           | context [UnsaturatedSolinas.opp] =>
+             destruct X as [? opp_func_value ?]
+           | context [UnsaturatedSolinas.selectznz] =>
+             destruct X as [? selectznz_func_value ?]
+           | context [UnsaturatedSolinas.to_bytes] =>
+             destruct X as [? to_bytes_func_value ?]
+           | context [UnsaturatedSolinas.from_bytes] =>
+             destruct X as [? from_bytes_func_value ?]
+           end
+         end;
   apply Build_bedrock2_unsaturated_solinas
     with (carry_mul:=carry_mul_func_value)
+         (carry_square:=carry_square_func_value)
+         (carry:=carry_func_value)
          (add:=add_func_value)
-         (to_bytes:=to_bytes_func_value);
-  rewrite ?carry_mul_func_eq, ?add_func_eq, ?to_bytes_func_eq.
+         (sub:=sub_func_value)
+         (opp:=opp_func_value)
+         (selectznz:=selectznz_func_value)
+         (to_bytes:=to_bytes_func_value)
+         (from_bytes:=from_bytes_func_value);
+  subst carry_mul_func_value carry_square_func_value carry_func_value
+        add_func_value sub_func_value opp_func_value selectznz_func_value
+        to_bytes_func_value from_bytes_func_value.
 
+(* TODO: move *)
+Definition names_from_prefix (prefix : string) : names_of_operations :=
+  {| name_of_carry_mul := (prefix ++ "carry_mul")%string;
+     name_of_carry_square := (prefix ++ "carry_square")%string;
+     name_of_carry := (prefix ++ "carry")%string;
+     name_of_add := (prefix ++ "add")%string;
+     name_of_sub := (prefix ++ "sub")%string;
+     name_of_opp := (prefix ++ "opp")%string;
+     name_of_selectznz := (prefix ++ "selectznz")%string;
+     name_of_to_bytes := (prefix ++ "to_bytes")%string;
+     name_of_from_bytes := (prefix ++ "from_bytes")%string;
+     name_of_carry_scmul_const := (prefix ++ "carry_scmul_const")%string
+  |}.
+(* TODO: move *)
 Ltac use_correctness_proofs :=
   match goal with
   | |- context [UnsaturatedSolinas.spec_of_carry_mul] =>
     apply UnsaturatedSolinas.carry_mul_correct
+  | |- context [UnsaturatedSolinas.spec_of_carry_square] =>
+    apply UnsaturatedSolinas.carry_square_correct
+  | |- context [UnsaturatedSolinas.spec_of_carry] =>
+    apply UnsaturatedSolinas.carry_correct
   | |- context [UnsaturatedSolinas.spec_of_add] =>
     apply UnsaturatedSolinas.add_correct
+  | |- context [UnsaturatedSolinas.spec_of_sub] =>
+    apply UnsaturatedSolinas.sub_correct
+  | |- context [UnsaturatedSolinas.spec_of_opp] =>
+    apply UnsaturatedSolinas.opp_correct
+  | |- context [UnsaturatedSolinas.spec_of_selectznz] =>
+    apply UnsaturatedSolinas.selectznz_correct
   | |- context [UnsaturatedSolinas.spec_of_to_bytes] =>
     apply UnsaturatedSolinas.to_bytes_correct
+  | |- context [UnsaturatedSolinas.spec_of_from_bytes] =>
+    apply UnsaturatedSolinas.from_bytes_correct
+  | |- context [UnsaturatedSolinas.spec_of_carry_scmul_const] =>
+    apply UnsaturatedSolinas.carry_scmul_const_correct
   end.
 
 Module X25519_64.
@@ -183,10 +293,9 @@ Module X25519_64.
   Let c := [(1, 19)].
   Let machine_wordsize := 64.
 
-  Definition names : names_of_operations :=
-    {| name_of_carry_mul := "curve25519_carry_mul"%string;
-       name_of_add := "curve25519_add"%string;
-       name_of_to_bytes := "curve25519_to_bytes"%string; |}.
+  Local Instance names : names_of_operations.
+  let n := eval cbv in (names_from_prefix "curve25519_") in
+      exact n. Defined.
 
   Local Instance p : Types.parameters.
   let p := parameters_from_wordsize machine_wordsize in
@@ -194,15 +303,35 @@ Module X25519_64.
 
   Local Instance p_ok : Types.ok. typeclasses eauto. Qed.
 
-  Instance curve25519_bedrock2 : bedrock2_unsaturated_solinas p n s c.
+  Instance curve25519_bedrock2 : bedrock2_unsaturated_solinas n s c.
   Proof.
-    make_all_reified_ops names n s c machine_wordsize.
-    instantiate_ops names.
+    make_all_reified_ops n s c machine_wordsize.
+    instantiate_ops.
     all: use_correctness_proofs.
     all: try assumption.
     all: try abstract (handle_easy_preconditions).
   Time Defined.
   (* Eval cbv [carry_mul curve25519_bedrock2] in carry_mul. *)
+
+  Instance curve25519_bedrock2_scmul
+    : bedrock2_unsaturated_solinas_scmul n s c 121666.
+  Proof.
+    let x := constr:(121666) in
+    make_reified_op
+      (UnsaturatedSolinas.carry_scmul_const n s c x)
+      (PushButtonSynthesis.UnsaturatedSolinas.carry_scmul_const
+         n s c machine_wordsize x).
+    match goal with
+    | X : reified_op ?op _ |- _ =>
+      destruct X as [? scmul_func_value ?] end.
+    apply Build_bedrock2_unsaturated_solinas_scmul
+      with (carry_scmul_const:=scmul_func_value); subst scmul_func_value.
+    all: use_correctness_proofs.
+    all: try assumption.
+    all: try abstract (handle_easy_preconditions).
+  Time Defined.
+  (* Eval cbv [carry_scmul_const curve25519_bedrock2_scmul]
+       in carry_scmul_const. *)
 End X25519_64.
 
 Module X1305_32.
@@ -211,10 +340,9 @@ Module X1305_32.
   Let c := [(1, 5)].
   Let machine_wordsize := 32.
 
-  Definition names : names_of_operations :=
-    {| name_of_carry_mul := "poly1305_carry_mul"%string;
-       name_of_add := "poly1305_add"%string;
-       name_of_to_bytes := "poly1305_to_bytes"%string; |}.
+  Local Instance names : names_of_operations.
+  let n := eval cbv in (names_from_prefix "poly1305_") in
+      exact n. Defined.
 
   Local Instance p : Types.parameters.
   let p := parameters_from_wordsize machine_wordsize in
@@ -222,10 +350,10 @@ Module X1305_32.
 
   Local Instance p_ok : Types.ok. typeclasses eauto. Qed.
 
-  Instance poly1305_bedrock2 : bedrock2_unsaturated_solinas p n s c.
+  Instance poly1305_bedrock2 : bedrock2_unsaturated_solinas n s c.
   Proof.
-    make_all_reified_ops names n s c machine_wordsize.
-    instantiate_ops names.
+    make_all_reified_ops n s c machine_wordsize.
+    instantiate_ops.
     all: use_correctness_proofs.
     all: try assumption.
     all: try abstract (handle_easy_preconditions).
@@ -242,8 +370,7 @@ Require Import bedrock2.Semantics.
 Import Types.
 Module Test.
   Import X25519_64.
-  Existing Instance Defaults64.default_parameters.
-  Existing Instance curve25519_bedrock2.
+  Existing Instances Defaults64.default_parameters names curve25519_bedrock2.
   Local Open Scope string_scope.
   Local Coercion name_of_func (f : bedrock_func) := fst f.
 
