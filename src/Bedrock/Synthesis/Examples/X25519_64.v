@@ -19,7 +19,11 @@ Instance p : Types.parameters.
 make_parameters machine_wordsize. Defined.
 Instance p_ok : Types.ok. typeclasses eauto. Qed.
 
-Instance curve25519_bedrock2_scmul
+Local Instance curve25519_bedrock2_scmul121665
+  : bedrock2_unsaturated_solinas_scmul n s c 121665.
+Proof. make_bedrock2_unsaturated_solinas_scmul. Defined.
+
+Local Instance curve25519_bedrock2_scmul121666
   : bedrock2_unsaturated_solinas_scmul n s c 121666.
 Proof. make_bedrock2_unsaturated_solinas_scmul. Defined.
 

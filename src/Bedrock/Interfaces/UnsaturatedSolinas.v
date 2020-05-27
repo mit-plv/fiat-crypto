@@ -67,9 +67,10 @@ Class names_of_operations :=
     name_of_selectznz : string;
     name_of_to_bytes : string;
     name_of_from_bytes : string;
-    name_of_carry_scmul_const : string }.
+    name_of_carry_scmul_const : Z -> string }.
 
-Definition names_from_prefix (prefix : string) : names_of_operations :=
+Definition names_from_prefix (prefix : string)
+  : names_of_operations :=
   {| name_of_carry_mul := (prefix ++ "carry_mul")%string;
      name_of_carry_square := (prefix ++ "carry_square")%string;
      name_of_carry := (prefix ++ "carry")%string;
@@ -79,7 +80,9 @@ Definition names_from_prefix (prefix : string) : names_of_operations :=
      name_of_selectznz := (prefix ++ "selectznz")%string;
      name_of_to_bytes := (prefix ++ "to_bytes")%string;
      name_of_from_bytes := (prefix ++ "from_bytes")%string;
-     name_of_carry_scmul_const := (prefix ++ "carry_scmul_const")%string
+     name_of_carry_scmul_const :=
+       fun x =>
+         (prefix ++ "carry_scmul_const" ++ Decimal.Z.to_string x)%string
   |}.
 
 Ltac apply_correctness_in H :=
@@ -322,7 +325,7 @@ Section __.
   Definition carry_scmul_const (x : Z)
     : operation (type_listZ -> type_listZ).
   Proof.
-    make_operation name_of_carry_scmul_const
+    make_operation (name_of_carry_scmul_const x)
                    (Some loose_bounds, tt)
                    (Some tight_bounds)
                    (UnsaturatedSolinas.carry_scmul_const n s c Semantics.width x).
@@ -522,7 +525,7 @@ Section __.
                    Rr m').
 
   Definition spec_of_carry_scmul_const (z : Z)
-    : spec_of name_of_carry_scmul_const :=
+    : spec_of (name_of_carry_scmul_const z) :=
     fun functions =>
       forall wx px pout wold_out t m
              (Ra Rr : Semantics.mem -> Prop),
