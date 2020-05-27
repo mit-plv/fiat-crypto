@@ -56,7 +56,6 @@ src/ArithmeticCPS/Freeze.v
 src/ArithmeticCPS/ModOps.v
 src/ArithmeticCPS/Saturated.v
 src/ArithmeticCPS/WordByWordMontgomery.v
-src/Bedrock/API.v
 src/Bedrock/StandaloneHaskellMain.v
 src/Bedrock/StandaloneOCamlMain.v
 src/Bedrock/Stringification.v
@@ -85,11 +84,17 @@ src/Bedrock/Proofs/Varnames.v
 src/Bedrock/Proofs/ValidComputable/Cmd.v
 src/Bedrock/Proofs/ValidComputable/Expr.v
 src/Bedrock/Proofs/ValidComputable/Func.v
+src/Bedrock/Synthesis/UnsaturatedSolinas.v
+src/Bedrock/Synthesis/ReifiedOperation.v
 src/Bedrock/Translation/Cmd.v
 src/Bedrock/Translation/Expr.v
 src/Bedrock/Translation/Flatten.v
 src/Bedrock/Translation/Func.v
 src/Bedrock/Translation/LoadStoreList.v
+src/Bedrock/Synthesis/Examples/X25519_64.v
+src/Bedrock/Synthesis/Examples/X1305_32.v
+src/Bedrock/Synthesis/Examples/EncodeDecode.v
+src/Bedrock/Synthesis/Examples/MulTwice.v
 src/Curves/Edwards/AffineProofs.v
 src/Curves/Edwards/Pre.v
 src/Curves/Edwards/XYZT/Basic.v

@@ -29,3 +29,12 @@ Definition select_parameters wordsize : parameters + string :=
            ++ "); valid choices are "
            ++ String.concat "," wordsize_choices_str)%string
   end.
+
+Ltac parameters_from_wordsize machine_wordsize :=
+  let r := (eval cbv - [Defaults32.default_parameters
+                          Defaults64.default_parameters] in
+               (select_parameters machine_wordsize)) in
+  lazymatch r with
+  | inl ?p => p
+  | inr ?err => fail "Failed to select parameters:" err
+  end.

@@ -460,8 +460,7 @@ Section __.
         let args := (word.unsigned wc,
                      (map word.unsigned wx, (map word.unsigned wy, tt))) in
         let c := word.unsigned wc in
-        ((ZRange.lower bit_range <=? c)
-           && (c <=? ZRange.upper bit_range) = true) ->
+        ZRange.is_bounded_by_bool c bit_range = true ->
         let X := BignumSuchThat px wx (list_Z_bounded_by saturated_bounds) in
         let Y := BignumSuchThat py wy (list_Z_bounded_by saturated_bounds) in
         let Out := BignumSuchThat pout wold_out (fun l => length l = n) in
@@ -791,3 +790,16 @@ Section __.
     Proof. setup; prove_is_correct Ra Rr. Qed.
   End Proofs.
 End __.
+Hint Unfold carry_mul carry_square carry add sub opp selectznz
+     to_bytes from_bytes carry_scmul_const : defs.
+Hint Unfold
+     spec_of_carry_mul
+     spec_of_carry_square
+     spec_of_carry
+     spec_of_add
+     spec_of_sub
+     spec_of_opp
+     spec_of_selectznz
+     spec_of_to_bytes
+     spec_of_from_bytes
+     spec_of_carry_scmul_const : specs.
