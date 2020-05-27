@@ -94,6 +94,7 @@ src/Bedrock/Translation/LoadStoreList.v
 src/Bedrock/Synthesis/Examples/X25519_64.v
 src/Bedrock/Synthesis/Examples/X1305_32.v
 src/Bedrock/Synthesis/Examples/EncodeDecode.v
+src/Bedrock/Synthesis/Examples/LadderStep.v
 src/Bedrock/Synthesis/Examples/MulTwice.v
 src/Curves/Edwards/AffineProofs.v
 src/Curves/Edwards/Pre.v
