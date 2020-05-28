@@ -770,6 +770,8 @@ Section __.
         to_bytes spec_of_to_bytes.
     Proof.
       autounfold with defs specs; begin_proof.
+      match goal with
+      | H : context [postcondition] |- _ => idtac H end.
       let e := match goal with
                | H : postcondition to_bytes _ ?e |- _ => e end in
       assert (list_Z_bounded_by (byte_bounds n_bytes) e).
