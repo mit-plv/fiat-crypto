@@ -212,8 +212,9 @@ Section __.
     intros;
     let Hcorrect :=
         lazymatch goal with H : _ = ErrorT.Success _ |- _ => H end in
-    apply_correctness_in Hcorrect; fold weight in *;
-    specialize_to_args Hcorrect; postcondition_from_correctness.
+    apply_correctness_in Hcorrect; [ | eassumption .. ];
+    fold weight in *; specialize_to_args Hcorrect;
+    postcondition_from_correctness.
 
   Ltac make_operation name inbounds outbounds out :=
     let t := lazymatch goal with |- operation ?t => t end in
@@ -338,11 +339,10 @@ Section __.
              (Ra Rr : Semantics.mem -> Prop),
         let op := carry_mul in
         let args := (map word.unsigned wx, (map word.unsigned wy, tt)) in
-        let X := BignumSuchThat px wx (list_Z_bounded_by loose_bounds) in
-        let Y := BignumSuchThat py wy (list_Z_bounded_by loose_bounds) in
-        let Out := BignumSuchThat pout wold_out (fun l => length l = n) in
-        (X * Y * Ra)%sep m ->
-        (Out * Rr)%sep m ->
+        op.(precondition) args ->
+        (Bignum px wx * Bignum py wy * Ra)%sep m ->
+        (BignumSuchThat
+           pout wold_out (fun l => length l = n) * Rr)%sep m ->
         WeakestPrecondition.call
           functions (op.(name)) t m
           (px :: py :: pout :: nil)
@@ -350,7 +350,8 @@ Section __.
              t = t' /\
              rets = []%list /\
              exists wout,
-               sep (BignumSuchThat pout wout (op.(postcondition) args))
+               sep (BignumSuchThat
+                      pout wout (op.(postcondition) args))
                    Rr m').
 
   Definition spec_of_carry_square : spec_of name_of_carry_square :=
@@ -359,10 +360,10 @@ Section __.
              (Ra Rr : Semantics.mem -> Prop),
         let op := carry_square in
         let args := (map word.unsigned wx, tt) in
-        let X := BignumSuchThat px wx (list_Z_bounded_by loose_bounds) in
-        let Out := BignumSuchThat pout wold_out (fun l => length l = n) in
-        (X  * Ra)%sep m ->
-        (Out * Rr)%sep m ->
+        op.(precondition) args ->
+        (Bignum px wx  * Ra)%sep m ->
+        (BignumSuchThat
+           pout wold_out (fun l => length l = n) * Rr)%sep m ->
         WeakestPrecondition.call
           functions (op.(name)) t m
           (px :: pout :: nil)
@@ -379,10 +380,10 @@ Section __.
              (Ra Rr : Semantics.mem -> Prop),
         let op := carry in
         let args := (map word.unsigned wx, tt) in
-        let X := BignumSuchThat px wx (list_Z_bounded_by loose_bounds) in
-        let Out := BignumSuchThat pout wold_out (fun l => length l = n) in
-        (X  * Ra)%sep m ->
-        (Out * Rr)%sep m ->
+        op.(precondition) args ->
+        (Bignum px wx * Ra)%sep m ->
+        (BignumSuchThat
+           pout wold_out (fun l => length l = n) * Rr)%sep m ->
         WeakestPrecondition.call
           functions (op.(name)) t m
           (px :: pout :: nil)
@@ -399,11 +400,10 @@ Section __.
              (Ra Rr : Semantics.mem -> Prop),
         let op := add in
         let args := (map word.unsigned wx, (map word.unsigned wy, tt)) in
-        let X := BignumSuchThat px wx (list_Z_bounded_by tight_bounds) in
-        let Y := BignumSuchThat py wy (list_Z_bounded_by tight_bounds) in
-        let Out := BignumSuchThat pout wold_out (fun l => length l = n) in
-        (X * Y * Ra)%sep m ->
-        (Out * Rr)%sep m ->
+        op.(precondition) args ->
+        (Bignum px wx * Bignum py wy * Ra)%sep m ->
+        (BignumSuchThat
+           pout wold_out (fun l => length l = n) * Rr)%sep m ->
         WeakestPrecondition.call
           functions (op.(name)) t m
           (px :: py :: pout :: nil)
@@ -420,11 +420,10 @@ Section __.
              (Ra Rr : Semantics.mem -> Prop),
         let op := sub in
         let args := (map word.unsigned wx, (map word.unsigned wy, tt)) in
-        let X := BignumSuchThat px wx (list_Z_bounded_by tight_bounds) in
-        let Y := BignumSuchThat py wy (list_Z_bounded_by tight_bounds) in
-        let Out := BignumSuchThat pout wold_out (fun l => length l = n) in
-        (X * Y * Ra)%sep m ->
-        (Out * Rr)%sep m ->
+        op.(precondition) args ->
+        (Bignum px wx * Bignum py wy * Ra)%sep m ->
+        (BignumSuchThat
+           pout wold_out (fun l => length l = n) * Rr)%sep m ->
         WeakestPrecondition.call
           functions (op.(name)) t m
           (px :: py :: pout :: nil)
@@ -441,10 +440,10 @@ Section __.
              (Ra Rr : Semantics.mem -> Prop),
         let op := opp in
         let args := (map word.unsigned wx, tt) in
-        let X := BignumSuchThat px wx (list_Z_bounded_by tight_bounds) in
-        let Out := BignumSuchThat pout wold_out (fun l => length l = n) in
-        (X  * Ra)%sep m ->
-        (Out * Rr)%sep m ->
+        op.(precondition) args ->
+        (Bignum px wx * Ra)%sep m ->
+        (BignumSuchThat
+           pout wold_out (fun l => length l = n) * Rr)%sep m ->
         WeakestPrecondition.call
           functions (op.(name)) t m
           (px :: pout :: nil)
@@ -464,11 +463,10 @@ Section __.
                      (map word.unsigned wx, (map word.unsigned wy, tt))) in
         let c := word.unsigned wc in
         ZRange.is_bounded_by_bool c bit_range = true ->
-        let X := BignumSuchThat px wx (list_Z_bounded_by saturated_bounds) in
-        let Y := BignumSuchThat py wy (list_Z_bounded_by saturated_bounds) in
-        let Out := BignumSuchThat pout wold_out (fun l => length l = n) in
-        (X * Y * Ra)%sep m ->
-        (Out * Rr)%sep m ->
+        op.(precondition) args ->
+        (Bignum px wx * Bignum py wy * Ra)%sep m ->
+        (BignumSuchThat
+           pout wold_out (fun l => length l = n) * Rr)%sep m ->
         WeakestPrecondition.call
           functions (op.(name)) t m
           (wc :: px :: py :: pout :: nil)
@@ -485,11 +483,10 @@ Section __.
              (Ra Rr : Semantics.mem -> Prop),
         let op := to_bytes in
         let args := (map word.unsigned wx, tt) in
-        let X := BignumSuchThat px wx (list_Z_bounded_by tight_bounds) in
-        let Out := EncodedBignumSuchThat
-                     pout wold_out (fun l => length l = n_bytes) in
-        (X  * Ra)%sep m ->
-        (Out * Rr)%sep m ->
+        op.(precondition) args ->
+        (Bignum px wx * Ra)%sep m ->
+        (EncodedBignumSuchThat
+           pout wold_out (fun l => length l = n_bytes) * Rr)%sep m ->
         WeakestPrecondition.call
           functions (op.(name)) t m
           (px :: pout :: nil)
@@ -507,12 +504,10 @@ Section __.
              (Ra Rr : Semantics.mem -> Prop),
         let op := from_bytes in
         let args := (map byte.unsigned wx, tt) in
-        let X := EncodedBignumSuchThat
-                   px wx (list_Z_bounded_by prime_bytes_bounds) in
-        let Out := BignumSuchThat
-                     pout wold_out (fun l => length l = n) in
-        (X  * Ra)%sep m ->
-        (Out * Rr)%sep m ->
+        op.(precondition) args ->
+        (EncodedBignum px wx  * Ra)%sep m ->
+        (BignumSuchThat
+           pout wold_out (fun l => length l = n) * Rr)%sep m ->
         WeakestPrecondition.call
           functions (op.(name)) t m
           (px :: pout :: nil)
@@ -531,10 +526,10 @@ Section __.
              (Ra Rr : Semantics.mem -> Prop),
         let op := carry_scmul_const z in
         let args := (map word.unsigned wx, tt) in
-        let X := BignumSuchThat px wx (list_Z_bounded_by loose_bounds) in
-        let Out := BignumSuchThat pout wold_out (fun l => length l = n) in
-        (X  * Ra)%sep m ->
-        (Out * Rr)%sep m ->
+        op.(precondition) args ->
+        (Bignum px wx * Ra)%sep m ->
+        (BignumSuchThat
+           pout wold_out (fun l => length l = n) * Rr)%sep m ->
         WeakestPrecondition.call
           functions (op.(name)) t m
           (px :: pout :: nil)
@@ -689,6 +684,11 @@ Section __.
     Ltac setup :=
       autounfold with defs specs;
       begin_proof;
+      match goal with
+        H1 : precondition _ _, H2 : precondition _ _ -> _ |- _ =>
+        specialize (H2 H1); autounfold with defs in H1;
+        cbn [precondition] in H1; cleanup
+      end;
       try assert_to_bytes_bounds;
       assert_output_length prove_output_length.
 
@@ -771,7 +771,13 @@ Section __.
     Proof.
       autounfold with defs specs; begin_proof.
       match goal with
-      | H : context [postcondition] |- _ => idtac H end.
+        H1 : precondition _ _, H2 : precondition _ _ -> _ |- _ =>
+        specialize (H2 H1); autounfold with defs in H1;
+        cbn [precondition] in H1; cleanup
+      end.
+      match goal with
+      | H : context [postcondition] |- _ =>
+        match type of H with ?T => idtac T end end.
       let e := match goal with
                | H : postcondition to_bytes _ ?e |- _ => e end in
       assert (list_Z_bounded_by (byte_bounds n_bytes) e).
