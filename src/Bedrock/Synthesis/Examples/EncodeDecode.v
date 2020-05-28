@@ -15,6 +15,7 @@ Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Interfaces.Operation.
 Require Import Crypto.Bedrock.Interfaces.UnsaturatedSolinas.
+Require Import Crypto.Bedrock.Synthesis.Tactics.
 Require Import Crypto.Bedrock.Synthesis.UnsaturatedSolinas.
 Require Import Crypto.Bedrock.Synthesis.Examples.X25519_64.
 Require Import Crypto.COperationSpecifications.
@@ -101,6 +102,14 @@ Ltac prove_length :=
     erewrite <-map_length; erewrite H;
     rewrite length_partition; reflexivity
   end.
+Ltac call_step :=
+  repeat straightline;
+  handle_call ltac:(try prove_bounds) ltac:(try prove_length);
+  repeat match goal with
+           H : context [Freeze.bytes_n ?a ?b ?c] |- _ =>
+           change (Freeze.bytes_n a b c) with n_bytes in H
+         end;
+  repeat straightline.
 
 (* TODO: need to replace encode_no_reduce with partition (lingering technical
    debt); then this proof is very easy *)
@@ -113,36 +122,10 @@ Admitted.
 Lemma encode_decode_correct :
   program_logic_goal_for_function! encode_decode.
 Proof.
-  (* first step of straightline is inlined here so we can do a [change]
-       instead of [replace] *)
-  enter encode_decode. cbv zeta. intros.
-  WeakestPrecondition.unfold1_call_goal.
-  (cbv beta match delta [WeakestPrecondition.call_body]).
-  lazymatch goal with
-  | |- if ?test then ?T else _ =>
-    (* this change is a replace in the original straightline, but that hangs
-      here for some reason *)
-    change test with true; change_no_check T
-  end.
-  (cbv beta match delta [WeakestPrecondition.func]).
-
+  straightline_init_with_change.
   repeat straightline.
-  straightline_call; sepsimpl;
-    [ try ecancel_assumption .. | ].
-  all: try prove_bounds.
-  all: try prove_length.
 
-  let Hpost := lazymatch goal with
-                 H : postcondition _ _ _ |- _ => H end in
-  cbn [fst snd postcondition
-           Interfaces.UnsaturatedSolinas.to_bytes] in Hpost;
-  repeat specialize (Hpost ltac:(prove_bounds));
-  match type of Hpost with
-    context [Freeze.bytes_n ?a ?b ?c] =>
-    change (Freeze.bytes_n a b c) with n_bytes in Hpost
-  end.
-  cleanup.
-
+  call_step.
   (* to_bytes doesn't explicitly mention bounds in the postcondition, so we need
      to extract them *)
   lazymatch goal with
@@ -152,24 +135,7 @@ Proof.
           apply Z.mod_pos_bound; reflexivity)
   end.
 
-  repeat straightline.
-  straightline_call; sepsimpl;
-    [ try ecancel_assumption .. | ].
-  all: try prove_bounds.
-  all: try prove_length.
-
-  let Hpost := lazymatch goal with
-                 H : postcondition _ _ _ |- _ => H end in
-  cbn [fst snd postcondition
-           Interfaces.UnsaturatedSolinas.from_bytes] in Hpost;
-  repeat specialize (Hpost ltac:(prove_bounds));
-  match type of Hpost with
-    context [Freeze.bytes_n ?a ?b ?c] =>
-    change (Freeze.bytes_n a b c) with n_bytes in Hpost
-  end.
-  cleanup.
-
-  repeat straightline.
+  call_step.
 
   repeat split; try reflexivity.
   sepsimpl_hyps.

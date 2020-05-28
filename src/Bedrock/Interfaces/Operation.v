@@ -57,6 +57,7 @@ Section op.
       input_array_lengths : foreach_arg list_lengths t;
       output_array_lengths : foreach_ret list_lengths t;
       pipeline_out : Pipeline.ErrorT (API.Expr t);
+      precondition : foreach_arg API.interp_type t -> Prop;
       postcondition : foreach_arg API.interp_type t
                       -> foreach_ret API.interp_type t -> Prop;
       check_args_ok : Prop;
@@ -65,6 +66,7 @@ Section op.
         forall res,
           pipeline_out = ErrorT.Success res ->
           forall args,
+            precondition args ->
             postcondition args (type.app_curried (API.Interp res) args)
     }.
  Global Arguments name {_}.
@@ -74,6 +76,7 @@ Section op.
  Global Arguments input_array_lengths {_}.
  Global Arguments output_array_lengths {_}.
  Global Arguments pipeline_out {_}.
+ Global Arguments precondition {_}.
  Global Arguments postcondition {_}.
  Global Arguments check_args_ok {_}.
  Global Arguments correctness {_}.
@@ -115,18 +118,31 @@ Ltac specialize_to_args Hcorrect :=
   subst A.
 
 Ltac postcondition_from_correctness :=
+  match goal with H : ?pre ?args |- ?post ?args _ =>
+                  revert H end;
   cbn [type.app_curried API.interp_type
                         Language.Compilers.base.interp
                         Compilers.base_interp] in *;
   lazymatch goal with
-  | Hcorrect : context [?res] |- ?post ?args ?res =>
-    let T := lazymatch type of Hcorrect with ?T => T end in
-    let F := lazymatch (eval pattern res in T) with
-               ?f _ => f end in
-    let F := lazymatch (eval pattern args in F) with
-               ?f _ => f end in
+  | Hcorrect : context [?res] |- ?pre ?args -> ?post ?args ?res =>
+    (* first /\ together all preconditions *)
+    let Htmp := fresh in
+    repeat match type of Hcorrect with
+           | ?P -> ?Q -> ?R =>
+             rename Hcorrect into Htmp;
+               assert (P /\ Q -> R) as Hcorrect
+                 by (destruct 1; apply Htmp; auto); clear Htmp
+           end;
+    let Ppre := lazymatch type of Hcorrect with ?P -> _ => P end in
+    let Ppost := lazymatch type of Hcorrect with _ -> ?P => P end in
+    let Fpre := lazymatch (eval pattern args in Ppre) with
+                | ?f _ => f end in
+    let Fpost := lazymatch (eval pattern res in Ppost) with
+                 | ?f _ => f end in
+    let Fpost := lazymatch (eval pattern args in Fpost) with
+                 | ?f _ => f end in
     let H := fresh in
-    assert (F args res) as H by exact Hcorrect;
+    assert (H : Fpre args -> Fpost args res) by exact Hcorrect;
     exact H
   end.
 

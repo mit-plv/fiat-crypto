@@ -13,6 +13,7 @@ Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Interfaces.Operation.
 Require Import Crypto.Bedrock.Interfaces.UnsaturatedSolinas.
+Require Import Crypto.Bedrock.Synthesis.Tactics.
 Require Import Crypto.Bedrock.Synthesis.UnsaturatedSolinas.
 Require Import Crypto.Bedrock.Synthesis.Examples.X25519_64.
 Require Import Crypto.COperationSpecifications.
@@ -93,52 +94,19 @@ Ltac prove_length :=
     apply bounded_by_loose_bounds_length
       with (s:=X25519_64.s) (c:=X25519_64.c); prove_bounds
   end.
+Ltac call_step :=
+  repeat straightline;
+  handle_call ltac:(try prove_bounds) ltac:(try prove_length);
+  repeat straightline.
 
 Lemma mul_twice_correct :
   program_logic_goal_for_function! mul_twice.
 Proof.
-  (* first step of straightline is inlined here so we can do a [change]
-       instead of [replace] *)
-  enter mul_twice. cbv zeta. intros.
-  WeakestPrecondition.unfold1_call_goal.
-  (cbv beta match delta [WeakestPrecondition.call_body]).
-  lazymatch goal with
-  | |- if ?test then ?T else _ =>
-    (* this change is a replace in the original straightline, but that hangs
-      here for some reason *)
-    change test with true; change_no_check T
-  end.
-  (cbv beta match delta [WeakestPrecondition.func]).
-
+  straightline_init_with_change.
   repeat straightline.
-  straightline_call; sepsimpl;
-    [ try ecancel_assumption .. | ].
-  all: try prove_bounds.
-  all: try prove_length.
 
-  (* clean up post-call guarantees *)
-  let Hpost := lazymatch goal with
-                 H : postcondition _ _ _ |- _ => H end in
-  cbn [fst snd postcondition
-           Interfaces.UnsaturatedSolinas.carry_mul] in Hpost;
-  repeat specialize (Hpost ltac:(prove_bounds)).
-  cleanup.
-
-  repeat straightline.
-  straightline_call; sepsimpl;
-    [ try ecancel_assumption .. | ].
-  all:try prove_bounds.
-  all:try prove_length.
-
-  (* clean up post-call guarantees *)
-  let Hpost := lazymatch goal with
-                 H : postcondition _ _ _ |- _ => H end in
-  cbn [fst snd postcondition
-           Interfaces.UnsaturatedSolinas.carry_mul] in Hpost;
-  repeat specialize (Hpost ltac:(prove_bounds)).
-  cleanup.
-
-  repeat straightline.
+  call_step.
+  call_step.
 
   repeat split; try reflexivity.
   sepsimpl_hyps.
