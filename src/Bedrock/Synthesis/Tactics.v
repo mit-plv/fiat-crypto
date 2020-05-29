@@ -33,32 +33,19 @@ Ltac straightline_init_with_change :=
   end.
 
 Ltac post_call :=
+  repeat straightline;
   lazymatch goal with
-  | |- context [WeakestPrecondition.cmd] =>
-    clear_old_seps
+  | |- context [ WeakestPrecondition.cmd ] => clear_old_seps
   | _ => idtac
-  end;
-  let Hpost := lazymatch goal with
-                 H : postcondition _ _ _ |- _ => H end in
-  autounfold with defs in Hpost;
-  cbn [fst snd postcondition] in Hpost;
-  cleanup; subst.
+  end; sepsimpl_hyps.
 
-Ltac do_call precondition_t length_t :=
-  straightline_call; sepsimpl;
-  (* do ecancel_assumption first to fill in evars *)
+Ltac do_call :=
+  straightline_call; [ sepsimpl .. | ];
+  (* do ecancel_assumption before any other preconditions
+     to fill in evars *)
   lazymatch goal with
   | |- sep _ _ _ => ecancel_assumption
   | _ => idtac
-  end;
-  (* simplify preconditions *)
-  lazymatch goal with
-  | |- precondition _ _ =>
-    autounfold with defs; cbn [fst snd precondition];
-    ssplit; precondition_t
-  | |- context [length] => length_t
-  | _ => idtac
   end.
 
-Ltac handle_call precondition_t length_t :=
-  do_call precondition_t length_t; post_call.
+Ltac handle_call := do_call; [ .. | post_call ].

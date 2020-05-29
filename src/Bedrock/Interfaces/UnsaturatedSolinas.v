@@ -57,34 +57,6 @@ Declare Scope sep_scope.
 Local Delimit Scope sep_scope with sep.
 Local Infix "*" := sep : sep_scope.
 
-Class names_of_operations :=
-  { name_of_carry_mul : string;
-    name_of_carry_square : string;
-    name_of_carry : string;
-    name_of_add : string;
-    name_of_sub : string;
-    name_of_opp : string;
-    name_of_selectznz : string;
-    name_of_to_bytes : string;
-    name_of_from_bytes : string;
-    name_of_carry_scmul_const : Z -> string }.
-
-Definition names_from_prefix (prefix : string)
-  : names_of_operations :=
-  {| name_of_carry_mul := (prefix ++ "carry_mul")%string;
-     name_of_carry_square := (prefix ++ "carry_square")%string;
-     name_of_carry := (prefix ++ "carry")%string;
-     name_of_add := (prefix ++ "add")%string;
-     name_of_sub := (prefix ++ "sub")%string;
-     name_of_opp := (prefix ++ "opp")%string;
-     name_of_selectznz := (prefix ++ "selectznz")%string;
-     name_of_to_bytes := (prefix ++ "to_bytes")%string;
-     name_of_from_bytes := (prefix ++ "from_bytes")%string;
-     name_of_carry_scmul_const :=
-       fun x =>
-         (prefix ++ "carry_scmul_const" ++ Decimal.Z.to_string x)%string
-  |}.
-
 Ltac apply_correctness_in H :=
   match type of H with
   | context [UnsaturatedSolinas.carry_mul] =>
@@ -158,9 +130,6 @@ Section __.
   Context {p : Types.parameters}
           {inname_gen outname_gen : nat -> string}
           (n : nat) (s : Z) (c : list (Z * Z)).
-  Context {names : names_of_operations}.
-  Local Notation make_bedrock_func :=
-    (@make_bedrock_func p inname_gen outname_gen).
   Local Notation is_correct :=
     (@is_correct p inname_gen outname_gen).
   Local Notation loose_bounds := (UnsaturatedSolinas.loose_bounds n s c).
@@ -216,15 +185,14 @@ Section __.
     fold weight in *; specialize_to_args Hcorrect;
     postcondition_from_correctness.
 
-  Ltac make_operation name inbounds outbounds out :=
+  Ltac make_operation inbounds outbounds out :=
     let t := lazymatch goal with |- operation ?t => t end in
     let insizes := sizes_from_bounds inbounds in
     let outsizes := sizes_from_bounds outbounds in
     let inlengths := lengths_from_bounds inbounds in
     let outlengths := lengths_from_bounds outbounds in
     eapply (Build_operation
-              t name inbounds
-              insizes outsizes inlengths outlengths)
+              t inbounds insizes outsizes inlengths outlengths)
     with (pipeline_out:=out)
          (check_args_ok:=
             check_args n s c machine_wordsize (ErrorT.Success tt)
@@ -233,8 +201,7 @@ Section __.
   Definition carry_mul
     : operation (type_listZ -> type_listZ -> type_listZ).
   Proof.
-    make_operation name_of_carry_mul
-                   (Some loose_bounds, (Some loose_bounds, tt))
+    make_operation (Some loose_bounds, (Some loose_bounds, tt))
                    (Some tight_bounds)
                    (UnsaturatedSolinas.carry_mul n s c Semantics.width).
     prove_operation_correctness.
@@ -243,8 +210,7 @@ Section __.
   Definition carry_square
     : operation (type_listZ -> type_listZ).
   Proof.
-    make_operation name_of_carry_square
-                   (Some loose_bounds, tt)
+    make_operation (Some loose_bounds, tt)
                    (Some tight_bounds)
                    (UnsaturatedSolinas.carry_square n s c Semantics.width).
     prove_operation_correctness.
@@ -253,8 +219,7 @@ Section __.
   Definition carry
     : operation (type_listZ -> type_listZ).
   Proof.
-    make_operation name_of_carry
-                   (Some loose_bounds, tt)
+    make_operation (Some loose_bounds, tt)
                    (Some tight_bounds)
                    (UnsaturatedSolinas.carry n s c Semantics.width).
     prove_operation_correctness.
@@ -263,8 +228,7 @@ Section __.
   Definition add
     : operation (type_listZ -> type_listZ -> type_listZ).
   Proof.
-    make_operation name_of_add
-                   (Some loose_bounds, (Some loose_bounds, tt))
+    make_operation (Some loose_bounds, (Some loose_bounds, tt))
                    (Some tight_bounds)
                    (UnsaturatedSolinas.add n s c Semantics.width).
     prove_operation_correctness.
@@ -273,8 +237,7 @@ Section __.
   Definition sub
     : operation (type_listZ -> type_listZ -> type_listZ).
   Proof.
-    make_operation name_of_sub
-                   (Some tight_bounds, (Some tight_bounds, tt))
+    make_operation (Some tight_bounds, (Some tight_bounds, tt))
                    (Some loose_bounds)
                    (UnsaturatedSolinas.sub n s c Semantics.width).
     prove_operation_correctness.
@@ -283,8 +246,7 @@ Section __.
   Definition opp
     : operation (type_listZ -> type_listZ).
   Proof.
-    make_operation name_of_opp
-                   (Some tight_bounds, tt)
+    make_operation (Some tight_bounds, tt)
                    (Some loose_bounds)
                    (UnsaturatedSolinas.opp n s c Semantics.width).
     prove_operation_correctness.
@@ -293,8 +255,7 @@ Section __.
   Definition selectznz
     : operation (type_Z -> type_listZ -> type_listZ -> type_listZ).
   Proof.
-    make_operation name_of_selectznz
-                   (Some bit_range, (Some saturated_bounds, (Some saturated_bounds, tt)))
+    make_operation (Some bit_range, (Some saturated_bounds, (Some saturated_bounds, tt)))
                    (Some loose_bounds)
                    (UnsaturatedSolinas.selectznz n Semantics.width).
     prove_operation_correctness.
@@ -306,8 +267,7 @@ Section __.
   Definition to_bytes
     : operation (type_listZ -> type_listZ).
   Proof.
-    make_operation name_of_to_bytes
-                   (Some tight_bounds, tt)
+    make_operation (Some tight_bounds, tt)
                    (Some prime_bytes_bounds)
                    (UnsaturatedSolinas.to_bytes n s c Semantics.width).
     prove_operation_correctness.
@@ -316,8 +276,7 @@ Section __.
   Definition from_bytes
     : operation (type_listZ -> type_listZ).
   Proof.
-    make_operation name_of_from_bytes
-                   (Some prime_bytes_bounds, tt)
+    make_operation (Some prime_bytes_bounds, tt)
                    (Some tight_bounds)
                    (UnsaturatedSolinas.from_bytes n s c Semantics.width).
     prove_operation_correctness.
@@ -326,14 +285,13 @@ Section __.
   Definition carry_scmul_const (x : Z)
     : operation (type_listZ -> type_listZ).
   Proof.
-    make_operation (name_of_carry_scmul_const x)
-                   (Some loose_bounds, tt)
+    make_operation (Some loose_bounds, tt)
                    (Some tight_bounds)
                    (UnsaturatedSolinas.carry_scmul_const n s c Semantics.width x).
     prove_operation_correctness.
   Defined.
 
-  Definition spec_of_carry_mul : spec_of name_of_carry_mul :=
+  Definition spec_of_carry_mul name : spec_of name :=
     fun functions =>
       forall wx wy px py pout wold_out t m
              (Ra Rr : Semantics.mem -> Prop),
@@ -344,7 +302,7 @@ Section __.
         (BignumSuchThat
            pout wold_out (fun l => length l = n) * Rr)%sep m ->
         WeakestPrecondition.call
-          functions (op.(name)) t m
+          functions name t m
           (px :: py :: pout :: nil)
           (fun t' m' rets =>
              t = t' /\
@@ -354,7 +312,7 @@ Section __.
                       pout wout (op.(postcondition) args))
                    Rr m').
 
-  Definition spec_of_carry_square : spec_of name_of_carry_square :=
+  Definition spec_of_carry_square name : spec_of name :=
     fun functions =>
       forall wx px pout wold_out t m
              (Ra Rr : Semantics.mem -> Prop),
@@ -365,7 +323,7 @@ Section __.
         (BignumSuchThat
            pout wold_out (fun l => length l = n) * Rr)%sep m ->
         WeakestPrecondition.call
-          functions (op.(name)) t m
+          functions name t m
           (px :: pout :: nil)
           (fun t' m' rets =>
              t = t' /\
@@ -374,7 +332,7 @@ Section __.
                sep (BignumSuchThat pout wout (op.(postcondition) args))
                    Rr m').
 
-  Definition spec_of_carry : spec_of name_of_carry :=
+  Definition spec_of_carry name : spec_of name :=
     fun functions =>
       forall wx px pout wold_out t m
              (Ra Rr : Semantics.mem -> Prop),
@@ -385,7 +343,7 @@ Section __.
         (BignumSuchThat
            pout wold_out (fun l => length l = n) * Rr)%sep m ->
         WeakestPrecondition.call
-          functions (op.(name)) t m
+          functions name t m
           (px :: pout :: nil)
           (fun t' m' rets =>
              t = t' /\
@@ -394,7 +352,7 @@ Section __.
                sep (BignumSuchThat pout wout (op.(postcondition) args))
                    Rr m').
 
-  Definition spec_of_add : spec_of name_of_add :=
+  Definition spec_of_add name : spec_of name :=
     fun functions =>
       forall wx wy px py pout wold_out t m
              (Ra Rr : Semantics.mem -> Prop),
@@ -405,7 +363,7 @@ Section __.
         (BignumSuchThat
            pout wold_out (fun l => length l = n) * Rr)%sep m ->
         WeakestPrecondition.call
-          functions (op.(name)) t m
+          functions name t m
           (px :: py :: pout :: nil)
           (fun t' m' rets =>
              t = t' /\
@@ -414,7 +372,7 @@ Section __.
                sep (BignumSuchThat pout wout (op.(postcondition) args))
                    Rr m').
 
-  Definition spec_of_sub : spec_of name_of_sub :=
+  Definition spec_of_sub name : spec_of name :=
     fun functions =>
       forall wx wy px py pout wold_out t m
              (Ra Rr : Semantics.mem -> Prop),
@@ -425,7 +383,7 @@ Section __.
         (BignumSuchThat
            pout wold_out (fun l => length l = n) * Rr)%sep m ->
         WeakestPrecondition.call
-          functions (op.(name)) t m
+          functions name t m
           (px :: py :: pout :: nil)
           (fun t' m' rets =>
              t = t' /\
@@ -434,7 +392,7 @@ Section __.
                sep (BignumSuchThat pout wout (op.(postcondition) args))
                    Rr m').
 
-  Definition spec_of_opp : spec_of name_of_opp :=
+  Definition spec_of_opp name : spec_of name :=
     fun functions =>
       forall wx px pout wold_out t m
              (Ra Rr : Semantics.mem -> Prop),
@@ -445,7 +403,7 @@ Section __.
         (BignumSuchThat
            pout wold_out (fun l => length l = n) * Rr)%sep m ->
         WeakestPrecondition.call
-          functions (op.(name)) t m
+          functions name t m
           (px :: pout :: nil)
           (fun t' m' rets =>
              t = t' /\
@@ -454,7 +412,7 @@ Section __.
                sep (BignumSuchThat pout wout (op.(postcondition) args))
                    Rr m').
 
-  Definition spec_of_selectznz : spec_of name_of_selectznz :=
+  Definition spec_of_selectznz name : spec_of name :=
     fun functions =>
       forall wc wx px wy py pout wold_out t m
              (Ra Rr : Semantics.mem -> Prop),
@@ -468,7 +426,7 @@ Section __.
         (BignumSuchThat
            pout wold_out (fun l => length l = n) * Rr)%sep m ->
         WeakestPrecondition.call
-          functions (op.(name)) t m
+          functions name t m
           (wc :: px :: py :: pout :: nil)
           (fun t' m' rets =>
              t = t' /\
@@ -477,7 +435,7 @@ Section __.
                sep (BignumSuchThat pout wout (op.(postcondition) args))
                    Rr m').
 
-  Definition spec_of_to_bytes : spec_of name_of_to_bytes :=
+  Definition spec_of_to_bytes name : spec_of name :=
     fun functions =>
       forall wx px pout wold_out t m
              (Ra Rr : Semantics.mem -> Prop),
@@ -488,7 +446,7 @@ Section __.
         (EncodedBignumSuchThat
            pout wold_out (fun l => length l = n_bytes) * Rr)%sep m ->
         WeakestPrecondition.call
-          functions (op.(name)) t m
+          functions name t m
           (px :: pout :: nil)
           (fun t' m' rets =>
              t = t' /\
@@ -498,7 +456,7 @@ Section __.
                       pout wout (op.(postcondition) args))
                    Rr m').
 
-  Definition spec_of_from_bytes : spec_of name_of_from_bytes :=
+  Definition spec_of_from_bytes name : spec_of name :=
     fun functions =>
       forall wx px pout wold_out t m
              (Ra Rr : Semantics.mem -> Prop),
@@ -509,7 +467,7 @@ Section __.
         (BignumSuchThat
            pout wold_out (fun l => length l = n) * Rr)%sep m ->
         WeakestPrecondition.call
-          functions (op.(name)) t m
+          functions name t m
           (px :: pout :: nil)
           (fun t' m' rets =>
              t = t' /\
@@ -519,8 +477,8 @@ Section __.
                       pout wout (op.(postcondition) args))
                    Rr m').
 
-  Definition spec_of_carry_scmul_const (z : Z)
-    : spec_of (name_of_carry_scmul_const z) :=
+  Definition spec_of_carry_scmul_const (z : Z) (name : string)
+    : spec_of name :=
     fun functions =>
       forall wx px pout wold_out t m
              (Ra Rr : Semantics.mem -> Prop),
@@ -531,7 +489,7 @@ Section __.
         (BignumSuchThat
            pout wold_out (fun l => length l = n) * Rr)%sep m ->
         WeakestPrecondition.call
-          functions (op.(name)) t m
+          functions name t m
           (px :: pout :: nil)
           (fun t' m' rets =>
              t = t' /\
@@ -722,52 +680,52 @@ Section __.
                check_args n s c Semantics.width (ErrorT.Success tt)
                = ErrorT.Success tt).
 
-    Lemma carry_mul_correct :
+    Lemma carry_mul_correct name :
       is_correct
         (UnsaturatedSolinas.carry_mul n s c Semantics.width)
-        carry_mul spec_of_carry_mul.
+        carry_mul (spec_of_carry_mul name).
     Proof. setup; prove_is_correct Ra Rr. Qed.
 
-    Lemma carry_square_correct :
+    Lemma carry_square_correct name :
       is_correct
         (UnsaturatedSolinas.carry_square n s c Semantics.width)
-        carry_square spec_of_carry_square.
+        carry_square (spec_of_carry_square name).
     Proof. setup; prove_is_correct Ra Rr. Qed.
 
-    Lemma carry_correct :
+    Lemma carry_correct name :
       is_correct
         (UnsaturatedSolinas.carry n s c Semantics.width)
-        carry spec_of_carry.
+        carry (spec_of_carry name).
     Proof. setup. prove_is_correct Ra Rr. Qed.
 
-    Lemma add_correct :
+    Lemma add_correct name :
       is_correct
         (UnsaturatedSolinas.add n s c Semantics.width)
-        add spec_of_add.
+        add (spec_of_add name).
     Proof. setup; prove_is_correct Ra Rr. Qed.
 
-    Lemma sub_correct :
+    Lemma sub_correct name :
       is_correct
         (UnsaturatedSolinas.sub n s c Semantics.width)
-        sub spec_of_sub.
+        sub (spec_of_sub name).
     Proof. setup; prove_is_correct Ra Rr. Qed.
 
-    Lemma opp_correct :
+    Lemma opp_correct name :
       is_correct
         (UnsaturatedSolinas.opp n s c Semantics.width)
-        opp spec_of_opp.
+        opp (spec_of_opp name).
     Proof. setup; prove_is_correct Ra Rr. Qed.
 
-    Lemma selectznz_correct :
+    Lemma selectznz_correct name :
       is_correct
         (UnsaturatedSolinas.selectznz n Semantics.width)
-        selectznz spec_of_selectznz.
-    Proof. setup. prove_is_correct Ra Rr. Qed.
+        selectznz (spec_of_selectznz name).
+    Proof. setup; prove_is_correct Ra Rr. Qed.
 
-    Lemma to_bytes_correct :
+    Lemma to_bytes_correct name :
       is_correct
         (UnsaturatedSolinas.to_bytes n s c Semantics.width)
-        to_bytes spec_of_to_bytes.
+        to_bytes (spec_of_to_bytes name).
     Proof.
       autounfold with defs specs; begin_proof.
       match goal with
@@ -775,9 +733,11 @@ Section __.
         specialize (H2 H1); autounfold with defs in H1;
         cbn [precondition] in H1; cleanup
       end.
-      match goal with
-      | H : context [postcondition] |- _ =>
-        match type of H with ?T => idtac T end end.
+      (*
+      let T := match goal with
+               | H : context [postcondition] |- _ =>
+                 match type of H with ?T => T end end in
+      fail "wanted [postcondition to_bytes _ _], found" T. *)
       let e := match goal with
                | H : postcondition to_bytes _ ?e |- _ => e end in
       assert (list_Z_bounded_by (byte_bounds n_bytes) e).
@@ -795,16 +755,16 @@ Section __.
       prove_is_correct Ra Rr.
     Qed.
 
-    Lemma from_bytes_correct :
+    Lemma from_bytes_correct name :
       is_correct
         (UnsaturatedSolinas.from_bytes n s c Semantics.width)
-        from_bytes spec_of_from_bytes.
-    Proof. setup. prove_is_correct Ra Rr. Qed.
+        from_bytes (spec_of_from_bytes name).
+    Proof. setup; prove_is_correct Ra Rr. Qed.
 
-    Lemma carry_scmul_const_correct (x : Z) :
+    Lemma carry_scmul_const_correct (x : Z) name :
       is_correct
         (UnsaturatedSolinas.carry_scmul_const n s c Semantics.width x)
-        (carry_scmul_const x) (spec_of_carry_scmul_const x).
+        (carry_scmul_const x) (spec_of_carry_scmul_const x name).
     Proof. setup; prove_is_correct Ra Rr. Qed.
   End Proofs.
 End __.

@@ -50,8 +50,7 @@ Section op.
                         outsizes).
 
   Record operation (t : API.type) :=
-    { name : string;
-      inbounds : foreach_arg ZRange.type.option.interp t;
+    { inbounds : foreach_arg ZRange.type.option.interp t;
       input_array_sizes : foreach_arg access_sizes t;
       output_array_sizes : foreach_ret access_sizes t;
       input_array_lengths : foreach_arg list_lengths t;
@@ -69,7 +68,6 @@ Section op.
             precondition args ->
             postcondition args (type.app_curried (API.Interp res) args)
     }.
- Global Arguments name {_}.
  Global Arguments inbounds {_}.
  Global Arguments input_array_sizes {_}.
  Global Arguments output_array_sizes {_}.
@@ -82,11 +80,11 @@ Section op.
  Global Arguments correctness {_}.
 
   Definition make_bedrock_func
-             {t} (op : operation t) (res : API.Expr t)
+             {t} (name : string) (op : operation t) (res : API.Expr t)
     : bedrock_func :=
-    (op.(name), make_bedrock_func_with_sizes
-                  (op.(input_array_sizes)) (op.(output_array_sizes))
-                  (op.(input_array_lengths)) res).
+    (name, make_bedrock_func_with_sizes
+             (op.(input_array_sizes)) (op.(output_array_sizes))
+             (op.(input_array_lengths)) res).
 
   Definition is_correct
              {t : API.type}
@@ -98,7 +96,7 @@ Section op.
         expr.Wf3 res ->
         valid_func (res (fun _ : API.type => unit)) ->
         forall functions,
-          spec (make_bedrock_func op res :: functions)).
+          spec (make_bedrock_func name op res :: functions)).
 End op.
 
 (* useful tactics for proving things about operations *)
@@ -202,9 +200,9 @@ Ltac begin_proof :=
     |- is_correct _ ?def _ =>
     cbv [is_correct make_bedrock_func] in *; intros;
     sepsimpl;
-    cbn [name inbounds input_array_sizes output_array_sizes
-              input_array_lengths output_array_lengths
-              pipeline_out correctness] in *
+    cbn [inbounds input_array_sizes output_array_sizes
+                  input_array_lengths output_array_lengths
+                  pipeline_out correctness] in *
   end;
   match goal with |- context [postcondition ?op ?args] =>
                   let H := fresh in

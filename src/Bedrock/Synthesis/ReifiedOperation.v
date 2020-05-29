@@ -22,13 +22,14 @@ Local Notation make_bedrock_func :=
   (@make_bedrock_func _ default_inname_gen default_outname_gen).
 
 Record reified_op {p t}
+       (name : String.string)
        (op : operation t)
        (start : ErrorT.ErrorT Pipeline.ErrorMessage
                               (API.Expr t)) :=
   { res : API.Expr t;
     computed_bedrock_func : bedrock_func;
     computed_bedrock_func_eq :
-      computed_bedrock_func = make_bedrock_func op res;
+      computed_bedrock_func = make_bedrock_func name op res;
     reified_eq : start = ErrorT.Success res;
     reified_Wf3 : expr.Wf3 res;
     reified_valid : Func.valid_func (p:=p) (res (fun _ => unit));
@@ -38,8 +39,8 @@ Arguments reified_eq {_ _ _}.
 Arguments reified_Wf3 {_ _ _}.
 Arguments reified_valid {_ _ _}.
 
-Ltac make_reified_op op start :=
-  assert (reified_op op start)
+Ltac make_reified_op p name op start :=
+  assert (@reified_op p _ name op start)
   by (econstructor; try apply valid_func_bool_iff;
       (* important to compute the function body first, before solving other
          subgoals *)
@@ -50,7 +51,7 @@ Ltac make_reified_op op start :=
       end;
       idtac ">> computing bedrock2 translation...";
       [ match goal with
-        | |- _ = make_bedrock_func _ _ =>
+        | |- _ = make_bedrock_func _ _ _ =>
           vm_compute; reflexivity end | .. ];
       idtac ">> proving Wf3 and valid_func...";
       match goal with
