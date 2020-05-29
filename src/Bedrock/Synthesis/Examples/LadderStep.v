@@ -15,6 +15,7 @@ Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Interfaces.Operation.
 Require Import Crypto.Bedrock.Interfaces.UnsaturatedSolinas.
+Require Import Crypto.Bedrock.Parameters.SelectParameters.
 Require Import Crypto.Bedrock.Synthesis.Tactics.
 Require Import Crypto.Bedrock.Synthesis.UnsaturatedSolinas.
 Require Import Crypto.Bedrock.Synthesis.Examples.X25519_64.
@@ -33,15 +34,18 @@ Definition ladderstep_gallina
            (X1 : F) (P1 P2 : F * F) : F * F * (F * F) :=
   @MxDH.ladderstep F F.add F.sub F.mul a24 X1 P1 P2.
 
-Existing Instances Defaults64.default_parameters names curve25519_bedrock2.
+Existing Instances Defaults64.default_parameters curve25519_bedrock2.
 
 (* need to define scalar-multiplication instance locally so typeclass inference
    knows which instance to pick up (results in weird ecancel_assumption failures
    otherwise) *)
 Local Instance curve25519_bedrock2_scmul121665
-  : bedrock2_unsaturated_solinas_scmul
-      X25519_64.n X25519_64.s X25519_64.c 121665.
-Proof. make_bedrock2_unsaturated_solinas_scmul. Defined.
+  : bedrock2_unsaturated_solinas_scmul 121665.
+Proof.
+  let p := parameters_from_wordsize X25519_64.machine_wordsize in
+  make_bedrock2_unsaturated_solinas_scmul
+    p names X25519_64.n X25519_64.s X25519_64.c X25519_64.machine_wordsize.
+Defined.
 
 Local Open Scope string_scope.
 Local Coercion name_of_func (f : bedrock_func) := fst f.
@@ -210,12 +214,10 @@ Instance spec_of_curve25519_sub :
   spec_of "curve25519_sub" := spec_of_sub.
 Instance spec_of_curve25519_carry_scmul_const121665 :
   spec_of "curve25519_carry_scmul_const121665"
-  := @spec_of_carry_scmul_const
-       _ _ _ _ _ _
-       curve25519_bedrock2_scmul121665.
+  := @spec_of_carry_scmul_const _ curve25519_bedrock2_scmul121665.
 
 Ltac prove_bounds :=
-  match goal with
+  lazymatch goal with
   | H : list_Z_bounded_by tight_bounds ?x
     |- list_Z_bounded_by loose_bounds ?x =>
     apply UnsaturatedSolinas.relax_correct; apply H
@@ -224,10 +226,15 @@ Ltac prove_bounds :=
   end.
 Ltac prove_length :=
   match goal with
-  | |- length _ = _ => rewrite ?map_length; solve [eauto]
+  | |- length (map _ _) = _ => rewrite ?map_length; assumption
   | |- length _ = X25519_64.n =>
     apply bounded_by_loose_bounds_length
       with (s:=X25519_64.s) (c:=X25519_64.c); prove_bounds
+  end.
+Ltac prove_preconditions :=
+  lazymatch goal with
+  | |- length _ = _ => prove_length
+  | |- list_Z_bounded_by _ _ => prove_bounds
   end.
 
 (* tactics for solving the final arithmetic equivalence *)
@@ -255,16 +262,15 @@ Ltac solve_F_eq :=
   rewrite_field_postconditions; pull_Zmod;
   subst LHS; try reflexivity.
 
-Ltac t :=
-  repeat straightline;
-  handle_call ltac:(try prove_bounds) ltac:(try prove_length);
-  repeat straightline.
+Ltac t := repeat straightline; handle_call; [ prove_preconditions .. | ].
 
 Lemma ladderstep_correct :
   program_logic_goal_for_function! ladderstep.
 Proof.
   straightline_init_with_change.
   repeat t.
+  (* TODO: straightline call is taking forever to pull the WP.call out of
+  spec_of_curve25519 etc -- probably computing proof terms from bedrock2_unsaturated_solinas. Try separating proofs from code/specs *)
 
   (* now prove postcondition *)
   repeat split; try reflexivity.

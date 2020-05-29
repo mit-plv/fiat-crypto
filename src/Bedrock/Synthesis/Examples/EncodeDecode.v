@@ -125,6 +125,21 @@ Proof.
   straightline_init_with_change.
   repeat straightline.
 
+  Print do_call.
+  straightline_call; sepsimpl.
+  2:{
+    ecancel_assumption.
+  2:ecancel_assumption.
+  Print do_call.
+  (* first figure out why it's failing, then figure out why it's taking so long
+  *)
+  repeat straightline;
+    do_call ltac:(try prove_bounds) ltac:(try prove_length).
+  repeat match goal with
+           H : context [Freeze.bytes_n ?a ?b ?c] |- _ =>
+           change (Freeze.bytes_n a b c) with n_bytes in H
+         end;
+  repeat straightline.
   call_step.
   (* to_bytes doesn't explicitly mention bounds in the postcondition, so we need
      to extract them *)
