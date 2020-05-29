@@ -733,11 +733,10 @@ Section __.
         specialize (H2 H1); autounfold with defs in H1;
         cbn [precondition] in H1; cleanup
       end.
-      (*
       let T := match goal with
                | H : context [postcondition] |- _ =>
                  match type of H with ?T => T end end in
-      fail "wanted [postcondition to_bytes _ _], found" T. *)
+      fail "wanted [postcondition to_bytes _ _], found" T.
       let e := match goal with
                | H : postcondition to_bytes _ ?e |- _ => e end in
       assert (list_Z_bounded_by (byte_bounds n_bytes) e).
