@@ -21,7 +21,10 @@ Require Import bedrock2.Semantics.
 Import Types ListNotations.
 Local Open Scope Z_scope.
 
-Existing Instances Defaults64.default_parameters names curve25519_bedrock2.
+Existing Instances
+         Defaults64.default_parameters names
+         curve25519_bedrock2_funcs curve25519_bedrock2_specs
+         curve25519_bedrock2_correctness.
 Local Open Scope string_scope.
 Local Coercion name_of_func (f : bedrock_func) := fst f.
 
@@ -94,19 +97,21 @@ Ltac prove_length :=
     apply bounded_by_loose_bounds_length
       with (s:=X25519_64.s) (c:=X25519_64.c); prove_bounds
   end.
-Ltac call_step :=
-  repeat straightline;
-  handle_call ltac:(try prove_bounds) ltac:(try prove_length);
-  repeat straightline.
+Ltac prove_preconditions :=
+  lazymatch goal with
+  | |- length _ = _ => prove_length
+  | |- list_Z_bounded_by _ _ => prove_bounds
+  end.
 
 Lemma mul_twice_correct :
   program_logic_goal_for_function! mul_twice.
 Proof.
   straightline_init_with_change.
-  repeat straightline.
 
-  call_step.
-  call_step.
+  repeat straightline.
+  handle_call; [ prove_preconditions .. | ].
+  repeat straightline.
+  handle_call; [ prove_preconditions .. | ].
 
   repeat split; try reflexivity.
   sepsimpl_hyps.

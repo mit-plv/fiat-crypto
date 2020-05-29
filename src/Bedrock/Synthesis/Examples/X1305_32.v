@@ -13,18 +13,21 @@ Let c := [(1, 5)].
 Let machine_wordsize := 32.
 Let prefix := "poly1305_"%string.
 
-Definition names : names_of_operations.
-make_names_of_operations prefix. Defined.
+Instance names : names_of_operations.
+  make_names_of_operations prefix. Defined.
 
-Instance p : Types.parameters.
-make_parameters machine_wordsize. Defined.
-Instance p_ok : Types.ok. typeclasses eauto. Qed.
+Definition ops : unsaturated_solinas_reified_ops n s c machine_wordsize.
+Proof. make_reified_ops. Time Defined.
 
-Instance poly1305_bedrock2 : bedrock2_unsaturated_solinas.
-Proof.
-  let p := parameters_from_wordsize machine_wordsize in
-  make_bedrock2_unsaturated_solinas p names n s c machine_wordsize.
-Time Defined.
+Instance poly1305_bedrock2_funcs : bedrock2_unsaturated_solinas_funcs.
+funcs_from_ops ops. Defined.
+
+Instance poly1305_bedrock2_specs : bedrock2_unsaturated_solinas_specs.
+specs_from_ops ops n s c. Defined.
+
+Instance poly1305_bedrock2_correctness :
+  bedrock2_unsaturated_solinas_correctness.
+prove_correctness ops n s c machine_wordsize. Defined.
 (*
 Eval cbv [add poly1305_bedrock2] in add.
 Eval cbv [spec_of_add poly1305_bedrock2] in spec_of_add.

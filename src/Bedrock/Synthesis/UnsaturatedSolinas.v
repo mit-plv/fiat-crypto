@@ -19,19 +19,7 @@ Local Open Scope Z_scope.
 Import ListNotations.
 Import AbstractInterpretation.Compilers.
 
-Record names_of_operations :=
-  { name_of_carry_mul : string;
-    name_of_carry_square : string;
-    name_of_carry : string;
-    name_of_add : string;
-    name_of_sub : string;
-    name_of_opp : string;
-    name_of_selectznz : string;
-    name_of_to_bytes : string;
-    name_of_from_bytes : string;
-    name_of_carry_scmul_const : Z -> string }.
-
-Class bedrock2_unsaturated_solinas :=
+Class bedrock2_unsaturated_solinas_funcs :=
   { carry_mul : bedrock_func;
     carry_square : bedrock_func;
     carry : bedrock_func;
@@ -40,8 +28,11 @@ Class bedrock2_unsaturated_solinas :=
     opp : bedrock_func;
     selectznz : bedrock_func;
     to_bytes : bedrock_func;
-    from_bytes : bedrock_func;
-    spec_of_carry_mul : spec_of (fst carry_mul);
+    from_bytes : bedrock_func }.
+
+Class bedrock2_unsaturated_solinas_specs
+      {funcs : bedrock2_unsaturated_solinas_funcs }:=
+  { spec_of_carry_mul : spec_of (fst carry_mul);
     spec_of_carry_square : spec_of (fst carry_square);
     spec_of_carry : spec_of (fst carry);
     spec_of_add : spec_of (fst add);
@@ -49,8 +40,12 @@ Class bedrock2_unsaturated_solinas :=
     spec_of_opp : spec_of (fst opp);
     spec_of_selectznz : spec_of (fst selectznz);
     spec_of_to_bytes : spec_of (fst to_bytes);
-    spec_of_from_bytes : spec_of (fst from_bytes);
-    carry_mul_correct :
+    spec_of_from_bytes : spec_of (fst from_bytes) }.
+
+Class bedrock2_unsaturated_solinas_correctness
+      {funcs : bedrock2_unsaturated_solinas_funcs}
+      {specs : bedrock2_unsaturated_solinas_specs} :=
+  { carry_mul_correct :
       forall functions,
         spec_of_carry_mul (carry_mul :: functions);
     carry_square_correct :
@@ -78,15 +73,93 @@ Class bedrock2_unsaturated_solinas :=
       forall functions,
         spec_of_from_bytes (from_bytes :: functions) }.
 
-(* scalar multiplication is calculated separately since it requires an extra
-   argument *)
-Class bedrock2_unsaturated_solinas_scmul {x : Z} :=
-  { carry_scmul_const : bedrock_func;
-    spec_of_carry_scmul_const : spec_of (fst carry_scmul_const);
-    carry_scmul_const_correct :
+Class bedrock2_unsaturated_solinas_scmul_func :=
+  { carry_scmul_const : bedrock_func }.
+
+Class bedrock2_unsaturated_solinas_scmul_spec
+      {func : bedrock2_unsaturated_solinas_scmul_func }:=
+  { spec_of_carry_scmul_const : spec_of (fst carry_scmul_const) }.
+
+Class bedrock2_unsaturated_solinas_scmul_correctness
+      {func : bedrock2_unsaturated_solinas_scmul_func}
+      {spec : bedrock2_unsaturated_solinas_scmul_spec} :=
+  { carry_scmul_const_correct :
       forall functions,
         spec_of_carry_scmul_const (carry_scmul_const :: functions) }.
-Arguments bedrock2_unsaturated_solinas_scmul x : clear implicits.
+
+Class names_of_operations :=
+  { name_of_carry_mul : string;
+    name_of_carry_square : string;
+    name_of_carry : string;
+    name_of_add : string;
+    name_of_sub : string;
+    name_of_opp : string;
+    name_of_selectznz : string;
+    name_of_to_bytes : string;
+    name_of_from_bytes : string;
+    name_of_carry_scmul_const : Z -> string }.
+
+Record unsaturated_solinas_reified_ops
+       {names : names_of_operations} {n s c machine_wordsize} :=
+  { params : Types.parameters;
+    reified_carry_mul :
+      reified_op name_of_carry_mul
+                 (@Interfaces.UnsaturatedSolinas.carry_mul params n s c)
+                 (PushButtonSynthesis.UnsaturatedSolinas.carry_mul
+                    n s c machine_wordsize);
+    reified_carry_square :
+      reified_op name_of_carry_square
+                 (@Interfaces.UnsaturatedSolinas.carry_square params n s c)
+                 (PushButtonSynthesis.UnsaturatedSolinas.carry_square
+                    n s c machine_wordsize);
+    reified_carry :
+      reified_op name_of_carry
+                 (@Interfaces.UnsaturatedSolinas.carry params n s c)
+                 (PushButtonSynthesis.UnsaturatedSolinas.carry
+                    n s c machine_wordsize);
+    reified_add :
+      reified_op name_of_add
+                 (@Interfaces.UnsaturatedSolinas.add params n s c)
+                 (PushButtonSynthesis.UnsaturatedSolinas.add
+                    n s c machine_wordsize);
+    reified_sub :
+      reified_op name_of_sub
+                 (@Interfaces.UnsaturatedSolinas.sub params n s c)
+                 (PushButtonSynthesis.UnsaturatedSolinas.sub
+                    n s c machine_wordsize);
+    reified_opp :
+      reified_op name_of_opp
+                 (@Interfaces.UnsaturatedSolinas.opp params n s c)
+                 (PushButtonSynthesis.UnsaturatedSolinas.opp
+                    n s c machine_wordsize);
+    reified_selectznz :
+      reified_op name_of_selectznz
+                 (@Interfaces.UnsaturatedSolinas.selectznz params n s c)
+                 (PushButtonSynthesis.UnsaturatedSolinas.selectznz
+                    n machine_wordsize);
+    reified_to_bytes :
+      reified_op name_of_to_bytes
+                 (@Interfaces.UnsaturatedSolinas.to_bytes params n s c)
+                 (PushButtonSynthesis.UnsaturatedSolinas.to_bytes
+                    n s c machine_wordsize);
+    reified_from_bytes :
+      reified_op name_of_from_bytes
+                 (@Interfaces.UnsaturatedSolinas.from_bytes params n s c)
+                 (PushButtonSynthesis.UnsaturatedSolinas.from_bytes
+                    n s c machine_wordsize) }.
+Arguments unsaturated_solinas_reified_ops {names} n s c machine_wordsize.
+
+Record unsaturated_solinas_reified_scmul
+       {names : names_of_operations} {n s c machine_wordsize} {x : Z} :=
+  { scmul_params : Types.parameters;
+    reified_carry_scmul_const :
+      reified_op (name_of_carry_scmul_const x)
+                 (@Interfaces.UnsaturatedSolinas.carry_scmul_const
+                    scmul_params n s c x)
+                 (PushButtonSynthesis.UnsaturatedSolinas.carry_scmul_const
+                    n s c machine_wordsize x) }.
+Arguments unsaturated_solinas_reified_scmul
+          {names} n s c machine_wordsize x.
 
 (*** Helpers ***)
 
@@ -106,13 +179,159 @@ Definition names_from_prefix (prefix : string)
          (prefix ++ "carry_scmul_const" ++ Decimal.Z.to_string x)%string
   |}.
 
-(*** Synthesis tactics ***)
+(*** Synthesis Tactics ***)
+
+Ltac scmul_func_from_ops ops :=
+  let carry_scmul_const_func_value :=
+      (eval lazy in
+          (computed_bedrock_func (reified_carry_scmul_const ops))) in
+  exact {| carry_scmul_const := carry_scmul_const_func_value |}.
+
+Ltac scmul_spec_from_ops ops n s c :=
+  let x := lazymatch type of ops with
+           | unsaturated_solinas_reified_scmul _ _ _ _ ?x => x end in
+  let p := (eval cbn [scmul_params ops] in (scmul_params ops)) in
+  let carry_scmul_const_name :=
+      (eval compute in (name_of_carry_scmul_const x)) in
+  let carry_scmul_const_spec :=
+      (eval cbv
+            [fst snd precondition postcondition
+                 Interfaces.UnsaturatedSolinas.carry_scmul_const
+                 Interfaces.UnsaturatedSolinas.spec_of_carry_scmul_const] in
+          (@Interfaces.UnsaturatedSolinas.spec_of_carry_scmul_const
+             p n s c x carry_scmul_const_name)) in
+  exact {| spec_of_carry_scmul_const := carry_scmul_const_spec |}.
+
+Ltac funcs_from_ops ops :=
+  let carry_mul_func_value :=
+      (eval lazy in
+          (computed_bedrock_func (reified_carry_mul ops))) in
+  let carry_square_func_value :=
+      (eval lazy in
+          (computed_bedrock_func (reified_carry_square ops))) in
+  let carry_func_value :=
+      (eval lazy in
+          (computed_bedrock_func (reified_carry ops))) in
+  let add_func_value :=
+      (eval lazy in
+          (computed_bedrock_func (reified_add ops))) in
+  let sub_func_value :=
+      (eval lazy in
+          (computed_bedrock_func (reified_sub ops))) in
+  let opp_func_value :=
+      (eval lazy in
+          (computed_bedrock_func (reified_opp ops))) in
+  let selectznz_func_value :=
+      (eval lazy in
+          (computed_bedrock_func (reified_selectznz ops))) in
+  let to_bytes_func_value :=
+      (eval lazy in
+          (computed_bedrock_func (reified_to_bytes ops))) in
+  let from_bytes_func_value :=
+      (eval lazy in
+          (computed_bedrock_func (reified_from_bytes ops))) in
+  exact {| carry_mul := carry_mul_func_value;
+           carry_square := carry_square_func_value;
+           carry := carry_func_value;
+           add := add_func_value;
+           sub := sub_func_value;
+           opp := opp_func_value;
+           selectznz := selectznz_func_value;
+           to_bytes := to_bytes_func_value;
+           from_bytes := from_bytes_func_value |}.
+
+Ltac specs_from_ops ops n s c :=
+  let p := eval cbn [params ops] in (params ops) in
+  let carry_mul_name := (eval compute in name_of_carry_mul) in
+  let carry_square_name := (eval compute in name_of_carry_square) in
+  let carry_name := (eval compute in name_of_carry) in
+  let add_name := (eval compute in name_of_add) in
+  let sub_name := (eval compute in name_of_sub) in
+  let opp_name := (eval compute in name_of_opp) in
+  let selectznz_name := (eval compute in name_of_selectznz) in
+  let to_bytes_name := (eval compute in name_of_to_bytes) in
+  let from_bytes_name := (eval compute in name_of_from_bytes) in
+  let carry_mul_spec :=
+      (eval cbv
+            [fst snd precondition postcondition
+                 Interfaces.UnsaturatedSolinas.carry_mul
+                 Interfaces.UnsaturatedSolinas.spec_of_carry_mul] in
+          (@Interfaces.UnsaturatedSolinas.spec_of_carry_mul
+             p n s c carry_mul_name)) in
+  let carry_square_spec :=
+      (eval cbv
+            [fst snd precondition postcondition
+                 Interfaces.UnsaturatedSolinas.carry_square
+                 Interfaces.UnsaturatedSolinas.spec_of_carry_square] in
+          (@Interfaces.UnsaturatedSolinas.spec_of_carry_square
+             p n s c carry_square_name)) in
+  let carry_spec :=
+      (eval cbv
+            [fst snd precondition postcondition
+                 Interfaces.UnsaturatedSolinas.carry
+                 Interfaces.UnsaturatedSolinas.spec_of_carry] in
+          (@Interfaces.UnsaturatedSolinas.spec_of_carry
+             p n s c carry_name)) in
+  let add_spec :=
+      (eval cbv
+            [fst snd precondition postcondition
+                 Interfaces.UnsaturatedSolinas.add
+                 Interfaces.UnsaturatedSolinas.spec_of_add] in
+          (@Interfaces.UnsaturatedSolinas.spec_of_add
+             p n s c add_name)) in
+  let sub_spec :=
+      (eval cbv
+            [fst snd precondition postcondition
+                 Interfaces.UnsaturatedSolinas.sub
+                 Interfaces.UnsaturatedSolinas.spec_of_sub] in
+          (@Interfaces.UnsaturatedSolinas.spec_of_sub
+             p n s c sub_name)) in
+  let opp_spec :=
+      (eval cbv
+            [fst snd precondition postcondition
+                 Interfaces.UnsaturatedSolinas.opp
+                 Interfaces.UnsaturatedSolinas.spec_of_opp] in
+          (@Interfaces.UnsaturatedSolinas.spec_of_opp
+             p n s c opp_name)) in
+  let selectznz_spec :=
+      (eval cbv
+            [fst snd precondition postcondition
+                 Interfaces.UnsaturatedSolinas.selectznz
+                 Interfaces.UnsaturatedSolinas.spec_of_selectznz] in
+          (@Interfaces.UnsaturatedSolinas.spec_of_selectznz
+             p n s c selectznz_name)) in
+  let to_bytes_spec :=
+      (eval cbv
+            [fst snd precondition postcondition
+                 Interfaces.UnsaturatedSolinas.to_bytes
+                 Interfaces.UnsaturatedSolinas.spec_of_to_bytes] in
+          (@Interfaces.UnsaturatedSolinas.spec_of_to_bytes
+             p n s c to_bytes_name)) in
+  let from_bytes_spec :=
+      (eval cbv
+            [fst snd precondition postcondition
+                 Interfaces.UnsaturatedSolinas.from_bytes
+                 Interfaces.UnsaturatedSolinas.spec_of_from_bytes] in
+          (@Interfaces.UnsaturatedSolinas.spec_of_from_bytes
+             p n s c from_bytes_name)) in
+  exact {| spec_of_carry_mul := carry_mul_spec;
+           spec_of_carry_square := carry_square_spec;
+           spec_of_carry := carry_spec;
+           spec_of_add := add_spec;
+           spec_of_sub := sub_spec;
+           spec_of_opp := opp_spec;
+           spec_of_selectznz := selectznz_spec;
+           spec_of_to_bytes := to_bytes_spec;
+           spec_of_from_bytes := from_bytes_spec |}.
 
 Ltac handle_easy_preconditions :=
   lazymatch goal with
   | |- ZRange.type.option.is_tighter_than _ _ = true =>
     abstract (vm_compute; reflexivity)
   | |- Types.ok => solve [typeclasses eauto]
+  | |- _ = ErrorT.Success _ => solve [apply reified_eq]
+  | |- Wf.Compilers.expr.Wf3 _ => solve [apply reified_Wf3]
+  | |- Func.valid_func _ => solve [apply reified_valid]
   | _ => first [ apply inname_gen_varname_gen_disjoint
                | apply outname_gen_varname_gen_disjoint
                | apply outname_gen_inname_gen_disjoint
@@ -155,242 +374,52 @@ Ltac use_correctness_proofs p n s c :=
              p default_inname_gen default_outname_gen n s c)
   end.
 
-Ltac make_all_reified_ops p names n s c machine_wordsize :=
-  let carry_mul_name := (eval compute in (name_of_carry_mul names)) in
-  let carry_square_name := (eval compute in (name_of_carry_square names)) in
-  let carry_name := (eval compute in (name_of_carry names)) in
-  let add_name := (eval compute in (name_of_add names)) in
-  let sub_name := (eval compute in (name_of_sub names)) in
-  let opp_name := (eval compute in (name_of_opp names)) in
-  let selectznz_name := (eval compute in (name_of_selectznz names)) in
-  let to_bytes_name := (eval compute in (name_of_to_bytes names)) in
-  let from_bytes_name := (eval compute in (name_of_from_bytes names)) in
-  idtac "computing reified carry_mul (slow)...";
-  make_reified_op
-    p carry_mul_name
-    (@Interfaces.UnsaturatedSolinas.carry_mul p n s c)
-    (PushButtonSynthesis.UnsaturatedSolinas.carry_mul
-       n s c machine_wordsize);
-  idtac "computing reified carry_square (slow)...";
-  make_reified_op
-    p carry_square_name
-    (@Interfaces.UnsaturatedSolinas.carry_square p n s c)
-    (PushButtonSynthesis.UnsaturatedSolinas.carry_square
-       n s c machine_wordsize);
-  idtac "computing reified carry...";
-  make_reified_op
-    p carry_name
-    (@Interfaces.UnsaturatedSolinas.carry p n s c)
-    (PushButtonSynthesis.UnsaturatedSolinas.carry
-       n s c machine_wordsize);
-  idtac "computing reified add...";
-  make_reified_op
-    p add_name
-    (@Interfaces.UnsaturatedSolinas.add p n s c)
-    (PushButtonSynthesis.UnsaturatedSolinas.add
-       n s c machine_wordsize);
-  idtac "computing reified sub...";
-  make_reified_op
-    p sub_name
-    (@Interfaces.UnsaturatedSolinas.sub p n s c)
-    (PushButtonSynthesis.UnsaturatedSolinas.sub
-       n s c machine_wordsize);
-  idtac "computing reified opp...";
-  make_reified_op
-    p opp_name
-    (@Interfaces.UnsaturatedSolinas.opp p n s c)
-    (PushButtonSynthesis.UnsaturatedSolinas.opp
-       n s c machine_wordsize);
-  idtac "computing reified selectznz...";
-  make_reified_op
-    p selectznz_name
-    (@Interfaces.UnsaturatedSolinas.selectznz p n s c)
-    (PushButtonSynthesis.UnsaturatedSolinas.selectznz
-       n machine_wordsize);
-  idtac "computing reified to_bytes (slow)...";
-  make_reified_op
-    p to_bytes_name
-    (@Interfaces.UnsaturatedSolinas.to_bytes p n s c)
-    (PushButtonSynthesis.UnsaturatedSolinas.to_bytes
-       n s c machine_wordsize);
-  idtac "computing reified from_bytes (slow)...";
-  make_reified_op
-    p from_bytes_name
-    (@Interfaces.UnsaturatedSolinas.from_bytes p n s c)
-    (PushButtonSynthesis.UnsaturatedSolinas.from_bytes
-       n s c machine_wordsize).
-
-Ltac instantiate_ops p names n s c :=
-  let carry_mul_func_value := fresh "carry_mul_func" in
-  let carry_square_func_value := fresh "carry_square_func" in
-  let carry_func_value := fresh "carry_func" in
-  let add_func_value := fresh "add_func" in
-  let sub_func_value := fresh "sub_func" in
-  let opp_func_value := fresh "opp_func" in
-  let selectznz_func_value := fresh "selectznz_func" in
-  let to_bytes_func_value := fresh "to_bytes_func" in
-  let from_bytes_func_value := fresh "from_bytes_func" in
-  repeat match goal with
-         | X : reified_op _ ?op _ |- _ =>
-           lazymatch op with
-           | context [Interfaces.UnsaturatedSolinas.carry_mul] =>
-             destruct X as [? carry_mul_func_value ?]
-           | context [Interfaces.UnsaturatedSolinas.carry_square] =>
-             destruct X as [? carry_square_func_value ?]
-           | context [Interfaces.UnsaturatedSolinas.carry] =>
-             destruct X as [? carry_func_value ?]
-           | context [Interfaces.UnsaturatedSolinas.add] =>
-             destruct X as [? add_func_value ?]
-           | context [Interfaces.UnsaturatedSolinas.sub] =>
-             destruct X as [? sub_func_value ?]
-           | context [Interfaces.UnsaturatedSolinas.opp] =>
-             destruct X as [? opp_func_value ?]
-           | context [Interfaces.UnsaturatedSolinas.selectznz] =>
-             destruct X as [? selectznz_func_value ?]
-           | context [Interfaces.UnsaturatedSolinas.to_bytes] =>
-             destruct X as [? to_bytes_func_value ?]
-           | context [Interfaces.UnsaturatedSolinas.from_bytes] =>
-             destruct X as [? from_bytes_func_value ?]
-           end
-         end;
-  let carry_mul_name := (eval compute in (name_of_carry_mul names)) in
-  let carry_square_name := (eval compute in (name_of_carry_square names)) in
-  let carry_name := (eval compute in (name_of_carry names)) in
-  let add_name := (eval compute in (name_of_add names)) in
-  let sub_name := (eval compute in (name_of_sub names)) in
-  let opp_name := (eval compute in (name_of_opp names)) in
-  let selectznz_name := (eval compute in (name_of_selectznz names)) in
-  let to_bytes_name := (eval compute in (name_of_to_bytes names)) in
-  let from_bytes_name := (eval compute in (name_of_from_bytes names)) in
-    let carry_mul_spec :=
-        (eval cbv
-              [fst snd precondition postcondition
-                   Interfaces.UnsaturatedSolinas.carry_mul
-                   Interfaces.UnsaturatedSolinas.spec_of_carry_mul] in
-            (@Interfaces.UnsaturatedSolinas.spec_of_carry_mul
-               p n s c carry_mul_name)) in
-    let carry_square_spec :=
-        (eval cbv
-              [fst snd precondition postcondition
-                   Interfaces.UnsaturatedSolinas.carry_square
-                   Interfaces.UnsaturatedSolinas.spec_of_carry_square] in
-            (@Interfaces.UnsaturatedSolinas.spec_of_carry_square
-               p n s c carry_square_name)) in
-    let carry_spec :=
-        (eval cbv
-              [fst snd precondition postcondition
-                   Interfaces.UnsaturatedSolinas.carry
-                   Interfaces.UnsaturatedSolinas.spec_of_carry] in
-            (@Interfaces.UnsaturatedSolinas.spec_of_carry
-               p n s c carry_name)) in
-    let add_spec :=
-        (eval cbv
-              [fst snd precondition postcondition
-                   Interfaces.UnsaturatedSolinas.add
-                   Interfaces.UnsaturatedSolinas.spec_of_add] in
-            (@Interfaces.UnsaturatedSolinas.spec_of_add
-               p n s c add_name)) in
-    let sub_spec :=
-        (eval cbv
-              [fst snd precondition postcondition
-                   Interfaces.UnsaturatedSolinas.sub
-                   Interfaces.UnsaturatedSolinas.spec_of_sub] in
-            (@Interfaces.UnsaturatedSolinas.spec_of_sub
-               p n s c sub_name)) in
-    let opp_spec :=
-        (eval cbv
-              [fst snd precondition postcondition
-                   Interfaces.UnsaturatedSolinas.opp
-                   Interfaces.UnsaturatedSolinas.spec_of_opp] in
-            (@Interfaces.UnsaturatedSolinas.spec_of_opp
-               p n s c opp_name)) in
-    let selectznz_spec :=
-        (eval cbv
-              [fst snd precondition postcondition
-                   Interfaces.UnsaturatedSolinas.selectznz
-                   Interfaces.UnsaturatedSolinas.spec_of_selectznz] in
-            (@Interfaces.UnsaturatedSolinas.spec_of_selectznz
-               p n s c selectznz_name)) in
-    let to_bytes_spec :=
-        (eval cbv
-              [fst snd precondition postcondition
-                   Interfaces.UnsaturatedSolinas.to_bytes
-                   Interfaces.UnsaturatedSolinas.spec_of_to_bytes] in
-            (@Interfaces.UnsaturatedSolinas.spec_of_to_bytes
-               p n s c to_bytes_name)) in
-    let from_bytes_spec :=
-        (eval cbv
-              [fst snd precondition postcondition
-                   Interfaces.UnsaturatedSolinas.from_bytes
-                   Interfaces.UnsaturatedSolinas.spec_of_from_bytes] in
-            (@Interfaces.UnsaturatedSolinas.spec_of_from_bytes
-               p n s c from_bytes_name)) in
-    apply Build_bedrock2_unsaturated_solinas
-      with (carry_mul:=carry_mul_func_value)
-           (spec_of_carry_mul:=carry_mul_spec)
-           (carry_square:=carry_square_func_value)
-           (spec_of_carry_square:=carry_square_spec)
-           (carry:=carry_func_value)
-           (spec_of_carry:=carry_spec)
-           (add:=add_func_value)
-           (spec_of_add:=add_spec)
-           (sub:=sub_func_value)
-           (spec_of_sub:=sub_spec)
-           (opp:=opp_func_value)
-           (spec_of_opp:=opp_spec)
-           (selectznz:=selectznz_func_value)
-           (spec_of_selectznz:=selectznz_spec)
-           (to_bytes:=to_bytes_func_value)
-           (spec_of_to_bytes:=to_bytes_spec)
-           (from_bytes:=from_bytes_func_value)
-           (spec_of_from_bytes:=from_bytes_spec);
-  subst carry_mul_func_value carry_square_func_value carry_func_value
-        add_func_value sub_func_value opp_func_value selectznz_func_value
-        to_bytes_func_value from_bytes_func_value.
-
-Ltac make_bedrock2_unsaturated_solinas p names n s c machine_wordsize :=
-  assert (UnsaturatedSolinas.check_args
-            n s c machine_wordsize (ErrorT.Success tt) =
-          ErrorT.Success tt) by abstract (native_compute; reflexivity);
-  match goal with
-    | |- bedrock2_unsaturated_solinas =>
-      make_all_reified_ops p names n s c machine_wordsize;
-      instantiate_ops p names n s c;
-      use_correctness_proofs p n s c; try assumption;
-      abstract (handle_easy_preconditions)
+Ltac change_with_computed_func ops :=
+  lazymatch goal with
+  | |- context [carry_mul] =>
+    change carry_mul with (computed_bedrock_func (reified_carry_mul ops))
+  | |- context [carry_square] =>
+    change carry_square with (computed_bedrock_func (reified_carry_square ops))
+  | |- context [carry] =>
+    change carry with (computed_bedrock_func (reified_carry ops))
+  | |- context [add] =>
+    change add with (computed_bedrock_func (reified_add ops))
+  | |- context [sub] =>
+    change sub with (computed_bedrock_func (reified_sub ops))
+  | |- context [opp] =>
+    change opp with (computed_bedrock_func (reified_opp ops))
+  | |- context [selectznz] =>
+    change selectznz with (computed_bedrock_func (reified_selectznz ops))
+  | |- context [to_bytes] =>
+    change to_bytes with (computed_bedrock_func (reified_to_bytes ops))
+  | |- context [from_bytes] =>
+    change from_bytes with (computed_bedrock_func (reified_from_bytes ops))
+  | |- context [carry_scmul_const] =>
+    change carry_scmul_const with (computed_bedrock_func (reified_carry_scmul_const ops))
   end.
 
-Ltac make_bedrock2_unsaturated_solinas_scmul
-     p names n s c machine_wordsize :=
+Ltac prove_correctness ops n s c machine_wordsize :=
   assert (UnsaturatedSolinas.check_args
             n s c machine_wordsize (ErrorT.Success tt) =
           ErrorT.Success tt) by abstract (native_compute; reflexivity);
-  let x := match goal with
-             |- bedrock2_unsaturated_solinas_scmul ?x => x end in
-  let carry_scmul_const_name :=
-      (eval compute in (name_of_carry_scmul_const names x)) in
-  make_reified_op
-    p carry_scmul_const_name
-    (@Interfaces.UnsaturatedSolinas.carry_scmul_const p n s c x)
-    (PushButtonSynthesis.UnsaturatedSolinas.carry_scmul_const
-       n s c machine_wordsize x);
-  let scmul_func_value := fresh "scmul_func_value" in
-  match goal with
-  | X : reified_op _ ?op _ |- _ =>
-    destruct X as [? scmul_func_value ?] end;
-  let carry_scmul_const_spec :=
-      (eval cbv
-            [fst snd precondition postcondition
-                 Interfaces.UnsaturatedSolinas.carry_scmul_const
-                 Interfaces.UnsaturatedSolinas.spec_of_carry_scmul_const] in
-          (@Interfaces.UnsaturatedSolinas.spec_of_carry_scmul_const
-             p n s c x carry_scmul_const_name)) in
-  apply Build_bedrock2_unsaturated_solinas_scmul
-    with (carry_scmul_const:=scmul_func_value)
-         (spec_of_carry_scmul_const:=carry_scmul_const_spec);
-  subst scmul_func_value;
+  lazymatch goal with
+    | |- bedrock2_unsaturated_solinas_correctness => econstructor end;
+  change_with_computed_func ops; rewrite computed_bedrock_func_eq;
+  let p := (eval cbn [params ops] in (params ops)) in
   use_correctness_proofs p n s c; try assumption;
-  abstract (handle_easy_preconditions).
+  handle_easy_preconditions.
+
+Ltac prove_correctness_scmul ops n s c machine_wordsize :=
+  assert (UnsaturatedSolinas.check_args
+            n s c machine_wordsize (ErrorT.Success tt) =
+          ErrorT.Success tt) by abstract (native_compute; reflexivity);
+  lazymatch goal with
+  | |- bedrock2_unsaturated_solinas_scmul_correctness =>
+    econstructor end;
+  change_with_computed_func ops; rewrite computed_bedrock_func_eq;
+  let p := (eval cbn [scmul_params ops] in (scmul_params ops)) in
+  use_correctness_proofs p n s c; try assumption;
+  handle_easy_preconditions.
 
 Ltac make_names_of_operations prefix :=
   match goal with
@@ -399,12 +428,20 @@ Ltac make_names_of_operations prefix :=
         exact n
   end.
 
-Ltac make_parameters machine_wordsize :=
-  match goal with
-  | |- Types.parameters =>
+Ltac make_reified_ops :=
+  lazymatch goal with
+    |- unsaturated_solinas_reified_ops ?n ?s ?c ?machine_wordsize =>
     let p := parameters_from_wordsize machine_wordsize in
-    exact p
-  end.
+    eapply Build_unsaturated_solinas_reified_ops with (params:=p)
+  end; prove_reified_op.
+
+Ltac make_reified_scmul :=
+  lazymatch goal with
+    |- unsaturated_solinas_reified_scmul ?n ?s ?c ?machine_wordsize ?x =>
+    let p := parameters_from_wordsize machine_wordsize in
+    eapply Build_unsaturated_solinas_reified_scmul with (scmul_params:=p)
+  end;
+  prove_reified_op.
 
 (*
 
@@ -414,19 +451,36 @@ Let c := [(1, 5)].
 Let machine_wordsize := 64.
 Let prefix := "poly1305_"%string.
 
-Definition names : names_of_operations.
-make_names_of_operations prefix. Defined.
+Instance names : names_of_operations.
+  make_names_of_operations prefix. Defined.
 
-Instance poly1305_bedrock2 : bedrock2_unsaturated_solinas.
-Proof.
-  let p := parameters_from_wordsize machine_wordsize in
-  make_bedrock2_unsaturated_solinas p names n s c machine_wordsize.
-Time Defined.
+Definition reified_scmul :
+  unsaturated_solinas_reified_scmul n s c machine_wordsize 5.
+Proof. make_reified_scmul. Defined.
 
-Instance poly1305_bedrock2_scmul5 : bedrock2_unsaturated_solinas_scmul 5.
-Proof.
-  let p := parameters_from_wordsize machine_wordsize in
-  make_bedrock2_unsaturated_solinas_scmul p names n s c machine_wordsize.
-Time Defined.
+Instance poly1305_bedrock2_scmul_func
+  : bedrock2_unsaturated_solinas_scmul_func.
+scmul_func_from_ops reified_scmul. Defined.
+
+Instance poly1305_bedrock2_scmul_spec
+  : bedrock2_unsaturated_solinas_scmul_spec.
+scmul_spec_from_ops reified_scmul n s c. Defined.
+
+Instance poly1305_bedrock2_scmul_correctness :
+  bedrock2_unsaturated_solinas_scmul_correctness.
+prove_correctness_scmul reified_scmul n s c machine_wordsize. Defined.
+
+Definition ops : unsaturated_solinas_reified_ops n s c machine_wordsize.
+Proof. make_reified_ops. Defined.
+
+Instance poly1305_bedrock2_funcs : bedrock2_unsaturated_solinas_funcs.
+funcs_from_ops ops. Defined.
+
+Instance poly1305_bedrock2_specs : bedrock2_unsaturated_solinas_specs.
+specs_from_ops ops n s c. Defined.
+
+Instance poly1305_bedrock2_correctness :
+  bedrock2_unsaturated_solinas_correctness.
+prove_correctness ops n s c machine_wordsize. Time Defined.
 
 *)

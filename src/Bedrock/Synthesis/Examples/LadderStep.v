@@ -34,35 +34,45 @@ Definition ladderstep_gallina
            (X1 : F) (P1 P2 : F * F) : F * F * (F * F) :=
   @MxDH.ladderstep F F.add F.sub F.mul a24 X1 P1 P2.
 
-Existing Instances Defaults64.default_parameters curve25519_bedrock2.
+Existing Instances Defaults64.default_parameters
+         curve25519_bedrock2_funcs curve25519_bedrock2_specs
+         curve25519_bedrock2_correctness.
+
+Local Notation n := X25519_64.n.
+Local Notation s := X25519_64.s.
+Local Notation c := X25519_64.c.
+Local Notation machine_wordsize := X25519_64.machine_wordsize.
+Local Notation M := (s - Associational.eval c).
+Local Notation eval :=
+  (Positional.eval
+              (Interfaces.UnsaturatedSolinas.weight n s c) n).
+Local Notation loose_bounds := (UnsaturatedSolinas.loose_bounds n s c).
+Local Notation tight_bounds := (UnsaturatedSolinas.tight_bounds n s c).
+
+Local Open Scope string_scope.
+Local Coercion name_of_func (f : bedrock_func) := fst f.
+Local Infix "*" := sep : sep_scope.
+Delimit Scope sep_scope with sep.
 
 (* need to define scalar-multiplication instance locally so typeclass inference
    knows which instance to pick up (results in weird ecancel_assumption failures
    otherwise) *)
-Local Instance curve25519_bedrock2_scmul121665
-  : bedrock2_unsaturated_solinas_scmul 121665.
-Proof.
-  let p := parameters_from_wordsize X25519_64.machine_wordsize in
-  make_bedrock2_unsaturated_solinas_scmul
-    p names X25519_64.n X25519_64.s X25519_64.c X25519_64.machine_wordsize.
-Defined.
+(* TODO: try Existing Instance again *)
+Definition reified_scmul121665 :
+  unsaturated_solinas_reified_scmul n s c machine_wordsize 121665.
+Proof. make_reified_scmul. Defined.
 
-Local Open Scope string_scope.
-Local Coercion name_of_func (f : bedrock_func) := fst f.
+Local Instance curve25519_bedrock2_scmul121665_func
+  : bedrock2_unsaturated_solinas_scmul_func.
+scmul_func_from_ops reified_scmul121665. Defined.
 
-(* Notations to make spec more readable *)
-Local Notation M := (X25519_64.s - Associational.eval X25519_64.c).
-Local Notation eval :=
-  (Positional.eval
-              (Interfaces.UnsaturatedSolinas.weight
-                 X25519_64.n X25519_64.s X25519_64.c)
-              X25519_64.n).
-Local Notation loose_bounds :=
-  (UnsaturatedSolinas.loose_bounds X25519_64.n X25519_64.s X25519_64.c).
-Local Notation tight_bounds :=
-  (UnsaturatedSolinas.tight_bounds X25519_64.n X25519_64.s X25519_64.c).
-Local Infix "*" := sep : sep_scope.
-Delimit Scope sep_scope with sep.
+Local Instance curve25519_bedrock2_scmul121665_spec
+  : bedrock2_unsaturated_solinas_scmul_spec.
+scmul_spec_from_ops reified_scmul121665 n s c. Defined.
+
+Local Instance curve25519_bedrock2_scmul121665_correctness :
+  bedrock2_unsaturated_solinas_scmul_correctness.
+prove_correctness_scmul reified_scmul121665 n s c machine_wordsize. Defined.
 
 Require Import bedrock2.Syntax.
 Require Import bedrock2.NotationsCustomEntry.
@@ -214,7 +224,7 @@ Instance spec_of_curve25519_sub :
   spec_of "curve25519_sub" := spec_of_sub.
 Instance spec_of_curve25519_carry_scmul_const121665 :
   spec_of "curve25519_carry_scmul_const121665"
-  := @spec_of_carry_scmul_const _ curve25519_bedrock2_scmul121665.
+  := @spec_of_carry_scmul_const _ curve25519_bedrock2_scmul121665_spec.
 
 Ltac prove_bounds :=
   lazymatch goal with
@@ -268,9 +278,8 @@ Lemma ladderstep_correct :
   program_logic_goal_for_function! ladderstep.
 Proof.
   straightline_init_with_change.
+  Time
   repeat t.
-  (* TODO: straightline call is taking forever to pull the WP.call out of
-  spec_of_curve25519 etc -- probably computing proof terms from bedrock2_unsaturated_solinas. Try separating proofs from code/specs *)
 
   (* now prove postcondition *)
   repeat split; try reflexivity.

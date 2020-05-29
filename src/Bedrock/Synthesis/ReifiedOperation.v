@@ -22,10 +22,10 @@ Local Notation make_bedrock_func :=
   (@make_bedrock_func _ default_inname_gen default_outname_gen).
 
 Record reified_op {p t}
-       (name : String.string)
-       (op : operation t)
-       (start : ErrorT.ErrorT Pipeline.ErrorMessage
-                              (API.Expr t)) :=
+       {name : String.string}
+       {op : operation t}
+       {start : ErrorT.ErrorT Pipeline.ErrorMessage
+                              (API.Expr t)} :=
   { res : API.Expr t;
     computed_bedrock_func : bedrock_func;
     computed_bedrock_func_eq :
@@ -34,28 +34,26 @@ Record reified_op {p t}
     reified_Wf3 : expr.Wf3 res;
     reified_valid : Func.valid_func (p:=p) (res (fun _ => unit));
   }.
-Arguments res {_ _ _}.
-Arguments reified_eq {_ _ _}.
-Arguments reified_Wf3 {_ _ _}.
-Arguments reified_valid {_ _ _}.
+Global Arguments reified_op {p t} name op start.
 
+Ltac prove_reified_op :=
+  lazymatch goal with |- reified_op _ _ _ => idtac end;
+  econstructor;
+  (* important to compute the function body first, before solving other
+     subgoals *)
+  lazymatch goal with
+  | |- ?start = ErrorT.Success _ =>
+    vm_compute; reflexivity
+  | |- Func.valid_func _ => eapply valid_func_bool_iff
+  | _ => idtac
+  end;
+  [ match goal with
+    | |- _ = make_bedrock_func _ _ _ =>
+      vm_compute; reflexivity end | .. ];
+  match goal with
+  | |- expr.Wf3 _ => abstract (prove_Wf3 ())
+  | |- valid_func_bool ?x = true =>
+    abstract (vm_compute; reflexivity)
+  end.
 Ltac make_reified_op p name op start :=
-  assert (@reified_op p _ name op start)
-  by (econstructor; try apply valid_func_bool_iff;
-      (* important to compute the function body first, before solving other
-         subgoals *)
-      lazymatch goal with
-      | |- ?start = ErrorT.Success _ =>
-        vm_compute; reflexivity
-      | _ => idtac
-      end;
-      idtac ">> computing bedrock2 translation...";
-      [ match goal with
-        | |- _ = make_bedrock_func _ _ _ =>
-          vm_compute; reflexivity end | .. ];
-      idtac ">> proving Wf3 and valid_func...";
-      match goal with
-      | |- expr.Wf3 _ => abstract (prove_Wf3 ())
-      | |- valid_func_bool ?x = true =>
-        abstract (vm_compute; reflexivity)
-      end).
+  assert (@reified_op p _ name op start) by prove_reified_op.

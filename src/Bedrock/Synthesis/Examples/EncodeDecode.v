@@ -23,7 +23,10 @@ Require Import bedrock2.Semantics.
 Import Types ListNotations.
 Local Open Scope Z_scope.
 
-Existing Instances Defaults64.default_parameters names curve25519_bedrock2.
+Existing Instances
+         Defaults64.default_parameters names
+         curve25519_bedrock2_funcs curve25519_bedrock2_specs
+         curve25519_bedrock2_correctness.
 Local Open Scope string_scope.
 Local Coercion name_of_func (f : bedrock_func) := fst f.
 
@@ -102,14 +105,11 @@ Ltac prove_length :=
     erewrite <-map_length; erewrite H;
     rewrite length_partition; reflexivity
   end.
-Ltac call_step :=
-  repeat straightline;
-  handle_call ltac:(try prove_bounds) ltac:(try prove_length);
-  repeat match goal with
-           H : context [Freeze.bytes_n ?a ?b ?c] |- _ =>
-           change (Freeze.bytes_n a b c) with n_bytes in H
-         end;
-  repeat straightline.
+Ltac prove_preconditions :=
+  lazymatch goal with
+  | |- length _ = _ => prove_length
+  | |- list_Z_bounded_by _ _ => prove_bounds
+  end.
 
 (* TODO: need to replace encode_no_reduce with partition (lingering technical
    debt); then this proof is very easy *)
@@ -123,24 +123,14 @@ Lemma encode_decode_correct :
   program_logic_goal_for_function! encode_decode.
 Proof.
   straightline_init_with_change.
-  repeat straightline.
 
-  Print do_call.
-  straightline_call; sepsimpl.
-  2:{
-    ecancel_assumption.
-  2:ecancel_assumption.
-  Print do_call.
-  (* first figure out why it's failing, then figure out why it's taking so long
-  *)
-  repeat straightline;
-    do_call ltac:(try prove_bounds) ltac:(try prove_length).
+  repeat straightline.
+  handle_call; [ prove_preconditions .. | ].
   repeat match goal with
            H : context [Freeze.bytes_n ?a ?b ?c] |- _ =>
            change (Freeze.bytes_n a b c) with n_bytes in H
-         end;
-  repeat straightline.
-  call_step.
+         end.
+
   (* to_bytes doesn't explicitly mention bounds in the postcondition, so we need
      to extract them *)
   lazymatch goal with
@@ -150,7 +140,12 @@ Proof.
           apply Z.mod_pos_bound; reflexivity)
   end.
 
-  call_step.
+  repeat straightline.
+  handle_call; [ prove_preconditions .. | ].
+  repeat match goal with
+           H : context [Freeze.bytes_n ?a ?b ?c] |- _ =>
+           change (Freeze.bytes_n a b c) with n_bytes in H
+         end.
 
   repeat split; try reflexivity.
   sepsimpl_hyps.
