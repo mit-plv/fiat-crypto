@@ -35,7 +35,8 @@ INSTALLDEFAULTROOT := Crypto
 	deps \
 	nobigmem print-nobigmem \
 	lite only-heavy printlite \
-	some-early pre-standalone standalone standalone-haskell standalone-ocaml \
+	all-except-compiled \
+	some-early pre-standalone pre-standalone-extracted standalone standalone-haskell standalone-ocaml \
 	test-c-files test-bedrock2-files test-rust-files test-go-files test-java-files \
 	only-test-c-files only-test-bedrock2-files only-test-rust-files only-test-go-files only-test-java-files \
 	javadoc only-javadoc \
@@ -229,7 +230,8 @@ ACCEPT_OUTPUTS := $(addprefix accept-,$(OUTPUT_PREOUTS))
 
 generated-files: c-files rust-files go-files java-files
 lite-generated-files: lite-c-files lite-rust-files lite-go-files lite-java-files
-all-except-generated: coq standalone-ocaml perf-standalone check-output
+all-except-compiled: coq pre-standalone-extracted check-output
+all-except-generated: standalone-ocaml perf-standalone all-except-compiled
 all: all-except-generated generated-files
 ifneq ($(SKIP_BEDROCK2),1)
 generated-files: bedrock2-files
@@ -408,12 +410,15 @@ STANDALONE_HASKELL := $(STANDALONE)
 OCAML_BINARIES := $(STANDALONE:%=src/ExtractionOCaml/%)
 HASKELL_BINARIES := $(STANDALONE:%=src/ExtractionHaskell/%)
 
+
 $(STANDALONE:%=src/ExtractionOCaml/%.ml): src/StandaloneOCamlMain.vo
 $(BEDROCK2_STANDALONE:%=src/ExtractionOCaml/%.ml): src/Bedrock/StandaloneOCamlMain.vo
 $(PERF_STANDALONE:%=src/ExtractionOCaml/%.ml): src/Rewriter/PerfTesting/StandaloneOCamlMain.vo
 $(STANDALONE:%=src/ExtractionHaskell/%.hs): src/StandaloneHaskellMain.vo
 $(BEDROCK2_STANDALONE:%=src/ExtractionHaskell/%.hs): src/Bedrock/StandaloneHaskellMain.vo
 # $(PERF_STANDALONE:%=src/ExtractionHaskell/%.hs): src/Rewriter/PerfTesting/StandaloneHaskellMain.vo
+
+pre-standalone-extracted: $(STANDALONE_OCAML:%=src/ExtractionOCaml/%.ml) $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%.hs)
 
 $(STANDALONE_OCAML:%=src/ExtractionOCaml/%.ml) : %.ml : %.v
 	$(SHOW)'COQC $< > $@'
