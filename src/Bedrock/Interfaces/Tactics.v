@@ -69,6 +69,7 @@ Ltac next_argument :=
 Ltac ssubst :=
   repeat match goal with
          | H : literal (word.unsigned _) (eq _) |- _ =>
+           let H' := fresh in
            inversion H as [H']; clear H;
            rewrite word.of_Z_unsigned in H'
          | H : word.unsigned _ = word.unsigned _ |- _ =>
