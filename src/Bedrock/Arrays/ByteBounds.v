@@ -27,6 +27,8 @@ Section ByteBounds.
   Definition byte_bounds : list (option ZRange.zrange) :=
     repeat (Some byte_range) n.
 
+  (* TODO: consider refactoring this lemma into lemmas about Forall, Forall2,
+     and fold_andb_map *)
   Lemma byte_bounds_range_iff x :
     list_Z_bounded_by byte_bounds x <->
     (length x = n /\
