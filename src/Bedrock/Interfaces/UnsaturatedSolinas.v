@@ -132,8 +132,10 @@ Section __.
           (n : nat) (s : Z) (c : list (Z * Z)).
   Local Notation is_correct :=
     (@is_correct p inname_gen outname_gen).
-  Local Notation loose_bounds := (UnsaturatedSolinas.loose_bounds n s c).
-  Local Notation tight_bounds := (UnsaturatedSolinas.tight_bounds n s c).
+  Local Notation loose_bounds :=
+    (UnsaturatedSolinasHeuristics.loose_bounds n s c).
+  Local Notation tight_bounds :=
+    (UnsaturatedSolinasHeuristics.tight_bounds n s c).
   (* TODO: maybe use Primitives.saturated_bounds instead, and unify this with
   max_bounds? *)
   Local Notation saturated_bounds := (max_bounds n).
@@ -554,7 +556,7 @@ Section __.
       list_Z_bounded_by loose_bounds x -> length x = n.
     Proof.
       intros. pose proof length_list_Z_bounded_by _ _ ltac:(eassumption).
-      rewrite length_loose_bounds in *. lia.
+      rewrite @length_loose_bounds in *. lia.
     Qed.
 
     Lemma bounded_by_saturated_bounds_length x :

@@ -20,6 +20,7 @@ Require Import Crypto.Bedrock.Synthesis.Tactics.
 Require Import Crypto.Bedrock.Synthesis.UnsaturatedSolinas.
 Require Import Crypto.Bedrock.Synthesis.Examples.X25519_64.
 Require Import Crypto.COperationSpecifications.
+Require Import Crypto.UnsaturatedSolinasHeuristics.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import bedrock2.Semantics.
 Import Types ListNotations.
@@ -46,8 +47,8 @@ Local Notation M := (s - Associational.eval c).
 Local Notation eval :=
   (Positional.eval
               (Interfaces.UnsaturatedSolinas.weight n s c) n).
-Local Notation loose_bounds := (UnsaturatedSolinas.loose_bounds n s c).
-Local Notation tight_bounds := (UnsaturatedSolinas.tight_bounds n s c).
+Local Notation loose_bounds := (UnsaturatedSolinasHeuristics.loose_bounds n s c).
+Local Notation tight_bounds := (UnsaturatedSolinasHeuristics.tight_bounds n s c).
 
 Local Open Scope string_scope.
 Local Coercion name_of_func (f : bedrock_func) := fst f.
