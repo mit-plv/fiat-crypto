@@ -5,6 +5,7 @@ Require Import Coq.QArith.QArith_base Coq.QArith.Qround.
 Require Import Coq.QArith.Qabs.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.ModOps.
+Require Import Crypto.Arithmetic.Partition.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.Option.
@@ -75,7 +76,7 @@ else:
   Definition default_tight_upperbound_fraction : Q := (11/10)%Q.
   Definition coef := 2. (* for balance in sub *)
   Definition prime_upperbound_list : list Z
-    := encode_no_reduce (weight (Qnum limbwidth) (Qden limbwidth)) n (s-1).
+    := Partition.partition (weight (Qnum limbwidth) (Qden limbwidth)) n (s-1).
   (** We take the absolute value mostly to make proofs easy *)
   Definition tight_upperbounds : list Z
     := List.map

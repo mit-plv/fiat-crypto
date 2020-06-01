@@ -30,6 +30,7 @@ Require Import Crypto.Stringification.Language.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Arithmetic.BaseConversion.
+Require Import Crypto.Arithmetic.Partition.
 Require Import Crypto.BoundsPipeline.
 Require Import Crypto.COperationSpecifications.
 Require Import Crypto.UnsaturatedSolinasHeuristics.
@@ -106,7 +107,7 @@ Section __.
   Let in_upperbounds : list Z
     := List.map
          (fun v : Z => Qceiling (Option.value inbounds_multiplier 1 * v))
-         (let encode := encode_no_reduce src_weight src_n in
+         (let encode := Partition.partition src_weight src_n in
           match inbounds with
           | exactly l => l
           | use_prime => encode (s - 1)
@@ -126,7 +127,7 @@ Section __.
   Let out_upperbounds : list Z
     := List.map
          (fun v : Z => Qceiling (Option.value outbounds_multiplier 1 * v))
-         (let encode := encode_no_reduce dst_weight dst_n in
+         (let encode := Partition.partition dst_weight dst_n in
           match outbounds with
           | exactly l => l
           | use_prime => encode (s - 1)
