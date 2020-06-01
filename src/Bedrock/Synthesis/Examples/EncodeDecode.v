@@ -19,6 +19,7 @@ Require Import Crypto.Bedrock.Synthesis.Tactics.
 Require Import Crypto.Bedrock.Synthesis.UnsaturatedSolinas.
 Require Import Crypto.Bedrock.Synthesis.Examples.X25519_64.
 Require Import Crypto.COperationSpecifications.
+Require Import Crypto.UnsaturatedSolinasHeuristics.
 Require Import bedrock2.Semantics.
 Import Types ListNotations.
 Local Open Scope Z_scope.
@@ -38,9 +39,9 @@ Local Notation eval :=
                  X25519_64.n X25519_64.s X25519_64.c)
               X25519_64.n).
 Local Notation loose_bounds :=
-  (UnsaturatedSolinas.loose_bounds X25519_64.n X25519_64.s X25519_64.c).
+  (UnsaturatedSolinasHeuristics.loose_bounds X25519_64.n X25519_64.s X25519_64.c).
 Local Notation tight_bounds :=
-  (UnsaturatedSolinas.tight_bounds X25519_64.n X25519_64.s X25519_64.c).
+  (UnsaturatedSolinasHeuristics.tight_bounds X25519_64.n X25519_64.s X25519_64.c).
 Local Notation n_bytes :=
   (UnsaturatedSolinas.n_bytes X25519_64.n X25519_64.s X25519_64.c).
 Local Notation prime_bytes_bounds :=
