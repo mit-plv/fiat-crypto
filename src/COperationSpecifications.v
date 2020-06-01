@@ -220,7 +220,7 @@ Module Solinas.
     Local Notation bytes_eval := (Positional.eval (weight 8 1) n_bytes).
 
     Let prime_bytes_upperbound_list : list Z
-      := Positional.encode_no_reduce (weight 8 1) n_bytes (s-1).
+      := Partition.partition (weight 8 1) n_bytes (s-1).
     Let prime_bytes_bounds : list (option zrange)
       := List.map (fun v => Some r[0 ~> v]%zrange) prime_bytes_upperbound_list.
     Let prime_bound : zrange

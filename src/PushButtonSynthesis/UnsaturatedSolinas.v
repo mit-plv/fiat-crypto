@@ -101,7 +101,7 @@ Section __.
   Definition n_bytes := bytes_n (Qnum limbwidth) (Qden limbwidth) n.
   Local Notation prime_upperbound_list := (prime_upperbound_list n s c) (only parsing).
   Definition prime_bytes_upperbound_list : list Z
-    := encode_no_reduce (weight 8 1) n_bytes (s-1).
+    := Partition.partition (weight 8 1) n_bytes (s-1).
   Local Notation tight_upperbounds := (tight_upperbounds n s c) (only parsing).
   Local Notation loose_upperbounds := (loose_upperbounds n s c) (only parsing).
   Local Notation tight_bounds := (tight_bounds n s c) (only parsing).

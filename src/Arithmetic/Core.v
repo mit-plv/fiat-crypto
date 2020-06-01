@@ -1278,23 +1278,9 @@ Module Positional.
     Lemma length_encode n s c x
       : length (encode n s c x) = n.
     Proof using Type. cbv [encode]; repeat distr_length.                 Qed.
-
-    (* Reverse of [eval]; translate from Z to basesystem by putting
-    everything in first digit and then carrying, but without reduction. *)
-    Definition encode_no_reduce n (x : Z) : list Z :=
-      chained_carries_no_reduce n (from_associational n [(1,x)]) (seq 0 n).
-    Lemma eval_encode_no_reduce n x :
-      (n <> 0%nat) ->
-      (forall i, In i (seq 0 n) -> weight (S i) / weight i <> 0) ->
-      eval n (encode_no_reduce n x) = x.
-    Proof using Type*. cbv [encode_no_reduce]; intros; push; auto; f_equal; omega. Qed.
-    Lemma length_encode_no_reduce n x
-      : length (encode_no_reduce n x) = n.
-    Proof using Type. cbv [encode_no_reduce]; repeat distr_length.                 Qed.
-
   End Carries.
-  Hint Rewrite @eval_encode @eval_encode_no_reduce @eval_carry @eval_carry_reduce @eval_chained_carries @eval_chained_carries_no_reduce : push_eval.
-  Hint Rewrite @length_encode @length_encode_no_reduce @length_carry @length_carry_reduce @length_chained_carries @length_chained_carries_no_reduce : distr_length.
+  Hint Rewrite @eval_encode @eval_carry @eval_carry_reduce @eval_chained_carries @eval_chained_carries_no_reduce : push_eval.
+  Hint Rewrite @length_encode @length_carry @length_carry_reduce @length_chained_carries @length_chained_carries_no_reduce : distr_length.
 
   Section sub.
     Context (n:nat)
@@ -1417,7 +1403,7 @@ Module Positional.
   End select.
 End Positional.
 (* Hint Rewrite disappears after the end of a section *)
-Hint Rewrite length_zeros length_add_to_nth length_from_associational @length_add @length_carry_reduce @length_carry @length_chained_carries @length_chained_carries_no_reduce @length_encode @length_encode_no_reduce @length_sub @length_opp @length_select @length_zselect @length_select_min @length_extend_to_length @length_drop_high_to_length : distr_length.
+Hint Rewrite length_zeros length_add_to_nth length_from_associational @length_add @length_carry_reduce @length_carry @length_chained_carries @length_chained_carries_no_reduce @length_encode @length_sub @length_opp @length_select @length_zselect @length_select_min @length_extend_to_length @length_drop_high_to_length : distr_length.
 Hint Rewrite @eval_zeros @eval_nil @eval_snoc_S @eval_select @eval_zselect @eval_extend_to_length using solve [auto; distr_length]: push_eval.
 Section Positional_nonuniform.
   Context (weight weight' : nat -> Z).

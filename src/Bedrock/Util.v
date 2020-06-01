@@ -154,6 +154,13 @@ Section Lists.
       constructor; auto.
   Qed.
 
+  Lemma Forall_repeat (R : A -> Prop) n x :
+    R x -> Forall R (repeat x n).
+  Proof.
+    induction n; intros; cbn [repeat];
+      constructor; auto.
+  Qed.
+
   Section Partition.
     Fixpoint partition_equal_size' {T}
              (n : nat) (xs acc : list T) (i : nat)
@@ -811,6 +818,69 @@ Section ListZBoundedBy.
                 | _ => solve [auto]
                 | _ => lia
                 end.
+  Qed.
+
+  Lemma list_Z_bounded_by_cons b0 bs x0 xs:
+    list_Z_bounded_by (b0 :: bs) (x0 :: xs) <->
+    (match b0 with
+     | Some r =>
+       ZRange.is_bounded_by_bool x0 r = true
+     | None => True
+     end /\ list_Z_bounded_by bs xs).
+  Proof.
+    cbv [list_Z_bounded_by]. cbn [FoldBool.fold_andb_map].
+    cbv [ZRange.is_bounded_by_bool].
+    split; destruct b0; intros;
+      repeat match goal with
+             | H : (_ && _)%bool = true |- _ =>
+               apply Bool.andb_true_iff in H
+             | |- (_ && _)%bool = true => apply Bool.andb_true_iff
+             | H : _ /\ _ |- _ => destruct H
+             | |- _ /\ _ => split
+             | _ => assumption
+             | _ => tauto
+             end.
+  Qed.
+
+  Lemma relax_to_bounded_upperbounds bs upperbounds x :
+    list_Z_bounded_by
+      (map (fun v : Z => Some {| ZRange.lower := 0; ZRange.upper := v |})
+           upperbounds) x ->
+    Forall (fun r =>
+              match r with
+              | Some r => ZRange.lower r = 0%Z
+              | None => True end) bs ->
+    list_Z_bounded_by bs upperbounds ->
+    list_Z_bounded_by bs x.
+  Proof.
+    intros.
+    pose proof length_list_Z_bounded_by bs _ ltac:(eassumption).
+    pose proof length_list_Z_bounded_by _ x ltac:(eassumption).
+    rewrite map_length in *.
+    generalize dependent bs. generalize dependent upperbounds.
+    generalize dependent x.
+    induction x; destruct upperbounds; destruct bs;
+      cbn [map length] in *; try congruence; intros; [ ].
+    repeat match goal with
+           | _ => progress cbv [ZRange.is_bounded_by_bool] in *
+           | _ => progress cbn [ZRange.lower ZRange.upper] in *
+           | H : _ = 0 |- _ => rewrite H in *
+           | H : Forall _ (_ :: _) |- _ =>
+             inversion H; subst; clear H
+           | H : (_ && _)%bool = true |- _ =>
+             apply Bool.andb_true_iff in H
+           | H : list_Z_bounded_by (_ :: _) (_ :: _) |- _ =>
+             apply list_Z_bounded_by_cons in H; destruct H
+           | |- list_Z_bounded_by (_ :: _) (_ :: _) =>
+             apply list_Z_bounded_by_cons; split
+           | |- (_ && _)%bool = true => apply Bool.andb_true_iff
+           | H : _ /\ _ |- _ => destruct H
+           | |- _ /\ _ => split
+           | _ => progress break_match
+           | _ => solve [auto]
+           | _ => Z.ltb_to_lt; lia
+           | H : _ |- list_Z_bounded_by _ _ => eapply H; solve [eauto]
+           end.
   Qed.
 End ListZBoundedBy.
 

@@ -16,6 +16,7 @@ Require Import bedrock2.WeakestPreconditionProperties.
 Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Map.SeparationLogic.
 Require Import Crypto.Arithmetic.Core.
+Require Import Crypto.Arithmetic.Partition.
 Require Import Crypto.BoundsPipeline.
 Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Types.
@@ -34,6 +35,7 @@ Require Import Crypto.Bedrock.Interfaces.Operation.
 Require Import Crypto.COperationSpecifications.
 Require Import Crypto.PushButtonSynthesis.UnsaturatedSolinas.
 Require Import Crypto.Util.ListUtil.
+Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Language.API.
 Require Import Coq.Lists.List. (* after SeparationLogic *)
 
@@ -497,9 +499,6 @@ Section __.
        spec_of_carry_scmul_const : specs.
 
   (* TODO: assert length in Bignum to make output simpler *)
-  (* TODO:
-     try adding something called "precondition" to operation that constructs seplogic with bounds for each argument + output array given the list of pointers with which the function is called; can use exists for wx, wy
-     make "postcondition" exclude these bounds preconditions, and have correctness say precondition -> postcondition *)
 
   Section Proofs.
     Context {ok : Types.ok}.
@@ -525,14 +524,15 @@ Section __.
       list_Z_bounded_by (max_bounds n) x.
     Proof. apply relax_list_Z_bounded_by; auto. Qed.
 
-    (* TODO : this proof is going to be way more annoying than it needed to be,
-    since there doesn't appear to be any encode_no_reduce_partitions *)
     Lemma relax_to_byte_bounds x :
       list_Z_bounded_by prime_bytes_bounds_value x ->
       list_Z_bounded_by (byte_bounds n_bytes) x.
     Proof.
-      cbv [prime_bytes_bounds byte_bounds prime_bytes_upperbound_list].
-    Admitted.
+      cbv [prime_bytes_bounds prime_bytes_upperbound_list].
+      intros; eapply relax_to_bounded_upperbounds;
+        eauto using partition_bounded_by; [ ].
+      apply Forall_repeat. reflexivity.
+    Qed.
 
     Lemma bounded_by_loose_bounds_length x :
       list_Z_bounded_by loose_bounds x -> length x = n.
@@ -554,7 +554,7 @@ Section __.
     Proof.
       intros. pose proof length_list_Z_bounded_by _ _ ltac:(eassumption).
       cbv [prime_bytes_bounds prime_bytes_upperbound_list] in *.
-      rewrite map_length, length_encode_no_reduce in *. lia.
+      rewrite map_length, length_partition in *. lia.
     Qed.
 
     Lemma bounded_by_byte_bounds_length x :

@@ -2140,7 +2140,7 @@ Module debugging_remove_mul_split_to_C_uint1_carry.
     Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
 
     Let prime_upperbound_list : list Z
-      := encode_no_reduce (weight (Qnum limbwidth) (Qden limbwidth)) n (s-1).
+      := Paritition.partition (weight (Qnum limbwidth) (Qden limbwidth)) n (s-1).
     Let tight_upperbounds : list Z
       := List.map
            (fun v : Z => Qceiling (11/10 * v))
@@ -2442,7 +2442,7 @@ Module debugging_remove_mul_split.
     Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
 
     Let prime_upperbound_list : list Z
-      := encode_no_reduce (weight (Qnum limbwidth) (Qden limbwidth)) n (s-1).
+      := Partition.partition (weight (Qnum limbwidth) (Qden limbwidth)) n (s-1).
     Let tight_upperbounds : list Z
       := List.map
            (fun v : Z => Qceiling (11/10 * v))
@@ -2952,7 +2952,7 @@ Module debugging_rewriting.
 
 
     Let prime_upperbound_list : list Z
-      := encode_no_reduce (weight (Qnum limbwidth) (Qden limbwidth)) n (s-1).
+      := Partition.partition (weight (Qnum limbwidth) (Qden limbwidth)) n (s-1).
     Let tight_upperbounds : list Z
       := List.map
            (fun v : Z => Qceiling (11/10 * v))
@@ -3059,7 +3059,7 @@ Section debugging_p448.
 
 
   Let prime_upperbound_list : list Z
-    := encode_no_reduce (weight (Qnum limbwidth) (Qden limbwidth)) n (s-1).
+    := Partition.partition (weight (Qnum limbwidth) (Qden limbwidth)) n (s-1).
   Let tight_upperbounds : list Z
     := List.map
          (fun v : Z => Qceiling (11/10 * v))
