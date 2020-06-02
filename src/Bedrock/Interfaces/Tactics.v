@@ -115,35 +115,16 @@ Ltac translator_simplify :=
            WeakestPrecondition.expr_body
            rep.equiv rep.Z rep.listZ_mem ].
 
+
 Ltac access_size_simplify :=
+  let do_simpl w v :=
+    lazymatch v with access_size.one => idtac | access_size.two => idtac | access_size.four => idtac end;
+    let from := constr:(Z.of_nat (@Memory.bytes_per w v)) in
+    let to := (eval compute in from) in
+    progress change from with to in * in
   repeat match goal with
-         | H: context [Z.of_nat (@Memory.bytes_per ?w _)]
-           |- _ =>
-           first [ progress
-                     change (Z.of_nat
-                               (@Memory.bytes_per
-                                  w access_size.one)) with 1 in H
-                 | progress
-                     change (Z.of_nat
-                               (@Memory.bytes_per
-                                  w access_size.two)) with 2 in H
-                 | progress
-                     change (Z.of_nat
-                               (@Memory.bytes_per
-                                  w access_size.four)) with 4 in H ]
-         | |- context [Z.of_nat (@Memory.bytes_per ?w _)] =>
-           first [ progress
-                     change (Z.of_nat
-                               (@Memory.bytes_per
-                                  w access_size.one)) with 1
-                 | progress
-                     change (Z.of_nat
-                               (@Memory.bytes_per
-                                  w access_size.two)) with 2
-                 | progress
-                     change (Z.of_nat
-                               (@Memory.bytes_per
-                                  w access_size.four)) with 4 ]
+         | H: context [Z.of_nat (@Memory.bytes_per ?w ?v)] |- _ => do_simpl w v
+         | |- context [Z.of_nat (@Memory.bytes_per ?w ?v)] => do_simpl w v
          end.
 
 Ltac exists_arg_pointers :=
@@ -252,7 +233,7 @@ Ltac get_out_array_ptrs arg_ptrs all_ptrs :=
       let ps := get_out_array_ptrs x y in
       constr:(ps)
     | _ =>
-      fail "no matching pointer for " p
+      fail "no matching pointer for" p
     end
   end.
 
@@ -271,15 +252,15 @@ Ltac exists_all_placeholders out_array_ptrs :=
     let zs :=
         lazymatch type of bits with
         | list word.rep => constr:(map word.unsigned bits)
-        | list Byte.byte => constr:(map byte.unsigned bits)
-        | ?t => fail "unexpected placeholder type " t
+        | list Init.Byte.byte => constr:(map byte.unsigned bits)
+        | ?t => fail "unexpected placeholder type" t
         end in
     let words :=
         lazymatch type of bits with
         | list word.rep => constr:(bits)
-        | list Byte.byte =>
+        | list Init.Byte.byte =>
           constr:(map word.of_Z (map byte.unsigned bits))
-        | ?t => fail "unexpected placeholder type " t
+        | ?t => fail "unexpected placeholder type" t
         end in
     exists_out_array_placeholder zs words p;
     exists_all_placeholders ptrs'

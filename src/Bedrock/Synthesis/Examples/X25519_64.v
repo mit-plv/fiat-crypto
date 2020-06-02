@@ -7,11 +7,11 @@ Require Import Crypto.Bedrock.Synthesis.UnsaturatedSolinas.
 Local Open Scope Z_scope.
 Import ListNotations.
 
-Let n := 10%nat.
-Let s := 2^255.
-Let c := [(1, 19)].
-Let machine_wordsize := 64.
-Let prefix := "curve25519_"%string. (* placed before function names *)
+Local Definition n := 10%nat.
+Local Definition s := 2^255.
+Local Definition c := [(1, 19)].
+Local Definition machine_wordsize := 64.
+Local Definition prefix := "curve25519_"%string. (* placed before function names *)
 
 Instance names : names_of_operations.
   make_names_of_operations prefix. Defined.

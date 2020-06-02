@@ -164,7 +164,7 @@ Section __.
     | Some loose_bounds => constr:(access_size.word)
     | Some tight_bounds => constr:(access_size.word)
     | Some prime_bytes_bounds => constr:(access_size.one)
-    | ?b => fail "unable to select access size for bound " b
+    | ?b => fail "unable to select access size for bound" b
     end.
 
   Ltac select_length bounds :=
@@ -173,7 +173,7 @@ Section __.
     | Some loose_bounds => constr:(n)
     | Some tight_bounds => constr:(n)
     | Some prime_bytes_bounds => constr:(n_bytes)
-    | ?b => fail "unable to select array length for bound " b
+    | ?b => fail "unable to select array length for bound" b
     end.
 
   Ltac sizes_from_bounds := map_bounds_listonly select_access_size.
@@ -589,7 +589,7 @@ Section __.
       | _ => assert (list_Z_bounded_by prime_bytes_bounds x) by prove_bounds_direct
       | _ => assert (list_Z_bounded_by (max_bounds n) x) by prove_bounds_direct
       | _ => assert (list_Z_bounded_by (byte_bounds n_bytes) x) by prove_bounds_direct
-      | _ => fail "could not determine known bounds of " x
+      | _ => fail "could not determine known bounds of" x
       end.
     (* looks for the following combinations of tighter/looser bounds:
        - tight_bounds/saturated_bounds

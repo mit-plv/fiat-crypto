@@ -7,11 +7,11 @@ Require Import Crypto.Bedrock.Synthesis.UnsaturatedSolinas.
 Local Open Scope Z_scope.
 Import ListNotations.
 
-Let n := 5%nat.
-Let s := 2^130.
-Let c := [(1, 5)].
-Let machine_wordsize := 32.
-Let prefix := "poly1305_"%string.
+Local Definition n := 5%nat.
+Local Definition s := 2^130.
+Local Definition c := [(1, 5)].
+Local Definition machine_wordsize := 32.
+Local Definition prefix := "poly1305_"%string.
 
 Instance names : names_of_operations.
   make_names_of_operations prefix. Defined.
