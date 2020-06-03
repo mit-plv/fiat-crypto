@@ -104,24 +104,26 @@ Section __.
           (m : Z)
           (machine_wordsize : Z).
 
-  Let s := 2^Z.log2_up m.
-  Let c := s - m.
-  Let n : nat := Z.to_nat (Qceiling (Z.log2_up s / machine_wordsize)).
-  Let r := 2^machine_wordsize.
-  Let r' := match Z.modinv r m with
-            | Some r' => r'
-            | None => 0
-            end.
-  Let m' := match Z.modinv (-m) r with
-            | Some m' => m'
-            | None => 0
-            end.
-  Let n_bytes := bytes_n machine_wordsize 1 n.
-  Let prime_upperbound_list : list Z
+  Definition s := 2^Z.log2_up m.
+  Definition c := s - m.
+  Definition n : nat := Z.to_nat (Qceiling (Z.log2_up s / machine_wordsize)).
+  Definition r := 2^machine_wordsize.
+  Definition r'
+    := match Z.modinv r m with
+       | Some r' => r'
+       | None => 0
+       end.
+  Definition m'
+    := match Z.modinv (-m) r with
+       | Some m' => m'
+       | None => 0
+       end.
+  Definition n_bytes := bytes_n machine_wordsize 1 n.
+  Definition prime_upperbound_list : list Z
     := Partition.partition (uweight machine_wordsize) n (s-1).
-  Let prime_bytes_upperbound_list : list Z
+  Definition prime_bytes_upperbound_list : list Z
     := Partition.partition (weight 8 1) n_bytes (s-1).
-  Let upperbounds : list Z := prime_upperbound_list.
+  Definition upperbounds : list Z := prime_upperbound_list.
   Definition prime_bound : ZRange.type.option.interp (base.type.Z)
     := Some r[0~>m-1]%zrange.
   Definition prime_bounds : ZRange.type.option.interp (base.type.list (base.type.Z))
@@ -220,7 +222,7 @@ Section __.
       /\ s <= uweight 8 n_bytes
       /\ uweight machine_wordsize n = uweight 8 n_bytes.
   Proof.
-    prepare_use_curve_good ().
+    prepare_use_curve_good (); cbv [s c] in *.
     { destruct m eqn:?; cbn; lia. }
     { use_curve_good_t. }
     { use_curve_good_t. }

@@ -96,11 +96,11 @@ Section __.
           (c : list (Z * Z))
           (machine_wordsize : Z).
 
-  Let limbwidth := (Z.log2_up (s - Associational.eval c) / Z.of_nat n)%Q.
-  Let idxs : list nat := carry_chains n s c.
-  Let n_bytes := bytes_n (Qnum limbwidth) (Qden limbwidth) n.
+  Definition limbwidth := (Z.log2_up (s - Associational.eval c) / Z.of_nat n)%Q.
+  Definition idxs : list nat := carry_chains n s c.
+  Definition n_bytes := bytes_n (Qnum limbwidth) (Qden limbwidth) n.
   Local Notation prime_upperbound_list := (prime_upperbound_list n s c) (only parsing).
-  Let prime_bytes_upperbound_list : list Z
+  Definition prime_bytes_upperbound_list : list Z
     := encode_no_reduce (weight 8 1) n_bytes (s-1).
   Local Notation tight_upperbounds := (tight_upperbounds n s c) (only parsing).
   Local Notation loose_upperbounds := (loose_upperbounds n s c) (only parsing).
@@ -115,7 +115,7 @@ Section __.
   Local Notation saturated_bounds_list := (saturated_bounds_list n machine_wordsize).
   Local Notation saturated_bounds := (saturated_bounds n machine_wordsize).
 
-  Let m : Z := s - Associational.eval c.
+  Definition m : Z := s - Associational.eval c.
   Definition m_enc : list Z
     := encode (weight (Qnum limbwidth) (Qden limbwidth)) n s c m.
 
@@ -239,7 +239,7 @@ Section __.
       /\ Datatypes.length m_enc = n
       /\ 0 < Associational.eval c < s
       /\ eval tight_upperbounds < 2 * eval m_enc
-      /\ 0 < m.
+      /\ 0 < s - Associational.eval c.
   Proof using curve_good.
     prepare_use_curve_good ().
     { use_curve_good_t. }

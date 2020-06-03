@@ -624,13 +624,13 @@ Module Pipeline.
        | Error err => Error err
        end.
 
-  Local Notation arg_bounds_of_pipeline result
+  Notation arg_bounds_of_pipeline result
     := ((fun a b c d e f g possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e f g possible_values t E arg_bounds out_bounds = result') => arg_bounds) _ _ _ _ _ _ _ _ _ _ _ _ result eq_refl)
          (only parsing).
-  Local Notation out_bounds_of_pipeline result
+  Notation out_bounds_of_pipeline result
     := ((fun a b c d e f g possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e f g possible_values t E arg_bounds out_bounds = result') => out_bounds) _ _ _ _ _ _ _ _ _ _ _ _ result eq_refl)
          (only parsing).
-  Local Notation possible_values_of_pipeline result
+  Notation possible_values_of_pipeline result
     := ((fun a b c d e f g possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e f g possible_values t E arg_bounds out_bounds = result') => possible_values) _ _ _ _ _ _ _ _ _ _ _ _ result eq_refl)
          (only parsing).
 

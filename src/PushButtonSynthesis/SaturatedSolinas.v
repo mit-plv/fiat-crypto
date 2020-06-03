@@ -81,8 +81,8 @@ Section __.
   Definition possible_values_of_machine_wordsize
     := prefix_with_carry [machine_wordsize].
 
-  Let n : nat := Z.to_nat (Qceiling (Z.log2_up s / machine_wordsize)).
-  Let m := s - Associational.eval c.
+  Definition n : nat := Z.to_nat (Qceiling (Z.log2_up s / machine_wordsize)).
+  Definition m := s - Associational.eval c.
   (* Number of reductions is calculated as follows :
          Let i be the highest limb index of c. Then, each reduction
          decreases the number of extra limbs by (n-i-1). (The -1 comes
@@ -91,14 +91,14 @@ Section __.
          post-multiplication down to 0, we need ceil (n / (n - i - 1))
          reductions.  In some cases. however, [n - i <= 1], and in
          this case, we do [n] reductions (is this enough?). *)
-  Let nreductions : nat :=
+  Definition nreductions : nat :=
     let i := fold_right Z.max 0 (map (fun t => Z.log2 (fst t) / machine_wordsize) c) in
     if Z.of_nat n - i <=? 1
     then n
     else Z.to_nat (Qceiling (Z.of_nat n / (Z.of_nat n - i - 1))).
   Let possible_values := possible_values_of_machine_wordsize.
-  Let bound := Some r[0 ~> (2^machine_wordsize - 1)]%zrange.
-  Let boundsn : list (ZRange.type.option.interp base.type.Z)
+  Definition bound := Some r[0 ~> (2^machine_wordsize - 1)]%zrange.
+  Definition boundsn : list (ZRange.type.option.interp base.type.Z)
     := repeat bound n.
 
   Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.

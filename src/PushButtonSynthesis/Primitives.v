@@ -318,8 +318,8 @@ Module CorrectnessStringification.
   Ltac find_in_ctx ctx x :=
     find_in_ctx' ctx x ltac:(fun x => constr:(Some x)).
 
-  Ltac test_is_var v :=
-    constr:(ltac:(tryif is_var v then exact true else exact false)).
+  Ltac test_is_var_or_const v :=
+    constr:(ltac:(tryif first [ is_var v | is_const v ] then exact true else exact false)).
 
   Local Open Scope string_scope.
 
@@ -508,7 +508,7 @@ Module CorrectnessStringification.
               let sy := recurse (pred y) 9 in
               constr:("[" ++ sx ++ ".." ++ sy ++ "]")
          | pred ?n
-           => let iv := test_is_var n in
+           => let iv := test_is_var_or_const n in
               let il := is_literal n in
               lazymatch (eval cbv in (orb il iv)) with
               | true => show_nat ()
@@ -519,7 +519,7 @@ Module CorrectnessStringification.
            => let slam := stringify_function_binders ctx correctness ltac:(fun ctx body => stringify_rec0 ctx body 200) in
               maybe_parenthesize ("λ" ++ slam) 200 lvl
          | ?v
-           => let iv := test_is_var v in
+           => let iv := test_is_var_or_const v in
               lazymatch iv with
               | true
                 => let T := type of v in
