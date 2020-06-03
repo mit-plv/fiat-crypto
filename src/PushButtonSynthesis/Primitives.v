@@ -196,6 +196,16 @@ Module CorrectnessStringification.
   End dyn_context.
 
   Ltac strip_bounds_info correctness :=
+    let rec is_known_non_bounds_equality_type T :=
+        lazymatch T with
+        | Z => true
+        | list Z => true
+        | prod ?A ?B
+          => let a := is_known_non_bounds_equality_type A in
+             let b := is_known_non_bounds_equality_type B in
+             (eval cbv in (andb a b))
+        | _ => false
+        end in
     lazymatch correctness with
     | (fun x : ?T => ?f)
       => let fx := fresh in
@@ -223,8 +233,17 @@ Module CorrectnessStringification.
       => constr:(x = y /\ a <= b < c)
     | (_ = List.map (fun z => (_ mod _) / _) (List.seq _ _)) /\ (?a <= ?b < ?c)
       => constr:(a <= b < c)
-    | _ = _ :> list Z
-      => correctness
+    | ?A /\ ?B
+      => let A := strip_bounds_info A in
+         let B := strip_bounds_info B in
+         constr:(A /\ B)
+    | _ = _ :> ?T
+      => lazymatch is_known_non_bounds_equality_type T with
+         | true => correctness
+         | false
+           => constr_fail_with ltac:(fun _ => idtac "Unrecognized bounds component:" correctness "; unrecognized equality type" T;
+                                              fail 1 "Unrecognized bounds component:" correctness "; unrecognized equality type" T)
+         end
     | forall x : ?T, ?f
       => let fx := fresh in
          constr:(forall x : T, match f return _ with
@@ -232,20 +251,40 @@ Module CorrectnessStringification.
                                              let v := strip_bounds_info fx in
                                              exact v)
                                end)
-    | ?T
-      => constr_fail_with ltac:(fun _ => idtac "Unrecognized bounds component:" T;
-                                         fail 1 "Unrecognized bounds component:" T)
+    | let x : ?T := ?v in ?f
+      => let fx := fresh in
+         constr:(let x : T := v in
+                 match f return _ with
+                 | fx => ltac:(let fx := (eval cbv [fx] in fx) in
+                               let v := strip_bounds_info fx in
+                               exact v)
+                 end)
+    | match ?v with pair a b => ?f end
+      => let fx := fresh in
+         constr:(match v return _ with
+                 | pair a b
+                   => match f return _ with
+                      | fx => ltac:(let fx := (eval cbv [fx] in fx) in
+                                    let v := strip_bounds_info fx in
+                                    exact v)
+                      end
+                 end)
+    | _
+      => constr_fail_with ltac:(fun _ => idtac "Unrecognized bounds component:" correctness;
+                                         fail 1 "Unrecognized bounds component:" correctness)
     end.
 
   Ltac with_assoc_list ctx correctness arg_var_names out_var_names cont :=
     lazymatch correctness with
     | (fun x : ?T => ?f)
       => let fx := fresh in
+         let x' := fresh in
          constr:(fun x : T
-                 => match f return _ with
-                    | fx
+                 => match x, f return _ with
+                    | x', fx
                       => ltac:(let fx' := (eval cbv delta [fx] in fx) in
-                               clear fx;
+                               let x := (eval cbv delta [x'] in x') in
+                               clear fx x';
                                let ret := with_assoc_list
                                             (dyn_context.cons x out_var_names ctx)
                                             fx'
@@ -261,11 +300,13 @@ Module CorrectnessStringification.
            => lazymatch correctness with
               | (forall x : ?T, ?f)
                 => let fx := fresh in
+                   let x' := fresh in
                    constr:(fun x : T
-                           => match f return _ with
-                              | fx
+                           => match x, f return _ with
+                              | x', fx
                                 => ltac:(let fx' := (eval cbv delta [fx] in fx) in
-                                         clear fx;
+                                         let x := (eval cbv delta [x'] in x') in
+                                         clear fx x';
                                          let ret := with_assoc_list
                                                       (dyn_context.cons x (fst arg_var_names) ctx)
                                                       fx'
@@ -346,15 +387,17 @@ Module CorrectnessStringification.
     lazymatch correctness with
     | (fun x : ?T => ?f)
       => let fx := fresh in
+         let x' := fresh in
          let xn := fresh_from ctx in
          lazymatch
            constr:(
              fun x : T
-             => match f return string with
-                | fx
+             => match x, f return string with
+                | x', fx
                   => ltac:(
                        let fx' := (eval cbv delta [fx] in fx) in
-                       clear fx;
+                       let x := (eval cbv delta [x'] in x') in
+                       clear fx x';
                        let res := stringify_function_binders
                                     (dyn_context.cons x xn ctx)
                                     fx'
@@ -375,7 +418,30 @@ Module CorrectnessStringification.
     | S ?x => is_literal x
     | _ => false
     end.
+  Ltac eta_match v :=
+    let recr_if_not_same v' :=
+        lazymatch v' with
+        | v => v'
+        | _ => eta_match v'
+        end in
+    lazymatch v with
+    | match ?x with pair a b => ?f end
+      => recr_if_not_same (match fst x, snd x with a, b => f end)
+    | fst (?x, ?y) => eta_match x
+    | snd (?x, ?y) => eta_match y
+    | match ?x with true => (?ta, ?tb) | false => (?fa, ?fb) end
+      => eta_match (if x then ta else fa, if x then tb else fb)
+    | @fst ?A ?B ?x
+      => let x := eta_match x in
+         recr_if_not_same (@fst A B x)
+    | @snd ?A ?B ?x
+      => let x := eta_match x in
+         recr_if_not_same (@snd A B x)
+    | _ => v
+    end.
+
   Ltac stringify_rec0 ctx correctness lvl :=
+    let correctness := eta_match correctness in
     let recurse v lvl := stringify_rec0 ctx v lvl in
     let name_of_var := find_head_in_ctx ctx correctness in
     let stringify_if testv t f :=
@@ -471,6 +537,9 @@ Module CorrectnessStringification.
            => stringify_if testv t f
          | Crypto.Util.Decidable.dec ?p
            => recurse p lvl
+         | Z.odd ?x
+           => let sx := recurse x 9 in
+              maybe_parenthesize ((sx ++ " is odd")%string) 10 lvl
          | Z0 => show_Z ()
          | Zpos _ => show_Z ()
          | Zneg _ => show_Z ()
@@ -487,7 +556,8 @@ Module CorrectnessStringification.
          | ?x <  ?y <= ?z => stringify_infix2 "<" "≤" 70 69 69 69
          | ?x <  ?y <  ?z => stringify_infix2 "<" "<" 70 69 69 69
          | iff _ _ => stringify_infix "↔" 95 94 94
-         | and _ _ => stringify_infix "∧" 80 80 80
+         | and _ _  => stringify_infix "∧" 80 80 80
+         | andb _ _ => stringify_infix "∧" 80 80 80
          | Z.modulo _ _ => stringify_infix "mod" 41 39 39
          | Z.mul _ _ => stringify_infix "*" 40 40 39
          | Z.pow _ _ => stringify_infix_without_space "^" 30 29 30
@@ -496,6 +566,8 @@ Module CorrectnessStringification.
          | Z.opp _ => stringify_prefix "-" 35 35
          | Z.le _ _ => stringify_infix "≤" 70 69 69
          | Z.lt _ _ => stringify_infix "<" 70 69 69
+         | Z.leb _ _ => stringify_infix "≤" 70 69 69
+         | Z.ltb _ _ => stringify_infix "<" 70 69 69
          | Nat.mul _ _ => stringify_infix "*" 40 40 39
          | Nat.pow _ _ => stringify_infix "^" 30 29 30
          | Nat.add _ _ => stringify_infix "+" 50 50 49
@@ -539,6 +611,7 @@ Module CorrectnessStringification.
     end.
 
   Ltac stringify_preconditions ctx so_far_rev correctness :=
+    let correctness := eta_match correctness in
     let recurse so_far_rev v := stringify_preconditions ctx so_far_rev v in
     lazymatch correctness with
     | ?A -> ?B
@@ -550,6 +623,7 @@ Module CorrectnessStringification.
     end.
 
   Ltac stringify_postconditions ctx correctness :=
+    let correctness := eta_match correctness in
     let recurse v := stringify_postconditions ctx v in
     let default _ := let v := stringify_rec0 ctx correctness 200 in
                      constr:(v::nil) in
