@@ -1,4 +1,4 @@
-![CI (Coq)](https://github.com/mit-plv/fiat-crypto/workflows/CI%20(Coq)/badge.svg?branch=sp2019latest)
+[![CI (Coq)](https://github.com/mit-plv/fiat-crypto/workflows/CI%20(Coq)/badge.svg?branch=sp2019latest)](https://github.com/mit-plv/fiat-crypto/actions?query=branch%3Asp2019latest+workflow%3A%22CI+%28Coq%29%22)
 
 Fiat-Crypto: Synthesizing Correct-by-Construction Code for Cryptographic Primitives
 =====
