@@ -435,8 +435,9 @@ Module Positional. Section Positional.
         eval n (sub a b) mod (s - Associational.eval c)
         = (eval n a - eval n b) mod (s - Associational.eval c).
     Proof.
-      destruct (zerop n); subst; try reflexivity.
-      intros; cbv [sub balance scmul negate_snd]; push; repeat distr_length;
+      cbv [sub balance scmul negate_snd];
+        destruct (zerop n); subst; try reflexivity.
+      intros; push; repeat distr_length;
         eauto with omega.
       push_Zmod; push; pull_Zmod; push_Zmod; pull_Zmod; distr_length; eauto.
     Qed.
@@ -1933,6 +1934,7 @@ Module BaseConversion.
     Proof.
       cbv [widemul]; intros.
       rewrite mul_converted_partitions by auto with zarith.
+      clear dwprops swprops.
       subst nout sw; cbv [weight]; cbn.
       autorewrite with zsimplify.
       rewrite Z.pow_mul_r, Z.pow_2_r by omega.
@@ -1971,7 +1973,7 @@ Module BaseConversion.
         rewrite from_associational_inlined_correct by (subst nout; auto).
         cbv [from_associational].
         rewrite !Rows.flatten_partitions' by eauto using Rows.length_from_associational.
-        rewrite !Rows.eval_from_associational by (subst nout; auto).
+        rewrite !Rows.eval_from_associational by (rewrite ?nout_2 in *; auto).
         f_equal.
         rewrite !eval_carries, !Associational.bind_snd_correct, !Associational.eval_rev by auto.
         reflexivity. } Unfocus.
