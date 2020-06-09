@@ -230,7 +230,7 @@ Section WordByWordMontgomery.
     Definition add_no_cps_bound : 0 <= eval add_no_cps < eval N
       := @add_bound T (@eval) r R R_numlimbs (@small) (@addT) (@eval_addT) (@small_addT) N N_lt_R (@conditional_sub) (@eval_conditional_sub) Av Bv small_Av small_Bv Av_bound Bv_bound.
     Definition sub_no_cps_bound : 0 <= eval sub_no_cps < eval N
-      := @sub_bound T (@eval) r R R_numlimbs (@small) N (@sub_then_maybe_add) (@eval_sub_then_maybe_add) Av Bv small_Av small_Bv Av_bound Bv_bound.
+      := @sub_bound T (@eval) R_numlimbs (@small) N (@sub_then_maybe_add) (@eval_sub_then_maybe_add) Av Bv small_Av small_Bv Av_bound Bv_bound.
     Definition opp_no_cps_bound : 0 <= eval opp_no_cps < eval N
       := @opp_bound T (@eval) (@zero) r R R_numlimbs (@small) (@eval_zero) (@small_zero) N (@sub_then_maybe_add) (@eval_sub_then_maybe_add) Av small_Av Av_bound.
 
