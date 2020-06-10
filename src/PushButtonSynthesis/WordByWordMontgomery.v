@@ -590,7 +590,7 @@ Section __.
          tt
          (Some larger_bounds).
 
-  Definition smsat (prefix : string)
+ Definition smsat (prefix : string)
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
@@ -598,9 +598,7 @@ Section __.
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname => ["The function " ++ fname ++ " returns the saturated represtation of the prime modulus."]%string)
-             (one_correct machine_wordsize n m valid from_montgomery_res)).
-             (* this results in unrecognized term/bounds component and I am unsure how to fix? Note perhaps that i have tried fixing it on L265 in notations_for_docstring *)
-             (* (msat_correct machine_wordsize n m)). *)
+             (msat_correct machine_wordsize n m valid)).
 
   Definition precomp
     := Pipeline.BoundsPipeline
@@ -640,9 +638,7 @@ Section __.
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => ["The function " ++ fname ++ " computes a divstep."]%string)
-             (forall a, valid a)).
-             (* the following results in 'unrecognized bounds component' or 'unrecognized term' and I am unsure how to fix it // Benjamin  *)
-             (* (divstep_correct machine_wordsize n m valid from_montgomery_res)). *)
+             (divstep_correct machine_wordsize n m valid from_montgomery_res)).
 
   Lemma bounded_by_of_valid x
         (H : valid x)

@@ -88,12 +88,4 @@ Module Z.
     - now rewrite Pow.Z.base_pow_neg, Z.land_0_r.
     - rewrite land_pow2_testbit, Z.div2_bits, Testbit.Z.bits_above_pow2; 
       try (replace (Z.succ b) with (b + 1); nia). Qed.
-
-  Lemma land_pow2 x n :
-    0 <= n ->
-    Z.land x (2^n-1) = x mod 2^n.
-  Proof.
-    intros. rewrite Z.sub_1_r, <- Z.ones_equiv.
-    apply Z.land_ones; auto with zarith.
-  Qed.
 End Z.
