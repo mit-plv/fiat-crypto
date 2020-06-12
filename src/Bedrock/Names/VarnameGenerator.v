@@ -5,29 +5,6 @@ Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Strings.String.
 Local Open Scope string_scope.
 
-(* TODO: move this? *)
-Lemma append_eq_r_iff s1 s2 s3 :
-  s1 ++ s2 = s1 ++ s3 <-> s2 = s3.
-Proof.
-  induction s1; cbn [append]; split;
-    try inversion 1; intros; auto; [ ].
-  apply IHs1. auto.
-Qed.
-
-(* TODO: move this? *)
-Lemma append_eq_prefix :
-  forall s1 s2 s3 s4,
-    s1 ++ s2 = s3 ++ s4 ->
-    prefix s1 s3 = true \/ prefix s3 s1 = true.
-Proof.
-  induction s1; destruct s3; cbn [append prefix] in *;
-    intros; try tauto; [ ].
-  match goal with H : String _ _ = String _ _ |- _ =>
-                  inversion H; clear H; subst end.
-  break_match; subst; try tauto.
-  eapply IHs1; eauto.
-Qed.
-
 Definition unique (gen : nat -> string) : Prop :=
   forall i j, gen i = gen j <-> i = j.
 Definition disjoint (gen1 gen2 : nat -> string) : Prop :=

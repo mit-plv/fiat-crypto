@@ -326,3 +326,26 @@ Definition to_title_case (s : string) : string
 Lemma substring_0_0 :
   forall s, substring 0 0 s = "".
 Proof. destruct s; reflexivity. Qed.
+
+Lemma append_eq_r_iff s1 s2 s3 :
+  s1 ++ s2 = s1 ++ s3 <-> s2 = s3.
+Proof.
+  induction s1; cbn [append]; split;
+    try inversion 1; intros; auto; [ ].
+  apply IHs1. auto.
+Qed.
+
+Lemma append_eq_prefix :
+  forall s1 s2 s3 s4,
+    s1 ++ s2 = s3 ++ s4 ->
+    prefix s1 s3 = true \/ prefix s3 s1 = true.
+Proof.
+  induction s1; destruct s3; cbn [append prefix] in *;
+    intros; try tauto; [ ].
+  match goal with H : String _ _ = String _ _ |- _ =>
+                  inversion H; clear H; subst end.
+  match goal with |- context [ascii_dec ?x ?y] =>
+                  destruct (ascii_dec x y) end;
+  subst; try tauto; [ ].
+  eapply IHs1; eauto.
+Qed.
