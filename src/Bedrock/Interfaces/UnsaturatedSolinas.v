@@ -137,7 +137,6 @@ Section __.
   Local Notation tight_bounds :=
     (UnsaturatedSolinasHeuristics.tight_bounds n s c).
   Local Notation bit_range := {|ZRange.lower := 0; ZRange.upper := 1|}.
-  Print Primitives.saturated_bounds.
   Local Notation saturated_bounds :=
     (Primitives.saturated_bounds n Semantics.width).
   Local Notation prime_bytes_bounds :=
