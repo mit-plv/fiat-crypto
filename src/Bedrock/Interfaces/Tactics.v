@@ -36,10 +36,14 @@ Ltac map_bounds_listonly t bounds :=
     let y := map_bounds_listonly t b in
     constr:((x, y))
   | tt => constr:(tt)
-  | ?b => lazymatch type of b with
-          | option (list _) => t b
-          | _ => constr:(tt)
-          end
+  | ?b =>
+    let bt := lazymatch type of b with
+             | ?bt => bt end in
+    let bt := (eval cbn in bt) in
+    lazymatch bt with
+    | option (list _) => t b
+    | _ => constr:(tt)
+    end
   end.
 
 Ltac crush_argument_equivalence_subgoals :=
