@@ -136,43 +136,44 @@ Section __.
     (UnsaturatedSolinasHeuristics.loose_bounds n s c).
   Local Notation tight_bounds :=
     (UnsaturatedSolinasHeuristics.tight_bounds n s c).
-  (* TODO: maybe use Primitives.saturated_bounds instead, and unify this with
-  max_bounds? *)
-  Local Notation saturated_bounds := (max_bounds n).
   Local Notation bit_range := {|ZRange.lower := 0; ZRange.upper := 1|}.
-  Local Notation M := (s - Associational.eval c)%Z.
+  Print Primitives.saturated_bounds.
+  Local Notation saturated_bounds :=
+    (Primitives.saturated_bounds n Semantics.width).
+  Local Notation prime_bytes_bounds :=
+    (UnsaturatedSolinas.prime_bytes_bounds n s c).
+  Local Notation n_bytes := (UnsaturatedSolinas.n_bytes n s c).
+  Local Notation M := (UnsaturatedSolinas.m s c).
   Definition weight :=
     (ModOps.weight
        (Qnum (inject_Z (Z.log2_up M) / inject_Z (Z.of_nat n)))
        (QDen (inject_Z (Z.log2_up M) / inject_Z (Z.of_nat n)))).
   Local Notation eval := (eval weight n).
 
-  (* for to/from bytes *)
-  Local Definition limbwidth :=
-    (Z.log2_up (s - Associational.eval c) / Z.of_nat n)%Q.
-  Local Definition n_bytes :=
-    (Freeze.bytes_n (Qnum limbwidth) (Qden limbwidth) n).
-  Let prime_bytes_upperbound_list :=
-    encode_no_reduce (ModOps.weight 8 1) n_bytes (s - 1).
-  Let prime_bytes_bounds :=
-    map (fun v : Z => Some {| ZRange.lower := 0; ZRange.upper := v |})
-        prime_bytes_upperbound_list.
+  (* Note: annoyingly, prime_bytes_bounds and saturated_bounds are option types,
+     unlike loose_bounds or tight_bounds, so we have to refer to the values they
+     wrap in Some whenever we want to use them with list_Z_bounded_by *)
+  Local Notation prime_bytes_bounds_value :=
+    (map (fun v : Z => Some {| ZRange.lower := 0; ZRange.upper := v |})
+         (prime_bytes_upperbound_list n s c)).
+  Local Notation saturated_bounds_value :=
+    (Primitives.saturated_bounds_list n Semantics.width).
 
   Ltac select_access_size bounds :=
     lazymatch bounds with
-    | Some saturated_bounds => constr:(access_size.word)
+    | saturated_bounds => constr:(access_size.word)
     | Some loose_bounds => constr:(access_size.word)
     | Some tight_bounds => constr:(access_size.word)
-    | Some prime_bytes_bounds => constr:(access_size.one)
+    | prime_bytes_bounds => constr:(access_size.one)
     | ?b => fail "unable to select access size for bound" b
     end.
 
   Ltac select_length bounds :=
     lazymatch bounds with
-    | Some saturated_bounds => constr:(n)
+    | saturated_bounds => constr:(n)
     | Some loose_bounds => constr:(n)
     | Some tight_bounds => constr:(n)
-    | Some prime_bytes_bounds => constr:(n_bytes)
+    | prime_bytes_bounds => constr:(n_bytes)
     | ?b => fail "unable to select array length for bound" b
     end.
 
@@ -187,7 +188,9 @@ Section __.
     fold weight in *; specialize_to_args Hcorrect;
     postcondition_from_correctness.
 
-  Ltac make_operation inbounds outbounds out :=
+  Ltac make_operation out :=
+    let inbounds := (eval cbv beta in (Pipeline.arg_bounds_of_pipeline out)) in
+    let outbounds := (eval cbv beta in (Pipeline.out_bounds_of_pipeline out)) in
     let t := lazymatch goal with |- operation ?t => t end in
     let insizes := sizes_from_bounds inbounds in
     let outsizes := sizes_from_bounds outbounds in
@@ -203,93 +206,73 @@ Section __.
   Definition carry_mul
     : operation (type_listZ -> type_listZ -> type_listZ).
   Proof.
-    make_operation (Some loose_bounds, (Some loose_bounds, tt))
-                   (Some tight_bounds)
-                   (UnsaturatedSolinas.carry_mul n s c Semantics.width).
+    make_operation (UnsaturatedSolinas.carry_mul n s c Semantics.width).
     prove_operation_correctness.
   Defined.
 
   Definition carry_square
     : operation (type_listZ -> type_listZ).
   Proof.
-    make_operation (Some loose_bounds, tt)
-                   (Some tight_bounds)
-                   (UnsaturatedSolinas.carry_square n s c Semantics.width).
+    make_operation (UnsaturatedSolinas.carry_square n s c Semantics.width).
     prove_operation_correctness.
   Defined.
 
   Definition carry
     : operation (type_listZ -> type_listZ).
   Proof.
-    make_operation (Some loose_bounds, tt)
-                   (Some tight_bounds)
-                   (UnsaturatedSolinas.carry n s c Semantics.width).
+    make_operation (UnsaturatedSolinas.carry n s c Semantics.width).
     prove_operation_correctness.
   Defined.
 
   Definition add
     : operation (type_listZ -> type_listZ -> type_listZ).
   Proof.
-    make_operation (Some loose_bounds, (Some loose_bounds, tt))
-                   (Some tight_bounds)
-                   (UnsaturatedSolinas.add n s c Semantics.width).
+    make_operation (UnsaturatedSolinas.add n s c Semantics.width).
     prove_operation_correctness.
   Defined.
 
   Definition sub
     : operation (type_listZ -> type_listZ -> type_listZ).
   Proof.
-    make_operation (Some tight_bounds, (Some tight_bounds, tt))
-                   (Some loose_bounds)
-                   (UnsaturatedSolinas.sub n s c Semantics.width).
+    make_operation (UnsaturatedSolinas.sub n s c Semantics.width).
     prove_operation_correctness.
   Defined.
 
   Definition opp
     : operation (type_listZ -> type_listZ).
   Proof.
-    make_operation (Some tight_bounds, tt)
-                   (Some loose_bounds)
-                   (UnsaturatedSolinas.opp n s c Semantics.width).
+    make_operation (UnsaturatedSolinas.opp n s c Semantics.width).
     prove_operation_correctness.
   Defined.
 
   Definition selectznz
     : operation (type_Z -> type_listZ -> type_listZ -> type_listZ).
   Proof.
-    make_operation (Some bit_range, (Some saturated_bounds, (Some saturated_bounds, tt)))
-                   (Some loose_bounds)
-                   (UnsaturatedSolinas.selectznz n Semantics.width).
+    make_operation (UnsaturatedSolinas.selectznz n Semantics.width).
     prove_operation_correctness.
     Unshelve.
     { apply Semantics.width. }
-    { apply limbwidth. }
+    { apply (limbwidth n s c). }
   Defined.
 
   Definition to_bytes
     : operation (type_listZ -> type_listZ).
   Proof.
-    make_operation (Some tight_bounds, tt)
-                   (Some prime_bytes_bounds)
-                   (UnsaturatedSolinas.to_bytes n s c Semantics.width).
+    make_operation (UnsaturatedSolinas.to_bytes n s c Semantics.width).
     prove_operation_correctness.
   Defined.
 
   Definition from_bytes
     : operation (type_listZ -> type_listZ).
   Proof.
-    make_operation (Some prime_bytes_bounds, tt)
-                   (Some tight_bounds)
-                   (UnsaturatedSolinas.from_bytes n s c Semantics.width).
+    make_operation (UnsaturatedSolinas.from_bytes n s c Semantics.width).
     prove_operation_correctness.
   Defined.
 
   Definition carry_scmul_const (x : Z)
     : operation (type_listZ -> type_listZ).
   Proof.
-    make_operation (Some loose_bounds, tt)
-                   (Some tight_bounds)
-                   (UnsaturatedSolinas.carry_scmul_const n s c Semantics.width x).
+    make_operation (UnsaturatedSolinas.carry_scmul_const n s c Semantics.width x).
     prove_operation_correctness.
   Defined.
 
@@ -546,7 +529,7 @@ Section __.
     (* TODO : this proof is going to be way more annoying than it needed to be,
     since there doesn't appear to be any encode_no_reduce_partitions *)
     Lemma relax_to_byte_bounds x :
-      list_Z_bounded_by prime_bytes_bounds x ->
+      list_Z_bounded_by prime_bytes_bounds_value x ->
       list_Z_bounded_by (byte_bounds n_bytes) x.
     Proof.
       cbv [prime_bytes_bounds byte_bounds prime_bytes_upperbound_list].
@@ -560,15 +543,15 @@ Section __.
     Qed.
 
     Lemma bounded_by_saturated_bounds_length x :
-      list_Z_bounded_by saturated_bounds x -> length x = n.
+      list_Z_bounded_by saturated_bounds_value x -> length x = n.
     Proof.
       cbv [saturated_bounds max_bounds].
       intros. pose proof length_list_Z_bounded_by _ _ ltac:(eassumption).
-      rewrite repeat_length in *. lia.
+      rewrite length_saturated_bounds_list in *. lia.
     Qed.
 
     Lemma bounded_by_prime_bytes_bounds_length x :
-      list_Z_bounded_by prime_bytes_bounds x -> length x = n_bytes.
+      list_Z_bounded_by prime_bytes_bounds_value x -> length x = n_bytes.
     Proof.
       intros. pose proof length_list_Z_bounded_by _ _ ltac:(eassumption).
       cbv [prime_bytes_bounds prime_bytes_upperbound_list] in *.
@@ -602,13 +585,13 @@ Section __.
       match goal with
       | H : list_Z_bounded_by ?b1 ?x |- list_Z_bounded_by ?b2 ?x =>
         first [ unify b1 b2; apply H
-              | unify b1 tight_bounds; unify b2 saturated_bounds;
+              | unify b1 tight_bounds; unify b2 saturated_bounds_value;
                 apply relax_to_max_bounds, relax_correct; apply H
               | unify b1 tight_bounds; unify b2 loose_bounds;
                 apply relax_correct; apply H
-              | unify b1 loose_bounds; unify b2 saturated_bounds;
+              | unify b1 loose_bounds; unify b2 saturated_bounds_value;
                 apply relax_to_max_bounds; apply H
-              | unify b1 prime_bytes_bounds; unify b2 (byte_bounds n_bytes);
+              | unify b1 prime_bytes_bounds_value; unify b2 (byte_bounds n_bytes);
                 apply relax_to_byte_bounds; apply H ]
       end.
 
