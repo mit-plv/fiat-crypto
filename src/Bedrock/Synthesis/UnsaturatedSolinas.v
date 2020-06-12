@@ -327,7 +327,7 @@ Ltac specs_from_ops ops n s c :=
 Ltac handle_easy_preconditions :=
   lazymatch goal with
   | |- ZRange.type.option.is_tighter_than _ _ = true =>
-    abstract (vm_compute; reflexivity)
+    abstract vm_cast_no_check (eq_refl true)
   | |- Types.ok => solve [typeclasses eauto]
   | |- _ = ErrorT.Success _ => solve [apply reified_eq]
   | |- Wf.Compilers.expr.Wf3 _ => solve [apply reified_Wf3]
