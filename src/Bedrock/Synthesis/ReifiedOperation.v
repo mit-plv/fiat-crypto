@@ -53,7 +53,7 @@ Ltac prove_reified_op :=
   match goal with
   | |- expr.Wf3 _ => abstract (prove_Wf3 ())
   | |- valid_func_bool ?x = true =>
-    abstract (vm_compute; reflexivity)
+    abstract vm_cast_no_check (eq_refl true)
   end.
 Ltac make_reified_op p name op start :=
   assert (@reified_op p _ name op start) by prove_reified_op.
