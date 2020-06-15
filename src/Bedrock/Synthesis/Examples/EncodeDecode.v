@@ -32,22 +32,23 @@ Local Open Scope string_scope.
 Local Coercion name_of_func (f : bedrock_func) := fst f.
 
 (* Notations to make spec more readable *)
-Local Notation M := (X25519_64.s - Associational.eval X25519_64.c).
-Local Notation eval :=
-  (Positional.eval
-              (Interfaces.UnsaturatedSolinas.weight
-                 X25519_64.n X25519_64.s X25519_64.c)
-              X25519_64.n).
-Local Notation loose_bounds :=
-  (UnsaturatedSolinasHeuristics.loose_bounds X25519_64.n X25519_64.s X25519_64.c).
-Local Notation tight_bounds :=
-  (UnsaturatedSolinasHeuristics.tight_bounds X25519_64.n X25519_64.s X25519_64.c).
-Local Notation n_bytes :=
-  (UnsaturatedSolinas.n_bytes X25519_64.n X25519_64.s X25519_64.c).
-Local Notation prime_bytes_bounds :=
+Local Notation n := X25519_64.n.
+Local Notation s := X25519_64.s.
+Local Notation c := X25519_64.c.
+Local Notation machine_wordsize := X25519_64.machine_wordsize.
+Local Notation M := (UnsaturatedSolinas.m s c).
+Local Notation weight :=
+  (ModOps.weight (QArith_base.Qnum
+                    (UnsaturatedSolinas.limbwidth n s c))
+                 (Z.pos (QArith_base.Qden
+                           (UnsaturatedSolinas.limbwidth n s c)))).
+Local Notation eval := (Positional.eval weight n).
+Local Notation n_bytes := (UnsaturatedSolinas.n_bytes n s c).
+Local Notation loose_bounds := (UnsaturatedSolinasHeuristics.loose_bounds n s c).
+Local Notation tight_bounds := (UnsaturatedSolinasHeuristics.tight_bounds n s c).
+Local Notation prime_bytes_bounds_value :=
   (map (fun v : Z => Some {| ZRange.lower := 0; ZRange.upper := v |})
-       (Positional.encode_no_reduce
-          (ModOps.weight 8 1) n_bytes (X25519_64.s - 1))).
+       (UnsaturatedSolinas.prime_bytes_upperbound_list n s c)).
 Local Infix "*" := sep : sep_scope.
 Delimit Scope sep_scope with sep.
 
@@ -117,7 +118,8 @@ Ltac prove_preconditions :=
 Lemma bounded_by_partition x :
   0 <= x < M ->
   list_Z_bounded_by
-    prime_bytes_bounds (Partition.partition (ModOps.weight 8 1) n_bytes x).
+    prime_bytes_bounds_value
+    (Partition.partition (ModOps.weight 8 1) n_bytes x).
 Admitted.
 
 Lemma encode_decode_correct :
@@ -136,7 +138,7 @@ Proof.
      to extract them *)
   lazymatch goal with
     H : ?out = Partition.partition _ _ _ |- _ =>
-    assert (list_Z_bounded_by prime_bytes_bounds out)
+    assert (list_Z_bounded_by prime_bytes_bounds_value out)
       by (rewrite H; apply bounded_by_partition;
           apply Z.mod_pos_bound; reflexivity)
   end.
