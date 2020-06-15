@@ -30,16 +30,19 @@ Local Open Scope string_scope.
 Local Coercion name_of_func (f : bedrock_func) := fst f.
 
 (* Notations to make spec more readable *)
-Local Notation M := (X25519_64.s - Associational.eval X25519_64.c).
-Local Notation eval :=
-  (Positional.eval
-              (Interfaces.UnsaturatedSolinas.weight
-                 X25519_64.n X25519_64.s X25519_64.c)
-              X25519_64.n).
-Local Notation loose_bounds :=
-  (UnsaturatedSolinasHeuristics.loose_bounds X25519_64.n X25519_64.s X25519_64.c).
-Local Notation tight_bounds :=
-  (UnsaturatedSolinasHeuristics.tight_bounds X25519_64.n X25519_64.s X25519_64.c).
+Local Notation n := X25519_64.n.
+Local Notation s := X25519_64.s.
+Local Notation c := X25519_64.c.
+Local Notation machine_wordsize := X25519_64.machine_wordsize.
+Local Notation M := (UnsaturatedSolinas.m s c).
+Local Notation weight :=
+  (ModOps.weight (QArith_base.Qnum
+                    (UnsaturatedSolinas.limbwidth n s c))
+                 (Z.pos (QArith_base.Qden
+                           (UnsaturatedSolinas.limbwidth n s c)))).
+Local Notation eval := (Positional.eval weight n).
+Local Notation loose_bounds := (UnsaturatedSolinasHeuristics.loose_bounds n s c).
+Local Notation tight_bounds := (UnsaturatedSolinasHeuristics.tight_bounds n s c).
 Local Infix "*" := sep : sep_scope.
 Delimit Scope sep_scope with sep.
 
@@ -64,7 +67,7 @@ Instance spec_of_mul_twice : spec_of mul_twice :=
       let yz := map word.unsigned y in
       list_Z_bounded_by loose_bounds xz ->
       list_Z_bounded_by loose_bounds yz ->
-      length old_out = X25519_64.n ->
+      length old_out = n ->
       (Bignum px x * Bignum py y * Bignum pout old_out * R)%sep m ->
       WeakestPrecondition.call
         (p:=Types.semantics)
@@ -94,9 +97,9 @@ Ltac prove_bounds :=
 Ltac prove_length :=
   match goal with
   | |- length _ = _ => rewrite ?map_length; solve [eauto]
-  | |- length _ = X25519_64.n =>
+  | |- length _ = n =>
     apply bounded_by_loose_bounds_length
-      with (s:=X25519_64.s) (c:=X25519_64.c); prove_bounds
+      with (s:=s) (c:=c); prove_bounds
   end.
 Ltac prove_preconditions :=
   lazymatch goal with
