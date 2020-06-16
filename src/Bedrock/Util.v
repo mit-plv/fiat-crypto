@@ -842,6 +842,29 @@ Section ListZBoundedBy.
              end.
   Qed.
 
+  Lemma list_Z_bounded_by_snoc b0 bs x0 xs:
+    list_Z_bounded_by (bs ++ [b0]) (xs ++ [x0]) <->
+    (match b0 with
+     | Some r =>
+       ZRange.is_bounded_by_bool x0 r = true
+     | None => True
+     end /\ list_Z_bounded_by bs xs).
+  Proof.
+    cbv [list_Z_bounded_by].
+    rewrite FoldBool.fold_andb_map_snoc.
+    cbv [ZRange.is_bounded_by_bool].
+    split; destruct b0; intros;
+      repeat match goal with
+             | H : (_ && _)%bool = true |- _ =>
+               apply Bool.andb_true_iff in H
+             | |- (_ && _)%bool = true => apply Bool.andb_true_iff
+             | H : _ /\ _ |- _ => destruct H
+             | |- _ /\ _ => split
+             | _ => assumption
+             | _ => tauto
+             end.
+  Qed.
+
   Lemma relax_to_bounded_upperbounds bs upperbounds x :
     list_Z_bounded_by
       (map (fun v : Z => Some {| ZRange.lower := 0; ZRange.upper := v |})
