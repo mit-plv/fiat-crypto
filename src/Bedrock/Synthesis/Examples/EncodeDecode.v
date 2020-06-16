@@ -113,14 +113,39 @@ Ltac prove_preconditions :=
   | |- list_Z_bounded_by _ _ => prove_bounds
   end.
 
-(* TODO: need to replace encode_no_reduce with partition (lingering technical
-   debt); then this proof is very easy *)
-Lemma bounded_by_partition x :
+(* TODO: postcondition of to_bytes should include the bounds so that this proof
+is not needed *)
+Lemma bounded_by_prime_bytes_bounds x :
   0 <= x < M ->
   list_Z_bounded_by
     prime_bytes_bounds_value
     (Partition.partition (ModOps.weight 8 1) n_bytes x).
-Admitted.
+Proof.
+  let weight := constr:(ModOps.weight 8 1) in
+  change (prime_bytes_bounds_value) with
+      ((ByteBounds.byte_bounds (n_bytes-1)%nat)
+         ++ [Some {| ZRange.lower:=0;
+                     ZRange.upper:=
+                       ((s - 1) mod (weight n_bytes) / weight (n_bytes-1)%nat);
+                  |}])%list.
+  change n_bytes with (S (n_bytes-1)).
+  rewrite partition_step, Util.list_Z_bounded_by_snoc.
+  change (S (n_bytes-1)) with n_bytes.
+  split; [ | solve [apply ByteBounds.partition_bounded_by] ].
+  pose proof (@weight_positive (ModOps.weight 8 1)
+                               ltac:(apply ModOps.wprops; lia))
+    as weight_pos.
+  pose proof (weight_pos n_bytes).
+  pose proof (weight_pos (n_bytes-1)%nat).
+  pose proof (Z.mod_pos_bound x (ModOps.weight 8 1 n_bytes)).
+  pose proof (Z.mod_le x (ModOps.weight 8 1 n_bytes) ltac:(lia) ltac:(lia)).
+  cbv [ZRange.is_bounded_by_bool]. cbn [ZRange.upper ZRange.lower].
+  apply Bool.andb_true_iff; split; LtbToLt.Z.ltb_to_lt;
+    [ apply Div.Z.div_nonneg; lia | ].
+  apply Z.div_le_mono; [ lia | ].
+  transitivity (M - 1); [ lia | ].
+  vm_compute. congruence.
+Qed.
 
 Lemma encode_decode_correct :
   program_logic_goal_for_function! encode_decode.
@@ -139,7 +164,7 @@ Proof.
   lazymatch goal with
     H : ?out = Partition.partition _ _ _ |- _ =>
     assert (list_Z_bounded_by prime_bytes_bounds_value out)
-      by (rewrite H; apply bounded_by_partition;
+      by (rewrite H; apply bounded_by_prime_bytes_bounds;
           apply Z.mod_pos_bound; reflexivity)
   end.
 
