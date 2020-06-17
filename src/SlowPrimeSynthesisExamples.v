@@ -7,6 +7,7 @@ Require Import Coq.Lists.List.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.ModOps.
+Require Import Crypto.Arithmetic.Partition.
 Require Import Crypto.PushButtonSynthesis.UnsaturatedSolinas.
 Require Import Crypto.UnsaturatedSolinasHeuristics.
 Require Crypto.PushButtonSynthesis.SaturatedSolinas.
