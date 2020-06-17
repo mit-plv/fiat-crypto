@@ -628,6 +628,8 @@ Module Compilers.
                           | match goal with
                             | [ |- bool ] => constructor (* ??? *)
                             end ].
+      Unshelve.
+      all: match goal with [ |- bool ] => constructor (* ??? *) end.
       Qed.
 
       Lemma interp_eval_with_bound'
