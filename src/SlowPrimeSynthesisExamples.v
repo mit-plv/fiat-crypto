@@ -2141,7 +2141,7 @@ Module debugging_remove_mul_split_to_C_uint1_carry.
     Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
 
     Let prime_upperbound_list : list Z
-      := Paritition.partition (weight (Qnum limbwidth) (Qden limbwidth)) n (s-1).
+      := Partition.partition (weight (Qnum limbwidth) (Qden limbwidth)) n (s-1).
     Let tight_upperbounds : list Z
       := List.map
            (fun v : Z => Qceiling (11/10 * v))
