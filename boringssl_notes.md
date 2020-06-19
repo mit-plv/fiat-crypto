@@ -24,9 +24,9 @@ if `BORINGSSL_X25519_NEON` is defined).
 ## Implementation links
 
 [ED25519_keypair](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#1879)
-[ED25519_sign](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#1885)$\\$
-[ED25519_verify](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#1924)$\\$
-[X25519_keypair](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#2100)$\\$
+[ED25519_sign](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#1885)
+[ED25519_verify](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#1924)
+[X25519_keypair](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#2100)
 
 ## Callees
 
@@ -103,7 +103,7 @@ although implementation looks like Solinas.
 
 ## Implementation links
 
-[x25519_sc_reduce](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#1057)$\\$
+[x25519_sc_reduce](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#1057)
 [sc_muladd](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#1398)
 
 ## Callees
@@ -126,26 +126,26 @@ but not for the core Ed25519.
 
 ## Implementation links
 
-[x25519_ge_tobytes](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#479)$\\$
-[ge_p3_tobytes](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#491)$\\$
-[x25519_ge_frombytes_vartime](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#503)$\\$
-[ge_p3_0](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#555)$\\$
-[ge_cached_0](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#569)$\\$
-[ge_p3_to_p2](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#576)$\\$
-[x25519_ge_p3_to_cached](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#583)$\\$
-[x25519_ge_p1p1_to_p2](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#591)$\\$
-[x25519_ge_p1p1_to_p3](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#598)$\\$
-[ge_p2_dbl](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#613)$\\$
-[ge_p3_dbl](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#632)$\\$
-[ge_madd](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#639)$\\$
-[ge_msub](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#656)$\\$
-[x25519_ge_add](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#673)$\\$
-[x25519_ge_sub](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#691)$\\$
-[cmov](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#718)$\\$
-[x25519_ge_scalarmult_small_precomp](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#724)$\\$
-[x25519_ge_scalarmult_base (if OPENSSL_SMALL defined)](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#780)$\\$
-[table_select](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#792)$\\$
-[x25519_ge_scalarmult_base (if OPENSSL_SMALL undefined)](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#823)$\\$
+[x25519_ge_tobytes](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#479)
+[ge_p3_tobytes](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#491)
+[x25519_ge_frombytes_vartime](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#503)
+[ge_p3_0](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#555)
+[ge_cached_0](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#569)
+[ge_p3_to_p2](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#576)
+[x25519_ge_p3_to_cached](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#583)
+[x25519_ge_p1p1_to_p2](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#591)
+[x25519_ge_p1p1_to_p3](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#598)
+[ge_p2_dbl](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#613)
+[ge_p3_dbl](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#632)
+[ge_madd](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#639)
+[ge_msub](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#656)
+[x25519_ge_add](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#673)
+[x25519_ge_sub](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#691)
+[cmov](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#718)
+[x25519_ge_scalarmult_small_precomp](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#724)
+[x25519_ge_scalarmult_base (if OPENSSL_SMALL defined)](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#780)
+[table_select](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#792)
+[x25519_ge_scalarmult_base (if OPENSSL_SMALL undefined)](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#823)
 [ge_double_scalarmult_vartime](https://boringssl.googlesource.com/boringssl/+/cbac9c3a2d20a05d5c634eaab8f8b07589838d57/crypto/curve25519/curve25519.c#972)
 
 ## Callees
