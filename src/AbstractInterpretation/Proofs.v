@@ -618,16 +618,15 @@ Module Compilers.
                                                         | [ H : forall v1 v2, expr.wf _ _ _ |- expr.wf _ (?f ?x) _ ]
                                                           => apply (H x x)
                                                         end ]
+                                           | [ |- bool ] (* unused [annotate_with_state] argument to a [Proper ... /\ ...] lemma which is used for its [Proper] part *)
+                                             => constructor
                                            | _ => idtac
                                            end .. ];
                                          match goal with
                                            [ |- ?G ] => assert_fails has_evar G
                                          end))
                             end
-                          | reflexivity
-                          | match goal with
-                            | [ |- bool ] => constructor (* ??? *)
-                            end ].
+                          | reflexivity ].
       Qed.
 
       Lemma interp_eval_with_bound'
