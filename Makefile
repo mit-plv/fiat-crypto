@@ -129,12 +129,14 @@ SOME_EARLY_VOFILES := \
 	src/Experiments/NewPipeline/Rewriter.vo \
 	src/Experiments/SimplyTypedArithmetic.vo
 
+# N.B. solinas64_2e480m2e240m1_8limbs is added because it's needed to catch regressions against https://github.com/coq/coq/pull/10476
 SELECTED_PATTERN := \
 	src/Specific/X25519/C64/% \
 	src/Specific/X25519/C32/Synthesis.vo \
 	src/Specific/NISTP256/AMD64/% \
 	src/Specific/NISTP256/AMD128/Synthesis.vo \
 	src/Specific/NISTP256/FancyMachine256/% \
+	src/Specific/solinas64_2e480m2e240m1_8limbs/% \
 	third_party/%
 SELECTED_SPECIFIC_PRE_VOFILES := $(filter $(SELECTED_PATTERN),$(REGULAR_VOFILES))
 

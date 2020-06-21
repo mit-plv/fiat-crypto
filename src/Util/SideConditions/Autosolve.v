@@ -5,6 +5,10 @@ Require Import Crypto.Util.SideConditions.ModInvPackage.
 Require Import Crypto.Util.SideConditions.ReductionPackages.
 Require Import Crypto.Util.SideConditions.RingPackage.
 
+Module Export Exports.
+  Export RingPackage.Exports.
+End Exports.
+
 Ltac autosolve_gen autosolve_tac ring_intros_tac else_tac :=
   CorePackages.preautosolve ();
   CorePackages.Internal.autosolve ltac:(fun _ =>

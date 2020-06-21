@@ -48,6 +48,7 @@ Require Import bbv.WordScope.
     v)] which has been transformed by the reflective pipeline. *)
 
 Module Export Exports.
+  Export Coq.setoid_ring.ZArithRing. (* Needed since 8.11 / https://github.com/coq/coq/pull/10476 *)
   Export Crypto.Compilers.Reify. (* export for the instances for recursing under binders *)
   Export Crypto.Compilers.Z.Reify. (* export for the tactic redefinitions *)
   Export Crypto.Compilers.Z.Bounds.Pipeline.Definition.Exports.

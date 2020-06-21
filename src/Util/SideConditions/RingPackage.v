@@ -4,6 +4,11 @@ Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.SideConditions.CorePackages.
 Require Export Crypto.Util.FixCoqMistakes.
 
+Module Export Exports.
+  (** Needed since 8.11 / https://github.com/coq/coq/pull/10476 *)
+  Export Coq.setoid_ring.ZArithRing.
+End Exports.
+
 Definition eq_by_Zring_prod_package (P : Prop) := P.
 
 Ltac auto_split_prod_step_early special_ring_intros_tac :=
