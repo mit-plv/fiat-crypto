@@ -399,7 +399,7 @@ Hint Extern 10 (Proper ?R ?x) => simple eapply (@PER_valid_r _ R); [ | | solve [
         { cbv [is_bounded_by_bool].
           repeat change (lower (-?r)) with (-upper r)%Z.
           repeat change (upper (-?r)) with (-lower r)%Z.
-          cbv [andb]; break_innermost_match; Z.ltb_to_lt; break_match; Z.ltb_to_lt; try lia; try reflexivity.
+          cbv [andb]; break_innermost_match; Z.ltb_to_lt; break_match; Z.ltb_to_lt; try lia; try reflexivity;
           symmetry; Z.ltb_to_lt; lia. }
         destruct (is_bounded_by_bool v (ZRange.normalize r)) eqn:?.
         { rewrite cast_in_normalized_bounds by assumption; intros; symmetry; break_innermost_match; auto. }
