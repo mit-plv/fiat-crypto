@@ -1,4 +1,4 @@
-Require Import Crypto.Specific.Framework.SynthesisFramework.
+Require Import Crypto.Specific.Framework.SynthesisFramework. Export SynthesisFramework.Exports.
 Require Import Crypto.Specific.solinas64_2e452m3_9limbs.CurveParameters.
 
 Module P <: PrePackage.

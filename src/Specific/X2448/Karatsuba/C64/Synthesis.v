@@ -1,4 +1,4 @@
-Require Import Crypto.Specific.Framework.SynthesisFramework.
+Require Import Crypto.Specific.Framework.SynthesisFramework. Export SynthesisFramework.Exports.
 Require Import Crypto.Specific.X2448.Karatsuba.C64.CurveParameters.
 
 Module P <: PrePackage.

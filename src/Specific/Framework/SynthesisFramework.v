@@ -17,6 +17,7 @@ Require Import Crypto.Specific.Framework.IntegrationTestTemporaryMiscCommon.
 Require Import Crypto.Compilers.Z.Bounds.Pipeline.
 
 Module Export Exports.
+  Export Pipeline.Exports.
   Export ArithmeticSynthesis.Defaults.Exports.
   Export ArithmeticSynthesis.Freeze.Exports.
 End Exports.

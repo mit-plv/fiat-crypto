@@ -297,7 +297,7 @@ Ltac extra_prove_square_eq _ := %(extra_prove_square_eq)s.
     return ret
 
 def make_synthesis(prefix):
-    return r"""Require Import Crypto.Specific.Framework.SynthesisFramework.
+    return r"""Require Import Crypto.Specific.Framework.SynthesisFramework. Export SynthesisFramework.Exports.
 Require Import %s.CurveParameters.
 
 Module P <: PrePackage.
