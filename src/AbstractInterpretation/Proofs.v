@@ -577,7 +577,7 @@ Module Compilers.
                           | progress cbn [UnderLets.interp List.In eq_rect fst snd projT1 projT2] in *
                           | rewrite UnderLets.interp_splice
                           | rewrite interp_annotate
-                          | solve [ cbv [Proper respectful Basics.impl] in *; eauto using related_of_related_bounded_value, related_bounded_value_bottomify ]
+                          | solve [ cbv [Proper respectful Basics.impl] in *; unshelve eauto using related_of_related_bounded_value, related_bounded_value_bottomify ]
                           | progress specialize_by_assumption
                           | progress cbv [Let_In] in *
                           | progress cbn [state_of_value extract'] in *
