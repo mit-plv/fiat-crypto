@@ -19,7 +19,7 @@ Require Import Crypto.Bedrock.Synthesis.Examples.X25519_64.
 Require Import Crypto.COperationSpecifications.
 Require Import Crypto.UnsaturatedSolinasHeuristics.
 Require Import bedrock2.Semantics.
-Import Types ListNotations.
+Import ListNotations.
 Local Open Scope Z_scope.
 
 Existing Instances

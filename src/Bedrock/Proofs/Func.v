@@ -15,8 +15,10 @@ Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Util.
 Require Import Crypto.Bedrock.Proofs.Cmd.
+Require Import Crypto.Bedrock.Proofs.Equivalence.
 Require Import Crypto.Bedrock.Proofs.Flatten.
 Require Import Crypto.Bedrock.Proofs.Varnames.
+Require Import Crypto.Bedrock.Proofs.VarnameSet.
 Require Import Crypto.Bedrock.Proofs.LoadStoreList.
 Require Import Crypto.Bedrock.Translation.Func.
 Require Import Crypto.Bedrock.Translation.Flatten.
@@ -28,7 +30,7 @@ Import ListNotations. Local Open Scope Z_scope.
 
 Import API.Compilers.
 Import Wf.Compilers.expr.
-Import Types.Notations Types.Types.
+Import Types.Notations.
 
 Section Func.
   Context {p : parameters} {p_ok : @ok p}.

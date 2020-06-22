@@ -8,7 +8,7 @@ Require Import Crypto.Language.API.
 Import ListNotations. Local Open Scope Z_scope.
 
 Import API.Compilers.
-Import Types.Notations Types.Types.
+Import Types.Notations.
 
 (* For argument and return variable names, fiat-crypto expects a nested
    structure while bedrock2 expects flat lists; this file contains mechanical
@@ -27,8 +27,8 @@ Section Flatten.
     | base.type.prod a b =>
       fun x : base_ltype a * base_ltype b =>
         (flatten_base_ltype (fst x) ++ flatten_base_ltype (snd x))
-    | base_listZ => fun x : string => [x] 
-    | _ => fun x : string => [x] 
+    | base_listZ => fun x : string => [x]
+    | _ => fun x : string => [x]
     end.
 
   Fixpoint flatten_base_rtype {t}
@@ -37,10 +37,10 @@ Section Flatten.
     | base.type.prod a b =>
       fun x : base_rtype a * base_rtype b =>
         (flatten_base_rtype (fst x) ++ flatten_base_rtype (snd x))
-    | base_listZ => fun x : Syntax.expr => [x] 
+    | base_listZ => fun x : Syntax.expr => [x]
     | _ => fun x : Syntax.expr => [x]
     end.
-  
+
   Fixpoint flatten_argnames {t}
     : type.for_each_lhs_of_arrow ltype t -> list string :=
     match t with

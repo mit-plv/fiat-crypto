@@ -14,7 +14,7 @@ Require Import Crypto.Util.ZRange.
 Import ListNotations. Local Open Scope Z_scope.
 
 Import API.Compilers.
-Import Types.Notations Types.Types.
+Import Types.Notations.
 
 (* For proofs, it's ideal to assume that at the "cmd" level of abstraction, the
    memory doesn't change. This is actually true for fiat-crypto functions, which

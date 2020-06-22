@@ -12,7 +12,9 @@ Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Util.
 Require Import Crypto.Bedrock.Proofs.Expr.
+Require Import Crypto.Bedrock.Proofs.Equivalence.
 Require Import Crypto.Bedrock.Proofs.Varnames.
+Require Import Crypto.Bedrock.Proofs.VarnameSet.
 Require Import Crypto.Bedrock.Translation.Cmd.
 Require Import Crypto.Bedrock.Translation.Expr.
 Require Import Crypto.Language.API.
@@ -25,7 +27,7 @@ Require Import Crypto.BoundsPipeline.
 
 Import API.Compilers.
 Import Wf.Compilers.expr.
-Import Types.Notations Types.Types.
+Import Types.Notations.
 
 Section Cmd.
   Context {p : Types.parameters} {p_ok : @ok p}.

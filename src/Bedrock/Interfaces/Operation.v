@@ -25,7 +25,6 @@ Require Import Coq.Lists.List. (* after SeparationLogic *)
 
 Import Language.Compilers.
 Import Language.Wf.Compilers.
-Import Types.
 
 Require Import Crypto.Util.Notations.
 Local Open Scope Z_scope.

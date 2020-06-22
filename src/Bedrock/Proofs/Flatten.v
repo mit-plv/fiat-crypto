@@ -12,12 +12,14 @@ Require Import Crypto.Language.API.
 Require Import Crypto.Bedrock.Util.
 Require Import Crypto.Bedrock.Translation.Flatten.
 Require Import Crypto.Bedrock.Translation.LoadStoreList.
+Require Import Crypto.Bedrock.Proofs.Equivalence.
 Require Import Crypto.Bedrock.Proofs.Varnames.
+Require Import Crypto.Bedrock.Proofs.VarnameSet.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Import ListNotations. Local Open Scope Z_scope.
 
 Import API.Compilers.
-Import Types.Notations Types.Types.
+Import Types.Notations.
 
 (* For argument and return variable names, fiat-crypto expects a nested
    structure while bedrock2 expects flat lists; this file contains mechanical

@@ -9,6 +9,8 @@ Require Import coqutil.Word.Interface coqutil.Word.Properties.
 Require Import coqutil.Datatypes.PropSet.
 Require Import Coq.Lists.List. (* after SeparationLogic *)
 Require Import Crypto.Bedrock.Types.
+Require Import Crypto.Bedrock.Proofs.VarnameSet.
+Require Import Crypto.Bedrock.Proofs.Equivalence.
 Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Util.
 Require Import Crypto.Language.API.
@@ -21,7 +23,7 @@ Require Import Crypto.BoundsPipeline.
 Import API.Compilers.
 Import Wf.Compilers.expr.
 Import ListNotations.
-Import Types.Notations Types.Types.
+Import Types.Notations.
 
 (* Reasoning about various collections of variable names *)
 Section Varnames.

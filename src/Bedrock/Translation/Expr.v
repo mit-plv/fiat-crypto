@@ -7,7 +7,7 @@ Require Import Crypto.Util.ZRange.
 Local Open Scope Z_scope.
 
 Import API.Compilers.
-Import Types.Notations Types.Types.
+Import Types.Notations.
 
 Section Expr.
   Context {p : Types.parameters}.
