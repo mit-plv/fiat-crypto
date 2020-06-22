@@ -66,9 +66,9 @@ src/Bedrock/Arrays/ByteBounds.v
 src/Bedrock/Arrays/MakeAccessSizes.v
 src/Bedrock/Arrays/MakeListLengths.v
 src/Bedrock/Arrays/MaxBounds.v
-src/Bedrock/Interfaces/Tactics.v
-src/Bedrock/Interfaces/Operation.v
-src/Bedrock/Interfaces/UnsaturatedSolinas.v
+src/Bedrock/Field/Tactics.v
+src/Bedrock/Field/Operation.v
+src/Bedrock/Field/UnsaturatedSolinas.v
 src/Bedrock/Names/MakeNames.v
 src/Bedrock/Names/VarnameGenerator.v
 src/Bedrock/Parameters/Defaults.v
