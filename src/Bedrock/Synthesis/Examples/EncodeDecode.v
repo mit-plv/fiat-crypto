@@ -13,8 +13,8 @@ Require Import Crypto.Arithmetic.Partition.
 Require Import Crypto.Bedrock.Parameters.Defaults.
 Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Types.
-Require Import Crypto.Bedrock.Interfaces.Operation.
-Require Import Crypto.Bedrock.Interfaces.UnsaturatedSolinas.
+Require Import Crypto.Bedrock.Field.Operation.
+Require Import Crypto.Bedrock.Field.UnsaturatedSolinas.
 Require Import Crypto.Bedrock.Synthesis.Tactics.
 Require Import Crypto.Bedrock.Synthesis.UnsaturatedSolinas.
 Require Import Crypto.Bedrock.Synthesis.Examples.X25519_64.

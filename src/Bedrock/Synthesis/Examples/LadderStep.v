@@ -13,8 +13,8 @@ Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Bedrock.Parameters.Defaults.
 Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Types.
-Require Import Crypto.Bedrock.Interfaces.Operation.
-Require Import Crypto.Bedrock.Interfaces.UnsaturatedSolinas.
+Require Import Crypto.Bedrock.Field.Operation.
+Require Import Crypto.Bedrock.Field.UnsaturatedSolinas.
 Require Import Crypto.Bedrock.Parameters.SelectParameters.
 Require Import Crypto.Bedrock.Synthesis.Tactics.
 Require Import Crypto.Bedrock.Synthesis.UnsaturatedSolinas.
@@ -88,8 +88,8 @@ Local Coercion var (x : string) : expr := expr.var x.
 Eval cbv [spec_of_carry_square
             curve25519_bedrock2
             name postcondition
-            Interfaces.UnsaturatedSolinas.carry_square
-            Interfaces.UnsaturatedSolinas.spec_of_carry_square]
+            Field.UnsaturatedSolinas.carry_square
+            Field.UnsaturatedSolinas.spec_of_carry_square]
   in (spec_of_carry_square). *)
 Definition ladderstep : bedrock_func :=
   let X1 := "X1" in

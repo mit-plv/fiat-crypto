@@ -30,8 +30,8 @@ Require Import Crypto.Bedrock.Names.VarnameGenerator.
 Require Import Crypto.Bedrock.Parameters.Defaults.
 Require Import Crypto.Bedrock.Proofs.Func.
 Require Import Crypto.Bedrock.Translation.Func.
-Require Import Crypto.Bedrock.Interfaces.Tactics.
-Require Import Crypto.Bedrock.Interfaces.Operation.
+Require Import Crypto.Bedrock.Field.Tactics.
+Require Import Crypto.Bedrock.Field.Operation.
 Require Import Crypto.COperationSpecifications.
 Require Import Crypto.PushButtonSynthesis.UnsaturatedSolinas.
 Require Import Crypto.Util.ListUtil.

@@ -4,7 +4,7 @@ Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Map.SeparationLogic.
 Require Import coqutil.Tactics.Tactics.
 Require Import Crypto.Bedrock.Tactics.
-Require Import Crypto.Bedrock.Interfaces.Operation.
+Require Import Crypto.Bedrock.Field.Operation.
 
 Ltac clear_old_seps :=
   lazymatch goal with
