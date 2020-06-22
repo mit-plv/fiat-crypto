@@ -8,7 +8,7 @@ Require Import coqutil.Datatypes.PropSet.
 Require Import Coq.Lists.List. (* after SeparationLogic *)
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Proofs.Equivalence.
-Require Import Crypto.Bedrock.Proofs.Varnames.
+Require Import Crypto.Bedrock.Proofs.UsedVarnames.
 Require Import Crypto.Bedrock.Proofs.VarnameSet.
 Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Util.
