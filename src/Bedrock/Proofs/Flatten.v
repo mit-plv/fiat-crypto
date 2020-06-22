@@ -13,7 +13,8 @@ Require Import Crypto.Bedrock.Util.
 Require Import Crypto.Bedrock.Translation.Flatten.
 Require Import Crypto.Bedrock.Translation.LoadStoreList.
 Require Import Crypto.Bedrock.Proofs.Equivalence.
-Require Import Crypto.Bedrock.Proofs.Varnames.
+Require Import Crypto.Bedrock.Proofs.EquivalenceProperties.
+Require Import Crypto.Bedrock.Proofs.UsedVarnames.
 Require Import Crypto.Bedrock.Proofs.VarnameSet.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Import ListNotations. Local Open Scope Z_scope.

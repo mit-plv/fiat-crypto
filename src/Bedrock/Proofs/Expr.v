@@ -10,7 +10,8 @@ Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Util.
 Require Import Crypto.Bedrock.Proofs.Equivalence.
-Require Import Crypto.Bedrock.Proofs.Varnames.
+Require Import Crypto.Bedrock.Proofs.EquivalenceProperties.
+Require Import Crypto.Bedrock.Proofs.UsedVarnames.
 Require Import Crypto.Bedrock.Proofs.VarnameSet.
 Require Import Crypto.Bedrock.Translation.Expr.
 Require Import Crypto.Language.API.
