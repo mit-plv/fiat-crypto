@@ -51,13 +51,14 @@ Section Equivalent.
       Semantics.locals ->
       Semantics.mem -> Prop :=
     match t with
-    | type.base b => fun _ _ _ _ => emp True
+    | type.base b => fun _ _ _ _ _ => True
     | type.arrow (type.base a) b =>
       fun (x : base.interp a * _) (y : base_rtype a * _)
-          (s : base_access_sizes a * _) locals =>
-        sep (equivalent_base (fst x) (fst y) (fst s) locals)
-            (equivalent_args (snd x) (snd y) (snd s) locals)
-    | _ => fun _ _ _ _ => emp False
+          (s : base_access_sizes a * _) locals mem =>
+        (exists R,
+            sep (equivalent_base (fst x) (fst y) (fst s) locals) R mem)
+        /\ (equivalent_args (snd x) (snd y) (snd s) locals mem)
+    | _ => fun _ _ _ _ _ => False
     end.
 
   Definition locally_equivalent_base {t} x y locals :=
@@ -162,15 +163,16 @@ Section EquivalentFlat.
           return type.for_each_lhs_of_arrow _ t0 -> _ ->
                  type.for_each_lhs_of_arrow _ t0 -> _
     with
-    | type.base _ => fun (_:unit) words _ => emp (words = nil)
+    | type.base _ => fun (_:unit) words _ _ => words = nil
     | type.arrow (type.base a) b =>
-      fun x words sizes =>
-        Lift1Prop.ex1
-          (fun i =>
-             sep
-               (equivalent_flat_base (fst x) (firstn i words) (fst sizes))
-               (equivalent_flat_args (snd x) (skipn i words) (snd sizes)))
-    | _ => fun _ _ _ => emp False (* invalid argument *)
+      fun x words sizes mem =>
+        exists i,
+          (exists R,
+              sep (equivalent_flat_base
+                     (fst x) (firstn i words) (fst sizes)) R mem)
+          /\ (equivalent_flat_args
+                (snd x) (skipn i words) (snd sizes) mem)
+    | _ => fun _ _ _ _ => False (* invalid argument *)
     end.
   Fixpoint equivalent_listexcl_flat_base {t}
     : base.interp t ->

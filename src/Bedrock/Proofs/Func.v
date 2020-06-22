@@ -130,9 +130,7 @@ Section Func.
       cbv [locally_equivalent_args] in *.
       cbn [fst snd equivalent_args
                type.map_for_each_lhs_of_arrow] in *.
-      match goal with H : sep _ _ map.empty |- _ =>
-                      apply sep_empty_iff in H; cleanup
-      end.
+      cleanup. sepsimpl.
       eapply IHe0_valid; eauto; [ | ].
       { destruct args; cbn [fst snd].
         cbn [context_varname_set]; intros.
@@ -370,26 +368,29 @@ Section Func.
                  erewrite <-flatten_base_samelength in H by eauto;
                    rewrite ?firstn_length_firstn, ?skipn_length_firstn in H
                end.
-        eapply Proper_sep_iff1;
-          [ | symmetry; eapply IHt2; eassumption | eassumption ].
-        { symmetry.
-          erewrite equivalent_only_differ_iff1 by
-            (eauto using only_differ_sym, map.only_differ_putmany
-               with equiv;
-             rewrite varname_set_flatten; symmetry;
-             apply NoDup_disjoint; eauto using string_dec).
-          eapply equivalent_flat_base_iff1; eauto. } }
-      { eexists.
-        eapply Proper_sep_iff1;
-          [ | eapply IHt2; solve [eauto] | eassumption ].
-        match goal with
-          H : map.putmany_of_list_zip _ (List.skipn _ _) ?x = _ |- _ =>
-          erewrite equivalent_only_differ_iff1 with (locals2:=x) by
-              (eauto using only_differ_sym, map.only_differ_putmany
-                 with equiv; rewrite varname_set_flatten; symmetry;
-               apply NoDup_disjoint; eauto using string_dec)
-        end.
-        eapply equivalent_flat_base_iff1; solve[eauto]. } }
+        split; eauto.
+        { eexists.
+          eapply Proper_sep_iff1;
+            [ | reflexivity | eassumption ].
+          rewrite equivalent_flat_base_iff1 by eauto.
+          eapply equivalent_only_differ_iff1;
+            eauto using only_differ_sym, map.only_differ_putmany
+              with equiv; [ ].
+          rewrite varname_set_flatten; symmetry;
+            apply NoDup_disjoint; eauto using string_dec. }
+        { eapply IHt2; eassumption. } }
+      { cleanup; subst.
+        eexists; split; eauto.
+        { eexists.
+          eapply Proper_sep_iff1;
+            [ | reflexivity | eassumption ].
+          rewrite equivalent_flat_base_iff1 by eauto.
+          eapply equivalent_only_differ_iff1;
+            eauto using only_differ_sym, map.only_differ_putmany
+              with equiv; [ ].
+          rewrite varname_set_flatten; symmetry;
+            apply NoDup_disjoint; eauto using string_dec. }
+        { eapply IHt2; eassumption. } } }
   Qed.
 
   Lemma equivalent_listonly_flat_iff1 {t} :
@@ -510,7 +511,7 @@ Section Func.
              (out_ptrs : list Semantics.word)
              (argvalues : list Semantics.word)
              (functions : list bedrock_func)
-             (Ra Rr : Semantics.mem -> Prop),
+             (R : Semantics.mem -> Prop),
         (* argument values are the concatenation of true argument values
            and output pointer values *)
         argvalues = flat_args ++ out_ptrs ->
@@ -520,7 +521,7 @@ Section Func.
         (* argnames don't contain variables we could later overwrite *)
         (forall n, ~ varname_set_args argnames (varname_gen n)) ->
         (* argument values are equivalent *)
-        sep (equivalent_flat_args args flat_args argsizes) Ra mem ->
+        equivalent_flat_args args flat_args argsizes mem ->
         (* argnames don't have duplicates *)
         NoDup (flatten_argnames argnames) ->
         (* argument bounds are within allowed integer size *)
@@ -540,7 +541,7 @@ Section Func.
                          (varname_set_base retnames) ->
         (* seplogic frame for return values *)
         sep (lists_reserved_with_initial_context
-               retlengths argnames retnames retsizes argvalues) Rr mem ->
+               retlengths argnames retnames retsizes argvalues) R mem ->
         (* translated function produces equivalent results *)
         WeakestPrecondition.call
           (f :: functions) fname tr mem argvalues
@@ -553,7 +554,7 @@ Section Func.
                          rets flat_rets retsizes)
                       (equivalent_listonly_flat_base
                          rets out_ptrs retsizes))
-                 Rr mem').
+                 R mem').
   Proof.
     cbv [translate_func Wf3]; intros. subst.
     cbn [fst snd
@@ -592,9 +593,7 @@ Section Func.
     cbn [WeakestPrecondition.cmd WeakestPrecondition.cmd_body].
     eapply Proper_cmd; [ solve [apply Proper_call] | repeat intro | ].
     2 : { eapply load_arguments_correct; try eassumption; eauto.
-          eapply Proper_sep_iff1;
-            [ symmetry; eapply equivalent_flat_args_iff1; solve [eauto]
-            | reflexivity | eassumption ]. }
+          eapply equivalent_flat_args_iff1; eauto. }
     cbv beta in *. cleanup; subst.
     eapply Proper_cmd; [ solve [apply Proper_call] | repeat intro | ].
     2 : { eapply translate_func'_correct with (args0:=args);
