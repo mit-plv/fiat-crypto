@@ -186,12 +186,12 @@ Ltac post_sufficient :=
          end;
   ssubst.
 
-Ltac apply_translate_func_correct Rin Rout arg_ptrs out_array_ptrs :=
+Ltac apply_translate_func_correct Rout arg_ptrs out_array_ptrs :=
   let a := lazymatch goal with
            | H : postcondition _ ?args _ |- _ => args end in
   eapply Proper_call;
   [ | eapply translate_func_correct with
-          (Ra0:=Rin) (Rr0:=Rout) (out_ptrs:=out_array_ptrs)
+          (R:=Rout) (out_ptrs:=out_array_ptrs)
           (args:=a) (flat_args := arg_ptrs) ].
 
 Ltac begin_proof :=

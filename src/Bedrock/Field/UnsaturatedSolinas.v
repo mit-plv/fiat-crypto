@@ -282,12 +282,13 @@ Section __.
   Definition spec_of_carry_mul name : spec_of name :=
     fun functions =>
       forall wx wy px py pout wold_out t m
-             (Ra Rr : Semantics.mem -> Prop),
+             (Rx Ry Rout : Semantics.mem -> Prop),
         let op := carry_mul in
         let args := (map word.unsigned wx, (map word.unsigned wy, tt)) in
         op.(precondition) args ->
-        (Bignum n px wx * Bignum n py wy * Ra)%sep m ->
-        (Bignum n pout wold_out * Rr)%sep m ->
+        (Bignum n px wx * Rx)%sep m ->
+        (Bignum n py wy * Ry)%sep m ->
+        (Bignum n pout wold_out * Rout)%sep m ->
         WeakestPrecondition.call
           functions name t m
           (px :: py :: pout :: nil)
@@ -297,17 +298,17 @@ Section __.
              exists wout,
                sep (BignumSuchThat
                       n pout wout (op.(postcondition) args))
-                   Rr m').
+                   Rout m').
 
   Definition spec_of_carry_square name : spec_of name :=
     fun functions =>
       forall wx px pout wold_out t m
-             (Ra Rr : Semantics.mem -> Prop),
+             (Rx Rout : Semantics.mem -> Prop),
         let op := carry_square in
         let args := (map word.unsigned wx, tt) in
         op.(precondition) args ->
-        (Bignum n px wx  * Ra)%sep m ->
-        (Bignum n pout wold_out * Rr)%sep m ->
+        (Bignum n px wx * Rx)%sep m ->
+        (Bignum n pout wold_out * Rout)%sep m ->
         WeakestPrecondition.call
           functions name t m
           (px :: pout :: nil)
@@ -316,17 +317,17 @@ Section __.
              rets = []%list /\
              exists wout,
                sep (BignumSuchThat n pout wout (op.(postcondition) args))
-                   Rr m').
+                   Rout m').
 
   Definition spec_of_carry name : spec_of name :=
     fun functions =>
       forall wx px pout wold_out t m
-             (Ra Rr : Semantics.mem -> Prop),
+             (Rx Rout : Semantics.mem -> Prop),
         let op := carry in
         let args := (map word.unsigned wx, tt) in
         op.(precondition) args ->
-        (Bignum n px wx * Ra)%sep m ->
-        (Bignum n pout wold_out * Rr)%sep m ->
+        (Bignum n px wx * Rx)%sep m ->
+        (Bignum n pout wold_out * Rout)%sep m ->
         WeakestPrecondition.call
           functions name t m
           (px :: pout :: nil)
@@ -335,17 +336,18 @@ Section __.
              rets = []%list /\
              exists wout,
                sep (BignumSuchThat n pout wout (op.(postcondition) args))
-                   Rr m').
+                   Rout m').
 
   Definition spec_of_add name : spec_of name :=
     fun functions =>
       forall wx wy px py pout wold_out t m
-             (Ra Rr : Semantics.mem -> Prop),
+             (Rx Ry Rout : Semantics.mem -> Prop),
         let op := add in
         let args := (map word.unsigned wx, (map word.unsigned wy, tt)) in
         op.(precondition) args ->
-        (Bignum n px wx * Bignum n py wy * Ra)%sep m ->
-        (Bignum n pout wold_out * Rr)%sep m ->
+        (Bignum n px wx * Rx)%sep m ->
+        (Bignum n py wy * Ry)%sep m ->
+        (Bignum n pout wold_out * Rout)%sep m ->
         WeakestPrecondition.call
           functions name t m
           (px :: py :: pout :: nil)
@@ -354,17 +356,18 @@ Section __.
              rets = []%list /\
              exists wout,
                sep (BignumSuchThat n pout wout (op.(postcondition) args))
-                   Rr m').
+                   Rout m').
 
   Definition spec_of_sub name : spec_of name :=
     fun functions =>
       forall wx wy px py pout wold_out t m
-             (Ra Rr : Semantics.mem -> Prop),
+             (Rx Ry Rout : Semantics.mem -> Prop),
         let op := sub in
         let args := (map word.unsigned wx, (map word.unsigned wy, tt)) in
         op.(precondition) args ->
-        (Bignum n px wx * Bignum n py wy * Ra)%sep m ->
-        (Bignum n pout wold_out * Rr)%sep m ->
+        (Bignum n px wx * Rx)%sep m ->
+        (Bignum n py wy * Ry)%sep m ->
+        (Bignum n pout wold_out * Rout)%sep m ->
         WeakestPrecondition.call
           functions name t m
           (px :: py :: pout :: nil)
@@ -373,17 +376,17 @@ Section __.
              rets = []%list /\
              exists wout,
                sep (BignumSuchThat n pout wout (op.(postcondition) args))
-                   Rr m').
+                   Rout m').
 
   Definition spec_of_opp name : spec_of name :=
     fun functions =>
       forall wx px pout wold_out t m
-             (Ra Rr : Semantics.mem -> Prop),
+             (Rx Ry Rout : Semantics.mem -> Prop),
         let op := opp in
         let args := (map word.unsigned wx, tt) in
         op.(precondition) args ->
-        (Bignum n px wx * Ra)%sep m ->
-        (Bignum n pout wold_out * Rr)%sep m ->
+        (Bignum n px wx * Rx)%sep m ->
+        (Bignum n pout wold_out * Rout)%sep m ->
         WeakestPrecondition.call
           functions name t m
           (px :: pout :: nil)
@@ -392,20 +395,21 @@ Section __.
              rets = []%list /\
              exists wout,
                sep (BignumSuchThat n pout wout (op.(postcondition) args))
-                   Rr m').
+                   Rout m').
 
   Definition spec_of_selectznz name : spec_of name :=
     fun functions =>
       forall wc wx px wy py pout wold_out t m
-             (Ra Rr : Semantics.mem -> Prop),
+             (Rx Ry Rout : Semantics.mem -> Prop),
         let op := selectznz in
         let args := (word.unsigned wc,
                      (map word.unsigned wx, (map word.unsigned wy, tt))) in
         let c := word.unsigned wc in
         ZRange.is_bounded_by_bool c bit_range = true ->
         op.(precondition) args ->
-        (Bignum n px wx * Bignum n py wy * Ra)%sep m ->
-        (Bignum n pout wold_out * Rr)%sep m ->
+        (Bignum n px wx * Rx)%sep m ->
+        (Bignum n py wy * Ry)%sep m ->
+        (Bignum n pout wold_out * Rout)%sep m ->
         WeakestPrecondition.call
           functions name t m
           (wc :: px :: py :: pout :: nil)
@@ -414,17 +418,17 @@ Section __.
              rets = []%list /\
              exists wout,
                sep (BignumSuchThat n pout wout (op.(postcondition) args))
-                   Rr m').
+                   Rout m').
 
   Definition spec_of_to_bytes name : spec_of name :=
     fun functions =>
       forall wx px pout wold_out t m
-             (Ra Rr : Semantics.mem -> Prop),
+             (Rx Rout : Semantics.mem -> Prop),
         let op := to_bytes in
         let args := (map word.unsigned wx, tt) in
         op.(precondition) args ->
-        (Bignum n px wx * Ra)%sep m ->
-        (EncodedBignum n_bytes pout wold_out * Rr)%sep m ->
+        (Bignum n px wx * Rx)%sep m ->
+        (EncodedBignum n_bytes pout wold_out * Rout)%sep m ->
         WeakestPrecondition.call
           functions name t m
           (px :: pout :: nil)
@@ -434,17 +438,17 @@ Section __.
              exists wout,
                sep (EncodedBignumSuchThat
                       n_bytes pout wout (op.(postcondition) args))
-                   Rr m').
+                   Rout m').
 
   Definition spec_of_from_bytes name : spec_of name :=
     fun functions =>
       forall wx px pout wold_out t m
-             (Ra Rr : Semantics.mem -> Prop),
+             (Rx Rout : Semantics.mem -> Prop),
         let op := from_bytes in
         let args := (map byte.unsigned wx, tt) in
         op.(precondition) args ->
-        (EncodedBignum n_bytes px wx * Ra)%sep m ->
-        (Bignum n pout wold_out * Rr)%sep m ->
+        (EncodedBignum n_bytes px wx * Rx)%sep m ->
+        (Bignum n pout wold_out * Rout)%sep m ->
         WeakestPrecondition.call
           functions name t m
           (px :: pout :: nil)
@@ -454,18 +458,18 @@ Section __.
              exists wout,
                sep (BignumSuchThat
                       n pout wout (op.(postcondition) args))
-                   Rr m').
+                   Rout m').
 
   Definition spec_of_carry_scmul_const (z : Z) (name : string)
     : spec_of name :=
     fun functions =>
       forall wx px pout wold_out t m
-             (Ra Rr : Semantics.mem -> Prop),
+             (Rx Rout : Semantics.mem -> Prop),
         let op := carry_scmul_const z in
         let args := (map word.unsigned wx, tt) in
         op.(precondition) args ->
-        (Bignum n px wx * Ra)%sep m ->
-        (Bignum n pout wold_out * Rr)%sep m ->
+        (Bignum n px wx * Rx)%sep m ->
+        (Bignum n pout wold_out * Rout)%sep m ->
         WeakestPrecondition.call
           functions name t m
           (px :: pout :: nil)
@@ -474,7 +478,7 @@ Section __.
              rets = []%list /\
              exists wout,
                sep (BignumSuchThat n pout wout (op.(postcondition) args))
-                   Rr m').
+                   Rout m').
 
   Hint Unfold carry_mul carry_square carry add sub opp selectznz
        to_bytes from_bytes carry_scmul_const : defs.
@@ -636,8 +640,8 @@ Section __.
       | _ => idtac
       end.
 
-    Ltac use_translate_func_correct Rin Rout arg_ptrs out_array_ptrs :=
-      apply_translate_func_correct Rin Rout arg_ptrs out_array_ptrs;
+    Ltac use_translate_func_correct Rout arg_ptrs out_array_ptrs :=
+      apply_translate_func_correct Rout arg_ptrs out_array_ptrs;
       [ post_sufficient;
         cbv [Bignum EncodedBignum] in *; sepsimpl;
         prove_length; canonicalize_arrays; ecancel_assumption
@@ -648,18 +652,18 @@ Section __.
       cbv [Bignum EncodedBignum] in *; sepsimpl;
       prove_length; canonicalize_arrays; ecancel_assumption.
 
-    Ltac prove_is_correct Rin Rout :=
+    Ltac prove_is_correct Rout :=
       let args := lazymatch goal with
                   | H : postcondition _ ?args _ |- _ => args end in
       let arg_ptrs := get_bedrock2_arglist args in
       let all_ptrs := lazymatch goal with
                       | |- call _ _ _ _ ?in_ptrs _ => in_ptrs end in
       let out_ptrs := get_out_array_ptrs arg_ptrs all_ptrs in
-      use_translate_func_correct Rin Rout arg_ptrs out_ptrs;
+      use_translate_func_correct Rout arg_ptrs out_ptrs;
       solve_translate_func_subgoals prove_bounds prove_output_length;
-      [ exists_arg_pointers;
+      [ repeat next_argument; [ .. | reflexivity ];
         cbv [Bignum EncodedBignum] in *; sepsimpl;
-        prove_length; canonicalize_arrays; ecancel_assumption
+        canonicalize_arrays; ecancel_assumption
       | setup_lists_reserved; solve_lists_reserved out_ptrs ].
 
     Context (check_args_ok :
@@ -670,61 +674,61 @@ Section __.
       is_correct
         (UnsaturatedSolinas.carry_mul n s c Semantics.width)
         carry_mul (spec_of_carry_mul name).
-    Proof. setup; prove_is_correct Ra Rr. Qed.
+    Proof. setup; prove_is_correct Rout. Qed.
 
     Lemma carry_square_correct name :
       is_correct
         (UnsaturatedSolinas.carry_square n s c Semantics.width)
         carry_square (spec_of_carry_square name).
-    Proof. setup; prove_is_correct Ra Rr. Qed.
+    Proof. setup; prove_is_correct Rout. Qed.
 
     Lemma carry_correct name :
       is_correct
         (UnsaturatedSolinas.carry n s c Semantics.width)
         carry (spec_of_carry name).
-    Proof. setup. prove_is_correct Ra Rr. Qed.
+    Proof. setup. prove_is_correct Rout. Qed.
 
     Lemma add_correct name :
       is_correct
         (UnsaturatedSolinas.add n s c Semantics.width)
         add (spec_of_add name).
-    Proof. setup; prove_is_correct Ra Rr. Qed.
+    Proof. setup; prove_is_correct Rout. Qed.
 
     Lemma sub_correct name :
       is_correct
         (UnsaturatedSolinas.sub n s c Semantics.width)
         sub (spec_of_sub name).
-    Proof. setup; prove_is_correct Ra Rr. Qed.
+    Proof. setup; prove_is_correct Rout. Qed.
 
     Lemma opp_correct name :
       is_correct
         (UnsaturatedSolinas.opp n s c Semantics.width)
         opp (spec_of_opp name).
-    Proof. setup; prove_is_correct Ra Rr. Qed.
+    Proof. setup; prove_is_correct Rout. Qed.
 
     Lemma selectznz_correct name :
       is_correct
         (UnsaturatedSolinas.selectznz n Semantics.width)
         selectznz (spec_of_selectznz name).
-    Proof. setup; prove_is_correct Ra Rr. Qed.
+    Proof. setup; prove_is_correct Rout. Qed.
 
     Lemma to_bytes_correct name :
       is_correct
         (UnsaturatedSolinas.to_bytes n s c Semantics.width)
         to_bytes (spec_of_to_bytes name).
-    Proof. setup; prove_is_correct Ra Rr. Qed.
+    Proof. setup; prove_is_correct Rout. Qed.
 
     Lemma from_bytes_correct name :
       is_correct
         (UnsaturatedSolinas.from_bytes n s c Semantics.width)
         from_bytes (spec_of_from_bytes name).
-    Proof. setup; prove_is_correct Ra Rr. Qed.
+    Proof. setup; prove_is_correct Rout. Qed.
 
     Lemma carry_scmul_const_correct (x : Z) name :
       is_correct
         (UnsaturatedSolinas.carry_scmul_const n s c Semantics.width x)
         (carry_scmul_const x) (spec_of_carry_scmul_const x name).
-    Proof. setup; prove_is_correct Ra Rr. Qed.
+    Proof. setup; prove_is_correct Rout. Qed.
   End Proofs.
 End __.
 Hint Unfold carry_mul carry_square carry add sub opp selectznz

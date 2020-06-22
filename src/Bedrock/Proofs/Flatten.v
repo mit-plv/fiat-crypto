@@ -56,12 +56,12 @@ Section Flatten.
   Qed.
 
   (* given these structures have the same type, they'll have the same size in
-       flattened form *)
+     flattened form *)
   Lemma flatten_args_samelength {t}
         (argnames : type.for_each_lhs_of_arrow ltype t)
         (args : type.for_each_lhs_of_arrow API.interp_type t) :
-    forall (flat_args : list Semantics.word) s R mem,
-      sep (equivalent_flat_args args flat_args s) R mem ->
+    forall (flat_args : list Semantics.word) s mem,
+      equivalent_flat_args args flat_args s mem ->
       length flat_args = length (flatten_argnames argnames).
   Proof.
     induction t;
@@ -83,8 +83,8 @@ Section Flatten.
   Lemma of_list_zip_flatten_argnames {t}
         (argnames : type.for_each_lhs_of_arrow ltype t)
         (args : type.for_each_lhs_of_arrow API.interp_type t)
-        (flat_args : list Semantics.word) s R mem :
-    sep (equivalent_flat_args args flat_args s) R mem ->
+        (flat_args : list Semantics.word) s mem :
+    equivalent_flat_args args flat_args s mem ->
     (exists l,
         map.of_list_zip (flatten_argnames argnames) flat_args = Some l).
   Proof.

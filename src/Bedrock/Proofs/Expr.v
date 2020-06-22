@@ -237,8 +237,12 @@ Section Expr.
       eauto; [ ].
     cbv [locally_equivalent] in *.
     cbn [locally_equivalent_args equivalent_args fst snd].
-    eapply sep_empty_iff.
-    sepsimpl; eauto.
+    repeat lazymatch goal with
+           | |- exists _, _ => exists (Separation.emp True)
+           | |- _ /\ _ => split
+           | |- True => tauto
+           | _ => solve [sepsimpl; eauto]
+           end.
   Qed.
 
   Fixpoint locally_equivalent_nobounds_base {t}

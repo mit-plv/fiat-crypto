@@ -67,8 +67,15 @@ Ltac crush_argument_equivalence_subgoals :=
          end.
 
 Ltac next_argument :=
-  (exists 1%nat); sepsimpl; cbn [firstn skipn];
-  [ solve [eauto using firstn_length_le] | ].
+  exists 1%nat; cbn [firstn skipn hd]; split;
+         [ repeat lazymatch goal with
+                  | |- Lift1Prop.ex1 _ _ =>
+                    eexists; sepsimpl;
+                    [ solve [crush_argument_equivalence_subgoals] .. | ]
+                  | |- exists _, _ =>
+                    eexists; sepsimpl;
+                    [ solve [crush_argument_equivalence_subgoals] .. | ]
+                  end | ].
 
 Ltac ssubst :=
   repeat match goal with
@@ -129,25 +136,6 @@ Ltac access_size_simplify :=
   repeat match goal with
          | H: context [Z.of_nat (@Memory.bytes_per ?w ?v)] |- _ => do_simpl w v
          | |- context [Z.of_nat (@Memory.bytes_per ?w ?v)] => do_simpl w v
-         end.
-
-Ltac exists_arg_pointers :=
-  repeat lazymatch goal with
-         | |- @Lift1Prop.ex1 nat _ ?k ?m =>
-           next_argument;
-           let p := lazymatch k with
-                    | context [@firstn word.rep _ ?l] =>
-                      let p := (eval cbn [hd] in (hd (word.of_Z 0) l)) in
-                      constr:(p)
-                    end in
-           (exists p; sepsimpl;
-                   [ solve [crush_argument_equivalence_subgoals] .. | ])
-         | |- @Lift1Prop.ex1 word.rep _ _ ?m =>
-           eexists; sepsimpl;
-           [ solve [crush_argument_equivalence_subgoals] .. | ]
-         | |- @Lift1Prop.ex1 (list word.rep) _ _ ?m =>
-           eexists; sepsimpl;
-           [ solve [crush_argument_equivalence_subgoals] .. | ]
          end.
 
 Ltac simplify_translate_func_postcondition :=
@@ -274,8 +262,14 @@ Ltac exists_all_placeholders out_array_ptrs :=
 Ltac canonicalize_arrays :=
   repeat match goal with
          | _ => progress access_size_simplify
-         | _ => seprewrite array_truncated_scalar_scalar_iff1
-         | _ => seprewrite array_truncated_scalar_ptsto_iff1
+         | |- context [Array.array
+                         (Scalars.truncated_scalar access_size.word)
+                         ?size ?start (map word.unsigned ?xs)] =>
+           seprewrite (array_truncated_scalar_scalar_iff1 xs start size)
+         | |- context [Array.array
+                         (Scalars.truncated_scalar access_size.one)
+                         ?size ?start ?xs] =>
+           seprewrite (array_truncated_scalar_ptsto_iff1 xs start size)
          | H : sep _ _ ?m |- context [?m] =>
            seprewrite_in array_truncated_scalar_scalar_iff1 H
          | H : sep _ _ ?m |- context [?m] =>

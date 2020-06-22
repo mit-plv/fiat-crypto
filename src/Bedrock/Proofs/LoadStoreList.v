@@ -530,8 +530,7 @@ Section LoadStoreList.
            (tr : Semantics.trace)
            (locals : Semantics.locals)
            (mem : Semantics.mem)
-           (nextn : nat)
-           (R : Semantics.mem -> Prop),
+           (nextn : nat),
         (* lengths of any lists in the arguments *)
         let arglengths := list_lengths_from_args args in
         (* look up variables in argnames *)
@@ -544,7 +543,7 @@ Section LoadStoreList.
         (* argument sizes are <= width *)
         access_sizes_good_args argsizes ->
         (* argument values are equivalent *)
-        sep (equivalent_args args argvalues argsizes locals) R mem ->
+        equivalent_args args argvalues argsizes locals mem ->
         (* load_arguments returns triple : # fresh variables used,
            new argnames with local lists, and cmd *)
         let out := load_arguments nextn argnames arglengths argsizes in
@@ -580,25 +579,18 @@ Section LoadStoreList.
       repeat straightline.
       repeat match goal with
              | |- _ /\ _ => split end;
-        eauto using only_differ_zero; try reflexivity.
-      cbv [locally_equivalent_args equivalent_args emp].
-      tauto. }
+        eauto using only_differ_zero; reflexivity. }
     { (* arrow (base _) _ *)
       cleanup. straightline.
       eapply Proper_cmd.
       3:{
-        eapply load_all_lists_correct; eauto.
-        { intros.
-          match goal with
-            | H : _ |- _ =>
+        eapply load_all_lists_correct; eauto; [ ].
+        intros.
+        match goal with
+        | H : _ |- _ =>
           setoid_rewrite not_union_iff in H;
             apply H; eauto
-          end. }
-        { match goal with
-          | H : sep (sep ?p ?q) ?r ?m |-
-            sep ?p _ ?m =>
-            apply sep_assoc in H; apply H
-          end. } }
+        end. }
       { apply Proper_call. }
       { repeat intro; cleanup; subst.
         eapply Proper_cmd; [ solve [apply Proper_call] | | ].
@@ -610,13 +602,8 @@ Section LoadStoreList.
           setoid_rewrite not_union_iff in H;
             apply H; lia
           end. }
-        { match goal with
-          | H : sep (sep ?p ?q) ?r ?m |- sep _ _ ?m =>
-            apply sep_comm, sep_assoc, sep_comm in H;
-            eapply Proper_sep_iff1; [ | reflexivity | apply H]
-          end.
-          eapply equivalent_args_only_differ_iff1;
-            eauto using equiv_listZ_only_differ_mem, only_differ_sym.
+        { eapply equivalent_args_only_differ;
+            eauto using only_differ_sym with equiv; [ ].
           intros.
           eapply disjoint_used_varnames_lt.
           cleanup. subst.
@@ -632,9 +619,10 @@ Section LoadStoreList.
               match goal with H : _ |- _ => apply H; lia end. }
           { cbv [locally_equivalent locally_equivalent_args] in *.
             cbn [equivalent_args fst rtype_of_ltype].
-            apply sep_empty_iff; split; eauto.
-            eapply equivalent_only_differ_iff1;
-              eauto using equiv_listZ_only_differ_local, only_differ_sym.
+            split; [ | solve [eauto] ].
+            exists (emp True). sepsimpl; eauto.
+            eapply equivalent_only_differ;
+              eauto using only_differ_sym with equiv; [ ].
             eapply disjoint_used_varnames_lt.
             intros; cleanup. subst.
             eauto with lia. } } } }

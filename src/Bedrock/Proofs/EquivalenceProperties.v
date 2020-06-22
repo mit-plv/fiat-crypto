@@ -279,7 +279,7 @@ Section OnlyDiffer.
       all:eapply equivalent_only_differ; eauto using only_differ_sym.
     Qed.
 
-    Lemma equivalent_args_only_differ_iff1 {t}
+    Lemma equivalent_args_only_differ {t}
           locals1 locals2 vset
           (argnames : type.for_each_lhs_of_arrow ltype t)
           s x :
@@ -288,9 +288,9 @@ Section OnlyDiffer.
       let argvalues :=
           type.map_for_each_lhs_of_arrow
             rtype_of_ltype argnames in
-      Lift1Prop.iff1
-        (equivalent_args x argvalues s locals1)
-        (equivalent_args x argvalues s locals2).
+      forall m,
+        equivalent_args x argvalues s locals1 m ->
+        equivalent_args x argvalues s locals2 m.
     Proof.
       induction t;
         cbv [Lift1Prop.iff1];
@@ -298,15 +298,22 @@ Section OnlyDiffer.
                  type.map_for_each_lhs_of_arrow
                  equivalent_args];
         intros; break_match; cbn [fst snd] in *;
-          try tauto.
-      eapply Proper_sep_iff1;
-        repeat match goal with
-               | _ => eapply equivalent_only_differ_iff1; eauto
-               | _ => eapply IHt2; eauto
-               | H : disjoint _ (union _ _) |- _ =>
-                 apply disjoint_union_r_iff in H;
-                   cleanup; eauto
-               end.
+          try tauto; [ ].
+      intros; cleanup; subst.
+      repeat match goal with
+             | |- _ /\ _ => split
+             | |- exists _, _ => eexists
+             | _ => solve [eauto]
+             end;
+        [ eapply Proper_sep_iff1;
+          [ eapply equivalent_only_differ_iff1
+          | reflexivity | eassumption ] | eapply IHt2 ];
+        eauto using only_differ_sym.
+      all:match goal with
+          | H : disjoint _ (union _ _) |- _ =>
+            apply disjoint_union_r_iff in H;
+              cleanup; eauto
+          end.
     Qed.
 
     Lemma equivalent_only_differ_undef {t} :
@@ -386,7 +393,7 @@ Section ContextEquivalence.
   Proof.
     intros; cbv [equiv3 context_varname_set locally_equivalent] in *.
     destruct x as [x [ [? ?] ?] ]; destruct x; [ | tauto ].
-    eapply equivalent_only_differ; eauto with equiv. 
+    eapply equivalent_only_differ; eauto with equiv.
     match goal with H : _ |- _ =>
                     apply disjoint_union_r_iff in H end.
     cleanup; eauto.
