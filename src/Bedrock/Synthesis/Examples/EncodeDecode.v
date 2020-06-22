@@ -66,8 +66,7 @@ Instance spec_of_encode_decode : spec_of encode_decode :=
     forall x old_tmp px ptmp t m R,
       let xz := map word.unsigned x in
       list_Z_bounded_by tight_bounds xz ->
-      length old_tmp = n_bytes ->
-      (Bignum px x * EncodedBignum ptmp old_tmp * R)%sep m ->
+      (Bignum n px x * EncodedBignum n_bytes ptmp old_tmp * R)%sep m ->
       WeakestPrecondition.call
         functions encode_decode t m
         (px :: ptmp :: nil)
@@ -78,8 +77,8 @@ Instance spec_of_encode_decode : spec_of encode_decode :=
              let outz := map word.unsigned out in
              eval outz mod M = eval xz mod M
              /\ list_Z_bounded_by tight_bounds outz
-             /\ length tmp' = n_bytes
-             /\ (Bignum px out * EncodedBignum ptmp tmp' * R)%sep m').
+             /\ (Bignum n px out
+                 * EncodedBignum n_bytes ptmp tmp' * R)%sep m').
 
 (* TODO: currently this extra step is required so the literal string isn't
   hidden *)

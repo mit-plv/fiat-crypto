@@ -67,8 +67,7 @@ Instance spec_of_mul_twice : spec_of mul_twice :=
       let yz := map word.unsigned y in
       list_Z_bounded_by loose_bounds xz ->
       list_Z_bounded_by loose_bounds yz ->
-      length old_out = n ->
-      (Bignum px x * Bignum py y * Bignum pout old_out * R)%sep m ->
+      (Bignum n px x * Bignum n py y * Bignum n pout old_out * R)%sep m ->
       WeakestPrecondition.call
         (p:=Types.semantics)
         functions mul_twice t m
@@ -81,7 +80,8 @@ Instance spec_of_mul_twice : spec_of mul_twice :=
              eval outz mod M
              = (eval xz * eval yz * eval yz) mod M
              /\ list_Z_bounded_by tight_bounds outz
-             /\ (Bignum px x * Bignum py y * Bignum pout out * R)%sep m').
+             /\ (Bignum n px x * Bignum n py y
+                 * Bignum n pout out * R)%sep m').
 
 Instance spec_of_curve25519_carry_mul :
   spec_of "curve25519_carry_mul" := spec_of_carry_mul.
