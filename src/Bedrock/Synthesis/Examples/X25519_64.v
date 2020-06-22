@@ -28,9 +28,15 @@ specs_from_ops ops n s c. Defined.
 Instance curve25519_bedrock2_correctness :
   bedrock2_unsaturated_solinas_correctness.
 prove_correctness ops n s c machine_wordsize. Defined.
+
 (*
-Eval cbv [add curve25519_bedrock2] in add.
-Eval cbv [spec_of_add curve25519_bedrock2] in spec_of_add.
+Require Import bedrock2.NotationsCustomEntry.
+Require Import bedrock2.NotationsInConstr.
+Require Import bedrock2.Syntax.
+Coercion expr.var : string >-> Syntax.expr.
+Local Open Scope bedrock_expr.
+Eval cbv [add curve25519_bedrock2_funcs] in add.
+Eval cbv [spec_of_add curve25519_bedrock2_specs] in spec_of_add.
 *)
 
 Section Scmul121666.
