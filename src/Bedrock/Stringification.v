@@ -17,7 +17,6 @@ Require Import Crypto.Bedrock.Translation.Func.
 Require Import Crypto.Language.API.
 Require Import Crypto.Util.Option.
 Import Stringification.Language.Compilers.
-Import Types.
 
 Import ListNotations Types.Notations.
 Import ToString.OfPHOAS.

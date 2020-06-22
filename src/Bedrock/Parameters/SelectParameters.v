@@ -6,7 +6,6 @@ Require Crypto.Bedrock.Parameters.Defaults32.
 Require Crypto.Bedrock.Parameters.Defaults64.
 Local Open Scope string_scope.
 Import ListNotations.
-Import Types.
 
 Existing Instances
          Defaults32.default_parameters_ok

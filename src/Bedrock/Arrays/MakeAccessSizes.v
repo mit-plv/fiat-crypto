@@ -19,7 +19,7 @@ Local Open Scope Z_scope.
 
 Import ListNotations.
 Import AbstractInterpretation.Compilers.
-Import Types.Notations Types.Types.
+Import Types.Notations.
 
 Section __.
   Context {p : Types.parameters}.

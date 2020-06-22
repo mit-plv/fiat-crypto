@@ -76,11 +76,13 @@ src/Bedrock/Parameters/Defaults32.v
 src/Bedrock/Parameters/Defaults64.v
 src/Bedrock/Parameters/SelectParameters.v
 src/Bedrock/Proofs/Cmd.v
+src/Bedrock/Proofs/Equivalence.v
 src/Bedrock/Proofs/Expr.v
 src/Bedrock/Proofs/Flatten.v
 src/Bedrock/Proofs/Func.v
 src/Bedrock/Proofs/LoadStoreList.v
 src/Bedrock/Proofs/Varnames.v
+src/Bedrock/Proofs/VarnameSet.v
 src/Bedrock/Proofs/ValidComputable/Cmd.v
 src/Bedrock/Proofs/ValidComputable/Expr.v
 src/Bedrock/Proofs/ValidComputable/Func.v

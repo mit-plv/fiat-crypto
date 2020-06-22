@@ -23,7 +23,7 @@ Require Import Crypto.COperationSpecifications.
 Require Import Crypto.UnsaturatedSolinasHeuristics.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import bedrock2.Semantics.
-Import Types ListNotations.
+Import ListNotations.
 Local Open Scope Z_scope.
 
 Require Import Crypto.Spec.ModularArithmetic.

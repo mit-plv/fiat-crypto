@@ -17,6 +17,7 @@ Require Import Crypto.Bedrock.Util.
 Require Import Crypto.Bedrock.Arrays.ByteBounds.
 Require Import Crypto.Bedrock.Arrays.MakeAccessSizes.
 Require Import Crypto.Bedrock.Arrays.MaxBounds.
+Require Import Crypto.Bedrock.Proofs.Equivalence.
 Require Import Crypto.Bedrock.Names.MakeNames.
 Require Import Crypto.Bedrock.Translation.Func.
 Require Import Crypto.Util.ListUtil.
@@ -24,7 +25,6 @@ Require Import Crypto.Language.API.
 Require Import Coq.Lists.List. (* after SeparationLogic *)
 
 Import Language.Compilers.
-Import Types.
 
 Require Import Crypto.Util.Notations.
 Local Open Scope Z_scope.

@@ -39,7 +39,6 @@ Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Language.API.
 Require Import Coq.Lists.List. (* after SeparationLogic *)
 
-Import Types.
 Existing Instances rep.Z rep.listZ_mem.
 
 Import Language.Compilers.

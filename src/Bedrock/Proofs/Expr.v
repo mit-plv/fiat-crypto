@@ -9,7 +9,9 @@ Require Import Crypto.CastLemmas.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Util.
+Require Import Crypto.Bedrock.Proofs.Equivalence.
 Require Import Crypto.Bedrock.Proofs.Varnames.
+Require Import Crypto.Bedrock.Proofs.VarnameSet.
 Require Import Crypto.Bedrock.Translation.Expr.
 Require Import Crypto.Language.API.
 Require Import Rewriter.Util.Bool.Reflect.
@@ -23,7 +25,7 @@ Local Open Scope Z_scope.
 
 Import API.Compilers.
 Import Wf.Compilers.expr.
-Import Types.Notations Types.Types.
+Import Types.Notations.
 
 Section Expr.
   Context {p : Types.parameters} {p_ok : @ok p}.

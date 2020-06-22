@@ -6,7 +6,7 @@ Require Import Crypto.Language.API.
 Require Import Crypto.Util.Option.
 
 Import Language.API.Compilers AbstractInterpretation.Compilers.
-Import Types Types.Notations.
+Import Types.Notations.
 Existing Instances rep.Z rep.listZ_mem.
 
 Section with_parameters.

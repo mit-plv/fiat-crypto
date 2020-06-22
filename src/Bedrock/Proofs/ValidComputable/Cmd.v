@@ -21,7 +21,7 @@ Local Open Scope bool_scope.
 
 Import API.Compilers.
 Import Wf.Compilers.expr.
-Import Types.Notations Types.Types.
+Import Types.Notations.
 
 Section Cmd.
   Context {p : Types.parameters} {p_ok : @ok p}.

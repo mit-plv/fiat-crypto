@@ -11,7 +11,7 @@ Import ListNotations. Local Open Scope Z_scope.
 Require Import Crypto.BoundsPipeline.
 
 Import API.Compilers.
-Import Types.Notations Types.Types.
+Import Types.Notations.
 
 Section Cmd.
   Context {p : Types.parameters}.

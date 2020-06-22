@@ -11,7 +11,7 @@ Require Import Crypto.Language.API.
 Import ListNotations.
 
 Import API.Compilers.
-Import Types.Notations Types.Types.
+Import Types.Notations.
 
 Section Func.
   Context {p : parameters}.

@@ -6,12 +6,13 @@ Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Util.
 Require Import Crypto.Bedrock.Proofs.Flatten.
+Require Import Crypto.Bedrock.Proofs.VarnameSet.
 Require Import Crypto.Bedrock.Translation.Flatten.
 Require Import Crypto.Language.API.
 Require Import Crypto.Util.Tactics.BreakMatch.
 
 Import Language.API.Compilers.
-Import Types Types.Notations.
+Import Types.Notations.
 Import ListNotations.
 Existing Instances rep.Z rep.listZ_mem.
 
