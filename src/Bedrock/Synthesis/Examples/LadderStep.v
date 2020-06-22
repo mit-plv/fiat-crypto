@@ -83,14 +83,6 @@ Require Import bedrock2.NotationsCustomEntry.
 Local Coercion literal (z : Z) : expr := expr.literal z.
 Local Coercion var (x : string) : expr := expr.var x.
 
-(* TODO: figure out a nicer way to view simplified specs *)
-(*
-Eval cbv [spec_of_carry_square
-            curve25519_bedrock2
-            name postcondition
-            Field.UnsaturatedSolinas.carry_square
-            Field.UnsaturatedSolinas.spec_of_carry_square]
-  in (spec_of_carry_square). *)
 Definition ladderstep : bedrock_func :=
   let X1 := "X1" in
   let X2 := "X2" in
@@ -158,30 +150,20 @@ Instance spec_of_ladderstep : spec_of ladderstep :=
       list_Z_bounded_by tight_bounds Z2z ->
       list_Z_bounded_by tight_bounds X3z ->
       list_Z_bounded_by tight_bounds Z3z ->
-      (* intermediate values simply must have enough space *)
-      length A  = X25519_64.n ->
-      length AA = X25519_64.n ->
-      length B  = X25519_64.n ->
-      length BB = X25519_64.n ->
-      length E  = X25519_64.n ->
-      length C  = X25519_64.n ->
-      length D  = X25519_64.n ->
-      length DA = X25519_64.n ->
-      length CB = X25519_64.n ->
-      (Bignum pX1 X1
-       * Bignum pX2 X2
-       * Bignum pZ2 Z2
-       * Bignum pX3 X3
-       * Bignum pZ3 Z3
-       * Bignum pA A
-       * Bignum pAA AA
-       * Bignum pB B
-       * Bignum pBB BB
-       * Bignum pE E
-       * Bignum pC C
-       * Bignum pD D
-       * Bignum pDA DA
-       * Bignum pCB CB)%sep m ->
+      (Bignum n pX1 X1
+       * Bignum n pX2 X2
+       * Bignum n pZ2 Z2
+       * Bignum n pX3 X3
+       * Bignum n pZ3 Z3
+       * Bignum n pA A
+       * Bignum n pAA AA
+       * Bignum n pB B
+       * Bignum n pBB BB
+       * Bignum n pE E
+       * Bignum n pC C
+       * Bignum n pD D
+       * Bignum n pDA DA
+       * Bignum n pCB CB)%sep m ->
       WeakestPrecondition.call
         functions ladderstep t m
         [pX1; pX2; pZ2; pX3; pZ3; pA; pAA; pB; pBB; pE; pC; pD; pDA; pCB]
@@ -203,20 +185,20 @@ Instance spec_of_ladderstep : spec_of ladderstep :=
              /\ list_Z_bounded_by tight_bounds Z4z
              /\ list_Z_bounded_by tight_bounds X5z
              /\ list_Z_bounded_by tight_bounds Z5z
-             /\ (Bignum pX1 X1
-                 * Bignum pX2 X4
-                 * Bignum pZ2 Z4
-                 * Bignum pX3 X5
-                 * Bignum pZ3 Z5
-                 * Bignum pA A'
-                 * Bignum pAA AA'
-                 * Bignum pB B'
-                 * Bignum pBB BB'
-                 * Bignum pE E'
-                 * Bignum pC C'
-                 * Bignum pD D'
-                 * Bignum pDA DA'
-                 * Bignum pCB CB')%sep m').
+             /\ (Bignum n pX1 X1
+                 * Bignum n pX2 X4
+                 * Bignum n pZ2 Z4
+                 * Bignum n pX3 X5
+                 * Bignum n pZ3 Z5
+                 * Bignum n pA A'
+                 * Bignum n pAA AA'
+                 * Bignum n pB B'
+                 * Bignum n pBB BB'
+                 * Bignum n pE E'
+                 * Bignum n pC C'
+                 * Bignum n pD D'
+                 * Bignum n pDA DA'
+                 * Bignum n pCB CB')%sep m').
 
 Instance spec_of_curve25519_carry_mul :
   spec_of "curve25519_carry_mul" := spec_of_carry_mul.

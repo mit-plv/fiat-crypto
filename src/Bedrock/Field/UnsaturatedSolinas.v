@@ -90,13 +90,16 @@ Ltac apply_correctness_in H :=
 
 Section Bignum.
   Context {p : Types.parameters}.
+
   Definition Bignum
-    : Semantics.word -> list Semantics.word -> Semantics.mem -> Prop :=
-    array scalar (word.of_Z word_size_in_bytes).
+             (n : nat) (px : Semantics.word) (x : list Semantics.word)
+    : Semantics.mem -> Prop :=
+    sep (emp (length x = n)) (array scalar (word.of_Z word_size_in_bytes) px x).
 
   Definition EncodedBignum
-    : Semantics.word -> list Byte.byte -> Semantics.mem -> Prop :=
-    array ptsto (word.of_Z 1).
+             (n_bytes : nat) (px : Semantics.word) (x : list Byte.byte)
+    : Semantics.mem -> Prop :=
+    sep (emp (length x = n_bytes)) (array ptsto (word.of_Z 1) px x).
 
   Section Proofs.
     Context {ok : Types.ok}.
@@ -106,26 +109,26 @@ Section Bignum.
       length bs = (n * Z.to_nat word_size_in_bytes)%nat ->
       Lift1Prop.iff1
         (array ptsto (word.of_Z 1) addr bs)
-        (Bignum addr (map word.of_Z
-                          (eval_bytes (width:=Semantics.width) bs))).
+        (Bignum n addr (map word.of_Z
+                            (eval_bytes (width:=Semantics.width) bs))).
     Admitted. (* TODO *)
 
     Lemma Bignum_to_bytes n addr x :
       list_Z_bounded_by (max_bounds n) (map word.unsigned x) ->
       Lift1Prop.iff1
-        (Bignum addr x)
+        (Bignum n addr x)
         (array ptsto (word.of_Z 1) addr (encode_bytes x)).
     Admitted. (* TODO *)
   End Proofs.
 End Bignum.
 Notation BignumSuchThat :=
-  (fun addr ws P =>
+  (fun n addr ws P =>
      let xs := map word.unsigned ws in
-     sep (emp (P xs)) (Bignum addr ws)).
+     sep (emp (P xs)) (Bignum n addr ws)).
 Notation EncodedBignumSuchThat :=
-  (fun addr ws P =>
+  (fun n addr ws P =>
      let xs := map Byte.byte.unsigned ws in
-     sep (emp (P xs)) (EncodedBignum addr ws)).
+     sep (emp (P xs)) (EncodedBignum n addr ws)).
 
 Section __.
   Context {p : Types.parameters}
@@ -283,9 +286,8 @@ Section __.
         let op := carry_mul in
         let args := (map word.unsigned wx, (map word.unsigned wy, tt)) in
         op.(precondition) args ->
-        (Bignum px wx * Bignum py wy * Ra)%sep m ->
-        (BignumSuchThat
-           pout wold_out (fun l => length l = n) * Rr)%sep m ->
+        (Bignum n px wx * Bignum n py wy * Ra)%sep m ->
+        (Bignum n pout wold_out * Rr)%sep m ->
         WeakestPrecondition.call
           functions name t m
           (px :: py :: pout :: nil)
@@ -294,7 +296,7 @@ Section __.
              rets = []%list /\
              exists wout,
                sep (BignumSuchThat
-                      pout wout (op.(postcondition) args))
+                      n pout wout (op.(postcondition) args))
                    Rr m').
 
   Definition spec_of_carry_square name : spec_of name :=
@@ -304,9 +306,8 @@ Section __.
         let op := carry_square in
         let args := (map word.unsigned wx, tt) in
         op.(precondition) args ->
-        (Bignum px wx  * Ra)%sep m ->
-        (BignumSuchThat
-           pout wold_out (fun l => length l = n) * Rr)%sep m ->
+        (Bignum n px wx  * Ra)%sep m ->
+        (Bignum n pout wold_out * Rr)%sep m ->
         WeakestPrecondition.call
           functions name t m
           (px :: pout :: nil)
@@ -314,7 +315,7 @@ Section __.
              t = t' /\
              rets = []%list /\
              exists wout,
-               sep (BignumSuchThat pout wout (op.(postcondition) args))
+               sep (BignumSuchThat n pout wout (op.(postcondition) args))
                    Rr m').
 
   Definition spec_of_carry name : spec_of name :=
@@ -324,9 +325,8 @@ Section __.
         let op := carry in
         let args := (map word.unsigned wx, tt) in
         op.(precondition) args ->
-        (Bignum px wx * Ra)%sep m ->
-        (BignumSuchThat
-           pout wold_out (fun l => length l = n) * Rr)%sep m ->
+        (Bignum n px wx * Ra)%sep m ->
+        (Bignum n pout wold_out * Rr)%sep m ->
         WeakestPrecondition.call
           functions name t m
           (px :: pout :: nil)
@@ -334,7 +334,7 @@ Section __.
              t = t' /\
              rets = []%list /\
              exists wout,
-               sep (BignumSuchThat pout wout (op.(postcondition) args))
+               sep (BignumSuchThat n pout wout (op.(postcondition) args))
                    Rr m').
 
   Definition spec_of_add name : spec_of name :=
@@ -344,9 +344,8 @@ Section __.
         let op := add in
         let args := (map word.unsigned wx, (map word.unsigned wy, tt)) in
         op.(precondition) args ->
-        (Bignum px wx * Bignum py wy * Ra)%sep m ->
-        (BignumSuchThat
-           pout wold_out (fun l => length l = n) * Rr)%sep m ->
+        (Bignum n px wx * Bignum n py wy * Ra)%sep m ->
+        (Bignum n pout wold_out * Rr)%sep m ->
         WeakestPrecondition.call
           functions name t m
           (px :: py :: pout :: nil)
@@ -354,7 +353,7 @@ Section __.
              t = t' /\
              rets = []%list /\
              exists wout,
-               sep (BignumSuchThat pout wout (op.(postcondition) args))
+               sep (BignumSuchThat n pout wout (op.(postcondition) args))
                    Rr m').
 
   Definition spec_of_sub name : spec_of name :=
@@ -364,9 +363,8 @@ Section __.
         let op := sub in
         let args := (map word.unsigned wx, (map word.unsigned wy, tt)) in
         op.(precondition) args ->
-        (Bignum px wx * Bignum py wy * Ra)%sep m ->
-        (BignumSuchThat
-           pout wold_out (fun l => length l = n) * Rr)%sep m ->
+        (Bignum n px wx * Bignum n py wy * Ra)%sep m ->
+        (Bignum n pout wold_out * Rr)%sep m ->
         WeakestPrecondition.call
           functions name t m
           (px :: py :: pout :: nil)
@@ -374,7 +372,7 @@ Section __.
              t = t' /\
              rets = []%list /\
              exists wout,
-               sep (BignumSuchThat pout wout (op.(postcondition) args))
+               sep (BignumSuchThat n pout wout (op.(postcondition) args))
                    Rr m').
 
   Definition spec_of_opp name : spec_of name :=
@@ -384,9 +382,8 @@ Section __.
         let op := opp in
         let args := (map word.unsigned wx, tt) in
         op.(precondition) args ->
-        (Bignum px wx * Ra)%sep m ->
-        (BignumSuchThat
-           pout wold_out (fun l => length l = n) * Rr)%sep m ->
+        (Bignum n px wx * Ra)%sep m ->
+        (Bignum n pout wold_out * Rr)%sep m ->
         WeakestPrecondition.call
           functions name t m
           (px :: pout :: nil)
@@ -394,7 +391,7 @@ Section __.
              t = t' /\
              rets = []%list /\
              exists wout,
-               sep (BignumSuchThat pout wout (op.(postcondition) args))
+               sep (BignumSuchThat n pout wout (op.(postcondition) args))
                    Rr m').
 
   Definition spec_of_selectznz name : spec_of name :=
@@ -407,9 +404,8 @@ Section __.
         let c := word.unsigned wc in
         ZRange.is_bounded_by_bool c bit_range = true ->
         op.(precondition) args ->
-        (Bignum px wx * Bignum py wy * Ra)%sep m ->
-        (BignumSuchThat
-           pout wold_out (fun l => length l = n) * Rr)%sep m ->
+        (Bignum n px wx * Bignum n py wy * Ra)%sep m ->
+        (Bignum n pout wold_out * Rr)%sep m ->
         WeakestPrecondition.call
           functions name t m
           (wc :: px :: py :: pout :: nil)
@@ -417,7 +413,7 @@ Section __.
              t = t' /\
              rets = []%list /\
              exists wout,
-               sep (BignumSuchThat pout wout (op.(postcondition) args))
+               sep (BignumSuchThat n pout wout (op.(postcondition) args))
                    Rr m').
 
   Definition spec_of_to_bytes name : spec_of name :=
@@ -427,9 +423,8 @@ Section __.
         let op := to_bytes in
         let args := (map word.unsigned wx, tt) in
         op.(precondition) args ->
-        (Bignum px wx * Ra)%sep m ->
-        (EncodedBignumSuchThat
-           pout wold_out (fun l => length l = n_bytes) * Rr)%sep m ->
+        (Bignum n px wx * Ra)%sep m ->
+        (EncodedBignum n_bytes pout wold_out * Rr)%sep m ->
         WeakestPrecondition.call
           functions name t m
           (px :: pout :: nil)
@@ -438,7 +433,7 @@ Section __.
              rets = []%list /\
              exists wout,
                sep (EncodedBignumSuchThat
-                      pout wout (op.(postcondition) args))
+                      n_bytes pout wout (op.(postcondition) args))
                    Rr m').
 
   Definition spec_of_from_bytes name : spec_of name :=
@@ -448,9 +443,8 @@ Section __.
         let op := from_bytes in
         let args := (map byte.unsigned wx, tt) in
         op.(precondition) args ->
-        (EncodedBignum px wx  * Ra)%sep m ->
-        (BignumSuchThat
-           pout wold_out (fun l => length l = n) * Rr)%sep m ->
+        (EncodedBignum n_bytes px wx * Ra)%sep m ->
+        (Bignum n pout wold_out * Rr)%sep m ->
         WeakestPrecondition.call
           functions name t m
           (px :: pout :: nil)
@@ -459,7 +453,7 @@ Section __.
              rets = []%list /\
              exists wout,
                sep (BignumSuchThat
-                      pout wout (op.(postcondition) args))
+                      n pout wout (op.(postcondition) args))
                    Rr m').
 
   Definition spec_of_carry_scmul_const (z : Z) (name : string)
@@ -470,9 +464,8 @@ Section __.
         let op := carry_scmul_const z in
         let args := (map word.unsigned wx, tt) in
         op.(precondition) args ->
-        (Bignum px wx * Ra)%sep m ->
-        (BignumSuchThat
-           pout wold_out (fun l => length l = n) * Rr)%sep m ->
+        (Bignum n px wx * Ra)%sep m ->
+        (Bignum n pout wold_out * Rr)%sep m ->
         WeakestPrecondition.call
           functions name t m
           (px :: pout :: nil)
@@ -480,7 +473,7 @@ Section __.
              t = t' /\
              rets = []%list /\
              exists wout,
-               sep (BignumSuchThat pout wout (op.(postcondition) args))
+               sep (BignumSuchThat n pout wout (op.(postcondition) args))
                    Rr m').
 
   Hint Unfold carry_mul carry_square carry add sub opp selectznz
@@ -496,8 +489,6 @@ Section __.
        spec_of_to_bytes
        spec_of_from_bytes
        spec_of_carry_scmul_const : specs.
-
-  (* TODO: assert length in Bignum to make output simpler *)
 
   Section Proofs.
     Context {ok : Types.ok}.
@@ -634,17 +625,28 @@ Section __.
       try assert_to_bytes_bounds;
       assert_output_length prove_output_length.
 
+    Ltac prove_length :=
+      lazymatch goal with
+      | H : map _ ?x = ?y |- length ?x = length ?y =>
+        rewrite <-H, !map_length; congruence
+      | H : length ?x = ?n |- length (map _ ?x) = ?n =>
+        rewrite map_length; solve [apply H]
+      | |- length ?x = length ?y =>
+        rewrite ?map_length in *; congruence
+      | _ => idtac
+      end.
+
     Ltac use_translate_func_correct Rin Rout arg_ptrs out_array_ptrs :=
       apply_translate_func_correct Rin Rout arg_ptrs out_array_ptrs;
       [ post_sufficient;
-        cbv [Bignum EncodedBignum] in *;
-        canonicalize_arrays; ecancel_assumption
+        cbv [Bignum EncodedBignum] in *; sepsimpl;
+        prove_length; canonicalize_arrays; ecancel_assumption
       | .. ].
 
     Ltac solve_lists_reserved out_array_ptrs :=
       exists_all_placeholders out_array_ptrs;
-      cbv [Bignum EncodedBignum] in *;
-      canonicalize_arrays; ecancel_assumption.
+      cbv [Bignum EncodedBignum] in *; sepsimpl;
+      prove_length; canonicalize_arrays; ecancel_assumption.
 
     Ltac prove_is_correct Rin Rout :=
       let args := lazymatch goal with
@@ -656,8 +658,8 @@ Section __.
       use_translate_func_correct Rin Rout arg_ptrs out_ptrs;
       solve_translate_func_subgoals prove_bounds prove_output_length;
       [ exists_arg_pointers;
-        cbv [Bignum EncodedBignum] in *;
-        canonicalize_arrays; ecancel_assumption
+        cbv [Bignum EncodedBignum] in *; sepsimpl;
+        prove_length; canonicalize_arrays; ecancel_assumption
       | setup_lists_reserved; solve_lists_reserved out_ptrs ].
 
     Context (check_args_ok :
