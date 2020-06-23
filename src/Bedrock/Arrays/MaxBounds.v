@@ -4,6 +4,7 @@ Require Import Coq.micromega.Lia.
 Require Import coqutil.Word.Interface.
 Require Import coqutil.Word.Properties.
 Require Import bedrock2.Syntax.
+Require Import Crypto.Arithmetic.Partition.
 Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Util.
@@ -116,5 +117,31 @@ Section MaxBounds.
     pose proof Z.pow_le_mono_r 2 8 Semantics.width ltac:(lia) width_ge_8.
     rewrite bits_per_word_eq_width by auto using width_0mod_8.
     lia.
+  Qed.
+
+  Lemma partition_max_range :
+    forall x,
+      let bytes := (Memory.bytes_per
+                      (width:=Semantics.width) access_size.word) in
+      Forall (fun z => 0 <= z < 2^(Z.of_nat bytes * 8))
+             (Partition.partition
+                (UniformWeight.uweight Semantics.width) n x).
+  Proof.
+    pose proof word.width_pos. cbv zeta.
+    induction n; intros; [ solve [constructor] | ].
+    rewrite partition_step. apply Forall_snoc; auto; [ ].
+    rewrite UniformWeight.uweight_S by lia.
+    rewrite <-Z.mod_pull_div by auto with zarith.
+    rewrite bits_per_word_eq_width by auto using width_0mod_8.
+    apply Z.mod_pos_bound; auto with zarith.
+  Qed.
+
+  Lemma partition_bounded_by x :
+    list_Z_bounded_by
+      max_bounds
+      (Partition.partition (UniformWeight.uweight Semantics.width) n x).
+  Proof.
+    apply max_bounds_range_iff; split;
+      auto using partition_max_range, length_partition.
   Qed.
 End MaxBounds.
