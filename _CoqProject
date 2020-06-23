@@ -98,6 +98,8 @@ src/Bedrock/Translation/Expr.v
 src/Bedrock/Translation/Flatten.v
 src/Bedrock/Translation/Func.v
 src/Bedrock/Translation/LoadStoreList.v
+src/Bedrock/Synthesis/Examples/p224_64.v
+src/Bedrock/Synthesis/Examples/p256_64.v
 src/Bedrock/Synthesis/Examples/X25519_64.v
 src/Bedrock/Synthesis/Examples/X1305_32.v
 src/Bedrock/Synthesis/Examples/EncodeDecode.v
