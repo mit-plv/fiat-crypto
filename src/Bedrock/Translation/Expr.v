@@ -211,7 +211,7 @@ Section Expr.
     | ident.Z_lor => Some (expr.op bopname.or)
     | ident.Z_land => Some (expr.op bopname.and)
     | ident.Z_lxor => Some (expr.op bopname.xor)
-    | _ => None 
+    | _ => None
     end.
 
   Fixpoint translate_ident
