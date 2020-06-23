@@ -92,8 +92,8 @@ static void fiat_Poly1305_cmovznz_u64(Box<Long> out1, int arg1, long arg2, long 
  *   eval out1 mod m = (eval arg1 * eval arg2) mod m <p>
  * <p>
  * Input Bounds: <p>
- *   arg1: [[0x0 ~&gt; 0xd333332], [0x0 ~&gt; 0xd333332], [0x0 ~&gt; 0xd333332], [0x0 ~&gt; 0xd333332], [0x0 ~&gt; 0xd333332]] <p>
- *   arg2: [[0x0 ~&gt; 0xd333332], [0x0 ~&gt; 0xd333332], [0x0 ~&gt; 0xd333332], [0x0 ~&gt; 0xd333332], [0x0 ~&gt; 0xd333332]] <p>
+ *   arg1: [[0x0 ~&gt; 0xc66665c], [0x0 ~&gt; 0xc666664], [0x0 ~&gt; 0xc666664], [0x0 ~&gt; 0xc666664], [0x0 ~&gt; 0xc666664]] <p>
+ *   arg2: [[0x0 ~&gt; 0xc66665c], [0x0 ~&gt; 0xc666664], [0x0 ~&gt; 0xc666664], [0x0 ~&gt; 0xc666664], [0x0 ~&gt; 0xc666664]] <p>
  * Output Bounds: <p>
  *   out1: [[0x0 ~&gt; 0x4666666], [0x0 ~&gt; 0x4666666], [0x0 ~&gt; 0x4666666], [0x0 ~&gt; 0x4666666], [0x0 ~&gt; 0x4666666]] <p>
  */
@@ -163,26 +163,26 @@ public static void fiat_Poly1305_carry_mul(int[] out1, final int[] arg1, final i
  *   eval out1 mod m = (eval arg1 * eval arg1) mod m <p>
  * <p>
  * Input Bounds: <p>
- *   arg1: [[0x0 ~&gt; 0xd333332], [0x0 ~&gt; 0xd333332], [0x0 ~&gt; 0xd333332], [0x0 ~&gt; 0xd333332], [0x0 ~&gt; 0xd333332]] <p>
+ *   arg1: [[0x0 ~&gt; 0xc66665c], [0x0 ~&gt; 0xc666664], [0x0 ~&gt; 0xc666664], [0x0 ~&gt; 0xc666664], [0x0 ~&gt; 0xc666664]] <p>
  * Output Bounds: <p>
  *   out1: [[0x0 ~&gt; 0x4666666], [0x0 ~&gt; 0x4666666], [0x0 ~&gt; 0x4666666], [0x0 ~&gt; 0x4666666], [0x0 ~&gt; 0x4666666]] <p>
  */
 public static void fiat_Poly1305_carry_square(int[] out1, final int[] arg1) {
   int x1 = ((arg1[4]) * 0x5);
-  long x2 = (Long.valueOf(x1).longValue() * Long.valueOf(0x2).longValue());
+  int x2 = (x1 * 0x2);
   int x3 = ((arg1[4]) * 0x2);
   int x4 = ((arg1[3]) * 0x5);
-  long x5 = (Long.valueOf(x4).longValue() * Long.valueOf(0x2).longValue());
+  int x5 = (x4 * 0x2);
   int x6 = ((arg1[3]) * 0x2);
   int x7 = ((arg1[2]) * 0x2);
   int x8 = ((arg1[1]) * 0x2);
   long x9 = (Long.valueOf((arg1[4])).longValue() * Long.valueOf(x1).longValue());
-  long x10 = (Long.valueOf((arg1[3])).longValue() * x2);
+  long x10 = (Long.valueOf((arg1[3])).longValue() * Long.valueOf(x2).longValue());
   long x11 = (Long.valueOf((arg1[3])).longValue() * Long.valueOf(x4).longValue());
-  long x12 = (Long.valueOf((arg1[2])).longValue() * x2);
-  long x13 = (Long.valueOf((arg1[2])).longValue() * x5);
+  long x12 = (Long.valueOf((arg1[2])).longValue() * Long.valueOf(x2).longValue());
+  long x13 = (Long.valueOf((arg1[2])).longValue() * Long.valueOf(x5).longValue());
   long x14 = (Long.valueOf((arg1[2])).longValue() * Long.valueOf((arg1[2])).longValue());
-  long x15 = (Long.valueOf((arg1[1])).longValue() * x2);
+  long x15 = (Long.valueOf((arg1[1])).longValue() * Long.valueOf(x2).longValue());
   long x16 = (Long.valueOf((arg1[1])).longValue() * Long.valueOf(x6).longValue());
   long x17 = (Long.valueOf((arg1[1])).longValue() * Long.valueOf(x7).longValue());
   long x18 = (Long.valueOf((arg1[1])).longValue() * Long.valueOf((arg1[1])).longValue());
@@ -231,7 +231,7 @@ public static void fiat_Poly1305_carry_square(int[] out1, final int[] arg1) {
  *   eval out1 mod m = eval arg1 mod m <p>
  * <p>
  * Input Bounds: <p>
- *   arg1: [[0x0 ~&gt; 0xd333332], [0x0 ~&gt; 0xd333332], [0x0 ~&gt; 0xd333332], [0x0 ~&gt; 0xd333332], [0x0 ~&gt; 0xd333332]] <p>
+ *   arg1: [[0x0 ~&gt; 0xc66665c], [0x0 ~&gt; 0xc666664], [0x0 ~&gt; 0xc666664], [0x0 ~&gt; 0xc666664], [0x0 ~&gt; 0xc666664]] <p>
  * Output Bounds: <p>
  *   out1: [[0x0 ~&gt; 0x4666666], [0x0 ~&gt; 0x4666666], [0x0 ~&gt; 0x4666666], [0x0 ~&gt; 0x4666666], [0x0 ~&gt; 0x4666666]] <p>
  */
@@ -264,7 +264,7 @@ public static void fiat_Poly1305_carry(int[] out1, final int[] arg1) {
  *   arg1: [[0x0 ~&gt; 0x4666666], [0x0 ~&gt; 0x4666666], [0x0 ~&gt; 0x4666666], [0x0 ~&gt; 0x4666666], [0x0 ~&gt; 0x4666666]] <p>
  *   arg2: [[0x0 ~&gt; 0x4666666], [0x0 ~&gt; 0x4666666], [0x0 ~&gt; 0x4666666], [0x0 ~&gt; 0x4666666], [0x0 ~&gt; 0x4666666]] <p>
  * Output Bounds: <p>
- *   out1: [[0x0 ~&gt; 0xd333332], [0x0 ~&gt; 0xd333332], [0x0 ~&gt; 0xd333332], [0x0 ~&gt; 0xd333332], [0x0 ~&gt; 0xd333332]] <p>
+ *   out1: [[0x0 ~&gt; 0xc66665c], [0x0 ~&gt; 0xc666664], [0x0 ~&gt; 0xc666664], [0x0 ~&gt; 0xc666664], [0x0 ~&gt; 0xc666664]] <p>
  */
 public static void fiat_Poly1305_add(int[] out1, final int[] arg1, final int[] arg2) {
   int x1 = ((arg1[0]) + (arg2[0]));
@@ -288,7 +288,7 @@ public static void fiat_Poly1305_add(int[] out1, final int[] arg1, final int[] a
  *   arg1: [[0x0 ~&gt; 0x4666666], [0x0 ~&gt; 0x4666666], [0x0 ~&gt; 0x4666666], [0x0 ~&gt; 0x4666666], [0x0 ~&gt; 0x4666666]] <p>
  *   arg2: [[0x0 ~&gt; 0x4666666], [0x0 ~&gt; 0x4666666], [0x0 ~&gt; 0x4666666], [0x0 ~&gt; 0x4666666], [0x0 ~&gt; 0x4666666]] <p>
  * Output Bounds: <p>
- *   out1: [[0x0 ~&gt; 0xd333332], [0x0 ~&gt; 0xd333332], [0x0 ~&gt; 0xd333332], [0x0 ~&gt; 0xd333332], [0x0 ~&gt; 0xd333332]] <p>
+ *   out1: [[0x0 ~&gt; 0xc66665c], [0x0 ~&gt; 0xc666664], [0x0 ~&gt; 0xc666664], [0x0 ~&gt; 0xc666664], [0x0 ~&gt; 0xc666664]] <p>
  */
 public static void fiat_Poly1305_sub(int[] out1, final int[] arg1, final int[] arg2) {
   int x1 = ((0x7fffff6 + (arg1[0])) - (arg2[0]));
@@ -311,7 +311,7 @@ public static void fiat_Poly1305_sub(int[] out1, final int[] arg1, final int[] a
  * Input Bounds: <p>
  *   arg1: [[0x0 ~&gt; 0x4666666], [0x0 ~&gt; 0x4666666], [0x0 ~&gt; 0x4666666], [0x0 ~&gt; 0x4666666], [0x0 ~&gt; 0x4666666]] <p>
  * Output Bounds: <p>
- *   out1: [[0x0 ~&gt; 0xd333332], [0x0 ~&gt; 0xd333332], [0x0 ~&gt; 0xd333332], [0x0 ~&gt; 0xd333332], [0x0 ~&gt; 0xd333332]] <p>
+ *   out1: [[0x0 ~&gt; 0xc66665c], [0x0 ~&gt; 0xc666664], [0x0 ~&gt; 0xc666664], [0x0 ~&gt; 0xc666664], [0x0 ~&gt; 0xc666664]] <p>
  */
 public static void fiat_Poly1305_opp(int[] out1, final int[] arg1) {
   int x1 = (0x7fffff6 - (arg1[0]));

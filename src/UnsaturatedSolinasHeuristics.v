@@ -86,8 +86,8 @@ else:
   (** We compute loose bounds based on how much headspace we have in
       each limb, and treat separately the maximum number of additions
       and subtractions that we guarantee *)
-  (** Allow enough space to do two additions in a row w/o carrying *)
-  Definition headspace_add_count : nat := 2.
+  (** Allow enough space to do one addition w/o carrying *)
+  Definition headspace_add_count : nat := 1.
   (** Allow enough space to do one subtraction w/o carrying *)
   Definition headspace_sub_count : nat := 1.
 
