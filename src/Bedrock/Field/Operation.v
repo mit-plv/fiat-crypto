@@ -174,7 +174,7 @@ Ltac find_input_array :=
 
 Ltac post_sufficient :=
   repeat intro;
-  simplify_translate_func_postcondition;
+  try simplify_translate_func_postcondition;
   type_simplify;
   repeat match goal with
          | _ => progress ssplit; try congruence
@@ -183,6 +183,9 @@ Ltac post_sufficient :=
            rewrite <-H in *
          | _ => progress sepsimpl;
                 [ solve [find_input_array] .. | ]
+         | H:postcondition ?op ?args ?x
+           |- postcondition ?op ?args ?y =>
+           ssubst; replace y with x; [ exact H | solve [auto] .. ]
          end;
   ssubst.
 

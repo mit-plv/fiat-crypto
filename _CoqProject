@@ -70,6 +70,7 @@ src/Bedrock/Field/Bignum.v
 src/Bedrock/Field/Tactics.v
 src/Bedrock/Field/Operation.v
 src/Bedrock/Field/UnsaturatedSolinas.v
+src/Bedrock/Field/WordByWordMontgomery.v
 src/Bedrock/Names/MakeNames.v
 src/Bedrock/Names/VarnameGenerator.v
 src/Bedrock/Parameters/Defaults.v
