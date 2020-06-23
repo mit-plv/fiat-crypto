@@ -66,6 +66,7 @@ src/Bedrock/Arrays/ByteBounds.v
 src/Bedrock/Arrays/MakeAccessSizes.v
 src/Bedrock/Arrays/MakeListLengths.v
 src/Bedrock/Arrays/MaxBounds.v
+src/Bedrock/Field/Bignum.v
 src/Bedrock/Field/Tactics.v
 src/Bedrock/Field/Operation.v
 src/Bedrock/Field/UnsaturatedSolinas.v
