@@ -166,6 +166,19 @@ Section Expr.
     | _ => false
     end.
 
+  (* opp is the only unary operation we accept *)
+  Definition is_opp_ident {t} (i : ident t) : bool :=
+    match i with
+    | ident.Z_opp => true
+    | _ => false
+    end.
+  Definition is_opp_ident_expr
+             {t} (e : @API.expr (fun _ => unit) t) :=
+    match e with
+    | expr.Ident (type.arrow type_Z type_Z) i => is_opp_ident i
+    | _ => false
+    end.
+
   (* TODO: too many boolean arguments, change to a "mode" inductive *)
   (* add an extra flag to translate binops because otherwise the inductive
      hypothesis won't be strong enough to give information about *both*
@@ -221,9 +234,14 @@ Section Expr.
                else if valid_expr_bool' false false true require_casts f
                     then (* f is a select; make sure x = 2^w-1 *)
                       is_literalz x (2^Semantics.width-1)
-                    else (* must be a cast *)
-                      (valid_expr_App1_bool require_casts f)
-                        && valid_expr_bool' false false false false x
+                    else
+                      if is_opp_ident_expr f
+                      then (* f is opp *)
+                        (negb require_casts)
+                          && valid_expr_bool' false false false true x
+                      else (* must be a cast *)
+                        (valid_expr_App1_bool require_casts f)
+                          && valid_expr_bool' false false false false x
         | expr.App type_ZZ type_Z f x =>
           (* fst or snd *)
           (valid_expr_App1_bool require_casts f)
@@ -805,6 +823,34 @@ Section Expr.
     Z.ltb_to_lt; subst; congruence.
   Qed.
 
+  Lemma is_opp_ident_eq {t} (i : ident.ident t) :
+    is_opp_ident i = true ->
+    (match t as t0 return ident.ident t0 -> Prop with
+     | type.arrow type_Z type_Z => fun i => i = ident.Z_opp
+     | _ => fun _ => False
+     end) i.
+  Proof.
+    cbv [is_opp_ident]. break_match; congruence.
+  Qed.
+
+  Lemma is_opp_ident_expr_eq {t} (f : API.expr t) :
+    is_opp_ident_expr f = true ->
+    (match t as t0 return API.expr t0 -> Prop with
+     | type.arrow type_Z type_Z =>
+       fun f => f = expr.Ident ident.Z_opp
+     | _ => fun _ => False
+     end) f.
+  Proof.
+    cbv [is_opp_ident_expr].
+    break_match; try congruence; [ ].
+    intros;
+      match goal with
+      | H : is_opp_ident _ = true |- _ =>
+        apply is_opp_ident_eq in H
+      end.
+    congruence.
+  Qed.
+
   Lemma valid_expr_select_bool_impl1 {t}
         rc (f : API.expr t) :
     valid_expr_select_bool rc f = true ->
@@ -949,6 +995,16 @@ Section Expr.
       { (* fully-applied select case *)
         intros.
         apply (IHe1 false false true); eauto. }
+      { (* opp case *)
+        intros.
+        repeat match goal with
+               | H : is_opp_ident_expr _ = true |- _ =>
+                 apply is_opp_ident_expr_eq in H; subst
+               | H : negb ?rc = true |- _ =>
+                 destruct rc; cbn [negb] in *; try congruence; [ ]
+               end.
+        econstructor.
+        eauto. }
       { (* cast Z case *)
         intros.
         apply (valid_expr_App1_bool_impl1
