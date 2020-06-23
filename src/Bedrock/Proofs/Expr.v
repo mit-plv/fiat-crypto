@@ -139,6 +139,11 @@ Section Expr.
                                 (expr.App (expr.Ident ident.Z_zselect) c)
                                 (expr.Ident (ident.Literal (t:=base.type.Z) x)))
                                 (expr.Ident (ident.Literal (t:=base.type.Z) y)))
+  | valid_opp :
+      forall (x : API.expr type_Z),
+        valid_expr true x ->
+        valid_expr (t:=type_Z) false
+                   (expr.App (expr.Ident ident.Z_opp) x)
   | valid_binop :
       forall i (x y : API.expr type_Z),
         translate_binop i <> None ->
@@ -668,6 +673,23 @@ Section Expr.
         by (rewrite ?Z.mod_1_l; auto with zarith).
       Z.rewrite_mod_small.
       reflexivity. }
+    { (* opp *)
+      specialize (IHvalid_expr _ _ _ _
+                               ltac:(eassumption) ltac:(eassumption)).
+      cbn [locally_equivalent_nobounds
+             locally_equivalent_nobounds_base
+             locally_equivalent equivalent
+             equivalent_base rep.equiv rep.Z ident.literal] in *.
+      cbv [WeakestPrecondition.dexpr ident.literal] in *.
+      cbn [WeakestPrecondition.expr WeakestPrecondition.expr_body
+                                    Semantics.interp_binop].
+      sepsimpl_hyps.
+      eapply Proper_expr; [ | eassumption ].
+      repeat intro; subst.
+      apply word.unsigned_inj.
+      rewrite word.unsigned_sub, word.unsigned_of_Z_0.
+      rewrite !word.unsigned_of_Z.
+      f_equal. lia. }
   Qed.
 
   Lemma translate_expr_correct {t}
