@@ -255,6 +255,7 @@ Section freeze_mod_ops.
   Proof using Hs_big limbwidth_good.
     clear -Hs_big limbwidth_good.
     intros; cbv [to_bytes].
+    pose proof bytes_nz.
     apply BaseConversion.convert_bases_partitions; eauto; try lia.
     split; [ | eapply Z.lt_le_trans ]; [ apply Hf_small.. | ].
     cbv [bytes_weight bytes_n].
@@ -329,8 +330,8 @@ Section freeze_mod_ops.
     : forall (f : list Z)
              (Hf_small : 0 <= eval bytes_weight bytes_n f < weight n),
       from_bytes f = Partition.partition weight n (Positional.eval bytes_weight bytes_n f).
-  Proof using limbwidth_good.
-    clear -limbwidth_good.
+  Proof using limbwidth_good Hn_nz.
+    clear -limbwidth_good Hn_nz.
     intros; cbv [from_bytes].
     apply BaseConversion.convert_bases_partitions; eauto; lia.
   Qed.
@@ -345,7 +346,7 @@ Section freeze_mod_ops.
     : forall (f : list Z)
              (Hf_small : 0 <= eval bytes_weight bytes_n f < weight n),
       from_bytesmod f = Partition.partition weight n (Positional.eval bytes_weight bytes_n f).
-  Proof using limbwidth_good. apply from_bytes_partitions. Qed.
+  Proof using limbwidth_good Hn_nz. apply from_bytes_partitions. Qed.
 
   Lemma eval_from_bytesmod_and_partitions
     : forall (f : list Z)

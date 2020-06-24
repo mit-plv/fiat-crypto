@@ -19,16 +19,34 @@ Module BaseConversion.
             {dwprops : @weight_properties dw}.
 
     Definition convert_bases (sn dn : nat) (p : list Z) : list Z :=
-      let p' := Positional.from_associational dw dn (Positional.to_associational sw sn p) in
-      chained_carries_no_reduce dw dn p' (seq 0 (pred dn)).
+      let a := Positional.to_associational sw sn p in
+      let b := Columns.from_associational dw dn a in
+      let c := Columns.flatten dw b in
+      let d := add_to_nth
+                 (pred dn) (snd c * (dw dn / dw (pred dn))) (fst c) in
+      d.
+
+    Hint Rewrite @Columns.length_from_associational @Columns.length_flatten
+      : distr_length.
 
     Lemma eval_convert_bases sn dn p :
       (dn <> 0%nat) -> length p = sn ->
       eval dw dn (convert_bases sn dn p) = eval sw sn p.
     Proof using dwprops.
       cbv [convert_bases]; intros.
-      rewrite eval_chained_carries_no_reduce by auto with zarith.
-      rewrite eval_from_associational; auto with zarith.
+      rewrite eval_add_to_nth by distr_length.
+      rewrite Columns.flatten_mod by (auto; distr_length).
+      erewrite Columns.flatten_div by (auto; distr_length).
+      distr_length.
+      rewrite !Columns.eval_from_associational by auto.
+      rewrite eval_to_associational.
+      match goal with
+      | |- context [?a * (?b * (?c / ?a))] =>
+        replace (a * (b * (c / a))) with (a * (c / a) * b) by Lia.lia
+      end.
+      rewrite <-Weight.weight_div_mod by (auto; Lia.lia).
+      pose proof (weight_positive dwprops dn).
+      rewrite <-Z.div_mod; auto; Lia.lia.
     Qed.
 
     Lemma length_convert_bases sn dn p
@@ -38,22 +56,29 @@ Module BaseConversion.
     Qed.
     Hint Rewrite length_convert_bases : distr_length.
 
+    (* TODO: move *)
+    Lemma add_to_nth_zero i l : add_to_nth i 0 l = l.
+    Proof.
+      cbv [add_to_nth]. apply update_nth_id_eq.
+      reflexivity.
+    Qed.
+
     Lemma convert_bases_partitions sn dn p
           (dw_unique : forall i j : nat, (i <= dn)%nat -> (j <= dn)%nat -> dw i = dw j -> i = j)
+          (dn_pos : dn <> 0%nat)
           (p_bounded : 0 <= eval sw sn p < dw dn)
       : convert_bases sn dn p = Partition.partition dw dn (eval sw sn p).
     Proof using dwprops.
-      apply list_elementwise_eq; intro i.
-      destruct (lt_dec i dn); [ | now rewrite !nth_error_length_error by distr_length ].
-      erewrite !(@nth_error_Some_nth_default _ _ 0) by (break_match; distr_length).
-      apply f_equal.
-      cbv [convert_bases Partition.partition].
-      unshelve erewrite map_nth_default, nth_default_chained_carries_no_reduce_pred;
-        repeat first [ progress autorewrite with distr_length push_eval
-                     | rewrite eval_from_associational, eval_to_associational
-                     | rewrite nth_default_seq_inbounds
-                     | apply dwprops
-                     | destruct dwprops; now auto with zarith ].
+      cbv [convert_bases].
+      erewrite Columns.flatten_div by (auto; distr_length).
+      distr_length.
+      erewrite Columns.flatten_correct by (auto; distr_length).
+      distr_length.
+      rewrite Columns.eval_from_associational by auto.
+      rewrite eval_to_associational.
+      rewrite Z.div_small by Lia.lia.
+      autorewrite with zsimplify_fast.
+      rewrite add_to_nth_zero. reflexivity.
     Qed.
 
     Hint Rewrite
@@ -320,8 +345,8 @@ Section base_conversion_mod_ops.
     : forall (f : list Z)
              (Hf_small : 0 <= eval src_weight src_n f < dst_weight dst_n),
       convert_bases f = Partition.partition dst_weight dst_n (Positional.eval src_weight src_n f).
-  Proof using dst_limbwidth_good.
-    clear -dst_limbwidth_good.
+  Proof using dst_limbwidth_good Hdst_n_nz.
+    clear -dst_limbwidth_good Hdst_n_nz.
     intros; cbv [convert_bases].
     apply BaseConversion.convert_bases_partitions; eauto.
   Qed.
@@ -336,7 +361,7 @@ Section base_conversion_mod_ops.
     : forall (f : list Z)
              (Hf_small : 0 <= eval src_weight src_n f < dst_weight dst_n),
       convert_basesmod f = Partition.partition dst_weight dst_n (Positional.eval src_weight src_n f).
-  Proof using dst_limbwidth_good. apply convert_bases_partitions. Qed.
+  Proof using dst_limbwidth_good Hdst_n_nz. apply convert_bases_partitions. Qed.
 
   Lemma eval_convert_basesmod_and_partitions
     : forall (f : list Z)
