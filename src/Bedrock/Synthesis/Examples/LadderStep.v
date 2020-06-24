@@ -13,6 +13,7 @@ Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Bedrock.Parameters.Defaults.
 Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Types.
+Require Import Crypto.Bedrock.Field.Bignum.
 Require Import Crypto.Bedrock.Field.Operation.
 Require Import Crypto.Bedrock.Field.UnsaturatedSolinas.
 Require Import Crypto.Bedrock.Parameters.SelectParameters.
