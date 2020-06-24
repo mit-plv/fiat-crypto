@@ -35,4 +35,4 @@ jobs:
     - name: BoringSSL C test
       run: EXTRA_CFLAGS="" etc/ci/test-fiat-c-boringssl.sh fiat-c/src
     - name: BoringSSL bedrock2 test
-      run: EXTRA_CFLAGS="$(make bedrock2-extra-cflags SKIP_INCLUDE=1 2>/dev/null)" etc/ci/test-fiat-c-boringssl.sh fiat-bedrock2/src
+      run: EXTRA_CFLAGS="$(make bedrock2-extra-boringssl-cflags SKIP_INCLUDE=1 2>/dev/null)" etc/ci/test-fiat-c-boringssl.sh fiat-bedrock2/src

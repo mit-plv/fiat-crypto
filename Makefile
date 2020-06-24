@@ -203,6 +203,7 @@ BEDROCK2_WORD_BY_WORD_MONTGOMERY := src/ExtractionOCaml/bedrock2_word_by_word_mo
 
 BEDROCK2_ARGS := --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select
 BEDROCK2_EXTRA_CFLAGS := -Wno-error=unused-but-set-variable -Wno-error=tautological-compare
+BEDROCK2_EXTRA_BORINGSSL_CFLAGS := -Wno-error=int-conversion -Wno-error=missing-prototypes $(BEDROCK2_EXTRA_CFLAGS)
 
 GO_EXTRA_ARGS_ALL := --cmovznz-by-mul --widen-carry --widen-bytes
 GO_EXTRA_ARGS_64  := --no-wide-int $(GO_EXTRA_ARGS_ALL)
@@ -215,6 +216,10 @@ JAVA_EXTRA_ARGS_32  := $(JAVA_EXTRA_ARGS_ALL)
 .PHONY: bedrock2-extra-cflags
 bedrock2-extra-cflags:
 	@echo "$(BEDROCK2_EXTRA_CFLAGS)"
+
+.PHONY: bedrock2-extra-boringssl-cflags
+bedrock2-extra-boringssl-cflags:
+	@echo "$(BEDROCK2_EXTRA_BORINGSSL_CFLAGS)"
 
 OUTPUT_VOS := \
 	src/Fancy/Montgomery256.vo \
