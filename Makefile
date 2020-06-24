@@ -43,8 +43,11 @@ INSTALLDEFAULTROOT := Crypto
 	check-output accept-output
 
 TIMEFMT?="$@ (real: %e, user: %U, sys: %S, mem: %M ko)"
+SKIP_INCLUDE?=
+ifneq ($(SKIP_INCLUDE),1)
 -include Makefile.coq
 include etc/coq-scripts/Makefile.vo_closure
+endif
 
 .DEFAULT_GOAL := all
 
@@ -208,6 +211,10 @@ GO_EXTRA_ARGS_32  := $(GO_EXTRA_ARGS_ALL)
 JAVA_EXTRA_ARGS_ALL := --cmovznz-by-mul --widen-carry --widen-bytes --internal-static --only-signed
 JAVA_EXTRA_ARGS_64  := --no-wide-int $(JAVA_EXTRA_ARGS_ALL)
 JAVA_EXTRA_ARGS_32  := $(JAVA_EXTRA_ARGS_ALL)
+
+.PHONY: bedrock2-extra-cflags
+bedrock2-extra-cflags:
+	@echo "$(BEDROCK2_EXTRA_CFLAGS)"
 
 OUTPUT_VOS := \
 	src/Fancy/Montgomery256.vo \
@@ -531,7 +538,9 @@ javadoc only-javadoc:
 
 # Perf testing
 PERF_MAKEFILE = src/Rewriter/PerfTesting/Specific/generated/primes.mk
+ifneq ($(SKIP_INCLUDE),1)
 include $(PERF_MAKEFILE)
+endif
 
 $(PERF_MAKEFILE): Makefile src/Rewriter/PerfTesting/Specific/make.py primes.txt
 	./src/Rewriter/PerfTesting/Specific/make.py primes.txt
