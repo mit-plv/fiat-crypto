@@ -37,9 +37,12 @@ typedef unsigned __int128 fiat_poly1305_uint128;
  *   out2: [0x0 ~> 0x1]
  */
 static void fiat_poly1305_addcarryx_u44(uint64_t* out1, fiat_poly1305_uint1* out2, fiat_poly1305_uint1 arg1, uint64_t arg2, uint64_t arg3) {
-  uint64_t x1 = ((arg1 + arg2) + arg3);
-  uint64_t x2 = (x1 & UINT64_C(0xfffffffffff));
-  fiat_poly1305_uint1 x3 = (fiat_poly1305_uint1)(x1 >> 44);
+  uint64_t x1;
+  uint64_t x2;
+  fiat_poly1305_uint1 x3;
+  x1 = ((arg1 + arg2) + arg3);
+  x2 = (x1 & UINT64_C(0xfffffffffff));
+  x3 = (fiat_poly1305_uint1)(x1 >> 44);
   *out1 = x2;
   *out2 = x3;
 }
@@ -59,9 +62,12 @@ static void fiat_poly1305_addcarryx_u44(uint64_t* out1, fiat_poly1305_uint1* out
  *   out2: [0x0 ~> 0x1]
  */
 static void fiat_poly1305_subborrowx_u44(uint64_t* out1, fiat_poly1305_uint1* out2, fiat_poly1305_uint1 arg1, uint64_t arg2, uint64_t arg3) {
-  int64_t x1 = ((int64_t)(arg2 - (int64_t)arg1) - (int64_t)arg3);
-  fiat_poly1305_int1 x2 = (fiat_poly1305_int1)(x1 >> 44);
-  uint64_t x3 = (x1 & UINT64_C(0xfffffffffff));
+  int64_t x1;
+  fiat_poly1305_int1 x2;
+  uint64_t x3;
+  x1 = ((int64_t)(arg2 - (int64_t)arg1) - (int64_t)arg3);
+  x2 = (fiat_poly1305_int1)(x1 >> 44);
+  x3 = (x1 & UINT64_C(0xfffffffffff));
   *out1 = x3;
   *out2 = (fiat_poly1305_uint1)(0x0 - x2);
 }
@@ -81,9 +87,12 @@ static void fiat_poly1305_subborrowx_u44(uint64_t* out1, fiat_poly1305_uint1* ou
  *   out2: [0x0 ~> 0x1]
  */
 static void fiat_poly1305_addcarryx_u43(uint64_t* out1, fiat_poly1305_uint1* out2, fiat_poly1305_uint1 arg1, uint64_t arg2, uint64_t arg3) {
-  uint64_t x1 = ((arg1 + arg2) + arg3);
-  uint64_t x2 = (x1 & UINT64_C(0x7ffffffffff));
-  fiat_poly1305_uint1 x3 = (fiat_poly1305_uint1)(x1 >> 43);
+  uint64_t x1;
+  uint64_t x2;
+  fiat_poly1305_uint1 x3;
+  x1 = ((arg1 + arg2) + arg3);
+  x2 = (x1 & UINT64_C(0x7ffffffffff));
+  x3 = (fiat_poly1305_uint1)(x1 >> 43);
   *out1 = x2;
   *out2 = x3;
 }
@@ -103,9 +112,12 @@ static void fiat_poly1305_addcarryx_u43(uint64_t* out1, fiat_poly1305_uint1* out
  *   out2: [0x0 ~> 0x1]
  */
 static void fiat_poly1305_subborrowx_u43(uint64_t* out1, fiat_poly1305_uint1* out2, fiat_poly1305_uint1 arg1, uint64_t arg2, uint64_t arg3) {
-  int64_t x1 = ((int64_t)(arg2 - (int64_t)arg1) - (int64_t)arg3);
-  fiat_poly1305_int1 x2 = (fiat_poly1305_int1)(x1 >> 43);
-  uint64_t x3 = (x1 & UINT64_C(0x7ffffffffff));
+  int64_t x1;
+  fiat_poly1305_int1 x2;
+  uint64_t x3;
+  x1 = ((int64_t)(arg2 - (int64_t)arg1) - (int64_t)arg3);
+  x2 = (fiat_poly1305_int1)(x1 >> 43);
+  x3 = (x1 & UINT64_C(0x7ffffffffff));
   *out1 = x3;
   *out2 = (fiat_poly1305_uint1)(0x0 - x2);
 }
@@ -123,9 +135,12 @@ static void fiat_poly1305_subborrowx_u43(uint64_t* out1, fiat_poly1305_uint1* ou
  *   out1: [0x0 ~> 0xffffffffffffffff]
  */
 static void fiat_poly1305_cmovznz_u64(uint64_t* out1, fiat_poly1305_uint1 arg1, uint64_t arg2, uint64_t arg3) {
-  fiat_poly1305_uint1 x1 = (!(!arg1));
-  uint64_t x2 = ((fiat_poly1305_int1)(0x0 - x1) & UINT64_C(0xffffffffffffffff));
-  uint64_t x3 = ((x2 & arg3) | ((~x2) & arg2));
+  fiat_poly1305_uint1 x1;
+  uint64_t x2;
+  uint64_t x3;
+  x1 = (!(!arg1));
+  x2 = ((fiat_poly1305_int1)(0x0 - x1) & UINT64_C(0xffffffffffffffff));
+  x3 = ((x2 & arg3) | ((~x2) & arg2));
   *out1 = x3;
 }
 
@@ -141,34 +156,62 @@ static void fiat_poly1305_cmovznz_u64(uint64_t* out1, fiat_poly1305_uint1 arg1, 
  *   out1: [[0x0 ~> 0x119999999999], [0x0 ~> 0x8cccccccccc], [0x0 ~> 0x8cccccccccc]]
  */
 static void fiat_poly1305_carry_mul(uint64_t out1[3], const uint64_t arg1[3], const uint64_t arg2[3]) {
-  fiat_poly1305_uint128 x1 = ((fiat_poly1305_uint128)(arg1[2]) * ((arg2[2]) * 0x5));
-  fiat_poly1305_uint128 x2 = ((fiat_poly1305_uint128)(arg1[2]) * ((arg2[1]) * 0xa));
-  fiat_poly1305_uint128 x3 = ((fiat_poly1305_uint128)(arg1[1]) * ((arg2[2]) * 0xa));
-  fiat_poly1305_uint128 x4 = ((fiat_poly1305_uint128)(arg1[2]) * (arg2[0]));
-  fiat_poly1305_uint128 x5 = ((fiat_poly1305_uint128)(arg1[1]) * ((arg2[1]) * 0x2));
-  fiat_poly1305_uint128 x6 = ((fiat_poly1305_uint128)(arg1[1]) * (arg2[0]));
-  fiat_poly1305_uint128 x7 = ((fiat_poly1305_uint128)(arg1[0]) * (arg2[2]));
-  fiat_poly1305_uint128 x8 = ((fiat_poly1305_uint128)(arg1[0]) * (arg2[1]));
-  fiat_poly1305_uint128 x9 = ((fiat_poly1305_uint128)(arg1[0]) * (arg2[0]));
-  fiat_poly1305_uint128 x10 = (x9 + (x3 + x2));
-  uint64_t x11 = (uint64_t)(x10 >> 44);
-  uint64_t x12 = (uint64_t)(x10 & UINT64_C(0xfffffffffff));
-  fiat_poly1305_uint128 x13 = (x7 + (x5 + x4));
-  fiat_poly1305_uint128 x14 = (x8 + (x6 + x1));
-  fiat_poly1305_uint128 x15 = (x11 + x14);
-  uint64_t x16 = (uint64_t)(x15 >> 43);
-  uint64_t x17 = (uint64_t)(x15 & UINT64_C(0x7ffffffffff));
-  fiat_poly1305_uint128 x18 = (x16 + x13);
-  uint64_t x19 = (uint64_t)(x18 >> 43);
-  uint64_t x20 = (uint64_t)(x18 & UINT64_C(0x7ffffffffff));
-  uint64_t x21 = (x19 * 0x5);
-  uint64_t x22 = (x12 + x21);
-  uint64_t x23 = (x22 >> 44);
-  uint64_t x24 = (x22 & UINT64_C(0xfffffffffff));
-  uint64_t x25 = (x23 + x17);
-  fiat_poly1305_uint1 x26 = (fiat_poly1305_uint1)(x25 >> 43);
-  uint64_t x27 = (x25 & UINT64_C(0x7ffffffffff));
-  uint64_t x28 = (x26 + x20);
+  fiat_poly1305_uint128 x1;
+  fiat_poly1305_uint128 x2;
+  fiat_poly1305_uint128 x3;
+  fiat_poly1305_uint128 x4;
+  fiat_poly1305_uint128 x5;
+  fiat_poly1305_uint128 x6;
+  fiat_poly1305_uint128 x7;
+  fiat_poly1305_uint128 x8;
+  fiat_poly1305_uint128 x9;
+  fiat_poly1305_uint128 x10;
+  uint64_t x11;
+  uint64_t x12;
+  fiat_poly1305_uint128 x13;
+  fiat_poly1305_uint128 x14;
+  fiat_poly1305_uint128 x15;
+  uint64_t x16;
+  uint64_t x17;
+  fiat_poly1305_uint128 x18;
+  uint64_t x19;
+  uint64_t x20;
+  uint64_t x21;
+  uint64_t x22;
+  uint64_t x23;
+  uint64_t x24;
+  uint64_t x25;
+  fiat_poly1305_uint1 x26;
+  uint64_t x27;
+  uint64_t x28;
+  x1 = ((fiat_poly1305_uint128)(arg1[2]) * ((arg2[2]) * 0x5));
+  x2 = ((fiat_poly1305_uint128)(arg1[2]) * ((arg2[1]) * 0xa));
+  x3 = ((fiat_poly1305_uint128)(arg1[1]) * ((arg2[2]) * 0xa));
+  x4 = ((fiat_poly1305_uint128)(arg1[2]) * (arg2[0]));
+  x5 = ((fiat_poly1305_uint128)(arg1[1]) * ((arg2[1]) * 0x2));
+  x6 = ((fiat_poly1305_uint128)(arg1[1]) * (arg2[0]));
+  x7 = ((fiat_poly1305_uint128)(arg1[0]) * (arg2[2]));
+  x8 = ((fiat_poly1305_uint128)(arg1[0]) * (arg2[1]));
+  x9 = ((fiat_poly1305_uint128)(arg1[0]) * (arg2[0]));
+  x10 = (x9 + (x3 + x2));
+  x11 = (uint64_t)(x10 >> 44);
+  x12 = (uint64_t)(x10 & UINT64_C(0xfffffffffff));
+  x13 = (x7 + (x5 + x4));
+  x14 = (x8 + (x6 + x1));
+  x15 = (x11 + x14);
+  x16 = (uint64_t)(x15 >> 43);
+  x17 = (uint64_t)(x15 & UINT64_C(0x7ffffffffff));
+  x18 = (x16 + x13);
+  x19 = (uint64_t)(x18 >> 43);
+  x20 = (uint64_t)(x18 & UINT64_C(0x7ffffffffff));
+  x21 = (x19 * 0x5);
+  x22 = (x12 + x21);
+  x23 = (x22 >> 44);
+  x24 = (x22 & UINT64_C(0xfffffffffff));
+  x25 = (x23 + x17);
+  x26 = (fiat_poly1305_uint1)(x25 >> 43);
+  x27 = (x25 & UINT64_C(0x7ffffffffff));
+  x28 = (x26 + x20);
   out1[0] = x24;
   out1[1] = x27;
   out1[2] = x28;
@@ -185,35 +228,64 @@ static void fiat_poly1305_carry_mul(uint64_t out1[3], const uint64_t arg1[3], co
  *   out1: [[0x0 ~> 0x119999999999], [0x0 ~> 0x8cccccccccc], [0x0 ~> 0x8cccccccccc]]
  */
 static void fiat_poly1305_carry_square(uint64_t out1[3], const uint64_t arg1[3]) {
-  uint64_t x1 = ((arg1[2]) * 0x5);
-  uint64_t x2 = (x1 * 0x2);
-  uint64_t x3 = ((arg1[2]) * 0x2);
-  uint64_t x4 = ((arg1[1]) * 0x2);
-  fiat_poly1305_uint128 x5 = ((fiat_poly1305_uint128)(arg1[2]) * x1);
-  fiat_poly1305_uint128 x6 = ((fiat_poly1305_uint128)(arg1[1]) * (x2 * 0x2));
-  fiat_poly1305_uint128 x7 = ((fiat_poly1305_uint128)(arg1[1]) * ((arg1[1]) * 0x2));
-  fiat_poly1305_uint128 x8 = ((fiat_poly1305_uint128)(arg1[0]) * x3);
-  fiat_poly1305_uint128 x9 = ((fiat_poly1305_uint128)(arg1[0]) * x4);
-  fiat_poly1305_uint128 x10 = ((fiat_poly1305_uint128)(arg1[0]) * (arg1[0]));
-  fiat_poly1305_uint128 x11 = (x10 + x6);
-  uint64_t x12 = (uint64_t)(x11 >> 44);
-  uint64_t x13 = (uint64_t)(x11 & UINT64_C(0xfffffffffff));
-  fiat_poly1305_uint128 x14 = (x8 + x7);
-  fiat_poly1305_uint128 x15 = (x9 + x5);
-  fiat_poly1305_uint128 x16 = (x12 + x15);
-  uint64_t x17 = (uint64_t)(x16 >> 43);
-  uint64_t x18 = (uint64_t)(x16 & UINT64_C(0x7ffffffffff));
-  fiat_poly1305_uint128 x19 = (x17 + x14);
-  uint64_t x20 = (uint64_t)(x19 >> 43);
-  uint64_t x21 = (uint64_t)(x19 & UINT64_C(0x7ffffffffff));
-  uint64_t x22 = (x20 * 0x5);
-  uint64_t x23 = (x13 + x22);
-  uint64_t x24 = (x23 >> 44);
-  uint64_t x25 = (x23 & UINT64_C(0xfffffffffff));
-  uint64_t x26 = (x24 + x18);
-  fiat_poly1305_uint1 x27 = (fiat_poly1305_uint1)(x26 >> 43);
-  uint64_t x28 = (x26 & UINT64_C(0x7ffffffffff));
-  uint64_t x29 = (x27 + x21);
+  uint64_t x1;
+  uint64_t x2;
+  uint64_t x3;
+  uint64_t x4;
+  fiat_poly1305_uint128 x5;
+  fiat_poly1305_uint128 x6;
+  fiat_poly1305_uint128 x7;
+  fiat_poly1305_uint128 x8;
+  fiat_poly1305_uint128 x9;
+  fiat_poly1305_uint128 x10;
+  fiat_poly1305_uint128 x11;
+  uint64_t x12;
+  uint64_t x13;
+  fiat_poly1305_uint128 x14;
+  fiat_poly1305_uint128 x15;
+  fiat_poly1305_uint128 x16;
+  uint64_t x17;
+  uint64_t x18;
+  fiat_poly1305_uint128 x19;
+  uint64_t x20;
+  uint64_t x21;
+  uint64_t x22;
+  uint64_t x23;
+  uint64_t x24;
+  uint64_t x25;
+  uint64_t x26;
+  fiat_poly1305_uint1 x27;
+  uint64_t x28;
+  uint64_t x29;
+  x1 = ((arg1[2]) * 0x5);
+  x2 = (x1 * 0x2);
+  x3 = ((arg1[2]) * 0x2);
+  x4 = ((arg1[1]) * 0x2);
+  x5 = ((fiat_poly1305_uint128)(arg1[2]) * x1);
+  x6 = ((fiat_poly1305_uint128)(arg1[1]) * (x2 * 0x2));
+  x7 = ((fiat_poly1305_uint128)(arg1[1]) * ((arg1[1]) * 0x2));
+  x8 = ((fiat_poly1305_uint128)(arg1[0]) * x3);
+  x9 = ((fiat_poly1305_uint128)(arg1[0]) * x4);
+  x10 = ((fiat_poly1305_uint128)(arg1[0]) * (arg1[0]));
+  x11 = (x10 + x6);
+  x12 = (uint64_t)(x11 >> 44);
+  x13 = (uint64_t)(x11 & UINT64_C(0xfffffffffff));
+  x14 = (x8 + x7);
+  x15 = (x9 + x5);
+  x16 = (x12 + x15);
+  x17 = (uint64_t)(x16 >> 43);
+  x18 = (uint64_t)(x16 & UINT64_C(0x7ffffffffff));
+  x19 = (x17 + x14);
+  x20 = (uint64_t)(x19 >> 43);
+  x21 = (uint64_t)(x19 & UINT64_C(0x7ffffffffff));
+  x22 = (x20 * 0x5);
+  x23 = (x13 + x22);
+  x24 = (x23 >> 44);
+  x25 = (x23 & UINT64_C(0xfffffffffff));
+  x26 = (x24 + x18);
+  x27 = (fiat_poly1305_uint1)(x26 >> 43);
+  x28 = (x26 & UINT64_C(0x7ffffffffff));
+  x29 = (x27 + x21);
   out1[0] = x25;
   out1[1] = x28;
   out1[2] = x29;
@@ -230,14 +302,22 @@ static void fiat_poly1305_carry_square(uint64_t out1[3], const uint64_t arg1[3])
  *   out1: [[0x0 ~> 0x119999999999], [0x0 ~> 0x8cccccccccc], [0x0 ~> 0x8cccccccccc]]
  */
 static void fiat_poly1305_carry(uint64_t out1[3], const uint64_t arg1[3]) {
-  uint64_t x1 = (arg1[0]);
-  uint64_t x2 = ((x1 >> 44) + (arg1[1]));
-  uint64_t x3 = ((x2 >> 43) + (arg1[2]));
-  uint64_t x4 = ((x1 & UINT64_C(0xfffffffffff)) + ((x3 >> 43) * 0x5));
-  uint64_t x5 = ((fiat_poly1305_uint1)(x4 >> 44) + (x2 & UINT64_C(0x7ffffffffff)));
-  uint64_t x6 = (x4 & UINT64_C(0xfffffffffff));
-  uint64_t x7 = (x5 & UINT64_C(0x7ffffffffff));
-  uint64_t x8 = ((fiat_poly1305_uint1)(x5 >> 43) + (x3 & UINT64_C(0x7ffffffffff)));
+  uint64_t x1;
+  uint64_t x2;
+  uint64_t x3;
+  uint64_t x4;
+  uint64_t x5;
+  uint64_t x6;
+  uint64_t x7;
+  uint64_t x8;
+  x1 = (arg1[0]);
+  x2 = ((x1 >> 44) + (arg1[1]));
+  x3 = ((x2 >> 43) + (arg1[2]));
+  x4 = ((x1 & UINT64_C(0xfffffffffff)) + ((x3 >> 43) * 0x5));
+  x5 = ((fiat_poly1305_uint1)(x4 >> 44) + (x2 & UINT64_C(0x7ffffffffff)));
+  x6 = (x4 & UINT64_C(0xfffffffffff));
+  x7 = (x5 & UINT64_C(0x7ffffffffff));
+  x8 = ((fiat_poly1305_uint1)(x5 >> 43) + (x3 & UINT64_C(0x7ffffffffff)));
   out1[0] = x6;
   out1[1] = x7;
   out1[2] = x8;
@@ -255,9 +335,12 @@ static void fiat_poly1305_carry(uint64_t out1[3], const uint64_t arg1[3]) {
  *   out1: [[0x0 ~> 0x34cccccccccb], [0x0 ~> 0x1a6666666664], [0x0 ~> 0x1a6666666664]]
  */
 static void fiat_poly1305_add(uint64_t out1[3], const uint64_t arg1[3], const uint64_t arg2[3]) {
-  uint64_t x1 = ((arg1[0]) + (arg2[0]));
-  uint64_t x2 = ((arg1[1]) + (arg2[1]));
-  uint64_t x3 = ((arg1[2]) + (arg2[2]));
+  uint64_t x1;
+  uint64_t x2;
+  uint64_t x3;
+  x1 = ((arg1[0]) + (arg2[0]));
+  x2 = ((arg1[1]) + (arg2[1]));
+  x3 = ((arg1[2]) + (arg2[2]));
   out1[0] = x1;
   out1[1] = x2;
   out1[2] = x3;
@@ -275,9 +358,12 @@ static void fiat_poly1305_add(uint64_t out1[3], const uint64_t arg1[3], const ui
  *   out1: [[0x0 ~> 0x34cccccccccb], [0x0 ~> 0x1a6666666664], [0x0 ~> 0x1a6666666664]]
  */
 static void fiat_poly1305_sub(uint64_t out1[3], const uint64_t arg1[3], const uint64_t arg2[3]) {
-  uint64_t x1 = ((UINT64_C(0x1ffffffffff6) + (arg1[0])) - (arg2[0]));
-  uint64_t x2 = ((UINT64_C(0xffffffffffe) + (arg1[1])) - (arg2[1]));
-  uint64_t x3 = ((UINT64_C(0xffffffffffe) + (arg1[2])) - (arg2[2]));
+  uint64_t x1;
+  uint64_t x2;
+  uint64_t x3;
+  x1 = ((UINT64_C(0x1ffffffffff6) + (arg1[0])) - (arg2[0]));
+  x2 = ((UINT64_C(0xffffffffffe) + (arg1[1])) - (arg2[1]));
+  x3 = ((UINT64_C(0xffffffffffe) + (arg1[2])) - (arg2[2]));
   out1[0] = x1;
   out1[1] = x2;
   out1[2] = x3;
@@ -294,9 +380,12 @@ static void fiat_poly1305_sub(uint64_t out1[3], const uint64_t arg1[3], const ui
  *   out1: [[0x0 ~> 0x34cccccccccb], [0x0 ~> 0x1a6666666664], [0x0 ~> 0x1a6666666664]]
  */
 static void fiat_poly1305_opp(uint64_t out1[3], const uint64_t arg1[3]) {
-  uint64_t x1 = (UINT64_C(0x1ffffffffff6) - (arg1[0]));
-  uint64_t x2 = (UINT64_C(0xffffffffffe) - (arg1[1]));
-  uint64_t x3 = (UINT64_C(0xffffffffffe) - (arg1[2]));
+  uint64_t x1;
+  uint64_t x2;
+  uint64_t x3;
+  x1 = (UINT64_C(0x1ffffffffff6) - (arg1[0]));
+  x2 = (UINT64_C(0xffffffffffe) - (arg1[1]));
+  x3 = (UINT64_C(0xffffffffffe) - (arg1[2]));
   out1[0] = x1;
   out1[1] = x2;
   out1[2] = x3;
@@ -316,10 +405,10 @@ static void fiat_poly1305_opp(uint64_t out1[3], const uint64_t arg1[3]) {
  */
 static void fiat_poly1305_selectznz(uint64_t out1[3], fiat_poly1305_uint1 arg1, const uint64_t arg2[3], const uint64_t arg3[3]) {
   uint64_t x1;
-  fiat_poly1305_cmovznz_u64(&x1, arg1, (arg2[0]), (arg3[0]));
   uint64_t x2;
-  fiat_poly1305_cmovznz_u64(&x2, arg1, (arg2[1]), (arg3[1]));
   uint64_t x3;
+  fiat_poly1305_cmovznz_u64(&x1, arg1, (arg2[0]), (arg3[0]));
+  fiat_poly1305_cmovznz_u64(&x2, arg1, (arg2[1]), (arg3[1]));
   fiat_poly1305_cmovznz_u64(&x3, arg1, (arg2[2]), (arg3[2]));
   out1[0] = x1;
   out1[1] = x2;
@@ -339,60 +428,96 @@ static void fiat_poly1305_selectznz(uint64_t out1[3], fiat_poly1305_uint1 arg1, 
 static void fiat_poly1305_to_bytes(uint8_t out1[17], const uint64_t arg1[3]) {
   uint64_t x1;
   fiat_poly1305_uint1 x2;
-  fiat_poly1305_subborrowx_u44(&x1, &x2, 0x0, (arg1[0]), UINT64_C(0xffffffffffb));
   uint64_t x3;
   fiat_poly1305_uint1 x4;
-  fiat_poly1305_subborrowx_u43(&x3, &x4, x2, (arg1[1]), UINT64_C(0x7ffffffffff));
   uint64_t x5;
   fiat_poly1305_uint1 x6;
-  fiat_poly1305_subborrowx_u43(&x5, &x6, x4, (arg1[2]), UINT64_C(0x7ffffffffff));
   uint64_t x7;
-  fiat_poly1305_cmovznz_u64(&x7, x6, 0x0, UINT64_C(0xffffffffffffffff));
   uint64_t x8;
   fiat_poly1305_uint1 x9;
-  fiat_poly1305_addcarryx_u44(&x8, &x9, 0x0, x1, (x7 & UINT64_C(0xffffffffffb)));
   uint64_t x10;
   fiat_poly1305_uint1 x11;
-  fiat_poly1305_addcarryx_u43(&x10, &x11, x9, x3, (x7 & UINT64_C(0x7ffffffffff)));
   uint64_t x12;
   fiat_poly1305_uint1 x13;
+  uint64_t x14;
+  uint64_t x15;
+  uint64_t x16;
+  uint8_t x17;
+  uint64_t x18;
+  uint8_t x19;
+  uint64_t x20;
+  uint8_t x21;
+  uint64_t x22;
+  uint8_t x23;
+  uint8_t x24;
+  uint8_t x25;
+  uint64_t x26;
+  uint64_t x27;
+  uint8_t x28;
+  uint64_t x29;
+  uint8_t x30;
+  uint64_t x31;
+  uint8_t x32;
+  uint64_t x33;
+  uint8_t x34;
+  uint8_t x35;
+  uint8_t x36;
+  uint64_t x37;
+  uint64_t x38;
+  uint8_t x39;
+  uint64_t x40;
+  uint8_t x41;
+  uint64_t x42;
+  uint8_t x43;
+  uint64_t x44;
+  uint8_t x45;
+  uint64_t x46;
+  uint8_t x47;
+  uint8_t x48;
+  uint8_t x49;
+  fiat_poly1305_subborrowx_u44(&x1, &x2, 0x0, (arg1[0]), UINT64_C(0xffffffffffb));
+  fiat_poly1305_subborrowx_u43(&x3, &x4, x2, (arg1[1]), UINT64_C(0x7ffffffffff));
+  fiat_poly1305_subborrowx_u43(&x5, &x6, x4, (arg1[2]), UINT64_C(0x7ffffffffff));
+  fiat_poly1305_cmovznz_u64(&x7, x6, 0x0, UINT64_C(0xffffffffffffffff));
+  fiat_poly1305_addcarryx_u44(&x8, &x9, 0x0, x1, (x7 & UINT64_C(0xffffffffffb)));
+  fiat_poly1305_addcarryx_u43(&x10, &x11, x9, x3, (x7 & UINT64_C(0x7ffffffffff)));
   fiat_poly1305_addcarryx_u43(&x12, &x13, x11, x5, (x7 & UINT64_C(0x7ffffffffff)));
-  uint64_t x14 = (x12 << 7);
-  uint64_t x15 = (x10 << 4);
-  uint64_t x16 = (x8 >> 8);
-  uint8_t x17 = (uint8_t)(x8 & UINT8_C(0xff));
-  uint64_t x18 = (x16 >> 8);
-  uint8_t x19 = (uint8_t)(x16 & UINT8_C(0xff));
-  uint64_t x20 = (x18 >> 8);
-  uint8_t x21 = (uint8_t)(x18 & UINT8_C(0xff));
-  uint64_t x22 = (x20 >> 8);
-  uint8_t x23 = (uint8_t)(x20 & UINT8_C(0xff));
-  uint8_t x24 = (uint8_t)(x22 >> 8);
-  uint8_t x25 = (uint8_t)(x22 & UINT8_C(0xff));
-  uint64_t x26 = (x24 + x15);
-  uint64_t x27 = (x26 >> 8);
-  uint8_t x28 = (uint8_t)(x26 & UINT8_C(0xff));
-  uint64_t x29 = (x27 >> 8);
-  uint8_t x30 = (uint8_t)(x27 & UINT8_C(0xff));
-  uint64_t x31 = (x29 >> 8);
-  uint8_t x32 = (uint8_t)(x29 & UINT8_C(0xff));
-  uint64_t x33 = (x31 >> 8);
-  uint8_t x34 = (uint8_t)(x31 & UINT8_C(0xff));
-  uint8_t x35 = (uint8_t)(x33 >> 8);
-  uint8_t x36 = (uint8_t)(x33 & UINT8_C(0xff));
-  uint64_t x37 = (x35 + x14);
-  uint64_t x38 = (x37 >> 8);
-  uint8_t x39 = (uint8_t)(x37 & UINT8_C(0xff));
-  uint64_t x40 = (x38 >> 8);
-  uint8_t x41 = (uint8_t)(x38 & UINT8_C(0xff));
-  uint64_t x42 = (x40 >> 8);
-  uint8_t x43 = (uint8_t)(x40 & UINT8_C(0xff));
-  uint64_t x44 = (x42 >> 8);
-  uint8_t x45 = (uint8_t)(x42 & UINT8_C(0xff));
-  uint64_t x46 = (x44 >> 8);
-  uint8_t x47 = (uint8_t)(x44 & UINT8_C(0xff));
-  uint8_t x48 = (uint8_t)(x46 >> 8);
-  uint8_t x49 = (uint8_t)(x46 & UINT8_C(0xff));
+  x14 = (x12 << 7);
+  x15 = (x10 << 4);
+  x16 = (x8 >> 8);
+  x17 = (uint8_t)(x8 & UINT8_C(0xff));
+  x18 = (x16 >> 8);
+  x19 = (uint8_t)(x16 & UINT8_C(0xff));
+  x20 = (x18 >> 8);
+  x21 = (uint8_t)(x18 & UINT8_C(0xff));
+  x22 = (x20 >> 8);
+  x23 = (uint8_t)(x20 & UINT8_C(0xff));
+  x24 = (uint8_t)(x22 >> 8);
+  x25 = (uint8_t)(x22 & UINT8_C(0xff));
+  x26 = (x24 + x15);
+  x27 = (x26 >> 8);
+  x28 = (uint8_t)(x26 & UINT8_C(0xff));
+  x29 = (x27 >> 8);
+  x30 = (uint8_t)(x27 & UINT8_C(0xff));
+  x31 = (x29 >> 8);
+  x32 = (uint8_t)(x29 & UINT8_C(0xff));
+  x33 = (x31 >> 8);
+  x34 = (uint8_t)(x31 & UINT8_C(0xff));
+  x35 = (uint8_t)(x33 >> 8);
+  x36 = (uint8_t)(x33 & UINT8_C(0xff));
+  x37 = (x35 + x14);
+  x38 = (x37 >> 8);
+  x39 = (uint8_t)(x37 & UINT8_C(0xff));
+  x40 = (x38 >> 8);
+  x41 = (uint8_t)(x38 & UINT8_C(0xff));
+  x42 = (x40 >> 8);
+  x43 = (uint8_t)(x40 & UINT8_C(0xff));
+  x44 = (x42 >> 8);
+  x45 = (uint8_t)(x42 & UINT8_C(0xff));
+  x46 = (x44 >> 8);
+  x47 = (uint8_t)(x44 & UINT8_C(0xff));
+  x48 = (uint8_t)(x46 >> 8);
+  x49 = (uint8_t)(x46 & UINT8_C(0xff));
   out1[0] = x17;
   out1[1] = x19;
   out1[2] = x21;
@@ -423,32 +548,58 @@ static void fiat_poly1305_to_bytes(uint8_t out1[17], const uint64_t arg1[3]) {
  *   out1: [[0x0 ~> 0x119999999999], [0x0 ~> 0x8cccccccccc], [0x0 ~> 0x8cccccccccc]]
  */
 static void fiat_poly1305_from_bytes(uint64_t out1[3], const uint8_t arg1[17]) {
-  uint64_t x1 = ((uint64_t)(arg1[16]) << 41);
-  uint64_t x2 = ((uint64_t)(arg1[15]) << 33);
-  uint64_t x3 = ((uint64_t)(arg1[14]) << 25);
-  uint64_t x4 = ((uint64_t)(arg1[13]) << 17);
-  uint64_t x5 = ((uint64_t)(arg1[12]) << 9);
-  uint64_t x6 = ((uint64_t)(arg1[11]) * 0x2);
-  uint64_t x7 = ((uint64_t)(arg1[10]) << 36);
-  uint64_t x8 = ((uint64_t)(arg1[9]) << 28);
-  uint64_t x9 = ((uint64_t)(arg1[8]) << 20);
-  uint64_t x10 = ((uint64_t)(arg1[7]) << 12);
-  uint64_t x11 = ((uint64_t)(arg1[6]) << 4);
-  uint64_t x12 = ((uint64_t)(arg1[5]) << 40);
-  uint64_t x13 = ((uint64_t)(arg1[4]) << 32);
-  uint64_t x14 = ((uint64_t)(arg1[3]) << 24);
-  uint64_t x15 = ((uint64_t)(arg1[2]) << 16);
-  uint64_t x16 = ((uint64_t)(arg1[1]) << 8);
-  uint8_t x17 = (arg1[0]);
-  uint64_t x18 = (x17 + (x16 + (x15 + (x14 + (x13 + x12)))));
-  uint8_t x19 = (uint8_t)(x18 >> 44);
-  uint64_t x20 = (x18 & UINT64_C(0xfffffffffff));
-  uint64_t x21 = (x6 + (x5 + (x4 + (x3 + (x2 + x1)))));
-  uint64_t x22 = (x11 + (x10 + (x9 + (x8 + x7))));
-  uint64_t x23 = (x19 + x22);
-  fiat_poly1305_uint1 x24 = (fiat_poly1305_uint1)(x23 >> 43);
-  uint64_t x25 = (x23 & UINT64_C(0x7ffffffffff));
-  uint64_t x26 = (x24 + x21);
+  uint64_t x1;
+  uint64_t x2;
+  uint64_t x3;
+  uint64_t x4;
+  uint64_t x5;
+  uint64_t x6;
+  uint64_t x7;
+  uint64_t x8;
+  uint64_t x9;
+  uint64_t x10;
+  uint64_t x11;
+  uint64_t x12;
+  uint64_t x13;
+  uint64_t x14;
+  uint64_t x15;
+  uint64_t x16;
+  uint8_t x17;
+  uint64_t x18;
+  uint8_t x19;
+  uint64_t x20;
+  uint64_t x21;
+  uint64_t x22;
+  uint64_t x23;
+  fiat_poly1305_uint1 x24;
+  uint64_t x25;
+  uint64_t x26;
+  x1 = ((uint64_t)(arg1[16]) << 41);
+  x2 = ((uint64_t)(arg1[15]) << 33);
+  x3 = ((uint64_t)(arg1[14]) << 25);
+  x4 = ((uint64_t)(arg1[13]) << 17);
+  x5 = ((uint64_t)(arg1[12]) << 9);
+  x6 = ((uint64_t)(arg1[11]) * 0x2);
+  x7 = ((uint64_t)(arg1[10]) << 36);
+  x8 = ((uint64_t)(arg1[9]) << 28);
+  x9 = ((uint64_t)(arg1[8]) << 20);
+  x10 = ((uint64_t)(arg1[7]) << 12);
+  x11 = ((uint64_t)(arg1[6]) << 4);
+  x12 = ((uint64_t)(arg1[5]) << 40);
+  x13 = ((uint64_t)(arg1[4]) << 32);
+  x14 = ((uint64_t)(arg1[3]) << 24);
+  x15 = ((uint64_t)(arg1[2]) << 16);
+  x16 = ((uint64_t)(arg1[1]) << 8);
+  x17 = (arg1[0]);
+  x18 = (x17 + (x16 + (x15 + (x14 + (x13 + x12)))));
+  x19 = (uint8_t)(x18 >> 44);
+  x20 = (x18 & UINT64_C(0xfffffffffff));
+  x21 = (x6 + (x5 + (x4 + (x3 + (x2 + x1)))));
+  x22 = (x11 + (x10 + (x9 + (x8 + x7))));
+  x23 = (x19 + x22);
+  x24 = (fiat_poly1305_uint1)(x23 >> 43);
+  x25 = (x23 & UINT64_C(0x7ffffffffff));
+  x26 = (x24 + x21);
   out1[0] = x20;
   out1[1] = x25;
   out1[2] = x26;

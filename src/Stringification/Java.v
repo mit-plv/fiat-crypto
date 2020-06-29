@@ -155,6 +155,8 @@ Module Java.
       passed by pointers), so all variables are live *)
   Local Instance : IR.OfPHOAS.consider_retargs_live_opt := fun _ _ _ => true.
   Local Instance : IR.OfPHOAS.rename_dead_opt := fun s => s.
+  (** No need to lift declarations to the top *)
+  Local Instance : IR.OfPHOAS.lift_declarations_opt := false.
 
   Fixpoint stmt_to_string (prefix : string) (e : IR.stmt) : string :=
     match e with
