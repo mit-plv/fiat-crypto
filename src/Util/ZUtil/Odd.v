@@ -12,13 +12,13 @@ Module Z.
     pose proof (Zmod_odd p) as mod_odd.
     destruct (Sumbool.sumbool_of_bool (Z.odd p)) as [? | p_not_odd]; auto.
     rewrite p_not_odd in mod_odd.
-    apply Zmod_divides in mod_odd; try omega.
+    apply Zmod_divides in mod_odd; try lia.
     destruct mod_odd as [c c_id].
     rewrite Z.mul_comm in c_id.
     apply Zdivide_intro in c_id.
     apply prime_divisors in c_id; auto.
-    destruct c_id; [omega | destruct H; [omega | destruct H; auto] ].
-    pose proof (prime_ge_2 p prime_p); omega.
+    destruct c_id; [lia | destruct H; [lia | destruct H; auto] ].
+    pose proof (prime_ge_2 p prime_p); lia.
   Qed.
 
   Lemma odd_mod : forall a b, (b <> 0)%Z ->

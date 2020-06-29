@@ -51,27 +51,27 @@ Section primitives.
       -> cmovznz bitwidth cond z nz = Z.zselect cond z nz.
   Proof using Type.
     intros.
-    assert (0 < 2^bitwidth) by omega.
+    assert (0 < 2^bitwidth) by lia.
     assert (0 <= bitwidth) by auto with zarith.
     assert (0 < bitwidth -> 1 < 2^bitwidth) by auto with zarith.
     pose proof Z.log2_lt_pow2_alt.
-    assert (bitwidth = 0 \/ 0 < bitwidth) by omega.
+    assert (bitwidth = 0 \/ 0 < bitwidth) by lia.
     repeat first [ progress cbv [cmovznz Z.zselect Z.bneg Let_In Z.lnot_modulo]
                  | progress split_iff
                  | progress subst
                  | progress Z.ltb_to_lt
                  | progress destruct_head'_or
                  | congruence
-                 | omega
+                 | lia
                  | progress break_innermost_match_step
                  | progress break_innermost_match_hyps_step
                  | progress autorewrite with zsimplify_const in *
                  | progress pull_Zmod
                  | progress intros
                  | rewrite !Z.sub_1_r, <- Z.ones_equiv, <- ?Z.sub_1_r
-                 | rewrite Z_mod_nz_opp_full by (Z.rewrite_mod_small; omega)
+                 | rewrite Z_mod_nz_opp_full by (Z.rewrite_mod_small; lia)
                  | rewrite (Z.land_comm (Z.ones _))
-                 | rewrite Z.land_ones_low by auto with omega
+                 | rewrite Z.land_ones_low by auto with lia
                  | progress Z.rewrite_mod_small ].
   Qed.
 
@@ -82,11 +82,11 @@ Section primitives.
       -> cmovznz_by_mul bitwidth cond z nz = Z.zselect cond z nz.
   Proof using Type.
     intros.
-    assert (0 < 2^bitwidth) by omega.
+    assert (0 < 2^bitwidth) by lia.
     assert (0 <= bitwidth) by auto with zarith.
     assert (0 < bitwidth -> 1 < 2^bitwidth) by auto with zarith.
     pose proof Z.log2_lt_pow2_alt.
-    assert (bitwidth = 0 \/ 0 < bitwidth) by omega.
+    assert (bitwidth = 0 \/ 0 < bitwidth) by lia.
     assert (cond = 0 \/ cond = 1) by lia.
     repeat first [ progress cbv [cmovznz_by_mul Z.zselect Let_In Z.lnot_modulo Z.lnot Z.pred]
                  | progress split_iff
@@ -94,16 +94,16 @@ Section primitives.
                  | progress Z.ltb_to_lt
                  | progress destruct_head'_or
                  | congruence
-                 | omega
+                 | lia
                  | progress break_innermost_match_step
                  | progress break_innermost_match_hyps_step
                  | progress autorewrite with zsimplify_const in *
                  | progress (push_Zmod; pull_Zmod)
                  | progress intros
                  | rewrite !Z.sub_1_r, <- Z.ones_equiv, <- ?Z.sub_1_r
-                 | rewrite Z_mod_nz_opp_full by (Z.rewrite_mod_small; omega)
+                 | rewrite Z_mod_nz_opp_full by (Z.rewrite_mod_small; lia)
                  | rewrite (Z.land_comm (Z.ones _))
-                 | rewrite Z.land_ones_low by auto with omega
+                 | rewrite Z.land_ones_low by auto with lia
                  | progress Z.rewrite_mod_small
                  | replace (-Z.ones bitwidth + -1) with (-2^bitwidth) by (rewrite Z.ones_equiv, <- Z.sub_1_r; lia) ].
   Qed.

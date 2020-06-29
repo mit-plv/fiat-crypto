@@ -1,6 +1,7 @@
 Require Coq.setoid_ring.Ncring.
 Require Coq.setoid_ring.Cring.
 Require Import Coq.Classes.Morphisms.
+Require Import Coq.micromega.Lia.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.OnSubterms.
 Require Import Crypto.Util.Tactics.Revert.
@@ -299,7 +300,7 @@ Section of_Z.
   Lemma of_nat_sub x (H: (0 < x)%nat):
     of_nat (Nat.sub x 1) = Rsub (of_nat x) Rone.
   Proof using Type*.
-    induction x; [omega|simpl].
+    induction x; [lia|simpl].
     rewrite <-of_nat_add.
     rewrite Nat.sub_0_r, Nat.add_1_r.
     simpl of_nat.

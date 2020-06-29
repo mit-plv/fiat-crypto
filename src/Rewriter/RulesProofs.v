@@ -322,7 +322,7 @@ Local Ltac interp_good_t_step_arith :=
           | H : ?x mod ?b * ?y <= _
             |- context [ (?x * ?y) mod ?b ] =>
             rewrite (PullPush.Z.mul_mod_l x y b);
-            rewrite (Z.mod_small (x mod b * y) b) by omega
+            rewrite (Z.mod_small (x mod b * y) b) by lia
           | [ |- context[_ - ?x + ?x] ] => rewrite !Z.sub_add
           | [ |- context[_ mod (2^_) * 2^_] ] => rewrite <- !Z.mul_mod_distr_r_full
           | [ |- context[Z.land _ (Z.ones _)] ] => rewrite !Z.land_ones by lia

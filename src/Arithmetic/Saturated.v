@@ -40,10 +40,10 @@ Module Associational.
                | _ => progress simpl flat_map
                | _ => rewrite IHq
                | _ => rewrite Z.mod_eq by assumption
-               | _ => ring_simplify; omega
+               | _ => ring_simplify; lia
                end.
     Qed.
-    Hint Rewrite eval_map_sat_multerm using (omega || assumption) : push_eval.
+    Hint Rewrite eval_map_sat_multerm using (lia || assumption) : push_eval.
 
     Lemma eval_sat_mul s p q (s_nonzero:s<>0):
       Associational.eval (sat_mul s p q) = Associational.eval p * Associational.eval q.
@@ -52,7 +52,7 @@ Module Associational.
       repeat match goal with
              | _ => progress (autorewrite with push_flat_map push_eval in * )
              | _ => rewrite IHp
-             | _ => ring_simplify; omega
+             | _ => ring_simplify; lia
              end.
     Qed.
     Hint Rewrite eval_sat_mul : push_eval.
@@ -83,10 +83,10 @@ Module Associational.
                | _ => progress break_match; Z.ltb_to_lt
                | _ => rewrite IHq
                | _ => rewrite Z.mod_eq by assumption
-               | _ => ring_simplify; omega
+               | _ => ring_simplify; lia
                end.
     Qed.
-    Hint Rewrite eval_map_sat_multerm_const using (omega || assumption) : push_eval.
+    Hint Rewrite eval_map_sat_multerm_const using (lia || assumption) : push_eval.
 
     Lemma eval_sat_mul_const s p q (s_nonzero:s<>0):
       Associational.eval (sat_mul_const s p q) = Associational.eval p * Associational.eval q.
@@ -95,7 +95,7 @@ Module Associational.
       repeat match goal with
              | _ => progress (autorewrite with push_flat_map push_eval in * )
              | _ => rewrite IHp
-             | _ => ring_simplify; omega
+             | _ => ring_simplify; lia
              end.
     Qed.
     Hint Rewrite eval_sat_mul_const : push_eval.
@@ -163,7 +163,7 @@ Module Columns.
                | |- context [list_rect _ _ _ ?ls] => rewrite single_list_rect_to_match; destruct ls
                | _ => progress (unfold flatten_step in *; fold flatten_step in * )
                | _ => rewrite Nat.add_1_r
-               | _ => rewrite Z.mul_div_eq_full by (auto with zarith; omega)
+               | _ => rewrite Z.mul_div_eq_full by (auto with zarith; lia)
                | _ => rewrite weight_multiples
                | _ => reflexivity
                | _ => solve [repeat (f_equal; try ring)]
@@ -198,7 +198,7 @@ Module Columns.
           repeat match goal with
                  | _ => rewrite IHxs
                  | _ => rewrite <-Z.div_add' by zutil_arith
-                 | _ => rewrite Z.mul_div_eq_full by omega
+                 | _ => rewrite Z.mul_div_eq_full by lia
                  | _ => progress push
                  end.
       Qed. Hint Rewrite flatten_column_div using auto with zarith : to_div_mod.
@@ -354,7 +354,7 @@ Module Rows.
     Proof using Type. cbv [eval]. rewrite map_nil, sum_nil; reflexivity. Qed.
     Hint Rewrite eval_nil : push_eval.
     Lemma eval0 x : eval 0 x = 0.
-    Proof using Type. cbv [eval]. induction x; autorewrite with push_map push_sum push_eval; omega. Qed.
+    Proof using Type. cbv [eval]. induction x; autorewrite with push_map push_sum push_eval; lia. Qed.
     Hint Rewrite eval0 : push_eval.
     Lemma eval_cons n r inp : eval n (r :: inp) = Positional.eval weight n r + eval n inp.
     Proof using Type. cbv [eval]; autorewrite with push_map push_sum; reflexivity. Qed.
@@ -450,7 +450,7 @@ Module Rows.
                | _ => progress (intros; subst)
                | _ => progress autorewrite with cancel_pair push_eval in *
                | _ => progress In_cases
-               | _ => split; try omega
+               | _ => split; try lia
                | H: _ /\ _ |- _ => destruct H
                | _ => progress distr_length
                | _ => solve [auto]
@@ -511,7 +511,7 @@ Module Rows.
                  | _ => progress autorewrite with cancel_pair push_eval push_max_column_size
                  | _ => rewrite max_column_size0 with (inp := fst (from_columns' _ _)) by
                        (autorewrite with push_max_column_size; distr_length)
-                 | _ => omega
+                 | _ => lia
                  end.
       Qed.
       Hint Rewrite eval_from_columns using (auto; solve [distr_length]) : push_eval.
@@ -571,7 +571,7 @@ Module Rows.
         end.
         { distr_length.
           rewrite Columns.length_from_associational.
-          remember (Nat.pred n) as m. replace n with (S m) by omega.
+          remember (Nat.pred n) as m. replace n with (S m) by lia.
           apply Positional.place_in_range. }
         rewrite <-nth_default_eq in *.
         autorewrite with push_nth_default in *.
@@ -585,7 +585,7 @@ Module Rows.
       Proof using Type.
         intros; cbv [from_associational from_columns from_columns'].
         pose proof (max_column_size_Columns_from_associational n p ltac:(auto) ltac:(auto)).
-        case_eq (max_column_size (Columns.from_associational weight n p)); [omega|].
+        case_eq (max_column_size (Columns.from_associational weight n p)); [lia|].
         intros; cbn.
         rewrite <-length_zero_iff_nil. distr_length.
       Qed.
@@ -764,7 +764,7 @@ Module Rows.
                  | |- pair _ _ = pair _ _ => f_equal
                  | _ => apply (@partition_eq_mod _ wprops)
                  | _ => rewrite <-Z.div_add_l' by auto with zarith
-                 | _ => rewrite Z.mod_add'_full by omega
+                 | _ => rewrite Z.mod_add'_full by lia
                  | _ => rewrite Z.mul_div_eq_full by auto with zarith
                  | _ => progress (push_Zmod; pull_Zmod)
                  | _ => progress push
@@ -938,7 +938,7 @@ Module Rows.
             (rewrite Hp; autorewrite with push_eval; auto using Z.mod_pos_bound).
         rewrite sub_partitions, sub_div; distr_length.
         erewrite Positional.select_eq by (distr_length; eauto).
-        rewrite Z.div_sub_small, Z.ltb_antisym by omega.
+        rewrite Z.div_sub_small, Z.ltb_antisym by lia.
         destruct (Positional.eval weight n q <=? Positional.eval weight n p);
           cbn [negb]; autorewrite with zsimplify_fast;
             break_match; try lia; congruence.
@@ -962,8 +962,8 @@ Module Rows.
         rewrite sub_partitions, add_partitions, sub_div by distr_length.
         autorewrite with push_eval.
         Z.rewrite_mod_small.
-        rewrite Z.div_sub_small by omega.
-        break_innermost_match; Z.ltb_to_lt; try omega;
+        rewrite Z.div_sub_small by lia.
+        break_innermost_match; Z.ltb_to_lt; try lia;
           auto using partition_eq_mod with zarith.
       Qed.
 

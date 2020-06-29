@@ -1,4 +1,4 @@
-Require Import Coq.ZArith.ZArith Coq.omega.Omega.
+Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
 Local Open Scope Z_scope.
 
 Module Z.
@@ -10,5 +10,5 @@ Module Z.
                               | _ => destruct H
                               end
   | [ |- (?a | ?b) ] => apply Z.mod_divide; try apply Zmod_divides
-  end; (omega || auto).
+  end; (lia || auto).
 End Z.

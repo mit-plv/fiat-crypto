@@ -1,4 +1,4 @@
-Require Import Coq.ZArith.ZArith Coq.omega.Omega Coq.micromega.Lia.
+Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
 Require Import Crypto.Util.ZUtil.Hints.Core.
 Require Import Crypto.Util.ZUtil.Sgn.
 Require Import Crypto.Util.ZUtil.Modulo.
@@ -19,7 +19,7 @@ Module Z.
   Proof.
     rewrite quot_div_full, !Z.sgn_mul, !Z.sgn_sgn.
     set (d := Z.abs a / Z.abs b).
-    destruct a, b; simpl; try (subst d; simpl; omega);
+    destruct a, b; simpl; try (subst d; simpl; lia);
       try rewrite (Z.mul_opp_l 1);
       do 2 try rewrite (Z.mul_opp_r _ 1);
       rewrite ?Z.mul_1_l, ?Z.mul_1_r, ?Z.opp_involutive;
@@ -33,7 +33,7 @@ Module Z.
     rewrite <- Z.mul_assoc, <- Z.sgn_mul.
     destruct (Z_zerop b); [ subst; destruct a; unfold Z.quot; simpl in *; congruence | ].
     rewrite (Z.sgn_pos (_ * _)) by nia.
-    intro; apply Z.sgn_nonneg; omega.
+    intro; apply Z.sgn_nonneg; lia.
   Qed.
 
   Lemma mul_quot_eq_full a m : m <> 0 -> m * (Z.quot a m) = a - a mod (Z.abs m * Z.sgn a).
@@ -45,12 +45,12 @@ Module Z.
     rewrite quot_div_full.
     rewrite <- (Z.abs_sgn m) at 1.
     transitivity ((Z.sgn m * Z.sgn m) * Z.sgn a * (Z.abs m * (Z.abs a / Z.abs m))); [ nia | ].
-    rewrite <- Z.sgn_mul, Z.sgn_pos, Z.mul_1_l, Z.mul_div_eq_full by omega.
+    rewrite <- Z.sgn_mul, Z.sgn_pos, Z.mul_1_l, Z.mul_div_eq_full by lia.
     rewrite Z.mul_sub_distr_l.
     rewrite Z.mul_comm, Z.abs_sgn.
     destruct a; simpl Z.sgn; simpl Z.abs; autorewrite with zsimplify_const; [ reflexivity | reflexivity | ].
-    repeat match goal with |- context[-1 * ?x] => replace (-1 * x) with (-x) by omega end.
-    repeat match goal with |- context[?x * -1] => replace (x * -1) with (-x) by omega end.
+    repeat match goal with |- context[-1 * ?x] => replace (-1 * x) with (-x) by lia end.
+    repeat match goal with |- context[?x * -1] => replace (x * -1) with (-x) by lia end.
     rewrite <- Zmod_opp_opp; simpl Z.opp.
     reflexivity.
   Qed.
@@ -73,8 +73,8 @@ Module Z.
       subst;
       try lia;
       rewrite !Z.quot_div_full;
-      try rewrite (Z.sgn_neg a) by omega;
-      try rewrite (Z.sgn_neg b) by omega;
+      try rewrite (Z.sgn_neg a) by lia;
+      try rewrite (Z.sgn_neg b) by lia;
       repeat first [ reflexivity
                    | rewrite Z.sgn_neg by lia
                    | rewrite Z.sgn_pos by lia
@@ -82,20 +82,20 @@ Module Z.
                    | rewrite Z.abs_neq by lia
                    | rewrite !Z.mul_opp_l
                    | rewrite Z.abs_opp in *
-                   | rewrite Z.abs_eq in * by omega
+                   | rewrite Z.abs_eq in * by lia
                    | match goal with
                      | [ |- context[-1 * ?x] ]
-                       => replace (-1 * x) with (-x) by omega
+                       => replace (-1 * x) with (-x) by lia
                      | [ |- context[?x * -1] ]
-                       => replace (x * -1) with (-x) by omega
+                       => replace (x * -1) with (-x) by lia
                      | [ |- context[-?x - ?y] ]
-                       => replace (-x - y) with (-(x + y)) by omega
+                       => replace (-x - y) with (-(x + y)) by lia
                      | [ |- context[-?x + - ?y] ]
-                       => replace (-x + - y) with (-(x + y)) by omega
+                       => replace (-x + - y) with (-(x + y)) by lia
                      | [ |- context[(?a + ?b + ?c) / ?b] ]
-                       => replace (a + b + c) with (((a + c) + b * 1)) by lia; rewrite Z.div_add' by omega
+                       => replace (a + b + c) with (((a + c) + b * 1)) by lia; rewrite Z.div_add' by lia
                      | [ |- context[(?a + ?b - ?c) / ?b] ]
-                       => replace (a + b - c) with (((a - c) + b * 1)) by lia; rewrite Z.div_add' by omega
+                       => replace (a + b - c) with (((a - c) + b * 1)) by lia; rewrite Z.div_add' by lia
                      end
                    | progress intros
                    | progress Z.replace_all_neg_with_pos

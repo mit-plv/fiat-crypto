@@ -17,7 +17,7 @@ Import Weight.
 Definition uweight (lgr : Z) : nat -> Z
   := weight lgr 1.
 Definition uwprops lgr (Hr : 0 < lgr) : @weight_properties (uweight lgr).
-Proof using Type. apply wprops; omega. Qed.
+Proof using Type. apply wprops; lia. Qed.
 Lemma uweight_eq_alt' lgr n : uweight lgr n = 2^(lgr*Z.of_nat n).
 Proof using Type. now cbv [uweight weight]; autorewrite with zsimplify_fast. Qed.
 Lemma uweight_eq_alt lgr (Hr : 0 <= lgr) n : uweight lgr n = (2^lgr)^Z.of_nat n.
@@ -31,7 +31,7 @@ Proof using Type.
   induction xs using rev_ind; destruct n; distr_length;
     intros; [cbn; ring | ].
   rewrite !Positional.eval_snoc with (n:=n) by distr_length.
-  rewrite IHxs, !uweight_eq_alt by omega.
+  rewrite IHxs, !uweight_eq_alt by lia.
   autorewrite with push_Zof_nat push_Zpow.
   rewrite !Z.pow_succ_r by auto with zarith.
   ring.
@@ -45,12 +45,12 @@ Proof using Type.
 Qed.
 Lemma uweight_double_le lgr (Hr : 0 < lgr) n : uweight lgr n + uweight lgr n <= uweight lgr (S n).
 Proof using Type.
-  rewrite uweight_S, uweight_eq_alt by omega.
+  rewrite uweight_S, uweight_eq_alt by lia.
   rewrite Z.add_diag.
   apply Z.mul_le_mono_nonneg_r.
   { auto with zarith. }
   { transitivity (2 ^ 1); [ reflexivity | ].
-    apply Z.pow_le_mono_r; omega. }
+    apply Z.pow_le_mono_r; lia. }
 Qed.
 Lemma uweight_sum_indices lgr (Hr : 0 <= lgr) i j : uweight lgr (i + j) = uweight lgr i * uweight lgr j.
 Proof.
@@ -72,9 +72,9 @@ Lemma uweight_recursive_partition_change_start lgr (Hr : 0 <= lgr) n :
 Proof using Type.
   induction n; intros; [reflexivity | ].
   cbn [recursive_partition].
-  rewrite !uweight_eq_alt by omega.
+  rewrite !uweight_eq_alt by lia.
   autorewrite with push_Zof_nat push_Zpow.
-  rewrite <-!Z.pow_sub_r by auto using Z.pow_nonzero with omega.
+  rewrite <-!Z.pow_sub_r by auto using Z.pow_nonzero with lia.
   rewrite !Z.sub_succ_l.
   autorewrite with zsimplify_fast.
   erewrite IHn. reflexivity.
@@ -84,7 +84,7 @@ Lemma uweight_recursive_partition_equiv lgr (Hr : 0 < lgr) n i x:
   recursive_partition (uweight lgr) n i x.
 Proof using Type.
   rewrite recursive_partition_equiv by auto using uwprops.
-  auto using uweight_recursive_partition_change_start with omega.
+  auto using uweight_recursive_partition_change_start with lia.
 Qed.
 
 Lemma uweight_firstn_partition lgr (Hr : 0 < lgr) n x m (Hm : (m <= n)%nat) :

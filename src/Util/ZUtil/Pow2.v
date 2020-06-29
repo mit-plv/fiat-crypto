@@ -5,12 +5,12 @@ Local Open Scope Z_scope.
 Module Z.
   Lemma pow2_ge_0: forall a, (0 <= 2 ^ a)%Z.
   Proof.
-    intros; apply Z.pow_nonneg; omega.
+    intros; apply Z.pow_nonneg; lia.
   Qed.
 
   Lemma pow2_gt_0: forall a, (0 <= a)%Z -> (0 < 2 ^ a)%Z.
   Proof.
-    intros; apply Z.pow_pos_nonneg; [|assumption]; omega.
+    intros; apply Z.pow_pos_nonneg; [|assumption]; lia.
   Qed.
 
   Lemma pow2_lt_or_divides : forall a b, 0 <= b ->
@@ -18,9 +18,9 @@ Module Z.
   Proof.
     intros a b H.
     destruct (Z_lt_dec a b); [left|right].
-    { apply Z.pow_lt_mono_r; auto; omega. }
+    { apply Z.pow_lt_mono_r; auto; lia. }
     { replace a with (a - b + b) by ring.
-      rewrite Z.pow_add_r by omega.
-      apply Z.mod_mul, Z.pow_nonzero; omega. }
+      rewrite Z.pow_add_r by lia.
+      apply Z.mod_mul, Z.pow_nonzero; lia. }
   Qed.
 End Z.

@@ -1,3 +1,4 @@
+Require Import Coq.micromega.Lia.
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Decidable.
@@ -114,8 +115,7 @@ Ltac inversion_zbounded := repeat inversion_zbounded_step.
 Lemma is_bounded_by'_zbounded {r} (v : zbounded r) : lower r <= upper r -> is_bounded_by' None r v.
 Proof.
   destruct v as [v H]; cbv [is_bounded_by']; simpl.
-  apply Bool.orb_true_iff in H; destruct H; split_andb; Z.ltb_to_lt; try omega.
-  intros; repeat apply conj; trivial.
+  apply Bool.orb_true_iff in H; destruct H; split_andb; Z.ltb_to_lt; lia.
 Qed.
 
 Global Instance dec_eq_zrange {r} : DecidableRel (@eq (zbounded r)) | 10.
@@ -139,7 +139,7 @@ Proof.
       destruct (l =? u) eqn:H';
       Z.ltb_to_lt; subst;
       repeat rewrite ?Z.sub_diag, ?Zmod_0_r, ?Z.add_0_r, ?Z.add_0_l, ?Z.mod_1_r;
-      try reflexivity; try omega
+      try reflexivity; try lia
     ).
 Defined.
 
@@ -149,8 +149,8 @@ Proof.
   destruct v as [v H]; simpl.
   destruct (upper r <? lower r) eqn:H'; [ reflexivity | ].
   simpl in *; unfold is_true in *; split_andb; Z.ltb_to_lt.
-  rewrite Z.mod_small by omega.
-  omega.
+  rewrite Z.mod_small by lia.
+  lia.
 Qed.
 
 Lemma value_modulo_in_range z r (Hr : lower r <= z <= upper r)
@@ -158,6 +158,6 @@ Lemma value_modulo_in_range z r (Hr : lower r <= z <= upper r)
 Proof.
   simpl.
   destruct (upper r <? lower r) eqn:H'; [ reflexivity | ].
-  rewrite Z.mod_small by omega.
-  omega.
+  rewrite Z.mod_small by lia.
+  lia.
 Qed.

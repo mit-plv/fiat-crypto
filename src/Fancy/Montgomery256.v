@@ -125,7 +125,7 @@ Module Montgomery256.
     { cbn; intros; subst RegZero RegMod RegPInv RegHi RegLo.
       match goal with |- context [_ mod ?m] => change m with (2 ^ machine_wordsize) end.
       assert (R <= 2 ^ machine_wordsize) by (cbv; congruence).
-      intuition; Prod.inversion_prod; subst; apply Z.mod_small; omega. }
+      intuition; Prod.inversion_prod; subst; apply Z.mod_small; lia. }
     { cbn.
       repeat match goal with
              | _ => apply Compilers.expr.WfLetIn
@@ -228,7 +228,7 @@ Module Montgomery256.
     intros. subst x.
     erewrite <-montred256_fancy_correct with (error:=100000%positive) by eauto.
     rewrite <-montred256_alloc_equivalent with (errorR := RegZero) (errorP := 1%positive) (extra_reg:=extra_reg)
-      by (cbv [R N N'] in *; auto with omega).
+      by (cbv [R N N'] in *; auto with lia).
 
     (* TODO: factor out this tactic *)
     match goal with

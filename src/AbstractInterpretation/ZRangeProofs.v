@@ -260,8 +260,8 @@ Module Compilers.
                                 exfalso; clear -H H' Hlen;
                                 apply nth_error_value_length in H;
                                 apply nth_error_error_length in H';
-                                omega
-                           | [ |- (0 <= 1)%Z ] => clear; omega
+                                lia
+                           | [ |- (0 <= 1)%Z ] => clear; lia
                            | [ H : ?beq ?x ?y = true |- ?x = ?y ]
                              => progress reflect_beq_to_eq beq
                            | [ |- ?beq ?x ?x = true ]
@@ -525,11 +525,11 @@ Module Compilers.
                      | _ => progress cbn in *
                      end.
 
-             { Z.ltb_to_lt. rewrite !Z.rshi_small by omega.
+             { Z.ltb_to_lt. rewrite !Z.rshi_small by lia.
                apply Bool.andb_true_iff; split; apply Z.leb_le;
                  Z.div_mod_to_quot_rem; nia. }
              { Z.ltb_to_lt.
-               rewrite Z.rshi_correct_full by omega.
+               rewrite Z.rshi_correct_full by lia.
                break_innermost_match; apply Bool.andb_true_iff; split; apply Z.leb_le; try apply Z.le_sub_1_iff; auto with zarith. }
           Qed.
 

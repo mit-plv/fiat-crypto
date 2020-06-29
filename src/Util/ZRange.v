@@ -1,5 +1,6 @@
 Require Import Coq.Classes.Morphisms.
 Require Import Coq.ZArith.ZArith.
+Require Import Coq.micromega.Lia.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.Bool.Reflect.
@@ -70,7 +71,7 @@ Lemma is_bounded_by_None_repeat_In_iff_lt {n} vs l u
     <-> (forall x, List.In x (Tuple.to_list _ vs) -> l <= x < u).
 Proof.
   rewrite is_bounded_by_None_repeat_In_iff.
-  split; intro H; (repeat let x := fresh in intro x; specialize (H x)); omega.
+  split; intro H; (repeat let x := fresh in intro x; specialize (H x)); lia.
 Qed.
 
 Definition is_bounded_by_bool (v : Z) (x : zrange) : bool

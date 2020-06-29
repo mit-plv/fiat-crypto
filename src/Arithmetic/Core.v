@@ -117,7 +117,7 @@ Module Associational.
     | _ => progress nsatz                                end. Qed.
   Lemma eval_split s p (s_nz:s<>0) :
     eval (fst (split s p)) + s * eval (snd (split s p)) = eval p.
-  Proof using Type. rewrite eval_snd_split, eval_fst_partition by assumption; cbv [split Let_In]; cbn [fst snd]; omega. Qed.
+  Proof using Type. rewrite eval_snd_split, eval_fst_partition by assumption; cbv [split Let_In]; cbn [fst snd]; lia. Qed.
 
   Lemma reduction_rule' b s c (modulus_nz:s-c<>0) :
     (s * b) mod (s - c) = (c * b) mod (s - c).
@@ -226,10 +226,10 @@ Module Associational.
     Theorem leb_total : forall a1 a2, a1 <=? a2 \/ a2 <=? a1.
     Proof using Type.
       cbv [is_true leb]; intros x y; rewrite !Z.leb_le; pose proof (Z.le_ge_cases (fst x) (fst y)).
-      omega.
+      lia.
     Qed.
     Global Instance leb_Transitive : Transitive leb.
-    Proof using Type. repeat intro; unfold is_true, leb in *; Z.ltb_to_lt; omega. Qed.
+    Proof using Type. repeat intro; unfold is_true, leb in *; Z.ltb_to_lt; lia. Qed.
   End RevWeightOrder.
 
   Module RevWeightSort := Mergesort.Sort RevWeightOrder.
@@ -515,7 +515,7 @@ Module Weight.
 
     Lemma weight_multiples_full j i : (i <= j)%nat -> weight j mod weight i = 0.
     Proof using weight_positive weight_multiples.
-      intros; replace j with (i + (j - i))%nat by omega.
+      intros; replace j with (i + (j - i))%nat by lia.
       apply weight_multiples_full'.
     Qed.
 
@@ -654,7 +654,7 @@ Module Positional.
       tt.
 
   Lemma place_in_range (t:Z*Z) (n:nat) : (fst (place t n) < S n)%nat.
-  Proof using Type. induction n; cbv [place nat_rect] in *; break_match; autorewrite with cancel_pair; try omega. Qed.
+  Proof using Type. induction n; cbv [place nat_rect] in *; break_match; autorewrite with cancel_pair; try lia. Qed.
   Lemma weight_place t i : weight (fst (place t i)) * snd (place t i) = fst t * snd t.
   Proof using weight_nz weight_0. induction i; cbv [place nat_rect] in *; break_match; push;
     repeat match goal with |- context[?a/?b] =>
@@ -672,28 +672,28 @@ Module Positional.
     : weight i mod weight j = 0 <-> ((j < i)%nat \/ forall k, (i <= k <= j)%nat -> weight k = weight j).
   Proof using weight_nz.
     split.
-    { destruct (dec (j < i)%nat); [ left; omega | intro H; right; revert H ].
-      assert (j = (j - i) + i)%nat by omega.
+    { destruct (dec (j < i)%nat); [ left; lia | intro H; right; revert H ].
+      assert (j = (j - i) + i)%nat by lia.
       generalize dependent (j - i)%nat; intro jmi; intros ? H0.
       subst j.
-      destruct jmi as [|j]; [ intros k ?; assert (k = i) by omega; subst; f_equal; omega | ].
+      destruct jmi as [|j]; [ intros k ?; assert (k = i) by lia; subst; f_equal; lia | ].
       induction j as [|j IH]; cbn [Nat.add] in *.
-      { intros k ?; assert (k = i \/ k = S i) by omega; destruct_head'_or; subst;
+      { intros k ?; assert (k = i \/ k = S i) by lia; destruct_head'_or; subst;
           eauto using Z.mod_mod_0_0_eq_pos. }
-      { specialize_by omega.
+      { specialize_by lia.
         { pose proof (weight_mul (S (j + i))) as H.
-          specialize_by eauto using Z.mod_mod_trans with omega.
+          specialize_by eauto using Z.mod_mod_trans with lia.
           intros k H'; destruct (dec (k = S (S (j + i)))); subst;
-            try rewrite IH by eauto using Z.mod_mod_trans with omega;
-            eauto using Z.mod_mod_trans, Z.mod_mod_0_0_eq_pos with omega.
-          rewrite (IH i) in * by omega.
-          eauto using Z.mod_mod_trans, Z.mod_mod_0_0_eq_pos with omega. } } }
-    { destruct (dec (j < i)%nat) as [H|H]; [ intros _ | intros [H'|H']; try omega ].
-      { assert (i = j + (i - j))%nat by omega.
+            try rewrite IH by eauto using Z.mod_mod_trans with lia;
+            eauto using Z.mod_mod_trans, Z.mod_mod_0_0_eq_pos with lia.
+          rewrite (IH i) in * by lia.
+          eauto using Z.mod_mod_trans, Z.mod_mod_0_0_eq_pos with lia. } } }
+    { destruct (dec (j < i)%nat) as [H|H]; [ intros _ | intros [H'|H']; try lia ].
+      { assert (i = j + (i - j))%nat by lia.
         generalize dependent (i - j)%nat; intro imj; intros.
         subst i.
         apply weight_add_mod; auto. }
-      { erewrite H', Z_mod_same_full by omega; omega. } }
+      { erewrite H', Z_mod_same_full by lia; lia. } }
   Qed.
   Lemma weight_div_from_pos_mul (weight_pos : forall i, 0 < weight i) (weight_mul : forall i, weight (S i) mod weight i = 0)
     : forall i, 0 < weight (S i) / weight i.
@@ -711,17 +711,17 @@ Module Positional.
     destruct (dec (i < S n)%nat);
       break_innermost_match; cbn [fst snd] in *; Z.ltb_to_lt; [ | rewrite IHn | | rewrite IHn ];
         break_innermost_match;
-        rewrite ?Min.min_l in * by omega;
-        rewrite ?Min.min_r in * by omega;
-        eauto with omega.
+        rewrite ?Min.min_l in * by lia;
+        rewrite ?Min.min_r in * by lia;
+        eauto with lia.
     { rewrite weight_mul_iff in * by auto.
-      destruct_head'_or; try omega.
+      destruct_head'_or; try lia.
       assert (S n = i).
-      { apply weight_unique; try omega.
-        symmetry; eauto with omega. }
+      { apply weight_unique; try lia.
+        symmetry; eauto with lia. }
       subst; reflexivity. }
     { rewrite weight_mul_iff in * by auto.
-      exfalso; intuition eauto with omega. }
+      exfalso; intuition eauto with lia. }
   Qed.
 
   Definition from_associational n (p:list (Z*Z)) :=
@@ -732,10 +732,10 @@ Module Positional.
     eval n (from_associational n p) = Associational.eval p.
   Proof using weight_0 weight_nz. destruct n_nz; [ induction p | subst p ];
   cbv [from_associational Let_In] in *; push; try
-  pose proof place_in_range a (pred n); try omega; try nsatz;
+  pose proof place_in_range a (pred n); try lia; try nsatz;
   apply fold_right_invariant; cbv [zeros add_to_nth];
   intros; rewrite ?map_length, ?List.repeat_length, ?seq_length, ?length_update_nth;
-  try omega.                                                  Qed.
+  destruct n; cbn [pred] in *; try lia.                     Qed.
   Hint Rewrite @eval_from_associational : push_eval.
   Lemma length_from_associational n p : length (from_associational n p) = n.
   Proof using Type. cbv [from_associational Let_In]. apply fold_right_invariant; intros; distr_length. Qed.
@@ -754,8 +754,8 @@ Module Positional.
     | [ |- context[place ?p ?i] ]
       => pose proof (place_in_range p i)
     end.
-    rewrite update_nth_nth_default_full; break_match; try omega;
-      rewrite nth_default_out_of_bounds by omega; try omega.
+    rewrite update_nth_nth_default_full; break_match; try lia;
+      rewrite nth_default_out_of_bounds by lia; try lia.
     match goal with
     | [ H : context[length (fold_right ?f ?v ?ps)] |- _ ]
       => replace (length (fold_right f v ps)) with (length v) in H
@@ -771,9 +771,9 @@ Module Positional.
     eval n_out (extend_to_length n_in n_out p) = eval n_in p.
   Proof using Type.
     cbv [eval extend_to_length to_associational]; intros.
-    replace (seq 0 n_out) with (seq 0 (n_in + (n_out - n_in))) by (f_equal; omega).
+    replace (seq 0 n_out) with (seq 0 (n_in + (n_out - n_in))) by (f_equal; lia).
     rewrite seq_add, map_app, combine_app_samelength, Associational.eval_app;
-      push; omega.
+      push; lia.
   Qed.
   Hint Rewrite eval_extend_to_length : push_eval.
   Lemma length_extend_to_length n_in n_out p :
@@ -804,7 +804,7 @@ Module Positional.
       eval n (mulmod n f g) mod (s - Associational.eval c)
       = (eval n f * eval n g) mod (s - Associational.eval c).
     Proof using m_nz s_nz weight_0 weight_nz. cbv [mulmod]; push; trivial.
-    destruct f, g; simpl in *; [ right; subst n | left; try omega.. ].
+    destruct f, g; simpl in *; [ right; subst n | left; try lia.. ].
     clear; cbv -[Associational.repeat_reduce].
     induction c as [|?? IHc]; simpl; trivial.                 Qed.
 
@@ -818,7 +818,7 @@ Module Positional.
       eval n (squaremod n f) mod (s - Associational.eval c)
       = (eval n f * eval n f) mod (s - Associational.eval c).
     Proof using m_nz s_nz weight_0 weight_nz. cbv [squaremod]; push; trivial.
-    destruct f; simpl in *; [ right; subst n; reflexivity | left; try omega.. ]. Qed.
+    destruct f; simpl in *; [ right; subst n; reflexivity | left; try lia.. ]. Qed.
   End mulmod.
   Hint Rewrite @eval_mulmod @eval_squaremod : push_eval.
 
@@ -880,14 +880,14 @@ Module Positional.
       assert (weight_unique_iff : forall i j, (i <= upper)%nat -> (j <= upper)%nat -> weight i = weight j <-> i = j)
         by (split; subst; auto).
       pose proof (weight_div_from_pos_mul weight_pos weight_mul) as weight_div_pos.
-      assert (weight_div_nz : forall i, weight (S i) / weight i <> 0) by (intro i; specialize (weight_div_pos i); omega).
+      assert (weight_div_nz : forall i, weight (S i) / weight i <> 0) by (intro i; specialize (weight_div_pos i); lia).
       intro; subst.
       intro i.
       destruct (dec (m <= i)%nat) as [Hmi|Hmi];
-        [ rewrite (@nth_default_out_of_bounds _ i (carry _ _ _ _)) by (distr_length; omega); reflexivity | ].
+        [ rewrite (@nth_default_out_of_bounds _ i (carry _ _ _ _)) by (distr_length; lia); reflexivity | ].
       cbv [carry to_associational Associational.carry Let_In Associational.carryterm].
       rewrite combine_map_l, flat_map_map; cbn [fst snd].
-      rewrite nth_default_from_associational, map_flat_map by omega; cbn [map].
+      rewrite nth_default_from_associational, map_flat_map by lia; cbn [map].
       cbv [zeros]; rewrite nth_default_repeat.
       replace (if (dec (i < m)%nat) then 0 else 0) with 0 by (break_match; reflexivity).
       set (init := 0) at 1.
@@ -898,83 +898,83 @@ Module Positional.
       induction p as [|p ps IHps]; cbn [length]; intros Hn i init Hmi Hnm Hidx.
       { cbn; cbv [zeros]; break_innermost_match; cbn;
           rewrite ?nth_default_repeat, ?nth_default_nil; break_innermost_match; autorewrite with zsimplify_const; reflexivity. }
-      { specialize_by omega.
+      { specialize_by lia.
         rewrite seq_snoc, rev_cons, combine_app_samelength by distr_length.
-        rewrite flat_map_app, fold_right_app, IHps by omega; clear IHps.
+        rewrite flat_map_app, fold_right_app, IHps by lia; clear IHps.
         cbn [combine fold_right fst snd flat_map map].
         rewrite Nat.add_0_l.
         cbv [Let_In]; cbn [fst snd].
         rewrite ?nth_default_app; distr_length.
-        destruct (dec (i = index)), (dec (i = S index)); try (subst; omega).
+        destruct (dec (i = index)), (dec (i = S index)); try (subst; lia).
         { all:subst; break_innermost_match; Z.ltb_to_lt;
             match goal with
-            | [ H : context[weight ?x = weight ?y] |- _ ] => rewrite (weight_unique_iff x y) in H by omega
-            end; destruct_head'_or; try (subst; omega).
+            | [ H : context[weight ?x = weight ?y] |- _ ] => rewrite (weight_unique_iff x y) in H by lia
+            end; destruct_head'_or; try (subst; lia).
           all:repeat first [ progress cbn [fst snd app map fold_right]
                            | progress Z.ltb_to_lt
                            | progress subst
                            | progress destruct_head'_or
-                           | progress rewrite ?Z.mul_div_eq_full, ?weight_mul, ?Z.sub_0_r by eauto with omega
-                           | progress rewrite ?place_weight by eauto with omega
+                           | progress rewrite ?Z.mul_div_eq_full, ?weight_mul, ?Z.sub_0_r by eauto with lia
+                           | progress rewrite ?place_weight by eauto with lia
                            | rewrite !Nat.sub_diag
-                           | rewrite !Min.min_l by omega
+                           | rewrite !Min.min_l by lia
                            | rewrite !nth_default_cons
-                           | rewrite Z.div_same by eauto with omega
+                           | rewrite Z.div_same by eauto with lia
                            | progress break_innermost_match
                            | progress autorewrite with zsimplify_const
                            | lia
                            | match goal with
-                             | [ H : context[weight ?x = weight ?y] |- _ ] => rewrite (weight_unique_iff x y) in H by omega
-                             | [ |- context[nth_default ?d ?ls ?i] ] => rewrite (@nth_default_out_of_bounds _ i ls d) by (distr_length; omega)
+                             | [ H : context[weight ?x = weight ?y] |- _ ] => rewrite (weight_unique_iff x y) in H by lia
+                             | [ |- context[nth_default ?d ?ls ?i] ] => rewrite (@nth_default_out_of_bounds _ i ls d) by (distr_length; lia)
                              | [ H : ?x = ?x |- _ ] => clear H
                              end
-                           | progress handle_min_max_for_omega_case ]. }
+                           | progress handle_min_max_for_lia_case ]. }
         { subst; break_innermost_match; Z.ltb_to_lt;
             match goal with
-            | [ H : context[weight ?x = weight ?y] |- _ ] => rewrite (weight_unique_iff x y) in H by omega
-            end; destruct_head'_or; try (subst; omega).
+            | [ H : context[weight ?x = weight ?y] |- _ ] => rewrite (weight_unique_iff x y) in H by lia
+            end; destruct_head'_or; try (subst; lia).
           all:repeat first [ progress cbn [fst snd app map fold_right]
                            | progress Z.ltb_to_lt
                            | progress subst
                            | progress destruct_head'_or
-                           | progress rewrite ?Z.mul_div_eq_full, ?weight_mul, ?Z.sub_0_r by eauto with omega
-                           | progress rewrite ?place_weight by eauto with omega
+                           | progress rewrite ?Z.mul_div_eq_full, ?weight_mul, ?Z.sub_0_r by eauto with lia
+                           | progress rewrite ?place_weight by eauto with lia
                            | rewrite !Nat.sub_diag
-                           | rewrite !Min.min_l by omega
+                           | rewrite !Min.min_l by lia
                            | rewrite !nth_default_cons
-                           | rewrite Z.div_same by eauto with omega
+                           | rewrite Z.div_same by eauto with lia
                            | progress break_innermost_match
                            | progress autorewrite with zsimplify_const
                            | lia
                            | match goal with
-                             | [ H : context[weight ?x = weight ?y] |- _ ] => rewrite (weight_unique_iff x y) in H by omega
-                             | [ |- context[nth_default ?d ?ls ?i] ] => rewrite (@nth_default_out_of_bounds _ i ls d) by (distr_length; omega)
+                             | [ H : context[weight ?x = weight ?y] |- _ ] => rewrite (weight_unique_iff x y) in H by lia
+                             | [ |- context[nth_default ?d ?ls ?i] ] => rewrite (@nth_default_out_of_bounds _ i ls d) by (distr_length; lia)
                              | [ H : ?x = ?x |- _ ] => clear H
                              end
-                           | progress handle_min_max_for_omega_case ]. }
+                           | progress handle_min_max_for_lia_case ]. }
         { subst; break_innermost_match; Z.ltb_to_lt;
             match goal with
-            | [ H : context[weight ?x = weight ?y] |- _ ] => rewrite (weight_unique_iff x y) in H by omega
-            end; destruct_head'_or; try (subst; omega).
+            | [ H : context[weight ?x = weight ?y] |- _ ] => rewrite (weight_unique_iff x y) in H by lia
+            end; destruct_head'_or; try (subst; lia).
           all:repeat first [ progress cbn [fst snd app map fold_right]
                            | progress Z.ltb_to_lt
                            | progress subst
                            | progress destruct_head'_or
-                           | progress rewrite ?Z.mul_div_eq_full, ?weight_mul, ?Z.sub_0_r by eauto with omega
-                           | progress rewrite ?place_weight by eauto with omega
+                           | progress rewrite ?Z.mul_div_eq_full, ?weight_mul, ?Z.sub_0_r by eauto with lia
+                           | progress rewrite ?place_weight by eauto with lia
                            | rewrite !Nat.sub_diag
-                           | rewrite !Min.min_l by omega
+                           | rewrite !Min.min_l by lia
                            | rewrite !nth_default_cons
-                           | rewrite Z.div_same by eauto with omega
+                           | rewrite Z.div_same by eauto with lia
                            | progress break_innermost_match
                            | progress autorewrite with zsimplify_const
                            | lia
                            | match goal with
-                             | [ H : context[weight ?x = weight ?y] |- _ ] => rewrite (weight_unique_iff x y) in H by omega
-                             | [ |- context[nth_default ?d ?ls ?i] ] => rewrite (@nth_default_out_of_bounds _ i ls d) by (distr_length; omega)
+                             | [ H : context[weight ?x = weight ?y] |- _ ] => rewrite (weight_unique_iff x y) in H by lia
+                             | [ |- context[nth_default ?d ?ls ?i] ] => rewrite (@nth_default_out_of_bounds _ i ls d) by (distr_length; lia)
                              | [ H : ?x = ?x |- _ ] => clear H
                              end
-                           | progress handle_min_max_for_omega_case ]. } }
+                           | progress handle_min_max_for_lia_case ]. } }
     Qed.
 
     Definition carry_reduce n (s:Z) (c:list (Z * Z))
@@ -1274,7 +1274,7 @@ Module Positional.
       (forall i, In i (seq 0 n) -> weight (S i) / weight i <> 0) ->
       eval n (encode n s c x) mod (s - Associational.eval c)
       = x mod (s - Associational.eval c).
-    Proof using Type*. cbv [encode]; intros; push; auto; f_equal; omega. Qed.
+    Proof using Type*. cbv [encode]; intros; push; auto; f_equal; lia. Qed.
     Lemma length_encode n s c x
       : length (encode n s c x) = n.
     Proof using Type. cbv [encode]; repeat distr_length.                 Qed.
@@ -1315,7 +1315,7 @@ Module Positional.
     Proof using s_nz m_nz weight_0 weight_nz.
       destruct (zerop n) as [->|]; try reflexivity.
       intros; cbv [sub balance scmul negate_snd]; push; repeat distr_length;
-        eauto with omega.
+        eauto with lia.
       push_Zmod; push; pull_Zmod; push_Zmod; pull_Zmod; distr_length; eauto.
     Qed.
     Hint Rewrite eval_sub : push_eval.
@@ -1399,7 +1399,7 @@ Module Positional.
     Lemma length_select n cond p q :
       length p = n -> length q = n ->
       length (select cond p q) = n.
-    Proof using Type. clear dependent weight. distr_length; omega **. Qed.
+    Proof using Type. clear dependent weight. distr_length; lia **. Qed.
   End select.
 End Positional.
 (* Hint Rewrite disappears after the end of a section *)
@@ -1412,7 +1412,7 @@ Section Positional_nonuniform.
     length xs = n ->
     eval weight n xs = weight 0%nat * hd 0 xs + eval (fun i => weight (S i)) (pred n) (tl xs).
   Proof using Type.
-    intro; subst; destruct xs as [|x xs]; [ cbn; omega | ].
+    intro; subst; destruct xs as [|x xs]; [ cbn; lia | ].
     cbv [eval to_associational Associational.eval] in *; cbn.
     rewrite <- map_S_seq; reflexivity.
   Qed.
@@ -1428,9 +1428,9 @@ Section Positional_nonuniform.
   Proof using Type.
     setoid_rewrite List.in_seq.
     revert n weight weight'; induction p as [|x xs IHxs], n as [|n]; intros weight weight' Hwt;
-      cbv [eval to_associational Associational.eval] in *; cbn in *; try omega.
-    rewrite Hwt, Z.mul_add_distr_l, Z.mul_assoc by omega.
-    erewrite <- !map_S_seq, IHxs; [ reflexivity | ]; cbn; eauto with omega.
+      cbv [eval to_associational Associational.eval] in *; cbn in *; try lia.
+    rewrite Hwt, Z.mul_add_distr_l, Z.mul_assoc by lia.
+    erewrite <- !map_S_seq, IHxs; [ reflexivity | ]; cbn; eauto with lia.
   Qed.
 End Positional_nonuniform.
 End Positional.

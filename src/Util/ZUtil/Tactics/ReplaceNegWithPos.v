@@ -1,17 +1,17 @@
-Require Import Coq.omega.Omega Coq.ZArith.ZArith.
+Require Import Coq.micromega.Lia Coq.ZArith.ZArith.
 Local Open Scope Z_scope.
 
 Module Z.
-  Lemma push_minus_add a b : -(-a + b) = a + -b. Proof. omega. Qed.
+  Lemma push_minus_add a b : -(-a + b) = a + -b. Proof. lia. Qed.
 
   Ltac clean_neg_step _ :=
     match goal with
-    | [ H : (-?x) < 0 |- _ ] => assert (0 < x) by omega; clear H
-    | [ H : 0 > (-?x) |- _ ] => assert (0 < x) by omega; clear H
-    | [ H : 0 <> -?x |- _ ] => assert (0 <> x) by omega; clear H
-    | [ H : -?x <> 0 |- _ ] => assert (x <> 0) by omega; clear H
-    | [ H : (-?x) <= 0 |- _ ] => assert (0 <= x) by omega; clear H
-    | [ H : 0 >= (-?x) |- _ ] => assert (0 <= x) by omega; clear H
+    | [ H : (-?x) < 0 |- _ ] => assert (0 < x) by lia; clear H
+    | [ H : 0 > (-?x) |- _ ] => assert (0 < x) by lia; clear H
+    | [ H : 0 <> -?x |- _ ] => assert (0 <> x) by lia; clear H
+    | [ H : -?x <> 0 |- _ ] => assert (x <> 0) by lia; clear H
+    | [ H : (-?x) <= 0 |- _ ] => assert (0 <= x) by lia; clear H
+    | [ H : 0 >= (-?x) |- _ ] => assert (0 <= x) by lia; clear H
     | [ H : -?x <= -?y |- _ ] => rewrite <- Z.opp_le_mono in H
     | [ |- -?x <= -?y ] => rewrite <- Z.opp_le_mono
     | [ H : -?x < -?y |- _ ] => rewrite <- Z.opp_lt_mono in H

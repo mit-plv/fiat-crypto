@@ -16,7 +16,7 @@ Lemma div_add_mod_cond_l' x y d :
   (x mod d + y) / d = (x + y) / d - x / d.
 Proof.
   intros.
-  rewrite (Div.Z.div_add_mod_cond_l x y d) by omega.
+  rewrite (Div.Z.div_add_mod_cond_l x y d) by lia.
   ring.
 Qed.
 Lemma div_add_mod_cond_r' x y d :
@@ -24,7 +24,7 @@ Lemma div_add_mod_cond_r' x y d :
   (x + y mod d) / d = (x + y) / d - y / d.
 Proof.
   intros.
-  rewrite (Div.Z.div_add_mod_cond_r x y d) by omega.
+  rewrite (Div.Z.div_add_mod_cond_r x y d) by lia.
   ring.
 Qed.
 End Z.
@@ -298,8 +298,8 @@ Section ProdEquiv.
 
     (* TODO: this is a stupidly ugly arithmetic proof *)
     { subst. subst result.
-      rewrite Z.shiftl_mul_pow2 by omega.
-      rewrite Z.shiftl_div_pow2 by omega.
+      rewrite Z.shiftl_mul_pow2 by lia.
+      rewrite Z.shiftl_div_pow2 by lia.
       rewrite Pos2Z.opp_neg. (* TODO : add to zsimplify? *)
       autorewrite with zsimplify.
 
@@ -308,7 +308,7 @@ Section ProdEquiv.
         change (if x then 1 else 0) with (Z.b2z x)
       end.
       cbv [cc_spec].
-      rewrite Z.testbit_spec' by omega.
+      rewrite Z.testbit_spec' by lia.
 
       rewrite Z.mod_small with (b:=2) by
           (split; [ Z.zero_bounds | ];
@@ -320,12 +320,12 @@ Section ProdEquiv.
       
       autorewrite with zsimplify.
 
-      rewrite Z.div_add_mod_cond_r' by omega.
+      rewrite Z.div_add_mod_cond_r' by lia.
       rewrite Z.mod_small with (a := ctx c / 2 ^ 128)
         by (split; [ Z.zero_bounds | apply Z.div_lt_upper_bound; lia ]).
-      assert (0 < 2 ^ 128) by (cbn; omega).
+      assert (0 < 2 ^ 128) by (cbn; lia).
       change (2 ^ 256)%Z with (2 ^ 128 * 2 ^ 128)%Z.
-      rewrite Z.div_mul_cancel_r by omega.
+      rewrite Z.div_mul_cancel_r by lia.
       ring. }
   Qed.
 
@@ -361,8 +361,8 @@ Section ProdEquiv.
               cc ctx.
   Proof.
     intros.
-    assert (0 < wordmax) by omega.
-    repeat (rewrite interp_add_chain by (rewrite ?reg_eqb_refl, ?reg_eqb_neq by congruence; try assumption; auto using Z.mod_pos_bound with omega)).
+    assert (0 < wordmax) by lia.
+    repeat (rewrite interp_add_chain by (rewrite ?reg_eqb_refl, ?reg_eqb_neq by congruence; try assumption; auto using Z.mod_pos_bound with lia)).
     rewrite ?reg_eqb_refl, ?reg_eqb_neq by congruence.
     match goal with
     | H : flags_unused ?e _
@@ -377,7 +377,7 @@ Section ProdEquiv.
     { autorewrite with zsimplify. pull_Zmod.
       f_equal; ring. }
     { autorewrite with zsimplify. pull_Zmod.
-      rewrite !Z.div_add_mod_cond_l' by (subst; cbn; omega).
+      rewrite !Z.div_add_mod_cond_l' by (subst; cbn; lia).
       ring_simplify.
       (* This is really annoying, can't a tactic do this? *)
       match goal with |- context [?a + ?b + ?c] =>

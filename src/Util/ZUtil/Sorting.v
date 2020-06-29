@@ -8,7 +8,7 @@ Module Z.
     Infix "<=?" := leb.
     Local Coercion is_true : bool >-> Sortclass.
     Theorem leb_total : forall a1 a2, a1 <=? a2 \/ a2 <=? a1.
-    Proof. intros x y; destruct (Z.le_ge_cases x y); [ left | right ]; unfold is_true, leb; rewrite Z.leb_le; omega. Qed.
+    Proof. intros x y; destruct (Z.le_ge_cases x y); [ left | right ]; unfold is_true, leb; rewrite Z.leb_le; lia. Qed.
   End Order.
 
   Module Sort := Mergesort.Sort Order.

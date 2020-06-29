@@ -53,7 +53,7 @@ Module MontgomeryReduction.
     Proof.
       clear -R_big_enough R_two_pow; cbv [w uweight weight]; intro.
       autorewrite with zsimplify.
-      rewrite Z.pow_mul_r, R_two_pow by omega; reflexivity.
+      rewrite Z.pow_mul_r, R_two_pow by lia; reflexivity.
     Qed.
 
     Declare Equivalent Keys weight w.
@@ -61,12 +61,12 @@ Module MontgomeryReduction.
     Local Ltac solve_range :=
       repeat match goal with
              | _ => progress change_weight
-             | |- context [?a mod ?b] => unique pose proof (Z.mod_pos_bound a b ltac:(omega))
+             | |- context [?a mod ?b] => unique pose proof (Z.mod_pos_bound a b ltac:(lia))
              | |- 0 <= _ => progress Z.zero_bounds
              | |- 0 <= _ * _ < _ * _ =>
-               split; [ solve [Z.zero_bounds] | apply Z.mul_lt_mono_nonneg; omega ]
+               split; [ solve [Z.zero_bounds] | apply Z.mul_lt_mono_nonneg; lia ]
              | _ => solve [auto]
-             | _ => omega
+             | _ => lia
              end.
 
     Local Lemma eval2 x y : Positional.eval w 2 [x;y] = x + R * y.
@@ -89,7 +89,7 @@ Module MontgomeryReduction.
       rewrite Hlo, Hhi.
       assert (0 <= (T mod R) * N' < w 2) by  (solve_range).
       autorewrite with widemul.
-      rewrite Rows.add_partitions, Rows.add_div by (distr_length; apply wprops; omega).
+      rewrite Rows.add_partitions, Rows.add_div by (distr_length; apply wprops; lia).
       (* rewrite R_two_pow. *)
       cbv [Partition.partition seq].
       repeat match goal with
@@ -123,8 +123,8 @@ Module MontgomeryReduction.
     Proof.
       erewrite montred'_eq by eauto.
       apply Z.equiv_modulo_mod_small; auto using reduce_via_partial_correct.
-      replace 0 with (Z.min 0 (R-N)) by (apply Z.min_l; omega).
-      apply reduce_via_partial_in_range; omega.
+      replace 0 with (Z.min 0 (R-N)) by (apply Z.min_l; lia).
+      apply reduce_via_partial_in_range; lia.
     Qed.
   End MontRed'.
 End MontgomeryReduction.

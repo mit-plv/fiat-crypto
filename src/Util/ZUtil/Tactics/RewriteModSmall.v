@@ -12,9 +12,9 @@ Module Z.
     : ((a mod n) mod m = a mod m)%Z.
   Proof.
     assert ((a mod n) < m)%Z
-      by (eapply Z.lt_le_trans; [ apply Z.mod_pos_bound | ]; omega).
+      by (eapply Z.lt_le_trans; [ apply Z.mod_pos_bound | ]; lia).
     rewrite (Z.mod_small _ m) by auto with zarith.
-    apply Z.mod_divide in Hnm; [ | omega ].
+    apply Z.mod_divide in Hnm; [ | lia ].
     destruct Hnm as [x ?]; subst.
     repeat match goal with
            | [ H : context[(_ mod _)%Z] |- _ ]

@@ -1,3 +1,4 @@
+Require Import Coq.micromega.Lia.
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Util.ListUtil Coq.Lists.List Crypto.Util.ListUtil.FoldBool.
 Require Import Crypto.Util.ZRange.
@@ -278,7 +279,7 @@ Module Compilers.
                            | progress rewrite ?Bool.andb_true_iff in *
                            | discriminate
                            | apply conj
-                           | Z.ltb_to_lt; omega
+                           | Z.ltb_to_lt; lia
                            | match goal with
                              | [ H : context[@Compilers.base.interp_beq _ _ ?base_interp_beq ?t] |- _ ]
                                => progress Reflect.reflect_beq_to_eq (@Compilers.base.interp_beq _ _ base_interp_beq t)

@@ -41,9 +41,9 @@ Module Z.
         autorewrite with zsimplify.
         reflexivity. }
       { f_equal.
-        { push_Zmod; pull_Zmod; apply f_equal2; omega. }
+        { push_Zmod; pull_Zmod; apply f_equal2; lia. }
         { Z.div_mod_to_quot_rem_in_goal; nia. } }
-      { subst; autorewrite with zsimplify; f_equal; omega. }
+      { subst; autorewrite with zsimplify; f_equal; lia. }
     Qed.
 
     Lemma add_get_carry_to_add_with_get_carry_cps {T} c a b (P : Z -> Z -> T)

@@ -65,7 +65,7 @@ Module ZRange.
     all: Z.replace_all_neg_with_pos.
     all: autorewrite with zsimplify_const; try reflexivity.
     2: rewrite Z.div_opp_r, Z.mod_opp_r, ZRange.is_bounded_by_bool_opp.
-    all: rewrite is_bounded_by_bool_split_bounds_pos by (rewrite ?ZRange.is_bounded_by_bool_opp; try assumption; omega).
+    all: rewrite is_bounded_by_bool_split_bounds_pos by (rewrite ?ZRange.is_bounded_by_bool_opp; try assumption; lia).
     all: reflexivity.
   Qed.
 

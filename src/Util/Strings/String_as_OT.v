@@ -1,4 +1,5 @@
-Require Import Coq.omega.Omega Coq.Strings.String Coq.Strings.Ascii.
+Require Import Coq.Arith.Arith.
+Require Import Coq.micromega.Lia Coq.Strings.String Coq.Strings.Ascii.
 Require Import Coq.Structures.OrderedType.
 
 Lemma nat_compare_eq_refl : forall x, Nat.compare x x = Eq.
@@ -58,9 +59,9 @@ Module String_as_OT <: OrderedType.
       | [ |- context [Nat.compare ?a ?b] ] =>
         let H := fresh in
         first [
-            assert (Nat.compare a b = Eq) as H by (autorewrite_nat_compare; omega) |
-            assert (Nat.compare a b = Lt) as H by (autorewrite_nat_compare; omega) |
-            assert (Nat.compare a b = Gt) as H by (autorewrite_nat_compare; omega)
+            assert (Nat.compare a b = Eq) as H by (autorewrite_nat_compare; lia) |
+            assert (Nat.compare a b = Lt) as H by (autorewrite_nat_compare; lia) |
+            assert (Nat.compare a b = Gt) as H by (autorewrite_nat_compare; lia)
         ]; rewrite H; intuition
     end.
 

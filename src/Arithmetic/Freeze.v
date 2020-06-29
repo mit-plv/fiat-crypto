@@ -48,7 +48,7 @@ Module Freeze.
                      | rewrite Z.div_small_iff in * by auto
                      | progress (Z.rewrite_mod_small; push_Zmod; Z.rewrite_mod_small)
                      | progress destruct_head'_or
-                     | omega ].
+                     | lia ].
     Qed.
 
     Lemma length_freeze n mask m p :
@@ -83,8 +83,8 @@ Module Freeze.
                    | progress pull_Zmod (*
                    | progress break_innermost_match_step
                    | progress destruct_head'_or
-                   | omega
-                   | f_equal; omega
+                   | lia
+                   | f_equal; lia
                    | rewrite Z.div_small_iff in * by (auto using (@weight_positive weight ltac:(assumption)))
                    | progress Z.rewrite_mod_small *) ].
     Qed.
@@ -103,8 +103,8 @@ Module Freeze.
     Proof using wprops.
       pose proof (@weight_positive weight wprops n).
       rewrite eval_freeze_eq by assumption.
-      erewrite freezeZ; try eassumption; try omega.
-      f_equal; omega.
+      erewrite freezeZ; try eassumption; try lia.
+      f_equal; lia.
     Qed.
 
     Lemma freeze_partitions n c mask m p

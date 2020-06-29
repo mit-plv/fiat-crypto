@@ -568,7 +568,6 @@ Section __.
     : carry_scmul_const_correct (weight (Qnum limbwidth) (QDen limbwidth)) n m tight_bounds loose_bounds a (Interp res).
   Proof using curve_good.
     prove_correctness ().
-    erewrite eval_carry_scmulmod by (auto || congruence); reflexivity.
   Qed.
 
   Lemma carry_correct res

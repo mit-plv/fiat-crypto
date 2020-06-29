@@ -206,7 +206,7 @@ Section barrett.
       Lemma q_bound : a / n - 1 <= q.
       Proof.
         rewrite (proj2_sig q_nice_strong).
-        break_match; omega.
+        break_match; lia.
       Qed.
 
       Lemma r_small_strong : r < 2 * n.

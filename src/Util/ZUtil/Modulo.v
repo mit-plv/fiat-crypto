@@ -42,28 +42,28 @@ Module Z.
                                       ((a ^ b) + c) mod a = c mod a.
   Proof.
     intros a b c H H0; replace b with (b - 1 + 1) by ring;
-      rewrite Z.pow_add_r, Z.pow_1_r by omega; auto using Z.mod_add_l.
+      rewrite Z.pow_add_r, Z.pow_1_r by lia; auto using Z.mod_add_l.
   Qed.
 
   Lemma mod_exp_0 : forall a x m, x > 0 -> m > 1 -> a mod m = 0 ->
     a ^ x mod m = 0.
   Proof.
     intros a x m H H0 H1.
-    replace x with (Z.of_nat (Z.to_nat x)) in * by (apply Z2Nat.id; omega).
+    replace x with (Z.of_nat (Z.to_nat x)) in * by (apply Z2Nat.id; lia).
     induction (Z.to_nat x). {
-      simpl in *; omega.
+      simpl in *; lia.
     } {
       rewrite Nat2Z.inj_succ in *.
-      rewrite Z.pow_succ_r by omega.
-      rewrite Z.mul_mod by omega.
+      rewrite Z.pow_succ_r by lia.
+      rewrite Z.mul_mod by lia.
       case_eq n; intros. {
         subst. simpl.
-        rewrite Zmod_1_l by omega.
+        rewrite Zmod_1_l by lia.
         rewrite H1.
         apply Zmod_0_l.
       } {
         subst.
-        rewrite IHn by (rewrite Nat2Z.inj_succ in *; omega).
+        rewrite IHn by (rewrite Nat2Z.inj_succ in *; lia).
         rewrite H1.
         auto.
       }
@@ -86,8 +86,8 @@ Module Z.
 
   Lemma mod_to_nat x m (Hm:(0 < m)%Z) (Hx:(0 <= x)%Z) : (Z.to_nat x mod Z.to_nat m = Z.to_nat (x mod m))%nat.
     pose proof Zdiv.mod_Zmod (Z.to_nat x) (Z.to_nat m) as H;
-      rewrite !Z2Nat.id in H by omega.
-    rewrite <-H by (change 0%nat with (Z.to_nat 0); rewrite Z2Nat.inj_iff; omega).
+      rewrite !Z2Nat.id in H by lia.
+    rewrite <-H by (change 0%nat with (Z.to_nat 0); rewrite Z2Nat.inj_iff; lia).
     rewrite !Nat2Z.id; reflexivity.
   Qed.
 
@@ -164,8 +164,8 @@ Module Z.
     intros; break_match; Z.ltb_to_lt; rewrite ?Z.sub_0_r, ?Z.add_0_r;
       assert (0 <> c * b) by nia; Z.div_mod_to_quot_rem_in_goal; subst;
         destruct_head'_or; destruct_head'_and;
-          try assert (b < 0) by omega;
-          try assert (c < 0) by omega;
+          try assert (b < 0) by lia;
+          try assert (c < 0) by lia;
           Z.replace_all_neg_with_pos;
           try match goal with
               | [ H : ?c * ?b * ?q1 + ?r1 = ?b * (?c * ?q2 + _) + _ |- _ ]
@@ -177,13 +177,13 @@ Module Z.
                  | [ |- - ?x = ?y ] => is_var y; assert (y <= 0) by nia; Z.replace_all_neg_with_pos
                  | [ |- - ?x = ?y + -_ ] => is_var y; assert (y <= 0) by nia; Z.replace_all_neg_with_pos
                  | [ H : -?x + (-?y + ?z) = -?w + ?v |- _ ]
-                   => assert (x + (y + -z) = w + -v) by omega; clear H
+                   => assert (x + (y + -z) = w + -v) by lia; clear H
                  | [ H : ?c * ?b * ?q1 + (?b * ?q2 + ?r) = ?b * (?c * ?q1' + ?q2') + ?r' |- _ ]
                    => assert (c * q1 + q2 = c * q1' + q2') by nia;
                         assert (r = r') by nia;
                         clear H
-                 | [ H : -?x < -?y + ?z |- _ ] => assert (y + -z < x) by omega; clear H
-                 | [ H : -?x + ?y <= 0 |- _ ] => assert (0 <= x + -y) by omega; clear H
+                 | [ H : -?x < -?y + ?z |- _ ] => assert (y + -z < x) by lia; clear H
+                 | [ H : -?x + ?y <= 0 |- _ ] => assert (0 <= x + -y) by lia; clear H
                  | _ => progress Z.clean_neg
                  | _ => progress subst
                  end.
@@ -203,8 +203,8 @@ Module Z.
                      | first [ assert (1 + q = q') by nia | assert (q = 1 + q') by nia ];
                        first [ assert (r' = 0) by nia | assert (r = 0) by nia ] ] ]
         end.
-    all:try omega.
-    all:break_match; Z.ltb_to_lt; omega.
+    all:try lia.
+    all:break_match; Z.ltb_to_lt; lia.
   Qed.
 
   Lemma mod_pull_div_full a b c
@@ -215,15 +215,15 @@ Module Z.
   Proof.
     destruct (Z_zerop b), (Z_zerop c); subst;
       autorewrite with zsimplify; try reflexivity.
-    { break_match; Z.ltb_to_lt; omega. }
-    { erewrite mod_pull_div_helper at 1 by (omega || reflexivity); cbv beta.
-      destruct (c <? 0) eqn:?; simpl; [ | omega ].
-      break_innermost_match; omega. }
+    { break_match; Z.ltb_to_lt; lia. }
+    { erewrite mod_pull_div_helper at 1 by (lia || reflexivity); cbv beta.
+      destruct (c <? 0) eqn:?; simpl; [ | lia ].
+      break_innermost_match; lia. }
   Qed.
 
   Lemma mod_pull_div a b c
     : 0 <= c -> (a / b) mod c = a mod (c * b) / b.
-  Proof. rewrite mod_pull_div_full; destruct (c <? 0) eqn:?; Z.ltb_to_lt; simpl; omega. Qed.
+  Proof. rewrite mod_pull_div_full; destruct (c <? 0) eqn:?; Z.ltb_to_lt; simpl; lia. Qed.
 
   Lemma small_mod_eq a b n: a mod n = b mod n -> 0 <= a < n -> a = b mod n.
   Proof. intros; rewrite <-(Z.mod_small a n); auto. Qed.
@@ -244,9 +244,9 @@ Module Z.
                                | progress apply Z.min_case_strong
                                | progress apply Z.max_case_strong
                                | progress intros
-                               | omega
+                               | lia
                                | match goal with
-                                 | [ H : ?x <= ?y, H' : ?y <= ?x |- _ ] => assert (x = y) by omega; clear H H'
+                                 | [ H : ?x <= ?y, H' : ?y <= ?x |- _ ] => assert (x = y) by lia; clear H H'
                                  | _ => progress subst
                                  | [ H : ?d * ?q0 + ?r0 = ?d * ?q1 + ?r1 |- _ ]
                                    => assert (q0 = q1) by nia; subst q0
@@ -272,7 +272,7 @@ Module Z.
       nia.
   Qed.
   Lemma mod_mod_0_0_eq_pos x y : 0 < x -> 0 < y -> x mod y = 0 -> y mod x = 0 -> x = y.
-  Proof. intros ?? H0 H1; pose proof (mod_mod_0_0_eq x y H0 H1); omega. Qed.
+  Proof. intros ?? H0 H1; pose proof (mod_mod_0_0_eq x y H0 H1); lia. Qed.
   Lemma mod_mod_trans x y z : y <> 0 -> x mod y = 0 -> y mod z = 0 -> x mod z = 0.
   Proof.
     destruct (Z_zerop x), (Z_zerop z); subst; autorewrite with zsimplify_const; auto; intro.
@@ -294,7 +294,7 @@ Module Z.
   Proof.
     intros a b c H.
     replace b with (b - c + c) by ring.
-    rewrite Z.pow_add_r by omega.
+    rewrite Z.pow_add_r by lia.
     apply Z_mod_mult.
   Qed.
   Hint Rewrite mod_same_pow using zutil_arith : zsimplify.
@@ -369,7 +369,7 @@ Module Z.
     replace (a mod b) with ((1 * b + (a - b)) mod b) by (f_equal; ring).
     rewrite Z.mod_add_l by auto.
     apply Z.mod_small.
-    omega.
+    lia.
   Qed.
 
   Lemma mod_pow_r_split x b e1 e2 : 0 <= b -> 0 <= e1 <= e2 -> x mod b^e2 = (x mod b^e1) + (b^e1) * ((x / b^e1) mod b^(e2-e1)).
