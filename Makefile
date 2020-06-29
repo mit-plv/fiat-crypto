@@ -441,7 +441,7 @@ $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%.hs) : %.hs : %.v src/haskell.sed
 # unix package needed for Unix.gettimeofday for the perf_* binaries
 $(STANDALONE_OCAML:%=src/ExtractionOCaml/%) : % : %.ml
 	$(SHOW)'OCAMLOPT $< -o $@'
-	$(HIDE)$(TIMER) ocamlfind ocamlopt -package unix -linkpkg -w -20 -o $@ $<
+	$(HIDE)$(TIMER) ocamlfind ocamlopt -package unix -linkpkg -w -20 -g -o $@ $<
 
 $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%) : % : %.hs
 	$(SHOW)'GHC $< -o $@'
