@@ -285,6 +285,28 @@ Module Compilers.
         End __.
       End name_infos.
 
+      Module LiftDeclare.
+        Local Open Scope list_scope.
+
+        Definition split_declare (e : stmt) : list stmt (* decls *) * list stmt (* non-decls *)
+          := match e with
+             | Assign true t sz name val
+               => ([DeclareVar t sz name], [Assign false t sz name val])
+             | DeclareVar _ _ _ as e
+               => ([e], [])
+             | e => ([], [e])
+             end.
+
+        Definition split_declarations (e : expr) : expr (* decls *) * expr (* non-decls *)
+          := let ls := List.map split_declare e in
+             (List.flat_map (@fst _ _) ls,
+              List.flat_map (@snd _ _) ls).
+
+        Definition lift_declarations (e : expr) : expr
+          := let '(decls, rest) := split_declarations e in
+             decls ++ rest.
+      End LiftDeclare.
+
       Module OfPHOAS.
         Export Stringification.Language.Compilers.ToString.OfPHOAS.
 
@@ -345,12 +367,14 @@ Module Compilers.
 
         Class consider_retargs_live_opt := consider_retargs_live : forall {s d}, ident s d -> bool.
         Class rename_dead_opt := rename_dead : string -> string.
+        Class lift_declarations_opt := lift_declarations : bool. 
 
         Section __.
           Context {lang_casts : LanguageCasts}
                   {relax_zrange : relax_zrange_opt}
                   {consider_retargs_live : consider_retargs_live_opt}
-                  {rename_dead : rename_dead_opt}.
+                  {rename_dead : rename_dead_opt}
+                  {lift_declarations : lift_declarations_opt}.
 
           (* None means unconstrained *)
           Definition bin_op_natural_output_opt
@@ -1485,8 +1509,10 @@ Module Compilers.
                  match t return @Compilers.expr.expr base.type ident.ident var_data t -> type.for_each_lhs_of_arrow ZRange.type.option.interp t -> var_data (type.base (type.final_codomain t)) -> ErrT (type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * expr) with
                  | type.base t
                    => fun e tt vd
-                      => rv <- expr_of_base_PHOAS do_bounds_check e (in_to_body_count count) make_name vd;
-                           ret (tt, vd, name_infos.adjust_dead consider_retargs_live rename_dead rv)
+                      => (rv <- expr_of_base_PHOAS do_bounds_check e (in_to_body_count count) make_name vd;
+                         let rv := name_infos.adjust_dead consider_retargs_live rename_dead rv in
+                         let rv := if lift_declarations then LiftDeclare.lift_declarations rv else rv in
+                         ret (tt, vd, rv))
                  | type.arrow s d
                    => fun e '(inbound, inbounds) vd
                       => match var_data_of_bounds false count make_in_name inbound, invert_Abs e with

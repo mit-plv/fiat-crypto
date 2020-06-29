@@ -480,6 +480,9 @@ Module Compilers.
           passed by pointers), so all variables are live *)
       Local Instance : consider_retargs_live_opt := fun _ _ _ => true.
       Local Instance : rename_dead_opt := fun s => s.
+      (** In C we do want to lift declarations to the top, to comply
+          with ISO C90 *)
+      Local Instance : lift_declarations_opt := true.
 
       Definition ToFunctionLines
                  {relax_zrange : relax_zrange_opt}

@@ -210,6 +210,8 @@ Module Go.
           end.
   (** In Go, assignment to an unused variable can be replaced with assignment to _ *)
   Local Instance : IR.OfPHOAS.rename_dead_opt := fun _ => "_"%string.
+  (** No need to lift declarations to the top *)
+  Local Instance : IR.OfPHOAS.lift_declarations_opt := false.
 
   Fixpoint stmt_to_string (prefix : string) (e : IR.stmt) : string :=
     match e with
