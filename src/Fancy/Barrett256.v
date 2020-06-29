@@ -109,12 +109,12 @@ Module Barrett256.
       match goal with |- context [_ mod ?m] => change m with (2 ^ machine_wordsize) end.
       assert (M < 2 ^ machine_wordsize) by (cbv; congruence).
       assert (0 <= muLow < 2 ^ machine_wordsize) by (split; cbv; congruence).
-      intuition; Prod.inversion_prod; subst; apply Z.mod_small; omega. }
+      intuition; Prod.inversion_prod; subst; apply Z.mod_small; lia. }
     { cbn; intros; subst RegZero RegMod RegMuLow RegxHigh RegxLow.
       match goal with |- context [_ mod ?m] => change m with (2 ^ machine_wordsize) end.
       assert (M < 2 ^ machine_wordsize) by (cbv; congruence).
       assert (0 <= muLow < 2 ^ machine_wordsize) by (split; cbv; congruence).
-      intuition; Prod.inversion_prod; subst; apply Z.mod_small; omega. }
+      intuition; Prod.inversion_prod; subst; apply Z.mod_small; lia. }
     { cbn.
       repeat match goal with
              | _ => apply Compilers.expr.WfLetIn
@@ -225,13 +225,13 @@ Module Barrett256.
              interp (Prod.MulMod x xHigh RegMuLow scratchp1 scratchp2 scratchp3 scratchp4 scratchp5) cc_start_state start_context = X mod M.
   Proof.
     intros. subst X.
-    assert (0 <= start_context xHigh < 2^machine_wordsize) by (cbv [M] in *; cbn; omega).
+    assert (0 <= start_context xHigh < 2^machine_wordsize) by (cbv [M] in *; cbn; lia).
     let r := (eval compute in (2 ^ machine_wordsize)) in
     replace (2^machine_wordsize) with r in * by reflexivity.
 
     erewrite <-barrett_red256_fancy_correct with (error:=100000%positive) by eauto.
     rewrite <-barrett_red256_alloc_equivalent with (errorR := RegZero) (errorP := 1%positive) (extra_reg:=extra_reg)
-      by (auto; cbv [M muLow] in *; cbn; auto with omega).
+      by (auto; cbv [M muLow] in *; cbn; auto with lia).
 
     match goal with
       |- context [make_cc ?last_wrote ?ctx ?carry] =>

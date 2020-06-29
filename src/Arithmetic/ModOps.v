@@ -49,7 +49,7 @@ Section mod_ops.
     clear -limbwidth_good;
     intros; rewrite !weight_ZQ_correct;
     apply lem;
-    try omega; Q_cbv; destruct limbwidth_den; cbn; try lia.
+    try lia; Q_cbv; destruct limbwidth_den; cbn; try lia.
 
   Definition wprops : @weight_properties weight.
   Proof using limbwidth_good.
@@ -69,7 +69,7 @@ Section mod_ops.
     clear -limbwidth_good.
     cut (1 < weight 1); [ lia | ].
     cbv [weight Z.of_nat]; autorewrite with zsimplify_fast.
-    apply Z.pow_gt_1; [ omega | ].
+    apply Z.pow_gt_1; [ lia | ].
     Z.div_mod_to_quot_rem_in_goal; nia.
   Qed.
 

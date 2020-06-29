@@ -1,14 +1,13 @@
 (** * Declaration of Hint Databases with lemmas about ℤ from the standard library *)
-Require Import Coq.micromega.Psatz Coq.omega.Omega.
+Require Import Coq.micromega.Psatz Coq.micromega.Lia.
 Require Import Coq.ZArith.ZArith.
 (* Should we [Require Import Coq.ZArith.Zhints.]? *)
 
 Hint Extern 1 => lia : lia.
 Hint Extern 1 => lra : lra.
 Hint Extern 1 => nia : nia.
-Hint Extern 1 => omega : omega.
 
-Ltac zutil_arith := solve [ omega | lia | auto with nocore ].
+Ltac zutil_arith := solve [ lia | lia | auto with nocore ].
 Ltac zutil_arith_more_inequalities := solve [ zutil_arith | auto with zarith ].
 
 (** Only hints that are always safe to apply (i.e., reversible), and

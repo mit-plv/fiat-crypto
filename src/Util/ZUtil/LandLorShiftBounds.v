@@ -19,13 +19,13 @@ Module Z.
   Lemma lor_range : forall x y n, 0 <= x < 2 ^ n -> 0 <= y < 2 ^ n ->
                                   0 <= Z.lor x y < 2 ^ n.
   Proof.
-    intros x y n H H0; assert (0 <= n) by auto with zarith omega.
+    intros x y n H H0; assert (0 <= n) by auto with zarith lia.
     repeat match goal with
            | |- _ => progress intros
            | |- _ => rewrite Z.lor_spec
-           | |- _ => rewrite Z.testbit_eqb by auto with zarith omega
-           | |- _ => rewrite !Z.div_small by (split; try omega; eapply Z.lt_le_trans;
-                             [ intuition eassumption | apply Z.pow_le_mono_r; omega])
+           | |- _ => rewrite Z.testbit_eqb by auto with zarith lia
+           | |- _ => rewrite !Z.div_small by (split; try lia; eapply Z.lt_le_trans;
+                             [ intuition eassumption | apply Z.pow_le_mono_r; lia])
            | |- _ => split
            | |- _ => apply Z.testbit_false_bound
            | |- _ => solve [auto with zarith]
@@ -42,14 +42,14 @@ Module Z.
   Proof.
     intros x y n m H H0 H1 H2.
     apply Z.lor_range.
-    { split; try omega.
-      apply Z.lt_le_trans with (m := (2 ^ n)%Z); try omega.
-      apply Z.pow_le_mono_r; omega. }
-    { rewrite Z.shiftl_mul_pow2 by omega.
-      rewrite Z.pow_add_r by omega.
+    { split; try lia.
+      apply Z.lt_le_trans with (m := (2 ^ n)%Z); try lia.
+      apply Z.pow_le_mono_r; lia. }
+    { rewrite Z.shiftl_mul_pow2 by lia.
+      rewrite Z.pow_add_r by lia.
       split; Z.zero_bounds.
       rewrite Z.mul_comm.
-      apply Z.mul_lt_mono_pos_l; omega. }
+      apply Z.mul_lt_mono_pos_l; lia. }
   Qed.
 
   Lemma land_upper_bound_l : forall a b, (0 <= a) -> (0 <= b) ->
@@ -130,16 +130,16 @@ Module Z.
 
       - destruct (Z_lt_dec 0 z).
 
-        + assert (forall a, a - 1 = Z.pred a)%Z as HP by (intro; omega);
+        + assert (forall a, a - 1 = Z.pred a)%Z as HP by (intro; lia);
             rewrite HP, <- Z.ones_equiv; clear HP.
-          apply Z.ldiff_ones_r_low; [apply Z.lor_nonneg; split; omega|].
-          rewrite Z.log2_up_eqn, Z.log2_lor; try omega.
+          apply Z.ldiff_ones_r_low; [apply Z.lor_nonneg; split; lia|].
+          rewrite Z.log2_up_eqn, Z.log2_lor; try lia.
           apply Z.lt_succ_r.
-          apply Z.max_case_strong; intros; apply Z.log2_le_mono; omega.
+          apply Z.max_case_strong; intros; apply Z.log2_le_mono; lia.
 
-        + replace z with 0%Z by omega.
-          replace y with 0%Z by omega.
-          replace x with 0%Z by omega.
+        + replace z with 0%Z by lia.
+          replace y with 0%Z by lia.
+          replace x with 0%Z by lia.
           cbv; reflexivity.
     Qed.
 
@@ -149,8 +149,8 @@ Module Z.
              | [|- (0 < 2 ^ _)%Z] => apply Z.pow2_gt_0
              | [|- (0 <= 2 ^ _)%Z] => apply Z.pow2_ge_0
              | [|- (2 ^ _ <= 2 ^ _)%Z] => apply Z.pow_le_mono_r
-             | [|- (_ <= _)%Z] => omega
-             | [|- (_ < _)%Z] => omega
+             | [|- (_ <= _)%Z] => lia
+             | [|- (_ < _)%Z] => lia
              end.
 
     Lemma pow2_mod_range : forall a n m,
@@ -163,7 +163,7 @@ Module Z.
       split; [apply Z.mod_pos_bound, Z.pow2_gt_0; assumption|].
       eapply Z.lt_le_trans; [apply Z.mod_pos_bound, Z.pow2_gt_0; assumption|].
       apply Z.pow_le_mono; [|assumption].
-      split; simpl; omega.
+      split; simpl; lia.
     Qed.
 
     Lemma shiftr_range : forall a n m,
@@ -177,7 +177,7 @@ Module Z.
       rewrite Z.shiftr_div_pow2; [|assumption].
       apply Z.div_lt_upper_bound; [apply Z.pow2_gt_0; assumption|].
       eapply Z.lt_le_trans; [eassumption|apply Z.eq_le_incl].
-      apply Z.pow_add_r; omega.
+      apply Z.pow_add_r; lia.
     Qed.
 
 
@@ -189,7 +189,7 @@ Module Z.
         -> (Z.shiftr a b <= Z.shiftr c d)%Z.
     Proof.
       intros.
-      repeat rewrite Z.shiftr_div_pow2; [|omega|omega].
+      repeat rewrite Z.shiftr_div_pow2; [|lia|lia].
       etransitivity; [apply Z.div_le_compat_l | apply Z.div_le_mono]; solve_pow2.
     Qed.
 
@@ -201,7 +201,7 @@ Module Z.
         -> (Z.shiftl a b <= Z.shiftl c d)%Z.
     Proof.
       intros.
-      repeat rewrite Z.shiftl_mul_pow2; [|omega|omega].
+      repeat rewrite Z.shiftl_mul_pow2; [|lia|lia].
       etransitivity; [apply Z.mul_le_mono_nonneg_l|apply Z.mul_le_mono_nonneg_r]; solve_pow2.
     Qed.
   End ZInequalities.
@@ -210,8 +210,8 @@ Module Z.
                          -> Z.max x y <= Z.lor x y <= 2^Z.log2_up (Z.max x y + 1) - 1.
   Proof.
     apply Z.max_case_strong; intros; split;
-      try solve [ eauto using lor_lower, Z.le_trans, lor_le with omega
-                | rewrite Z.lor_comm; eauto using lor_lower, Z.le_trans, lor_le with omega ].
+      try solve [ eauto using lor_lower, Z.le_trans, lor_le with lia
+                | rewrite Z.lor_comm; eauto using lor_lower, Z.le_trans, lor_le with lia ].
   Qed.
   Lemma lor_bounds_lower x y : 0 <= x -> 0 <= y
                                -> Z.max x y <= Z.lor x y.
@@ -223,7 +223,7 @@ Module Z.
       try solve [ intros; apply lor_bounds; assumption ];
       transitivity (2^0-1);
       try apply Z.sub_le_mono_r, Z.pow_le_mono_r, Z.log2_up_nonneg;
-      simpl; omega.
+      simpl; lia.
   Qed.
   Lemma lor_bounds_gen_lower x y l : 0 <= x -> 0 <= y -> l <= Z.max x y
                                      -> l <= Z.lor x y.
@@ -237,7 +237,7 @@ Module Z.
   Proof.
     intros; etransitivity; [ apply lor_bounds_upper | ].
     apply Z.sub_le_mono_r, Z.pow_le_mono_r, Z.log2_up_le_mono, Z.max_case_strong;
-      omega.
+      lia.
   Qed.
   Lemma lor_bounds_gen x y l u : 0 <= x -> 0 <= y -> l <= Z.max x y -> x <= u -> y <= u
                                  -> l <= Z.lor x y <= 2^Z.log2_up (u + 1) - 1.
@@ -261,12 +261,12 @@ Module Z.
       auto with zarith;
       repeat match goal with
              | [ |- context[-?x - ?y] ]
-               => replace (-x - y) with (-(x + y)) by omega
+               => replace (-x - y) with (-(x + y)) by lia
              | _ => rewrite <- Z.opp_le_mono
              | _ => rewrite <- Z.add_le_mono_r
              | _ => solve [ auto with zarith ]
              | [ |- ?x <= ?y + 1 ]
-               => cut (x <= y); [ omega | solve [ auto with zarith ] ]
+               => cut (x <= y); [ lia | solve [ auto with zarith ] ]
              | [ |- -_ <= _ ]
                => solve [ transitivity (-0); auto with zarith ]
              end.
@@ -293,12 +293,12 @@ Module Z.
       auto with zarith;
       repeat match goal with
              | [ |- context[-?x - ?y] ]
-               => replace (-x - y) with (-(x + y)) by omega
+               => replace (-x - y) with (-(x + y)) by lia
              | _ => rewrite <- Z.opp_le_mono
              | _ => rewrite <- Z.add_le_mono_r
              | _ => solve [ auto with zarith ]
              | [ |- ?x <= ?y + 1 ]
-               => cut (x <= y); [ omega | solve [ auto with zarith ] ]
+               => cut (x <= y); [ lia | solve [ auto with zarith ] ]
              | [ |- context[2^?x] ]
                => lazymatch goal with
                   | [ H : 1 < 2^x |- _ ] => fail
@@ -318,11 +318,11 @@ Module Z.
              | [ H : ?x <= ?y, H' : ?f ?x = ?k, H'' : ?f ?y <> ?k |- _ ]
                => let Hn := fresh in
                   assert (Hn : x <> y) by congruence;
-                    assert (x < y) by omega; clear H Hn
+                    assert (x < y) by lia; clear H Hn
              | [ H : ?x <= ?y, H' : ?f ?x <> ?k, H'' : ?f ?y = ?k |- _ ]
                => let Hn := fresh in
                   assert (Hn : x <> y) by congruence;
-                    assert (x < y) by omega; clear H Hn
+                    assert (x < y) by lia; clear H Hn
              | _ => solve [ repeat match goal with H : context[_ mod _] |- _ => revert H end;
                             Z.div_mod_to_quot_rem_in_goal; subst;
                             lazymatch goal with
@@ -332,9 +332,9 @@ Module Z.
                                  | nia ]
                             end ]
              end.
-    { replace y' with (y + (y' - y)) by omega.
+    { replace y' with (y + (y' - y)) by lia.
       rewrite Z.pow_add_r, <- Zdiv_Zdiv by auto with zarith.
-      assert (y < y') by (assert (y <> y') by congruence; omega).
+      assert (y < y') by (assert (y <> y') by congruence; lia).
       assert (1 < 2^(y'-y)) by auto with zarith.
       assert (0 < x / 2^y)
         by (repeat match goal with H : context[_ mod _] |- _ => revert H end;
@@ -343,7 +343,7 @@ Module Z.
         by (repeat match goal with H : context[_ / _] |- _ => revert H end;
             Z.div_mod_to_quot_rem_in_goal; nia).
       match goal with
-      | [ |- ?x + 1 <= ?y ] => cut (x < y); [ omega | ]
+      | [ |- ?x + 1 <= ?y ] => cut (x < y); [ lia | ]
       end.
       auto with zarith. }
   Qed.
@@ -360,6 +360,6 @@ Module Z.
     unfold Basics.flip in *.
     pose proof (Zle_cases 0 x).
     pose proof (Zlt_cases x 0).
-    destruct (0 <=? x), (x <? 0); try omega.
+    destruct (0 <=? x), (x <? 0); try lia.
   Qed.
 End Z.

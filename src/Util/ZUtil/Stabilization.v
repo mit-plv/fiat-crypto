@@ -16,7 +16,7 @@ Lemma stabilizes_after_Proper x
   : Proper (Z.le ==> Basics.impl) (fun l => stabilizes_after x l).
 Proof.
   intros ?? H [b H']; exists b.
-  intros n H''; apply (H' n); omega.
+  intros n H''; apply (H' n); lia.
 Qed.
 
 Lemma stabilization_time (x:Z) : stabilizes_after x (Z.max (Z.log2 (Z.pred (- x))) (Z.log2 x)).
@@ -31,17 +31,17 @@ Proof.
   repeat match goal with
          | [ |- context[Z.abs _ ] ] => apply Zabs_ind; intro
          | [ |- context[Z.log2 ?x] ]
-           => rewrite (Z.log2_nonpos x) by omega
+           => rewrite (Z.log2_nonpos x) by lia
          | [ |- context[Z.log2_up ?x] ]
-           => rewrite (Z.log2_up_nonpos x) by omega
+           => rewrite (Z.log2_up_nonpos x) by lia
          | _ => rewrite Z.max_r by auto with zarith
          | _ => rewrite Z.max_l by auto with zarith
-         | _ => etransitivity; [ apply Z.le_log2_log2_up | omega ]
+         | _ => etransitivity; [ apply Z.le_log2_log2_up | lia ]
          | _ => progress Z.replace_all_neg_with_pos
          | [ H : 0 <= ?x |- _ ]
-           => assert (x = 0 \/ x = 1 \/ 1 < x) by omega; clear H; destruct_head' or; subst
-         | _ => omega
-         | _ => simpl; omega
+           => assert (x = 0 \/ x = 1 \/ 1 < x) by lia; clear H; destruct_head' or; subst
+         | _ => lia
+         | _ => simpl; lia
          | _ => rewrite Z.log2_up_eqn by assumption
          | _ => progress change (Z.log2_up 1) with 0
          end.
@@ -71,10 +71,10 @@ Proof.
   { destruct H as [l [Hl H]].
     edestruct Z_lt_le_dec; [ | eassumption ].
     pose proof (fun pf n => Z.bits_above_log2_neg x n pf) as H'.
-    specialize_by (omega || assumption).
+    specialize_by (lia || assumption).
     specialize (H (1 + Z.max l (Z.log2 (Z.pred (- x))))).
     specialize (H' (1 + Z.max l (Z.log2 (Z.pred (- x))))).
-    specialize_by (apply Z.max_case_strong; omega).
+    specialize_by (apply Z.max_case_strong; lia).
     congruence. }
   { pose proof (fun n => Z.bits_above_log2 x n H) as Hf.
     eexists; split; [ | eapply Hf ]; auto with zarith. }
@@ -83,42 +83,42 @@ Qed.
 Lemma stabilizes_bounded_pos (x l:Z) (H:stabilizes_after x l) (Hl : 0 <= l) (Hx : 0 < x)
   : x <= 2^(l + 1) - 1.
 Proof.
-  assert (Hlt : forall l n, l < n <-> l + 1 <= n) by (intros; omega).
+  assert (Hlt : forall l n, l < n <-> l + 1 <= n) by (intros; lia).
   destruct H as [b H].
-  destruct (proj2 (testbit_nonneg_iff x)) as [l' [H0' H1']]; [ omega | ].
+  destruct (proj2 (testbit_nonneg_iff x)) as [l' [H0' H1']]; [ lia | ].
   pose proof (Z.testbit_false_bound x (l' + 1)) as Hf.
   pose proof (Z.testbit_false_bound x (l + 1)) as Hf'.
   pose proof (fun pf n => Z.bits_above_log2 x n pf) as Hf''.
   pose proof (fun pf n => Z.log2_lt_pow2 x n pf) as Hlg.
-  specialize_by omega.
+  specialize_by lia.
   setoid_rewrite <- Z.le_ngt in Hf.
   setoid_rewrite <- Z.le_ngt in Hf'.
   setoid_rewrite <- Hlt in Hf; setoid_rewrite <- Hlt in Hf'; clear Hlt.
   setoid_rewrite <- Hlg in Hf''; clear Hlg.
-  destruct b; specialize_by (omega || assumption); [ | omega ].
+  destruct b; specialize_by (lia || assumption); [ | lia ].
   specialize (H (1 + Z.max l l')).
   specialize (H1' (1 + Z.max l l')).
-  specialize_by (apply Z.max_case_strong; omega).
+  specialize_by (apply Z.max_case_strong; lia).
   congruence.
 Qed.
 
 Lemma stabilizes_bounded (x l:Z) (H:stabilizes_after x l) (Hl : 0 <= l) : Z.abs x <= 2^(1 + l).
 Proof.
-  assert (Hlt : forall l n, l < n <-> l + 1 <= n) by (intros; omega).
+  assert (Hlt : forall l n, l < n <-> l + 1 <= n) by (intros; lia).
   rewrite Z.add_comm.
   destruct (Z_zerop x); subst; simpl.
   { cut (0 < 2^(l + 1)); auto with zarith. }
   apply Zabs_ind; intro.
-  { etransitivity; [ apply stabilizes_bounded_pos; eauto | ]; omega. }
+  { etransitivity; [ apply stabilizes_bounded_pos; eauto | ]; lia. }
   { Z.replace_all_neg_with_pos.
     destruct (Z.eq_dec x 1); subst.
     { assert (1 < 2^(l+1)) by auto with zarith.
-      omega. }
+      lia. }
     { assert (H' : stabilizes_after (Z.pred x) l).
       { destruct H as [b H]; exists (negb b).
         do 2 let x := fresh in intro x; specialize (H x).
-        rewrite Z.bits_opp in H by omega.
+        rewrite Z.bits_opp in H by lia.
         destruct b; rewrite ?Bool.negb_true_iff, ?Bool.negb_false_iff in H; assumption. }
       clear H.
-      apply stabilizes_bounded_pos in H'; auto; omega. } }
+      apply stabilizes_bounded_pos in H'; auto; lia. } }
 Qed.

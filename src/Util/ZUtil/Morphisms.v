@@ -1,5 +1,4 @@
 (** * [Proper] morphisms for ℤ constants *)
-Require Import Coq.omega.Omega.
 Require Import Coq.micromega.Lia.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Classes.Morphisms.
@@ -21,22 +20,22 @@ Module Z.
       unacceptably.  In files where we use these, we add them with
       [Local Existing Instances]. *)
   Lemma succ_le_Proper : Proper (Z.le ==> Z.le) Z.succ.
-  Proof. repeat (omega || intro). Qed.
+  Proof. repeat (lia || intro). Qed.
   Hint Resolve succ_le_Proper : zarith.
   Lemma add_le_Proper : Proper (Z.le ==> Z.le ==> Z.le) Z.add.
-  Proof. repeat (omega || intro). Qed.
+  Proof. repeat (lia || intro). Qed.
   Hint Resolve add_le_Proper : zarith.
   Lemma add_le_Proper' x : Proper (Z.le ==> Z.le) (Z.add x).
-  Proof. repeat (omega || intro). Qed.
+  Proof. repeat (lia || intro). Qed.
   Hint Resolve add_le_Proper' : zarith.
   Lemma sub_le_ge_Proper : Proper (Z.le ==> Z.ge ==> Z.le) Z.sub.
-  Proof. repeat (omega || intro). Qed.
+  Proof. repeat (lia || intro). Qed.
   Hint Resolve sub_le_ge_Proper : zarith.
   Lemma sub_le_flip_le_Proper : Proper (Z.le ==> Basics.flip Z.le ==> Z.le) Z.sub.
-  Proof. unfold Basics.flip; repeat (omega || intro). Qed.
+  Proof. unfold Basics.flip; repeat (lia || intro). Qed.
   Hint Resolve sub_le_flip_le_Proper : zarith.
   Lemma sub_le_eq_Proper : Proper (Z.le ==> Logic.eq ==> Z.le) Z.sub.
-  Proof. repeat (omega || intro). Qed.
+  Proof. repeat (lia || intro). Qed.
   Hint Resolve sub_le_eq_Proper : zarith.
   Lemma mul_Zpos_le_Proper p : Proper (Z.le ==> Z.le) (Z.mul (Z.pos p)).
   Proof. repeat (nia || intro). Qed.
@@ -52,22 +51,22 @@ Module Z.
   Hint Resolve pow_Zpos_le_Proper : zarith.
   Lemma lt_le_flip_Proper_flip_impl
     : Proper (Z.le ==> Basics.flip Z.le ==> Basics.flip Basics.impl) Z.lt.
-  Proof. unfold Basics.flip; repeat (omega || intro). Qed.
+  Proof. unfold Basics.flip; repeat (lia || intro). Qed.
   Hint Resolve lt_le_flip_Proper_flip_impl : zarith.
   Lemma le_Proper_ge_le_flip_impl : Proper (Z.le ==> Z.ge ==> Basics.flip Basics.impl) Z.le.
-  Proof. intros ???????; omega. Qed.
+  Proof. intros ???????; lia. Qed.
   Hint Resolve le_Proper_ge_le_flip_impl : zarith.
   Lemma add_le_Proper_flip : Proper (Basics.flip Z.le ==> Basics.flip Z.le ==> Basics.flip Z.le) Z.add.
-  Proof. unfold Basics.flip; repeat (omega || intro). Qed.
+  Proof. unfold Basics.flip; repeat (lia || intro). Qed.
   Hint Resolve add_le_Proper_flip : zarith.
   Lemma sub_le_ge_Proper_flip : Proper (Basics.flip Z.le ==> Basics.flip Z.ge ==> Basics.flip Z.le) Z.sub.
-  Proof. unfold Basics.flip; repeat (omega || intro). Qed.
+  Proof. unfold Basics.flip; repeat (lia || intro). Qed.
   Hint Resolve sub_le_ge_Proper_flip : zarith.
   Lemma sub_flip_le_le_Proper_flip : Proper (Basics.flip Z.le ==> Z.le ==> Basics.flip Z.le) Z.sub.
-  Proof. unfold Basics.flip; repeat (omega || intro). Qed.
+  Proof. unfold Basics.flip; repeat (lia || intro). Qed.
   Hint Resolve sub_flip_le_le_Proper_flip : zarith.
   Lemma sub_le_eq_Proper_flip : Proper (Basics.flip Z.le ==> Logic.eq ==> Basics.flip Z.le) Z.sub.
-  Proof. unfold Basics.flip; repeat (omega || intro). Qed.
+  Proof. unfold Basics.flip; repeat (lia || intro). Qed.
   Hint Resolve sub_le_eq_Proper_flip : zarith.
   Lemma log2_up_le_Proper_flip : Proper (Basics.flip Z.le ==> Basics.flip Z.le) Z.log2_up.
   Proof. intros ???; apply Z.log2_up_le_mono; assumption. Qed.
@@ -79,10 +78,10 @@ Module Z.
   Proof. intros ???; apply Z.pow_le_mono_r; try reflexivity; try assumption. Qed.
   Hint Resolve pow_Zpos_le_Proper_flip : zarith.
   Lemma add_with_carry_le_Proper : Proper (Z.le ==> Z.le ==> Z.le ==> Z.le) Z.add_with_carry.
-  Proof. unfold Z.add_with_carry; repeat (omega || intro). Qed.
+  Proof. unfold Z.add_with_carry; repeat (lia || intro). Qed.
   Hint Resolve add_with_carry_le_Proper : zarith.
   Lemma sub_with_borrow_le_Proper : Proper (Basics.flip Z.le ==> Z.le ==> Basics.flip Z.le ==> Z.le) Z.sub_with_borrow.
-  Proof. unfold Z.sub_with_borrow, Z.add_with_carry, Basics.flip; repeat (omega || intro). Qed.
+  Proof. unfold Z.sub_with_borrow, Z.add_with_carry, Basics.flip; repeat (lia || intro). Qed.
   Hint Resolve sub_with_borrow_le_Proper : zarith.
   Lemma opp_flip_le_le_Proper : Proper (Basics.flip Z.le ==> Z.le) Z.opp.
   Proof. cbv [Basics.flip]; repeat (lia || intro). Qed.
@@ -97,22 +96,22 @@ Module Z.
   Proof. cbv [Basics.flip]; repeat (lia || intro). Qed.
   Hint Resolve opp_ge_le_Proper : zarith.
   Lemma add_le_Proper'' x : Proper (Z.le ==> Z.le) (fun y => Z.add y x).
-  Proof. repeat (omega || intro). Qed.
+  Proof. repeat (lia || intro). Qed.
   Hint Resolve add_le_Proper'' : zarith.
   Lemma sub_le_ge_Proper_r p : Proper (Z.le ==> Z.ge) (Z.sub p).
-  Proof. repeat (omega || intro). Qed.
+  Proof. repeat (lia || intro). Qed.
   Hint Resolve sub_le_ge_Proper_r : zarith.
   Lemma sub_le_le_Proper_l p : Proper (Z.le ==> Z.le) (fun x => Z.sub x p).
-  Proof. repeat (omega || intro). Qed.
+  Proof. repeat (lia || intro). Qed.
   Hint Resolve sub_le_le_Proper_l : zarith.
   Lemma sub_le_flip_le_Proper_r p : Proper (Z.le ==> Basics.flip Z.le) (Z.sub p).
-  Proof. unfold Basics.flip; repeat (omega || intro). Qed.
+  Proof. unfold Basics.flip; repeat (lia || intro). Qed.
   Hint Resolve sub_le_flip_le_Proper_r : zarith.
   Lemma sub_flip_le_le_Proper_r p : Proper (Basics.flip Z.le ==> Z.le) (Z.sub p).
-  Proof. unfold Basics.flip; repeat (omega || intro). Qed.
+  Proof. unfold Basics.flip; repeat (lia || intro). Qed.
   Hint Resolve sub_flip_le_le_Proper_r : zarith.
   Lemma sub_ge_le_Proper_r p : Proper (Z.ge ==> Z.le) (Z.sub p).
-  Proof. unfold Basics.flip; repeat (omega || intro). Qed.
+  Proof. unfold Basics.flip; repeat (lia || intro). Qed.
   Hint Resolve sub_ge_le_Proper_r : zarith.
   Lemma mul_Z0_le_Proper : Proper (Z.le ==> Z.le) (Z.mul Z0).
   Proof. repeat (nia || intro). Qed.

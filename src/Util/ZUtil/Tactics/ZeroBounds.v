@@ -1,4 +1,4 @@
-Require Import Coq.ZArith.ZArith Coq.omega.Omega.
+Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
 Require Import Crypto.Util.ZUtil.Tactics.PrimeBound.
 Require Import Crypto.Util.ZUtil.Div.
 Require Import Crypto.Util.ZUtil.Le.
@@ -26,12 +26,12 @@ Module Z.
     | [ |- 0 < _ * _] => apply Z.lt_0_mul; left; split
     | [ |- 0 < _ / _] => apply Z.div_str_pos
     | [ |- 0 < _ ^ _ ] => apply Z.pow_pos_nonneg
-    end; try omega; try Z.prime_bound; auto.
+    end; try lia; try Z.prime_bound; auto.
 
   Ltac zero_bounds' :=
     repeat match goal with
            | |- ?a <> 0 => apply Z.positive_is_nonzero
-           | |- ?a > 0 => apply Z.lt_gt 
+           | |- ?a > 0 => apply Z.lt_gt
            | |- ?a >= 0 => apply Z.le_ge
            end;
     try match goal with
@@ -39,7 +39,7 @@ Module Z.
         | |- 0 <= ?a => zero_bounds''
         end.
 
-  Ltac zero_bounds := try omega; try Z.prime_bound; zero_bounds'.
+  Ltac zero_bounds := try lia; try Z.prime_bound; zero_bounds'.
 
   Hint Extern 1 => progress zero_bounds : zero_bounds.
 End Z.

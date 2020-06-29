@@ -1,5 +1,5 @@
 Require Import Coq.Lists.List. Import ListNotations.
-Require Import Coq.ZArith.ZArith Coq.omega.Omega.
+Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.ListUtil.
@@ -152,7 +152,7 @@ Lemma nth_default_seq_inbouns d s n i (H:(i < n)%nat) :
 Proof.
   progress cbv [List.nth_default].
   rewrite ListUtil.nth_error_seq.
-  break_innermost_match; solve [ trivial | omega ].
+  break_innermost_match; solve [ trivial | lia ].
 Qed.
 
 Lemma mod_add_mul_full a b c k m : m <> 0 -> c mod m = k mod m ->

@@ -1,29 +1,29 @@
-Require Import Coq.omega.Omega Coq.ZArith.ZArith.
+Require Import Coq.micromega.Lia Coq.ZArith.ZArith.
 Require Import Crypto.Util.Tactics.Contains.
 Require Import Crypto.Util.Tactics.Not.
 Local Open Scope Z_scope.
 
 Module Z.
   Lemma move_R_pX x y z : x + y = z -> x = z - y.
-  Proof. omega. Qed.
+  Proof. lia. Qed.
   Lemma move_R_mX x y z : x - y = z -> x = z + y.
-  Proof. omega. Qed.
+  Proof. lia. Qed.
   Lemma move_R_Xp x y z : y + x = z -> x = z - y.
-  Proof. omega. Qed.
+  Proof. lia. Qed.
   Lemma move_R_Xm x y z : y - x = z -> x = y - z.
-  Proof. omega. Qed.
+  Proof. lia. Qed.
   Lemma move_R_nX x y : -x = y -> x = -y.
-  Proof. omega. Qed.
+  Proof. lia. Qed.
   Lemma move_L_pX x y z : z = x + y -> z - y = x.
-  Proof. omega. Qed.
+  Proof. lia. Qed.
   Lemma move_L_mX x y z : z = x - y -> z + y = x.
-  Proof. omega. Qed.
+  Proof. lia. Qed.
   Lemma move_L_Xp x y z : z = y + x -> z - y = x.
-  Proof. omega. Qed.
+  Proof. lia. Qed.
   Lemma move_L_Xm x y z : z = y - x -> y - z = x.
-  Proof. omega. Qed.
+  Proof. lia. Qed.
   Lemma move_L_nX x y : y = -x -> -y = x.
-  Proof. omega. Qed.
+  Proof. lia. Qed.
 
   (** [linear_substitute x] attempts to maipulate equations using only
       addition and subtraction to put [x] on the left, and then

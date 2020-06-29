@@ -1,4 +1,5 @@
 Require Import Coq.ZArith.ZArith.
+Require Import Coq.micromega.Lia.
 Require Import Crypto.Util.ZUtil.Hints.Core.
 Local Open Scope Z_scope.
 
@@ -33,7 +34,7 @@ Module N2Z.
 
     - apply N2Z.inj_lt in g.
         rewrite Z2N.id in g; [symmetry|assumption].
-        apply Z.testbit_neg_r; omega.
+        apply Z.testbit_neg_r; lia.
   Qed.
   Hint Rewrite inj_shiftl : push_Zof_N.
   Hint Rewrite <- inj_shiftl : pull_Zof_N.

@@ -1,8 +1,7 @@
-Require Import Coq.ZArith.BinInt Coq.NArith.BinNat Coq.Numbers.BinNums Coq.ZArith.Zdiv Coq.ZArith.Znumtheory.
+Require Import Coq.ZArith.ZArith Coq.NArith.NArith Coq.Numbers.BinNums Coq.ZArith.Znumtheory.
 Require Import Coq.Logic.Eqdep_dec.
 Require Import Coq.Logic.EqdepFacts.
-Require Import Coq.omega.Omega.
-From Coq Require Import ZArith.
+Require Import Coq.micromega.Lia.
 Require Import Crypto.Util.NumTheoryUtil.
 Require Export Crypto.Util.FixCoqMistakes.
 Require Import Crypto.Util.Tactics.BreakMatch.
@@ -129,7 +128,7 @@ Next Obligation.
   intros m; split.
   { apply exist_reduced_eq; rewrite Zmod_0_l; reflexivity. }
   intros Hm [a pfa] Ha'. apply exist_reduced_eq.
-  assert (Hm':0 <= m - 2) by (pose proof prime_ge_2 m Hm; omega).
+  assert (Hm':0 <= m - 2) by (pose proof prime_ge_2 m Hm; lia).
   assert (Ha:a mod m<>0) by (intro; apply Ha', exist_reduced_eq; congruence).
   cbv [proj1_sig mod_inv_sig].
   transitivity ((a*powmod m a (Z.to_N (m - 2))) mod m); [destruct a; f_equal; ring|].
@@ -137,7 +136,7 @@ Next Obligation.
   rewrite Z2N.id by assumption.
   rewrite Zmult_mod_idemp_r.
   rewrite <-Z.pow_succ_r by assumption.
-  replace (Z.succ (m - 2)) with (m-1) by omega.
-  rewrite (Zmod_small 1) by omega.
+  replace (Z.succ (m - 2)) with (m-1) by lia.
+  rewrite (Zmod_small 1) by lia.
   apply (fermat_little m Hm a Ha).
 Qed.

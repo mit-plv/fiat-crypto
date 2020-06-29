@@ -49,7 +49,7 @@ Section pow_ceil_mul_nat.
     : forall i, wt i <> 0.
   Proof.
     intros.
-    eapply Z.pow_nonzero; try omega.
+    eapply Z.pow_nonzero; try lia.
     eapply zero_le_ceil_mul_nat.
   Qed.
 
@@ -70,7 +70,7 @@ Section pow_ceil_mul_nat.
     change (inject_Z 1) with 1%Q.
     rewrite Qmult_plus_distr_r, Qmult_1_r.
     let g := constr:((f * inject_Z (Z.of_nat i))%Q) in
-    replace (Qceiling (f+g)) with ((Qceiling (f+g)-Qceiling g)+Qceiling g) at 1 by omega.
+    replace (Qceiling (f+g)) with ((Qceiling (f+g)-Qceiling g)+Qceiling g) at 1 by lia.
     rewrite Z.pow_add_r; [reflexivity|eapply Zle_minus_le_0|apply zero_le_ceil_mul_nat].
     eapply Qceiling_resp_le.
     rewrite <-Qplus_0_l at 1.
@@ -109,10 +109,10 @@ Section pow_ceil_mul_nat2.
     etransitivity; [|eapply Z.sub_le_ge_Proper].
     2:eapply add_floor_l_le_ceiling.
     2:eapply Z.ge_le_iff; reflexivity.
-    assert (1 <= Qfloor f); [|omega].
+    assert (1 <= Qfloor f); [|lia].
     change 1%Z with (Qfloor 1).
     eapply Qfloor_resp_le.
-    all: trivial; try omega; (eapply (Qle_trans _ 1 _); [vm_decide|assumption]).
+    all: trivial; try lia; (eapply (Qle_trans _ 1 _); [vm_decide|assumption]).
   Qed.
 
   Lemma pow_ceil_mul_nat_divide_nonzero i :
@@ -127,7 +127,7 @@ Section pow_ceil_mul_nat2.
   Proof.
     rewrite pow_ceil_mul_S.
     rewrite Z_div_mult_full; [|apply pow_ceil_mul_nat_nonzero].
-    all:[ > | omega | eapply (Qle_trans _ 1 _); [vm_decide|assumption].. ].
+    all:[ > | lia | eapply (Qle_trans _ 1 _); [vm_decide|assumption].. ].
     apply Z.pow_le_mono_r; [ assumption | ].
     rewrite Z.le_sub_le_add_l, Z.add_comm.
     etransitivity; [ | apply Qceiling_le_add ].

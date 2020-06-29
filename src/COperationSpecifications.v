@@ -91,8 +91,8 @@ Section list_Z_bounded.
     { rewrite !map_app in *; cbn [map] in *.
       erewrite !Positional.eval_snoc by (distr_length; eauto).
       cbv [list_Z_bounded_by] in *.
-      specialize_by (intros; auto with omega).
-      specialize (Hwt n); specialize_by omega.
+      specialize_by (intros; auto with lia).
+      specialize (Hwt n); specialize_by lia.
       repeat first [ progress Bool.split_andb
                    | rewrite Nat.add_1_r in *
                    | rewrite fold_andb_map_snoc in *

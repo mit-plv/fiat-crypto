@@ -1,4 +1,4 @@
-Require Import Coq.ZArith.ZArith Coq.micromega.Lia Coq.omega.Omega.
+Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
 Require Import Crypto.Util.ZUtil.Hints.Core.
 Local Open Scope Z_scope.
 
@@ -63,7 +63,7 @@ Module Z.
   Hint Rewrite simplify_twice_sub_add : zsimplify.
 
   Lemma simplify_2XmX X : 2 * X - X = X.
-  Proof. omega. Qed.
+  Proof. lia. Qed.
   Hint Rewrite simplify_2XmX : zsimplify.
 
   Lemma simplify_add_pos x y : Z.pos x + Z.pos y = Z.pos (x + y).

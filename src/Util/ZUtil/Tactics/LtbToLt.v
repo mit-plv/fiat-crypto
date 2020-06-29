@@ -1,4 +1,5 @@
 Require Import Coq.ZArith.ZArith.
+Require Import Coq.micromega.Lia.
 Require Import Crypto.Util.Bool.
 Local Open Scope Z_scope.
 
@@ -11,11 +12,11 @@ Module Z.
 
   Lemma geb_spec0 : forall x y : Z, Bool.reflect (x >= y) (x >=? y).
   Proof.
-    intros x y; pose proof (Zge_cases x y) as H; destruct (Z.geb x y); constructor; omega.
+    intros x y; pose proof (Zge_cases x y) as H; destruct (Z.geb x y); constructor; lia.
   Qed.
   Lemma gtb_spec0 : forall x y : Z, Bool.reflect (x > y) (x >? y).
   Proof.
-    intros x y; pose proof (Zgt_cases x y) as H; destruct (Z.gtb x y); constructor; omega.
+    intros x y; pose proof (Zgt_cases x y) as H; destruct (Z.gtb x y); constructor; lia.
   Qed.
 
   Ltac ltb_to_lt_with_hyp H lem :=
@@ -61,7 +62,7 @@ Module Z.
   Ltac ltb_to_lt := repeat ltb_to_lt_step.
 
   Section R_Rb.
-    Local Ltac t := intros ? ? []; split; intro; ltb_to_lt; omega.
+    Local Ltac t := intros ? ? []; split; intro; ltb_to_lt; lia.
     Local Notation R_Rb Rb R nR := (forall x y b, Rb x y = b <-> if b then R x y else nR x y).
     Lemma ltb_lt_iff : R_Rb Z.ltb Z.lt Z.ge. Proof. t. Qed.
     Lemma leb_le_iff : R_Rb Z.leb Z.le Z.gt. Proof. t. Qed.

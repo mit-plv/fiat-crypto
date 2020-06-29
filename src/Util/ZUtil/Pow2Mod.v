@@ -1,4 +1,5 @@
 Require Import Coq.ZArith.ZArith.
+Require Import Coq.micromega.Lia.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.Notations.
 Require Import Crypto.Util.ZUtil.Hints.Core.
@@ -24,7 +25,7 @@ Module Z.
 
   Lemma pow2_mod_0_l : forall n, 0 <= n -> Z.pow2_mod 0 n = 0.
   Proof.
-    intros; rewrite Z.pow2_mod_spec, Z.mod_0_l; try reflexivity; try apply Z.pow_nonzero; omega.
+    intros; rewrite Z.pow2_mod_spec, Z.mod_0_l; try reflexivity; try apply Z.pow_nonzero; lia.
   Qed.
 
   Lemma pow2_mod_split : forall a n m, 0 <= n -> 0 <= m ->
@@ -34,7 +35,7 @@ Module Z.
     apply Z.bits_inj'; intros.
     repeat progress (try break_match; autorewrite with Ztestbit zsimplify; try reflexivity).
     try match goal with H : ?a < ?b |- context[Z.testbit _ (?a - ?b)] =>
-      rewrite !Z.testbit_neg_r with (n := a - b) by omega end.
+      rewrite !Z.testbit_neg_r with (n := a - b) by lia end.
     autorewrite with Ztestbit; reflexivity.
   Qed.
 
@@ -48,7 +49,7 @@ Module Z.
 
   Lemma pow2_mod_pos_bound a b : 0 < b -> 0 <= Z.pow2_mod a b < 2^b.
   Proof.
-    intros; rewrite Z.pow2_mod_spec by omega.
+    intros; rewrite Z.pow2_mod_spec by lia.
     auto with zarith.
   Qed.
   Hint Resolve pow2_mod_pos_bound : zarith.
@@ -59,7 +60,7 @@ Module Z.
     intros a n H.
     rewrite Z.pow2_mod_spec by assumption.
     assert (0 < 2 ^ n) by Z.zero_bounds.
-    rewrite Z.mod_small_iff by omega.
-    split; intros; intuition omega.
+    rewrite Z.mod_small_iff by lia.
+    split; intros; intuition lia.
   Qed.
 End Z.

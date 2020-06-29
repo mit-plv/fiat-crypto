@@ -1,3 +1,4 @@
+Require Import Coq.micromega.Lia.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Lists.List.
 Require Import Coq.Structures.Orders.
@@ -38,7 +39,7 @@ Section PartitionProofs.
     { rewrite (Z.div_mod (x mod weight (S n)) (weight n)) by auto with zarith.
       rewrite <-Znumtheory.Zmod_div_mod by (try apply Z.mod_divide; auto with zarith).
       rewrite partition_step, Positional.eval_snoc with (n:=n) by distr_length.
-      omega. }
+      lia. }
   Qed.
 
   Lemma partition_Proper n :
@@ -88,7 +89,7 @@ Section PartitionProofs.
     pose proof (@weight_divides _ wprops j).
     f_equal;
       repeat match goal with
-             | _ => rewrite Z.mod_pull_div by auto with zarith 
+             | _ => rewrite Z.mod_pull_div by auto with zarith
              | _ => rewrite weight_multiples by auto with zarith
              | _ => progress autorewrite with zsimplify_fast zdiv_to_mod pull_Zdiv
              | _ => reflexivity
@@ -116,7 +117,7 @@ Section PartitionProofs.
   Proof using Type.
     cbv [Positional.drop_high_to_length partition]; intros.
     autorewrite with push_firstn.
-    rewrite Nat.min_l by omega.
+    rewrite Nat.min_l by lia.
     reflexivity.
   Qed.
 

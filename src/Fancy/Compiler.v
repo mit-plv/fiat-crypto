@@ -644,7 +644,7 @@ Section of_prefancy.
 
     Lemma cc_spec_c v :
       Z.b2z (cc_spec CC.C v) = (v / wordmax) mod 2.
-    Proof. cbv [cc_spec]; apply Z.testbit_spec'. omega. Qed.
+    Proof. cbv [cc_spec]; apply Z.testbit_spec'. lia. Qed.
 
     Lemma cc_m_zselect x z nz :
       x mod wordmax = x ->
@@ -654,10 +654,10 @@ Section of_prefancy.
       intro Hx_small.
       transitivity (if (Z.b2z (cc_spec CC.M x) =? 1) then nz else z); [ reflexivity | ].
       cbv [cc_spec Z.zselect].
-      rewrite Z.testbit_spec', Z.shiftr_div_pow2 by omega. rewrite <-Hx_small.
+      rewrite Z.testbit_spec', Z.shiftr_div_pow2 by lia. rewrite <-Hx_small.
       rewrite Z.div_between_0_if by (try replace (2 * (2 ^ 255)) with wordmax by reflexivity;
                                          auto with zarith).
-      break_innermost_match; Z.ltb_to_lt; try rewrite Z.mod_small in * by omega; congruence.
+      break_innermost_match; Z.ltb_to_lt; try rewrite Z.mod_small in * by lia; congruence.
     Qed.
 
     Lemma cc_l_zselect x z nz :
@@ -665,7 +665,7 @@ Section of_prefancy.
     Proof.
       transitivity (if (Z.b2z (cc_spec CC.L x) =? 1) then nz else z); [ reflexivity | ].
       transitivity (Z.zselect (x &' Z.ones 1) z nz); [ | reflexivity ].
-      cbv [cc_spec Z.zselect]. rewrite Z.testbit_spec', Z.land_ones by omega.
+      cbv [cc_spec Z.zselect]. rewrite Z.testbit_spec', Z.land_ones by lia.
       autorewrite with zsimplify_fast. rewrite Zmod_even.
       break_innermost_match; Z.ltb_to_lt; congruence.
     Qed.
@@ -696,7 +696,7 @@ Section of_prefancy.
              | _ => progress hammer
              | _ => progress Language.Inversion.Compilers.expr.invert_subst
              | _ => rewrite cast_mod by (cbv; congruence)
-             | _ => rewrite Z.mod_mod by omega
+             | _ => rewrite Z.mod_mod by lia
              | _ => rewrite Z.mod_small by apply b2z_range
              | H : (forall _ _ _, In _ _ -> interp_base _ _ _ = _),
                    H' : In (existZZ (?v, _)) _ |- context [cctx (snd ?v)] =>
@@ -759,7 +759,7 @@ Section of_prefancy.
     Proof.
       destruct 1; try exact I; cbn [of_prefancy_ident]; cbn [GallinaReify.base.reify ident.ident_Literal ident.buildIdent] in *; hammer; intros; inversion_option; (simplify_ident; [ ]).
       all:
-        rewrite cast_mod by omega;
+        rewrite cast_mod by lia;
         match goal with
                  | H : context [spec _ _ _ mod _ = _] |- ?x mod wordmax = _ mod ?m =>
                    replace (x mod wordmax) with (x mod m) by auto
@@ -817,7 +817,7 @@ Section of_prefancy.
         spec (projT1 i) (Tuple.map ctx (projT2 i)) cc mod wordmax = (cinterp f (cinterp x2)).
     Proof.
       intros; eapply of_prefancy_identZ_loosen_correct; try eassumption; [ | ].
-      { cbn; omega. } { intros; f_equal; ring. }
+      { cbn; lia. } { intros; f_equal; ring. }
     Qed.
     Lemma of_prefancy_identZZ_correct' {s} idc:
       forall (x : @cexpr var _) i ctx G cc cctx x2 r rf f,
@@ -844,7 +844,7 @@ Section of_prefancy.
                  erewrite <-of_prefancy_scalar_carry with (c:=x) (e:=e2) by eauto
                   end.
       all: match goal with |- context [(?x << ?n) mod ?m] =>
-                           pose proof (Z.mod_pos_bound (x << n) m ltac:(omega)) end.
+                           pose proof (Z.mod_pos_bound (x << n) m ltac:(lia)) end.
       all:repeat match goal with
                | |- context [if _ (of_prefancy_scalar _) then _ else _ ] =>
                  cbv [Z.zselect Z.b2z]; break_innermost_match; Z.ltb_to_lt; try congruence; [ | ]
@@ -977,7 +977,7 @@ Section of_prefancy.
              | H : (forall n v, consts v = Some n -> name_lt _ _),
                    H' : consts _ = Some _ |- _ => specialize (H _ _ H')
              | H : name_lt ?n ?n |- _ => apply name_lt_irr in H; contradiction
-             | _ => cbv [cc_spec]; rewrite Z.mod_pow2_bits_low by omega
+             | _ => cbv [cc_spec]; rewrite Z.mod_pow2_bits_low by lia
              | _ => congruence
              end.
     Qed.
@@ -1336,7 +1336,7 @@ Section Equivalence.
     interp (Instr (ADD 0) rd (y, x) cont) cc ctx.
   Proof.
     prove_comm Z.add_comm.
-    rewrite !(Z.mod_small (ctx _)) by omega.
+    rewrite !(Z.mod_small (ctx _)) by lia.
     reflexivity.
   Qed.
 
@@ -1347,7 +1347,7 @@ Section Equivalence.
     interp (Instr (ADDC 0) rd (y, x) cont) cc ctx.
   Proof.
     prove_comm (Z.add_comm (ctx x)).
-    rewrite !(Z.mod_small (ctx _)) by omega.
+    rewrite !(Z.mod_small (ctx _)) by lia.
     reflexivity.
   Qed.
 End Equivalence.

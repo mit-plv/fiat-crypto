@@ -15,8 +15,8 @@ Module Z.
   Proof.
     intros.
     break_match.
-    + apply Z.ones_spec_low. omega.
-    + apply Z.ones_spec_high. omega.
+    + apply Z.ones_spec_low. lia.
+    + apply Z.ones_spec_high. lia.
   Qed.
   Hint Rewrite ones_spec using zutil_arith : Ztestbit.
 
@@ -28,9 +28,9 @@ Module Z.
                                             else if Z_lt_dec m n then true else false.
   Proof.
     intros n m.
-    repeat (break_match || autorewrite with Ztestbit); try reflexivity; try omega.
+    repeat (break_match || autorewrite with Ztestbit); try reflexivity; try lia.
     unfold Z.ones.
-    rewrite <- Z.shiftr_opp_r, Z.shiftr_eq_0 by (simpl; omega); simpl.
+    rewrite <- Z.shiftr_opp_r, Z.shiftr_eq_0 by (simpl; lia); simpl.
     destruct m; simpl in *; try reflexivity.
     exfalso; auto using Zlt_neg_0.
   Qed.
@@ -41,9 +41,9 @@ Module Z.
   Proof.
     cbv [Z.pow2_mod]; intros a n i H; destruct (Z_le_dec 0 i);
       repeat match goal with
-          | |- _ => rewrite Z.testbit_neg_r by omega
+          | |- _ => rewrite Z.testbit_neg_r by lia
           | |- _ => break_innermost_match_step
-          | |- _ => omega
+          | |- _ => lia
           | |- _ => reflexivity
           | |- _ => progress autorewrite with Ztestbit
           end.
@@ -55,7 +55,7 @@ Module Z.
                                      then if Z_lt_dec i 0 then false else Z.testbit a i
                                      else if Z_lt_dec i n then Z.testbit a i else false.
   Proof.
-    intros a n i; destruct (Z_lt_dec n 0); [ | apply testbit_pow2_mod; omega ].
+    intros a n i; destruct (Z_lt_dec n 0); [ | apply testbit_pow2_mod; lia ].
     unfold Z.pow2_mod.
     autorewrite with Ztestbit_full;
       repeat break_match;
@@ -76,10 +76,10 @@ Module Z.
     Z.testbit x i = Z.testbit (Z.land x (Z.ones n)) i.
   Proof.
     intros.
-    rewrite Z.land_ones by omega.
+    rewrite Z.land_ones by lia.
     symmetry.
     apply Z.mod_pow2_bits_low.
-    omega.
+    lia.
   Qed.
 
   Lemma testbit_add_shiftl_low : forall i, (0 <= i) -> forall a b n, (i < n) ->
@@ -87,8 +87,8 @@ Module Z.
   Proof.
     intros i H a b n H0.
     erewrite Z.testbit_low; eauto.
-    rewrite Z.land_ones, Z.shiftl_mul_pow2 by omega.
-    rewrite Z.mod_add by (pose proof (Z.pow_pos_nonneg 2 n); omega).
+    rewrite Z.land_ones, Z.shiftl_mul_pow2 by lia.
+    rewrite Z.mod_add by (pose proof (Z.pow_pos_nonneg 2 n); lia).
     auto using Z.mod_pow2_bits_low.
   Qed.
   Hint Rewrite testbit_add_shiftl_low using zutil_arith : Ztestbit.
@@ -96,10 +96,10 @@ Module Z.
   Lemma testbit_sub_pow2 n i x (i_range:0 <= i < n) (x_range:0 < x < 2 ^ n) :
     Z.testbit (2 ^ n - x) i = negb (Z.testbit (x - 1)  i).
   Proof.
-    rewrite <-Z.lnot_spec, Z.lnot_sub1 by omega.
+    rewrite <-Z.lnot_spec, Z.lnot_sub1 by lia.
     rewrite <-(Z.mod_pow2_bits_low (-x) _ _ (proj2 i_range)).
     f_equal.
-    rewrite Z.mod_opp_l_nz; autorewrite with zsimplify; omega.
+    rewrite Z.mod_opp_l_nz; autorewrite with zsimplify; lia.
   Qed.
 
   Lemma testbit_false_bound : forall a x, 0 <= x ->
@@ -109,7 +109,7 @@ Module Z.
     intros a x H H0.
     assert (H1 : a = Z.pow2_mod a x). {
      apply Z.bits_inj'; intros.
-     rewrite Z.testbit_pow2_mod by omega; break_match; auto.
+     rewrite Z.testbit_pow2_mod by lia; break_match; auto.
     }
     rewrite H1.
     cbv [Z.pow2_mod]; rewrite Z.land_ones by auto.
@@ -124,7 +124,7 @@ Module Z.
     intros. break_match; Z.ltb_to_lt.
     { autorewrite with zsimplify. reflexivity. }
     { autorewrite with zsimplify.
-      rewrite Z.bits_above_pow2 by omega.
+      rewrite Z.bits_above_pow2 by lia.
       reflexivity. }
   Qed.
 End Z.

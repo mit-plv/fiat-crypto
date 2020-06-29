@@ -109,7 +109,7 @@ Module Z.
   Proof.
     destruct (Z_zerop c).
     { subst; simpl; autorewrite with zsimplify; reflexivity. }
-    { intros; apply Z.div_le_mono; omega. }
+    { intros; apply Z.div_le_mono; lia. }
   Qed.
   Hint Resolve div_le_mono_nonneg : zarith.
 
@@ -119,7 +119,7 @@ Module Z.
   Lemma div_nonneg a b : 0 <= a -> 0 <= b -> 0 <= a / b.
   Proof.
     destruct (Z_zerop b); subst; rewrite ?Zdiv_0_r; [ reflexivity | ].
-    intros; apply Z.div_pos; omega.
+    intros; apply Z.div_pos; lia.
   Qed.
   Hint Resolve div_nonneg : zarith.
 
@@ -185,12 +185,12 @@ Module Z.
   Lemma mod_small_n_neg n a b : n < 0 -> 0 < b -> n * b <= a < (1 + n) * b ->
                                 a mod b = a - n * b.
   Proof.
-    intros. rewrite Z.mod_eq, div_between_full with (n:=n) by omega. ring.
+    intros. rewrite Z.mod_eq, div_between_full with (n:=n) by lia. ring.
   Qed.
 
   Lemma div_div_comm : forall x y z,  0 < y -> 0 < z -> x / y / z = x / z / y.
   Proof.
-    intros; rewrite !Z.div_div by omega.
+    intros; rewrite !Z.div_div by lia.
     f_equal; ring.
   Qed.
 
@@ -227,8 +227,8 @@ Module Z.
   Proof.
     intros; rewrite Z.gt_lt_iff.
     apply Z.div_str_pos.
-    split; intuition auto with omega.
-    apply Z.divide_pos_le; try (apply Zmod_divide); omega.
+    split; intuition auto with lia.
+    apply Z.divide_pos_le; try (apply Zmod_divide); lia.
   Qed.
 
   Lemma div_opp_l_complete a b (Hb : b <> 0) : -a/b = -(a/b) - (if Z_zerop (a mod b) then 0 else 1).
@@ -270,7 +270,7 @@ Module Z.
   Proof.
     intros.
     apply Z.lt_succ_r.
-    apply Z.div_lt_upper_bound; try omega.
+    apply Z.div_lt_upper_bound; try lia.
   Qed.
 
   Lemma mul_div_le x y z

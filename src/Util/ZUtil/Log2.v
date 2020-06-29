@@ -25,7 +25,7 @@ Module Z.
     destruct (Z_dec 0 a) as [ [?|?] | ?].
     { rewrite Z.log2_pred_pow2 by assumption; lia. }
     { autorewrite with zsimplify; simpl.
-      apply Z.max_case_strong; try omega.
+      apply Z.max_case_strong; try lia.
 
     }
     { subst; compute; reflexivity. }
@@ -36,22 +36,22 @@ Module Z.
   Proof.
     destruct (Z_dec 1 a) as [ [ ? | ? ] | ? ];
       first [ apply Z.log2_up_spec; assumption
-            | rewrite Z.log2_up_eqn0 by omega; simpl; omega ].
+            | rewrite Z.log2_up_eqn0 by lia; simpl; lia ].
   Qed.
 
   Lemma log2_up_le_pow2_full : forall a b : Z, (0 <= b)%Z -> (a <= 2 ^ b)%Z <-> (Z.log2_up a <= b)%Z.
   Proof.
     intros a b H.
     destruct (Z_lt_le_dec 0 a); [ apply Z.log2_up_le_pow2; assumption | ].
-    split; transitivity 0%Z; try omega; auto with zarith.
-    rewrite Z.log2_up_eqn0 by omega.
+    split; transitivity 0%Z; try lia; auto with zarith.
+    rewrite Z.log2_up_eqn0 by lia.
     reflexivity.
   Qed.
 
   Lemma log2_lt_pow2_alt a b : 0 < b -> (a < 2^b <-> Z.log2 a < b).
   Proof.
     destruct (Z_lt_le_dec 0 a); auto using Z.log2_lt_pow2; [].
-    rewrite Z.log2_nonpos by omega.
+    rewrite Z.log2_nonpos by lia.
     split; auto with zarith; [].
     intro; eapply Z.le_lt_trans; [ eassumption | ].
     auto with zarith.
@@ -71,20 +71,20 @@ Module Z.
   Proof.
     pose proof (Z.log2_nonneg (Z.pred a)).
     destruct (Z_dec a 2) as [ [ ? | ? ] | ? ].
-    { rewrite (proj2 (Z.log2_up_null a)) by omega; split; omega. }
-    { rewrite Z.log2_up_eqn by omega.
-      split; try omega; intro.
-      assert (Z.log2 (Z.pred a) = 0) by omega.
-      assert (Z.pred a <= 1) by (apply Z.log2_null; omega).
-      omega. }
-    { subst; cbv -[Z.le]; split; omega. }
+    { rewrite (proj2 (Z.log2_up_null a)) by lia; split; lia. }
+    { rewrite Z.log2_up_eqn by lia.
+      split; try lia; intro.
+      assert (Z.log2 (Z.pred a) = 0) by lia.
+      assert (Z.pred a <= 1) by (apply Z.log2_null; lia).
+      lia. }
+    { subst; cbv -[Z.le]; split; lia. }
   Qed.
   Lemma log2_up_1_le a : 1 <= Z.log2_up a <-> 2 <= a.
   Proof.
     pose proof (Z.log2_nonneg (Z.pred a)).
     destruct (Z_dec a 2) as [ [ ? | ? ] | ? ].
-    { rewrite (proj2 (Z.log2_up_null a)) by omega; split; omega. }
-    { rewrite Z.log2_up_eqn by omega; omega. }
-    { subst; cbv -[Z.le]; split; omega. }
+    { rewrite (proj2 (Z.log2_up_null a)) by lia; split; lia. }
+    { rewrite Z.log2_up_eqn by lia; lia. }
+    { subst; cbv -[Z.le]; split; lia. }
   Qed.
 End Z.
