@@ -94,7 +94,7 @@ Section mod_ops.
                       = (eval weight n f * eval weight n g) mod (s - Associational.eval c))
          As eval_carry_mulmod.
   Proof.
-    instantiate (1:=ltac:(clear -idxs s c n)) in (value of carry_mulmod).
+    instantiate (1:=ltac:(clear -idxs s c n)) in (Value of carry_mulmod).
     clear -m_nz s_nz limbwidth_good Hn_nz idxs.
     intros.
     rewrite <-eval_mulmod with (s:=s) (c:=c) by auto with zarith.
@@ -112,7 +112,7 @@ Section mod_ops.
                       = (eval weight n f * eval weight n f) mod (s - Associational.eval c))
          As eval_carry_squaremod.
   Proof.
-    instantiate (1:=ltac:(clear -idxs s c n)) in (value of carry_squaremod).
+    instantiate (1:=ltac:(clear -idxs s c n)) in (Value of carry_squaremod).
     clear -m_nz s_nz limbwidth_good Hn_nz idxs.
     intros.
     rewrite <-eval_squaremod with (s:=s) (c:=c) by auto with zarith.
@@ -130,7 +130,7 @@ Section mod_ops.
                       = (x * eval weight n f) mod (s - Associational.eval c))
          As eval_carry_scmulmod.
   Proof.
-    instantiate (1:=ltac:(clear -idxs s c n)) in (value of carry_scmulmod).
+    instantiate (1:=ltac:(clear -idxs s c n)) in (Value of carry_scmulmod).
     clear -m_nz s_nz limbwidth_good Hn_nz idxs.
     intros.
     push_Zmod.
@@ -151,7 +151,7 @@ Section mod_ops.
                       = (eval weight n f) mod (s - Associational.eval c))
          As eval_carrymod.
   Proof.
-    instantiate (1:=ltac:(clear -idxs s c n)) in (value of carrymod).
+    instantiate (1:=ltac:(clear -idxs s c n)) in (Value of carrymod).
     clear -m_nz s_nz limbwidth_good Hn_nz idxs.
     intros.
     etransitivity;
@@ -169,7 +169,7 @@ Section mod_ops.
                       = (eval weight n f + eval weight n g) mod (s - Associational.eval c))
          As eval_addmod.
   Proof.
-    instantiate (1:=ltac:(clear -s c n)) in (value of addmod).
+    instantiate (1:=ltac:(clear -s c n)) in (Value of addmod).
     clear -limbwidth_good.
     intros.
     rewrite <-eval_add by auto with zarith.
@@ -186,7 +186,7 @@ Section mod_ops.
                       = (eval weight n f - eval weight n g) mod (s - Associational.eval c))
          As eval_submod.
   Proof.
-    instantiate (1:=ltac:(clear -s c n)) in (value of submod).
+    instantiate (1:=ltac:(clear -s c n)) in (Value of submod).
     clear -s_nz m_nz limbwidth_good.
     intros.
     rewrite <-eval_sub with (coef:=coef) by auto with zarith.
@@ -202,7 +202,7 @@ Section mod_ops.
                       = (- eval weight n f) mod (s - Associational.eval c))
          As eval_oppmod.
   Proof.
-    instantiate (1:=ltac:(clear -s c n)) in (value of oppmod).
+    instantiate (1:=ltac:(clear -s c n)) in (Value of oppmod).
     clear -s_nz m_nz limbwidth_good.
     intros.
     rewrite <-eval_opp with (coef:=coef) by auto with zarith.
@@ -216,7 +216,7 @@ Section mod_ops.
                       = f mod (s - Associational.eval c))
          As eval_encodemod.
   Proof.
-    instantiate (1:=ltac:(clear -s c n)) in (value of encodemod).
+    instantiate (1:=ltac:(clear -s c n)) in (Value of encodemod).
     clear -limbwidth_good s_nz m_nz Hn_nz.
     intros.
     etransitivity.
