@@ -59,8 +59,8 @@ Definition encode_decode : bedrock_func :=
   ("encode_decode",
    ([x; tmp], [],
     (cmd.seq
-       (cmd.call [] "curve25519_to_bytes" [expr.var x; expr.var tmp])
-       (cmd.call [] "curve25519_from_bytes" [expr.var tmp; expr.var x])))).
+       (cmd.call [] "curve25519_to_bytes" [expr.var tmp; expr.var x])
+       (cmd.call [] "curve25519_from_bytes" [expr.var x; expr.var tmp])))).
 
 Instance spec_of_encode_decode : spec_of encode_decode :=
   fun functions =>

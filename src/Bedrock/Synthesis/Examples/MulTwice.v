@@ -54,11 +54,13 @@ Definition mul_twice : bedrock_func :=
   let xy := "xy" in
   let out := "out" in
   ("mul_twice",
-   ([x; y; out], [],
+   ([out; x; y], [],
     (cmd.seq
-       (cmd.call [] "curve25519_carry_mul" [expr.var x; expr.var y; expr.var out])
-       (cmd.call [] "curve25519_carry_mul" [expr.var out; expr.var y; expr.var out])))).
+       (cmd.call [] "curve25519_carry_mul" [expr.var out; expr.var x; expr.var y])
+       (cmd.call [] "curve25519_carry_mul" [expr.var out; expr.var out; expr.var y])))).
 
+(* TODO: update to have three separation-logic preconditions, one for each input
+   and one for output *)
 Instance spec_of_mul_twice : spec_of mul_twice :=
   fun functions =>
     forall x y old_out px py pout t m
@@ -72,7 +74,7 @@ Instance spec_of_mul_twice : spec_of mul_twice :=
       WeakestPrecondition.call
         (p:=Types.semantics)
         functions mul_twice t m
-        (px :: py :: pout :: nil)
+        (pout :: px :: py ::  nil)
         (fun t' m' rets =>
            t = t' /\
            rets = []%list /\
