@@ -464,10 +464,9 @@ test-c-files: $(ALL_C_FILES)
 test-c-files only-test-c-files:
 	$(CC) -Wall -Wno-unused-function -Werror $(CFLAGS) -c $(ALL_C_FILES)
 
-$(ALL_BEDROCK2_FILES) : $(BEDROCK2_DIR)%.c : $$($$(BEDROCK2_$$*_BINARY_NAME))
+$(ALL_BEDROCK2_FILES) : $(BEDROCK2_DIR)%.c : $$(BEDROCK2_$$($$*_BINARY_NAME))
 	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $($(BEDROCK2_$*_BINARY_NAME)) --lang bedrock2 $(BEDROCK2_ARGS) $($*_DESCRIPTION) $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(BEDROCK2_$($*_BINARY_NAME)) --lang bedrock2 $(BEDROCK2_ARGS) $($*_DESCRIPTION) $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 test-bedrock2-files: $(ALL_BEDROCK2_FILES)
