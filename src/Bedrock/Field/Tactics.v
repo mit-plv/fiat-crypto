@@ -217,17 +217,9 @@ Ltac get_bedrock2_arglist args :=
   end.
 
 Ltac get_out_array_ptrs arg_ptrs all_ptrs :=
-  lazymatch arg_ptrs with
-  | nil => constr:(all_ptrs)
-  | cons ?p ?x =>
-    lazymatch all_ptrs with
-    | cons p ?y =>
-      let ps := get_out_array_ptrs x y in
-      constr:(ps)
-    | _ =>
-      fail "no matching pointer for" p
-    end
-  end.
+  let n := constr:((length all_ptrs - length arg_ptrs)%nat) in
+  let out_ptrs := (eval lazy in (firstn n all_ptrs)) in
+  out_ptrs.
 
 Ltac exists_out_array_placeholder zs words ptr :=
   repeat match goal with

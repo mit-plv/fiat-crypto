@@ -167,7 +167,7 @@ Section LoadStoreList.
     let outptrs :=
         flatten_listonly_base_ltype (fst (extract_listnames retnames)) in
     match map.of_list_zip
-            ((flatten_argnames argnames) ++ outptrs)
+            (outptrs ++ (flatten_argnames argnames))
             flat_args with
     | Some init_locals =>
       lists_reserved

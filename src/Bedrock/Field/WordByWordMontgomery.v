@@ -260,7 +260,7 @@ Section __.
         (Bignum n pout wold_out * Rout)%sep m ->
         WeakestPrecondition.call
           functions name t m
-          (px :: py :: pout :: nil)
+          (pout :: px :: py :: nil)
           (fun t' m' rets =>
              t = t' /\
              rets = []%list /\
@@ -280,7 +280,7 @@ Section __.
         (Bignum n pout wold_out * Rout)%sep m ->
         WeakestPrecondition.call
           functions name t m
-          (px :: pout :: nil)
+          (pout :: px :: nil)
           (fun t' m' rets =>
              t = t' /\
              rets = []%list /\
@@ -300,7 +300,7 @@ Section __.
         (Bignum n pout wold_out * Rout)%sep m ->
         WeakestPrecondition.call
           functions name t m
-          (px :: py :: pout :: nil)
+          (pout :: px :: py :: nil)
           (fun t' m' rets =>
              t = t' /\
              rets = []%list /\
@@ -320,7 +320,7 @@ Section __.
         (Bignum n pout wold_out * Rout)%sep m ->
         WeakestPrecondition.call
           functions name t m
-          (px :: py :: pout :: nil)
+          (pout :: px :: py :: nil)
           (fun t' m' rets =>
              t = t' /\
              rets = []%list /\
@@ -339,7 +339,7 @@ Section __.
         (Bignum n pout wold_out * Rout)%sep m ->
         WeakestPrecondition.call
           functions name t m
-          (px :: pout :: nil)
+          (pout :: px :: nil)
           (fun t' m' rets =>
              t = t' /\
              rets = []%list /\
@@ -358,7 +358,7 @@ Section __.
         (Bignum n pout wold_out * Rout)%sep m ->
         WeakestPrecondition.call
           functions name t m
-          (px :: pout :: nil)
+          (pout :: px :: nil)
           (fun t' m' rets =>
              t = t' /\
              rets = []%list /\
@@ -378,7 +378,7 @@ Section __.
         (Bignum n pout wold_out * Rout)%sep m ->
         WeakestPrecondition.call
           functions name t m
-          (px :: pout :: nil)
+          (pout :: px :: nil)
           (fun t' m' rets =>
              t = t' /\
              rets = []%list /\
@@ -421,7 +421,7 @@ Section __.
         (Bignum n pout wold_out * Rout)%sep m ->
         WeakestPrecondition.call
           functions name t m
-          (wc :: px :: py :: pout :: nil)
+          (pout :: wc :: px :: py :: nil)
           (fun t' m' rets =>
              t = t' /\
              rets = []%list /\
@@ -440,7 +440,7 @@ Section __.
         (EncodedBignum n_bytes pout wold_out * Rout)%sep m ->
         WeakestPrecondition.call
           functions name t m
-          (px :: pout :: nil)
+          (pout :: px :: nil)
           (fun t' m' rets =>
              t = t' /\
              rets = []%list /\
@@ -460,7 +460,7 @@ Section __.
         (Bignum n pout wold_out * Rout)%sep m ->
         WeakestPrecondition.call
           functions name t m
-          (px :: pout :: nil)
+          (pout :: px :: nil)
           (fun t' m' rets =>
              t = t' /\
              rets = []%list /\
@@ -698,7 +698,13 @@ Section __.
       | _ =>
         exists_all_placeholders out_array_ptrs;
         cbv [Bignum EncodedBignum] in *; sepsimpl;
-        prove_length; canonicalize_arrays; ecancel_assumption
+        lazymatch goal with
+        | |- length _ = _ => prove_length
+        | |- WeakestPrecondition.get _ _ _ =>
+          eexists; rewrite ?map.get_put_diff by eauto;
+          rewrite map.get_put_same; solve [eauto]
+        | |- sep _ _ _ => canonicalize_arrays; ecancel_assumption
+        end
       end.
 
     Ltac prove_is_correct Rout :=
