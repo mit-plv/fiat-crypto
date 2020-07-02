@@ -79,7 +79,7 @@ Section Func.
     (* make new arguments for pointers to returned lists *)
     let part := extract_listnames rets in
     let out_ptrs := flatten_listonly_base_ltype (fst part) in
-    let innames := flatten_argnames argnames ++ out_ptrs in
+    let innames := out_ptrs ++ flatten_argnames argnames in
     let outnames := flatten_listexcl_base_ltype (snd part) in
     (* assemble executable body: load arguments, function body, store rets *)
     let body := cmd.seq (cmd.seq load_args_cmd (snd out)) (snd store_rets) in

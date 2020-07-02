@@ -514,7 +514,7 @@ Section Func.
              (R : Semantics.mem -> Prop),
         (* argument values are the concatenation of true argument values
            and output pointer values *)
-        argvalues = flat_args ++ out_ptrs ->
+        argvalues = out_ptrs ++ flat_args ->
         length out_ptrs =
         length (flatten_listonly_base_ltype
                   (fst (extract_listnames retnames))) ->
@@ -568,7 +568,7 @@ Section Func.
             [ | cleanup; eexists; split; [ eassumption | ] ] ]
     end.
     { apply disjoint_NoDup; eauto using flatten_listonly_NoDup.
-      eapply subset_disjoint;
+      eapply subset_disjoint';
         [ | rewrite <-varname_set_args_flatten; solve [eauto] ].
       eapply flatten_listonly_subset. }
     { eapply of_list_zip_app; try lia; [ ].
@@ -668,17 +668,22 @@ Section Func.
                            apply NoDup_app_iff in H end.
     cleanup.
 
-    eapply equivalent_listonly_flat_iff1; eauto using only_differ_trans; [ ].
+    eapply equivalent_listonly_flat_iff1;
+      eauto using only_differ_sym, map.only_differ_putmany,
+      only_differ_trans; [ ].
     repeat match goal with
              |- PropSet.disjoint (PropSet.union _ _) _ =>
              eapply disjoint_union_l_iff; split
+           | _ => rewrite <-varname_set_args_flatten
            | _ =>
              solve[eauto using flatten_listonly_disjoint,
-                   subset_disjoint, flatten_listonly_subset, disjoint_used_varnames_lt]
+                   subset_disjoint, flatten_listonly_subset,
+                   disjoint_used_varnames_lt]
            | _ =>
              symmetry;
                solve[eauto using flatten_listonly_disjoint,
-                     subset_disjoint, flatten_listonly_subset, disjoint_used_varnames_lt]
+                     subset_disjoint, flatten_listonly_subset,
+                     disjoint_used_varnames_lt]
            end.
   Qed.
 End Func.
