@@ -114,24 +114,24 @@ Definition ladderstep : bedrock_func :=
    ([X1; X2; Z2; X3; Z3;
        A; AA; B; BB; E; C; D; DA; CB], [],
     bedrock_func_body:(
-      add (X2, Z2, A) ;     (* llet A  := X2+Z2 in *)
-      square (A, AA) ;      (* llet AA := A^2 in *)
-      sub (X2, Z2, B) ;     (* llet B  := X2-Z2 in *)
-      square (B, BB) ;      (* llet BB := B^2 in *)
-      sub (AA, BB, E) ;     (* llet E  := AA-BB in *)
-      add (X3, Z3, C) ;     (* llet C  := X3+Z3 in *)
-      sub (X3, Z3, D) ;     (* llet D  := X3-Z3 in *)
-      mul (D, A, DA) ;      (* llet DA := D*A in *)
-      mul (C, B, CB) ;      (* llet CB := C*B in *)
-      add (DA, CB, X5) ;    (* llet X5 := (DA+CB)^2 in *)
+      add (A, X2, Z2) ;     (* llet A  := X2+Z2 in *)
+      square (AA, A) ;      (* llet AA := A^2 in *)
+      sub (B, X2, Z2) ;     (* llet B  := X2-Z2 in *)
+      square (BB, B) ;      (* llet BB := B^2 in *)
+      sub (E, AA, BB) ;     (* llet E  := AA-BB in *)
+      add (C, X3, Z3) ;     (* llet C  := X3+Z3 in *)
+      sub (D, X3, Z3) ;     (* llet D  := X3-Z3 in *)
+      mul (DA, D, A) ;      (* llet DA := D*A in *)
+      mul (CB, C, B) ;      (* llet CB := C*B in *)
+      add (X5, DA, CB) ;    (* llet X5 := (DA+CB)^2 in *)
       square (X5, X5) ;
-      sub (DA, CB, Z5) ;    (* llet Z5 := X1*(DA-CB)^2 in *)
+      sub (Z5, DA, CB) ;    (* llet Z5 := X1*(DA-CB)^2 in *)
       square (Z5, Z5) ;
-      mul (X1, Z5, Z5) ;
-      mul (AA, BB, X4) ;    (* llet X4 := AA*BB in *)
-      scmul121665 (E, Z4) ; (* llet Z4 := E*(AA + a24*E) in *)
-      add (AA, Z4, Z4) ;
-      mul (E, Z4, Z4)        (* pair4 X4 Z4 X5 Z5 *)
+      mul (Z5, X1, Z5) ;
+      mul (X4, AA, BB) ;    (* llet X4 := AA*BB in *)
+      scmul121665 (Z4, E) ; (* llet Z4 := E*(AA + a24*E) in *)
+      add (Z4, AA, Z4) ;
+      mul (Z4, E, Z4)        (* pair4 X4 Z4 X5 Z5 *)
   ))).
 
 Instance spec_of_ladderstep : spec_of ladderstep :=
