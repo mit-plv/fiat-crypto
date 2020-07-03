@@ -25,7 +25,7 @@
  * Output Bounds:
  *   out0: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  */
-void fiat_secp256k1_mul(uintptr_t in0, uintptr_t in1, uintptr_t out0) {
+void fiat_secp256k1_mul(uintptr_t out0, uintptr_t in0, uintptr_t in1) {
   uintptr_t x1, x2, x3, x0, x11, x16, x19, x21, x17, x22, x14, x23, x25, x26, x15, x27, x12, x28, x30, x31, x13, x33, x38, x41, x43, x39, x44, x36, x45, x47, x48, x37, x49, x34, x50, x52, x53, x35, x40, x55, x18, x56, x20, x57, x42, x58, x60, x61, x24, x62, x46, x63, x65, x66, x29, x67, x51, x68, x70, x71, x32, x72, x54, x73, x75, x8, x81, x84, x86, x82, x87, x79, x88, x90, x91, x80, x92, x77, x93, x95, x96, x78, x83, x59, x99, x64, x100, x85, x101, x103, x104, x69, x105, x89, x106, x108, x109, x74, x110, x94, x111, x113, x114, x76, x115, x97, x116, x118, x120, x125, x128, x130, x126, x131, x123, x132, x134, x135, x124, x136, x121, x137, x139, x140, x122, x127, x142, x98, x143, x102, x144, x129, x145, x147, x148, x107, x149, x133, x150, x152, x153, x112, x154, x138, x155, x157, x158, x117, x159, x141, x160, x162, x163, x119, x9, x169, x172, x174, x170, x175, x167, x176, x178, x179, x168, x180, x165, x181, x183, x184, x166, x171, x146, x187, x151, x188, x173, x189, x191, x192, x156, x193, x177, x194, x196, x197, x161, x198, x182, x199, x201, x202, x164, x203, x185, x204, x206, x208, x213, x216, x218, x214, x219, x211, x220, x222, x223, x212, x224, x209, x225, x227, x228, x210, x215, x230, x186, x231, x190, x232, x217, x233, x235, x236, x195, x237, x221, x238, x240, x241, x200, x242, x226, x243, x245, x246, x205, x247, x229, x248, x250, x251, x207, x7, x6, x5, x10, x4, x257, x260, x262, x258, x263, x255, x264, x266, x267, x256, x268, x253, x269, x271, x272, x254, x259, x234, x275, x239, x276, x261, x277, x279, x280, x244, x281, x265, x282, x284, x285, x249, x286, x270, x287, x289, x290, x252, x291, x273, x292, x294, x296, x301, x304, x306, x302, x307, x299, x308, x310, x311, x300, x312, x297, x313, x315, x316, x298, x303, x318, x274, x319, x278, x320, x305, x321, x323, x324, x283, x325, x309, x326, x328, x329, x288, x330, x314, x331, x333, x334, x293, x335, x317, x336, x338, x339, x295, x342, x343, x344, x345, x346, x348, x349, x350, x351, x353, x354, x355, x356, x358, x359, x340, x361, x360, x362, x322, x364, x341, x365, x327, x367, x347, x368, x332, x370, x352, x371, x363, x337, x373, x357, x374, x366, x369, x372, x375, x376, x377, x378, x379;
   x0 = *(uintptr_t*)((in0)+((uintptr_t)0ULL));
   x1 = *(uintptr_t*)((in0)+((uintptr_t)8ULL));
@@ -426,7 +426,7 @@ void fiat_secp256k1_mul(uintptr_t in0, uintptr_t in1, uintptr_t out0) {
  * Output Bounds:
  *   out0: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  */
-void fiat_secp256k1_square(uintptr_t in0, uintptr_t out0) {
+void fiat_secp256k1_square(uintptr_t out0, uintptr_t in0) {
   uintptr_t x7, x12, x15, x17, x13, x18, x10, x19, x21, x22, x11, x23, x8, x24, x26, x27, x9, x29, x34, x37, x39, x35, x40, x32, x41, x43, x44, x33, x45, x30, x46, x48, x49, x31, x36, x51, x14, x52, x16, x53, x38, x54, x56, x57, x20, x58, x42, x59, x61, x62, x25, x63, x47, x64, x66, x67, x28, x68, x50, x69, x71, x4, x77, x80, x82, x78, x83, x75, x84, x86, x87, x76, x88, x73, x89, x91, x92, x74, x79, x55, x95, x60, x96, x81, x97, x99, x100, x65, x101, x85, x102, x104, x105, x70, x106, x90, x107, x109, x110, x72, x111, x93, x112, x114, x116, x121, x124, x126, x122, x127, x119, x128, x130, x131, x120, x132, x117, x133, x135, x136, x118, x123, x138, x94, x139, x98, x140, x125, x141, x143, x144, x103, x145, x129, x146, x148, x149, x108, x150, x134, x151, x153, x154, x113, x155, x137, x156, x158, x159, x115, x5, x165, x168, x170, x166, x171, x163, x172, x174, x175, x164, x176, x161, x177, x179, x180, x162, x167, x142, x183, x147, x184, x169, x185, x187, x188, x152, x189, x173, x190, x192, x193, x157, x194, x178, x195, x197, x198, x160, x199, x181, x200, x202, x204, x209, x212, x214, x210, x215, x207, x216, x218, x219, x208, x220, x205, x221, x223, x224, x206, x211, x226, x182, x227, x186, x228, x213, x229, x231, x232, x191, x233, x217, x234, x236, x237, x196, x238, x222, x239, x241, x242, x201, x243, x225, x244, x246, x247, x203, x3, x2, x1, x6, x0, x253, x256, x258, x254, x259, x251, x260, x262, x263, x252, x264, x249, x265, x267, x268, x250, x255, x230, x271, x235, x272, x257, x273, x275, x276, x240, x277, x261, x278, x280, x281, x245, x282, x266, x283, x285, x286, x248, x287, x269, x288, x290, x292, x297, x300, x302, x298, x303, x295, x304, x306, x307, x296, x308, x293, x309, x311, x312, x294, x299, x314, x270, x315, x274, x316, x301, x317, x319, x320, x279, x321, x305, x322, x324, x325, x284, x326, x310, x327, x329, x330, x289, x331, x313, x332, x334, x335, x291, x338, x339, x340, x341, x342, x344, x345, x346, x347, x349, x350, x351, x352, x354, x355, x336, x357, x356, x358, x318, x360, x337, x361, x323, x363, x343, x364, x328, x366, x348, x367, x359, x333, x369, x353, x370, x362, x365, x368, x371, x372, x373, x374, x375;
   x0 = *(uintptr_t*)((in0)+((uintptr_t)0ULL));
   x1 = *(uintptr_t*)((in0)+((uintptr_t)8ULL));
@@ -823,7 +823,7 @@ void fiat_secp256k1_square(uintptr_t in0, uintptr_t out0) {
  * Output Bounds:
  *   out0: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  */
-void fiat_secp256k1_add(uintptr_t in0, uintptr_t in1, uintptr_t out0) {
+void fiat_secp256k1_add(uintptr_t out0, uintptr_t in0, uintptr_t in1) {
   uintptr_t x4, x0, x9, x1, x5, x11, x2, x6, x13, x3, x7, x17, x19, x15, x21, x8, x24, x16, x25, x10, x27, x18, x28, x12, x30, x20, x31, x23, x14, x33, x22, x34, x26, x29, x32, x35, x36, x37, x38, x39;
   x0 = *(uintptr_t*)((in0)+((uintptr_t)0ULL));
   x1 = *(uintptr_t*)((in0)+((uintptr_t)8ULL));
@@ -885,7 +885,7 @@ void fiat_secp256k1_add(uintptr_t in0, uintptr_t in1, uintptr_t out0) {
  * Output Bounds:
  *   out0: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  */
-void fiat_secp256k1_sub(uintptr_t in0, uintptr_t in1, uintptr_t out0) {
+void fiat_secp256k1_sub(uintptr_t out0, uintptr_t in0, uintptr_t in1) {
   uintptr_t x4, x5, x0, x6, x1, x9, x7, x2, x11, x3, x13, x8, x17, x10, x19, x12, x14, x15, x16, x18, x20, x21, x22, x23, x24, x25;
   x0 = *(uintptr_t*)((in0)+((uintptr_t)0ULL));
   x1 = *(uintptr_t*)((in0)+((uintptr_t)8ULL));
@@ -932,7 +932,7 @@ void fiat_secp256k1_sub(uintptr_t in0, uintptr_t in1, uintptr_t out0) {
  * Output Bounds:
  *   out0: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  */
-void fiat_secp256k1_opp(uintptr_t in0, uintptr_t out0) {
+void fiat_secp256k1_opp(uintptr_t out0, uintptr_t in0) {
   uintptr_t x0, x1, x2, x5, x3, x7, x9, x4, x13, x6, x15, x8, x10, x11, x12, x14, x16, x17, x18, x19, x20, x21;
   x0 = *(uintptr_t*)((in0)+((uintptr_t)0ULL));
   x1 = *(uintptr_t*)((in0)+((uintptr_t)8ULL));
@@ -974,7 +974,7 @@ void fiat_secp256k1_opp(uintptr_t in0, uintptr_t out0) {
  * Output Bounds:
  *   out0: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  */
-void fiat_secp256k1_from_montgomery(uintptr_t in0, uintptr_t out0) {
+void fiat_secp256k1_from_montgomery(uintptr_t out0, uintptr_t in0) {
   uintptr_t x0, x11, x13, x10, x8, x15, x9, x6, x5, x4, x12, x14, x16, x17, x7, x1, x18, x19, x20, x21, x34, x36, x33, x31, x38, x32, x29, x28, x23, x41, x24, x35, x43, x25, x37, x45, x26, x39, x47, x27, x22, x40, x30, x2, x42, x44, x46, x48, x61, x63, x60, x58, x65, x59, x56, x55, x50, x68, x51, x62, x70, x52, x64, x72, x53, x66, x74, x54, x49, x67, x57, x3, x69, x71, x73, x75, x88, x90, x87, x85, x92, x86, x83, x82, x77, x95, x78, x89, x97, x79, x91, x99, x80, x93, x101, x81, x76, x94, x84, x105, x107, x103, x109, x96, x112, x104, x113, x98, x115, x106, x116, x100, x118, x108, x119, x111, x102, x121, x110, x122, x114, x117, x120, x123, x124, x125, x126, x127;
   x0 = *(uintptr_t*)((in0)+((uintptr_t)0ULL));
   x1 = *(uintptr_t*)((in0)+((uintptr_t)8ULL));
@@ -1122,7 +1122,7 @@ void fiat_secp256k1_from_montgomery(uintptr_t in0, uintptr_t out0) {
  * Output Bounds:
  *   out0: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  */
-void fiat_secp256k1_to_montgomery(uintptr_t in0, uintptr_t out0) {
+void fiat_secp256k1_to_montgomery(uintptr_t out0, uintptr_t in0) {
   uintptr_t x1, x2, x3, x0, x7, x9, x18, x20, x17, x15, x22, x16, x13, x12, x8, x25, x10, x19, x27, x11, x21, x23, x24, x14, x32, x4, x26, x36, x28, x33, x38, x29, x34, x30, x48, x50, x47, x45, x52, x46, x43, x42, x35, x55, x37, x49, x57, x39, x51, x59, x40, x53, x61, x41, x31, x54, x44, x64, x5, x56, x68, x58, x65, x70, x60, x66, x62, x80, x82, x79, x77, x84, x78, x75, x74, x67, x87, x69, x81, x89, x71, x83, x91, x72, x85, x93, x73, x63, x86, x76, x96, x6, x88, x100, x90, x97, x102, x92, x98, x94, x112, x114, x111, x109, x116, x110, x107, x106, x99, x119, x101, x113, x121, x103, x115, x123, x104, x117, x125, x105, x95, x118, x108, x129, x131, x127, x133, x120, x136, x128, x137, x122, x139, x130, x140, x124, x142, x132, x143, x135, x126, x145, x134, x146, x138, x141, x144, x147, x148, x149, x150, x151;
   x0 = *(uintptr_t*)((in0)+((uintptr_t)0ULL));
   x1 = *(uintptr_t*)((in0)+((uintptr_t)8ULL));
@@ -1317,7 +1317,7 @@ uintptr_t fiat_secp256k1_nonzero(uintptr_t in0) {
  * Output Bounds:
  *   out0: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  */
-void fiat_secp256k1_selectznz(uintptr_t in0, uintptr_t in1, uintptr_t in2, uintptr_t out0) {
+void fiat_secp256k1_selectznz(uintptr_t out0, uintptr_t in0, uintptr_t in1, uintptr_t in2) {
   uintptr_t x4, x8, x0, x9, x5, x11, x1, x12, x6, x14, x2, x15, x7, x17, x3, x18, x10, x13, x16, x19, x20, x21, x22, x23;
   /*skip*/
   x0 = *(uintptr_t*)((in1)+((uintptr_t)0ULL));
@@ -1363,7 +1363,7 @@ void fiat_secp256k1_selectznz(uintptr_t in0, uintptr_t in1, uintptr_t in2, uintp
  * Output Bounds:
  *   out0: [[0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff]]
  */
-void fiat_secp256k1_to_bytes(uintptr_t in0, uintptr_t out0) {
+void fiat_secp256k1_to_bytes(uintptr_t out0, uintptr_t in0) {
   uintptr_t x3, x2, x1, x0, x7, x8, x10, x12, x14, x16, x18, x20, x6, x23, x25, x27, x29, x31, x33, x35, x5, x38, x40, x42, x44, x46, x48, x50, x4, x53, x55, x57, x59, x61, x63, x9, x11, x13, x15, x17, x19, x21, x22, x24, x26, x28, x30, x32, x34, x36, x37, x39, x41, x43, x45, x47, x49, x51, x52, x54, x56, x58, x60, x62, x64, x66, x65, x67, x68, x69, x70, x71, x72, x73, x74, x75, x76, x77, x78, x79, x80, x81, x82, x83, x84, x85, x86, x87, x88, x89, x90, x91, x92, x93, x94, x95, x96, x97, x98;
   x0 = *(uintptr_t*)((in0)+((uintptr_t)0ULL));
   x1 = *(uintptr_t*)((in0)+((uintptr_t)8ULL));
@@ -1510,7 +1510,7 @@ void fiat_secp256k1_to_bytes(uintptr_t in0, uintptr_t out0) {
  * Output Bounds:
  *   out0: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  */
-void fiat_secp256k1_from_bytes(uintptr_t in0, uintptr_t out0) {
+void fiat_secp256k1_from_bytes(uintptr_t out0, uintptr_t in0) {
   uintptr_t x31, x30, x29, x28, x27, x26, x25, x24, x23, x22, x21, x20, x19, x18, x17, x16, x15, x14, x13, x12, x11, x10, x9, x8, x7, x6, x5, x4, x3, x2, x1, x0, x63, x62, x61, x60, x59, x58, x57, x56, x64, x39, x38, x37, x36, x35, x34, x33, x32, x47, x46, x45, x44, x43, x42, x41, x40, x55, x54, x53, x52, x51, x50, x49, x48, x68, x67, x65, x69, x70, x66, x71, x72, x73, x74;
   x0 = *(uint8_t*)((in0)+((uintptr_t)0ULL));
   x1 = *(uint8_t*)((in0)+((uintptr_t)1ULL));
