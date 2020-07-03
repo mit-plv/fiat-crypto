@@ -21,7 +21,7 @@
  * Output Bounds:
  *   out0: [[0x0 ~> 0x4666666], [0x0 ~> 0x4666666], [0x0 ~> 0x4666666], [0x0 ~> 0x4666666], [0x0 ~> 0x4666666]]
  */
-void fiat_poly1305_carry_mul(uintptr_t in0, uintptr_t in1, uintptr_t out0) {
+void fiat_poly1305_carry_mul(uintptr_t out0, uintptr_t in0, uintptr_t in1) {
   uintptr_t x4, x3, x2, x1, x9, x8, x7, x6, x0, x5, x16, x22, x61, x23, x62, x17, x60, x26, x65, x27, x66, x63, x64, x28, x69, x29, x70, x67, x68, x58, x73, x59, x74, x71, x75, x72, x30, x32, x80, x33, x81, x31, x79, x36, x84, x37, x85, x82, x83, x42, x88, x43, x89, x86, x87, x50, x92, x51, x93, x90, x10, x34, x96, x35, x97, x11, x95, x38, x100, x39, x101, x98, x99, x44, x104, x45, x105, x102, x103, x52, x108, x53, x109, x106, x12, x18, x112, x19, x113, x13, x111, x40, x116, x41, x117, x114, x115, x46, x120, x47, x121, x118, x119, x54, x124, x55, x125, x122, x14, x20, x128, x21, x129, x15, x127, x24, x132, x25, x133, x130, x131, x48, x136, x49, x137, x134, x135, x56, x140, x57, x141, x138, x139, x76, x144, x77, x145, x142, x146, x143, x123, x147, x151, x148, x152, x126, x153, x150, x107, x154, x158, x155, x159, x110, x160, x157, x91, x161, x165, x162, x166, x94, x167, x164, x168, x170, x78, x173, x171, x174, x172, x175, x149, x177, x178, x156, x176, x179, x180, x163, x169, x181, x182, x183, x184, x185;
   x0 = *(uintptr_t*)((in0)+((uintptr_t)0ULL));
   x1 = *(uintptr_t*)((in0)+((uintptr_t)4ULL));
@@ -229,7 +229,7 @@ void fiat_poly1305_carry_mul(uintptr_t in0, uintptr_t in1, uintptr_t out0) {
  * Output Bounds:
  *   out0: [[0x0 ~> 0x4666666], [0x0 ~> 0x4666666], [0x0 ~> 0x4666666], [0x0 ~> 0x4666666], [0x0 ~> 0x4666666]]
  */
-void fiat_poly1305_carry_square(uintptr_t in0, uintptr_t out0) {
+void fiat_poly1305_carry_square(uintptr_t out0, uintptr_t in0) {
   uintptr_t x4, x5, x3, x8, x9, x2, x6, x1, x7, x10, x11, x12, x0, x21, x25, x44, x26, x45, x22, x43, x41, x48, x42, x49, x46, x50, x47, x23, x27, x55, x28, x56, x24, x54, x33, x59, x34, x60, x57, x13, x29, x63, x30, x64, x14, x62, x35, x67, x36, x68, x65, x15, x31, x71, x32, x72, x16, x70, x37, x75, x38, x76, x73, x17, x19, x79, x20, x80, x18, x78, x39, x83, x40, x84, x81, x82, x51, x87, x52, x88, x85, x89, x86, x74, x90, x94, x91, x95, x77, x96, x93, x66, x97, x101, x98, x102, x69, x103, x100, x58, x104, x108, x105, x109, x61, x110, x107, x111, x113, x53, x116, x114, x117, x115, x118, x92, x120, x121, x99, x119, x122, x123, x106, x112, x124, x125, x126, x127, x128;
   x0 = *(uintptr_t*)((in0)+((uintptr_t)0ULL));
   x1 = *(uintptr_t*)((in0)+((uintptr_t)4ULL));
@@ -379,7 +379,7 @@ void fiat_poly1305_carry_square(uintptr_t in0, uintptr_t out0) {
  * Output Bounds:
  *   out0: [[0x0 ~> 0x4666666], [0x0 ~> 0x4666666], [0x0 ~> 0x4666666], [0x0 ~> 0x4666666], [0x0 ~> 0x4666666]]
  */
-void fiat_poly1305_carry(uintptr_t in0, uintptr_t out0) {
+void fiat_poly1305_carry(uintptr_t out0, uintptr_t in0) {
   uintptr_t x0, x1, x2, x3, x4, x5, x6, x10, x11, x7, x8, x9, x12, x13, x14, x15, x16, x17, x18, x19, x20, x21;
   x0 = *(uintptr_t*)((in0)+((uintptr_t)0ULL));
   x1 = *(uintptr_t*)((in0)+((uintptr_t)4ULL));
@@ -423,7 +423,7 @@ void fiat_poly1305_carry(uintptr_t in0, uintptr_t out0) {
  * Output Bounds:
  *   out0: [[0x0 ~> 0xd333332], [0x0 ~> 0xd333332], [0x0 ~> 0xd333332], [0x0 ~> 0xd333332], [0x0 ~> 0xd333332]]
  */
-void fiat_poly1305_add(uintptr_t in0, uintptr_t in1, uintptr_t out0) {
+void fiat_poly1305_add(uintptr_t out0, uintptr_t in0, uintptr_t in1) {
   uintptr_t x0, x5, x1, x6, x2, x7, x3, x8, x4, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19;
   x0 = *(uintptr_t*)((in0)+((uintptr_t)0ULL));
   x1 = *(uintptr_t*)((in0)+((uintptr_t)4ULL));
@@ -466,7 +466,7 @@ void fiat_poly1305_add(uintptr_t in0, uintptr_t in1, uintptr_t out0) {
  * Output Bounds:
  *   out0: [[0x0 ~> 0xd333332], [0x0 ~> 0xd333332], [0x0 ~> 0xd333332], [0x0 ~> 0xd333332], [0x0 ~> 0xd333332]]
  */
-void fiat_poly1305_sub(uintptr_t in0, uintptr_t in1, uintptr_t out0) {
+void fiat_poly1305_sub(uintptr_t out0, uintptr_t in0, uintptr_t in1) {
   uintptr_t x0, x5, x1, x6, x2, x7, x3, x8, x4, x9, x10, x11, x12, x13, x14, x15, x16, x17, x18, x19;
   x0 = *(uintptr_t*)((in0)+((uintptr_t)0ULL));
   x1 = *(uintptr_t*)((in0)+((uintptr_t)4ULL));
@@ -508,7 +508,7 @@ void fiat_poly1305_sub(uintptr_t in0, uintptr_t in1, uintptr_t out0) {
  * Output Bounds:
  *   out0: [[0x0 ~> 0xd333332], [0x0 ~> 0xd333332], [0x0 ~> 0xd333332], [0x0 ~> 0xd333332], [0x0 ~> 0xd333332]]
  */
-void fiat_poly1305_opp(uintptr_t in0, uintptr_t out0) {
+void fiat_poly1305_opp(uintptr_t out0, uintptr_t in0) {
   uintptr_t x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14;
   x0 = *(uintptr_t*)((in0)+((uintptr_t)0ULL));
   x1 = *(uintptr_t*)((in0)+((uintptr_t)4ULL));
@@ -546,7 +546,7 @@ void fiat_poly1305_opp(uintptr_t in0, uintptr_t out0) {
  * Output Bounds:
  *   out0: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  */
-void fiat_poly1305_selectznz(uintptr_t in0, uintptr_t in1, uintptr_t in2, uintptr_t out0) {
+void fiat_poly1305_selectznz(uintptr_t out0, uintptr_t in0, uintptr_t in1, uintptr_t in2) {
   uintptr_t x5, x10, x0, x11, x6, x13, x1, x14, x7, x16, x2, x17, x8, x19, x3, x20, x9, x22, x4, x23, x12, x15, x18, x21, x24, x25, x26, x27, x28, x29;
   /*skip*/
   x0 = *(uintptr_t*)((in1)+((uintptr_t)0ULL));
@@ -599,7 +599,7 @@ void fiat_poly1305_selectznz(uintptr_t in0, uintptr_t in1, uintptr_t in2, uintpt
  * Output Bounds:
  *   out0: [[0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0x3]]
  */
-void fiat_poly1305_to_bytes(uintptr_t in0, uintptr_t out0) {
+void fiat_poly1305_to_bytes(uintptr_t out0, uintptr_t in0) {
   uintptr_t x0, x6, x7, x8, x5, x1, x10, x11, x12, x14, x15, x13, x2, x17, x18, x19, x21, x22, x20, x3, x24, x25, x26, x28, x29, x27, x4, x31, x32, x33, x35, x36, x34, x38, x9, x40, x41, x43, x16, x44, x45, x47, x46, x48, x50, x23, x51, x52, x54, x53, x55, x57, x30, x58, x59, x61, x60, x62, x64, x37, x65, x39, x66, x63, x56, x49, x42, x71, x73, x75, x70, x77, x78, x80, x82, x69, x84, x85, x87, x89, x68, x91, x92, x94, x96, x67, x99, x101, x72, x74, x76, x79, x81, x83, x86, x88, x90, x93, x95, x97, x98, x100, x102, x104, x103, x105, x106, x107, x108, x109, x110, x111, x112, x113, x114, x115, x116, x117, x118, x119, x120, x121;
   x0 = *(uintptr_t*)((in0)+((uintptr_t)0ULL));
   x1 = *(uintptr_t*)((in0)+((uintptr_t)4ULL));
@@ -754,7 +754,7 @@ void fiat_poly1305_to_bytes(uintptr_t in0, uintptr_t out0) {
  * Output Bounds:
  *   out0: [[0x0 ~> 0x4666666], [0x0 ~> 0x4666666], [0x0 ~> 0x4666666], [0x0 ~> 0x4666666], [0x0 ~> 0x4666666]]
  */
-void fiat_poly1305_from_bytes(uintptr_t in0, uintptr_t out0) {
+void fiat_poly1305_from_bytes(uintptr_t out0, uintptr_t in0) {
   uintptr_t x16, x15, x14, x13, x12, x11, x10, x9, x8, x7, x6, x5, x4, x3, x2, x1, x0, x33, x32, x31, x30, x34, x20, x19, x18, x17, x23, x22, x21, x26, x25, x24, x29, x28, x27, x35, x40, x41, x42, x39, x44, x45, x38, x47, x36, x43, x46, x48, x37, x49, x50, x51, x52, x53;
   x0 = *(uint8_t*)((in0)+((uintptr_t)0ULL));
   x1 = *(uint8_t*)((in0)+((uintptr_t)1ULL));
