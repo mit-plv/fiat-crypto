@@ -75,15 +75,15 @@ Definition sat_arithmetic_shiftr machine_wordsize n f :=
 Definition sat_mod2 f :=
   nth_default 0 f 0 mod 2.
 
-Local Notation sat_one machine_wordsize n := (encode_no_reduce (uweight machine_wordsize) n 1).
+Definition sat_one n := cons 1 (zeros (n - 1)).
 
 Definition sat_opp machine_wordsize n f :=
   sat_add machine_wordsize n
-          (sat_one machine_wordsize n)
+          (sat_one n)
           (map (fun i => Z.lnot_modulo i (2^machine_wordsize)) f).
 
 Definition sat_zero n :=
-  repeat 0 n.
+  zeros n.
   (* encode_no_reduce (uweight machine_wordsize) n 0. *)
 
 (************************************************* *)
@@ -419,9 +419,19 @@ Proof.
 (**Properties of sat_one and sat_zero *)
 (************************************ *)
 
-Lemma length_sat_one machine_wordsize n :
-  length (sat_one machine_wordsize n) = n.
-Proof. auto with distr_length. Qed.
+Lemma length_sat_one n (Hn : (0 < n)%nat) :
+  length (sat_one n) = n.
+Proof. unfold sat_one; simpl; rewrite length_zeros; lia. Qed.
+
+Hint Rewrite length_sat_one : distr_length.
+
+Lemma eval_sat_one n machine_wordsize
+      (Hn : (0 < n)%nat)
+      (Hmw : 0 <= machine_wordsize) :
+  eval (uweight machine_wordsize) n (sat_one n) = 1.
+Proof. unfold sat_one. destruct n. lia.
+       rewrite eval_cons, uweight_eval_shift, uweight_0, uweight_1 by (try rewrite length_zeros; lia).
+       replace (S n - 1)%nat with n by lia. rewrite eval_zeros; lia. Qed.
 
 Lemma length_sat_zero n :
   length (sat_zero n) = n.
@@ -429,11 +439,7 @@ Proof. auto with distr_length. Qed.
 
 Lemma eval_sat_zero machine_wordsize n (mw : 0 < machine_wordsize):
   eval (uweight machine_wordsize) n (sat_zero n) = 0.
-Proof.
-  unfold sat_zero; induction n.
-  - reflexivity.
-  - simpl; rewrite eval_cons, uweight_eval_shift, uweight_0, IHn;
-      auto with distr_length; lia. Qed.
+Proof. apply eval_zeros. Qed.
 
 (******************************************************** *)
 (**Properties of sat_opp including functional correctness *)
@@ -441,13 +447,15 @@ Proof.
 
 Lemma length_sat_opp machine_wordsize n f
       (mw0 : 0 < machine_wordsize)
+      (Hn : (0 < n)%nat)
       (Hf : length f = n) :
   length (sat_opp machine_wordsize n f) = n.
-Proof. unfold sat_opp; rewrite length_sat_add; auto with distr_length; lia. Qed.
+Proof. unfold sat_opp; rewrite length_sat_add; auto with distr_length. Qed.
 
 Hint Rewrite length_sat_opp : distr_length.
 
 Lemma eval_sat_opp machine_wordsize n f
+      (Hn : (0 < n)%nat)
       (mw0 : 0 < machine_wordsize)
       (Hz : forall z, In z f -> 0 <= z < 2^machine_wordsize)
       (Hf : length f = n) :
@@ -471,25 +479,20 @@ Proof.
         ((2 ^ machine_wordsize) * (2 ^ (machine_wordsize * Z.of_nat (length f)))).
     rewrite !Z.mul_mod_distr_l; try lia.
     unfold Z.lnot_modulo. rewrite Lnot.Z.lnot_equiv. unfold Z.pred.
-    rewrite IHf; try lia.
     destruct (length f) eqn:E.
     + rewrite !eval0.
       rewrite !Z.mul_0_r, !Z.mul_1_r, !Z.add_0_r.
       replace (-a + -1) with (- (a + 1)) by ring.
-      rewrite eval_encode_no_reduce.
+      rewrite eval_sat_one by lia.
       rewrite Z.mod_opp_small.
       replace (1 + (2 ^ machine_wordsize - (a + 1))) with
           (-a + 2 ^ machine_wordsize) by ring.
       rewrite <- Z.add_mod_idemp_r.
       rewrite Z_mod_same_full. rewrite Z.add_0_r. reflexivity.
       apply Z.pow_nonzero. omega. lia.
-      specialize (Hz a (or_introl eq_refl)). lia.
-      rewrite uweight_0. reflexivity.
-      intro; symmetry; apply Z.lt_neq;
-        apply (weight_positive (uwprops machine_wordsize mw0)). omega.
-      intros; symmetry; apply Z.lt_neq;
-        apply (weight_divides (uwprops machine_wordsize mw0)).
-    + rewrite !eval_encode_no_reduce in *; try lia; try apply uweight_0.
+      specialize (Hz a (or_introl eq_refl)). lia. 
+    + rewrite IHf; try lia.
+      rewrite !eval_sat_one in *; try lia; try apply uweight_0.
       rewrite <- Z.mul_mod_distr_l, Z.add_mod_idemp_r; try nia.
       symmetry.
       rewrite <- Z.mul_mod_distr_l, Z.add_mod_idemp_r, Z.mul_add_distr_l, Z.mul_1_r; try nia.
@@ -501,19 +504,12 @@ Proof.
           (- a + 2 ^ machine_wordsize) by ring.
       reflexivity.
       specialize (Hz a (or_introl eq_refl)); lia.
-      intro; symmetry; apply Z.lt_neq;
-        eapply (weight_positive (uwprops machine_wordsize mw0)).
-      intros; symmetry; apply Z.lt_neq;
-      apply (weight_divides (uwprops machine_wordsize mw0)).
-      intro; symmetry; apply Z.lt_neq;
-        eapply (weight_positive (uwprops machine_wordsize mw0)).
-      intros; symmetry; apply Z.lt_neq;
-        apply (weight_divides (uwprops machine_wordsize mw0)).
-    + intros; apply Hz; right; assumption.
+      intros; apply Hz; right; assumption.
     + rewrite <- Z.pow_add_r; try apply f_equal; nia. Qed.
 
 Lemma sat_opp_mod2 machine_wordsize n f
       (mw0 : 0 < machine_wordsize)
+      (Hn : (0 < n)%nat)
       (Hf : length f = n)
       (Hz : forall z, In z f -> 0 <= z < 2^machine_wordsize) :
   sat_mod2 (sat_opp machine_wordsize n f) = sat_mod2 f.
