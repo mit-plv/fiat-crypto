@@ -57,6 +57,14 @@ Module Z.
       by auto with zarith.
     rewrite Z.land_ones_low; auto with zarith.
   Qed.
+
+  Lemma land_pow2 x n :
+    0 <= n ->
+    Z.land x (2^n-1) = x mod 2^n.
+  Proof.
+    intros. rewrite Z.sub_1_r, <- Z.ones_equiv.
+    apply Z.land_ones; auto with zarith.
+  Qed.
   
   Lemma land_pow2_testbit a b :
   a &' 2^b = if Z.testbit a b then 2^b else 0.

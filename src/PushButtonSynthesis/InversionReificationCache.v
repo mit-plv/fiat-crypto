@@ -4,6 +4,7 @@ Require Import Coq.derive.Derive.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.ZUtil.Pow.
 Require Import Crypto.Arithmetic.Core.
+Require Import Crypto.Arithmetic.Partition.
 Require Import Crypto.Arithmetic.Freeze.
 Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Arithmetic.WordByWordMontgomery.
@@ -29,7 +30,7 @@ Local Set Keyed Unification. (* needed for making [autorewrite] fast, c.f. COQBU
 Module Export WordByWordMontgomeryInversion.
   Import WordByWordMontgomery.WordByWordMontgomery.
 
-  Definition msat bitwidth n m := encode_no_reduce (uweight bitwidth) n m. (* m in saturated representation *)
+  Definition msat bitwidth n m := Partition.partition (uweight bitwidth) n m. (* m in saturated representation *)
   (* Precomputed value for the inversion algorithm in the montgomery domain (not sure where to put this) *)
   Definition precompmod bitwidth n m m' :=
   let bits := (Z.log2 m) + 1 in
