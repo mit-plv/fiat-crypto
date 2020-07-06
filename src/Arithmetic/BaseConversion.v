@@ -18,10 +18,13 @@ Module BaseConversion.
             {swprops : @weight_properties sw}
             {dwprops : @weight_properties dw}.
 
+    Definition add_split (s x y : Z) : Z * Z :=
+      dlet sum := Z.add x y in (sum mod s, sum / s).
+
     Definition convert_bases (sn dn : nat) (p : list Z) : list Z :=
       let p_assoc := Positional.to_associational sw sn p in
       let p_cols := Columns.from_associational dw dn p_assoc in
-      let p_flattened : list Z * Z := Columns.flatten dw p_cols in
+      let p_flattened := Columns.flatten dw add_split p_cols in
       let r := fst p_flattened in
       let carry := (snd p_flattened * (dw dn / dw (pred dn))) in
       let r := add_to_nth (pred dn) carry r in
