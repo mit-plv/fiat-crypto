@@ -19,12 +19,13 @@ Module BaseConversion.
             {dwprops : @weight_properties dw}.
 
     Definition convert_bases (sn dn : nat) (p : list Z) : list Z :=
-      let a := Positional.to_associational sw sn p in
-      let b := Columns.from_associational dw dn a in
-      let c := Columns.flatten dw b in
-      let d := add_to_nth
-                 (pred dn) (snd c * (dw dn / dw (pred dn))) (fst c) in
-      d.
+      let p_assoc := Positional.to_associational sw sn p in
+      let p_cols := Columns.from_associational dw dn p_assoc in
+      let p_flattened : list Z * Z := Columns.flatten dw p_cols in
+      let r := fst p_flattened in
+      let carry := (snd p_flattened * (dw dn / dw (pred dn))) in
+      let r := add_to_nth (pred dn) carry r in
+      r.
 
     Hint Rewrite @Columns.length_from_associational @Columns.length_flatten
       : distr_length.
