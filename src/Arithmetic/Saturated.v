@@ -127,22 +127,28 @@ Module Columns.
       end.
 
     Section Flatten.
+      Context (add_split : Z -> Z -> Z -> Z * Z).
+      Context (add_split_mod :
+                 forall s x y, fst (add_split s x y) = (x + y) mod s)
+              (add_split_div :
+                 forall s x y, snd (add_split s x y) = (x + y) / s).
+      Hint Rewrite add_split_mod add_split_div : to_div_mod.
+
       Section flatten_column.
         Context (fw : Z). (* maximum size of the result *)
 
         (* Outputs (sum, carry) *)
         Definition flatten_column (digit: list Z) : (Z * Z) :=
           list_rect (fun _ => (Z * Z)%type) (0,0)
-                    (fun xx tl flatten_column_tl =>
+                    (fun x tl flatten_column_tl =>
                        list_case
-                         (fun _ => (Z * Z)%type) (xx mod fw, xx / fw)
-                         (fun yy tl' =>
+                         (fun _ => (Z * Z)%type) (x mod fw, x / fw)
+                         (fun y tl' =>
                             list_case
-                              (fun _ => (Z * Z)%type) (dlet_nd x := xx in dlet_nd y := yy in Z.add_get_carry_full fw x y)
+                              (fun _ => (Z * Z)%type) (add_split fw x y)
                               (fun _ _ =>
-                                 dlet_nd x := xx in
-                                   dlet_nd rec := flatten_column_tl in (* recursively get the sum and carry *)
-                                   dlet_nd sum_carry := Z.add_get_carry_full fw x (fst rec) in (* add the new value to the sum *)
+                                 dlet_nd rec := flatten_column_tl in (* recursively get the sum and carry *)
+                                   dlet_nd sum_carry := add_split fw x (fst rec) in (* add the new value to the sum *)
                                    dlet_nd carry' := snd sum_carry + snd rec in (* add the two carries together *)
                                    (fst sum_carry, carry'))
                               tl')
@@ -181,7 +187,7 @@ Module Columns.
 
       Lemma flatten_column_mod fw (xs : list Z) :
         fst (flatten_column fw xs)  = sum xs mod fw.
-      Proof using Type.
+      Proof using add_split_mod.
         induction xs; simpl flatten_column; cbv [Let_In];
           repeat match goal with
                  | _ => rewrite IHxs
@@ -191,7 +197,7 @@ Module Columns.
 
       Lemma flatten_column_div fw (xs : list Z) (fw_nz : fw <> 0) :
         snd (flatten_column fw xs)  = sum xs / fw.
-      Proof using Type.
+      Proof using add_split_div add_split_mod.
         (* this hint is already in the database but Z.div_add_l' is triggered first and that screws things up *)
         Hint Rewrite <- Z.div_add' using zutil_arith : pull_Zdiv.
         induction xs; simpl flatten_column; cbv [Let_In];
@@ -207,10 +213,12 @@ Module Columns.
 
       Lemma length_flatten_step digit state :
         length (fst (flatten_step digit state)) = S (length (fst state)).
-      Proof using Type. cbv [flatten_step]; push. Qed.
+      Proof using add_split_mod. cbv [flatten_step]; push. Qed.
       Hint Rewrite length_flatten_step : distr_length.
       Lemma length_flatten inp : length (fst (flatten inp)) = length inp.
-      Proof using Type. cbv [flatten]. induction inp using rev_ind; push. Qed.
+      Proof using add_split_mod.
+        cbv [flatten]. induction inp using rev_ind; push.
+      Qed.
       Hint Rewrite length_flatten : distr_length.
 
       Lemma flatten_snoc x inp : flatten (inp ++ [x]) = flatten_step x (flatten inp).
@@ -221,7 +229,7 @@ Module Columns.
           length inp = n ->
           flatten inp = (Partition.partition weight n (eval n inp),
                          eval n inp / (weight n)).
-      Proof using wprops.
+      Proof using wprops add_split_mod add_split_div.
         induction inp using rev_ind; intros;
           destruct n; distr_length; [ reflexivity | ].
         rewrite flatten_snoc.
@@ -247,7 +255,7 @@ Module Columns.
         (Positional.eval weight n (fst (flatten inp))
          = (eval n inp) mod (weight n))
         /\ (snd (flatten inp) = eval n inp / weight n).
-      Proof using wprops.
+      Proof using wprops add_split_mod add_split_div.
         intros.
         rewrite flatten_correct with (n:=n) by auto.
         cbn [fst snd].
@@ -257,12 +265,16 @@ Module Columns.
       Lemma flatten_mod {n} inp :
         length inp = n ->
         (Positional.eval weight n (fst (flatten inp)) = (eval n inp) mod (weight n)).
-      Proof using wprops. apply flatten_div_mod. Qed.
+      Proof using wprops add_split_mod add_split_div.
+        apply flatten_div_mod.
+      Qed.
       Hint Rewrite @flatten_mod : push_eval.
 
       Lemma flatten_div {n} inp :
         length inp = n -> snd (flatten inp) = eval n inp / weight n.
-      Proof using wprops. apply flatten_div_mod. Qed.
+      Proof using wprops add_split_mod add_split_div.
+        apply flatten_div_mod.
+      Qed.
       Hint Rewrite @flatten_div : push_eval.
     End Flatten.
 
