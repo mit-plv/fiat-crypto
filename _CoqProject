@@ -1,5 +1,5 @@
 -R src Crypto
--arg -w -arg +implicit-core-hint-db,+implicits-in-term,+non-reversible-notation,+deprecated-intros-until-0,+deprecated-focus,+unused-intro-pattern,+variable-collision,-deprecated-hint-constr
+-arg -w -arg +implicit-core-hint-db,+implicits-in-term,+non-reversible-notation,+deprecated-intros-until-0,+deprecated-focus,+unused-intro-pattern,+variable-collision,-deprecated-hint-constr,+omega-is-deprecated,+deprecated-instantiate-syntax
 src/BoundsPipeline.v
 src/CLI.v
 src/COperationSpecifications.v
@@ -67,8 +67,8 @@ src/Bedrock/Arrays/MakeAccessSizes.v
 src/Bedrock/Arrays/MakeListLengths.v
 src/Bedrock/Arrays/MaxBounds.v
 src/Bedrock/Field/Bignum.v
-src/Bedrock/Field/Tactics.v
 src/Bedrock/Field/Operation.v
+src/Bedrock/Field/Tactics.v
 src/Bedrock/Field/UnsaturatedSolinas.v
 src/Bedrock/Field/WordByWordMontgomery.v
 src/Bedrock/Names/MakeNames.v
@@ -93,18 +93,18 @@ src/Bedrock/Synthesis/ReifiedOperation.v
 src/Bedrock/Synthesis/Tactics.v
 src/Bedrock/Synthesis/UnsaturatedSolinas.v
 src/Bedrock/Synthesis/WordByWordMontgomery.v
+src/Bedrock/Synthesis/Examples/EncodeDecode.v
+src/Bedrock/Synthesis/Examples/LadderStep.v
+src/Bedrock/Synthesis/Examples/MulTwice.v
+src/Bedrock/Synthesis/Examples/X1305_32.v
+src/Bedrock/Synthesis/Examples/X25519_64.v
+src/Bedrock/Synthesis/Examples/p224_64.v
+src/Bedrock/Synthesis/Examples/p256_64.v
 src/Bedrock/Translation/Cmd.v
 src/Bedrock/Translation/Expr.v
 src/Bedrock/Translation/Flatten.v
 src/Bedrock/Translation/Func.v
 src/Bedrock/Translation/LoadStoreList.v
-src/Bedrock/Synthesis/Examples/p224_64.v
-src/Bedrock/Synthesis/Examples/p256_64.v
-src/Bedrock/Synthesis/Examples/X25519_64.v
-src/Bedrock/Synthesis/Examples/X1305_32.v
-src/Bedrock/Synthesis/Examples/EncodeDecode.v
-src/Bedrock/Synthesis/Examples/LadderStep.v
-src/Bedrock/Synthesis/Examples/MulTwice.v
 src/Curves/Edwards/AffineProofs.v
 src/Curves/Edwards/Pre.v
 src/Curves/Edwards/XYZT/Basic.v
@@ -154,6 +154,8 @@ src/Rewriter/All.v
 src/Rewriter/AllTacticsExtra.v
 src/Rewriter/Rules.v
 src/Rewriter/RulesProofs.v
+src/Rewriter/TestRules.v
+src/Rewriter/TestRulesProofs.v
 src/Rewriter/Passes/AddAssocLeft.v
 src/Rewriter/Passes/Arith.v
 src/Rewriter/Passes/ArithWithCasts.v
