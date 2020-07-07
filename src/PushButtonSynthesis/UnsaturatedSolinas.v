@@ -566,9 +566,7 @@ Section __.
   Lemma carry_scmul_const_correct a res
         (Hres : carry_scmul_const a = Success res)
     : carry_scmul_const_correct (weight (Qnum limbwidth) (QDen limbwidth)) n m tight_bounds loose_bounds a (Interp res).
-  Proof using curve_good.
-    prove_correctness ().
-  Qed.
+  Proof using curve_good. prove_correctness (). Qed.
 
   Lemma carry_correct res
         (Hres : carry = Success res)
