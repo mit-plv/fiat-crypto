@@ -553,6 +553,40 @@ Section __.
     Primitives.prove_correctness use_curve_good;
     try solve [ auto | congruence | solve_extra_bounds_side_conditions ].
 
+  (** Work around COQBUG(https://github.com/coq/coq/issues/9286) *)
+  Local Opaque
+        carry_mulmod
+        carry_squaremod
+        carry_scmulmod
+        carrymod
+        addmod
+        submod
+        oppmod
+        from_bytesmod
+        to_bytesmod
+        (* Set Printing Width 100000. Print Rewrite HintDb push_eval. | sed s'/^.*->//g' | grep -o ' eval \(([^)]\+)\|[^ ]*\) \(([^)]\+)\|[^ ]*\) [^ )]*' | grep -o '[A-Za-z0-9_\.][A-Za-z0-9_\.]\+$' | sort | uniq *)
+        addmod
+        BaseConversion.convert_bases
+        BaseConversion.convert_basesmod
+        carrymod
+        carry_mulmod
+        carry_scmulmod
+        carry_squaremod
+        encodemod
+        extend_to_length
+        Freeze.from_bytes
+        Freeze.to_bytes
+        freeze_to_bytesmod
+        from_bytesmod
+        oppmod
+        Partition.partition
+        select
+        submod
+        to_bytesmod
+        zeros
+        zselect
+  .
+
   Lemma carry_mul_correct res
         (Hres : carry_mul = Success res)
     : carry_mul_correct (weight (Qnum limbwidth) (QDen limbwidth)) n m tight_bounds loose_bounds (Interp res).
