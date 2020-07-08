@@ -278,7 +278,7 @@ Section __.
                             (CorrectnessStringification.dyn_context.cons
                                (Z.log2 m) "(log2 m)"
                                (CorrectnessStringification.dyn_context.cons
-                                  (@eval_twosc machine_wordsize n) "twos_complement_eval"
+                                  (@eval_twos_complement machine_wordsize n) "twos_complement_eval"
                                   CorrectnessStringification.dyn_context.nil)))))))%string)
          (only parsing).
   Local Notation "'docstring_with_summary_from_lemma!' prefix summary correctness"

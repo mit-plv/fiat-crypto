@@ -121,22 +121,39 @@ Module Z.
   Definition value_barrier (x : Z) := x.
   
   (* arithmetic right shift *)
-  Definition arithmetic_shiftr (m a : Z) :=
+  Definition arithmetic_shiftr1 (m a : Z) :=
     (a &' 2^(m - 1)) |' (a >> 1).
+
+  Definition sign_bit m a := a >> (m - 1).
+
+  Definition ones_from m k := (Z.ones k) << (m - k).
+  Definition ones_at m k := (Z.ones k) << m.
+
+  Definition sign_extend old_m new_m a :=
+    dlet q := Z.zselect (sign_bit old_m a) 0 (ones_at old_m (new_m - old_m)) in
+          q |' a.
+
+  Definition arithmetic_shiftr m a k :=
+    dlet q := Z.zselect (sign_bit m a) 0 (ones_from m k) in
+          q |' (a >> k).
+
+  Definition twos_complement m a :=
+    (if ((a mod 2 ^ m) <? 2 ^ (m - 1)) then a mod 2 ^ m else a mod 2 ^ m - 2 ^ m).
 
   (* Negation in twos complement *)
   Definition twos_complement_opp m a :=
     ((Z.lnot_modulo a (2 ^ m)) + 1) mod (2 ^ m).
 
   (* Check if a number considered in twos complement of bitwidth m is negative *)
-  Definition twos_complement_neg m a :=
-    a >> (m - 1).
+  Definition twos_complement_neg m a := a >> (m - 1).
 
-  (* note the corner case condition: when f is exactly 2 to the mw-1'th power, then -f = f and 
-   so checking that -f is negative does not work in that case. 
+  (* note the corner case condition: when f is exactly 2 to the mw-1'th power, then -f = f and
+   so checking that -f is negative does not work in that case.
    This is not really an issue, since it just requires that our integers are small (which they are)
    Long term, we would like to add comparison operators to the supported C language *)
   Definition twos_complement_pos m a :=
-    dlet b := twos_complement_opp m a in
-          (b >> (m - 1)).
+    dlet b := twos_complement_opp m a in sign_bit m b.
+
+  Definition twos_complement_mul ma mb a b :=
+    (sign_extend ma (ma + mb) a) * (sign_extend mb (ma + mb) b).
 End Z.
