@@ -1086,9 +1086,9 @@ Module Compilers.
           : expr.wf G (@strip_all_annotations strip_annotations_under var1 t e1) (@strip_all_annotations strip_annotations_under var2 t e2).
         Proof using Type. revert Hwf; apply ident.wf_strip_all_annotations, @wf_annotation_to_cast. Qed.
 
-        Lemma wf_eval_with_bound {relax_zrange skip_annotations_under strip_preexisting_annotations t} G G' e1 e2 (Hwf : expr.wf G e1 e2) st1 st2 (Hst : type.and_for_each_lhs_of_arrow (@abstract_domain_R) st1 st2)
+        Lemma wf_eval_with_bound {relax_zrange assume_cast_truncates skip_annotations_under strip_preexisting_annotations t} G G' e1 e2 (Hwf : expr.wf G e1 e2) st1 st2 (Hst : type.and_for_each_lhs_of_arrow (@abstract_domain_R) st1 st2)
               (HGG' : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> wf_value_with_lets G' v1 v2)
-          : expr.wf G' (@eval_with_bound relax_zrange skip_annotations_under strip_preexisting_annotations var1 t e1 st1) (@eval_with_bound relax_zrange skip_annotations_under strip_preexisting_annotations var2 t e2 st2).
+          : expr.wf G' (@eval_with_bound relax_zrange assume_cast_truncates skip_annotations_under strip_preexisting_annotations var1 t e1 st1) (@eval_with_bound relax_zrange assume_cast_truncates skip_annotations_under strip_preexisting_annotations var2 t e2 st2).
         Proof.
           eapply ident.wf_eval_with_bound;
             solve [ eassumption
@@ -1101,9 +1101,9 @@ Module Compilers.
                   | apply is_annotated_for_Proper ].
         Qed.
 
-        Lemma wf_strip_annotations {t} G G' e1 e2 (Hwf : expr.wf G e1 e2) st1 st2 (Hst : type.and_for_each_lhs_of_arrow (@abstract_domain_R) st1 st2)
+        Lemma wf_strip_annotations {assume_cast_truncates} {t} G G' e1 e2 (Hwf : expr.wf G e1 e2) st1 st2 (Hst : type.and_for_each_lhs_of_arrow (@abstract_domain_R) st1 st2)
               (HGG' : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> wf_value_with_lets G' v1 v2)
-          : expr.wf G' (@strip_annotations var1 t e1 st1) (@strip_annotations var2 t e2 st2).
+          : expr.wf G' (@strip_annotations assume_cast_truncates var1 t e1 st1) (@strip_annotations assume_cast_truncates var2 t e2 st2).
         Proof.
           eapply ident.wf_eval_with_bound;
             solve [ eassumption
@@ -1140,14 +1140,14 @@ Module Compilers.
         intros ??; eapply wf_eval with (G:=nil); cbn [List.In]; try apply Hwf; tauto.
       Qed.
 
-      Lemma Wf_EvalWithBound {relax_zrange skip_annotations_under strip_preexisting_annotations t} (e : Expr t) bound (Hwf : Wf e) (bound_valid : Proper (type.and_for_each_lhs_of_arrow (@abstract_domain_R)) bound)
-        : Wf (EvalWithBound relax_zrange skip_annotations_under strip_preexisting_annotations e bound).
+      Lemma Wf_EvalWithBound {relax_zrange assume_cast_truncates skip_annotations_under strip_preexisting_annotations t} (e : Expr t) bound (Hwf : Wf e) (bound_valid : Proper (type.and_for_each_lhs_of_arrow (@abstract_domain_R)) bound)
+        : Wf (EvalWithBound relax_zrange assume_cast_truncates skip_annotations_under strip_preexisting_annotations e bound).
       Proof.
         intros ??; eapply wf_eval_with_bound with (G:=nil); cbn [List.In]; try apply Hwf; tauto.
       Qed.
 
-      Lemma Wf_StripAnnotations {t} (e : Expr t) bound (Hwf : Wf e) (bound_valid : Proper (type.and_for_each_lhs_of_arrow (@abstract_domain_R)) bound)
-        : Wf (StripAnnotations e bound).
+      Lemma Wf_StripAnnotations {assume_cast_truncates} {t} (e : Expr t) bound (Hwf : Wf e) (bound_valid : Proper (type.and_for_each_lhs_of_arrow (@abstract_domain_R)) bound)
+        : Wf (StripAnnotations assume_cast_truncates e bound).
       Proof.
         intros ??; eapply wf_strip_annotations with (G:=nil); cbn [List.In]; try tauto; apply GeneralizeVar.Wf_GeneralizeVar, Hwf.
       Qed.
@@ -1191,11 +1191,11 @@ Module Compilers.
   Hint Opaque PartialEvaluateWithListInfoFromBounds : wf interp rewrite.
 
   Lemma Wf_PartialEvaluateWithBounds
-        {relax_zrange} {skip_annotations_under : forall t, ident t -> bool} {strip_preexisting_annotations : bool} {t} (E : Expr t)
+        {relax_zrange} {assume_cast_truncates : bool} {skip_annotations_under : forall t, ident t -> bool} {strip_preexisting_annotations : bool} {t} (E : Expr t)
         (b_in : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
         (Hwf : Wf E)
         {b_in_Proper : Proper (type.and_for_each_lhs_of_arrow (@abstract_domain_R base.type ZRange.type.base.option.interp (fun t0 : base.type => eq))) b_in}
-    : Wf (PartialEvaluateWithBounds relax_zrange skip_annotations_under strip_preexisting_annotations E b_in).
+    : Wf (PartialEvaluateWithBounds relax_zrange assume_cast_truncates skip_annotations_under strip_preexisting_annotations E b_in).
   Proof. cbv [PartialEvaluateWithBounds]; eauto with wf. Qed.
   Hint Resolve Wf_PartialEvaluateWithBounds : wf.
   Hint Opaque PartialEvaluateWithBounds : wf interp rewrite.

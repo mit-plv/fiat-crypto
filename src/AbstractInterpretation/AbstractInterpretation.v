@@ -485,9 +485,8 @@ Module Compilers.
         Definition strip_all_annotations strip_annotations_under {var} {t} (e : @expr var t) : @expr var t
           := @ident.strip_all_annotations var (@annotation_to_cast _) strip_annotations_under t e.
 
-        Definition eval_with_bound (skip_annotations_under : forall t, ident t -> bool) (strip_preexisting_annotations : bool) {var} {t} (e : @expr _ t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : expr t
-          := let assume_cast_truncates := false in
-             let annotate_with_state := true in
+        Definition eval_with_bound (assume_cast_truncates : bool) (skip_annotations_under : forall t, ident t -> bool) (strip_preexisting_annotations : bool) {var} {t} (e : @expr _ t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : expr t
+          := let annotate_with_state := true in
              (@partial.ident.eval_with_bound)
                var abstract_domain' annotate_expr bottom' (abstract_interp_ident assume_cast_truncates) extract_list_state extract_option_state is_annotated_for (strip_annotation assume_cast_truncates strip_preexisting_annotations) skip_annotations_under annotate_with_state t e bound.
 
@@ -499,15 +498,14 @@ Module Compilers.
         Definition StripAllAnnotations strip_annotations_under {t} (e : Expr t) : Expr t
           := fun var => strip_all_annotations strip_annotations_under (e _).
 
-        Definition EvalWithBound (skip_annotations_under : forall t, ident t -> bool) (strip_preexisting_annotations : bool) {t} (e : Expr t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : Expr t
-          := fun var => eval_with_bound skip_annotations_under strip_preexisting_annotations (e _) bound.
+        Definition EvalWithBound (assume_cast_truncates : bool) (skip_annotations_under : forall t, ident t -> bool) (strip_preexisting_annotations : bool) {t} (e : Expr t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : Expr t
+          := fun var => eval_with_bound assume_cast_truncates skip_annotations_under strip_preexisting_annotations (e _) bound.
         Definition EtaExpandWithBound {t} (e : Expr t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : Expr t
           := fun var => eta_expand_with_bound (e _) bound.
       End with_relax.
 
-      Definition strip_annotations {var} {t} (e : @expr _ t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : expr t
-        := let assume_cast_truncates := false in
-           let strip_preexisting_annotations := true in
+      Definition strip_annotations (assume_cast_truncates : bool) {var} {t} (e : @expr _ t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : expr t
+        := let strip_preexisting_annotations := true in
            let annotate_with_state := false in
            let skip_annotations_under := fun _ _ => false in
            (@partial.ident.eval_with_bound)
@@ -516,8 +514,8 @@ Module Compilers.
       (* N.B. We insert [GeneralizeVar] so that we can assume [Wf e]
               and get [Wf3 (GeneralizeVar e)], rather than needing to
               assume [Wf3 e] *)
-      Definition StripAnnotations {t} (e : Expr t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : Expr t
-        := fun var => strip_annotations (GeneralizeVar.GeneralizeVar (e _) _) bound.
+      Definition StripAnnotations (assume_cast_truncates : bool) {t} (e : Expr t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : Expr t
+        := fun var => strip_annotations assume_cast_truncates (GeneralizeVar.GeneralizeVar (e _) _) bound.
 
       Definition eval {var} {t} (e : @expr _ t) : expr t
         := let assume_cast_truncates := false in
@@ -556,12 +554,13 @@ Module Compilers.
 
   Definition PartialEvaluateWithBounds
              (relax_zrange : zrange -> option zrange)
+             (assume_cast_truncates : bool)
              (skip_annotations_under : forall t, ident t -> bool)
              (strip_preexisting_annotations : bool)
              {t} (e : Expr t)
              (bound : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
     : Expr t
-    := partial.EvalWithBound relax_zrange skip_annotations_under strip_preexisting_annotations (GeneralizeVar.GeneralizeVar (e _)) bound.
+    := partial.EvalWithBound relax_zrange assume_cast_truncates skip_annotations_under strip_preexisting_annotations (GeneralizeVar.GeneralizeVar (e _)) bound.
   Definition PartialEvaluateWithListInfoFromBounds {t} (e : Expr t)
              (bound : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
     : Expr t
@@ -569,6 +568,7 @@ Module Compilers.
 
   Definition CheckedPartialEvaluateWithBounds
              (relax_zrange : zrange -> option zrange)
+             (assume_cast_truncates : bool)
              (skip_annotations_under : forall t, ident t -> bool)
              (strip_preexisting_annotations : bool)
              {t} (E : Expr t)
@@ -577,12 +577,12 @@ Module Compilers.
     : Expr t + (ZRange.type.base.option.interp (type.final_codomain t) * Expr t + list { t : _ & forall var, @expr var t })
     := dlet_nd e := GeneralizeVar.ToFlat E in
        let E := GeneralizeVar.FromFlat e in
-       let b_computed := partial.Extract false E b_in in
+       let b_computed := partial.Extract assume_cast_truncates E b_in in
        let unsupported_casts := if strip_preexisting_annotations
                                 then nil
                                 else CheckCasts.GetUnsupportedCasts E in
        match unsupported_casts with
-       | nil => (let E := PartialEvaluateWithBounds relax_zrange skip_annotations_under strip_preexisting_annotations E b_in in
+       | nil => (let E := PartialEvaluateWithBounds relax_zrange assume_cast_truncates skip_annotations_under strip_preexisting_annotations E b_in in
                 if ZRange.type.base.option.is_tighter_than b_computed b_out
                 then @inl (Expr t) _ E
                 else inr (@inl (ZRange.type.base.option.interp (type.final_codomain t) * Expr t) _ (b_computed, E)))

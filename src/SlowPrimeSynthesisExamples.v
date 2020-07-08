@@ -39,6 +39,89 @@ Local Coercion Z.pos : positive >-> Z.
 Local Existing Instance default_low_level_rewriter_method.
 Local Instance : tight_upperbound_fraction_opt := default_tight_upperbound_fraction.
 
+Module debugging_21271_from_bytes.
+  Import Crypto.PushButtonSynthesis.UnsaturatedSolinas.
+  Import Stringification.C.
+  Import Stringification.C.Compilers.
+  Import Stringification.C.Compilers.ToString.
+  Section __.
+    Local Existing Instance C.OutputCAPI.
+    Local Instance static : static_opt := false.
+    Local Instance : internal_static_opt := true.
+    Local Instance : emit_primitives_opt := false.
+    Local Instance : use_mul_for_cmovznz_opt := false.
+    Local Instance : widen_carry_opt := false.
+    Local Instance : widen_bytes_opt := false.
+    Local Instance : only_signed_opt := false.
+    Local Instance : no_select_opt := false.
+    Local Instance : should_split_mul_opt := false.
+    Local Instance : should_split_multiret_opt :=false.
+
+    Definition n := 3%nat (*5%nat*).
+    Definition s := 2^127 (* 255*).
+    Definition c := [(1, 1(*9*))].
+    Definition machine_wordsize := 64.
+
+    Import IR.Compilers.ToString.
+
+    Goal True.
+      pose (sfrom_bytes n s c machine_wordsize "1271") as v.
+      cbv [sfrom_bytes] in v.
+      set (k := from_bytes _ _ _ _) in (value of v).
+      clear v.
+      cbv [from_bytes] in k.
+      cbv [Pipeline.BoundsPipeline] in k.
+      set (k' := Pipeline.PreBoundsPipeline _ _ _ _ _) in (value of k).
+      vm_compute in k'.
+      cbv [Rewriter.Util.LetIn.Let_In] in k.
+      set (k'' := CheckedPartialEvaluateWithBounds _ _ _ _ _ _ _) in (value of k).
+      vm_compute in k''.
+      lazymatch (eval cbv [k''] in k'') with
+      | @inl ?A ?B ?v => pose v as V; change k'' with (@inl A B V) in (value of k)
+      end.
+      cbv beta iota zeta in k.
+      clear k''.
+      set (e := GeneralizeVar.FromFlat _) in (value of k).
+      vm_compute in e.
+      set (k'' := CheckedPartialEvaluateWithBounds _ _ _ _ _ _ _) in (value of k).
+      cbv [CheckedPartialEvaluateWithBounds] in k''.
+      clear -k''.
+      cbv [Rewriter.Util.LetIn.Let_In] in k''.
+      set (e' := (GeneralizeVar.FromFlat (GeneralizeVar.ToFlat e))) in (value of k'').
+      vm_compute in e'; clear e; rename e' into e.
+      set (b := (partial.Extract _ _ _)) in (value of k'').
+      clear -b.
+      cbv [partial.Extract partial.ident.extract partial.extract_gen type.app_curried partial.extract'] in b.
+      subst e.
+      cbv beta iota zeta in b.
+      Import Rewriter.Util.LetIn.
+      cbn [partial.abstract_interp_ident] in b.
+      cbv [partial.abstract_interp_ident] in b.
+      cbv [ZRange.ident.option.interp] in b.
+      cbv [ZRange.ident.option.of_literal] in b.
+      cbn [ZRange.ident.option.interp_Z_cast option_map] in b.
+      cbv [partial.abstract_domain ZRange.type.base.option.interp type.interp ZRange.type.base.interp] in b.
+      cbn [fst snd] in b.
+      (do 54 try (lazymatch (eval cbv [b] in b) with
+                  | dlet x := ?v in _ => let v' := (eval vm_compute in v) in change v with v' in (value of b)
+                  end;
+                  unfold Let_In at 1 in (value of b));
+          try lazymatch (eval cbv [b] in b) with
+              | dlet x := ?v in _ => let v' := (eval vm_compute in v) in change v with v' in (value of b)
+              end).
+      (*
+      unfold Let_In at 1 in (value of b).
+      lazymatch (eval cbv [b] in b) with
+      | context[Crypto.Util.Option.bind ?v _] => let v' := (eval vm_compute in v) in change v with v' in (value of b)
+      end.
+      cbn [Crypto.Util.Option.bind] in b.
+      set (k' := Operations.ZRange.land_bounds _ _) in (value of b).
+      cbv [Operations.ZRange.land_bounds] in k'.
+      clear -k'.*)
+    Abort.
+  End __.
+End debugging_21271_from_bytes.
+
 Module debugging_sat_solinas_25519.
   Section __.
     Import Crypto.PushButtonSynthesis.WordByWordMontgomery.
@@ -356,7 +439,7 @@ Module debugging_p256_mul_bedrock2.
       cbv [mul] in k.
       cbv -[Pipeline.BoundsPipeline WordByWordMontgomeryReificationCache.WordByWordMontgomery.reified_mul_gen] in k.
       cbv [Pipeline.BoundsPipeline Pipeline.PreBoundsPipeline Rewriter.Util.LetIn.Let_In] in k.
-      set (k' := CheckedPartialEvaluateWithBounds _ _ _ _ _ _) in (value of k).
+      set (k' := CheckedPartialEvaluateWithBounds _ _ _ _ _ _ _) in (value of k).
       vm_compute in k'.
       subst k'; cbv beta iota zeta in k.
       cbv [Pipeline.RewriteAndEliminateDeadAndInline] in k.
@@ -373,7 +456,7 @@ Module debugging_p256_mul_bedrock2.
       set (k' := ArithWithCasts.Compilers.RewriteRules.RewriteArithWithCasts _ _ _) in (value of k).
       vm_compute in k'.
       subst k'; cbv beta iota zeta in k.
-      set (k' := CheckedPartialEvaluateWithBounds _ _ _ _ _ _) in (value of k).
+      set (k' := CheckedPartialEvaluateWithBounds _ _ _ _ _ _ _) in (value of k).
       vm_compute in k'.
       subst k'; cbv beta iota zeta in k.
       set (k' := MulSplit.Compilers.RewriteRules.RewriteMulSplit _ _ _ _) in (value of k) at 1.
@@ -426,7 +509,7 @@ Module debugging_25519_to_bytes_bedrock2.
       set (k' := Arith.Compilers.RewriteRules.RewriteArith _ _ _) in (value of k).
       vm_compute in k'.
       cbv [Rewriter.Util.LetIn.Let_In] in k.
-      set (k'' := CheckedPartialEvaluateWithBounds _ _ _ _ _ _) in (value of k).
+      set (k'' := CheckedPartialEvaluateWithBounds _ _ _ _ _ _ _) in (value of k).
       vm_compute in k''.
       set (uint64 := r[0 ~> 18446744073709551615]%zrange) in (value of k'').
       subst k''.
@@ -435,7 +518,7 @@ Module debugging_25519_to_bytes_bedrock2.
       vm_compute in k''.
       Compute Z.log2 9223372036854775808.
       clear -k''.
-      set (k'' := CheckedPartialEvaluateWithBounds _ _ _ _ _ _) in (value of k).
+      set (k'' := CheckedPartialEvaluateWithBounds _ _ _ _ _ _ _) in (value of k).
       vm_compute in k''.
       subst k''.
       cbv beta iota zeta in k.
@@ -1048,7 +1131,7 @@ Module debugging_p256_uint1.
       cbv [split_multiret_to should_split_multiret should_split_multiret_opt_instance_0] in k.
       vm_compute ZRange.type.base.option.is_tighter_than in k.
       cbv beta iota zeta in k.
-      set (k' := PartialEvaluateWithBounds _ _ _ _ _) in (value of k) at 1.
+      set (k' := PartialEvaluateWithBounds _ _ _ _ _ _) in (value of k) at 1.
       vm_compute in k'.
     Abort.
   End __.
@@ -1200,7 +1283,7 @@ Module debugging_go_build.
       vm_compute in k'.
       subst k'.
       cbv beta iota in k.
-      set (k' := partial.Extract _ _) in (value of k).
+      set (k' := partial.Extract _ _ _) in (value of k).
       vm_compute in k'.
       subst k'.
       set (k' := ZRange.type.base.option.is_tighter_than _ _) in (value of k).
@@ -1209,7 +1292,7 @@ Module debugging_go_build.
       cbv [split_mul_to] in k.
       cbv [should_split_mul] in k.
       cbv [should_split_mul_opt_instance_0] in k.
-      set (k' := PartialEvaluateWithBounds _ _ _ _ _) in (value of k).
+      set (k' := PartialEvaluateWithBounds _ _ _ _ _ _) in (value of k).
       vm_compute in k'.
       subst k'.
       vm_compute in k.
@@ -2907,7 +2990,7 @@ Module debugging_remove_mul_split2.
       Import WordByWordMontgomeryReificationCache.
       cbv -[Pipeline.BoundsPipeline reified_mul_gen] in k.
       cbv [Pipeline.BoundsPipeline Pipeline.PreBoundsPipeline LetIn.Let_In] in k.
-      set (v := CheckedPartialEvaluateWithBounds _ _ _ _ _ _) in (value of k).
+      set (v := CheckedPartialEvaluateWithBounds _ _ _ _ _ _ _) in (value of k).
       Notation INL := (inl _).
       vm_compute in v.
       Notation IDD := (id _).
