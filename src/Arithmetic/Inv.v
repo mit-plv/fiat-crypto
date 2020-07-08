@@ -531,7 +531,7 @@ Lemma eval_twos_complement_sat_add machine_wordsize n f g
   eval_twos_complement machine_wordsize n (sat_add machine_wordsize n f g) =
   eval_twos_complement machine_wordsize n f + eval_twos_complement machine_wordsize n g.
 Proof. assert (0 < Z.of_nat n) by lia; unfold eval_twos_complement.
-       rewrite eval_sat_add, <- Z.twos_complement_add_weak, Z.twos_complement_mod; lia. Qed.
+       rewrite eval_sat_add, <- Z.twos_complement_add_weak, Z.twos_complement_mod; nia. Qed.
 
 Lemma eval_twos_complement_select machine_wordsize n cond f g
       (Hf : length f = n)
