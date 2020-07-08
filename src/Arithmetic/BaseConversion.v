@@ -173,15 +173,12 @@ Module BaseConversion.
            As to_associational_inlined_correct.
     Proof.
       intros.
-      cbv beta iota delta [ to_associational convert_bases
-                                             Positional.to_associational
-                                             Positional.from_associational
-                                             chained_carries_no_reduce
-                                             carry
-                                             Associational.carry
-                                             Associational.carryterm
-                          ].
-      cbv beta iota delta [Let_In].
+      cbv beta iota delta [ to_associational convert_bases ].
+      cbv beta iota delta [ Columns.from_associational ].
+      cbv beta iota delta [Let_In]. (* inlines dlets from Columns.from_associaitonal  *)
+      cbv beta iota delta [ Columns.flatten Columns.flatten_step
+                                            Columns.flatten_column ].
+      cbv beta iota delta [Let_In]. (* inlines dlets from Columns.flatten  *)
       subst to_associational_inlined; reflexivity.
     Qed.
 

@@ -319,6 +319,15 @@ Definition arith_with_casts_rewrite_rulesT (adc_no_carry_to_add : bool) : list (
            ]
          ; mymap
              do_again
+             [ (** remove unnecessary masks *)
+               (forall rv rx x ry y,
+                   (rx <= rv)%zrange ->
+                   (rx <= r[0~>y])%zrange ->
+                   y ∈ ry -> y = Z.ones (Z.succ (Z.log2 y))
+                   -> cstZ rv (cstZ rx x &' cstZ ry ('y)) = cstZ rx x)
+             ]%Z%zrange
+         ; mymap
+             do_again
              [ (* [do_again], so that we can trigger add/sub rules on the output *)
                (** flatten add/sub which incurs no carry/borrow *)
                (forall rv rs s rx x ry y,

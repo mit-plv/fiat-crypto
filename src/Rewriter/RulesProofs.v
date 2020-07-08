@@ -250,6 +250,16 @@ Local Ltac interp_good_t_step_arith :=
                apply unfold_is_bounded_by_bool in Hy
           | [ |- context[ident.cast r[0~>0] ?v] ]
             => rewrite (ident.platform_specific_cast_0_is_mod 0 v) by reflexivity
+          | [ H : ?x = Z.ones _ |- context [Z.land _ ?x] ] => rewrite H
+          | [ |- context [Z.land ?x (Z.ones (Z.succ (Z.log2 _)))] ] =>
+            rewrite (Z.land_ones_low x)
+              by (repeat match goal with
+                         | H : is_bounded_by_bool _ _ = true |- _ =>
+                           apply unfold_is_bounded_by_bool in H;
+                           cbn [upper lower] in H
+                         end;
+                  try apply Z.lt_succ_r;
+                  eauto using Z.log2_le_mono with lia)
           end
         | progress intros
         | progress subst
