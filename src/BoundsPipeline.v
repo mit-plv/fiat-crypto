@@ -485,7 +485,7 @@ Module Pipeline.
              out_bounds
   : ErrorT (Expr t)
     := (*let E := expr.Uncurry E in*)
-      let assume_cast_truncates := false in
+      let assume_cast_truncates := true in
       let opts := opts_of_method in
       dlet E := PreBoundsPipeline (* with_dead_code_elimination *) with_subst01 with_let_bind_return translate_to_fancy E arg_bounds in
       (** We first do bounds analysis with no relaxation so that we
