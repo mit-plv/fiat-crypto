@@ -1262,7 +1262,7 @@ Lemma map_seq_ext {A} (f g : nat -> A) (n m k : nat)
 Proof.
   generalize dependent m; generalize dependent n; induction k as [|k IHk]; intros; simpl.
   - reflexivity.
-  - simpl; rewrite H by lia; replace (n + (m - n))%nat with m by omega.
+  - simpl; rewrite H by lia; replace (n + (m - n))%nat with m by lia.
     rewrite (IHk (S n) (S m)); [reflexivity| |lia]. 
     intros; rewrite Nat.sub_succ; apply H; lia. Qed.
 

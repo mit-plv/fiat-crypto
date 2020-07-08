@@ -67,28 +67,25 @@ Module Z.
     - destruct H4. rewrite H4 in *. rewrite Z.mod_neg_small. lia.
       destruct (dec (0 <= b)); [|lia]. rewrite Z.mod_small in H3; lia. Qed.
 
-  Lemma twos_complement_testbit_spec m a i
-        (Hi : 0 <= i)
+  Lemma twos_complement_testbit_spec_full m a i
         (Hm : 0 < m) :
     Z.testbit (Z.twos_complement m a) i = if (i <? m) then Z.testbit a i else Z.testbit a (m - 1).
-  Proof. unfold Z.twos_complement. unfold Z.sub at 2.
+  Proof. unfold Z.twos_complement.
+         unfold Z.sub at 2.
          rewrite <- Z.lor_add by solve_using_testbit.
          rewrite Z.twos_complement_cond_equiv by assumption.
          destruct (Z.testbit a (m - 1)); solve_testbit. Qed.
 
-  Hint Rewrite twos_complement_testbit_spec : testbit_rewrite.
+  Hint Rewrite twos_complement_testbit_spec_full : testbit_pos_rewrite.
+  Hint Rewrite twos_complement_testbit_spec_full : testbit_rewrite.
 
   Lemma twos_complement_one m (Hm : 1 < m) :
     Z.twos_complement m 1 = 1.
-  Proof.
-    apply twos_complement_spec; try split; try lia.
-    assert (1 < 2 ^ (m - 1)) by (apply Zpow_facts.Zpower_gt_1; lia); lia. Qed.
+  Proof. solve_using_testbit. Qed.
 
   Lemma twos_complement_zero m (Hm : 0 < m):
     Z.twos_complement m 0 = 0.
-  Proof. assert (0 < 2 ^ m) by (apply Z.pow_pos_nonneg; lia).
-         assert (0 < 2 ^ (m - 1)) by (apply Z.pow_pos_nonneg; lia).
-         apply twos_complement_spec; try split; rewrite ?Z.mod_0_l; lia. Qed.
+  Proof. solve_using_testbit. Qed.
 
   Lemma twos_complement_mod a m (Hm : 0 < m) :
     Z.twos_complement m (a mod 2 ^ m) = Z.twos_complement m a.
@@ -101,7 +98,7 @@ Module Z.
            try apply Z.mod_mod; apply Z.pow_nonzero; lia. Qed.
 
   Lemma twos_complement_odd m a (Hm : 0 < m) : Z.odd (Z.twos_complement m a) = Z.odd a.
-  Proof. rewrite <- !Z.bit0_odd. solve_testbit. Qed.
+  Proof. rewrite <- !Z.bit0_odd; solve_testbit. Qed.
 
   Lemma twos_complement_mod2 m a (Hm : 0 < m) : Z.twos_complement m a mod 2 = a mod 2.
   Proof. rewrite Zmod_odd, twos_complement_odd, <- Zmod_odd by lia. reflexivity. Qed.

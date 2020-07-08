@@ -173,7 +173,7 @@ Proof.
         ** specialize (Hz a (or_introl eq_refl)).
            rewrite Z.mul_1_r, Z.land_div2; rewrite ?Z.sub_simpl_r; lia.
         ** now rewrite Z.mul_0_r, Z.land_0_r.
-      * unfold sat_shiftr. replace (S (length f) - 1)%nat with (length f) by omega.
+      * unfold sat_shiftr. replace (S (length f) - 1)%nat with (length f) by lia.
         apply f_equal2.
         ** apply map_seq_ext; intros; [|lia].
            rewrite Nat.sub_0_r, Nat.add_1_r.
@@ -424,7 +424,7 @@ Proof.
           (-a + 2 ^ machine_wordsize) by ring.
       rewrite <- Z.add_mod_idemp_r.
       rewrite Z_mod_same_full. rewrite Z.add_0_r. reflexivity.
-      apply Z.pow_nonzero. omega. lia.
+      apply Z.pow_nonzero. lia. lia.
       specialize (Hz a (or_introl eq_refl)). lia. lia. lia.
     + rewrite IHf by (try (intros; apply Hz; right; assumption); lia).
       rewrite !eval_sat_one in * by lia.
@@ -514,7 +514,7 @@ Lemma eval_twos_complement_sat_arithmetic_shiftr1 machine_wordsize n f
   eval_twos_complement machine_wordsize n (sat_arithmetic_shiftr1 machine_wordsize n f) =
   (eval_twos_complement machine_wordsize n f) / 2.
 Proof.
-  assert (0 < Z.of_nat n) by omega. unfold eval_twos_complement. rewrite eval_sat_arithmetic_shiftr1, Z.arithmetic_shiftr1_spec; auto; [nia|].
+  assert (0 < Z.of_nat n) by lia. unfold eval_twos_complement. rewrite eval_sat_arithmetic_shiftr1, Z.arithmetic_shiftr1_spec; auto; [nia|].
   apply eval_bound; auto. Qed.
 
 Lemma eval_twos_complement_sat_add machine_wordsize n f g
@@ -530,7 +530,7 @@ Lemma eval_twos_complement_sat_add machine_wordsize n f g
                     2 ^ (machine_wordsize * n - 2)) :
   eval_twos_complement machine_wordsize n (sat_add machine_wordsize n f g) =
   eval_twos_complement machine_wordsize n f + eval_twos_complement machine_wordsize n g.
-Proof. assert (0 < Z.of_nat n) by omega; unfold eval_twos_complement.
+Proof. assert (0 < Z.of_nat n) by lia; unfold eval_twos_complement.
        rewrite eval_sat_add, <- Z.twos_complement_add_weak, Z.twos_complement_mod; lia. Qed.
 
 Lemma eval_twos_complement_select machine_wordsize n cond f g
@@ -549,7 +549,7 @@ Lemma eval_twos_complement_sat_opp machine_wordsize n f
       (corner_case : eval_twos_complement machine_wordsize n f <> - 2 ^ (machine_wordsize * n - 1)):
   eval_twos_complement machine_wordsize n (sat_opp machine_wordsize n f) =
   - eval_twos_complement machine_wordsize n f.
-Proof. assert (0 < Z.of_nat n) by omega; unfold eval_twos_complement in *; rewrite eval_sat_opp, Z.twos_complement_mod, twos_complement_zopp; try tauto; nia. Qed.
+Proof. assert (0 < Z.of_nat n) by lia; unfold eval_twos_complement in *; rewrite eval_sat_opp, Z.twos_complement_mod, twos_complement_zopp; try tauto; nia. Qed.
 
 Lemma eval_twos_complement_sat_zero machine_wordsize n
       (mw0 : 0 < machine_wordsize)
@@ -638,7 +638,7 @@ Proof.
   set (bw := machine_wordsize * Z.of_nat sat_limbs) in *.
 
   simpl.
-  assert (0 < Z.of_nat sat_limbs) by omega.
+  assert (0 < Z.of_nat sat_limbs) by lia.
   assert (bw0 : 0 < bw) by nia.
   assert (bw1 : 1 < bw) by (destruct (dec (bw = 1)); rewrite ?e in *; simpl in *; lia).
   assert (2 ^ machine_wordsize = 2 * 2 ^ (machine_wordsize - 1))
@@ -698,7 +698,7 @@ Lemma divstep_d machine_wordsize sat_limbs mont_limbs m d f g v r
                            (eval_twos_complement machine_wordsize sat_limbs f)
                            (eval_twos_complement machine_wordsize sat_limbs g))).
 Proof.
-  assert (helper0 : 0 < Z.of_nat sat_limbs) by omega.
+  assert (helper0 : 0 < Z.of_nat sat_limbs) by lia.
   assert (mw0 : 0 < machine_wordsize) by lia.
   assert (helper : 1 < 2 ^ machine_wordsize) by (apply Zpow_facts.Zpower_gt_1; lia).
   assert (helper2 : 1 < 2 ^ (machine_wordsize - 1)) by (apply Zpow_facts.Zpower_gt_1; lia).

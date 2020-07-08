@@ -26,12 +26,14 @@ Require Import Crypto.Util.ZUtil.Tactics.SolveTestbit.
 Local Open Scope Z_scope.
 
 Module Z.
-  Lemma arithmetic_shiftr1_testbit_spec m a i (Hm : 0 < m) (Hi : 0 <= i) (Ha : 0 <= a < 2 ^ m) :
+  Lemma arithmetic_shiftr1_testbit_spec_full m a i
+        (Hm : 0 < m)
+        (Ha : 0 <= a < 2 ^ m) :
     Z.testbit (Z.arithmetic_shiftr1 m a) i =
-    if i =? (m - 1) then Z.testbit a (m - 1) else Z.testbit a (i + 1).
+    if (i <? 0) then false else if i =? (m - 1) then Z.testbit a (m - 1) else Z.testbit a (i + 1).
   Proof. unfold Z.arithmetic_shiftr1; solve_testbit. Qed.
 
-  Hint Rewrite arithmetic_shiftr1_testbit_spec : testbit_rewrite.
+  Hint Rewrite arithmetic_shiftr1_testbit_spec_full : testbit_rewrite.
 
   Lemma arithmetic_shiftr1_bound m a (Ha : 0 <= a < 2 ^ m) :
     0 <= Z.arithmetic_shiftr1 m a < 2 ^ m.
@@ -60,10 +62,9 @@ Module Z.
   Lemma arithmetic_shiftr_testbit_spec m a k i
         (Hm : 0 < m)
         (Hk : 0 <= k)
-        (Hi : 0 <= i)
         (Ha : 0 <= a < 2 ^ m) :
     Z.testbit (Z.arithmetic_shiftr m a k) i =
-    if (m - k <=? i) && (i <? m) then Z.testbit a (m - 1) else Z.testbit a (i + k).
+    if (i <? 0) then false else if (m - k <=? i) && (i <? m) then Z.testbit a (m - 1) else Z.testbit a (i + k).
   Proof.
     unfold Z.arithmetic_shiftr; rewrite unfold_Let_In, Zselect.Z.zselect_correct.
     rewrite (Z.testbit_b2z a), Z.sign_bit_testbit by lia.
@@ -71,16 +72,17 @@ Module Z.
 
   Hint Rewrite arithmetic_shiftr_testbit_spec : testbit_rewrite.
 
-  Lemma arithmetic_shiftr_1' m a (Hm : 0 < m) (Ha : 0 <= a < 2 ^ m) :
+  Lemma arithmetic_shiftr_1 m a
+        (Hm : 0 < m)
+        (Ha : 0 <= a < 2 ^ m) :
     Z.arithmetic_shiftr m a 1 = Z.arithmetic_shiftr1 m a.
   Proof. solve_using_testbit. Qed.
 
-  Lemma arithmetic_shiftr_0 m a :
+  Lemma arithmetic_shiftr_0 m a
+        (Hm : 0 < m)
+        (Ha : 0 <= a < 2 ^ m) :
     Z.arithmetic_shiftr m a 0 = a.
-  Proof.
-    unfold Z.arithmetic_shiftr; rewrite unfold_Let_In, !Zselect.Z.zselect_correct.
-    rewrite Z.shiftr_0_r, Z.ones_from_0.
-    destruct (dec (Z.sign_bit m a = 0)); reflexivity. Qed.
+  Proof. solve_using_testbit. Qed.
 
   Lemma ones_lor_shift n m k
         (Hn : 0 <= n)
