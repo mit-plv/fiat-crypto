@@ -10,7 +10,7 @@ Require Import Crypto.Util.Tactics.SpecializeBy.
 
 Local Open Scope Z_scope.
 
-Local Notation stabilizes_after x l := (exists b, forall n, l < n -> Z.testbit x n = b).
+Notation stabilizes_after x l := (exists b, forall n, l < n -> Z.testbit x n = b).
 
 Lemma stabilizes_after_Proper x
   : Proper (Z.le ==> Basics.impl) (fun l => stabilizes_after x l).
@@ -19,13 +19,27 @@ Proof.
   intros n H''; apply (H' n); lia.
 Qed.
 
-Lemma stabilization_time (x:Z) : stabilizes_after x (Z.max (Z.log2 (Z.pred (- x))) (Z.log2 x)).
+Module Z.
+  Notation stabilization_time x := (Z.max (Z.log2 (Z.pred (- x))) (Z.log2 x)).
+  Notation stabilization_time_weaker x := (Z.log2_up (Z.abs x)).
+
+  Lemma stabilization_time_nonneg x : 0 <= stabilization_time x.
+  Proof. rewrite Z.max_le_iff; constructor; apply Z.log2_nonneg. Qed.
+  Hint Resolve Z.stabilization_time_nonneg : zarith.
+
+  Lemma stabilization_time_weaker_nonneg x : 0 <= stabilization_time_weaker x.
+  Proof. apply Z.log2_up_nonneg. Qed.
+  Hint Resolve Z.stabilization_time_weaker_nonneg : zarith.
+End Z.
+Hint Resolve Z.stabilization_time_nonneg Z.stabilization_time_weaker_nonneg : zarith.
+
+Lemma stabilization_time (x:Z) : stabilizes_after x (Z.stabilization_time x).
 Proof.
   destruct (Z_lt_le_dec x 0); eexists; intros;
     [ eapply Z.bits_above_log2_neg | eapply Z.bits_above_log2]; lia.
 Qed.
 
-Lemma stabilization_time_weaker (x:Z) : stabilizes_after x (Z.log2_up (Z.abs x)).
+Lemma stabilization_time_weaker (x:Z) : stabilizes_after x (Z.stabilization_time_weaker x).
 Proof.
   eapply stabilizes_after_Proper; try apply stabilization_time.
   repeat match goal with
