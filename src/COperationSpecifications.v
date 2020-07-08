@@ -455,7 +455,7 @@ Module WordByWordMontgomery.
             (length_saturated_bounds : length saturated_bounds = n).
     Local Notation eval := (@WordByWordMontgomery.eval bitwidth n).
     Local Notation bytes_eval := (Positional.eval (weight 8 1) n_bytes).
-    Local Notation twos_complement_eval f := (eval_twosc bitwidth n f).
+    Local Notation twos_complement_eval f := (eval_twos_complement bitwidth n f).
 
     Let prime_bound : zrange
       := r[0~>(m - 1)]%zrange.

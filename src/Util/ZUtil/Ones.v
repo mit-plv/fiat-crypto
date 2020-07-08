@@ -88,6 +88,10 @@ Module Z.
   Qed.
   Hint Resolve ones_nonneg : zarith.
 
+  Lemma ones_bound m (Hm : 0 <= m) :
+    0 <= Z.ones m < 2 ^ m.
+  Proof. split. apply ones_nonneg; lia. rewrite Z.ones_equiv; lia. Qed.
+
   Lemma ones_pos_pos : forall i, (0 < i) -> 0 < Z.ones i.
   Proof.
     intros.

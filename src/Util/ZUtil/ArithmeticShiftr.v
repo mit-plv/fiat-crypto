@@ -1,76 +1,124 @@
+Require Import Coq.Bool.Bool.
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.micromega.Lia.
+
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.Notations.
 Require Import Crypto.Util.ZUtil.Land.
 Require Import Crypto.Util.ZUtil.Lor.
 Require Import Crypto.Util.ZUtil.Testbit.
 Require Import Crypto.Util.ZUtil.Div.
+Require Import Crypto.Util.ZUtil.LandLorShiftBounds.
+Require Import Crypto.Util.ZUtil.Zselect.
+Require Import Crypto.Util.ZUtil.Ones.
+Require Import Crypto.Util.ZUtil.OnesFrom.
+Require Import Crypto.Util.ZUtil.Pow.
+Require Import Crypto.Util.ZUtil.TruncatingShiftl.
+Require Import Crypto.Util.ZUtil.SignBit.
+Require Import Crypto.Util.ZUtil.TwosComplement.
+
+Require Import Crypto.Util.Decidable.
+Require Import Crypto.Util.LetIn.
+Require Import Crypto.Util.ListUtil.
+Require Import Crypto.Util.ZUtil.Tactics.SolveRange.
+Require Import Crypto.Util.ZUtil.Tactics.SolveTestbit.
+
 Local Open Scope Z_scope.
 
-Section Z.
-  (* note that this is only true since coq integer division rounds towards -infinity *)
-  Lemma arithmetic_shiftr_small m a
-        (Ha : - 2 ^ (m - 1) <= a < 2 ^ (m - 1))
-        (Hm : 0 < m) :
-    Z.arithmetic_shiftr m a = a / 2.
-  Proof.
-    unfold Z.arithmetic_shiftr. rewrite Z.shiftr_div_pow2, Z.pow_1_r; try lia.
-    destruct (Z_dec 1 m) as [[]|]. 
-    - destruct (Z.leb_spec 0 a) as [H|H].
-      + now rewrite Z.land_pow2_small, Z.lor_0_l. 
-      + rewrite Z.land_pow2_small_neg; try lia.
-        rewrite Z.lor_small_neg; try lia. split.
-        apply Zdiv_le_lower_bound; lia.
-        apply Zdiv_lt_upper_bound; lia.  
-    - lia.
-    - subst; simpl in *.
-      destruct (Z_dec a 0) as [[]|]; subst; try lia; try reflexivity.
-      destruct (Z_dec a (-1)) as [[]|]; subst; try lia; reflexivity. Qed.
+Module Z.
+  Lemma arithmetic_shiftr1_testbit_spec m a i (Hm : 0 < m) (Hi : 0 <= i) (Ha : 0 <= a < 2 ^ m) :
+    Z.testbit (Z.arithmetic_shiftr1 m a) i =
+    if i =? (m - 1) then Z.testbit a (m - 1) else Z.testbit a (i + 1).
+  Proof. unfold Z.arithmetic_shiftr1; solve_testbit. Qed.
 
-  Lemma arithmetic_shiftr_large m a
-        (Ha : 2 ^ (m - 1) <= a < 2 ^ m)
-        (Hm : 0 < m) :
-    Z.arithmetic_shiftr m a = a / 2 + 2 ^ (m - 1).
-  Proof.
-    assert (0 < 2 ^ (m - 1)) by (apply Z.pow_pos_nonneg; lia).
-    unfold Z.arithmetic_shiftr.
-    rewrite Z.land_pow2_testbit, Z.testbit_large, <- Z.div2_spec, Z.div2_div, Z.lor_add; try lia.
-    rewrite Z.land_comm, Z.land_div2; try lia. 
-    rewrite Z.sub_simpl_r; lia. Qed.
+  Hint Rewrite arithmetic_shiftr1_testbit_spec : testbit_rewrite.
 
-  (* twos complement evaluation *)
-  Local Notation twos_complement m a :=
-    (if ((a mod 2 ^ m) <? 2 ^ (m - 1)) then a mod 2 ^ m else a mod 2 ^ m - 2 ^ m).
+  Lemma arithmetic_shiftr1_bound m a (Ha : 0 <= a < 2 ^ m) :
+    0 <= Z.arithmetic_shiftr1 m a < 2 ^ m.
+  Proof. unfold Z.arithmetic_shiftr1; solve_range. Qed.
 
-  Lemma arithmetic_shiftr_spec m a
+  Hint Resolve arithmetic_shiftr1_bound : zarith.
+
+  Lemma arithmetic_shiftr1_spec m a
         (Hm : 0 < m)
         (Ha : 0 <= a < 2 ^ m) :
-    twos_complement m (Z.arithmetic_shiftr m a) = (twos_complement m a) / 2.
+    Z.twos_complement m (Z.arithmetic_shiftr1 m a) = (Z.twos_complement m a) / 2.
+  Proof. solve_using_testbit. Qed.
+
+  Lemma arithmetic_shiftr_bound m a k
+        (Hm : 0 <= m)
+        (Ha : 0 <= a < 2 ^ m)
+        (Hk : 0 <= k) :
+    0 <= Z.arithmetic_shiftr m a k < 2 ^ m.
   Proof.
-    rewrite (Z.mod_small a) by lia.
-    assert (0 <= a / 2 < 2 ^ (m - 1)).
-    { split.
-      apply Zdiv_le_lower_bound; lia. 
-      apply Zdiv_lt_upper_bound; try lia. rewrite Z.mul_comm, Pow.Z.pow_mul_base, Z.sub_simpl_r; lia. }
-    
-    destruct (a <? 2 ^ (m - 1)) eqn:E; [apply Z.ltb_lt in E | apply Z.ltb_ge in E].
-    - rewrite arithmetic_shiftr_small, Z.mod_small; try lia.
-      assert (a / 2 <? 2 ^ (m - 1) = true).
-      { apply Z.ltb_lt; apply Zdiv_lt_upper_bound; lia. } 
-      rewrite H0; lia.
-      split.
-      + apply Zdiv_le_lower_bound; lia. 
-      + apply Zdiv_lt_upper_bound; lia. 
-    - rewrite arithmetic_shiftr_large, Z.mod_small; try lia.
-      assert (a / 2 + 2 ^ (m - 1) <? 2 ^ (m - 1) = false).
-      { apply Z.ltb_ge; lia. }
-      rewrite H0. unfold Z.sub at 3.
-      replace (- 2 ^ m) with (2 ^ m * (-1)) by ring.
-      rewrite Z.div2_split by lia. 
-      replace (-1 mod 2) with 1 by reflexivity.
-      replace (-1 / 2) with (-1) by reflexivity; lia. 
-      
-      replace (2 ^ m) with (2 * 2 ^ (m - 1)); try lia.
-      rewrite Pow.Z.pow_mul_base, Z.sub_simpl_r; lia. Qed.
+    unfold Z.arithmetic_shiftr; rewrite unfold_Let_In, Zselect.Z.zselect_correct.
+    destruct (dec (Z.sign_bit m a = 0)); [solve_range|].
+    destruct (dec (m - k <= 0)); solve_range. Qed.
+
+  Hint Resolve arithmetic_shiftr_bound : zarith.
+
+  Lemma arithmetic_shiftr_testbit_spec m a k i
+        (Hm : 0 < m)
+        (Hk : 0 <= k)
+        (Hi : 0 <= i)
+        (Ha : 0 <= a < 2 ^ m) :
+    Z.testbit (Z.arithmetic_shiftr m a k) i =
+    if (m - k <=? i) && (i <? m) then Z.testbit a (m - 1) else Z.testbit a (i + k).
+  Proof.
+    unfold Z.arithmetic_shiftr; rewrite unfold_Let_In, Zselect.Z.zselect_correct.
+    rewrite (Z.testbit_b2z a), Z.sign_bit_testbit by lia.
+    destruct (Z.testbit a (m - 1)); solve_testbit. Qed.
+
+  Hint Rewrite arithmetic_shiftr_testbit_spec : testbit_rewrite.
+
+  Lemma arithmetic_shiftr_1' m a (Hm : 0 < m) (Ha : 0 <= a < 2 ^ m) :
+    Z.arithmetic_shiftr m a 1 = Z.arithmetic_shiftr1 m a.
+  Proof. solve_using_testbit. Qed.
+
+  Lemma arithmetic_shiftr_0 m a :
+    Z.arithmetic_shiftr m a 0 = a.
+  Proof.
+    unfold Z.arithmetic_shiftr; rewrite unfold_Let_In, !Zselect.Z.zselect_correct.
+    rewrite Z.shiftr_0_r, Z.ones_from_0.
+    destruct (dec (Z.sign_bit m a = 0)); reflexivity. Qed.
+
+  Lemma ones_lor_shift n m k
+        (Hn : 0 <= n)
+        (Hm : 0 <= m)
+        (Hk : 0 <= k) :
+    Z.ones n << k |' Z.ones m << (k - m) = Z.ones (n + m) << (k - m).
+  Proof. solve_using_testbit. Qed.
+
+  Lemma arithmetic_shiftr_sign_bit m a k
+        (Hm : 0 < m)
+        (Ha : 0 <= a < 2 ^ m)
+        (Hk : 0 <= k) :
+    Z.sign_bit m (Z.arithmetic_shiftr m a k) = Z.sign_bit m a.
+  Proof.
+    rewrite !Z.sign_bit_testbit
+      by (try apply arithmetic_shiftr_bound; lia). apply f_equal; solve_testbit. Qed.
+
+  Lemma arithmetic_shiftr_arithmetic_shiftr m a p q
+        (Hm : 0 < m)
+        (Ha : 0 <= a < 2 ^ m)
+        (Hp : 0 <= p)
+        (Hq : 0 <= q) :
+    Z.arithmetic_shiftr m (Z.arithmetic_shiftr m a p) q =
+    Z.arithmetic_shiftr m a (p + q).
+  Proof. solve_using_testbit. Qed.
+
+  Lemma arithmetic_shiftr_arithmetic_shiftr1 m a k
+        (Hm : 0 < m)
+        (Ha : 0 <= a < 2 ^ m)
+        (Hk : 0 <= k) :
+    Z.arithmetic_shiftr m (Z.arithmetic_shiftr1 m a) k =
+    Z.arithmetic_shiftr m a (k + 1).
+  Proof. solve_using_testbit. Qed.
+
+  Lemma arithmetic_shiftr_spec m a k
+        (Hm : 0 < m)
+        (Ha : 0 <= a < 2 ^ m)
+        (Hk : 0 <= k) :
+    Z.twos_complement m (Z.arithmetic_shiftr m a k) = (Z.twos_complement m a) / 2 ^ k.
+  Proof. solve_using_testbit. Qed.
 End Z.

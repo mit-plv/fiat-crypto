@@ -26,6 +26,13 @@ Module Z.
   Qed.
   Hint Rewrite ones_spec using zutil_arith : Ztestbit.
 
+  Lemma ones_spec' n m (Hn : 0 <= n) (Hm : 0 <= m) :
+    Z.testbit (Z.ones n) m = if (m <? n) then true else false.
+  Proof. rewrite ones_spec by assumption.
+         destruct (Z_lt_dec m n) as [lt|lt];
+           [apply Z.ltb_lt in lt|apply Z.ltb_nlt in lt];
+           rewrite lt; reflexivity. Qed.
+
   Lemma ones_spec_full : forall n m, Z.testbit (Z.ones n) m
                                      = if Z_lt_dec m 0
                                        then false
@@ -218,15 +225,18 @@ Module Z.
     - subst; replace (- 2 ^ b) with ((-1) * 2 ^ b) by ring.
       rewrite Z.mul_pow2_bits, Z.sub_diag, Z.bit0_odd by lia; reflexivity. Qed.
 
-  Lemma testbit_large a b 
-        (Ha : 2^(b - 1) <= a <= 2^b - 1)
+  Lemma testbit_large a b
+        (Ha : 2 ^ (b - 1) <= a < 2 ^ b)
         (Hb : 0 < b) :
     Z.testbit a (b - 1) = true.
   Proof.
     destruct (Z.testbit a (b - 1)) eqn:E; try reflexivity.
     rewrite Z.testbit_false in * by lia.
     apply Z.div_exact in E; [|lia].
-    rewrite Div.Z.div_between_1 in E; auto with zarith. 
+    rewrite Div.Z.div_between_1 in E; auto with zarith.
     rewrite Pow.Z.pow_mul_base, Z.sub_simpl_r; lia. Qed.
-  
+
+   Lemma testbit_b2z a m :
+     Z.testbit a m = negb (Z.b2z (Z.testbit a m) =? 0).
+   Proof. destruct (Z.testbit a m); reflexivity. Qed.
 End Z.
