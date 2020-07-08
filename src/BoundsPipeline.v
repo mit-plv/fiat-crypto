@@ -485,6 +485,7 @@ Module Pipeline.
              out_bounds
   : ErrorT (Expr t)
     := (*let E := expr.Uncurry E in*)
+      let assume_cast_truncates := false in
       let opts := opts_of_method in
       dlet E := PreBoundsPipeline (* with_dead_code_elimination *) with_subst01 with_let_bind_return translate_to_fancy E arg_bounds in
       (** We first do bounds analysis with no relaxation so that we
@@ -492,7 +493,7 @@ Module Pipeline.
           way, we do bounds analysis again to relax the bounds. *)
       (** To get better error messages, we don't check bounds until
           after doing some extra rewriting *)
-      let E' := CheckedPartialEvaluateWithBounds (fun _ => None) (@ident.is_comment) false E arg_bounds ZRange.type.base.option.None in
+      let E' := CheckedPartialEvaluateWithBounds (fun _ => None) assume_cast_truncates (@ident.is_comment) false E arg_bounds ZRange.type.base.option.None in
       let E'
           := match E' with
              | inl E
@@ -502,12 +503,12 @@ Module Pipeline.
                   (** to give good error messages, we first look at
                       the version of the syntax tree annotated with
                       unrelaxed ranges *)
-                  let E' := CheckedPartialEvaluateWithBounds (fun _ => None) (@ident.is_comment) true (* strip pre-existing casts *) E arg_bounds out_bounds in
+                  let E' := CheckedPartialEvaluateWithBounds (fun _ => None) assume_cast_truncates (@ident.is_comment) true (* strip pre-existing casts *) E arg_bounds out_bounds in
                   match E' with
                   | inl E
                     => dlet_nd e := ToFlat E in
                        let E := FromFlat e in
-                       let E' := CheckedPartialEvaluateWithBounds relax_zrange (@ident.is_comment) true (* strip pre-existing casts *) E arg_bounds out_bounds in
+                       let E' := CheckedPartialEvaluateWithBounds relax_zrange assume_cast_truncates (@ident.is_comment) true (* strip pre-existing casts *) E arg_bounds out_bounds in
                        E'
                   | inr v => inr v
                   end
