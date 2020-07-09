@@ -1555,6 +1555,10 @@ Lemma sum_app x y : sum (x ++ y) = (sum x + sum y)%Z.
 Proof. induction x; rewrite ?app_nil_l, <-?app_comm_cons; autorewrite with push_sum; lia. Qed.
 Hint Rewrite sum_app : push_sum.
 
+Lemma sum_rev x : sum (rev x) = sum x.
+Proof. induction x; cbn [rev]; autorewrite with push_sum; lia. Qed.
+Hint Rewrite sum_rev : push_sum.
+
 Lemma nth_error_skipn : forall {A} n (l : list A) m,
 nth_error (skipn n l) m = nth_error l (n + m).
 Proof.
@@ -2072,6 +2076,9 @@ Lemma fold_right_flat_map A B C (f : A -> list B) xs (F : _ -> _ -> C) v
   : fold_right F v (flat_map f xs) = fold_right (fun x y => fold_right F y (f x)) v xs.
 Proof. revert v; induction xs; cbn; intros; rewrite ?fold_right_app; congruence. Qed.
 
+Lemma fold_right_ext A B f g v xs : (forall x y, f x y = g x y) -> @fold_right A B f v xs = fold_right g v xs.
+Proof. induction xs; cbn; intro H; rewrite ?H, ?IHxs; auto. Qed.
+
 Lemma fold_right_id_ext A B f v xs : (forall x y, f x y = y) -> @fold_right A B f v xs = v.
 Proof. induction xs; cbn; intro H; rewrite ?H; auto. Qed.
 Lemma nth_error_repeat_alt {A} (v : A) n i
@@ -2230,6 +2237,14 @@ Proof. induction k; cbn; f_equal; assumption. Qed.
 Lemma map_const {A B} (v : B) (ls : list A)
   : List.map (fun _ => v) ls = List.repeat v (List.length ls).
 Proof. induction ls; cbn; f_equal; assumption. Qed.
+
+Lemma Forall2_rev {A B R ls1 ls2}
+  : @List.Forall2 A B R ls1 ls2
+    -> List.Forall2 R (rev ls1) (rev ls2).
+Proof using Type.
+  induction 1; cbn [rev]; [ constructor | ].
+  apply Forall2_app; auto.
+Qed.
 
 Lemma Forall2_update_nth {A B f g n R ls1 ls2}
   : @List.Forall2 A B R ls1 ls2

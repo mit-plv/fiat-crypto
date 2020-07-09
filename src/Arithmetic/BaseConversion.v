@@ -24,14 +24,22 @@ Module BaseConversion.
     Definition convert_bases (sn dn : nat) (p : list Z) : list Z :=
       let p_assoc := Positional.to_associational sw sn p in
       let p_cols := Columns.from_associational dw dn p_assoc in
+      (* reverse is not needed for correctness, but this way has better
+         performance because we add the small numbers first *)
+      let p_cols := Columns.reverse p_cols in
       let p_flattened := Columns.flatten dw add_split p_cols in
       let r := fst p_flattened in
       let carry := (snd p_flattened * (dw dn / dw (pred dn))) in
       let r := add_to_nth (pred dn) carry r in
       r.
 
-    Hint Rewrite @Columns.length_from_associational @Columns.length_flatten
+    Hint Rewrite @Columns.length_from_associational
+         @Columns.length_flatten @Columns.length_reverse
       : distr_length.
+    Hint Rewrite @Columns.eval_from_associational
+         @Columns.eval_reverse @Positional.eval_to_associational
+         using (auto; solve [distr_length])
+      : push_eval.
 
     Lemma eval_convert_bases sn dn p :
       (dn <> 0%nat) -> length p = sn ->
@@ -42,8 +50,7 @@ Module BaseConversion.
       rewrite Columns.flatten_mod by (auto; distr_length).
       erewrite Columns.flatten_div by (auto; distr_length).
       distr_length.
-      rewrite !Columns.eval_from_associational by auto.
-      rewrite eval_to_associational.
+      autorewrite with push_eval.
       match goal with
       | |- context [?a * (?b * (?c / ?a))] =>
         replace (a * (b * (c / a))) with (a * (c / a) * b) by Lia.lia
@@ -78,8 +85,7 @@ Module BaseConversion.
       distr_length.
       erewrite Columns.flatten_correct by (auto; distr_length).
       distr_length.
-      rewrite Columns.eval_from_associational by auto.
-      rewrite eval_to_associational.
+      autorewrite with push_eval.
       rewrite Z.div_small by Lia.lia.
       autorewrite with zsimplify_fast.
       rewrite add_to_nth_zero. reflexivity.
@@ -89,7 +95,6 @@ Module BaseConversion.
          @Rows.eval_from_associational
          @Associational.eval_carry
          @Associational.eval_mul
-         @Positional.eval_to_associational
          Associational.eval_carryterm
          @eval_convert_bases using solve [auto with zarith] : push_eval.
 
