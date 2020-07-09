@@ -303,7 +303,22 @@ Module ZRange.
     Lemma goodb_shiftl r1 r2 : goodb (ZRange.shiftl r1 r2) = true.
     Proof. apply goodb_four_corners_and_zero. Qed.
     Lemma goodb_land r1 r2 : goodb (ZRange.land r1 r2) = true.
-    Proof. apply goodb_four_corners_and_zero. Qed.
+    Proof.
+      cbv [goodb land].
+      match goal with
+        |- context [2 ^ ?n] =>
+        assert (0 <= 2 ^ n) by (apply Z.pow_nonneg; lia)
+      end.
+      break_innermost_match;
+        repeat match goal with
+               | H : (_ && _)%bool = true |- _ =>
+                 apply Bool.andb_true_iff in H; destruct H
+               | H : (_ && _)%bool = false |- _ =>
+                 apply Bool.andb_false_iff in H; destruct H
+               end;
+        Z.ltb_to_lt; cbn [upper lower].
+      all:lia.
+    Qed.
     Lemma goodb_lor r1 r2 : goodb (ZRange.lor r1 r2) = true.
     Proof. apply goodb_four_corners_and_zero. Qed.
     Lemma goodb_cc_m s r : goodb (ZRange.cc_m s r) = true.
@@ -346,7 +361,22 @@ Module ZRange.
     Lemma normalize_shiftl r1 r2 : normalize (ZRange.shiftl r1 r2) = ZRange.shiftl r1 r2.
     Proof. apply normalize_four_corners_and_zero. Qed.
     Lemma normalize_land r1 r2 : normalize (ZRange.land r1 r2) = ZRange.land r1 r2.
-    Proof. apply normalize_four_corners_and_zero. Qed.
+    Proof.
+      cbv [normalize land].
+      match goal with
+        |- context [(2 ^ ?n)%Z] =>
+        assert (0 <= 2 ^ n)%Z by (apply Z.pow_nonneg; lia)
+      end.
+      break_innermost_match;
+        repeat match goal with
+               | H : (_ && _)%bool = true |- _ =>
+                 apply Bool.andb_true_iff in H; destruct H
+               | H : (_ && _)%bool = false |- _ =>
+                 apply Bool.andb_false_iff in H; destruct H
+               end;
+        Z.ltb_to_lt; cbn [upper lower].
+      all:f_equal; try lia.
+    Qed.
     Lemma normalize_lor r1 r2 : normalize (ZRange.lor r1 r2) = ZRange.lor r1 r2.
     Proof. apply normalize_four_corners_and_zero. Qed.
     Lemma normalize_cc_m s r : normalize (ZRange.cc_m s r) = ZRange.cc_m s r.

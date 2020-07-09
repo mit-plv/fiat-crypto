@@ -114,6 +114,108 @@ Module Z.
       apply lor_lower; lia.
     Qed.
 
+    Lemma land_le_neg_l_lower :
+      forall x y, (x < 0)%Z -> (0 <= y) -> (x <= Z.land x y)%Z.
+    Proof.
+      intros x y ? ?. destruct x, y; cbn [Z.land]; lia.
+    Qed.
+
+    Lemma land_le_neg_l_upper :
+      forall x y, (x < 0)%Z -> (0 <= y) -> (Z.land x y <= y)%Z.
+    Proof.
+      intros; rewrite Z.land_comm. auto using land_le'.
+    Qed.
+
+    Lemma land_neg_l_range :
+      forall x y, x < 0 -> 0 <= y -> x <= Z.land x y <= y.
+    Proof.
+      auto using land_le_neg_l_lower, land_le_neg_l_upper.
+    Qed.
+    Lemma land_neg_r_range :
+      forall x y, 0 <= x -> y < 0 -> y <= Z.land x y <= x.
+    Proof.
+      intros; rewrite Z.land_comm. auto using land_neg_l_range.
+    Qed.
+
+    (* TODO : move *)
+    Lemma N2Z_inj_lor a b :
+      Z.of_N (N.lor a b) = Z.lor (Z.of_N a) (Z.of_N b).
+    Proof. destruct a, b; reflexivity. Qed.
+    Lemma N2Z_inj_land a b :
+      Z.of_N (N.land a b) = Z.land (Z.of_N a) (Z.of_N b).
+    Proof. destruct a, b; reflexivity. Qed.
+
+    Lemma lor_neg_lower :
+      forall x y, x < 0 -> y < 0 -> (Z.max x y <= Z.lor x y)%Z.
+    Proof.
+      intros x y ? ?. destruct x, y; cbn [Z.lor]; try lia.
+      apply Z.opp_le_mono.
+      repeat first [ rewrite N.pos_pred_spec
+                   | rewrite N.succ_pos_spec
+                   | rewrite Z.opp_max_distr
+                   | rewrite Pos2Z.opp_neg
+                   | rewrite <-!positive_N_Z
+                   | rewrite N.succ_pos_spec ].
+      rewrite !N2Z.inj_succ, !N2Z_inj_land,
+      !N2Z.inj_pred, !N2Z.inj_pos by lia.
+      match goal with
+      | |- context [Z.land ?a ?b] =>
+        let Hab := fresh in
+        let Hba := fresh in
+        pose proof (land_le a b ltac:(lia)) as Hab;
+          pose proof (land_le b a ltac:(lia)) as Hba;
+          rewrite Z.land_comm in Hba
+      end.
+      lia.
+    Qed.
+
+    Lemma land_neg_lower' :
+      forall x y n, x < 0 -> y < 0 ->
+                    - 2 ^ n <= x ->
+                    - 2 ^ n <= y ->
+                    - 2 ^ n <= Z.land x y.
+    Proof.
+      intros x y n. intros.
+      destruct x, y; cbn [Z.land]; try lia; [ ].
+      apply Z.opp_le_mono.
+      repeat first [ rewrite N.pos_pred_spec
+                   | rewrite N.succ_pos_spec
+                   | rewrite Z.opp_max_distr
+                   | rewrite Pos2Z.opp_neg
+                   | rewrite <-!positive_N_Z
+                   | rewrite N.succ_pos_spec
+                   | rewrite Z.opp_involutive
+                   | rewrite Z.opp_succ ].
+      rewrite !N2Z.inj_succ, !N2Z_inj_lor,
+      !N2Z.inj_pred, !N2Z.inj_pos by lia.
+      match goal with
+      | |- context [Z.lor ?a ?b] =>
+        pose proof (lor_range a b n ltac:(lia) ltac:(lia))
+      end.
+      lia.
+    Qed.
+
+    Lemma land_neg_lower :
+      forall x y,
+        x < 0 -> y < 0 ->
+        - 2 ^ (Z.max (Z.log2_up (-x)) (Z.log2_up (-y))) <= Z.land x y.
+    Proof.
+      intros x y. intros.
+      pose proof (Z.log2_log2_up_spec (-x) ltac:(lia)).
+      pose proof (Z.log2_log2_up_spec (-y) ltac:(lia)).
+      pose proof (Z.pow_le_mono 2 (Z.log2_up (-x))
+                                2 (Z.log2_up (-y)) ltac:(lia)).
+      pose proof (Z.pow_le_mono 2 (Z.log2_up (-y))
+                                2 (Z.log2_up (-x)) ltac:(lia)).
+      apply land_neg_lower'; auto; [ | ].
+      { apply Z.opp_le_mono.
+        rewrite Z.opp_involutive.
+        apply Z.max_case_strong; lia. }
+      { apply Z.opp_le_mono.
+        rewrite Z.opp_involutive.
+        apply Z.max_case_strong; lia. }
+    Qed.
+
     Lemma lor_le : forall x y z,
         (0 <= x)%Z
         -> (x <= y)%Z
