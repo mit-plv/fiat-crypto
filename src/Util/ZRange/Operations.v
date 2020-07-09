@@ -175,8 +175,29 @@ Module ZRange.
   Definition land_lor_bounds (f : BinInt.Z -> BinInt.Z -> BinInt.Z) (x y : zrange) : zrange
     := four_corners_and_zero (fun x y => f (Z.round_lor_land_bound x) (Z.round_lor_land_bound y))
                              (extend_land_lor_bounds x) (extend_land_lor_bounds y).
-  Definition land_bounds : zrange -> zrange -> zrange := land_lor_bounds Z.land.
   Definition lor_bounds : zrange -> zrange -> zrange := land_lor_bounds Z.lor.
+
+  (* N.B. the bounds here for negative numbers are fairly loose *)
+  Definition land_bounds (x y : zrange) : zrange
+    :=
+      let low := if ((lower x <? 0) && (lower y <? 0))%bool
+                 then
+                   let logx := Z.log2_up (-lower x) in
+                   let logy := Z.log2_up (-lower y) in
+                   - 2 ^ (Z.max logx logy)
+                 else 0 in
+      let high := if ((0 <=? lower x)%Z && (0 <=? lower y)%Z)%bool
+                  then (* both arguments must be positive *)
+                    if ((0 <=? upper x)%Z && (0 <=? upper y)%Z)%bool
+                    then Z.min (upper x) (upper y)
+                    else (* only get here if upper < lower *)
+                      Z.max (Z.max (lower x) (upper x))
+                            (Z.max (lower y) (upper y))
+                  else if ((upper x <? 0) && (upper y <? 0))%bool
+                       then 0 (* both arguments must be negative *)
+                       else Z.max (upper x) (upper y) in
+      r[low~>high].
+
 
   Definition split_bounds_pos (r : zrange) (split_at : BinInt.Z) : zrange * zrange :=
     if upper r <? split_at

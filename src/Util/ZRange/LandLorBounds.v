@@ -3,6 +3,7 @@ Require Import Coq.ZArith.ZArith.
 Require Import Coq.micromega.Lia.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.LandLorBounds.
+Require Import Crypto.Util.ZUtil.LandLorShiftBounds.
 Require Import Crypto.Util.ZUtil.Morphisms.
 Require Import Crypto.Util.ZUtil.Tactics.SplitMinMax.
 Require Import Crypto.Util.ZRange.
@@ -148,7 +149,54 @@ Module ZRange.
         (Hboundedx : is_bounded_by_bool x x_bs = true)
         (Hboundedy : is_bounded_by_bool y y_bs = true)
     : is_bounded_by_bool (Z.land x y) (ZRange.land_bounds x_bs y_bs) = true.
-  Proof. apply is_bounded_by_bool_land_lor_bounds_helper; auto. Qed.
+  Proof.
+    cbv [ZRange.land_bounds].
+    cbv [is_bounded_by_bool] in *.
+    cbn [upper lower].
+    repeat match goal with
+           | H : (_ && _)%bool = true |- _ =>
+             apply Bool.andb_true_iff in H; destruct H
+           end.
+    LtbToLt.Z.ltb_to_lt.
+    pose proof (Z.log2_up_le_mono (-x) (- lower x_bs) ltac:(lia)).
+    pose proof (Z.log2_up_le_mono (-y) (- lower y_bs) ltac:(lia)).
+    assert (0 <= 2 ^ (Z.max (Z.log2_up (- lower x_bs))
+                            (Z.log2_up (- lower y_bs))))
+      by (apply Z.pow_nonneg; lia).
+    pose proof (Z.pow_le_mono
+                  2 (Z.max (Z.log2_up (- x)) (Z.log2_up (- y)))
+                  2 (Z.max (Z.log2_up (- lower x_bs)) (Z.log2_up (- lower y_bs)))
+                  ltac:(lia) ltac:(lia)).
+    destruct (Z_lt_le_dec x 0); destruct (Z_lt_le_dec y 0).
+    all:lazymatch goal with
+        | Hx : ?x < 0, Hy : ?y < 0 |- context [Z.land ?x ?y] =>
+          pose proof (Z.land_neg_lower x y ltac:(lia) ltac:(lia));
+            pose proof (proj2 (Z.land_neg x y) ltac:(lia));
+            pose proof (Z.land_le x y ltac:(lia))
+        | Hx : ?x < 0, Hy : 0 <= ?y |- context [Z.land ?x ?y] =>
+          pose proof (Z.land_neg_l_range x y ltac:(lia) ltac:(lia));
+            pose proof (proj2 (Z.land_nonneg x y) ltac:(lia))
+        | Hx : 0 <= ?x, Hy : ?y < 0 |- context [Z.land ?x ?y] =>
+          pose proof (Z.land_neg_r_range x y ltac:(lia) ltac:(lia));
+            pose proof (proj2 (Z.land_nonneg x y) ltac:(lia))
+        | Hx : 0 <= ?x, Hy : 0 <= ?y |- context [Z.land ?x ?y] =>
+          pose proof (Z.land_le x y ltac:(lia));
+            let H := fresh in
+            pose proof (Z.land_le y x ltac:(lia)) as H;
+              rewrite Z.land_comm in H;
+              pose proof (proj2 (Z.land_nonneg x y) ltac:(lia))
+        end.
+    all:break_innermost_match;
+      repeat match goal with
+             | H : (_ && _)%bool = true |- _ =>
+               apply Bool.andb_true_iff in H; destruct H
+             | H : (_ && _)%bool = false |- _ =>
+               apply Bool.andb_false_iff in H; destruct H
+             end; LtbToLt.Z.ltb_to_lt.
+    all:try lia.
+    all:apply Bool.andb_true_iff; split;
+      LtbToLt.Z.ltb_to_lt; try lia.
+  Qed.
 
   Lemma is_bounded_by_bool_lor_bounds
         x x_bs y y_bs
