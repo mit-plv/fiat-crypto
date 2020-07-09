@@ -276,6 +276,17 @@ Module Columns.
         apply flatten_div_mod.
       Qed.
       Hint Rewrite @flatten_div : push_eval.
+
+      Lemma flatten_same_sum p q :
+        Forall2 (fun x y => sum x = sum y) p q ->
+        flatten p = flatten q.
+      Proof using wprops add_split_mod add_split_div.
+        cbv [flatten].
+        let H := fresh in
+        intro H; apply Forall2_rev in H;
+          induction H; [ reflexivity | ].
+        push.
+      Qed.
     End Flatten.
 
     Section FromAssociational.
@@ -345,6 +356,32 @@ Module Columns.
                     (from_associational n p).
       Proof using Type. reflexivity. Qed.
     End FromAssociational.
+
+    Section Reverse.
+      Definition reverse (p : list (list Z)) : list (list Z) :=
+        map (@rev Z) p.
+
+      Lemma eval_reverse n p :
+        eval n (reverse p) = eval n p.
+      Proof.
+        cbv [eval reverse]. rewrite map_map.
+        f_equal. apply map_ext; intros.
+        autorewrite with push_sum. reflexivity.
+      Qed. Hint Rewrite @eval_reverse : push_eval.
+
+      Lemma length_reverse p :
+        length (reverse p) = length p.
+      Proof. cbv [reverse]; distr_length. Qed.
+      Hint Rewrite @length_reverse : distr_length.
+
+      Lemma reverse_same_sum p :
+        Forall2 (fun x y => sum x = sum y) (reverse p) p.
+      Proof.
+        cbv [reverse].
+        induction p; cbn [rev map]; constructor;
+          autorewrite with push_sum; auto.
+      Qed.
+    End Reverse.
   End Columns.
 End Columns.
 
