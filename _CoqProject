@@ -341,6 +341,7 @@ src/Util/ZRange/Operations.v
 src/Util/ZRange/OperationsBounds.v
 src/Util/ZRange/Show.v
 src/Util/ZRange/SplitBounds.v
+src/Util/ZRange/SplitRangeBounds.v
 src/Util/ZUtil/AddGetCarry.v
 src/Util/ZUtil/AddModulo.v
 src/Util/ZUtil/CC.v
