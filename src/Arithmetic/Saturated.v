@@ -157,8 +157,11 @@ Module Columns.
       End flatten_column.
 
       Definition flatten_step (digit:list Z) (acc_carry:list Z * Z) : list Z * Z :=
-        dlet sum_carry := flatten_column (weight (S (length (fst acc_carry))) / weight (length (fst acc_carry))) (snd acc_carry::digit) in
-              (fst acc_carry ++ fst sum_carry :: nil, snd sum_carry).
+        let acc := fst acc_carry in
+        let carry := snd acc_carry in
+        let fw := weight (S (length acc)) / weight (length acc) in
+        dlet sum_carry := flatten_column fw (digit ++ [snd acc_carry]) in
+              (acc ++ fst sum_carry :: nil, snd sum_carry).
 
       Definition flatten (xs : list (list Z)) : list Z * Z :=
         fold_right (fun a b => flatten_step a b) (nil,0) (rev xs).
