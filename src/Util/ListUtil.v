@@ -2535,3 +2535,75 @@ Lemma In_nth_error_iff {A l x}
 Proof.
   split; [ now apply In_nth_error | intros [? ?]; eapply nth_error_In; eassumption ].
 Qed.
+
+Lemma fold_right_fun_apply {A B C} (ls : list B) (f : B -> C -> (A -> C)) init x
+  : fold_right (fun b F a => f b (F a) a) init ls x = fold_right (fun b c => f b c x) (init x) ls.
+Proof. induction ls as [|?? IH]; cbn; now f_equal. Qed.
+
+Ltac make_fold_right_fun_apply ty :=
+  multimatch ty with
+  | context[@fold_right ?AC ?B ?f ?init ?ls ?x]
+    => let fv := fresh in
+       let b := fresh "b" in
+       let F := fresh "F" in
+       let a := fresh "a" in
+       let f := lazymatch
+             constr:(
+               fun b F a
+               => match f b F a return _ with
+                  | fv
+                    => ltac:(let fv := (eval cbv [fv] in fv) in
+                             lazymatch (eval pattern a, (F a), b in fv) with
+                             | ?f _ _ _ => refine (fun x y z => f z y x)
+                             end)
+                  end) with
+           | fun _ _ _ => ?f => (eval cbv beta in f)
+           | ?f => idtac "failed to eliminate the functional dependencies of" f;
+                   fail 0 "failed to eliminate the functional dependencies of" f
+           end in
+       constr:(@fold_right_fun_apply _ _ _ ls f init x)
+  end.
+
+Ltac rewrite_fold_right_fun_apply :=
+  match goal with
+  | [ H : ?T |- _ ] => let pf := make_fold_right_fun_apply T in
+                       rewrite pf in H
+  | [ |- ?T ] => let pf := make_fold_right_fun_apply T in
+                 rewrite pf
+  end.
+
+Lemma fold_left_fun_apply {A B C} (ls : list B) (f : C -> B -> (A -> C)) init x
+  : fold_left (fun F b a => f (F a) b a) ls init x = fold_left (fun b c => f b c x) ls (init x).
+Proof. rewrite <- !fold_left_rev_right; now rewrite_fold_right_fun_apply. Qed.
+
+Ltac make_fold_left_fun_apply ty :=
+  multimatch ty with
+  | context[@fold_left ?AC ?B ?f ?ls ?init ?x]
+    => let fv := fresh in
+       let b := fresh "b" in
+       let F := fresh "F" in
+       let a := fresh "a" in
+       let f := lazymatch
+             constr:(
+               fun F b a
+               => match f F b a return _ with
+                  | fv
+                    => ltac:(let fv := (eval cbv [fv] in fv) in
+                             lazymatch (eval pattern a, b, (F a) in fv) with
+                             | ?f _ _ _ => refine (fun x y z => f z y x)
+                             end)
+                  end) with
+           | fun _ _ _ => ?f => (eval cbv beta in f)
+           | ?f => idtac "failed to eliminate the functional dependencies of" f;
+                   fail 0 "failed to eliminate the functional dependencies of" f
+           end in
+       constr:(@fold_left_fun_apply _ _ _ ls f init x)
+  end.
+
+Ltac rewrite_fold_left_fun_apply :=
+  match goal with
+  | [ H : ?T |- _ ] => let pf := make_fold_left_fun_apply T in
+                       rewrite pf in H
+  | [ |- ?T ] => let pf := make_fold_left_fun_apply T in
+                 rewrite pf
+  end.
