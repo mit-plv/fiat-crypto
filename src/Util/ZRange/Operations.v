@@ -107,6 +107,14 @@ Module ZRange.
   Definition apply_to_each_split_range_under_args {A} {n} (f : BinInt.Z -> nary_T A zrange n) (v : zrange) : nary_T A zrange n
     := apply_to_split_range_under_args (apply_to_range_under_args f) v.
 
+  Fixpoint nary_is_bounded_by {n : nat} : nary_T Z Z n -> nary_T zrange zrange n -> Prop
+    := match n return nary_T Z Z n -> nary_T zrange zrange n -> Prop with
+       | O => fun z r => is_bounded_by_bool z r = true
+       | S n
+         => fun (f : Z -> nary_T Z Z n) (fb : zrange -> nary_T zrange zrange n)
+            => forall z r, is_bounded_by_bool z r = true -> nary_is_bounded_by (f z) (fb r)
+       end.
+
   Fixpoint n_corners {n : nat} : nary_T Z Z n -> nary_T zrange zrange n
     := match n with
        | O => constant
@@ -123,6 +131,14 @@ Module ZRange.
             => apply_to_each_split_range_under_args (fun x => n_corners_and_zero (f x)) v
        end.
 
+  Fixpoint apply_to_n_split_range {n : nat} : nary_T zrange zrange n -> nary_T zrange zrange n
+    := match n with
+       | O => fun x => x
+       | S n
+         => fun (f : zrange -> nary_T zrange zrange n) (v : zrange)
+            => apply_to_n_split_range (apply_to_split_range_under_args f v)
+       end.
+
   Definition two_corners (f : Z -> Z) (v : zrange) : zrange
     := apply_to_range (fun x => constant (f x)) v.
   Definition four_corners (f : Z -> Z -> Z) (x y : zrange) : zrange
@@ -136,6 +152,11 @@ Module ZRange.
     := apply_to_split_range (apply_to_range (fun x => two_corners_and_zero (f x) y)) x.
   Definition eight_corners_and_zero (f : Z -> Z -> Z -> Z) (x y z : zrange) : zrange
     := apply_to_split_range (apply_to_range (fun x => four_corners_and_zero (f x) y z)) x.
+
+  Definition split_range_one (f : zrange -> zrange) : zrange -> zrange
+    := apply_to_n_split_range (n := 1) f.
+  Definition split_range_two (f : zrange -> zrange -> zrange) : zrange -> zrange -> zrange
+    := apply_to_n_split_range (n := 2) f.
 
   Definition two_corners' (f : Z -> Z) (v : zrange) : zrange
     := normalize' (map f v).
@@ -177,6 +198,8 @@ Module ZRange.
     := lower r <= upper r.
   Definition goodb (r : zrange) : bool
     := (lower r <=? upper r)%Z.
+  Definition covers (rs : list zrange) (r : zrange)
+    := forall z, is_bounded_by_bool z r = true -> exists r', is_bounded_by_bool z r' = true /\ List.In r' rs.
 
   Notation log2 := (ZRange.two_corners Z.log2).
   Notation log2_up := (ZRange.two_corners Z.log2_up).

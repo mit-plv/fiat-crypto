@@ -219,6 +219,12 @@ Module ZRange.
   Lemma is_tighter_than_bool_union_r r1 r2 : is_tighter_than_bool r2 (union r1 r2).
   Proof. repeat t2_step. Qed.
 
+  Lemma is_bounded_by_bool_union_l r1 r2 z : is_bounded_by_bool z r1 -> is_bounded_by_bool z (union r1 r2).
+  Proof. repeat t2_step. Qed.
+
+  Lemma is_bounded_by_bool_union_r r1 r2 z : is_bounded_by_bool z r2 -> is_bounded_by_bool z (union r1 r2).
+  Proof. repeat t2_step. Qed.
+
   Section goodb.
     Local Open Scope Z_scope.
     Local Open Scope zrange_scope.
