@@ -142,247 +142,247 @@ func fiat_p521_cmovznz_u64(out1 *uint64, arg1 uint64, arg2 uint64, arg3 uint64) 
 func fiat_p521_carry_mul(out1 *[9]uint64, arg1 *[9]uint64, arg2 *[9]uint64) {
   var x1 uint64
   var x2 uint64
-  x1, x2 = bits.Mul64((arg1[8]), ((arg2[8]) * 0x2))
+  x2, x1 = bits.Mul64((arg1[8]), ((arg2[8]) * 0x2))
   var x3 uint64
   var x4 uint64
-  x3, x4 = bits.Mul64((arg1[8]), ((arg2[7]) * 0x2))
+  x4, x3 = bits.Mul64((arg1[8]), ((arg2[7]) * 0x2))
   var x5 uint64
   var x6 uint64
-  x5, x6 = bits.Mul64((arg1[8]), ((arg2[6]) * 0x2))
+  x6, x5 = bits.Mul64((arg1[8]), ((arg2[6]) * 0x2))
   var x7 uint64
   var x8 uint64
-  x7, x8 = bits.Mul64((arg1[8]), ((arg2[5]) * 0x2))
+  x8, x7 = bits.Mul64((arg1[8]), ((arg2[5]) * 0x2))
   var x9 uint64
   var x10 uint64
-  x9, x10 = bits.Mul64((arg1[8]), ((arg2[4]) * 0x2))
+  x10, x9 = bits.Mul64((arg1[8]), ((arg2[4]) * 0x2))
   var x11 uint64
   var x12 uint64
-  x11, x12 = bits.Mul64((arg1[8]), ((arg2[3]) * 0x2))
+  x12, x11 = bits.Mul64((arg1[8]), ((arg2[3]) * 0x2))
   var x13 uint64
   var x14 uint64
-  x13, x14 = bits.Mul64((arg1[8]), ((arg2[2]) * 0x2))
+  x14, x13 = bits.Mul64((arg1[8]), ((arg2[2]) * 0x2))
   var x15 uint64
   var x16 uint64
-  x15, x16 = bits.Mul64((arg1[8]), ((arg2[1]) * 0x2))
+  x16, x15 = bits.Mul64((arg1[8]), ((arg2[1]) * 0x2))
   var x17 uint64
   var x18 uint64
-  x17, x18 = bits.Mul64((arg1[7]), ((arg2[8]) * 0x2))
+  x18, x17 = bits.Mul64((arg1[7]), ((arg2[8]) * 0x2))
   var x19 uint64
   var x20 uint64
-  x19, x20 = bits.Mul64((arg1[7]), ((arg2[7]) * 0x2))
+  x20, x19 = bits.Mul64((arg1[7]), ((arg2[7]) * 0x2))
   var x21 uint64
   var x22 uint64
-  x21, x22 = bits.Mul64((arg1[7]), ((arg2[6]) * 0x2))
+  x22, x21 = bits.Mul64((arg1[7]), ((arg2[6]) * 0x2))
   var x23 uint64
   var x24 uint64
-  x23, x24 = bits.Mul64((arg1[7]), ((arg2[5]) * 0x2))
+  x24, x23 = bits.Mul64((arg1[7]), ((arg2[5]) * 0x2))
   var x25 uint64
   var x26 uint64
-  x25, x26 = bits.Mul64((arg1[7]), ((arg2[4]) * 0x2))
+  x26, x25 = bits.Mul64((arg1[7]), ((arg2[4]) * 0x2))
   var x27 uint64
   var x28 uint64
-  x27, x28 = bits.Mul64((arg1[7]), ((arg2[3]) * 0x2))
+  x28, x27 = bits.Mul64((arg1[7]), ((arg2[3]) * 0x2))
   var x29 uint64
   var x30 uint64
-  x29, x30 = bits.Mul64((arg1[7]), ((arg2[2]) * 0x2))
+  x30, x29 = bits.Mul64((arg1[7]), ((arg2[2]) * 0x2))
   var x31 uint64
   var x32 uint64
-  x31, x32 = bits.Mul64((arg1[6]), ((arg2[8]) * 0x2))
+  x32, x31 = bits.Mul64((arg1[6]), ((arg2[8]) * 0x2))
   var x33 uint64
   var x34 uint64
-  x33, x34 = bits.Mul64((arg1[6]), ((arg2[7]) * 0x2))
+  x34, x33 = bits.Mul64((arg1[6]), ((arg2[7]) * 0x2))
   var x35 uint64
   var x36 uint64
-  x35, x36 = bits.Mul64((arg1[6]), ((arg2[6]) * 0x2))
+  x36, x35 = bits.Mul64((arg1[6]), ((arg2[6]) * 0x2))
   var x37 uint64
   var x38 uint64
-  x37, x38 = bits.Mul64((arg1[6]), ((arg2[5]) * 0x2))
+  x38, x37 = bits.Mul64((arg1[6]), ((arg2[5]) * 0x2))
   var x39 uint64
   var x40 uint64
-  x39, x40 = bits.Mul64((arg1[6]), ((arg2[4]) * 0x2))
+  x40, x39 = bits.Mul64((arg1[6]), ((arg2[4]) * 0x2))
   var x41 uint64
   var x42 uint64
-  x41, x42 = bits.Mul64((arg1[6]), ((arg2[3]) * 0x2))
+  x42, x41 = bits.Mul64((arg1[6]), ((arg2[3]) * 0x2))
   var x43 uint64
   var x44 uint64
-  x43, x44 = bits.Mul64((arg1[5]), ((arg2[8]) * 0x2))
+  x44, x43 = bits.Mul64((arg1[5]), ((arg2[8]) * 0x2))
   var x45 uint64
   var x46 uint64
-  x45, x46 = bits.Mul64((arg1[5]), ((arg2[7]) * 0x2))
+  x46, x45 = bits.Mul64((arg1[5]), ((arg2[7]) * 0x2))
   var x47 uint64
   var x48 uint64
-  x47, x48 = bits.Mul64((arg1[5]), ((arg2[6]) * 0x2))
+  x48, x47 = bits.Mul64((arg1[5]), ((arg2[6]) * 0x2))
   var x49 uint64
   var x50 uint64
-  x49, x50 = bits.Mul64((arg1[5]), ((arg2[5]) * 0x2))
+  x50, x49 = bits.Mul64((arg1[5]), ((arg2[5]) * 0x2))
   var x51 uint64
   var x52 uint64
-  x51, x52 = bits.Mul64((arg1[5]), ((arg2[4]) * 0x2))
+  x52, x51 = bits.Mul64((arg1[5]), ((arg2[4]) * 0x2))
   var x53 uint64
   var x54 uint64
-  x53, x54 = bits.Mul64((arg1[4]), ((arg2[8]) * 0x2))
+  x54, x53 = bits.Mul64((arg1[4]), ((arg2[8]) * 0x2))
   var x55 uint64
   var x56 uint64
-  x55, x56 = bits.Mul64((arg1[4]), ((arg2[7]) * 0x2))
+  x56, x55 = bits.Mul64((arg1[4]), ((arg2[7]) * 0x2))
   var x57 uint64
   var x58 uint64
-  x57, x58 = bits.Mul64((arg1[4]), ((arg2[6]) * 0x2))
+  x58, x57 = bits.Mul64((arg1[4]), ((arg2[6]) * 0x2))
   var x59 uint64
   var x60 uint64
-  x59, x60 = bits.Mul64((arg1[4]), ((arg2[5]) * 0x2))
+  x60, x59 = bits.Mul64((arg1[4]), ((arg2[5]) * 0x2))
   var x61 uint64
   var x62 uint64
-  x61, x62 = bits.Mul64((arg1[3]), ((arg2[8]) * 0x2))
+  x62, x61 = bits.Mul64((arg1[3]), ((arg2[8]) * 0x2))
   var x63 uint64
   var x64 uint64
-  x63, x64 = bits.Mul64((arg1[3]), ((arg2[7]) * 0x2))
+  x64, x63 = bits.Mul64((arg1[3]), ((arg2[7]) * 0x2))
   var x65 uint64
   var x66 uint64
-  x65, x66 = bits.Mul64((arg1[3]), ((arg2[6]) * 0x2))
+  x66, x65 = bits.Mul64((arg1[3]), ((arg2[6]) * 0x2))
   var x67 uint64
   var x68 uint64
-  x67, x68 = bits.Mul64((arg1[2]), ((arg2[8]) * 0x2))
+  x68, x67 = bits.Mul64((arg1[2]), ((arg2[8]) * 0x2))
   var x69 uint64
   var x70 uint64
-  x69, x70 = bits.Mul64((arg1[2]), ((arg2[7]) * 0x2))
+  x70, x69 = bits.Mul64((arg1[2]), ((arg2[7]) * 0x2))
   var x71 uint64
   var x72 uint64
-  x71, x72 = bits.Mul64((arg1[1]), ((arg2[8]) * 0x2))
+  x72, x71 = bits.Mul64((arg1[1]), ((arg2[8]) * 0x2))
   var x73 uint64
   var x74 uint64
-  x73, x74 = bits.Mul64((arg1[8]), (arg2[0]))
+  x74, x73 = bits.Mul64((arg1[8]), (arg2[0]))
   var x75 uint64
   var x76 uint64
-  x75, x76 = bits.Mul64((arg1[7]), (arg2[1]))
+  x76, x75 = bits.Mul64((arg1[7]), (arg2[1]))
   var x77 uint64
   var x78 uint64
-  x77, x78 = bits.Mul64((arg1[7]), (arg2[0]))
+  x78, x77 = bits.Mul64((arg1[7]), (arg2[0]))
   var x79 uint64
   var x80 uint64
-  x79, x80 = bits.Mul64((arg1[6]), (arg2[2]))
+  x80, x79 = bits.Mul64((arg1[6]), (arg2[2]))
   var x81 uint64
   var x82 uint64
-  x81, x82 = bits.Mul64((arg1[6]), (arg2[1]))
+  x82, x81 = bits.Mul64((arg1[6]), (arg2[1]))
   var x83 uint64
   var x84 uint64
-  x83, x84 = bits.Mul64((arg1[6]), (arg2[0]))
+  x84, x83 = bits.Mul64((arg1[6]), (arg2[0]))
   var x85 uint64
   var x86 uint64
-  x85, x86 = bits.Mul64((arg1[5]), (arg2[3]))
+  x86, x85 = bits.Mul64((arg1[5]), (arg2[3]))
   var x87 uint64
   var x88 uint64
-  x87, x88 = bits.Mul64((arg1[5]), (arg2[2]))
+  x88, x87 = bits.Mul64((arg1[5]), (arg2[2]))
   var x89 uint64
   var x90 uint64
-  x89, x90 = bits.Mul64((arg1[5]), (arg2[1]))
+  x90, x89 = bits.Mul64((arg1[5]), (arg2[1]))
   var x91 uint64
   var x92 uint64
-  x91, x92 = bits.Mul64((arg1[5]), (arg2[0]))
+  x92, x91 = bits.Mul64((arg1[5]), (arg2[0]))
   var x93 uint64
   var x94 uint64
-  x93, x94 = bits.Mul64((arg1[4]), (arg2[4]))
+  x94, x93 = bits.Mul64((arg1[4]), (arg2[4]))
   var x95 uint64
   var x96 uint64
-  x95, x96 = bits.Mul64((arg1[4]), (arg2[3]))
+  x96, x95 = bits.Mul64((arg1[4]), (arg2[3]))
   var x97 uint64
   var x98 uint64
-  x97, x98 = bits.Mul64((arg1[4]), (arg2[2]))
+  x98, x97 = bits.Mul64((arg1[4]), (arg2[2]))
   var x99 uint64
   var x100 uint64
-  x99, x100 = bits.Mul64((arg1[4]), (arg2[1]))
+  x100, x99 = bits.Mul64((arg1[4]), (arg2[1]))
   var x101 uint64
   var x102 uint64
-  x101, x102 = bits.Mul64((arg1[4]), (arg2[0]))
+  x102, x101 = bits.Mul64((arg1[4]), (arg2[0]))
   var x103 uint64
   var x104 uint64
-  x103, x104 = bits.Mul64((arg1[3]), (arg2[5]))
+  x104, x103 = bits.Mul64((arg1[3]), (arg2[5]))
   var x105 uint64
   var x106 uint64
-  x105, x106 = bits.Mul64((arg1[3]), (arg2[4]))
+  x106, x105 = bits.Mul64((arg1[3]), (arg2[4]))
   var x107 uint64
   var x108 uint64
-  x107, x108 = bits.Mul64((arg1[3]), (arg2[3]))
+  x108, x107 = bits.Mul64((arg1[3]), (arg2[3]))
   var x109 uint64
   var x110 uint64
-  x109, x110 = bits.Mul64((arg1[3]), (arg2[2]))
+  x110, x109 = bits.Mul64((arg1[3]), (arg2[2]))
   var x111 uint64
   var x112 uint64
-  x111, x112 = bits.Mul64((arg1[3]), (arg2[1]))
+  x112, x111 = bits.Mul64((arg1[3]), (arg2[1]))
   var x113 uint64
   var x114 uint64
-  x113, x114 = bits.Mul64((arg1[3]), (arg2[0]))
+  x114, x113 = bits.Mul64((arg1[3]), (arg2[0]))
   var x115 uint64
   var x116 uint64
-  x115, x116 = bits.Mul64((arg1[2]), (arg2[6]))
+  x116, x115 = bits.Mul64((arg1[2]), (arg2[6]))
   var x117 uint64
   var x118 uint64
-  x117, x118 = bits.Mul64((arg1[2]), (arg2[5]))
+  x118, x117 = bits.Mul64((arg1[2]), (arg2[5]))
   var x119 uint64
   var x120 uint64
-  x119, x120 = bits.Mul64((arg1[2]), (arg2[4]))
+  x120, x119 = bits.Mul64((arg1[2]), (arg2[4]))
   var x121 uint64
   var x122 uint64
-  x121, x122 = bits.Mul64((arg1[2]), (arg2[3]))
+  x122, x121 = bits.Mul64((arg1[2]), (arg2[3]))
   var x123 uint64
   var x124 uint64
-  x123, x124 = bits.Mul64((arg1[2]), (arg2[2]))
+  x124, x123 = bits.Mul64((arg1[2]), (arg2[2]))
   var x125 uint64
   var x126 uint64
-  x125, x126 = bits.Mul64((arg1[2]), (arg2[1]))
+  x126, x125 = bits.Mul64((arg1[2]), (arg2[1]))
   var x127 uint64
   var x128 uint64
-  x127, x128 = bits.Mul64((arg1[2]), (arg2[0]))
+  x128, x127 = bits.Mul64((arg1[2]), (arg2[0]))
   var x129 uint64
   var x130 uint64
-  x129, x130 = bits.Mul64((arg1[1]), (arg2[7]))
+  x130, x129 = bits.Mul64((arg1[1]), (arg2[7]))
   var x131 uint64
   var x132 uint64
-  x131, x132 = bits.Mul64((arg1[1]), (arg2[6]))
+  x132, x131 = bits.Mul64((arg1[1]), (arg2[6]))
   var x133 uint64
   var x134 uint64
-  x133, x134 = bits.Mul64((arg1[1]), (arg2[5]))
+  x134, x133 = bits.Mul64((arg1[1]), (arg2[5]))
   var x135 uint64
   var x136 uint64
-  x135, x136 = bits.Mul64((arg1[1]), (arg2[4]))
+  x136, x135 = bits.Mul64((arg1[1]), (arg2[4]))
   var x137 uint64
   var x138 uint64
-  x137, x138 = bits.Mul64((arg1[1]), (arg2[3]))
+  x138, x137 = bits.Mul64((arg1[1]), (arg2[3]))
   var x139 uint64
   var x140 uint64
-  x139, x140 = bits.Mul64((arg1[1]), (arg2[2]))
+  x140, x139 = bits.Mul64((arg1[1]), (arg2[2]))
   var x141 uint64
   var x142 uint64
-  x141, x142 = bits.Mul64((arg1[1]), (arg2[1]))
+  x142, x141 = bits.Mul64((arg1[1]), (arg2[1]))
   var x143 uint64
   var x144 uint64
-  x143, x144 = bits.Mul64((arg1[1]), (arg2[0]))
+  x144, x143 = bits.Mul64((arg1[1]), (arg2[0]))
   var x145 uint64
   var x146 uint64
-  x145, x146 = bits.Mul64((arg1[0]), (arg2[8]))
+  x146, x145 = bits.Mul64((arg1[0]), (arg2[8]))
   var x147 uint64
   var x148 uint64
-  x147, x148 = bits.Mul64((arg1[0]), (arg2[7]))
+  x148, x147 = bits.Mul64((arg1[0]), (arg2[7]))
   var x149 uint64
   var x150 uint64
-  x149, x150 = bits.Mul64((arg1[0]), (arg2[6]))
+  x150, x149 = bits.Mul64((arg1[0]), (arg2[6]))
   var x151 uint64
   var x152 uint64
-  x151, x152 = bits.Mul64((arg1[0]), (arg2[5]))
+  x152, x151 = bits.Mul64((arg1[0]), (arg2[5]))
   var x153 uint64
   var x154 uint64
-  x153, x154 = bits.Mul64((arg1[0]), (arg2[4]))
+  x154, x153 = bits.Mul64((arg1[0]), (arg2[4]))
   var x155 uint64
   var x156 uint64
-  x155, x156 = bits.Mul64((arg1[0]), (arg2[3]))
+  x156, x155 = bits.Mul64((arg1[0]), (arg2[3]))
   var x157 uint64
   var x158 uint64
-  x157, x158 = bits.Mul64((arg1[0]), (arg2[2]))
+  x158, x157 = bits.Mul64((arg1[0]), (arg2[2]))
   var x159 uint64
   var x160 uint64
-  x159, x160 = bits.Mul64((arg1[0]), (arg2[1]))
+  x160, x159 = bits.Mul64((arg1[0]), (arg2[1]))
   var x161 uint64
   var x162 uint64
-  x161, x162 = bits.Mul64((arg1[0]), (arg2[0]))
+  x162, x161 = bits.Mul64((arg1[0]), (arg2[0]))
   var x163 uint64
   var x164 uint64
   x163, x164 = bits.Add64(x29, x15, 0x0)
@@ -861,139 +861,139 @@ func fiat_p521_carry_square(out1 *[9]uint64, arg1 *[9]uint64) {
   var x16 uint64 = ((arg1[1]) * 0x2)
   var x17 uint64
   var x18 uint64
-  x17, x18 = bits.Mul64((arg1[8]), (x1 * 0x2))
+  x18, x17 = bits.Mul64((arg1[8]), (x1 * 0x2))
   var x19 uint64
   var x20 uint64
-  x19, x20 = bits.Mul64((arg1[7]), (x2 * 0x2))
+  x20, x19 = bits.Mul64((arg1[7]), (x2 * 0x2))
   var x21 uint64
   var x22 uint64
-  x21, x22 = bits.Mul64((arg1[7]), (x4 * 0x2))
+  x22, x21 = bits.Mul64((arg1[7]), (x4 * 0x2))
   var x23 uint64
   var x24 uint64
-  x23, x24 = bits.Mul64((arg1[6]), (x2 * 0x2))
+  x24, x23 = bits.Mul64((arg1[6]), (x2 * 0x2))
   var x25 uint64
   var x26 uint64
-  x25, x26 = bits.Mul64((arg1[6]), (x5 * 0x2))
+  x26, x25 = bits.Mul64((arg1[6]), (x5 * 0x2))
   var x27 uint64
   var x28 uint64
-  x27, x28 = bits.Mul64((arg1[6]), (x7 * 0x2))
+  x28, x27 = bits.Mul64((arg1[6]), (x7 * 0x2))
   var x29 uint64
   var x30 uint64
-  x29, x30 = bits.Mul64((arg1[5]), (x2 * 0x2))
+  x30, x29 = bits.Mul64((arg1[5]), (x2 * 0x2))
   var x31 uint64
   var x32 uint64
-  x31, x32 = bits.Mul64((arg1[5]), (x5 * 0x2))
+  x32, x31 = bits.Mul64((arg1[5]), (x5 * 0x2))
   var x33 uint64
   var x34 uint64
-  x33, x34 = bits.Mul64((arg1[5]), (x8 * 0x2))
+  x34, x33 = bits.Mul64((arg1[5]), (x8 * 0x2))
   var x35 uint64
   var x36 uint64
-  x35, x36 = bits.Mul64((arg1[5]), (x10 * 0x2))
+  x36, x35 = bits.Mul64((arg1[5]), (x10 * 0x2))
   var x37 uint64
   var x38 uint64
-  x37, x38 = bits.Mul64((arg1[4]), (x2 * 0x2))
+  x38, x37 = bits.Mul64((arg1[4]), (x2 * 0x2))
   var x39 uint64
   var x40 uint64
-  x39, x40 = bits.Mul64((arg1[4]), (x5 * 0x2))
+  x40, x39 = bits.Mul64((arg1[4]), (x5 * 0x2))
   var x41 uint64
   var x42 uint64
-  x41, x42 = bits.Mul64((arg1[4]), (x8 * 0x2))
+  x42, x41 = bits.Mul64((arg1[4]), (x8 * 0x2))
   var x43 uint64
   var x44 uint64
-  x43, x44 = bits.Mul64((arg1[4]), (x11 * 0x2))
+  x44, x43 = bits.Mul64((arg1[4]), (x11 * 0x2))
   var x45 uint64
   var x46 uint64
-  x45, x46 = bits.Mul64((arg1[4]), (arg1[4]))
+  x46, x45 = bits.Mul64((arg1[4]), (arg1[4]))
   var x47 uint64
   var x48 uint64
-  x47, x48 = bits.Mul64((arg1[3]), (x2 * 0x2))
+  x48, x47 = bits.Mul64((arg1[3]), (x2 * 0x2))
   var x49 uint64
   var x50 uint64
-  x49, x50 = bits.Mul64((arg1[3]), (x5 * 0x2))
+  x50, x49 = bits.Mul64((arg1[3]), (x5 * 0x2))
   var x51 uint64
   var x52 uint64
-  x51, x52 = bits.Mul64((arg1[3]), (x8 * 0x2))
+  x52, x51 = bits.Mul64((arg1[3]), (x8 * 0x2))
   var x53 uint64
   var x54 uint64
-  x53, x54 = bits.Mul64((arg1[3]), x12)
+  x54, x53 = bits.Mul64((arg1[3]), x12)
   var x55 uint64
   var x56 uint64
-  x55, x56 = bits.Mul64((arg1[3]), x13)
+  x56, x55 = bits.Mul64((arg1[3]), x13)
   var x57 uint64
   var x58 uint64
-  x57, x58 = bits.Mul64((arg1[3]), (arg1[3]))
+  x58, x57 = bits.Mul64((arg1[3]), (arg1[3]))
   var x59 uint64
   var x60 uint64
-  x59, x60 = bits.Mul64((arg1[2]), (x2 * 0x2))
+  x60, x59 = bits.Mul64((arg1[2]), (x2 * 0x2))
   var x61 uint64
   var x62 uint64
-  x61, x62 = bits.Mul64((arg1[2]), (x5 * 0x2))
+  x62, x61 = bits.Mul64((arg1[2]), (x5 * 0x2))
   var x63 uint64
   var x64 uint64
-  x63, x64 = bits.Mul64((arg1[2]), x9)
+  x64, x63 = bits.Mul64((arg1[2]), x9)
   var x65 uint64
   var x66 uint64
-  x65, x66 = bits.Mul64((arg1[2]), x12)
+  x66, x65 = bits.Mul64((arg1[2]), x12)
   var x67 uint64
   var x68 uint64
-  x67, x68 = bits.Mul64((arg1[2]), x13)
+  x68, x67 = bits.Mul64((arg1[2]), x13)
   var x69 uint64
   var x70 uint64
-  x69, x70 = bits.Mul64((arg1[2]), x14)
+  x70, x69 = bits.Mul64((arg1[2]), x14)
   var x71 uint64
   var x72 uint64
-  x71, x72 = bits.Mul64((arg1[2]), (arg1[2]))
+  x72, x71 = bits.Mul64((arg1[2]), (arg1[2]))
   var x73 uint64
   var x74 uint64
-  x73, x74 = bits.Mul64((arg1[1]), (x2 * 0x2))
+  x74, x73 = bits.Mul64((arg1[1]), (x2 * 0x2))
   var x75 uint64
   var x76 uint64
-  x75, x76 = bits.Mul64((arg1[1]), x6)
+  x76, x75 = bits.Mul64((arg1[1]), x6)
   var x77 uint64
   var x78 uint64
-  x77, x78 = bits.Mul64((arg1[1]), x9)
+  x78, x77 = bits.Mul64((arg1[1]), x9)
   var x79 uint64
   var x80 uint64
-  x79, x80 = bits.Mul64((arg1[1]), x12)
+  x80, x79 = bits.Mul64((arg1[1]), x12)
   var x81 uint64
   var x82 uint64
-  x81, x82 = bits.Mul64((arg1[1]), x13)
+  x82, x81 = bits.Mul64((arg1[1]), x13)
   var x83 uint64
   var x84 uint64
-  x83, x84 = bits.Mul64((arg1[1]), x14)
+  x84, x83 = bits.Mul64((arg1[1]), x14)
   var x85 uint64
   var x86 uint64
-  x85, x86 = bits.Mul64((arg1[1]), x15)
+  x86, x85 = bits.Mul64((arg1[1]), x15)
   var x87 uint64
   var x88 uint64
-  x87, x88 = bits.Mul64((arg1[1]), (arg1[1]))
+  x88, x87 = bits.Mul64((arg1[1]), (arg1[1]))
   var x89 uint64
   var x90 uint64
-  x89, x90 = bits.Mul64((arg1[0]), x3)
+  x90, x89 = bits.Mul64((arg1[0]), x3)
   var x91 uint64
   var x92 uint64
-  x91, x92 = bits.Mul64((arg1[0]), x6)
+  x92, x91 = bits.Mul64((arg1[0]), x6)
   var x93 uint64
   var x94 uint64
-  x93, x94 = bits.Mul64((arg1[0]), x9)
+  x94, x93 = bits.Mul64((arg1[0]), x9)
   var x95 uint64
   var x96 uint64
-  x95, x96 = bits.Mul64((arg1[0]), x12)
+  x96, x95 = bits.Mul64((arg1[0]), x12)
   var x97 uint64
   var x98 uint64
-  x97, x98 = bits.Mul64((arg1[0]), x13)
+  x98, x97 = bits.Mul64((arg1[0]), x13)
   var x99 uint64
   var x100 uint64
-  x99, x100 = bits.Mul64((arg1[0]), x14)
+  x100, x99 = bits.Mul64((arg1[0]), x14)
   var x101 uint64
   var x102 uint64
-  x101, x102 = bits.Mul64((arg1[0]), x15)
+  x102, x101 = bits.Mul64((arg1[0]), x15)
   var x103 uint64
   var x104 uint64
-  x103, x104 = bits.Mul64((arg1[0]), x16)
+  x104, x103 = bits.Mul64((arg1[0]), x16)
   var x105 uint64
   var x106 uint64
-  x105, x106 = bits.Mul64((arg1[0]), (arg1[0]))
+  x106, x105 = bits.Mul64((arg1[0]), (arg1[0]))
   var x107 uint64
   var x108 uint64
   x107, x108 = bits.Add64(x51, x43, 0x0)

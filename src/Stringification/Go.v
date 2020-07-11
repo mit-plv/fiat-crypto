@@ -134,7 +134,7 @@ Module Go.
        | (IR.Z_bneg @@@ e) => "(!/* TODO: FIX ME */ " ++ arith_to_string prefix e ++ ")"
        | (IR.Z_mul_split lg2s @@@ args) =>
          match is_standard_bitwidth lg2s, args with
-         | true, ((IR.Addr @@@ hi, IR.Addr @@@ lo), args)
+         | true, ((IR.Addr @@@ lo, IR.Addr @@@ hi), args)
            => (arith_to_string prefix hi ++ ", " ++ arith_to_string prefix lo)
                 ++ " = bits.Mul"
                 ++ Decimal.Z.to_string lg2s ++ "(" ++ arith_to_string prefix args ++ ")"

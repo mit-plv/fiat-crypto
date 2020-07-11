@@ -66,28 +66,28 @@ func fiat_p256_mul(out1 *[8]uint32, arg1 *[8]uint32, arg2 *[8]uint32) {
   var x8 uint32 = (arg1[0])
   var x9 uint32
   var x10 uint32
-  x9, x10 = bits.Mul32(x8, (arg2[7]))
+  x10, x9 = bits.Mul32(x8, (arg2[7]))
   var x11 uint32
   var x12 uint32
-  x11, x12 = bits.Mul32(x8, (arg2[6]))
+  x12, x11 = bits.Mul32(x8, (arg2[6]))
   var x13 uint32
   var x14 uint32
-  x13, x14 = bits.Mul32(x8, (arg2[5]))
+  x14, x13 = bits.Mul32(x8, (arg2[5]))
   var x15 uint32
   var x16 uint32
-  x15, x16 = bits.Mul32(x8, (arg2[4]))
+  x16, x15 = bits.Mul32(x8, (arg2[4]))
   var x17 uint32
   var x18 uint32
-  x17, x18 = bits.Mul32(x8, (arg2[3]))
+  x18, x17 = bits.Mul32(x8, (arg2[3]))
   var x19 uint32
   var x20 uint32
-  x19, x20 = bits.Mul32(x8, (arg2[2]))
+  x20, x19 = bits.Mul32(x8, (arg2[2]))
   var x21 uint32
   var x22 uint32
-  x21, x22 = bits.Mul32(x8, (arg2[1]))
+  x22, x21 = bits.Mul32(x8, (arg2[1]))
   var x23 uint32
   var x24 uint32
-  x23, x24 = bits.Mul32(x8, (arg2[0]))
+  x24, x23 = bits.Mul32(x8, (arg2[0]))
   var x25 uint32
   var x26 uint32
   x25, x26 = bits.Add32(x24, x21, 0x0)
@@ -112,16 +112,16 @@ func fiat_p256_mul(out1 *[8]uint32, arg1 *[8]uint32, arg2 *[8]uint32) {
   var x39 uint32 = (x38 + x10)
   var x40 uint32
   var x41 uint32
-  x40, x41 = bits.Mul32(x23, 0xffffffff)
+  x41, x40 = bits.Mul32(x23, 0xffffffff)
   var x42 uint32
   var x43 uint32
-  x42, x43 = bits.Mul32(x23, 0xffffffff)
+  x43, x42 = bits.Mul32(x23, 0xffffffff)
   var x44 uint32
   var x45 uint32
-  x44, x45 = bits.Mul32(x23, 0xffffffff)
+  x45, x44 = bits.Mul32(x23, 0xffffffff)
   var x46 uint32
   var x47 uint32
-  x46, x47 = bits.Mul32(x23, 0xffffffff)
+  x47, x46 = bits.Mul32(x23, 0xffffffff)
   var x48 uint32
   var x49 uint32
   x48, x49 = bits.Add32(x47, x44, 0x0)
@@ -157,28 +157,28 @@ func fiat_p256_mul(out1 *[8]uint32, arg1 *[8]uint32, arg2 *[8]uint32) {
   x69, x70 = bits.Add32(x39, x41, x68)
   var x71 uint32
   var x72 uint32
-  x71, x72 = bits.Mul32(x1, (arg2[7]))
+  x72, x71 = bits.Mul32(x1, (arg2[7]))
   var x73 uint32
   var x74 uint32
-  x73, x74 = bits.Mul32(x1, (arg2[6]))
+  x74, x73 = bits.Mul32(x1, (arg2[6]))
   var x75 uint32
   var x76 uint32
-  x75, x76 = bits.Mul32(x1, (arg2[5]))
+  x76, x75 = bits.Mul32(x1, (arg2[5]))
   var x77 uint32
   var x78 uint32
-  x77, x78 = bits.Mul32(x1, (arg2[4]))
+  x78, x77 = bits.Mul32(x1, (arg2[4]))
   var x79 uint32
   var x80 uint32
-  x79, x80 = bits.Mul32(x1, (arg2[3]))
+  x80, x79 = bits.Mul32(x1, (arg2[3]))
   var x81 uint32
   var x82 uint32
-  x81, x82 = bits.Mul32(x1, (arg2[2]))
+  x82, x81 = bits.Mul32(x1, (arg2[2]))
   var x83 uint32
   var x84 uint32
-  x83, x84 = bits.Mul32(x1, (arg2[1]))
+  x84, x83 = bits.Mul32(x1, (arg2[1]))
   var x85 uint32
   var x86 uint32
-  x85, x86 = bits.Mul32(x1, (arg2[0]))
+  x86, x85 = bits.Mul32(x1, (arg2[0]))
   var x87 uint32
   var x88 uint32
   x87, x88 = bits.Add32(x86, x83, 0x0)
@@ -230,16 +230,16 @@ func fiat_p256_mul(out1 *[8]uint32, arg1 *[8]uint32, arg2 *[8]uint32) {
   x118, x119 = bits.Add32(x70, x101, x117)
   var x120 uint32
   var x121 uint32
-  x120, x121 = bits.Mul32(x102, 0xffffffff)
+  x121, x120 = bits.Mul32(x102, 0xffffffff)
   var x122 uint32
   var x123 uint32
-  x122, x123 = bits.Mul32(x102, 0xffffffff)
+  x123, x122 = bits.Mul32(x102, 0xffffffff)
   var x124 uint32
   var x125 uint32
-  x124, x125 = bits.Mul32(x102, 0xffffffff)
+  x125, x124 = bits.Mul32(x102, 0xffffffff)
   var x126 uint32
   var x127 uint32
-  x126, x127 = bits.Mul32(x102, 0xffffffff)
+  x127, x126 = bits.Mul32(x102, 0xffffffff)
   var x128 uint32
   var x129 uint32
   x128, x129 = bits.Add32(x127, x124, 0x0)
@@ -276,28 +276,28 @@ func fiat_p256_mul(out1 *[8]uint32, arg1 *[8]uint32, arg2 *[8]uint32) {
   var x151 uint32 = (x150 + x119)
   var x152 uint32
   var x153 uint32
-  x152, x153 = bits.Mul32(x2, (arg2[7]))
+  x153, x152 = bits.Mul32(x2, (arg2[7]))
   var x154 uint32
   var x155 uint32
-  x154, x155 = bits.Mul32(x2, (arg2[6]))
+  x155, x154 = bits.Mul32(x2, (arg2[6]))
   var x156 uint32
   var x157 uint32
-  x156, x157 = bits.Mul32(x2, (arg2[5]))
+  x157, x156 = bits.Mul32(x2, (arg2[5]))
   var x158 uint32
   var x159 uint32
-  x158, x159 = bits.Mul32(x2, (arg2[4]))
+  x159, x158 = bits.Mul32(x2, (arg2[4]))
   var x160 uint32
   var x161 uint32
-  x160, x161 = bits.Mul32(x2, (arg2[3]))
+  x161, x160 = bits.Mul32(x2, (arg2[3]))
   var x162 uint32
   var x163 uint32
-  x162, x163 = bits.Mul32(x2, (arg2[2]))
+  x163, x162 = bits.Mul32(x2, (arg2[2]))
   var x164 uint32
   var x165 uint32
-  x164, x165 = bits.Mul32(x2, (arg2[1]))
+  x165, x164 = bits.Mul32(x2, (arg2[1]))
   var x166 uint32
   var x167 uint32
-  x166, x167 = bits.Mul32(x2, (arg2[0]))
+  x167, x166 = bits.Mul32(x2, (arg2[0]))
   var x168 uint32
   var x169 uint32
   x168, x169 = bits.Add32(x167, x164, 0x0)
@@ -349,16 +349,16 @@ func fiat_p256_mul(out1 *[8]uint32, arg1 *[8]uint32, arg2 *[8]uint32) {
   x199, x200 = bits.Add32(x151, x182, x198)
   var x201 uint32
   var x202 uint32
-  x201, x202 = bits.Mul32(x183, 0xffffffff)
+  x202, x201 = bits.Mul32(x183, 0xffffffff)
   var x203 uint32
   var x204 uint32
-  x203, x204 = bits.Mul32(x183, 0xffffffff)
+  x204, x203 = bits.Mul32(x183, 0xffffffff)
   var x205 uint32
   var x206 uint32
-  x205, x206 = bits.Mul32(x183, 0xffffffff)
+  x206, x205 = bits.Mul32(x183, 0xffffffff)
   var x207 uint32
   var x208 uint32
-  x207, x208 = bits.Mul32(x183, 0xffffffff)
+  x208, x207 = bits.Mul32(x183, 0xffffffff)
   var x209 uint32
   var x210 uint32
   x209, x210 = bits.Add32(x208, x205, 0x0)
@@ -395,28 +395,28 @@ func fiat_p256_mul(out1 *[8]uint32, arg1 *[8]uint32, arg2 *[8]uint32) {
   var x232 uint32 = (x231 + x200)
   var x233 uint32
   var x234 uint32
-  x233, x234 = bits.Mul32(x3, (arg2[7]))
+  x234, x233 = bits.Mul32(x3, (arg2[7]))
   var x235 uint32
   var x236 uint32
-  x235, x236 = bits.Mul32(x3, (arg2[6]))
+  x236, x235 = bits.Mul32(x3, (arg2[6]))
   var x237 uint32
   var x238 uint32
-  x237, x238 = bits.Mul32(x3, (arg2[5]))
+  x238, x237 = bits.Mul32(x3, (arg2[5]))
   var x239 uint32
   var x240 uint32
-  x239, x240 = bits.Mul32(x3, (arg2[4]))
+  x240, x239 = bits.Mul32(x3, (arg2[4]))
   var x241 uint32
   var x242 uint32
-  x241, x242 = bits.Mul32(x3, (arg2[3]))
+  x242, x241 = bits.Mul32(x3, (arg2[3]))
   var x243 uint32
   var x244 uint32
-  x243, x244 = bits.Mul32(x3, (arg2[2]))
+  x244, x243 = bits.Mul32(x3, (arg2[2]))
   var x245 uint32
   var x246 uint32
-  x245, x246 = bits.Mul32(x3, (arg2[1]))
+  x246, x245 = bits.Mul32(x3, (arg2[1]))
   var x247 uint32
   var x248 uint32
-  x247, x248 = bits.Mul32(x3, (arg2[0]))
+  x248, x247 = bits.Mul32(x3, (arg2[0]))
   var x249 uint32
   var x250 uint32
   x249, x250 = bits.Add32(x248, x245, 0x0)
@@ -468,16 +468,16 @@ func fiat_p256_mul(out1 *[8]uint32, arg1 *[8]uint32, arg2 *[8]uint32) {
   x280, x281 = bits.Add32(x232, x263, x279)
   var x282 uint32
   var x283 uint32
-  x282, x283 = bits.Mul32(x264, 0xffffffff)
+  x283, x282 = bits.Mul32(x264, 0xffffffff)
   var x284 uint32
   var x285 uint32
-  x284, x285 = bits.Mul32(x264, 0xffffffff)
+  x285, x284 = bits.Mul32(x264, 0xffffffff)
   var x286 uint32
   var x287 uint32
-  x286, x287 = bits.Mul32(x264, 0xffffffff)
+  x287, x286 = bits.Mul32(x264, 0xffffffff)
   var x288 uint32
   var x289 uint32
-  x288, x289 = bits.Mul32(x264, 0xffffffff)
+  x289, x288 = bits.Mul32(x264, 0xffffffff)
   var x290 uint32
   var x291 uint32
   x290, x291 = bits.Add32(x289, x286, 0x0)
@@ -514,28 +514,28 @@ func fiat_p256_mul(out1 *[8]uint32, arg1 *[8]uint32, arg2 *[8]uint32) {
   var x313 uint32 = (x312 + x281)
   var x314 uint32
   var x315 uint32
-  x314, x315 = bits.Mul32(x4, (arg2[7]))
+  x315, x314 = bits.Mul32(x4, (arg2[7]))
   var x316 uint32
   var x317 uint32
-  x316, x317 = bits.Mul32(x4, (arg2[6]))
+  x317, x316 = bits.Mul32(x4, (arg2[6]))
   var x318 uint32
   var x319 uint32
-  x318, x319 = bits.Mul32(x4, (arg2[5]))
+  x319, x318 = bits.Mul32(x4, (arg2[5]))
   var x320 uint32
   var x321 uint32
-  x320, x321 = bits.Mul32(x4, (arg2[4]))
+  x321, x320 = bits.Mul32(x4, (arg2[4]))
   var x322 uint32
   var x323 uint32
-  x322, x323 = bits.Mul32(x4, (arg2[3]))
+  x323, x322 = bits.Mul32(x4, (arg2[3]))
   var x324 uint32
   var x325 uint32
-  x324, x325 = bits.Mul32(x4, (arg2[2]))
+  x325, x324 = bits.Mul32(x4, (arg2[2]))
   var x326 uint32
   var x327 uint32
-  x326, x327 = bits.Mul32(x4, (arg2[1]))
+  x327, x326 = bits.Mul32(x4, (arg2[1]))
   var x328 uint32
   var x329 uint32
-  x328, x329 = bits.Mul32(x4, (arg2[0]))
+  x329, x328 = bits.Mul32(x4, (arg2[0]))
   var x330 uint32
   var x331 uint32
   x330, x331 = bits.Add32(x329, x326, 0x0)
@@ -587,16 +587,16 @@ func fiat_p256_mul(out1 *[8]uint32, arg1 *[8]uint32, arg2 *[8]uint32) {
   x361, x362 = bits.Add32(x313, x344, x360)
   var x363 uint32
   var x364 uint32
-  x363, x364 = bits.Mul32(x345, 0xffffffff)
+  x364, x363 = bits.Mul32(x345, 0xffffffff)
   var x365 uint32
   var x366 uint32
-  x365, x366 = bits.Mul32(x345, 0xffffffff)
+  x366, x365 = bits.Mul32(x345, 0xffffffff)
   var x367 uint32
   var x368 uint32
-  x367, x368 = bits.Mul32(x345, 0xffffffff)
+  x368, x367 = bits.Mul32(x345, 0xffffffff)
   var x369 uint32
   var x370 uint32
-  x369, x370 = bits.Mul32(x345, 0xffffffff)
+  x370, x369 = bits.Mul32(x345, 0xffffffff)
   var x371 uint32
   var x372 uint32
   x371, x372 = bits.Add32(x370, x367, 0x0)
@@ -633,28 +633,28 @@ func fiat_p256_mul(out1 *[8]uint32, arg1 *[8]uint32, arg2 *[8]uint32) {
   var x394 uint32 = (x393 + x362)
   var x395 uint32
   var x396 uint32
-  x395, x396 = bits.Mul32(x5, (arg2[7]))
+  x396, x395 = bits.Mul32(x5, (arg2[7]))
   var x397 uint32
   var x398 uint32
-  x397, x398 = bits.Mul32(x5, (arg2[6]))
+  x398, x397 = bits.Mul32(x5, (arg2[6]))
   var x399 uint32
   var x400 uint32
-  x399, x400 = bits.Mul32(x5, (arg2[5]))
+  x400, x399 = bits.Mul32(x5, (arg2[5]))
   var x401 uint32
   var x402 uint32
-  x401, x402 = bits.Mul32(x5, (arg2[4]))
+  x402, x401 = bits.Mul32(x5, (arg2[4]))
   var x403 uint32
   var x404 uint32
-  x403, x404 = bits.Mul32(x5, (arg2[3]))
+  x404, x403 = bits.Mul32(x5, (arg2[3]))
   var x405 uint32
   var x406 uint32
-  x405, x406 = bits.Mul32(x5, (arg2[2]))
+  x406, x405 = bits.Mul32(x5, (arg2[2]))
   var x407 uint32
   var x408 uint32
-  x407, x408 = bits.Mul32(x5, (arg2[1]))
+  x408, x407 = bits.Mul32(x5, (arg2[1]))
   var x409 uint32
   var x410 uint32
-  x409, x410 = bits.Mul32(x5, (arg2[0]))
+  x410, x409 = bits.Mul32(x5, (arg2[0]))
   var x411 uint32
   var x412 uint32
   x411, x412 = bits.Add32(x410, x407, 0x0)
@@ -706,16 +706,16 @@ func fiat_p256_mul(out1 *[8]uint32, arg1 *[8]uint32, arg2 *[8]uint32) {
   x442, x443 = bits.Add32(x394, x425, x441)
   var x444 uint32
   var x445 uint32
-  x444, x445 = bits.Mul32(x426, 0xffffffff)
+  x445, x444 = bits.Mul32(x426, 0xffffffff)
   var x446 uint32
   var x447 uint32
-  x446, x447 = bits.Mul32(x426, 0xffffffff)
+  x447, x446 = bits.Mul32(x426, 0xffffffff)
   var x448 uint32
   var x449 uint32
-  x448, x449 = bits.Mul32(x426, 0xffffffff)
+  x449, x448 = bits.Mul32(x426, 0xffffffff)
   var x450 uint32
   var x451 uint32
-  x450, x451 = bits.Mul32(x426, 0xffffffff)
+  x451, x450 = bits.Mul32(x426, 0xffffffff)
   var x452 uint32
   var x453 uint32
   x452, x453 = bits.Add32(x451, x448, 0x0)
@@ -752,28 +752,28 @@ func fiat_p256_mul(out1 *[8]uint32, arg1 *[8]uint32, arg2 *[8]uint32) {
   var x475 uint32 = (x474 + x443)
   var x476 uint32
   var x477 uint32
-  x476, x477 = bits.Mul32(x6, (arg2[7]))
+  x477, x476 = bits.Mul32(x6, (arg2[7]))
   var x478 uint32
   var x479 uint32
-  x478, x479 = bits.Mul32(x6, (arg2[6]))
+  x479, x478 = bits.Mul32(x6, (arg2[6]))
   var x480 uint32
   var x481 uint32
-  x480, x481 = bits.Mul32(x6, (arg2[5]))
+  x481, x480 = bits.Mul32(x6, (arg2[5]))
   var x482 uint32
   var x483 uint32
-  x482, x483 = bits.Mul32(x6, (arg2[4]))
+  x483, x482 = bits.Mul32(x6, (arg2[4]))
   var x484 uint32
   var x485 uint32
-  x484, x485 = bits.Mul32(x6, (arg2[3]))
+  x485, x484 = bits.Mul32(x6, (arg2[3]))
   var x486 uint32
   var x487 uint32
-  x486, x487 = bits.Mul32(x6, (arg2[2]))
+  x487, x486 = bits.Mul32(x6, (arg2[2]))
   var x488 uint32
   var x489 uint32
-  x488, x489 = bits.Mul32(x6, (arg2[1]))
+  x489, x488 = bits.Mul32(x6, (arg2[1]))
   var x490 uint32
   var x491 uint32
-  x490, x491 = bits.Mul32(x6, (arg2[0]))
+  x491, x490 = bits.Mul32(x6, (arg2[0]))
   var x492 uint32
   var x493 uint32
   x492, x493 = bits.Add32(x491, x488, 0x0)
@@ -825,16 +825,16 @@ func fiat_p256_mul(out1 *[8]uint32, arg1 *[8]uint32, arg2 *[8]uint32) {
   x523, x524 = bits.Add32(x475, x506, x522)
   var x525 uint32
   var x526 uint32
-  x525, x526 = bits.Mul32(x507, 0xffffffff)
+  x526, x525 = bits.Mul32(x507, 0xffffffff)
   var x527 uint32
   var x528 uint32
-  x527, x528 = bits.Mul32(x507, 0xffffffff)
+  x528, x527 = bits.Mul32(x507, 0xffffffff)
   var x529 uint32
   var x530 uint32
-  x529, x530 = bits.Mul32(x507, 0xffffffff)
+  x530, x529 = bits.Mul32(x507, 0xffffffff)
   var x531 uint32
   var x532 uint32
-  x531, x532 = bits.Mul32(x507, 0xffffffff)
+  x532, x531 = bits.Mul32(x507, 0xffffffff)
   var x533 uint32
   var x534 uint32
   x533, x534 = bits.Add32(x532, x529, 0x0)
@@ -871,28 +871,28 @@ func fiat_p256_mul(out1 *[8]uint32, arg1 *[8]uint32, arg2 *[8]uint32) {
   var x556 uint32 = (x555 + x524)
   var x557 uint32
   var x558 uint32
-  x557, x558 = bits.Mul32(x7, (arg2[7]))
+  x558, x557 = bits.Mul32(x7, (arg2[7]))
   var x559 uint32
   var x560 uint32
-  x559, x560 = bits.Mul32(x7, (arg2[6]))
+  x560, x559 = bits.Mul32(x7, (arg2[6]))
   var x561 uint32
   var x562 uint32
-  x561, x562 = bits.Mul32(x7, (arg2[5]))
+  x562, x561 = bits.Mul32(x7, (arg2[5]))
   var x563 uint32
   var x564 uint32
-  x563, x564 = bits.Mul32(x7, (arg2[4]))
+  x564, x563 = bits.Mul32(x7, (arg2[4]))
   var x565 uint32
   var x566 uint32
-  x565, x566 = bits.Mul32(x7, (arg2[3]))
+  x566, x565 = bits.Mul32(x7, (arg2[3]))
   var x567 uint32
   var x568 uint32
-  x567, x568 = bits.Mul32(x7, (arg2[2]))
+  x568, x567 = bits.Mul32(x7, (arg2[2]))
   var x569 uint32
   var x570 uint32
-  x569, x570 = bits.Mul32(x7, (arg2[1]))
+  x570, x569 = bits.Mul32(x7, (arg2[1]))
   var x571 uint32
   var x572 uint32
-  x571, x572 = bits.Mul32(x7, (arg2[0]))
+  x572, x571 = bits.Mul32(x7, (arg2[0]))
   var x573 uint32
   var x574 uint32
   x573, x574 = bits.Add32(x572, x569, 0x0)
@@ -944,16 +944,16 @@ func fiat_p256_mul(out1 *[8]uint32, arg1 *[8]uint32, arg2 *[8]uint32) {
   x604, x605 = bits.Add32(x556, x587, x603)
   var x606 uint32
   var x607 uint32
-  x606, x607 = bits.Mul32(x588, 0xffffffff)
+  x607, x606 = bits.Mul32(x588, 0xffffffff)
   var x608 uint32
   var x609 uint32
-  x608, x609 = bits.Mul32(x588, 0xffffffff)
+  x609, x608 = bits.Mul32(x588, 0xffffffff)
   var x610 uint32
   var x611 uint32
-  x610, x611 = bits.Mul32(x588, 0xffffffff)
+  x611, x610 = bits.Mul32(x588, 0xffffffff)
   var x612 uint32
   var x613 uint32
-  x612, x613 = bits.Mul32(x588, 0xffffffff)
+  x613, x612 = bits.Mul32(x588, 0xffffffff)
   var x614 uint32
   var x615 uint32
   x614, x615 = bits.Add32(x613, x610, 0x0)
@@ -1065,28 +1065,28 @@ func fiat_p256_square(out1 *[8]uint32, arg1 *[8]uint32) {
   var x8 uint32 = (arg1[0])
   var x9 uint32
   var x10 uint32
-  x9, x10 = bits.Mul32(x8, (arg1[7]))
+  x10, x9 = bits.Mul32(x8, (arg1[7]))
   var x11 uint32
   var x12 uint32
-  x11, x12 = bits.Mul32(x8, (arg1[6]))
+  x12, x11 = bits.Mul32(x8, (arg1[6]))
   var x13 uint32
   var x14 uint32
-  x13, x14 = bits.Mul32(x8, (arg1[5]))
+  x14, x13 = bits.Mul32(x8, (arg1[5]))
   var x15 uint32
   var x16 uint32
-  x15, x16 = bits.Mul32(x8, (arg1[4]))
+  x16, x15 = bits.Mul32(x8, (arg1[4]))
   var x17 uint32
   var x18 uint32
-  x17, x18 = bits.Mul32(x8, (arg1[3]))
+  x18, x17 = bits.Mul32(x8, (arg1[3]))
   var x19 uint32
   var x20 uint32
-  x19, x20 = bits.Mul32(x8, (arg1[2]))
+  x20, x19 = bits.Mul32(x8, (arg1[2]))
   var x21 uint32
   var x22 uint32
-  x21, x22 = bits.Mul32(x8, (arg1[1]))
+  x22, x21 = bits.Mul32(x8, (arg1[1]))
   var x23 uint32
   var x24 uint32
-  x23, x24 = bits.Mul32(x8, (arg1[0]))
+  x24, x23 = bits.Mul32(x8, (arg1[0]))
   var x25 uint32
   var x26 uint32
   x25, x26 = bits.Add32(x24, x21, 0x0)
@@ -1111,16 +1111,16 @@ func fiat_p256_square(out1 *[8]uint32, arg1 *[8]uint32) {
   var x39 uint32 = (x38 + x10)
   var x40 uint32
   var x41 uint32
-  x40, x41 = bits.Mul32(x23, 0xffffffff)
+  x41, x40 = bits.Mul32(x23, 0xffffffff)
   var x42 uint32
   var x43 uint32
-  x42, x43 = bits.Mul32(x23, 0xffffffff)
+  x43, x42 = bits.Mul32(x23, 0xffffffff)
   var x44 uint32
   var x45 uint32
-  x44, x45 = bits.Mul32(x23, 0xffffffff)
+  x45, x44 = bits.Mul32(x23, 0xffffffff)
   var x46 uint32
   var x47 uint32
-  x46, x47 = bits.Mul32(x23, 0xffffffff)
+  x47, x46 = bits.Mul32(x23, 0xffffffff)
   var x48 uint32
   var x49 uint32
   x48, x49 = bits.Add32(x47, x44, 0x0)
@@ -1156,28 +1156,28 @@ func fiat_p256_square(out1 *[8]uint32, arg1 *[8]uint32) {
   x69, x70 = bits.Add32(x39, x41, x68)
   var x71 uint32
   var x72 uint32
-  x71, x72 = bits.Mul32(x1, (arg1[7]))
+  x72, x71 = bits.Mul32(x1, (arg1[7]))
   var x73 uint32
   var x74 uint32
-  x73, x74 = bits.Mul32(x1, (arg1[6]))
+  x74, x73 = bits.Mul32(x1, (arg1[6]))
   var x75 uint32
   var x76 uint32
-  x75, x76 = bits.Mul32(x1, (arg1[5]))
+  x76, x75 = bits.Mul32(x1, (arg1[5]))
   var x77 uint32
   var x78 uint32
-  x77, x78 = bits.Mul32(x1, (arg1[4]))
+  x78, x77 = bits.Mul32(x1, (arg1[4]))
   var x79 uint32
   var x80 uint32
-  x79, x80 = bits.Mul32(x1, (arg1[3]))
+  x80, x79 = bits.Mul32(x1, (arg1[3]))
   var x81 uint32
   var x82 uint32
-  x81, x82 = bits.Mul32(x1, (arg1[2]))
+  x82, x81 = bits.Mul32(x1, (arg1[2]))
   var x83 uint32
   var x84 uint32
-  x83, x84 = bits.Mul32(x1, (arg1[1]))
+  x84, x83 = bits.Mul32(x1, (arg1[1]))
   var x85 uint32
   var x86 uint32
-  x85, x86 = bits.Mul32(x1, (arg1[0]))
+  x86, x85 = bits.Mul32(x1, (arg1[0]))
   var x87 uint32
   var x88 uint32
   x87, x88 = bits.Add32(x86, x83, 0x0)
@@ -1229,16 +1229,16 @@ func fiat_p256_square(out1 *[8]uint32, arg1 *[8]uint32) {
   x118, x119 = bits.Add32(x70, x101, x117)
   var x120 uint32
   var x121 uint32
-  x120, x121 = bits.Mul32(x102, 0xffffffff)
+  x121, x120 = bits.Mul32(x102, 0xffffffff)
   var x122 uint32
   var x123 uint32
-  x122, x123 = bits.Mul32(x102, 0xffffffff)
+  x123, x122 = bits.Mul32(x102, 0xffffffff)
   var x124 uint32
   var x125 uint32
-  x124, x125 = bits.Mul32(x102, 0xffffffff)
+  x125, x124 = bits.Mul32(x102, 0xffffffff)
   var x126 uint32
   var x127 uint32
-  x126, x127 = bits.Mul32(x102, 0xffffffff)
+  x127, x126 = bits.Mul32(x102, 0xffffffff)
   var x128 uint32
   var x129 uint32
   x128, x129 = bits.Add32(x127, x124, 0x0)
@@ -1275,28 +1275,28 @@ func fiat_p256_square(out1 *[8]uint32, arg1 *[8]uint32) {
   var x151 uint32 = (x150 + x119)
   var x152 uint32
   var x153 uint32
-  x152, x153 = bits.Mul32(x2, (arg1[7]))
+  x153, x152 = bits.Mul32(x2, (arg1[7]))
   var x154 uint32
   var x155 uint32
-  x154, x155 = bits.Mul32(x2, (arg1[6]))
+  x155, x154 = bits.Mul32(x2, (arg1[6]))
   var x156 uint32
   var x157 uint32
-  x156, x157 = bits.Mul32(x2, (arg1[5]))
+  x157, x156 = bits.Mul32(x2, (arg1[5]))
   var x158 uint32
   var x159 uint32
-  x158, x159 = bits.Mul32(x2, (arg1[4]))
+  x159, x158 = bits.Mul32(x2, (arg1[4]))
   var x160 uint32
   var x161 uint32
-  x160, x161 = bits.Mul32(x2, (arg1[3]))
+  x161, x160 = bits.Mul32(x2, (arg1[3]))
   var x162 uint32
   var x163 uint32
-  x162, x163 = bits.Mul32(x2, (arg1[2]))
+  x163, x162 = bits.Mul32(x2, (arg1[2]))
   var x164 uint32
   var x165 uint32
-  x164, x165 = bits.Mul32(x2, (arg1[1]))
+  x165, x164 = bits.Mul32(x2, (arg1[1]))
   var x166 uint32
   var x167 uint32
-  x166, x167 = bits.Mul32(x2, (arg1[0]))
+  x167, x166 = bits.Mul32(x2, (arg1[0]))
   var x168 uint32
   var x169 uint32
   x168, x169 = bits.Add32(x167, x164, 0x0)
@@ -1348,16 +1348,16 @@ func fiat_p256_square(out1 *[8]uint32, arg1 *[8]uint32) {
   x199, x200 = bits.Add32(x151, x182, x198)
   var x201 uint32
   var x202 uint32
-  x201, x202 = bits.Mul32(x183, 0xffffffff)
+  x202, x201 = bits.Mul32(x183, 0xffffffff)
   var x203 uint32
   var x204 uint32
-  x203, x204 = bits.Mul32(x183, 0xffffffff)
+  x204, x203 = bits.Mul32(x183, 0xffffffff)
   var x205 uint32
   var x206 uint32
-  x205, x206 = bits.Mul32(x183, 0xffffffff)
+  x206, x205 = bits.Mul32(x183, 0xffffffff)
   var x207 uint32
   var x208 uint32
-  x207, x208 = bits.Mul32(x183, 0xffffffff)
+  x208, x207 = bits.Mul32(x183, 0xffffffff)
   var x209 uint32
   var x210 uint32
   x209, x210 = bits.Add32(x208, x205, 0x0)
@@ -1394,28 +1394,28 @@ func fiat_p256_square(out1 *[8]uint32, arg1 *[8]uint32) {
   var x232 uint32 = (x231 + x200)
   var x233 uint32
   var x234 uint32
-  x233, x234 = bits.Mul32(x3, (arg1[7]))
+  x234, x233 = bits.Mul32(x3, (arg1[7]))
   var x235 uint32
   var x236 uint32
-  x235, x236 = bits.Mul32(x3, (arg1[6]))
+  x236, x235 = bits.Mul32(x3, (arg1[6]))
   var x237 uint32
   var x238 uint32
-  x237, x238 = bits.Mul32(x3, (arg1[5]))
+  x238, x237 = bits.Mul32(x3, (arg1[5]))
   var x239 uint32
   var x240 uint32
-  x239, x240 = bits.Mul32(x3, (arg1[4]))
+  x240, x239 = bits.Mul32(x3, (arg1[4]))
   var x241 uint32
   var x242 uint32
-  x241, x242 = bits.Mul32(x3, (arg1[3]))
+  x242, x241 = bits.Mul32(x3, (arg1[3]))
   var x243 uint32
   var x244 uint32
-  x243, x244 = bits.Mul32(x3, (arg1[2]))
+  x244, x243 = bits.Mul32(x3, (arg1[2]))
   var x245 uint32
   var x246 uint32
-  x245, x246 = bits.Mul32(x3, (arg1[1]))
+  x246, x245 = bits.Mul32(x3, (arg1[1]))
   var x247 uint32
   var x248 uint32
-  x247, x248 = bits.Mul32(x3, (arg1[0]))
+  x248, x247 = bits.Mul32(x3, (arg1[0]))
   var x249 uint32
   var x250 uint32
   x249, x250 = bits.Add32(x248, x245, 0x0)
@@ -1467,16 +1467,16 @@ func fiat_p256_square(out1 *[8]uint32, arg1 *[8]uint32) {
   x280, x281 = bits.Add32(x232, x263, x279)
   var x282 uint32
   var x283 uint32
-  x282, x283 = bits.Mul32(x264, 0xffffffff)
+  x283, x282 = bits.Mul32(x264, 0xffffffff)
   var x284 uint32
   var x285 uint32
-  x284, x285 = bits.Mul32(x264, 0xffffffff)
+  x285, x284 = bits.Mul32(x264, 0xffffffff)
   var x286 uint32
   var x287 uint32
-  x286, x287 = bits.Mul32(x264, 0xffffffff)
+  x287, x286 = bits.Mul32(x264, 0xffffffff)
   var x288 uint32
   var x289 uint32
-  x288, x289 = bits.Mul32(x264, 0xffffffff)
+  x289, x288 = bits.Mul32(x264, 0xffffffff)
   var x290 uint32
   var x291 uint32
   x290, x291 = bits.Add32(x289, x286, 0x0)
@@ -1513,28 +1513,28 @@ func fiat_p256_square(out1 *[8]uint32, arg1 *[8]uint32) {
   var x313 uint32 = (x312 + x281)
   var x314 uint32
   var x315 uint32
-  x314, x315 = bits.Mul32(x4, (arg1[7]))
+  x315, x314 = bits.Mul32(x4, (arg1[7]))
   var x316 uint32
   var x317 uint32
-  x316, x317 = bits.Mul32(x4, (arg1[6]))
+  x317, x316 = bits.Mul32(x4, (arg1[6]))
   var x318 uint32
   var x319 uint32
-  x318, x319 = bits.Mul32(x4, (arg1[5]))
+  x319, x318 = bits.Mul32(x4, (arg1[5]))
   var x320 uint32
   var x321 uint32
-  x320, x321 = bits.Mul32(x4, (arg1[4]))
+  x321, x320 = bits.Mul32(x4, (arg1[4]))
   var x322 uint32
   var x323 uint32
-  x322, x323 = bits.Mul32(x4, (arg1[3]))
+  x323, x322 = bits.Mul32(x4, (arg1[3]))
   var x324 uint32
   var x325 uint32
-  x324, x325 = bits.Mul32(x4, (arg1[2]))
+  x325, x324 = bits.Mul32(x4, (arg1[2]))
   var x326 uint32
   var x327 uint32
-  x326, x327 = bits.Mul32(x4, (arg1[1]))
+  x327, x326 = bits.Mul32(x4, (arg1[1]))
   var x328 uint32
   var x329 uint32
-  x328, x329 = bits.Mul32(x4, (arg1[0]))
+  x329, x328 = bits.Mul32(x4, (arg1[0]))
   var x330 uint32
   var x331 uint32
   x330, x331 = bits.Add32(x329, x326, 0x0)
@@ -1586,16 +1586,16 @@ func fiat_p256_square(out1 *[8]uint32, arg1 *[8]uint32) {
   x361, x362 = bits.Add32(x313, x344, x360)
   var x363 uint32
   var x364 uint32
-  x363, x364 = bits.Mul32(x345, 0xffffffff)
+  x364, x363 = bits.Mul32(x345, 0xffffffff)
   var x365 uint32
   var x366 uint32
-  x365, x366 = bits.Mul32(x345, 0xffffffff)
+  x366, x365 = bits.Mul32(x345, 0xffffffff)
   var x367 uint32
   var x368 uint32
-  x367, x368 = bits.Mul32(x345, 0xffffffff)
+  x368, x367 = bits.Mul32(x345, 0xffffffff)
   var x369 uint32
   var x370 uint32
-  x369, x370 = bits.Mul32(x345, 0xffffffff)
+  x370, x369 = bits.Mul32(x345, 0xffffffff)
   var x371 uint32
   var x372 uint32
   x371, x372 = bits.Add32(x370, x367, 0x0)
@@ -1632,28 +1632,28 @@ func fiat_p256_square(out1 *[8]uint32, arg1 *[8]uint32) {
   var x394 uint32 = (x393 + x362)
   var x395 uint32
   var x396 uint32
-  x395, x396 = bits.Mul32(x5, (arg1[7]))
+  x396, x395 = bits.Mul32(x5, (arg1[7]))
   var x397 uint32
   var x398 uint32
-  x397, x398 = bits.Mul32(x5, (arg1[6]))
+  x398, x397 = bits.Mul32(x5, (arg1[6]))
   var x399 uint32
   var x400 uint32
-  x399, x400 = bits.Mul32(x5, (arg1[5]))
+  x400, x399 = bits.Mul32(x5, (arg1[5]))
   var x401 uint32
   var x402 uint32
-  x401, x402 = bits.Mul32(x5, (arg1[4]))
+  x402, x401 = bits.Mul32(x5, (arg1[4]))
   var x403 uint32
   var x404 uint32
-  x403, x404 = bits.Mul32(x5, (arg1[3]))
+  x404, x403 = bits.Mul32(x5, (arg1[3]))
   var x405 uint32
   var x406 uint32
-  x405, x406 = bits.Mul32(x5, (arg1[2]))
+  x406, x405 = bits.Mul32(x5, (arg1[2]))
   var x407 uint32
   var x408 uint32
-  x407, x408 = bits.Mul32(x5, (arg1[1]))
+  x408, x407 = bits.Mul32(x5, (arg1[1]))
   var x409 uint32
   var x410 uint32
-  x409, x410 = bits.Mul32(x5, (arg1[0]))
+  x410, x409 = bits.Mul32(x5, (arg1[0]))
   var x411 uint32
   var x412 uint32
   x411, x412 = bits.Add32(x410, x407, 0x0)
@@ -1705,16 +1705,16 @@ func fiat_p256_square(out1 *[8]uint32, arg1 *[8]uint32) {
   x442, x443 = bits.Add32(x394, x425, x441)
   var x444 uint32
   var x445 uint32
-  x444, x445 = bits.Mul32(x426, 0xffffffff)
+  x445, x444 = bits.Mul32(x426, 0xffffffff)
   var x446 uint32
   var x447 uint32
-  x446, x447 = bits.Mul32(x426, 0xffffffff)
+  x447, x446 = bits.Mul32(x426, 0xffffffff)
   var x448 uint32
   var x449 uint32
-  x448, x449 = bits.Mul32(x426, 0xffffffff)
+  x449, x448 = bits.Mul32(x426, 0xffffffff)
   var x450 uint32
   var x451 uint32
-  x450, x451 = bits.Mul32(x426, 0xffffffff)
+  x451, x450 = bits.Mul32(x426, 0xffffffff)
   var x452 uint32
   var x453 uint32
   x452, x453 = bits.Add32(x451, x448, 0x0)
@@ -1751,28 +1751,28 @@ func fiat_p256_square(out1 *[8]uint32, arg1 *[8]uint32) {
   var x475 uint32 = (x474 + x443)
   var x476 uint32
   var x477 uint32
-  x476, x477 = bits.Mul32(x6, (arg1[7]))
+  x477, x476 = bits.Mul32(x6, (arg1[7]))
   var x478 uint32
   var x479 uint32
-  x478, x479 = bits.Mul32(x6, (arg1[6]))
+  x479, x478 = bits.Mul32(x6, (arg1[6]))
   var x480 uint32
   var x481 uint32
-  x480, x481 = bits.Mul32(x6, (arg1[5]))
+  x481, x480 = bits.Mul32(x6, (arg1[5]))
   var x482 uint32
   var x483 uint32
-  x482, x483 = bits.Mul32(x6, (arg1[4]))
+  x483, x482 = bits.Mul32(x6, (arg1[4]))
   var x484 uint32
   var x485 uint32
-  x484, x485 = bits.Mul32(x6, (arg1[3]))
+  x485, x484 = bits.Mul32(x6, (arg1[3]))
   var x486 uint32
   var x487 uint32
-  x486, x487 = bits.Mul32(x6, (arg1[2]))
+  x487, x486 = bits.Mul32(x6, (arg1[2]))
   var x488 uint32
   var x489 uint32
-  x488, x489 = bits.Mul32(x6, (arg1[1]))
+  x489, x488 = bits.Mul32(x6, (arg1[1]))
   var x490 uint32
   var x491 uint32
-  x490, x491 = bits.Mul32(x6, (arg1[0]))
+  x491, x490 = bits.Mul32(x6, (arg1[0]))
   var x492 uint32
   var x493 uint32
   x492, x493 = bits.Add32(x491, x488, 0x0)
@@ -1824,16 +1824,16 @@ func fiat_p256_square(out1 *[8]uint32, arg1 *[8]uint32) {
   x523, x524 = bits.Add32(x475, x506, x522)
   var x525 uint32
   var x526 uint32
-  x525, x526 = bits.Mul32(x507, 0xffffffff)
+  x526, x525 = bits.Mul32(x507, 0xffffffff)
   var x527 uint32
   var x528 uint32
-  x527, x528 = bits.Mul32(x507, 0xffffffff)
+  x528, x527 = bits.Mul32(x507, 0xffffffff)
   var x529 uint32
   var x530 uint32
-  x529, x530 = bits.Mul32(x507, 0xffffffff)
+  x530, x529 = bits.Mul32(x507, 0xffffffff)
   var x531 uint32
   var x532 uint32
-  x531, x532 = bits.Mul32(x507, 0xffffffff)
+  x532, x531 = bits.Mul32(x507, 0xffffffff)
   var x533 uint32
   var x534 uint32
   x533, x534 = bits.Add32(x532, x529, 0x0)
@@ -1870,28 +1870,28 @@ func fiat_p256_square(out1 *[8]uint32, arg1 *[8]uint32) {
   var x556 uint32 = (x555 + x524)
   var x557 uint32
   var x558 uint32
-  x557, x558 = bits.Mul32(x7, (arg1[7]))
+  x558, x557 = bits.Mul32(x7, (arg1[7]))
   var x559 uint32
   var x560 uint32
-  x559, x560 = bits.Mul32(x7, (arg1[6]))
+  x560, x559 = bits.Mul32(x7, (arg1[6]))
   var x561 uint32
   var x562 uint32
-  x561, x562 = bits.Mul32(x7, (arg1[5]))
+  x562, x561 = bits.Mul32(x7, (arg1[5]))
   var x563 uint32
   var x564 uint32
-  x563, x564 = bits.Mul32(x7, (arg1[4]))
+  x564, x563 = bits.Mul32(x7, (arg1[4]))
   var x565 uint32
   var x566 uint32
-  x565, x566 = bits.Mul32(x7, (arg1[3]))
+  x566, x565 = bits.Mul32(x7, (arg1[3]))
   var x567 uint32
   var x568 uint32
-  x567, x568 = bits.Mul32(x7, (arg1[2]))
+  x568, x567 = bits.Mul32(x7, (arg1[2]))
   var x569 uint32
   var x570 uint32
-  x569, x570 = bits.Mul32(x7, (arg1[1]))
+  x570, x569 = bits.Mul32(x7, (arg1[1]))
   var x571 uint32
   var x572 uint32
-  x571, x572 = bits.Mul32(x7, (arg1[0]))
+  x572, x571 = bits.Mul32(x7, (arg1[0]))
   var x573 uint32
   var x574 uint32
   x573, x574 = bits.Add32(x572, x569, 0x0)
@@ -1943,16 +1943,16 @@ func fiat_p256_square(out1 *[8]uint32, arg1 *[8]uint32) {
   x604, x605 = bits.Add32(x556, x587, x603)
   var x606 uint32
   var x607 uint32
-  x606, x607 = bits.Mul32(x588, 0xffffffff)
+  x607, x606 = bits.Mul32(x588, 0xffffffff)
   var x608 uint32
   var x609 uint32
-  x608, x609 = bits.Mul32(x588, 0xffffffff)
+  x609, x608 = bits.Mul32(x588, 0xffffffff)
   var x610 uint32
   var x611 uint32
-  x610, x611 = bits.Mul32(x588, 0xffffffff)
+  x611, x610 = bits.Mul32(x588, 0xffffffff)
   var x612 uint32
   var x613 uint32
-  x612, x613 = bits.Mul32(x588, 0xffffffff)
+  x613, x612 = bits.Mul32(x588, 0xffffffff)
   var x614 uint32
   var x615 uint32
   x614, x615 = bits.Add32(x613, x610, 0x0)
@@ -2300,16 +2300,16 @@ func fiat_p256_from_montgomery(out1 *[8]uint32, arg1 *[8]uint32) {
   var x1 uint32 = (arg1[0])
   var x2 uint32
   var x3 uint32
-  x2, x3 = bits.Mul32(x1, 0xffffffff)
+  x3, x2 = bits.Mul32(x1, 0xffffffff)
   var x4 uint32
   var x5 uint32
-  x4, x5 = bits.Mul32(x1, 0xffffffff)
+  x5, x4 = bits.Mul32(x1, 0xffffffff)
   var x6 uint32
   var x7 uint32
-  x6, x7 = bits.Mul32(x1, 0xffffffff)
+  x7, x6 = bits.Mul32(x1, 0xffffffff)
   var x8 uint32
   var x9 uint32
-  x8, x9 = bits.Mul32(x1, 0xffffffff)
+  x9, x8 = bits.Mul32(x1, 0xffffffff)
   var x10 uint32
   var x11 uint32
   x10, x11 = bits.Add32(x9, x6, 0x0)
@@ -2338,16 +2338,16 @@ func fiat_p256_from_montgomery(out1 *[8]uint32, arg1 *[8]uint32) {
   x26, x27 = bits.Add32(x20, uint32(0x0), x25)
   var x28 uint32
   var x29 uint32
-  x28, x29 = bits.Mul32(x22, 0xffffffff)
+  x29, x28 = bits.Mul32(x22, 0xffffffff)
   var x30 uint32
   var x31 uint32
-  x30, x31 = bits.Mul32(x22, 0xffffffff)
+  x31, x30 = bits.Mul32(x22, 0xffffffff)
   var x32 uint32
   var x33 uint32
-  x32, x33 = bits.Mul32(x22, 0xffffffff)
+  x33, x32 = bits.Mul32(x22, 0xffffffff)
   var x34 uint32
   var x35 uint32
-  x34, x35 = bits.Mul32(x22, 0xffffffff)
+  x35, x34 = bits.Mul32(x22, 0xffffffff)
   var x36 uint32
   var x37 uint32
   x36, x37 = bits.Add32(x35, x32, 0x0)
@@ -2382,16 +2382,16 @@ func fiat_p256_from_montgomery(out1 *[8]uint32, arg1 *[8]uint32) {
   x56, x57 = bits.Add32(x46, uint32(0x0), x55)
   var x58 uint32
   var x59 uint32
-  x58, x59 = bits.Mul32(x52, 0xffffffff)
+  x59, x58 = bits.Mul32(x52, 0xffffffff)
   var x60 uint32
   var x61 uint32
-  x60, x61 = bits.Mul32(x52, 0xffffffff)
+  x61, x60 = bits.Mul32(x52, 0xffffffff)
   var x62 uint32
   var x63 uint32
-  x62, x63 = bits.Mul32(x52, 0xffffffff)
+  x63, x62 = bits.Mul32(x52, 0xffffffff)
   var x64 uint32
   var x65 uint32
-  x64, x65 = bits.Mul32(x52, 0xffffffff)
+  x65, x64 = bits.Mul32(x52, 0xffffffff)
   var x66 uint32
   var x67 uint32
   x66, x67 = bits.Add32(x65, x62, 0x0)
@@ -2447,16 +2447,16 @@ func fiat_p256_from_montgomery(out1 *[8]uint32, arg1 *[8]uint32) {
   x100, x101 = bits.Add32((x85 + x59), uint32(0x0), x99)
   var x102 uint32
   var x103 uint32
-  x102, x103 = bits.Mul32(x86, 0xffffffff)
+  x103, x102 = bits.Mul32(x86, 0xffffffff)
   var x104 uint32
   var x105 uint32
-  x104, x105 = bits.Mul32(x86, 0xffffffff)
+  x105, x104 = bits.Mul32(x86, 0xffffffff)
   var x106 uint32
   var x107 uint32
-  x106, x107 = bits.Mul32(x86, 0xffffffff)
+  x107, x106 = bits.Mul32(x86, 0xffffffff)
   var x108 uint32
   var x109 uint32
-  x108, x109 = bits.Mul32(x86, 0xffffffff)
+  x109, x108 = bits.Mul32(x86, 0xffffffff)
   var x110 uint32
   var x111 uint32
   x110, x111 = bits.Add32(x109, x106, 0x0)
@@ -2515,16 +2515,16 @@ func fiat_p256_from_montgomery(out1 *[8]uint32, arg1 *[8]uint32) {
   x146, x147 = bits.Add32(x130, uint32(0x0), x145)
   var x148 uint32
   var x149 uint32
-  x148, x149 = bits.Mul32(x132, 0xffffffff)
+  x149, x148 = bits.Mul32(x132, 0xffffffff)
   var x150 uint32
   var x151 uint32
-  x150, x151 = bits.Mul32(x132, 0xffffffff)
+  x151, x150 = bits.Mul32(x132, 0xffffffff)
   var x152 uint32
   var x153 uint32
-  x152, x153 = bits.Mul32(x132, 0xffffffff)
+  x153, x152 = bits.Mul32(x132, 0xffffffff)
   var x154 uint32
   var x155 uint32
-  x154, x155 = bits.Mul32(x132, 0xffffffff)
+  x155, x154 = bits.Mul32(x132, 0xffffffff)
   var x156 uint32
   var x157 uint32
   x156, x157 = bits.Add32(x155, x152, 0x0)
@@ -2583,16 +2583,16 @@ func fiat_p256_from_montgomery(out1 *[8]uint32, arg1 *[8]uint32) {
   x192, x193 = bits.Add32(x176, uint32(0x0), x191)
   var x194 uint32
   var x195 uint32
-  x194, x195 = bits.Mul32(x178, 0xffffffff)
+  x195, x194 = bits.Mul32(x178, 0xffffffff)
   var x196 uint32
   var x197 uint32
-  x196, x197 = bits.Mul32(x178, 0xffffffff)
+  x197, x196 = bits.Mul32(x178, 0xffffffff)
   var x198 uint32
   var x199 uint32
-  x198, x199 = bits.Mul32(x178, 0xffffffff)
+  x199, x198 = bits.Mul32(x178, 0xffffffff)
   var x200 uint32
   var x201 uint32
-  x200, x201 = bits.Mul32(x178, 0xffffffff)
+  x201, x200 = bits.Mul32(x178, 0xffffffff)
   var x202 uint32
   var x203 uint32
   x202, x203 = bits.Add32(x201, x198, 0x0)
@@ -2651,16 +2651,16 @@ func fiat_p256_from_montgomery(out1 *[8]uint32, arg1 *[8]uint32) {
   x238, x239 = bits.Add32(x222, uint32(0x0), x237)
   var x240 uint32
   var x241 uint32
-  x240, x241 = bits.Mul32(x224, 0xffffffff)
+  x241, x240 = bits.Mul32(x224, 0xffffffff)
   var x242 uint32
   var x243 uint32
-  x242, x243 = bits.Mul32(x224, 0xffffffff)
+  x243, x242 = bits.Mul32(x224, 0xffffffff)
   var x244 uint32
   var x245 uint32
-  x244, x245 = bits.Mul32(x224, 0xffffffff)
+  x245, x244 = bits.Mul32(x224, 0xffffffff)
   var x246 uint32
   var x247 uint32
-  x246, x247 = bits.Mul32(x224, 0xffffffff)
+  x247, x246 = bits.Mul32(x224, 0xffffffff)
   var x248 uint32
   var x249 uint32
   x248, x249 = bits.Add32(x247, x244, 0x0)
@@ -2719,16 +2719,16 @@ func fiat_p256_from_montgomery(out1 *[8]uint32, arg1 *[8]uint32) {
   x284, x285 = bits.Add32(x268, uint32(0x0), x283)
   var x286 uint32
   var x287 uint32
-  x286, x287 = bits.Mul32(x270, 0xffffffff)
+  x287, x286 = bits.Mul32(x270, 0xffffffff)
   var x288 uint32
   var x289 uint32
-  x288, x289 = bits.Mul32(x270, 0xffffffff)
+  x289, x288 = bits.Mul32(x270, 0xffffffff)
   var x290 uint32
   var x291 uint32
-  x290, x291 = bits.Mul32(x270, 0xffffffff)
+  x291, x290 = bits.Mul32(x270, 0xffffffff)
   var x292 uint32
   var x293 uint32
-  x292, x293 = bits.Mul32(x270, 0xffffffff)
+  x293, x292 = bits.Mul32(x270, 0xffffffff)
   var x294 uint32
   var x295 uint32
   x294, x295 = bits.Add32(x293, x290, 0x0)
@@ -2838,25 +2838,25 @@ func fiat_p256_to_montgomery(out1 *[8]uint32, arg1 *[8]uint32) {
   var x8 uint32 = (arg1[0])
   var x9 uint32
   var x10 uint32
-  x9, x10 = bits.Mul32(x8, 0x4)
+  x10, x9 = bits.Mul32(x8, 0x4)
   var x11 uint32
   var x12 uint32
-  x11, x12 = bits.Mul32(x8, 0xfffffffd)
+  x12, x11 = bits.Mul32(x8, 0xfffffffd)
   var x13 uint32
   var x14 uint32
-  x13, x14 = bits.Mul32(x8, 0xffffffff)
+  x14, x13 = bits.Mul32(x8, 0xffffffff)
   var x15 uint32
   var x16 uint32
-  x15, x16 = bits.Mul32(x8, 0xfffffffe)
+  x16, x15 = bits.Mul32(x8, 0xfffffffe)
   var x17 uint32
   var x18 uint32
-  x17, x18 = bits.Mul32(x8, 0xfffffffb)
+  x18, x17 = bits.Mul32(x8, 0xfffffffb)
   var x19 uint32
   var x20 uint32
-  x19, x20 = bits.Mul32(x8, 0xffffffff)
+  x20, x19 = bits.Mul32(x8, 0xffffffff)
   var x21 uint32
   var x22 uint32
-  x21, x22 = bits.Mul32(x8, 0x3)
+  x22, x21 = bits.Mul32(x8, 0x3)
   var x23 uint32
   var x24 uint32
   x23, x24 = bits.Add32(x20, x17, 0x0)
@@ -2874,16 +2874,16 @@ func fiat_p256_to_montgomery(out1 *[8]uint32, arg1 *[8]uint32) {
   x31, x32 = bits.Add32(x12, x9, x30)
   var x33 uint32
   var x34 uint32
-  x33, x34 = bits.Mul32(x21, 0xffffffff)
+  x34, x33 = bits.Mul32(x21, 0xffffffff)
   var x35 uint32
   var x36 uint32
-  x35, x36 = bits.Mul32(x21, 0xffffffff)
+  x36, x35 = bits.Mul32(x21, 0xffffffff)
   var x37 uint32
   var x38 uint32
-  x37, x38 = bits.Mul32(x21, 0xffffffff)
+  x38, x37 = bits.Mul32(x21, 0xffffffff)
   var x39 uint32
   var x40 uint32
-  x39, x40 = bits.Mul32(x21, 0xffffffff)
+  x40, x39 = bits.Mul32(x21, 0xffffffff)
   var x41 uint32
   var x42 uint32
   x41, x42 = bits.Add32(x40, x37, 0x0)
@@ -2918,25 +2918,25 @@ func fiat_p256_to_montgomery(out1 *[8]uint32, arg1 *[8]uint32) {
   x61, x62 = bits.Add32((x32 + x10), x34, x60)
   var x63 uint32
   var x64 uint32
-  x63, x64 = bits.Mul32(x1, 0x4)
+  x64, x63 = bits.Mul32(x1, 0x4)
   var x65 uint32
   var x66 uint32
-  x65, x66 = bits.Mul32(x1, 0xfffffffd)
+  x66, x65 = bits.Mul32(x1, 0xfffffffd)
   var x67 uint32
   var x68 uint32
-  x67, x68 = bits.Mul32(x1, 0xffffffff)
+  x68, x67 = bits.Mul32(x1, 0xffffffff)
   var x69 uint32
   var x70 uint32
-  x69, x70 = bits.Mul32(x1, 0xfffffffe)
+  x70, x69 = bits.Mul32(x1, 0xfffffffe)
   var x71 uint32
   var x72 uint32
-  x71, x72 = bits.Mul32(x1, 0xfffffffb)
+  x72, x71 = bits.Mul32(x1, 0xfffffffb)
   var x73 uint32
   var x74 uint32
-  x73, x74 = bits.Mul32(x1, 0xffffffff)
+  x74, x73 = bits.Mul32(x1, 0xffffffff)
   var x75 uint32
   var x76 uint32
-  x75, x76 = bits.Mul32(x1, 0x3)
+  x76, x75 = bits.Mul32(x1, 0x3)
   var x77 uint32
   var x78 uint32
   x77, x78 = bits.Add32(x74, x71, 0x0)
@@ -2978,16 +2978,16 @@ func fiat_p256_to_montgomery(out1 *[8]uint32, arg1 *[8]uint32) {
   x101, x102 = bits.Add32(x61, x85, x100)
   var x103 uint32
   var x104 uint32
-  x103, x104 = bits.Mul32(x87, 0xffffffff)
+  x104, x103 = bits.Mul32(x87, 0xffffffff)
   var x105 uint32
   var x106 uint32
-  x105, x106 = bits.Mul32(x87, 0xffffffff)
+  x106, x105 = bits.Mul32(x87, 0xffffffff)
   var x107 uint32
   var x108 uint32
-  x107, x108 = bits.Mul32(x87, 0xffffffff)
+  x108, x107 = bits.Mul32(x87, 0xffffffff)
   var x109 uint32
   var x110 uint32
-  x109, x110 = bits.Mul32(x87, 0xffffffff)
+  x110, x109 = bits.Mul32(x87, 0xffffffff)
   var x111 uint32
   var x112 uint32
   x111, x112 = bits.Add32(x110, x107, 0x0)
@@ -3022,25 +3022,25 @@ func fiat_p256_to_montgomery(out1 *[8]uint32, arg1 *[8]uint32) {
   x131, x132 = bits.Add32(((x102 + x62) + (x86 + x64)), x104, x130)
   var x133 uint32
   var x134 uint32
-  x133, x134 = bits.Mul32(x2, 0x4)
+  x134, x133 = bits.Mul32(x2, 0x4)
   var x135 uint32
   var x136 uint32
-  x135, x136 = bits.Mul32(x2, 0xfffffffd)
+  x136, x135 = bits.Mul32(x2, 0xfffffffd)
   var x137 uint32
   var x138 uint32
-  x137, x138 = bits.Mul32(x2, 0xffffffff)
+  x138, x137 = bits.Mul32(x2, 0xffffffff)
   var x139 uint32
   var x140 uint32
-  x139, x140 = bits.Mul32(x2, 0xfffffffe)
+  x140, x139 = bits.Mul32(x2, 0xfffffffe)
   var x141 uint32
   var x142 uint32
-  x141, x142 = bits.Mul32(x2, 0xfffffffb)
+  x142, x141 = bits.Mul32(x2, 0xfffffffb)
   var x143 uint32
   var x144 uint32
-  x143, x144 = bits.Mul32(x2, 0xffffffff)
+  x144, x143 = bits.Mul32(x2, 0xffffffff)
   var x145 uint32
   var x146 uint32
-  x145, x146 = bits.Mul32(x2, 0x3)
+  x146, x145 = bits.Mul32(x2, 0x3)
   var x147 uint32
   var x148 uint32
   x147, x148 = bits.Add32(x144, x141, 0x0)
@@ -3082,16 +3082,16 @@ func fiat_p256_to_montgomery(out1 *[8]uint32, arg1 *[8]uint32) {
   x171, x172 = bits.Add32(x131, x155, x170)
   var x173 uint32
   var x174 uint32
-  x173, x174 = bits.Mul32(x157, 0xffffffff)
+  x174, x173 = bits.Mul32(x157, 0xffffffff)
   var x175 uint32
   var x176 uint32
-  x175, x176 = bits.Mul32(x157, 0xffffffff)
+  x176, x175 = bits.Mul32(x157, 0xffffffff)
   var x177 uint32
   var x178 uint32
-  x177, x178 = bits.Mul32(x157, 0xffffffff)
+  x178, x177 = bits.Mul32(x157, 0xffffffff)
   var x179 uint32
   var x180 uint32
-  x179, x180 = bits.Mul32(x157, 0xffffffff)
+  x180, x179 = bits.Mul32(x157, 0xffffffff)
   var x181 uint32
   var x182 uint32
   x181, x182 = bits.Add32(x180, x177, 0x0)
@@ -3126,25 +3126,25 @@ func fiat_p256_to_montgomery(out1 *[8]uint32, arg1 *[8]uint32) {
   x201, x202 = bits.Add32(((x172 + x132) + (x156 + x134)), x174, x200)
   var x203 uint32
   var x204 uint32
-  x203, x204 = bits.Mul32(x3, 0x4)
+  x204, x203 = bits.Mul32(x3, 0x4)
   var x205 uint32
   var x206 uint32
-  x205, x206 = bits.Mul32(x3, 0xfffffffd)
+  x206, x205 = bits.Mul32(x3, 0xfffffffd)
   var x207 uint32
   var x208 uint32
-  x207, x208 = bits.Mul32(x3, 0xffffffff)
+  x208, x207 = bits.Mul32(x3, 0xffffffff)
   var x209 uint32
   var x210 uint32
-  x209, x210 = bits.Mul32(x3, 0xfffffffe)
+  x210, x209 = bits.Mul32(x3, 0xfffffffe)
   var x211 uint32
   var x212 uint32
-  x211, x212 = bits.Mul32(x3, 0xfffffffb)
+  x212, x211 = bits.Mul32(x3, 0xfffffffb)
   var x213 uint32
   var x214 uint32
-  x213, x214 = bits.Mul32(x3, 0xffffffff)
+  x214, x213 = bits.Mul32(x3, 0xffffffff)
   var x215 uint32
   var x216 uint32
-  x215, x216 = bits.Mul32(x3, 0x3)
+  x216, x215 = bits.Mul32(x3, 0x3)
   var x217 uint32
   var x218 uint32
   x217, x218 = bits.Add32(x214, x211, 0x0)
@@ -3186,16 +3186,16 @@ func fiat_p256_to_montgomery(out1 *[8]uint32, arg1 *[8]uint32) {
   x241, x242 = bits.Add32(x201, x225, x240)
   var x243 uint32
   var x244 uint32
-  x243, x244 = bits.Mul32(x227, 0xffffffff)
+  x244, x243 = bits.Mul32(x227, 0xffffffff)
   var x245 uint32
   var x246 uint32
-  x245, x246 = bits.Mul32(x227, 0xffffffff)
+  x246, x245 = bits.Mul32(x227, 0xffffffff)
   var x247 uint32
   var x248 uint32
-  x247, x248 = bits.Mul32(x227, 0xffffffff)
+  x248, x247 = bits.Mul32(x227, 0xffffffff)
   var x249 uint32
   var x250 uint32
-  x249, x250 = bits.Mul32(x227, 0xffffffff)
+  x250, x249 = bits.Mul32(x227, 0xffffffff)
   var x251 uint32
   var x252 uint32
   x251, x252 = bits.Add32(x250, x247, 0x0)
@@ -3230,25 +3230,25 @@ func fiat_p256_to_montgomery(out1 *[8]uint32, arg1 *[8]uint32) {
   x271, x272 = bits.Add32(((x242 + x202) + (x226 + x204)), x244, x270)
   var x273 uint32
   var x274 uint32
-  x273, x274 = bits.Mul32(x4, 0x4)
+  x274, x273 = bits.Mul32(x4, 0x4)
   var x275 uint32
   var x276 uint32
-  x275, x276 = bits.Mul32(x4, 0xfffffffd)
+  x276, x275 = bits.Mul32(x4, 0xfffffffd)
   var x277 uint32
   var x278 uint32
-  x277, x278 = bits.Mul32(x4, 0xffffffff)
+  x278, x277 = bits.Mul32(x4, 0xffffffff)
   var x279 uint32
   var x280 uint32
-  x279, x280 = bits.Mul32(x4, 0xfffffffe)
+  x280, x279 = bits.Mul32(x4, 0xfffffffe)
   var x281 uint32
   var x282 uint32
-  x281, x282 = bits.Mul32(x4, 0xfffffffb)
+  x282, x281 = bits.Mul32(x4, 0xfffffffb)
   var x283 uint32
   var x284 uint32
-  x283, x284 = bits.Mul32(x4, 0xffffffff)
+  x284, x283 = bits.Mul32(x4, 0xffffffff)
   var x285 uint32
   var x286 uint32
-  x285, x286 = bits.Mul32(x4, 0x3)
+  x286, x285 = bits.Mul32(x4, 0x3)
   var x287 uint32
   var x288 uint32
   x287, x288 = bits.Add32(x284, x281, 0x0)
@@ -3290,16 +3290,16 @@ func fiat_p256_to_montgomery(out1 *[8]uint32, arg1 *[8]uint32) {
   x311, x312 = bits.Add32(x271, x295, x310)
   var x313 uint32
   var x314 uint32
-  x313, x314 = bits.Mul32(x297, 0xffffffff)
+  x314, x313 = bits.Mul32(x297, 0xffffffff)
   var x315 uint32
   var x316 uint32
-  x315, x316 = bits.Mul32(x297, 0xffffffff)
+  x316, x315 = bits.Mul32(x297, 0xffffffff)
   var x317 uint32
   var x318 uint32
-  x317, x318 = bits.Mul32(x297, 0xffffffff)
+  x318, x317 = bits.Mul32(x297, 0xffffffff)
   var x319 uint32
   var x320 uint32
-  x319, x320 = bits.Mul32(x297, 0xffffffff)
+  x320, x319 = bits.Mul32(x297, 0xffffffff)
   var x321 uint32
   var x322 uint32
   x321, x322 = bits.Add32(x320, x317, 0x0)
@@ -3334,25 +3334,25 @@ func fiat_p256_to_montgomery(out1 *[8]uint32, arg1 *[8]uint32) {
   x341, x342 = bits.Add32(((x312 + x272) + (x296 + x274)), x314, x340)
   var x343 uint32
   var x344 uint32
-  x343, x344 = bits.Mul32(x5, 0x4)
+  x344, x343 = bits.Mul32(x5, 0x4)
   var x345 uint32
   var x346 uint32
-  x345, x346 = bits.Mul32(x5, 0xfffffffd)
+  x346, x345 = bits.Mul32(x5, 0xfffffffd)
   var x347 uint32
   var x348 uint32
-  x347, x348 = bits.Mul32(x5, 0xffffffff)
+  x348, x347 = bits.Mul32(x5, 0xffffffff)
   var x349 uint32
   var x350 uint32
-  x349, x350 = bits.Mul32(x5, 0xfffffffe)
+  x350, x349 = bits.Mul32(x5, 0xfffffffe)
   var x351 uint32
   var x352 uint32
-  x351, x352 = bits.Mul32(x5, 0xfffffffb)
+  x352, x351 = bits.Mul32(x5, 0xfffffffb)
   var x353 uint32
   var x354 uint32
-  x353, x354 = bits.Mul32(x5, 0xffffffff)
+  x354, x353 = bits.Mul32(x5, 0xffffffff)
   var x355 uint32
   var x356 uint32
-  x355, x356 = bits.Mul32(x5, 0x3)
+  x356, x355 = bits.Mul32(x5, 0x3)
   var x357 uint32
   var x358 uint32
   x357, x358 = bits.Add32(x354, x351, 0x0)
@@ -3394,16 +3394,16 @@ func fiat_p256_to_montgomery(out1 *[8]uint32, arg1 *[8]uint32) {
   x381, x382 = bits.Add32(x341, x365, x380)
   var x383 uint32
   var x384 uint32
-  x383, x384 = bits.Mul32(x367, 0xffffffff)
+  x384, x383 = bits.Mul32(x367, 0xffffffff)
   var x385 uint32
   var x386 uint32
-  x385, x386 = bits.Mul32(x367, 0xffffffff)
+  x386, x385 = bits.Mul32(x367, 0xffffffff)
   var x387 uint32
   var x388 uint32
-  x387, x388 = bits.Mul32(x367, 0xffffffff)
+  x388, x387 = bits.Mul32(x367, 0xffffffff)
   var x389 uint32
   var x390 uint32
-  x389, x390 = bits.Mul32(x367, 0xffffffff)
+  x390, x389 = bits.Mul32(x367, 0xffffffff)
   var x391 uint32
   var x392 uint32
   x391, x392 = bits.Add32(x390, x387, 0x0)
@@ -3438,25 +3438,25 @@ func fiat_p256_to_montgomery(out1 *[8]uint32, arg1 *[8]uint32) {
   x411, x412 = bits.Add32(((x382 + x342) + (x366 + x344)), x384, x410)
   var x413 uint32
   var x414 uint32
-  x413, x414 = bits.Mul32(x6, 0x4)
+  x414, x413 = bits.Mul32(x6, 0x4)
   var x415 uint32
   var x416 uint32
-  x415, x416 = bits.Mul32(x6, 0xfffffffd)
+  x416, x415 = bits.Mul32(x6, 0xfffffffd)
   var x417 uint32
   var x418 uint32
-  x417, x418 = bits.Mul32(x6, 0xffffffff)
+  x418, x417 = bits.Mul32(x6, 0xffffffff)
   var x419 uint32
   var x420 uint32
-  x419, x420 = bits.Mul32(x6, 0xfffffffe)
+  x420, x419 = bits.Mul32(x6, 0xfffffffe)
   var x421 uint32
   var x422 uint32
-  x421, x422 = bits.Mul32(x6, 0xfffffffb)
+  x422, x421 = bits.Mul32(x6, 0xfffffffb)
   var x423 uint32
   var x424 uint32
-  x423, x424 = bits.Mul32(x6, 0xffffffff)
+  x424, x423 = bits.Mul32(x6, 0xffffffff)
   var x425 uint32
   var x426 uint32
-  x425, x426 = bits.Mul32(x6, 0x3)
+  x426, x425 = bits.Mul32(x6, 0x3)
   var x427 uint32
   var x428 uint32
   x427, x428 = bits.Add32(x424, x421, 0x0)
@@ -3498,16 +3498,16 @@ func fiat_p256_to_montgomery(out1 *[8]uint32, arg1 *[8]uint32) {
   x451, x452 = bits.Add32(x411, x435, x450)
   var x453 uint32
   var x454 uint32
-  x453, x454 = bits.Mul32(x437, 0xffffffff)
+  x454, x453 = bits.Mul32(x437, 0xffffffff)
   var x455 uint32
   var x456 uint32
-  x455, x456 = bits.Mul32(x437, 0xffffffff)
+  x456, x455 = bits.Mul32(x437, 0xffffffff)
   var x457 uint32
   var x458 uint32
-  x457, x458 = bits.Mul32(x437, 0xffffffff)
+  x458, x457 = bits.Mul32(x437, 0xffffffff)
   var x459 uint32
   var x460 uint32
-  x459, x460 = bits.Mul32(x437, 0xffffffff)
+  x460, x459 = bits.Mul32(x437, 0xffffffff)
   var x461 uint32
   var x462 uint32
   x461, x462 = bits.Add32(x460, x457, 0x0)
@@ -3542,25 +3542,25 @@ func fiat_p256_to_montgomery(out1 *[8]uint32, arg1 *[8]uint32) {
   x481, x482 = bits.Add32(((x452 + x412) + (x436 + x414)), x454, x480)
   var x483 uint32
   var x484 uint32
-  x483, x484 = bits.Mul32(x7, 0x4)
+  x484, x483 = bits.Mul32(x7, 0x4)
   var x485 uint32
   var x486 uint32
-  x485, x486 = bits.Mul32(x7, 0xfffffffd)
+  x486, x485 = bits.Mul32(x7, 0xfffffffd)
   var x487 uint32
   var x488 uint32
-  x487, x488 = bits.Mul32(x7, 0xffffffff)
+  x488, x487 = bits.Mul32(x7, 0xffffffff)
   var x489 uint32
   var x490 uint32
-  x489, x490 = bits.Mul32(x7, 0xfffffffe)
+  x490, x489 = bits.Mul32(x7, 0xfffffffe)
   var x491 uint32
   var x492 uint32
-  x491, x492 = bits.Mul32(x7, 0xfffffffb)
+  x492, x491 = bits.Mul32(x7, 0xfffffffb)
   var x493 uint32
   var x494 uint32
-  x493, x494 = bits.Mul32(x7, 0xffffffff)
+  x494, x493 = bits.Mul32(x7, 0xffffffff)
   var x495 uint32
   var x496 uint32
-  x495, x496 = bits.Mul32(x7, 0x3)
+  x496, x495 = bits.Mul32(x7, 0x3)
   var x497 uint32
   var x498 uint32
   x497, x498 = bits.Add32(x494, x491, 0x0)
@@ -3602,16 +3602,16 @@ func fiat_p256_to_montgomery(out1 *[8]uint32, arg1 *[8]uint32) {
   x521, x522 = bits.Add32(x481, x505, x520)
   var x523 uint32
   var x524 uint32
-  x523, x524 = bits.Mul32(x507, 0xffffffff)
+  x524, x523 = bits.Mul32(x507, 0xffffffff)
   var x525 uint32
   var x526 uint32
-  x525, x526 = bits.Mul32(x507, 0xffffffff)
+  x526, x525 = bits.Mul32(x507, 0xffffffff)
   var x527 uint32
   var x528 uint32
-  x527, x528 = bits.Mul32(x507, 0xffffffff)
+  x528, x527 = bits.Mul32(x507, 0xffffffff)
   var x529 uint32
   var x530 uint32
-  x529, x530 = bits.Mul32(x507, 0xffffffff)
+  x530, x529 = bits.Mul32(x507, 0xffffffff)
   var x531 uint32
   var x532 uint32
   x531, x532 = bits.Add32(x530, x527, 0x0)
