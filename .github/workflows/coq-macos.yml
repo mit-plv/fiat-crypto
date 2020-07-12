@@ -21,13 +21,8 @@ jobs:
       run: |
         set -e
         brew update
-        (cd $(brew --repository)/Library/Taps/homebrew/homebrew-core/ && git fetch --shallow-since=${HBCORE_DATE} && git checkout ${HBCORE_REF})
         brew install gnu-time opam pkg-config gtksourceview3 adwaita-icon-theme
         pip3 install macpack
-      env:
-        HOMEBREW_NO_AUTO_UPDATE: "1"
-        HBCORE_DATE: "2019-09-03"
-        HBCORE_REF: "44ee64cf4b9f2d2bf000758d356db0c77425e42e"
 
     - name: Install OCaml dependencies
       run: |
