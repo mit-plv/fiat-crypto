@@ -30,10 +30,10 @@ package fiat_25519
  *   out2: [0x0 ~> 0x1]
  */
 /*inline*/
-func fiat_25519_addcarryx_u26(out1 *uint32, out2 *uint8, arg1 uint8, arg2 uint32, arg3 uint32) {
-  var x1 uint32 = ((uint32(arg1) + arg2) + arg3)
+func fiat_25519_addcarryx_u26(out1 *uint32, out2 *uint32, arg1 uint32, arg2 uint32, arg3 uint32) {
+  var x1 uint32 = ((arg1 + arg2) + arg3)
   var x2 uint32 = (x1 & 0x3ffffff)
-  var x3 uint8 = uint8((x1 >> 26))
+  var x3 uint32 = (x1 >> 26)
   *out1 = x2
   *out2 = x3
 }
@@ -53,12 +53,12 @@ func fiat_25519_addcarryx_u26(out1 *uint32, out2 *uint8, arg1 uint8, arg2 uint32
  *   out2: [0x0 ~> 0x1]
  */
 /*inline*/
-func fiat_25519_subborrowx_u26(out1 *uint32, out2 *uint8, arg1 uint8, arg2 uint32, arg3 uint32) {
+func fiat_25519_subborrowx_u26(out1 *uint32, out2 *uint32, arg1 uint32, arg2 uint32, arg3 uint32) {
   var x1 int32 = ((int32(arg2) - int32(arg1)) - int32(arg3))
-  var x2 int8 = int8((x1 >> 26))
+  var x2 int32 = (x1 >> 26)
   var x3 uint32 = (uint32(x1) & 0x3ffffff)
   *out1 = x3
-  *out2 = (uint8(0x0) - uint8(x2))
+  *out2 = (uint32(0x0) - uint32(x2))
 }
 
 /*
@@ -76,10 +76,10 @@ func fiat_25519_subborrowx_u26(out1 *uint32, out2 *uint8, arg1 uint8, arg2 uint3
  *   out2: [0x0 ~> 0x1]
  */
 /*inline*/
-func fiat_25519_addcarryx_u25(out1 *uint32, out2 *uint8, arg1 uint8, arg2 uint32, arg3 uint32) {
-  var x1 uint32 = ((uint32(arg1) + arg2) + arg3)
+func fiat_25519_addcarryx_u25(out1 *uint32, out2 *uint32, arg1 uint32, arg2 uint32, arg3 uint32) {
+  var x1 uint32 = ((arg1 + arg2) + arg3)
   var x2 uint32 = (x1 & 0x1ffffff)
-  var x3 uint8 = uint8((x1 >> 25))
+  var x3 uint32 = (x1 >> 25)
   *out1 = x2
   *out2 = x3
 }
@@ -99,12 +99,12 @@ func fiat_25519_addcarryx_u25(out1 *uint32, out2 *uint8, arg1 uint8, arg2 uint32
  *   out2: [0x0 ~> 0x1]
  */
 /*inline*/
-func fiat_25519_subborrowx_u25(out1 *uint32, out2 *uint8, arg1 uint8, arg2 uint32, arg3 uint32) {
+func fiat_25519_subborrowx_u25(out1 *uint32, out2 *uint32, arg1 uint32, arg2 uint32, arg3 uint32) {
   var x1 int32 = ((int32(arg2) - int32(arg1)) - int32(arg3))
-  var x2 int8 = int8((x1 >> 25))
+  var x2 int32 = (x1 >> 25)
   var x3 uint32 = (uint32(x1) & 0x1ffffff)
   *out1 = x3
-  *out2 = (uint8(0x0) - uint8(x2))
+  *out2 = (uint32(0x0) - uint32(x2))
 }
 
 /*
@@ -120,8 +120,8 @@ func fiat_25519_subborrowx_u25(out1 *uint32, out2 *uint8, arg1 uint8, arg2 uint3
  *   out1: [0x0 ~> 0xffffffff]
  */
 /*inline*/
-func fiat_25519_cmovznz_u32(out1 *uint32, arg1 uint8, arg2 uint32, arg3 uint32) {
-  var x1 uint32 = (uint32(arg1) * 0xffffffff)
+func fiat_25519_cmovznz_u32(out1 *uint32, arg1 uint32, arg2 uint32, arg3 uint32) {
+  var x1 uint32 = (arg1 * 0xffffffff)
   var x2 uint32 = ((x1 & arg3) | ((^x1) & arg2))
   *out1 = x2
 }
@@ -605,7 +605,7 @@ func fiat_25519_opp(out1 *[10]uint32, arg1 *[10]uint32) {
  *   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  */
 /*inline*/
-func fiat_25519_selectznz(out1 *[10]uint32, arg1 uint8, arg2 *[10]uint32, arg3 *[10]uint32) {
+func fiat_25519_selectznz(out1 *[10]uint32, arg1 uint32, arg2 *[10]uint32, arg3 *[10]uint32) {
   var x1 uint32
   fiat_25519_cmovznz_u32(&x1, arg1, (arg2[0]), (arg3[0]))
   var x2 uint32
