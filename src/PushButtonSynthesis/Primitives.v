@@ -766,7 +766,7 @@ Section __.
     := Pipeline.BoundsPipeline
          false (* subst01 *)
          None (* fancy *)
-         possible_values
+         possible_values_with_bytes
          reified_selectznz_gen
          (Some r[0~>1], (saturated_bounds, (saturated_bounds, tt)))%zrange
          saturated_bounds.
@@ -784,7 +784,7 @@ Section __.
     := Pipeline.BoundsPipeline
          false (* subst01 *)
          None (* fancy *)
-         possible_values
+         possible_values_with_bytes
          (reified_mulx_gen
             @ GallinaReify.Reify s)
          (Some r[0~>2^s-1], (Some r[0~>2^s-1], tt))%zrange
@@ -803,7 +803,7 @@ Section __.
     := Pipeline.BoundsPipeline
          false (* subst01 *)
          None (* fancy *)
-         possible_values
+         possible_values_with_bytes
          (reified_addcarryx_gen
             @ GallinaReify.Reify s)
          (Some r[0~>1], (Some r[0~>2^s-1], (Some r[0~>2^s-1], tt)))%zrange
@@ -823,7 +823,7 @@ Section __.
     := Pipeline.BoundsPipeline
          false (* subst01 *)
          None (* fancy *)
-         possible_values
+         possible_values_with_bytes
          (reified_subborrowx_gen
             @ GallinaReify.Reify s)
          (Some r[0~>1], (Some r[0~>2^s-1], (Some r[0~>2^s-1], tt)))%zrange
@@ -843,7 +843,7 @@ Section __.
     := Pipeline.BoundsPipeline
          false (* subst01 *)
          None (* fancy *)
-         possible_values
+         possible_values_with_bytes
          (reified_cmovznz_gen
             @ GallinaReify.Reify s)
          (Some r[0~>1], (Some r[0~>2^s-1], (Some r[0~>2^s-1], tt)))%zrange
@@ -862,7 +862,7 @@ Section __.
     := Pipeline.BoundsPipeline
          false (* subst01 *)
          None (* fancy *)
-         possible_values
+         possible_values_with_bytes
          (reified_cmovznz_by_mul_gen
             @ GallinaReify.Reify s)
          (Some r[0~>1], (Some r[0~>2^s-1], (Some r[0~>2^s-1], tt)))%zrange

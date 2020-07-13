@@ -33,8 +33,8 @@ import "math/bits"
  *   out1: [0x0 ~> 0xffffffffffffffff]
  */
 /*inline*/
-func fiat_secp256k1_cmovznz_u64(out1 *uint64, arg1 uint64, arg2 uint64, arg3 uint64) {
-  var x1 uint64 = (arg1 * 0xffffffffffffffff)
+func fiat_secp256k1_cmovznz_u64(out1 *uint64, arg1 uint8, arg2 uint64, arg3 uint64) {
+  var x1 uint64 = (uint64(arg1) * 0xffffffffffffffff)
   var x2 uint64 = ((x1 & arg3) | ((^x1) & arg2))
   *out1 = x2
 }
@@ -1376,7 +1376,7 @@ func fiat_secp256k1_nonzero(out1 *uint64, arg1 *[4]uint64) {
  *   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  */
 /*inline*/
-func fiat_secp256k1_selectznz(out1 *[4]uint64, arg1 uint64, arg2 *[4]uint64, arg3 *[4]uint64) {
+func fiat_secp256k1_selectznz(out1 *[4]uint64, arg1 uint8, arg2 *[4]uint64, arg3 *[4]uint64) {
   var x1 uint64
   fiat_secp256k1_cmovznz_u64(&x1, arg1, (arg2[0]), (arg3[0]))
   var x2 uint64

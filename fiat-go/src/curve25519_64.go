@@ -31,10 +31,10 @@ import "math/bits"
  *   out2: [0x0 ~> 0x1]
  */
 /*inline*/
-func fiat_25519_addcarryx_u51(out1 *uint64, out2 *uint64, arg1 uint64, arg2 uint64, arg3 uint64) {
-  var x1 uint64 = ((arg1 + arg2) + arg3)
+func fiat_25519_addcarryx_u51(out1 *uint64, out2 *uint8, arg1 uint8, arg2 uint64, arg3 uint64) {
+  var x1 uint64 = ((uint64(arg1) + arg2) + arg3)
   var x2 uint64 = (x1 & 0x7ffffffffffff)
-  var x3 uint64 = (x1 >> 51)
+  var x3 uint8 = uint8((x1 >> 51))
   *out1 = x2
   *out2 = x3
 }
@@ -54,12 +54,12 @@ func fiat_25519_addcarryx_u51(out1 *uint64, out2 *uint64, arg1 uint64, arg2 uint
  *   out2: [0x0 ~> 0x1]
  */
 /*inline*/
-func fiat_25519_subborrowx_u51(out1 *uint64, out2 *uint64, arg1 uint64, arg2 uint64, arg3 uint64) {
+func fiat_25519_subborrowx_u51(out1 *uint64, out2 *uint8, arg1 uint8, arg2 uint64, arg3 uint64) {
   var x1 int64 = ((int64(arg2) - int64(arg1)) - int64(arg3))
-  var x2 int64 = (x1 >> 51)
+  var x2 int8 = int8((x1 >> 51))
   var x3 uint64 = (uint64(x1) & 0x7ffffffffffff)
   *out1 = x3
-  *out2 = (uint64(0x0) - uint64(x2))
+  *out2 = (uint8(0x0) - uint8(x2))
 }
 
 /*
@@ -75,8 +75,8 @@ func fiat_25519_subborrowx_u51(out1 *uint64, out2 *uint64, arg1 uint64, arg2 uin
  *   out1: [0x0 ~> 0xffffffffffffffff]
  */
 /*inline*/
-func fiat_25519_cmovznz_u64(out1 *uint64, arg1 uint64, arg2 uint64, arg3 uint64) {
-  var x1 uint64 = (arg1 * 0xffffffffffffffff)
+func fiat_25519_cmovznz_u64(out1 *uint64, arg1 uint8, arg2 uint64, arg3 uint64) {
+  var x1 uint64 = (uint64(arg1) * 0xffffffffffffffff)
   var x2 uint64 = ((x1 & arg3) | ((^x1) & arg2))
   *out1 = x2
 }
@@ -584,7 +584,7 @@ func fiat_25519_opp(out1 *[5]uint64, arg1 *[5]uint64) {
  *   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  */
 /*inline*/
-func fiat_25519_selectznz(out1 *[5]uint64, arg1 uint64, arg2 *[5]uint64, arg3 *[5]uint64) {
+func fiat_25519_selectznz(out1 *[5]uint64, arg1 uint8, arg2 *[5]uint64, arg3 *[5]uint64) {
   var x1 uint64
   fiat_25519_cmovznz_u64(&x1, arg1, (arg2[0]), (arg3[0]))
   var x2 uint64
