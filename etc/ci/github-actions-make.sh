@@ -7,7 +7,7 @@ if [ ! -z "${TOUCH}" ]; then
 fi
 
 rm -f finished.ok
-(make "$@" TIMED=1 TIMING=1 2>&1 && touch finished.ok) | tee -a time-of-build.log
+(make "$@" --output-sync TIMED=1 TIMING=1 2>&1 && touch finished.ok) | tee -a time-of-build.log
 python "./etc/coq-scripts/timing/make-one-time-file.py" "time-of-build.log" "time-of-build-pretty.log" || exit $?
 
 git update-index --assume-unchanged _CoqProject
