@@ -27,7 +27,7 @@ Module Export WordByWordMontgomery.
   Definition zeromod bitwidth n m m' := encodemod bitwidth n m m' 0.
   Definition onemod bitwidth n m m' := encodemod bitwidth n m m' 1.
   Definition evalmod bitwidth n := @eval bitwidth n.
-  Definition bytes_evalmod bitwidth n := @eval 8 (bytes_n bitwidth 1 n).
+  Definition bytes_evalmod s := @eval 8 (bytes_n s).
 
   (* we would do something faster, but it generally breaks extraction COQBUG(https://github.com/coq/coq/issues/7954) *)
   Local Ltac precache_reify_faster _ :=

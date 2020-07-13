@@ -99,13 +99,13 @@ Section __.
   Local Notation is_correct := (@is_correct p inname_gen outname_gen).
   Local Notation bit_range := {|ZRange.lower := 0; ZRange.upper := 1|}.
   Local Notation n := (WordByWordMontgomery.n m Semantics.width).
-  Local Notation n_bytes := (WordByWordMontgomery.n_bytes m Semantics.width).
+  Local Notation n_bytes := (WordByWordMontgomery.n_bytes m).
   Local Notation bounds :=
     (WordByWordMontgomery.bounds m Semantics.width).
   Local Notation prime_bounds :=
     (WordByWordMontgomery.prime_bounds m Semantics.width).
   Local Notation prime_bytes_bounds :=
-    (WordByWordMontgomery.prime_bytes_bounds m Semantics.width).
+    (WordByWordMontgomery.prime_bytes_bounds m).
   Local Notation saturated_bounds :=
     (Primitives.saturated_bounds n Semantics.width).
   Local Notation eval :=
@@ -120,7 +120,7 @@ Section __.
          (prime_upperbound_list m Semantics.width)).
   Local Notation prime_bytes_bounds_value :=
     (map (fun v : Z => Some {| ZRange.lower := 0; ZRange.upper := v |})
-         (prime_bytes_upperbound_list m Semantics.width)).
+         (prime_bytes_upperbound_list m)).
   Local Notation saturated_bounds_value :=
     (Primitives.saturated_bounds_list n Semantics.width).
 
@@ -583,7 +583,7 @@ Section __.
       WordByWordMontgomery.valid 8 n_bytes m x ->
       list_Z_bounded_by prime_bytes_bounds_value x.
     Proof.
-      intros; apply bounded_by_prime_bytes_bounds_of_bytes_valid; auto.
+      intros; eapply bounded_by_prime_bytes_bounds_of_bytes_valid; eauto.
     Qed.
 
     (* TODO: maybe make a generalized prove_bounds tactic that takes a list of

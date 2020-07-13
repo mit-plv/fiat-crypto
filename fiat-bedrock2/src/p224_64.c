@@ -13,7 +13,7 @@
 /*  */
 /* Computed values: */
 /* eval z = z[0] + (z[1] << 64) + (z[2] << 128) + (z[3] << 192) */
-/* bytes_eval z = z[0] + (z[1] << 8) + (z[2] << 16) + (z[3] << 24) + (z[4] << 32) + (z[5] << 40) + (z[6] << 48) + (z[7] << 56) + (z[8] << 64) + (z[9] << 72) + (z[10] << 80) + (z[11] << 88) + (z[12] << 96) + (z[13] << 104) + (z[14] << 112) + (z[15] << 120) + (z[16] << 128) + (z[17] << 136) + (z[18] << 144) + (z[19] << 152) + (z[20] << 160) + (z[21] << 168) + (z[22] << 176) + (z[23] << 184) + (z[24] << 192) + (z[25] << 200) + (z[26] << 208) + (z[27] << 216) + (z[28] << 224) + (z[29] << 232) + (z[30] << 240) + (z[31] << 248) */
+/* bytes_eval z = z[0] + (z[1] << 8) + (z[2] << 16) + (z[3] << 24) + (z[4] << 32) + (z[5] << 40) + (z[6] << 48) + (z[7] << 56) + (z[8] << 64) + (z[9] << 72) + (z[10] << 80) + (z[11] << 88) + (z[12] << 96) + (z[13] << 104) + (z[14] << 112) + (z[15] << 120) + (z[16] << 128) + (z[17] << 136) + (z[18] << 144) + (z[19] << 152) + (z[20] << 160) + (z[21] << 168) + (z[22] << 176) + (z[23] << 184) + (z[24] << 192) + (z[25] << 200) + (z[26] << 208) + (z[27] << 216) */
 
 #include <stdint.h>
 
@@ -1297,10 +1297,10 @@ void fiat_p224_selectznz(uintptr_t out0, uintptr_t in0, uintptr_t in1, uintptr_t
  * Input Bounds:
  *   in0: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffff]]
  * Output Bounds:
- *   out0: [[0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0x0], [0x0 ~> 0x0], [0x0 ~> 0x0], [0x0 ~> 0x0]]
+ *   out0: [[0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff]]
  */
 void fiat_p224_to_bytes(uintptr_t out0, uintptr_t in0) {
-  uintptr_t x3, x2, x1, x0, x7, x8, x10, x12, x14, x16, x18, x20, x6, x23, x25, x27, x29, x31, x33, x35, x5, x38, x40, x42, x44, x46, x48, x50, x4, x53, x55, x57, x9, x11, x13, x15, x17, x19, x21, x22, x24, x26, x28, x30, x32, x34, x36, x37, x39, x41, x43, x45, x47, x49, x51, x52, x54, x56, x58, x59, x60, x61, x62, x63, x64, x65, x66, x67, x68, x69, x70, x71, x72, x73, x74, x75, x76, x77, x78, x79, x80, x81, x82, x83, x84, x85, x86, x87, x88, x89, x90, x91;
+  uintptr_t x3, x2, x1, x0, x7, x8, x10, x12, x14, x16, x18, x20, x6, x23, x25, x27, x29, x31, x33, x35, x5, x38, x40, x42, x44, x46, x48, x50, x4, x53, x55, x9, x11, x13, x15, x17, x19, x21, x22, x24, x26, x28, x30, x32, x34, x36, x37, x39, x41, x43, x45, x47, x49, x51, x52, x54, x56, x58, x57, x59, x60, x61, x62, x63, x64, x65, x66, x67, x68, x69, x70, x71, x72, x73, x74, x75, x76, x77, x78, x79, x80, x81, x82, x83, x84, x85, x86;
   x0 = *(uintptr_t*)((in0)+((uintptr_t)0ULL));
   x1 = *(uintptr_t*)((in0)+((uintptr_t)8ULL));
   x2 = *(uintptr_t*)((in0)+((uintptr_t)16ULL));
@@ -1362,72 +1362,63 @@ void fiat_p224_to_bytes(uintptr_t out0, uintptr_t in0) {
   x56 = (x53)&((uintptr_t)255ULL);
   x57 = (x55)>>((uintptr_t)8ULL);
   x58 = (x55)&((uintptr_t)255ULL);
-  x59 = (x57)&((uintptr_t)255ULL);
-  x60 = x9;
-  x61 = x11;
-  x62 = x13;
-  x63 = x15;
-  x64 = x17;
-  x65 = x19;
-  x66 = x21;
-  x67 = x22;
-  x68 = x24;
-  x69 = x26;
-  x70 = x28;
-  x71 = x30;
-  x72 = x32;
-  x73 = x34;
-  x74 = x36;
-  x75 = x37;
-  x76 = x39;
-  x77 = x41;
-  x78 = x43;
-  x79 = x45;
-  x80 = x47;
-  x81 = x49;
-  x82 = x51;
-  x83 = x52;
-  x84 = x54;
-  x85 = x56;
-  x86 = x58;
-  x87 = x59;
-  x88 = (uintptr_t)0ULL;
-  x89 = (uintptr_t)0ULL;
-  x90 = (uintptr_t)0ULL;
-  x91 = (uintptr_t)0ULL;
+  x59 = x9;
+  x60 = x11;
+  x61 = x13;
+  x62 = x15;
+  x63 = x17;
+  x64 = x19;
+  x65 = x21;
+  x66 = x22;
+  x67 = x24;
+  x68 = x26;
+  x69 = x28;
+  x70 = x30;
+  x71 = x32;
+  x72 = x34;
+  x73 = x36;
+  x74 = x37;
+  x75 = x39;
+  x76 = x41;
+  x77 = x43;
+  x78 = x45;
+  x79 = x47;
+  x80 = x49;
+  x81 = x51;
+  x82 = x52;
+  x83 = x54;
+  x84 = x56;
+  x85 = x58;
+  x86 = x57;
   /*skip*/
-  *(uint8_t*)((out0)+((uintptr_t)0ULL)) = x60;
-  *(uint8_t*)((out0)+((uintptr_t)1ULL)) = x61;
-  *(uint8_t*)((out0)+((uintptr_t)2ULL)) = x62;
-  *(uint8_t*)((out0)+((uintptr_t)3ULL)) = x63;
-  *(uint8_t*)((out0)+((uintptr_t)4ULL)) = x64;
-  *(uint8_t*)((out0)+((uintptr_t)5ULL)) = x65;
-  *(uint8_t*)((out0)+((uintptr_t)6ULL)) = x66;
-  *(uint8_t*)((out0)+((uintptr_t)7ULL)) = x67;
-  *(uint8_t*)((out0)+((uintptr_t)8ULL)) = x68;
-  *(uint8_t*)((out0)+((uintptr_t)9ULL)) = x69;
-  *(uint8_t*)((out0)+((uintptr_t)10ULL)) = x70;
-  *(uint8_t*)((out0)+((uintptr_t)11ULL)) = x71;
-  *(uint8_t*)((out0)+((uintptr_t)12ULL)) = x72;
-  *(uint8_t*)((out0)+((uintptr_t)13ULL)) = x73;
-  *(uint8_t*)((out0)+((uintptr_t)14ULL)) = x74;
-  *(uint8_t*)((out0)+((uintptr_t)15ULL)) = x75;
-  *(uint8_t*)((out0)+((uintptr_t)16ULL)) = x76;
-  *(uint8_t*)((out0)+((uintptr_t)17ULL)) = x77;
-  *(uint8_t*)((out0)+((uintptr_t)18ULL)) = x78;
-  *(uint8_t*)((out0)+((uintptr_t)19ULL)) = x79;
-  *(uint8_t*)((out0)+((uintptr_t)20ULL)) = x80;
-  *(uint8_t*)((out0)+((uintptr_t)21ULL)) = x81;
-  *(uint8_t*)((out0)+((uintptr_t)22ULL)) = x82;
-  *(uint8_t*)((out0)+((uintptr_t)23ULL)) = x83;
-  *(uint8_t*)((out0)+((uintptr_t)24ULL)) = x84;
-  *(uint8_t*)((out0)+((uintptr_t)25ULL)) = x85;
-  *(uint8_t*)((out0)+((uintptr_t)26ULL)) = x86;
-  *(uint8_t*)((out0)+((uintptr_t)27ULL)) = x87;
-  *(uint8_t*)((out0)+((uintptr_t)28ULL)) = x88;
-  *(uint8_t*)((out0)+((uintptr_t)29ULL)) = x89;
-  *(uint8_t*)((out0)+((uintptr_t)30ULL)) = x90;
-  *(uint8_t*)((out0)+((uintptr_t)31ULL)) = x91;
+  *(uint8_t*)((out0)+((uintptr_t)0ULL)) = x59;
+  *(uint8_t*)((out0)+((uintptr_t)1ULL)) = x60;
+  *(uint8_t*)((out0)+((uintptr_t)2ULL)) = x61;
+  *(uint8_t*)((out0)+((uintptr_t)3ULL)) = x62;
+  *(uint8_t*)((out0)+((uintptr_t)4ULL)) = x63;
+  *(uint8_t*)((out0)+((uintptr_t)5ULL)) = x64;
+  *(uint8_t*)((out0)+((uintptr_t)6ULL)) = x65;
+  *(uint8_t*)((out0)+((uintptr_t)7ULL)) = x66;
+  *(uint8_t*)((out0)+((uintptr_t)8ULL)) = x67;
+  *(uint8_t*)((out0)+((uintptr_t)9ULL)) = x68;
+  *(uint8_t*)((out0)+((uintptr_t)10ULL)) = x69;
+  *(uint8_t*)((out0)+((uintptr_t)11ULL)) = x70;
+  *(uint8_t*)((out0)+((uintptr_t)12ULL)) = x71;
+  *(uint8_t*)((out0)+((uintptr_t)13ULL)) = x72;
+  *(uint8_t*)((out0)+((uintptr_t)14ULL)) = x73;
+  *(uint8_t*)((out0)+((uintptr_t)15ULL)) = x74;
+  *(uint8_t*)((out0)+((uintptr_t)16ULL)) = x75;
+  *(uint8_t*)((out0)+((uintptr_t)17ULL)) = x76;
+  *(uint8_t*)((out0)+((uintptr_t)18ULL)) = x77;
+  *(uint8_t*)((out0)+((uintptr_t)19ULL)) = x78;
+  *(uint8_t*)((out0)+((uintptr_t)20ULL)) = x79;
+  *(uint8_t*)((out0)+((uintptr_t)21ULL)) = x80;
+  *(uint8_t*)((out0)+((uintptr_t)22ULL)) = x81;
+  *(uint8_t*)((out0)+((uintptr_t)23ULL)) = x82;
+  *(uint8_t*)((out0)+((uintptr_t)24ULL)) = x83;
+  *(uint8_t*)((out0)+((uintptr_t)25ULL)) = x84;
+  *(uint8_t*)((out0)+((uintptr_t)26ULL)) = x85;
+  *(uint8_t*)((out0)+((uintptr_t)27ULL)) = x86;
   /*skip*/
   return;
 }
@@ -1435,12 +1426,12 @@ void fiat_p224_to_bytes(uintptr_t out0, uintptr_t in0) {
 
 /*
  * Input Bounds:
- *   in0: [[0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0x0], [0x0 ~> 0x0], [0x0 ~> 0x0], [0x0 ~> 0x0]]
+ *   in0: [[0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff]]
  * Output Bounds:
  *   out0: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffff]]
  */
 void fiat_p224_from_bytes(uintptr_t out0, uintptr_t in0) {
-  uintptr_t x28, x29, x30, x31, x27, x26, x25, x24, x23, x22, x21, x20, x19, x18, x17, x16, x15, x14, x13, x12, x11, x10, x9, x8, x7, x6, x5, x4, x3, x2, x1, x0, x59, x58, x57, x56, x55, x54, x53, x52, x60, x35, x34, x33, x32, x43, x42, x41, x40, x39, x38, x37, x36, x51, x50, x49, x48, x47, x46, x45, x44, x64, x63, x61, x65, x66, x62, x67, x68, x69, x70;
+  uintptr_t x27, x26, x25, x24, x23, x22, x21, x20, x19, x18, x17, x16, x15, x14, x13, x12, x11, x10, x9, x8, x7, x6, x5, x4, x3, x2, x1, x0, x55, x54, x53, x52, x51, x50, x49, x48, x56, x31, x30, x29, x28, x39, x38, x37, x36, x35, x34, x33, x32, x47, x46, x45, x44, x43, x42, x41, x40, x60, x59, x57, x61, x62, x58, x63, x64, x65, x66;
   x0 = *(uint8_t*)((in0)+((uintptr_t)0ULL));
   x1 = *(uint8_t*)((in0)+((uintptr_t)1ULL));
   x2 = *(uint8_t*)((in0)+((uintptr_t)2ULL));
@@ -1469,56 +1460,52 @@ void fiat_p224_from_bytes(uintptr_t out0, uintptr_t in0) {
   x25 = *(uint8_t*)((in0)+((uintptr_t)25ULL));
   x26 = *(uint8_t*)((in0)+((uintptr_t)26ULL));
   x27 = *(uint8_t*)((in0)+((uintptr_t)27ULL));
-  x28 = *(uint8_t*)((in0)+((uintptr_t)28ULL));
-  x29 = *(uint8_t*)((in0)+((uintptr_t)29ULL));
-  x30 = *(uint8_t*)((in0)+((uintptr_t)30ULL));
-  x31 = *(uint8_t*)((in0)+((uintptr_t)31ULL));
   /*skip*/
   /*skip*/
-  x32 = (x27)<<((uintptr_t)24ULL);
-  x33 = (x26)<<((uintptr_t)16ULL);
-  x34 = (x25)<<((uintptr_t)8ULL);
-  x35 = x24;
-  x36 = (x23)<<((uintptr_t)56ULL);
-  x37 = (x22)<<((uintptr_t)48ULL);
-  x38 = (x21)<<((uintptr_t)40ULL);
-  x39 = (x20)<<((uintptr_t)32ULL);
-  x40 = (x19)<<((uintptr_t)24ULL);
-  x41 = (x18)<<((uintptr_t)16ULL);
-  x42 = (x17)<<((uintptr_t)8ULL);
-  x43 = x16;
-  x44 = (x15)<<((uintptr_t)56ULL);
-  x45 = (x14)<<((uintptr_t)48ULL);
-  x46 = (x13)<<((uintptr_t)40ULL);
-  x47 = (x12)<<((uintptr_t)32ULL);
-  x48 = (x11)<<((uintptr_t)24ULL);
-  x49 = (x10)<<((uintptr_t)16ULL);
-  x50 = (x9)<<((uintptr_t)8ULL);
-  x51 = x8;
-  x52 = (x7)<<((uintptr_t)56ULL);
-  x53 = (x6)<<((uintptr_t)48ULL);
-  x54 = (x5)<<((uintptr_t)40ULL);
-  x55 = (x4)<<((uintptr_t)32ULL);
-  x56 = (x3)<<((uintptr_t)24ULL);
-  x57 = (x2)<<((uintptr_t)16ULL);
-  x58 = (x1)<<((uintptr_t)8ULL);
-  x59 = x0;
-  x60 = (x59)+((x58)+((x57)+((x56)+((x55)+((x54)+((x53)+(x52)))))));
+  x28 = (x27)<<((uintptr_t)24ULL);
+  x29 = (x26)<<((uintptr_t)16ULL);
+  x30 = (x25)<<((uintptr_t)8ULL);
+  x31 = x24;
+  x32 = (x23)<<((uintptr_t)56ULL);
+  x33 = (x22)<<((uintptr_t)48ULL);
+  x34 = (x21)<<((uintptr_t)40ULL);
+  x35 = (x20)<<((uintptr_t)32ULL);
+  x36 = (x19)<<((uintptr_t)24ULL);
+  x37 = (x18)<<((uintptr_t)16ULL);
+  x38 = (x17)<<((uintptr_t)8ULL);
+  x39 = x16;
+  x40 = (x15)<<((uintptr_t)56ULL);
+  x41 = (x14)<<((uintptr_t)48ULL);
+  x42 = (x13)<<((uintptr_t)40ULL);
+  x43 = (x12)<<((uintptr_t)32ULL);
+  x44 = (x11)<<((uintptr_t)24ULL);
+  x45 = (x10)<<((uintptr_t)16ULL);
+  x46 = (x9)<<((uintptr_t)8ULL);
+  x47 = x8;
+  x48 = (x7)<<((uintptr_t)56ULL);
+  x49 = (x6)<<((uintptr_t)48ULL);
+  x50 = (x5)<<((uintptr_t)40ULL);
+  x51 = (x4)<<((uintptr_t)32ULL);
+  x52 = (x3)<<((uintptr_t)24ULL);
+  x53 = (x2)<<((uintptr_t)16ULL);
+  x54 = (x1)<<((uintptr_t)8ULL);
+  x55 = x0;
+  x56 = (x55)+((x54)+((x53)+((x52)+((x51)+((x50)+((x49)+(x48)))))));
+  x57 = (x56)&((uintptr_t)18446744073709551615ULL);
+  x58 = (x31)+((x30)+((x29)+(x28)));
+  x59 = (x39)+((x38)+((x37)+((x36)+((x35)+((x34)+((x33)+(x32)))))));
+  x60 = (x47)+((x46)+((x45)+((x44)+((x43)+((x42)+((x41)+(x40)))))));
   x61 = (x60)&((uintptr_t)18446744073709551615ULL);
-  x62 = (x35)+((x34)+((x33)+(x32)));
-  x63 = (x43)+((x42)+((x41)+((x40)+((x39)+((x38)+((x37)+(x36)))))));
-  x64 = (x51)+((x50)+((x49)+((x48)+((x47)+((x46)+((x45)+(x44)))))));
-  x65 = (x64)&((uintptr_t)18446744073709551615ULL);
-  x66 = (x63)&((uintptr_t)18446744073709551615ULL);
-  x67 = x61;
-  x68 = x65;
-  x69 = x66;
-  x70 = x62;
+  x62 = (x59)&((uintptr_t)18446744073709551615ULL);
+  x63 = x57;
+  x64 = x61;
+  x65 = x62;
+  x66 = x58;
   /*skip*/
-  *(uintptr_t*)((out0)+((uintptr_t)0ULL)) = x67;
-  *(uintptr_t*)((out0)+((uintptr_t)8ULL)) = x68;
-  *(uintptr_t*)((out0)+((uintptr_t)16ULL)) = x69;
-  *(uintptr_t*)((out0)+((uintptr_t)24ULL)) = x70;
+  *(uintptr_t*)((out0)+((uintptr_t)0ULL)) = x63;
+  *(uintptr_t*)((out0)+((uintptr_t)8ULL)) = x64;
+  *(uintptr_t*)((out0)+((uintptr_t)16ULL)) = x65;
+  *(uintptr_t*)((out0)+((uintptr_t)24ULL)) = x66;
   /*skip*/
   return;
 }

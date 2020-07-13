@@ -118,7 +118,7 @@ Section __.
        | Some m' => m'
        | None => 0
        end.
-  Definition n_bytes := bytes_n machine_wordsize 1 n.
+  Definition n_bytes := bytes_n s.
   Definition prime_upperbound_list : list Z
     := Partition.partition (uweight machine_wordsize) n (s-1).
   Definition prime_bytes_upperbound_list : list Z
@@ -166,7 +166,7 @@ Section __.
             (negb ((m * m') mod r =? (-1) mod r)%Z, Pipeline.Values_not_provably_equalZ "(m * m') mod r ≠ (-1) mod r" ((m * m') mod r) ((-1) mod r));
             (negb (s <=? r^n), Pipeline.Value_not_leZ "r^n ≤ s" s (r^n));
             (negb (s <=? uweight machine_wordsize n), Pipeline.Value_not_leZ "weight n < s (needed for from_bytes)" s (uweight machine_wordsize n));
-            (negb (uweight machine_wordsize n =? uweight 8 n_bytes), Pipeline.Values_not_provably_equalZ "weight n ≠ bytes_weight n_bytes (needed for from_bytes)" (uweight machine_wordsize n) (uweight 8 n_bytes))].
+            (negb (s <=? uweight 8 n_bytes), Pipeline.Value_not_leZ "bytes_weight n_bytes < s (needed for from_bytes)" s (uweight 8 n_bytes))].
 
   Local Arguments Z.mul !_ !_.
   Local Ltac prepare_use_curve_good _ :=
@@ -219,12 +219,10 @@ Section __.
       /\ m < r^n
       /\ s = 2^Z.log2 s
       /\ s <= uweight machine_wordsize n
-      /\ s <= uweight 8 n_bytes
-      /\ uweight machine_wordsize n = uweight 8 n_bytes.
+      /\ s <= uweight 8 n_bytes.
   Proof.
     prepare_use_curve_good (); cbv [s c] in *.
     { destruct m eqn:?; cbn; lia. }
-    { use_curve_good_t. }
     { use_curve_good_t. }
     { use_curve_good_t. }
     { use_curve_good_t. }
@@ -429,7 +427,7 @@ Section __.
          None (* fancy *)
          possible_values_with_bytes
          (reified_to_bytes_gen
-            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n)
+            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m)
          (prime_bounds, tt)
          prime_bytes_bounds.
 
@@ -449,7 +447,7 @@ Section __.
          None (* fancy *)
          possible_values_with_bytes
          (reified_from_bytes_gen
-            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify 1 @ GallinaReify.Reify n)
+            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify 1 @ GallinaReify.Reify s @ GallinaReify.Reify n)
          (prime_bytes_bounds, tt)
          prime_bounds.
 
@@ -545,7 +543,7 @@ Section __.
             false (* let_bind_return *)
             None (* fancy *)
             (reified_bytes_eval_gen
-               @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n)
+               @ GallinaReify.Reify s)
             (prime_bytes_bounds, tt)).
 
   Definition sbytes_eval (arg_name : string) (with_parens : bool) (* s for string *)

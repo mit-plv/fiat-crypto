@@ -44,12 +44,12 @@ Local Notation weight :=
                  (Z.pos (QArith_base.Qden
                            (UnsaturatedSolinas.limbwidth n s c)))).
 Local Notation eval := (Positional.eval weight n).
-Local Notation n_bytes := (UnsaturatedSolinas.n_bytes n s c).
+Local Notation n_bytes := (UnsaturatedSolinas.n_bytes s).
 Local Notation loose_bounds := (UnsaturatedSolinasHeuristics.loose_bounds n s c).
 Local Notation tight_bounds := (UnsaturatedSolinasHeuristics.tight_bounds n s c).
 Local Notation prime_bytes_bounds_value :=
   (map (fun v : Z => Some {| ZRange.lower := 0; ZRange.upper := v |})
-       (UnsaturatedSolinas.prime_bytes_upperbound_list n s c)).
+       (UnsaturatedSolinas.prime_bytes_upperbound_list s)).
 Local Infix "*" := sep : sep_scope.
 Delimit Scope sep_scope with sep.
 

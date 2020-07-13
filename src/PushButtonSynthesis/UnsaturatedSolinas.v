@@ -98,7 +98,7 @@ Section __.
 
   Definition limbwidth := (Z.log2_up (s - Associational.eval c) / Z.of_nat n)%Q.
   Definition idxs : list nat := carry_chains n s c.
-  Definition n_bytes := bytes_n (Qnum limbwidth) (Qden limbwidth) n.
+  Definition n_bytes := bytes_n s.
   Local Notation prime_upperbound_list := (prime_upperbound_list n s c) (only parsing).
   Definition prime_bytes_upperbound_list : list Z
     := Partition.partition (weight 8 1) n_bytes (s-1).
@@ -146,7 +146,7 @@ Section __.
   Lemma length_loose_bounds : List.length loose_bounds = n.
   Proof using Type. cbv [loose_bounds]; now autorewrite with distr_length natsimplify. Qed.
   Hint Rewrite length_loose_bounds : distr_length.
-  Lemma length_prime_bytes_upperbound_list : List.length prime_bytes_upperbound_list = bytes_n (Qnum limbwidth) (Qden limbwidth) n.
+  Lemma length_prime_bytes_upperbound_list : List.length prime_bytes_upperbound_list = n_bytes.
   Proof using Type. cbv [prime_bytes_upperbound_list]; now autorewrite with distr_length. Qed.
   Hint Rewrite length_prime_bytes_upperbound_list : distr_length.
   Lemma length_saturated_bounds_list : List.length saturated_bounds_list = n.
@@ -226,6 +226,7 @@ Section __.
     : let eval := eval (weight (Qnum limbwidth) (QDen limbwidth)) n in
       s - Associational.eval c <> 0
       /\ s <> 0
+      /\ 1 < s
       /\ 0 < machine_wordsize
       /\ n <> 0%nat
       /\ List.length tight_bounds = n
@@ -242,6 +243,7 @@ Section __.
       /\ 0 < s - Associational.eval c.
   Proof using curve_good.
     prepare_use_curve_good ().
+    { use_curve_good_t. }
     { use_curve_good_t. }
     { use_curve_good_t. }
     { use_curve_good_t. }
@@ -409,7 +411,7 @@ Section __.
          None (* fancy *)
          possible_values_with_bytes
          (reified_to_bytes_gen
-            @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify n @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify m_enc)
+            @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify n @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify m_enc)
          (Some tight_bounds, tt)
          prime_bytes_bounds.
 
@@ -428,7 +430,7 @@ Section __.
          None (* fancy *)
          possible_values_with_bytes
          (reified_from_bytes_gen
-            @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify n)
+            @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify n)
          (prime_bytes_bounds, tt)
          (Some tight_bounds).
 
@@ -520,7 +522,7 @@ Section __.
             false (* let_bind_return *)
             None (* fancy *)
             (reified_bytes_eval_gen
-               @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify n)
+               @ GallinaReify.Reify s)
             (prime_bytes_bounds, tt)).
 
   Definition sbytes_eval (arg_name : string) (with_parens : bool) (* s for string *)
