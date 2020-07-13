@@ -17,6 +17,7 @@ Require Import Crypto.Util.Tactics.SubstEvars.
 Require Import Crypto.Util.ZUtil.Modulo Crypto.Util.ZUtil.Div.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.EquivModulo.
+Require Import Crypto.Util.ZUtil.Log2.
 Require Import Crypto.Util.ZUtil.AddGetCarry Crypto.Util.ZUtil.MulSplit.
 Require Import Crypto.Util.ZUtil.Modulo.PullPush.
 Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
@@ -1045,7 +1046,7 @@ Module WordByWordMontgomery.
     Definition submod (a b : list Z) : list Z := @sub bitwidth n m_enc a b.
     Definition oppmod (a : list Z) : list Z := @opp bitwidth n m_enc a.
     Definition nonzeromod (a : list Z) : Z := @nonzero a.
-    Definition to_bytesmod (a : list Z) : list Z := @to_bytesmod bitwidth 1 n a.
+    Definition to_bytesmod (a : list Z) : list Z := @to_bytesmod bitwidth 1 (2^Z.log2_up m) n a.
 
     Definition valid (a : list Z) := small a /\ 0 <= eval a < m.
 
@@ -1294,11 +1295,12 @@ Module WordByWordMontgomery.
     Qed.
 
     Lemma to_bytesmod_correct
-      : (forall a (_ : valid a), Positional.eval (uweight 8) (bytes_n bitwidth 1 n) (to_bytesmod a)
+      : (forall a (_ : valid a), Positional.eval (uweight 8) (bytes_n (2^Z.log2_up m)) (to_bytesmod a)
                                  = eval a mod m)
-        /\ (forall a (_ : valid a), to_bytesmod a = Partition.partition (uweight 8) (bytes_n bitwidth 1 n) (eval a mod m)).
-    Proof using n_nz m_small bitwidth_big.
-      clear -n_nz m_small bitwidth_big.
+        /\ (forall a (_ : valid a), to_bytesmod a = Partition.partition (uweight 8) (bytes_n (2^Z.log2_up m)) (eval a mod m)).
+    Proof using m_big n_nz m_small bitwidth_big.
+      clear -m_big n_nz m_small bitwidth_big.
+      pose proof (Z.log2_up_le_full m).
       generalize (@length_small bitwidth n);
         cbv [valid small to_bytesmod eval]; split; intros; (etransitivity; [ apply eval_to_bytesmod | ]);
           fold weight in *; fold (uweight 8) in *; subst r;
@@ -1311,7 +1313,7 @@ Module WordByWordMontgomery.
 
     Lemma eval_to_bytesmod
       : (forall a (_ : valid a),
-            Positional.eval (uweight 8) (bytes_n bitwidth 1 n) (to_bytesmod a)
+            Positional.eval (uweight 8) (bytes_n (2^Z.log2_up m)) (to_bytesmod a)
             = eval a mod m).
     Proof. apply to_bytesmod_correct. Qed.
   End modops.

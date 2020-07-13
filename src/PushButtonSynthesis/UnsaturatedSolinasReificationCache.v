@@ -16,7 +16,7 @@ Module Export UnsaturatedSolinas.
   Definition onemod limbwidth_num limbwidth_den s c n := encodemod limbwidth_num limbwidth_den s c n 1.
   Definition primemod limbwidth_num limbwidth_den s c n := encodemod limbwidth_num limbwidth_den s c n (s - Associational.eval c).
   Definition evalmod limbwidth_num limbwidth_den n := Positional.eval (weight limbwidth_num limbwidth_den) n.
-  Definition bytes_evalmod limbwidth_num limbwidth_den n := Positional.eval (weight 8 1) (bytes_n limbwidth_num limbwidth_den n).
+  Definition bytes_evalmod s := Positional.eval (weight 8 1) (bytes_n s).
 
   (**
 <<

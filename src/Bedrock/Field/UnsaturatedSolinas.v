@@ -103,8 +103,8 @@ Section __.
   Local Notation saturated_bounds :=
     (Primitives.saturated_bounds n Semantics.width).
   Local Notation prime_bytes_bounds :=
-    (UnsaturatedSolinas.prime_bytes_bounds n s c).
-  Local Notation n_bytes := (UnsaturatedSolinas.n_bytes n s c).
+    (UnsaturatedSolinas.prime_bytes_bounds s).
+  Local Notation n_bytes := (UnsaturatedSolinas.n_bytes s).
   Local Notation M := (UnsaturatedSolinas.m s c).
   Definition weight :=
     (ModOps.weight
@@ -117,7 +117,7 @@ Section __.
      wrap in Some whenever we want to use them with list_Z_bounded_by *)
   Local Notation prime_bytes_bounds_value :=
     (map (fun v : Z => Some {| ZRange.lower := 0; ZRange.upper := v |})
-         (prime_bytes_upperbound_list n s c)).
+         (prime_bytes_upperbound_list s)).
   Local Notation saturated_bounds_value :=
     (Primitives.saturated_bounds_list n Semantics.width).
 

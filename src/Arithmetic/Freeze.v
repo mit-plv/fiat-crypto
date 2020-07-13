@@ -150,7 +150,8 @@ Section freeze_mod_ops.
           (bitwidth : Z)
           (m_enc : list Z)
           (m_nz:s - Associational.eval c <> 0) (s_nz:s <> 0)
-          (Hn_nz : n <> 0%nat).
+          (Hn_nz : n <> 0%nat)
+          (Hs_big : 1 < s).
   Local Notation bytes_weight := (@weight 8 1).
   Local Notation weight := (@weight limbwidth_num limbwidth_den).
   Let m := (s - Associational.eval c).
@@ -182,13 +183,13 @@ Section freeze_mod_ops.
 
   Definition bytes_n
     := Eval cbv [Qceiling Qdiv inject_Z Qfloor Qmult Qopp Qnum Qden Qinv Pos.mul]
-      in Z.to_nat (Qceiling (Z.log2_up (weight n) / 8)).
+      in Z.to_nat (Qceiling (Z.log2_up s / 8)).
 
   Lemma weight_bytes_weight_matches
     : weight n <= bytes_weight bytes_n.
-  Proof using limbwidth_good.
-    clear -limbwidth_good.
-    cbv [weight bytes_n].
+  Proof using limbwidth_good Hs.
+    clear -limbwidth_good Hs.
+    cbv [weight bytes_n] in *; subst s.
     autorewrite with zsimplify_const.
     rewrite Z.log2_up_pow2, !Z2Nat.id, !Z.opp_involutive by (Z.div_mod_to_quot_rem; nia).
     Z.peel_le.
@@ -210,24 +211,22 @@ Section freeze_mod_ops.
   Definition from_bytesmod (f : list Z) : list Z
     := from_bytes f.
 
-  Lemma bytes_nz : bytes_n <> 0%nat.
-  Proof using limbwidth_good Hn_nz.
-    clear -limbwidth_good Hn_nz.
+  Lemma bytes_pos : (0 < bytes_n)%nat.
+  Proof using Hs_big.
+    clear -Hs_big.
     cbv [bytes_n].
-    cbv [Qceiling Qdiv inject_Z Qfloor Qmult Qopp Qnum Qden Qinv].
-    autorewrite with zsimplify_const.
-    change (Z.pos (1*8)) with 8.
-    cbv [weight].
-    rewrite Z.log2_up_pow2 by (Z.div_mod_to_quot_rem; nia).
-    autorewrite with zsimplify_fast.
-    rewrite <- Z2Nat.inj_0, Z2Nat.inj_iff by (Z.div_mod_to_quot_rem; nia).
-    Z.div_mod_to_quot_rem; nia.
+    pose proof (Z.log2_up_pos s Hs_big).
+    zify; rewrite ?Z2Nat.id in *. (* This line only needed in < 8.11 *)
+    all: Z.div_mod_to_quot_rem; try nia.
   Qed.
 
+  Lemma bytes_nz : bytes_n <> 0%nat.
+  Proof using Hs_big. generalize bytes_pos; clear; lia. Qed.
+
   Lemma bytes_n_big : weight n <= bytes_weight bytes_n.
-  Proof using limbwidth_good Hn_nz.
-    clear -limbwidth_good Hn_nz.
-    cbv [bytes_n bytes_weight].
+  Proof using limbwidth_good Hn_nz Hs.
+    clear -limbwidth_good Hn_nz Hs.
+    cbv [bytes_n bytes_weight] in *; subst s.
     Z.peel_le.
     rewrite Z.log2_up_pow2 by (Z.div_mod_to_quot_rem; nia).
     autorewrite with zsimplify_fast.
@@ -239,8 +238,8 @@ Section freeze_mod_ops.
     : forall (f : list Z)
         (Hf : length f = n),
       eval bytes_weight bytes_n (to_bytes f) = eval weight n f.
-  Proof using limbwidth_good Hn_nz.
-    generalize wprops wprops_bytes; clear -Hn_nz limbwidth_good.
+  Proof using limbwidth_good Hs_big.
+    generalize wprops wprops_bytes; clear -limbwidth_good Hs_big.
     intros.
     cbv [to_bytes].
     rewrite BaseConversion.eval_convert_bases
@@ -251,22 +250,29 @@ Section freeze_mod_ops.
   Lemma to_bytes_partitions
     : forall (f : list Z)
              (Hf : length f = n)
-             (Hf_small : 0 <= eval weight n f < weight n),
+             (Hf_small : 0 <= eval weight n f < s),
       to_bytes f = Partition.partition bytes_weight bytes_n (Positional.eval weight n f).
-  Proof using Hn_nz limbwidth_good.
-    clear -Hn_nz limbwidth_good.
+  Proof using Hs_big limbwidth_good.
+    clear -Hs_big limbwidth_good.
     intros; cbv [to_bytes].
-    pose proof weight_bytes_weight_matches.
-    apply BaseConversion.convert_bases_partitions; eauto; lia.
+    apply BaseConversion.convert_bases_partitions; eauto; try lia.
+    split; [ | eapply Z.lt_le_trans ]; [ apply Hf_small.. | ].
+    cbv [bytes_weight bytes_n].
+    pose proof (Z.log2_up_pos s Hs_big).
+    rewrite Z2Nat.id by (Z.div_mod_to_quot_rem; nia).
+    autorewrite with zsimplify_fast.
+    etransitivity; [ now apply Z.log2_up_spec | ].
+    Z.peel_le.
+    Z.div_mod_to_quot_rem; nia.
   Qed.
 
   Lemma eval_to_bytesmod
     : forall (f : list Z)
              (Hf : length f = n)
-             (Hf_small : 0 <= eval weight n f < weight n),
+             (Hf_small : 0 <= eval weight n f < s),
       eval bytes_weight bytes_n (to_bytesmod f) = eval weight n f
       /\ to_bytesmod f = Partition.partition bytes_weight bytes_n (Positional.eval weight n f).
-  Proof using Hn_nz limbwidth_good.
+  Proof using Hs_big limbwidth_good.
     split; apply eval_to_bytes || apply to_bytes_partitions; assumption.
   Qed.
 
@@ -276,9 +282,11 @@ Section freeze_mod_ops.
         (Hf_bounded : 0 <= eval weight n f < 2 * m),
       (eval bytes_weight bytes_n (freeze_to_bytesmod f)) = (eval weight n f) mod m
       /\ freeze_to_bytesmod f = Partition.partition bytes_weight bytes_n (Positional.eval weight n f mod m).
-  Proof using m_enc_correct Hs limbwidth_good Hn_nz c_small Hm_enc_len m_enc_bounded.
-    clear -m_enc_correct Hs limbwidth_good Hn_nz c_small Hm_enc_len m_enc_bounded.
-    intros; subst m s.
+  Proof using m_enc_correct Hs_big limbwidth_good Hn_nz Hs c_small Hm_enc_len m_enc_bounded.
+    clear -m_enc_correct Hs_big limbwidth_good Hn_nz Hs c_small Hm_enc_len m_enc_bounded.
+    pose proof eval_to_bytes as eval_to_bytes.
+    pose proof to_bytes_partitions as to_bytes_partitions.
+    intros; subst m; rewrite Hs in *.
     cbv [freeze_to_bytesmod].
     rewrite eval_to_bytes, to_bytes_partitions;
       erewrite ?eval_freeze by eauto using wprops;
@@ -291,7 +299,7 @@ Section freeze_mod_ops.
         (Hf : length f = n)
         (Hf_bounded : 0 <= eval weight n f < 2 * m),
       (eval bytes_weight bytes_n (freeze_to_bytesmod f)) = (eval weight n f) mod m.
-  Proof using m_enc_correct Hs limbwidth_good Hn_nz c_small Hm_enc_len m_enc_bounded.
+  Proof using m_enc_correct Hs_big limbwidth_good Hn_nz Hs c_small Hm_enc_len m_enc_bounded.
     intros; now apply eval_freeze_to_bytesmod_and_partitions.
   Qed.
 
@@ -300,7 +308,7 @@ Section freeze_mod_ops.
         (Hf : length f = n)
         (Hf_bounded : 0 <= eval weight n f < 2 * m),
       freeze_to_bytesmod f = Partition.partition bytes_weight bytes_n (Positional.eval weight n f mod m).
-  Proof using m_enc_correct Hs limbwidth_good Hn_nz c_small Hm_enc_len m_enc_bounded.
+  Proof using m_enc_correct Hs_big limbwidth_good Hn_nz Hs c_small Hm_enc_len m_enc_bounded.
     intros; now apply eval_freeze_to_bytesmod_and_partitions.
   Qed.
 
@@ -308,8 +316,8 @@ Section freeze_mod_ops.
     : forall (f : list Z)
         (Hf : length f = bytes_n),
       eval weight n (from_bytes f) = eval bytes_weight bytes_n f.
-  Proof using limbwidth_good Hn_nz.
-    generalize wprops wprops_bytes; clear -Hn_nz limbwidth_good.
+  Proof using limbwidth_good Hs_big Hn_nz.
+    generalize wprops wprops_bytes; clear -Hs_big limbwidth_good Hn_nz.
     intros.
     cbv [from_bytes].
     rewrite BaseConversion.eval_convert_bases
@@ -324,7 +332,6 @@ Section freeze_mod_ops.
   Proof using limbwidth_good.
     clear -limbwidth_good.
     intros; cbv [from_bytes].
-    pose proof weight_bytes_weight_matches.
     apply BaseConversion.convert_bases_partitions; eauto; lia.
   Qed.
 
@@ -332,7 +339,7 @@ Section freeze_mod_ops.
     : forall (f : list Z)
              (Hf : length f = bytes_n),
       eval weight n (from_bytesmod f) = eval bytes_weight bytes_n f.
-  Proof using Hn_nz limbwidth_good. apply eval_from_bytes. Qed.
+  Proof using Hn_nz Hs_big limbwidth_good. apply eval_from_bytes. Qed.
 
   Lemma from_bytesmod_partitions
     : forall (f : list Z)
@@ -346,7 +353,7 @@ Section freeze_mod_ops.
              (Hf_small : 0 <= eval bytes_weight bytes_n f < weight n),
       eval weight n (from_bytesmod f) = eval bytes_weight bytes_n f
       /\ from_bytesmod f = Partition.partition weight n (Positional.eval bytes_weight bytes_n f).
-  Proof using limbwidth_good Hn_nz.
+  Proof using limbwidth_good Hn_nz Hs_big.
     now (split; [ apply eval_from_bytesmod | apply from_bytes_partitions ]).
   Qed.
 End freeze_mod_ops.
