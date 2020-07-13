@@ -5,9 +5,13 @@ Require Import Crypto.Util.ZUtil.Hints.
 Require Import Crypto.Util.ZUtil.Notations.
 Require Import Crypto.Util.ZUtil.Lnot.
 Require Import Crypto.Util.ZUtil.Div.
+Require Import Crypto.Util.ZUtil.Hints.Core.
+Require Import Crypto.Util.ZUtil.Hints.Ztestbit.
 Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.Tactics.SplitInContext.
+Require Import Crypto.Util.Tactics.DestructHead.
 Local Open Scope Z_scope.
 
 Module Z.
@@ -126,5 +130,78 @@ Module Z.
     { autorewrite with zsimplify.
       rewrite Z.bits_above_pow2 by lia.
       reflexivity. }
+  Qed.
+
+  Lemma shiftl_spec_full a n m : Z.testbit (a << n) m = if (0 <=? m) then Z.testbit a (m - n) else false.
+  Proof.
+    break_innermost_match; Z.ltb_to_lt; now autorewrite with Ztestbit.
+  Qed.
+  Hint Rewrite shiftl_spec_full : Ztestbit_full.
+
+  Lemma shiftr_spec_full a n m : Z.testbit (a >> n) m = if (0 <=? m) then Z.testbit a (m + n) else false.
+  Proof.
+    break_innermost_match; Z.ltb_to_lt; now autorewrite with Ztestbit.
+  Qed.
+  Hint Rewrite shiftr_spec_full : Ztestbit_full.
+
+  Definition bit_compare (b1 b2 : bool) : comparison
+    := match b1, b2 with
+       | true, true => Eq
+       | true, false => Lt
+       | false, false => Eq
+       | false, true => Gt
+       end.
+
+  Lemma bit_compare_refl (b  : bool) : bit_compare b b = Eq.
+  Proof. now destruct b. Qed.
+  Hint Rewrite bit_compare_refl : Ztestbit.
+
+  Lemma bit_compare_eq_iff (b1 b2 : bool)
+    : bit_compare b1 b2 = Eq <-> b1 = b2.
+  Proof. now destruct b1, b2. Qed.
+
+  Lemma bit_compare_gt_iff (b1 b2 : bool)
+    : bit_compare b1 b2 = Gt <-> (b1 = false /\ b2 = true).
+  Proof. now destruct b1, b2. Qed.
+
+  Lemma bit_compare_lt_iff (b1 b2 : bool)
+    : bit_compare b1 b2 = Lt <-> (b1 = true /\ b2 = false).
+  Proof. now destruct b1, b2. Qed.
+
+  Lemma bits_const_iff z b
+    : (forall n, 0 <= n -> Z.testbit z n = b)
+      <-> z = if b then -1 else 0.
+  Proof.
+    destruct b; [ rewrite <- (Z.bits_inj_iff z (-(1))) | rewrite <- (Z.bits_inj_iff z 0) ];
+      cbv [Z.eqf];
+      split; intros H n; specialize (H n); intros; destruct (Z_le_gt_dec 0 n);
+        try specialize (H ltac:(assumption)); try lia;
+        revert H;
+        rewrite ?Z.bits_0, ?Z.bits_m1, ?Z.testbit_neg_r by lia; trivial.
+  Qed.
+
+  Lemma compare_by_bits_impl z1 z2 c
+    : (forall n, 0 <= n -> bit_compare (Z.testbit z1 n) (Z.testbit z2 n) = c)
+      -> Z.compare z1 z2 = c.
+  Proof.
+    destruct (Z.compare_spec z1 z2), c; subst.
+    all: repeat first [ progress setoid_rewrite bit_compare_refl
+                      | progress setoid_rewrite bit_compare_eq_iff
+                      | progress setoid_rewrite bit_compare_gt_iff
+                      | progress setoid_rewrite bit_compare_lt_iff
+                      | reflexivity
+                      | assumption
+                      | congruence
+                      | lia
+                      | progress subst
+                      | progress intros
+                      | progress split_and
+                      | match goal with
+                        | [ H : forall n, 0 <= n -> ?T |- _ ] => assert T by (eapply H; reflexivity); clear H
+                        | [ H : forall n, 0 <= n -> Z.testbit _ _ = Z.testbit _ _ |- _ ]
+                          => apply Z.bits_inj' in H
+                        | [ H : forall n, 0 <= n -> Z.testbit _ n = ?b |- _ ]
+                          => apply bits_const_iff in H
+                        end ].
   Qed.
 End Z.
