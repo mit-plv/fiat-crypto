@@ -32,6 +32,11 @@ Module Go.
   Definition is_standard_bitwidth (bw : Z) := existsb (Z.eqb bw) stdint_bitwidths.
   Definition is_special_bitwidth (bw : Z) := negb (is_standard_bitwidth bw).
 
+  Definition special_addcarryx_name (prefix : string) (lg2s : Z)
+    := (prefix ++ "addcarryx_u" ++ Decimal.Z.to_string lg2s)%string.
+  Definition special_subborrowx_name (prefix : string) (lg2s : Z)
+    := (prefix ++ "subborrowx_u" ++ Decimal.Z.to_string lg2s)%string.
+
   (* Header imports and type defs *)
   Definition header (machine_wordsize : Z) (static : bool) (prefix : string) (infos : ToString.ident_infos)
   : list string
@@ -44,12 +49,23 @@ Module Go.
                                    (ToString.mulx_lg_splits infos)) in
        let type_prefix := ("type " ++ prefix)%string in
        let pkg_name := if endswith "_" prefix then substring 0 (String.length prefix - 1) prefix else prefix in
+       let special_addcarryx_lg_splits
+           := List.filter
+                is_standard_bitwidth
+                (List.map
+                   Z.pos
+                   (PositiveSet.elements (ToString.addcarryx_lg_splits infos))) in
+       let carry_type := (if IntSet.mem _Bool bitwidths_used || IntSet.mem (ToString.int.signed_counterpart_of _Bool) bitwidths_used
+                          then prefix ++ "uint1"
+                          else if IntSet.mem uint8 bitwidths_used || IntSet.mem int8 bitwidths_used
+                               then "uint8"
+                               else "uint" ++ Decimal.Z.to_string machine_wordsize)%string in
        ((["package " ++ pkg_name;
             ""]%string)
           ++ (if needs_bits_import then ["import ""math/bits"""]%string else [])
           ++ (if IntSet.mem _Bool bitwidths_used || IntSet.mem (ToString.int.signed_counterpart_of _Bool) bitwidths_used
-              then [type_prefix ++ "uint1 int"; (* C: typedef unsigned char prefix_uint1 *)
-                      type_prefix ++ "int1 int" ]%string (* C: typedef signed char prefix_int1 *)
+              then [type_prefix ++ "uint1 uint8"; (* C: typedef unsigned char prefix_uint1 *)
+                      type_prefix ++ "int1 int8" ]%string (* C: typedef signed char prefix_int1 *)
               else [])
           ++ (if IntSet.mem (int.of_bitwidth false 2) bitwidths_used || IntSet.mem (int.of_bitwidth true 2) bitwidths_used
               then [type_prefix ++ "uint2 uint8";
@@ -57,7 +73,24 @@ Module Go.
               else [])
           ++ (if IntSet.mem uint128 bitwidths_used || IntSet.mem int128 bitwidths_used
               then ["var _ = error_Go_output_does_not_support_128_bit_integers___instead_use_rewriting_rules_for_removing_128_bit_integers"]%string
-              else []))%list.
+              else [])
+          ++ (List.flat_map
+                (fun bw
+                 => let s_bw := Decimal.Z.to_string bw in
+                    List.flat_map
+                      (fun '(newname, bitsname)
+                       => [""%string]
+                            ++ (comment_block
+                                  ["The function " ++ newname ++ " is a thin wrapper around " ++ bitsname ++ " that uses " ++ carry_type ++ " rather than uint" ++ s_bw]%string)
+                            ++ ["func " ++ newname ++ "(x uint" ++ s_bw ++ ", y uint" ++ s_bw ++ ", carry " ++ carry_type ++ ") (uint" ++ s_bw ++ ", " ++ carry_type ++ ") {"
+                                ; "  var sum uint" ++ s_bw
+                                ; "  var carryOut uint" ++ s_bw
+                                ; "  sum, carryOut = " ++ bitsname ++ "(x, y, uint" ++ s_bw ++ "(carry))"
+                                ; "  return sum, " ++ carry_type ++ "(carryOut)"
+                                ; "}"]%string)
+                      [(special_addcarryx_name prefix bw, "bits.Add" ++ s_bw)
+                       ; (special_subborrowx_name prefix bw, "bits.Sub" ++ s_bw)]%string)
+                special_addcarryx_lg_splits))%list.
 
   Definition int_type_to_string (prefix : string) (t : ToString.int.type) : string :=
     ((if is_special_bitwidth (ToString.int.bitwidth_of t) then prefix else "")
@@ -147,8 +180,8 @@ Module Go.
          match is_standard_bitwidth lg2s, args with
          | true, ((IR.Addr @@@ v, IR.Addr @@@ c), (cin, x, y))
            => (arith_to_string prefix v ++ ", " ++ arith_to_string prefix c)
-                ++ " = bits.Add"
-                ++ Decimal.Z.to_string lg2s ++ "(" ++ arith_to_string prefix x ++ ", " ++ arith_to_string prefix y ++ ", " ++ arith_to_string prefix cin ++ ")"
+                ++ " = " ++ special_addcarryx_name prefix lg2s
+                ++ "(" ++ arith_to_string prefix x ++ ", " ++ arith_to_string prefix y ++ ", " ++ arith_to_string prefix cin ++ ")"
          | _, _
            => prefix
                 ++ "addcarryx_u"
@@ -158,8 +191,8 @@ Module Go.
          match is_standard_bitwidth lg2s, args with
          | true, ((IR.Addr @@@ v, IR.Addr @@@ b), (bin, x, y))
            => (arith_to_string prefix v ++ ", " ++ arith_to_string prefix b)
-                ++ " = bits.Sub"
-                ++ Decimal.Z.to_string lg2s ++ "(" ++ arith_to_string prefix x ++ ", " ++ arith_to_string prefix y ++ ", " ++ arith_to_string prefix bin ++ ")"
+                ++ " = " ++ special_subborrowx_name prefix lg2s
+                ++ "(" ++ arith_to_string prefix x ++ ", " ++ arith_to_string prefix y ++ ", " ++ arith_to_string prefix bin ++ ")"
          | _, _
            => prefix
                 ++ "subborrowx_u"
