@@ -293,6 +293,9 @@ Module Export List.
 
   End Cutting.
 
+  (** new operations *)
+  Definition enumerate {A} (ls : list A) : list (nat * A)
+    := combine (seq 0 (length ls)) ls.
 End List.
 
 Hint Rewrite @firstn_skipn : simpl_firstn.
@@ -2071,10 +2074,15 @@ Proof. revert v; induction xs; cbn; intros; rewrite ?fold_right_app; congruence.
 
 Lemma fold_right_id_ext A B f v xs : (forall x y, f x y = y) -> @fold_right A B f v xs = v.
 Proof. induction xs; cbn; intro H; rewrite ?H; auto. Qed.
-Lemma nth_default_repeat A (v:A) n (d:A) i : nth_default d (repeat v n) i = if dec (i < n)%nat then v else d.
+Lemma nth_error_repeat_alt {A} (v : A) n i
+  : nth_error (repeat v n) i = if dec (i < n)%nat then Some v else None.
 Proof.
   revert i; induction n as [|n IHn], i; cbn; try reflexivity.
-  rewrite nth_default_cons_S, IHn; do 2 edestruct dec; try reflexivity; lia.
+  cbn [nth_error]; rewrite IHn; do 2 edestruct dec; try reflexivity; lia.
+Qed.
+Lemma nth_default_repeat A (v:A) n (d:A) i : nth_default d (repeat v n) i = if dec (i < n)%nat then v else d.
+Proof.
+  cbv [nth_default]; rewrite nth_error_repeat_alt; now break_innermost_match.
 Qed.
 Lemma fold_right_if_dec_eq_seq A start len i f (x v : A)
   : ((start <= i < start + len)%nat -> f i v = x)

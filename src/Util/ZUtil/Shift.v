@@ -8,6 +8,8 @@ Require Import Crypto.Util.ZUtil.Pow2Mod.
 Require Import Crypto.Util.ZUtil.Le.
 Require Import Crypto.Util.ZUtil.Div.
 Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
+Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
+Require Import Crypto.Util.ZUtil.LandLorShiftBounds.
 Require Import Crypto.Util.ZUtil.Notations.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.SpecializeBy.
@@ -390,4 +392,29 @@ Module Z.
            end.
   Qed.
   Hint Resolve shiftr_nonneg_le : zarith.
+
+  Lemma lor_shift_land_ones x n
+    : 0 <= n -> x = Z.lor ((x >> n) << n) (Z.land x (Z.ones n)).
+  Proof.
+    intro Hn.
+    apply Z.bits_inj; intro n'.
+    autorewrite with Ztestbit Ztestbit_full.
+    break_innermost_match; Z.ltb_to_lt;
+      repeat rewrite ?Bool.andb_false_l, ?Bool.andb_false_r, ?Bool.orb_false_l, ?Bool.orb_false_r, ?Bool.andb_true_l, ?Bool.andb_true_r, ?Z.sub_add, ?Bool.orb_diag;
+      autorewrite with Ztestbit;
+      try lia; reflexivity.
+  Qed.
+
+  Lemma add_shift_land_ones x n
+    : 0 <= n -> x = ((x >> n) << n) + (Z.land x (Z.ones n)).
+  Proof.
+    pose proof (Z.ones_lt_pow2 n n).
+    pose proof (Z.ones_nonneg n).
+    intro Hn; etransitivity; [ eapply lor_shift_land_ones; eassumption | ].
+    apply lor_shiftl'; [ assumption | ].
+    rewrite Z.land_nonneg, Z.lt_le_pred.
+    split.
+    { right; now apply Z.ones_nonneg. }
+    { rewrite Z.land_comm; etransitivity; [ apply Z.land_le | ]; lia. }
+  Qed.
 End Z.
