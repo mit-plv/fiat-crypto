@@ -31,10 +31,10 @@ import "math/bits"
  *   out2: [0x0 ~> 0x1]
  */
 /*inline*/
-func fiat_p521_addcarryx_u58(out1 *uint64, out2 *uint64, arg1 uint64, arg2 uint64, arg3 uint64) {
-  var x1 uint64 = ((arg1 + arg2) + arg3)
+func fiat_p521_addcarryx_u58(out1 *uint64, out2 *uint8, arg1 uint8, arg2 uint64, arg3 uint64) {
+  var x1 uint64 = ((uint64(arg1) + arg2) + arg3)
   var x2 uint64 = (x1 & 0x3ffffffffffffff)
-  var x3 uint64 = (x1 >> 58)
+  var x3 uint8 = uint8((x1 >> 58))
   *out1 = x2
   *out2 = x3
 }
@@ -54,12 +54,12 @@ func fiat_p521_addcarryx_u58(out1 *uint64, out2 *uint64, arg1 uint64, arg2 uint6
  *   out2: [0x0 ~> 0x1]
  */
 /*inline*/
-func fiat_p521_subborrowx_u58(out1 *uint64, out2 *uint64, arg1 uint64, arg2 uint64, arg3 uint64) {
+func fiat_p521_subborrowx_u58(out1 *uint64, out2 *uint8, arg1 uint8, arg2 uint64, arg3 uint64) {
   var x1 int64 = ((int64(arg2) - int64(arg1)) - int64(arg3))
-  var x2 int64 = (x1 >> 58)
+  var x2 int8 = int8((x1 >> 58))
   var x3 uint64 = (uint64(x1) & 0x3ffffffffffffff)
   *out1 = x3
-  *out2 = (uint64(0x0) - uint64(x2))
+  *out2 = (uint8(0x0) - uint8(x2))
 }
 
 /*
@@ -77,10 +77,10 @@ func fiat_p521_subborrowx_u58(out1 *uint64, out2 *uint64, arg1 uint64, arg2 uint
  *   out2: [0x0 ~> 0x1]
  */
 /*inline*/
-func fiat_p521_addcarryx_u57(out1 *uint64, out2 *uint64, arg1 uint64, arg2 uint64, arg3 uint64) {
-  var x1 uint64 = ((arg1 + arg2) + arg3)
+func fiat_p521_addcarryx_u57(out1 *uint64, out2 *uint8, arg1 uint8, arg2 uint64, arg3 uint64) {
+  var x1 uint64 = ((uint64(arg1) + arg2) + arg3)
   var x2 uint64 = (x1 & 0x1ffffffffffffff)
-  var x3 uint64 = (x1 >> 57)
+  var x3 uint8 = uint8((x1 >> 57))
   *out1 = x2
   *out2 = x3
 }
@@ -100,12 +100,12 @@ func fiat_p521_addcarryx_u57(out1 *uint64, out2 *uint64, arg1 uint64, arg2 uint6
  *   out2: [0x0 ~> 0x1]
  */
 /*inline*/
-func fiat_p521_subborrowx_u57(out1 *uint64, out2 *uint64, arg1 uint64, arg2 uint64, arg3 uint64) {
+func fiat_p521_subborrowx_u57(out1 *uint64, out2 *uint8, arg1 uint8, arg2 uint64, arg3 uint64) {
   var x1 int64 = ((int64(arg2) - int64(arg1)) - int64(arg3))
-  var x2 int64 = (x1 >> 57)
+  var x2 int8 = int8((x1 >> 57))
   var x3 uint64 = (uint64(x1) & 0x1ffffffffffffff)
   *out1 = x3
-  *out2 = (uint64(0x0) - uint64(x2))
+  *out2 = (uint8(0x0) - uint8(x2))
 }
 
 /*
@@ -121,8 +121,8 @@ func fiat_p521_subborrowx_u57(out1 *uint64, out2 *uint64, arg1 uint64, arg2 uint
  *   out1: [0x0 ~> 0xffffffffffffffff]
  */
 /*inline*/
-func fiat_p521_cmovznz_u64(out1 *uint64, arg1 uint64, arg2 uint64, arg3 uint64) {
-  var x1 uint64 = (arg1 * 0xffffffffffffffff)
+func fiat_p521_cmovznz_u64(out1 *uint64, arg1 uint8, arg2 uint64, arg3 uint64) {
+  var x1 uint64 = (uint64(arg1) * 0xffffffffffffffff)
   var x2 uint64 = ((x1 & arg3) | ((^x1) & arg2))
   *out1 = x2
 }
@@ -1416,7 +1416,7 @@ func fiat_p521_opp(out1 *[9]uint64, arg1 *[9]uint64) {
  *   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
  */
 /*inline*/
-func fiat_p521_selectznz(out1 *[9]uint64, arg1 uint64, arg2 *[9]uint64, arg3 *[9]uint64) {
+func fiat_p521_selectznz(out1 *[9]uint64, arg1 uint8, arg2 *[9]uint64, arg3 *[9]uint64) {
   var x1 uint64
   fiat_p521_cmovznz_u64(&x1, arg1, (arg2[0]), (arg3[0]))
   var x2 uint64
