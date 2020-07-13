@@ -3938,7 +3938,7 @@ static void fiat_p256_selectznz(uint32_t out1[8], fiat_p256_uint1 arg1, const ui
 }
 
 /*
- * The function fiat_p256_to_bytes serializes a field element in the Montgomery domain to bytes in little-endian order.
+ * The function fiat_p256_to_bytes serializes a field element NOT in the Montgomery domain to bytes in little-endian order.
  * Preconditions:
  *   0 ≤ eval arg1 < m
  * Postconditions:
@@ -4111,7 +4111,7 @@ static void fiat_p256_to_bytes(uint8_t out1[32], const uint32_t arg1[8]) {
 }
 
 /*
- * The function fiat_p256_from_bytes deserializes a field element in the Montgomery domain from bytes in little-endian order.
+ * The function fiat_p256_from_bytes deserializes a field element NOT in the Montgomery domain from bytes in little-endian order.
  * Preconditions:
  *   0 ≤ bytes_eval arg1 < m
  * Postconditions:

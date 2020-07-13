@@ -3660,7 +3660,7 @@ func fiat_p434_selectznz(out1 *[7]uint64, arg1 uint64, arg2 *[7]uint64, arg3 *[7
 }
 
 /*
- * The function fiat_p434_to_bytes serializes a field element in the Montgomery domain to bytes in little-endian order.
+ * The function fiat_p434_to_bytes serializes a field element NOT in the Montgomery domain to bytes in little-endian order.
  * Preconditions:
  *   0 ≤ eval arg1 < m
  * Postconditions:
@@ -3842,7 +3842,7 @@ func fiat_p434_to_bytes(out1 *[56]uint64, arg1 *[7]uint64) {
 }
 
 /*
- * The function fiat_p434_from_bytes deserializes a field element in the Montgomery domain from bytes in little-endian order.
+ * The function fiat_p434_from_bytes deserializes a field element NOT in the Montgomery domain from bytes in little-endian order.
  * Preconditions:
  *   0 ≤ bytes_eval arg1 < m
  * Postconditions:
