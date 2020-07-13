@@ -4566,7 +4566,7 @@ func fiat_secp256k1_selectznz(out1 *[8]uint32, arg1 fiat_secp256k1_uint1, arg2 *
 }
 
 /*
- * The function fiat_secp256k1_to_bytes serializes a field element in the Montgomery domain to bytes in little-endian order.
+ * The function fiat_secp256k1_to_bytes serializes a field element NOT in the Montgomery domain to bytes in little-endian order.
  * Preconditions:
  *   0 ≤ eval arg1 < m
  * Postconditions:
@@ -4677,7 +4677,7 @@ func fiat_secp256k1_to_bytes(out1 *[32]uint8, arg1 *[8]uint32) {
 }
 
 /*
- * The function fiat_secp256k1_from_bytes deserializes a field element in the Montgomery domain from bytes in little-endian order.
+ * The function fiat_secp256k1_from_bytes deserializes a field element NOT in the Montgomery domain from bytes in little-endian order.
  * Preconditions:
  *   0 ≤ bytes_eval arg1 < m
  * Postconditions:

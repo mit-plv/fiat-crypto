@@ -440,7 +440,7 @@ Section __.
           machine_wordsize prefix "to_bytes" to_bytes
           (docstring_with_summary_from_lemma!
              prefix
-             (fun fname : string => ["The function " ++ fname ++ " serializes a field element in the Montgomery domain to bytes in little-endian order."]%string)
+             (fun fname : string => ["The function " ++ fname ++ " serializes a field element NOT in the Montgomery domain to bytes in little-endian order."]%string)
              (to_bytes_correct machine_wordsize n n_bytes m valid)).
 
   Definition from_bytes
@@ -460,7 +460,7 @@ Section __.
           machine_wordsize prefix "from_bytes" from_bytes
           (docstring_with_summary_from_lemma!
              prefix
-             (fun fname : string => ["The function " ++ fname ++ " deserializes a field element in the Montgomery domain from bytes in little-endian order."]%string)
+             (fun fname : string => ["The function " ++ fname ++ " deserializes a field element NOT in the Montgomery domain from bytes in little-endian order."]%string)
              (from_bytes_correct machine_wordsize n n_bytes m valid bytes_valid)).
 
   Definition encode
