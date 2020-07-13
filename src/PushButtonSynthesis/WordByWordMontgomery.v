@@ -12,6 +12,7 @@ Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ListUtil.FoldBool.
 Require Import Crypto.Util.Strings.Decimal.
 Require Import Crypto.Util.ZRange.
+Require Crypto.Util.Option. (* for option scope *)
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.Zselect.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
@@ -77,6 +78,7 @@ Local Opaque
       reified_add_gen
       reified_sub_gen
       reified_opp_gen
+      reified_scmul_gen
       reified_to_bytes_gen
       reified_from_bytes_gen
       reified_nonzero_gen
@@ -303,6 +305,26 @@ Section __.
              prefix
              (fun fname : string => ["The function " ++ fname ++ " squares a field element in the Montgomery domain."]%string)
              (square_correct machine_wordsize n m valid from_montgomery_res)).
+
+  Definition scmul_const (x : Z)
+    := Pipeline.BoundsPipeline
+         false (* subst01 *)
+         None (* fancy *)
+         possible_values
+         (reified_scmul_gen
+            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m' @ GallinaReify.Reify x)
+         (Some bounds, tt)
+         (Some bounds).
+
+  Definition sscmul_const (prefix : string) (x : Z)
+    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    := Eval cbv beta in
+        FromPipelineToString
+          machine_wordsize prefix ("scmul_" ++ Decimal.Z.to_string x) (scmul_const x)
+          (docstring_with_summary_from_lemma!
+             prefix
+             (fun fname : string => ["The function " ++ fname ++ " multiplies a field element in the Montgomery domain by " ++ Decimal.Z.to_string (x mod m) ++ "."]%string)
+             (scmul_const_correct machine_wordsize n m valid from_montgomery_res x)).
 
   Definition add
     := Pipeline.BoundsPipeline
@@ -706,6 +728,7 @@ Section __.
 
   Hint Rewrite
        (@eval_mulmod machine_wordsize n m r' m')
+       (@eval_scmulmod machine_wordsize n m r' m')
        (@eval_squaremod machine_wordsize n m r' m')
        (@eval_addmod machine_wordsize n m r' m')
        (@eval_submod machine_wordsize n m r' m')
@@ -722,6 +745,7 @@ Section __.
         WordByWordMontgomery.WordByWordMontgomery.from_montgomerymod
         WordByWordMontgomery.WordByWordMontgomery.to_montgomerymod
         WordByWordMontgomery.WordByWordMontgomery.mulmod
+        WordByWordMontgomery.WordByWordMontgomery.scmulmod
         WordByWordMontgomery.WordByWordMontgomery.squaremod
         WordByWordMontgomery.WordByWordMontgomery.encodemod
         WordByWordMontgomery.WordByWordMontgomery.addmod
@@ -732,32 +756,15 @@ Section __.
 
   Local Ltac prove_correctness op_correct :=
     let dont_clear H := first [ constr_eq H curve_good ] in
-    let Hres := match goal with H : _ = Success _ |- _ => H end in
-    let H := fresh in
-    pose proof use_curve_good as H;
-    (* I want to just use [clear -H Hres], but then I can't use any lemmas in the section because of COQBUG(https://github.com/coq/coq/issues/8153) *)
-    repeat match goal with
-           | [ H' : _ |- _ ]
-             => tryif first [ has_body H' | constr_eq H' H | constr_eq H' Hres | dont_clear H' ]
-             then fail
-             else clear H'
-           end;
-    cbv zeta in *;
-    destruct_head'_and;
-    let f := match type of Hres with ?f = _ => head f end in
-    try cbv [f] in *;
-    hnf;
-    PipelineTactics.do_unfolding;
-    try (let m := match goal with m := _ - Associational.eval _ |- _ => m end in
-         cbv [m] in * );
-    intros;
-    lazymatch goal with
-    | [ |- _ <-> _ ] => idtac
-    | [ |- _ = _ ] => idtac
-    | _ => split; [ | try split ];
-           cbv [small]
-    end;
-    PipelineTactics.use_compilers_correctness Hres;
+    Primitives.pre_prove_correctness
+      dont_clear use_curve_good
+      ltac:(fun _ =>
+              lazymatch goal with
+              | [ |- _ <-> _ ] => idtac
+              | [ |- _ = _ ] => idtac
+              | _ => split; [ | try split ];
+                     cbv [small]
+              end);
     repeat first [ reflexivity
                  | now apply bounded_by_of_valid
                  | now apply bounded_by_prime_bounds_of_valid
@@ -783,6 +790,11 @@ Section __.
         (Hres : mul = Success res)
     : mul_correct machine_wordsize n m valid from_montgomery_res (Interp res).
   Proof using curve_good. prove_correctness mulmod_correct. Qed.
+
+  Lemma scmul_const_correct x res
+        (Hres : scmul_const x = Success res)
+    : scmul_const_correct machine_wordsize n m valid from_montgomery_res x (Interp res).
+  Proof using curve_good. prove_correctness scmulmod_correct. Qed.
 
   Lemma square_correct res
         (Hres : square = Success res)
@@ -914,14 +926,26 @@ Section __.
             ("to_bytes", sto_bytes);
             ("from_bytes", sfrom_bytes)].
 
-    Definition valid_names : string := Eval compute in String.concat ", " (List.map (@fst _ _) known_functions).
+    Definition valid_names : string
+      := Eval compute in String.concat ", " (List.map (@fst _ _) known_functions) ++ ", or 'scmul' followed by a decimal literal".
+
+    Import Crypto.Util.Option.
+    Definition extra_special_synthesis (function_name_prefix : string) (name : string)
+      : list (option (string * Pipeline.ErrorT (list string * ToString.ident_infos)))
+      := [if prefix "scmul" name
+          then let sc := substring (String.length "scmul") (String.length name) name in
+               (scZ <- Decimal.Z.of_string sc;
+               if (sc =? Decimal.Z.to_string scZ)%string
+               then Some (sscmul_const function_name_prefix scZ)
+               else None)%option
+          else None].
 
     (** Note: If you change the name or type signature of this
           function, you will need to update the code in CLI.v *)
     Definition Synthesize (comment_header : list string) (function_name_prefix : string) (requests : list string)
       : list (string * Pipeline.ErrorT (list string))
       := Primitives.Synthesize
-           machine_wordsize valid_names known_functions (fun _ => nil)
+           machine_wordsize valid_names known_functions (extra_special_synthesis function_name_prefix)
            check_args
            (ToString.comment_file_header_block
               (comment_header

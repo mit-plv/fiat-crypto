@@ -1314,5 +1314,32 @@ Module WordByWordMontgomery.
             Positional.eval (uweight 8) (bytes_n bitwidth 1 n) (to_bytesmod a)
             = eval a mod m).
     Proof. apply to_bytesmod_correct. Qed.
+
+    Definition scmulmod (x : Z) (a : list Z) := mulmod (encodemod (x mod m)) a.
+
+    Lemma scmulmod_correct
+      : (forall (x : Z) a (_ : valid a),
+            eval (from_montgomerymod (scmulmod x a)) mod m
+            = (x * eval (from_montgomerymod a)) mod m)
+        /\ (forall (x : Z) a (_ : valid a),
+               valid (scmulmod x a)).
+    Proof using r'_correct r' n_nz m_small m_big m'_correct bitwidth_big.
+      pose proof (fun x => Z.mod_pos_bound x m ltac:(clear -m_big; lia)).
+      split; intros.
+      { push_Zmod; rewrite <- (Zmod_mod x);
+          etransitivity;
+          [ | rewrite <- (eval_encodemod (x mod m)) by auto; reflexivity ].
+        pull_Zmod.
+        rewrite <- eval_mulmod by now try apply encodemod_correct.
+        cbv [scmulmod]; reflexivity. }
+      { cbv [scmulmod].
+        now apply mulmod_correct; [ apply encodemod_correct | ]. }
+    Qed.
+
+    Lemma eval_scmulmod
+      : forall (x : Z) a (_ : valid a),
+        eval (from_montgomerymod (scmulmod x a)) mod m
+        = (x * eval (from_montgomerymod a)) mod m.
+    Proof. apply scmulmod_correct. Qed.
   End modops.
 End WordByWordMontgomery.

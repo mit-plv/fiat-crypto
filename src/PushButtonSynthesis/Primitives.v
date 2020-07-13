@@ -156,7 +156,7 @@ Notation FromPipelineToString machine_wordsize prefix name result
 Notation FromPipelineToInternalString machine_wordsize prefix name result
   := (Pipeline.FromPipelineToInternalString machine_wordsize prefix name result).
 
-Ltac prove_correctness' should_not_clear use_curve_good :=
+Ltac pre_prove_correctness should_not_clear use_curve_good split_tac :=
   let Hres := match goal with H : _ = Success _ |- _ => H end in
   let H := fresh in
   pose proof use_curve_good as H;
@@ -176,7 +176,11 @@ Ltac prove_correctness' should_not_clear use_curve_good :=
   try (let m := match goal with m := _ - Associational.eval _ |- _ => m end in
        cbv [m] in * );
   intros;
-  try split; PipelineTactics.use_compilers_correctness Hres;
+  split_tac ();
+  PipelineTactics.use_compilers_correctness Hres.
+
+Ltac prove_correctness' should_not_clear use_curve_good :=
+  pre_prove_correctness should_not_clear use_curve_good ltac:(fun _ => try split);
   [ pose_proof_length_list_Z_bounded_by;
     repeat first [ reflexivity
                  | progress autorewrite with interp_extra interp_gen_cache
