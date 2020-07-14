@@ -465,6 +465,14 @@ Module WordByWordMontgomery.
         -> eval (from_montgomery (mul a b)) mod m = (Z.mul (eval (from_montgomery a)) (eval (from_montgomery b))) mod m
            /\ valid (mul a b).
 
+    Definition scmul_const_correct
+               (x : Z)
+               (scmul_const : list Z -> list Z)
+      := forall a,
+        valid a
+        -> eval (from_montgomery (scmul_const a)) mod m = (Z.mul x (eval (from_montgomery a))) mod m
+           /\ valid (scmul_const a).
+
     Definition add_correct
                (add : list Z -> list Z -> list Z)
       := forall a b,
