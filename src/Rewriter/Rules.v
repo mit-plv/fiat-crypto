@@ -318,13 +318,18 @@ Definition arith_with_casts_rewrite_rulesT (adc_no_carry_to_add : bool) : list (
                      = (cstZ ry y, cstZ r[0~>0] 0))
            ]
          ; mymap
-             do_again
+             dont_do_again
              [ (** remove unnecessary masks *)
                (forall rv rx x ry y,
                    (rx <= rv)%zrange ->
                    (rx <= r[0~>y])%zrange ->
                    y ∈ ry -> y = Z.ones (Z.succ (Z.log2 y))
-                   -> cstZ rv (cstZ rx x &' cstZ ry ('y)) = cstZ rx x)
+                   -> cstZ rv (cstZ rx x &' cstZ ry ('y)) = cstZ rx x);
+                 (forall rv rx x ry y,
+                   (rx <= rv)%zrange ->
+                   (rx <= r[0~>y])%zrange ->
+                   y ∈ ry -> y = Z.ones (Z.succ (Z.log2 y))
+                   -> cstZ rv (cstZ ry ('y) &' cstZ rx x) = cstZ rx x)
              ]%Z%zrange
          ; mymap
              do_again

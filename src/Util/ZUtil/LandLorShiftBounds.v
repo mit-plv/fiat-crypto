@@ -4,6 +4,7 @@ Require Import Coq.micromega.Lia.
 Require Import Crypto.Util.ZUtil.Hints.Core.
 Require Import Crypto.Util.ZUtil.Hints.ZArith.
 Require Import Crypto.Util.ZUtil.Definitions.
+Require Import Crypto.Util.ZUtil.N2Z.
 Require Import Crypto.Util.ZUtil.Pow.
 Require Import Crypto.Util.ZUtil.Pow2.
 Require Import Crypto.Util.ZUtil.Div.
@@ -137,14 +138,6 @@ Module Z.
       intros; rewrite Z.land_comm. auto using land_neg_l_range.
     Qed.
 
-    (* TODO : move *)
-    Lemma N2Z_inj_lor a b :
-      Z.of_N (N.lor a b) = Z.lor (Z.of_N a) (Z.of_N b).
-    Proof. destruct a, b; reflexivity. Qed.
-    Lemma N2Z_inj_land a b :
-      Z.of_N (N.land a b) = Z.land (Z.of_N a) (Z.of_N b).
-    Proof. destruct a, b; reflexivity. Qed.
-
     Lemma lor_neg_lower :
       forall x y, x < 0 -> y < 0 -> (Z.max x y <= Z.lor x y)%Z.
     Proof.
@@ -156,7 +149,7 @@ Module Z.
                    | rewrite Pos2Z.opp_neg
                    | rewrite <-!positive_N_Z
                    | rewrite N.succ_pos_spec ].
-      rewrite !N2Z.inj_succ, !N2Z_inj_land,
+      rewrite !N2Z.inj_succ, !N2Z.inj_land,
       !N2Z.inj_pred, !N2Z.inj_pos by lia.
       match goal with
       | |- context [Z.land ?a ?b] =>
@@ -186,7 +179,7 @@ Module Z.
                    | rewrite N.succ_pos_spec
                    | rewrite Z.opp_involutive
                    | rewrite Z.opp_succ ].
-      rewrite !N2Z.inj_succ, !N2Z_inj_lor,
+      rewrite !N2Z.inj_succ, !N2Z.inj_lor,
       !N2Z.inj_pred, !N2Z.inj_pos by lia.
       match goal with
       | |- context [Z.lor ?a ?b] =>

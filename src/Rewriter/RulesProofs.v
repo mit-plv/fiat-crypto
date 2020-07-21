@@ -251,6 +251,12 @@ Local Ltac interp_good_t_step_arith :=
           | [ |- context[ident.cast r[0~>0] ?v] ]
             => rewrite (ident.platform_specific_cast_0_is_mod 0 v) by reflexivity
           | [ H : ?x = Z.ones _ |- context [Z.land _ ?x] ] => rewrite H
+          | [ H : ?x = Z.ones _ |- context [Z.land ?x _] ] => rewrite H
+          | [ |- context [Z.land (Z.ones ?n) ?x] ] =>
+            lazymatch x with
+            | Z.ones _ => fail
+            | _ => rewrite (Z.land_comm (Z.ones n) x)
+            end
           | [ |- context [Z.land ?x (Z.ones (Z.succ (Z.log2 _)))] ] =>
             rewrite (Z.land_ones_low x)
               by (repeat match goal with
