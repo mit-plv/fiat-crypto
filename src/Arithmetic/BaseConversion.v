@@ -7,6 +7,7 @@ Require Import Crypto.Arithmetic.Partition.
 Require Import Crypto.Arithmetic.Saturated.
 Require Import Crypto.Util.LetIn.
 Require Import Crypto.Util.ListUtil.
+Require Import Crypto.Util.ZUtil.Definitions.
 
 Require Import Crypto.Util.Notations.
 Local Open Scope Z_scope.
@@ -18,16 +19,13 @@ Module BaseConversion.
             {swprops : @weight_properties sw}
             {dwprops : @weight_properties dw}.
 
-    Definition add_split (s x y : Z) : Z * Z :=
-      dlet sum := Z.add x y in (sum mod s, sum / s).
-
     Definition convert_bases (sn dn : nat) (p : list Z) : list Z :=
       let p_assoc := Positional.to_associational sw sn p in
       let p_cols := Columns.from_associational dw dn p_assoc in
       (* reverse is not needed for correctness, but this way has better
          performance because we add the small numbers first *)
       let p_cols := Columns.reverse p_cols in
-      let p_flattened := Columns.flatten dw add_split p_cols in
+      let p_flattened := Columns.flatten dw Z.add_split p_cols in
       let r := fst p_flattened in
       let carry := (snd p_flattened * (dw dn / dw (pred dn))) in
       let r := add_to_nth (pred dn) carry r in
@@ -66,13 +64,6 @@ Module BaseConversion.
       cbv [convert_bases]; now repeat autorewrite with distr_length.
     Qed.
     Hint Rewrite length_convert_bases : distr_length.
-
-    (* TODO: move *)
-    Lemma add_to_nth_zero i l : add_to_nth i 0 l = l.
-    Proof.
-      cbv [add_to_nth]. apply update_nth_id_eq.
-      reflexivity.
-    Qed.
 
     Lemma convert_bases_partitions sn dn p
           (dw_unique : forall i j : nat, (i <= dn)%nat -> (j <= dn)%nat -> dw i = dw j -> i = j)

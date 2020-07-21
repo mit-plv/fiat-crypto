@@ -5,6 +5,7 @@ Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.LandLorBounds.
 Require Import Crypto.Util.ZUtil.LandLorShiftBounds.
 Require Import Crypto.Util.ZUtil.Morphisms.
+Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.SplitMinMax.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.Operations.
@@ -157,7 +158,7 @@ Module ZRange.
            | H : (_ && _)%bool = true |- _ =>
              apply Bool.andb_true_iff in H; destruct H
            end.
-    LtbToLt.Z.ltb_to_lt.
+    Z.ltb_to_lt.
     pose proof (Z.log2_up_le_mono (-x) (- lower x_bs) ltac:(lia)).
     pose proof (Z.log2_up_le_mono (-y) (- lower y_bs) ltac:(lia)).
     assert (0 <= 2 ^ (Z.max (Z.log2_up (- lower x_bs))
@@ -192,10 +193,10 @@ Module ZRange.
                apply Bool.andb_true_iff in H; destruct H
              | H : (_ && _)%bool = false |- _ =>
                apply Bool.andb_false_iff in H; destruct H
-             end; LtbToLt.Z.ltb_to_lt.
+             end; Z.ltb_to_lt.
     all:try lia.
     all:apply Bool.andb_true_iff; split;
-      LtbToLt.Z.ltb_to_lt; try lia.
+      Z.ltb_to_lt; try lia.
   Qed.
 
   Lemma is_bounded_by_bool_lor_bounds

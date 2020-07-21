@@ -625,6 +625,8 @@ Module Positional.
            | _ => rewrite <-ListUtil.map_nth_default_always
            end; lia.                                          Qed.
   Hint Rewrite @eval_add_to_nth eval_zeros eval_combine_zeros : push_eval.
+  Lemma add_to_nth_zero i l : add_to_nth i 0 l = l.
+  Proof. cbv [add_to_nth]. apply update_nth_id_eq. reflexivity. Qed.
 
   Lemma zeros_ext_map {A} n (p : list A) : length p = n -> zeros n = map (fun _ => 0) p.
   Proof using Type. cbv [zeros]; intro; subst; induction p; cbn; congruence. Qed.

@@ -75,6 +75,9 @@ Module Z.
        then sub_with_get_borrow (Z.log2 bound) c x y
        else ((x - y - c) mod bound, -((x - y - c) / bound)).
 
+  Definition add_split (s x y : Z) : Z * Z
+    := dlet sum := Z.add x y in (sum mod s, sum / s).
+
   Definition mul_split_at_bitwidth (bitwidth : Z) (x y : Z) : Z * Z
     := dlet xy := x * y in
        (if Z.geb bitwidth 0
