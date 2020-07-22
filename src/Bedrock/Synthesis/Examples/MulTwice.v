@@ -38,9 +38,9 @@ Local Notation machine_wordsize := X25519_64.machine_wordsize.
 Local Notation M := (UnsaturatedSolinas.m s c).
 Local Notation weight :=
   (ModOps.weight (QArith_base.Qnum
-                    (UnsaturatedSolinas.limbwidth n s c))
+                    (UnsaturatedSolinasHeuristics.limbwidth n s c))
                  (Z.pos (QArith_base.Qden
-                           (UnsaturatedSolinas.limbwidth n s c)))).
+                           (UnsaturatedSolinasHeuristics.limbwidth n s c)))).
 Local Notation eval := (Positional.eval weight n).
 Local Notation loose_bounds := (UnsaturatedSolinasHeuristics.loose_bounds n s c).
 Local Notation tight_bounds := (UnsaturatedSolinasHeuristics.tight_bounds n s c).

@@ -96,7 +96,7 @@ Section __.
           (c : list (Z * Z))
           (machine_wordsize : Z).
 
-  Definition limbwidth := (Z.log2_up (s - Associational.eval c) / Z.of_nat n)%Q.
+  Local Notation limbwidth := (limbwidth n s c).
   Definition idxs : list nat := carry_chains n s c.
   Definition n_bytes := bytes_n s.
   Local Notation prime_upperbound_list := (prime_upperbound_list n s c) (only parsing).
@@ -114,6 +114,7 @@ Section __.
     := Some (List.map (fun v => Some r[0 ~> v]%zrange) prime_bytes_upperbound_list).
   Local Notation saturated_bounds_list := (saturated_bounds_list n machine_wordsize).
   Local Notation saturated_bounds := (saturated_bounds n machine_wordsize).
+  Local Notation balance := (balance n s c).
 
   Definition m : Z := s - Associational.eval c.
   Definition m_enc : list Z
@@ -161,6 +162,7 @@ Section __.
          (fun '(b, e) k => if b:bool then Error e else k)
          res
          [(negb (Qle_bool 1 limbwidth)%Q, Pipeline.Value_not_leQ "limbwidth < 1" 1%Q limbwidth);
+            (negb (n <=? (Z.log2_up (s - Associational.eval c)))%Z, Pipeline.Value_not_leZ "Z.log2_up (s - Associational.eval c) < n" n (Z.log2_up (s - Associational.eval c)));
             ((negb (0 <? Associational.eval c))%Z, Pipeline.Value_not_ltZ "Associational.eval c ≤ 0" 0 (Associational.eval c));
             ((negb (Associational.eval c <? s))%Z, Pipeline.Value_not_ltZ "s ≤ Associational.eval c" (Associational.eval c) s);
             ((s =? 0)%Z, Pipeline.Values_not_provably_distinctZ "s = 0" s 0);
@@ -240,7 +242,8 @@ Section __.
       /\ Datatypes.length m_enc = n
       /\ 0 < Associational.eval c < s
       /\ eval tight_upperbounds < 2 * eval m_enc
-      /\ 0 < s - Associational.eval c.
+      /\ 0 < s - Associational.eval c
+      /\ n <= Z.log2_up (s - Associational.eval c).
   Proof using curve_good.
     prepare_use_curve_good ().
     { use_curve_good_t. }
@@ -373,7 +376,7 @@ Section __.
          None (* fancy *)
          possible_values
          (reified_sub_gen
-            @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify coef)
+            @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify n @ GallinaReify.Reify balance)
          (Some tight_bounds, (Some tight_bounds, tt))
          (Some loose_bounds).
 
@@ -392,7 +395,7 @@ Section __.
          None (* fancy *)
          possible_values
          (reified_opp_gen
-            @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify coef)
+            @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify n @ GallinaReify.Reify balance)
          (Some tight_bounds, tt)
          (Some loose_bounds).
 
@@ -548,7 +551,7 @@ Section __.
        eval_to_bytesmod
        eval_from_bytesmod
        eval_encodemod
-       using solve [ auto | congruence | solve_extra_bounds_side_conditions ] : push_eval.
+       using solve [ auto using eval_balance, length_balance | congruence | solve_extra_bounds_side_conditions ] : push_eval.
   Hint Unfold zeromod onemod : push_eval.
 
   Local Ltac prove_correctness _ :=
@@ -759,6 +762,7 @@ Section __.
                       ; "carry_chain = " ++ show false idxs
                       ; "eval z = " ++ seval "z" false
                       ; "bytes_eval z = " ++ sbytes_eval "z" false
+                      ; "balance = " ++ let show_Z := Hex.show_Z in show false balance
                      ]%string))
               ++ [""])
            function_name_prefix requests.
