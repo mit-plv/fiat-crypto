@@ -10,6 +10,7 @@ Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
+Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
 Require Import Crypto.Util.ListUtil.FoldBool.
 Require Crypto.TAPSort.
@@ -40,9 +41,21 @@ Section __.
           (n : nat)
           (s : Z)
           (c : list (Z * Z))
-          (machine_wordsize : Z).
+          (machine_wordsize : Z)
+          (Hn_nz : n <> 0%nat)
+          (Hs_n : Z.of_nat n <= Z.log2_up (s - Associational.eval c))
+          (Hs_nz : s <> 0)
+          (Hs_c_nz : s - Associational.eval c <> 0).
 
   Let limbwidth := (limbwidth n s c).
+  Lemma limbwidth_good : 0 < Qden limbwidth <= Qnum limbwidth.
+  Proof using Hn_nz Hs_n.
+    clear -Hn_nz Hs_n.
+    cbv [limbwidth Qnum Qden Qdiv inject_Z Qmult Qinv].
+    destruct n; cbn [Z.of_nat]; lia.
+  Qed.
+  Let wprops := wprops _ _ limbwidth_good.
+  Local Hint Resolve wprops : core.
   (** Translating from https://github.com/mit-plv/fiat-crypto/blob/c60b1d2556a72c37f4bc7444204e9ddc0791ce4f/src/Specific/solinas64_2e448m2e224m1_8limbs/CurveParameters.v#L11-L35
 <<
 if len(p) > 2:
@@ -91,11 +104,15 @@ else:
   (** Allow enough space to do one subtraction w/o carrying *)
   Definition headspace_sub_count : nat := 1.
 
+  Definition balance : list Z
+    := let weight := weight (Qnum limbwidth) (Qden limbwidth) in
+       scmul weight n coef (encode weight n s c (s - Associational.eval c)).
+
   Definition loose_upperbounds : list Z
     := List.map
          (fun '(v, bal) => v + Z.max (headspace_add_count * v)
                                      (headspace_sub_count * bal))
-         (List.combine tight_upperbounds (balance (weight (Qnum limbwidth) (Qden limbwidth)) n s c coef)).
+         (List.combine tight_upperbounds balance).
 
   Definition tight_bounds : list (option zrange)
     := List.map (fun u => Some r[0~>u]%zrange) tight_upperbounds.
@@ -120,6 +137,20 @@ else:
       etransitivity; [ | apply Z.le_max_l ].
       cbv [Qceiling Qmult Qfloor Qnum Qden Qopp inject_Z Qabs]; case tight_upperbound_fraction; intros; clear.
       Z.div_mod_to_quot_rem; nia. }
+  Qed.
+
+  Lemma length_balance : List.length balance = n.
+  Proof using Type. cbv [balance]; now autorewrite with distr_length. Qed.
+
+  Lemma eval_balance : eval (weight (Qnum limbwidth) (Qden limbwidth)) n balance mod (s - Associational.eval c) = 0.
+  Proof using Hs_nz Hs_c_nz Hs_n Hn_nz.
+    clear -Hs_nz Hs_c_nz Hs_n Hn_nz wprops.
+    cbv [balance];
+      repeat first [ rewrite Z_mod_same_full
+                   | rewrite eval_scmul by auto
+                   | rewrite eval_encode by auto with zarith
+                   | reflexivity
+                   | progress (pull_Zmod; autorewrite with zsimplify_fast; push_Zmod) ].
   Qed.
 
   (** check if the suggested number of limbs will overflow

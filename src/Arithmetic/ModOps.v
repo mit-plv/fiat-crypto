@@ -178,34 +178,38 @@ Section mod_ops.
   Qed.
 
   Derive submod
-         SuchThat (forall (coef:Z)
+         SuchThat (forall (balance : list Z)
                           (f g : list Z)
+                          (length_balance : length balance = n)
+                          (eval_balance : eval weight n balance mod (s - Associational.eval c) = 0)
                           (Hf : length f = n)
                           (Hg : length g = n),
-                      (eval weight n (submod coef f g)) mod (s - Associational.eval c)
+                      (eval weight n (submod balance f g)) mod (s - Associational.eval c)
                       = (eval weight n f - eval weight n g) mod (s - Associational.eval c))
          As eval_submod.
   Proof.
     revert submod; instantiate (1:=ltac:(clear -s c n)); intro submod.
     clear -s_nz m_nz limbwidth_good.
     intros.
-    rewrite <-eval_sub with (coef:=coef) by auto with zarith.
+    rewrite <-eval_sub with (balance:=balance) by auto with zarith.
     eapply f_equal2; [|trivial]. eapply f_equal.
     subst submod; reflexivity.
   Qed.
 
   Derive oppmod
-         SuchThat (forall (coef:Z)
+         SuchThat (forall (balance : list Z)
                           (f: list Z)
+                          (length_balance : length balance = n)
+                          (eval_balance : eval weight n balance mod (s - Associational.eval c) = 0)
                           (Hf : length f = n),
-                      (eval weight n (oppmod coef f)) mod (s - Associational.eval c)
+                      (eval weight n (oppmod balance f)) mod (s - Associational.eval c)
                       = (- eval weight n f) mod (s - Associational.eval c))
          As eval_oppmod.
   Proof.
     revert oppmod; instantiate (1:=ltac:(clear -s c n)); intro oppmod.
     clear -s_nz m_nz limbwidth_good.
     intros.
-    rewrite <-eval_opp with (coef:=coef) by auto with zarith.
+    rewrite <-eval_opp with (balance:=balance) by auto with zarith.
     eapply f_equal2; [|trivial]. eapply f_equal.
     subst oppmod; reflexivity.
   Qed.

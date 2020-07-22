@@ -902,7 +902,9 @@ Module Positional.
             (s:Z) (s_nz:s <> 0)
             (c:list (Z * Z))
             (m_nz:s - Associational.eval c <> 0)
-            (coef:Z).
+            (balance:list Z)
+            (length_balance:length balance = n)
+            (eval_balance:eval n balance mod (s - Associational.eval c) = 0).
 
     Definition negate_snd (a:list Z) : list Z
       := let A := to_associational n a in
@@ -914,22 +916,32 @@ Module Positional.
          let R := Associational.mul A [(1, x)] in
          from_associational n R.
 
-    Definition balance : list Z
-      := scmul coef (encode n s c (s - Associational.eval c)).
-
     Definition sub (a b:list Z) : list Z
       := let ca := add n balance a in
          let _b := negate_snd b in
          add n ca _b.
 
+    Lemma length_scmul x a : length (scmul x a) = n.
+    Proof using Type. cbv [scmul]; now push. Qed.
+    Hint Rewrite length_scmul : distr_length.
+
+    Lemma eval_scmul x a : eval n (scmul x a) = x * eval n a.
+    Proof using weight_0 weight_nz.
+      clear -weight_0 weight_nz.
+      destruct (zerop n) as [->|]; [ cbn; lia | ].
+      cbv [scmul]; push; try lia.
+    Qed.
+    Hint Rewrite eval_scmul : push_eval.
+
+    Hint Rewrite eval_balance : push_eval.
     Lemma eval_sub a b
       : (forall i, In i (seq 0 n) -> weight (S i) / weight i <> 0) ->
         (List.length a = n) -> (List.length b = n) ->
         eval n (sub a b) mod (s - Associational.eval c)
         = (eval n a - eval n b) mod (s - Associational.eval c).
-    Proof using s_nz m_nz weight_0 weight_nz.
+    Proof using s_nz m_nz weight_0 weight_nz eval_balance length_balance.
       destruct (zerop n) as [->|]; try reflexivity.
-      intros; cbv [sub balance scmul negate_snd]; push; repeat distr_length;
+      intros; cbv [sub negate_snd]; push; repeat distr_length;
         eauto with lia.
       push_Zmod; push; pull_Zmod; push_Zmod; pull_Zmod; distr_length; eauto.
     Qed.
@@ -937,7 +949,7 @@ Module Positional.
     Lemma length_sub a b
       : length a = n -> length b = n ->
         length (sub a b) = n.
-    Proof using Type. intros; cbv [sub balance scmul negate_snd]; repeat distr_length. Qed.
+    Proof using length_balance. intros; cbv [sub scmul negate_snd]; repeat distr_length. Qed.
     Hint Rewrite length_sub : distr_length.
     Definition opp (a:list Z) : list Z
       := sub (zeros n) a.
@@ -947,13 +959,13 @@ Module Positional.
         (forall i, In i (seq 0 n) -> weight (S i) / weight i <> 0) ->
         eval n (opp a) mod (s - Associational.eval c)
         = (- eval n a) mod (s - Associational.eval c).
-    Proof using m_nz s_nz weight_0 weight_nz. intros; cbv [opp]; push; distr_length; auto.       Qed.
+    Proof using m_nz s_nz weight_0 weight_nz eval_balance length_balance. intros; cbv [opp]; push; distr_length; auto.       Qed.
     Lemma length_opp a
       : length a = n -> length (opp a) = n.
-    Proof using Type. cbv [opp]; intros; repeat distr_length.            Qed.
+    Proof using length_balance. cbv [opp]; intros; repeat distr_length.            Qed.
   End sub.
-  Hint Rewrite @eval_opp @eval_sub : push_eval.
-  Hint Rewrite @length_sub @length_opp : distr_length.
+  Hint Rewrite @eval_scmul @eval_opp @eval_sub : push_eval.
+  Hint Rewrite @length_scmul @length_sub @length_opp : distr_length.
 
   Section select.
     Definition zselect (mask cond:Z) (p:list Z) :=
@@ -1018,7 +1030,7 @@ Module Positional.
   End select.
 End Positional.
 (* Hint Rewrite disappears after the end of a section *)
-Hint Rewrite length_zeros length_add_to_nth length_from_associational @length_add @length_carry_reduce @length_carry @length_chained_carries @length_encode @length_sub @length_opp @length_select @length_zselect @length_select_min @length_extend_to_length @length_drop_high_to_length : distr_length.
+Hint Rewrite length_zeros length_add_to_nth length_from_associational @length_add @length_carry_reduce @length_carry @length_chained_carries @length_encode @length_scmul @length_sub @length_opp @length_select @length_zselect @length_select_min @length_extend_to_length @length_drop_high_to_length : distr_length.
 Hint Rewrite @eval_zeros @eval_nil @eval_snoc_S @eval_select @eval_zselect @eval_extend_to_length using solve [auto; distr_length]: push_eval.
 Section Positional_nonuniform.
   Context (weight weight' : nat -> Z).
@@ -1058,3 +1070,7 @@ Record weight_properties {weight : nat -> Z} :=
     weight_divides : forall i : nat, 0 < weight (S i) / weight i;
   }.
 Hint Resolve weight_0 weight_positive weight_multiples weight_divides : core.
+Lemma weight_nz {weight : nat -> Z} {wprops : @weight_properties weight}
+  : forall i, weight i <> 0.
+Proof. intro i; pose proof (@weight_positive _ wprops i); lia. Qed.
+Hint Resolve weight_nz : core.
