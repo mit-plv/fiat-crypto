@@ -6,6 +6,8 @@ Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Map.SeparationLogic.
 Require Import coqutil.Word.Interface coqutil.Word.Properties.
 Require Import coqutil.Map.Interface coqutil.Map.Properties.
+Require Import coqutil.Datatypes.List.
+Require Import coqutil.Datatypes.PropSet.
 Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Language.API.
@@ -133,7 +135,7 @@ Section Flatten.
       break_match; intros; cbn [fst snd];
         eauto using subset_empty_l; [ | ].
     { rewrite PropSet.of_list_app.
-      eauto using subset_union_l, subset_union_r, subset_union_r'. }
+      eauto using subset_union_l, subset_union_rr, subset_union_rl. }
     { rewrite of_list_singleton. reflexivity. }
   Qed.
 

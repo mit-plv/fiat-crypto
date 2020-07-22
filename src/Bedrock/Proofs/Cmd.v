@@ -8,6 +8,8 @@ Require Import bedrock2.Map.SeparationLogic.
 Require Import bedrock2.WeakestPreconditionProperties.
 Require Import coqutil.Map.Interface.
 Require Import coqutil.Word.Interface.
+Require Import coqutil.Datatypes.List.
+Require Import coqutil.Datatypes.PropSet.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Util.

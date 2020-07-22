@@ -11,6 +11,8 @@ Require Import coqutil.Word.Interface.
 Require Import coqutil.Word.Properties.
 Require Import coqutil.Map.Interface.
 Require Import coqutil.Map.Properties.
+Require Import coqutil.Datatypes.List.
+Require Import coqutil.Datatypes.PropSet.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Util.
@@ -103,7 +105,7 @@ Section Func.
           (fun tr' mem' locals' =>
              tr = tr' /\
              mem = mem' /\
-             PropSet.subset (varname_set_base (snd (fst out)))
+             subset (varname_set_base (snd (fst out)))
                             (used_varnames nextn nvars) /\
              Interface.map.only_differ
                locals (used_varnames nextn nvars) locals' /\
@@ -397,11 +399,11 @@ Section Func.
     forall (names : listonly_base_ltype t) (values : list Semantics.word)
            (sizes : base_access_sizes t)
            (l locals init_locals : Semantics.locals)
-           (vset : PropSet.set string) (x : base.interp t),
+           (vset : set string) (x : base.interp t),
       NoDup (flatten_listonly_base_ltype names) ->
       map.putmany_of_list_zip (flatten_listonly_base_ltype names) values l = Some init_locals ->
       map.only_differ init_locals vset locals ->
-      PropSet.disjoint vset (PropSet.of_list (flatten_listonly_base_ltype names)) ->
+      disjoint vset (of_list (flatten_listonly_base_ltype names)) ->
       Lift1Prop.iff1
         (equivalent_listonly
            x (map_listonly base_rtype_of_ltype names) sizes locals)
@@ -426,7 +428,7 @@ Section Func.
       end.
       cbv [Option.bind] in *. break_match_hyps; try congruence; [ ].
       match goal with
-      | H : _ |- _ => rewrite PropSet.of_list_app in H;
+      | H : _ |- _ => rewrite of_list_app in H;
                         rewrite disjoint_union_r_iff in H
       end.
       cleanup.
@@ -461,7 +463,7 @@ Section Func.
       cbv [WeakestPrecondition.literal dlet.dlet].
       repeat match goal with
              | H : _ |- _ => rewrite map.get_put_same in H
-             | H : context [PropSet.of_list [_] ] |- _ =>
+             | H : context [of_list [_] ] |- _ =>
                rewrite of_list_singleton in H
              | H : map.only_differ (map.put _ ?k ?v) _ ?m' |- _ =>
                eapply only_differ_notin in H;
@@ -537,7 +539,7 @@ Section Func.
         (* return value bounds are obeyed *)
         within_base_access_sizes rets retsizes ->
         (* argnames and retnames are disjoint *)
-        PropSet.disjoint (varname_set_args argnames)
+        disjoint (varname_set_args argnames)
                          (varname_set_base retnames) ->
         (* seplogic frame for return values *)
         sep (lists_reserved_with_initial_context
@@ -568,8 +570,8 @@ Section Func.
             [ | cleanup; eexists; split; [ eassumption | ] ] ]
     end.
     { apply disjoint_NoDup; eauto using flatten_listonly_NoDup.
-      eapply subset_disjoint';
-        [ | rewrite <-varname_set_args_flatten; solve [eauto] ].
+      eapply subset_disjoint_l;
+        [ | symmetry; rewrite <-varname_set_args_flatten; solve [eauto] ].
       eapply flatten_listonly_subset. }
     { eapply of_list_zip_app; try lia; [ ].
       erewrite flatten_args_samelength; eauto. }
@@ -607,8 +609,9 @@ Section Func.
               eauto with lia | ].
           eapply putmany_of_list_zip_undef_on;
             eauto using undef_on_empty.
-          eapply subset_disjoint';
-            eauto using flatten_listonly_subset.
+          eapply subset_disjoint_l;
+            eauto using flatten_listonly_subset; [ ].
+          eapply disjoint_sym.
           eapply disjoint_used_varnames_lt; eauto with lia. }
     cbv beta in *. cleanup; subst.
     eapply Proper_cmd; [ solve [apply Proper_call] | repeat intro | ].
@@ -619,35 +622,36 @@ Section Func.
                       inversion H; clear H; subst end.
       eapply store_return_values_correct; eauto using only_differ_trans.
       { eapply of_list_zip_undef_on; eauto.
-        rewrite PropSet.of_list_app.
+        rewrite of_list_app.
         rewrite <-varname_set_args_flatten.
         repeat match goal with
-               | |- PropSet.disjoint (PropSet.union _ _) _ =>
+               | |- disjoint (union _ _) _ =>
                  apply disjoint_union_l_iff; split; auto
-               | |- PropSet.disjoint _ (PropSet.union _ _) =>
+               | |- disjoint _ (union _ _) =>
                  apply disjoint_union_r_iff; split; auto
-               | |- PropSet.disjoint
-                      (PropSet.of_list
+               | |- disjoint
+                      (of_list
                          (flatten_listonly_base_ltype _))
                       (used_varnames _ _) =>
-                 eapply subset_disjoint';
+                 symmetry;
+                 eapply subset_disjoint_r;
                    [ solve [apply flatten_listonly_subset] | ]
                end;
           (* solvers *)
           try match goal with
-              | |- PropSet.disjoint _ (varname_set_listexcl _) =>
-                eapply subset_disjoint;
+              | |- disjoint _ (varname_set_listexcl _) =>
+                eapply subset_disjoint_r;
                   solve [eauto using varname_set_listexcl_subset]
-              | |- PropSet.disjoint (used_varnames _ _) _ =>
+              | |- disjoint (used_varnames _ _) _ =>
                 apply disjoint_used_varnames_lt; intros;
                   solve [eauto with lia]
-              | |- PropSet.disjoint _ (used_varnames _ _) =>
+              | |- disjoint _ (used_varnames _ _) =>
                 symmetry; apply disjoint_used_varnames_lt; intros;
                   solve [eauto with lia]
               | _ => solve [eauto using flatten_listonly_disjoint]
+              | _ => solve [symmetry; eauto using flatten_listonly_disjoint]
               end. }
-      { eapply subset_disjoint'; try eassumption.
-        symmetry.
+      { eapply subset_disjoint_l; try eassumption.
         eauto using disjoint_used_varnames_lt. } }
 
     cbv beta in *. cleanup; subst.
@@ -672,17 +676,17 @@ Section Func.
       eauto using only_differ_sym, map.only_differ_putmany,
       only_differ_trans; [ ].
     repeat match goal with
-             |- PropSet.disjoint (PropSet.union _ _) _ =>
+             |- disjoint (union _ _) _ =>
              eapply disjoint_union_l_iff; split
            | _ => rewrite <-varname_set_args_flatten
            | _ =>
              solve[eauto using flatten_listonly_disjoint,
-                   subset_disjoint, flatten_listonly_subset,
+                   subset_disjoint_r, flatten_listonly_subset,
                    disjoint_used_varnames_lt]
            | _ =>
              symmetry;
                solve[eauto using flatten_listonly_disjoint,
-                     subset_disjoint, flatten_listonly_subset,
+                     subset_disjoint_r, flatten_listonly_subset,
                      disjoint_used_varnames_lt]
            end.
   Qed.

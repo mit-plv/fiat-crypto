@@ -2,9 +2,10 @@ Require Import Coq.ZArith.ZArith.
 Require Import Coq.Lists.List.
 Require Import Coq.micromega.Lia.
 Require Import Coq.Strings.String.
+Require Import coqutil.Datatypes.List.
+Require Import coqutil.Datatypes.PropSet.
 Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Types.
-Require Import Crypto.Bedrock.Util.
 Require Import Crypto.Bedrock.Proofs.Flatten.
 Require Import Crypto.Bedrock.Proofs.VarnameSet.
 Require Import Crypto.Bedrock.Translation.Flatten.
@@ -78,7 +79,7 @@ Section with_parameters.
                  apply disjoint_singleton_r_iff;
                    solve [auto using disjoint_singleton_singleton]
                | |- ~ PropSet.union _ _ _ =>
-                 apply Util.not_union_iff; split; solve [auto]
+                 apply not_union_iff; split; solve [auto]
                | _ => progress break_innermost_match
                end.
     Qed.
@@ -95,7 +96,7 @@ Section with_parameters.
                                  varname_set_args] in *
                | |- ~ PropSet.empty_set _ => cbv [PropSet.empty_set]; tauto
                | |- ~ PropSet.union _ _ _ =>
-                 apply Util.not_union_iff; split
+                 apply not_union_iff; split
                | _ => progress break_innermost_match
                | _ => solve [auto using make_names_no_collision]
                end.
