@@ -17,7 +17,6 @@ Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Map.SeparationLogic.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.Partition.
-Require Import Crypto.Arithmetic.WordByWordMontgomery.
 Require Import Crypto.BoundsPipeline.
 Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Types.
@@ -30,12 +29,12 @@ Require Import Crypto.Bedrock.Names.MakeNames.
 Require Import Crypto.Bedrock.Names.VarnameGenerator.
 Require Import Crypto.Bedrock.Parameters.Defaults.
 Require Import Crypto.Bedrock.Proofs.Func.
-Require Import Crypto.Bedrock.Translation.Func.
-Require Import Crypto.Bedrock.Field.Bignum.
-Require Import Crypto.Bedrock.Field.Tactics.
-Require Import Crypto.Bedrock.Field.Operation.
+Require Import Crypto.Bedrock.Field.Translation.Func.
+Require Import Crypto.Bedrock.Field.Generic.Tactics.
+Require Import Crypto.Bedrock.Field.Generic.Operation.
+Require Import Crypto.Bedrock.Field.Generic.Bignum.
 Require Import Crypto.COperationSpecifications.
-Require Import Crypto.PushButtonSynthesis.WordByWordMontgomery.
+Require Import Crypto.PushButtonSynthesis.UnsaturatedSolinas.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Language.API.
@@ -62,82 +61,80 @@ Local Infix "*" := sep : sep_scope.
 
 Ltac apply_correctness_in H :=
   match type of H with
-  | context [WordByWordMontgomery.mul] =>
-    apply WordByWordMontgomery.mul_correct in H
-  | context [WordByWordMontgomery.square] =>
-    apply WordByWordMontgomery.square_correct in H
-  | context [WordByWordMontgomery.add] =>
-    apply WordByWordMontgomery.add_correct in H
-  | context [WordByWordMontgomery.sub] =>
-    apply WordByWordMontgomery.sub_correct in H
-  | context [WordByWordMontgomery.opp] =>
-    apply WordByWordMontgomery.opp_correct in H
-  | context [WordByWordMontgomery.to_montgomery] =>
-    apply WordByWordMontgomery.to_montgomery_correct in H
-  | context [WordByWordMontgomery.from_montgomery] =>
-    apply WordByWordMontgomery.from_montgomery_correct in H
-  | context [WordByWordMontgomery.nonzero] =>
-    apply WordByWordMontgomery.nonzero_correct in H
-  | context [WordByWordMontgomery.selectznz] =>
+  | context [UnsaturatedSolinas.carry_mul] =>
+    apply UnsaturatedSolinas.carry_mul_correct in H
+  | context [UnsaturatedSolinas.carry_square] =>
+    apply UnsaturatedSolinas.carry_square_correct in H
+  | context [UnsaturatedSolinas.carry] =>
+    apply UnsaturatedSolinas.carry_correct in H
+  | context [UnsaturatedSolinas.add] =>
+    apply UnsaturatedSolinas.add_correct in H
+  | context [UnsaturatedSolinas.sub] =>
+    apply UnsaturatedSolinas.sub_correct in H
+  | context [UnsaturatedSolinas.opp] =>
+    apply UnsaturatedSolinas.opp_correct in H
+  | context [UnsaturatedSolinas.selectznz] =>
     eapply Primitives.selectznz_correct in H
-  | context [WordByWordMontgomery.to_bytes] =>
-    apply WordByWordMontgomery.to_bytes_correct in H
-  | context [WordByWordMontgomery.from_bytes] =>
-    apply WordByWordMontgomery.from_bytes_correct in H
-  | context [WordByWordMontgomery.encode] =>
-    apply WordByWordMontgomery.encode_correct in H
-  | context [WordByWordMontgomery.zero] =>
-    apply WordByWordMontgomery.zero_correct in H
-  | context [WordByWordMontgomery.one] =>
-    apply WordByWordMontgomery.one_correct in H
+  | context [UnsaturatedSolinas.to_bytes] =>
+    apply UnsaturatedSolinas.to_bytes_correct in H
+  | context [UnsaturatedSolinas.from_bytes] =>
+    apply UnsaturatedSolinas.from_bytes_correct in H
+  | context [UnsaturatedSolinas.carry_scmul_const] =>
+    apply UnsaturatedSolinas.carry_scmul_const_correct in H
+  | context [UnsaturatedSolinas.encode] =>
+    apply UnsaturatedSolinas.encode_correct in H
+  | context [UnsaturatedSolinas.zero] =>
+    apply UnsaturatedSolinas.zero_correct in H
+  | context [UnsaturatedSolinas.one] =>
+    apply UnsaturatedSolinas.one_correct in H
   end.
 
 Section __.
   Context {p : Types.parameters}
           {inname_gen outname_gen : nat -> string}
-          (m : Z).
-  Local Notation is_correct := (@is_correct p inname_gen outname_gen).
+          (n : nat) (s : Z) (c : list (Z * Z)).
+  Local Notation is_correct :=
+    (@is_correct p inname_gen outname_gen).
+  Local Notation loose_bounds :=
+    (UnsaturatedSolinasHeuristics.loose_bounds n s c).
+  Local Notation tight_bounds :=
+    (UnsaturatedSolinasHeuristics.tight_bounds n s c).
   Local Notation bit_range := {|ZRange.lower := 0; ZRange.upper := 1|}.
-  Local Notation n := (WordByWordMontgomery.n m Semantics.width).
-  Local Notation n_bytes := (WordByWordMontgomery.n_bytes m).
-  Local Notation bounds :=
-    (WordByWordMontgomery.bounds m Semantics.width).
-  Local Notation prime_bounds :=
-    (WordByWordMontgomery.prime_bounds m Semantics.width).
-  Local Notation prime_bytes_bounds :=
-    (WordByWordMontgomery.prime_bytes_bounds m).
   Local Notation saturated_bounds :=
     (Primitives.saturated_bounds n Semantics.width).
-  Local Notation eval :=
-    (@WordByWordMontgomery.WordByWordMontgomery.eval Semantics.width n).
+  Local Notation prime_bytes_bounds :=
+    (UnsaturatedSolinas.prime_bytes_bounds s).
+  Local Notation n_bytes := (UnsaturatedSolinas.n_bytes s).
+  Local Notation M := (UnsaturatedSolinas.m s c).
+  Definition weight :=
+    (ModOps.weight
+       (Qnum (inject_Z (Z.log2_up M) / inject_Z (Z.of_nat n)))
+       (QDen (inject_Z (Z.log2_up M) / inject_Z (Z.of_nat n)))).
+  Local Notation eval := (eval weight n).
 
-  (* Note: annoyingly, prime_boudnds, prime_bytes_bounds and saturated_bounds
-     are option types, unlike loose_bounds or tight_bounds, so we have to refer
-     to the values they wrap in Some whenever we want to use them with
-     list_Z_bounded_by *)
-  Local Notation prime_bounds_value :=
-    (map (fun v : Z => Some {| ZRange.lower := 0; ZRange.upper := v |})
-         (prime_upperbound_list m Semantics.width)).
+  (* Note: annoyingly, prime_bytes_bounds and saturated_bounds are option types,
+     unlike loose_bounds or tight_bounds, so we have to refer to the values they
+     wrap in Some whenever we want to use them with list_Z_bounded_by *)
   Local Notation prime_bytes_bounds_value :=
     (map (fun v : Z => Some {| ZRange.lower := 0; ZRange.upper := v |})
-         (prime_bytes_upperbound_list m)).
+         (prime_bytes_upperbound_list s)).
   Local Notation saturated_bounds_value :=
     (Primitives.saturated_bounds_list n Semantics.width).
 
-  Ltac select_access_size b :=
-    lazymatch b with
-    | Some bounds => constr:(access_size.word)
+  Ltac select_access_size bounds :=
+    lazymatch bounds with
     | saturated_bounds => constr:(access_size.word)
-    | prime_bounds => constr:(access_size.word)
+    | Some loose_bounds => constr:(access_size.word)
+    | Some tight_bounds => constr:(access_size.word)
     | prime_bytes_bounds => constr:(access_size.one)
     | ?b => fail "unable to select access size for bound" b
     end.
 
-  Ltac select_length b :=
-    lazymatch b with
-    | Some bounds => constr:(n)
+  Ltac select_length bounds :=
+    lazymatch bounds with
     | saturated_bounds => constr:(n)
-    | prime_bounds => constr:(n)
+    | Some loose_bounds => constr:(n)
+    | Some tight_bounds => constr:(n)
     | prime_bytes_bounds => constr:(n_bytes)
     | ?b => fail "unable to select array length for bound" b
     end.
@@ -150,7 +147,7 @@ Section __.
     let Hcorrect :=
         lazymatch goal with H : _ = ErrorT.Success _ |- _ => H end in
     apply_correctness_in Hcorrect; [ | eassumption .. ];
-    specialize_to_args Hcorrect;
+    fold weight in *; specialize_to_args Hcorrect;
     postcondition_from_correctness.
 
   Ltac make_operation out :=
@@ -165,94 +162,87 @@ Section __.
               t inbounds insizes outsizes inlengths outlengths)
     with (pipeline_out:=out)
          (check_args_ok:=
-            check_args m machine_wordsize (ErrorT.Success tt)
+            check_args n s c machine_wordsize (ErrorT.Success tt)
             = ErrorT.Success tt).
 
-  Definition mul
+  Definition carry_mul
     : operation (type_listZ -> type_listZ -> type_listZ).
   Proof.
-    make_operation (WordByWordMontgomery.mul m Semantics.width).
+    make_operation (UnsaturatedSolinas.carry_mul n s c Semantics.width).
     prove_operation_correctness.
   Defined.
 
-  Definition square
+  Definition carry_square
     : operation (type_listZ -> type_listZ).
   Proof.
-    make_operation (WordByWordMontgomery.square m Semantics.width).
+    make_operation (UnsaturatedSolinas.carry_square n s c Semantics.width).
+    prove_operation_correctness.
+  Defined.
+
+  Definition carry
+    : operation (type_listZ -> type_listZ).
+  Proof.
+    make_operation (UnsaturatedSolinas.carry n s c Semantics.width).
     prove_operation_correctness.
   Defined.
 
   Definition add
     : operation (type_listZ -> type_listZ -> type_listZ).
   Proof.
-    make_operation (WordByWordMontgomery.add m Semantics.width).
+    make_operation (UnsaturatedSolinas.add n s c Semantics.width).
     prove_operation_correctness.
   Defined.
 
   Definition sub
     : operation (type_listZ -> type_listZ -> type_listZ).
   Proof.
-    make_operation (WordByWordMontgomery.sub m Semantics.width).
+    make_operation (UnsaturatedSolinas.sub n s c Semantics.width).
     prove_operation_correctness.
   Defined.
 
   Definition opp
     : operation (type_listZ -> type_listZ).
   Proof.
-    make_operation (WordByWordMontgomery.opp m Semantics.width).
-    prove_operation_correctness.
-  Defined.
-
-  Definition to_montgomery
-    : operation (type_listZ -> type_listZ).
-  Proof.
-    make_operation (WordByWordMontgomery.to_montgomery m Semantics.width).
-    prove_operation_correctness.
-  Defined.
-
-  Definition from_montgomery
-    : operation (type_listZ -> type_listZ).
-  Proof.
-    make_operation (WordByWordMontgomery.from_montgomery m Semantics.width).
-    prove_operation_correctness.
-  Defined.
-
-  Definition nonzero
-    : operation (type_listZ -> type_Z).
-  Proof.
-    make_operation (WordByWordMontgomery.nonzero m Semantics.width).
+    make_operation (UnsaturatedSolinas.opp n s c Semantics.width).
     prove_operation_correctness.
   Defined.
 
   Definition selectznz
     : operation (type_Z -> type_listZ -> type_listZ -> type_listZ).
   Proof.
-    make_operation (WordByWordMontgomery.selectznz m Semantics.width).
+    make_operation (UnsaturatedSolinas.selectznz n Semantics.width).
     prove_operation_correctness.
     Unshelve.
     { apply Semantics.width. }
-    { apply (inject_Z Semantics.width). }
+    { apply (UnsaturatedSolinasHeuristics.limbwidth n s c). }
   Defined.
 
   Definition to_bytes
     : operation (type_listZ -> type_listZ).
   Proof.
-    make_operation (WordByWordMontgomery.to_bytes m Semantics.width).
+    make_operation (UnsaturatedSolinas.to_bytes n s c Semantics.width).
     prove_operation_correctness.
   Defined.
 
   Definition from_bytes
     : operation (type_listZ -> type_listZ).
   Proof.
-    make_operation (WordByWordMontgomery.from_bytes m Semantics.width).
+    make_operation (UnsaturatedSolinas.from_bytes n s c Semantics.width).
     prove_operation_correctness.
   Defined.
 
-  Definition spec_of_mul name : spec_of name :=
+  Definition carry_scmul_const (x : Z)
+    : operation (type_listZ -> type_listZ).
+  Proof.
+    make_operation (UnsaturatedSolinas.carry_scmul_const n s c Semantics.width x).
+    prove_operation_correctness.
+  Defined.
+
+  Definition spec_of_carry_mul name : spec_of name :=
     fun functions =>
       forall wx wy px py pout wold_out t m
              (Rx Ry Rout : Semantics.mem -> Prop),
-        let op := mul in
+        let op := carry_mul in
         let args := (map word.unsigned wx, (map word.unsigned wy, tt)) in
         op.(precondition) args ->
         (Bignum n px wx * Rx)%sep m ->
@@ -260,7 +250,7 @@ Section __.
         (Bignum n pout wold_out * Rout)%sep m ->
         WeakestPrecondition.call
           functions name t m
-          (pout :: px :: py :: nil)
+          (pout :: px :: py ::  nil)
           (fun t' m' rets =>
              t = t' /\
              rets = []%list /\
@@ -269,18 +259,37 @@ Section __.
                       n pout wout (op.(postcondition) args))
                    Rout m').
 
-  Definition spec_of_square name : spec_of name :=
+  Definition spec_of_carry_square name : spec_of name :=
     fun functions =>
       forall wx px pout wold_out t m
              (Rx Rout : Semantics.mem -> Prop),
-        let op := square in
+        let op := carry_square in
         let args := (map word.unsigned wx, tt) in
         op.(precondition) args ->
         (Bignum n px wx * Rx)%sep m ->
         (Bignum n pout wold_out * Rout)%sep m ->
         WeakestPrecondition.call
           functions name t m
-          (pout :: px :: nil)
+          (pout :: px ::  nil)
+          (fun t' m' rets =>
+             t = t' /\
+             rets = []%list /\
+             exists wout,
+               sep (BignumSuchThat n pout wout (op.(postcondition) args))
+                   Rout m').
+
+  Definition spec_of_carry name : spec_of name :=
+    fun functions =>
+      forall wx px pout wold_out t m
+             (Rx Rout : Semantics.mem -> Prop),
+        let op := carry in
+        let args := (map word.unsigned wx, tt) in
+        op.(precondition) args ->
+        (Bignum n px wx * Rx)%sep m ->
+        (Bignum n pout wold_out * Rout)%sep m ->
+        WeakestPrecondition.call
+          functions name t m
+          (pout :: px ::  nil)
           (fun t' m' rets =>
              t = t' /\
              rets = []%list /\
@@ -300,7 +309,7 @@ Section __.
         (Bignum n pout wold_out * Rout)%sep m ->
         WeakestPrecondition.call
           functions name t m
-          (pout :: px :: py :: nil)
+          (pout :: px :: py ::  nil)
           (fun t' m' rets =>
              t = t' /\
              rets = []%list /\
@@ -320,7 +329,7 @@ Section __.
         (Bignum n pout wold_out * Rout)%sep m ->
         WeakestPrecondition.call
           functions name t m
-          (pout :: px :: py :: nil)
+          (pout :: px :: py ::  nil)
           (fun t' m' rets =>
              t = t' /\
              rets = []%list /\
@@ -331,7 +340,7 @@ Section __.
   Definition spec_of_opp name : spec_of name :=
     fun functions =>
       forall wx px pout wold_out t m
-             (Rx Rout : Semantics.mem -> Prop),
+             (Rx Ry Rout : Semantics.mem -> Prop),
         let op := opp in
         let args := (map word.unsigned wx, tt) in
         op.(precondition) args ->
@@ -339,72 +348,13 @@ Section __.
         (Bignum n pout wold_out * Rout)%sep m ->
         WeakestPrecondition.call
           functions name t m
-          (pout :: px :: nil)
+          (pout :: px ::  nil)
           (fun t' m' rets =>
              t = t' /\
              rets = []%list /\
              exists wout,
                sep (BignumSuchThat n pout wout (op.(postcondition) args))
                    Rout m').
-
-  Definition spec_of_to_montgomery name : spec_of name :=
-    fun functions =>
-      forall wx px pout wold_out t m
-             (Rx Rout : Semantics.mem -> Prop),
-        let op := to_montgomery in
-        let args := (map word.unsigned wx, tt) in
-        op.(precondition) args ->
-        (Bignum n px wx * Rx)%sep m ->
-        (Bignum n pout wold_out * Rout)%sep m ->
-        WeakestPrecondition.call
-          functions name t m
-          (pout :: px :: nil)
-          (fun t' m' rets =>
-             t = t' /\
-             rets = []%list /\
-             exists wout,
-               sep (BignumSuchThat
-                      n pout wout (op.(postcondition) args))
-                   Rout m').
-
-  Definition spec_of_from_montgomery name : spec_of name :=
-    fun functions =>
-      forall wx px pout wold_out t m
-             (Rx Rout : Semantics.mem -> Prop),
-        let op := from_montgomery in
-        let args := (map word.unsigned wx, tt) in
-        op.(precondition) args ->
-        (Bignum n px wx * Rx)%sep m ->
-        (Bignum n pout wold_out * Rout)%sep m ->
-        WeakestPrecondition.call
-          functions name t m
-          (pout :: px :: nil)
-          (fun t' m' rets =>
-             t = t' /\
-             rets = []%list /\
-             exists wout,
-               sep (BignumSuchThat
-                      n pout wout (op.(postcondition) args))
-                   Rout m').
-
-  Definition spec_of_nonzero name : spec_of name :=
-    fun functions =>
-      forall wx px t m
-             (Rx Rout : Semantics.mem -> Prop),
-        let op := nonzero in
-        let args := (map word.unsigned wx, tt) in
-        op.(precondition) args ->
-        (Bignum n px wx * Rx)%sep m ->
-        Rout m ->
-        WeakestPrecondition.call
-          functions name t m
-          (px :: nil)
-          (fun t' m' rets =>
-             t = t' /\
-             length rets = 1%nat /\
-             Rout m' /\
-             let out := hd (word.of_Z 0) rets in
-             op.(postcondition) args (word.unsigned out)).
 
   Definition spec_of_selectznz name : spec_of name :=
     fun functions =>
@@ -421,7 +371,7 @@ Section __.
         (Bignum n pout wold_out * Rout)%sep m ->
         WeakestPrecondition.call
           functions name t m
-          (pout :: wc :: px :: py :: nil)
+          (pout :: wc :: px :: py ::  nil)
           (fun t' m' rets =>
              t = t' /\
              rets = []%list /\
@@ -440,7 +390,7 @@ Section __.
         (EncodedBignum n_bytes pout wold_out * Rout)%sep m ->
         WeakestPrecondition.call
           functions name t m
-          (pout :: px :: nil)
+          (pout :: px ::  nil)
           (fun t' m' rets =>
              t = t' /\
              rets = []%list /\
@@ -460,7 +410,7 @@ Section __.
         (Bignum n pout wold_out * Rout)%sep m ->
         WeakestPrecondition.call
           functions name t m
-          (pout :: px :: nil)
+          (pout :: px ::  nil)
           (fun t' m' rets =>
              t = t' /\
              rets = []%list /\
@@ -469,25 +419,52 @@ Section __.
                       n pout wout (op.(postcondition) args))
                    Rout m').
 
-  Hint Unfold mul square add sub opp to_montgomery from_montgomery
-       nonzero selectznz to_bytes from_bytes : defs.
+  Definition spec_of_carry_scmul_const (z : Z) (name : string)
+    : spec_of name :=
+    fun functions =>
+      forall wx px pout wold_out t m
+             (Rx Rout : Semantics.mem -> Prop),
+        let op := carry_scmul_const z in
+        let args := (map word.unsigned wx, tt) in
+        op.(precondition) args ->
+        (Bignum n px wx * Rx)%sep m ->
+        (Bignum n pout wold_out * Rout)%sep m ->
+        WeakestPrecondition.call
+          functions name t m
+          (pout :: px ::  nil)
+          (fun t' m' rets =>
+             t = t' /\
+             rets = []%list /\
+             exists wout,
+               sep (BignumSuchThat n pout wout (op.(postcondition) args))
+                   Rout m').
 
+  Hint Unfold carry_mul carry_square carry add sub opp selectznz
+       to_bytes from_bytes carry_scmul_const : defs.
   Hint Unfold
-       spec_of_mul
-       spec_of_square
+       spec_of_carry_mul
+       spec_of_carry_square
+       spec_of_carry
        spec_of_add
        spec_of_sub
        spec_of_opp
-       spec_of_to_montgomery
-       spec_of_from_montgomery
-       spec_of_nonzero
        spec_of_selectznz
        spec_of_to_bytes
-       spec_of_from_bytes : specs.
+       spec_of_from_bytes
+       spec_of_carry_scmul_const : specs.
 
   Section Proofs.
     Context {ok : Types.ok}.
     Existing Instance semantics_ok.
+
+    (* loose_bounds_ok could be proven in parameterized form, but is a pain
+      and is easily computable with parameters plugged in. So for now, leaving
+      as a precondition. *)
+    Context
+      (loose_bounds_ok :
+         ZRange.type.option.is_tighter_than
+           (t:=type_listZ) (Some loose_bounds)
+           (Some (max_bounds n)) = true).
 
     Context (inname_gen_varname_gen_ok : disjoint inname_gen varname_gen)
             (outname_gen_varname_gen_ok : disjoint outname_gen varname_gen)
@@ -496,26 +473,9 @@ Section __.
             (outname_gen_unique : unique outname_gen).
 
     Lemma relax_to_max_bounds x :
-      list_Z_bounded_by bounds x ->
+      list_Z_bounded_by loose_bounds x ->
       list_Z_bounded_by (max_bounds n) x.
-    Proof.
-      apply relax_list_Z_bounded_by. cbn.
-      cbv [Primitives.saturated_bounds_list max_bounds list_Z_tighter_than].
-      induction n; [ reflexivity | ].
-      cbn [repeat FoldBool.fold_andb_map ZRange.lower ZRange.upper max_range].
-      apply Bool.andb_true_iff. split; [ | solve [ auto ] ].
-      apply Bool.andb_true_iff. split; Z.ltb_to_lt; lia.
-    Qed.
-
-    Lemma relax_prime_bounds x :
-      list_Z_bounded_by prime_bounds_value x ->
-      list_Z_bounded_by bounds x.
-    Proof.
-      cbv [prime_bounds prime_upperbound_list].
-      intros; eapply relax_to_bounded_upperbounds;
-        eauto; [ | solve [apply MaxBounds.partition_bounded_by] ].
-      apply Forall_repeat. reflexivity.
-    Qed.
+    Proof. apply relax_list_Z_bounded_by; auto. Qed.
 
     Lemma relax_to_byte_bounds x :
       list_Z_bounded_by prime_bytes_bounds_value x ->
@@ -527,33 +487,19 @@ Section __.
       apply Forall_repeat. reflexivity.
     Qed.
 
-    Lemma length_bounds : length bounds = n.
-    Proof. apply repeat_length. Qed.
-
-    Lemma bounded_by_bounds_length x :
-      list_Z_bounded_by bounds x -> length x = n.
+    Lemma bounded_by_loose_bounds_length x :
+      list_Z_bounded_by loose_bounds x -> length x = n.
     Proof.
       intros. pose proof length_list_Z_bounded_by _ _ ltac:(eassumption).
-      rewrite <-length_bounds. cbn - [bounds]. congruence.
+      autorewrite with distr_length in *; lia.
     Qed.
-
-    Lemma length_saturated_bounds_value : length saturated_bounds_value = n.
-    Proof. apply repeat_length. Qed.
 
     Lemma bounded_by_saturated_bounds_length x :
       list_Z_bounded_by saturated_bounds_value x -> length x = n.
     Proof.
       cbv [saturated_bounds max_bounds].
       intros. pose proof length_list_Z_bounded_by _ _ ltac:(eassumption).
-      rewrite length_saturated_bounds_value in *. lia.
-    Qed.
-
-    Lemma bounded_by_prime_bounds_length x :
-      list_Z_bounded_by prime_bounds_value x -> length x = n.
-    Proof.
-      intros. pose proof length_list_Z_bounded_by _ _ ltac:(eassumption).
-      cbv [prime_bounds prime_upperbound_list] in *.
-      rewrite map_length, length_partition in *. lia.
+      rewrite length_saturated_bounds_list in *. lia.
     Qed.
 
     Lemma bounded_by_prime_bytes_bounds_length x :
@@ -568,49 +514,22 @@ Section __.
       list_Z_bounded_by (byte_bounds n_bytes) x -> length x = n_bytes.
     Proof. eapply byte_bounds_range_iff. Qed.
 
-    Lemma valid_bounded_by_prime_bounds x :
-      (check_args m Semantics.width (ErrorT.Success tt)
-       = ErrorT.Success tt) ->
-      WordByWordMontgomery.valid Semantics.width n m x ->
-      list_Z_bounded_by prime_bounds_value x.
-    Proof.
-      intros; apply bounded_by_prime_bounds_of_valid; auto.
-    Qed.
-
-    Lemma valid_bounded_by_prime_bytes_bounds x :
-      (check_args m Semantics.width (ErrorT.Success tt)
-       = ErrorT.Success tt) ->
-      WordByWordMontgomery.valid 8 n_bytes m x ->
-      list_Z_bounded_by prime_bytes_bounds_value x.
-    Proof.
-      intros; eapply bounded_by_prime_bytes_bounds_of_bytes_valid; eauto.
-    Qed.
-
     (* TODO: maybe make a generalized prove_bounds tactic that takes a list of
     bounds? *)
     Ltac assert_bounds x :=
       match goal with
       | H: list_Z_bounded_by ?bs x |- _ => idtac
-      | _ =>
-        assert (WordByWordMontgomery.valid Semantics.width n m x)
-               by prove_bounds_direct;
-        assert (list_Z_bounded_by prime_bounds_value x)
-               by (apply valid_bounded_by_prime_bounds; auto)
-      | _ =>
-        assert (WordByWordMontgomery.valid 8 n_bytes m x)
-               by prove_bounds_direct;
-        assert (list_Z_bounded_by prime_bytes_bounds_value x)
-               by (apply valid_bounded_by_prime_bytes_bounds; auto)
-      | _ => assert (list_Z_bounded_by bounds x) by prove_bounds_direct
-      | _ => assert (list_Z_bounded_by prime_bytes_bounds_value x)
-          by prove_bounds_direct
+      | _ => assert (list_Z_bounded_by tight_bounds x) by prove_bounds_direct
+      | _ => assert (list_Z_bounded_by loose_bounds x) by prove_bounds_direct
+      | _ => assert (list_Z_bounded_by prime_bytes_bounds x) by prove_bounds_direct
       | _ => assert (list_Z_bounded_by (max_bounds n) x) by prove_bounds_direct
       | _ => assert (list_Z_bounded_by (byte_bounds n_bytes) x) by prove_bounds_direct
       | _ => fail "could not determine known bounds of" x
       end.
     (* looks for the following combinations of tighter/looser bounds:
-       - prime_bounds/bounds
-       - prime_bounds/saturated_bounds
+       - tight_bounds/saturated_bounds
+       - tight_bounds/loose_bounds
+       - loose_bounds/saturated_bounds
        - prime_bytes_bounds/byte_bounds
     *)
     Ltac prove_bounds :=
@@ -618,10 +537,12 @@ Section __.
       match goal with
       | H : list_Z_bounded_by ?b1 ?x |- list_Z_bounded_by ?b2 ?x =>
         first [ unify b1 b2; apply H
-              | unify b1 prime_bounds_value; unify b2 bounds;
-                apply relax_prime_bounds; apply H
-              | unify b1 prime_bounds_value; unify b2 saturated_bounds_value;
-                apply relax_to_max_bounds, relax_prime_bounds; apply H
+              | unify b1 tight_bounds; unify b2 saturated_bounds_value;
+                apply relax_to_max_bounds, relax_correct; apply H
+              | unify b1 tight_bounds; unify b2 loose_bounds;
+                apply relax_correct; apply H
+              | unify b1 loose_bounds; unify b2 saturated_bounds_value;
+                apply relax_to_max_bounds; apply H
               | unify b1 prime_bytes_bounds_value; unify b2 (byte_bounds n_bytes);
                 apply relax_to_byte_bounds; apply H ]
       end.
@@ -642,11 +563,9 @@ Section __.
       ssplit;
       match goal with
       | |- length _ = n =>
-        apply bounded_by_bounds_length; prove_bounds
+        apply bounded_by_loose_bounds_length; prove_bounds
       | |- length _ = n =>
         apply bounded_by_saturated_bounds_length; prove_bounds
-      | |- length _ = n =>
-        apply bounded_by_prime_bounds_length; prove_bounds
       | |- length _ = n_bytes =>
         apply bounded_by_byte_bounds_length; prove_bounds
       | |- length _ = n_bytes =>
@@ -655,7 +574,6 @@ Section __.
         symmetry; prove_output_length
       | |- n_bytes = length _ =>
         symmetry; prove_output_length
-      | |- tt = tt => reflexivity
       | |- ?x => fail "could not prove output length :" x
       end.
 
@@ -676,12 +594,8 @@ Section __.
         rewrite <-H, !map_length; congruence
       | H : length ?x = ?n |- length (map _ ?x) = ?n =>
         rewrite map_length; solve [apply H]
-      | H : length (map _ ?x) = ?n |- length ?x = ?n =>
-        rewrite map_length in H; solve [apply H]
       | |- length ?x = length ?y =>
         rewrite ?map_length in *; congruence
-      | H1 : length ?x = ?n, H2 : map _ ?y = ?x |- length ?y = ?n =>
-        rewrite <-H1, <-H2, ?map_length; reflexivity
       | _ => idtac
       end.
 
@@ -693,19 +607,15 @@ Section __.
       | .. ].
 
     Ltac solve_lists_reserved out_array_ptrs :=
-      lazymatch out_array_ptrs with
-      | [] => sepsimpl; solve [auto]
-      | _ =>
-        exists_all_placeholders out_array_ptrs;
-        cbv [Bignum EncodedBignum] in *; sepsimpl;
+      exists_all_placeholders out_array_ptrs;
+      cbv [Bignum EncodedBignum] in *; sepsimpl;
         lazymatch goal with
         | |- length _ = _ => prove_length
         | |- WeakestPrecondition.get _ _ _ =>
           eexists; rewrite ?map.get_put_diff by eauto;
           rewrite map.get_put_same; solve [eauto]
         | |- sep _ _ _ => canonicalize_arrays; ecancel_assumption
-        end
-      end.
+        end.
 
     Ltac prove_is_correct Rout :=
       let args := lazymatch goal with
@@ -722,87 +632,80 @@ Section __.
       | setup_lists_reserved; solve_lists_reserved out_ptrs ].
 
     Context (check_args_ok :
-               check_args m Semantics.width (ErrorT.Success tt)
+               check_args n s c Semantics.width (ErrorT.Success tt)
                = ErrorT.Success tt).
 
-    Lemma mul_correct name :
+    Lemma carry_mul_correct name :
       is_correct
-        (WordByWordMontgomery.mul m Semantics.width)
-        mul (spec_of_mul name).
+        (UnsaturatedSolinas.carry_mul n s c Semantics.width)
+        carry_mul (spec_of_carry_mul name).
     Proof. setup; prove_is_correct Rout. Qed.
 
-    Lemma square_correct name :
+    Lemma carry_square_correct name :
       is_correct
-        (WordByWordMontgomery.square m Semantics.width)
-        square (spec_of_square name).
+        (UnsaturatedSolinas.carry_square n s c Semantics.width)
+        carry_square (spec_of_carry_square name).
+    Proof. setup; prove_is_correct Rout. Qed.
+
+    Lemma carry_correct name :
+      is_correct
+        (UnsaturatedSolinas.carry n s c Semantics.width)
+        carry (spec_of_carry name).
     Proof. setup. prove_is_correct Rout. Qed.
 
     Lemma add_correct name :
       is_correct
-        (WordByWordMontgomery.add m Semantics.width)
+        (UnsaturatedSolinas.add n s c Semantics.width)
         add (spec_of_add name).
     Proof. setup; prove_is_correct Rout. Qed.
 
     Lemma sub_correct name :
       is_correct
-        (WordByWordMontgomery.sub m Semantics.width)
+        (UnsaturatedSolinas.sub n s c Semantics.width)
         sub (spec_of_sub name).
     Proof. setup; prove_is_correct Rout. Qed.
 
     Lemma opp_correct name :
       is_correct
-        (WordByWordMontgomery.opp m Semantics.width)
+        (UnsaturatedSolinas.opp n s c Semantics.width)
         opp (spec_of_opp name).
-    Proof. setup; prove_is_correct Rout. Qed.
-
-    Lemma to_montgomery_correct name :
-      is_correct
-        (WordByWordMontgomery.to_montgomery m Semantics.width)
-        to_montgomery (spec_of_to_montgomery name).
-    Proof. setup; prove_is_correct Rout. Qed.
-
-    Lemma from_montgomery_correct name :
-      is_correct
-        (WordByWordMontgomery.from_montgomery m Semantics.width)
-        from_montgomery (spec_of_from_montgomery name).
-    Proof. setup; prove_is_correct Rout. Qed.
-
-    Lemma nonzero_correct name :
-      is_correct
-        (WordByWordMontgomery.nonzero m Semantics.width)
-        nonzero (spec_of_nonzero name).
     Proof. setup; prove_is_correct Rout. Qed.
 
     Lemma selectznz_correct name :
       is_correct
-        (WordByWordMontgomery.selectznz m Semantics.width)
+        (UnsaturatedSolinas.selectznz n Semantics.width)
         selectznz (spec_of_selectznz name).
     Proof. setup; prove_is_correct Rout. Qed.
 
     Lemma to_bytes_correct name :
       is_correct
-        (WordByWordMontgomery.to_bytes m Semantics.width)
+        (UnsaturatedSolinas.to_bytes n s c Semantics.width)
         to_bytes (spec_of_to_bytes name).
     Proof. setup; prove_is_correct Rout. Qed.
 
     Lemma from_bytes_correct name :
       is_correct
-        (WordByWordMontgomery.from_bytes m Semantics.width)
+        (UnsaturatedSolinas.from_bytes n s c Semantics.width)
         from_bytes (spec_of_from_bytes name).
+    Proof. setup; prove_is_correct Rout. Qed.
+
+    Lemma carry_scmul_const_correct (x : Z) name :
+      is_correct
+        (UnsaturatedSolinas.carry_scmul_const n s c Semantics.width x)
+        (carry_scmul_const x) (spec_of_carry_scmul_const x name).
     Proof. setup; prove_is_correct Rout. Qed.
   End Proofs.
 End __.
-Hint Unfold mul square add sub opp to_montgomery from_montgomery
-     nonzero selectznz to_bytes from_bytes : defs.
+Hint Unfold carry_mul carry_square carry add sub opp selectznz
+     to_bytes from_bytes carry_scmul_const : defs.
 Hint Unfold
-     spec_of_mul
-     spec_of_square
+     spec_of_carry_mul
+     spec_of_carry_square
+     spec_of_carry
      spec_of_add
      spec_of_sub
      spec_of_opp
-     spec_of_to_montgomery
-     spec_of_from_montgomery
-     spec_of_nonzero
      spec_of_selectznz
      spec_of_to_bytes
-     spec_of_from_bytes : specs.
+     spec_of_from_bytes
+     spec_of_carry_scmul_const : specs.

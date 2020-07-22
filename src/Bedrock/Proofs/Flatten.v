@@ -12,8 +12,8 @@ Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Language.API.
 Require Import Crypto.Bedrock.Util.
-Require Import Crypto.Bedrock.Translation.Flatten.
-Require Import Crypto.Bedrock.Translation.LoadStoreList.
+Require Import Crypto.Bedrock.Field.Translation.Flatten.
+Require Import Crypto.Bedrock.Field.Translation.LoadStoreList.
 Require Import Crypto.Bedrock.Proofs.Equivalence.
 Require Import Crypto.Bedrock.Proofs.EquivalenceProperties.
 Require Import Crypto.Bedrock.Proofs.UsedVarnames.

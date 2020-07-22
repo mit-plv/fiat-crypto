@@ -11,8 +11,8 @@ Require Import Crypto.Bedrock.Names.VarnameGenerator.
 Require Import Crypto.Bedrock.Parameters.Defaults.
 Require Import Crypto.Bedrock.Parameters.SelectParameters.
 Require Import Crypto.Bedrock.Synthesis.ReifiedOperation.
-Require Import Crypto.Bedrock.Field.WordByWordMontgomery.
-Require Import Crypto.Bedrock.Field.Operation.
+Require Import Crypto.Bedrock.Field.Generic.WordByWordMontgomery.
+Require Import Crypto.Bedrock.Field.Generic.Operation.
 Require Import Crypto.Bedrock.Proofs.ValidComputable.Func.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Local Open Scope Z_scope.

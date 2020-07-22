@@ -2,7 +2,7 @@ Require Import Coq.ZArith.ZArith.
 Require Import Coq.Lists.List.
 Require Import Coq.Strings.String.
 Require Import Crypto.Bedrock.Parameters.SelectParameters.
-Require Import Crypto.Bedrock.Field.UnsaturatedSolinas.
+Require Import Crypto.Bedrock.Field.Generic.UnsaturatedSolinas.
 Require Import Crypto.Bedrock.Synthesis.UnsaturatedSolinas.
 Local Open Scope Z_scope.
 Import ListNotations.

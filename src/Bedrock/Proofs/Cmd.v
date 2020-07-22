@@ -18,8 +18,8 @@ Require Import Crypto.Bedrock.Proofs.Equivalence.
 Require Import Crypto.Bedrock.Proofs.EquivalenceProperties.
 Require Import Crypto.Bedrock.Proofs.UsedVarnames.
 Require Import Crypto.Bedrock.Proofs.VarnameSet.
-Require Import Crypto.Bedrock.Translation.Cmd.
-Require Import Crypto.Bedrock.Translation.Expr.
+Require Import Crypto.Bedrock.Field.Translation.Cmd.
+Require Import Crypto.Bedrock.Field.Translation.Expr.
 Require Import Crypto.Language.API.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.Notations.

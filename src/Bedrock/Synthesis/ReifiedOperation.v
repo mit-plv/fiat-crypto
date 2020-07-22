@@ -3,7 +3,7 @@ Require Import coqutil.Word.Interface.
 Require Import Rewriter.Language.Wf.
 Require Import Crypto.BoundsPipeline.
 Require Import Crypto.Language.API.
-Require Import Crypto.Bedrock.Field.Operation.
+Require Import Crypto.Bedrock.Field.Generic.Operation.
 Require Import Crypto.Bedrock.Names.VarnameGenerator.
 Require Import Crypto.Bedrock.Parameters.Defaults.
 Require Import Crypto.Bedrock.Proofs.Func.

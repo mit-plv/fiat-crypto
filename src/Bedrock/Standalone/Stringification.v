@@ -13,7 +13,7 @@ Require Import Crypto.Bedrock.Names.MakeNames.
 Require Import Crypto.Bedrock.Names.VarnameGenerator.
 Require Import Crypto.Bedrock.Parameters.Defaults.
 Require Import Crypto.Bedrock.Parameters.SelectParameters.
-Require Import Crypto.Bedrock.Translation.Func.
+Require Import Crypto.Bedrock.Field.Translation.Func.
 Require Import Crypto.Language.API.
 Require Import Crypto.Util.Option.
 Import Stringification.Language.Compilers.

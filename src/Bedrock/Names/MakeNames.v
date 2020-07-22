@@ -8,7 +8,7 @@ Require Import Crypto.Bedrock.Tactics.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Proofs.Flatten.
 Require Import Crypto.Bedrock.Proofs.VarnameSet.
-Require Import Crypto.Bedrock.Translation.Flatten.
+Require Import Crypto.Bedrock.Field.Translation.Flatten.
 Require Import Crypto.Language.API.
 Require Import Crypto.Util.Tactics.BreakMatch.
 

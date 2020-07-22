@@ -4,9 +4,9 @@ Require Import bedrock2.Syntax.
 Require Import coqutil.Word.Interface.
 Require Import coqutil.Map.Interface.
 Require Import Crypto.Bedrock.Types.
-Require Import Crypto.Bedrock.Translation.Cmd.
-Require Import Crypto.Bedrock.Translation.Flatten.
-Require Import Crypto.Bedrock.Translation.LoadStoreList.
+Require Import Crypto.Bedrock.Field.Translation.Cmd.
+Require Import Crypto.Bedrock.Field.Translation.Flatten.
+Require Import Crypto.Bedrock.Field.Translation.LoadStoreList.
 Require Import Crypto.Language.API.
 Import ListNotations.
 

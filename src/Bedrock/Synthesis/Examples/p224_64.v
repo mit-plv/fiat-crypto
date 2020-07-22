@@ -1,6 +1,6 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Strings.String.
-Require Import Crypto.Bedrock.Field.WordByWordMontgomery.
+Require Import Crypto.Bedrock.Field.Generic.WordByWordMontgomery.
 Require Import Crypto.Bedrock.Synthesis.WordByWordMontgomery.
 Local Open Scope Z_scope.
 

@@ -19,7 +19,7 @@ Require Import Crypto.Bedrock.Arrays.MakeAccessSizes.
 Require Import Crypto.Bedrock.Arrays.MaxBounds.
 Require Import Crypto.Bedrock.Proofs.Equivalence.
 Require Import Crypto.Bedrock.Names.MakeNames.
-Require Import Crypto.Bedrock.Translation.Func.
+Require Import Crypto.Bedrock.Field.Translation.Func.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Language.API.
 Require Import Coq.Lists.List. (* after SeparationLogic *)

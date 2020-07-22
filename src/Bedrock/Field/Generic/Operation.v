@@ -17,8 +17,8 @@ Require Import Crypto.Bedrock.Arrays.ByteBounds.
 Require Import Crypto.Bedrock.Names.MakeNames.
 Require Import Crypto.Bedrock.Parameters.Defaults.
 Require Import Crypto.Bedrock.Proofs.Func.
-Require Import Crypto.Bedrock.Translation.Func.
-Require Import Crypto.Bedrock.Field.Tactics.
+Require Import Crypto.Bedrock.Field.Translation.Func.
+Require Import Crypto.Bedrock.Field.Generic.Tactics.
 Require Import Crypto.BoundsPipeline.
 Require Import Crypto.Language.API.
 Require Import Coq.Lists.List. (* after SeparationLogic *)
