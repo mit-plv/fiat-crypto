@@ -62,6 +62,7 @@ Section Defs.
     | cmd.seq x y => (error_free_cmd x && error_free_cmd y)%bool
     | cmd.while c b => (error_free_expr c && error_free_cmd b)
     | cmd.call _ _ args => forallb error_free_expr args
+    | cmd.stackalloc _ _ x => error_free_cmd x
     | cmd.interact _ _ args => forallb error_free_expr args
     end.
 End Defs.

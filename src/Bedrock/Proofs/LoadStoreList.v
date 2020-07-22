@@ -11,6 +11,8 @@ Require Import bedrock2.Map.SeparationLogic.
 Require Import bedrock2.WeakestPreconditionProperties.
 Require Import coqutil.Word.Interface coqutil.Word.Properties.
 Require Import coqutil.Map.Interface coqutil.Map.Properties.
+Require Import coqutil.Datatypes.List.
+Require Import coqutil.Datatypes.PropSet.
 Require Import Crypto.AbstractInterpretation.AbstractInterpretation.
 Require Import Crypto.Bedrock.Types.
 Require Import Crypto.Bedrock.Tactics.
@@ -348,7 +350,7 @@ Section LoadStoreList.
                  varname_set rep.varname_set].
         repeat split.
       { eapply only_differ_zero. }
-      { intros. cbv [PropSet.empty_set]. tauto. }
+      { intros. cbv [empty_set]. tauto. }
       { rewrite skipn_all by lia. econstructor. } }
     { cbn [WeakestPrecondition.cmd WeakestPrecondition.cmd_body].
       eexists; split; cbv [dlet.dlet].
@@ -370,7 +372,7 @@ Section LoadStoreList.
                rep.varname_set rep.listZ_local rep.Z fold_right] in *.
         intros.
         apply not_union_iff; split; eauto with lia.
-        cbv [PropSet.singleton_set].
+        cbv [singleton_set].
         rewrite varname_gen_unique; lia. }
       { cbv [locally_equivalent] in *.
         cbn [map base_rtype_of_ltype
@@ -861,7 +863,7 @@ Section LoadStoreList.
     forall (retnames_local : base_ltype t)
            (retnames_mem : base_ltype t)
            (retsizes : base_access_sizes t)
-           (vset : PropSet.set string)
+           (vset : set string)
            (rets : base.interp t)
            (functions : list _)
            (tr : Semantics.trace)
@@ -875,15 +877,14 @@ Section LoadStoreList.
                           retsizes init_locals) R mem ->
       map.undef_on
         init_locals
-        (PropSet.union vset
-                       (varname_set_listexcl retnames_mem)) ->
+        (union vset (varname_set_listexcl retnames_mem)) ->
       map.only_differ init_locals vset locals ->
       (* rets are stored in local retnames *)
       locally_equivalent_base
         rets (base_rtype_of_ltype retnames_local) locals ->
       (* retnames are disjoint *)
-      PropSet.disjoint (varname_set_base retnames_local)
-                       (varname_set_base retnames_mem) ->
+      disjoint (varname_set_base retnames_local)
+               (varname_set_base retnames_mem) ->
       (* retnames don't contain duplicates *)
       NoDup (flatten_base_ltype retnames_mem) ->
       (* rets bounds obey access sizes *)
@@ -936,11 +937,11 @@ Section LoadStoreList.
                       apply NoDup_app_iff in H; cleanup end.
       repeat match goal with
              | _ => progress cleanup
-             | H : PropSet.disjoint (PropSet.union _ _) _ |- _ =>
+             | H : disjoint (union _ _) _ |- _ =>
                apply disjoint_union_l_iff in H
-             | H : PropSet.disjoint _ (PropSet.union _ _) |- _ =>
+             | H : disjoint _ (union _ _) |- _ =>
                apply disjoint_union_r_iff in H
-             | H : map.undef_on _ (PropSet.union _ _) |- _ =>
+             | H : map.undef_on _ (union _ _) |- _ =>
                apply undef_on_union_iff in H
              end.
       eapply Proper_cmd;
@@ -952,8 +953,7 @@ Section LoadStoreList.
       eapply Proper_cmd;
         [ solve [apply Proper_call] | repeat intro | ].
       2:{ eapply IHt2 with
-              (vset:=PropSet.union
-                       vset (varname_set_listexcl (fst retnames_mem)));
+              (vset:=union vset (varname_set_listexcl (fst retnames_mem)));
           try ecancel_assumption; eauto.
           { apply undef_on_union_iff; split; eauto.
             apply undef_on_union_iff; split; eauto. }
@@ -961,7 +961,8 @@ Section LoadStoreList.
             eapply only_differ_trans; eauto. }
           { cbv [locally_equivalent].
             eapply equivalent_only_differ; eauto with equiv.
-            eapply subset_disjoint';
+            apply disjoint_sym.
+            eapply subset_disjoint_r;
               eauto using varname_set_listexcl_subset. } }
       cbv beta in *. cleanup; subst.
       repeat match goal with H : list_lengths_from_value _ = _ |- _ =>
@@ -972,7 +973,8 @@ Section LoadStoreList.
       (* TODO: why doesn't cancel handle the below? *)
       cancel_seps_at_indices 0 1; [ reflexivity | ].
       eapply equivalent_only_differ_iff1; eauto with equiv.
-      eapply subset_disjoint';
+      eapply disjoint_sym.
+      eapply subset_disjoint_r;
         eauto using varname_set_listexcl_subset; [ ].
       rewrite !varname_set_flatten.
       eapply NoDup_disjoint; eauto using string_dec. }
@@ -980,7 +982,7 @@ Section LoadStoreList.
       repeat straightline.
       repeat match goal with p := _ |- _ => subst p end.
       repeat match goal with
-             | H : map.undef_on _ (PropSet.union _ _) |- _ =>
+             | H : map.undef_on _ (union _ _) |- _ =>
                apply undef_on_union_iff in H
              end.
       cbn [rep.Z rep.listZ_mem rep.equiv rep.rtype_of_ltype] in *.

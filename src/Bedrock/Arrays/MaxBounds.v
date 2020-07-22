@@ -3,6 +3,7 @@ Require Import Coq.Lists.List.
 Require Import Coq.micromega.Lia.
 Require Import coqutil.Word.Interface.
 Require Import coqutil.Word.Properties.
+Require Import coqutil.Datatypes.List.
 Require Import bedrock2.Syntax.
 Require Import Crypto.Arithmetic.Partition.
 Require Import Crypto.Bedrock.Tactics.
