@@ -1,3 +1,3 @@
-Require Import Crypto.Bedrock.StandaloneOCamlMain.
+Require Import Crypto.Bedrock.Standalone.StandaloneOCamlMain.
 
 (*Redirect "/tmp/bedrock2_word_by_word_montgomery.ml"*) Recursive Extraction WordByWordMontgomery.main.
