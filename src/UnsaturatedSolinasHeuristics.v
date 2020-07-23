@@ -106,23 +106,17 @@ else:
 
   (** Constraints: tight_upperbounds[i] <= balance[i] <= loose_upperbounds[i]
       Algorithm:
-        start with coef = 1
-
         B = encode (s - c)
         B = map(Z.mul coef, B)
         for i from 0 .. nlimbs-2:
             if B[i] < tight_upperbounds[i]:
                // need to find the lowest number we can add, confined to highest bits only
-               x = ((tight_upperbounds[i] / fw[i]) + 1)
+               x = tight_upperbounds[i] / fw[i]
+               if tight_upperbounds[i] mod fw[i] != 0:
+                  x += 1 // round up
                B[i] += x * fw[i]
                B[i+1] -= x
-
-        if B[-1] < tight_upperbounds[-1]:
-           B *= 2
-           coef *= 2
-           restart
    *)
-
   Definition distribute_balance_step (i : nat) (B : list Z) :=
     let Bi := nth_default 0 B i in
     let ti := nth_default 0 tight_upperbounds i in
@@ -271,32 +265,3 @@ Section ___.
        | Auto idx => nth_error get_possible_limbs idx
        end.
 End ___.
-
-(*
-Definition check_balance (balance : list Z) (loose_upperbounds : list Z)
-  := forallb (fun x => fst x <=? snd x)
-             (List.combine balance loose_upperbounds).
-
-About balance.
-Print balance.
-Require Import Crypto.Util.Strings.Show.
-Require Import Coq.Strings.String.
-Open Scope string_scope.
-(* Existing Instance PowersOfTwo.show_Z. *)
-(* Or: *)
-Existing Instance Hex.show_Z.
-
-Definition bal224 := (@balance default_tight_upperbound_fraction 4 (2^224) [(2^96,1);(1,-1)]).
-Definition lb224 := (@loose_upperbounds default_tight_upperbound_fraction 4 (2^224) [(2^96,1);(1,-1)]).
-
-Compute show false bal224.
-Compute show false lb224.
-Compute (check_balance bal224 lb224).
-
-Definition bal25519 := (@balance default_tight_upperbound_fraction 10 (2^255) [(1,19)]).
-Definition lb25519 := (@loose_upperbounds default_tight_upperbound_fraction 10 (2^255) [(1,19)]).
-
-Compute show false bal25519.
-Compute show false lb25519.
-Compute (check_balance bal224 lb224).
-*)

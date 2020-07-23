@@ -144,6 +144,9 @@ Section __.
   Lemma length_tight_bounds : List.length tight_bounds = n.
   Proof using Type. cbv [tight_bounds]; now autorewrite with distr_length. Qed.
   Hint Rewrite length_tight_bounds : distr_length.
+  Lemma length_balance : List.length balance = n.
+  Proof using Type. now rewrite balance_length. Qed.
+  Hint Rewrite length_balance : distr_length.
   Lemma length_loose_bounds : List.length loose_bounds = n.
   Proof using Type. cbv [loose_bounds]; now autorewrite with distr_length natsimplify. Qed.
   Hint Rewrite length_loose_bounds : distr_length.
