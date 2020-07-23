@@ -128,8 +128,6 @@ else:
       let zero := [(weight i, x * fw); (weight (S i), -x)] in
       let Ba := to_associational weight n B ++ zero in
       let B := from_associational weight n Ba in
-      (* let B := update_nth i (Z.add (x * fw)) B in
-         let B := update_nth (S i) (fun y => y - x) B in *)
       B
     else B.
 
