@@ -131,17 +131,20 @@ else:
       B
     else B.
 
+  Definition distribute_balance B :=
+    fold_right distribute_balance_step B (seq 0 (n-1)).
+
   (* distribute balance such that for all limbs i,
      tight_upperbounds[i] <= balance[i] *)
   Definition balance : list Z
       := let weight := weight (Qnum limbwidth) (Qden limbwidth) in
          let B := encode weight n s c (s - Associational.eval c) in
          let B := scmul weight n coef B in
-         fold_right distribute_balance_step B (seq 0 (n-1)).
+         distribute_balance B.
 
   Lemma balance_length : length balance = n.
   Proof.
-    cbv [balance scmul distribute_balance_step].
+    cbv [balance scmul distribute_balance distribute_balance_step].
     apply fold_right_invariant; intros;
       break_innermost_match;
       now autorewrite with distr_length.
@@ -209,12 +212,20 @@ else:
     rewrite weight_multiples by auto. lia.
   Qed.
 
+  Lemma eval_distribute_balance x :
+    eval (weight (Qnum limbwidth) (QDen limbwidth)) n (distribute_balance x)
+    = eval (weight (Qnum limbwidth) (QDen limbwidth)) n x.
+  Proof using Hs_nz Hs_c_nz Hs_n Hn_nz.
+    clear -p Hs_nz Hs_c_nz Hs_n Hn_nz wprops.
+    cbv [distribute_balance].
+    apply fold_right_invariant; [ reflexivity | ].
+    intros; rewrite eval_distribute_balance_step; auto.
+  Qed.
+
   Lemma eval_balance : eval (weight (Qnum limbwidth) (Qden limbwidth)) n balance mod (s - Associational.eval c) = 0.
   Proof using Hs_nz Hs_c_nz Hs_n Hn_nz.
     clear -p Hs_nz Hs_c_nz Hs_n Hn_nz wprops.
-    cbv [balance].
-    apply fold_right_invariant;
-      [ | intros; rewrite eval_distribute_balance_step; solve [auto] ].
+    cbv [balance]. rewrite eval_distribute_balance.
     repeat first [ rewrite Z_mod_same_full
                  | rewrite eval_scmul by auto
                  | rewrite eval_encode by auto with zarith

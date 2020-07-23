@@ -117,8 +117,9 @@ Section __.
   Local Notation balance := (balance n s c).
 
   Definition m : Z := s - Associational.eval c.
-  Definition m_enc : list Z
-    := encode (weight (Qnum limbwidth) (Qden limbwidth)) n s c m.
+  Definition m_enc : list Z :=
+    let M := encode (weight (Qnum limbwidth) (Qden limbwidth)) n s c m in
+    distribute_balance n s c M.
 
   (* We include [0], so that even after bounds relaxation, we can
        notice where the constant 0s are, and remove them. *)
@@ -156,6 +157,13 @@ Section __.
   Lemma length_saturated_bounds_list : List.length saturated_bounds_list = n.
   Proof using Type. cbv [saturated_bounds_list]; now autorewrite with distr_length. Qed.
   Hint Rewrite length_saturated_bounds_list : distr_length.
+  Lemma length_m_enc : List.length m_enc = n.
+  Proof using Type.
+    cbv [m_enc distribute_balance distribute_balance_step].
+    apply fold_right_invariant; intros;
+      break_innermost_match; now autorewrite with distr_length.
+  Qed.
+  Hint Rewrite length_m_enc : distr_length.
 
   (** Note: If you change the name or type signature of this
         function, you will need to update the code in CLI.v *)
