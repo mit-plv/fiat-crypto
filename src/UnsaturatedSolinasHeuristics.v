@@ -111,8 +111,9 @@ else:
         for i from 0 .. nlimbs-2:
             if B[i] < tight_upperbounds[i]:
                // need to find the lowest number we can add, confined to highest bits only
-               x = tight_upperbounds[i] / fw[i]
-               if tight_upperbounds[i] mod fw[i] != 0:
+               d = tight_upperbounds[i] - B[i]
+               x = d / fw[i]
+               if d mod fw[i] != 0:
                   x += 1 // round up
                B[i] += x * fw[i]
                B[i+1] -= x
@@ -124,7 +125,7 @@ else:
     then
       let weight := weight (Qnum limbwidth) (Qden limbwidth) in
       let fw := weight (S i) / weight i in
-      let x := (ti / fw) + Z.b2z (negb (ti mod fw =? 0)) in
+      let x := ((ti - Bi) / fw) + Z.b2z (negb ((ti - Bi) mod fw =? 0)) in
       let zero := [(weight i, x * fw); (weight (S i), -x)] in
       let Ba := to_associational weight n B ++ zero in
       let B := from_associational weight n Ba in
