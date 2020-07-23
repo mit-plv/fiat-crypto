@@ -104,9 +104,57 @@ else:
   (** Allow enough space to do one subtraction w/o carrying *)
   Definition headspace_sub_count : nat := 1.
 
+  (** Constraints: tight_upperbounds[i] <= balance[i] <= loose_upperbounds[i]
+      Algorithm:
+        start with coef = 1
+
+        B = encode (s - c)
+        B = map(Z.mul coef, B)
+        for i from 0 .. nlimbs-2:
+            if B[i] < tight_upperbounds[i]:
+               // need to find the lowest number we can add, confined to highest bits only
+               x = ((tight_upperbounds[i] / fw[i]) + 1)
+               B[i] += x * fw[i]
+               B[i+1] -= x
+
+        if B[-1] < tight_upperbounds[-1]:
+           B *= 2
+           coef *= 2
+           restart
+   *)
+
+  Definition distribute_balance_step (i : nat) (B : list Z) :=
+    let Bi := nth_default 0 B i in
+    let ti := nth_default 0 tight_upperbounds i in
+    if (Bi <? ti)
+    then
+      let weight := weight (Qnum limbwidth) (Qden limbwidth) in
+      let fw := weight (S i) / weight i in
+      let x := (ti / fw) + Z.b2z (negb (ti mod fw =? 0)) in
+      let zero := [(weight i, x * fw); (weight (S i), -x)] in
+      let Ba := to_associational weight n B ++ zero in
+      let B := from_associational weight n Ba in
+      (* let B := update_nth i (Z.add (x * fw)) B in
+         let B := update_nth (S i) (fun y => y - x) B in *)
+      B
+    else B.
+
+  (* distribute balance such that for all limbs i,
+     tight_upperbounds[i] <= balance[i] *)
   Definition balance : list Z
-    := let weight := weight (Qnum limbwidth) (Qden limbwidth) in
-       scmul weight n coef (encode weight n s c (s - Associational.eval c)).
+      := let weight := weight (Qnum limbwidth) (Qden limbwidth) in
+         let B := encode weight n s c (s - Associational.eval c) in
+         let B := scmul weight n coef B in
+         fold_right distribute_balance_step B (seq 0 (n-1)).
+
+  Lemma balance_length : length balance = n.
+  Proof.
+    cbv [balance scmul distribute_balance_step].
+    apply fold_right_invariant; intros;
+      break_innermost_match;
+      now autorewrite with distr_length.
+  Qed.
+  Hint Rewrite balance_length : distr_length.
 
   Definition loose_upperbounds : list Z
     := List.map
@@ -121,7 +169,7 @@ else:
 
   Lemma tight_bounds_tighter : is_tighter_than tight_bounds loose_bounds = true.
   Proof using Type.
-    cbv [tight_bounds loose_bounds tight_upperbounds loose_upperbounds balance scmul].
+    cbv [tight_bounds loose_bounds tight_upperbounds loose_upperbounds].
     rewrite !combine_map_l, !fold_andb_map_map, !fold_andb_map_map1, fold_andb_map_iff.
     cbn [lower upper].
     autorewrite with distr_length.
@@ -139,18 +187,47 @@ else:
       Z.div_mod_to_quot_rem; nia. }
   Qed.
 
-  Lemma length_balance : List.length balance = n.
-  Proof using Type. cbv [balance]; now autorewrite with distr_length. Qed.
+  (* TODO: shouldn't this be in Positional? *)
+  Lemma eval_scmul weight {weight_props : @weight_properties weight} k x :
+    eval weight n (scmul weight n k x) = k * eval weight n x.
+  Proof.
+    cbv [scmul].
+    rewrite eval_from_associational by auto with zarith.
+    autorewrite with push_eval. cbn [fst snd].
+    rewrite eval_to_associational by auto. lia.
+  Qed.
+
+  Lemma eval_distribute_balance_step i x :
+    eval (weight (Qnum limbwidth) (QDen limbwidth)) n
+         (distribute_balance_step i x)
+    = eval (weight (Qnum limbwidth) (QDen limbwidth)) n x.
+  Proof using Hs_nz Hs_c_nz Hs_n Hn_nz.
+    clear -Hs_nz Hs_c_nz Hs_n Hn_nz wprops.
+    cbv [distribute_balance_step].
+    break_innermost_match; [ | lia ].
+    rewrite eval_from_associational by auto with zarith.
+    autorewrite with push_eval. cbn [fst snd].
+    rewrite eval_to_associational by auto.
+    ring_simplify.
+    do 2 match goal with
+         | |- context [?a * ?b * (?c / ?a)] =>
+           replace (a * b * (c / a)) with (a * (c / a) * b) by lia;
+             rewrite (Modulo.Z.mul_div_eq_full c a) by auto with zarith
+         end.
+    rewrite weight_multiples by auto. lia.
+  Qed.
 
   Lemma eval_balance : eval (weight (Qnum limbwidth) (Qden limbwidth)) n balance mod (s - Associational.eval c) = 0.
   Proof using Hs_nz Hs_c_nz Hs_n Hn_nz.
-    clear -Hs_nz Hs_c_nz Hs_n Hn_nz wprops.
-    cbv [balance];
-      repeat first [ rewrite Z_mod_same_full
-                   | rewrite eval_scmul by auto
-                   | rewrite eval_encode by auto with zarith
-                   | reflexivity
-                   | progress (pull_Zmod; autorewrite with zsimplify_fast; push_Zmod) ].
+    clear -p Hs_nz Hs_c_nz Hs_n Hn_nz wprops.
+    cbv [balance].
+    apply fold_right_invariant;
+      [ | intros; rewrite eval_distribute_balance_step; solve [auto] ].
+    repeat first [ rewrite Z_mod_same_full
+                 | rewrite eval_scmul by auto
+                 | rewrite eval_encode by auto with zarith
+                 | reflexivity
+                 | progress (pull_Zmod; autorewrite with zsimplify_fast; push_Zmod) ].
   Qed.
 
   (** check if the suggested number of limbs will overflow
@@ -194,3 +271,32 @@ Section ___.
        | Auto idx => nth_error get_possible_limbs idx
        end.
 End ___.
+
+(*
+Definition check_balance (balance : list Z) (loose_upperbounds : list Z)
+  := forallb (fun x => fst x <=? snd x)
+             (List.combine balance loose_upperbounds).
+
+About balance.
+Print balance.
+Require Import Crypto.Util.Strings.Show.
+Require Import Coq.Strings.String.
+Open Scope string_scope.
+(* Existing Instance PowersOfTwo.show_Z. *)
+(* Or: *)
+Existing Instance Hex.show_Z.
+
+Definition bal224 := (@balance default_tight_upperbound_fraction 4 (2^224) [(2^96,1);(1,-1)]).
+Definition lb224 := (@loose_upperbounds default_tight_upperbound_fraction 4 (2^224) [(2^96,1);(1,-1)]).
+
+Compute show false bal224.
+Compute show false lb224.
+Compute (check_balance bal224 lb224).
+
+Definition bal25519 := (@balance default_tight_upperbound_fraction 10 (2^255) [(1,19)]).
+Definition lb25519 := (@loose_upperbounds default_tight_upperbound_fraction 10 (2^255) [(1,19)]).
+
+Compute show false bal25519.
+Compute show false lb25519.
+Compute (check_balance bal224 lb224).
+*)
