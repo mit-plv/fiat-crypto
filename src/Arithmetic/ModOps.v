@@ -145,9 +145,11 @@ Section mod_ops.
   Qed.
 
   Derive carrymod
-         SuchThat (forall (f : list Z)
+         SuchThat (forall (balance f : list Z)
+                          (length_balance : length balance = n)
+                          (eval_balance : eval weight n balance mod (s - Associational.eval c) = 0)
                           (Hf : length f = n),
-                      (eval weight n (carrymod f)) mod (s - Associational.eval c)
+                      (eval weight n (carrymod balance f)) mod (s - Associational.eval c)
                       = (eval weight n f) mod (s - Associational.eval c))
          As eval_carrymod.
   Proof.
@@ -155,7 +157,9 @@ Section mod_ops.
     clear -m_nz s_nz limbwidth_good Hn_nz idxs.
     intros.
     etransitivity;
-      [ | rewrite <- @eval_chained_carries with (s:=s) (c:=c) (idxs:=idxs)
+      [ | rewrite <-@eval_add_balance with (balance:=balance)
+          by auto with zarith;
+          rewrite <- @eval_chained_carries with (s:=s) (c:=c) (idxs:=idxs)
           by auto with zarith; reflexivity ].
     eapply f_equal2; [|trivial]. eapply f_equal.
     subst carrymod; reflexivity.

@@ -816,6 +816,29 @@ Module Positional.
   Proof using Type. clear -Hf Hf; cbv [add]; distr_length.               Qed.
   Hint Rewrite @length_add : distr_length.
 
+  Section AddBalance.
+    Context (s:Z) (s_nz:s <> 0)
+            (c:list (Z*Z))
+            (m_nz:s - Associational.eval c <> 0).
+    Definition add_balance n (balance p : list Z) : list Z
+      := add n p balance.
+    Lemma eval_add_balance n balance p (Hp : length p = n)
+          (length_balance : length balance = n)
+          (eval_balance : eval n balance mod (s - Associational.eval c) = 0) :
+      eval n (add_balance n balance p) mod (s - Associational.eval c) =
+      eval n p mod (s - Associational.eval c).
+    Proof using m_nz weight_0 weight_nz.
+      cbv [add_balance]; push; auto;
+        push_Zmod; rewrite ?eval_balance; now autorewrite with zsimplify.
+    Qed.
+    Lemma length_add_balance n balance p (Hp : length p = n)
+          (length_balance : length balance = n) :
+      length (add_balance n balance p) = n.
+    Proof using Type. cbv [add_balance]; distr_length. Qed.
+  End AddBalance.
+  Hint Rewrite @eval_add_balance : push_eval.
+  Hint Rewrite @length_add_balance : distr_length.
+
   Section Carries.
     Definition carry n m (index:nat) (p:list Z) : list Z :=
       from_associational

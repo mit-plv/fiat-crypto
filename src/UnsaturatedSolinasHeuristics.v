@@ -134,7 +134,7 @@ else:
     else B.
 
   Definition distribute_balance minvalues B :=
-    fold_right (distribute_balance_step minvalues) B (seq 0 (n-1)).
+    fold_right (distribute_balance_step minvalues) B (rev (seq 0 (n-1))).
 
   (* distribute balance such that for all limbs i,
      tight_upperbounds[i] <= balance[i] *)
@@ -152,6 +152,58 @@ else:
       now autorewrite with distr_length.
   Qed.
   Hint Rewrite balance_length : distr_length.
+
+  (* reduce_balance needs to be enough such that +c doesn't underflow
+
+     put -c in positional, look for negative terms
+     if c is all-positive, then min(-c) will be positive
+
+     most negative number that could be added (if min(-c) negative):
+          max(tight_upperbounds)^2 * min(-c)
+
+     ...but it can only occur at one position. try to rethink...
+
+     - convert tight_upperbounds to associational
+     - multiply by itself, call split
+     - compute c * hi, convert to positional = max to be subtracted
+
+     0 <= bal[i] + c_hi[i]
+     -c_hi[i] <= bal[i]
+
+     if c_hi[i] is negative, this means 0 < bal, so we do need balance
+     if c_hi[i] is positive, this is satisfied by bal=0
+
+     see if it works with 0; if not, try higher values
+     TODO: is there a good way to guess the values?
+   *)
+  Definition max_reduce_add_term : list Z :=
+    let weight := weight (Qnum limbwidth) (Qden limbwidth) in
+    (* first, compute maximum values post-multiplication *)
+    let max_values := to_associational weight n tight_upperbounds in
+    let max_postmul := Associational.mul max_values max_values in
+    (* next, get high part and multiply by c *)
+    let c_hi := Associational.mul c (snd (split s max_postmul)) in
+    from_associational weight n c_hi.
+
+  (* negates the max_reduce_add_term and zeroes out negative coefficients; we
+     always want balance limbs to be nonnegative *)
+  Definition reduce_balance_lower_bounds :=
+    let weight := weight (Qnum limbwidth) (Qden limbwidth) in
+    List.map (Z.max 0) (scmul weight n (-1) max_reduce_add_term).
+
+  (* Compute the reduce balance coefficient; we divide the evaluation of balance
+     lower bounds by the modulus (using a ceiling division) to see the minimum
+     coefficient needed so that balance can possibly obey its lower bounds *)
+  Definition reduce_balance_coef :=
+    let weight := weight (Qnum limbwidth) (Qden limbwidth) in
+    ZMicromega.ceiling
+      (eval weight n reduce_balance_lower_bounds) (s - Associational.eval c).
+
+  Definition reduce_balance :=
+    let weight := weight (Qnum limbwidth) (Qden limbwidth) in
+    let M := encode weight n s c (s - Associational.eval c) in
+    let balance := scmul weight n reduce_balance_coef M in
+    @distribute_balance reduce_balance_lower_bounds balance.
 
   Definition loose_upperbounds : list Z
     := List.map
@@ -277,3 +329,36 @@ Section ___.
        | Auto idx => nth_error get_possible_limbs idx
        end.
 End ___.
+(*
+Require Import Crypto.Util.Strings.Show.
+Require Import Coq.Strings.String.
+Open Scope string_scope.
+Existing Instance PowersOfTwo.show_Z.
+(* Or: *)
+(*
+Existing Instance Hex.show_Z.
+*)
+
+Class params := { n : nat; s : Z; c : list (Z * Z) }.
+
+Inductive prime := p224_32 | p224_64 | p256_32 | p256_64.
+
+Definition get_params (m : prime) : params :=
+  match m with
+  | p224_64 => {| n := 4; s := 2^224; c := [(2^96,1);(1,-1)] |}
+  | p256_64 => {| n := 6; s := 2^256; c := [(2^224,1); (2^192,-1); (2^96,-1);(1,1)] |}
+  | p224_32 => {| n := 8; s := 2^224; c := [(2^96,1);(1,-1)] |}
+  | p256_32 => {| n := 12; s := 2^256; c := [(2^224,1); (2^192,-1); (2^96,-1);(1,1)] |}
+  end.
+
+Definition m := p256_64.
+Instance p : params := get_params m.
+
+Definition weight :=
+  weight (Qnum (limbwidth n s c)) (QDen (limbwidth n s c)).
+
+About reduce_balance.
+Compute (@reduce_balance 1 n s c).
+Compute show false (eval weight n (@reduce_balance 1 n s c)).
+Compute show false (eval weight n (@reduce_balance 1 n s c) / (s - Associational.eval c)).
+*)
