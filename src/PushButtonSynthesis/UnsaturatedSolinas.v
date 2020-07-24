@@ -117,9 +117,22 @@ Section __.
   Local Notation balance := (balance n s c).
 
   Definition m : Z := s - Associational.eval c.
+  (* m_enc needs to be such that, if x is bounded by tight bounds:
+
+     -2*fw[i] <= x[i] - m_enc[i] <= fw[i]
+
+     ...so as to obey the bounds for the sub-with-borrow in freeze. fw[i] here
+     is shorthand for (weight (S i) / weight i). To obey the upper bound, we
+     need to redistribute m_enc such that:
+
+     tight_upperbounds[i] - fw[i] <= m_enc[i] *)
+  Definition m_enc_min : list Z :=
+    let wt := weight (Qnum limbwidth) (Qden limbwidth) in
+    let fw := map (fun i => wt (S i) / wt i) (seq 0 n) in
+    map2 Z.sub tight_upperbounds fw.
   Definition m_enc : list Z :=
     let M := encode (weight (Qnum limbwidth) (Qden limbwidth)) n s c m in
-    distribute_balance n s c M.
+    distribute_balance n s c m_enc_min M.
 
   (* We include [0], so that even after bounds relaxation, we can
        notice where the constant 0s are, and remove them. *)

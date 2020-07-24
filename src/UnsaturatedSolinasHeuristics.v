@@ -89,7 +89,8 @@ else:
   Definition default_tight_upperbound_fraction : Q := 1%Q.
   Definition coef := 2. (* for balance in sub *)
   Definition prime_upperbound_list : list Z
-    := Partition.partition (weight (Qnum limbwidth) (Qden limbwidth)) n (s-1).
+    := Partition.partition
+         (weight (Qnum limbwidth) (Qden limbwidth)) n (s-1).
   (** We take the absolute value mostly to make proofs easy *)
   Definition tight_upperbounds : list Z
     := List.map
@@ -104,7 +105,7 @@ else:
   (** Allow enough space to do one subtraction w/o carrying *)
   Definition headspace_sub_count : nat := 1.
 
-  (** Constraints: tight_upperbounds[i] <= balance[i] <= loose_upperbounds[i]
+  (** readjust such that forall i, minvalues[i] <= B[i]
       Algorithm:
         B = encode (s - c)
         B = map(Z.mul coef, B)
@@ -118,22 +119,22 @@ else:
                B[i] += x * fw[i]
                B[i+1] -= x
    *)
-  Definition distribute_balance_step (i : nat) (B : list Z) :=
+  Definition distribute_balance_step (minvalues : list Z) (i : nat) (B : list Z) :=
     let Bi := nth_default 0 B i in
-    let ti := nth_default 0 tight_upperbounds i in
-    if (Bi <? ti)
+    let Mi := nth_default 0 minvalues i in
+    if (Bi <? Mi)
     then
       let weight := weight (Qnum limbwidth) (Qden limbwidth) in
       let fw := weight (S i) / weight i in
-      let x := ((ti - Bi) / fw) + Z.b2z (negb ((ti - Bi) mod fw =? 0)) in
+      let x := ((Mi - Bi) / fw) + Z.b2z (negb ((Mi - Bi) mod fw =? 0)) in
       let zero := [(weight i, x * fw); (weight (S i), -x)] in
       let Ba := to_associational weight n B ++ zero in
       let B := from_associational weight n Ba in
       B
     else B.
 
-  Definition distribute_balance B :=
-    fold_right distribute_balance_step B (seq 0 (n-1)).
+  Definition distribute_balance minvalues B :=
+    fold_right (distribute_balance_step minvalues) B (seq 0 (n-1)).
 
   (* distribute balance such that for all limbs i,
      tight_upperbounds[i] <= balance[i] *)
@@ -141,7 +142,7 @@ else:
       := let weight := weight (Qnum limbwidth) (Qden limbwidth) in
          let B := encode weight n s c (s - Associational.eval c) in
          let B := scmul weight n coef B in
-         distribute_balance B.
+         distribute_balance tight_upperbounds B.
 
   Lemma balance_length : length balance = n.
   Proof.
@@ -193,9 +194,9 @@ else:
     rewrite eval_to_associational by auto. lia.
   Qed.
 
-  Lemma eval_distribute_balance_step i x :
+  Lemma eval_distribute_balance_step minvalues i x :
     eval (weight (Qnum limbwidth) (QDen limbwidth)) n
-         (distribute_balance_step i x)
+         (distribute_balance_step minvalues i x)
     = eval (weight (Qnum limbwidth) (QDen limbwidth)) n x.
   Proof using Hs_nz Hs_c_nz Hs_n Hn_nz.
     clear -Hs_nz Hs_c_nz Hs_n Hn_nz wprops.
@@ -213,8 +214,9 @@ else:
     rewrite weight_multiples by auto. lia.
   Qed.
 
-  Lemma eval_distribute_balance x :
-    eval (weight (Qnum limbwidth) (QDen limbwidth)) n (distribute_balance x)
+  Lemma eval_distribute_balance minvalues x :
+    eval (weight (Qnum limbwidth) (QDen limbwidth))
+         n (distribute_balance minvalues x)
     = eval (weight (Qnum limbwidth) (QDen limbwidth)) n x.
   Proof using Hs_nz Hs_c_nz Hs_n Hn_nz.
     clear -p Hs_nz Hs_c_nz Hs_n Hn_nz wprops.
