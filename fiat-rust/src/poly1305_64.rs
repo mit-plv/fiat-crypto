@@ -4,7 +4,7 @@
 //! requested operations: carry_mul, carry_square, carry, add, sub, opp, selectznz, to_bytes, from_bytes
 //! n = 3 (from "3")
 //! s-c = 2^130 - [(1, 5)] (from "2^130 - 5")
-//! tight_bounds_multiplier = 1.1 (from "")
+//! tight_bounds_multiplier = 1 (from "")
 //!
 //! Computed values:
 //! carry_chain = [0, 1, 2, 0, 1]
@@ -128,10 +128,10 @@ pub fn fiat_poly1305_cmovznz_u64(out1: &mut u64, arg1: fiat_poly1305_u1, arg2: u
 ///   eval out1 mod m = (eval arg1 * eval arg2) mod m
 ///
 /// Input Bounds:
-///   arg1: [[0x0 ~> 0x34cccccccccb], [0x0 ~> 0x1a6666666664], [0x0 ~> 0x1a6666666664]]
-///   arg2: [[0x0 ~> 0x34cccccccccb], [0x0 ~> 0x1a6666666664], [0x0 ~> 0x1a6666666664]]
+///   arg1: [[0x0 ~> 0x300000000000], [0x0 ~> 0x180000000000], [0x0 ~> 0x180000000000]]
+///   arg2: [[0x0 ~> 0x300000000000], [0x0 ~> 0x180000000000], [0x0 ~> 0x180000000000]]
 /// Output Bounds:
-///   out1: [[0x0 ~> 0x119999999999], [0x0 ~> 0x8cccccccccc], [0x0 ~> 0x8cccccccccc]]
+///   out1: [[0x0 ~> 0x100000000000], [0x0 ~> 0x80000000000], [0x0 ~> 0x80000000000]]
 #[inline]
 pub fn fiat_poly1305_carry_mul(out1: &mut [u64; 3], arg1: &[u64; 3], arg2: &[u64; 3]) -> () {
   let x1: u128 = (((arg1[2]) as u128) * (((arg2[2]) * 0x5) as u128));
@@ -172,9 +172,9 @@ pub fn fiat_poly1305_carry_mul(out1: &mut [u64; 3], arg1: &[u64; 3], arg2: &[u64
 ///   eval out1 mod m = (eval arg1 * eval arg1) mod m
 ///
 /// Input Bounds:
-///   arg1: [[0x0 ~> 0x34cccccccccb], [0x0 ~> 0x1a6666666664], [0x0 ~> 0x1a6666666664]]
+///   arg1: [[0x0 ~> 0x300000000000], [0x0 ~> 0x180000000000], [0x0 ~> 0x180000000000]]
 /// Output Bounds:
-///   out1: [[0x0 ~> 0x119999999999], [0x0 ~> 0x8cccccccccc], [0x0 ~> 0x8cccccccccc]]
+///   out1: [[0x0 ~> 0x100000000000], [0x0 ~> 0x80000000000], [0x0 ~> 0x80000000000]]
 #[inline]
 pub fn fiat_poly1305_carry_square(out1: &mut [u64; 3], arg1: &[u64; 3]) -> () {
   let x1: u64 = ((arg1[2]) * 0x5);
@@ -216,9 +216,9 @@ pub fn fiat_poly1305_carry_square(out1: &mut [u64; 3], arg1: &[u64; 3]) -> () {
 ///   eval out1 mod m = eval arg1 mod m
 ///
 /// Input Bounds:
-///   arg1: [[0x0 ~> 0x34cccccccccb], [0x0 ~> 0x1a6666666664], [0x0 ~> 0x1a6666666664]]
+///   arg1: [[0x0 ~> 0x300000000000], [0x0 ~> 0x180000000000], [0x0 ~> 0x180000000000]]
 /// Output Bounds:
-///   out1: [[0x0 ~> 0x119999999999], [0x0 ~> 0x8cccccccccc], [0x0 ~> 0x8cccccccccc]]
+///   out1: [[0x0 ~> 0x100000000000], [0x0 ~> 0x80000000000], [0x0 ~> 0x80000000000]]
 #[inline]
 pub fn fiat_poly1305_carry(out1: &mut [u64; 3], arg1: &[u64; 3]) -> () {
   let x1: u64 = (arg1[0]);
@@ -239,10 +239,10 @@ pub fn fiat_poly1305_carry(out1: &mut [u64; 3], arg1: &[u64; 3]) -> () {
 ///   eval out1 mod m = (eval arg1 + eval arg2) mod m
 ///
 /// Input Bounds:
-///   arg1: [[0x0 ~> 0x119999999999], [0x0 ~> 0x8cccccccccc], [0x0 ~> 0x8cccccccccc]]
-///   arg2: [[0x0 ~> 0x119999999999], [0x0 ~> 0x8cccccccccc], [0x0 ~> 0x8cccccccccc]]
+///   arg1: [[0x0 ~> 0x100000000000], [0x0 ~> 0x80000000000], [0x0 ~> 0x80000000000]]
+///   arg2: [[0x0 ~> 0x100000000000], [0x0 ~> 0x80000000000], [0x0 ~> 0x80000000000]]
 /// Output Bounds:
-///   out1: [[0x0 ~> 0x34cccccccccb], [0x0 ~> 0x1a6666666664], [0x0 ~> 0x1a6666666664]]
+///   out1: [[0x0 ~> 0x300000000000], [0x0 ~> 0x180000000000], [0x0 ~> 0x180000000000]]
 #[inline]
 pub fn fiat_poly1305_add(out1: &mut [u64; 3], arg1: &[u64; 3], arg2: &[u64; 3]) -> () {
   let x1: u64 = ((arg1[0]) + (arg2[0]));
@@ -258,10 +258,10 @@ pub fn fiat_poly1305_add(out1: &mut [u64; 3], arg1: &[u64; 3], arg2: &[u64; 3]) 
 ///   eval out1 mod m = (eval arg1 - eval arg2) mod m
 ///
 /// Input Bounds:
-///   arg1: [[0x0 ~> 0x119999999999], [0x0 ~> 0x8cccccccccc], [0x0 ~> 0x8cccccccccc]]
-///   arg2: [[0x0 ~> 0x119999999999], [0x0 ~> 0x8cccccccccc], [0x0 ~> 0x8cccccccccc]]
+///   arg1: [[0x0 ~> 0x100000000000], [0x0 ~> 0x80000000000], [0x0 ~> 0x80000000000]]
+///   arg2: [[0x0 ~> 0x100000000000], [0x0 ~> 0x80000000000], [0x0 ~> 0x80000000000]]
 /// Output Bounds:
-///   out1: [[0x0 ~> 0x34cccccccccb], [0x0 ~> 0x1a6666666664], [0x0 ~> 0x1a6666666664]]
+///   out1: [[0x0 ~> 0x300000000000], [0x0 ~> 0x180000000000], [0x0 ~> 0x180000000000]]
 #[inline]
 pub fn fiat_poly1305_sub(out1: &mut [u64; 3], arg1: &[u64; 3], arg2: &[u64; 3]) -> () {
   let x1: u64 = ((0x1ffffffffff6 + (arg1[0])) - (arg2[0]));
@@ -277,9 +277,9 @@ pub fn fiat_poly1305_sub(out1: &mut [u64; 3], arg1: &[u64; 3], arg2: &[u64; 3]) 
 ///   eval out1 mod m = -eval arg1 mod m
 ///
 /// Input Bounds:
-///   arg1: [[0x0 ~> 0x119999999999], [0x0 ~> 0x8cccccccccc], [0x0 ~> 0x8cccccccccc]]
+///   arg1: [[0x0 ~> 0x100000000000], [0x0 ~> 0x80000000000], [0x0 ~> 0x80000000000]]
 /// Output Bounds:
-///   out1: [[0x0 ~> 0x34cccccccccb], [0x0 ~> 0x1a6666666664], [0x0 ~> 0x1a6666666664]]
+///   out1: [[0x0 ~> 0x300000000000], [0x0 ~> 0x180000000000], [0x0 ~> 0x180000000000]]
 #[inline]
 pub fn fiat_poly1305_opp(out1: &mut [u64; 3], arg1: &[u64; 3]) -> () {
   let x1: u64 = (0x1ffffffffff6 - (arg1[0]));
@@ -318,7 +318,7 @@ pub fn fiat_poly1305_selectznz(out1: &mut [u64; 3], arg1: fiat_poly1305_u1, arg2
 ///   out1 = map (λ x, ⌊((eval arg1 mod m) mod 2^(8 * (x + 1))) / 2^(8 * x)⌋) [0..16]
 ///
 /// Input Bounds:
-///   arg1: [[0x0 ~> 0x119999999999], [0x0 ~> 0x8cccccccccc], [0x0 ~> 0x8cccccccccc]]
+///   arg1: [[0x0 ~> 0x100000000000], [0x0 ~> 0x80000000000], [0x0 ~> 0x80000000000]]
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0x3]]
 #[inline]
@@ -405,7 +405,7 @@ pub fn fiat_poly1305_to_bytes(out1: &mut [u8; 17], arg1: &[u64; 3]) -> () {
 /// Input Bounds:
 ///   arg1: [[0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0x3]]
 /// Output Bounds:
-///   out1: [[0x0 ~> 0x119999999999], [0x0 ~> 0x8cccccccccc], [0x0 ~> 0x8cccccccccc]]
+///   out1: [[0x0 ~> 0x100000000000], [0x0 ~> 0x80000000000], [0x0 ~> 0x80000000000]]
 #[inline]
 pub fn fiat_poly1305_from_bytes(out1: &mut [u64; 3], arg1: &[u8; 17]) -> () {
   let x1: u64 = (((arg1[16]) as u64) << 41);
