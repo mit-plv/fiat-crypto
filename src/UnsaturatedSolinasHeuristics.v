@@ -86,14 +86,14 @@ else:
          List.map Z.to_nat (starts ++ chain2 ++ chain3)
        else (List.seq 0 n ++ [0; 1])%list%nat.
 
-  Definition default_tight_upperbound_fraction : Q := (11/10)%Q.
+  Definition default_tight_upperbound_fraction : Q := 1%Q.
   Definition coef := 2. (* for balance in sub *)
   Definition prime_upperbound_list : list Z
     := Partition.partition (weight (Qnum limbwidth) (Qden limbwidth)) n (s-1).
   (** We take the absolute value mostly to make proofs easy *)
   Definition tight_upperbounds : list Z
     := List.map
-         (fun v : Z => Qceiling (Qabs (tight_upperbound_fraction * v)))
+         (fun v : Z => Qceiling (Qabs (tight_upperbound_fraction * (v+1))))
          prime_upperbound_list.
 
   (** We compute loose bounds based on how much headspace we have in
