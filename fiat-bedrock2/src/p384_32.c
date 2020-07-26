@@ -8862,7 +8862,7 @@ uintptr_t fiat_p384_nonzero(uintptr_t in0) {
   x11 = *(uintptr_t*)((in0)+((uintptr_t)44ULL));
   /*skip*/
   /*skip*/
-  x12 = (x0)|((x1)|((x2)|((x3)|((x4)|((x5)|((x6)|((x7)|((x8)|((x9)|((x10)|((x11)|((uintptr_t)0ULL))))))))))));
+  x12 = (x0)|((x1)|((x2)|((x3)|((x4)|((x5)|((x6)|((x7)|((x8)|((x9)|((x10)|(x11)))))))))));
   x13 = x12;
   out0 = x13;
   return out0;

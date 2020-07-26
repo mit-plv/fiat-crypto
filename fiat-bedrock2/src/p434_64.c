@@ -3582,7 +3582,7 @@ uintptr_t fiat_p434_nonzero(uintptr_t in0) {
   x6 = *(uintptr_t*)((in0)+((uintptr_t)48ULL));
   /*skip*/
   /*skip*/
-  x7 = (x0)|((x1)|((x2)|((x3)|((x4)|((x5)|((x6)|((uintptr_t)0ULL)))))));
+  x7 = (x0)|((x1)|((x2)|((x3)|((x4)|((x5)|(x6))))));
   x8 = x7;
   out0 = x8;
   return out0;

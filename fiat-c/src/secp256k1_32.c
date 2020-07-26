@@ -4719,7 +4719,7 @@ static void fiat_secp256k1_to_montgomery(uint32_t out1[8], const uint32_t arg1[8
  */
 static void fiat_secp256k1_nonzero(uint32_t* out1, const uint32_t arg1[8]) {
   uint32_t x1;
-  x1 = ((arg1[0]) | ((arg1[1]) | ((arg1[2]) | ((arg1[3]) | ((arg1[4]) | ((arg1[5]) | ((arg1[6]) | ((arg1[7]) | (uint32_t)0x0))))))));
+  x1 = ((arg1[0]) | ((arg1[1]) | ((arg1[2]) | ((arg1[3]) | ((arg1[4]) | ((arg1[5]) | ((arg1[6]) | (arg1[7]))))))));
   *out1 = x1;
 }
 

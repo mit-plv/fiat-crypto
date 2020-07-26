@@ -3813,7 +3813,7 @@ public static void fiat_P256_to_montgomery(long[] out1, final long[] arg1) {
  *   out1: [0x0 ~&gt; 0xffffffff] <p>
  */
 public static void fiat_P256_nonzero(Box<Long> out1, final long[] arg1) {
-  long x1 = ((arg1[0]) | ((arg1[1]) | ((arg1[2]) | ((arg1[3]) | ((arg1[4]) | ((arg1[5]) | ((arg1[6]) | ((arg1[7]) | Long.valueOf(0x0).longValue()))))))));
+  long x1 = ((arg1[0]) | ((arg1[1]) | ((arg1[2]) | ((arg1[3]) | ((arg1[4]) | ((arg1[5]) | ((arg1[6]) | (arg1[7]))))))));
   out1.set(x1);
 }
 

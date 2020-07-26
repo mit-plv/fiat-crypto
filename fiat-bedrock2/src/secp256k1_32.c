@@ -4478,7 +4478,7 @@ uintptr_t fiat_secp256k1_nonzero(uintptr_t in0) {
   x7 = *(uintptr_t*)((in0)+((uintptr_t)28ULL));
   /*skip*/
   /*skip*/
-  x8 = (x0)|((x1)|((x2)|((x3)|((x4)|((x5)|((x6)|((x7)|((uintptr_t)0ULL))))))));
+  x8 = (x0)|((x1)|((x2)|((x3)|((x4)|((x5)|((x6)|(x7)))))));
   x9 = x8;
   out0 = x9;
   return out0;

@@ -2879,7 +2879,7 @@ pub fn fiat_p384_to_montgomery(out1: &mut [u64; 6], arg1: &[u64; 6]) -> () {
 ///   out1: [0x0 ~> 0xffffffffffffffff]
 #[inline]
 pub fn fiat_p384_nonzero(out1: &mut u64, arg1: &[u64; 6]) -> () {
-  let x1: u64 = ((arg1[0]) | ((arg1[1]) | ((arg1[2]) | ((arg1[3]) | ((arg1[4]) | ((arg1[5]) | (0x0 as u64)))))));
+  let x1: u64 = ((arg1[0]) | ((arg1[1]) | ((arg1[2]) | ((arg1[3]) | ((arg1[4]) | (arg1[5]))))));
   *out1 = x1;
 }
 

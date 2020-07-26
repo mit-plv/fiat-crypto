@@ -3196,7 +3196,7 @@ static void fiat_p224_to_montgomery(uint32_t out1[7], const uint32_t arg1[7]) {
  */
 static void fiat_p224_nonzero(uint32_t* out1, const uint32_t arg1[7]) {
   uint32_t x1;
-  x1 = ((arg1[0]) | ((arg1[1]) | ((arg1[2]) | ((arg1[3]) | ((arg1[4]) | ((arg1[5]) | ((arg1[6]) | (uint32_t)0x0)))))));
+  x1 = ((arg1[0]) | ((arg1[1]) | ((arg1[2]) | ((arg1[3]) | ((arg1[4]) | ((arg1[5]) | (arg1[6])))))));
   *out1 = x1;
 }
 

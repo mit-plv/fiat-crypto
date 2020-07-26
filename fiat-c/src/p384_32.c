@@ -8927,7 +8927,7 @@ static void fiat_p384_to_montgomery(uint32_t out1[12], const uint32_t arg1[12]) 
  */
 static void fiat_p384_nonzero(uint32_t* out1, const uint32_t arg1[12]) {
   uint32_t x1;
-  x1 = ((arg1[0]) | ((arg1[1]) | ((arg1[2]) | ((arg1[3]) | ((arg1[4]) | ((arg1[5]) | ((arg1[6]) | ((arg1[7]) | ((arg1[8]) | ((arg1[9]) | ((arg1[10]) | ((arg1[11]) | (uint32_t)0x0))))))))))));
+  x1 = ((arg1[0]) | ((arg1[1]) | ((arg1[2]) | ((arg1[3]) | ((arg1[4]) | ((arg1[5]) | ((arg1[6]) | ((arg1[7]) | ((arg1[8]) | ((arg1[9]) | ((arg1[10]) | (arg1[11]))))))))))));
   *out1 = x1;
 }
 

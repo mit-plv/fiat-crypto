@@ -1161,7 +1161,7 @@ uintptr_t fiat_p256_nonzero(uintptr_t in0) {
   x3 = *(uintptr_t*)((in0)+((uintptr_t)24ULL));
   /*skip*/
   /*skip*/
-  x4 = (x0)|((x1)|((x2)|((x3)|((uintptr_t)0ULL))));
+  x4 = (x0)|((x1)|((x2)|(x3)));
   x5 = x4;
   out0 = x5;
   return out0;

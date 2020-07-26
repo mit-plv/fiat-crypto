@@ -3109,7 +3109,7 @@ pub fn fiat_p224_to_montgomery(out1: &mut [u32; 7], arg1: &[u32; 7]) -> () {
 ///   out1: [0x0 ~> 0xffffffff]
 #[inline]
 pub fn fiat_p224_nonzero(out1: &mut u32, arg1: &[u32; 7]) -> () {
-  let x1: u32 = ((arg1[0]) | ((arg1[1]) | ((arg1[2]) | ((arg1[3]) | ((arg1[4]) | ((arg1[5]) | ((arg1[6]) | (0x0 as u32))))))));
+  let x1: u32 = ((arg1[0]) | ((arg1[1]) | ((arg1[2]) | ((arg1[3]) | ((arg1[4]) | ((arg1[5]) | (arg1[6])))))));
   *out1 = x1;
 }
 

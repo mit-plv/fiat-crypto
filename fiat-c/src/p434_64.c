@@ -3793,7 +3793,7 @@ static void fiat_p434_to_montgomery(uint64_t out1[7], const uint64_t arg1[7]) {
  */
 static void fiat_p434_nonzero(uint64_t* out1, const uint64_t arg1[7]) {
   uint64_t x1;
-  x1 = ((arg1[0]) | ((arg1[1]) | ((arg1[2]) | ((arg1[3]) | ((arg1[4]) | ((arg1[5]) | ((arg1[6]) | (uint64_t)0x0)))))));
+  x1 = ((arg1[0]) | ((arg1[1]) | ((arg1[2]) | ((arg1[3]) | ((arg1[4]) | ((arg1[5]) | (arg1[6])))))));
   *out1 = x1;
 }
 

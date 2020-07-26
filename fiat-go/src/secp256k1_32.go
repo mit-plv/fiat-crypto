@@ -4521,7 +4521,7 @@ func fiat_secp256k1_to_montgomery(out1 *[8]uint32, arg1 *[8]uint32) {
  */
 /*inline*/
 func fiat_secp256k1_nonzero(out1 *uint32, arg1 *[8]uint32) {
-  var x1 uint32 = ((arg1[0]) | ((arg1[1]) | ((arg1[2]) | ((arg1[3]) | ((arg1[4]) | ((arg1[5]) | ((arg1[6]) | ((arg1[7]) | uint32(0x0)))))))))
+  var x1 uint32 = ((arg1[0]) | ((arg1[1]) | ((arg1[2]) | ((arg1[3]) | ((arg1[4]) | ((arg1[5]) | ((arg1[6]) | (arg1[7]))))))))
   *out1 = x1
 }
 

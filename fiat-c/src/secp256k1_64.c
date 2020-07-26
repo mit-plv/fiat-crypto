@@ -1509,7 +1509,7 @@ static void fiat_secp256k1_to_montgomery(uint64_t out1[4], const uint64_t arg1[4
  */
 static void fiat_secp256k1_nonzero(uint64_t* out1, const uint64_t arg1[4]) {
   uint64_t x1;
-  x1 = ((arg1[0]) | ((arg1[1]) | ((arg1[2]) | ((arg1[3]) | (uint64_t)0x0))));
+  x1 = ((arg1[0]) | ((arg1[1]) | ((arg1[2]) | (arg1[3]))));
   *out1 = x1;
 }
 

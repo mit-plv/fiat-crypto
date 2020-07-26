@@ -1229,7 +1229,7 @@ func fiat_p256_to_montgomery(out1 *[4]uint64, arg1 *[4]uint64) {
  */
 /*inline*/
 func fiat_p256_nonzero(out1 *uint64, arg1 *[4]uint64) {
-  var x1 uint64 = ((arg1[0]) | ((arg1[1]) | ((arg1[2]) | ((arg1[3]) | uint64(0x0)))))
+  var x1 uint64 = ((arg1[0]) | ((arg1[1]) | ((arg1[2]) | (arg1[3]))))
   *out1 = x1
 }
 
