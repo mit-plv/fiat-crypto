@@ -216,6 +216,16 @@ Definition arith_rewrite_rulesT (max_const_val : Z) : list (bool * Prop)
 
             ; (forall v, -(-v) = v)
 
+            ; (forall v, Z.land v ('0) = '0)
+            ; (forall v, Z.land ('0) v = '0)
+            ; (forall v, Z.land v ('-1) = v)
+            ; (forall v, Z.land ('-1) v = v)
+
+            ; (forall v, Z.lor v ('0) = v)
+            ; (forall v, Z.lor ('0) v = v)
+            ; (forall v, Z.lor v ('-1) = '-1)
+            ; (forall v, Z.lor ('-1) v = '-1)
+
             ; (forall z v, z > 0 ->  'z  + (-v) = 'z - v)
             ; (forall z v, z > 0 -> (-v) +  'z  = 'z - v)
             ; (forall z v, z < 0 ->  'z  + (-v) = -('(-z) + v))
@@ -298,6 +308,32 @@ Definition arith_with_casts_rewrite_rulesT (adc_no_carry_to_add : bool) : list (
             ; (forall rnv rv v,
                   (rv <= -n rnv)%zrange
                   -> -(cstZ rnv (-(cstZ rv v))) = cstZ rv v)
+
+            ; (forall rland r0 rv v,
+                  0 ∈ rland -> 0 ∈ r0
+                  -> cstZ rland (Z.land (cstZ rv v) (cstZ r0 ('0))) = cstZ r0 ('0))
+            ; (forall rland r0 rv v,
+                  0 ∈ rland -> 0 ∈ r0
+                  -> cstZ rland (Z.land (cstZ r0 ('0)) (cstZ rv v)) = cstZ r0 ('0))
+            ; (forall rland rm1 rv v,
+                  (rv <= rland)%zrange -> -1 ∈ rm1
+                  -> cstZ rland (Z.land (cstZ rv v) (cstZ rm1 ('-1))) = cstZ rv v)
+            ; (forall rland rm1 rv v,
+                  (rv <= rland)%zrange -> -1 ∈ rm1
+                  -> cstZ rland (Z.land (cstZ rm1 ('-1)) (cstZ rv v)) = cstZ rv v)
+
+            ; (forall rlor r0 rv v,
+                  (rv <= rlor)%zrange -> 0 ∈ r0
+                  -> cstZ rlor (Z.lor (cstZ rv v) (cstZ r0 ('0))) = cstZ rv v)
+            ; (forall rlor r0 rv v,
+                  (rv <= rlor)%zrange -> 0 ∈ r0
+                  -> cstZ rlor (Z.lor (cstZ r0 ('0)) (cstZ rv v)) = cstZ rv v)
+            ; (forall rlor rm1 rv v,
+                  -1 ∈ rlor -> -1 ∈ rm1
+                  -> cstZ rlor (Z.lor (cstZ rv v) (cstZ rm1 ('-1))) = cstZ rm1 ('-1))
+            ; (forall rlor rm1 rv v,
+                  -1 ∈ rlor -> -1 ∈ rm1
+                  -> cstZ rlor (Z.lor (cstZ rm1 ('-1)) (cstZ rv v)) = cstZ rm1 ('-1))
 
             ; (forall rx x ry y, upper (n rx) < lower (n ry) -> Z.ltz (cstZ rx x) (cstZ ry y) = 1)
             ; (forall rx x ry y, upper (n ry) <= lower (n rx) -> Z.ltz (cstZ rx x) (cstZ ry y) = 0)

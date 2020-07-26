@@ -28,6 +28,7 @@ Require Import Crypto.Util.ZUtil.Modulo.
 Require Import Crypto.Util.ZUtil.Opp.
 Require Import Crypto.Util.ZUtil.Pow.
 Require Import Crypto.Util.ZUtil.Land.
+Require Import Crypto.Util.ZUtil.Lor.
 Require Import Crypto.Util.ZUtil.LandLorShiftBounds.
 Require Import Crypto.Util.ZUtil.Shift.
 Require Import Crypto.Util.ZRange.

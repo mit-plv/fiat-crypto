@@ -19,6 +19,7 @@ Require Crypto.Util.ZUtil.Hints.Ztestbit.
 Require Crypto.Util.ZUtil.Land.
 Require Crypto.Util.ZUtil.LandLorBounds.
 Require Crypto.Util.ZUtil.LandLorShiftBounds.
+Require Crypto.Util.ZUtil.Lor.
 Require Crypto.Util.ZUtil.Le.
 Require Crypto.Util.ZUtil.Lnot.
 Require Crypto.Util.ZUtil.Log2.
