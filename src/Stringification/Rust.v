@@ -132,6 +132,11 @@ Module Rust.
          prefix
            ++ "subborrowx_u"
            ++ Decimal.Z.to_string lg2s ++ "(" ++ arith_to_string prefix args ++ ")"
+       | (IR.Z_value_barrier ty @@@ args) =>
+         prefix
+           ++ "value_barrier_"
+           ++ (if int.is_unsigned ty then "u" else "")
+           ++ Decimal.Z.to_string (int.bitwidth_of ty) ++ "(" ++ arith_to_string prefix args ++ ")"
        | (IR.Z_zselect ty @@@ args) =>
          prefix
            ++ "cmovznz_"
@@ -150,7 +155,7 @@ Module Rust.
        | (IR.Z_land @@@ _)
        | (IR.Z_lor @@@ _)
        | (IR.Z_add_modulo @@@ _) => "#error bad_arg;"
-       | TT => "#error tt;"
+       | IR.TT => "#error tt;"
        end%string%Cexpr.
 
   Fixpoint stmt_to_string (prefix : string) (e : IR.stmt) : string :=

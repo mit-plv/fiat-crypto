@@ -198,6 +198,11 @@ Module Go.
                 ++ "subborrowx_u"
                 ++ Decimal.Z.to_string lg2s ++ "(" ++ arith_to_string prefix args ++ ")"
          end
+       | (IR.Z_value_barrier ty @@@ args) =>
+         prefix
+           ++ "value_barrier_"
+           ++ (if int.is_unsigned ty then "u" else "")
+           ++ Decimal.Z.to_string (int.bitwidth_of ty) ++ "(" ++ arith_to_string prefix args ++ ")"
        | (IR.Z_zselect ty @@@ args) =>
          prefix
            ++ "cmovznz_"
@@ -216,7 +221,7 @@ Module Go.
        | (IR.Z_land @@@ _)
        | (IR.Z_lor @@@ _)
        | (IR.Z_add_modulo @@@ _) => "var _error = error_bad_arg"
-       | TT => "var _error = error_tt"
+       | IR.TT => "var _error = error_tt"
        end%string%Cexpr.
 
   (** In Go, we munge return arguments of some functions above, so

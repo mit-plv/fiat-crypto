@@ -134,6 +134,11 @@ Module Java.
          prefix
            ++ "cmovznz_u"
            ++ Decimal.Z.to_string (ToString.int.bitwidth_of ty) ++ "(" ++ @arith_to_string prefix _ args ++ ")"
+       | (IR.Z_value_barrier ty @@@ args) =>
+         prefix
+           ++ "value_barrier_"
+           ++ (if int.is_unsigned ty then "u" else "")
+           ++ Decimal.Z.to_string (int.bitwidth_of ty) ++ "(" ++ arith_to_string prefix args ++ ")"
        | (IR.Z_static_cast int_t @@@ e) =>
          "Long.valueOf(" ++ arith_to_string prefix e ++ ")." ++ primitive_type_to_string false prefix IR.type.Z (Some int_t) ++ "Value()"
        | IR.Var _ v => v
@@ -148,7 +153,7 @@ Module Java.
        | (IR.Z_land @@@ _)
        | (IR.Z_lor @@@ _)
        | (IR.Z_add_modulo @@@ _) => "int _error = error_bad_arg"
-       | TT => "error_tt"
+       | IR.TT => "error_tt"
        end%string%Cexpr.
 
   (** In Java, there is no munging of return arguments (they remain
