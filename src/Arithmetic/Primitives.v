@@ -18,9 +18,9 @@ Section primitives.
   Definition addcarryx (bitwidth : Z) := Eval cbv [Z.add_with_get_carry Z.add_with_carry Z.get_carry] in Z.add_with_get_carry bitwidth.
   Definition subborrowx (bitwidth : Z) := Eval cbv [Z.sub_with_get_borrow Z.sub_with_borrow Z.get_borrow Z.get_carry Z.add_with_carry] in Z.sub_with_get_borrow bitwidth.
   Definition cmovznz (bitwidth : Z) (cond : Z) (z nz : Z)
-    := dlet t := (0 - Z.bneg (Z.bneg cond)) mod 2^bitwidth in Z.lor (Z.land t nz) (Z.land (Z.lnot_modulo t (2^bitwidth)) z).
+    := dlet t := (0 - Z.bneg (Z.bneg cond)) mod 2^bitwidth in Z.lor (Z.land (Z.value_barrier t) nz) (Z.land (Z.value_barrier (Z.lnot_modulo t (2^bitwidth))) z).
   Definition cmovznz_by_mul (bitwidth : Z) (cond : Z) (z nz : Z)
-    := dlet t := cond * (2^bitwidth - 1) in Z.lor (Z.land t nz) (Z.land (Z.lnot_modulo t (2^bitwidth)) z).
+    := dlet t := cond * (2^bitwidth - 1) in Z.lor (Z.land (Z.value_barrier t) nz) (Z.land (Z.value_barrier (Z.lnot_modulo t (2^bitwidth))) z).
 
   Lemma mulx_correct (bitwidth : Z)
         (x y : Z)

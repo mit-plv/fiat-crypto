@@ -32,6 +32,8 @@ Global Instance only_signed : only_signed_opt := false.
 (* Rewrite selects into expressions that don't require cmov *)
 Global Instance no_select : no_select_opt := true.
 Global Instance tight_upperbound_fraction : tight_upperbound_fraction_opt := default_tight_upperbound_fraction.
+(* We don't handle value_barrier in bedrock2 *)
+Global Instance unfold_value_barrier : unfold_value_barrier_opt := true.
 
 (* bedrock2 backend parameters *)
 Global Existing Instances Types.rep.Z Types.rep.listZ_mem.

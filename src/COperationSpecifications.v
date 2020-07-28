@@ -139,6 +139,18 @@ Module Primitives.
       -> subborrowx b x y = ((-b + x + -y) mod 2^s, -((-b + x + -y) / 2^s))
          /\ is_bounded_by2 (r[0~>2^s-1], r[0~>1]) (subborrowx b x y) = true.
 
+  Definition value_barrier_correct (is_signed : bool) s
+             (value_barrier : Z -> Z)
+    := match (if is_signed
+              then r[-2^(s-1) ~> 2^(s-1) - 1]
+              else r[0 ~> 2^s - 1])%zrange with
+       | rs
+         =>
+         forall z,
+           is_bounded_by0 rs z = true
+           -> value_barrier z = z
+       end.
+
   Definition cmovznz_correct (is_signed : bool) s
              (cmovznz : Z -> Z -> Z -> Z)
     := match (if is_signed

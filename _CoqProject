@@ -167,6 +167,7 @@ src/Rewriter/Passes/StripLiteralCasts.v
 src/Rewriter/Passes/Test.v
 src/Rewriter/Passes/ToFancy.v
 src/Rewriter/Passes/ToFancyWithCasts.v
+src/Rewriter/Passes/UnfoldValueBarrier.v
 src/Rewriter/PerfTesting/Core.v
 src/Rewriter/PerfTesting/StandaloneOCamlMain.v
 src/Spec/CompleteEdwardsCurve.v
@@ -199,6 +200,7 @@ src/Util/ErrorT.v
 src/Util/Factorize.v
 src/Util/FixCoqMistakes.v
 src/Util/FsatzAutoLemmas.v
+src/Util/FueledLUB.v
 src/Util/GlobalSettings.v
 src/Util/HList.v
 src/Util/HProp.v

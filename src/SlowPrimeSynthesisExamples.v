@@ -37,6 +37,7 @@ Local Coercion QArith_base.inject_Z : Z >-> Q.
 Local Coercion Z.pos : positive >-> Z.
 
 Local Existing Instance default_low_level_rewriter_method.
+Local Instance : unfold_value_barrier_opt := true.
 Local Instance : tight_upperbound_fraction_opt := default_tight_upperbound_fraction.
 
 Module debugging_21271_from_bytes.

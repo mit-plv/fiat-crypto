@@ -8,6 +8,7 @@ Require Import Crypto.Rewriter.Passes.MultiRetSplit.
 Require Import Crypto.Rewriter.Passes.NoSelect.
 Require Import Crypto.Rewriter.Passes.ToFancy.
 Require Import Crypto.Rewriter.Passes.ToFancyWithCasts.
+Require Import Crypto.Rewriter.Passes.UnfoldValueBarrier.
 
 Module Compilers.
   Export NBE.Compilers.
@@ -20,6 +21,7 @@ Module Compilers.
   Export NoSelect.Compilers.
   Export ToFancy.Compilers.
   Export ToFancyWithCasts.Compilers.
+  Export UnfoldValueBarrier.Compilers.
 
   Module Import RewriteRules.
     Export NBE.Compilers.RewriteRules.
@@ -32,5 +34,6 @@ Module Compilers.
     Export NoSelect.Compilers.RewriteRules.
     Export ToFancy.Compilers.RewriteRules.
     Export ToFancyWithCasts.Compilers.RewriteRules.
+    Export UnfoldValueBarrier.Compilers.RewriteRules.
   End RewriteRules.
 End Compilers.

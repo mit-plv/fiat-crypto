@@ -218,12 +218,16 @@ Module ForExtraction.
     := ([Arg.long_key "no-select"], Arg.Unit, ["Use expressions that don't require cmov."]).
   Definition no_wide_int_spec : named_argT
     := ([Arg.long_key "no-wide-int"], Arg.Unit, ["Don't use integers wider than the bitwidth."]).
+  Definition widen_carry_to_bytes_spec : named_argT
+    := ([Arg.long_key "widen-carry-to-bytes"], Arg.Unit, ["Always widen carry bit integer types the byte type, or to the full bitwidth if --widen-bytes is also passed."]).
   Definition widen_carry_spec : named_argT
     := ([Arg.long_key "widen-carry"], Arg.Unit, ["Widen carry bit integer types to either the byte type, or to the full bitwidth if --widen-bytes is also passed."]).
   Definition widen_bytes_spec : named_argT
     := ([Arg.long_key "widen-bytes"], Arg.Unit, ["Widen byte types to the full bitwidth."]).
   Definition split_multiret_spec : named_argT
     := ([Arg.long_key "split-multiret"], Arg.Unit, ["Don't allow instructions to return two results. This should always be set for bedrock2."]).
+  Definition value_barrier_spec : named_argT
+    := ([Arg.long_key "use-value-barrier"], Arg.Unit, ["Guard some expressions with an assembly barrier to prevent compilers from generating non-constant-time code for cmovznz."]).
   Definition no_primitives_spec : named_argT
     := ([Arg.long_key "no-primitives"], Arg.Unit, ["Suppress the generation of the bodies of primitive operations such as addcarryx, subborrowx, cmovznz, mulx, etc."]).
   Definition cmovznz_by_mul_spec : named_argT
@@ -322,6 +326,8 @@ Module ForExtraction.
       ; should_split_mul :> should_split_mul_opt
       (** Should we split apart multi-return operations? *)
       ; should_split_multiret :> should_split_multiret_opt
+      (** Should we remove use of value_barrier? *)
+      ; unfold_value_barrier :> unfold_value_barrier_opt
       (** Should we widen the carry to the full bitwidth? *)
       ; widen_carry :> widen_carry_opt
       (** Should we widen the byte type to the full bitwidth? *)
@@ -342,6 +348,7 @@ Module ForExtraction.
         ; widen_bytes_spec
         ; no_select_spec
         ; split_multiret_spec
+        ; value_barrier_spec
         ; no_primitives_spec
         ; cmovznz_by_mul_spec
         ; only_signed_spec
@@ -360,6 +367,7 @@ Module ForExtraction.
              , widen_bytesv
              , no_selectv
              , split_multiretv
+             , value_barrierv
              , no_primitivesv
              , cmovznz_by_mulv
              , only_signedv
@@ -374,6 +382,7 @@ Module ForExtraction.
                   ; only_signed := to_bool only_signedv
                   ; should_split_mul := to_bool no_wide_intv
                   ; should_split_multiret := to_bool split_multiretv
+                  ; unfold_value_barrier := negb (to_bool value_barrierv)
                   ; use_mul_for_cmovznz := to_bool cmovznz_by_mulv
                   ; emit_primitives := negb (to_bool no_primitivesv)
                |},

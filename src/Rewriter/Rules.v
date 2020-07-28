@@ -177,6 +177,15 @@ Definition nbe_rewrite_rulesT : list (bool * Prop)
              ]
         ].
 
+Definition unfold_value_barrier_rewrite_rulesT : list (bool * Prop)
+  := Eval cbv [myapp mymap myflatten] in
+      myflatten
+        [mymap
+           dont_do_again
+           [(forall x, Z.value_barrier x = x)
+           ]
+        ].
+
 Definition arith_rewrite_rulesT (max_const_val : Z) : list (bool * Prop)
   := Eval cbv [myapp mymap myflatten] in
       myflatten

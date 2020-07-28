@@ -251,6 +251,7 @@ Module Compilers.
              => match idc with
                 | ident.Literal base.type.Z v => show_compact_Z with_parens v
                 | ident.Literal t v => show with_parens v
+                | ident.value_barrier => "value_barrier"
                 | ident.comment _ => "comment"
                 | ident.comment_no_keep _ => "comment_no_keep"
                 | ident.tt => "()"
@@ -411,6 +412,7 @@ Module Compilers.
              | ident.Build_zrange => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 0) ("r[" ++ x 60%nat ++ " ~> " ++ y 200%nat), ZRange.type.base.option.None)
              | ident.comment _ as idc
              | ident.comment_no_keep _ as idc
+             | ident.value_barrier as idc
              | ident.Some _ as idc
              | ident.nat_rect _ as idc
              | ident.eager_nat_rect _ as idc
@@ -852,62 +854,118 @@ Module Compilers.
       { bitwidths_used : IntSet.t;
         addcarryx_lg_splits : PositiveSet.t;
         mulx_lg_splits : PositiveSet.t;
-        cmovznz_bitwidths : IntSet.t }.
+        cmovznz_bitwidths : IntSet.t;
+        value_barrier_bitwidths : IntSet.t;
+      }.
     Local Set Decidable Equality Schemes.
     Global Instance show_lines_ident_infos : ShowLines ident_infos
       := fun _ v
          => ["{| bitwidths_used := " ++ show false (bitwidths_used v)
              ; " ; addcarryx_lg_splits := " ++ show false (addcarryx_lg_splits v)
              ; " ; mulx_lg_splits := " ++ show false (mulx_lg_splits v)
-             ; " ; cmovznz_bitwidths := " ++ show false (cmovznz_bitwidths v) ++ " |}"].
+             ; " ; cmovznz_bitwidths := " ++ show false (cmovznz_bitwidths v)
+             ; " ; value_barrier_bitwidths := " ++ show false (value_barrier_bitwidths v) ++ " |}"].
     Global Instance show_ident_infos : Show ident_infos
       := fun _ v => String.concat "" (show_lines false v).
+    Definition ident_infos_equal (x y : ident_infos) : bool
+      := let (x0, x1, x2, x3, x4) := x in
+         let (y0, y1, y2, y3, y4) := y in
+         List.fold_right
+           andb true
+           [IntSet.equal x0 y0
+            ; PositiveSet.equal x1 y1
+            ; PositiveSet.equal x2 y2
+            ; IntSet.equal x3 y3
+            ; IntSet.equal x4 y4].
     Definition ident_info_empty : ident_infos
-      := Build_ident_infos IntSet.empty PositiveSet.empty PositiveSet.empty IntSet.empty.
+      := Build_ident_infos IntSet.empty PositiveSet.empty PositiveSet.empty IntSet.empty IntSet.empty.
     Definition ident_info_diff (x y : ident_infos) : ident_infos
-      := let (x0, x1, x2, x3) := x in
-         let (y0, y1, y2, y3) := y in
+      := let (x0, x1, x2, x3, x4) := x in
+         let (y0, y1, y2, y3, y4) := y in
          Build_ident_infos
            (IntSet.diff x0 y0)
            (PositiveSet.diff x1 y1)
            (PositiveSet.diff x2 y2)
-           (IntSet.diff x3 y3).
+           (IntSet.diff x3 y3)
+           (IntSet.diff x4 y4).
     Definition ident_info_diff_except_bitwidths (x y : ident_infos) : ident_infos
-      := let (x0, x1, x2, x3) := x in
-         let (y0, y1, y2, y3) := y in
+      := let (x0, x1, x2, x3, x4) := x in
+         let (y0, y1, y2, y3, y4) := y in
          Build_ident_infos
            x0
            (PositiveSet.diff x1 y1)
            (PositiveSet.diff x2 y2)
-           (IntSet.diff x3 y3).
+           (IntSet.diff x3 y3)
+           (IntSet.diff x4 y4).
     Definition ident_info_union (x y : ident_infos) : ident_infos
-      := let (x0, x1, x2, x3) := x in
-         let (y0, y1, y2, y3) := y in
+      := let (x0, x1, x2, x3, x4) := x in
+         let (y0, y1, y2, y3, y4) := y in
          Build_ident_infos
            (IntSet.union x0 y0)
            (PositiveSet.union x1 y1)
            (PositiveSet.union x2 y2)
-           (IntSet.union x3 y3).
+           (IntSet.union x3 y3)
+           (IntSet.union x4 y4).
     Definition ident_info_of_bitwidths_used (v : IntSet.t) : ident_infos
       := {| bitwidths_used := v;
             addcarryx_lg_splits := PositiveSet.empty;
             mulx_lg_splits := PositiveSet.empty;
-            cmovznz_bitwidths := IntSet.empty |}.
+            cmovznz_bitwidths := IntSet.empty;
+            value_barrier_bitwidths := IntSet.empty |}.
     Definition ident_info_of_addcarryx (v : PositiveSet.t) : ident_infos
       := {| bitwidths_used := IntSet.empty;
             addcarryx_lg_splits := v;
             mulx_lg_splits := PositiveSet.empty;
-            cmovznz_bitwidths := IntSet.empty |}.
+            cmovznz_bitwidths := IntSet.empty;
+            value_barrier_bitwidths := IntSet.empty |}.
     Definition ident_info_of_mulx (v : PositiveSet.t) : ident_infos
       := {| bitwidths_used := IntSet.empty;
             addcarryx_lg_splits := PositiveSet.empty;
             mulx_lg_splits := v;
-            cmovznz_bitwidths := IntSet.empty |}.
+            cmovznz_bitwidths := IntSet.empty;
+            value_barrier_bitwidths := IntSet.empty |}.
     Definition ident_info_of_cmovznz (v : IntSet.t) : ident_infos
       := {| bitwidths_used := IntSet.empty;
             addcarryx_lg_splits := PositiveSet.empty;
             mulx_lg_splits := PositiveSet.empty;
-            cmovznz_bitwidths := v |}.
+            cmovznz_bitwidths := v;
+            value_barrier_bitwidths := IntSet.empty |}.
+    Definition ident_info_of_value_barrier (v : IntSet.t) : ident_infos
+      := {| bitwidths_used := IntSet.empty;
+            addcarryx_lg_splits := PositiveSet.empty;
+            mulx_lg_splits := PositiveSet.empty;
+            cmovznz_bitwidths := IntSet.empty;
+            value_barrier_bitwidths := v |}.
+    Definition ident_info_with_bitwidths_used (i : ident_infos) (v : IntSet.t) : ident_infos
+      := {| bitwidths_used := v;
+            addcarryx_lg_splits := addcarryx_lg_splits i;
+            mulx_lg_splits := mulx_lg_splits i;
+            cmovznz_bitwidths := cmovznz_bitwidths i;
+            value_barrier_bitwidths := value_barrier_bitwidths i |}.
+    Definition ident_info_with_addcarryx (i : ident_infos) (v : PositiveSet.t) : ident_infos
+      := {| bitwidths_used := bitwidths_used i;
+            addcarryx_lg_splits := v;
+            mulx_lg_splits := mulx_lg_splits i;
+            cmovznz_bitwidths := cmovznz_bitwidths i;
+            value_barrier_bitwidths := value_barrier_bitwidths i |}.
+    Definition ident_info_with_mulx (i : ident_infos) (v : PositiveSet.t) : ident_infos
+      := {| bitwidths_used := bitwidths_used i;
+            addcarryx_lg_splits := addcarryx_lg_splits i;
+            mulx_lg_splits := v;
+            cmovznz_bitwidths := cmovznz_bitwidths i;
+            value_barrier_bitwidths := value_barrier_bitwidths i |}.
+    Definition ident_info_with_cmovznz (i : ident_infos) (v : IntSet.t) : ident_infos
+      := {| bitwidths_used := bitwidths_used i;
+            addcarryx_lg_splits := addcarryx_lg_splits i;
+            mulx_lg_splits := mulx_lg_splits i;
+            cmovznz_bitwidths := v;
+            value_barrier_bitwidths := value_barrier_bitwidths i |}.
+    Definition ident_info_with_value_barrier (i : ident_infos) (v : IntSet.t) : ident_infos
+      := {| bitwidths_used := bitwidths_used i;
+            addcarryx_lg_splits := addcarryx_lg_splits i;
+            mulx_lg_splits := mulx_lg_splits i;
+            cmovznz_bitwidths := cmovznz_bitwidths i;
+            value_barrier_bitwidths := v |}.
 
     Module Import OfPHOAS.
       Fixpoint base_var_data (t : base.type) : Set
