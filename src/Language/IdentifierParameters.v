@@ -53,6 +53,7 @@ Definition all_ident_named_interped : InductiveHList.hlist
   := [with_name ident_Literal (@ident.literal)
       ; with_name ident_comment (@ident.comment)
       ; with_name ident_comment_no_keep (@ident.comment_no_keep)
+      ; with_name ident_value_barrier (@Z.value_barrier)
       ; with_name ident_Nat_succ Nat.succ
       ; with_name ident_Nat_pred Nat.pred
       ; with_name ident_Nat_max Nat.max

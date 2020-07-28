@@ -47,23 +47,6 @@ Module Compilers.
       Definition comment_block := List.map (fun line => "/* " ++ line ++ " */")%string.
 
       Module String.
-        Definition header (machine_wordsize : Z) (static : bool) (prefix : string) (infos : ident_infos)
-        : list string
-          := let bitwidths_used := bitwidths_used infos in
-             (["#include <stdint.h>"]
-                ++ (if IntSet.mem _Bool bitwidths_used || IntSet.mem (int.signed_counterpart_of _Bool) bitwidths_used
-                    then ["typedef unsigned char " ++ prefix ++ "uint1;";
-                            "typedef signed char " ++ prefix ++ "int1;"]%string
-                    else [])
-                ++ (if IntSet.mem uint128 bitwidths_used || IntSet.mem int128 bitwidths_used
-                    then ["typedef signed __int128 " ++ prefix ++ "int128;";
-                            "typedef unsigned __int128 " ++ prefix ++ "uint128;"]%string
-                    else [])
-                ++ [""
-                    ; "#if (-1 & 3) != 3"
-                    ; "#error ""This code only works on a two's complement system"""
-                    ; "#endif"])%list.
-
         Definition stdint_bitwidths : list Z := [8; 16; 32; 64].
         Definition is_special_bitwidth (bw : Z) := negb (existsb (Z.eqb bw) stdint_bitwidths).
 
@@ -97,6 +80,40 @@ Module Compilers.
                         end.
           End primitive.
         End type.
+
+        Definition value_barrier_name (prefix : string) (ty : int.type) : string
+          := prefix ++ "value_barrier_" ++ (if int.is_unsigned ty then "u" else "") ++ show false (int.bitwidth_of ty).
+        Definition value_barrier_func (static : bool) (prefix : string) (ty : int.type) : list string
+          := [""
+              ; "#if !defined(" ++ String.to_upper prefix ++ "NO_ASM) && (defined(__GNUC__) || defined(__clang__))"
+              ; (if static then "static " else "") ++ "__inline__ " ++ int.type.to_string prefix ty ++ " " ++ value_barrier_name prefix ty ++ "(" ++ int.type.to_string prefix ty ++ " a) {"
+              ; "  __asm__("""" : ""+r""(a) : /* no inputs */);"
+              ; "  return a;"
+              ; "}"
+              ; "#else"
+              ; "#  define " ++ value_barrier_name prefix ty ++ "(x) (x)"
+              ; "#endif"].
+
+        Definition header (machine_wordsize : Z) (static : bool) (prefix : string) (infos : ident_infos)
+        : list string
+          := let bitwidths_used := bitwidths_used infos in
+             let value_barrier_bitwidths := value_barrier_bitwidths infos in
+             (["#include <stdint.h>"]
+                ++ (if IntSet.mem _Bool bitwidths_used || IntSet.mem (int.signed_counterpart_of _Bool) bitwidths_used
+                    then ["typedef unsigned char " ++ prefix ++ "uint1;";
+                            "typedef signed char " ++ prefix ++ "int1;"]%string
+                    else [])
+                ++ (if IntSet.mem uint128 bitwidths_used || IntSet.mem int128 bitwidths_used
+                    then ["typedef signed __int128 " ++ prefix ++ "int128;";
+                            "typedef unsigned __int128 " ++ prefix ++ "uint128;"]%string
+                    else [])
+                ++ [""
+                    ; "#if (-1 & 3) != 3"
+                    ; "#error ""This code only works on a two's complement system"""
+                    ; "#endif"]
+                ++ (List.flat_map
+                      (value_barrier_func static prefix)
+                      (IntSet.elements value_barrier_bitwidths)))%list.
       End String.
 
       Module primitive.
@@ -134,6 +151,8 @@ Module Compilers.
              => "(~" ++ @arith_to_string prefix _ e ++ ")"
            | (Z_bneg @@@ e)
              => "(!" ++ @arith_to_string prefix _ e ++ ")"
+           | (Z_value_barrier ty @@@ e)
+             => String.value_barrier_name prefix ty ++ "(" ++ @arith_to_string prefix _ e ++ ")"
            | (Z_mul_split lg2s @@@ args)
              => prefix
                  ++ "mulx_u"
@@ -419,7 +438,7 @@ Module Compilers.
                 let t' := int.union_zrange r[0~>2^offset]%zrange t in
                 ((** We cast the result down to the specified type, if needed *)
                   get_Zcast_down_if_needed desired_type (Some t'),
-                 (** We cast the argument up to a large enough type *)
+                  (** We cast the argument up to a large enough type *)
                   get_Zcast_up_if_needed (Some t') (Some t))
               | Z_shiftl offset
                 => (** N.B. We must cast the expression up to a large
@@ -438,18 +457,25 @@ Module Compilers.
                                 end in
                 ((** We cast the result down to the specified type, if needed *)
                   get_Zcast_down_if_needed desired_type rpre_out,
-                 (** We cast the argument up to a large enough type *)
-                 get_Zcast_up_if_needed rpre_out (Some t))
+                  (** We cast the argument up to a large enough type *)
+                  get_Zcast_up_if_needed rpre_out (Some t))
               | Z_lnot ty
                 => ((* if the result is too big, we cast it down; we
                        don't need to upcast it because it'll get
                        picked up by implicit casts if necessary *)
                   get_Zcast_down_if_needed desired_type (Some ty),
-                (** always cast to the width of the type, unless we are already exactly that type (which the machinery in IR handles *)
+                  (** always cast to the width of the type, unless we are already exactly that type (which the machinery in IR handles) *)
                   Some ty)
-                | Z_bneg
-                  => ((* bneg is !, i.e., takes the argument to 1 if its not zero, and to zero if it is zero; so we don't ever need to cast *)
-                    None, None)
+              | Z_value_barrier ty
+                => ((* if the result is too big, we cast it down; we
+                       don't need to upcast it because it'll get
+                       picked up by implicit casts if necessary *)
+                  get_Zcast_down_if_needed desired_type (Some ty),
+                  (** implicit casts will cast the argument up if needed *)
+                  None)
+              | Z_bneg
+                => ((* bneg is !, i.e., takes the argument to 1 if its not zero, and to zero if it is zero; so we don't ever need to cast *)
+                  None, None)
               end.
 
       Local Instance CLanguageCasts : LanguageCasts :=
@@ -542,8 +568,9 @@ Module Compilers.
 
           ToString.footer := fun _ _ _ _ => [];
 
-          (** No special handling for any functions *)
-          ToString.strip_special_infos machine_wordsize infos := infos;
+          (** We handle value_barrier specially *)
+          ToString.strip_special_infos machine_wordsize infos
+          := ident_info_with_value_barrier infos IntSet.empty;
 
         |}.
     End C.

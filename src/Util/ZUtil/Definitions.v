@@ -116,4 +116,7 @@ Module Z.
          else 0
     end.
   Definition log10 (v : Z) : Z := log10_fuel (Z.to_nat (Z.log2 v)) v.
+
+  (** Special identity function for constant-time cmov *)
+  Definition value_barrier (x : Z) := x.
 End Z.

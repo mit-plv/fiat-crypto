@@ -63,6 +63,7 @@ Section rbarrett_red.
   Local Instance no_select_size : no_select_size_opt := None.
   Local Instance split_mul_to : split_mul_to_opt := None.
   Local Instance split_multiret_to : split_multiret_to_opt := None.
+  Local Instance unfold_value_barrier : unfold_value_barrier_opt := true.
   Local Instance low_level_rewriter_method : low_level_rewriter_method_opt := default_low_level_rewriter_method.
 
   Let fancy_args

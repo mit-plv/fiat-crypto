@@ -196,6 +196,9 @@ Typeclasses Opaque widen_carry_opt.
 (** Widen uint8 / bytes types to machine wordsize? *)
 Class widen_bytes_opt := widen_bytes : bool.
 Typeclasses Opaque widen_bytes_opt.
+(** Unfold value_barrier *)
+Class unfold_value_barrier_opt := unfold_value_barrier : bool.
+Typeclasses Opaque unfold_value_barrier_opt.
 Notation no_select_size_of_no_select machine_wordsize
   := (if no_select return no_select_size_opt
       then Some machine_wordsize
@@ -433,6 +436,7 @@ Module Pipeline.
   Definition PreBoundsPipeline
              {low_level_rewriter_method : low_level_rewriter_method_opt}
              {only_signed : only_signed_opt}
+             {unfold_value_barrier : unfold_value_barrier_opt}
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
              (with_let_bind_return : bool)
@@ -445,6 +449,7 @@ Module Pipeline.
       let opts := opts_of_method in
       let E := PartialEvaluateWithListInfoFromBounds E arg_bounds in
       let E := PartialEvaluate opts E in
+      let E := if unfold_value_barrier then RewriteRules.RewriteUnfoldValueBarrier opts E else E in
       let E := RewriteAndEliminateDeadAndInline (RewriteRules.RewriteArith 0 opts) with_dead_code_elimination with_subst01 with_let_bind_return E in
       let E := RewriteRules.RewriteArith (2^8) opts E in (* reassociate small consts *)
       let E := match translate_to_fancy with
@@ -471,6 +476,7 @@ Module Pipeline.
              {no_select_size : no_select_size_opt}
              {split_mul_to : split_mul_to_opt}
              {split_multiret_to : split_multiret_to_opt}
+             {unfold_value_barrier : unfold_value_barrier_opt}
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
              (with_let_bind_return : bool := true)
@@ -560,6 +566,7 @@ Module Pipeline.
              {no_select_size : no_select_size_opt}
              {split_mul_to : split_mul_to_opt}
              {split_multiret_to : split_multiret_to_opt}
+             {unfold_value_barrier : unfold_value_barrier_opt}
              (type_prefix : string)
              (name : string)
              (with_dead_code_elimination : bool := true)
@@ -599,6 +606,7 @@ Module Pipeline.
              {no_select_size : no_select_size_opt}
              {split_mul_to : split_mul_to_opt}
              {split_multiret_to : split_multiret_to_opt}
+             {unfold_value_barrier : unfold_value_barrier_opt}
              (type_prefix : string)
              (name : string)
              (with_dead_code_elimination : bool := true)
@@ -626,13 +634,13 @@ Module Pipeline.
        end.
 
   Notation arg_bounds_of_pipeline result
-    := ((fun a b c d e f g possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e f g possible_values t E arg_bounds out_bounds = result') => arg_bounds) _ _ _ _ _ _ _ _ _ _ _ _ result eq_refl)
+    := ((fun a b c d e f g h possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e f g h possible_values t E arg_bounds out_bounds = result') => arg_bounds) _ _ _ _ _ _ _ _ _ _ _ _ _ result eq_refl)
          (only parsing).
   Notation out_bounds_of_pipeline result
-    := ((fun a b c d e f g possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e f g possible_values t E arg_bounds out_bounds = result') => out_bounds) _ _ _ _ _ _ _ _ _ _ _ _ result eq_refl)
+    := ((fun a b c d e f g h possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e f g h possible_values t E arg_bounds out_bounds = result') => out_bounds) _ _ _ _ _ _ _ _ _ _ _ _ _ result eq_refl)
          (only parsing).
   Notation possible_values_of_pipeline result
-    := ((fun a b c d e f g possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e f g possible_values t E arg_bounds out_bounds = result') => possible_values) _ _ _ _ _ _ _ _ _ _ _ _ result eq_refl)
+    := ((fun a b c d e f g h possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e f g h possible_values t E arg_bounds out_bounds = result') => possible_values) _ _ _ _ _ _ _ _ _ _ _ _ _ result eq_refl)
          (only parsing).
 
   Notation FromPipelineToString_gen machine_wordsize is_internal prefix name result
@@ -848,6 +856,7 @@ Module Pipeline.
             | [ |- ?x = ?x ] => reflexivity
             | [ |- context[match ?x with Some _ => _ | _ => _ end] ] => destruct x
             | [ |- context[match ?x with (a, b) => _ end] ] => destruct x
+            | [ |- context[match ?x with true => _ | _ => _ end] ] => destruct x
             | [ |- type.app_curried (Interp (PartialEvaluateWithListInfoFromBounds _ _)) _ = _ ]
               => erewrite Interp_PartialEvaluateWithListInfoFromBounds by eassumption
             end
@@ -860,6 +869,7 @@ Module Pipeline.
              {no_select_size : no_select_size_opt}
              {split_mul_to : split_mul_to_opt}
              {split_multiret_to : split_multiret_to_opt}
+             {unfold_value_barrier : unfold_value_barrier_opt}
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
              (translate_to_fancy : option to_fancy_args)
@@ -915,6 +925,7 @@ Module Pipeline.
         {no_select_size : no_select_size_opt}
         {split_mul_to : split_mul_to_opt}
         {split_multiret_to : split_multiret_to_opt}
+        {unfold_value_barrier : unfold_value_barrier_opt}
         (with_dead_code_elimination : bool := true)
         (with_subst01 : bool)
         (translate_to_fancy : option to_fancy_args)

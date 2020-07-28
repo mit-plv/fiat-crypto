@@ -74,6 +74,7 @@ Module Compilers.
         (*| Z_opp*)
         | Z_lnot (ty:int.type)
         | Z_bneg
+        | Z_value_barrier (ty:int.type)
         .
         Inductive ident : type -> type -> Set :=
         | literal (v : BinInt.Z) : ident unit Z
@@ -140,6 +141,8 @@ Module Compilers.
                => ident_info_of_addcarryx (PositiveSet.add (Z.to_pos lg2s) PositiveSet.empty)
              | Z_zselect ty
                => ident_info_of_cmovznz (IntSet.singleton ty)
+             | iunop (Z_value_barrier ty)
+               =>ident_info_of_value_barrier (IntSet.singleton ty)
              | literal _
              | List_nth _
              | Addr
@@ -367,7 +370,7 @@ Module Compilers.
 
         Class consider_retargs_live_opt := consider_retargs_live : forall {s d}, ident s d -> bool.
         Class rename_dead_opt := rename_dead : string -> string.
-        Class lift_declarations_opt := lift_declarations : bool. 
+        Class lift_declarations_opt := lift_declarations : bool.
 
         Section __.
           Context {lang_casts : LanguageCasts}
@@ -695,6 +698,13 @@ Module Compilers.
                               ret truncated
                          | _, None => inr ["Invalid (truncating) left-shift by a non-literal"]%string
                          | None, _ => inr ["Invalid left-shift truncated to a non-literal bitwidth"]%string
+                         end
+                 | ident.value_barrier
+                   => fun r '(x, rx)
+                      => match rx with
+                         | Some ty
+                           => ret (cast_down_if_needed r (Z_value_barrier ty @@@ x, Some ty))
+                         | None => inr ["Invalid unknown integer size for value_barrier"]%string
                          end
                  | ident.Z_bneg => fun r x => ret (arith_un_arith_expr_of_PHOAS_ident Z_bneg r x)
                  | ident.Z_land => fun r x y => ret (arith_bin_arith_expr_of_PHOAS_ident Z_land r (x, y))

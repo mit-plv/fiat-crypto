@@ -64,6 +64,7 @@ Module Compilers.
   Global Arguments ident_Literal {_} _ : assert.
   Global Arguments ident_comment {_} : assert.
   Global Arguments ident_comment_no_keep {_} : assert.
+  Global Arguments ident_value_barrier : assert.
   Global Arguments ident_nil {_} : assert.
   Global Arguments ident_cons {_} : assert.
   Global Arguments ident_pair {_ _} : assert.
@@ -171,6 +172,7 @@ Module Compilers.
     Notation Literal := Compilers.ident_Literal (only parsing).
     Notation comment := Compilers.ident_comment (only parsing).
     Notation comment_no_keep := Compilers.ident_comment_no_keep (only parsing).
+    Notation value_barrier := Compilers.ident_value_barrier (only parsing).
     Notation Nat_succ := Compilers.ident_Nat_succ (only parsing).
     Notation Nat_pred := Compilers.ident_Nat_pred (only parsing).
     Notation Nat_max := Compilers.ident_Nat_max (only parsing).

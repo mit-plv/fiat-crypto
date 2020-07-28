@@ -456,7 +456,7 @@ standalone-ocaml: $(STANDALONE_OCAML:%=src/ExtractionOCaml/%)
 $(ALL_C_FILES) : $(C_DIR)%.c : $$($$($$*_BINARY_NAME))
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $($($*_BINARY_NAME)) --static $($*_DESCRIPTION) $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $($($*_BINARY_NAME)) --static --use-value-barrier $($*_DESCRIPTION) $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 test-c-files: $(ALL_C_FILES)

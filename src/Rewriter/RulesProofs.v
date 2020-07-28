@@ -157,6 +157,10 @@ Proof using Type.
                     | interp_good_t_step_related ].
 Qed.
 
+Lemma unfold_value_barrier_rewrite_rules_proofs
+  : PrimitiveHList.hlist (@snd bool Prop) unfold_value_barrier_rewrite_rulesT.
+Proof using Type. now start_proof. Qed.
+
 Local Lemma unfold_is_bounded_by_bool v r
   : is_bounded_by_bool v r = true -> lower r <= v <= upper r.
 Proof using Type.

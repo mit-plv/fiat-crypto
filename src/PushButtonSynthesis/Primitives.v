@@ -13,6 +13,7 @@ Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZUtil.Definitions.
 Require Import Crypto.Util.ZUtil.Zselect.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
+Require Import Crypto.Util.FueledLUB.
 Require Import Crypto.Util.Tactics.HasBody.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.ConstrFail.
@@ -65,7 +66,7 @@ print((indent + '(' + r'''**
 >>
 *''' + ')\n') % open(__file__, 'r').read())
 
-for (op, opmod) in (('id', '(@id (list Z))'), ('selectznz', 'Positional.select'), ('mulx', 'mulx'), ('addcarryx', 'addcarryx'), ('subborrowx', 'subborrowx'), ('cmovznz', 'cmovznz'), ('cmovznz_by_mul', 'cmovz_nz_by_mul')):
+for (op, opmod) in (('id', '(@id (list Z))'), ('selectznz', 'Positional.select'), ('mulx', 'mulx'), ('addcarryx', 'addcarryx'), ('subborrowx', 'subborrowx'), ('value_barrier', 'Z.value_barrier'), ('cmovznz', 'cmovznz'), ('cmovznz_by_mul', 'cmovz_nz_by_mul')):
     print((r'''%sDerive reified_%s_gen
        SuchThat (is_reification_of reified_%s_gen %s)
        As reified_%s_gen_correct.
@@ -122,6 +123,15 @@ Hint Extern 1 (_ = _) => apply_cached_reification subborrowx (proj1 reified_subb
 Hint Immediate (proj2 reified_subborrowx_gen_correct) : wf_gen_cache.
 Hint Rewrite (proj1 reified_subborrowx_gen_correct) : interp_gen_cache.
 Local Opaque reified_subborrowx_gen. (* needed for making [autorewrite] not take a very long time *)
+
+Derive reified_value_barrier_gen
+       SuchThat (is_reification_of reified_value_barrier_gen Z.value_barrier)
+       As reified_value_barrier_gen_correct.
+Proof. Time cache_reify (). Time Qed.
+Hint Extern 1 (_ = _) => apply_cached_reification Z.value_barrier (proj1 reified_value_barrier_gen_correct) : reify_cache_gen.
+Hint Immediate (proj2 reified_value_barrier_gen_correct) : wf_gen_cache.
+Hint Rewrite (proj1 reified_value_barrier_gen_correct) : interp_gen_cache.
+Local Opaque reified_value_barrier_gen. (* needed for making [autorewrite] not take a very long time *)
 
 Derive reified_cmovznz_gen
        SuchThat (is_reification_of reified_cmovznz_gen cmovznz)
@@ -720,6 +730,7 @@ Section __.
           {emit_primitives : emit_primitives_opt}
           {should_split_mul : should_split_mul_opt}
           {should_split_multiret : should_split_multiret_opt}
+          {unfold_value_barrier : unfold_value_barrier_opt}
           {widen_carry : widen_carry_opt}
           {widen_bytes : widen_bytes_opt}
           (n : nat)
@@ -839,6 +850,25 @@ Section __.
              (subborrowx_correct s)).
 
 
+  Definition value_barrier (s : int.type)
+    := Pipeline.BoundsPipeline
+         false (* subst01 *)
+         None (* fancy *)
+         possible_values_with_bytes
+         reified_value_barrier_gen
+         (Some (int.to_zrange s), tt)
+         (Some (int.to_zrange s)).
+
+  Definition svalue_barrier (prefix : string) (s : int.type)
+    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    := Eval cbv beta in
+        FromPipelineToInternalString
+          machine_wordsize prefix ("value_barrier_" ++ (if int.is_unsigned s then "u" else "") ++ Decimal.Z.to_string (int.bitwidth_of s)) (value_barrier s)
+          (docstring_with_summary_from_lemma!
+             (fun fname : string => ["The function " ++ fname ++ " is a single-word conditional move."]%string)
+             (value_barrier_correct (int.is_signed s) (int.bitwidth_of s))).
+
+
   Definition cmovznz (s : Z)
     := Pipeline.BoundsPipeline
          false (* subst01 *)
@@ -908,6 +938,12 @@ Section __.
     : subborrowx_correct s' (Interp res).
   Proof using Type. prove_correctness I. Qed.
 
+  Strategy -1000 [value_barrier]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
+  Lemma value_barrier_correct s' res
+        (Hres : value_barrier s' = Success res)
+    : value_barrier_correct (int.is_signed s') (int.bitwidth_of s') (Interp res).
+  Proof using Type. prove_correctness I. Qed.
+
   Strategy -1000 [cmovznz]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
   Lemma cmovznz_correct s' res
         (Hres : cmovznz s' = Success res)
@@ -950,21 +986,40 @@ Section __.
               ls).
 
     Definition extra_synthesis (function_name_prefix : string) (infos : ToString.ident_infos)
-      : list (string * Pipeline.ErrorT (list string)) * IntSet.t
-      := let ls_addcarryx := List.flat_map
+      : list (string * Pipeline.ErrorT (list string)) * ToString.ident_infos
+      := let infos := ToString.strip_special_infos machine_wordsize infos in
+         let ls_addcarryx := List.flat_map
                                (fun lg_split:positive => [saddcarryx function_name_prefix lg_split; ssubborrowx function_name_prefix lg_split])
                                (PositiveSet.elements (ToString.addcarryx_lg_splits infos)) in
          let ls_mulx := List.map
                           (fun lg_split:positive => smulx function_name_prefix lg_split)
                           (PositiveSet.elements (ToString.mulx_lg_splits infos)) in
+         let ls_value_barrier
+             := List.map
+                  (svalue_barrier function_name_prefix)
+                  (IntSet.elements (value_barrier_bitwidths infos)) in
          let ls_cmov := List.map
                           (fun ty:int.type
                            => (if use_mul_for_cmovznz then scmovznz_by_mul else scmovznz) function_name_prefix (int.bitwidth_of ty))
                           (IntSet.elements (cmovznz_bitwidths infos)) in
-         let ls := ls_addcarryx ++ ls_mulx ++ ls_cmov in
+         let ls := ls_addcarryx ++ ls_mulx ++ ls_value_barrier ++ ls_cmov in
          let infos := aggregate_infos ls in
          (List.map (fun '(name, res) => (name, (res <- res; Success (fst res))%error)) ls,
-          ToString.bitwidths_used infos).
+          infos).
+
+    (** Since some of the extra functions (such as [cmovznz]) are the
+        only users of other extra functions (such as [value_barrier]),
+        we iterate extra synthesis until we reach a fixedpoint on the
+        info used *)
+    Definition union_extra_infos_of_extra_synthesis (infos : ToString.ident_infos)
+      : ToString.ident_infos
+      := let '(fs, _) := extra_synthesis "" infos in
+         let fuel := (1 + List.length fs)%nat in
+         snd
+           (fueled_lub
+              ident_infos_equal ident_info_union fuel
+              (fun infos => snd (extra_synthesis "" infos))
+              infos).
 
 
     Definition synthesize_of_name (function_name_prefix : string) (name : string)
@@ -994,7 +1049,9 @@ Section __.
                    | requests => List.map (synthesize_of_name function_name_prefix) requests
                    end in
          let infos := aggregate_infos ls in
-         let '(extra_ls, extra_bit_widths) := extra_synthesis function_name_prefix (ToString.strip_special_infos machine_wordsize infos) in
+         let infos := union_extra_infos_of_extra_synthesis infos in
+         let '(extra_ls, extra_infos) := extra_synthesis function_name_prefix infos in
+         let extra_bit_widths := ToString.bitwidths_used extra_infos in
          let res := (if emit_primitives then extra_ls else nil) ++ List.map (fun '(name, res) => (name, (res <- res; Success (fst res))%error)) ls in
          let infos := ToString.ident_info_union
                         infos

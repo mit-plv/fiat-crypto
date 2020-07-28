@@ -455,6 +455,8 @@ Module Compilers.
                => fun v => v <- to_literal v; Some (ident.interp idc v)
              | ident.List_length _
                => option_map (@List.length _)
+             | ident.value_barrier
+               => fun x => x
              | ident.Nat_max as idc
              | ident.Nat_mul as idc
              | ident.Nat_add as idc

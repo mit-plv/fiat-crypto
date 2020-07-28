@@ -99,6 +99,7 @@ Section __.
           {emit_primitives : emit_primitives_opt}
           {should_split_mul : should_split_mul_opt}
           {should_split_multiret : should_split_multiret_opt}
+          {unfold_value_barrier : unfold_value_barrier_opt}
           {widen_carry : widen_carry_opt}
           {widen_bytes : widen_bytes_opt}
           (m : Z)
