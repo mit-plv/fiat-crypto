@@ -153,29 +153,9 @@ else:
   Qed.
   Hint Rewrite balance_length : distr_length.
 
-  (* reduce_balance needs to be enough such that +c doesn't underflow
-
-     put -c in positional, look for negative terms
-     if c is all-positive, then min(-c) will be positive
-
-     most negative number that could be added (if min(-c) negative):
-          max(tight_upperbounds)^2 * min(-c)
-
-     ...but it can only occur at one position. try to rethink...
-
-     - convert tight_upperbounds to associational
-     - multiply by itself, call split
-     - compute c * hi, convert to positional = max to be subtracted
-
-     0 <= bal[i] + c_hi[i]
-     -c_hi[i] <= bal[i]
-
-     if c_hi[i] is negative, this means 0 < bal, so we do need balance
-     if c_hi[i] is positive, this is satisfied by bal=0
-
-     see if it works with 0; if not, try higher values
-     TODO: is there a good way to guess the values?
-   *)
+  (* to compute the lower bounds for reduce_balance, we compute the maximum
+     bounds of a tightly bound number post-multiplication and pre-reduction, and
+     then mimic a reduce step by getting the high part and multiplying by c. *)
   Definition max_reduce_add_term : list Z :=
     let weight := weight (Qnum limbwidth) (Qden limbwidth) in
     (* first, compute maximum values post-multiplication *)
@@ -204,6 +184,15 @@ else:
     let M := encode weight n s c (s - Associational.eval c) in
     let balance := scmul weight n reduce_balance_coef M in
     @distribute_balance reduce_balance_lower_bounds balance.
+
+  Lemma reduce_balance_length : length reduce_balance = n.
+  Proof.
+    cbv [reduce_balance scmul distribute_balance distribute_balance_step].
+    apply fold_right_invariant; intros;
+      break_innermost_match;
+      now autorewrite with distr_length.
+  Qed.
+  Hint Rewrite reduce_balance_length : distr_length.
 
   Definition loose_upperbounds : list Z
     := List.map
@@ -288,6 +277,17 @@ else:
                  | progress (pull_Zmod; autorewrite with zsimplify_fast; push_Zmod) ].
   Qed.
 
+  Lemma eval_reduce_balance : eval (weight (Qnum limbwidth) (Qden limbwidth)) n reduce_balance mod (s - Associational.eval c) = 0.
+  Proof using Hs_nz Hs_c_nz Hs_n Hn_nz.
+    clear -p Hs_nz Hs_c_nz Hs_n Hn_nz wprops.
+    cbv [reduce_balance]. rewrite eval_distribute_balance.
+    repeat first [ rewrite Z_mod_same_full
+                 | rewrite eval_scmul by auto
+                 | rewrite eval_encode by auto with zarith
+                 | reflexivity
+                 | progress (pull_Zmod; autorewrite with zsimplify_fast; push_Zmod) ].
+  Qed.
+
   (** check if the suggested number of limbs will overflow
       double-width registers when adding partial products after a
       multiplication and then doing solinas reduction *)
@@ -329,36 +329,3 @@ Section ___.
        | Auto idx => nth_error get_possible_limbs idx
        end.
 End ___.
-(*
-Require Import Crypto.Util.Strings.Show.
-Require Import Coq.Strings.String.
-Open Scope string_scope.
-Existing Instance PowersOfTwo.show_Z.
-(* Or: *)
-(*
-Existing Instance Hex.show_Z.
-*)
-
-Class params := { n : nat; s : Z; c : list (Z * Z) }.
-
-Inductive prime := p224_32 | p224_64 | p256_32 | p256_64.
-
-Definition get_params (m : prime) : params :=
-  match m with
-  | p224_64 => {| n := 4; s := 2^224; c := [(2^96,1);(1,-1)] |}
-  | p256_64 => {| n := 6; s := 2^256; c := [(2^224,1); (2^192,-1); (2^96,-1);(1,1)] |}
-  | p224_32 => {| n := 8; s := 2^224; c := [(2^96,1);(1,-1)] |}
-  | p256_32 => {| n := 12; s := 2^256; c := [(2^224,1); (2^192,-1); (2^96,-1);(1,1)] |}
-  end.
-
-Definition m := p256_64.
-Instance p : params := get_params m.
-
-Definition weight :=
-  weight (Qnum (limbwidth n s c)) (QDen (limbwidth n s c)).
-
-About reduce_balance.
-Compute (@reduce_balance 1 n s c).
-Compute show false (eval weight n (@reduce_balance 1 n s c)).
-Compute show false (eval weight n (@reduce_balance 1 n s c) / (s - Associational.eval c)).
-*)

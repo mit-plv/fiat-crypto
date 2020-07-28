@@ -115,6 +115,7 @@ Section __.
   Local Notation saturated_bounds_list := (saturated_bounds_list n machine_wordsize).
   Local Notation saturated_bounds := (saturated_bounds n machine_wordsize).
   Local Notation balance := (balance n s c).
+  Local Notation reduce_balance := (reduce_balance n s c).
 
   Definition m : Z := s - Associational.eval c.
   (* m_enc needs to be such that, if x is bounded by tight bounds:
@@ -161,6 +162,9 @@ Section __.
   Lemma length_balance : List.length balance = n.
   Proof using Type. now rewrite balance_length. Qed.
   Hint Rewrite length_balance : distr_length.
+  Lemma length_reduce_balance : List.length reduce_balance = n.
+  Proof using Type. now rewrite reduce_balance_length. Qed.
+  Hint Rewrite length_reduce_balance : distr_length.
   Lemma length_loose_bounds : List.length loose_bounds = n.
   Proof using Type. cbv [loose_bounds]; now autorewrite with distr_length natsimplify. Qed.
   Hint Rewrite length_loose_bounds : distr_length.
@@ -362,7 +366,7 @@ Section __.
          None (* fancy *)
          possible_values
          (reified_carry_gen
-            @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify idxs)
+            @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify idxs @ GallinaReify.Reify reduce_balance)
          (Some loose_bounds, tt)
          (Some tight_bounds).
 
@@ -575,7 +579,7 @@ Section __.
        eval_to_bytesmod
        eval_from_bytesmod
        eval_encodemod
-       using solve [ auto using eval_balance, length_balance | congruence | solve_extra_bounds_side_conditions ] : push_eval.
+       using solve [ auto using eval_balance, length_balance, eval_reduce_balance, length_reduce_balance | congruence | solve_extra_bounds_side_conditions ] : push_eval.
   Hint Unfold zeromod onemod : push_eval.
 
   Local Ltac prove_correctness _ :=

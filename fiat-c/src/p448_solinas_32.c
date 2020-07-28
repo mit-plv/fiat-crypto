@@ -1845,10 +1845,10 @@ static void fiat_p448_carry(uint32_t out1[16], const uint32_t arg1[16]) {
   uint32_t x36;
   uint32_t x37;
   uint32_t x38;
-  x1 = (arg1[7]);
-  x2 = (arg1[15]);
-  x3 = (x2 >> 28);
-  x4 = (((x1 >> 28) + (arg1[8])) + x3);
+  x1 = (arg1[15]);
+  x2 = (arg1[7]);
+  x3 = (x1 >> 28);
+  x4 = (((x2 >> 28) + (arg1[8])) + x3);
   x5 = ((arg1[0]) + x3);
   x6 = ((x4 >> 28) + (arg1[9]));
   x7 = ((x5 >> 28) + (arg1[1]));
@@ -1862,8 +1862,8 @@ static void fiat_p448_carry(uint32_t out1[16], const uint32_t arg1[16]) {
   x15 = ((x13 >> 28) + (arg1[5]));
   x16 = ((x14 >> 28) + (arg1[14]));
   x17 = ((x15 >> 28) + (arg1[6]));
-  x18 = ((x16 >> 28) + (x2 & UINT32_C(0xfffffff)));
-  x19 = ((x17 >> 28) + (x1 & UINT32_C(0xfffffff)));
+  x18 = ((x16 >> 28) + (x1 & UINT32_C(0xfffffff)));
+  x19 = ((x17 >> 28) + (x2 & UINT32_C(0xfffffff)));
   x20 = (fiat_p448_uint1)(x18 >> 28);
   x21 = ((x5 & UINT32_C(0xfffffff)) + (uint32_t)x20);
   x22 = ((fiat_p448_uint1)(x19 >> 28) + ((x4 & UINT32_C(0xfffffff)) + (uint32_t)x20));
