@@ -491,7 +491,7 @@ Section __.
       list_Z_bounded_by loose_bounds x -> length x = n.
     Proof.
       intros. pose proof length_list_Z_bounded_by _ _ ltac:(eassumption).
-      rewrite @length_loose_bounds in *. lia.
+      autorewrite with distr_length in *; lia.
     Qed.
 
     Lemma bounded_by_saturated_bounds_length x :

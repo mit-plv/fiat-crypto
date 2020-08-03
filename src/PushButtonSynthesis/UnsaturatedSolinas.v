@@ -136,18 +136,6 @@ Section __.
   Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
   Local Instance split_multiret_to : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
 
-  Lemma length_prime_upperbound_list : List.length prime_upperbound_list = n.
-  Proof using Type. cbv [prime_upperbound_list]; now autorewrite with distr_length. Qed.
-  Hint Rewrite length_prime_upperbound_list : distr_length.
-  Lemma length_tight_upperbounds : List.length tight_upperbounds = n.
-  Proof using Type. cbv [tight_upperbounds]; now autorewrite with distr_length. Qed.
-  Hint Rewrite length_tight_upperbounds : distr_length.
-  Lemma length_tight_bounds : List.length tight_bounds = n.
-  Proof using Type. cbv [tight_bounds]; now autorewrite with distr_length. Qed.
-  Hint Rewrite length_tight_bounds : distr_length.
-  Lemma length_loose_bounds : List.length loose_bounds = n.
-  Proof using Type. cbv [loose_bounds]; now autorewrite with distr_length natsimplify. Qed.
-  Hint Rewrite length_loose_bounds : distr_length.
   Lemma length_prime_bytes_upperbound_list : List.length prime_bytes_upperbound_list = n_bytes.
   Proof using Type. cbv [prime_bytes_upperbound_list]; now autorewrite with distr_length. Qed.
   Hint Rewrite length_prime_bytes_upperbound_list : distr_length.
