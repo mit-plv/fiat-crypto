@@ -1017,6 +1017,7 @@ Module debugging_25519_to_bytes_java.
       set (k' := Language.Compilers.ToString.int.of_zrange_relaxed _) in (value of k) at 1; vm_compute in k'; subst k'.
       set (k' := IR.OfPHOAS.bounds_check _ _ _ _ _ _) in (value of k) at 1; vm_compute in k'; subst k'.
       cbv beta iota zeta in k.
+      (*
       set (k' := IR.OfPHOAS.bounds_check _ _ _ _ _ _) in (value of k) at 1; vm_compute in k'; subst k'.
       cbv beta iota zeta in k.
       set (k' := IR.OfPHOAS.result_upcast _ _) in (value of k) at 1; vm_compute in k'; subst k'.
@@ -1024,6 +1025,7 @@ Module debugging_25519_to_bytes_java.
       set (k' := IR.OfPHOAS.result_upcast _ _) in (value of k) at 1; vm_compute in k'; subst k'.
       cbv beta iota zeta in k.
       set (k' := IR.OfPHOAS.result_upcast _ _) in (value of k) at 1; vm_compute in k'; subst k'.
+       *)
       (*cbv
       vm_compute in k.
       vm_compute in k'.

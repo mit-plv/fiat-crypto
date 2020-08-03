@@ -3,6 +3,7 @@ Require Import Coq.Lists.List.
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Util.Option.
 Require Import Crypto.UnsaturatedSolinasHeuristics.
+Require Import Crypto.Util.Strings.Show.
 Require Import Crypto.Util.Strings.ParseArithmeticToTaps.
 Require Import Crypto.Util.OptionList.
 Import ListNotations.
@@ -147,6 +148,40 @@ Time Definition possible_limbs :=
                    | None => Some None
                    end)
          primes).
+
+Import ListUtil.
+Time Definition balances
+  := Eval native_compute in
+      option_map
+       (fun ps
+        => Option.List.lift
+             (List.map
+                (fun '(p, ls)
+                 => option_map
+                      (fun '(s, c)
+                       => (p,
+                           List.map
+                             (fun '(bw, ns)
+                              => List.map
+                                   (fun n
+                                    => let bal := @balance default_tight_upperbound_fraction n s c in
+                                       let tub := @tight_upperbounds default_tight_upperbound_fraction n s c in
+                                       let dif := map2 Z.sub bal tub in
+                                       ((bw, n),
+                                        ("balance:                                        ",
+                                         (let show_Z := PowersOfTwo.show_Z in show false bal),
+                                         (let show_Z := Hex.show_Z in show false bal)),
+                                        ("tight_upperbounds:                              ",
+                                         (let show_Z := PowersOfTwo.show_Z in show false tub),
+                                         (let show_Z := Hex.show_Z in show false tub)),
+                                        ("balance - tight_upperbounds:                    ",
+                                         (let show_Z := PowersOfTwo.show_Z in show false dif),
+                                         (let show_Z := Hex.show_Z in show false dif))))
+                                   ns)
+                             ls))
+                      (parseZ_arith_to_taps p))
+                ps))
+       possible_limbs.
 Local Notation "[ ]" := nil (format "[ ]") : core_scope.
 Local Notation "[ x ]" := (cons x nil) : core_scope.
 Local Notation "[ x ; y ; .. ; z ]" :=  (cons x (cons y .. (cons z nil) ..)) (format "'[hv ' [ x ;  '/' y ;  '/' .. ;  '/' z ] ']'") : core_scope.
@@ -155,3 +190,5 @@ Local Open Scope core_scope.
 Set Printing Width 250.
 Redirect "Crypto.UnsaturatedSolinasHeuristics.Tests.get_possible_limbs"
          Print possible_limbs.
+Redirect "Crypto.UnsaturatedSolinasHeuristics.Tests.get_balances"
+         Print balances.
