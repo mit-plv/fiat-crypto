@@ -451,3 +451,35 @@ Proof.
   revert v; induction n as [|n IHn]; cbn [nat_rect]; [ reflexivity | ]; intro.
   rewrite HS; apply PS'_Proper; eauto.
 Qed.
+
+Lemma min_x_xy x y : Nat.min x (Nat.min x y) = Nat.min x y.
+Proof. now rewrite Nat.min_assoc; autorewrite with natsimplify. Qed.
+Hint Rewrite min_x_xy : natsimplify.
+
+Lemma min_x_yx x y : Nat.min x (Nat.min y x) = Nat.min x y.
+Proof. now rewrite Nat.min_comm, <- Nat.min_assoc, Nat.min_comm; autorewrite with natsimplify. Qed.
+Hint Rewrite min_x_yx : natsimplify.
+
+Lemma min_xy_x x y : Nat.min (Nat.min x y) x = Nat.min x y.
+Proof. now rewrite Nat.min_comm, Nat.min_assoc; autorewrite with natsimplify. Qed.
+Hint Rewrite min_xy_x : natsimplify.
+
+Lemma min_yx_x x y : Nat.min (Nat.min y x) x = Nat.min y x.
+Proof. now rewrite <- Nat.min_assoc; autorewrite with natsimplify. Qed.
+Hint Rewrite min_yx_x : natsimplify.
+
+Lemma max_x_xy x y : Nat.max x (Nat.max x y) = Nat.max x y.
+Proof. now rewrite Nat.max_assoc; autorewrite with natsimplify. Qed.
+Hint Rewrite max_x_xy : natsimplify.
+
+Lemma max_x_yx x y : Nat.max x (Nat.max y x) = Nat.max x y.
+Proof. now rewrite Nat.max_comm, <- Nat.max_assoc, Nat.max_comm; autorewrite with natsimplify. Qed.
+Hint Rewrite max_x_yx : natsimplify.
+
+Lemma max_xy_x x y : Nat.max (Nat.max x y) x = Nat.max x y.
+Proof. now rewrite Nat.max_comm, Nat.max_assoc; autorewrite with natsimplify. Qed.
+Hint Rewrite max_xy_x : natsimplify.
+
+Lemma max_yx_x x y : Nat.max (Nat.max y x) x = Nat.max y x.
+Proof. now rewrite <- Nat.max_assoc; autorewrite with natsimplify. Qed.
+Hint Rewrite max_yx_x : natsimplify.

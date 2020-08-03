@@ -1735,6 +1735,7 @@ Section OpaqueMap2.
     rewrite IHls1; auto.
   Qed.
 End OpaqueMap2.
+Hint Rewrite @map2_length : distr_length.
 
 Lemma firstn_update_nth {A}
   : forall f m n (xs : list A), firstn m (update_nth n f xs) = update_nth n f (firstn m xs).
@@ -2091,6 +2092,7 @@ Lemma nth_default_repeat A (v:A) n (d:A) i : nth_default d (repeat v n) i = if d
 Proof.
   cbv [nth_default]; rewrite nth_error_repeat_alt; now break_innermost_match.
 Qed.
+Hint Rewrite nth_default_repeat : push_nth_default simpl_nth_default.
 Lemma fold_right_if_dec_eq_seq A start len i f (x v : A)
   : ((start <= i < start + len)%nat -> f i v = x)
     -> (forall j v, (i <> j)%nat -> f j v = v)
