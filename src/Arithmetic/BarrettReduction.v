@@ -201,17 +201,21 @@ Module Fancy.
         forall t tn,
           (m <= tn)%nat -> 0 <= t < w tn -> 0 <= n < width ->
           shiftr' m (Partition.partition w tn t) n = Partition.partition w m (t / 2 ^ n).
-      Proof.
+      Proof using width_ok.
+        clear -width_ok.
         cbv [shiftr']. induction m; intros; [ reflexivity | ].
         rewrite !partition_step, seq_snoc.
         autorewrite with distr_length natsimplify push_map push_nth_default.
-        rewrite IHm, Z.rshi_correct, uweight_S by auto with zarith.
-        rewrite <-Z.mod_pull_div by auto with zarith.
-        destruct (Nat.eq_dec (S m) tn); [subst tn | ]; rewrite !nth_default_partition by lia.
-        { rewrite nth_default_out_of_bounds by distr_length.
-          autorewrite with zsimplify. Z.rewrite_mod_small.
+        rewrite IHm, Z.rshi_correct, !uweight_S by auto with zarith.
+        rewrite <-!Z.mod_pull_div by auto with zarith.
+        destruct (Nat.eq_dec (S m) tn); [subst tn | ].
+        { rewrite uweight_S in * by auto with zarith.
+          break_innermost_match; try lia.
+          autorewrite with zsimplify_fast. Z.rewrite_mod_small.
           rewrite Z.div_div_comm by auto with zarith; reflexivity. }
-        { repeat match goal with
+        { break_innermost_match; try lia.
+          rewrite <-!uweight_S by auto with zarith.
+          repeat match goal with
                  | _ => rewrite uweight_pull_mod by auto with zarith
                  | _ => rewrite Z.mod_mod_small by auto with zarith
                  | _ => rewrite <-Znumtheory.Zmod_div_mod by (Z.zero_bounds; auto with zarith)
