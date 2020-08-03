@@ -27,6 +27,7 @@ Require Import Crypto.Language.API.
 Require Import Crypto.AbstractInterpretation.AbstractInterpretation.
 Require Import Crypto.Stringification.Language.
 Require Import Crypto.Arithmetic.Core.
+Require Import Crypto.Arithmetic.Distribution.
 Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Arithmetic.Partition.
 Require Import Crypto.Arithmetic.Freeze.
@@ -118,8 +119,29 @@ Section __.
   Local Notation balance := (balance n s c).
 
   Definition m : Z := s - Associational.eval c.
+  (* m_enc needs to be such that, if x is bounded by tight bounds:
+
+     -2*fw[i] <= x[i] - m_enc[i] <= fw[i]
+
+     ...so as to obey the bounds for the sub-with-borrow in
+     freeze. fw[i] here is shorthand for (weight (S i) / weight i). To
+     obey the upper bound, we need to redistribute m_enc such that:
+
+     tight_upperbounds[i] - fw[i] <= m_enc[i]
+
+     Additionally, we cannot have the minimum be uniformly 0, or else
+     we'll encode 0; if this happens, we bump the highest limb to be
+     at least 1 *)
+  Definition m_enc_min : list Z :=
+    let wt := weight (Qnum limbwidth) (Qden limbwidth) in
+    let fw := map (fun i => wt (S i) / wt i) (seq 0 n) in
+    let m_enc_min := map2 Z.sub tight_upperbounds fw in
+    if List.forallb (Z.eqb 0) m_enc_min
+    then set_nth (n-1) 1 m_enc_min
+    else m_enc_min.
+
   Definition m_enc : list Z
-    := encode (weight (Qnum limbwidth) (Qden limbwidth)) n s c m.
+    := encode_distributed (weight (Qnum limbwidth) (Qden limbwidth)) n s c m_enc_min m.
 
   (* We include [0], so that even after bounds relaxation, we can
        notice where the constant 0s are, and remove them. *)
@@ -142,6 +164,10 @@ Section __.
   Lemma length_saturated_bounds_list : List.length saturated_bounds_list = n.
   Proof using Type. cbv [saturated_bounds_list]; now autorewrite with distr_length. Qed.
   Hint Rewrite length_saturated_bounds_list : distr_length.
+  Local Opaque encode_distributed.
+  Lemma length_m_enc : List.length m_enc = n.
+  Proof using Type. cbv [m_enc]; distr_length. Qed.
+  Hint Rewrite length_m_enc : distr_length.
 
   (** Note: If you change the name or type signature of this
         function, you will need to update the code in CLI.v *)
@@ -232,9 +258,12 @@ Section __.
       /\ 0 < Associational.eval c < s
       /\ eval tight_upperbounds < 2 * eval m_enc
       /\ 0 < s - Associational.eval c
+      /\ 0 < s - Associational.eval c <= weight (Qnum limbwidth) (QDen limbwidth) n
       /\ n <= Z.log2_up (s - Associational.eval c).
   Proof using curve_good.
     prepare_use_curve_good ().
+    { use_curve_good_t. }
+    { use_curve_good_t. }
     { use_curve_good_t. }
     { use_curve_good_t. }
     { use_curve_good_t. }

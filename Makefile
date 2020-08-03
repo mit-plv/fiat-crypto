@@ -230,7 +230,8 @@ OUTPUT_PREOUTS := \
 	Crypto.Fancy.Barrett256.prod_barrett_red256_correct \
 	Crypto.Fancy.Barrett256.prod_barrett_red256_correct.Assumptions \
 	Crypto.Fancy.Barrett256.barrett_red256 \
-	Crypto.UnsaturatedSolinasHeuristics.Tests.get_possible_limbs
+	Crypto.UnsaturatedSolinasHeuristics.Tests.get_possible_limbs \
+	Crypto.UnsaturatedSolinasHeuristics.Tests.get_balances
 
 CHECK_OUTPUTS := $(addprefix check-,$(OUTPUT_PREOUTS))
 ACCEPT_OUTPUTS := $(addprefix accept-,$(OUTPUT_PREOUTS))

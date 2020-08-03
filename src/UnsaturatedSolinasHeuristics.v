@@ -6,9 +6,11 @@ Require Import Coq.QArith.Qabs.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Arithmetic.Partition.
+Require Import Crypto.Arithmetic.Distribution.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.Option.
+Require Import Crypto.Util.NatUtil.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
@@ -41,14 +43,15 @@ Section __.
           (n : nat)
           (s : Z)
           (c : list (Z * Z))
-          (machine_wordsize : Z)
-          (Hn_nz : n <> 0%nat)
-          (Hs_n : Z.of_nat n <= Z.log2_up (s - Associational.eval c))
-          (Hs_nz : s <> 0)
-          (Hs_c_nz : s - Associational.eval c <> 0).
-
+          (machine_wordsize : Z).
   Let limbwidth := (limbwidth n s c).
   Local Notation weight := (weight (Qnum limbwidth) (Qden limbwidth)).
+  Context (Hn_nz : n <> 0%nat)
+          (Hs_n : Z.of_nat n <= Z.log2_up (s - Associational.eval c))
+          (Hs_nz : s <> 0)
+          (Hs_c_nz : s - Associational.eval c <> 0)
+          (Hs_c_bounded : 0 < s - Associational.eval c <= weight n).
+
   Lemma limbwidth_good : 0 < Qden limbwidth <= Qnum limbwidth.
   Proof using Hn_nz Hs_n.
     clear -Hn_nz Hs_n.
@@ -88,7 +91,7 @@ else:
        else (List.seq 0 n ++ [0; 1])%list%nat.
 
   Definition default_tight_upperbound_fraction : Q := 1%Q.
-  Definition coef := 2. (* for balance in sub *)
+  Definition coef := 1. (* for balance in sub *)
   Definition prime_upperbound_list : list Z
     := Partition.partition weight n (s-1).
   (** We take the absolute value mostly to make proofs easy *)
@@ -106,7 +109,7 @@ else:
   Definition headspace_sub_count : nat := 1.
 
   Definition balance : list Z
-    := scmul weight n coef (encode weight n s c (s - Associational.eval c)).
+    := encode_distributed weight n s c (List.map (Z.mul coef) tight_upperbounds) 0.
 
   Definition loose_upperbounds : list Z
     := List.map
@@ -161,15 +164,33 @@ else:
   Qed.
 
   Lemma eval_balance : eval weight n balance mod (s - Associational.eval c) = 0.
-  Proof using Hs_nz Hs_c_nz Hs_n Hn_nz.
-    clear -Hs_nz Hs_c_nz Hs_n Hn_nz wprops.
-    cbv [balance];
-      repeat first [ rewrite Z_mod_same_full
-                   | rewrite eval_scmul by auto
-                   | rewrite eval_encode by auto with zarith
-                   | reflexivity
-                   | progress (pull_Zmod; autorewrite with zsimplify_fast; push_Zmod) ].
+  Proof using Hs_c_bounded wprops.
+    clear -Hs_c_bounded wprops.
+    cbv [balance]; rewrite eval_encode_distributed by auto.
+    now autorewrite with zsimplify_fast.
   Qed.
+
+  Lemma nth_default_balance_bounded' i d' d
+        (** We add an extra hypothesis that is too bulky to prove *)
+        (Hadd : forall x y, length x = n -> length y = n -> Positional.add weight n x y = map2 Z.add x y)
+    : (i < n)%nat ->
+      coef * nth_default d' tight_upperbounds i <= nth_default d balance i.
+  Proof using wprops.
+    generalize length_tight_upperbounds.
+    clear -wprops Hadd.
+    intros; etransitivity; [ | eapply nth_default_encode_distributed_bounded'; auto ]; auto.
+    { rewrite map_nth_default_always; reflexivity. }
+    { distr_length. }
+  Qed.
+  (** We would like to prove this general lemma, but since we're using
+      [Positional.add] rather than [List.map2 Z.add], it's kind-of
+      annoying to prove, so we skip it. *)
+  Lemma nth_default_balance_bounded i d' d
+    : (i < n)%nat ->
+      coef * nth_default d' tight_upperbounds i <= nth_default d balance i.
+  Proof using wprops.
+    apply nth_default_balance_bounded'; auto.
+  Abort.
 
   (** check if the suggested number of limbs will overflow
       double-width registers when adding partial products after a

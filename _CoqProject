@@ -33,6 +33,7 @@ src/Algebra/SubsetoidRing.v
 src/Arithmetic/BarrettReduction.v
 src/Arithmetic/BaseConversion.v
 src/Arithmetic/Core.v
+src/Arithmetic/Distribution.v
 src/Arithmetic/FancyMontgomeryReduction.v
 src/Arithmetic/Freeze.v
 src/Arithmetic/ModOps.v
