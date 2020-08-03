@@ -141,6 +141,26 @@ else:
 
   Lemma length_balance : List.length balance = n.
   Proof using Type. cbv [balance]; now autorewrite with distr_length. Qed.
+  Hint Rewrite length_balance : distr_length.
+
+  Lemma length_prime_upperbound_list : List.length prime_upperbound_list = n.
+  Proof using Type. cbv [prime_upperbound_list]; now autorewrite with distr_length. Qed.
+  Hint Rewrite length_prime_upperbound_list : distr_length.
+
+  Lemma length_tight_upperbounds : List.length tight_upperbounds = n.
+  Proof using Type. cbv [tight_upperbounds]; now autorewrite with distr_length. Qed.
+  Hint Rewrite length_tight_upperbounds : distr_length.
+
+  Lemma length_loose_upperbounds : List.length loose_upperbounds = n.
+  Proof using Type. cbv [loose_upperbounds]; now autorewrite with distr_length natsimplify. Qed.
+  Hint Rewrite length_loose_upperbounds : distr_length.
+
+  Lemma length_tight_bounds : List.length tight_bounds = n.
+  Proof using Type. cbv [tight_bounds]; now autorewrite with distr_length. Qed.
+  Hint Rewrite length_tight_bounds : distr_length.
+  Lemma length_loose_bounds : List.length loose_bounds = n.
+  Proof using Type. generalize length_loose_upperbounds; clear; cbv [loose_bounds]; autorewrite with distr_length natsimplify; lia. Qed.
+  Hint Rewrite length_loose_bounds : distr_length.
 
   Lemma eval_balance : eval (weight (Qnum limbwidth) (Qden limbwidth)) n balance mod (s - Associational.eval c) = 0.
   Proof using Hs_nz Hs_c_nz Hs_n Hn_nz.
@@ -169,6 +189,7 @@ else:
        | nil => false
        end.
 End __.
+Hint Rewrite @length_balance @length_prime_upperbound_list @length_tight_upperbounds @length_loose_upperbounds @length_tight_bounds @length_loose_bounds : distr_length.
 
 Inductive MaybeLimbCount := NumLimbs (n : nat) | Auto (idx : nat).
 
