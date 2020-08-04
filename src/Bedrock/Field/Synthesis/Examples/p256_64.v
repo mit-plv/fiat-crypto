@@ -1,7 +1,7 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Strings.String.
-Require Import Crypto.Bedrock.Field.Generic.WordByWordMontgomery.
-Require Import Crypto.Bedrock.Synthesis.WordByWordMontgomery.
+Require Import Crypto.Bedrock.Field.Synthesis.Generic.WordByWordMontgomery.
+Require Import Crypto.Bedrock.Field.Synthesis.Specialized.WordByWordMontgomery.
 Local Open Scope Z_scope.
 
 Local Definition m := 2^256 - 2^224 + 2^192 + 2^96 - 1.

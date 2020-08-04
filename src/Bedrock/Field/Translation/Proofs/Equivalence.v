@@ -6,7 +6,7 @@ Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Array bedrock2.Scalars.
 Require Import coqutil.Map.Interface.
 Require Import coqutil.Word.Interface.
-Require Import Crypto.Bedrock.Types.
+Require Import Crypto.Bedrock.Field.Common.Types.
 Require Import Crypto.Language.API.
 Local Open Scope Z_scope.
 

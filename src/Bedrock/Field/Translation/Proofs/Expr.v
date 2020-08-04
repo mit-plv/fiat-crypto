@@ -6,13 +6,13 @@ Require Import bedrock2.WeakestPreconditionProperties.
 Require Import coqutil.Word.Interface coqutil.Word.Properties.
 Require Import coqutil.Map.Interface.
 Require Import Crypto.CastLemmas.
-Require Import Crypto.Bedrock.Types.
-Require Import Crypto.Bedrock.Tactics.
-Require Import Crypto.Bedrock.Util.
-Require Import Crypto.Bedrock.Proofs.Equivalence.
-Require Import Crypto.Bedrock.Proofs.EquivalenceProperties.
-Require Import Crypto.Bedrock.Proofs.UsedVarnames.
-Require Import Crypto.Bedrock.Proofs.VarnameSet.
+Require Import Crypto.Bedrock.Field.Common.Types.
+Require Import Crypto.Bedrock.Field.Common.Tactics.
+Require Import Crypto.Bedrock.Field.Common.Util.
+Require Import Crypto.Bedrock.Field.Translation.Proofs.Equivalence.
+Require Import Crypto.Bedrock.Field.Translation.Proofs.EquivalenceProperties.
+Require Import Crypto.Bedrock.Field.Translation.Proofs.UsedVarnames.
+Require Import Crypto.Bedrock.Field.Translation.Proofs.VarnameSet.
 Require Import Crypto.Bedrock.Field.Translation.Expr.
 Require Import Crypto.Language.API.
 Require Import Rewriter.Util.Bool.Reflect.

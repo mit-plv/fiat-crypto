@@ -3,7 +3,7 @@ Require Import Coq.Lists.List.
 Require Import bedrock2.Array.
 Require Import bedrock2.Syntax.
 Require Import bedrock2.Semantics.
-Require Import Crypto.Bedrock.Types.
+Require Import Crypto.Bedrock.Field.Common.Types.
 Require Import Crypto.Language.API.
 Import ListNotations. Local Open Scope Z_scope.
 

@@ -3,8 +3,8 @@ Require Import bedrock2.ProgramLogic.
 Require Import bedrock2.Map.Separation.
 Require Import bedrock2.Map.SeparationLogic.
 Require Import coqutil.Tactics.Tactics.
-Require Import Crypto.Bedrock.Tactics.
-Require Import Crypto.Bedrock.Field.Generic.Operation.
+Require Import Crypto.Bedrock.Field.Common.Tactics.
+Require Import Crypto.Bedrock.Field.Synthesis.Generic.Operation.
 
 Ltac clear_old_seps :=
   lazymatch goal with

@@ -7,7 +7,7 @@ Require Import bedrock2.Scalars.
 Require Import bedrock2.Syntax.
 Require Import bedrock2.WeakestPreconditionProperties.
 Require Import coqutil.Word.Interface.
-Require Import Crypto.Bedrock.Types.
+Require Import Crypto.Bedrock.Field.Common.Types.
 Require Import Crypto.Language.API.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ZRange.

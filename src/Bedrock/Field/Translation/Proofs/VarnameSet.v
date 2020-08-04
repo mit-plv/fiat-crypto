@@ -1,5 +1,5 @@
 Require Import Coq.Strings.String.
-Require Import Crypto.Bedrock.Types.
+Require Import Crypto.Bedrock.Field.Common.Types.
 Require Import Crypto.Language.API.
 Local Open Scope Z_scope.
 

@@ -6,9 +6,9 @@ Require Import coqutil.Tactics.Tactics.
 Require Import coqutil.Word.Interface coqutil.Word.Properties.
 Require Import Crypto.AbstractInterpretation.AbstractInterpretation.
 Require Import Crypto.COperationSpecifications. (* for list_Z_bounded_by *)
-Require Import Crypto.Bedrock.Types.
-Require Import Crypto.Bedrock.Util.
-Require Import Crypto.Bedrock.Proofs.LoadStoreList.
+Require Import Crypto.Bedrock.Field.Common.Types.
+Require Import Crypto.Bedrock.Field.Common.Util.
+Require Import Crypto.Bedrock.Field.Translation.Proofs.LoadStoreList.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZUtil.Modulo.
 Require Import Crypto.Util.Tactics.BreakMatch.

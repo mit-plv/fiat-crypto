@@ -8,10 +8,10 @@ Require Import coqutil.Map.Interface coqutil.Map.Properties.
 Require Import coqutil.Word.Interface coqutil.Word.Properties.
 Require Import coqutil.Datatypes.PropSet.
 Require Import Coq.Lists.List. (* after SeparationLogic *)
-Require Import Crypto.Bedrock.Types.
-Require Import Crypto.Bedrock.Proofs.VarnameSet.
-Require Import Crypto.Bedrock.Tactics.
-Require Import Crypto.Bedrock.Util.
+Require Import Crypto.Bedrock.Field.Common.Types.
+Require Import Crypto.Bedrock.Field.Translation.Proofs.VarnameSet.
+Require Import Crypto.Bedrock.Field.Common.Tactics.
+Require Import Crypto.Bedrock.Field.Common.Util.
 Require Import Crypto.Language.API.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.Tactics.DestructHead.

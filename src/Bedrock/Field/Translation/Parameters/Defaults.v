@@ -3,7 +3,7 @@ Require Import Coq.Strings.String.
 Require Import Coq.Lists.List.
 Require Import coqutil.Word.Interface.
 Require Import bedrock2.Syntax.
-Require Import Crypto.Bedrock.Types.
+Require Import Crypto.Bedrock.Field.Common.Types.
 Require Import Crypto.BoundsPipeline.
 Require Import Crypto.UnsaturatedSolinasHeuristics.
 Require Crypto.Util.Strings.Decimal.

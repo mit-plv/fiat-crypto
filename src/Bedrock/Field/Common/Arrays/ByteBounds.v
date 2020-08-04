@@ -7,9 +7,9 @@ Require Import coqutil.Datatypes.List.
 Require Import coqutil.Byte.
 Require Import bedrock2.Syntax.
 Require Import Crypto.Arithmetic.Partition.
-Require Import Crypto.Bedrock.Tactics.
-Require Import Crypto.Bedrock.Types.
-Require Import Crypto.Bedrock.Util.
+Require Import Crypto.Bedrock.Field.Common.Tactics.
+Require Import Crypto.Bedrock.Field.Common.Types.
+Require Import Crypto.Bedrock.Field.Common.Util.
 Require Import Crypto.COperationSpecifications.
 Require Import Crypto.Util.ZRange.BasicLemmas.
 Require Import Crypto.Util.ZUtil.Modulo.

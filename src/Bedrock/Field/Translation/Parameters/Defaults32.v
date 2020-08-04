@@ -4,9 +4,9 @@ Require Import Coq.Lists.List.
 Require Import bedrock2.Syntax.
 Require Import bedrock2.Semantics.
 Require Import bedrock2.BasicC32Semantics.
-Require Import Crypto.Bedrock.Types.
-Require Import Crypto.Bedrock.Names.VarnameGenerator.
-Require Import Crypto.Bedrock.Parameters.Defaults.
+Require Import Crypto.Bedrock.Field.Common.Types.
+Require Import Crypto.Bedrock.Field.Common.Names.VarnameGenerator.
+Require Import Crypto.Bedrock.Field.Translation.Parameters.Defaults.
 Require Import Crypto.BoundsPipeline.
 Require Import Crypto.Language.API.
 Require Import Crypto.Util.ZRange.

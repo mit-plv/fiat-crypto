@@ -1,7 +1,7 @@
 Require Import bedrock2.WeakestPreconditionProperties.
 Require Import bedrock2.Map.Separation bedrock2.Map.SeparationLogic.
 Require Import coqutil.Map.Interface.
-Require Import Crypto.Bedrock.Util.
+Require Import Crypto.Bedrock.Field.Common.Util.
 Require Import Crypto.Language.API.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.BreakMatch.

@@ -1,9 +1,9 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Strings.String.
 Require Import Coq.Lists.List.
-Require Import Crypto.Bedrock.Types.
-Require Crypto.Bedrock.Parameters.Defaults32.
-Require Crypto.Bedrock.Parameters.Defaults64.
+Require Import Crypto.Bedrock.Field.Common.Types.
+Require Crypto.Bedrock.Field.Translation.Parameters.Defaults32.
+Require Crypto.Bedrock.Field.Translation.Parameters.Defaults64.
 Local Open Scope string_scope.
 Import ListNotations.
 

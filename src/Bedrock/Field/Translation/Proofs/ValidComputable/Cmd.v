@@ -5,11 +5,11 @@ Require Import Coq.micromega.Lia.
 Require Import bedrock2.Syntax.
 Require Import coqutil.Word.Interface coqutil.Word.Properties.
 Require Import coqutil.Map.Interface.
-Require Import Crypto.Bedrock.Types.
-Require Import Crypto.Bedrock.Tactics.
-Require Import Crypto.Bedrock.Proofs.Expr.
-Require Import Crypto.Bedrock.Proofs.Cmd.
-Require Import Crypto.Bedrock.Proofs.ValidComputable.Expr.
+Require Import Crypto.Bedrock.Field.Common.Types.
+Require Import Crypto.Bedrock.Field.Common.Tactics.
+Require Import Crypto.Bedrock.Field.Translation.Proofs.Expr.
+Require Import Crypto.Bedrock.Field.Translation.Proofs.Cmd.
+Require Import Crypto.Bedrock.Field.Translation.Proofs.ValidComputable.Expr.
 Require Import Crypto.Language.API.
 Require Import Crypto.Util.Decidable.
 Require Import Crypto.Util.ZRange.

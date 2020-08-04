@@ -419,7 +419,7 @@ HASKELL_BINARIES := $(STANDALONE:%=src/ExtractionHaskell/%)
 
 
 $(STANDALONE:%=src/ExtractionOCaml/%.ml): src/StandaloneOCamlMain.vo
-$(BEDROCK2_STANDALONE:%=src/ExtractionOCaml/%.ml): src/Bedrock/StandaloneOCamlMain.vo
+$(BEDROCK2_STANDALONE:%=src/ExtractionOCaml/%.ml): src/Bedrock/Standalone/StandaloneOCamlMain.vo
 $(PERF_STANDALONE:%=src/ExtractionOCaml/%.ml): src/Rewriter/PerfTesting/StandaloneOCamlMain.vo
 $(STANDALONE:%=src/ExtractionHaskell/%.hs): src/StandaloneHaskellMain.vo
 $(BEDROCK2_STANDALONE:%=src/ExtractionHaskell/%.hs): src/Bedrock/StandaloneHaskellMain.vo

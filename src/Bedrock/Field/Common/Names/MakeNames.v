@@ -4,10 +4,10 @@ Require Import Coq.micromega.Lia.
 Require Import Coq.Strings.String.
 Require Import coqutil.Datatypes.List.
 Require Import coqutil.Datatypes.PropSet.
-Require Import Crypto.Bedrock.Tactics.
-Require Import Crypto.Bedrock.Types.
-Require Import Crypto.Bedrock.Proofs.Flatten.
-Require Import Crypto.Bedrock.Proofs.VarnameSet.
+Require Import Crypto.Bedrock.Field.Common.Tactics.
+Require Import Crypto.Bedrock.Field.Common.Types.
+Require Import Crypto.Bedrock.Field.Translation.Proofs.Flatten.
+Require Import Crypto.Bedrock.Field.Translation.Proofs.VarnameSet.
 Require Import Crypto.Bedrock.Field.Translation.Flatten.
 Require Import Crypto.Language.API.
 Require Import Crypto.Util.Tactics.BreakMatch.

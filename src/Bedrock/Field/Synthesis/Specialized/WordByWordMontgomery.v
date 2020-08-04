@@ -7,13 +7,13 @@ Require Import bedrock2.Syntax.
 Require Import coqutil.Word.Interface.
 Require Import Crypto.AbstractInterpretation.AbstractInterpretation.
 Require Import Crypto.PushButtonSynthesis.WordByWordMontgomery.
-Require Import Crypto.Bedrock.Names.VarnameGenerator.
-Require Import Crypto.Bedrock.Parameters.Defaults.
-Require Import Crypto.Bedrock.Parameters.SelectParameters.
-Require Import Crypto.Bedrock.Synthesis.ReifiedOperation.
-Require Import Crypto.Bedrock.Field.Generic.WordByWordMontgomery.
-Require Import Crypto.Bedrock.Field.Generic.Operation.
-Require Import Crypto.Bedrock.Proofs.ValidComputable.Func.
+Require Import Crypto.Bedrock.Field.Common.Names.VarnameGenerator.
+Require Import Crypto.Bedrock.Field.Translation.Parameters.Defaults.
+Require Import Crypto.Bedrock.Field.Translation.Parameters.SelectParameters.
+Require Import Crypto.Bedrock.Field.Synthesis.Specialized.ReifiedOperation.
+Require Import Crypto.Bedrock.Field.Synthesis.Generic.WordByWordMontgomery.
+Require Import Crypto.Bedrock.Field.Synthesis.Generic.Operation.
+Require Import Crypto.Bedrock.Field.Translation.Proofs.ValidComputable.Func.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Local Open Scope Z_scope.
 Import ListNotations.

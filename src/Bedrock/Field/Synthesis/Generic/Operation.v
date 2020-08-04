@@ -10,15 +10,15 @@ Require Import bedrock2.Scalars.
 Require Import bedrock2.Syntax.
 Require Import bedrock2.Map.Separation.
 Require Import bedrock2.WeakestPreconditionProperties.
-Require Import Crypto.Bedrock.Tactics.
-Require Import Crypto.Bedrock.Types.
-Require Import Crypto.Bedrock.Util.
-Require Import Crypto.Bedrock.Arrays.ByteBounds.
-Require Import Crypto.Bedrock.Names.MakeNames.
-Require Import Crypto.Bedrock.Parameters.Defaults.
-Require Import Crypto.Bedrock.Proofs.Func.
+Require Import Crypto.Bedrock.Field.Common.Tactics.
+Require Import Crypto.Bedrock.Field.Common.Types.
+Require Import Crypto.Bedrock.Field.Common.Util.
+Require Import Crypto.Bedrock.Field.Common.Arrays.ByteBounds.
+Require Import Crypto.Bedrock.Field.Common.Names.MakeNames.
+Require Import Crypto.Bedrock.Field.Translation.Parameters.Defaults.
+Require Import Crypto.Bedrock.Field.Translation.Proofs.Func.
 Require Import Crypto.Bedrock.Field.Translation.Func.
-Require Import Crypto.Bedrock.Field.Generic.Tactics.
+Require Import Crypto.Bedrock.Field.Synthesis.Generic.Tactics.
 Require Import Crypto.BoundsPipeline.
 Require Import Crypto.Language.API.
 Require Import Coq.Lists.List. (* after SeparationLogic *)

@@ -6,10 +6,10 @@ Require Import bedrock2.Map.Separation.
 Require Import coqutil.Word.Interface.
 Require Import coqutil.Map.Interface.
 Require Import Crypto.COperationSpecifications.
-Require Import Crypto.Bedrock.Types.
-Require Import Crypto.Bedrock.Util.
-Require Import Crypto.Bedrock.Arrays.MaxBounds.
-Require Import Crypto.Bedrock.Arrays.ByteBounds.
+Require Import Crypto.Bedrock.Field.Common.Types.
+Require Import Crypto.Bedrock.Field.Common.Util.
+Require Import Crypto.Bedrock.Field.Common.Arrays.MaxBounds.
+Require Import Crypto.Bedrock.Field.Common.Arrays.ByteBounds.
 Local Open Scope Z_scope.
 
 Section Bignum.
