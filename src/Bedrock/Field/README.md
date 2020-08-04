@@ -1,89 +1,48 @@
-# Bedrock2 backend
+# Bedrock2 field-arithmetic backend
 
-The code in this subdirectory translates functions in fiat-crypto's internal
-language to bedrock2 code.
-
-## Usage
-
-Examples of generating, translating, and proving arithmetic operations can be
-found in `Synthesis/Examples/`. Generally, you first create a suite of field
-operations (for each operation, you get a bedrock2 function, a specification,
-and a proof that the function obeys the specification), and then use those to
-prove higher-level functions as usual using bedrock2 logic. It's also possible
-to call the translator directly on an arbitrary expression in fiat-crypto's AST
-(the top-level function is `translate_func`).
+The code in this subdirectory creates proofs and code for field arithmetic using
+fiat-crypto's pipeline.
 
 ## Structure
 
-The most important directories are:
+`Common/` : generally useful definitions and proofs for bedrock2 field
+ arithmetic
 
-`Translation/` : defines functions that manipulate a fiat-crypto expression and
-translate it to bedrock2.
+`Synthesis/` : tactics and proofs that string together the fiat-crypto pipeline
+  and the bedrock2 translation, and that make it easy to create full suites of
+  bedrock2 operations with proofs for different fields
 
-`Proofs/` : proves that the functions in `Translation/` do their jobs
-correctly. Generally, each `Translation/XYZ.v` has a `Proofs/XYZ.v` that
-corresponds to it.
+`Translation/` : the compiler that translates from fiat-crypto's AST to
+ bedrock2, and its correctness proofs
 
-`Synthesis/` : contains tactics and groundwork for creating suites of field
-operation implementations with proofs, and examples of usage.
+## Usage
 
-## Method
+Generally, you would (following the pattern in `Synthesis/Examples`) first
+create a suite of field operations for your chosen field using the premade
+synthesis tactics. For each field operation, you get a bedrock2 function, a
+specification, and a proof that the function obeys the specification. Using
+these, you can prove higher-level functions using the usual bedrock2 logic.
 
-The translation process mirrors bedrock2 abstraction levels (see bedrock2's
-`Syntax.v`):
+For more custom use cases, it's also possible to call the translator directly on
+an arbitrary expression in fiat-crypto's AST. The top-level function for this
+purpose is `translate_func` from `Translation/Func.v`, and its correctness proof
+is `translate_func_correct` from `Translation/Proofs/Func.v`. To prove that the
+expression is valid input to the compiler, it's also likely helpful to take a
+look at the computable version of `valid_func` from
+`Translation/Proofs/ValidComputable/Func.v`.
 
-1. `expr`, for expressions that don't set local variables, store anything, or
-   otherwise change state
-2. `cmd`, for expressions that do set local variables. In bedrock2 these are
-   also allowed to store data. However, in this fiat-crypto backend the `cmd`
-level is not allowed to read from or write to memory.
-3. `func`, the top level, which is allowed to handle memory. The bedrock2 code
-   produced by this backend always loads input arrays into local variables
-immediately, and handles everything in local variables until it's ready to
-store any output arrays at the end.
+## Examples
 
-The choice to not allow the `cmd` level to modify memory was a tradeoff that
-makes sense for the specific domain in which fiat-crypto operates, because you
-basically always need to access all the information in your input array and
-gain nothing by modifying it in place. Doing the loads immediately and the
-stores at the very end also greatly simplified the proofs for the `cmd` level,
-which can now assume that memory doesn't change. And, since the inputs are
-read-only, it allowed `translate_func_correct` to use multiple separation-logic
-preconditions instead of one (one for each input, one for the output), which
-means it's possible to e.g.  add a bignum to itself and then store the result
-in the same location, in place. The postcondition will be stated in terms of
-the output precondition (so if you stored the result in one of the inputs, you
-will of course lose information about that input).
+Examples of generating, translating, and proving arithmetic operations can be
+found in `Synthesis/Examples/`. Examples of generated output (printed as C code)
+can be found outside this subdirectory, in the top-level `fiat-bedrock2`
+subdirectory. Please note that the translation from bedrock2 to C is just for
+readability, and is unverified.
 
+Here is a prettified example of the fiat-crypto AST and corresponding bedrock2
+code for curve25519 addition on 64-bit (see `Synthesis/Examples/X25519_64.v`):
 
-Another thing to note about the translation is that it assumes all lists are
-handled as arrays and passed as pointers, so if a function returns a list an
-argument will be added to the bedrock2 implementation: a pointer in which to
-store the output list. This happens automatically for all lists of integers in
-the return type.
-
-## Restrictions
-
-Input to the bedrock2 translation must:
-- contain only the subset of operations found in `Translation/Expr.v`
-- have only one size of integer (uses options `widen_bytes` and
-  `widen_carries`)
-- not have functions that return multiple values, as these are untranslatable
-  to bedrock2\*
-- not use types other than integers, lists of integers, and tuples, although
-  tuples can be arbitrarily nested
-- not assign anything to lists
-
-\* bedrock2 doesn't support carries or assigning to multiple values, but if it
-did start supporting them in the future the translation has most of the code in
-place to handle that.
-
-## Example
-
-To make things a little more concrete, here is the translation of addition for
-curve25519 on 64-bit (see `Synthesis/Examples/X25519_64.v`):
-
-fiat-crypto AST (input to the translation):
+Fiat-crypto AST (input to the translation):
 ```
 = fun x : API.type -> Type =>
   (λ x0
