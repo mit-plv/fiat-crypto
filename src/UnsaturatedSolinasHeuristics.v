@@ -164,7 +164,7 @@ else:
        else (List.seq 0 n ++ [0; 1])%list%nat.
 
   Definition default_tight_upperbound_fraction : Q := 1%Q.
-  Definition coef := 1. (* for balance in sub *)
+  Definition coef := 2. (* for balance in sub *)
   Definition prime_upperbound_list : list Z
     := Partition.partition weight n (s-1).
   (** We take the absolute value mostly to make proofs easy *)
@@ -212,7 +212,9 @@ else:
     fold_right (distribute_balance_step minvalues) B (seq 0 (n-1)).
 
   Definition balance : list Z
-    := encode_distributed weight n s c (List.map (Z.mul coef) tight_upperbounds) 0.
+    := let B := encode weight n s c (s - Associational.eval c) in
+       let B := scmul weight n coef B in
+       distribute_balance tight_upperbounds B.
 
   Definition loose_upperbounds : list Z
     := List.map
@@ -243,7 +245,7 @@ else:
   Hint Rewrite length_distribute_balance : distr_length.
 
   Lemma length_balance : List.length balance = n.
-  Proof using Type. cbv [balance]; now autorewrite with distr_length. Qed.
+  Proof using Type. cbv [balance]; now repeat autorewrite with distr_length. Qed.
   Hint Rewrite length_balance : distr_length.
 
   Lemma length_prime_upperbound_list : List.length prime_upperbound_list = n.
@@ -313,12 +315,17 @@ else:
   Qed.
 
   Lemma eval_balance : eval weight n balance mod (s - Associational.eval c) = 0.
-  Proof using Hs_c_bounded wprops.
-    clear -Hs_c_bounded wprops.
-    cbv [balance]; rewrite eval_encode_distributed by auto.
-    now autorewrite with zsimplify_fast.
+  Proof using Hs_nz Hs_c_nz Hs_n Hn_nz.
+    clear -p Hs_nz Hs_c_nz Hs_n Hn_nz wprops.
+    cbv [balance]. rewrite eval_distribute_balance.
+    repeat first [ rewrite Z_mod_same_full
+                 | rewrite eval_scmul by auto
+                 | rewrite eval_encode by auto with zarith
+                 | reflexivity
+                 | progress (pull_Zmod; autorewrite with zsimplify_fast; push_Zmod) ].
   Qed.
 
+  (*
   Lemma nth_default_balance_bounded' i d' d
         (** We add an extra hypothesis that is too bulky to prove *)
         (Hadd : forall x y, length x = n -> length y = n -> Positional.add weight n x y = map2 Z.add x y)
@@ -340,6 +347,7 @@ else:
   Proof using wprops.
     apply nth_default_balance_bounded'; auto.
   Abort.
+   *)
 
   (** check if the suggested number of limbs will overflow
       double-width registers when adding partial products after a
