@@ -48,6 +48,7 @@ Section __.
           (Hs_c_nz : s - Associational.eval c <> 0).
 
   Let limbwidth := (limbwidth n s c).
+  Local Notation weight := (weight (Qnum limbwidth) (Qden limbwidth)).
   Lemma limbwidth_good : 0 < Qden limbwidth <= Qnum limbwidth.
   Proof using Hn_nz Hs_n.
     clear -Hn_nz Hs_n.
@@ -89,7 +90,7 @@ else:
   Definition default_tight_upperbound_fraction : Q := 1%Q.
   Definition coef := 2. (* for balance in sub *)
   Definition prime_upperbound_list : list Z
-    := Partition.partition (weight (Qnum limbwidth) (Qden limbwidth)) n (s-1).
+    := Partition.partition weight n (s-1).
   (** We take the absolute value mostly to make proofs easy *)
   Definition tight_upperbounds : list Z
     := List.map
@@ -105,8 +106,7 @@ else:
   Definition headspace_sub_count : nat := 1.
 
   Definition balance : list Z
-    := let weight := weight (Qnum limbwidth) (Qden limbwidth) in
-       scmul weight n coef (encode weight n s c (s - Associational.eval c)).
+    := scmul weight n coef (encode weight n s c (s - Associational.eval c)).
 
   Definition loose_upperbounds : list Z
     := List.map
@@ -160,7 +160,7 @@ else:
     Z.div_mod_to_quot_rem; nia.
   Qed.
 
-  Lemma eval_balance : eval (weight (Qnum limbwidth) (Qden limbwidth)) n balance mod (s - Associational.eval c) = 0.
+  Lemma eval_balance : eval weight n balance mod (s - Associational.eval c) = 0.
   Proof using Hs_nz Hs_c_nz Hs_n Hn_nz.
     clear -Hs_nz Hs_c_nz Hs_n Hn_nz wprops.
     cbv [balance];
@@ -175,7 +175,7 @@ else:
       double-width registers when adding partial products after a
       multiplication and then doing solinas reduction *)
   Definition overflow_free : bool
-    := let v := squaremod (weight (Qnum limbwidth) (Qden limbwidth)) s c n loose_upperbounds in
+    := let v := squaremod weight s c n loose_upperbounds in
        forallb (fun k => Z.log2 k <? 2 * machine_wordsize) v.
 
   Definition is_goldilocks : bool
