@@ -119,26 +119,6 @@ else:
   Definition loose_bounds : list (option zrange)
     := List.map (fun u => Some r[0~>u]%zrange) loose_upperbounds.
 
-  Lemma tight_bounds_tighter : is_tighter_than tight_bounds loose_bounds = true.
-  Proof using Type.
-    cbv [tight_bounds loose_bounds tight_upperbounds loose_upperbounds balance scmul].
-    rewrite !combine_map_l, !fold_andb_map_map, !fold_andb_map_map1, fold_andb_map_iff.
-    cbn [lower upper].
-    autorewrite with distr_length.
-    split.
-    { cbv [prime_upperbound_list].
-      now autorewrite with distr_length natsimplify. }
-    { intro; rewrite In_nth_error_iff; intros [n' H].
-      rewrite !nth_error_combine in H.
-      break_innermost_match_hyps; inversion_option; subst; cbn [fst snd].
-      rewrite !Bool.andb_true_iff; split; [ reflexivity | Z.ltb_to_lt ].
-      let x := lazymatch goal with |- ?x <= _ => x end in
-      rewrite <- (Z.add_0_r x) at 1; apply Zplus_le_compat_l.
-      etransitivity; [ | apply Z.le_max_l ].
-      cbv [Qceiling Qmult Qfloor Qnum Qden Qopp inject_Z Qabs]; case tight_upperbound_fraction; intros; clear.
-      Z.div_mod_to_quot_rem; nia. }
-  Qed.
-
   Lemma length_balance : List.length balance = n.
   Proof using Type. cbv [balance]; now autorewrite with distr_length. Qed.
   Hint Rewrite length_balance : distr_length.
@@ -161,6 +141,24 @@ else:
   Lemma length_loose_bounds : List.length loose_bounds = n.
   Proof using Type. generalize length_loose_upperbounds; clear; cbv [loose_bounds]; autorewrite with distr_length natsimplify; lia. Qed.
   Hint Rewrite length_loose_bounds : distr_length.
+
+  Lemma tight_bounds_tighter : is_tighter_than tight_bounds loose_bounds = true.
+  Proof using Type.
+    cbv [tight_bounds loose_bounds tight_upperbounds loose_upperbounds].
+    rewrite !combine_map_l, !fold_andb_map_map, !fold_andb_map_map1, fold_andb_map_iff.
+    cbn [lower upper].
+    autorewrite with distr_length natsimplify.
+    split; [ reflexivity | ].
+    intro; rewrite In_nth_error_iff; intros [n' H].
+    rewrite !nth_error_combine in H.
+    break_innermost_match_hyps; inversion_option; subst; cbn [fst snd].
+    rewrite !Bool.andb_true_iff; split; [ reflexivity | Z.ltb_to_lt ].
+    let x := lazymatch goal with |- ?x <= _ => x end in
+    rewrite <- (Z.add_0_r x) at 1; apply Zplus_le_compat_l.
+    etransitivity; [ | apply Z.le_max_l ].
+    cbv [Qceiling Qmult Qfloor Qnum Qden Qopp inject_Z Qabs]; case tight_upperbound_fraction; intros; clear.
+    Z.div_mod_to_quot_rem; nia.
+  Qed.
 
   Lemma eval_balance : eval (weight (Qnum limbwidth) (Qden limbwidth)) n balance mod (s - Associational.eval c) = 0.
   Proof using Hs_nz Hs_c_nz Hs_n Hn_nz.
