@@ -139,8 +139,9 @@ Section __.
     then set_nth (n-1) 1 m_enc_min
     else m_enc_min.
 
-  Definition m_enc : list Z
-    := encode_distributed (weight (Qnum limbwidth) (Qden limbwidth)) n s c m_enc_min m.
+  Definition m_enc : list Z :=
+    let M := encode (weight (Qnum limbwidth) (Qden limbwidth)) n s c m in
+    distribute_balance n s c m_enc_min M.
 
   (* We include [0], so that even after bounds relaxation, we can
        notice where the constant 0s are, and remove them. *)
@@ -163,9 +164,8 @@ Section __.
   Lemma length_saturated_bounds_list : List.length saturated_bounds_list = n.
   Proof using Type. cbv [saturated_bounds_list]; now autorewrite with distr_length. Qed.
   Hint Rewrite length_saturated_bounds_list : distr_length.
-  Local Opaque encode_distributed.
   Lemma length_m_enc : List.length m_enc = n.
-  Proof using Type. cbv [m_enc]; distr_length. Qed.
+  Proof using Type. cbv [m_enc]; repeat distr_length. Qed.
   Hint Rewrite length_m_enc : distr_length.
 
   (** Note: If you change the name or type signature of this
