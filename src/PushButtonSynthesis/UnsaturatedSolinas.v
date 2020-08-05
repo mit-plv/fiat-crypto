@@ -27,7 +27,6 @@ Require Import Crypto.Language.API.
 Require Import Crypto.AbstractInterpretation.AbstractInterpretation.
 Require Import Crypto.Stringification.Language.
 Require Import Crypto.Arithmetic.Core.
-Require Import Crypto.Arithmetic.Distribution.
 Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Arithmetic.Partition.
 Require Import Crypto.Arithmetic.Freeze.
