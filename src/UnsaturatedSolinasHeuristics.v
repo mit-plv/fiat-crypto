@@ -10,6 +10,7 @@ Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.NatUtil.
+Require Import Crypto.Util.ZUtil.Modulo.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
@@ -180,6 +181,36 @@ else:
   (** Allow enough space to do one subtraction w/o carrying *)
   Definition headspace_sub_count : nat := 1.
 
+  (** readjust such that forall i, minvalues[i] <= B[i]
+      Algorithm:
+        B = encode (s - c)
+        B = map(Z.mul coef, B)
+        for i from 0 .. nlimbs-2:
+            if B[i] < tight_upperbounds[i]:
+               // need to find the lowest number we can add, confined to highest bits only
+               d = tight_upperbounds[i] - B[i]
+               x = d / fw[i]
+               if d mod fw[i] != 0:
+                  x += 1 // round up
+               B[i] += x * fw[i]
+               B[i+1] -= x
+   *)
+  Definition distribute_balance_step (minvalues : list Z) (i : nat) (B : list Z) :=
+    let Bi := nth_default 0 B i in
+    let Mi := nth_default 0 minvalues i in
+    if (Bi <? Mi)
+    then
+      let fw := weight (S i) / weight i in
+      let x := ((Mi - Bi) / fw) + Z.b2z (negb ((Mi - Bi) mod fw =? 0)) in
+      let zero := [(weight i, x * fw); (weight (S i), -x)] in
+      let Ba := to_associational weight n B ++ zero in
+      let B := from_associational weight n Ba in
+      B
+    else B.
+
+  Definition distribute_balance minvalues B :=
+    fold_right (distribute_balance_step minvalues) B (seq 0 (n-1)).
+
   Definition balance : list Z
     := encode_distributed weight n s c (List.map (Z.mul coef) tight_upperbounds) 0.
 
@@ -193,6 +224,23 @@ else:
     := List.map (fun u => Some r[0~>u]%zrange) tight_upperbounds.
   Definition loose_bounds : list (option zrange)
     := List.map (fun u => Some r[0~>u]%zrange) loose_upperbounds.
+
+  Lemma length_distribute_balance_step minvalues i B
+    : List.length B = n ->
+      List.length (distribute_balance_step minvalues i B) = n.
+  Proof using Type.
+    clear; cbv [distribute_balance_step]; break_innermost_match; now autorewrite with distr_length.
+  Qed.
+  Hint Rewrite length_distribute_balance_step : distr_length.
+
+  Lemma length_distribute_balance minvalues B
+    : List.length B = n ->
+      List.length (distribute_balance minvalues B) = n.
+  Proof using Type.
+    clear -limbwidth p; cbv [distribute_balance]; intros.
+    apply fold_right_invariant; intros; auto; now autorewrite with distr_length.
+  Qed.
+  Hint Rewrite length_distribute_balance : distr_length.
 
   Lemma length_balance : List.length balance = n.
   Proof using Type. cbv [balance]; now autorewrite with distr_length. Qed.
@@ -233,6 +281,35 @@ else:
     etransitivity; [ | apply Z.le_max_l ].
     cbv [Qceiling Qmult Qfloor Qnum Qden Qopp inject_Z Qabs]; case tight_upperbound_fraction; intros; clear.
     Z.div_mod_to_quot_rem; nia.
+  Qed.
+
+  Lemma eval_distribute_balance_step minvalues i x :
+    eval weight n (distribute_balance_step minvalues i x)
+    = eval weight n x.
+  Proof using Hs_nz Hs_c_nz Hs_n Hn_nz.
+    clear -Hs_nz Hs_c_nz Hs_n Hn_nz wprops.
+    cbv [distribute_balance_step].
+    break_innermost_match; [ | lia ].
+    rewrite eval_from_associational by auto with zarith.
+    autorewrite with push_eval. cbn [fst snd].
+    rewrite eval_to_associational by auto.
+    ring_simplify.
+    do 2 match goal with
+         | |- context [?a * ?b * (?c / ?a)] =>
+           replace (a * b * (c / a)) with (a * (c / a) * b) by lia;
+             rewrite (Z.mul_div_eq_full c a) by auto with zarith
+         end.
+    rewrite weight_multiples by auto. lia.
+  Qed.
+
+  Lemma eval_distribute_balance minvalues x :
+    eval weight n (distribute_balance minvalues x)
+    = eval weight n x.
+  Proof using Hs_nz Hs_c_nz Hs_n Hn_nz.
+    clear -p Hs_nz Hs_c_nz Hs_n Hn_nz wprops.
+    cbv [distribute_balance].
+    apply fold_right_invariant; [ reflexivity | ].
+    intros; rewrite eval_distribute_balance_step; auto.
   Qed.
 
   Lemma eval_balance : eval weight n balance mod (s - Associational.eval c) = 0.
@@ -280,7 +357,7 @@ else:
        | nil => false
        end.
 End __.
-Hint Rewrite @length_balance @length_prime_upperbound_list @length_tight_upperbounds @length_loose_upperbounds @length_tight_bounds @length_loose_bounds : distr_length.
+Hint Rewrite @length_distribute_balance @length_distribute_balance_step @length_balance @length_prime_upperbound_list @length_tight_upperbounds @length_loose_upperbounds @length_tight_bounds @length_loose_bounds : distr_length.
 
 Inductive MaybeLimbCount := NumLimbs (n : nat) | Auto (idx : nat).
 
