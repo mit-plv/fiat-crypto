@@ -422,7 +422,7 @@ $(STANDALONE:%=src/ExtractionOCaml/%.ml): src/StandaloneOCamlMain.vo
 $(BEDROCK2_STANDALONE:%=src/ExtractionOCaml/%.ml): src/Bedrock/Standalone/StandaloneOCamlMain.vo
 $(PERF_STANDALONE:%=src/ExtractionOCaml/%.ml): src/Rewriter/PerfTesting/StandaloneOCamlMain.vo
 $(STANDALONE:%=src/ExtractionHaskell/%.hs): src/StandaloneHaskellMain.vo
-$(BEDROCK2_STANDALONE:%=src/ExtractionHaskell/%.hs): src/Bedrock/StandaloneHaskellMain.vo
+$(BEDROCK2_STANDALONE:%=src/ExtractionHaskell/%.hs): src/Bedrock/Standalone/StandaloneHaskellMain.vo
 # $(PERF_STANDALONE:%=src/ExtractionHaskell/%.hs): src/Rewriter/PerfTesting/StandaloneHaskellMain.vo
 
 pre-standalone-extracted: $(STANDALONE_OCAML:%=src/ExtractionOCaml/%.ml) $(STANDALONE_HASKELL:%=src/ExtractionHaskell/%.hs)
