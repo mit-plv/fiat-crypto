@@ -101,57 +101,57 @@ Record wbwmontgomery_reified_ops
   { params : Types.parameters;
     reified_mul :
       reified_op name_of_mul
-                 (@Field.WordByWordMontgomery.mul params m)
+                 (@Generic.WordByWordMontgomery.mul params m)
                  (PushButtonSynthesis.WordByWordMontgomery.mul
                     m machine_wordsize);
     reified_square :
       reified_op name_of_square
-                 (@Field.WordByWordMontgomery.square params m)
+                 (@Generic.WordByWordMontgomery.square params m)
                  (PushButtonSynthesis.WordByWordMontgomery.square
                     m machine_wordsize);
     reified_add :
       reified_op name_of_add
-                 (@Field.WordByWordMontgomery.add params m)
+                 (@Generic.WordByWordMontgomery.add params m)
                  (PushButtonSynthesis.WordByWordMontgomery.add
                     m machine_wordsize);
     reified_sub :
       reified_op name_of_sub
-                 (@Field.WordByWordMontgomery.sub params m)
+                 (@Generic.WordByWordMontgomery.sub params m)
                  (PushButtonSynthesis.WordByWordMontgomery.sub
                     m machine_wordsize);
     reified_opp :
       reified_op name_of_opp
-                 (@Field.WordByWordMontgomery.opp params m)
+                 (@Generic.WordByWordMontgomery.opp params m)
                  (PushButtonSynthesis.WordByWordMontgomery.opp
                     m machine_wordsize);
     reified_to_montgomery :
       reified_op name_of_to_montgomery
-                 (@Field.WordByWordMontgomery.to_montgomery params m)
+                 (@Generic.WordByWordMontgomery.to_montgomery params m)
                  (PushButtonSynthesis.WordByWordMontgomery.to_montgomery
                     m machine_wordsize);
     reified_from_montgomery :
       reified_op name_of_from_montgomery
-                 (@Field.WordByWordMontgomery.from_montgomery params m)
+                 (@Generic.WordByWordMontgomery.from_montgomery params m)
                  (PushButtonSynthesis.WordByWordMontgomery.from_montgomery
                     m machine_wordsize);
     reified_nonzero :
       reified_op name_of_nonzero
-                 (@Field.WordByWordMontgomery.nonzero params m)
+                 (@Generic.WordByWordMontgomery.nonzero params m)
                  (PushButtonSynthesis.WordByWordMontgomery.nonzero
                     m machine_wordsize);
     reified_selectznz :
       reified_op name_of_selectznz
-                 (@Field.WordByWordMontgomery.selectznz params m)
+                 (@Generic.WordByWordMontgomery.selectznz params m)
                  (PushButtonSynthesis.WordByWordMontgomery.selectznz
                     m machine_wordsize);
     reified_to_bytes :
       reified_op name_of_to_bytes
-                 (@Field.WordByWordMontgomery.to_bytes params m)
+                 (@Generic.WordByWordMontgomery.to_bytes params m)
                  (PushButtonSynthesis.WordByWordMontgomery.to_bytes
                     m machine_wordsize);
     reified_from_bytes :
       reified_op name_of_from_bytes
-                 (@Field.WordByWordMontgomery.from_bytes params m)
+                 (@Generic.WordByWordMontgomery.from_bytes params m)
                  (PushButtonSynthesis.WordByWordMontgomery.from_bytes
                     m machine_wordsize) }.
 Arguments wbwmontgomery_reified_ops {names} m machine_wordsize.
@@ -237,79 +237,79 @@ Ltac specs_from_ops ops m :=
   let mul_spec :=
       (eval cbv
             [fst snd precondition postcondition
-                 Field.WordByWordMontgomery.mul
-                 Field.WordByWordMontgomery.spec_of_mul] in
-          (@Field.WordByWordMontgomery.spec_of_mul
+                 Generic.WordByWordMontgomery.mul
+                 Generic.WordByWordMontgomery.spec_of_mul] in
+          (@Generic.WordByWordMontgomery.spec_of_mul
              p m mul_name)) in
   let square_spec :=
       (eval cbv
             [fst snd precondition postcondition
-                 Field.WordByWordMontgomery.square
-                 Field.WordByWordMontgomery.spec_of_square] in
-          (@Field.WordByWordMontgomery.spec_of_square
+                 Generic.WordByWordMontgomery.square
+                 Generic.WordByWordMontgomery.spec_of_square] in
+          (@Generic.WordByWordMontgomery.spec_of_square
              p m square_name)) in
   let add_spec :=
       (eval cbv
             [fst snd precondition postcondition
-                 Field.WordByWordMontgomery.add
-                 Field.WordByWordMontgomery.spec_of_add] in
-          (@Field.WordByWordMontgomery.spec_of_add
+                 Generic.WordByWordMontgomery.add
+                 Generic.WordByWordMontgomery.spec_of_add] in
+          (@Generic.WordByWordMontgomery.spec_of_add
              p m add_name)) in
   let sub_spec :=
       (eval cbv
             [fst snd precondition postcondition
-                 Field.WordByWordMontgomery.sub
-                 Field.WordByWordMontgomery.spec_of_sub] in
-          (@Field.WordByWordMontgomery.spec_of_sub
+                 Generic.WordByWordMontgomery.sub
+                 Generic.WordByWordMontgomery.spec_of_sub] in
+          (@Generic.WordByWordMontgomery.spec_of_sub
              p m sub_name)) in
   let to_montgomery_spec :=
       (eval cbv
             [fst snd precondition postcondition
-                 Field.WordByWordMontgomery.to_montgomery
-                 Field.WordByWordMontgomery.spec_of_to_montgomery] in
-          (@Field.WordByWordMontgomery.spec_of_to_montgomery
+                 Generic.WordByWordMontgomery.to_montgomery
+                 Generic.WordByWordMontgomery.spec_of_to_montgomery] in
+          (@Generic.WordByWordMontgomery.spec_of_to_montgomery
              p m to_montgomery_name)) in
   let from_montgomery_spec :=
       (eval cbv
             [fst snd precondition postcondition
-                 Field.WordByWordMontgomery.from_montgomery
-                 Field.WordByWordMontgomery.spec_of_from_montgomery] in
-          (@Field.WordByWordMontgomery.spec_of_from_montgomery
+                 Generic.WordByWordMontgomery.from_montgomery
+                 Generic.WordByWordMontgomery.spec_of_from_montgomery] in
+          (@Generic.WordByWordMontgomery.spec_of_from_montgomery
              p m from_montgomery_name)) in
   let opp_spec :=
       (eval cbv
             [fst snd precondition postcondition
-                 Field.WordByWordMontgomery.opp
-                 Field.WordByWordMontgomery.spec_of_opp] in
-          (@Field.WordByWordMontgomery.spec_of_opp
+                 Generic.WordByWordMontgomery.opp
+                 Generic.WordByWordMontgomery.spec_of_opp] in
+          (@Generic.WordByWordMontgomery.spec_of_opp
              p m opp_name)) in
   let nonzero_spec :=
       (eval cbv
             [fst snd precondition postcondition
-                 Field.WordByWordMontgomery.nonzero
-                 Field.WordByWordMontgomery.spec_of_nonzero] in
-          (@Field.WordByWordMontgomery.spec_of_nonzero
+                 Generic.WordByWordMontgomery.nonzero
+                 Generic.WordByWordMontgomery.spec_of_nonzero] in
+          (@Generic.WordByWordMontgomery.spec_of_nonzero
              p m nonzero_name)) in
   let selectznz_spec :=
       (eval cbv
             [fst snd precondition postcondition
-                 Field.WordByWordMontgomery.selectznz
-                 Field.WordByWordMontgomery.spec_of_selectznz] in
-          (@Field.WordByWordMontgomery.spec_of_selectznz
+                 Generic.WordByWordMontgomery.selectznz
+                 Generic.WordByWordMontgomery.spec_of_selectznz] in
+          (@Generic.WordByWordMontgomery.spec_of_selectznz
              p m selectznz_name)) in
   let to_bytes_spec :=
       (eval cbv
             [fst snd precondition postcondition
-                 Field.WordByWordMontgomery.to_bytes
-                 Field.WordByWordMontgomery.spec_of_to_bytes] in
-          (@Field.WordByWordMontgomery.spec_of_to_bytes
+                 Generic.WordByWordMontgomery.to_bytes
+                 Generic.WordByWordMontgomery.spec_of_to_bytes] in
+          (@Generic.WordByWordMontgomery.spec_of_to_bytes
              p m to_bytes_name)) in
   let from_bytes_spec :=
       (eval cbv
             [fst snd precondition postcondition
-                 Field.WordByWordMontgomery.from_bytes
-                 Field.WordByWordMontgomery.spec_of_from_bytes] in
-          (@Field.WordByWordMontgomery.spec_of_from_bytes
+                 Generic.WordByWordMontgomery.from_bytes
+                 Generic.WordByWordMontgomery.spec_of_from_bytes] in
+          (@Generic.WordByWordMontgomery.spec_of_from_bytes
              p m from_bytes_name)) in
   exact {| spec_of_mul := mul_spec;
            spec_of_square := square_spec;
@@ -341,38 +341,38 @@ Ltac handle_easy_preconditions :=
 Ltac use_correctness_proofs p m :=
   let Hc := fresh in
   match goal with
-  | |- context [Field.WordByWordMontgomery.mul] =>
-    apply (@Field.WordByWordMontgomery.mul_correct
+  | |- context [Generic.WordByWordMontgomery.mul] =>
+    apply (@Generic.WordByWordMontgomery.mul_correct
              p default_inname_gen default_outname_gen m)
-  | |- context [Field.WordByWordMontgomery.square] =>
-    apply (@Field.WordByWordMontgomery.square_correct
+  | |- context [Generic.WordByWordMontgomery.square] =>
+    apply (@Generic.WordByWordMontgomery.square_correct
              p default_inname_gen default_outname_gen m)
-  | |- context [Field.WordByWordMontgomery.add] =>
-    apply (@Field.WordByWordMontgomery.add_correct
+  | |- context [Generic.WordByWordMontgomery.add] =>
+    apply (@Generic.WordByWordMontgomery.add_correct
              p default_inname_gen default_outname_gen m)
-  | |- context [Field.WordByWordMontgomery.sub] =>
-    apply (@Field.WordByWordMontgomery.sub_correct
+  | |- context [Generic.WordByWordMontgomery.sub] =>
+    apply (@Generic.WordByWordMontgomery.sub_correct
              p default_inname_gen default_outname_gen m)
-  | |- context [Field.WordByWordMontgomery.opp] =>
-    apply (@Field.WordByWordMontgomery.opp_correct
+  | |- context [Generic.WordByWordMontgomery.opp] =>
+    apply (@Generic.WordByWordMontgomery.opp_correct
              p default_inname_gen default_outname_gen m)
-  | |- context [Field.WordByWordMontgomery.to_montgomery] =>
-    apply (@Field.WordByWordMontgomery.to_montgomery_correct
+  | |- context [Generic.WordByWordMontgomery.to_montgomery] =>
+    apply (@Generic.WordByWordMontgomery.to_montgomery_correct
              p default_inname_gen default_outname_gen m)
-  | |- context [Field.WordByWordMontgomery.from_montgomery] =>
-    apply (@Field.WordByWordMontgomery.from_montgomery_correct
+  | |- context [Generic.WordByWordMontgomery.from_montgomery] =>
+    apply (@Generic.WordByWordMontgomery.from_montgomery_correct
              p default_inname_gen default_outname_gen m)
-  | |- context [Field.WordByWordMontgomery.nonzero] =>
-    apply (@Field.WordByWordMontgomery.nonzero_correct
+  | |- context [Generic.WordByWordMontgomery.nonzero] =>
+    apply (@Generic.WordByWordMontgomery.nonzero_correct
              p default_inname_gen default_outname_gen m)
-  | |- context [Field.WordByWordMontgomery.selectznz] =>
-    apply (@Field.WordByWordMontgomery.selectznz_correct
+  | |- context [Generic.WordByWordMontgomery.selectznz] =>
+    apply (@Generic.WordByWordMontgomery.selectznz_correct
              p default_inname_gen default_outname_gen m)
-  | |- context [Field.WordByWordMontgomery.to_bytes] =>
-    apply (@Field.WordByWordMontgomery.to_bytes_correct
+  | |- context [Generic.WordByWordMontgomery.to_bytes] =>
+    apply (@Generic.WordByWordMontgomery.to_bytes_correct
              p default_inname_gen default_outname_gen m)
-  | |- context [Field.WordByWordMontgomery.from_bytes] =>
-    apply (@Field.WordByWordMontgomery.from_bytes_correct
+  | |- context [Generic.WordByWordMontgomery.from_bytes] =>
+    apply (@Generic.WordByWordMontgomery.from_bytes_correct
              p default_inname_gen default_outname_gen m)
   end.
 
