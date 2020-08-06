@@ -134,7 +134,7 @@ else:
     else B.
 
   Definition distribute_balance minvalues B :=
-    fold_right (distribute_balance_step minvalues) B (seq 0 (n-1)).
+    fold_right (distribute_balance_step minvalues) B (rev (seq 0 (n-1))).
 
   (* distribute balance such that for all limbs i,
      tight_upperbounds[i] <= balance[i] *)
