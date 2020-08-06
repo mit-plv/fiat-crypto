@@ -209,7 +209,7 @@ else:
     else B.
 
   Definition distribute_balance minvalues B :=
-    fold_right (distribute_balance_step minvalues) B (seq 0 (n-1)).
+    fold_right (distribute_balance_step minvalues) B (rev (seq 0 (n-1))).
 
   Definition balance : list Z
     := encode_distributed weight n s c (List.map (Z.mul coef) tight_upperbounds) 0.
