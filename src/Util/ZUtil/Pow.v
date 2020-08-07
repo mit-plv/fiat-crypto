@@ -1,6 +1,7 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.micromega.Lia.
 Require Import Crypto.Util.ZUtil.Hints.Core.
+Require Import Crypto.Util.ListUtil.
 Require Import Lists.List.
 Local Open Scope Z_scope.
 
@@ -68,13 +69,56 @@ Module Z.
   Hint Rewrite pow_mul_base using zutil_arith : pull_Zpow.
 
   (* faster modular exponentation for computing (not sure where to put this) *)
-  Definition sq_and_multiply_mod a p m :=
+  Definition sq_and_multiply_mod_aux a p m n :=
     fold_right
       (fun i res =>
          ((a - 1) * ((p / (2 ^ (Z.of_nat i))) mod 2) + 1) * (res ^ 2) mod m)
-      a (seq 0 (Z.to_nat (Z.log2 p))).
+      (a mod m) (seq 0 n).
 
-  Lemma sq_and_multiply_mod_correct a p m (Hp : p >= 1) : sq_and_multiply_mod a p m = a ^ p mod m.
-  Proof. Admitted.
+  Definition sq_and_multiply_mod a p m :=
+    sq_and_multiply_mod_aux a p m (Z.to_nat (Z.log2 p)).
 
+  Lemma sq_and_multiply_mod_aux_S a p m n :
+    sq_and_multiply_mod_aux a p m (S n) =
+    ((a - 1) * (p mod 2) + 1) * (sq_and_multiply_mod_aux a (p / 2) m n) ^ 2 mod m.
+  Proof.
+    unfold sq_and_multiply_mod_aux; simpl.
+    repeat apply f_equal2; try lia; [now rewrite Z.div_1_r|].
+    rewrite map_seq_succ, fold_right_map; apply fold_right_ext; intros i j.
+    rewrite Z.div_div, pow_mul_base by (try apply Z.pow_pos_nonneg; lia).
+    replace (Z.of_nat i + 1) with (Z.of_nat (i + 1)) by lia; reflexivity. Qed.
+
+  Lemma sq_and_multiply_mod_correct_aux a p m n
+        (Hm : 0 < m)
+        (Hp : 1 <= p)
+        (Hn : (Z.to_nat (Z.log2 p)) = n) :
+    sq_and_multiply_mod_aux a p m n = a ^ p mod m.
+  Proof.
+    assert (0 <= Z.log2 p) by apply Z.log2_nonneg.
+    generalize dependent p; induction n; intros.
+    - assert (Z.log2 p = 0) by lia. pose proof (Z.log2_null p).
+      destruct H1; specialize (H1 H0); assert (p = 1) by lia; subst.
+      rewrite Z.pow_1_r; reflexivity.
+    - assert (0 < 2 ^ Z.of_nat n) by (apply Z.pow_pos_nonneg; lia).
+      assert (1 < p) by (apply Z.log2_lt_cancel; simpl; lia).
+      assert (1 <= p / 2) by (apply Zdiv_le_lower_bound; lia).
+      rewrite sq_and_multiply_mod_aux_S, IHn; try apply Z.log2_nonneg; try lia.
+      rewrite Z.pow_2_r, Z.mul_assoc, Z.mul_mod_idemp_r by lia.
+      rewrite Z.mul_comm, Z.mul_assoc, Z.mul_mod_idemp_r by lia.
+      rewrite Z.mul_comm; apply f_equal2; [|lia].
+      rewrite Z.mul_assoc, <- Z.pow_add_r by lia.
+      rewrite Z.add_diag. rewrite (Z.div_mod p 2) at 3 by lia.
+      rewrite Z.pow_add_r by (try apply Z.mod_pos_bound; lia).
+      apply f_equal2. reflexivity.
+      pose proof (Z.mod_pos_bound p 2 ltac:(lia)).
+      assert (p01 : p mod 2 = 0 \/ p mod 2 = 1) by lia; destruct p01 as [p0|p1];
+        rewrite ?p0, ?p1; lia.
+      replace 2 with (2 ^ 1) by reflexivity.
+      rewrite <- Z.shiftr_div_pow2, Z.log2_shiftr, Z.max_r by lia; lia. Qed.
+
+  Lemma sq_and_multiply_mod_correct a p m
+        (Hm : 0 < m)
+        (Hp : 1 <= p) :
+    sq_and_multiply_mod a p m = a ^ p mod m.
+  Proof. apply sq_and_multiply_mod_correct_aux; auto. Qed.
 End Z.
