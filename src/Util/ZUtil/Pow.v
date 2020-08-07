@@ -95,14 +95,16 @@ Module Z.
     sq_and_multiply_mod_aux a p m n = a ^ p mod m.
   Proof.
     assert (0 <= Z.log2 p) by apply Z.log2_nonneg.
-    generalize dependent p; induction n; intros.
-    - assert (Z.log2 p = 0) by lia. pose proof (Z.log2_null p).
-      destruct H1; specialize (H1 H0); assert (p = 1) by lia; subst.
+    assert (logpn : Z.log2 p = Z.of_nat n) by (rewrite <- (Z2Nat.id (Z.log2 p)) by assumption; apply f_equal; assumption).
+    generalize dependent p; induction n as [|n IHn]; intros.
+    - assert (log2p0 : Z.log2 p = 0) by lia.
+      pose proof ((proj1 (Z.log2_null p)) log2p0).
+      assert (p = 1) by lia; subst.
       rewrite Z.pow_1_r; reflexivity.
     - assert (0 < 2 ^ Z.of_nat n) by (apply Z.pow_pos_nonneg; lia).
       assert (1 < p) by (apply Z.log2_lt_cancel; simpl; lia).
       assert (1 <= p / 2) by (apply Zdiv_le_lower_bound; lia).
-      rewrite sq_and_multiply_mod_aux_S, IHn; try apply Z.log2_nonneg; try lia.
+      rewrite sq_and_multiply_mod_aux_S, IHn; try apply Z.log2_nonneg; [|lia| |].
       rewrite Z.pow_2_r, Z.mul_assoc, Z.mul_mod_idemp_r by lia.
       rewrite Z.mul_comm, Z.mul_assoc, Z.mul_mod_idemp_r by lia.
       rewrite Z.mul_comm; apply f_equal2; [|lia].
@@ -112,9 +114,12 @@ Module Z.
       apply f_equal2. reflexivity.
       pose proof (Z.mod_pos_bound p 2 ltac:(lia)).
       assert (p01 : p mod 2 = 0 \/ p mod 2 = 1) by lia; destruct p01 as [p0|p1];
-        rewrite ?p0, ?p1; lia.
+        rewrite ?p0, ?p1; lia. 
+      replace 2 with (2 ^ 1) by reflexivity. 
+      rewrite <- Z.shiftr_div_pow2, Z.log2_shiftr, Z.max_r by lia.
+      rewrite logpn, Nat2Z.inj_succ, Z.sub_1_r, Z.pred_succ by lia; apply Nat2Z.id.
       replace 2 with (2 ^ 1) by reflexivity.
-      rewrite <- Z.shiftr_div_pow2, Z.log2_shiftr, Z.max_r by lia; lia. Qed.
+      rewrite <- Z.shiftr_div_pow2, Z.log2_shiftr, Z.max_r; lia. Qed.
 
   Lemma sq_and_multiply_mod_correct a p m
         (Hm : 0 < m)
