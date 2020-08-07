@@ -26,6 +26,7 @@ INSTALLDEFAULTROOT := Crypto
 	install-rewriter clean-rewriter rewriter \
 	install-coqprime clean-coqprime coqprime coqprime-all \
 	bedrock2 clean-bedrock2 install-bedrock2 coqutil clean-coqutil install-coqutil \
+	rupicola clean-rupicola install-rupicola \
 	install-standalone install-standalone-ocaml install-standalone-haskell \
 	uninstall-standalone uninstall-standalone-ocaml uninstall-standalone-haskell \
 	util all-except-generated \
@@ -318,6 +319,9 @@ BEDROCK2_NAME := bedrock2
 COQUTIL_FOLDER := bedrock2/deps/coqutil
 COQUTIL_SRC := $(COQUTIL_FOLDER)/src
 COQUTIL_NAME := coqutil
+RUPICOLA_FOLDER := rupicola
+RUPICOLA_SRC := $(RUPICOLA_FOLDER)/src
+RUPICOLA_NAME := rupicola
 # Work around COQBUG(https://github.com/coq/coq/issues/11834)
 SYS_OS_TYPE := $(shell "$(OCAMLFIND)" ocamlc etc/sys_os_type.ml -o etc/sys_os_type.exe && etc/sys_os_type.exe)
 COQPATH_TEMP:=
@@ -339,11 +343,11 @@ endif
 ifneq ($(SKIP_BEDROCK2),1)
 ifneq ($(EXTERNAL_BEDROCK2),1)
 COQPATH_TEMP:=${CURDIR_SAFE}/$(BEDROCK2_SRC)$(COQPATH_SEP)${CURDIR_SAFE}/$(COQUTIL_SRC)$(COQPATH_SEP)$(COQPATH_TEMP)
-deps: coqutil bedrock2
-$(VOFILES): | coqutil bedrock2
-$(ALLDFILES): | coqutil bedrock2
-cleanall:: clean-bedrock2 clean-coqutil
-install: install-bedrock2 install-coqutil
+deps: coqutil bedrock2 rupicola
+$(VOFILES): | coqutil bedrock2 rupicola
+$(ALLDFILES): | coqutil bedrock2 rupicola
+cleanall:: clean-bedrock2 clean-coqutil clean-rupicola
+install: install-bedrock2 install-coqutil install-rupicola
 endif
 endif
 
@@ -397,6 +401,15 @@ clean-bedrock2:
 
 install-bedrock2:
 	$(MAKE) --no-print-directory -C $(BEDROCK2_FOLDER) install
+
+rupicola:
+	$(MAKE) --no-print-directory -C $(RUPICOLA_FOLDER)
+
+clean-rupicola:
+	$(MAKE) --no-print-directory -C $(RUPICOLA_FOLDER) clean
+
+install-rupicola:
+	$(MAKE) --no-print-directory -C $(RUPICOLA_FOLDER) install
 endif
 
 # Note that the bit about OTHERFLAGS is to work around COQBUG(https://github.com/coq/coq/issues/10905)
