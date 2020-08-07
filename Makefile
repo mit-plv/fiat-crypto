@@ -312,10 +312,10 @@ REWRITER_FOLDER := rewriter
 REWRITER_SRC := $(REWRITER_FOLDER)/src
 COQPRIME_FOLDER := coqprime
 COQPRIME_SRC := $(COQPRIME_FOLDER)/src
-BEDROCK2_FOLDER := bedrock2/bedrock2
+BEDROCK2_FOLDER := rupicola/bedrock2/bedrock2
 BEDROCK2_SRC := $(BEDROCK2_FOLDER)/src
 BEDROCK2_NAME := bedrock2
-COQUTIL_FOLDER := bedrock2/deps/coqutil
+COQUTIL_FOLDER := rupicola/bedrock2/deps/coqutil
 COQUTIL_SRC := $(COQUTIL_FOLDER)/src
 COQUTIL_NAME := coqutil
 RUPICOLA_FOLDER := rupicola
@@ -401,7 +401,7 @@ clean-bedrock2:
 install-bedrock2:
 	$(MAKE) --no-print-directory -C $(BEDROCK2_FOLDER) install
 
-rupicola:
+rupicola: bedrock2
 	$(MAKE) --no-print-directory -C $(RUPICOLA_FOLDER)
 
 clean-rupicola:
