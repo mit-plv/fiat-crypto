@@ -58,6 +58,26 @@ Section encode_distributed.
     : length (encode_distributed minvalues x) = n.
   Proof using Type. cbv [encode_distributed]; repeat distr_length. Qed.
   Hint Rewrite length_encode_distributed : distr_length.
+  Lemma nth_default_encode_distributed_bounded_eq'
+        (** We add an extra hypothesis that is too bulky to prove *)
+        (Hadd : forall x y, length x = n -> length y = n -> add weight n x y = map2 Z.add x y)
+        minvalues x i d
+    : nth_default d (encode_distributed minvalues x) i
+      = if Decidable.dec (i < n)%nat
+        then (((x - Positional.eval weight n (firstn n (minvalues ++ repeat 0 n)))
+                 mod (s - Associational.eval c)) mod weight (S i))
+               / weight i
+             + nth_default 0 minvalues i
+        else d.
+  Proof using wprops.
+    cbv [encode_distributed].
+    rewrite Hadd by repeat distr_length.
+    rewrite nth_default_map2 with (d1:=0) (d2:=0);
+      autorewrite with push_nth_default distr_length.
+    autorewrite with natsimplify.
+    break_innermost_match; try lia.
+    now rewrite nth_default_out_of_bounds by lia.
+  Qed.
   Lemma nth_default_encode_distributed_bounded'
         (** We add an extra hypothesis that is too bulky to prove *)
         (Hadd : forall x y, length x = n -> length y = n -> add weight n x y = map2 Z.add x y)
@@ -66,16 +86,10 @@ Section encode_distributed.
         (Hn : (i < n)%nat)
     : nth_default d' minvalues i <= nth_default d (encode_distributed minvalues x) i.
   Proof using wprops.
-    cbv [encode_distributed].
-    rewrite (nth_default_in_bounds 0 d') by lia.
     rewrite (nth_default_in_bounds 0 d) by repeat distr_length.
-    rewrite Hadd by repeat distr_length.
-    rewrite nth_default_map2 with (d1:=0) (d2:=0);
-      autorewrite with push_nth_default distr_length.
-    rewrite Nat.min_assoc, Nat.min_id, (Nat.min_l n (_ + n)) by lia.
-    break_innermost_match; try lia;
-      autorewrite with simpl_nth_default;
-      try solve [ destruct_head'_or; try lia ].
+    rewrite (nth_default_in_bounds 0 d') by lia.
+    rewrite nth_default_encode_distributed_bounded_eq' by auto.
+    break_innermost_match; try lia.
     match goal with |- ?x <= ?y + ?x => cut (0 <= y); [ lia | ] end.
     auto with zarith.
   Qed.
