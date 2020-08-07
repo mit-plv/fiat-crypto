@@ -72,7 +72,7 @@ jobs:
     - name: add Coq matcher
       run: echo "::add-matcher::.github/coq.json"
     - name: deps
-      run: etc/ci/github-actions-make.sh -j2 deps
+      run: make -j2 deps
     - name: all
       run: etc/ci/github-actions-make.sh -j2 all
     - name: upload OCaml files
