@@ -11,3 +11,6 @@
 [submodule "rewriter"]
 	path = rewriter
 	url = https://github.com/mit-plv/rewriter.git
+[submodule "rupicola"]
+	path = rupicola
+	url = https://github.com/mit-plv/rupicola.git
