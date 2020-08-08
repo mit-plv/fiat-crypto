@@ -26,10 +26,11 @@ The translation process mirrors bedrock2 abstraction levels (see bedrock2's
 2. `cmd`, for expressions that do set local variables. In bedrock2 these are
    also allowed to store data. However, in this fiat-crypto backend the `cmd`
 level is not allowed to read from or write to memory.
-3. `func`, the top level, which is allowed to handle memory. The bedrock2 code
-   produced by this backend always loads input arrays into local variables
-immediately, and handles everything in local variables until it's ready to
-store any output arrays at the end.
+3. `func`, the top level, which wraps the output of the `cmd` phase and
+   generates additional code to handle memory. The bedrock2 code produced by
+   this backend always loads input arrays into local variables immediately
+   after function invocation, and keeps everything in local variables until
+   it's ready to store any output arrays at the end.
 
 The choice to not allow the `cmd` level to modify memory was a tradeoff that
 makes sense for the specific domain in which fiat-crypto operates, because you
@@ -54,15 +55,18 @@ the return type.
 ## Restrictions
 
 Input to the bedrock2 translation must:
+
 - contain only the subset of operations found in `Translation/Expr.v`
-- have only one size of integer (uses options `widen_bytes` and
-  `widen_carries`)
-- not have functions that return multiple values, as these are untranslatable
-  to bedrock2\*
+- have only one size of integer (see rewriter pipeline options `widen_bytes`
+  and `widen_carry`)
+- not have arithmetic oprations that return multiple values (for example, low
+  and high half of the output), as these are untranslatable to bedrock2\*
 - not use types other than integers, lists of integers, and tuples, although
   tuples can be arbitrarily nested
 - not assign anything to lists
 
-\* bedrock2 doesn't support carries or assigning to multiple values, but if it
-did start supporting them in the future the translation has most of the code in
-place to handle that.
+\* bedrock2 does support returning multiple values from a function, but
+currently the compiler does not do function inlining so the relevant
+substitution is peformed by the fiat-crypto rewriter instead. If bedrock2
+started supporting multi-return arithmetic operations in the future the
+translation has most of the code in place to handle that.
