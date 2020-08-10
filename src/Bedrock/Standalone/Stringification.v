@@ -100,7 +100,7 @@ End with_parameters.
 
 Definition bedrock_func_to_lines (f : bedrock_func)
   : list string :=
-  [@c_func BasicCSyntax.to_c_parameters f].
+  [c_func f].
 
 (* TODO: for now, name_list is just ignored -- could probably make it not ignored *)
 Definition Bedrock2_ToFunctionLines
