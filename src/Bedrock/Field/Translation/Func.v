@@ -16,7 +16,6 @@ Import Types.Notations.
 Section Func.
   Context {p : parameters}.
   Existing Instance rep.Z.
-  Local Notation bedrock_func := (string * (list string * list string * cmd))%type.
 
   (* Feeds arguments to function one by one and then calls translate_cmd *)
   Fixpoint translate_func' {t} (e : @API.expr ltype t) (nextn : nat)

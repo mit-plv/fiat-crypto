@@ -56,7 +56,6 @@ Local Notation loose_bounds := (UnsaturatedSolinasHeuristics.loose_bounds n s c)
 Local Notation tight_bounds := (UnsaturatedSolinasHeuristics.tight_bounds n s c).
 
 Local Open Scope string_scope.
-Local Coercion name_of_func (f : bedrock_func) := fst f.
 Local Infix "*" := sep : sep_scope.
 Delimit Scope sep_scope with sep.
 

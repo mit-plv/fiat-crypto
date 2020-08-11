@@ -80,7 +80,7 @@ Section op.
 
   Definition make_bedrock_func
              {t} (name : string) (op : operation t) (res : API.Expr t)
-    : bedrock_func :=
+    : func :=
     (name, make_bedrock_func_with_sizes
              (op.(input_array_sizes)) (op.(output_array_sizes))
              (op.(input_array_lengths)) res).
