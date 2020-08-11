@@ -25,6 +25,7 @@ Require Import Crypto.UnsaturatedSolinasHeuristics.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import bedrock2.Semantics.
 Import ListNotations.
+Import Syntax.Coercions.
 Local Open Scope Z_scope.
 
 Require Import Crypto.Spec.ModularArithmetic.
@@ -79,12 +80,9 @@ Local Instance curve25519_bedrock2_scmul121665_correctness :
   bedrock2_unsaturated_solinas_scmul_correctness.
 prove_correctness_scmul reified_scmul121665 n s c machine_wordsize. Defined.
 
-Require Import bedrock2.Syntax.
 Require Import bedrock2.NotationsCustomEntry.
-Local Coercion literal (z : Z) : expr := expr.literal z.
-Local Coercion var (x : string) : expr := expr.var x.
 
-Definition ladderstep : bedrock_func :=
+Definition ladderstep : Syntax.func :=
   let X1 := "X1" in
   let X2 := "X2" in
   let Z2 := "Z2" in
