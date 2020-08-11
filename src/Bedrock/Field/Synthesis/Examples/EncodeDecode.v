@@ -23,6 +23,7 @@ Require Import Crypto.COperationSpecifications.
 Require Import Crypto.UnsaturatedSolinasHeuristics.
 Require Import bedrock2.Semantics.
 Import ListNotations.
+Import Syntax.Coercions.
 Local Open Scope Z_scope.
 
 Existing Instances
@@ -30,7 +31,6 @@ Existing Instances
          curve25519_bedrock2_funcs curve25519_bedrock2_specs
          curve25519_bedrock2_correctness.
 Local Open Scope string_scope.
-Local Coercion name_of_func (f : bedrock_func) := fst f.
 
 (* Notations to make spec more readable *)
 Local Notation n := X25519_64.n.
@@ -53,7 +53,7 @@ Local Notation prime_bytes_bounds_value :=
 Local Infix "*" := sep : sep_scope.
 Delimit Scope sep_scope with sep.
 
-Definition encode_decode : bedrock_func :=
+Definition encode_decode : func :=
   let x := "x" in
   let tmp := "tmp" in
   ("encode_decode",

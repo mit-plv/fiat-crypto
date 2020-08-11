@@ -37,7 +37,6 @@ Import Types.Notations.
 
 Section Func.
   Context {p : parameters} {p_ok : @ok p}.
-  Local Notation bedrock_func := (string * (list string * list string * cmd))%type.
 
   Local Existing Instance rep.Z.
   Local Instance sem_ok : Semantics.parameters_ok semantics
@@ -88,7 +87,7 @@ Section Func.
       forall (tr : Semantics.trace)
              (locals : Semantics.locals)
              (mem : Semantics.mem)
-             (functions : list bedrock_func),
+             (functions : list func),
         (* locals doesn't contain variables we could overwrite *)
         (forall n nvars,
             (nextn <= n)%nat ->
@@ -505,14 +504,14 @@ Section Func.
          (function arguments, function return variable names, body) *)
       let out := translate_func
                    e argnames arglengths argsizes retnames retsizes in
-      let f : bedrock_func := (fname, fst out) in
+      let f : func := (fname, fst out) in
       let lengths := snd out in
       forall (tr : Semantics.trace)
              (mem : Semantics.mem)
              (flat_args : list Semantics.word)
              (out_ptrs : list Semantics.word)
              (argvalues : list Semantics.word)
-             (functions : list bedrock_func)
+             (functions : list func)
              (R : Semantics.mem -> Prop),
         (* argument values are the concatenation of true argument values
            and output pointer values *)

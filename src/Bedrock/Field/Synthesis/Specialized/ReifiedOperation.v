@@ -27,7 +27,7 @@ Record reified_op {p t}
        {start : ErrorT.ErrorT Pipeline.ErrorMessage
                               (API.Expr t)} :=
   { res : API.Expr t;
-    computed_bedrock_func : bedrock_func;
+    computed_bedrock_func : Syntax.func;
     computed_bedrock_func_eq :
       computed_bedrock_func = make_bedrock_func name op res;
     reified_eq : start = ErrorT.Success res;

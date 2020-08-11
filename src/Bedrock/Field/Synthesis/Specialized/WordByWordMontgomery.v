@@ -20,17 +20,17 @@ Import ListNotations.
 Import AbstractInterpretation.Compilers.
 
 Class bedrock2_wbwmontgomery_funcs :=
-  { mul : bedrock_func;
-    square : bedrock_func;
-    add : bedrock_func;
-    sub : bedrock_func;
-    opp : bedrock_func;
-    to_montgomery : bedrock_func;
-    from_montgomery : bedrock_func;
-    nonzero : bedrock_func;
-    selectznz : bedrock_func;
-    to_bytes : bedrock_func;
-    from_bytes : bedrock_func }.
+  { mul : func;
+    square : func;
+    add : func;
+    sub : func;
+    opp : func;
+    to_montgomery : func;
+    from_montgomery : func;
+    nonzero : func;
+    selectznz : func;
+    to_bytes : func;
+    from_bytes : func }.
 
 Class bedrock2_wbwmontgomery_specs
       {funcs : bedrock2_wbwmontgomery_funcs }:=

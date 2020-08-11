@@ -98,7 +98,7 @@ Section with_parameters.
     end.
 End with_parameters.
 
-Definition bedrock_func_to_lines (f : bedrock_func)
+Definition bedrock_func_to_lines (f : func)
   : list string :=
   [c_func f].
 
@@ -129,7 +129,7 @@ Definition Bedrock2_ToFunctionLines
         | Some insizes, Some outsizes =>
           let out := translate_func
                        e innames inlengths insizes outnames outsizes in
-          let f : bedrock_func := (name, fst out) in
+          let f : func := (name, fst out) in
           let outlengths := snd out in
           if error_free_cmd (snd (snd f))
           then

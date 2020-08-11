@@ -41,9 +41,6 @@ Global Existing Instances Types.rep.Z Types.rep.listZ_mem.
 Local Definition ERROR := "ERROR"%string.
 
 Section Defs.
-  Definition bedrock_func : Type :=
-    string * (list string * list string * cmd.cmd).
-
   (* quick check to make sure the expression produced no errors *)
   Fixpoint error_free_expr (x : Syntax.expr) : bool :=
     match x with

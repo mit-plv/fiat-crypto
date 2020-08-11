@@ -20,15 +20,15 @@ Import ListNotations.
 Import AbstractInterpretation.Compilers.
 
 Class bedrock2_unsaturated_solinas_funcs :=
-  { carry_mul : bedrock_func;
-    carry_square : bedrock_func;
-    carry : bedrock_func;
-    add : bedrock_func;
-    sub : bedrock_func;
-    opp : bedrock_func;
-    selectznz : bedrock_func;
-    to_bytes : bedrock_func;
-    from_bytes : bedrock_func }.
+  { carry_mul : func;
+    carry_square : func;
+    carry : func;
+    add : func;
+    sub : func;
+    opp : func;
+    selectznz : func;
+    to_bytes : func;
+    from_bytes : func }.
 
 Class bedrock2_unsaturated_solinas_specs
       {funcs : bedrock2_unsaturated_solinas_funcs }:=
@@ -74,7 +74,7 @@ Class bedrock2_unsaturated_solinas_correctness
         spec_of_from_bytes (from_bytes :: functions) }.
 
 Class bedrock2_unsaturated_solinas_scmul_func :=
-  { carry_scmul_const : bedrock_func }.
+  { carry_scmul_const : func }.
 
 Class bedrock2_unsaturated_solinas_scmul_spec
       {func : bedrock2_unsaturated_solinas_scmul_func }:=
