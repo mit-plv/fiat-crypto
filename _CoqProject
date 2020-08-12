@@ -179,6 +179,7 @@ src/Spec/Test/X25519.v
 src/Stringification/C.v
 src/Stringification/Go.v
 src/Stringification/IR.v
+src/Stringification/JSON.v
 src/Stringification/Java.v
 src/Stringification/Language.v
 src/Stringification/Rust.v
