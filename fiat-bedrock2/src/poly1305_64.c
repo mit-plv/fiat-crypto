@@ -13,6 +13,20 @@
 /* balance = [0x1ffffffffff6, 0xffffffffffe, 0xffffffffffe] */
 
 #include <stdint.h>
+#include <memory.h>
+
+// LITTLE-ENDIAN memory access is REQUIRED
+// the following two functions are required to work around -fstrict-aliasing
+static inline uintptr_t _br2_load(uintptr_t a, size_t sz) {
+  uintptr_t r = 0;
+  memcpy(&r, (void*)a, sz);
+  return r;
+}
+
+static inline void _br2_store(uintptr_t a, uintptr_t v, size_t sz) {
+  memcpy((void*)a, &v, sz);
+}
+
 
 
 /*
