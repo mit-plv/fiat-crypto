@@ -175,7 +175,7 @@ Definition OutputBedrock2API : ToString.OutputLanguageAPI :=
 
     ToString.ToFunctionLines := @Bedrock2_ToFunctionLines;
 
-    ToString.header := fun _ _ _ _ => ["#include <stdint.h>"];
+    ToString.header := fun _ _ _ _ => [ToCString.prelude];
 
     ToString.footer := fun _ _ _ _ => [];
 
