@@ -80,6 +80,14 @@ Here are some examples of ways to invoke the binaries (from the directories that
 
 You can find more examples in the `Makefile`.
 
+Note that for large primes, you may need to increase the stack size to avoid stack overflows.  For example:
+
+    ulimit -S -s 1048576; ./word_by_word_montgomery --static gost_512_paramSetB 32 '2^511 + 111'
+
+This sets the stack size to 1 GB (= 1024 MB = 1024 * 1024 KB = 1048576 KB) before running the command.
+As of the last edit of this line, this command takes about an hour to run, but does in fact complete successfully.
+Without a sufficiently large stack-size, it instead stack overflows.
+
 Usage (Generating Bedrock2 Files)
 ---------------------------------
 Output is supported to the research language [bedrock2](https://github.com/mit-plv/bedrock2).
