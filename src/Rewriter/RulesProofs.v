@@ -750,7 +750,7 @@ Proof using Type.
 
   start_proof; auto; intros; try lia.
   all: repeat interp_good_t_step_related.
-  all: systematically_handle_casts; try reflexivity.
+  all: systematically_handle_casts; autorewrite with zsimplify_fast; try reflexivity.
   all: rewrite !ident.platform_specific_cast_0_is_mod, ?Z.sub_add, ?Z.mod_mod by lia; try reflexivity.
   all: progress specialize_by lia.
   all: try match goal with

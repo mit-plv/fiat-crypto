@@ -203,7 +203,7 @@ BEDROCK2_UNSATURATED_SOLINAS := src/ExtractionOCaml/bedrock2_unsaturated_solinas
 BEDROCK2_WORD_BY_WORD_MONTGOMERY := src/ExtractionOCaml/bedrock2_word_by_word_montgomery
 
 BEDROCK2_ARGS := --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select
-BEDROCK2_EXTRA_CFLAGS := -Wno-error=unused-but-set-variable -Wno-error=tautological-compare
+BEDROCK2_EXTRA_CFLAGS := -Wno-error=unused-but-set-variable
 
 GO_EXTRA_ARGS_ALL := --cmovznz-by-mul
 GO_EXTRA_ARGS_64  := --no-wide-int $(GO_EXTRA_ARGS_ALL)
