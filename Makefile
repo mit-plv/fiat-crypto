@@ -30,16 +30,16 @@ INSTALLDEFAULTROOT := Crypto
 	install-standalone install-standalone-ocaml install-standalone-haskell \
 	uninstall-standalone uninstall-standalone-ocaml uninstall-standalone-haskell \
 	util all-except-generated \
-	c-files bedrock2-files rust-files go-files java-files generated-files \
-	lite-c-files lite-bedrock2-files lite-rust-files lite-go-files lite-java-files lite-generated-files \
+	c-files bedrock2-files rust-files go-files json-files java-files generated-files \
+	lite-c-files lite-bedrock2-files lite-rust-files lite-go-files lite-json-files lite-java-files lite-generated-files \
 	bedrock2-backend \
 	deps \
 	nobigmem print-nobigmem \
 	lite only-heavy printlite \
 	all-except-compiled \
 	some-early pre-standalone pre-standalone-extracted standalone standalone-haskell standalone-ocaml \
-	test-c-files test-bedrock2-files test-rust-files test-go-files test-java-files \
-	only-test-c-files only-test-bedrock2-files only-test-rust-files only-test-go-files only-test-java-files \
+	test-c-files test-bedrock2-files test-rust-files test-go-files test-json-files test-java-files \
+	only-test-c-files only-test-bedrock2-files only-test-rust-files only-test-go-files only-test-json-files only-test-java-files \
 	javadoc only-javadoc \
 	check-output accept-output
 
@@ -128,6 +128,7 @@ C_DIR := fiat-c/src/
 BEDROCK2_DIR := fiat-bedrock2/src/
 RUST_DIR := fiat-rust/src/
 GO_DIR := fiat-go/src/
+JSON_DIR := fiat-json/src/
 JAVA_DIR := fiat-java/src/
 JAVADOC_DIR := fiat-java/doc/
 
@@ -191,12 +192,14 @@ ALL_C_FILES := $(patsubst %,$(C_DIR)%.c,$(ALL_BASE_FILES))
 ALL_BEDROCK2_FILES := $(patsubst %,$(BEDROCK2_DIR)%.c,$(filter-out $(BASE_FILES_NEEDING_INT128),$(ALL_BASE_FILES)))
 ALL_RUST_FILES := $(patsubst %,$(RUST_DIR)%.rs,$(ALL_BASE_FILES))
 ALL_GO_FILES := $(patsubst %,$(GO_DIR)%.go,$(filter-out $(BASE_FILES_NEEDING_INT128),$(ALL_BASE_FILES)))
+ALL_JSON_FILES := $(patsubst %,$(JSON_DIR)%.json,$(ALL_BASE_FILES))
 ALL_JAVA_FILES := $(patsubst %,$(JAVA_DIR)%.java,$(call JAVA_RENAME,$(filter-out $(BASE_FILES_NEEDING_INT128),$(ALL_BASE_FILES))))
 
 LITE_C_FILES := $(patsubst %,$(C_DIR)%.c,$(LITE_BASE_FILES))
 LITE_BEDROCK2_FILES := $(patsubst %,$(BEDROCK2_DIR)%.c,$(filter-out $(BASE_FILES_NEEDING_INT128),$(LITE_BASE_FILES)))
 LITE_RUST_FILES := $(patsubst %,$(RUST_DIR)%.rs,$(LITE_BASE_FILES))
 LITE_GO_FILES := $(patsubst %,$(GO_DIR)%.go,$(filter-out $(BASE_FILES_NEEDING_INT128),$(LITE_BASE_FILES)))
+LITE_JSON_FILES := $(patsubst %,$(JSON_DIR)%.json,$(LITE_BASE_FILES))
 LITE_JAVA_FILES := $(patsubst %,$(JAVA_DIR)%.java,$(call JAVA_RENAME,$(filter-out $(BASE_FILES_NEEDING_INT128),$(LITE_BASE_FILES))))
 
 BEDROCK2_UNSATURATED_SOLINAS := src/ExtractionOCaml/bedrock2_unsaturated_solinas
@@ -237,8 +240,8 @@ OUTPUT_PREOUTS := \
 CHECK_OUTPUTS := $(addprefix check-,$(OUTPUT_PREOUTS))
 ACCEPT_OUTPUTS := $(addprefix accept-,$(OUTPUT_PREOUTS))
 
-generated-files: c-files rust-files go-files java-files
-lite-generated-files: lite-c-files lite-rust-files lite-go-files lite-java-files
+generated-files: c-files rust-files go-files json-files java-files
+lite-generated-files: lite-c-files lite-rust-files lite-go-files lite-json-files lite-java-files
 all-except-compiled: coq pre-standalone-extracted check-output
 all-except-generated: standalone-ocaml perf-standalone all-except-compiled
 all: all-except-generated generated-files
@@ -253,12 +256,14 @@ c-files: $(ALL_C_FILES)
 bedrock2-files: $(ALL_BEDROCK2_FILES)
 rust-files: $(ALL_RUST_FILES)
 go-files: $(ALL_GO_FILES)
+json-files: $(ALL_JSON_FILES)
 java-files: $(ALL_JAVA_FILES)
 
 lite-c-files: $(LITE_C_FILES)
 lite-bedrock2-files: $(LITE_BEDROCK2_FILES)
 lite-rust-files: $(LITE_RUST_FILES)
 lite-go-files: $(LITE_GO_FILES)
+lite-json-files: $(LITE_JSON_FILES)
 lite-java-files: $(LITE_JAVA_FILES)
 
 lite: $(LITE_VOFILES)
@@ -524,6 +529,25 @@ $(addprefix only-test-,$(ALL_GO_FILES)) : only-test-% :
 
 test-go-files: $(addprefix test-,$(ALL_GO_FILES))
 only-test-go-files: $(addprefix only-test-,$(ALL_GO_FILES))
+
+
+$(ALL_JSON_FILES) : $(JSON_DIR)%.json : $$($$($$*_BINARY_NAME))
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok1 $@.ok2
+	$(HIDE)(($(TIMER) $($($*_BINARY_NAME)) --lang JSON $($*_DESCRIPTION) $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok1) | jq -s . && touch $@.ok2) > $@.tmp
+	$(HIDE)(rm $@.ok1 $@.ok2 && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
+
+.PHONY: $(addprefix test-,$(ALL_JSON_FILES))
+.PHONY: $(addprefix only-test-,$(ALL_JSON_FILES))
+
+$(addprefix test-,$(ALL_JSON_FILES)) : test-% : %
+	jq . >/dev/null <$*
+
+$(addprefix only-test-,$(ALL_JSON_FILES)) : only-test-% :
+	jq . >/dev/null <$*
+
+test-json-files: $(addprefix test-,$(ALL_JSON_FILES))
+only-test-json-files: $(addprefix only-test-,$(ALL_JSON_FILES))
 
 $(ALL_JAVA_FILES) : $(JAVA_DIR)%.java : $$($$(JAVA_$$*_BINARY_NAME))
 	$(SHOW)'SYNTHESIZE > $@'
