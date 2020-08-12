@@ -988,10 +988,25 @@ Section with_bitwidth.
   Definition multiret_split_rewrite_rulesT : Datatypes.list (Datatypes.bool * Prop)
     := Eval cbv [myapp mymap myflatten] in
         myflatten
-          [mymap
-             do_again
-             [
-             ]
+          [mymap dont_do_again []
+           ; mymap
+               do_again
+               [(forall A B x y, @fst A B (x, y) = x)
+                ; (forall A B x y, @snd A B (x, y) = y)
+                    (** In order to avoid tautological compares, we need to deal with carry/borrows being 0 *)
+                ; (forall r0 s x y r1 r2,
+                      0 ∈ r0 ->
+                      cstZZ r1 r2 (Z.add_with_get_carry_full s (cstZ r0 ('0)) x y)
+                      = cstZZ r1 r2 (Z.add_get_carry_full s x y))
+                ; (forall r0 s x y r1 r2,
+                      0 ∈ r0 ->
+                      cstZZ r1 r2 (Z.sub_with_get_borrow_full s (cstZ r0 ('0)) x y)
+                      = cstZZ r1 r2 (Z.sub_get_borrow_full s x y))
+                ; (forall r0 s x y r1 r2,
+                      0 ∈ r0 ->
+                      cstZZ r1 r2 (Z.sub_with_get_borrow_full s y x (cstZ r0 ('0)))
+                      = cstZZ r1 r2 (Z.sub_get_borrow_full s x y))
+               ]
            ; mymap
                dont_do_again
                [(forall A B x y, @fst A B (x, y) = x)
