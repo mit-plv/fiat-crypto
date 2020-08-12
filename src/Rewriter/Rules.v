@@ -989,136 +989,140 @@ Section with_bitwidth.
     := Eval cbv [myapp mymap myflatten] in
         myflatten
           [mymap
-             dont_do_again
-             [(forall A B x y, @fst A B (x, y) = x)
-              ; (forall A B x y, @snd A B (x, y) = y)
-              ; ((** At this point, we need zeros to be casted up to bitwidth range, rather than to 0-range, so we add a rule to widen the casts *)
-               forall c rc,
-                 c ∈ rc -> c ∈ singlewidth_range -> rc <> singlewidth_range
-                 -> cstZ rc ('c) = singlewidth ('c))
-              ; (forall x y rpow2_bitwidth,
-                  0 <= lgcarrymax <= bitwidth -> 2^bitwidth ∈ rpow2_bitwidth
-                  -> singlewidth_carry (Z.add_get_carry_full (cstZ rpow2_bitwidth ('(2^bitwidth))) (singlewidth x) (singlewidth y))
-                     = (dlet sum_xy := singlewidth (singlewidth x + singlewidth y) in
-                            dlet carry_xy := carrywidth (Z.ltz (singlewidth sum_xy) (singlewidth x)) in
-                            (singlewidth sum_xy, carrywidth carry_xy)))
-              ; (forall c x y rpow2_bitwidth,
-                    0 <= lgcarrymax <= bitwidth -> 2^bitwidth ∈ rpow2_bitwidth
-                    -> singlewidth_carry (Z.add_with_get_carry_full (cstZ rpow2_bitwidth ('(2^bitwidth))) (carrywidth c) (singlewidth x) (singlewidth y))
-                       = (dlet sum_cx := singlewidth (carrywidth c + singlewidth x) in
-                              dlet carry_cx := carrywidth (Z.ltz (singlewidth sum_cx) (singlewidth x)) in
-                              dlet sum_cxy := singlewidth (singlewidth sum_cx + singlewidth y) in
-                              dlet carry_cx_y := carrywidth (Z.ltz (singlewidth sum_cxy) (singlewidth y)) in
-                              dlet carry_cxy := carrywidth (carrywidth carry_cx + carrywidth carry_cx_y) in
-                              (singlewidth sum_cxy, carrywidth carry_cxy)))
-
-              ; (forall x y rpow2_bitwidth,
-                    0 <= lgcarrymax <= bitwidth -> 2^bitwidth ∈ rpow2_bitwidth
-                    -> singlewidth_carry (Z.sub_get_borrow_full (cstZ rpow2_bitwidth ('(2^bitwidth))) (singlewidth x) (singlewidth y))
-                       = (dlet diff_xy := singlewidth (singlewidth x - singlewidth y) in
-                              dlet borrow_xy := carrywidth (Z.ltz (singlewidth x) (singlewidth diff_xy)) in
-                              (singlewidth diff_xy, carrywidth borrow_xy)))
-              ; (forall c x y rpow2_bitwidth,
-                    0 <= lgcarrymax <= bitwidth -> 2^bitwidth ∈ rpow2_bitwidth
-                    -> singlewidth_carry (Z.sub_with_get_borrow_full (cstZ rpow2_bitwidth ('(2^bitwidth))) (carrywidth c) (singlewidth x) (singlewidth y))
-                       = (dlet diff_xy := singlewidth (singlewidth x - singlewidth y) in
-                              dlet borrow_xy := carrywidth (Z.ltz (singlewidth x) (singlewidth diff_xy)) in
-                              dlet diff_xyc := singlewidth (singlewidth diff_xy - carrywidth c) in
-                              dlet borrow_xy_c := carrywidth (Z.ltz (singlewidth diff_xy) (singlewidth diff_xyc)) in
-                              dlet borrow_xyc := carrywidth (carrywidth borrow_xy + carrywidth borrow_xy_c) in
-                              (singlewidth diff_xyc, carrywidth borrow_xyc)))
-
-              ; (forall x y rpow2_bitwidth,
-                    0 <= lgcarrymax <= bitwidth -> 2^bitwidth ∈ rpow2_bitwidth
-                    -> pairsinglewidth (Z.mul_split (cstZ rpow2_bitwidth ('(2^bitwidth))) (singlewidth x) (singlewidth y))
-                       = (dlet low := singlewidth (singlewidth x * singlewidth y) in
-                              dlet high := singlewidth (Z.mul_high (cstZ rpow2_bitwidth ('(2^bitwidth))) (singlewidth x) (singlewidth y)) in
-                              (singlewidth low, singlewidth high)))
-              ; (forall x y two_pow_n r,
-                    0 <= lgcarrymax <= bitwidth
-                    -> two_pow_n = 2 ^ Z.log2 two_pow_n
-                    -> 0 < Z.log2 two_pow_n < bitwidth
-                    -> bitwidth < Z.log2 two_pow_n + lgcarrymax
-                    -> two_pow_n ∈ r
-                    -> singlewidth_carry
-                         (Z.add_get_carry_full (cstZ r ('two_pow_n)) (singlewidth x) (singlewidth y))
-                       = (dlet sum_xy := singlewidth (singlewidth x + singlewidth y) in
-                              dlet carry_xy := carrywidth (Z.ltz (singlewidth sum_xy) (singlewidth x)) in
-                              dlet low := singlewidth
-                                            (Z.land (singlewidth sum_xy) (singlewidth ('(two_pow_n - 1)))) in
-                              dlet high :=
-                            singlewidth
-                              (Z.add (singlewidth (Z.shiftr (singlewidth sum_xy)
-                                                            (singlewidth ('(Z.log2 two_pow_n)))))
-                                     (singlewidth (Z.shiftl (carrywidth carry_xy)
-                                                            (singlewidth ('(bitwidth - Z.log2 two_pow_n))))))
-                            in
-                              (singlewidth low, singlewidth high)))
-              ; (forall c x y two_pow_n r,
-                    0 <= lgcarrymax <= bitwidth
-                    -> two_pow_n = 2 ^ Z.log2 two_pow_n
-                    -> 0 < Z.log2 two_pow_n < bitwidth
-                    -> bitwidth + 1 < Z.log2 two_pow_n + lgcarrymax
-                    -> two_pow_n ∈ r
-                    -> singlewidth_carry
-                         (Z.add_with_get_carry_full (cstZ r ('two_pow_n)) (carrywidth c) (singlewidth x) (singlewidth y))
-                       = (dlet sum_cx := singlewidth (carrywidth c + singlewidth x) in
-                              dlet carry_cx := carrywidth (Z.ltz (singlewidth sum_cx) (singlewidth x)) in
-                              dlet sum_cxy := singlewidth (singlewidth sum_cx + singlewidth y) in
-                              dlet carry_cxy := carrywidth (Z.ltz (singlewidth sum_cxy) (singlewidth y)) in
-                              dlet carry := singlewidth (Z.add (carrywidth carry_cx) (carrywidth carry_cxy)) in
-                              dlet low := singlewidth
-                                            (Z.land (singlewidth sum_cxy) (singlewidth ('(two_pow_n - 1)))) in
-                              dlet high := singlewidth
-                                             (Z.add (singlewidth (Z.shiftr (singlewidth sum_cxy)
-                                                                           (singlewidth ('(Z.log2 two_pow_n)))))
-                                                    (singlewidth (Z.shiftl (carrywidth carry)
-                                                                           (singlewidth ('(bitwidth - Z.log2 two_pow_n)))))) in
-                              (singlewidth low, singlewidth high)))
-              ; (forall x y two_pow_n r,
-                    0 <= lgcarrymax <= bitwidth
-                    -> two_pow_n = 2 ^ Z.log2 two_pow_n
-                    -> 0 < Z.log2 two_pow_n < bitwidth
-                    -> bitwidth < Z.log2 two_pow_n + lgcarrymax
-                    -> two_pow_n ∈ r
-                    -> singlewidth_carry
-                         (Z.sub_get_borrow_full (cstZ r ('two_pow_n)) (singlewidth x) (singlewidth y))
-                       = (dlet diff_xy := singlewidth (singlewidth x - singlewidth y) in
-                              dlet borrow_xy := carrywidth (Z.ltz (singlewidth x) (singlewidth diff_xy)) in
-                              dlet low := singlewidth
-                                            (Z.land (singlewidth diff_xy) (singlewidth ('(two_pow_n - 1)))) in
-                              dlet high :=
-                            singlewidth
-                              (Z.sub (singlewidth (Z.shiftl (carrywidth borrow_xy)
-                                                            (singlewidth ('(bitwidth - Z.log2 two_pow_n)))))
-                                     (singlewidth (Z.shiftr (singlewidth diff_xy)
-                                                            (singlewidth ('(Z.log2 two_pow_n))))))
-                            in
-                              (singlewidth low, carrywidth high)))
-              ; (forall c x y two_pow_n r,
-                    0 <= lgcarrymax <= bitwidth
-                    -> two_pow_n = 2 ^ Z.log2 two_pow_n
-                    -> 0 < Z.log2 two_pow_n < bitwidth
-                    -> bitwidth < Z.log2 two_pow_n + lgcarrymax
-                    -> two_pow_n ∈ r
-                    -> singlewidth_carry
-                         (Z.sub_with_get_borrow_full (cstZ r ('two_pow_n)) (carrywidth c) (singlewidth x) (singlewidth y))
-                       = (dlet diff_xy := singlewidth (singlewidth x - singlewidth y) in
-                              dlet borrow_xy := carrywidth (Z.ltz (singlewidth x) (singlewidth diff_xy)) in
-                              dlet diff_xyc := singlewidth (singlewidth diff_xy - carrywidth c) in
-                              dlet borrow_xyc := carrywidth (Z.ltz (singlewidth diff_xy) (singlewidth diff_xyc)) in
-                              dlet borrow :=  singlewidth (carrywidth borrow_xy + carrywidth borrow_xyc) in
-                              dlet low := singlewidth
-                                            (Z.land (singlewidth diff_xyc) (singlewidth ('(two_pow_n - 1)))) in
-                              dlet high :=
-                            singlewidth
-                              (Z.sub (singlewidth (Z.shiftl (carrywidth borrow)
-                                                            (singlewidth ('(bitwidth - Z.log2 two_pow_n)))))
-                                     (singlewidth (Z.shiftr (singlewidth diff_xyc)
-                                                            (singlewidth ('(Z.log2 two_pow_n))))))
-                            in
-                              (singlewidth low, carrywidth high)))
+             do_again
+             [
              ]
+           ; mymap
+               dont_do_again
+               [(forall A B x y, @fst A B (x, y) = x)
+                ; (forall A B x y, @snd A B (x, y) = y)
+                ; ((** At this point, we need zeros to be casted up to bitwidth range, rather than to 0-range, so we add a rule to widen the casts *)
+                 forall c rc,
+                   c ∈ rc -> c ∈ singlewidth_range -> rc <> singlewidth_range
+                   -> cstZ rc ('c) = singlewidth ('c))
+                ; (forall x y rpow2_bitwidth,
+                      0 <= lgcarrymax <= bitwidth -> 2^bitwidth ∈ rpow2_bitwidth
+                      -> singlewidth_carry (Z.add_get_carry_full (cstZ rpow2_bitwidth ('(2^bitwidth))) (singlewidth x) (singlewidth y))
+                         = (dlet sum_xy := singlewidth (singlewidth x + singlewidth y) in
+                                dlet carry_xy := carrywidth (Z.ltz (singlewidth sum_xy) (singlewidth x)) in
+                                (singlewidth sum_xy, carrywidth carry_xy)))
+                ; (forall c x y rpow2_bitwidth,
+                      0 <= lgcarrymax <= bitwidth -> 2^bitwidth ∈ rpow2_bitwidth
+                      -> singlewidth_carry (Z.add_with_get_carry_full (cstZ rpow2_bitwidth ('(2^bitwidth))) (carrywidth c) (singlewidth x) (singlewidth y))
+                         = (dlet sum_cx := singlewidth (carrywidth c + singlewidth x) in
+                                dlet carry_cx := carrywidth (Z.ltz (singlewidth sum_cx) (singlewidth x)) in
+                                dlet sum_cxy := singlewidth (singlewidth sum_cx + singlewidth y) in
+                                dlet carry_cx_y := carrywidth (Z.ltz (singlewidth sum_cxy) (singlewidth y)) in
+                                dlet carry_cxy := carrywidth (carrywidth carry_cx + carrywidth carry_cx_y) in
+                                (singlewidth sum_cxy, carrywidth carry_cxy)))
+
+                ; (forall x y rpow2_bitwidth,
+                      0 <= lgcarrymax <= bitwidth -> 2^bitwidth ∈ rpow2_bitwidth
+                      -> singlewidth_carry (Z.sub_get_borrow_full (cstZ rpow2_bitwidth ('(2^bitwidth))) (singlewidth x) (singlewidth y))
+                         = (dlet diff_xy := singlewidth (singlewidth x - singlewidth y) in
+                                dlet borrow_xy := carrywidth (Z.ltz (singlewidth x) (singlewidth diff_xy)) in
+                                (singlewidth diff_xy, carrywidth borrow_xy)))
+                ; (forall c x y rpow2_bitwidth,
+                      0 <= lgcarrymax <= bitwidth -> 2^bitwidth ∈ rpow2_bitwidth
+                      -> singlewidth_carry (Z.sub_with_get_borrow_full (cstZ rpow2_bitwidth ('(2^bitwidth))) (carrywidth c) (singlewidth x) (singlewidth y))
+                         = (dlet diff_xy := singlewidth (singlewidth x - singlewidth y) in
+                                dlet borrow_xy := carrywidth (Z.ltz (singlewidth x) (singlewidth diff_xy)) in
+                                dlet diff_xyc := singlewidth (singlewidth diff_xy - carrywidth c) in
+                                dlet borrow_xy_c := carrywidth (Z.ltz (singlewidth diff_xy) (singlewidth diff_xyc)) in
+                                dlet borrow_xyc := carrywidth (carrywidth borrow_xy + carrywidth borrow_xy_c) in
+                                (singlewidth diff_xyc, carrywidth borrow_xyc)))
+
+                ; (forall x y rpow2_bitwidth,
+                      0 <= lgcarrymax <= bitwidth -> 2^bitwidth ∈ rpow2_bitwidth
+                      -> pairsinglewidth (Z.mul_split (cstZ rpow2_bitwidth ('(2^bitwidth))) (singlewidth x) (singlewidth y))
+                         = (dlet low := singlewidth (singlewidth x * singlewidth y) in
+                                dlet high := singlewidth (Z.mul_high (cstZ rpow2_bitwidth ('(2^bitwidth))) (singlewidth x) (singlewidth y)) in
+                                (singlewidth low, singlewidth high)))
+                ; (forall x y two_pow_n r,
+                      0 <= lgcarrymax <= bitwidth
+                      -> two_pow_n = 2 ^ Z.log2 two_pow_n
+                      -> 0 < Z.log2 two_pow_n < bitwidth
+                      -> bitwidth < Z.log2 two_pow_n + lgcarrymax
+                      -> two_pow_n ∈ r
+                      -> singlewidth_carry
+                           (Z.add_get_carry_full (cstZ r ('two_pow_n)) (singlewidth x) (singlewidth y))
+                         = (dlet sum_xy := singlewidth (singlewidth x + singlewidth y) in
+                                dlet carry_xy := carrywidth (Z.ltz (singlewidth sum_xy) (singlewidth x)) in
+                                dlet low := singlewidth
+                                              (Z.land (singlewidth sum_xy) (singlewidth ('(two_pow_n - 1)))) in
+                                dlet high :=
+                              singlewidth
+                                (Z.add (singlewidth (Z.shiftr (singlewidth sum_xy)
+                                                              (singlewidth ('(Z.log2 two_pow_n)))))
+                                       (singlewidth (Z.shiftl (carrywidth carry_xy)
+                                                              (singlewidth ('(bitwidth - Z.log2 two_pow_n))))))
+                              in
+                                (singlewidth low, singlewidth high)))
+                ; (forall c x y two_pow_n r,
+                      0 <= lgcarrymax <= bitwidth
+                      -> two_pow_n = 2 ^ Z.log2 two_pow_n
+                      -> 0 < Z.log2 two_pow_n < bitwidth
+                      -> bitwidth + 1 < Z.log2 two_pow_n + lgcarrymax
+                      -> two_pow_n ∈ r
+                      -> singlewidth_carry
+                           (Z.add_with_get_carry_full (cstZ r ('two_pow_n)) (carrywidth c) (singlewidth x) (singlewidth y))
+                         = (dlet sum_cx := singlewidth (carrywidth c + singlewidth x) in
+                                dlet carry_cx := carrywidth (Z.ltz (singlewidth sum_cx) (singlewidth x)) in
+                                dlet sum_cxy := singlewidth (singlewidth sum_cx + singlewidth y) in
+                                dlet carry_cxy := carrywidth (Z.ltz (singlewidth sum_cxy) (singlewidth y)) in
+                                dlet carry := singlewidth (Z.add (carrywidth carry_cx) (carrywidth carry_cxy)) in
+                                dlet low := singlewidth
+                                              (Z.land (singlewidth sum_cxy) (singlewidth ('(two_pow_n - 1)))) in
+                                dlet high := singlewidth
+                                               (Z.add (singlewidth (Z.shiftr (singlewidth sum_cxy)
+                                                                             (singlewidth ('(Z.log2 two_pow_n)))))
+                                                      (singlewidth (Z.shiftl (carrywidth carry)
+                                                                             (singlewidth ('(bitwidth - Z.log2 two_pow_n)))))) in
+                                (singlewidth low, singlewidth high)))
+                ; (forall x y two_pow_n r,
+                      0 <= lgcarrymax <= bitwidth
+                      -> two_pow_n = 2 ^ Z.log2 two_pow_n
+                      -> 0 < Z.log2 two_pow_n < bitwidth
+                      -> bitwidth < Z.log2 two_pow_n + lgcarrymax
+                      -> two_pow_n ∈ r
+                      -> singlewidth_carry
+                           (Z.sub_get_borrow_full (cstZ r ('two_pow_n)) (singlewidth x) (singlewidth y))
+                         = (dlet diff_xy := singlewidth (singlewidth x - singlewidth y) in
+                                dlet borrow_xy := carrywidth (Z.ltz (singlewidth x) (singlewidth diff_xy)) in
+                                dlet low := singlewidth
+                                              (Z.land (singlewidth diff_xy) (singlewidth ('(two_pow_n - 1)))) in
+                                dlet high :=
+                              singlewidth
+                                (Z.sub (singlewidth (Z.shiftl (carrywidth borrow_xy)
+                                                              (singlewidth ('(bitwidth - Z.log2 two_pow_n)))))
+                                       (singlewidth (Z.shiftr (singlewidth diff_xy)
+                                                              (singlewidth ('(Z.log2 two_pow_n))))))
+                              in
+                                (singlewidth low, carrywidth high)))
+                ; (forall c x y two_pow_n r,
+                      0 <= lgcarrymax <= bitwidth
+                      -> two_pow_n = 2 ^ Z.log2 two_pow_n
+                      -> 0 < Z.log2 two_pow_n < bitwidth
+                      -> bitwidth < Z.log2 two_pow_n + lgcarrymax
+                      -> two_pow_n ∈ r
+                      -> singlewidth_carry
+                           (Z.sub_with_get_borrow_full (cstZ r ('two_pow_n)) (carrywidth c) (singlewidth x) (singlewidth y))
+                         = (dlet diff_xy := singlewidth (singlewidth x - singlewidth y) in
+                                dlet borrow_xy := carrywidth (Z.ltz (singlewidth x) (singlewidth diff_xy)) in
+                                dlet diff_xyc := singlewidth (singlewidth diff_xy - carrywidth c) in
+                                dlet borrow_xyc := carrywidth (Z.ltz (singlewidth diff_xy) (singlewidth diff_xyc)) in
+                                dlet borrow :=  singlewidth (carrywidth borrow_xy + carrywidth borrow_xyc) in
+                                dlet low := singlewidth
+                                              (Z.land (singlewidth diff_xyc) (singlewidth ('(two_pow_n - 1)))) in
+                                dlet high :=
+                              singlewidth
+                                (Z.sub (singlewidth (Z.shiftl (carrywidth borrow)
+                                                              (singlewidth ('(bitwidth - Z.log2 two_pow_n)))))
+                                       (singlewidth (Z.shiftr (singlewidth diff_xyc)
+                                                              (singlewidth ('(Z.log2 two_pow_n))))))
+                              in
+                                (singlewidth low, carrywidth high)))
+               ]
            ; mymap
                do_again
                [ (* [do_again], so that if one of the arguments is concrete, we automatically get the rewrite rule for [Z_cast] applying to it *)
