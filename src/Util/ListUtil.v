@@ -2632,3 +2632,32 @@ Ltac rewrite_fold_left_fun_apply :=
   | [ |- ?T ] => let pf := make_fold_left_fun_apply T in
                  rewrite pf
   end.
+
+Lemma Forall2_Forall_iff_ignore_r {A B P ls1 ls2}
+  : @Forall2 A B (fun _ => P) ls1 ls2 <-> (length ls1 = length ls2 /\ Forall P ls2).
+Proof.
+  revert ls1 ls2; induction ls1 as [|x xs IH], ls2 as [|y ys]; split; intro; split_iff; split_and.
+  all: let head_is_ctor x := match x with nil => idtac | cons _ _ => idtac end in
+       repeat first [ constructor
+                    | progress subst
+                    | progress destruct_head'_and
+                    | progress cbn [length] in *
+                    | lia
+                    | solve [ eauto ]
+                    | match goal with
+                      | [ H : Forall2 _ ?x ?y |- _ ]
+                        => first [ head_is_ctor x | head_is_ctor y ];
+                           inversion H; clear H
+                      | [ H : Forall _ ?x |- _ ]
+                        => head_is_ctor x; inversion H; clear H
+                      | [ |- S _ = S _ ] => apply f_equal
+                      end ].
+Qed.
+
+Lemma Forall2_flip_iff {A B P xs ys}
+  : @Forall2 A B P xs ys <-> Forall2 (Basics.flip P) ys xs.
+Proof. split; induction 1; constructor; assumption. Qed.
+
+Lemma Forall2_Forall_ignore_l {A B P ls1 ls2}
+  : @Forall2 A B (fun x _ => P x) ls1 ls2 <-> (length ls1 = length ls2 /\ Forall P ls1).
+Proof. now rewrite Forall2_flip_iff; cbv [Basics.flip]; rewrite Forall2_Forall_iff_ignore_r. Qed.
