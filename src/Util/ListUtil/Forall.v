@@ -38,6 +38,7 @@ Local Ltac t_Forall2_step :=
         | progress destruct_head'_ex
         | progress specialize_by_assumption
         | progress split_iff
+        | progress split_and
         | apply conj
         | progress cbn [List.map List.seq List.repeat List.rev List.firstn List.skipn List.length] in *
         | exfalso; assumption
@@ -236,3 +237,17 @@ Proof.
   split_iff.
   repeat (split || destruct_head'_and); eauto.
 Qed.
+
+Lemma Forall2_Forall_iff_ignore_r {A B P ls1 ls2}
+  : @Forall2 A B (fun _ => P) ls1 ls2 <-> (length ls1 = length ls2 /\ Forall P ls2).
+Proof.
+  revert ls1 ls2; induction ls1, ls2; t_Forall2; exfalso; lia.
+Qed.
+
+Lemma Forall2_flip_iff {A B P xs ys}
+  : @Forall2 A B P xs ys <-> Forall2 (Basics.flip P) ys xs.
+Proof. split; induction 1; constructor; assumption. Qed.
+
+Lemma Forall2_Forall_ignore_l {A B P ls1 ls2}
+  : @Forall2 A B (fun x _ => P x) ls1 ls2 <-> (length ls1 = length ls2 /\ Forall P ls1).
+Proof. now rewrite Forall2_flip_iff; cbv [Basics.flip]; rewrite Forall2_Forall_iff_ignore_r. Qed.
