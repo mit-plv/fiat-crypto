@@ -29,20 +29,22 @@ Section Bignum.
     Context {ok : Types.ok}.
     Existing Instance semantics_ok.
 
+    (* TODO: lemmas along these lines might be convenient for stack allocation
     Lemma Bignum_of_bytes n addr bs :
       length bs = (n * Z.to_nat word_size_in_bytes)%nat ->
       Lift1Prop.iff1
         (array ptsto (word.of_Z 1) addr bs)
         (Bignum n addr (map word.of_Z
                             (eval_bytes (width:=Semantics.width) bs))).
-    Admitted. (* TODO *)
+    Admitted.
 
     Lemma Bignum_to_bytes n addr x :
       list_Z_bounded_by (max_bounds n) (map word.unsigned x) ->
       Lift1Prop.iff1
         (Bignum n addr x)
         (array ptsto (word.of_Z 1) addr (encode_bytes x)).
-    Admitted. (* TODO *)
+    Admitted.
+    *)
   End Proofs.
 End Bignum.
 Notation BignumSuchThat :=
