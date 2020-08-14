@@ -2,6 +2,7 @@ Require Import Rupicola.Lib.Api.
 Require Import Rupicola.Lib.SepLocals.
 Require Import Rupicola.Examples.ECC.DownTo.
 Require Import Rupicola.Examples.ECC.CondSwap.
+Require Import Crypto.Bedrock.Field.Interface.Compilation.
 Require Import Crypto.Bedrock.Group.Point.
 Require Import Crypto.Bedrock.Group.ScalarMult.LadderStep.
 Require Import Crypto.Bedrock.Specs.Field.

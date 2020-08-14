@@ -1,6 +1,7 @@
 Require Import Rupicola.Lib.Api.
-Require Import Crypto.Bedrock.Specs.Field.
+Require Import Crypto.Bedrock.Field.Interface.Compilation.
 Require Import Crypto.Bedrock.Group.Point.
+Require Import Crypto.Bedrock.Specs.Field.
 Local Open Scope Z_scope.
 
 Section __.

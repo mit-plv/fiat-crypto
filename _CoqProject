@@ -56,7 +56,6 @@ src/ArithmeticCPS/Freeze.v
 src/ArithmeticCPS/ModOps.v
 src/ArithmeticCPS/Saturated.v
 src/ArithmeticCPS/WordByWordMontgomery.v
-src/Bedrock/Field/Representation.v
 src/Bedrock/Field/Common/Tactics.v
 src/Bedrock/Field/Common/Types.v
 src/Bedrock/Field/Common/Util.v
@@ -66,6 +65,8 @@ src/Bedrock/Field/Common/Arrays/MakeListLengths.v
 src/Bedrock/Field/Common/Arrays/MaxBounds.v
 src/Bedrock/Field/Common/Names/MakeNames.v
 src/Bedrock/Field/Common/Names/VarnameGenerator.v
+src/Bedrock/Field/Interface/Compilation.v
+src/Bedrock/Field/Interface/Representation.v
 src/Bedrock/Field/Synthesis/Examples/EncodeDecode.v
 src/Bedrock/Field/Synthesis/Examples/LadderStep.v
 src/Bedrock/Field/Synthesis/Examples/MulTwice.v
