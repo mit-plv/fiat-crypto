@@ -148,16 +148,6 @@ Section __.
     Context {p_ok : @Types.ok p}.
     Existing Instance semantics_ok.
 
-    Lemma zrange_to_access_size_ok r sz :
-      zrange_to_access_size r = Some sz ->
-      (r <=? access_size_to_zrange sz)%zrange = true.
-    Admitted.
-
-    Lemma access_size_to_zrange_word_upper_bound :
-      upper (access_size_to_zrange
-               access_size.word) < 2 ^ Semantics.width.
-    Admitted.
-
     Lemma access_size_to_zrange_lower s :
       lower (access_size_to_zrange s) = 0.
     Proof. reflexivity. Qed.
