@@ -6,14 +6,14 @@ Local Open Scope Z_scope.
 Section __.
   Context {semantics : Semantics.parameters}
           {semantics_ok : Semantics.parameters_ok semantics}.
-  Context {field_parameters : FieldParameters}.
-  Context {bignum_representaton : BignumRepresentation}.
+  Context {field_parameters : FieldParameters}
+          {field_representaton : FieldRepresentation}.
   Existing Instances spec_of_mul spec_of_square spec_of_add
-           spec_of_sub spec_of_scmula24 spec_of_inv spec_of_bignum_copy
-           spec_of_bignum_literal.
+           spec_of_sub spec_of_scmula24 spec_of_inv spec_of_felem_copy
+           spec_of_felem_small_literal.
 
   Context {relax_bounds :
-             forall X : bignum,
+             forall X : felem,
                bounded_by tight_bounds X ->
                bounded_by loose_bounds X}.
   Hint Resolve relax_bounds : compiler.
@@ -54,7 +54,7 @@ Section __.
      out. If sepsimpl is improved to handle very nested emps, this will not be
      necessary. *)
   Definition LadderStepResult
-             (X1 X2 Z2 X3 Z3 : bignum)
+             (X1 X2 Z2 X3 Z3 : felem)
              (pX1 pX2 pZ2 pX3 pZ3 : Semantics.word)
              (pA pAA pB pBB pE pC pD pDA pCB : Semantics.word)
              (result : point * point)
@@ -62,22 +62,22 @@ Section __.
     fun _ =>
       (liftexists X4 Z4 X5 Z5 (* output values *)
                   A' AA' B' BB' E' C' D' DA' CB' (* new intermediates *)
-       : bignum,
-         (emp (result = ((eval X4 mod M, eval Z4 mod M),
-                            (eval X5 mod M, eval Z5 mod M))
+       : felem,
+         (emp (result = ((feval X4 mod M, feval Z4 mod M),
+                            (feval X5 mod M, feval Z5 mod M))
                /\ bounded_by tight_bounds X4
                /\ bounded_by tight_bounds Z4
                /\ bounded_by tight_bounds X5
                /\ bounded_by tight_bounds Z5)
-          * (Bignum pX1 X1 * Bignum pX2 X4 * Bignum pZ2 Z4
-             * Bignum pX3 X5 * Bignum pZ3 Z5
-             * Bignum pA A' * Bignum pAA AA'
-             * Bignum pB B' * Bignum pBB BB'
-             * Bignum pE E' * Bignum pC C' * Bignum pD D'
-             * Bignum pDA DA' * Bignum pCB CB'))%sep).
+          * (FElem pX1 X1 * FElem pX2 X4 * FElem pZ2 Z4
+             * FElem pX3 X5 * FElem pZ3 Z5
+             * FElem pA A' * FElem pAA AA'
+             * FElem pB B' * FElem pBB BB'
+             * FElem pE E' * FElem pC C' * FElem pD D'
+             * FElem pDA DA' * FElem pCB CB'))%sep).
 
   Instance spec_of_ladderstep : spec_of "ladderstep" :=
-    forall! (X1 X2 Z2 X3 Z3 A AA B BB E C D DA CB : bignum)
+    forall! (X1 X2 Z2 X3 Z3 A AA B BB E C D DA CB : felem)
           (pX1 pX2 pZ2 pX3 pZ3
                pA pAA pB pBB pE pC pD pDA pCB : Semantics.word),
       (fun R m =>
@@ -86,9 +86,9 @@ Section __.
         /\ bounded_by tight_bounds Z2
         /\ bounded_by tight_bounds X3
         /\ bounded_by tight_bounds Z3
-        /\ (Bignum pX1 X1
-            * Bignum pX2 X2 * Bignum pZ2 Z2
-            * Bignum pX3 X3 * Bignum pZ3 Z3
+        /\ (FElem pX1 X1
+            * FElem pX2 X2 * FElem pZ2 Z2
+            * FElem pX3 X3 * FElem pZ3 Z3
             * Placeholder pA A * Placeholder pAA AA
             * Placeholder pB B * Placeholder pBB BB
             * Placeholder pE E * Placeholder pC C
@@ -101,8 +101,8 @@ Section __.
            X1 X2 Z2 X3 Z3 pX1 pX2 pZ2 pX3 pZ3
            pA pAA pB pBB pE pC pD pDA pCB
            (ladderstep_gallina
-              (eval X1 mod M) (eval X2 mod M, eval Z2 mod M)
-              (eval X3 mod M, eval Z3 mod M))).
+              (feval X1 mod M) (feval X2 mod M, feval Z2 mod M)
+              (feval X3 mod M, feval Z3 mod M))).
 
     Lemma compile_ladderstep :
       forall (locals: Semantics.locals) (mem: Semantics.mem)
@@ -116,19 +116,19 @@ Section __.
         DA DA_ptr DA_var CB CB_ptr CB_var
         k k_impl,
         spec_of_ladderstep functions ->
-        eval X1 mod M = x1 mod M ->
-        eval X2 mod M = x2 mod M ->
-        eval Z2 mod M = z2 mod M ->
-        eval X3 mod M = x3 mod M ->
-        eval Z3 mod M = z3 mod M ->
+        feval X1 mod M = x1 mod M ->
+        feval X2 mod M = x2 mod M ->
+        feval Z2 mod M = z2 mod M ->
+        feval X3 mod M = x3 mod M ->
+        feval Z3 mod M = z3 mod M ->
         bounded_by tight_bounds X1 ->
         bounded_by tight_bounds X2 ->
         bounded_by tight_bounds Z2 ->
         bounded_by tight_bounds X3 ->
         bounded_by tight_bounds Z3 ->
-        (Bignum X1_ptr X1
-         * Bignum X2_ptr X2 * Bignum Z2_ptr Z2
-         * Bignum X3_ptr X3 * Bignum Z3_ptr Z3
+        (FElem X1_ptr X1
+         * FElem X2_ptr X2 * FElem Z2_ptr Z2
+         * FElem X3_ptr X3 * FElem Z3_ptr Z3
          * Placeholder A_ptr A * Placeholder AA_ptr AA
          * Placeholder B_ptr B * Placeholder BB_ptr BB
          * Placeholder E_ptr E * Placeholder C_ptr C
@@ -185,7 +185,7 @@ Section __.
       repeat straightline'.
       handle_call; [ solve [eauto] .. | sepsimpl ].
       repeat straightline'.
-      repeat match goal with H : eval _ mod _ = _ |- _ =>
+      repeat match goal with H : feval _ mod _ = _ |- _ =>
                              rewrite H in * end.
       eauto.
     Qed.
@@ -194,10 +194,10 @@ Section __.
     repeat compile_compose_step;
     field_compile_step; [ repeat compile_step .. | ];
     (* if the output we selected was one of the inputs, need to write the
-       Placeholder back into a Bignum for the arguments precondition *)
+       Placeholder back into a FElem for the arguments precondition *)
     lazymatch goal with
     | |- sep _ _ _ =>
-      change Placeholder with Bignum in * |- ;
+      change Placeholder with FElem in * |- ;
       solve [repeat compile_step]
     | _ => idtac
     end;
