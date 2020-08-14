@@ -56,6 +56,7 @@ src/ArithmeticCPS/Freeze.v
 src/ArithmeticCPS/ModOps.v
 src/ArithmeticCPS/Saturated.v
 src/ArithmeticCPS/WordByWordMontgomery.v
+src/Bedrock/Field/Representation.v
 src/Bedrock/Field/Common/Tactics.v
 src/Bedrock/Field/Common/Types.v
 src/Bedrock/Field/Common/Util.v
@@ -106,6 +107,7 @@ src/Bedrock/Group/Point.v
 src/Bedrock/Group/ScalarMult/LadderStep.v
 src/Bedrock/Group/ScalarMult/MontgomeryLadder.v
 src/Bedrock/Specs/Field.v
+src/Bedrock/Specs/Group.v
 src/Bedrock/Specs/ScalarField.v
 src/Bedrock/Standalone/StandaloneHaskellMain.v
 src/Bedrock/Standalone/StandaloneOCamlMain.v

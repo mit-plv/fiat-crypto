@@ -22,12 +22,10 @@ Class GroupParameters_ok {group_parameters : GroupParameters} :=
     scalarmult_ok : @is_scalarmult G eq add zero opp scalarmult;
   }.
 
-Class GroupRepresentation {G : Type} :=
+Class GroupRepresentation {G : Type} {semantics : Semantics.parameters} :=
   { gelem : Type;
     geval : gelem -> G;
-    GElem :
-      forall {semantics : Semantics.parameters},
-        word -> gelem -> Semantics.mem -> Prop;
+    GElem : word -> gelem -> Semantics.mem -> Prop;
   }.
 
 Section Specs.
