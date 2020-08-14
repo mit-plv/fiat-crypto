@@ -18,10 +18,10 @@ Section Representation.
     fun ws =>
       Positional.eval weight n (map word.unsigned ws).
 
-  Instance fe_rep : BignumRepresentation :=
-  { bignum := list word;
-    eval := eval_words;
-    Bignum := Bignum.Bignum n;
+  Instance frep : FieldRepresentation :=
+  { felem := list word;
+    feval := eval_words;
+    FElem := Bignum n;
     bounds := list (option zrange);
     bounded_by :=
       fun bs ws =>

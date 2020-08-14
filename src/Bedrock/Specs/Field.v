@@ -11,72 +11,67 @@ Class FieldParameters :=
     mul : string; add : string; sub : string;
     square : string; scmula24 : string; inv : string;
 
-    (* N.B. in current form, bignum_literal only works for literals that fit in
-       a word -- what would a more general form look like? Is it needed? *)
-    (* bignum_literal p x :=
+    (* felem_small_literal p x :=
          store p (expr.literal x);
          store (p+4) (expr.literal 0);
          ...
 
-       bignum_copy pX pY :=
+       felem_copy pX pY :=
          store pX (load pY);
          store (pX+4) (load (pY+4));
          ... *)
-    bignum_copy : string;
-    bignum_literal : string;
+    felem_copy : string;
+    felem_small_literal : string;
   }.
 
 Lemma M_nonzero {fp : FieldParameters} : M <> 0.
 Proof. cbv [M]. congruence. Qed.
 
-Class BignumRepresentation {semantics : Semantics.parameters} :=
-  { bignum : Type;
-    eval : bignum -> Z;
-    Bignum : word -> bignum -> Semantics.mem -> Prop;
+Class FieldRepresentation {semantics : Semantics.parameters} :=
+  { felem : Type;
+    feval : felem -> Z;
+    FElem : word -> felem -> Semantics.mem -> Prop;
     bounds : Type;
-    bounded_by : bounds -> bignum -> Prop;
+    bounded_by : bounds -> felem -> Prop;
 
-    (* TODO: does this cover all field operation schemes, more than just
-     UnsaturatedSolinas? *)
+    (* for saturated implementations, loose/tight bounds are the same *)
     loose_bounds : bounds;
     tight_bounds : bounds;
   }.
 
-(* TODO: copy the specs back over into fiat-crypto and prove that they are
-   obeyed to validate the slight rephrasings here *)
 Section Specs.
   Context {semantics : Semantics.parameters}
           {semantics_ok : Semantics.parameters_ok semantics}.
-  Context {field_parameters : FieldParameters}.
-  Context {bignum_representaton : BignumRepresentation}.
+  Context {field_parameters : FieldParameters}
+          {field_representaton : FieldRepresentation}.
 
   Local Notation unop_spec name op xbounds outbounds :=
-    (forall! (x : bignum) (px pout : word) (old_out : bignum),
+    (forall! (x : felem) (px pout : word) (old_out : felem),
         (fun Rr mem =>
            bounded_by xbounds x
-           /\ (exists Ra, (Bignum px x * Ra)%sep mem)
-           /\ (Bignum pout old_out * Rr)%sep mem)
+           /\ (exists Ra, (FElem px x * Ra)%sep mem)
+           /\ (FElem pout old_out * Rr)%sep mem)
           ===> name @ [px; pout] ===>
           (fun _ =>
            liftexists out,
-           (emp ((eval out mod M = (op (eval x)) mod M)%Z
+           (emp ((feval out mod M = (op (feval x)) mod M)%Z
                  /\ bounded_by outbounds out)
-            * Bignum pout out)%sep))
+            * FElem pout out)%sep))
       (only parsing).
 
   Local Notation binop_spec name op xbounds ybounds outbounds :=
-    (forall! (x y : bignum) (px py pout : word) (old_out : bignum),
+    (forall! (x y : felem) (px py pout : word) (old_out : felem),
         (fun Rr mem =>
            bounded_by xbounds x
            /\ bounded_by ybounds y
-           /\ (exists Ra, (Bignum px x * Bignum py y * Ra)%sep mem)
-           /\ (Bignum pout old_out * Rr)%sep mem)
+           /\ (exists Ra, (FElem px x * FElem py y * Ra)%sep mem)
+           /\ (FElem pout old_out * Rr)%sep mem)
           ===> name @ [px; py; pout] ===>
           (fun _ =>
            liftexists out,
-           (emp ((eval out mod M = (op (eval x) (eval y)) mod M)%Z
+           (emp ((feval out mod M = (op (feval x) (feval y)) mod M)%Z
                  /\ bounded_by outbounds out)
-            * Bignum pout out)%sep)) (only parsing).
+            * FElem pout out)%sep)) (only parsing).
 
   Instance spec_of_mul : spec_of mul :=
     binop_spec mul Z.mul loose_bounds loose_bounds tight_bounds.
@@ -91,75 +86,75 @@ Section Specs.
 
   (* TODO: what are the bounds for inv? *)
   Instance spec_of_inv : spec_of inv :=
-    (forall! (x : bignum) (px pout : word) (old_out : bignum),
+    (forall! (x : felem) (px pout : word) (old_out : felem),
         (fun Rr mem =>
            bounded_by tight_bounds x
-           /\ (exists Ra, (Bignum px x * Ra)%sep mem)
-           /\ (Bignum pout old_out * Rr)%sep mem)
+           /\ (exists Ra, (FElem px x * Ra)%sep mem)
+           /\ (FElem pout old_out * Rr)%sep mem)
           ===> inv @ [px; pout] ===>
           (fun _ =>
            liftexists out,
-           (emp ((eval out mod M = (Finv (eval x mod M)) mod M)%Z
+           (emp ((feval out mod M = (Finv (feval x mod M)) mod M)%Z
                  /\ bounded_by loose_bounds out)
-            * Bignum pout out)%sep)).
+            * FElem pout out)%sep)).
 
-  Instance spec_of_bignum_copy : spec_of bignum_copy :=
-    forall! (x : bignum) (px pout : word) (old_out : bignum),
-      (sep (Bignum px x * Bignum pout old_out)%sep)
-        ===> bignum_copy @ [px; pout] ===>
-        (fun _ => Bignum px x * Bignum pout x)%sep.
+  Instance spec_of_felem_copy : spec_of felem_copy :=
+    forall! (x : felem) (px pout : word) (old_out : felem),
+      (sep (FElem px x * FElem pout old_out)%sep)
+        ===> felem_copy @ [px; pout] ===>
+        (fun _ => FElem px x * FElem pout x)%sep.
 
-  Instance spec_of_bignum_literal : spec_of bignum_literal :=
-    forall! (x pout : word) (old_out : bignum),
-      (sep (Bignum pout old_out))
-        ===> bignum_literal @ [x; pout] ===>
+  Instance spec_of_felem_small_literal : spec_of felem_small_literal :=
+    forall! (x pout : word) (old_out : felem),
+      (sep (FElem pout old_out))
+        ===> felem_small_literal @ [x; pout] ===>
         (fun _ =>
            liftexists X,
-           (emp (eval X mod M = word.unsigned x mod M
+           (emp (feval X mod M = word.unsigned x mod M
                  /\ bounded_by tight_bounds X)
-            * Bignum pout X)%sep).
+            * FElem pout X)%sep).
 End Specs.
 Existing Instances spec_of_mul spec_of_square spec_of_add
-         spec_of_sub spec_of_scmula24 spec_of_inv spec_of_bignum_copy
-         spec_of_bignum_literal.
+         spec_of_sub spec_of_scmula24 spec_of_inv spec_of_felem_copy
+         spec_of_felem_small_literal.
 
 Section Compile.
   Context {semantics : Semantics.parameters}
           {semantics_ok : Semantics.parameters_ok semantics}.
-  Context {field_parameters : FieldParameters}.
-  Context {bignum_representaton : BignumRepresentation}.
+  Context {field_parameters : FieldParameters}
+          {field_representaton : FieldRepresentation}.
 
   (* In compilation, we need to decide where to store outputs. In particular,
      we don't want to overwrite a variable that we want to use later with the
      output of some operation. The [Placeholder] alias explicitly signifies
-     which Bignums are overwritable.
+     which FElems are overwritable.
 
      TODO: in the future, it would be nice to be able to look through the
-     Gallina code and see which Bignums get used later and which don't. *)
-  Definition Placeholder := Bignum.
+     Gallina code and see which FElems get used later and which don't. *)
+  Definition Placeholder := FElem.
 
   Lemma compile_mul :
     forall (locals: Semantics.locals) (mem: Semantics.mem)
            (locals_ok : Semantics.locals -> Prop)
       tr retvars R Rin Rout functions T (pred: T -> list word -> Semantics.mem -> Prop)
-      (x y out : bignum) x_ptr x_var y_ptr y_var out_ptr out_var
+      (x y out : felem) x_ptr x_var y_ptr y_var out_ptr out_var
       k k_impl,
       spec_of_mul functions ->
       bounded_by loose_bounds x ->
       bounded_by loose_bounds y ->
-      (Bignum x_ptr x * Bignum y_ptr y * Rin)%sep mem ->
+      (FElem x_ptr x * FElem y_ptr y * Rin)%sep mem ->
       (Placeholder out_ptr out * Rout)%sep mem ->
       map.get locals x_var = Some x_ptr ->
       map.get locals y_var = Some y_ptr ->
       map.get locals out_var = Some out_ptr ->
-      let v := (eval x * eval y) mod M in
+      let v := (feval x * feval y) mod M in
       (let head := v in
        forall out m,
-         eval out mod M = head ->
+         feval out mod M = head ->
          bounded_by tight_bounds out ->
-         sep (Bignum out_ptr out) Rout m ->
+         sep (FElem out_ptr out) Rout m ->
          (find k_impl
-          implementing (pred (k (eval out mod M)))
+          implementing (pred (k (feval out mod M)))
           and-returning retvars
           and-locals-post locals_ok
           with-locals locals and-memory m and-trace tr and-rest R
@@ -190,24 +185,24 @@ Section Compile.
     forall (locals: Semantics.locals) (mem: Semantics.mem)
            (locals_ok : Semantics.locals -> Prop)
       tr retvars R Rin Rout functions T (pred: T -> list word -> Semantics.mem -> Prop)
-      (x y out : bignum) x_ptr x_var y_ptr y_var out_ptr out_var
+      (x y out : felem) x_ptr x_var y_ptr y_var out_ptr out_var
       k k_impl,
       spec_of_add functions ->
       bounded_by tight_bounds x ->
       bounded_by tight_bounds y ->
-      (Bignum x_ptr x * Bignum y_ptr y * Rin)%sep mem ->
+      (FElem x_ptr x * FElem y_ptr y * Rin)%sep mem ->
       (Placeholder out_ptr out * Rout)%sep mem ->
       map.get locals x_var = Some x_ptr ->
       map.get locals y_var = Some y_ptr ->
       map.get locals out_var = Some out_ptr ->
-      let v := (eval x + eval y) mod M in
+      let v := (feval x + feval y) mod M in
       (let head := v in
        forall out m,
-         eval out mod M = head ->
+         feval out mod M = head ->
          bounded_by loose_bounds out ->
-         sep (Bignum out_ptr out) Rout m ->
+         sep (FElem out_ptr out) Rout m ->
          (find k_impl
-          implementing (pred (k (eval out mod M)))
+          implementing (pred (k (feval out mod M)))
           and-returning retvars
           and-locals-post locals_ok
           with-locals locals and-memory m and-trace tr and-rest R
@@ -238,24 +233,24 @@ Section Compile.
     forall (locals: Semantics.locals) (mem: Semantics.mem)
            (locals_ok : Semantics.locals -> Prop)
       tr retvars R Rin Rout functions T (pred: T -> list word -> Semantics.mem -> Prop)
-      (x y out : bignum) x_ptr x_var y_ptr y_var out_ptr out_var
+      (x y out : felem) x_ptr x_var y_ptr y_var out_ptr out_var
       k k_impl,
       spec_of_sub functions ->
       bounded_by tight_bounds x ->
       bounded_by tight_bounds y ->
-      (Bignum x_ptr x * Bignum y_ptr y * Rin)%sep mem ->
+      (FElem x_ptr x * FElem y_ptr y * Rin)%sep mem ->
       (Placeholder out_ptr out * Rout)%sep mem ->
       map.get locals x_var = Some x_ptr ->
       map.get locals y_var = Some y_ptr ->
       map.get locals out_var = Some out_ptr ->
-      let v := (eval x - eval y) mod M in
+      let v := (feval x - feval y) mod M in
       (let head := v in
        forall out m,
-         eval out mod M = head ->
+         feval out mod M = head ->
          bounded_by loose_bounds out ->
-         sep (Bignum out_ptr out) Rout m ->
+         sep (FElem out_ptr out) Rout m ->
          (find k_impl
-          implementing (pred (k (eval out mod M)))
+          implementing (pred (k (feval out mod M)))
           and-returning retvars
           and-locals-post locals_ok
           with-locals locals and-memory m and-trace tr and-rest R
@@ -286,21 +281,21 @@ Section Compile.
     forall (locals: Semantics.locals) (mem: Semantics.mem)
            (locals_ok : Semantics.locals -> Prop)
       tr retvars R Rin Rout functions T (pred: T -> list word -> Semantics.mem -> Prop)
-      (x out : bignum) x_ptr x_var out_ptr out_var k k_impl,
+      (x out : felem) x_ptr x_var out_ptr out_var k k_impl,
       spec_of_square functions ->
       bounded_by loose_bounds x ->
-      (Bignum x_ptr x * Rin)%sep mem ->
+      (FElem x_ptr x * Rin)%sep mem ->
       (Placeholder out_ptr out * Rout)%sep mem ->
       map.get locals x_var = Some x_ptr ->
       map.get locals out_var = Some out_ptr ->
-      let v := (eval x ^ 2) mod M in
+      let v := (feval x ^ 2) mod M in
       (let head := v in
        forall out m,
-         eval out mod M = head ->
+         feval out mod M = head ->
          bounded_by tight_bounds out ->
-         sep (Bignum out_ptr out) Rout m ->
+         sep (FElem out_ptr out) Rout m ->
          (find k_impl
-          implementing (pred (k (eval out mod M)))
+          implementing (pred (k (feval out mod M)))
           and-returning retvars
           and-locals-post locals_ok
           with-locals locals and-memory m and-trace tr and-rest R
@@ -331,21 +326,21 @@ Section Compile.
     forall (locals: Semantics.locals) (mem: Semantics.mem)
            (locals_ok : Semantics.locals -> Prop)
       tr retvars R Rin Rout functions T (pred: T -> list word -> Semantics.mem -> Prop)
-      (x out : bignum) x_ptr x_var out_ptr out_var k k_impl,
+      (x out : felem) x_ptr x_var out_ptr out_var k k_impl,
       spec_of_scmula24 functions ->
       bounded_by loose_bounds x ->
-      (Bignum x_ptr x * Rin)%sep mem ->
+      (FElem x_ptr x * Rin)%sep mem ->
       (Placeholder out_ptr out * Rout)%sep mem ->
       map.get locals x_var = Some x_ptr ->
       map.get locals out_var = Some out_ptr ->
-      let v := (a24 * eval x) mod M in
+      let v := (a24 * feval x) mod M in
       (let head := v in
        forall out m,
-         eval out mod M = head ->
+         feval out mod M = head ->
          bounded_by tight_bounds out ->
-         sep (Bignum out_ptr out) Rout m ->
+         sep (FElem out_ptr out) Rout m ->
          (find k_impl
-          implementing (pred (k (eval out mod M)))
+          implementing (pred (k (feval out mod M)))
           and-returning retvars
           and-locals-post locals_ok
           with-locals locals and-memory m and-trace tr and-rest R
@@ -375,21 +370,21 @@ Section Compile.
     forall (locals: Semantics.locals) (mem: Semantics.mem)
            (locals_ok : Semantics.locals -> Prop)
       tr retvars R Rin Rout functions T (pred: T -> list word -> Semantics.mem -> Prop)
-      (x out : bignum) x_ptr x_var out_ptr out_var k k_impl,
+      (x out : felem) x_ptr x_var out_ptr out_var k k_impl,
       spec_of_inv functions ->
       bounded_by tight_bounds x ->
-      (Bignum x_ptr x * Rin)%sep mem ->
+      (FElem x_ptr x * Rin)%sep mem ->
       (Placeholder out_ptr out * Rout)%sep mem ->
       map.get locals x_var = Some x_ptr ->
       map.get locals out_var = Some out_ptr ->
-      let v := (Finv (eval x mod M)) mod M in
+      let v := (Finv (feval x mod M)) mod M in
       (let head := v in
        forall out m,
-         eval out mod M = head ->
+         feval out mod M = head ->
          bounded_by loose_bounds out ->
-         sep (Bignum out_ptr out) Rout m ->
+         sep (FElem out_ptr out) Rout m ->
          (find k_impl
-          implementing (pred (k (eval out mod M)))
+          implementing (pred (k (feval out mod M)))
           and-returning retvars
           and-locals-post locals_ok
           with-locals locals and-memory m and-trace tr and-rest R
@@ -415,19 +410,19 @@ Section Compile.
     eauto.
   Qed.
 
-  Lemma compile_bignum_copy :
+  Lemma compile_felem_copy :
     forall (locals: Semantics.locals) (mem: Semantics.mem)
            (locals_ok : Semantics.locals -> Prop)
       tr retvars R R' functions T (pred: T -> list word -> Semantics.mem -> Prop)
-      (x out : bignum) x_ptr x_var out_ptr out_var k k_impl,
-      spec_of_bignum_copy functions ->
-      (Bignum x_ptr x * Placeholder out_ptr out * R')%sep mem ->
+      (x out : felem) x_ptr x_var out_ptr out_var k k_impl,
+      spec_of_felem_copy functions ->
+      (FElem x_ptr x * Placeholder out_ptr out * R')%sep mem ->
       map.get locals x_var = Some x_ptr ->
       map.get locals out_var = Some out_ptr ->
-      let v := (eval x mod M)%Z in
+      let v := (feval x mod M)%Z in
       (let head := v in
        forall m,
-         (Bignum x_ptr x * Bignum out_ptr x * R')%sep m ->
+         (FElem x_ptr x * FElem out_ptr x * R')%sep m ->
          (find k_impl
           implementing (pred (k head))
           and-returning retvars
@@ -436,7 +431,7 @@ Section Compile.
           and-functions functions)) ->
       (let head := v in
        find (cmd.seq
-               (cmd.call [] bignum_copy [expr.var x_var; expr.var out_var])
+               (cmd.call [] felem_copy [expr.var x_var; expr.var out_var])
                k_impl)
        implementing (pred (dlet head k))
        and-returning retvars
@@ -452,20 +447,20 @@ Section Compile.
       ecancel_assumption.
   Qed.
 
-  Lemma compile_bignum_literal :
+  Lemma compile_felem_small_literal :
     forall (locals: Semantics.locals) (mem: Semantics.mem)
            (locals_ok : Semantics.locals -> Prop)
       tr retvars R R' functions T (pred: T -> list word -> Semantics.mem -> Prop)
-      (wx : word) (x : Z) (out : bignum) out_ptr out_var k k_impl,
-      spec_of_bignum_literal functions ->
+      (wx : word) (x : Z) (out : felem) out_ptr out_var k k_impl,
+      spec_of_felem_small_literal functions ->
       (Placeholder out_ptr out * R')%sep mem ->
       map.get locals out_var = Some out_ptr ->
       word.unsigned wx = x ->
       let v := (x mod M)%Z in
       (let head := v in
        forall X m,
-         (Bignum out_ptr X * R')%sep m ->
-         eval X mod M = head ->
+         (FElem out_ptr X * R')%sep m ->
+         feval X mod M = head ->
          bounded_by tight_bounds X ->
          (find k_impl
           implementing (pred (k head))
@@ -475,7 +470,7 @@ Section Compile.
           and-functions functions)) ->
       (let head := v in
        find (cmd.seq
-               (cmd.call [] bignum_literal
+               (cmd.call [] felem_small_literal
                          [expr.literal x; expr.var out_var])
                k_impl)
        implementing (pred (dlet head k))
@@ -560,11 +555,11 @@ Section Compile.
     forall (locals: Semantics.locals) (mem: Semantics.mem)
            (locals_ok : Semantics.locals -> Prop)
       tr retvars R Rin functions T (pred: T -> list word -> Semantics.mem -> Prop)
-      (x : Z) (op : Z -> Z -> Z) (y : bignum) y_ptr y_var k k_impl,
-      (Bignum y_ptr y * Rin)%sep mem ->
+      (x : Z) (op : Z -> Z -> Z) (y : felem) y_ptr y_var k k_impl,
+      (FElem y_ptr y * Rin)%sep mem ->
       map.get locals y_var = Some y_ptr ->
-      let v := ((overwrite1 op) x (eval y mod M)) mod M in
-      let v' := (op x (eval y mod M)) mod M in
+      let v := ((overwrite1 op) x (feval y mod M)) mod M in
+      let v' := (op x (feval y mod M)) mod M in
       (let __ := 0 in (* placeholder *)
        forall m,
          sep (Placeholder y_ptr y) Rin m ->
@@ -590,11 +585,11 @@ Section Compile.
     forall (locals: Semantics.locals) (mem: Semantics.mem)
            (locals_ok : Semantics.locals -> Prop)
       tr retvars R Rin functions T (pred: T -> list word -> Semantics.mem -> Prop)
-      (y : Z) (op : Z -> Z -> Z) (x : bignum) x_ptr x_var k k_impl,
-      (Bignum x_ptr x * Rin)%sep mem ->
+      (y : Z) (op : Z -> Z -> Z) (x : felem) x_ptr x_var k k_impl,
+      (FElem x_ptr x * Rin)%sep mem ->
       map.get locals x_var = Some x_ptr ->
-      let v := ((overwrite2 op) (eval x mod M) y) mod M in
-      let v' := (op (eval x mod M) y) mod M in
+      let v := ((overwrite2 op) (feval x mod M) y) mod M in
+      let v' := (op (feval x mod M) y) mod M in
       (let __ := 0 in (* placeholder *)
        forall m,
          sep (Placeholder x_ptr x) Rin m ->
@@ -665,4 +660,4 @@ Ltac compile_compose_step :=
         | simple eapply compile_overwrite2 ];
   [ solve [repeat compile_step] .. | intros ].
 
-Ltac free p := change (Bignum p) with (Placeholder p) in *.
+Ltac free p := change (FElem p) with (Placeholder p) in *.

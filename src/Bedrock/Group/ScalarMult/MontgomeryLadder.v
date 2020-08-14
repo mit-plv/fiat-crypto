@@ -13,14 +13,15 @@ Section __.
           {semantics_ok : Semantics.parameters_ok semantics}.
   Context {field_parameters : FieldParameters}
           {scalar_field_parameters : ScalarFieldParameters}.
-  Context {bignum_representaton : BignumRepresentation}
+  Context {field_representaton : FieldRepresentation}
           {scalar_representation : ScalarRepresentation}.
   Existing Instances spec_of_mul spec_of_square spec_of_add
-           spec_of_sub spec_of_scmula24 spec_of_inv spec_of_bignum_copy
-           spec_of_bignum_literal spec_of_sctestbit spec_of_ladderstep.
+           spec_of_sub spec_of_scmula24 spec_of_inv spec_of_felem_copy
+           spec_of_felem_small_literal spec_of_sctestbit
+           spec_of_ladderstep.
 
   Context {relax_bounds :
-             forall X : bignum,
+             forall X : felem,
                bounded_by tight_bounds X ->
                bounded_by loose_bounds X}.
   Hint Resolve relax_bounds : compiler.
@@ -69,8 +70,8 @@ Section __.
             (zbound_small : word.wrap zbound = zbound)
             (zbound_eq : zbound = Z.of_nat bound).
 
-    (* TODO: make Placeholder [Lift1Prop.ex1 (fun x => Bignum p x)], and prove
-       an iff1 with Bignum? Then we could even do some loop over the pointers to
+    (* TODO: make Placeholder [Lift1Prop.ex1 (fun x => FElem p x)], and prove
+       an iff1 with FElem? Then we could even do some loop over the pointers to
        construct the seplogic condition *)
     (* TODO: should montladder return a pointer to the result? Currently writes
        result into U. *)
@@ -80,26 +81,26 @@ Section __.
                (result : Z)
       : list word -> Semantics.mem -> Prop :=
       fun _ =>
-      (liftexists U' X1' Z1' X2' Z2' A' AA' B' BB' E' C' D' DA' CB' : bignum,
-         (emp (result = eval U' mod M)
-          * (Scalar pK K * Bignum pU U'
-             * Bignum pX1 X1' * Bignum pZ1 Z1'
-             * Bignum pX2 X2' * Bignum pZ2 Z2'
-             * Bignum pA A' * Bignum pAA AA'
-             * Bignum pB B' * Bignum pBB BB'
-             * Bignum pE E' * Bignum pC C' * Bignum pD D'
-             * Bignum pDA DA' * Bignum pCB CB'))%sep).
+      (liftexists U' X1' Z1' X2' Z2' A' AA' B' BB' E' C' D' DA' CB' : felem,
+         (emp (result = feval U' mod M)
+          * (Scalar pK K * FElem pU U'
+             * FElem pX1 X1' * FElem pZ1 Z1'
+             * FElem pX2 X2' * FElem pZ2 Z2'
+             * FElem pA A' * FElem pAA AA'
+             * FElem pB B' * FElem pBB BB'
+             * FElem pE E' * FElem pC C' * FElem pD D'
+             * FElem pDA DA' * FElem pCB CB'))%sep).
 
     Instance spec_of_montladder : spec_of "montladder" :=
       forall!
             (K : scalar)
-            (U X1 Z1 X2 Z2 : bignum) (* u, P1, P2 *)
-            (A AA B BB E C D DA CB : bignum) (* ladderstep intermediates *)
+            (U X1 Z1 X2 Z2 : felem) (* u, P1, P2 *)
+            (A AA B BB E C D DA CB : felem) (* ladderstep intermediates *)
             (pK pU pX1 pZ1 pX2 pZ2
                 pA pAA pB pBB pE pC pD pDA pCB : Semantics.word),
         (fun R m =>
            bounded_by tight_bounds U
-           /\ (Scalar pK K * Bignum pU U
+           /\ (Scalar pK K * FElem pU U
                * Placeholder pX1 X1 * Placeholder pZ1 Z1
                * Placeholder pX2 X2 * Placeholder pZ2 Z2
                * Placeholder pA A * Placeholder pAA AA
@@ -115,7 +116,7 @@ Section __.
              K pK pU pX1 pZ1 pX2 pZ2 pA pAA pB pBB pE pC pD pDA pCB
              (montladder_gallina
                 (fun i => Z.testbit (sceval K) (Z.of_nat i))
-                (eval U mod M))).
+                (feval U mod M))).
 
     Ltac apply_compile_cswap_nocopy :=
       simple eapply compile_cswap_nocopy with
@@ -123,13 +124,13 @@ Section __.
            fun p (X : Z) =>
              (Lift1Prop.ex1
                 (fun x =>
-                   (emp (eval x mod M = X mod M) * Bignum p x)%sep)))
+                   (emp (feval x mod M = X mod M) * FElem p x)%sep)))
         (tmp:="tmp");
       [ lazymatch goal with
         | |- sep _ _ _ =>
           repeat lazymatch goal with
                  | |- Lift1Prop.ex1 _ _ => eexists
-                 | |- eval _ mod _ = _ => eassumption
+                 | |- feval _ mod _ = _ => eassumption
                  | _ => progress sepsimpl
                  end; ecancel_assumption
         | _ => idtac
@@ -144,8 +145,8 @@ Section __.
       first [ simple eapply compile_downto
             | simple eapply compile_sctestbit with (var:=name)
             | simple eapply compile_point_assign
-            | simple eapply compile_bignum_literal
-            | simple eapply compile_bignum_copy
+            | simple eapply compile_felem_small_literal
+            | simple eapply compile_felem_copy
             | simple eapply compile_cswap_pair
             | apply_compile_cswap_nocopy
             | simple eapply compile_ladderstep ].
@@ -178,10 +179,10 @@ Section __.
               /\ Z1z mod M = Z1z
               /\ X2z mod M = X2z
               /\ Z2z mod M = Z2z
-              /\ eval X1 mod M = X1z mod M
-              /\ eval Z1 mod M = Z1z mod M
-              /\ eval X2 mod M = X2z mod M
-              /\ eval Z2 mod M = Z2z mod M
+              /\ feval X1 mod M = X1z mod M
+              /\ feval Z1 mod M = Z1z mod M
+              /\ feval X2 mod M = X2z mod M
+              /\ feval Z2 mod M = Z2z mod M
               /\ (if swapped
                   then (X1_ptr' = X2_ptr
                         /\ Z1_ptr' = Z2_ptr
@@ -195,8 +196,8 @@ Section __.
                   * Var X1_var X1_ptr' * Var Z1_var Z1_ptr'
                   * Var X2_var X2_ptr' * Var Z2_var Z2_ptr'
                   * Rl)%sep locals)
-         * (Scalar K_ptr K * Bignum X1_ptr' X1 * Bignum Z1_ptr' Z1
-            * Bignum X2_ptr' X2 * Bignum Z2_ptr' Z2
+         * (Scalar K_ptr K * FElem X1_ptr' X1 * FElem Z1_ptr' Z1
+            * FElem X2_ptr' X2 * FElem Z2_ptr' Z2
             * Placeholder A_ptr A * Placeholder AA_ptr AA
             * Placeholder B_ptr B * Placeholder BB_ptr BB
             * Placeholder E_ptr E * Placeholder C_ptr C
@@ -228,7 +229,7 @@ Section __.
       lazymatch goal with
       | |- map.get _ _ = _ => subst_lets_in_goal; solve_map_get_goal
       | |- bounded_by _ _ => solve [ auto ]
-      | |- eval _ mod _ = _ =>
+      | |- feval _ mod _ = _ =>
         subst_lets_in_goal; rewrite ?Z.mod_mod by apply M_nonzero;
         first [ reflexivity | assumption ]
       | |- ?x mod M = ?x => subst_lets_in_goal;
@@ -237,22 +238,22 @@ Section __.
       | |- ?x => fail "unrecognized side condition" x
       end.
 
-    Lemma eval_fst_cswap s a b A B :
-      eval a mod M = A mod M->
-      eval b mod M = B mod M ->
-      eval (fst (cswap s a b)) mod M = (fst (cswap s A B)) mod M.
+    Lemma feval_fst_cswap s a b A B :
+      feval a mod M = A mod M->
+      feval b mod M = B mod M ->
+      feval (fst (cswap s a b)) mod M = (fst (cswap s A B)) mod M.
     Proof. destruct s; cbn; auto. Qed.
 
-    Lemma eval_snd_cswap s a b A B :
-      eval a mod M = A mod M->
-      eval b mod M = B mod M ->
-      eval (snd (cswap s a b)) mod M = (snd (cswap s A B)) mod M.
+    Lemma feval_snd_cswap s a b A B :
+      feval a mod M = A mod M->
+      feval b mod M = B mod M ->
+      feval (snd (cswap s a b)) mod M = (snd (cswap s A B)) mod M.
     Proof. destruct s; cbn; auto. Qed.
 
-    Lemma eval_fst_cswap_small s a b A B :
-      eval a mod M = A ->
-      eval b mod M = B ->
-      eval (fst (cswap s a b)) mod M = (fst (cswap s A B)).
+    Lemma feval_fst_cswap_small s a b A B :
+      feval a mod M = A ->
+      feval b mod M = B ->
+      feval (fst (cswap s a b)) mod M = (fst (cswap s A B)).
     Proof. destruct s; cbn; auto. Qed.
 
     Local Ltac swap_mod :=
@@ -286,8 +287,8 @@ Section __.
       lazymatch goal with
       | |- map.get _ _ = Some _ =>
         solve [subst_lets_in_goal; solve_map_get_goal]
-      | |- eval _ mod _ = _ =>
-        solve [eauto using eval_fst_cswap, eval_snd_cswap]
+      | |- feval _ mod _ = _ =>
+        solve [eauto using feval_fst_cswap, feval_snd_cswap]
       | |- bounded_by _ (fst (cswap _ _ _)) =>
         apply cswap_cases_fst; solve [auto]
       | |- bounded_by _ (snd (cswap _ _ _)) =>
@@ -307,7 +308,7 @@ Section __.
         evar (R1 : Semantics.mem -> Prop);
         evar (R2 : Semantics.mem -> Prop);
         unify R (sep R1 R2);
-        seprewrite (cswap_iff1 Bignum)
+        seprewrite (cswap_iff1 FElem)
       end.
 
     Ltac safe_field_compile_step :=
@@ -316,7 +317,7 @@ Section __.
       | |- sep _ ?R _ =>
         tryif is_evar R
         then (repeat rewrite_cswap_iff1_with_evar_frame)
-        else (repeat seprewrite (cswap_iff1 Bignum));
+        else (repeat seprewrite (cswap_iff1 FElem));
         ecancel_assumption
       | _ => idtac
       end;
@@ -333,7 +334,8 @@ Section __.
               montladder
               (ltac:(
                  let callees :=
-                     constr:([bignum_literal; bignum_copy; "ladderstep";
+                     constr:([felem_small_literal; felem_copy;
+                                "ladderstep";
                                 sctestbit; inv; mul]) in
                  let x := program_logic_goal_for_function
                                 montladder callees in
@@ -421,14 +423,14 @@ Section __.
         compile_step.
         (* first, resolve evars *)
         all:lazymatch goal with
-            | |- eval _ mod _ = _ =>
-              solve [eauto using eval_fst_cswap, eval_snd_cswap]
+            | |- feval _ mod _ = _ =>
+              solve [eauto using feval_fst_cswap, feval_snd_cswap]
             | _ => idtac
             end.
         (* *after* evar resolution *)
         all:lazymatch goal with
             | |- sep _ _ _ =>
-              repeat seprewrite (cswap_iff1 Bignum);
+              repeat seprewrite (cswap_iff1 FElem);
                 ecancel_assumption
             | |- context [WeakestPrecondition.cmd] => idtac
             | _ => solve_field_subgoals_with_cswap
@@ -467,7 +469,7 @@ Section __.
           (* first, resolve evars *)
           all:lazymatch goal with
               | |- @sep _ _ Semantics.mem _ _ _ =>
-                change Placeholder with Bignum; ecancel_assumption
+                change Placeholder with FElem; ecancel_assumption
               | |- @sep _ _ Semantics.locals _ _ ?locals =>
                 subst_lets_in_goal; push_map_remove;
                   let locals := match goal with |- ?P ?l => l end in
@@ -504,11 +506,11 @@ Section __.
         repeat safe_compile_step.
         cbv match zeta.
 
-        (* pull the eval out of all the swaps so field lemmas work *)
+        (* pull the feval out of all the swaps so field lemmas work *)
         repeat match goal with
-               | H1 : ?y mod ?M = ?y, H2 : eval ?x mod M = ?y mod M |- _ =>
+               | H1 : ?y mod ?M = ?y, H2 : feval ?x mod M = ?y mod M |- _ =>
                  rewrite <-H2 in H1
-               | _ => erewrite <-eval_fst_cswap_small by eauto
+               | _ => erewrite <-feval_fst_cswap_small by eauto
                | x := cswap _ _ _ |- _ => subst x
                end.
 
@@ -517,10 +519,10 @@ Section __.
 
         (* the output of this last operation needs to be stored in the pointer
            for the output, so we guide the automation to the right pointer *)
-        clear_old_seps. change Placeholder with Bignum in *.
+        clear_old_seps. change Placeholder with FElem in *.
         lazymatch goal with
-        | H : context [Bignum ?p U] |- _ =>
-          change (Bignum p) with (Placeholder p) in H
+        | H : context [FElem ?p U] |- _ =>
+          change (FElem p) with (Placeholder p) in H
         end.
 
         safe_field_compile_step.
@@ -547,10 +549,10 @@ Print montladder_body.
 (* fun (field_parameters : FieldParameters)
  *   (scalar_field_parameters : ScalarFieldParameters)
  *   (zbound : Z) =>
- * (cmd.call [] bignum_literal [(uintptr_t)1ULL; "X1"];;
- *  cmd.call [] bignum_literal [(uintptr_t)0ULL; "Z1"];;
- *  cmd.call [] bignum_copy ["U"; "X2"];;
- *  cmd.call [] bignum_literal [(uintptr_t)1ULL; "Z2"];;
+ * (cmd.call [] felem_small_literal [(uintptr_t)1ULL; "X1"];;
+ *  cmd.call [] felem_small_literal [(uintptr_t)0ULL; "Z1"];;
+ *  cmd.call [] felem_copy ["U"; "X2"];;
+ *  cmd.call [] felem_small_literal [(uintptr_t)1ULL; "Z2"];;
  *  "v6" = (uintptr_t)0ULL;;
  *  "v7" = (uintptr_t)zboundULL;;
  *  (while ((uintptr_t)0ULL < "v7") {{

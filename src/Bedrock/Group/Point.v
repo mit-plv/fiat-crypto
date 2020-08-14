@@ -9,7 +9,7 @@ Section Compile.
   Context {semantics : Semantics.parameters}
           {semantics_ok : Semantics.parameters_ok semantics}.
   Context {field_parameters : FieldParameters}
-          {bignum_representation : BignumRepresentation}.
+          {field_representation : FieldRepresentation}.
 
   Lemma compile_point_assign :
     forall (locals: Semantics.locals) (mem: Semantics.mem)
