@@ -32,7 +32,7 @@ Section Specs.
   Context {semantics : Semantics.parameters}
           {scalar_representaton : ScalarRepresentation}.
   Context {group_parameters : GroupParameters}
-          {group_representaton : @GroupRepresentation G}.
+          {group_representaton : GroupRepresentation (G:=G)}.
 
   Instance spec_of_scmul : spec_of scmul :=
     (forall! (x old_out : gelem) (k : scalar) (pout px pk : word),
