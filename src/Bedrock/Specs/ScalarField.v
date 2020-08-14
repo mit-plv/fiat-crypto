@@ -9,20 +9,10 @@ Class ScalarFieldParameters :=
     sctestbit : string;
   }.
 
-(* In practice, these would be instantiated with:
-   bignum := list word
-   eval := fun ws => Positional.eval weight n (map word.unsigned ws)
-   Bignum := (fun addr xs =>
-               (emp (length xs = n) * array scalar addr xs)%sep)
-   bounds := list (option zrange)
-   bounded_by := (fun bs ws =>
-                   list_Z_bounded_by bs (map word.unsigned ws)) *)
-Class ScalarRepresentation :=
+Class ScalarRepresentation {semantics : Semantics.parameters} :=
   { scalar : Type;
     sceval : scalar -> Z;
-    Scalar :
-      forall {semantics : Semantics.parameters},
-        word -> scalar -> Semantics.mem -> Prop;
+    Scalar : word -> scalar -> Semantics.mem -> Prop;
   }.
 
 Section Specs.

@@ -29,20 +29,10 @@ Class FieldParameters :=
 Lemma M_nonzero {fp : FieldParameters} : M <> 0.
 Proof. cbv [M]. congruence. Qed.
 
-(* TODO: instantiate with...
-   bignum := list word
-   eval := fun ws => Positional.eval weight n (map word.unsigned ws)
-   Bignum := (fun addr xs =>
-               (emp (length xs = n) * array scalar addr xs)%sep)
-   bounds := list (option zrange)
-   bounded_by := (fun bs ws =>
-                   list_Z_bounded_by bs (map word.unsigned ws)) *)
-Class BignumRepresentation :=
+Class BignumRepresentation {semantics : Semantics.parameters} :=
   { bignum : Type;
     eval : bignum -> Z;
-    Bignum :
-      forall {semantics : Semantics.parameters},
-        word -> bignum -> Semantics.mem -> Prop;
+    Bignum : word -> bignum -> Semantics.mem -> Prop;
     bounds : Type;
     bounded_by : bounds -> bignum -> Prop;
 
