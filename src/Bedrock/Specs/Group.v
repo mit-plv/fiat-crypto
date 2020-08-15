@@ -1,9 +1,10 @@
 Require Import bedrock2.Semantics.
 Require Import Rupicola.Lib.Api.
-Require Import Crypto.Bedrock.Specs.ScalarField.
-Require Import Crypto.Algebra.Hierarchy.
 Require Import Crypto.Algebra.Group.
+Require Import Crypto.Algebra.Hierarchy.
 Require Import Crypto.Algebra.ScalarMult.
+Require Import Crypto.Arithmetic.PrimeFieldTheorems.
+Require Import Crypto.Bedrock.Specs.ScalarField.
 
 Class GroupParameters :=
   { (** mathematical parameters **)
@@ -31,6 +32,7 @@ Class GroupRepresentation {G : Type} {semantics : Semantics.parameters} :=
 
 Section Specs.
   Context {semantics : Semantics.parameters}
+          {scalar_field_parameters : ScalarFieldParameters}
           {scalar_representaton : ScalarRepresentation}.
   Context {group_parameters : GroupParameters}
           {group_representaton : GroupRepresentation (G:=G)}.
@@ -45,7 +47,7 @@ Section Specs.
           ===>
           (fun _ =>
              liftexists (xk : gelem),
-             (emp (geval xk = scalarmult (sceval k) (geval x))
+             (emp (geval xk = scalarmult (F.to_Z (sceval k)) (geval x))
               * GElem pout xk)%sep)).
 End Specs.
 
