@@ -264,9 +264,8 @@ Section __.
         apply cswap_cases_fst; solve [auto]
       | |- bounded_by _ (snd (cswap _ _ _)) =>
         apply cswap_cases_snd; solve [auto]
-      | |- context [WeakestPrecondition.cmd] => idtac
-      | _ => solve [eauto]
-      end.
+      | _ => idtac
+      end; solve [eauto].
 
     (* create a new evar to take on the second swap clause *)
     Ltac rewrite_cswap_iff1_with_evar_frame :=
