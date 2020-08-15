@@ -1,4 +1,5 @@
 Require Import Rupicola.Lib.Api.
+Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.Field.Interface.Compilation.
 Require Import Crypto.Bedrock.Group.Point.
 Require Import Crypto.Bedrock.Specs.Field.
@@ -20,17 +21,10 @@ Section __.
   Hint Resolve relax_bounds : compiler.
 
   Section Gallina.
-    (* Everything in gallina-world is mod M; ideally we will use a type like
-       fiat-crypto's F for this *)
-    Local Notation "0" := (0 mod M).
-    Local Notation "1" := (1 mod M).
-    Local Infix "+" := (fun x y => (x + y) mod M).
-    Local Infix "-" := (fun x y => (x - y) mod M).
-    Local Infix "*" := (fun x y => (x * y) mod M).
-    Local Infix "^" := (fun x y => (x ^ y) mod M).
+    Local Open Scope F_scope.
 
     Definition ladderstep_gallina
-               (X1: Z) (P1 P2: point)  : (point * point) :=
+               (X1: F M_pos) (P1 P2: point)  : (point * point) :=
       let '(X2, Z2) := P1 in
       let '(X3, Z3) := P2 in
       let/d A := X2+Z2 in
@@ -64,8 +58,7 @@ Section __.
       (liftexists X4 Z4 X5 Z5 (* output values *)
                   A' AA' B' BB' E' C' D' DA' CB' (* new intermediates *)
        : felem,
-         (emp (result = ((feval X4 mod M, feval Z4 mod M),
-                            (feval X5 mod M, feval Z5 mod M))
+         (emp (result = ((feval X4, feval Z4), (feval X5, feval Z5))
                /\ bounded_by tight_bounds X4
                /\ bounded_by tight_bounds Z4
                /\ bounded_by tight_bounds X5
@@ -102,8 +95,8 @@ Section __.
            X1 X2 Z2 X3 Z3 pX1 pX2 pZ2 pX3 pZ3
            pA pAA pB pBB pE pC pD pDA pCB
            (ladderstep_gallina
-              (feval X1 mod M) (feval X2 mod M, feval Z2 mod M)
-              (feval X3 mod M, feval Z3 mod M))).
+              (feval X1) (feval X2, feval Z2)
+              (feval X3, feval Z3))).
 
     Lemma compile_ladderstep :
       forall (locals: Semantics.locals) (mem: Semantics.mem)
@@ -117,11 +110,11 @@ Section __.
         DA DA_ptr DA_var CB CB_ptr CB_var
         k k_impl,
         spec_of_ladderstep functions ->
-        feval X1 mod M = x1 mod M ->
-        feval X2 mod M = x2 mod M ->
-        feval Z2 mod M = z2 mod M ->
-        feval X3 mod M = x3 mod M ->
-        feval Z3 mod M = z3 mod M ->
+        feval X1 = x1 ->
+        feval X2 = x2 ->
+        feval Z2 = z2 ->
+        feval X3 = x3 ->
+        feval Z3 = z3 ->
         bounded_by tight_bounds X1 ->
         bounded_by tight_bounds X2 ->
         bounded_by tight_bounds Z2 ->
@@ -149,8 +142,7 @@ Section __.
         map.get locals D_var = Some D_ptr ->
         map.get locals DA_var = Some DA_ptr ->
         map.get locals CB_var = Some CB_ptr ->
-        let v := ladderstep_gallina
-                   (x1 mod M) (x2 mod M, z2 mod M) (x3 mod M, z3 mod M) in
+        let v := ladderstep_gallina x1 (x2, z2) (x3, z3) in
         (let head := v in
          forall m,
            (LadderStepResult
@@ -185,10 +177,7 @@ Section __.
     Proof.
       repeat straightline'.
       handle_call; [ solve [eauto] .. | sepsimpl ].
-      repeat straightline'.
-      repeat match goal with H : feval _ mod _ = _ |- _ =>
-                             rewrite H in * end.
-      eauto.
+      repeat straightline'. subst. eauto.
     Qed.
 
   Ltac ladderstep_compile_custom :=
@@ -229,6 +218,12 @@ Section __.
     free pX2; repeat safe_compile_step.
     free pZ2; repeat safe_compile_step.
 
+    (* sanity-check that compilation is done *)
+    lazymatch goal with
+    | |- context [dlet.dlet] => fail
+    | _ => idtac
+    end.
+
     (* done! now just prove postcondition *)
     compile_done. cbv [LadderStepResult].
     repeat lazymatch goal with
@@ -236,8 +231,7 @@ Section __.
            | |- sep _ _ _ =>
              first [ progress sepsimpl
                    | ecancel_assumption ]
-           | _ => idtac
-           end.
+          end.
     all:lazymatch goal with
         | |- bounded_by _ _ => solve [auto with compiler]
         | _ => idtac

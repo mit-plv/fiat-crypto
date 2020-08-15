@@ -3,6 +3,7 @@ Require Import Coq.Lists.List.
 Require Import coqutil.Word.Interface.
 Require Import bedrock2.Semantics.
 Require Import Crypto.Arithmetic.Core.
+Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.Field.Common.Types.
 Require Import Crypto.Bedrock.Field.Synthesis.Generic.Bignum.
 Require Import Crypto.Bedrock.Specs.Field.
@@ -10,13 +11,13 @@ Require Import Crypto.COperationSpecifications.
 Require Import Crypto.Util.ZRange.
 
 Section Representation.
-  Context {p : Types.parameters}.
+  Context {p : Types.parameters} {field_parameters : FieldParameters}.
   Context (n : nat) (weight : nat -> Z)
           (loose_bounds tight_bounds : list (option zrange)).
 
-  Definition eval_words : list word -> Z :=
+  Definition eval_words : list word -> F M_pos :=
     fun ws =>
-      Positional.eval weight n (map word.unsigned ws).
+      F.of_Z _ (Positional.eval weight n (map word.unsigned ws)).
 
   Instance frep : FieldRepresentation :=
     { felem := list word;
