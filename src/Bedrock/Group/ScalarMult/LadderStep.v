@@ -236,7 +236,7 @@ Section __.
         | |- bounded_by _ _ => solve [auto with compiler]
         | _ => idtac
         end.
-    reflexivity.
+    congruence.
   Qed.
 End __.
 

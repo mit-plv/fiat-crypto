@@ -466,8 +466,7 @@ Section __.
 
         repeat safe_compile_step. (cbv match zeta beta).
 
-        subst_lets_in_goal.
-        erewrite <-!feval_fst_cswap by eauto.
+        subst_lets_in_goal. erewrite <-!feval_fst_cswap by eauto.
         safe_field_compile_step.
         repeat safe_compile_step.
 
@@ -487,7 +486,7 @@ Section __.
         destruct_one_match_hyp_of_type bool.
         all:cleanup; subst.
         all:lift_eexists.
-        all:sepsimpl; [ reflexivity | ].
+        all:sepsimpl; [ solve [eauto] | ].
         all:ecancel_assumption. }
     Qed.
   End MontLadder.
