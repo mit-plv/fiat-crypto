@@ -2,6 +2,7 @@ Require Import Rupicola.Lib.Api.
 Require Import Rupicola.Lib.SepLocals.
 Require Import Rupicola.Examples.ECC.DownTo.
 Require Import Rupicola.Examples.ECC.CondSwap.
+Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.Field.Interface.Compilation.
 Require Import Crypto.Bedrock.Group.Point.
 Require Import Crypto.Bedrock.Group.ScalarMult.LadderStep.
@@ -31,16 +32,10 @@ Section __.
   Context (bound_pos : (bound > 0)%nat).
 
   Section Gallina.
-    (* Everything in gallina-world is mod M; ideally we will use a type like
-       fiat-crypto's F for this *)
-    Local Notation "0" := (0 mod M).
-    Local Notation "1" := (1 mod M).
-    Local Infix "+" := (fun x y => (x + y) mod M).
-    Local Infix "-" := (fun x y => (x - y) mod M).
-    Local Infix "*" := (fun x y => (x * y) mod M).
-    Local Infix "^" := (fun x y => (x ^ y) mod M).
+    Local Open Scope F_scope.
 
-    Definition montladder_gallina (testbit:nat ->bool) (u:Z) : Z :=
+    Definition montladder_gallina (testbit:nat ->bool) (u:F M_pos)
+      : F M_pos :=
       let/d P1 := (1, 0) in
       let/d P2 := (u, 1) in
       let/d swap := false in
@@ -60,7 +55,7 @@ Section __.
            ) in
       let/d ''(P1, P2) := cswap swap P1 P2 in
       let '(x, z) := P1 in
-      let/d r := Finv z mod M in
+      let/d r := F.inv z in
       let/d r := (x * r) in
       r.
   End Gallina.
@@ -79,11 +74,11 @@ Section __.
     Definition MontLadderResult
                (K : scalar)
                (pK pU pX1 pZ1 pX2 pZ2 pA pAA pB pBB pE pC pD pDA pCB : Semantics.word)
-               (result : Z)
+               (result : F M_pos)
       : list word -> Semantics.mem -> Prop :=
       fun _ =>
       (liftexists U' X1' Z1' X2' Z2' A' AA' B' BB' E' C' D' DA' CB' : felem,
-         (emp (result = feval U' mod M)
+         (emp (result = feval U')
           * (Scalar pK K * FElem pU U'
              * FElem pX1 X1' * FElem pZ1 Z1'
              * FElem pX2 X2' * FElem pZ2 Z2'
@@ -117,21 +112,21 @@ Section __.
              K pK pU pX1 pZ1 pX2 pZ2 pA pAA pB pBB pE pC pD pDA pCB
              (montladder_gallina
                 (fun i => Z.testbit (sceval K) (Z.of_nat i))
-                (feval U mod M))).
+                (feval U))).
 
     Ltac apply_compile_cswap_nocopy :=
       simple eapply compile_cswap_nocopy with
         (Data :=
-           fun p (X : Z) =>
+           fun p (X : F _) =>
              (Lift1Prop.ex1
                 (fun x =>
-                   (emp (feval x mod M = X mod M) * FElem p x)%sep)))
+                   (emp (feval x = X) * FElem p x)%sep)))
         (tmp:="tmp");
       [ lazymatch goal with
         | |- sep _ _ _ =>
           repeat lazymatch goal with
                  | |- Lift1Prop.ex1 _ _ => eexists
-                 | |- feval _ mod _ = _ => eassumption
+                 | |- feval _ = _ => eassumption
                  | _ => progress sepsimpl
                  end; ecancel_assumption
         | _ => idtac
@@ -149,8 +144,7 @@ Section __.
             | simple eapply compile_felem_small_literal
             | simple eapply compile_felem_copy
             | simple eapply compile_cswap_pair
-            | apply_compile_cswap_nocopy
-            | simple eapply compile_ladderstep ].
+            | apply_compile_cswap_nocopy ].
 
     Definition downto_inv
                swap_var X1_var Z1_var X2_var Z2_var K_var
@@ -165,10 +159,10 @@ Section __.
       let P1 := fst (fst st) in
       let P2 := snd (fst st) in
       let swap := snd st in
-      let X1z := fst P1 in
-      let Z1z := snd P1 in
-      let X2z := fst P2 in
-      let Z2z := snd P2 in
+      let x1 := fst P1 in
+      let z1 := snd P1 in
+      let x2 := fst P2 in
+      let z2 := snd P2 in
       let swapped := gst in
       liftexists X1_ptr' Z1_ptr' X2_ptr' Z2_ptr'
                  X1 Z1 X2 Z2 A AA B BB E C D DA CB,
@@ -176,14 +170,10 @@ Section __.
               /\ bounded_by tight_bounds Z1
               /\ bounded_by tight_bounds X2
               /\ bounded_by tight_bounds Z2
-              /\ X1z mod M = X1z
-              /\ Z1z mod M = Z1z
-              /\ X2z mod M = X2z
-              /\ Z2z mod M = Z2z
-              /\ feval X1 mod M = X1z mod M
-              /\ feval Z1 mod M = Z1z mod M
-              /\ feval X2 mod M = X2z mod M
-              /\ feval Z2 mod M = Z2z mod M
+              /\ feval X1 = x1
+              /\ feval Z1 = z1
+              /\ feval X2 = x2
+              /\ feval Z2 = z2
               /\ (if swapped
                   then (X1_ptr' = X2_ptr
                         /\ Z1_ptr' = Z2_ptr
@@ -230,41 +220,21 @@ Section __.
       lazymatch goal with
       | |- map.get _ _ = _ => subst_lets_in_goal; solve_map_get_goal
       | |- bounded_by _ _ => solve [ auto ]
-      | |- feval _ mod _ = _ =>
-        subst_lets_in_goal; rewrite ?Z.mod_mod by apply M_nonzero;
-        first [ reflexivity | assumption ]
-      | |- ?x mod M = ?x => subst_lets_in_goal;
-                            rewrite ?Z.mod_mod by apply M_nonzero; reflexivity
+      | |- feval _ = _ =>
+        subst_lets_in_goal; first [ reflexivity | assumption ]
       | |- ?x = ?x => reflexivity
       | |- ?x => fail "unrecognized side condition" x
       end.
 
     Lemma feval_fst_cswap s a b A B :
-      feval a mod M = A mod M->
-      feval b mod M = B mod M ->
-      feval (fst (cswap s a b)) mod M = (fst (cswap s A B)) mod M.
+      feval a = A -> feval b = B ->
+      feval (fst (cswap s a b)) = fst (cswap s A B).
     Proof. destruct s; cbn; auto. Qed.
 
     Lemma feval_snd_cswap s a b A B :
-      feval a mod M = A mod M->
-      feval b mod M = B mod M ->
-      feval (snd (cswap s a b)) mod M = (snd (cswap s A B)) mod M.
+      feval a = A -> feval b = B ->
+      feval (snd (cswap s a b)) = snd (cswap s A B).
     Proof. destruct s; cbn; auto. Qed.
-
-    Lemma feval_fst_cswap_small s a b A B :
-      feval a mod M = A ->
-      feval b mod M = B ->
-      feval (fst (cswap s a b)) mod M = (fst (cswap s A B)).
-    Proof. destruct s; cbn; auto. Qed.
-
-    Local Ltac swap_mod :=
-      subst_lets_in_goal;
-      repeat lazymatch goal with
-             | H : ?x mod M = ?x |- context [cswap _ ?x] => rewrite <-H
-             | H : ?x mod M = ?x |- context [cswap _ _ ?x] => rewrite <-H
-             end;
-      first [apply cswap_cases_fst | apply cswap_cases_snd ];
-      auto using Z.mod_mod, M_nonzero.
 
     (* Adding word.unsigned_of_Z_1 and word.unsigned_of_Z_0 as hints to
        compiler doesn't work, presumably because of the typeclass
@@ -288,7 +258,7 @@ Section __.
       lazymatch goal with
       | |- map.get _ _ = Some _ =>
         solve [subst_lets_in_goal; solve_map_get_goal]
-      | |- feval _ mod _ = _ =>
+      | |- feval _ = _ =>
         solve [eauto using feval_fst_cswap, feval_snd_cswap]
       | |- bounded_by _ (fst (cswap _ _ _)) =>
         apply cswap_cases_fst; solve [auto]
@@ -344,7 +314,7 @@ Section __.
            As montladder_body_correct.
     Proof.
       cbv [program_logic_goal_for spec_of_montladder].
-      setup.
+      setup. cbv [F.one F.zero]. (* expose F.of_Z *)
       repeat safe_compile_step.
 
       let i_var := gen_sym_fetch "v" in (* last used variable name *)
@@ -411,20 +381,11 @@ Section __.
         literal_locals_from_sep.
 
         repeat safe_compile_step.
-        cbv zeta.
 
-        match goal with
-        | |- context [dlet (ladderstep_gallina _ (?x1, ?z1) (?x2, ?z2))] =>
-          replace x1 with (x1 mod M) by swap_mod;
-          replace z1 with (z1 mod M) by swap_mod;
-          replace x2 with (x2 mod M) by swap_mod;
-          replace z2 with (z2 mod M) by swap_mod
-        end.
-
-        compile_step.
+        simple eapply compile_ladderstep.
         (* first, resolve evars *)
         all:lazymatch goal with
-            | |- feval _ mod _ = _ =>
+            | |- feval _ = _ =>
               solve [eauto using feval_fst_cswap, feval_snd_cswap]
             | _ => idtac
             end.
@@ -479,8 +440,7 @@ Section __.
               | _ => idtac
               end.
           (* now solve other subgoals *)
-          all:subst_lets_in_goal;
-              rewrite ?Z.mod_mod by apply M_nonzero; eauto.
+          all:subst_lets_in_goal; eauto.
           match goal with
           | H : if ?gst then _ else _ |-
             if xorb ?gst ?x then _ else _ =>
@@ -504,17 +464,10 @@ Section __.
         end.
         literal_locals_from_sep.
 
-        repeat safe_compile_step.
-        cbv match zeta.
+        repeat safe_compile_step. (cbv match zeta beta).
 
-        (* pull the feval out of all the swaps so field lemmas work *)
-        repeat match goal with
-               | H1 : ?y mod ?M = ?y, H2 : feval ?x mod M = ?y mod M |- _ =>
-                 rewrite <-H2 in H1
-               | _ => erewrite <-feval_fst_cswap_small by eauto
-               | x := cswap _ _ _ |- _ => subst x
-               end.
-
+        subst_lets_in_goal.
+        erewrite <-!feval_fst_cswap by eauto.
         safe_field_compile_step.
         repeat safe_compile_step.
 

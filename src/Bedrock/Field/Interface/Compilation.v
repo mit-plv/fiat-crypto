@@ -1,5 +1,6 @@
 Require Import Rupicola.Lib.Api.
 Require Import Crypto.Bedrock.Specs.Field.
+Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Local Open Scope Z_scope.
 
 Section Compile.
@@ -34,14 +35,14 @@ Section Compile.
       map.get locals x_var = Some x_ptr ->
       map.get locals y_var = Some y_ptr ->
       map.get locals out_var = Some out_ptr ->
-      let v := (feval x * feval y) mod M in
+      let v := (feval x * feval y)%F in
       (let head := v in
        forall out m,
-         feval out mod M = head ->
+         feval out = head ->
          bounded_by tight_bounds out ->
          sep (FElem out_ptr out) Rout m ->
          (find k_impl
-          implementing (pred (k (feval out mod M)))
+          implementing (pred (k (feval out)))
           and-returning retvars
           and-locals-post locals_ok
           with-locals locals and-memory m and-trace tr and-rest R
@@ -61,10 +62,7 @@ Section Compile.
     repeat straightline'.
     handle_call; [ solve [eauto] .. | sepsimpl ].
     repeat straightline'.
-    match goal with H : _ mod M = ?x mod M
-                    |- context [dlet (?x mod M)] =>
-                    rewrite <-H
-    end.
+    match goal with H : feval _ = _ |- _ => rewrite <-H end.
     eauto.
   Qed.
 
@@ -82,14 +80,14 @@ Section Compile.
       map.get locals x_var = Some x_ptr ->
       map.get locals y_var = Some y_ptr ->
       map.get locals out_var = Some out_ptr ->
-      let v := (feval x + feval y) mod M in
+      let v := (feval x + feval y)%F in
       (let head := v in
        forall out m,
-         feval out mod M = head ->
+         feval out = head ->
          bounded_by loose_bounds out ->
          sep (FElem out_ptr out) Rout m ->
          (find k_impl
-          implementing (pred (k (feval out mod M)))
+          implementing (pred (k (feval out)))
           and-returning retvars
           and-locals-post locals_ok
           with-locals locals and-memory m and-trace tr and-rest R
@@ -109,10 +107,7 @@ Section Compile.
     repeat straightline'.
     handle_call; [ solve [eauto] .. | sepsimpl ].
     repeat straightline'.
-    match goal with H : _ mod M = ?x mod M
-                    |- context [dlet (?x mod M)] =>
-                    rewrite <-H
-    end.
+    match goal with H : feval _ = _ |- _ => rewrite <-H end.
     eauto.
   Qed.
 
@@ -130,14 +125,14 @@ Section Compile.
       map.get locals x_var = Some x_ptr ->
       map.get locals y_var = Some y_ptr ->
       map.get locals out_var = Some out_ptr ->
-      let v := (feval x - feval y) mod M in
+      let v := (feval x - feval y)%F in
       (let head := v in
        forall out m,
-         feval out mod M = head ->
+         feval out = head ->
          bounded_by loose_bounds out ->
          sep (FElem out_ptr out) Rout m ->
          (find k_impl
-          implementing (pred (k (feval out mod M)))
+          implementing (pred (k (feval out)))
           and-returning retvars
           and-locals-post locals_ok
           with-locals locals and-memory m and-trace tr and-rest R
@@ -157,10 +152,7 @@ Section Compile.
     repeat straightline'.
     handle_call; [ solve [eauto] .. | sepsimpl ].
     repeat straightline'.
-    match goal with H : _ mod M = ?x mod M
-                    |- context [dlet (?x mod M)] =>
-                    rewrite <-H
-    end.
+    match goal with H : feval _ = _ |- _ => rewrite <-H end.
     eauto.
   Qed.
 
@@ -175,14 +167,14 @@ Section Compile.
       (Placeholder out_ptr out * Rout)%sep mem ->
       map.get locals x_var = Some x_ptr ->
       map.get locals out_var = Some out_ptr ->
-      let v := (feval x ^ 2) mod M in
+      let v := (feval x ^ 2)%F in
       (let head := v in
        forall out m,
-         feval out mod M = head ->
+         feval out = head ->
          bounded_by tight_bounds out ->
          sep (FElem out_ptr out) Rout m ->
          (find k_impl
-          implementing (pred (k (feval out mod M)))
+          implementing (pred (k (feval out)))
           and-returning retvars
           and-locals-post locals_ok
           with-locals locals and-memory m and-trace tr and-rest R
@@ -200,12 +192,8 @@ Section Compile.
     cbv [Placeholder] in *.
     repeat straightline'.
     handle_call; [ solve [eauto] .. | sepsimpl ].
-    repeat straightline'.
-    rewrite Z.pow_2_r in *.
-    match goal with H : _ mod M = ?x mod M
-                    |- context [dlet (?x mod M)] =>
-                    rewrite <-H
-    end.
+    repeat straightline'. rewrite F.pow_2_r in *.
+    match goal with H : feval _ = _ |- _ => rewrite <-H end.
     eauto.
   Qed.
 
@@ -220,14 +208,14 @@ Section Compile.
       (Placeholder out_ptr out * Rout)%sep mem ->
       map.get locals x_var = Some x_ptr ->
       map.get locals out_var = Some out_ptr ->
-      let v := (a24 * feval x) mod M in
+      let v := (a24 * feval x)%F in
       (let head := v in
        forall out m,
-         feval out mod M = head ->
+         feval out = head ->
          bounded_by tight_bounds out ->
          sep (FElem out_ptr out) Rout m ->
          (find k_impl
-          implementing (pred (k (feval out mod M)))
+          implementing (pred (k (feval out)))
           and-returning retvars
           and-locals-post locals_ok
           with-locals locals and-memory m and-trace tr and-rest R
@@ -246,10 +234,7 @@ Section Compile.
     repeat straightline'.
     handle_call; [ solve [eauto] .. | sepsimpl ].
     repeat straightline'.
-    match goal with H : _ mod M = ?x mod M
-                    |- context [dlet (?x mod M)] =>
-                    rewrite <-H
-    end.
+    match goal with H : feval _ = _ |- _ => rewrite <-H end.
     eauto.
   Qed.
 
@@ -264,14 +249,14 @@ Section Compile.
       (Placeholder out_ptr out * Rout)%sep mem ->
       map.get locals x_var = Some x_ptr ->
       map.get locals out_var = Some out_ptr ->
-      let v := (Finv (feval x mod M)) mod M in
+      let v := F.inv (feval x) in
       (let head := v in
        forall out m,
-         feval out mod M = head ->
+         feval out = head ->
          bounded_by loose_bounds out ->
          sep (FElem out_ptr out) Rout m ->
          (find k_impl
-          implementing (pred (k (feval out mod M)))
+          implementing (pred (k (feval out)))
           and-returning retvars
           and-locals-post locals_ok
           with-locals locals and-memory m and-trace tr and-rest R
@@ -290,10 +275,7 @@ Section Compile.
     repeat straightline'.
     handle_call; [ solve [eauto] .. | sepsimpl ].
     repeat straightline'.
-    match goal with H : _ mod M = ?x mod M
-                    |- context [dlet (?x mod M)] =>
-                    rewrite <-H
-    end.
+    match goal with H : feval _ = _ |- _ => rewrite <-H end.
     eauto.
   Qed.
 
@@ -306,7 +288,7 @@ Section Compile.
       (FElem x_ptr x * Placeholder out_ptr out * R')%sep mem ->
       map.get locals x_var = Some x_ptr ->
       map.get locals out_var = Some out_ptr ->
-      let v := (feval x mod M)%Z in
+      let v := feval x in
       (let head := v in
        forall m,
          (FElem x_ptr x * FElem out_ptr x * R')%sep m ->
@@ -343,11 +325,11 @@ Section Compile.
       (Placeholder out_ptr out * R')%sep mem ->
       map.get locals out_var = Some out_ptr ->
       word.unsigned wx = x ->
-      let v := (x mod M)%Z in
+      let v := F.of_Z M_pos x in
       (let head := v in
        forall X m,
          (FElem out_ptr X * R')%sep m ->
-         feval X mod M = head ->
+         feval X = head ->
          bounded_by tight_bounds X ->
          (find k_impl
           implementing (pred (k head))
@@ -372,7 +354,9 @@ Section Compile.
     repeat straightline'.
     match goal with H : _ |- _ =>
                     rewrite word.of_Z_unsigned in H end.
-    eauto.
+    use_hyp_with_matching_cmd; eauto; [ ].
+    match goal with H : F.to_Z _ = _ |- _ => rewrite <-H end.
+    rewrite F.of_Z_to_Z. eauto.
   Qed.
 
   (* noop indicating that the last argument should store output *)
@@ -383,16 +367,19 @@ Section Compile.
   Lemma compile_compose_l :
     forall (locals: Semantics.locals) (mem: Semantics.mem)
            (locals_ok : Semantics.locals -> Prop)
-      tr retvars R Rout functions T (pred: T -> list word -> Semantics.mem -> Prop)
-      (op1 op2 : Z -> Z -> Z)
-      x y z out out_ptr out_var k k_impl,
+           tr retvars R Rout functions T (pred: T -> list word -> Semantics.mem -> Prop)
+           {A1 A2 : Type} (* second arg is N for F.pow, so allow that *)
+           (op1 : F M_pos -> A1 -> F M_pos)
+           (op2 : F M_pos -> A2 -> F M_pos)
+           x y z out out_ptr out_var k k_impl,
       (Placeholder out_ptr out * Rout)%sep mem ->
       map.get locals out_var = Some out_ptr ->
-      let v := ((op2 (op1 x y mod M) z)) mod M in
+      let v := ((op2 (op1 x y) z)) in
       (let head := v in
        (find k_impl
-        implementing (pred (dlet (op1 x y mod M)
-        (fun xy => dlet ((overwrite2 op2) xy z mod M) k)))
+        implementing
+             (pred (dlet (op1 x y)
+                         (fun xy => dlet ((overwrite2 op2) xy z) k)))
         and-returning retvars
         and-locals-post locals_ok
         with-locals locals and-memory mem and-trace tr and-rest R
@@ -413,15 +400,18 @@ Section Compile.
     forall (locals: Semantics.locals) (mem: Semantics.mem)
            (locals_ok : Semantics.locals -> Prop)
       tr retvars R Rout functions T (pred: T -> list word -> Semantics.mem -> Prop)
-      (op1 op2 : Z -> Z -> Z)
-      x y z out out_ptr out_var k k_impl,
+           {A1 : Type} (* second arg is N for F.pow, so allow that *)
+           (op1 : F M_pos -> A1 -> F M_pos)
+           (op2 : F M_pos -> F M_pos -> F M_pos)
+           x y z out out_ptr out_var k k_impl,
       (Placeholder out_ptr out * Rout)%sep mem ->
       map.get locals out_var = Some out_ptr ->
-      let v := ((op2 z (op1 x y mod M))) mod M in
+      let v := (op2 z (op1 x y)) in
       (let head := v in
        (find k_impl
-        implementing (pred (dlet (op1 x y mod M)
-        (fun xy => dlet ((overwrite1 op2) z xy mod M) k)))
+        implementing
+             (pred (dlet (op1 x y)
+                         (fun xy => dlet ((overwrite1 op2) z xy) k)))
         and-returning retvars
         and-locals-post locals_ok
         with-locals locals and-memory mem and-trace tr and-rest R
@@ -442,11 +432,12 @@ Section Compile.
     forall (locals: Semantics.locals) (mem: Semantics.mem)
            (locals_ok : Semantics.locals -> Prop)
       tr retvars R Rin functions T (pred: T -> list word -> Semantics.mem -> Prop)
-      (x : Z) (op : Z -> Z -> Z) (y : felem) y_ptr y_var k k_impl,
+      (x : F M_pos) (op : F M_pos -> F M_pos -> F M_pos)
+      (y : felem) y_ptr y_var k k_impl,
       (FElem y_ptr y * Rin)%sep mem ->
       map.get locals y_var = Some y_ptr ->
-      let v := ((overwrite1 op) x (feval y mod M)) mod M in
-      let v' := (op x (feval y mod M)) mod M in
+      let v := (overwrite1 op) x (feval y) in
+      let v' := op x (feval y) in
       (let __ := 0 in (* placeholder *)
        forall m,
          sep (Placeholder y_ptr y) Rin m ->
@@ -472,11 +463,13 @@ Section Compile.
     forall (locals: Semantics.locals) (mem: Semantics.mem)
            (locals_ok : Semantics.locals -> Prop)
       tr retvars R Rin functions T (pred: T -> list word -> Semantics.mem -> Prop)
-      (y : Z) (op : Z -> Z -> Z) (x : felem) x_ptr x_var k k_impl,
+      {A} (y : A)
+      (op : F M_pos -> A -> F M_pos)
+      (x : felem) x_ptr x_var k k_impl,
       (FElem x_ptr x * Rin)%sep mem ->
       map.get locals x_var = Some x_ptr ->
-      let v := ((overwrite2 op) (feval x mod M) y) mod M in
-      let v' := (op (feval x mod M) y) mod M in
+      let v := (overwrite2 op) (feval x) y in
+      let v' := op (feval x) y in
       (let __ := 0 in (* placeholder *)
        forall m,
          sep (Placeholder x_ptr x) Rin m ->
@@ -499,6 +492,7 @@ Section Compile.
   Qed.
 End Compile.
 
+(* TODO: unused?*)
 Module Z.
   (* helper for Zpow_mod *)
   Lemma pow_mod_nonneg a b m :
@@ -531,7 +525,7 @@ Ltac pull_mod :=
                | rewrite <-Z.pow_mod ].
 
 Ltac field_compile_step :=
-  Z.push_pull_mod; pull_mod;
+(*  Z.push_pull_mod; pull_mod; *)
   first [ simple eapply compile_mul
         | simple eapply compile_add
         | simple eapply compile_sub
@@ -540,7 +534,7 @@ Ltac field_compile_step :=
         | simple eapply compile_inv ].
 
 Ltac compile_compose_step :=
-  Z.push_mod;
+  (*Z.push_mod; *)
   first [ simple eapply compile_compose_l
         | simple eapply compile_compose_r
         | simple eapply compile_overwrite1

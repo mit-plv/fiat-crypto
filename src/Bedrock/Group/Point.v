@@ -1,8 +1,10 @@
 Require Import Rupicola.Lib.Api.
+Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.Specs.Field.
 
 Section Gallina.
-  Definition point : Type := (Z * Z).
+  Definition point {field_parameters : FieldParameters} : Type
+    := (F M_pos * F M_pos).
 End Gallina.
 
 Section Compile.
@@ -15,12 +17,12 @@ Section Compile.
     forall (locals: Semantics.locals) (mem: Semantics.mem)
            (locals_ok : Semantics.locals -> Prop)
       tr retvars R functions T (pred: T -> _ -> _ -> Prop)
-      (x y : Z) k k_impl,
-      let v := (x mod M, y mod M)%Z in
+      (x y : F M_pos) k k_impl,
+      let v := (x, y) in
       (let __ := 0 in (* placeholder *)
        find k_impl
-       implementing (pred (dlet (x mod M)%Z
-                                (fun x => dlet (y mod M)%Z
+       implementing (pred (dlet x
+                                (fun x => dlet y
                                                (fun y => k (x, y)))))
        and-returning retvars
        and-locals-post locals_ok
