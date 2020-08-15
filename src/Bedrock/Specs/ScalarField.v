@@ -1,4 +1,5 @@
 Require Import Rupicola.Lib.Api.
+Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Local Open Scope Z_scope.
 
 Class ScalarFieldParameters :=
@@ -9,9 +10,11 @@ Class ScalarFieldParameters :=
     sctestbit : string;
   }.
 
-Class ScalarRepresentation {semantics : Semantics.parameters} :=
+Class ScalarRepresentation
+      {scalar_field_parameters : ScalarFieldParameters}
+      {semantics : Semantics.parameters} :=
   { scalar : Type;
-    sceval : scalar -> Z;
+    sceval : scalar -> F L_pos;
     Scalar : word -> scalar -> Semantics.mem -> Prop;
   }.
 
@@ -23,7 +26,7 @@ Section Specs.
 
   Definition spec_of_sctestbit : spec_of sctestbit :=
     (forall! (x : scalar) (px wi : word)
-           (b:=Z.testbit (sceval x) (word.unsigned wi)),
+           (b:=Z.testbit (F.to_Z (sceval x)) (word.unsigned wi)),
         (fun Rr mem =>
            (exists Ra, (Scalar px x * Ra)%sep mem)
            /\ Rr mem)
@@ -53,7 +56,7 @@ Section Compile.
       map.get locals x_var = Some x_ptr ->
       map.get locals i_var = Some wi ->
       word.unsigned wi = Z.of_nat i ->
-      let v := Z.testbit (sceval x) (Z.of_nat i) in
+      let v := Z.testbit (F.to_Z (sceval x)) (Z.of_nat i) in
       (let head := v in
        forall m,
          (Scalar x_ptr x * R')%sep m ->

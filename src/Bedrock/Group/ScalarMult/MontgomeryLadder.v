@@ -111,7 +111,7 @@ Section __.
           (MontLadderResult
              K pK pU pX1 pZ1 pX2 pZ2 pA pAA pB pBB pE pC pD pDA pCB
              (montladder_gallina
-                (fun i => Z.testbit (sceval K) (Z.of_nat i))
+                (fun i => Z.testbit (F.to_Z (sceval K)) (Z.of_nat i))
                 (feval U))).
 
     Ltac apply_compile_cswap_nocopy :=
@@ -199,7 +199,7 @@ Section __.
                (K : scalar) (st : point * point * bool)
                (gst : bool) (i : nat) :=
       let swap := snd st in
-      let swap := xorb swap (Z.testbit (sceval K) (Z.of_nat i)) in
+      let swap := xorb swap (Z.testbit (F.to_Z (sceval K)) (Z.of_nat i)) in
       xorb gst swap.
 
     Ltac setup_downto_inv_init :=
