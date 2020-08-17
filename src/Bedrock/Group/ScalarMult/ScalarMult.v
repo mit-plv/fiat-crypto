@@ -155,5 +155,45 @@ Module M.
         grepresents := xrepresents;
         GElem := FElem;
       }.
+
+    Section Implementation.
+      Context {scalar_field_parameters : ScalarFieldParameters}
+              {scalar_field_parameters_ok : ScalarFieldParameters_ok}
+              {scalar_field_representation : ScalarRepresentation}.
+      Existing Instance spec_of_montladder.
+
+      (* redeclaration plugs in implicits so [enter] works *)
+      Definition spec_of_scmul : spec_of scmul :=
+        Eval cbv [spec_of_scmul] in
+          (@spec_of_scmul semantics scalar_field_parameters
+                          scalar_field_representation group_parameters
+                          x_representation).
+      Existing Instance spec_of_scmul.
+
+      Definition scmul_func : Syntax.func :=
+        (scmul, (["out"; "k"; "x1"], [],
+                 cmd.call [] "montladder" [expr.var "out"; expr.var "k"; expr.var "x1"])).
+
+      Lemma scmul_func_correct :
+        program_logic_goal_for_function! scmul_func.
+      Proof.
+        (* straightline doesn't work properly for setup, so the first step
+           is inlined and changed here *)
+        Fail straightline.
+        enter scmul_func. intros.
+        WeakestPrecondition.unfold1_call_goal.
+        (cbv beta match delta [WeakestPrecondition.call_body]).
+        lazymatch goal with
+        | |- if ?test then ?T else _ =>
+          replace test with true by (rewrite String.eqb_refl; reflexivity);
+            change_no_check T
+        end; (cbv beta match delta [WeakestPrecondition.func]).
+
+        (* plain straightline should do this but doesn't; using enhanced
+           version from rupicola *)
+        repeat straightline'.
+      Abort.
+    End Implementation.
   End __.
 End M.
+
