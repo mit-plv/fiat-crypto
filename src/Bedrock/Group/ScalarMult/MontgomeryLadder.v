@@ -61,10 +61,7 @@ Section __.
   End Gallina.
 
   Section MontLadder.
-    (* need the literal Z form of scalarbits to give to expr.literal *)
-    Context (scalarbits : Z)
-            (scalarbits_small : word.wrap scalarbits = scalarbits)
-            (scalarbits_eq : scalarbits = Z.log2_up L).
+    Context (scalarbits_small : word.wrap scalarbits = scalarbits).
 
     (* TODO: make Placeholder [Lift1Prop.ex1 (fun x => FElem p x)], and prove
        an iff1 with FElem? Then we could even do some loop over the pointers to
@@ -73,13 +70,13 @@ Section __.
        result into U. *)
     Definition MontLadderResult
                (K : scalar)
-               (pK pU pX1 pZ1 pX2 pZ2 pA pAA pB pBB pE pC pD pDA pCB : Semantics.word)
+               (pOUT pK pU pX1 pZ1 pX2 pZ2 pA pAA pB pBB pE pC pD pDA pCB: Semantics.word)
                (result : F M_pos)
       : list word -> Semantics.mem -> Prop :=
       fun _ =>
-      (liftexists U' X1' Z1' X2' Z2' A' AA' B' BB' E' C' D' DA' CB' : felem,
-         (emp (result = feval U')
-          * (Scalar pK K * FElem pU U'
+      (liftexists OUT U' X1' Z1' X2' Z2' A' AA' B' BB' E' C' D' DA' CB' : felem,
+         (emp (result = feval OUT)
+          * (FElem pOUT OUT * Scalar pK K * FElem pU U'
              * FElem pX1 X1' * FElem pZ1 Z1'
              * FElem pX2 X2' * FElem pZ2 Z2'
              * FElem pA A' * FElem pAA AA'
@@ -89,14 +86,14 @@ Section __.
 
     Instance spec_of_montladder : spec_of "montladder" :=
       forall!
-            (K : scalar)
-            (U X1 Z1 X2 Z2 : felem) (* u, P1, P2 *)
-            (A AA B BB E C D DA CB : felem) (* ladderstep intermediates *)
-            (pK pU pX1 pZ1 pX2 pZ2
+            (OLD_OUT : felem) (* output placeholder *)
+            (K : scalar) (U : felem) (* input *)
+            (X1 Z1 X2 Z2 A AA B BB E C D DA CB : felem) (* intermediates *)
+            (pOUT pK pU pX1 pZ1 pX2 pZ2
                 pA pAA pB pBB pE pC pD pDA pCB : Semantics.word),
         (fun R m =>
            bounded_by tight_bounds U
-           /\ (Scalar pK K * FElem pU U
+           /\ (FElem pOUT OLD_OUT * Scalar pK K * FElem pU U
                * Placeholder pX1 X1 * Placeholder pZ1 Z1
                * Placeholder pX2 X2 * Placeholder pZ2 Z2
                * Placeholder pA A * Placeholder pAA AA
@@ -106,10 +103,10 @@ Section __.
                * Placeholder pCB CB * R)%sep m)
           ===>
           "montladder" @
-          [pK; pU; pX1; pZ1; pX2; pZ2; pA; pAA; pB; pBB; pE; pC; pD; pDA; pCB]
+          [pOUT; pK; pU; pX1; pZ1; pX2; pZ2; pA; pAA; pB; pBB; pE; pC; pD; pDA; pCB]
           ===>
           (MontLadderResult
-             K pK pU pX1 pZ1 pX2 pZ2 pA pAA pB pBB pE pC pD pDA pCB
+             K pOUT pK pU pX1 pZ1 pX2 pZ2 pA pAA pB pBB pE pC pD pDA pCB
              (montladder_gallina
                 scalarbits
                 (fun i => Z.testbit (F.to_Z (sceval K)) (Z.of_nat i))
@@ -304,7 +301,7 @@ Section __.
     Qed.
 
     Derive montladder_body SuchThat
-           (let args := ["K"; "U"; "X1"; "Z1"; "X2"; "Z2";
+           (let args := ["OUT"; "K"; "U"; "X1"; "Z1"; "X2"; "Z2";
                            "A"; "AA"; "B"; "BB"; "E"; "C"; "D"; "DA"; "CB"] in
             let montladder := ("montladder", (args, [], montladder_body)) in
             program_logic_goal_for
@@ -321,7 +318,6 @@ Section __.
     Proof.
       cbv [program_logic_goal_for spec_of_montladder].
       pose proof scalarbits_pos.
-      clear scalarbits_eq. (* so scalarbits isn't substituted *)
       setup. cbv [F.one F.zero]. (* expose F.of_Z *)
       repeat safe_compile_step.
 
@@ -474,14 +470,13 @@ Section __.
         repeat safe_compile_step. (cbv match zeta beta).
 
         subst_lets_in_goal. erewrite <-!feval_fst_cswap by eauto.
-        safe_field_compile_step.
-        repeat safe_compile_step.
+        safe_field_compile_step. safe_compile_step.
 
         (* the output of this last operation needs to be stored in the pointer
            for the output, so we guide the automation to the right pointer *)
         clear_old_seps. change Placeholder with FElem in *.
         lazymatch goal with
-        | H : context [FElem ?p U] |- _ =>
+        | H : context [FElem ?p OLD_OUT] |- _ =>
           change (FElem p) with (Placeholder p) in H
         end.
 
@@ -507,8 +502,7 @@ Local Open Scope bedrock_expr.
 Print montladder_body.
 *)
 (* fun (field_parameters : FieldParameters)
- *   (scalar_field_parameters : ScalarFieldParameters)
- *   (scalarbits : Z) =>
+ *   (scalar_field_parameters : ScalarFieldParameters) =>
  * (cmd.call [] felem_small_literal [(uintptr_t)1ULL; "X1"];;
  *  cmd.call [] felem_small_literal [(uintptr_t)0ULL; "Z1"];;
  *  cmd.call [] felem_copy ["U"; "X2"];;
@@ -552,7 +546,7 @@ Print montladder_body.
  *     cmd.unset "tmp"
  *   }});;
  *  cmd.call [] inv ["Z1"; "A"];;
- *  cmd.call [] mul ["X1"; "A"; "U"];;
+ *  cmd.call [] mul ["X1"; "A"; "OUT"];;
  *  /*skip*/)%bedrock_cmd
- *      : FieldParameters -> ScalarFieldParameters -> Z -> cmd
+ *      : FieldParameters -> ScalarFieldParameters -> cmd
  *)

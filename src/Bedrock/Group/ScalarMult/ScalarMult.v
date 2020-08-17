@@ -17,26 +17,6 @@ Require Import Crypto.Curves.Montgomery.XZProofs.
 Require Import Crypto.Spec.MontgomeryCurve.
 Require Import Crypto.Util.Loops.
 
-Instance montgomery_xz_parameters
-         {field_parameters : FieldParameters}
-         (M_prime : Znumtheory.prime M) (* TODO: move to field_parameters_ok or something *)
-         (char_ge_3 : Ring.char_ge 3)
-         (a b : F M_pos)
-         (b_nonzero : b <> F.zero)
-         (scmul : string)
-  : GroupParameters :=
-  { G := @M.point (F M_pos) Logic.eq F.add F.mul a b;
-    eq := @M.eq (F M_pos) Logic.eq F.add F.mul a b;
-    add := @M.add _ _ _ _ _ _ _ _ _ _ (@F.field_modulo M_pos M_prime) F.eq_dec char_ge_3 a b b_nonzero;
-    zero := @M.zero (F M_pos) Logic.eq F.add F.mul a b;
-    opp := @Affine.M.opp _ _ _ _ _ _ _ _ _ _ (@F.field_modulo M_pos M_prime) F.eq_dec a b b_nonzero;
-    scalarmult :=
-      @scalarmult_ref _ (M.add (b_nonzero:=b_nonzero))
-                      M.zero
-                      (Affine.M.opp (b_nonzero:=b_nonzero));
-    scmul := scmul;
-    }.
-
 Section Equivalence.
   Context {semantics : Semantics.parameters}.
   Context {field_parameters : FieldParameters}
@@ -110,3 +90,55 @@ Section Equivalence.
     { rewrite Z2Nat.id by lia. reflexivity. }
   Qed.
 End Equivalence.
+
+Module M.
+  Section __.
+    Context {semantics : Semantics.parameters}
+            {field_parameters : FieldParameters}
+            {field_parameters_ok : FieldParameters_ok}
+            {field_representation : FieldRepresentation}.
+    Context  (char_ge_3 :
+                @Ring.char_ge (F M_pos) Logic.eq F.zero F.one F.opp F.add
+                              F.sub F.mul 3)
+             (a b : F M_pos) (b_nonzero : b <> F.zero)
+             (scmul : string).
+    Local Notation to_xz := (M.to_xz (F:=F M_pos) (Feq:=Logic.eq)
+                                     (Fzero:=F.zero) (Fone:=F.one)
+                                     (Fadd:=F.add) (Fmul:=F.mul)
+                                     (a:=a) (b:=b)).
+    Local Notation to_x := (M.to_x (F:=F M_pos) (Feq:=Logic.eq)
+                                   (Fzero:=F.zero) (Fdiv:=F.div)
+                                   (Feq_dec:=F.eq_dec)).
+
+    Global Instance parameters
+      : GroupParameters :=
+      { G := @M.point (F M_pos) Logic.eq F.add F.mul a b;
+        eq := @M.eq (F M_pos) Logic.eq F.add F.mul a b;
+        add := @M.add (F M_pos) Logic.eq F.zero F.one F.opp F.add F.sub
+                      F.mul F.inv F.div (@F.field_modulo M_pos M_prime)
+                      F.eq_dec char_ge_3 a b b_nonzero;
+        zero := @M.zero (F M_pos) Logic.eq F.add F.mul a b;
+        opp := @Affine.M.opp _ _ _ _ _ _ _ _ _ _ (@F.field_modulo M_pos M_prime) F.eq_dec a b b_nonzero;
+        scalarmult :=
+          @scalarmult_ref _
+                          (M.add
+                             (field := @F.field_modulo M_pos M_prime)
+                             (char_ge_3 := char_ge_3)
+                             (b_nonzero := b_nonzero))
+                          M.zero
+                          (Affine.M.opp
+                             (field := @F.field_modulo M_pos M_prime)
+                             (b_nonzero := b_nonzero));
+        scmul := scmul;
+      }.
+
+    Definition xrepresents (x : felem) (P : G) : Prop :=
+      feval x = to_x (to_xz P).
+
+    Global Instance x_representation : GroupRepresentation :=
+      { gelem := felem; (* x only *)
+        grepresents := xrepresents;
+        GElem := FElem;
+      }.
+  End __.
+End M.
