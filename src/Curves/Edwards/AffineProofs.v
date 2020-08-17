@@ -264,8 +264,9 @@ Module E.
       eapply Monoid.is_homomorphism_phi_proper in X.
       rewrite (homomorphism_zero(zero:=Fzero)(phi:=KtoF)) in X.
       etransitivity; [|eexact X]; clear X.
-      (* TODO: Ring.of_Z of isomorphism *)
-    Admitted.
+      rewrite (of_Z_absorbs_homomorphism(phi:=KtoF)).
+      reflexivity.
+    Qed.
 
     Local Notation Fpoint := (@E.point F Feq Fone Fadd Fmul Fa Fd).
     Local Notation Kpoint := (@E.point K Keq Kone Kadd Kmul Ka Kd).

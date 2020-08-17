@@ -427,6 +427,42 @@ Section of_Z.
   Qed.
 End of_Z.
 
+Section of_Z_absorbs_homomorphism.
+  Context {R Req Rzero Rone Ropp Radd Rsub Rmul}
+          {Rring : @ring R Req Rzero Rone Ropp Radd Rsub Rmul}.
+  Context {R' R'eq R'zero R'one R'opp R'add R'sub R'mul}
+          {R'ring : @ring R' R'eq R'zero R'one R'opp R'add R'sub R'mul}.
+  Context {phi}
+          {Hphi:@is_homomorphism R Req Rone Radd Rmul
+                                     R' R'eq R'one R'add R'mul phi}.
+
+  Local Notation R_of_nat := (@of_nat R Rzero Rone Radd) (only parsing).
+  Local Notation R'_of_nat := (@of_nat R' R'zero R'one R'add) (only parsing).
+  Local Notation R_of_Z := (@of_Z R Rzero Rone Ropp Radd) (only parsing).
+  Local Notation R'_of_Z := (@of_Z R' R'zero R'one R'opp R'add) (only parsing).
+
+  Lemma of_nat_absorbs_homomorphism x
+    : R'eq (phi (R_of_nat x)) (R'_of_nat x).
+  Proof.
+    induction x as [|x IHx]; cbn [of_nat];
+      repeat first [ rewrite homomorphism_zero
+                   | rewrite homomorphism_add
+                   | rewrite homomorphism_one
+                   | rewrite IHx
+                   | reflexivity ].
+  Qed.
+
+  Lemma of_Z_absorbs_homomorphism x
+    : R'eq (phi (R_of_Z x)) (R'_of_Z x).
+  Proof.
+    cbv [of_Z]; break_innermost_match;
+      repeat first [ rewrite homomorphism_zero
+                   | rewrite homomorphism_opp
+                   | rewrite of_nat_absorbs_homomorphism
+                   | reflexivity ].
+  Qed.
+End of_Z_absorbs_homomorphism.
+
 Definition char_ge
            {R eq zero one opp add} {sub:R->R->R} {mul:R->R->R}
            C :=
