@@ -26,7 +26,7 @@ Class GroupParameters_ok {group_parameters : GroupParameters} :=
 
 Class GroupRepresentation {G : Type} {semantics : Semantics.parameters} :=
   { gelem : Type;
-    geval : gelem -> G;
+    grepresents : gelem -> G -> Prop;
     GElem : word -> gelem -> Semantics.mem -> Prop;
   }.
 
@@ -38,16 +38,18 @@ Section Specs.
           {group_representaton : GroupRepresentation (G:=G)}.
 
   Definition spec_of_scmul : spec_of scmul :=
-    (forall! (x old_out : gelem) (k : scalar) (pout px pk : word),
+    (forall! (x old_out : gelem) (k : scalar) (X : G)
+           (pout px pk : word),
         (fun Rr mem =>
-           (exists Ra, (GElem px x * Scalar pk k * Ra)%sep mem)
+           grepresents x X
+           /\ (exists Ra, (GElem px x * Scalar pk k * Ra)%sep mem)
            /\ (GElem pout old_out * Rr)%sep mem)
           ===>
           scmul @ [pout; px; pk]
           ===>
           (fun _ =>
              liftexists (xk : gelem),
-             (emp (geval xk = scalarmult (F.to_Z (sceval k)) (geval x))
+             (emp (grepresents xk (scalarmult (F.to_Z (sceval k)) X))
               * GElem pout xk)%sep)).
 End Specs.
 
