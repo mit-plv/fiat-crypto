@@ -97,11 +97,18 @@ Module M.
             {field_parameters : FieldParameters}
             {field_parameters_ok : FieldParameters_ok}
             {field_representation : FieldRepresentation}.
-    Context  (char_ge_3 :
-                @Ring.char_ge (F M_pos) Logic.eq F.zero F.one F.opp F.add
-                              F.sub F.mul 3)
-             (a b : F M_pos) (b_nonzero : b <> F.zero)
-             (scmul : string).
+    Context (char_ge_3 :
+               @Ring.char_ge (F M_pos) Logic.eq F.zero F.one F.opp F.add
+                             F.sub F.mul 3)
+            (char_ge_12 :
+               @Ring.char_ge (F M_pos) Logic.eq F.zero F.one F.opp F.add
+                              F.sub F.mul 12)
+            (char_ge_28 :
+               @Ring.char_ge (F M_pos) Logic.eq F.zero F.one F.opp F.add
+                             F.sub F.mul 28)
+            (a b : F M_pos) (b_nonzero : b <> F.zero)
+            (discriminant_nonzero : (a * a - (1 + 1 + 1 + 1) <> 0)%F)
+            (scmul : string).
     Local Notation to_xz := (M.to_xz (F:=F M_pos) (Feq:=Logic.eq)
                                      (Fzero:=F.zero) (Fone:=F.one)
                                      (Fadd:=F.add) (Fmul:=F.mul)
@@ -110,7 +117,7 @@ Module M.
                                    (Fzero:=F.zero) (Fdiv:=F.div)
                                    (Feq_dec:=F.eq_dec)).
 
-    Global Instance parameters
+    Global Instance group_parameters
       : GroupParameters :=
       { G := @M.point (F M_pos) Logic.eq F.add F.mul a b;
         eq := @M.eq (F M_pos) Logic.eq F.add F.mul a b;
@@ -131,6 +138,14 @@ Module M.
                              (b_nonzero := b_nonzero));
         scmul := scmul;
       }.
+
+    Global Instance group_parameters_ok : GroupParameters_ok.
+    Proof.
+      constructor.
+      { apply M.MontgomeryWeierstrassIsomorphism; auto. }
+      { apply @scalarmult_ref_is_scalarmult.
+        apply M.MontgomeryWeierstrassIsomorphism; auto. }
+    Qed.
 
     Definition xrepresents (x : felem) (P : G) : Prop :=
       feval x = to_x (to_xz P).
