@@ -5,7 +5,7 @@ Class ScalarFieldParameters :=
   { (** mathematical parameters **)
     L_pos : positive; (* modulus *)
     L : Z := Z.pos L_pos;
-    (** function names **)
+    (** function names for bedrock2 **)
     sctestbit : string;
   }.
 

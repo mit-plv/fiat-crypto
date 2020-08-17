@@ -6,14 +6,15 @@ Require Import Crypto.Algebra.Group.
 Require Import Crypto.Algebra.ScalarMult.
 
 Class GroupParameters :=
-  { G : Type;
+  { (** mathematical parameters **)
+    G : Type;
     eq : G -> G -> Prop;
     add : G -> G -> G;
     zero : G;
     opp : G -> G;
     scalarmult : Z -> G -> G;
 
-    (* function names *)
+    (** function names for bedrock2 **)
     scmul : string;
   }.
 

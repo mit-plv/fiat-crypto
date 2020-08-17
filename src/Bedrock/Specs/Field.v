@@ -7,7 +7,7 @@ Class FieldParameters :=
     M : Z := Z.pos M_pos;
     a24 : Z; (* (a+2) / 4 or (a-2) / 4, depending on the implementation *)
     Finv : Z -> Z; (* modular inverse in Z/M *)
-    (** function names **)
+    (** function names for bedrock2 **)
     mul : string; add : string; sub : string;
     square : string; scmula24 : string; inv : string;
 
