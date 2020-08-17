@@ -1,6 +1,6 @@
 Require Import Coq.Classes.Morphisms.
 Require Import Coq.ZArith.ZArith.
-Require Import Coq.micromega.Psatz.
+Require Import Coq.micromega.Lia.
 Require Import Crypto.Util.ZUtil.Tactics.SplitMinMax.
 Require Import Crypto.Util.ZUtil.Stabilization.
 Require Import Crypto.Util.ZUtil.MulSplit.

@@ -1,5 +1,5 @@
 Require Import Coq.Bool.Sumbool.
-Require Import Coq.micromega.Psatz.
+Require Import Coq.micromega.Lia.
 Require Import Coq.NArith.NArith.
 Require Import Coq.PArith.PArith.
 Require Import Coq.Lists.List.
