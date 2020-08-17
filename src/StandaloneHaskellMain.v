@@ -12,15 +12,32 @@ Global Set Warnings Append "-extraction-opaque-accessed".
 Extraction Language Haskell.
 Global Unset Extraction Optimize.
 
-Axiom IO_unit : Set.
-Axiom _IO : Set -> Set.
-Axiom printf_string : string -> _IO unit.
-Axiom getArgs : _IO (list string).
-Axiom getProgName : _IO string.
-Axiom raise_failure : string -> _IO unit.
-Axiom _IO_bind : forall A B, _IO A -> (A -> _IO B) -> _IO B.
-Axiom _IO_return : forall A : Set, A -> _IO A.
-Axiom cast_io : _IO unit -> IO_unit.
+(** We pull a hack to get coqchk to not report these as axioms; for
+    this, all we care about is that there exists a model. *)
+Module Type HaskellPrimitivesT.
+  Axiom IO_unit : Set.
+  Axiom _IO : Set -> Set.
+  Axiom printf_string : string -> _IO unit.
+  Axiom getArgs : _IO (list string).
+  Axiom getProgName : _IO string.
+  Axiom raise_failure : string -> _IO unit.
+  Axiom _IO_bind : forall A B, _IO A -> (A -> _IO B) -> _IO B.
+  Axiom _IO_return : forall A : Set, A -> _IO A.
+  Axiom cast_io : _IO unit -> IO_unit.
+End HaskellPrimitivesT.
+
+Module Export HaskellPrimitives : HaskellPrimitivesT.
+  Definition IO_unit : Set := unit.
+  Definition _IO : Set -> Set := fun T => T.
+  Definition printf_string : string -> _IO unit := fun _ => tt.
+  Definition getArgs : _IO (list string) := nil.
+  Definition getProgName : _IO string := "".
+  Definition raise_failure : string -> _IO unit := fun _ => tt.
+  Definition _IO_bind : forall A B, _IO A -> (A -> _IO B) -> _IO B := fun A B x f => f x.
+  Definition _IO_return : forall A : Set, A -> _IO A := fun A x => x.
+  Definition cast_io : _IO unit -> IO_unit := fun x => x.
+End HaskellPrimitives.
+
 Extract Constant printf_string =>
 "\s -> Text.Printf.printf ""%s"" s".
 Extract Constant _IO "a" => "GHC.Base.IO a".
