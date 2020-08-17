@@ -10,6 +10,10 @@ Class ScalarFieldParameters :=
     sctestbit : string;
   }.
 
+Class ScalarFieldParameters_ok
+      {scalar_field_parameters : ScalarFieldParameters} :=
+  { L_prime : Znumtheory.prime L }.
+
 Class ScalarRepresentation
       {scalar_field_parameters : ScalarFieldParameters}
       {semantics : Semantics.parameters} :=
