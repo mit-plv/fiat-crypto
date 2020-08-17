@@ -453,6 +453,24 @@ Module while.
   End While.
   Global Arguments by_invariant_fuel {state test body} inv measure P.
   Global Arguments by_invariant {state test body} inv measure P.
+
+  Section TwoLoops.
+    Context {state1 state2 : Type}
+            (test1 : state1 -> bool) (body1 : state1 -> state1)
+            (test2 : state2 -> bool) (body2 : state2 -> state2).
+
+    Lemma preservation
+          (R : state1 -> state2 -> Prop)
+          (Htest: forall s1 s2, R s1 s2 -> test1 s1 = test2 s2)
+          (Hbody: forall s1 s2, test2 s2 = true -> R s1 s2 -> R (body1 s1) (body2 s2)) :
+      forall fuel init1 init2,
+        R init1 init2 ->
+        R (while test1 body1 fuel init1) (while test2 body2 fuel init2).
+    Proof.
+      induction fuel; intros; cbn [while];
+        erewrite Htest by eauto; case_eq (test2 init2); auto.
+    Qed.
+  End TwoLoops.
 End while.
 Notation while := while.while.
 
