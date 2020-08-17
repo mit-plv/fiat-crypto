@@ -73,19 +73,19 @@ Section Specs.
                  /\ bounded_by outbounds out)
             * FElem pout out)%sep)) (only parsing).
 
-  Instance spec_of_mul : spec_of mul :=
+  Definition spec_of_mul : spec_of mul :=
     binop_spec mul Z.mul loose_bounds loose_bounds tight_bounds.
-  Instance spec_of_square : spec_of square :=
+  Definition spec_of_square : spec_of square :=
     unop_spec square (fun x => Z.mul x x) loose_bounds tight_bounds.
-  Instance spec_of_add : spec_of add :=
+  Definition spec_of_add : spec_of add :=
     binop_spec add Z.add tight_bounds tight_bounds loose_bounds.
-  Instance spec_of_sub : spec_of sub :=
+  Definition spec_of_sub : spec_of sub :=
     binop_spec sub Z.sub tight_bounds tight_bounds loose_bounds.
-  Instance spec_of_scmula24 : spec_of scmula24 :=
+  Definition spec_of_scmula24 : spec_of scmula24 :=
     unop_spec scmula24 (Z.mul a24) loose_bounds tight_bounds.
 
   (* TODO: what are the bounds for inv? *)
-  Instance spec_of_inv : spec_of inv :=
+  Definition spec_of_inv : spec_of inv :=
     (forall! (x : felem) (px pout : word) (old_out : felem),
         (fun Rr mem =>
            bounded_by tight_bounds x
@@ -98,13 +98,13 @@ Section Specs.
                  /\ bounded_by loose_bounds out)
             * FElem pout out)%sep)).
 
-  Instance spec_of_felem_copy : spec_of felem_copy :=
+  Definition spec_of_felem_copy : spec_of felem_copy :=
     forall! (x : felem) (px pout : word) (old_out : felem),
       (sep (FElem px x * FElem pout old_out)%sep)
         ===> felem_copy @ [px; pout] ===>
         (fun _ => FElem px x * FElem pout x)%sep.
 
-  Instance spec_of_felem_small_literal : spec_of felem_small_literal :=
+  Definition spec_of_felem_small_literal : spec_of felem_small_literal :=
     forall! (x pout : word) (old_out : felem),
       (sep (FElem pout old_out))
         ===> felem_small_literal @ [x; pout] ===>
@@ -114,6 +114,3 @@ Section Specs.
                  /\ bounded_by tight_bounds X)
             * FElem pout X)%sep).
 End Specs.
-Existing Instances spec_of_mul spec_of_square spec_of_add
-         spec_of_sub spec_of_scmula24 spec_of_inv spec_of_felem_copy
-         spec_of_felem_small_literal.

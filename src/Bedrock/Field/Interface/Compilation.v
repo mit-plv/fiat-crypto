@@ -7,6 +7,9 @@ Section Compile.
           {semantics_ok : Semantics.parameters_ok semantics}.
   Context {field_parameters : FieldParameters}
           {field_representaton : FieldRepresentation}.
+  Existing Instances spec_of_mul spec_of_add spec_of_sub spec_of_square
+           spec_of_scmula24 spec_of_inv spec_of_felem_copy
+           spec_of_felem_small_literal.
 
   (* In compilation, we need to decide where to store outputs. In particular,
      we don't want to overwrite a variable that we want to use later with the
