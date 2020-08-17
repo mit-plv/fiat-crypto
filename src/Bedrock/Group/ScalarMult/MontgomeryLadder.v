@@ -8,6 +8,7 @@ Require Import Crypto.Bedrock.Group.Point.
 Require Import Crypto.Bedrock.Group.ScalarMult.LadderStep.
 Require Import Crypto.Bedrock.Specs.Field.
 Require Import Crypto.Bedrock.Specs.ScalarField.
+Require Import Crypto.Util.NumTheoryUtil.
 Local Open Scope Z_scope.
 
 Section __.
@@ -15,6 +16,7 @@ Section __.
           {semantics_ok : Semantics.parameters_ok semantics}.
   Context {field_parameters : FieldParameters}
           {scalar_field_parameters : ScalarFieldParameters}.
+  Context {scalar_field_parameters_ok : ScalarFieldParameters_ok}.
   Context {field_representaton : FieldRepresentation}
           {scalar_representation : ScalarRepresentation}.
   Existing Instances spec_of_mul spec_of_square spec_of_add
@@ -28,22 +30,20 @@ Section __.
                bounded_by loose_bounds X}.
   Hint Resolve relax_bounds : compiler.
 
-  Context (bound : nat).
-  Context (bound_pos : (bound > 0)%nat).
-
   Section Gallina.
     Local Open Scope F_scope.
 
-    Definition montladder_gallina (testbit:nat ->bool) (u:F M_pos)
+    Definition montladder_gallina
+               (scalarbits : Z) (testbit:nat ->bool) (u:F M_pos)
       : F M_pos :=
       let/d P1 := (1, 0) in
       let/d P2 := (u, 1) in
       let/d swap := false in
-      let/d count := bound in
+      let/d count := scalarbits in
       let/d ''(P1, P2, swap) :=
          downto
            (P1, P2, swap) (* initial state *)
-           count
+           (Z.to_nat count)
            (fun state i =>
               let '(P1, P2, swap) := state in
               let/d s_i := testbit i in
@@ -61,10 +61,10 @@ Section __.
   End Gallina.
 
   Section MontLadder.
-    (* need the literal Z form of bound to give to expr.literal *)
-    Context (zbound : Z)
-            (zbound_small : word.wrap zbound = zbound)
-            (zbound_eq : zbound = Z.of_nat bound).
+    (* need the literal Z form of scalarbits to give to expr.literal *)
+    Context (scalarbits : Z)
+            (scalarbits_small : word.wrap scalarbits = scalarbits)
+            (scalarbits_eq : scalarbits = Z.log2_up L).
 
     (* TODO: make Placeholder [Lift1Prop.ex1 (fun x => FElem p x)], and prove
        an iff1 with FElem? Then we could even do some loop over the pointers to
@@ -111,6 +111,7 @@ Section __.
           (MontLadderResult
              K pK pU pX1 pZ1 pX2 pZ2 pA pAA pB pBB pE pC pD pDA pCB
              (montladder_gallina
+                scalarbits
                 (fun i => Z.testbit (F.to_Z (sceval K)) (Z.of_nat i))
                 (feval U))).
 
@@ -296,6 +297,12 @@ Section __.
       | _ => solve_field_subgoals_with_cswap
       end.
 
+    Lemma scalarbits_pos : 0 < scalarbits.
+    Proof.
+      rewrite scalarbits_eq. apply Z.log2_up_pos.
+      apply lt_1_p. apply L_prime.
+    Qed.
+
     Derive montladder_body SuchThat
            (let args := ["K"; "U"; "X1"; "Z1"; "X2"; "Z2";
                            "A"; "AA"; "B"; "BB"; "E"; "C"; "D"; "DA"; "CB"] in
@@ -313,6 +320,8 @@ Section __.
            As montladder_body_correct.
     Proof.
       cbv [program_logic_goal_for spec_of_montladder].
+      pose proof scalarbits_pos.
+      clear scalarbits_eq. (* so scalarbits isn't substituted *)
       setup. cbv [F.one F.zero]. (* expose F.of_Z *)
       repeat safe_compile_step.
 
@@ -342,7 +351,7 @@ Section __.
       let locals := lazymatch goal with
                     | |- WeakestPrecondition.cmd _ _ _ _ ?l _ => l end in
         simple eapply compile_downto with
-            (wcount := word.of_Z (word.wrap zbound))
+            (wcount := word.of_Z scalarbits)
             (ginit := false)
             (i_var := counter_var)
             (ghost_step := downto_ghost_step K)
@@ -351,16 +360,15 @@ Section __.
                  _ x1_var z1_var x2_var z2_var _
                  _ pK pX1 pZ1 pX2 pZ2
                  _ pA pAA pB pBB pE pC pD pDA pCB);
-        [ .. | subst L | subst L ].
+          [ .. | subst L | subst L ].
       { cbv [downto_inv].
         setup_downto_inv_init.
         all:solve_downto_inv_subgoals. }
       { subst. autorewrite with mapsimpl.
         reflexivity. }
-      { rewrite ?zbound_small, word.unsigned_of_Z;
-          solve [eauto using zbound_small]. }
-      { subst_lets_in_goal.
-        rewrite ?word.unsigned_of_Z, ?zbound_small; lia. }
+      { rewrite word.unsigned_of_Z, Z2Nat.id by lia;
+          solve [eauto using scalarbits_small]. }
+      { subst_lets_in_goal. lia. }
       { (* loop body *)
         intros. clear_old_seps.
         match goal with gst' := downto_ghost_step _ _ _ _ |- _ =>
@@ -500,13 +508,13 @@ Print montladder_body.
 *)
 (* fun (field_parameters : FieldParameters)
  *   (scalar_field_parameters : ScalarFieldParameters)
- *   (zbound : Z) =>
+ *   (scalarbits : Z) =>
  * (cmd.call [] felem_small_literal [(uintptr_t)1ULL; "X1"];;
  *  cmd.call [] felem_small_literal [(uintptr_t)0ULL; "Z1"];;
  *  cmd.call [] felem_copy ["U"; "X2"];;
  *  cmd.call [] felem_small_literal [(uintptr_t)1ULL; "Z2"];;
  *  "v6" = (uintptr_t)0ULL;;
- *  "v7" = (uintptr_t)zboundULL;;
+ *  "v7" = (uintptr_t)scalarbitsULL;;
  *  (while ((uintptr_t)0ULL < "v7") {{
  *     "v7" = "v7" - (uintptr_t)1ULL;;
  *     cmd.call ["v8"] sctestbit ["K"; "v7"];;
