@@ -6,13 +6,17 @@ Class ScalarFieldParameters :=
   { (** mathematical parameters **)
     L_pos : positive; (* modulus *)
     L : Z := Z.pos L_pos;
+    scalarbits : Z;
+
     (** function names for bedrock2 **)
     sctestbit : string;
   }.
 
 Class ScalarFieldParameters_ok
       {scalar_field_parameters : ScalarFieldParameters} :=
-  { L_prime : Znumtheory.prime L }.
+  { L_prime : Znumtheory.prime L;
+    scalarbits_eq : scalarbits = Z.log2_up L;
+  }.
 
 Class ScalarRepresentation
       {scalar_field_parameters : ScalarFieldParameters}
