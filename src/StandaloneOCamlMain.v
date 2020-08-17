@@ -15,14 +15,30 @@ Global Unset Extraction Optimize.
 
 Inductive int : Set := int_O | int_S (x : int).
 
-Axiom printf_char : Ascii.ascii -> unit.
-Axiom flush : unit -> unit.
-Axiom string : Set.
-Axiom string_length : string -> int.
-Axiom string_get : string -> int -> Ascii.ascii.
-Axiom sys_argv : list string.
-Axiom string_init : int -> (int -> Ascii.ascii) -> string.
-Axiom raise_Failure : string -> unit.
+(** We pull a hack to get coqchk to not report these as axioms; for
+    this, all we care about is that there exists a model. *)
+
+Module Type OCamlPrimitivesT.
+  Axiom printf_char : Ascii.ascii -> unit.
+  Axiom flush : unit -> unit.
+  Axiom string : Set.
+  Axiom string_length : string -> int.
+  Axiom string_get : string -> int -> Ascii.ascii.
+  Axiom sys_argv : list string.
+  Axiom string_init : int -> (int -> Ascii.ascii) -> string.
+  Axiom raise_Failure : string -> unit.
+End OCamlPrimitivesT.
+
+Module Export OCamlPrimitives : OCamlPrimitivesT.
+  Definition printf_char : Ascii.ascii -> unit := fun _ => tt.
+  Definition flush : unit -> unit := fun 'tt => tt.
+  Definition string : Set := unit.
+  Definition string_length : string -> int := fun _ => int_O.
+  Definition string_get : string -> int -> Ascii.ascii := fun _ _ => "000"%char.
+  Definition sys_argv : list string := nil.
+  Definition string_init : int -> (int -> Ascii.ascii) -> string := fun _ _ => tt.
+  Definition raise_Failure : string -> unit := fun _ => tt.
+End OCamlPrimitives.
 
 Extract Inductive int
 => int [ "0" "Pervasives.succ" ]

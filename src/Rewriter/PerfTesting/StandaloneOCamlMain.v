@@ -4,11 +4,23 @@ Require Import Crypto.Rewriter.PerfTesting.Core.
 Require Import Crypto.Util.Notations.
 Import ListNotations. Local Open Scope list_scope.
 
-Axiom float : Set.
-Axiom Unix_gettimeofday : unit -> float.
-Axiom Sys_time : unit -> float.
-Axiom fsub : float -> float -> float.
-Axiom printf_float : float -> unit.
+(** We pull a hack to get coqchk to not report these as axioms; for
+    this, all we care about is that there exists a model. *)
+Module Type OCamlPrimitivesT.
+  Axiom float : Set.
+  Axiom Unix_gettimeofday : unit -> float.
+  Axiom Sys_time : unit -> float.
+  Axiom fsub : float -> float -> float.
+  Axiom printf_float : float -> unit.
+End OCamlPrimitivesT.
+
+Module Export OCamlPrimitives : OCamlPrimitivesT.
+  Definition float : Set := unit.
+  Definition Unix_gettimeofday : unit -> float := fun 'tt => tt.
+  Definition Sys_time : unit -> float := fun 'tt => tt.
+  Definition fsub : float -> float -> float := fun _ _ => tt.
+  Definition printf_float : float -> unit := fun _ => tt.
+End OCamlPrimitives.
 
 Extract Inlined Constant float => "float".
 Extract Inlined Constant Unix_gettimeofday => "Unix.gettimeofday".
