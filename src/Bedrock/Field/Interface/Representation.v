@@ -18,15 +18,15 @@ Section Representation.
     fun ws =>
       Positional.eval weight n (map word.unsigned ws).
 
-  Definition frep : FieldRepresentation :=
-  { felem := list word;
-    feval := eval_words;
-    FElem := Bignum n;
-    bounds := list (option zrange);
-    bounded_by :=
-      fun bs ws =>
-        list_Z_bounded_by bs (map word.unsigned ws);
-    loose_bounds := loose_bounds;
-    tight_bounds := tight_bounds;
-  }.
+  Instance frep : FieldRepresentation :=
+    { felem := list word;
+      feval := eval_words;
+      FElem := Bignum n;
+      bounds := list (option zrange);
+      bounded_by :=
+        fun bs ws =>
+          list_Z_bounded_by bs (map word.unsigned ws);
+      loose_bounds := loose_bounds;
+      tight_bounds := tight_bounds;
+    }.
 End Representation.
