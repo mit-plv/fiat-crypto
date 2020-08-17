@@ -34,7 +34,7 @@ Section Specs.
   Context {group_parameters : GroupParameters}
           {group_representaton : GroupRepresentation (G:=G)}.
 
-  Instance spec_of_scmul : spec_of scmul :=
+  Definition spec_of_scmul : spec_of scmul :=
     (forall! (x old_out : gelem) (k : scalar) (pout px pk : word),
         (fun Rr mem =>
            (exists Ra, (GElem px x * Scalar pk k * Ra)%sep mem)
@@ -47,6 +47,5 @@ Section Specs.
              (emp (geval xk = scalarmult (sceval k) (geval x))
               * GElem pout xk)%sep)).
 End Specs.
-Existing Instance spec_of_scmul.
 
 

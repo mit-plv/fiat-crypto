@@ -21,7 +21,7 @@ Section Specs.
   Context {scalar_field_parameters : ScalarFieldParameters}.
   Context {scalar_representaton : ScalarRepresentation}.
 
-  Instance spec_of_sctestbit : spec_of sctestbit :=
+  Definition spec_of_sctestbit : spec_of sctestbit :=
     (forall! (x : scalar) (px wi : word)
            (b:=Z.testbit (sceval x) (word.unsigned wi)),
         (fun Rr mem =>
@@ -34,13 +34,13 @@ Section Specs.
            emp (rets = [r]
                 /\ r = word.of_Z (Z.b2z b)))).
 End Specs.
-Existing Instances spec_of_sctestbit.
 
 Section Compile.
   Context {semantics : Semantics.parameters}
           {semantics_ok : Semantics.parameters_ok semantics}.
   Context {scalar_field_parameters : ScalarFieldParameters}.
   Context {scalar_representaton : ScalarRepresentation}.
+  Existing Instance spec_of_sctestbit.
 
   Lemma compile_sctestbit :
     forall (locals: Semantics.locals) (mem: Semantics.mem)

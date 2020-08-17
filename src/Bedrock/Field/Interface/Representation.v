@@ -18,7 +18,7 @@ Section Representation.
     fun ws =>
       Positional.eval weight n (map word.unsigned ws).
 
-  Instance frep : FieldRepresentation :=
+  Definition frep : FieldRepresentation :=
   { felem := list word;
     feval := eval_words;
     FElem := Bignum n;
