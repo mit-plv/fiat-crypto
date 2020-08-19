@@ -172,8 +172,6 @@ End IntegralDomain.
 
 (** Tactics for polynomial equations over integral domains *)
 
-Require Coq.nsatz.Nsatz.
-
 Ltac dropAlgebraSyntax :=
   cbv beta delta [
       Algebra_syntax.zero

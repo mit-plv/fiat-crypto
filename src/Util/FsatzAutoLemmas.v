@@ -1,4 +1,4 @@
-Require Import Coq.Program.Program.
+Require Import Coq.Program.Basics Coq.Program.Tactics.
 Require Import Coq.Classes.Morphisms.
 
 Require Import Crypto.Util.Decidable.
