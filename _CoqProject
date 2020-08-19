@@ -27,6 +27,7 @@ src/Algebra/Hierarchy.v
 src/Algebra/IntegralDomain.v
 src/Algebra/Monoid.v
 src/Algebra/Nsatz.v
+src/Algebra/NsatzTactic.v
 src/Algebra/Ring.v
 src/Algebra/ScalarMult.v
 src/Algebra/SubsetoidRing.v
