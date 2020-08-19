@@ -4,25 +4,35 @@
     "arguments": [
       {
         "datatype": "u1",
-        "name": "arg1"
+        "name": "arg1",
+        "lbound": "0x0",
+        "ubound": "0x1"
       },
       {
         "datatype": "u64",
-        "name": "arg2"
+        "name": "arg2",
+        "lbound": "0x0",
+        "ubound": "0x7ffffffffffff"
       },
       {
         "datatype": "u64",
-        "name": "arg3"
+        "name": "arg3",
+        "lbound": "0x0",
+        "ubound": "0x7ffffffffffff"
       }
     ],
     "returns": [
       {
         "datatype": "u64",
-        "name": "out1"
+        "name": "out1",
+        "lbound": "0x0",
+        "ubound": "0x7ffffffffffff"
       },
       {
         "datatype": "u1",
-        "name": "out2"
+        "name": "out2",
+        "lbound": "0x0",
+        "ubound": "0x1"
       }
     ],
     "body": [
@@ -108,25 +118,35 @@
     "arguments": [
       {
         "datatype": "u1",
-        "name": "arg1"
+        "name": "arg1",
+        "lbound": "0x0",
+        "ubound": "0x1"
       },
       {
         "datatype": "u64",
-        "name": "arg2"
+        "name": "arg2",
+        "lbound": "0x0",
+        "ubound": "0x7ffffffffffff"
       },
       {
         "datatype": "u64",
-        "name": "arg3"
+        "name": "arg3",
+        "lbound": "0x0",
+        "ubound": "0x7ffffffffffff"
       }
     ],
     "returns": [
       {
         "datatype": "u64",
-        "name": "out1"
+        "name": "out1",
+        "lbound": "0x0",
+        "ubound": "0x7ffffffffffff"
       },
       {
         "datatype": "u1",
-        "name": "out2"
+        "name": "out2",
+        "lbound": "0x0",
+        "ubound": "0x1"
       }
     ],
     "body": [
@@ -241,21 +261,29 @@
     "arguments": [
       {
         "datatype": "u1",
-        "name": "arg1"
+        "name": "arg1",
+        "lbound": "0x0",
+        "ubound": "0x1"
       },
       {
         "datatype": "u64",
-        "name": "arg2"
+        "name": "arg2",
+        "lbound": "0x0",
+        "ubound": "0xffffffffffffffff"
       },
       {
         "datatype": "u64",
-        "name": "arg3"
+        "name": "arg3",
+        "lbound": "0x0",
+        "ubound": "0xffffffffffffffff"
       }
     ],
     "returns": [
       {
         "datatype": "u64",
-        "name": "out1"
+        "name": "out1",
+        "lbound": "0x0",
+        "ubound": "0xffffffffffffffff"
       }
     ],
     "body": [
@@ -367,17 +395,59 @@
     "arguments": [
       {
         "datatype": "u64[5]",
-        "name": "arg1"
+        "name": "arg1",
+        "lbound": [
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0"
+        ],
+        "ubound": [
+          "0x18000000000000",
+          "0x18000000000000",
+          "0x18000000000000",
+          "0x18000000000000",
+          "0x18000000000000"
+        ]
       },
       {
         "datatype": "u64[5]",
-        "name": "arg2"
+        "name": "arg2",
+        "lbound": [
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0"
+        ],
+        "ubound": [
+          "0x18000000000000",
+          "0x18000000000000",
+          "0x18000000000000",
+          "0x18000000000000",
+          "0x18000000000000"
+        ]
       }
     ],
     "returns": [
       {
         "datatype": "u64[5]",
-        "name": "out1"
+        "name": "out1",
+        "lbound": [
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0"
+        ],
+        "ubound": [
+          "0x8000000000000",
+          "0x8000000000000",
+          "0x8000000000000",
+          "0x8000000000000",
+          "0x8000000000000"
+        ]
       }
     ],
     "body": [
@@ -1672,13 +1742,41 @@
     "arguments": [
       {
         "datatype": "u64[5]",
-        "name": "arg1"
+        "name": "arg1",
+        "lbound": [
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0"
+        ],
+        "ubound": [
+          "0x18000000000000",
+          "0x18000000000000",
+          "0x18000000000000",
+          "0x18000000000000",
+          "0x18000000000000"
+        ]
       }
     ],
     "returns": [
       {
         "datatype": "u64[5]",
-        "name": "out1"
+        "name": "out1",
+        "lbound": [
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0"
+        ],
+        "ubound": [
+          "0x8000000000000",
+          "0x8000000000000",
+          "0x8000000000000",
+          "0x8000000000000",
+          "0x8000000000000"
+        ]
       }
     ],
     "body": [
@@ -2651,13 +2749,41 @@
     "arguments": [
       {
         "datatype": "u64[5]",
-        "name": "arg1"
+        "name": "arg1",
+        "lbound": [
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0"
+        ],
+        "ubound": [
+          "0x18000000000000",
+          "0x18000000000000",
+          "0x18000000000000",
+          "0x18000000000000",
+          "0x18000000000000"
+        ]
       }
     ],
     "returns": [
       {
         "datatype": "u64[5]",
-        "name": "out1"
+        "name": "out1",
+        "lbound": [
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0"
+        ],
+        "ubound": [
+          "0x8000000000000",
+          "0x8000000000000",
+          "0x8000000000000",
+          "0x8000000000000",
+          "0x8000000000000"
+        ]
       }
     ],
     "body": [
@@ -2965,17 +3091,59 @@
     "arguments": [
       {
         "datatype": "u64[5]",
-        "name": "arg1"
+        "name": "arg1",
+        "lbound": [
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0"
+        ],
+        "ubound": [
+          "0x8000000000000",
+          "0x8000000000000",
+          "0x8000000000000",
+          "0x8000000000000",
+          "0x8000000000000"
+        ]
       },
       {
         "datatype": "u64[5]",
-        "name": "arg2"
+        "name": "arg2",
+        "lbound": [
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0"
+        ],
+        "ubound": [
+          "0x8000000000000",
+          "0x8000000000000",
+          "0x8000000000000",
+          "0x8000000000000",
+          "0x8000000000000"
+        ]
       }
     ],
     "returns": [
       {
         "datatype": "u64[5]",
-        "name": "out1"
+        "name": "out1",
+        "lbound": [
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0"
+        ],
+        "ubound": [
+          "0x18000000000000",
+          "0x18000000000000",
+          "0x18000000000000",
+          "0x18000000000000",
+          "0x18000000000000"
+        ]
       }
     ],
     "body": [
@@ -3091,17 +3259,59 @@
     "arguments": [
       {
         "datatype": "u64[5]",
-        "name": "arg1"
+        "name": "arg1",
+        "lbound": [
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0"
+        ],
+        "ubound": [
+          "0x8000000000000",
+          "0x8000000000000",
+          "0x8000000000000",
+          "0x8000000000000",
+          "0x8000000000000"
+        ]
       },
       {
         "datatype": "u64[5]",
-        "name": "arg2"
+        "name": "arg2",
+        "lbound": [
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0"
+        ],
+        "ubound": [
+          "0x8000000000000",
+          "0x8000000000000",
+          "0x8000000000000",
+          "0x8000000000000",
+          "0x8000000000000"
+        ]
       }
     ],
     "returns": [
       {
         "datatype": "u64[5]",
-        "name": "out1"
+        "name": "out1",
+        "lbound": [
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0"
+        ],
+        "ubound": [
+          "0x18000000000000",
+          "0x18000000000000",
+          "0x18000000000000",
+          "0x18000000000000",
+          "0x18000000000000"
+        ]
       }
     ],
     "body": [
@@ -3257,13 +3467,41 @@
     "arguments": [
       {
         "datatype": "u64[5]",
-        "name": "arg1"
+        "name": "arg1",
+        "lbound": [
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0"
+        ],
+        "ubound": [
+          "0x8000000000000",
+          "0x8000000000000",
+          "0x8000000000000",
+          "0x8000000000000",
+          "0x8000000000000"
+        ]
       }
     ],
     "returns": [
       {
         "datatype": "u64[5]",
-        "name": "out1"
+        "name": "out1",
+        "lbound": [
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0"
+        ],
+        "ubound": [
+          "0x18000000000000",
+          "0x18000000000000",
+          "0x18000000000000",
+          "0x18000000000000",
+          "0x18000000000000"
+        ]
       }
     ],
     "body": [
@@ -3379,21 +3617,65 @@
     "arguments": [
       {
         "datatype": "u1",
-        "name": "arg1"
+        "name": "arg1",
+        "lbound": "0x0",
+        "ubound": "0x1"
       },
       {
         "datatype": "u64[5]",
-        "name": "arg2"
+        "name": "arg2",
+        "lbound": [
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0"
+        ],
+        "ubound": [
+          "0xffffffffffffffff",
+          "0xffffffffffffffff",
+          "0xffffffffffffffff",
+          "0xffffffffffffffff",
+          "0xffffffffffffffff"
+        ]
       },
       {
         "datatype": "u64[5]",
-        "name": "arg3"
+        "name": "arg3",
+        "lbound": [
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0"
+        ],
+        "ubound": [
+          "0xffffffffffffffff",
+          "0xffffffffffffffff",
+          "0xffffffffffffffff",
+          "0xffffffffffffffff",
+          "0xffffffffffffffff"
+        ]
       }
     ],
     "returns": [
       {
         "datatype": "u64[5]",
-        "name": "out1"
+        "name": "out1",
+        "lbound": [
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0"
+        ],
+        "ubound": [
+          "0xffffffffffffffff",
+          "0xffffffffffffffff",
+          "0xffffffffffffffff",
+          "0xffffffffffffffff",
+          "0xffffffffffffffff"
+        ]
       }
     ],
     "body": [
@@ -3514,13 +3796,95 @@
     "arguments": [
       {
         "datatype": "u64[5]",
-        "name": "arg1"
+        "name": "arg1",
+        "lbound": [
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0"
+        ],
+        "ubound": [
+          "0x8000000000000",
+          "0x8000000000000",
+          "0x8000000000000",
+          "0x8000000000000",
+          "0x8000000000000"
+        ]
       }
     ],
     "returns": [
       {
         "datatype": "u8[32]",
-        "name": "out1"
+        "name": "out1",
+        "lbound": [
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0"
+        ],
+        "ubound": [
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0x7f"
+        ]
       }
     ],
     "body": [
@@ -5097,13 +5461,95 @@
     "arguments": [
       {
         "datatype": "u8[32]",
-        "name": "arg1"
+        "name": "arg1",
+        "lbound": [
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0"
+        ],
+        "ubound": [
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0xff",
+          "0x7f"
+        ]
       }
     ],
     "returns": [
       {
         "datatype": "u64[5]",
-        "name": "out1"
+        "name": "out1",
+        "lbound": [
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0"
+        ],
+        "ubound": [
+          "0x8000000000000",
+          "0x8000000000000",
+          "0x8000000000000",
+          "0x8000000000000",
+          "0x8000000000000"
+        ]
       }
     ],
     "body": [
@@ -6224,13 +6670,41 @@
     "arguments": [
       {
         "datatype": "u64[5]",
-        "name": "arg1"
+        "name": "arg1",
+        "lbound": [
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0"
+        ],
+        "ubound": [
+          "0x18000000000000",
+          "0x18000000000000",
+          "0x18000000000000",
+          "0x18000000000000",
+          "0x18000000000000"
+        ]
       }
     ],
     "returns": [
       {
         "datatype": "u64[5]",
-        "name": "out1"
+        "name": "out1",
+        "lbound": [
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0"
+        ],
+        "ubound": [
+          "0x8000000000000",
+          "0x8000000000000",
+          "0x8000000000000",
+          "0x8000000000000",
+          "0x8000000000000"
+        ]
       }
     ],
     "body": [

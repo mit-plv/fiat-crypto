@@ -179,33 +179,54 @@ Module JSON.
   Import Rewriter.Language.Language.Compilers Crypto.Language.API.Compilers IR.OfPHOAS.
 
   Local Notation tZ := (base.type.type_base base.type.Z).
+  Local Notation None_object := "null" (only parsing).
+  Local Notation quote_string s := ("""" ++ s ++ """")%string (only parsing).
 
-  Fixpoint to_base_arg_list {t} : base_var_data t -> list (string * string)
-    := match t return base_var_data t -> _ with
+  Fixpoint to_base_arg_list {t} : base_var_data t -> Compilers.ZRange.type.base.option.interp t -> list (string * string * (string * string))
+    := let show_Z s := quote_string (Hex.show_Z false s) in
+       let opt_to_json T f (b : option T) :=
+           match b with
+           | None => (None_object, None_object)
+           | Some v => f v
+           end in
+       let zrange_to_json b :=
+           (show_Z b.(lower), show_Z b.(upper)) in
+       let opt_zrange_to_json b :=
+           opt_to_json _ zrange_to_json b in
+       let opt_zrange_list_to_json ls :=
+           let ls := List.map opt_zrange_to_json ls in
+           ("[" ++ String.concat ", " (List.map (@fst _ _) ls) ++ "]",
+            "[" ++ String.concat ", " (List.map (@snd _ _) ls) ++ "]")%string in
+       let opt_opt_zrange_list_to_json ls :=
+           opt_to_json _ opt_zrange_list_to_json ls in
+       match t return base_var_data t -> Compilers.ZRange.type.base.option.interp t -> _ with
        | tZ
-         => fun '(n, is_ptr, r) => [(primitive_type_to_string IR.type.Z r, n)]
+         => fun '(n, is_ptr, r) b
+            => [(primitive_type_to_string IR.type.Z r, n, opt_zrange_to_json b)]
        | base.type.prod A B
-         => fun '(va, vb) => (@to_base_arg_list A va ++ @to_base_arg_list B vb)%list
+         => fun '(va, vb) '(ba, bb) => (@to_base_arg_list A va ba ++ @to_base_arg_list B vb bb)%list
        | base.type.list tZ
-         => fun '(n, r, len) => [(primitive_type_to_string IR.type.Z r ++ "[" ++ Decimal.Z.to_string (Z.of_nat len) ++ "]", n)]
-       | base.type.list _ => fun _ => [("#error ""complex list""", "")]
-       | base.type.option _ => fun _ => [("#error option", "")]
-       | base.type.unit => fun _ => [("#error unit", "")]
-       | base.type.type_base t => fun _ => [("#error " ++ show false t, "")]
+         => fun '(n, r, len) b
+            => [(primitive_type_to_string IR.type.Z r ++ "[" ++ Decimal.Z.to_string (Z.of_nat len) ++ "]", n,
+                 opt_opt_zrange_list_to_json b)]
+       | base.type.list _ => fun _ _ => [("#error ""complex list""", "", (None_object, None_object))]
+       | base.type.option _ => fun _ _ => [("#error option", "", (None_object, None_object))]
+       | base.type.unit => fun _ _ => [("#error unit", "", (None_object, None_object))]
+       | base.type.type_base t => fun _ _ => [("#error " ++ show false t, "", (None_object, None_object))]
        end%string.
 
-  Definition to_arg_list {t} : var_data t -> list (string * string) :=
-    match t return var_data t -> _ with
+  Definition to_arg_list {t} : var_data t -> Compilers.ZRange.type.option.interp t -> list (string * string * (string * string)) :=
+    match t return var_data t -> Compilers.ZRange.type.option.interp t -> _ with
     | type.base t => to_base_arg_list
-    | type.arrow _ _ => fun _ => [("#error arrow", "")]
+    | type.arrow _ _ => fun _ _ => [("#error arrow", "", (None_object, None_object))]
     end%string.
 
-  Fixpoint to_arg_list_for_each_lhs_of_arrow {t} : type.for_each_lhs_of_arrow var_data t -> list (string * string)
-    := match t return type.for_each_lhs_of_arrow var_data t -> _ with
-       | type.base t => fun _ => nil
+  Fixpoint to_arg_list_for_each_lhs_of_arrow {t} : type.for_each_lhs_of_arrow var_data t -> type.for_each_lhs_of_arrow Compilers.ZRange.type.option.interp t -> list (string * string * (string * string))
+    := match t return type.for_each_lhs_of_arrow _ t -> type.for_each_lhs_of_arrow _ t -> _ with
+       | type.base t => fun _ _ => nil
        | type.arrow s d
-         => fun '(x, xs)
-            => to_arg_list x ++ @to_arg_list_for_each_lhs_of_arrow d xs
+         => fun '(x, xs) '(b, bs)
+            => to_arg_list x b ++ @to_arg_list_for_each_lhs_of_arrow d xs bs
        end%list.
 
   (** * Language-specific numeric conversions to be passed to the PHOAS -> IR translation *)
@@ -306,6 +327,8 @@ Module JSON.
 
   Definition to_function_lines (static : bool) (name : string)
              {t}
+             (inbounds : type.for_each_lhs_of_arrow Compilers.ZRange.type.option.interp t)
+             (outbounds : Compilers.ZRange.type.base.option.interp (type.final_codomain t))
              (f : type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * IR.expr)
     : list string :=
     let '(args, rets, body) := f in
@@ -314,13 +337,13 @@ Module JSON.
               ++ (String.concat
                     ", "
                     (List.map
-                       (fun '(typ, name) => "{""datatype"": """ ++ typ ++ """, ""name"": """ ++ name ++ """}")
+                       (fun '(typ, name, (lbound, ubound)) => "{""datatype"": """ ++ typ ++ """, ""name"": """ ++ name ++ """, ""lbound"": " ++ lbound ++ ", ""ubound"": " ++ ubound ++ "}")
                        ls))
               ++ "]")%string in
     ["{"]
       ++ (["""operation"": """ ++ name ++ ""","
-           ; """arguments"": " ++ args_list_to_string (to_arg_list_for_each_lhs_of_arrow args) ++ ","
-           ; """returns"": " ++ args_list_to_string (to_arg_list rets) ++ ","
+           ; """arguments"": " ++ args_list_to_string (to_arg_list_for_each_lhs_of_arrow args inbounds) ++ ","
+           ; """returns"": " ++ args_list_to_string (to_arg_list rets outbounds) ++ ","
            ; """body"": ["]%string)
       ++ to_strings body
       ++ ["]"
@@ -345,7 +368,11 @@ Module JSON.
     : (list string * ToString.ident_infos) + string :=
     match ExprOfPHOAS do_bounds_check e name_list inbounds with
     | inl (indata, outdata, f) =>
-      inl (to_function_lines static name (indata, outdata, f),
+      inl (to_function_lines
+             static name
+             inbounds
+             outbounds
+             (indata, outdata, f),
            IR.ident_infos.collect_infos f)
     | inr nil =>
       inr ("Unknown internal error in converting " ++ name ++ " to JSON")%string

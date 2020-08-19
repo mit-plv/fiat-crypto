@@ -34,6 +34,8 @@ Let us define the following types:
 - `number`, a string which is either a decimal numeral or a
   hexadecimal numeral
 
+- `bound`, either `null` or a `number` or a list of `bound`s
+
 Let us define one more type.  The recursive type of expressions
 (corresponding to lines of code or expressions) `expr` has the format:
 
@@ -67,14 +69,25 @@ The format of top-level functions is:
 ```json
 {
 "operation": string,
-"arguments": [{"datatype": datatype, "name": varname}],
-"returns": [{"datatype": datatype, "name": varname}],
+"arguments": [{"datatype": datatype, "name": varname, "lbound": bound, "ubound": bound}],
+"returns": [{"datatype": datatype, "name": varname, "lbound": bound, "ubound": bound}],
 "body": [expr]
 }
 ```
 
 Note that here `"operation"` is just the name of the function, and may
 be something like `fiat_25519_carry_mul`.
+
+The fields `"lbound"` and `"ubound"` stand for "lower bound" and
+"upper bound" respectively.  The bounds are assumptions about the
+arguments, and guarantees about the returns.  If the `"datatype"` is
+an integer, the bounds will either be `null` or a string with a
+hexadecimal number.  If the `"datatype"` is a list of integers, the
+bounds will either be `null` or a list of the appropriate length
+containing either `null` or strings with hexadecimal encodings of
+numbers.  Bounds of `null` should never appear, and indicate that
+bounds were either not given, unknown, or that the bounds analysis
+pass failed.
 
 Note that errors in the pretty-printing process may be encoded with
 `#error ...`; these can be detected by running the code through a JSON
