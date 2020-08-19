@@ -18,20 +18,17 @@ Building
 
 This repository requires [Coq](https://coq.inria.fr/) [8.9](https://github.com/coq/coq/releases/tag/V8.9.0) or later.
 Note that if you install Coq from Ubuntu aptitude packages, you need `libcoq-ocaml-dev` in addition to `coq`.
-Note that in some cases (such as installing Coq via homebrew on Mac), you may also need to install `ocaml-findlib` and `ocaml-num`.
+Note that in some cases (such as installing Coq via homebrew on Mac), you may also need to install `ocaml-findlib` (for `ocamlfind`) and `ocaml-num`.
 If you want to build the bedrock2 code, you need [Coq 8.10](https://github.com/coq/coq/releases/tag/V8.10.0) or later (otherwise you can pass `SKIP_BEDROCK2=1` to `make`).
 We suggest downloading [the latest version of Coq](https://github.com/coq/coq/wiki#coq-installation).
 
-Choose your packagemanager to install dependencies
+Alternatively, choose your package-manager to install dependencies:
 
-    #Aptitude (Ubuntu / Debian)
-    apt install coq ocaml-findlib libcoq-ocaml-dev
-    
-    #Homebrew (OS X)
-    brew install coq ocaml-findlib ocaml-num
-    
-    #Pacman (Archlinux)
-    pacman -S coq ocaml-findlib ocaml-num
+Package Manager | Command Line Invocation |
+--|--|
+Aptitude (Ubuntu / Debian) | `apt install coq ocaml-findlib libcoq-ocaml-dev` |
+Homebrew (OS X) | `brew install coq ocaml-findlib ocaml-num` |
+Pacman (Archlinux) | `pacman -S coq ocaml-findlib ocaml-num` |
     
 You can clone this repository with
 
