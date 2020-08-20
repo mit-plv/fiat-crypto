@@ -408,7 +408,7 @@ install-bedrock2:
 	$(MAKE) --no-print-directory -C $(BEDROCK2_FOLDER) install
 
 rupicola: bedrock2
-	$(MAKE) --no-print-directory -C $(RUPICOLA_FOLDER)
+	$(MAKE) --no-print-directory -C $(RUPICOLA_FOLDER) lib
 
 clean-rupicola:
 	$(MAKE) --no-print-directory -C $(RUPICOLA_FOLDER) clean
