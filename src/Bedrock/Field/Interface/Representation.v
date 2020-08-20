@@ -22,6 +22,7 @@ Section Representation.
   Instance frep : FieldRepresentation :=
     { felem := list word;
       feval := eval_words;
+      felem_size_in_bytes := word_size_in_bytes;
       FElem := Bignum n;
       bounds := list (option zrange);
       bounded_by :=

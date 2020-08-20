@@ -9,15 +9,11 @@ Section __.
   Context {semantics : Semantics.parameters}
           {semantics_ok : Semantics.parameters_ok semantics}.
   Context {field_parameters : FieldParameters}
-          {field_representaton : FieldRepresentation}.
+          {field_representaton : FieldRepresentation}
+          {field_representation_ok : FieldRepresentation_ok}.
   Existing Instances spec_of_mul spec_of_square spec_of_add
            spec_of_sub spec_of_scmula24 spec_of_inv spec_of_felem_copy
            spec_of_felem_small_literal.
-
-  Context {relax_bounds :
-             forall X : felem,
-               bounded_by tight_bounds X ->
-               bounded_by loose_bounds X}.
   Hint Resolve relax_bounds : compiler.
 
   Section Gallina.

@@ -94,9 +94,11 @@ End Equivalence.
 Module M.
   Section __.
     Context {semantics : Semantics.parameters}
+            {semantics_ok : Semantics.parameters_ok _}
             {field_parameters : FieldParameters}
             {field_parameters_ok : FieldParameters_ok}
-            {field_representation : FieldRepresentation}.
+            {field_representation : FieldRepresentation}
+            {field_representation_ok : FieldRepresentation_ok}.
     Context (char_ge_3 :
                @Ring.char_ge (F M_pos) Logic.eq F.zero F.one F.opp F.add
                              F.sub F.mul 3)
@@ -170,16 +172,49 @@ Module M.
                           x_representation).
       Existing Instance spec_of_scmul.
 
+      (* TODO: make rupicola and stack allocation play nicer together so
+         Montgomery ladder doesn't need so many arguments *)
       Definition scmul_func : Syntax.func :=
-        (scmul, (["out"; "k"; "x1"], [],
-                 cmd.call [] "montladder" [expr.var "out"; expr.var "k"; expr.var "x1"])).
+        let n := felem_size_in_bytes in
+        (scmul, (["out"; "k"; "x"], [],
+                 cmd.stackalloc
+                   "X1" n
+                   (cmd.stackalloc
+                      "Z1" n
+                      (cmd.stackalloc
+                         "X2" n
+                         (cmd.stackalloc
+                            "Z2" n
+                            (cmd.stackalloc
+                               "A" n
+                               (cmd.stackalloc
+                                  "AA" n
+                                  (cmd.stackalloc
+                                     "B" n
+                                     (cmd.stackalloc
+                                        "BB" n
+                                        (cmd.stackalloc
+                                           "E" n
+                                           (cmd.stackalloc
+                                              "C" n
+                                              (cmd.stackalloc
+                                                 "D" n
+                                                 (cmd.stackalloc
+                                                    "DA" n
+                                                    (cmd.stackalloc
+                                                       "CB" n
+                                                       (cmd.call [] "montladder" [expr.var "out"; expr.var "k"; expr.var "x"; expr.var "X1"; expr.var "Z1"; expr.var "X2"; expr.var "Z2"; expr.var "A"; expr.var "AA"; expr.var "B"; expr.var "BB"; expr.var "E"; expr.var "C"; expr.var "D"; expr.var "DA"; expr.var "CB"]))))))))))))))).
 
+      (* speedier proof if straightline doesn't try to compute the stack
+         allocation sizes *)
+      Local Opaque felem_size_in_bytes.
       Lemma scmul_func_correct :
         program_logic_goal_for_function! scmul_func.
       Proof.
         (* straightline doesn't work properly for setup, so the first step
            is inlined and changed here *)
         Fail straightline.
+        cbv [program_logic_goal_for].
         enter scmul_func. intros.
         WeakestPrecondition.unfold1_call_goal.
         (cbv beta match delta [WeakestPrecondition.call_body]).
@@ -189,12 +224,21 @@ Module M.
             change_no_check T
         end; (cbv beta match delta [WeakestPrecondition.func]).
 
-        (* plain straightline should do this but doesn't; using enhanced
-           version from rupicola *)
+        repeat match goal with
+               | _ => straightline
+               | |- (felem_size_in_bytes mod _ = 0)%Z /\ _ =>
+                 split; [ solve [apply felem_size_in_bytes_mod] | ]
+               end.
+        (* plain straightline should do this but doesn't (because locals
+           representation is abstract?); using enhanced version from
+           rupicola *)
         repeat straightline'.
-
-        (* TODO: finish once stack allocation is incorporated for
-           ladderstep/montladder functions *)
+        straightline_call.
+        { ssplit.
+          (* TODO: next steps are
+             - add bounds to spec
+             - prove bytes <-> bignum lemmas
+             - change placeholder to Memory.anybytes *)
       Abort.
     End Implementation.
   End __.
