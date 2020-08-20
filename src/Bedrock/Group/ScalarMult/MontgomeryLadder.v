@@ -19,16 +19,12 @@ Section __.
   Context {scalar_field_parameters_ok : ScalarFieldParameters_ok}.
   Context {field_representaton : FieldRepresentation}
           {scalar_representation : ScalarRepresentation}.
+  Context {field_representation_ok : FieldRepresentation_ok}.
   Existing Instances spec_of_mul spec_of_square spec_of_add
            spec_of_sub spec_of_scmula24 spec_of_inv spec_of_felem_copy
            spec_of_felem_small_literal spec_of_sctestbit
            spec_of_ladderstep.
-
-  Context {relax_bounds :
-             forall X : felem,
-               bounded_by tight_bounds X ->
-               bounded_by loose_bounds X}.
-  Hint Resolve relax_bounds : compiler.
+  Hint Resolve @relax_bounds : core.
 
   Section Gallina.
     Local Open Scope F_scope.
