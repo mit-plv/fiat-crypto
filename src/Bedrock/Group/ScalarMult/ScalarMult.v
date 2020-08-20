@@ -192,6 +192,9 @@ Module M.
         (* plain straightline should do this but doesn't; using enhanced
            version from rupicola *)
         repeat straightline'.
+
+        (* TODO: finish once stack allocation is incorporated for
+           ladderstep/montladder functions *)
       Abort.
     End Implementation.
   End __.
