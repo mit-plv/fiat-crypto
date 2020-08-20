@@ -39,6 +39,7 @@ Class FieldRepresentation
       {semantics : Semantics.parameters} :=
   { felem : Type;
     feval : felem -> F M_pos;
+    felem_size_in_bytes : Z; (* for stack allocation *)
     FElem : word -> felem -> Semantics.mem -> Prop;
     bounds : Type;
     bounded_by : bounds -> felem -> Prop;
@@ -47,6 +48,17 @@ Class FieldRepresentation
     loose_bounds : bounds;
     tight_bounds : bounds;
   }.
+
+Class FieldRepresentation_ok
+      {field_parameters : FieldParameters}
+      {semantics : Semantics.parameters}
+      {field_representation : FieldRepresentation} :=
+  { felem_size_in_bytes_mod :
+      (felem_size_in_bytes mod Memory.bytes_per_word Semantics.width)%Z = 0%Z;
+    relax_bounds :
+      forall X : felem, bounded_by tight_bounds X
+                        -> bounded_by loose_bounds X;
+    }.
 
 Section Specs.
   Context {semantics : Semantics.parameters}

@@ -1,6 +1,6 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Lists.List.
-Require Import Rupicola.Examples.ECC.DownTo.
+Require Import Rupicola.Lib.ControlFlow.DownTo.
 Require Import Crypto.Util.Loops.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
