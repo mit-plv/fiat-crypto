@@ -1,7 +1,7 @@
 Require Import Rupicola.Lib.Api.
 Require Import Rupicola.Lib.SepLocals.
-Require Import Rupicola.Examples.ECC.DownTo.
-Require Import Rupicola.Examples.ECC.CondSwap.
+Require Import Rupicola.Lib.ControlFlow.CondSwap.
+Require Import Rupicola.Lib.ControlFlow.DownTo.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.Field.Interface.Compilation.
 Require Import Crypto.Bedrock.Group.Point.
