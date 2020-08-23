@@ -31,12 +31,12 @@ src/Algebra/NsatzTactic.v
 src/Algebra/Ring.v
 src/Algebra/ScalarMult.v
 src/Algebra/SubsetoidRing.v
+src/Arithmetic/BYInv.v
 src/Arithmetic/BarrettReduction.v
 src/Arithmetic/BaseConversion.v
 src/Arithmetic/Core.v
 src/Arithmetic/FancyMontgomeryReduction.v
 src/Arithmetic/Freeze.v
-src/Arithmetic/Inv.v
 src/Arithmetic/ModOps.v
 src/Arithmetic/ModularArithmeticPre.v
 src/Arithmetic/ModularArithmeticTheorems.v
@@ -148,13 +148,13 @@ src/Language/PreExtra.v
 src/Language/UnderLetsProofsExtra.v
 src/Language/WfExtra.v
 src/Primitives/MxDHRepChange.v
+src/PushButtonSynthesis/BYInversionReificationCache.v
 src/PushButtonSynthesis/BarrettReduction.v
 src/PushButtonSynthesis/BarrettReductionReificationCache.v
 src/PushButtonSynthesis/BaseConversion.v
 src/PushButtonSynthesis/BaseConversionReificationCache.v
 src/PushButtonSynthesis/FancyMontgomeryReduction.v
 src/PushButtonSynthesis/FancyMontgomeryReductionReificationCache.v
-src/PushButtonSynthesis/InversionReificationCache.v
 src/PushButtonSynthesis/InvertHighLow.v
 src/PushButtonSynthesis/Primitives.v
 src/PushButtonSynthesis/ReificationCache.v
@@ -362,8 +362,8 @@ src/Util/ZRange/SplitBounds.v
 src/Util/ZRange/SplitRangeBounds.v
 src/Util/ZUtil/AddGetCarry.v
 src/Util/ZUtil/AddModulo.v
-src/Util/ZUtil/Bitwise.v
 src/Util/ZUtil/ArithmeticShiftr.v
+src/Util/ZUtil/Bitwise.v
 src/Util/ZUtil/CC.v
 src/Util/ZUtil/CPS.v
 src/Util/ZUtil/Combine.v
@@ -382,6 +382,7 @@ src/Util/ZUtil/Lnot.v
 src/Util/ZUtil/Log2.v
 src/Util/ZUtil/Lor.v
 src/Util/ZUtil/Ltz.v
+src/Util/ZUtil/ModExp.v
 src/Util/ZUtil/ModInv.v
 src/Util/ZUtil/Modulo.v
 src/Util/ZUtil/Morphisms.v

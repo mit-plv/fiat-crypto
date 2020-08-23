@@ -25,6 +25,7 @@ Require Import Crypto.Util.ZUtil.Div. (* For WBW Montgomery proofs *)
 Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem. (* For WBW Montgomery proofs *)
 Require Import Crypto.Util.ZUtil.Ones. (* For WBW montgomery proofs *)
 Require Import Crypto.Util.ZUtil.Shift. (* For WBW montgomery proofs *)
+Require Import Crypto.Util.ZUtil.ModExp.
 Require Import Crypto.Util.Tactics.HasBody.
 Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.SpecializeBy.
@@ -40,13 +41,13 @@ Require Import Crypto.Arithmetic.Freeze.
 Require Import Crypto.Arithmetic.Partition.
 Require Import Crypto.Arithmetic.WordByWordMontgomery.
 Require Import Crypto.Arithmetic.UniformWeight.
-Require Import Crypto.Arithmetic.Inv.
+Require Import Crypto.Arithmetic.BYInv.
 Require Import Crypto.BoundsPipeline.
 Require Import Crypto.COperationSpecifications.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.
 Require Import Crypto.PushButtonSynthesis.Primitives.
 Require Import Crypto.PushButtonSynthesis.WordByWordMontgomeryReificationCache.
-Require Import Crypto.PushButtonSynthesis.InversionReificationCache.
+Require Import Crypto.PushButtonSynthesis.BYInversionReificationCache.
 Import ListNotations.
 Local Open Scope Z_scope. Local Open Scope list_scope. Local Open Scope bool_scope.
 
@@ -66,7 +67,7 @@ Import Associational Positional.
 Import Arithmetic.WordByWordMontgomery.WordByWordMontgomery.
 
 Import WordByWordMontgomeryReificationCache.WordByWordMontgomery.
-Import InversionReificationCache.WordByWordMontgomeryInversion.
+Import BYInversionReificationCache.WordByWordMontgomeryInversion.
 
 Local Coercion Z.of_nat : nat >-> Z.
 Local Coercion QArith_base.inject_Z : Z >-> Q.
@@ -124,6 +125,13 @@ Section __.
        | None => 0
        end.
   Definition n_bytes := bytes_n s.
+
+  Definition divstep_precompmod :=
+    let bits := (Z.log2 m) + 1 in
+    let i := if bits <? 46 then (49 * bits + 80) / 17 else (49 * bits + 57) / 17 in
+    let k := (m + 1) / 2 in
+    (Z.modexp k i m).
+
   Definition prime_upperbound_list : list Z
     := Partition.partition (uweight machine_wordsize) n (s-1).
   Definition prime_bytes_upperbound_list : list Z
@@ -600,25 +608,25 @@ Section __.
              (fun fname => ["The function " ++ fname ++ " returns the saturated represtation of the prime modulus."]%string)
              (msat_correct machine_wordsize n m valid)).
 
-  Definition precomp
+  Definition divstep_precomp
     := Pipeline.BoundsPipeline
          true (* subst01 *)
          None (* fancy *)
          possible_values
-         (reified_precomp_gen
-            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
+         (reified_encode_gen
+            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m' @ GallinaReify.Reify divstep_precompmod)
          tt
          (Some bounds).
 
-  Definition sprecomp (prefix : string)
+  Definition sdivstep_precomp (prefix : string)
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          machine_wordsize prefix "precomp" precomp
+          machine_wordsize prefix "divstep_precomp" divstep_precomp
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname => ["The function " ++ fname ++ " returns the precomputed value for Bernstein-Yang-inversion (in montgomery form)."]%string)
-             (precomp_correct machine_wordsize n m valid from_montgomery_res)).
+             (divstep_precomp_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition divstep
     := Pipeline.BoundsPipeline
@@ -999,7 +1007,7 @@ Section __.
             ("from_bytes", sfrom_bytes);
             ("one", sone);
             ("msat", smsat);
-            ("precomp", sprecomp);
+            ("divstep_precomp", sdivstep_precomp);
             ("divstep", sdivstep)].
 
     Definition valid_names : string := Eval compute in String.concat ", " (List.map (@fst _ _) known_functions).
