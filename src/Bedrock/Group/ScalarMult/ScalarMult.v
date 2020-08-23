@@ -1,6 +1,7 @@
 Require Import Rupicola.Lib.Api.
 Require Import Rupicola.Lib.ControlFlow.CondSwap.
 Require Import bedrock2.Syntax.
+Require Import coqutil.Byte.
 Require Import Crypto.Algebra.Hierarchy.
 Require Import Crypto.Algebra.ScalarMult.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
@@ -149,13 +150,13 @@ Module M.
         apply M.MontgomeryWeierstrassIsomorphism; auto. }
     Qed.
 
-    Definition xrepresents (x : felem) (P : G) : Prop :=
-      feval x = to_x (to_xz P).
+    Definition xrepresents (x : list byte) (P : G) : Prop :=
+      feval_bytes x = to_x (to_xz P).
 
     Global Instance x_representation : GroupRepresentation :=
-      { gelem := felem; (* x only *)
+      { gelem := list byte; (* x only, as bytes *)
         grepresents := xrepresents;
-        GElem := FElem;
+        GElem := FElemBytes;
       }.
 
     Section Implementation.
@@ -170,13 +171,15 @@ Module M.
           (@spec_of_scmul semantics scalar_field_parameters
                           scalar_field_representation group_parameters
                           x_representation).
-      Existing Instance spec_of_scmul.
+      Definition spec_of_from_bytes : spec_of from_bytes :=
+        spec_of_from_bytes.
+      Existing Instances spec_of_scmul spec_of_from_bytes.
 
       (* TODO: make rupicola and stack allocation play nicer together so
          Montgomery ladder doesn't need so many arguments *)
       Definition scmul_func : Syntax.func :=
         let n := felem_size_in_bytes in
-        (scmul, (["out"; "k"; "x"], [],
+        (scmul, (["out"; "x_bytes"; "k"], [],
                  cmd.stackalloc
                    "X1" n
                    (cmd.stackalloc
@@ -203,7 +206,11 @@ Module M.
                                                     "DA" n
                                                     (cmd.stackalloc
                                                        "CB" n
-                                                       (cmd.call [] "montladder" [expr.var "out"; expr.var "k"; expr.var "x"; expr.var "X1"; expr.var "Z1"; expr.var "X2"; expr.var "Z2"; expr.var "A"; expr.var "AA"; expr.var "B"; expr.var "BB"; expr.var "E"; expr.var "C"; expr.var "D"; expr.var "DA"; expr.var "CB"]))))))))))))))).
+                                                       (cmd.stackalloc
+                                                          "x" n
+                                                          (cmd.seq
+                                                             (cmd.call [] from_bytes [expr.var "x_bytes"; expr.var "x"])
+                                                             (cmd.call [] "montladder" [expr.var "out"; expr.var "k"; expr.var "x"; expr.var "X1"; expr.var "Z1"; expr.var "X2"; expr.var "Z2"; expr.var "A"; expr.var "AA"; expr.var "B"; expr.var "BB"; expr.var "E"; expr.var "C"; expr.var "D"; expr.var "DA"; expr.var "CB"]))))))))))))))))).
 
       (* speedier proof if straightline doesn't try to compute the stack
          allocation sizes *)
@@ -224,20 +231,37 @@ Module M.
             change_no_check T
         end; (cbv beta match delta [WeakestPrecondition.func]).
 
-        repeat match goal with
-               | _ => straightline
-               | |- (felem_size_in_bytes mod _ = 0)%Z /\ _ =>
-                 split; [ solve [apply felem_size_in_bytes_mod] | ]
-               end.
+        cbv [GElem x_representation] in *. sepsimpl.
         (* plain straightline should do this but doesn't (because locals
            representation is abstract?); using enhanced version from
-           rupicola *)
-        repeat straightline'.
+           rupicola (straightline') *)
+        repeat lazymatch goal with
+               | |- (felem_size_in_bytes mod _ = 0)%Z /\ _ =>
+                 split; [ solve [apply felem_size_in_bytes_mod] | ]
+               | Hb : Memory.anybytes ?p ?n ?mS,
+                      Hs : map.split ?mC ?m ?mS,
+                           Hm : ?P ?m |- _ =>
+                 let H := fresh in
+                 let bs := fresh "bs" in
+                 pose proof (anybytes_to_array_1 _ _ _ Hb) as H;
+                   destruct H as [bs [? ?]];
+                   assert (sep P (array ptsto (word.of_Z 1) p bs) mC)
+                     by (remember P; cbv [sep]; exists m, mS;
+                         ssplit; solve [eauto]);
+                   clear Hb Hs
+               | _ => clear_old_seps; straightline'
+               end.
+
         straightline_call.
         { ssplit.
+          { admit. (* needs bytes <-> bignum lemma *) }
+          { admit. (* needs bytes <-> bignum lemma *) } }
+        { split.
+          Print handle_call.
+          ecancel_assum
+        { ssplit.
           (* TODO: next steps are
-             - add bounds to spec
-             - prove bytes <-> bignum lemmas
+             - prove bytes <-> bignum lemmas (from Field/Synthesis/Generic/Bignum.v)
              - change placeholder to Memory.anybytes *)
       Abort.
     End Implementation.
