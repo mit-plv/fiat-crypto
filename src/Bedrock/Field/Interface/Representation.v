@@ -11,6 +11,7 @@ Require Import Crypto.Bedrock.Field.Synthesis.Generic.Bignum.
 Require Import Crypto.Bedrock.Specs.Field.
 Require Import Crypto.COperationSpecifications.
 Require Import Crypto.Util.ZRange.
+Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 
 Section Representation.
   Context {p : Types.parameters} {field_parameters : FieldParameters}
@@ -38,7 +39,7 @@ Section Representation.
     { felem := list word;
       feval := eval_words;
       feval_bytes := eval_bytes;
-      felem_size_in_bytes := word_size_in_bytes;
+      felem_size_in_bytes := (Z.of_nat n * word_size_in_bytes)%Z;
       FElem := Bignum n;
       FElemBytes := EncodedBignum n;
       bounds := list (option zrange);
@@ -62,7 +63,7 @@ Section Representation.
         apply Z.div_str_pos; auto with zarith. }
 
       cbn [bytes_per]. rewrite Z2Nat.id by auto with zarith.
-      apply Z.mod_same; auto with zarith. }
+      push_Zmod. autorewrite with zsimplify_fast. reflexivity. }
     { cbn [bounded_by frep]; intros.
       apply relax_bounds; auto. }
   Qed.
