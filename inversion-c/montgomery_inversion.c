@@ -5013,7 +5013,7 @@ void fiat_test_msat(uint32_t out1[9]) {
 }
 
 /*
- * The function fiat_test_precomp returns the precomputed value for Bernstein-Yang-inversion (in montgomery form).
+ * The function fiat_test_divstep_precomp returns the precomputed value for Bernstein-Yang-inversion (in montgomery form).
  * Postconditions:
  *   eval (from_montgomery out1) = ⌊(m - 1) / 2⌋^(if (log2 m) + 1 < 46 then ⌊(49 * ((log2 m) + 1) + 80) / 17⌋ else ⌊(49 * ((log2 m) + 1) + 57) / 17⌋)
  *   0 ≤ eval out1 < m
@@ -5022,7 +5022,7 @@ void fiat_test_msat(uint32_t out1[9]) {
  * Output Bounds:
  *   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  */
-void fiat_test_precomp(uint32_t out1[8]) {
+void fiat_test_divstep_precomp(uint32_t out1[8]) {
   out1[0] = UINT32_C(0x127f51fe);
   out1[1] = UINT32_C(0x7ea454d3);
   out1[2] = UINT32_C(0x5546a7f1);
@@ -5043,7 +5043,7 @@ void fiat_test_precomp(uint32_t out1[8]) {
  *   twos_complement_eval out2 = (if 0 < arg1 ∧ (twos_complement_eval arg3) is odd then twos_complement_eval arg3 else twos_complement_eval arg2)
  *   twos_complement_eval out3 = (if 0 < arg1 ∧ (twos_complement_eval arg3) is odd then ⌊(twos_complement_eval arg3 - twos_complement_eval arg2) / 2⌋ else ⌊(twos_complement_eval arg3 + (twos_complement_eval arg3 mod 2) * twos_complement_eval arg2) / 2⌋)
  *   eval (from_montgomery out4) mod m = (if 0 < arg1 ∧ (twos_complement_eval arg3) is odd then (2 * eval (from_montgomery arg5)) mod m else (2 * eval (from_montgomery arg4)) mod m)
- *   eval (from_montgomery out5) mod m = (if 0 < arg1 ∧ (twos_complement_eval arg3) is odd then (eval (from_montgomery arg5) - eval (from_montgomery arg4)) mod m else (eval (from_montgomery arg5) + (twos_complement_eval arg3 mod 2) * eval (from_montgomery arg4)) mod m)
+ *   eval (from_montgomery out5) mod m = (if 0 < arg1 ∧ (twos_complement_eval arg3) is odd then (eval (from_montgomery arg4) - eval (from_montgomery arg4)) mod m else (eval (from_montgomery arg5) + (twos_complement_eval arg3 mod 2) * eval (from_montgomery arg4)) mod m)
  *   0 ≤ eval out5 < m
  *   0 ≤ eval out5 < m
  *   0 ≤ eval out2 < m

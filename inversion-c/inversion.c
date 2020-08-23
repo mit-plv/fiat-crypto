@@ -23,7 +23,7 @@
 void inverse(WORD out[LIMBS], WORD g[SAT_LIMBS]) {
 
   WORD precomp[LIMBS];
-  fiat_test_precomp(precomp);
+  fiat_test_divstep_precomp(precomp);
 
   WORD d = 1;
   WORD f[SAT_LIMBS];
