@@ -1,3 +1,4 @@
+Require Import coqutil.Byte.
 Require Import Rupicola.Lib.Api.
 Require Import Crypto.Algebra.Hierarchy.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
@@ -12,6 +13,7 @@ Class FieldParameters :=
     (** function names **)
     mul : string; add : string; sub : string;
     square : string; scmula24 : string; inv : string;
+    from_bytes : string;
 
     (* felem_small_literal p x :=
          store p (expr.literal x);
@@ -39,8 +41,10 @@ Class FieldRepresentation
       {semantics : Semantics.parameters} :=
   { felem : Type;
     feval : felem -> F M_pos;
+    feval_bytes : list byte -> F M_pos;
     felem_size_in_bytes : Z; (* for stack allocation *)
     FElem : word -> felem -> Semantics.mem -> Prop;
+    FElemBytes : word -> list byte -> Semantics.mem -> Prop;
     bounds : Type;
     bounded_by : bounds -> felem -> Prop;
 
@@ -107,6 +111,17 @@ Section Specs.
   (* TODO: what are the bounds for inv? *)
   Instance spec_of_inv : spec_of inv :=
     unop_spec inv F.inv tight_bounds loose_bounds.
+
+  Definition spec_of_from_bytes : spec_of from_bytes :=
+    forall! (bs : list byte) (px pout : word) (old_out : felem),
+      (fun Rr mem =>
+         (exists Ra, (FElemBytes px bs * Ra)%sep mem)
+         /\ (FElem pout old_out * Rr)%sep mem)
+        ===> from_bytes @ [px; pout] ===>
+        (fun _ =>
+           liftexists X,
+           (emp (feval X = feval_bytes bs /\ bounded_by tight_bounds X)
+            * FElem pout X)%sep).
 
   Definition spec_of_felem_copy : spec_of felem_copy :=
     forall! (x : felem) (px pout : word) (old_out : felem),
