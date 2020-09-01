@@ -1503,37 +1503,93 @@ Module Compilers.
                  | type.arrow s d => fun _ => None
                  end.
 
-            Fixpoint expr_of_PHOAS'
-                     (do_bounds_check : bool)
+            Fixpoint expr_of_PHOAS'_cps
                      {t}
                      (e : @Compilers.expr.expr base.type ident.ident var_data t)
                      (make_in_name : positive -> option string)
-                     (make_name : positive -> option string)
                      (inbounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
-                     (out_data : var_data (type.base (type.final_codomain t)))
                      (count : positive)
-                     (in_to_body_count : positive -> positive)
+                     {T}
                      {struct t}
-              : ErrT (type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * expr)
+              : (positive * (type.for_each_lhs_of_arrow var_data t * @Compilers.expr.expr base.type ident.ident var_data (type.final_codomain t)) -> ErrT T) -> ErrT T
               := let _ := @PHOAS.expr.partially_show_expr in (* for TC resolution *)
-                 match t return @Compilers.expr.expr base.type ident.ident var_data t -> type.for_each_lhs_of_arrow ZRange.type.option.interp t -> var_data (type.base (type.final_codomain t)) -> ErrT (type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * expr) with
+                 match t return @Compilers.expr.expr base.type ident.ident var_data t -> type.for_each_lhs_of_arrow ZRange.type.option.interp t -> (positive * (type.for_each_lhs_of_arrow var_data t * @Compilers.expr.expr base.type ident.ident var_data (type.final_codomain t)) -> ErrT T) -> ErrT T with
                  | type.base t
-                   => fun e tt vd
-                      => (rv <- expr_of_base_PHOAS do_bounds_check e (in_to_body_count count) make_name vd;
-                         let rv := name_infos.adjust_dead consider_retargs_live rename_dead rv in
-                         let rv := if lift_declarations then LiftDeclare.lift_declarations rv else rv in
-                         ret (tt, vd, rv))
+                   => fun e tt k => k (count, (tt, e))
                  | type.arrow s d
-                   => fun e '(inbound, inbounds) vd
+                   => fun e '(inbound, inbounds) k
                       => match var_data_of_bounds false count make_in_name inbound, invert_Abs e with
                          | Some (count, vs), Some f
-                           => retv <- @expr_of_PHOAS' do_bounds_check d (f vs) make_in_name make_name inbounds vd count in_to_body_count;
-                                let '(vss, vd, rv) := retv in
-                                ret (vs, vss, vd, rv)
+                           => @expr_of_PHOAS'_cps
+                                d (f vs) make_in_name inbounds count _
+                                (fun '(count, (vss, rv))
+                                 => k (count, ((vs, vss), rv)))
                          | None, _ => inr ["Unable to bind names for all arguments and bounds at type " ++ show false s]%string%list
                          | _, None => inr ["Invalid non-λ expression of arrow type (" ++ show false t ++ "): " ++ show true e]%string%list
                          end
-                 end%core%expr e inbounds out_data.
+                 end%core%expr e inbounds.
+
+            Definition expr_of_PHOAS'_cont
+                       (do_bounds_check : bool)
+                       {t}
+                       (make_name : positive -> option string)
+                       (out_data : var_data (type.base (type.final_codomain t)))
+                       (in_to_body_count : positive -> positive)
+              : positive * (type.for_each_lhs_of_arrow var_data t * @Compilers.expr.expr base.type ident.ident var_data (type.final_codomain t))
+                -> ErrT (type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * expr)
+              := let _ := @PHOAS.expr.partially_show_expr in (* for TC resolution *)
+                 fun '(count, (d, e))
+                 => (rv <- expr_of_base_PHOAS do_bounds_check e (in_to_body_count count) make_name out_data;
+                    let rv := name_infos.adjust_dead consider_retargs_live rename_dead rv in
+                    let rv := if lift_declarations then LiftDeclare.lift_declarations rv else rv in
+                    ret (d, out_data, rv)).
+
+            Definition expr_of_PHOAS'
+                       (do_bounds_check : bool)
+                       {t}
+                       (e : @Compilers.expr.expr base.type ident.ident var_data t)
+                       (make_in_name : positive -> option string)
+                       (make_name : positive -> option string)
+                       (inbounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
+                       (out_data : var_data (type.base (type.final_codomain t)))
+                       (count : positive)
+                       (in_to_body_count : positive -> positive)
+              : ErrT (type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * expr)
+              := @expr_of_PHOAS'_cps
+                   _ e make_in_name inbounds count _
+                   (@expr_of_PHOAS'_cont do_bounds_check t make_name out_data in_to_body_count).
+
+            Definition expr_of_PHOAS_cont
+                       (do_bounds_check : bool)
+                       {t}
+                       (make_name : positive -> option string)
+                       (in_to_body_count : positive -> positive)
+              : positive * (type.for_each_lhs_of_arrow var_data t * var_data (type.final_codomain t) * @Compilers.expr.expr base.type ident.ident var_data (type.final_codomain t))
+                -> ErrT (type.for_each_lhs_of_arrow var_data t * var_data (type.final_codomain t) * expr)
+              := fun '(count, (din, dout, e))
+                 => @expr_of_PHOAS'_cont do_bounds_check t make_name dout in_to_body_count (count, (din, e)).
+
+            Definition expr_of_PHOAS_cps
+                       {t}
+                       (e : @Compilers.expr.expr base.type ident.ident var_data t)
+                       (make_in_name : positive -> option string)
+                       (make_out_name : positive -> option string)
+                       (inbounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
+                       (outbounds : ZRange.type.option.interp (type.base (type.final_codomain t)))
+                       (count : positive)
+                       (out_to_in_count : positive -> positive)
+                       {T}
+                       (k : positive * (type.for_each_lhs_of_arrow var_data t * var_data (type.final_codomain t) * @Compilers.expr.expr base.type ident.ident var_data (type.final_codomain t)) -> ErrT T)
+              : ErrT T
+              := match var_data_of_bounds true count make_out_name outbounds with
+                 | Some vd
+                   => let '(count, dout) := vd in
+                      let count := out_to_in_count count in
+                      @expr_of_PHOAS'_cps
+                        t e make_in_name inbounds count _
+                        (fun '(count, (din, e)) => k (count, (din, dout, e)))
+                 | None => inr ["Unable to bind names for all return arguments and bounds at type " ++ show false (type.final_codomain t)]%string
+                 end.
 
             Definition expr_of_PHOAS
                        (do_bounds_check : bool)
@@ -1547,13 +1603,79 @@ Module Compilers.
                        (count : positive)
                        (in_to_body_count out_to_in_count : positive -> positive)
               : ErrT (type.for_each_lhs_of_arrow var_data t * var_data (type.final_codomain t) * expr)
-              := match var_data_of_bounds true count make_out_name outbounds with
-                 | Some vd
-                   => let '(count, vd) := vd in
-                      let count := out_to_in_count count in
-                      @expr_of_PHOAS' do_bounds_check t e make_in_name make_name inbounds vd count in_to_body_count
-                 | None => inr ["Unable to bind names for all return arguments and bounds at type " ++ show false (type.final_codomain t)]%string
+              := @expr_of_PHOAS_cps
+                   _ e make_in_name make_out_name inbounds outbounds count out_to_in_count _
+                   (@expr_of_PHOAS_cont do_bounds_check t make_name in_to_body_count).
+
+            Let make_name_gen (name_list : option (list string))
+              := fun prefix
+                 => match name_list with
+                    | None => fun p => Some (prefix ++ Decimal.Z.to_string (Zpos p))
+                    | Some ls => fun p => List.nth_error ls (pred (Pos.to_nat p))
+                    end.
+
+            Let make_in_name name_list := make_name_gen name_list "arg".
+            Let make_out_name name_list := make_name_gen name_list "out".
+            Let make_name name_list := make_name_gen name_list "x".
+            Let reset_if_names_given (name_list : option (list string))
+              := match name_list with
+                 | Some _ => fun p : positive => p
+                 | None => fun _ : positive => 1%positive
                  end.
+
+            Definition ExprOfPHOAS_cont
+                       (do_bounds_check : bool)
+                       {t}
+                       (name_list : option (list string))
+              : positive * (type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * @Compilers.expr.expr base.type ident.ident var_data (type.final_codomain t))
+                -> ErrT (type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * expr)
+              := @expr_of_PHOAS_cont
+                   do_bounds_check t
+                   (make_name name_list) (reset_if_names_given name_list).
+
+            Definition ExprOfPHOAS_with_opt_outbounds_cps
+                       {t}
+                       (e : @Compilers.expr.Expr base.type ident.ident t)
+                       (name_list : option (list string))
+                       (inbounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
+                       (outbounds : option (ZRange.type.base.option.interp (type.final_codomain t)))
+                       {T}
+                       (k : positive * (type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * @Compilers.expr.expr base.type ident.ident var_data (type.final_codomain t)) -> ErrT T)
+              : ErrT T
+              := let outbounds := Option.value outbounds (partial.Extract true (* assume the output has casts around it *) e inbounds) in
+                 expr_of_PHOAS_cps
+                   (e _) (make_in_name name_list) (make_out_name name_list) inbounds outbounds 1 (reset_if_names_given name_list) k.
+
+            Definition ExprOfPHOAS_cps
+                       {t}
+                       (e : @Compilers.expr.Expr base.type ident.ident t)
+                       (name_list : option (list string))
+                       (inbounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
+                       {T}
+                       (k : positive * (type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * @Compilers.expr.expr base.type ident.ident var_data (type.final_codomain t)) -> ErrT T)
+              : ErrT T
+              := ExprOfPHOAS_with_opt_outbounds_cps e name_list inbounds None k.
+
+            Definition var_data_of_PHOAS
+                       {t}
+                       (e : @Compilers.expr.Expr base.type ident.ident t)
+                       (name_list : option (list string))
+                       (inbounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
+              : ErrT (type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)))
+              := ExprOfPHOAS_with_opt_outbounds_cps
+                   e name_list inbounds None
+                   (fun '(count, (din, dout, e)) => ret (din, dout)).
+
+            Definition var_data_of_PHOAS_bounds
+                       {t}
+                       (e : @Compilers.expr.Expr base.type ident.ident t)
+                       (name_list : option (list string))
+                       (inbounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
+                       (outbounds : ZRange.type.base.option.interp (type.final_codomain t))
+              : ErrT (type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)))
+              := ExprOfPHOAS_with_opt_outbounds_cps
+                   e name_list inbounds (Some outbounds)
+                   (fun '(count, (din, dout, e)) => ret (din, dout)).
 
             Definition ExprOfPHOAS
                        (do_bounds_check : bool)
@@ -1562,19 +1684,9 @@ Module Compilers.
                        (name_list : option (list string))
                        (inbounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
               : ErrT (type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * expr)
-              := (let outbounds := partial.Extract true (* assume the output has casts around it *) e inbounds in
-                  let make_name_gen prefix := match name_list with
-                                              | None => fun p => Some (prefix ++ Decimal.Z.to_string (Zpos p))
-                                              | Some ls => fun p => List.nth_error ls (pred (Pos.to_nat p))
-                                              end in
-                  let make_in_name := make_name_gen "arg" in
-                  let make_out_name := make_name_gen "out" in
-                  let make_name := make_name_gen "x" in
-                  let reset_if_names_given := match name_list with
-                                              | Some _ => fun p : positive => p
-                                              | None => fun _ : positive => 1%positive
-                                              end in
-                  expr_of_PHOAS do_bounds_check (e _) make_in_name make_out_name make_name inbounds outbounds 1 reset_if_names_given reset_if_names_given).
+              := ExprOfPHOAS_cps
+                   e name_list inbounds
+                   (ExprOfPHOAS_cont do_bounds_check name_list).
           End with_bind.
         End __.
       End OfPHOAS.

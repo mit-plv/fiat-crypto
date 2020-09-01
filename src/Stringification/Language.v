@@ -1046,6 +1046,19 @@ Module Compilers.
       Definition names_list_of_var_data {t} (v : var_data t) : list string
         := names_list_of_var_names (names_of_var_data v).
 
+      Fixpoint flatten_names_list_of_input_data {t : type} : type.for_each_lhs_of_arrow (fun _ => list string) t -> list string
+        := match t return type.for_each_lhs_of_arrow _ t -> _ with
+           | type.base _ => fun 'tt => nil
+           | type.arrow s d
+             => fun '(sl, v) => sl ++ @flatten_names_list_of_input_data d v
+           end%list.
+
+      Definition names_list_of_input_var_names {t} (v : type.for_each_lhs_of_arrow var_names t) : list string
+        := flatten_names_list_of_input_data (type.map_for_each_lhs_of_arrow (@names_list_of_var_names) v).
+
+      Definition names_list_of_input_var_data {t} (v : type.for_each_lhs_of_arrow var_data t) : list string
+        := names_list_of_input_var_names (type.map_for_each_lhs_of_arrow (@names_of_var_data) v).
+
       Fixpoint base_var_data_of_names {t} : base_var_names t -> base_var_data t
         := match t return base_var_names t -> base_var_data t with
            | base.type.type_base base.type.Z => fun n => (n, false, None)
