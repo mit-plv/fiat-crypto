@@ -964,13 +964,13 @@ Module debugging_25519_to_bytes_java.
       cbv [Java.ToFunctionLines] in k.
       set (k' := IR.OfPHOAS.ExprOfPHOAS _ _ _ _) in (value of k).
       clear k.
-      cbv [IR.OfPHOAS.ExprOfPHOAS] in k'.
-      cbv [IR.OfPHOAS.expr_of_PHOAS] in k'.
+      cbv [IR.OfPHOAS.ExprOfPHOAS IR.OfPHOAS.ExprOfPHOAS_cps IR.OfPHOAS.ExprOfPHOAS_with_opt_outbounds_cps IR.OfPHOAS.ExprOfPHOAS_cont] in k'.
+      cbv [IR.OfPHOAS.expr_of_PHOAS IR.OfPHOAS.expr_of_PHOAS_cps IR.OfPHOAS.expr_of_PHOAS_cont] in k'.
       set (k := IR.OfPHOAS.var_data_of_bounds _ _ _ _) in (value of k').
       vm_compute in k.
       subst k.
       cbv beta iota zeta in k'.
-      cbv [IR.OfPHOAS.expr_of_PHOAS'] in k'.
+      cbv [IR.OfPHOAS.expr_of_PHOAS' IR.OfPHOAS.expr_of_PHOAS'_cps IR.OfPHOAS.expr_of_PHOAS'_cont] in k'.
       set (k := IR.OfPHOAS.var_data_of_bounds _ _ _ _) in (value of k').
       vm_compute in k.
       subst k.
@@ -1169,8 +1169,8 @@ Module debugging_go_build0.
       cbv [Go.ToFunctionLines] in v.
       set (k := IR.OfPHOAS.ExprOfPHOAS _ _ _ _) in (value of v).
       clear v.
-      cbv [IR.OfPHOAS.ExprOfPHOAS] in k; rename k into v.
-      cbv [IR.OfPHOAS.expr_of_PHOAS] in v.
+      cbv [IR.OfPHOAS.ExprOfPHOAS IR.OfPHOAS.ExprOfPHOAS_cps IR.OfPHOAS.ExprOfPHOAS_with_opt_outbounds_cps IR.OfPHOAS.ExprOfPHOAS_cont] in k; rename k into v.
+      cbv [IR.OfPHOAS.expr_of_PHOAS IR.OfPHOAS.expr_of_PHOAS_cps IR.OfPHOAS.expr_of_PHOAS_cont] in v.
       set (k := partial.Extract _ _ _) in (value of v).
       cbv [partial.Extract] in k.
       clear v; rename k into v.
@@ -1316,13 +1316,13 @@ Module debugging_go_build.
       cbn [type.final_codomain] in v.
       cbn [Language.Compilers.ToString.OfPHOAS.var_data type.for_each_lhs_of_arrow] in v.
       cbn [Language.Compilers.ToString.OfPHOAS.base_var_data] in v.
-      cbv [IR.OfPHOAS.ExprOfPHOAS] in v.
-      cbn [IR.OfPHOAS.expr_of_PHOAS] in v.
-      cbv [IR.OfPHOAS.expr_of_PHOAS] in v.
+      cbv [IR.OfPHOAS.ExprOfPHOAS IR.OfPHOAS.ExprOfPHOAS_cps IR.OfPHOAS.ExprOfPHOAS_with_opt_outbounds_cps IR.OfPHOAS.ExprOfPHOAS_cont] in v.
+      cbn [IR.OfPHOAS.expr_of_PHOAS IR.OfPHOAS.expr_of_PHOAS_cps IR.OfPHOAS.expr_of_PHOAS_cont] in v.
+      cbv [IR.OfPHOAS.expr_of_PHOAS IR.OfPHOAS.expr_of_PHOAS_cps IR.OfPHOAS.expr_of_PHOAS_cont] in v.
       set (k := IR.OfPHOAS.var_data_of_bounds _ _ _) in (value of v).
       vm_compute in k.
       subst k; cbv beta iota zeta in v.
-      cbn [IR.OfPHOAS.expr_of_PHOAS'] in v.
+      cbn [IR.OfPHOAS.expr_of_PHOAS' IR.OfPHOAS.expr_of_PHOAS'_cps IR.OfPHOAS.expr_of_PHOAS'_cont] in v.
       set (k := IR.OfPHOAS.var_data_of_bounds _ _ _) in (value of v).
       vm_compute in k.
       subst k; cbv beta iota zeta in v.

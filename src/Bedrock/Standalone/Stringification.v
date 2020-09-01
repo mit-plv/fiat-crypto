@@ -14,9 +14,12 @@ Require Import Crypto.Bedrock.Field.Common.Names.VarnameGenerator.
 Require Import Crypto.Bedrock.Field.Translation.Parameters.Defaults.
 Require Import Crypto.Bedrock.Field.Translation.Parameters.SelectParameters.
 Require Import Crypto.Bedrock.Field.Translation.Func.
+Require Import Crypto.Stringification.C.
 Require Import Crypto.Language.API.
 Require Import Crypto.Util.Option.
 Import Stringification.Language.Compilers.
+Import Stringification.IR.Compilers.ToString.
+Import Stringification.C.Compilers.ToString.
 
 Import ListNotations Types.Notations.
 Import ToString.OfPHOAS.
@@ -102,6 +105,41 @@ Definition bedrock_func_to_lines (f : func)
   : list string :=
   [c_func f].
 
+(** TODO: Is there a better way to do this? *)
+(** TODO: FIXME: This is currently incorrect when outputs contain mixed integers and pointers *)
+Definition wrap_call
+           {p : parameters}
+           {t}
+           (indata : type.for_each_lhs_of_arrow var_data t)
+           (outdata : base_var_data (type.final_codomain t))
+           (f : func)
+           (insizes : type.for_each_lhs_of_arrow access_sizes t)
+           (outsizes : base_access_sizes (type.final_codomain t))
+  : string
+  := let innames := ToString.OfPHOAS.names_list_of_input_var_data indata in
+     let outnames := ToString.OfPHOAS.names_list_of_base_var_data outdata in
+     let '(name, (args, rets, _body)) := f in
+     let '(precall, all_args)
+         := match rets, outnames with
+            | nil, _ | _, nil => (name, outnames ++ innames)
+            | cons _ _, cons r0 _
+              => let r0 := List.last outnames r0 in
+                 let outnames' := List.removelast outnames in
+                 (("*" ++ r0 ++ " = " ++ name)%string, outnames' ++ innames)
+            end%list in
+     ((precall ++ "(")
+        ++ (String.concat
+              ", "
+              (List.map
+                 (** TODO: Is there a better way to do this? *)
+                 (fun n => "(uintptr_t)" ++ n)
+                 all_args))
+        ++ ")")%string.
+
+(** When writing wrapper functions, we first check to see if any of the arguments fit in uint8_t; if not then we use the given bounds relaxation function *)
+Notation wrapper_relax_zrange relax_zrange
+  := (fun r => Option.value (BoundsPipeline.relax_zrange_gen false (* only signed=false *) [8]%Z r) (relax_zrange r)).
+
 (* TODO: for now, name_list is just ignored -- could probably make it not ignored *)
 Definition Bedrock2_ToFunctionLines
            {relax_zrange : relax_zrange_opt}
@@ -129,15 +167,28 @@ Definition Bedrock2_ToFunctionLines
         | Some insizes, Some outsizes =>
           let out := translate_func
                        e innames inlengths insizes outnames outsizes in
-          let f : func := (name, fst out) in
+          let f : func := (("internal_" ++ name)%string, fst out) in
           let outlengths := snd out in
           if error_free_cmd (snd (snd f))
           then
             match make_header innames inlengths inbounds
                               outnames outlengths outbounds with
             | Some header =>
-              inl (header ++ bedrock_func_to_lines f,
-                   ToString.ident_info_empty)
+              match (let relax_zrange : relax_zrange_opt := wrapper_relax_zrange relax_zrange in
+                     IR.OfPHOAS.var_data_of_PHOAS_bounds e name_list inbounds outbounds) with
+              | inl (indata, outdata)
+                => inl ((header ++ ["static"] ++ bedrock_func_to_lines f)
+                          ++ ["/* NOTE: The following wrapper function is not covered by Coq proofs */"
+                              ; (((if static then "static " else "") ++ "void " ++ name ++ "(")
+                                   ++ (String.concat ", " (C.to_retarg_list prefix outdata ++ C.to_arg_list_for_each_lhs_of_arrow prefix indata))
+                                   ++ ") {")
+                              ; "  " ++ (wrap_call indata outdata f insizes outsizes) ++ ";"
+                              ; "}"
+                              ; ""
+                             ]%string%list,
+                        ToString.ident_info_empty)
+              | inr errs => inr (String.concat String.NewLine errs)
+              end
             | None =>
               inr
                 (String.concat

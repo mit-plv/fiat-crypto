@@ -485,7 +485,7 @@ test-c-files only-test-c-files:
 
 $(ALL_BEDROCK2_FILES) : $(BEDROCK2_DIR)%.c : $$(BEDROCK2_$$($$*_BINARY_NAME))
 	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)($(TIMER) $(BEDROCK2_$($*_BINARY_NAME)) --lang bedrock2 $(BEDROCK2_ARGS) $($*_DESCRIPTION) $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(BEDROCK2_$($*_BINARY_NAME)) --lang bedrock2 --static $(BEDROCK2_ARGS) $($*_DESCRIPTION) $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 test-bedrock2-files: $(ALL_BEDROCK2_FILES)
