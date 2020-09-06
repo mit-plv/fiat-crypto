@@ -1,5 +1,6 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Lists.List.
+Require Import Coq.micromega.Lia.
 Require Import coqutil.Byte.
 Require Import coqutil.Word.Interface.
 Require Import bedrock2.Semantics.
@@ -12,6 +13,7 @@ Require Import Crypto.Bedrock.Specs.Field.
 Require Import Crypto.COperationSpecifications.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
+Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
 
 Section Representation.
   Context {p : Types.parameters} {field_parameters : FieldParameters}
@@ -54,6 +56,35 @@ Section Representation.
     constructor.
     { cbn [felem_size_in_bytes frep].
       push_Zmod. autorewrite with zsimplify_fast. reflexivity. }
+    { cbv [Placeholder FElem felem_size_in_bytes frep]; repeat intro.
+      assert (word_size_in_bytes = bytes_per_word width).
+      { pose proof word.width_pos.
+        rewrite word_size_in_bytes_eq; cbn [bytes_per].
+        apply Z2Nat.id. cbv [bytes_per_word].
+        Z.zero_bounds. }
+      cbv [Lift1Prop.ex1]; split; intros;
+        repeat match goal with
+               | H : anybytes _ _ _ |- _ =>
+                 apply Array.anybytes_to_array_1 in H
+               | H : exists _, _ |- _ => destruct H
+               | H : _ /\ _ |- _ => destruct H
+               end.
+      { Check Bignum_of_bytes.
+        match goal with
+          | H : Array.array _ _ _ _ _ |- _ =>
+            eapply Bignum_of_bytes with (n0:=n) in H;
+              [ destruct H | nia ]
+        end.
+        eexists; eauto. }
+      {
+        pose proof word_size_in_bytes_pos.
+        let H := match goal with
+                 | H : Bignum _ _ _ _ |- _ => H end in
+        eapply Bignum_to_bytes in H;
+        eapply Array.array_1_to_anybytes in H.
+        replace (Z.of_nat (length (Util.encode_bytes x0)))
+          with (bytes_per_word width * Z.of_nat n)%Z in * by admit.
+        eauto. } }
     { cbn [bounded_by frep]; intros.
       apply relax_bounds; auto. }
   Qed.
