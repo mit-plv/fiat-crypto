@@ -46,6 +46,23 @@ Section Specs.
                 /\ r = word.of_Z (Z.b2z b)))).
 End Specs.
 
+Section Proofs.
+  Context {semantics : Semantics.parameters}
+          {semantics_ok : Semantics.parameters_ok semantics}.
+  Context {scalar_field_parameters : ScalarFieldParameters}
+          {scalar_field_parameters_ok : ScalarFieldParameters_ok}
+          {scalar_representation : ScalarRepresentation}.
+
+  Lemma sceval_range k :
+    0 <= F.to_Z (sceval k) < 2 ^ scalarbits.
+  Proof.
+    pose proof (Znumtheory.prime_ge_2 (Z.pos L_pos) L_prime).
+    pose proof (@F.to_Z_range L_pos (sceval k) ltac:(lia)).
+    pose proof (Z.log2_log2_up_spec (Z.pos L_pos) ltac:(lia)).
+    rewrite scalarbits_eq. change L with (Z.pos L_pos). lia.
+  Qed.
+End Proofs.
+
 Section Compile.
   Context {semantics : Semantics.parameters}
           {semantics_ok : Semantics.parameters_ok semantics}.

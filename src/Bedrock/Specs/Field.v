@@ -13,7 +13,7 @@ Class FieldParameters :=
     (** function names **)
     mul : string; add : string; sub : string;
     square : string; scmula24 : string; inv : string;
-    from_bytes : string;
+    from_bytes : string; to_bytes : string;
 
     (* felem_small_literal p x :=
          store p (expr.literal x);
@@ -44,7 +44,10 @@ Class FieldRepresentation
     feval_bytes : list byte -> F M_pos;
     felem_size_in_bytes : Z; (* for stack allocation *)
     FElem : word -> felem -> Semantics.mem -> Prop;
-    FElemBytes : word -> list byte -> Semantics.mem -> Prop;
+    FElemBytes : word -> list byte -> Semantics.mem -> Prop :=
+      fun addr bs =>
+        (emp (length bs = Z.to_nat felem_size_in_bytes)
+         * array ptsto (word.of_Z 1) addr bs)%sep;
     bounds : Type;
     bounded_by : bounds -> felem -> Prop;
 
@@ -53,16 +56,41 @@ Class FieldRepresentation
     tight_bounds : bounds;
   }.
 
+Definition Placeholder
+           {field_parameters : FieldParameters}
+           {semantics : Semantics.parameters}
+           {field_representation : FieldRepresentation}
+           (p : Semantics.word) : Semantics.mem -> Prop :=
+  Memory.anybytes p felem_size_in_bytes.
+
 Class FieldRepresentation_ok
       {field_parameters : FieldParameters}
       {semantics : Semantics.parameters}
       {field_representation : FieldRepresentation} :=
   { felem_size_in_bytes_mod :
       (felem_size_in_bytes mod Memory.bytes_per_word Semantics.width)%Z = 0%Z;
+    FElem_from_bytes :
+      forall px,
+        Lift1Prop.iff1 (Placeholder px) (Lift1Prop.ex1 (FElem px));
     relax_bounds :
       forall X : felem, bounded_by tight_bounds X
                         -> bounded_by loose_bounds X;
-    }.
+  }.
+
+Section Proofs.
+  Context {semantics : Semantics.parameters}
+          {semantics_ok : Semantics.parameters_ok semantics}.
+  Context {field_parameters : FieldParameters}
+          {field_representaton : FieldRepresentation}
+          {field_representation_ok : FieldRepresentation_ok}.
+
+  Lemma FElem_to_bytes px x :
+    Lift1Prop.impl1 (FElem px x) (Placeholder px).
+  Proof.
+    rewrite FElem_from_bytes.
+    repeat intro; eexists; eauto.
+  Qed.
+End Proofs.
 
 Section Specs.
   Context {semantics : Semantics.parameters}
@@ -71,11 +99,11 @@ Section Specs.
           {field_representaton : FieldRepresentation}.
 
   Local Notation unop_spec name op xbounds outbounds :=
-    (forall! (x : felem) (px pout : word) (old_out : felem),
+    (forall! (x : felem) (px pout : word),
         (fun Rr mem =>
            bounded_by xbounds x
            /\ (exists Ra, (FElem px x * Ra)%sep mem)
-           /\ (FElem pout old_out * Rr)%sep mem)
+           /\ (Placeholder pout * Rr)%sep mem)
           ===> name @ [px; pout] ===>
           (fun _ =>
            liftexists out,
@@ -85,12 +113,12 @@ Section Specs.
       (only parsing).
 
   Local Notation binop_spec name op xbounds ybounds outbounds :=
-    (forall! (x y : felem) (px py pout : word) (old_out : felem),
+    (forall! (x y : felem) (px py pout : word),
         (fun Rr mem =>
            bounded_by xbounds x
            /\ bounded_by ybounds y
            /\ (exists Ra, (FElem px x * FElem py y * Ra)%sep mem)
-           /\ (FElem pout old_out * Rr)%sep mem)
+           /\ (Placeholder pout * Rr)%sep mem)
           ===> name @ [px; py; pout] ===>
           (fun _ =>
            liftexists out,
@@ -113,25 +141,36 @@ Section Specs.
     unop_spec inv F.inv tight_bounds loose_bounds.
 
   Definition spec_of_from_bytes : spec_of from_bytes :=
-    forall! (bs : list byte) (px pout : word) (old_out : felem),
+    forall! (bs : list byte) (px pout : word),
       (fun Rr mem =>
          (exists Ra, (FElemBytes px bs * Ra)%sep mem)
-         /\ (FElem pout old_out * Rr)%sep mem)
+         /\ (Placeholder pout * Rr)%sep mem)
         ===> from_bytes @ [px; pout] ===>
         (fun _ =>
            liftexists X,
            (emp (feval X = feval_bytes bs /\ bounded_by tight_bounds X)
             * FElem pout X)%sep).
 
+  Definition spec_of_to_bytes : spec_of to_bytes :=
+    forall! (x : felem) (px pout : word) (old_out : list byte),
+      (fun Rr mem =>
+         bounded_by tight_bounds x
+         /\ (exists Ra, (FElem px x * Ra)%sep mem)
+         /\ (FElemBytes pout old_out * Rr)%sep mem)
+        ===> to_bytes @ [px; pout] ===>
+        (fun _ =>
+           liftexists bs,
+           (emp (feval_bytes bs = feval x) * FElemBytes pout bs)%sep).
+
   Definition spec_of_felem_copy : spec_of felem_copy :=
-    forall! (x : felem) (px pout : word) (old_out : felem),
-      (sep (FElem px x * FElem pout old_out)%sep)
+    forall! (x : felem) (px pout : word),
+      (sep (FElem px x * Placeholder pout)%sep)
         ===> felem_copy @ [px; pout] ===>
         (fun _ => FElem px x * FElem pout x)%sep.
 
   Definition spec_of_felem_small_literal : spec_of felem_small_literal :=
-    forall! (x pout : word) (old_out : felem),
-      (sep (FElem pout old_out))
+    forall! (x pout : word),
+      (sep (Placeholder pout))
         ===> felem_small_literal @ [x; pout] ===>
         (fun _ =>
            liftexists X,
