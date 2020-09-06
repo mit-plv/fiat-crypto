@@ -67,7 +67,7 @@ Section __.
              * FElem pDA DA' * FElem pCB CB'))%sep).
 
   Instance spec_of_ladderstep : spec_of "ladderstep" :=
-    forall! (X1 X2 Z2 X3 Z3 A AA B BB E C D DA CB : felem)
+    forall! (X1 X2 Z2 X3 Z3 : felem)
           (pX1 pX2 pZ2 pX3 pZ3
                pA pAA pB pBB pE pC pD pDA pCB : Semantics.word),
       (fun R m =>
@@ -79,11 +79,11 @@ Section __.
         /\ (FElem pX1 X1
             * FElem pX2 X2 * FElem pZ2 Z2
             * FElem pX3 X3 * FElem pZ3 Z3
-            * Placeholder pA A * Placeholder pAA AA
-            * Placeholder pB B * Placeholder pBB BB
-            * Placeholder pE E * Placeholder pC C
-            * Placeholder pD D * Placeholder pDA DA
-            * Placeholder pCB CB * R)%sep m)
+            * Placeholder pA * Placeholder pAA
+            * Placeholder pB * Placeholder pBB
+            * Placeholder pE * Placeholder pC
+            * Placeholder pD * Placeholder pDA
+            * Placeholder pCB * R)%sep m)
         ===>
         "ladderstep" @ [pX1; pX2; pZ2; pX3; pZ3; pA; pAA; pB; pBB; pE; pC; pD; pDA; pCB]
         ===>
@@ -101,9 +101,9 @@ Section __.
         x1 x2 z2 x3 z3
         X1 X1_ptr X1_var X2 X2_ptr X2_var Z2 Z2_ptr Z2_var
         X3 X3_ptr X3_var Z3 Z3_ptr Z3_var
-        A A_ptr A_var AA AA_ptr AA_var B B_ptr B_var BB BB_ptr BB_var
-        E E_ptr E_var C C_ptr C_var D D_ptr D_var
-        DA DA_ptr DA_var CB CB_ptr CB_var
+        A_ptr A_var AA_ptr AA_var B_ptr B_var BB_ptr BB_var
+        E_ptr E_var C_ptr C_var D_ptr D_var
+        DA_ptr DA_var CB_ptr CB_var
         k k_impl,
         spec_of_ladderstep functions ->
         feval X1 = x1 ->
@@ -119,11 +119,11 @@ Section __.
         (FElem X1_ptr X1
          * FElem X2_ptr X2 * FElem Z2_ptr Z2
          * FElem X3_ptr X3 * FElem Z3_ptr Z3
-         * Placeholder A_ptr A * Placeholder AA_ptr AA
-         * Placeholder B_ptr B * Placeholder BB_ptr BB
-         * Placeholder E_ptr E * Placeholder C_ptr C
-         * Placeholder D_ptr D * Placeholder DA_ptr DA
-         * Placeholder CB_ptr CB * R')%sep mem ->
+         * Placeholder A_ptr * Placeholder AA_ptr
+         * Placeholder B_ptr * Placeholder BB_ptr
+         * Placeholder E_ptr * Placeholder C_ptr
+         * Placeholder D_ptr * Placeholder DA_ptr
+         * Placeholder CB_ptr * R')%sep mem ->
         map.get locals X1_var = Some X1_ptr ->
         map.get locals X2_var = Some X2_ptr ->
         map.get locals Z2_var = Some Z2_ptr ->
@@ -183,7 +183,7 @@ Section __.
        Placeholder back into a FElem for the arguments precondition *)
     lazymatch goal with
     | |- sep _ _ _ =>
-      change Placeholder with FElem in * |- ;
+      seprewrite FElem_from_bytes;
       solve [repeat compile_step]
     | _ => idtac
     end;

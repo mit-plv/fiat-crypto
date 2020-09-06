@@ -37,20 +37,22 @@ Section Specs.
   Context {group_parameters : GroupParameters}
           {group_representaton : GroupRepresentation (G:=G)}.
 
+  (* N.B. spec_of_scmul has only one separation-logic condition for now because
+     using multiple results in problems with stack allocation. Should be further
+     looked into. *)
   Definition spec_of_scmul : spec_of scmul :=
     (forall! (x old_out : gelem) (k : scalar) (X : G)
            (pout px pk : word),
         (fun Rr mem =>
            grepresents x X
-           /\ (exists Ra, (GElem px x * Scalar pk k * Ra)%sep mem)
-           /\ (GElem pout old_out * Rr)%sep mem)
+           /\ (GElem pout old_out * GElem px x * Scalar pk k * Rr)%sep mem)
           ===>
           scmul @ [pout; px; pk]
           ===>
           (fun _ =>
              liftexists (xk : gelem),
              (emp (grepresents xk (scalarmult (F.to_Z (sceval k)) X))
-              * GElem pout xk)%sep)).
+              * GElem pout xk * GElem px x * Scalar pk k)%sep)).
 End Specs.
 
 

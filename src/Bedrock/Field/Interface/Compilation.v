@@ -7,25 +7,26 @@ Section Compile.
   Context {semantics : Semantics.parameters}
           {semantics_ok : Semantics.parameters_ok semantics}.
   Context {field_parameters : FieldParameters}
-          {field_representaton : FieldRepresentation}.
+          {field_representaton : FieldRepresentation}
+          {field_representation_ok : FieldRepresentation_ok}.
   Existing Instances spec_of_mul spec_of_add spec_of_sub spec_of_square
            spec_of_scmula24 spec_of_inv spec_of_felem_copy
            spec_of_felem_small_literal.
 
-  (* In compilation, we need to decide where to store outputs. In particular,
-     we don't want to overwrite a variable that we want to use later with the
-     output of some operation. The [Placeholder] alias explicitly signifies
-     which FElems are overwritable.
-
-     TODO: in the future, it would be nice to be able to look through the
-     Gallina code and see which FElems get used later and which don't. *)
-  Definition Placeholder := FElem.
+  Local Ltac prove_field_compilation :=
+    repeat straightline';
+    handle_call;
+    lazymatch goal with
+    | |- sep _ _ _ => ecancel_assumption
+    | _ => idtac
+    end; eauto;
+    sepsimpl; repeat straightline'; subst; eauto.
 
   Lemma compile_mul :
     forall (locals: Semantics.locals) (mem: Semantics.mem)
            (locals_ok : Semantics.locals -> Prop)
       tr retvars R Rin Rout functions T (pred: T -> list word -> Semantics.mem -> Prop)
-      (x y out : felem) x_ptr x_var y_ptr y_var out_ptr out_var
+      (x y : felem) x_ptr x_var y_ptr y_var out_ptr out_var
       (X Y : F M_pos) k k_impl,
       spec_of_mul functions ->
       bounded_by loose_bounds x ->
@@ -33,7 +34,7 @@ Section Compile.
       feval x = X ->
       feval y = Y ->
       (FElem x_ptr x * FElem y_ptr y * Rin)%sep mem ->
-      (Placeholder out_ptr out * Rout)%sep mem ->
+      (Placeholder out_ptr * Rout)%sep mem ->
       map.get locals x_var = Some x_ptr ->
       map.get locals y_var = Some y_ptr ->
       map.get locals out_var = Some out_ptr ->
@@ -59,18 +60,13 @@ Section Compile.
        and-locals-post locals_ok
        with-locals locals and-memory mem and-trace tr and-rest R
        and-functions functions).
-  Proof.
-    cbv [Placeholder] in *.
-    repeat straightline'.
-    handle_call; [ solve [eauto] .. | sepsimpl ].
-    repeat straightline'. subst; eauto.
-  Qed.
+  Proof. prove_field_compilation. Qed.
 
   Lemma compile_add :
     forall (locals: Semantics.locals) (mem: Semantics.mem)
            (locals_ok : Semantics.locals -> Prop)
       tr retvars R Rin Rout functions T (pred: T -> list word -> Semantics.mem -> Prop)
-      (x y out : felem) x_ptr x_var y_ptr y_var out_ptr out_var
+      (x y : felem) x_ptr x_var y_ptr y_var out_ptr out_var
       (X Y : F M_pos) k k_impl,
       spec_of_add functions ->
       bounded_by tight_bounds x ->
@@ -78,7 +74,7 @@ Section Compile.
       feval x = X ->
       feval y = Y ->
       (FElem x_ptr x * FElem y_ptr y * Rin)%sep mem ->
-      (Placeholder out_ptr out * Rout)%sep mem ->
+      (Placeholder out_ptr * Rout)%sep mem ->
       map.get locals x_var = Some x_ptr ->
       map.get locals y_var = Some y_ptr ->
       map.get locals out_var = Some out_ptr ->
@@ -104,18 +100,13 @@ Section Compile.
        and-locals-post locals_ok
        with-locals locals and-memory mem and-trace tr and-rest R
        and-functions functions).
-  Proof.
-    cbv [Placeholder] in *.
-    repeat straightline'.
-    handle_call; [ solve [eauto] .. | sepsimpl ].
-    repeat straightline'. subst; eauto.
-  Qed.
+  Proof. prove_field_compilation. Qed.
 
   Lemma compile_sub :
     forall (locals: Semantics.locals) (mem: Semantics.mem)
            (locals_ok : Semantics.locals -> Prop)
       tr retvars R Rin Rout functions T (pred: T -> list word -> Semantics.mem -> Prop)
-      (x y out : felem) x_ptr x_var y_ptr y_var out_ptr out_var
+      (x y : felem) x_ptr x_var y_ptr y_var out_ptr out_var
       (X Y : F M_pos) k k_impl,
       spec_of_sub functions ->
       bounded_by tight_bounds x ->
@@ -123,7 +114,7 @@ Section Compile.
       feval x = X ->
       feval y = Y ->
       (FElem x_ptr x * FElem y_ptr y * Rin)%sep mem ->
-      (Placeholder out_ptr out * Rout)%sep mem ->
+      (Placeholder out_ptr * Rout)%sep mem ->
       map.get locals x_var = Some x_ptr ->
       map.get locals y_var = Some y_ptr ->
       map.get locals out_var = Some out_ptr ->
@@ -149,23 +140,18 @@ Section Compile.
        and-locals-post locals_ok
        with-locals locals and-memory mem and-trace tr and-rest R
        and-functions functions).
-  Proof.
-    cbv [Placeholder] in *.
-    repeat straightline'.
-    handle_call; [ solve [eauto] .. | sepsimpl ].
-    repeat straightline'. subst; eauto.
-  Qed.
+  Proof. prove_field_compilation. Qed.
 
   Lemma compile_square :
     forall (locals: Semantics.locals) (mem: Semantics.mem)
            (locals_ok : Semantics.locals -> Prop)
       tr retvars R Rin Rout functions T (pred: T -> list word -> Semantics.mem -> Prop)
-      (x out : felem) x_ptr x_var out_ptr out_var (X : F M_pos) k k_impl,
+      (x : felem) x_ptr x_var out_ptr out_var (X : F M_pos) k k_impl,
       spec_of_square functions ->
       bounded_by loose_bounds x ->
       feval x = X ->
       (FElem x_ptr x * Rin)%sep mem ->
-      (Placeholder out_ptr out * Rout)%sep mem ->
+      (Placeholder out_ptr * Rout)%sep mem ->
       map.get locals x_var = Some x_ptr ->
       map.get locals out_var = Some out_ptr ->
       let v := (X ^ 2)%F in
@@ -190,22 +176,21 @@ Section Compile.
        with-locals locals and-memory mem and-trace tr and-rest R
        and-functions functions).
   Proof.
-    cbv [Placeholder] in *.
-    repeat straightline'.
-    handle_call; [ solve [eauto] .. | sepsimpl ].
-    repeat straightline'. subst. rewrite F.pow_2_r in *. eauto.
+    intros. subst_lets_in_goal.
+    rewrite F.pow_2_r in *.
+    prove_field_compilation.
   Qed.
 
   Lemma compile_scmula24 :
     forall (locals: Semantics.locals) (mem: Semantics.mem)
            (locals_ok : Semantics.locals -> Prop)
       tr retvars R Rin Rout functions T (pred: T -> list word -> Semantics.mem -> Prop)
-      (x out : felem) x_ptr x_var out_ptr out_var (X : F M_pos) k k_impl,
+      (x : felem) x_ptr x_var out_ptr out_var (X : F M_pos) k k_impl,
       spec_of_scmula24 functions ->
       bounded_by loose_bounds x ->
       feval x = X ->
       (FElem x_ptr x * Rin)%sep mem ->
-      (Placeholder out_ptr out * Rout)%sep mem ->
+      (Placeholder out_ptr * Rout)%sep mem ->
       map.get locals x_var = Some x_ptr ->
       map.get locals out_var = Some out_ptr ->
       let v := (a24 * X)%F in
@@ -229,23 +214,18 @@ Section Compile.
        and-locals-post locals_ok
        with-locals locals and-memory mem and-trace tr and-rest R
        and-functions functions).
-  Proof.
-    cbv [Placeholder] in *.
-    repeat straightline'.
-    handle_call; [ solve [eauto] .. | sepsimpl ].
-    repeat straightline'. subst; eauto.
-  Qed.
+  Proof. prove_field_compilation. Qed.
 
   Lemma compile_inv :
     forall (locals: Semantics.locals) (mem: Semantics.mem)
            (locals_ok : Semantics.locals -> Prop)
       tr retvars R Rin Rout functions T (pred: T -> list word -> Semantics.mem -> Prop)
-      (x out : felem) x_ptr x_var out_ptr out_var (X : F M_pos) k k_impl,
+      (x : felem) x_ptr x_var out_ptr out_var (X : F M_pos) k k_impl,
       spec_of_inv functions ->
       bounded_by tight_bounds x ->
       feval x = X ->
       (FElem x_ptr x * Rin)%sep mem ->
-      (Placeholder out_ptr out * Rout)%sep mem ->
+      (Placeholder out_ptr * Rout)%sep mem ->
       map.get locals x_var = Some x_ptr ->
       map.get locals out_var = Some out_ptr ->
       let v := F.inv X in
@@ -269,22 +249,17 @@ Section Compile.
        and-locals-post locals_ok
        with-locals locals and-memory mem and-trace tr and-rest R
        and-functions functions).
-  Proof.
-    cbv [Placeholder] in *.
-    repeat straightline'.
-    handle_call; [ solve [eauto] .. | sepsimpl ].
-    repeat straightline'. subst; eauto.
-  Qed.
+  Proof. prove_field_compilation. Qed.
 
   Lemma compile_felem_copy :
     forall (locals: Semantics.locals) (mem: Semantics.mem)
            (locals_ok : Semantics.locals -> Prop)
       tr retvars R R' functions T (pred: T -> list word -> Semantics.mem -> Prop)
-      (x out : felem) x_ptr x_var out_ptr out_var
+      (x : felem) x_ptr x_var out_ptr out_var
       (X : F M_pos) k k_impl,
       spec_of_felem_copy functions ->
       feval x = X ->
-      (FElem x_ptr x * Placeholder out_ptr out * R')%sep mem ->
+      (FElem x_ptr x * Placeholder out_ptr * R')%sep mem ->
       map.get locals x_var = Some x_ptr ->
       map.get locals out_var = Some out_ptr ->
       let v := X in
@@ -306,22 +281,15 @@ Section Compile.
        and-locals-post locals_ok
        with-locals locals and-memory mem and-trace tr and-rest R
        and-functions functions).
-  Proof.
-    cbv [Placeholder] in *.
-    repeat straightline'.
-    handle_call; [ solve [eauto] .. | sepsimpl ].
-    repeat straightline'. subst.
-    use_hyp_with_matching_cmd; eauto;
-      ecancel_assumption.
-  Qed.
+  Proof. prove_field_compilation. Qed.
 
   Lemma compile_felem_small_literal :
     forall (locals: Semantics.locals) (mem: Semantics.mem)
            (locals_ok : Semantics.locals -> Prop)
       tr retvars R R' functions T (pred: T -> list word -> Semantics.mem -> Prop)
-      (wx : word) (x : Z) (out : felem) out_ptr out_var k k_impl,
+      (wx : word) (x : Z) out_ptr out_var k k_impl,
       spec_of_felem_small_literal functions ->
-      (Placeholder out_ptr out * R')%sep mem ->
+      (Placeholder out_ptr * R')%sep mem ->
       map.get locals out_var = Some out_ptr ->
       word.unsigned wx = x ->
       let v := F.of_Z M_pos x in
@@ -347,13 +315,11 @@ Section Compile.
        with-locals locals and-memory mem and-trace tr and-rest R
        and-functions functions).
   Proof.
-    cbv [Placeholder] in *.
-    repeat straightline'. subst.
-    handle_call; [ solve [eauto] .. | sepsimpl ].
-    repeat straightline'. subst.
+    prove_field_compilation.
     match goal with H : _ |- _ =>
                     rewrite word.of_Z_unsigned in H end.
     use_hyp_with_matching_cmd; eauto; [ ].
+    subst_lets_in_goal.
     match goal with H : F.to_Z _ = _ |- _ => rewrite <-H end.
     rewrite F.of_Z_to_Z. eauto.
   Qed.
@@ -370,8 +336,8 @@ Section Compile.
            {A1 A2 : Type} (* second arg is N for F.pow, so allow that *)
            (op1 : F M_pos -> A1 -> F M_pos)
            (op2 : F M_pos -> A2 -> F M_pos)
-           x y z out out_ptr out_var k k_impl,
-      (Placeholder out_ptr out * Rout)%sep mem ->
+           x y z out_ptr out_var k k_impl,
+      (Placeholder out_ptr * Rout)%sep mem ->
       map.get locals out_var = Some out_ptr ->
       let v := ((op2 (op1 x y) z)) in
       (let head := v in
@@ -402,8 +368,8 @@ Section Compile.
            {A1 : Type} (* second arg is N for F.pow, so allow that *)
            (op1 : F M_pos -> A1 -> F M_pos)
            (op2 : F M_pos -> F M_pos -> F M_pos)
-           x y z out out_ptr out_var k k_impl,
-      (Placeholder out_ptr out * Rout)%sep mem ->
+           x y z out_ptr out_var k k_impl,
+      (Placeholder out_ptr * Rout)%sep mem ->
       map.get locals out_var = Some out_ptr ->
       let v := (op2 z (op1 x y)) in
       (let head := v in
@@ -440,7 +406,8 @@ Section Compile.
       let v' := op x Y in
       (let __ := 0 in (* placeholder *)
        forall m,
-         sep (Placeholder y_ptr y) Rin m ->
+         sep (FElem y_ptr y) Rin m ->
+         sep (Placeholder y_ptr) Rin m ->
          (find k_impl
           implementing (pred (dlet v' k))
           and-returning retvars
@@ -455,8 +422,11 @@ Section Compile.
        with-locals locals and-memory mem and-trace tr and-rest R
        and-functions functions).
   Proof.
-    cbv [Placeholder] in *.
     repeat straightline'. auto.
+    match goal with H : _ |- _ => apply H end.
+    { ecancel_assumption. }
+    { seprewrite FElem_from_bytes.
+      sepsimpl; eexists; ecancel_assumption. }
   Qed.
 
   Lemma compile_overwrite2 :
@@ -473,7 +443,8 @@ Section Compile.
       let v' := op X y in
       (let __ := 0 in (* placeholder *)
        forall m,
-         sep (Placeholder x_ptr x) Rin m ->
+         sep (FElem x_ptr x) Rin m ->
+         sep (Placeholder x_ptr) Rin m ->
          (find k_impl
           implementing (pred (dlet v' k))
           and-returning retvars
@@ -488,8 +459,11 @@ Section Compile.
        with-locals locals and-memory mem and-trace tr and-rest R
        and-functions functions).
   Proof.
-    cbv [Placeholder] in *.
     repeat straightline'. auto.
+    match goal with H : _ |- _ => apply H end.
+    { ecancel_assumption. }
+    { seprewrite FElem_from_bytes.
+      sepsimpl; eexists; ecancel_assumption. }
   Qed.
 End Compile.
 
@@ -512,4 +486,19 @@ Ltac compile_compose_step :=
         | simple eapply compile_overwrite2 ];
   [ solve [repeat compile_step] .. | intros ].
 
-Ltac free p := change (FElem p) with (Placeholder p) in *.
+Ltac free p :=
+  match goal with
+  | H : sep ?P ?Q ?m |- context [?m] =>
+    let x :=
+        match type of H with
+        | context [FElem p ?x] => x
+        end in
+    let F :=
+        match (eval pattern (FElem p x) in (sep P Q m)) with
+        | ?F _ => F end in
+    let H' := fresh in
+    assert (F (Placeholder p)) as H'
+        by (seprewrite FElem_from_bytes; sepsimpl; eexists;
+            ecancel_assumption);
+    cbv beta in H'; clear H
+  end.

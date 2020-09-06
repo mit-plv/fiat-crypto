@@ -59,44 +59,36 @@ Section __.
   Section MontLadder.
     Context (scalarbits_small : word.wrap scalarbits = scalarbits).
 
-    (* TODO: make Placeholder [Lift1Prop.ex1 (fun x => FElem p x)], and prove
-       an iff1 with FElem? Then we could even do some loop over the pointers to
-       construct the seplogic condition *)
-    (* TODO: should montladder return a pointer to the result? Currently writes
-       result into U. *)
     Definition MontLadderResult
                (K : scalar)
                (pOUT pK pU pX1 pZ1 pX2 pZ2 pA pAA pB pBB pE pC pD pDA pCB: Semantics.word)
                (result : F M_pos)
       : list word -> Semantics.mem -> Prop :=
       fun _ =>
-      (liftexists OUT U' X1' Z1' X2' Z2' A' AA' B' BB' E' C' D' DA' CB' : felem,
-         (emp (result = feval OUT)
-          * (FElem pOUT OUT * Scalar pK K * FElem pU U'
-             * FElem pX1 X1' * FElem pZ1 Z1'
-             * FElem pX2 X2' * FElem pZ2 Z2'
-             * FElem pA A' * FElem pAA AA'
-             * FElem pB B' * FElem pBB BB'
-             * FElem pE E' * FElem pC C' * FElem pD D'
-             * FElem pDA DA' * FElem pCB CB'))%sep).
+      (liftexists OUT : felem,
+         (emp (result = feval OUT /\ bounded_by tight_bounds OUT)
+          * (FElem pOUT OUT * Scalar pK K * Placeholder pU
+             * Placeholder pX1 * Placeholder pZ1
+             * Placeholder pX2 * Placeholder pZ2
+             * Placeholder pA * Placeholder pAA
+             * Placeholder pB * Placeholder pBB
+             * Placeholder pE * Placeholder pC * Placeholder pD
+             * Placeholder pDA * Placeholder pCB))%sep).
 
     Instance spec_of_montladder : spec_of "montladder" :=
-      forall!
-            (OLD_OUT : felem) (* output placeholder *)
-            (K : scalar) (U : felem) (* input *)
-            (X1 Z1 X2 Z2 A AA B BB E C D DA CB : felem) (* intermediates *)
+      forall! (K : scalar) (U : felem) (* input *)
             (pOUT pK pU pX1 pZ1 pX2 pZ2
-                pA pAA pB pBB pE pC pD pDA pCB : Semantics.word),
+                  pA pAA pB pBB pE pC pD pDA pCB : Semantics.word),
         (fun R m =>
            bounded_by tight_bounds U
-           /\ (FElem pOUT OLD_OUT * Scalar pK K * FElem pU U
-               * Placeholder pX1 X1 * Placeholder pZ1 Z1
-               * Placeholder pX2 X2 * Placeholder pZ2 Z2
-               * Placeholder pA A * Placeholder pAA AA
-               * Placeholder pB B * Placeholder pBB BB
-               * Placeholder pE E * Placeholder pC C
-               * Placeholder pD D * Placeholder pDA DA
-               * Placeholder pCB CB * R)%sep m)
+           /\ (Placeholder pOUT * Scalar pK K * FElem pU U
+               * Placeholder pX1 * Placeholder pZ1
+               * Placeholder pX2 * Placeholder pZ2
+               * Placeholder pA * Placeholder pAA
+               * Placeholder pB * Placeholder pBB
+               * Placeholder pE * Placeholder pC
+               * Placeholder pD * Placeholder pDA
+               * Placeholder pCB * R)%sep m)
           ===>
           "montladder" @
           [pOUT; pK; pU; pX1; pZ1; pX2; pZ2; pA; pAA; pB; pBB; pE; pC; pD; pDA; pCB]
@@ -159,7 +151,7 @@ Section __.
       let z2 := snd P2 in
       let swapped := gst in
       liftexists X1_ptr' Z1_ptr' X2_ptr' Z2_ptr'
-                 X1 Z1 X2 Z2 A AA B BB E C D DA CB,
+                 X1 Z1 X2 Z2,
         (emp (bounded_by tight_bounds X1
               /\ bounded_by tight_bounds Z1
               /\ bounded_by tight_bounds X2
@@ -183,11 +175,11 @@ Section __.
                   * Rl)%sep locals)
          * (Scalar K_ptr K * FElem X1_ptr' X1 * FElem Z1_ptr' Z1
             * FElem X2_ptr' X2 * FElem Z2_ptr' Z2
-            * Placeholder A_ptr A * Placeholder AA_ptr AA
-            * Placeholder B_ptr B * Placeholder BB_ptr BB
-            * Placeholder E_ptr E * Placeholder C_ptr C
-            * Placeholder D_ptr D * Placeholder DA_ptr DA
-            * Placeholder CB_ptr CB))%sep.
+            * Placeholder A_ptr * Placeholder AA_ptr
+            * Placeholder B_ptr * Placeholder BB_ptr
+            * Placeholder E_ptr * Placeholder C_ptr
+            * Placeholder D_ptr * Placeholder DA_ptr
+            * Placeholder CB_ptr))%sep.
 
     Definition downto_ghost_step
                (K : scalar) (st : point * point * bool)
@@ -296,6 +288,12 @@ Section __.
       apply lt_1_p. apply L_prime.
     Qed.
 
+    Definition Hidden := Placeholder.
+    Ltac hide p :=
+      change (Placeholder p) with (Hidden p) in *.
+    Ltac unhide p :=
+      change (Hidden p) with (Placeholder p) in *.
+
     Derive montladder_body SuchThat
            (let args := ["OUT"; "K"; "U"; "X1"; "Z1"; "X2"; "Z2";
                            "A"; "AA"; "B"; "BB"; "E"; "C"; "D"; "DA"; "CB"] in
@@ -315,6 +313,10 @@ Section __.
       cbv [program_logic_goal_for spec_of_montladder].
       pose proof scalarbits_pos.
       setup. cbv [F.one F.zero]. (* expose F.of_Z *)
+
+      (* prevent things from getting stored in pOUT *)
+      hide pOUT.
+
       repeat safe_compile_step.
 
       let i_var := gen_sym_fetch "v" in (* last used variable name *)
@@ -355,7 +357,7 @@ Section __.
           [ .. | subst L | subst L ].
       { cbv [downto_inv].
         setup_downto_inv_init.
-        all:solve_downto_inv_subgoals. }
+        all:try solve_downto_inv_subgoals. }
       { subst. autorewrite with mapsimpl.
         reflexivity. }
       { rewrite word.unsigned_of_Z, Z2Nat.id by lia;
@@ -430,7 +432,9 @@ Section __.
           (* first, resolve evars *)
           all:lazymatch goal with
               | |- @sep _ _ Semantics.mem _ _ _ =>
-                change Placeholder with FElem; ecancel_assumption
+                repeat seprewrite FElem_from_bytes;
+                repeat (sepsimpl; lift_eexists);
+                ecancel_assumption
               | |- @sep _ _ Semantics.locals _ _ ?locals =>
                 subst_lets_in_goal; push_map_remove;
                   let locals := match goal with |- ?P ?l => l end in
@@ -470,11 +474,13 @@ Section __.
 
         (* the output of this last operation needs to be stored in the pointer
            for the output, so we guide the automation to the right pointer *)
-        clear_old_seps. change Placeholder with FElem in *.
-        lazymatch goal with
-        | H : context [FElem ?p OLD_OUT] |- _ =>
-          change (FElem p) with (Placeholder p) in H
-        end.
+        clear_old_seps.
+        repeat lazymatch goal with
+               | H : sep _ _ _ |- _ =>
+                 seprewrite_in FElem_from_bytes H
+               end.
+        sepsimpl.
+        unhide pOUT.
 
         safe_field_compile_step.
         repeat safe_compile_step.
@@ -484,7 +490,9 @@ Section __.
         destruct_one_match_hyp_of_type bool.
         all:cleanup; subst.
         all:lift_eexists.
-        all:sepsimpl; [ solve [eauto] | ].
+        all:sepsimpl; [ solve [eauto] .. | ].
+        all:repeat seprewrite FElem_from_bytes.
+        all:repeat (sepsimpl; lift_eexists).
         all:ecancel_assumption. }
     Qed.
   End MontLadder.
@@ -494,6 +502,7 @@ End __.
 Require Import bedrock2.NotationsCustomEntry.
 Require Import bedrock2.NotationsInConstr.
 Coercion expr.var : string >-> Syntax.expr.
+Unset Printing Coercions.
 Local Open Scope bedrock_expr.
 Print montladder_body.
 *)
