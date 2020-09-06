@@ -39,9 +39,8 @@ Section Representation.
     { felem := list word;
       feval := eval_words;
       feval_bytes := eval_bytes;
-      felem_size_in_bytes := (Z.of_nat n * word_size_in_bytes)%Z;
+      felem_size_in_bytes := bytes_per_word Semantics.width * Z.of_nat n;
       FElem := Bignum n;
-      FElemBytes := EncodedBignum n;
       bounds := list (option zrange);
       bounded_by :=
         fun bs ws =>
@@ -54,15 +53,6 @@ Section Representation.
   Proof.
     constructor.
     { cbn [felem_size_in_bytes frep].
-      rewrite word_size_in_bytes_eq.
-
-      (* TODO: should this be upstreamed to bedrock2? *)
-      assert (0 < bytes_per_word width).
-      { cbv [bytes_per_word].
-        pose proof word.width_pos.
-        apply Z.div_str_pos; auto with zarith. }
-
-      cbn [bytes_per]. rewrite Z2Nat.id by auto with zarith.
       push_Zmod. autorewrite with zsimplify_fast. reflexivity. }
     { cbn [bounded_by frep]; intros.
       apply relax_bounds; auto. }

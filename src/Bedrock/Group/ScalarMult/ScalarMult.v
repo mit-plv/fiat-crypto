@@ -103,15 +103,24 @@ Module M.
     Context (char_ge_3 :
                @Ring.char_ge (F M_pos) Logic.eq F.zero F.one F.opp F.add
                              F.sub F.mul 3)
+            (char_ge_5 :
+               @Ring.char_ge (F M_pos) Logic.eq F.zero F.one F.opp F.add
+                             F.sub F.mul 5)
             (char_ge_12 :
                @Ring.char_ge (F M_pos) Logic.eq F.zero F.one F.opp F.add
                               F.sub F.mul 12)
             (char_ge_28 :
                @Ring.char_ge (F M_pos) Logic.eq F.zero F.one F.opp F.add
                              F.sub F.mul 28)
-            (a b : F M_pos) (b_nonzero : b <> F.zero)
-            (discriminant_nonzero : (a * a - (1 + 1 + 1 + 1) <> 0)%F)
-            (scmul : string).
+            (a b : F M_pos) (scmul : string).
+    Context
+      (b_nonzero : b <> F.zero)
+      (discriminant_nonzero : (a * a - (1 + 1 + 1 + 1) <> 0)%F)
+      (a24_correct : ((1 + 1 + 1 + 1) * a24)%F = (a - (1 + 1))%F)
+      (a2m4_nonsquare :
+         forall r : F M_pos,
+           (r * r)%F <> (a * a - (1 + 1 + 1 + 1))%F).
+
     Local Notation to_xz := (M.to_xz (F:=F M_pos) (Feq:=Logic.eq)
                                      (Fzero:=F.zero) (Fone:=F.one)
                                      (Fadd:=F.add) (Fmul:=F.mul)
@@ -171,46 +180,78 @@ Module M.
           (@spec_of_scmul semantics scalar_field_parameters
                           scalar_field_representation group_parameters
                           x_representation).
-      Definition spec_of_from_bytes : spec_of from_bytes :=
-        spec_of_from_bytes.
-      Existing Instances spec_of_scmul spec_of_from_bytes.
+      Definition spec_of_from_bytes : spec_of from_bytes := spec_of_from_bytes.
+      Definition spec_of_to_bytes : spec_of to_bytes := spec_of_to_bytes.
+      Existing Instances spec_of_scmul spec_of_from_bytes spec_of_to_bytes.
+
+      Fixpoint repeat_stackalloc
+               (size : Z) (names : list string)
+        : cmd.cmd -> cmd.cmd :=
+        match names with
+        | [] => fun post => post
+        | n :: names' =>
+          fun post =>
+            cmd.stackalloc n size (repeat_stackalloc size names' post)
+        end.
 
       (* TODO: make rupicola and stack allocation play nicer together so
          Montgomery ladder doesn't need so many arguments *)
       Definition scmul_func : Syntax.func :=
-        let n := felem_size_in_bytes in
         (scmul, (["out"; "x_bytes"; "k"], [],
-                 cmd.stackalloc
-                   "X1" n
-                   (cmd.stackalloc
-                      "Z1" n
-                      (cmd.stackalloc
-                         "X2" n
-                         (cmd.stackalloc
-                            "Z2" n
-                            (cmd.stackalloc
-                               "A" n
-                               (cmd.stackalloc
-                                  "AA" n
-                                  (cmd.stackalloc
-                                     "B" n
-                                     (cmd.stackalloc
-                                        "BB" n
-                                        (cmd.stackalloc
-                                           "E" n
-                                           (cmd.stackalloc
-                                              "C" n
-                                              (cmd.stackalloc
-                                                 "D" n
-                                                 (cmd.stackalloc
-                                                    "DA" n
-                                                    (cmd.stackalloc
-                                                       "CB" n
-                                                       (cmd.stackalloc
-                                                          "x" n
-                                                          (cmd.seq
-                                                             (cmd.call [] from_bytes [expr.var "x_bytes"; expr.var "x"])
-                                                             (cmd.call [] "montladder" [expr.var "out"; expr.var "k"; expr.var "x"; expr.var "X1"; expr.var "Z1"; expr.var "X2"; expr.var "Z2"; expr.var "A"; expr.var "AA"; expr.var "B"; expr.var "BB"; expr.var "E"; expr.var "C"; expr.var "D"; expr.var "DA"; expr.var "CB"]))))))))))))))))).
+                 repeat_stackalloc
+                   felem_size_in_bytes
+                   ["X1"; "Z1"; "X2"; "Z2"; "A"; "AA"; "B"; "BB"; "E"; "C"; "D"; "DA"; "CB"; "x"; "r"]
+                   (cmd.seq
+                      (cmd.call [] from_bytes [expr.var "x_bytes"; expr.var "x"])
+                      (cmd.seq
+                         (cmd.call [] "montladder"
+                                   [expr.var "r"; expr.var "k"; expr.var "x"; expr.var "X1";
+                                      expr.var "Z1"; expr.var "X2"; expr.var "Z2"; expr.var "A";
+                                        expr.var "AA"; expr.var "B"; expr.var "BB"; expr.var "E";
+                                          expr.var "C"; expr.var "D"; expr.var "DA"; expr.var "CB"])
+                         (cmd.call [] to_bytes [expr.var "r"; expr.var "out"]))))).
+
+      Lemma and_iff1_l (X : Prop) (P : Semantics.mem -> Prop) :
+        X ->
+        Lift1Prop.iff1 (fun m => X /\ P m) P.
+      Proof.
+        repeat intro.
+        split; intros; sepsimpl; eauto.
+      Qed.
+
+      Ltac extract_emp' P :=
+        lazymatch P with
+        | (emp ?X * ?Q)%sep => constr:(pair X Q)
+        | (?Q * emp ?X)%sep => constr:(pair X Q)
+        | (?P * ?Q)%sep =>
+          lazymatch P with
+          | context [emp] =>
+            match extract_emp' P with
+            | pair ?X ?P' => constr:(pair X (P' * Q)%sep)
+            end
+          | _ => lazymatch Q with
+                 | context [emp] =>
+                   match extract_emp' Q with
+                   | pair ?X ?Q' => constr:(pair X (P * Q')%sep)
+                   end
+                 | _ => fail "No emp found in" P Q
+                 end
+          end
+        | _ => fail "expected a separation-logic conjunct with at least 2 terms, got" P
+        end.
+      Ltac extract_emp :=
+        match goal with
+        | |- context [emp] =>
+          match goal with
+          | |- sep ?P ?Q ?m =>
+            match extract_emp' (sep P Q) with
+            | pair ?X ?Y =>
+              let H := fresh in
+              assert (sep (emp X) Y m) as H;
+              [ | clear - H; ecancel_assumption ]
+            end
+          end
+        end.
 
       (* speedier proof if straightline doesn't try to compute the stack
          allocation sizes *)
@@ -241,30 +282,97 @@ Module M.
                | Hb : Memory.anybytes ?p ?n ?mS,
                       Hs : map.split ?mC ?m ?mS,
                            Hm : ?P ?m |- _ =>
-                 let H := fresh in
-                 let bs := fresh "bs" in
-                 pose proof (anybytes_to_array_1 _ _ _ Hb) as H;
-                   destruct H as [bs [? ?]];
-                   assert (sep P (array ptsto (word.of_Z 1) p bs) mC)
+                   assert (sep P (Placeholder p) mC)
                      by (remember P; cbv [sep]; exists m, mS;
                          ssplit; solve [eauto]);
                    clear Hb Hs
                | _ => clear_old_seps; straightline'
                end.
 
-        straightline_call.
-        { ssplit.
-          { admit. (* needs bytes <-> bignum lemma *) }
-          { admit. (* needs bytes <-> bignum lemma *) } }
-        { split.
-          Print handle_call.
-          ecancel_assum
-        { ssplit.
-          (* TODO: next steps are
-             - prove bytes <-> bignum lemmas (from Field/Synthesis/Generic/Bignum.v)
-             - change placeholder to Memory.anybytes *)
-      Abort.
+        (* call from_bytes *)
+        handle_call.
+        sepsimpl; repeat straightline'.
+
+        (* call montladder *)
+        handle_call; [ solve [eauto] .. | ].
+        sepsimpl; repeat straightline'.
+
+        (* clean up *)
+        cbv [MontLadderResult] in *.
+        clear_old_seps. sepsimpl.
+
+        (* call to_bytes *)
+        handle_call; [ solve [eauto] .. | ].
+        sepsimpl; subst. clear_old_seps.
+
+        (* prove postcondition, including dealloc *)
+        repeat straightline'.
+        match goal with
+        | |- exists m mS,
+            Memory.anybytes ?p ?n mS
+            /\ map.split ?mC m mS
+            /\ ?K =>
+          let H := fresh in
+          let mp := fresh in
+          let mq := fresh in
+          assert (sep (fun m => K) (Placeholder p) mC) as H;
+            [ | clear - H; cbv [sep] in H; cbv [Placeholder];
+                destruct H as [mp [mq [? [? ?]]]];
+                exists mp, mq; ssplit; solve [eauto] ]
+        end.
+        repeat
+          lazymatch goal with
+          | |- sep (fun mC =>
+                      exists m mS,
+                        Memory.anybytes ?p ?n mS
+                        /\ map.split mC m mS
+                        /\ ?K) ?Q ?mem =>
+            let H := fresh in
+            let H' := fresh in
+            let mp := fresh in
+            let mq := fresh in
+            let mp2 := fresh in
+            let mq2 := fresh in
+            assert (sep (sep (fun m => K) (Placeholder p)) Q mem) as H;
+              [ eapply sep_assoc
+              | clear - H; cbv [sep] in H; cbv [Placeholder];
+                destruct H as [mp [mq [? [H' ?] ] ] ];
+                exists mp, mq; ssplit; eauto; [ ];
+                destruct H' as [mp2 [mq2 [? [? ?] ] ] ];
+                exists mp2, mq2; ssplit; solve [eauto] ]
+          end.
+        cbn [WeakestPrecondition.list_map
+               WeakestPrecondition.list_map_body].
+        seprewrite and_iff1_l; [ reflexivity | ].
+        sepsimpl; [ reflexivity .. | ].
+        lift_eexists; sepsimpl.
+
+        extract_emp. sepsimpl; [ | ].
+        {
+          pose proof scalarbits_pos.
+          match goal with
+          | H : context [montladder_gallina] |- _ =>
+            erewrite montladder_gallina_equiv in H
+              by (reflexivity || lia)
+          end.
+          cbv [grepresents xrepresents] in *.
+          cbn [scalarmult group_parameters].
+          match goal with
+          | H : M.montladder _ _ _ = feval ?x
+            |- feval_bytes ?y = _ =>
+            let H' := fresh in
+            assert (feval x = feval_bytes y) as H' by eauto;
+              rewrite <-H', <-H; clear H H'
+          end.
+          apply @M.montladder_correct with (Feq := Logic.eq);
+            eauto using F.inv_0, sceval_range with lia; try congruence. }
+        { repeat match goal with
+                 | H : context [FElem ?p] |- context [Placeholder ?p] =>
+                   seprewrite (FElem_from_bytes p)
+                 end.
+          sepsimpl. lift_eexists.
+          ecancel_assumption. }
+      Qed.
     End Implementation.
   End __.
 End M.
-
