@@ -857,7 +857,6 @@ Lemma divstep_r machine_wordsize sat_limbs mont_limbs m (r' : Z) m' d f g v r
                 (@WordByWordMontgomery.eval machine_wordsize mont_limbs
                                        (from_montgomerymod machine_wordsize mont_limbs m m' r))).
 Proof.
-  Arguments Z.mul : simpl never.
   assert (sat_limbs0' : (sat_limbs <> 0%nat)) by lia.
   assert (mont_limbs0' : mont_limbs <> 0%nat) by lia.
   unfold divstep_spec2.
@@ -867,15 +866,14 @@ Proof.
   pose proof (nonzero_zero mont_limbs) as H3.
   rewrite (nonzeromod_correct machine_wordsize mont_limbs m r' m') in H3
     by (try apply zero_valid; lia).
-
-  simpl.
+  cbn -[Z.mul oppmod sat_opp select].
   rewrite select_push; rewrite ?length_sat_opp; auto.
   rewrite sat_opp_mod2; auto.
   rewrite twos_complement_pos_spec, <- !(eval_twos_complement_sat_mod2 machine_wordsize sat_limbs) by lia.
   rewrite !Zmod_odd, !(select_eq (uweight machine_wordsize) _ mont_limbs), fodd;
     try apply length_select; auto.
   destruct (0 <? Z.twos_complement machine_wordsize d);
-    destruct (Z.odd (eval_twos_complement machine_wordsize sat_limbs g)); simpl.
+    destruct (Z.odd (eval_twos_complement machine_wordsize sat_limbs g)); cbn -[Z.mul oppmod].
   - rewrite (eval_addmod _ _ _ r'); auto.
     rewrite <- Zplus_mod_idemp_l; auto.
     rewrite (eval_oppmod _ _ _ r'); auto.

@@ -3,25 +3,27 @@ Require Import Coq.micromega.Lia.
 Require Import Lists.List.
 Local Open Scope Z.
 
+Local Open Scope Z_scope.
 Module Z.
-  Definition modexp_nat a p m :=
-    fold_right
-      (fun a b => (a * b) mod m) 1 (repeat a p).
-
-  Lemma modexp_nat_correct a p m
-        (Hm : 1 < m) :
-    modexp_nat a p m = (Zpower_nat a p) mod m.
+  Definition modexp_pos a p m := Pos.iter (fun z => (a * z) mod m) (1 mod m) p.
+  Definition modexp a p m
+    := match p with
+       | 0 => 1 mod m
+       | Z.neg _ => 0
+       | Z.pos p => modexp_pos a p m
+       end.
+  Lemma modexp_pos_correct a p m
+    : modexp_pos a p m = Z.pow_pos a p mod m.
   Proof.
-    induction p.
-    - rewrite Z.mod_1_l by assumption; reflexivity.
-    - simpl; rewrite  <- Zmult_mod_idemp_r, <- IHp; reflexivity. Qed.
-
-  Definition modexp a p m := modexp_nat a (Z.to_nat p) m.
-
+    cbv [Z.pow_pos modexp_pos].
+    erewrite Pos.iter_swap_gen with (f := fun a => a mod m).
+    { reflexivity. }
+    { cbv beta; intros; now rewrite Zmult_mod_idemp_r. }
+  Qed.
   Lemma modexp_correct a p m
-        (Hp : 0 <= p)
-        (Hm : 1 < m) :
-    modexp a p m = a ^ p mod m.
+    : modexp a p m = a ^ p mod m.
   Proof.
-    unfold modexp; destruct p; simpl; rewrite modexp_nat_correct, ?Zpower_pos_nat by assumption; first [reflexivity|lia]. Qed.
+    cbv [modexp Z.pow]; destruct p;
+      now rewrite ?modexp_pos_correct, ?Zmod_0_l.
+  Qed.
 End Z.

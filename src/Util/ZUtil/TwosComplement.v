@@ -72,20 +72,20 @@ Module Z.
     Z.testbit (Z.twos_complement m a) i = if (i <? m) then Z.testbit a i else Z.testbit a (m - 1).
   Proof. unfold Z.twos_complement.
          unfold Z.sub at 2.
-         rewrite <- Z.lor_add by solve_using_testbit.
+         rewrite <- Z.lor_add by Z.solve_using_testbit.
          rewrite Z.twos_complement_cond_equiv by assumption.
-         destruct (Z.testbit a (m - 1)); solve_testbit. Qed.
+         destruct (Z.testbit a (m - 1)); Z.solve_testbit. Qed.
 
   Hint Rewrite twos_complement_testbit_spec_full : testbit_pos_rewrite.
   Hint Rewrite twos_complement_testbit_spec_full : testbit_rewrite.
 
   Lemma twos_complement_one m (Hm : 1 < m) :
     Z.twos_complement m 1 = 1.
-  Proof. solve_using_testbit. Qed.
+  Proof. Z.solve_using_testbit. Qed.
 
   Lemma twos_complement_zero m (Hm : 0 < m):
     Z.twos_complement m 0 = 0.
-  Proof. solve_using_testbit. Qed.
+  Proof. Z.solve_using_testbit. Qed.
 
   Lemma twos_complement_mod a m (Hm : 0 < m) :
     Z.twos_complement m (a mod 2 ^ m) = Z.twos_complement m a.
@@ -98,7 +98,7 @@ Module Z.
            try apply Z.mod_mod; apply Z.pow_nonzero; lia. Qed.
 
   Lemma twos_complement_odd m a (Hm : 0 < m) : Z.odd (Z.twos_complement m a) = Z.odd a.
-  Proof. rewrite <- !Z.bit0_odd; solve_testbit. Qed.
+  Proof. rewrite <- !Z.bit0_odd; Z.solve_testbit. Qed.
 
   Lemma twos_complement_mod2 m a (Hm : 0 < m) : Z.twos_complement m a mod 2 = a mod 2.
   Proof. rewrite Zmod_odd, twos_complement_odd, <- Zmod_odd by lia. reflexivity. Qed.

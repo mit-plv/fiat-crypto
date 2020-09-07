@@ -153,6 +153,34 @@ Module Z.
   Qed.
   Hint Rewrite shiftr_spec_full : Ztestbit_full.
 
+  Lemma mod_pow2_ones a m :
+    a mod 2 ^ m = if (Z_lt_dec m 0) then 0 else a &' Z.ones m.
+  Proof. destruct (Z_lt_dec m 0). rewrite Z.pow_neg_r, Zmod_0_r; lia.
+         symmetry; apply Z.land_ones; lia. Qed.
+
+  Lemma bits_1 m :
+    Z.testbit 1 m = if Z.eq_dec m 0 then true else false.
+  Proof.
+    destruct (Z.eq_dec m 0); subst. reflexivity.
+    destruct (Z_lt_dec m 0). rewrite Z.testbit_neg_r by lia. reflexivity.
+    rewrite Z.bits_above_log2; simpl; try reflexivity; lia. Qed.
+
+  Lemma bits_opp_full a i :
+    Z.testbit (- a) i = if (Z_lt_dec i 0) then false else negb (Z.testbit (Z.pred a) i).
+  Proof.
+    destruct (Z_lt_dec i 0). rewrite Z.testbit_neg_r by lia. reflexivity.
+    apply Z.bits_opp; lia. Qed.
+
+  Lemma pow2_bits_full m i :
+    Z.testbit (2 ^ m) i =
+    if (Z_lt_dec m 0) then false else if (Z.eq_dec i m) then true else false.
+  Proof.
+    destruct (Z_lt_dec m 0); [now rewrite Z.pow_neg_r, Z.bits_0|].
+    destruct (Z.eq_dec i m); subst.
+    - apply Z.pow2_bits_true; lia.
+    - apply Z.pow2_bits_false; lia. Qed.
+
+
   Definition bit_compare (b1 b2 : bool) : comparison
     := match b1, b2 with
        | true, true => Eq
@@ -213,7 +241,7 @@ Module Z.
                           => apply bits_const_iff in H
                         end ].
   Qed.
-  
+
   Lemma testbit_small_neg a b
         (Ha : - 2^b <= a < 0)
         (Hb : 0 < b) :

@@ -277,7 +277,7 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
     Time cache_reify ().
     (* Note that the following speed up breaks compilation of binaries /benjamin *)
     (* we do something faster *)
-    (* Time cache_reify_faster_1arg ().  *)
+    (* Time cache_reify_faster_1arg (). *)
   Time Qed.
   Hint Extern 1 (_ = _) => apply_cached_reification onemod (proj1 reified_one_gen_correct) : reify_cache_gen.
   Hint Immediate (proj2 reified_one_gen_correct) : wf_gen_cache.
