@@ -1,5 +1,6 @@
 Require Import Rupicola.Lib.Api.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
+Require Import Crypto.Util.NumTheoryUtil.
 Local Open Scope Z_scope.
 
 Class ScalarFieldParameters :=
