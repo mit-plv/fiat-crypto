@@ -30,7 +30,7 @@ Class GroupRepresentation {G : Type} {semantics : Semantics.parameters} :=
     GElem : word -> gelem -> Semantics.mem -> Prop;
   }.
 
-Section Specs.
+Section FunctionSpecs.
   Context {semantics : Semantics.parameters}
           {scalar_field_parameters : ScalarFieldParameters}
           {scalar_representaton : ScalarRepresentation}.
@@ -53,6 +53,4 @@ Section Specs.
              liftexists (xk : gelem),
              (emp (grepresents xk (scalarmult (F.to_Z (sceval k)) X))
               * GElem pout xk * GElem px x * Scalar pk k)%sep)).
-End Specs.
-
-
+End FunctionSpecs.
