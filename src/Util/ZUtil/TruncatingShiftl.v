@@ -37,7 +37,7 @@ Module Z.
   Lemma truncating_shiftl_testbit_spec_full m a k i :
     Z.testbit (Z.truncating_shiftl m a k) i
     = if (i <? 0) then false else if (i <? m) then Z.testbit a (i - k) else false.
-  Proof. unfold Z.truncating_shiftl. solve_testbit. Qed.
+  Proof. unfold Z.truncating_shiftl. Z.solve_testbit. Qed.
 
   Hint Rewrite truncating_shiftl_testbit_spec_full : testbit_rewrite.
 
@@ -46,20 +46,20 @@ Module Z.
         (Hq : 0 <= q) :
     Z.truncating_shiftl m (Z.truncating_shiftl m a p) q
     = Z.truncating_shiftl m a (p + q).
-  Proof. solve_using_testbit. Qed.
+  Proof. Z.solve_using_testbit. Qed.
 
   Lemma truncating_shiftl0 m k :
     Z.truncating_shiftl m 0 k = 0.
-  Proof. solve_using_testbit. Qed.
+  Proof. Z.solve_using_testbit. Qed.
 
   Lemma truncating_shiftl_lor m a b k :
     Z.truncating_shiftl m (a |' b) k
     = (Z.truncating_shiftl m a k) |' (Z.truncating_shiftl m b k).
-  Proof. solve_using_testbit. Qed.
+  Proof. Z.solve_using_testbit. Qed.
 
   Lemma truncating_shiftl_large m a k (Hk : k >= m) :
     Z.truncating_shiftl m a k = 0.
-  Proof. solve_using_testbit. Qed.
+  Proof. Z.solve_using_testbit. Qed.
 
   Lemma truncating_shiftl_range m a k (Hm : 0 <= m) :
     0 <= Z.truncating_shiftl m a k < 2 ^ m.

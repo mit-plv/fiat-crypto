@@ -2,7 +2,6 @@ Require Import Coq.ZArith.ZArith.
 Require Import Coq.micromega.Lia.
 Require Import Crypto.Util.ZUtil.Hints.Core.
 Require Import Crypto.Util.ListUtil.
-Require Import Lists.List.
 Local Open Scope Z_scope.
 
 Module Z.

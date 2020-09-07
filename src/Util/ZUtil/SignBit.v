@@ -27,7 +27,7 @@ Module Z.
         (H : 0 <= a < 2 ^ m) :
     Z.sign_bit m a = Z.b2z (Z.testbit a (m - 1)).
   Proof.
-    rewrite Z.testbit_spec', Z.mod_small, <- Z.shiftr_div_pow2 by solve_range.
+    rewrite Z.testbit_spec', Z.mod_small, <- Z.shiftr_div_pow2 by Z.solve_range.
     reflexivity. Qed.
 
   Lemma sign_bit_equiv a m

@@ -1,6 +1,16 @@
-#include "inversion.c"
+#include "p384_32.c"
+
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
+
+#define MAKE_FN_NAME1(x,y) x ## y
+#define MAKE_FN_NAME(x,y) MAKE_FN_NAME1(x,y)
+
+#define FROM_BYTES MAKE_FN_NAME(CURVE_DESCRIPTION,_from_bytes)
+#define TO_BYTES MAKE_FN_NAME(CURVE_DESCRIPTION,_to_bytes)
+#define FROM_MONTGOMERY MAKE_FN_NAME(CURVE_DESCRIPTION,_from_montgomery)
 
 int main() {
   WORD res[LIMBS], out[LIMBS], g[SAT_LIMBS], g1[LIMBS], g2[LIMBS], g3[LIMBS];
@@ -15,23 +25,21 @@ int main() {
     for (i = 0; i < BYTES; i++) {
       a[i] = rand() % 256;
       if (i > BYTES - 8) a[i] = 0;
-      /* printf("[%i]",a[i]); */
     }
 
-    fiat_test_from_bytes(g1,a);
-    fiat_test_from_bytes(g2,a);
-    fiat_test_from_montgomery(g3,g2);
+    FROM_BYTES(g1,a);
+    FROM_BYTES(g2,a);
+    FROM_MONTGOMERY(g3,g2);
 
     for (int i = 0; i < LIMBS; i++) g[i] = g3[i];
     g[SAT_LIMBS - 1] = 0;
 
     inverse(out,g);
 
-    fiat_test_mul(res,out,g1);
-    fiat_test_from_montgomery(out,res);
-    fiat_test_to_bytes(a,out);
+    MUL(res,out,g1);
+    FROM_MONTGOMERY(out,res);
+    TO_BYTES(a,out);
 
-    /* printf("\n [%i]",a[0]); */
     if (a[0] != 1) {
       printf("FAIL\n");
       return 2;
@@ -40,7 +48,6 @@ int main() {
       if (a[i] != 0) {
         printf("FAIL\n");
         return 1;
-        /* printf("[%i]",a[i]); */
       }
     }
   }
