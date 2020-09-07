@@ -1,96 +1,17 @@
-Require Import Rupicola.Lib.Api.
-Require Import Rupicola.Lib.ControlFlow.CondSwap.
-Require Import bedrock2.Syntax.
+Require Import Rupicola.Lib.Api. (* for helpful tactics + notations *)
 Require Import coqutil.Byte.
 Require Import Crypto.Algebra.Hierarchy.
 Require Import Crypto.Algebra.ScalarMult.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
-Require Import Crypto.Bedrock.Group.Loops.
-Require Import Crypto.Bedrock.Group.Point.
-Require Import Crypto.Bedrock.Group.ScalarMult.LadderStep.
+Require Import Crypto.Bedrock.Group.ScalarMult.MontgomeryEquivalence.
 Require Import Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder.
 Require Import Crypto.Bedrock.Specs.Field.
-Require Import Crypto.Bedrock.Specs.ScalarField.
 Require Import Crypto.Bedrock.Specs.Group.
+Require Import Crypto.Bedrock.Specs.ScalarField.
 Require Import Crypto.Curves.Montgomery.AffineInstances.
 Require Import Crypto.Curves.Montgomery.XZ.
 Require Import Crypto.Curves.Montgomery.XZProofs.
 Require Import Crypto.Spec.MontgomeryCurve.
-Require Import Crypto.Util.Loops.
-
-Section Equivalence.
-  Context {semantics : Semantics.parameters}.
-  Context {field_parameters : FieldParameters}
-          {field_representation : FieldRepresentation}.
-
-  Lemma ladderstep_gallina_equiv X1 P1 P2 :
-    ladderstep_gallina X1 P1 P2 =
-    @M.xzladderstep
-      _ F.add F.sub F.mul a24 X1 P1 P2.
-  Proof.
-    intros. cbv [ladderstep_gallina M.xzladderstep].
-    destruct P1 as [x1 z1]. destruct P2 as [x2 z2].
-    cbv [Rewriter.Util.LetIn.Let_In dlet.dlet]. cbn [fst snd].
-    rewrite !F.pow_2_r. reflexivity.
-  Qed.
-
-  Lemma montladder_gallina_equiv
-        n scalarbits testb point :
-    (forall i, testb i = Z.testbit n (Z.of_nat i)) ->
-    (0 <= scalarbits)%Z ->
-    montladder_gallina scalarbits testb point =
-    @M.montladder
-      _ F.zero F.one F.add F.sub F.mul F.inv
-      a24 cswap scalarbits (Z.testbit n) point.
-  Proof.
-    intros. cbv [montladder_gallina M.montladder].
-    cbv [Rewriter.Util.LetIn.Let_In dlet.dlet]. cbn [fst snd].
-    rewrite downto_while.
-    match goal with
-    | |- ?lhs = ?rhs =>
-      match lhs with
-        | context [while ?ltest ?lbody ?fuel ?linit] =>
-        match rhs with
-          | context [while ?rtest ?rbody ?fuel ?rinit] =>
-            rewrite (while.preservation
-                       ltest lbody rtest rbody
-                       (fun s1 s2 =>
-                          s1 =
-                          let '(x2, z2, x3, z3, swap, i) := s2 in
-                          (x2, z2, (x3, z3), swap, i)))
-              with (init2:=rinit);
-              [ remember (while rtest rbody fuel rinit) | .. ]
-        end end end.
-
-    (* first, finish proving post-loop equivalence *)
-    { destruct_products. rewrite cswap_pair. cbn [fst snd].
-      repeat match goal with
-             | |- context [match ?e with | pair _ _ => _ end] =>
-               destr e
-             end.
-      reflexivity. }
-
-    (* then, prove loop-equivalence preconditions *)
-    { intros. destruct_products. congruence. }
-    { intros. destruct_products. LtbToLt.Z.ltb_to_lt.
-      rewrite ladderstep_gallina_equiv.
-      repeat match goal with
-             | _ => progress rewrite Z2Nat.id by lia
-             | _ => progress cbn [fst snd]
-             | _ => rewrite cswap_pair
-             | _ => rewrite <-surjective_pairing
-             | H : forall i : nat, _ i = Z.testbit _ _ |- _ =>
-               rewrite H
-             | H : (_,_) = (_,_) |- _ => inversion H; subst; clear H
-             | H : context [match ?e with | pair _ _ => _ end] |- _ =>
-               destr e
-             | |- context [match ?e with | pair _ _ => _ end] =>
-               destr e
-             | _ => reflexivity
-             end. }
-    { rewrite Z2Nat.id by lia. reflexivity. }
-  Qed.
-End Equivalence.
 
 Module M.
   Section __.
@@ -219,19 +140,20 @@ Module M.
         split; intros; sepsimpl; eauto.
       Qed.
 
-      Ltac extract_emp' P :=
+      (* TODO: generalize this tactic and upstream to bedrock2 *)
+      Ltac extract_pred' pred P :=
         lazymatch P with
-        | (emp ?X * ?Q)%sep => constr:(pair X Q)
-        | (?Q * emp ?X)%sep => constr:(pair X Q)
+        | (pred ?X * ?Q)%sep => constr:(pair X Q)
+        | (?Q * pred ?X)%sep => constr:(pair X Q)
         | (?P * ?Q)%sep =>
           lazymatch P with
-          | context [emp] =>
-            match extract_emp' P with
+          | context [pred] =>
+            match extract_pred' pred P with
             | pair ?X ?P' => constr:(pair X (P' * Q)%sep)
             end
           | _ => lazymatch Q with
-                 | context [emp] =>
-                   match extract_emp' Q with
+                 | context [pred] =>
+                   match extract_pred' pred Q with
                    | pair ?X ?Q' => constr:(pair X (P * Q')%sep)
                    end
                  | _ => fail "No emp found in" P Q
@@ -239,19 +161,63 @@ Module M.
           end
         | _ => fail "expected a separation-logic conjunct with at least 2 terms, got" P
         end.
-      Ltac extract_emp :=
+      Ltac extract_pred pred :=
         match goal with
-        | |- context [emp] =>
+        | |- context [pred] =>
           match goal with
           | |- sep ?P ?Q ?m =>
-            match extract_emp' (sep P Q) with
+            let r := extract_pred' pred (sep P Q) in
+            match r with
             | pair ?X ?Y =>
               let H := fresh in
-              assert (sep (emp X) Y m) as H;
+              assert (sep (pred X) Y m) as H;
               [ | clear - H; ecancel_assumption ]
             end
           end
         end.
+      Ltac extract_emp :=
+        let pred := constr:(emp (map:=Semantics.mem)) in
+        extract_pred pred.
+      Ltac extract_ex1 :=
+        lazymatch goal with
+        | |- context [@Lift1Prop.ex1 ?A ?B] =>
+            let pred := constr:(@Lift1Prop.ex1 A B) in
+            extract_pred pred
+        | _ => fail "extract_ex1 : no ex1 found in goal!"
+        end.
+
+      Ltac prove_anybytes_postcondition :=
+        repeat lazymatch goal with
+               | |- exists m mS,
+                   Memory.anybytes ?p ?n mS
+                   /\ map.split ?mC m mS
+                   /\ ?K =>
+                 let H := fresh in
+                 let mp := fresh in
+                 let mq := fresh in
+                 assert (sep (fun m => K) (Placeholder p) mC) as H;
+                 [ | clear - H; cbv [sep] in H; cbv [Placeholder];
+                     destruct H as [mp [mq [? [? ?]]]];
+                     exists mp, mq; ssplit; solve [eauto] ]
+               | |- sep (fun mC =>
+                           exists m mS,
+                             Memory.anybytes ?p ?n mS
+                             /\ map.split mC m mS
+                             /\ ?K) ?Q ?mem =>
+                 let H := fresh in
+                 let H' := fresh in
+                 let mp := fresh in
+                 let mq := fresh in
+                 let mp2 := fresh in
+                 let mq2 := fresh in
+                 assert (sep (sep (fun m => K) (Placeholder p)) Q mem) as H;
+                 [ eapply sep_assoc
+                 | clear - H; cbv [sep] in H; cbv [Placeholder];
+                   destruct H as [mp [mq [? [H' ?] ] ] ];
+                   exists mp, mq; ssplit; eauto; [ ];
+                   destruct H' as [mp2 [mq2 [? [? ?] ] ] ];
+                   exists mp2, mq2; ssplit; solve [eauto] ]
+               end.
 
       (* speedier proof if straightline doesn't try to compute the stack
          allocation sizes *)
@@ -307,45 +273,14 @@ Module M.
 
         (* prove postcondition, including dealloc *)
         repeat straightline'.
-        match goal with
-        | |- exists m mS,
-            Memory.anybytes ?p ?n mS
-            /\ map.split ?mC m mS
-            /\ ?K =>
-          let H := fresh in
-          let mp := fresh in
-          let mq := fresh in
-          assert (sep (fun m => K) (Placeholder p) mC) as H;
-            [ | clear - H; cbv [sep] in H; cbv [Placeholder];
-                destruct H as [mp [mq [? [? ?]]]];
-                exists mp, mq; ssplit; solve [eauto] ]
-        end.
-        repeat
-          lazymatch goal with
-          | |- sep (fun mC =>
-                      exists m mS,
-                        Memory.anybytes ?p ?n mS
-                        /\ map.split mC m mS
-                        /\ ?K) ?Q ?mem =>
-            let H := fresh in
-            let H' := fresh in
-            let mp := fresh in
-            let mq := fresh in
-            let mp2 := fresh in
-            let mq2 := fresh in
-            assert (sep (sep (fun m => K) (Placeholder p)) Q mem) as H;
-              [ eapply sep_assoc
-              | clear - H; cbv [sep] in H; cbv [Placeholder];
-                destruct H as [mp [mq [? [H' ?] ] ] ];
-                exists mp, mq; ssplit; eauto; [ ];
-                destruct H' as [mp2 [mq2 [? [? ?] ] ] ];
-                exists mp2, mq2; ssplit; solve [eauto] ]
-          end.
+        prove_anybytes_postcondition.
         cbn [WeakestPrecondition.list_map
                WeakestPrecondition.list_map_body].
         seprewrite and_iff1_l; [ reflexivity | ].
         sepsimpl; [ reflexivity .. | ].
         lift_eexists; sepsimpl.
+
+        extract_emp.
 
         extract_emp. sepsimpl; [ | ].
         {

@@ -13,6 +13,10 @@ Section Compile.
            spec_of_scmula24 spec_of_inv spec_of_felem_copy
            spec_of_felem_small_literal.
 
+  (* "Hidden" alias protects a Placeholder (e.g. the pointer reserved for the
+     final output value) from having intermediate values stored in it *)
+  Definition Hidden := Placeholder.
+
   Local Ltac prove_field_compilation :=
     repeat straightline';
     handle_call;
@@ -486,6 +490,7 @@ Ltac compile_compose_step :=
         | simple eapply compile_overwrite2 ];
   [ solve [repeat compile_step] .. | intros ].
 
+(* Change an FElem into a Placeholder to indicate that it is overwritable *)
 Ltac free p :=
   match goal with
   | H : sep ?P ?Q ?m |- context [?m] =>
@@ -502,3 +507,10 @@ Ltac free p :=
             ecancel_assumption);
     cbv beta in H'; clear H
   end.
+
+(* Protect a pointer (e.g. the pointer reserved for final output) by "hiding"
+   the fact that it is available under the "Hidden" alias *)
+Ltac hide p :=
+  change (Placeholder p) with (Hidden p) in *.
+Ltac unhide p :=
+  change (Hidden p) with (Placeholder p) in *.
