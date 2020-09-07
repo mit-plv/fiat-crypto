@@ -6,6 +6,7 @@ Require Import Crypto.Arithmetic.PrimeFieldTheorems.
 Require Import Crypto.Bedrock.Field.Interface.Compilation.
 Require Import Crypto.Bedrock.Group.Point.
 Require Import Crypto.Bedrock.Group.ScalarMult.LadderStep.
+Require Import Crypto.Bedrock.ScalarField.Interface.Compilation.
 Require Import Crypto.Bedrock.Specs.Field.
 Require Import Crypto.Bedrock.Specs.ScalarField.
 Require Import Crypto.Util.NumTheoryUtil.
