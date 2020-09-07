@@ -56,8 +56,8 @@ Section Compile.
           and-functions functions)) ->
       (let head := v in
        find (cmd.seq
-               (cmd.call [] mul [expr.var x_var; expr.var y_var;
-                                   expr.var out_var])
+               (cmd.call [] mul [expr.var out_var; expr.var x_var;
+                                   expr.var y_var])
                k_impl)
        implementing (pred (dlet head k))
        and-returning retvars
@@ -96,8 +96,8 @@ Section Compile.
           and-functions functions)) ->
       (let head := v in
        find (cmd.seq
-               (cmd.call [] add [expr.var x_var; expr.var y_var;
-                                   expr.var out_var])
+               (cmd.call [] add [expr.var out_var; expr.var x_var;
+                                   expr.var y_var])
                k_impl)
        implementing (pred (dlet head k))
        and-returning retvars
@@ -136,8 +136,8 @@ Section Compile.
           and-functions functions)) ->
       (let head := v in
        find (cmd.seq
-               (cmd.call [] sub [expr.var x_var; expr.var y_var;
-                                   expr.var out_var])
+               (cmd.call [] sub [expr.var out_var; expr.var x_var;
+                                   expr.var y_var])
                k_impl)
        implementing (pred (dlet head k))
        and-returning retvars
@@ -172,7 +172,7 @@ Section Compile.
           and-functions functions)) ->
       (let head := v in
        find (cmd.seq
-               (cmd.call [] square [expr.var x_var; expr.var out_var])
+               (cmd.call [] square [expr.var out_var; expr.var x_var])
                k_impl)
        implementing (pred (dlet head k))
        and-returning retvars
@@ -211,7 +211,7 @@ Section Compile.
           and-functions functions)) ->
       (let head := v in
        find (cmd.seq
-               (cmd.call [] scmula24 [expr.var x_var; expr.var out_var])
+               (cmd.call [] scmula24 [expr.var out_var; expr.var x_var])
                k_impl)
        implementing (pred (dlet head k))
        and-returning retvars
@@ -246,7 +246,7 @@ Section Compile.
           and-functions functions)) ->
       (let head := v in
        find (cmd.seq
-               (cmd.call [] inv [expr.var x_var; expr.var out_var])
+               (cmd.call [] inv [expr.var out_var; expr.var x_var])
                k_impl)
        implementing (pred (dlet head k))
        and-returning retvars
@@ -278,7 +278,7 @@ Section Compile.
           and-functions functions)) ->
       (let head := v in
        find (cmd.seq
-               (cmd.call [] felem_copy [expr.var x_var; expr.var out_var])
+               (cmd.call [] felem_copy [expr.var out_var; expr.var x_var])
                k_impl)
        implementing (pred (dlet head k))
        and-returning retvars
@@ -311,7 +311,7 @@ Section Compile.
       (let head := v in
        find (cmd.seq
                (cmd.call [] felem_small_literal
-                         [expr.literal x; expr.var out_var])
+                         [expr.var out_var; expr.literal x])
                k_impl)
        implementing (pred (dlet head k))
        and-returning retvars

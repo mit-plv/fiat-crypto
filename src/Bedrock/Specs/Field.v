@@ -86,7 +86,7 @@ Section FunctionSpecs.
            bounded_by xbounds x
            /\ (exists Ra, (FElem px x * Ra)%sep mem)
            /\ (Placeholder pout * Rr)%sep mem)
-          ===> name @ [px; pout] ===>
+          ===> name @ [pout; px] ===>
           (fun _ =>
            liftexists out,
            (emp (feval out = op (feval x)
@@ -101,7 +101,7 @@ Section FunctionSpecs.
            /\ bounded_by ybounds y
            /\ (exists Ra, (FElem px x * FElem py y * Ra)%sep mem)
            /\ (Placeholder pout * Rr)%sep mem)
-          ===> name @ [px; py; pout] ===>
+          ===> name @ [pout; px; py] ===>
           (fun _ =>
            liftexists out,
            (emp ((feval out = op (feval x) (feval y))
@@ -127,7 +127,7 @@ Section FunctionSpecs.
       (fun Rr mem =>
          (exists Ra, (FElemBytes px bs * Ra)%sep mem)
          /\ (Placeholder pout * Rr)%sep mem)
-        ===> from_bytes @ [px; pout] ===>
+        ===> from_bytes @ [pout; px] ===>
         (fun _ =>
            liftexists X,
            (emp (feval X = feval_bytes bs /\ bounded_by tight_bounds X)
@@ -139,7 +139,7 @@ Section FunctionSpecs.
          bounded_by tight_bounds x
          /\ (exists Ra, (FElem px x * Ra)%sep mem)
          /\ (FElemBytes pout old_out * Rr)%sep mem)
-        ===> to_bytes @ [px; pout] ===>
+        ===> to_bytes @ [pout; px] ===>
         (fun _ =>
            liftexists bs,
            (emp (feval_bytes bs = feval x) * FElemBytes pout bs)%sep).
@@ -147,13 +147,13 @@ Section FunctionSpecs.
   Definition spec_of_felem_copy : spec_of felem_copy :=
     forall! (x : felem) (px pout : word),
       (sep (FElem px x * Placeholder pout)%sep)
-        ===> felem_copy @ [px; pout] ===>
+        ===> felem_copy @ [pout; px] ===>
         (fun _ => FElem px x * FElem pout x)%sep.
 
   Definition spec_of_felem_small_literal : spec_of felem_small_literal :=
     forall! (x pout : word),
       (sep (Placeholder pout))
-        ===> felem_small_literal @ [x; pout] ===>
+        ===> felem_small_literal @ [pout; x] ===>
         (fun _ =>
            liftexists X,
            (emp (F.to_Z (feval X) = word.unsigned x
