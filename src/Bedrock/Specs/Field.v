@@ -28,9 +28,6 @@ Class FieldParameters :=
     felem_small_literal : string;
   }.
 
-Lemma M_nonzero {fp : FieldParameters} : M <> 0.
-Proof. cbv [M]. congruence. Qed.
-
 Class FieldParameters_ok {field_parameters : FieldParameters} :=
   { M_prime : Znumtheory.prime M;
     (* TODO: a24_ok *)
@@ -77,22 +74,7 @@ Class FieldRepresentation_ok
                         -> bounded_by loose_bounds X;
   }.
 
-Section Proofs.
-  Context {semantics : Semantics.parameters}
-          {semantics_ok : Semantics.parameters_ok semantics}.
-  Context {field_parameters : FieldParameters}
-          {field_representaton : FieldRepresentation}
-          {field_representation_ok : FieldRepresentation_ok}.
-
-  Lemma FElem_to_bytes px x :
-    Lift1Prop.impl1 (FElem px x) (Placeholder px).
-  Proof.
-    rewrite FElem_from_bytes.
-    repeat intro; eexists; eauto.
-  Qed.
-End Proofs.
-
-Section Specs.
+Section FunctionSpecs.
   Context {semantics : Semantics.parameters}
           {semantics_ok : Semantics.parameters_ok semantics}.
   Context {field_parameters : FieldParameters}
@@ -177,4 +159,22 @@ Section Specs.
            (emp (F.to_Z (feval X) = word.unsigned x
                  /\ bounded_by tight_bounds X)
             * FElem pout X)%sep).
-End Specs.
+End FunctionSpecs.
+
+Section SpecProperties.
+  Context {semantics : Semantics.parameters}
+          {semantics_ok : Semantics.parameters_ok semantics}.
+  Context {field_parameters : FieldParameters}
+          {field_representaton : FieldRepresentation}
+          {field_representation_ok : FieldRepresentation_ok}.
+
+  Lemma FElem_to_bytes px x :
+    Lift1Prop.impl1 (FElem px x) (Placeholder px).
+  Proof.
+    rewrite FElem_from_bytes.
+    repeat intro; eexists; eauto.
+  Qed.
+
+  Lemma M_nonzero : M <> 0.
+  Proof. cbv [M]. congruence. Qed.
+End SpecProperties.
