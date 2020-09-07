@@ -667,11 +667,11 @@ Section Scalars.
 
   Lemma scalar_to_bytes a x :
     Lift1Prop.iff1
+      (scalar a x)
       (array ptsto (word.of_Z 1) a
              (HList.tuple.to_list
                 (LittleEndian.split bytes_per_word
-                                    (word.unsigned x))))
-      (scalar a x).
+                                    (word.unsigned x)))).
   Proof. reflexivity. Qed.
 
   Lemma scalar_of_bytes
