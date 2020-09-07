@@ -7,6 +7,7 @@ Require Import bedrock2.Semantics.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Arithmetic.ModOps.
 Require Import Crypto.Arithmetic.PrimeFieldTheorems.
+Require Import Crypto.Bedrock.Field.Common.Tactics.
 Require Import Crypto.Bedrock.Field.Common.Types.
 Require Import Crypto.Bedrock.Field.Synthesis.Generic.Bignum.
 Require Import Crypto.Bedrock.Specs.Field.
@@ -69,8 +70,7 @@ Section Representation.
                | H : exists _, _ |- _ => destruct H
                | H : _ /\ _ |- _ => destruct H
                end.
-      { Check Bignum_of_bytes.
-        match goal with
+      { match goal with
           | H : Array.array _ _ _ _ _ |- _ =>
             eapply Bignum_of_bytes with (n0:=n) in H;
               [ destruct H | nia ]
@@ -80,11 +80,15 @@ Section Representation.
         pose proof word_size_in_bytes_pos.
         let H := match goal with
                  | H : Bignum _ _ _ _ |- _ => H end in
-        eapply Bignum_to_bytes in H;
+        eapply Bignum_to_bytes in H.
+        sepsimpl.
+        let H := match goal with
+                 | H : Array.array _ _ _ _ _ |- _ => H end in
         eapply Array.array_1_to_anybytes in H.
-        replace (Z.of_nat (length (Util.encode_bytes x0)))
-          with (bytes_per_word width * Z.of_nat n)%Z in * by admit.
-        eauto. } }
+        match goal with
+        | H : anybytes ?p ?n1 ?m |- anybytes ?p ?n2 ?m =>
+          replace n2 with n1 by nia; assumption
+        end. } }
     { cbn [bounded_by frep]; intros.
       apply relax_bounds; auto. }
   Qed.
