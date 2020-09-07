@@ -61,6 +61,12 @@ Section Proofs.
     pose proof (Z.log2_log2_up_spec (Z.pos L_pos) ltac:(lia)).
     rewrite scalarbits_eq. change L with (Z.pos L_pos). lia.
   Qed.
+
+  Lemma scalarbits_pos : 0 < scalarbits.
+  Proof.
+    rewrite scalarbits_eq. apply Z.log2_up_pos.
+    apply lt_1_p. apply L_prime.
+  Qed.
 End Proofs.
 
 Section Compile.

@@ -282,18 +282,6 @@ Section __.
       | _ => solve_field_subgoals_with_cswap
       end.
 
-    Lemma scalarbits_pos : 0 < scalarbits.
-    Proof.
-      rewrite scalarbits_eq. apply Z.log2_up_pos.
-      apply lt_1_p. apply L_prime.
-    Qed.
-
-    Definition Hidden := Placeholder.
-    Ltac hide p :=
-      change (Placeholder p) with (Hidden p) in *.
-    Ltac unhide p :=
-      change (Hidden p) with (Placeholder p) in *.
-
     Derive montladder_body SuchThat
            (let args := ["OUT"; "K"; "U"; "X1"; "Z1"; "X2"; "Z2";
                            "A"; "AA"; "B"; "BB"; "E"; "C"; "D"; "DA"; "CB"] in
@@ -357,7 +345,7 @@ Section __.
           [ .. | subst L | subst L ].
       { cbv [downto_inv].
         setup_downto_inv_init.
-        all:try solve_downto_inv_subgoals. }
+        all:solve_downto_inv_subgoals. }
       { subst. autorewrite with mapsimpl.
         reflexivity. }
       { rewrite word.unsigned_of_Z, Z2Nat.id by lia;
