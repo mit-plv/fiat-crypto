@@ -349,3 +349,12 @@ Proof.
   subst; try tauto; [ ].
   eapply IHs1; eauto.
 Qed.
+
+Definition repeat (ch : ascii) (n : nat) : string
+  := string_of_list_ascii (List.repeat ch n).
+
+(** TODO: Better name for this? *)
+Definition rfill (ch : ascii) (ls : list string) : list string
+  := let len := List.fold_right Nat.max 0 (List.map String.length ls) in
+     let fill s := s ++ repeat ch (len - String.length s) in
+     List.map fill ls.

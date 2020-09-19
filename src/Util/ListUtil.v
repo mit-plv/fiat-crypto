@@ -2632,3 +2632,23 @@ Ltac rewrite_fold_left_fun_apply :=
   | [ |- ?T ] => let pf := make_fold_left_fun_apply T in
                  rewrite pf
   end.
+
+Fixpoint takeWhile {A} (f : A -> bool) (ls : list A) : list A
+  := match ls with
+     | nil => nil
+     | x :: xs => if f x then x :: takeWhile f xs else nil
+     end.
+
+Fixpoint dropWhile {A} (f : A -> bool) (ls : list A) : list A
+  := match ls with
+     | nil => nil
+     | x :: xs => if f x then dropWhile f xs else ls
+     end.
+
+Lemma takeWhile_app_dropWhile {A} f xs
+  : @takeWhile A f xs ++ @dropWhile A f xs = xs.
+Proof. induction xs; cbn; break_innermost_match; boring. Qed.
+
+Lemma filter_takeWhile {A} f xs
+  : filter f (@takeWhile A f xs) = @takeWhile A f xs.
+Proof. induction xs; cbn; break_innermost_match; boring. Qed.
