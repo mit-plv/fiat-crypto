@@ -29,7 +29,7 @@ Package Manager | Command Line Invocation |
 Aptitude (Ubuntu / Debian) | `apt install coq ocaml-findlib libcoq-ocaml-dev` |
 Homebrew (OS X) | `brew install coq ocaml-findlib ocaml-num` |
 Pacman (Archlinux) | `pacman -S coq ocaml-findlib ocaml-num` |
-    
+
 You can clone this repository with
 
     git clone --recursive https://github.com/mit-plv/fiat-crypto.git
@@ -140,6 +140,14 @@ Here are some examples of ways to invoke the binaries (from the directories that
     ./bedrock2_unsaturated_solinas --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select 'poly1305' '32' '5' '2^130 - 5' > poly1305_32.c
 
 You can find more examples in the `Makefile`.
+
+License
+-------
+
+Fiat-Crypto is distributed under the terms of the MIT License, the Apache License (Version 2.0), and the BSD 1-Clause License; users may pick which license to apply.
+
+See [`COPYRIGHT`](./COPYRIGHT), [`LICENSE-MIT`](./LICENSE-MIT), [`LICENSE-APACHE`](./LICENSE-APACHE), and [`LICENSE-BSD-1`](./LICENSE-BSD-1) for details.
+
 
 Extended Build Instructions
 ---------------------------

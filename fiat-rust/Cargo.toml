@@ -7,7 +7,7 @@ description = "Fiat-crypto generated Rust"
 homepage = "https://github.com/mit-plv/fiat-crypto"
 repository = "https://github.com/mit-plv/fiat-crypto"
 readme = "README.md"
-license = "MIT"
+license = "MIT OR Apache-2.0 OR BSD-1-Clause"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

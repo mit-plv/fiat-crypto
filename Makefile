@@ -102,7 +102,10 @@ SOME_EARLY_VOFILES := \
 COPY_TO_FIAT_RUST := \
 	AUTHORS \
 	CONTRIBUTORS \
-	LICENSE
+	COPYRIGHT \
+	LICENSE-MIT \
+	LICENSE-APACHE \
+	LICENSE-BSD-1
 
 # computing the vo_reverse_closure is slow, so we only do it if we're
 # asked to make the lite target
