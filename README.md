@@ -154,8 +154,8 @@ Reading About The Code
 
 - [Andres Erbsen, Jade Philipoom, Jason Gross, Robert Sloan, Adam Chlipala. Simple High-Level Code For Cryptographic Arithmetic -- With Proofs, Without Compromises. To Appear in Proceedings of the IEEE Symposium on Security & Privacy 2019 (S&P'19). May 2019.](http://adam.chlipala.net/papers/FiatCryptoSP19/FiatCryptoSP19.pdf). This paper describes multiple field arithmetic implementations, and an older version of the compilation pipeline (preserved [here](https://github.com/mit-plv/fiat-crypto/tree/sp2019latest)). It is somewhat space-constrained, so some details are best read about in theses below.
 - [Jade Philipoom. Correct-by-Construction Finite Field Arithmetic in Coq. MIT Master's Thesis. February 2018.](http://adam.chlipala.net/theses/jadep_meng.pdf) Chapters 3 and 4 contain a detailed walkthrough of the field arithmetic implementations (again, targeting the previous compilation pipeline).
-- [Andres Erbsen. Crafting Certified Elliptic CurveCryptography Implementations in Coq. MIT Master's Thesis. June 2017.](
-http://adam.chlipala.net/theses/andreser_meng.pdf) Section 3 contains a whirlwind introduction to synthesizing field arithmetic code using coq, without assuming Coq skills, but covering a tiny fraction of the overall library. Sections 5 and 6 contain the only write-up on the ellitpic-curve library in this repository.
+- [Andres Erbsen. Crafting Certified Elliptic Curve Cryptography Implementations in Coq. MIT Master's Thesis. June 2017.](
+http://adam.chlipala.net/theses/andreser_meng.pdf) Section 3 contains a whirlwind introduction to synthesizing field arithmetic code using coq, without assuming Coq skills, but covering a tiny fraction of the overall library. Sections 5 and 6 contain the only write-up on the elliptic-curve library in this repository.
 - The newest compilation pipeline does not have a separate document yet, but this README does go over it in some detail.
 
 
@@ -254,7 +254,7 @@ The files contain:
   + EliminateDead (dead code elimination)
   + Subst01 (substitute let-binders used 0 or 1 times)
 
-- `Rewriter/*.v`: rewrite rules, rewriting.  See below for actual stucture
+- `Rewriter/*.v`: rewrite rules, rewriting.  See below for actual structure
   of files.  Defines the passes:
   + RewriteNBE
   + RewriteArith
@@ -278,7 +278,7 @@ The files contain:
     . utilities for inverting PHOAS exprs
     . default/dummy values of PHOAS exprs
     . default instantiation of generic PHOAS types
-    . gallina reification of ground terms
+    . Gallina reification of ground terms
     . Flat/indexed syntax trees, and conversions to and from PHOAS
 
     Defines the passes:
@@ -380,7 +380,7 @@ The files contain:
   reify and apply things from the cache.
 
 - `PushButtonSynthesis/*`: Reifies the various operations from
-  `Arithmetic.v`, definies the compositions of the BoundsPipeline with
+  `Arithmetic.v`, defines the compositions of the BoundsPipeline with
   these operations, proves that their interpretations satisfies the
   specs from `COperationSpecifications.v`, assembles the reified
   post-bounds operations into synthesis targets.  These are the files
@@ -391,7 +391,7 @@ The files contain:
       re-reify big terms every time we change the pipeline or
       intermediate stages thereof.
   + `InvertHighLow.v`:
-      Defines some common definitions, around plitting apart high and
+      Defines some common definitions, around splitting apart high and
       low bits of things, for Barrett and FancyMontgomeryReduction.
   + `Primitives.v`:
       Specializes the pipeline to basic "primitive" operations such as
@@ -537,11 +537,11 @@ For `Language.v`, there is a semi-arbitrary split between two files
      indexed over type codes, in a way that preserves information
      about the type of `e`, and generally works even when the goal is
      dependently typed over `e` and/or its type
-  + `ident.invert`, which does case-anaylsis on idents whose type has
+  + `ident.invert`, which does case-analysis on idents whose type has
     structure (i.e., is not a var)
   + `ident.invert_match`, which does case-analysis on idents appearing as
     the discriminee of a `match` in the goal or in any hypothesis
-  + `expr.invert`, which does case-anaylsis on exprs whose type has
+  + `expr.invert`, which does case-analysis on exprs whose type has
     structure (i.e., is not a var)
   + `expr.invert_match`, which does case-analysis on exprs appearing as
     the discriminee of a `match` in the goal or in any hypothesis
