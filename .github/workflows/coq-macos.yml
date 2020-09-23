@@ -15,7 +15,7 @@ jobs:
       NJOBS: "2"
       COQ_VERSION: "master"
 
-    # initial steps copied from https://github.com/coq/coq/blob/cfc41cb79e2364f19d97e7e5c94262132972b0b2/azure-pipelines.yml#L41-L110
+    # initial steps copied from https://github.com/coq/coq/blob/d7b2da080bbfbbc85b3ce19bcda99e06ee355fef/azure-pipelines.yml#L51-L120
     steps:
     - name: Install system dependencies
       run: |
@@ -32,7 +32,7 @@ jobs:
         opam switch set ocaml-base-compiler.$COMPILER
         eval $(opam env)
         opam update
-        opam install -j "$NJOBS" num ocamlfind${FINDLIB_VER} ounit lablgtk3-sourceview3 zarith.1.9.1
+        opam install -j "$NJOBS" num ocamlfind${FINDLIB_VER} ounit lablgtk3-sourceview3 zarith.1.10
         opam list
       env:
         COMPILER: "4.09.0"
