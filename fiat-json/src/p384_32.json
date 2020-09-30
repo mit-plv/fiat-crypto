@@ -46190,5 +46190,5087 @@
         ]
       }
     ]
+  },
+  {
+    "operation": "fiat_p384_one",
+    "arguments": [],
+    "returns": [
+      {
+        "datatype": "u32[12]",
+        "name": "out1",
+        "lbound": [
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0"
+        ],
+        "ubound": [
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff"
+        ]
+      }
+    ],
+    "body": [
+      {
+        "datatype": "u32",
+        "name": [
+          "out1[0]"
+        ],
+        "operation": "static_cast",
+        "arguments": [
+          "0x1"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[1]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "0xffffffff"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[2]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "0xffffffff"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "out1[3]"
+        ],
+        "operation": "static_cast",
+        "arguments": [
+          "0x0"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "out1[4]"
+        ],
+        "operation": "static_cast",
+        "arguments": [
+          "0x1"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "out1[5]"
+        ],
+        "operation": "static_cast",
+        "arguments": [
+          "0x0"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "out1[6]"
+        ],
+        "operation": "static_cast",
+        "arguments": [
+          "0x0"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "out1[7]"
+        ],
+        "operation": "static_cast",
+        "arguments": [
+          "0x0"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "out1[8]"
+        ],
+        "operation": "static_cast",
+        "arguments": [
+          "0x0"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "out1[9]"
+        ],
+        "operation": "static_cast",
+        "arguments": [
+          "0x0"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "out1[10]"
+        ],
+        "operation": "static_cast",
+        "arguments": [
+          "0x0"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "out1[11]"
+        ],
+        "operation": "static_cast",
+        "arguments": [
+          "0x0"
+        ]
+      }
+    ]
+  },
+  {
+    "operation": "fiat_p384_msat",
+    "arguments": [],
+    "returns": [
+      {
+        "datatype": "u32[13]",
+        "name": "out1",
+        "lbound": [
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0"
+        ],
+        "ubound": [
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff"
+        ]
+      }
+    ],
+    "body": [
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[0]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "0xffffffff"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "out1[1]"
+        ],
+        "operation": "static_cast",
+        "arguments": [
+          "0x0"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "out1[2]"
+        ],
+        "operation": "static_cast",
+        "arguments": [
+          "0x0"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[3]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "0xffffffff"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[4]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "0xfffffffe"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[5]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "0xffffffff"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[6]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "0xffffffff"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[7]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "0xffffffff"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[8]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "0xffffffff"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[9]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "0xffffffff"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[10]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "0xffffffff"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[11]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "0xffffffff"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "out1[12]"
+        ],
+        "operation": "static_cast",
+        "arguments": [
+          "0x0"
+        ]
+      }
+    ]
+  },
+  {
+    "operation": "fiat_p384_divstep",
+    "arguments": [
+      {
+        "datatype": "u32",
+        "name": "arg1",
+        "lbound": "0x0",
+        "ubound": "0xffffffff"
+      },
+      {
+        "datatype": "u32[13]",
+        "name": "arg2",
+        "lbound": [
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0"
+        ],
+        "ubound": [
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff"
+        ]
+      },
+      {
+        "datatype": "u32[13]",
+        "name": "arg3",
+        "lbound": [
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0"
+        ],
+        "ubound": [
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff"
+        ]
+      },
+      {
+        "datatype": "u32[12]",
+        "name": "arg4",
+        "lbound": [
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0"
+        ],
+        "ubound": [
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff"
+        ]
+      },
+      {
+        "datatype": "u32[12]",
+        "name": "arg5",
+        "lbound": [
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0"
+        ],
+        "ubound": [
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff"
+        ]
+      }
+    ],
+    "returns": [
+      {
+        "datatype": "u32",
+        "name": "out1",
+        "lbound": "0x0",
+        "ubound": "0xffffffff"
+      },
+      {
+        "datatype": "u32[13]",
+        "name": "out2",
+        "lbound": [
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0"
+        ],
+        "ubound": [
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff"
+        ]
+      },
+      {
+        "datatype": "u32[13]",
+        "name": "out3",
+        "lbound": [
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0"
+        ],
+        "ubound": [
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff"
+        ]
+      },
+      {
+        "datatype": "u32[12]",
+        "name": "out4",
+        "lbound": [
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0"
+        ],
+        "ubound": [
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff"
+        ]
+      },
+      {
+        "datatype": "u32[12]",
+        "name": "out5",
+        "lbound": [
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0"
+        ],
+        "ubound": [
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff"
+        ]
+      }
+    ],
+    "body": [
+      {
+        "datatype": "u32",
+        "name": [
+          "x1"
+        ],
+        "operation": "&",
+        "arguments": [
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              {
+                "datatype": "u32",
+                "name": [],
+                "operation": "+",
+                "arguments": [
+                  {
+                    "datatype": "u64",
+                    "name": [],
+                    "operation": "static_cast",
+                    "arguments": [
+                      {
+                        "datatype": "u64",
+                        "name": [],
+                        "operation": "~",
+                        "arguments": [
+                          "arg1"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "datatype": "u64",
+                    "name": [],
+                    "operation": "static_cast",
+                    "arguments": [
+                      "0x1"
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "0xffffffff"
+        ]
+      },
+      {
+        "datatype": "u1",
+        "name": [
+          "x2"
+        ],
+        "operation": "&",
+        "arguments": [
+          {
+            "datatype": "u1",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              {
+                "datatype": "u1",
+                "name": [],
+                "operation": ">>",
+                "arguments": [
+                  "x1",
+                  "31"
+                ]
+              }
+            ]
+          },
+          {
+            "datatype": "u1",
+            "name": [],
+            "operation": "&",
+            "arguments": [
+              {
+                "datatype": "u1",
+                "name": [],
+                "operation": "static_cast",
+                "arguments": [
+                  "arg3[0]"
+                ]
+              },
+              "0x1"
+            ]
+          }
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x3"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg1",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "&",
+            "arguments": [
+              {
+                "datatype": "u32",
+                "name": [],
+                "operation": "static_cast",
+                "arguments": [
+                  {
+                    "datatype": "u32",
+                    "name": [],
+                    "operation": "+",
+                    "arguments": [
+                      {
+                        "datatype": "u64",
+                        "name": [],
+                        "operation": "static_cast",
+                        "arguments": [
+                          {
+                            "datatype": "u64",
+                            "name": [],
+                            "operation": "~",
+                            "arguments": [
+                              "arg1"
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "datatype": "u64",
+                        "name": [],
+                        "operation": "static_cast",
+                        "arguments": [
+                          "0x1"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              "0xffffffff"
+            ]
+          }
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x4"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg2[0]",
+          "arg3[0]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x5"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg2[1]",
+          "arg3[1]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x6"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg2[2]",
+          "arg3[2]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x7"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg2[3]",
+          "arg3[3]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x8"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg2[4]",
+          "arg3[4]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x9"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg2[5]",
+          "arg3[5]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x10"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg2[6]",
+          "arg3[6]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x11"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg2[7]",
+          "arg3[7]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x12"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg2[8]",
+          "arg3[8]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x13"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg2[9]",
+          "arg3[9]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x14"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg2[10]",
+          "arg3[10]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x15"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg2[11]",
+          "arg3[11]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x16"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg2[12]",
+          "arg3[12]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x17",
+          "x18"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "0x0",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x1"
+            ]
+          },
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "~",
+            "arguments": [
+              "arg2[0]"
+            ]
+          }
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x19",
+          "x20"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x18",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "~",
+            "arguments": [
+              "arg2[1]"
+            ]
+          }
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x21",
+          "x22"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x20",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "~",
+            "arguments": [
+              "arg2[2]"
+            ]
+          }
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x23",
+          "x24"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x22",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "~",
+            "arguments": [
+              "arg2[3]"
+            ]
+          }
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x25",
+          "x26"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x24",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "~",
+            "arguments": [
+              "arg2[4]"
+            ]
+          }
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x27",
+          "x28"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x26",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "~",
+            "arguments": [
+              "arg2[5]"
+            ]
+          }
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x29",
+          "x30"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x28",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "~",
+            "arguments": [
+              "arg2[6]"
+            ]
+          }
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x31",
+          "x32"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x30",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "~",
+            "arguments": [
+              "arg2[7]"
+            ]
+          }
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x33",
+          "x34"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x32",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "~",
+            "arguments": [
+              "arg2[8]"
+            ]
+          }
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x35",
+          "x36"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x34",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "~",
+            "arguments": [
+              "arg2[9]"
+            ]
+          }
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x37",
+          "x38"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x36",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "~",
+            "arguments": [
+              "arg2[10]"
+            ]
+          }
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x39",
+          "x40"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x38",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "~",
+            "arguments": [
+              "arg2[11]"
+            ]
+          }
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x41",
+          "_"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x40",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "~",
+            "arguments": [
+              "arg2[12]"
+            ]
+          }
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x43"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg3[0]",
+          "x17"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x44"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg3[1]",
+          "x19"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x45"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg3[2]",
+          "x21"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x46"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg3[3]",
+          "x23"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x47"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg3[4]",
+          "x25"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x48"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg3[5]",
+          "x27"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x49"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg3[6]",
+          "x29"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x50"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg3[7]",
+          "x31"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x51"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg3[8]",
+          "x33"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x52"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg3[9]",
+          "x35"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x53"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg3[10]",
+          "x37"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x54"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg3[11]",
+          "x39"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x55"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg3[12]",
+          "x41"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x56"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg4[0]",
+          "arg5[0]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x57"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg4[1]",
+          "arg5[1]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x58"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg4[2]",
+          "arg5[2]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x59"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg4[3]",
+          "arg5[3]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x60"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg4[4]",
+          "arg5[4]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x61"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg4[5]",
+          "arg5[5]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x62"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg4[6]",
+          "arg5[6]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x63"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg4[7]",
+          "arg5[7]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x64"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg4[8]",
+          "arg5[8]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x65"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg4[9]",
+          "arg5[9]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x66"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg4[10]",
+          "arg5[10]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x67"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg4[11]",
+          "arg5[11]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x68",
+          "x69"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "0x0",
+          "x56",
+          "x56"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x70",
+          "x71"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x69",
+          "x57",
+          "x57"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x72",
+          "x73"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x71",
+          "x58",
+          "x58"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x74",
+          "x75"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x73",
+          "x59",
+          "x59"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x76",
+          "x77"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x75",
+          "x60",
+          "x60"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x78",
+          "x79"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x77",
+          "x61",
+          "x61"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x80",
+          "x81"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x79",
+          "x62",
+          "x62"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x82",
+          "x83"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x81",
+          "x63",
+          "x63"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x84",
+          "x85"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x83",
+          "x64",
+          "x64"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x86",
+          "x87"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x85",
+          "x65",
+          "x65"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x88",
+          "x89"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x87",
+          "x66",
+          "x66"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x90",
+          "x91"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x89",
+          "x67",
+          "x67"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x92",
+          "x93"
+        ],
+        "operation": "subborrowx",
+        "arguments": [
+          "0x0",
+          "x68",
+          "0xffffffff"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x94",
+          "x95"
+        ],
+        "operation": "subborrowx",
+        "arguments": [
+          "x93",
+          "x70",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          }
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x96",
+          "x97"
+        ],
+        "operation": "subborrowx",
+        "arguments": [
+          "x95",
+          "x72",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          }
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x98",
+          "x99"
+        ],
+        "operation": "subborrowx",
+        "arguments": [
+          "x97",
+          "x74",
+          "0xffffffff"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x100",
+          "x101"
+        ],
+        "operation": "subborrowx",
+        "arguments": [
+          "x99",
+          "x76",
+          "0xfffffffe"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x102",
+          "x103"
+        ],
+        "operation": "subborrowx",
+        "arguments": [
+          "x101",
+          "x78",
+          "0xffffffff"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x104",
+          "x105"
+        ],
+        "operation": "subborrowx",
+        "arguments": [
+          "x103",
+          "x80",
+          "0xffffffff"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x106",
+          "x107"
+        ],
+        "operation": "subborrowx",
+        "arguments": [
+          "x105",
+          "x82",
+          "0xffffffff"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x108",
+          "x109"
+        ],
+        "operation": "subborrowx",
+        "arguments": [
+          "x107",
+          "x84",
+          "0xffffffff"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x110",
+          "x111"
+        ],
+        "operation": "subborrowx",
+        "arguments": [
+          "x109",
+          "x86",
+          "0xffffffff"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x112",
+          "x113"
+        ],
+        "operation": "subborrowx",
+        "arguments": [
+          "x111",
+          "x88",
+          "0xffffffff"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x114",
+          "x115"
+        ],
+        "operation": "subborrowx",
+        "arguments": [
+          "x113",
+          "x90",
+          "0xffffffff"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "_",
+          "x117"
+        ],
+        "operation": "subborrowx",
+        "arguments": [
+          "x115",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "x91"
+            ]
+          },
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          }
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x118"
+        ],
+        "operation": "=",
+        "arguments": [
+          "arg4[11]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x119"
+        ],
+        "operation": "=",
+        "arguments": [
+          "arg4[10]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x120"
+        ],
+        "operation": "=",
+        "arguments": [
+          "arg4[9]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x121"
+        ],
+        "operation": "=",
+        "arguments": [
+          "arg4[8]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x122"
+        ],
+        "operation": "=",
+        "arguments": [
+          "arg4[7]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x123"
+        ],
+        "operation": "=",
+        "arguments": [
+          "arg4[6]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x124"
+        ],
+        "operation": "=",
+        "arguments": [
+          "arg4[5]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x125"
+        ],
+        "operation": "=",
+        "arguments": [
+          "arg4[4]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x126"
+        ],
+        "operation": "=",
+        "arguments": [
+          "arg4[3]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x127"
+        ],
+        "operation": "=",
+        "arguments": [
+          "arg4[2]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x128"
+        ],
+        "operation": "=",
+        "arguments": [
+          "arg4[1]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x129"
+        ],
+        "operation": "=",
+        "arguments": [
+          "arg4[0]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x130",
+          "x131"
+        ],
+        "operation": "subborrowx",
+        "arguments": [
+          "0x0",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          "x129"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x132",
+          "x133"
+        ],
+        "operation": "subborrowx",
+        "arguments": [
+          "x131",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          "x128"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x134",
+          "x135"
+        ],
+        "operation": "subborrowx",
+        "arguments": [
+          "x133",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          "x127"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x136",
+          "x137"
+        ],
+        "operation": "subborrowx",
+        "arguments": [
+          "x135",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          "x126"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x138",
+          "x139"
+        ],
+        "operation": "subborrowx",
+        "arguments": [
+          "x137",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          "x125"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x140",
+          "x141"
+        ],
+        "operation": "subborrowx",
+        "arguments": [
+          "x139",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          "x124"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x142",
+          "x143"
+        ],
+        "operation": "subborrowx",
+        "arguments": [
+          "x141",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          "x123"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x144",
+          "x145"
+        ],
+        "operation": "subborrowx",
+        "arguments": [
+          "x143",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          "x122"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x146",
+          "x147"
+        ],
+        "operation": "subborrowx",
+        "arguments": [
+          "x145",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          "x121"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x148",
+          "x149"
+        ],
+        "operation": "subborrowx",
+        "arguments": [
+          "x147",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          "x120"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x150",
+          "x151"
+        ],
+        "operation": "subborrowx",
+        "arguments": [
+          "x149",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          "x119"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x152",
+          "x153"
+        ],
+        "operation": "subborrowx",
+        "arguments": [
+          "x151",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          "x118"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x154"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x153",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          "0xffffffff"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x155",
+          "x156"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "0x0",
+          "x130",
+          "x154"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x157",
+          "x158"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x156",
+          "x132",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          }
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x159",
+          "x160"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x158",
+          "x134",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          }
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x161",
+          "x162"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x160",
+          "x136",
+          "x154"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x163",
+          "x164"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x162",
+          "x138",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "&",
+            "arguments": [
+              "x154",
+              "0xfffffffe"
+            ]
+          }
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x165",
+          "x166"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x164",
+          "x140",
+          "x154"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x167",
+          "x168"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x166",
+          "x142",
+          "x154"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x169",
+          "x170"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x168",
+          "x144",
+          "x154"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x171",
+          "x172"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x170",
+          "x146",
+          "x154"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x173",
+          "x174"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x172",
+          "x148",
+          "x154"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x175",
+          "x176"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x174",
+          "x150",
+          "x154"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x177",
+          "_"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x176",
+          "x152",
+          "x154"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x179"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg5[0]",
+          "x155"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x180"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg5[1]",
+          "x157"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x181"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg5[2]",
+          "x159"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x182"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg5[3]",
+          "x161"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x183"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg5[4]",
+          "x163"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x184"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg5[5]",
+          "x165"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x185"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg5[6]",
+          "x167"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x186"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg5[7]",
+          "x169"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x187"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg5[8]",
+          "x171"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x188"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg5[9]",
+          "x173"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x189"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg5[10]",
+          "x175"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x190"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x2",
+          "arg5[11]",
+          "x177"
+        ]
+      },
+      {
+        "datatype": "u1",
+        "name": [
+          "x191"
+        ],
+        "operation": "&",
+        "arguments": [
+          {
+            "datatype": "u1",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "x43"
+            ]
+          },
+          "0x1"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x192"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x191",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          "x4"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x193"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x191",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          "x5"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x194"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x191",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          "x6"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x195"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x191",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          "x7"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x196"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x191",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          "x8"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x197"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x191",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          "x9"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x198"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x191",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          "x10"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x199"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x191",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          "x11"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x200"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x191",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          "x12"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x201"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x191",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          "x13"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x202"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x191",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          "x14"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x203"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x191",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          "x15"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x204"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x191",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          "x16"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x205",
+          "x206"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "0x0",
+          "x43",
+          "x192"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x207",
+          "x208"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x206",
+          "x44",
+          "x193"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x209",
+          "x210"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x208",
+          "x45",
+          "x194"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x211",
+          "x212"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x210",
+          "x46",
+          "x195"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x213",
+          "x214"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x212",
+          "x47",
+          "x196"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x215",
+          "x216"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x214",
+          "x48",
+          "x197"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x217",
+          "x218"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x216",
+          "x49",
+          "x198"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x219",
+          "x220"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x218",
+          "x50",
+          "x199"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x221",
+          "x222"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x220",
+          "x51",
+          "x200"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x223",
+          "x224"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x222",
+          "x52",
+          "x201"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x225",
+          "x226"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x224",
+          "x53",
+          "x202"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x227",
+          "x228"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x226",
+          "x54",
+          "x203"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x229",
+          "_"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x228",
+          "x55",
+          "x204"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x231"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x191",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          "x56"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x232"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x191",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          "x57"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x233"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x191",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          "x58"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x234"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x191",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          "x59"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x235"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x191",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          "x60"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x236"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x191",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          "x61"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x237"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x191",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          "x62"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x238"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x191",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          "x63"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x239"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x191",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          "x64"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x240"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x191",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          "x65"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x241"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x191",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          "x66"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x242"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x191",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          },
+          "x67"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x243",
+          "x244"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "0x0",
+          "x179",
+          "x231"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x245",
+          "x246"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x244",
+          "x180",
+          "x232"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x247",
+          "x248"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x246",
+          "x181",
+          "x233"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x249",
+          "x250"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x248",
+          "x182",
+          "x234"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x251",
+          "x252"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x250",
+          "x183",
+          "x235"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x253",
+          "x254"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x252",
+          "x184",
+          "x236"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x255",
+          "x256"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x254",
+          "x185",
+          "x237"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x257",
+          "x258"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x256",
+          "x186",
+          "x238"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x259",
+          "x260"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x258",
+          "x187",
+          "x239"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x261",
+          "x262"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x260",
+          "x188",
+          "x240"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x263",
+          "x264"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x262",
+          "x189",
+          "x241"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x265",
+          "x266"
+        ],
+        "operation": "addcarryx",
+        "arguments": [
+          "x264",
+          "x190",
+          "x242"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x267",
+          "x268"
+        ],
+        "operation": "subborrowx",
+        "arguments": [
+          "0x0",
+          "x243",
+          "0xffffffff"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x269",
+          "x270"
+        ],
+        "operation": "subborrowx",
+        "arguments": [
+          "x268",
+          "x245",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          }
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x271",
+          "x272"
+        ],
+        "operation": "subborrowx",
+        "arguments": [
+          "x270",
+          "x247",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          }
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x273",
+          "x274"
+        ],
+        "operation": "subborrowx",
+        "arguments": [
+          "x272",
+          "x249",
+          "0xffffffff"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x275",
+          "x276"
+        ],
+        "operation": "subborrowx",
+        "arguments": [
+          "x274",
+          "x251",
+          "0xfffffffe"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x277",
+          "x278"
+        ],
+        "operation": "subborrowx",
+        "arguments": [
+          "x276",
+          "x253",
+          "0xffffffff"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x279",
+          "x280"
+        ],
+        "operation": "subborrowx",
+        "arguments": [
+          "x278",
+          "x255",
+          "0xffffffff"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x281",
+          "x282"
+        ],
+        "operation": "subborrowx",
+        "arguments": [
+          "x280",
+          "x257",
+          "0xffffffff"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x283",
+          "x284"
+        ],
+        "operation": "subborrowx",
+        "arguments": [
+          "x282",
+          "x259",
+          "0xffffffff"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x285",
+          "x286"
+        ],
+        "operation": "subborrowx",
+        "arguments": [
+          "x284",
+          "x261",
+          "0xffffffff"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x287",
+          "x288"
+        ],
+        "operation": "subborrowx",
+        "arguments": [
+          "x286",
+          "x263",
+          "0xffffffff"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x289",
+          "x290"
+        ],
+        "operation": "subborrowx",
+        "arguments": [
+          "x288",
+          "x265",
+          "0xffffffff"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "_",
+          "x292"
+        ],
+        "operation": "subborrowx",
+        "arguments": [
+          "x290",
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "x266"
+            ]
+          },
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              "0x0"
+            ]
+          }
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x293"
+        ],
+        "operation": "&",
+        "arguments": [
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "static_cast",
+            "arguments": [
+              {
+                "datatype": "u32",
+                "name": [],
+                "operation": "+",
+                "arguments": [
+                  {
+                    "datatype": "u64",
+                    "name": [],
+                    "operation": "static_cast",
+                    "arguments": [
+                      "x3"
+                    ]
+                  },
+                  {
+                    "datatype": "u64",
+                    "name": [],
+                    "operation": "static_cast",
+                    "arguments": [
+                      "0x1"
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "0xffffffff"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x294"
+        ],
+        "operation": "|",
+        "arguments": [
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": ">>",
+            "arguments": [
+              "x205",
+              "1"
+            ]
+          },
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "&",
+            "arguments": [
+              {
+                "datatype": "u32",
+                "name": [],
+                "operation": "<<",
+                "arguments": [
+                  "x207",
+                  "31"
+                ]
+              },
+              "0xffffffff"
+            ]
+          }
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x295"
+        ],
+        "operation": "|",
+        "arguments": [
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": ">>",
+            "arguments": [
+              "x207",
+              "1"
+            ]
+          },
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "&",
+            "arguments": [
+              {
+                "datatype": "u32",
+                "name": [],
+                "operation": "<<",
+                "arguments": [
+                  "x209",
+                  "31"
+                ]
+              },
+              "0xffffffff"
+            ]
+          }
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x296"
+        ],
+        "operation": "|",
+        "arguments": [
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": ">>",
+            "arguments": [
+              "x209",
+              "1"
+            ]
+          },
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "&",
+            "arguments": [
+              {
+                "datatype": "u32",
+                "name": [],
+                "operation": "<<",
+                "arguments": [
+                  "x211",
+                  "31"
+                ]
+              },
+              "0xffffffff"
+            ]
+          }
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x297"
+        ],
+        "operation": "|",
+        "arguments": [
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": ">>",
+            "arguments": [
+              "x211",
+              "1"
+            ]
+          },
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "&",
+            "arguments": [
+              {
+                "datatype": "u32",
+                "name": [],
+                "operation": "<<",
+                "arguments": [
+                  "x213",
+                  "31"
+                ]
+              },
+              "0xffffffff"
+            ]
+          }
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x298"
+        ],
+        "operation": "|",
+        "arguments": [
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": ">>",
+            "arguments": [
+              "x213",
+              "1"
+            ]
+          },
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "&",
+            "arguments": [
+              {
+                "datatype": "u32",
+                "name": [],
+                "operation": "<<",
+                "arguments": [
+                  "x215",
+                  "31"
+                ]
+              },
+              "0xffffffff"
+            ]
+          }
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x299"
+        ],
+        "operation": "|",
+        "arguments": [
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": ">>",
+            "arguments": [
+              "x215",
+              "1"
+            ]
+          },
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "&",
+            "arguments": [
+              {
+                "datatype": "u32",
+                "name": [],
+                "operation": "<<",
+                "arguments": [
+                  "x217",
+                  "31"
+                ]
+              },
+              "0xffffffff"
+            ]
+          }
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x300"
+        ],
+        "operation": "|",
+        "arguments": [
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": ">>",
+            "arguments": [
+              "x217",
+              "1"
+            ]
+          },
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "&",
+            "arguments": [
+              {
+                "datatype": "u32",
+                "name": [],
+                "operation": "<<",
+                "arguments": [
+                  "x219",
+                  "31"
+                ]
+              },
+              "0xffffffff"
+            ]
+          }
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x301"
+        ],
+        "operation": "|",
+        "arguments": [
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": ">>",
+            "arguments": [
+              "x219",
+              "1"
+            ]
+          },
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "&",
+            "arguments": [
+              {
+                "datatype": "u32",
+                "name": [],
+                "operation": "<<",
+                "arguments": [
+                  "x221",
+                  "31"
+                ]
+              },
+              "0xffffffff"
+            ]
+          }
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x302"
+        ],
+        "operation": "|",
+        "arguments": [
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": ">>",
+            "arguments": [
+              "x221",
+              "1"
+            ]
+          },
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "&",
+            "arguments": [
+              {
+                "datatype": "u32",
+                "name": [],
+                "operation": "<<",
+                "arguments": [
+                  "x223",
+                  "31"
+                ]
+              },
+              "0xffffffff"
+            ]
+          }
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x303"
+        ],
+        "operation": "|",
+        "arguments": [
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": ">>",
+            "arguments": [
+              "x223",
+              "1"
+            ]
+          },
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "&",
+            "arguments": [
+              {
+                "datatype": "u32",
+                "name": [],
+                "operation": "<<",
+                "arguments": [
+                  "x225",
+                  "31"
+                ]
+              },
+              "0xffffffff"
+            ]
+          }
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x304"
+        ],
+        "operation": "|",
+        "arguments": [
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": ">>",
+            "arguments": [
+              "x225",
+              "1"
+            ]
+          },
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "&",
+            "arguments": [
+              {
+                "datatype": "u32",
+                "name": [],
+                "operation": "<<",
+                "arguments": [
+                  "x227",
+                  "31"
+                ]
+              },
+              "0xffffffff"
+            ]
+          }
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x305"
+        ],
+        "operation": "|",
+        "arguments": [
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": ">>",
+            "arguments": [
+              "x227",
+              "1"
+            ]
+          },
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "&",
+            "arguments": [
+              {
+                "datatype": "u32",
+                "name": [],
+                "operation": "<<",
+                "arguments": [
+                  "x229",
+                  "31"
+                ]
+              },
+              "0xffffffff"
+            ]
+          }
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x306"
+        ],
+        "operation": "|",
+        "arguments": [
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": "&",
+            "arguments": [
+              "x229",
+              "0x80000000"
+            ]
+          },
+          {
+            "datatype": "u32",
+            "name": [],
+            "operation": ">>",
+            "arguments": [
+              "x229",
+              "1"
+            ]
+          }
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x307"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x117",
+          "x92",
+          "x68"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x308"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x117",
+          "x94",
+          "x70"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x309"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x117",
+          "x96",
+          "x72"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x310"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x117",
+          "x98",
+          "x74"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x311"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x117",
+          "x100",
+          "x76"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x312"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x117",
+          "x102",
+          "x78"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x313"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x117",
+          "x104",
+          "x80"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x314"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x117",
+          "x106",
+          "x82"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x315"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x117",
+          "x108",
+          "x84"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x316"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x117",
+          "x110",
+          "x86"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x317"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x117",
+          "x112",
+          "x88"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x318"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x117",
+          "x114",
+          "x90"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x319"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x292",
+          "x267",
+          "x243"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x320"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x292",
+          "x269",
+          "x245"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x321"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x292",
+          "x271",
+          "x247"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x322"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x292",
+          "x273",
+          "x249"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x323"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x292",
+          "x275",
+          "x251"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x324"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x292",
+          "x277",
+          "x253"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x325"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x292",
+          "x279",
+          "x255"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x326"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x292",
+          "x281",
+          "x257"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x327"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x292",
+          "x283",
+          "x259"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x328"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x292",
+          "x285",
+          "x261"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x329"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x292",
+          "x287",
+          "x263"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x330"
+        ],
+        "operation": "cmovznz",
+        "arguments": [
+          "x292",
+          "x289",
+          "x265"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "out1"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x293"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out2[0]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x4"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out2[1]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x5"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out2[2]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x6"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out2[3]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x7"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out2[4]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x8"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out2[5]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x9"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out2[6]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x10"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out2[7]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x11"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out2[8]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x12"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out2[9]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x13"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out2[10]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x14"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out2[11]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x15"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out2[12]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x16"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out3[0]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x294"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out3[1]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x295"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out3[2]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x296"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out3[3]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x297"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out3[4]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x298"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out3[5]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x299"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out3[6]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x300"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out3[7]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x301"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out3[8]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x302"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out3[9]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x303"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out3[10]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x304"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out3[11]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x305"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out3[12]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x306"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out4[0]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x307"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out4[1]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x308"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out4[2]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x309"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out4[3]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x310"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out4[4]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x311"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out4[5]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x312"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out4[6]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x313"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out4[7]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x314"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out4[8]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x315"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out4[9]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x316"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out4[10]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x317"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out4[11]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x318"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out5[0]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x319"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out5[1]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x320"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out5[2]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x321"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out5[3]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x322"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out5[4]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x323"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out5[5]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x324"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out5[6]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x325"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out5[7]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x326"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out5[8]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x327"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out5[9]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x328"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out5[10]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x329"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out5[11]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x330"
+        ]
+      }
+    ]
+  },
+  {
+    "operation": "fiat_p384_divstep_precomp",
+    "arguments": [],
+    "returns": [
+      {
+        "datatype": "u32[12]",
+        "name": "out1",
+        "lbound": [
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0"
+        ],
+        "ubound": [
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff",
+          "0xffffffff"
+        ]
+      }
+    ],
+    "body": [
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[0]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "0xfff18fff"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[1]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "0xfff69400"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[2]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "0xffffd3ff"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[3]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "0x2b7fe"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[4]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "0xfffe97ff"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[5]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "0xfffedbff"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[6]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "0x2fff"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[7]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "0x28400"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[8]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "0x50400"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[9]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "0x60400"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[10]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "0x38000"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[11]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "0xfffc4800"
+        ]
+      }
+    ]
   }
 ]
