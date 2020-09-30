@@ -4040,7 +4040,7 @@ public static void fiat_P256_from_bytes(long[] out1, final int[] arg1) {
 }
 
 /**
- * The function fiat_P256_one returns the field element one in the Montgomery domain. <p>
+ * The function fiat_P256_set_one returns the field element one in the Montgomery domain. <p>
  * Postconditions: <p>
  *   eval (from_montgomery out1) mod m = 1 mod m <p>
  *   0 ≤ eval out1 &lt; m <p>
@@ -4049,7 +4049,7 @@ public static void fiat_P256_from_bytes(long[] out1, final int[] arg1) {
  * Output Bounds: <p>
  *   out1: [[0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff]] <p>
  */
-public static void fiat_P256_one(long[] out1) {
+public static void fiat_P256_set_one(long[] out1) {
   out1[0] = Long.valueOf(0x1).longValue();
   out1[1] = Long.valueOf(0x0).longValue();
   out1[2] = Long.valueOf(0x0).longValue();

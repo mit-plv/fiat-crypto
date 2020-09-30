@@ -9124,7 +9124,7 @@
     ]
   },
   {
-    "operation": "fiat_p256_one",
+    "operation": "fiat_p256_set_one",
     "arguments": [],
     "returns": [
       {

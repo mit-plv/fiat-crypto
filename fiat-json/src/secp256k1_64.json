@@ -9747,7 +9747,7 @@
     ]
   },
   {
-    "operation": "fiat_secp256k1_one",
+    "operation": "fiat_secp256k1_set_one",
     "arguments": [],
     "returns": [
       {

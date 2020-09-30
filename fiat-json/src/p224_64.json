@@ -9344,7 +9344,7 @@
     ]
   },
   {
-    "operation": "fiat_p224_one",
+    "operation": "fiat_p224_set_one",
     "arguments": [],
     "returns": [
       {
