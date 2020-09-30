@@ -137,6 +137,11 @@ Module Z.
     dlet q := Z.zselect (sign_bit m a) 0 (ones_from m k) in
           q |' (a >> k).
 
+  (** Note that the following definition may be inconvenient to reason about,
+      and [(a + 2^(m-1)) mod 2^m - 2^(m-1)] may prove simpler to reason about arithmetically. 
+      See also https://github.com/mit-plv/coqutil/blob/c8006ceca816076b117c31d7feaefb5bbb850754/src/coqutil/Word/Naive.v#L15
+      and https://github.com/mit-plv/coqutil/blob/c8006ceca816076b117c31d7feaefb5bbb850754/src/coqutil/Word/Properties.v#L190 *)
+
   Definition twos_complement m a :=
     (if ((a mod 2 ^ m) <? 2 ^ (m - 1)) then a mod 2 ^ m else a mod 2 ^ m - 2 ^ m).
 
