@@ -22315,7 +22315,7 @@
     ]
   },
   {
-    "operation": "fiat_p434_one",
+    "operation": "fiat_p434_set_one",
     "arguments": [],
     "returns": [
       {

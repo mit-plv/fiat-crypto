@@ -17725,7 +17725,7 @@
     ]
   },
   {
-    "operation": "fiat_p384_one",
+    "operation": "fiat_p384_set_one",
     "arguments": [],
     "returns": [
       {

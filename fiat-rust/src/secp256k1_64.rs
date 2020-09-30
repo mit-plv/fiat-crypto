@@ -1662,7 +1662,7 @@ pub fn fiat_secp256k1_from_bytes(out1: &mut [u64; 4], arg1: &[u8; 32]) -> () {
   out1[3] = x60;
 }
 
-/// The function fiat_secp256k1_one returns the field element one in the Montgomery domain.
+/// The function fiat_secp256k1_set_one returns the field element one in the Montgomery domain.
 /// Postconditions:
 ///   eval (from_montgomery out1) mod m = 1 mod m
 ///   0 ≤ eval out1 < m
@@ -1671,7 +1671,7 @@ pub fn fiat_secp256k1_from_bytes(out1: &mut [u64; 4], arg1: &[u8; 32]) -> () {
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 #[inline]
-pub fn fiat_secp256k1_one(out1: &mut [u64; 4]) -> () {
+pub fn fiat_secp256k1_set_one(out1: &mut [u64; 4]) -> () {
   out1[0] = 0x1000003d1;
   out1[1] = (0x0 as u64);
   out1[2] = (0x0 as u64);

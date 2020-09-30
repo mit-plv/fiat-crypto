@@ -3223,7 +3223,7 @@ func fiat_p224_from_bytes(out1 *[7]uint32, arg1 *[28]uint8) {
 }
 
 /*
- * The function fiat_p224_one returns the field element one in the Montgomery domain.
+ * The function fiat_p224_set_one returns the field element one in the Montgomery domain.
  * Postconditions:
  *   eval (from_montgomery out1) mod m = 1 mod m
  *   0 ≤ eval out1 < m
@@ -3233,7 +3233,7 @@ func fiat_p224_from_bytes(out1 *[7]uint32, arg1 *[28]uint8) {
  *   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  */
 /*inline*/
-func fiat_p224_one(out1 *[7]uint32) {
+func fiat_p224_set_one(out1 *[7]uint32) {
   out1[0] = 0xffffffff
   out1[1] = 0xffffffff
   out1[2] = 0xffffffff

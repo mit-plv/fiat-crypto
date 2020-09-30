@@ -3178,7 +3178,7 @@ pub fn fiat_p384_from_bytes(out1: &mut [u64; 6], arg1: &[u8; 48]) -> () {
   out1[5] = x90;
 }
 
-/// The function fiat_p384_one returns the field element one in the Montgomery domain.
+/// The function fiat_p384_set_one returns the field element one in the Montgomery domain.
 /// Postconditions:
 ///   eval (from_montgomery out1) mod m = 1 mod m
 ///   0 ≤ eval out1 < m
@@ -3187,7 +3187,7 @@ pub fn fiat_p384_from_bytes(out1: &mut [u64; 6], arg1: &[u8; 48]) -> () {
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 #[inline]
-pub fn fiat_p384_one(out1: &mut [u64; 6]) -> () {
+pub fn fiat_p384_set_one(out1: &mut [u64; 6]) -> () {
   out1[0] = 0xffffffff00000001;
   out1[1] = 0xffffffff;
   out1[2] = (0x1 as u64);
