@@ -549,7 +549,7 @@ Section __.
     : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
     := Eval cbv beta in
         FromPipelineToString
-          machine_wordsize prefix "one" one
+          machine_wordsize prefix "set_one" one (* to avoid conflict with boringSSL *)
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname => ["The function " ++ fname ++ " returns the field element one in the Montgomery domain."]%string)
