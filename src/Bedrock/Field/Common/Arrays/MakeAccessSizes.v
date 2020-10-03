@@ -271,6 +271,11 @@ Section __.
       reflexivity.
     Qed.
 
+    Lemma bytes_per_word_eq :
+      Z.to_nat (Memory.bytes_per_word Semantics.width)
+      = Memory.bytes_per (width:=Semantics.width) access_size.word.
+    Proof. reflexivity. Qed.
+
     Lemma make_access_size_good ranges size :
       make_access_size ranges = Some size ->
       (Z.of_nat (Memory.bytes_per

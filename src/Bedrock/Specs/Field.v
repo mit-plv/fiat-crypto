@@ -74,39 +74,40 @@ Class FieldRepresentation_ok
                         -> bounded_by loose_bounds X;
   }.
 
+Notation unop_spec name op xbounds outbounds :=
+  (forall! (x : felem) (px pout : word),
+      (fun Rr mem =>
+         bounded_by xbounds x
+         /\ (exists Ra, (FElem px x * Ra)%sep mem)
+         /\ (Placeholder pout * Rr)%sep mem)
+        ===> name @ [pout; px] ===>
+        (fun _ =>
+           liftexists out,
+           (emp (feval out = op (feval x)
+                 /\ bounded_by outbounds out)
+            * FElem pout out)%sep))
+    (only parsing).
+
+Notation binop_spec name op xbounds ybounds outbounds :=
+  (forall! (x y : felem) (px py pout : word),
+      (fun Rr mem =>
+         bounded_by xbounds x
+         /\ bounded_by ybounds y
+         /\ (exists Ra, (FElem px x * Ra)%sep mem)
+         /\ (exists Ra, (FElem py y * Ra)%sep mem)
+         /\ (Placeholder pout * Rr)%sep mem)
+        ===> name @ [pout; px; py] ===>
+        (fun _ =>
+           liftexists out,
+           (emp ((feval out = op (feval x) (feval y))
+                 /\ bounded_by outbounds out)
+            * FElem pout out)%sep)) (only parsing).
+
 Section FunctionSpecs.
   Context {semantics : Semantics.parameters}
           {semantics_ok : Semantics.parameters_ok semantics}.
   Context {field_parameters : FieldParameters}
           {field_representaton : FieldRepresentation}.
-
-  Local Notation unop_spec name op xbounds outbounds :=
-    (forall! (x : felem) (px pout : word),
-        (fun Rr mem =>
-           bounded_by xbounds x
-           /\ (exists Ra, (FElem px x * Ra)%sep mem)
-           /\ (Placeholder pout * Rr)%sep mem)
-          ===> name @ [pout; px] ===>
-          (fun _ =>
-           liftexists out,
-           (emp (feval out = op (feval x)
-                 /\ bounded_by outbounds out)
-            * FElem pout out)%sep))
-      (only parsing).
-
-  Local Notation binop_spec name op xbounds ybounds outbounds :=
-    (forall! (x y : felem) (px py pout : word),
-        (fun Rr mem =>
-           bounded_by xbounds x
-           /\ bounded_by ybounds y
-           /\ (exists Ra, (FElem px x * FElem py y * Ra)%sep mem)
-           /\ (Placeholder pout * Rr)%sep mem)
-          ===> name @ [pout; px; py] ===>
-          (fun _ =>
-           liftexists out,
-           (emp ((feval out = op (feval x) (feval y))
-                 /\ bounded_by outbounds out)
-            * FElem pout out)%sep)) (only parsing).
 
   Instance spec_of_mul : spec_of mul :=
     binop_spec mul F.mul loose_bounds loose_bounds tight_bounds.

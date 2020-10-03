@@ -123,14 +123,14 @@ Module M.
                    felem_size_in_bytes
                    ["X1"; "Z1"; "X2"; "Z2"; "A"; "AA"; "B"; "BB"; "E"; "C"; "D"; "DA"; "CB"; "x"; "r"]
                    (cmd.seq
-                      (cmd.call [] from_bytes [expr.var "x_bytes"; expr.var "x"])
+                      (cmd.call [] from_bytes [expr.var "x"; expr.var "x_bytes"])
                       (cmd.seq
                          (cmd.call [] "montladder"
                                    [expr.var "r"; expr.var "k"; expr.var "x"; expr.var "X1";
                                       expr.var "Z1"; expr.var "X2"; expr.var "Z2"; expr.var "A";
                                         expr.var "AA"; expr.var "B"; expr.var "BB"; expr.var "E";
                                           expr.var "C"; expr.var "D"; expr.var "DA"; expr.var "CB"])
-                         (cmd.call [] to_bytes [expr.var "r"; expr.var "out"]))))).
+                         (cmd.call [] to_bytes [expr.var "out"; expr.var "r"]))))).
 
       Lemma and_iff1_l (X : Prop) (P : Semantics.mem -> Prop) :
         X ->
