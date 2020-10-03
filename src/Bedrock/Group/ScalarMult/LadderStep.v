@@ -243,24 +243,24 @@ Print ladderstep_body.
 *)
 (* ladderstep_body =
  * fun field_parameters : FieldParameters =>
- *  (cmd.call [] add [expr.var "X2"; expr.var "Z2"; expr.var "A"];;
- *  cmd.call [] square [expr.var "A"; expr.var "AA"];;
- *  cmd.call [] sub [expr.var "X2"; expr.var "Z2"; expr.var "B"];;
- *  cmd.call [] square [expr.var "B"; expr.var "BB"];;
- *  cmd.call [] sub [expr.var "AA"; expr.var "BB"; expr.var "E"];;
- *  cmd.call [] add [expr.var "X3"; expr.var "Z3"; expr.var "C"];;
- *  cmd.call [] sub [expr.var "X3"; expr.var "Z3"; expr.var "D"];;
- *  cmd.call [] mul [expr.var "D"; expr.var "A"; expr.var "DA"];;
- *  cmd.call [] mul [expr.var "C"; expr.var "B"; expr.var "CB"];;
- *  cmd.call [] add [expr.var "DA"; expr.var "CB"; expr.var "X3"];;
+ * (cmd.call [] add [expr.var "A"; expr.var "X2"; expr.var "Z2"];;
+ *  cmd.call [] square [expr.var "AA"; expr.var "A"];;
+ *  cmd.call [] sub [expr.var "B"; expr.var "X2"; expr.var "Z2"];;
+ *  cmd.call [] square [expr.var "BB"; expr.var "B"];;
+ *  cmd.call [] sub [expr.var "E"; expr.var "AA"; expr.var "BB"];;
+ *  cmd.call [] add [expr.var "C"; expr.var "X3"; expr.var "Z3"];;
+ *  cmd.call [] sub [expr.var "D"; expr.var "X3"; expr.var "Z3"];;
+ *  cmd.call [] mul [expr.var "DA"; expr.var "D"; expr.var "A"];;
+ *  cmd.call [] mul [expr.var "CB"; expr.var "C"; expr.var "B"];;
+ *  cmd.call [] add [expr.var "X3"; expr.var "DA"; expr.var "CB"];;
  *  cmd.call [] square [expr.var "X3"; expr.var "X3"];;
- *  cmd.call [] sub [expr.var "DA"; expr.var "CB"; expr.var "Z3"];;
+ *  cmd.call [] sub [expr.var "Z3"; expr.var "DA"; expr.var "CB"];;
  *  cmd.call [] square [expr.var "Z3"; expr.var "Z3"];;
- *  cmd.call [] mul [expr.var "X1"; expr.var "Z3"; expr.var "Z3"];;
- *  cmd.call [] mul [expr.var "AA"; expr.var "BB"; expr.var "X2"];;
- *  cmd.call [] scmula24 [expr.var "E"; expr.var "Z2"];;
- *  cmd.call [] add [expr.var "AA"; expr.var "Z2"; expr.var "Z2"];;
- *  cmd.call [] mul [expr.var "E"; expr.var "Z2"; expr.var "Z2"];;
+ *  cmd.call [] mul [expr.var "Z3"; expr.var "X1"; expr.var "Z3"];;
+ *  cmd.call [] mul [expr.var "X2"; expr.var "AA"; expr.var "BB"];;
+ *  cmd.call [] scmula24 [expr.var "Z2"; expr.var "E"];;
+ *  cmd.call [] add [expr.var "Z2"; expr.var "AA"; expr.var "Z2"];;
+ *  cmd.call [] mul [expr.var "Z2"; expr.var "E"; expr.var "Z2"];;
  *  /*skip*/)%bedrock_cmd
  *      : FieldParameters -> cmd
  *)
