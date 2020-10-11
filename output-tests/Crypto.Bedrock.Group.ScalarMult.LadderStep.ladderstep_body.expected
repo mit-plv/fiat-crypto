@@ -1,24 +1,33 @@
 ladderstep_body = 
 fun field_parameters : FieldParameters =>
-(cmd.call [] add ["A"; "X2"; "Z2"];;
- cmd.call [] square ["AA"; "A"];;
- cmd.call [] sub ["B"; "X2"; "Z2"];;
- cmd.call [] square ["BB"; "B"];;
- cmd.call [] sub ["E"; "AA"; "BB"];;
- cmd.call [] add ["C"; "X3"; "Z3"];;
- cmd.call [] sub ["D"; "X3"; "Z3"];;
- cmd.call [] mul ["DA"; "D"; "A"];;
- cmd.call [] mul ["CB"; "C"; "B"];;
- cmd.call [] add ["X3"; "DA"; "CB"];;
- cmd.call [] square ["X3"; "X3"];;
- cmd.call [] sub ["Z3"; "DA"; "CB"];;
- cmd.call [] square ["Z3"; "Z3"];;
- cmd.call [] mul ["Z3"; "X1"; "Z3"];;
- cmd.call [] mul ["X2"; "AA"; "BB"];;
- cmd.call [] scmula24 ["Z2"; "E"];;
- cmd.call [] add ["Z2"; "AA"; "Z2"];;
- cmd.call [] mul ["Z2"; "E"; "Z2"];;
- /*skip*/)%bedrock_cmd
+cmd.seq (cmd.call [] add ["A"; "X2"; "Z2"])
+  (cmd.seq (cmd.call [] square ["AA"; "A"])
+     (cmd.seq (cmd.call [] sub ["B"; "X2"; "Z2"])
+        (cmd.seq (cmd.call [] square ["BB"; "B"])
+           (cmd.seq (cmd.call [] sub ["E"; "AA"; "BB"])
+              (cmd.seq (cmd.call [] add ["C"; "X3"; "Z3"])
+                 (cmd.seq (cmd.call [] sub ["D"; "X3"; "Z3"])
+                    (cmd.seq (cmd.call [] mul ["DA"; "D"; "A"])
+                       (cmd.seq (cmd.call [] mul ["CB"; "C"; "B"])
+                          (cmd.seq (cmd.call [] add ["X3"; "DA"; "CB"])
+                             (cmd.seq (cmd.call [] square ["X3"; "X3"])
+                                (cmd.seq (cmd.call [] sub ["Z3"; "DA"; "CB"])
+                                   (cmd.seq (cmd.call [] square ["Z3"; "Z3"])
+                                      (cmd.seq
+                                         (cmd.call [] mul ["Z3"; "X1"; "Z3"])
+                                         (cmd.seq
+                                            (cmd.call [] mul
+                                               ["X2"; "AA"; "BB"])
+                                            (cmd.seq
+                                               (cmd.call [] scmula24
+                                                  ["Z2"; "E"])
+                                               (cmd.seq
+                                                  (cmd.call [] add
+                                                     ["Z2"; "AA"; "Z2"])
+                                                  (cmd.seq
+                                                     (cmd.call [] mul
+                                                        ["Z2"; "E"; "Z2"])
+                                                     cmd.skip)))))))))))))))))
      : FieldParameters -> cmd
 
 Arguments ladderstep_body {field_parameters}
