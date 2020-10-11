@@ -487,60 +487,10 @@ Section __.
   End MontLadder.
 End __.
 
-(*
+
 Require Import bedrock2.NotationsCustomEntry.
 Require Import bedrock2.NotationsInConstr.
-Coercion expr.var : string >-> Syntax.expr.
-Unset Printing Coercions.
+Local Coercion expr.var : string >-> Syntax.expr.
+Local Unset Printing Coercions.
 Local Open Scope bedrock_expr.
-Print montladder_body.
-*)
-(* fun (field_parameters : FieldParameters)
- *   (scalar_field_parameters : ScalarFieldParameters) =>
- * (cmd.call [] felem_small_literal [(uintptr_t)1ULL; "X1"];;
- *  cmd.call [] felem_small_literal [(uintptr_t)0ULL; "Z1"];;
- *  cmd.call [] felem_copy ["U"; "X2"];;
- *  cmd.call [] felem_small_literal [(uintptr_t)1ULL; "Z2"];;
- *  "v6" = (uintptr_t)0ULL;;
- *  "v7" = (uintptr_t)scalarbitsULL;;
- *  (while ((uintptr_t)0ULL < "v7") {{
- *     "v7" = "v7" - (uintptr_t)1ULL;;
- *     cmd.call ["v8"] sctestbit ["K"; "v7"];;
- *     "v9" = "v6" .^ "v8";;
- *     (if ("v9") {{
- *        (("tmp" = "X1";;
- *          "X1" = "X2");;
- *         "X2" = "tmp");;
- *        cmd.unset "tmp"
- *      }});;
- *     (if ("v9") {{
- *        (("tmp" = "Z1";;
- *          "Z1" = "Z2");;
- *         "Z2" = "tmp");;
- *        cmd.unset "tmp"
- *      }});;
- *     cmd.call [] "ladderstep"
- *       ["U"; "X1"; "Z1"; "X2"; "Z2"; "A"; "AA"; "B"; "BB"; "E"; "C"; "D";
- *       "DA"; "CB"];;
- *     "v6" = "v8";;
- *     cmd.unset "v9";;
- *     cmd.unset "v8";;
- *     /*skip*/
- *   }});;
- *  (if ("v6") {{
- *     (("tmp" = "X1";;
- *       "X1" = "X2");;
- *      "X2" = "tmp");;
- *     cmd.unset "tmp"
- *   }});;
- *  (if ("v6") {{
- *     (("tmp" = "Z1";;
- *       "Z1" = "Z2");;
- *      "Z2" = "tmp");;
- *     cmd.unset "tmp"
- *   }});;
- *  cmd.call [] inv ["Z1"; "A"];;
- *  cmd.call [] mul ["X1"; "A"; "OUT"];;
- *  /*skip*/)%bedrock_cmd
- *      : FieldParameters -> ScalarFieldParameters -> cmd
- *)
+Redirect "Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder.montladder_body" Print montladder_body.

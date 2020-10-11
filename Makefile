@@ -224,11 +224,15 @@ bedrock2-extra-cflags:
 	@echo "$(BEDROCK2_EXTRA_CFLAGS)"
 
 OUTPUT_VOS := \
+	src/Bedrock/Group/ScalarMult/LadderStep.vo \
+	src/Bedrock/Group/ScalarMult/MontgomeryLadder.vo \
 	src/Fancy/Montgomery256.vo \
 	src/Fancy/Barrett256.vo \
 	src/UnsaturatedSolinasHeuristics/Tests.vo
 
 OUTPUT_PREOUTS := \
+	Crypto.Bedrock.Group.ScalarMult.LadderStep.ladderstep_body \
+	Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder.montladder_body \
 	Crypto.Fancy.Montgomery256.Prod.MontRed256 \
 	Crypto.Fancy.Montgomery256.prod_montred256_correct \
 	Crypto.Fancy.Montgomery256.prod_montred256_correct.Assumptions \
