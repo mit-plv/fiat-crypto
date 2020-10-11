@@ -98,6 +98,7 @@ src/Bedrock/Field/Synthesis/Examples/p256_64.v
 src/Bedrock/Field/Synthesis/Generic/Bignum.v
 src/Bedrock/Field/Synthesis/Generic/Operation.v
 src/Bedrock/Field/Synthesis/Generic/Tactics.v
+src/Bedrock/Field/Synthesis/Generic/Signature.v
 src/Bedrock/Field/Synthesis/Generic/UnsaturatedSolinas.v
 src/Bedrock/Field/Synthesis/Generic/WordByWordMontgomery.v
 src/Bedrock/Field/Synthesis/Specialized/ReifiedOperation.v
