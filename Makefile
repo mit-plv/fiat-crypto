@@ -241,12 +241,10 @@ OUTPUT_PREOUTS := \
 	Crypto.UnsaturatedSolinasHeuristics.Tests.get_balances
 
 ifneq ($(SKIP_BEDROCK2), 1)
-OUTPUT_VOS := \
-	$(OUPUT_VOS) \
+OUTPUT_VOS += \
 	src/Bedrock/Group/ScalarMult/LadderStep.vo \
 	src/Bedrock/Group/ScalarMult/MontgomeryLadder.vo
-OUTPUT_PREOUTS := \
-	$(OUTPUT_PREOUTS) \
+OUTPUT_PREOUTS += \
 	Crypto.Bedrock.Group.ScalarMult.LadderStep.ladderstep_body \
 	Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder.montladder_body
 endif
