@@ -1,0 +1,51 @@
+montladder_body = 
+fun (field_parameters : FieldParameters)
+  (scalar_field_parameters : ScalarFieldParameters) =>
+(cmd.call [] felem_small_literal ["X1"; (uintptr_t)1ULL];;
+ cmd.call [] felem_small_literal ["Z1"; (uintptr_t)0ULL];;
+ cmd.call [] felem_copy ["X2"; "U"];;
+ cmd.call [] felem_small_literal ["Z2"; (uintptr_t)1ULL];;
+ "v6" = (uintptr_t)0ULL;;
+ "v7" = (uintptr_t)scalarbitsULL;;
+ (while ((uintptr_t)0ULL < "v7") {{
+    "v7" = "v7" - (uintptr_t)1ULL;;
+    cmd.call ["v8"] sctestbit ["K"; "v7"];;
+    "v9" = "v6" .^ "v8";;
+    (if ("v9") {{
+       (("tmp" = "X1";;
+         "X1" = "X2");;
+        "X2" = "tmp");;
+       cmd.unset "tmp"
+     }});;
+    (if ("v9") {{
+       (("tmp" = "Z1";;
+         "Z1" = "Z2");;
+        "Z2" = "tmp");;
+       cmd.unset "tmp"
+     }});;
+    cmd.call [] "ladderstep"
+      ["U"; "X1"; "Z1"; "X2"; "Z2"; "A"; "AA"; "B"; "BB"; "E"; "C"; "D";
+      "DA"; "CB"];;
+    "v6" = "v8";;
+    cmd.unset "v9";;
+    cmd.unset "v8";;
+    /*skip*/
+  }});;
+ (if ("v6") {{
+    (("tmp" = "X1";;
+      "X1" = "X2");;
+     "X2" = "tmp");;
+    cmd.unset "tmp"
+  }});;
+ (if ("v6") {{
+    (("tmp" = "Z1";;
+      "Z1" = "Z2");;
+     "Z2" = "tmp");;
+    cmd.unset "tmp"
+  }});;
+ cmd.call [] inv ["A"; "Z1"];;
+ cmd.call [] mul ["OUT"; "X1"; "A"];;
+ /*skip*/)%bedrock_cmd
+     : FieldParameters -> ScalarFieldParameters -> cmd
+
+Arguments montladder_body {field_parameters scalar_field_parameters}

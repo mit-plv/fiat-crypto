@@ -236,31 +236,10 @@ Section __.
   Qed.
 End __.
 
-(*
+
 Require Import bedrock2.NotationsCustomEntry.
 Require Import bedrock2.NotationsInConstr.
-Print ladderstep_body.
-*)
-(* ladderstep_body =
- * fun field_parameters : FieldParameters =>
- * (cmd.call [] add [expr.var "A"; expr.var "X2"; expr.var "Z2"];;
- *  cmd.call [] square [expr.var "AA"; expr.var "A"];;
- *  cmd.call [] sub [expr.var "B"; expr.var "X2"; expr.var "Z2"];;
- *  cmd.call [] square [expr.var "BB"; expr.var "B"];;
- *  cmd.call [] sub [expr.var "E"; expr.var "AA"; expr.var "BB"];;
- *  cmd.call [] add [expr.var "C"; expr.var "X3"; expr.var "Z3"];;
- *  cmd.call [] sub [expr.var "D"; expr.var "X3"; expr.var "Z3"];;
- *  cmd.call [] mul [expr.var "DA"; expr.var "D"; expr.var "A"];;
- *  cmd.call [] mul [expr.var "CB"; expr.var "C"; expr.var "B"];;
- *  cmd.call [] add [expr.var "X3"; expr.var "DA"; expr.var "CB"];;
- *  cmd.call [] square [expr.var "X3"; expr.var "X3"];;
- *  cmd.call [] sub [expr.var "Z3"; expr.var "DA"; expr.var "CB"];;
- *  cmd.call [] square [expr.var "Z3"; expr.var "Z3"];;
- *  cmd.call [] mul [expr.var "Z3"; expr.var "X1"; expr.var "Z3"];;
- *  cmd.call [] mul [expr.var "X2"; expr.var "AA"; expr.var "BB"];;
- *  cmd.call [] scmula24 [expr.var "Z2"; expr.var "E"];;
- *  cmd.call [] add [expr.var "Z2"; expr.var "AA"; expr.var "Z2"];;
- *  cmd.call [] mul [expr.var "Z2"; expr.var "E"; expr.var "Z2"];;
- *  /*skip*/)%bedrock_cmd
- *      : FieldParameters -> cmd
- *)
+Local Coercion expr.var : string >-> Syntax.expr.
+Local Unset Printing Coercions.
+Local Open Scope bedrock_expr.
+Redirect "Crypto.Bedrock.Group.ScalarMult.LadderStep.ladderstep_body" Print ladderstep_body.
