@@ -224,15 +224,11 @@ bedrock2-extra-cflags:
 	@echo "$(BEDROCK2_EXTRA_CFLAGS)"
 
 OUTPUT_VOS := \
-	src/Bedrock/Group/ScalarMult/LadderStep.vo \
-	src/Bedrock/Group/ScalarMult/MontgomeryLadder.vo \
 	src/Fancy/Montgomery256.vo \
 	src/Fancy/Barrett256.vo \
 	src/UnsaturatedSolinasHeuristics/Tests.vo
 
 OUTPUT_PREOUTS := \
-	Crypto.Bedrock.Group.ScalarMult.LadderStep.ladderstep_body \
-	Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder.montladder_body \
 	Crypto.Fancy.Montgomery256.Prod.MontRed256 \
 	Crypto.Fancy.Montgomery256.prod_montred256_correct \
 	Crypto.Fancy.Montgomery256.prod_montred256_correct.Assumptions \
@@ -243,6 +239,17 @@ OUTPUT_PREOUTS := \
 	Crypto.Fancy.Barrett256.barrett_red256 \
 	Crypto.UnsaturatedSolinasHeuristics.Tests.get_possible_limbs \
 	Crypto.UnsaturatedSolinasHeuristics.Tests.get_balances
+
+ifneq ($(SKIP_BEDROCK2), 1)
+OUTPUT_VOS := \
+	$(OUPUT_VOS) \
+	src/Bedrock/Group/ScalarMult/LadderStep.vo \
+	src/Bedrock/Group/ScalarMult/MontgomeryLadder.vo
+OUTPUT_PREOUTS := \
+	$(OUTPUT_PREOUTS) \
+	Crypto.Bedrock.Group.ScalarMult.LadderStep.ladderstep_body \
+	Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder.montladder_body
+endif
 
 CHECK_OUTPUTS := $(addprefix check-,$(OUTPUT_PREOUTS))
 ACCEPT_OUTPUTS := $(addprefix accept-,$(OUTPUT_PREOUTS))
