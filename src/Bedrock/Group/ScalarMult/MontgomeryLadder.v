@@ -487,10 +487,6 @@ Section __.
   End MontLadder.
 End __.
 
-
-Require Import bedrock2.NotationsCustomEntry.
-Require Import bedrock2.NotationsInConstr.
 Local Coercion expr.var : string >-> Syntax.expr.
 Local Unset Printing Coercions.
-Local Open Scope bedrock_expr.
 Redirect "Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder.montladder_body" Print montladder_body.

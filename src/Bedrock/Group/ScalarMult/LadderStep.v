@@ -236,10 +236,6 @@ Section __.
   Qed.
 End __.
 
-
-Require Import bedrock2.NotationsCustomEntry.
-Require Import bedrock2.NotationsInConstr.
 Local Coercion expr.var : string >-> Syntax.expr.
 Local Unset Printing Coercions.
-Local Open Scope bedrock_expr.
 Redirect "Crypto.Bedrock.Group.ScalarMult.LadderStep.ladderstep_body" Print ladderstep_body.
