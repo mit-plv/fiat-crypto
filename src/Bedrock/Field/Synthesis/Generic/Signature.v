@@ -440,3 +440,21 @@ Section WithParameters.
     Qed.
   End ListUnop.
 End WithParameters.
+
+  (*
+    Goals:
+    - bedrock2 implementations that fill the role in montladder
+    - infrastructure at a similar level as existing (examples, wbw + unsat)
+
+    Questions:
+    - does montladder require wbw, or unsat? A: unsat
+
+    Next steps:
+    - focus on unsat solinas first, make mul/add defs
+    - take mul/add defs through full synthesis/translation to get x25519 impls
+    - make proofs for other signatures (select, from_bytes)
+    - figure out what to do for copy and small_literal; general template that spits out the correct bedrock2?
+    - plug in everything for montladder so we have e2e scalarmult
+    ====== merge ====
+    - add examples
+  *)
