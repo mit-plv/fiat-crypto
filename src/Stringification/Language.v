@@ -216,12 +216,28 @@ Module Compilers.
                    | Some c, None => Some (c ++ ", ??")
                    | None, None => None
                    end
+           | base.type.list A
+             => fun r
+                => match r with
+                   | None => None
+                   | Some nil => Some "void[0]"
+                   | Some ((r :: rs) as ls)
+                     => let n := show false (List.length ls) in
+                        let c1 := @make_castb A r in
+                        let all_same := List.forallb (ZRange.type.base.option.interp_beq r) rs in
+                        Some
+                          (match all_same, c1 with
+                           | true, Some c1 => c1
+                           | _, _ => "??"
+                           end
+                             ++ "[" ++ n ++ "]")
+                   end
            | base.type.unit
            | base.type.type_base _
-           | base.type.list _
            | base.type.option _
              => fun _ => None
            end.
+
       Fixpoint make_cast {t} : ZRange.type.option.interp t -> option string
         := match t with
            | type.base t => @make_castb t
