@@ -571,22 +571,37 @@ Proof. unfold eval_twos_complement; rewrite Z.twos_complement_mod2, eval_sat_mod
 Import WordByWordMontgomery.
 Import Positional.
 
+(* This version does not introduce larger types unnecessarily *)
+Definition twos_complement_opp' m a :=
+  (fst (Z.add_get_carry_full (2^m) (Z.lnot_modulo a (2 ^ m)) 1)) mod (2 ^ m).
+
+Lemma twos_complement_opp'_spec m a :
+  twos_complement_opp' m a = Z.twos_complement_opp m a.
+Proof.
+  unfold twos_complement_opp', Z.twos_complement_opp.
+  destruct (Z_lt_dec m 0).
+  - rewrite !Z.pow_neg_r, !Zmod_0_r by assumption; reflexivity. 
+  - rewrite AddGetCarry.Z.add_get_carry_full_mod.
+    rewrite Z.mod_mod; [reflexivity|]. apply Z.pow_nonzero; lia. Qed.
+
+(* This version does not introduce larger types unnecessarily *)
+Definition twos_complement_pos' m a :=
+  dlet b := twos_complement_opp' m a in (Z.shiftr b (m-1)).
+Lemma twos_complement_pos'_spec m a :
+  twos_complement_pos' m a = Z.twos_complement_pos m a.
+Proof. unfold twos_complement_pos'. rewrite twos_complement_opp'_spec. reflexivity. Qed.
+
 Definition divstep_aux (machine_wordsize : Z) (sat_limbs mont_limbs : nat) (m : Z) (data : Z * (list Z) * (list Z) * (list Z) * (list Z)) :=
   let '(d,f,g,v,r) := data in
-  let r := snd data in
-  let v := snd (fst data) in
-  let g := snd (fst (fst data)) in
-  let f := snd (fst (fst (fst data))) in
-  let d := fst (fst (fst (fst data))) in
-  dlet cond := Z.land (Z.twos_complement_pos machine_wordsize d) (sat_mod2 g) in
-  dlet d' := Z.zselect cond d (Z.twos_complement_opp machine_wordsize d) in
+  dlet cond := Z.land (twos_complement_pos' machine_wordsize d) (sat_mod2 g) in
+  dlet d' := Z.zselect cond d (twos_complement_opp' machine_wordsize d) in
   dlet f' := select cond f g in
   dlet g' := select cond g (sat_opp machine_wordsize sat_limbs f) in
   dlet v' := select cond v r in
   let v'':= addmod machine_wordsize mont_limbs m v' v' in
   dlet r' := select cond r (oppmod machine_wordsize mont_limbs m v) in
   dlet g0 := sat_mod2 g' in
-  let d'' := (d' + 1) mod 2^machine_wordsize in
+  let d'' := (fst (Z.add_get_carry_full (2^machine_wordsize) d' 1)) in
   dlet f'' := select g0 (sat_zero sat_limbs) f' in
   let g'' := sat_arithmetic_shiftr1 machine_wordsize sat_limbs (sat_add machine_wordsize sat_limbs g' f'') in
   dlet v''' := select g0 (sat_zero mont_limbs) v' in
@@ -657,6 +672,7 @@ Proof.
 
   rewrite sat_opp_mod2; auto.
   unfold divstep_spec.
+  rewrite twos_complement_pos'_spec.
   rewrite twos_complement_pos_spec; auto.
   rewrite <- !(eval_twos_complement_sat_mod2 machine_wordsize sat_limbs); auto.
   rewrite !Zmod_odd; auto.
@@ -673,12 +689,14 @@ Proof.
   - rewrite Z.mul_1_l; simpl; reflexivity.
   - simpl; rewrite eval_twos_complement_sat_zero; auto.
   - replace (_ * _) with bw by reflexivity; lia.
-  - fold (eval_twos_complement machine_wordsize sat_limbs
+  - rewrite twos_complement_pos'_spec.
+    fold (eval_twos_complement machine_wordsize sat_limbs
                      (select (Z.twos_complement_pos machine_wordsize d &' sat_mod2 g) g (sat_opp machine_wordsize sat_limbs f))).
     rewrite eval_twos_complement_select; try apply length_sat_opp; auto.
     destruct (dec (_)); replace (machine_wordsize * _) with bw by reflexivity;
     try rewrite eval_twos_complement_sat_opp; auto; replace (machine_wordsize * _) with bw by reflexivity; lia.
-  - fold (eval_twos_complement machine_wordsize sat_limbs
+  - rewrite twos_complement_pos'_spec.
+    fold (eval_twos_complement machine_wordsize sat_limbs
                      (select (sat_mod2 (select (Z.twos_complement_pos machine_wordsize d &' sat_mod2 g) g (sat_opp machine_wordsize sat_limbs f)))
                              (sat_zero sat_limbs) (select (Z.twos_complement_pos machine_wordsize d &' sat_mod2 g) f g))).
     rewrite eval_twos_complement_select; try apply length_sat_zero; try apply length_select; auto.
@@ -707,6 +725,9 @@ Proof.
     by (rewrite Pow.Z.pow_mul_base, Z.sub_simpl_r; lia).
 
   simpl; unfold divstep_spec.
+  rewrite AddGetCarry.Z.add_get_carry_full_mod.
+  rewrite twos_complement_pos'_spec.
+  rewrite twos_complement_opp'_spec.
   rewrite twos_complement_pos_spec, <- (eval_twos_complement_sat_mod2 machine_wordsize sat_limbs), Zmod_odd by nia.
   fold (eval_twos_complement machine_wordsize sat_limbs g); set (g' := eval_twos_complement machine_wordsize sat_limbs g) in *.
   destruct ((0 <? Z.twos_complement machine_wordsize d) && (Z.odd g')) eqn:E.
@@ -742,6 +763,8 @@ Proof.
 
   set (n' := S sat_limbs) in *.
   assert (0 < n')%nat by apply Nat.lt_0_succ.
+  rewrite twos_complement_pos'_spec.
+
   rewrite eval_twos_complement_select, twos_complement_pos_spec, <- (eval_twos_complement_sat_mod2 machine_wordsize n'), Zmod_odd; auto.
   fold (eval_twos_complement machine_wordsize n' g).
   destruct (0 <? Z.twos_complement machine_wordsize d); destruct (Z.odd (eval_twos_complement machine_wordsize n' g));
@@ -810,6 +833,8 @@ Proof.
   assert (sat_limbs <> 0%nat) by lia.
   assert (mont_limbs <> 0%nat) by lia.
   simpl.
+  rewrite twos_complement_pos'_spec.
+  
   rewrite twos_complement_pos_spec, <- (eval_twos_complement_sat_mod2 machine_wordsize sat_limbs) by lia.
   rewrite Zmod_odd, (select_eq (uweight machine_wordsize) _ mont_limbs); auto.
   unfold divstep_spec2.
@@ -870,6 +895,7 @@ Proof.
   cbn -[Z.mul oppmod sat_opp select].
   rewrite select_push; rewrite ?length_sat_opp; auto.
   rewrite sat_opp_mod2; auto.
+  rewrite twos_complement_pos'_spec.
   rewrite twos_complement_pos_spec, <- !(eval_twos_complement_sat_mod2 machine_wordsize sat_limbs) by lia.
   rewrite !Zmod_odd, !(select_eq (uweight machine_wordsize) _ mont_limbs), fodd;
     try apply length_select; auto.
