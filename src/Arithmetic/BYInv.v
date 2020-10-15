@@ -571,7 +571,8 @@ Proof. unfold eval_twos_complement; rewrite Z.twos_complement_mod2, eval_sat_mod
 Import WordByWordMontgomery.
 Import Positional.
 
-Definition divstep_aux machine_wordsize sat_limbs mont_limbs m (data : Z * (list Z) * (list Z) * (list Z) * (list Z)) :=
+Definition divstep_aux (machine_wordsize : Z) (sat_limbs mont_limbs : nat) (m : Z) (data : Z * (list Z) * (list Z) * (list Z) * (list Z)) :=
+  let '(d,f,g,v,r) := data in
   let r := snd data in
   let v := snd (fst data) in
   let g := snd (fst (fst data)) in
