@@ -20,7 +20,6 @@ package fiat_p384
 import "math/bits"
 type fiat_p384_uint1 uint8
 type fiat_p384_int1 int8
-var _ = error_Go_output_does_not_support_128_bit_integers___instead_use_rewriting_rules_for_removing_128_bit_integers
 
 /* The function fiat_p384_addcarryx_u64 is a thin wrapper around bits.Add64 that uses fiat_p384_uint1 rather than uint64 */
 func fiat_p384_addcarryx_u64(x uint64, y uint64, carry fiat_p384_uint1) (uint64, fiat_p384_uint1) {
@@ -3171,307 +3170,311 @@ func fiat_p384_msat(out1 *[7]uint64) {
  */
 /*inline*/
 func fiat_p384_divstep(out1 *uint64, out2 *[7]uint64, out3 *[7]uint64, out4 *[6]uint64, out5 *[6]uint64, arg1 uint64, arg2 *[7]uint64, arg3 *[7]uint64, arg4 *[6]uint64, arg5 *[6]uint64) {
-  var x1 uint64 = (uint64((fiat_p384_uint128((^arg1)) + fiat_p384_uint128(0x1))) & 0xffffffffffffffff)
-  var x2 fiat_p384_uint1 = (fiat_p384_uint1((x1 >> 63)) & (fiat_p384_uint1((arg3[0])) & 0x1))
-  var x3 uint64
-  fiat_p384_cmovznz_u64(&x3, x2, arg1, (uint64((fiat_p384_uint128((^arg1)) + fiat_p384_uint128(0x1))) & 0xffffffffffffffff))
+  var x1 uint64
+  x1, _ = fiat_p384_addcarryx_u64((^arg1), uint64(0x1), 0x0)
+  var x3 fiat_p384_uint1 = (fiat_p384_uint1((x1 >> 63)) & (fiat_p384_uint1((arg3[0])) & 0x1))
   var x4 uint64
-  fiat_p384_cmovznz_u64(&x4, x2, (arg2[0]), (arg3[0]))
-  var x5 uint64
-  fiat_p384_cmovznz_u64(&x5, x2, (arg2[1]), (arg3[1]))
+  x4, _ = fiat_p384_addcarryx_u64((^arg1), uint64(0x1), 0x0)
   var x6 uint64
-  fiat_p384_cmovznz_u64(&x6, x2, (arg2[2]), (arg3[2]))
+  fiat_p384_cmovznz_u64(&x6, x3, arg1, x4)
   var x7 uint64
-  fiat_p384_cmovznz_u64(&x7, x2, (arg2[3]), (arg3[3]))
+  fiat_p384_cmovznz_u64(&x7, x3, (arg2[0]), (arg3[0]))
   var x8 uint64
-  fiat_p384_cmovznz_u64(&x8, x2, (arg2[4]), (arg3[4]))
+  fiat_p384_cmovznz_u64(&x8, x3, (arg2[1]), (arg3[1]))
   var x9 uint64
-  fiat_p384_cmovznz_u64(&x9, x2, (arg2[5]), (arg3[5]))
+  fiat_p384_cmovznz_u64(&x9, x3, (arg2[2]), (arg3[2]))
   var x10 uint64
-  fiat_p384_cmovznz_u64(&x10, x2, (arg2[6]), (arg3[6]))
+  fiat_p384_cmovznz_u64(&x10, x3, (arg2[3]), (arg3[3]))
   var x11 uint64
-  var x12 fiat_p384_uint1
-  x11, x12 = fiat_p384_addcarryx_u64(uint64(0x1), (^(arg2[0])), 0x0)
+  fiat_p384_cmovznz_u64(&x11, x3, (arg2[4]), (arg3[4]))
+  var x12 uint64
+  fiat_p384_cmovznz_u64(&x12, x3, (arg2[5]), (arg3[5]))
   var x13 uint64
-  var x14 fiat_p384_uint1
-  x13, x14 = fiat_p384_addcarryx_u64(uint64(0x0), (^(arg2[1])), x12)
-  var x15 uint64
-  var x16 fiat_p384_uint1
-  x15, x16 = fiat_p384_addcarryx_u64(uint64(0x0), (^(arg2[2])), x14)
-  var x17 uint64
-  var x18 fiat_p384_uint1
-  x17, x18 = fiat_p384_addcarryx_u64(uint64(0x0), (^(arg2[3])), x16)
-  var x19 uint64
-  var x20 fiat_p384_uint1
-  x19, x20 = fiat_p384_addcarryx_u64(uint64(0x0), (^(arg2[4])), x18)
-  var x21 uint64
-  var x22 fiat_p384_uint1
-  x21, x22 = fiat_p384_addcarryx_u64(uint64(0x0), (^(arg2[5])), x20)
-  var x23 uint64
-  x23, _ = fiat_p384_addcarryx_u64(uint64(0x0), (^(arg2[6])), x22)
-  var x25 uint64
-  fiat_p384_cmovznz_u64(&x25, x2, (arg3[0]), x11)
+  fiat_p384_cmovznz_u64(&x13, x3, (arg2[6]), (arg3[6]))
+  var x14 uint64
+  var x15 fiat_p384_uint1
+  x14, x15 = fiat_p384_addcarryx_u64(uint64(0x1), (^(arg2[0])), 0x0)
+  var x16 uint64
+  var x17 fiat_p384_uint1
+  x16, x17 = fiat_p384_addcarryx_u64(uint64(0x0), (^(arg2[1])), x15)
+  var x18 uint64
+  var x19 fiat_p384_uint1
+  x18, x19 = fiat_p384_addcarryx_u64(uint64(0x0), (^(arg2[2])), x17)
+  var x20 uint64
+  var x21 fiat_p384_uint1
+  x20, x21 = fiat_p384_addcarryx_u64(uint64(0x0), (^(arg2[3])), x19)
+  var x22 uint64
+  var x23 fiat_p384_uint1
+  x22, x23 = fiat_p384_addcarryx_u64(uint64(0x0), (^(arg2[4])), x21)
+  var x24 uint64
+  var x25 fiat_p384_uint1
+  x24, x25 = fiat_p384_addcarryx_u64(uint64(0x0), (^(arg2[5])), x23)
   var x26 uint64
-  fiat_p384_cmovznz_u64(&x26, x2, (arg3[1]), x13)
-  var x27 uint64
-  fiat_p384_cmovznz_u64(&x27, x2, (arg3[2]), x15)
+  x26, _ = fiat_p384_addcarryx_u64(uint64(0x0), (^(arg2[6])), x25)
   var x28 uint64
-  fiat_p384_cmovznz_u64(&x28, x2, (arg3[3]), x17)
+  fiat_p384_cmovznz_u64(&x28, x3, (arg3[0]), x14)
   var x29 uint64
-  fiat_p384_cmovznz_u64(&x29, x2, (arg3[4]), x19)
+  fiat_p384_cmovznz_u64(&x29, x3, (arg3[1]), x16)
   var x30 uint64
-  fiat_p384_cmovznz_u64(&x30, x2, (arg3[5]), x21)
+  fiat_p384_cmovznz_u64(&x30, x3, (arg3[2]), x18)
   var x31 uint64
-  fiat_p384_cmovznz_u64(&x31, x2, (arg3[6]), x23)
+  fiat_p384_cmovznz_u64(&x31, x3, (arg3[3]), x20)
   var x32 uint64
-  fiat_p384_cmovznz_u64(&x32, x2, (arg4[0]), (arg5[0]))
+  fiat_p384_cmovznz_u64(&x32, x3, (arg3[4]), x22)
   var x33 uint64
-  fiat_p384_cmovznz_u64(&x33, x2, (arg4[1]), (arg5[1]))
+  fiat_p384_cmovznz_u64(&x33, x3, (arg3[5]), x24)
   var x34 uint64
-  fiat_p384_cmovznz_u64(&x34, x2, (arg4[2]), (arg5[2]))
+  fiat_p384_cmovznz_u64(&x34, x3, (arg3[6]), x26)
   var x35 uint64
-  fiat_p384_cmovznz_u64(&x35, x2, (arg4[3]), (arg5[3]))
+  fiat_p384_cmovznz_u64(&x35, x3, (arg4[0]), (arg5[0]))
   var x36 uint64
-  fiat_p384_cmovznz_u64(&x36, x2, (arg4[4]), (arg5[4]))
+  fiat_p384_cmovznz_u64(&x36, x3, (arg4[1]), (arg5[1]))
   var x37 uint64
-  fiat_p384_cmovznz_u64(&x37, x2, (arg4[5]), (arg5[5]))
+  fiat_p384_cmovznz_u64(&x37, x3, (arg4[2]), (arg5[2]))
   var x38 uint64
-  var x39 fiat_p384_uint1
-  x38, x39 = fiat_p384_addcarryx_u64(x32, x32, 0x0)
+  fiat_p384_cmovznz_u64(&x38, x3, (arg4[3]), (arg5[3]))
+  var x39 uint64
+  fiat_p384_cmovznz_u64(&x39, x3, (arg4[4]), (arg5[4]))
   var x40 uint64
-  var x41 fiat_p384_uint1
-  x40, x41 = fiat_p384_addcarryx_u64(x33, x33, x39)
-  var x42 uint64
-  var x43 fiat_p384_uint1
-  x42, x43 = fiat_p384_addcarryx_u64(x34, x34, x41)
-  var x44 uint64
-  var x45 fiat_p384_uint1
-  x44, x45 = fiat_p384_addcarryx_u64(x35, x35, x43)
-  var x46 uint64
-  var x47 fiat_p384_uint1
-  x46, x47 = fiat_p384_addcarryx_u64(x36, x36, x45)
-  var x48 uint64
-  var x49 fiat_p384_uint1
-  x48, x49 = fiat_p384_addcarryx_u64(x37, x37, x47)
-  var x50 uint64
-  var x51 fiat_p384_uint1
-  x50, x51 = fiat_p384_subborrowx_u64(x38, 0xffffffff, 0x0)
-  var x52 uint64
-  var x53 fiat_p384_uint1
-  x52, x53 = fiat_p384_subborrowx_u64(x40, 0xffffffff00000000, x51)
-  var x54 uint64
-  var x55 fiat_p384_uint1
-  x54, x55 = fiat_p384_subborrowx_u64(x42, 0xfffffffffffffffe, x53)
-  var x56 uint64
-  var x57 fiat_p384_uint1
-  x56, x57 = fiat_p384_subborrowx_u64(x44, 0xffffffffffffffff, x55)
-  var x58 uint64
-  var x59 fiat_p384_uint1
-  x58, x59 = fiat_p384_subborrowx_u64(x46, 0xffffffffffffffff, x57)
-  var x60 uint64
-  var x61 fiat_p384_uint1
-  x60, x61 = fiat_p384_subborrowx_u64(x48, 0xffffffffffffffff, x59)
-  var x63 fiat_p384_uint1
-  _, x63 = fiat_p384_subborrowx_u64(uint64(x49), uint64(0x0), x61)
-  var x64 uint64 = (arg4[5])
-  var x65 uint64 = (arg4[4])
-  var x66 uint64 = (arg4[3])
-  var x67 uint64 = (arg4[2])
-  var x68 uint64 = (arg4[1])
-  var x69 uint64 = (arg4[0])
-  var x70 uint64
-  var x71 fiat_p384_uint1
-  x70, x71 = fiat_p384_subborrowx_u64(uint64(0x0), x69, 0x0)
-  var x72 uint64
-  var x73 fiat_p384_uint1
-  x72, x73 = fiat_p384_subborrowx_u64(uint64(0x0), x68, x71)
-  var x74 uint64
-  var x75 fiat_p384_uint1
-  x74, x75 = fiat_p384_subborrowx_u64(uint64(0x0), x67, x73)
-  var x76 uint64
-  var x77 fiat_p384_uint1
-  x76, x77 = fiat_p384_subborrowx_u64(uint64(0x0), x66, x75)
-  var x78 uint64
-  var x79 fiat_p384_uint1
-  x78, x79 = fiat_p384_subborrowx_u64(uint64(0x0), x65, x77)
-  var x80 uint64
-  var x81 fiat_p384_uint1
-  x80, x81 = fiat_p384_subborrowx_u64(uint64(0x0), x64, x79)
-  var x82 uint64
-  fiat_p384_cmovznz_u64(&x82, x81, uint64(0x0), 0xffffffffffffffff)
+  fiat_p384_cmovznz_u64(&x40, x3, (arg4[5]), (arg5[5]))
+  var x41 uint64
+  var x42 fiat_p384_uint1
+  x41, x42 = fiat_p384_addcarryx_u64(x35, x35, 0x0)
+  var x43 uint64
+  var x44 fiat_p384_uint1
+  x43, x44 = fiat_p384_addcarryx_u64(x36, x36, x42)
+  var x45 uint64
+  var x46 fiat_p384_uint1
+  x45, x46 = fiat_p384_addcarryx_u64(x37, x37, x44)
+  var x47 uint64
+  var x48 fiat_p384_uint1
+  x47, x48 = fiat_p384_addcarryx_u64(x38, x38, x46)
+  var x49 uint64
+  var x50 fiat_p384_uint1
+  x49, x50 = fiat_p384_addcarryx_u64(x39, x39, x48)
+  var x51 uint64
+  var x52 fiat_p384_uint1
+  x51, x52 = fiat_p384_addcarryx_u64(x40, x40, x50)
+  var x53 uint64
+  var x54 fiat_p384_uint1
+  x53, x54 = fiat_p384_subborrowx_u64(x41, 0xffffffff, 0x0)
+  var x55 uint64
+  var x56 fiat_p384_uint1
+  x55, x56 = fiat_p384_subborrowx_u64(x43, 0xffffffff00000000, x54)
+  var x57 uint64
+  var x58 fiat_p384_uint1
+  x57, x58 = fiat_p384_subborrowx_u64(x45, 0xfffffffffffffffe, x56)
+  var x59 uint64
+  var x60 fiat_p384_uint1
+  x59, x60 = fiat_p384_subborrowx_u64(x47, 0xffffffffffffffff, x58)
+  var x61 uint64
+  var x62 fiat_p384_uint1
+  x61, x62 = fiat_p384_subborrowx_u64(x49, 0xffffffffffffffff, x60)
+  var x63 uint64
+  var x64 fiat_p384_uint1
+  x63, x64 = fiat_p384_subborrowx_u64(x51, 0xffffffffffffffff, x62)
+  var x66 fiat_p384_uint1
+  _, x66 = fiat_p384_subborrowx_u64(uint64(x52), uint64(0x0), x64)
+  var x67 uint64 = (arg4[5])
+  var x68 uint64 = (arg4[4])
+  var x69 uint64 = (arg4[3])
+  var x70 uint64 = (arg4[2])
+  var x71 uint64 = (arg4[1])
+  var x72 uint64 = (arg4[0])
+  var x73 uint64
+  var x74 fiat_p384_uint1
+  x73, x74 = fiat_p384_subborrowx_u64(uint64(0x0), x72, 0x0)
+  var x75 uint64
+  var x76 fiat_p384_uint1
+  x75, x76 = fiat_p384_subborrowx_u64(uint64(0x0), x71, x74)
+  var x77 uint64
+  var x78 fiat_p384_uint1
+  x77, x78 = fiat_p384_subborrowx_u64(uint64(0x0), x70, x76)
+  var x79 uint64
+  var x80 fiat_p384_uint1
+  x79, x80 = fiat_p384_subborrowx_u64(uint64(0x0), x69, x78)
+  var x81 uint64
+  var x82 fiat_p384_uint1
+  x81, x82 = fiat_p384_subborrowx_u64(uint64(0x0), x68, x80)
   var x83 uint64
   var x84 fiat_p384_uint1
-  x83, x84 = fiat_p384_addcarryx_u64(x70, (x82 & 0xffffffff), 0x0)
+  x83, x84 = fiat_p384_subborrowx_u64(uint64(0x0), x67, x82)
   var x85 uint64
-  var x86 fiat_p384_uint1
-  x85, x86 = fiat_p384_addcarryx_u64(x72, (x82 & 0xffffffff00000000), x84)
-  var x87 uint64
-  var x88 fiat_p384_uint1
-  x87, x88 = fiat_p384_addcarryx_u64(x74, (x82 & 0xfffffffffffffffe), x86)
-  var x89 uint64
-  var x90 fiat_p384_uint1
-  x89, x90 = fiat_p384_addcarryx_u64(x76, x82, x88)
-  var x91 uint64
-  var x92 fiat_p384_uint1
-  x91, x92 = fiat_p384_addcarryx_u64(x78, x82, x90)
-  var x93 uint64
-  x93, _ = fiat_p384_addcarryx_u64(x80, x82, x92)
-  var x95 uint64
-  fiat_p384_cmovznz_u64(&x95, x2, (arg5[0]), x83)
+  fiat_p384_cmovznz_u64(&x85, x84, uint64(0x0), 0xffffffffffffffff)
+  var x86 uint64
+  var x87 fiat_p384_uint1
+  x86, x87 = fiat_p384_addcarryx_u64(x73, (x85 & 0xffffffff), 0x0)
+  var x88 uint64
+  var x89 fiat_p384_uint1
+  x88, x89 = fiat_p384_addcarryx_u64(x75, (x85 & 0xffffffff00000000), x87)
+  var x90 uint64
+  var x91 fiat_p384_uint1
+  x90, x91 = fiat_p384_addcarryx_u64(x77, (x85 & 0xfffffffffffffffe), x89)
+  var x92 uint64
+  var x93 fiat_p384_uint1
+  x92, x93 = fiat_p384_addcarryx_u64(x79, x85, x91)
+  var x94 uint64
+  var x95 fiat_p384_uint1
+  x94, x95 = fiat_p384_addcarryx_u64(x81, x85, x93)
   var x96 uint64
-  fiat_p384_cmovznz_u64(&x96, x2, (arg5[1]), x85)
-  var x97 uint64
-  fiat_p384_cmovznz_u64(&x97, x2, (arg5[2]), x87)
+  x96, _ = fiat_p384_addcarryx_u64(x83, x85, x95)
   var x98 uint64
-  fiat_p384_cmovznz_u64(&x98, x2, (arg5[3]), x89)
+  fiat_p384_cmovznz_u64(&x98, x3, (arg5[0]), x86)
   var x99 uint64
-  fiat_p384_cmovznz_u64(&x99, x2, (arg5[4]), x91)
+  fiat_p384_cmovznz_u64(&x99, x3, (arg5[1]), x88)
   var x100 uint64
-  fiat_p384_cmovznz_u64(&x100, x2, (arg5[5]), x93)
-  var x101 fiat_p384_uint1 = (fiat_p384_uint1(x25) & 0x1)
+  fiat_p384_cmovznz_u64(&x100, x3, (arg5[2]), x90)
+  var x101 uint64
+  fiat_p384_cmovznz_u64(&x101, x3, (arg5[3]), x92)
   var x102 uint64
-  fiat_p384_cmovznz_u64(&x102, x101, uint64(0x0), x4)
+  fiat_p384_cmovznz_u64(&x102, x3, (arg5[4]), x94)
   var x103 uint64
-  fiat_p384_cmovznz_u64(&x103, x101, uint64(0x0), x5)
-  var x104 uint64
-  fiat_p384_cmovznz_u64(&x104, x101, uint64(0x0), x6)
+  fiat_p384_cmovznz_u64(&x103, x3, (arg5[5]), x96)
+  var x104 fiat_p384_uint1 = (fiat_p384_uint1(x28) & 0x1)
   var x105 uint64
-  fiat_p384_cmovznz_u64(&x105, x101, uint64(0x0), x7)
+  fiat_p384_cmovznz_u64(&x105, x104, uint64(0x0), x7)
   var x106 uint64
-  fiat_p384_cmovznz_u64(&x106, x101, uint64(0x0), x8)
+  fiat_p384_cmovznz_u64(&x106, x104, uint64(0x0), x8)
   var x107 uint64
-  fiat_p384_cmovznz_u64(&x107, x101, uint64(0x0), x9)
+  fiat_p384_cmovznz_u64(&x107, x104, uint64(0x0), x9)
   var x108 uint64
-  fiat_p384_cmovznz_u64(&x108, x101, uint64(0x0), x10)
+  fiat_p384_cmovznz_u64(&x108, x104, uint64(0x0), x10)
   var x109 uint64
-  var x110 fiat_p384_uint1
-  x109, x110 = fiat_p384_addcarryx_u64(x25, x102, 0x0)
+  fiat_p384_cmovznz_u64(&x109, x104, uint64(0x0), x11)
+  var x110 uint64
+  fiat_p384_cmovznz_u64(&x110, x104, uint64(0x0), x12)
   var x111 uint64
-  var x112 fiat_p384_uint1
-  x111, x112 = fiat_p384_addcarryx_u64(x26, x103, x110)
-  var x113 uint64
-  var x114 fiat_p384_uint1
-  x113, x114 = fiat_p384_addcarryx_u64(x27, x104, x112)
-  var x115 uint64
-  var x116 fiat_p384_uint1
-  x115, x116 = fiat_p384_addcarryx_u64(x28, x105, x114)
-  var x117 uint64
-  var x118 fiat_p384_uint1
-  x117, x118 = fiat_p384_addcarryx_u64(x29, x106, x116)
-  var x119 uint64
-  var x120 fiat_p384_uint1
-  x119, x120 = fiat_p384_addcarryx_u64(x30, x107, x118)
-  var x121 uint64
-  x121, _ = fiat_p384_addcarryx_u64(x31, x108, x120)
-  var x123 uint64
-  fiat_p384_cmovznz_u64(&x123, x101, uint64(0x0), x32)
+  fiat_p384_cmovznz_u64(&x111, x104, uint64(0x0), x13)
+  var x112 uint64
+  var x113 fiat_p384_uint1
+  x112, x113 = fiat_p384_addcarryx_u64(x28, x105, 0x0)
+  var x114 uint64
+  var x115 fiat_p384_uint1
+  x114, x115 = fiat_p384_addcarryx_u64(x29, x106, x113)
+  var x116 uint64
+  var x117 fiat_p384_uint1
+  x116, x117 = fiat_p384_addcarryx_u64(x30, x107, x115)
+  var x118 uint64
+  var x119 fiat_p384_uint1
+  x118, x119 = fiat_p384_addcarryx_u64(x31, x108, x117)
+  var x120 uint64
+  var x121 fiat_p384_uint1
+  x120, x121 = fiat_p384_addcarryx_u64(x32, x109, x119)
+  var x122 uint64
+  var x123 fiat_p384_uint1
+  x122, x123 = fiat_p384_addcarryx_u64(x33, x110, x121)
   var x124 uint64
-  fiat_p384_cmovznz_u64(&x124, x101, uint64(0x0), x33)
-  var x125 uint64
-  fiat_p384_cmovznz_u64(&x125, x101, uint64(0x0), x34)
+  x124, _ = fiat_p384_addcarryx_u64(x34, x111, x123)
   var x126 uint64
-  fiat_p384_cmovznz_u64(&x126, x101, uint64(0x0), x35)
+  fiat_p384_cmovznz_u64(&x126, x104, uint64(0x0), x35)
   var x127 uint64
-  fiat_p384_cmovznz_u64(&x127, x101, uint64(0x0), x36)
+  fiat_p384_cmovznz_u64(&x127, x104, uint64(0x0), x36)
   var x128 uint64
-  fiat_p384_cmovznz_u64(&x128, x101, uint64(0x0), x37)
+  fiat_p384_cmovznz_u64(&x128, x104, uint64(0x0), x37)
   var x129 uint64
-  var x130 fiat_p384_uint1
-  x129, x130 = fiat_p384_addcarryx_u64(x95, x123, 0x0)
+  fiat_p384_cmovznz_u64(&x129, x104, uint64(0x0), x38)
+  var x130 uint64
+  fiat_p384_cmovznz_u64(&x130, x104, uint64(0x0), x39)
   var x131 uint64
-  var x132 fiat_p384_uint1
-  x131, x132 = fiat_p384_addcarryx_u64(x96, x124, x130)
-  var x133 uint64
-  var x134 fiat_p384_uint1
-  x133, x134 = fiat_p384_addcarryx_u64(x97, x125, x132)
-  var x135 uint64
-  var x136 fiat_p384_uint1
-  x135, x136 = fiat_p384_addcarryx_u64(x98, x126, x134)
-  var x137 uint64
-  var x138 fiat_p384_uint1
-  x137, x138 = fiat_p384_addcarryx_u64(x99, x127, x136)
-  var x139 uint64
-  var x140 fiat_p384_uint1
-  x139, x140 = fiat_p384_addcarryx_u64(x100, x128, x138)
-  var x141 uint64
-  var x142 fiat_p384_uint1
-  x141, x142 = fiat_p384_subborrowx_u64(x129, 0xffffffff, 0x0)
-  var x143 uint64
-  var x144 fiat_p384_uint1
-  x143, x144 = fiat_p384_subborrowx_u64(x131, 0xffffffff00000000, x142)
-  var x145 uint64
-  var x146 fiat_p384_uint1
-  x145, x146 = fiat_p384_subborrowx_u64(x133, 0xfffffffffffffffe, x144)
-  var x147 uint64
-  var x148 fiat_p384_uint1
-  x147, x148 = fiat_p384_subborrowx_u64(x135, 0xffffffffffffffff, x146)
-  var x149 uint64
-  var x150 fiat_p384_uint1
-  x149, x150 = fiat_p384_subborrowx_u64(x137, 0xffffffffffffffff, x148)
-  var x151 uint64
-  var x152 fiat_p384_uint1
-  x151, x152 = fiat_p384_subborrowx_u64(x139, 0xffffffffffffffff, x150)
-  var x154 fiat_p384_uint1
-  _, x154 = fiat_p384_subborrowx_u64(uint64(x140), uint64(0x0), x152)
-  var x155 uint64 = (uint64((fiat_p384_uint128(x3) + fiat_p384_uint128(0x1))) & 0xffffffffffffffff)
-  var x156 uint64 = ((x109 >> 1) | ((x111 << 63) & 0xffffffffffffffff))
-  var x157 uint64 = ((x111 >> 1) | ((x113 << 63) & 0xffffffffffffffff))
-  var x158 uint64 = ((x113 >> 1) | ((x115 << 63) & 0xffffffffffffffff))
-  var x159 uint64 = ((x115 >> 1) | ((x117 << 63) & 0xffffffffffffffff))
-  var x160 uint64 = ((x117 >> 1) | ((x119 << 63) & 0xffffffffffffffff))
-  var x161 uint64 = ((x119 >> 1) | ((x121 << 63) & 0xffffffffffffffff))
-  var x162 uint64 = ((x121 & 0x8000000000000000) | (x121 >> 1))
-  var x163 uint64
-  fiat_p384_cmovznz_u64(&x163, x63, x50, x38)
-  var x164 uint64
-  fiat_p384_cmovznz_u64(&x164, x63, x52, x40)
-  var x165 uint64
-  fiat_p384_cmovznz_u64(&x165, x63, x54, x42)
-  var x166 uint64
-  fiat_p384_cmovznz_u64(&x166, x63, x56, x44)
+  fiat_p384_cmovznz_u64(&x131, x104, uint64(0x0), x40)
+  var x132 uint64
+  var x133 fiat_p384_uint1
+  x132, x133 = fiat_p384_addcarryx_u64(x98, x126, 0x0)
+  var x134 uint64
+  var x135 fiat_p384_uint1
+  x134, x135 = fiat_p384_addcarryx_u64(x99, x127, x133)
+  var x136 uint64
+  var x137 fiat_p384_uint1
+  x136, x137 = fiat_p384_addcarryx_u64(x100, x128, x135)
+  var x138 uint64
+  var x139 fiat_p384_uint1
+  x138, x139 = fiat_p384_addcarryx_u64(x101, x129, x137)
+  var x140 uint64
+  var x141 fiat_p384_uint1
+  x140, x141 = fiat_p384_addcarryx_u64(x102, x130, x139)
+  var x142 uint64
+  var x143 fiat_p384_uint1
+  x142, x143 = fiat_p384_addcarryx_u64(x103, x131, x141)
+  var x144 uint64
+  var x145 fiat_p384_uint1
+  x144, x145 = fiat_p384_subborrowx_u64(x132, 0xffffffff, 0x0)
+  var x146 uint64
+  var x147 fiat_p384_uint1
+  x146, x147 = fiat_p384_subborrowx_u64(x134, 0xffffffff00000000, x145)
+  var x148 uint64
+  var x149 fiat_p384_uint1
+  x148, x149 = fiat_p384_subborrowx_u64(x136, 0xfffffffffffffffe, x147)
+  var x150 uint64
+  var x151 fiat_p384_uint1
+  x150, x151 = fiat_p384_subborrowx_u64(x138, 0xffffffffffffffff, x149)
+  var x152 uint64
+  var x153 fiat_p384_uint1
+  x152, x153 = fiat_p384_subborrowx_u64(x140, 0xffffffffffffffff, x151)
+  var x154 uint64
+  var x155 fiat_p384_uint1
+  x154, x155 = fiat_p384_subborrowx_u64(x142, 0xffffffffffffffff, x153)
+  var x157 fiat_p384_uint1
+  _, x157 = fiat_p384_subborrowx_u64(uint64(x143), uint64(0x0), x155)
+  var x158 uint64
+  x158, _ = fiat_p384_addcarryx_u64(x6, uint64(0x1), 0x0)
+  var x160 uint64 = ((x112 >> 1) | ((x114 << 63) & 0xffffffffffffffff))
+  var x161 uint64 = ((x114 >> 1) | ((x116 << 63) & 0xffffffffffffffff))
+  var x162 uint64 = ((x116 >> 1) | ((x118 << 63) & 0xffffffffffffffff))
+  var x163 uint64 = ((x118 >> 1) | ((x120 << 63) & 0xffffffffffffffff))
+  var x164 uint64 = ((x120 >> 1) | ((x122 << 63) & 0xffffffffffffffff))
+  var x165 uint64 = ((x122 >> 1) | ((x124 << 63) & 0xffffffffffffffff))
+  var x166 uint64 = ((x124 & 0x8000000000000000) | (x124 >> 1))
   var x167 uint64
-  fiat_p384_cmovznz_u64(&x167, x63, x58, x46)
+  fiat_p384_cmovznz_u64(&x167, x66, x53, x41)
   var x168 uint64
-  fiat_p384_cmovznz_u64(&x168, x63, x60, x48)
+  fiat_p384_cmovznz_u64(&x168, x66, x55, x43)
   var x169 uint64
-  fiat_p384_cmovznz_u64(&x169, x154, x141, x129)
+  fiat_p384_cmovznz_u64(&x169, x66, x57, x45)
   var x170 uint64
-  fiat_p384_cmovznz_u64(&x170, x154, x143, x131)
+  fiat_p384_cmovznz_u64(&x170, x66, x59, x47)
   var x171 uint64
-  fiat_p384_cmovznz_u64(&x171, x154, x145, x133)
+  fiat_p384_cmovznz_u64(&x171, x66, x61, x49)
   var x172 uint64
-  fiat_p384_cmovznz_u64(&x172, x154, x147, x135)
+  fiat_p384_cmovznz_u64(&x172, x66, x63, x51)
   var x173 uint64
-  fiat_p384_cmovznz_u64(&x173, x154, x149, x137)
+  fiat_p384_cmovznz_u64(&x173, x157, x144, x132)
   var x174 uint64
-  fiat_p384_cmovznz_u64(&x174, x154, x151, x139)
-  *out1 = x155
-  out2[0] = x4
-  out2[1] = x5
-  out2[2] = x6
-  out2[3] = x7
-  out2[4] = x8
-  out2[5] = x9
-  out2[6] = x10
-  out3[0] = x156
-  out3[1] = x157
-  out3[2] = x158
-  out3[3] = x159
-  out3[4] = x160
-  out3[5] = x161
-  out3[6] = x162
-  out4[0] = x163
-  out4[1] = x164
-  out4[2] = x165
-  out4[3] = x166
-  out4[4] = x167
-  out4[5] = x168
-  out5[0] = x169
-  out5[1] = x170
-  out5[2] = x171
-  out5[3] = x172
-  out5[4] = x173
-  out5[5] = x174
+  fiat_p384_cmovznz_u64(&x174, x157, x146, x134)
+  var x175 uint64
+  fiat_p384_cmovznz_u64(&x175, x157, x148, x136)
+  var x176 uint64
+  fiat_p384_cmovznz_u64(&x176, x157, x150, x138)
+  var x177 uint64
+  fiat_p384_cmovznz_u64(&x177, x157, x152, x140)
+  var x178 uint64
+  fiat_p384_cmovznz_u64(&x178, x157, x154, x142)
+  *out1 = x158
+  out2[0] = x7
+  out2[1] = x8
+  out2[2] = x9
+  out2[3] = x10
+  out2[4] = x11
+  out2[5] = x12
+  out2[6] = x13
+  out3[0] = x160
+  out3[1] = x161
+  out3[2] = x162
+  out3[3] = x163
+  out3[4] = x164
+  out3[5] = x165
+  out3[6] = x166
+  out4[0] = x167
+  out4[1] = x168
+  out4[2] = x169
+  out4[3] = x170
+  out4[4] = x171
+  out4[5] = x172
+  out5[0] = x173
+  out5[1] = x174
+  out5[2] = x175
+  out5[3] = x176
+  out5[4] = x177
+  out5[5] = x178
 }
 
 /*

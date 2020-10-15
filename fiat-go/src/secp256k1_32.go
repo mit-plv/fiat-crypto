@@ -4826,399 +4826,403 @@ func fiat_secp256k1_msat(out1 *[9]uint32) {
  */
 /*inline*/
 func fiat_secp256k1_divstep(out1 *uint32, out2 *[9]uint32, out3 *[9]uint32, out4 *[8]uint32, out5 *[8]uint32, arg1 uint32, arg2 *[9]uint32, arg3 *[9]uint32, arg4 *[8]uint32, arg5 *[8]uint32) {
-  var x1 uint32 = (uint32((uint64((^arg1)) + uint64(0x1))) & 0xffffffff)
-  var x2 fiat_secp256k1_uint1 = (fiat_secp256k1_uint1((x1 >> 31)) & (fiat_secp256k1_uint1((arg3[0])) & 0x1))
-  var x3 uint32
-  fiat_secp256k1_cmovznz_u32(&x3, x2, arg1, (uint32((uint64((^arg1)) + uint64(0x1))) & 0xffffffff))
+  var x1 uint32
+  x1, _ = fiat_secp256k1_addcarryx_u32((^arg1), uint32(0x1), 0x0)
+  var x3 fiat_secp256k1_uint1 = (fiat_secp256k1_uint1((x1 >> 31)) & (fiat_secp256k1_uint1((arg3[0])) & 0x1))
   var x4 uint32
-  fiat_secp256k1_cmovznz_u32(&x4, x2, (arg2[0]), (arg3[0]))
-  var x5 uint32
-  fiat_secp256k1_cmovznz_u32(&x5, x2, (arg2[1]), (arg3[1]))
+  x4, _ = fiat_secp256k1_addcarryx_u32((^arg1), uint32(0x1), 0x0)
   var x6 uint32
-  fiat_secp256k1_cmovznz_u32(&x6, x2, (arg2[2]), (arg3[2]))
+  fiat_secp256k1_cmovznz_u32(&x6, x3, arg1, x4)
   var x7 uint32
-  fiat_secp256k1_cmovznz_u32(&x7, x2, (arg2[3]), (arg3[3]))
+  fiat_secp256k1_cmovznz_u32(&x7, x3, (arg2[0]), (arg3[0]))
   var x8 uint32
-  fiat_secp256k1_cmovznz_u32(&x8, x2, (arg2[4]), (arg3[4]))
+  fiat_secp256k1_cmovznz_u32(&x8, x3, (arg2[1]), (arg3[1]))
   var x9 uint32
-  fiat_secp256k1_cmovznz_u32(&x9, x2, (arg2[5]), (arg3[5]))
+  fiat_secp256k1_cmovznz_u32(&x9, x3, (arg2[2]), (arg3[2]))
   var x10 uint32
-  fiat_secp256k1_cmovznz_u32(&x10, x2, (arg2[6]), (arg3[6]))
+  fiat_secp256k1_cmovznz_u32(&x10, x3, (arg2[3]), (arg3[3]))
   var x11 uint32
-  fiat_secp256k1_cmovznz_u32(&x11, x2, (arg2[7]), (arg3[7]))
+  fiat_secp256k1_cmovznz_u32(&x11, x3, (arg2[4]), (arg3[4]))
   var x12 uint32
-  fiat_secp256k1_cmovznz_u32(&x12, x2, (arg2[8]), (arg3[8]))
+  fiat_secp256k1_cmovznz_u32(&x12, x3, (arg2[5]), (arg3[5]))
   var x13 uint32
-  var x14 fiat_secp256k1_uint1
-  x13, x14 = fiat_secp256k1_addcarryx_u32(uint32(0x1), (^(arg2[0])), 0x0)
+  fiat_secp256k1_cmovznz_u32(&x13, x3, (arg2[6]), (arg3[6]))
+  var x14 uint32
+  fiat_secp256k1_cmovznz_u32(&x14, x3, (arg2[7]), (arg3[7]))
   var x15 uint32
-  var x16 fiat_secp256k1_uint1
-  x15, x16 = fiat_secp256k1_addcarryx_u32(uint32(0x0), (^(arg2[1])), x14)
-  var x17 uint32
-  var x18 fiat_secp256k1_uint1
-  x17, x18 = fiat_secp256k1_addcarryx_u32(uint32(0x0), (^(arg2[2])), x16)
-  var x19 uint32
-  var x20 fiat_secp256k1_uint1
-  x19, x20 = fiat_secp256k1_addcarryx_u32(uint32(0x0), (^(arg2[3])), x18)
-  var x21 uint32
-  var x22 fiat_secp256k1_uint1
-  x21, x22 = fiat_secp256k1_addcarryx_u32(uint32(0x0), (^(arg2[4])), x20)
-  var x23 uint32
-  var x24 fiat_secp256k1_uint1
-  x23, x24 = fiat_secp256k1_addcarryx_u32(uint32(0x0), (^(arg2[5])), x22)
-  var x25 uint32
-  var x26 fiat_secp256k1_uint1
-  x25, x26 = fiat_secp256k1_addcarryx_u32(uint32(0x0), (^(arg2[6])), x24)
-  var x27 uint32
-  var x28 fiat_secp256k1_uint1
-  x27, x28 = fiat_secp256k1_addcarryx_u32(uint32(0x0), (^(arg2[7])), x26)
-  var x29 uint32
-  x29, _ = fiat_secp256k1_addcarryx_u32(uint32(0x0), (^(arg2[8])), x28)
-  var x31 uint32
-  fiat_secp256k1_cmovznz_u32(&x31, x2, (arg3[0]), x13)
+  fiat_secp256k1_cmovznz_u32(&x15, x3, (arg2[8]), (arg3[8]))
+  var x16 uint32
+  var x17 fiat_secp256k1_uint1
+  x16, x17 = fiat_secp256k1_addcarryx_u32(uint32(0x1), (^(arg2[0])), 0x0)
+  var x18 uint32
+  var x19 fiat_secp256k1_uint1
+  x18, x19 = fiat_secp256k1_addcarryx_u32(uint32(0x0), (^(arg2[1])), x17)
+  var x20 uint32
+  var x21 fiat_secp256k1_uint1
+  x20, x21 = fiat_secp256k1_addcarryx_u32(uint32(0x0), (^(arg2[2])), x19)
+  var x22 uint32
+  var x23 fiat_secp256k1_uint1
+  x22, x23 = fiat_secp256k1_addcarryx_u32(uint32(0x0), (^(arg2[3])), x21)
+  var x24 uint32
+  var x25 fiat_secp256k1_uint1
+  x24, x25 = fiat_secp256k1_addcarryx_u32(uint32(0x0), (^(arg2[4])), x23)
+  var x26 uint32
+  var x27 fiat_secp256k1_uint1
+  x26, x27 = fiat_secp256k1_addcarryx_u32(uint32(0x0), (^(arg2[5])), x25)
+  var x28 uint32
+  var x29 fiat_secp256k1_uint1
+  x28, x29 = fiat_secp256k1_addcarryx_u32(uint32(0x0), (^(arg2[6])), x27)
+  var x30 uint32
+  var x31 fiat_secp256k1_uint1
+  x30, x31 = fiat_secp256k1_addcarryx_u32(uint32(0x0), (^(arg2[7])), x29)
   var x32 uint32
-  fiat_secp256k1_cmovznz_u32(&x32, x2, (arg3[1]), x15)
-  var x33 uint32
-  fiat_secp256k1_cmovznz_u32(&x33, x2, (arg3[2]), x17)
+  x32, _ = fiat_secp256k1_addcarryx_u32(uint32(0x0), (^(arg2[8])), x31)
   var x34 uint32
-  fiat_secp256k1_cmovznz_u32(&x34, x2, (arg3[3]), x19)
+  fiat_secp256k1_cmovznz_u32(&x34, x3, (arg3[0]), x16)
   var x35 uint32
-  fiat_secp256k1_cmovznz_u32(&x35, x2, (arg3[4]), x21)
+  fiat_secp256k1_cmovznz_u32(&x35, x3, (arg3[1]), x18)
   var x36 uint32
-  fiat_secp256k1_cmovznz_u32(&x36, x2, (arg3[5]), x23)
+  fiat_secp256k1_cmovznz_u32(&x36, x3, (arg3[2]), x20)
   var x37 uint32
-  fiat_secp256k1_cmovznz_u32(&x37, x2, (arg3[6]), x25)
+  fiat_secp256k1_cmovznz_u32(&x37, x3, (arg3[3]), x22)
   var x38 uint32
-  fiat_secp256k1_cmovznz_u32(&x38, x2, (arg3[7]), x27)
+  fiat_secp256k1_cmovznz_u32(&x38, x3, (arg3[4]), x24)
   var x39 uint32
-  fiat_secp256k1_cmovznz_u32(&x39, x2, (arg3[8]), x29)
+  fiat_secp256k1_cmovznz_u32(&x39, x3, (arg3[5]), x26)
   var x40 uint32
-  fiat_secp256k1_cmovznz_u32(&x40, x2, (arg4[0]), (arg5[0]))
+  fiat_secp256k1_cmovznz_u32(&x40, x3, (arg3[6]), x28)
   var x41 uint32
-  fiat_secp256k1_cmovznz_u32(&x41, x2, (arg4[1]), (arg5[1]))
+  fiat_secp256k1_cmovznz_u32(&x41, x3, (arg3[7]), x30)
   var x42 uint32
-  fiat_secp256k1_cmovznz_u32(&x42, x2, (arg4[2]), (arg5[2]))
+  fiat_secp256k1_cmovznz_u32(&x42, x3, (arg3[8]), x32)
   var x43 uint32
-  fiat_secp256k1_cmovznz_u32(&x43, x2, (arg4[3]), (arg5[3]))
+  fiat_secp256k1_cmovznz_u32(&x43, x3, (arg4[0]), (arg5[0]))
   var x44 uint32
-  fiat_secp256k1_cmovznz_u32(&x44, x2, (arg4[4]), (arg5[4]))
+  fiat_secp256k1_cmovznz_u32(&x44, x3, (arg4[1]), (arg5[1]))
   var x45 uint32
-  fiat_secp256k1_cmovznz_u32(&x45, x2, (arg4[5]), (arg5[5]))
+  fiat_secp256k1_cmovznz_u32(&x45, x3, (arg4[2]), (arg5[2]))
   var x46 uint32
-  fiat_secp256k1_cmovznz_u32(&x46, x2, (arg4[6]), (arg5[6]))
+  fiat_secp256k1_cmovznz_u32(&x46, x3, (arg4[3]), (arg5[3]))
   var x47 uint32
-  fiat_secp256k1_cmovznz_u32(&x47, x2, (arg4[7]), (arg5[7]))
+  fiat_secp256k1_cmovznz_u32(&x47, x3, (arg4[4]), (arg5[4]))
   var x48 uint32
-  var x49 fiat_secp256k1_uint1
-  x48, x49 = fiat_secp256k1_addcarryx_u32(x40, x40, 0x0)
+  fiat_secp256k1_cmovznz_u32(&x48, x3, (arg4[5]), (arg5[5]))
+  var x49 uint32
+  fiat_secp256k1_cmovznz_u32(&x49, x3, (arg4[6]), (arg5[6]))
   var x50 uint32
-  var x51 fiat_secp256k1_uint1
-  x50, x51 = fiat_secp256k1_addcarryx_u32(x41, x41, x49)
-  var x52 uint32
-  var x53 fiat_secp256k1_uint1
-  x52, x53 = fiat_secp256k1_addcarryx_u32(x42, x42, x51)
-  var x54 uint32
-  var x55 fiat_secp256k1_uint1
-  x54, x55 = fiat_secp256k1_addcarryx_u32(x43, x43, x53)
-  var x56 uint32
-  var x57 fiat_secp256k1_uint1
-  x56, x57 = fiat_secp256k1_addcarryx_u32(x44, x44, x55)
-  var x58 uint32
-  var x59 fiat_secp256k1_uint1
-  x58, x59 = fiat_secp256k1_addcarryx_u32(x45, x45, x57)
-  var x60 uint32
-  var x61 fiat_secp256k1_uint1
-  x60, x61 = fiat_secp256k1_addcarryx_u32(x46, x46, x59)
-  var x62 uint32
-  var x63 fiat_secp256k1_uint1
-  x62, x63 = fiat_secp256k1_addcarryx_u32(x47, x47, x61)
-  var x64 uint32
-  var x65 fiat_secp256k1_uint1
-  x64, x65 = fiat_secp256k1_subborrowx_u32(x48, 0xfffffc2f, 0x0)
-  var x66 uint32
-  var x67 fiat_secp256k1_uint1
-  x66, x67 = fiat_secp256k1_subborrowx_u32(x50, 0xfffffffe, x65)
-  var x68 uint32
-  var x69 fiat_secp256k1_uint1
-  x68, x69 = fiat_secp256k1_subborrowx_u32(x52, 0xffffffff, x67)
-  var x70 uint32
-  var x71 fiat_secp256k1_uint1
-  x70, x71 = fiat_secp256k1_subborrowx_u32(x54, 0xffffffff, x69)
-  var x72 uint32
-  var x73 fiat_secp256k1_uint1
-  x72, x73 = fiat_secp256k1_subborrowx_u32(x56, 0xffffffff, x71)
-  var x74 uint32
-  var x75 fiat_secp256k1_uint1
-  x74, x75 = fiat_secp256k1_subborrowx_u32(x58, 0xffffffff, x73)
-  var x76 uint32
-  var x77 fiat_secp256k1_uint1
-  x76, x77 = fiat_secp256k1_subborrowx_u32(x60, 0xffffffff, x75)
-  var x78 uint32
-  var x79 fiat_secp256k1_uint1
-  x78, x79 = fiat_secp256k1_subborrowx_u32(x62, 0xffffffff, x77)
-  var x81 fiat_secp256k1_uint1
-  _, x81 = fiat_secp256k1_subborrowx_u32(uint32(x63), uint32(0x0), x79)
-  var x82 uint32 = (arg4[7])
-  var x83 uint32 = (arg4[6])
-  var x84 uint32 = (arg4[5])
-  var x85 uint32 = (arg4[4])
-  var x86 uint32 = (arg4[3])
-  var x87 uint32 = (arg4[2])
-  var x88 uint32 = (arg4[1])
-  var x89 uint32 = (arg4[0])
-  var x90 uint32
-  var x91 fiat_secp256k1_uint1
-  x90, x91 = fiat_secp256k1_subborrowx_u32(uint32(0x0), x89, 0x0)
-  var x92 uint32
-  var x93 fiat_secp256k1_uint1
-  x92, x93 = fiat_secp256k1_subborrowx_u32(uint32(0x0), x88, x91)
-  var x94 uint32
-  var x95 fiat_secp256k1_uint1
-  x94, x95 = fiat_secp256k1_subborrowx_u32(uint32(0x0), x87, x93)
-  var x96 uint32
-  var x97 fiat_secp256k1_uint1
-  x96, x97 = fiat_secp256k1_subborrowx_u32(uint32(0x0), x86, x95)
-  var x98 uint32
-  var x99 fiat_secp256k1_uint1
-  x98, x99 = fiat_secp256k1_subborrowx_u32(uint32(0x0), x85, x97)
-  var x100 uint32
-  var x101 fiat_secp256k1_uint1
-  x100, x101 = fiat_secp256k1_subborrowx_u32(uint32(0x0), x84, x99)
-  var x102 uint32
-  var x103 fiat_secp256k1_uint1
-  x102, x103 = fiat_secp256k1_subborrowx_u32(uint32(0x0), x83, x101)
-  var x104 uint32
-  var x105 fiat_secp256k1_uint1
-  x104, x105 = fiat_secp256k1_subborrowx_u32(uint32(0x0), x82, x103)
-  var x106 uint32
-  fiat_secp256k1_cmovznz_u32(&x106, x105, uint32(0x0), 0xffffffff)
+  fiat_secp256k1_cmovznz_u32(&x50, x3, (arg4[7]), (arg5[7]))
+  var x51 uint32
+  var x52 fiat_secp256k1_uint1
+  x51, x52 = fiat_secp256k1_addcarryx_u32(x43, x43, 0x0)
+  var x53 uint32
+  var x54 fiat_secp256k1_uint1
+  x53, x54 = fiat_secp256k1_addcarryx_u32(x44, x44, x52)
+  var x55 uint32
+  var x56 fiat_secp256k1_uint1
+  x55, x56 = fiat_secp256k1_addcarryx_u32(x45, x45, x54)
+  var x57 uint32
+  var x58 fiat_secp256k1_uint1
+  x57, x58 = fiat_secp256k1_addcarryx_u32(x46, x46, x56)
+  var x59 uint32
+  var x60 fiat_secp256k1_uint1
+  x59, x60 = fiat_secp256k1_addcarryx_u32(x47, x47, x58)
+  var x61 uint32
+  var x62 fiat_secp256k1_uint1
+  x61, x62 = fiat_secp256k1_addcarryx_u32(x48, x48, x60)
+  var x63 uint32
+  var x64 fiat_secp256k1_uint1
+  x63, x64 = fiat_secp256k1_addcarryx_u32(x49, x49, x62)
+  var x65 uint32
+  var x66 fiat_secp256k1_uint1
+  x65, x66 = fiat_secp256k1_addcarryx_u32(x50, x50, x64)
+  var x67 uint32
+  var x68 fiat_secp256k1_uint1
+  x67, x68 = fiat_secp256k1_subborrowx_u32(x51, 0xfffffc2f, 0x0)
+  var x69 uint32
+  var x70 fiat_secp256k1_uint1
+  x69, x70 = fiat_secp256k1_subborrowx_u32(x53, 0xfffffffe, x68)
+  var x71 uint32
+  var x72 fiat_secp256k1_uint1
+  x71, x72 = fiat_secp256k1_subborrowx_u32(x55, 0xffffffff, x70)
+  var x73 uint32
+  var x74 fiat_secp256k1_uint1
+  x73, x74 = fiat_secp256k1_subborrowx_u32(x57, 0xffffffff, x72)
+  var x75 uint32
+  var x76 fiat_secp256k1_uint1
+  x75, x76 = fiat_secp256k1_subborrowx_u32(x59, 0xffffffff, x74)
+  var x77 uint32
+  var x78 fiat_secp256k1_uint1
+  x77, x78 = fiat_secp256k1_subborrowx_u32(x61, 0xffffffff, x76)
+  var x79 uint32
+  var x80 fiat_secp256k1_uint1
+  x79, x80 = fiat_secp256k1_subborrowx_u32(x63, 0xffffffff, x78)
+  var x81 uint32
+  var x82 fiat_secp256k1_uint1
+  x81, x82 = fiat_secp256k1_subborrowx_u32(x65, 0xffffffff, x80)
+  var x84 fiat_secp256k1_uint1
+  _, x84 = fiat_secp256k1_subborrowx_u32(uint32(x66), uint32(0x0), x82)
+  var x85 uint32 = (arg4[7])
+  var x86 uint32 = (arg4[6])
+  var x87 uint32 = (arg4[5])
+  var x88 uint32 = (arg4[4])
+  var x89 uint32 = (arg4[3])
+  var x90 uint32 = (arg4[2])
+  var x91 uint32 = (arg4[1])
+  var x92 uint32 = (arg4[0])
+  var x93 uint32
+  var x94 fiat_secp256k1_uint1
+  x93, x94 = fiat_secp256k1_subborrowx_u32(uint32(0x0), x92, 0x0)
+  var x95 uint32
+  var x96 fiat_secp256k1_uint1
+  x95, x96 = fiat_secp256k1_subborrowx_u32(uint32(0x0), x91, x94)
+  var x97 uint32
+  var x98 fiat_secp256k1_uint1
+  x97, x98 = fiat_secp256k1_subborrowx_u32(uint32(0x0), x90, x96)
+  var x99 uint32
+  var x100 fiat_secp256k1_uint1
+  x99, x100 = fiat_secp256k1_subborrowx_u32(uint32(0x0), x89, x98)
+  var x101 uint32
+  var x102 fiat_secp256k1_uint1
+  x101, x102 = fiat_secp256k1_subborrowx_u32(uint32(0x0), x88, x100)
+  var x103 uint32
+  var x104 fiat_secp256k1_uint1
+  x103, x104 = fiat_secp256k1_subborrowx_u32(uint32(0x0), x87, x102)
+  var x105 uint32
+  var x106 fiat_secp256k1_uint1
+  x105, x106 = fiat_secp256k1_subborrowx_u32(uint32(0x0), x86, x104)
   var x107 uint32
   var x108 fiat_secp256k1_uint1
-  x107, x108 = fiat_secp256k1_addcarryx_u32(x90, (x106 & 0xfffffc2f), 0x0)
+  x107, x108 = fiat_secp256k1_subborrowx_u32(uint32(0x0), x85, x106)
   var x109 uint32
-  var x110 fiat_secp256k1_uint1
-  x109, x110 = fiat_secp256k1_addcarryx_u32(x92, (x106 & 0xfffffffe), x108)
-  var x111 uint32
-  var x112 fiat_secp256k1_uint1
-  x111, x112 = fiat_secp256k1_addcarryx_u32(x94, x106, x110)
-  var x113 uint32
-  var x114 fiat_secp256k1_uint1
-  x113, x114 = fiat_secp256k1_addcarryx_u32(x96, x106, x112)
-  var x115 uint32
-  var x116 fiat_secp256k1_uint1
-  x115, x116 = fiat_secp256k1_addcarryx_u32(x98, x106, x114)
-  var x117 uint32
-  var x118 fiat_secp256k1_uint1
-  x117, x118 = fiat_secp256k1_addcarryx_u32(x100, x106, x116)
-  var x119 uint32
-  var x120 fiat_secp256k1_uint1
-  x119, x120 = fiat_secp256k1_addcarryx_u32(x102, x106, x118)
-  var x121 uint32
-  x121, _ = fiat_secp256k1_addcarryx_u32(x104, x106, x120)
-  var x123 uint32
-  fiat_secp256k1_cmovznz_u32(&x123, x2, (arg5[0]), x107)
+  fiat_secp256k1_cmovznz_u32(&x109, x108, uint32(0x0), 0xffffffff)
+  var x110 uint32
+  var x111 fiat_secp256k1_uint1
+  x110, x111 = fiat_secp256k1_addcarryx_u32(x93, (x109 & 0xfffffc2f), 0x0)
+  var x112 uint32
+  var x113 fiat_secp256k1_uint1
+  x112, x113 = fiat_secp256k1_addcarryx_u32(x95, (x109 & 0xfffffffe), x111)
+  var x114 uint32
+  var x115 fiat_secp256k1_uint1
+  x114, x115 = fiat_secp256k1_addcarryx_u32(x97, x109, x113)
+  var x116 uint32
+  var x117 fiat_secp256k1_uint1
+  x116, x117 = fiat_secp256k1_addcarryx_u32(x99, x109, x115)
+  var x118 uint32
+  var x119 fiat_secp256k1_uint1
+  x118, x119 = fiat_secp256k1_addcarryx_u32(x101, x109, x117)
+  var x120 uint32
+  var x121 fiat_secp256k1_uint1
+  x120, x121 = fiat_secp256k1_addcarryx_u32(x103, x109, x119)
+  var x122 uint32
+  var x123 fiat_secp256k1_uint1
+  x122, x123 = fiat_secp256k1_addcarryx_u32(x105, x109, x121)
   var x124 uint32
-  fiat_secp256k1_cmovznz_u32(&x124, x2, (arg5[1]), x109)
-  var x125 uint32
-  fiat_secp256k1_cmovznz_u32(&x125, x2, (arg5[2]), x111)
+  x124, _ = fiat_secp256k1_addcarryx_u32(x107, x109, x123)
   var x126 uint32
-  fiat_secp256k1_cmovznz_u32(&x126, x2, (arg5[3]), x113)
+  fiat_secp256k1_cmovznz_u32(&x126, x3, (arg5[0]), x110)
   var x127 uint32
-  fiat_secp256k1_cmovznz_u32(&x127, x2, (arg5[4]), x115)
+  fiat_secp256k1_cmovznz_u32(&x127, x3, (arg5[1]), x112)
   var x128 uint32
-  fiat_secp256k1_cmovznz_u32(&x128, x2, (arg5[5]), x117)
+  fiat_secp256k1_cmovznz_u32(&x128, x3, (arg5[2]), x114)
   var x129 uint32
-  fiat_secp256k1_cmovznz_u32(&x129, x2, (arg5[6]), x119)
+  fiat_secp256k1_cmovznz_u32(&x129, x3, (arg5[3]), x116)
   var x130 uint32
-  fiat_secp256k1_cmovznz_u32(&x130, x2, (arg5[7]), x121)
-  var x131 fiat_secp256k1_uint1 = (fiat_secp256k1_uint1(x31) & 0x1)
+  fiat_secp256k1_cmovznz_u32(&x130, x3, (arg5[4]), x118)
+  var x131 uint32
+  fiat_secp256k1_cmovznz_u32(&x131, x3, (arg5[5]), x120)
   var x132 uint32
-  fiat_secp256k1_cmovznz_u32(&x132, x131, uint32(0x0), x4)
+  fiat_secp256k1_cmovznz_u32(&x132, x3, (arg5[6]), x122)
   var x133 uint32
-  fiat_secp256k1_cmovznz_u32(&x133, x131, uint32(0x0), x5)
-  var x134 uint32
-  fiat_secp256k1_cmovznz_u32(&x134, x131, uint32(0x0), x6)
+  fiat_secp256k1_cmovznz_u32(&x133, x3, (arg5[7]), x124)
+  var x134 fiat_secp256k1_uint1 = (fiat_secp256k1_uint1(x34) & 0x1)
   var x135 uint32
-  fiat_secp256k1_cmovznz_u32(&x135, x131, uint32(0x0), x7)
+  fiat_secp256k1_cmovznz_u32(&x135, x134, uint32(0x0), x7)
   var x136 uint32
-  fiat_secp256k1_cmovznz_u32(&x136, x131, uint32(0x0), x8)
+  fiat_secp256k1_cmovznz_u32(&x136, x134, uint32(0x0), x8)
   var x137 uint32
-  fiat_secp256k1_cmovznz_u32(&x137, x131, uint32(0x0), x9)
+  fiat_secp256k1_cmovznz_u32(&x137, x134, uint32(0x0), x9)
   var x138 uint32
-  fiat_secp256k1_cmovznz_u32(&x138, x131, uint32(0x0), x10)
+  fiat_secp256k1_cmovznz_u32(&x138, x134, uint32(0x0), x10)
   var x139 uint32
-  fiat_secp256k1_cmovznz_u32(&x139, x131, uint32(0x0), x11)
+  fiat_secp256k1_cmovznz_u32(&x139, x134, uint32(0x0), x11)
   var x140 uint32
-  fiat_secp256k1_cmovznz_u32(&x140, x131, uint32(0x0), x12)
+  fiat_secp256k1_cmovznz_u32(&x140, x134, uint32(0x0), x12)
   var x141 uint32
-  var x142 fiat_secp256k1_uint1
-  x141, x142 = fiat_secp256k1_addcarryx_u32(x31, x132, 0x0)
+  fiat_secp256k1_cmovznz_u32(&x141, x134, uint32(0x0), x13)
+  var x142 uint32
+  fiat_secp256k1_cmovznz_u32(&x142, x134, uint32(0x0), x14)
   var x143 uint32
-  var x144 fiat_secp256k1_uint1
-  x143, x144 = fiat_secp256k1_addcarryx_u32(x32, x133, x142)
-  var x145 uint32
-  var x146 fiat_secp256k1_uint1
-  x145, x146 = fiat_secp256k1_addcarryx_u32(x33, x134, x144)
-  var x147 uint32
-  var x148 fiat_secp256k1_uint1
-  x147, x148 = fiat_secp256k1_addcarryx_u32(x34, x135, x146)
-  var x149 uint32
-  var x150 fiat_secp256k1_uint1
-  x149, x150 = fiat_secp256k1_addcarryx_u32(x35, x136, x148)
-  var x151 uint32
-  var x152 fiat_secp256k1_uint1
-  x151, x152 = fiat_secp256k1_addcarryx_u32(x36, x137, x150)
-  var x153 uint32
-  var x154 fiat_secp256k1_uint1
-  x153, x154 = fiat_secp256k1_addcarryx_u32(x37, x138, x152)
-  var x155 uint32
-  var x156 fiat_secp256k1_uint1
-  x155, x156 = fiat_secp256k1_addcarryx_u32(x38, x139, x154)
-  var x157 uint32
-  x157, _ = fiat_secp256k1_addcarryx_u32(x39, x140, x156)
-  var x159 uint32
-  fiat_secp256k1_cmovznz_u32(&x159, x131, uint32(0x0), x40)
+  fiat_secp256k1_cmovznz_u32(&x143, x134, uint32(0x0), x15)
+  var x144 uint32
+  var x145 fiat_secp256k1_uint1
+  x144, x145 = fiat_secp256k1_addcarryx_u32(x34, x135, 0x0)
+  var x146 uint32
+  var x147 fiat_secp256k1_uint1
+  x146, x147 = fiat_secp256k1_addcarryx_u32(x35, x136, x145)
+  var x148 uint32
+  var x149 fiat_secp256k1_uint1
+  x148, x149 = fiat_secp256k1_addcarryx_u32(x36, x137, x147)
+  var x150 uint32
+  var x151 fiat_secp256k1_uint1
+  x150, x151 = fiat_secp256k1_addcarryx_u32(x37, x138, x149)
+  var x152 uint32
+  var x153 fiat_secp256k1_uint1
+  x152, x153 = fiat_secp256k1_addcarryx_u32(x38, x139, x151)
+  var x154 uint32
+  var x155 fiat_secp256k1_uint1
+  x154, x155 = fiat_secp256k1_addcarryx_u32(x39, x140, x153)
+  var x156 uint32
+  var x157 fiat_secp256k1_uint1
+  x156, x157 = fiat_secp256k1_addcarryx_u32(x40, x141, x155)
+  var x158 uint32
+  var x159 fiat_secp256k1_uint1
+  x158, x159 = fiat_secp256k1_addcarryx_u32(x41, x142, x157)
   var x160 uint32
-  fiat_secp256k1_cmovznz_u32(&x160, x131, uint32(0x0), x41)
-  var x161 uint32
-  fiat_secp256k1_cmovznz_u32(&x161, x131, uint32(0x0), x42)
+  x160, _ = fiat_secp256k1_addcarryx_u32(x42, x143, x159)
   var x162 uint32
-  fiat_secp256k1_cmovznz_u32(&x162, x131, uint32(0x0), x43)
+  fiat_secp256k1_cmovznz_u32(&x162, x134, uint32(0x0), x43)
   var x163 uint32
-  fiat_secp256k1_cmovznz_u32(&x163, x131, uint32(0x0), x44)
+  fiat_secp256k1_cmovznz_u32(&x163, x134, uint32(0x0), x44)
   var x164 uint32
-  fiat_secp256k1_cmovznz_u32(&x164, x131, uint32(0x0), x45)
+  fiat_secp256k1_cmovznz_u32(&x164, x134, uint32(0x0), x45)
   var x165 uint32
-  fiat_secp256k1_cmovznz_u32(&x165, x131, uint32(0x0), x46)
+  fiat_secp256k1_cmovznz_u32(&x165, x134, uint32(0x0), x46)
   var x166 uint32
-  fiat_secp256k1_cmovznz_u32(&x166, x131, uint32(0x0), x47)
+  fiat_secp256k1_cmovznz_u32(&x166, x134, uint32(0x0), x47)
   var x167 uint32
-  var x168 fiat_secp256k1_uint1
-  x167, x168 = fiat_secp256k1_addcarryx_u32(x123, x159, 0x0)
+  fiat_secp256k1_cmovznz_u32(&x167, x134, uint32(0x0), x48)
+  var x168 uint32
+  fiat_secp256k1_cmovznz_u32(&x168, x134, uint32(0x0), x49)
   var x169 uint32
-  var x170 fiat_secp256k1_uint1
-  x169, x170 = fiat_secp256k1_addcarryx_u32(x124, x160, x168)
-  var x171 uint32
-  var x172 fiat_secp256k1_uint1
-  x171, x172 = fiat_secp256k1_addcarryx_u32(x125, x161, x170)
-  var x173 uint32
-  var x174 fiat_secp256k1_uint1
-  x173, x174 = fiat_secp256k1_addcarryx_u32(x126, x162, x172)
-  var x175 uint32
-  var x176 fiat_secp256k1_uint1
-  x175, x176 = fiat_secp256k1_addcarryx_u32(x127, x163, x174)
-  var x177 uint32
-  var x178 fiat_secp256k1_uint1
-  x177, x178 = fiat_secp256k1_addcarryx_u32(x128, x164, x176)
-  var x179 uint32
-  var x180 fiat_secp256k1_uint1
-  x179, x180 = fiat_secp256k1_addcarryx_u32(x129, x165, x178)
-  var x181 uint32
-  var x182 fiat_secp256k1_uint1
-  x181, x182 = fiat_secp256k1_addcarryx_u32(x130, x166, x180)
-  var x183 uint32
-  var x184 fiat_secp256k1_uint1
-  x183, x184 = fiat_secp256k1_subborrowx_u32(x167, 0xfffffc2f, 0x0)
-  var x185 uint32
-  var x186 fiat_secp256k1_uint1
-  x185, x186 = fiat_secp256k1_subborrowx_u32(x169, 0xfffffffe, x184)
-  var x187 uint32
-  var x188 fiat_secp256k1_uint1
-  x187, x188 = fiat_secp256k1_subborrowx_u32(x171, 0xffffffff, x186)
-  var x189 uint32
-  var x190 fiat_secp256k1_uint1
-  x189, x190 = fiat_secp256k1_subborrowx_u32(x173, 0xffffffff, x188)
-  var x191 uint32
-  var x192 fiat_secp256k1_uint1
-  x191, x192 = fiat_secp256k1_subborrowx_u32(x175, 0xffffffff, x190)
-  var x193 uint32
-  var x194 fiat_secp256k1_uint1
-  x193, x194 = fiat_secp256k1_subborrowx_u32(x177, 0xffffffff, x192)
-  var x195 uint32
-  var x196 fiat_secp256k1_uint1
-  x195, x196 = fiat_secp256k1_subborrowx_u32(x179, 0xffffffff, x194)
-  var x197 uint32
-  var x198 fiat_secp256k1_uint1
-  x197, x198 = fiat_secp256k1_subborrowx_u32(x181, 0xffffffff, x196)
-  var x200 fiat_secp256k1_uint1
-  _, x200 = fiat_secp256k1_subborrowx_u32(uint32(x182), uint32(0x0), x198)
-  var x201 uint32 = (uint32((uint64(x3) + uint64(0x1))) & 0xffffffff)
-  var x202 uint32 = ((x141 >> 1) | ((x143 << 31) & 0xffffffff))
-  var x203 uint32 = ((x143 >> 1) | ((x145 << 31) & 0xffffffff))
-  var x204 uint32 = ((x145 >> 1) | ((x147 << 31) & 0xffffffff))
-  var x205 uint32 = ((x147 >> 1) | ((x149 << 31) & 0xffffffff))
-  var x206 uint32 = ((x149 >> 1) | ((x151 << 31) & 0xffffffff))
-  var x207 uint32 = ((x151 >> 1) | ((x153 << 31) & 0xffffffff))
-  var x208 uint32 = ((x153 >> 1) | ((x155 << 31) & 0xffffffff))
-  var x209 uint32 = ((x155 >> 1) | ((x157 << 31) & 0xffffffff))
-  var x210 uint32 = ((x157 & 0x80000000) | (x157 >> 1))
-  var x211 uint32
-  fiat_secp256k1_cmovznz_u32(&x211, x81, x64, x48)
-  var x212 uint32
-  fiat_secp256k1_cmovznz_u32(&x212, x81, x66, x50)
-  var x213 uint32
-  fiat_secp256k1_cmovznz_u32(&x213, x81, x68, x52)
-  var x214 uint32
-  fiat_secp256k1_cmovznz_u32(&x214, x81, x70, x54)
+  fiat_secp256k1_cmovznz_u32(&x169, x134, uint32(0x0), x50)
+  var x170 uint32
+  var x171 fiat_secp256k1_uint1
+  x170, x171 = fiat_secp256k1_addcarryx_u32(x126, x162, 0x0)
+  var x172 uint32
+  var x173 fiat_secp256k1_uint1
+  x172, x173 = fiat_secp256k1_addcarryx_u32(x127, x163, x171)
+  var x174 uint32
+  var x175 fiat_secp256k1_uint1
+  x174, x175 = fiat_secp256k1_addcarryx_u32(x128, x164, x173)
+  var x176 uint32
+  var x177 fiat_secp256k1_uint1
+  x176, x177 = fiat_secp256k1_addcarryx_u32(x129, x165, x175)
+  var x178 uint32
+  var x179 fiat_secp256k1_uint1
+  x178, x179 = fiat_secp256k1_addcarryx_u32(x130, x166, x177)
+  var x180 uint32
+  var x181 fiat_secp256k1_uint1
+  x180, x181 = fiat_secp256k1_addcarryx_u32(x131, x167, x179)
+  var x182 uint32
+  var x183 fiat_secp256k1_uint1
+  x182, x183 = fiat_secp256k1_addcarryx_u32(x132, x168, x181)
+  var x184 uint32
+  var x185 fiat_secp256k1_uint1
+  x184, x185 = fiat_secp256k1_addcarryx_u32(x133, x169, x183)
+  var x186 uint32
+  var x187 fiat_secp256k1_uint1
+  x186, x187 = fiat_secp256k1_subborrowx_u32(x170, 0xfffffc2f, 0x0)
+  var x188 uint32
+  var x189 fiat_secp256k1_uint1
+  x188, x189 = fiat_secp256k1_subborrowx_u32(x172, 0xfffffffe, x187)
+  var x190 uint32
+  var x191 fiat_secp256k1_uint1
+  x190, x191 = fiat_secp256k1_subborrowx_u32(x174, 0xffffffff, x189)
+  var x192 uint32
+  var x193 fiat_secp256k1_uint1
+  x192, x193 = fiat_secp256k1_subborrowx_u32(x176, 0xffffffff, x191)
+  var x194 uint32
+  var x195 fiat_secp256k1_uint1
+  x194, x195 = fiat_secp256k1_subborrowx_u32(x178, 0xffffffff, x193)
+  var x196 uint32
+  var x197 fiat_secp256k1_uint1
+  x196, x197 = fiat_secp256k1_subborrowx_u32(x180, 0xffffffff, x195)
+  var x198 uint32
+  var x199 fiat_secp256k1_uint1
+  x198, x199 = fiat_secp256k1_subborrowx_u32(x182, 0xffffffff, x197)
+  var x200 uint32
+  var x201 fiat_secp256k1_uint1
+  x200, x201 = fiat_secp256k1_subborrowx_u32(x184, 0xffffffff, x199)
+  var x203 fiat_secp256k1_uint1
+  _, x203 = fiat_secp256k1_subborrowx_u32(uint32(x185), uint32(0x0), x201)
+  var x204 uint32
+  x204, _ = fiat_secp256k1_addcarryx_u32(x6, uint32(0x1), 0x0)
+  var x206 uint32 = ((x144 >> 1) | ((x146 << 31) & 0xffffffff))
+  var x207 uint32 = ((x146 >> 1) | ((x148 << 31) & 0xffffffff))
+  var x208 uint32 = ((x148 >> 1) | ((x150 << 31) & 0xffffffff))
+  var x209 uint32 = ((x150 >> 1) | ((x152 << 31) & 0xffffffff))
+  var x210 uint32 = ((x152 >> 1) | ((x154 << 31) & 0xffffffff))
+  var x211 uint32 = ((x154 >> 1) | ((x156 << 31) & 0xffffffff))
+  var x212 uint32 = ((x156 >> 1) | ((x158 << 31) & 0xffffffff))
+  var x213 uint32 = ((x158 >> 1) | ((x160 << 31) & 0xffffffff))
+  var x214 uint32 = ((x160 & 0x80000000) | (x160 >> 1))
   var x215 uint32
-  fiat_secp256k1_cmovznz_u32(&x215, x81, x72, x56)
+  fiat_secp256k1_cmovznz_u32(&x215, x84, x67, x51)
   var x216 uint32
-  fiat_secp256k1_cmovznz_u32(&x216, x81, x74, x58)
+  fiat_secp256k1_cmovznz_u32(&x216, x84, x69, x53)
   var x217 uint32
-  fiat_secp256k1_cmovznz_u32(&x217, x81, x76, x60)
+  fiat_secp256k1_cmovznz_u32(&x217, x84, x71, x55)
   var x218 uint32
-  fiat_secp256k1_cmovznz_u32(&x218, x81, x78, x62)
+  fiat_secp256k1_cmovznz_u32(&x218, x84, x73, x57)
   var x219 uint32
-  fiat_secp256k1_cmovznz_u32(&x219, x200, x183, x167)
+  fiat_secp256k1_cmovznz_u32(&x219, x84, x75, x59)
   var x220 uint32
-  fiat_secp256k1_cmovznz_u32(&x220, x200, x185, x169)
+  fiat_secp256k1_cmovznz_u32(&x220, x84, x77, x61)
   var x221 uint32
-  fiat_secp256k1_cmovznz_u32(&x221, x200, x187, x171)
+  fiat_secp256k1_cmovznz_u32(&x221, x84, x79, x63)
   var x222 uint32
-  fiat_secp256k1_cmovznz_u32(&x222, x200, x189, x173)
+  fiat_secp256k1_cmovznz_u32(&x222, x84, x81, x65)
   var x223 uint32
-  fiat_secp256k1_cmovznz_u32(&x223, x200, x191, x175)
+  fiat_secp256k1_cmovznz_u32(&x223, x203, x186, x170)
   var x224 uint32
-  fiat_secp256k1_cmovznz_u32(&x224, x200, x193, x177)
+  fiat_secp256k1_cmovznz_u32(&x224, x203, x188, x172)
   var x225 uint32
-  fiat_secp256k1_cmovznz_u32(&x225, x200, x195, x179)
+  fiat_secp256k1_cmovznz_u32(&x225, x203, x190, x174)
   var x226 uint32
-  fiat_secp256k1_cmovznz_u32(&x226, x200, x197, x181)
-  *out1 = x201
-  out2[0] = x4
-  out2[1] = x5
-  out2[2] = x6
-  out2[3] = x7
-  out2[4] = x8
-  out2[5] = x9
-  out2[6] = x10
-  out2[7] = x11
-  out2[8] = x12
-  out3[0] = x202
-  out3[1] = x203
-  out3[2] = x204
-  out3[3] = x205
-  out3[4] = x206
-  out3[5] = x207
-  out3[6] = x208
-  out3[7] = x209
-  out3[8] = x210
-  out4[0] = x211
-  out4[1] = x212
-  out4[2] = x213
-  out4[3] = x214
-  out4[4] = x215
-  out4[5] = x216
-  out4[6] = x217
-  out4[7] = x218
-  out5[0] = x219
-  out5[1] = x220
-  out5[2] = x221
-  out5[3] = x222
-  out5[4] = x223
-  out5[5] = x224
-  out5[6] = x225
-  out5[7] = x226
+  fiat_secp256k1_cmovznz_u32(&x226, x203, x192, x176)
+  var x227 uint32
+  fiat_secp256k1_cmovznz_u32(&x227, x203, x194, x178)
+  var x228 uint32
+  fiat_secp256k1_cmovznz_u32(&x228, x203, x196, x180)
+  var x229 uint32
+  fiat_secp256k1_cmovznz_u32(&x229, x203, x198, x182)
+  var x230 uint32
+  fiat_secp256k1_cmovznz_u32(&x230, x203, x200, x184)
+  *out1 = x204
+  out2[0] = x7
+  out2[1] = x8
+  out2[2] = x9
+  out2[3] = x10
+  out2[4] = x11
+  out2[5] = x12
+  out2[6] = x13
+  out2[7] = x14
+  out2[8] = x15
+  out3[0] = x206
+  out3[1] = x207
+  out3[2] = x208
+  out3[3] = x209
+  out3[4] = x210
+  out3[5] = x211
+  out3[6] = x212
+  out3[7] = x213
+  out3[8] = x214
+  out4[0] = x215
+  out4[1] = x216
+  out4[2] = x217
+  out4[3] = x218
+  out4[4] = x219
+  out4[5] = x220
+  out4[6] = x221
+  out4[7] = x222
+  out5[0] = x223
+  out5[1] = x224
+  out5[2] = x225
+  out5[3] = x226
+  out5[4] = x227
+  out5[5] = x228
+  out5[6] = x229
+  out5[7] = x230
 }
 
 /*
