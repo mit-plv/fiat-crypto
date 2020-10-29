@@ -79,8 +79,9 @@ Redirect "log" Check eq_refl : digits_to_N 10 [1;2;3;4;5;6]%N = 123456%N.
 Local Coercion N.of_nat : nat >-> N.
 Local Coercion Z.of_N : N >-> Z.
 Local Coercion inject_Z : Z >-> Q.
-Definition parse_num_gen {P} (base : N) (parse_prefix : ParserAction P) : ParserAction Q
-  := ((strip_whitespace_around "-")?)
+
+Definition parse_num_gen (allow_neg : bool) {P} (base : N) (parse_prefix : ParserAction P) : ParserAction Q
+  := (if allow_neg then ((strip_whitespace_around "-")??) else parse_map (fun _ => None) "")
        ;;->{ fun n v => if n:option _ then (-v)%Q else v }
        parse_prefix ;;->{ fun _ v => v }
        ((((parse_digits_gen_step base)* )
@@ -89,17 +90,26 @@ Definition parse_num_gen {P} (base : N) (parse_prefix : ParserAction P) : Parser
                      + digits_to_N base decimals / base^List.length decimals)%Q }
            "." ;;->{ fun _ v => v }
            (parse_digits_gen_step base)* )
-        || parse_map (digits_to_N base : _ -> Q) ((parse_digits_gen_step base)+)).
+        || parse_map (digits_to_N base : _ -> Q) ((parse_digits_gen_step base)+))
+       ;;->{ fun n e => match e with Some e => n * e | None => n end%Q }
+       (((("e" || "E") ;;->{ fun _ v => Qpower 10 v }
+         (((strip_whitespace_around "-")??)
+            ;;->{ fun n v => if n:option _ then (-v)%Z else v }
+            (parse_map (digits_to_N base : _ -> Z) ((parse_digits_gen_step base)+) )))
+        || (("p" || "P") ;;->{ fun _ v => Qpower 2 v }
+         (((strip_whitespace_around "-")??)
+            ;;->{ fun n v => if n:option _ then (-v)%Z else v }
+            (parse_map (digits_to_N base : _ -> Z) ((parse_digits_gen_step base)+) ))))??).
 
-Definition parse_num : ParserAction Q
-  := parse_num_gen 2 parse_bin_prefix
-     || parse_num_gen 8 parse_oct_prefix
-     || parse_num_gen 10 parse_dec_prefix
-     || parse_num_gen 16 parse_hex_prefix.
+Definition parse_num (allow_neg : bool) : ParserAction Q
+  := parse_num_gen allow_neg 2 parse_bin_prefix
+     || parse_num_gen allow_neg 8 parse_oct_prefix
+     || parse_num_gen allow_neg 10 parse_dec_prefix
+     || parse_num_gen allow_neg 16 parse_hex_prefix.
 
 Redirect "log" Check let ls := [("-1234", -(1234):Q); ("0xF", 15:Q); ("10.5", (10 + 5/10)); ("-10.5", -(10+5/10))]%Q in
                      eq_refl
-                     : List.map (fun '(s, v) => ((parse_num;;->{fun v _ => v} ε)%parse s )) ls
+                     : List.map (fun '(s, v) => ((parse_num true;;->{fun v _ => v} ε)%parse s )) ls
                        = List.map (fun '(s, v) => [(v, "")]) ls.
 
 Inductive Qexpr := Qv (_ : Q) | Qeopp (a : Qexpr) | Qeadd (a b : Qexpr) | Qesub (a b : Qexpr) | Qemul (a b : Qexpr) | Qediv (a b : Qexpr) | Qepow (b e : Qexpr).
@@ -149,41 +159,58 @@ Definition parse_ops {A} (ls : list (string * (A -> A -> A))) (parse : ParserAct
            (strip_whitespace_around (parse_strs ls) ;;->{fun f r l => f l r}
                                     parse)*.
 
+Definition parse_prefix_ops {A} (ls : list (string * (A -> A))) (parse : ParserAction A) : ParserAction A
+  := ((strip_whitespace_after (parse_strs ls))* )
+       ;;->{fun ls v => fold_right (fun f x => f x) v ls }
+       parse.
+
 Section step.
-  Context (parse : ParserAction Qexpr).
+  Context (parse_num : ParserAction Q)
+          (parse : ParserAction Qexpr).
 
   Definition parseQexpr_gen_parens : ParserAction Qexpr
     := ("(" ;;->{fun _ v => v} strip_whitespace_around parse ;;->{fun v _ => v} ")")
        || parse_map Qv parse_num.
   Definition parseQexpr_gen_exp : ParserAction Qexpr
     := parse_ops [("^", Qepow)] parseQexpr_gen_parens.
+  Definition parseQexpr_gen_opp : ParserAction Qexpr
+    := parse_prefix_ops [("-", Qeopp)] parseQexpr_gen_exp.
   Definition parseQexpr_gen_mul_div : ParserAction Qexpr
-    := parse_ops [("*", Qemul); ("/", Qediv)] parseQexpr_gen_exp.
+    := parse_ops [("*", Qemul); ("/", Qediv)] parseQexpr_gen_opp.
   Definition parseQexpr_gen_add_sub : ParserAction Qexpr
     := parse_ops [("+", Qeadd); ("-", Qesub)] parseQexpr_gen_mul_div.
 End step.
 
-Fixpoint parse_Qexpr_fueled (fuel : nat) : ParserAction Qexpr
+Fixpoint parse_Qexpr_fueled (parse_num : ParserAction Q) (fuel : nat) : ParserAction Qexpr
   := strip_whitespace_around
-       (parseQexpr_gen_add_sub (match fuel with
+       (parseQexpr_gen_add_sub parse_num
+                               (match fuel with
                                 | O => parse_impossible
-                                | S fuel => parse_Qexpr_fueled fuel
+                                | S fuel => parse_Qexpr_fueled parse_num fuel
                                 end)).
 
-Definition parse_Qexpr : ParserAction Qexpr := fuel parse_Qexpr_fueled.
+Definition parse_Qexpr_gen (parse_num : ParserAction Q) : ParserAction Qexpr := fuel (parse_Qexpr_fueled parse_num).
 
-Definition parseQexpr_arith (s : string) : option Qexpr
-  := finalize parse_Qexpr s.
-Definition parseQ_arith (s : string) : option Q
-  := option_map eval_Qexpr (parseQexpr_arith s).
-Definition parseZ_arith (s : string) : option Z
-  := (q <- parseQ_arith s; Some (Qnum q / Z.pos (Qden q)))%Z%option.
-Definition parsepositive_arith (s : string) : option positive
-  := (z <- parseZ_arith s; match z with Z0 => None | Zpos p => Some p | Zneg _ => None end).
-Definition parseN_arith (s : string) : option N
-  := (z <- parseZ_arith s; match z with Z0 => Some 0 | Zpos p => Some (Npos p) | Zneg _ => None end)%N%option.
-Definition parsenat_arith (s : string) : option nat
-  := (n <- parseN_arith s; Some (N.to_nat n)).
+Definition parse_Qexpr_with_vars (vars : list (string * Q)) : ParserAction Qexpr
+  := parse_Qexpr_gen
+       (List.fold_right
+          (fun '((s, q) : string * Q) default => default || parse_map (fun _ => q) s)%parse
+          (parse_num false)
+          vars).
+
+
+Definition parseQexpr_arith_with_vars (vars : list (string * Q)) (s : string) : option Qexpr
+  := finalize (parse_Qexpr_with_vars vars) s.
+Definition parseQ_arith_with_vars (vars : list (string * Q)) (s : string) : option Q
+  := option_map eval_Qexpr (parseQexpr_arith_with_vars vars s).
+Definition parseZ_arith_with_vars (vars : list (string * Q)) (s : string) : option Z
+  := (q <- parseQ_arith_with_vars vars s; Some (Qnum q / Z.pos (Qden q)))%Z%option.
+Definition parsepositive_arith_with_vars (vars : list (string * Q)) (s : string) : option positive
+  := (z <- parseZ_arith_with_vars vars s; match z with Z0 => None | Zpos p => Some p | Zneg _ => None end).
+Definition parseN_arith_with_vars (vars : list (string * Q)) (s : string) : option N
+  := (z <- parseZ_arith_with_vars vars s; match z with Z0 => Some 0 | Zpos p => Some (Npos p) | Zneg _ => None end)%N%option.
+Definition parsenat_arith_with_vars (vars : list (string * Q)) (s : string) : option nat
+  := (n <- parseN_arith_with_vars vars s; Some (N.to_nat n)).
 
 Definition Q_to_Z_strict (x : Q) : option Z
   := let '(q, r) := Z.div_eucl (Qnum x) (Zpos (Qden x)) in
@@ -191,13 +218,28 @@ Definition Q_to_Z_strict (x : Q) : option Z
      then Some q
      else None.
 
-Definition parseQ_arith_strict (s : string) : option Q
-  := (q <- parseQexpr_arith s; eval_Qexpr_strict q)%option.
-Definition parseZ_arith_strict (s : string) : option Z
-  := (q <- parseQ_arith_strict s; Q_to_Z_strict q)%option.
-Definition parsepositive_arith_strict (s : string) : option positive
-  := (z <- parseZ_arith_strict s; match z with Z0 => None | Zpos p => Some p | Zneg _ => None end).
-Definition parseN_arith_strict (s : string) : option N
-  := (z <- parseZ_arith_strict s; match z with Z0 => Some 0 | Zpos p => Some (Npos p) | Zneg _ => None end)%N%option.
-Definition parsenat_arith_strict (s : string) : option nat
-  := (n <- parseN_arith_strict s; Some (N.to_nat n)).
+Definition parseQ_arith_strict_with_vars (vars : list (string * Q)) (s : string) : option Q
+  := (q <- parseQexpr_arith_with_vars vars s; eval_Qexpr_strict q)%option.
+Definition parseZ_arith_strict_with_vars (vars : list (string * Q)) (s : string) : option Z
+  := (q <- parseQ_arith_strict_with_vars vars s; Q_to_Z_strict q)%option.
+Definition parsepositive_arith_strict_with_vars (vars : list (string * Q)) (s : string) : option positive
+  := (z <- parseZ_arith_strict_with_vars vars s; match z with Z0 => None | Zpos p => Some p | Zneg _ => None end).
+Definition parseN_arith_strict_with_vars (vars : list (string * Q)) (s : string) : option N
+  := (z <- parseZ_arith_strict_with_vars vars s; match z with Z0 => Some 0 | Zpos p => Some (Npos p) | Zneg _ => None end)%N%option.
+Definition parsenat_arith_strict_with_vars (vars : list (string * Q)) (s : string) : option nat
+  := (n <- parseN_arith_strict_with_vars vars s; Some (N.to_nat n)).
+
+Definition parse_Qexpr := parse_Qexpr_with_vars [].
+Definition parseQexpr_arith := parseQexpr_arith_with_vars [].
+Definition parseQ_arith := parseQ_arith_with_vars [].
+Definition parseZ_arith := parseZ_arith_with_vars [].
+Definition parsepositive_arith := parsepositive_arith_with_vars [].
+Definition parseN_arith := parseN_arith_with_vars [].
+Definition parsenat_arith := parsenat_arith_with_vars [].
+Definition parseQ_arith_strict := parseQ_arith_strict_with_vars [].
+Definition parseZ_arith_strict := parseZ_arith_strict_with_vars [].
+Definition parsepositive_arith_strict := parsepositive_arith_strict_with_vars [].
+Definition parseN_arith_strict := parseN_arith_strict_with_vars [].
+Definition parsenat_arith_strict := parsenat_arith_strict_with_vars [].
+
+Redirect "log" Check eq_refl : parseQexpr_arith "1 + -2" = Some (1%Q + - 2%Q)%Qexpr.
