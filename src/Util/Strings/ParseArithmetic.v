@@ -81,7 +81,7 @@ Local Coercion Z.of_N : N >-> Z.
 Local Coercion inject_Z : Z >-> Q.
 
 Definition parse_num_gen (allow_neg : bool) {P} (base : N) (parse_prefix : ParserAction P) : ParserAction Q
-  := (if allow_neg then ((strip_whitespace_around "-")??) else parse_map (fun _ => None) "")
+  := (if allow_neg then ((strip_whitespace_around "-")?) else parse_map (fun _ => None) "")
        ;;->{ fun n v => if n:option _ then (-v)%Q else v }
        parse_prefix ;;->{ fun _ v => v }
        ((((parse_digits_gen_step base)* )
@@ -93,13 +93,13 @@ Definition parse_num_gen (allow_neg : bool) {P} (base : N) (parse_prefix : Parse
         || parse_map (digits_to_N base : _ -> Q) ((parse_digits_gen_step base)+))
        ;;->{ fun n e => match e with Some e => n * e | None => n end%Q }
        (((("e" || "E") ;;->{ fun _ v => Qpower 10 v }
-         (((strip_whitespace_around "-")??)
+         (((strip_whitespace_around "-")?)
             ;;->{ fun n v => if n:option _ then (-v)%Z else v }
             (parse_map (digits_to_N base : _ -> Z) ((parse_digits_gen_step base)+) )))
         || (("p" || "P") ;;->{ fun _ v => Qpower 2 v }
-         (((strip_whitespace_around "-")??)
+         (((strip_whitespace_around "-")?)
             ;;->{ fun n v => if n:option _ then (-v)%Z else v }
-            (parse_map (digits_to_N base : _ -> Z) ((parse_digits_gen_step base)+) ))))??).
+            (parse_map (digits_to_N base : _ -> Z) ((parse_digits_gen_step base)+) ))))?).
 
 Definition parse_num (allow_neg : bool) : ParserAction Q
   := parse_num_gen allow_neg 2 parse_bin_prefix

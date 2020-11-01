@@ -62,7 +62,7 @@ Definition parse_map {A B} (f : A -> B) : ParserAction A -> ParserAction B
 Definition parse_maybe {A} (p : ParserAction A) : ParserAction (option A)
   := (p ||->{ fun v => match v with inl v => Some v | inr _ => None end } "")%parse.
 
-Notation "f ? ?" := (parse_maybe f) : parse_scope.
+Notation "f ?" := (parse_maybe f) : parse_scope.
 
 Definition option_to_list {A} (v : option A) : list A
   := match v with
@@ -82,14 +82,14 @@ Definition fuel {A} (p : nat -> ParserAction A) : ParserAction A
 Fixpoint parse_plus_fueled {A} (p : ParserAction A) (fuel : nat) : ParserAction (list A)
   := (p ;;->{ @cons _ } (match fuel with
                          | O => fun s => []
-                         | S fuel => parse_map option_list_to_list ((parse_plus_fueled p fuel)??)
+                         | S fuel => parse_map option_list_to_list ((parse_plus_fueled p fuel)?)
                          end)).
 
 Definition parse_plus {A} (p : ParserAction A) : ParserAction (list A)
   := fuel (parse_plus_fueled p).
 
 Definition parse_star {A} (p : ParserAction A) : ParserAction (list A)
-  := parse_map option_list_to_list ((parse_plus p)??).
+  := parse_map option_list_to_list ((parse_plus p)?).
 
 Notation "p +" := (parse_plus p) : parse_scope.
 Notation "p *" := (parse_star p) : parse_scope.
@@ -127,7 +127,7 @@ Definition parse_list_gen {A} (leftbr sep rightbr : string) (parse : ParserActio
   := (strip_whitespace_around leftbr)
        ;;->{ fun _ v => v }
        ((parse ;;->{ @cons _ }
-               (strip_whitespace_around sep ;;->{ fun _ tl => tl } parse)* ))??
+               (strip_whitespace_around sep ;;->{ fun _ tl => tl } parse)* ))?
        ;;->{ fun v _ => match v with None => [] | Some ls => ls end }
        strip_whitespace_around rightbr.
 
