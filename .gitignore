@@ -194,3 +194,7 @@ src/Rewriter/PerfTesting/Specific/generated/primes.mk
 # Rust
 /fiat-rust/Cargo.lock
 /fiat-rust/target/
+
+
+# Misc
+native_compute_profile_*.data
