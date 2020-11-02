@@ -20,7 +20,11 @@ online_governors() {
 
 printf "$(hostname)"
 printf -
-grep -q '[^0-9]' /sys/devices/system/cpu/cpu[0-9]*/topology/thread_siblings_list && printf ht || printf noht
+if ls /sys/devices/system/cpu/cpu[0-9]*/topology/thread_siblings_list >/dev/null 2>/dev/null; then
+  grep -q '[^0-9]' /sys/devices/system/cpu/cpu[0-9]*/topology/thread_siblings_list && printf ht || printf noht
+else
+  printf unknown_ht
+fi
 printf -
 if [ -f /sys/devices/system/cpu/intel_pstate/no_turbo ]; then
   grep -q 1 /sys/devices/system/cpu/intel_pstate/no_turbo && printf notb || printf tb
@@ -34,7 +38,7 @@ else
   printf nops
 fi
 printf -
-printf "$(echo -n "$(online_governors | uniq)" | tr '\n' '_')"
+printf "$(printf "%s" "$(online_governors | uniq)" | tr '\n' '_')"
 printf -
 printf "$(gcc -march=native -Q --help=target|grep march | cut -d= -f2 | grep -ow '\S*')"
 printf '\n'
