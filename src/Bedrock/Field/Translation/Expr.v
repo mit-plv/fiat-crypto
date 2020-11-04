@@ -46,7 +46,7 @@ Section Expr.
       true
     | expr.Var _ _ =>
       true
-    | _ => false 
+    | _ => false
     end.
 
   Definition invert_literal (x : Syntax.expr) : option Z :=
@@ -191,7 +191,7 @@ Section Expr.
              {var t} (e : @API.expr var t) : bool :=
     match e with
     | Zcast r => negb (range_good r)
-    | Zcast2 r1 r2 => 
+    | Zcast2 r1 r2 =>
       negb (range_good r1 && range_good r2)
     | expr.Ident _ ident.Z_mul_high => false
     | expr.App
@@ -214,7 +214,7 @@ Section Expr.
     | _ => None
     end.
 
-  Fixpoint translate_ident
+  Definition translate_ident
            {t} (i : ident.ident t) : rtype t :=
     match i in ident.ident t0 return rtype t0 with
     | ident.fst _ _ => fst
