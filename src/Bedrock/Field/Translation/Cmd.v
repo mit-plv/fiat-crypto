@@ -47,7 +47,7 @@ Section Cmd.
         (1%nat, v, Syntax.cmd.set v rhs)
     end.
 
-  Fixpoint assign {t} (nextn : nat)
+  Definition assign {t} (nextn : nat)
     : rtype t -> (nat * ltype t * Syntax.cmd.cmd) :=
     match t as t0 return
           rtype t0 -> nat * ltype t0 * _ with
