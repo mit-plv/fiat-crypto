@@ -549,6 +549,9 @@ Module Compilers.
                                      clear H1 H2
                                 | [ H : ?x = ?x |- _ ] => clear H
                                 | [ H : length ?l1 = length ?l2, H' : context[length ?l1] |- _ ] => rewrite H in H'
+                                | [ H : context[invert_pair ?e] |- _ ]
+                                  => let lem := constr:(expr.invert_pair_ident_pair : invert_pair e = _) in
+                                     rewrite lem in H
                                 end
                               | apply wf_annotate_with_expr
                               | apply DefaultValue.expr.base.wf_default
@@ -1039,7 +1042,7 @@ Module Compilers.
                        | progress break_innermost_match_hyps
                        | progress expr.invert_subst
                        | progress expr.inversion_wf_one_constr
-                       | progress cbn [invert_AppIdent invert_App invert_Ident Option.bind] in *
+                       | progress cbn [invert_AppIdent invert_App invert_Ident invert_App_cps invert_AppIdent_cps Option.bind] in *
                        | progress expr.invert_match
                        | progress expr.inversion_expr
                        | now refine (wf_annotation_to_cast_helper eq_refl) ].
