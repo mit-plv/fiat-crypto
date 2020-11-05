@@ -183,25 +183,6 @@ Section Expr.
     | _ => false
     end.
 
-  Definition is_pair_ident {t} (idc : ident t) : bool :=
-    match idc with
-    | ident.pair _ _ => true
-    | _ => false
-    end.
-
-  Definition is_pair_ident_expr {var t}
-             (e : @API.expr var t) : bool :=
-    match e with
-    | expr.Ident _ i => is_pair_ident i
-    | _ => false
-    end.
-
-  Definition is_pair {var t} (e : @API.expr var t) : bool :=
-    match invert_expr.invert_AppIdent2 e with
-    | Some (existT _ (i, _, _)) => is_pair_ident i
-    | None => false
-    end.
-
   (* only require cast for the argument of (App f x) if:
      - f is not a cast
      - f is not mul_high (then, x = 2^width)
@@ -247,7 +228,6 @@ Section Expr.
     | ident.Z_mul_high => rmul_high
     | ident.Z_cast => fun _ x => x
     | ident.Z_cast2 => fun _ x => x
-    | ident.pair _ _ => pair
     | i => match translate_binop i with
            | Some x => x
            | None => make_error _
@@ -276,7 +256,7 @@ Section Expr.
            {t} (e : @API.expr ltype t) : rtype t :=
     if cast_exempt e
     then translate_cast_exempt require_cast e
-    else if (require_cast && negb (is_pair e))%bool
+    else if require_cast
          then
            match e in expr.expr t0 return rtype t0 with
            | expr.App _ _ f x =>
