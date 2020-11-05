@@ -62,33 +62,53 @@ Section Cmd.
     : nat (* number of variable names used *)
       * ltype t (* variables in which return values are stored *)
       * Syntax.cmd.cmd (* actual program *) :=
-    match e in expr.expr t0
-          return (nat * ltype t0 * Syntax.cmd.cmd) with
-    | expr.LetIn (type.base t1) (type.base t2) x f =>
-      let trx := assign nextn (translate_expr true x) in
-      let trf := translate_cmd (f (snd (fst trx))) (nextn + fst (fst trx)) in
-      ((fst (fst trx) + fst (fst trf))%nat,
-       snd (fst trf),
-       Syntax.cmd.seq (snd trx) (snd trf))
-    | expr.App
-        type_listZ type_listZ
-        (expr.App type_Z _ (expr.Ident _ (ident.cons _)) x) l =>
-      let trx := assign nextn (translate_expr true x) in
-      let trl := translate_cmd l (S nextn) in
-      ((fst (fst trx) + fst (fst trl))%nat,
-       snd (fst trx) :: snd (fst trl),
-       Syntax.cmd.seq (snd trx) (snd trl))
-    | expr.Ident type_listZ (ident.nil _) =>
-      (0%nat, [], Syntax.cmd.skip)
-    | expr.App _ _ f x =>
-      let v := translate_expr true (expr.App f x) in
-      assign nextn v
-    | expr.Ident _ i =>
-      let v := translate_expr true (expr.Ident i) in
-      assign nextn v
-    | expr.Var _ v =>
-      let v := translate_expr true (expr.Var v) in
-      assign nextn v
-    | _ => (0%nat, dummy_ltype _, Syntax.cmd.skip)
+    let default _
+        := match e in expr.expr t0
+                 return (nat * ltype t0 * Syntax.cmd.cmd) with
+           | expr.LetIn (type.base t1) (type.base t2) x f =>
+             let trx := assign nextn (translate_expr true x) in
+             let trf := translate_cmd (f (snd (fst trx))) (nextn + fst (fst trx)) in
+             ((fst (fst trx) + fst (fst trf))%nat,
+              snd (fst trf),
+              Syntax.cmd.seq (snd trx) (snd trf))
+           | expr.App
+               type_listZ type_listZ
+               (expr.App type_Z _ (expr.Ident _ (ident.cons _)) x) l =>
+             let trx := assign nextn (translate_expr true x) in
+             let trl := translate_cmd l (S nextn) in
+             ((fst (fst trx) + fst (fst trl))%nat,
+              snd (fst trx) :: snd (fst trl),
+              Syntax.cmd.seq (snd trx) (snd trl))
+           | expr.Ident type_listZ (ident.nil _) =>
+             (0%nat, [], Syntax.cmd.skip)
+           | expr.App _ _ f x =>
+             let v := translate_expr true (expr.App f x) in
+             assign nextn v
+           | expr.Ident _ i =>
+             let v := translate_expr true (expr.Ident i) in
+             assign nextn v
+           | expr.Var _ v =>
+             let v := translate_expr true (expr.Var v) in
+             assign nextn v
+           | _ => (0%nat, dummy_ltype _, Syntax.cmd.skip)
+           end in
+    match invert_expr.invert_pair_cps e (@translate_cmd) (@translate_cmd) with
+    | Some (a, b)
+      => match t
+               return let A := match t with type.base (A * B) => type.base A | _ => _ end in
+                      let B := match t with type.base (A * B) => type.base B | _ => _ end in
+                      (_ -> _ * ltype A * _) -> (_ -> _ * ltype B * _) -> (unit -> _ * ltype t * _) -> _ * ltype t * _
+         with
+         | type.base (A * B)
+           => fun translate_cmd_a translate_cmd_b _
+              => let tra := translate_cmd_a nextn in
+                 let trb := translate_cmd_b (fst (fst tra) + nextn)%nat in (** TODO(Jade) Please check if this is right *)
+                 ((fst (fst tra) + fst (fst trb))%nat,
+                  (snd (fst tra), snd (fst trb)),
+                  Syntax.cmd.seq (snd tra) (snd trb))
+         | _ => fun _ _ default => default tt
+         end a b default
+    | None
+      => default tt
     end.
 End Cmd.
