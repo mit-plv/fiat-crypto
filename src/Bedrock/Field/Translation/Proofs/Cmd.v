@@ -446,7 +446,7 @@ Section Cmd.
                         [ eapply Proper_call | repeat intro
                           | eapply assign_correct; eauto;
                             eapply translate_expr_correct; solve [eauto] ]
-               | _ => progress cbn [invert_expr.invert_pair_cps invert_expr.invert_AppIdent2_cps Option.bind invert_expr.invert_App2_cps invert_expr.invert_App_cps invert_expr.invert_Ident invert_expr.is_pair Compilers.invertIdent]
+               | _ => progress cbn [invert_expr.invert_pair_cps invert_expr.invert_AppIdent2_cps Option.bind invert_expr.invert_App2_cps invert_expr.invert_App_cps invert_expr.invert_Ident invert_expr.is_pair Compilers.invertIdent Option.bind translate_ident2_for_cmd Crypto.Util.Option.bind]
                end.
 
     { (* let-in (product of base types) *)
@@ -496,7 +496,7 @@ Section Cmd.
         eapply only_differ_disjoint_undef_on; eauto with lia; [ ].
         match goal with H : PropSet.sameset _ _ |- _ =>
                         rewrite H end.
-        apply used_varnames_disjoint; cbn; lia. }
+        apply used_varnames_disjoint; lia. }
       { simplify; subst; eauto; [ | | ].
         { (* varnames subset *)
           rewrite varname_set_local.
@@ -509,7 +509,7 @@ Section Cmd.
           rewrite <-Nat.add_1_r.
           apply used_varnames_shift. }
         { (* only_differ *)
-          rewrite <-(Nat.add_1_r nextn) in *.
+          rewrite <-(Nat.add_comm nextn 1) in *.
           only_differ_ok. }
         { (* equivalence of output holds *)
           clear IHe1_valid.
