@@ -454,7 +454,7 @@ Module Compilers.
              | _, _, _ => fun _ => false
              end.
 
-        Definition annotation_to_cast_helper {var1} {s'sd} (idc : ident s'sd) : option (@expr var1 (type.domain base.type.unit (type.codomain s'sd)) -> @expr var1 (type.codomain (type.codomain s'sd)))
+        Definition annotation_to_cast_helper {var1} {s'sd} (idc : ident s'sd) : option (@expr var1 (type.domain (type.codomain s'sd)) -> @expr var1 (type.codomain (type.codomain s'sd)))
           := match idc with
              | ident.Z_cast => Some (fun x => x)
              | ident.Z_cast2 => Some (fun x => x)
