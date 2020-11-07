@@ -184,7 +184,7 @@ Lemma map_cps2_correct {A B} g g' (Hg : forall T k a, g a T k = k (g' a)) ls : f
     @map_cps2 A B g ls T f = f (map g' ls).
 Proof. induction ls as [|?? IHls]; simpl; intros; rewrite ?IHls, ?Hg; reflexivity. Qed.
 
-Fixpoint firstn_cps {A} (n:nat) (l:list A) {T} (f:list A->T) :=
+Definition firstn_cps {A} (n:nat) (l:list A) {T} (f:list A->T) :=
   match n with
   | O => f nil
   | S n' => match l with

@@ -190,7 +190,7 @@ Module Compilers.
              => "#error tt;"
            end%core%Cexpr.
 
-      Fixpoint stmt_to_string (prefix : string) (e : stmt) : string
+      Definition stmt_to_string (prefix : string) (e : stmt) : string
         := match e with
            | Call val
              => arith_to_string prefix val ++ ";"

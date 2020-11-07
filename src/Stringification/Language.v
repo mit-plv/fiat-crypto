@@ -139,7 +139,7 @@ Module Compilers.
                       with_parens
                       ("option " ++ @show_type true A)
                end.
-          Fixpoint show_base_interp {t} : Show (base.base_interp t)
+          Definition show_base_interp {t} : Show (base.base_interp t)
             := match t with
                | base.type.Z => @show Z _
                | base.type.bool => @show bool _
@@ -238,7 +238,7 @@ Module Compilers.
              => fun _ => None
            end.
 
-      Fixpoint make_cast {t} : ZRange.type.option.interp t -> option string
+      Definition make_cast {t} : ZRange.type.option.interp t -> option string
         := match t with
            | type.base t => @make_castb t
            | type.arrow _ _ => fun _ => None

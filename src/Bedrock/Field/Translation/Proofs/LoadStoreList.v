@@ -53,7 +53,7 @@ Section LoadStoreList.
                      (width:=Semantics.width) s) * 8 <= Semantics.width)%Z
     | _ => fun _ => True
     end.
-  Fixpoint access_sizes_good {t}
+  Definition access_sizes_good {t}
     : access_sizes (listZ:=rep.listZ_mem) t -> Prop :=
     match t with
     | type.base _ => base_access_sizes_good

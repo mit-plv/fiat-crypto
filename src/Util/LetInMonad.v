@@ -23,7 +23,7 @@ Fixpoint bind {A B} (v : LetInM A) : forall (f : A -> LetInM B), LetInM B
      end.
 Notation "x <- y ; z" := (bind y%letinm (fun x => z%letinm)) : letinm_scope.
 
-Fixpoint under_lets {A B} (v : LetInM A) : forall (f : A -> LetInM B), LetInM B
+Definition under_lets {A B} (v : LetInM A) : forall (f : A -> LetInM B), LetInM B
   := match v in LetInM A return (A -> _) -> _ with
      | ret T v => fun f => f v
      | let_in A B v g => fun f => let_in v (fun x => bind (g x) f)

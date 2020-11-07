@@ -158,7 +158,7 @@ Module Rust.
        | IR.TT => "#error tt;"
        end%string%Cexpr.
 
-  Fixpoint stmt_to_string (prefix : string) (e : IR.stmt) : string :=
+  Definition stmt_to_string (prefix : string) (e : IR.stmt) : string :=
     match e with
     | IR.Call val => arith_to_string prefix val ++ ";"
     | IR.Assign true t sz name val =>

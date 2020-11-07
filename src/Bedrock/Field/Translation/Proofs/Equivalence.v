@@ -68,7 +68,7 @@ Section Equivalent.
     @equivalent_args t x y (dummy_access_sizes_args t) locals map.empty.
 
   (* wrapper that uses non-base types *)
-  Fixpoint equivalent {t : API.type}
+  Definition equivalent {t : API.type}
     : API.interp_type t -> (* fiat-crypto value *)
       rtype t -> (* bedrock2 value *)
       access_sizes t -> (* sizes in memory *)

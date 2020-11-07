@@ -155,7 +155,7 @@ Module JSON.
        | IR.TT => wrap_value [ [ "#error tt" ] ]
        end%string%Cexpr.
 
-  Fixpoint stmt_to_string (e : IR.stmt) : list string
+  Definition stmt_to_string (e : IR.stmt) : list string
     := List.concat
          match e with
          | IR.Call val

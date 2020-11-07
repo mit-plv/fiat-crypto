@@ -251,7 +251,7 @@ Module Go.
   (** No need to lift declarations to the top *)
   Local Instance : IR.OfPHOAS.lift_declarations_opt := false.
 
-  Fixpoint stmt_to_string (prefix : string) (e : IR.stmt) : string :=
+  Definition stmt_to_string (prefix : string) (e : IR.stmt) : string :=
     match e with
     | IR.Call val => arith_to_string prefix val
     | IR.Assign true t sz name val =>

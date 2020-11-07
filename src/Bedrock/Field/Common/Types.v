@@ -166,7 +166,7 @@ Section defs.
     | base_listZ => rep.ltype (rep:=listZ)
     | _ => rep.ltype (rep:=rep.Z)
     end.
-  Fixpoint ltype (t : type.type base.type) : Type :=
+  Definition ltype (t : type.type base.type) : Type :=
     match t with
     | type.base t => base_ltype t
     | type.arrow s d => unit (* garbage *)
@@ -268,7 +268,7 @@ Section defs.
       (dummy_access_sizes s, dummy_access_sizes_args d)
     end.
 
-  Fixpoint baseonly (f : base.type -> Type) t : Type :=
+  Definition baseonly (f : base.type -> Type) t : Type :=
     match t with
     | type.base b => f b
     | type.arrow _ _ => unit

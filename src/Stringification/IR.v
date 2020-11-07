@@ -160,7 +160,7 @@ Module Compilers.
              | TT => ident_info_empty
              end.
 
-        Fixpoint collect_infos_of_stmt (e : stmt) : ident_infos
+        Definition collect_infos_of_stmt (e : stmt) : ident_infos
           := match e with
              | Assign _ _ (Some sz) _ val
              | AssignZPtr _ (Some sz) val
@@ -177,7 +177,7 @@ Module Compilers.
                => ident_info_empty
              end.
 
-        Fixpoint collect_infos (e : expr) : ident_infos
+        Definition collect_infos (e : expr) : ident_infos
           := fold_right
                ident_info_union
                ident_info_empty
@@ -226,7 +226,7 @@ Module Compilers.
                | TT => empty
                end.
 
-          Fixpoint collect_live_of_stmt (e : stmt) : t
+          Definition collect_live_of_stmt (e : stmt) : t
             := match e with
                | Assign _ _ _ _ val
                | AssignZPtr _ _ val
@@ -238,7 +238,7 @@ Module Compilers.
                | DeclareVar _ _ _ => empty
                end.
 
-          Fixpoint collect_live (e : expr) : t
+          Definition collect_live (e : expr) : t
             := fold_right
                  union
                  empty
@@ -261,7 +261,7 @@ Module Compilers.
                  | TT => TT
                  end.
 
-            Fixpoint adjust_dead_of_stmt (e : stmt) : list stmt
+            Definition adjust_dead_of_stmt (e : stmt) : list stmt
               := match e with
                  | Call val
                    => [Call (adjust_dead_of_arith_expr val)]
@@ -279,7 +279,7 @@ Module Compilers.
                    => [e]
                  end.
 
-            Fixpoint adjust_dead_of_expr (e : expr) : expr
+            Definition adjust_dead_of_expr (e : expr) : expr
               := flat_map adjust_dead_of_stmt e.
           End adjust_dead.
 

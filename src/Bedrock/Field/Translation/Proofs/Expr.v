@@ -271,7 +271,7 @@ Section Expr.
       fun _ _ _ => True
     | _ => fun _ _ _ => False
     end.
-  Fixpoint locally_equivalent_nobounds {t}
+  Definition locally_equivalent_nobounds {t}
     : API.interp_type t -> rtype t -> Semantics.locals -> Prop :=
     match t with
     | type.base b => locally_equivalent_nobounds_base

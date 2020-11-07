@@ -310,12 +310,12 @@ Module Compilers.
           [type.base] to [type] *)
       Definition interp (t : type base.type)
         := type.interp base.interp t.
-      Fixpoint is_tighter_than {t} : interp t -> interp t -> bool
+      Definition is_tighter_than {t} : interp t -> interp t -> bool
         := match t with
            | type.base x => @base.is_tighter_than x
            | type.arrow s d => fun _ _ => false
            end.
-      Fixpoint is_bounded_by {t} : interp t -> einterp t -> bool
+      Definition is_bounded_by {t} : interp t -> einterp t -> bool
         := match t return interp t -> einterp t -> bool with
            | type.base x => @base.is_bounded_by x
            | type.arrow s d => fun _ _ => false
@@ -333,7 +333,7 @@ Module Compilers.
              | type.base x => @base.option.None x
              | type.arrow s d => fun _ => @None d
              end.
-        Fixpoint Some {t : type base.type} : type.interp t -> interp t
+        Definition Some {t : type base.type} : type.interp t -> interp t
           := match t with
              | type.base x => @base.option.Some x
              | type.arrow s d => fun _ _ => @None d
@@ -343,12 +343,12 @@ Module Compilers.
              | type.base x => @base.option.strip_ranges x
              | type.arrow s d => fun f x => @strip_ranges d (f x)
              end.
-        Fixpoint is_tighter_than {t} : interp t -> interp t -> bool
+        Definition is_tighter_than {t} : interp t -> interp t -> bool
           := match t with
              | type.base x => @base.option.is_tighter_than x
              | type.arrow s d => fun _ _ => false
              end.
-        Fixpoint is_bounded_by {t} : interp t -> einterp t -> bool
+        Definition is_bounded_by {t} : interp t -> einterp t -> bool
           := match t with
              | type.base x => @base.option.is_bounded_by x
              | type.arrow s d => fun _ _ => false

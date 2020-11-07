@@ -333,7 +333,7 @@ Section of_prefancy.
                                 (expr.App (cstZZ r2 r[0~>1]) (expr.Var v))))
     .
 
-    Fixpoint interp_base (ctx : name -> Z) (cctx : name -> bool) {t}
+    Definition interp_base (ctx : name -> Z) (cctx : name -> bool) {t}
       : base_var t -> base.interp t :=
       match t as t0 return base_var t0 -> base.interp t0 with
       | tZ => fun n => ctx n

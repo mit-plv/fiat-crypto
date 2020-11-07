@@ -193,7 +193,7 @@ Fixpoint uncurry' {R T n} : (tuple' T n -> R) -> curry'T R T n
      | S n' => fun f => @uncurry' (T -> R) T n' (fun xs x => f (xs, x))
      end.
 
-Fixpoint uncurry {R T n} : (tuple T n -> R) -> curryT R T n
+Definition uncurry {R T n} : (tuple T n -> R) -> curryT R T n
   := match n return (tuple T n -> R) -> curryT R T n with
      | 0 => fun f => f tt
      | S n' => @uncurry' R T n'
@@ -205,7 +205,7 @@ Fixpoint curry' {R T n} : curry'T R T n -> (tuple' T n -> R)
      | S n' => fun f xs_x => @curry' (T -> R) T n' f (fst xs_x) (snd xs_x)
      end.
 
-Fixpoint curry {R T n} : curryT R T n -> (tuple T n -> R)
+Definition curry {R T n} : curryT R T n -> (tuple T n -> R)
   := match n return curryT R T n -> (tuple T n -> R) with
      | 0 => fun r _ => r
      | S n' => @curry' R T n'
@@ -945,7 +945,7 @@ Fixpoint mapi_with' {T A B n} i (f: nat->T->A->T*B) (start:T)
                snd (f i start (hd ys))))
   end.
 
-Fixpoint mapi_with {T A B n} (f: nat->T->A->T*B) (start:T)
+Definition mapi_with {T A B n} (f: nat->T->A->T*B) (start:T)
   : tuple A n -> T * tuple B n :=
   match n as n0 return (tuple A n0 -> T * tuple B n0) with
   | O => fun ys => (start, tt)
