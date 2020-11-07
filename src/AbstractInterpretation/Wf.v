@@ -550,7 +550,9 @@ Module Compilers.
                                 | [ H : ?x = ?x |- _ ] => clear H
                                 | [ H : length ?l1 = length ?l2, H' : context[length ?l1] |- _ ] => rewrite H in H'
                                 | [ H : context[invert_pair ?e] |- _ ]
-                                  => let lem := constr:(expr.invert_pair_ident_pair : invert_pair e = _) in
+                                  => let lem := lazymatch e with
+                                                | (?x, ?y)%expr => constr:(expr.invert_pair_ident_pair(v1:=x) (v2:=y) : invert_pair e = _)
+                                                end in
                                      rewrite lem in H
                                 end
                               | apply wf_annotate_with_expr
