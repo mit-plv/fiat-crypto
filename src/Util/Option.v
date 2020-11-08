@@ -271,6 +271,15 @@ Proof.
   rewrite <- (option_leq_to_eq_to_leq p), <- (option_leq_to_eq_to_leq q); simpl; reflexivity.
 Qed.
 
+Definition is_None {A} (x : option A) : bool
+  := match x with
+     | Some _ => false
+     | None => true
+     end.
+
+Lemma is_None_eq_None_iff {A x} : @is_None A x = true <-> x = None.
+Proof. destruct x; cbv; split; congruence. Qed.
+
 Definition invert_Some {A} (x : option A) : match x with
                                             | Some _ => A
                                             | None => unit

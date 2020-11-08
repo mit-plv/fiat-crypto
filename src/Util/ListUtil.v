@@ -2670,3 +2670,12 @@ Proof. induction xs; cbn; break_innermost_match; boring. Qed.
 Lemma filter_takeWhile {A} f xs
   : filter f (@takeWhile A f xs) = @takeWhile A f xs.
 Proof. induction xs; cbn; break_innermost_match; boring. Qed.
+
+Definition is_nil {A} (x : list A) : bool
+  := match x with
+     | nil => true
+     | _ => false
+     end.
+
+Lemma is_nil_eq_nil_iff {A x} : @is_nil A x = true <-> x = nil.
+Proof. destruct x; cbv; split; congruence. Qed.
