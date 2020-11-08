@@ -19,6 +19,7 @@ Require Import Rewriter.Util.Bool.Reflect.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.ZUtil.LandLorShiftBounds.
+Require Import Crypto.Util.ZUtil.LnotModulo.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.RewriteModSmall.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
@@ -129,6 +130,15 @@ Section Expr.
                                 (expr.App (expr.Ident ident.Z_truncating_shiftl)
                                           (expr.Ident (ident.Literal (t:=base.type.Z) s)))
                                 x) (expr.Ident (ident.Literal (t:=base.type.Z) n)))
+  | valid_lnot_modulo :
+      forall (x : API.expr type_Z) (m : Z),
+        is_bounded_by_bool m max_range = true ->
+        2 ^ Z.log2 m = m ->
+        valid_expr true x ->
+        valid_expr (t:=type_Z) false
+                   (expr.App (expr.App (expr.Ident ident.Z_lnot_modulo)
+                                       x)
+                             (expr.Ident (ident.Literal (t:=base.type.Z) m)))
   | valid_zselect :
       forall (c : API.expr type_Z) (x y : Z),
         x = 0 ->
@@ -350,6 +360,8 @@ Section Expr.
     apply Z.pow_pos_nonneg; lia.
   Qed.
 
+  (** TODO: Find a better place for this *)
+  Hint Rewrite word.testbit_wrap : Ztestbit_full.
   Lemma translate_expr_correct' {t}
         (* three exprs, representing the same Expr with different vars *)
         (e1 : @API.expr (fun _ => unit) (type.base t))
@@ -643,6 +655,30 @@ Section Expr.
             Z.rewrite_mod_small; lia).
       cbv [word.wrap]. Z.rewrite_mod_small.
       congruence. }
+    { (* lnot_modulo *)
+      cbv [rlnot_modulo invert_literal].
+      rewrite (proj2 (Z.eqb_eq _ _)) by lia.
+      specialize (IHvalid_expr _ _ _ _
+                               ltac:(eassumption) ltac:(eassumption)).
+      break_innermost_match; Z.ltb_to_lt.
+      all: cbn [locally_equivalent_nobounds
+                  locally_equivalent_nobounds_base
+                  locally_equivalent equivalent
+                  equivalent_base rep.equiv rep.Z ident.literal] in *.
+      all: cbv [WeakestPrecondition.dexpr ident.literal] in *.
+      all: cbn [WeakestPrecondition.expr WeakestPrecondition.expr_body
+                                         Semantics.interp_binop].
+      all: sepsimpl_hyps.
+      all: eapply Proper_expr; [ | eassumption ].
+      all: repeat intro; subst.
+      all: cbv [WeakestPrecondition.literal dlet.dlet].
+      all: apply word.unsigned_inj.
+      all: let H := match goal with H : 2^Z.log2 _ = ?m |- context[Definitions.Z.lnot_modulo _ ?m] => H end in
+           rewrite <- H, Z.lnot_modulo_correct, <- Z.land_ones, -> ?H by auto using Z.log2_nonneg.
+      all: rewrite word.unsigned_xor, ?word.unsigned_and_nowrap, !word.unsigned_of_Z.
+      all: apply Z.bits_inj'; intros; autorewrite with Ztestbit Ztestbit_full.
+      all: cbv [xorb negb andb orb]; break_innermost_match; Z.ltb_to_lt; try congruence; try lia. }
+
     { (* select *)
       cbv [ident.literal rselect literal_eqb invert_literal].
       rewrite !Z.eqb_refl.

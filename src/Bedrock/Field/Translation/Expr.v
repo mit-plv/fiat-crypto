@@ -88,6 +88,20 @@ Section Expr.
            else make_error type_Z
       else base_make_error _.
 
+  Definition rlnot_modulo
+    : rtype (type_Z -> type_Z -> type_Z) :=
+    fun x m =>
+      match invert_literal m with
+      | Some m => if (2^(Z.log2 m) =? m)
+                  then expr.op bopname.xor
+                               (if Z.log2 m =? Semantics.width (* is this a good place to do this optimization? *)
+                                then x
+                                else expr.op bopname.and x (expr.literal (Z.ones (Z.log2 m))))
+                               (expr.literal (Z.ones (Z.log2 m)))
+                  else make_error type_Z
+      | None => make_error type_Z
+      end.
+
   Definition rselect
     : rtype (type_Z -> type_Z -> type_Z -> type_Z) :=
     fun c x y =>
@@ -224,6 +238,7 @@ Section Expr.
     | ident.Z_shiftr => rshiftr
     | ident.Z_shiftl => rshiftl
     | ident.Z_truncating_shiftl => rtruncating_shiftl
+    | ident.Z_lnot_modulo => rlnot_modulo
     | ident.Z_zselect => rselect
     | ident.Z_mul_high => rmul_high
     | ident.Z_cast => fun _ x => x
