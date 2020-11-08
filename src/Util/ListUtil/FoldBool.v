@@ -9,6 +9,12 @@ Lemma fold_left_orb_pull ls v
   : List.fold_left orb ls v = orb v (List.fold_left orb ls false).
 Proof. destruct v; [ apply fold_left_orb_true | reflexivity ]. Qed.
 
+Lemma nth_error_true_fold_left_orb_true {n ls b}
+  : nth_error ls n = Some true -> fold_left orb ls b = true.
+Proof.
+  revert ls b; induction n, ls as [|[] ?]; cbn; try congruence; intro b'; destruct b'; cbn [orb]; try congruence; auto using fold_left_orb_true.
+Qed.
+
 Fixpoint fold_andb_map {A B} (f : A -> B -> bool) (ls1 : list A) (ls2 : list B)
   : bool
   := match ls1, ls2 with
