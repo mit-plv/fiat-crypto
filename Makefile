@@ -160,8 +160,6 @@ JAVA_$(call JAVA_RENAME,$(1))_BITWIDTH:=$(4)
 JAVA_$(call JAVA_RENAME,$(1))_ARGS:=$(4) $(5)
 JAVA_$(call JAVA_RENAME,$(1))_FUNCTIONS:=$(6)
 
-BEDROCK2_$(1)_FUNCTIONS:=$(filter-out %msat %divstep %divstep_precomp, $(6))
-
 endef
 
 UNSATURATED_SOLINAS_FUNCTIONS := carry_mul carry_square carry add sub opp selectznz to_bytes from_bytes
@@ -501,7 +499,7 @@ test-c-files only-test-c-files:
 
 $(ALL_BEDROCK2_FILES) : $(BEDROCK2_DIR)%.c : $$(BEDROCK2_$$($$*_BINARY_NAME))
 	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)($(TIMER) $(BEDROCK2_$($*_BINARY_NAME)) --lang bedrock2 --static $(BEDROCK2_ARGS) $($*_DESCRIPTION) $($*_ARGS) $(BEDROCK2_$*_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $(BEDROCK2_$($*_BINARY_NAME)) --lang bedrock2 --static $(BEDROCK2_ARGS) $($*_DESCRIPTION) $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 test-bedrock2-files: $(ALL_BEDROCK2_FILES)
