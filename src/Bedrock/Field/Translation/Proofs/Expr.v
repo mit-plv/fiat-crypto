@@ -132,7 +132,7 @@ Section Expr.
                                 x) (expr.Ident (ident.Literal (t:=base.type.Z) n)))
   | valid_lnot_modulo :
       forall (x : API.expr type_Z) (m : Z),
-        is_bounded_by_bool m max_range = true ->
+        is_bounded_by_bool (m-1) max_range = true ->
         2 ^ Z.log2 m = m ->
         valid_expr true x ->
         valid_expr (t:=type_Z) false
@@ -313,6 +313,20 @@ Section Expr.
       congruence.
   Qed.
 
+  Lemma require_cast_for_arg_binop2 {var s d} :
+    forall (i : ident.ident (s -> d)) x,
+      translate_binop i <> None ->
+      require_cast_for_arg (var:=var) (expr.App (expr.Ident i) x) = true.
+  Proof.
+    (* destruct is too weak *)
+    intro i.
+    refine match i with
+           | ident.Literal _ _ => _
+           | _ => _
+           end; try exact idProp; try reflexivity;
+      cbn [translate_binop]; congruence.
+  Qed.
+
   Lemma translate_ident_binop {t} :
     forall i : ident.ident t,
       translate_binop i <> None ->
@@ -409,6 +423,7 @@ Section Expr.
                             is_cast_ident is_cast_ident_expr
                             is_pair_range negb andb].
     all:rewrite ?require_cast_for_arg_binop by auto.
+    all:rewrite ?require_cast_for_arg_binop2 by auto.
     all:rewrite ?translate_binop_cast_exempt by auto.
     all:cbn [require_cast_for_arg cast_exempt
                                   translate_cast_exempt].

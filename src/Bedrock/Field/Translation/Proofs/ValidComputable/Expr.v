@@ -177,7 +177,7 @@ Section Expr.
            (e : @API.expr (fun _ => unit) t) : bool :=
     match e with
     | expr.Ident _ (ident.Literal base.type.Z n) =>
-      (is_bounded_by_bool n max_range) && (n =? 2 ^ Z.log2 n)
+      (is_bounded_by_bool (n-1) max_range) && (n =? 2 ^ Z.log2 n)
     | _ => false
     end.
 
@@ -918,7 +918,7 @@ Section Expr.
      | type_Z =>
        fun x =>
          exists n,
-           is_bounded_by_bool n max_range = true
+           is_bounded_by_bool (n-1) max_range = true
            /\ n = 2 ^ Z.log2 n
            /\ x = expr.Ident (ident.Literal (t:=base.type.Z) n)
      | _ => fun _ => False
