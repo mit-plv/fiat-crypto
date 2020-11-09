@@ -200,6 +200,7 @@ Section Expr.
   (* only require cast for the argument of (App f x) if:
      - f is not a cast
      - f is not mul_high (then, x = 2^width)
+     - f is not (lnot_modulo _) (then x is allowed to be 2^width)
      - f is not (nth_default ?d ?l) (i doesn't need to fit in a word) *)
   Definition require_cast_for_arg
              {var t} (e : @API.expr var t) : bool :=
@@ -208,6 +209,9 @@ Section Expr.
     | Zcast2 r1 r2 =>
       negb (range_good r1 && range_good r2)
     | expr.Ident _ ident.Z_mul_high => false
+    | expr.App
+        _ _ (expr.Ident _ ident.Z_lnot_modulo)
+        _ => false
     | expr.App
         _ _ (expr.App
                _ _ (expr.Ident _ (ident.List_nth_default _))
