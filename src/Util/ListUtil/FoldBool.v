@@ -15,6 +15,28 @@ Proof.
   revert ls b; induction n, ls as [|[] ?]; cbn; try congruence; intro b'; destruct b'; cbn [orb]; try congruence; auto using fold_left_orb_true.
 Qed.
 
+Lemma fold_left_orb_true_or_ind_gen {ls b} (P Q : bool -> Prop)
+      (H : forall b, P b -> Q b)
+  : Q b -> fold_right (fun b res => P b -> res) (Q (fold_left orb ls b)) ls.
+Proof.
+  revert Q H b; induction ls; cbn; eauto; intros.
+  apply IHls; eauto.
+  destruct b; cbn; eauto.
+Qed.
+
+Lemma fold_left_orb_true_or_ind {ls b} (P : bool -> Prop)
+  : fold_right (fun b res => P b -> res) (P b -> P (fold_left orb ls b)) ls.
+Proof.
+  apply @fold_left_orb_true_or_ind_gen with (P:=P) (Q:=fun v => _ -> P v); auto.
+Qed.
+
+Ltac induction_fold_left_orb_true ls b :=
+  let fold_right_u := (eval cbv [fold_right] in (@fold_right)) in
+  let lem := (eval cbv beta iota in
+                 (@id (forall P : bool -> Prop, fold_right_u _ _ (fun b' res => P b' -> res) (P b -> P (fold_left orb ls b)) ls)
+                      (@fold_left_orb_true_or_ind ls b))) in
+  induction (fold_left orb ls b) using lem.
+
 Fixpoint fold_andb_map {A B} (f : A -> B -> bool) (ls1 : list A) (ls2 : list B)
   : bool
   := match ls1, ls2 with
