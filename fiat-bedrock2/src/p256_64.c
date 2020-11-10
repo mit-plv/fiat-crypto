@@ -1214,7 +1214,7 @@ uintptr_t internal_fiat_p256_nonzero(uintptr_t in0) {
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
 static void fiat_p256_nonzero(uint64_t* out1, const uint64_t arg1[4]) {
-  *out1 = internal_fiat_p256_nonzero((uintptr_t)arg1);
+  *out1 = (uint64_t)internal_fiat_p256_nonzero((uintptr_t)arg1);
 }
 
 

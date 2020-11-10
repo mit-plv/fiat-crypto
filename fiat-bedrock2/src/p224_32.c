@@ -2982,7 +2982,7 @@ uintptr_t internal_fiat_p224_nonzero(uintptr_t in0) {
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
 static void fiat_p224_nonzero(uint32_t* out1, const uint32_t arg1[7]) {
-  *out1 = internal_fiat_p224_nonzero((uintptr_t)arg1);
+  *out1 = (uint32_t)internal_fiat_p224_nonzero((uintptr_t)arg1);
 }
 
 

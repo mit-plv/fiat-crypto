@@ -1,3 +1,4 @@
+(* IF YOU CHANGE THIS FILE YOU MUST ALSO CHANGE FlattenVarData.v ! *)
 Require Import Coq.Strings.String.
 Require Import Coq.Lists.List.
 Require Import bedrock2.Array.
