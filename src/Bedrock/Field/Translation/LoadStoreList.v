@@ -1,3 +1,4 @@
+(* IF YOU CHANGE THIS FILE YOU MUST ALSO CHANGE LoadStoreListVarData.v ! *)
 Require Import Coq.Strings.String.
 Require Import Coq.Lists.List.
 Require Import Coq.micromega.Lia.

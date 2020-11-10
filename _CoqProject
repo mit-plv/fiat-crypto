@@ -88,8 +88,10 @@ src/Bedrock/Field/Synthesis/Specialized/WordByWordMontgomery.v
 src/Bedrock/Field/Translation/Cmd.v
 src/Bedrock/Field/Translation/Expr.v
 src/Bedrock/Field/Translation/Flatten.v
+src/Bedrock/Field/Translation/FlattenVarData.v
 src/Bedrock/Field/Translation/Func.v
 src/Bedrock/Field/Translation/LoadStoreList.v
+src/Bedrock/Field/Translation/LoadStoreListVarData.v
 src/Bedrock/Field/Translation/Parameters/Defaults.v
 src/Bedrock/Field/Translation/Parameters/Defaults32.v
 src/Bedrock/Field/Translation/Parameters/Defaults64.v

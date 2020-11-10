@@ -14,6 +14,8 @@ Require Import Crypto.Bedrock.Field.Common.Names.VarnameGenerator.
 Require Import Crypto.Bedrock.Field.Translation.Parameters.Defaults.
 Require Import Crypto.Bedrock.Field.Translation.Parameters.SelectParameters.
 Require Import Crypto.Bedrock.Field.Translation.Func.
+Require Import Crypto.Bedrock.Field.Translation.FlattenVarData.
+Require Import Crypto.Bedrock.Field.Translation.LoadStoreListVarData.
 Require Import Crypto.Stringification.C.
 Require Import Crypto.Language.API.
 Require Import Crypto.Util.Option.
@@ -105,8 +107,6 @@ Definition bedrock_func_to_lines (f : func)
   : list string :=
   [c_func f].
 
-(** TODO: Is there a better way to do this? *)
-(** TODO: FIXME: This is currently incorrect when outputs contain mixed integers and pointers *)
 Definition wrap_call
            {p : parameters}
            {t}
@@ -116,23 +116,26 @@ Definition wrap_call
            (insizes : type.for_each_lhs_of_arrow access_sizes t)
            (outsizes : base_access_sizes (type.final_codomain t))
   : string
-  := let innames := ToString.OfPHOAS.names_list_of_input_var_data indata in
-     let outnames := ToString.OfPHOAS.names_list_of_base_var_data outdata in
+  := let part := extract_list_var_data outdata in
+     let out_ptrs := flatten_listonly_base_var_data (fst part) in
+     let innames := out_ptrs ++ flatten_argnames_of_var_data indata in
+     let outnames := flatten_listexcl_base_var_data (snd part) in
      let '(name, (args, rets, _body)) := f in
+     (* slightly modified from https://github.com/mit-plv/bedrock2/blob/13365e8113131601a60dd6b6ffddc5a0b92aed58/bedrock2/src/bedrock2/ToCString.v#L151-L154 *)
      let '(precall, all_args)
          := match rets, outnames with
             | nil, _ | _, nil => (name, outnames ++ innames)
             | cons _ _, cons r0 _
               => let r0 := List.last outnames r0 in
                  let outnames' := List.removelast outnames in
-                 (("*" ++ r0 ++ " = " ++ name)%string, outnames' ++ innames)
+                 (("*" ++ print_name r0 ++ " = " ++ print_cast r0 ++ name)%string, outnames' ++ innames)
             end%list in
      ((precall ++ "(")
         ++ (String.concat
               ", "
               (List.map
-                 (** TODO: Is there a better way to do this? *)
-                 (fun n => "(uintptr_t)" ++ n)
+                 (** TODO: Is there a better way to do this, e.g., pulling from insizes? *)
+                 (fun n => "(uintptr_t)" ++ print_name n)
                  all_args))
         ++ ")")%string.
 
