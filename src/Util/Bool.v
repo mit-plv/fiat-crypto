@@ -1,5 +1,6 @@
 (*** Boolean Utility Lemmas and Databases *)
 Require Import Coq.Bool.Bool.
+Require Import Crypto.Util.Notations.
 
 (** For equalities of booleans *)
 Create HintDb bool_congr discriminated.
@@ -116,12 +117,38 @@ Lemma eqb_false_r x : Bool.eqb false x = negb x. Proof. now destruct x. Qed.
 Hint Rewrite eqb_true_l eqb_true_r eqb_false_l eqb_false_r : boolsimplify.
 
 Module Thunked.
+  Local Notation lift0 f := (fun (v : unit) => f) (only parsing).
+  Local Notation lift1 f := (fun (x : unit -> bool) (v : unit) => f (x v)) (only parsing).
   Local Notation lift2 f := (fun (x y : unit -> bool) (v : unit) => f (x v) (y v)) (only parsing).
   Local Notation lift3 f := (fun (x y z : unit -> bool) (v : unit) => f (x v) (y v) (z v)) (only parsing).
-  Definition orb := lift2 orb.
-  Definition xorb := lift2 xorb.
-  Definition andb := lift2 andb.
-  Definition implb := lift2 implb.
-  Definition eqb := lift2 eqb.
-  Definition ifb := lift3 ifb.
+  Definition bool := unit -> bool.
+  Definition true : bool := lift0 true.
+  Definition false : bool := lift0 false.
+  Definition orb : bool -> bool -> bool := lift2 orb.
+  Definition xorb : bool -> bool -> bool := lift2 xorb.
+  Definition andb : bool -> bool -> bool := lift2 andb.
+  Definition implb : bool -> bool -> bool := lift2 implb.
+  Definition eqb : bool -> bool -> bool := lift2 eqb.
+  Definition ifb : bool -> bool -> bool -> bool := lift3 ifb.
+  Definition eq : bool -> bool -> Prop := fun a b => a tt = b tt.
+
+  Module Export Notations.
+    Declare Scope thunked_bool_scope.
+    Delimit Scope thunked_bool_scope with thunked_bool.
+    Bind Scope thunked_bool_scope with bool.
+    Infix "&&" := andb : thunked_bool_scope.
+    Infix "||" := orb : thunked_bool_scope.
+  End Notations.
+
+  Local Infix "==" := eq.
+
+  Create HintDb thunked_bool_helper discriminated.
+
+  Local Ltac t :=
+    cbv [true false bool orb xorb andb implb eqb ifb eq].
+
+  Lemma andb_prop : forall a b : bool, a && b == true -> a == true /\ b == true.
+  Proof. t; auto using andb_prop. Qed.
+  Lemma andb_true_intro : forall b1 b2 : bool, b1 == true /\ b2 == true -> b1 && b2 == true.
+  Proof. t; auto using andb_true_intro. Qed.
 End Thunked.

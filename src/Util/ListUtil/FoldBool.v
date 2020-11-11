@@ -101,13 +101,13 @@ Qed.
 Module Thunked.
   Import Bool.Thunked.
   Lemma fold_left_orb_true ls b
-    : b tt = true -> List.fold_left orb ls b tt = true.
+    : b tt = Datatypes.true -> List.fold_left orb ls b tt = Datatypes.true.
   Proof.
     revert b; induction ls as [|?? IHls]; cbn; auto.
     intros ? H; apply IHls; cbv [orb]; rewrite H; reflexivity.
   Qed.
   Lemma nth_error_true_fold_left_orb_true {n ls b}
-    : option_map (fun f => f tt) (nth_error ls n) = Some true -> fold_left orb ls b tt = true.
+    : option_map (fun f => f tt) (nth_error ls n) = Some Datatypes.true -> fold_left orb ls b tt = Datatypes.true.
   Proof.
     revert ls b; induction n, ls as [|v ?]; cbn; auto.
     all: intros b H; inversion H; auto using fold_left_orb_true.
