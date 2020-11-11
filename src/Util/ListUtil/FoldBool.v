@@ -1,5 +1,6 @@
 Require Import Coq.Classes.Morphisms.
 Require Import Coq.Lists.List.
+Require Import Crypto.Util.Bool.
 Import ListNotations. Open Scope bool_scope.
 
 Lemma fold_left_orb_true ls
@@ -96,3 +97,43 @@ Proof.
     try reflexivity.
   rewrite IHxs', Bool.andb_assoc; reflexivity.
 Qed.
+
+Module Thunked.
+  Import Bool.Thunked.
+  Lemma fold_left_orb_true ls b
+    : b tt = true -> List.fold_left orb ls b tt = true.
+  Proof.
+    revert b; induction ls as [|?? IHls]; cbn; auto.
+    intros ? H; apply IHls; cbv [orb]; rewrite H; reflexivity.
+  Qed.
+  Lemma nth_error_true_fold_left_orb_true {n ls b}
+    : option_map (fun f => f tt) (nth_error ls n) = Some true -> fold_left orb ls b tt = true.
+  Proof.
+    revert ls b; induction n, ls as [|v ?]; cbn; auto.
+    all: intros b H; inversion H; auto using fold_left_orb_true.
+    etransitivity; [ apply fold_left_orb_true; cbv [orb] | congruence ].
+    edestruct b; cbn; congruence.
+  Qed.
+
+  Lemma fold_left_orb_true_or_ind_gen {ls b} (P Q : Datatypes.bool -> Prop)
+        (H : forall b, P b -> Q b)
+    : Q (b tt) -> fold_right (fun b res => P (b tt) -> res) (Q (fold_left orb ls b tt)) ls.
+  Proof.
+    revert Q H b; induction ls; cbn; eauto; intros.
+    apply IHls; eauto; cbv [orb].
+    destruct b; cbn; eauto.
+  Qed.
+
+  Lemma fold_left_orb_true_or_ind {ls b} (P : Datatypes.bool -> Prop)
+    : fold_right (fun b res => P (b tt) -> res) (P (b tt) -> P (fold_left orb ls b tt)) ls.
+  Proof.
+    apply @fold_left_orb_true_or_ind_gen with (P:=P) (Q:=fun v => _ -> P v); auto.
+  Qed.
+
+  Ltac induction_fold_left_orb_true ls b :=
+    let fold_right_u := (eval cbv [fold_right] in (@fold_right)) in
+    let lem := (eval cbv beta iota in
+                   (@id (forall P : Datatypes.bool -> Prop, fold_right_u _ _ (fun b' res => P (b' tt) -> res) (P (b tt) -> P (fold_left orb ls b tt)) ls)
+                        (@fold_left_orb_true_or_ind ls b))) in
+    induction (fold_left orb ls b tt) using lem.
+End Thunked.

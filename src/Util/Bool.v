@@ -114,3 +114,14 @@ Lemma eqb_true_r x : Bool.eqb true x = x. Proof. now destruct x. Qed.
 Lemma eqb_false_l x : Bool.eqb x false = negb x. Proof. now destruct x. Qed.
 Lemma eqb_false_r x : Bool.eqb false x = negb x. Proof. now destruct x. Qed.
 Hint Rewrite eqb_true_l eqb_true_r eqb_false_l eqb_false_r : boolsimplify.
+
+Module Thunked.
+  Local Notation lift2 f := (fun (x y : unit -> bool) (v : unit) => f (x v) (y v)) (only parsing).
+  Local Notation lift3 f := (fun (x y z : unit -> bool) (v : unit) => f (x v) (y v) (z v)) (only parsing).
+  Definition orb := lift2 orb.
+  Definition xorb := lift2 xorb.
+  Definition andb := lift2 andb.
+  Definition implb := lift2 implb.
+  Definition eqb := lift2 eqb.
+  Definition ifb := lift3 ifb.
+End Thunked.
