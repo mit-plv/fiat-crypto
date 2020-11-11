@@ -17,7 +17,7 @@ Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.Tactics.DestructHead.
 
 (* for [eauto with lia] *)
-Require Import Crypto.BoundsPipeline.
+Require Import Crypto.Util.ZUtil.Hints.Core.
 
 Import API.Compilers.
 Import Wf.Compilers.expr.
