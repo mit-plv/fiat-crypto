@@ -124,12 +124,16 @@ Module Thunked.
   Definition bool := unit -> bool.
   Definition true : bool := lift0 true.
   Definition false : bool := lift0 false.
-  Definition orb : bool -> bool -> bool := lift2 orb.
+  Definition orb (x y : bool) : bool
+    := fun _ => if x tt then Datatypes.true else y tt.
   Definition xorb : bool -> bool -> bool := lift2 xorb.
-  Definition andb : bool -> bool -> bool := lift2 andb.
-  Definition implb : bool -> bool -> bool := lift2 implb.
+  Definition andb (x y : bool) : bool
+    := fun _ => if x tt then y tt else Datatypes.false.
+  Definition implb (x y : bool) : bool
+    := fun _ => if x tt then y tt else Datatypes.true.
   Definition eqb : bool -> bool -> bool := lift2 eqb.
-  Definition ifb : bool -> bool -> bool -> bool := lift3 ifb.
+  Definition ifb (c t f : bool) : bool
+    := fun _ => if c tt then t tt else f tt.
   Definition eq : bool -> bool -> Prop := fun a b => a tt = b tt.
 
   Module Export Notations.
@@ -145,10 +149,23 @@ Module Thunked.
   Create HintDb thunked_bool_helper discriminated.
 
   Local Ltac t :=
-    cbv [true false bool orb xorb andb implb eqb ifb eq].
+    cbv [true false bool orb xorb andb implb eqb ifb eq
+              Datatypes.orb Datatypes.xorb Datatypes.andb Datatypes.implb Bool.eqb Bool.ifb] in *;
+    repeat first [ progress intros
+                 | progress subst
+                 | reflexivity
+                 | congruence
+                 | match goal with
+                   | [ x : unit |- _ ] => destruct x
+                   | [ x : unit -> Datatypes.bool |- _ ] => generalize dependent (x tt); clear x; intros
+                   | [ H : context[match ?x with _ => _ end] |- _ ] => is_var x; destruct x
+                   | [ |- context[match ?x with _ => _ end] ] => is_var x; destruct x
+                   | [ H : and _ _ |- _ ] => destruct H
+                   | [ |- and _ _ ] => split
+                   end ].
 
   Lemma andb_prop : forall a b : bool, a && b == true -> a == true /\ b == true.
-  Proof. t; auto using andb_prop. Qed.
+  Proof. t. Qed.
   Lemma andb_true_intro : forall b1 b2 : bool, b1 == true /\ b2 == true -> b1 && b2 == true.
-  Proof. t; auto using andb_true_intro. Qed.
+  Proof. t. Qed.
 End Thunked.
