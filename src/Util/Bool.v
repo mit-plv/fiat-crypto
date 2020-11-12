@@ -163,6 +163,34 @@ Module Thunked.
                    | [ |- and _ _ ] => split
                    end ].
 
+  Lemma unthunk_true : true tt = Datatypes.true.
+  Proof. t. Qed.
+  Hint Rewrite unthunk_true : unthunk_bool.
+  Lemma unthunk_false : false tt = Datatypes.false.
+  Proof. t. Qed.
+  Hint Rewrite unthunk_false : unthunk_bool.
+  Lemma unthunk_orb {x y} : orb x y tt = Datatypes.orb (x tt) (y tt).
+  Proof. t. Qed.
+  Hint Rewrite @unthunk_orb : unthunk_bool.
+  Lemma unthunk_xorb {x y} : xorb x y tt = Datatypes.xorb (x tt) (y tt).
+  Proof. t. Qed.
+  Hint Rewrite @unthunk_xorb : unthunk_bool.
+  Lemma unthunk_andb {x y} : andb x y tt = Datatypes.andb (x tt) (y tt).
+  Proof. t. Qed.
+  Hint Rewrite @unthunk_andb : unthunk_bool.
+  Lemma unthunk_implb {x y} : implb x y tt = Datatypes.implb (x tt) (y tt).
+  Proof. t. Qed.
+  Hint Rewrite @unthunk_implb : unthunk_bool.
+  Lemma unthunk_eqb {x y} : eqb x y tt = Bool.eqb (x tt) (y tt).
+  Proof. t. Qed.
+  Hint Rewrite @unthunk_eqb : unthunk_bool.
+  Lemma unthunk_ifb {x y z} : ifb x y z tt = Bool.ifb (x tt) (y tt) (z tt).
+  Proof. t. Qed.
+  Hint Rewrite @unthunk_ifb : unthunk_bool.
+  Lemma unthunk_eq {x y} : eq x y = (x tt = y tt).
+  Proof. t. Qed.
+  Hint Rewrite @unthunk_eq : unthunk_bool.
+
   Lemma andb_prop : forall a b : bool, a && b == true -> a == true /\ b == true.
   Proof. t. Qed.
   Lemma andb_true_intro : forall b1 b2 : bool, b1 == true /\ b2 == true -> b1 && b2 == true.
