@@ -29,6 +29,14 @@ Section WordByWordMontgomery.
     {sub_then_maybe_add : T R_numlimbs -> T R_numlimbs -> T R_numlimbs} (* computes [a - b + if (a - b) <? 0 then N else 0] *)
     (N : T R_numlimbs).
 
+  (* Coq bug #9412 *)
+  Local Arguments eval {n}.
+  Local Arguments zero {n}.
+  Local Arguments divmod {n}.
+  Local Arguments scmul {n}.
+  Local Arguments addT {n}.
+  Local Arguments addT' {n}.
+
   (* Recurse for a as many iterations as A has limbs, varying A := A, S := 0, r, bounds *)
   Section Iteration.
     Context (pred_A_numlimbs : nat)
@@ -36,12 +44,12 @@ Section WordByWordMontgomery.
             (A : T (S pred_A_numlimbs))
             (S : T (S R_numlimbs)).
     (* Given A, B < R, we want to compute A * B / R mod N. R = bound 0 * ... * bound (n-1) *)
-    Local Definition A_a := dlet p := divmod _ A in p. Local Definition A' := fst A_a. Local Definition a := snd A_a.
-    Local Definition S1 := addT _ S (scmul _ a B).
-    Local Definition s := snd (divmod _ S1).
+    Local Definition A_a := dlet p := divmod A in p. Local Definition A' := fst A_a. Local Definition a := snd A_a.
+    Local Definition S1 := addT S (scmul a B).
+    Local Definition s := snd (divmod S1).
     Local Definition q := fst (Z.mul_split r s k).
-    Local Definition S2 := addT' _ S1 (scmul _ q N).
-    Local Definition S3 := fst (divmod _ S2).
+    Local Definition S2 := addT' S1 (scmul q N).
+    Local Definition S3 := fst (divmod S2).
     Local Definition S4 := drop_high S3.
   End Iteration.
 
@@ -63,18 +71,18 @@ Section WordByWordMontgomery.
          end.
 
     Definition pre_redc : T (S R_numlimbs)
-      := snd (redc_loop A_numlimbs (A, zero (1 + R_numlimbs))).
+      := snd (redc_loop A_numlimbs (A, zero (n := 1 + R_numlimbs))).
 
     Definition redc : T R_numlimbs
       := conditional_sub pre_redc.
   End loop.
 
   Definition add (A B : T R_numlimbs) : T R_numlimbs
-    := conditional_sub (addT _ A B).
+    := conditional_sub (addT A B).
   Definition sub (A B : T R_numlimbs) : T R_numlimbs
     := sub_then_maybe_add A B.
   Definition opp (A : T R_numlimbs) : T R_numlimbs
-    := sub (zero _) A.
+    := sub zero A.
 End WordByWordMontgomery.
 
 Create HintDb word_by_word_montgomery.

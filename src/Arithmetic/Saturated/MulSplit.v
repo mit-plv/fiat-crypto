@@ -18,6 +18,10 @@ Module B.
                   snd (mul_split_cps s x y id)  = (x * y) / s}
       .
 
+      (* Coq bug #9412 *)
+      Local Arguments mul_split_cps {T}.
+      Local Arguments mul_split_cps_id {T}.
+
       Local Lemma mul_split_cps_correct {T} s x y f
         : @mul_split_cps T s x y f = f ((x * y) mod s, (x * y) / s).
       Proof.
@@ -26,7 +30,7 @@ Module B.
       Hint Rewrite @mul_split_cps_correct : uncps.
 
       Definition sat_multerm_cps s (t t' : B.limb) {T} (f:list B.limb ->T) :=
-      mul_split_cps _ s (snd t) (snd t') (fun xy =>
+      mul_split_cps s (snd t) (snd t') (fun xy =>
       dlet xy := xy in
       f ((fst t * fst t', fst xy) :: (fst t * fst t' * s, snd xy) :: nil)).
 

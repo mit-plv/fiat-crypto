@@ -19,8 +19,8 @@ Module B.
       Let small {n} := @small s n.
       Section GenericOp.
         Context {op : Z -> Z -> Z}
-                {op_get_carry_cps : forall {T}, Z -> Z -> (Z * Z -> T) -> T} (* no carry in, carry out *)
-                {op_with_carry_cps : forall {T}, Z -> Z -> Z -> (Z * Z -> T) -> T}. (* carry in, carry out  *)
+                {op_get_carry_cps : forall T, Z -> Z -> (Z * Z -> T) -> T} (* no carry in, carry out *)
+                {op_with_carry_cps : forall T, Z -> Z -> Z -> (Z * Z -> T) -> T}. (* carry in, carry out  *)
         Let op_get_carry x y := op_get_carry_cps _ x y id.
         Let op_with_carry x y z := op_with_carry_cps _ x y z id.
         Context {op_get_carry_id : forall {T} x y f,

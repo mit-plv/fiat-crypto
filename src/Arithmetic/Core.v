@@ -440,7 +440,7 @@ Module B.
     Qed. Hint Rewrite eval_negate_snd : push_basesystem_eval.
 
     Section Carries.
-      Context {modulo_cps div_cps:forall {R},Z->Z->(Z->R)->R}.
+      Context {modulo_cps div_cps:forall R,Z->Z->(Z->R)->R}.
       Let modulo x y := modulo_cps _ x y id.
       Let div x y := div_cps _ x y id.
       Context {modulo_cps_id : forall R x y f, modulo_cps R x y f = f (modulo x y)}
@@ -730,7 +730,7 @@ Module B.
       .
 
       Section Carries.
-        Context {modulo_cps div_cps:forall {R},Z->Z->(Z->R)->R}.
+        Context {modulo_cps div_cps:forall R,Z->Z->(Z->R)->R}.
         Let modulo x y := modulo_cps _ x y id.
         Let div x y := div_cps _ x y id.
         Context {modulo_cps_id : forall R x y f, modulo_cps R x y f = f (modulo x y)}
@@ -942,7 +942,7 @@ Module B.
       Section F.
         Context {sz:nat} {sz_nonzero : sz<>0%nat} {m :positive}.
         Context (weight_divides : forall i : nat, weight (S i) / weight i <> 0).
-        Context {modulo_cps div_cps:forall {R},Z->Z->(Z->R)->R}.
+        Context {modulo_cps div_cps:forall R,Z->Z->(Z->R)->R}.
         Let modulo x y := modulo_cps _ x y id.
         Let div x y := div_cps _ x y id.
         Context {modulo_cps_id : forall R x y f, modulo_cps R x y f = f (modulo x y)}

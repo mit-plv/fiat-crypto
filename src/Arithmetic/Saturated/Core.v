@@ -117,20 +117,20 @@ Module Columns.
             {weight_multiples : forall i, weight (S i) mod weight i = 0}
             {weight_divides : forall i : nat, weight (S i) / weight i > 0}
             (* add_get_carry takes in a number at which to split output *)
-            {add_get_carry_cps: forall {T}, Z ->Z -> Z -> (Z * Z -> T) -> T}
-            {div_cps modulo_cps : forall {T}, Z -> Z -> (Z -> T) -> T}.
+            {add_get_carry_cps: forall T, Z ->Z -> Z -> (Z * Z -> T) -> T}
+            {div_cps modulo_cps : forall T, Z -> Z -> (Z -> T) -> T}.
     Let add_get_carry s x y := add_get_carry_cps _ s x y id.
     Let div x y := div_cps _ x y id.
     Let modulo x y := modulo_cps _ x y id.
-    Context {add_get_carry_cps_id : forall {T} s x y f,
+    Context {add_get_carry_cps_id : forall T s x y f,
                 @add_get_carry_cps T s x y f = f (add_get_carry s x y)}
             {add_get_carry_mod : forall s x y,
                 fst (add_get_carry s x y)  = (x + y) mod s}
             {add_get_carry_div : forall s x y,
                 snd (add_get_carry s x y)  = (x + y) / s}
-            {div_cps_id : forall {T} x y f,
+            {div_cps_id : forall T x y f,
                 @div_cps T x y f = f (div x y)}
-            {modulo_cps_id : forall {T} x y f,
+            {modulo_cps_id : forall T x y f,
                 @modulo_cps T x y f = f (modulo x y)}
             {div_correct : forall a b, div a b = a / b}
             {modulo_correct : forall a b, modulo a b = a mod b}
