@@ -28,7 +28,7 @@ Section WordByWordMontgomery.
   Context
     {T : nat -> Type}
     {eval : forall {n}, T n -> Z}
-    {zero : forall {n}, T n}
+    {zero : forall n, T n}
     {divmod : forall {n}, T (S n) -> T n * Z} (* returns lowest limb and all-but-lowest-limb *)
     {r : positive}
     {r_big : r > 1}
@@ -41,13 +41,13 @@ Section WordByWordMontgomery.
     {eval_div : forall n v, small v -> eval (fst (@divmod n v)) = eval v / r}
     {eval_mod : forall n v, small v -> snd (@divmod n v) = eval v mod r}
     {small_div : forall n v, small v -> small (fst (@divmod n v))}
-    {scmul : forall {n}, Z -> T n -> T (S n)} (* uses double-output multiply *)
+    {scmul : forall n, Z -> T n -> T (S n)} (* uses double-output multiply *)
     {eval_scmul: forall n a v, small v -> 0 <= a < r -> 0 <= eval v < R -> eval (@scmul n a v) = a * eval v}
     {small_scmul : forall n a v, small v -> 0 <= a < r -> 0 <= eval v < R -> small (@scmul n a v)}
-    {addT : forall {n}, T n -> T n -> T (S n)} (* joins carry *)
+    {addT : forall n, T n -> T n -> T (S n)} (* joins carry *)
     {eval_addT : forall n a b, eval (@addT n a b) = eval a + eval b}
     {small_addT : forall n a b, small a -> small b -> small (@addT n a b)}
-    {addT' : forall {n}, T (S n) -> T n -> T (S (S n))} (* joins carry *)
+    {addT' : forall n, T (S n) -> T n -> T (S (S n))} (* joins carry *)
     {eval_addT' : forall n a b, eval (@addT' n a b) = eval a + eval b}
     {small_addT' : forall n a b, small a -> small b -> small (@addT' n a b)}
     {drop_high : T (S (S R_numlimbs)) -> T (S R_numlimbs)} (* drops the highest limb *)
@@ -101,6 +101,7 @@ Section WordByWordMontgomery.
        using (repeat autounfold with word_by_word_montgomery; t_small)
     : push_eval.
 
+  (* Coq bug #9412 *)
   Local Arguments eval {_} _.
   Local Arguments small {_} _.
   Local Arguments divmod {_} _.

@@ -12,13 +12,14 @@ Section language.
 
     Section gen_flat_type.
       Context (eta : forall {A B}, A * B -> A * B).
+      Local Arguments eta {A B}. (* Coq bug #9412 *)
       Fixpoint interp_flat_type_eta_gen {t T} : (interp_flat_type var t -> T) -> interp_flat_type var t -> T
         := match t return (interp_flat_type var t -> T) -> interp_flat_type var t -> T with
            | Tbase T => fun f => f
            | Unit => fun f => f
            | Prod A B
              => fun f x
-                => let '(a, b) := eta _ _ x in
+                => let '(a, b) := eta x in
                    @interp_flat_type_eta_gen
                      A _
                      (fun a' => @interp_flat_type_eta_gen B _ (fun b' => f (a', b')) b)
@@ -27,8 +28,9 @@ Section language.
 
       Section gen_type.
         Context (exprf_eta : forall {t} (e : exprf t), exprf t).
+        Local Arguments exprf_eta {t}. (* Coq bug #9412 *)
         Definition expr_eta_gen {t} (e : expr t) : expr (Arrow (domain t) (codomain t))
-          := Abs (interp_flat_type_eta_gen (fun x => exprf_eta _ (invert_Abs e x))).
+          := Abs (interp_flat_type_eta_gen (fun x => exprf_eta (invert_Abs e x))).
       End gen_type.
 
       Fixpoint exprf_eta_gen {t} (e : exprf t) : exprf t

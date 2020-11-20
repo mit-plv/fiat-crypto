@@ -50,7 +50,7 @@ Module Import core.
                end.
     Qed.
 
-    Context (body_cps2 : A -> forall {R}, (A -> R) -> (B -> R) -> R).
+    Context (body_cps2 : A -> forall R, (A -> R) -> (B -> R) -> R).
     Fixpoint loop_cps2 (fuel : nat) (s : A) {R} (timeout:A->R) (ret:B->R) {struct fuel} : R :=
       body_cps2 s R
                 (fun a =>

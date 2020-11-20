@@ -29,7 +29,7 @@ Section language.
   Local Ltac t := repeat t_step.
 
   Section gen_flat_type.
-    Context (eta : forall {A B}, A * B -> A * B)
+    Context (eta : forall A B, A * B -> A * B)
             (eq_eta : forall A B x, @eta A B x = x).
     Lemma eq_interp_flat_type_eta_gen {var t T f} x
       : @interp_flat_type_eta_gen base_type_code var eta t T f x = f x.
@@ -38,7 +38,7 @@ Section language.
     (* Local *) Hint Rewrite @eq_interp_flat_type_eta_gen.
 
     Section gen_type.
-      Context (exprf_eta : forall {t} (e : exprf t), exprf t)
+      Context (exprf_eta : forall t (e : exprf t), exprf t)
               (eq_interp_exprf_eta : forall t e, interpf (@interp_op) (@exprf_eta t e) = interpf (@interp_op) e).
       Lemma interp_expr_eta_gen {t e}
         : forall x,

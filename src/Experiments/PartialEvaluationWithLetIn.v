@@ -526,7 +526,7 @@ Module partial.
                      cells'
            end.
 
-      Context (half_interp : forall {t} (idc : pident t),
+      Context (half_interp : forall t (idc : pident t),
                   parametric.half_interp UnderLets pbase_value value t
                   + parametric.half_interp2 UnderLets pbase_value value t).
 

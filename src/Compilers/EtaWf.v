@@ -42,11 +42,11 @@ Section language.
   Section with_var.
     Context {var1 var2 : base_type_code -> Type}.
     Section gen_flat_type.
-      Context (eta : forall {A B}, A * B -> A * B)
+      Context (eta : forall A B, A * B -> A * B)
               (eq_eta : forall A B x, @eta A B x = x).
       Section gen_type.
-        Context (exprf_eta1 : forall {t} (e : exprf t), exprf t)
-                (exprf_eta2 : forall {t} (e : exprf t), exprf t)
+        Context (exprf_eta1 : forall t (e : exprf t), exprf t)
+                (exprf_eta2 : forall t (e : exprf t), exprf t)
                 (wff_exprf_eta : forall G t e1 e2, @wff _ _ var1 var2 G t e1 e2
                                                    <-> @wff _ _ var1 var2 G t (@exprf_eta1 t e1) (@exprf_eta2 t e2)).
         Lemma wf_expr_eta_gen {t e1 e2}

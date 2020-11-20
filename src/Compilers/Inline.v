@@ -38,11 +38,12 @@ Section language.
          end.
 
     Context (postprocess : forall {t}, @exprf var t -> inline_directive t).
+    Local Arguments postprocess {t}.
 
     Fixpoint inline_const_genf {t} (e : @exprf (@exprf var) t) : @exprf var t
       := match e in Syntax.exprf _ _ t return @exprf var t with
          | LetIn tx ex tC eC
-           => match postprocess _ (@inline_const_genf _ ex) in inline_directive t' return (interp_flat_type _ t' -> @exprf var tC) -> @exprf var tC with
+           => match postprocess (@inline_const_genf _ ex) in inline_directive t' return (interp_flat_type _ t' -> @exprf var tC) -> @exprf var tC with
               | default_inline _ ex
                 => match ex in Syntax.exprf _ _ t' return (interp_flat_type _ t' -> @exprf var tC) -> @exprf var tC with
                    | TT => fun eC => eC tt
