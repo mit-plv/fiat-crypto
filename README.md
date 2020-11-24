@@ -27,43 +27,7 @@ New Pipeline
 -----
 The new pipeline (nearly finished) generates binaries that take in arguments on the command line and print out C code on stdout.
 
-A collection of C files can be made with
-
-    make c-files
-
-The C files will appear in the top-level directory.
-
-The binaries generating these C files can be made with
-
-    make standalone
-
-or `make standalone-haskell` or `make standalone-ocaml` for binaries generated with just one compiler.
-
-The binaries are located in
-
-    src/Experiments/NewPipeline/ExtractionOCaml/
-
-or
-
-    src/Experiments/NewPipeline/ExtractionHaskell/
-
-The binaries are:
-
- - `saturated_solinas`
- - `unsaturated_solinas`
- - `word_by_word_montgomery`
-
-Passing no arguments, or passing `-h` or `--help` (or any other invalid arguments) will result in a usage message being printed.  These binaries output C code on stdout.
-
-Here are some examples of ways to invoke the binaries (from the directories that they live in):
-
-    # Generate code for 2^255-19
-    ./unsaturated_solinas '25519' '5' '2^255' '1,19' '64' carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes > curve25519_64.c
-    ./unsaturated_solinas '25519' '10' '2^255' '1,19' '32' carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes > curve25519_32.c
-
-    # Generate code for NIST-P256 (2^256 - 2^224 + 2^192 + 2^96 - 1)
-    ./word_by_word_montgomery 'p256' '2^256' '2^224,1;2^192,-1;2^96,-1;1,1' '32' > p256_32.c
-    ./word_by_word_montgomery 'p256' '2^256' '2^224,1;2^192,-1;2^96,-1;1,1' '64' > p256_64.c
+This pipeline is no longer included in this branch, and has become the default on the master branch.
 
 Old Pipeline
 ----

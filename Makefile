@@ -84,13 +84,10 @@ UNMADE_C_FILES := \
 	src/Specific/X25519/C32/fesub.h src/Specific/X25519/C32/feadd.h src/Specific/X25519/C32/fecarry.h
 # files that are treated specially
 SPECIAL_VOFILES := \
-	src/Specific/%Display.vo \
-	src/Experiments/NewPipeline/ExtractionOCaml/%.vo \
-	src/Experiments/NewPipeline/ExtractionHaskell/%.vo
+	src/Specific/%Display.vo
 SPECIFIC_GENERATED_VOFILES := src/Specific/solinas%.vo src/Specific/montgomery%.vo
 # add files to this list to prevent them from being built as final
 # targets by the "lite" target
-NEW_PIPELINE_FILTER := src/Experiments/NewPipeline/%
 LITE_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo \
 	src/Curves/Weierstrass/Jacobian.vo \
 	src/Curves/Weierstrass/Projective.vo \
@@ -99,12 +96,6 @@ LITE_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo \
 	src/Specific/NISTP256/AMD128/fe%.vo \
 	src/Specific/X25519/C64/ladderstep.vo \
 	src/Specific/X25519/C32/fe%.vo \
-	src/Experiments/NewPipeline/RewriterWf1.vo \
-	src/Experiments/NewPipeline/RewriterWf2.vo \
-	src/Experiments/NewPipeline/RewriterRulesGood.vo \
-	src/Experiments/NewPipeline/RewriterProofs.vo \
-	src/Experiments/NewPipeline/Toplevel2.vo \
-	src/Experiments/NewPipeline/SlowPrimeSynthesisExamples.vo \
 	src/Experiments/SimplyTypedArithmetic.vo \
 	$(SPECIFIC_GENERATED_VOFILES)
 NOBIGMEM_UNMADE_VOFILES := \
@@ -112,21 +103,17 @@ NOBIGMEM_UNMADE_VOFILES := \
 	src/Curves/Weierstrass/Jacobian.vo \
 	src/Curves/Weierstrass/Projective.vo \
 	$(SPECIFIC_GENERATED_VOFILES)
-OLD_PIPELINE_LITE_UNMADE_VOFILES := $(LITE_UNMADE_VOFILES) $(NEW_PIPELINE_FILTER)
-OLD_PIPELINE_NOBIGMEM_UNMADE_VOFILES := $(NOBIGMEM_UNMADE_VOFILES) $(NEW_PIPELINE_FILTER)
+OLD_PIPELINE_LITE_UNMADE_VOFILES := $(LITE_UNMADE_VOFILES)
+OLD_PIPELINE_NOBIGMEM_UNMADE_VOFILES := $(NOBIGMEM_UNMADE_VOFILES)
 REGULAR_VOFILES := $(filter-out $(SPECIAL_VOFILES) $(UNMADE_VOFILES),$(VOFILES))
 CURVES_PROOFS_PRE_VOFILES := $(filter src/Curves/Weierstrass/Jacobian.vo src/Curves/%Proofs.vo,$(REGULAR_VOFILES))
 NO_CURVES_PROOFS_UNMADE_VOFILES := src/Curves/Weierstrass/AffineProofs.vo \
 	src/Curves/Weierstrass/Jacobian.vo
 NO_CURVES_PROOFS_NON_SPECIFIC_UNMADE_VOFILES := $(filter $(NO_CURVES_PROOFS_UNMADE_VOFILES) src/Specific/%.vo,$(VOFILES))
 REAL_SPECIFIC_GENERATED_VOFILES := $(filter $(SPECIFIC_GENERATED_VOFILES),$(VOFILES))
-NEW_PIPELINE_PRE_VOFILES := $(filter $(NEW_PIPELINE_FILTER),$(REGULAR_VOFILES))
-PRE_STANDALONE_PRE_VOFILES := $(filter src/Experiments/NewPipeline/Standalone%.vo,$(REGULAR_VOFILES))
 UTIL_PRE_VOFILES := $(filter bbv/%.vo src/Algebra/%.vo src/Tactics/%.vo src/Util/%.vo,$(REGULAR_VOFILES))
-COQ_WITHOUT_NEW_PIPELINE_VOFILES := $(filter-out $(NEW_PIPELINE_FILTER),$(REGULAR_VOFILES))
+COQ_WITHOUT_NEW_PIPELINE_VOFILES := $(REGULAR_VOFILES)
 SOME_EARLY_VOFILES := \
-	src/Experiments/NewPipeline/Arithmetic.vo \
-	src/Experiments/NewPipeline/Rewriter.vo \
 	src/Experiments/SimplyTypedArithmetic.vo
 
 # N.B. solinas64_2e480m2e240m1_8limbs is added because it's needed to catch regressions against https://github.com/coq/coq/pull/10476
@@ -197,10 +184,10 @@ ifneq ($(filter selected-specific,$(MAKECMDGOALS)),)
 SELECTED_SPECIFIC_VOFILES := $(call vo_closure,$(SELECTED_SPECIFIC_PRE_VOFILES))
 endif
 ifneq ($(filter new-pipeline,$(MAKECMDGOALS)),)
-NEW_PIPELINE_VOFILES := $(call vo_closure,$(NEW_PIPELINE_PRE_VOFILES))
+$(error new-pipeline is no longer supported)
 endif
 ifneq ($(filter pre-standalone,$(MAKECMDGOALS)),)
-PRE_STANDALONE_VOFILES := $(call vo_closure,$(PRE_STANDALONE_PRE_VOFILES))
+$(error pre-standalone is no longer supported)
 endif
 
 SPECIFIC_VO_LT_10GB := $(shell cat specific-vo-lt-10000000-ko.txt)
@@ -225,8 +212,8 @@ util: $(UTIL_VOFILES)
 curves-proofs: $(CURVES_PROOFS_VOFILES)
 no-curves-proofs: $(NO_CURVES_PROOFS_VOFILES)
 no-curves-proofs-non-specific: $(NO_CURVES_PROOFS_NON_SPECIFIC_VOFILES)
-new-pipeline: $(NEW_PIPELINE_VOFILES)
-pre-standalone: $(PRE_STANDALONE_VOFILES)
+new-pipeline:
+pre-standalone:
 specific-display: $(SPECIFIC_DISPLAY_VO:.vo=.log)
 specific-c: $(filter-out $(UNMADE_C_FILES),$(SPECIFIC_DISPLAY_VO:Display.vo=.c) $(SPECIFIC_DISPLAY_VO:Display.vo=.h))
 selected-specific: $(SELECTED_SPECIFIC_VOFILES)
@@ -614,98 +601,6 @@ build-selected-test: $(SELECTED_TEST_BINARIES)
 build-bench: $(MEASURE_BINARIES)
 
 build-selected-bench: $(SELECTED_MEASURE_BINARIES)
-
-STANDALONE := \
-	unsaturated_solinas \
-	saturated_solinas \
-	word_by_word_montgomery
-
-$(STANDALONE:%=src/Experiments/NewPipeline/ExtractionOCaml/%.ml) : %.ml : %.v src/Experiments/NewPipeline/StandaloneOCamlMain.vo
-	$(SHOW)'COQC $< > $@'
-	$(HIDE)$(TIMER_FULL) $(COQC) $(COQDEBUG) $(COQFLAGS) $(COQLIBS) $< > $@.tmp
-	$(HIDE)sed 's/\r\n/\n/g; s/\r//g' $@.tmp > $@ && rm -f $@.tmp
-
-$(STANDALONE:%=src/Experiments/NewPipeline/ExtractionHaskell/%.hs) : %.hs : %.v src/Experiments/NewPipeline/StandaloneHaskellMain.vo src/Experiments/NewPipeline/haskell.sed
-	$(SHOW)'COQC $< > $@'
-	$(HIDE)$(TIMER_FULL) $(COQC) $(COQDEBUG) $(COQFLAGS) $(COQLIBS) $< > $@.tmp
-	$(HIDE)sed 's/\r\n/\n/g; s/\r//g' $@.tmp | sed -f src/Experiments/NewPipeline/haskell.sed > $@ && rm -f $@.tmp
-
-# pass -w -20 to disable the unused argument warning
-$(STANDALONE:%=src/Experiments/NewPipeline/ExtractionOCaml/%) : % : %.ml
-	$(TIMER_FULL) ocamlopt -w -20 -o $@ $<
-
-$(STANDALONE:%=src/Experiments/NewPipeline/ExtractionHaskell/%) : % : %.hs
-	$(TIMER_FULL) $(GHC) $(GHCFLAGS) -o $@ $<
-
-standalone: standalone-haskell standalone-ocaml
-
-standalone-haskell: $(STANDALONE:%=src/Experiments/NewPipeline/ExtractionHaskell/%)
-standalone-ocaml: $(STANDALONE:%=src/Experiments/NewPipeline/ExtractionOCaml/%)
-
-UNSATURATED_SOLINAS_C_FILES := curve25519_64.c curve25519_32.c p521_64.c p521_32.c # p224_solinas_64.c
-WORD_BY_WORD_MONTGOMERY_C_FILES := p256_64.c p256_32.c p384_64.c p384_32.c secp256k1_64.c secp256k1_32.c p224_64.c p224_32.c
-FUNCTIONS_FOR_25519 := carry_mul carry_square carry_scmul121666 carry add sub opp selectznz to_bytes from_bytes
-UNSATURATED_SOLINAS := src/Experiments/NewPipeline/ExtractionOCaml/unsaturated_solinas
-WORD_BY_WORD_MONTGOMERY := src/Experiments/NewPipeline/ExtractionOCaml/word_by_word_montgomery
-ALL_C_FILES := $(UNSATURATED_SOLINAS_C_FILES) $(WORD_BY_WORD_MONTGOMERY_C_FILES)
-.PHONY: c-files
-c-files: $(ALL_C_FILES)
-
-$(UNSATURATED_SOLINAS_C_FILES): $(UNSATURATED_SOLINAS) # Makefile
-
-$(WORD_BY_WORD_MONTGOMERY_C_FILES): $(WORD_BY_WORD_MONTGOMERY) # Makefile
-
-# 2^255 - 19
-curve25519_64.c:
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)$(TIMER_FULL) $(UNSATURATED_SOLINAS) '25519' '5' '2^255' '1,19' '64' $(FUNCTIONS_FOR_25519) > $@
-
-# 2^255 - 19
-curve25519_32.c:
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)$(TIMER_FULL) $(UNSATURATED_SOLINAS) '25519' '10' '2^255' '1,19' '32' $(FUNCTIONS_FOR_25519) > $@
-
-# 2^521 - 1
-p521_64.c:
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)$(TIMER_FULL) $(UNSATURATED_SOLINAS) 'p521' '9' '2^521' '1,1' '64' > $@
-
-# 2^521 - 1
-p521_32.c:
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)$(TIMER_FULL) $(UNSATURATED_SOLINAS) 'p521' '17' '2^521' '1,1' '32' > $@
-
-## 2^224 - 2^96 + 1 ## does not bounds check
-#p224_solinas_64.c:
-#	$(SHOW)'SYNTHESIZE > $@'
-#	$(HIDE)$(TIMER_FULL) $(UNSATURATED_SOLINAS) 'p224' '4' '2^224' '2^96,1;1,-1' '64' > $@
-
-# 2^256 - 2^224 + 2^192 + 2^96 - 1
-p256_64.c p256_32.c : p256_%.c :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)$(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) 'p256' '2^256' '2^224,1;2^192,-1;2^96,-1;1,1' '$*' > $@
-
-# 2^256 - 2^32 - 977
-secp256k1_64.c secp256k1_32.c : secp256k1_%.c :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)$(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) 'secp256k1' '2^256' '2^32,1;1,977' '$*' > $@
-
-# 2^384 - 2^128 - 2^96 + 2^32 - 1
-p384_64.c p384_32.c : p384_%.c :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)$(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) 'p384' '2^384' '2^128,1;2^96,1;2^32,-1;1,1' '$*' > $@
-
-# 2^224 - 2^96 + 1
-p224_64.c p224_32.c : p224_%.c :
-	$(SHOW)'SYNTHESIZE > $@'
-	$(HIDE)$(TIMER_FULL) $(WORD_BY_WORD_MONTGOMERY) 'p224' '2^224' '2^96,1;1,-1' '$*' > $@
-
-CFLAGS?=
-.PHONY: only-test-c-files test-c-files
-only-test-c-files test-c-files:
-	$(CC) -Wall -Wno-unused-function -Werror $(CFLAGS) -c $(ALL_C_FILES)
-
-test-c-files: $(ALL_C_FILES)
 
 clean::
 	rm -f Makefile.coq remake_curves.log src/Specific/.autgenerated-deps

@@ -14,25 +14,6 @@ LITE_ALL_UNMADE_VOFILES := \
 	src/Curves/Weierstrass/AffineProofs.vo \
 	src/Curves/Weierstrass/Jacobian.vo \
 	src/Curves/Weierstrass/Projective.vo \
-	src/Experiments/NewPipeline/BoundsPipeline.vo \
-	src/Experiments/NewPipeline/CLI.vo \
-	src/Experiments/NewPipeline/ExtractionHaskell/saturated_solinas.vo \
-	src/Experiments/NewPipeline/ExtractionHaskell/unsaturated_solinas.vo \
-	src/Experiments/NewPipeline/ExtractionHaskell/word_by_word_montgomery.vo \
-	src/Experiments/NewPipeline/ExtractionOCaml/saturated_solinas.vo \
-	src/Experiments/NewPipeline/ExtractionOCaml/unsaturated_solinas.vo \
-	src/Experiments/NewPipeline/ExtractionOCaml/word_by_word_montgomery.vo \
-	src/Experiments/NewPipeline/PushButtonSynthesis.vo \
-	src/Experiments/NewPipeline/RewriterInterpProofs1.vo \
-	src/Experiments/NewPipeline/RewriterProofs.vo \
-	src/Experiments/NewPipeline/RewriterRulesGood.vo \
-	src/Experiments/NewPipeline/RewriterRulesInterpGood.vo \
-	src/Experiments/NewPipeline/RewriterWf1.vo \
-	src/Experiments/NewPipeline/RewriterWf2.vo \
-	src/Experiments/NewPipeline/SlowPrimeSynthesisExamples.vo \
-	src/Experiments/NewPipeline/StandaloneHaskellMain.vo \
-	src/Experiments/NewPipeline/StandaloneOCamlMain.vo \
-	src/Experiments/NewPipeline/Toplevel2.vo \
 	src/Experiments/SimplyTypedArithmetic.vo \
 	src/Specific/NISTP256/AMD128/fe%.vo \
 	src/Specific/NISTP256/AMD64/fe%.vo \
@@ -282,25 +263,6 @@ LITE_VOFILES := \
 	src/Curves/Montgomery/XZ.vo \
 	src/Curves/Weierstrass/Affine.vo \
 	src/Demo.vo \
-	src/Experiments/NewPipeline/AbstractInterpretation.vo \
-	src/Experiments/NewPipeline/AbstractInterpretationProofs.vo \
-	src/Experiments/NewPipeline/AbstractInterpretationWf.vo \
-	src/Experiments/NewPipeline/AbstractInterpretationZRangeProofs.vo \
-	src/Experiments/NewPipeline/Arithmetic.vo \
-	src/Experiments/NewPipeline/COperationSpecifications.vo \
-	src/Experiments/NewPipeline/CStringification.vo \
-	src/Experiments/NewPipeline/CompilersTestCases.vo \
-	src/Experiments/NewPipeline/GENERATEDIdentifiersWithoutTypes.vo \
-	src/Experiments/NewPipeline/GENERATEDIdentifiersWithoutTypesProofs.vo \
-	src/Experiments/NewPipeline/Language.vo \
-	src/Experiments/NewPipeline/LanguageInversion.vo \
-	src/Experiments/NewPipeline/LanguageWf.vo \
-	src/Experiments/NewPipeline/MiscCompilerPasses.vo \
-	src/Experiments/NewPipeline/MiscCompilerPassesProofs.vo \
-	src/Experiments/NewPipeline/PushButtonSynthesis/ReificationCache.vo \
-	src/Experiments/NewPipeline/Rewriter.vo \
-	src/Experiments/NewPipeline/UnderLets.vo \
-	src/Experiments/NewPipeline/UnderLetsProofs.vo \
 	src/Experiments/PartialEvaluationWithLetIn.vo \
 	src/LegacyArithmetic/ArchitectureToZLike.vo \
 	src/LegacyArithmetic/ArchitectureToZLikeProofs.vo \

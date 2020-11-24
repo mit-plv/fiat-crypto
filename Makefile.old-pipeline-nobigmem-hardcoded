@@ -560,6 +560,5 @@ OLD_PIPELINE_NOBIGMEM_ALL_UNMADE_VOFILES := \
 	src/Curves/Weierstrass/AffineProofs.vo \
 	src/Curves/Weierstrass/Jacobian.vo \
 	src/Curves/Weierstrass/Projective.vo \
-	src/Experiments/NewPipeline/% \
 	src/Specific/montgomery%.vo \
 	src/Specific/solinas%.vo
