@@ -55,16 +55,10 @@ jobs:
       run: etc/ci/github-actions-make.sh -j2 some-early util
     - name: printlite lite
       run: etc/ci/github-actions-make.sh -j2 printlite lite
-    - name: pre-standalone
-      run: etc/ci/github-actions-make.sh -j2 pre-standalone
-    - name: new-pipeline
-      run: etc/ci/github-actions-make.sh -j2 new-pipeline
     - name: no-curves-proofs-non-specific
       run: etc/ci/github-actions-make.sh -j2 no-curves-proofs-non-specific
     - name: curves-proofs
       run: etc/ci/github-actions-make.sh -j2 curves-proofs
-    - name: standalone-ocaml
-      run: etc/ci/github-actions-make.sh -j2 standalone-ocaml
     - name: selected-specific selected-specific-display c-files
       run: ALLOW_DIFF="${SKIP_DISPLAY_TEST}" etc/ci/github-actions-make.sh -j2 selected-specific selected-specific-display c-files
     - name: selected-specific-display-test
@@ -72,9 +66,6 @@ jobs:
       if: env.SKIP_DISPLAY_TEST != '1'
     - name: build-selected-test build-selected-bench
       run: etc/ci/github-actions-make.sh -j2 build-selected-test build-selected-bench
-      if: env.SKIP_DISPLAY_TEST != '1'
-    - name: standalone-ocaml c-files test-c-files
-      run: etc/ci/github-actions-make.sh -j2 test-c-files
       if: env.SKIP_DISPLAY_TEST != '1'
     - name: test for adx
       run: etc/assert-adx.sh
