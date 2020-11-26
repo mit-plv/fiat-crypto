@@ -59,8 +59,8 @@ jobs:
       run: etc/ci/github-actions-make.sh -j2 no-curves-proofs-non-specific
     - name: curves-proofs
       run: etc/ci/github-actions-make.sh -j2 curves-proofs
-    - name: selected-specific selected-specific-display c-files
-      run: ALLOW_DIFF="${SKIP_DISPLAY_TEST}" etc/ci/github-actions-make.sh -j2 selected-specific selected-specific-display c-files
+    - name: selected-specific selected-specific-display
+      run: ALLOW_DIFF="${SKIP_DISPLAY_TEST}" etc/ci/github-actions-make.sh -j2 selected-specific selected-specific-display
     - name: selected-specific-display-test
       run: etc/ci/github-actions-make.sh -j2 selected-specific-display-test
       if: env.SKIP_DISPLAY_TEST != '1'
