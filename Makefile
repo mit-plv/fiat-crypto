@@ -26,6 +26,7 @@ INSTALLDEFAULTROOT := Crypto
 	install-rewriter clean-rewriter rewriter \
 	install-coqprime clean-coqprime coqprime coqprime-all \
 	bedrock2 clean-bedrock2 install-bedrock2 coqutil clean-coqutil install-coqutil \
+	compiler clean-compiler install-compiler riscv clean-riscv install-riscv \
 	rupicola clean-rupicola install-rupicola \
 	install-standalone install-standalone-ocaml install-standalone-haskell \
 	uninstall-standalone uninstall-standalone-ocaml uninstall-standalone-haskell \
@@ -337,6 +338,12 @@ COQPRIME_SRC := $(COQPRIME_FOLDER)/src
 BEDROCK2_FOLDER := rupicola/bedrock2/bedrock2
 BEDROCK2_SRC := $(BEDROCK2_FOLDER)/src
 BEDROCK2_NAME := bedrock2
+COMPILER_FOLDER := rupicola/bedrock2/compiler
+COMPILER_SRC := $(COMPILER_FOLDER)/src
+COMPILER_NAME := compiler
+RISCV_FOLDER := rupicola/bedrock2/deps/riscv-coq
+RISCV_SRC := $(RISCV_FOLDER)/src
+RISCV_NAME := riscv
 COQUTIL_FOLDER := rupicola/bedrock2/deps/coqutil
 COQUTIL_SRC := $(COQUTIL_FOLDER)/src
 COQUTIL_NAME := coqutil
@@ -381,6 +388,16 @@ cleanall:: clean-coqprime
 install: install-coqprime
 endif
 
+ifeq ($(RISCV_COMPILATION),1)
+COQPATH_TEMP:=${CURDIR_SAFE}/$(COMPILER_SRC)$(COQPATH_SEP)${CURDIR_SAFE}/$(RISCV_SRC)$(COQPATH_SEP)$(COQPATH_TEMP)
+deps: riscv compiler
+$(VOFILES): | riscv compiler
+$(ALLDFILES): | riscv compiler
+cleanall:: clean-riscv clean-compiler
+install: install-riscv install-compiler
+endif
+
+
 COQPATH?=$(patsubst %$(COQPATH_SEP),%,$(COQPATH_TEMP))
 export COQPATH
 
@@ -422,6 +439,24 @@ clean-bedrock2:
 
 install-bedrock2:
 	$(MAKE) --no-print-directory -C $(BEDROCK2_FOLDER) install
+
+compiler: coqutil riscv
+	$(MAKE) --no-print-directory -C $(COMPILER_FOLDER) noex
+
+clean-compiler:
+	$(MAKE) --no-print-directory -C $(COMPILER_FOLDER) clean
+
+install-compiler:
+	$(MAKE) --no-print-directory -C $(COMPILER_FOLDER) install
+
+riscv: coqutil
+	$(MAKE) --no-print-directory -C $(RISCV_FOLDER) all
+
+clean-riscv:
+	$(MAKE) --no-print-directory -C $(RISCV_FOLDER) clean
+
+install-riscv:
+	$(MAKE) --no-print-directory -C $(RISCV_FOLDER) install
 
 rupicola: bedrock2
 	$(MAKE) --no-print-directory -C $(RUPICOLA_FOLDER) lib
