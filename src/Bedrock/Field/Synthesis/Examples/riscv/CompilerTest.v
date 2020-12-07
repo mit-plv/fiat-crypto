@@ -90,7 +90,7 @@ Definition ml: MemoryLayout := {|
 Unset Printing Coercions. (* https://github.com/mit-plv/fiat-crypto/issues/899 *)
 
 Definition asm: list Instruction.
-  Time (let r := eval vm_compute in (compile ml e) in
+  (*Time*) (let r := eval vm_compute in (compile ml e) in
             match r with
             | Some (?x, _) => exact x
             end). (* 2.328 secs *)
@@ -122,14 +122,25 @@ Module PrintAssembly.
   Goal True. let r := eval unfold asm in asm in idtac (* r *). Abort.
 End PrintAssembly.
 
+Import RegisterNames.
+
+Definition syscall_exit: Z := 93.
+
+Definition asm1 := [[
+  Xor a0 a0 a0;
+  Addi a0 a0 123;
+  Addi a7 zero syscall_exit;
+  Ecall
+]].
+
 (* Note: this must be Coq.Init.Byte.byte, not coqutil.Byte.byte,
    which is a Notation for `(Coq.Init.Byte.byte: Type)` and doesn't
    work with bedrock2.Hexdump. *)
-Definition as_bytes: list Coq.Init.Byte.byte := instrencode asm.
+Definition as_bytes: list Coq.Init.Byte.byte := instrencode asm1.
 
 Module PrintBytes.
   Import bedrock2.Hexdump.
   Local Open Scope hexdump_scope.
   Set Printing Width 100.
-  Goal True. let x := eval vm_compute in as_bytes in idtac (* x *). Abort.
+  Goal True. let x := eval vm_compute in as_bytes in idtac x. Abort.
 End PrintBytes.
