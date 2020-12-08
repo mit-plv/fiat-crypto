@@ -7,6 +7,10 @@ COQC?=coqc
 # fun fact: fiat-crypto forces all its dependencies to be in a physical folder named the same as their logical name, so that they can be put on COQPATH, but fiat-crypto itself violates this rule ("src" has to be mapped to "Crypto")
 COQC_OPTIONS=-Q $(FIAT_CRYPTO_ROOT)/src Crypto
 
+RISCV_OBJCOPY?=riscv32-unknown-linux-gnu-objcopy
+RISCV_AS?=riscv32-unknown-linux-gnu-as
+RISCV_LD?=riscv32-unknown-linux-gnu-ld
+
 .PRECIOUS: %.vo
 
 %.vo : %.v
@@ -18,11 +22,17 @@ COQC_OPTIONS=-Q $(FIAT_CRYPTO_ROOT)/src Crypto
 %.bin : %.hex
 	xxd -r -p < $< > $@
 
-%_wrapper.s : %.bin wrapper_template.s
-	sed wrapper_template.s -e 's/FILENAME/'$<'/g' > $@
+%.o : %.bin
+	$(RISCV_OBJCOPY) -I binary -O elf32-littleriscv -B riscv $< $@
 
-%.o : %_wrapper.s
-	riscv32-unknown-linux-gnu-as $< -o $@
+%.exe : %.o link.lds
+	$(RISCV_LD) --script link.lds $< -o $@
 
-%.exe : %.o
-	riscv32-unknown-linux-gnu-ld $< -o $@
+# %_wrapper.s : %.bin wrapper_template.s
+#	sed wrapper_template.s -e 's/FILENAME/'$<'/g' > $@
+
+# %.o : %_wrapper.s
+#	$(RISCV_AS) $< -o $@
+
+# %.exe : %.o
+#	$(RISCV_LD) $< -o $@
