@@ -89,12 +89,14 @@ Definition ml: MemoryLayout := {|
 
 Unset Printing Coercions. (* https://github.com/mit-plv/fiat-crypto/issues/899 *)
 
+(*
 Definition asm: list Instruction.
   (*Time*) (let r := eval vm_compute in (compile ml e) in
             match r with
             | Some (?x, _) => exact x
             end). (* 2.328 secs *)
 Defined.
+*)
 
 Definition valid_instructions: list Instruction -> Prop :=
   Forall (fun i : Instruction => verify i RV32IM).
@@ -117,18 +119,30 @@ Proof.
   all: fail.
 *)
 
+(*
 Module PrintAssembly.
   Import riscv.Utility.InstructionNotations.
   Goal True. let r := eval unfold asm in asm in idtac (* r *). Abort.
 End PrintAssembly.
+*)
 
-Import RegisterNames.
+Import RegisterNames Decode.
 
 Definition syscall_exit: Z := 93.
 
 Definition asm1 := [[
-  Xor a0 a0 a0;
-  Addi a0 a0 123;
+  (* write two values onto the stack: *)
+  Addi a0 zero 15;
+  Sw sp a0 (-4);
+  Addi a0 zero 28;
+  Sw sp a0 (-8);
+
+  (* read them back and add them up: *)
+  Lw a1 sp (-4);
+  Lw a2 sp (-8);
+  Add a0 a1 a2;
+
+  (* exit(a0) *)
   Addi a7 zero syscall_exit;
   Ecall
 ]].
