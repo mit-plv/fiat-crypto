@@ -7,7 +7,12 @@ COQC?=coqc
 # fun fact: fiat-crypto forces all its dependencies to be in a physical folder named the same as their logical name, so that they can be put on COQPATH, but fiat-crypto itself violates this rule ("src" has to be mapped to "Crypto")
 COQC_OPTIONS=-Q $(FIAT_CRYPTO_ROOT)/src Crypto
 
-%.hex : %.v
+.PRECIOUS: %.vo
+
+%.vo : %.v
+	$(COQC) $(COQC_OPTIONS) $<
+
+%.hex : %.v SyscallNumbers.vo
 	$(COQC) $(COQC_OPTIONS) $< > $@
 
 %.bin : %.hex

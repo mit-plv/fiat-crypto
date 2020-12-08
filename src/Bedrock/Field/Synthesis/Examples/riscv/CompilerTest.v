@@ -126,9 +126,12 @@ Module PrintAssembly.
 End PrintAssembly.
 *)
 
+Require Import Crypto.Bedrock.Field.Synthesis.Examples.riscv.SyscallNumbers.
 Import RegisterNames Decode.
 
-Definition syscall_exit: Z := 93.
+Definition STDIN_FILENO: Z := 0.
+Definition STDOUT_FILENO: Z := 1.
+Definition STDERR_FILENO: Z := 2.
 
 Definition asm1 := [[
   (* write two values onto the stack: *)
@@ -143,14 +146,94 @@ Definition asm1 := [[
   Add a0 a1 a2;
 
   (* exit(a0) *)
-  Addi a7 zero syscall_exit;
+  Addi a7 zero __NR_exit;
   Ecall
 ]].
+
+Definition asm20 := [[
+  (* a2 = 2 ^ 12 *)
+  Addi a2 zero 1;
+  Slli a2 a2 12;
+
+  (* a1 = sp with the 12 lowest bits set to 0 *)
+  Addi t0 a2 (-1);
+  Xori t0 t0 (-1);
+  And a1 sp t0;
+
+  (* ssize_t write(int fd, const void *buf, size_t nbytes); *)
+  (* write(STDOUT_FILENO, a1, a2) *)
+  Addi a0 zero STDOUT_FILENO;
+  Addi a7 zero __NR_write;
+  Ecall;
+
+  (* exit(0) *)
+  Addi a0 zero 0;
+  Addi a7 zero __NR_exit;
+  Ecall
+]].
+
+Definition asm21 := [[
+  (* a2 = 2 ^ 12 *)
+  Addi a2 zero 1;
+  Slli a2 a2 12;
+
+  (* a1 = sp with the 12 lowest bits set to 0 *)
+  Addi t0 a2 (-1);
+  Xori t0 t0 (-1);
+  And a1 sp t0;
+
+  (* a1 = assumed beginning (pastend) of stack *)
+  Add a1 a1 a2;
+  (* a2 = size of existing stack *)
+  Sub a2 a1 sp;
+  (* a1 = sp *)
+  Addi a1 sp 0;
+
+  (* ssize_t write(int fd, const void *buf, size_t nbytes); *)
+  (* write(STDOUT_FILENO, a1, a2) *)
+  Addi a0 zero STDOUT_FILENO;
+  Addi a7 zero __NR_write;
+  Ecall;
+
+  (* exit(11) *)
+  Addi a0 zero 11;
+  Addi a7 zero __NR_exit;
+  Ecall
+]].
+
+Definition asm2 := [[
+  Addi s1 sp 0;
+
+  (* ssize_t write(int fd, const void *buf, size_t nbytes); *)
+  (* write(STDOUT_FILENO, a1, a2) *)
+  Addi a0 zero STDOUT_FILENO;
+  Addi a1 s1 0;
+  Addi a2 zero 4;
+  Addi a7 zero __NR_write;
+  Ecall;
+  Addi s1 s1 4;
+  Jal zero (-24);
+
+  (* exit(11) *)
+  Addi a0 zero 11;
+  Addi a7 zero __NR_exit;
+  Ecall
+]].
+
+(* The stack already contains the environment variables and the command line arguments
+   (contents of argv) and some other stuff, and sp points past that stuff, so we don't
+   get the whole stack amount we required
+
+https://interrupt.memfault.com/blog/how-to-write-linker-scripts-for-firmware
+
+and use objcopy to turn the binary file into a .o file that can be referenced in a linker script
+https://www.devever.net/~hl/incbin
+*)
 
 (* Note: this must be Coq.Init.Byte.byte, not coqutil.Byte.byte,
    which is a Notation for `(Coq.Init.Byte.byte: Type)` and doesn't
    work with bedrock2.Hexdump. *)
-Definition as_bytes: list Coq.Init.Byte.byte := instrencode asm1.
+Definition as_bytes: list Coq.Init.Byte.byte := instrencode asm2.
 
 Module PrintBytes.
   Import bedrock2.Hexdump.
