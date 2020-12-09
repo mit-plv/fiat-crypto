@@ -13,10 +13,12 @@ RISCV_LD?=riscv32-unknown-linux-gnu-ld
 
 .PRECIOUS: %.vo
 
+hello.v : hello_src.vo
+
 %.vo : %.v
 	$(COQC) $(COQC_OPTIONS) $<
 
-%.hex : %.v SyscallNumbers.vo
+%.hex : %.v SyscallNumbers.vo Prelude.vo
 	$(COQC) $(COQC_OPTIONS) $< > $@
 
 %.bin : %.hex
@@ -25,7 +27,7 @@ RISCV_LD?=riscv32-unknown-linux-gnu-ld
 %.o : %.bin
 	$(RISCV_OBJCOPY) -I binary -O elf32-littleriscv -B riscv $< $@
 
-%.exe : %.o link.lds
+%.exe : %.o link.lds %.v
 	$(RISCV_LD) --script link.lds $< -o $@
 
 # %_wrapper.s : %.bin wrapper_template.s
