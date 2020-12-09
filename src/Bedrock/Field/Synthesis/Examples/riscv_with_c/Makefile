@@ -7,10 +7,12 @@ COQC?=coqc
 # fun fact: fiat-crypto forces all its dependencies to be in a physical folder named the same as their logical name, so that they can be put on COQPATH, but fiat-crypto itself violates this rule ("src" has to be mapped to "Crypto")
 COQC_OPTIONS=-Q $(FIAT_CRYPTO_ROOT)/src Crypto
 
-RISCV_OBJCOPY?=riscv32-unknown-linux-gnu-objcopy
-RISCV_AS?=riscv32-unknown-linux-gnu-as
-RISCV_LD?=riscv32-unknown-linux-gnu-ld
-RISCV_GCC?=riscv32-unknown-linux-gnu-gcc
+CROSS_COMPILE?=riscv32-unknown-linux-gnu-
+RISCV_OBJCOPY?=$(CROSS_COMPILE)objcopy
+RISCV_AS?=$(CROSS_COMPILE)as
+RISCV_LD?=$(CROSS_COMPILE)ld
+RISCV_GCC?=$(CROSS_COMPILE)gcc
+RISCV_GDB?=$(CROSS_COMPILE)gdb
 
 .PRECIOUS: %.vo %.o %.hex %.s %.bin
 
@@ -30,7 +32,7 @@ RISCV_GCC?=riscv32-unknown-linux-gnu-gcc
 	$(RISCV_AS) -march=rv32ima -mabi=ilp32 $< -o $@
 
 %.exe : %_main.c %.o
-	$(RISCV_GCC) -march=rv32ima -mabi=ilp32 $^ -o $@
+	$(RISCV_GCC) -g -march=rv32ima -mabi=ilp32 $^ -o $@
 
 SYSROOT:=$(dir $(shell which $(RISCV_GCC)))/../sysroot/
 
@@ -39,6 +41,9 @@ run: poly1305.exe
 
 debug: poly1305.exe
 	qemu-riscv32 -L $(SYSROOT) -g 1234 $<
+
+gdb:
+	$(RISCV_GDB) -ex "target remote :1234" -ex "file poly1305.exe"
 
 # %_main.o : %_main.c
 #	$(RISCV_GCC) -c $< -o $@

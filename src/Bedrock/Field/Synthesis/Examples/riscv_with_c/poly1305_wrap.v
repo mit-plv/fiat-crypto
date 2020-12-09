@@ -127,28 +127,27 @@ Fixpoint load_res_regs(n: nat)(offset: Z): string :=
            "  lw a" ++ natToStr m ++ ", " ++ ZToStr (offset + -4 * Z.of_nat n) ++ "(sp)" ++ LF
   end.
 
-Definition call(mypos: Z)(e_src: src_env)(e_pos: MapStrZ)(f: string): (string * Z) :=
+Definition call(e_src: src_env)(e_pos: MapStrZ)(f: string): string :=
   match map.get e_src f, map.get e_pos f with
-  | Some (argvars, resvars, body), Some funpos => (
+  | Some (argvars, resvars, body), Some funpos =>
   "  addi sp, sp, -4" ++ LF ++
   "  sw ra, 0(sp)" ++ LF ++
   save_arg_regs (List.length argvars) ++
-  "  jal ra, " ++ ZToStr (funpos - (mypos + 4 * (2 + Z.of_nat (List.length argvars)))) ++ LF ++
+  "  jal ra, bedrock2functions+" ++ ZToStr funpos ++ LF ++
   load_res_regs (List.length resvars) (- Z.of_nat (List.length argvars)) ++
   "  lw ra, 0(sp)" ++ LF ++
   "  addi sp, sp, 4" ++ LF ++
-  "  ret" ++ LF,
-  4 * (Z.of_nat (2 + List.length argvars + 1 + List.length resvars + 3)))
-  | _, _ => ("ERROR: " ++ f ++ " not found", -1)
+  "  ret" ++ LF
+  | _, _ => "ERROR: " ++ f ++ " not found"
   end.
 
-Fixpoint wrappers(mypos: Z)(e_src: src_env)(e_pos: MapStrZ)(fs: list string): string :=
+Fixpoint wrappers(e_src: src_env)(e_pos: MapStrZ)(fs: list string): string :=
   match fs with
-  | f :: rest => let '(s, l) := call mypos e_src e_pos f in
+  | f :: rest => let s := call e_src e_pos f in
                  ".globl " ++ f ++ LF ++
                  f ++ ":" ++ LF ++
                  s ++
-                 wrappers (mypos + l) e_src e_pos rest
+                 wrappers e_src e_pos rest
   | nil => ""
   end.
 
@@ -156,7 +155,7 @@ Definition asm_str: string :=
   Eval vm_compute in
   ".section .text" ++ LF ++
   "bedrock2functions: .incbin ""poly1305.bin""" ++ LF ++
-  wrappers (4 * (Z.of_nat (List.length asm))) e positions (map.keys positions).
+  wrappers e positions (map.keys positions).
 
 From bedrock2 Require Import ToCString Bytedump.
 Local Open Scope bytedump_scope.

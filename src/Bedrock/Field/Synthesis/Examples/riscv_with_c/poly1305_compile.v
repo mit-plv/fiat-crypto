@@ -107,58 +107,6 @@ Definition positions: MapStrZ :=
   | None => map.empty
   end.
 
-Definition LF : string := String (Coq.Strings.Ascii.Ascii false true false true false false false false) "".
-
-Definition ZToStr(z: Z): string := DecimalString.NilZero.string_of_int (BinInt.Z.to_int z).
-Definition natToStr(n: nat): string := ZToStr (Z.of_nat n).
-
-Fixpoint save_arg_regs(n: nat): string :=
-  match n with
-  | O => ""
-  | S m => save_arg_regs m ++ "  sw sp, a" ++ natToStr m ++ ", (" ++ ZToStr (-4 * Z.of_nat n) ++ ")" ++ LF
-  end.
-
-Fixpoint load_res_regs(n: nat)(offset: Z): string :=
-  match n with
-  | O => ""
-  | S m => load_res_regs m offset ++
-           "  lw a" ++ natToStr m ++ ", sp, (" ++ ZToStr (offset + -4 * Z.of_nat n) ++ ")" ++ LF
-  end.
-
-Definition call(mypos: Z)(e_src: src_env)(e_pos: MapStrZ)(f: string): (string * Z) :=
-  match map.get e_src f, map.get e_pos f with
-  | Some (argvars, resvars, body), Some funpos => (
-  "  addi sp, sp, (-4)" ++ LF ++
-  "  sw sp, ra, (0)" ++ LF ++
-  save_arg_regs (List.length argvars) ++
-  "  jalr ra, (" ++ ZToStr (funpos - (mypos + 4 * (2 + Z.of_nat (List.length argvars)))) ++ ")" ++ LF ++
-  load_res_regs (List.length resvars) (- Z.of_nat (List.length argvars)) ++
-  "  lw ra, sp, (0)" ++ LF ++
-  "  addi sp, sp, (4)" ++ LF ++
-  "  ret" ++ LF,
-  4 * (Z.of_nat (2 + List.length argvars + 1 + List.length resvars + 3)))
-  | _, _ => ("ERROR: " ++ f ++ " not found", -1)
-  end.
-
-Fixpoint wrappers(mypos: Z)(e_src: src_env)(e_pos: MapStrZ)(fs: list string): string :=
-  match fs with
-  | f :: rest => let '(s, l) := call mypos e_src e_pos f in
-                 f ++ ":" ++ LF ++ s ++ wrappers (mypos + l) e_src e_pos rest
-  | nil => ""
-  end.
-
-Definition asm_str: string :=
-  Eval vm_compute in
-  ".section .text" ++ LF ++
-  "bedrock2functions: .incbin ""tmp.bin""" ++ LF ++
-  wrappers (4 * (Z.of_nat (List.length asm))) e positions (map.keys positions).
-
-From bedrock2 Require Import ToCString Bytedump.
-Local Open Scope bytedump_scope.
-Goal True.
-  let c_code := eval vm_compute in (byte_list_of_string asm_str) in idtac c_code.
-Abort.
-
 Definition valid_instructions: list Instruction -> Prop :=
   Forall (fun i : Instruction => verify i RV32IM).
 
