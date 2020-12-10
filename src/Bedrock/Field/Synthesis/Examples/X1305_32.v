@@ -30,6 +30,9 @@ Instance poly1305_bedrock2_correctness :
 prove_correctness ops n s c machine_wordsize. Defined.
 
 (*
+Require Import bedrock2.ToCString.
+Compute c_func UnsaturatedSolinas.to_bytes.
+Compute c_func UnsaturatedSolinas.from_bytes.
 Eval cbv [add poly1305_bedrock2_funcs] in add.
 Eval cbv [spec_of_add poly1305_bedrock2_specs] in spec_of_add.
 *)
