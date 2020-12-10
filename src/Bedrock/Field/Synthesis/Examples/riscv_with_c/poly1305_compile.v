@@ -130,7 +130,7 @@ Proof.
 
 Module PrintAssembly.
   Import riscv.Utility.InstructionNotations.
-  Goal True. let r := eval unfold asm in asm in idtac (* r *). Abort.
+  Goal True. let r := eval vm_compute in asm in idtac (* r *). Abort.
 End PrintAssembly.
 
 Require Import Crypto.Bedrock.Field.Synthesis.Examples.riscv.SyscallNumbers.
