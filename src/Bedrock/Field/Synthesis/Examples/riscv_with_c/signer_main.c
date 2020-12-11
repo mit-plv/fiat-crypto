@@ -551,6 +551,7 @@ static void fiat_25519_cmovznz_u32(uint32_t* out1, fiat_25519_uint1 arg1, uint32
   uint32_t x3 = ((value_barrier_u32(x2) & arg3) | (value_barrier_u32(~x2) & arg2));
   *out1 = x3;
 }
+
 /*
  * The function fiat_25519_carry_mul multiplies two field elements and reduces the result.
  * Postconditions:
@@ -563,6 +564,7 @@ static void fiat_25519_cmovznz_u32(uint32_t* out1, fiat_25519_uint1 arg1, uint32
  *   out1: [[0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333]]
  */
 static void fiat_25519_carry_mul(uint32_t out1[10], const uint32_t arg1[10], const uint32_t arg2[10]) {
+  //curve25519_carry_mul(out1, arg1, arg2);//segfaults
   uint64_t x1 = ((uint64_t)(arg1[9]) * ((arg2[9]) * UINT8_C(0x26)));
   uint64_t x2 = ((uint64_t)(arg1[9]) * ((arg2[8]) * UINT8_C(0x13)));
   uint64_t x3 = ((uint64_t)(arg1[9]) * ((arg2[7]) * UINT8_C(0x26)));
@@ -721,6 +723,7 @@ static void fiat_25519_carry_mul(uint32_t out1[10], const uint32_t arg1[10], con
   out1[8] = x136;
   out1[9] = x139;
 }
+
 /*
  * The function fiat_25519_carry_square squares a field element and reduces the result.
  * Postconditions:
@@ -732,137 +735,9 @@ static void fiat_25519_carry_mul(uint32_t out1[10], const uint32_t arg1[10], con
  *   out1: [[0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333]]
  */
 static void fiat_25519_carry_square(uint32_t out1[10], const uint32_t arg1[10]) {
-  uint32_t x1 = ((arg1[9]) * UINT8_C(0x13));
-  uint32_t x2 = (x1 * 0x2);
-  uint32_t x3 = ((arg1[9]) * 0x2);
-  uint32_t x4 = ((arg1[8]) * UINT8_C(0x13));
-  uint64_t x5 = ((uint64_t)x4 * 0x2);
-  uint32_t x6 = ((arg1[8]) * 0x2);
-  uint32_t x7 = ((arg1[7]) * UINT8_C(0x13));
-  uint32_t x8 = (x7 * 0x2);
-  uint32_t x9 = ((arg1[7]) * 0x2);
-  uint32_t x10 = ((arg1[6]) * UINT8_C(0x13));
-  uint64_t x11 = ((uint64_t)x10 * 0x2);
-  uint32_t x12 = ((arg1[6]) * 0x2);
-  uint32_t x13 = ((arg1[5]) * UINT8_C(0x13));
-  uint32_t x14 = ((arg1[5]) * 0x2);
-  uint32_t x15 = ((arg1[4]) * 0x2);
-  uint32_t x16 = ((arg1[3]) * 0x2);
-  uint32_t x17 = ((arg1[2]) * 0x2);
-  uint32_t x18 = ((arg1[1]) * 0x2);
-  uint64_t x19 = ((uint64_t)(arg1[9]) * (x1 * 0x2));
-  uint64_t x20 = ((uint64_t)(arg1[8]) * x2);
-  uint64_t x21 = ((uint64_t)(arg1[8]) * x4);
-  uint64_t x22 = ((arg1[7]) * ((uint64_t)x2 * 0x2));
-  uint64_t x23 = ((arg1[7]) * x5);
-  uint64_t x24 = ((uint64_t)(arg1[7]) * (x7 * 0x2));
-  uint64_t x25 = ((uint64_t)(arg1[6]) * x2);
-  uint64_t x26 = ((arg1[6]) * x5);
-  uint64_t x27 = ((uint64_t)(arg1[6]) * x8);
-  uint64_t x28 = ((uint64_t)(arg1[6]) * x10);
-  uint64_t x29 = ((arg1[5]) * ((uint64_t)x2 * 0x2));
-  uint64_t x30 = ((arg1[5]) * x5);
-  uint64_t x31 = ((arg1[5]) * ((uint64_t)x8 * 0x2));
-  uint64_t x32 = ((arg1[5]) * x11);
-  uint64_t x33 = ((uint64_t)(arg1[5]) * (x13 * 0x2));
-  uint64_t x34 = ((uint64_t)(arg1[4]) * x2);
-  uint64_t x35 = ((arg1[4]) * x5);
-  uint64_t x36 = ((uint64_t)(arg1[4]) * x8);
-  uint64_t x37 = ((arg1[4]) * x11);
-  uint64_t x38 = ((uint64_t)(arg1[4]) * x14);
-  uint64_t x39 = ((uint64_t)(arg1[4]) * (arg1[4]));
-  uint64_t x40 = ((arg1[3]) * ((uint64_t)x2 * 0x2));
-  uint64_t x41 = ((arg1[3]) * x5);
-  uint64_t x42 = ((arg1[3]) * ((uint64_t)x8 * 0x2));
-  uint64_t x43 = ((uint64_t)(arg1[3]) * x12);
-  uint64_t x44 = ((uint64_t)(arg1[3]) * (x14 * 0x2));
-  uint64_t x45 = ((uint64_t)(arg1[3]) * x15);
-  uint64_t x46 = ((uint64_t)(arg1[3]) * ((arg1[3]) * 0x2));
-  uint64_t x47 = ((uint64_t)(arg1[2]) * x2);
-  uint64_t x48 = ((arg1[2]) * x5);
-  uint64_t x49 = ((uint64_t)(arg1[2]) * x9);
-  uint64_t x50 = ((uint64_t)(arg1[2]) * x12);
-  uint64_t x51 = ((uint64_t)(arg1[2]) * x14);
-  uint64_t x52 = ((uint64_t)(arg1[2]) * x15);
-  uint64_t x53 = ((uint64_t)(arg1[2]) * x16);
-  uint64_t x54 = ((uint64_t)(arg1[2]) * (arg1[2]));
-  uint64_t x55 = ((arg1[1]) * ((uint64_t)x2 * 0x2));
-  uint64_t x56 = ((uint64_t)(arg1[1]) * x6);
-  uint64_t x57 = ((uint64_t)(arg1[1]) * (x9 * 0x2));
-  uint64_t x58 = ((uint64_t)(arg1[1]) * x12);
-  uint64_t x59 = ((uint64_t)(arg1[1]) * (x14 * 0x2));
-  uint64_t x60 = ((uint64_t)(arg1[1]) * x15);
-  uint64_t x61 = ((uint64_t)(arg1[1]) * (x16 * 0x2));
-  uint64_t x62 = ((uint64_t)(arg1[1]) * x17);
-  uint64_t x63 = ((uint64_t)(arg1[1]) * ((arg1[1]) * 0x2));
-  uint64_t x64 = ((uint64_t)(arg1[0]) * x3);
-  uint64_t x65 = ((uint64_t)(arg1[0]) * x6);
-  uint64_t x66 = ((uint64_t)(arg1[0]) * x9);
-  uint64_t x67 = ((uint64_t)(arg1[0]) * x12);
-  uint64_t x68 = ((uint64_t)(arg1[0]) * x14);
-  uint64_t x69 = ((uint64_t)(arg1[0]) * x15);
-  uint64_t x70 = ((uint64_t)(arg1[0]) * x16);
-  uint64_t x71 = ((uint64_t)(arg1[0]) * x17);
-  uint64_t x72 = ((uint64_t)(arg1[0]) * x18);
-  uint64_t x73 = ((uint64_t)(arg1[0]) * (arg1[0]));
-  uint64_t x74 = (x73 + (x55 + (x48 + (x42 + (x37 + x33)))));
-  uint64_t x75 = (x74 >> 26);
-  uint32_t x76 = (uint32_t)(x74 & UINT32_C(0x3ffffff));
-  uint64_t x77 = (x64 + (x56 + (x49 + (x43 + x38))));
-  uint64_t x78 = (x65 + (x57 + (x50 + (x44 + (x39 + x19)))));
-  uint64_t x79 = (x66 + (x58 + (x51 + (x45 + x20))));
-  uint64_t x80 = (x67 + (x59 + (x52 + (x46 + (x22 + x21)))));
-  uint64_t x81 = (x68 + (x60 + (x53 + (x25 + x23))));
-  uint64_t x82 = (x69 + (x61 + (x54 + (x29 + (x26 + x24)))));
-  uint64_t x83 = (x70 + (x62 + (x34 + (x30 + x27))));
-  uint64_t x84 = (x71 + (x63 + (x40 + (x35 + (x31 + x28)))));
-  uint64_t x85 = (x72 + (x47 + (x41 + (x36 + x32))));
-  uint64_t x86 = (x75 + x85);
-  uint64_t x87 = (x86 >> 25);
-  uint32_t x88 = (uint32_t)(x86 & UINT32_C(0x1ffffff));
-  uint64_t x89 = (x87 + x84);
-  uint64_t x90 = (x89 >> 26);
-  uint32_t x91 = (uint32_t)(x89 & UINT32_C(0x3ffffff));
-  uint64_t x92 = (x90 + x83);
-  uint64_t x93 = (x92 >> 25);
-  uint32_t x94 = (uint32_t)(x92 & UINT32_C(0x1ffffff));
-  uint64_t x95 = (x93 + x82);
-  uint64_t x96 = (x95 >> 26);
-  uint32_t x97 = (uint32_t)(x95 & UINT32_C(0x3ffffff));
-  uint64_t x98 = (x96 + x81);
-  uint64_t x99 = (x98 >> 25);
-  uint32_t x100 = (uint32_t)(x98 & UINT32_C(0x1ffffff));
-  uint64_t x101 = (x99 + x80);
-  uint64_t x102 = (x101 >> 26);
-  uint32_t x103 = (uint32_t)(x101 & UINT32_C(0x3ffffff));
-  uint64_t x104 = (x102 + x79);
-  uint64_t x105 = (x104 >> 25);
-  uint32_t x106 = (uint32_t)(x104 & UINT32_C(0x1ffffff));
-  uint64_t x107 = (x105 + x78);
-  uint64_t x108 = (x107 >> 26);
-  uint32_t x109 = (uint32_t)(x107 & UINT32_C(0x3ffffff));
-  uint64_t x110 = (x108 + x77);
-  uint64_t x111 = (x110 >> 25);
-  uint32_t x112 = (uint32_t)(x110 & UINT32_C(0x1ffffff));
-  uint64_t x113 = (x111 * UINT8_C(0x13));
-  uint64_t x114 = (x76 + x113);
-  uint32_t x115 = (uint32_t)(x114 >> 26);
-  uint32_t x116 = (uint32_t)(x114 & UINT32_C(0x3ffffff));
-  uint32_t x117 = (x115 + x88);
-  fiat_25519_uint1 x118 = (fiat_25519_uint1)(x117 >> 25);
-  uint32_t x119 = (x117 & UINT32_C(0x1ffffff));
-  uint32_t x120 = (x118 + x91);
-  out1[0] = x116;
-  out1[1] = x119;
-  out1[2] = x120;
-  out1[3] = x94;
-  out1[4] = x97;
-  out1[5] = x100;
-  out1[6] = x103;
-  out1[7] = x106;
-  out1[8] = x109;
-  out1[9] = x112;
+  curve25519_carry_square(out1, arg1);
 }
+
 /*
  * The function fiat_25519_carry reduces a field element.
  * Postconditions:
@@ -874,38 +749,7 @@ static void fiat_25519_carry_square(uint32_t out1[10], const uint32_t arg1[10]) 
  *   out1: [[0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333], [0x0 ~> 0x4666666], [0x0 ~> 0x2333333]]
  */
 static void fiat_25519_carry(uint32_t out1[10], const uint32_t arg1[10]) {
-  uint32_t x1 = (arg1[0]);
-  uint32_t x2 = ((x1 >> 26) + (arg1[1]));
-  uint32_t x3 = ((x2 >> 25) + (arg1[2]));
-  uint32_t x4 = ((x3 >> 26) + (arg1[3]));
-  uint32_t x5 = ((x4 >> 25) + (arg1[4]));
-  uint32_t x6 = ((x5 >> 26) + (arg1[5]));
-  uint32_t x7 = ((x6 >> 25) + (arg1[6]));
-  uint32_t x8 = ((x7 >> 26) + (arg1[7]));
-  uint32_t x9 = ((x8 >> 25) + (arg1[8]));
-  uint32_t x10 = ((x9 >> 26) + (arg1[9]));
-  uint32_t x11 = ((x1 & UINT32_C(0x3ffffff)) + ((x10 >> 25) * UINT8_C(0x13)));
-  uint32_t x12 = ((fiat_25519_uint1)(x11 >> 26) + (x2 & UINT32_C(0x1ffffff)));
-  uint32_t x13 = (x11 & UINT32_C(0x3ffffff));
-  uint32_t x14 = (x12 & UINT32_C(0x1ffffff));
-  uint32_t x15 = ((fiat_25519_uint1)(x12 >> 25) + (x3 & UINT32_C(0x3ffffff)));
-  uint32_t x16 = (x4 & UINT32_C(0x1ffffff));
-  uint32_t x17 = (x5 & UINT32_C(0x3ffffff));
-  uint32_t x18 = (x6 & UINT32_C(0x1ffffff));
-  uint32_t x19 = (x7 & UINT32_C(0x3ffffff));
-  uint32_t x20 = (x8 & UINT32_C(0x1ffffff));
-  uint32_t x21 = (x9 & UINT32_C(0x3ffffff));
-  uint32_t x22 = (x10 & UINT32_C(0x1ffffff));
-  out1[0] = x13;
-  out1[1] = x14;
-  out1[2] = x15;
-  out1[3] = x16;
-  out1[4] = x17;
-  out1[5] = x18;
-  out1[6] = x19;
-  out1[7] = x20;
-  out1[8] = x21;
-  out1[9] = x22;
+  curve25519_carry(out1, arg1);
 }
 /*
  * The function fiat_25519_add adds two field elements.

@@ -36,14 +36,16 @@ RISCV_GDB?=$(CROSS_COMPILE)gdb
 
 SYSROOT:=$(dir $(shell which $(RISCV_GCC)))/../sysroot/
 
-run: poly1305.exe
+CURRENTLY_TESTING?=signer
+
+run: $(CURRENTLY_TESTING).exe
 	qemu-riscv32 -L $(SYSROOT) $<
 
-debug: poly1305.exe
+debug: $(CURRENTLY_TESTING).exe
 	qemu-riscv32 -L $(SYSROOT) -g 1234 $<
 
 gdb:
-	$(RISCV_GDB) -ex "target remote :1234" -ex "file poly1305.exe"
+	$(RISCV_GDB) -ex "target remote :1234" -ex "file $(CURRENTLY_TESTING).exe"
 
 # %_main.o : %_main.c
 #	$(RISCV_GCC) -c $< -o $@

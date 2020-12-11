@@ -74,6 +74,7 @@ src/Bedrock/Field/Synthesis/Examples/LadderStep.v
 src/Bedrock/Field/Synthesis/Examples/MulTwice.v
 src/Bedrock/Field/Synthesis/Examples/X1305_32.v
 src/Bedrock/Field/Synthesis/Examples/X25519_64.v
+src/Bedrock/Field/Synthesis/Examples/X25519_32.v
 src/Bedrock/Field/Synthesis/Examples/p224_64.v
 src/Bedrock/Field/Synthesis/Examples/p256_64.v
 src/Bedrock/Field/Synthesis/Generic/Bignum.v
