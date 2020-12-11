@@ -76,36 +76,21 @@ Notation src_env := (SortedListString.map (list string * list string * Syntax.cm
 
 Definition e: src_env := map.of_list allFuns.
 
-(* stack grows from high addreses to low addresses, first stack word will be written to
-   (stack_pastend-8), next stack word to (stack_pastend-16) etc *)
-Definition stack_pastend: Z := 2048.
-
-Definition ml: MemoryLayout := {|
-  MemoryLayout.code_start    := word.of_Z 0;
-  MemoryLayout.code_pastend  := word.of_Z (4*2^10);
-  MemoryLayout.heap_start    := word.of_Z (4*2^10);
-  MemoryLayout.heap_pastend  := word.of_Z (8*2^10);
-  MemoryLayout.stack_start   := word.of_Z (8*2^10);
-  MemoryLayout.stack_pastend := word.of_Z (16*2^10);
-|}.
-
 Unset Printing Coercions. (* https://github.com/mit-plv/fiat-crypto/issues/899 *)
 
-Definition compiled := Eval vm_compute in (compile ml e).
+Definition compiled := Eval vm_compute in
+      match composed_compile e with
+        (* Note: stack_needed is 0 because the current stack size computation only considers
+           functions without arguments as entry points, and there are none *)
+      | Some (insts, positions, stack_needed) => (insts, positions)
+      | None => (nil, map.empty)
+      end.
 
-Definition asm: list Instruction :=
-  match compiled with
-  | Some (l, _) => l
-  | None => []
-  end.
+Definition asm: list Instruction := fst compiled.
 
 Notation MapStrZ := (SortedListString.map Z).
 
-Definition positions: MapStrZ :=
-  match compiled with
-  | Some (_, e) => e
-  | None => map.empty
-  end.
+Definition positions: MapStrZ := snd compiled.
 
 Definition valid_instructions: list Instruction -> Prop :=
   Forall (fun i : Instruction => verify i RV32IM).
@@ -126,164 +111,6 @@ Proof.
   repeat (time (apply valid_cons; [vm_compute; try intuition discriminate|])).
   apply Forall_nil.
   all: fail.
-*)
-
-Module PrintAssembly.
-  Import riscv.Utility.InstructionNotations.
-  Goal True. let r := eval vm_compute in asm in idtac (* r *). Abort.
-End PrintAssembly.
-
-Require Import Crypto.Bedrock.Field.Synthesis.Examples.riscv.SyscallNumbers.
-Import RegisterNames Decode.
-
-Definition STDIN_FILENO: Z := 0.
-Definition STDOUT_FILENO: Z := 1.
-Definition STDERR_FILENO: Z := 2.
-
-Definition asm1 := [[
-  (* write two values onto the stack: *)
-  Addi a0 zero 15;
-  Sw sp a0 (-4);
-  Addi a0 zero 28;
-  Sw sp a0 (-8);
-
-  (* read them back and add them up: *)
-  Lw a1 sp (-4);
-  Lw a2 sp (-8);
-  Add a0 a1 a2;
-
-  (* exit(a0) *)
-  Addi a7 zero __NR_exit;
-  Ecall
-]].
-
-Definition asm20 := [[
-  (* a2 = 2 ^ 12 *)
-  Addi a2 zero 1;
-  Slli a2 a2 12;
-
-  (* a1 = sp with the 12 lowest bits set to 0 *)
-  Addi t0 a2 (-1);
-  Xori t0 t0 (-1);
-  And a1 sp t0;
-
-  (* ssize_t write(int fd, const void *buf, size_t nbytes); *)
-  (* write(STDOUT_FILENO, a1, a2) *)
-  Addi a0 zero STDOUT_FILENO;
-  Addi a7 zero __NR_write;
-  Ecall;
-
-  (* exit(0) *)
-  Addi a0 zero 0;
-  Addi a7 zero __NR_exit;
-  Ecall
-]].
-
-Definition asm21 := [[
-  (* a2 = 2 ^ 12 *)
-  Addi a2 zero 1;
-  Slli a2 a2 12;
-
-  (* a1 = sp with the 12 lowest bits set to 0 *)
-  Addi t0 a2 (-1);
-  Xori t0 t0 (-1);
-  And a1 sp t0;
-
-  (* a1 = assumed beginning (pastend) of stack *)
-  Add a1 a1 a2;
-  (* a2 = size of existing stack *)
-  Sub a2 a1 sp;
-  (* a1 = sp *)
-  Addi a1 sp 0;
-
-  (* ssize_t write(int fd, const void *buf, size_t nbytes); *)
-  (* write(STDOUT_FILENO, a1, a2) *)
-  Addi a0 zero STDOUT_FILENO;
-  Addi a7 zero __NR_write;
-  Ecall;
-
-  (* exit(11) *)
-  Addi a0 zero 11;
-  Addi a7 zero __NR_exit;
-  Ecall
-]].
-
-Definition asm2 := [[
-  Addi s1 sp 0;
-
-  (* ssize_t write(int fd, const void *buf, size_t nbytes); *)
-  (* write(STDOUT_FILENO, a1, a2) *)
-  Addi a0 zero STDOUT_FILENO;
-  Addi a1 s1 0;
-  Addi a2 zero 4;
-  Addi a7 zero __NR_write;
-  Ecall;
-  Addi s1 s1 4;
-  Jal zero (-24);
-
-  (* exit(11) *)
-  Addi a0 zero 11;
-  Addi a7 zero __NR_exit;
-  Ecall
-]].
-
-Definition probe_mem := [[
-  (* stack pointer starts at end of stack, 0x4000000 *)
-  Addi sp zero 1;
-  Slli sp sp 30;
-
-  (* heap starts at 0x20000000 *)
-  Addi gp zero 1;
-  Slli gp gp 29;
-
-  (* size of stack and heap is 1MB each *)
-  Addi t0 zero 1;
-  Slli t0 t0 20;
-
-  (* some magic constants *)
-  Addi s1 zero 9;
-  Addi s2 zero 10;
-  Addi s3 zero 11;
-  Addi s4 zero 12;
-
-  (* write to highest stack addr: *)
-  Sw sp s1 (-4);
-  (* write to lowest stack addr: *)
-  Sub sp sp t0;
-  Sw sp s2 (0);
-  (* write to lowest heap addr: *)
-  Sw gp s3 (0);
-  (* write to highest heap addr: *)
-  Add gp gp t0;
-  Sw gp s4 (-4);
-  (* replacing any of the above (0)s by a (-4) or vice versa will result in a segfault *)
-
-  (* read back values: *)
-  Lw a2 sp (0);
-  Add sp sp t0;
-  Lw a1 sp (-4);
-  Lw a4 gp (-4);
-  Sub gp gp t0;
-  Lw a3 gp (0);
-
-  Add a0 zero a1;
-  Add a0 a0 a2;
-  Add a0 a0 a3;
-  Add a0 a0 a4;
-
-  (* exit(a0) *)
-  Addi a7 zero __NR_exit;
-  Ecall
-]].
-
-(* The stack already contains the environment variables and the command line arguments
-   (contents of argv) and some other stuff, and sp points past that stuff, so we don't
-   get the whole stack amount we required
-
-https://interrupt.memfault.com/blog/how-to-write-linker-scripts-for-firmware
-
-and use objcopy to turn the binary file into a .o file that can be referenced in a linker script
-https://www.devever.net/~hl/incbin
 *)
 
 (* Note: this must be Coq.Init.Byte.byte, not coqutil.Byte.byte,

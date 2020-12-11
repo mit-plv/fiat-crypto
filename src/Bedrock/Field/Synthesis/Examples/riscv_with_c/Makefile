@@ -22,7 +22,7 @@ RISCV_GDB?=$(CROSS_COMPILE)gdb
 %.hex : %_compile.v
 	$(COQC) $(COQC_OPTIONS) $< > $@
 
-%.s : %_wrap.v
+%.s : %_wrap.v asm_wrappers.vo %.hex
 	$(COQC) $(COQC_OPTIONS) $< > $@
 
 %.bin : %.hex
