@@ -912,7 +912,7 @@ Proof.
          | [ |- context[?min' b c] ]
            => progress change min' with min
          end.
-  rewrite <- (combine_split _ _ x) at 2 3.
+  rewrite <- (combine_split _ _ x) at 2.
   rewrite wand_combine, !wordToNat_combine, wand_kill, wand_unit, wordToNat_wzero.
   generalize (split1 _ _ x); generalize (split2 _ _ x); clear x; simpl.
   apply Min.min_case_strong; intros Hbc x0 x1;
