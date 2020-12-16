@@ -156,6 +156,8 @@ Module Go.
          "(" ++ arith_to_string prefix e1 ++ " & " ++ arith_to_string prefix e2 ++ ")"
        | (IR.Z_lor @@@ (e1, e2)) =>
          "(" ++ arith_to_string prefix e1 ++ " | " ++ arith_to_string prefix e2 ++ ")"
+       | (IR.Z_lxor @@@ (e1, e2)) =>
+         "(" ++ arith_to_string prefix e1 ++ " ^ " ++ arith_to_string prefix e2 ++ ")"
        | (IR.Z_lnot _ @@@ e) => "(^" ++ arith_to_string prefix e ++ ")"
        (* arithmetic operations *)
        | (IR.Z_add @@@ (x1, x2)) =>
@@ -220,6 +222,7 @@ Module Go.
        | (IR.Z_sub @@@ _)
        | (IR.Z_land @@@ _)
        | (IR.Z_lor @@@ _)
+       | (IR.Z_lxor @@@ _)
        | (IR.Z_add_modulo @@@ _) => "var _error = error_bad_arg"
        | IR.TT => "var _error = error_tt"
        end%string%Cexpr.
@@ -342,6 +345,7 @@ Module Go.
     := match idc with
        | IR.Z_land
        | IR.Z_lor
+       | IR.Z_lxor
        | IR.Z_add
        | IR.Z_mul
        | IR.Z_sub

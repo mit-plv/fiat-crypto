@@ -141,6 +141,8 @@ Module Compilers.
              => "(" ++ @arith_to_string prefix _ e1 ++ " & " ++ @arith_to_string prefix _ e2 ++ ")"
            | (Z_lor @@@ (e1, e2))
              => "(" ++ @arith_to_string prefix _ e1 ++ " | " ++ @arith_to_string prefix _ e2 ++ ")"
+           | (Z_lxor @@@ (e1, e2))
+             => "(" ++ @arith_to_string prefix _ e1 ++ " ^ " ++ @arith_to_string prefix _ e2 ++ ")"
            | (Z_add @@@ (x1, x2))
              => "(" ++ @arith_to_string prefix _ x1 ++ " + " ++ @arith_to_string prefix _ x2 ++ ")"
            | (Z_mul @@@ (x1, x2))
@@ -184,6 +186,7 @@ Module Compilers.
            | (Z_sub @@@ _)
            | (Z_land @@@ _)
            | (Z_lor @@@ _)
+           | (Z_lxor @@@ _)
            | (Z_add_modulo @@@ _)
              => "#error bad_arg;"
            | TT
@@ -387,6 +390,7 @@ Module Compilers.
         := match idc with
            | Z_land
            | Z_lor
+           | Z_lxor
            | Z_add
            | Z_mul
            | Z_sub

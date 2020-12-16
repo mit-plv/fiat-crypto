@@ -114,6 +114,8 @@ Module JSON.
          => handle_op1 "&" args
        | (IR.Z_lor @@@ args)
          => handle_op1 "|" args
+       | (IR.Z_lxor @@@ args)
+         => handle_op1 "^" args
        | (IR.Z_lnot _ @@@ args)
          => handle_op1 "~" args
        (* arithmetic operations *)
@@ -241,6 +243,7 @@ Module JSON.
     := match idc with
        | IR.Z_land
        | IR.Z_lor
+       | IR.Z_lxor
        | IR.Z_add
        | IR.Z_mul
        | IR.Z_sub

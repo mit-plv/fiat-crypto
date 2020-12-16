@@ -64,6 +64,7 @@ Module Compilers.
         Inductive Z_binop : Set :=
         | Z_land
         | Z_lor
+        | Z_lxor
         | Z_add
         | Z_mul
         | Z_sub
@@ -709,6 +710,7 @@ Module Compilers.
                  | ident.Z_bneg => fun r x => ret (arith_un_arith_expr_of_PHOAS_ident Z_bneg r x)
                  | ident.Z_land => fun r x y => ret (arith_bin_arith_expr_of_PHOAS_ident Z_land r (x, y))
                  | ident.Z_lor => fun r x y => ret (arith_bin_arith_expr_of_PHOAS_ident Z_lor r (x, y))
+                 | ident.Z_lxor => fun r x y => ret (arith_bin_arith_expr_of_PHOAS_ident Z_lxor r (x, y))
                  | ident.Z_add => fun r x y => ret (arith_bin_arith_expr_of_PHOAS_ident Z_add r (x, y))
                  | ident.Z_mul => fun r x y => ret (arith_bin_arith_expr_of_PHOAS_ident Z_mul r (x, y))
                  | ident.Z_sub => fun r x y => ret (arith_bin_arith_expr_of_PHOAS_ident Z_sub r (x, y))
@@ -796,7 +798,6 @@ Module Compilers.
                  | ident.Z_sub_get_borrow
                  | ident.Z_sub_with_get_borrow
                  | ident.Z_add_modulo
-                 | ident.Z_lxor
                  | ident.Z_rshi
                  | ident.Z_cc_m
                  | ident.Z_combine_at_bitwidth
