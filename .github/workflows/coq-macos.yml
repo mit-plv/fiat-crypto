@@ -9,7 +9,7 @@ on:
 jobs:
   build:
 
-    runs-on: macos-latest
+    runs-on: macOS-10.15
 
     env:
       NJOBS: "2"
@@ -20,7 +20,6 @@ jobs:
     - name: Install system dependencies
       run: |
         set -e
-        brew update
         brew install gnu-time opam pkg-config gtksourceview3 adwaita-icon-theme
         pip3 install macpack
 
