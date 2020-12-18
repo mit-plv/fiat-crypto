@@ -2,7 +2,7 @@ Require Import Coq.Lists.List.
 Require Import Coq.Strings.String.
 Require Import Crypto.CLI.
 Require Export Crypto.StandaloneHaskellMain.
-Require Import Crypto.Bedrock.Standalone.Stringification.
+Require Import Crypto.Bedrock.Field.Stringification.Stringification.
 Import ListNotations.
 Local Open Scope string_scope.
 Local Open Scope list_scope.

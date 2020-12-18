@@ -1,4 +1,4 @@
-(* IF YOU CHANGE THIS FILE YOU MUST ALSO CHANGE LoadStoreListVarData.v ! *)
+(* IF YOU CHANGE THIS FILE YOU MUST ALSO CHANGE src/Bedrock/Field/Stringification/LoadStoreListVarData.v ! *)
 Require Import Coq.Strings.String.
 Require Import Coq.Lists.List.
 Require Import Coq.micromega.Lia.

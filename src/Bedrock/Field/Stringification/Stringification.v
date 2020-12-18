@@ -14,8 +14,8 @@ Require Import Crypto.Bedrock.Field.Common.Names.VarnameGenerator.
 Require Import Crypto.Bedrock.Field.Translation.Parameters.Defaults.
 Require Import Crypto.Bedrock.Field.Translation.Parameters.SelectParameters.
 Require Import Crypto.Bedrock.Field.Translation.Func.
-Require Import Crypto.Bedrock.Field.Translation.FlattenVarData.
-Require Import Crypto.Bedrock.Field.Translation.LoadStoreListVarData.
+Require Import Crypto.Bedrock.Field.Stringification.FlattenVarData.
+Require Import Crypto.Bedrock.Field.Stringification.LoadStoreListVarData.
 Require Import Crypto.Stringification.C.
 Require Import Crypto.Language.API.
 Require Import Crypto.Util.Option.

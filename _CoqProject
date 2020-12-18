@@ -69,6 +69,9 @@ src/Bedrock/Field/Common/Names/MakeNames.v
 src/Bedrock/Field/Common/Names/VarnameGenerator.v
 src/Bedrock/Field/Interface/Compilation.v
 src/Bedrock/Field/Interface/Representation.v
+src/Bedrock/Field/Stringification/FlattenVarData.v
+src/Bedrock/Field/Stringification/LoadStoreListVarData.v
+src/Bedrock/Field/Stringification/Stringification.v
 src/Bedrock/Field/Synthesis/Examples/EncodeDecode.v
 src/Bedrock/Field/Synthesis/Examples/LadderStep.v
 src/Bedrock/Field/Synthesis/Examples/MulTwice.v
@@ -88,10 +91,8 @@ src/Bedrock/Field/Synthesis/Specialized/WordByWordMontgomery.v
 src/Bedrock/Field/Translation/Cmd.v
 src/Bedrock/Field/Translation/Expr.v
 src/Bedrock/Field/Translation/Flatten.v
-src/Bedrock/Field/Translation/FlattenVarData.v
 src/Bedrock/Field/Translation/Func.v
 src/Bedrock/Field/Translation/LoadStoreList.v
-src/Bedrock/Field/Translation/LoadStoreListVarData.v
 src/Bedrock/Field/Translation/Parameters/Defaults.v
 src/Bedrock/Field/Translation/Parameters/Defaults32.v
 src/Bedrock/Field/Translation/Parameters/Defaults64.v
@@ -120,7 +121,6 @@ src/Bedrock/Specs/Group.v
 src/Bedrock/Specs/ScalarField.v
 src/Bedrock/Standalone/StandaloneHaskellMain.v
 src/Bedrock/Standalone/StandaloneOCamlMain.v
-src/Bedrock/Standalone/Stringification.v
 src/Curves/Edwards/AffineProofs.v
 src/Curves/Edwards/Pre.v
 src/Curves/Edwards/XYZT/Basic.v
