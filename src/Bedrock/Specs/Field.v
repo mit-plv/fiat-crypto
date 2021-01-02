@@ -11,7 +11,7 @@ Class FieldParameters :=
     a24 : F M_pos; (* (a+2) / 4 or (a-2) / 4, depending on the implementation *)
 
     (** function names **)
-    mul : string; add : string; sub : string;
+    mul : string; add : string; sub : string; opp : string;
     square : string; scmula24 : string; inv : string;
     from_bytes : string; to_bytes : string;
 
@@ -107,7 +107,7 @@ Section FunctionSpecs.
   Context {semantics : Semantics.parameters}
           {semantics_ok : Semantics.parameters_ok semantics}.
   Context {field_parameters : FieldParameters}
-          {field_representaton : FieldRepresentation}.
+          {field_representation : FieldRepresentation}.
 
   Instance spec_of_mul : spec_of mul :=
     binop_spec mul F.mul loose_bounds loose_bounds tight_bounds.
@@ -117,6 +117,8 @@ Section FunctionSpecs.
     binop_spec add F.add tight_bounds tight_bounds loose_bounds.
   Instance spec_of_sub : spec_of sub :=
     binop_spec sub F.sub tight_bounds tight_bounds loose_bounds.
+  Instance spec_of_opp : spec_of opp :=
+    unop_spec opp F.opp tight_bounds loose_bounds.
   Instance spec_of_scmula24 : spec_of scmula24 :=
     unop_spec scmula24 (F.mul a24) loose_bounds tight_bounds.
   (* TODO: what are the bounds for inv? *)
@@ -166,7 +168,7 @@ Section SpecProperties.
   Context {semantics : Semantics.parameters}
           {semantics_ok : Semantics.parameters_ok semantics}.
   Context {field_parameters : FieldParameters}
-          {field_representaton : FieldRepresentation}
+          {field_representation : FieldRepresentation}
           {field_representation_ok : FieldRepresentation_ok}.
 
   Lemma FElem_to_bytes px x :

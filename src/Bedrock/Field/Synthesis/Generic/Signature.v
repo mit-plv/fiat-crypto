@@ -311,12 +311,18 @@ Section WithParameters.
       (type.arrow type_listZ (type.arrow type_listZ type_listZ))
         (only parsing).
 
-    Let insizes : type.for_each_lhs_of_arrow access_sizes t :=
+    Definition list_binop_insizes
+      : type.for_each_lhs_of_arrow access_sizes t :=
       (access_size.word, (access_size.word, tt)).
-    Let outsizes : base_access_sizes (type.final_codomain t) :=
+    Definition list_binop_outsizes
+      : base_access_sizes (type.final_codomain t) :=
       access_size.word.
-    Let inlengths : type.for_each_lhs_of_arrow list_lengths t :=
+    Definition list_binop_inlengths
+      : type.for_each_lhs_of_arrow list_lengths t :=
       (n, (n, tt)).
+    Let insizes := list_binop_insizes.
+    Let outsizes := list_binop_outsizes.
+    Let inlengths := list_binop_inlengths.
 
     Lemma list_binop_correct name f :
       f = make_bedrock_func name insizes outsizes inlengths res ->
@@ -324,6 +330,7 @@ Section WithParameters.
         (binop_spec name op xbounds ybounds outbounds (f :: functions)).
     Proof.
       subst inlengths insizes outsizes.
+      cbv [list_binop_insizes list_binop_outsizes list_binop_inlengths].
       cbv beta; intros; subst f. cbv [make_bedrock_func].
       cleanup. eapply Proper_call.
       2: {
@@ -392,12 +399,18 @@ Section WithParameters.
     Local Notation t :=
       (type.arrow type_listZ type_listZ) (only parsing).
 
-    Let insizes : type.for_each_lhs_of_arrow access_sizes t :=
+    Definition list_unop_insizes
+      : type.for_each_lhs_of_arrow access_sizes t :=
       (access_size.word, tt).
-    Let outsizes : base_access_sizes (type.final_codomain t) :=
+    Definition list_unop_outsizes
+      : base_access_sizes (type.final_codomain t) :=
       access_size.word.
-    Let inlengths : type.for_each_lhs_of_arrow list_lengths t :=
+    Definition list_unop_inlengths
+      : type.for_each_lhs_of_arrow list_lengths t :=
       (n, tt).
+    Let insizes := list_unop_insizes.
+    Let outsizes := list_unop_outsizes.
+    Let inlengths := list_unop_inlengths.
 
     Lemma list_unop_correct name f :
       f = make_bedrock_func name insizes outsizes inlengths res ->
@@ -405,6 +418,7 @@ Section WithParameters.
         (unop_spec name op xbounds outbounds (f :: functions)).
     Proof.
       subst inlengths insizes outsizes.
+      cbv [list_unop_insizes list_unop_outsizes list_unop_inlengths].
       cbv beta; intros; subst f. cbv [make_bedrock_func].
       cleanup. eapply Proper_call.
       2: {
@@ -452,9 +466,19 @@ End WithParameters.
     Next steps:
     - focus on unsat solinas first, make mul/add defs
     - take mul/add defs through full synthesis/translation to get x25519 impls
-    - make proofs for other signatures (select, from_bytes)
+    - compose with montladder as demo to test
+    === merge ===
+    - generate other bin/unops
+    === merge ===
+    - make signature proofs for other signatures (select, from_bytes)
+    - generate all operations
+    === merge ===
     - figure out what to do for copy and small_literal; general template that spits out the correct bedrock2?
     - plug in everything for montladder so we have e2e scalarmult
     ====== merge ====
+
+    Later:
     - add examples
+    - make nice demo
+    - wbw
   *)
