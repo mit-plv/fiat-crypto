@@ -246,16 +246,7 @@ Section UnsaturatedSolinas.
 
 End UnsaturatedSolinas.
 
-(*
-Next steps:
-- Figure out how we want to ultimately generate operations -- as one unified package, or by-operation?
-- Prototype the design here
-- Make a more final version with everything in its own file
-
-Current design ideas:
-1) have the computed_op record (that UnsaturatedSolinas above can also require for each op); flow looks like a) call a tactic to make computed_op and then b) use the computed_op in the proof -- drawback is that final function will be projection from computed_op unless you explicitly compute it
-2) Directly in a derive proof with bedrock2-fulfills-spec as proof part, compute res and func -- does this make it faster? easier?
-*)
+(* Prototyping full pipeline: *)
 
 Require Import Coq.Strings.String.
 Require Import Crypto.Bedrock.Field.Translation.Parameters.Defaults64.
@@ -357,3 +348,10 @@ End Tests.
 
 Print fe25519_add.
 Print fe25519_opp.
+(* Current status: mul/add/opp prototyped through full pipeline
+   Next:
+   - fix from_bytes proof in Signature.v
+   - prototype from_bytes through full pipeline
+   - prototype to_bytes through full pipeline
+   - add remaining operations
+*)
