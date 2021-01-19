@@ -46,6 +46,10 @@ Definition parse_oct_prefix : ParserAction _ := "0o".
 Definition parse_dec_prefix : ParserAction _ := "".
 Definition parse_hex_prefix : ParserAction _ := "0x".
 
+(** Is [E]/[e] a valid digit in the given base? *)
+Definition base_accepts_E (base : N) : bool
+  := (10 + N_of_ascii "E" - N_of_ascii "A" <? base)%N.
+
 Definition parse_digits_gen_step (base : N) : ParserAction N
   := (parse_strs
         (List.flat_map
@@ -81,7 +85,17 @@ Local Coercion Z.of_N : N >-> Z.
 Local Coercion inject_Z : Z >-> Q.
 
 Definition parse_num_gen (allow_neg : bool) {P} (base : N) (parse_prefix : ParserAction P) : ParserAction Q
-  := (if allow_neg then ((strip_whitespace_around "-")?) else parse_map (fun _ => None) "")
+  := let parse_E_exponent
+         := (("e" || "E") ;;->{ fun _ v => Qpower 10 v }
+                          (((strip_whitespace_around "-")?)
+                             ;;->{ fun n v => if n:option _ then (-v)%Z else v }
+                             (parse_map (digits_to_N base : _ -> Z) ((parse_digits_gen_step base)+) )))%parse in
+     let parse_P_exponent
+         := (("p" || "P") ;;->{ fun _ v => Qpower 2 v }
+                          (((strip_whitespace_around "-")?)
+                             ;;->{ fun n v => if n:option _ then (-v)%Z else v }
+                             (parse_map (digits_to_N base : _ -> Z) ((parse_digits_gen_step base)+) )))%parse in
+     (if allow_neg then ((strip_whitespace_around "-")?) else parse_map (fun _ => None) "")
        ;;->{ fun n v => if n:option _ then (-v)%Q else v }
        parse_prefix ;;->{ fun _ v => v }
        ((((parse_digits_gen_step base)* )
@@ -92,14 +106,9 @@ Definition parse_num_gen (allow_neg : bool) {P} (base : N) (parse_prefix : Parse
            (parse_digits_gen_step base)* )
         || parse_map (digits_to_N base : _ -> Q) ((parse_digits_gen_step base)+))
        ;;->{ fun n e => match e with Some e => n * e | None => n end%Q }
-       (((("e" || "E") ;;->{ fun _ v => Qpower 10 v }
-         (((strip_whitespace_around "-")?)
-            ;;->{ fun n v => if n:option _ then (-v)%Z else v }
-            (parse_map (digits_to_N base : _ -> Z) ((parse_digits_gen_step base)+) )))
-        || (("p" || "P") ;;->{ fun _ v => Qpower 2 v }
-         (((strip_whitespace_around "-")?)
-            ;;->{ fun n v => if n:option _ then (-v)%Z else v }
-            (parse_map (digits_to_N base : _ -> Z) ((parse_digits_gen_step base)+) ))))?).
+       ((if base_accepts_E base
+         then parse_P_exponent (* if [e] is a valid character in the base, then we don't permit [e] as an exponent *)
+         else (parse_E_exponent || parse_P_exponent))?).
 
 Definition parse_num (allow_neg : bool) : ParserAction Q
   := parse_num_gen allow_neg 2 parse_bin_prefix
@@ -111,6 +120,9 @@ Redirect "log" Check let ls := [("-1234", -(1234):Q); ("0xF", 15:Q); ("10.5", (1
                      eq_refl
                      : List.map (fun '(s, v) => ((parse_num true;;->{fun v _ => v} ε)%parse s )) ls
                        = List.map (fun '(s, v) => [(v, "")]) ls.
+
+(* This was previously stack overflowing due to treating [e] as an exponent *)
+Redirect "log" Compute parse_num false "0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551".
 
 Inductive Qexpr := Qv (_ : Q) | Qeopp (a : Qexpr) | Qeadd (a b : Qexpr) | Qesub (a b : Qexpr) | Qemul (a b : Qexpr) | Qediv (a b : Qexpr) | Qepow (b e : Qexpr).
 Coercion Qv : Q >-> Qexpr.
