@@ -65,7 +65,7 @@ Ltac finish_prove_FinitelyListable :=
 Ltac prove_ListableDerive :=
   lazymatch goal with
   | [ |- @FinitelyListable ?T ?H ]
-    => instantiate (1:=ltac:(partially_prove_Listable)) in (Value of H);
+    => revert H; instantiate (1:=ltac:(partially_prove_Listable)); intro H; (* argh, instantiate .. in (value of H) doesn't work in old versions of Coq, and current Coq doesn't know about (Value of H) *)
        cbv [H];
        finish_prove_FinitelyListable
   end.
