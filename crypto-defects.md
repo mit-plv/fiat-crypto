@@ -33,10 +33,13 @@ appearing in our code.
 |[bitcoin#eed71d85](https://github.com/bitcoin-core/secp256k1/commit/5de4c5dffd22aa4510a5c97d0ad4a9c2eed71d85) | ECDSA-secp256k1 x*B | mixed addition Jacobian+Affine | missing case |
 |[openjdk#01781d7e](http://hg.openjdk.java.net/jdk8u/jdk8u/jdk/rev/d99101781d7e) | EC scalarmult | mixed addition Jacobian+Affine | [missing case](https://twitter.com/asanso/status/887691580018176000) |
 | [openssl/openssl#6687](https://github.com/openssl/openssl/issues/6687) | Ed25519 | 64-bit pseudo-Mersenne, x86 | incorrect handling of partially reduced values |
+| [go#43786](https://github.com/golang/go/issues/43786) / [CVE-2021-3114](https://github.com/golang/go/commit/5c8fd727c41e31273923c32b33d4f25855f4e123) | P224 | | [confusion of `>` with `>=`?; underflow](https://github.com/golang/go/commit/5c8fd727c41e31273923c32b33d4f25855f4e123) |
 
 
 Not a bug, but still relevant:
 
+| Reference                                                           | Specification               | Implementation              | Defect        |
+| ------------------------------------------------------------------- | --------------------------- | --------------------------- | ------------- |
 | [ref/sc25519.c:84](https://github.com/floodyberry/supercop/blob/master/crypto_sign/ed25519/ref/sc25519.c#L84) | x mod (order of Curve25519) |  Barrett reduction (code is likely correct) | "XXX" comment |
 
 
