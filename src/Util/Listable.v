@@ -65,7 +65,7 @@ Ltac finish_prove_FinitelyListable :=
 Ltac prove_ListableDerive :=
   lazymatch goal with
   | [ |- @FinitelyListable ?T ?H ]
-    => instantiate (1:=ltac:(partially_prove_Listable)) in (value of H);
+    => instantiate (1:=ltac:(partially_prove_Listable)) in (Value of H);
        cbv [H];
        finish_prove_FinitelyListable
   end.
