@@ -126,6 +126,8 @@ Reserved Notation "A <--- X ; B" (at level 70, X at next level, right associativ
 Reserved Notation "A <---- X ; B" (at level 70, X at next level, right associativity, format "'[v' A  <----  X ; '/' B ']'").
 Reserved Notation "A <----- X ; B" (at level 70, X at next level, right associativity, format "'[v' A  <-----  X ; '/' B ']'").
 Reserved Notation "A ;; B" (at level 70, right associativity, format "'[v' A ;; '/' B ']'").
+Reserved Notation "A ';;L' B" (at level 70, right associativity, format "'[v' A ';;L' '/' B ']'").
+Reserved Notation "A ';;R' B" (at level 70, right associativity, format "'[v' A ';;R' '/' B ']'").
 Reserved Notation "A ;;->{ f } B" (at level 70, right associativity, format "'[v' A ;;->{ f } '/' B ']'").
 Reserved Notation "A ;;; B" (at level 70, right associativity, format "'[v' A ;;; '/' B ']'").
 Reserved Notation "u [ i ]" (at level 30).

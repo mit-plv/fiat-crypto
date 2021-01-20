@@ -1,6 +1,7 @@
 Require Import Coq.Strings.Ascii Coq.Strings.String Coq.Lists.List.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Strings.String.
+Require Import Crypto.Util.Strings.Ascii.
 Require Import Crypto.Util.Notations.
 Import ListNotations.
 Local Open Scope list_scope.
@@ -35,6 +36,22 @@ Infix "||" := parse_alt : parse_scope.
 Infix "||->{ f }" := (parse_alt_gen f) : parse_scope.
 Infix ";;->{ f }" := (parse_seq_gen f) : parse_scope.
 Infix ";;" := (parse_seq_gen (@pair _ _)) : parse_scope.
+Infix ";;L" := (parse_seq_gen (fun l r => l)) : parse_scope.
+Infix ";;R" := (parse_seq_gen (fun l r => r)) : parse_scope.
+
+Definition parse_alpha_char (lower : bool) (upper : bool) : ParserAction ascii
+  := fun s
+     => match s with
+        | EmptyString => []
+        | String ch s'
+          => if ((lower && ("a" <=? ch) && (ch <=? "z")) || (upper && ("A" <=? ch) && (ch <=? "Z")))%char%bool
+             then [(ch, s')]
+             else []
+        end.
+
+Notation "[A-Z]" := (parse_alpha_char false true) : parse_scope.
+Notation "[a-z]" := (parse_alpha_char true false) : parse_scope.
+Notation "[a-zA-Z]" := (parse_alpha_char true true) : parse_scope.
 
 Definition parse_ascii (prefix : ascii) : ParserAction ascii
   := fun s
@@ -99,12 +116,13 @@ Definition whitespace : list ascii
 Definition whitespace_strs : list string
   := Eval compute in List.map (fun ch => String ch "") whitespace.
 
-Definition parse_strs {T} (ls : list (string * T)) : ParserAction T
-  := List.fold_left ((fun p2 '(s1, v1) => (s1:string) ||->{ fun v => match v with inl _ => v1 | inr v => v end } p2)%parse)
+Definition parse_alt_list {T} (ls : list (ParserAction T)) : ParserAction T
+  := List.fold_left ((fun p2 p1 => p1 ||->{ fun v => match v with inl v => v | inr v => v end } p2)%parse)
                     ls
                     parse_impossible.
 
-
+Definition parse_strs {T} (ls : list (string * T)) : ParserAction T
+  := parse_alt_list (List.map (fun '(s, v) => parse_map (fun _ => v) (s:string)) ls).
 
 Definition parse_any_whitespace : ParserAction (list string)
   := Eval cbv [List.fold_right List.fold_left whitespace whitespace_strs List.tl List.hd parse_strs List.combine] in
@@ -130,6 +148,14 @@ Definition parse_list_gen {A} (leftbr sep rightbr : string) (parse : ParserActio
                (strip_whitespace_around sep ;;->{ fun _ tl => tl } parse)* ))?
        ;;->{ fun v _ => match v with None => [] | Some ls => ls end }
        strip_whitespace_around rightbr.
+
+Definition parse_list_gen_no_leading_trailing_space {A} (leftbr sep rightbr : string) (parse : ParserAction A) : ParserAction (list A)
+  := (strip_whitespace_after leftbr)
+       ;;->{ fun _ v => v }
+       ((parse ;;->{ @cons _ }
+               (strip_whitespace_around sep ;;->{ fun _ tl => tl } parse)* ))?
+       ;;->{ fun v _ => match v with None => [] | Some ls => ls end }
+       strip_whitespace_before rightbr.
 
 Definition parse_list {A} (parse : ParserAction A) : ParserAction (list A)
   := parse_list_gen "[" ";" "]" parse.
