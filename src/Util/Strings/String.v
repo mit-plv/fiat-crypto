@@ -313,6 +313,15 @@ Definition replace (from to s : string) : string
   := concat to (split from s).
 
 Notation NewLine := (String Ascii.NewLine "").
+Notation CR := (String Ascii.CR "").
+Notation LF := (String Ascii.LF "").
+Notation CRLF := (String Ascii.CF (String Ascii.LF "")).
+
+(** Given a list of strings, breaks all strings within the list at
+    CFLF, CF, and LF.  Useful for normalizing a newline-separated list
+    of strings, where some substrings might contain newlines *)
+Definition split_newlines (s : list string) : list string
+  := List.flat_map (split CR) (List.flat_map (split LF) (List.flat_map (split CRLF) s)).
 
 (** Title case makes all words after a space begin with a capital letter *)
 Definition capitalize_first_letter (s : string) : string
