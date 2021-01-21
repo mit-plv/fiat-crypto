@@ -120,6 +120,15 @@ Definition parse_plus {A} (p : ParserAction A) : ParserAction (list A)
 Definition parse_star {A} (p : ParserAction A) : ParserAction (list A)
   := parse_map option_list_to_list ((parse_plus p)?).
 
+Definition parse_lookahead {A} (p : ParserAction A) : ParserAction A
+  := fun s => List.map (fun '(a, _) => (a, s)) (p s).
+
+Definition parse_lookahead_not {A} (p : ParserAction A) : ParserAction unit
+  := fun s => match p s with
+              | [] => [(tt, s)]
+              | _ => []
+              end.
+
 Notation "p +" := (parse_plus p) : parse_scope.
 Notation "p *" := (parse_star p) : parse_scope.
 
