@@ -180,11 +180,11 @@ Fixpoint eval_Qexpr_strict (v : Qexpr) : option Q
      | Qeadd a b => a <- eval_Qexpr_strict a; b <- eval_Qexpr_strict b; Some (Qplus a b)
      | Qesub a b => a <- eval_Qexpr_strict a; b <- eval_Qexpr_strict b; Some (Qminus a b)
      | Qemul a b => a <- eval_Qexpr_strict a; b <- eval_Qexpr_strict b; Some (Qmult a b)
-     | Qediv a b => a <- eval_Qexpr_strict a; b <- eval_Qexpr_strict b; Some (Qdiv a b)
+     | Qediv a b => a <- eval_Qexpr_strict a; b <- eval_Qexpr_strict b; if Qeq_bool b 0 then None else Some (Qdiv a b)
      | Qepow b e => b <- eval_Qexpr_strict b;
                       e <- eval_Qexpr_strict e;
                       let (qe, re) := Z.div_eucl (Qnum e) (Z.pos (Qden e)) in
-                      if Z.eqb re 0
+                      if Z.eqb re 0 && (negb (Qeq_bool b 0) || Z.ltb 0 qe)
                       then Some (Qpower b qe)
                       else None
      end.
