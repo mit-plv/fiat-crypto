@@ -72,18 +72,23 @@ Lemma rev_step s
       end.
 Proof. destruct s; cbn; rewrite ?string_of_list_ascii_app; reflexivity. Qed.
 
+Fixpoint take_while_drop_while (f : ascii -> bool) (s : string) : string * string
+  := match s with
+     | EmptyString => (EmptyString, EmptyString)
+     | String ch s
+       => if f ch
+          then let '(s1, s2) := take_while_drop_while f s in
+               (String ch s1, s2)
+          else (EmptyString, String ch s)
+     end.
+
 (** *** trimming a string *)
 (** [trim s] returns a copy of the argument, without leading and trailing
     whitespace. The characters regarded as whitespace are: ' ',
     '\012', '\n', '\r', and '\t'. *)
-Fixpoint ltrim (s : string) : string
-  := match s with
-     | EmptyString => EmptyString
-     | String x xs
-       => if Ascii.is_whitespace x
-          then ltrim xs
-          else s
-     end.
+Definition ltrim (s : string) : string
+  := snd (take_while_drop_while Ascii.is_whitespace s).
+
 Definition rtrim (s : string) : string
   := rev (ltrim (rev s)).
 
@@ -110,6 +115,13 @@ Qed.
 Lemma append_assoc s1 s2 s3 : s1 ++ (s2 ++ s3) = (s1 ++ s2) ++ s3.
 Proof.
   rewrite !append_alt, !list_ascii_of_string_of_list_ascii; cbn; rewrite List.app_assoc; reflexivity.
+Qed.
+
+Lemma substring_alt n m s
+  : substring n m s = string_of_list_ascii (List.firstn m (List.skipn n (list_ascii_of_string s))).
+Proof.
+  revert n m; induction s as [|ch s IHs]; intros [|n] [|m]; try reflexivity; cbn;
+    rewrite IHs; cbn; try reflexivity.
 Qed.
 
 Lemma length_substring n1 n2 s
@@ -174,6 +186,14 @@ Section strip_prefix_cps.
                  end
             else remaining (String sepch sep) s2
        end.
+
+  Lemma strip_prefix_cps_found sepch sep s2 s2'
+        (Hfound : String sepch sep ++ s2' = s2)
+    : strip_prefix_cps sepch sep s2 = found s2'.
+  Proof.
+    revert sepch sep Hfound; induction s2 as [|ch s2 IHs2]; intros; cbn in Hfound; inversion Hfound; clear Hfound; subst.
+    destruct sep; cbn [strip_prefix_cps]; now rewrite Ascii.eqb_refl; auto.
+  Qed.
 End strip_prefix_cps.
 
 (** *** splitting a string *)
@@ -266,6 +286,7 @@ Proof.
   { generalize (split_helper_no_substring sepch sep xs (String x rev_acc)).
     generalize (split_helper sepch sep xs (String x rev_acc)).
     intros ls.
+    clear split_helper_no_substring; intro split_helper_no_substring.
 Abort.
 Lemma split_no_substring sep s (Hsep : sep <> EmptyString)
   : List.Forall (fun s' => contains 0 sep s' = false)
