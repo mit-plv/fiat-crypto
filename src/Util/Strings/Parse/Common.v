@@ -145,9 +145,15 @@ Definition parse_alt_list {T} (ls : list (ParserAction T)) : ParserAction T
 Definition parse_strs {T} (ls : list (string * T)) : ParserAction T
   := parse_alt_list (List.map (fun '(s, v) => parse_map (fun _ => v) (s:string)) ls).
 
-Definition parse_any_whitespace : ParserAction (list string)
+Definition parse_one_whitespace : ParserAction string
   := Eval cbv [List.fold_right List.fold_left whitespace whitespace_strs List.tl List.hd parse_strs List.combine] in
-      (List.fold_left (B:=string) parse_alt (tl whitespace_strs) (hd " " whitespace_strs))*.
+      (List.fold_left (B:=string) parse_alt (tl whitespace_strs) (hd " " whitespace_strs)).
+
+Notation "[\s]" := parse_one_whitespace : parse_scope.
+
+Definition parse_any_whitespace : ParserAction (list string)
+  := Eval cbv [parse_one_whitespace] in
+      (parse_one_whitespace)*.
 
 Definition strip_whitespace_around {A} (p : ParserAction A) : ParserAction A
   := parse_any_whitespace ;;->{ fun _ v => v }
