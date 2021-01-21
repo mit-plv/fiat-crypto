@@ -31,3 +31,6 @@ Definition to_upper (ch : ascii) : ascii
   := if ("a" <=? ch) && (ch <=? "z")
      then ascii_of_N ("A" + ch - "a")
      else ch.
+
+Definition is_whitespace (x : ascii) : bool
+  := ((x =? " ") || (x =? NewPage) || (x =? LF) || (x =? CR) || (x =? Tab))%char%bool.

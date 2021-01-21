@@ -80,7 +80,7 @@ Fixpoint ltrim (s : string) : string
   := match s with
      | EmptyString => EmptyString
      | String x xs
-       => if ((x =? " ") || (x =? NewPage) || (x =? LF) || (x =? CR) || (x =? Tab))%char%bool
+       => if Ascii.is_whitespace x
           then ltrim xs
           else s
      end.
