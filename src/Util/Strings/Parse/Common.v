@@ -1,5 +1,6 @@
 Require Import Coq.Strings.Ascii Coq.Strings.String Coq.Lists.List.
 Require Import Crypto.Util.Option.
+Require Import Crypto.Util.OptionList.
 Require Import Crypto.Util.Strings.String.
 Require Import Crypto.Util.Strings.Ascii.
 Require Import Crypto.Util.Notations.
@@ -75,6 +76,17 @@ Coercion parse_str : string >-> ParserAction.
 Definition parse_map {A B} (f : A -> B) : ParserAction A -> ParserAction B
   := fun p s
      => List.map (fun '(v, s) => (f v, s)) (p s).
+
+Definition parse_filter {A} (f : A -> bool) : ParserAction A -> ParserAction A
+  := fun p s
+     => List.filter (fun '(v, s) => f v) (p s).
+
+Definition parse_flat_map {A B} (f : A -> list B) : ParserAction A -> ParserAction B
+  := fun p s
+     => List.flat_map (fun '(v, s) => List.map (fun fv => (fv, s)) (f v)) (p s).
+
+Definition parse_option_list_map {A B} (f : A -> option B) : ParserAction A -> ParserAction B
+  := parse_flat_map (fun a => match f a with Some v => [v] | None => [] end).
 
 Definition parse_maybe {A} (p : ParserAction A) : ParserAction (option A)
   := (p ||->{ fun v => match v with inl v => Some v | inr _ => None end } "")%parse.

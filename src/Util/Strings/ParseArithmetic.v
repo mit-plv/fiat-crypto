@@ -233,6 +233,39 @@ Definition parse_Qexpr_with_vars (vars : list (string * Q)) : ParserAction Qexpr
           (parse_num false)
           vars).
 
+Definition Q_to_Z (q : Q) : Z := (Qnum q / Z.pos (Qden q))%Z.
+Definition Q_to_Z_strict (x : Q) : option Z
+  := let '(q, r) := Z.div_eucl (Qnum x) (Zpos (Qden x)) in
+     if Z.eqb r 0
+     then Some q
+     else None.
+Definition N_of_Z_strict (z : Z) : option N
+  := match z with Z0 => Some N0 | Zpos p => Some (Npos p) | Zneg _ => None end.
+Definition positive_of_N (n : N) : positive
+  := match n with N0 => 1%positive | Npos p => p end.
+Definition positive_of_N_strict (n : N) : option positive
+  := match n with N0 => None | Npos p => Some p end.
+
+Definition parse_Q_with_vars (vars : list (string * Q)) : ParserAction Q
+  := parse_map eval_Qexpr (parse_Qexpr_with_vars vars).
+Definition parse_Q_strict_with_vars (vars : list (string * Q)) : ParserAction Q
+  := parse_option_list_map eval_Qexpr_strict (parse_Qexpr_with_vars vars).
+Definition parse_Z_with_vars (vars : list (string * Q)) : ParserAction Z
+  := parse_map Q_to_Z (parse_Q_with_vars vars).
+Definition parse_Z_strict_with_vars (vars : list (string * Q)) : ParserAction Z
+  := parse_option_list_map Q_to_Z_strict (parse_Q_strict_with_vars vars).
+Definition parse_N_with_vars (vars : list (string * Q)) : ParserAction N
+  := parse_map Z.to_N (parse_Z_with_vars vars).
+Definition parse_N_strict_with_vars (vars : list (string * Q)) : ParserAction N
+  := parse_option_list_map N_of_Z_strict (parse_Z_strict_with_vars vars).
+Definition parse_nat_with_vars (vars : list (string * Q)) : ParserAction nat
+  := parse_map N.to_nat (parse_N_with_vars vars).
+Definition parse_nat_strict_with_vars (vars : list (string * Q)) : ParserAction nat
+  := parse_map N.to_nat (parse_N_strict_with_vars vars).
+Definition parse_positive_with_vars (vars : list (string * Q)) : ParserAction positive
+  := parse_map positive_of_N (parse_N_with_vars vars).
+Definition parse_positive_strict_with_vars (vars : list (string * Q)) : ParserAction positive
+  := parse_option_list_map positive_of_N_strict (parse_N_strict_with_vars vars).
 
 Definition parseQexpr_arith_with_vars (vars : list (string * Q)) (s : string) : option Qexpr
   := finalize (parse_Qexpr_with_vars vars) s.
@@ -246,12 +279,6 @@ Definition parseN_arith_with_vars (vars : list (string * Q)) (s : string) : opti
   := (z <- parseZ_arith_with_vars vars s; match z with Z0 => Some 0 | Zpos p => Some (Npos p) | Zneg _ => None end)%N%option.
 Definition parsenat_arith_with_vars (vars : list (string * Q)) (s : string) : option nat
   := (n <- parseN_arith_with_vars vars s; Some (N.to_nat n)).
-
-Definition Q_to_Z_strict (x : Q) : option Z
-  := let '(q, r) := Z.div_eucl (Qnum x) (Zpos (Qden x)) in
-     if Z.eqb r 0
-     then Some q
-     else None.
 
 Definition parseQ_arith_strict_with_vars (vars : list (string * Q)) (s : string) : option Q
   := (q <- parseQexpr_arith_with_vars vars s; eval_Qexpr_strict q)%option.
@@ -276,5 +303,16 @@ Definition parseZ_arith_strict := parseZ_arith_strict_with_vars [].
 Definition parsepositive_arith_strict := parsepositive_arith_strict_with_vars [].
 Definition parseN_arith_strict := parseN_arith_strict_with_vars [].
 Definition parsenat_arith_strict := parsenat_arith_strict_with_vars [].
+
+Definition parse_Q_arith := parse_Q_with_vars [].
+Definition parse_Q_arith_strict := parse_Q_strict_with_vars [].
+Definition parse_Z_arith := parse_Z_with_vars [].
+Definition parse_Z_arith_strict := parse_Z_strict_with_vars [].
+Definition parse_N_arith := parse_N_with_vars [].
+Definition parse_N_arith_strict := parse_N_strict_with_vars [].
+Definition parse_nat_arith := parse_nat_with_vars [].
+Definition parse_nat_arith_strict := parse_nat_strict_with_vars [].
+Definition parse_positive_arith := parse_positive_with_vars [].
+Definition parse_positive_arith_strict := parse_positive_strict_with_vars [].
 
 Redirect "log" Check eq_refl : parseQexpr_arith "1 + -2" = Some (1%Q + - 2%Q)%Qexpr.
