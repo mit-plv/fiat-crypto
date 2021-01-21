@@ -315,7 +315,7 @@ Definition replace (from to s : string) : string
 Notation NewLine := (String Ascii.NewLine "").
 Notation CR := (String Ascii.CR "").
 Notation LF := (String Ascii.LF "").
-Notation CRLF := (String Ascii.CF (String Ascii.LF "")).
+Notation CRLF := (String Ascii.CR (String Ascii.LF "")).
 
 (** Given a list of strings, breaks all strings within the list at
     CFLF, CF, and LF.  Useful for normalizing a newline-separated list
