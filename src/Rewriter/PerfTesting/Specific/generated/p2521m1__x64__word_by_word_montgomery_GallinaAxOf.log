@@ -1,0 +1,10 @@
+Testing WordByWordMontgomery "2^521-1" (bitwidth = 64 ) (method = None ) (params = {| WordByWordMontgomery.m := 6864797660130609714981900799081393217269435300143305409394463459185543183397656052122559640661454554977296311391480858037121987999716643812574028291115057151; WordByWordMontgomery.machine_wordsize := 64 |} ) "GallinaAxOf with vm_compute" :
+Tactic call ran for 43.742 secs (43.697u,0.043s) (success)
+Testing WordByWordMontgomery "2^521-1" (bitwidth = 64 ) (method = None ) (params = {| WordByWordMontgomery.m := 6864797660130609714981900799081393217269435300143305409394463459185543183397656052122559640661454554977296311391480858037121987999716643812574028291115057151; WordByWordMontgomery.machine_wordsize := 64 |} ) "GallinaAxOf with native_compute" (1) :
+Tactic call ran for 8.426 secs (7.814u,0.191s) (success)
+Testing WordByWordMontgomery "2^521-1" (bitwidth = 64 ) (method = None ) (params = {| WordByWordMontgomery.m := 6864797660130609714981900799081393217269435300143305409394463459185543183397656052122559640661454554977296311391480858037121987999716643812574028291115057151; WordByWordMontgomery.machine_wordsize := 64 |} ) "GallinaAxOf with native_compute" (2) :
+Tactic call ran for 8.003 secs (7.781u,0.152s) (success)
+Testing WordByWordMontgomery "2^521-1" (bitwidth = 64 ) (method = None ) (params = {| WordByWordMontgomery.m := 6864797660130609714981900799081393217269435300143305409394463459185543183397656052122559640661454554977296311391480858037121987999716643812574028291115057151; WordByWordMontgomery.machine_wordsize := 64 |} ) "GallinaAxOf with cbv" :
+Tactic call ran for 1067.084 secs (1066.601u,0.44s) (success)
+Testing WordByWordMontgomery "2^521-1" (bitwidth = 64 ) (method = None ) (params = {| WordByWordMontgomery.m := 6864797660130609714981900799081393217269435300143305409394463459185543183397656052122559640661454554977296311391480858037121987999716643812574028291115057151; WordByWordMontgomery.machine_wordsize := 64 |} ) "GallinaAxOf with lazy" :
+Tactic call ran for 1793.789 secs (1793.131u,0.587s) (success)

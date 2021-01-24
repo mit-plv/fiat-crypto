@@ -1,0 +1,4 @@
+Testing UnsaturatedSolinas "2^129-25" (bitwidth = 32 ) (index = 1%nat ) (method = None ) (params = {| UnsaturatedSolinas.n := 6; UnsaturatedSolinas.s := 680564733841876926926749214863536422912; UnsaturatedSolinas.c := (1, 25) :: nil; UnsaturatedSolinas.idxs := 0%nat :: 1%nat :: 2%nat :: 3%nat :: 4%nat :: 5%nat :: 0%nat :: 1%nat :: nil; UnsaturatedSolinas.machine_wordsize := 32 |} ) "GallinaDefOf with cbv_no_rt" :
+Tactic call ran for 1.257 secs (1.257u,0.s) (success)
+Testing UnsaturatedSolinas "2^129-25" (bitwidth = 32 ) (index = 1%nat ) (method = None ) (params = {| UnsaturatedSolinas.n := 6; UnsaturatedSolinas.s := 680564733841876926926749214863536422912; UnsaturatedSolinas.c := (1, 25) :: nil; UnsaturatedSolinas.idxs := 0%nat :: 1%nat :: 2%nat :: 3%nat :: 4%nat :: 5%nat :: 0%nat :: 1%nat :: nil; UnsaturatedSolinas.machine_wordsize := 32 |} ) "GallinaDefOf with lazy_no_rt" :
+Tactic call ran for 1.855 secs (1.851u,0.003s) (success)

@@ -1,0 +1,6 @@
+Testing UnsaturatedSolinas "2^140-27" (bitwidth = 64 ) (index = 0%nat ) (method = None ) (params = {| UnsaturatedSolinas.n := 3; UnsaturatedSolinas.s := 1393796574908163946345982392040522594123776; UnsaturatedSolinas.c := (1, 27) :: nil; UnsaturatedSolinas.idxs := 0%nat :: 1%nat :: 2%nat :: 0%nat :: 1%nat :: nil; UnsaturatedSolinas.machine_wordsize := 64 |} ) "GallinaAxComputedOf with vm_compute" :
+Tactic call ran for 0.19 secs (0.134u,0.056s) (success)
+Testing UnsaturatedSolinas "2^140-27" (bitwidth = 64 ) (index = 0%nat ) (method = None ) (params = {| UnsaturatedSolinas.n := 3; UnsaturatedSolinas.s := 1393796574908163946345982392040522594123776; UnsaturatedSolinas.c := (1, 27) :: nil; UnsaturatedSolinas.idxs := 0%nat :: 1%nat :: 2%nat :: 0%nat :: 1%nat :: nil; UnsaturatedSolinas.machine_wordsize := 64 |} ) "GallinaAxComputedOf with cbv" :
+Tactic call ran for 0.54 secs (0.54u,0.s) (success)
+Testing UnsaturatedSolinas "2^140-27" (bitwidth = 64 ) (index = 0%nat ) (method = None ) (params = {| UnsaturatedSolinas.n := 3; UnsaturatedSolinas.s := 1393796574908163946345982392040522594123776; UnsaturatedSolinas.c := (1, 27) :: nil; UnsaturatedSolinas.idxs := 0%nat :: 1%nat :: 2%nat :: 0%nat :: 1%nat :: nil; UnsaturatedSolinas.machine_wordsize := 64 |} ) "GallinaAxComputedOf with lazy" :
+Tactic call ran for 0.777 secs (0.777u,0.s) (success)
