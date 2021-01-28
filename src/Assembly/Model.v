@@ -1,6 +1,9 @@
 Require Import Coq.ZArith.ZArith.
+Require Import Coq.Strings.String.
 Require Import Coq.Classes.Morphisms.
 Require Import Coq.Bool.Bool.
+Require Import Crypto.Util.Option.
+Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.Bool.Reflect.
 (*
 Require Import Coq.Strings.String.
@@ -13,6 +16,7 @@ Local Open Scope string_scope.
 Local Set Implicit Arguments.
 Local Set Boolean Equality Schemes.
 Local Set Decidable Equality Schemes.
+Local Set Primitive Projections.
 
 Inductive REG :=
 |     rax |     rcx |     rdx |     rbx | rsp  | rbp  | rsi  | rdi  | r8  | r9  | r10  | r11  | r12  | r13  | r14  | r15
@@ -21,23 +25,14 @@ Inductive REG :=
 | ah | al | ch | cl | dh | dl | bh | bl |  spl |  bpl |  sil |  dil | r8b | r9b | r10b | r11b | r12b | r13b | r14b | r15b
 .
 
-Definition CONST := Z.
-
-Record MEM := { mem_is_byte : bool ; mem_reg : REG ; mem_extra_reg : option REG ; mem_offset : option Z }.
-
 Declare Scope REG_scope.
 Delimit Scope REG_scope with REG.
 Bind Scope REG_scope with REG.
 
 Infix "=?" := REG_beq : REG_scope.
 
-Global Instance REG_beq_spec : reflect_rel (@eq REG) REG_beq | 10
-  := reflect_of_beq internal_REG_dec_bl internal_REG_dec_lb.
-Definition REG_beq_eq x y : (x =? y)%REG = true <-> x = y := conj (@internal_REG_dec_bl _ _) (@internal_REG_dec_lb _ _).
-Lemma REG_beq_neq x y : (x =? y)%REG = false <-> x <> y.
-Proof. rewrite <- REG_beq_eq; destruct (x =? y)%REG; intuition congruence. Qed.
-Global Instance REG_beq_compat : Proper (eq ==> eq ==> eq) REG_beq | 10.
-Proof. repeat intro; subst; reflexivity. Qed.
+Definition CONST := Z.
+Coercion CONST_of_Z (x : Z) : CONST := x.
 
 Definition CONST_beq : CONST -> CONST -> bool := Z.eqb.
 Definition CONST_dec_bl (x y : CONST) : CONST_beq x y = true -> x = y := proj1 (Z.eqb_eq x y).
@@ -50,35 +45,27 @@ Bind Scope CONST_scope with CONST.
 
 Infix "=?" := CONST_beq : CONST_scope.
 
-Global Instance CONST_beq_spec : reflect_rel (@eq CONST) CONST_beq | 10
-  := reflect_of_beq CONST_dec_bl CONST_dec_lb.
-Definition CONST_beq_eq x y : (x =? y)%CONST = true <-> x = y := conj (@CONST_dec_bl _ _) (@CONST_dec_lb _ _).
-Lemma CONST_beq_neq x y : (x =? y)%CONST = false <-> x <> y.
-Proof. rewrite <- CONST_beq_eq; destruct (x =? y)%CONST; intuition congruence. Qed.
-Global Instance CONST_beq_compat : Proper (eq ==> eq ==> eq) CONST_beq | 10.
-Proof. repeat intro; subst; reflexivity. Qed.
-
-Lemma MEM_dec_bl (x y : MEM) : MEM_beq x y = true -> x = y.
-Proof. destruct x, y; cbn.
-  := proj1 (Z.eqb_eq x y).
-Definition MEM_dec_lb (x y : MEM) : x = y -> MEM_beq x y = true := proj2 (Z.eqb_eq x y).
-Definition MEM_eq_dec (x y : MEM) : {x = y} + {x <> y} := Z.eq_dec x y.
+Record MEM := { mem_is_byte : bool ; mem_reg : REG ; mem_extra_reg : option REG ; mem_offset : option Z }.
 
 Declare Scope MEM_scope.
 Delimit Scope MEM_scope with MEM.
 Bind Scope MEM_scope with MEM.
 
+Definition MEM_beq (x y : MEM) : bool
+  := ((bool_beq x.(mem_is_byte) y.(mem_is_byte))
+      && (x.(mem_reg) =? y.(mem_reg))%REG
+      && (option_beq REG_beq x.(mem_extra_reg) y.(mem_extra_reg))
+      && (option_beq Z.eqb x.(mem_offset) y.(mem_offset)))%bool.
+
 Infix "=?" := MEM_beq : MEM_scope.
 
-Global Instance MEM_beq_spec : reflect_rel (@eq MEM) MEM_beq | 10
-  := reflect_of_beq MEM_dec_bl MEM_dec_lb.
-Definition MEM_beq_eq x y : (x =? y)%MEM = true <-> x = y := conj (@MEM_dec_bl _ _) (@MEM_dec_lb _ _).
-Lemma MEM_beq_neq x y : (x =? y)%MEM = false <-> x <> y.
-Proof. rewrite <- MEM_beq_eq; destruct (x =? y)%MEM; intuition congruence. Qed.
-Global Instance MEM_beq_compat : Proper (eq ==> eq ==> eq) MEM_beq | 10.
-Proof. repeat intro; subst; reflexivity. Qed.
-
 Inductive FLAG := CF | PF | AF | ZF | SF | OF.
+
+Declare Scope FLAG_scope.
+Delimit Scope FLAG_scope with FLAG.
+Bind Scope FLAG_scope with FLAG.
+
+Infix "=?" := FLAG_beq : FLAG_scope.
 
 Inductive OpCode :=
 | adc
@@ -108,7 +95,88 @@ Inductive OpCode :=
 | xor
 .
 
+Declare Scope OpCode_scope.
+Delimit Scope OpCode_scope with OpCode.
+Bind Scope OpCode_scope with OpCode.
+
+Infix "=?" := OpCode_beq : OpCode_scope.
+
 Inductive ARG := reg (r : REG) | mem (m : MEM) | const (c : CONST).
+Coercion reg : REG >-> ARG.
+Coercion mem : MEM >-> ARG.
+Coercion const : CONST >-> ARG.
+
+Declare Scope ARG_scope.
+Delimit Scope ARG_scope with ARG.
+Bind Scope ARG_scope with ARG.
+
+Definition ARG_beq (x y : ARG) : bool
+  := match x, y with
+     | reg x, reg y => REG_beq x y
+     | mem x, mem y => MEM_beq x y
+     | const x, const y => CONST_beq x y
+     | reg _, _
+     | mem _, _
+     | const _, _
+       => false
+     end.
+
+Infix "=?" := ARG_beq : ARG_scope.
+
+Record NormalInstruction := { op : OpCode ; args : list ARG }.
+
+Inductive RawLine :=
+| SECTION (name : string)
+| GLOBAL (name : string)
+| LABEL (name : string)
+| EMPTY
+| INSTR (instr : NormalInstruction)
+.
+Coercion INSTR : NormalInstruction >-> RawLine.
+Record Line := { indent : string ; rawline :> RawLine ; pre_comment_whitespace : string ; comment : option string }.
+Definition Lines := list Line.
+
+(** denotational semantics *)
+
+Record flag_state := { get_flag : FLAG -> option bool }.
+Definition set_flag_internal (st : flag_state) (f : FLAG) (v : option bool)
+  := {| get_flag f' := if f' =? f then v else st.(get_flag) f' |}%FLAG.
+Definition set_flag (st : flag_state) (f : FLAG) (v : bool)
+  := set_flag_internal st f (Some v).
+Definition havoc_flag (st : flag_state) (f : FLAG)
+  := set_flag_internal st f None.
+
+Record reg_state :=
+
+Global Instance REG_beq_spec : reflect_rel (@eq REG) REG_beq | 10
+  := reflect_of_beq internal_REG_dec_bl internal_REG_dec_lb.
+Definition REG_beq_eq x y : (x =? y)%REG = true <-> x = y := conj (@internal_REG_dec_bl _ _) (@internal_REG_dec_lb _ _).
+Lemma REG_beq_neq x y : (x =? y)%REG = false <-> x <> y.
+Proof. rewrite <- REG_beq_eq; destruct (x =? y)%REG; intuition congruence. Qed.
+Global Instance REG_beq_compat : Proper (eq ==> eq ==> eq) REG_beq | 10.
+Proof. repeat intro; subst; reflexivity. Qed.
+
+Global Instance CONST_beq_spec : reflect_rel (@eq CONST) CONST_beq | 10
+  := reflect_of_beq CONST_dec_bl CONST_dec_lb.
+Definition CONST_beq_eq x y : (x =? y)%CONST = true <-> x = y := conj (@CONST_dec_bl _ _) (@CONST_dec_lb _ _).
+Lemma CONST_beq_neq x y : (x =? y)%CONST = false <-> x <> y.
+Proof. rewrite <- CONST_beq_eq; destruct (x =? y)%CONST; intuition congruence. Qed.
+Global Instance CONST_beq_compat : Proper (eq ==> eq ==> eq) CONST_beq | 10.
+Proof. repeat intro; subst; reflexivity. Qed.
+
+Lemma MEM_dec_bl (x y : MEM) : MEM_beq x y = true -> x = y.
+Proof. destruct x, y; cbn.
+  := proj1 (Z.eqb_eq x y).
+Definition MEM_dec_lb (x y : MEM) : x = y -> MEM_beq x y = true := proj2 (Z.eqb_eq x y).
+Definition MEM_eq_dec (x y : MEM) : {x = y} + {x <> y} := Z.eq_dec x y.
+
+Global Instance MEM_beq_spec : reflect_rel (@eq MEM) MEM_beq | 10
+  := reflect_of_beq MEM_dec_bl MEM_dec_lb.
+Definition MEM_beq_eq x y : (x =? y)%MEM = true <-> x = y := conj (@MEM_dec_bl _ _) (@MEM_dec_lb _ _).
+Lemma MEM_beq_neq x y : (x =? y)%MEM = false <-> x <> y.
+Proof. rewrite <- MEM_beq_eq; destruct (x =? y)%MEM; intuition congruence. Qed.
+Global Instance MEM_beq_compat : Proper (eq ==> eq ==> eq) MEM_beq | 10.
+Proof. repeat intro; subst; reflexivity. Qed.
 
 Print internal_
 
