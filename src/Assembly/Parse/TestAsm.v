@@ -2,7 +2,7 @@ Require Import Coq.Strings.String.
 Require Import Coq.Lists.List.
 Require Import Crypto.Util.ErrorT.
 Require Import Crypto.Util.Strings.Show.
-Require Import Crypto.Assembly.Parse.Asm.
+Require Import Crypto.Assembly.Parse.
 Require Crypto.Assembly.Parse.Examples.fiat_25519_carry_square_optimised.
 Require Crypto.Assembly.Parse.Examples.fiat_25519_carry_square_optimised_seed10.
 Require Crypto.Assembly.Parse.Examples.fiat_25519_carry_square_optimised_seed20.
