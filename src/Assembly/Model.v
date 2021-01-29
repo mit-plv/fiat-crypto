@@ -12,6 +12,9 @@ Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Notations.
 Require Crypto.Util.Tuple.
+Import ListNotations.
+
+Local Open Scope list_scope.
 
 Local Set Implicit Arguments.
 Local Set Boolean Equality Schemes.
@@ -571,7 +574,10 @@ Definition update_mem_with (st : machine_state) (f : mem_state -> mem_state) : m
 (*
 Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstruction) : option machine_state.
   refine match instr.(op), instr.(args) with
-         | adc, _ => _
+           (* https://www.felixcloutier.com/x86/adc *)
+         | adc, [(reg _ | mem _) as dst; src]
+           => _
+         | adc, _ => None
          | adcx, _ => _
          | add, _ => _
          | adox, _ => _
