@@ -1,5 +1,6 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.NArith.NArith.
+Require Import Coq.FSets.FMapPositive.
 Require Import Coq.Strings.String.
 Require Import Coq.Lists.List.
 Require Import Coq.Classes.Morphisms.
@@ -9,6 +10,7 @@ Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.Bool.Reflect.
 Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.Tactics.DestructHead.
+Require Import Crypto.Util.Notations.
 Require Crypto.Util.Tuple.
 
 Local Set Implicit Arguments.
@@ -484,11 +486,88 @@ Definition set_reg (st : reg_state) (r : REG) (v : N) : reg_state
                           (N.ldiff curv bitmask))
        st.
 
-Record machine_state := { machine_reg_state :> reg_state ; machine_flag_state :> flag_state }.
+Record mem_state := { mem_bytes_state :> PositiveMap.t Byte.byte }.
+Definition get_mem_byte (st : mem_state) (addr : Z) : option Byte.byte
+  := match addr with
+     | Zpos p => PositiveMap.find p st.(mem_bytes_state)
+     | _ => None
+     end.
+Definition set_mem_byte (st : mem_state) (addr : positive) (b : Byte.byte) : mem_state
+  := {| mem_bytes_state := PositiveMap.add addr b st.(mem_bytes_state) |}.
+Definition set_mem_byte_error (st : mem_state) (addr : Z) (b : Byte.byte) : option mem_state
+  := match addr with
+     | Zpos addr => Some (set_mem_byte st addr b)
+     | _ => None
+     end.
+Definition set_mem_byte_default (st : mem_state) (addr : Z) (b : Byte.byte) : mem_state
+  := match set_mem_byte_error st addr b with
+     | Some st => st
+     | None => st
+     end.
+Fixpoint get_mem_bytes (st : mem_state) (addr : Z) (nbytes : nat) : option (list Byte.byte)
+  := match nbytes with
+     | O => Some nil
+     | S nbytes => match get_mem_byte st addr, get_mem_bytes st (addr + 1) nbytes with
+                   | Some b, Some bs => Some (b :: bs)
+                   | _, _ => None
+                   end
+     end.
+Fixpoint set_mem_bytes (st : mem_state) (addr : positive) (v : list Byte.byte) : mem_state
+  := match v with
+     | nil => st
+     | v :: vs => let st := set_mem_byte st addr v in
+                  set_mem_bytes st (addr + 1) vs
+     end.
+Definition set_mem_bytes_error (st : mem_state) (addr : Z) (v : list Byte.byte) : option mem_state
+  := match addr with
+     | Zpos addr => Some (set_mem_bytes st addr v)
+     | _ => None
+     end.
+Definition set_mem_bytes_default (st : mem_state) (addr : Z) (v : list Byte.byte) : mem_state
+  := match set_mem_bytes_error st addr v with
+     | Some st => st
+     | None => st
+     end.
+(* x86 is little-endian according to https://stackoverflow.com/a/25939262/377022, so we have l[0] + 8*l[1] + ... *)
+Fixpoint mem_bytes_to_N (bytes : list Byte.byte) : N
+  := match bytes with
+     | nil => 0
+     | b :: bs => Byte.to_N b + 8 * mem_bytes_to_N bs
+     end%N.
+(* returns the carry as well *)
+Fixpoint mem_bytes_of_N_split (nbytes : nat) (v : N) : list Byte.byte * N
+  := match nbytes with
+     | O => (nil, v)
+     | S nbytes => let '(vh, vl) := (N.shiftr v 8, N.land v (N.ones 8)) in
+                   let '(bs, carry) := mem_bytes_of_N_split nbytes vh in
+                   let vl := match Byte.of_N vl with
+                             | Some vl => vl
+                             | None (* should be impossible *) => Byte.x00
+                             end in
+                   (vl :: bs, carry)
+     end%N.
+Definition mem_bytes_of_N_error (nbytes : nat) (v : N) : option (list Byte.byte)
+  := let '(bs, carry) := mem_bytes_of_N_split nbytes v in
+     if (carry =? 0)%N then Some bs else None.
+Definition mem_bytes_of_N_masked (nbytes : nat) (v : N) : list Byte.byte
+  := let '(bs, carry) := mem_bytes_of_N_split nbytes v in bs.
+Definition get_mem (st : mem_state) (addr : Z) (nbytes : nat) : option N
+  := option_map mem_bytes_to_N (get_mem_bytes st addr nbytes).
+Definition set_mem_error (st : mem_state) (addr : Z) (nbytes : nat) (v : N) : option mem_state
+  := (bs <- mem_bytes_of_N_error nbytes v;
+     set_mem_bytes_error st addr bs)%option.
+Definition set_mem_masked_error (st : mem_state) (addr : Z) (nbytes : nat) (v : N) : option mem_state
+  := set_mem_bytes_error st addr (mem_bytes_of_N_masked nbytes v).
+Definition set_mem_default (st : mem_state) (addr : Z) (nbytes : nat) (v : N) : mem_state
+  := Option.value (set_mem_masked_error st addr nbytes v) st.
+
+Record machine_state := { machine_reg_state :> reg_state ; machine_flag_state :> flag_state ; machine_mem_state :> mem_state }.
 Definition update_reg_with (st : machine_state) (f : reg_state -> reg_state) : machine_state
-  := {| machine_reg_state := f st.(machine_reg_state) ; machine_flag_state := st.(machine_flag_state) |}.
+  := {| machine_reg_state := f st.(machine_reg_state) ; machine_flag_state := st.(machine_flag_state) ; machine_mem_state := st.(machine_mem_state) |}.
 Definition update_flag_with (st : machine_state) (f : flag_state -> flag_state) : machine_state
-  := {| machine_reg_state := st.(machine_reg_state) ; machine_flag_state := f st.(machine_flag_state) |}.
+  := {| machine_reg_state := st.(machine_reg_state) ; machine_flag_state := f st.(machine_flag_state) ; machine_mem_state := st.(machine_mem_state) |}.
+Definition update_mem_with (st : machine_state) (f : mem_state -> mem_state) : machine_state
+  := {| machine_reg_state := st.(machine_reg_state) ; machine_flag_state := st.(machine_flag_state) ; machine_mem_state := f st.(machine_mem_state) |}.
 (*
 Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstruction) : option machine_state.
   refine match instr.(op), instr.(args) with
