@@ -75,15 +75,16 @@ Hint Unfold LoadStoreList.lists_reserved_with_initial_context
   : lists_reserved.
 
 Hint Resolve @MakeAccessSizes.bits_per_word_le_width
-     @width_0mod_8
+     @MakeAccessSizes.width_ge_8 @width_0mod_8
+     @Util.Forall_map_byte_unsigned
   : translate_func_preconditions.
-
 
 Section WithParameters.
   Context {p:Types.parameters} {p_ok : Types.ok}
           {field_parameters : FieldParameters}.
   Context (n : nat) (weight : nat -> Z)
-          (loose_bounds tight_bounds : list (option ZRange.zrange))
+          (loose_bounds tight_bounds byte_bounds
+           : list (option ZRange.zrange))
           (relax_bounds :
              forall X,
                list_Z_bounded_by tight_bounds X ->
@@ -94,9 +95,11 @@ Section WithParameters.
              disjoint default_outname_gen varname_gen).
   Existing Instance semantics_ok.
   Local Instance field_representation : FieldRepresentation
-    := @frep p field_parameters n weight loose_bounds tight_bounds.
+    := @frep p field_parameters n weight loose_bounds tight_bounds
+             byte_bounds.
   Local Instance field_representation_ok : FieldRepresentation_ok
-    := frep_ok n weight loose_bounds tight_bounds relax_bounds.
+    := frep_ok n weight loose_bounds tight_bounds byte_bounds
+               relax_bounds.
 
   Lemma FElem_array_truncated_scalar_iff1 px x :
     Lift1Prop.iff1
@@ -491,27 +494,28 @@ Section WithParameters.
             (res_valid :
                valid_func (res (fun _ : API.type => unit)))
             (res_Wf3 : Wf.Compilers.expr.Wf3 res).
-    Context (xbounds outbounds : bounds)
-            (op : F M_pos -> F M_pos)
-            (outbounds_tighter_than_max :
-               list_Z_tighter_than outbounds (MaxBounds.max_bounds n))
-            (outbounds_length : length outbounds = n)
-            (res_eq : forall x,
-                bounded_by xbounds x ->
+    Context (tight_bounds_tighter_than_max :
+               list_Z_tighter_than tight_bounds (MaxBounds.max_bounds n))
+            (tight_bounds_length : length tight_bounds = n)
+            (res_eq : forall bs,
+                bytes_in_bounds bs ->
                 feval (map word.of_Z
-                           (API.interp (res _) (map word.unsigned x)))
-                = op (feval x))
-            (res_bounds : forall x,
-                list_Z_bounded_by xbounds x ->
-                list_Z_bounded_by outbounds (API.interp (res _) x)).
+                           (API.interp (res _) (map byte.unsigned bs)))
+                = feval_bytes bs)
+            (res_bounds : forall bs,
+                bytes_in_bounds bs ->
+                list_Z_bounded_by
+                  tight_bounds
+                  (API.interp (res _) (map byte.unsigned bs))).
 
     Ltac equivalence_side_conditions_hook ::=
       lazymatch goal with
-      | |- context [length (API.interp (res _) ?x)] =>
+      | |- context [length (API.interp (res _)
+                                       (map byte.unsigned ?x))] =>
         specialize (res_bounds x ltac:(auto));
         rewrite (length_list_Z_bounded_by _ _ res_bounds);
         try congruence;
-        rewrite !map_length, outbounds_length;
+        rewrite !map_length, tight_bounds_length;
         felem_to_array; sepsimpl; congruence
       | _ => idtac
       end.
@@ -566,13 +570,13 @@ Section WithParameters.
           { erewrite Util.map_unsigned_of_Z, MaxBounds.map_word_wrap_bounded
               by eauto using relax_list_Z_bounded_by.
             rewrite MakeAccessSizes.bytes_per_word_eq.
-            clear outbounds_length; subst.
+            clear tight_bounds_length; subst.
             match goal with
               H : map word.unsigned _ = API.interp (res _) _ |- _ =>
               rewrite <-H end.
             auto. } } }
     Qed.
-  End ListUnop.
+  End FromBytes.
 End WithParameters.
 
   (*

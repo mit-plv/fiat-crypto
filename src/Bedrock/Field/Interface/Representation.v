@@ -20,7 +20,7 @@ Section Representation.
   Context {p : Types.parameters} {field_parameters : FieldParameters}
           {p_ok : Types.ok}.
   Context (n : nat) (weight : nat -> Z)
-          (loose_bounds tight_bounds : list (option zrange))
+          (loose_bounds tight_bounds byte_bounds : list (option zrange))
           (relax_bounds :
              forall X : list Z,
                list_Z_bounded_by tight_bounds X ->
@@ -43,6 +43,8 @@ Section Representation.
       feval := eval_words;
       feval_bytes := eval_bytes;
       felem_size_in_bytes := bytes_per_word Semantics.width * Z.of_nat n;
+      bytes_in_bounds :=
+        fun bs => list_Z_bounded_by byte_bounds (map byte.unsigned bs);
       FElem := Bignum n;
       bounds := list (option zrange);
       bounded_by :=
