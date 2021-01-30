@@ -349,8 +349,9 @@ End Tests.
 Print fe25519_add.
 Print fe25519_opp.
 (* Current status: mul/add/opp prototyped through full pipeline
-   Next:
+   Done:
    - fix from_bytes proof in Signature.v
+   Next:
    - prototype from_bytes through full pipeline
    - prototype to_bytes through full pipeline
    - add remaining operations

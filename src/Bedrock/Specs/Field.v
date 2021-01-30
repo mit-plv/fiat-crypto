@@ -40,14 +40,17 @@ Class FieldRepresentation
     feval : felem -> F M_pos;
     feval_bytes : list byte -> F M_pos;
     felem_size_in_bytes : Z; (* for stack allocation *)
+    bytes_in_bounds : list byte -> Prop;
+
+    (* Memory layout *)
     FElem : word -> felem -> Semantics.mem -> Prop;
     FElemBytes : word -> list byte -> Semantics.mem -> Prop :=
       fun addr bs =>
         (emp (length bs = Z.to_nat felem_size_in_bytes)
          * array ptsto (word.of_Z 1) addr bs)%sep;
+
     bounds : Type;
     bounded_by : bounds -> felem -> Prop;
-
     (* for saturated implementations, loose/tight bounds are the same *)
     loose_bounds : bounds;
     tight_bounds : bounds;
@@ -129,6 +132,7 @@ Section FunctionSpecs.
     forall! (bs : list byte) (px pout : word),
       (fun Rr mem =>
          (exists Ra, (FElemBytes px bs * Ra)%sep mem)
+         /\ bytes_in_bounds bs
          /\ (Placeholder pout * Rr)%sep mem)
         ===> from_bytes @ [pout; px] ===>
         (fun _ =>
@@ -145,7 +149,9 @@ Section FunctionSpecs.
         ===> to_bytes @ [pout; px] ===>
         (fun _ =>
            liftexists bs,
-           (emp (feval_bytes bs = feval x) * FElemBytes pout bs)%sep).
+           (emp (feval_bytes bs = feval x
+                 /\ bytes_in_bounds bs)
+            * FElemBytes pout bs)%sep).
 
   Definition spec_of_felem_copy : spec_of felem_copy :=
     forall! (x : felem) (px pout : word),
