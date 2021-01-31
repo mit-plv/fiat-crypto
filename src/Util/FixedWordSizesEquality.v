@@ -25,7 +25,7 @@ Proof.
   destruct (NatUtil.nat_eq_dec x y) as [pf|pf]; [ intros; assumption | ].
   intro H; exfalso.
   let pf := pf in
-  abstract (apply pf; eapply NPeano.Nat.pow_inj_r; [ | eassumption ]; omega).
+  abstract (apply pf; eapply NPeano.Nat.pow_inj_r; [ | eassumption ]; lia).
 Defined.
 Lemma pow2_inj_helper_refl x p : pow2_inj_helper x x p = eq_refl.
 Proof.
@@ -46,7 +46,7 @@ Proof.
   destruct (NatUtil.nat_eq_dec x y) as [H|H];
     [ | exfalso; clear -pf H;
         let pf := pf in
-        abstract (apply pow2_inj_helper in pf; omega) ].
+        abstract (apply pow2_inj_helper in pf; lia) ].
   subst; rewrite pow2_inj_helper_refl; simpl.
   pose proof (NatUtil.UIP_nat_transparent _ _ pf eq_refl); subst pf.
   reflexivity.
@@ -80,8 +80,8 @@ Proof.
   revert H.
   repeat (try destruct logsz1 as [|logsz1];
           try destruct logsz2 as [|logsz2];
-          try (intros; omega);
-          try (intro H'; apply Word.weqb_hetero_true_iff in H'; destruct H' as [pf H']; pose proof (pow2_inj_helper _ _ pf); try omega)).
+          try (intros; lia);
+          try (intro H'; apply Word.weqb_hetero_true_iff in H'; destruct H' as [pf H']; pose proof (pow2_inj_helper _ _ pf); try lia)).
 Qed.
 
 Definition wordT_beq_hetero_bl {logsz1 logsz2}
@@ -104,7 +104,7 @@ Proof.
          end;
     match goal with
     | [ pf : _ = _ |- _ ]
-      => abstract (rewrite wordT_beq_hetero_type_lb_false in pf by omega; clear -pf; congruence)
+      => abstract (rewrite wordT_beq_hetero_type_lb_false in pf by lia; clear -pf; congruence)
     end.
 Defined.
 
@@ -119,10 +119,10 @@ Lemma wordToZ_gen_ZToWord_gen : forall {sz} v, (0 <= v < 2^(Z.of_nat sz))%Z -> @
 Proof.
   unfold ZToWord_gen, wordToZ_gen.
   intros ?? [H0 H1].
-  rewrite wordToN_NToWord_idempotent, Z2N.id; try omega.
+  rewrite wordToN_NToWord_idempotent, Z2N.id; try lia.
   rewrite Npow2_N.
-  apply Z2N.inj_lt in H1; [ | omega.. ].
-  rewrite Z2N.inj_pow, <- nat_N_Z, N2Z.id in H1 by omega.
+  apply Z2N.inj_lt in H1; [ | lia.. ].
+  rewrite Z2N.inj_pow, <- nat_N_Z, N2Z.id in H1 by lia.
   assumption.
 Qed.
 
@@ -156,7 +156,7 @@ Qed.
 Lemma wordToZ_gen_ZToWord_gen_mod_full : forall {sz} w, wordToZ_gen (@ZToWord_gen sz w) = (Z.max 0 w mod (2^Z.of_nat sz))%Z.
 Proof.
   intros; apply Z.max_case_strong; intro.
-  { apply wordToZ_gen_ZToWord_gen_neg; omega. }
+  { apply wordToZ_gen_ZToWord_gen_neg; lia. }
   { apply wordToZ_gen_ZToWord_gen_mod; assumption. }
 Qed.
 
@@ -165,7 +165,7 @@ Lemma ZToWord_gen_wordToZ_gen_ZToWord_gen : forall {sz1 sz2} v,
 Proof.
   unfold ZToWord_gen, wordToZ_gen.
   intros sz1 sz2 v H.
-  rewrite N2Z.id, NToWord_wordToN_NToWord by omega.
+  rewrite N2Z.id, NToWord_wordToN_NToWord by lia.
   reflexivity.
 Qed.
 
@@ -185,7 +185,7 @@ Lemma wordToZ_gen_ZToWord_gen_wordToZ_gen sz1 sz2 w
   : (sz1 <= sz2)%nat -> wordToZ_gen (@ZToWord_gen sz2 (@wordToZ_gen sz1 w)) = wordToZ_gen w.
 Proof.
   unfold ZToWord_gen, wordToZ_gen; intro H.
-  rewrite N2Z.id, wordToN_NToWord_wordToN by omega.
+  rewrite N2Z.id, wordToN_NToWord_wordToN by lia.
   reflexivity.
 Qed.
 
@@ -227,11 +227,11 @@ Local Ltac handle_le :=
            => change (2^(Nat.log2 (S a)) <= 2^b)%nat
          | [ |- (2^_ <= 2^_)%nat ]
            => apply Nat.pow_le_mono_r
-         | [ |- _ <> _ ] => intro; omega
+         | [ |- _ <> _ ] => intro; lia
          | _ => assumption
          | [ |- (_ <= S _)%nat ]
            => apply Nat.leb_le; vm_compute; reflexivity
-         | _ => exfalso; omega
+         | _ => exfalso; lia
          end.
 
 Lemma ZToWord_wordToZ_ZToWord : forall {sz1 sz2} v,
@@ -247,7 +247,7 @@ Lemma ZToWord_wordToZ_ZToWord_small : forall {sz1 sz2} v,
 Proof.
   unfold wordToZ, ZToWord, word_case_dep.
   intros sz1 sz2; break_match; intros; apply ZToWord_gen_wordToZ_gen_ZToWord_gen_small;
-    handle_le; try omega.
+    handle_le; try lia.
 Qed.
 
 Lemma wordToZ_ZToWord_wordToZ : forall sz1 sz2 w, (sz1 <= sz2)%nat -> wordToZ (@ZToWord sz2 (@wordToZ sz1 w)) = wordToZ w.
@@ -570,13 +570,13 @@ Section pull_ZToWord.
     apply f_equal.
   Local Ltac t1 lem :=
     let solver := solve [ apply Npow2_Zlog2; autorewrite with push_Zof_N; assumption
-                        | apply N2Z.inj_ge; unfold wordToZ_gen in *; omega
+                        | apply N2Z.inj_ge; unfold wordToZ_gen in *; lia
                         | apply N2Z.inj_lt; rewrite Npow2_N; autorewrite with push_Zof_N push_Zof_nat; assumption ] in
     first [ rewrite <- lem by solver | rewrite -> lem by solver ].
   Local Ltac t2 :=
     autorewrite with push_Zof_N; unfold wordToZ_gen in *;
     try first [ reflexivity
-              | apply Z.max_case_strong; omega ].
+              | apply Z.max_case_strong; lia ].
 
   Local Ltac t lem :=
     t0; t1 lem; solve [ t2 ].

@@ -1,4 +1,4 @@
-Require Import Coq.omega.Omega Coq.micromega.Psatz.
+Require Import Coq.micromega.Lia Coq.micromega.Psatz.
 Require Import Coq.PArith.BinPos Coq.Lists.List.
 Require Import Crypto.Compilers.Named.Context.
 Require Import Crypto.Compilers.Named.Syntax.
@@ -225,7 +225,7 @@ Module bounds.
   Definition add_bounded_pf (x y : bounded_pf) : bounded_pf.
   Proof.
     exists (map_bounded_f2 plus false (proj1_sig x) (proj1_sig y)).
-    simpl; let x := x in let y := y in abstract (destruct x, y; simpl; omega).
+    simpl; let x := x in let y := y in abstract (destruct x, y; simpl; lia).
   Defined.
   Definition mul_bounded_pf (x y : bounded_pf) : bounded_pf.
   Proof.
@@ -235,7 +235,7 @@ Module bounds.
   Definition sub_bounded_pf (x y : bounded_pf) : bounded_pf.
   Proof.
     exists (map_bounded_f2 minus true (proj1_sig x) (proj1_sig y)).
-    simpl; let x := x in let y := y in abstract (destruct x, y; simpl; omega).
+    simpl; let x := x in let y := y in abstract (destruct x, y; simpl; lia).
   Defined.
   Definition interp_base_type_bounds (v : base_type) : Type :=
     match v with

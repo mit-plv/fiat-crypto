@@ -23,7 +23,7 @@ Local Lemma helper logsz v
   : (v < 2 ^ 2 ^ Z.of_nat logsz)%Z <-> (Z.to_nat (Z.log2_up (Z.log2_up (1 + v))) <= logsz)%nat.
 Proof.
   rewrite Nat2Z.inj_le, Z2Nat.id by auto with zarith.
-  transitivity (1 + v <= 2^2^Z.of_nat logsz)%Z; [ omega | ].
+  transitivity (1 + v <= 2^2^Z.of_nat logsz)%Z; [ lia | ].
   rewrite !Z.log2_up_le_pow2_full by auto with zarith.
   reflexivity.
 Qed.
@@ -75,10 +75,10 @@ Proof.
                    | progress destruct_head'_and
                    | progress simpl in *
                    | rewrite helper in *
-                   | omega
+                   | lia
                    | tauto
                    | congruence
-                   | progress destruct_head @eq; (reflexivity || omega)
+                   | progress destruct_head @eq; (reflexivity || lia)
                    | progress break_innermost_match_step
                    | apply conj ]. }
   { compute in *; tauto. }

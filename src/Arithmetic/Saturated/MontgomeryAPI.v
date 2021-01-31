@@ -187,17 +187,17 @@ Section API.
              | |- context [?b ^ Z.of_nat (S ?n)] =>
                replace (b ^ Z.of_nat (S n)) with (b ^ Z.of_nat n * b) by
                    (rewrite Nat2Z.inj_succ, <-Z.add_1_r, Z.pow_add_r,
-                    Z.pow_1_r by (omega || auto using Nat2Z.is_nonneg);
+                    Z.pow_1_r by (lia || auto using Nat2Z.is_nonneg);
                     reflexivity)
-             | _ => omega
+             | _ => lia
              end.
 
         specialize (Hsmall _ (Tuple.In_left_hd _ p)).
-        split; [Z.zero_bounds; omega |].
+        split; [Z.zero_bounds; lia |].
         apply Z.lt_le_trans with (m:=bound^Z.of_nat n * (left_hd p+1)).
         { rewrite Z.mul_add_distr_l.
-          apply Z.add_le_lt_mono; omega. }
-        { apply Z.mul_le_mono_nonneg; omega. }
+          apply Z.add_le_lt_mono; lia. }
+        { apply Z.mul_le_mono_nonneg; lia. }
     Qed.
 
     Lemma small_encode n (v : Z) (Hsmall : 0 <= v < uweight bound n)
@@ -209,12 +209,12 @@ Section API.
       : eval (encode n v) = v.
     Proof.
       destruct n as [|n].
-      { cbv -[Z.le Z.lt Z.gt] in *; omega. }
+      { cbv -[Z.le Z.lt Z.gt] in *; lia. }
       { cbv [eval encode].
         pose proof (@uweight_divides _ bound_pos) as Hdiv.
         apply B.Positional.eval_encode; try reflexivity;
           eauto using modulo_id, div_id, div_mod, uweight_nonzero.
-        { intros i ?; specialize (Hdiv i); omega. } }
+        { intros i ?; specialize (Hdiv i); lia. } }
     Qed.
 
     Lemma eval_zero n : eval (@zero n) = 0.
@@ -228,7 +228,7 @@ Section API.
     Proof.
       cbv [zero small B.Positional.zeros]. destruct n; [simpl;tauto|].
       rewrite to_list_repeat.
-      intros x H; apply repeat_spec in H; subst x; omega.
+      intros x H; apply repeat_spec in H; subst x; lia.
     Qed.
 
     Lemma small_hd n p : @small (S n) p -> 0 <= hd p < bound.
@@ -261,10 +261,10 @@ Section API.
       intro Hsmall. cbv [eval].
       rewrite uweight_eval_step with (p:=p).
       change (fst p) with (tl p). change (snd p) with (hd p).
-      apply add_nonneg_zero_iff; try omega.
-      { apply small_hd in Hsmall. omega. }
+      apply add_nonneg_zero_iff; try lia.
+      { apply small_hd in Hsmall. lia. }
       { apply small_tl, eval_small in Hsmall.
-        cbv [eval] in Hsmall; omega. }
+        cbv [eval] in Hsmall; lia. }
     Qed.
 
     Lemma eval_nonzero n p : small p -> @nonzero n p = 0 <-> eval p = 0.
@@ -275,7 +275,7 @@ Section API.
       { simpl; rewrite Z.lor_0_r; unfold eval, id.
         cbv -[Z.add iff].
         rewrite Z.add_0_r.
-        destruct p; omega. }
+        destruct p; lia. }
       { destruct p as [ps p]; specialize (IHn ps).
         unfold nonzero, nonzero_cps in *.
         autorewrite with uncps in *.
@@ -326,7 +326,7 @@ Section API.
 
     Lemma eval_add_same n p q
       :  eval (@add n p q) = eval p + eval q.
-    Proof. apply eval_add; omega. Qed.
+    Proof. apply eval_add; lia. Qed.
     Lemma eval_add_S1 n p q
       :  eval (@add_S1 n p q) = eval p + eval q.
     Proof.
@@ -339,7 +339,7 @@ Section API.
       cbv [add_S2 add_S2_cps]. autorewrite with uncps push_id.
       rewrite eval_add; rewrite eval_join0; reflexivity.
     Qed.
-    Hint Rewrite eval_add_same eval_add_S1 eval_add_S2 using (omega || assumption): push_basesystem_eval.
+    Hint Rewrite eval_add_same eval_add_S1 eval_add_S2 using (lia || assumption): push_basesystem_eval.
 
     Local Definition compact {n} := Columns.compact (n:=n) (add_get_carry_cps:=@Z.add_get_carry_full_cps) (div_cps:=@div_cps) (modulo_cps:=@modulo_cps) (uweight bound).
     Local Definition compact_digit := Columns.compact_digit (add_get_carry_cps:=@Z.add_get_carry_full_cps) (div_cps:=@div_cps) (modulo_cps:=@modulo_cps) (uweight bound).
@@ -377,7 +377,7 @@ Section API.
         rewrite Columns.compact_digit_mod
             by (assumption || (intros; autorewrite with uncps push_id; auto)).
         rewrite !uweight_succ, Z.div_mul by
-            (apply Z.neq_mul_0; split; auto; omega).
+            (apply Z.neq_mul_0; split; auto; lia).
         apply Z.mod_pos_bound, Z.gt_lt, bound_pos. }
     Qed.
 
@@ -388,7 +388,7 @@ Section API.
       cbv [small].
       setoid_rewrite Tuple.to_list_left_append.
       setoid_rewrite in_app_iff.
-      intros y HIn; destruct HIn as [HIn|[]]; (contradiction||omega||eauto).
+      intros y HIn; destruct HIn as [HIn|[]]; (contradiction||lia||eauto).
     Qed.
 
     Lemma small_add n a b :
@@ -397,9 +397,9 @@ Section API.
     Proof.
       intros.
       cbv [add add_cps]; autorewrite with uncps push_id in *.
-      pose proof @B.Positional.small_sat_add bound ltac:(omega) _ a b.
+      pose proof @B.Positional.small_sat_add bound ltac:(lia) _ a b.
       eapply small_left_append; eauto.
-      rewrite @B.Positional.sat_add_div by omega.
+      rewrite @B.Positional.sat_add_div by lia.
       repeat match goal with H:_|-_=> unique pose proof (eval_small _ _ H) end.
       cbv [eval] in *; Z.div_mod_to_quot_rem_in_goal; nia.
     Qed.
@@ -407,7 +407,7 @@ Section API.
     Lemma small_join0 {n} b : small b -> small (@join0 n b).
     Proof.
       cbv [join0 join0_cps]; autorewrite with uncps push_id in *.
-      eapply small_left_append; omega.
+      eapply small_left_append; lia.
     Qed.
 
     Lemma small_add_S1 n a b :
@@ -449,9 +449,9 @@ Section API.
              | _ => progress intros
              | _ => rewrite Z.ltb_ge
              | _ => rewrite Z.opp_eq_0_iff
-             | _ => rewrite Z.div_small_iff by omega
+             | _ => rewrite Z.div_small_iff by lia
              | _ => split
-             | _ => omega
+             | _ => lia
              end.
    Qed.
 
@@ -467,10 +467,10 @@ Section API.
       repeat match goal with
              | _ => progress (intros; cbv [eval runtime_opp sub_then_maybe_add sub_then_maybe_add_cps] in * )
              | _ => progress autorewrite with uncps push_id push_basesystem_eval
-             | _ => rewrite eval_drop_high by (apply @B.Positional.small_sat_add; omega)
-             | _ => rewrite B.Positional.sat_sub_mod by omega
-             | _ => rewrite B.Positional.sat_sub_div by omega
-             | _ => rewrite B.Positional.sat_add_mod by omega
+             | _ => rewrite eval_drop_high by (apply @B.Positional.small_sat_add; lia)
+             | _ => rewrite B.Positional.sat_sub_mod by lia
+             | _ => rewrite B.Positional.sat_sub_div by lia
+             | _ => rewrite B.Positional.sat_add_mod by lia
              | _ => rewrite B.Positional.eval_left_append
              | _ => rewrite eval_join0
              | H : small _ |- _ => apply eval_small in H
@@ -478,7 +478,7 @@ Section API.
       let H := fresh "H" in
       match goal with |- context [- (?X / ?Y) = 0] =>
                       assert ((- (X / Y) = 0) <-> X <? 0 = false) as H
-                             by (apply div_nonzero_neg_iff; omega)
+                             by (apply div_nonzero_neg_iff; lia)
       end; destruct H.
       break_match;  try match goal with
                           H : ?x = ?x -> _ |- _
@@ -488,12 +488,12 @@ Section API.
       | H : _ |- _ => rewrite Z.ltb_ge in H
       | H : _ |- _ => rewrite Z.ltb_lt in H
       end.
-      { repeat (rewrite Z.mod_small; try omega). }
+      { repeat (rewrite Z.mod_small; try lia). }
       { rewrite !Z.mul_opp_r, Z.opp_involutive.
         rewrite Z.mul_div_eq_full by (subst; auto).
         match goal with |- context [?a - ?b + ?b] =>
                         replace (a - b + b) with a by ring end.
-        repeat (rewrite Z.mod_small; try omega). }
+        repeat (rewrite Z.mod_small; try lia). }
     Qed.
 
    Lemma small_sub_then_maybe_add n mask (p q r : T n) :
@@ -501,14 +501,14 @@ Section API.
    Proof.
      cbv [sub_then_maybe_add_cps sub_then_maybe_add]; intros.
      repeat progress autounfold. autorewrite with uncps push_id.
-     apply small_drop_high,  @B.Positional.small_sat_add; omega.
+     apply small_drop_high,  @B.Positional.small_sat_add; lia.
    Qed.
 
     Lemma map2_zselect n cond x y :
       Tuple.map2 (n:=n) (Z.zselect cond) x y = if dec (cond = 0) then x else y.
     Proof.
       unfold Z.zselect.
-      break_innermost_match; Z.ltb_to_lt; subst; try omega;
+      break_innermost_match; Z.ltb_to_lt; subst; try lia;
         [ rewrite Tuple.map2_fst, Tuple.map_id
         | rewrite Tuple.map2_snd, Tuple.map_id ];
         reflexivity.
@@ -526,11 +526,11 @@ Section API.
              | _ => progress (intros; cbv [eval conditional_sub conditional_sub_cps] in * )
              | _ => progress autorewrite with uncps push_id push_basesystem_eval
              | _ => rewrite eval_drop_high
-                 by (break_match; try assumption; apply @B.Positional.small_sat_sub; omega)
+                 by (break_match; try assumption; apply @B.Positional.small_sat_sub; lia)
              | _ => rewrite map2_zselect
-             | _ => rewrite B.Positional.sat_sub_mod by omega
-             | _ => rewrite B.Positional.sat_sub_div by omega
-             | _ => rewrite B.Positional.sat_add_mod by omega
+             | _ => rewrite B.Positional.sat_sub_mod by lia
+             | _ => rewrite B.Positional.sat_sub_div by lia
+             | _ => rewrite B.Positional.sat_add_mod by lia
              | _ => rewrite B.Positional.eval_left_append
              | _ => rewrite eval_join0
              | H : small _ |- _ => apply eval_small in H
@@ -538,7 +538,7 @@ Section API.
       let H := fresh "H" in
       match goal with |- context [- (?X / ?Y) = 0] =>
                       assert ((- (X / Y) = 0) <-> X <? 0 = false) as H
-                             by (apply div_nonzero_neg_iff; omega)
+                             by (apply div_nonzero_neg_iff; lia)
       end; destruct H.
       break_match;  try match goal with
                           H : ?x = ?x -> _ |- _
@@ -548,11 +548,11 @@ Section API.
       | H : _ |- _ => rewrite Z.leb_le in H
       | H : _ |- _ => rewrite Z.ltb_lt in H
       | H : _ |- _ => rewrite Z.ltb_ge in H
-      end; try omega.
-      { rewrite @B.Positional.sat_sub_mod by omega.
+      end; try lia.
+      { rewrite @B.Positional.sat_sub_mod by lia.
         rewrite eval_join0; cbv [eval].
-        repeat (rewrite Z.mod_small; try omega). }
-      { repeat (rewrite Z.mod_small; try omega). }
+        repeat (rewrite Z.mod_small; try lia). }
+      { repeat (rewrite Z.mod_small; try lia). }
     Qed.
 
     Lemma eval_conditional_sub n (p:T (S n)) (q:T n)
@@ -568,7 +568,7 @@ Section API.
              | _ => progress autounfold
              | _ => progress (autorewrite with uncps push_id push_basesystem_eval in * )
              | _ => (rewrite uweight_0 in * )
-             | _ => assert (p = 0) by omega; subst p; break_match; ring
+             | _ => assert (p = 0) by lia; subst p; break_match; ring
              end.
     Qed.
 
@@ -581,7 +581,7 @@ Section API.
       cbv [conditional_sub conditional_sub_cps]; autorewrite with uncps push_id.
       eapply small_drop_high.
       rewrite map2_zselect; break_match; [|assumption].
-      eauto using @B.Positional.small_sat_sub with omega.
+      eauto using @B.Positional.small_sat_sub with lia.
     Qed.
 
     Lemma eval_scmul n a v : small v -> 0 <= a < bound ->
@@ -595,7 +595,7 @@ Section API.
       rewrite uweight_0, Z.mul_1_l. apply Z.mod_small.
       split; [solve[Z.zero_bounds]|]. cbv [uweight] in *.
       rewrite !Nat2Z.inj_succ, Z.pow_succ_r by auto using Nat2Z.is_nonneg.
-      apply Z.mul_lt_mono_nonneg; omega.
+      apply Z.mul_lt_mono_nonneg; lia.
     Qed.
 
     Lemma small_scmul n a v : small (@scmul n a v).
@@ -620,7 +620,7 @@ Section API.
       autorewrite with uncps push_id cancel_pair.
       rewrite (subst_append p) at 2.
       rewrite uweight_eval_step. rewrite hd_append, tl_append.
-      rewrite Z.div_add' by omega. rewrite Z.div_small by auto using small_hd.
+      rewrite Z.div_add' by lia. rewrite Z.div_small by auto using small_hd.
       ring.
     Qed.
 

@@ -165,7 +165,7 @@ Module Columns.
         by (simpl in *; destruct n; destruct inp; reflexivity).
       rewrite map_append, B.Positional.eval_step, hd_append, tl_append.
       autorewrite with natsimplify; ring_simplify; rewrite Group.cancel_left.
-      apply B.Positional.eval_wt_equiv; intros; f_equal; omega.
+      apply B.Positional.eval_wt_equiv; intros; f_equal; lia.
     Qed.
 
     (* Sums a list of integers using carry bits.
@@ -270,25 +270,25 @@ Module Columns.
       a * ((c / a + d) mod b) + c mod a = (a * d + c) mod (a * b).
     Proof.
       clear.
-      intros Ha Hb. assert (a <= a * b) by (apply Z.le_mul_diag_r; omega).
+      intros Ha Hb. assert (a <= a * b) by (apply Z.le_mul_diag_r; lia).
       pose proof (Z.mod_pos_bound c a Ha).
       pose proof (Z.mod_pos_bound (c/a+d) b Hb).
       apply small_mod_eq.
-      { rewrite <-(Z.mod_small (c mod a) (a * b)) by omega.
-        rewrite <-Z.mul_mod_distr_l with (c:=a) by omega.
-        rewrite Z.mul_add_distr_l, Z.mul_div_eq, <-Z.add_mod_full by omega.
+      { rewrite <-(Z.mod_small (c mod a) (a * b)) by lia.
+        rewrite <-Z.mul_mod_distr_l with (c:=a) by lia.
+        rewrite Z.mul_add_distr_l, Z.mul_div_eq, <-Z.add_mod_full by lia.
         f_equal; ring. }
       { split; [Z.zero_bounds|].
-        apply Z.lt_le_trans with (m:=a*(b-1)+a); [|ring_simplify; omega].
-        apply Z.add_le_lt_mono; try apply Z.mul_le_mono_nonneg_l; omega. }
+        apply Z.lt_le_trans with (m:=a*(b-1)+a); [|ring_simplify; lia].
+        apply Z.add_le_lt_mono; try apply Z.mul_le_mono_nonneg_l; lia. }
     Qed.
 
     Lemma compact_div_step a b c d : 0 < a -> 0 < b ->
       (c / a + d) / b = (a * d + c) / (a * b).
     Proof.
       clear. intros Ha Hb.
-      rewrite <-Z.div_div by omega.
-      rewrite Z.div_add_l' by omega.
+      rewrite <-Z.div_div by lia.
+      rewrite Z.div_add_l' by lia.
       f_equal; ring.
     Qed.
 
@@ -324,9 +324,9 @@ Module Columns.
                end.
         remember (weight (S (S n)) / weight (S n)) as bound.
         replace (weight (S (S n))) with (weight (S n) * bound)
-          by (subst bound; rewrite Z.mul_div_eq by omega;
+          by (subst bound; rewrite Z.mul_div_eq by lia;
               rewrite weight_multiples; ring).
-        split; [apply compact_mod_step | apply compact_div_step]; omega.
+        split; [apply compact_mod_step | apply compact_div_step]; lia.
     Qed.
 
     Lemma compact_mod {n} inp :
@@ -391,7 +391,7 @@ Module Columns.
       cbv [eval]; intros. rewrite cons_to_nth_add_to_nth.
       auto using B.Positional.eval_add_to_nth.
     Qed.
-    Hint Rewrite eval_cons_to_nth using omega : push_basesystem_eval.
+    Hint Rewrite eval_cons_to_nth using lia : push_basesystem_eval.
 
     Definition nils n : (list Z)^n := Tuple.repeat nil n.
 
@@ -432,7 +432,7 @@ Module Columns.
         pose proof (B.Positional.place_cps_in_range weight a (pred n)).
         rewrite Nat.succ_pred in * by assumption. simpl.
         autorewrite with uncps push_id push_basesystem_eval in *.
-        rewrite eval_cons_to_nth by omega. nsatz.
+        rewrite eval_cons_to_nth by lia. nsatz.
     Qed.
   End Columns.
 End Columns.
@@ -452,7 +452,7 @@ Hint Rewrite
      @Columns.eval_cons_to_nth
      @Columns.eval_from_associational
      @Columns.eval_nils
-  using (assumption || omega): push_basesystem_eval.
+  using (assumption || lia): push_basesystem_eval.
 
 Hint Unfold
      Columns.eval Columns.eval_from

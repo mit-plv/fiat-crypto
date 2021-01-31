@@ -1,7 +1,7 @@
 Require Import Coq.Lists.List Coq.micromega.Psatz.
 Require Import Crypto.Util.ListUtil.
 Require Import Coq.ZArith.ZArith Coq.ZArith.Zdiv.
-Require Import Coq.omega.Omega Coq.Numbers.Natural.Peano.NPeano Coq.Arith.Arith.
+Require Import Coq.micromega.Lia Coq.Numbers.Natural.Peano.NPeano Coq.Arith.Arith.
 Require Import Crypto.LegacyArithmetic.BaseSystem.
 Require Import Crypto.Util.Tactics.UniquePose.
 Require Import Crypto.Util.Notations.
@@ -123,7 +123,7 @@ Section BaseSystemProofs.
     rewrite (combine_truncate_r vs bs); apply (f_equal2 Z.add); trivial; [].
     unfold combine; break_match.
     { let Heql := match goal with H : _ = nil |- _ => H end in
-      apply (f_equal (@length _)) in Heql; simpl length in Heql; rewrite skipn_length in Heql; omega. }
+      apply (f_equal (@length _)) in Heql; simpl length in Heql; rewrite skipn_length in Heql; lia. }
     { cbv -[Z.add Z.mul]; ring_simplify; f_equal.
       assert (HH: nth_error (z0 :: l) 0 = Some z) by
           (

@@ -299,7 +299,7 @@ Section of_Z.
   Lemma of_nat_sub x (H: (0 < x)%nat):
     of_nat (Nat.sub x 1) = Rsub (of_nat x) Rone.
   Proof using Type*.
-    induction x; [omega|simpl].
+    induction x; [lia|simpl].
     rewrite <-of_nat_add.
     rewrite Nat.sub_0_r, Nat.add_1_r.
     simpl of_nat.

@@ -1,4 +1,4 @@
-Require Import Coq.omega.Omega.
+Require Import Coq.micromega.Lia.
 Require Import Crypto.Util.FixCoqMistakes.
 Require Import Crypto.Compilers.Syntax.
 Require Import Crypto.Compilers.Wf.
@@ -57,9 +57,9 @@ Section with_context.
                    | solve [ eauto using In_skipn, In_firstn ]
                    | match goal with
                      | [ H : List.In ?x (List.firstn ?n ?ls) |- List.In ?x (List.firstn (?n + ?m) ?ls) ]
-                       => apply (In_firstn n); rewrite firstn_firstn by omega
+                       => apply (In_firstn n); rewrite firstn_firstn by lia
                      | [ H : _ |- _ ] => first [ rewrite firstn_skipn_add in H
-                                               | rewrite firstn_firstn in H by omega ]
+                                               | rewrite firstn_firstn in H by lia ]
                      | [ H : List.In ?x' (List.firstn (?n + ?m) ?ls) |- List.In ?x' (List.firstn ?m (List.skipn ?n ?ls)) ]
                        => apply (In_firstn_skipn_split n) in H
                      end ].

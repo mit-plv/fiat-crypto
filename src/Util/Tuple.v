@@ -1,7 +1,7 @@
 Require Import Coq.Classes.Morphisms.
 Require Import Coq.Relations.Relation_Definitions.
 Require Import Coq.Lists.List.
-Require Import Coq.omega.Omega.
+Require Import Coq.micromega.Lia.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Tactics.DestructHead.
@@ -967,14 +967,14 @@ Lemma mapi_with'_left_step {T A B n} f a0:
                            (fst (mapi_with' i f start xs)) a0))
                    (snd (mapi_with' i f start xs))).
 Proof.
-  induction n as [|? IHn]; intros; [subst; simpl; repeat f_equal; omega|].
+  induction n as [|? IHn]; intros; [subst; simpl; repeat f_equal; lia|].
   rewrite mapi_with'_step; autorewrite with cancel_pair.
   rewrite tl_left_append, hd_left_append.
   erewrite IHn by reflexivity; subst; autorewrite with cancel_pair.
   match goal with |- context [(?xs ,?x0)] =>
                   change (xs, x0) with (append x0 xs) end.
   rewrite <-left_append_append.
-  repeat (f_equal; try omega).
+  repeat (f_equal; try lia).
 Qed.
 
 Lemma mapi_with'_linvariant {T A B n} start f

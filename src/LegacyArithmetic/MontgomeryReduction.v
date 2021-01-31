@@ -46,8 +46,8 @@ Section montgomery.
     assert (0 <= decode_small modulus' < small_bound) by auto using decode_small_valid.
     assert (0 <= decode_small modulus_digits < small_bound) by auto using decode_small_valid, modulus_digits_valid.
     assert (0 <= modulus) by apply (modulus_nonneg _).
-    assert (modulus < small_bound) by (rewrite <- modulus_digits_correct; omega).
-    rewrite <- partial_reduce_alt_eq by omega.
+    assert (modulus < small_bound) by (rewrite <- modulus_digits_correct; lia).
+    rewrite <- partial_reduce_alt_eq by lia.
     cbv [MontgomeryReduction.Definition.partial_reduce MontgomeryReduction.Definition.partial_reduce_alt MontgomeryReduction.Definition.prereduce].
     pull_zlike_decode.
     cse.
@@ -66,9 +66,9 @@ Section montgomery.
     assert (0 <= decode_small modulus' < small_bound) by auto using decode_small_valid.
     assert (0 <= decode_small modulus_digits < small_bound) by auto using decode_small_valid, modulus_digits_valid.
     assert (0 <= modulus) by apply (modulus_nonneg _).
-    assert (modulus < small_bound) by (rewrite <- modulus_digits_correct; omega).
+    assert (modulus < small_bound) by (rewrite <- modulus_digits_correct; lia).
     unfold reduce_via_partial.
-    rewrite <- partial_reduce_alt_eq by omega.
+    rewrite <- partial_reduce_alt_eq by lia.
     cbv [MontgomeryReduction.Definition.partial_reduce MontgomeryReduction.Definition.partial_reduce_alt MontgomeryReduction.Definition.prereduce].
     pull_zlike_decode.
     cse.
@@ -100,7 +100,7 @@ Section montgomery.
     Proof using H Hmod Hmod' Hv.
       pose proof (proj2 (proj2_sig (reduce_via_partial v) H)) as H'.
       apply decode_small_valid in H'.
-      destruct reduce_via_partial_correct'; split; eauto; omega.
+      destruct reduce_via_partial_correct'; split; eauto; lia.
     Qed.
 
     Theorem reduce_via_partial_correct

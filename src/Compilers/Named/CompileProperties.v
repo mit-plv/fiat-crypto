@@ -1,4 +1,4 @@
-Require Import Coq.omega.Omega.
+Require Import Coq.micromega.Lia.
 Require Import Crypto.Compilers.Named.Syntax.
 Require Import Crypto.Compilers.Named.NameUtil.
 Require Import Crypto.Compilers.Named.NameUtilProperties.
@@ -47,7 +47,7 @@ Section language.
                    | progress subst
                    | progress inversion_prod
                    | congruence
-                   | omega
+                   | lia
                    | progress break_innermost_match_step
                    | progress break_match_hyps
                    | progress intros

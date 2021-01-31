@@ -131,7 +131,7 @@ Module Positional. Section Positional.
     then (i, let c := fst t / weight i in (c * snd t)%RT)
     else match i with S i' => place t i' | O => (O, fst t * snd t)%RT end.
   Lemma place_in_range (t:Z*Z) (n:nat) : (fst (place t n) < S n)%nat.
-  Proof. induction n; cbv [place] in *; break_match; autorewrite with cancel_pair; try omega. Qed.
+  Proof. induction n; cbv [place] in *; break_match; autorewrite with cancel_pair; try lia. Qed.
   Lemma weight_place t i : weight (fst (place t i)) * snd (place t i) = fst t * snd t.
   Proof. induction i; cbv [place] in *; break_match; push;
     repeat match goal with |- context[?a/?b] =>
@@ -146,7 +146,7 @@ Module Positional. Section Positional.
   Lemma eval_from_associational {n} p (n_nz:n<>O) :
     eval (from_associational n p) = Associational.eval p.
   Proof. induction p; cbv [from_associational] in *; push; try
-  pose proof place_in_range a (pred n); try omega; try nsatz. Qed.
+  pose proof place_in_range a (pred n); try lia; try nsatz. Qed.
   Hint Rewrite @eval_from_associational : push_eval.
 
   Section mulmod.

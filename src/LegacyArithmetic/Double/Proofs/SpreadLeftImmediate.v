@@ -146,7 +146,7 @@ Section tuple2.
           nia. }
         assert (half_n < 0) by lia.
         assert (2^half_n = 0) by auto with zarith.
-        assert (0 < 0) by nia; omega. }
+        assert (0 < 0) by nia; lia. }
     Qed.
   End full_from_half.
 End tuple2.

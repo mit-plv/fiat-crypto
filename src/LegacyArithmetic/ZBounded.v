@@ -103,14 +103,14 @@ Lemma ConditionalSubtractModulus_correct'
                                = if (decode_small modulus_digits <=? decode_small x) then decode_small x - decode_small modulus_digits else decode_small x.
 Proof.
   intros; rewrite ConditionalSubtractModulus_correct by assumption.
-  break_match; Z.ltb_to_lt; omega.
+  break_match; Z.ltb_to_lt; lia.
 Qed.
 
 Lemma modulus_nonneg {small_bound smaller_bound modulus} (Zops : ZLikeOps small_bound smaller_bound modulus) {_ : ZLikeProperties Zops} : 0 <= modulus.
 Proof.
   pose proof (decode_small_valid _ modulus_digits_valid) as H.
   rewrite modulus_digits_correct in H.
-  omega.
+  lia.
 Qed.
 
 Create HintDb push_zlike_decode discriminated.

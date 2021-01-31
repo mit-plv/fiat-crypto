@@ -5,8 +5,8 @@ Require Import Crypto.Util.ZUtil.EquivModulo.
 
 Section expression.
   Context (ops : fancy_machine.instructions (2 * 128)) (props : fancy_machine.arithmetic ops) (modulus : Z) (m' : Z) (Hm : modulus <> 0) (H : 0 <= modulus < 2^256) (Hm' : 0 <= m' < 2^256).
-  Let H' : 0 <= 256 <= 256. omega. Qed.
-  Let H'' : 0 < 256. omega. Qed.
+  Let H' : 0 <= 256 <= 256. lia. Qed.
+  Let H'' : 0 < 256. lia. Qed.
   Definition ldi' : load_immediate
                      (@ZBounded.SmallT (2 ^ 256) (2 ^ 256) modulus
                                        (@ZLikeOps_of_ArchitectureBoundedOps 128 ops modulus 256)) := _.

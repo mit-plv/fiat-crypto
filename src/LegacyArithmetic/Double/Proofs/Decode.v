@@ -44,13 +44,13 @@ Section decode.
       destruct (zerop k); [ subst | ].
       { cbv; intuition congruence. }
       assert (0 <= n)
-        by (destruct k as [ | [|] ]; [ omega | | destruct w ];
+        by (destruct k as [ | [|] ]; [ lia | | destruct w ];
             eauto using decode_exponent_nonnegative).
       replace (2^(k * n)) with (Pow2Base.upper_bound limb_widths)
         by (erewrite Pow2BaseProofs.upper_bound_uniform by eauto using repeat_spec; distr_length).
       apply Pow2BaseProofs.decode_upper_bound; auto using decode_bounded.
       { intros ? H'.
-        apply repeat_spec in H'; omega. }
+        apply repeat_spec in H'; lia. }
       { distr_length. }
     Qed.
   End with_k.
@@ -62,7 +62,7 @@ Section decode.
   Proof using Type.
     intro Hn.
     destruct w as [? w]; simpl.
-    replace (decode w) with (decode w * 1 + 0)%Z by omega.
+    replace (decode w) with (decode w * 1 + 0)%Z by lia.
     rewrite map_app, map_cons, map_nil.
     erewrite Pow2BaseProofs.decode_shift_uniform_app by (eauto using repeat_spec; distr_length).
     distr_length.
@@ -81,9 +81,9 @@ Section decode.
   Proof using Type.
     pose proof (tuple_is_decode w) as H'; hnf in H'.
     intro; assert (k * n <= 0) by nia.
-    assert (2^(k * n) <= 2^0) by (apply Z.pow_le_mono_r; omega).
+    assert (2^(k * n) <= 2^0) by (apply Z.pow_le_mono_r; lia).
     simpl in *; hnf.
-    omega.
+    lia.
   Qed.
   Lemma tuple_decoder_O_ind_prod
          (P : forall n, decoder n W -> Type)

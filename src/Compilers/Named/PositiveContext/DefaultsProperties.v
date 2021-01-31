@@ -23,7 +23,7 @@ Section language.
     rewrite !in_map_iff; intros; destruct_head' ex; destruct_head' and; inversion_option; subst.
     match goal with H : _ |- _ => apply Pnat.SuccNat2Pos.inj in H end; subst.
     rewrite in_seq in *.
-    omega *.
+    lia *.
   Qed.
 
   Lemma name_list_unique_default_names_forf {var dummy t e}

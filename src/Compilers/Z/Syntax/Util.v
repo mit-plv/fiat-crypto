@@ -115,7 +115,7 @@ Proof.
                | rewrite ZToWord_wordToZ_ZToWord by lia
                | rewrite wordToZ_ZToWord_wordToZ by lia
                | rewrite wordToZ_ZToWord by assumption
-               | rewrite ZToWord_wordToZ_ZToWord_small by omega ].
+               | rewrite ZToWord_wordToZ_ZToWord_small by lia ].
 Qed.
 
 Lemma cast_const_split_mod {a b} v
@@ -298,7 +298,7 @@ Lemma base_type_leb_total
   : forall x y : base_type, base_type_leb x y = true \/ base_type_leb y x = true.
 Proof.
   induction x, y; simpl; auto.
-  rewrite !Nat.leb_le; omega.
+  rewrite !Nat.leb_le; lia.
 Qed.
 
 Lemma eta_match_base_type_impl P1 P2 PZ T

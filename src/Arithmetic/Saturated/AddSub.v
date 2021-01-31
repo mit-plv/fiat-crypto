@@ -104,7 +104,7 @@ Module B.
           assert (0 < uweight s n) as wt_pos
               by auto using Z.lt_gt, Z.gt_lt, uweight_positive.
           rewrite <-(Columns.compact_mod_step s (uweight s n) c d s_pos wt_pos).
-          repeat (ring_simplify; f_equal; ring_simplify; try omega).
+          repeat (ring_simplify; f_equal; ring_simplify; try lia).
         Qed.
 
         Lemma sat_add_div_step n c d :
@@ -113,7 +113,7 @@ Module B.
           assert (0 < uweight s n) as wt_pos
               by auto using Z.lt_gt, Z.gt_lt, uweight_positive.
           rewrite <-(Columns.compact_div_step s (uweight s n) c d s_pos wt_pos).
-          repeat (ring_simplify; f_equal; ring_simplify; try omega).
+          repeat (ring_simplify; f_equal; ring_simplify; try lia).
         Qed.
 
         Lemma sat_add_divmod n p q :
@@ -141,7 +141,7 @@ Module B.
                    => specialize (IHn p q c); autorewrite with push_id uncps in IHn;
                    rewrite (proj1 IHn); rewrite (proj2 IHn)
                  | _ => split; ring
-                 | _ => solve [split; repeat (f_equal; ring_simplify; try omega)]
+                 | _ => solve [split; repeat (f_equal; ring_simplify; try lia)]
                  end.
         Qed.
 
@@ -174,7 +174,7 @@ Module B.
                    end;
             try solve [ rewrite ?Z.add_with_get_carry_full_mod,
                         ?Z.add_get_carry_full_mod;
-                        apply Z.mod_pos_bound; omega ].
+                        apply Z.mod_pos_bound; lia ].
        Qed.
 
         Definition sat_sub_cps {n} p q T (f:Z*Z^n->T) :=
@@ -211,7 +211,7 @@ Module B.
                    => specialize (IHn p q c); autorewrite with push_id uncps in IHn;
                    rewrite (proj1 IHn); rewrite (proj2 IHn)
                  | _ => split; ring
-                 | _ => solve [split; repeat (f_equal; ring_simplify; try omega)]
+                 | _ => solve [split; repeat (f_equal; ring_simplify; try lia)]
                  end.
         Qed.
 
@@ -244,7 +244,7 @@ Module B.
                    end;
             try solve [ rewrite ?Z.sub_with_get_borrow_full_mod,
                         ?Z.sub_get_borrow_full_mod;
-                        apply Z.mod_pos_bound; omega ].
+                        apply Z.mod_pos_bound; lia ].
         Qed.
       End AddSub.
     End Positional.
@@ -253,7 +253,7 @@ End B.
 Hint Opaque B.Positional.sat_sub B.Positional.sat_add B.Positional.chain_op B.Positional.chain_op' : uncps.
 Hint Rewrite @B.Positional.sat_sub_id @B.Positional.sat_add_id : uncps.
 Hint Rewrite @B.Positional.chain_op_id @B.Positional.chain_op' using (assumption || (intros; autorewrite with uncps; reflexivity)) : uncps.
-Hint Rewrite @B.Positional.sat_sub_mod @B.Positional.sat_sub_div @B.Positional.sat_add_mod @B.Positional.sat_add_div using (omega || assumption) : push_basesystem_eval.
+Hint Rewrite @B.Positional.sat_sub_mod @B.Positional.sat_sub_div @B.Positional.sat_add_mod @B.Positional.sat_add_div using (lia || assumption) : push_basesystem_eval.
 
 Hint Unfold
      B.Positional.chain_op'_cps

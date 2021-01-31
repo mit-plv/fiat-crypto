@@ -106,14 +106,14 @@ Module Z.
       rewrite !Z.opp_involutive.
       apply f_equal.
       destruct (Z.Even_or_Odd q).
-      { rewrite !Z.pow_opp_even by (assumption || omega).
+      { rewrite !Z.pow_opp_even by (assumption || lia).
         destruct (Z.eq_dec (p^q mod n) 0) as [H'|H'], (Z.eq_dec ((-p mod n)^q mod n) 0) as [H''|H''];
           repeat first [ rewrite Z_mod_zero_opp_full by assumption
                        | rewrite Z_mod_nz_opp_full by assumption
                        | reflexivity
-                       | rewrite <- Zpower_mod, Z.pow_opp_even in H'' by (assumption || omega); omega
-                       | rewrite <- Zpower_mod, Z.pow_opp_even in H'' |- * by (assumption || omega); omega ]. }
-      { rewrite Z.pow_opp_odd, !Z.opp_involutive, <- Zpower_mod, Z.pow_opp_odd, ?Z.opp_involutive by (assumption || omega).
+                       | rewrite <- Zpower_mod, Z.pow_opp_even in H'' by (assumption || lia); lia
+                       | rewrite <- Zpower_mod, Z.pow_opp_even in H'' |- * by (assumption || lia); lia ]. }
+      { rewrite Z.pow_opp_odd, !Z.opp_involutive, <- Zpower_mod, Z.pow_opp_odd, ?Z.opp_involutive by (assumption || lia).
         reflexivity. } }
   Qed.
   Hint Rewrite <- mod_pow_full : pull_Zmod.

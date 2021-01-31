@@ -18,11 +18,11 @@ Module Z.
     Z.shiftr (a + (Z.shiftl b n)) m = Z.shiftr b (m - n).
   Proof.
     intros n m a b H H0.
-    rewrite !Z.shiftr_div_pow2, Z.shiftl_mul_pow2 by omega.
+    rewrite !Z.shiftr_div_pow2, Z.shiftl_mul_pow2 by lia.
     replace (2 ^ m) with (2 ^ n * 2 ^ (m - n)) by
-      (rewrite <-Z.pow_add_r by omega; f_equal; ring).
+      (rewrite <-Z.pow_add_r by lia; f_equal; ring).
     rewrite <-Z.div_div, Z.div_add, (Z.div_small a) ; try solve
-      [assumption || apply Z.pow_nonzero || apply Z.pow_pos_nonneg; omega].
+      [assumption || apply Z.pow_nonzero || apply Z.pow_pos_nonneg; lia].
     f_equal; ring.
   Qed.
   Hint Rewrite Z.shiftr_add_shiftl_high using zutil_arith : pull_Zshift.
@@ -32,10 +32,10 @@ Module Z.
                                            Z.shiftr (a + (Z.shiftl b n)) m = Z.shiftr a m + Z.shiftr b (m - n).
   Proof.
     intros n m a b H H0.
-    rewrite !Z.shiftr_div_pow2, Z.shiftl_mul_pow2, Z.shiftr_mul_pow2 by omega.
+    rewrite !Z.shiftr_div_pow2, Z.shiftl_mul_pow2, Z.shiftr_mul_pow2 by lia.
     replace (2 ^ n) with (2 ^ (n - m) * 2 ^ m) by
-        (rewrite <-Z.pow_add_r by omega; f_equal; ring).
-    rewrite Z.mul_assoc, Z.div_add by (apply Z.pow_nonzero; omega).
+        (rewrite <-Z.pow_add_r by lia; f_equal; ring).
+    rewrite Z.mul_assoc, Z.div_add by (apply Z.pow_nonzero; lia).
     repeat f_equal; ring.
   Qed.
   Hint Rewrite Z.shiftr_add_shiftl_low using zutil_arith : pull_Zshift.
@@ -48,16 +48,16 @@ Module Z.
     intros i ?.
     apply natlike_ind with (x := i); [ intros a b n | intros x H0 H1 a b n | ]; intros; try assumption;
       (destruct (Z.eq_dec 0 n); [ subst; rewrite Z.pow_0_r in *;
-                                  replace a with 0 by omega; f_equal; ring | ]); try omega.
+                                  replace a with 0 by lia; f_equal; ring | ]); try lia.
     rewrite <-Z.add_1_r at 1. rewrite <-Z.shiftr_spec by assumption.
     replace (Z.succ x - n) with (x - (n - 1)) by ring.
-    rewrite shiftr_add_shiftl_low, <-Z.shiftl_opp_r with (a := b) by omega.
-    rewrite <-H1 with (a := Z.shiftr a 1); try omega; [ repeat f_equal; ring | ].
-    rewrite Z.shiftr_div_pow2 by omega.
+    rewrite shiftr_add_shiftl_low, <-Z.shiftl_opp_r with (a := b) by lia.
+    rewrite <-H1 with (a := Z.shiftr a 1); try lia; [ repeat f_equal; ring | ].
+    rewrite Z.shiftr_div_pow2 by lia.
     split; apply Z.div_pos || apply Z.div_lt_upper_bound;
-      try solve [rewrite ?Z.pow_1_r; omega].
-    rewrite <-Z.pow_add_r by omega.
-    replace (1 + (n - 1)) with n by ring; omega.
+      try solve [rewrite ?Z.pow_1_r; lia].
+    rewrite <-Z.pow_add_r by lia.
+    replace (1 + (n - 1)) with n by ring; lia.
   Qed.
   Hint Rewrite testbit_add_shiftl_high using zutil_arith : Ztestbit.
 
@@ -65,7 +65,7 @@ Module Z.
     Z.shiftr n (Z.succ x) = Z.shiftr (Z.shiftr n x) 1.
   Proof.
     intros.
-    rewrite Z.shiftr_shiftr by omega.
+    rewrite Z.shiftr_shiftr by lia.
     reflexivity.
   Qed.
   Hint Rewrite Z.shiftr_succ using zutil_arith : push_Zshift.
@@ -75,8 +75,8 @@ Module Z.
     Z.shiftr a 1 <= Z.shiftr b 1.
   Proof.
     intros.
-    rewrite !Z.shiftr_div_pow2, Z.pow_1_r by omega.
-    apply Z.div_le_mono; omega.
+    rewrite !Z.shiftr_div_pow2, Z.pow_1_r by lia.
+    apply Z.div_le_mono; lia.
   Qed.
   Hint Resolve shiftr_1_r_le : zarith.
 
@@ -94,14 +94,14 @@ Module Z.
     apply natlike_ind.
     + unfold Z.ones.
       rewrite Z.shiftr_0_r, Z.shiftl_1_l, Z.sub_0_r.
-      omega.
+      lia.
     + intros x H0 H1.
-      destruct (Z_lt_le_dec x n); try omega.
+      destruct (Z_lt_le_dec x n); try lia.
       intuition auto with zarith lia.
       left.
       rewrite shiftr_succ.
-      replace (n - Z.succ x) with (Z.pred (n - x)) by omega.
-      rewrite Z.ones_pred by omega.
+      replace (n - Z.succ x) with (Z.pred (n - x)) by lia.
+      rewrite Z.ones_pred by lia.
       apply Z.shiftr_1_r_le.
       assumption.
   Qed.
@@ -111,12 +111,12 @@ Module Z.
   Proof.
     intros a n i G G0 G1.
     destruct (Z_le_lt_eq_dec i n G1).
-    + destruct (Z.shiftr_ones' a n G i G0); omega.
+    + destruct (Z.shiftr_ones' a n G i G0); lia.
     + subst; rewrite Z.sub_diag.
       destruct (Z.eq_dec a 0).
       - subst; rewrite Z.shiftr_0_l; reflexivity.
-      - rewrite Z.shiftr_eq_0; try omega; try reflexivity.
-        apply Z.log2_lt_pow2; omega.
+      - rewrite Z.shiftr_eq_0; try lia; try reflexivity.
+        apply Z.log2_lt_pow2; lia.
   Qed.
   Hint Resolve shiftr_ones : zarith.
 
@@ -126,14 +126,14 @@ Module Z.
     apply Z_le_lt_eq_dec in a_upper_bound.
     destruct a_upper_bound.
     + destruct (Z.eq_dec 0 a).
-      - subst; rewrite Z.shiftr_0_l; omega.
-      - rewrite Z.shiftr_eq_0; auto; try omega.
-        apply Z.log2_lt_pow2; auto; omega.
+      - subst; rewrite Z.shiftr_0_l; lia.
+      - rewrite Z.shiftr_eq_0; auto; try lia.
+        apply Z.log2_lt_pow2; auto; lia.
     + subst.
       rewrite Z.shiftr_div_pow2 by assumption.
-      rewrite Z.div_same; try omega.
-      assert (0 < 2 ^ n) by (apply Z.pow_pos_nonneg; omega).
-      omega.
+      rewrite Z.div_same; try lia.
+      assert (0 < 2 ^ n) by (apply Z.pow_pos_nonneg; lia).
+      lia.
   Qed.
   Hint Resolve shiftr_upper_bound : zarith.
 
@@ -144,16 +144,16 @@ Module Z.
     apply Z.bits_inj'; intros t ?.
     rewrite Z.lor_spec, Z.shiftl_spec by assumption.
     destruct (Z_lt_dec t n).
-    + rewrite Z.testbit_add_shiftl_low by omega.
-      rewrite Z.testbit_neg_r with (n := t - n) by omega.
+    + rewrite Z.testbit_add_shiftl_low by lia.
+      rewrite Z.testbit_neg_r with (n := t - n) by lia.
       apply Bool.orb_false_r.
-    + rewrite testbit_add_shiftl_high by omega.
+    + rewrite testbit_add_shiftl_high by lia.
       replace (Z.testbit a t) with false; [ apply Bool.orb_false_l | ].
       symmetry.
-      apply Z.testbit_false; try omega.
+      apply Z.testbit_false; try lia.
       rewrite Z.div_small; try reflexivity.
-      split; try eapply Z.lt_le_trans with (m := 2 ^ n); try omega.
-      apply Z.pow_le_mono_r; omega.
+      split; try eapply Z.lt_le_trans with (m := 2 ^ n); try lia.
+      apply Z.pow_le_mono_r; lia.
   Qed.
   Hint Rewrite <- Z.lor_shiftl using zutil_arith : convert_to_Ztestbit.
 
@@ -171,7 +171,7 @@ Module Z.
                                   then Z.testbit a (m - n)
                                   else false.
   Proof.
-    repeat break_match; auto using Z.shiftl_spec_low, Z.shiftl_spec, Z.testbit_neg_r with omega.
+    repeat break_match; auto using Z.shiftl_spec_low, Z.shiftl_spec, Z.testbit_neg_r with lia.
   Qed.
   Hint Rewrite shiftl_spec_full : Ztestbit_full.
 
@@ -190,7 +190,7 @@ Module Z.
     : Z.testbit (a + b << n) i
       = if (i <? n) then Z.testbit a i else Z.testbit b (i - n).
   Proof.
-    assert (0 < 2^n) by omega.
+    assert (0 < 2^n) by lia.
     assert (0 <= n) by eauto 2 with zarith.
     pose proof (Zlt_cases i n); break_match; autorewrite with Ztestbit; reflexivity.
   Qed.
@@ -206,8 +206,8 @@ Module Z.
       ((b * 2 ^ Z.of_nat (n - m)) * 2 ^ Z.of_nat m) by
       (rewrite (le_plus_minus m n) at 2; try assumption;
        rewrite Nat2Z.inj_add, Z.pow_add_r by apply Nat2Z.is_nonneg; ring).
-    rewrite Z.mod_add by (pose proof (Z.pow_pos_nonneg 2 (Z.of_nat m)); omega).
-    symmetry. apply Znumtheory.Zmod_div_mod; try (apply Z.pow_pos_nonneg; omega).
+    rewrite Z.mod_add by (pose proof (Z.pow_pos_nonneg 2 (Z.of_nat m)); lia).
+    symmetry. apply Znumtheory.Zmod_div_mod; try (apply Z.pow_pos_nonneg; lia).
     rewrite (le_plus_minus m n) by assumption.
     rewrite Nat2Z.inj_add, Z.pow_add_r by apply Nat2Z.is_nonneg.
     apply Z.divide_factor_l.
@@ -243,17 +243,17 @@ Module Z.
   repeat match goal with
            | |- _ => progress intros
            | |- _ => progress subst y1
-           | |- _ => rewrite Z.shiftl_mul_pow2 by omega
+           | |- _ => rewrite Z.shiftl_mul_pow2 by lia
            | |- _ => rewrite Z.add_compare_mono_r
            | |- _ => rewrite <-Z.mul_sub_distr_r
            | |- _ => break_innermost_match_step
-           | H : Z.pow2_mod _ _ = _ |- _ => rewrite Z.pow2_mod_id_iff in H by omega
+           | H : Z.pow2_mod _ _ = _ |- _ => rewrite Z.pow2_mod_id_iff in H by lia
            | H : ?a <> ?b |- _ = (?a ?= ?b) =>
              case_eq (a ?= b); rewrite ?Z.compare_eq_iff, ?Z.compare_gt_iff, ?Z.compare_lt_iff
            | |- _ + (_ * _) > _ + (_ * _) => cbv [Z.gt]
            | |- _ + (_ * ?x) < _ + (_ * ?x) =>
-             apply Z.lt_sub_lt_add; apply Z.lt_le_trans with (m := 1 * x); [omega|]
-           | |- _ => apply Z.mul_le_mono_nonneg_r; omega
+             apply Z.lt_sub_lt_add; apply Z.lt_le_trans with (m := 1 * x); [lia|]
+           | |- _ => apply Z.mul_le_mono_nonneg_r; lia
            | |- _ => reflexivity
            | |- _ => congruence
            end.
@@ -264,12 +264,12 @@ Module Z.
   Proof.
     destruct (Z_dec 0 n) as [ [?|?] | ? ];
       subst;
-      rewrite ?Z.pow_neg_r by omega;
+      rewrite ?Z.pow_neg_r by lia;
       autorewrite with zsimplify_const;
-      [ | | simpl; omega ].
-    { rewrite !Z.shiftl_mul_pow2 by omega.
+      [ | | simpl; lia ].
+    { rewrite !Z.shiftl_mul_pow2 by lia.
       nia. }
-    { rewrite !Z.shiftl_div_pow2 by omega.
+    { rewrite !Z.shiftl_div_pow2 by lia.
       rewrite Z.div_opp_l_complete by auto with zarith.
       reflexivity. }
   Qed.
@@ -288,19 +288,19 @@ Module Z.
   Lemma shl_shr_lt x y n m (Hx : 0 <= x < 2^n) (Hy : 0 <= y < 2^n) (Hm : 0 <= m <= n)
     : 0 <= (x >> (n - m)) + ((y << m) mod 2^n) < 2^n.
   Proof.
-    cut (0 <= (x >> (n - m)) + ((y << m) mod 2^n) <= 2^n - 1); [ omega | ].
-    assert (0 <= x <= 2^n - 1) by omega.
-    assert (0 <= y <= 2^n - 1) by omega.
+    cut (0 <= (x >> (n - m)) + ((y << m) mod 2^n) <= 2^n - 1); [ lia | ].
+    assert (0 <= x <= 2^n - 1) by lia.
+    assert (0 <= y <= 2^n - 1) by lia.
     assert (0 < 2 ^ (n - m)) by auto with zarith.
     assert (0 <= y mod 2 ^ (n - m) < 2^(n-m)) by auto with zarith.
-    assert (0 <= y mod 2 ^ (n - m) <= 2 ^ (n - m) - 1) by omega.
+    assert (0 <= y mod 2 ^ (n - m) <= 2 ^ (n - m) - 1) by lia.
     assert (0 <= (y mod 2 ^ (n - m)) * 2^m <= (2^(n-m) - 1)*2^m) by auto with zarith.
     assert (0 <= x / 2^(n-m) < 2^n / 2^(n-m)).
     { split; Z.zero_bounds.
       apply Z.div_lt_upper_bound; autorewrite with pull_Zpow zsimplify; nia. }
     autorewrite with Zshift_to_pow.
     split; Z.zero_bounds.
-    replace (2^n) with (2^(n-m) * 2^m) by (autorewrite with pull_Zpow; f_equal; omega).
+    replace (2^n) with (2^(n-m) * 2^m) by (autorewrite with pull_Zpow; f_equal; lia).
     rewrite Zmult_mod_distr_r.
     autorewrite with pull_Zpow zsimplify push_Zmul in * |- .
     nia.
@@ -312,7 +312,7 @@ Module Z.
     : (x + y << n) mod (m * 2^n) = x + (y mod m) << n.
   Proof.
     pose proof (Z.mod_bound_pos y m).
-    specialize_by omega.
+    specialize_by lia.
     assert (0 < 2^n) by auto with zarith.
     autorewrite with Zshift_to_pow.
     rewrite Zplus_mod, !Zmult_mod_distr_r.
@@ -341,8 +341,8 @@ Module Z.
     destruct (Z_le_dec 0 n).
     + rewrite Z.shiftr_div_pow2 by assumption.
       auto using Z.div_small.
-    + assert (2 ^ n = 0) by (apply Z.pow_neg_r; omega).
-      omega.
+    + assert (2 ^ n = 0) by (apply Z.pow_neg_r; lia).
+      lia.
   Qed.
 
   Hint Rewrite Z.pow2_bits_eqb using zutil_arith : Ztestbit.
@@ -355,26 +355,26 @@ Module Z.
            | |- _ => progress rewrite ?Z.eqb_eq, ?Z.eqb_neq in *
            | |- _ => progress autorewrite with Ztestbit
            | |- context[Z.eqb ?a ?b] => case_eq (Z.eqb a b)
-           | |- _ => reflexivity || omega
+           | |- _ => reflexivity || lia
            end.
   Qed.
 
   Lemma lt_mul_2_pow_2_shiftr : forall a n, 0 <= a < 2 * 2 ^ n ->
                                             a >> n = if Z_lt_dec a (2 ^ n) then 0 else 1.
   Proof.
-    intros a n H; break_match; [ apply lt_pow_2_shiftr; omega | ].
+    intros a n H; break_match; [ apply lt_pow_2_shiftr; lia | ].
     destruct (Z_le_dec 0 n).
     + replace (2 * 2 ^ n) with (2 ^ (n + 1)) in *
-        by (rewrite Z.pow_add_r; try omega; ring).
+        by (rewrite Z.pow_add_r; try lia; ring).
       pose proof (Z.shiftr_ones a (n + 1) n H).
       pose proof (Z.shiftr_le (2 ^ n) a n).
-      specialize_by omega.
+      specialize_by lia.
       replace (n + 1 - n) with 1 in * by ring.
       replace (Z.ones 1) with 1 in * by reflexivity.
-      rewrite pow_2_shiftr in * by omega.
-      omega.
-    + assert (2 ^ n = 0) by (apply Z.pow_neg_r; omega).
-      omega.
+      rewrite pow_2_shiftr in * by lia.
+      lia.
+    + assert (2 ^ n = 0) by (apply Z.pow_neg_r; lia).
+      lia.
   Qed.
 
   Lemma shiftr_nonneg_le : forall a n, 0 <= a -> 0 <= n -> a >> n <= a.
@@ -386,7 +386,7 @@ Module Z.
            | [ H : _ \/ _ |- _ ] => destruct H
            | _ => progress subst
            | _ => progress autorewrite with zsimplify Zshift_to_pow
-           | _ => solve [ auto with zarith omega ]
+           | _ => solve [ auto with zarith lia ]
            end.
   Qed.
   Hint Resolve shiftr_nonneg_le : zarith.

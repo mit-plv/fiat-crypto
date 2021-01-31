@@ -65,10 +65,10 @@ Module B.
                  | _ => rewrite Z.mod_eq by assumption
                  | _ => rewrite B.Associational.eval_nil
                  | _ => progress change (Z * Z)%type with B.limb
-                 | _ => ring_simplify; omega
+                 | _ => ring_simplify; lia
                  end.
       Qed.
-      Hint Rewrite eval_map_sat_multerm using (omega || assumption)
+      Hint Rewrite eval_map_sat_multerm using (lia || assumption)
       : push_basesystem_eval.
 
       Lemma eval_sat_mul s p q (s_nonzero:s<>0):
@@ -80,7 +80,7 @@ Module B.
               | _ => progress simpl flat_map
               | _ => rewrite IHp
               | _ => progress change (fun x => sat_multerm_cps s a x id)  with (sat_multerm s a)
-              | _ => ring_simplify; omega
+              | _ => ring_simplify; lia
               end.
       Qed.
       Hint Rewrite eval_sat_mul : push_basesystem_eval.
@@ -89,7 +89,7 @@ Module B.
 End B.
 Hint Opaque B.Associational.sat_mul B.Associational.sat_multerm : uncps.
 Hint Rewrite @B.Associational.sat_mul_id @B.Associational.sat_multerm_id using (assumption || (intros; autorewrite with uncps; reflexivity)) : uncps.
-Hint Rewrite @B.Associational.eval_sat_mul @B.Associational.eval_map_sat_multerm using (omega || assumption) : push_basesystem_eval.
+Hint Rewrite @B.Associational.eval_sat_mul @B.Associational.eval_map_sat_multerm using (lia || assumption) : push_basesystem_eval.
 
 Hint Unfold
      B.Associational.sat_multerm_cps B.Associational.sat_multerm B.Associational.sat_mul_cps B.Associational.sat_mul

@@ -1,4 +1,4 @@
-Require Import Coq.omega.Omega.
+Require Import Coq.micromega.Lia.
 Require Import Coq.Strings.String.
 Require Import Coq.Strings.Ascii.
 Require Import Crypto.Util.Strings.Equality.
@@ -235,7 +235,7 @@ Proof.
     apply index_correct1 in H.
     apply (f_equal length) in H.
     rewrite length_substring, !length_append in H.
-    revert H; apply PeanoNat.Nat.min_case_strong; cbn; intros; omega. }
+    revert H; apply PeanoNat.Nat.min_case_strong; cbn; intros; lia. }
   { generalize (split_helper_no_substring sepch sep xs (String x rev_acc)).
     generalize (split_helper sepch sep xs (String x rev_acc)).
     intros ls.

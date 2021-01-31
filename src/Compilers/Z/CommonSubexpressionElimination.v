@@ -136,7 +136,7 @@ Lemma symbolic_op_leb_total
   : forall a1 a2, symbolic_op_leb a1 a2 = true \/ symbolic_op_leb a2 a1 = true.
 Proof.
   induction a1, a2; simpl; auto;
-    rewrite !Z.leb_le; omega.
+    rewrite !Z.leb_le; lia.
 Qed.
 
 Module SymbolicExprOrder <: TotalLeBool.

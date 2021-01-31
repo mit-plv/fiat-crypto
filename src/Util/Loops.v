@@ -1,4 +1,4 @@
-Require Import omega.Omega.
+Require Import Coq.micromega.Lia.
 
 Module Import core.
   Section Loops.
@@ -147,11 +147,11 @@ Module Import core.
         end.
     Proof.
       revert dependent s0; induction f; intros.
-      { specialize (step s0 (proj1 init)); cbv. destruct (body _); [omega|assumption]. }
+      { specialize (step s0 (proj1 init)); cbv. destruct (body _); [lia|assumption]. }
       { rewrite loop_fuel_S_first.
         specialize (step s0 (proj1 init)); destruct (body s0); [|assumption].
         destruct step.
-        exact (IHf a ltac:(split; (assumption || omega))). }
+        exact (IHf a ltac:(split; (assumption || lia))). }
     Qed.
 
     Lemma by_invariant_fuel (inv:_->Prop) measure P f s0
@@ -198,7 +198,7 @@ Module Import core.
       (iterations_required fuel s = None -> forall n, n < fuel -> exists a, loop n s = inl a).
     Proof.
       induction fuel; intros.
-      { cbn. split; [congruence|intros; omega]. }
+      { cbn. split; [congruence|intros; lia]. }
       { change (iterations_required (S fuel) s)
           with (match iterations_required fuel s with
                 | None => match loop fuel s with
@@ -209,13 +209,13 @@ Module Import core.
                 end) in *.
         destruct (iterations_required fuel s) in *.
         { split; intros ? H; [ inversion H; subst | congruence ].
-          destruct (proj1 IHfuel _ eq_refl); split; [omega|assumption]. }
+          destruct (proj1 IHfuel _ eq_refl); split; [lia|assumption]. }
         { destruct (loop fuel s) eqn:HSf; split; intros; try congruence.
           { destruct (PeanoNat.Nat.eq_dec n fuel); subst; eauto; [].
-            eapply IHfuel; omega || congruence. }
-          { split; match goal with H:Some _=Some _|-_=>inversion H end; [omega|].
+            eapply IHfuel; lia || congruence. }
+          { split; match goal with H:Some _=Some _|-_=>inversion H end; [lia|].
             exists b; intros; split; intros.
-            { eapply IHfuel; congruence || omega. }
+            { eapply IHfuel; congruence || lia. }
             { destruct (PeanoNat.Nat.le_exists_sub m n ltac:(assumption)) as [?[]]; subst.
               eauto using loop_fuel_add_stable. } } } }
     Qed.
@@ -227,17 +227,17 @@ Module Import core.
     Proof.
       eapply iterations_required_correct in Hs.
       destruct Hs as [Hn [b Hs]].
-      pose proof (proj2 (Hs (S n)) ltac:(omega)) as H.
+      pose proof (proj2 (Hs (S n)) ltac:(lia)) as H.
       rewrite loop_fuel_S_first, Hstep in H.
       destruct (iterations_required fuel s') as [x|] eqn:Hs' in *; [f_equal|exfalso].
       { eapply iterations_required_correct in Hs'; destruct Hs' as [Hx Hs'].
         destruct Hs' as [b' Hs'].
         destruct (Compare_dec.le_lt_dec n x) as [Hc|Hc].
-        { destruct (Compare_dec.le_lt_dec x n) as [Hc'|Hc']; try omega; [].
+        { destruct (Compare_dec.le_lt_dec x n) as [Hc'|Hc']; try lia; [].
           destruct (proj1 (Hs' n) Hc'); congruence. }
-        { destruct (proj1 (Hs (S x)) ltac:(omega)) as [? HX].
+        { destruct (proj1 (Hs (S x)) ltac:(lia)) as [? HX].
           rewrite loop_fuel_S_first, Hstep in HX.
-          pose proof (proj2 (Hs' x) ltac:(omega)).
+          pose proof (proj2 (Hs' x) ltac:(lia)).
           congruence. } }
       { eapply iterations_required_correct in Hs'; [|exact Hn].
         destruct Hs' as [? Hs']; rewrite loop_fuel_S_last, H in Hs'; congruence. }
@@ -259,9 +259,9 @@ Module Import core.
       { cbv [measure].
         destruct (iterations_required (S f) s0) eqn:Hs0;
           eapply iterations_required_correct in Hs0;
-          [ .. | exact (ltac:(omega):f <S f)]; [|destruct Hs0; congruence].
-        destruct Hs0 as [? [? Hs0]]; split; [|omega].
-        pose proof (proj2 (Hs0 n) ltac:(omega)) as HH; rewrite HH.
+          [ .. | exact (ltac:(lia):f <S f)]; [|destruct Hs0; congruence].
+        destruct Hs0 as [? [? Hs0]]; split; [|lia].
+        pose proof (proj2 (Hs0 n) ltac:(lia)) as HH; rewrite HH.
         exact (loop_fuel_irrelevant _ _ _ _ _ HH H). }
       { intros s Hinv; destruct (body s) as [s'|c] eqn:Hstep.
         { destruct (loop (measure s) s) eqn:Hs; [contradiction|subst].
@@ -272,7 +272,7 @@ Module Import core.
           rewrite HA.
           destruct (proj1 (iterations_required_correct _ _) _ HA) as [? [? [? HE']]].
           pose proof (HE' ltac:(constructor)) as HE; clear HE'.
-          split; [|omega].
+          split; [|lia].
           rewrite loop_fuel_S_first, Hstep in Hs.
           destruct (loop n s'); congruence. }
         { destruct (loop (measure s) s) eqn:Hs; [contradiction|].

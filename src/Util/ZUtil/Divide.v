@@ -23,14 +23,14 @@ Module Z.
   Proof.
     intros n; split. {
       intro divide2_n.
-      Z.divide_exists_mul; [ | pose proof (Z.mod_pos_bound n 2); omega].
+      Z.divide_exists_mul; [ | pose proof (Z.mod_pos_bound n 2); lia].
       rewrite divide2_n.
       apply Z.even_mul.
     } {
       intro n_even.
       pose proof (Zmod_even n) as H.
       rewrite n_even in H.
-      apply Zmod_divide; omega || auto.
+      apply Zmod_divide; lia || auto.
     }
   Qed.
 End Z.

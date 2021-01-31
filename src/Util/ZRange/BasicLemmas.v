@@ -1,6 +1,6 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Classes.RelationClasses.
-Require Import Coq.omega.Omega.
+Require Import Coq.micromega.Lia.
 Require Import Coq.micromega.Lia.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.Operations.
@@ -27,7 +27,7 @@ Module ZRange.
           | match goal with
             | [ |- _ = _ :> zrange ] => apply f_equal2
             end
-          | omega
+          | lia
           | solve [ auto ] ].
   Local Ltac t := repeat t_step.
 
@@ -69,7 +69,7 @@ Module ZRange.
             | [ H : true = false |- _ ] => exfalso; clear -H; discriminate
             | [ H : Build_zrange _ _ = Build_zrange _ _ |- _ ] => inversion H; clear H
             end
-          | progress specialize_by omega
+          | progress specialize_by lia
           | progress destruct_head'_or ].
 
   Lemma goodb_normalize r : goodb (normalize r) = true.

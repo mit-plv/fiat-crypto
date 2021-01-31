@@ -1,6 +1,6 @@
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.QArith.QArith_base.
-Require Import Coq.omega.Omega.
+Require Import Coq.micromega.Lia.
 Require Import Coq.Lists.List.
 Require Import Crypto.Util.SideConditions.ReductionPackages.
 Require Import Crypto.Util.Tuple.
@@ -14,19 +14,19 @@ Create HintDb dec2bool discriminated.
 Lemma dec_Z_lt_to_bool a b
   : (if dec (a < b) then true else false) = Z.ltb a b.
 Proof.
-  destruct (Z.ltb a b) eqn:?; break_match; Z.ltb_to_lt; try reflexivity; omega.
+  destruct (Z.ltb a b) eqn:?; break_match; Z.ltb_to_lt; try reflexivity; lia.
 Qed.
 Hint Rewrite dec_Z_lt_to_bool : dec2bool.
 Lemma dec_Z_le_to_bool a b
   : (if dec (a <= b) then true else false) = Z.leb a b.
 Proof.
-  destruct (Z.leb a b) eqn:?; break_match; Z.ltb_to_lt; try reflexivity; omega.
+  destruct (Z.leb a b) eqn:?; break_match; Z.ltb_to_lt; try reflexivity; lia.
 Qed.
 Hint Rewrite dec_Z_le_to_bool : dec2bool.
 Lemma dec_Z_eq_to_bool a b
   : (if dec (a = b) then true else false) = Z.eqb a b.
 Proof.
-  destruct (Z.eqb a b) eqn:?; break_match; Z.ltb_to_lt; try reflexivity; omega.
+  destruct (Z.eqb a b) eqn:?; break_match; Z.ltb_to_lt; try reflexivity; lia.
 Qed.
 Hint Rewrite dec_Z_eq_to_bool : dec2bool.
 Lemma dec_nat_eq_to_bool a b
@@ -54,7 +54,7 @@ Lemma dec_Q_le_to_bool a b
   : (if dec (a <= b)%Q then true else false) = Qle_bool a b.
 Proof.
   destruct (Qle_bool a b) eqn:?; cbv [Qle Qle_bool] in *;
-    break_match; Z.ltb_to_lt; try reflexivity; omega.
+    break_match; Z.ltb_to_lt; try reflexivity; lia.
 Qed.
 Hint Rewrite dec_Q_le_to_bool : dec2bool.
 Lemma dec_True_to_bool

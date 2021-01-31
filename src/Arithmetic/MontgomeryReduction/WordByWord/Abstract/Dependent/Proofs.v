@@ -132,7 +132,7 @@ Section WordByWordMontgomery.
         -> eval S3 < eval N + eval B.
     Proof.
       assert (Hmod : forall a b, 0 < b -> a mod b <= b - 1)
-        by (intros x y; pose proof (Z_mod_lt x y); omega).
+        by (intros x y; pose proof (Z_mod_lt x y); lia).
       intro HS.
       unfold S3, S2, S1.
       autorewrite with push_eval; [].
@@ -146,7 +146,7 @@ Section WordByWordMontgomery.
             auto with lia. }
       rewrite (Z.mul_comm _ r), <- Z.add_sub_assoc, <- Z.add_opp_r, !Z.div_add_l' by lia.
       autorewrite with zsimplify.
-      simpl; omega.
+      simpl; lia.
     Qed.
 
     Lemma small_A'
@@ -203,7 +203,7 @@ Section WordByWordMontgomery.
       assert (Hr : (-(1 mod r)) mod r = r - 1 /\ (-(1)) mod r = r - 1).
       { destruct (Z.eq_dec r 1) as [H'|H'].
         { rewrite H'; split; reflexivity. }
-        { rewrite !Z_mod_nz_opp_full; rewrite ?Z.mod_mod; Z.rewrite_mod_small; [ split; reflexivity | omega.. ]. } }
+        { rewrite !Z_mod_nz_opp_full; rewrite ?Z.mod_mod; Z.rewrite_mod_small; [ split; reflexivity | lia.. ]. } }
       autorewrite with pull_Zmod.
       replace 0 with (0 mod r) by apply Zmod_0_l.
       eapply F.eq_of_Z_iff.
@@ -277,7 +277,7 @@ Section WordByWordMontgomery.
 
     Lemma snd_redc_body_mod_N
       : (eval (snd (redc_body A_S))) mod (eval N) = (eval S + a*eval B)*ri mod (eval N).
-    Proof. destruct A_S; apply S4_mod_N; auto; omega. Qed.
+    Proof. destruct A_S; apply S4_mod_N; auto; lia. Qed.
 
     Lemma fst_redc_body
       : (eval (fst (redc_body A_S))) = eval (fst A_S) / r.
@@ -301,7 +301,7 @@ Section WordByWordMontgomery.
       : eval S < eval N + eval B
         -> eval (snd (redc_body A_S)) < eval N + eval B.
     Proof.
-      destruct A_S; apply S4_bound; unfold S in *; cbn [snd] in *; try assumption; try omega.
+      destruct A_S; apply S4_bound; unfold S in *; cbn [snd] in *; try assumption; try lia.
     Qed.
   End body.
 
@@ -490,7 +490,7 @@ Section WordByWordMontgomery.
     pose proof (@pre_redc_bound _ A small_A).
     unfold redc.
     rewrite eval_conditional_sub by t_small.
-    break_innermost_match; Z.ltb_to_lt; omega.
+    break_innermost_match; Z.ltb_to_lt; lia.
   Qed.
 
   Lemma redc_bound_N A_numlimbs (A : T A_numlimbs)
@@ -501,7 +501,7 @@ Section WordByWordMontgomery.
     pose proof (@pre_redc_bound _ A small_A).
     unfold redc.
     rewrite eval_conditional_sub by t_small.
-    break_innermost_match; Z.ltb_to_lt; omega.
+    break_innermost_match; Z.ltb_to_lt; lia.
   Qed.
 
   Lemma redc_bound A_numlimbs (A : T A_numlimbs)
@@ -513,7 +513,7 @@ Section WordByWordMontgomery.
     pose proof (@pre_redc_bound _ A small_A).
     unfold redc.
     rewrite eval_conditional_sub by t_small.
-    break_innermost_match; Z.ltb_to_lt; try omega.
+    break_innermost_match; Z.ltb_to_lt; try lia.
   Qed.
 
   Lemma small_redc A_numlimbs (A : T A_numlimbs)
@@ -524,7 +524,7 @@ Section WordByWordMontgomery.
     pose proof (@small_pre_redc _ A small_A).
     pose proof (@pre_redc_bound _ A small_A).
     unfold redc.
-    apply small_conditional_sub; [ apply small_pre_redc | .. ]; auto; omega.
+    apply small_conditional_sub; [ apply small_pre_redc | .. ]; auto; lia.
   Qed.
 
   Local Notation add := (@add T R_numlimbs addT conditional_sub).

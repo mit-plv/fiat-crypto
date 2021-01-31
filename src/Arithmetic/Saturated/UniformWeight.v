@@ -16,15 +16,15 @@ Section UniformWeight.
   Definition uweight : nat -> Z := fun i => bound ^ Z.of_nat i.
   Lemma uweight_0 : uweight 0%nat = 1. Proof. reflexivity. Qed.
   Lemma uweight_positive i : uweight i > 0.
-  Proof. apply Z.lt_gt, Z.pow_pos_nonneg; omega. Qed.
+  Proof. apply Z.lt_gt, Z.pow_pos_nonneg; lia. Qed.
   Lemma uweight_nonzero i : uweight i <> 0.
   Proof. auto using Z.positive_is_nonzero, uweight_positive. Qed.
   Lemma uweight_multiples i : uweight (S i) mod uweight i = 0.
-  Proof. apply Z.mod_same_pow; rewrite Nat2Z.inj_succ; omega. Qed.
+  Proof. apply Z.mod_same_pow; rewrite Nat2Z.inj_succ; lia. Qed.
   Lemma uweight_divides i : uweight (S i) / uweight i > 0.
   Proof.
-    cbv [uweight]. rewrite <-Z.pow_sub_r by (rewrite ?Nat2Z.inj_succ; omega).
-    apply Z.lt_gt, Z.pow_pos_nonneg; rewrite ?Nat2Z.inj_succ; omega.
+    cbv [uweight]. rewrite <-Z.pow_sub_r by (rewrite ?Nat2Z.inj_succ; lia).
+    apply Z.lt_gt, Z.pow_pos_nonneg; rewrite ?Nat2Z.inj_succ; lia.
   Qed.
 
   (* TODO : move to Positional *)
@@ -44,16 +44,16 @@ Section UniformWeight.
            | _ => rewrite B.Positional.eval_step; [ ]
            | _ => rewrite IHn; [ ]
            | _ => rewrite eval_from_eq with (offset0:=S offset)
-               by (intros; f_equal; omega)
+               by (intros; f_equal; lia)
            | _ => rewrite eval_from_eq with
                   (wt:=fun i => uweight (S i)) (offset0:=1%nat)
-               by (intros; f_equal; omega)
+               by (intros; f_equal; lia)
            | _ => ring
            end.
     repeat match goal with
            | _ => cbv [uweight]; progress autorewrite with natsimplify
            | _ => progress (rewrite ?Nat2Z.inj_succ, ?Nat2Z.inj_0, ?Z.pow_0_r)
-           | _ => rewrite !Z.pow_succ_r by (try apply Nat2Z.is_nonneg; omega)
+           | _ => rewrite !Z.pow_succ_r by (try apply Nat2Z.is_nonneg; lia)
            | _ => ring
            end.
   Qed.
@@ -62,7 +62,7 @@ Section UniformWeight.
     B.Positional.eval uweight p = hd p + bound * B.Positional.eval uweight (tl p).
   Proof.
     rewrite (subst_append p) at 1; rewrite B.Positional.eval_step.
-    rewrite eval_from_eq with (offset := 1%nat) by (intros; f_equal; omega).
+    rewrite eval_from_eq with (offset := 1%nat) by (intros; f_equal; lia).
     rewrite uweight_eval_from. cbv [uweight]; rewrite Z.pow_0_r, Z.pow_1_r.
     ring.
   Qed.
@@ -70,14 +70,14 @@ Section UniformWeight.
   Lemma uweight_le_mono n m : (n <= m)%nat ->
     uweight n <= uweight m.
   Proof.
-    unfold uweight; intro; Z.peel_le; omega.
+    unfold uweight; intro; Z.peel_le; lia.
   Qed.
 
   Lemma uweight_lt_mono (bound_gt_1 : bound > 1) n m : (n < m)%nat ->
     uweight n < uweight m.
   Proof.
     clear bound_pos.
-    unfold uweight; intro; apply Z.pow_lt_mono_r; omega.
+    unfold uweight; intro; apply Z.pow_lt_mono_r; lia.
   Qed.
 
   Lemma uweight_succ n : uweight (S n) = bound * uweight n.
