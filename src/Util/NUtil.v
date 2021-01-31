@@ -85,10 +85,10 @@ Module N.
       intros.
       apply WordUtil.bound_check_nat_N.
       apply Znat.Nat2Z.inj_lt.
-      rewrite Znat.Z2Nat.id by omega.
+      rewrite Znat.Z2Nat.id by lia.
       rewrite Z.pow_Zpow.
       replace (Z.of_nat 2) with 2%Z by reflexivity.
-      omega.
+      lia.
     Qed.
 
     Let ZNWord sz x := Word.NToWord sz (BinInt.Z.to_N x).
@@ -108,11 +108,11 @@ Module N.
       f_equal.
       rewrite Z.lor_shiftl by auto.
       rewrite !Z_N_nat.
-      rewrite Znat.Z2Nat.inj_add by (try apply Z.shiftl_nonneg; omega).
+      rewrite Znat.Z2Nat.inj_add by (try apply Z.shiftl_nonneg; lia).
       f_equal.
       rewrite Z.shiftl_mul_pow2 by auto.
-      rewrite Znat.Z2Nat.inj_mul by omega.
-      rewrite <-Z.pow_Z2N_Zpow by omega.
+      rewrite Znat.Z2Nat.inj_mul by lia.
+      rewrite <-Z.pow_Z2N_Zpow by lia.
       rewrite Nat.mul_comm.
       f_equal.
     Qed.

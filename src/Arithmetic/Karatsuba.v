@@ -201,7 +201,7 @@ Context (weight : nat -> Z)
     ring_simplify.
     setoid_rewrite s2_modp.
     apply f_equal2; nsatz.
-    assumption. assumption. omega.
+    assumption. assumption. lia.
   Qed.
 
   Lemma eval_goldilocks_mul (p : positive) s (s_nonzero : s <> 0) (s2_modp : mod_eq p (s^2) (s+1)) xs ys :

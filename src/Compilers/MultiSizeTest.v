@@ -1,4 +1,4 @@
-Require Import Coq.omega.Omega.
+Require Import Coq.micromega.Lia.
 Require Import Crypto.Compilers.SmartMap.
 
 Set Implicit Arguments.
@@ -84,7 +84,7 @@ Definition typeD (t : type) : Type :=
 
 Theorem O_lt_S : forall n, O < S n.
 Proof.
-  intros; omega.
+  intros; lia.
 Qed.
 
 Definition plus8 (a b : word8) : word8 :=

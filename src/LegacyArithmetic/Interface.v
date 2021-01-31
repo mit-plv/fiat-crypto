@@ -19,7 +19,7 @@ Class is_decode {n W} (decode : decoder n W) :=
 
 Class bounded_in_range_cls (x y z : Z) := is_bounded_in_range : x <= y < z.
 Ltac bounded_solver_tac :=
-  solve [ eassumption | typeclasses eauto | omega ].
+  solve [ eassumption | typeclasses eauto | lia ].
 Hint Extern 0 (bounded_in_range_cls _ _ _) => unfold bounded_in_range_cls; bounded_solver_tac : typeclass_instances.
 Global Arguments bounded_in_range_cls / _ _ _.
 Global Instance decode_range_bound {n W} {decode : decoder n W} {H : is_decode decode}

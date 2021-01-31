@@ -116,7 +116,7 @@ Proof.
                  | progress destruct_head_hnf' and
                  | progress intros
                  | apply conj
-                 | omega
+                 | lia
                  | solve [ eauto ] ].
 Qed.
 

@@ -38,7 +38,7 @@ Module F.
                           | apply F.commutative_ring_modulo
                           | apply inv_nonzero
                           | cbv [F.zero F.one not]; pose proof prime_ge_2 q prime_q;
-                            rewrite F.eq_to_Z_iff, !F.to_Z_of_Z, !Zmod_small; omega ]
+                            rewrite F.eq_to_Z_iff, !F.to_Z_of_Z, !Zmod_small; lia ]
              | _ => split
              end.
     Qed.
@@ -49,15 +49,15 @@ Module F.
 
     (* TODO: move to PrimeFieldTheorems *)
     Lemma to_Z_1 : @F.to_Z q 1 = 1%Z.
-    Proof using two_lt_q. simpl. rewrite Zmod_small; omega. Qed.
+    Proof using two_lt_q. simpl. rewrite Zmod_small; lia. Qed.
 
     Lemma Fq_inv_fermat (x:F q) : F.inv x = x ^ Z.to_N (q - 2)%Z.
     Proof using Type*.
       destruct (dec (x = 0%F)) as [?|Hnz].
       { subst x; rewrite inv_0, F.pow_0_l; trivial.
-        change (0%N) with (Z.to_N 0%Z); rewrite Z2N.inj_iff; omega. }
+        change (0%N) with (Z.to_N 0%Z); rewrite Z2N.inj_iff; lia. }
       erewrite <-Algebra.Field.inv_unique; try reflexivity.
-      rewrite F.eq_to_Z_iff, F.to_Z_mul, F.to_Z_pow, Z2N.id, to_Z_1 by omega.
+      rewrite F.eq_to_Z_iff, F.to_Z_mul, F.to_Z_pow, Z2N.id, to_Z_1 by lia.
       apply (fermat_inv q _ (F.to_Z x)); rewrite F.mod_to_Z; eapply F.to_Z_nonzero; trivial.
     Qed.
 
@@ -65,9 +65,9 @@ Module F.
       (a ^ (Z.to_N (q / 2)) = 1) <-> (exists b, b*b = a).
     Proof using Type*.
       pose proof F.to_Z_nonzero_range a; pose proof (odd_as_div q).
-      specialize_by (destruct (Z.prime_odd_or_2 _ prime_q); try omega; trivial).
-      rewrite F.eq_to_Z_iff, !F.to_Z_pow, !to_Z_1, !Z2N.id by omega.
-      rewrite F.square_iff, <-(euler_criterion (q/2)) by (trivial || omega); reflexivity.
+      specialize_by (destruct (Z.prime_odd_or_2 _ prime_q); try lia; trivial).
+      rewrite F.eq_to_Z_iff, !F.to_Z_pow, !to_Z_1, !Z2N.id by lia.
+      rewrite F.square_iff, <-(euler_criterion (q/2)) by (trivial || lia); reflexivity.
     Qed.
 
     Global Instance Decidable_square : forall (x:F q), Decidable (exists y, y*y = x).
@@ -111,17 +111,17 @@ Module F.
              | |- _ => progress rewrite <-?Z2N.inj_0, <-?Z2N.inj_add by Z.zero_bounds
              | |- _ => rewrite <-@euler_criterion by auto
              | |- ?x ^ (?f _) = ?a <-> ?x ^ (?f _) = ?a => do 3 f_equiv; [ ]
-             | |- _ => rewrite !Zmod_odd in *; repeat (break_match; break_match_hyps); omega
-             | |- _ => rewrite Z.rem_mul_r in * by omega
+             | |- _ => rewrite !Zmod_odd in *; repeat (break_match; break_match_hyps); lia
+             | |- _ => rewrite Z.rem_mul_r in * by lia
              | |- (exists x, _) <-> ?B => assert B by field; solve [intuition eauto]
              | |- (?x ^ Z.to_N ?a = 1) <-> _ =>
                transitivity (x ^ Z.to_N a * x ^ Z.to_N 1 = x);
                  [ rewrite F.pow_1_r, Algebra.Field.mul_cancel_l_iff by auto; reflexivity | ]
              | |- (_ <> _)%N => rewrite Z2N.inj_iff by Z.zero_bounds
-             | |- (?a <> 0)%Z => assert (0 < a) by Z.zero_bounds; omega
+             | |- (?a <> 0)%Z => assert (0 < a) by Z.zero_bounds; lia
              | |- (_ = _)%Z => replace 4 with (2 * 2)%Z in * by ring;
                                  rewrite <-Z.div_div by Z.zero_bounds;
-                                 rewrite Z.add_diag, Z.mul_add_distr_l, Z.mul_div_eq by omega
+                                 rewrite Z.add_diag, Z.mul_add_distr_l, Z.mul_div_eq by lia
              end.
     Qed.
   End SquareRootsPrime3Mod4.
@@ -160,9 +160,9 @@ Module F.
       ((x ^ Z.to_N (q / 8 + 1)) ^ 2) ^ 2 = x ^ 2.
     Proof using prime_q q_5mod8.
       pose proof two_lt_q_5mod8.
-      assert (0 <= q/8)%Z by (apply Z.div_le_lower_bound; rewrite ?Z.mul_0_r; omega).
+      assert (0 <= q/8)%Z by (apply Z.div_le_lower_bound; rewrite ?Z.mul_0_r; lia).
       assert (Z.to_N (q / 8 + 1) <> 0%N) by
-          (intro Hbad; change (0%N) with (Z.to_N 0%Z) in Hbad; rewrite Z2N.inj_iff in Hbad; omega).
+          (intro Hbad; change (0%N) with (Z.to_N 0%Z) in Hbad; rewrite Z2N.inj_iff in Hbad; lia).
       destruct (dec (x = 0)); [subst; rewrite !F.pow_0_l by (trivial || lazy_decide); reflexivity|].
       rewrite !F.pow_pow_l.
 
@@ -171,12 +171,12 @@ Module F.
         change (2*2)%N with (Z.to_N 4).
         rewrite <- Z2N.inj_mul by Z.zero_bounds.
         apply Z2N.inj_iff; try Z.zero_bounds.
-        rewrite <- Z.mul_cancel_l with (p := 2) by omega.
+        rewrite <- Z.mul_cancel_l with (p := 2) by lia.
         ring_simplify.
-        rewrite Z.mul_div_eq by omega.
-        rewrite Z.mul_div_eq by omega.
+        rewrite Z.mul_div_eq by lia.
+        rewrite Z.mul_div_eq by lia.
         rewrite (Zmod_div_mod 2 8 q) by
-            (try omega; apply Zmod_divide; omega || auto).
+            (try lia; apply Zmod_divide; lia || auto).
         rewrite q_5mod8.
         replace (5 mod 2)%Z with 1%Z by auto.
         ring.
@@ -219,7 +219,7 @@ Module F.
              | |- _ => progress subst
              | |- _ => progress rewrite ?F.pow_0_l
              | |- (_ <> _)%N => rewrite <-Z2N.inj_0, Z2N.inj_iff by Z.zero_bounds
-             | |- (?a <> 0)%Z => assert (0 < a) by Z.zero_bounds; omega
+             | |- (?a <> 0)%Z => assert (0 < a) by Z.zero_bounds; lia
              | |- _ => congruence
              end.
         break_match;

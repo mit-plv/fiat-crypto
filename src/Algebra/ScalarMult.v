@@ -1,4 +1,4 @@
-Require Import Coq.ZArith.BinInt Coq.omega.Omega Crypto.Util.ZUtil.Peano.
+Require Import Coq.ZArith.BinInt Coq.micromega.Lia Crypto.Util.ZUtil.Peano.
 Require Import Coq.Classes.Morphisms.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Algebra.Hierarchy Crypto.Algebra.Group.
@@ -22,13 +22,13 @@ Section ScalarMultProperties.
 
   Lemma scalarmult_succ_l n P : Z.succ n * P = P + n * P.
   Proof.
-    induction n using Z.peano_rect_strong; intros; rewrite ?Z.succ'_succ, ?Z.pred'_pred in * by omega;
-      repeat (rewrite ?scalarmult_0_l, ?scalarmult_succ_l_nn, ?scalarmult_pred_l_np, ?left_identity, ?right_identity, ?Z.succ_pred, ?Z.pred_succ, ?associative, ?right_inverse, ?left_inverse by omega); reflexivity.
+    induction n using Z.peano_rect_strong; intros; rewrite ?Z.succ'_succ, ?Z.pred'_pred in * by lia;
+      repeat (rewrite ?scalarmult_0_l, ?scalarmult_succ_l_nn, ?scalarmult_pred_l_np, ?left_identity, ?right_identity, ?Z.succ_pred, ?Z.pred_succ, ?associative, ?right_inverse, ?left_inverse by lia); reflexivity.
   Qed.
 
   Lemma scalarmult_pred_l n P : Z.pred n * P = opp P + n * P.
-    induction n using Z.peano_rect_strong; intros; rewrite ?Z.succ'_succ, ?Z.pred'_pred in * by omega;
-      repeat (rewrite ?scalarmult_0_l, ?scalarmult_succ_l_nn, ?scalarmult_pred_l_np, ?left_identity, ?right_identity, ?Z.succ_pred, ?Z.pred_succ, ?associative, ?right_inverse, ?left_inverse by omega); reflexivity.
+    induction n using Z.peano_rect_strong; intros; rewrite ?Z.succ'_succ, ?Z.pred'_pred in * by lia;
+      repeat (rewrite ?scalarmult_0_l, ?scalarmult_succ_l_nn, ?scalarmult_pred_l_np, ?left_identity, ?right_identity, ?Z.succ_pred, ?Z.pred_succ, ?associative, ?right_inverse, ?left_inverse by lia); reflexivity.
   Qed.
 
   Definition scalarmult_ref (n:Z) (P:G) : G :=
@@ -47,7 +47,7 @@ Section ScalarMultProperties.
       cbv [Proper respectful] in *;
       intros;
       cbv [scalarmult_ref] in *; break_match; try reflexivity;
-      rewrite ?Z.peano_rect_succ, ?Z.peano_rect_pred in * by omega;
+      rewrite ?Z.peano_rect_succ, ?Z.peano_rect_pred in * by lia;
       rewrite IHn by eassumption;
       match goal with H : _ = _ |- _ => rewrite H; reflexivity end.
   Qed.
@@ -59,7 +59,7 @@ Section ScalarMultProperties.
     induction n using Z.peano_rect_strong; intros;
       cbv [scalarmult_ref] in *; break_match;
         rewrite ?Z.peano_rect_succ, ?Z.peano_rect_pred, ?Z.succ'_succ, ?Z.pred'_pred in *;
-        try rewrite <-IHn; try match goal with [H:_|-_] => eapply H end; omega.
+        try rewrite <-IHn; try match goal with [H:_|-_] => eapply H end; lia.
   Qed.
 
   Lemma scalarmult_1_l P : 1*P = P.
@@ -76,7 +76,7 @@ Section ScalarMultProperties.
   Lemma scalarmult_add_l (n m:Z) (P:G) : ((n + m)%Z * P = n * P + m * P).
   Proof using Type*.
     revert P.
-    induction n using Z.peano_rect_strong; intros; rewrite ?Z.succ'_succ, ?Z.pred'_pred in * by omega;
+    induction n using Z.peano_rect_strong; intros; rewrite ?Z.succ'_succ, ?Z.pred'_pred in * by lia;
         rewrite ?Z.add_0_l, ?Z.add_succ_l, ?Z.add_pred_l;
         rewrite ?scalarmult_0_l, ?scalarmult_succ_l, ?scalarmult_pred_l, ?left_identity, <-?associative, <-?IHn; try reflexivity.
   Qed.
@@ -84,31 +84,31 @@ Section ScalarMultProperties.
   Lemma scalarmult_opp_l (n:Z) (P:G) : (-n) * P = opp (n*P).
   Proof using Type*.
     revert P.
-    induction n using Z.peano_rect_strong; intros; rewrite ?Z.succ'_succ, ?Z.pred'_pred in * by omega.
+    induction n using Z.peano_rect_strong; intros; rewrite ?Z.succ'_succ, ?Z.pred'_pred in * by lia.
     { change (-0) with (0). rewrite !scalarmult_0_l, inv_id; reflexivity. }
-    { rewrite scalarmult_succ_l_nn, inv_op, <-IHn by omega.
+    { rewrite scalarmult_succ_l_nn, inv_op, <-IHn by lia.
       replace (-Z.succ n) with (-n + (- 1))%Z by auto with zarith.
       rewrite scalarmult_add_l, scalarmult_opp1_l; reflexivity. }
-    { rewrite scalarmult_pred_l_np, inv_op, <-IHn, inv_inv by omega.
+    { rewrite scalarmult_pred_l_np, inv_op, <-IHn, inv_inv by lia.
       replace (- Z.pred n) with (-n+1)%Z by auto with zarith.
       rewrite scalarmult_add_l, scalarmult_1_l; reflexivity. }
   Qed.
 
   Lemma scalarmult_zero_r (n:Z) : n * zero = zero.
-    induction n using Z.peano_rect_strong; intros; rewrite ?Z.succ'_succ, ?Z.pred'_pred in * by omega;
-        rewrite ?scalarmult_0_l, ?scalarmult_succ_l_nn, ?scalarmult_pred_l_np, ?IHn, ?inv_id, ?left_identity by omega;
+    induction n using Z.peano_rect_strong; intros; rewrite ?Z.succ'_succ, ?Z.pred'_pred in * by lia;
+        rewrite ?scalarmult_0_l, ?scalarmult_succ_l_nn, ?scalarmult_pred_l_np, ?IHn, ?inv_id, ?left_identity by lia;
         try reflexivity.
   Qed.
 
   Lemma scalarmult_assoc (n m : Z) P : n * (m * P) = (m * n)%Z * P.
   Proof using Type*.
     revert P.
-    induction n using Z.peano_rect_strong; intros; rewrite ?Z.succ'_succ, ?Z.pred'_pred in * by omega.
-    { rewrite Z.mul_0_r, 2scalarmult_0_l by omega; reflexivity. }
-    { rewrite scalarmult_succ_l, IHn by omega.
+    induction n using Z.peano_rect_strong; intros; rewrite ?Z.succ'_succ, ?Z.pred'_pred in * by lia.
+    { rewrite Z.mul_0_r, 2scalarmult_0_l by lia; reflexivity. }
+    { rewrite scalarmult_succ_l, IHn by lia.
       rewrite (Z.mul_comm m (Z.succ n)), Z.mul_succ_l, (Z.mul_comm n m), (Z.add_comm (m*n) m).
       rewrite scalarmult_add_l. reflexivity. }
-    { rewrite scalarmult_pred_l, IHn by omega.
+    { rewrite scalarmult_pred_l, IHn by lia.
       rewrite (Z.mul_comm m (Z.pred n)), Z.mul_pred_l, (Z.mul_comm n m), <-Z.add_opp_l.
       rewrite scalarmult_add_l, scalarmult_opp_l. reflexivity. }
   Qed.
@@ -121,7 +121,7 @@ Section ScalarMultProperties.
   Lemma scalarmult_opp_r (n:Z) (P:G) : n*opp P = opp (n * P).
   Proof using Type*.
     revert P.
-    induction n using Z.peano_rect_strong; intros; rewrite ?Z.succ'_succ, ?Z.pred'_pred in * by omega;
+    induction n using Z.peano_rect_strong; intros; rewrite ?Z.succ'_succ, ?Z.pred'_pred in * by lia;
       rewrite <-?Z.add_1_l, <-?Z.sub_1_r;
       [|rewrite Z.add_comm at 1|rewrite <-Z.add_opp_l; rewrite Z.add_comm at 1];
       repeat (rewrite ?scalarmult_0_l, ?scalarmult_opp_l, ?scalarmult_add_l, ?inv_id, ?inv_op, ?inv_inv, ?IHn, ?scalarmult_1_l);
@@ -150,8 +150,8 @@ Section ScalarMultHomomorphism.
 
   Lemma homomorphism_scalarmult : forall n P, phi (MUL n P) = mul n (phi P).
   Proof using Type*.
-    induction n using Z.peano_rect_strong; intros; rewrite ?Z.succ'_succ, ?Z.pred'_pred in * by omega;
-      rewrite ?scalarmult_0_l, ?scalarmult_succ_l, ?scalarmult_pred_l by omega.
+    induction n using Z.peano_rect_strong; intros; rewrite ?Z.succ'_succ, ?Z.pred'_pred in * by lia;
+      rewrite ?scalarmult_0_l, ?scalarmult_succ_l, ?scalarmult_pred_l by lia.
     { apply homomorphism_id. }
     { rewrite <-IHn. rewrite Monoid.homomorphism. reflexivity. }
     { rewrite <-IHn. rewrite Monoid.homomorphism, Group.homomorphism_inv. reflexivity. }
@@ -162,6 +162,6 @@ Global Instance scalarmult_ref_is_scalarmult {G eq add zero opp} {groupG:@group 
   : @is_scalarmult G eq add zero opp (@scalarmult_ref G add zero opp).
 Proof.
   split; try exact _; cbv [scalarmult_ref] in *; intros;
-    rewrite <-?Z.succ'_succ, <-?Z.pred'_pred, ?Z.peano_rect_succ, ?Z.peano_rect_pred in * by omega;
+    rewrite <-?Z.succ'_succ, <-?Z.pred'_pred, ?Z.peano_rect_succ, ?Z.peano_rect_pred in * by lia;
     reflexivity.
 Qed.

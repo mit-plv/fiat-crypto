@@ -7,7 +7,7 @@ Require Import Crypto.Util.Tactics.SetEvars.
 Require Import Crypto.Util.Tactics.SubstEvars.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.SpecializeBy.
-Require Import Coq.omega.Omega.
+Require Import Coq.micromega.Lia.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.Option Crypto.Util.Logic Crypto.Util.Relations Crypto.Util.WordUtil Util.LetIn Util.NatUtil.
 Require Import Crypto.Spec.ModularArithmetic Crypto.Arithmetic.PrimeFieldTheorems.
@@ -30,8 +30,8 @@ Section EdDSA.
              end.
     rewrite F.to_Z_of_Z, scalarmult_mod_order, scalarmult_add_l, cancel_left, scalarmult_mod_order, Z.mul_comm, scalarmult_assoc;
       try solve [ reflexivity
-                | setoid_rewrite (*unify 0*) (Z2Nat.inj_iff _ 0); pose proof EdDSA_l_odd; omega
-                | pose proof EdDSA_l_odd; omega
+                | setoid_rewrite (*unify 0*) (Z2Nat.inj_iff _ 0); pose proof EdDSA_l_odd; lia
+                | pose proof EdDSA_l_odd; lia
                 | apply EdDSA_l_order_B
                 | rewrite scalarmult_assoc, Z.mul_comm, <-scalarmult_assoc,
                   EdDSA_l_order_B, scalarmult_zero_r; reflexivity].
@@ -119,7 +119,7 @@ Section EdDSA.
       etransitivity. Focus 2. {
         eapply Proper_option_rect_nd_changebody; [intro|reflexivity].
         eapply Proper_option_rect_nd_changebody; [intro|reflexivity].
-        rewrite <-F.mod_to_Z by omega.
+        rewrite <-F.mod_to_Z by lia.
         repeat (
             rewrite ERepEnc_correct
             || rewrite homomorphism
@@ -216,7 +216,7 @@ Section EdDSA.
     inlining let-bound subexpressions turned out to be quite messy in
     the current state of Coq: <https://github.com/mit-plv/fiat-crypto/issues/64> *)
 
-    Let n_le_bpb : (n <= b+b)%nat. destruct prm. omega. Qed.
+    Let n_le_bpb : (n <= b+b)%nat. destruct prm. lia. Qed.
 
     (* TODO: change impl to basesystem *)
     Context (splitSecretPrngCurve : forall (sk:word b), SRep * word b).

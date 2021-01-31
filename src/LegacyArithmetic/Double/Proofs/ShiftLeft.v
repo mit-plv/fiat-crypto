@@ -36,7 +36,7 @@ Section shl.
     pose proof (decode_range (fst r)).
     pose proof (decode_range (snd r)).
     assert (forall n', 2^n <= 2^n' -> 0 <= decode (fst r) < 2^n') by (simpl in *; auto with zarith).
-    assert (forall n', n <= n' -> 0 <= decode (fst r) < 2^n') by auto with zarith omega.
+    assert (forall n', n <= n' -> 0 <= decode (fst r) < 2^n') by auto with zarith lia.
     autorewrite with simpl_tuple_decoder; push_decode.
     shift_left_right_t.
   Qed.

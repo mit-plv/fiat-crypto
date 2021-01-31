@@ -1,4 +1,4 @@
-Require Import Coq.omega.Omega.
+Require Import Coq.micromega.Lia.
 Require Import Crypto.Spec.ModularArithmetic.
 Require Import Crypto.Arithmetic.ModularArithmeticPre.
 
@@ -62,7 +62,7 @@ Module F.
     Proof using Type. unwrap_F. apply Zmod_0_l. Qed.
 
     Lemma of_Z_small_nonzero z : (0 < z < m)%Z -> F.of_Z m z <> 0.
-    Proof using Type. intros Hrange Hnz. inversion Hnz. rewrite Zmod_small, Zmod_0_l in *; omega. Qed.
+    Proof using Type. intros Hrange Hnz. inversion Hnz. rewrite Zmod_small, Zmod_0_l in *; lia. Qed.
 
     Lemma to_Z_nonzero (x:F m) : x <> 0 -> F.to_Z x <> 0%Z.
     Proof using Type.  cbv [F.zero]. intros Hnz Hz. rewrite <- Hz, of_Z_to_Z in Hnz; auto. Qed.
@@ -74,7 +74,7 @@ Module F.
     Proof using Type.
       unfold not; intros Hnz Hlt.
       rewrite eq_to_Z_iff, to_Z_0 in Hnz; pose proof (to_Z_range x Hlt).
-      omega.
+      lia.
     Qed.
 
     Lemma of_Z_add : forall (x y : Z),
@@ -186,11 +186,11 @@ Module F.
     Proof using Type.
       unfold F.to_nat, F.of_nat.
       rewrite F.to_Z_of_Z.
-      assert (Pos.to_nat m <> 0)%nat as HA by (pose proof Pos2Nat.is_pos m; omega).
+      assert (Pos.to_nat m <> 0)%nat as HA by (pose proof Pos2Nat.is_pos m; lia).
       pose proof (mod_Zmod n (Pos.to_nat m) HA) as Hmod.
       rewrite positive_nat_Z in Hmod.
       rewrite <- Hmod.
-      rewrite <-Nat2Z.id, Z2Nat.inj_pos; omega.
+      rewrite <-Nat2Z.id, Z2Nat.inj_pos; lia.
     Qed.
 
     Lemma of_nat_to_nat x : F.of_nat m (F.to_nat x) = x.
@@ -203,7 +203,7 @@ Module F.
     (* TODO: move *)
     Lemma Pos_to_nat_nonzero p : Pos.to_nat p <> 0%nat.
     Proof.
-      pose proof (Pos2Nat.is_pos p); omega.
+      pose proof (Pos2Nat.is_pos p); lia.
     Qed.
 
     Lemma of_nat_mod (n:nat) : F.of_nat m (n mod (Z.to_nat m)) = F.of_nat m n.

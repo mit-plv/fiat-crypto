@@ -159,7 +159,7 @@ Proof.
                  | progress cbv [Bounds.interp_base_type Bounds.is_bounded_by' ZRange.is_bounded_by'] in *
                  | progress destruct_head'_prod
                  | progress destruct_head'_and
-                 | omega
+                 | lia
                  | match goal with
                    | [ |- context[interpToZ ?x] ]
                      => generalize dependent (interpToZ x); clear x; intros
@@ -180,23 +180,23 @@ Proof.
                    | Zarith_t_step
                    | rewriter_t
                    | progress saturate_land_lor_facts
-                   | split_min_max; omega ]. }
+                   | split_min_max; lia ]. }
   { cbv [Bounds.lor Bounds.extremization_bounds]; break_innermost_match;
       [ apply lor_bounds_extreme; split; auto | .. ];
       repeat first [ progress simpl in *
                    | Zarith_t_step
                    | rewriter_t
                    | progress Zarith_land_lor_t_step
-                   | solve [ split_min_max; try omega; try Zarith_land_lor_t_step ] ]. }
+                   | solve [ split_min_max; try lia; try Zarith_land_lor_t_step ] ]. }
   { repeat first [ progress destruct_head Bounds.t
                  | progress simpl in *
                  | progress split_min_max
-                 | omega ]. }
+                 | lia ]. }
   { cbv [Bounds.id_with_alt];
       break_innermost_match; simpl in *; Z.ltb_to_lt; subst;
         split; assumption. }
   { destruct_head Bounds.t; cbv [Bounds.zselect' Z.zselect].
-    break_innermost_match; split_min_max; omega. }
+    break_innermost_match; split_min_max; lia. }
   { handle_mul. }
   { apply Z.mod_bound_min_max; auto. }
   { handle_mul. }

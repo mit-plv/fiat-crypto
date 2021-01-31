@@ -115,7 +115,7 @@ End Word.
 
 (* Utility Tactics *)
 
-Ltac word_util_arith := omega.
+Ltac word_util_arith := lia.
 
 Ltac destruct_min :=
   match goal with
@@ -187,7 +187,7 @@ Section Pow2.
     rewrite Nat2Z.inj_succ.
     rewrite Z.pow_succ_r by apply Zle_0_nat.
     rewrite untimes2.
-    rewrite Z2Nat.inj_mul by (try apply Z.pow_nonneg; omega).
+    rewrite Z2Nat.inj_mul by (try apply Z.pow_nonneg; lia).
     rewrite <- IHn.
     auto.
   Qed.
@@ -253,7 +253,7 @@ Section Pow2.
 
       + inversion H.
 
-      + assert (n <= m)%nat as H0 by omega.
+      + assert (n <= m)%nat as H0 by lia.
         apply IHn in H0.
         apply N.mul_le_mono_l.
         assumption.
@@ -297,8 +297,8 @@ Section WordToN.
   Lemma wbit_large {n} (x: word n) (k: nat)
     : n <= k -> wbit x k = false.
   Proof.
-    revert k; induction x as [|b n x IHx], k; intro H; simpl; try reflexivity; try omega.
-    apply IHx; omega.
+    revert k; induction x as [|b n x IHx], k; intro H; simpl; try reflexivity; try lia.
+    apply IHx; lia.
   Qed.
 
   Lemma wbit_inj_iff {n} (x y : word n)
@@ -429,7 +429,7 @@ Section WordToN.
       repeat match goal with
              | [ H : (_ <? _) = true |- _ ] => apply Nat.ltb_lt in H
              | [ H : (_ <? _) = false |- _ ] => apply Nat.ltb_ge in H
-             | _ => omega
+             | _ => lia
              | _ => congruence
              | _ => rewrite N.bits_above_log2 by lia
              | _ => solve [ symmetry; auto ]
@@ -446,7 +446,7 @@ Section WordToN.
       repeat match goal with
              | [ H : (_ <? _) = true |- _ ] => apply Nat.ltb_lt in H
              | [ H : (_ <? _) = false |- _ ] => apply Nat.ltb_ge in H
-             | _ => omega
+             | _ => lia
              end.
   Qed.
 
@@ -457,7 +457,7 @@ Section WordToN.
     rewrite !wordToN_testbit, !wbit_NToWord, wordToN_testbit, N2Nat.id.
     destruct (N.to_nat k <? sz2) eqn:H'; try reflexivity.
     apply Nat.ltb_ge in H'.
-    rewrite wbit_large by omega.
+    rewrite wbit_large by lia.
     reflexivity.
   Qed.
 
@@ -473,7 +473,7 @@ Section WordToN.
            | _ => progress break_match
            | [ H : (_ <? _) = true |- _ ] => apply Nat.ltb_lt in H
            | [ H : (_ <? _) = false |- _ ] => apply Nat.ltb_ge in H
-           | _ => omega
+           | _ => lia
            end.
   Qed.
 
@@ -529,14 +529,14 @@ Section WordToN.
       rewrite <- (N2Nat.id x).
       repeat rewrite <- Nat2N.inj_add.
       repeat rewrite Nat2N.id; simpl.
-      replace (N.to_nat x + S n) with (S (N.to_nat x + n)) by omega.
+      replace (N.to_nat x + S n) with (S (N.to_nat x + n)) by lia.
       reflexivity.
 
     - rewrite (IHn x (wtl a) b).
       rewrite <- (N2Nat.id x).
       repeat rewrite <- Nat2N.inj_add.
       repeat rewrite Nat2N.id; simpl.
-      replace (N.to_nat x + S n) with (S (N.to_nat x + n)) by omega.
+      replace (N.to_nat x + S n) with (S (N.to_nat x + n)) by lia.
       reflexivity.
   Qed.
 
@@ -621,7 +621,7 @@ Section WordToN.
     rewrite Npow2_nat.
     replace (N.to_nat (wordToN x))
        with ((N.to_nat (wordToN x) + pow2 n) - 1 * pow2 n)
-         by omega.
+         by lia.
     rewrite drop_sub; f_equal; nomega.
   Qed.
 End WordToN.
@@ -763,14 +763,14 @@ Qed.
 Definition wfirstn n {m} (w : Word.word m) {H : n <= m} : Word.word n.
   refine (Word.split1 n (m - n) (match _ in _ = N return Word.word N with
                             | eq_refl => w
-                            end)); abstract omega. Defined.
+                            end)); abstract lia. Defined.
 
 Lemma combine_eq_iff {a b} (A:word a) (B:word b) C :
   combine A B = C <-> A = split1 a b C /\ B = split2 a b C.
 Proof. intuition; subst; auto using split1_combine, split2_combine, combine_split. Qed.
 
 Class wordsize_eq (x y : nat) := wordsize_eq_to_eq : x = y.
-Ltac wordsize_eq_tac := cbv beta delta [wordsize_eq] in *; omega*.
+Ltac wordsize_eq_tac := cbv beta delta [wordsize_eq] in *; lia*.
 Ltac gt84_abstract t := t. (* TODO: when we drop Coq 8.4, use [abstract] here *)
 Hint Extern 100 (wordsize_eq _ _) => gt84_abstract wordsize_eq_tac : typeclass_instances.
 
@@ -886,13 +886,13 @@ Proof.
   generalize (split1 _ _ x); generalize (split2 _ _ x); clear x; simpl.
   apply Min.min_case_strong; intros Hbc x0 x1;
     pose proof (wordToNat_bound x0); pose proof (wordToNat_bound x1).
-  { assert (b - c = 0) by omega.
+  { assert (b - c = 0) by lia.
     assert (2^b <= 2^c) by auto using pow_le_mono_r with arith.
-    generalize dependent (b - c); intros n x0 H0 H2; destruct x0; try omega; [].
+    generalize dependent (b - c); intros n x0 H0 H2; destruct x0; try lia; [].
     simpl; rewrite mul_0_r, add_0_r.
-    rewrite mod_small by omega.
-    omega. }
-  { rewrite !(mul_comm (2^c)), mod_add, mod_small by omega.
+    rewrite mod_small by lia.
+    lia. }
+  { rewrite !(mul_comm (2^c)), mod_add, mod_small by lia.
     lia. }
 Qed.
 
@@ -917,13 +917,13 @@ Proof.
   generalize (split1 _ _ x); generalize (split2 _ _ x); clear x; simpl.
   apply Min.min_case_strong; intros Hbc x0 x1;
     pose proof (wordToNat_bound x0); pose proof (wordToNat_bound x1).
-  { assert (b - c = 0) by omega.
+  { assert (b - c = 0) by lia.
     assert (2^b <= 2^c) by auto using pow_le_mono_r with arith.
-    generalize dependent (b - c); intros n x0 H0 H2; destruct x0; try omega.
+    generalize dependent (b - c); intros n x0 H0 H2; destruct x0; try lia.
     simpl; rewrite mul_0_r, add_0_r.
-    rewrite mod_small by omega.
-    omega. }
-  { rewrite !(mul_comm (2^c)), mod_add, mod_small by omega.
+    rewrite mod_small by lia.
+    lia. }
+  { rewrite !(mul_comm (2^c)), mod_add, mod_small by lia.
     lia. }
 Qed.
 
@@ -936,7 +936,7 @@ Proof.
     change (2^a + (2^a + 0)) with (2 * 2^a).
     rewrite (mul_comm 2 (2^a)).
     assert (2^a <> 0) by auto with arith.
-    destruct (whd w); try rewrite S_mod; try rewrite mul_mod_distr_r; omega. }
+    destruct (whd w); try rewrite S_mod; try rewrite mul_mod_distr_r; lia. }
 Qed.
 
 Lemma wordToNat_wfirstn : forall a b w H, wordToNat (@wfirstn a b w H) = (wordToNat w) mod (2^a).
@@ -1080,7 +1080,7 @@ Section Updates.
                 (upperF lower0 upper0 lower1 upper1).
 
   Local Ltac add_mono :=
-    etransitivity; [| apply Z.add_le_mono_r; eassumption]; omega.
+    etransitivity; [| apply Z.add_le_mono_r; eassumption]; lia.
 
   Lemma add_valid_update: forall n,
     valid_update n
@@ -1113,7 +1113,7 @@ Section Updates.
     unfold valid_update; intros until upper1; intros B0 B1.
     do 2 destruct B0 as [? B0], B1 as [? B1]; destruct B0, B1.
     repeat split; [sub_mono| | |assumption]; (
-    rewrite wordToN_wminus; [sub_mono|omega|];
+    rewrite wordToN_wminus; [sub_mono|lia|];
     eapply Z.le_lt_trans; [apply Z.log2_le_mono|eassumption]; sub_mono).
   Qed.
 
@@ -1124,7 +1124,7 @@ Section Updates.
     | reflexivity
     | apply Z.mul_le_mono_nonneg_l
     | rewrite Z.mul_0_l
-    | omega]).
+    | lia]).
 
   Lemma mul_valid_update: forall n,
     valid_update n
@@ -1206,7 +1206,7 @@ Section Updates.
             [|rewrite Z.lor_comm];
             apply Z.lor_le; lor_mono.
 
-        + assert (upper1 >= upper0)%Z as g'' by omega; clear g.
+        + assert (upper1 >= upper0)%Z as g'' by lia; clear g.
         pose proof g'' as g; pose proof g'' as g'; clear g''.
         apply Z.ge_le in g; apply Z.ge_le in g'.
         apply -> (Z.add_le_mono_r upper0 upper1 1) in g'.
@@ -1310,14 +1310,14 @@ Proof.
   destruct (Nge_dec (Z.to_N k) (N.of_nat n)).
 
   - rewrite Z.ones_spec_high, N.ones_spec_high;
-      [reflexivity|apply N.ge_le; assumption|split; [omega|]].
+      [reflexivity|apply N.ge_le; assumption|split; [lia|]].
     apply Z2N.inj_le; [apply Nat2Z.is_nonneg|assumption|].
     etransitivity; [|apply N.ge_le; eassumption].
     apply N.eq_le_incl.
     induction n as [|n IHn]; simpl; reflexivity.
 
   - rewrite Z.ones_spec_low, N.ones_spec_low;
-      [reflexivity|assumption|split; [omega|]].
+      [reflexivity|assumption|split; [lia|]].
     apply Z2N.inj_lt; [assumption|apply Nat2Z.is_nonneg|].
     eapply N.lt_le_trans; [eassumption|].
     apply N.eq_le_incl.
@@ -1333,7 +1333,7 @@ Proof.
   apply Z.bits_inj_iff'; intros k Hpos.
   rewrite Z2N.inj_testbit; [|assumption].
   rewrite Z.shiftr_spec, N.shiftr_spec; [|apply N2Z.inj_le; rewrite Z2N.id|]; try assumption.
-  rewrite Z2N.inj_testbit; [f_equal|omega].
+  rewrite Z2N.inj_testbit; [f_equal|lia].
   rewrite Z2N.inj_add; [f_equal|assumption|apply Nat2Z.is_nonneg].
   induction n as [|n IHn]; simpl; reflexivity.
 Qed.
@@ -1358,5 +1358,5 @@ Proof.
   eapply Z.lt_le_trans; [apply N2Z.inj_lt; apply word_size_bound|].
   rewrite Npow2_N, N2Z.inj_pow, nat_N_Z.
   apply Z.pow_le_mono; [|assumption].
-  split; simpl; omega.
+  split; simpl; lia.
 Qed.

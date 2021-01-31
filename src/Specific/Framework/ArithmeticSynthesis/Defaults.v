@@ -267,7 +267,7 @@ Ltac internal_solve_code_correct P_tac :=
        autorewrite with pattern_runtime;
        basesystem_partial_evaluation_RHS;
        P_tac ();
-       break_match; cbv [Let_In runtime_mul runtime_add]; repeat apply (f_equal2 pair); rewrite ?Z.shiftl_mul_pow2 by omega; ring
+       break_match; cbv [Let_In runtime_mul runtime_add]; repeat apply (f_equal2 pair); rewrite ?Z.shiftl_mul_pow2 by lia; ring
   end.
 
 Ltac pose_mul_code_correct P_extra_prove_mul_eq sz sz2 wt s c mul_code mul_code_correct :=

@@ -518,11 +518,11 @@ Module ZRange.
              | [ H : Proper (R ?b ==> Z.le) (f _) |- _ ]
                => unique assert (R b (if b then ly else y) (if b then y else ly)
                                  /\ R b (if b then y else uy) (if b then uy else y))
-                 by (unfold Basics.flip; destruct b; omega)
+                 by (unfold Basics.flip; destruct b; lia)
              | [ H : Proper (R ?b ==> Z.le) (fun x => f x _) |- _ ]
                => unique assert (R b (if b then lx else x) (if b then x else lx)
                                  /\ R b (if b then x else ux) (if b then ux else x))
-                 by (unfold Basics.flip; destruct b; omega)
+                 by (unfold Basics.flip; destruct b; lia)
              end.
       destruct_head' and.
       repeat match goal with
@@ -593,15 +593,15 @@ Module ZRange.
              | [ H : Proper (R ?b ==> Z.le) (f _ _) |- _ ]
                => unique assert (R b (if b then lz else z) (if b then z else lz)
                                  /\ R b (if b then z else uz) (if b then uz else z))
-                 by (unfold Basics.flip; destruct b; omega)
+                 by (unfold Basics.flip; destruct b; lia)
              | [ H : Proper (R ?b ==> Z.le) (fun y' => f _ y' _) |- _ ]
                => unique assert (R b (if b then ly else y) (if b then y else ly)
                                  /\ R b (if b then y else uy) (if b then uy else y))
-                 by (unfold Basics.flip; destruct b; omega)
+                 by (unfold Basics.flip; destruct b; lia)
              | [ H : Proper (R ?b ==> Z.le) (fun x' => f x' _ _) |- _ ]
                => unique assert (R b (if b then lx else x) (if b then x else lx)
                                  /\ R b (if b then x else ux) (if b then ux else x))
-                 by (unfold Basics.flip; destruct b; omega)
+                 by (unfold Basics.flip; destruct b; lia)
              end.
       destruct_head' and.
       repeat match goal with
@@ -651,7 +651,7 @@ Module ZRange.
       etransitivity; [ apply Hbounded | ].
       apply Hupper_monotone;
         unfold ZRange.abs;
-        repeat (apply Z.max_case_strong || apply Zabs_ind); omega.
+        repeat (apply Z.max_case_strong || apply Zabs_ind); lia.
     Qed.
   End legacy.
 End ZRange.

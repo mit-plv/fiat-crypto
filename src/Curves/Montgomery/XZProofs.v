@@ -16,7 +16,7 @@ Require Import Crypto.Spec.MontgomeryCurve Crypto.Curves.Montgomery.Affine.
 Require Import Crypto.Curves.Montgomery.AffineInstances.
 Require Import Crypto.Curves.Montgomery.XZ BinPos.
 Require Import Coq.Classes.Morphisms.
-Require Import Coq.omega.Omega.
+Require Import Coq.micromega.Lia.
 Require Import Coq.micromega.Lia.
 
 Module M.
@@ -414,12 +414,12 @@ Module M.
       { cbn. t. }
       { (* Induction case from n to Z.succ n. *)
         unfold scalarmult_ref.
-        rewrite Z.peano_rect_succ by omega.
+        rewrite Z.peano_rect_succ by lia.
         fold (scalarmult n P).
         apply add_to_x_to_xz_0; trivial. }
       { (* Induction case from n to Z.pred n. *)
         unfold scalarmult_ref.
-        rewrite Z.peano_rect_pred by omega.
+        rewrite Z.peano_rect_pred by lia.
         fold (scalarmult n P).
         apply add_to_x_to_xz_0.
         { apply opp_to_x_to_xz_0; trivial. }

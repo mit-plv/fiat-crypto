@@ -73,17 +73,17 @@ Section Freeze.
     a mod m = y0 mod m.
   Proof.
     clear. intros. subst. break_match.
-    { rewrite Z.add_0_r, Z.mod_mod by omega.
-      assert (-(s-c) <= y - (s-c) < s-c) by omega.
+    { rewrite Z.add_0_r, Z.mod_mod by lia.
+      assert (-(s-c) <= y - (s-c) < s-c) by lia.
       match goal with H : s <> 0 |- _ =>
                       rewrite (proj2 (Z.mod_small_iff _ s H))
                               by (apply Z.div_small_iff; assumption)
       end.
       reflexivity. }
     { rewrite <-Z.add_mod_l, Z.sub_mod_full.
-      rewrite Z.mod_same, Z.sub_0_r, Z.mod_mod by omega.
+      rewrite Z.mod_same, Z.sub_0_r, Z.mod_mod by lia.
       rewrite Z.mod_small with (b := s)
-      by (pose proof (Z.div_small (y - (s-c)) s); omega).
+      by (pose proof (Z.div_small (y - (s-c)) s); lia).
       f_equal. ring. }
   Qed.
 
@@ -128,7 +128,7 @@ End Freeze.
 Hint Opaque freeze_cps : uncps.
 Hint Rewrite @freeze_id : uncps.
 Hint Rewrite @eval_freeze
-     using (assumption || reflexivity || auto || eassumption || omega) : push_basesystem_eval.
+     using (assumption || reflexivity || auto || eassumption || lia) : push_basesystem_eval.
 
 Hint Unfold
      freeze freeze_cps

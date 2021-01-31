@@ -54,7 +54,7 @@ Section gen.
   Lemma sz2'_nonzero
         (sz_nonzero : sz <> 0%nat)
     : sz2' <> 0%nat.
-  Proof using Type. clear -sz_nonzero; cbv [sz2']; omega. Qed.
+  Proof using Type. clear -sz_nonzero; cbv [sz2']; lia. Qed.
 
   Local Ltac Q_cbv :=
     cbv [wt_gen Qround.Qceiling QArith_base.Qmult QArith_base.Qdiv QArith_base.inject_Z QArith_base.Qden QArith_base.Qnum QArith_base.Qopp Qround.Qfloor QArith_base.Qinv QArith_base.Qle QArith_base.Qeq Z.of_nat] in *.
@@ -66,17 +66,17 @@ Section gen.
 
   Lemma wt_gen_nonzero : forall i, wt i <> 0.
   Proof using base_pos.
-    eapply pow_ceil_mul_nat_nonzero; [ omega | ].
+    eapply pow_ceil_mul_nat_nonzero; [ lia | ].
     destruct base; Q_cbv; lia.
   Qed.
 
   Lemma wt_gen_nonneg : forall i, 0 <= wt i.
-  Proof using Type. apply pow_ceil_mul_nat_nonneg; omega. Qed.
+  Proof using Type. apply pow_ceil_mul_nat_nonneg; lia. Qed.
 
   Lemma wt_gen_pos : forall i, wt i > 0.
   Proof using base_pos.
     intro i; pose proof (wt_gen_nonzero i); pose proof (wt_gen_nonneg i).
-    omega.
+    lia.
   Qed.
 
   Lemma wt_gen_multiples : forall i, wt (S i) mod (wt i) = 0.
@@ -88,7 +88,7 @@ Section gen.
     Lemma wt_gen_divides
       : forall i, wt (S i) / wt i > 0.
     Proof using base_pos.
-      apply pow_ceil_mul_nat_divide; [ omega | ].
+      apply pow_ceil_mul_nat_divide; [ lia | ].
       destruct base; Q_cbv; lia.
     Qed.
 
@@ -102,9 +102,9 @@ Section gen.
       : forall i, wt (S i) / wt i <= wt 1.
     Proof using base_pos.
       intro; etransitivity.
-      eapply pow_ceil_mul_nat_divide_upperbound; [ omega | ].
+      eapply pow_ceil_mul_nat_divide_upperbound; [ lia | ].
       all:destruct base; Q_cbv; autorewrite with zsimplify_const;
-        rewrite ?Pos.mul_1_l, ?Pos.mul_1_r; try assumption; omega.
+        rewrite ?Pos.mul_1_l, ?Pos.mul_1_r; try assumption; lia.
     Qed.
     Lemma wt_gen_divides_chain
           carry_chain

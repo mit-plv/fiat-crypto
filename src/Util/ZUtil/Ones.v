@@ -36,34 +36,34 @@ Module Z.
 
   Lemma log2_ones_lt x y : 0 < x <= y -> Z.log2 (Z.ones x) < y.
   Proof.
-    rewrite log2_ones_full; apply Z.max_case_strong; omega.
+    rewrite log2_ones_full; apply Z.max_case_strong; lia.
   Qed.
   Hint Resolve log2_ones_lt : zarith.
 
   Lemma log2_ones_le x y : 0 <= x <= y -> Z.log2 (Z.ones x) <= y.
   Proof.
-    rewrite log2_ones_full; apply Z.max_case_strong; omega.
+    rewrite log2_ones_full; apply Z.max_case_strong; lia.
   Qed.
   Hint Resolve log2_ones_le : zarith.
 
   Lemma log2_ones_lt_nonneg x y : 0 < y -> x <= y -> Z.log2 (Z.ones x) < y.
   Proof.
-    rewrite log2_ones_full; apply Z.max_case_strong; omega.
+    rewrite log2_ones_full; apply Z.max_case_strong; lia.
   Qed.
   Hint Resolve log2_ones_lt_nonneg : zarith.
 
   Lemma ones_pred : forall i, 0 < i -> Z.ones (Z.pred i) = Z.shiftr (Z.ones i) 1.
   Proof.
-    induction i as [|p|p]; [ | | pose proof (Pos2Z.neg_is_neg p) ]; try omega.
+    induction i as [|p|p]; [ | | pose proof (Pos2Z.neg_is_neg p) ]; try lia.
     intros.
     unfold Z.ones.
-    rewrite !Z.shiftl_1_l, Z.shiftr_div_pow2, <-!Z.sub_1_r, Z.pow_1_r, <-!Z.add_opp_r by omega.
+    rewrite !Z.shiftl_1_l, Z.shiftr_div_pow2, <-!Z.sub_1_r, Z.pow_1_r, <-!Z.add_opp_r by lia.
     replace (2 ^ (Z.pos p)) with (2 ^ (Z.pos p - 1)* 2).
-    rewrite Z.div_add_l by omega.
+    rewrite Z.div_add_l by lia.
     reflexivity.
     change 2 with (2 ^ 1) at 2.
-    rewrite <-Z.pow_add_r by (pose proof (Pos2Z.is_pos p); omega).
-    f_equal. omega.
+    rewrite <-Z.pow_add_r by (pose proof (Pos2Z.is_pos p); lia).
+    f_equal. lia.
   Qed.
   Hint Rewrite <- ones_pred using zutil_arith : push_Zshift.
 
@@ -75,13 +75,13 @@ Module Z.
     rewrite Z.add_pred_r.
     apply Z.succ_inj.
     rewrite !Z.succ_pred.
-    rewrite Z.pow_succ_r; omega.
+    rewrite Z.pow_succ_r; lia.
   Qed.
 
   Lemma ones_nonneg : forall i, (0 <= i) -> 0 <= Z.ones i.
   Proof.
     apply natlike_ind.
-    + unfold Z.ones. simpl; omega.
+    + unfold Z.ones. simpl; lia.
     + intros.
       rewrite Z.ones_succ by assumption.
       Z.zero_bounds.
@@ -94,7 +94,7 @@ Module Z.
     unfold Z.ones.
     rewrite Z.shiftl_1_l.
     apply Z.lt_succ_lt_pred.
-    apply Z.pow_gt_1; omega.
+    apply Z.pow_gt_1; lia.
   Qed.
   Hint Resolve ones_pos_pos : zarith.
 

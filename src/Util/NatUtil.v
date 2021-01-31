@@ -1,5 +1,5 @@
 Require Coq.Logic.Eqdep_dec.
-Require Import Coq.Numbers.Natural.Peano.NPeano Coq.omega.Omega.
+Require Import Coq.Numbers.Natural.Peano.NPeano Coq.micromega.Lia.
 Require Import Coq.Classes.Morphisms.
 Require Import Coq.Relations.Relation_Definitions.
 Require Import Coq.micromega.Lia.
@@ -12,25 +12,25 @@ Create HintDb natsimplify discriminated.
 Hint Resolve mod_bound_pos plus_le_compat : arith.
 Hint Resolve (fun x y p q => proj1 (@Nat.mod_bound_pos x y p q)) (fun x y p q => proj2 (@Nat.mod_bound_pos x y p q)) : arith.
 
-Hint Rewrite @mod_small @mod_mod @mod_1_l @mod_1_r succ_pred using omega : natsimplify.
+Hint Rewrite @mod_small @mod_mod @mod_1_l @mod_1_r succ_pred using lia : natsimplify.
 
 Hint Rewrite sub_diag add_0_l add_0_r sub_0_r sub_succ : natsimplify.
 
 Local Open Scope nat_scope.
 
 Lemma min_def {x y} : min x y = x - (x - y).
-Proof. apply Min.min_case_strong; omega. Qed.
+Proof. apply Min.min_case_strong; lia. Qed.
 Lemma max_def {x y} : max x y = x + (y - x).
-Proof. apply Max.max_case_strong; omega. Qed.
-Ltac coq_omega := omega.
-Ltac handle_min_max_for_omega_gen min max :=
+Proof. apply Max.max_case_strong; lia. Qed.
+Ltac coq_lia := lia.
+Ltac handle_min_max_for_lia_gen min max :=
   repeat match goal with
          | [ H : context[min _ _] |- _ ] => rewrite !min_def in H || setoid_rewrite min_def in H
          | [ H : context[max _ _] |- _ ] => rewrite !max_def in H || setoid_rewrite max_def in H
          | [ |- context[min _ _] ] => rewrite !min_def || setoid_rewrite min_def
          | [ |- context[max _ _] ] => rewrite !max_def || setoid_rewrite max_def
          end.
-Ltac handle_min_max_for_omega_case_gen min max :=
+Ltac handle_min_max_for_lia_case_gen min max :=
   repeat match goal with
          | [ H : context[min _ _] |- _ ] => revert H
          | [ H : context[max _ _] |- _ ] => revert H
@@ -38,28 +38,28 @@ Ltac handle_min_max_for_omega_case_gen min max :=
          | [ |- context[max _ _] ] => apply Max.max_case_strong
          end;
   intros.
-Ltac handle_min_max_for_omega := handle_min_max_for_omega_gen min max.
-Ltac handle_min_max_for_omega_case := handle_min_max_for_omega_case_gen min max.
+Ltac handle_min_max_for_lia := handle_min_max_for_lia_gen min max.
+Ltac handle_min_max_for_lia_case := handle_min_max_for_lia_case_gen min max.
 (* In 8.4, Nat.min is a definition, so we need to unfold it *)
-Ltac handle_min_max_for_omega_compat_84 :=
+Ltac handle_min_max_for_lia_compat_84 :=
   let min := (eval cbv [min] in min) in
   let max := (eval cbv [max] in max) in
-  handle_min_max_for_omega_gen min max.
-Ltac handle_min_max_for_omega_case_compat_84 :=
+  handle_min_max_for_lia_gen min max.
+Ltac handle_min_max_for_lia_case_compat_84 :=
   let min := (eval cbv [min] in min) in
   let max := (eval cbv [max] in max) in
-  handle_min_max_for_omega_case_gen min max.
-Ltac omega_with_min_max :=
-  handle_min_max_for_omega;
-  try handle_min_max_for_omega_compat_84;
-  omega.
-Ltac omega_with_min_max_case :=
-  handle_min_max_for_omega_case;
-  try handle_min_max_for_omega_case_compat_84;
-  omega.
-Tactic Notation "omega" := coq_omega.
-Tactic Notation "omega" "*" := omega_with_min_max_case.
-Tactic Notation "omega" "**" := omega_with_min_max.
+  handle_min_max_for_lia_case_gen min max.
+Ltac lia_with_min_max :=
+  handle_min_max_for_lia;
+  try handle_min_max_for_lia_compat_84;
+  lia.
+Ltac lia_with_min_max_case :=
+  handle_min_max_for_lia_case;
+  try handle_min_max_for_lia_case_compat_84;
+  lia.
+Tactic Notation "lia" := coq_lia.
+Tactic Notation "lia" "*" := lia_with_min_max_case.
+Tactic Notation "lia" "**" := lia_with_min_max.
 
 Global Instance nat_rect_Proper {P} : Proper (Logic.eq ==> forall_relation (fun _ => forall_relation (fun _ => Logic.eq)) ==> forall_relation (fun _ => Logic.eq)) (@nat_rect P).
 Proof.
@@ -122,7 +122,7 @@ Ltac nat_beq_to_eq :=
 Lemma div_minus : forall a b, b <> 0 -> (a + b) / b = a / b + 1.
 Proof.
   intros a b H.
-  assert (H0 : b = 1 * b) by omega.
+  assert (H0 : b = 1 * b) by lia.
   rewrite H0 at 1.
   rewrite <- Nat.div_add by auto.
   reflexivity.
@@ -131,7 +131,7 @@ Qed.
 Lemma pred_mod : forall m, (0 < m)%nat -> ((pred m) mod m)%nat = pred m.
 Proof.
   intros m H; apply Nat.mod_small.
-  destruct m; try omega; rewrite Nat.pred_succ; auto.
+  destruct m; try lia; rewrite Nat.pred_succ; auto.
 Qed.
 
 Lemma div_add_l' : forall a b c, a <> 0 -> (a * b + c) / a = b + c / a.
@@ -151,12 +151,12 @@ Qed.
 
 Lemma mod_div_eq0 : forall a b, b <> 0 -> a mod b / b = 0.
 Proof.
-  intros; apply Nat.div_small, mod_bound_pos; omega.
+  intros; apply Nat.div_small, mod_bound_pos; lia.
 Qed.
 
 Lemma divide2_1mod4_nat : forall c x, c = x / 4 -> x mod 4 = 1 -> exists y, 2 * y = (x / 2).
 Proof.
-  assert (4 <> 0) as ne40 by omega.
+  assert (4 <> 0) as ne40 by lia.
   induction c; intros x H H0; pose proof (div_mod x 4 ne40) as H1; rewrite <- H in H1. {
     rewrite H0 in H1.
     simpl in H1.
@@ -164,23 +164,23 @@ Proof.
     exists 0; auto.
   } {
     rewrite mult_succ_r in H1.
-    assert (4 <= x) as le4x by (apply Nat.div_str_pos_iff; omega).
+    assert (4 <= x) as le4x by (apply Nat.div_str_pos_iff; lia).
     rewrite <- Nat.add_1_r in H.
-    replace x with ((x - 4) + 4) in H by omega.
+    replace x with ((x - 4) + 4) in H by lia.
     rewrite div_minus in H by auto.
     apply Nat.add_cancel_r in H.
-    replace x with ((x - 4) + (1 * 4)) in H0 by omega.
+    replace x with ((x - 4) + (1 * 4)) in H0 by lia.
     rewrite Nat.mod_add in H0 by auto.
     pose proof (IHc _ H H0) as H2.
     destruct H2 as [x0 H2].
     exists (x0 + 1).
     rewrite <- (Nat.sub_add 4 x) in H1 at 1 by auto.
-    replace (4 * c + 4 + x mod 4) with (4 * c + x mod 4 + 4) in H1 by omega.
+    replace (4 * c + 4 + x mod 4) with (4 * c + x mod 4 + 4) in H1 by lia.
     apply Nat.add_cancel_r in H1.
     replace (2 * (x0 + 1)) with (2 * x0 + 2)
       by (rewrite Nat.mul_add_distr_l; auto).
     rewrite H2.
-    rewrite <- Nat.div_add by omega.
+    rewrite <- Nat.div_add by lia.
     f_equal.
     simpl.
     apply Nat.sub_add; auto.
@@ -210,7 +210,7 @@ Qed.
 (* useful for hints *)
 Lemma eq_le_incl_rev : forall a b, a = b -> b <= a.
 Proof.
-  intros; omega.
+  intros; lia.
 Qed.
 
 Lemma beq_nat_eq_nat_dec {R} (x y : nat) (a b : R)
@@ -230,21 +230,21 @@ Hint Resolve pow_nonzero : arith.
 
 Lemma S_pred_nonzero : forall a, (a > 0 -> S (pred a) = a)%nat.
 Proof.
-  destruct a; simpl; omega.
+  destruct a; simpl; lia.
 Qed.
 
-Hint Rewrite S_pred_nonzero using omega : natsimplify.
+Hint Rewrite S_pred_nonzero using lia : natsimplify.
 
 Lemma mod_same_eq a b : a <> 0 -> a = b -> b mod a = 0.
 Proof. intros; subst; apply mod_same; assumption. Qed.
 
-Hint Rewrite @mod_same_eq using omega : natsimplify.
+Hint Rewrite @mod_same_eq using lia : natsimplify.
 Hint Resolve mod_same_eq : arith.
 
 Lemma mod_mod_eq a b c : a <> 0 -> b = c mod a -> b mod a = b.
 Proof. intros; subst; autorewrite with natsimplify; reflexivity. Qed.
 
-Hint Rewrite @mod_mod_eq using (reflexivity || omega) : natsimplify.
+Hint Rewrite @mod_mod_eq using (reflexivity || lia) : natsimplify.
 
 Local Arguments minus !_ !_.
 
@@ -260,15 +260,15 @@ Proof.
       try congruence; try reflexivity.
 Qed.
 
-Hint Rewrite S_mod_full using omega : natsimplify.
+Hint Rewrite S_mod_full using lia : natsimplify.
 
 Lemma S_mod a b : a <> 0 -> S (b mod a) <> a -> (S b) mod a = S (b mod a).
 Proof.
   intros; rewrite S_mod_full by assumption.
-  edestruct eq_nat_dec; omega.
+  edestruct eq_nat_dec; lia.
 Qed.
 
-Hint Rewrite S_mod using (omega || autorewrite with natsimplify; omega) : natsimplify.
+Hint Rewrite S_mod using (lia || autorewrite with natsimplify; lia) : natsimplify.
 
 Lemma eq_nat_dec_refl x : eq_nat_dec x x = left (Logic.eq_refl x).
 Proof.
@@ -288,7 +288,7 @@ Proof.
     | eexists; reflexivity
     | ].
   { specialize (IHm n).
-    destruct IHm as [? IHm]; [ omega | ].
+    destruct IHm as [? IHm]; [ lia | ].
     eexists; rewrite IHm; reflexivity. }
 Qed.
 
@@ -324,7 +324,7 @@ Proof. edestruct lt_dec_right_val; assumption. Qed.
 Hint Rewrite lt_dec_irrefl : natsimplify.
 
 Lemma not_lt_n_pred_n n : ~n < pred n.
-Proof. destruct n; simpl; omega. Qed.
+Proof. destruct n; simpl; lia. Qed.
 
 Lemma lt_dec_n_pred_n n : lt_dec n (pred n) = right (proj1_sig (@lt_dec_right_val _ _ (not_lt_n_pred_n n))).
 Proof. edestruct lt_dec_right_val; assumption. Qed.
@@ -332,44 +332,44 @@ Hint Rewrite lt_dec_n_pred_n : natsimplify.
 
 Lemma le_dec_refl n : le_dec n n = left (le_refl n).
 Proof.
-  edestruct le_dec; try omega.
+  edestruct le_dec; try lia.
   apply f_equal, le_unique.
 Qed.
 Hint Rewrite le_dec_refl : natsimplify.
 
 Lemma le_dec_pred_l n : le_dec (pred n) n = left (le_pred_l n).
 Proof.
-  edestruct le_dec; [ | destruct n; simpl in *; omega ].
+  edestruct le_dec; [ | destruct n; simpl in *; lia ].
   apply f_equal, le_unique.
 Qed.
 Hint Rewrite le_dec_pred_l : natsimplify.
 
 Lemma le_pred_plus_same n : n <= pred (n + n).
-Proof. destruct n; simpl; omega. Qed.
+Proof. destruct n; simpl; lia. Qed.
 
 Lemma le_dec_pred_plus_same n : le_dec n (pred (n + n)) = left (le_pred_plus_same n).
 Proof.
-  edestruct le_dec; [ | destruct n; simpl in *; omega ].
+  edestruct le_dec; [ | destruct n; simpl in *; lia ].
   apply f_equal, le_unique.
 Qed.
 Hint Rewrite le_dec_pred_plus_same : natsimplify.
 
 Lemma minus_S_diag x : (S x - x = 1)%nat.
-Proof. omega. Qed.
+Proof. lia. Qed.
 Hint Rewrite minus_S_diag : natsimplify.
 
 Lemma min_idempotent_S_l x : min (S x) x = x.
-Proof. omega *. Qed.
+Proof. lia *. Qed.
 Hint Rewrite min_idempotent_S_l : natsimplify.
 
 Lemma min_idempotent_S_r x : min x (S x) = x.
-Proof. omega *. Qed.
+Proof. lia *. Qed.
 Hint Rewrite min_idempotent_S_r : natsimplify.
 
 Lemma mod_pow_same b e : b <> 0 -> e <> 0 -> b^e mod b = 0.
 Proof.
-  intros; destruct e as [|e]; [ omega | simpl ].
-  rewrite mul_comm, mod_mul by omega; omega.
+  intros; destruct e as [|e]; [ lia | simpl ].
+  rewrite mul_comm, mod_mul by lia; lia.
 Qed.
 
 Lemma setbit_high : forall x i, (x < 2^i -> setbit x i = x + 2^i)%nat.
@@ -379,24 +379,24 @@ Proof.
   destruct (beq_nat i n) eqn:H'; simpl.
   { apply beq_nat_true in H'; subst.
     symmetry; apply testbit_true.
-    rewrite div_minus, div_small by omega.
+    rewrite div_minus, div_small by lia.
     reflexivity. }
   { assert (H'' : (((x + 2 ^ i) / 2 ^ n) mod 2) = ((x / 2 ^ n) mod 2)).
     { assert (2^(i-n) <> 0) by auto with arith.
-      assert (2^(i-n) <> 0) by omega.
+      assert (2^(i-n) <> 0) by lia.
       destruct (lt_eq_lt_dec i n) as [ [?|?] | ? ]; [ | subst; rewrite <- beq_nat_refl in H'; congruence | ].
-      { assert (i <= n - 1) by omega.
+      { assert (i <= n - 1) by lia.
         assert (2^i <= 2^n) by auto using pow_le_mono_r with arith.
         assert (2^i <= 2^(n - 1)) by auto using pow_le_mono_r with arith.
         assert (2^(n-1) <> 0) by auto with arith.
         assert (2^(n-1) + 2^(n-1) = 2^n)
-          by (transitivity (2^(S (n - 1))); [ simpl; omega | apply f_equal; omega ]).
-        assert ((2^(n - 1) - 1) + (2^(n - 1)) < 2^n) by omega.
-        rewrite !div_small; try omega. }
+          by (transitivity (2^(S (n - 1))); [ simpl; lia | apply f_equal; lia ]).
+        assert ((2^(n - 1) - 1) + (2^(n - 1)) < 2^n) by lia.
+        rewrite !div_small; try lia. }
       { replace (2^i) with (2^(i - n) * 2^n)
-          by (rewrite <- pow_add_r, ?le_plus_minus_r, ?sub_add by omega; omega).
+          by (rewrite <- pow_add_r, ?le_plus_minus_r, ?sub_add by lia; lia).
         rewrite div_add by auto with arith.
-        rewrite <- add_mod_idemp_r, mod_pow_same, add_0_r by omega.
+        rewrite <- add_mod_idemp_r, mod_pow_same, add_0_r by lia.
         reflexivity. } }
     { match goal with
       | [ |- ?x = ?y ]
@@ -410,7 +410,7 @@ Proof.
 Qed.
 
 Lemma max_0_iff a b : Nat.max a b = 0%nat <-> (a = 0%nat /\ b = 0%nat).
-Proof. omega **. Qed.
+Proof. lia **. Qed.
 
 Lemma push_f_nat_rect {P P'} (f : P -> P') PO PS PS' n
       (HS : forall x rec, f (PS x rec)

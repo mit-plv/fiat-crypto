@@ -85,7 +85,7 @@ Section InstructionGallery.
       assert (0 < 2^n) by auto with zarith;
       assert (0 <= decode x * decode y < 2^n * 2^n)%Z by nia;
       (destruct (0 <=? n) eqn:?; Z.ltb_to_lt;
-       [ | assert (2^n = 0) by auto with zarith; exfalso; omega ]);
+       [ | assert (2^n = 0) by auto with zarith; exfalso; lia ]);
       rewrite ?decode_fst_mul_double, ?decode_snd_mul_double
         by typeclasses eauto with typeclass_instances core;
       autorewrite with Zshift_to_pow zsimplify push_Zpow.
@@ -99,7 +99,7 @@ Global Arguments is_spread_left_immediate_alt {_ _ _ _ _}.
 Global Arguments is_mul_double_alt {_ _ _ _ _}.
 
 Ltac bounded_solver_tac :=
-  solve [ eassumption | typeclasses eauto | omega ].
+  solve [ eassumption | typeclasses eauto | lia ].
 
 Global Instance decode_proj n W (dec : W -> Z)
   : @decode n W {| decode := dec |} =~> dec.
@@ -127,10 +127,10 @@ Lemma decode_exponent_nonnegative {n W} (decode : decoder n W) {isdecode : is_de
   : (0 <= n)%Z.
 Proof.
   pose proof (decode_range isinhabited).
-  assert (0 < 2^n) by omega.
-  destruct (Z_lt_ge_dec n 0) as [H'|]; [ | omega ].
+  assert (0 < 2^n) by lia.
+  destruct (Z_lt_ge_dec n 0) as [H'|]; [ | lia ].
   assert (2^n = 0) by auto using Z.pow_neg_r.
-  omega.
+  lia.
 Qed.
 
 Section adc_subc.
@@ -159,7 +159,7 @@ Section adc_subc.
     intros x y c; hnf.
     assert (0 <= n)%Z by eauto using decode_exponent_nonnegative.
     pose proof (decode_range x); pose proof (decode_range y).
-    assert (0 <= bit c <= 1)%Z by (destruct c; omega).
+    assert (0 <= bit c <= 1)%Z by (destruct c; lia).
     lazymatch goal with
     | [ |- fst ?x = (?a <=? ?b) :> bool ]
       => cut (((if fst x then 1 else 0) = (if a <=? b then 1 else 0))%Z);

@@ -1,5 +1,5 @@
 (** * Common Subexpression Elimination for PHOAS Syntax *)
-Require Import Coq.omega.Omega.
+Require Import Coq.micromega.Lia.
 Require Import Coq.Lists.List.
 Require Import Coq.FSets.FMapInterface.
 Require Import Crypto.Compilers.Syntax.
@@ -118,7 +118,7 @@ Section symbolic.
                    | progress subst
                    | progress simpl
                    | solve [ auto ]
-                   | omega
+                   | lia
                    | progress rewrite_beq_leb_flat_type_op_code_reflexive
                    | match goal with
                      | [ |- context[flat_type_beq ?x ?y] ]
@@ -159,7 +159,7 @@ Section symbolic.
                    | progress subst
                    | progress simpl
                    | solve [ auto ]
-                   | omega
+                   | lia
                    | progress rewrite ?andb_true_r, ?orb_false_r
                    | progress rewrite_beq_leb_flat_type_op_code_reflexive
                    | progress rewrite_beq_leb_symbolic_expr_reflexive
@@ -176,7 +176,7 @@ Section symbolic.
                        => let H' := fresh in destruct (flat_type_leb_total a1 a2) as [H'|H']; rewrite H'
                      | [ |- context[op_code_leb ?a1 ?a2] ]
                        => let H' := fresh in destruct (op_code_leb_total a1 a2) as [H'|H']; rewrite H'
-                     | [ H : ?x <= ?y, H' : ?y <= ?x |- _ ] => assert (x = y) by omega; clear H H'
+                     | [ H : ?x <= ?y, H' : ?y <= ?x |- _ ] => assert (x = y) by lia; clear H H'
                      | [ H : forall a2, ?leb ?x a2 = true -> ?leb a2 ?x = true -> _, H0 : ?leb ?x ?a2' = true, H1 : ?leb ?a2' ?x = true |- _ ]
                        => specialize (H _ H0 H1)
                      | [ H0 : flat_type_leb ?x' ?y' = true, H1 : flat_type_leb ?y' ?x' = true |- _ ]

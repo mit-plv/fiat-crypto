@@ -21,7 +21,7 @@ Section shrd.
           {isldi : is_load_immediate ldi}
           {isshrd : is_shift_right_doubleword_immediate shrd}.
 
-  Local Ltac zutil_arith ::= solve [ auto with nocore omega ].
+  Local Ltac zutil_arith ::= solve [ auto with nocore lia ].
 
   Global Instance is_shift_right_doubleword_immediate_double : is_shift_right_doubleword_immediate (shrd_double n).
   Proof using isdecode isshrd.
@@ -35,7 +35,7 @@ Section shrd.
     generalize (decode_range (snd high)).
     assert (forall x, 0 <= Z.pow2_mod x n < 2^n) by auto with zarith.
     assert (forall n' x, 2^n <= 2^n' -> 0 <= x < 2^n -> 0 <= x < 2^n') by auto with zarith.
-    assert (forall n' x, n <= n' -> 0 <= x < 2^n -> 0 <= x < 2^n') by auto with zarith omega.
+    assert (forall n' x, n <= n' -> 0 <= x < 2^n -> 0 <= x < 2^n') by auto with zarith lia.
     autorewrite with simpl_tuple_decoder; push_decode.
     shift_left_right_t.
   Qed.

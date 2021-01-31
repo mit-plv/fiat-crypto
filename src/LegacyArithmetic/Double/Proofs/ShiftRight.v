@@ -28,14 +28,14 @@ Section shr.
     intros r count H; hnf in H.
     assert (0 < 2^count) by auto with zarith.
     assert (0 < 2^(n+count)) by auto with zarith.
-    assert (forall n', ~n' + count < n -> 2^n <= 2^(n'+count)) by auto with zarith omega.
-    assert (forall n', ~n' + count < n -> 2^n <= 2^(n'+count)) by auto with zarith omega.
+    assert (forall n', ~n' + count < n -> 2^n <= 2^(n'+count)) by auto with zarith lia.
+    assert (forall n', ~n' + count < n -> 2^n <= 2^(n'+count)) by auto with zarith lia.
     unfold shr_double; simpl.
     generalize (decode_range r).
     pose proof (decode_range (fst r)).
     pose proof (decode_range (snd r)).
     assert (forall n', 2^n <= 2^n' -> 0 <= decode (fst r) < 2^n') by (simpl in *; auto with zarith).
-    assert (forall n', n <= n' -> 0 <= decode (fst r) < 2^n') by auto with zarith omega.
+    assert (forall n', n <= n' -> 0 <= decode (fst r) < 2^n') by auto with zarith lia.
     autorewrite with simpl_tuple_decoder; push_decode.
     shift_left_right_t.
   Qed.

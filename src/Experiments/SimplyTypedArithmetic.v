@@ -250,7 +250,7 @@ Module Positional. Section Positional.
       i.
 
   Lemma place_in_range (t:Z*Z) (n:nat) : (fst (place t n) < S n)%nat.
-  Proof. induction n; cbv [place nat_rect] in *; break_match; autorewrite with cancel_pair; try omega. Qed.
+  Proof. induction n; cbv [place nat_rect] in *; break_match; autorewrite with cancel_pair; try lia. Qed.
   Lemma weight_place t i : weight (fst (place t i)) * snd (place t i) = fst t * snd t.
   Proof. induction i; cbv [place nat_rect] in *; break_match; push;
     repeat match goal with |- context[?a/?b] =>
@@ -266,10 +266,10 @@ Module Positional. Section Positional.
     eval n (from_associational n p) = Associational.eval p.
   Proof. destruct n_nz; [ induction p | subst p ];
   cbv [from_associational Let_In] in *; push; try
-  pose proof place_in_range a (pred n); try omega; try nsatz;
+  pose proof place_in_range a (pred n); try lia; try nsatz;
   apply fold_right_invariant; cbv [zeros add_to_nth];
   intros; rewrite ?map_length, ?List.repeat_length, ?seq_length, ?length_update_nth;
-  try omega.                                                  Qed.
+  try lia.                                                  Qed.
   Hint Rewrite @eval_from_associational : push_eval.
   Lemma length_from_associational n p : length (from_associational n p) = n.
   Proof. cbv [from_associational Let_In]. apply fold_right_invariant; intros; distr_length. Qed.
@@ -290,7 +290,7 @@ Module Positional. Section Positional.
       eval n (mulmod n f g) mod (s - Associational.eval c)
       = (eval n f * eval n g) mod (s - Associational.eval c).
     Proof. cbv [mulmod]; push; trivial.
-    destruct f, g; simpl in *; [ right; subst n | left; try omega.. ].
+    destruct f, g; simpl in *; [ right; subst n | left; try lia.. ].
     clear; cbv -[Associational.reduce].
     induction c as [|?? IHc]; simpl; trivial.                 Qed.
   End mulmod.
@@ -396,7 +396,7 @@ Module Positional. Section Positional.
       (forall i, In i (seq 0 n) -> weight (S i) / weight i <> 0) ->
       eval n (encode n s c x) mod (s - Associational.eval c)
       = x mod (s - Associational.eval c).
-    Proof using Type*. cbv [encode]; intros; push; auto; f_equal; omega. Qed.
+    Proof using Type*. cbv [encode]; intros; push; auto; f_equal; lia. Qed.
     Lemma length_encode n s c x
       : length (encode n s c x) = n.
     Proof. cbv [encode]; repeat distr_length.                 Qed.
@@ -438,7 +438,7 @@ Module Positional. Section Positional.
       cbv [sub balance scmul negate_snd];
         destruct (zerop n); subst; try reflexivity.
       intros; push; repeat distr_length;
-        eauto with omega.
+        eauto with lia.
       push_Zmod; push; pull_Zmod; push_Zmod; pull_Zmod; distr_length; eauto.
     Qed.
     Hint Rewrite eval_sub : push_eval.
@@ -516,7 +516,7 @@ Section mod_ops.
     clear -limbwidth_good;
     intros; rewrite !weight_ZQ_correct;
     apply lem;
-    try omega; Q_cbv; destruct limbwidth_den; cbn; try lia.
+    try lia; Q_cbv; destruct limbwidth_den; cbn; try lia.
 
   Definition wprops : @weight_properties weight.
   Proof.
@@ -537,7 +537,7 @@ Section mod_ops.
     clear -limbwidth_good.
     cut (1 < weight 1); [ lia | ].
     cbv [weight Z.of_nat]; autorewrite with zsimplify_fast.
-    apply Z.pow_gt_1; [ omega | ].
+    apply Z.pow_gt_1; [ lia | ].
     Z.div_mod_to_quot_rem_in_goal; nia.
   Qed.
 
@@ -658,7 +658,7 @@ Module Saturated.
 
     Lemma weight_multiples_full j i : (i <= j)%nat -> weight j mod weight i = 0.
     Proof.
-      intros; replace j with (i + (j - i))%nat by omega.
+      intros; replace j with (i + (j - i))%nat by lia.
       apply weight_multiples_full'.
     Qed.
 
@@ -688,10 +688,10 @@ Module Saturated.
                  | _ => progress simpl flat_map
                  | _ => rewrite IHq
                  | _ => rewrite Z.mod_eq by assumption
-                 | _ => ring_simplify; omega
+                 | _ => ring_simplify; lia
                  end.
       Qed.
-      Hint Rewrite eval_map_sat_multerm using (omega || assumption) : push_eval.
+      Hint Rewrite eval_map_sat_multerm using (lia || assumption) : push_eval.
 
       Lemma eval_sat_mul s p q (s_nonzero:s<>0):
         Associational.eval (sat_mul s p q) = Associational.eval p * Associational.eval q.
@@ -700,7 +700,7 @@ Module Saturated.
         repeat match goal with
                | _ => progress (autorewrite with push_flat_map push_eval in * )
                | _ => rewrite IHp
-               | _ => ring_simplify; omega
+               | _ => ring_simplify; lia
                end.
       Qed.
       Hint Rewrite eval_sat_mul : push_eval.
@@ -731,10 +731,10 @@ Module Saturated.
                  | _ => progress break_match; Z.ltb_to_lt
                  | _ => rewrite IHq
                  | _ => rewrite Z.mod_eq by assumption
-                 | _ => ring_simplify; omega
+                 | _ => ring_simplify; lia
                  end.
       Qed.
-      Hint Rewrite eval_map_sat_multerm_const using (omega || assumption) : push_eval.
+      Hint Rewrite eval_map_sat_multerm_const using (lia || assumption) : push_eval.
 
       Lemma eval_sat_mul_const s p q (s_nonzero:s<>0):
         Associational.eval (sat_mul_const s p q) = Associational.eval p * Associational.eval q.
@@ -743,7 +743,7 @@ Module Saturated.
         repeat match goal with
                | _ => progress (autorewrite with push_flat_map push_eval in * )
                | _ => rewrite IHp
-               | _ => ring_simplify; omega
+               | _ => ring_simplify; lia
                end.
       Qed.
       Hint Rewrite eval_sat_mul_const : push_eval.
@@ -754,7 +754,7 @@ Module Saturated.
     Lemma mod_step a b c d: 0 < a -> 0 < b ->
                             c mod a + a * ((c / a + d) mod b) = (a * d + c) mod (a * b).
     Proof.
-      intros; rewrite Z.rem_mul_r by omega. push_Zmod.
+      intros; rewrite Z.rem_mul_r by lia. push_Zmod.
       autorewrite with zsimplify pull_Zmod. repeat (f_equal; try ring).
     Qed.
 
@@ -770,7 +770,7 @@ Module Saturated.
     Proof.
       intros. rewrite <-!Z.div_add' by auto using Z.positive_is_nonzero.
       rewrite Z.mod_pull_div, Z.mul_div_eq' by auto using Z.gt_lt.
-      repeat (f_equal; try omega).
+      repeat (f_equal; try lia).
     Qed.
 
     Lemma add_mod_l_multiple a b n m:
@@ -802,11 +802,11 @@ Module Saturated.
              | H: _ /\ _ |- _ => destruct H
              | H: ?LHS = _ |- _ => match LHS with context [dm2] => rewrite H end
              | H: ?LHS = _ |- _ => match LHS with context [dm1] => rewrite H end
-             | _ => rewrite mod_step by omega
-             | _ => rewrite div_step by omega
-             | _ => rewrite Z.mul_div_eq_full by omega
+             | _ => rewrite mod_step by lia
+             | _ => rewrite div_step by lia
+             | _ => rewrite Z.mul_div_eq_full by lia
              end.
-      split; f_equal; omega.
+      split; f_equal; lia.
     Qed.
 
     Lemma is_div_mod_result_equal {T} evalf dm y1 y2 n :
@@ -833,7 +833,7 @@ Module Columns.
       apply Positional.eval_snoc; distr_length.
     Qed. Hint Rewrite eval_snoc using (solve [distr_length]) : push_eval.
 
-    Hint Rewrite <- Z.div_add' using omega : pull_Zdiv.
+    Hint Rewrite <- Z.div_add' using lia : pull_Zdiv.
 
     Ltac cases :=
       match goal with
@@ -880,7 +880,7 @@ Module Columns.
                | |- context [list_rect _ _ _ ?ls] => rewrite single_list_rect_to_match; destruct ls
                | _ => progress (unfold flatten_step in *; fold flatten_step in * )
                | _ => rewrite Nat.add_1_r
-               | _ => rewrite Z.mul_div_eq_full by (auto; omega)
+               | _ => rewrite Z.mul_div_eq_full by (auto; lia)
                | _ => rewrite weight_multiples
                | _ => reflexivity
                | _ => solve [repeat (f_equal; try ring)]
@@ -912,7 +912,7 @@ Module Columns.
         induction xs; simpl flatten_column; cbv [Let_In];
           repeat match goal with
                  | _ => rewrite IHxs
-                 | _ => rewrite Z.mul_div_eq_full by omega
+                 | _ => rewrite Z.mul_div_eq_full by lia
                  | _ => progress push
                  end.
       Qed. Hint Rewrite flatten_column_div using auto with zarith : to_div_mod.
@@ -970,10 +970,10 @@ Module Columns.
         induction inp using rev_ind; intros; destruct n; distr_length.
         rewrite flatten_snoc.
         push; distr_length;
-          [rewrite IHinp with (n:=n) by omega; rewrite weight_div_mod with (j:=n) (i:=S i) by (eauto; omega); push_Zmod; push |].
+          [rewrite IHinp with (n:=n) by lia; rewrite weight_div_mod with (j:=n) (i:=S i) by (eauto; lia); push_Zmod; push |].
         repeat match goal with
-               | _ => progress replace (length inp) with n by omega
-               | _ => progress replace i with n by omega
+               | _ => progress replace (length inp) with n by lia
+               | _ => progress replace i with n by lia
                | _ => progress push
                | _ => erewrite flatten_div by eauto
                | _ => rewrite <-Z.div_add' by auto
@@ -1074,7 +1074,7 @@ Module Rows.
     Proof. cbv [eval]. rewrite map_nil, sum_nil; reflexivity. Qed.
     Hint Rewrite eval_nil : push_eval.
     Lemma eval0 x : eval 0 x = 0.
-    Proof. cbv [eval]. induction x; autorewrite with push_map push_sum push_eval; omega. Qed.
+    Proof. cbv [eval]. induction x; autorewrite with push_map push_sum push_eval; lia. Qed.
     Hint Rewrite eval0 : push_eval.
     Lemma eval_cons n r inp : eval n (r :: inp) = Positional.eval weight n r + eval n inp.
     Proof. cbv [eval]; autorewrite with push_map push_sum; reflexivity. Qed.
@@ -1176,7 +1176,7 @@ Module Rows.
                  | _ => progress (intros; subst)
                  | _ => progress autorewrite with cancel_pair push_eval
                  | _ => progress In_cases
-                 | _ => split; try omega
+                 | _ => split; try lia
                  | H: _ /\ _ |- _ => destruct H
                  | _ => solve [auto using length_fst_extract_row, length_snd_extract_row]
                  end.
@@ -1223,7 +1223,7 @@ Module Rows.
                  | _ => progress autorewrite with cancel_pair push_eval push_max_column_size
                  | _ => rewrite max_column_size0 with (inp := fst (from_columns' _ _)) by
                        (autorewrite with push_max_column_size; distr_length)
-                 | _ => omega
+                 | _ => lia
                  end.
       Qed.
       Hint Rewrite eval_from_columns using (auto; solve [distr_length]) : push_eval.
@@ -1283,7 +1283,7 @@ Module Rows.
         end.
         { distr_length.
           rewrite Columns.length_from_associational.
-          remember (Nat.pred n) as m. replace n with (S m) by omega.
+          remember (Nat.pred n) as m. replace n with (S m) by lia.
           apply Positional.place_in_range. }
         rewrite <-nth_default_eq in *.
         autorewrite with push_nth_default in *.
@@ -1297,7 +1297,7 @@ Module Rows.
       Proof.
         intros; cbv [from_associational from_columns from_columns'].
         pose proof (max_column_size_Columns_from_associational n p ltac:(auto) ltac:(auto)).
-        case_eq (max_column_size (Columns.from_associational weight n p)); [omega|].
+        case_eq (max_column_size (Columns.from_associational weight n p)); [lia|].
         intros; cbn.
         rewrite <-length_zero_iff_nil. distr_length.
       Qed.
@@ -1373,7 +1373,7 @@ Module Rows.
         Proof.
           induction row1 as [|x1 row1]; destruct row2 as [|x2 row2]; intros; subst nm; push; [ ].
           rewrite (app_cons_app_app _ row1'), (app_cons_app_app _ row2').
-          apply IHrow1; clear IHrow1; autorewrite with cancel_pair distr_length in *; try omega.
+          apply IHrow1; clear IHrow1; autorewrite with cancel_pair distr_length in *; try lia.
           eapply is_div_mod_step with (x := x1 + x2); try eassumption; push.
         Qed.
 
@@ -1422,14 +1422,14 @@ Module Rows.
             repeat match goal with
                    | H : ?LHS = _ |- _ =>
                      match LHS with context [start_state] => rewrite H end
-                   | H : context [nth_default 0 (fst (fst start_state))] |- _ => rewrite H by omega
+                   | H : context [nth_default 0 (fst (fst start_state))] |- _ => rewrite H by lia
                    | _ => rewrite <-(Z.add_assoc _ x1 x2)
                    end.
           { rewrite div_step by auto using Z.gt_lt.
             rewrite Z.mul_div_eq_full by auto; rewrite weight_multiples by auto. push. }
-          { rewrite weight_div_mod with (j:=snd start_state) (i:=S j) by (auto; omega).
+          { rewrite weight_div_mod with (j:=snd start_state) (i:=S j) by (auto; lia).
             push_Zmod. autorewrite with zsimplify_fast. reflexivity. }
-          { push. replace (snd start_state) with j in * by omega.
+          { push. replace (snd start_state) with j in * by lia.
             push. rewrite add_mod_div_multiple by auto using Z.lt_le_incl.
             push. }
         Qed.
@@ -1595,10 +1595,10 @@ Module Rows.
         autorewrite with natsimplify push_map.
         rewrite <-IHp; auto; intros;
           match goal with H : context [nth_default _ (p ++ [ _ ])] |- _ =>
-                          rewrite <-H by omega end.
+                          rewrite <-H by lia end.
         { autorewrite with push_nth_default natsimplify. reflexivity. }
         { autorewrite with push_nth_default natsimplify.
-          break_match; omega. }
+          break_match; lia. }
       Qed.
 
       Lemma partition_step n x :
@@ -1620,7 +1620,7 @@ Module Rows.
         { rewrite (Z.div_mod (x mod weight (S n)) (weight n)) by auto.
           rewrite <-Znumtheory.Zmod_div_mod by (try apply Z.mod_divide; auto).
           rewrite partition_step, Positional.eval_snoc with (n:=n) by distr_length.
-          omega. }
+          lia. }
       Qed.
 
       Lemma flatten_partitions' inp n :
@@ -1717,7 +1717,7 @@ Module Rows.
       Proof.
         intros; cbv [sat_reduce].
         autorewrite with push_eval.
-        rewrite <-Associational.reduction_rule by omega.
+        rewrite <-Associational.reduction_rule by lia.
         autorewrite with push_eval; reflexivity.
       Qed.
       Hint Rewrite eval_sat_reduce using auto : push_eval.
@@ -1833,7 +1833,7 @@ Module BaseConversion.
                 nth_default 0 (from_associational idxs n p) i = (Associational.eval p) mod (sw (S i)) / sw i.
     Proof.
       intros; cbv [from_associational].
-      rewrite Rows.flatten_partitions with (n:=n) by (eauto using Rows.length_from_associational; omega).
+      rewrite Rows.flatten_partitions with (n:=n) by (eauto using Rows.length_from_associational; lia).
       rewrite Associational.bind_snd_correct.
       push_eval.
     Qed.
@@ -1937,7 +1937,7 @@ Module BaseConversion.
       clear dwprops swprops.
       subst nout sw; cbv [weight]; cbn.
       autorewrite with zsimplify.
-      rewrite Z.pow_mul_r, Z.pow_2_r by omega.
+      rewrite Z.pow_mul_r, Z.pow_2_r by lia.
       Z.rewrite_mod_small. reflexivity.
     Qed.
 
@@ -4855,7 +4855,7 @@ Module Compilers.
                          | progress rewrite ?Bool.andb_true_iff in *
                          | discriminate
                          | apply conj
-                         | Z.ltb_to_lt; omega
+                         | Z.ltb_to_lt; lia
                          | rewrite @fold_andb_map_map in * ].
           { lazymatch goal with
             | [ r1 : list (interp t), r2 : list (interp t), val : list (Compilers.type.interp t) |- _ ]
@@ -7141,7 +7141,7 @@ Proof.
   cbv [round_up_bitwidth_gen].
   induction possible_values as [|x xs IHxs]; cbn; intros; inversion_option.
   break_innermost_match_hyps; Z.ltb_to_lt; inversion_option; subst; trivial.
-  specialize_by_assumption; omega.
+  specialize_by_assumption; lia.
 Qed.
 
 Definition relax_zrange_gen (possible_values : list Z) : zrange -> option zrange
@@ -7167,8 +7167,8 @@ Proof.
     inversion_option; inversion_zrange;
       subst;
       repeat apply conj;
-      Z.ltb_to_lt; try omega;
-        try (rewrite <- Z.log2_up_le_pow2_full in *; omega).
+      Z.ltb_to_lt; try lia;
+        try (rewrite <- Z.log2_up_le_pow2_full in *; lia).
 Qed.
 
 (** XXX TODO: Translate Jade's python script *)
@@ -8353,7 +8353,7 @@ Module Straightline.
       Qed.
 
       Lemma depth_positive {var t} dummy_var (e : Uncurried.expr.expr t) : 0 < depth var dummy_var e.
-      Proof. destruct e; cbn [depth]; rewrite Nat2Z.inj_succ; omega. Qed.
+      Proof. destruct e; cbn [depth]; rewrite Nat2Z.inj_succ; lia. Qed.
 
       Lemma of_uncurried_scalar_ident_correct {s d} (idc : ident s d) args args':
         ok_scalar_ident idc ->
@@ -8408,7 +8408,7 @@ Module Straightline.
         ok_expr e ->
         uinterp e = straightline_interp (@of_uncurried _ dummy_arrow fuel _ e).
       Proof.
-        induction fuel; intros; [ pose proof (depth_positive dummy_var e); omega | ].
+        induction fuel; intros; [ pose proof (depth_positive dummy_var e); lia | ].
         destruct e; cbn [depth of_uncurried expr.interp interp]; intros; invert_ok_expr;
           repeat match goal with
                  | |- context [of_uncurried_scalar _ ] => progress rewrite_ok_scalar
@@ -8555,13 +8555,13 @@ Module PreFancy.
     Lemma wordmax_gt_2 : 2 < wordmax.
     Proof.
       apply Z.le_lt_trans with (m:=2 ^ 1); [ reflexivity | ].
-      apply Z.pow_lt_mono_r; omega.
+      apply Z.pow_lt_mono_r; lia.
     Qed.
 
     Lemma wordmax_even : wordmax mod 2 = 0.
     Proof.
       replace 2 with (2 ^ 1) by reflexivity.
-      subst wordmax. apply Z.mod_same_pow; omega.
+      subst wordmax. apply Z.mod_same_pow; lia.
     Qed.
 
     Let half_bits := log2wordmax / 2.
@@ -8580,14 +8580,14 @@ Module PreFancy.
       subst wordmax_half_bits.
       transitivity (2 ^ (half_bits + half_bits) - 2 * 2 ^ half_bits + 1).
       { rewrite Z.pow_add_r by (subst half_bits; Z.zero_bounds).
-        autorewrite with push_Zmul; omega. }
+        autorewrite with push_Zmul; lia. }
       { transitivity (wordmax - 2 * 2 ^ half_bits + 1); [ | lia].
         subst wordmax.
         apply Z.add_le_mono_r.
         apply Z.sub_le_mono_r.
-        apply Z.pow_le_mono_r; [ omega | ].
+        apply Z.pow_le_mono_r; [ lia | ].
         rewrite Z.add_diag; subst half_bits.
-        apply BinInt.Z.mul_div_le; omega. }
+        apply BinInt.Z.mul_div_le; lia. }
     Qed.
 
     Lemma wordmax_half_bits_le_wordmax : wordmax_half_bits <= wordmax.
@@ -8608,7 +8608,7 @@ Module PreFancy.
     Proof.
       subst wordmax half_bits wordmax_half_bits.
       rewrite <-Z.pow_add_r by Z.zero_bounds.
-      rewrite Z.add_diag, Z.mul_div_eq by omega.
+      rewrite Z.add_diag, Z.mul_div_eq by lia.
       f_equal; lia.
     Qed.
 
@@ -9111,7 +9111,7 @@ Module PreFancy.
         has_range (get_range_var _ v) v.
       Proof.
         induction t; cbn [get_range_var has_range fst snd]; auto.
-        destruct p; auto; cbn [upper lower]; omega.
+        destruct p; auto; cbn [upper lower]; lia.
       Qed.
 
       Lemma has_range_loosen r1 r2 (x : Z) :
@@ -9121,7 +9121,7 @@ Module PreFancy.
       Proof.
         cbv [is_tighter_than_bool has_range]; intros;
           match goal with H : _ && _ = true |- _ => rewrite andb_true_iff in H; destruct H end;
-          Z.ltb_to_lt; omega.
+          Z.ltb_to_lt; lia.
       Qed.
 
       Lemma interp_cast_noop x r :
@@ -9142,14 +9142,14 @@ Module PreFancy.
         0 <= n ->
         has_range (get_range x) (interp_scalar x) ->
         @has_range type.Z (ZRange.map (fun y : Z => y >> n) (get_range x)) (interp_scalar x >> n).
-      Proof. cbv [has_range]; intros; cbn. auto using Z.shiftr_le with omega. Qed.
+      Proof. cbv [has_range]; intros; cbn. auto using Z.shiftr_le with lia. Qed.
       Hint Resolve has_range_shiftr : has_range.
 
       Lemma has_range_shiftl n r x :
         0 <= n -> 0 <= lower r ->
         @has_range type.Z r x ->
         @has_range type.Z (ZRange.map (fun y : Z => y << n) r) (x << n).
-      Proof. cbv [has_range]; intros; cbn. auto using Z.shiftl_le_mono with omega. Qed.
+      Proof. cbv [has_range]; intros; cbn. auto using Z.shiftl_le_mono with lia. Qed.
       Hint Resolve has_range_shiftl : has_range.
 
       Lemma has_range_land n (x : scalar type.Z) :
@@ -9158,7 +9158,7 @@ Module PreFancy.
         @has_range type.Z (r[0~>n])%zrange (Z.land (interp_scalar x) n).
       Proof.
         cbv [has_range]; intros; cbn.
-        split; [ apply Z.land_nonneg | apply Z.land_upper_bound_r ]; omega.
+        split; [ apply Z.land_nonneg | apply Z.land_upper_bound_r ]; lia.
       Qed.
       Hint Resolve has_range_land : has_range.
 
@@ -9177,9 +9177,9 @@ Module PreFancy.
             cbn [has_range]; split; eapply has_range_loosen; eauto. }
         { cbn. cbv [has_range] in *.
           pose proof wordmax_gt_2.
-          rewrite !Z.cc_m_eq by omega.
-          split; apply Z.div_le_mono; Z.zero_bounds; omega. }
-        { destruct p; cbn [has_range upper lower]; auto; omega. }
+          rewrite !Z.cc_m_eq by lia.
+          split; apply Z.div_le_mono; Z.zero_bounds; lia. }
+        { destruct p; cbn [has_range upper lower]; auto; lia. }
       Qed.
       Hint Resolve has_range_interp_scalar : has_range.
 
@@ -9199,7 +9199,7 @@ Module PreFancy.
       Proof.
         cbv [in_word_range is_tighter_than_bool]; cbn.
         rewrite andb_true_iff; intuition.
-        Z.ltb_to_lt. omega.
+        Z.ltb_to_lt. lia.
       Qed.
 
       Lemma has_word_range_shiftl n r x :
@@ -9210,11 +9210,11 @@ Module PreFancy.
       Proof.
         intros.
         eapply has_range_loosen;
-          [ apply has_range_shiftl; eauto using in_word_range_nonneg with has_range; omega | ].
+          [ apply has_range_shiftl; eauto using in_word_range_nonneg with has_range; lia | ].
         cbv [is_tighter_than_bool]. cbn.
         apply andb_true_iff; split; apply Z.leb_le;
           [ apply Z.shiftl_nonneg; solve [auto using in_word_range_nonneg] | ].
-        rewrite Z.shiftl_mul_pow2 by omega.
+        rewrite Z.shiftl_mul_pow2 by lia.
         auto.
       Qed.
 
@@ -9228,15 +9228,15 @@ Module PreFancy.
       Proof.
         pose proof wordmax_gt_2.
         intros. cbv [has_range].
-        rewrite Z.rshi_correct by omega.
+        rewrite Z.rshi_correct by lia.
         match goal with |- context [?x mod ?m] =>
-                        pose proof (Z.mod_pos_bound x m ltac:(omega)) end.
+                        pose proof (Z.mod_pos_bound x m ltac:(lia)) end.
         split; [lia|].
         intuition.
         { destruct (Z_lt_dec (upper r) wordmax); [ | lia].
-          rewrite Z.mod_small by (split; Z.zero_bounds; omega).
-          omega. }
-        { subst r. cbn [upper]. omega. }
+          rewrite Z.mod_small by (split; Z.zero_bounds; lia).
+          lia. }
+        { subst r. cbn [upper]. lia. }
       Qed.
 
       Lemma in_word_range_spec r :
@@ -9245,7 +9245,7 @@ Module PreFancy.
       Proof.
         intros; cbv [in_word_range is_tighter_than_bool].
         rewrite andb_true_iff.
-        intuition; apply Z.leb_le; cbn [upper lower]; try omega.
+        intuition; apply Z.leb_le; cbn [upper lower]; try lia.
       Qed.
 
       Ltac destruct_scalar :=
@@ -9309,16 +9309,16 @@ Module PreFancy.
         cbv [in_word_range is_tighter_than_bool].
         rewrite andb_true_iff.
         cbn [has_range upper lower]; intros; intuition; Z.ltb_to_lt.
-        { apply Z.shiftr_nonneg. omega. }
+        { apply Z.shiftr_nonneg. lia. }
         { pose proof half_bits_nonneg.
           pose proof half_bits_squared.
-          assert (x >> half_bits < wordmax_half_bits); [|omega].
+          assert (x >> half_bits < wordmax_half_bits); [|lia].
           rewrite Z.shiftr_div_pow2 by auto.
           apply Z.div_lt_upper_bound; Z.zero_bounds.
           subst wordmax_half_bits half_bits.
-          rewrite <-Z.pow_add_r by omega.
-          rewrite Z.add_diag, Z.mul_div_eq, log2wordmax_even by omega.
-          autorewrite with zsimplify_fast. subst wordmax. omega. }
+          rewrite <-Z.pow_add_r by lia.
+          rewrite Z.add_diag, Z.mul_div_eq, log2wordmax_even by lia.
+          autorewrite with zsimplify_fast. subst wordmax. lia. }
       Qed.
 
       Lemma has_half_word_range_land r x :
@@ -9330,8 +9330,8 @@ Module PreFancy.
         cbv [in_word_range is_tighter_than_bool].
         rewrite andb_true_iff.
         cbn [has_range upper lower]; intros; intuition; Z.ltb_to_lt.
-        { apply Z.land_nonneg; omega. }
-        { apply Z.land_upper_bound_r; omega. }
+        { apply Z.land_nonneg; lia. }
+        { apply Z.land_upper_bound_r; lia. }
       Qed.
 
       Section constant_to_scalar.
@@ -9344,11 +9344,11 @@ Module PreFancy.
             try match goal with H : Some _ = Some _ |- _ => inversion H; subst end;
             cbn [interp_scalar]; apply interp_cast_noop.
           { apply has_half_word_range_shiftr with (r:=r[x~>x]%zrange);
-            cbv [in_word_range is_tighter_than_bool upper lower has_range]; try omega.
-            apply andb_true_iff; split; apply Z.leb_le; omega. }
+            cbv [in_word_range is_tighter_than_bool upper lower has_range]; try lia.
+            apply andb_true_iff; split; apply Z.leb_le; lia. }
           { apply has_half_word_range_land with (r:=r[x~>x]%zrange);
-            cbv [in_word_range is_tighter_than_bool upper lower has_range]; try omega.
-            apply andb_true_iff; split; apply Z.leb_le; omega. }
+            cbv [in_word_range is_tighter_than_bool upper lower has_range]; try lia.
+            apply andb_true_iff; split; apply Z.leb_le; lia. }
         Qed.
 
         Lemma constant_to_scalar_correct s z :
@@ -9395,11 +9395,11 @@ Module PreFancy.
           pose proof wordmax_half_bits_pos. pose proof half_bits_nonneg.
           let H := fresh in
           intro H; apply constant_to_scalar_cases in H; destruct H as [ [? ?] | [? ?] ]; intuition; subst;
-            cbn [has_range lower upper] in *; repeat constructor; cbn [lower get_range]; try apply Z.leb_refl; try omega.
-          assert (in_word_range r[x~>x]) by (apply in_word_range_spec; cbn [lower upper]; omega).
-          pose proof (has_half_word_range_shiftr r[x~>x] x ltac:(assumption) ltac:(cbv [has_range lower upper]; omega)).
+            cbn [has_range lower upper] in *; repeat constructor; cbn [lower get_range]; try apply Z.leb_refl; try lia.
+          assert (in_word_range r[x~>x]) by (apply in_word_range_spec; cbn [lower upper]; lia).
+          pose proof (has_half_word_range_shiftr r[x~>x] x ltac:(assumption) ltac:(cbv [has_range lower upper]; lia)).
           cbn [has_range ZRange.map is_tighter_than_bool lower upper] in *.
-          apply andb_true_iff; cbn [lower upper]; split; apply Z.leb_le; omega.
+          apply andb_true_iff; cbn [lower upper]; split; apply Z.leb_le; lia.
         Qed.
       End constant_to_scalar.
       Hint Resolve ok_scalar_constant_to_scalar.
@@ -9434,32 +9434,32 @@ Module PreFancy.
                  end.
         {
           autorewrite with to_div_mod.
-          match goal with |- context[?x mod ?m] => pose proof (Z.mod_pos_bound x m ltac:(omega)) end.
-          rewrite Z.div_between_0_if by omega.
+          match goal with |- context[?x mod ?m] => pose proof (Z.mod_pos_bound x m ltac:(lia)) end.
+          rewrite Z.div_between_0_if by lia.
           split; break_match; lia. }
         {
           autorewrite with to_div_mod.
-          match goal with |- context[?x mod ?m] => pose proof (Z.mod_pos_bound x m ltac:(omega)) end.
-          rewrite Z.div_between_0_if by omega.
+          match goal with |- context[?x mod ?m] => pose proof (Z.mod_pos_bound x m ltac:(lia)) end.
+          rewrite Z.div_between_0_if by lia.
           match goal with H : _ \/ _ |- _ => destruct H; subst end.
           { split; break_match; try lia.
             destruct (Z_lt_dec (upper outr) wordmax).
             { match goal with |- _ <= ?y mod _ <= ?u =>
                               assert (y <= u) by nia end.
-              rewrite Z.mod_small by omega. omega. }
-            { match goal with|- context [?x mod ?m] => pose proof (Z.mod_pos_bound x m ltac:(omega)) end.
-              omega. } }
+              rewrite Z.mod_small by lia. lia. }
+            { match goal with|- context [?x mod ?m] => pose proof (Z.mod_pos_bound x m ltac:(lia)) end.
+              lia. } }
           { split; break_match; cbn; lia. } }
         {
           autorewrite with to_div_mod.
-          match goal with |- context[?x mod ?m] => pose proof (Z.mod_pos_bound x m ltac:(omega)) end.
-          rewrite Z.div_sub_small by omega.
+          match goal with |- context[?x mod ?m] => pose proof (Z.mod_pos_bound x m ltac:(lia)) end.
+          rewrite Z.div_sub_small by lia.
           split; break_match; lia. }
         {
           autorewrite with to_div_mod.
           match goal with |- context [?a - ?b - ?c] => replace (a - b - c) with (a - (b + c)) by ring end.
-          match goal with |- context[?x mod ?m] => pose proof (Z.mod_pos_bound x m ltac:(omega)) end.
-          rewrite Z.div_sub_small by omega.
+          match goal with |- context[?x mod ?m] => pose proof (Z.mod_pos_bound x m ltac:(lia)) end.
+          rewrite Z.div_sub_small by lia.
           split; break_match; lia. }
         { apply has_range_rshi; try nia; [ ].
           match goal with H : context [upper ?ra + upper ?rb * wordmax] |- context [?a + ?b * wordmax] =>
@@ -9467,13 +9467,13 @@ Module PreFancy.
           end.
           match goal with H : _ \/ ?P |- _ \/ ?P => destruct H; [left|tauto] end.
           split; Z.zero_bounds; nia. }
-        { rewrite Z.zselect_correct. break_match; omega. }
+        { rewrite Z.zselect_correct. break_match; lia. }
         { cbn [interp_scalar fst snd get_range] in *.
-          rewrite Z.zselect_correct. break_match; omega. }
+          rewrite Z.zselect_correct. break_match; lia. }
         { cbn [interp_scalar fst snd get_range] in *.
-          rewrite Z.zselect_correct. break_match; omega. }
+          rewrite Z.zselect_correct. break_match; lia. }
         { rewrite Z.add_modulo_correct.
-          break_match; Z.ltb_to_lt; omega. }
+          break_match; Z.ltb_to_lt; lia. }
         { cbn [interp_scalar has_range fst snd get_range upper lower] in *.
           pose proof half_bits_squared. nia. }
       Qed.
@@ -9487,7 +9487,7 @@ Module PreFancy.
         cbn [upper lower]; rewrite andb_true_iff; intros.
         match goal with H : _ /\ _ |- _ => destruct H; Z.ltb_to_lt end.
         pose proof wordmax_gt_2. pose proof wordmax_even.
-        pose proof (Z.cc_m_small wordmax x). omega.
+        pose proof (Z.cc_m_small wordmax x). lia.
       Qed.
 
       Lemma has_flag_range_cc_m' (x : scalar type.Z) :
@@ -9503,8 +9503,8 @@ Module PreFancy.
       Proof.
         cbv [has_range in_word_range is_tighter_than_bool].
         cbn [upper lower]; rewrite andb_true_iff; intuition; Z.ltb_to_lt.
-        { apply Z.land_nonneg. left; omega. }
-        { apply Z.land_upper_bound_r; omega. }
+        { apply Z.land_nonneg. left; lia. }
+        { apply Z.land_upper_bound_r; lia. }
       Qed.
 
       Lemma has_flag_range_land' (x : scalar type.Z) :
@@ -9601,7 +9601,7 @@ Module PreFancy.
         x mod wordmax = x.
       Proof.
         cbv [has_range upper lower].
-        intros. apply Z.mod_small; omega.
+        intros. apply Z.mod_small; lia.
       Qed.
 
       Lemma half_word_range_le_word_range r :
@@ -9788,8 +9788,8 @@ Module PreFancy.
                  | _ => progress tighter_than_to_le
                  | H : ok_scalar _ |- _ => apply (has_range_interp_scalar (interp_cast_correct:=interp_cast_correct)) in H
                  | _ => rewrite <-IHok_scalar
-                 | _ => rewrite interp_cast_correct by omega
-                 | _ => rewrite interp_cast'_correct by omega
+                 | _ => rewrite interp_cast_correct by lia
+                 | _ => rewrite interp_cast'_correct by lia
                  | _ => congruence
                  end.
       Qed.
@@ -9833,7 +9833,7 @@ Module PreFancy.
   Proof.
     cbv [interp_cast_mod].
     intros; break_match; rewrite ?andb_true_iff in *; intuition; Z.ltb_to_lt;
-      apply Z.mod_small; omega.
+      apply Z.mod_small; lia.
   Qed.
 
   Lemma of_Expr_correct {s d} (log2wordmax : Z) (consts : list Z) (e : Expr (s -> d))
@@ -9852,7 +9852,7 @@ Module PreFancy.
     intro He'; intros; cbv [of_Expr Straightline.of_Expr].
     rewrite He'; cbn [invert_Abs expr.interp].
     assert (forall r z, lower r <= z <= upper r -> ident.cast ident.cast_outside_of_range r z = z) as interp_cast_correct.
-    { cbv [ident.cast]; intros; break_match; rewrite ?andb_true_iff, ?andb_false_iff in *; intuition; Z.ltb_to_lt; omega. }
+    { cbv [ident.cast]; intros; break_match; rewrite ?andb_true_iff, ?andb_false_iff in *; intuition; Z.ltb_to_lt; lia. }
     erewrite replace_interp_cast with (interp_cast':=ident.cast ident.cast_outside_of_range) by auto using interp_cast_mod_correct.
     rewrite of_straightline_correct by auto.
     erewrite Straightline.expr.of_uncurried_correct by eassumption.
@@ -9923,7 +9923,7 @@ Module PreFancy.
       | |- _ <= _ <= _ \/ @eq zrange _ _ =>
         left; lazy; try split; congruence
       | |- context [PreFancy.ok_ident] => constructor
-      | |- context [PreFancy.ok_scalar] => constructor; try omega
+      | |- context [PreFancy.ok_scalar] => constructor; try lia
       | |- context [PreFancy.is_halved] => eapply PreFancy.is_halved_constant; [lazy; reflexivity | ]
       | |- context [PreFancy.is_halved] => constructor
       | |- context [PreFancy.in_word_range] => lazy; reflexivity
@@ -9937,10 +9937,10 @@ Module PreFancy.
           cbv [is_tighter_than_bool PreFancy.has_range fst snd upper lower] in *; cbn;
           apply andb_true_iff; split; apply Z.leb_le
         | _ => lazy
-        end; omega || reflexivity
+        end; lia || reflexivity
       | |- @eq zrange _ _ => lazy; reflexivity
-      | |- _ <= _ => omega
-      | |- _ <= _ <= _ => omega
+      | |- _ <= _ => lia
+      | |- _ <= _ <= _ => lia
       end; intros.
 
     Ltac ok_expr_step :=
@@ -10578,7 +10578,7 @@ Module ProdEquiv.
     ProdEquiv.interp256 (Fancy.Instr (Fancy.ADD 0) rd (x, y) cont) cc ctx = ProdEquiv.interp256 (Fancy.Instr (Fancy.ADD 0) rd (y, x) cont) cc ctx.
   Proof.
     intros; rewrite !ProdEquiv.interp_step. cbn - [Fancy.interp]. rewrite Z.add_comm.
-    rewrite !(Z.mod_small (ctx _)) by (cbn in *; omega). reflexivity.
+    rewrite !(Z.mod_small (ctx _)) by (cbn in *; lia). reflexivity.
   Qed.
 
   Lemma addc_comm rd x y cont cc ctx :
@@ -10587,7 +10587,7 @@ Module ProdEquiv.
     ProdEquiv.interp256 (Fancy.Instr (Fancy.ADDC 0) rd (x, y) cont) cc ctx = ProdEquiv.interp256 (Fancy.Instr (Fancy.ADDC 0) rd (y, x) cont) cc ctx.
   Proof.
     intros; rewrite !ProdEquiv.interp_step. cbn - [Fancy.interp]. rewrite (Z.add_comm (ctx x)).
-    rewrite !(Z.mod_small (ctx _)) by (cbn in *; omega). reflexivity.
+    rewrite !(Z.mod_small (ctx _)) by (cbn in *; lia). reflexivity.
   Qed.
 
   (* Tactics to help prove that something in Fancy is line-by-line equivalent to something in PreFancy *)
@@ -10645,7 +10645,7 @@ Module Fancy_PreFancy_Equiv.
   Lemma interp_cast_mod_flag w x: PreFancy.interp_cast_mod w r[0 ~> 1] x = x mod 2.
   Proof.
     cbv [PreFancy.interp_cast_mod upper lower].
-    break_match; Z.ltb_to_lt; subst; try omega.
+    break_match; Z.ltb_to_lt; subst; try lia.
     f_equal; lia.
   Qed.
 
@@ -10665,7 +10665,7 @@ Module Fancy_PreFancy_Equiv.
     cbn [Fancy.interp PreFancy.interp].
     rewrite next_eq.
     rewrite <-spec_eq.
-    rewrite interp_cast_mod_eq by omega.
+    rewrite interp_cast_mod_eq by lia.
     reflexivity.
   Qed.
 
@@ -10688,10 +10688,10 @@ Module Fancy_PreFancy_Equiv.
     cbn [Fancy.interp PreFancy.interp].
     cbv [Straightline.expr.interp_cast2]. cbn [fst snd].
     rewrite next_eq.
-    rewrite interp_cast_mod_eq by omega.
-    rewrite interp_cast_mod_flag by omega.
+    rewrite interp_cast_mod_eq by lia.
+    rewrite interp_cast_mod_flag by lia.
     rewrite <-spec_eq1, <-spec_eq2.
-    rewrite Z.mod_mod by omega.
+    rewrite Z.mod_mod by lia.
     reflexivity.
   Qed.
 End Fancy_PreFancy_Equiv.
@@ -10761,14 +10761,14 @@ Module BarrettReduction.
     Proof. clear -M_range M_nz x_range k_pos; rewrite <-Z.add_diag, Z.pow_add_r; nia. Qed.
 
     Lemma pow_2k_eq : 2 ^ (2*k) = 2 ^ (k - 1) * 2 ^ (k + 1).
-    Proof. clear -k_pos; rewrite <-Z.pow_add_r by omega. f_equal; ring. Qed.
+    Proof. clear -k_pos; rewrite <-Z.pow_add_r by lia. f_equal; ring. Qed.
 
     Lemma mu_bounds : 2 ^ k <= mu < 2^(k+1).
     Proof.
       pose proof looser_bound.
       subst mu. split.
-      { apply Z.div_le_lower_bound; omega. }
-      { apply Z.div_lt_upper_bound; try omega.
+      { apply Z.div_le_lower_bound; lia. }
+      { apply Z.div_lt_upper_bound; try lia.
         rewrite pow_2k_eq; apply Z.mul_lt_mono_pos_r; auto with zarith. }
     Qed.
 
@@ -10777,11 +10777,11 @@ Module BarrettReduction.
       pose proof looser_bound.
       split; [ solve [Z.zero_bounds] | ].
       apply Z.div_lt_upper_bound; auto with zarith.
-      rewrite <-pow_2k_eq. omega.
+      rewrite <-pow_2k_eq. lia.
     Qed.
     Hint Resolve shiftr_x_bounds.
 
-    Ltac solve_rep := eauto using shiftr_correct, mul_high_correct, mul_correct, sub_correct with omega.
+    Ltac solve_rep := eauto using shiftr_correct, mul_high_correct, mul_correct, sub_correct with lia.
 
     Let q := mu * (x / 2 ^ (k - 1)) / 2 ^ (k + 1).
 
@@ -10802,10 +10802,10 @@ Module BarrettReduction.
       pose proof looser_bound. pose proof x_mod_small. pose proof mu_bounds.
       split; subst q; [ solve [Z.zero_bounds] | ].
       edestruct q_nice_strong with (n:=M) as [? Hqnice];
-        try rewrite Hqnice; auto; try omega; [ ].
+        try rewrite Hqnice; auto; try lia; [ ].
       apply Z.le_lt_trans with (m:= x / M).
-      { break_match; omega. }
-      { apply Z.div_lt_upper_bound; omega. }
+      { break_match; lia. }
+      { apply Z.div_lt_upper_bound; lia. }
     Qed.
 
     Lemma two_conditional_subtracts :
@@ -10815,7 +10815,7 @@ Module BarrettReduction.
       cond_sub2 (cond_sub1 a M) M = cond_sub2 (cond_sub2 x M) M.
     Proof.
       intros.
-      erewrite !cond_sub2_correct, !cond_sub1_correct by (eassumption || omega).
+      erewrite !cond_sub2_correct, !cond_sub1_correct by (eassumption || lia).
       break_match; Z.ltb_to_lt; try lia; discriminate.
     Qed.
 
@@ -10823,15 +10823,15 @@ Module BarrettReduction.
     Proof.
       pose proof looser_bound. pose proof q_bounds. pose proof x_mod_small.
       subst q mu; split.
-      { Z.zero_bounds. apply qn_small; omega. }
-      { apply r_small_strong; rewrite ?Z.pow_1_r; auto; omega. }
+      { Z.zero_bounds. apply qn_small; lia. }
+      { apply r_small_strong; rewrite ?Z.pow_1_r; auto; lia. }
     Qed.
 
     Lemma reduce_correct : reduce = x mod M.
     Proof.
       pose proof looser_bound. pose proof r_bounds. pose proof q_bounds.
       assert (2 * M < 2^k * 2^k) by nia.
-      rewrite barrett_reduction_small with (k:=k) (m:=mu) (offset:=1) (b:=2) by (auto; omega).
+      rewrite barrett_reduction_small with (k:=k) (m:=mu) (offset:=1) (b:=2) by (auto; lia).
       cbv [reduce Let_In].
       erewrite low_correct by eauto. Z.rewrite_mod_small.
       erewrite two_conditional_subtracts by solve_rep.
@@ -10852,7 +10852,7 @@ Module BarrettReduction.
     Context (n:nat) (Hn_nz: n <> 0%nat) (n_le_k : Z.of_nat n <= k).
     Context (nout : nat) (Hnout : nout = 2%nat).
     Let w := weight k 1.
-    Local Lemma k_range : 0 < 1 <= k. Proof. omega. Qed.
+    Local Lemma k_range : 0 < 1 <= k. Proof. lia. Qed.
     Let props : @weight_properties w := wprops k 1 k_range.
 
     Hint Rewrite Positional.eval_nil Positional.eval_snoc : push_eval.
@@ -11000,8 +11000,8 @@ Module BarrettReduction.
       rewrite <-(Z.mod_small ((x - y) / 2^k) (2^k)) by (split; try apply Z.div_lt_upper_bound; Z.zero_bounds).
       f_equal.
       transitivity ((x mod 2^k - y mod 2^k + 2^k * (x / 2 ^ k) - 2^k * (y / 2^k)) / 2^k). {
-        rewrite (Z.div_mod x (2^k)) at 1 by auto using Z.pow_nonzero with omega.
-        rewrite (Z.div_mod y (2^k)) at 1 by auto using Z.pow_nonzero with omega.
+        rewrite (Z.div_mod x (2^k)) at 1 by auto using Z.pow_nonzero with lia.
+        rewrite (Z.div_mod y (2^k)) at 1 by auto using Z.pow_nonzero with lia.
         f_equal. ring. }
       autorewrite with zsimplify.
       ring.
@@ -11033,14 +11033,14 @@ Module BarrettReduction.
     Proof.
       intros. subst a b. autorewrite with push_Zmul.
       ring_simplify_subterms. rewrite Z.pow_2_r.
-      rewrite Z.div_add_exact by (push_Zmod; autorewrite with zsimplify; omega).
+      rewrite Z.div_add_exact by (push_Zmod; autorewrite with zsimplify; lia).
       repeat match goal with
              | |- context [d * ?a * ?b * ?c] =>
                replace (d * a * b * c) with (a * b * c * d) by ring
              | |- context [d * ?a * ?b] =>
                replace (d * a * b) with (a * b * d) by ring
              end.
-      rewrite !Z.div_add by omega.
+      rewrite !Z.div_add by lia.
       autorewrite with zsimplify.
       rewrite (Z.mul_comm a0 b0).
       ring_simplify. ring.
@@ -11078,7 +11078,7 @@ Module BarrettReduction.
       a0b1 = x mod 2^k * (y / 2^k) ->
       represents (mul_high a b a0b1) ((x * y) / 2^k).
     Proof.
-      cbv [mul_high Let_In]; rewrite Z.pow_add_r, Z.pow_1_r by omega; intros.
+      cbv [mul_high Let_In]; rewrite Z.pow_add_r, Z.pow_1_r by lia; intros.
       assert (4 <= 2 ^ k) by (transitivity (Z.pow 2 2); auto with zarith).
       assert (0 <= x * y / 2^k < 2^k*2^k) by (Z.div_mod_to_quot_rem_in_goal; nia).
 
@@ -11086,7 +11086,7 @@ Module BarrettReduction.
         by (push_rep; Z.div_mod_to_quot_rem_in_goal; lia).
 
       push_rep. subst a0b1.
-      assert (y / 2 ^ k < 2) by (apply Z.div_lt_upper_bound; omega).
+      assert (y / 2 ^ k < 2) by (apply Z.div_lt_upper_bound; lia).
       replace (x / 2 ^ k) with 1 in * by (rewrite Z.div_between_1; lia).
       autorewrite with zsimplify_fast in *.
 
@@ -11099,7 +11099,7 @@ Module BarrettReduction.
                           split; [ solve [Z.zero_bounds] | ];
                             eapply Z.le_lt_trans with (m:= x + y); nia
           end. }
-        { omega. } }
+        { lia. } }
       { ring. }
     Qed.
 
@@ -11111,8 +11111,8 @@ Module BarrettReduction.
     Lemma cc_l_only_bit : forall x s, 0 <= x < 2 * s -> Z.cc_l (x / s) = 0 <-> x < s.
     Proof.
       cbv [Z.cc_l]; intros.
-      rewrite Z.div_between_0_if by omega.
-      break_match; Z.ltb_to_lt; Z.rewrite_mod_small; omega.
+      rewrite Z.div_between_0_if by lia.
+      break_match; Z.ltb_to_lt; Z.rewrite_mod_small; lia.
     Qed.
 
     Lemma cond_sub1_correct a x y :
@@ -11122,7 +11122,7 @@ Module BarrettReduction.
       cond_sub1 a y = if (x <? 2 ^ k) then x else x - y.
     Proof.
       intros; cbv [cond_sub1 Let_In]. rewrite Z.zselect_correct. push_rep.
-      break_match; Z.ltb_to_lt; rewrite cc_l_only_bit in *; try omega;
+      break_match; Z.ltb_to_lt; rewrite cc_l_only_bit in *; try lia;
         autorewrite with zsimplify_fast to_div_mod pull_Zmod; auto with zarith.
     Qed.
 
@@ -11131,7 +11131,7 @@ Module BarrettReduction.
       cond_sub2 x y = if (x <? y) then x else x - y.
     Proof.
       cbv [cond_sub2]. rewrite Z.add_modulo_correct.
-      autorewrite with zsimplify_fast. break_match; Z.ltb_to_lt; omega.
+      autorewrite with zsimplify_fast. break_match; Z.ltb_to_lt; lia.
     Qed.
 
     Section Defn.
@@ -11168,7 +11168,7 @@ Module BarrettReduction.
         autorewrite with pull_Zdiv push_Zpow.
         rewrite (Z.mul_comm (2 ^ k / 2)).
         break_match; [ ring | ].
-        match goal with H : 0 <= ?x < 2, H' : ?x <> 0 |- _ => replace x with 1 by omega end.
+        match goal with H : 0 <= ?x < 2, H' : ?x <> 0 |- _ => replace x with 1 by lia end.
         autorewrite with zsimplify; reflexivity.
       Qed.
 
@@ -11180,7 +11180,7 @@ Module BarrettReduction.
              As barrett_reduce_correct.
       Proof.
         erewrite <-reduce_correct with (rep:=represents) (muSelect:=muSelect) (k0:=k) (mut:=[muLow;1]) (xt0:=xt)
-          by (auto using x_bounds, muSelect_correct, x_rep, mu_rep; omega).
+          by (auto using x_bounds, muSelect_correct, x_rep, mu_rep; lia).
         subst barrett_reduce. reflexivity.
       Qed.
     End Defn.
@@ -11305,9 +11305,9 @@ Module Barrett256.
   Proof.
     intros.
     apply BarrettReduction.barrett_reduce_correct; cbv [machine_wordsize M muLow] in *;
-      try omega;
+      try lia;
       try match goal with
-          | |- context [weight] => intros; cbv [weight]; autorewrite with zsimplify; auto using Z.pow_mul_r with omega
+          | |- context [weight] => intros; cbv [weight]; autorewrite with zsimplify; auto using Z.pow_mul_r with lia
           end; lazy; try split; congruence.
   Qed.
 
@@ -11341,7 +11341,7 @@ Module Barrett256.
     { cbv [expr.Interp type.uncurried_domain type.uncurry type.final_codomain].
       reflexivity. }
     { cbn. rewrite !andb_true_iff. cbv [machine_wordsize M] in *.
-      cbn in *. repeat split; apply Z.leb_le; omega. }
+      cbn in *. repeat split; apply Z.leb_le; lia. }
   Qed.
 
   Import PreFancy.Tactics. (* for ok_expr_step *)
@@ -11368,7 +11368,7 @@ Module Barrett256.
       lazy; congruence.
       constructor.
       constructor. }
-    { lazy. omega. }
+    { lazy. lia. }
   Qed.
 
   Definition barrett_red256_fancy' (xLow xHigh RegMuLow RegMod RegZero error : positive) :=
@@ -11421,7 +11421,7 @@ Module Barrett256.
 
   Local Ltac solve_bounds :=
     match goal with
-    | H : ?a = ?b mod ?c |- 0 <= ?a < ?c => rewrite H; apply Z.mod_pos_bound; omega
+    | H : ?a = ?b mod ?c |- 0 <= ?a < ?c => rewrite H; apply Z.mod_pos_bound; lia
     | _ => assumption
     end.
 
@@ -11477,14 +11477,14 @@ Module Barrett256.
         Z.le Z.lt Z.ltb Z.leb Z.geb Z.eqb Z.land Z.shiftr Z.shiftl
         Z.add Z.mul Z.div Z.sub Z.modulo Z.testbit Z.pow Z.ones
         fst snd]; cbn [fst snd];
-    try (replace (2 ^ (256 / 2) - 1) with (Z.ones 128) by reflexivity; rewrite !Z.land_ones by omega);
-    autorewrite with to_div_mod; rewrite ?Z.mod_mod, <-?Z.testbit_spec' by omega;
+    try (replace (2 ^ (256 / 2) - 1) with (Z.ones 128) by reflexivity; rewrite !Z.land_ones by lia);
+    autorewrite with to_div_mod; rewrite ?Z.mod_mod, <-?Z.testbit_spec' by lia;
     let r := (eval compute in (2 ^ 256)) in
     replace (2^256) with r in * by reflexivity;
     repeat match goal with
            | H : 0 <= ?x < ?m |- context [?x mod ?m] => rewrite (Z.mod_small x m) by apply H
            | |- context [?x <? 0] => rewrite (proj2 (Z.ltb_ge x 0)) by (break_match; Z.zero_bounds)
-           | _ => rewrite Z.mod_small with (b:=2) by (break_match; omega)
+           | _ => rewrite Z.mod_small with (b:=2) by (break_match; lia)
            | |- context [ (if Z.testbit ?a ?n then 1 else 0) + ?b + ?c] =>
              replace ((if Z.testbit a n then 1 else 0) + b + c) with (b + c + (if Z.testbit a n then 1 else 0)) by ring
            end.
@@ -11524,14 +11524,14 @@ Module Barrett256.
              ProdEquiv.interp256 (Prod.MulMod x xHigh RegMuLow scratchp1 scratchp2 scratchp3 scratchp4 scratchp5) cc_start_state start_context = X mod M.
   Proof.
     intros. subst X.
-    assert (0 <= start_context xHigh < 2^machine_wordsize) by (cbv [M] in *; cbn; omega).
+    assert (0 <= start_context xHigh < 2^machine_wordsize) by (cbv [M] in *; cbn; lia).
     let r := (eval compute in (2 ^ machine_wordsize)) in
     replace (2^machine_wordsize) with r in * by reflexivity.
     cbv [M muLow] in *.
 
     rewrite <-barrett_red256_prefancy_correct with (dummy_arrow := fun s d _ => DefaultValue.type.default) by auto.
     rewrite <-barrett_red256_alloc_equivalent with (errorR := RegZero) (errorP := 1%positive) (extra_reg:=extra_reg)
-      by (cbn in *; auto with omega).
+      by (cbn in *; auto with lia).
     cbv [ProdEquiv.interp256].
     let r := (eval compute in (2 ^ 256)) in
     replace (2^256) with r in * by reflexivity.
@@ -11541,15 +11541,15 @@ Module Barrett256.
     {
       match goal with H : Fancy.CC.cc_m _ = _ |- _ => rewrite H end.
       match goal with |- context [Z.cc_m ?s ?x] =>
-                      pose proof (Z.cc_m_small s x ltac:(reflexivity) ltac:(omega));
+                      pose proof (Z.cc_m_small s x ltac:(reflexivity) ltac:(lia));
                         let H := fresh in
-                        assert (Z.cc_m s x = 1 \/ Z.cc_m s x = 0) as H by omega;
+                        assert (Z.cc_m s x = 1 \/ Z.cc_m s x = 0) as H by lia;
                           destruct H as [H | H]; rewrite H in *
       end; break_innermost_match; Z.ltb_to_lt; try congruence. }
     apply interp_equivZ_256; [ simplify_op_equiv start_context | ]. (* apply manually instead of using [step] to allow a custom bounds proof *)
-    { rewrite Z.rshi_correct by omega.
+    { rewrite Z.rshi_correct by lia.
       autorewrite with zsimplify_fast.
-      rewrite Z.shiftr_div_pow2 by omega.
+      rewrite Z.shiftr_div_pow2 by lia.
       reflexivity. }
 
     (* Special case to remember the bound for the output of RSHI *)
@@ -11557,16 +11557,16 @@ Module Barrett256.
     let v_bound := fresh "v_bound" in
     intro v; assert (0 <= v <= 1) as v_bound; [ |generalize v v_bound; clear v v_bound; intros v v_bound].
     { solve_nonneg start_context. autorewrite with zsimplify_fast.
-      rewrite Z.shiftr_div_pow2 by omega.
-      rewrite Z.mod_pull_div by omega.
-      rewrite Z.mod_small by (cbn; omega).
+      rewrite Z.shiftr_div_pow2 by lia.
+      rewrite Z.mod_pull_div by lia.
+      rewrite Z.mod_small by (cbn; lia).
       split; [Z.zero_bounds|].
       apply Z.lt_succ_r.
-      apply Z.div_lt_upper_bound; cbn; omega. }
+      apply Z.div_lt_upper_bound; cbn; lia. }
 
     step start_context.
-    { rewrite Z.rshi_correct by omega.
-      rewrite Z.shiftr_div_pow2 by omega.
+    { rewrite Z.rshi_correct by lia.
+      rewrite Z.shiftr_div_pow2 by lia.
       repeat (f_equal; try ring). }
     step start_context; [ reflexivity | ].
     step start_context; [ reflexivity | ].
@@ -11578,15 +11578,15 @@ Module Barrett256.
     step start_context; [ reflexivity | reflexivity | ].
     step start_context; [ reflexivity | reflexivity | ].
     step start_context;
-      [ rewrite Z.mod_small with (b:=2) by (rewrite Z.mod_small by omega; omega); (* Here we make use of the bound of RSHI *)
+      [ rewrite Z.mod_small with (b:=2) by (rewrite Z.mod_small by lia; lia); (* Here we make use of the bound of RSHI *)
         reflexivity
-      | rewrite Z.mod_small with (b:=2) by (rewrite Z.mod_small by omega; omega); (* Here we make use of the bound of RSHI *)
+      | rewrite Z.mod_small with (b:=2) by (rewrite Z.mod_small by lia; lia); (* Here we make use of the bound of RSHI *)
         reflexivity | ].
     step start_context; [ reflexivity | reflexivity | ].
     step start_context; [ reflexivity | reflexivity | ].
     step start_context.
-    { rewrite Z.rshi_correct by omega.
-      rewrite Z.shiftr_div_pow2 by omega.
+    { rewrite Z.rshi_correct by lia.
+      rewrite Z.shiftr_div_pow2 by lia.
       repeat (f_equal; try ring). }
 
     step start_context; [ reflexivity | ].
@@ -11601,37 +11601,37 @@ Module Barrett256.
     step start_context.
     { reflexivity. }
     { autorewrite with zsimplify_fast.
-      match goal with |- context [?x mod ?m] => pose proof (Z.mod_pos_bound x m ltac:(omega)) end.
-      rewrite <-Z.testbit_neg_eq_if with (n:=256) by (cbn; omega).
+      match goal with |- context [?x mod ?m] => pose proof (Z.mod_pos_bound x m ltac:(lia)) end.
+      rewrite <-Z.testbit_neg_eq_if with (n:=256) by (cbn; lia).
       reflexivity. }
     step start_context.
     { reflexivity. }
     { autorewrite with zsimplify_fast.
-      rewrite Z.mod_small with (a:=(if (if _ <? 0 then true else _) then _ else _)) (b:=2) by (break_innermost_match; omega).
+      rewrite Z.mod_small with (a:=(if (if _ <? 0 then true else _) then _ else _)) (b:=2) by (break_innermost_match; lia).
       match goal with |- context [?a - ?b - ?c] => replace (a - b - c) with (a - (b + c)) by ring end.
-      match goal with |- context [?x mod ?m] => pose proof (Z.mod_pos_bound x m ltac:(omega)) end.
-      rewrite <-Z.testbit_neg_eq_if with (n:=256) by (break_innermost_match; cbn; omega).
+      match goal with |- context [?x mod ?m] => pose proof (Z.mod_pos_bound x m ltac:(lia)) end.
+      rewrite <-Z.testbit_neg_eq_if with (n:=256) by (break_innermost_match; cbn; lia).
       reflexivity. }
     step start_context.
     { rewrite Z.bit0_eqb.
       match goal with |- context [(?x mod ?m) &' 1] =>
-                      replace (x mod m) with (x &' Z.ones 256) by (rewrite Z.land_ones by omega; reflexivity) end.
+                      replace (x mod m) with (x &' Z.ones 256) by (rewrite Z.land_ones by lia; reflexivity) end.
       rewrite <-Z.land_assoc.
-      rewrite Z.land_ones with (n:=1) by omega.
+      rewrite Z.land_ones with (n:=1) by lia.
       cbn.
       match goal with |- context [?x mod 2] =>
                       let H := fresh in
                       assert (x mod 2 = 0 \/ x mod 2 = 1) as H
-                          by (pose proof (Z.mod_pos_bound x 2 ltac:(omega)); omega);
+                          by (pose proof (Z.mod_pos_bound x 2 ltac:(lia)); lia);
                         destruct H as [H | H]; rewrite H
       end; reflexivity. }
     step start_context.
     { reflexivity. }
     { autorewrite with zsimplify_fast.
-      repeat match goal with |- context [?x mod ?m] => unique pose proof (Z.mod_pos_bound x m ltac:(omega)) end.
-      rewrite <-Z.testbit_neg_eq_if with (n:=256) by (cbn; omega).
+      repeat match goal with |- context [?x mod ?m] => unique pose proof (Z.mod_pos_bound x m ltac:(lia)) end.
+      rewrite <-Z.testbit_neg_eq_if with (n:=256) by (cbn; lia).
       reflexivity. }
-    step start_context; [ break_innermost_match; Z.ltb_to_lt; omega | ].
+    step start_context; [ break_innermost_match; Z.ltb_to_lt; lia | ].
     reflexivity.
   Qed.
 
@@ -11720,7 +11720,7 @@ Module SaturatedSolinas.
             (n nreductions : nat) (n_nz : n <> 0%nat).
 
     Let weight := weight log2base 1.
-    Let props : @weight_properties weight := wprops log2base 1 ltac:(omega).
+    Let props : @weight_properties weight := wprops log2base 1 ltac:(lia).
     Local Lemma base_nz : 2 ^ log2base <> 0. Proof. auto with zarith. Qed.
 
     Derive mulmod
@@ -12133,19 +12133,19 @@ Module MontgomeryReduction.
     Proof.
       clear -R_big_enough R_two_pow; cbv [w weight]; intro.
       autorewrite with zsimplify.
-      rewrite Z.pow_mul_r, R_two_pow by omega; reflexivity.
+      rewrite Z.pow_mul_r, R_two_pow by lia; reflexivity.
     Qed.
 
     Local Ltac change_weight := rewrite !Hw, ?Z.pow_0_r, ?Z.pow_1_r, ?Z.pow_2_r, ?Z.pow_1_l in *.
     Local Ltac solve_range :=
       repeat match goal with
              | _ => progress change_weight
-             | |- context [?a mod ?b] => unique pose proof (Z.mod_pos_bound a b ltac:(omega))
+             | |- context [?a mod ?b] => unique pose proof (Z.mod_pos_bound a b ltac:(lia))
              | |- 0 <= _ => progress Z.zero_bounds
              | |- 0 <= _ * _ < _ * _ =>
-               split; [ solve [Z.zero_bounds] | apply Z.mul_lt_mono_nonneg; omega ]
+               split; [ solve [Z.zero_bounds] | apply Z.mul_lt_mono_nonneg; lia ]
              | _ => solve [auto]
-             | _ => omega
+             | _ => lia
              end.
 
     Local Lemma eval2 x y : eval w 2 [x;y] = x + R * y.
@@ -12164,7 +12164,7 @@ Module MontgomeryReduction.
       assert (0 <= (T mod R) * N' < w 2) by  (solve_range).
 
       autorewrite with widemul.
-      rewrite Rows.add_partitions, Rows.add_div by (distr_length; apply wprops; omega).
+      rewrite Rows.add_partitions, Rows.add_div by (distr_length; apply wprops; lia).
       rewrite R_two_pow.
       cbv [Rows.partition seq]. rewrite !eval2.
       autorewrite with push_nth_default push_map.
@@ -12177,13 +12177,13 @@ Module MontgomeryReduction.
 
       autorewrite with zsimplify.
       rewrite (Z.mul_comm (((T mod R) * N') mod R) N) in *.
-      break_match; try reflexivity; Z.ltb_to_lt; rewrite Z.div_small_iff in * by omega;
+      break_match; try reflexivity; Z.ltb_to_lt; rewrite Z.div_small_iff in * by lia;
         repeat match goal with
                | _ => progress autorewrite with zsimplify_fast
                | |- context [?x mod (R * R)] =>
                  unique pose proof (Z.mod_pos_bound x (R * R));
                    try rewrite (Z.mod_small x (R * R)) in * by Z.rewrite_mod_small_solver
-               | _ => omega
+               | _ => lia
                | _ => progress Z.rewrite_mod_small
                end.
     Qed.
@@ -12193,8 +12193,8 @@ Module MontgomeryReduction.
     Proof.
       erewrite montred'_eq by eauto.
       apply Z.equiv_modulo_mod_small; auto using reduce_via_partial_correct.
-      replace 0 with (Z.min 0 (R-N)) by (apply Z.min_l; omega).
-      apply reduce_via_partial_in_range; omega.
+      replace 0 with (Z.min 0 (R-N)) by (apply Z.min_l; lia).
+      apply reduce_via_partial_in_range; lia.
     Qed.
   End MontRed'.
 
@@ -12321,7 +12321,7 @@ Module Montgomery256.
     { cbv [expr.Interp type.uncurried_domain type.uncurry type.final_codomain].
       reflexivity. }
     { cbn. rewrite !andb_true_iff. cbv [R N] in *.
-      repeat split; apply Z.leb_le; omega. }
+      repeat split; apply Z.leb_le; lia. }
   Qed.
 
   (* TODO : maybe move these ok_expr tactics somewhere else *)
@@ -12334,7 +12334,7 @@ Module Montgomery256.
       left; lazy; try split; congruence
     | |- lower r[0~>_]%zrange = 0 => reflexivity
     | |- context [PreFancy.ok_ident] => constructor
-    | |- context [PreFancy.ok_scalar] => constructor; try omega
+    | |- context [PreFancy.ok_scalar] => constructor; try lia
     | |- context [PreFancy.is_halved] => eapply PreFancy.is_halved_constant; [lazy; reflexivity | ]
     | |- context [PreFancy.is_halved] => constructor
     | |- context [PreFancy.in_word_range] => lazy; reflexivity
@@ -12348,10 +12348,10 @@ Module Montgomery256.
         cbv [is_tighter_than_bool PreFancy.has_range fst snd upper lower R N] in *; cbn;
         apply andb_true_iff; split; apply Z.leb_le
       | _ => lazy
-      end; omega || reflexivity
+      end; lia || reflexivity
     | |- @eq zrange _ _ => lazy; reflexivity
-    | |- _ <= _ => cbv [machine_wordsize]; omega
-    | |- _ <= _ <= _ => cbv [machine_wordsize]; omega
+    | |- _ <= _ => cbv [machine_wordsize]; lia
+    | |- _ <= _ <= _ => cbv [machine_wordsize]; lia
     end; intros.
 
   (* TODO : maybe move these ok_expr tactics somewhere else *)
@@ -12379,7 +12379,7 @@ Module Montgomery256.
       lazy; congruence.
       constructor.
       constructor. }
-    { lazy. omega. }
+    { lazy. lia. }
    Qed.
 
   Definition montred256_fancy' (lo hi RegMod RegPInv RegZero error : positive) :=
@@ -12431,7 +12431,7 @@ Module Montgomery256.
 
   Local Ltac solve_bounds :=
     match goal with
-    | H : ?a = ?b mod ?c |- 0 <= ?a < ?c => rewrite H; apply Z.mod_pos_bound; omega
+    | H : ?a = ?b mod ?c |- 0 <= ?a < ?c => rewrite H; apply Z.mod_pos_bound; lia
     | _ => assumption
     end.
 
@@ -12508,12 +12508,12 @@ Module Montgomery256.
         Z.le Z.ltb Z.leb Z.geb Z.eqb Z.land Z.shiftr Z.shiftl
         Z.add Z.mul Z.div Z.sub Z.modulo Z.testbit Z.pow Z.ones
         fst snd]; cbn [fst snd];
-    try (replace (2 ^ (256 / 2) - 1) with (Z.ones 128) by reflexivity; rewrite !Z.land_ones by omega);
-    autorewrite with to_div_mod; rewrite ?Z.mod_mod, <-?Z.testbit_spec' by omega;
+    try (replace (2 ^ (256 / 2) - 1) with (Z.ones 128) by reflexivity; rewrite !Z.land_ones by lia);
+    autorewrite with to_div_mod; rewrite ?Z.mod_mod, <-?Z.testbit_spec' by lia;
     repeat match goal with
            | H : 0 <= ?x < ?m |- context [?x mod ?m] => rewrite (Z.mod_small x m) by apply H
            | |- context [?x <? 0] => rewrite (proj2 (Z.ltb_ge x 0)) by (break_match; Z.zero_bounds)
-           | _ => rewrite Z.mod_small with (b:=2) by (break_match; omega)
+           | _ => rewrite Z.mod_small with (b:=2) by (break_match; lia)
            | |- context [ (if Z.testbit ?a ?n then 1 else 0) + ?b + ?c] =>
              replace ((if Z.testbit a n then 1 else 0) + b + c) with (b + c + (if Z.testbit a n then 1 else 0)) by ring
            end.
@@ -12555,7 +12555,7 @@ Module Montgomery256.
     intros. subst x. cbv [N R N'] in *.
     rewrite <-montred256_prefancy_correct with (dummy_arrow := fun s d _ => DefaultValue.type.default) by auto.
     rewrite <-montred256_alloc_equivalent with (errorR := RegZero) (errorP := 1%positive) (extra_reg:=extra_reg)
-      by (cbv [R]; auto with omega).
+      by (cbv [R]; auto with lia).
     cbv [ProdEquiv.interp256].
     cbv [montred256_alloc montred256_prefancy].
 
@@ -12575,18 +12575,18 @@ Module Montgomery256.
 
     step start_context; [ reflexivity | reflexivity | ].
     step start_context; [ reflexivity | reflexivity | ].
-    step start_context; [ break_innermost_match; Z.ltb_to_lt; omega | ].
+    step start_context; [ break_innermost_match; Z.ltb_to_lt; lia | ].
     step start_context; [ reflexivity | | ].
     {
       let r := eval cbv in (2^256) in replace (2^256) with r by reflexivity.
-      rewrite !Z.shiftl_0_r, !Z.mod_mod by omega.
+      rewrite !Z.shiftl_0_r, !Z.mod_mod by lia.
       repeat match goal with
-             | |- context [?a mod ?b] => unique pose proof (Z.mod_pos_bound a b ltac:(omega))
+             | |- context [?a mod ?b] => unique pose proof (Z.mod_pos_bound a b ltac:(lia))
              end.
       apply Z.testbit_neg_eq_if;
         let r := eval cbv in (2^256) in replace (2^256) with r by reflexivity;
-                               omega. }
-    step start_context; [ break_innermost_match; Z.ltb_to_lt; omega | ].
+                               lia. }
+    step start_context; [ break_innermost_match; Z.ltb_to_lt; lia | ].
     reflexivity.
   Qed.
 

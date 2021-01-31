@@ -6,6 +6,6 @@ Local Open Scope Z_scope.
 
 Module Z.
   Lemma opp_eq_0_iff a : -a = 0 <-> a = 0.
-  Proof. omega. Qed.
+  Proof. lia. Qed.
   Hint Rewrite opp_eq_0_iff : zsimplify.
 End Z.

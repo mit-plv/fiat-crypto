@@ -1,4 +1,4 @@
-Require Import Coq.omega.Omega.
+Require Import Coq.micromega.Lia.
 Require Import Crypto.Compilers.Z.Bounds.Interpretation.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.Tactics.BreakMatch.
@@ -29,6 +29,6 @@ Proof.
            | _ => progress break_innermost_match_hyps_step
            | [ H : ?leb _ _ = true |- _ ] => apply NPeano.Nat.leb_le in H
            | [ H : ?leb _ _ = false |- _ ] => apply NPeano.Nat.leb_gt in H
-           | _ => omega *
+           | _ => lia *
            end. }
 Qed.

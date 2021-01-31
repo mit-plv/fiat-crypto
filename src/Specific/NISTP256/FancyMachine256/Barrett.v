@@ -13,13 +13,13 @@ Section expression.
   Let base_pos : 0 < b. reflexivity. Qed.
   Context (k_good : m < b^k)
           (μ_good : μ = b^(2*k) / m) (* [/] is [Z.div], which is truncated *).
-  Let offset_nonneg : 0 <= offset. unfold offset; omega. Qed.
-  Let k_big_enough : offset <= k. unfold offset, k; omega. Qed.
+  Let offset_nonneg : 0 <= offset. unfold offset; lia. Qed.
+  Let k_big_enough : offset <= k. unfold offset, k; lia. Qed.
   Context (m_small : 3 * m <= b^(k+offset))
           (m_large : b^(k-offset) <= m + 1).
   Context (H : 0 <= m < 2^256).
-  Let H' : 0 <= 250 <= 256. omega. Qed.
-  Let H'' : 0 < 250. omega. Qed.
+  Let H' : 0 <= 250 <= 256. lia. Qed.
+  Let H'' : 0 < 250. lia. Qed.
   Local Notation SmallT := (@ZBounded.SmallT (2 ^ 256) (2 ^ 250) m
                                   (@ZLikeOps_of_ArchitectureBoundedOps 128 ops m _)).
   Definition ldi' : load_immediate SmallT := _.

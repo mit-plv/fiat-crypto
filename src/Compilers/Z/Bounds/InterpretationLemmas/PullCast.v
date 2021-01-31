@@ -57,10 +57,10 @@ Section with_round_up.
                  | rewrite <- Z.log2_up_le_pow2_full in * by auto with zarith
                  | break_innermost_match_step
                  | apply conj
-                 | omega
+                 | lia
                  | rewrite <- Z.log2_up_le_full
                  | match goal with
-                   | [ |- ?x < ?y ] => cut (x + 1 <= y); [ omega | ]
+                   | [ |- ?x < ?y ] => cut (x + 1 <= y); [ lia | ]
                    | [ H : (_ <=? _)%nat = true |- _ ] => apply Nat.leb_le in H
                    | [ H : (_ <= _)%nat |- _ ] => apply inj_le in H
                    end ].
@@ -78,10 +78,10 @@ Section with_round_up.
     destruct_head base_type; simpl in *; try reflexivity.
     unfold Bounds.smallest_logsz, Bounds.interp_base_type, cast_const in *.
     break_innermost_match_hyps; Z.ltb_to_lt; simpl in *;
-      [ pose proof (wordToZ_range v) | omega ].
+      [ pose proof (wordToZ_range v) | lia ].
     rewrite wordToZ_ZToWord_mod_full.
     rewrite wordToZ_ZToWord_mod_full in Hv.
-    revert Hv; apply Z.max_case_strong; Z.rewrite_mod_small; intros; try omega; [].
+    revert Hv; apply Z.max_case_strong; Z.rewrite_mod_small; intros; try lia; [].
     rewrite Z.mod_small; [ reflexivity | split; auto with zarith ].
     autorewrite with push_Zof_nat zsimplify_const in *.
     rewrite Z2Nat.id in * by auto with zarith.
@@ -89,7 +89,7 @@ Section with_round_up.
     eapply Z.lt_le_trans; [ eassumption | ].
     repeat first [ progress Z.peel_le
                  | rewrite <- Z.log2_up_pow2 by auto with zarith; progress Z.peel_le
-                 | omega ].
+                 | lia ].
   Qed.
 
   Local Existing Instances Z.pow_Zpos_le_Proper Z.pow_Zpos_le_Proper_flip Z.lt_le_flip_Proper_flip_impl.
@@ -109,9 +109,9 @@ Section with_round_up.
     { unfold Bounds.actual_logsz.
       break_innermost_match; Z.ltb_to_lt; try reflexivity; [].
       t_small.
-      apply Z.max_case_strong; intros; Z.rewrite_mod_small; omega. }
+      apply Z.max_case_strong; intros; Z.rewrite_mod_small; lia. }
     { unfold Bounds.smallest_logsz.
-      break_innermost_match_step; Z.ltb_to_lt; try omega; [].
+      break_innermost_match_step; Z.ltb_to_lt; try lia; [].
       revert Hb; apply (Z.max_case_strong 0 v); intros; Z.rewrite_mod_small; try reflexivity.
       rewrite Z.max_r by auto with zarith.
       autorewrite with push_Zof_nat zsimplify_const in *.
@@ -119,7 +119,7 @@ Section with_round_up.
       rewrite Z.mod_mod_small; try apply conj; auto with zarith;
         repeat first [ rewrite <- Z.log2_up_le_pow2_full in * by auto with zarith
                      | rewrite <- Z.log2_up_le_full
-                     | omega
+                     | lia
                      | apply conj
                      | progress Z.peel_le
                      | rewrite <- Z.log2_up_pow2 by auto with zarith; progress Z.peel_le

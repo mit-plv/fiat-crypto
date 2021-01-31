@@ -69,7 +69,7 @@ Section Pow2BaseProofs.
   Lemma sum_firstn_limb_widths_nonneg : forall n, 0 <= sum_firstn limb_widths n.
   Proof using Type*.
     unfold sum_firstn; intros.
-    apply fold_right_invariant; try omega.
+    apply fold_right_invariant; try lia.
     eauto using Z.add_nonneg_nonneg, limb_widths_nonneg, In_firstn.
   Qed. Hint Resolve sum_firstn_limb_widths_nonneg.
 
@@ -81,13 +81,13 @@ Section Pow2BaseProofs.
     clear limb_widths_nonneg. (* don't use this in the inductive hypothesis *)
     induction limb_widths; intros i b w ? nth_err_w nth_err_b;
       unfold base_from_limb_widths in *; fold base_from_limb_widths in *;
-      [rewrite (@nil_length0 Z) in *; omega | ].
+      [rewrite (@nil_length0 Z) in *; lia | ].
     simpl in *.
     case_eq i; intros; subst.
     + subst; apply nth_error_first in nth_err_w.
       apply nth_error_first in nth_err_b; subst.
       apply map_nth_error.
-      case_eq l; intros; subst; [simpl in *; omega | ].
+      case_eq l; intros; subst; [simpl in *; lia | ].
       unfold base_from_limb_widths; fold base_from_limb_widths.
       reflexivity.
     + simpl in nth_err_w.
@@ -96,7 +96,7 @@ Section Pow2BaseProofs.
       subst.
       replace (two_p w * (two_p a * x)) with (two_p a * (two_p w * x)) by ring.
       apply map_nth_error.
-      apply IHl; auto. omega.
+      apply IHl; auto. lia.
   Qed.
 
 
@@ -105,8 +105,8 @@ Section Pow2BaseProofs.
   Proof using Type*.
     induction i as [|i IHi]; intros H.
     + unfold sum_firstn, base_from_limb_widths in *; case_eq limb_widths; try reflexivity.
-      intro lw_nil; rewrite lw_nil, (@nil_length0 Z) in *; omega.
-    + assert (i < length limb_widths)%nat as lt_i_length by omega.
+      intro lw_nil; rewrite lw_nil, (@nil_length0 Z) in *; lia.
+    + assert (i < length limb_widths)%nat as lt_i_length by lia.
       specialize (IHi lt_i_length).
       destruct (nth_error_length_exists_value _ _ lt_i_length) as [w nth_err_w].
       erewrite base_from_limb_widths_step; eauto.
@@ -146,7 +146,7 @@ Section Pow2BaseProofs.
       = base_from_limb_widths l0 ++ map (Z.mul (two_p (sum_firstn l0 (length l0)))) (base_from_limb_widths l).
   Proof using Type.
     induction l0 as [|?? IHl0].
-    { simpl; intros; rewrite <- map_id at 1; apply map_ext; intros; omega. }
+    { simpl; intros; rewrite <- map_id at 1; apply map_ext; intros; lia. }
     { simpl; intros; rewrite !IHl0, !map_app, map_map, sum_firstn_succ_cons, two_p_is_exp by auto with znonzero.
       do 2 f_equal; apply map_ext; intros; lia. }
   Qed.
@@ -176,16 +176,16 @@ Section Pow2BaseProofs.
            | |- _ => progress (cbv [bounded]; intros)
            | |- _ => break_if
            | |- _ => apply Z.bits_inj'
-           | |- _ => rewrite Z.testbit_pow2_mod by (apply nth_default_preserves_properties; auto; omega)
+           | |- _ => rewrite Z.testbit_pow2_mod by (apply nth_default_preserves_properties; auto; lia)
            | |- _ => reflexivity
            end.
     specialize (H0 i).
     symmetry.
     let n := match goal with n : Z |- _ => n end in
     rewrite <- (Z.mod_pow2_bits_high (nth_default 0 us i) (nth_default 0 lw i) n);
-      [ rewrite Z.mod_small by omega; reflexivity | ].
-    split; try omega.
-    apply nth_default_preserves_properties; auto; omega.
+      [ rewrite Z.mod_small by lia; reflexivity | ].
+    split; try lia.
+    apply nth_default_preserves_properties; auto; lia.
   Qed.
 
   Lemma bounded_nil_iff : forall us, bounded nil us <-> (forall u, In u us -> u = 0).
@@ -196,12 +196,12 @@ Section Pow2BaseProofs.
       specialize (H x).
       replace u with (nth_default 0 us x) by (auto using nth_error_value_eq_nth_default).
       rewrite nth_default_nil, Z.pow_0_r in H.
-      omega.
+      lia.
     + rewrite nth_default_nil, Z.pow_0_r.
-      apply nth_default_preserves_properties; try omega.
+      apply nth_default_preserves_properties; try lia.
       intros x H0.
       apply H in H0.
-      omega.
+      lia.
   Qed.
 
   Lemma bounded_iff : forall lw us, bounded lw us <-> forall i, 0 <= nth_default 0 us i < 2 ^ nth_default 0 lw i.
@@ -217,7 +217,7 @@ Section Pow2BaseProofs.
     intro us; revert limb_widths limb_widths_nonneg; induction us as [|a us IHus];
       intros limb_widths limb_widths_nonneg i H.
     + rewrite nth_default_nil, BaseSystemProofs.decode_nil, Z.shiftr_0_l, Z.pow2_mod_spec, Z.mod_0_l by
-          (try (apply Z.pow_nonzero; try omega); apply nth_default_preserves_properties; auto; omega).
+          (try (apply Z.pow_nonzero; try lia); apply nth_default_preserves_properties; auto; lia).
       reflexivity.
     + destruct i.
       - rewrite nth_default_cons, sum_firstn_0, Z.shiftr_0_r.
@@ -234,17 +234,17 @@ Section Pow2BaseProofs.
           rewrite <-Z.shiftl_mul_pow2 by auto using in_eq.
           rewrite bounded_iff in *.
           specialize (H 0%nat); rewrite !nth_default_cons in H.
-          rewrite <-Z.lor_shiftl by (auto using in_eq; omega).
+          rewrite <-Z.lor_shiftl by (auto using in_eq; lia).
           apply Z.bits_inj'; intros n H0.
           rewrite Z.testbit_pow2_mod by auto using in_eq.
           break_if. {
             autorewrite with Ztestbit; break_match;
-              try rewrite Z.testbit_neg_r with (n := n - w) by omega;
+              try rewrite Z.testbit_neg_r with (n := n - w) by lia;
               autorewrite with bool_congr;
               f_equal; ring.
           } {
             replace a with (a mod 2 ^ w) by (auto using Z.mod_small).
-            apply Z.mod_pow2_bits_high. split; auto using in_eq; omega.
+            apply Z.mod_pow2_bits_high. split; auto using in_eq; lia.
           }
       - rewrite nth_default_cons_S.
         destruct limb_widths as [|w lw].
@@ -260,8 +260,8 @@ Section Pow2BaseProofs.
           rewrite <-Z.shiftl_mul_pow2 by auto using in_eq.
           rewrite bounded_iff in *.
           rewrite Z.shiftr_add_shiftl_high by first
-            [ pose proof (sum_firstn_nonnegative i lw); split; auto using in_eq; specialize_by auto using in_cons; omega
-            | specialize (H 0%nat); rewrite !nth_default_cons in H; omega ].
+            [ pose proof (sum_firstn_nonnegative i lw); split; auto using in_eq; specialize_by auto using in_cons; lia
+            | specialize (H 0%nat); rewrite !nth_default_cons in H; lia ].
           rewrite IHus with (limb_widths := lw) by
               (auto using in_cons; rewrite ?bounded_iff; intro j; specialize (H (S j));
                rewrite !nth_default_cons_S in H; assumption).
@@ -270,7 +270,7 @@ Section Pow2BaseProofs.
 
   Lemma nth_default_limb_widths_nonneg : forall i, 0 <= nth_default 0 limb_widths i.
   Proof using Type*.
-    intros; apply nth_default_preserves_properties; auto; omega.
+    intros; apply nth_default_preserves_properties; auto; lia.
   Qed. Hint Resolve nth_default_limb_widths_nonneg.
 
   Lemma decode_firstn_pow2_mod : forall us i,
@@ -289,7 +289,7 @@ Section Pow2BaseProofs.
            | |- _ => rewrite nth_default_base
            | |- _ => rewrite IHi
            | |- _ => rewrite <-Z.lor_shiftl by (rewrite ?Z.pow2_mod_spec; try apply Z.mod_pos_bound; Z.zero_bounds)
-           | |- context[min ?x ?y] => (rewrite Nat.min_l by omega || rewrite Nat.min_r by omega)
+           | |- context[min ?x ?y] => (rewrite Nat.min_l by lia || rewrite Nat.min_r by lia)
            | |- context[2 ^ ?a * _] => rewrite (Z.mul_comm (2 ^ a)); rewrite <-Z.shiftl_mul_pow2
            | |- _ => solve [auto]
            | |- _ => lia
@@ -298,14 +298,14 @@ Section Pow2BaseProofs.
     repeat match goal with
            | |- _ => progress intros
            | |- _ => progress autorewrite with Ztestbit
-           | |- _ => rewrite Z.testbit_pow2_mod by (omega || trivial)
-           | |- _ => break_if; try omega
+           | |- _ => rewrite Z.testbit_pow2_mod by (lia || trivial)
+           | |- _ => break_if; try lia
            | H : ?a < ?b |- context[Z.testbit _ (?a - ?b)] =>
-             rewrite (Z.testbit_neg_r _ (a-b)) by omega
+             rewrite (Z.testbit_neg_r _ (a-b)) by lia
            | |- _ => reflexivity
            | |- _ => solve [f_equal; ring]
            | |- _ => rewrite sum_firstn_succ_default in *;
-                       pose proof (nth_default_limb_widths_nonneg i); omega
+                       pose proof (nth_default_limb_widths_nonneg i); lia
            end.
   Qed.
 
@@ -324,7 +324,7 @@ Section Pow2BaseProofs.
            | |- _ => break_if
            | |- _ => assumption
            | |- _ => solve [auto]
-           | H : ?a <= ?b |- 0 <= ?b => assert (0 <= a) by (omega || auto); omega
+           | H : ?a <= ?b |- 0 <= ?b => assert (0 <= a) by (lia || auto); lia
            end.
   Qed.
 
@@ -364,7 +364,7 @@ Section Pow2BaseProofs.
     unfold BaseSystem.accumulate at 1; simpl.
     assert (0 < two_p zero) by (rewrite two_p_equiv; auto with zarith).
     replace (map (fun x => two_p zero * (two_p w * x)) (base_from_limb_widths limb_widths')) with (map (Z.mul (two_p (zero + w))) (base_from_limb_widths limb_widths'))
-      by (apply map_ext; rewrite two_p_is_exp by auto with zarith omega; auto with zarith).
+      by (apply map_ext; rewrite two_p_is_exp by auto with zarith lia; auto with zarith).
     change 0 with (0 + 0) at 1.
     apply Z.add_le_mono; simpl in *; auto with zarith.
   Qed.
@@ -379,7 +379,7 @@ Section Pow2BaseProofs.
     { apply decode_nonneg; auto. }
     { apply Z.testbit_false_bound; auto; intros.
       rewrite testbit_decode_high; auto;
-        replace (length us) with (length limb_widths); try omega. }
+        replace (length us) with (length limb_widths); try lia. }
   Qed.
 
   Lemma decode_shift_app : forall us0 us1, (length (us0 ++ us1) <= length limb_widths)%nat ->
@@ -454,12 +454,12 @@ Section UniformBase.
        specialize (A x).
        split; try eapply A.
        eapply Z.lt_le_trans; try apply A.
-       apply nth_default_preserves_properties; [ | apply Z.pow_le_mono_r; omega ] .
+       apply nth_default_preserves_properties; [ | apply Z.pow_le_mono_r; lia ] .
        intros; apply Z.eq_le_incl.
        f_equal; auto.
      + apply nth_default_preserves_properties_length_dep;
-         try solve [apply nth_default_preserves_properties; split; Z.zero_bounds; rewrite limb_widths_uniform; auto || omega].
-      intros; apply nth_default_preserves_properties_length_dep; try solve [intros; omega].
+         try solve [apply nth_default_preserves_properties; split; Z.zero_bounds; rewrite limb_widths_uniform; auto || lia].
+      intros; apply nth_default_preserves_properties_length_dep; try solve [intros; lia].
        let x := fresh "x" in intro x; intros;
          replace x with width; try symmetry; auto.
    Qed.
@@ -480,7 +480,7 @@ Section UniformBase.
       nth_default 0 limb_widths i = width.
   Proof using Type*.
     intros; rewrite nth_default_uniform_base_full.
-    edestruct lt_dec; omega.
+    edestruct lt_dec; lia.
   Qed.
 
   Lemma sum_firstn_uniform_base : forall i, (i <= length limb_widths)%nat ->
@@ -491,20 +491,20 @@ Section UniformBase.
       simpl @length in *;
       autorewrite with simpl_sum_firstn push_Zof_nat zsimplify;
       try reflexivity;
-      try omega.
+      try lia.
     assert (x = width) by auto with datatypes; subst.
-    rewrite IHxs by auto with datatypes omega; omega.
+    rewrite IHxs by auto with datatypes lia; lia.
   Qed.
 
   Lemma sum_firstn_uniform_base_strong : forall i, (length limb_widths <= i)%nat ->
                                             sum_firstn limb_widths i = Z.of_nat (length limb_widths) * width.
   Proof using limb_widths_uniform.
-    intros; rewrite sum_firstn_all, sum_firstn_uniform_base by omega; reflexivity.
+    intros; rewrite sum_firstn_all, sum_firstn_uniform_base by lia; reflexivity.
   Qed.
 
   Lemma upper_bound_uniform : upper_bound limb_widths = 2^(Z.of_nat (length limb_widths) * width).
   Proof using limb_widths_uniform.
-    unfold upper_bound; rewrite sum_firstn_uniform_base_strong by omega; reflexivity.
+    unfold upper_bound; rewrite sum_firstn_uniform_base_strong by lia; reflexivity.
   Qed.
 
   (* TODO : move *)
@@ -530,7 +530,7 @@ Section UniformBase.
     erewrite (repeat_spec_eq xs) by first [ eassumption | reflexivity ].
     rewrite ListUtil.tl_repeat.
     autorewrite with push_firstn.
-    apply f_equal; omega *.
+    apply f_equal; lia *.
   Qed.
 
   Lemma decode_tl_base : forall us, (length us < length limb_widths)%nat ->
@@ -557,7 +557,7 @@ Section UniformBase.
     BaseSystem.decode base (us0 ++ us1) = (BaseSystem.decode (base_from_limb_widths (firstn (length us0) limb_widths)) us0) + ((BaseSystem.decode (base_from_limb_widths (skipn (length us0) limb_widths)) us1) << (Z.of_nat (length us0) * width)).
   Proof using Type*.
     intros.
-    rewrite <- sum_firstn_uniform_base by (distr_length; omega).
+    rewrite <- sum_firstn_uniform_base by (distr_length; lia).
     rewrite decode_shift_app by auto using uniform_limb_widths_nonneg.
     reflexivity.
   Qed.

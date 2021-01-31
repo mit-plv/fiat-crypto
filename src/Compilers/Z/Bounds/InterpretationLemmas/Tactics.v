@@ -38,7 +38,7 @@ Ltac fin_t :=
                      | split; [ solve [ fin_t ] | ] ];
                try solve [ fin_t ]
           end
-        | omega ].
+        | lia ].
 
 Ltac specializer_t_step :=
   first [ progress specialize_by_assumption
@@ -47,20 +47,20 @@ Ltac specializer_t_step :=
 Ltac Zarith_t_step :=
   first [ match goal with
           | [ H : (?x <= ?y)%Z, H' : (?y <= ?x)%Z |- _ ]
-            => assert (x = y) by omega; clear H H'
+            => assert (x = y) by lia; clear H H'
           end
         | progress Z.ltb_to_lt_in_context ].
 Ltac Zarith_land_lor_t_step :=
   match goal with
   | [ |- _ <= Z.lor _ _ <= _ ]
-    => split; etransitivity; [ | apply Z.lor_bounds; omega | apply Z.lor_bounds; omega | ]
+    => split; etransitivity; [ | apply Z.lor_bounds; lia | apply Z.lor_bounds; lia | ]
   | [ |- 2^Z.log2_up (?x + 1) - 1 <= 2^Z.log2_up (?y + 1) - 1 ]
-    => let H := fresh in assert (H : x <= y) by omega; rewrite H; reflexivity
+    => let H := fresh in assert (H : x <= y) by lia; rewrite H; reflexivity
   end.
 Ltac word_arith_t :=
   match goal with
   | [ |- (0 <= FixedWordSizes.wordToZ ?w <= 2^2^Z.of_nat ?logsz - 1)%Z ]
-    => clear; pose proof (@wordToZ_range logsz w); autorewrite with push_Zof_nat zsimplify_const in *; try omega
+    => clear; pose proof (@wordToZ_range logsz w); autorewrite with push_Zof_nat zsimplify_const in *; try lia
   end.
 
 Ltac case_Zvar_nonneg_on x :=
@@ -69,7 +69,7 @@ Ltac case_Zvar_nonneg_on x :=
   | Z => lazymatch goal with
          | [ H : (0 <= x)%Z |- _ ] => fail
          | [ H : (x < 0)%Z |- _ ] => fail
-         | _ => destruct (Z_lt_le_dec x 0); try omega
+         | _ => destruct (Z_lt_le_dec x 0); try lia
          end
   end.
 Ltac case_Zvar_nonneg_step :=
@@ -82,21 +82,21 @@ Ltac case_Zvar_nonneg := repeat case_Zvar_nonneg_step.
 Ltac remove_binary_operation_le_hyps_step :=
   match goal with
   | [ H : (?f ?x ?y <= ?f ?x ?y')%Z |- _ ]
-    => assert ((y = y') \/ (y < y' /\ 0 <= x))%Z by (assert (y <= y')%Z by omega; nia);
+    => assert ((y = y') \/ (y < y' /\ 0 <= x))%Z by (assert (y <= y')%Z by lia; nia);
        clear H
   | [ H : (?f ?y ?x <= ?f ?y' ?x)%Z |- _ ]
-    => assert ((y = y') \/ (y < y' /\ 0 <= x))%Z by (assert (y <= y')%Z by omega; nia);
+    => assert ((y = y') \/ (y < y' /\ 0 <= x))%Z by (assert (y <= y')%Z by lia; nia);
        clear H
   | [ H : (?f ?x ?y <= ?f ?x ?y')%Z |- _ ]
-    => assert ((y = y') \/ (y' < y /\ x <= 0))%Z by (assert (y' <= y)%Z by omega; nia);
+    => assert ((y = y') \/ (y' < y /\ x <= 0))%Z by (assert (y' <= y)%Z by lia; nia);
        clear H
   | [ H : (?f ?y ?x <= ?f ?y' ?x)%Z |- _ ]
-    => assert ((y = y') \/ (y' < y /\ x <= 0))%Z by (assert (y' <= y)%Z by omega; nia);
+    => assert ((y = y') \/ (y' < y /\ x <= 0))%Z by (assert (y' <= y)%Z by lia; nia);
        clear H
   | [ H : ?T, H' : ?T |- _ ] => clear H'
   | [ H : ?A \/ (~?A /\ ?B), H' : ?A \/ (~?A /\ ?C) |- _ ]
     => assert (A \/ (~A /\ (B /\ C))) by (clear -H H'; tauto); clear H H'
-  | _ => progress destruct_head' or; destruct_head' and; subst; try omega
+  | _ => progress destruct_head' or; destruct_head' and; subst; try lia
   | [ |- (_ <= _ <= _)%Z ] => split
   | _ => case_Zvar_nonneg_step
   end.
@@ -104,53 +104,53 @@ Ltac remove_binary_operation_le_hyps_step :=
 Ltac saturate_with_shift_facts :=
   repeat match goal with
          | [ H : ?x <= ?y, H' : ?x' <= ?y' |- context[?x << ?x'] ]
-           => unique assert (x << x' <= y << y') by (apply Z.shiftl_le_mono; omega)
+           => unique assert (x << x' <= y << y') by (apply Z.shiftl_le_mono; lia)
          | [ H : ?x <= ?y, H' : ?x' <= ?y' |- context[?y << ?y'] ]
-           => unique assert (x << x' <= y << y') by (apply Z.shiftl_le_mono; omega)
+           => unique assert (x << x' <= y << y') by (apply Z.shiftl_le_mono; lia)
           | [ H : ?x <= ?y, H' : ?x' <= ?y' |- context[?x >> ?y'] ]
-            => unique assert (x >> y' <= y >> x') by (Z.shiftr_le_mono; omega)
+            => unique assert (x >> y' <= y >> x') by (Z.shiftr_le_mono; lia)
          | [ H : ?x <= ?y, H' : ?x' <= ?y' |- context[?y >> ?x'] ]
-           => unique assert (x >> y' <= y >> x') by (apply Z.shiftr_le_mono; omega)
+           => unique assert (x >> y' <= y >> x') by (apply Z.shiftr_le_mono; lia)
          end.
 Ltac saturate_with_all_shift_facts :=
   repeat match goal with
          | _ => progress saturate_with_shift_facts
          | [ H : ?x <= ?y, H' : ?x' <= ?y' |- context[Z.shiftl _ _] ]
-           => unique assert (x << x' <= y << y') by (apply Z.shiftl_le_mono; omega)
+           => unique assert (x << x' <= y << y') by (apply Z.shiftl_le_mono; lia)
          | [ H : ?x <= ?y, H' : ?x' <= ?y' |- context[Z.shiftr _ _] ]
-           => unique assert (x >> y' <= y >> x') by (apply Z.shiftr_le_mono; omega)
+           => unique assert (x >> y' <= y >> x') by (apply Z.shiftr_le_mono; lia)
          end.
 Ltac preprocess_shift_min_max :=
-  repeat first [ rewrite (Z.min_r (_ >> _) (_ >> _)) by (apply Z.shiftr_le_mono; omega)
-               | rewrite (Z.min_l (_ >> _) (_ >> _)) by (apply Z.shiftr_le_mono; omega)
-               | rewrite (Z.max_r (_ >> _) (_ >> _)) by (apply Z.shiftr_le_mono; omega)
-               | rewrite (Z.max_l (_ >> _) (_ >> _)) by (apply Z.shiftr_le_mono; omega)
-               | rewrite (Z.min_r (_ << _) (_ << _)) by (apply Z.shiftl_le_mono; omega)
-               | rewrite (Z.min_l (_ << _) (_ << _)) by (apply Z.shiftl_le_mono; omega)
-               | rewrite (Z.max_r (_ << _) (_ << _)) by (apply Z.shiftl_le_mono; omega)
-               | rewrite (Z.max_l (_ << _) (_ << _)) by (apply Z.shiftl_le_mono; omega) ].
+  repeat first [ rewrite (Z.min_r (_ >> _) (_ >> _)) by (apply Z.shiftr_le_mono; lia)
+               | rewrite (Z.min_l (_ >> _) (_ >> _)) by (apply Z.shiftr_le_mono; lia)
+               | rewrite (Z.max_r (_ >> _) (_ >> _)) by (apply Z.shiftr_le_mono; lia)
+               | rewrite (Z.max_l (_ >> _) (_ >> _)) by (apply Z.shiftr_le_mono; lia)
+               | rewrite (Z.min_r (_ << _) (_ << _)) by (apply Z.shiftl_le_mono; lia)
+               | rewrite (Z.min_l (_ << _) (_ << _)) by (apply Z.shiftl_le_mono; lia)
+               | rewrite (Z.max_r (_ << _) (_ << _)) by (apply Z.shiftl_le_mono; lia)
+               | rewrite (Z.max_l (_ << _) (_ << _)) by (apply Z.shiftl_le_mono; lia) ].
 Ltac saturate_land_lor_facts :=
   repeat match goal with
          | [ |- context[Z.land ?x ?y] ]
            => let H := fresh in
               let H' := fresh in
-              assert (H : 0 <= x) by omega;
-              assert (H' : 0 <= y) by omega;
+              assert (H : 0 <= x) by lia;
+              assert (H' : 0 <= y) by lia;
               unique pose proof (Z.land_upper_bound_r x y H H');
               unique pose proof (Z.land_upper_bound_l x y H H')
          | [ |- context[Z.land ?x ?y] ]
-           => unique assert (0 <= Z.land x y) by (apply Z.land_nonneg; omega)
+           => unique assert (0 <= Z.land x y) by (apply Z.land_nonneg; lia)
          | [ |- context[Z.land ?x ?y] ]
            => case_Zvar_nonneg_on x; case_Zvar_nonneg_on y
          | [ |- context[Z.lor ?x ?y] ]
            => let H := fresh in
               let H' := fresh in
-              assert (H : 0 <= x) by omega;
-              assert (H' : 0 <= y) by omega;
+              assert (H : 0 <= x) by lia;
+              assert (H' : 0 <= y) by lia;
               unique pose proof (proj1 (Z.lor_bounds x y H H'));
               unique pose proof (proj2 (Z.lor_bounds x y H H'))
          | [ |- context[Z.lor ?x ?y] ]
-           => unique assert (0 <= Z.lor x y) by (apply Z.lor_nonneg; omega)
+           => unique assert (0 <= Z.lor x y) by (apply Z.lor_nonneg; lia)
          | [ |- context[Z.lor ?x ?y] ]
            => case_Zvar_nonneg_on x; case_Zvar_nonneg_on y
          end.
@@ -166,7 +166,7 @@ Ltac handle_four_corners_step_fast :=
         | progress subst
         | Zarith_t_step
         | progress split_min_max
-        | omega
+        | lia
         | nia ].
 Ltac handle_four_corners_step :=
   first [ handle_four_corners_step_fast
@@ -187,7 +187,7 @@ Ltac rewriter_t :=
         | rewrite !Z.max_log2_up
         | rewrite !Z.add_max_distr_r
         | rewrite !Z.add_max_distr_l
-        | rewrite wordToZ_ZToWord by (autorewrite with push_Zof_nat zsimplify_const; omega)
+        | rewrite wordToZ_ZToWord by (autorewrite with push_Zof_nat zsimplify_const; lia)
         | match goal with
           | [ H : _ |- _ ]
             => first [ rewrite !Bool.andb_true_iff in H

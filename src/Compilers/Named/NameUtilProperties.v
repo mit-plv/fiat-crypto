@@ -1,4 +1,4 @@
-Require Import Coq.omega.Omega.
+Require Import Coq.micromega.Lia.
 Require Import Coq.Arith.Arith.
 Require Import Coq.Lists.List.
 Require Import Crypto.Compilers.Syntax.
@@ -44,7 +44,7 @@ Section language.
                        | [ H : forall ls', fst (split_mnames _ _ _) = _, H' : context[fst (split_mnames _ _ (skipn ?n ?ls))] |- _ ]
                          => rewrite (H (skipn n ls)) in H'
                        | [ H : forall ls', fst (split_mnames _ _ _) = _, H' : context[fst (split_mnames _ ?t (firstn (count_pairs ?t + ?n) ?ls))] |- _ ]
-                         => rewrite (H (firstn (count_pairs t + n) ls)), firstn_firstn in H' by omega
+                         => rewrite (H (firstn (count_pairs t + n) ls)), firstn_firstn in H' by lia
                        | [ H : forall ls', fst (split_mnames _ _ _) = _, H' : context[fst (split_mnames _ ?t ?ls)] |- _ ]
                          => is_var ls; rewrite (H ls) in H'
                        | [ H : ?x = Some _, H' : ?x = None |- _ ] => congruence
@@ -73,7 +73,7 @@ Section language.
       { apply Min.min_case_strong.
         { match goal with H : _ |- _ => rewrite skipn_firstn in H end;
             eauto using In_firstn. }
-        { intro; match goal with H : _ |- _ => rewrite skipn_all in H by (rewrite firstn_length; omega * ) end.
+        { intro; match goal with H : _ |- _ => rewrite skipn_all in H by (rewrite firstn_length; lia * ) end.
           simpl in *; tauto. } }
       { eauto using In_skipn. }
     Qed.
@@ -172,15 +172,15 @@ Section language.
     : fst (split_names t ls) <> None <-> List.length ls >= count_pairs t.
   Proof using Type.
     revert ls; induction t; intros ls;
-      try solve [ destruct ls; simpl; intuition (omega || congruence) ].
+      try solve [ destruct ls; simpl; intuition (lia || congruence) ].
     repeat first [ progress simpl in *
                  | progress break_innermost_match_step
                  | progress specialize_by congruence
-                 | progress specialize_by omega
+                 | progress specialize_by lia
                  | rewrite snd_split_names_skipn in *
                  | progress intros
                  | congruence
-                 | omega
+                 | lia
                  | match goal with
                    | [ H : forall ls, fst (split_names ?t ls) <> None <-> _, H' : fst (split_names ?t ?ls') = _ |- _ ]
                      => specialize (H ls'); rewrite H' in H
@@ -197,8 +197,8 @@ Section language.
     : fst (split_names t ls) = None <-> List.length ls < count_pairs t.
   Proof using Type.
     destruct (length_fst_split_names_Some_iff t ls).
-    destruct (le_lt_dec (count_pairs t) (List.length ls)); specialize_by omega;
-      destruct (fst (split_names t ls)); split; try intuition (congruence || omega).
+    destruct (le_lt_dec (count_pairs t) (List.length ls)); specialize_by lia;
+      destruct (fst (split_names t ls)); split; try intuition (congruence || lia).
   Qed.
 
   Lemma split_onames_split_names (t : flat_type base_type_code) (ls : list Name)

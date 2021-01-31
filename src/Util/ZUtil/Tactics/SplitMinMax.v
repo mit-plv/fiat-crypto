@@ -1,7 +1,7 @@
-Require Import Coq.omega.Omega.
+Require Import Coq.micromega.Lia.
 Require Import Coq.ZArith.BinInt.
 
-Ltac rewrite_min_max_side_condition_t := omega.
+Ltac rewrite_min_max_side_condition_t := lia.
 
 Ltac revert_min_max :=
   repeat match goal with

@@ -112,7 +112,7 @@ Section WordByWordMontgomery.
         -> eval S3 < eval N + eval B.
     Proof.
       assert (Hmod : forall a b, 0 < b -> a mod b <= b - 1)
-        by (intros x y; pose proof (Z_mod_lt x y); omega).
+        by (intros x y; pose proof (Z_mod_lt x y); lia).
       intro HS.
       unfold S3, WordByWord.Abstract.Definition.S2, WordByWord.Abstract.Definition.S1.
       autorewrite with push_eval; [].
@@ -126,7 +126,7 @@ Section WordByWordMontgomery.
             auto with lia. }
       rewrite (Z.mul_comm _ r), <- Z.add_sub_assoc, <- Z.add_opp_r, !Z.div_add_l' by lia.
       autorewrite with zsimplify.
-      omega.
+      lia.
     Qed.
 
     Lemma small_A'
@@ -188,7 +188,7 @@ Section WordByWordMontgomery.
       assert (Hr : (-(1 mod r)) mod r = r - 1 /\ (-(1)) mod r = r - 1).
       { destruct (Z.eq_dec r 1) as [H'|H'].
         { rewrite H'; split; reflexivity. }
-        { rewrite !Z_mod_nz_opp_full; rewrite ?Z.mod_mod; Z.rewrite_mod_small; [ split; reflexivity | omega.. ]. } }
+        { rewrite !Z_mod_nz_opp_full; rewrite ?Z.mod_mod; Z.rewrite_mod_small; [ split; reflexivity | lia.. ]. } }
       autorewrite with pull_Zmod.
       replace 0 with (0 mod r) by apply Zmod_0_l.
       eapply F.eq_of_Z_iff.
@@ -264,7 +264,7 @@ Section WordByWordMontgomery.
 
     Lemma snd_redc_body_mod_N
       : (eval (snd (redc_body A_S))) mod (eval N) = (eval S + a*eval B)*ri mod (eval N).
-    Proof. destruct A_S; apply S4_mod_N; auto; omega. Qed.
+    Proof. destruct A_S; apply S4_mod_N; auto; lia. Qed.
 
     Lemma fst_redc_body
       : (eval (fst (redc_body A_S))) = eval (fst A_S) / r.
@@ -288,7 +288,7 @@ Section WordByWordMontgomery.
       : eval S < eval N + eval B
         -> eval (snd (redc_body A_S)) < eval N + eval B.
     Proof.
-      destruct A_S; apply S4_bound; unfold S in *; cbn [snd] in *; try assumption; try omega.
+      destruct A_S; apply S4_bound; unfold S in *; cbn [snd] in *; try assumption; try lia.
     Qed.
 
     Lemma numlimbs_redc_body : numlimbs (snd (redc_body A_S))
@@ -325,11 +325,11 @@ Section WordByWordMontgomery.
   Local Ltac t_min_max_step _ :=
     match goal with
     | [ |- context[Init.Nat.max ?x ?y] ]
-      => first [ rewrite (Max.max_l x y) by omega
-               | rewrite (Max.max_r x y) by omega ]
+      => first [ rewrite (Max.max_l x y) by lia
+               | rewrite (Max.max_r x y) by lia ]
     | [ |- context[Init.Nat.min ?x ?y] ]
-      => first [ rewrite (Min.min_l x y) by omega
-               | rewrite (Min.min_r x y) by omega ]
+      => first [ rewrite (Min.min_l x y) by lia
+               | rewrite (Min.min_r x y) by lia ]
     | _ => progress change Init.Nat.max with Nat.max
     | _ => progress change Init.Nat.min with Nat.min
     end.
@@ -363,7 +363,7 @@ Section WordByWordMontgomery.
                      | rewrite Nat.min_comm, Nat.min_max_distr ]. }
     rewrite Hgen; clear Hgen.
     destruct count; [ reflexivity | ].
-    repeat apply Max.max_case_strong; apply Min.min_case_strong; omega.
+    repeat apply Max.max_case_strong; apply Min.min_case_strong; lia.
   Qed.
 
 
@@ -432,7 +432,7 @@ Section WordByWordMontgomery.
       rewrite <- !Z.add_assoc.
       apply Z.add_mod_Proper; [ reflexivity | ].
       unfold Z.equiv_modulo; push_Zmod; rewrite (Z.mul_mod_l (_ mod r) _ (eval N)).
-      rewrite fst_redc_loop by (try apply redc_loop_good; auto; omega).
+      rewrite fst_redc_loop by (try apply redc_loop_good; auto; lia).
       cbn [fst].
       rewrite Z.mod_pull_div by lia.
       erewrite Z.div_to_inv_modulo;

@@ -240,7 +240,7 @@ reasonable time, so this is not really an option.
 
 *****)
 
-Require Import Coq.ZArith.ZArith Coq.micromega.Psatz Coq.omega.Omega.
+Require Import Coq.ZArith.ZArith Coq.micromega.Psatz Coq.micromega.Lia.
 Require Import Coq.ZArith.BinIntDef.
 Local Open Scope Z_scope.
 
@@ -412,7 +412,7 @@ Module B.
     Proof.
       rewrite m_eq. pose proof (Pos2Z.is_pos m).
       replace (a + s * b) with ((a + c*b) + b*(s-c)) by ring.
-      rewrite Z.add_mod, Z_mod_mult, Z.add_0_r, Z.mod_mod by omega.
+      rewrite Z.add_mod, Z_mod_mult, Z.add_0_r, Z.mod_mod by lia.
       trivial.
     Qed.
     Lemma eval_reduce s c p (s_nonzero:s<>0) m (m_eq : Z.pos m = s - eval c) :
@@ -421,7 +421,7 @@ Module B.
       cbv [reduce reduce_cps mod_eq]; prove_eval.
         erewrite <-reduction_rule by eauto; prove_eval.
     Qed.
-    Hint Rewrite eval_reduce using (omega || assumption) : push_basesystem_eval.
+    Hint Rewrite eval_reduce using (lia || assumption) : push_basesystem_eval.
     (* Why TF does this hint get picked up outside the section (while other eval_ hints do not?) *)
 
 
@@ -604,7 +604,7 @@ Module B.
                  end; trivial; lia.
         Unshelve.
         intros; subst. autorewrite with uncps push_id. distr_length.
-      Qed. Hint Rewrite @eval_add_to_nth using omega : push_basesystem_eval.
+      Qed. Hint Rewrite @eval_add_to_nth using lia : push_basesystem_eval.
 
       Section place_cps.
         Context {T : Type}.
@@ -625,7 +625,7 @@ Module B.
 
       Lemma place_cps_in_range (t:limb) (n:nat)
         : (fst (place_cps t n id) < S n)%nat.
-      Proof using Type. induction n; simpl; cbv [Z.eqb_cps]; break_match; simpl; omega. Qed.
+      Proof using Type. induction n; simpl; cbv [Z.eqb_cps]; break_match; simpl; lia. Qed.
       Lemma weight_place_cps t i
         : weight (fst (place_cps t i id)) * snd (place_cps t i id)
           = fst t * snd t.
@@ -661,7 +661,7 @@ Module B.
           [|pose proof (place_cps_in_range a (pred n))]; prove_eval.
         cbv [place]; rewrite weight_place_cps. nsatz.
       Qed.
-      Hint Rewrite @eval_from_associational using omega
+      Hint Rewrite @eval_from_associational using lia
         : push_basesystem_eval.
 
 
@@ -894,7 +894,7 @@ Module B.
             cbn in * |- .
             prove_eval; auto. }
         Qed.
-        Hint Rewrite @eval_chained_carries_reduce using (omega || assumption) : push_basesystem_eval.
+        Hint Rewrite @eval_chained_carries_reduce using (lia || assumption) : push_basesystem_eval.
 
         (* Reverse of [eval]; translate from Z to basesystem by putting
         everything in first digit and then carrying. This function, like

@@ -133,7 +133,7 @@ Proof.
                  | rewrite_interp_as_expr_or_const_correct ()
                  | intro ].
   all:repeat first [ reflexivity
-                   | omega
+                   | lia
                    | discriminate
                    | progress cbv [LetIn.Let_In Z.zselect IdfunWithAlt.id_with_alt]
                    | progress subst
@@ -178,7 +178,7 @@ Proof.
   all:try nia.
   Time
     all:repeat first [ reflexivity
-                     | omega
+                     | lia
                      | progress change (2^0)%Z with 1%Z in *
                      | progress change (2^1)%Z with 2%Z in *
                      | progress rewrite ?Z.land_0_l, ?Z.land_0_r, ?Z.lor_0_l, ?Z.lor_0_r, ?Z.opp_involutive, ?Z.shiftr_0_r

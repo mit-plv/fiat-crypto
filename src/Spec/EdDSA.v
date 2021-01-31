@@ -56,7 +56,7 @@ Section EdDSA.
   Local Arguments H {n} _.
   Local Notation wfirstn n w := (@WordUtil.wfirstn n _ w _) (only parsing).
 
-  Local Obligation Tactic := destruct prm; simpl; intros; Omega.omega.
+  Local Obligation Tactic := destruct prm; simpl; intros; Lia.lia.
 
   Program Definition curveKey (sk:secretkey) : BinInt.Z :=
     let x := wfirstn n (H sk) in (* hash the key, use first "half" for secret scalar *)

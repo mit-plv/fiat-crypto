@@ -21,14 +21,14 @@ Local Arguments Z.mul !_ !_.
 Ltac shift_left_right_t :=
   repeat match goal with
          | [ |- ?x = ?x ] => reflexivity
-         | [ |- Z.testbit ?x ?n = Z.testbit ?x ?n' ] => apply f_equal; try omega
+         | [ |- Z.testbit ?x ?n = Z.testbit ?x ?n' ] => apply f_equal; try lia
          | [ |- orb (Z.testbit ?x _) (Z.testbit ?y _) = orb (Z.testbit ?x _) (Z.testbit ?y _) ]
            => apply f_equal2
          | _ => progress Z.ltb_to_lt
          | _ => progress subst
          | _ => progress unfold AutoRewrite.rewrite_eq
          | _ => progress intros
-         | _ => omega
+         | _ => lia
          | _ => solve [ trivial ]
          | _ => progress break_match_step ltac:(fun _ => idtac)
          | [ |- context[Z.lor (?x >> ?count) (Z.pow2_mod (?y << (?n - ?count)) ?n)] ]

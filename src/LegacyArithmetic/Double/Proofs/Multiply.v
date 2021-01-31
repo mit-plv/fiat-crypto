@@ -78,7 +78,7 @@ Section tuple2.
       : (tuple_decoder (mul_double half_n x y) = (decode x * decode y) mod (2^(2 * half_n) * 2^(2*half_n)))%Z.
     Proof using Type*.
       assert (0 <= 2 * half_n) by eauto using decode_exponent_nonnegative.
-      assert (0 <= half_n) by omega.
+      assert (0 <= half_n) by lia.
       unfold mul_double, Let_In.
       push_decode; autorewrite with simpl_tuple_decoder; simplify_projections.
       autorewrite with zsimplify Zshift_to_pow push_Zpow.
