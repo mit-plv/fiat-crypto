@@ -58,8 +58,10 @@ src/ArithmeticCPS/Freeze.v
 src/ArithmeticCPS/ModOps.v
 src/ArithmeticCPS/Saturated.v
 src/ArithmeticCPS/WordByWordMontgomery.v
-src/Assembly/Model.v
+src/Assembly/Equality.v
 src/Assembly/Parse.v
+src/Assembly/Semantics.v
+src/Assembly/Syntax.v
 src/Assembly/Parse/TestAsm.v
 src/Assembly/Parse/Examples/fiat_25519_carry_square_optimised.v
 src/Assembly/Parse/Examples/fiat_25519_carry_square_optimised_seed10.v

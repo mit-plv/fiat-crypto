@@ -2,7 +2,8 @@ Require Import Coq.ZArith.ZArith.
 Require Import Coq.derive.Derive.
 Require Import Coq.Strings.String.
 Require Import Coq.Lists.List.
-Require Import Crypto.Assembly.Model.
+Require Import Crypto.Assembly.Syntax.
+Require Import Crypto.Assembly.Equality.
 Require Import Crypto.Util.OptionList.
 Require Import Crypto.Util.Strings.Parse.Common.
 Require Import Crypto.Util.Strings.ParseArithmetic.
