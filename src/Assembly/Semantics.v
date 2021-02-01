@@ -212,6 +212,15 @@ Definition annotate_reg_state (st : reg_state) : list (REG * N)
   := List.map (fun '(n, v) => (widest_register_of_index n, v)) (enumerate st).
 Ltac print_reg_state st := let st' := (eval cbv in (annotate_reg_state st)) in idtac st'.
 
+(* Kludge since [byte] isn't present in Coq 8.9 *)
+Module Byte.
+  Notation byte := N (only parsing).
+  Definition to_N (x : byte) : N := x.
+  Definition of_N (x : N) : option byte
+    := if (x <? 2^256)%N then Some x else None.
+  Notation x00 := 0%N (only parsing).
+End Byte.
+
 Record mem_state := { mem_bytes_state :> PositiveMap.t Byte.byte }.
 Definition get_mem_byte (st : mem_state) (addr : Z) : option Byte.byte
   := match addr with
