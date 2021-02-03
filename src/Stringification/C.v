@@ -104,8 +104,14 @@ Module Compilers.
                             "typedef signed char " ++ prefix ++ "int1;"]%string
                     else [])
                 ++ (if IntSet.mem uint128 bitwidths_used || IntSet.mem int128 bitwidths_used
-                    then ["typedef signed __int128 " ++ prefix ++ "int128;";
-                            "typedef unsigned __int128 " ++ prefix ++ "uint128;"]%string
+                    then ["#ifdef GNUC";
+                          "#  define FIAT_EXTENSION __extension__";
+                          "#else";
+                          "#  define FIAT_EXTENSION";
+                          "#endif";
+                          "";
+                          "FIAT_EXTENSION typedef signed __int128 " ++ prefix ++ "int128;";
+                          "FIAT_EXTENSION typedef unsigned __int128 " ++ prefix ++ "uint128;"]%string
                     else [])
                 ++ [""
                     ; "#if (-1 & 3) != 3"
