@@ -495,7 +495,7 @@ $(ALL_C_FILES) : $(C_DIR)%.c : $$($$($$*_BINARY_NAME))
 test-c-files: $(ALL_C_FILES) $(EXTRA_C_FILES)
 
 test-c-files only-test-c-files:
-	$(CC) -Wall -Wno-unused-function -Werror $(CFLAGS) -c $(ALL_C_FILES) $(EXTRA_C_FILES)
+	$(CC) -Wall -Wno-unused-function -Wpedantic -Werror $(CFLAGS) -c $(ALL_C_FILES) $(EXTRA_C_FILES)
 
 $(ALL_BEDROCK2_FILES) : $(BEDROCK2_DIR)%.c : $$(BEDROCK2_$$($$*_BINARY_NAME))
 	$(SHOW)'SYNTHESIZE > $@'
