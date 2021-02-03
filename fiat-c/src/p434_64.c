@@ -18,8 +18,14 @@
 #include <stdint.h>
 typedef unsigned char fiat_p434_uint1;
 typedef signed char fiat_p434_int1;
-typedef signed __int128 fiat_p434_int128;
-typedef unsigned __int128 fiat_p434_uint128;
+#ifdef GNUC
+#  define FIAT_EXTENSION __extension__
+#else
+#  define FIAT_EXTENSION
+#endif
+
+FIAT_EXTENSION typedef signed __int128 fiat_p434_int128;
+FIAT_EXTENSION typedef unsigned __int128 fiat_p434_uint128;
 
 #if (-1 & 3) != 3
 #error "This code only works on a two's complement system"
