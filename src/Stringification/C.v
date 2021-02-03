@@ -104,14 +104,15 @@ Module Compilers.
                             "typedef signed char " ++ prefix ++ "int1;"]%string
                     else [])
                 ++ (if IntSet.mem uint128 bitwidths_used || IntSet.mem int128 bitwidths_used
-                    then ["#ifdef __GNUC__";
-                          "#  define FIAT_EXTENSION __extension__";
+                    then let FIAT_EXTENSION := (String.to_upper prefix ++ "FIAT_EXTENSION")%string in
+                         ["#ifdef __GNUC__";
+                          "#  define " ++ FIAT_EXTENSION ++ " __extension__";
                           "#else";
-                          "#  define FIAT_EXTENSION";
+                          "#  define " ++ FIAT_EXTENSION;
                           "#endif";
                           "";
-                          "FIAT_EXTENSION typedef signed __int128 " ++ prefix ++ "int128;";
-                          "FIAT_EXTENSION typedef unsigned __int128 " ++ prefix ++ "uint128;"]%string
+                          FIAT_EXTENSION ++ " typedef signed __int128 " ++ prefix ++ "int128;";
+                          FIAT_EXTENSION ++ " typedef unsigned __int128 " ++ prefix ++ "uint128;"]%string
                     else [])
                 ++ [""
                     ; "#if (-1 & 3) != 3"
