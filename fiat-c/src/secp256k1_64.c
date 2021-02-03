@@ -19,13 +19,13 @@
 typedef unsigned char fiat_secp256k1_uint1;
 typedef signed char fiat_secp256k1_int1;
 #ifdef __GNUC__
-#  define FIAT_EXTENSION __extension__
+#  define FIAT_SECP256K1_FIAT_EXTENSION __extension__
 #else
-#  define FIAT_EXTENSION
+#  define FIAT_SECP256K1_FIAT_EXTENSION
 #endif
 
-FIAT_EXTENSION typedef signed __int128 fiat_secp256k1_int128;
-FIAT_EXTENSION typedef unsigned __int128 fiat_secp256k1_uint128;
+FIAT_SECP256K1_FIAT_EXTENSION typedef signed __int128 fiat_secp256k1_int128;
+FIAT_SECP256K1_FIAT_EXTENSION typedef unsigned __int128 fiat_secp256k1_uint128;
 
 #if (-1 & 3) != 3
 #error "This code only works on a two's complement system"
