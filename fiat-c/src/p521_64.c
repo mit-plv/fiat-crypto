@@ -15,7 +15,7 @@
 #include <stdint.h>
 typedef unsigned char fiat_p521_uint1;
 typedef signed char fiat_p521_int1;
-#ifdef GNUC
+#ifdef __GNUC__
 #  define FIAT_EXTENSION __extension__
 #else
 #  define FIAT_EXTENSION

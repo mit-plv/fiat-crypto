@@ -104,7 +104,7 @@ Module Compilers.
                             "typedef signed char " ++ prefix ++ "int1;"]%string
                     else [])
                 ++ (if IntSet.mem uint128 bitwidths_used || IntSet.mem int128 bitwidths_used
-                    then ["#ifdef GNUC";
+                    then ["#ifdef __GNUC__";
                           "#  define FIAT_EXTENSION __extension__";
                           "#else";
                           "#  define FIAT_EXTENSION";
