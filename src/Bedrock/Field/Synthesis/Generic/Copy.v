@@ -56,6 +56,20 @@ Require Import Crypto.Util.ZRange.
 Require Import bedrock2.Syntax.
 Require Import bedrock2.NotationsCustomEntry.
 
+
+  Lemma anybytes_S pout n mem
+    : exists x,
+    (anybytes pout (bytes_per_word width * Z.of_nat (S n)) mem
+     <->
+     (((anybytes pout (bytes_per_word width * Z.of_nat n))
+      * (Scalars.scalar
+           (word.add pout
+                     (word.of_Z
+                        (bytes_per_word width * Z.of_nat n))) x)))%sep
+          mem).
+  Proof using.
+  Admitted.
+
 Section FImpl.
   Context {field_parameters : FieldParameters}.
   Context (sz : nat) (weight : nat -> Z)
@@ -80,19 +94,134 @@ Section FImpl.
     match n with
     | O => cmd.skip
     | S n' => cmd.seq (cmdf n') (rep n' cmdf)
-    end. 
+    end.
 
   Local Definition incr_nat x n :=
     expr.op bopname.add x ((Memory.bytes_per_word Semantics.width) * Z.of_nat n).
 
+ 
+  Lemma Bignum_0 px x : Lift1Prop.iff1 (Bignum 0 px x) (emp (x =[])).
+  Proof using.
+    unfold Bignum.
+    destruct x.
+    {
+      etransitivity.
+      {
+        eapply sep_emp_emp.
+      }
+      {
+        apply Proper_emp_iff.
+        simpl; easy.
+      }
+    }
+    {
+      split;
+        intros; sepsimpl;
+        match goal with
+        | H : _ = 0%nat |- _ => inversion H
+        | H : _ = [] |- _ => inversion H
+        end.
+    }
+  Qed.
+
+  
+  Lemma anybytes_0 (x : word.rep) : Lift1Prop.iff1 (anybytes x 0) (emp True).
+  Proof. Admitted.
+
+  
+  Lemma Bignum_snoc n px x a
+    : Lift1Prop.iff1 (Bignum (S n) px (x++[a]))
+                     (Bignum n px x
+                      * Scalars.scalar
+                          (word.add px
+              (word.of_Z (word_size_in_bytes * Z.of_nat n)))  a)%sep.
+  Proof using.
+    unfold Bignum.
+    intro mem; split; intro H; sepsimpl;
+      try 
+      match goal with
+      | [H : Datatypes.length ?x = ?n
+         |- Datatypes.length (?x++ [_]) = S ?n] =>
+        rewrite app_length;
+        rewrite Nat.add_comm; simpl; f_equal; exact H
+      | [H : Datatypes.length (?x++ [_]) = S ?n
+        |- _] =>
+        rewrite app_length in H;
+        rewrite Nat.add_comm in H;
+        inversion H; subst; try reflexivity
+      end.
+    {
+      seprewrite_in
+          (array_append Scalars.scalar
+                        (word.of_Z word_size_in_bytes) x [a] px)
+          H0.
+      sepsimpl.
+      cbn [WeakestPrecondition.dexpr
+            WeakestPrecondition.expr WeakestPrecondition.expr_body
+            array incr_nat] in *.
+      rewrite word.unsigned_of_Z in H0.
+      rewrite Core.word.wrap_small in H0.
+      {
+         change (@Naive.rep (Zpos (xO (xO (xO (xO (xO (xO xH))))))))
+              with (@word.rep (@width (@semantics Defaults64.default_parameters))
+                     (@word (@semantics Defaults64.default_parameters))).
+        ecancel_assumption.
+      }
+      { easy. }
+    }    
+    {
+      seprewrite
+          (array_append Scalars.scalar
+                        (word.of_Z word_size_in_bytes) x [a] px).
+      sepsimpl; auto.
+      cbn [WeakestPrecondition.dexpr
+            WeakestPrecondition.expr WeakestPrecondition.expr_body
+            array incr_nat] in *.
+      rewrite word.unsigned_of_Z.
+      rewrite Core.word.wrap_small; [subst; ecancel_assumption| easy].
+    }
+  Qed.
+
+  Lemma Bignum_nth_load l vx px n x y a R mem
+    : Interface.map.get l vx = Some px ->
+      (Bignum (S n) px x * R)%sep mem ->
+      x = (y++[a])%list ->
+      WeakestPrecondition.dexpr mem l
+          bedrock_expr:(load( constr:(incr_nat (expr.var vx) n))) a.
+  Proof using.
+    intros; subst.
+    seprewrite_in (Bignum_snoc n px y a) H0.
+     exists px; split; auto.
+     exists a; split; auto.
+     cbn [interp_binop].
+     change (bytes_per_word width) with word_size_in_bytes.
+     eapply Scalars.load_word_of_sep.
+     ecancel_assumption.
+  Qed.
+
+  
+  Lemma Bignum_S n px x mem
+    : Bignum (S n) px x mem -> exists a x', x = (x'++ [a])%list.
+  Proof.
+    unfold Bignum; intros; sepsimpl.
+    assert (x <>[]).
+    {
+      destruct x; inversion H; easy.
+    }
+    apply exists_last in H1; repeat destruct H1 as [? H1].
+    rewrite H1.
+    eauto.
+  Qed.
+
+    
   Lemma copy_satisfies_spec :
     (let args := ["out"; "x"] in
      let rets := [] in
      let copy_body :=  (rep sz
                           (fun n =>
                              cmd.store access_size.word
-                                     (incr_nat "out" (sz - 1 - n))
-                                     (expr.load access_size.word (incr_nat "x" (sz - 1 - n))))) in
+                                     (incr_nat "out" n)
+                                     (expr.load access_size.word (incr_nat "x" n)))) in
      let felem_copy := (felem_copy, (args, rets, copy_body)) in
      program_logic_goal_for
        felem_copy
@@ -100,30 +229,136 @@ Section FImpl.
            copy_spec (felem_copy :: functions))).
   Proof.
     
-    Require Import Rupicola.Lib.Api.
     unfold copy_spec.
     unfold spec_of_felem_copy.
-
-    cbv[program_logic_goal_for].
+    intro functions.
     intros; WeakestPrecondition.unfold1_call_goal; cbv beta match delta [WeakestPrecondition.call_body].
-    
-   
     lazymatch goal with
-     | |- if ?test then ?T else _ => rewrite String.eqb_refl; change_no_check T
+     | |- if ?x =? ?x then ?T else _ => rewrite (String.eqb_refl x); change_no_check T
     end; cbv beta match delta [WeakestPrecondition.func].
-    repeat straightline; subst_lets_in_goal.
-    cbn[Datatypes.length].
-    (first
-   [ apply postcondition_func_norets_postcondition_cmd | apply postcondition_func_postcondition_cmd ]).
+    repeat straightline.
+    (*TODO: remember 0%nat as szup.*)
+    revert R x mem H.
+    cbv [FElem frep Representation.frep felem Placeholder felem_size_in_bytes rep].
+    induction sz.
+    {
+      intros.
+      split; [ reflexivity|].
+      repeat seprewrite Bignum_0.
+      seprewrite_in Bignum_0 H.
+      sepsimpl; subst; auto.
+      rewrite Z.mul_0_r in H0.
+      pose proof (anybytes_0 pout).
+      cbn -[Interface.map.rep width word Semantics.mem] in H0.
+      seprewrite_in H H0.
+      sepsimpl; assumption.
+    }
+    {
+      intros.
+      repeat straightline.
+      assert (exists a x', x = (x'++[a])%list).
+      {
+        cbn -[Interface.map.rep width word Semantics.mem Z.of_nat].
+        repeat destruct H as [? H].
+        destruct H as [ H' H].
+        repeat destruct H as [? H].
+        destruct H as [H H2].
+        repeat destruct H as [? H].
+        destruct H as [H3 H].
+        destruct H as [? ?].
+        eapply Bignum_S; eauto.
+      }
+      repeat destruct H0 as [? H0]; subst.
+      exists x0; split.
+      {
+        eapply Bignum_nth_load; auto.
+        { reflexivity. }
+        {
+          ecancel_assumption.
+        }
+      }
+      eapply Scalars.store_word_of_sep.
+      {
+        unfold a.
+        cbn -[Interface.map.rep width word Semantics.mem Z.of_nat] in H.
+        Print Lift1Prop.ex1.
+        pose proof (anybytes_S
+        seprewrite_in (anybytes_S pout n) H.
+        unfold Lift1Prop.ex1 in H1.
+        cbv beta in H1.
+        match type of H1 with
+        | context H'[fun m : ?M => exists x : ?X , @?P m x] =>
+          let x' := fresh "x" in
+          assert (exists x' : X,
+                           ltac:(let T := context H'[fun m : M => P m x'] in
+                            exact T))
+        end.
+        {
+          repeat (destruct H1 as [? H1]).
+          destruct H0 as [wd H0].
+          exists wd.
+          exists x.
+          exists x2.
+          split; eauto.
+          split; auto.
+          exists x3.
+          exists x4.
+          auto.
+        }
+        clear H1.
+        destruct H as [wd H].
+        (instantiate (2:=wd)).
+        Set Printing All.
+        cbn -[Interface.map.rep width word Semantics.mem Z.of_nat].
+        cancel.
+        ecancel_assumption.
+        Search 
+        change ( exists a : word.rep,
+           (anybytes pout (bytes_per_word width * Z.of_nat n) *
+            Scalars.scalar
+              (word.add pout (word.of_Z (bytes_per_word width * Z.of_nat n)))
+              a) b) * (Bignum (S n) px (x1 ++ [x0]) * R))%sep mem)
+      in H1.
+        ecancel_assumption.
+        destruct H1.
+        admit. (*TODO: works with anybytes*)
+      }
+      {
+        intros.
+        seprewrite_in Bignum_snoc H.
+        eapply IHn.
+            
+      eexists; split.
+      {
+        Search store.
 
+
+      }
+        apply IHn.
+            Lemma Bignum_S n px x mem
+            : Bignum (S n) px x mem -> exists a x', x = x'++[a].
+            
+
+          Lemma Bignum_nth_load
+        : Interface.map.get l vx = Some px ->
+          (Bignum (S n) px (r::x) * R)%sep ->
+          WeakestPrecondition.dexpr mem l
+    bedrock_expr:(load( constr:(incr_nat (expr.var vx) n))) r.
+    nth 0 n x.
+        cbn [WeakestPrecondition.dexpr
+               WeakestPrecondition.expr WeakestPrecondition.expr_body] in *.
+        TODO: load
+        sepsimpl; subst.
+      
     cbv[FElem frep Representation.frep felem_size_in_bytes Placeholder Bignum] in *.
     revert mem H.
-    (*TODO: want to do induction on rep sz but not fn szs *)
+    (*TODO: want to do induction on rep sz but not fn szs?
+      not quite right. 
+     *)
     induction sz;
       destruct x; cbn[Datatypes.length].
     {
       intro.
-      simpl.
       cbv[postcondition_cmd]; repeat split; auto.
       exists [].
       split; cbn; auto.
@@ -219,20 +454,11 @@ Section FImpl.
           exists r; split; auto.
           rewrite Naive.of_Z_unsigned.
           cbn [array] in H.
-          Search _ sep.
-          apply sep_assoc in H.
-          apply sep_comm in H.
-          apply sep_assoc in H.
-          apply sep_comm in H.
-          apply sep_assoc in H.
-          apply sep_comm in H.
-          apply sep_emp_l in H; destruct H.
-          apply sep_comm in H1.
-          apply sep_assoc in H1.
-          apply sep_comm in H1.
-          apply sep_assoc in H1.
-          apply sep_comm in H1.
+          sepsimpl.
           eapply load_word_of_sep; eauto.
+          clear a H2 H0 H IHn tr.
+          simpl in *.
+          ecancel_assumption.
         }
         {
           apply Z.pow_nonzero.
@@ -241,7 +467,9 @@ Section FImpl.
         }
       }
       {
-        simpl.
+        cbn[array] in H.
+        sepsimpl.
+       simpl.
         cbv[WeakestPrecondition.store].
         
         assert (S (Datatypes.length x) - 1 - Datatypes.length x = (0:nat)).
