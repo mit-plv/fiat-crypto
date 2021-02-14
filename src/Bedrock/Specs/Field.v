@@ -40,13 +40,14 @@ Class FieldRepresentation
     feval : felem -> F M_pos;
     feval_bytes : list byte -> F M_pos;
     felem_size_in_bytes : Z; (* for stack allocation *)
+    encoded_felem_size_in_bytes : nat; (* number of bytes when serialized *)
     bytes_in_bounds : list byte -> Prop;
 
     (* Memory layout *)
     FElem : word -> felem -> Semantics.mem -> Prop;
     FElemBytes : word -> list byte -> Semantics.mem -> Prop :=
       fun addr bs =>
-        (emp (length bs = Z.to_nat felem_size_in_bytes)
+        (emp (length bs = encoded_felem_size_in_bytes)
          * array ptsto (word.of_Z 1) addr bs)%sep;
 
     bounds : Type;
@@ -67,9 +68,9 @@ Class FieldRepresentation_ok
       {field_parameters : FieldParameters}
       {semantics : Semantics.parameters}
       {field_representation : FieldRepresentation} :=
-  { felem_size_in_bytes_mod :
-      (felem_size_in_bytes mod Memory.bytes_per_word Semantics.width)%Z = 0%Z;
-    FElem_from_bytes :
+  {  felem_size_in_bytes_mod :
+       felem_size_in_bytes mod Memory.bytes_per_word Semantics.width = 0;
+     FElem_from_bytes :
       forall px,
         Lift1Prop.iff1 (Placeholder px) (Lift1Prop.ex1 (FElem px));
     relax_bounds :

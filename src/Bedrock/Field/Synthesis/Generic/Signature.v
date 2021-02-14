@@ -82,7 +82,7 @@ Hint Resolve @MakeAccessSizes.bits_per_word_le_width
 Section WithParameters.
   Context {p:Types.parameters} {p_ok : Types.ok}
           {field_parameters : FieldParameters}.
-  Context (n : nat) (weight : nat -> Z)
+  Context (n n_bytes : nat) (weight : nat -> Z)
           (loose_bounds tight_bounds byte_bounds
            : list (option ZRange.zrange))
           (relax_bounds :
@@ -95,10 +95,10 @@ Section WithParameters.
              disjoint default_outname_gen varname_gen).
   Existing Instance semantics_ok.
   Local Instance field_representation : FieldRepresentation
-    := @frep p field_parameters n weight loose_bounds tight_bounds
+    := @frep p field_parameters n n_bytes weight loose_bounds tight_bounds
              byte_bounds.
   Local Instance field_representation_ok : FieldRepresentation_ok
-    := frep_ok n weight loose_bounds tight_bounds byte_bounds
+    := frep_ok n n_bytes weight loose_bounds tight_bounds byte_bounds
                relax_bounds.
 
   Lemma FElem_array_truncated_scalar_iff1 px x :
@@ -122,7 +122,7 @@ Section WithParameters.
       (FElemBytes pbs bs)
       (sep (map:=Semantics.mem)
            (emp (map:=Semantics.mem)
-                (length bs = Z.to_nat felem_size_in_bytes))
+                (length bs = encoded_felem_size_in_bytes))
            (Array.array
               (Scalars.truncated_scalar access_size.one)
               (word.of_Z 1) pbs (map byte.unsigned bs))).
@@ -531,7 +531,7 @@ Section WithParameters.
       access_size.word.
     Definition from_bytes_inlengths
       : type.for_each_lhs_of_arrow list_lengths t :=
-      (Z.to_nat felem_size_in_bytes, tt).
+      (n_bytes, tt).
     Let insizes := from_bytes_insizes.
     Let outsizes := from_bytes_outsizes.
     Let inlengths := from_bytes_inlengths.
