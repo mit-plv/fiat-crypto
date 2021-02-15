@@ -70,13 +70,11 @@ Class unsaturated_solinas_ops
         Field.from_bytes
         from_bytes_insizes from_bytes_outsizes (from_bytes_inlengths
                                                   (n_bytes s));
-    (* TODO: need bytes insizes/outsizes/lengths from Signature.v *)
-    (*
     to_bytes_op :
       computed_op
-        (UnsaturatedSolinas.to_bytes n s c Semantics.width) Field.to_bytes
-        list_unop_insizes list_unop_outsizes (list_unop_inlengths n);
-*)
+        (UnsaturatedSolinas.to_bytes n s c Semantics.width)
+        Field.to_bytes
+        to_bytes_insizes to_bytes_outsizes (to_bytes_inlengths n);
   }.
 Arguments unsaturated_solinas_ops {_ _} _ _ _ _.
 
@@ -108,14 +106,15 @@ Section UnsaturatedSolinas.
                                  (MaxBounds.max_bounds n)).
   Context (ops : unsaturated_solinas_ops n s c Semantics.width)
           mul_func add_func sub_func opp_func square_func
-          scmula24_func from_bytes_func
+          scmula24_func from_bytes_func to_bytes_func
           (mul_func_eq : mul_func = b2_func mul_op)
           (add_func_eq : add_func = b2_func add_op)
           (sub_func_eq : sub_func = b2_func sub_op)
           (opp_func_eq : opp_func = b2_func opp_op)
           (square_func_eq : square_func = b2_func square_op)
           (scmula24_func_eq : scmula24_func = b2_func scmula24_op)
-          (from_bytes_func_eq : from_bytes_func = b2_func from_bytes_op).
+          (from_bytes_func_eq : from_bytes_func = b2_func from_bytes_op)
+          (to_bytes_func_eq : to_bytes_func = b2_func to_bytes_op).
   Existing Instance semantics_ok.
 
   Local Notation weight :=
@@ -156,6 +155,54 @@ Section UnsaturatedSolinas.
   Proof. reflexivity. Qed.
   Lemma tight_bounds_eq : Field.tight_bounds = tight_bounds n s c.
   Proof. reflexivity. Qed.
+
+  (* TODO: could be moved to util *)
+  Lemma tighter_than_if_upper_bounded_by lo uppers bs :
+    list_Z_bounded_by bs uppers ->
+    Forall (fun b =>
+              exists r,
+                b = Some r /\ ZRange.lower r = lo) bs ->
+    list_Z_tighter_than
+      (map (fun v : Z => Some {| ZRange.lower := lo; ZRange.upper := v |})
+           uppers) bs.
+  Proof.
+    clear; revert bs; induction uppers; intros;
+      lazymatch goal with
+      | H : list_Z_bounded_by _ _ |- _ =>
+        pose proof H; apply length_list_Z_bounded_by in H
+      end; (destruct bs; cbn [length] in *; try auto with lia); [ ].
+    repeat lazymatch goal with
+           | H : list_Z_bounded_by (_::_) (_::_) |- _ =>
+             rewrite Util.list_Z_bounded_by_cons in H
+           | |- list_Z_tighter_than (map _ (_ :: _)) (_ :: _) =>
+             cbn [map]; rewrite Util.list_Z_tighter_than_cons
+           | H : Forall _ (_ :: _) |- _ => inversion H; clear H; subst
+           | H : exists _, _ |- _ => destruct H; subst
+           | H : _ /\ _ |- _ => destruct H; subst
+           end.
+    Check Util.list_Z_bounded_by_cons.
+    cbv [list_Z_tighter_than].
+    Search FoldBool.fold_andb_map.
+  Qed.
+  Lemma byte_bounds_tighter_than :
+    list_Z_tighter_than prime_bytes_bounds_value
+                        (ByteBounds.byte_bounds (n_bytes s)).
+  Proof.
+    clear. cbv [prime_bytes_upperbound_list].
+    pose proof
+         (ByteBounds.partition_bounded_by (n_bytes s) (s - 1)).
+    match goal with
+    | H : list_Z_bounded_by ?x ?y |- _ =>
+      generalize dependent y; generalize dependent x
+    end.
+    generalize (
+    cbv [list_Z_bounded_by list_Z_tighter_than] in *.
+    
+    Search FoldBool.fold_andb_map.
+    Search list_Z_tighter_than.
+    list_Z_bounded_by.
+    Search Partition.Partition.partition.
+  Qed.
 
   Local Hint Resolve
         relax_correct func_eq
@@ -286,6 +333,43 @@ Section UnsaturatedSolinas.
       rewrite Heq. reflexivity. }
     { (* output *bounds* are correct *)
       intros. cbv [Solinas.from_bytes_correct] in Hcorrect.
+      apply Hcorrect; auto. }
+  Qed.
+
+  Lemma to_bytes_func_correct :
+    valid_func (res to_bytes_op _) ->
+    expr.Wf3 (res to_bytes_op) ->
+    forall functions,
+      spec_of_to_bytes (to_bytes_func :: functions).
+  Proof.
+    intros. cbv [spec_of_to_bytes]. rewrite to_bytes_func_eq.
+    pose proof UnsaturatedSolinas.to_bytes_correct
+         _ _ _ _ ltac:(eassumption) _ (res_eq to_bytes_op)
+      as Hcorrect.
+
+    eapply Signature.to_bytes_correct with (res:=res to_bytes_op);
+      rewrite ?varname_gen_is_default;
+      rewrite ?tight_bounds_eq, ?loose_bounds_eq;
+      eauto with helpers.
+    Print HintDb helpers.
+    [ | ].
+    { (* output *value* is correct *)
+      intros. cbv [Solinas.to_bytes_correct expr.Interp] in Hcorrect.
+      (* simplify bounds expression *)
+      match type of Hcorrect with
+      | context [list_Z_bounded_by (map ?f ?x)] =>
+        change (map f x) with prime_bytes_bounds_value in Hcorrect
+      end.
+      specialize_correctness_hyp Hcorrect.
+      destruct Hcorrect as [Heq Hbounds].
+      rewrite Util.map_unsigned_of_Z.
+      rewrite (MaxBounds.map_word_wrap_bounded) with (n0:=n)
+        by eauto using relax_list_Z_bounded_by.
+      apply F.eq_of_Z_iff.
+      cbv [M] in M_eq. rewrite M_eq.
+      rewrite Heq. reflexivity. }
+    { (* output *bounds* are correct *)
+      intros. cbv [Solinas.to_bytes_correct] in Hcorrect.
       apply Hcorrect; auto. }
   Qed.
 
