@@ -231,7 +231,7 @@ Section WithParameters.
     | |- NoDup (Flatten.flatten_base_ltype (make_outnames _)) =>
       apply flatten_make_outnames_NoDup;
       solve [eapply prefix_name_gen_unique]
-    | |- LoadStoreList.base_access_sizes_good access_size.word =>
+    | |- LoadStoreList.base_access_sizes_good _ =>
       autounfold with types access_sizes;
       solve [auto with translate_func_preconditions]
     | |- PropSet.disjoint
@@ -258,7 +258,8 @@ Section WithParameters.
       solve [auto with translate_func_preconditions]
     | |- LoadStoreList.within_base_access_sizes _ _ =>
       autounfold with types access_sizes;
-      eapply MaxBounds.max_bounds_range_iff;
+      first [ eapply MaxBounds.max_bounds_range_iff
+            | eapply ByteBounds.byte_bounds_range_iff ];
       cbn [type.app_curried fst snd];
       solve [eauto using relax_list_Z_bounded_by]
     | |- LoadStoreList.access_sizes_good_args _ =>
@@ -276,14 +277,19 @@ Section WithParameters.
   Ltac lists_reserved_simplify pout :=
     compute_names; cbn [type.app_curried fst snd];
     autounfold with types list_lengths pairs;
-    let H := match goal with H : context [Placeholder] |- _ =>
-                             H end in
-    seprewrite_in @FElem_from_bytes H; [ ];
+    lazymatch goal with
+    | H : context [Placeholder] |- _ =>
+      seprewrite_in @FElem_from_bytes H; [ ]
+    | _ => idtac
+    end;
     lists_autounfold; sepsimpl;
     match goal with
     | H : context [FElem pout ?old_out]
       |- @Lift1Prop.ex1 (list Z) _ _ _ =>
       exists (map word.unsigned old_out)
+    | H : context [FElemBytes pout ?old_out]
+      |- @Lift1Prop.ex1 (list Z) _ _ _ =>
+      exists (map byte.unsigned old_out)
     end;
     crush_sep.
 
@@ -577,6 +583,97 @@ Section WithParameters.
             auto. } } }
     Qed.
   End FromBytes.
+
+  Section ToBytes.
+    Context {res : API.Expr (type_listZ -> type_listZ)}
+            (res_valid :
+               valid_func (res (fun _ : API.type => unit)))
+            (res_Wf3 : Wf.Compilers.expr.Wf3 res).
+    Context (byte_bounds_tighter_than_max :
+               list_Z_tighter_than
+                 byte_bounds (ByteBounds.byte_bounds n_bytes))
+            (byte_bounds_length :
+               length byte_bounds = encoded_felem_size_in_bytes)
+            (res_eq : forall x,
+                bounded_by tight_bounds x ->
+                feval_bytes
+                  (map byte.of_Z
+                       (API.interp (res _) (map word.unsigned x)))
+                = feval x)
+            (res_bounds : forall x,
+                bounded_by tight_bounds x ->
+                list_Z_bounded_by
+                  byte_bounds
+                  (API.interp (res _)
+                              (map word.unsigned x))).
+
+    Ltac equivalence_side_conditions_hook ::=
+      lazymatch goal with
+      | |- context [length (API.interp (res _) (map word.unsigned ?x))] =>
+        specialize (res_bounds x ltac:(auto));
+          rewrite (length_list_Z_bounded_by _ _ res_bounds);
+          try congruence; rewrite !map_length;
+          felem_to_array; sepsimpl; congruence
+      end.
+
+    Local Notation t :=
+      (type.arrow type_listZ type_listZ) (only parsing).
+
+    Definition to_bytes_insizes
+      : type.for_each_lhs_of_arrow access_sizes t :=
+      (access_size.word, tt).
+    Definition to_bytes_outsizes
+      : base_access_sizes (type.final_codomain t) :=
+      access_size.one.
+    Definition to_bytes_inlengths
+      : type.for_each_lhs_of_arrow list_lengths t :=
+      (n, tt).
+    Let insizes := to_bytes_insizes.
+    Let outsizes := to_bytes_outsizes.
+    Let inlengths := to_bytes_inlengths.
+
+    Lemma to_bytes_correct f :
+      f = make_bedrock_func to_bytes insizes outsizes inlengths res ->
+      forall functions,
+        spec_of_to_bytes (f :: functions).
+    Proof.
+      subst inlengths insizes outsizes. cbv [spec_of_to_bytes].
+      cbv [to_bytes_insizes to_bytes_outsizes to_bytes_inlengths].
+      cbv beta; intros; subst f. cbv [make_bedrock_func].
+      cleanup. eapply Proper_call.
+      2:{
+        use_translate_func_correct
+          constr:((map word.unsigned x, tt)) R.
+        all:translate_func_precondition_hammer.
+        { (* lists_reserved_with_initial_context *)
+          lists_reserved_simplify pout.
+          all:solve_equivalence_side_conditions. } }
+      { postcondition_simplify; [ | | ].
+        { (* output correctness *)
+          eapply res_eq; auto. }
+        { (* output bounds *)
+          cbn [bytes_in_bounds field_representation frep] in *.
+          erewrite ByteBounds.byte_map_unsigned_of_Z,
+          ByteBounds.map_byte_wrap_bounded
+            by eauto using relax_list_Z_bounded_by.
+          eauto. }
+        { (* separation-logic postcondition *)
+          eapply Proper_sep_iff1;
+            [ solve [apply FElemBytes_array_truncated_scalar_iff1]
+            | reflexivity | ].
+          sepsimpl; [ | ].
+          { rewrite !map_length.
+            solve_equivalence_side_conditions. }
+          { erewrite ByteBounds.byte_map_unsigned_of_Z,
+            ByteBounds.map_byte_wrap_bounded
+              by eauto using relax_list_Z_bounded_by.
+            change (Z.of_nat (bytes_per access_size.one)) with 1 in *.
+            match goal with
+              H : map word.unsigned _ = API.interp (res _) _ |- _ =>
+              rewrite <-H end.
+            auto. } } }
+    Qed.
+  End ToBytes.
 End WithParameters.
 
   (*

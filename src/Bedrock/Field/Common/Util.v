@@ -519,6 +519,37 @@ Section ListZBoundedBy.
              end.
   Qed.
 
+  Lemma list_Z_tighter_than_cons b1 b2 b1s b2s :
+    list_Z_tighter_than (b1 :: b1s) (b2 :: b2s) <->
+    (match b1 with
+     | Some r1 =>
+       match b2 with
+       | Some r2 =>
+         (ZRange.lower r2 <= ZRange.lower r1
+          /\ ZRange.upper r1 <= ZRange.upper r2)%Z
+       | None => True
+       end
+     | None => match b2 with
+               | Some _ => False
+               | None => True
+               end
+     end /\ list_Z_tighter_than b1s b2s).
+  Proof.
+    cbv [list_Z_tighter_than]. cbn [FoldBool.fold_andb_map].
+    split; destruct b1, b2; intros;
+      repeat match goal with
+             | H : (_ && _)%bool = true |- _ =>
+               apply Bool.andb_true_iff in H
+             | |- (_ && _)%bool = true => apply Bool.andb_true_iff
+             | H : _ /\ _ |- _ => destruct H
+             | |- _ /\ _ => split
+             | _ => progress Z.ltb_to_lt
+             | _ => assumption
+             | _ => tauto
+             | _ => congruence
+             end.
+  Qed.
+
   Lemma list_Z_bounded_by_snoc b0 bs x0 xs:
     list_Z_bounded_by (bs ++ [b0]) (xs ++ [x0]) <->
     (match b0 with
