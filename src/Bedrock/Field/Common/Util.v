@@ -613,6 +613,73 @@ Section ListZBoundedBy.
            | H : _ |- list_Z_bounded_by _ _ => eapply H; solve [eauto]
            end.
   Qed.
+
+  Lemma tighter_than_if_upper_bounded_by lo uppers bs :
+    list_Z_bounded_by bs uppers ->
+    Forall (fun b =>
+              exists r,
+                b = Some r /\ ZRange.lower r = lo) bs ->
+    list_Z_tighter_than
+      (map (fun v : Z => Some {| ZRange.lower := lo; ZRange.upper := v |})
+           uppers) bs.
+  Proof.
+    clear; revert bs; induction uppers; intros;
+      lazymatch goal with
+      | H : list_Z_bounded_by _ _ |- _ =>
+        pose proof H; apply length_list_Z_bounded_by in H
+      end; (destruct bs; cbn [length] in *; try auto with lia); [ ].
+    repeat lazymatch goal with
+           | H : list_Z_bounded_by (_::_) (_::_) |- _ =>
+             rewrite list_Z_bounded_by_cons in H
+           | |- list_Z_tighter_than (map _ (_ :: _)) (_ :: _) =>
+             cbn [map]; rewrite list_Z_tighter_than_cons
+           | H : ZRange.is_bounded_by_bool _ _ = true |- _ =>
+             apply Bool.andb_true_iff in H; destruct H;
+               Z.ltb_to_lt
+           | H : Forall _ (_ :: _) |- _ => inversion H; clear H; subst
+           | H : exists _, _ |- _ => destruct H; subst
+           | H : _ /\ _ |- _ => destruct H; subst
+           end.
+    progress cbn [ZRange.lower ZRange.upper].
+    split; auto with lia.
+  Qed.
+
+  Lemma partition_bounded_by_partition_ones x lg2s nb :
+    (0 <= x < 2 ^ lg2s)%Z ->
+    list_Z_bounded_by
+      (map (fun v : Z => Some {| ZRange.lower := 0; ZRange.upper := v |})
+           (Partition.Partition.partition
+              (ModOps.weight 8 1) nb (2 ^ lg2s - 1)))
+      (Partition.Partition.partition (ModOps.weight 8 1) nb x).
+  Proof.
+    clear.
+    induction nb; [ reflexivity | ].
+    rewrite !Partition.partition_step.
+    rewrite map_last, list_Z_bounded_by_snoc.
+    split; [ | solve [auto] ]. cbv [ZRange.is_bounded_by_bool].
+    cbn [ZRange.lower ZRange.upper].
+    apply Bool.andb_true_iff; split; Z.ltb_to_lt;
+      [ ZeroBounds.Z.zero_bounds;
+        solve [auto using Core.weight_positive, ModOps.wprops
+                 with zarith] | ].
+    apply Z.div_le_mono;
+      [ solve [auto using Core.weight_positive, ModOps.wprops
+                 with zarith] | ].
+    cbv [ModOps.weight]. rewrite Nat2Z.inj_succ.
+    autorewrite with zsimplify_fast. clear IHnb.
+    destruct (Z_lt_dec lg2s ((8 * Z.of_nat nb + 8)%Z));
+      [ assert (2 ^ lg2s < 2 ^ (8 * Z.of_nat nb + 8))%Z | ].
+    1:auto with zarith.
+    1:rewrite !Z.mod_small; auto with zarith.
+    replace (2 ^ lg2s - 1)%Z with (Z.ones lg2s)
+      by (rewrite Z.ones_equiv; auto with zarith).
+    rewrite Z.ones_mod_pow2 by auto with zarith.
+    lazymatch goal with
+      |- context [(x mod ?m)%Z] =>
+      pose proof Z.mod_pos_bound x m ltac:(auto with zarith)
+    end.
+    rewrite Z.ones_equiv; auto with zarith.
+  Qed.
 End ListZBoundedBy.
 
 Section Bytes.

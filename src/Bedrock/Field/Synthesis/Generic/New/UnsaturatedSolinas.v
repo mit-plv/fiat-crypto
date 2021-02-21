@@ -7,6 +7,8 @@ Require Import Crypto.Spec.ModularArithmetic.
 Require Import Crypto.Arithmetic.ModularArithmeticTheorems.
 Require Import Crypto.Bedrock.Specs.Field.
 Require Import Crypto.Bedrock.Field.Common.Types.
+Require Import Crypto.Bedrock.Field.Common.Util.
+Require Import Crypto.Bedrock.Field.Common.Arrays.ByteBounds.
 Require Import Crypto.Bedrock.Field.Common.Names.VarnameGenerator.
 Require Import Crypto.Bedrock.Field.Synthesis.Generic.Signature.
 Require Import Crypto.Bedrock.Field.Translation.Parameters.Defaults.
@@ -16,6 +18,9 @@ Require Import Crypto.COperationSpecifications.
 Require Import Crypto.PushButtonSynthesis.UnsaturatedSolinas.
 Require Import Crypto.Language.API.
 Require Import Crypto.UnsaturatedSolinasHeuristics.
+Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
+Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
+Require Import Crypto.Util.Tactics.BreakMatch.
 Import ListNotations API.Compilers Types.Notations.
 Import Language.Wf.Compilers.
 
@@ -134,17 +139,22 @@ Section UnsaturatedSolinas.
          (prime_bytes_bounds_value).
 
   Local Ltac specialize_correctness_hyp Hcorrect :=
-    cbv [feval bounded_by bytes_in_bounds field_representation
-               Signature.field_representation
-               Representation.frep
+    cbv [feval feval_bytes bounded_by bytes_in_bounds
+               field_representation Signature.field_representation
+               Representation.frep Representation.eval_bytes
                Representation.eval_words] in *;
+    (* if prime_bytes_bounds, simplify first *)
+    try match type of Hcorrect with
+        | context [list_Z_bounded_by (map ?f ?x)] =>
+          change (map f x) with prime_bytes_bounds_value in Hcorrect
+        end;
     lazymatch type of Hcorrect with
-    | forall x y, ?Px x -> ?Py y -> _ /\ _ =>
+    | forall x y, ?Px x -> ?Py y -> _ =>
       match goal with
         | Hx : Px ?x, Hy : Py ?y |- _ =>
           specialize (Hcorrect x y Hx Hy)
       end
-    | forall x, ?Px x -> _ /\ _ =>
+    | forall x, ?Px x -> _ =>
       match goal with
         | Hx : Px ?x |- _ =>
           specialize (Hcorrect x Hx)
@@ -156,52 +166,40 @@ Section UnsaturatedSolinas.
   Lemma tight_bounds_eq : Field.tight_bounds = tight_bounds n s c.
   Proof. reflexivity. Qed.
 
-  (* TODO: could be moved to util *)
-  Lemma tighter_than_if_upper_bounded_by lo uppers bs :
-    list_Z_bounded_by bs uppers ->
-    Forall (fun b =>
-              exists r,
-                b = Some r /\ ZRange.lower r = lo) bs ->
-    list_Z_tighter_than
-      (map (fun v : Z => Some {| ZRange.lower := lo; ZRange.upper := v |})
-           uppers) bs.
-  Proof.
-    clear; revert bs; induction uppers; intros;
-      lazymatch goal with
-      | H : list_Z_bounded_by _ _ |- _ =>
-        pose proof H; apply length_list_Z_bounded_by in H
-      end; (destruct bs; cbn [length] in *; try auto with lia); [ ].
-    repeat lazymatch goal with
-           | H : list_Z_bounded_by (_::_) (_::_) |- _ =>
-             rewrite Util.list_Z_bounded_by_cons in H
-           | |- list_Z_tighter_than (map _ (_ :: _)) (_ :: _) =>
-             cbn [map]; rewrite Util.list_Z_tighter_than_cons
-           | H : Forall _ (_ :: _) |- _ => inversion H; clear H; subst
-           | H : exists _, _ |- _ => destruct H; subst
-           | H : _ /\ _ |- _ => destruct H; subst
-           end.
-    Check Util.list_Z_bounded_by_cons.
-    cbv [list_Z_tighter_than].
-    Search FoldBool.fold_andb_map.
-  Qed.
   Lemma byte_bounds_tighter_than :
     list_Z_tighter_than prime_bytes_bounds_value
-                        (ByteBounds.byte_bounds (n_bytes s)).
+                        (byte_bounds (n_bytes s)).
   Proof.
     clear. cbv [prime_bytes_upperbound_list].
-    pose proof
-         (ByteBounds.partition_bounded_by (n_bytes s) (s - 1)).
+    apply tighter_than_if_upper_bounded_by;
+    eauto using Forall_repeat, partition_bounded_by.
+  Qed.
+
+  Lemma length_byte_bounds :
+    length prime_bytes_bounds_value = encoded_felem_size_in_bytes.
+  Proof.
+    autorewrite with distr_length.
+    apply length_prime_bytes_upperbound_list.
+  Qed.
+
+  Lemma modulus_fits_in_bytes :
+    (0 < m s c <= ModOps.weight 8 1 (n_bytes s))%Z.
+  Proof.
+    (* Extract information from check_args *)
+    clear - check_args_ok. cbv [check_args] in check_args_ok.
+    cbn [fold_right] in check_args_ok.
+    break_match_hyps; try congruence; [ ].
+    repeat lazymatch goal with
+           | H : negb _ = false |- _ => apply Bool.negb_false_iff in H
+           | H : Nat.eqb _ _ = false |- _ => apply Nat.eqb_neq in H
+           end.
+    Z.ltb_to_lt.
     match goal with
-    | H : list_Z_bounded_by ?x ?y |- _ =>
-      generalize dependent y; generalize dependent x
-    end.
-    generalize (
-    cbv [list_Z_bounded_by list_Z_tighter_than] in *.
-    
-    Search FoldBool.fold_andb_map.
-    Search list_Z_tighter_than.
-    list_Z_bounded_by.
-    Search Partition.Partition.partition.
+    | H : s = ModOps.weight _ _ n |- _ =>
+      pose proof H;
+      apply Freeze.bytes_n_big in H
+    end;
+      cbv [m n_bytes]; auto using limbwidth_good with zarith.
   Qed.
 
   Local Hint Resolve
@@ -209,7 +207,80 @@ Section UnsaturatedSolinas.
         inname_gen_varname_gen_disjoint
         outname_gen_varname_gen_disjoint
         length_tight_bounds length_loose_bounds
+        length_byte_bounds
+        byte_bounds_tighter_than
     : helpers.
+
+  Local Hint Unfold
+        Solinas.selectznz_correct
+        Solinas.from_bytes_correct
+        Solinas.to_bytes_correct
+        Solinas.carry_mul_correct
+        Solinas.carry_square_correct
+        Solinas.carry_scmul_const_correct
+        Solinas.add_correct
+        Solinas.sub_correct
+        Solinas.opp_correct
+        Solinas.carry_correct
+        Solinas.zero_correct
+        Solinas.one_correct : solinas_specs.
+
+  (* Extra lemma for to_bytes because the COperationSpecifications spec does not
+     include bounds *)
+  Lemma partition_bounded_by_prime_bytes_bounds x :
+    (0 <= x < m s c)%Z ->
+    list_Z_bounded_by
+      prime_bytes_bounds_value
+      (Partition.Partition.partition
+         (ModOps.weight 8 1) (n_bytes s) x).
+  Proof.
+    clear - check_args_ok. intros.
+    apply use_curve_good in check_args_ok.
+    DestructHead.destruct_head' and.
+    assert (0 <= x < s)%Z as xbounds
+        by (cbv [m] in *; auto with zarith).
+    cbv [prime_bytes_upperbound_list].
+    assert (exists lg2s, s = 2 ^ lg2s)%Z as [lg2s ?]
+      by (eexists;
+          lazymatch goal with
+            H : s = ModOps.weight _ _ _ |- _ =>
+            cbv [ModOps.weight] in H; apply H
+          end).
+    subst s. apply partition_bounded_by_partition_ones.
+    auto with zarith.
+  Qed.
+
+  Ltac handle_side_conditions :=
+    lazymatch goal with
+    | |- context [varname_gen] => rewrite varname_gen_is_default
+    | |- context [Field.tight_bounds] => rewrite tight_bounds_eq
+    | |- context [Field.loose_bounds] => rewrite loose_bounds_eq
+    | _ => idtac
+    end;
+    lazymatch goal with
+    | |- context [expr.interp] =>
+      cbv [expr.Interp] in *; autounfold with solinas_specs in *
+    | _ => eauto with helpers
+    end.
+
+  Hint Resolve relax_list_Z_bounded_by partition_bounded_by : bounds.
+
+  Ltac simpl_map_unsigned :=
+    lazymatch goal with
+    | |- context [map Interface.word.unsigned
+                      (map Interface.word.of_Z _)] =>
+      rewrite map_unsigned_of_Z;
+      erewrite MaxBounds.map_word_wrap_bounded
+        by eauto with bounds
+    | |- context [map Byte.byte.unsigned
+                      (map Byte.byte.of_Z _)] =>
+      rewrite byte_map_unsigned_of_Z;
+      erewrite map_byte_wrap_bounded
+        by eauto with bounds
+    end.
+  Ltac FtoZ :=
+    apply F.eq_of_Z_iff; rewrite ?F.to_Z_of_Z;
+    cbv [M] in M_eq; rewrite ?M_eq; pull_Zmod.
 
   Lemma mul_func_correct :
     valid_func (res mul_op _) ->
@@ -223,22 +294,13 @@ Section UnsaturatedSolinas.
       as Hcorrect.
 
     eapply list_binop_correct with (res:=res mul_op);
-      rewrite ?varname_gen_is_default;
-      rewrite ?tight_bounds_eq, ?loose_bounds_eq;
-      eauto with helpers; [ | ].
+      handle_side_conditions; [ | ].
     { (* output *value* is correct *)
-      intros. cbv [Solinas.carry_mul_correct expr.Interp] in Hcorrect.
-      specialize_correctness_hyp Hcorrect.
-      destruct Hcorrect as [Heq Hbounds].
-      rewrite Util.map_unsigned_of_Z.
-      rewrite (MaxBounds.map_word_wrap_bounded) with (n0:=n)
-        by eauto using relax_list_Z_bounded_by.
-      apply F.eq_of_Z_iff. rewrite !F.to_Z_of_Z.
-      cbv [M] in M_eq. rewrite M_eq, Heq.
-      Modulo.pull_Zmod; reflexivity. }
+      intros. specialize_correctness_hyp Hcorrect.
+      destruct Hcorrect. simpl_map_unsigned.
+      FtoZ; congruence. }
     { (* output *bounds* are correct *)
-      intros. cbv [Solinas.carry_mul_correct] in Hcorrect.
-      apply Hcorrect; auto. }
+      intros. apply Hcorrect; auto. }
   Qed.
 
   Lemma add_func_correct :
@@ -253,22 +315,13 @@ Section UnsaturatedSolinas.
       as Hcorrect.
 
     eapply list_binop_correct with (res:=res add_op);
-      rewrite ?varname_gen_is_default;
-      rewrite ?tight_bounds_eq, ?loose_bounds_eq;
-      eauto with helpers; [ | ].
+      handle_side_conditions; [ | ].
     { (* output *value* is correct *)
-      intros. cbv [Solinas.add_correct expr.Interp] in Hcorrect.
-      specialize_correctness_hyp Hcorrect.
-      destruct Hcorrect as [Heq Hbounds].
-      rewrite Util.map_unsigned_of_Z.
-      rewrite (MaxBounds.map_word_wrap_bounded) with (n0:=n)
-        by eauto using relax_list_Z_bounded_by.
-      apply F.eq_of_Z_iff. rewrite !F.to_Z_of_Z.
-      cbv [M] in M_eq. rewrite M_eq, Heq.
-      Modulo.pull_Zmod; reflexivity. }
+      intros. specialize_correctness_hyp Hcorrect.
+      destruct Hcorrect. simpl_map_unsigned.
+      FtoZ; congruence. }
     { (* output *bounds* are correct *)
-      intros. cbv [Solinas.add_correct] in Hcorrect.
-      apply Hcorrect; auto. }
+      intros. apply Hcorrect; auto. }
   Qed.
 
   Lemma opp_func_correct :
@@ -283,22 +336,13 @@ Section UnsaturatedSolinas.
       as Hcorrect.
 
     eapply list_unop_correct with (res:=res opp_op);
-      rewrite ?varname_gen_is_default;
-      rewrite ?tight_bounds_eq, ?loose_bounds_eq;
-      eauto with helpers; [ | ].
+      handle_side_conditions; [ | ].
     { (* output *value* is correct *)
-      intros. cbv [Solinas.opp_correct expr.Interp] in Hcorrect.
-      specialize_correctness_hyp Hcorrect.
-      destruct Hcorrect as [Heq Hbounds].
-      rewrite Util.map_unsigned_of_Z.
-      rewrite (MaxBounds.map_word_wrap_bounded) with (n0:=n)
-        by eauto using relax_list_Z_bounded_by.
-      apply F.eq_of_Z_iff. rewrite !F.to_Z_of_Z.
-      cbv [M] in M_eq. rewrite M_eq, Heq.
-      Modulo.pull_Zmod; reflexivity. }
+      intros. specialize_correctness_hyp Hcorrect.
+      destruct Hcorrect. simpl_map_unsigned.
+      FtoZ. rewrite Z.sub_0_l; congruence. }
     { (* output *bounds* are correct *)
-      intros. cbv [Solinas.opp_correct] in Hcorrect.
-      apply Hcorrect; auto. }
+      intros. apply Hcorrect; auto. }
   Qed.
 
   Lemma from_bytes_func_correct :
@@ -313,27 +357,13 @@ Section UnsaturatedSolinas.
       as Hcorrect.
 
     eapply Signature.from_bytes_correct with (res:=res from_bytes_op);
-      rewrite ?varname_gen_is_default;
-      rewrite ?tight_bounds_eq, ?loose_bounds_eq;
-      eauto with helpers; [ | ].
+      handle_side_conditions; [ | ].
     { (* output *value* is correct *)
-      intros. cbv [Solinas.from_bytes_correct expr.Interp] in Hcorrect.
-      (* simplify bounds expression *)
-      match type of Hcorrect with
-      | context [list_Z_bounded_by (map ?f ?x)] =>
-        change (map f x) with prime_bytes_bounds_value in Hcorrect
-      end.
-      specialize_correctness_hyp Hcorrect.
-      destruct Hcorrect as [Heq Hbounds].
-      rewrite Util.map_unsigned_of_Z.
-      rewrite (MaxBounds.map_word_wrap_bounded) with (n0:=n)
-        by eauto using relax_list_Z_bounded_by.
-      apply F.eq_of_Z_iff.
-      cbv [M] in M_eq. rewrite M_eq.
-      rewrite Heq. reflexivity. }
+      intros. specialize_correctness_hyp Hcorrect.
+      destruct Hcorrect. simpl_map_unsigned.
+      FtoZ. congruence. }
     { (* output *bounds* are correct *)
-      intros. cbv [Solinas.from_bytes_correct] in Hcorrect.
-      apply Hcorrect; auto. }
+      intros. apply Hcorrect; auto. }
   Qed.
 
   Lemma to_bytes_func_correct :
@@ -348,29 +378,24 @@ Section UnsaturatedSolinas.
       as Hcorrect.
 
     eapply Signature.to_bytes_correct with (res:=res to_bytes_op);
-      rewrite ?varname_gen_is_default;
-      rewrite ?tight_bounds_eq, ?loose_bounds_eq;
-      eauto with helpers.
-    Print HintDb helpers.
-    [ | ].
+      handle_side_conditions; [ | ].
     { (* output *value* is correct *)
-      intros. cbv [Solinas.to_bytes_correct expr.Interp] in Hcorrect.
-      (* simplify bounds expression *)
-      match type of Hcorrect with
-      | context [list_Z_bounded_by (map ?f ?x)] =>
-        change (map f x) with prime_bytes_bounds_value in Hcorrect
+      intros. specialize_correctness_hyp Hcorrect.
+      rewrite Hcorrect. simpl_map_unsigned.
+      FtoZ.
+      rewrite Partition.eval_partition by apply Freeze.wprops_bytes.
+      lazymatch goal with
+      | |- (((?x mod ?m) mod ?s) mod ?m = ?x mod ?m)%Z =>
+        pose proof (Z.mod_pos_bound x m);
+          pose proof modulus_fits_in_bytes;
+          rewrite (Z.mod_small (x mod m) s) by auto with zarith
       end.
-      specialize_correctness_hyp Hcorrect.
-      destruct Hcorrect as [Heq Hbounds].
-      rewrite Util.map_unsigned_of_Z.
-      rewrite (MaxBounds.map_word_wrap_bounded) with (n0:=n)
-        by eauto using relax_list_Z_bounded_by.
-      apply F.eq_of_Z_iff.
-      cbv [M] in M_eq. rewrite M_eq.
-      rewrite Heq. reflexivity. }
+      rewrite Z.mod_mod by auto with zarith; reflexivity. }
     { (* output *bounds* are correct *)
-      intros. cbv [Solinas.to_bytes_correct] in Hcorrect.
-      apply Hcorrect; auto. }
+      intros. rewrite Hcorrect by auto.
+      apply partition_bounded_by_prime_bytes_bounds.
+      apply Z.mod_pos_bound.
+      apply modulus_fits_in_bytes. }
   Qed.
 
 End UnsaturatedSolinas.
@@ -405,6 +430,7 @@ Local Ltac begin_derive_bedrock2_func :=
   | |- context [spec_of_add] => eapply add_func_correct
   | |- context [spec_of_opp] => eapply opp_func_correct
   | |- context [spec_of_from_bytes] => eapply from_bytes_func_correct
+  | |- context [spec_of_to_bytes] => eapply to_bytes_func_correct
   end.
 
 Local Ltac derive_bedrock2_func op :=
@@ -482,17 +508,27 @@ Section Tests.
                         (fe25519_from_bytes :: functions))
          As fe25519_from_bytes_correct.
   Proof. Time derive_bedrock2_func from_bytes_op. Qed.
+
+  Derive fe25519_to_bytes
+         SuchThat (forall functions,
+                      spec_of_to_bytes
+                        (field_representation:=field_representation n s c)
+                        (fe25519_to_bytes :: functions))
+         As fe25519_to_bytes_correct.
+  Proof. Time derive_bedrock2_func to_bytes_op. Qed.
 End Tests.
 
 Print fe25519_add.
 Print fe25519_opp.
 Print fe25519_from_bytes.
+Print fe25519_to_bytes.
 (* Current status: mul/add/opp/from_bytes prototyped through full pipeline
    Done:
    - fix from_bytes proof in Signature.v
    - prototype from_bytes through full pipeline
-   Next:
    - prototype to_bytes through full pipeline
+   - separate out more tactics for UnsaturatedSolinas proofs
+   Next:
    - add remaining operations using existing Signature lemmas
    - wbw montgomery
    - replace old pipeline with new
