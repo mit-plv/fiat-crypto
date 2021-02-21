@@ -303,6 +303,28 @@ Section UnsaturatedSolinas.
       intros. apply Hcorrect; auto. }
   Qed.
 
+  Lemma square_func_correct :
+    valid_func (res square_op _) ->
+    expr.Wf3 (res square_op) ->
+    forall functions,
+      spec_of_square (square_func :: functions).
+  Proof.
+    intros. cbv [spec_of_square]. rewrite square_func_eq.
+    pose proof carry_square_correct
+         _ _ _ _ ltac:(eassumption) _ (res_eq square_op)
+      as Hcorrect.
+
+    eapply list_unop_correct with (op:=fun x => (x * x)%F)
+                                  (res:=res square_op);
+      handle_side_conditions; [ | ].
+    { (* output *value* is correct *)
+      intros. specialize_correctness_hyp Hcorrect.
+      destruct Hcorrect. simpl_map_unsigned.
+      FtoZ; congruence. }
+    { (* output *bounds* are correct *)
+      intros. apply Hcorrect; auto. }
+  Qed.
+
   Lemma add_func_correct :
     valid_func (res add_op _) ->
     expr.Wf3 (res add_op) ->
@@ -324,6 +346,28 @@ Section UnsaturatedSolinas.
       intros. apply Hcorrect; auto. }
   Qed.
 
+  Lemma sub_func_correct :
+    valid_func (res sub_op _) ->
+    expr.Wf3 (res sub_op) ->
+    forall functions,
+      spec_of_sub (sub_func :: functions).
+  Proof.
+    intros. cbv [spec_of_sub]. rewrite sub_func_eq.
+    pose proof sub_correct
+         _ _ _ _ ltac:(eassumption) _ (res_eq sub_op)
+      as Hcorrect.
+
+    eapply list_binop_correct with (res:=res sub_op);
+      handle_side_conditions; [ | ].
+    { (* output *value* is correct *)
+      intros. specialize_correctness_hyp Hcorrect.
+      destruct Hcorrect. simpl_map_unsigned.
+      rewrite <-F.of_Z_sub. FtoZ.
+      congruence. }
+    { (* output *bounds* are correct *)
+      intros. apply Hcorrect; auto. }
+  Qed.
+
   Lemma opp_func_correct :
     valid_func (res opp_op _) ->
     expr.Wf3 (res opp_op) ->
@@ -341,6 +385,28 @@ Section UnsaturatedSolinas.
       intros. specialize_correctness_hyp Hcorrect.
       destruct Hcorrect. simpl_map_unsigned.
       FtoZ. rewrite Z.sub_0_l; congruence. }
+    { (* output *bounds* are correct *)
+      intros. apply Hcorrect; auto. }
+  Qed.
+
+  Lemma scmula24_func_correct :
+    valid_func (res scmula24_op _) ->
+    expr.Wf3 (res scmula24_op) ->
+    forall functions,
+      spec_of_scmula24 (scmula24_func :: functions).
+  Proof.
+    intros. cbv [spec_of_scmula24]. rewrite scmula24_func_eq.
+    pose proof carry_scmul_const_correct
+         _ _ _ _ (ltac:(eassumption)) (F.to_Z a24) _
+         (res_eq scmula24_op)
+      as Hcorrect.
+
+    eapply list_unop_correct with (res:=res scmula24_op);
+      handle_side_conditions; [ | ].
+    { (* output *value* is correct *)
+      intros. specialize_correctness_hyp Hcorrect.
+      destruct Hcorrect. simpl_map_unsigned.
+      FtoZ. congruence. }
     { (* output *bounds* are correct *)
       intros. apply Hcorrect; auto. }
   Qed.
@@ -427,8 +493,11 @@ Definition field_parameters_prefixed
 Local Ltac begin_derive_bedrock2_func :=
   lazymatch goal with
   | |- context [spec_of_mul] => eapply mul_func_correct
+  | |- context [spec_of_square] => eapply square_func_correct
   | |- context [spec_of_add] => eapply add_func_correct
+  | |- context [spec_of_sub] => eapply sub_func_correct
   | |- context [spec_of_opp] => eapply opp_func_correct
+  | |- context [spec_of_scmula24] => eapply scmula24_func_correct
   | |- context [spec_of_from_bytes] => eapply from_bytes_func_correct
   | |- context [spec_of_to_bytes] => eapply to_bytes_func_correct
   end.
@@ -485,6 +554,14 @@ Section Tests.
          As fe25519_mul_correct.
   Proof. Time derive_bedrock2_func mul_op. Qed.
 
+  Derive fe25519_square
+         SuchThat (forall functions,
+                      spec_of_square
+                        (field_representation:=field_representation n s c)
+                        (fe25519_square :: functions))
+         As fe25519_square_correct.
+  Proof. Time derive_bedrock2_func square_op. Qed.
+
   Derive fe25519_add
          SuchThat (forall functions,
                       spec_of_add
@@ -493,6 +570,14 @@ Section Tests.
          As fe25519_add_correct.
   Proof. Time derive_bedrock2_func add_op. Qed.
 
+  Derive fe25519_sub
+         SuchThat (forall functions,
+                      spec_of_sub
+                        (field_representation:=field_representation n s c)
+                        (fe25519_sub :: functions))
+         As fe25519_sub_correct.
+  Proof. Time derive_bedrock2_func sub_op. Qed.
+
   Derive fe25519_opp
          SuchThat (forall functions,
                       spec_of_opp
@@ -500,6 +585,14 @@ Section Tests.
                         (fe25519_opp :: functions))
          As fe25519_opp_correct.
   Proof. Time derive_bedrock2_func opp_op. Qed.
+
+  Derive fe25519_scmula24
+         SuchThat (forall functions,
+                      spec_of_scmula24
+                        (field_representation:=field_representation n s c)
+                        (fe25519_scmula24 :: functions))
+         As fe25519_scmula24_correct.
+  Proof. Time derive_bedrock2_func scmula24_op. Qed.
 
   Derive fe25519_from_bytes
          SuchThat (forall functions,
@@ -518,8 +611,12 @@ Section Tests.
   Proof. Time derive_bedrock2_func to_bytes_op. Qed.
 End Tests.
 
+Print fe25519_mul.
+Print fe25519_square.
 Print fe25519_add.
+Print fe25519_sub.
 Print fe25519_opp.
+Print fe25519_scmula24.
 Print fe25519_from_bytes.
 Print fe25519_to_bytes.
 (* Current status: mul/add/opp/from_bytes prototyped through full pipeline
@@ -528,8 +625,8 @@ Print fe25519_to_bytes.
    - prototype from_bytes through full pipeline
    - prototype to_bytes through full pipeline
    - separate out more tactics for UnsaturatedSolinas proofs
-   Next:
    - add remaining operations using existing Signature lemmas
+   Next:
    - wbw montgomery
    - replace old pipeline with new
 *)
