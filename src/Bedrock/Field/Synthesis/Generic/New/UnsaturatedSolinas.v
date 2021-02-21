@@ -11,6 +11,7 @@ Require Import Crypto.Bedrock.Field.Common.Util.
 Require Import Crypto.Bedrock.Field.Common.Arrays.ByteBounds.
 Require Import Crypto.Bedrock.Field.Common.Names.VarnameGenerator.
 Require Import Crypto.Bedrock.Field.Synthesis.Generic.Signature.
+Require Import Crypto.Bedrock.Field.Synthesis.Generic.New.ComputedOp.
 Require Import Crypto.Bedrock.Field.Translation.Parameters.Defaults.
 Require Import Crypto.Bedrock.Field.Translation.Proofs.Func.
 Require Import Crypto.BoundsPipeline.
@@ -23,21 +24,6 @@ Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Import ListNotations API.Compilers Types.Notations.
 Import Language.Wf.Compilers.
-
-Record computed_op
-      {p : Types.parameters} {t}
-      {op : Pipeline.ErrorT (API.Expr t)}
-      {name : String.string}
-      {insizes outsizes inlengths}
-  :=
-  { res : API.Expr t;
-    b2_func : func;
-    res_eq : op = ErrorT.Success res;
-    func_eq :
-      b2_func = make_bedrock_func
-                  name insizes outsizes inlengths res;
-  }.
-Global Arguments computed_op {_} {_}.
 
 Class unsaturated_solinas_ops
            {p : Types.parameters}
@@ -82,14 +68,6 @@ Class unsaturated_solinas_ops
         to_bytes_insizes to_bytes_outsizes (to_bytes_inlengths n);
   }.
 Arguments unsaturated_solinas_ops {_ _} _ _ _ _.
-
-Ltac make_computed_op :=
-  eapply Build_computed_op;
-  lazymatch goal with
-  | |- _ = ErrorT.Success _ => vm_compute; reflexivity
-  | _ => idtac
-  end;
-  vm_compute; reflexivity.
 
 Section UnsaturatedSolinas.
   Context {p:Types.parameters} {p_ok : Types.ok}
