@@ -350,8 +350,15 @@ Definition capitalize_first_letter (s : string) : string
      | "" => ""
      | String ch s => String (Ascii.to_upper ch) s
      end.
+Definition uncapitalize_first_letter (s : string) : string
+  := match s with
+     | "" => ""
+     | String ch s => String (Ascii.to_lower ch) s
+     end.
+Definition to_title_case_sep (sep : string) (s : string) : string
+  := concat sep (List.map capitalize_first_letter (split sep s)).
 Definition to_title_case (s : string) : string
-  := concat " " (List.map capitalize_first_letter (split " " s)).
+  := to_title_case_sep " " s.
 
 Lemma substring_0_0 :
   forall s, substring 0 0 s = "".
