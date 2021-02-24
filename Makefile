@@ -213,7 +213,7 @@ BEDROCK2_WORD_BY_WORD_MONTGOMERY := src/ExtractionOCaml/bedrock2_word_by_word_mo
 BEDROCK2_ARGS := --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select
 BEDROCK2_EXTRA_CFLAGS := -Wno-error=unused-but-set-variable
 
-GO_EXTRA_ARGS_ALL := --cmovznz-by-mul
+GO_EXTRA_ARGS_ALL := --cmovznz-by-mul --internal-static --package-case flatcase --public-function-case UpperCamelCase --private-function-case camelCase --public-type-case UpperCamelCase --private-type-case camelCase --no-prefix-fiat
 GO_EXTRA_ARGS_64  := --no-wide-int $(GO_EXTRA_ARGS_ALL)
 GO_EXTRA_ARGS_32  := $(GO_EXTRA_ARGS_ALL)
 
@@ -529,7 +529,7 @@ $(addprefix fiat-rust/,$(COPY_TO_FIAT_RUST)) : fiat-rust/% : %
 $(ALL_GO_FILES) : $(GO_DIR)%.go : $$($$($$*_BINARY_NAME))
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $($($*_BINARY_NAME)) --lang Go $(GO_EXTRA_ARGS_$($*_BITWIDTH)) $($*_DESCRIPTION) $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $($($*_BINARY_NAME)) --lang Go $(GO_EXTRA_ARGS_$($*_BITWIDTH)) --package-name fiat$($*_DESCRIPTION) "" $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 .PHONY: $(addprefix test-,$(ALL_GO_FILES))
