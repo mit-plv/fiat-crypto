@@ -524,7 +524,7 @@ Module Compilers.
       Definition ToFunctionLines
                  {relax_zrange : relax_zrange_opt}
                  (machine_wordsize : Z)
-                 (do_bounds_check : bool) (static : bool) (prefix : string) (name : string)
+                 (do_bounds_check : bool) (internal_static : bool) (static : bool) (prefix : string) (name : string)
                  {t}
                  (e : @Compilers.expr.Expr base.type ident.ident t)
                  (comment : type.for_each_lhs_of_arrow var_data t -> var_data (type.base (type.final_codomain t)) -> list string)
@@ -554,7 +554,7 @@ Module Compilers.
       Definition ToFunctionString
                  {relax_zrange : relax_zrange_opt}
                  (machine_wordsize : Z)
-                 (do_bounds_check : bool) (static : bool) (prefix : string) (name : string)
+                 (do_bounds_check : bool) (internal_static : bool) (static : bool) (prefix : string) (name : string)
                  {t}
                  (e : @Compilers.expr.Expr base.type ident.ident t)
                  (comment : type.for_each_lhs_of_arrow var_data t -> var_data (type.base (type.final_codomain t)) -> list string)
@@ -562,7 +562,7 @@ Module Compilers.
                  (inbounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
                  (outbounds : ZRange.type.option.interp (type.base (type.final_codomain t)))
         : (string * ident_infos) + string
-        := match ToFunctionLines machine_wordsize do_bounds_check static prefix name e comment name_list inbounds outbounds with
+        := match ToFunctionLines machine_wordsize do_bounds_check internal_static static prefix name e comment name_list inbounds outbounds with
            | inl (ls, used_types) => inl (LinesToString ls, used_types)
            | inr err => inr err
            end.
@@ -572,6 +572,8 @@ Module Compilers.
           ToString.comment_block := comment_block;
 
           ToString.comment_file_header_block := comment_block;
+
+          ToString.adjust_name _ name := name;
 
           ToString.ToFunctionLines := @ToFunctionLines;
 

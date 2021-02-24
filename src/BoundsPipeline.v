@@ -345,7 +345,7 @@ Module Pipeline.
                       ++ match ToString.ToFunctionLines
                                  (relax_zrange := fun r => r)
                                  machine_wordsize
-                                 false (* do extra bounds check *) false (* static *) "" "f" syntax_tree (fun _ _ => nil) None arg_bounds ZRange.type.base.option.None with
+                                 false (* do extra bounds check *) false (* internal static *) false (* static *) "" "f" syntax_tree (fun _ _ => nil) None arg_bounds ZRange.type.base.option.None with
                          | inl (E_lines, types_used)
                            => ["When doing bounds analysis on the syntax tree:"]
                                 ++ show_lines false syntax_tree
@@ -560,6 +560,7 @@ Module Pipeline.
 
   Definition BoundsPipelineToStrings
              {output_language_api : ToString.OutputLanguageAPI}
+             {internal_static : internal_static_opt}
              {static : static_opt}
              {low_level_rewriter_method : low_level_rewriter_method_opt}
              {only_signed : only_signed_opt}
@@ -590,7 +591,7 @@ Module Pipeline.
                   E arg_bounds out_bounds in
        match E with
        | Success E' => let E := ToString.ToFunctionLines
-                                  machine_wordsize true static type_prefix name E' comment None arg_bounds out_bounds in
+                                  machine_wordsize true internal_static static type_prefix name E' comment None arg_bounds out_bounds in
                       match E with
                       | inl E => Success E
                       | inr err => Error (Stringification_failed E' err)
@@ -600,6 +601,7 @@ Module Pipeline.
 
   Definition BoundsPipelineToString
              {output_language_api : ToString.OutputLanguageAPI}
+             {internal_static : internal_static_opt}
              {static : static_opt}
              {low_level_rewriter_method : low_level_rewriter_method_opt}
              {only_signed : only_signed_opt}
@@ -648,17 +650,18 @@ Module Pipeline.
         => ((prefix ++ name)%string,
             match result with
             | Success E'
-              => let E := ToString.ToFunctionLines
+              => let is_internal' := match is_internal return bool with
+                                     | true => orb (_ : static_opt) (_ : internal_static_opt)
+                                     | false => _ : static_opt
+                                     end in
+                 let E := ToString.ToFunctionLines
                             (relax_zrange
                              := fun r => Option.value (relax_zrange_gen (_ : only_signed_opt) (possible_values_of_pipeline result) r) r)
                             machine_wordsize
-                            true match is_internal return bool with
-                                 | true => orb (_ : static_opt) (_ : internal_static_opt)
-                                 | false => _ : static_opt
-                                 end
-                            prefix (prefix ++ name)%string
+                            true (_ : internal_static_opt) is_internal'
+                            prefix (ToString.adjust_name is_internal' (prefix ++ name))
                             E'
-                            (comment (prefix ++ name)%string)
+                            (comment (ToString.adjust_name is_internal' (prefix ++ name)))
                             None
                             (arg_bounds_of_pipeline result)
                             (out_bounds_of_pipeline result) in

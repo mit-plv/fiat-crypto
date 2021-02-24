@@ -32,10 +32,18 @@ Module Go.
   Definition is_standard_bitwidth (bw : Z) := existsb (Z.eqb bw) stdint_bitwidths.
   Definition is_special_bitwidth (bw : Z) := negb (is_standard_bitwidth bw).
 
+  Definition to_go_case (static : bool) (name : string) : string
+    := (* will be replaced by something fancier soon *) name.
+
   Definition special_addcarryx_name (prefix : string) (lg2s : Z)
-    := (prefix ++ "addcarryx_u" ++ Decimal.Z.to_string lg2s)%string.
+    := to_go_case true (prefix ++ "addcarryx_u" ++ Decimal.Z.to_string lg2s).
   Definition special_subborrowx_name (prefix : string) (lg2s : Z)
-    := (prefix ++ "subborrowx_u" ++ Decimal.Z.to_string lg2s)%string.
+    := to_go_case true (prefix ++ "subborrowx_u" ++ Decimal.Z.to_string lg2s)%string.
+
+  Definition int_type_to_string (prefix : string) (t : ToString.int.type) : string :=
+    ((if is_special_bitwidth (ToString.int.bitwidth_of t) then (fun t => to_go_case true (prefix ++ t)) else (fun t => t))
+       ((if ToString.int.is_unsigned t then "uint" else "int")
+          ++ Decimal.Z.to_string (ToString.int.bitwidth_of t)))%string.
 
   (* Header imports and type defs *)
   Definition header (machine_wordsize : Z) (static : bool) (prefix : string) (infos : ToString.ident_infos)
@@ -47,8 +55,8 @@ Module Go.
                 (fun bw => is_standard_bitwidth (Z.pos bw))
                 (PositiveSet.union (ToString.addcarryx_lg_splits infos)
                                    (ToString.mulx_lg_splits infos)) in
-       let type_prefix := ("type " ++ prefix)%string in
-       let pkg_name := if endswith "_" prefix then substring 0 (String.length prefix - 1) prefix else prefix in
+       let type_prefix := "type "%string in
+       let pkg_name := to_go_case false (if endswith "_" prefix then substring 0 (String.length prefix - 1) prefix else prefix) in
        let special_addcarryx_lg_splits
            := List.filter
                 is_standard_bitwidth
@@ -56,20 +64,20 @@ Module Go.
                    Z.pos
                    (PositiveSet.elements (ToString.addcarryx_lg_splits infos))) in
        let carry_type := (if IntSet.mem _Bool bitwidths_used || IntSet.mem (ToString.int.signed_counterpart_of _Bool) bitwidths_used
-                          then prefix ++ "uint1"
+                          then int_type_to_string prefix _Bool
                           else if IntSet.mem uint8 bitwidths_used || IntSet.mem int8 bitwidths_used
-                               then "uint8"
-                               else "uint" ++ Decimal.Z.to_string machine_wordsize)%string in
+                               then int_type_to_string prefix uint8
+                               else int_type_to_string prefix (int.of_bitwidth false(*unsigned*) machine_wordsize)) in
        ((["package " ++ pkg_name;
             ""]%string)
           ++ (if needs_bits_import then ["import ""math/bits"""]%string else [])
           ++ (if IntSet.mem _Bool bitwidths_used || IntSet.mem (ToString.int.signed_counterpart_of _Bool) bitwidths_used
-              then [type_prefix ++ "uint1 uint8"; (* C: typedef unsigned char prefix_uint1 *)
-                      type_prefix ++ "int1 int8" ]%string (* C: typedef signed char prefix_int1 *)
+              then [type_prefix ++ int_type_to_string prefix _Bool ++ " uint8"; (* C: typedef unsigned char prefix_uint1 *)
+                      type_prefix ++ int_type_to_string prefix (int.signed_counterpart_of _Bool) ++ " int8" ]%string (* C: typedef signed char prefix_int1 *)
               else [])
           ++ (if IntSet.mem (int.of_bitwidth false 2) bitwidths_used || IntSet.mem (int.of_bitwidth true 2) bitwidths_used
-              then [type_prefix ++ "uint2 uint8";
-                      type_prefix ++ "int2 int8" ]%string
+              then [type_prefix ++ int_type_to_string prefix (int.of_bitwidth false 2) ++ " uint8";
+                      type_prefix ++ int_type_to_string prefix (int.of_bitwidth true 2) ++ " int8" ]%string
               else [])
           ++ (if IntSet.mem uint128 bitwidths_used || IntSet.mem int128 bitwidths_used
               then ["var _ = error_Go_output_does_not_support_128_bit_integers___instead_use_rewriting_rules_for_removing_128_bit_integers"]%string
@@ -91,12 +99,6 @@ Module Go.
                       [(special_addcarryx_name prefix bw, "bits.Add" ++ s_bw)
                        ; (special_subborrowx_name prefix bw, "bits.Sub" ++ s_bw)]%string)
                 special_addcarryx_lg_splits))%list.
-
-  Definition int_type_to_string (prefix : string) (t : ToString.int.type) : string :=
-    ((if is_special_bitwidth (ToString.int.bitwidth_of t) then prefix else "")
-       ++ (if ToString.int.is_unsigned t then "uint" else "int")
-       ++ Decimal.Z.to_string (ToString.int.bitwidth_of t))%string.
-
 
   (* Instead of "macros for minimum-width integer constants" we tried to
      use numeric casts in Go. It turns out that it wasn't needed and Go
@@ -138,7 +140,7 @@ Module Go.
 
   Import IR.Notations.
 
-  Fixpoint arith_to_string (prefix : string) {t} (e : IR.arith_expr t) : string
+  Fixpoint arith_to_string (internal_static : bool) (prefix : string) {t} (e : IR.arith_expr t) : string
     := match e with
        (* integer literals *)
        | (IR.literal v @@@ _) => int_literal_to_string prefix IR.type.Z v
@@ -146,74 +148,65 @@ Module Go.
        | (IR.List_nth n @@@ IR.Var _ v) => "(" ++ v ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "])"
        (* (de)referencing *)
        | (IR.Addr @@@ IR.Var _ v) => "&" ++ v
-       | (IR.Dereference @@@ e) => "( *" ++ arith_to_string prefix e ++ " )"
+       | (IR.Dereference @@@ e) => "( *" ++ arith_to_string internal_static prefix e ++ " )"
        (* bitwise operations *)
        | (IR.Z_shiftr offset @@@ e) =>
-         "(" ++ arith_to_string prefix e ++ " >> " ++ Decimal.Z.to_string offset ++ ")"
+         "(" ++ arith_to_string internal_static prefix e ++ " >> " ++ Decimal.Z.to_string offset ++ ")"
        | (IR.Z_shiftl offset @@@ e) =>
-         "(" ++ arith_to_string prefix e ++ " << " ++ Decimal.Z.to_string offset ++ ")"
+         "(" ++ arith_to_string internal_static prefix e ++ " << " ++ Decimal.Z.to_string offset ++ ")"
        | (IR.Z_land @@@ (e1, e2)) =>
-         "(" ++ arith_to_string prefix e1 ++ " & " ++ arith_to_string prefix e2 ++ ")"
+         "(" ++ arith_to_string internal_static prefix e1 ++ " & " ++ arith_to_string internal_static prefix e2 ++ ")"
        | (IR.Z_lor @@@ (e1, e2)) =>
-         "(" ++ arith_to_string prefix e1 ++ " | " ++ arith_to_string prefix e2 ++ ")"
+         "(" ++ arith_to_string internal_static prefix e1 ++ " | " ++ arith_to_string internal_static prefix e2 ++ ")"
        | (IR.Z_lxor @@@ (e1, e2)) =>
-         "(" ++ arith_to_string prefix e1 ++ " ^ " ++ arith_to_string prefix e2 ++ ")"
-       | (IR.Z_lnot _ @@@ e) => "(^" ++ arith_to_string prefix e ++ ")"
+         "(" ++ arith_to_string internal_static prefix e1 ++ " ^ " ++ arith_to_string internal_static prefix e2 ++ ")"
+       | (IR.Z_lnot _ @@@ e) => "(^" ++ arith_to_string internal_static prefix e ++ ")"
        (* arithmetic operations *)
        | (IR.Z_add @@@ (x1, x2)) =>
-         "(" ++ arith_to_string prefix x1 ++ " + " ++ arith_to_string prefix x2 ++ ")"
+         "(" ++ arith_to_string internal_static prefix x1 ++ " + " ++ arith_to_string internal_static prefix x2 ++ ")"
        | (IR.Z_mul @@@ (x1, x2)) =>
-         "(" ++ arith_to_string prefix x1 ++ " * " ++ arith_to_string prefix x2 ++ ")"
+         "(" ++ arith_to_string internal_static prefix x1 ++ " * " ++ arith_to_string internal_static prefix x2 ++ ")"
        | (IR.Z_sub @@@ (x1, x2)) =>
-         "(" ++ arith_to_string prefix x1 ++ " - " ++ arith_to_string prefix x2 ++ ")"
-       | (IR.Z_bneg @@@ e) => "(!/* TODO: FIX ME */ " ++ arith_to_string prefix e ++ ")"
+         "(" ++ arith_to_string internal_static prefix x1 ++ " - " ++ arith_to_string internal_static prefix x2 ++ ")"
+       | (IR.Z_bneg @@@ e) => "(!/* TODO: FIX ME */ " ++ arith_to_string internal_static prefix e ++ ")"
        | (IR.Z_mul_split lg2s @@@ args) =>
          match is_standard_bitwidth lg2s, args with
          | true, ((IR.Addr @@@ lo, IR.Addr @@@ hi), args)
-           => (arith_to_string prefix hi ++ ", " ++ arith_to_string prefix lo)
+           => (arith_to_string internal_static prefix hi ++ ", " ++ arith_to_string internal_static prefix lo)
                 ++ " = bits.Mul"
-                ++ Decimal.Z.to_string lg2s ++ "(" ++ arith_to_string prefix args ++ ")"
+                ++ Decimal.Z.to_string lg2s ++ "(" ++ arith_to_string internal_static prefix args ++ ")"
          | _, _
-           => prefix
-                ++ "mulx_u"
-                ++ Decimal.Z.to_string lg2s ++ "(" ++ arith_to_string prefix args ++ ")"
+           => (to_go_case internal_static (prefix ++ "mulx_u" ++ Decimal.Z.to_string lg2s))
+                ++ "(" ++ arith_to_string internal_static prefix args ++ ")"
          end
        | (IR.Z_add_with_get_carry lg2s @@@ args) =>
          match is_standard_bitwidth lg2s, args with
          | true, ((IR.Addr @@@ v, IR.Addr @@@ c), (cin, x, y))
-           => (arith_to_string prefix v ++ ", " ++ arith_to_string prefix c)
+           => (arith_to_string internal_static prefix v ++ ", " ++ arith_to_string internal_static prefix c)
                 ++ " = " ++ special_addcarryx_name prefix lg2s
-                ++ "(" ++ arith_to_string prefix x ++ ", " ++ arith_to_string prefix y ++ ", " ++ arith_to_string prefix cin ++ ")"
+                ++ "(" ++ arith_to_string internal_static prefix x ++ ", " ++ arith_to_string internal_static prefix y ++ ", " ++ arith_to_string internal_static prefix cin ++ ")"
          | _, _
-           => prefix
-                ++ "addcarryx_u"
-                ++ Decimal.Z.to_string lg2s ++ "(" ++ arith_to_string prefix args ++ ")"
+           => special_addcarryx_name prefix lg2s ++ "(" ++ arith_to_string internal_static prefix args ++ ")"
          end
        | (IR.Z_sub_with_get_borrow lg2s @@@ args) =>
          match is_standard_bitwidth lg2s, args with
          | true, ((IR.Addr @@@ v, IR.Addr @@@ b), (bin, x, y))
-           => (arith_to_string prefix v ++ ", " ++ arith_to_string prefix b)
+           => (arith_to_string internal_static prefix v ++ ", " ++ arith_to_string internal_static prefix b)
                 ++ " = " ++ special_subborrowx_name prefix lg2s
-                ++ "(" ++ arith_to_string prefix x ++ ", " ++ arith_to_string prefix y ++ ", " ++ arith_to_string prefix bin ++ ")"
+                ++ "(" ++ arith_to_string internal_static prefix x ++ ", " ++ arith_to_string internal_static prefix y ++ ", " ++ arith_to_string internal_static prefix bin ++ ")"
          | _, _
-           => prefix
-                ++ "subborrowx_u"
-                ++ Decimal.Z.to_string lg2s ++ "(" ++ arith_to_string prefix args ++ ")"
+           => special_subborrowx_name prefix lg2s ++ "(" ++ arith_to_string internal_static prefix args ++ ")"
          end
        | (IR.Z_value_barrier ty @@@ args) =>
-         prefix
-           ++ "value_barrier_"
-           ++ (if int.is_unsigned ty then "u" else "")
-           ++ Decimal.Z.to_string (int.bitwidth_of ty) ++ "(" ++ arith_to_string prefix args ++ ")"
+         (to_go_case internal_static (prefix ++ "value_barrier_" ++ (if int.is_unsigned ty then "u" else "") ++ Decimal.Z.to_string (int.bitwidth_of ty)))
+           ++ "(" ++ arith_to_string internal_static prefix args ++ ")"
        | (IR.Z_zselect ty @@@ args) =>
-         prefix
-           ++ "cmovznz_"
-           ++ (if ToString.int.is_unsigned ty then "u" else "")
-           ++ Decimal.Z.to_string (ToString.int.bitwidth_of ty) ++ "(" ++ @arith_to_string prefix _ args ++ ")"
+         (to_go_case internal_static (prefix ++ "cmovznz_" ++ (if ToString.int.is_unsigned ty then "u" else "") ++ Decimal.Z.to_string (ToString.int.bitwidth_of ty)))
+           ++ "(" ++ @arith_to_string internal_static prefix _ args ++ ")"
        | (IR.Z_static_cast int_t @@@ e) =>
-         primitive_type_to_string prefix IR.type.Z (Some int_t) ++ "(" ++ arith_to_string prefix e ++ ")"
+         primitive_type_to_string prefix IR.type.Z (Some int_t) ++ "(" ++ arith_to_string internal_static prefix e ++ ")"
        | IR.Var _ v => v
-       | IR.Pair A B a b => arith_to_string prefix a ++ ", " ++ arith_to_string prefix b
+       | IR.Pair A B a b => arith_to_string internal_static prefix a ++ ", " ++ arith_to_string internal_static prefix b
        | (IR.Z_add_modulo @@@ (x1, x2, x3)) => "var _error = error_addmodulo"
        | (IR.List_nth _ @@@ _)
        | (IR.Addr @@@ _)
@@ -254,20 +247,20 @@ Module Go.
   (** No need to lift declarations to the top *)
   Local Instance : IR.OfPHOAS.lift_declarations_opt := false.
 
-  Definition stmt_to_string (prefix : string) (e : IR.stmt) : string :=
+  Definition stmt_to_string (internal_static : bool) (prefix : string) (e : IR.stmt) : string :=
     match e with
-    | IR.Call val => arith_to_string prefix val
+    | IR.Call val => arith_to_string internal_static prefix val
     | IR.Assign true t sz name val =>
       (* local non-mutable declaration with initialization *)
-      "var " ++ name ++ " " ++ primitive_type_to_string prefix t sz ++ " = " ++ arith_to_string prefix val
+      "var " ++ name ++ " " ++ primitive_type_to_string prefix t sz ++ " = " ++ arith_to_string internal_static prefix val
     | IR.Assign false _ sz name val =>
     (* This corresponds to assignment to a non-pointer variable and should never ever
        happen in our generated code. Fiat-crypto handles it but I
        haven't found and instance of this to their generated code *)
-    (* code : name ++ " = " ++ arith_to_string prefix val ++ ";" *)
+    (* code : name ++ " = " ++ arith_to_string internal_static prefix val ++ ";" *)
       "var _error = error_trying_to_assign_value_to_non_mutable_variable"
     | IR.AssignZPtr name sz val =>
-      "*" ++ name ++ " = " ++ arith_to_string prefix val
+      "*" ++ name ++ " = " ++ arith_to_string internal_static prefix val
     | IR.DeclareVar t sz name =>
       (* Local uninitialized declarations become mut declarations, and
          are initialized to 0. *)
@@ -279,11 +272,11 @@ Module Go.
     | IR.Comment lines _ =>
       String.concat String.NewLine (comment_block (ToString.preprocess_comment_block lines))
     | IR.AssignNth name n val =>
-      name ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "] = " ++ arith_to_string prefix val
+      name ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "] = " ++ arith_to_string internal_static prefix val
     end.
 
-  Definition to_strings (prefix : string) (e : IR.expr) : list string :=
-    List.map (stmt_to_string prefix) e.
+  Definition to_strings (internal_static : bool) (prefix : string) (e : IR.expr) : list string :=
+    List.map (stmt_to_string internal_static prefix) e.
 
   Import Rewriter.Language.Language.Compilers Crypto.Language.API.Compilers IR.OfPHOAS.
   Local Notation tZ := (base.type.type_base base.type.Z).
@@ -430,14 +423,14 @@ Module Go.
        ; explicit_pointer_variables := false
     |}.
 
-  Definition to_function_lines (static : bool) (prefix : string) (name : string)
+  Definition to_function_lines (internal_static : bool) (static : bool) (prefix : string) (name : string)
              {t}
              (f : type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * IR.expr)
     : list string :=
     let '(args, rets, body) := f in
     ("/*inline*/" ++ String.NewLine ++ "func " ++ name ++
       "(" ++ String.concat ", " (to_arg_list prefix Out rets ++ to_arg_list_for_each_lhs_of_arrow prefix args) ++
-      ") {")%string :: (List.map (fun s => "  " ++ s)%string (to_strings prefix body)) ++ ["}"%string]%list.
+      ") {")%string :: (List.map (fun s => "  " ++ s)%string (to_strings internal_static prefix body)) ++ ["}"%string]%list.
 
   Definition strip_special_infos (infos : ToString.ident_infos) : ToString.ident_infos
     := ToString.ident_info_diff
@@ -455,7 +448,7 @@ Module Go.
   Definition ToFunctionLines
              {relax_zrange : relax_zrange_opt}
              (machine_wordsize : Z)
-             (do_bounds_check : bool) (static : bool) (prefix : string) (name : string)
+             (do_bounds_check : bool) (internal_static : bool) (static : bool) (prefix : string) (name : string)
              {t}
              (e : API.Expr t)
              (comment : type.for_each_lhs_of_arrow var_data t -> var_data (type.base (type.final_codomain t)) -> list string)
@@ -472,7 +465,7 @@ Module Go.
               ++ [" * Output Bounds:"%string]
               ++ List.map (fun v => " *   "%string ++ v)%string (bound_to_string outdata outbounds)
               ++ [" */"%string]
-              ++ to_function_lines static prefix name (indata, outdata, f))%list,
+              ++ to_function_lines internal_static static prefix name (indata, outdata, f))%list,
            IR.ident_infos.collect_infos f)
     | inr nil =>
       inr ("Unknown internal error in converting " ++ name ++ " to Go")%string
@@ -485,6 +478,7 @@ Module Go.
   Definition OutputGoAPI : ToString.OutputLanguageAPI :=
     {| ToString.comment_block := comment_block;
        ToString.comment_file_header_block := comment_block;
+       ToString.adjust_name := to_go_case;
        ToString.ToFunctionLines := @ToFunctionLines;
        ToString.header := header;
        ToString.footer := fun _ _ _ _ => [];

@@ -804,7 +804,7 @@ Module debugging_25519_to_bytes_bedrock2.
       vm_compute in k.
       subst k.
       cbv beta iota zeta in v.
-      set (k := Language.Compilers.ToString.ToFunctionLines _ _ _ _ _ _ _ _ _) in (value of v).
+      set (k := Language.Compilers.ToString.ToFunctionLines _ _ _ _ _ _ _ _ _ _) in (value of v).
       clear v.
       cbv [Language.Compilers.ToString.ToFunctionLines] in k.
       cbv [Java.OutputJavaAPI] in k.
@@ -956,7 +956,7 @@ Module debugging_25519_to_bytes_java.
       vm_compute in k.
       subst k.
       cbv beta iota zeta in v.
-      set (k := Language.Compilers.ToString.ToFunctionLines _ _ _ _ _ _ _ _ _) in (value of v).
+      set (k := Language.Compilers.ToString.ToFunctionLines _ _ _ _ _ _ _ _ _ _) in (value of v).
       clear v.
       cbv [Language.Compilers.ToString.ToFunctionLines] in k.
       cbv [Java.OutputJavaAPI] in k.

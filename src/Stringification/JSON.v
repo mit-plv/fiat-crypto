@@ -361,7 +361,7 @@ Module JSON.
   Definition ToFunctionLines
              {relax_zrange : relax_zrange_opt}
              (machine_wordsize : Z)
-             (do_bounds_check : bool) (static : bool) (prefix : string) (name : string)
+             (do_bounds_check : bool) (internal_static : bool) (static : bool) (prefix : string) (name : string)
              {t}
              (e : API.Expr t)
              (comment : type.for_each_lhs_of_arrow var_data t -> var_data (type.base (type.final_codomain t)) -> list string)
@@ -388,6 +388,7 @@ Module JSON.
   Definition OutputJSONAPI : ToString.OutputLanguageAPI :=
     {| ToString.comment_block _ := [];
        ToString.comment_file_header_block _ := [];
+       ToString.adjust_name _ name := name;
        ToString.ToFunctionLines := @ToFunctionLines;
        ToString.header := fun _ _ _ _ => [];
        ToString.footer := fun _ _ _ _ => [];

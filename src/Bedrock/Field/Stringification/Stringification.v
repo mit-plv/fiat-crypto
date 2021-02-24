@@ -147,7 +147,7 @@ Notation wrapper_relax_zrange relax_zrange
 Definition Bedrock2_ToFunctionLines
            {relax_zrange : relax_zrange_opt}
            (machine_wordsize : Z)
-           (do_bounds_check : bool) (static : bool) (prefix : string) (name : string)
+           (do_bounds_check : bool) (internal_static : bool) (static : bool) (prefix : string) (name : string)
            {t}
            (e : @API.Expr t)
            (comment : type.for_each_lhs_of_arrow ToString.OfPHOAS.var_data t ->
@@ -226,6 +226,8 @@ Definition OutputBedrock2API : ToString.OutputLanguageAPI :=
 
     ToString.comment_file_header_block s
     := List.map (fun line => "/* " ++ line ++ " */")%string s;
+
+    ToString.adjust_name _ name := name;
 
     ToString.ToFunctionLines := @Bedrock2_ToFunctionLines;
 
