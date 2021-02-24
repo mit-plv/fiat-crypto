@@ -31,6 +31,7 @@ Require Import Crypto.Arithmetic.UniformWeight.
 Require Import Crypto.BoundsPipeline.
 Require Import Crypto.COperationSpecifications.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.
+Require Crypto.Assembly.Parse.
 Import ListNotations.
 Local Open Scope string_scope. Local Open Scope Z_scope. Local Open Scope list_scope. Local Open Scope bool_scope.
 
@@ -734,6 +735,7 @@ Section __.
           {should_split_mul : should_split_mul_opt}
           {should_split_multiret : should_split_multiret_opt}
           {unfold_value_barrier : unfold_value_barrier_opt}
+          {assembly_hints_lines : assembly_hints_lines_opt}
           {widen_carry : widen_carry_opt}
           {widen_bytes : widen_bytes_opt}
           (n : nat)
@@ -1042,12 +1044,26 @@ Section __.
                known_functions)
               ++ extra_special_synthesis name).
 
+    Definition parse_asm_hints : Pipeline.ErrorT (option Assembly.Syntax.Lines)
+      := match assembly_hints_lines with
+         | None => Success None
+         | Some lines
+           => match Assembly.Parse.parse_validated lines with
+              | Error err => Error (Pipeline.Assembly_parsing_error err)
+              | Success v => Success (Some v)
+              end
+         end.
+
     (** Note: If you change the name or type signature of this
           function, you will need to update the code in CLI.v *)
     Definition Synthesize (check_args : Pipeline.ErrorT (list string) -> Pipeline.ErrorT (list string))
                (comment_header : list string) (function_name_prefix : string) (requests : list string)
-      : list (string * Pipeline.ErrorT (list string))
-      := let ls := match requests with
+      : list (synthesis_output_kind * string * Pipeline.ErrorT (list string))
+      := let parse_asm_ls := match parse_asm_hints with
+                             | Success _ => [] (* TODO: make use of the parsed assembly *)
+                             | Error err => [(assembly_output, "parsing", Error err)]
+                             end in
+         let ls := match requests with
                    | nil => List.map (fun '(_, sr) => sr function_name_prefix) known_functions
                    | requests => List.map (synthesize_of_name function_name_prefix) requests
                    end in
@@ -1055,7 +1071,8 @@ Section __.
          let infos := union_extra_infos_of_extra_synthesis infos in
          let '(extra_ls, extra_infos) := extra_synthesis function_name_prefix infos in
          let extra_bit_widths := ToString.bitwidths_used extra_infos in
-         let res := (if emit_primitives then extra_ls else nil) ++ List.map (fun '(name, res) => (name, (res <- res; Success (fst res))%error)) ls in
+         let extra_ls := List.map (fun '(name, res) => (normal_output, name, res)) extra_ls in
+         let res := (if emit_primitives then extra_ls else nil) ++ List.map (fun '(name, res) => (normal_output, name, (res <- res; Success (fst res))%error)) ls in
          let infos := ToString.ident_info_union
                         infos
                         (ToString.ident_info_of_bitwidths_used extra_bit_widths) in
@@ -1065,12 +1082,14 @@ Section __.
                 ++ [""]) in
          let footer :=
              ToString.footer machine_wordsize (orb internal_static static) static function_name_prefix infos in
-         [("check_args" ++ String.NewLine ++ String.concat String.NewLine header,
+         [(normal_output,
+           "check_args" ++ String.NewLine ++ String.concat String.NewLine header,
            check_args (ErrorT.Success header))%string]
+           ++ parse_asm_ls
            ++ res
            ++ match footer with
               | nil => nil
-              | _ => [("footer", ErrorT.Success footer)]
+              | _ => [(normal_output, "footer", ErrorT.Success footer)]
               end.
   End for_stringification.
 End __.

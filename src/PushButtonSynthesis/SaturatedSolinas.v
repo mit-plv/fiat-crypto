@@ -72,6 +72,7 @@ Section __.
           {should_split_mul : should_split_mul_opt}
           {should_split_multiret : should_split_multiret_opt}
           {unfold_value_barrier : unfold_value_barrier_opt}
+          {assembly_hints_lines : assembly_hints_lines_opt}
           {widen_carry : widen_carry_opt}
           (widen_bytes : widen_bytes_opt := true) (* true, because we don't allow byte-sized things anyway, so we should not expect carries to be widened to byte-size when emitting C code *)
           (s : Z)
@@ -223,7 +224,7 @@ Section __.
     (** Note: If you change the name or type signature of this
           function, you will need to update the code in CLI.v *)
     Definition Synthesize (comment_header : list string) (function_name_prefix : string) (requests : list string)
-      : list (string * Pipeline.ErrorT (list string))
+      : list (synthesis_output_kind * string * Pipeline.ErrorT (list string))
       := Primitives.Synthesize
            machine_wordsize valid_names known_functions (fun _ => nil)
            check_args

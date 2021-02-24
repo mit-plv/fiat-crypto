@@ -24,6 +24,10 @@ Module Type HaskellPrimitivesT.
   Axiom _IO_bind : forall A B, _IO A -> (A -> _IO B) -> _IO B.
   Axiom _IO_return : forall A : Set, A -> _IO A.
   Axiom cast_io : _IO unit -> IO_unit.
+  Axiom uncast_io : IO_unit -> _IO unit.
+  Axiom getContents : _IO string.
+  Axiom readFile : string -> _IO string.
+  Axiom writeFile : string (* fname *) -> string (* contents *) -> _IO unit.
 End HaskellPrimitivesT.
 
 Module Export HaskellPrimitives : HaskellPrimitivesT.
@@ -36,6 +40,10 @@ Module Export HaskellPrimitives : HaskellPrimitivesT.
   Definition _IO_bind : forall A B, _IO A -> (A -> _IO B) -> _IO B := fun A B x f => f x.
   Definition _IO_return : forall A : Set, A -> _IO A := fun A x => x.
   Definition cast_io : _IO unit -> IO_unit := fun x => x.
+  Definition uncast_io : IO_unit -> _IO unit := fun x => x.
+  Definition getContents : _IO string := "".
+  Definition readFile : string -> _IO string := fun _ => "".
+  Definition writeFile : string -> string -> _IO unit := fun _ _ => tt.
 End HaskellPrimitives.
 
 Extract Constant printf_string =>
@@ -45,30 +53,47 @@ Extract Inlined Constant getArgs => "System.Environment.getArgs".
 Extract Inlined Constant getProgName => "System.Environment.getProgName".
 Extract Constant raise_failure => "\x -> Prelude.error x".
 Extract Inlined Constant _IO_bind => "(Prelude.>>=)".
-Extract Inlined Constant _IO_return => "return".
+Extract Inlined Constant _IO_return => "GHC.Base.return".
 Extract Inlined Constant IO_unit => "GHC.Base.IO ()".
 Extract Inlined Constant cast_io => "".
+Extract Inlined Constant uncast_io => "".
+Extract Inlined Constant getContents => "Prelude.getContents".
+Extract Inlined Constant readFile => "Prelude.readFile".
+Extract Inlined Constant writeFile => "Prelude.writeFile".
 (* COQBUG(https://github.com/coq/coq/issues/12258) *)
 Extract Inlined Constant String.eqb => "((Prelude.==) :: Prelude.String -> Prelude.String -> Prelude.Bool)".
 
 Local Notation "x <- y ; f" := (_IO_bind _ _ y (fun x => f)).
 
+Global Instance HaskellIODriver : ForExtraction.IODriverAPI (_IO unit)
+  := {
+       ForExtraction.error err := raise_failure (String.concat String.NewLine err)
+       ; ForExtraction.ret 'tt := _IO_return _ tt
+       ; ForExtraction.with_read_stdin k :=
+           (lines <- getContents;
+           k (String.split String.NewLine lines))
+       ; ForExtraction.write_stdout_then lines k
+         := (_ <- printf_string (String.concat "" lines);
+            k tt)
+       ; ForExtraction.with_read_file fname k
+         := (lines <- readFile fname;
+            k (String.split String.NewLine lines))
+       ; ForExtraction.write_file_then fname lines k
+         := (_ <- writeFile fname (String.concat "" lines);
+            k tt)
+    }.
+
 Definition main_gen
            {supported_languages : ForExtraction.supported_languagesT}
            (PipelineMain : forall (A := _)
-                                  (argv : list String.string)
-                                  (success : list String.string -> A)
-                                  (error : list String.string -> A),
+                                  (argv : list String.string),
                A)
   : IO_unit
   := cast_io
        (argv <- getArgs;
        prog <- getProgName;
        PipelineMain
-         (prog::argv)
-         (fun res => printf_string
-                       (String.concat "" res))
-         (fun err => raise_failure (String.concat String.NewLine err))).
+         (prog::argv)).
 
 Local Existing Instance ForExtraction.default_supported_languages.
 

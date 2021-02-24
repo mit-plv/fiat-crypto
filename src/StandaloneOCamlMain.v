@@ -19,40 +19,75 @@ Inductive int : Set := int_O | int_S (x : int).
     this, all we care about is that there exists a model. *)
 
 Module Type OCamlPrimitivesT.
-  Axiom printf_char : Ascii.ascii -> unit.
-  Axiom flush : unit -> unit.
+  Axiom in_channel : Set.
+  Axiom out_channel : Set.
+  Axiom fprintf_char : out_channel -> Ascii.ascii -> unit.
+  Axiom flush : out_channel -> unit.
+  Axiom stdin : in_channel.
+  Axiom stdout : out_channel.
   Axiom string : Set.
   Axiom string_length : string -> int.
   Axiom string_get : string -> int -> Ascii.ascii.
   Axiom sys_argv : list string.
   Axiom string_init : int -> (int -> Ascii.ascii) -> string.
   Axiom raise_Failure : string -> unit.
+  Axiom open_in : string -> in_channel.
+  Axiom open_out : string -> out_channel.
+  Axiom close_in : in_channel -> unit.
+  Axiom close_out : out_channel -> unit.
+  Axiom read_channel_rev : in_channel -> list string.
 End OCamlPrimitivesT.
 
 Module Export OCamlPrimitives : OCamlPrimitivesT.
-  Definition printf_char : Ascii.ascii -> unit := fun _ => tt.
-  Definition flush : unit -> unit := fun 'tt => tt.
+  Definition in_channel : Set := unit.
+  Definition out_channel : Set := unit.
+  Definition fprintf_char : out_channel -> Ascii.ascii -> unit := fun _ _ => tt.
+  Definition flush : out_channel -> unit := fun _ => tt.
+  Definition stdin : in_channel := tt.
+  Definition stdout : out_channel := tt.
   Definition string : Set := unit.
   Definition string_length : string -> int := fun _ => int_O.
   Definition string_get : string -> int -> Ascii.ascii := fun _ _ => "000"%char.
   Definition sys_argv : list string := nil.
   Definition string_init : int -> (int -> Ascii.ascii) -> string := fun _ _ => tt.
   Definition raise_Failure : string -> unit := fun _ => tt.
+  Definition open_in : string -> in_channel := fun _ => tt.
+  Definition open_out : string -> out_channel := fun _ => tt.
+  Definition close_in : in_channel -> unit := fun _ => tt.
+  Definition close_out : out_channel -> unit := fun _ => tt.
+  Definition read_channel_rev : in_channel -> list string := fun _ => nil.
 End OCamlPrimitives.
 
 Extract Inductive int
 => int [ "0" "Pervasives.succ" ]
        "(fun fO fS n -> if n=0 then fO () else fS (n-1))".
-Extract Constant printf_char =>
-"fun c -> Printf.printf ""%c%!"" c".
+Extract Inlined Constant in_channel => "in_channel".
+Extract Inlined Constant out_channel => "out_channel".
+Extract Constant fprintf_char =>
+"fun chan c -> Printf.fprintf chan ""%c%!"" c".
 Extract Constant flush =>
-"fun () -> Printf.printf ""%!""".
+"fun chan () -> Printf.fprintf chan ""%!""".
+Extract Inlined Constant stdin => "stdin".
+Extract Inlined Constant stdout => "stdout".
 Extract Inlined Constant string => "string".
 Extract Inlined Constant string_length => "String.length".
 Extract Inlined Constant string_get => "String.get".
 Extract Constant sys_argv => "Array.to_list Sys.argv".
 Extract Inlined Constant string_init => "String.init".
 Extract Constant raise_Failure => "fun x -> raise (Failure x)".
+Extract Inlined Constant open_in => "open_in".
+Extract Inlined Constant open_out => "open_out".
+Extract Inlined Constant close_in => "close_in".
+Extract Inlined Constant close_out => "close_out".
+Extract Constant read_channel_rev
+=> "fun chan ->
+      let lines = ref [] in
+      try
+        while true; do
+          lines := input_line chan :: !lines
+        done; !lines
+      with End_of_file ->
+        !lines".
 
 Fixpoint nat_of_int (x : int) : nat
   := match x with
@@ -91,35 +126,58 @@ Fixpoint list_iter {A} (f : A -> unit) (ls : list A) : unit
      | nil => tt
      end.
 
-Definition printf_list_string (strs : list String.string) : unit
+Definition fprintf_list_string (chan : out_channel) (strs : list String.string) : unit
   := list_iter
        (fun ls
-        => list_iter printf_char (String.list_ascii_of_string ls))
+        => list_iter (fprintf_char chan) (String.list_ascii_of_string ls))
        strs.
-Definition printf_list_string_with_newlines (strs : list String.string) : unit
+Definition printf_list_string (strs : list String.string) : unit
+  := fprintf_list_string stdout strs.
+Definition fprintf_list_string_with_newlines (chan : out_channel) (strs : list String.string) : unit
   := match strs with
-     | nil => printf_list_string nil
-     | str :: strs => printf_list_string (str :: List.map (String.String Ascii.NewLine) strs
-                                              ++ [String.NewLine; String.NewLine])%list
+     | nil => fprintf_list_string chan nil
+     | str :: strs => fprintf_list_string chan
+                                          (str :: List.map (String.String Ascii.NewLine) strs
+                                               ++ [String.NewLine; String.NewLine])%list
      end.
+Definition printf_list_string_with_newlines (strs : list String.string) : unit
+  := fprintf_list_string_with_newlines stdout strs.
 
 Definition raise_failure (msg : list String.string)
-  := seq (fun _ => printf_list_string_with_newlines msg)
+  := seq (fun _ => fprintf_list_string_with_newlines stdout msg)
          (fun _ => raise_Failure (string_of_Coq_string "Synthesis failed")).
+
+Global Instance OCamlIODriver : ForExtraction.IODriverAPI unit
+  := { ForExtraction.error := raise_failure
+       ; ForExtraction.ret := fun 'tt => tt
+       ; ForExtraction.with_read_stdin k
+         := seq (fun 'tt => read_channel_rev stdin)
+                (fun rev_lines => k (List.map string_to_Coq_string (List.rev rev_lines)))
+       ; ForExtraction.write_stdout_then lines k
+         := seq (fun _ => fprintf_list_string stdout lines)
+                k
+       ; ForExtraction.with_read_file fname k
+         := seq (fun 'tt => open_in (string_of_Coq_string fname))
+                (fun chan
+                 => seq (fun 'tt => read_channel_rev chan)
+                        (fun rev_lines => seq (fun 'tt => close_in chan)
+                                              (fun 'tt => k (List.map string_to_Coq_string (List.rev rev_lines)))))
+       ; ForExtraction.write_file_then fname lines k
+         := seq (fun 'tt => open_out (string_of_Coq_string fname))
+                (fun chan
+                 => seq (fun 'tt => fprintf_list_string chan lines)
+                        (fun 'tt => seq (fun 'tt => close_out chan)
+                                        k))
+     }.
 
 Definition main_gen
            {supported_languages : ForExtraction.supported_languagesT}
            (PipelineMain : forall (A := _)
-                                  (argv : list String.string)
-                                  (success : list String.string -> A)
-                                  (error : list String.string -> A),
+                                  (argv : list String.string),
                A)
   : unit
   := let argv := List.map string_to_Coq_string sys_argv in
-     PipelineMain
-       argv
-       printf_list_string
-       raise_failure.
+     PipelineMain argv.
 
 Local Existing Instance ForExtraction.default_supported_languages.
 

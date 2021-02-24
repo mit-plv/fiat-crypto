@@ -45,6 +45,7 @@ Require Crypto.Rewriter.All.
 Require Crypto.AbstractInterpretation.Wf.
 Require Crypto.AbstractInterpretation.WfExtra.
 Require Crypto.AbstractInterpretation.Proofs.
+Require Crypto.Assembly.Parse.
 Require Import Crypto.Util.Notations.
 Import ListNotations. Local Open Scope Z_scope.
 
@@ -199,6 +200,10 @@ Typeclasses Opaque widen_bytes_opt.
 (** Unfold value_barrier *)
 Class unfold_value_barrier_opt := unfold_value_barrier : bool.
 Typeclasses Opaque unfold_value_barrier_opt.
+(** Lines of assembly code (implicitly separated by \n) *)
+Class assembly_hints_lines_opt := assembly_hints_lines : option (list string).
+Typeclasses Opaque assembly_hints_lines_opt.
+Inductive synthesis_output_kind := normal_output | assembly_output.
 Notation no_select_size_of_no_select machine_wordsize
   := (if no_select return no_select_size_opt
       then Some machine_wordsize
@@ -237,7 +242,8 @@ Module Pipeline.
   | Values_not_provably_equal_listZ (descr : string) (lhs rhs : list Z)
   | Unsupported_casts_in_input {t} (e : Expr t) (ls : list { t : _ & @expr (fun _ => string) t })
   | Stringification_failed {t} (e : Expr t) (err : string)
-  | Invalid_argument (msg : string).
+  | Invalid_argument (msg : string)
+  | Assembly_parsing_error (msg : Assembly.Parse.ParseValidatedError).
 
   Notation ErrorT := (ErrorT ErrorMessage).
 
@@ -381,6 +387,9 @@ Module Pipeline.
               | Stringification_failed t e err => ["Stringification failed on the syntax tree:"] ++ show_lines false e ++ [err]
               | Invalid_argument msg
                 => ["Invalid argument: " ++ msg]%string
+              | Assembly_parsing_error msgs
+                => ((["Error while parsing assembly:"]%string)
+                      ++ show_lines parens msgs)
               end.
     Local Instance show_ErrorMessage : Show ErrorMessage
       := fun parens err => String.concat String.NewLine (show_lines parens err).

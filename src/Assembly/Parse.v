@@ -317,19 +317,117 @@ Global Instance show_lines_Lines : ShowLines Lines
 
 Definition parse_correct_on (v : list string)
   := forall res, parse v = Success res -> parse v = parse (show_lines false res).
-Definition parse_correct_on_bool (v : list string) : bool
+
+Inductive ParseError :=
+| Parse_error (msgs : list string)
+.
+
+Inductive ParseValidatedError :=
+| Initial_parse_error (err : ParseError)
+| Reparse_error (new_asm : list string) (err : ParseError)
+| Lengths_not_equal (old_asm : Lines) (new_asm : Lines)
+| Lines_not_equal (mismatched_lines : list (Line * Line))
+.
+Global Coercion Initial_parse_error : ParseError >-> ParseValidatedError.
+
+Global Instance show_lines_ParseError : ShowLines ParseError
+  := fun parens err => match err with
+                       | Parse_error err => err
+                       end.
+Global Instance show_ParseError : Show ParseError
+  := fun parens err => String.concat String.NewLine (show_lines parens err).
+Global Instance show_lines_ParseValidatedError : ShowLines ParseValidatedError
+  := fun parens err => match err with
+                       | Initial_parse_error err
+                         => match show_lines parens err with
+                            | [] => ["Unknown error while parsing assembly"]
+                            | [err] => ["Error while parsing assembly: " ++ err]%string
+                            | lines => "Error while parsing assembly:" :: lines
+                            end
+                       | Reparse_error new_asm err
+                         => match show_lines parens err with
+                            | [] => ["Unknown error while reparsing assembly:"] ++ new_asm
+                            | [err] => (["Error while reparsing assembly: " ++ err
+                                         ; "New assembly being parsed:"]%string)
+                                         ++ new_asm
+                            | lines => ["Error while parsing assembly:"]
+                                         ++ lines
+                                         ++ [""]
+                                         ++ ["New assembly being parsed:"]
+                                         ++ new_asm
+                            end
+                       | Lengths_not_equal old_asm new_asm
+                         => ["Reparsing the assembly:"]
+                              ++ show_lines parens old_asm
+                              ++ [""]
+                              ++ ["Yielded non-equal assembly:"]
+                              ++ show_lines parens new_asm
+                              ++ [""]
+                              ++ (["The number of lines was not equal (" ++ show false (List.length old_asm) ++ " ≠ " ++ show false (List.length new_asm) ++ ")"]%string)
+                       | Lines_not_equal mismatched_lines
+                         => ["When reparsing assembly for validation, the following lines were not equal:"]
+                              ++ (List.flat_map (fun '(old, new) => ["- " ++ show false old; "+ " ++ show false new; ""]%string)
+                                                mismatched_lines)
+                       end%list.
+Global Instance show_ParseValidatedError : Show ParseValidatedError
+  := fun parens err => String.concat String.NewLine (show_lines parens err).
+
+Definition parse_validated (v : list string) : ErrorT ParseValidatedError Lines
   := match parse v with
-     | Success res => match parse (show_lines false res) with
-                      | Success res' => Lines_beq res res'
-                      | Error _ => false
-                      end
-     | Error _ => true
+     | Success v
+       => let new_asm := show_lines false v in
+          match parse new_asm with
+          | Success v'
+            => if (List.length v =? List.length v')%nat
+               then match List.filter (fun '(x, y) => negb (Line_beq x y)) (List.combine v v') with
+                    | nil => Success v
+                    | mismatched_lines => Error (Lines_not_equal mismatched_lines)
+                    end
+               else Error (Lengths_not_equal v v')
+          | Error e
+            => Error (Reparse_error new_asm (Parse_error e))
+          end
+     | Error e => Error (Initial_parse_error (Parse_error e))
      end.
+
+Definition parse_correct_on_bool (v : list string) : bool
+  := match parse v, parse_validated v with
+     | Success _, Success _ => true
+     | Error _, _ => true
+     | Success _, Error _ => false
+     end.
+
+Definition parse_validated_correct_on v
+  := forall res, parse_validated v = Success res <-> parse v = Success res.
+
+Lemma parse_validated_correct_on_iff v : parse_validated_correct_on v <-> parse_correct_on v.
+Proof.
+  cbv [parse_validated_correct_on parse_correct_on parse_validated].
+  destruct (parse_Lines v) eqn:Hp; [ | split; [ congruence | split; congruence ] ].
+  destruct (parse_Lines (show_lines false _)) eqn:Hp2; (split; [ intros H res Hres; inversion Hres; subst | intro H; specialize (H _ eq_refl); rewrite <- H in Hp2; inversion Hp2; subst ]); rewrite ?Nat.eqb_refl, ?combine_same; try congruence.
+  all: repeat first [ progress destruct_head' iff
+                    | congruence
+                    | progress subst
+                    | progress rewrite ?Nat.eqb_eq in *
+                    | match goal with
+                      | [ H : forall x, _ <-> Success ?y = Success x |- _ ] => specialize (H y)
+                      | [ H : ?x = ?x |- _ ] => clear H
+                      | [ H : Success ?x = Success ?y |- _ ] => inversion H; clear H
+                      | [ H : ?x = ?x -> _ |- _ ] => specialize (H eq_refl)
+                      end
+                    | break_innermost_match_hyps_step
+                    | progress break_match_hyps
+                    | progress break_match
+                    | progress intros
+                    | apply conj ].
+Abort.
+
 Lemma parse_correct_on_bool_iff v : parse_correct_on_bool v = true <-> parse_correct_on v.
 Proof.
-  cbv [parse_correct_on_bool parse_correct_on].
-  destruct (parse_Lines v) eqn:Hp; [ | split; [ congruence | reflexivity ] ].
-  destruct (parse_Lines (show_lines false _)) eqn:Hp2; (split; [ intros H res Hres; inversion Hres; subst | intro H; specialize (H _ eq_refl); rewrite <- H in Hp2; inversion Hp2; subst ]); try congruence.
+  assert (parse_validated_correct_on_iff : forall v, parse_validated_correct_on v <-> parse_correct_on v) by admit.
+  rewrite <- parse_validated_correct_on_iff.
+  cbv [parse_correct_on_bool parse_validated_correct_on].
+  destruct (parse_Lines v) eqn:Heq1, (parse_validated v) eqn:Heq2; split; try split; try congruence.
 Abort.
 
 (* This version allows for easier debugging because it highlights the differences *)
