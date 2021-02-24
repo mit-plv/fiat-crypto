@@ -173,16 +173,16 @@ Module ForExtraction.
   Definition CollectErrors
              {machine_wordsize : machine_wordsize_opt}
              {output_language_api : ToString.OutputLanguageAPI}
-             (res : list (string * Pipeline.ErrorT (list string)) + list string)
-    : list (list string) + list (list string)
+             (res : list (synthesis_output_kind * string * Pipeline.ErrorT (list string)) + list string)
+    : ((* normal *) list (list string) * (* asm output *) list (list string)) + (* error *) list (list string)
     := match res with
        | inl res
-         => let header := hd "" (List.map (@fst _ _) res) in
+         => let header := hd "" (List.map (@snd _ _) (List.map (@fst _ _) res)) in
             let res :=
                 List.fold_right
-                  (fun '(name, res) rest
-                   => match res, rest with
-                      | ErrorT.Error err, rest
+                  (fun '(kind, name, res) rest
+                   => match kind, res, rest with
+                      | _, ErrorT.Error err, rest
                         => let in_name := ("In " ++ name ++ ":") in
                            let cur :=
                                match show_lines false err with
@@ -191,11 +191,13 @@ Module ForExtraction.
                                end in
                            let rest := match rest with inl _ => nil | inr rest => rest end in
                            inr (cur :: rest)
-                      | ErrorT.Success v, inr ls => inr ls
-                      | ErrorT.Success v, inl ls
-                        => inl (v :: ls)
+                      | _, ErrorT.Success v, inr ls => inr ls
+                      | normal_output, ErrorT.Success v_normal, inl (ls_normal, ls_asm)
+                        => inl (v_normal :: ls_normal, ls_asm)
+                      | assembly_output, ErrorT.Success v_asm, inl (ls_normal, ls_asm)
+                        => inl (ls_normal, v_asm :: ls_asm)
                       end)
-                  (inl nil)
+                  (inl (nil, nil))
                   res in
             match res with
             | inl ls => inl ls
@@ -354,6 +356,18 @@ Module ForExtraction.
         Arg.String,
         ["A space-separated list of functions that should be synthesized.  If no functions are given, all functions are synthesized."
          ; "Valid options are " ++ valid_names ++ "."]).
+  Definition hint_file_spec : named_argT
+    := ([Arg.long_key "hints-file"],
+        Arg.String,
+        ["An assembly file to be read for hinting the synthesis process.  Use - for stdin.  Currently unused."]).
+  Definition output_file_spec : named_argT
+    := ([Arg.long_key "output"; Arg.short_key "o"],
+        Arg.String,
+        ["The name of the file to write output to.  Use - for stdout.  (default: -)"]).
+  Definition asm_output_spec : named_argT
+    := ([Arg.long_key "output-asm"],
+        Arg.String,
+        ["The name of the file to write generated assembly to.  Use - for stdout.  (default: -)  Currently unused."]).
 
   Definition collapse_list_default {A} (default : A) (ls : list A)
     := List.hd default (List.rev ls).
@@ -366,7 +380,8 @@ Module ForExtraction.
        end.
 
   (** We define a class for holding the various options we might pass to [Synthesize] *)
-  Class SynthesizeOptions :=
+  (** We split up the ones we can directly parse and the ones we have to process *)
+  Class ParsedSynthesizeOptions :=
     {
       (** Is the code static / inlined *)
       static :> static_opt
@@ -404,6 +419,41 @@ Module ForExtraction.
       (** don't prepend fiat to prefix *)
       ; no_prefix_fiat : bool
     }.
+  Class SynthesizeOptions :=
+    {
+      parsed_synthesize_options :> ParsedSynthesizeOptions
+      (** Lines of assembly hints *)
+      ; assembly_hints_lines :> assembly_hints_lines_opt
+    }.
+
+  (** We define a class for holding the various options about file interaction that we don't pass to [Synthesize] *)
+  Class IODriverOptions :=
+    {
+      (** The name of the file holding assembly hints *)
+      hint_file_names : list string
+      (** The name of the file to output to *)
+      ; output_file_name : string
+      (** The name of the file to output assembly to *)
+      ; asm_output_file_name : string
+    }.
+
+  Fixpoint with_read_concat_asm_files_cps
+           {A}
+           (with_read_file : string (* fname *) -> (list string -> A) -> A)
+           (hint_file_names : list string)
+    : (assembly_hints_lines_opt -> A) -> A
+    := match hint_file_names with
+       | nil => fun k => k None
+       | fname :: fnames
+         => fun k
+            => with_read_file
+                 fname
+                 (fun lines
+                  => with_read_concat_asm_files_cps
+                       with_read_file
+                       fnames
+                       (fun rest_lines => k (Some (lines ++ Option.value rest_lines nil)%list)))
+       end.
 
   Definition common_optional_options {supported_languages : supported_languagesT}
     := [lang_spec
@@ -427,13 +477,16 @@ Module ForExtraction.
         ; no_primitives_spec
         ; cmovznz_by_mul_spec
         ; only_signed_spec
+        ; hint_file_spec
+        ; output_file_spec
+        ; asm_output_spec
        ].
 
   Definition parse_common_optional_options
              {supported_languages : supported_languagesT}
              {machine_wordsizev : machine_wordsize_opt}
              (data : Arg.keyed_spec_list_data common_optional_options)
-    : (SynthesizeOptions * ToString.OutputLanguageAPI) + list string
+    : (IODriverOptions * ParsedSynthesizeOptions * ToString.OutputLanguageAPI) + list string
     := let '(langv
              , package_namev
              , class_namev
@@ -455,15 +508,25 @@ Module ForExtraction.
              , no_primitivesv
              , cmovznz_by_mulv
              , only_signedv
+             , hint_file_namesv
+             , output_file_namev
+             , asm_output_file_namev
             ) := data in
        let to_bool ls := (0 <? List.length ls)%nat in
-       let to_string_opt ls := List.nth_error (List.map (@snd _ _) ls) 0 in
+       let to_string_list ls := List.map (@snd _ _) ls in
+       let to_string_opt ls := List.nth_error (to_string_list ls) 0 in
+       let to_string_default ls default := Option.value (to_string_opt ls) default in
        let to_capitalization_data_opt ls := List.nth_error (List.map (fun '(_, (_, v)) => v) ls) 0 in
        let to_capitalization_convention_opt ls
            := option_map (fun d => {| capitalization_convention_data := d ; only_lower_first_letters := true |})
                          (to_capitalization_data_opt ls) in
        let res
-           := ({| static := to_bool staticv
+           := ({|
+                  hint_file_names := to_string_list hint_file_namesv
+                  ; output_file_name := to_string_default output_file_namev "-"
+                  ; asm_output_file_name := to_string_default asm_output_file_namev "-"
+                |},
+               {| static := to_bool staticv
                   ; internal_class_name := to_string_opt class_namev
                   ; internal_package_name := to_string_opt package_namev
                   ; language_naming_conventions
@@ -520,8 +583,20 @@ Module ForExtraction.
           {output_language_api : ToString.OutputLanguageAPI}
           {synthesize_opts : SynthesizeOptions}
           (args : ParsedArgsT) (comment_header : list string) (function_name_prefix : string),
-          list (string * Pipeline.ErrorT (list string))
+          list (synthesis_output_kind * string * Pipeline.ErrorT (list string))
     }.
+
+  (** API for performing IO *)
+  Class IODriverAPI {A} :=
+    {
+      error : list string -> A
+      ; ret : unit -> A
+      ; with_read_stdin : (list string -> A) -> A
+      ; write_stdout_then : list string (* lines, to be joined with "" *) -> (unit -> A) -> A
+      ; with_read_file : string (* fname *) -> (list string -> A) -> A
+      ; write_file_then : string (* fname *) -> list string (* lines, to be joined with "" *) -> (unit -> A) -> A
+    }.
+  Global Arguments IODriverAPI : clear implicits.
 
   Module Export Notations.
     Bind Scope list_scope with supported_languagesT.
@@ -538,7 +613,7 @@ Module ForExtraction.
                  (curve_description : string)
                  (str_machine_wordsize : string)
                  (args : ArgsT)
-        : list (string * Pipeline.ErrorT (list string)) + list string
+        : list (synthesis_output_kind * string * Pipeline.ErrorT (list string)) + list string
         := let prefix := ((if no_prefix_fiat then "" else "fiat_")
                             ++ (if (curve_description =? "") then "" else (curve_description ++ "_")))%string in
            let header :=
@@ -566,13 +641,13 @@ Module ForExtraction.
                  (curve_description : string)
                  (str_machine_wordsize : string)
                  (args : ArgsT)
-        : list string + list string
+        : ((* normal *) list string * (* asm *) list string) + list string
         := match CollectErrors (PipelineLines invocation curve_description str_machine_wordsize args) with
-           | inl ls
-             => inl
-                  (List.flat_map (fun s => ((List.map (fun s => s ++ String.NewLine) (List.map strip_trailing_spaces s))%string)
-                                             ++ [String.NewLine])%list
-                                 ls)
+           | inl (ls_normal, ls_asm)
+             => let postprocess_lines
+                    := List.flat_map (fun s => ((List.map (fun s => s ++ String.NewLine) (List.map strip_trailing_spaces s))%string)
+                                                 ++ [String.NewLine])%list in
+                inl (postprocess_lines ls_normal, postprocess_lines ls_asm)
            | inr nil => inr nil
            | inr (l :: ls)
              => inr (l ++ (List.flat_map
@@ -588,7 +663,7 @@ Module ForExtraction.
                  (curve_description : string)
                  (str_machine_wordsize : string)
                  (args : ArgsT)
-                 (success : list string -> A)
+                 (success : list string * list string -> A)
                  (error : list string -> A)
         : A
         := match ProcessedLines invocation curve_description str_machine_wordsize args with
@@ -599,11 +674,14 @@ Module ForExtraction.
       Definition PipelineMain
                  {supported_languages : supported_languagesT}
                  {A}
+                 {io_driver : IODriverAPI A}
                  (argv : list string)
-                 (success : list string -> A)
-                 (error : list string -> A)
         : A
-        := let invocation := String.concat " " (List.map quote argv) in
+        := let with_read_file fname
+               := if (fname =? "-")%string then with_read_stdin else with_read_file fname in
+           let write_file_then fname
+               := if (fname =? "-")%string then write_stdout_then else write_file_then fname in
+           let invocation := String.concat " " (List.map quote argv) in
            let full_spec
                := {| Arg.named_args := common_optional_options ++ spec.(Arg.named_args)
                      ; Arg.anon_args := curve_description_spec :: machine_wordsize_spec :: spec.(Arg.anon_args)
@@ -615,12 +693,33 @@ Module ForExtraction.
                 let '((curve_description, (str_machine_wordsize, machine_wordsize)), anon_data) := Arg.split_type_of_list' (ls1:=[_;_]) anon_data in
                 let machine_wordsize : machine_wordsize_opt := machine_wordsize in
                 match parse_common_optional_options common_named_data with
-                | inl (opts, output_language_api)
-                  => match parse_args (named_data, anon_data, anon_opt_data, anon_opt_repeated_data) with
-                     | inl args
-                       => Pipeline invocation curve_description str_machine_wordsize args success error
-                     | inr errs => error errs
-                     end
+                | inl (io_driver_opts, opts, output_language_api)
+                  => with_read_concat_asm_files_cps
+                       with_read_file
+                       hint_file_names
+                       (fun assembly_hints_linesv
+                        => let success :=
+                               fun '(normal_lines, asm_lines)
+                               => write_file_then
+                                    output_file_name
+                                    normal_lines
+                                    (fun 'tt
+                                     => match asm_lines, assembly_hints_linesv with
+                                        | nil, None => ret tt
+                                        | _, _ => write_file_then
+                                                    asm_output_file_name
+                                                    asm_lines
+                                                    ret
+                                        end) in
+                           let opts := {|
+                                 parsed_synthesize_options := opts
+                                 ; assembly_hints_lines := assembly_hints_linesv
+                               |} in
+                           match parse_args (named_data, anon_data, anon_opt_data, anon_opt_repeated_data) with
+                           | inl args
+                             => Pipeline invocation curve_description str_machine_wordsize args success error
+                           | inr errs => error errs
+                           end)
                 | inr errs => error errs
                 end
            | ErrorT.Error err => error (Arg.show_list_parse_error full_spec err)
@@ -667,11 +766,10 @@ Module ForExtraction.
     Definition PipelineMain
                {supported_languages : supported_languagesT}
                {A}
+               {io_driver : IODriverAPI A}
                (argv : list string)
-               (success : list string -> A)
-               (error : list string -> A)
       : A
-      := Parameterized.PipelineMain argv success error.
+      := Parameterized.PipelineMain argv.
   End UnsaturatedSolinas.
 
   Module WordByWordMontgomery.
@@ -710,11 +808,10 @@ Module ForExtraction.
     Definition PipelineMain
                {supported_languages : supported_languagesT}
                {A}
+               {io_driver : IODriverAPI A}
                (argv : list string)
-               (success : list string -> A)
-               (error : list string -> A)
       : A
-      := Parameterized.PipelineMain argv success error.
+      := Parameterized.PipelineMain argv.
   End WordByWordMontgomery.
 
   Module SaturatedSolinas.
@@ -746,11 +843,10 @@ Module ForExtraction.
     Definition PipelineMain
                {supported_languages : supported_languagesT}
                {A}
+               {io_driver : IODriverAPI A}
                (argv : list string)
-               (success : list string -> A)
-               (error : list string -> A)
       : A
-      := Parameterized.PipelineMain argv success error.
+      := Parameterized.PipelineMain argv.
   End SaturatedSolinas.
 
   Module BaseConversion.
@@ -815,10 +911,9 @@ Module ForExtraction.
     Definition PipelineMain
                {supported_languages : supported_languagesT}
                {A}
+               {io_driver : IODriverAPI A}
                (argv : list string)
-               (success : list string -> A)
-               (error : list string -> A)
       : A
-      := Parameterized.PipelineMain argv success error.
+      := Parameterized.PipelineMain argv.
   End BaseConversion.
 End ForExtraction.

@@ -38,6 +38,7 @@ Local Coercion Z.pos : positive >-> Z.
 
 Local Existing Instance default_low_level_rewriter_method.
 Local Instance : unfold_value_barrier_opt := true.
+Local Instance : assembly_hints_lines_opt := None.
 Local Instance : tight_upperbound_fraction_opt := default_tight_upperbound_fraction.
 Local Existing Instance default_language_naming_conventions.
 Local Instance : package_name_opt := None.

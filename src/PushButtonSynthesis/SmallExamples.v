@@ -23,6 +23,7 @@ Import Associational Positional.
 Local Instance : split_mul_to_opt := None.
 Local Instance : split_multiret_to_opt := None.
 Local Instance : unfold_value_barrier_opt := true.
+Local Instance : assembly_hints_lines_opt := None.
 Local Instance : only_signed_opt := false.
 Local Instance : no_select_size_opt := None.
 Local Existing Instance default_low_level_rewriter_method.
