@@ -16,6 +16,7 @@ Local Set Decidable Equality Schemes.
 Inductive name_case_kind := lower | upper.
 Record word_case_data := { first_letter_case : name_case_kind ; rest_letters_case : name_case_kind }.
 Record capitalization_data := { separator : string ; first_word_case : word_case_data ; rest_words_case : word_case_data }.
+Record capitalization_convention := { capitalization_convention_data :> capitalization_data ; only_lower_first_letters : bool }.
 
 Derive name_case_kind_Listable SuchThat (@FinitelyListable name_case_kind name_case_kind_Listable) As name_case_kind_FinitelyListable.
 Proof. prove_ListableDerive. Qed.
@@ -44,6 +45,11 @@ Global Instance show_capitalization_data : Show capitalization_data
      => ("{| separator := " ++ show false v.(separator))
           ++ (" ; first_word_case := " ++ show false v.(first_word_case))
           ++ " ; rest_words_case := " ++ show false v.(rest_words_case) ++ " |}".
+
+Global Instance show_capitalization_convention : Show capitalization_convention
+  := fun parens v
+     => ("{| capitalization_convention_data := " ++ show false v.(capitalization_convention_data))
+          ++ " ; only_lower_first_letters := " ++ show false v.(only_lower_first_letters) ++ " |}".
 
 Definition case_adjust_ascii (data : name_case_kind) : Ascii.ascii -> Ascii.ascii
   := match data with
@@ -131,9 +137,9 @@ Definition split_case_to_words (data : capitalization_data) (s : string) : if sp
      | None => tt
      end.
 
-Definition convert_case (only_lower_first_char : bool) (from to : capitalization_data) (s : string) : if splitter_function from then string else unit
+Definition convert_case (from : capitalization_data) (to : capitalization_convention) (s : string) : if splitter_function from then string else unit
   := match splitter_function from as f return if f then _ else _ with
-     | Some f => case_adjust_words only_lower_first_char to (f s)
+     | Some f => case_adjust_words to.(only_lower_first_letters) to (f s)
      | None => tt
      end.
 
