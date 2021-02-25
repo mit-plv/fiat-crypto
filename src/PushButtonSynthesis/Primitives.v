@@ -721,6 +721,9 @@ Notation "'docstring_with_summary_from_lemma!' summary correctness"
 
 Section __.
   Context {output_language_api : ToString.OutputLanguageAPI}
+          {language_naming_conventions : language_naming_conventions_opt}
+          {package_namev : package_name_opt}
+          {class_namev : class_name_opt}
           {static : static_opt}
           {internal_static : internal_static_opt}
           {low_level_rewriter_method : low_level_rewriter_method_opt}
@@ -1058,10 +1061,10 @@ Section __.
                         (ToString.ident_info_of_bitwidths_used extra_bit_widths) in
          let header :=
              (comment_header
-                ++ ToString.header machine_wordsize static function_name_prefix infos
+                ++ ToString.header machine_wordsize (orb internal_static static) static function_name_prefix infos
                 ++ [""]) in
          let footer :=
-             ToString.footer machine_wordsize static function_name_prefix infos in
+             ToString.footer machine_wordsize (orb internal_static static) static function_name_prefix infos in
          [("check_args" ++ String.NewLine ++ String.concat String.NewLine header,
            check_args (ErrorT.Success header))%string]
            ++ res

@@ -22,9 +22,11 @@ Import C.Compilers.ToString IR.Compilers.ToString.
 Notation name_with_type := (string * option int.type)%type (only parsing).
 Definition print_name (n : name_with_type) : string := fst n.
 Definition print_type (n : name_with_type) : string
-  := C.String.type.primitive.to_string "" IR.type.Z (snd n).
+  := let __ := Compilers.Options.default_language_naming_conventions in
+     C.String.type.primitive.to_string "" IR.type.Z (snd n).
 Definition print_ptr_type (n : name_with_type) : string
-  := C.String.type.primitive.to_string "" IR.type.Zptr (snd n).
+  := let __ := Compilers.Options.default_language_naming_conventions in
+     C.String.type.primitive.to_string "" IR.type.Zptr (snd n).
 Definition print_cast (n : name_with_type) : string
   := ("(" ++ print_type n ++ ")")%string.
 Definition print_ptr_cast (n : name_with_type) : string

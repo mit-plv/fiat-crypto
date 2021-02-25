@@ -57,6 +57,7 @@ Section rbarrett_red.
     := [1; machine_wordsize / 2; machine_wordsize; 2 * machine_wordsize]%Z.
   Let possible_values := possible_values_of_machine_wordsize.
 
+  Local Existing Instance default_language_naming_conventions.
   Local Instance widen_carry : widen_carry_opt := false.
   Local Instance widen_bytes : widen_bytes_opt := true.
   Local Instance only_signed : only_signed_opt := false.

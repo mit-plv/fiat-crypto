@@ -20,6 +20,7 @@ Require Import Crypto.Util.MSets.Iso.
 Require Import Crypto.Util.MSets.Sum.
 Require Import Crypto.Util.Strings.Decimal.
 Require Import Crypto.Util.Strings.Show.
+Require Import Crypto.Util.Strings.NamingConventions.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZRange.Operations.
 Require Import Crypto.Util.ZRange.Show.
@@ -50,6 +51,50 @@ Module Compilers.
     (** How to relax zranges *)
     Class relax_zrange_opt := relax_zrange : zrange -> zrange.
     Typeclasses Opaque relax_zrange_opt.
+    (** What's the package name? *)
+    Class package_name_opt := internal_package_name : option string.
+    Typeclasses Opaque package_name_opt.
+    (** What's the class name? *)
+    Class class_name_opt := internal_class_name : option string.
+    Typeclasses Opaque class_name_opt.
+    Class language_naming_conventions_opt :=
+      { public_function_naming_convention : option capitalization_convention
+        ; private_function_naming_convention : option capitalization_convention
+        ; public_type_naming_convention : option capitalization_convention
+        ; private_type_naming_convention : option capitalization_convention
+        ; variable_naming_convention : option capitalization_convention
+        ; package_naming_convention : option capitalization_convention
+        ; class_naming_convention : option capitalization_convention
+      }.
+    Definition default_language_naming_conventions : language_naming_conventions_opt
+      := {| public_function_naming_convention := None
+            ; private_function_naming_convention := None
+            ; public_type_naming_convention := None
+            ; private_type_naming_convention := None
+            ; variable_naming_convention := None
+            ; package_naming_convention := None
+            ; class_naming_convention := None
+         |}.
+
+    Definition convert_to_naming_convention (convention : option capitalization_convention) (s : string) : string
+      := match convention with
+         | Some convention => convert_case snake_case convention s
+         | None => s
+         end.
+    Definition package_name {pkg_name : package_name_opt} {language_naming_conventions : language_naming_conventions_opt} (prefix : string) : string
+      := match pkg_name with
+         | Some name => name
+         | None => convert_to_naming_convention
+                     package_naming_convention
+                     (if String.endswith "_" prefix then substring 0 (String.length prefix - 1) prefix else prefix)
+         end.
+    Definition class_name {cls_name : class_name_opt} {language_naming_conventions : language_naming_conventions_opt} (prefix : string) : string
+      := match cls_name with
+         | Some name => name
+         | None => convert_to_naming_convention
+                     class_naming_convention
+                     (if String.endswith "_" prefix then substring 0 (String.length prefix - 1) prefix else prefix)
+         end.
   End Options.
 
   Module ToString.
@@ -756,6 +801,24 @@ Module Compilers.
                 with_parens
                 ((if is_unsigned t then "u" else "") ++ "int" ++ Decimal.Z.to_string (bitwidth_of t)).
 
+      Definition to_string_gen
+                 {language_naming_conventions : language_naming_conventions_opt}
+                 (standard_bitwidths : list Z)
+                 (unsigned_s signed_s : string)
+                 (standard_postfix special_postfix : string)
+                 (private : bool) (prefix : string)
+                 (t : type)
+        : string
+        := let is_standard := existsb (Z.eqb (bitwidth_of t)) standard_bitwidths in
+           (if is_standard
+            then (fun s => s)
+            else (fun s => convert_to_naming_convention
+                             (if private then private_type_naming_convention else public_type_naming_convention)
+                             (prefix ++ s)))
+             ((if is_unsigned t then unsigned_s else signed_s)
+                ++ Decimal.Z.to_string (ToString.int.bitwidth_of t)
+                ++ (if is_standard then standard_postfix else special_postfix)).
+
       Definition union (t1 t2 : type) : type := of_zrange_relaxed (ZRange.union (to_zrange t1) (to_zrange t2)).
 
       Definition union_zrange (r : zrange) (t : type) : type
@@ -1129,6 +1192,26 @@ Module Compilers.
            end%list.
     End OfPHOAS.
 
+    Definition format_special_function_name
+               {language_naming_conventions : language_naming_conventions_opt}
+               (internal_private : bool)
+               (prefix : string)
+               (name : string)
+               (is_signed : bool)
+               (bw : Z)
+      : string
+      := convert_to_naming_convention
+           (if internal_private then private_function_naming_convention else public_function_naming_convention)
+           (prefix ++ name ++ "_" ++ (if negb is_signed then "u" else "") ++ Decimal.Z.to_string bw).
+    Definition format_special_function_name_ty
+               {language_naming_conventions : language_naming_conventions_opt}
+               (internal_private : bool)
+               (prefix : string)
+               (name : string)
+               (t : int.type)
+      : string
+      := format_special_function_name internal_private prefix name (int.is_signed t) (int.bitwidth_of t).
+
     Definition preprocess_comment_block (lines : list string)
       := String.split String.NewLine (String.concat String.NewLine lines).
 
@@ -1154,15 +1237,11 @@ Module Compilers.
             lines)]. *)
         comment_file_header_block : list string -> list string;
 
-        (** Convert the name of a function from
-            lowercase_with_underscores to whatever convention the
-            language uses *)
-        adjust_name : forall (static : bool) (name : string), string;
-
         (** Converts a PHOAS AST to lines of code * info on which
             primitive functions are called, or else an error string *)
         ToFunctionLines
         : forall {relax_zrange : relax_zrange_opt}
+                 {language_naming_conventions : language_naming_conventions_opt}
                  (machine_wordsize : Z)
                  (do_bounds_check : bool) (internal_static : bool) (static : bool) (prefix : string) (name : string)
                  {t}
@@ -1175,12 +1254,18 @@ Module Compilers.
 
         (** Generates a header of any needed typedefs, etc based on the idents used and the curve-specific prefix *)
         header
-        : forall (machine_wordsize : Z) (static : bool) (prefix : string) (ident_info : ident_infos),
+        : forall {language_naming_conventions : language_naming_conventions_opt}
+                 {package_name : package_name_opt}
+                 {class_name : class_name_opt}
+                 (machine_wordsize : Z) (internal_static : bool) (static : bool) (prefix : string) (ident_info : ident_infos),
             list string;
 
         (** The footer on the file, if any *)
         footer
-        : forall (machine_wordsize : Z) (static : bool) (prefix : string) (ident_info : ident_infos),
+        : forall {language_naming_conventions : language_naming_conventions_opt}
+                 {package_name : package_name_opt}
+                 {class_name : class_name_opt}
+                 (machine_wordsize : Z) (internal_static : bool) (static : bool) (prefix : string) (ident_info : ident_infos),
             list string;
 
         (** Filters [ident_infos] to strip out primitive functions

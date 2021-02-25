@@ -68,8 +68,8 @@ Definition case_adjust_word (only_lower_first_char : bool) (data : word_case_dat
                                 (let adjusted := case_adjust_string data.(rest_letters_case) rest in
                                  match only_lower_first_char, data.(rest_letters_case) with
                                  | _, upper => adjusted
-                                 | true, lower => adjusted
-                                 | false, lower => rest
+                                 | true, lower => rest
+                                 | false, lower => adjusted
                                  end)
      end.
 Definition case_adjust_word_list (only_lower_first_char : bool) (data : capitalization_data) (words : list string) : list string
@@ -162,25 +162,27 @@ Notation doner_case := {| separator := "|" ; first_word_case := Word.lowercase ;
 Notation TRAIN_CASE := {| separator := "-" ; first_word_case := Word.uppercase ; rest_words_case := Word.uppercase |}.
 Notation Train_Case := {| separator := "-" ; first_word_case := Word.titlecase ; rest_words_case := Word.titlecase |}.
 
+Definition parse_capitalization_data_pre_list : list (capitalization_data * list string)
+  := [
+      (flatcase, ["flat case"; "flatcase"])
+      ; (UPPERFLATCASE, ["upper flat case"; "UPPER FLAT CASE"; "UPPERFLATCASE"])
+      ; (camelCase, ["camelCase"; "lower camelCase"; "lowerCamelCase"; "dromedaryCase"])
+      ; (UpperCamelCase, ["PascalCase"; "UpperCamelCase"; "Upper Camel Case"; "StudlyCase"])
+      ; (snake_case, ["snake_case"; "pothole_case"])
+      ; (SCREAMING_SNAKE_CASE, ["SCREAMING_SNAKE_CASE"; "MACRO_CASE"; "CONSTANT_CASE"])
+      ; (camel_Snake_Case, ["camel_Snake_Case"])
+      ; (Pascal_Snake_Case, ["Pascal_Snake_Case"])
+      ; (dash_case, ["kebab-case"; "dash-case"; "lisp-case"])
+      ; (doner_case, ["doner|case"])
+      ; (TRAIN_CASE, ["TRAIN-CASE"; "COBOL-CASE"; "SCREAMING-KEBAB-CASE"])
+      ; (Train_Case, ["Train-Case"; "HTTP-Header-Case"])
+    ].
+
 Definition parse_capitalization_data_list : list (string * capitalization_data)
   := Eval compute in
       List.flat_map
         (fun '(v, ls) => List.map (fun s => (s, v)) ls)
-        [
-          (flatcase, ["flat case"; "flatcase"])
-          ; (UPPERFLATCASE, ["upper flat case"; "UPPER FLAT CASE"; "UPPERFLATCASE"])
-          ; (camelCase, ["camelCase"; "lower camelCase"; "lowerCamelCase"; "dromedaryCase"])
-          ; (UpperCamelCase, ["PascalCase"; "UpperCamelCase"; "Upper Camel Case"; "StudlyCase"])
-          ; (snake_case, ["snake_case"; "pothole_case"])
-          ; (SCREAMING_SNAKE_CASE, ["SCREAMING_SNAKE_CASE"; "MACRO_CASE"; "CONSTANT_CASE"])
-          ; (camel_Snake_Case, ["camel_Snake_Case"])
-          ; (Pascal_Snake_Case, ["Pascal_Snake_Case"])
-          ; (dash_case, ["kebab-case"; "dash-case"; "lisp-case"])
-          ; (doner_case, ["doner|case"])
-          ; (TRAIN_CASE, ["TRAIN-CASE"; "COBOL-CASE"; "SCREAMING-KEBAB-CASE"])
-          ; (Train_Case, ["Train-Case"; "HTTP-Header-Case"])
-        ].
-
+        parse_capitalization_data_pre_list.
 Definition parse_capitalization_data : ParserAction capitalization_data
   := parse_strs parse_capitalization_data_list.
 

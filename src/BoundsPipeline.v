@@ -336,7 +336,8 @@ Module Pipeline.
 
     Global Instance show_lines_ErrorMessage : ShowLines ErrorMessage
       := fun parens e
-         => maybe_wrap_parens_lines
+         => let __ := default_language_naming_conventions in
+            maybe_wrap_parens_lines
               parens
               match e with
               | Computed_bounds_are_not_tight_enough t computed_bounds expected_bounds syntax_tree arg_bounds
@@ -560,6 +561,7 @@ Module Pipeline.
 
   Definition BoundsPipelineToStrings
              {output_language_api : ToString.OutputLanguageAPI}
+             {language_naming_conventions : language_naming_conventions_opt}
              {internal_static : internal_static_opt}
              {static : static_opt}
              {low_level_rewriter_method : low_level_rewriter_method_opt}
@@ -591,7 +593,7 @@ Module Pipeline.
                   E arg_bounds out_bounds in
        match E with
        | Success E' => let E := ToString.ToFunctionLines
-                                  machine_wordsize true internal_static static type_prefix name E' comment None arg_bounds out_bounds in
+                                  machine_wordsize true (orb internal_static static) static type_prefix name E' comment None arg_bounds out_bounds in
                       match E with
                       | inl E => Success E
                       | inr err => Error (Stringification_failed E' err)
@@ -601,6 +603,7 @@ Module Pipeline.
 
   Definition BoundsPipelineToString
              {output_language_api : ToString.OutputLanguageAPI}
+             {language_naming_conventions : language_naming_conventions_opt}
              {internal_static : internal_static_opt}
              {static : static_opt}
              {low_level_rewriter_method : low_level_rewriter_method_opt}
@@ -654,14 +657,15 @@ Module Pipeline.
                                      | true => orb (_ : static_opt) (_ : internal_static_opt)
                                      | false => _ : static_opt
                                      end in
+                 let adjust_name := convert_to_naming_convention (if is_internal' then private_function_naming_convention else public_function_naming_convention) in
                  let E := ToString.ToFunctionLines
                             (relax_zrange
                              := fun r => Option.value (relax_zrange_gen (_ : only_signed_opt) (possible_values_of_pipeline result) r) r)
                             machine_wordsize
-                            true (_ : internal_static_opt) is_internal'
-                            prefix (ToString.adjust_name is_internal' (prefix ++ name))
+                            true (orb (_ : static_opt) (_ : internal_static_opt)) is_internal'
+                            prefix (adjust_name (prefix ++ name)%string)
                             E'
-                            (comment (ToString.adjust_name is_internal' (prefix ++ name)))
+                            (comment (adjust_name (prefix ++ name)%string))
                             None
                             (arg_bounds_of_pipeline result)
                             (out_bounds_of_pipeline result) in

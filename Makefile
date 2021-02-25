@@ -217,7 +217,7 @@ GO_EXTRA_ARGS_ALL := --cmovznz-by-mul
 GO_EXTRA_ARGS_64  := --no-wide-int $(GO_EXTRA_ARGS_ALL)
 GO_EXTRA_ARGS_32  := $(GO_EXTRA_ARGS_ALL)
 
-JAVA_EXTRA_ARGS_ALL := --cmovznz-by-mul --widen-carry --widen-bytes --internal-static --only-signed
+JAVA_EXTRA_ARGS_ALL := --cmovznz-by-mul --widen-carry --widen-bytes --internal-static --only-signed --package-name fiat_crypto --class-case UpperCamelCase
 JAVA_EXTRA_ARGS_64  := --no-wide-int $(JAVA_EXTRA_ARGS_ALL)
 JAVA_EXTRA_ARGS_32  := $(JAVA_EXTRA_ARGS_ALL)
 

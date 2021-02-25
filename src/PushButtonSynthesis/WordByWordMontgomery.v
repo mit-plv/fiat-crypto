@@ -94,6 +94,9 @@ Local Opaque
 
 Section __.
   Context {output_language_api : ToString.OutputLanguageAPI}
+          {language_naming_conventions : language_naming_conventions_opt}
+          {package_namev : package_name_opt}
+          {class_namev : class_name_opt}
           {static : static_opt}
           {internal_static : internal_static_opt}
           {low_level_rewriter_method : low_level_rewriter_method_opt}

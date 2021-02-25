@@ -146,6 +146,7 @@ Notation wrapper_relax_zrange relax_zrange
 (* TODO: for now, name_list is just ignored -- could probably make it not ignored *)
 Definition Bedrock2_ToFunctionLines
            {relax_zrange : relax_zrange_opt}
+           {language_naming_conventions : language_naming_conventions_opt}
            (machine_wordsize : Z)
            (do_bounds_check : bool) (internal_static : bool) (static : bool) (prefix : string) (name : string)
            {t}
@@ -227,13 +228,11 @@ Definition OutputBedrock2API : ToString.OutputLanguageAPI :=
     ToString.comment_file_header_block s
     := List.map (fun line => "/* " ++ line ++ " */")%string s;
 
-    ToString.adjust_name _ name := name;
-
     ToString.ToFunctionLines := @Bedrock2_ToFunctionLines;
 
-    ToString.header := fun _ _ _ _ => [ToCString.prelude];
+    ToString.header := fun _ _ _ _ _ _ _ _ => [ToCString.prelude];
 
-    ToString.footer := fun _ _ _ _ => [];
+    ToString.footer := fun _ _ _ _ _ _ _ _ => [];
 
     (** No special handling for any functions *)
     ToString.strip_special_infos machine_wordsize infos := infos;

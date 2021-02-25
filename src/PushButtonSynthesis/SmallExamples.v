@@ -68,6 +68,9 @@ Time Redirect "log" Compute
                ZRange.type.base.option.None).
 
 Local Existing Instance ToString.C.OutputCAPI.
+Local Existing Instance default_language_naming_conventions.
+Local Instance : package_name_opt := None.
+Local Instance : class_name_opt := None.
 Local Instance : static_opt := true.
 Local Instance : internal_static_opt := true.
 Local Instance : emit_primitives_opt := true.

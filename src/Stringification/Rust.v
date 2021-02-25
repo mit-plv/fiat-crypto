@@ -25,33 +25,34 @@ Module Rust.
   Definition comment_module_header_block := List.map (fun line => "//! " ++ line)%string.
   Definition comment_block := List.map (fun line => "/* " ++ line ++ " */")%string.
 
-  (* Header imports and type defs *)
-  Definition header (machine_wordsize : Z) (static : bool) (prefix : string) (infos : ToString.ident_infos)
-    : list string
-    := let bitwidths_used := ToString.bitwidths_used infos in
-       let type_prefix := ((if static then "type " else "pub type ") ++ prefix)%string in
-       (["#![allow(unused_parens)]";
-        "#[allow(non_camel_case_types)]";
-        ""]%string
-          ++ (if IntSet.mem _Bool bitwidths_used || IntSet.mem (ToString.int.signed_counterpart_of _Bool) bitwidths_used
-              then [type_prefix ++ "u1 = u8;"; (* C: typedef unsigned char prefix_uint1 *)
-                      type_prefix ++ "i1 = i8;" ]%string (* C: typedef signed char prefix_int1 *)
-              else [])
-          ++ (if IntSet.mem (int.of_bitwidth false 2) bitwidths_used || IntSet.mem (int.of_bitwidth true 2) bitwidths_used
-              then [type_prefix ++ "u2 = u8;";
-                      type_prefix ++ "i2 = i8;" ]%string
-              else []))%list.
 
   (* Supported integer bitwidths *)
   Definition stdint_bitwidths : list Z := [8; 16; 32; 64; 128].
   Definition is_special_bitwidth (bw : Z) := negb (existsb (Z.eqb bw) stdint_bitwidths).
 
 
-  Definition int_type_to_string (prefix : string) (t : ToString.int.type) : string :=
-    ((if is_special_bitwidth (ToString.int.bitwidth_of t) then prefix else "")
-       ++ (if ToString.int.is_unsigned t then "u" else "i")
-       ++ Decimal.Z.to_string (ToString.int.bitwidth_of t))%string.
+  Definition int_type_to_string {language_naming_conventions : language_naming_conventions_opt} (private : bool) (prefix : string) (t : ToString.int.type) : string :=
+    int.to_string_gen stdint_bitwidths "u" "i" "" "" private prefix t.
 
+  (* Header imports and type defs *)
+  Definition header
+             {language_naming_conventions : language_naming_conventions_opt}
+             {package_namev : package_name_opt}
+             {class_namev : class_name_opt}
+             (machine_wordsize : Z) (internal_private : bool) (private : bool) (prefix : string) (infos : ToString.ident_infos)
+    : list string
+    := let bitwidths_used := ToString.bitwidths_used infos in
+       let type_prefix := (if internal_private then "type " else "pub type ")%string in
+       (["#![allow(unused_parens)]";
+        "#[allow(non_camel_case_types)]";
+        ""]%string
+           ++ (List.flat_map
+                 (fun bw
+                  => (if IntSet.mem (int.of_bitwidth false bw) bitwidths_used || IntSet.mem (int.of_bitwidth true bw) bitwidths_used
+                      then [type_prefix ++ int_type_to_string internal_private prefix (int.of_bitwidth false bw) ++ " = u8;"; (* C: typedef unsigned char prefix_uint1 *)
+                           type_prefix ++ int_type_to_string internal_private prefix (int.of_bitwidth true bw) ++ " = i8;" ]%string (* C: typedef signed char prefix_int1 *)
+                      else []))
+                 [1; 2]))%list.
 
   (* Instead of "macros for minimum-width integer constants" we tried to
      use numeric casts in Rust. It turns out that it wasn't needed and Rust
@@ -72,13 +73,13 @@ Module Rust.
      In the longer term, we should examine whether we should use
      non-void functions in Rust and just return the result *)
 
-  Definition primitive_type_to_string (prefix : string) (t : IR.type.primitive)
+  Definition primitive_type_to_string {language_naming_conventions : language_naming_conventions_opt} (private : bool) (prefix : string) (t : IR.type.primitive)
              (r : option ToString.int.type) : string :=
     match t with
     | IR.type.Zptr => "&mut "
     | IR.type.Z => ""
     end ++ match r with
-           | Some int_t => int_type_to_string prefix int_t
+           | Some int_t => int_type_to_string private prefix int_t
            | None => "ℤ" (* XXX what is this unicode symbol?? *)
            end.
 
@@ -92,62 +93,54 @@ Module Rust.
 
   Import IR.Notations.
 
-  Fixpoint arith_to_string (prefix : string) {t} (e : IR.arith_expr t) : string
-    := match e with
+  Fixpoint arith_to_string
+           {language_naming_conventions : language_naming_conventions_opt} (internal_private : bool)
+           (prefix : string) {t} (e : IR.arith_expr t) : string
+    := let special_name_ty name ty := ToString.format_special_function_name_ty internal_private prefix name ty in
+       let special_name name bw := ToString.format_special_function_name internal_private prefix name false(*unsigned*) bw in
+       match e with
        (* integer literals *)
        | (IR.literal v @@@ _) => int_literal_to_string prefix IR.type.Z v
        (* array dereference *)
        | (IR.List_nth n @@@ IR.Var _ v) => "(" ++ v ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "])"
        (* (de)referencing *)
        | (IR.Addr @@@ IR.Var _ v) => "&mut " ++ v (* borrow a mutable ref to v *)
-       | (IR.Dereference @@@ e) => "( *" ++ arith_to_string prefix e ++ " )"
+       | (IR.Dereference @@@ e) => "( *" ++ arith_to_string internal_private prefix e ++ " )"
        (* bitwise operations *)
        | (IR.Z_shiftr offset @@@ e) =>
-         "(" ++ arith_to_string prefix e ++ " >> " ++ Decimal.Z.to_string offset ++ ")"
+         "(" ++ arith_to_string internal_private prefix e ++ " >> " ++ Decimal.Z.to_string offset ++ ")"
        | (IR.Z_shiftl offset @@@ e) =>
-         "(" ++ arith_to_string prefix e ++ " << " ++ Decimal.Z.to_string offset ++ ")"
+         "(" ++ arith_to_string internal_private prefix e ++ " << " ++ Decimal.Z.to_string offset ++ ")"
        | (IR.Z_land @@@ (e1, e2)) =>
-         "(" ++ arith_to_string prefix e1 ++ " & " ++ arith_to_string prefix e2 ++ ")"
+         "(" ++ arith_to_string internal_private prefix e1 ++ " & " ++ arith_to_string internal_private prefix e2 ++ ")"
        | (IR.Z_lor @@@ (e1, e2)) =>
-         "(" ++ arith_to_string prefix e1 ++ " | " ++ arith_to_string prefix e2 ++ ")"
+         "(" ++ arith_to_string internal_private prefix e1 ++ " | " ++ arith_to_string internal_private prefix e2 ++ ")"
        | (IR.Z_lxor @@@ (e1, e2)) =>
-         "(" ++ arith_to_string prefix e1 ++ " ^ " ++ arith_to_string prefix e2 ++ ")"
-       | (IR.Z_lnot _ @@@ e) => "(!" ++ arith_to_string prefix e ++ ")"
+         "(" ++ arith_to_string internal_private prefix e1 ++ " ^ " ++ arith_to_string internal_private prefix e2 ++ ")"
+       | (IR.Z_lnot _ @@@ e) => "(!" ++ arith_to_string internal_private prefix e ++ ")"
        (* arithmetic operations *)
        | (IR.Z_add @@@ (x1, x2)) =>
-         "(" ++ arith_to_string prefix x1 ++ " + " ++ arith_to_string prefix x2 ++ ")"
+         "(" ++ arith_to_string internal_private prefix x1 ++ " + " ++ arith_to_string internal_private prefix x2 ++ ")"
        | (IR.Z_mul @@@ (x1, x2)) =>
-         "(" ++ arith_to_string prefix x1 ++ " * " ++ arith_to_string prefix x2 ++ ")"
+         "(" ++ arith_to_string internal_private prefix x1 ++ " * " ++ arith_to_string internal_private prefix x2 ++ ")"
        | (IR.Z_sub @@@ (x1, x2)) =>
-         "(" ++ arith_to_string prefix x1 ++ " - " ++ arith_to_string prefix x2 ++ ")"
-       | (IR.Z_bneg @@@ e) => "(!" ++ arith_to_string prefix e ++ ")" (* logical negation. XXX this has different semantics for numbers <>
+         "(" ++ arith_to_string internal_private prefix x1 ++ " - " ++ arith_to_string internal_private prefix x2 ++ ")"
+       | (IR.Z_bneg @@@ e) => "(!" ++ arith_to_string internal_private prefix e ++ ")" (* logical negation. XXX this has different semantics for numbers <>
                                                                         0 or 1 than it did before *)
        | (IR.Z_mul_split lg2s @@@ args) =>
-         prefix
-           ++ "mulx_u"
-           ++ Decimal.Z.to_string lg2s ++ "(" ++ arith_to_string prefix args ++ ")"
+         special_name "mulx" lg2s ++ "(" ++ arith_to_string internal_private prefix args ++ ")"
        | (IR.Z_add_with_get_carry lg2s @@@ args) =>
-         prefix
-           ++ "addcarryx_u"
-           ++ Decimal.Z.to_string lg2s ++ "(" ++ arith_to_string prefix args ++ ")"
+         special_name "addcarryx" lg2s ++ "(" ++ arith_to_string internal_private prefix args ++ ")"
        | (IR.Z_sub_with_get_borrow lg2s @@@ args) =>
-         prefix
-           ++ "subborrowx_u"
-           ++ Decimal.Z.to_string lg2s ++ "(" ++ arith_to_string prefix args ++ ")"
-       | (IR.Z_value_barrier ty @@@ args) =>
-         prefix
-           ++ "value_barrier_"
-           ++ (if int.is_unsigned ty then "u" else "")
-           ++ Decimal.Z.to_string (int.bitwidth_of ty) ++ "(" ++ arith_to_string prefix args ++ ")"
+         special_name "subborrowx" lg2s ++ "(" ++ arith_to_string internal_private prefix args ++ ")"
        | (IR.Z_zselect ty @@@ args) =>
-         prefix
-           ++ "cmovznz_"
-           ++ (if ToString.int.is_unsigned ty then "u" else "")
-           ++ Decimal.Z.to_string (ToString.int.bitwidth_of ty) ++ "(" ++ @arith_to_string prefix _ args ++ ")"
+         special_name_ty "cmovznz" ty ++ "(" ++ arith_to_string internal_private prefix args ++ ")"
+       | (IR.Z_value_barrier ty @@@ args) =>
+         special_name_ty "value_barrier" ty ++ "(" ++ arith_to_string internal_private prefix args ++ ")"
        | (IR.Z_static_cast int_t @@@ e) =>
-         "(" ++ arith_to_string prefix e ++ " as " ++ primitive_type_to_string prefix IR.type.Z (Some int_t) ++ ")"
+         "(" ++ arith_to_string internal_private prefix e ++ " as " ++ primitive_type_to_string internal_private prefix IR.type.Z (Some int_t) ++ ")"
        | IR.Var _ v => v
-       | IR.Pair A B a b => arith_to_string prefix a ++ ", " ++ arith_to_string prefix b
+       | IR.Pair A B a b => arith_to_string internal_private prefix a ++ ", " ++ arith_to_string internal_private prefix b
        | (IR.Z_add_modulo @@@ (x1, x2, x3)) => "#error addmodulo;"
        | (IR.List_nth _ @@@ _)
        | (IR.Addr @@@ _)
@@ -161,20 +154,22 @@ Module Rust.
        | IR.TT => "#error tt;"
        end%string%Cexpr.
 
-  Definition stmt_to_string (prefix : string) (e : IR.stmt) : string :=
+  Definition stmt_to_string
+             {language_naming_conventions : language_naming_conventions_opt} (internal_private : bool)
+             (prefix : string) (e : IR.stmt) : string :=
     match e with
-    | IR.Call val => arith_to_string prefix val ++ ";"
+    | IR.Call val => arith_to_string internal_private prefix val ++ ";"
     | IR.Assign true t sz name val =>
       (* local non-mutable declaration with initialization *)
-      "let " ++ name ++ ": " ++ primitive_type_to_string prefix t sz ++ " = " ++ arith_to_string prefix val ++ ";"
+      "let " ++ name ++ ": " ++ primitive_type_to_string internal_private prefix t sz ++ " = " ++ arith_to_string internal_private prefix val ++ ";"
     | IR.Assign false _ sz name val =>
     (* This corresponds to assignment to a non-pointer variable and should never ever
        happen in our generated code. Fiat-crypto handles it but I
        haven't found and instance of this to their generated code *)
-    (* code : name ++ " = " ++ arith_to_string prefix val ++ ";" *)
+    (* code : name ++ " = " ++ arith_to_string internal_private prefix val ++ ";" *)
       "#error trying to assign value to non-mutable variable;"
     | IR.AssignZPtr name sz val =>
-      "*" ++ name ++ " = " ++ arith_to_string prefix val ++ ";"
+      "*" ++ name ++ " = " ++ arith_to_string internal_private prefix val ++ ";"
     | IR.DeclareVar t sz name =>
       (* Local uninitialized declarations become mut declarations, and
          are initialized to 0. *)
@@ -182,15 +177,15 @@ Module Rust.
          patterns, are that 1.) this variable will be an argument to a
          call that will store its result in this variable. 2.) this will
          have a non-pointer an integer type *)
-      "let mut " ++ name ++ ": " ++ primitive_type_to_string prefix t sz ++ " = 0;"
+      "let mut " ++ name ++ ": " ++ primitive_type_to_string internal_private prefix t sz ++ " = 0;"
     | IR.Comment lines _ =>
       String.concat String.NewLine (comment_block (ToString.preprocess_comment_block lines))
     | IR.AssignNth name n val =>
-      name ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "] = " ++ arith_to_string prefix val ++ ";"
+      name ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "] = " ++ arith_to_string internal_private prefix val ++ ";"
     end.
 
-  Definition to_strings (prefix : string) (e : IR.expr) : list string :=
-    List.map (stmt_to_string prefix) e.
+  Definition to_strings {language_naming_conventions : language_naming_conventions_opt} (internal_private : bool) (prefix : string) (e : IR.expr) : list string :=
+    List.map (stmt_to_string internal_private prefix) e.
 
   Import Rewriter.Language.Language.Compilers Crypto.Language.API.Compilers IR.OfPHOAS.
   Local Notation tZ := (base.type.type_base base.type.Z).
@@ -201,23 +196,23 @@ Module Rust.
   (* This would have been nice, but coercions don't work *)
   (* Module Base := Rewriter.Language.Language.Compilers.base. *)
 
-  Fixpoint to_base_arg_list (prefix : string) (mode : Mode) {t} : ToString.OfPHOAS.base_var_data t -> list string :=
+  Fixpoint to_base_arg_list {language_naming_conventions : language_naming_conventions_opt} (internal_private : bool) (prefix : string) (mode : Mode) {t} : ToString.OfPHOAS.base_var_data t -> list string :=
     match t return base_var_data t -> _ with
     | tZ =>
       let typ := match mode with In => IR.type.Z | Out => IR.type.Zptr end in
-      fun '(n, is_ptr, r) => [n ++ ": " ++ primitive_type_to_string prefix typ r]
+      fun '(n, is_ptr, r) => [n ++ ": " ++ primitive_type_to_string internal_private prefix typ r]
     | base.type.prod A B =>
-      fun '(va, vb) => (to_base_arg_list prefix mode va ++ to_base_arg_list prefix mode vb)%list
+      fun '(va, vb) => (to_base_arg_list internal_private prefix mode va ++ to_base_arg_list internal_private prefix mode vb)%list
     | base.type.list tZ =>
       fun '(n, r, len) =>
         match mode with
         | In => (* arrays for inputs are immutable borrows *)
           [ n ++ ": " ++
-              "&[" ++ primitive_type_to_string prefix IR.type.Z r  ++
+              "&[" ++ primitive_type_to_string internal_private prefix IR.type.Z r  ++
               "; " ++ Decimal.Z.to_string (Z.of_nat len) ++ "]" ]
         | Out => (* arrays for outputs are mutable borrows *)
           [ n ++ ": " ++
-              "&mut [" ++ primitive_type_to_string prefix IR.type.Z r ++
+              "&mut [" ++ primitive_type_to_string internal_private prefix IR.type.Z r ++
               "; " ++ Decimal.Z.to_string (Z.of_nat len) ++ "]" ]
         end
     | base.type.list _ => fun _ => ["#error ""complex list"";"]
@@ -226,18 +221,18 @@ Module Rust.
     | base.type.type_base t => fun _ => ["#error " ++ show false t ++ ";"]%string
     end%string.
 
-  Definition to_arg_list (prefix : string) (mode : Mode) {t} : var_data t -> list string :=
+  Definition to_arg_list {language_naming_conventions : language_naming_conventions_opt} (internal_private : bool) (prefix : string) (mode : Mode) {t} : var_data t -> list string :=
     match t return var_data t -> _ with
-    | type.base t => to_base_arg_list prefix mode
+    | type.base t => to_base_arg_list internal_private prefix mode
     | type.arrow _ _ => fun _ => ["#error arrow;"]
     end%string.
 
-  Fixpoint to_arg_list_for_each_lhs_of_arrow (prefix : string) {t} : type.for_each_lhs_of_arrow var_data t -> list string
+  Fixpoint to_arg_list_for_each_lhs_of_arrow {language_naming_conventions : language_naming_conventions_opt} (internal_private : bool) (prefix : string) {t} : type.for_each_lhs_of_arrow var_data t -> list string
     := match t return type.for_each_lhs_of_arrow var_data t -> _ with
        | type.base t => fun _ => nil
        | type.arrow s d
          => fun '(x, xs)
-            => to_arg_list prefix In x ++ @to_arg_list_for_each_lhs_of_arrow prefix d xs
+            => to_arg_list internal_private prefix In x ++ to_arg_list_for_each_lhs_of_arrow internal_private prefix xs
        end%list.
 
   (** * Language-specific numeric conversions to be passed to the PHOAS -> IR translation *)
@@ -320,14 +315,14 @@ Module Rust.
        ; explicit_pointer_variables := false
     |}.
 
-  Definition to_function_lines (static : bool) (prefix : string) (name : string)
+  Definition to_function_lines {language_naming_conventions : language_naming_conventions_opt} (internal_private : bool) (private : bool) (prefix : string) (name : string)
              {t}
              (f : type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * IR.expr)
     : list string :=
     let '(args, rets, body) := f in
-    ("#[inline]" ++ String.NewLine ++ (if static then "fn " else "pub fn ") ++ name ++
-      "(" ++ String.concat ", " (to_arg_list prefix Out rets ++ to_arg_list_for_each_lhs_of_arrow prefix args) ++
-      ") -> () {")%string :: (List.map (fun s => "  " ++ s)%string (to_strings prefix body)) ++ ["}"%string]%list.
+    ("#[inline]" ++ String.NewLine ++ (if private then "fn " else "pub fn ") ++ name ++
+      "(" ++ String.concat ", " (to_arg_list internal_private prefix Out rets ++ to_arg_list_for_each_lhs_of_arrow internal_private prefix args) ++
+      ") -> () {")%string :: (List.map (fun s => "  " ++ s)%string (to_strings internal_private prefix body)) ++ ["}"%string]%list.
 
   (** In Rust, there is no munging of return arguments (they remain
       passed by pointers), so all variables are live *)
@@ -338,8 +333,9 @@ Module Rust.
 
   Definition ToFunctionLines
              {relax_zrange : relax_zrange_opt}
+             {language_naming_conventions : language_naming_conventions_opt}
              (machine_wordsize : Z)
-             (do_bounds_check : bool) (internal_static : bool) (static : bool) (prefix : string) (name : string)
+             (do_bounds_check : bool) (internal_private : bool) (private : bool) (prefix : string) (name : string)
              {t}
              (e : API.Expr t)
              (comment : type.for_each_lhs_of_arrow var_data t -> var_data (type.base (type.final_codomain t)) -> list string)
@@ -354,7 +350,7 @@ Module Rust.
               ++ List.map (fun v => "///   "%string ++ v)%string (input_bounds_to_string indata inbounds)
               ++ ["/// Output Bounds:"%string]
               ++ List.map (fun v => "///   "%string ++ v)%string (bound_to_string outdata outbounds)
-              ++ to_function_lines static prefix name (indata, outdata, f))%list,
+              ++ to_function_lines internal_private private prefix name (indata, outdata, f))%list,
            IR.ident_infos.collect_infos f)
     | inr nil =>
       inr ("Unknown internal error in converting " ++ name ++ " to Rust")%string
@@ -367,10 +363,9 @@ Module Rust.
   Definition OutputRustAPI : ToString.OutputLanguageAPI :=
     {| ToString.comment_block := comment_block;
        ToString.comment_file_header_block := comment_module_header_block;
-       ToString.adjust_name _ name := name;
        ToString.ToFunctionLines := @ToFunctionLines;
-       ToString.header := header;
-       ToString.footer := fun _ _ _ _ => [];
+       ToString.header := @header;
+       ToString.footer := fun _ _ _ _ _ _ _ _ => [];
        (** No special handling for any functions *)
        ToString.strip_special_infos machine_wordsize infos := infos |}.
 

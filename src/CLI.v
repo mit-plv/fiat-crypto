@@ -9,6 +9,7 @@ Require Import Crypto.Util.Strings.Decimal.
 Require Import Crypto.Util.Strings.ParseArithmetic.
 Require Import Crypto.Util.Strings.ParseArithmeticToTaps.
 Require Import Crypto.Util.Strings.Parse.Common.
+Require Import Crypto.Util.Strings.NamingConventions.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.OptionList.
 Require Import Crypto.Util.Strings.Show.
@@ -78,6 +79,22 @@ Module ForExtraction.
   Definition parse_m (s : string) : option Z
     := parse_Z s.
 
+  Definition parse_case_convention (s : string) : option capitalization_data
+    := parse_capitalization_data_strict s.
+  Definition valid_case_conventions : string
+    := Eval compute in
+        String.concat
+          ", "
+          (List.flat_map
+             (fun '(_, ls)
+              => match ls with
+                 | [] => []
+                 | [n] => [n]
+                 | n :: ns
+                   => [n ++ " (alternatively: " ++ String.concat ", " ns ++ ")"]
+                 end%string)
+             parse_capitalization_data_pre_list).
+
   Definition parse_src_n : string -> option nat := parse_nat.
   Definition parse_limbwidth : string -> option Q := parse_Q.
   Definition parse_max (s : string) : option (option Z)
@@ -95,7 +112,7 @@ Module ForExtraction.
             (s,
              match q with
              | Some q => inl q
-             | None => inr ["Could not parse '" ++ s ++ "' as a Q for --" ++ dir ++ "bounds-multiplier"]%string
+             | None => inr ["Could not parse '" ++ s ++ "' as a ℚ for --" ++ dir ++ "bounds-multiplier"]%string
              end)
        | inr opts
          => ("", inr ["Argument --" ++ dir ++ "bounds-multiplier can only be passed once; passed multiple times with values: " ++ String.concat ", " opts])
@@ -143,11 +160,12 @@ Module ForExtraction.
   Local Open Scope string_scope.
 
   (** TODO: Write a better quoter and maybe move this elsewhere *)
+  (* https://mywiki.wooledge.org/BashGuide/SpecialCharacters *)
   Definition quote (s : string) : string
     := if List.existsb (fun ch => List.existsb (fun badch => badch =? ch)%char
-                                               [" "; "("; ")"]%char)
+                                               [" "; "$"; "'"; """"; "\"; "#"; "="; "!"; ">"; "<"; "|"; ";"; "{"; "}"; "("; ")"; "["; "]"; "*"; "?"; "~"; "&"; "`"]%char)
                        (String.list_ascii_of_string s)
-       then "'" ++ s ++ "'"
+       then "'" ++ String.replace "'" "'""'""'" s ++ "'"
        else s.
 
   Definition CollectErrors
@@ -210,6 +228,42 @@ Module ForExtraction.
        ([Arg.long_key "lang"],
         Arg.CustomSymbol supported_languages,
         ["The output language code should be emitted in.  Defaults to " ++ List.hd "C" supported_language_names ++ " if no language is given.  Case-sensitive."]).
+  Definition no_prefix_fiat_spec : named_argT
+    := ([Arg.long_key "no-prefix-fiat"], Arg.Unit, ["Don't prefix functions with fiat_"]).
+  Definition package_name_spec : named_argT
+    := ([Arg.long_key "package-name"], Arg.String, ["The name of the package, for languages that support it."]).
+  Definition class_name_spec : named_argT
+    := ([Arg.long_key "class-name"], Arg.String, ["The name of the class, for languages that support it."]).
+  Definition private_function_case_spec : named_argT
+    := ([Arg.long_key "private-function-case"],
+        Arg.Custom (parse_string_and parse_case_convention) "CONVENTION",
+        ["The case convention for non-exported function names.  Default is to not adjust case, resulting in, roughly, snake_case."
+         ; "Valid options are: " ++ valid_case_conventions ++ "."]).
+  Definition public_function_case_spec : named_argT
+    := ([Arg.long_key "public-function-case"],
+        Arg.Custom (parse_string_and parse_case_convention) "CONVENTION",
+        ["The case convention for exported function names.  Default is to not adjust case, resulting in, roughly, snake_case."
+         ; "Valid options are: " ++ valid_case_conventions ++ "."]).
+  Definition private_type_case_spec : named_argT
+    := ([Arg.long_key "private-type-case"],
+        Arg.Custom (parse_string_and parse_case_convention) "CONVENTION",
+        ["The case convention for non-exported type names.  Default is to not adjust case, resulting in, roughly, snake_case."
+         ; "Valid options are: " ++ valid_case_conventions ++ "."]).
+  Definition public_type_case_spec : named_argT
+    := ([Arg.long_key "public-type-case"],
+        Arg.Custom (parse_string_and parse_case_convention) "CONVENTION",
+        ["The case convention for exported type names.  Default is to not adjust case, resulting in, roughly, snake_case."
+         ; "Valid options are: " ++ valid_case_conventions ++ "."]).
+  Definition class_case_spec : named_argT
+    := ([Arg.long_key "class-case"],
+        Arg.Custom (parse_string_and parse_case_convention) "CONVENTION",
+        ["The case convention for the default class name.  Only meaningful when the class name is inferred from curve_description, rather than given explicitly with --class-name."
+         ; "Valid options are: " ++ valid_case_conventions ++ "."]).
+  Definition package_case_spec : named_argT
+    := ([Arg.long_key "package-case"],
+        Arg.Custom (parse_string_and parse_case_convention) "CONVENTION",
+        ["The case convention for the default package name.  Only meaningful when the package name is inferred from curve_description, rather than given explicitly with --package-name."
+         ; "Valid options are: " ++ valid_case_conventions ++ "."]).
   Definition static_spec : named_argT
     := ([Arg.long_key "static"], Arg.Unit, ["Declare the functions as static, i.e., local to the file."]).
   Definition internal_static_spec : named_argT
@@ -339,10 +393,24 @@ Module ForExtraction.
         := default_low_level_rewriter_method
       (** What's the bitwidth? *)
       ; machine_wordsize :> machine_wordsize_opt
+      (** What's the package name *)
+      ; internal_package_name :> package_name_opt
+      (** What's the class name *)
+      ; internal_class_name :> class_name_opt
+      (** What's are the naming conventions to use? *)
+      ; language_naming_conventions :> language_naming_conventions_opt
     }.
 
   Definition common_optional_options {supported_languages : supported_languagesT}
     := [lang_spec
+        ; package_name_spec
+        ; class_name_spec
+        ; package_case_spec
+        ; class_case_spec
+        ; private_function_case_spec
+        ; public_function_case_spec
+        ; private_type_case_spec
+        ; public_type_case_spec
         ; static_spec
         ; internal_static_spec
         ; no_wide_int_spec
@@ -362,6 +430,14 @@ Module ForExtraction.
              (data : Arg.keyed_spec_list_data common_optional_options)
     : (SynthesizeOptions * ToString.OutputLanguageAPI) + list string
     := let '(langv
+             , package_namev
+             , class_namev
+             , package_casev
+             , class_casev
+             , private_function_casev
+             , public_function_casev
+             , private_type_casev
+             , public_type_casev
              , staticv
              , internal_staticv
              , no_wide_intv
@@ -375,8 +451,24 @@ Module ForExtraction.
              , only_signedv
             ) := data in
        let to_bool ls := (0 <? List.length ls)%nat in
+       let to_string_opt ls := List.nth_error (List.map (@snd _ _) ls) 0 in
+       let to_capitalization_data_opt ls := List.nth_error (List.map (fun '(_, (_, v)) => v) ls) 0 in
+       let to_capitalization_convention_opt ls
+           := option_map (fun d => {| capitalization_convention_data := d ; only_lower_first_letters := true |})
+                         (to_capitalization_data_opt ls) in
        let res
            := ({| static := to_bool staticv
+                  ; internal_class_name := to_string_opt class_namev
+                  ; internal_package_name := to_string_opt package_namev
+                  ; language_naming_conventions
+                    := {| public_function_naming_convention := to_capitalization_convention_opt public_function_casev
+                          ; private_function_naming_convention := to_capitalization_convention_opt private_function_casev
+                          ; public_type_naming_convention := to_capitalization_convention_opt public_type_casev
+                          ; private_type_naming_convention := to_capitalization_convention_opt private_type_casev
+                          ; variable_naming_convention := None
+                          ; package_naming_convention := to_capitalization_convention_opt package_casev
+                          ; class_naming_convention := to_capitalization_convention_opt class_casev
+                       |}
                   ; internal_static := to_bool internal_staticv
                   ; widen_carry := to_bool widen_carryv
                   ; widen_bytes := to_bool widen_bytesv

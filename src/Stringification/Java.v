@@ -27,15 +27,18 @@ Module Java.
   Definition comment_block := List.map (fun line => "/* " ++ line ++ " */")%string.
 
   (* Header imports and type defs *)
-  Definition header (machine_wordsize : Z) (static : bool) (prefix : string) (infos : ToString.ident_infos)
+  Definition header
+             {language_naming_conventions : language_naming_conventions_opt}
+             {package_namev : package_name_opt}
+             {class_namev : class_name_opt}
+             (machine_wordsize : Z) (internal_private : bool) (private : bool) (prefix : string) (infos : ToString.ident_infos)
   : list string
-    (* N.B. We don't do anything with static; we always export everything *)
+    (* N.B. We don't do anything with private; we always export everything *)
     := let bitwidths_used := ToString.bitwidths_used infos in
        (* Java class names are in mixed case *)
-       let class_name := String.replace " " "" (String.to_title_case (String.replace "_" " " prefix)) in
-       ((["package fiat_crypto;";
+       ((["package " ++ package_name prefix ++ ";";
          "";
-         "public final class " ++ class_name ++ " {";
+         "public final class " ++ class_name prefix ++ " {";
          (** Java doesn't have pointers, so we make them *)
          "";
          "static class Box<T> {";
@@ -45,7 +48,11 @@ Module Java.
          "  public T get() { return this.value; }";
          "}";
          ""]%string)).
-  Definition footer (machine_wordsize : Z) (static : bool) (prefix : string) (infos : ToString.ident_infos)
+  Definition footer
+             {language_naming_conventions : language_naming_conventions_opt}
+             {package_namev : package_name_opt}
+             {class_namev : class_name_opt}
+             (machine_wordsize : Z) (internal_private : bool) (private : bool) (prefix : string) (infos : ToString.ident_infos)
     : list string
     := ["}"]%string.
 
@@ -91,60 +98,55 @@ Module Java.
 
   Import IR.Notations.
 
-  Fixpoint arith_to_string (prefix : string) {t} (e : IR.arith_expr t) : string
-    := match e with
+  Fixpoint arith_to_string
+           {language_naming_conventions : language_naming_conventions_opt} (internal_private : bool)
+           (prefix : string)
+           {t} (e : IR.arith_expr t)
+    : string
+    := let special_name_ty name ty := ToString.format_special_function_name_ty internal_private prefix name ty in
+       let special_name name bw := ToString.format_special_function_name internal_private prefix name false(*unsigned*) bw in
+       match e with
        (* integer literals *)
        | (IR.literal v @@@ _) => int_literal_to_string prefix IR.type.Z v
        (* array dereference *)
        | (IR.List_nth n @@@ IR.Var _ v) => "(" ++ v ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "])"
        (* (de)referencing *)
-       | (IR.Dereference @@@ e) => "(" ++ arith_to_string prefix e ++ ").get()"
+       | (IR.Dereference @@@ e) => "(" ++ arith_to_string internal_private prefix e ++ ").get()"
        (* bitwise operations *)
        | (IR.Z_shiftr offset @@@ e) =>
          (* We assume that shift is always unsigned *)
-         "(" ++ arith_to_string prefix e ++ " >>> " ++ Decimal.Z.to_string offset ++ ")"
+         "(" ++ arith_to_string internal_private prefix e ++ " >>> " ++ Decimal.Z.to_string offset ++ ")"
        | (IR.Z_shiftl offset @@@ e) =>
-         "(" ++ arith_to_string prefix e ++ " << " ++ Decimal.Z.to_string offset ++ ")"
+         "(" ++ arith_to_string internal_private prefix e ++ " << " ++ Decimal.Z.to_string offset ++ ")"
        | (IR.Z_land @@@ (e1, e2)) =>
-         "(" ++ arith_to_string prefix e1 ++ " & " ++ arith_to_string prefix e2 ++ ")"
+         "(" ++ arith_to_string internal_private prefix e1 ++ " & " ++ arith_to_string internal_private prefix e2 ++ ")"
        | (IR.Z_lor @@@ (e1, e2)) =>
-         "(" ++ arith_to_string prefix e1 ++ " | " ++ arith_to_string prefix e2 ++ ")"
+         "(" ++ arith_to_string internal_private prefix e1 ++ " | " ++ arith_to_string internal_private prefix e2 ++ ")"
        | (IR.Z_lxor @@@ (e1, e2)) =>
-         "(" ++ arith_to_string prefix e1 ++ " ^ " ++ arith_to_string prefix e2 ++ ")"
-       | (IR.Z_lnot _ @@@ e) => "(~" ++ arith_to_string prefix e ++ ")"
+         "(" ++ arith_to_string internal_private prefix e1 ++ " ^ " ++ arith_to_string internal_private prefix e2 ++ ")"
+       | (IR.Z_lnot _ @@@ e) => "(~" ++ arith_to_string internal_private prefix e ++ ")"
        (* arithmetic operations *)
        | (IR.Z_add @@@ (x1, x2)) =>
-         "(" ++ arith_to_string prefix x1 ++ " + " ++ arith_to_string prefix x2 ++ ")"
+         "(" ++ arith_to_string internal_private prefix x1 ++ " + " ++ arith_to_string internal_private prefix x2 ++ ")"
        | (IR.Z_mul @@@ (x1, x2)) =>
-         "(" ++ arith_to_string prefix x1 ++ " * " ++ arith_to_string prefix x2 ++ ")"
+         "(" ++ arith_to_string internal_private prefix x1 ++ " * " ++ arith_to_string internal_private prefix x2 ++ ")"
        | (IR.Z_sub @@@ (x1, x2)) =>
-         "(" ++ arith_to_string prefix x1 ++ " - " ++ arith_to_string prefix x2 ++ ")"
-       | (IR.Z_bneg @@@ e) => "(!/* TODO: FIX ME */ " ++ arith_to_string prefix e ++ ")"
+         "(" ++ arith_to_string internal_private prefix x1 ++ " - " ++ arith_to_string internal_private prefix x2 ++ ")"
+       | (IR.Z_bneg @@@ e) => "(!/* TODO: FIX ME */ " ++ arith_to_string internal_private prefix e ++ ")"
        | (IR.Z_mul_split lg2s @@@ args) =>
-         prefix
-           ++ "mulx_u"
-           ++ Decimal.Z.to_string lg2s ++ "(" ++ arith_to_string prefix args ++ ")"
+         special_name "mulx" lg2s ++ "(" ++ arith_to_string internal_private prefix args ++ ")"
        | (IR.Z_add_with_get_carry lg2s @@@ args) =>
-         prefix
-           ++ "addcarryx_u"
-           ++ Decimal.Z.to_string lg2s ++ "(" ++ arith_to_string prefix args ++ ")"
+         special_name "addcarryx" lg2s ++ "(" ++ arith_to_string internal_private prefix args ++ ")"
        | (IR.Z_sub_with_get_borrow lg2s @@@ args) =>
-         prefix
-           ++ "subborrowx_u"
-           ++ Decimal.Z.to_string lg2s ++ "(" ++ arith_to_string prefix args ++ ")"
+         special_name "subborrowx" lg2s ++ "(" ++ arith_to_string internal_private prefix args ++ ")"
        | (IR.Z_zselect ty @@@ args) =>
-         prefix
-           ++ "cmovznz_u"
-           ++ Decimal.Z.to_string (ToString.int.bitwidth_of ty) ++ "(" ++ @arith_to_string prefix _ args ++ ")"
+         special_name_ty "cmovznz" (int.unsigned_counterpart_of ty) ++ "(" ++ arith_to_string internal_private prefix args ++ ")"
        | (IR.Z_value_barrier ty @@@ args) =>
-         prefix
-           ++ "value_barrier_"
-           ++ (if int.is_unsigned ty then "u" else "")
-           ++ Decimal.Z.to_string (int.bitwidth_of ty) ++ "(" ++ arith_to_string prefix args ++ ")"
+         special_name_ty "value_barrier" ty ++ "(" ++ arith_to_string internal_private prefix args ++ ")"
        | (IR.Z_static_cast int_t @@@ e) =>
-         "Long.valueOf(" ++ arith_to_string prefix e ++ ")." ++ primitive_type_to_string false prefix IR.type.Z (Some int_t) ++ "Value()"
+         "Long.valueOf(" ++ arith_to_string internal_private prefix e ++ ")." ++ primitive_type_to_string false prefix IR.type.Z (Some int_t) ++ "Value()"
        | IR.Var _ v => v
-       | IR.Pair A B a b => arith_to_string prefix a ++ ", " ++ arith_to_string prefix b
+       | IR.Pair A B a b => arith_to_string internal_private prefix a ++ ", " ++ arith_to_string internal_private prefix b
        | (IR.Addr @@@ IR.Var _ v) => "error_cannot_take_reference_in_Java_to_" ++ v
        | (IR.Z_add_modulo @@@ (x1, x2, x3)) => "int _error = error_addmodulo"
        | (IR.List_nth _ @@@ _)
@@ -166,20 +168,24 @@ Module Java.
   (** No need to lift declarations to the top *)
   Local Instance : IR.OfPHOAS.lift_declarations_opt := false.
 
-  Definition stmt_to_string (prefix : string) (e : IR.stmt) : string :=
+  Definition stmt_to_string
+             {language_naming_conventions : language_naming_conventions_opt} (internal_private : bool)
+             (prefix : string)
+             (e : IR.stmt)
+    : string :=
     match e with
-    | IR.Call val => arith_to_string prefix val ++ ";"
+    | IR.Call val => arith_to_string internal_private prefix val ++ ";"
     | IR.Assign true t sz name val =>
       (* local non-mutable declaration with initialization *)
-      primitive_type_to_string false prefix t sz ++ " " ++ name ++ " = " ++ arith_to_string prefix val ++ ";"
+      primitive_type_to_string false prefix t sz ++ " " ++ name ++ " = " ++ arith_to_string internal_private prefix val ++ ";"
     | IR.Assign false _ sz name val =>
     (* This corresponds to assignment to a non-pointer variable and should never ever
        happen in our generated code. Fiat-crypto handles it but I
        haven't found and instance of this to their generated code *)
-    (* code : name ++ " = " ++ arith_to_string prefix val ++ ";" *)
+    (* code : name ++ " = " ++ arith_to_string internal_private prefix val ++ ";" *)
       "error_trying_to_assign_value_to_non_mutable_variable;"
     | IR.AssignZPtr name sz val =>
-      name ++ ".set(" ++ arith_to_string prefix val ++ ");"
+      name ++ ".set(" ++ arith_to_string internal_private prefix val ++ ");"
     | IR.DeclareVar t sz name =>
       (* Local uninitialized declarations become mut declarations, and
          are initialized to 0. *)
@@ -191,11 +197,15 @@ Module Java.
     | IR.Comment lines _ =>
       String.concat String.NewLine (comment_block (ToString.preprocess_comment_block lines))
     | IR.AssignNth name n val =>
-      name ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "] = " ++ arith_to_string prefix val ++ ";"
+      name ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "] = " ++ arith_to_string internal_private prefix val ++ ";"
     end.
 
-  Definition to_strings (prefix : string) (e : IR.expr) : list string :=
-    List.map (stmt_to_string prefix) e.
+  Definition to_strings
+             {language_naming_conventions : language_naming_conventions_opt} (internal_private : bool)
+             (prefix : string)
+             (e : IR.expr)
+    : list string :=
+    List.map (stmt_to_string internal_private prefix) e.
 
   Import Rewriter.Language.Language.Compilers Crypto.Language.API.Compilers IR.OfPHOAS.
   Local Notation tZ := (base.type.type_base base.type.Z).
@@ -342,14 +352,16 @@ Module Java.
        ; explicit_pointer_variables := true (* Java can't take the address of a variable, so we declare explicit pointer variables *)
     |}.
 
-  Definition to_function_lines (internal : bool) (prefix : string) (name : string)
+  Definition to_function_lines
+             {language_naming_conventions : language_naming_conventions_opt} (internal_private : bool)
+             (internal : bool) (prefix : string) (name : string)
              {t}
              (f : type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * IR.expr)
     : list string :=
     let '(args, rets, body) := f in
     (((if internal then "" else "public ") ++ "static void " ++ name)
        ++ "(" ++ String.concat ", " (to_arg_list prefix Out rets ++ to_arg_list_for_each_lhs_of_arrow prefix args) ++
-       ") {")%string :: (List.map (fun s => "  " ++ s)%string (to_strings prefix body)) ++ ["}"%string]%list.
+       ") {")%string :: (List.map (fun s => "  " ++ s)%string (to_strings internal_private prefix body)) ++ ["}"%string]%list.
 
   Definition javadoc_replace (s : string) : string
     := String.replace "<" "&lt;" (String.replace ">" "&gt;" s).
@@ -361,8 +373,9 @@ Module Java.
 
   Definition ToFunctionLines
              {relax_zrange : relax_zrange_opt}
+             {language_naming_conventions : language_naming_conventions_opt}
              (machine_wordsize : Z)
-             (do_bounds_check : bool) (internal_internal : bool) (internal : bool) (prefix : string) (name : string)
+             (do_bounds_check : bool) (internal_private : bool) (internal : bool) (prefix : string) (name : string)
              {t}
              (e : API.Expr t)
              (comment : type.for_each_lhs_of_arrow var_data t -> var_data (type.base (type.final_codomain t)) -> list string)
@@ -378,7 +391,7 @@ Module Java.
                  ++ List.map (fun v => " *   "%string ++ javadoc_replace v)%string (input_bounds_to_string indata inbounds)
                  ++ [" * Output Bounds:"%string]
                  ++ List.map (fun v => " *   "%string ++ javadoc_replace v)%string (bound_to_string outdata outbounds))
-              ++ to_function_lines internal prefix name (indata, outdata, f))%list,
+              ++ to_function_lines internal_private internal prefix name (indata, outdata, f))%list,
            IR.ident_infos.collect_infos f)
     | inr nil =>
       inr ("Unknown internal error in converting " ++ name ++ " to Java")%string
@@ -391,10 +404,9 @@ Module Java.
   Definition OutputJavaAPI : ToString.OutputLanguageAPI :=
     {| ToString.comment_block := comment_block;
        ToString.comment_file_header_block := comment_block;
-       ToString.adjust_name _ name := name;
        ToString.ToFunctionLines := @ToFunctionLines;
-       ToString.header := header;
-       ToString.footer := footer;
+       ToString.header := @header;
+       ToString.footer := @footer;
        ToString.strip_special_infos machine_wordsize infos := infos |}.
 
 End Java.

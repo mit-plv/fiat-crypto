@@ -52,12 +52,8 @@ Module Compilers.
 
         Module int.
           Module type.
-            Definition to_string (prefix : string) (t : int.type) : string
-              := ((if is_special_bitwidth (int.bitwidth_of t) then prefix else "")
-                    ++ (if int.is_unsigned t then "u" else "")
-                    ++ "int"
-                    ++ Decimal.Z.to_string (int.bitwidth_of t)
-                    ++ (if is_special_bitwidth (int.bitwidth_of t) then "" else "_t"))%string.
+            Definition to_string {language_naming_conventions : language_naming_conventions_opt} (prefix : string) (t : int.type) : string
+              := int.to_string_gen stdint_bitwidths "uint" "int" "_t" "" false(*type declarations not static*) prefix t.
             Definition to_literal_macro_string (t : int.type) : option string
               := if Z.ltb (int.bitwidth_of t) 8
                  then None
@@ -70,7 +66,7 @@ Module Compilers.
 
         Module type.
           Module primitive.
-            Definition to_string (prefix : string) (t : type.primitive) (r : option int.type) : string
+            Definition to_string {language_naming_conventions : language_naming_conventions_opt} (prefix : string) (t : type.primitive) (r : option int.type) : string
               := match r with
                  | Some int_t => int.type.to_string prefix int_t
                  | None => "ℤ"
@@ -81,27 +77,31 @@ Module Compilers.
           End primitive.
         End type.
 
-        Definition value_barrier_name (prefix : string) (ty : int.type) : string
-          := prefix ++ "value_barrier_" ++ (if int.is_unsigned ty then "u" else "") ++ show false (int.bitwidth_of ty).
-        Definition value_barrier_func (static : bool) (prefix : string) (ty : int.type) : list string
+        Definition value_barrier_name {language_naming_conventions : language_naming_conventions_opt} (static : bool) (prefix : string) (ty : int.type) : string
+          := format_special_function_name_ty static prefix "value_barrier" ty.
+        Definition value_barrier_func {language_naming_conventions : language_naming_conventions_opt} (static : bool) (prefix : string) (ty : int.type) : list string
           := [""
               ; "#if !defined(" ++ String.to_upper prefix ++ "NO_ASM) && (defined(__GNUC__) || defined(__clang__))"
-              ; (if static then "static " else "") ++ "__inline__ " ++ int.type.to_string prefix ty ++ " " ++ value_barrier_name prefix ty ++ "(" ++ int.type.to_string prefix ty ++ " a) {"
+              ; (if static then "static " else "") ++ "__inline__ " ++ int.type.to_string prefix ty ++ " " ++ value_barrier_name static prefix ty ++ "(" ++ int.type.to_string prefix ty ++ " a) {"
               ; "  __asm__("""" : ""+r""(a) : /* no inputs */);"
               ; "  return a;"
               ; "}"
               ; "#else"
-              ; "#  define " ++ value_barrier_name prefix ty ++ "(x) (x)"
+              ; "#  define " ++ value_barrier_name static prefix ty ++ "(x) (x)"
               ; "#endif"].
 
-        Definition header (machine_wordsize : Z) (static : bool) (prefix : string) (infos : ident_infos)
+        Definition header
+             {language_naming_conventions : language_naming_conventions_opt}
+             {package_namev : package_name_opt}
+             {class_namev : class_name_opt}
+             (machine_wordsize : Z) (internal_static : bool) (static : bool) (prefix : string) (infos : ident_infos)
         : list string
           := let bitwidths_used := bitwidths_used infos in
              let value_barrier_bitwidths := value_barrier_bitwidths infos in
              (["#include <stdint.h>"]
                 ++ (if IntSet.mem _Bool bitwidths_used || IntSet.mem (int.signed_counterpart_of _Bool) bitwidths_used
-                    then ["typedef unsigned char " ++ prefix ++ "uint1;";
-                            "typedef signed char " ++ prefix ++ "int1;"]%string
+                    then ["typedef unsigned char " ++ int.type.to_string prefix _Bool ++ ";";
+                            "typedef signed char " ++ int.type.to_string prefix (int.signed_counterpart_of _Bool) ++ ";"]%string
                     else [])
                 ++ (if IntSet.mem uint128 bitwidths_used || IntSet.mem int128 bitwidths_used
                     then let FIAT_EXTENSION := (String.to_upper prefix ++ "FIAT_EXTENSION")%string in
@@ -111,15 +111,15 @@ Module Compilers.
                           "#  define " ++ FIAT_EXTENSION;
                           "#endif";
                           "";
-                          FIAT_EXTENSION ++ " typedef signed __int128 " ++ prefix ++ "int128;";
-                          FIAT_EXTENSION ++ " typedef unsigned __int128 " ++ prefix ++ "uint128;"]%string
+                          FIAT_EXTENSION ++ " typedef signed __int128 " ++ int.type.to_string prefix int128 ++ ";";
+                          FIAT_EXTENSION ++ " typedef unsigned __int128 " ++ int.type.to_string prefix uint128 ++ ";"]%string
                     else [])
                 ++ [""
                     ; "#if (-1 & 3) != 3"
                     ; "#error ""This code only works on a two's complement system"""
                     ; "#endif"]
                 ++ (List.flat_map
-                      (value_barrier_func static prefix)
+                      (value_barrier_func internal_static prefix)
                       (IntSet.elements value_barrier_bitwidths)))%list.
       End String.
 
@@ -133,59 +133,54 @@ Module Compilers.
              end.
       End primitive.
 
-      Fixpoint arith_to_string (prefix : string) {t} (e : arith_expr t) : string
-        := match e with
+      Fixpoint arith_to_string
+               {language_naming_conventions : language_naming_conventions_opt} (internal_static : bool)
+               (prefix : string) {t} (e : arith_expr t) : string
+        := let special_name_ty name ty := format_special_function_name_ty internal_static prefix name ty in
+           let special_name name bw := format_special_function_name internal_static prefix name false(*unsigned*) bw in
+           match e with
            | (literal v @@@ _) => primitive.to_string prefix type.Z v
            | (List_nth n @@@ Var _ v)
              => "(" ++ v ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "])"
            | (Addr @@@ Var _ v) => "&" ++ v
-           | (Dereference @@@ e) => "( *" ++ @arith_to_string prefix _ e ++ " )"
+           | (Dereference @@@ e) => "( *" ++ arith_to_string internal_static prefix e ++ " )"
            | (Z_shiftr offset @@@ e)
-             => "(" ++ @arith_to_string prefix _ e ++ " >> " ++ Decimal.Z.to_string offset ++ ")"
+             => "(" ++ arith_to_string internal_static prefix e ++ " >> " ++ Decimal.Z.to_string offset ++ ")"
            | (Z_shiftl offset @@@ e)
-             => "(" ++ @arith_to_string prefix _ e ++ " << " ++ Decimal.Z.to_string offset ++ ")"
+             => "(" ++ arith_to_string internal_static prefix e ++ " << " ++ Decimal.Z.to_string offset ++ ")"
            | (Z_land @@@ (e1, e2))
-             => "(" ++ @arith_to_string prefix _ e1 ++ " & " ++ @arith_to_string prefix _ e2 ++ ")"
+             => "(" ++ arith_to_string internal_static prefix e1 ++ " & " ++ arith_to_string internal_static prefix e2 ++ ")"
            | (Z_lor @@@ (e1, e2))
-             => "(" ++ @arith_to_string prefix _ e1 ++ " | " ++ @arith_to_string prefix _ e2 ++ ")"
+             => "(" ++ arith_to_string internal_static prefix e1 ++ " | " ++ arith_to_string internal_static prefix e2 ++ ")"
            | (Z_lxor @@@ (e1, e2))
-             => "(" ++ @arith_to_string prefix _ e1 ++ " ^ " ++ @arith_to_string prefix _ e2 ++ ")"
+             => "(" ++ arith_to_string internal_static prefix e1 ++ " ^ " ++ arith_to_string internal_static prefix e2 ++ ")"
            | (Z_add @@@ (x1, x2))
-             => "(" ++ @arith_to_string prefix _ x1 ++ " + " ++ @arith_to_string prefix _ x2 ++ ")"
+             => "(" ++ arith_to_string internal_static prefix x1 ++ " + " ++ arith_to_string internal_static prefix x2 ++ ")"
            | (Z_mul @@@ (x1, x2))
-             => "(" ++ @arith_to_string prefix _ x1 ++ " * " ++ @arith_to_string prefix _ x2 ++ ")"
+             => "(" ++ arith_to_string internal_static prefix x1 ++ " * " ++ arith_to_string internal_static prefix x2 ++ ")"
            | (Z_sub @@@ (x1, x2))
-             => "(" ++ @arith_to_string prefix _ x1 ++ " - " ++ @arith_to_string prefix _ x2 ++ ")"
+             => "(" ++ arith_to_string internal_static prefix x1 ++ " - " ++ arith_to_string internal_static prefix x2 ++ ")"
            | (Z_lnot _ @@@ e)
-             => "(~" ++ @arith_to_string prefix _ e ++ ")"
+             => "(~" ++ arith_to_string internal_static prefix e ++ ")"
            | (Z_bneg @@@ e)
-             => "(!" ++ @arith_to_string prefix _ e ++ ")"
+             => "(!" ++ arith_to_string internal_static prefix e ++ ")"
            | (Z_value_barrier ty @@@ e)
-             => String.value_barrier_name prefix ty ++ "(" ++ @arith_to_string prefix _ e ++ ")"
+             => String.value_barrier_name internal_static prefix ty ++ "(" ++ arith_to_string internal_static prefix e ++ ")"
            | (Z_mul_split lg2s @@@ args)
-             => prefix
-                 ++ "mulx_u"
-                 ++ Decimal.Z.to_string lg2s ++ "(" ++ @arith_to_string prefix _ args ++ ")"
+             => special_name "mulx" lg2s ++ "(" ++ arith_to_string internal_static prefix args ++ ")"
            | (Z_add_with_get_carry lg2s @@@ args)
-             => prefix
-                 ++ "addcarryx_u"
-                 ++ Decimal.Z.to_string lg2s ++ "(" ++ @arith_to_string prefix _ args ++ ")"
+             => special_name "addcarryx" lg2s ++ "(" ++ arith_to_string internal_static prefix args ++ ")"
            | (Z_sub_with_get_borrow lg2s @@@ args)
-             => prefix
-                 ++ "subborrowx_u"
-                 ++ Decimal.Z.to_string lg2s ++ "(" ++ @arith_to_string prefix _ args ++ ")"
+             => special_name "subborrowx" lg2s ++ "(" ++ arith_to_string internal_static prefix args ++ ")"
            | (Z_zselect ty @@@ args)
-             => prefix
-                 ++ "cmovznz_"
-                 ++ (if int.is_unsigned ty then "u" else "")
-                 ++ Decimal.Z.to_string (int.bitwidth_of ty) ++ "(" ++ @arith_to_string prefix _ args ++ ")"
+             => special_name_ty "cmovznz" ty ++ "(" ++ arith_to_string internal_static prefix args ++ ")"
            | (Z_add_modulo @@@ (x1, x2, x3)) => "#error addmodulo;"
            | (Z_static_cast int_t @@@ e)
              => "(" ++ String.type.primitive.to_string prefix type.Z (Some int_t) ++ ")"
-                    ++ @arith_to_string prefix _ e
+                    ++ arith_to_string internal_static prefix e
            | Var _ v => v
            | Pair A B a b
-             => @arith_to_string prefix A a ++ ", " ++ @arith_to_string prefix B b
+             => arith_to_string internal_static prefix a ++ ", " ++ arith_to_string internal_static prefix b
            | (List_nth _ @@@ _)
            | (Addr @@@ _)
            | (Z_add @@@ _)
@@ -200,34 +195,42 @@ Module Compilers.
              => "#error tt;"
            end%core%Cexpr.
 
-      Definition stmt_to_string (prefix : string) (e : stmt) : string
+      Definition stmt_to_string
+                 {language_naming_conventions : language_naming_conventions_opt} (internal_static : bool)
+                 (prefix : string)
+                 (e : stmt)
+        : string
         := match e with
            | Call val
-             => arith_to_string prefix val ++ ";"
+             => arith_to_string internal_static prefix val ++ ";"
            | Assign true t sz name val
-             => String.type.primitive.to_string prefix t sz ++ " " ++ name ++ " = " ++ arith_to_string prefix val ++ ";"
+             => String.type.primitive.to_string prefix t sz ++ " " ++ name ++ " = " ++ arith_to_string internal_static prefix val ++ ";"
            | Assign false _ sz name val
-             => name ++ " = " ++ arith_to_string prefix val ++ ";"
+             => name ++ " = " ++ arith_to_string internal_static prefix val ++ ";"
            | AssignZPtr name sz val
-             => "*" ++ name ++ " = " ++ arith_to_string prefix val ++ ";"
+             => "*" ++ name ++ " = " ++ arith_to_string internal_static prefix val ++ ";"
            | DeclareVar t sz name
              => String.type.primitive.to_string prefix t sz ++ " " ++ name ++ ";"
            | Comment lines _
              => String.concat String.NewLine (comment_block (ToString.preprocess_comment_block lines))
            | AssignNth name n val
-             => name ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "] = " ++ arith_to_string prefix val ++ ";"
+             => name ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "] = " ++ arith_to_string internal_static prefix val ++ ";"
            end.
-      Definition to_strings (prefix : string) (e : expr) : list string
-        := List.map (stmt_to_string prefix) e.
+      Definition to_strings
+                 {language_naming_conventions : language_naming_conventions_opt} (internal_static : bool)
+                 (prefix : string)
+                 (e : expr)
+        : list string
+        := List.map (stmt_to_string internal_static prefix) e.
 
       Import OfPHOAS.
 
-      Fixpoint to_base_arg_list (prefix : string) {t} : base_var_data t -> list string
+      Fixpoint to_base_arg_list {language_naming_conventions : language_naming_conventions_opt} (prefix : string) {t} : base_var_data t -> list string
         := match t return base_var_data t -> _ with
            | tZ
              => fun '(n, is_ptr, r) => [String.type.primitive.to_string prefix type.Z r ++ " " ++ n]
            | base.type.prod A B
-             => fun '(va, vb) => (@to_base_arg_list prefix A va ++ @to_base_arg_list prefix B vb)%list
+             => fun '(va, vb) => (to_base_arg_list prefix va ++ to_base_arg_list prefix vb)%list
            | base.type.list tZ
              => fun '(n, r, len) => ["const " ++ String.type.primitive.to_string prefix type.Z r ++ " " ++ n ++ "[" ++ Decimal.Z.to_string (Z.of_nat len) ++ "]"]
            | base.type.list _ => fun _ => ["#error ""complex list"";"]
@@ -236,26 +239,26 @@ Module Compilers.
            | base.type.type_base t => fun _ => ["#error " ++ show false t ++ ";"]%string
            end.
 
-      Definition to_arg_list (prefix : string) {t} : var_data t -> list string
+      Definition to_arg_list {language_naming_conventions : language_naming_conventions_opt} (prefix : string) {t} : var_data t -> list string
         := match t return var_data t -> _ with
            | type.base t => to_base_arg_list prefix
            | type.arrow _ _ => fun _ => ["#error arrow;"]
            end.
 
-      Fixpoint to_arg_list_for_each_lhs_of_arrow (prefix : string) {t} : type.for_each_lhs_of_arrow var_data t -> list string
+      Fixpoint to_arg_list_for_each_lhs_of_arrow {language_naming_conventions : language_naming_conventions_opt} (prefix : string) {t} : type.for_each_lhs_of_arrow var_data t -> list string
         := match t return type.for_each_lhs_of_arrow var_data t -> _ with
            | type.base t => fun _ => nil
            | type.arrow s d
              => fun '(x, xs)
-                => to_arg_list prefix x ++ @to_arg_list_for_each_lhs_of_arrow prefix d xs
+                => to_arg_list prefix x ++ to_arg_list_for_each_lhs_of_arrow prefix xs
            end%list.
 
-      Fixpoint to_base_retarg_list prefix {t} : base_var_data t -> list string
+      Fixpoint to_base_retarg_list {language_naming_conventions : language_naming_conventions_opt} prefix {t} : base_var_data t -> list string
         := match t return base_var_data t -> _ with
            | tZ
              => fun '(n, is_ptr, r) => [String.type.primitive.to_string prefix type.Zptr r ++ " " ++ n]
            | base.type.prod A B
-             => fun '(va, vb) => (@to_base_retarg_list prefix A va ++ @to_base_retarg_list prefix B vb)%list
+             => fun '(va, vb) => (to_base_retarg_list prefix va ++ to_base_retarg_list prefix vb)%list
            | base.type.list tZ
              => fun '(n, r, len) => [String.type.primitive.to_string prefix type.Z r ++ " " ++ n ++ "[" ++ Decimal.Z.to_string (Z.of_nat len) ++ "]"]
            | base.type.list _ => fun _ => ["#error ""complex list"";"]
@@ -264,7 +267,7 @@ Module Compilers.
            | base.type.type_base t => fun _ => ["#error " ++ show false t ++ ";"]%string
            end.
 
-      Definition to_retarg_list (prefix : string) {t} : var_data t -> list string
+      Definition to_retarg_list {language_naming_conventions : language_naming_conventions_opt} (prefix : string) {t} : var_data t -> list string
         := match t return var_data t -> _ with
            | type.base _ => to_base_retarg_list prefix
            | type.arrow _ _ => fun _ => ["#error arrow;"]
@@ -500,7 +503,9 @@ Module Compilers.
 
       (** Top-level printing functions *)
 
-      Definition to_function_lines (static : bool) (prefix : string) (name : string)
+      Definition to_function_lines
+                 {language_naming_conventions : language_naming_conventions_opt} (internal_static : bool)
+                 (static : bool) (prefix : string) (name : string)
                  {t}
                  (f : type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * expr)
         : list string
@@ -510,7 +515,7 @@ Module Compilers.
                  ++ name ++ "("
                  ++ (String.concat ", " (to_retarg_list prefix rets ++ to_arg_list_for_each_lhs_of_arrow prefix args))
                  ++ ") {")%string)
-               :: (List.map (fun s => "  " ++ s)%string (to_strings prefix body)))
+               :: (List.map (fun s => "  " ++ s)%string (to_strings internal_static prefix body)))
               ++ ["}"])%list.
 
       (** In C, there is no munging of return arguments (they remain
@@ -523,6 +528,7 @@ Module Compilers.
 
       Definition ToFunctionLines
                  {relax_zrange : relax_zrange_opt}
+                 {language_naming_conventions : language_naming_conventions_opt}
                  (machine_wordsize : Z)
                  (do_bounds_check : bool) (internal_static : bool) (static : bool) (prefix : string) (name : string)
                  {t}
@@ -541,7 +547,7 @@ Module Compilers.
                         ++ [" * Output Bounds:"]
                         ++ List.map (fun v => " *   " ++ v)%string (bound_to_string outdata outbounds)
                         ++ [" */"]
-                        ++ to_function_lines static prefix name (indata, outdata, f))%list,
+                        ++ to_function_lines internal_static static prefix name (indata, outdata, f))%list,
                      ident_infos.collect_infos f)
            | inr nil
              => inr ("Unknown internal error in converting " ++ name ++ " to C")%string
@@ -553,6 +559,7 @@ Module Compilers.
 
       Definition ToFunctionString
                  {relax_zrange : relax_zrange_opt}
+                 {language_naming_conventions : language_naming_conventions_opt}
                  (machine_wordsize : Z)
                  (do_bounds_check : bool) (internal_static : bool) (static : bool) (prefix : string) (name : string)
                  {t}
@@ -573,13 +580,11 @@ Module Compilers.
 
           ToString.comment_file_header_block := comment_block;
 
-          ToString.adjust_name _ name := name;
-
           ToString.ToFunctionLines := @ToFunctionLines;
 
-          ToString.header := String.header;
+          ToString.header := @String.header;
 
-          ToString.footer := fun _ _ _ _ => [];
+          ToString.footer := fun _ _ _ _ _ _ _ _ => [];
 
           (** We handle value_barrier specially *)
           ToString.strip_special_infos machine_wordsize infos
