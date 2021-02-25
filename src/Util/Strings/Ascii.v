@@ -23,6 +23,11 @@ Definition leb (x y : ascii) : bool := N.leb x y.
 Infix "<?" := ltb : char_scope.
 Infix "<=?" := leb : char_scope.
 
+Definition is_upper (ch : ascii) : bool
+  := ("A" <=? ch) && (ch <=? "Z").
+Definition is_lower (ch : ascii) : bool
+  := ("a" <=? ch) && (ch <=? "z").
+
 Definition to_lower (ch : ascii) : ascii
   := if ("A" <=? ch) && (ch <=? "Z")
      then ascii_of_N ("a" + ch - "A")

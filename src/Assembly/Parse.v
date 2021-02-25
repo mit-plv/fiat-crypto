@@ -21,7 +21,7 @@ Derive REG_Listable SuchThat (@FinitelyListable REG REG_Listable) As REG_Finitel
 Proof. prove_ListableDerive. Qed.
 Global Existing Instances REG_Listable REG_FinitelyListable.
 
-(* M-x query-replace-regex RET ([^ ]+) => _ RET \1 => "\1" *)
+(* M-x query-replace-regex RET \([^ ]+\) => _ RET \1 => "\1" *)
 Global Instance show_REG : Show REG
   := fun with_parens reg
      => match reg with
@@ -99,7 +99,7 @@ Derive FLAG_Listable SuchThat (@FinitelyListable FLAG FLAG_Listable) As FLAG_Fin
 Proof. prove_ListableDerive. Qed.
 Global Existing Instances FLAG_Listable FLAG_FinitelyListable.
 
-(* M-x query-replace-regex RET ([^ ]+) => _ RET \1 => "\1" *)
+(* M-x query-replace-regex RET \([^ ]+\) => _ RET \1 => "\1" *)
 Global Instance show_FLAG : Show FLAG
   := fun with_parens flag
      => match flag with
@@ -115,7 +115,7 @@ Derive OpCode_Listable SuchThat (@FinitelyListable OpCode OpCode_Listable) As Op
 Proof. prove_ListableDerive. Qed.
 Global Existing Instances OpCode_Listable OpCode_FinitelyListable.
 
-(* M-x query-replace-regex RET ([^ ]+) => _ RET \1 => "\1" *)
+(* M-x query-replace-regex RET \([^ ]+\) => _ RET \1 => "\1" *)
 Global Instance show_OpCode : Show OpCode
   := fun with_parens opc
      => match opc with

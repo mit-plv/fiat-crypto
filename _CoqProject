@@ -307,6 +307,7 @@ src/Util/Sigma/MapProjections.v
 src/Util/Sigma/Related.v
 src/Util/Strings/Ascii.v
 src/Util/Strings/Decimal.v
+src/Util/Strings/NamingConventions.v
 src/Util/Strings/ParseArithmetic.v
 src/Util/Strings/ParseArithmeticToTaps.v
 src/Util/Strings/Show.v
