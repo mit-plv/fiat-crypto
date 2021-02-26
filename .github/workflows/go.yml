@@ -20,5 +20,7 @@ jobs:
     - uses: actions/checkout@v2
     - name: submodules-init
       uses: snickerbockers/submodules-init@v4
+    - name: make only-test-go-module
+      run: make only-test-go-module EXTERNAL_DEPENDENCIES=1
     - name: make only-test-go-files
       run: make only-test-go-files EXTERNAL_DEPENDENCIES=1
