@@ -163,7 +163,7 @@ $(1)_ARGS:=$(4) $(5)
 $(1)_FUNCTIONS:=$(6)
 
 GO_$(call GO_RENAME_TO_KEY,$(1))_BINARY_NAME:=$(2)
-GO_$(call GO_RENAME_TO_KEY,$(1))_DESCRIPTION:=$(3)
+GO_$(call GO_RENAME_TO_KEY,$(1))_PACKAGE:=$(patsubst %_32,%,$(patsubst %_64,%,$(1)))
 GO_$(call GO_RENAME_TO_KEY,$(1))_BITWIDTH:=$(4)
 GO_$(call GO_RENAME_TO_KEY,$(1))_ARGS:=$(4) $(5)
 GO_$(call GO_RENAME_TO_KEY,$(1))_FUNCTIONS:=$(6)
@@ -544,7 +544,7 @@ $(ALL_GO_FILES) : $(GO_DIR)%.go : $$($$(GO_$$(call GO_FILE_TO_KEY,$$*)_BINARY_NA
 	$(SHOW)'SYNTHESIZE > $@'
 	$(HIDE)mkdir -p $(dir $@)
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $($(GO_$(call GO_FILE_TO_KEY,$*)_BINARY_NAME)) --lang Go $(GO_EXTRA_ARGS_$(GO_$(call GO_FILE_TO_KEY,$*)_BITWIDTH)) --package-name fiat$(GO_$(call GO_FILE_TO_KEY,$*)_DESCRIPTION) "" $(GO_$(call GO_FILE_TO_KEY,$*)_ARGS) $(GO_$(call GO_FILE_TO_KEY,$*)_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $($(GO_$(call GO_FILE_TO_KEY,$*)_BINARY_NAME)) --lang Go $(GO_EXTRA_ARGS_$(GO_$(call GO_FILE_TO_KEY,$*)_BITWIDTH)) --package-name $(GO_$(call GO_FILE_TO_KEY,$*)_PACKAGE) "" $(GO_$(call GO_FILE_TO_KEY,$*)_ARGS) $(GO_$(call GO_FILE_TO_KEY,$*)_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 .PHONY: $(addprefix test-,$(ALL_GO_FILES))
