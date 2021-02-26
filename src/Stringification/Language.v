@@ -1270,7 +1270,7 @@ Module Compilers.
 
         (** Filters [ident_infos] to strip out primitive functions
             that we don't want to request (because they have special
-            language handling *)
+            language handling) *)
         strip_special_infos
         : forall (machine_wordsize : Z),
             ident_infos -> ident_infos;

@@ -42,7 +42,6 @@ Module Go.
              {class_namev : class_name_opt}
              (machine_wordsize : Z) (internal_private : bool) (private : bool) (prefix : string) (infos : ToString.ident_infos)
     : list string
-    (* N.B. We don't do anything with private; we never export anything *)
     := let bitwidths_used := ToString.bitwidths_used infos in
        let needs_bits_import (* we only need the bits import if we use addcarryx/subborrowx/mulx with a standard bitwidth *)
            := PositiveSet.exists_
