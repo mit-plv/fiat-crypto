@@ -40,6 +40,7 @@ INSTALLDEFAULTROOT := Crypto
 	some-early pre-standalone pre-standalone-extracted standalone standalone-haskell standalone-ocaml \
 	test-c-files test-bedrock2-files test-rust-files test-go-files test-json-files test-java-files \
 	only-test-c-files only-test-bedrock2-files only-test-rust-files only-test-go-files only-test-json-files only-test-java-files \
+	test-go-module only-test-go-module \
 	javadoc only-javadoc \
 	check-output accept-output
 
@@ -143,16 +144,29 @@ empty=
 space=$(empty) $(empty)
 JAVA_RENAME = $(foreach i,$(patsubst %_32,%,$(filter %_32,$(1))),Fiat$(subst $(space),,$(call to_title_case,$(subst _, ,$(i)))))
 
+# Go places each file in a separate directory, and separates these directories by machine bitwidth
+GO_RENAME_TO_KEY  = $(strip $(foreach bw,32 64,$(foreach i,$(patsubst %_$(bw),%,$(filter %_$(bw),$(1))),$(bw)__SLASH__$(i)__SLASH__$(i))))
+GO_KEY_TO_FILE    = $(subst __SLASH__,/,$(1))
+GO_FILE_TO_KEY    = $(subst /,__SLASH__,$(1))
+GO_RENAME_TO_FILE = $(call GO_KEY_TO_FILE,$(call GO_RENAME_TO_KEY,$(1)))
+
 # Keys for looking up curve parameters
 define add_curve_keys
 # add_curve_keys curve_base BINARY_NAME description bitwidth non_bitwidth_args FUNCTIONS
 $(2)_BASE_FILES += $(1)
 ALL_BASE_FILES += $(1)
+
 $(1)_BINARY_NAME:=$(2)
 $(1)_DESCRIPTION:=$(3)
 $(1)_BITWIDTH:=$(4)
 $(1)_ARGS:=$(4) $(5)
 $(1)_FUNCTIONS:=$(6)
+
+GO_$(call GO_RENAME_TO_KEY,$(1))_BINARY_NAME:=$(2)
+GO_$(call GO_RENAME_TO_KEY,$(1))_DESCRIPTION:=$(3)
+GO_$(call GO_RENAME_TO_KEY,$(1))_BITWIDTH:=$(4)
+GO_$(call GO_RENAME_TO_KEY,$(1))_ARGS:=$(4) $(5)
+GO_$(call GO_RENAME_TO_KEY,$(1))_FUNCTIONS:=$(6)
 
 JAVA_$(call JAVA_RENAME,$(1))_BINARY_NAME:=$(2)
 JAVA_$(call JAVA_RENAME,$(1))_DESCRIPTION:=$(patsubst Fiat%,%,$(call JAVA_RENAME,$(1)))
@@ -196,14 +210,14 @@ EXTRA_C_FILES := inversion-c/*_test.c
 ALL_C_FILES := $(patsubst %,$(C_DIR)%.c,$(ALL_BASE_FILES))
 ALL_BEDROCK2_FILES := $(patsubst %,$(BEDROCK2_DIR)%.c,$(filter-out $(BASE_FILES_NEEDING_INT128),$(ALL_BASE_FILES)))
 ALL_RUST_FILES := $(patsubst %,$(RUST_DIR)%.rs,$(ALL_BASE_FILES))
-ALL_GO_FILES := $(patsubst %,$(GO_DIR)%.go,$(filter-out $(BASE_FILES_NEEDING_INT128),$(ALL_BASE_FILES)))
+ALL_GO_FILES := $(patsubst %,$(GO_DIR)%.go,$(call GO_RENAME_TO_FILE,$(filter-out $(BASE_FILES_NEEDING_INT128),$(ALL_BASE_FILES))))
 ALL_JSON_FILES := $(patsubst %,$(JSON_DIR)%.json,$(ALL_BASE_FILES))
 ALL_JAVA_FILES := $(patsubst %,$(JAVA_DIR)%.java,$(call JAVA_RENAME,$(filter-out $(BASE_FILES_NEEDING_INT128),$(ALL_BASE_FILES))))
 
 LITE_C_FILES := $(patsubst %,$(C_DIR)%.c,$(LITE_BASE_FILES))
 LITE_BEDROCK2_FILES := $(patsubst %,$(BEDROCK2_DIR)%.c,$(filter-out $(BASE_FILES_NEEDING_INT128),$(LITE_BASE_FILES)))
 LITE_RUST_FILES := $(patsubst %,$(RUST_DIR)%.rs,$(LITE_BASE_FILES))
-LITE_GO_FILES := $(patsubst %,$(GO_DIR)%.go,$(filter-out $(BASE_FILES_NEEDING_INT128),$(LITE_BASE_FILES)))
+LITE_GO_FILES := $(patsubst %,$(GO_DIR)%.go,$(call GO_RENAME_TO_FILE,$(filter-out $(BASE_FILES_NEEDING_INT128),$(LITE_BASE_FILES))))
 LITE_JSON_FILES := $(patsubst %,$(JSON_DIR)%.json,$(LITE_BASE_FILES))
 LITE_JAVA_FILES := $(patsubst %,$(JAVA_DIR)%.java,$(call JAVA_RENAME,$(filter-out $(BASE_FILES_NEEDING_INT128),$(LITE_BASE_FILES))))
 
@@ -526,10 +540,11 @@ all: $(addprefix fiat-rust/,$(COPY_TO_FIAT_RUST))
 $(addprefix fiat-rust/,$(COPY_TO_FIAT_RUST)) : fiat-rust/% : %
 	cp -f $< $@
 
-$(ALL_GO_FILES) : $(GO_DIR)%.go : $$($$($$*_BINARY_NAME))
+$(ALL_GO_FILES) : $(GO_DIR)%.go : $$($$(GO_$$(call GO_FILE_TO_KEY,$$*)_BINARY_NAME))
 	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)mkdir -p $(dir $@)
 	$(HIDE)rm -f $@.ok
-	$(HIDE)($(TIMER) $($($*_BINARY_NAME)) --lang Go $(GO_EXTRA_ARGS_$($*_BITWIDTH)) --package-name fiat$($*_DESCRIPTION) "" $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)($(TIMER) $($(GO_$(call GO_FILE_TO_KEY,$*)_BINARY_NAME)) --lang Go $(GO_EXTRA_ARGS_$(GO_$(call GO_FILE_TO_KEY,$*)_BITWIDTH)) --package-name fiat$(GO_$(call GO_FILE_TO_KEY,$*)_DESCRIPTION) "" $(GO_$(call GO_FILE_TO_KEY,$*)_ARGS) $(GO_$(call GO_FILE_TO_KEY,$*)_FUNCTIONS) && touch $@.ok) > $@.tmp
 	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
 
 .PHONY: $(addprefix test-,$(ALL_GO_FILES))
@@ -540,6 +555,11 @@ $(addprefix test-,$(ALL_GO_FILES)) : test-% : %
 
 $(addprefix only-test-,$(ALL_GO_FILES)) : only-test-% :
 	go build $*
+
+test-go-module only-test-go-module:
+	( cd fiat-go && go build ./... )
+
+test-go-module: $(ALL_GO_FILES)
 
 test-go-files: $(addprefix test-,$(ALL_GO_FILES))
 only-test-go-files: $(addprefix only-test-,$(ALL_GO_FILES))
