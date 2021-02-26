@@ -165,6 +165,7 @@ Module ForExtraction.
     := if List.existsb (fun ch => List.existsb (fun badch => badch =? ch)%char
                                                [" "; "$"; "'"; """"; "\"; "#"; "="; "!"; ">"; "<"; "|"; ";"; "{"; "}"; "("; ")"; "["; "]"; "*"; "?"; "~"; "&"; "`"]%char)
                        (String.list_ascii_of_string s)
+          || (String.length s =? 0)%nat
        then "'" ++ String.replace "'" "'""'""'" s ++ "'"
        else s.
 
