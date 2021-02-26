@@ -144,7 +144,7 @@ Definition convert_case (from : capitalization_data) (to : capitalization_conven
      end.
 
 Module Word.
-  Notation lowercase := {| first_letter_case := lower ; rest_letters_case := upper |}.
+  Notation lowercase := {| first_letter_case := lower ; rest_letters_case := lower |}.
   Notation uppercase := {| first_letter_case := upper ; rest_letters_case := upper |}.
   Notation titlecase := {| first_letter_case := upper ; rest_letters_case := lower |}.
 End Word.
