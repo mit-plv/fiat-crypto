@@ -160,10 +160,11 @@ Module ForExtraction.
   Local Open Scope string_scope.
 
   (** TODO: Write a better quoter and maybe move this elsewhere *)
-  (* https://mywiki.wooledge.org/BashGuide/SpecialCharacters *)
+  (** https://mywiki.wooledge.org/BashGuide/SpecialCharacters *)
+  (** We also quote the "/" character so that we don't change quoting behavior based on Windows vs Linux paths *)
   Definition quote (s : string) : string
     := if List.existsb (fun ch => List.existsb (fun badch => badch =? ch)%char
-                                               [" "; "$"; "'"; """"; "\"; "#"; "="; "!"; ">"; "<"; "|"; ";"; "{"; "}"; "("; ")"; "["; "]"; "*"; "?"; "~"; "&"; "`"]%char)
+                                               [" "; "$"; "'"; """"; "\"; "#"; "="; "!"; ">"; "<"; "|"; ";"; "{"; "}"; "("; ")"; "["; "]"; "*"; "?"; "~"; "&"; "`"; "/"]%char)
                        (String.list_ascii_of_string s)
           || (String.length s =? 0)%nat
        then "'" ++ String.replace "'" "'""'""'" s ++ "'"
