@@ -11,7 +11,7 @@ Scheme Equality for nat.
 
 Create HintDb natsimplify discriminated.
 
-Hint Resolve mod_bound_pos plus_le_compat : arith.
+Global Hint Resolve mod_bound_pos plus_le_compat : arith.
 Hint Rewrite @mod_small @mod_mod @mod_1_l @mod_1_r succ_pred using lia : natsimplify.
 
 Hint Rewrite sub_diag add_0_l add_0_r sub_0_r sub_succ : natsimplify.
@@ -26,7 +26,7 @@ Qed.
 Lemma mod_bound_lt x y : 0 < y -> x mod y < y.
 Proof. apply Nat.mod_bound_pos; lia. Qed.
 
-Hint Resolve mod_bound_nonneg mod_bound_lt : arith.
+Global Hint Resolve mod_bound_nonneg mod_bound_lt : arith.
 
 Lemma min_def {x y} : min x y = x - (x - y).
 Proof. apply Min.min_case_strong; lia. Qed.
@@ -236,7 +236,7 @@ Proof.
   intro; induction k; simpl; nia.
 Qed.
 
-Hint Resolve pow_nonzero : arith.
+Global Hint Resolve pow_nonzero : arith.
 
 Lemma S_pred_nonzero : forall a, (a > 0 -> S (pred a) = a)%nat.
 Proof.
@@ -249,7 +249,7 @@ Lemma mod_same_eq a b : a <> 0 -> a = b -> b mod a = 0.
 Proof. intros; subst; apply mod_same; assumption. Qed.
 
 Hint Rewrite @mod_same_eq using lia : natsimplify.
-Hint Resolve mod_same_eq : arith.
+Global Hint Resolve mod_same_eq : arith.
 
 Lemma mod_mod_eq a b c : a <> 0 -> b = c mod a -> b mod a = b.
 Proof. intros; subst; autorewrite with natsimplify; reflexivity. Qed.

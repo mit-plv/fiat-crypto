@@ -479,6 +479,6 @@ Ltac ring_simplify_subterms_in_all :=
 Create HintDb ring_simplify discriminated.
 Create HintDb ring_simplify_subterms discriminated.
 Create HintDb ring_simplify_subterms_in_all discriminated.
-Hint Extern 1 => progress ring_simplify : ring_simplify.
-Hint Extern 1 => progress ring_simplify_subterms : ring_simplify_subterms.
-Hint Extern 1 => progress ring_simplify_subterms_in_all : ring_simplify_subterms_in_all.
+Global Hint Extern 1 => progress ring_simplify : ring_simplify.
+Global Hint Extern 1 => progress ring_simplify_subterms : ring_simplify_subterms.
+Global Hint Extern 1 => progress ring_simplify_subterms_in_all : ring_simplify_subterms_in_all.

@@ -1076,8 +1076,8 @@ Record weight_properties {weight : nat -> Z} :=
     weight_multiples : forall i, weight (S i) mod weight i = 0;
     weight_divides : forall i : nat, 0 < weight (S i) / weight i;
   }.
-Hint Resolve weight_0 weight_positive weight_multiples weight_divides : core.
+Global Hint Resolve weight_0 weight_positive weight_multiples weight_divides : core.
 Lemma weight_nz {weight : nat -> Z} {wprops : @weight_properties weight}
   : forall i, weight i <> 0.
 Proof. intro i; pose proof (@weight_positive _ wprops i); lia. Qed.
-Hint Resolve weight_nz : core.
+Global Hint Resolve weight_nz : core.

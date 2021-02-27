@@ -111,7 +111,7 @@ Hint Rewrite
   @prod_length
   : distr_length.
 
-Hint Extern 1 => progress autorewrite with distr_length in * : distr_length.
+Global Hint Extern 1 => progress autorewrite with distr_length in * : distr_length.
 Ltac distr_length := autorewrite with distr_length in *;
   try solve [simpl in *; intros; (idtac + exfalso); lia].
 
@@ -451,7 +451,7 @@ Lemma nth_error_length_error : forall A i (xs:list A),
 Proof.
   induction i as [|? IHi]; destruct xs; nth_tac'; rewrite IHi by lia; auto.
 Qed.
-Hint Resolve nth_error_length_error : core.
+Global Hint Resolve nth_error_length_error : core.
 Hint Rewrite @nth_error_length_error using lia : simpl_nth_error.
 
 Lemma map_nth_default : forall (A B : Type) (f : A -> B) n x y l,
@@ -1214,7 +1214,7 @@ Proof.
   assumption.
 Qed.
 
-Hint Resolve nth_default_in_bounds : simpl_nth_default.
+Global Hint Resolve nth_default_in_bounds : simpl_nth_default.
 
 Lemma cons_eq_head : forall {T} (x y:T) xs ys, x::xs = y::ys -> x=y.
 Proof.
@@ -1541,7 +1541,7 @@ Proof.
       intuition auto with zarith. }
 Qed.
 
-Hint Resolve sum_firstn_nonnegative : znonzero.
+Global Hint Resolve sum_firstn_nonnegative : znonzero.
 
 Lemma sum_firstn_app : forall xs ys n,
   sum_firstn (xs ++ ys) n = (sum_firstn xs n + sum_firstn ys (n - length xs))%Z.

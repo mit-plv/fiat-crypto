@@ -31,7 +31,7 @@ Module Z.
   Proof. apply Z.log2_up_nonneg. Qed.
   Hint Resolve Z.stabilization_time_weaker_nonneg : zarith.
 End Z.
-Hint Resolve Z.stabilization_time_nonneg Z.stabilization_time_weaker_nonneg : zarith.
+Global Hint Resolve Z.stabilization_time_nonneg Z.stabilization_time_weaker_nonneg : zarith.
 
 Lemma stabilization_time (x:Z) : stabilizes_after x (Z.stabilization_time x).
 Proof.

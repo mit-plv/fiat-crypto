@@ -87,7 +87,7 @@ for i in ('mul', 'add', 'sub', 'opp', 'to_bytes', 'from_bytes', 'nonzero', 'eval
        SuchThat (is_reification_of reified_%s_gen %smod)
        As reified_%s_gen_correct.
 Proof. Time cache_reify (). Time Qed.
-Hint Extern 1 (_ = _) => apply_cached_reification %smod (proj1 reified_%s_gen_correct) : reify_cache_gen.
+Global Hint Extern 1 (_ = _) => apply_cached_reification %smod (proj1 reified_%s_gen_correct) : reify_cache_gen.
 Hint Immediate (proj2 reified_%s_gen_correct) : wf_gen_cache.
 Hint Rewrite (proj1 reified_%s_gen_correct) : interp_gen_cache.
 Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very long time *)''' % (indent, i, i, i, i, i, i, i, i, i)).replace('\n', '\n%s' % indent) + '\n')
@@ -101,7 +101,7 @@ Proof.
   (* we would do something faster, but it breaks extraction COQBUG(https://github.com/coq/coq/issues/7954) *)
   (* Time cache_reify_faster_2arg (). *)
 Time Qed.
-Hint Extern 1 (_ = _) => apply_cached_reification %smod (proj1 reified_%s_gen_correct) : reify_cache_gen.
+Global Hint Extern 1 (_ = _) => apply_cached_reification %smod (proj1 reified_%s_gen_correct) : reify_cache_gen.
 Hint Immediate (proj2 reified_%s_gen_correct) : wf_gen_cache.
 Hint Rewrite (proj1 reified_%s_gen_correct) : interp_gen_cache.
 Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very long time *)''' % (indent, i, i, i, i, i, i, i, i, i)).replace('\n', '\n%s' % indent) + '\n')
@@ -116,7 +116,7 @@ Proof.
   (* we do something faster *)
   Time cache_reify_faster_1arg ().
 Time Qed.
-Hint Extern 1 (_ = _) => apply_cached_reification %smod (proj1 reified_%s_gen_correct) : reify_cache_gen.
+Global Hint Extern 1 (_ = _) => apply_cached_reification %smod (proj1 reified_%s_gen_correct) : reify_cache_gen.
 Hint Immediate (proj2 reified_%s_gen_correct) : wf_gen_cache.
 Hint Rewrite (proj1 reified_%s_gen_correct) : interp_gen_cache.
 Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very long time *)''' % (indent, i, i, i, i, i, i, i, i, i)).replace('\n', '\n%s' % indent) + '\n')

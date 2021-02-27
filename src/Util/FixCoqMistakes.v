@@ -85,4 +85,4 @@ Ltac solve_Proper_eq :=
       unify R R';
       apply (@reflexive_proper A R')
   end.
-Hint Extern 0 (Proper _ _) => solve_Proper_eq : typeclass_instances.
+Global Hint Extern 0 (Proper _ _) => solve_Proper_eq : typeclass_instances.
