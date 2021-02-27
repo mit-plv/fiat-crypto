@@ -131,7 +131,7 @@ endif
 C_DIR := fiat-c/src/
 BEDROCK2_DIR := fiat-bedrock2/src/
 RUST_DIR := fiat-rust/src/
-GO_DIR := fiat-go/src/
+GO_DIR := fiat-go/
 JSON_DIR := fiat-json/src/
 JAVA_DIR := fiat-java/src/
 JAVADOC_DIR := fiat-java/doc/
@@ -145,7 +145,7 @@ space=$(empty) $(empty)
 JAVA_RENAME = $(foreach i,$(patsubst %_32,%,$(filter %_32,$(1))),Fiat$(subst $(space),,$(call to_title_case,$(subst _, ,$(i)))))
 
 # Go places each file in a separate directory, and separates these directories by machine bitwidth
-GO_RENAME_TO_KEY  = $(strip $(foreach bw,32 64,$(foreach i,$(patsubst %_$(bw),%,$(filter %_$(bw),$(1))),$(bw)__SLASH__$(i)__SLASH__$(i))))
+GO_RENAME_TO_KEY  = $(strip $(foreach bw,32 64,$(foreach i,$(subst _,,$(patsubst %_$(bw),%,$(filter %_$(bw),$(1)))),$(bw)__SLASH__$(i)__SLASH__$(i))))
 GO_KEY_TO_FILE    = $(subst __SLASH__,/,$(1))
 GO_FILE_TO_KEY    = $(subst /,__SLASH__,$(1))
 GO_RENAME_TO_FILE = $(call GO_KEY_TO_FILE,$(call GO_RENAME_TO_KEY,$(1)))
@@ -163,7 +163,7 @@ $(1)_ARGS:=$(4) $(5)
 $(1)_FUNCTIONS:=$(6)
 
 GO_$(call GO_RENAME_TO_KEY,$(1))_BINARY_NAME:=$(2)
-GO_$(call GO_RENAME_TO_KEY,$(1))_PACKAGE:=$(patsubst %_32,%,$(patsubst %_64,%,$(1)))
+GO_$(call GO_RENAME_TO_KEY,$(1))_PACKAGE:=$(subst _,,$(patsubst %_32,%,$(patsubst %_64,%,$(1))))
 GO_$(call GO_RENAME_TO_KEY,$(1))_BITWIDTH:=$(4)
 GO_$(call GO_RENAME_TO_KEY,$(1))_ARGS:=$(4) $(5)
 GO_$(call GO_RENAME_TO_KEY,$(1))_FUNCTIONS:=$(6)
@@ -557,7 +557,7 @@ $(addprefix only-test-,$(ALL_GO_FILES)) : only-test-% :
 	go build $*
 
 test-go-module only-test-go-module:
-	( cd fiat-go && go build ./... )
+	( cd fiat-go && go build -a -v ./... )
 
 test-go-module: $(ALL_GO_FILES)
 
