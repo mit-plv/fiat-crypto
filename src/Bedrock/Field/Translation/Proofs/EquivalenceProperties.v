@@ -333,7 +333,7 @@ Section OnlyDiffer.
     Qed.
   End Generic.
 End OnlyDiffer.
-Hint Resolve
+Global Hint Resolve
      equiv_listZ_only_differ_undef_local
      equiv_listZ_only_differ_undef_mem
      equiv_listZ_only_differ_local

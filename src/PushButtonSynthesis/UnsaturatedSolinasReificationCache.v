@@ -35,7 +35,7 @@ for i in ('carry_mul', 'carry_square', 'carry_scmul', 'carry', 'encode', 'add', 
        SuchThat (is_reification_of reified_%s_gen %smod)
        As reified_%s_gen_correct.
 Proof. Time cache_reify (). Time Qed.
-Hint Extern 1 (_ = _) => apply_cached_reification %smod (proj1 reified_%s_gen_correct) : reify_cache_gen.
+Global Hint Extern 1 (_ = _) => apply_cached_reification %smod (proj1 reified_%s_gen_correct) : reify_cache_gen.
 Hint Immediate (proj2 reified_%s_gen_correct) : wf_gen_cache.
 Hint Rewrite (proj1 reified_%s_gen_correct) : interp_gen_cache.
 Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very long time *)''' % (indent, i, i, i, i, i, i, i, i, i)).replace('\n', '\n%s' % indent) + '\n')
@@ -45,7 +45,7 @@ for (op, opmod) in (('to_bytes', 'freeze_to_bytesmod'), ('from_bytes', 'from_byt
        SuchThat (is_reification_of reified_%s_gen %s)
        As reified_%s_gen_correct.
 Proof. Time cache_reify (). Time Qed.
-Hint Extern 1 (_ = _) => apply_cached_reification %s (proj1 reified_%s_gen_correct) : reify_cache_gen.
+Global Hint Extern 1 (_ = _) => apply_cached_reification %s (proj1 reified_%s_gen_correct) : reify_cache_gen.
 Hint Immediate (proj2 reified_%s_gen_correct) : wf_gen_cache.
 Hint Rewrite (proj1 reified_%s_gen_correct) : interp_gen_cache.
 Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very long time *)''' % (indent, op, op, opmod, op, opmod, op, op, op, op)).replace('\n', '\n%s' % indent) + '\n')

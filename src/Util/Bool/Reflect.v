@@ -277,8 +277,8 @@ Lemma reflect_not {A a} `{reflect A a} : reflect (~A) (negb a).
 Proof. exact _. Qed.
 
 (** Disallow infinite loops of reflect_not *)
-Hint Extern 0 (reflect (~?A) _) => eapply (@reflect_not A) : typeclass_instances.
-Hint Extern 0 (reflect _ (negb ?b)) => eapply (@reflect_not _ b) : typeclass_instances.
+Global Hint Extern 0 (reflect (~?A) _) => eapply (@reflect_not A) : typeclass_instances.
+Global Hint Extern 0 (reflect _ (negb ?b)) => eapply (@reflect_not _ b) : typeclass_instances.
 
 Global Instance reflect_eq_unit : reflect_rel (@eq unit) (fun _ _ => true) | 10. exact _. Qed.
 Global Instance reflect_eq_bool : reflect_rel (@eq bool) Bool.eqb | 10. exact _. Qed.
@@ -376,9 +376,9 @@ Definition reflect_if_bool {x : bool} {A B a b} {HA : reflect A a} {HB : reflect
      then HA
      else HB.
 
-Hint Extern 1 (reflect _ (match ?x with true => ?a | false => ?b end))
+Global Hint Extern 1 (reflect _ (match ?x with true => ?a | false => ?b end))
 => eapply (@reflect_if_bool x _ _ a b) : typeclass_instances.
-Hint Extern 1 (reflect (match ?x with true => ?A | false => ?B end) _)
+Global Hint Extern 1 (reflect (match ?x with true => ?A | false => ?B end) _)
 => eapply (@reflect_if_bool x A B) : typeclass_instances.
 
 Global Instance reflect_ex_forall_not : forall T (P:T->Prop) (exPb:bool) {d:reflect (exists b, P b) exPb}, reflect (forall b, ~ P b) (negb exPb).
@@ -423,14 +423,14 @@ Lemma reflect_eq_pair {A B a1 a2 b1 b2 Aeqb Beqb}
        {HB : Bool.reflect (@eq B b1 b2) Beqb}
   : Bool.reflect ((a1, b1) = (a2, b2)) (andb Aeqb Beqb).
 Proof. apply reflect_f_equal2_inverts; now inversion 1. Defined.
-Hint Extern 2 (reflect (@pair ?A ?B _ _ = pair _ _) _) => simple eapply (@reflect_eq_pair A B) : typeclass_instances.
+Global Hint Extern 2 (reflect (@pair ?A ?B _ _ = pair _ _) _) => simple eapply (@reflect_eq_pair A B) : typeclass_instances.
 
 Lemma reflect_eq_cons {A x y xs ys eqb eqbs}
        {HA : Bool.reflect (@eq A x y) eqb}
        {HB : Bool.reflect (@eq (list A) xs ys) eqbs}
   : Bool.reflect (cons x xs = cons y ys) (andb eqb eqbs).
 Proof. apply reflect_f_equal2_inverts; now inversion 1. Defined.
-Hint Extern 2 (reflect (@cons ?T _ _ = cons _ _) _) => simple eapply (@reflect_eq_cons T) : typeclass_instances.
+Global Hint Extern 2 (reflect (@cons ?T _ _ = cons _ _) _) => simple eapply (@reflect_eq_cons T) : typeclass_instances.
 
 Lemma reflect_bool : forall {P b} {Preflect:reflect P b}, b = true -> P.
 Proof. intros P b Preflect; destruct Preflect; solve [ auto | discriminate ]. Qed.

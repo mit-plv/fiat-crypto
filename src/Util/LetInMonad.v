@@ -35,7 +35,7 @@ Definition lift2 {A B C} (f : A -> B -> C) : LetInM A -> LetInM B -> LetInM C
   := fun x y => under_lets x (fun x' => under_lets y (fun y' => ret (f x' y'))).
 
 Create HintDb push_denote discriminated.
-Hint Extern 1 => progress autorewrite with push_denote in * : push_denote.
+Global Hint Extern 1 => progress autorewrite with push_denote in * : push_denote.
 
 Ltac push_denote_step :=
   first [ progress simpl @denote in *
