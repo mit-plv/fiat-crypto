@@ -1,7 +1,7 @@
 {
     "problemMatcher": [
         {
-            "owner": "coq-problem-matcher",
+            "owner": "coq-problem-matcher-one-line",
             "pattern": [
                 {
                     "regexp": "^File \"([^ \"]+)\", line (\\d+), characters (\\d+-\\d+):",
@@ -10,10 +10,74 @@
                     "column": 3
                 },
                 {
-                    "regexp": "^(Warning|Error):\\s*(.*?)(?:\\s*\\[(.*)\\])?$",
+                    "regexp": "^(Warning|Error):\\s*(.*?)\\s*\\[(.*)\\]$",
                     "severity": 1,
                     "message": 2,
                     "code": 3
+                }
+            ]
+        },
+        {
+            "owner": "coq-problem-matcher-twoline",
+            "pattern": [
+                {
+                    "regexp": "^File \"([^ \"]+)\", line (\\d+), characters (\\d+-\\d+):",
+                    "file": 1,
+                    "line": 2,
+                    "column": 3
+                },
+                {
+                    "regexp": "^(Warning|Error):\\s*((?:[^\\]]|\\].)*)$",
+                    "severity": 1,
+                    "message": 2,
+                },
+                {
+                    "regexp": "^(.*?)\\s*\\[(.*)\\]$",
+                    "message": 1,
+                    "code": 2
+                }
+            ]
+        },
+        {
+            "owner": "coq-problem-matcher-multiline",
+            "pattern": [
+                {
+                    "regexp": "^File \"([^ \"]+)\", line (\\d+), characters (\\d+-\\d+):",
+                    "file": 1,
+                    "line": 2,
+                    "column": 3
+                },
+                {
+                    "regexp": "^(Warning|Error):\\s*((?:[^\\]]|\\].)*)$",
+                    "severity": 1,
+                    "message": 2
+                },
+                {
+                    "regexp": "^((?:[^\\]]|\\].)*)$",
+                    "severity": 1,
+                    "message": 2,
+                    "loop": true
+                },
+                {
+                    "regexp": "^(.*?)\\s*\\[(.*)\\]$",
+                    "message": 1,
+                    "code": 2
+                }
+            ]
+        },
+        {
+            "owner": "coq-problem-matcher-fallback",
+            "pattern": [
+                {
+                    "regexp": "^File \"([^ \"]+)\", line (\\d+), characters (\\d+-\\d+):",
+                    "file": 1,
+                    "line": 2,
+                    "column": 3
+                },
+                {
+                    "regexp": "^(Warning|Error):\\s*(.*)$",
+                    "severity": 1,
+                    "message": 2
                 }
             ]
         }
