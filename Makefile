@@ -100,13 +100,17 @@ UTIL_PRE_VOFILES := $(filter src/Algebra/%.vo src/Tactics/%.vo src/Util/%.vo,$(R
 SOME_EARLY_VOFILES := \
   src/Arithmetic/Core.vo \
   src/Rewriter/AllTacticsExtra.vo
-COPY_TO_FIAT_RUST := \
+COPY_TO_FIAT_RUST_AND_FIAT_GO := \
 	AUTHORS \
 	CONTRIBUTORS \
 	COPYRIGHT \
 	LICENSE-MIT \
 	LICENSE-APACHE \
 	LICENSE-BSD-1
+COPY_TO_FIAT_RUST := \
+	$(COPY_TO_FIAT_RUST_AND_FIAT_GO)
+COPY_TO_FIAT_GO := \
+	$(COPY_TO_FIAT_RUST_AND_FIAT_GO)
 
 # computing the vo_reverse_closure is slow, so we only do it if we're
 # asked to make the lite target
@@ -533,11 +537,16 @@ test-rust-files only-test-rust-files:
 	cd fiat-rust; $(CARGO_BUILD)
 
 all: $(addprefix fiat-rust/,$(COPY_TO_FIAT_RUST))
+all: $(addprefix fiat-go/,$(COPY_TO_FIAT_GO))
 
 # make these .PHONY, so that we copy by contents, not by modification date
 # this ensures that these files are always in sync as long as we run make
 .PHONY: $(addprefix fiat-rust/,$(COPY_TO_FIAT_RUST))
 $(addprefix fiat-rust/,$(COPY_TO_FIAT_RUST)) : fiat-rust/% : %
+	cp -f $< $@
+
+.PHONY: $(addprefix fiat-go/,$(COPY_TO_FIAT_GO))
+$(addprefix fiat-go/,$(COPY_TO_FIAT_GO)) : fiat-go/% : %
 	cp -f $< $@
 
 $(ALL_GO_FILES) : $(GO_DIR)%.go : $$($$(GO_$$(call GO_FILE_TO_KEY,$$*)_BINARY_NAME))
