@@ -3,9 +3,9 @@ Fiat-Crypto: Synthesizing Correct-by-Construction Code for Cryptographic Primiti
 
 Building
 --------
-[![CI (Coq)](https://github.com/mit-plv/fiat-crypto/workflows/CI%20(Coq)/badge.svg)](https://github.com/mit-plv/fiat-crypto/actions?query=workflow%3A%22CI+%28Coq%29%22+branch%3Amaster)
-[![CI (Coq, Windows)](https://github.com/mit-plv/fiat-crypto/workflows/CI%20(Coq,%20Windows)/badge.svg)](https://github.com/mit-plv/fiat-crypto/actions?query=workflow%3A%22CI+%28Coq,%20Windows%29%22+branch%3Amaster)
-[![CI (Coq, MacOS)](https://github.com/mit-plv/fiat-crypto/workflows/CI%20(Coq,%20MacOS)/badge.svg)](https://github.com/mit-plv/fiat-crypto/actions?query=workflow%3A%22CI+%28Coq,%20MacOS%29%22+branch%3Amaster)
+[![CI (Coq)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq.yml/badge.svg?branch=master)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq.yml?query=branch%3Amaster)
+[![CI (Coq, Windows)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-windows.yml/badge.svg?branch=master)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-windows.yml?query=branch%3Amaster)
+[![CI (Coq, MacOS)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-macos.yml/badge.svg?branch=master)](https://github.com/mit-plv/fiat-crypto/actions/workflows/coq-macos.yml?query=branch%3Amaster)
 
 [![Zulip][zulip-shield]][zulip-link]
 [![Rust Crate][crate-shield]][crate-link]
@@ -168,7 +168,8 @@ Reading About The Code
 - [Jade Philipoom. Correct-by-Construction Finite Field Arithmetic in Coq. MIT Master's Thesis. February 2018.](http://adam.chlipala.net/theses/jadep_meng.pdf) Chapters 3 and 4 contain a detailed walkthrough of the field arithmetic implementations (again, targeting the previous compilation pipeline).
 - [Andres Erbsen. Crafting Certified Elliptic Curve Cryptography Implementations in Coq. MIT Master's Thesis. June 2017.](
 http://adam.chlipala.net/theses/andreser_meng.pdf) Section 3 contains a whirlwind introduction to synthesizing field arithmetic code using coq, without assuming Coq skills, but covering a tiny fraction of the overall library. Sections 5 and 6 contain the only write-up on the elliptic-curve library in this repository.
-- The newest compilation pipeline does not have a separate document yet, but this README does go over it in some detail.
+- [Jason Gross. Performance Engineering of Proof-Based Software Systems at Scale. MIT Doctoral Thesis. February 2021.](http://adam.chlipala.net/theses/jgross.pdf) Chapters 4 and 5 describe the reflective program transformation framework at the center of the newest compilation pipeline.
+- The newest compilation pipeline as a whole does not have a separate document yet, but this README does go over it in some detail.
 
 
 Reading The Code
