@@ -351,8 +351,7 @@ Section __.
                (comment_header
                   ++ ["";
                      "Computed values:";
-                     "dst_n = " ++ show false dst_n]%string))
-              ++ [""])
+                     "dst_n = " ++ show false dst_n]%string)))
            function_name_prefix requests.
   End for_stringification.
 End __.

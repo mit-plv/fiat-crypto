@@ -1029,8 +1029,7 @@ Section __.
                       ; "Computed values:"
                       ; "eval z = " ++ seval "z" false
                       ; "bytes_eval z = " ++ sbytes_eval "z" false
-                     ]%string)
-              ++ [""])
+                     ]%string))
            function_name_prefix requests.
   End for_stringification.
 End __.
