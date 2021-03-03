@@ -784,8 +784,7 @@ Section __.
                       ; "eval z = " ++ seval "z" false
                       ; "bytes_eval z = " ++ sbytes_eval "z" false
                       ; "balance = " ++ let show_Z := Hex.show_Z in show false balance
-                     ]%string))
-              ++ [""])
+                     ]%string)))
            function_name_prefix requests.
   End for_stringification.
 End __.

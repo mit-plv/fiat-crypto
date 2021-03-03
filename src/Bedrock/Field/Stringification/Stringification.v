@@ -230,7 +230,7 @@ Definition OutputBedrock2API : ToString.OutputLanguageAPI :=
 
     ToString.ToFunctionLines := @Bedrock2_ToFunctionLines;
 
-    ToString.header := fun _ _ _ _ _ _ _ _ => [ToCString.prelude];
+    ToString.header := fun _ _ _ _ _ _ _ _ => [""; ToCString.prelude];
 
     ToString.footer := fun _ _ _ _ _ _ _ _ => [];
 

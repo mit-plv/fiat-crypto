@@ -36,7 +36,8 @@ Module Java.
     (* N.B. We don't do anything with private; we always export everything *)
     := let bitwidths_used := ToString.bitwidths_used infos in
        (* Java class names are in mixed case *)
-       ((["package " ++ package_name prefix ++ ";";
+       ((["";
+         "package " ++ package_name prefix ++ ";";
          "";
          "public final class " ++ class_name prefix ++ " {";
          (** Java doesn't have pointers, so we make them *)

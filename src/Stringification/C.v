@@ -98,7 +98,8 @@ Module Compilers.
         : list string
           := let bitwidths_used := bitwidths_used infos in
              let value_barrier_bitwidths := value_barrier_bitwidths infos in
-             (["#include <stdint.h>"]
+             (["";
+              "#include <stdint.h>"]
                 ++ (if IntSet.mem _Bool bitwidths_used || IntSet.mem (int.signed_counterpart_of _Bool) bitwidths_used
                     then ["typedef unsigned char " ++ int.type.to_string prefix _Bool ++ ";";
                             "typedef signed char " ++ int.type.to_string prefix (int.signed_counterpart_of _Bool) ++ ";"]%string

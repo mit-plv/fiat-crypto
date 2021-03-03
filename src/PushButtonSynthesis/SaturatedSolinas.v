@@ -232,8 +232,7 @@ Section __.
                (comment_header
                   ++ ["";
                      "Computed values:";
-                     "# reductions = " ++ show false nreductions]%string))
-              ++ [""])
+                     "# reductions = " ++ show false nreductions]%string)))
            function_name_prefix requests.
   End for_stringification.
 End __.

@@ -43,7 +43,8 @@ Module Rust.
     : list string
     := let bitwidths_used := ToString.bitwidths_used infos in
        let type_prefix := (if internal_private then "type " else "pub type ")%string in
-       (["#![allow(unused_parens)]";
+       (["";
+        "#![allow(unused_parens)]";
         "#[allow(non_camel_case_types)]";
         ""]%string
            ++ (List.flat_map
