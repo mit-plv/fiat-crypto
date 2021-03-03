@@ -8,13 +8,17 @@ Building
 [![CI (Coq, MacOS)](https://github.com/mit-plv/fiat-crypto/workflows/CI%20(Coq,%20MacOS)/badge.svg)](https://github.com/mit-plv/fiat-crypto/actions?query=workflow%3A%22CI+%28Coq,%20MacOS%29%22+branch%3Amaster)
 
 [![Zulip][zulip-shield]][zulip-link]
-[![Crate][crate-shield]][crate-link]
+[![Rust Crate][crate-shield]][crate-link]
+[![Go Reference][pkg.go-shield]][pkg.go-link]
 
 [zulip-shield]: https://img.shields.io/badge/chat-on%20zulip-informational.svg
 [zulip-link]: https://coq.zulipchat.com/#narrow/stream/247791-fiat-crypto
 
 [crate-shield]: https://img.shields.io/crates/v/fiat-crypto.svg
 [crate-link]: https://crates.io/crates/fiat-crypto
+
+[pkg.go-shield]: https://pkg.go.dev/badge/github.com/mit-plv/fiat-crypto/fiat-go.svg
+[pkg.go-link]: https://pkg.go.dev/github.com/mit-plv/fiat-crypto/fiat-go
 
 This repository requires [Coq](https://coq.inria.fr/) [8.9](https://github.com/coq/coq/releases/tag/V8.9.0) or later.
 Note that if you install Coq from Ubuntu aptitude packages, you need `libcoq-ocaml-dev` in addition to `coq`.
