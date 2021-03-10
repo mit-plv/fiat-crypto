@@ -48,12 +48,12 @@ Definition set_flag (st : flag_state) (f : FLAG) (v : bool) : flag_state
   := set_flag_internal st f (Some v).
 Definition havoc_flag (st : flag_state) (f : FLAG) : flag_state
   := set_flag_internal st f None.
-Definition havoc_flags (st : flag_state) : flag_state
+Definition havoc_flags : flag_state
   := (None, None, None, None, None, None).
 
 Definition reg_state := list N.
-Definition index_and_shift_and_bitcount_of_reg (r : REG) : nat * N * N
-  := (match r with
+Definition reg_index (r : REG) : nat
+  :=  match r with
       |     rax
       |     eax
       |      ax
@@ -134,7 +134,8 @@ Definition index_and_shift_and_bitcount_of_reg (r : REG) : nat * N * N
       | r15w
       | r15b
         => 15
-      end,
+      end.
+Definition reg_offset (r : REG) : N :=
       match r with
       |(    rax |     rcx |     rdx |     rbx | rsp  | rbp  | rsi  | rdi  | r8  | r9  | r10  | r11  | r12  | r13  | r14  | r15 )
       |(    eax |     ecx |     edx |     ebx | esp  | ebp  | esi  | edi  | r8d | r9d | r10d | r11d | r12d | r13d | r14d | r15d)
@@ -143,7 +144,8 @@ Definition index_and_shift_and_bitcount_of_reg (r : REG) : nat * N * N
        => 0
       |(ah      | ch      | dh      | bh      )
        => 8
-      end%N,
+      end.
+Definition reg_size (r : REG) : N :=
       match r with
       |(    rax |     rcx |     rdx |     rbx | rsp  | rbp  | rsi  | rdi  | r8  | r9  | r10  | r11  | r12  | r13  | r14  | r15 )
        => 64
@@ -153,7 +155,10 @@ Definition index_and_shift_and_bitcount_of_reg (r : REG) : nat * N * N
        => 16
       |(ah | al | ch | cl | dh | dl | bh | bl |  spl |  bpl |  sil |  dil | r8b | r9b | r10b | r11b | r12b | r13b | r14b | r15b)
        => 8
-      end%N).
+      end.
+
+Definition index_and_shift_and_bitcount_of_reg (r : REG) :=
+  (reg_index r, reg_offset r, reg_size r).
 Definition bitmask_of_reg (r : REG) : N
   := let '(idx, shift, bitcount) := index_and_shift_and_bitcount_of_reg r in
      N.shiftl (N.ones bitcount) shift.
@@ -222,24 +227,24 @@ Module Byte.
 End Byte.
 
 Record mem_state := { mem_bytes_state :> PositiveMap.t Byte.byte }.
-Definition get_mem_byte (st : mem_state) (addr : Z) : option Byte.byte
+Definition get_mem_byte (st : mem_state) (addr : N) : option Byte.byte
   := match addr with
-     | Zpos p => PositiveMap.find p st.(mem_bytes_state)
+     | Npos p => PositiveMap.find p st.(mem_bytes_state)
      | _ => None
      end.
 Definition set_mem_byte (st : mem_state) (addr : positive) (b : Byte.byte) : mem_state
   := {| mem_bytes_state := PositiveMap.add addr b st.(mem_bytes_state) |}.
-Definition set_mem_byte_error (st : mem_state) (addr : Z) (b : Byte.byte) : option mem_state
+Definition set_mem_byte_error (st : mem_state) (addr : N) (b : Byte.byte) : option mem_state
   := match addr with
-     | Zpos addr => Some (set_mem_byte st addr b)
+     | Npos addr => Some (set_mem_byte st addr b)
      | _ => None
      end.
-Definition set_mem_byte_default (st : mem_state) (addr : Z) (b : Byte.byte) : mem_state
+Definition set_mem_byte_default (st : mem_state) (addr : N) (b : Byte.byte) : mem_state
   := match set_mem_byte_error st addr b with
      | Some st => st
      | None => st
      end.
-Fixpoint get_mem_bytes (st : mem_state) (addr : Z) (nbytes : nat) : option (list Byte.byte)
+Fixpoint get_mem_bytes (st : mem_state) (addr : N) (nbytes : nat) : option (list Byte.byte)
   := match nbytes with
      | O => Some nil
      | S nbytes => match get_mem_byte st addr, get_mem_bytes st (addr + 1) nbytes with
@@ -253,12 +258,12 @@ Fixpoint set_mem_bytes (st : mem_state) (addr : positive) (v : list Byte.byte) :
      | v :: vs => let st := set_mem_byte st addr v in
                   set_mem_bytes st (addr + 1) vs
      end.
-Definition set_mem_bytes_error (st : mem_state) (addr : Z) (v : list Byte.byte) : option mem_state
+Definition set_mem_bytes_error (st : mem_state) (addr : N) (v : list Byte.byte) : option mem_state
   := match addr with
-     | Zpos addr => Some (set_mem_bytes st addr v)
+     | Npos addr => Some (set_mem_bytes st addr v)
      | _ => None
      end.
-Definition set_mem_bytes_default (st : mem_state) (addr : Z) (v : list Byte.byte) : mem_state
+Definition set_mem_bytes_default (st : mem_state) (addr : N) (v : list Byte.byte) : mem_state
   := match set_mem_bytes_error st addr v with
      | Some st => st
      | None => st
@@ -286,14 +291,14 @@ Definition mem_bytes_of_N_error (nbytes : nat) (v : N) : option (list Byte.byte)
      if (carry =? 0)%N then Some bs else None.
 Definition mem_bytes_of_N_masked (nbytes : nat) (v : N) : list Byte.byte
   := let '(bs, carry) := mem_bytes_of_N_split nbytes v in bs.
-Definition get_mem (st : mem_state) (addr : Z) (nbytes : nat) : option N
+Definition get_mem (st : mem_state) (addr : N) (nbytes : nat) : option N
   := option_map mem_bytes_to_N (get_mem_bytes st addr nbytes).
-Definition set_mem_error (st : mem_state) (addr : Z) (nbytes : nat) (v : N) : option mem_state
+Definition set_mem_error (st : mem_state) (addr : N) (nbytes : nat) (v : N) : option mem_state
   := (bs <- mem_bytes_of_N_error nbytes v;
      set_mem_bytes_error st addr bs)%option.
-Definition set_mem_masked_error (st : mem_state) (addr : Z) (nbytes : nat) (v : N) : option mem_state
+Definition set_mem_masked_error (st : mem_state) (addr : N) (nbytes : nat) (v : N) : option mem_state
   := set_mem_bytes_error st addr (mem_bytes_of_N_masked nbytes v).
-Definition set_mem_default (st : mem_state) (addr : Z) (nbytes : nat) (v : N) : mem_state
+Definition set_mem_default (st : mem_state) (addr : N) (nbytes : nat) (v : N) : mem_state
   := Option.value (set_mem_masked_error st addr nbytes v) st.
 
 Record machine_state := { machine_reg_state :> reg_state ; machine_flag_state :> flag_state ; machine_mem_state :> mem_state }.
@@ -303,36 +308,288 @@ Definition update_flag_with (st : machine_state) (f : flag_state -> flag_state) 
   := {| machine_reg_state := st.(machine_reg_state) ; machine_flag_state := f st.(machine_flag_state) ; machine_mem_state := st.(machine_mem_state) |}.
 Definition update_mem_with (st : machine_state) (f : mem_state -> mem_state) : machine_state
   := {| machine_reg_state := st.(machine_reg_state) ; machine_flag_state := st.(machine_flag_state) ; machine_mem_state := f st.(machine_mem_state) |}.
-(*
+
+Definition operand_size (x : ARG) : option N :=
+  match x with
+  | reg r => Some (reg_size r)
+  | mem m => if m.(mem_is_byte)
+             then Some 8
+             else None
+  | const c => None
+  end%N.
+Definition unify_operand_size (a : option N)  (b : option (option N)) : option (option N) :=
+  match a with
+  | None => b
+  | Some s =>
+      match b with
+      | None => None
+      | Some None => Some (Some s)
+      | Some (Some s') => if N.eqb s s' then Some (Some s) else None
+      end
+  end.
+(* None => contradiction, Some None => underconstrained, Some Some s => size s *)
+Definition operation_size (instr : NormalInstruction) : option (option N) :=
+  List.fold_right unify_operand_size (Some None) (List.map operand_size instr.(args)).
+
+Definition DenoteConst (s : N) (a : CONST) : N :=
+  Z.to_N (Z.land a (Z.ones (Z.of_N s))).
+
+Definition DenoteAddress (sa : N) (st : machine_state) (a : MEM) : N :=
+  N.land (N.ones sa) (
+    get_reg st (mem_reg a) +
+    match mem_extra_reg a with Some e => get_reg st e | _ => 0 end +
+    (match mem_offset a with Some z => DenoteConst sa z | _ => 0 end)).
+
+Definition DenoteOperand (sa s : N) (st : machine_state) (a : ARG) : option N :=
+  match a with
+  | reg a => Some (get_reg st a)
+  | mem a => get_mem st (DenoteAddress sa st a) (N.to_nat (N.div s 8))
+  | const a => Some (DenoteConst s a)
+  end.
+
+Definition SetOperand (sa s : N) (st : machine_state) (a : ARG) (v : N) : option machine_state :=
+  match a with
+  | reg a => Some (update_reg_with st (fun rs => set_reg rs a v))
+  | mem a => ms <- set_mem_error st (DenoteAddress sa st a) (N.to_nat (N.div s 8)) v;
+             Some (update_mem_with st (fun _ => ms))
+  | const a => None
+  end.
+
+Definition result_flags s v :=
+  (* note: AF and PF remain undefined *)
+  let fs := set_flag havoc_flags ZF (N.eqb v 0) in
+  let fs := set_flag fs SF (N.testbit v (s-1)) in
+  fs.
+
+Definition signed s z : Z :=
+  Z.land (Z.shiftl 1 (s-1) + z) (Z.ones s) - Z.shiftl 1 (s-1).
+Local Coercion Z.of_N : N >-> Z.
+
+(* NOTE: currently immediate operands are treated as if sign-extension has been
+ * performed ahead of time. *)
 Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstruction) : option machine_state.
+  refine (let sa := 64%N in _).
+  refine (match operation_size instr with Some (Some s) => _ | _ => None end).
   refine match instr.(op), instr.(args) with
-           (* https://www.felixcloutier.com/x86/adc *)
-         | adc, [(reg _ | mem _) as dst; src]
-           => _
-         | adc, _ => None
-         | adcx, _ => _
-         | add, _ => _
-         | adox, _ => _
-         | and, _ => _
-         | clc, _ => _
-         | cmovnz, _ => _
-         | dec, _ => _
-         | imul, _ => _
-         | inc, _ => _
-         | lea, _ => _
-         | mov, _ => _
-         | movzx, _ => _
-         | mulx, _ => _
-         | ret, _ => _
-         | sar, _ => _
-         | sbb, _ => _
-         | setc, _ => _
-         | seto, _ => _
-         | shr, _ => _
-         | shrd, _ => _
-         | sub, _ => _
-         | test, _ => _
-         | xchg, _ => _
-         | xor, _ => _
-         end.
-*)
+  | adc, [(reg _ | mem _) as dst; src] =>
+      v1 <- DenoteOperand sa s st dst;
+      v2 <- DenoteOperand sa s st src;
+      c <- get_flag st CF; let c := N.b2n c in
+      st <- SetOperand sa s st dst (v1 + v2 + c);
+      Some (update_flag_with st (fun fs =>
+        let fs := result_flags s (v1 + v2 + c) in
+        let v := N.land (v1 + v2 + c) (N.ones s) in
+        let fs := set_flag fs CF (negb (v =? v1 + v2 + c)) in
+        set_flag fs OF (negb (signed s v =? signed s v1 + signed s v2 + c)%Z)))
+  | adcx, [dst; src] =>
+      v1 <- DenoteOperand sa s st dst;
+      v2 <- DenoteOperand sa s st src;
+      c <- get_flag st CF; let c := N.b2n c in
+      st <- SetOperand sa s st dst (v1 + v2 + c);
+      Some (update_flag_with st (fun fs =>
+        let v := N.land (v1 + v2 + c) (N.ones s) in
+        set_flag fs CF (negb (v =? v1 + v2 + c))))
+  | add, [dst; src] => 
+      v1 <- DenoteOperand sa s st dst;
+      v2 <- DenoteOperand sa s st src;
+      st <- SetOperand sa s st dst (v1 + v2);
+      Some (update_flag_with st (fun fs =>
+        let fs := result_flags s (v1 + v2) in
+        let v := N.land (v1 + v2) (N.ones s) in
+        let fs := set_flag fs CF (negb (v =? v1 + v2)) in
+        set_flag fs OF (negb (signed s v =? signed s v1 + signed s v2)%Z)))
+  | adox, [dst; src] =>
+      v1 <- DenoteOperand sa s st dst;
+      v2 <- DenoteOperand sa s st src;
+      c <- get_flag st OF; let c := N.b2n c in
+      st <- SetOperand sa s st dst (v1 + v2 + c);
+      Some (update_flag_with st (fun fs =>
+        let v := N.land (v1 + v2 + c) (N.ones s) in
+        set_flag fs OF (negb (v =? v1 + v2 + c))))
+  | and, [dst; src] =>
+      v1 <- DenoteOperand sa s st dst;
+      v2 <- DenoteOperand sa s st src;
+      let v := N.land v1 v2 in
+      Some (update_flag_with st (fun fs =>
+        let fs := result_flags s v in
+        let fs := set_flag fs CF false in
+        let fs := set_flag fs OF false in
+        havoc_flag fs AF
+      ))
+  | clc, [] => Some (update_flag_with st (fun fs =>
+      set_flag fs CF false))
+  | cmovnz, [dst; src] => (* Flags Affected: None *)
+      v <- DenoteOperand sa s st src;
+      zf <- get_flag st ZF;
+      if negb zf
+      then SetOperand sa s st dst v
+      else Some st
+  | dec, [dst] =>
+      v1 <- DenoteOperand sa s st dst;
+      let v := Z.to_N (Z.land (v1 - 1) (Z.ones s)) in
+      st <- SetOperand sa s st dst v;
+      Some (update_flag_with st (fun fs =>
+        let fs := result_flags s v in
+        let fs := set_flag_internal fs CF (get_flag st CF) in
+        set_flag fs OF (negb (signed s v =? signed s v1 - 1)%Z)))
+  | imul, [_] => None (* Note: exists, not supported yet, different CF/OF *)
+  | imul, [dst; src] =>
+      dst <- DenoteOperand sa s st dst;
+      src <- DenoteOperand sa s st src;
+      let v := (signed s dst * signed s src)%Z in
+      let lo := Z.land v (Z.ones s) in
+      st <- SetOperand sa s st dst (Z.to_N lo);
+      Some (update_flag_with st (fun fs =>
+        let c := negb (v =? lo)%Z in
+        set_flag (set_flag havoc_flags OF c) CF c))
+  | imul, [dst; src1; src2] =>
+      src1 <- DenoteOperand sa s st src1;
+      src2 <- DenoteOperand sa s st src2;
+      let v := (signed s src1 * signed s src2)%Z in
+      let lo := Z.land v (Z.ones s) in
+      st <- SetOperand sa s st dst (Z.to_N lo);
+      Some (update_flag_with st (fun fs =>
+        let c := negb (v =? lo)%Z in
+        set_flag (set_flag havoc_flags OF c) CF c))
+  | inc, [dst] =>
+      v1 <- DenoteOperand sa s st dst;
+      st <- SetOperand sa s st dst (v1 + 1);
+      Some (update_flag_with st (fun fs =>
+        let fs := result_flags s (v1 + 1) in
+        let v := N.land (v1 + 1) (N.ones s) in
+        let fs := set_flag_internal fs CF (get_flag st CF) in
+        set_flag fs OF (negb (signed s v =? signed s v1 + 1)%Z)))
+  | lea, [reg dst; mem src] => (* Flags Affected: None *)
+      Some (update_reg_with st (fun rs => set_reg rs dst (DenoteAddress sa st src)))
+  | mov, [dst; src]
+    | movzx, [dst; src] =>
+      v <- DenoteOperand sa s st src;
+      SetOperand sa s st dst v
+  | mulx, [hi; lo; src2] => (* Flags Affected: None *)
+      let src1 : ARG := rdx in (* Note: assumes s=64 *)
+      v1 <- DenoteOperand sa s st src1;
+      v2 <- DenoteOperand sa s st src2;
+      let v := v1 * v2 in
+      st <- SetOperand sa s st lo v;
+      SetOperand sa s st hi (N.shiftr v s)
+  | sar, [dst; cnt] =>
+      v1 <- DenoteOperand sa s st dst;
+      cnt <- DenoteOperand sa s st cnt;
+      let v := Z.to_N (Z.land (Z.shiftr v1 (N.land cnt (s-1))) (Z.ones s)) in
+      st <- SetOperand sa s st dst v;
+      Some (update_flag_with st (fun fs =>
+        if cnt =? 0 then fs else
+        let fs := result_flags s v in
+        let fs := set_flag_internal fs OF
+          (if cnt =? 1 then Some false else None) in
+        let fs := set_flag_internal fs CF
+          (if cnt <? s then Some (N.testbit v1 (cnt-1)) else None) in
+        havoc_flag fs AF))
+  | sbb, [dst; src] =>
+      v1 <- DenoteOperand sa s st dst;
+      v2 <- DenoteOperand sa s st src;
+      c <- get_flag st CF; let c := N.b2n c in
+      let v := Z.to_N (Z.land (Z.of_N v1 - Z.of_N (v2 + c)) (Z.ones (Z.of_N s))) in
+      st <- SetOperand sa s st dst v;
+      Some (update_flag_with st (fun fs =>
+        let fs := result_flags s v in
+        let fs := set_flag fs CF (negb (Z.of_N v =? Z.of_N v1 - (Z.of_N v2 + Z.of_N c))%Z) in
+        set_flag fs OF (negb (signed s v =? signed s v1 - (signed s v2 + Z.of_N c))%Z)))
+  | setc, [dst] => (* Flags Affected: None *)
+      b <- get_flag st CF;
+      SetOperand sa s st dst (N.b2n b)
+  | seto, [dst] => (* Flags Affected: None *)
+      b <- get_flag st OF;
+      SetOperand sa s st dst (N.b2n b)
+  | shr, [dst; cnt] =>
+      v1 <- DenoteOperand sa s st dst;
+      cnt <- DenoteOperand sa s st cnt;
+      let v := N.shiftr v1 (N.land cnt (s-1)) in
+      st <- SetOperand sa s st dst v;
+      Some (update_flag_with st (fun fs =>
+        if cnt =? 0 then fs else
+        let fs := result_flags s v in
+        let fs := set_flag_internal fs OF
+          (if cnt =? 1 then Some (N.testbit v1 (s-1)) else None) in
+        let fs := set_flag_internal fs CF
+          (if cnt <? s then Some (N.testbit v1 (cnt-1)) else None) in
+        havoc_flag fs AF))
+  | shrd, [lo as dst; hi; cnt] =>
+      lo <- DenoteOperand sa s st lo;
+      hi <- DenoteOperand sa s st hi;
+      cnt <- DenoteOperand sa s st cnt;
+      let l := N.lor lo (N.shiftl hi s) in
+      let v := N.shiftr l (N.land cnt (s-1)) in
+      st <- SetOperand sa s st dst v;
+      Some (update_flag_with st (fun fs =>
+        if cnt =? 0 then fs else
+        let fs := result_flags s l in
+        let signchange := xorb (signed s lo <? 0)%Z (signed s v <? 0)%Z in
+        (* Note: IA-32 SDM does not make it clear what sign change is in question *)
+        let fs := set_flag_internal fs OF
+          (if cnt =? 1 then Some signchange else None) in
+        let fs := set_flag fs CF (N.testbit l (cnt-1)) in
+        let fs := havoc_flag fs AF in
+        if cnt <? s then fs else havoc_flags))
+  | sub, [dst; src] =>
+      v1 <- DenoteOperand sa s st dst;
+      v2 <- DenoteOperand sa s st src;
+      let v := Z.to_N (Z.land (Z.of_N v1 - Z.of_N v2) (Z.ones (Z.of_N s))) in
+      st <- SetOperand sa s st dst v;
+      Some (update_flag_with st (fun fs =>
+        let fs := result_flags s v in
+        let fs := set_flag fs CF (negb (Z.of_N v =? Z.of_N v1 - Z.of_N v2)%Z) in
+        set_flag fs OF (negb (signed s v =? signed s v1 - signed s v2)%Z)))
+  | test, [src1; src2] =>
+      v1 <- DenoteOperand sa s st src1;
+      v2 <- DenoteOperand sa s st src2;
+      let v := N.land v1 v2 in
+      Some (update_flag_with st (fun fs =>
+        let fs := result_flags s v in
+        let fs := set_flag fs CF false in
+        let fs := set_flag fs OF false in
+        havoc_flag fs AF
+      ))
+  | xchg, [a; b] => (* Flags Affected: None *)
+      va <- DenoteOperand sa s st a;
+      vb <- DenoteOperand sa s st b;
+      st <- SetOperand sa s st b va;
+      SetOperand sa s st a vb
+  | xor, [dst; src] =>
+      v1 <- DenoteOperand sa s st dst;
+      v2 <- DenoteOperand sa s st src;
+      let v := N.lxor v1 v2 in
+      Some (update_flag_with st (fun fs =>
+        let fs := result_flags s v in
+        let fs := set_flag fs CF false in
+        let fs := set_flag fs OF false in
+        havoc_flag fs AF
+      ))
+
+  | ret, _ => None (* not sure what to do with this ret, maybe exlude it? *)
+
+  | adc, _
+  | adcx, _
+  | add, _
+  | adox, _
+  | and, _
+  | mulx, _
+  | cmovnz, _
+  | setc, _
+  | seto, _
+  | clc, _
+  | dec, _
+  | lea, _
+  | mov, _
+  | movzx, _
+  | imul, _
+  | inc, _
+  | sar, _
+  | sbb, _
+  | shr, _
+  | shrd, _
+  | sub, _
+  | test, _
+  | xor, _
+  | xchg, _ => None
+  end%N%option.
