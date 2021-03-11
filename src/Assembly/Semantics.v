@@ -16,6 +16,8 @@ Require Import Crypto.Assembly.Syntax.
 Require Crypto.Util.Tuple.
 Import ListNotations.
 
+Local Set Primitive Projections.
+
 Local Open Scope list_scope.
 
 Local Set Implicit Arguments.
@@ -361,6 +363,17 @@ Definition result_flags s v :=
   let fs := set_flag fs SF (N.testbit v (s-1)) in
   fs.
 
+Definition SetFlag (st : machine_state) (f : FLAG) (b : bool) :=
+  update_flag_with st (fun fs => set_flag fs f b).
+Definition HavocFlag st f : machine_state :=
+  update_flag_with st (fun fs => havoc_flag fs f).
+Definition HavocFlags st : machine_state :=
+  update_flag_with st (fun _ => havoc_flags).
+Definition HavocFlagsFromResult s st v : machine_state :=
+  update_flag_with st (fun _ => result_flags s v).
+Definition PreserveFlag (st : machine_state) (f : FLAG) st' :=
+  update_flag_with st (fun fs => set_flag_internal fs f (get_flag st' f)).
+
 Definition signed s z : Z :=
   Z.land (Z.shiftl 1 (s-1) + z) (Z.ones s) - Z.shiftl 1 (s-1).
 Local Coercion Z.of_N : N >-> Z.
@@ -371,200 +384,141 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
   refine (let sa := 64%N in _).
   refine (match operation_size instr with Some (Some s) => _ | _ => None end).
   refine match instr.(op), instr.(args) with
-  | adc, [(reg _ | mem _) as dst; src] =>
-      v1 <- DenoteOperand sa s st dst;
-      v2 <- DenoteOperand sa s st src;
-      c <- get_flag st CF; let c := N.b2n c in
-      st <- SetOperand sa s st dst (v1 + v2 + c);
-      Some (update_flag_with st (fun fs =>
-        let fs := result_flags s (v1 + v2 + c) in
-        let v := N.land (v1 + v2 + c) (N.ones s) in
-        let fs := set_flag fs CF (negb (v =? v1 + v2 + c)) in
-        set_flag fs OF (negb (signed s v =? signed s v1 + signed s v2 + c)%Z)))
-  | adcx, [dst; src] =>
-      v1 <- DenoteOperand sa s st dst;
-      v2 <- DenoteOperand sa s st src;
-      c <- get_flag st CF; let c := N.b2n c in
-      st <- SetOperand sa s st dst (v1 + v2 + c);
-      Some (update_flag_with st (fun fs =>
-        let v := N.land (v1 + v2 + c) (N.ones s) in
-        set_flag fs CF (negb (v =? v1 + v2 + c))))
-  | add, [dst; src] => 
-      v1 <- DenoteOperand sa s st dst;
-      v2 <- DenoteOperand sa s st src;
-      st <- SetOperand sa s st dst (v1 + v2);
-      Some (update_flag_with st (fun fs =>
-        let fs := result_flags s (v1 + v2) in
-        let v := N.land (v1 + v2) (N.ones s) in
-        let fs := set_flag fs CF (negb (v =? v1 + v2)) in
-        set_flag fs OF (negb (signed s v =? signed s v1 + signed s v2)%Z)))
-  | adox, [dst; src] =>
-      v1 <- DenoteOperand sa s st dst;
-      v2 <- DenoteOperand sa s st src;
-      c <- get_flag st OF; let c := N.b2n c in
-      st <- SetOperand sa s st dst (v1 + v2 + c);
-      Some (update_flag_with st (fun fs =>
-        let v := N.land (v1 + v2 + c) (N.ones s) in
-        set_flag fs OF (negb (v =? v1 + v2 + c))))
-  | and, [dst; src] =>
-      v1 <- DenoteOperand sa s st dst;
-      v2 <- DenoteOperand sa s st src;
-      let v := N.land v1 v2 in
-      Some (update_flag_with st (fun fs =>
-        let fs := result_flags s v in
-        let fs := set_flag fs CF false in
-        let fs := set_flag fs OF false in
-        havoc_flag fs AF
-      ))
-  | clc, [] => Some (update_flag_with st (fun fs =>
-      set_flag fs CF false))
-  | cmovnz, [dst; src] => (* Flags Affected: None *)
-      v <- DenoteOperand sa s st src;
-      zf <- get_flag st ZF;
-      if negb zf
-      then SetOperand sa s st dst v
-      else Some st
-  | dec, [dst] =>
-      v1 <- DenoteOperand sa s st dst;
-      let v := Z.to_N (Z.land (v1 - 1) (Z.ones s)) in
-      st <- SetOperand sa s st dst v;
-      Some (update_flag_with st (fun fs =>
-        let fs := result_flags s v in
-        let fs := set_flag_internal fs CF (get_flag st CF) in
-        set_flag fs OF (negb (signed s v =? signed s v1 - 1)%Z)))
-  | imul, [_] => None (* Note: exists, not supported yet, different CF/OF *)
-  | imul, [dst; src] =>
-      dst <- DenoteOperand sa s st dst;
-      src <- DenoteOperand sa s st src;
-      let v := (signed s dst * signed s src)%Z in
-      let lo := Z.land v (Z.ones s) in
-      st <- SetOperand sa s st dst (Z.to_N lo);
-      Some (update_flag_with st (fun fs =>
-        let c := negb (v =? lo)%Z in
-        set_flag (set_flag havoc_flags OF c) CF c))
-  | imul, [dst; src1; src2] =>
-      src1 <- DenoteOperand sa s st src1;
-      src2 <- DenoteOperand sa s st src2;
-      let v := (signed s src1 * signed s src2)%Z in
-      let lo := Z.land v (Z.ones s) in
-      st <- SetOperand sa s st dst (Z.to_N lo);
-      Some (update_flag_with st (fun fs =>
-        let c := negb (v =? lo)%Z in
-        set_flag (set_flag havoc_flags OF c) CF c))
-  | inc, [dst] =>
-      v1 <- DenoteOperand sa s st dst;
-      st <- SetOperand sa s st dst (v1 + 1);
-      Some (update_flag_with st (fun fs =>
-        let fs := result_flags s (v1 + 1) in
-        let v := N.land (v1 + 1) (N.ones s) in
-        let fs := set_flag_internal fs CF (get_flag st CF) in
-        set_flag fs OF (negb (signed s v =? signed s v1 + 1)%Z)))
-  | lea, [reg dst; mem src] => (* Flags Affected: None *)
-      Some (update_reg_with st (fun rs => set_reg rs dst (DenoteAddress sa st src)))
-  | mov, [dst; src]
-    | movzx, [dst; src] =>
-      v <- DenoteOperand sa s st src;
-      SetOperand sa s st dst v
-  | mulx, [hi; lo; src2] => (* Flags Affected: None *)
-      let src1 : ARG := rdx in (* Note: assumes s=64 *)
-      v1 <- DenoteOperand sa s st src1;
-      v2 <- DenoteOperand sa s st src2;
-      let v := v1 * v2 in
-      st <- SetOperand sa s st lo v;
-      SetOperand sa s st hi (N.shiftr v s)
-  | sar, [dst; cnt] =>
-      v1 <- DenoteOperand sa s st dst;
-      cnt <- DenoteOperand sa s st cnt;
-      let v := Z.to_N (Z.land (Z.shiftr v1 (N.land cnt (s-1))) (Z.ones s)) in
-      st <- SetOperand sa s st dst v;
-      Some (update_flag_with st (fun fs =>
-        if cnt =? 0 then fs else
-        let fs := result_flags s v in
-        let fs := set_flag_internal fs OF
-          (if cnt =? 1 then Some false else None) in
-        let fs := set_flag_internal fs CF
-          (if cnt <? s then Some (N.testbit v1 (cnt-1)) else None) in
-        havoc_flag fs AF))
-  | sbb, [dst; src] =>
-      v1 <- DenoteOperand sa s st dst;
-      v2 <- DenoteOperand sa s st src;
-      c <- get_flag st CF; let c := N.b2n c in
-      let v := Z.to_N (Z.land (Z.of_N v1 - Z.of_N (v2 + c)) (Z.ones (Z.of_N s))) in
-      st <- SetOperand sa s st dst v;
-      Some (update_flag_with st (fun fs =>
-        let fs := result_flags s v in
-        let fs := set_flag fs CF (negb (Z.of_N v =? Z.of_N v1 - (Z.of_N v2 + Z.of_N c))%Z) in
-        set_flag fs OF (negb (signed s v =? signed s v1 - (signed s v2 + Z.of_N c))%Z)))
-  | setc, [dst] => (* Flags Affected: None *)
-      b <- get_flag st CF;
-      SetOperand sa s st dst (N.b2n b)
-  | seto, [dst] => (* Flags Affected: None *)
-      b <- get_flag st OF;
-      SetOperand sa s st dst (N.b2n b)
-  | shr, [dst; cnt] =>
-      v1 <- DenoteOperand sa s st dst;
-      cnt <- DenoteOperand sa s st cnt;
-      let v := N.shiftr v1 (N.land cnt (s-1)) in
-      st <- SetOperand sa s st dst v;
-      Some (update_flag_with st (fun fs =>
-        if cnt =? 0 then fs else
-        let fs := result_flags s v in
-        let fs := set_flag_internal fs OF
-          (if cnt =? 1 then Some (N.testbit v1 (s-1)) else None) in
-        let fs := set_flag_internal fs CF
-          (if cnt <? s then Some (N.testbit v1 (cnt-1)) else None) in
-        havoc_flag fs AF))
-  | shrd, [lo as dst; hi; cnt] =>
-      lo <- DenoteOperand sa s st lo;
-      hi <- DenoteOperand sa s st hi;
-      cnt <- DenoteOperand sa s st cnt;
-      let l := N.lor lo (N.shiftl hi s) in
-      let v := N.shiftr l (N.land cnt (s-1)) in
-      st <- SetOperand sa s st dst v;
-      Some (update_flag_with st (fun fs =>
-        if cnt =? 0 then fs else
-        let fs := result_flags s l in
-        let signchange := xorb (signed s lo <? 0)%Z (signed s v <? 0)%Z in
-        (* Note: IA-32 SDM does not make it clear what sign change is in question *)
-        let fs := set_flag_internal fs OF
-          (if cnt =? 1 then Some signchange else None) in
-        let fs := set_flag fs CF (N.testbit l (cnt-1)) in
-        let fs := havoc_flag fs AF in
-        if cnt <? s then fs else havoc_flags))
-  | sub, [dst; src] =>
-      v1 <- DenoteOperand sa s st dst;
-      v2 <- DenoteOperand sa s st src;
-      let v := Z.to_N (Z.land (Z.of_N v1 - Z.of_N v2) (Z.ones (Z.of_N s))) in
-      st <- SetOperand sa s st dst v;
-      Some (update_flag_with st (fun fs =>
-        let fs := result_flags s v in
-        let fs := set_flag fs CF (negb (Z.of_N v =? Z.of_N v1 - Z.of_N v2)%Z) in
-        set_flag fs OF (negb (signed s v =? signed s v1 - signed s v2)%Z)))
-  | test, [src1; src2] =>
-      v1 <- DenoteOperand sa s st src1;
-      v2 <- DenoteOperand sa s st src2;
-      let v := N.land v1 v2 in
-      Some (update_flag_with st (fun fs =>
-        let fs := result_flags s v in
-        let fs := set_flag fs CF false in
-        let fs := set_flag fs OF false in
-        havoc_flag fs AF
-      ))
+  | (mov | movzx), [dst; src] => (* Note: unbundle when switching from N to Z *)
+    v <- DenoteOperand sa s st src;
+    SetOperand sa s st dst v
   | xchg, [a; b] => (* Flags Affected: None *)
-      va <- DenoteOperand sa s st a;
-      vb <- DenoteOperand sa s st b;
-      st <- SetOperand sa s st b va;
-      SetOperand sa s st a vb
-  | xor, [dst; src] =>
-      v1 <- DenoteOperand sa s st dst;
-      v2 <- DenoteOperand sa s st src;
-      let v := N.lxor v1 v2 in
-      Some (update_flag_with st (fun fs =>
-        let fs := result_flags s v in
-        let fs := set_flag fs CF false in
-        let fs := set_flag fs OF false in
-        havoc_flag fs AF
-      ))
+    va <- DenoteOperand sa s st a;
+    vb <- DenoteOperand sa s st b;
+    st <- SetOperand sa s st b va;
+    SetOperand sa s st a vb
+  | (setc | seto) as opc, [dst] => (* Flags Affected: None *)
+    let flag := match opc with adcx => CF | _ => OF end in
+    b <- get_flag st flag;
+    SetOperand sa s st dst (N.b2n b)
+  | clc, [] => Some (update_flag_with st (fun fs =>
+    set_flag fs CF false))
+  | cmovnz, [dst; src] => (* Flags Affected: None *)
+    v <- DenoteOperand sa s st src;
+    zf <- get_flag st ZF;
+    if negb zf
+    then SetOperand sa s st dst v
+    else Some st
+
+  | lea, [reg dst; mem src] => (* Flags Affected: None *)
+    Some (update_reg_with st (fun rs => set_reg rs dst (DenoteAddress sa st src)))
+  | (add | adc) as opc, [dst; src] => 
+    c <- (match opc with adc => get_flag st CF | _ => Some false end);
+    let c := N.b2n c in
+    v1 <- DenoteOperand sa s st dst;
+    v2 <- DenoteOperand sa s st src;
+    let v := v1 + v2 + c in
+    st <- SetOperand sa s st dst v;
+    let st := HavocFlagsFromResult s st v in
+    let v := N.land v (N.ones s) in
+    let st := SetFlag st CF (negb (v =? v1 + v2 + c)) in
+    Some (SetFlag st OF (negb (signed s v =? signed s v1 + signed s v2 + c)%Z))
+  | (adcx | adox) as opc, [dst; src] =>
+    let flag := match opc with adcx => CF | _ => OF end in
+    v1 <- DenoteOperand sa s st dst;
+    v2 <- DenoteOperand sa s st src;
+    c <- get_flag st flag; let c := N.b2n c in
+    let v := v1 + v2 + c in
+    st <- SetOperand sa s st dst v;
+    let v := N.land v (N.ones s) in
+    Some (SetFlag st flag (negb (v =? v1 + v2 + c)))
+  | (sbb | sub) as opc, [dst; src] =>
+    c <- (match opc with sbb => get_flag st CF | _ => Some false end);
+    let c := N.b2n c in
+    v1 <- DenoteOperand sa s st dst;
+    v2 <- DenoteOperand sa s st src;
+    let v := Z.to_N (Z.land (Z.of_N v1 - Z.of_N (v2 + c)) (Z.ones (Z.of_N s))) in
+    st <- SetOperand sa s st dst v;
+    let st := HavocFlagsFromResult s st v in
+    let st := SetFlag st CF (negb (Z.of_N v =? Z.of_N v1 - (Z.of_N v2 + Z.of_N c))%Z) in
+    Some (SetFlag st OF (negb (signed s v =? signed s v1 - (signed s v2 + Z.of_N c))%Z))
+  | dec, [dst] =>
+    v1 <- DenoteOperand sa s st dst;
+    let v := Z.to_N (Z.land (v1 - 1) (Z.ones s)) in
+    st <- SetOperand sa s st dst v;
+    let st := PreserveFlag (HavocFlagsFromResult s st v) CF st in
+    Some (SetFlag st OF (negb (signed s v =? signed s v1 - 1)%Z))
+  | inc, [dst] =>
+    v1 <- DenoteOperand sa s st dst;
+    let v := v1 + 1 in
+    st <- SetOperand sa s st dst v;
+    let v := N.land v (N.ones s) in
+    let st := PreserveFlag (HavocFlagsFromResult s st v) CF st in
+    Some (SetFlag st OF (negb (signed s v =? signed s v1 + 1)%Z))
+  | mulx, [hi; lo; src2] => (* Flags Affected: None *)
+    let src1 : ARG := rdx in (* Note: assumes s=64 *)
+    v1 <- DenoteOperand sa s st src1;
+    v2 <- DenoteOperand sa s st src2;
+    let v := v1 * v2 in
+    st <- SetOperand sa s st lo v;
+    SetOperand sa s st hi (N.shiftr v s)
+  | imul, [_] => None (* Note: exists, not supported yet, different CF/OF *)
+  | imul, ([dst as src1; src2] | [dst; src1; src2]) =>
+    src1 <- DenoteOperand sa s st src1;
+    src2 <- DenoteOperand sa s st src2;
+    let v := (signed s src1 * signed s src2)%Z in
+    let lo := Z.land v (Z.ones s) in
+    st <- SetOperand sa s st dst (Z.to_N lo);
+    let c := negb (v =? lo)%Z in
+    Some (SetFlag (SetFlag (HavocFlags st) CF c) OF c)
+  | sar, [dst; cnt] =>
+    v1 <- DenoteOperand sa s st dst;
+    cnt <- DenoteOperand sa s st cnt;
+    let v := Z.to_N (Z.land (Z.shiftr v1 (N.land cnt (s-1))) (Z.ones s)) in
+    st <- SetOperand sa s st dst v;
+    if cnt =? 0 then Some st else
+      let st := HavocFlagsFromResult s st v in
+      let st := if cnt =? 1 then SetFlag st OF false else st in
+      let st := if cnt <? s then SetFlag st CF (N.testbit v1 (cnt-1)) else st in
+      Some (HavocFlag st AF)
+  | shr, [dst; cnt] =>
+    v1 <- DenoteOperand sa s st dst;
+    cnt <- DenoteOperand sa s st cnt;
+    let v := N.shiftr v1 (N.land cnt (s-1)) in
+    st <- SetOperand sa s st dst v;
+    if cnt =? 0 then Some st else
+      let st := HavocFlagsFromResult s st v in
+      let st := if cnt =? 1 then SetFlag st OF (N.testbit v1 (s-1)) else st in
+      let st := if cnt <? s then SetFlag st CF (N.testbit v1 (cnt-1)) else st in
+      Some (HavocFlag st AF)
+  | shrd, [lo as dst; hi; cnt] =>
+    lo <- DenoteOperand sa s st lo;
+    hi <- DenoteOperand sa s st hi;
+    cnt <- DenoteOperand sa s st cnt;
+    let l := N.lor lo (N.shiftl hi s) in
+    let v := N.shiftr l (N.land cnt (s-1)) in
+    st <- SetOperand sa s st dst v;
+    if cnt =? 0 then Some st else
+    if s <? cnt then Some (HavocFlags st) else
+      let st := HavocFlagsFromResult s st l in
+      let signchange := xorb (signed s lo <? 0)%Z (signed s v <? 0)%Z in
+      (* Note: IA-32 SDM does not make it clear what sign change is in question *)
+      let st := if cnt =? 1 then SetFlag st OF signchange else st in
+      let st := SetFlag st CF (N.testbit l (cnt-1)) in
+      Some (HavocFlag st AF)
+  | (and | xor) as opc, [dst; src] =>
+    let f := match opc with and => N.land | _ => N.lxor end in
+    v1 <- DenoteOperand sa s st dst;
+    v2 <- DenoteOperand sa s st src;
+    let v := f v1 v2 in
+    st <- SetOperand sa s st dst v;
+    let st := HavocFlagsFromResult s st v in
+    let st := SetFlag st CF false in
+    let st := SetFlag st OF false in
+    Some (HavocFlag st AF)
+  | test, [src1; src2] =>
+    v1 <- DenoteOperand sa s st src1;
+    v2 <- DenoteOperand sa s st src2;
+    let v := N.land v1 v2 in
+    let st := HavocFlagsFromResult s st v in
+    let st := SetFlag st CF false in
+    let st := SetFlag st OF false in
+    Some (HavocFlag st AF)
 
   | ret, _ => None (* not sure what to do with this ret, maybe exlude it? *)
 
