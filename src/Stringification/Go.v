@@ -31,6 +31,19 @@ Module Go.
        | lines => ["/*"] ++ List.map (fun s => if (String.length s =? 0)%nat then "" else "   " ++ s)%string lines ++ [" */"]
        end%list%string.
 
+  Definition comment_block_extra_newlines (lines : list string) : list string
+    := match lines with
+       | [] => []
+       | [""] => [""]
+       | [line] => ["/* " ++ line ++ " */"]%string
+       | lines => ["/*"]
+                    ++ List.tl (List.flat_map (fun s => ["";
+                                                        if (String.length s =? 0)%nat
+                                                        then ""
+                                                        else "   " ++ s])%string lines)
+                    ++ [" */"]
+       end%list%string.
+
   (* Supported integer bitwidths *)
   Definition stdint_bitwidths : list Z := [8; 16; 32; 64].
   (* supported bitwidth for things like bits.Mul64 *)
@@ -475,7 +488,7 @@ Module Go.
 
   Definition OutputGoAPI : ToString.OutputLanguageAPI :=
     {| ToString.comment_block := comment_block;
-       ToString.comment_file_header_block := comment_block;
+       ToString.comment_file_header_block := comment_block_extra_newlines;
        ToString.ToFunctionLines := @ToFunctionLines;
        ToString.header := @header;
        ToString.footer := fun _ _ _ _ _ _ _ _ => [];
