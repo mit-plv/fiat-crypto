@@ -33,6 +33,7 @@ INSTALLDEFAULTROOT := Crypto
 	c-files bedrock2-files rust-files go-files json-files java-files generated-files \
 	lite-c-files lite-bedrock2-files lite-rust-files lite-go-files lite-json-files lite-java-files lite-generated-files \
 	bedrock2-backend \
+	update-go-pkg-cache \
 	deps \
 	nobigmem print-nobigmem \
 	lite only-heavy printlite \
@@ -783,3 +784,8 @@ printreversedeps::
 
 etc/tscfreq: etc/tscfreq.c
 	$(CC) etc/tscfreq.c -s -Os -o etc/tscfreq
+
+update-go-pkg-cache:
+	GOPROXY=https://proxy.golang.org GO111MODULE=on
+	go get "github.com/mit-plv/fiat-crypto/fiat-go@master"
+	go get "github.com/mit-plv/fiat-crypto/fiat-go@v0.0.0-$$(TZ=UTC git show --quiet --date='format-local:%Y%m%d%H%M%S' --format="%cd" HEAD)-$$(git rev-parse HEAD | cut -c 1-12)"
