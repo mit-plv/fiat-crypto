@@ -23,7 +23,13 @@ Import Stringification.Language.Compilers.ToString.int.Notations.
 
 Module Go.
 
-  Definition comment_block := List.map (fun line => "/* " ++ line ++ " */")%string.
+  Definition comment_block (lines : list string) : list string
+    := match lines with
+       | [] => []
+       | [""] => [""]
+       | [line] => ["/* " ++ line ++ " */"]%string
+       | lines => ["/*"] ++ List.map (fun s => if (String.length s =? 0)%nat then "" else "   " ++ s)%string lines ++ [" */"]
+       end%list%string.
 
   (* Supported integer bitwidths *)
   Definition stdint_bitwidths : list Z := [8; 16; 32; 64].
@@ -451,13 +457,12 @@ Module Go.
     : (list string * ToString.ident_infos) + string :=
     match ExprOfPHOAS do_bounds_check e name_list inbounds with
     | inl (indata, outdata, f) =>
-      inl ((["/*"%string]
-              ++ (List.map (fun s => if (String.length s =? 0)%nat then " *" else (" * " ++ s))%string (comment indata outdata))
-              ++ [" * Input Bounds:"%string]
-              ++ List.map (fun v => " *   "%string ++ v)%string (input_bounds_to_string indata inbounds)
-              ++ [" * Output Bounds:"%string]
-              ++ List.map (fun v => " *   "%string ++ v)%string (bound_to_string outdata outbounds)
-              ++ [" */"%string]
+      inl ((comment_block
+              ((comment indata outdata)
+                 ++ ["Input Bounds:"]
+                 ++ List.map (fun v => "  " ++ v)%string (input_bounds_to_string indata inbounds)
+                 ++ ["Output Bounds:"]
+                 ++ List.map (fun v => "  " ++ v)%string (bound_to_string outdata outbounds))%list%string
               ++ to_function_lines internal_private private prefix name (indata, outdata, f))%list,
            IR.ident_infos.collect_infos f)
     | inr nil =>
