@@ -785,7 +785,11 @@ printreversedeps::
 etc/tscfreq: etc/tscfreq.c
 	$(CC) etc/tscfreq.c -s -Os -o etc/tscfreq
 
+GOPROXY?=https://proxy.golang.org
+GO111MODULE?=on
+export GOPROXY
+export GO111MODULE
 update-go-pkg-cache:
-	GOPROXY=https://proxy.golang.org GO111MODULE=on
 	go get "github.com/mit-plv/fiat-crypto/fiat-go@master"
-	go get "github.com/mit-plv/fiat-crypto/fiat-go@v0.0.0-$$(TZ=UTC git show --quiet --date='format-local:%Y%m%d%H%M%S' --format="%cd" HEAD)-$$(git rev-parse HEAD | cut -c 1-12)"
+	go get "github.com/mit-plv/fiat-crypto/fiat-go@v0.0.0-$(shell TZ=UTC git show --quiet --date='format-local:%Y%m%d%H%M%S' --format="%cd" HEAD)-$(shell git rev-parse HEAD | cut -c 1-12)"
+	curl "https://pkg.go.dev/github.com/mit-plv/fiat-crypto/fiat-go@v0.0.0-$(shell TZ=UTC git show --quiet --date='format-local:%Y%m%d%H%M%S' --format="%cd" HEAD)-$(shell git rev-parse HEAD | cut -c 1-12)" >/dev/null
