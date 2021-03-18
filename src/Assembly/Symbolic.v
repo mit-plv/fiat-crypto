@@ -3,14 +3,6 @@ Require Import Coq.ZArith.ZArith.
 Require Crypto.Util.Tuple.
 Require Import Util.OptionList.
 Module Import List.
-  Definition option_all [A] : list (option A) -> option (list A) := OptionList.Option.List.lift.
-  Lemma option_all_Some [A] ol l (H : @option_all A ol = Some l)
-    : forall i a, nth_error l i = Some a -> nth_error ol i = (Some (Some a)).
-  Admitted.
-  Lemma option_all_None [A] ol (H : @option_all A ol = None)
-    : exists j, nth_error ol j = None.
-  Admitted.
-
   Section IndexOf.
     Context [A] (f : A -> bool).
     Fixpoint indexof (l : list A) : option nat :=
@@ -30,6 +22,19 @@ Module Import List.
       forall j a, j < i -> nth_error l j = Some a -> f a = false.
     Admitted.
   End IndexOf.
+
+
+  Section FoldMap. (* map over a list in the state monad *)
+    Context [A B S] (f : A -> S -> B * S).
+    Fixpoint foldmap (l : list A) (s : S) : list B * S :=
+      match l with
+      | nil => (nil, s)
+      | cons a l =>
+          let b_s := f a s in
+          let bs_s := foldmap l (snd b_s) in
+          (cons (fst b_s) (fst bs_s), snd bs_s)
+      end.
+  End FoldMap.
 End List.
 
 Require Import Crypto.Assembly.Syntax.
@@ -58,6 +63,8 @@ Definition flag_state := Tuple.tuple (option idx) 6.
 Definition mem_state := list (Z * list (option idx)).
 
 Record symbolic_state := { dag_state :> dag ; machine_reg_state :> reg_state ; machine_flag_state :> flag_state ; machine_mem_state :> mem_state }.
+Definition update_dag_with (st : symbolic_state) (f : dag -> dag) : symbolic_state
+  := {| dag_state := f st.(dag_state); machine_reg_state := st.(machine_reg_state) ; machine_flag_state := st.(machine_flag_state) ; machine_mem_state := st.(machine_mem_state) |}.
 Definition update_reg_with (st : symbolic_state) (f : reg_state -> reg_state) : symbolic_state
   := {| dag_state := st.(dag_state); machine_reg_state := f st.(machine_reg_state) ; machine_flag_state := st.(machine_flag_state) ; machine_mem_state := st.(machine_mem_state) |}.
 Definition update_flag_with (st : symbolic_state) (f : flag_state -> flag_state) : symbolic_state
@@ -65,42 +72,38 @@ Definition update_flag_with (st : symbolic_state) (f : flag_state -> flag_state)
 Definition update_mem_with (st : symbolic_state) (f : mem_state -> mem_state) : symbolic_state
   := {| dag_state := st.(dag_state); machine_reg_state := st.(machine_reg_state) ; machine_flag_state := st.(machine_flag_state) ; machine_mem_state := f st.(machine_mem_state) |}.
 
-Section WithDag.
+Section Reveal.
   Context (dag : dag).
-  Definition reveal_idx_step reveal (i : idx) : expr :=
+  Definition reveal_step reveal (i : idx) : expr :=
     match List.nth_error dag (Z.to_nat i) with
     | None => (* bad dag *) ExprRef i
     | Some (op, args) => ExprNode (op, List.map reveal args)
     end.
-  Fixpoint reveal_idx_fuel (n : nat) (i : idx) :=
+  Fixpoint reveal_fuel (n : nat) (i : idx) :=
     match n with
     | O => ExprRef i
-    | S n => reveal_idx_step (reveal_idx_fuel n) i
+    | S n => reveal_step (reveal_fuel n) i
     end.
-  Definition reveal_idx i := reveal_idx_fuel (Z.to_nat i) i.
+  Definition reveal i := reveal_fuel (Z.to_nat i) i.
+End Reveal.
 
-  Fixpoint reveal (e : expr) :=
-    match e with
-    | ExprRef i => reveal_idx i
-    | ExprNode (op, args) => ExprNode (op, List.map reveal args)
-    end.
+Fixpoint merge (e : expr) (d : dag) : idx * dag :=
+  match e with
+  | ExprRef i => (i, d)
+  | ExprNode (op, args) =>
+    let idxs_d := List.foldmap merge args d in
+    let d : dag := snd idxs_d in
+    let n : node idx := (op, fst idxs_d) in
+    match List.indexof (node_eqb Z.eqb n) d with
+    | Some i => (Z.of_nat i, d)
+    | None => (Z.of_nat (length d), List.app d (cons n nil))
+    end
+  end.
 
-  Fixpoint merge (e : expr) : expr :=
-    match e with
-    | ExprRef i => ExprRef i
-    | ExprNode (op, args) =>
-      let args : list expr := List.map merge args in
-      match List.option_all (List.map invert_ExprRef args) with
-      | None => ExprNode (op, args)
-      | Some argidxs =>
-          let n : node idx := (op, argidxs) in
-          match List.indexof (node_eqb Z.eqb n) dag with
-          | Some i => ExprRef (Z.of_nat i)
-          | None => ExprNode (op, args)
-          end
-      end
-    end.
+Lemma reveal_merge : forall d e, reveal (snd (merge e d)) (fst (merge e d)) = e.
+Proof.
+Admitted.
 
-  Lemma reveal_merge : forall e, reveal (merge e) = e.
-  Admitted.
-End WithDag.
+Definition SymexConst (s : N) (a : CONST) (st : symbolic_state) : symbolic_state * idx :=
+  let i_d := merge (ExprNode (const a, nil)) st in
+  (update_dag_with st (fun _ => snd i_d), fst i_d).
