@@ -53,7 +53,7 @@ Definition havoc_flag (st : flag_state) (f : FLAG) : flag_state
 Definition havoc_flags : flag_state
   := (None, None, None, None, None, None).
 
-Definition reg_state := list N.
+Definition reg_state := Tuple.tuple N 16.
 Definition reg_index (r : REG) : nat
   :=  match r with
       |     rax
@@ -166,16 +166,16 @@ Definition bitmask_of_reg (r : REG) : N
      N.shiftl (N.ones bitcount) shift.
 Definition get_reg (st : reg_state) (r : REG) : N
   := let '(idx, shift, bitcount) := index_and_shift_and_bitcount_of_reg r in
-     let rv := nth_default 0%N st idx in
-     N.land (N.shiftr rv shift) (N.ones bitcount).
+  let rv := Tuple.nth_default 0%N idx st in
+  N.land (N.shiftr rv shift) (N.ones bitcount).
 Definition set_reg (st : reg_state) (r : REG) (v : N) : reg_state
   := let '(idx, shift, bitcount) := index_and_shift_and_bitcount_of_reg r in
      let bitmask := bitmask_of_reg r in
-     ListUtil.update_nth
+     Tuple.from_list_default 0%N _ (ListUtil.update_nth
        idx
        (fun curv => N.lor (N.land bitmask (N.shiftl v shift))
                           (N.ldiff curv bitmask))
-       st.
+       (Tuple.to_list _ st)).
 
 (** convenience printing function *)
 Definition widest_register_of_index (n : nat) : REG
@@ -216,7 +216,7 @@ Proof.
   all: try (right; vm_compute; reflexivity).
 Qed.
 Definition annotate_reg_state (st : reg_state) : list (REG * N)
-  := List.map (fun '(n, v) => (widest_register_of_index n, v)) (enumerate st).
+  := List.map (fun '(n, v) => (widest_register_of_index n, v)) (enumerate (Tuple.to_list _ st)).
 Ltac print_reg_state st := let st' := (eval cbv in (annotate_reg_state st)) in idtac st'.
 
 (* Kludge since [byte] isn't present in Coq 8.9 *)
@@ -380,10 +380,10 @@ Local Coercion Z.of_N : N >-> Z.
 
 (* NOTE: currently immediate operands are treated as if sign-extension has been
  * performed ahead of time. *)
-Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstruction) : option machine_state.
-  refine (let sa := 64%N in _).
-  refine (match operation_size instr with Some (Some s) => _ | _ => None end).
-  refine match instr.(op), instr.(args) with
+Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstruction) : option machine_state :=
+  let sa := 64%N in
+  match operation_size instr with Some (Some s) =>
+  match instr.(op), instr.(args) with
   | (mov | movzx), [dst; src] => (* Note: unbundle when switching from N to Z *)
     v <- DenoteOperand sa s st src;
     SetOperand sa s st dst v
@@ -546,4 +546,4 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
   | test, _
   | xor, _
   | xchg, _ => None
-  end%N%option.
+ end | _ => None end%N%option.
