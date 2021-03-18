@@ -61,6 +61,7 @@ src/ArithmeticCPS/WordByWordMontgomery.v
 src/Assembly/Equality.v
 src/Assembly/Parse.v
 src/Assembly/Semantics.v
+src/Assembly/Symbolic.v
 src/Assembly/Syntax.v
 src/Assembly/Parse/TestAsm.v
 src/Assembly/Parse/Examples/fiat_25519_carry_square_optimised.v

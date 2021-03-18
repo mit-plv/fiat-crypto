@@ -147,17 +147,6 @@ Definition reg_offset (r : REG) : N :=
       |(ah      | ch      | dh      | bh      )
        => 8
       end.
-Definition reg_size (r : REG) : N :=
-      match r with
-      |(    rax |     rcx |     rdx |     rbx | rsp  | rbp  | rsi  | rdi  | r8  | r9  | r10  | r11  | r12  | r13  | r14  | r15 )
-       => 64
-      |(    eax |     ecx |     edx |     ebx | esp  | ebp  | esi  | edi  | r8d | r9d | r10d | r11d | r12d | r13d | r14d | r15d)
-       => 32
-      |(     ax |      cx |      dx |      bx |  sp  |  bp  |  si  |  di  | r8w | r9w | r10w | r11w | r12w | r13w | r14w | r15w)
-       => 16
-      |(ah | al | ch | cl | dh | dl | bh | bl |  spl |  bpl |  sil |  dil | r8b | r9b | r10b | r11b | r12b | r13b | r14b | r15b)
-       => 8
-      end.
 
 Definition index_and_shift_and_bitcount_of_reg (r : REG) :=
   (reg_index r, reg_offset r, reg_size r).
@@ -311,28 +300,6 @@ Definition update_flag_with (st : machine_state) (f : flag_state -> flag_state) 
 Definition update_mem_with (st : machine_state) (f : mem_state -> mem_state) : machine_state
   := {| machine_reg_state := st.(machine_reg_state) ; machine_flag_state := st.(machine_flag_state) ; machine_mem_state := f st.(machine_mem_state) |}.
 
-Definition operand_size (x : ARG) : option N :=
-  match x with
-  | reg r => Some (reg_size r)
-  | mem m => if m.(mem_is_byte)
-             then Some 8
-             else None
-  | const c => None
-  end%N.
-Definition unify_operand_size (a : option N)  (b : option (option N)) : option (option N) :=
-  match a with
-  | None => b
-  | Some s =>
-      match b with
-      | None => None
-      | Some None => Some (Some s)
-      | Some (Some s') => if N.eqb s s' then Some (Some s) else None
-      end
-  end.
-(* None => contradiction, Some None => underconstrained, Some Some s => size s *)
-Definition operation_size (instr : NormalInstruction) : option (option N) :=
-  List.fold_right unify_operand_size (Some None) (List.map operand_size instr.(args)).
-
 Definition DenoteConst (s : N) (a : CONST) : N :=
   Z.to_N (Z.land a (Z.ones (Z.of_N s))).
 
@@ -340,7 +307,7 @@ Definition DenoteAddress (sa : N) (st : machine_state) (a : MEM) : N :=
   N.land (N.ones sa) (
     get_reg st (mem_reg a) +
     match mem_extra_reg a with Some e => get_reg st e | _ => 0 end +
-    (match mem_offset a with Some z => DenoteConst sa z | _ => 0 end)).
+    match mem_offset a with Some z => DenoteConst sa z | _ => 0 end).
 
 Definition DenoteOperand (sa s : N) (st : machine_state) (a : ARG) : option N :=
   match a with
