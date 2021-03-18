@@ -3,6 +3,14 @@ Require Import Coq.ZArith.ZArith.
 Require Crypto.Util.Tuple.
 Require Import Util.OptionList.
 Module Import List.
+  Definition option_all [A] : list (option A) -> option (list A) := OptionList.Option.List.lift.
+  Lemma option_all_Some [A] ol l (H : @option_all A ol = Some l)
+    : forall i a, nth_error l i = Some a -> nth_error ol i = (Some (Some a)).
+  Admitted.
+  Lemma option_all_None [A] ol (H : @option_all A ol = None)
+    : exists j, nth_error ol j = None.
+  Admitted.
+
   Section IndexOf.
     Context [A] (f : A -> bool).
     Fixpoint indexof (l : list A) : option nat :=
@@ -40,44 +48,32 @@ End List.
 Require Import Crypto.Assembly.Syntax.
 Definition idx := Z.
 Local Set Boolean Equality Schemes.
-Variant op := const (_ : Z) | add (width : Z) (* | ... *).
+Variant opname := input (_:nat) | const (_ : Z) | add | sub | slice (lo sz : Z) | set_slice (lo sz : Z)(* | ... *).
+Class OperationSize := operation_size : Z.
+Definition op : Set := opname * OperationSize.
 
-Definition node (arg : Set) : Set := op * list arg.
+Definition node (A : Set) : Set := op * list A.
 
 Local Unset Elimination Schemes.
 Inductive expr : Set :=
 | ExprRef (_ : idx)
-| ExprNode (_ : node expr).
-Local Set Elimination Schemes.
-(* Note: need custom induction principle *)
-Definition invert_ExprRef (e : expr) :=
+| ExprApp (_ : node expr).
+  (* Note: need custom induction principle *)
+Local Unset Elimination Schemes.
+Definition invert_ExprRef (e : expr) : option idx :=
   match e with ExprRef i => Some i | _ => None end.
 
-Definition node_eqb [arg : Set] (arg_eqb : arg -> arg -> bool) : node arg -> node arg -> bool := 
-  Prod.prod_beq _ _ op_beq (ListUtil.list_beq _ arg_eqb).
+Definition node_eqb [A : Set] (arg_eqb : A -> A -> bool) : node A -> node A -> bool := 
+  Prod.prod_beq _ _ (Prod.prod_beq _ _ opname_beq Z.eqb) (ListUtil.list_beq _ arg_eqb).
 
 Definition dag := list (node idx).
-
-Definition reg_state := Tuple.tuple (option idx) 16.
-Definition flag_state := Tuple.tuple (option idx) 6.
-Definition mem_state := list (Z * list (option idx)).
-
-Record symbolic_state := { dag_state :> dag ; machine_reg_state :> reg_state ; machine_flag_state :> flag_state ; machine_mem_state :> mem_state }.
-Definition update_dag_with (st : symbolic_state) (f : dag -> dag) : symbolic_state
-  := {| dag_state := f st.(dag_state); machine_reg_state := st.(machine_reg_state) ; machine_flag_state := st.(machine_flag_state) ; machine_mem_state := st.(machine_mem_state) |}.
-Definition update_reg_with (st : symbolic_state) (f : reg_state -> reg_state) : symbolic_state
-  := {| dag_state := st.(dag_state); machine_reg_state := f st.(machine_reg_state) ; machine_flag_state := st.(machine_flag_state) ; machine_mem_state := st.(machine_mem_state) |}.
-Definition update_flag_with (st : symbolic_state) (f : flag_state -> flag_state) : symbolic_state
-  := {| dag_state := st.(dag_state); machine_reg_state := st.(machine_reg_state) ; machine_flag_state := f st.(machine_flag_state) ; machine_mem_state := st.(machine_mem_state) |}.
-Definition update_mem_with (st : symbolic_state) (f : mem_state -> mem_state) : symbolic_state
-  := {| dag_state := st.(dag_state); machine_reg_state := st.(machine_reg_state) ; machine_flag_state := st.(machine_flag_state) ; machine_mem_state := f st.(machine_mem_state) |}.
 
 Section Reveal.
   Context (dag : dag).
   Definition reveal_step reveal (i : idx) : expr :=
     match List.nth_error dag (Z.to_nat i) with
     | None => (* bad dag *) ExprRef i
-    | Some (op, args) => ExprNode (op, List.map reveal args)
+    | Some (op, args) => ExprApp (op, List.map reveal args)
     end.
   Fixpoint reveal_fuel (n : nat) (i : idx) :=
     match n with
@@ -90,7 +86,7 @@ End Reveal.
 Fixpoint merge (e : expr) (d : dag) : idx * dag :=
   match e with
   | ExprRef i => (i, d)
-  | ExprNode (op, args) =>
+  | ExprApp (op, args) =>
     let idxs_d := List.foldmap merge args d in
     let d : dag := snd idxs_d in
     let n : node idx := (op, fst idxs_d) in
@@ -104,6 +100,178 @@ Lemma reveal_merge : forall d e, reveal (snd (merge e d)) (fst (merge e d)) = e.
 Proof.
 Admitted.
 
-Definition SymexConst (s : N) (a : CONST) (st : symbolic_state) : symbolic_state * idx :=
-  let i_d := merge (ExprNode (const a, nil)) st in
-  (update_dag_with st (fun _ => snd i_d), fst i_d).
+Definition reg_state := Tuple.tuple (option idx) 16.
+Definition flag_state := Tuple.tuple (option idx) 6.
+Definition mem_state := list (idx * list (option idx)).
+
+Definition get_flag (st : flag_state) (f : FLAG) : option idx
+  := let '(cfv, pfv, afv, zfv, sfv, ofv) := st in
+     match f with
+     | CF => cfv
+     | PF => pfv
+     | AF => afv
+     | ZF => zfv
+     | SF => sfv
+     | OF => ofv
+     end.
+Definition set_flag_internal (st : flag_state) (f : FLAG) (v : option idx) : flag_state
+  := let '(cfv, pfv, afv, zfv, sfv, ofv) := st in
+     (match f with CF => v | _ => cfv end,
+      match f with PF => v | _ => pfv end,
+      match f with AF => v | _ => afv end,
+      match f with ZF => v | _ => zfv end,
+      match f with SF => v | _ => sfv end,
+      match f with OF => v | _ => ofv end).
+Definition set_flag (st : flag_state) (f : FLAG) (v : idx) : flag_state
+  := set_flag_internal st f (Some v).
+Definition havoc_flag (st : flag_state) (f : FLAG) : flag_state
+  := set_flag_internal st f None.
+Definition havoc_flags : flag_state
+  := (None, None, None, None, None, None).
+
+Definition get_reg (st : reg_state) (ri : nat) : option idx
+  := Tuple.nth_default None ri st.
+Definition set_reg (st : reg_state) ri (i : idx) : reg_state
+  := Tuple.from_list_default None _ (ListUtil.set_nth
+       ri
+       (Some i)
+       (Tuple.to_list _ st)).
+
+Record symbolic_state := { dag_state :> dag ; symbolic_reg_state :> reg_state ; symbolic_flag_state :> flag_state ; symbolic_mem_state :> mem_state }.
+Definition update_dag_with (st : symbolic_state) (f : dag -> dag) : symbolic_state
+  := {| dag_state := f st.(dag_state); symbolic_reg_state := st.(symbolic_reg_state) ; symbolic_flag_state := st.(symbolic_flag_state) ; symbolic_mem_state := st.(symbolic_mem_state) |}.
+Definition update_reg_with (st : symbolic_state) (f : reg_state -> reg_state) : symbolic_state
+  := {| dag_state := st.(dag_state); symbolic_reg_state := f st.(symbolic_reg_state) ; symbolic_flag_state := st.(symbolic_flag_state) ; symbolic_mem_state := st.(symbolic_mem_state) |}.
+Definition update_flag_with (st : symbolic_state) (f : flag_state -> flag_state) : symbolic_state
+  := {| dag_state := st.(dag_state); symbolic_reg_state := st.(symbolic_reg_state) ; symbolic_flag_state := f st.(symbolic_flag_state) ; symbolic_mem_state := st.(symbolic_mem_state) |}.
+Definition update_mem_with (st : symbolic_state) (f : mem_state -> mem_state) : symbolic_state
+  := {| dag_state := st.(dag_state); symbolic_reg_state := st.(symbolic_reg_state) ; symbolic_flag_state := st.(symbolic_flag_state) ; symbolic_mem_state := f st.(symbolic_mem_state) |}.
+
+Local Unset Elimination Schemes.
+Inductive pre_expr : Set :=
+| PreFlag (_:FLAG)
+| PreReg (_:nat) (* 0 <= i < 16 *)
+| PreMem {s: OperationSize} (_ : pre_expr)
+| PreApp (_:node pre_expr).
+(* note: need custom induction principle *)
+Local Set Elimination Schemes.
+
+Require Import Crypto.Util.Option Crypto.Util.Notations.
+
+Import ListNotations.
+
+Section WithSymbolicState.
+  Context (st : symbolic_state).
+
+  Definition simplify (e : expr) : expr := snd (st, e). (* note: from Python script *)
+
+  Definition load (sa : Z) (e : expr) : option expr :=
+    match
+      Option.List.map (fun array =>
+        let base := fst array in
+        match simplify (ExprApp ((sub, sa), [e; ExprRef base])) with
+        | ExprApp ((const offset, _), nil) =>
+            if (offset mod 8 =? 0)%Z then (* note: generalize mem repr? *)
+            match nth_error (snd array) (Z.to_nat (offset/8)) with
+            | Some (Some i) => 
+                Some (ExprRef i)
+            | _ => None
+            end
+            else None
+        | _ => None
+        end)
+      st.(symbolic_mem_state)
+    with
+    | nil => None
+    | cons r nil => Some r
+    | _ => None (* multiple arrays match same address -- contradiction *)
+    end.
+
+  Definition unchecked_store (sa : Z) (e : expr) (v : idx) : symbolic_state :=
+    update_mem_with st (List.map (fun array =>
+      let base := fst array in
+      match simplify (ExprApp ((sub, sa), [e; ExprRef base])) with
+      | ExprApp ((const offset, _), nil) =>
+          if (offset mod 8 =? 0)%Z (* note: generalize mem repr? *)
+          then (base, ListUtil.set_nth (Z.to_nat (offset/8)) (Some v) (snd array))
+          else array
+      | _ => array
+      end)).
+      
+  Fixpoint symeval_pre (r : pre_expr) : option expr :=
+    option_map simplify
+    match r with
+    | PreFlag f => i <- get_flag st f; Some (ExprRef i)
+    | PreReg r =>
+        match List.nth_error (Tuple.to_list _ st.(symbolic_reg_state)) r with
+        | Some (Some i) => Some (ExprRef i)
+        | _ => None
+        end
+    | PreMem s e =>
+        addr <- symeval_pre e;
+        load s addr
+    | PreApp (op, args) =>
+        args <- List.option_all (List.map symeval_pre args);
+        Some (ExprApp (op, args))
+    end.
+End WithSymbolicState.
+
+Class AddressSize := address_size : Z.
+Definition PreAddress {sa : AddressSize} (a : MEM) : pre_expr :=
+  PreApp (add, sa,
+  [PreApp (add, sa,
+   [PreReg (reg_index (mem_reg a));
+   match mem_extra_reg a with
+   | Some _ => PreReg (reg_index (mem_reg a))
+   | None => PreApp ((const 0, sa), nil)
+   end]);
+   PreApp ((const match mem_offset a with Some z => z | _ => 0 end, sa), nil)]).
+
+Section WithOperationSize.
+  Context {sa : AddressSize} {s : OperationSize}.
+  Definition PreOperand (a : ARG) : pre_expr :=
+    match a with
+    | reg a => PreReg (reg_index a)
+    | mem a => PreMem (s:=s) (PreAddress (sa:=sa) a)
+    | Syntax.const a => PreApp ((const a, s), nil)
+  end.
+  Definition symeval st a := symeval_pre st (PreOperand a).
+  Definition symaddr st a := symeval_pre st (PreAddress a).
+
+  Definition SetOperand (st : symbolic_state) (a : ARG) (e : expr) : option symbolic_state :=
+    match a with
+    | Syntax.const a => None
+    | mem a =>
+        old <- load st sa e;
+        let e := if mem_is_byte a then simplify st (ExprApp ((set_slice 0 8, 64%Z), [old ;e])) else e in
+        let i_dag := merge e st.(dag_state) in
+        let i := fst i_dag in
+        let st := update_dag_with st (fun _ => snd i_dag) in
+        addr <- symeval st a;
+        Some (unchecked_store st sa addr i)
+    | reg a =>
+        let '(a, lo, sz) := index_and_shift_and_bitcount_of_reg a in
+        e <- if N.eqb sz 64 then Some e else
+             old <- get_reg st a;
+             Some (simplify st (ExprApp ((set_slice (Z.of_N lo) (Z.of_N sz), 64%Z), [ExprRef old; e])));
+        let i_dag := merge e st.(dag_state) in
+        let i := fst i_dag in
+        let st := update_dag_with st (fun _ => snd i_dag) in
+        Some (update_reg_with st (fun rs => set_reg rs a i))
+    end.
+
+End WithOperationSize.
+
+Definition SymexNormalInstruction (st : symbolic_state) (instr : NormalInstruction) : option symbolic_state :=
+  let sa : AddressSize := 64%Z in
+  match Syntax.operation_size instr with Some (Some s) =>
+  let s : OperationSize := Z.of_N s in
+  match instr.(Syntax.op), instr.(args) with
+  | mov, [dst; src] => (* Note: unbundle when switching from N to Z *)
+    e <- symeval st src;
+    SetOperand st dst e
+  | lea, [dst; mem src] => (* Flags Affected: None *)
+    e <- symaddr st src;
+    SetOperand st dst e
+  | _, _ => None
+ end | _ => None end%N%option.
