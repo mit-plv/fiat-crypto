@@ -1,3 +1,4 @@
+Require Import Coq.micromega.Lia.
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Util.Tuple.
 Require Import Crypto.Util.Decidable.
@@ -114,8 +115,8 @@ Ltac inversion_zbounded := repeat inversion_zbounded_step.
 Lemma is_bounded_by'_zbounded {r} (v : zbounded r) : lower r <= upper r -> is_bounded_by' None r v.
 Proof.
   destruct v as [v H]; cbv [is_bounded_by']; simpl.
-  apply Bool.orb_true_iff in H; destruct H; split_andb; Z.ltb_to_lt; try lia.
-  intros; repeat apply conj; trivial.
+  apply Bool.orb_true_iff in H; destruct H; split_andb; Z.ltb_to_lt; try lia;
+    intros; repeat apply conj; trivial.
 Qed.
 
 Global Instance dec_eq_zrange {r} : DecidableRel (@eq (zbounded r)) | 10.

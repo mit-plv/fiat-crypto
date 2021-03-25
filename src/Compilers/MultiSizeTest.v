@@ -1,4 +1,5 @@
 Require Import Coq.micromega.Lia.
+Require Import Coq.Arith.Arith.
 Require Import Crypto.Compilers.SmartMap.
 
 Set Implicit Arguments.

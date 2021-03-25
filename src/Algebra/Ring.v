@@ -1,6 +1,7 @@
 Require Coq.setoid_ring.Ncring.
 Require Coq.setoid_ring.Cring.
 Require Import Coq.Classes.Morphisms.
+Require Import Coq.micromega.Lia.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.OnSubterms.
 Require Import Crypto.Util.Tactics.Revert.

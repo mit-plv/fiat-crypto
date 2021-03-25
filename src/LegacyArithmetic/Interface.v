@@ -1,4 +1,5 @@
 (*** Interface for bounded arithmetic *)
+Require Import Coq.micromega.Lia.
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Util.ZUtil.Notations.
 

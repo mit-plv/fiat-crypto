@@ -3,6 +3,8 @@ Require Import Coq.Numbers.Natural.Peano.NPeano Coq.micromega.Lia.
 Require Import Coq.Classes.Morphisms.
 Require Import Coq.Relations.Relation_Definitions.
 Require Import Coq.micromega.Lia.
+Require Import Coq.Arith.Arith.
+Require Import Coq.NArith.NArith.
 Import Nat.
 
 Scheme Equality for nat.

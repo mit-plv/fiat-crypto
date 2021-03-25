@@ -164,9 +164,9 @@ Proof.
                    | [ |- context[interpToZ ?x] ]
                      => generalize dependent (interpToZ x); clear x; intros
                    | [ |- _ /\ True ] => split; [ | tauto ]
-                   end ].
-  { apply (@ZRange.monotone_four_corners true true Z.add _); split; auto. }
-  { apply (@ZRange.monotone_four_corners true false Z.sub _); split; auto. }
+                   end ];
+    try solve [ apply (@ZRange.monotone_four_corners true true Z.add _); split; auto
+              | apply (@ZRange.monotone_four_corners true false Z.sub _); split; auto ].
   { handle_mul. }
   { apply (ZRange.monotone_four_corners_genb Z.shiftl); try (split; auto);
       [ eexists; apply Z.shiftl_le_Proper1
@@ -188,10 +188,10 @@ Proof.
                    | rewriter_t
                    | progress Zarith_land_lor_t_step
                    | solve [ split_min_max; try lia; try Zarith_land_lor_t_step ] ]. }
-  { repeat first [ progress destruct_head Bounds.t
+  (*{ repeat first [ progress destruct_head Bounds.t
                  | progress simpl in *
                  | progress split_min_max
-                 | lia ]. }
+                 | lia ]. }*)
   { cbv [Bounds.id_with_alt];
       break_innermost_match; simpl in *; Z.ltb_to_lt; subst;
         split; assumption. }

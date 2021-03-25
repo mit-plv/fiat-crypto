@@ -1,6 +1,7 @@
 (*** Bounded ℤ-Like Types *)
 (** This file specifies a ℤ-like type of bounded integers, with
     operations for Montgomery Reduction and Barrett Reduction. *)
+Require Import Coq.micromega.Lia.
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.Tactics.BreakMatch.

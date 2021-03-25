@@ -1,3 +1,4 @@
+Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Util.FixCoqMistakes.
 Require Import Crypto.Spec.EdDSA bbv.WordScope.
 Require Import Coq.Classes.Morphisms Coq.Relations.Relation_Definitions.
@@ -231,7 +232,7 @@ Section EdDSA.
       dlet r := SRepDecModL (H _ (p ++ msg)) in
       dlet R := SRepERepMul r ErepB in
       dlet S := SRepAdd r (SRepMul (SRepDecModL (H _ (ERepEnc R ++ pk ++ msg))) s) in
-      ERepEnc R ++ SRepEnc S. 
+      ERepEnc R ++ SRepEnc S.
 
     Lemma Z_l_nonzero : Z.pos l <> 0%Z. discriminate. Qed.
 
