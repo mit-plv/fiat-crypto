@@ -52,9 +52,9 @@ Hypothesis prime_p : prime p.
 Hypothesis neq_p_2 : p <> 2. (* Euler's Criterion is also provable with p = 2, but we do not need it and are lazy.*)
 Hypothesis x_id : x * 2 + 1 = p.
 
-Lemma lt_1_p : 1 < p. Proof using prime_p. Z.prime_bound. Qed.
-Lemma x_pos: 0 < x. Proof using prime_p x_id. Z.prime_bound. Qed.
-Lemma x_nonneg: 0 <= x. Proof using prime_p x_id. Z.prime_bound. Qed.
+Lemma lt_1_p : 1 < p. Proof using prime_p. clear -prime_p. Z.prime_bound. Qed.
+Lemma x_pos: 0 < x. Proof using prime_p x_id. clear -prime_p x_id. Z.prime_bound. Qed.
+Lemma x_nonneg: 0 <= x. Proof using prime_p x_id. clear -prime_p x_id. Z.prime_bound. Qed.
 
 Lemma x_id_inv : x = (p - 1) / 2.
 Proof using x_id.
@@ -87,6 +87,7 @@ Qed.
 Lemma fermat_little: forall a (a_nonzero : a mod p <> 0),
   a ^ (p - 1) mod p = 1.
 Proof using prime_p.
+  clear -prime_p.
   intros a a_nonzero.
   assert (rel_prime a p). {
     apply rel_prime_mod_rev; try Z.prime_bound.
@@ -102,6 +103,7 @@ Qed.
 
 Lemma fermat_inv : forall a, a mod p <> 0 -> ((a^(p-2) mod p) * a) mod p = 1.
 Proof using prime_p.
+  clear -prime_p.
   intros a H.
   pose proof (prime_ge_2 _ prime_p).
   rewrite Zmult_mod_idemp_l.

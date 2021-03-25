@@ -1,4 +1,4 @@
-Require Import Coq.ZArith.BinInt Coq.micromega.Lia Crypto.Util.ZUtil.Peano.
+Require Import Coq.ZArith.BinInt Coq.ZArith.ZArith Coq.micromega.Lia Crypto.Util.ZUtil.Peano.
 Require Import Coq.Classes.Morphisms.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Algebra.Hierarchy Crypto.Algebra.Group.

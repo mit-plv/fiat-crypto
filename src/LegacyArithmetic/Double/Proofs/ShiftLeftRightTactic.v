@@ -1,3 +1,4 @@
+Require Import Coq.micromega.Lia.
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.LegacyArithmetic.Interface.
 Require Import Crypto.Util.ZUtil.Notations.

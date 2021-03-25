@@ -1,3 +1,4 @@
+Require Import Coq.ZArith.ZArith.
 Require Import Coq.micromega.Lia Coq.micromega.Psatz.
 Require Import Coq.PArith.BinPos Coq.Lists.List.
 Require Import Crypto.Compilers.Named.Context.

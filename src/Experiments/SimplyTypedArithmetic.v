@@ -207,10 +207,11 @@ Module Positional. Section Positional.
   Local Ltac push := autorewrite with push_eval push_map distr_length
     push_flat_map push_fold_right push_nth_default cancel_pair natsimplify.
   Definition zeros n : list Z := repeat 0 n.
-  Lemma length_zeros n : length (zeros n) = n. Proof. cbv [zeros]; distr_length. Qed.
+  Lemma length_zeros n : length (zeros n) = n. Proof using Type. clear. cbv [zeros]; distr_length. Qed.
   Hint Rewrite length_zeros : distr_length.
   Lemma eval_zeros n : eval n (zeros n) = 0.
-  Proof.
+  Proof using Type.
+    clear.
     cbv [eval Associational.eval to_associational zeros].
     rewrite <- (seq_length n 0) at 2.
     generalize dependent (List.seq 0 n); intro xs.
@@ -218,12 +219,13 @@ Module Positional. Section Positional.
   Definition add_to_nth i x (ls : list Z) : list Z
     := ListUtil.update_nth i (fun y => x + y) ls.
   Lemma length_add_to_nth i x ls : length (add_to_nth i x ls) = length ls.
-  Proof. cbv [add_to_nth]; distr_length. Qed.
+  Proof using Type. clear. cbv [add_to_nth]; distr_length. Qed.
   Hint Rewrite length_add_to_nth : distr_length.
   Lemma eval_add_to_nth (n:nat) (i:nat) (x:Z) (xs:list Z) (H:(i<length xs)%nat)
         (Hn : length xs = n) (* N.B. We really only need [i < Nat.min n (length xs)] *) :
     eval n (add_to_nth i x xs) = weight i * x + eval n xs.
-  Proof.
+  Proof using Type.
+    clear -H Hn.
     subst n.
     cbv [eval to_associational add_to_nth].
     rewrite ListUtil.combine_update_nth_r at 1.
@@ -250,9 +252,9 @@ Module Positional. Section Positional.
       i.
 
   Lemma place_in_range (t:Z*Z) (n:nat) : (fst (place t n) < S n)%nat.
-  Proof. induction n; cbv [place nat_rect] in *; break_match; autorewrite with cancel_pair; try lia. Qed.
+  Proof using Type. clear. induction n; cbv [place nat_rect] in *; break_match; autorewrite with cancel_pair; try lia. Qed.
   Lemma weight_place t i : weight (fst (place t i)) * snd (place t i) = fst t * snd t.
-  Proof. induction i; cbv [place nat_rect] in *; break_match; push;
+  Proof using weight_nz weight_0. clear -weight_nz weight_0. induction i; cbv [place nat_rect] in *; break_match; push;
     repeat match goal with |- context[?a/?b] =>
       unique pose proof (Z_div_exact_full_2 a b ltac:(auto) ltac:(auto))
            end; nsatz.                                        Qed.
@@ -1509,7 +1511,7 @@ Module Rows.
         { rewrite Z.div_add' by auto; push. }
       Qed.
 
-      Hint Rewrite (@Positional.length_zeros weight) : distr_length.
+      Hint Rewrite (@Positional.length_zeros) : distr_length.
       Hint Rewrite (@Positional.eval_zeros weight) using auto : push_eval.
 
       Lemma flatten_div_mod inp n :

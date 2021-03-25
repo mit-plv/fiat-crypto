@@ -1,3 +1,4 @@
+Require Import Coq.micromega.Lia.
 Require Import Coq.ZArith.ZArith Coq.ZArith.BinIntDef.
 Require Import Coq.QArith.QArith_base.
 Require Import Coq.Lists.List. Import ListNotations.
