@@ -271,7 +271,7 @@ Module Positional. Section Positional.
   pose proof place_in_range a (pred n); try lia; try nsatz;
   apply fold_right_invariant; cbv [zeros add_to_nth];
   intros; rewrite ?map_length, ?List.repeat_length, ?seq_length, ?length_update_nth;
-  try lia.                                                  Qed.
+  try lia; destruct n; cbn [Init.Nat.pred] in *; try lia.   Qed.
   Hint Rewrite @eval_from_associational : push_eval.
   Lemma length_from_associational n p : length (from_associational n p) = n.
   Proof. cbv [from_associational Let_In]. apply fold_right_invariant; intros; distr_length. Qed.

@@ -82,7 +82,7 @@ Hint Rewrite
 
 Hint Extern 1 => progress autorewrite with distr_length in * : distr_length.
 Ltac distr_length := autorewrite with distr_length in *;
-  try solve [simpl in *; lia].
+  try solve [simpl in *; (idtac + exfalso); lia].
 
 Module Export List.
   Local Set Implicit Arguments.
