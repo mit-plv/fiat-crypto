@@ -27,14 +27,14 @@ Section Compile.
         {tr mem locals functions} x y:
     let v := bin_model (feval x) (feval y) in
     forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
-      Rin Rout x_ptr x_var y_ptr y_var out_ptr out_var,
+      Rin Rout out x_ptr x_var y_ptr y_var out_ptr out_var,
 
       (_: spec_of name) functions ->
       bounded_by bin_xbounds x ->
       bounded_by bin_ybounds y ->
 
       map.get locals out_var = Some out_ptr ->
-      (Placeholder out_ptr * Rout)%sep mem ->
+      (FElem out_ptr out * Rout)%sep mem ->
 
       (FElem x_ptr x * FElem y_ptr y * Rin)%sep mem ->
       map.get locals x_var = Some x_ptr ->
@@ -64,19 +64,19 @@ Section Compile.
   Lemma compile_unop {name} (op: UnOp name) {tr mem locals functions} x:
     let v := un_model (feval x) in
     forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
-      Rin Rout x_ptr x_var out_ptr out_var,
+      Rin Rout out x_ptr x_var out_ptr out_var,
 
       (_: spec_of name) functions ->
       bounded_by un_xbounds x ->
 
       map.get locals out_var = Some out_ptr ->
-      (Placeholder out_ptr * Rout)%sep mem ->
+      (FElem out_ptr out * Rout)%sep mem ->
 
       (FElem x_ptr x * Rin)%sep mem ->
       map.get locals x_var = Some x_ptr ->
 
       (let v := v in
-       forall out m,
+       forall out m (Heq : feval out = v),
          bounded_by un_outbounds out ->
          sep (FElem out_ptr out) Rout m ->
          (<{ Trace := tr;
@@ -84,7 +84,6 @@ Section Compile.
              Locals := locals;
              Functions := functions }>
           k_impl
-          (* <{ (rew [fun v => P v -> predicate)] Heq in pred) (k (eval out mod M) Heq) }>)) -> *)
           <{ pred (k v eq_refl) }>)) ->
       <{ Trace := tr;
          Memory := mem;
@@ -133,13 +132,13 @@ Section Compile.
   Lemma compile_felem_copy {tr mem locals functions} x :
     let v := feval x in
     forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
-      R x_ptr x_var out_ptr out_var,
+      R x_ptr x_var out out_ptr out_var,
 
       spec_of_felem_copy functions ->
 
       map.get locals out_var = Some out_ptr ->
 
-      (FElem x_ptr x * Placeholder out_ptr * R)%sep mem ->
+      (FElem x_ptr x * FElem out_ptr out * R)%sep mem ->
       map.get locals x_var = Some x_ptr ->
 
       (let v := v in
@@ -169,7 +168,7 @@ Section Compile.
       spec_of_felem_small_literal functions ->
 
       map.get locals out_var = Some out_ptr ->
-      (Placeholder out_ptr * R)%sep mem ->
+      (FElem out_ptr out * R)%sep mem ->
 
       word.unsigned wx = x ->
 
@@ -233,10 +232,3 @@ Ltac free p :=
             ecancel_assumption);
     cbv beta in H'; clear H
   end.
-
-(* Protect a pointer (e.g. the pointer reserved for final output) by "hiding"
-   the fact that it is available under the "Hidden" alias *)
-Ltac hide p :=
-  change (Placeholder p) with (Hidden p) in *.
-Ltac unhide p :=
-  change (Hidden p) with (Placeholder p) in *.

@@ -10,6 +10,9 @@ Class FieldParameters :=
     M : Z := Z.pos M_pos;
     a24 : F M_pos; (* (a+2) / 4 or (a-2) / 4, depending on the implementation *)
 
+    (* special wrapper for copy so that compilation lemmas can recognize it *)
+    fe_copy := (@id (F M_pos));
+
     (** function names **)
     mul : string; add : string; sub : string;
     square : string; scmula24 : string; inv : string;
@@ -85,11 +88,11 @@ Section FunctionSpecs.
       un_outbounds: bounds }.
 
   Definition unop_spec {name} (op: UnOp name) :=
-    fnspec! name (px pout : word) / (x : felem) Rr,
+    fnspec! name (px pout : word) / (x out : felem) Rr,
     { requires tr mem :=
         bounded_by un_xbounds x
         /\ (exists Ra, (FElem px x * Ra)%sep mem)
-        /\ (Placeholder pout * Rr)%sep mem;
+        /\ (FElem pout out * Rr)%sep mem;
       ensures tr' mem' :=
         tr = tr' /\
         exists out,
@@ -107,12 +110,12 @@ Section FunctionSpecs.
       bin_outbounds: bounds }.
 
   Definition binop_spec  {name} (op: BinOp name) :=
-    fnspec! name (px py pout : word) / (x y: felem) Rr,
+    fnspec! name (px py pout : word) / (x y out: felem) Rr,
     { requires tr mem :=
         bounded_by bin_xbounds x
         /\ bounded_by bin_ybounds y
         /\ (exists Ra, (FElem px x * FElem py y * Ra)%sep mem)
-        /\ (Placeholder pout * Rr)%sep mem;
+        /\ (FElem pout out * Rr)%sep mem;
       ensures tr' mem' :=
         tr = tr' /\
         exists out,
@@ -137,10 +140,10 @@ Section FunctionSpecs.
     {| un_model := F.inv; un_xbounds := tight_bounds; un_outbounds := loose_bounds |}.
 
   Instance spec_of_from_bytes : spec_of from_bytes :=
-    fnspec! from_bytes (px pout : word) / (bs : list byte) Rr,
+    fnspec! from_bytes (px pout : word) / (bs : list byte) out Rr,
     { requires tr mem :=
         (exists Ra, (FElemBytes px bs * Ra)%sep mem)
-        /\ (Placeholder pout * Rr)%sep mem;
+        /\ (FElem pout out * Rr)%sep mem;
       ensures tr' mem' :=
         tr = tr' /\
         exists X, feval X = feval_bytes bs
@@ -148,27 +151,27 @@ Section FunctionSpecs.
              /\ (FElem pout X * Rr)%sep mem' }.
 
   Instance spec_of_to_bytes : spec_of to_bytes :=
-    fnspec! to_bytes (px pout : word) / (x : felem) (old_out : list byte) Rr,
+    fnspec! to_bytes (px pout : word) / (x : felem) (out : list byte) Rr,
     { requires tr mem :=
         (exists Ra, (FElem px x * Ra)%sep mem)
-        /\ (FElemBytes pout old_out * Rr)%sep mem;
+        /\ (FElemBytes pout out * Rr)%sep mem;
       ensures tr' mem' :=
         tr = tr' /\
         exists bs, feval_bytes bs = feval x
                    /\ (FElemBytes pout bs * Rr)%sep mem' }.
 
   Instance spec_of_felem_copy : spec_of felem_copy :=
-    fnspec! felem_copy (px pout : word) / (x : felem) R,
+    fnspec! felem_copy (px pout : word) / (x out : felem) R,
     { requires tr mem :=
-        (FElem px x * Placeholder pout * R)%sep mem;
+        (FElem px x * FElem pout out * R)%sep mem;
       ensures tr' mem' :=
         tr = tr' /\
         (FElem px x * FElem pout x * R)%sep mem' }.
 
   Instance spec_of_felem_small_literal : spec_of felem_small_literal :=
-    fnspec! felem_small_literal (x pout : word) / R,
+    fnspec! felem_small_literal (x pout : word) / out R,
     { requires tr mem :=
-        (Placeholder pout * R)%sep mem;
+        (FElem pout out * R)%sep mem;
       ensures tr' mem' :=
         tr = tr' /\
         exists X, feval X = F.of_Z _ (word.unsigned x)

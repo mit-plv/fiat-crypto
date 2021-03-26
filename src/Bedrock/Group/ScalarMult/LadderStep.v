@@ -29,18 +29,28 @@ Section __.
       let/n D := X3-Z3 in
       let/n DA := D*A in
       let/n CB := C*B in
-      let/n X5 := (DA+CB)^2 in
-      let/n Z5 := X1*(DA-CB)^2 in
-      let/n X4 := AA*BB in
-      let/n Z4 := E*(AA + a24*E) in
-      ((X4, Z4), (X5, Z5)).
+      (* store X5 under X3 pointer *)
+      let/n X3 := (DA+CB) in
+      let/n X3 := X3^2 in
+      (* store Z5 under Z3 pointer *)
+      let/n Z3 := (DA-CB) in
+      let/n Z3 := X1*Z3 in
+      let/n Z3 := Z3^2 in
+      (* store X4 under X2 pointer *)
+      let/n X2 := AA*BB in
+      (* store Z4 under Z2 pointer *)
+      let/n Z2 := a24*E in
+      let/n Z2:= (AA+Z2) in
+      let/n Z2 := E*Z2 in
+      (* ((X4, Z4), (X5, Z5)) *)
+      ((X2, Z2), (X3, Z3)).
   End Gallina.
 
   Instance spec_of_ladderstep : spec_of "ladderstep" :=
     fnspec! "ladderstep"
           (pX1 pX2 pZ2 pX3 pZ3
                pA pAA pB pBB pE pC pD pDA pCB : Semantics.word)
-          / (X1 X2 Z2 X3 Z3 : felem) R,
+          / (X1 X2 Z2 X3 Z3 A AA B BB E C D DA CB : felem) R,
     { requires tr mem :=
         bounded_by tight_bounds X1
         /\ bounded_by tight_bounds X2
@@ -50,11 +60,11 @@ Section __.
         /\ (FElem pX1 X1
             * FElem pX2 X2 * FElem pZ2 Z2
             * FElem pX3 X3 * FElem pZ3 Z3
-            * Placeholder pA * Placeholder pAA
-            * Placeholder pB * Placeholder pBB
-            * Placeholder pE * Placeholder pC
-            * Placeholder pD * Placeholder pDA
-            * Placeholder pCB * R)%sep mem;
+            * FElem pA A * FElem pAA AA
+            * FElem pB B * FElem pBB BB
+            * FElem pE E * FElem pC C
+            * FElem pD D * FElem pDA DA
+            * FElem pCB CB * R)%sep mem;
       ensures tr' mem' :=
         tr = tr'
         /\ exists X4 Z4 X5 Z5 (* output values *)
@@ -117,9 +127,11 @@ Section __.
            Rout
            X1 X1_ptr X1_var X2 X2_ptr X2_var Z2 Z2_ptr Z2_var
            X3 X3_ptr X3_var Z3 Z3_ptr Z3_var
-           A_ptr A_var AA_ptr AA_var B_ptr B_var BB_ptr BB_var
-           E_ptr E_var C_ptr C_var D_ptr D_var
-           DA_ptr DA_var CB_ptr CB_var,
+           A A_ptr A_var AA AA_ptr AA_var
+           B B_ptr B_var BB BB_ptr BB_var
+           E E_ptr E_var C C_ptr C_var
+           D D_ptr D_var DA DA_ptr DA_var
+           CB CB_ptr CB_var,
 
       spec_of_ladderstep functions ->
 
@@ -136,11 +148,11 @@ Section __.
       (FElem X1_ptr X1
        * FElem X2_ptr X2 * FElem Z2_ptr Z2
        * FElem X3_ptr X3 * FElem Z3_ptr Z3
-       * Placeholder A_ptr * Placeholder AA_ptr
-       * Placeholder B_ptr * Placeholder BB_ptr
-       * Placeholder E_ptr * Placeholder C_ptr
-       * Placeholder D_ptr * Placeholder DA_ptr
-       * Placeholder CB_ptr * Rout)%sep mem ->
+       * FElem A_ptr A * FElem AA_ptr AA
+       * FElem B_ptr B * FElem BB_ptr BB
+       * FElem E_ptr E * FElem C_ptr C
+       * FElem D_ptr D * FElem DA_ptr DA
+       * FElem CB_ptr CB * Rout)%sep mem ->
 
         map.get locals X1_var = Some X1_ptr ->
         map.get locals X2_var = Some X2_ptr ->
@@ -209,16 +221,14 @@ Section __.
     Qed.
 
   Ltac ladderstep_compile_custom :=
-    field_compile_step; [ repeat compile_step .. | ];
-    (* if the output we selected was one of the inputs, need to write the
-       Placeholder back into a FElem for the arguments precondition *)
-    lazymatch goal with
-    | |- sep _ _ _ =>
-      seprewrite FElem_from_bytes;
-      solve [repeat compile_step]
-    | _ => idtac
-    end;
-    [ solve [repeat compile_step] .. | intros ].
+    simple apply compile_nlet_as_nlet_eq;
+    field_compile_step; [ repeat compile_step .. | intros ];
+    eauto with compiler;
+    (* rewrite results in terms of feval to match lemmas *)
+    repeat lazymatch goal with
+           | H : feval _ = ?x |- context [?x] =>
+             is_var x; rewrite <-H
+           end.
 
   Ltac compile_custom ::= ladderstep_compile_custom.
 
@@ -237,46 +247,7 @@ Section __.
   Proof.
     compile_setup.
 
-    repeat (simple apply compile_nlet_as_nlet_eq;
-            repeat compile_step).
-
-    Check compile_square.
-    Print compile_step.
-    compile_cleanup.
-    field_compile_step.
-    1-8:repeat
-    compile_step.
     repeat compile_step.
-    cbv [program_logic_goal_for spec_of_ladderstep].
-    setup.
-    repeat safe_compile_step.
-
-    (* by now, we're out of Placeholders; need to decide (manually for now)
-       where output gets stored *)
-    free pX3; repeat safe_compile_step.
-    free pZ3; repeat safe_compile_step.
-    free pX2; repeat safe_compile_step.
-    free pZ2; repeat safe_compile_step.
-
-    (* sanity-check that compilation is done *)
-    lazymatch goal with
-    | |- context [dlet.dlet] => fail
-    | _ => idtac
-    end.
-
-    (* done! now just prove postcondition *)
-    compile_done. cbv [LadderStepResult].
-    repeat lazymatch goal with
-           | |- Lift1Prop.ex1 _ _ => eexists
-           | |- sep _ _ _ =>
-             first [ progress sepsimpl
-                   | ecancel_assumption ]
-          end.
-    all:lazymatch goal with
-        | |- bounded_by _ _ => solve [auto with compiler]
-        | _ => idtac
-        end.
-    congruence.
   Qed.
 End __.
 
