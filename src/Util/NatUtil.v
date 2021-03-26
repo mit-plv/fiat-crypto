@@ -334,14 +334,14 @@ Hint Rewrite lt_dec_n_pred_n : natsimplify.
 
 Lemma le_dec_refl n : le_dec n n = left (le_refl n).
 Proof.
-  edestruct le_dec; try lia.
+  edestruct le_dec; try ((idtac + exfalso); lia).
   apply f_equal, le_unique.
 Qed.
 Hint Rewrite le_dec_refl : natsimplify.
 
 Lemma le_dec_pred_l n : le_dec (pred n) n = left (le_pred_l n).
 Proof.
-  edestruct le_dec; [ | destruct n; simpl in *; lia ].
+  edestruct le_dec; [ | destruct n; simpl in *; (idtac + exfalso); lia ].
   apply f_equal, le_unique.
 Qed.
 Hint Rewrite le_dec_pred_l : natsimplify.
@@ -351,7 +351,7 @@ Proof. destruct n; simpl; lia. Qed.
 
 Lemma le_dec_pred_plus_same n : le_dec n (pred (n + n)) = left (le_pred_plus_same n).
 Proof.
-  edestruct le_dec; [ | destruct n; simpl in *; lia ].
+  edestruct le_dec; [ | destruct n; simpl in *; (idtac + exfalso); lia ].
   apply f_equal, le_unique.
 Qed.
 Hint Rewrite le_dec_pred_plus_same : natsimplify.

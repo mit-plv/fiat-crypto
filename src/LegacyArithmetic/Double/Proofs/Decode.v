@@ -167,6 +167,7 @@ Proof.
   assert (0 <= k * n) by nia.
   assert (0 < 2^n) by auto with zarith.
   assert (0 <= tuple_decoder (k := S k) (fst w) < 2^(S k * n)) by apply decode_range.
+  assert (0 < 2^(S k * n)) by (generalize dependent (2^(S k * n)); intros; lia).
   autorewrite with simpl_tuple_decoder Zshift_to_pow zsimplify.
   reflexivity.
 Qed.

@@ -291,6 +291,7 @@ Local Ltac prove_eval :=
          | _ => discriminate
          | _ => reflexivity
          | _ => nsatz
+         | _ => progress rewrite Nat.succ_pred in * by assumption
          end.
 
 Definition mod_eq (m:positive) a b := a mod m = b mod m.

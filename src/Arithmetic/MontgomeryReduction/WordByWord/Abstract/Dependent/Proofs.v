@@ -497,6 +497,7 @@ Section WordByWordMontgomery.
         (small_A : small A)
     : eval B < eval N -> 0 <= eval (redc A) < eval N.
   Proof.
+    clear dependent ri.
     pose proof (@small_pre_redc _ A small_A).
     pose proof (@pre_redc_bound _ A small_A).
     unfold redc.
@@ -509,6 +510,7 @@ Section WordByWordMontgomery.
         (A_bound : 0 <= eval A < r ^ Z.of_nat A_numlimbs)
     : 0 <= eval (redc A) < R.
   Proof.
+    clear dependent ri.
     pose proof (@small_pre_redc _ A small_A).
     pose proof (@pre_redc_bound _ A small_A).
     unfold redc.
@@ -521,6 +523,7 @@ Section WordByWordMontgomery.
         (A_bound : 0 <= eval A < r ^ Z.of_nat A_numlimbs)
     : small (redc A).
   Proof.
+    clear dependent ri.
     pose proof (@small_pre_redc _ A small_A).
     pose proof (@pre_redc_bound _ A small_A).
     unfold redc.

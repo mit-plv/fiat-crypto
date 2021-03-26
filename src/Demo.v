@@ -146,7 +146,7 @@ Module Positional. Section Positional.
   Lemma eval_from_associational {n} p (n_nz:n<>O) :
     eval (from_associational n p) = Associational.eval p.
   Proof. induction p; cbv [from_associational] in *; push; try
-  pose proof place_in_range a (pred n); try lia; try nsatz. Qed.
+  pose proof place_in_range a (pred n); try lia; try nsatz; destruct n; cbn [Init.Nat.pred] in *; lia. Qed.
   Hint Rewrite @eval_from_associational : push_eval.
 
   Section mulmod.
