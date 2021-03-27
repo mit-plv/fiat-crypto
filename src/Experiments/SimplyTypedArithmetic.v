@@ -9346,10 +9346,10 @@ Module PreFancy.
             try match goal with H : Some _ = Some _ |- _ => inversion H; subst end;
             cbn [interp_scalar]; apply interp_cast_noop.
           { apply has_half_word_range_shiftr with (r:=r[x~>x]%zrange);
-            cbv [in_word_range is_tighter_than_bool upper lower has_range]; try lia.
+            cbv [in_word_range is_tighter_than_bool upper lower has_range]; try lia;
             apply andb_true_iff; split; apply Z.leb_le; lia. }
           { apply has_half_word_range_land with (r:=r[x~>x]%zrange);
-            cbv [in_word_range is_tighter_than_bool upper lower has_range]; try lia.
+            cbv [in_word_range is_tighter_than_bool upper lower has_range]; try lia;
             apply andb_true_iff; split; apply Z.leb_le; lia. }
         Qed.
 
