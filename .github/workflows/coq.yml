@@ -23,8 +23,6 @@ jobs:
         - { COQ_VERSION: "v8.11" , COQ_PACKAGE: "coq"       , PPA: "ppa:jgross-h/coq-8.11-daily"              , SKIP_DISPLAY_TEST: "1", CC: "gcc" }
         - { COQ_VERSION: "v8.10" , COQ_PACKAGE: "coq"       , PPA: "ppa:jgross-h/coq-8.10-daily"              , SKIP_DISPLAY_TEST: "1", CC: "gcc" }
         - { COQ_VERSION: "v8.9"  , COQ_PACKAGE: "coq"       , PPA: "ppa:jgross-h/coq-8.9-daily"               , SKIP_DISPLAY_TEST: "1", CC: "gcc" }
-        - { COQ_VERSION: "v8.8"  , COQ_PACKAGE: "coq"       , PPA: "ppa:jgross-h/coq-8.8-daily"               , SKIP_DISPLAY_TEST: "" , CC: "gcc" }
-        - { COQ_VERSION: "v8.7"  , COQ_PACKAGE: "coq"       , PPA: "ppa:jgross-h/coq-8.7-daily"               , SKIP_DISPLAY_TEST: "" , CC: "gcc" }
 
     env: ${{ matrix.env }}
 
