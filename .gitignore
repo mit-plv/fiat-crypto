@@ -41,6 +41,7 @@ nra.cache
 .nlia.cache
 .nia.cache
 .nra.cache
+.coq-native
 
 /remake_curves.log
 /finished.ok
