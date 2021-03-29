@@ -95,7 +95,14 @@ Create HintDb Ztestbit_full discriminated.
 (** Work around bug #5019, that [zify] loops on dependent types.  We
     copy/paste [zify_nat_op] from the standard library and add a case
     to each of the [match isnat with ... end]. *)
-Ltac zify_nat_op ::=
+(** After https://github.com/coq/coq/pull/13741, [zify_nat_op] will no
+    longer exist.  So we pull a hack to ensure that we don't error
+    here.  Since absolute names always trump relative names, we can
+    add a relative name which fails to shadow the absolute name,
+    unless the absolute name doesn't exist. *)
+Local Set Warnings Append "-masking-absolute-name".
+Module Coq. Module omega. Module PreOmega. Ltac zify_nat_op := idtac. End PreOmega. End omega. End Coq.
+Ltac Coq.omega.PreOmega.zify_nat_op ::=
  match goal with
   (* misc type conversions: positive/N/Z to nat *)
   | H : context [ Z.of_nat (Pos.to_nat ?a) ] |- _ => rewrite (positive_nat_Z a) in H
