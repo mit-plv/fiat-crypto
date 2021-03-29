@@ -48,6 +48,7 @@ Section Defs.
     | expr.var x => negb (String.eqb x ERROR)
     | expr.load _ a => error_free_expr a
     | expr.op _ x y => (error_free_expr x && error_free_expr y)%bool
+    | expr.inlinetable _ _ index => error_free_expr index
     end.
   Fixpoint error_free_cmd (x : cmd.cmd) : bool :=
     match x with
