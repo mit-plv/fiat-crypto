@@ -101,7 +101,15 @@ Create HintDb Ztestbit_full discriminated.
     add a relative name which fails to shadow the absolute name,
     unless the absolute name doesn't exist. *)
 Local Set Warnings Append "-masking-absolute-name".
-Module Coq. Module omega. Module PreOmega. Ltac zify_nat_op := idtac. End PreOmega. End omega. End Coq.
+Module Coq.
+  Module omega.
+    Module PreOmega.
+      Definition Z_of_nat' := Z.of_nat.
+      Ltac hide_Z_of_nat a := idtac.
+      Ltac zify_nat_op := idtac.
+    End PreOmega.
+  End omega.
+End Coq.
 Ltac Coq.omega.PreOmega.zify_nat_op ::=
  match goal with
   (* misc type conversions: positive/N/Z to nat *)
@@ -150,20 +158,20 @@ Ltac Coq.omega.PreOmega.zify_nat_op ::=
      match isnat with
       | true => simpl (Z.of_nat (S a)) in H
       | _ => rewrite (Nat2Z.inj_succ a) in H
-      | _ => change (Z.of_nat (S a)) with (Z_of_nat' (S a)) in H
+      | _ => change (Z.of_nat (S a)) with (Coq.omega.PreOmega.Z_of_nat' (S a)) in H
      end
   | |- context [ Z.of_nat (S ?a) ] =>
      let isnat := isnatcst a in
      match isnat with
       | true => simpl (Z.of_nat (S a))
       | _ => rewrite (Nat2Z.inj_succ a)
-      | _ => change (Z.of_nat (S a)) with (Z_of_nat' (S a))
+      | _ => change (Z.of_nat (S a)) with (Coq.omega.PreOmega.Z_of_nat' (S a))
      end
 
   (* atoms of type nat : we add a positivity condition (if not already there) *)
-  | _ : (0 <= Z.of_nat ?a)%Z |- _ => hide_Z_of_nat a
+  | _ : (0 <= Z.of_nat ?a)%Z |- _ => Coq.omega.PreOmega.hide_Z_of_nat a
   | _ : context [ Z.of_nat ?a ] |- _ =>
-    pose proof (Nat2Z.is_nonneg a); hide_Z_of_nat a
+    pose proof (Nat2Z.is_nonneg a); Coq.omega.PreOmega.hide_Z_of_nat a
   | |- context [ Z.of_nat ?a ] =>
-    pose proof (Nat2Z.is_nonneg a); hide_Z_of_nat a
+    pose proof (Nat2Z.is_nonneg a); Coq.omega.PreOmega.hide_Z_of_nat a
  end.
