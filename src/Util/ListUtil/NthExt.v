@@ -2,8 +2,8 @@
 Require Import Coq.Lists.List.
 Require Import Coq.Arith.Arith.
 Import ListNotations.
-Open Scope list_scope.
-Module List.
+Local Open Scope list_scope.
+Module Export List.
   (* This is in the stdlib since Coq 8.12 *)
   Section Elts.
     Variable A : Type.
