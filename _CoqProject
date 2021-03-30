@@ -94,7 +94,6 @@ src/Bedrock/Field/Synthesis/Examples/X25519_64.v
 src/Bedrock/Field/Synthesis/Examples/p224_64.v
 src/Bedrock/Field/Synthesis/Examples/p256_64.v
 src/Bedrock/Field/Synthesis/Generic/Bignum.v
-src/Bedrock/Field/Synthesis/Generic/Copy.v
 src/Bedrock/Field/Synthesis/Generic/Operation.v
 src/Bedrock/Field/Synthesis/Generic/Tactics.v
 src/Bedrock/Field/Synthesis/Generic/UnsaturatedSolinas.v
