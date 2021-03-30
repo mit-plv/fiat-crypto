@@ -5,6 +5,7 @@ Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.SplitInContext.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.SpecializeBy.
+Require Import Crypto.Util.ListUtil.NthExt.
 Require Import Crypto.Util.Notations.
 
 Module Option.
