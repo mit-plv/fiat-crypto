@@ -9,6 +9,7 @@ Require Import Crypto.Util.NatUtil.
 Require Import Crypto.Util.Pointed.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Decidable.
+Require Crypto.Util.Option.
 Require Export Crypto.Util.FixCoqMistakes.
 Require Export Crypto.Util.Tactics.BreakMatch.
 Require Export Crypto.Util.Tactics.DestructHead.
@@ -2679,3 +2680,113 @@ Definition is_nil {A} (x : list A) : bool
 
 Lemma is_nil_eq_nil_iff {A x} : @is_nil A x = true <-> x = nil.
 Proof. destruct x; cbv; split; congruence. Qed.
+
+Lemma find_none_iff {A} (f : A -> bool) (xs : list A) : find f xs = None <-> forall x, In x xs -> f x = false.
+Proof.
+  split; try apply find_none.
+  pose proof (find_some f xs) as H.
+  edestruct find; [ specialize (H _ eq_refl) | reflexivity ].
+  destruct H as [H1 H2].
+  intro H'; specialize (H' _ H1); congruence.
+Qed.
+
+Lemma find_none_iff_nth_error {A} (f : A -> bool) (xs : list A) : find f xs = None <-> forall n a, nth_error xs n = Some a -> f a = false.
+Proof.
+  rewrite find_none_iff.
+  setoid_rewrite In_nth_error_iff.
+  intuition (destruct_head'_ex; eauto).
+Qed.
+
+Lemma find_some_iff {A} (f : A -> bool) (xs : list A) x
+  : find f xs = Some x
+    <-> exists n, nth_error xs n = Some x /\ f x = true /\ forall n', n' < n -> forall a, nth_error xs n' = Some a -> f a = false.
+Proof.
+  induction xs as [|y xs IHxs]; cbn [find].
+  all: repeat first [ apply conj
+                    | progress intros
+                    | progress destruct_head'_ex
+                    | progress destruct_head'_and
+                    | progress Option.inversion_option
+                    | progress break_innermost_match_hyps
+                    | progress subst
+                    | progress cbn in *
+                    | assumption
+                    | exists 0; cbn; repeat split; try assumption; lia
+                    | progress break_innermost_match
+                    | reflexivity
+                    | congruence
+                    | match goal with
+                      | [ H : nth_error nil ?i = _ |- _ ] => is_var i; destruct i
+                      | [ H : nth_error (cons _ _) ?i = _ |- _ ] => is_var i; destruct i
+                      | [ H : ?T <-> _, H' : ?T |- _ ] => destruct H as [H _]; specialize (H H')
+                      | [ H : S ?x < S ?y |- _ ] => assert (x < y) by lia; clear H
+                      | [ H : forall a, Some _ = Some a -> _ |- _ ] => specialize (H _ eq_refl)
+                      | [ H : forall a, Some a = Some _ -> _ |- _ ] => specialize (H _ eq_refl)
+                      | [ H : forall n, n < S ?v -> @?P n |- _ ]
+                        => assert (forall n, n < v -> P (S n)) by (intros ? ?; apply H; lia);
+                           specialize (H 0 ltac:(lia))
+                      end
+                    | eexists (S _); cbn; repeat apply conj; [ eassumption | .. ]; try assumption; intros [|?]
+                    | progress split_iff
+                    | solve [ eauto with nocore ]
+                    | progress specialize_by eauto ].
+Qed.
+
+Section find_index.
+  Context {A} (f : A -> bool).
+
+  Definition find_index (xs : list A) : option nat
+    := option_map (@fst _ _) (find (fun v => f (snd v)) (enumerate xs)).
+
+  Lemma find_index_none_iff xs
+    : find_index xs = None <-> forall i a, nth_error xs i = Some a -> f a = false.
+  Proof.
+    cbv [find_index enumerate].
+    edestruct find eqn:H; cbn; [ split; [ congruence | ] | split; [ intros _ | reflexivity ] ].
+    { rewrite find_some_iff in H.
+      destruct H as [n H]; intro H'; specialize (H' n).
+      rewrite nth_error_combine, nth_error_seq in H.
+      break_innermost_match_hyps; destruct_head'_and; Option.inversion_option; subst; cbn in *.
+      specialize (H' _ eq_refl); congruence. }
+    { rewrite find_none_iff_nth_error in H.
+      intros n a; specialize (H n (n, a)).
+      rewrite nth_error_combine, nth_error_seq in H.
+      edestruct lt_dec; [ | rewrite nth_error_length_error by lia; congruence ].
+      edestruct nth_error eqn:?; intros; Option.inversion_option; subst; specialize (H eq_refl); assumption. }
+  Qed.
+
+  Lemma find_index_some_iff xs n
+    : find_index xs = Some n
+      <-> ((exists x, nth_error xs n = Some x /\ f x = true) /\ forall n', n' < n -> forall a, nth_error xs n' = Some a -> f a = false).
+  Proof.
+    cbv [find_index enumerate].
+    edestruct find eqn:H; cbn; [ | split; [ congruence | ] ].
+    { rewrite find_some_iff in H.
+      destruct H as [n' H].
+      rewrite nth_error_combine, nth_error_seq in H.
+      setoid_rewrite nth_error_combine in H.
+      setoid_rewrite nth_error_seq in H.
+      break_innermost_match_hyps; split; intro H'; destruct_head'_and; Option.inversion_option; subst; cbn in *.
+      all: repeat apply conj; eauto.
+      { let H := match goal with H : forall n, n < _ -> _ |- _ => H end in
+        intros i H' a' H''; specialize (H i H' (i, a'));
+          rewrite H'' in H;
+          break_innermost_match_hyps; [ specialize (H eq_refl); assumption | ].
+        rewrite nth_error_length_error in H'' by lia; congruence. }
+      { match goal with |- Some ?n = Some ?m => destruct (lt_eq_lt_dec n m) end; destruct_head' sumbool; subst; try reflexivity.
+        all: match goal with H : forall n', n' < _ -> _ |- _ => specialize (H _ ltac:(eassumption)) end.
+        { match goal with H : forall a, nth_error _ _ = Some _ -> _ |- _ => specialize (H _ ltac:(eassumption)); congruence end. }
+        { destruct_head'_ex; destruct_head'_and.
+          break_innermost_match_hyps; try congruence; try lia.
+          Option.inversion_option; subst.
+          match goal with H : forall x, Some _ = Some x -> _ |- _ => specialize (H _ eq_refl) end.
+          cbn in *.
+          congruence. } } }
+    { rewrite find_none_iff_nth_error in H.
+      intros [ [a [H0 H1]] ?]; specialize (H n (n, a)).
+      rewrite nth_error_combine, nth_error_seq, H0 in H.
+      break_innermost_match_hyps; [ | rewrite nth_error_length_error in H0 by lia; congruence ].
+      specialize (H eq_refl); cbn in *.
+      congruence. }
+  Qed.
+End find_index.
