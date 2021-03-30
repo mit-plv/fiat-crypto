@@ -1,3 +1,4 @@
+(*
 Require Import Coq.ZArith.ZArith.
 Require Import Coq.Strings.String.
 Require Import Coq.Lists.List.
@@ -57,7 +58,7 @@ Require Import bedrock2.Syntax.
 Require Import bedrock2.NotationsCustomEntry.
 
 
-  Lemma anybytes_S pout n 
+  Lemma anybytes_S pout n
     : Lift1Prop.iff1 (anybytes pout (bytes_per_word width * Z.of_nat (S n)))%sep
                      (Lift1Prop.ex1(fun x =>(anybytes pout (bytes_per_word width * Z.of_nat n))
                                             * (Scalars.scalar
@@ -77,7 +78,7 @@ Section FImpl.
                list_Z_bounded_by loose_bounds X).
 
   Local Definition frep := (frep sz weight loose_bounds tight_bounds).
-  
+
   Existing Instance field_parameters.
   Existing Instance semantics.
   Existing Instance frep.
@@ -96,7 +97,7 @@ Section FImpl.
   Local Definition incr_nat x n :=
     expr.op bopname.add x ((Memory.bytes_per_word Semantics.width) * Z.of_nat n).
 
- 
+
   Lemma Bignum_0 px x : Lift1Prop.iff1 (Bignum 0 px x) (emp (x =[])).
   Proof using.
     unfold Bignum.
@@ -121,11 +122,11 @@ Section FImpl.
     }
   Qed.
 
-  
+
   Lemma anybytes_0 (x : word.rep) : Lift1Prop.iff1 (anybytes x 0) (emp True).
   Proof. Admitted.
 
-  
+
   Lemma Bignum_snoc n px x a
     : Lift1Prop.iff1 (Bignum (S n) px (x++[a]))
                      (Bignum n px x
@@ -135,7 +136,7 @@ Section FImpl.
   Proof using.
     unfold Bignum.
     intro mem; split; intro H; sepsimpl;
-      try 
+      try
       match goal with
       | [H : Datatypes.length ?x = ?n
          |- Datatypes.length (?x++ [_]) = S ?n] =>
@@ -165,7 +166,7 @@ Section FImpl.
         ecancel_assumption.
       }
       { easy. }
-    }    
+    }
     {
       seprewrite
           (array_append Scalars.scalar
@@ -196,7 +197,7 @@ Section FImpl.
      ecancel_assumption.
   Qed.
 
-  
+
   Lemma Bignum_S n px x mem
     : Bignum (S n) px x mem -> exists a x', x = (x'++ [a])%list.
   Proof.
@@ -210,7 +211,7 @@ Section FImpl.
     eauto.
   Qed.
 
-    
+
   Lemma copy_satisfies_spec :
     (let args := ["out"; "x"] in
      let rets := [] in
@@ -225,7 +226,7 @@ Section FImpl.
        (forall functions : list (string * (list string * list string * cmd)),
            copy_spec (felem_copy :: functions))).
   Proof.
-    
+
     unfold copy_spec.
     unfold spec_of_felem_copy.
     intro functions.
@@ -340,6 +341,7 @@ Section FImpl.
       }
     }
   Qed.
-   
-  
- 
+
+
+
+*)
