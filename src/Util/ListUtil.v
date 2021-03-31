@@ -2711,7 +2711,7 @@ Proof.
                     | progress subst
                     | progress cbn in *
                     | assumption
-                    | exists 0; cbn; repeat split; try assumption; lia
+                    | exists 0; cbn; repeat split; try assumption; (idtac + (intros; exfalso)); lia
                     | progress break_innermost_match
                     | reflexivity
                     | congruence
