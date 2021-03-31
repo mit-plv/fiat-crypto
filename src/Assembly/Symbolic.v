@@ -4,14 +4,6 @@ Require Crypto.Util.Tuple.
 Require Import Util.OptionList.
 Require Import Crypto.Util.ErrorT.
 Module Import List.
-  Definition option_all [A] : list (option A) -> option (list A) := OptionList.Option.List.lift.
-  Lemma option_all_Some [A] ol l (H : @option_all A ol = Some l)
-    : forall i a, nth_error l i = Some a -> nth_error ol i = (Some (Some a)).
-  Admitted.
-  Lemma option_all_None [A] ol (H : @option_all A ol = None)
-    : exists j, nth_error ol j = None.
-  Admitted.
-
   Section IndexOf.
     Context [A] (f : A -> bool).
     Fixpoint indexof (l : list A) : option nat :=
@@ -82,34 +74,42 @@ Section Reveal.
     | S n => reveal_step (reveal n) i
     end.
 
-  Definition reveal_expr_step reveal reveal_expr (e : expr) : expr :=
-    match e with
-    | ExprRef i => reveal i
-    | ExprApp (op, args) => ExprApp (op, List.map reveal_expr args)
-    end.
-  Fixpoint reveal_expr (n : nat) (e : expr) {struct n} : expr :=
-    match n with
-    | O => e
-    | S n => reveal_expr_step (reveal n) (reveal_expr n) e
-    end.
+  Definition reveal_node n '(op, args) :=
+    ExprApp (op, List.map (reveal n) args).
 End Reveal.
 
+Definition merge_node (n : node idx) (d : dag) : idx * dag :=
+  match List.indexof (node_eqb Z.eqb n) d with
+  | Some i => (Z.of_nat i, d)
+  | None => (Z.of_nat (length d), List.app d (cons n nil))
+  end.
 Fixpoint merge (e : expr) (d : dag) : idx * dag :=
   match e with
   | ExprRef i => (i, d)
   | ExprApp (op, args) =>
     let idxs_d := List.foldmap merge args d in
-    let d : dag := snd idxs_d in
-    let n : node idx := (op, fst idxs_d) in
-    match List.indexof (node_eqb Z.eqb n) d with
-    | Some i => (Z.of_nat i, d)
-    | None => (Z.of_nat (length d), List.app d (cons n nil))
-    end
+    merge_node (op, fst idxs_d) (snd idxs_d)
   end.
 
 Lemma reveal_merge : forall d e, exists n, reveal (snd (merge e d)) n (fst (merge e d)) = e.
 Proof.
 Admitted.
+
+Require Import Crypto.Util.Option Crypto.Util.Notations.
+Import ListNotations.
+
+Definition simplify (dag : dag) (e : node idx) : expr :=
+  List.fold_right (fun f e => f e) (reveal_node dag 4 e)
+  [fun e => match e with
+    ExprApp (((add|sub),s), [a; ExprApp ((const 0, _), []) ]) =>
+      if N.eqb s 64 then a else e | _ => e end
+  ;fun e => match e with
+    ExprApp ((sub,s)as op, [ExprApp ((add, s'), [a; b]); a']) =>
+      if N.eqb s s' && expr_beq a a' then b else e | _ => e end
+  ;fun e => match e with
+    ExprApp ((sub,s), [a; b]) =>
+      if expr_beq a b then ExprApp ((const 0, s), []) else e | _ => e end]%bool.
+
 
 Definition reg_state := Tuple.tuple (option idx) 16.
 Definition flag_state := Tuple.tuple (option idx) 6.
@@ -148,6 +148,12 @@ Definition set_reg (st : reg_state) ri (i : idx) : reg_state
        (Some i)
        (Tuple.to_list _ st)).
 
+Definition load (a : idx) (s : mem_state) : option idx :=
+  option_map snd (find (fun p => fst p =? a)%Z s).
+Definition store (a v : idx) (s : mem_state) : option mem_state :=
+  n <- indexof (fun p => fst p =? a)%Z s;
+  Some (ListUtil.update_nth n (fun ptsto => (fst ptsto, v)) s).
+
 Record symbolic_state := { dag_state :> dag ; symbolic_reg_state :> reg_state ; symbolic_flag_state :> flag_state ; symbolic_mem_state :> mem_state }.
 Definition update_dag_with (st : symbolic_state) (f : dag -> dag) : symbolic_state
   := {| dag_state := f st.(dag_state); symbolic_reg_state := st.(symbolic_reg_state) ; symbolic_flag_state := st.(symbolic_flag_state) ; symbolic_mem_state := st.(symbolic_mem_state) |}.
@@ -158,68 +164,73 @@ Definition update_flag_with (st : symbolic_state) (f : flag_state -> flag_state)
 Definition update_mem_with (st : symbolic_state) (f : mem_state -> mem_state) : symbolic_state
   := {| dag_state := st.(dag_state); symbolic_reg_state := st.(symbolic_reg_state) ; symbolic_flag_state := st.(symbolic_flag_state) ; symbolic_mem_state := f st.(symbolic_mem_state) |}.
 
+Module error.
+  Variant error :=
+  | get_flag (f : FLAG)
+  | get_reg (r : REG)
+  | load (a : idx)
+  | store (a v : idx)
+  | set_const (_ : CONST) (_ : idx)
+
+  | unimplemented_instruction (_ : NormalInstruction)
+  | ambiguous_operation_size (_ : NormalInstruction).
+End error.
+Notation error := error.error.
+
+Definition M T := symbolic_state -> ErrorT (error * symbolic_state) (T * symbolic_state).
+Definition ret {A} (x : A) : M A :=
+  fun s => Success (x, s).
+Definition err {A} (e : error) : M A :=
+  fun s => Error (e, s).
+Definition some_or {A} (f : symbolic_state -> option A) (e : error) : M A :=
+  fun st => match f st with Some x => Success (x, st) | None => Error (e, st) end.
+Definition bind {A B} (x : M A) (f : A -> M B) : M B :=
+  fun s => (x_s <- x s; f (fst x_s) (snd x_s))%error.
+Declare Scope x86symex_scope.
+Delimit Scope x86symex_scope with x86symex.
+Bind Scope x86symex_scope with M.
+Notation "x <- y ; f" := (bind y (fun x => f%x86symex)) : x86symex_scope.
+Section MapM. (* map over a list in the state monad *)
+  Context [A B] (f : A -> M B).
+  Fixpoint mapM (l : list A) : M (list B) :=
+    match l with
+    | nil => ret nil
+    | cons a l => b <- f a; bs <- mapM l; ret (cons b bs)
+    end%x86symex.
+End MapM.
+Definition mapM_ [A] (f: A -> M unit) l : M unit := _ <- mapM f l; ret tt.
+
+Definition GetFlag f : M idx :=
+  some_or (fun s => get_flag s f) (error.get_flag f).
+Definition GetReg ri : M idx :=
+  some_or (fun st => get_reg st ri) (error.get_reg (widest_register_of_index ri)).
+Definition Load (a : idx) : M idx := some_or (load a) (error.load a).
+Definition SetFlag f i : M unit :=
+  fun s => Success (tt, update_flag_with s (fun s => set_flag s f i)).
+Definition SetReg rn i : M unit :=
+  fun s => Success (tt, update_reg_with s (fun s => set_reg s rn i)).
+Definition Store (a v : idx) : M unit :=
+  ms <- some_or (store a v) (error.store a v);
+  fun s => Success (tt, update_mem_with s (fun _ => ms)).
+Definition App (n : node idx) : M idx := fun s =>
+  let i_dag := merge (simplify s n) s in
+  Success (fst i_dag, update_dag_with s (fun _ => snd i_dag)).
+
 Local Unset Elimination Schemes.
 Inductive pre_expr : Set :=
-| PreFlag (_:FLAG)
-| PreReg (_:nat) (* 0 <= i < 16 *)
-| PreMem {s: OperationSize} (_ : pre_expr)
+| PreFlag (_ : FLAG)
+| PreReg (_ : nat) (* 0 <= i < 16 *)
+| PreMem (_ : pre_expr)
 | PreApp (_:node pre_expr).
 (* note: need custom induction principle *)
 Local Set Elimination Schemes.
-
-Require Import Crypto.Util.Option Crypto.Util.Notations.
-
-Import ListNotations.
-
-Section WithDag.
-  Context (dag : dag).
-
-  Definition simplify (e : expr) : expr :=
-    List.fold_right (fun f e => f e) (reveal_expr dag 5 e)
-    [fun e => match e with
-      ExprApp (((add|sub),s), [a; ExprApp ((const 0, _), []) ]) =>
-        if N.eqb s 64 then a else e | _ => e end
-    ;fun e => match e with
-      ExprApp ((sub,s)as op, [ExprApp ((add, s'), [a; b]); a']) =>
-        if N.eqb s s' && expr_beq a a' then b else e | _ => e end
-    ;fun e => match e with
-      ExprApp ((sub,s), [a; b]) =>
-        if expr_beq a b then ExprApp ((const 0, s), []) else e | _ => e end]%bool.
-End WithDag.
-
-Section WithSymbolicState.
-  Context (st : symbolic_state).
-  Local Open Scope option_scope.
-
-  Definition load (sa : N) (e : expr) : option idx :=
-    option_map snd (find (fun ptsto => expr_beq
-          (simplify st (ExprApp ((sub, sa), [e; ExprRef (fst ptsto)])))
-          (ExprApp ((const 0, sa), nil))) st.(symbolic_mem_state)).
-
-  Definition store (sa : N) (e : expr) (v : idx) : option symbolic_state :=
-    n <- (indexof (fun ptsto => expr_beq
-          (simplify st (ExprApp ((sub, sa), [e; ExprRef (fst ptsto)])))
-          (ExprApp ((const 0, sa), nil))) st.(symbolic_mem_state));
-    Some (update_mem_with st (ListUtil.update_nth n (fun ptsto => (fst ptsto, v)))).
-      
-  (* note: it would be more powerful to fuse this with [merge], but hopefully we don't have to *)
-  Fixpoint symeval_pre (r : pre_expr) : option expr :=
-    option_map (simplify st)
-    match r with
-    | PreFlag f => i <- get_flag st f; Some (ExprRef i)
-    | PreReg r =>
-        match List.nth_error (Tuple.to_list _ st.(symbolic_reg_state)) r with
-        | Some (Some i) => Some (ExprRef i)
-        | _ => None
-        end
-    | PreMem s e =>
-        addr <- symeval_pre e;
-        option_map ExprRef (load s addr)
-    | PreApp (op, args) =>
-        args <- List.option_all (List.map symeval_pre args);
-        Some (ExprApp (op, args))
-    end.
-End WithSymbolicState.
+Fixpoint SymevalPre (e : pre_expr) : M idx :=
+  match e with
+  | PreFlag f => GetFlag f
+  | PreReg r => GetReg r
+  | PreMem a => a <- SymevalPre a; Load a
+  | PreApp (op, args) => args <- mapM SymevalPre args; App (op, args)
+  end%x86symex.
 
 Class AddressSize := address_size : N.
 Definition PreAddress {sa : AddressSize} (a : MEM) : pre_expr :=
@@ -236,60 +247,55 @@ Section WithOperationSize.
   Context {sa : AddressSize} {s : OperationSize}.
   Definition PreOperand (a : ARG) : pre_expr :=
     match a with
-    | reg a => PreReg (reg_index a)
-    | mem a => PreMem (s:=s) (PreAddress (sa:=sa) a)
+    | reg a =>
+        (* note: partial register access should be handled here *)
+        PreReg (reg_index a)
+    | mem a => PreMem (PreAddress (sa:=sa) a)
     | Syntax.const a => PreApp ((const a, s), nil)
   end.
-  Definition symeval st a := symeval_pre st (PreOperand a).
-  Definition symaddr st a := symeval_pre st (PreAddress a).
+  Definition Symeval a := SymevalPre (PreOperand a).
+  Definition Symaddr a := SymevalPre (PreAddress a).
 
-  Definition SetOperand (st : symbolic_state) (a : ARG) (e : expr) : option symbolic_state :=
+  Definition SetOperand (a : ARG) (v : idx) : M unit :=
     match a with
-    | Syntax.const a => None
+    | Syntax.const a => err (error.set_const a v)
     | mem a =>
-        addr <- symaddr st a;
-        old <- load st sa addr;
-        let e := if mem_is_byte a
-             then simplify st (ExprApp ((set_slice 0 8, 64%N), [ExprRef old ;e]))
-             else e in
-        let i_dag := merge e st.(dag_state) in
-        let i := fst i_dag in
-        let st := update_dag_with st (fun _ => snd i_dag) in
-        store st sa addr i
+        addr <- Symaddr a;
+        if negb (mem_is_byte a)
+        then
+          Store addr v
+        else
+          old <- Load addr;
+          v <- App ((set_slice 0 8, 64), [old; v]);
+          Store addr v
     | reg a =>
         let '(a, lo, sz) := index_and_shift_and_bitcount_of_reg a in
-        e <- if N.eqb sz 64 then Some e else
-             old <- get_reg st a;
-             Some (simplify st (ExprApp ((set_slice lo sz, 64%N), [ExprRef old; e])));
-        let i_dag := merge e st.(dag_state) in
-        let i := fst i_dag in
-        let st := update_dag_with st (fun _ => snd i_dag) in
-        Some (update_reg_with st (fun rs => set_reg rs a i))
-    end.
+        if N.eqb sz 64
+        then
+          SetReg a v
+        else
+          old <- GetReg a;
+          v <- App ((set_slice lo sz, 64), [old; v]);
+          SetReg a v
+    end%N%x86symex.
 
 End WithOperationSize.
 
-Definition SymexNormalInstruction (st : symbolic_state) (instr : NormalInstruction) : option symbolic_state :=
+Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
   let sa : AddressSize := 64%N in
   match Syntax.operation_size instr with Some (Some s) =>
   let s : OperationSize := s in
   match instr.(Syntax.op), instr.(args) with
   | mov, [dst; src] => (* Note: unbundle when switching from N to Z *)
-    e <- symeval st src;
-    SetOperand st dst e
+    e <- Symeval src;
+    SetOperand dst e
   | lea, [dst; mem src] => (* Flags Affected: None *)
-    e <- symaddr st src;
-    SetOperand st dst e
-  | _, _ => None
- end | _ => None end%N%option.
+    e <- Symaddr src;
+    SetOperand dst e
+  | _, _ => err (error.unimplemented_instruction instr)
+ end | _ => err (error.ambiguous_operation_size instr) end%N%x86symex.
 
-Fixpoint SymexNormalInstructions st instrs : option symbolic_state :=
-  match instrs with
-  | nil => Some st
-  | cons instr instrs =>
-      st <- SymexNormalInstruction st instr;
-      SymexNormalInstructions st instrs
-  end.
+Definition SymexNormalInstructions := fun st is => mapM_ SymexNormalInstruction is st.
 
 Definition init
   (arrays : list (REG * nat)) (* full 64-bit registers only *)
@@ -326,33 +332,21 @@ Example test1 : match (
     ;Build_NormalInstruction lea [reg rcx; mem (Build_MEM false rsi (Some rbx) (Some 7%Z))]
     ;Build_NormalInstruction mov [         mem (Build_MEM false rsi None (Some 24%Z)); reg rcx]
     ])
-) with None => False | Some st => True end. native_cast_no_check I. Qed.
+) with Error _ => False | Success st => True end. native_cast_no_check I. Qed.
 
-Definition opt2err {Err T} (e : Err) (r : option T) :=
-  match r with
-  | None => Error e
-  | Some r => Success r
-  end.
-
-Fixpoint SymexLines st (lines : list Syntax.Line) : ErrorT _ symbolic_state :=
-  match lines with
-  | nil => Success st
-  | (cons line lines) as s =>
-      match line.(rawline) with
-      | INSTR instr => 
-          st <- opt2err (st, s) (SymexNormalInstruction st instr);
-          SymexLines st lines
-      | _ => SymexLines st lines
-      end
-  end.
+Definition SymexLines st (lines : list Syntax.Line) :=
+  SymexNormalInstructions st (Option.List.map (fun l =>
+    match l.(rawline) with INSTR instr => Some instr | _ => None end) lines).
 
 Require Crypto.Assembly.Parse Crypto.Assembly.Parse.Examples.fiat_25519_carry_square_optimised_seed20.
 Definition lines' := Eval native_compute in
   Assembly.Parse.parse
   Assembly.Parse.Examples.fiat_25519_carry_square_optimised_seed20.example.
 Definition lines := Eval cbv in ErrorT.invert_result lines'.
+
 Import Coq.Strings.String.
 Local Open Scope string_scope.
+
 (*
 Compute
   let st := init [(rsi, 4); (rdi, 4)] 48 in
