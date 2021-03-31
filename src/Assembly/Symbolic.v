@@ -210,6 +210,8 @@ Definition GetReg64 ri : M idx :=
 Definition Load64 (a : idx) : M idx := some_or (load a) (error.load a).
 Definition SetFlag f i : M unit :=
   fun s => Success (tt, update_flag_with s (fun s => set_flag s f i)).
+Definition HavocFlags : M unit :=
+  fun s => Success (tt, update_flag_with s (fun _ => Tuple.repeat None 6)).
 Definition SetReg64 rn i : M unit :=
   fun s => Success (tt, update_reg_with s (fun s => set_reg s rn i)).
 Definition Store64 (a v : idx) : M unit :=
@@ -275,29 +277,39 @@ Definition SetOperand {sa : AddressSize} (o : ARG) (v : idx) : M unit :=
 Local Unset Elimination Schemes.
 Inductive pre_expr : Set :=
 | PreARG (_ : ARG)
-| PreApp (_:node pre_expr).
+| PreApp (_ : opname) {_ : OperationSize} (_ : list pre_expr).
 (* note: need custom induction principle *)
 Local Set Elimination Schemes.
+Local Coercion PreARG : ARG >-> pre_expr.
+Example __testPreARG_boring : ARG -> list pre_expr := fun x : ARG => @cons pre_expr x nil.
+(*
+Example __testPreARG : ARG -> list pre_expr := fun x : ARG => [x].
+*)
 
 Fixpoint Symeval {sa : AddressSize} (e : pre_expr) : M idx :=
   match e with
   | PreARG o => GetOperand o
-  | PreApp ((op, s), args) =>
+  | PreApp op s args =>
       idxs <- mapM Symeval args;
       App ((op, s), idxs)
   end.
 
+Notation "f @ ( x , y , .. , z )" := (PreApp f (@cons pre_expr x (@cons pre_expr y .. (@cons pre_expr z nil) ..))) (at level 10) : x86symex_scope.
 Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
   let sa : AddressSize := 64%N in
   match Syntax.operation_size instr with Some (Some s) =>
   let s : OperationSize := s in
   match instr.(Syntax.op), instr.(args) with
   | mov, [dst; src] => (* Note: unbundle when switching from N to Z *)
-    e <- GetOperand src;
-    SetOperand dst e
+    v <- GetOperand src;
+    SetOperand dst v
+  | Syntax.sub, [dst; src] =>
+    v <- Symeval (sub@(dst, src));
+    _ <- SetOperand dst v;
+    HavocFlags
   | lea, [dst; mem src] => (* Flags Affected: None *)
-    e <- Address src;
-    SetOperand dst e
+    a <- Address src;
+    SetOperand dst a
   | _, _ => err (error.unimplemented_instruction instr)
  end | _ => err (error.ambiguous_operation_size instr) end%N%x86symex.
 
@@ -320,8 +332,8 @@ Definition init
   let stack_dag := foldmap (fun i dag => let r := rsp in
        let p_dag := merge (ExprApp ((sub, sz),[ExprRef (N.of_nat (reg_index r)); ExprApp ((const (8*Z.of_nat i), sz), [])])) dag in
        let v_dag := merge (ExprApp ((old (r, Some i), sz),[])) (snd p_dag) in
-       ((fst p_dag, fst v_dag), snd p_dag)
-       ) (seq 0 stack) (snd heap_dag) in
+       ((fst p_dag, fst v_dag), snd v_dag)
+       ) (seq 1 stack) (snd heap_dag) in
   let regs := List.map (fun i => Some (N.of_nat i)) (seq 0 16) in
   {|
     dag_state := snd stack_dag;
@@ -353,8 +365,25 @@ Definition lines := Eval cbv in ErrorT.invert_result lines'.
 Import Coq.Strings.String.
 Local Open Scope string_scope.
 
-(*
-Compute
-  let st := init [(rsi, 4); (rdi, 4)] 48 in
-  SymexLines st lines.
-*)
+Example evaluation : True.
+  pose (x :=
+    let st := init [(rsi, 4); (rdi, 4)] 48 in
+    SymexLines st lines).
+  cbv in x.
+  let v := eval cbv delta [x] in x in
+  match v with Error (?e, ?s) =>
+    let n := fresh in
+    simple notypeclasses refine (let n : symbolic_state := _ in _);
+    [ transparent_abstract (exact s) |];
+    let g := eval cbv delta [n] in n in
+    idtac e g
+  end.
+  exact I.
+Defined.
+
+Notation "f @ ()" := (ExprApp ((f,64%N), (@nil expr))) (at level 10).
+Notation "f @ ( x , y , .. , z )" := (ExprApp ((f,64%N), (@cons expr x%N (@cons expr y%N .. (@cons expr z%N nil) ..)))) (at level 10).
+Local Coercion ExprRef : idx >-> expr.
+
+Compute reveal evaluation_subterm 100 169%N.
+Compute reveal evaluation_subterm 100 44%N.
