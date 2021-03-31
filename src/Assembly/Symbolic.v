@@ -39,7 +39,7 @@ Module Import List.
 End List.
 
 Require Import Crypto.Assembly.Syntax.
-Definition idx := Z.
+Definition idx := N.
 Local Set Boolean Equality Schemes.
 Variant opname := old (_:REG*option nat) | const (_ : Z) | add | sub | slice (lo sz : N) | set_slice (lo sz : N)(* | ... *).
 Class OperationSize := operation_size : N.
@@ -64,7 +64,7 @@ Definition dag := list (node idx).
 Section Reveal.
   Context (dag : dag).
   Definition reveal_step reveal (i : idx) : expr :=
-    match List.nth_error dag (Z.to_nat i) with
+    match List.nth_error dag (N.to_nat i) with
     | None => (* undefined *) ExprRef i
     | Some (op, args) => ExprApp (op, List.map reveal args)
     end.
@@ -79,9 +79,9 @@ Section Reveal.
 End Reveal.
 
 Definition merge_node (n : node idx) (d : dag) : idx * dag :=
-  match List.indexof (node_eqb Z.eqb n) d with
-  | Some i => (Z.of_nat i, d)
-  | None => (Z.of_nat (length d), List.app d (cons n nil))
+  match List.indexof (node_eqb N.eqb n) d with
+  | Some i => (N.of_nat i, d)
+  | None => (N.of_nat (length d), List.app d (cons n nil))
   end.
 Fixpoint merge (e : expr) (d : dag) : idx * dag :=
   match e with
@@ -101,6 +101,9 @@ Import ListNotations.
 Definition simplify (dag : dag) (e : node idx) : expr :=
   List.fold_right (fun f e => f e) (reveal_node dag 4 e)
   [fun e => match e with
+    ExprApp ((slice 0 s',s), [a]) =>
+      if N.eqb s s' then a else e | _ => e end
+  ;fun e => match e with
     ExprApp (((add|sub),s), [a; ExprApp ((const 0, _), []) ]) =>
       if N.eqb s 64 then a else e | _ => e end
   ;fun e => match e with
@@ -149,9 +152,9 @@ Definition set_reg (st : reg_state) ri (i : idx) : reg_state
        (Tuple.to_list _ st)).
 
 Definition load (a : idx) (s : mem_state) : option idx :=
-  option_map snd (find (fun p => fst p =? a)%Z s).
+  option_map snd (find (fun p => fst p =? a)%N s).
 Definition store (a v : idx) (s : mem_state) : option mem_state :=
-  n <- indexof (fun p => fst p =? a)%Z s;
+  n <- indexof (fun p => fst p =? a)%N s;
   Some (ListUtil.update_nth n (fun ptsto => (fst ptsto, v)) s).
 
 Record symbolic_state := { dag_state :> dag ; symbolic_reg_state :> reg_state ; symbolic_flag_state :> flag_state ; symbolic_mem_state :> mem_state }.
@@ -202,84 +205,87 @@ Definition mapM_ [A] (f: A -> M unit) l : M unit := _ <- mapM f l; ret tt.
 
 Definition GetFlag f : M idx :=
   some_or (fun s => get_flag s f) (error.get_flag f).
-Definition GetReg ri : M idx :=
+Definition GetReg64 ri : M idx :=
   some_or (fun st => get_reg st ri) (error.get_reg (widest_register_of_index ri)).
-Definition Load (a : idx) : M idx := some_or (load a) (error.load a).
+Definition Load64 (a : idx) : M idx := some_or (load a) (error.load a).
 Definition SetFlag f i : M unit :=
   fun s => Success (tt, update_flag_with s (fun s => set_flag s f i)).
-Definition SetReg rn i : M unit :=
+Definition SetReg64 rn i : M unit :=
   fun s => Success (tt, update_reg_with s (fun s => set_reg s rn i)).
-Definition Store (a v : idx) : M unit :=
+Definition Store64 (a v : idx) : M unit :=
   ms <- some_or (store a v) (error.store a v);
   fun s => Success (tt, update_mem_with s (fun _ => ms)).
 Definition App (n : node idx) : M idx := fun s =>
   let i_dag := merge (simplify s n) s in
   Success (fst i_dag, update_dag_with s (fun _ => snd i_dag)).
 
+Definition GetReg r : M idx :=
+  let '(rn, lo, sz) := index_and_shift_and_bitcount_of_reg r in
+  v <- GetReg64 rn;
+  App ((slice lo sz, 64%N), [v]).
+Definition SetReg r (v : idx) : M unit :=
+  let '(rn, lo, sz) := index_and_shift_and_bitcount_of_reg r in
+  if N.eqb sz 64
+  then SetReg64 rn v (* works even if old value is unspecified *)
+  else old <- GetReg64 rn;
+       v <- App ((set_slice lo sz, 64%N), [old; v]);
+       SetReg64 rn v.
+
+Class AddressSize := address_size : N.
+Definition Address {sa : AddressSize} (a : MEM) : M idx :=
+  base <- GetReg a.(mem_reg);
+  index <- match a.(mem_extra_reg) with
+           | Some r => GetReg r
+           | None => App ((const 0, sa), nil)
+           end;
+  offset <- App ((const match a.(mem_offset) with Some z => z | _ => 0 end, sa), nil);
+  bi <- App ((add, sa), [base; index]);
+  App ((add, sa), [bi; offset]).
+
+Definition Load {sa : AddressSize} (a : MEM) : M idx :=
+  addr <- Address a;
+  v <- Load64 addr;
+  if a.(mem_is_byte)
+  then App ((slice 0 8, 64%N), [v])
+  else ret v.
+
+Definition Store {sa : AddressSize} (a : MEM) v : M unit :=
+  addr <- Address a;
+  if negb a.(mem_is_byte) (* works even if old value undefined *)
+  then Store64 addr v
+  else old <- Load64 addr;
+       v <- App ((set_slice 0 8, 64), [old; v])%N;
+       Store64 addr v.
+
+(* note: this could totally just handle truncation of constants if semanics handled it *)
+Definition GetOperand {sa : AddressSize} (o : ARG) : M idx :=
+  match o with
+  | Syntax.const a => App ((const a, 64%N), [])
+  | mem a => Load a
+  | reg r => GetReg r
+  end.
+
+Definition SetOperand {sa : AddressSize} (o : ARG) (v : idx) : M unit :=
+  match o with
+  | Syntax.const a => err (error.set_const a v)
+  | mem a => Store a v
+  | reg a => SetReg a v
+  end.
+
 Local Unset Elimination Schemes.
 Inductive pre_expr : Set :=
-| PreFlag (_ : FLAG)
-| PreReg (_ : nat) (* 0 <= i < 16 *)
-| PreMem (_ : pre_expr)
+| PreARG (_ : ARG)
 | PreApp (_:node pre_expr).
 (* note: need custom induction principle *)
 Local Set Elimination Schemes.
-Fixpoint SymevalPre (e : pre_expr) : M idx :=
+
+Fixpoint Symeval {sa : AddressSize} (e : pre_expr) : M idx :=
   match e with
-  | PreFlag f => GetFlag f
-  | PreReg r => GetReg r
-  | PreMem a => a <- SymevalPre a; Load a
-  | PreApp (op, args) => args <- mapM SymevalPre args; App (op, args)
-  end%x86symex.
-
-Class AddressSize := address_size : N.
-Definition PreAddress {sa : AddressSize} (a : MEM) : pre_expr :=
-  PreApp (add, sa,
-  [PreApp (add, sa,
-   [PreReg (reg_index (mem_reg a));
-   match mem_extra_reg a with
-   | Some _ => PreReg (reg_index (mem_reg a))
-   | None => PreApp ((const 0, sa), nil)
-   end]);
-   PreApp ((const match mem_offset a with Some z => z | _ => 0 end, sa), nil)]).
-
-Section WithOperationSize.
-  Context {sa : AddressSize} {s : OperationSize}.
-  Definition PreOperand (a : ARG) : pre_expr :=
-    match a with
-    | reg a =>
-        (* note: partial register access should be handled here *)
-        PreReg (reg_index a)
-    | mem a => PreMem (PreAddress (sa:=sa) a)
-    | Syntax.const a => PreApp ((const a, s), nil)
+  | PreARG o => GetOperand o
+  | PreApp ((op, s), args) =>
+      idxs <- mapM Symeval args;
+      App ((op, s), idxs)
   end.
-  Definition Symeval a := SymevalPre (PreOperand a).
-  Definition Symaddr a := SymevalPre (PreAddress a).
-
-  Definition SetOperand (a : ARG) (v : idx) : M unit :=
-    match a with
-    | Syntax.const a => err (error.set_const a v)
-    | mem a =>
-        addr <- Symaddr a;
-        if negb (mem_is_byte a)
-        then
-          Store addr v
-        else
-          old <- Load addr;
-          v <- App ((set_slice 0 8, 64), [old; v]);
-          Store addr v
-    | reg a =>
-        let '(a, lo, sz) := index_and_shift_and_bitcount_of_reg a in
-        if N.eqb sz 64
-        then
-          SetReg a v
-        else
-          old <- GetReg a;
-          v <- App ((set_slice lo sz, 64), [old; v]);
-          SetReg a v
-    end%N%x86symex.
-
-End WithOperationSize.
 
 Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
   let sa : AddressSize := 64%N in
@@ -287,10 +293,10 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
   let s : OperationSize := s in
   match instr.(Syntax.op), instr.(args) with
   | mov, [dst; src] => (* Note: unbundle when switching from N to Z *)
-    e <- Symeval src;
+    e <- GetOperand src;
     SetOperand dst e
   | lea, [dst; mem src] => (* Flags Affected: None *)
-    e <- Symaddr src;
+    e <- Address src;
     SetOperand dst e
   | _, _ => err (error.unimplemented_instruction instr)
  end | _ => err (error.ambiguous_operation_size instr) end%N%x86symex.
@@ -307,16 +313,16 @@ Definition init
   let arrayentries := List.flat_map (fun r_n =>
     List.map (fun i => (fst r_n, i)) (List.seq 0 (snd r_n))) arrays in
   let heap_dag := foldmap (fun r_i dag => let r := fst r_i in
-       let p_dag := merge (ExprApp ((add, sz),[ExprRef (Z.of_nat (reg_index r)); ExprApp ((const (8 * Z.of_nat (snd r_i)), sz), [])])) dag in
+       let p_dag := merge (ExprApp ((add, sz),[ExprRef (N.of_nat (reg_index r)); ExprApp ((const (8 * Z.of_nat (snd r_i)), sz), [])])) dag in
        let v_dag := merge (ExprApp ((old (r, Some (snd r_i)), sz),[])) (snd p_dag) in
        ((fst p_dag, fst v_dag), snd p_dag)
        ) arrayentries dag in
   let stack_dag := foldmap (fun i dag => let r := rsp in
-       let p_dag := merge (ExprApp ((sub, sz),[ExprRef (Z.of_nat (reg_index r)); ExprApp ((const (8*Z.of_nat i), sz), [])])) dag in
+       let p_dag := merge (ExprApp ((sub, sz),[ExprRef (N.of_nat (reg_index r)); ExprApp ((const (8*Z.of_nat i), sz), [])])) dag in
        let v_dag := merge (ExprApp ((old (r, Some i), sz),[])) (snd p_dag) in
        ((fst p_dag, fst v_dag), snd p_dag)
        ) (seq 0 stack) (snd heap_dag) in
-  let regs := List.map (fun i => Some (Z.of_nat i)) (seq 0 16) in
+  let regs := List.map (fun i => Some (N.of_nat i)) (seq 0 16) in
   {|
     dag_state := snd stack_dag;
     symbolic_reg_state := Tuple.from_list _ regs eq_refl;
@@ -331,7 +337,7 @@ Example test1 : match (
     ;Build_NormalInstruction mov [reg rbx; mem (Build_MEM false rsi None (Some 16%Z))]
     ;Build_NormalInstruction lea [reg rcx; mem (Build_MEM false rsi (Some rbx) (Some 7%Z))]
     ;Build_NormalInstruction mov [         mem (Build_MEM false rsi None (Some 24%Z)); reg rcx]
-    ])
+     ])
 ) with Error _ => False | Success st => True end. native_cast_no_check I. Qed.
 
 Definition SymexLines st (lines : list Syntax.Line) :=
