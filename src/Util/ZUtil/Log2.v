@@ -52,7 +52,7 @@ Module Z.
   Proof.
     destruct (Z_lt_le_dec 0 a); auto using Z.log2_lt_pow2; [].
     rewrite Z.log2_nonpos by lia.
-    split; auto with zarith; [].
+    split; auto;[].
     intro; eapply Z.le_lt_trans; [ eassumption | ].
     auto with zarith.
   Qed.
