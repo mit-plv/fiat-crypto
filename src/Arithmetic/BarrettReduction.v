@@ -406,7 +406,7 @@ Module Fancy.
              break_innermost_match; autorewrite with zsimplify; reflexivity).
         rewrite shiftr_correct by (rewrite ?Z.div_small, ?Z2Nat.inj_0 by lia; auto with zarith lia).
         autorewrite with weight_to_pow pull_Zpow pull_Zdiv.
-        rewrite !Z.div_div, <-!Z.pow_add_r by (Core.zutil_arith || Z.zero_bounds).
+        rewrite ?Z.div_div, <-?Z.pow_add_r by (Core.zutil_arith || Z.zero_bounds).
         congruence.
       Qed.
 
