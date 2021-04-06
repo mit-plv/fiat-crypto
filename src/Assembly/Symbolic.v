@@ -38,12 +38,38 @@ Module Import List.
   End FoldMap.
 End List.
 
+Require Coq.Sorting.Mergesort.
+Module NOrder <: Orders.TotalLeBool.
+  Local Open Scope N_scope.
+  Definition t := N.
+  Definition ltb := N.ltb.
+  Definition leb := N.leb.
+  Theorem leb_total : forall a1 a2, leb a1 a2 = true \/ leb a2 a1 = true.
+  Proof.
+    cbv [leb ltb]; intros a1 a2.
+    repeat first [ rewrite !Bool.andb_true_iff
+                 | rewrite !Bool.orb_true_iff
+                 | rewrite !N.eqb_eq
+                 | rewrite !N.ltb_lt
+                 | rewrite !N.leb_le ].
+    Lia.lia.
+  Qed.
+End NOrder.
+Module NSort := Mergesort.Sort NOrder.
+Notation sortN := NSort.sort.
+
 Require Import Crypto.Assembly.Syntax.
 Definition idx := N.
 Local Set Boolean Equality Schemes.
-Variant opname := old (_:REG*option nat) | const (_ : Z) | add | sub | slice (lo sz : N) | set_slice (lo sz : N)(* | ... *).
+Variant opname := old (_:REG*option nat) | const (_ : Z) | add | sub | neg | slice (lo sz : N) | set_slice (lo sz : N)(* | ... *).
+
+Definition associative o := match o with add => true | _ => false end.
+Definition commutative o := match o with add => true | _ => false end.
+Definition identity o := match o with add => Some 0%Z | _ => None end.
+
 Class OperationSize := operation_size : N.
 Definition op : Set := opname * OperationSize.
+Definition op_beq := Prod.prod_beq _ _ opname_beq N.eqb.
 
 Definition node (A : Set) : Set := op * list A.
 
@@ -56,8 +82,8 @@ Local Unset Elimination Schemes.
 Definition invert_ExprRef (e : expr) : option idx :=
   match e with ExprRef i => Some i | _ => None end.
 
-Definition node_eqb [A : Set] (arg_eqb : A -> A -> bool) : node A -> node A -> bool := 
-  Prod.prod_beq _ _ (Prod.prod_beq _ _ opname_beq N.eqb) (ListUtil.list_beq _ arg_eqb).
+Definition node_beq [A : Set] (arg_eqb : A -> A -> bool) : node A -> node A -> bool := 
+  Prod.prod_beq _ _ op_beq (ListUtil.list_beq _ arg_eqb).
 
 Definition dag := list (node idx).
 
@@ -79,7 +105,7 @@ Section Reveal.
 End Reveal.
 
 Definition merge_node (n : node idx) (d : dag) : idx * dag :=
-  match List.indexof (node_eqb N.eqb n) d with
+  match List.indexof (node_beq N.eqb n) d with
   | Some i => (N.of_nat i, d)
   | None => (N.of_nat (length d), List.app d (cons n nil))
   end.
@@ -88,7 +114,10 @@ Fixpoint merge (e : expr) (d : dag) : idx * dag :=
   | ExprRef i => (i, d)
   | ExprApp (op, args) =>
     let idxs_d := List.foldmap merge args d in
-    merge_node (op, fst idxs_d) (snd idxs_d)
+    let idxs := if commutative (fst op)
+                then sortN (fst idxs_d)
+                else (fst idxs_d) in
+    merge_node (op, idxs) (snd idxs_d)
   end.
 
 Lemma reveal_merge : forall d e, exists n, reveal (snd (merge e d)) n (fst (merge e d)) = e.
@@ -98,21 +127,74 @@ Admitted.
 Require Import Crypto.Util.Option Crypto.Util.Notations.
 Import ListNotations.
 
-Definition simplify (dag : dag) (e : node idx) : expr :=
-  List.fold_right (fun f e => f e) (reveal_node dag 4 e)
+Require Import Crypto.Util.Option Crypto.Util.Notations.
+Import ListNotations.
+
+Definition interp_op o s args :=
+  match o, args with
+  | add, args => Some (List.fold_right Z.add 0 args mod s)
+  | neg, [a] => Some (-a mod s)
+  | const z, nil => Some (z mod s)
+  (* note: incomplete *)
+  | _, _ => None
+  end%Z.
+
+Fixpoint interp_expr (e : expr) : option Z :=
+  match e with
+  | ExprApp ((o,s), arges) =>
+      args <- Option.List.lift (List.map interp_expr arges);
+      interp_op o (Z.of_N s) args
+  | _ => None
+  end%option.
+
+Definition isCst (e : expr) :=
+  match e with ExprApp ((const _, _), _) => true | _ => false end.
+Definition simplify_expr : expr -> expr :=
+  List.fold_left (fun e f => f e)
   [fun e => match e with
-    ExprApp ((slice 0 s',s), [a]) =>
-      if N.eqb s s' then a else e | _ => e end
-  ;fun e => match e with
-    ExprApp (((add|sub),s), [a; ExprApp ((const 0, _), []) ]) =>
-      if N.eqb s 64 then a else e | _ => e end
-  ;fun e => match e with
-    ExprApp ((sub,s)as op, [ExprApp ((add, s'), [a; b]); a']) =>
+    ExprApp ((sub,s), [ExprApp ((add, s'), [a; b]); a']) =>
       if N.eqb s s' && expr_beq a a' then b else e | _ => e end
   ;fun e => match e with
     ExprApp ((sub,s), [a; b]) =>
-      if expr_beq a b then ExprApp ((const 0, s), []) else e | _ => e end]%bool.
-
+      if expr_beq a b then ExprApp ((const 0, s), []) else e | _ => e end
+  ;fun e => match e with
+     ExprApp ((sub, s), [a;b]) =>
+     ExprApp ((add, s), [a; ExprApp ((neg, s), [b])])  | _ => e end
+  ;fun e => match e with
+    ExprApp (o, args) =>
+    if associative (fst o) then
+      ExprApp (o, List.flat_map (fun e' =>
+        match e' with
+        | ExprApp (o', args') => if op_beq o o' then args' else [e']
+        | _ => [e'] end) args)
+    else e | _ => e end
+  ;fun e => match e with
+    ExprApp (o, args) =>
+    if commutative (fst o) then
+    let csts_exprs := List.partition isCst args in
+    match interp_expr (ExprApp (o, fst csts_exprs)) with None => e | Some v =>
+    ExprApp (o, ExprApp (const v, snd o, nil):: snd csts_exprs)
+    end else e | _ => e end
+  ;fun e => match e with
+    ExprApp ((slice 0 s',s), [a]) =>
+      if N.eqb s s' then a else e | _ => e end
+  ;fun e => match e with
+    ExprApp (o, args) =>
+    match identity (fst o) with
+    | Some i =>
+        match args with
+        | cons a (cons b nil) =>
+            match interp_expr a, interp_expr b with
+            | Some a, _ => if i =? a then b else  e
+            | _, Some b => if i =? b then a else e
+            | _, _  => e end
+        | cons a args' =>
+            match interp_expr a with
+            | Some v => ExprApp (o, args')
+            | _ => e end | _ => e end | _ => e end  | _ => e end
+  ]%Z%bool.
+Definition simplify (dag : dag) (e : node idx) : expr :=
+  simplify_expr (reveal_node dag 1 e).
 
 Definition reg_state := Tuple.tuple (option idx) 16.
 Definition flag_state := Tuple.tuple (option idx) 6.
@@ -169,6 +251,8 @@ Definition update_mem_with (st : symbolic_state) (f : mem_state -> mem_state) : 
 
 Module error.
   Variant error :=
+  | nth_error_dag (_ : nat)
+
   | get_flag (f : FLAG)
   | get_reg (r : REG)
   | load (a : idx)
@@ -325,13 +409,13 @@ Definition init
   let arrayentries := List.flat_map (fun r_n =>
     List.map (fun i => (fst r_n, i)) (List.seq 0 (snd r_n))) arrays in
   let heap_dag := foldmap (fun r_i dag => let r := fst r_i in
-       let p_dag := merge (ExprApp ((add, sz),[ExprRef (N.of_nat (reg_index r)); ExprApp ((const (8 * Z.of_nat (snd r_i)), sz), [])])) dag in
-       let v_dag := merge (ExprApp ((old (r, Some (snd r_i)), sz),[])) (snd p_dag) in
+       let p_dag := merge (simplify_expr (ExprApp ((add, sz),[ExprRef (N.of_nat (reg_index r)); ExprApp ((const (8 * Z.of_nat (snd r_i)), sz), [])]))) dag in
+       let v_dag := merge (simplify_expr (ExprApp ((old (r, Some (snd r_i)), sz),[]))) (snd p_dag) in
        ((fst p_dag, fst v_dag), snd p_dag)
        ) arrayentries dag in
   let stack_dag := foldmap (fun i dag => let r := rsp in
-       let p_dag := merge (ExprApp ((sub, sz),[ExprRef (N.of_nat (reg_index r)); ExprApp ((const (8*Z.of_nat i), sz), [])])) dag in
-       let v_dag := merge (ExprApp ((old (r, Some i), sz),[])) (snd p_dag) in
+       let p_dag := merge (simplify_expr (ExprApp ((sub, sz),[ExprRef (N.of_nat (reg_index r)); ExprApp ((const (8*Z.of_nat i), sz), [])]))) dag in
+       let v_dag := merge (simplify_expr (ExprApp ((old (r, Some i), sz),[]))) (snd p_dag) in
        ((fst p_dag, fst v_dag), snd v_dag)
        ) (seq 1 stack) (snd heap_dag) in
   let regs := List.map (fun i => Some (N.of_nat i)) (seq 0 16) in
@@ -376,14 +460,12 @@ Example evaluation : True.
     simple notypeclasses refine (let n : symbolic_state := _ in _);
     [ transparent_abstract (exact s) |];
     let g := eval cbv delta [n] in n in
-    idtac e g
+    idtac (* e g *)
   end.
   exact I.
 Defined.
 
-Notation "f @ ()" := (ExprApp ((f,64%N), (@nil expr))) (at level 10).
-Notation "f @ ( x , y , .. , z )" := (ExprApp ((f,64%N), (@cons expr x%N (@cons expr y%N .. (@cons expr z%N nil) ..)))) (at level 10).
+Notation "f" := (ExprApp ((f,64%N), (@nil expr))) (at level 10, only printing).
+Notation "f @ ( x , y , .. , z )" := (ExprApp ((f,64%N), (@cons expr x%N (@cons expr y%N .. (@cons expr z%N nil) ..)))) (at level 10, only printing).
 Local Coercion ExprRef : idx >-> expr.
-
-Compute reveal evaluation_subterm 100 169%N.
-Compute reveal evaluation_subterm 100 44%N.
+(* Compute reveal evaluation_subterm 999 170%N. *)
