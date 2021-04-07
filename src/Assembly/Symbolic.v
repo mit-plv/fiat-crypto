@@ -1,3 +1,9 @@
+Require Crypto.Assembly.Parse Crypto.Assembly.Parse.Examples.fiat_25519_carry_square_optimised_seed20.
+Definition lines' := Eval native_compute in
+  Assembly.Parse.parse
+  Assembly.Parse.Examples.fiat_25519_carry_square_optimised_seed20.example.
+
+Definition lines := Eval cbv in ErrorT.invert_result lines'.
 Require Import Coq.Lists.List.
 Require Import Coq.ZArith.ZArith.
 Require Crypto.Util.Tuple.
@@ -61,11 +67,11 @@ Notation sortN := NSort.sort.
 Require Import Crypto.Assembly.Syntax.
 Definition idx := N.
 Local Set Boolean Equality Schemes.
-Variant opname := old (_:REG*option nat) | const (_ : Z) | add | sub | neg | slice (lo sz : N) | set_slice (lo sz : N)(* | ... *).
+Variant opname := old (_:REG*option nat) | const (_ : N) | add | neg | xor | slice (lo sz : N) | mul | mulhuu | set_slice (lo sz : N)(* | ... *).
 
 Definition associative o := match o with add => true | _ => false end.
 Definition commutative o := match o with add => true | _ => false end.
-Definition identity o := match o with add => Some 0%Z | _ => None end.
+Definition identity o := match o with add => Some 0%N | _ => None end.
 
 Class OperationSize := operation_size : N.
 Definition op : Set := opname * OperationSize.
@@ -132,18 +138,21 @@ Import ListNotations.
 
 Definition interp_op o s args :=
   match o, args with
-  | add, args => Some (List.fold_right Z.add 0 args mod s)
-  | neg, [a] => Some (-a mod s)
-  | const z, nil => Some (z mod s)
+  | add, args => Some (N.land (List.fold_right N.add 0 args) (N.ones s))
+  | neg, [a] => Some (N.land (2^s - a) (N.ones s))
+  | const z, nil => Some (N.land z (N.ones s))
   (* note: incomplete *)
   | _, _ => None
-  end%Z.
+  end%N.
 
-Fixpoint interp_expr (e : expr) : option Z :=
+Definition zconst s (z:Z) :=
+  const (if z <? 0 then invert_Some (interp_op neg s [Z.abs_N z]) else Z.to_N z)%Z.
+
+Fixpoint interp_expr (e : expr) : option N :=
   match e with
   | ExprApp ((o,s), arges) =>
       args <- Option.List.lift (List.map interp_expr arges);
-      interp_op o (Z.of_N s) args
+      interp_op o s args
   | _ => None
   end%option.
 
@@ -151,15 +160,9 @@ Definition isCst (e : expr) :=
   match e with ExprApp ((const _, _), _) => true | _ => false end.
 Definition simplify_expr : expr -> expr :=
   List.fold_left (fun e f => f e)
-  [fun e => match e with
-    ExprApp ((sub,s), [ExprApp ((add, s'), [a; b]); a']) =>
-      if N.eqb s s' && expr_beq a a' then b else e | _ => e end
-  ;fun e => match e with
-    ExprApp ((sub,s), [a; b]) =>
-      if expr_beq a b then ExprApp ((const 0, s), []) else e | _ => e end
-  ;fun e => match e with
-     ExprApp ((sub, s), [a;b]) =>
-     ExprApp ((add, s), [a; ExprApp ((neg, s), [b])])  | _ => e end
+  [fun e => match interp_expr e with
+            | Some v => ExprApp ((const v, 64(*note:arbitrary*)), nil)
+            | _ => e end
   ;fun e => match e with
     ExprApp (o, args) =>
     if associative (fst o) then
@@ -192,7 +195,7 @@ Definition simplify_expr : expr -> expr :=
             match interp_expr a with
             | Some v => ExprApp (o, args')
             | _ => e end | _ => e end | _ => e end  | _ => e end
-  ]%Z%bool.
+  ]%N%bool.
 Definition simplify (dag : dag) (e : node idx) : expr :=
   simplify_expr (reveal_node dag 1 e).
 
@@ -285,7 +288,7 @@ Section MapM. (* map over a list in the state monad *)
     | cons a l => b <- f a; bs <- mapM l; ret (cons b bs)
     end%x86symex.
 End MapM.
-Definition mapM_ [A] (f: A -> M unit) l : M unit := _ <- mapM f l; ret tt.
+Definition mapM_ [A B] (f: A -> M B) l : M unit := _ <- mapM f l; ret tt.
 
 Definition GetFlag f : M idx :=
   some_or (fun s => get_flag s f) (error.get_flag f).
@@ -301,9 +304,11 @@ Definition SetReg64 rn i : M unit :=
 Definition Store64 (a v : idx) : M unit :=
   ms <- some_or (store a v) (error.store a v);
   fun s => Success (tt, update_mem_with s (fun _ => ms)).
-Definition App (n : node idx) : M idx := fun s =>
-  let i_dag := merge (simplify s n) s in
+Definition Merge (e : expr) : M idx := fun s =>
+  let i_dag := merge e s in
   Success (fst i_dag, update_dag_with s (fun _ => snd i_dag)).
+Definition App (n : node idx) : M idx :=
+  fun s => Merge (simplify s n) s.
 
 Definition GetReg r : M idx :=
   let '(rn, lo, sz) := index_and_shift_and_bitcount_of_reg r in
@@ -324,7 +329,9 @@ Definition Address {sa : AddressSize} (a : MEM) : M idx :=
            | Some r => GetReg r
            | None => App ((const 0, sa), nil)
            end;
-  offset <- App ((const match a.(mem_offset) with Some z => z | _ => 0 end, sa), nil);
+  offset <- App ((zconst sa (match a.(mem_offset) with
+                             | Some s => s 
+                             | None => 0 end), sa), nil);
   bi <- App ((add, sa), [base; index]);
   App ((add, sa), [bi; offset]).
 
@@ -346,7 +353,7 @@ Definition Store {sa : AddressSize} (a : MEM) v : M unit :=
 (* note: this could totally just handle truncation of constants if semanics handled it *)
 Definition GetOperand {sa : AddressSize} (o : ARG) : M idx :=
   match o with
-  | Syntax.const a => App ((const a, 64%N), [])
+  | Syntax.const a => App ((zconst 64 a, 64%N), [])
   | mem a => Load a
   | reg r => GetReg r
   end.
@@ -388,43 +395,66 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
     v <- GetOperand src;
     SetOperand dst v
   | Syntax.sub, [dst; src] =>
-    v <- Symeval (sub@(dst, src));
+    v <- Symeval (add@(dst, PreApp neg [PreARG src]));
     _ <- SetOperand dst v;
     HavocFlags
-  | lea, [dst; mem src] => (* Flags Affected: None *)
+  | lea, [dst; mem src] =>
     a <- Address src;
     SetOperand dst a
+  | imul, ([dst as src1; src2] | [dst; src1; src2]) =>
+    v <- Symeval (mul@(src1,src2));
+    _ <- SetOperand dst v;
+    HavocFlags
+  | Syntax.xor, [dst; src] =>
+    v <- Symeval (xor@(dst,src));
+    _ <- SetOperand dst v;
+    HavocFlags
+  | mulx, [hi; lo; src2] =>
+    let src1 : ARG := rdx in
+    vl <- Symeval (mul@(src1,src2));
+    vh <- Symeval (mulhuu@(src1,src2));
+    _ <- SetOperand lo vl;
+         SetOperand hi vh
   | _, _ => err (error.unimplemented_instruction instr)
  end | _ => err (error.ambiguous_operation_size instr) end%N%x86symex.
 
 Definition SymexNormalInstructions := fun st is => mapM_ SymexNormalInstruction is st.
+
+
+Definition OldReg (r : REG) : M unit :=
+  i <- Merge (ExprApp ((old (r, None), reg_size r), nil));
+  SetReg r i.
+Definition OldCell (r : REG) (i : nat) : M unit :=
+  a <- @Address 64%N {| mem_reg := r; mem_offset := Some (Z.of_nat(8*i));
+                 mem_is_byte := false; mem_extra_reg:=None |};
+  v <- Merge (ExprApp ((old (r, Some i), 64%N), nil));
+  (fun s => Success (tt, update_mem_with s (cons (a,v)))).
+Definition OldStack (r := rsp) (i : nat) : M unit :=
+  a <- @Address 64%N {| mem_reg := r; mem_offset := Some (Z.opp (Z.of_nat(8*S i)));
+                 mem_is_byte := false; mem_extra_reg:=None |};
+  v <- Merge (ExprApp ((old (r, Some i), 64%N), nil));
+  (fun s => Success (tt, update_mem_with s (cons (a,v)))).
 
 Definition init
   (arrays : list (REG * nat)) (* full 64-bit registers only *)
   (stack : nat)
   : symbolic_state :=
   let sz := 64%N in
-  let dag := List.map (fun i =>
-    ((old (widest_register_of_index i,None), 64%N),[])) (seq 0 16) in
-  let arrayentries := List.flat_map (fun r_n =>
-    List.map (fun i => (fst r_n, i)) (List.seq 0 (snd r_n))) arrays in
-  let heap_dag := foldmap (fun r_i dag => let r := fst r_i in
-       let p_dag := merge (simplify_expr (ExprApp ((add, sz),[ExprRef (N.of_nat (reg_index r)); ExprApp ((const (8 * Z.of_nat (snd r_i)), sz), [])]))) dag in
-       let v_dag := merge (simplify_expr (ExprApp ((old (r, Some (snd r_i)), sz),[]))) (snd p_dag) in
-       ((fst p_dag, fst v_dag), snd p_dag)
-       ) arrayentries dag in
-  let stack_dag := foldmap (fun i dag => let r := rsp in
-       let p_dag := merge (simplify_expr (ExprApp ((sub, sz),[ExprRef (N.of_nat (reg_index r)); ExprApp ((const (8*Z.of_nat i), sz), [])]))) dag in
-       let v_dag := merge (simplify_expr (ExprApp ((old (r, Some i), sz),[]))) (snd p_dag) in
-       ((fst p_dag, fst v_dag), snd v_dag)
-       ) (seq 1 stack) (snd heap_dag) in
-  let regs := List.map (fun i => Some (N.of_nat i)) (seq 0 16) in
-  {|
-    dag_state := snd stack_dag;
-    symbolic_reg_state := Tuple.from_list _ regs eq_refl;
-    symbolic_mem_state := fst heap_dag ++ fst stack_dag;
-    symbolic_flag_state := Tuple.repeat None 6
-  |}.
+  let s0 :=
+    {|
+      dag_state := [];
+      symbolic_reg_state := Tuple.repeat None 16;
+      symbolic_mem_state := [];
+      symbolic_flag_state := Tuple.repeat None 6;
+    |} in
+  let es :=
+    (_ <- mapM_ OldReg (List.map widest_register_of_index (seq 0 16));
+     _ <- mapM_ (fun '(r, n) => mapM_ (OldCell r) (seq 0 n)) arrays;
+     mapM_ OldStack (seq 0 stack))%x86symex s0 in
+  match es with
+  | Success (_, s) => s
+  | _ => s0
+  end.
 
 Example test1 : match (
   let st := init [(rsi, 4)] 0 in
@@ -436,23 +466,21 @@ Example test1 : match (
      ])
 ) with Error _ => False | Success st => True end. native_cast_no_check I. Qed.
 
+Definition invert_rawline l := match l.(rawline) with INSTR instr => Some instr | _ => None end.
 Definition SymexLines st (lines : list Syntax.Line) :=
-  SymexNormalInstructions st (Option.List.map (fun l =>
-    match l.(rawline) with INSTR instr => Some instr | _ => None end) lines).
-
-Require Crypto.Assembly.Parse Crypto.Assembly.Parse.Examples.fiat_25519_carry_square_optimised_seed20.
-Definition lines' := Eval native_compute in
-  Assembly.Parse.parse
-  Assembly.Parse.Examples.fiat_25519_carry_square_optimised_seed20.example.
-Definition lines := Eval cbv in ErrorT.invert_result lines'.
+  SymexNormalInstructions st (Option.List.map invert_rawline lines).
 
 Import Coq.Strings.String.
 Local Open Scope string_scope.
+Notation "f" := (ExprApp ((f,64%N), (@nil expr))) (at level 10, only printing).
+Notation "f @ ( x , y , .. , z )" := (ExprApp ((f,64%N), (@cons expr x%N (@cons expr y%N .. (@cons expr z%N nil) ..)))) (at level 10, only printing).
+Local Coercion ExprRef : idx >-> expr.
 
 Example evaluation : True.
-  pose (x :=
-    let st := init [(rsi, 4); (rdi, 4)] 48 in
-    SymexLines st lines).
+  pose (s0 := init [(rsi, 5); (rdi, 5)] 7).
+
+  let n := constr:(85%nat) in
+  pose (x := SymexLines s0 (firstn n lines));
   cbv in x.
   let v := eval cbv delta [x] in x in
   match v with Error (?e, ?s) =>
@@ -460,12 +488,21 @@ Example evaluation : True.
     simple notypeclasses refine (let n : symbolic_state := _ in _);
     [ transparent_abstract (exact s) |];
     let g := eval cbv delta [n] in n in
-    idtac (* e g *)
+    idtac (* g *);
+
+    try (match e with context [?i] => 
+      let d := eval cbv in (reveal evaluation_subterm 999 170%N) in
+      idtac d end)
+  | Success (_, ?s) =>
+      let ss := fresh "s" in 
+      set s as ss;
+      let v := eval cbv in (Option.bind (nth_error lines n) invert_rawline) in
+      match v with
+      | Some ?ni => pose (SymexNormalInstruction ni ss); clear x
+      end
   end.
+
+  (* note: next adox *)
+
   exact I.
 Defined.
-
-Notation "f" := (ExprApp ((f,64%N), (@nil expr))) (at level 10, only printing).
-Notation "f @ ( x , y , .. , z )" := (ExprApp ((f,64%N), (@cons expr x%N (@cons expr y%N .. (@cons expr z%N nil) ..)))) (at level 10, only printing).
-Local Coercion ExprRef : idx >-> expr.
-(* Compute reveal evaluation_subterm 999 170%N. *)
