@@ -5,6 +5,9 @@ Require Import Coq.Lists.List.
 Require Import Coq.Strings.String.
 Require Import Coq.Strings.HexString.
 Require Crypto.Util.Strings.String.
+Require Import Crypto.Assembly.Syntax.
+Require Import Crypto.Assembly.Parse.
+Require Import Crypto.Assembly.Equivalence.
 Require Import Crypto.Util.Strings.Decimal.
 Require Import Crypto.Util.Strings.ParseArithmetic.
 Require Import Crypto.Util.Strings.ParseArithmeticToTaps.
@@ -51,6 +54,9 @@ Module ForExtraction.
           ls <-- List.map ParseArithmetic.eval_Qexpr_strict ls;
           ls <-- List.map ParseArithmetic.Q_to_Z_strict ls;
           Some ls).
+
+  Definition parse_list_REG (s : string) : option (list REG)
+    := finalize (parse_comma_list parse_REG) s.
 
   (* Workaround for lack of notation in 8.8 *)
   Local Notation "x =? y" := (if string_dec x y then true else false) : string_scope.
@@ -361,7 +367,7 @@ Module ForExtraction.
   Definition hint_file_spec : named_argT
     := ([Arg.long_key "hints-file"],
         Arg.String,
-        ["An assembly file to be read for hinting the synthesis process.  Use - for stdin.  Currently unused."]).
+        ["An assembly file to be read for hinting the synthesis process.  Use - for stdin."]).
   Definition output_file_spec : named_argT
     := ([Arg.long_key "output"; Arg.short_key "o"],
         Arg.String,
@@ -369,7 +375,28 @@ Module ForExtraction.
   Definition asm_output_spec : named_argT
     := ([Arg.long_key "output-asm"],
         Arg.String,
-        ["The name of the file to write generated assembly to.  Use - for stdout.  (default: -)  Currently unused."]).
+        ["The name of the file to write generated assembly to.  Use - for stdout.  (default: -)"]).
+  Definition asm_reg_spec : named_argT
+    := ([Arg.long_key "asm-reg"],
+        Arg.Custom (parse_string_and parse_list_REG) "REG",
+        ["A comma-separated list of registers to use for calling conventions.  Only relevant when --hints-file is specified."
+         ; "Defaults to the System V AMD64 ABI of " ++ String.concat "," (List.map (show false) default_assembly_calling_registers) ++ ".  Note that registers are first used for outputs and then inputs."]).
+  Definition asm_stack_size_spec : named_argT
+    := ([Arg.long_key "asm-stack-size"],
+        Arg.Custom (parse_string_and parse_N) "ℕ",
+        ["The number of bytes of stack.  Only relevant when --hints-file is specified.  Default: " ++ show false (default_assembly_stack_size:N) ++ "."]).
+  Definition no_error_on_unused_asm_functions_spec : named_argT
+    := ([Arg.long_key "no-error-on-unused-asm-functions"],
+        Arg.Unit,
+        ["Don't error if there are global labels in the hints-file which are not requested functions."]).
+  Definition asm_input_first_spec : named_argT
+    := ([Arg.long_key "asm-input-first"],
+        Arg.Unit,
+        ["By default, output pointers are assumed to come before input arguments in the C code the assembly hints are based on.  This flag reverses that convention."]).
+  Definition asm_reg_rtl_spec : named_argT
+    := ([Arg.long_key "asm-reg-rtl"],
+        Arg.Unit,
+        ["By default, registers are assumed to be assigned to function arguments from left to right in the hints file.  This flag reverses that convention to be right-to-left.  Note that this flag interacts with --asm-input-first, which determines whether the output pointers are to the left or to the right of the input arguments."]).
 
   Definition collapse_list_default {A} (default : A) (ls : list A)
     := List.hd default (List.rev ls).
@@ -418,6 +445,16 @@ Module ForExtraction.
       ; internal_class_name :> class_name_opt
       (** What's are the naming conventions to use? *)
       ; language_naming_conventions :> language_naming_conventions_opt
+      (** list of registers for calling assembly functions *)
+      ; assembly_calling_registers :> assembly_calling_registers_opt
+      (** size of the stack in bytes *)
+      ; assembly_stack_size :> assembly_stack_size_opt
+      (** error if there are un-requested assembly functions *)
+      ; error_on_unused_assembly_functions :> error_on_unused_assembly_functions_opt
+      (** Are output arrays considered to come before input arrays, or after them? *)
+      ; assembly_output_first :> assembly_output_first_opt
+      (** Should we assign registers to the arguments in left-to-right or right-to-left order? *)
+      ; assembly_argument_registers_left_to_right :> assembly_argument_registers_left_to_right_opt
       (** don't prepend fiat to prefix *)
       ; no_prefix_fiat : bool
     }.
@@ -482,6 +519,11 @@ Module ForExtraction.
         ; hint_file_spec
         ; output_file_spec
         ; asm_output_spec
+        ; asm_reg_spec
+        ; asm_stack_size_spec
+        ; no_error_on_unused_asm_functions_spec
+        ; asm_input_first_spec
+        ; asm_reg_rtl_spec
        ].
 
   Definition parse_common_optional_options
@@ -513,9 +555,21 @@ Module ForExtraction.
              , hint_file_namesv
              , output_file_namev
              , asm_output_file_namev
+             , asm_regv
+             , asm_stack_sizev
+             , no_error_on_unused_asm_functionsv
+             , asm_input_firstv
+             , asm_reg_rtlv
             ) := data in
        let to_bool ls := (0 <? List.length ls)%nat in
        let to_string_list ls := List.map (@snd _ _) ls in
+       let to_N_list ls := List.map (@snd _ _) (List.map (@snd _ _) ls) in
+       let to_reg_list ls := match List.map (@snd _ _) (List.map (@snd _ _) ls) with
+                             | nil => None
+                             | ls => Some (List.concat ls)
+                             end in
+       let to_N_opt ls := List.nth_error (to_N_list ls) 0 in
+       let to_N_default ls default := Option.value (to_N_opt ls) default in
        let to_string_opt ls := List.nth_error (to_string_list ls) 0 in
        let to_string_default ls default := Option.value (to_string_opt ls) default in
        let to_capitalization_data_opt ls := List.nth_error (List.map (fun '(_, (_, v)) => v) ls) 0 in
@@ -551,6 +605,11 @@ Module ForExtraction.
                   ; unfold_value_barrier := negb (to_bool value_barrierv)
                   ; use_mul_for_cmovznz := to_bool cmovznz_by_mulv
                   ; emit_primitives := negb (to_bool no_primitivesv)
+                  ; assembly_calling_registers := to_reg_list asm_regv
+                  ; assembly_stack_size := to_N_opt asm_stack_sizev
+                  ; error_on_unused_assembly_functions := negb (to_bool no_error_on_unused_asm_functionsv)
+                  ; assembly_output_first := negb (to_bool asm_input_firstv)
+                  ; assembly_argument_registers_left_to_right := negb (to_bool asm_reg_rtlv)
                |},
                snd (List.hd lang_default langv)) in
        match langv with

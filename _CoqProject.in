@@ -60,6 +60,7 @@ src/ArithmeticCPS/ModOps.v
 src/ArithmeticCPS/Saturated.v
 src/ArithmeticCPS/WordByWordMontgomery.v
 src/Assembly/Equality.v
+src/Assembly/Equivalence.v
 src/Assembly/Parse.v
 src/Assembly/Semantics.v
 src/Assembly/Syntax.v

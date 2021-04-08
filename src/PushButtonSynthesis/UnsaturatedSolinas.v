@@ -36,6 +36,7 @@ Require Import Crypto.UnsaturatedSolinasHeuristics.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.
 Require Import Crypto.PushButtonSynthesis.Primitives.
 Require Import Crypto.PushButtonSynthesis.UnsaturatedSolinasReificationCache.
+Require Import Crypto.Assembly.Equivalence.
 Import Option.Notations.
 Import ListNotations.
 Local Open Scope Z_scope. Local Open Scope list_scope. Local Open Scope bool_scope.
@@ -96,6 +97,11 @@ Section __.
           {widen_carry : widen_carry_opt}
           {widen_bytes : widen_bytes_opt}
           {tight_upperbound_fraction : tight_upperbound_fraction_opt}
+          {assembly_calling_registers : assembly_calling_registers_opt}
+          {assembly_stack_size : assembly_stack_size_opt}
+          {error_on_unused_assembly_functions : error_on_unused_assembly_functions_opt}
+          {assembly_output_first : assembly_output_first_opt}
+          {assembly_argument_registers_left_to_right : assembly_argument_registers_left_to_right_opt}
           (n : nat)
           (s : Z)
           (c : list (Z * Z))
@@ -307,7 +313,7 @@ Section __.
          (Some tight_bounds).
 
   Definition scarry_mul (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString
           machine_wordsize prefix "carry_mul" carry_mul
@@ -326,7 +332,7 @@ Section __.
          (Some tight_bounds).
 
   Definition scarry_square (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString
           machine_wordsize prefix "carry_square" carry_square
@@ -345,7 +351,7 @@ Section __.
          (Some tight_bounds).
 
   Definition scarry_scmul_const (prefix : string) (x : Z)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString
           machine_wordsize prefix ("carry_scmul_" ++ Decimal.Z.to_string x) (carry_scmul_const x)
@@ -364,7 +370,7 @@ Section __.
          (Some tight_bounds).
 
   Definition scarry (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString
           machine_wordsize prefix "carry" carry
@@ -383,7 +389,7 @@ Section __.
          (Some loose_bounds).
 
   Definition sadd (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString
           machine_wordsize prefix "add" add
@@ -402,7 +408,7 @@ Section __.
          (Some loose_bounds).
 
   Definition ssub (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString
           machine_wordsize prefix "sub" sub
@@ -421,7 +427,7 @@ Section __.
          (Some loose_bounds).
 
   Definition sopp (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString
           machine_wordsize prefix "opp" opp
@@ -440,7 +446,7 @@ Section __.
          prime_bytes_bounds.
 
   Definition sto_bytes (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString
           machine_wordsize prefix "to_bytes" to_bytes
@@ -459,7 +465,7 @@ Section __.
          (Some tight_bounds).
 
   Definition sfrom_bytes (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString
           machine_wordsize prefix "from_bytes" from_bytes
@@ -478,7 +484,7 @@ Section __.
          (Some tight_bounds).
 
   Definition sencode (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString
           machine_wordsize prefix "encode" encode
@@ -497,7 +503,7 @@ Section __.
          (Some tight_bounds).
 
   Definition szero (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString
           machine_wordsize prefix "zero" zero
@@ -516,7 +522,7 @@ Section __.
          (Some tight_bounds).
 
   Definition sone (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString
           machine_wordsize prefix "one" one
@@ -554,7 +560,7 @@ Section __.
 
   Definition selectznz : Pipeline.ErrorT _ := Primitives.selectznz n machine_wordsize.
   Definition sselectznz (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Primitives.sselectznz n machine_wordsize prefix.
 
   Local Ltac solve_extra_bounds_side_conditions :=
@@ -746,26 +752,26 @@ Section __.
     Local Open Scope list_scope.
 
     Definition known_functions
-      := [("carry_mul", scarry_mul);
-            ("carry_square", scarry_square);
-            ("carry", scarry);
-            ("add", sadd);
-            ("sub", ssub);
-            ("opp", sopp);
-            ("selectznz", sselectznz);
-            ("to_bytes", sto_bytes);
-            ("from_bytes", sfrom_bytes)].
+      := [("carry_mul", wrap_s scarry_mul);
+            ("carry_square", wrap_s scarry_square);
+            ("carry", wrap_s scarry);
+            ("add", wrap_s sadd);
+            ("sub", wrap_s ssub);
+            ("opp", wrap_s sopp);
+            ("selectznz", wrap_s sselectznz);
+            ("to_bytes", wrap_s sto_bytes);
+            ("from_bytes", wrap_s sfrom_bytes)].
 
     Definition valid_names : string
       := Eval compute in String.concat ", " (List.map (@fst _ _) known_functions) ++ ", or 'carry_scmul' followed by a decimal literal".
 
     Definition extra_special_synthesis (function_name_prefix : string) (name : string)
-      : list (option (string * Pipeline.ErrorT (list string * ToString.ident_infos)))
+      : list (option { t : _ & string * Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult t) }%type)
       := [if prefix "carry_scmul" name
           then let sc := substring (String.length "carry_scmul") (String.length name) name in
                (scZ <- Decimal.Z.of_string sc;
                if (sc =? Decimal.Z.to_string scZ)%string
-               then Some (scarry_scmul_const function_name_prefix scZ)
+               then Some (wrap_s (fun _ => scarry_scmul_const function_name_prefix scZ) tt)
                else None)%option
           else None].
 

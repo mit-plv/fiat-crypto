@@ -170,7 +170,7 @@ Section rmontred.
          bound.
 
   Definition smontred (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString
           machine_wordsize prefix "montred" montred

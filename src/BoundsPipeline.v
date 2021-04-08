@@ -46,8 +46,11 @@ Require Crypto.AbstractInterpretation.Wf.
 Require Crypto.AbstractInterpretation.WfExtra.
 Require Crypto.AbstractInterpretation.Proofs.
 Require Crypto.Assembly.Parse.
+Require Crypto.Assembly.Equivalence.
 Require Import Crypto.Util.Notations.
 Import ListNotations. Local Open Scope Z_scope.
+
+Local Set Implicit Arguments.
 
 Import
   Rewriter.Language.Wf
@@ -203,6 +206,9 @@ Typeclasses Opaque unfold_value_barrier_opt.
 (** Lines of assembly code (implicitly separated by \n) *)
 Class assembly_hints_lines_opt := assembly_hints_lines : option (list string).
 Typeclasses Opaque assembly_hints_lines_opt.
+(** Error if there are un-requested assembly functions *)
+Class error_on_unused_assembly_functions_opt := error_on_unused_assembly_functions : bool.
+Typeclasses Opaque error_on_unused_assembly_functions_opt.
 Inductive synthesis_output_kind := normal_output | assembly_output.
 Notation no_select_size_of_no_select machine_wordsize
   := (if no_select return no_select_size_opt
@@ -243,9 +249,22 @@ Module Pipeline.
   | Unsupported_casts_in_input {t} (e : Expr t) (ls : list { t : _ & @expr (fun _ => string) t })
   | Stringification_failed {t} (e : Expr t) (err : string)
   | Invalid_argument (msg : string)
-  | Assembly_parsing_error (msg : Assembly.Parse.ParseValidatedError).
+  | Assembly_parsing_error (msg : Assembly.Parse.ParseValidatedError)
+  | Unused_global_assembly_labels (labels : list string)
+  | Equivalence_checking_failure
+      {t} (e : Expr t) (asm : Assembly.Syntax.Lines) (arg_bounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
+      (msg : Assembly.Equivalence.EquivalenceCheckingError)
+  .
 
   Notation ErrorT := (ErrorT ErrorMessage).
+
+  Record ExtendedSynthesisResult t :=
+    { lines : list string
+      ; ident_infos : ToString.ident_infos
+      ; arg_bounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t
+      ; out_bounds : ZRange.type.base.option.interp (type.final_codomain t)
+      ; expr : Expr t
+    }.
 
   Section show.
     Context {machine_wordsize : machine_wordsize_opt}
@@ -340,6 +359,25 @@ Module Pipeline.
                     (fun '(b1, b2) => "The bounds " ++ show false b1 ++ " are looser than the expected bounds " ++ show false b2)
                     bs)).
 
+    Definition show_lines_Expr {t} (arg_bounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t) (include_input_bounds : bool)
+      : ShowLines (Expr t)
+      := fun with_parens syntax_tree
+         => let __ := default_language_naming_conventions in
+            match ToString.ToFunctionLines
+                    (relax_zrange := fun r => r)
+                    machine_wordsize
+                    false (* do extra bounds check *) false (* internal static *) false (* static *) "" "f" syntax_tree (fun _ _ => nil) None arg_bounds ZRange.type.base.option.None with
+            | inl (E_lines, types_used)
+              => ["The syntax tree:"]
+                   ++ show_lines false syntax_tree
+                   ++ [""; "which can be pretty-printed as:"]
+                   ++ E_lines ++ [""]
+                   ++ (if include_input_bounds then ["with input bounds " ++ show true arg_bounds ++ "." ++ String.NewLine]%string else [])
+            | inr errs
+              => (["(Unprintible syntax tree used in bounds analysis)" ++ String.NewLine]%string)
+                   ++ ["Stringification failed on the syntax tree:"] ++ show_lines false syntax_tree ++ [errs]
+            end%list.
+
     Global Instance show_lines_ErrorMessage : ShowLines ErrorMessage
       := fun parens e
          => let __ := default_language_naming_conventions in
@@ -349,20 +387,7 @@ Module Pipeline.
               | Computed_bounds_are_not_tight_enough t computed_bounds expected_bounds syntax_tree arg_bounds
                 => ((["Computed bounds " ++ show true computed_bounds ++ " are not tight enough (expected bounds not looser than " ++ show true expected_bounds ++ ")."]%string)
                       ++ [explain_too_loose_bounds (t:=type.base _) computed_bounds expected_bounds]
-                      ++ match ToString.ToFunctionLines
-                                 (relax_zrange := fun r => r)
-                                 machine_wordsize
-                                 false (* do extra bounds check *) false (* internal static *) false (* static *) "" "f" syntax_tree (fun _ _ => nil) None arg_bounds ZRange.type.base.option.None with
-                         | inl (E_lines, types_used)
-                           => ["When doing bounds analysis on the syntax tree:"]
-                                ++ show_lines false syntax_tree
-                                ++ [""; "which can be pretty-printed as:"]
-                                ++ E_lines ++ [""]
-                                ++ ["with input bounds " ++ show true arg_bounds ++ "." ++ String.NewLine]%string
-                         | inr errs
-                           => (["(Unprintible syntax tree used in bounds analysis)" ++ String.NewLine]%string)
-                               ++ ["Stringification failed on the syntax tree:"] ++ show_lines false syntax_tree ++ [errs]
-                         end)%list
+                      ++ show_lines_Expr arg_bounds true (* re-print the input bounds at the end; they're very relevant *) false syntax_tree)%list
               | No_modular_inverse descr v m
                 => ["Could not compute a modular inverse (" ++ descr ++ ") for " ++ show false v ++ " mod " ++ show false m]
               | Value_not_leZ descr lhs rhs
@@ -390,6 +415,15 @@ Module Pipeline.
               | Assembly_parsing_error msgs
                 => ((["Error while parsing assembly:"]%string)
                       ++ show_lines parens msgs)
+              | Unused_global_assembly_labels labels
+                => ["The following global functions are present in the hints file but do not correspond to any requested function: " ++ String.concat ", " labels]%string
+              | Equivalence_checking_failure _ e asm arg_bounds err
+                => (["Error while checking for equivalence of syntax tree and assembly:"]
+                      ++ show_lines_Expr arg_bounds false (* don't re-print input bounds; they're not relevant *) false e
+                      ++ [""; "Assembly:"]
+                      ++ show_lines false asm
+                      ++ [""; "Equivalence checking error:"]
+                      ++ show_lines false err)
               end.
     Local Instance show_ErrorMessage : Show ErrorMessage
       := fun parens err => String.concat String.NewLine (show_lines parens err).
@@ -568,6 +602,49 @@ Module Pipeline.
         => Error (Unsupported_casts_in_input E (@List.map { _ & forall var, _ } _ (fun '(existT t e) => existT _ t (e _)) unsupported_casts))
       end.
 
+  Definition BoundsPipelineToExtendedResult
+             {output_language_api : ToString.OutputLanguageAPI}
+             {language_naming_conventions : language_naming_conventions_opt}
+             {internal_static : internal_static_opt}
+             {static : static_opt}
+             {low_level_rewriter_method : low_level_rewriter_method_opt}
+             {only_signed : only_signed_opt}
+             {no_select_size : no_select_size_opt}
+             {split_mul_to : split_mul_to_opt}
+             {split_multiret_to : split_multiret_to_opt}
+             {unfold_value_barrier : unfold_value_barrier_opt}
+             (type_prefix : string)
+             (name : string)
+             (with_dead_code_elimination : bool := true)
+             (with_subst01 : bool)
+             (translate_to_fancy : option to_fancy_args)
+             (possible_values : list Z)
+             (relax_zrangef : relax_zrange_opt
+              := fun r => Option.value (relax_zrange_gen only_signed possible_values r) r)
+             (machine_wordsize : Z)
+             {t}
+             (E : Expr t)
+             (comment : type.for_each_lhs_of_arrow ToString.OfPHOAS.var_data t -> ToString.OfPHOAS.var_data (type.final_codomain t) -> list string)
+             (arg_bounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
+             (out_bounds : ZRange.type.base.option.interp (type.final_codomain t))
+    : ErrorT (ExtendedSynthesisResult t)
+    := dlet_nd E := BoundsPipeline
+                      (*with_dead_code_elimination*)
+                      with_subst01
+                      translate_to_fancy
+                      possible_values
+                      E arg_bounds out_bounds in
+       match E with
+       | Success E' => let E := ToString.ToFunctionLines
+                                  machine_wordsize true (orb internal_static static) static type_prefix name E' comment None arg_bounds out_bounds in
+                      match E with
+                      | inl (lines, infos)
+                        => Success {| lines := lines; ident_infos := infos; arg_bounds := arg_bounds; out_bounds := out_bounds; expr := E' |}
+                      | inr err => Error (Stringification_failed E' err)
+                      end
+       | Error err => Error err
+       end.
+
   Definition BoundsPipelineToStrings
              {output_language_api : ToString.OutputLanguageAPI}
              {language_naming_conventions : language_naming_conventions_opt}
@@ -594,19 +671,16 @@ Module Pipeline.
              arg_bounds
              out_bounds
     : ErrorT (list string * ToString.ident_infos)
-    := let E := BoundsPipeline
+    := let E := BoundsPipelineToExtendedResult
+                  type_prefix name
                   (*with_dead_code_elimination*)
                   with_subst01
                   translate_to_fancy
                   possible_values
-                  E arg_bounds out_bounds in
+                  machine_wordsize
+                  E comment arg_bounds out_bounds in
        match E with
-       | Success E' => let E := ToString.ToFunctionLines
-                                  machine_wordsize true (orb internal_static static) static type_prefix name E' comment None arg_bounds out_bounds in
-                      match E with
-                      | inl E => Success E
-                      | inr err => Error (Stringification_failed E' err)
-                      end
+       | Success v => Success (v.(lines), v.(ident_infos))
        | Error err => Error err
        end.
 
@@ -667,6 +741,8 @@ Module Pipeline.
                                      | false => _ : static_opt
                                      end in
                  let adjust_name := convert_to_naming_convention (if is_internal' then private_function_naming_convention else public_function_naming_convention) in
+                 let arg_bounds := arg_bounds_of_pipeline result in
+                 let out_bounds := out_bounds_of_pipeline result in
                  let E := ToString.ToFunctionLines
                             (relax_zrange
                              := fun r => Option.value (relax_zrange_gen (_ : only_signed_opt) (possible_values_of_pipeline result) r) r)
@@ -676,10 +752,11 @@ Module Pipeline.
                             E'
                             (comment (adjust_name (prefix ++ name)%string))
                             None
-                            (arg_bounds_of_pipeline result)
-                            (out_bounds_of_pipeline result) in
+                            arg_bounds
+                            out_bounds in
                  match E with
-                 | inl E => Success E
+                 | inl (lines, infos)
+                   => Success {| lines := lines; ident_infos := infos; arg_bounds := arg_bounds; out_bounds := out_bounds; expr := E' |}
                  | inr err => Error (Pipeline.Stringification_failed E' err)
                  end
             | Error err => Error err
