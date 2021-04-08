@@ -1,209 +1,93 @@
+Require Import Coq.Structures.Orders.
+Require Import Coq.Structures.OrdersEx.
+Require Import Coq.Strings.Ascii Coq.Strings.String.
 Require Import Coq.Arith.Arith.
-Require Import Coq.micromega.Lia Coq.Strings.String Coq.Strings.Ascii.
-Require Import Coq.Structures.OrderedType.
+Require Import Coq.NArith.NArith.
+Require Export Crypto.Util.FixCoqMistakes.
 
-Lemma nat_compare_eq_refl : forall x, Nat.compare x x = Eq.
-  intros; apply Nat.compare_eq_iff; trivial.
-Qed.
+(** This should disappear whenever we bump the minimum version to a version where https://github.com/coq/coq/pull/14096 has been merged *)
 
-Hint Rewrite <- nat_compare_lt : nat_comp_hints.
-Hint Rewrite <- nat_compare_gt : nat_comp_hints.
-Hint Rewrite    Nat.compare_eq_iff : nat_comp_hints.
-Hint Rewrite <- Nat.compare_eq_iff : nat_comp_hints.
-Hint Rewrite    nat_compare_eq_refl : nat_comp_hints.
+Module Ascii_as_OT <: UsualOrderedType.
+  Definition t := ascii.
+  Include HasUsualEq <+ UsualIsEq.
+  Definition eqb := Ascii.eqb.
+  Definition eqb_eq := Ascii.eqb_eq.
+  Include HasEqBool2Dec.
 
-Ltac autorewrite_nat_compare :=
-  autorewrite with nat_comp_hints in *.
+  Definition compare (a b : ascii) := N_as_OT.compare (N_of_ascii a) (N_of_ascii b).
+  Definition lt (a b : ascii) := N_as_OT.lt (N_of_ascii a) (N_of_ascii b).
 
-Lemma nat_compare_consistent :
-  forall n0 n1,
-    { Nat.compare n0 n1 = Lt /\ Nat.compare n1 n0 = Gt }
-    + { Nat.compare n0 n1 = Eq /\ Nat.compare n1 n0 = Eq }
-    + { Nat.compare n0 n1 = Gt /\ Nat.compare n1 n0 = Lt }.
-Proof.
-  intros n0 n1;
-  destruct (lt_eq_lt_dec n0 n1) as [ [_lt | _eq] | _lt ];
-  [ constructor 1; constructor 1  | constructor 1; constructor 2 | constructor 2 ];
-  split;
-  autorewrite_nat_compare;
-  intuition.
-Qed.
+  Instance lt_compat : Proper (eq==>eq==>iff) lt.
+  Proof.
+    intros x x' Hx y y' Hy. rewrite Hx, Hy; intuition.
+  Qed.
 
-Module String_as_OT <: OrderedType.
+  Instance lt_strorder : StrictOrder lt.
+  Proof.
+    split; unfold lt; [ intro | intros ??? ]; eapply N_as_OT.lt_strorder.
+  Qed.
+
+  Lemma compare_spec : forall x y, CompSpec eq lt x y (compare x y).
+  Proof.
+    intros x y; unfold eq, lt, compare.
+    destruct (N_as_OT.compare_spec (N_of_ascii x) (N_of_ascii y)) as [H|H|H]; constructor; try assumption.
+    now rewrite <- (ascii_N_embedding x), <- (ascii_N_embedding y), H.
+  Qed.
+End Ascii_as_OT.
+
+(** [String] is an ordered type with respect to the usual lexical order. *)
+
+Module String_as_OT <: UsualOrderedType.
   Definition t := string.
+  Include HasUsualEq <+ UsualIsEq.
+  Definition eqb := String.eqb.
+  Definition eqb_eq := String.eqb_eq.
+  Include HasEqBool2Dec.
 
-  Fixpoint string_compare str1 str2 :=
-    match str1, str2 with
-      | EmptyString, EmptyString => Eq
-      | EmptyString, _           => Lt
-      | _, EmptyString           => Gt
-      | String char1 tail1, String char2 tail2 =>
-        match Nat.compare (nat_of_ascii char1) (nat_of_ascii char2) with
-          | Eq => string_compare tail1 tail2
-          | Lt => Lt
-          | Gt => Gt
-        end
-    end.
+  Fixpoint compare (a b : string)
+    := match a, b with
+       | EmptyString, EmptyString => Eq
+       | EmptyString, _ => Lt
+       | String _ _, EmptyString => Gt
+       | String a_head a_tail, String b_head b_tail =>
+         match Ascii_as_OT.compare a_head b_head with
+         | Lt => Lt
+         | Gt => Gt
+         | Eq => compare a_tail b_tail
+         end
+       end.
 
-  Lemma string_compare_eq_refl : forall x, string_compare x x = Eq.
-    intro x;
-    induction x;
-      simpl; trivial;
-      autorewrite_nat_compare.
-      trivial.
+  Definition lt (a b : string) := compare a b = Lt.
+
+  Instance lt_compat : Proper (eq==>eq==>iff) lt.
+  Proof.
+    intros x x' Hx y y' Hy. rewrite Hx, Hy; intuition.
   Qed.
 
-  Ltac comparisons_minicrush :=
-    autorewrite_nat_compare;
-    match goal with
-      | [ |- context [Nat.compare ?a ?b] ] =>
-        let H := fresh in
-        first [
-            assert (Nat.compare a b = Eq) as H by (autorewrite_nat_compare; lia) |
-            assert (Nat.compare a b = Lt) as H by (autorewrite_nat_compare; lia) |
-            assert (Nat.compare a b = Gt) as H by (autorewrite_nat_compare; lia)
-        ]; rewrite H; intuition
-    end.
-
-  Ltac destruct_comparisons :=
-    repeat match goal with
-             | [ H: match ?pred ?a ?b with
-                      | Lt => _ | Gt => _ | Eq => _ end = _
-                 |- _] =>
-               let H := fresh in
-               destruct (pred a b) eqn:H;
-                 try discriminate
-           end.
-
-  Ltac exfalso_from_equalities :=
-    match goal with
-      | [ H1: ?a = ?b, H2: ?a = ?c |- _ ] => assert (b = c) by congruence; discriminate
-    end.
-
-  Definition eq := @eq string.
-
-  Hint Resolve string_compare_eq_refl : core.
-
-  Lemma eq_Eq : forall x y, x = y -> string_compare x y = Eq.
+  Lemma compare_spec : forall x y, CompSpec eq lt x y (compare x y).
   Proof.
-    intros; subst; auto.
+    unfold eq, lt.
+    induction x as [|x xs IHxs], y as [|y ys]; cbn [compare]; try constructor; cbn [compare]; try reflexivity.
+    specialize (IHxs ys).
+    destruct (Ascii_as_OT.compare x y) eqn:H; [ destruct IHxs; constructor | constructor | constructor ]; cbn [compare].
+    all: destruct (Ascii_as_OT.compare_spec y x), (Ascii_as_OT.compare_spec x y); cbv [Ascii_as_OT.eq] in *; try congruence; subst.
+    all: exfalso; eapply irreflexivity; (idtac + etransitivity); eassumption.
   Qed.
 
-  Lemma nat_of_ascii_injective :
-    forall a b, nat_of_ascii a = nat_of_ascii b <-> a = b.
+  Instance lt_strorder : StrictOrder lt.
   Proof.
-    intros a b; split; intro H;
-    [ apply (f_equal ascii_of_nat) in H;
-      repeat rewrite ascii_nat_embedding in H
-    | apply (f_equal nat_of_ascii) in H ]; trivial.
+    split; unfold lt; [ intro x | intros x y z ]; unfold complement.
+    { induction x as [|x xs IHxs]; cbn [compare]; [ congruence | ].
+      destruct (Ascii_as_OT.compare x x) eqn:H; try congruence.
+      exfalso; eapply irreflexivity; eassumption. }
+    { revert x y z.
+      induction x as [|x xs IHxs], y as [|y ys], z as [|z zs]; cbn [compare]; try congruence.
+      specialize (IHxs ys zs).
+      destruct (Ascii_as_OT.compare x y) eqn:Hxy, (Ascii_as_OT.compare y z) eqn:Hyz, (Ascii_as_OT.compare x z) eqn:Hxz;
+        try intuition (congruence || eauto).
+      all: destruct (Ascii_as_OT.compare_spec x y), (Ascii_as_OT.compare_spec y z), (Ascii_as_OT.compare_spec x z);
+        try discriminate.
+      all: unfold Ascii_as_OT.eq in *; subst.
+      all: exfalso; eapply irreflexivity; (idtac + etransitivity); (idtac + etransitivity); eassumption. }
   Qed.
-
-  Lemma Eq_eq : forall x y, string_compare x y = Eq -> x = y.
-  Proof.
-    induction x;
-      destruct y;
-      simpl;
-      first [ discriminate
-            | intros;
-              f_equal;
-              destruct_comparisons;
-              autorewrite_nat_compare;
-              rewrite nat_of_ascii_injective in *
-            | idtac ];
-      intuition.
-  Qed.
-
-  Lemma Eq_eq_iff : forall x y, x = y <-> string_compare x y = Eq.
-  Proof.
-    intros; split; eauto using eq_Eq, Eq_eq.
-  Qed.
-
-  Definition eq_refl := @eq_refl string.
-
-  Definition eq_sym := @eq_sym string.
-
-  Definition eq_trans := @eq_trans string.
-
-  Definition lt x y :=
-    string_compare x y = Lt.
-
-  Lemma lt_trans : forall x y z : t, lt x y -> lt y z -> lt x z.
-  Proof.
-    intros x y z;
-    generalize x z;
-    clear x z;
-
-    induction y;
-    destruct x;
-    destruct z;
-      intros;
-      unfold lt in *;
-      simpl in *;
-      first [ discriminate
-            | destruct_comparisons; comparisons_minicrush
-            | trivial ]; intuition.
-  Qed.
-
-  Lemma lt_not_eq : forall x y, lt x y -> ~ eq x y.
-  Proof.
-    unfold lt, not in *;
-    intros;
-    rewrite Eq_eq_iff in *;
-    exfalso_from_equalities.
-  Qed.
-
-  Lemma Lt_Gt : forall x y, string_compare x y = Gt <-> string_compare y x = Lt.
-  Proof.
-    intros x;
-    induction x as [ | x0 x' Hind ];
-      intros y;
-      destruct y as [ | y0 y' ];
-
-      simpl;
-      split;
-      first [ discriminate | trivial ];
-
-      destruct (nat_compare_consistent
-                  (nat_of_ascii x0)
-                  (nat_of_ascii y0))
-          as [ [ (H1, H2) | (H1, H2) ] | (H1, H2) ];
-        rewrite H1, H2;
-        try rewrite Hind;
-        auto.
-  Qed.
-
-  Definition compare x y : OrderedType.Compare lt eq x y.
-  Proof.
-    destruct (string_compare x y) eqn:comp;
-      unfold lt;
-      [ constructor 2; apply Eq_eq
-      | constructor 1
-      | constructor 3; apply Lt_Gt];
-      trivial.
-  Defined.
-
-  Definition eq_dec : forall (x y: string), { x = y } + { x <> y } := string_dec.
-
 End String_as_OT.
-
-(* Usage example:
-Require Import FMapAVL.
-Require Import Coq.Structures.OrderedTypeEx.
-
-Module StringIndexedMap := FMapAVL.Make(String_as_OT).
-Definition String2Nat := StringIndexedMap.t nat.
-
-Definition find key (map: String2Nat) := StringIndexedMap.find key map.
-
-Definition bind (pair: string * nat) (map: String2Nat) := StringIndexedMap.add (fst pair) (snd pair) map.
-
-Notation "k >> v" := (pair k v) (at level 100).
-Notation "[[ b1 , .. , bn ]]" := (bind b1 .. (bind bn (StringIndexedMap.empty nat)) .. ).
-
-Open Scope string_scope.
-
-Definition population_in_millions :=
- [[ "china" >> 1364, "india" >> 1243, "united states" >> 318, "indonesia" >> 247, "brazil" >> 201, "pakistan" >> 186, "nigeria" >> 174, "bangladesh" >> 153, "russia" >> 144, "japan" >> 127, "mexico" >> 120, "philippines" >> 99, "vietnam" >> 90, "ethiopia" >> 87, "egypt" >> 86, "germany" >> 81, "iran" >> 77, "turkey" >> 77, "democratic republic of the congo" >> 68, "france" >> 66 ]].
-
-Eval compute in (find "france" population_in_millions).
-*)
