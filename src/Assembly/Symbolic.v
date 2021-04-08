@@ -2,8 +2,13 @@ Require Crypto.Assembly.Parse Crypto.Assembly.Parse.Examples.fiat_25519_carry_sq
 Definition lines' := Eval native_compute in
   Assembly.Parse.parse
   Assembly.Parse.Examples.fiat_25519_carry_square_optimised_seed20.example.
-
 Definition lines := Eval cbv in ErrorT.invert_result lines'.
+Require Crypto.Assembly.Parse Crypto.Assembly.Parse.Examples.fiat_25519_carry_square_optimised_seed10.
+Definition lines'10 := Eval native_compute in
+  Assembly.Parse.parse
+  Assembly.Parse.Examples.fiat_25519_carry_square_optimised_seed10.example.
+Definition lines10 := Eval cbv in ErrorT.invert_result lines'10.
+
 Require Import Coq.Lists.List.
 Require Import Coq.ZArith.ZArith.
 Require Crypto.Util.Tuple.
@@ -67,11 +72,11 @@ Notation sortN := NSort.sort.
 Require Import Crypto.Assembly.Syntax.
 Definition idx := N.
 Local Set Boolean Equality Schemes.
-Variant opname := old (_:REG*option nat) | const (_ : N) | add | neg | xor | slice (lo sz : N) | mul | mulhuu | set_slice (lo sz : N)(* | ... *).
+Variant opname := old (_:REG*option nat) | const (_ : N) | add | addcarry | notaddcarry | neg | shl | shr | and | or | xor | slice (lo sz : N) | mul | mulhuu | set_slice (lo sz : N)(* | ... *).
 
-Definition associative o := match o with add => true | _ => false end.
-Definition commutative o := match o with add => true | _ => false end.
-Definition identity o := match o with add => Some 0%N | _ => None end.
+Definition associative o := match o with add|mul|or|and => true | _ => false end.
+Definition commutative o := match o with add|addcarry|mul|mulhuu => true | _ => false end.
+Definition identity o := match o with add|addcarry => Some 0%N | mul|mulhuu=>Some 1%N |_=> None end.
 
 Class OperationSize := operation_size : N.
 Definition op : Set := opname * OperationSize.
@@ -184,20 +189,19 @@ Definition simplify_expr : expr -> expr :=
   ;fun e => match e with
     ExprApp (o, args) =>
     match identity (fst o) with
-    | Some i =>
+    | Some i => 
+        let args := List.filter (fun a => negb (option_beq N.eqb (interp_expr a) (Some i))) args in
         match args with
-        | cons a (cons b nil) =>
-            match interp_expr a, interp_expr b with
-            | Some a, _ => if i =? a then b else  e
-            | _, Some b => if i =? b then a else e
-            | _, _  => e end
-        | cons a args' =>
-            match interp_expr a with
-            | Some v => ExprApp (o, args')
-            | _ => e end | _ => e end | _ => e end  | _ => e end
+        | nil => ExprApp ((const i, snd o), nil)
+        | cons a nil => a
+        | _ => ExprApp (o, args)
+        end
+    | _ => e end | _ => e end
+  ;fun e => match e with ExprApp ((xor,s),[x;y]) =>
+    if expr_beq x y then ExprApp ((const 0, s), nil) else e | _ => e end
   ]%N%bool.
 Definition simplify (dag : dag) (e : node idx) : expr :=
-  simplify_expr (reveal_node dag 1 e).
+  simplify_expr (reveal_node dag 2 e).
 
 Definition reg_state := Tuple.tuple (option idx) 16.
 Definition flag_state := Tuple.tuple (option idx) 6.
@@ -263,7 +267,9 @@ Module error.
   | set_const (_ : CONST) (_ : idx)
 
   | unimplemented_instruction (_ : NormalInstruction)
-  | ambiguous_operation_size (_ : NormalInstruction).
+  | ambiguous_operation_size (_ : NormalInstruction)
+
+  | failed_to_unify (_ : list (expr * (option idx * option idx))).
 End error.
 Notation error := error.error.
 
@@ -309,6 +315,8 @@ Definition Merge (e : expr) : M idx := fun s =>
   Success (fst i_dag, update_dag_with s (fun _ => snd i_dag)).
 Definition App (n : node idx) : M idx :=
   fun s => Merge (simplify s n) s.
+Definition Reveal n (i : idx) : M expr :=
+  fun s => Success (reveal s n i, s).
 
 Definition GetReg r : M idx :=
   let '(rn, lo, sz) := index_and_shift_and_bitcount_of_reg r in
@@ -368,10 +376,12 @@ Definition SetOperand {sa : AddressSize} (o : ARG) (v : idx) : M unit :=
 Local Unset Elimination Schemes.
 Inductive pre_expr : Set :=
 | PreARG (_ : ARG)
+| PreFLG (_ : FLAG)
 | PreApp (_ : opname) {_ : OperationSize} (_ : list pre_expr).
 (* note: need custom induction principle *)
 Local Set Elimination Schemes.
 Local Coercion PreARG : ARG >-> pre_expr.
+Local Coercion PreFLG : FLAG >-> pre_expr.
 Example __testPreARG_boring : ARG -> list pre_expr := fun x : ARG => @cons pre_expr x nil.
 (*
 Example __testPreARG : ARG -> list pre_expr := fun x : ARG => [x].
@@ -380,6 +390,7 @@ Example __testPreARG : ARG -> list pre_expr := fun x : ARG => [x].
 Fixpoint Symeval {sa : AddressSize} (e : pre_expr) : M idx :=
   match e with
   | PreARG o => GetOperand o
+  | PreFLG f => GetFlag f
   | PreApp op s args =>
       idxs <- mapM Symeval args;
       App ((op, s), idxs)
@@ -394,6 +405,24 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
   | mov, [dst; src] => (* Note: unbundle when switching from N to Z *)
     v <- GetOperand src;
     SetOperand dst v
+  | Syntax.add, [dst; src] =>
+    v <- Symeval (add@(dst, src));
+    c <- Symeval (addcarry@(dst, src));
+    _ <- SetOperand dst v;
+    _ <- HavocFlags;
+    SetFlag CF c
+  | Syntax.adc, [dst; src] =>
+    v <- Symeval (add@(dst, src, CF));
+    c <- Symeval (addcarry@(dst, src, CF));
+    _ <- SetOperand dst v;
+    _ <- HavocFlags;
+    SetFlag CF c
+  | (adcx|adox) as op, [dst; src] =>
+    let f := match op with adcx => CF | _ => OF end in
+    v <- Symeval (add@(dst, src, f));
+    c <- Symeval (addcarry@(dst, src, f));
+    _ <- SetOperand dst v;
+    SetFlag f c
   | Syntax.sub, [dst; src] =>
     v <- Symeval (add@(dst, PreApp neg [PreARG src]));
     _ <- SetOperand dst v;
@@ -408,6 +437,13 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
   | Syntax.xor, [dst; src] =>
     v <- Symeval (xor@(dst,src));
     _ <- SetOperand dst v;
+    _ <- HavocFlags;
+    zero <- Symeval (PreApp (const 0) nil);
+    _ <- SetFlag CF zero;
+    SetFlag OF zero
+  | Syntax.and, [dst; src] =>
+    v <- Symeval (and@(dst,src));
+    _ <- SetOperand dst v;
     HavocFlags
   | mulx, [hi; lo; src2] =>
     let src1 : ARG := rdx in
@@ -415,8 +451,42 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
     vh <- Symeval (mulhuu@(src1,src2));
     _ <- SetOperand lo vl;
          SetOperand hi vh
+   | Syntax.shr, [dst; cnt] =>
+    v <- Symeval (shr@(dst, cnt));
+    _ <- SetOperand dst v;
+    HavocFlags
+  | shrd, [lo as dst; hi; cnt] =>
+    let cnt' := add@(Z.of_N s, PreApp neg [PreARG cnt]) in
+    v <- Symeval (or@(shr@(lo, cnt), shl@(hi, cnt')));
+    _ <- SetOperand dst v;
+    HavocFlags
+  | inc, [dst] =>
+    orig <- GetOperand dst; orig <- Reveal 1 orig;
+    v <- Symeval (add@(dst, PreARG 1%Z));
+    _ <- SetOperand dst v;
+    cf <- GetFlag CF; _ <- HavocFlags; _ <- SetFlag CF cf;
+    if match orig with ExprApp (const n, _, nil) => n =? 2^s-1 | _ => false end
+    then zero <- Symeval (PreApp (const 0) nil); SetFlag OF zero else SetFlag CF cf
+  | dec, [dst] =>
+    orig <- GetOperand dst; orig <- Reveal 1 orig;
+    v <- Symeval (add@(dst, PreApp neg [PreARG 1%Z]));
+    _ <- SetOperand dst v;
+    cf <- GetFlag CF; _ <- HavocFlags; _ <- SetFlag CF cf;
+    if match orig with ExprApp (const n, _, nil) => n =? 0 | _ => false end
+    then zero <- Symeval (PreApp (const 0) nil); SetFlag OF zero else SetFlag CF cf
+  | test, [a;b] =>
+      _ <- HavocFlags;
+    zero <- Symeval (PreApp (const 0) nil);
+    _ <- SetFlag CF zero;
+    SetFlag OF zero
+      (* note: ZF *)
   | _, _ => err (error.unimplemented_instruction instr)
- end | _ => err (error.ambiguous_operation_size instr) end%N%x86symex.
+ end
+  | _ =>
+  match instr.(Syntax.op), instr.(args) with
+  | clc, [] => zero <- Symeval (@PreApp (const 0) 1 nil); SetFlag CF zero
+  | Syntax.ret, [] => ret tt
+  | _, _ => err (error.ambiguous_operation_size instr) end end%N%x86symex.
 
 Definition SymexNormalInstructions := fun st is => mapM_ SymexNormalInstruction is st.
 
@@ -438,11 +508,12 @@ Definition OldStack (r := rsp) (i : nat) : M unit :=
 Definition init
   (arrays : list (REG * nat)) (* full 64-bit registers only *)
   (stack : nat)
+  (d : dag)
   : symbolic_state :=
   let sz := 64%N in
   let s0 :=
     {|
-      dag_state := [];
+      dag_state := d;
       symbolic_reg_state := Tuple.repeat None 16;
       symbolic_mem_state := [];
       symbolic_flag_state := Tuple.repeat None 6;
@@ -457,7 +528,7 @@ Definition init
   end.
 
 Example test1 : match (
-  let st := init [(rsi, 4)] 0 in
+  let st := init [(rsi, 4)] 0 [] in
   (SymexNormalInstructions st
     [Build_NormalInstruction lea [reg rax; mem (Build_MEM false rsi None (Some 16%Z))]
     ;Build_NormalInstruction mov [reg rbx; mem (Build_MEM false rsi None (Some 16%Z))]
@@ -473,16 +544,40 @@ Definition SymexLines st (lines : list Syntax.Line) :=
 Import Coq.Strings.String.
 Local Open Scope string_scope.
 Notation "f" := (ExprApp ((f,64%N), (@nil expr))) (at level 10, only printing).
-Notation "f @ ( x , y , .. , z )" := (ExprApp ((f,64%N), (@cons expr x%N (@cons expr y%N .. (@cons expr z%N nil) ..)))) (at level 10, only printing).
+Notation "f @ ( x , y , .. , z )" := (ExprApp ((f,64%N), (@cons expr x%N (@cons expr y%N .. (@cons expr z%N nil) ..)))) (at level 10).
 Local Coercion ExprRef : idx >-> expr.
 
-Example evaluation : True.
-  pose (s0 := init [(rsi, 5); (rdi, 5)] 7).
+Ltac step e :=
+  let ev := eval cbv [e] in e in
+  let X := match ev with (x <- ?X; _)%x86symex _ => X end in
+  let C := match ev with (x <- ?X; @?C x)%x86symex _ => C end in
+  let s := match ev with _ ?s => s end in
+  let Y := eval hnf in (X s) in
+  match Y with
+  | Success (?r, ?s) => clear e; set (e:=C r s); simpl in e
+  | Error (?e, ?s) => fail e
+  end.
 
-  let n := constr:(85%nat) in
-  pose (x := SymexLines s0 (firstn n lines));
-  cbv in x.
-  let v := eval cbv delta [x] in x in
+Definition symex_asm_asm args stack impl1 impl2 : ErrorT _ _ :=
+  let s0 := init args stack nil in
+  _s1 <- SymexLines s0 impl1; let s1 := snd _s1 in
+  _s2 <- SymexLines s1 impl2; let s2 := snd _s2 in
+  let answers := List.map
+    (fun '(k, _) => (reveal s0 2 k, (load k s1, load k s2)))
+    ((init args 0 s0).(symbolic_mem_state)) in
+  if List.forallb (fun '(_, (a, b)) =>
+      match a,b with Some a, Some b => N.eqb a b | _, _ => false end) answers
+  then Success tt
+  else Error (error.failed_to_unify answers, s2).
+
+Example curve25519_square_same : symex_asm_asm [(rsi, 5); (rdi, 5)] 7 lines lines10 = Success tt. vm_cast_no_check (eq_refl (@Success (error.error*symbolic_state) unit tt)). Qed.
+
+Example evaluation : True.
+  pose (s0 := init [(rsi, 5); (rdi, 5)] 7 nil).
+  let n := constr:(600%nat) in
+  pose (s1 := SymexLines s0 (firstn n lines10));
+  cbv in s1;
+  let v := eval cbv delta [s1] in s1 in
   match v with Error (?e, ?s) =>
     let n := fresh in
     simple notypeclasses refine (let n : symbolic_state := _ in _);
@@ -495,14 +590,25 @@ Example evaluation : True.
       idtac d end)
   | Success (_, ?s) =>
       let ss := fresh "s" in 
-      set s as ss;
-      let v := eval cbv in (Option.bind (nth_error lines n) invert_rawline) in
+      set s as ss; clear s1; rename ss into s1;
+      let v := eval cbv in (Option.bind (nth_error lines10 n) invert_rawline) in
       match v with
-      | Some ?ni => pose (SymexNormalInstruction ni ss); clear x
+      | Some ?ni => pose (SymexNormalInstruction ni ss)
+      | _ => idtac (* "COMMENT" *)
       end
   end.
 
-  (* note: next adox *)
+  set (s2 := invert_result (SymexLines s1 (firstn 151 lines))).
+  native_compute in s2.
+  pose (s2' := snd s2); cbv in s2'; clear s2; rename s2' into s2.
+  pose (output :=
+  let answers := List.map
+    (fun '(k, _) => (reveal s0 2 k, (load k s1, load k s2)))
+    ((init [(rsi, 5); (rdi, 5)] 0 s0).(symbolic_mem_state)) in
+    (answers,
+    List.forallb (fun '(_, (a, b)) =>
+    match a,b with Some a, Some b => N.eqb a b | _, _ => false end) answers));
+  vm_compute in output.
 
   exact I.
 Defined.
