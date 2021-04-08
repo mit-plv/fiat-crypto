@@ -312,6 +312,7 @@ src/Util/Strings/NamingConventions.v
 src/Util/Strings/ParseArithmetic.v
 src/Util/Strings/ParseArithmeticToTaps.v
 src/Util/Strings/Show.v
+src/Util/Strings/Sorting.v
 src/Util/Strings/String.v
 src/Util/Strings/StringMap.v
 src/Util/Strings/String_as_OT.v
