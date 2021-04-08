@@ -48,6 +48,7 @@ Require Import Crypto.PushButtonSynthesis.ReificationCache.
 Require Import Crypto.PushButtonSynthesis.Primitives.
 Require Import Crypto.PushButtonSynthesis.WordByWordMontgomeryReificationCache.
 Require Import Crypto.PushButtonSynthesis.BYInversionReificationCache.
+Require Import Crypto.Assembly.Equivalence.
 Import ListNotations.
 Local Open Scope Z_scope. Local Open Scope list_scope. Local Open Scope bool_scope.
 
@@ -110,6 +111,11 @@ Section __.
           {assembly_hints_lines : assembly_hints_lines_opt}
           {widen_carry : widen_carry_opt}
           {widen_bytes : widen_bytes_opt}
+          {assembly_calling_registers : assembly_calling_registers_opt}
+          {assembly_stack_size : assembly_stack_size_opt}
+          {error_on_unused_assembly_functions : error_on_unused_assembly_functions_opt}
+          {assembly_output_first : assembly_output_first_opt}
+          {assembly_argument_registers_left_to_right : assembly_argument_registers_left_to_right_opt}
           (m : Z)
           (machine_wordsize : Z).
 
@@ -311,7 +317,7 @@ Section __.
          (Some bounds).
 
   Definition smul (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString
           machine_wordsize prefix "mul" mul
@@ -331,7 +337,7 @@ Section __.
          (Some bounds).
 
   Definition ssquare (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString
           machine_wordsize prefix "square" square
@@ -351,7 +357,7 @@ Section __.
          (Some bounds).
 
   Definition sadd (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString
           machine_wordsize prefix "add" add
@@ -371,7 +377,7 @@ Section __.
          (Some bounds).
 
   Definition ssub (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString
           machine_wordsize prefix "sub" sub
@@ -391,7 +397,7 @@ Section __.
          (Some bounds).
 
   Definition sopp (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString
           machine_wordsize prefix "opp" opp
@@ -411,7 +417,7 @@ Section __.
          (Some bounds).
 
   Definition sfrom_montgomery (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString
           machine_wordsize prefix "from_montgomery" from_montgomery
@@ -431,7 +437,7 @@ Section __.
          (Some bounds).
 
   Definition sto_montgomery (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString
           machine_wordsize prefix "to_montgomery" to_montgomery
@@ -450,7 +456,7 @@ Section __.
          (Some r[0~>r-1]%zrange).
 
   Definition snonzero (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString
           machine_wordsize prefix "nonzero" nonzero
@@ -470,7 +476,7 @@ Section __.
          prime_bytes_bounds.
 
   Definition sto_bytes (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString
           machine_wordsize prefix "to_bytes" to_bytes
@@ -490,7 +496,7 @@ Section __.
          prime_bounds.
 
   Definition sfrom_bytes (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString
           machine_wordsize prefix "from_bytes" from_bytes
@@ -510,7 +516,7 @@ Section __.
          (Some bounds).
 
   Definition sencode (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString
           machine_wordsize prefix "encode" encode
@@ -530,7 +536,7 @@ Section __.
          (Some bounds).
 
   Definition szero (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString
           machine_wordsize prefix "zero" zero
@@ -550,7 +556,7 @@ Section __.
          (Some bounds).
 
   Definition sone (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString
           machine_wordsize prefix "set_one" one (* to avoid conflict with boringSSL *)
@@ -589,7 +595,7 @@ Section __.
 
   Definition selectznz : Pipeline.ErrorT _ := Primitives.selectznz n machine_wordsize.
   Definition sselectznz (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Primitives.sselectznz n machine_wordsize prefix.
 
   Definition msat
@@ -603,7 +609,7 @@ Section __.
          (Some larger_bounds).
 
  Definition smsat (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString
           machine_wordsize prefix "msat" msat
@@ -623,7 +629,7 @@ Section __.
          (Some bounds).
 
   Definition sdivstep_precomp (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString
           machine_wordsize prefix "divstep_precomp" divstep_precomp
@@ -643,7 +649,7 @@ Section __.
          (divstep_output).
 
   Definition sdivstep (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString
           machine_wordsize prefix "divstep" divstep
@@ -998,21 +1004,21 @@ Section __.
     Local Open Scope list_scope.
 
     Definition known_functions
-      := [("mul", smul);
-            ("square", ssquare);
-            ("add", sadd);
-            ("sub", ssub);
-            ("opp", sopp);
-            ("from_montgomery", sfrom_montgomery);
-            ("to_montgomery", sto_montgomery);
-            ("nonzero", snonzero);
-            ("selectznz", sselectznz);
-            ("to_bytes", sto_bytes);
-            ("from_bytes", sfrom_bytes);
-            ("one", sone);
-            ("msat", smsat);
-            ("divstep_precomp", sdivstep_precomp);
-            ("divstep", sdivstep)].
+      := [("mul", wrap_s smul);
+            ("square", wrap_s ssquare);
+            ("add", wrap_s sadd);
+            ("sub", wrap_s ssub);
+            ("opp", wrap_s sopp);
+            ("from_montgomery", wrap_s sfrom_montgomery);
+            ("to_montgomery", wrap_s sto_montgomery);
+            ("nonzero", wrap_s snonzero);
+            ("selectznz", wrap_s sselectznz);
+            ("to_bytes", wrap_s sto_bytes);
+            ("from_bytes", wrap_s sfrom_bytes);
+            ("one", wrap_s sone);
+            ("msat", wrap_s smsat);
+            ("divstep_precomp", wrap_s sdivstep_precomp);
+            ("divstep", wrap_s sdivstep)].
 
     Definition valid_names : string := Eval compute in String.concat ", " (List.map (@fst _ _) known_functions).
 

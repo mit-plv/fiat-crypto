@@ -37,6 +37,7 @@ Require Import Crypto.UnsaturatedSolinasHeuristics.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.
 Require Import Crypto.PushButtonSynthesis.Primitives.
 Require Import Crypto.PushButtonSynthesis.BaseConversionReificationCache.
+Require Import Crypto.Assembly.Equivalence.
 Import ListNotations.
 Local Open Scope Z_scope. Local Open Scope list_scope. Local Open Scope bool_scope.
 
@@ -93,6 +94,11 @@ Section __.
           {assembly_hints_lines : assembly_hints_lines_opt}
           {widen_carry : widen_carry_opt}
           {widen_bytes : widen_bytes_opt}
+          {assembly_calling_registers : assembly_calling_registers_opt}
+          {assembly_stack_size : assembly_stack_size_opt}
+          {error_on_unused_assembly_functions : error_on_unused_assembly_functions_opt}
+          {assembly_output_first : assembly_output_first_opt}
+          {assembly_argument_registers_left_to_right : assembly_argument_registers_left_to_right_opt}
           (s : Z) (c : list (Z * Z))
           (src_n : nat)
           (src_limbwidth : Q)
@@ -278,7 +284,7 @@ Section __.
          (Some out_bounds).
 
   Definition sconvert_bases (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString
           machine_wordsize prefix "convert_bases" convert_bases
@@ -331,21 +337,17 @@ Section __.
     Local Open Scope list_scope.
 
     Definition known_functions
-      := [("convert_bases", sconvert_bases)].
+      := [("convert_bases", wrap_s sconvert_bases)].
 
     Definition valid_names : string
       := Eval compute in String.concat ", " (List.map (@fst _ _) known_functions).
-
-    Definition extra_special_synthesis (function_name_prefix : string) (name : string)
-      : list (option (string * Pipeline.ErrorT (list string * ToString.ident_infos)))
-      := [].
 
     (** Note: If you change the name or type signature of this
           function, you will need to update the code in CLI.v *)
     Definition Synthesize (comment_header : list string) (function_name_prefix : string) (requests : list string)
       : list (synthesis_output_kind * string * Pipeline.ErrorT (list string))
       := Primitives.Synthesize
-           machine_wordsize valid_names known_functions (extra_special_synthesis function_name_prefix)
+           machine_wordsize valid_names known_functions (fun _ => nil)
            check_args
            ((ToString.comment_file_header_block
                (comment_header

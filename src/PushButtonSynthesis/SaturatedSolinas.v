@@ -31,6 +31,7 @@ Require Import Crypto.COperationSpecifications.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.
 Require Import Crypto.PushButtonSynthesis.Primitives.
 Require Import Crypto.PushButtonSynthesis.SaturatedSolinasReificationCache.
+Require Import Crypto.Assembly.Equivalence.
 Import ListNotations.
 Local Open Scope Z_scope. Local Open Scope list_scope. Local Open Scope bool_scope.
 
@@ -75,6 +76,11 @@ Section __.
           {assembly_hints_lines : assembly_hints_lines_opt}
           {widen_carry : widen_carry_opt}
           (widen_bytes : widen_bytes_opt := true) (* true, because we don't allow byte-sized things anyway, so we should not expect carries to be widened to byte-size when emitting C code *)
+          {assembly_calling_registers : assembly_calling_registers_opt}
+          {assembly_stack_size : assembly_stack_size_opt}
+          {error_on_unused_assembly_functions : error_on_unused_assembly_functions_opt}
+          {assembly_output_first : assembly_output_first_opt}
+          {assembly_argument_registers_left_to_right : assembly_argument_registers_left_to_right_opt}
           (s : Z)
           (c : list (Z * Z))
           (machine_wordsize : Z).
@@ -189,7 +195,7 @@ Section __.
          (Some boundsn, None (* Should be: Some r[0~>0]%zrange, but bounds analysis is not good enough *) ).
 
   Definition smul (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString
           machine_wordsize prefix "mul" mul
@@ -217,7 +223,7 @@ Section __.
     Local Open Scope list_scope.
 
     Definition known_functions
-      := [("mul", smul)].
+      := [("mul", wrap_s smul)].
 
     Definition valid_names : string := Eval compute in String.concat ", " (List.map (@fst _ _) known_functions).
 
