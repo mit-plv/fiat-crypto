@@ -131,9 +131,8 @@ Module Z.
         apply Z.log2_lt_pow2; auto; lia.
     + subst.
       rewrite Z.shiftr_div_pow2 by assumption.
-      rewrite Z.div_same; try lia.
       assert (0 < 2 ^ n) by (apply Z.pow_pos_nonneg; lia).
-      lia.
+      rewrite Z.div_same;  lia.
   Qed.
   Hint Resolve shiftr_upper_bound : zarith.
 
