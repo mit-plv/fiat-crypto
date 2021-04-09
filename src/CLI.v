@@ -386,7 +386,7 @@ Module ForExtraction.
   Definition asm_stack_size_spec : named_argT
     := ([Arg.long_key "asm-stack-size"],
         Arg.Custom (parse_string_and parse_N) "ℕ",
-        ["The number of bytes of stack.  Only relevant when --hints-file is specified.  Default: " ++ show (default_assembly_stack_size:N) ++ "."]).
+        ["The number of bytes of stack.  Only relevant when --hints-file is specified.  Defaults to the literal argument to the first `sub rsp, LITERAL` in the code, or else " ++ show (default_assembly_stack_size:N) ++ " if none exists."]).
   Definition no_error_on_unused_asm_functions_spec : named_argT
     := ([Arg.long_key "no-error-on-unused-asm-functions"],
         Arg.Unit,
