@@ -1,5 +1,6 @@
 Require Import Coq.Strings.String.
 Require Import Coq.Lists.List.
+Require Import Coq.ZArith.ZArith.
 Require Import Coq.NArith.NArith.
 Require Import Crypto.Assembly.Syntax.
 Require Import Crypto.Assembly.Parse.
@@ -11,6 +12,7 @@ Require Import Crypto.AbstractInterpretation.ZRange.
 Require Import Crypto.Stringification.Language.
 Require Import Crypto.Util.Strings.Show.
 Require Import Crypto.Util.Option.
+Require Import Crypto.Util.OptionList.
 Import API.Compilers APINotations.Compilers AbstractInterpretation.ZRange.Compilers.
 Import ListNotations.
 Local Open Scope string_scope.
@@ -31,10 +33,28 @@ Typeclasses Opaque assembly_argument_registers_left_to_right_opt.
 (** Stack size (in bytes) *)
 Class assembly_stack_size_opt := assembly_stack_size' : option N.
 Typeclasses Opaque assembly_stack_size_opt.
-(** TODO(for Andres from Jason): What should this be? *)
 Definition default_assembly_stack_size := 40%N.
-Definition assembly_stack_size {v : assembly_stack_size_opt} : N
-  := Option.value v default_assembly_stack_size.
+(** The stack size is taken to be the given command line argument, or
+    else inferred to be the literal argument to the first [sub rsp,
+    LITERAL] in the code, or else [default_assembly_stack_size] if
+    none exists *)
+Definition assembly_stack_size {v : assembly_stack_size_opt} (asm : Lines) : N
+  := match v with
+     | Some v => v
+     | None
+       => match Option.List.map
+                  (fun l
+                   => match l.(rawline) with
+                      | INSTR {| op := sub ; args := [reg rsp; const n] |}
+                        => Some (Z.to_N n)
+                      | _ => None
+                      end)
+                  asm
+          with
+          | n :: _ => n
+          | [] => default_assembly_stack_size
+          end
+     end.
 
 (** N.B. The printer of these error messages will always know the
 assembly function lines and the AST used for equivalence checking, so
@@ -258,7 +278,7 @@ Section check_equivalence.
               - the assembly expression is available in the context as asm *)
            let output_register_list : list (REG * nat) := reg_list_of_base_reg_data output_registers in
            let input_register_list : list (REG * nat) := reg_list_of_input_reg_data input_registers in
-           let stack_size : nat := N.to_nat assembly_stack_size in
+           let stack_size : nat := N.to_nat (assembly_stack_size asm) in
            let ast : API.expr (type.base (type.final_codomain t))
                := invert_expr.smart_App_curried (expr _) (type.map_for_each_lhs_of_arrow (@reg_data_to_var) input_registers) in
            let asm_lines : Lines := asm in
