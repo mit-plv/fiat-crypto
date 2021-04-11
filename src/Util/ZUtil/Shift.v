@@ -258,6 +258,7 @@ Module Z.
            end.
   Qed.
 
+  (* (* incompatible with x mod 0 = x *)
   Lemma shiftl_opp_l a n
     : Z.shiftl (-a) n = - Z.shiftl a n - (if Z_zerop (a mod 2 ^ (- n)) then 0 else 1).
   Proof.
@@ -282,7 +283,7 @@ Module Z.
     reflexivity.
   Qed.
   Hint Rewrite shiftr_opp_l : push_Zshift.
-  Hint Rewrite <- shiftr_opp_l : pull_Zshift.
+  Hint Rewrite <- shiftr_opp_l : pull_Zshift. *)
 
   Lemma shl_shr_lt x y n m (Hx : 0 <= x < 2^n) (Hy : 0 <= y < 2^n) (Hm : 0 <= m <= n)
     : 0 <= (x >> (n - m)) + ((y << m) mod 2^n) < 2^n.
