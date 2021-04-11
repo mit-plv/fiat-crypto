@@ -157,8 +157,8 @@ Ltac saturate_land_lor_facts :=
 Ltac handle_shift_neg :=
   repeat first [ rewrite !Z.shiftr_opp_r
                | rewrite !Z.shiftl_opp_r
-               | rewrite !Z.shiftr_opp_l
-               | rewrite !Z.shiftl_opp_l ].
+               (* | rewrite !Z.shiftr_opp_l *)
+               (* | rewrite !Z.shiftl_opp_l *) ].
 
 Ltac handle_four_corners_step_fast :=
   first [ progress destruct_head Bounds.t

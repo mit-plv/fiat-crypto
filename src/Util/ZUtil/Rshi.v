@@ -20,14 +20,14 @@ Module Z.
     cbv [Z.rshi]; intros. pose proof (Z.log2_nonneg s).
     destruct (Decidable.dec (0 <= n)), (Z_zerop s); subst;
       break_match;
-      repeat match goal with
+      now repeat match goal with
              | H : _ = s |- _ => rewrite H
              | _ => rewrite Z.land_ones by auto with zarith
              | _ => progress Z.ltb_to_lt
              | _ => progress autorewrite with Zshift_to_pow push_Zpow zsimplify_const
              | _ => reflexivity
              | _ => lia
-             end.
+        end.
   Qed.
 
   Lemma rshi_correct_full_alt : forall s a b n,
