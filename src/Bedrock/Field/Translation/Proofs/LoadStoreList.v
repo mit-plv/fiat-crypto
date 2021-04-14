@@ -297,7 +297,8 @@ Section LoadStoreList.
     { cbv [Memory.load].
       erewrite load_Z_of_sep; [ reflexivity | ].
       ecancel_assumption. }
-    { rewrite Z.land_ones by auto with zarith.
+    { unfold truncate_Z.
+      rewrite Z.land_ones by auto with zarith.
       rewrite Z.mod_small; [ reflexivity | ].
       rewrite <-hd_skipn_nth_default.
       match goal with H : base_access_sizes_good _ |- _ =>
