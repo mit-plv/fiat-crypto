@@ -18,7 +18,8 @@ Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
 
 Section Representation.
   Context {p : Types.parameters} {field_parameters : FieldParameters}
-          {p_ok : Types.ok}.
+          {p_ok : Types.ok}
+          (width_ge_32 : 32 <= Semantics.width).
   Context (n : nat) (weight : nat -> Z)
           (loose_bounds tight_bounds : list (option zrange))
           (relax_bounds :
@@ -73,7 +74,7 @@ Section Representation.
       { match goal with
           | H : Array.array _ _ _ _ _ |- _ =>
             eapply Bignum_of_bytes with (n0:=n) in H;
-              [ destruct H | nia ]
+              [ destruct H | nia.. ]
         end.
         eexists; eauto. }
       {
