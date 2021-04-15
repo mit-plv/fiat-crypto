@@ -30,8 +30,7 @@ Section Bignum.
     sep (emp (length x = n_bytes)) (array ptsto (word.of_Z 1) px x).
 
   Section Proofs.
-    Context {ok : Types.ok}
-            (width_ge_32 : 32 <= Semantics.width).
+    Context {ok : Types.ok}.
     Existing Instance semantics_ok.
 
     (* TODO: factor this proof into a more general form that says if subarrays
@@ -51,7 +50,11 @@ Section Bignum.
         cbn [array length] in *. sepsimpl; eauto. }
       { rewrite <-(firstn_skipn (Z.to_nat word_size_in_bytes) bs).
         rewrite array_append.
-        rewrite Scalars.scalar_of_bytes with (l:=List.firstn _ _); try assumption.
+        rewrite Scalars.scalar_of_bytes with (l:=List.firstn _ _);
+          lazymatch goal with
+          | [ |- _ <= Semantics.width ] => destruct Semantics.width_cases; lia
+          | _ => idtac
+          end.
         2:{
           rewrite word_size_in_bytes_eq in *.
           etransitivity;
