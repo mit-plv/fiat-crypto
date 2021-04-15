@@ -38,7 +38,7 @@ Module Z.
       unfold Let_In, ADD, ADC, Z.get_carry, Z.add_with_carry; simpl.
       destruct (Z_dec bitwidth 0) as [ [?|?] | ? ].
       { rewrite Z.pow_neg_r by assumption.
-        autorewrite with zsimplify.
+        autorewrite with zsimplify. rewrite ?Z.add_assoc.
         reflexivity. }
       { f_equal.
         { push_Zmod; pull_Zmod; apply f_equal2; lia. }

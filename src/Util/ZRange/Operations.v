@@ -211,7 +211,7 @@ Module ZRange.
     if (0 <? split_at)%Z
     then split_bounds_pos r split_at
     else if (split_at =? 0)%Z
-         then ({| lower := 0; upper := 0 |}, {| lower := 0 ; upper := 0 |})
+         then (ltac:(match eval hnf in (1 mod 0) with | 0 => exact {| lower := 0; upper := 0 |} | _ => exact r end), {| lower := 0; upper := 0 |})
          else let '(q, r) := split_bounds_pos (opp r) (-split_at) in
               (opp q, r).
 

@@ -63,10 +63,10 @@ Module ZRange.
     intro; cbv [ZRange.split_bounds]; eta_expand; break_match; cbn [fst snd] in *.
     all: Z.ltb_to_lt.
     all: Z.replace_all_neg_with_pos.
-    all: autorewrite with zsimplify_const; try reflexivity.
-    2: rewrite Z.div_opp_r, Z.mod_opp_r, ZRange.is_bounded_by_bool_opp.
-    all: rewrite is_bounded_by_bool_split_bounds_pos by (rewrite ?ZRange.is_bounded_by_bool_opp; try assumption; lia).
-    all: reflexivity.
+    - now apply is_bounded_by_bool_split_bounds_pos.
+    - autorewrite with zsimplify_const. now rewrite 1?Bool.andb_comm.
+    - rewrite Z.div_opp_r, Z.mod_opp_r, ZRange.is_bounded_by_bool_opp.
+      now apply is_bounded_by_bool_split_bounds_pos; [lia|rewrite ZRange.is_bounded_by_bool_opp].
   Qed.
 
   Lemma is_bounded_by_bool_split_bounds_and x r m

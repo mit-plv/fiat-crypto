@@ -275,15 +275,8 @@ Module Z.
   Proof. intros ?? H0 H1; pose proof (mod_mod_0_0_eq x y H0 H1); lia. Qed.
   Lemma mod_mod_trans x y z : y <> 0 -> x mod y = 0 -> y mod z = 0 -> x mod z = 0.
   Proof.
-    destruct (Z_zerop x), (Z_zerop z); subst; autorewrite with zsimplify_const; auto; intro.
-    Z.generalize_div_eucl x y.
-    Z.generalize_div_eucl y z.
-    intros; subst.
-    rewrite ?Z.add_0_r in *.
-    rewrite <- Z.mul_assoc.
-    rewrite <- Zmult_mod_idemp_l, Z_mod_same_full.
-    autorewrite with zsimplify_const.
-    reflexivity.
+    intros Hy. rewrite (Zmod_eq_full x y Hy). intros Hx Hyz.
+    replace x with (x / y * y) by lia. now rewrite Zmult_mod, Hyz, Z.mul_0_r.
   Qed.
 
   Lemma mod_opp_r a b : a mod (-b) = -((-a) mod b).
@@ -381,7 +374,7 @@ Module Z.
   Lemma mod_pow_r_split x b e1 e2 : 0 <= b -> 0 <= e1 <= e2 -> x mod b^e2 = (x mod b^e1) + (b^e1) * ((x / b^e1) mod b^(e2-e1)).
   Proof.
     destruct (Z_zerop b).
-    { destruct (Z_zerop e1), (Z_zerop e2), (Z.eq_dec e1 e2); subst; intros; cbn; autorewrite with zsimplify_fast; lia. }
+    { destruct (Z_zerop e1), (Z_zerop e2), (Z.eq_dec e1 e2); subst; intros; cbn; autorewrite with zsimplify_fast; destruct x; lia. }
     intros.
     replace (b^e2) with (b^e1 * b^(e2 - e1)) by (autorewrite with pull_Zpow; f_equal; lia).
     rewrite Z.rem_mul_r by auto with zarith.
