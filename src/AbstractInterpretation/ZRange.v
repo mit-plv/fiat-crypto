@@ -525,11 +525,11 @@ Module Compilers.
                => fun v m
                  => match to_literal m, to_literal v with
                    | Some m, Some v => of_literal (ident.interp idc v m)
-                   | Some m, None => Some (if (0 <? m)%Z
-                                           then r[0 ~> m-1]
+                   | Some m, None => (if (0 <? m)%Z
+                                           then Some r[0 ~> m-1]
                                            else if (m =? 0)%Z
-                                                then r[0 ~> 0]
-                                                else r[m+1 ~> 0])
+                                                then ltac:(match eval hnf in (1 mod 0) with | 0 => exact r[0 ~> 0] | _ => exact None (* v? *) end)
+                                                else Some r[m+1 ~> 0])
                    | _, _ => None
                     end
              | ident.Z_truncating_shiftl as idc
@@ -540,7 +540,7 @@ Module Compilers.
                                        y <- y;
                                        Some (ZRange.land_bounds
                                                (ZRange.four_corners_and_zero Z.shiftl x y)
-                                               (ZRange.constant (Z.ones (Z.max 0 bw))))
+                                               (ZRange.constant (Z.ones (ltac:(match eval hnf in (1 mod 0) with | 0 => exact (Z.max 0 bw) | _ => exact bw end)))))
                                 | None, _, _ => None
                                 end
              | ident.bool_rect _

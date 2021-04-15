@@ -154,7 +154,7 @@ Module Z.
   Hint Rewrite shiftr_spec_full : Ztestbit_full.
 
   Lemma mod_pow2_ones a m :
-    a mod 2 ^ m = if (Z_lt_dec m 0) then 0 else a &' Z.ones m.
+    a mod 2 ^ m = if (Z_lt_dec m 0) then ltac:(match eval hnf in (1 mod 0) with | 0 => exact 0 | _ => exact a end) else a &' Z.ones m.
   Proof. destruct (Z_lt_dec m 0). rewrite Z.pow_neg_r, Zmod_0_r; lia.
          symmetry; apply Z.land_ones; lia. Qed.
 
