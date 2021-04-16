@@ -528,7 +528,7 @@ Module Compilers.
                    | Some m, None => (if (0 <? m)%Z
                                            then Some r[0 ~> m-1]
                                            else if (m =? 0)%Z
-                                                then ltac:(match eval hnf in (1 mod 0) with | 0 => exact r[0 ~> 0] | _ => exact None (* v? *) end)
+                                                then ltac:(match eval hnf in (1 mod 0) with | 0 => exact r[0 ~> 0] | _ => exact None (* if `_ mod 0` is not constant and neither is `v`, we do not bother computing the bounds of `Z.lnot v` *) end)
                                                 else Some r[m+1 ~> 0])
                    | _, _ => None
                     end
