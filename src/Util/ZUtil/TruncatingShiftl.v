@@ -52,7 +52,6 @@ Module Z.
     Z.truncating_shiftl m (Z.truncating_shiftl m a p) q
     = Z.truncating_shiftl m a (p + q).
   Proof. Z.solve_using_testbit. Qed.
- 
   Lemma truncating_shiftl0 m k :
     Z.truncating_shiftl m 0 k = 0.
   Proof. Z.solve_using_testbit. Qed.
