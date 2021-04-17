@@ -5,6 +5,7 @@
 *.h    text
 *.rs   text
 *.go   text
+*.zig  text
 
 fiat-bedrock2/**/*.c  linguist-generated
 fiat-c/**/*.c         linguist-generated
@@ -12,3 +13,4 @@ fiat-go/**/*.go       linguist-generated
 fiat-java/**/*.java   linguist-generated
 fiat-json/**/*.json   linguist-generated
 fiat-rust/**/*.rs     linguist-generated
+fiat-zig/**/*.zig     linguist-generated

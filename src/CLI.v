@@ -25,6 +25,7 @@ Require Import Crypto.Stringification.Rust.
 Require Import Crypto.Stringification.Go.
 Require Import Crypto.Stringification.Java.
 Require Import Crypto.Stringification.JSON.
+Require Import Crypto.Stringification.Zig.
 Require Crypto.Util.Arg.
 Import ListNotations. Local Open Scope Z_scope. Local Open Scope string_scope.
 
@@ -216,7 +217,8 @@ Module ForExtraction.
         ; ("Rust", Rust.OutputRustAPI)
         ; ("Go", Go.OutputGoAPI)
         ; ("Java", Java.OutputJavaAPI)
-        ; ("JSON", JSON.OutputJSONAPI)].
+        ; ("JSON", JSON.OutputJSONAPI)
+        ; ("Zig", Zig.OutputZigAPI)].
 
   Local Notation anon_argT := (string * Arg.spec * Arg.doc)%type (only parsing).
   Local Notation named_argT := (list Arg.key * Arg.spec * Arg.doc)%type (only parsing).

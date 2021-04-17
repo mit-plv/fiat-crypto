@@ -214,6 +214,7 @@ src/Stringification/JSON.v
 src/Stringification/Java.v
 src/Stringification/Language.v
 src/Stringification/Rust.v
+src/Stringification/Zig.v
 src/UnsaturatedSolinasHeuristics/Tests.v
 src/Util/AdditionChainExponentiation.v
 src/Util/Arg.v

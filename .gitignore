@@ -16,6 +16,7 @@ tramp
 
 # misc
 *.pyc
+zig-cache
 
 # java
 *.class
