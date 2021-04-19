@@ -609,7 +609,7 @@ Section __.
           machine_wordsize prefix "msat" msat
           (docstring_with_summary_from_lemma!
              prefix
-             (fun fname => ["The function " ++ fname ++ " returns the saturated represtation of the prime modulus."]%string)
+             (fun fname => ["The function " ++ fname ++ " returns the saturated representation of the prime modulus."]%string)
              (msat_correct machine_wordsize n m valid)).
 
   Definition divstep_precomp
