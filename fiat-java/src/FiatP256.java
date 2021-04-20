@@ -4061,7 +4061,7 @@ public static void fiat_P256_set_one(long[] out1) {
 }
 
 /**
- * The function fiat_P256_msat returns the saturated represtation of the prime modulus. <p>
+ * The function fiat_P256_msat returns the saturated representation of the prime modulus. <p>
  * Postconditions: <p>
  *   twos_complement_eval out1 = m <p>
  *   0 ≤ eval out1 &lt; m <p>
