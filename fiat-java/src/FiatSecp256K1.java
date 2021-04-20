@@ -4886,7 +4886,7 @@ public static void fiat_Secp256K1_set_one(int[] out1) {
 }
 
 /**
- * The function fiat_Secp256K1_msat returns the saturated represtation of the prime modulus. <p>
+ * The function fiat_Secp256K1_msat returns the saturated representation of the prime modulus. <p>
  * Postconditions: <p>
  *   twos_complement_eval out1 = m <p>
  *   0 ≤ eval out1 &lt; m <p>
