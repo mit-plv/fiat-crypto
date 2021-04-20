@@ -115,10 +115,6 @@ jobs:
         C:\cygwin64\bin\bash -l -c 'cd "%cd%"; echo "${PATH}"'
         ECHO ::endgroup::
       shell: cmd
-    - name: add Coq matcher
-      run: |
-        C:\cygwin64\bin\bash -l -c 'cd "%cd%"; echo "::add-matcher::.github/coq.json"'
-      shell: cmd
     - name: deps
       run: C:\cygwin64\bin\bash -l -c 'cd "%cd%"; etc/ci/github-actions-make.sh -j%NJOBS% deps'
       shell: cmd
