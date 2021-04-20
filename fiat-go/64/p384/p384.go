@@ -3135,7 +3135,7 @@ func SetOne(out1 *[6]uint64) {
 }
 
 /*
-   The function Msat returns the saturated represtation of the prime modulus.
+   The function Msat returns the saturated representation of the prime modulus.
    Postconditions:
      twos_complement_eval out1 = m
      0 ≤ eval out1 < m

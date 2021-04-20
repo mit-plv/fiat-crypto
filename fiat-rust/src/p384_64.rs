@@ -3196,7 +3196,7 @@ pub fn fiat_p384_set_one(out1: &mut [u64; 6]) -> () {
   out1[5] = (0x0 as u64);
 }
 
-/// The function fiat_p384_msat returns the saturated represtation of the prime modulus.
+/// The function fiat_p384_msat returns the saturated representation of the prime modulus.
 /// Postconditions:
 ///   twos_complement_eval out1 = m
 ///   0 ≤ eval out1 < m

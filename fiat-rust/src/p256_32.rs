@@ -4041,7 +4041,7 @@ pub fn fiat_p256_set_one(out1: &mut [u32; 8]) -> () {
   out1[7] = (0x0 as u32);
 }
 
-/// The function fiat_p256_msat returns the saturated represtation of the prime modulus.
+/// The function fiat_p256_msat returns the saturated representation of the prime modulus.
 /// Postconditions:
 ///   twos_complement_eval out1 = m
 ///   0 ≤ eval out1 < m
