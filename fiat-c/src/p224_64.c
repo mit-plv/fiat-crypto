@@ -1779,7 +1779,7 @@ static void fiat_p224_set_one(uint64_t out1[4]) {
 }
 
 /*
- * The function fiat_p224_msat returns the saturated represtation of the prime modulus.
+ * The function fiat_p224_msat returns the saturated representation of the prime modulus.
  * Postconditions:
  *   twos_complement_eval out1 = m
  *   0 ≤ eval out1 < m

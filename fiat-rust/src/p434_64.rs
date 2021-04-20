@@ -4057,7 +4057,7 @@ pub fn fiat_p434_set_one(out1: &mut [u64; 7]) -> () {
   out1[6] = 0xeceea7bd2eda;
 }
 
-/// The function fiat_p434_msat returns the saturated represtation of the prime modulus.
+/// The function fiat_p434_msat returns the saturated representation of the prime modulus.
 /// Postconditions:
 ///   twos_complement_eval out1 = m
 ///   0 ≤ eval out1 < m
