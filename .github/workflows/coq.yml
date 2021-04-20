@@ -21,7 +21,7 @@ jobs:
         - { COQ_VERSION: "8.11.1", COQ_PACKAGE: "coq-8.11.1 libcoq-8.11.1-ocaml-dev", SKIP_BEDROCK2: "1", SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/many-coq-versions-ocaml-4-05" }
         - { COQ_VERSION: "8.10.2", COQ_PACKAGE: "coq-8.10.2 libcoq-8.10.2-ocaml-dev", SKIP_BEDROCK2: "1", SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/many-coq-versions-ocaml-4-05" }
         - { COQ_VERSION: "8.9.1" , COQ_PACKAGE: "coq-8.9.1 libcoq-8.9.1-ocaml-dev"  , SKIP_BEDROCK2: "1", SKIP_VALIDATE: "1", PPA: "ppa:jgross-h/many-coq-versions" }
-        - { COQ_VERSION: "master", COQ_PACKAGE: "coq libcoq-ocaml-dev"              , SKIP_BEDROCK2: "" , SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/coq-master-daily" }
+        - { COQ_VERSION: "master", COQ_PACKAGE: "coq libcoq-ocaml-dev"              , SKIP_BEDROCK2: "" , SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/coq-master-daily", EXTRA_GH_REPORTIFY: "--warnings" }
         - { COQ_VERSION: "v8.13" , COQ_PACKAGE: "coq libcoq-ocaml-dev"              , SKIP_BEDROCK2: "" , SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/coq-8.13-daily" }
         - { COQ_VERSION: "v8.12" , COQ_PACKAGE: "coq libcoq-ocaml-dev"              , SKIP_BEDROCK2: "1", SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/coq-8.12-daily" }
         - { COQ_VERSION: "v8.11" , COQ_PACKAGE: "coq libcoq-ocaml-dev"              , SKIP_BEDROCK2: "1", SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/coq-8.11-daily" }
@@ -35,7 +35,6 @@ jobs:
     steps:
     - name: install Coq
       run: |
-        sudo sed -i 's/azure\.//' /etc/apt/sources.list
         if [ ! -z "$PPA" ]; then sudo add-apt-repository "$PPA" -y; fi
         sudo apt-get -o Acquire::Retries=30 update -q
         sudo apt-get -o Acquire::Retries=30 install ocaml-findlib $COQ_PACKAGE -y --allow-unauthenticated
@@ -75,12 +74,10 @@ jobs:
     - uses: actions/checkout@v2
     - name: submodules-init
       uses: snickerbockers/submodules-init@v4
-    - name: add Coq matcher
-      run: echo "::add-matcher::.github/coq.json"
     - name: deps
       run: etc/ci/github-actions-make.sh -j2 deps
     - name: all
-      run: etc/ci/github-actions-make.sh -j2 all
+      run: etc/ci/github-actions-make.sh ${EXTRA_GH_REPORTIFY} -j2 all
     - name: upload OCaml files
       uses: actions/upload-artifact@v1
       with:

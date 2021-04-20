@@ -13,8 +13,18 @@ else
     echo "WARNING: make does not support --output-sync"
 fi
 
+reportify=" --errors"
+
+if [ "$1" == "--warnings" ]; then
+    reportify+=" $1"
+    shift
+fi
+if [ ! -z "${reportify}" ]; then
+    reportify="COQC=etc/coq-scripts/github/reportify-coq.sh${reportify} ${COQBIN}coqc"
+fi
+
 rm -f finished.ok
-(make "$@" ${OUTPUT_SYNC} TIMED=1 TIMING=1 2>&1 && touch finished.ok) | tee -a time-of-build.log
+(make "$@" ${OUTPUT_SYNC} TIMED=1 TIMING=1 "${reportify}" 2>&1 && touch finished.ok) | tee -a time-of-build.log
 python "./etc/coq-scripts/timing/make-one-time-file.py" "time-of-build.log" "time-of-build-pretty.log" || exit $?
 
 git update-index --assume-unchanged _CoqProject
