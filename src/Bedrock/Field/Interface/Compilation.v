@@ -161,7 +161,7 @@ Section Compile.
   Proof. prove_field_compilation. Qed.
 
   Lemma compile_felem_small_literal {tr mem locals functions} x:
-    let v := x mod M in
+    let v := F.of_Z _ x in
     forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
       R (wx : word) (out : felem) out_ptr out_var,
 
@@ -175,7 +175,7 @@ Section Compile.
       (let v := v in
        forall X m,
          (FElem out_ptr X * R)%sep m ->
-         feval X = F.of_Z _ v ->
+         feval X = v ->
          bounded_by tight_bounds X ->
          (<{ Trace := tr;
              Memory := m;
@@ -196,10 +196,7 @@ Section Compile.
     prove_field_compilation.
     match goal with H : _ |- _ =>
                     rewrite word.of_Z_unsigned in H end.
-    use_hyp_with_matching_cmd; eauto; [ ].
-    subst_lets_in_goal.
-    cbv [M]. rewrite <-F.of_Z_mod.
-    assumption.
+    use_hyp_with_matching_cmd; eauto.
   Qed.
 End Compile.
 

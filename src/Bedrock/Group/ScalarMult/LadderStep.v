@@ -85,41 +85,6 @@ Section __.
               * FElem pE E' * FElem pC C' * FElem pD D'
               * FElem pDA DA' * FElem pCB CB' * R)%sep mem'}.
 
-  (*
-    let v := un_model (eval x) mod M in
-    forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
-      Rin Rout (out : bignum) x_ptr x_var out_ptr out_var,
-
-      (_: spec_of name) functions ->
-      bounded_by un_xbounds x ->
-
-      map.get locals out_var = Some out_ptr ->
-      (Placeholder out_ptr out * Rout)%sep mem ->
-
-      (Bignum x_ptr x * Rin)%sep mem ->
-      map.get locals x_var = Some x_ptr ->
-
-      (let v := v in
-       forall out m (Heq: eval out mod M = v),
-         bounded_by un_outbounds out ->
-         sep (Bignum out_ptr out) Rout m ->
-         (<{ Trace := tr;
-             Memory := m;
-             Locals := locals;
-             Functions := functions }>
-          k_impl
-          (* <{ (rew [fun v => P v -> predicate)] Heq in pred) (k (eval out mod M) Heq) }>)) -> *)
-          <{ pred (k v eq_refl) }>)) ->
-      <{ Trace := tr;
-         Memory := mem;
-         Locals := locals;
-         Functions := functions }>
-      cmd.seq
-        (cmd.call [] name [expr.var x_var; expr.var out_var])
-        k_impl
-      <{ pred (nlet_eq [out_var] v k) }>.
-   *)
-  Print nlet_eq.
   Lemma compile_ladderstep {tr mem locals functions}
         (x1 x2 z2 x3 z3 : F M_pos) :
     let v := ladderstep_gallina x1 (x2, z2) (x3, z3) in
@@ -250,6 +215,8 @@ Section __.
     repeat compile_step.
   Qed.
 End __.
+
+Existing Instance spec_of_ladderstep.
 
 Local Coercion expr.var : string >-> Syntax.expr.
 Local Unset Printing Coercions.
