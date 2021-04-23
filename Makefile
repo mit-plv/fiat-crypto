@@ -12,6 +12,7 @@ GHCFLAGS?= # -XStrict
 CFLAGS?=
 
 CARGO_BUILD := cargo build
+ZIG_BUILD := zig build
 
 SKIP_BEDROCK2?=
 
@@ -30,8 +31,8 @@ INSTALLDEFAULTROOT := Crypto
 	install-standalone install-standalone-ocaml install-standalone-haskell \
 	uninstall-standalone uninstall-standalone-ocaml uninstall-standalone-haskell \
 	util all-except-generated \
-	c-files bedrock2-files rust-files go-files json-files java-files generated-files \
-	lite-c-files lite-bedrock2-files lite-rust-files lite-go-files lite-json-files lite-java-files lite-generated-files \
+	c-files bedrock2-files rust-files go-files json-files java-files zig-files generated-files \
+	lite-c-files lite-bedrock2-files lite-rust-files lite-go-files lite-json-files lite-java-files lite-zig-files lite-generated-files \
 	bedrock2-backend \
 	update-go-pkg-cache \
 	deps \
@@ -39,8 +40,8 @@ INSTALLDEFAULTROOT := Crypto
 	lite only-heavy printlite \
 	all-except-compiled \
 	some-early pre-standalone pre-standalone-extracted standalone standalone-haskell standalone-ocaml \
-	test-c-files test-bedrock2-files test-rust-files test-go-files test-json-files test-java-files \
-	only-test-c-files only-test-bedrock2-files only-test-rust-files only-test-go-files only-test-json-files only-test-java-files \
+	test-c-files test-bedrock2-files test-rust-files test-go-files test-json-files test-java-files test-zig-files \
+	only-test-c-files only-test-bedrock2-files only-test-rust-files only-test-go-files only-test-json-files only-test-java-files only-test-zig-files \
 	test-go-module only-test-go-module \
 	javadoc only-javadoc \
 	check-output accept-output
@@ -140,6 +141,7 @@ GO_DIR := fiat-go/
 JSON_DIR := fiat-json/src/
 JAVA_DIR := fiat-java/src/
 JAVADOC_DIR := fiat-java/doc/
+ZIG_DIR := fiat-zig/src/
 
 # Java only really supports 32-bit builds, because we have neither 64x64->64x64 multiplication, nor uint128
 # Java also requires that class names match file names
@@ -218,6 +220,7 @@ ALL_RUST_FILES := $(patsubst %,$(RUST_DIR)%.rs,$(ALL_BASE_FILES))
 ALL_GO_FILES := $(patsubst %,$(GO_DIR)%.go,$(call GO_RENAME_TO_FILE,$(filter-out $(BASE_FILES_NEEDING_INT128),$(ALL_BASE_FILES))))
 ALL_JSON_FILES := $(patsubst %,$(JSON_DIR)%.json,$(ALL_BASE_FILES))
 ALL_JAVA_FILES := $(patsubst %,$(JAVA_DIR)%.java,$(call JAVA_RENAME,$(filter-out $(BASE_FILES_NEEDING_INT128),$(ALL_BASE_FILES))))
+ALL_ZIG_FILES := $(patsubst %,$(ZIG_DIR)%.zig,$(ALL_BASE_FILES))
 
 LITE_C_FILES := $(patsubst %,$(C_DIR)%.c,$(LITE_BASE_FILES))
 LITE_BEDROCK2_FILES := $(patsubst %,$(BEDROCK2_DIR)%.c,$(filter-out $(BASE_FILES_NEEDING_INT128),$(LITE_BASE_FILES)))
@@ -225,6 +228,7 @@ LITE_RUST_FILES := $(patsubst %,$(RUST_DIR)%.rs,$(LITE_BASE_FILES))
 LITE_GO_FILES := $(patsubst %,$(GO_DIR)%.go,$(call GO_RENAME_TO_FILE,$(filter-out $(BASE_FILES_NEEDING_INT128),$(LITE_BASE_FILES))))
 LITE_JSON_FILES := $(patsubst %,$(JSON_DIR)%.json,$(LITE_BASE_FILES))
 LITE_JAVA_FILES := $(patsubst %,$(JAVA_DIR)%.java,$(call JAVA_RENAME,$(filter-out $(BASE_FILES_NEEDING_INT128),$(LITE_BASE_FILES))))
+LITE_ZIG_FILES := $(patsubst %,$(ZIG_DIR)%.zig,$(LITE_BASE_FILES))
 
 BEDROCK2_UNSATURATED_SOLINAS := src/ExtractionOCaml/bedrock2_unsaturated_solinas
 BEDROCK2_WORD_BY_WORD_MONTGOMERY := src/ExtractionOCaml/bedrock2_word_by_word_montgomery
@@ -273,8 +277,8 @@ endif
 CHECK_OUTPUTS := $(addprefix check-,$(OUTPUT_PREOUTS))
 ACCEPT_OUTPUTS := $(addprefix accept-,$(OUTPUT_PREOUTS))
 
-generated-files: c-files rust-files go-files json-files java-files
-lite-generated-files: lite-c-files lite-rust-files lite-go-files lite-json-files lite-java-files
+generated-files: c-files rust-files go-files json-files java-files zig-files
+lite-generated-files: lite-c-files lite-rust-files lite-go-files lite-json-files lite-java-files lite-zig-files
 all-except-compiled: coq pre-standalone-extracted check-output
 all-except-generated: standalone-ocaml perf-standalone all-except-compiled
 all: all-except-generated generated-files
@@ -291,6 +295,7 @@ rust-files: $(ALL_RUST_FILES)
 go-files: $(ALL_GO_FILES)
 json-files: $(ALL_JSON_FILES)
 java-files: $(ALL_JAVA_FILES)
+zig-files: $(ALL_ZIG_FILES)
 
 lite-c-files: $(LITE_C_FILES)
 lite-bedrock2-files: $(LITE_BEDROCK2_FILES)
@@ -298,6 +303,7 @@ lite-rust-files: $(LITE_RUST_FILES)
 lite-go-files: $(LITE_GO_FILES)
 lite-json-files: $(LITE_JSON_FILES)
 lite-java-files: $(LITE_JAVA_FILES)
+lite-zig-files: $(LITE_ZIG_FILES)
 
 lite: $(LITE_VOFILES)
 nobigmem: $(NOBIGMEM_VOFILES)
@@ -536,6 +542,17 @@ test-rust-files: $(ALL_RUST_FILES)
 
 test-rust-files only-test-rust-files:
 	cd fiat-rust; $(CARGO_BUILD)
+
+$(ALL_ZIG_FILES) : $(ZIG_DIR)%.zig : $$($$($$*_BINARY_NAME))
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER) $($($*_BINARY_NAME)) --lang Zig --internal-static --public-function-case camelCase --private-function-case camelCase $($*_DESCRIPTION) $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
+
+test-zig-files: $(ALL_ZIG_FILES)
+
+test-zig-files only-test-zig-files:
+	cd fiat-zig; $(ZIG_BUILD)
 
 all: $(addprefix fiat-rust/,$(COPY_TO_FIAT_RUST))
 all: $(addprefix fiat-go/,$(COPY_TO_FIAT_GO))
