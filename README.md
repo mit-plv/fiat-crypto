@@ -192,6 +192,7 @@ Go | :white_check_mark: @mdempsky | :heavy_check_mark: | |
 Java | :x: Unmaintained | :heavy_check_mark: | :x: Known Buggy [#707](https://github.com/mit-plv/fiat-crypto/issues/707#issuecomment-763098543) | 
 JSON | Experimental | :white_check_mark: (only syntax) | | 
 Rust | :white_check_mark: | :heavy_check_mark: | :heavy_check_mark: ([Dalek Cryptography test-suite](https://github.com/dalek-cryptography/curve25519-dalek)) | 
+Zig | :white_check_mark: @jedisct1 | :heavy_check_mark: | | 
 
 ### Contributing a new backend
 
