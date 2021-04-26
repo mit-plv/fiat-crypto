@@ -73,6 +73,10 @@ Inductive EquivalenceCheckingError :=
 | Could_not_prove_equivalence
 | Not_enough_registers (num_given num_extra_needed : nat)
 | Invalid_bounds_data (e : BoundsDataError)
+| Incorrect_array_input_dag_node
+| Incorrect_Z_input_dag_node
+| Not_enough_input_dag_nodes (t : Compilers.type.type base.type)
+| Invalid_input_type (t : Compilers.type.type base.type)
 .
 
 Global Instance show_lines_BoundsDataError : ShowLines BoundsDataError
@@ -88,158 +92,227 @@ Global Instance show_lines_EquivalenceCheckingError : ShowLines EquivalenceCheck
                   => ["Could not prove equivalence of assembly and AST."]
                 | Not_enough_registers num_given num_extra_needed
                   => ["Not enough registers available for storing input and output (given " ++ show num_given ++ ", needed an additional " ++ show num_extra_needed ++ "."]%string
+                | Incorrect_array_input_dag_node
+                  => ["Internal error: Input dag node had an unexpected array."]
+                | Incorrect_Z_input_dag_node
+                  => ["Internal error: Input dag node had an unexpected Z."]
+                | Not_enough_input_dag_nodes t
+                  => ["Internal error: Not enough input dag nodes to allocate for type " ++ show t ++ "."]%string
+                | Invalid_input_type t
+                  => ["Invalid type for input argument " ++ show t ++ "."]%string
                 | Invalid_bounds_data err
                   => show_lines err
                 end%list.
 Global Instance show_EquivalenceCheckingError : Show EquivalenceCheckingError
   := fun err => String.concat String.NewLine (show_lines err).
 
-(* stores information about registers and array lengths associated to variables *)
-Fixpoint base_reg_data (t : base.type) : Set
+(** FIXME: remove axioms *)
+Definition symbol := N.
+Definition gensym_state := N.
+Definition gensym_state_init : gensym_state := 0%N.
+Definition gensym (st : gensym_state) : symbol * gensym_state := (st, N.succ st).
+Definition idx := N.
+Axiom dag : Type.
+Axiom empty_dag : dag.
+Axiom merge : symbol -> dag -> idx * dag.
+Axiom merge_literal : Z -> dag -> idx * dag.
+
+Definition input_type_spec := list (option nat). (* list of array lengths; None means not an array *)
+
+(** Convert PHOAS info about types and argument bounds into a simplified specification *)
+Fixpoint simplify_base_type
+         (t : base.type)
+  : forall arg_bounds : ZRange.type.base.option.interp t, ErrorT EquivalenceCheckingError input_type_spec
+  := match t return ZRange.type.base.option.interp t -> _ with
+     | base.type.unit
+       => fun 'tt => Success []
+     | base.type.type_base base.type.Z
+       => fun _ => Success [None]
+     | base.type.prod A B
+       => fun '(bA, bB)
+          => (vA <- simplify_base_type A bA;
+             vB <- simplify_base_type B bB;
+             Success (vA ++ vB))
+     | base.type.list (base.type.type_base base.type.Z)
+       => fun b
+          => match b with
+             | None => Error (Invalid_bounds_data (Unknown_array_length t))
+             | Some bs => Success [Some (List.length bs)]
+             end
+     | base.type.type_base _
+     | base.type.option _
+     | base.type.list _
+       => fun _ => Error (Invalid_input_type (type.base t))
+     end%error.
+Definition simplify_type
+         (t : Compilers.type.type base.type)
+  : forall arg_bounds : ZRange.type.option.interp t, ErrorT EquivalenceCheckingError input_type_spec
+  := match t with
+     | type.base t => simplify_base_type t
+     | type.arrow _ _ => fun _ => Error (Invalid_input_type t)
+     end.
+Fixpoint simplify_input_type
+         (t : Compilers.type.type base.type)
+  : forall arg_bounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t, ErrorT EquivalenceCheckingError input_type_spec
+  := match t return type.for_each_lhs_of_arrow ZRange.type.option.interp t -> _ with
+     | type.base _ => fun 'tt => Success []
+     | type.arrow A B
+       => fun '(bA, bB)
+          => (vA <- simplify_type A bA;
+             vB <- simplify_input_type B bB;
+             Success (vA ++ vB))
+     end%error.
+
+Fixpoint build_inputs (st : dag * gensym_state) (types : input_type_spec) : list (idx + list idx) * (dag * gensym_state)
+  := match types with
+     | [] => ([], st)
+     | None :: tys
+       => let '(d, st) := st in
+          let '(n, st) := gensym st in
+          let '(idx, d) := merge n d in
+          let '(rest, (d, st)) := build_inputs (d, st) tys in
+          (inl idx :: rest, (d, st))
+     | Some len :: tys
+       => let '(idxs, (d, st))
+              := List.fold_left
+                   (fun '(idxs, (d, st)) _
+                    => let '(n, st) := gensym st in
+                       let '(idx, d) := merge n d in
+                       (idx :: idxs, (d, st)))
+                   (List.seq 0 len)
+                   ([], st) in
+          let '(rest, (d, st)) := build_inputs (d, st) tys in
+          (inr idxs :: rest, (d, st))
+     end.
+
+(** PHOAS var type, storing dag indices *)
+Fixpoint base_var (t : base.type) : Set
   := match t with
      | base.type.unit
        => unit
-     | base.type.type_base base.type.Z => REG * bool (* is pointer *)
-     | base.type.prod A B => base_reg_data A * base_reg_data B
-     | base.type.list A => REG * nat (* array length *)
+     | base.type.type_base base.type.Z => idx
+     | base.type.prod A B => base_var A * base_var B
+     | base.type.list A => list (base_var A)
      | base.type.type_base _
      | base.type.option _
        => unit (* should not happen *)
      end.
-Definition reg_data (t : Compilers.type.type base.type) : Set
+Definition var (t : Compilers.type.type base.type) : Set
   := match t with
-     | type.base t => base_reg_data t
+     | type.base t => base_var t
      | type.arrow s d => Empty_set
      end.
-(* 0 means immediate *)
-Fixpoint reg_list_of_base_reg_data {t} : base_reg_data t -> list (REG * nat)
-  := match t return base_reg_data t -> list (REG * nat) with
-     | base.type.unit
-       => fun _ => []
-     | base.type.type_base base.type.Z
-       => fun '(r, is_pointer) => [(r, if is_pointer then 1 else 0)]
-     | base.type.list _
-       => fun '(r, len) => [(r, len)]
-     | base.type.prod A B
-       => fun x : base_reg_data A * base_reg_data B
-          => @reg_list_of_base_reg_data A (fst x) ++ @reg_list_of_base_reg_data B (snd x)
-     | base.type.type_base _
-     | base.type.option _
-       => fun 'tt => []
-     end%list.
 
-Definition reg_list_of_reg_data {t} : reg_data t -> list (REG * nat)
-  := match t with
-     | type.base t => @reg_list_of_base_reg_data t
-     | type.arrow _ _ => fun absurd : Empty_set => match absurd with end
-     end.
-
-Definition prod_sequence_reg_available' {E A B C}
-           (nil : C)
-           (f1 : C -> (ErrorT E A * C) + nat)
-           (f2 : C -> (ErrorT E B * C) + nat)
-  : C -> (ErrorT E (A * B) * C) + nat
-  := fun reg_available
-     => let '(rsA, reg_available, nA)
-            := match f1 reg_available with
-               | inl (rs, reg_available) => (Some rs, reg_available, 0%nat)
-               | inr n => (None, nil, n)
-               end in
-        let '(rsB, reg_available, nB)
-            := match f2 reg_available with
-               | inl (rs, reg_available) => (Some rs, reg_available, 0%nat)
-               | inr n => (None, nil, n)
-               end in
-        match rsA, rsB with
-        | None, _ | _, None => inr (nA + nB)%nat
-        | Some rsA, Some rsB => inl ((rsA <- rsA; rsB <- rsB; Success (rsA, rsB))%error, reg_available)
-        end.
-Definition prod_sequence_reg_available {E A B C}
-           (nil : C) (in_order : bool)
-           (f1 : C -> (ErrorT E A * C) + nat)
-           (f2 : C -> (ErrorT E B * C) + nat)
-  : C -> (ErrorT E (A * B) * C) + nat
-  := if in_order
-     then prod_sequence_reg_available' nil f1 f2
-     else
-       fun c
-       => match prod_sequence_reg_available' nil f2 f1 c with
-          | inl (Success (b, a), c) => inl (Success (a, b), c)
-          | inl (Error e, c) => inl (Error e, c)
-          | inr n => inr n
-          end.
-
-Fixpoint make_base_reg_data
-         {assembly_argument_registers_left_to_right : assembly_argument_registers_left_to_right_opt}
-         (is_pointer : bool) {t} (reg_available : list REG)
-  : ZRange.type.base.option.interp t -> (ErrorT BoundsDataError (base_reg_data t) * list REG (* remaining *)) + nat (* how many more registers needed? *)
-  := match t, reg_available return ZRange.type.base.option.interp t -> (ErrorT BoundsDataError (base_reg_data t) * list REG) + nat with
+(** From the information about dag nodes for inputs, build up the var
+    data we're passing into PHOAS, and return as well the indices that
+    we've not consumed *)
+Fixpoint build_base_var (t : base.type) (indices : list (idx + list idx))
+  : ErrorT EquivalenceCheckingError (base_var t * list (idx + list idx))
+  := match t, indices return ErrorT _ (base_var t * list (idx + list idx)) with
      | base.type.unit, _
-       => fun _ => inl (Success tt, reg_available)
-     | base.type.type_base base.type.Z, r :: reg_available
-       => fun _ => inl (Success (r, is_pointer), reg_available)
-     | base.type.list t, r :: reg_available
-       => fun bounds : option (list (ZRange.type.base.option.interp t))
-          => inl (match bounds with
-                  | Some ls => Success (r, List.length ls)
-                  | None => Error (Unknown_array_length t)
-                  end,
-                  reg_available)
-     | base.type.type_base base.type.Z, []
-     | base.type.list _, []
-       => fun _ => inr 1%nat
+       => Success (tt, indices)
+     | base.type.type_base base.type.Z, inl idx :: indices
+       => Success (idx, indices)
      | base.type.prod A B, _
-       => fun bounds : ZRange.type.base.option.interp A * ZRange.type.base.option.interp B
-          => prod_sequence_reg_available
-               [] assembly_argument_registers_left_to_right
-               (fun reg_available => make_base_reg_data is_pointer reg_available (fst bounds))
-               (fun reg_available => make_base_reg_data is_pointer reg_available (snd bounds))
-               reg_available
+       => (vA <- build_base_var A indices;
+          let '(vA, indices) := vA in
+          vB <- build_base_var B indices;
+          let '(vB, indices) := vB in
+          Success ((vA, vB), indices))
+     | base.type.list (base.type.type_base base.type.Z), inr idxs :: indices
+       => Success (idxs, indices)
+     | base.type.type_base base.type.Z, inr _ :: _
+       => Error Incorrect_array_input_dag_node
+     | base.type.list (base.type.type_base base.type.Z), inl _ :: _
+       => Error Incorrect_Z_input_dag_node
+     | base.type.type_base _, []
+     | base.type.list _, []
+       => Error (Not_enough_input_dag_nodes (type.base t))
      | base.type.type_base _, _
      | base.type.option _, _
-       => fun _ => inl (Success tt, reg_available)
-     end%list.
-Definition make_reg_data
-          {assembly_argument_registers_left_to_right : assembly_argument_registers_left_to_right_opt}
-          (is_pointer : bool) {t} (reg_available : list REG)
-  : ZRange.type.option.interp t -> (ErrorT BoundsDataError (reg_data t) * list REG (* remaining *)) + nat (* how many more registers needed? *)
-  := match t return ZRange.type.option.interp t -> (ErrorT BoundsDataError (reg_data t) * list REG) + nat with
-     | type.base t => make_base_reg_data is_pointer reg_available
-     | type.arrow _ _ => fun _ => inl (Error (Invalid_arrow_type t), reg_available)
+     | base.type.list _, _ :: _
+       => Error (Invalid_input_type (type.base t))
+     end%error.
+Definition build_var (t : Compilers.type.type base.type) (indices : list (idx + list idx))
+  : ErrorT EquivalenceCheckingError (var t * list (idx + list idx))
+  := match t with
+     | type.base t => build_base_var t indices
+     | type.arrow _ _ => Error (Invalid_input_type t)
      end.
-Fixpoint make_input_reg_data
-         {assembly_argument_registers_left_to_right : assembly_argument_registers_left_to_right_opt}
-         {t} (reg_available : list REG) : type.for_each_lhs_of_arrow ZRange.type.option.interp t -> (ErrorT BoundsDataError (type.for_each_lhs_of_arrow reg_data t) * list REG (* remaining *)) + nat (* how many more registers needed? *)
-  := match t return type.for_each_lhs_of_arrow ZRange.type.option.interp t -> (ErrorT BoundsDataError (type.for_each_lhs_of_arrow reg_data t) * list REG) + nat with
-     | type.base t => fun 'tt => inl (Success tt, reg_available)
+Fixpoint build_input_var (t : Compilers.type.type base.type) (indices : list (idx + list idx))
+  : ErrorT EquivalenceCheckingError (type.for_each_lhs_of_arrow var t * list (idx + list idx))
+  := match t with
+     | type.base _ => Success (tt, indices)
      | type.arrow A B
-       => fun bounds : ZRange.type.option.interp A * type.for_each_lhs_of_arrow ZRange.type.option.interp B
-          => prod_sequence_reg_available
-               [] assembly_argument_registers_left_to_right
-               (fun reg_available => make_reg_data true reg_available (fst bounds))
-               (fun reg_available => make_input_reg_data reg_available (snd bounds))
-               reg_available
+       => (vA <- build_var A indices;
+          let '(vA, indices) := vA in
+          vB <- build_input_var B indices;
+          let '(vB, indices) := vB in
+          Success ((vA, vB), indices))
+     end%error.
+
+(** symbolic evaluations live in the state monad, pushed to the leaves of a PHOAS type *)
+Definition symexM T := dag -> ErrorT EquivalenceCheckingError (T * dag).
+(* light alias *)
+Definition merge_literalM (v : Z) : symexM idx := fun st => Success (merge_literal v st).
+Fixpoint symex_T (t : Compilers.type.type base.type) : Type
+  := match t with
+     | type.base t => symexM (base_var t)
+     | type.arrow s d
+       => ErrorT EquivalenceCheckingError (symex_T s -> symex_T d)
      end.
-Definition make_output_reg_data
-           {assembly_argument_registers_left_to_right : assembly_argument_registers_left_to_right_opt}
-           {t} (reg_available : list REG)
-  : ZRange.type.base.option.interp (type.final_codomain t) -> (ErrorT BoundsDataError (base_reg_data (type.final_codomain t)) * list REG (* remaining *)) + nat (* how many more registers needed? *)
-  := make_base_reg_data false reg_available.
-
-Fixpoint reg_list_of_input_reg_data {t} : type.for_each_lhs_of_arrow reg_data t -> list (REG * nat)
-  := match t return type.for_each_lhs_of_arrow reg_data t -> list (REG * nat) with
-     | type.base t => fun 'tt => []
-     | type.arrow A B
-       => fun data : reg_data A * type.for_each_lhs_of_arrow reg_data B
-          => reg_list_of_reg_data (fst data) ++ @reg_list_of_input_reg_data B (snd data)
+Definition symex_return {T} (v : T) : symexM T := fun st => Success (v, st).
+Definition symex_bind {A B} (v : symexM A) (f : A -> symexM B) : symexM B
+  := fun st => (v <- v st; let '(a, st) := v in f a st)%error.
+Definition symex_T_return {t : Compilers.type.type base.type} : var t -> symex_T t
+  := match t return var t -> symex_T t with
+     | type.base t => symex_return
+     | type.arrow s d
+       => fun f : Empty_set => match f with end
      end.
+Delimit Scope symex_scope with symex.
+Bind Scope symex_scope with symexM.
+Bind Scope symex_scope with symex_T.
+(** TODO: move this to Notations *)
+Reserved Notation "'slet' x .. y <- X ; B"
+         (at level 200, x binder, y binder, B at level 200, format "'slet'  x .. y  <-  X  ; '//' B").
+Notation "'slet' x .. y <- X ; B"  := (symex_bind X (fun x => .. (fun y => B%symex) .. )) : symex_scope.
+Notation "A <- X ; B" := (symex_bind X (fun A => B%symex)) : symex_scope.
+(*Infix ";;" := sequence : option_scope.
+Infix ";;;" := sequence_return : option_scope.*)
 
-(** the var type for equivalence checking *)
-(** right now we just reuse reg_data, but this should be changed (TODO for Andres) *)
-Local Notation var t := (reg_data t) (only parsing).
+Definition symex_ident {t} (idc : ident t) : symex_T t.
+  Print IdentifiersBasicGENERATED.Compilers.ident.
+  refine match idc in ident t return symex_T t with
+         | ident.Literal Compilers.Z v
+           => idx <- merge_literalM v;
+                symex_return idx
+         | ident.Z_add
+           => Success (fun x => Success (fun y => x <- x; y <- y; idx <- ?[merge_addition] x y; symex_return idx))
+         | _ => ltac:(shelve)
+         end%symex; cbn.
+Admitted.
 
-Definition reg_data_to_var {t} (v : reg_data t) : var t
-  := v.
+Fixpoint symex_expr {t} (e : API.expr (var:=var) t) : symex_T t.
+  refine match e in expr.expr t return symex_T t with
+     | expr.Ident _ idc => symex_ident idc
+     | expr.Var _ v => symex_T_return v
+     | expr.Abs _ _ f => Success _
+     | expr.App _ _ f x
+       => let ef := @symex_expr _ f in
+          let ex := @symex_expr _ x in
+          _
+          (*ef ex*)
+     | expr.LetIn _ _ x f
+       => let ef := (*@symex_expr _ f*)_ in
+          let ex := @symex_expr _ x in
+          _
+         end%symex; cbn in *; fold symex_T.
+
+  shelve.
+  fold symex_T.
+  shelve.
+Admitted.
 
 Section check_equivalence.
   Context {assembly_calling_registers' : assembly_calling_registers_opt}
@@ -258,12 +331,26 @@ Section check_equivalence.
     Proof.
       refine (
           let reg_available := assembly_calling_registers (* registers available for calling conventions *) in
+          let d := empty_dag in
+          let gensym_st := gensym_state_init in
+          input_types <- simplify_input_type t arg_bounds;
+          output_types <- simplify_base_type (type.final_codomain t) out_bounds;
+          let '(inputs, (d, gensym_st)) := build_inputs (d, gensym_st) input_types in
+          input_var_data <- build_input_var t inputs;
+          let '(input_var_data, unused_inputs) := input_var_data in
+          (* TODO: should we check that there are no unused input nodes? *)
+          let ast : API.expr (type.base (type.final_codomain t))
+              := invert_expr.smart_App_curried (expr _) input_var_data in
+          symevaled_PHOAS <- symex_expr ast d;
+          let '(PHOAS_output, PHOAS_dag) := symevaled_PHOAS in
+          _)%error.
           (* outputs come first, assuming assembly_output_first *)
           let res := prod_sequence_reg_available
                        [] assembly_output_first
                        (fun reg_available => make_output_reg_data reg_available out_bounds)
                        (fun reg_available => make_input_reg_data reg_available arg_bounds)
                        reg_available in
+
           (decl <- match res with
                    | inl (Success decl, _reg_available) => Success decl
                    | inl (Error err, _) => Error (Invalid_bounds_data err)
@@ -282,6 +369,7 @@ Section check_equivalence.
            let ast : API.expr (type.base (type.final_codomain t))
                := invert_expr.smart_App_curried (expr _) (type.map_for_each_lhs_of_arrow (@reg_data_to_var) input_registers) in
            let asm_lines : Lines := asm in
+
            _)%error).
       refine (if false
               then Success tt
