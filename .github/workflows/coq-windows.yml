@@ -16,70 +16,40 @@ jobs:
       COQ_VERSION: "V8.13.1"
       SKIP_BEDROCK2: "1"
 
-    # initial steps copied from https://github.com/coq/coq/blob/7f08a61878952b0b3d72f2053a38003b9787638d/azure-pipelines.yml#L22-L30
+    # initial steps copied from https://github.com/coq/coq/commit/b481ae12fb55cc558d58b9902f1020e43f76fc4e#diff-7915b9b726a397ae7ba6af7b9703633d21c031ebf21682f3ee7e6a4ec52837a5
     steps:
     - uses: actions/checkout@v2
     - name: submodules-init
       uses: snickerbockers/submodules-init@v4
-    - name: Download cygwin
+    - name: Set up Cygwin
+      uses: egor-tensin/setup-cygwin@v1
+      with:
+        packages: rsync patch diffutils make unzip m4 findutils time wget curl git mingw64-x86_64-binutils mingw64-x86_64-gcc-core mingw64-x86_64-gcc-g++ mingw64-x86_64-pkg-config mingw64-x86_64-windows_default_manifest mingw64-x86_64-headers mingw64-x86_64-runtime mingw64-x86_64-pthreads mingw64-x86_64-zlib mingw64-x86_64-gmp python3
+    - name: Create home dir
       run: |
-        & cmd /c 'nslookup www.cygwin.com 2>&1'
-        while ($true)
-        {
-            try
-            {
-                (New-Object Net.WebClient).DownloadFile('http://www.cygwin.com/setup-x86_64.exe', 'setup-x86_64.exe')
-                break
-            }
-            catch
-            {
-                Write-Host "There is an error during package downloading:`n $_"
-            }
-        }
-        & cmd /c 'nslookup www.cygwin.com 8.8.8.8 2>&1'
-      shell: powershell
-    - name: Install cygwin
-      run: |
-        @ECHO ON
-        SET CYGROOT=C:\cygwin64
-        SET CYGCACHE=%CYGROOT%\var\cache\setup
-        setup-x86_64.exe -qnNdO -R %CYGROOT% -l %CYGCACHE% -s %CYGMIRROR% -P rsync -P patch -P diffutils -P make -P unzip -P m4 -P findutils -P time -P wget -P curl -P git -P mingw64-x86_64-binutils,mingw64-x86_64-gcc-core,mingw64-x86_64-gcc-g++,mingw64-x86_64-pkg-config,mingw64-x86_64-windows_default_manifest -P mingw64-x86_64-headers,mingw64-x86_64-runtime,mingw64-x86_64-pthreads,mingw64-x86_64-zlib,mingw64-x86_64-gmp -P python3
-        SET TARGET_ARCH=x86_64-w64-mingw32
-        SET CD_MFMT=%cd:\=/%
-        SET RESULT_INSTALLDIR_CFMT=%CD_MFMT:C:/=/cygdrive/c/%
-      env:
-        CYGMIRROR: "http://mirror.cs.vt.edu/pub/cygwin/cygwin"
-      shell: cmd
-
+        C:\tools\cygwin\bin\bash.exe --login -c 'env'
     - name: Clone Coq
       run: |
-        C:\cygwin64\bin\bash -l -c 'git clone "https://github.com/coq/coq.git" --branch=${COQ_VERSION}'
-        C:\cygwin64\bin\bash -l -c 'cd coq; git log --max-count=1'
+        C:\tools\cygwin\bin\bash.exe -l -c 'git clone "https://github.com/coq/coq.git" --branch=${COQ_VERSION}'
+        C:\tools\cygwin\bin\bash.exe -l -c 'cd coq; git log --max-count=1'
       shell: cmd
-
-    - name: Set up cygwin profile
-      run: |
-        C:\cygwin64\bin\bash -l coq\dev\build\windows\configure_profile.sh
-      shell: cmd
-
     - name: Install opam
       run: |
-        C:\cygwin64\bin\bash -l coq\dev\ci\azure-opam.sh
-      shell: cmd
+        C:\tools\cygwin\bin\bash.exe -l coq\dev\ci\azure-opam.sh
 
     - name: Configure Coq
       run: |
-        C:\cygwin64\bin\bash -l -c 'cd coq; ./configure -prefix=/usr/local'
+        C:\tools\cygwin\bin\bash.exe -l -c 'cd coq; ./configure -prefix=/usr/local'
       shell: cmd
 
     - name: Build Coq
       run: |
-        C:\cygwin64\bin\bash -l -c 'cd coq; make -j${NJOBS}'
+        C:\tools\cygwin\bin\bash.exe -l -c 'cd coq; make -j${NJOBS}'
       shell: cmd
 
     - name: Install Coq
       run: |
-        C:\cygwin64\bin\bash -l -c 'cd coq; make install'
+        C:\tools\cygwin\bin\bash.exe -l -c 'cd coq; make install'
       shell: cmd
 
     - name: echo build params
@@ -91,35 +61,35 @@ jobs:
         wmic cpu list /format:list
         ECHO ::endgroup::
         ECHO ::group::git config -l
-        C:\cygwin64\bin\bash -l -c 'git config -l'
+        C:\tools\cygwin\bin\bash.exe -l -c 'git config -l'
         ECHO ::endgroup::
         ECHO ::group::git config --global -l
-        C:\cygwin64\bin\bash -l -c 'git config --global -l'
+        C:\tools\cygwin\bin\bash.exe -l -c 'git config --global -l'
         ECHO ::endgroup::
         ECHO ::group::ocamlc -config
-        C:\cygwin64\bin\bash -l -c 'ocamlc -config'
+        C:\tools\cygwin\bin\bash.exe -l -c 'ocamlc -config'
         ECHO ::endgroup::
         ECHO ::group::coqc --config
-        C:\cygwin64\bin\bash -l -c 'coqc --config'
+        C:\tools\cygwin\bin\bash.exe -l -c 'coqc --config'
         ECHO ::endgroup::
         ECHO ::group::coqc --version
-        C:\cygwin64\bin\bash -l -c 'coqc --version'
+        C:\tools\cygwin\bin\bash.exe -l -c 'coqc --version'
         ECHO ::endgroup::
         ECHO ::group::coqtop version
-        true | C:\cygwin64\bin\bash -l -c 'coqtop'
+        true | C:\tools\cygwin\bin\bash.exe -l -c 'coqtop'
         ECHO ::endgroup::
         ECHO ::group::make printenv
-        C:\cygwin64\bin\bash -l -c 'cd "%cd%"; make printenv'
+        C:\tools\cygwin\bin\bash.exe -l -c 'cd "%cd%"; make printenv'
         ECHO ::endgroup::
         ECHO ::group::PATH
-        C:\cygwin64\bin\bash -l -c 'cd "%cd%"; echo "${PATH}"'
+        C:\tools\cygwin\bin\bash.exe -l -c 'cd "%cd%"; echo "${PATH}"'
         ECHO ::endgroup::
       shell: cmd
     - name: deps
-      run: C:\cygwin64\bin\bash -l -c 'cd "%cd%"; etc/ci/github-actions-make.sh -j%NJOBS% deps'
+      run: C:\tools\cygwin\bin\bash.exe -l -c 'cd "%cd%"; etc/ci/github-actions-make.sh -j%NJOBS% deps'
       shell: cmd
     - name: all
-      run: C:\cygwin64\bin\bash -l -c 'cd "%cd%"; etc/ci/github-actions-make.sh -j%NJOBS% all'
+      run: C:\tools\cygwin\bin\bash.exe -l -c 'cd "%cd%"; etc/ci/github-actions-make.sh -j%NJOBS% all'
       shell: cmd
     - name: upload OCaml files
       uses: actions/upload-artifact@v1
@@ -127,10 +97,10 @@ jobs:
         name: ExtractionOCaml
         path: src/ExtractionOCaml
     - name: display timing info
-      run: C:\cygwin64\bin\bash -l -c 'cd "%cd%"; cat time-of-build-pretty.log'
+      run: C:\tools\cygwin\bin\bash.exe -l -c 'cd "%cd%"; cat time-of-build-pretty.log'
       shell: cmd
     - name: display per-line timing info
-      run: C:\cygwin64\bin\bash -l -c 'cd "%cd%"; etc/ci/github-actions-display-per-line-timing.sh'
+      run: C:\tools\cygwin\bin\bash.exe -l -c 'cd "%cd%"; etc/ci/github-actions-display-per-line-timing.sh'
       shell: cmd
 #    - name: upload timing and .vo info
 #      uses: actions/upload-artifact@v1
@@ -139,6 +109,6 @@ jobs:
 #        path: .
 #      if: always ()
     - name: validate
-      run: C:\cygwin64\bin\bash -l -c 'cd "%cd%"; make TIMED=1 validate COQCHKFLAGS="-o"'
+      run: C:\tools\cygwin\bin\bash.exe -l -c 'cd "%cd%"; make TIMED=1 validate COQCHKFLAGS="-o"'
       shell: cmd
       if: github.event_name != 'pull_request'
