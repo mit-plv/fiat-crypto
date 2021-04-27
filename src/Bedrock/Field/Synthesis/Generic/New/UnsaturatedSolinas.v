@@ -597,14 +597,3 @@ Print fe25519_opp.
 Print fe25519_scmula24.
 Print fe25519_from_bytes.
 Print fe25519_to_bytes.
-(* Current status: mul/add/opp/from_bytes prototyped through full pipeline
-   Done:
-   - fix from_bytes proof in Signature.v
-   - prototype from_bytes through full pipeline
-   - prototype to_bytes through full pipeline
-   - separate out more tactics for UnsaturatedSolinas proofs
-   - add remaining operations using existing Signature lemmas
-   Next:
-   - wbw montgomery
-   - replace old pipeline with new
-*)
