@@ -16,7 +16,7 @@ jobs:
       COQ_VERSION: "V8.13.1"
       SKIP_BEDROCK2: "1"
 
-    # initial steps copied from https://github.com/coq/coq/blob/76d8a38a4591c604795c5429ffcbbe9daaa8945d/azure-pipelines.yml#L9-L39
+    # initial steps copied from https://github.com/coq/coq/blob/7f08a61878952b0b3d72f2053a38003b9787638d/azure-pipelines.yml#L22-L30
     steps:
     - uses: actions/checkout@v2
     - name: submodules-init
@@ -43,12 +43,12 @@ jobs:
         @ECHO ON
         SET CYGROOT=C:\cygwin64
         SET CYGCACHE=%CYGROOT%\var\cache\setup
-        setup-x86_64.exe -qnNdO -R %CYGROOT% -l %CYGCACHE% -s %CYGMIRROR% -P rsync -P patch -P diffutils -P make -P unzip -P m4 -P findutils -P time -P wget -P curl -P git -P jq -P mingw64-x86_64-binutils,mingw64-x86_64-gcc-core,mingw64-x86_64-gcc-g++,mingw64-x86_64-pkg-config,mingw64-x86_64-windows_default_manifest -P mingw64-x86_64-headers,mingw64-x86_64-runtime,mingw64-x86_64-pthreads,mingw64-x86_64-zlib -P python3 -P python2 -P python
+        setup-x86_64.exe -qnNdO -R %CYGROOT% -l %CYGCACHE% -s %CYGMIRROR% -P rsync -P patch -P diffutils -P make -P unzip -P m4 -P findutils -P time -P wget -P curl -P git -P mingw64-x86_64-binutils,mingw64-x86_64-gcc-core,mingw64-x86_64-gcc-g++,mingw64-x86_64-pkg-config,mingw64-x86_64-windows_default_manifest -P mingw64-x86_64-headers,mingw64-x86_64-runtime,mingw64-x86_64-pthreads,mingw64-x86_64-zlib,mingw64-x86_64-gmp -P python3
         SET TARGET_ARCH=x86_64-w64-mingw32
         SET CD_MFMT=%cd:\=/%
         SET RESULT_INSTALLDIR_CFMT=%CD_MFMT:C:/=/cygdrive/c/%
       env:
-        CYGMIRROR: "http://mirror.easyname.at/cygwin"
+        CYGMIRROR: "http://mirror.cs.vt.edu/pub/cygwin/cygwin"
       shell: cmd
 
     - name: Clone Coq
