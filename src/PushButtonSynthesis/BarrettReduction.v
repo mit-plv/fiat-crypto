@@ -28,6 +28,7 @@ Local Open Scope Z_scope. Local Open Scope list_scope. Local Open Scope bool_sco
 
 Import
   Language.Compilers
+  Language.Wf.Compilers
   Stringification.Language.Compilers.
 Import Compilers.API.
 
@@ -215,4 +216,16 @@ Section rbarrett_red.
     { cbv [ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by bound is_bounded_by_bool value_range upper lower]. rewrite Bool.andb_true_iff, !Z.leb_le. lia. }
     { cbv [ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by bound is_bounded_by_bool value_range upper lower]. rewrite Bool.andb_true_iff, !Z.leb_le. lia. }
   Qed.
+
+  Lemma Wf_barrett_red res (Hres : barrett_red = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). apply fancy_args_good. Qed.
 End rbarrett_red.
+
+Module Export Hints.
+  Hint Opaque
+       barrett_red
+  : wf_op_cache.
+  Hint Immediate
+       Wf_barrett_red
+  : wf_op_cache.
+End Hints.

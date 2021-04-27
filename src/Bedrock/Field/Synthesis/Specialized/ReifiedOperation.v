@@ -31,7 +31,8 @@ Record reified_op {p t}
     computed_bedrock_func_eq :
       computed_bedrock_func = make_bedrock_func name op res;
     reified_eq : start = ErrorT.Success res;
-    reified_Wf3 : expr.Wf3 res;
+    reified_Wf_via_start : forall res, start = ErrorT.Success res -> expr.Wf res;
+    reified_Wf : expr.Wf res := reified_Wf_via_start _ reified_eq;
     reified_valid : Func.valid_func (p:=p) (res (fun _ => unit));
   }.
 Global Arguments reified_op {p t} name op start.
@@ -50,8 +51,12 @@ Ltac prove_reified_op :=
   [ match goal with
     | |- _ = make_bedrock_func _ _ _ =>
       vm_compute; reflexivity end | .. ];
-  match goal with
-  | |- expr.Wf3 _ => abstract (prove_Wf3 ())
+  lazymatch goal with
+  | |- forall res, ?e = _ -> expr.Wf _ =>
+    (* Kludge around auto being bad (COQBUG(https://github.com/coq/coq/issues/14190)) and eauto not respecting Hint Opaque *)
+    typeclasses eauto with wf_op_cache;
+    idtac "Warning: Falling back to manually proving pipeline well-formedness for" e;
+    PipelineTactics.prove_pipeline_wf ()
   | |- valid_func_bool ?x = true =>
     abstract vm_cast_no_check (eq_refl true)
   end.

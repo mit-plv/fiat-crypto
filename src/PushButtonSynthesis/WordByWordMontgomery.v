@@ -886,50 +886,80 @@ Section __.
     : mul_correct machine_wordsize n m valid from_montgomery_res (Interp res).
   Proof using curve_good. prove_correctness mulmod_correct. Qed.
 
+  Lemma Wf_mul res (Hres : mul = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Lemma square_correct res
         (Hres : square = Success res)
     : square_correct machine_wordsize n m valid from_montgomery_res (Interp res).
   Proof using curve_good. prove_correctness squaremod_correct. Qed.
+
+  Lemma Wf_square res (Hres : square = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
 
   Lemma add_correct res
         (Hres : add = Success res)
     : add_correct machine_wordsize n m valid from_montgomery_res (Interp res).
   Proof using curve_good. prove_correctness addmod_correct. Qed.
 
+  Lemma Wf_add res (Hres : add = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Lemma sub_correct res
         (Hres : sub = Success res)
     : sub_correct machine_wordsize n m valid from_montgomery_res (Interp res).
   Proof using curve_good. prove_correctness submod_correct. Qed.
+
+  Lemma Wf_sub res (Hres : sub = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
 
   Lemma opp_correct res
         (Hres : opp = Success res)
     : opp_correct machine_wordsize n m valid from_montgomery_res (Interp res).
   Proof using curve_good. prove_correctness oppmod_correct. Qed.
 
+  Lemma Wf_opp res (Hres : opp = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Lemma from_montgomery_correct res
         (Hres : from_montgomery = Success res)
     : from_montgomery_correct machine_wordsize n m r' valid (Interp res).
   Proof using curve_good. prove_correctness from_montgomerymod_correct. Qed.
+
+  Lemma Wf_from_montgomery res (Hres : from_montgomery = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
 
   Lemma to_montgomery_correct res
         (Hres : to_montgomery = Success res)
     : to_montgomery_correct machine_wordsize n m valid from_montgomery_res (Interp res).
   Proof using curve_good. prove_correctness to_montgomerymod_correct. Qed.
 
+  Lemma Wf_to_montgomery res (Hres : to_montgomery = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Lemma nonzero_correct res
         (Hres : nonzero = Success res)
     : nonzero_correct machine_wordsize n m valid from_montgomery_res (Interp res).
   Proof using curve_good. prove_correctness nonzeromod_correct. Qed.
+
+  Lemma Wf_nonzero res (Hres : nonzero = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
 
   Lemma to_bytes_correct res
         (Hres : to_bytes = Success res)
     : to_bytes_correct machine_wordsize n n_bytes m valid (Interp res).
   Proof using curve_good. prove_correctness to_bytesmod_correct. Qed.
 
+  Lemma Wf_to_bytes res (Hres : to_bytes = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Lemma from_bytes_correct res
         (Hres : from_bytes = Success res)
     : from_bytes_correct machine_wordsize n n_bytes m valid bytes_valid (Interp res).
   Proof using curve_good. prove_correctness eval_from_bytesmod_and_partitions. Qed.
+
+  Lemma Wf_from_bytes res (Hres : from_bytes = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
 
   Strategy -1000 [encode]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
   Lemma encode_correct res
@@ -937,11 +967,17 @@ Section __.
     : encode_correct machine_wordsize n m valid from_montgomery_res (Interp res).
   Proof using curve_good. prove_correctness encodemod_correct. Qed.
 
+  Lemma Wf_encode res (Hres : encode = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Strategy -1000 [zero]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
   Lemma zero_correct res
         (Hres : zero = Success res)
     : zero_correct machine_wordsize n m valid from_montgomery_res (Interp res).
   Proof using curve_good. prove_correctness encodemod_correct. Qed.
+
+  Lemma Wf_zero res (Hres : zero = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
 
   Strategy -1000 [one]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
   Lemma one_correct res
@@ -949,11 +985,17 @@ Section __.
     : one_correct machine_wordsize n m valid from_montgomery_res (Interp res).
   Proof using curve_good. prove_correctness encodemod_correct. Qed.
 
+  Lemma Wf_one res (Hres : one = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Local Opaque Pipeline.BoundsPipeline. (* need this or else [eapply Pipeline.BoundsPipeline_correct in Hres] takes forever *)
   Lemma selectznz_correct res
         (Hres : selectznz = Success res)
     : selectznz_correct machine_wordsize n saturated_bounds_list (Interp res).
   Proof using curve_good. Primitives.prove_correctness use_curve_good. Qed.
+
+  Lemma Wf_selectznz res (Hres : selectznz = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
 
   Section ring.
     Context from_montgomery_res (Hfrom_montgomery : from_montgomery = Success from_montgomery_res)
@@ -1039,3 +1081,38 @@ Section __.
            function_name_prefix requests.
   End for_stringification.
 End __.
+
+Module Export Hints.
+  Hint Opaque
+       mul
+       square
+       add
+       sub
+       opp
+       from_montgomery
+       to_montgomery
+       nonzero
+       to_bytes
+       from_bytes
+       encode
+       zero
+       one
+       selectznz
+  : wf_op_cache.
+  Hint Immediate
+       Wf_mul
+       Wf_square
+       Wf_add
+       Wf_sub
+       Wf_opp
+       Wf_from_montgomery
+       Wf_to_montgomery
+       Wf_nonzero
+       Wf_to_bytes
+       Wf_from_bytes
+       Wf_encode
+       Wf_zero
+       Wf_one
+       Wf_selectznz
+  : wf_op_cache.
+End Hints.

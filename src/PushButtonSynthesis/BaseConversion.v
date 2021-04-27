@@ -332,6 +332,9 @@ Section __.
                       | destruct_head'_and; eapply Z.le_lt_trans; eassumption ].
   Qed.
 
+  Lemma Wf_convert_bases res (Hres : convert_bases = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Section for_stringification.
     Local Open Scope string_scope.
     Local Open Scope list_scope.
@@ -357,3 +360,12 @@ Section __.
            function_name_prefix requests.
   End for_stringification.
 End __.
+
+Module Export Hints.
+  Hint Opaque
+       convert_bases
+  : wf_op_cache.
+  Hint Immediate
+       Wf_convert_bases
+  : wf_op_cache.
+End Hints.

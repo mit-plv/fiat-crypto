@@ -511,11 +511,8 @@ Module Compilers.
            (@partial.ident.eval_with_bound)
              var abstract_domain' (annotate_expr default_relax_zrange) bottom' (abstract_interp_ident assume_cast_truncates) extract_list_state extract_option_state (is_annotated_for default_relax_zrange) (strip_annotation assume_cast_truncates strip_preexisting_annotations) skip_annotations_under annotate_with_state t e bound.
 
-      (* N.B. We insert [GeneralizeVar] so that we can assume [Wf e]
-              and get [Wf3 (GeneralizeVar e)], rather than needing to
-              assume [Wf3 e] *)
       Definition StripAnnotations (assume_cast_truncates : bool) {t} (e : Expr t) (bound : type.for_each_lhs_of_arrow abstract_domain t) : Expr t
-        := fun var => strip_annotations assume_cast_truncates (GeneralizeVar.GeneralizeVar (e _) _) bound.
+        := fun var => strip_annotations assume_cast_truncates (e _) bound.
 
       Definition eval {var} {t} (e : @expr _ t) : expr t
         := let assume_cast_truncates := false in
