@@ -101,6 +101,8 @@ src/Bedrock/Field/Synthesis/Generic/Tactics.v
 src/Bedrock/Field/Synthesis/Generic/Signature.v
 src/Bedrock/Field/Synthesis/Generic/UnsaturatedSolinas.v
 src/Bedrock/Field/Synthesis/Generic/WordByWordMontgomery.v
+src/Bedrock/Field/Synthesis/Generic/New/ComputedOp.v
+src/Bedrock/Field/Synthesis/Generic/New/UnsaturatedSolinas.v
 src/Bedrock/Field/Synthesis/Specialized/ReifiedOperation.v
 src/Bedrock/Field/Synthesis/Specialized/Tactics.v
 src/Bedrock/Field/Synthesis/Specialized/UnsaturatedSolinas.v
