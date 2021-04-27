@@ -198,6 +198,7 @@ Ltac prove_correctness' should_not_clear use_curve_good :=
   | .. ].
 
 Ltac prove_correctness use_curve_good := prove_correctness' ltac:(fun _ => fail) use_curve_good.
+Ltac prove_pipeline_wf _ := PipelineTactics.prove_pipeline_wf ().
 
 Module CorrectnessStringification.
   Module dyn_context.
@@ -931,11 +932,17 @@ Section __.
     : mulx_correct s' (Interp res).
   Proof using Type. prove_correctness I. Qed.
 
+  Lemma Wf_mulx s' res (Hres : mulx s' = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Strategy -1000 [addcarryx]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
   Lemma addcarryx_correct s' res
         (Hres : addcarryx s' = Success res)
     : addcarryx_correct s' (Interp res).
   Proof using Type. prove_correctness I. Qed.
+
+  Lemma Wf_addcarryx s' res (Hres : addcarryx s' = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
 
   Strategy -1000 [subborrowx]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
   Lemma subborrowx_correct s' res
@@ -943,11 +950,17 @@ Section __.
     : subborrowx_correct s' (Interp res).
   Proof using Type. prove_correctness I. Qed.
 
+  Lemma Wf_subborrowx s' res (Hres : subborrowx s' = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Strategy -1000 [value_barrier]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
   Lemma value_barrier_correct s' res
         (Hres : value_barrier s' = Success res)
     : value_barrier_correct (int.is_signed s') (int.bitwidth_of s') (Interp res).
   Proof using Type. prove_correctness I. Qed.
+
+  Lemma Wf_value_barrier s' res (Hres : value_barrier s' = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
 
   Strategy -1000 [cmovznz]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
   Lemma cmovznz_correct s' res
@@ -955,16 +968,25 @@ Section __.
     : cmovznz_correct false s' (Interp res).
   Proof using Type. prove_correctness I. Qed.
 
+  Lemma Wf_cmovznz s' res (Hres : cmovznz s' = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Strategy -1000 [cmovznz_by_mul]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
   Lemma cmovznz_by_mul_correct s' res
         (Hres : cmovznz_by_mul s' = Success res)
     : COperationSpecifications.Primitives.cmovznz_correct false s' (Interp res).
   Proof using Type. prove_correctness I. Qed.
 
+  Lemma Wf_cmovznz_by_mul s' res (Hres : cmovznz_by_mul s' = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Lemma selectznz_correct limbwidth res
         (Hres : selectznz = Success res)
     : selectznz_correct (weight (Qnum limbwidth) (QDen limbwidth)) n saturated_bounds_list (Interp res).
   Proof using Type. prove_correctness I. Qed.
+
+  Lemma Wf_selectznz res (Hres : selectznz = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
 
   Section for_stringification.
     Context (valid_names : string)
@@ -1093,3 +1115,24 @@ Section __.
               end.
   End for_stringification.
 End __.
+
+Module Export Hints.
+  Hint Opaque
+       mulx
+       addcarryx
+       subborrowx
+       value_barrier
+       cmovznz
+       cmovznz_by_mul
+       selectznz
+  : wf_op_cache.
+  Hint Immediate
+       Wf_mulx
+       Wf_addcarryx
+       Wf_subborrowx
+       Wf_value_barrier
+       Wf_cmovznz
+       Wf_cmovznz_by_mul
+       Wf_selectznz
+  : wf_op_cache.
+End Hints.

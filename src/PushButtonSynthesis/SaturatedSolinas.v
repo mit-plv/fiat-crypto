@@ -212,6 +212,9 @@ Section __.
     : mul_correct (weight machine_wordsize 1) n m boundsn (Interp res).
   Proof using curve_good. prove_correctness (). Qed.
 
+  Lemma Wf_mul res (Hres : mul = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Section for_stringification.
     Local Open Scope string_scope.
     Local Open Scope list_scope.
@@ -236,3 +239,12 @@ Section __.
            function_name_prefix requests.
   End for_stringification.
 End __.
+
+Module Export Hints.
+  Hint Opaque
+       mul
+  : wf_op_cache.
+  Hint Immediate
+       Wf_mul
+  : wf_op_cache.
+End Hints.

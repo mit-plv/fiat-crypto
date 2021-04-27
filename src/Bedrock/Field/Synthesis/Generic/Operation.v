@@ -92,7 +92,7 @@ Section op.
              {name : string} (spec : spec_of name) : Prop :=
     (forall res : API.Expr t,
         start = ErrorT.Success res ->
-        expr.Wf3 res ->
+        expr.Wf res ->
         valid_func (res (fun _ : API.type => unit)) ->
         forall functions,
           spec (make_bedrock_func name op res :: functions)).

@@ -486,7 +486,7 @@ Section Func.
         (e : API.Expr t)
         (* expressions are valid input to translate_func *)
         (e_valid : valid_func (e _)) :
-    Wf3 e ->
+    Wf e ->
     forall (fname : string)
            (retnames : base_ltype (type.final_codomain t))
            (retsizes : base_access_sizes (type.final_codomain t))
@@ -557,7 +557,7 @@ Section Func.
                          rets out_ptrs retsizes))
                  R mem').
   Proof.
-    cbv [translate_func Wf3]; intros. subst.
+    cbv [translate_func]; intros. subst.
     cbn [fst snd
              WeakestPrecondition.call
              WeakestPrecondition.call_body WeakestPrecondition.func].
@@ -598,7 +598,7 @@ Section Func.
     cbv beta in *. cleanup; subst.
     eapply Proper_cmd; [ solve [apply Proper_call] | repeat intro | ].
     2 : { eapply translate_func'_correct with (args0:=args);
-          cbv [context_equiv]; intros; eauto; [ ].
+          cbv [context_equiv]; intros; try apply Wf3_of_Wf; eauto; [ ].
           eapply only_differ_disjoint_undef_on; eauto;
             [ eapply used_varnames_disjoint; lia | ].
           eapply putmany_of_list_zip_undef_on

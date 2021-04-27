@@ -618,40 +618,64 @@ Section __.
     : carry_mul_correct (weight (Qnum limbwidth) (QDen limbwidth)) n m tight_bounds loose_bounds (Interp res).
   Proof using curve_good. prove_correctness (). Qed.
 
+  Lemma Wf_carry_mul res (Hres : carry_mul = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Lemma carry_square_correct res
         (Hres : carry_square = Success res)
     : carry_square_correct (weight (Qnum limbwidth) (QDen limbwidth)) n m tight_bounds loose_bounds (Interp res).
   Proof using curve_good. prove_correctness (). Qed.
+
+  Lemma Wf_carry_square res (Hres : carry_square = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
 
   Lemma carry_scmul_const_correct a res
         (Hres : carry_scmul_const a = Success res)
     : carry_scmul_const_correct (weight (Qnum limbwidth) (QDen limbwidth)) n m tight_bounds loose_bounds a (Interp res).
   Proof using curve_good. prove_correctness (). Qed.
 
+  Lemma Wf_carry_scmul_const a res (Hres : carry_scmul_const a = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Lemma carry_correct res
         (Hres : carry = Success res)
     : carry_correct (weight (Qnum limbwidth) (QDen limbwidth)) n m tight_bounds loose_bounds (Interp res).
   Proof using curve_good. prove_correctness (). Qed.
+
+  Lemma Wf_carry res (Hres : carry = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
 
   Lemma add_correct res
         (Hres : add = Success res)
     : add_correct (weight (Qnum limbwidth) (QDen limbwidth)) n m tight_bounds loose_bounds (Interp res).
   Proof using curve_good. prove_correctness (). Qed.
 
+  Lemma Wf_add res (Hres : add = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Lemma sub_correct res
         (Hres : sub = Success res)
     : sub_correct (weight (Qnum limbwidth) (QDen limbwidth)) n m tight_bounds loose_bounds (Interp res).
   Proof using curve_good. prove_correctness (). Qed.
+
+  Lemma Wf_sub res (Hres : sub = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
 
   Lemma opp_correct res
         (Hres : opp = Success res)
     : opp_correct (weight (Qnum limbwidth) (QDen limbwidth)) n m tight_bounds loose_bounds (Interp res).
   Proof using curve_good. prove_correctness (). Qed.
 
+  Lemma Wf_opp res (Hres : opp = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Lemma from_bytes_correct res
         (Hres : from_bytes = Success res)
     : from_bytes_correct (weight (Qnum limbwidth) (QDen limbwidth)) n n_bytes m s tight_bounds (Interp res).
   Proof using curve_good. prove_correctness (). Qed.
+
+  Lemma Wf_from_bytes res (Hres : from_bytes = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
 
   Lemma relax_correct
     : forall x, list_Z_bounded_by tight_bounds x -> list_Z_bounded_by loose_bounds x.
@@ -684,11 +708,17 @@ Section __.
                       | progress cbv [tight_upperbounds] in * ].
   Qed.
 
+  Lemma Wf_to_bytes res (Hres : to_bytes = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Strategy -1000 [encode]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
   Lemma encode_correct res
         (Hres : encode = Success res)
     : encode_correct (weight (Qnum limbwidth) (QDen limbwidth)) n m tight_bounds (Interp res).
   Proof using curve_good. prove_correctness (). Qed.
+
+  Lemma Wf_encode res (Hres : encode = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
 
   Strategy -1000 [zero]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
   Lemma zero_correct res
@@ -696,11 +726,17 @@ Section __.
     : zero_correct (weight (Qnum limbwidth) (QDen limbwidth)) n m tight_bounds (Interp res).
   Proof using curve_good. prove_correctness (). Qed.
 
+  Lemma Wf_zero res (Hres : zero = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Strategy -1000 [one]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
   Lemma one_correct res
         (Hres : one = Success res)
     : one_correct (weight (Qnum limbwidth) (QDen limbwidth)) n m tight_bounds (Interp res).
   Proof using curve_good. prove_correctness (). Qed.
+
+  Lemma Wf_one res (Hres : one = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
 
   Section ring.
     Context carry_mul_res (Hcarry_mul : carry_mul = Success carry_mul_res)
@@ -788,3 +824,34 @@ Section __.
            function_name_prefix requests.
   End for_stringification.
 End __.
+
+Module Export Hints.
+  Hint Opaque
+       carry_mul
+       carry_square
+       carry_scmul_const
+       carry
+       add
+       sub
+       opp
+       from_bytes
+       to_bytes
+       encode
+       zero
+       one
+  : wf_op_cache.
+  Hint Immediate
+       Wf_carry_mul
+       Wf_carry_square
+       Wf_carry_scmul_const
+       Wf_carry
+       Wf_add
+       Wf_sub
+       Wf_opp
+       Wf_from_bytes
+       Wf_to_bytes
+       Wf_encode
+       Wf_zero
+       Wf_one
+  : wf_op_cache.
+End Hints.

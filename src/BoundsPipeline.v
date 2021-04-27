@@ -1001,6 +1001,9 @@ Module Pipeline.
 End Pipeline.
 
 Module Export Hints.
+  (* for storing the results of prove_pipeline_wf *)
+  Create HintDb wf_op_cache discriminated.
+
   Export Pipeline.Instances.
   Hint Extern 1 (@Pipeline.bounds_goodT _ _) => solve [ Pipeline.solve_bounds_good ] : typeclass_instances.
   Global Strategy -100 [type.interp ZRange.type.option.interp ZRange.type.base.option.interp GallinaReify.Reify_as GallinaReify.reify type_base].
@@ -1078,4 +1081,18 @@ Module PipelineTactics.
       | [ |- Wf _ ]
         => repeat apply expr.Wf_APP; try typeclasses eauto with nocore wf_extra wf_gen_cache; try typeclasses eauto with nocore wf wf_gen_cache
       end ].
+
+  Ltac prove_pipeline_wf _ :=
+    lazymatch goal with
+    | [ Hres : _ = Success _ |- Wf _ ]
+      => eapply Pipeline.BoundsPipeline_correct
+    end;
+    repeat first [ exact _
+                 | exact I
+                 | solve [ auto with wf_gen_cache ]
+                 | match goal with
+                   | [ Hres : _ = Success ?res |- _ = Success ?res ] => refine Hres (* eassumption is too slow *)
+                   | [ |- Wf (expr.APP _ _) ] => apply expr.Wf_APP
+                   | [ |- Wf (GallinaReify.Reify_as _ _) ] => apply expr.Wf_Reify_as
+                   end ].
 End PipelineTactics.
