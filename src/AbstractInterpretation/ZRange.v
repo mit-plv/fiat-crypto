@@ -549,6 +549,12 @@ Module Compilers.
                    | Some b => if b then t tt else f tt
                    | None => ZRange.type.base.option.None
                    end
+             | ident.bool_rect_nodep _
+               => fun t f b
+                 => match b with
+                   | Some b => if b then t else f
+                   | None => ZRange.type.base.option.None
+                   end
              | ident.option_rect _ _
                => fun s n o
                  => match o with

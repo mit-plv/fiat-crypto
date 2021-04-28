@@ -126,6 +126,7 @@ Global Opaque ident.comment_no_keep.
 Notation prod_rect_nodep := Rewriter.Util.Prod.prod_rect_nodep (only parsing).
 Notation nat_rect_arrow_nodep := Rewriter.Util.NatUtil.nat_rect_arrow_nodep (only parsing).
 Notation list_rect_arrow_nodep := Rewriter.Util.ListUtil.list_rect_arrow_nodep (only parsing).
+Notation bool_rect_nodep := Rewriter.Util.Bool.bool_rect_nodep (only parsing).
 
 Module Thunked.
   Notation bool_rect := Rewriter.Util.Bool.Thunked.bool_rect (only parsing).

@@ -565,6 +565,10 @@ Lemma add_assoc_left_rewrite_rules_proofs
   : PrimitiveHList.hlist (@snd bool Prop) add_assoc_left_rewrite_rulesT.
 Proof using Type. start_proof; intros; lia. Qed.
 
+Lemma flatten_thunked_rects_rewrite_rules_proofs
+  : PrimitiveHList.hlist (@snd bool Prop) flatten_thunked_rects_rewrite_rulesT.
+Proof using Type. start_proof; intros; reflexivity. Qed.
+
 Section fancy.
   Context (invert_low invert_high : Z (*log2wordmax*) -> Z -> option Z)
           (value_range flag_range : zrange).

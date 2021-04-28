@@ -69,6 +69,7 @@ Definition all_ident_named_interped : InductiveHList.hlist
       ; with_name ident_snd (@Datatypes.snd)
       ; with_name ident_prod_rect (@prod_rect_nodep)
       ; with_name ident_bool_rect (@Thunked.bool_rect)
+      ; with_name ident_bool_rect_nodep (@bool_rect_nodep)
       ; with_name ident_nat_rect (@Thunked.nat_rect)
       ; with_name ident_eager_nat_rect (ident.eagerly (@Thunked.nat_rect))
       ; with_name ident_nat_rect_arrow (@nat_rect_arrow_nodep)

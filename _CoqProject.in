@@ -192,6 +192,7 @@ src/Rewriter/TestRulesProofs.v
 src/Rewriter/Passes/AddAssocLeft.v
 src/Rewriter/Passes/Arith.v
 src/Rewriter/Passes/ArithWithCasts.v
+src/Rewriter/Passes/FlattenThunkedRects.v
 src/Rewriter/Passes/MulSplit.v
 src/Rewriter/Passes/MultiRetSplit.v
 src/Rewriter/Passes/NBE.v

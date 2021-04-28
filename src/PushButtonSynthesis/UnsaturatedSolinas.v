@@ -531,7 +531,7 @@ Section __.
              (one_correct weightf n m tight_bounds)).
 
   Definition reval (* r for reified *)
-    := Pipeline.RepeatRewriteAddAssocLeft
+    := Pipeline.RepeatRewriteAddAssocLeftAndFlattenThunkedRects
          n
          (Pipeline.PreBoundsPipeline
             true (* subst01 *)
@@ -545,7 +545,7 @@ Section __.
     := show with_parens (invert_expr.smart_App_curried (reval _) (arg_name, tt)).
 
   Definition rbytes_eval (* r for reified *)
-    := Pipeline.RepeatRewriteAddAssocLeft
+    := Pipeline.RepeatRewriteAddAssocLeftAndFlattenThunkedRects
          n_bytes
          (Pipeline.PreBoundsPipeline
             true (* subst01 *)
@@ -818,15 +818,14 @@ Section __.
       := Primitives.Synthesize
            machine_wordsize valid_names known_functions (extra_special_synthesis function_name_prefix)
            check_args
-           ((ToString.comment_file_header_block
-               (comment_header
-                  ++ [""
-                      ; "Computed values:"
-                      ; "carry_chain = " ++ show false idxs
-                      ; "eval z = " ++ seval "z" false
-                      ; "bytes_eval z = " ++ sbytes_eval "z" false
-                      ; "balance = " ++ let show_Z := Hex.show_Z in show false balance
-                     ]%string)))
+           (ToString.comment_file_header_block
+              (comment_header
+                 ++ [""
+                     ; "Computed values:"]
+                 ++ (ToString.prefix_and_indent "carry_chain = " [show false idxs])
+                 ++ (ToString.prefix_and_indent "eval z = " [seval "z" false])
+                 ++ (ToString.prefix_and_indent "bytes_eval z = " [sbytes_eval "z" false])
+                 ++ (ToString.prefix_and_indent "balance = " [let show_Z := Hex.show_Z in show false balance])))
            function_name_prefix requests.
   End for_stringification.
 End __.

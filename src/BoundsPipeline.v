@@ -505,13 +505,14 @@ Module Pipeline.
       E.
 
   (** Useful for rewriting to a prettier form sometimes *)
-  Definition RepeatRewriteAddAssocLeft
+  Definition RepeatRewriteAddAssocLeftAndFlattenThunkedRects
              {low_level_rewriter_method : low_level_rewriter_method_opt}
              (n : nat)
              {t}
              (E : Expr t)
     : Expr t
     := let opts := Pipeline.opts_of_method in
+       let E := RewriteRules.RewriteFlattenThunkedRects opts E in
        List.fold_right (fun f v => f v) E (List.repeat (RewriteRules.RewriteAddAssocLeft opts) n).
 
   Definition BoundsPipeline
