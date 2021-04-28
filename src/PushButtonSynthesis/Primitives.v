@@ -672,7 +672,7 @@ Module CorrectnessStringification.
              := constr:((["Postconditions:"]
                            ++ List.map (fun s => "  " ++ s)%string postconditions)%list%string) in
          (eval cbv [List.map List.app] in
-             (preconditions_list_string ++ postconditions_list_string ++ [""])%list%string)
+             ([""] ++ preconditions_list_string ++ postconditions_list_string ++ [""])%list%string)
     end.
 
   Ltac strip_lambdas v :=
@@ -729,6 +729,7 @@ Notation wrap_s v := (fun s => existT (fun t => prod string (Pipeline.ErrorT (Pi
 Section __.
   Context {output_language_api : ToString.OutputLanguageAPI}
           {language_naming_conventions : language_naming_conventions_opt}
+          {documentation_options : documentation_options_opt}
           {package_namev : package_name_opt}
           {class_namev : class_name_opt}
           {static : static_opt}
@@ -804,7 +805,7 @@ Section __.
         FromPipelineToString
           machine_wordsize prefix "selectznz" selectznz
           (docstring_with_summary_from_lemma!
-             (fun fname : string => ["The function " ++ fname ++ " is a multi-limb conditional select."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " is a multi-limb conditional select."]%string)
              (selectznz_correct dummy_weight n saturated_bounds_list)).
 
   Definition mulx (s : Z)
@@ -823,7 +824,7 @@ Section __.
         FromPipelineToInternalString
           machine_wordsize prefix ("mulx_u" ++ Decimal.Z.to_string s) (mulx s)
           (docstring_with_summary_from_lemma!
-             (fun fname : string => ["The function " ++ fname ++ " is a multiplication, returning the full double-width result."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " is a multiplication, returning the full double-width result."]%string)
              (mulx_correct s)).
 
   Definition addcarryx (s : Z)
@@ -843,7 +844,7 @@ Section __.
         FromPipelineToInternalString
           machine_wordsize prefix ("addcarryx_u" ++ Decimal.Z.to_string s) (addcarryx s)
           (docstring_with_summary_from_lemma!
-             (fun fname : string => ["The function " ++ fname ++ " is an addition with carry."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " is an addition with carry."]%string)
              (addcarryx_correct s)).
 
   Definition subborrowx (s : Z)
@@ -862,7 +863,7 @@ Section __.
         FromPipelineToInternalString
           machine_wordsize prefix ("subborrowx_u" ++ Decimal.Z.to_string s) (subborrowx s)
           (docstring_with_summary_from_lemma!
-             (fun fname : string => ["The function " ++ fname ++ " is a subtraction with borrow."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " is a subtraction with borrow."]%string)
              (subborrowx_correct s)).
 
 
@@ -881,7 +882,7 @@ Section __.
         FromPipelineToInternalString
           machine_wordsize prefix ("value_barrier_" ++ (if int.is_unsigned s then "u" else "") ++ Decimal.Z.to_string (int.bitwidth_of s)) (value_barrier s)
           (docstring_with_summary_from_lemma!
-             (fun fname : string => ["The function " ++ fname ++ " is a single-word conditional move."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " is a single-word conditional move."]%string)
              (value_barrier_correct (int.is_signed s) (int.bitwidth_of s))).
 
 
@@ -901,7 +902,7 @@ Section __.
         FromPipelineToInternalString
           machine_wordsize prefix ("cmovznz_u" ++ Decimal.Z.to_string s) (cmovznz s)
           (docstring_with_summary_from_lemma!
-             (fun fname : string => ["The function " ++ fname ++ " is a single-word conditional move."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " is a single-word conditional move."]%string)
              (cmovznz_correct false s)).
 
   Definition cmovznz_by_mul (s : Z)
@@ -920,7 +921,7 @@ Section __.
         FromPipelineToInternalString
           machine_wordsize prefix ("cmovznz_u" ++ Decimal.Z.to_string s) (cmovznz_by_mul s)
           (docstring_with_summary_from_lemma!
-             (fun fname : string => ["The function " ++ fname ++ " is a single-word conditional move."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " is a single-word conditional move."]%string)
              (cmovznz_correct false s)).
 
   Local Ltac solve_extra_bounds_side_conditions :=
@@ -1174,8 +1175,7 @@ Section __.
                         (ToString.ident_info_of_bitwidths_used extra_bit_widths) in
          let header :=
              (comment_header
-                ++ ToString.header machine_wordsize (orb internal_static static) static function_name_prefix infos
-                ++ [""]) in
+                ++ ToString.header machine_wordsize (orb internal_static static) static function_name_prefix infos) in
          let footer :=
              ToString.footer machine_wordsize (orb internal_static static) static function_name_prefix infos in
          [(normal_output,

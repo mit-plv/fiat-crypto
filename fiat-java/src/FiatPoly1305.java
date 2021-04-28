@@ -7,10 +7,10 @@
 /* tight_bounds_multiplier = 1 (from "") */
 /*  */
 /* Computed values: */
-/* carry_chain = [0, 1, 2, 3, 4, 0, 1] */
-/* eval z = z[0] + (z[1] << 26) + (z[2] << 52) + (z[3] << 78) + (z[4] << 104) */
-/* bytes_eval z = z[0] + (z[1] << 8) + (z[2] << 16) + (z[3] << 24) + (z[4] << 32) + (z[5] << 40) + (z[6] << 48) + (z[7] << 56) + (z[8] << 64) + (z[9] << 72) + (z[10] << 80) + (z[11] << 88) + (z[12] << 96) + (z[13] << 104) + (z[14] << 112) + (z[15] << 120) + (z[16] << 128) */
-/* balance = [0x7fffff6, 0x7fffffe, 0x7fffffe, 0x7fffffe, 0x7fffffe] */
+/*   carry_chain = [0, 1, 2, 3, 4, 0, 1] */
+/*   eval z = z[0] + (z[1] << 26) + (z[2] << 52) + (z[3] << 78) + (z[4] << 104) */
+/*   bytes_eval z = z[0] + (z[1] << 8) + (z[2] << 16) + (z[3] << 24) + (z[4] << 32) + (z[5] << 40) + (z[6] << 48) + (z[7] << 56) + (z[8] << 64) + (z[9] << 72) + (z[10] << 80) + (z[11] << 88) + (z[12] << 96) + (z[13] << 104) + (z[14] << 112) + (z[15] << 120) + (z[16] << 128) */
+/*   balance = [0x7fffff6, 0x7fffffe, 0x7fffffe, 0x7fffffe, 0x7fffffe] */
 
 package fiat_crypto;
 
@@ -27,6 +27,7 @@ static class Box<T> {
 
 /**
  * The function fiat_Poly1305_addcarryx_u26 is an addition with carry. <p>
+ * <p>
  * Postconditions: <p>
  *   out1 = (arg1 + arg2 + arg3) mod 2^26 <p>
  *   out2 = ⌊(arg1 + arg2 + arg3) / 2^26⌋ <p>
@@ -49,6 +50,7 @@ static void fiat_Poly1305_addcarryx_u26(Box<Integer> out1, Box<Integer> out2, in
 
 /**
  * The function fiat_Poly1305_subborrowx_u26 is a subtraction with borrow. <p>
+ * <p>
  * Postconditions: <p>
  *   out1 = (-arg1 + arg2 + -arg3) mod 2^26 <p>
  *   out2 = -⌊(-arg1 + arg2 + -arg3) / 2^26⌋ <p>
@@ -71,6 +73,7 @@ static void fiat_Poly1305_subborrowx_u26(Box<Integer> out1, Box<Integer> out2, i
 
 /**
  * The function fiat_Poly1305_cmovznz_u64 is a single-word conditional move. <p>
+ * <p>
  * Postconditions: <p>
  *   out1 = (if arg1 = 0 then arg2 else arg3) <p>
  * <p>
@@ -89,6 +92,7 @@ static void fiat_Poly1305_cmovznz_u64(Box<Long> out1, int arg1, long arg2, long 
 
 /**
  * The function fiat_Poly1305_carry_mul multiplies two field elements and reduces the result. <p>
+ * <p>
  * Postconditions: <p>
  *   eval out1 mod m = (eval arg1 * eval arg2) mod m <p>
  * <p>
@@ -160,6 +164,7 @@ public static void fiat_Poly1305_carry_mul(int[] out1, final int[] arg1, final i
 
 /**
  * The function fiat_Poly1305_carry_square squares a field element and reduces the result. <p>
+ * <p>
  * Postconditions: <p>
  *   eval out1 mod m = (eval arg1 * eval arg1) mod m <p>
  * <p>
@@ -228,6 +233,7 @@ public static void fiat_Poly1305_carry_square(int[] out1, final int[] arg1) {
 
 /**
  * The function fiat_Poly1305_carry reduces a field element. <p>
+ * <p>
  * Postconditions: <p>
  *   eval out1 mod m = eval arg1 mod m <p>
  * <p>
@@ -258,6 +264,7 @@ public static void fiat_Poly1305_carry(int[] out1, final int[] arg1) {
 
 /**
  * The function fiat_Poly1305_add adds two field elements. <p>
+ * <p>
  * Postconditions: <p>
  *   eval out1 mod m = (eval arg1 + eval arg2) mod m <p>
  * <p>
@@ -282,6 +289,7 @@ public static void fiat_Poly1305_add(int[] out1, final int[] arg1, final int[] a
 
 /**
  * The function fiat_Poly1305_sub subtracts two field elements. <p>
+ * <p>
  * Postconditions: <p>
  *   eval out1 mod m = (eval arg1 - eval arg2) mod m <p>
  * <p>
@@ -306,6 +314,7 @@ public static void fiat_Poly1305_sub(int[] out1, final int[] arg1, final int[] a
 
 /**
  * The function fiat_Poly1305_opp negates a field element. <p>
+ * <p>
  * Postconditions: <p>
  *   eval out1 mod m = -eval arg1 mod m <p>
  * <p>
@@ -329,6 +338,7 @@ public static void fiat_Poly1305_opp(int[] out1, final int[] arg1) {
 
 /**
  * The function fiat_Poly1305_selectznz is a multi-limb conditional select. <p>
+ * <p>
  * Postconditions: <p>
  *   eval out1 = (if arg1 = 0 then eval arg2 else eval arg3) <p>
  * <p>
@@ -359,6 +369,7 @@ public static void fiat_Poly1305_selectznz(long[] out1, int arg1, final long[] a
 
 /**
  * The function fiat_Poly1305_to_bytes serializes a field element to bytes in little-endian order. <p>
+ * <p>
  * Postconditions: <p>
  *   out1 = map (λ x, ⌊((eval arg1 mod m) mod 2^(8 * (x + 1))) / 2^(8 * x)⌋) [0..16] <p>
  * <p>
@@ -457,6 +468,7 @@ public static void fiat_Poly1305_to_bytes(int[] out1, final int[] arg1) {
 
 /**
  * The function fiat_Poly1305_from_bytes deserializes a field element from bytes in little-endian order. <p>
+ * <p>
  * Postconditions: <p>
  *   eval out1 mod m = bytes_eval arg1 mod m <p>
  * <p>
@@ -512,4 +524,3 @@ public static void fiat_Poly1305_from_bytes(int[] out1, final int[] arg1) {
 }
 
 }
-

@@ -12,17 +12,17 @@
 //   return values.
 //
 // Computed values:
-// eval z = z[0] + (z[1] << 32) + (z[2] << 64) + (z[3] << 96) + (z[4] << 128) + (z[5] << 160) + (z[6] << 192)
-// bytes_eval z = z[0] + (z[1] << 8) + (z[2] << 16) + (z[3] << 24) + (z[4] << 32) + (z[5] << 40) + (z[6] << 48) + (z[7] << 56) + (z[8] << 64) + (z[9] << 72) + (z[10] << 80) + (z[11] << 88) + (z[12] << 96) + (z[13] << 104) + (z[14] << 112) + (z[15] << 120) + (z[16] << 128) + (z[17] << 136) + (z[18] << 144) + (z[19] << 152) + (z[20] << 160) + (z[21] << 168) + (z[22] << 176) + (z[23] << 184) + (z[24] << 192) + (z[25] << 200) + (z[26] << 208) + (z[27] << 216)
-// twos_complement_eval z = let x1 := z[0] + (z[1] << 32) + (z[2] << 64) + (z[3] << 96) + (z[4] << 128) + (z[5] << 160) + (z[6] << 192) in
-//                          if x1 & (2^224-1) < 2^223 then x1 & (2^224-1) else (x1 & (2^224-1)) - 2^224
+//   eval z = z[0] + (z[1] << 32) + (z[2] << 64) + (z[3] << 96) + (z[4] << 128) + (z[5] << 160) + (z[6] << 192)
+//   bytes_eval z = z[0] + (z[1] << 8) + (z[2] << 16) + (z[3] << 24) + (z[4] << 32) + (z[5] << 40) + (z[6] << 48) + (z[7] << 56) + (z[8] << 64) + (z[9] << 72) + (z[10] << 80) + (z[11] << 88) + (z[12] << 96) + (z[13] << 104) + (z[14] << 112) + (z[15] << 120) + (z[16] << 128) + (z[17] << 136) + (z[18] << 144) + (z[19] << 152) + (z[20] << 160) + (z[21] << 168) + (z[22] << 176) + (z[23] << 184) + (z[24] << 192) + (z[25] << 200) + (z[26] << 208) + (z[27] << 216)
+//   twos_complement_eval z = let x1 := z[0] + (z[1] << 32) + (z[2] << 64) + (z[3] << 96) + (z[4] << 128) + (z[5] << 160) + (z[6] << 192) in
+//                            if x1 & (2^224-1) < 2^223 then x1 & (2^224-1) else (x1 & (2^224-1)) - 2^224
 
 const std = @import("std");
 const cast = std.meta.cast;
 const mode = std.builtin.mode; // Checked arithmetic is disabled in non-debug modes to avoid side channels
 
-
 /// The function addcarryxU32 is an addition with carry.
+///
 /// Postconditions:
 ///   out1 = (arg1 + arg2 + arg3) mod 2^32
 ///   out2 = ⌊(arg1 + arg2 + arg3) / 2^32⌋
@@ -45,6 +45,7 @@ fn addcarryxU32(out1: *u32, out2: *u1, arg1: u1, arg2: u32, arg3: u32) callconv(
 }
 
 /// The function subborrowxU32 is a subtraction with borrow.
+///
 /// Postconditions:
 ///   out1 = (-arg1 + arg2 + -arg3) mod 2^32
 ///   out2 = -⌊(-arg1 + arg2 + -arg3) / 2^32⌋
@@ -67,6 +68,7 @@ fn subborrowxU32(out1: *u32, out2: *u1, arg1: u1, arg2: u32, arg3: u32) callconv
 }
 
 /// The function mulxU32 is a multiplication, returning the full double-width result.
+///
 /// Postconditions:
 ///   out1 = (arg1 * arg2) mod 2^32
 ///   out2 = ⌊arg1 * arg2 / 2^32⌋
@@ -88,6 +90,7 @@ fn mulxU32(out1: *u32, out2: *u32, arg1: u32, arg2: u32) callconv(.Inline) void 
 }
 
 /// The function cmovznzU32 is a single-word conditional move.
+///
 /// Postconditions:
 ///   out1 = (if arg1 = 0 then arg2 else arg3)
 ///
@@ -107,6 +110,7 @@ fn cmovznzU32(out1: *u32, arg1: u1, arg2: u32, arg3: u32) callconv(.Inline) void
 }
 
 /// The function mul multiplies two field elements in the Montgomery domain.
+///
 /// Preconditions:
 ///   0 ≤ eval arg1 < m
 ///   0 ≤ eval arg2 < m
@@ -950,6 +954,7 @@ pub fn mul(out1: *[7]u32, arg1: [7]u32, arg2: [7]u32) void {
 }
 
 /// The function square squares a field element in the Montgomery domain.
+///
 /// Preconditions:
 ///   0 ≤ eval arg1 < m
 /// Postconditions:
@@ -1791,6 +1796,7 @@ pub fn square(out1: *[7]u32, arg1: [7]u32) void {
 }
 
 /// The function add adds two field elements in the Montgomery domain.
+///
 /// Preconditions:
 ///   0 ≤ eval arg1 < m
 ///   0 ≤ eval arg2 < m
@@ -1875,6 +1881,7 @@ pub fn add(out1: *[7]u32, arg1: [7]u32, arg2: [7]u32) void {
 }
 
 /// The function sub subtracts two field elements in the Montgomery domain.
+///
 /// Preconditions:
 ///   0 ≤ eval arg1 < m
 ///   0 ≤ eval arg2 < m
@@ -1944,6 +1951,7 @@ pub fn sub(out1: *[7]u32, arg1: [7]u32, arg2: [7]u32) void {
 }
 
 /// The function opp negates a field element in the Montgomery domain.
+///
 /// Preconditions:
 ///   0 ≤ eval arg1 < m
 /// Postconditions:
@@ -2011,6 +2019,7 @@ pub fn opp(out1: *[7]u32, arg1: [7]u32) void {
 }
 
 /// The function fromMontgomery translates a field element out of the Montgomery domain.
+///
 /// Preconditions:
 ///   0 ≤ eval arg1 < m
 /// Postconditions:
@@ -2490,6 +2499,7 @@ pub fn fromMontgomery(out1: *[7]u32, arg1: [7]u32) void {
 }
 
 /// The function toMontgomery translates a field element into the Montgomery domain.
+///
 /// Preconditions:
 ///   0 ≤ eval arg1 < m
 /// Postconditions:
@@ -3107,6 +3117,7 @@ pub fn toMontgomery(out1: *[7]u32, arg1: [7]u32) void {
 }
 
 /// The function nonzero outputs a single non-zero word if the input is non-zero and zero otherwise.
+///
 /// Preconditions:
 ///   0 ≤ eval arg1 < m
 /// Postconditions:
@@ -3124,6 +3135,7 @@ pub fn nonzero(out1: *u32, arg1: [7]u32) void {
 }
 
 /// The function selectznz is a multi-limb conditional select.
+///
 /// Postconditions:
 ///   eval out1 = (if arg1 = 0 then eval arg2 else eval arg3)
 ///
@@ -3160,6 +3172,7 @@ pub fn selectznz(out1: *[7]u32, arg1: u1, arg2: [7]u32, arg3: [7]u32) void {
 }
 
 /// The function toBytes serializes a field element NOT in the Montgomery domain to bytes in little-endian order.
+///
 /// Preconditions:
 ///   0 ≤ eval arg1 < m
 /// Postconditions:
@@ -3252,6 +3265,7 @@ pub fn toBytes(out1: *[28]u8, arg1: [7]u32) void {
 }
 
 /// The function fromBytes deserializes a field element NOT in the Montgomery domain from bytes in little-endian order.
+///
 /// Preconditions:
 ///   0 ≤ bytes_eval arg1 < m
 /// Postconditions:
@@ -3324,6 +3338,7 @@ pub fn fromBytes(out1: *[7]u32, arg1: [28]u8) void {
 }
 
 /// The function setOne returns the field element one in the Montgomery domain.
+///
 /// Postconditions:
 ///   eval (from_montgomery out1) mod m = 1 mod m
 ///   0 ≤ eval out1 < m
@@ -3344,6 +3359,7 @@ pub fn setOne(out1: *[7]u32) void {
 }
 
 /// The function msat returns the saturated representation of the prime modulus.
+///
 /// Postconditions:
 ///   twos_complement_eval out1 = m
 ///   0 ≤ eval out1 < m
@@ -3365,6 +3381,7 @@ pub fn msat(out1: *[8]u32) void {
 }
 
 /// The function divstep computes a divstep.
+///
 /// Preconditions:
 ///   0 ≤ eval arg4 < m
 ///   0 ≤ eval arg5 < m
@@ -3756,6 +3773,7 @@ pub fn divstep(out1: *u32, out2: *[8]u32, out3: *[8]u32, out4: *[7]u32, out5: *[
 }
 
 /// The function divstepPrecomp returns the precomputed value for Bernstein-Yang-inversion (in montgomery form).
+///
 /// Postconditions:
 ///   eval (from_montgomery out1) = ⌊(m - 1) / 2⌋^(if (log2 m) + 1 < 46 then ⌊(49 * ((log2 m) + 1) + 80) / 17⌋ else ⌊(49 * ((log2 m) + 1) + 57) / 17⌋)
 ///   0 ≤ eval out1 < m
@@ -3774,4 +3792,3 @@ pub fn divstepPrecomp(out1: *[7]u32) void {
     out1[5] = 0xff800000;
     out1[6] = 0x17fffff;
 }
-

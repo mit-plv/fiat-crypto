@@ -363,6 +363,7 @@ Module Pipeline.
       : ShowLines (Expr t)
       := fun with_parens syntax_tree
          => let __ := default_language_naming_conventions in
+            let __ := default_documentation_options in
             match ToString.ToFunctionLines
                     (relax_zrange := fun r => r)
                     machine_wordsize
@@ -381,6 +382,7 @@ Module Pipeline.
     Global Instance show_lines_ErrorMessage : ShowLines ErrorMessage
       := fun parens e
          => let __ := default_language_naming_conventions in
+            let __ := default_documentation_options in
             maybe_wrap_parens_lines
               parens
               match e with
@@ -606,6 +608,7 @@ Module Pipeline.
   Definition BoundsPipelineToExtendedResult
              {output_language_api : ToString.OutputLanguageAPI}
              {language_naming_conventions : language_naming_conventions_opt}
+             {documentation_options : documentation_options_opt}
              {internal_static : internal_static_opt}
              {static : static_opt}
              {low_level_rewriter_method : low_level_rewriter_method_opt}
@@ -649,6 +652,7 @@ Module Pipeline.
   Definition BoundsPipelineToStrings
              {output_language_api : ToString.OutputLanguageAPI}
              {language_naming_conventions : language_naming_conventions_opt}
+             {documentation_options : documentation_options_opt}
              {internal_static : internal_static_opt}
              {static : static_opt}
              {low_level_rewriter_method : low_level_rewriter_method_opt}
@@ -688,6 +692,7 @@ Module Pipeline.
   Definition BoundsPipelineToString
              {output_language_api : ToString.OutputLanguageAPI}
              {language_naming_conventions : language_naming_conventions_opt}
+             {documentation_options : documentation_options_opt}
              {internal_static : internal_static_opt}
              {static : static_opt}
              {low_level_rewriter_method : low_level_rewriter_method_opt}

@@ -7,10 +7,10 @@
 /* tight_bounds_multiplier = 1 (from "") */
 /*  */
 /* Computed values: */
-/* carry_chain = [0, 1, 2, 3, 4, 0, 1] */
-/* eval z = z[0] + (z[1] << 26) + (z[2] << 52) + (z[3] << 78) + (z[4] << 104) */
-/* bytes_eval z = z[0] + (z[1] << 8) + (z[2] << 16) + (z[3] << 24) + (z[4] << 32) + (z[5] << 40) + (z[6] << 48) + (z[7] << 56) + (z[8] << 64) + (z[9] << 72) + (z[10] << 80) + (z[11] << 88) + (z[12] << 96) + (z[13] << 104) + (z[14] << 112) + (z[15] << 120) + (z[16] << 128) */
-/* balance = [0x7fffff6, 0x7fffffe, 0x7fffffe, 0x7fffffe, 0x7fffffe] */
+/*   carry_chain = [0, 1, 2, 3, 4, 0, 1] */
+/*   eval z = z[0] + (z[1] << 26) + (z[2] << 52) + (z[3] << 78) + (z[4] << 104) */
+/*   bytes_eval z = z[0] + (z[1] << 8) + (z[2] << 16) + (z[3] << 24) + (z[4] << 32) + (z[5] << 40) + (z[6] << 48) + (z[7] << 56) + (z[8] << 64) + (z[9] << 72) + (z[10] << 80) + (z[11] << 88) + (z[12] << 96) + (z[13] << 104) + (z[14] << 112) + (z[15] << 120) + (z[16] << 128) */
+/*   balance = [0x7fffff6, 0x7fffffe, 0x7fffffe, 0x7fffffe, 0x7fffffe] */
 
 #include <stdint.h>
 #include <memory.h>
@@ -26,7 +26,6 @@ static inline uintptr_t _br2_load(uintptr_t a, size_t sz) {
 static inline void _br2_store(uintptr_t a, uintptr_t v, size_t sz) {
   memcpy((void*)a, &v, sz);
 }
-
 
 
 /*
@@ -893,5 +892,3 @@ void internal_fiat_poly1305_from_bytes(uintptr_t out0, uintptr_t in0) {
 static void fiat_poly1305_from_bytes(uint32_t out1[5], const uint8_t arg1[17]) {
   internal_fiat_poly1305_from_bytes((uintptr_t)out1, (uintptr_t)arg1);
 }
-
-

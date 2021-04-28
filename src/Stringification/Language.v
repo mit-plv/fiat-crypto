@@ -95,6 +95,22 @@ Module Compilers.
                      class_naming_convention
                      (if String.endswith "_" prefix then substring 0 (String.length prefix - 1) prefix else prefix)
          end.
+
+    Definition default_text_before_function_name : string := "The function ".
+
+    Class documentation_options_opt :=
+      {
+        (** Text to insert before the function name *)
+        text_before_function_name_opt : option string;
+        text_before_function_name : string := Option.value text_before_function_name_opt default_text_before_function_name;
+        (** Stick an extra newline before the package declaration *)
+        newline_before_package_declaration : bool;
+      }.
+
+    Definition default_documentation_options : documentation_options_opt
+      := {| text_before_function_name_opt := None
+            ; newline_before_package_declaration := false
+         |}.
   End Options.
 
   Module ToString.
@@ -1271,6 +1287,7 @@ Module Compilers.
         ToFunctionLines
         : forall {relax_zrange : relax_zrange_opt}
                  {language_naming_conventions : language_naming_conventions_opt}
+                 {documentation_options : documentation_options_opt}
                  (machine_wordsize : Z)
                  (do_bounds_check : bool) (internal_static : bool) (static : bool) (prefix : string) (name : string)
                  {t}
@@ -1284,6 +1301,7 @@ Module Compilers.
         (** Generates a header of any needed typedefs, etc based on the idents used and the curve-specific prefix *)
         header
         : forall {language_naming_conventions : language_naming_conventions_opt}
+                 {documentation_options : documentation_options_opt}
                  {package_name : package_name_opt}
                  {class_name : class_name_opt}
                  (machine_wordsize : Z) (internal_static : bool) (static : bool) (prefix : string) (ident_info : ident_infos),
@@ -1292,6 +1310,7 @@ Module Compilers.
         (** The footer on the file, if any *)
         footer
         : forall {language_naming_conventions : language_naming_conventions_opt}
+                 {documentation_options : documentation_options_opt}
                  {package_name : package_name_opt}
                  {class_name : class_name_opt}
                  (machine_wordsize : Z) (internal_static : bool) (static : bool) (prefix : string) (ident_info : ident_infos),
@@ -1303,7 +1322,6 @@ Module Compilers.
         strip_special_infos
         : forall (machine_wordsize : Z),
             ident_infos -> ident_infos;
-
       }.
   End ToString.
 End Compilers.

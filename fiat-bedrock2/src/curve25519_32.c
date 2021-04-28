@@ -7,10 +7,10 @@
 /* tight_bounds_multiplier = 1 (from "") */
 /*  */
 /* Computed values: */
-/* carry_chain = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1] */
-/* eval z = z[0] + (z[1] << 26) + (z[2] << 51) + (z[3] << 77) + (z[4] << 102) + (z[5] << 128) + (z[6] << 153) + (z[7] << 179) + (z[8] << 204) + (z[9] << 230) */
-/* bytes_eval z = z[0] + (z[1] << 8) + (z[2] << 16) + (z[3] << 24) + (z[4] << 32) + (z[5] << 40) + (z[6] << 48) + (z[7] << 56) + (z[8] << 64) + (z[9] << 72) + (z[10] << 80) + (z[11] << 88) + (z[12] << 96) + (z[13] << 104) + (z[14] << 112) + (z[15] << 120) + (z[16] << 128) + (z[17] << 136) + (z[18] << 144) + (z[19] << 152) + (z[20] << 160) + (z[21] << 168) + (z[22] << 176) + (z[23] << 184) + (z[24] << 192) + (z[25] << 200) + (z[26] << 208) + (z[27] << 216) + (z[28] << 224) + (z[29] << 232) + (z[30] << 240) + (z[31] << 248) */
-/* balance = [0x7ffffda, 0x3fffffe, 0x7fffffe, 0x3fffffe, 0x7fffffe, 0x3fffffe, 0x7fffffe, 0x3fffffe, 0x7fffffe, 0x3fffffe] */
+/*   carry_chain = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1] */
+/*   eval z = z[0] + (z[1] << 26) + (z[2] << 51) + (z[3] << 77) + (z[4] << 102) + (z[5] << 128) + (z[6] << 153) + (z[7] << 179) + (z[8] << 204) + (z[9] << 230) */
+/*   bytes_eval z = z[0] + (z[1] << 8) + (z[2] << 16) + (z[3] << 24) + (z[4] << 32) + (z[5] << 40) + (z[6] << 48) + (z[7] << 56) + (z[8] << 64) + (z[9] << 72) + (z[10] << 80) + (z[11] << 88) + (z[12] << 96) + (z[13] << 104) + (z[14] << 112) + (z[15] << 120) + (z[16] << 128) + (z[17] << 136) + (z[18] << 144) + (z[19] << 152) + (z[20] << 160) + (z[21] << 168) + (z[22] << 176) + (z[23] << 184) + (z[24] << 192) + (z[25] << 200) + (z[26] << 208) + (z[27] << 216) + (z[28] << 224) + (z[29] << 232) + (z[30] << 240) + (z[31] << 248) */
+/*   balance = [0x7ffffda, 0x3fffffe, 0x7fffffe, 0x3fffffe, 0x7fffffe, 0x3fffffe, 0x7fffffe, 0x3fffffe, 0x7fffffe, 0x3fffffe] */
 
 #include <stdint.h>
 #include <memory.h>
@@ -26,7 +26,6 @@ static inline uintptr_t _br2_load(uintptr_t a, size_t sz) {
 static inline void _br2_store(uintptr_t a, uintptr_t v, size_t sz) {
   memcpy((void*)a, &v, sz);
 }
-
 
 
 /*
@@ -2173,5 +2172,3 @@ void internal_fiat_25519_carry_scmul_121666(uintptr_t out0, uintptr_t in0) {
 static void fiat_25519_carry_scmul_121666(uint32_t out1[10], const uint32_t arg1[10]) {
   internal_fiat_25519_carry_scmul_121666((uintptr_t)out1, (uintptr_t)arg1);
 }
-
-
