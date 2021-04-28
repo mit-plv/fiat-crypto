@@ -7,10 +7,10 @@
 /* tight_bounds_multiplier = 1 (from "") */
 /*  */
 /* Computed values: */
-/* carry_chain = [7, 15, 8, 0, 9, 1, 10, 2, 11, 3, 12, 4, 13, 5, 14, 6, 15, 7, 8, 0] */
-/* eval z = z[0] + (z[1] << 28) + (z[2] << 56) + (z[3] << 84) + (z[4] << 112) + (z[5] << 140) + (z[6] << 168) + (z[7] << 196) + (z[8] << 224) + (z[9] << 252) + (z[10] << 0x118) + (z[11] << 0x134) + (z[12] << 0x150) + (z[13] << 0x16c) + (z[14] << 0x188) + (z[15] << 0x1a4) */
-/* bytes_eval z = z[0] + (z[1] << 8) + (z[2] << 16) + (z[3] << 24) + (z[4] << 32) + (z[5] << 40) + (z[6] << 48) + (z[7] << 56) + (z[8] << 64) + (z[9] << 72) + (z[10] << 80) + (z[11] << 88) + (z[12] << 96) + (z[13] << 104) + (z[14] << 112) + (z[15] << 120) + (z[16] << 128) + (z[17] << 136) + (z[18] << 144) + (z[19] << 152) + (z[20] << 160) + (z[21] << 168) + (z[22] << 176) + (z[23] << 184) + (z[24] << 192) + (z[25] << 200) + (z[26] << 208) + (z[27] << 216) + (z[28] << 224) + (z[29] << 232) + (z[30] << 240) + (z[31] << 248) + (z[32] << 256) + (z[33] << 0x108) + (z[34] << 0x110) + (z[35] << 0x118) + (z[36] << 0x120) + (z[37] << 0x128) + (z[38] << 0x130) + (z[39] << 0x138) + (z[40] << 0x140) + (z[41] << 0x148) + (z[42] << 0x150) + (z[43] << 0x158) + (z[44] << 0x160) + (z[45] << 0x168) + (z[46] << 0x170) + (z[47] << 0x178) + (z[48] << 0x180) + (z[49] << 0x188) + (z[50] << 0x190) + (z[51] << 0x198) + (z[52] << 0x1a0) + (z[53] << 0x1a8) + (z[54] << 0x1b0) + (z[55] << 0x1b8) */
-/* balance = [0x1ffffffe, 0x1ffffffe, 0x1ffffffe, 0x1ffffffe, 0x1ffffffe, 0x1ffffffe, 0x1ffffffe, 0x1ffffffe, 0x1ffffffc, 0x1ffffffe, 0x1ffffffe, 0x1ffffffe, 0x1ffffffe, 0x1ffffffe, 0x1ffffffe, 0x1ffffffe] */
+/*   carry_chain = [7, 15, 8, 0, 9, 1, 10, 2, 11, 3, 12, 4, 13, 5, 14, 6, 15, 7, 8, 0] */
+/*   eval z = z[0] + (z[1] << 28) + (z[2] << 56) + (z[3] << 84) + (z[4] << 112) + (z[5] << 140) + (z[6] << 168) + (z[7] << 196) + (z[8] << 224) + (z[9] << 252) + (z[10] << 0x118) + (z[11] << 0x134) + (z[12] << 0x150) + (z[13] << 0x16c) + (z[14] << 0x188) + (z[15] << 0x1a4) */
+/*   bytes_eval z = z[0] + (z[1] << 8) + (z[2] << 16) + (z[3] << 24) + (z[4] << 32) + (z[5] << 40) + (z[6] << 48) + (z[7] << 56) + (z[8] << 64) + (z[9] << 72) + (z[10] << 80) + (z[11] << 88) + (z[12] << 96) + (z[13] << 104) + (z[14] << 112) + (z[15] << 120) + (z[16] << 128) + (z[17] << 136) + (z[18] << 144) + (z[19] << 152) + (z[20] << 160) + (z[21] << 168) + (z[22] << 176) + (z[23] << 184) + (z[24] << 192) + (z[25] << 200) + (z[26] << 208) + (z[27] << 216) + (z[28] << 224) + (z[29] << 232) + (z[30] << 240) + (z[31] << 248) + (z[32] << 256) + (z[33] << 0x108) + (z[34] << 0x110) + (z[35] << 0x118) + (z[36] << 0x120) + (z[37] << 0x128) + (z[38] << 0x130) + (z[39] << 0x138) + (z[40] << 0x140) + (z[41] << 0x148) + (z[42] << 0x150) + (z[43] << 0x158) + (z[44] << 0x160) + (z[45] << 0x168) + (z[46] << 0x170) + (z[47] << 0x178) + (z[48] << 0x180) + (z[49] << 0x188) + (z[50] << 0x190) + (z[51] << 0x198) + (z[52] << 0x1a0) + (z[53] << 0x1a8) + (z[54] << 0x1b0) + (z[55] << 0x1b8) */
+/*   balance = [0x1ffffffe, 0x1ffffffe, 0x1ffffffe, 0x1ffffffe, 0x1ffffffe, 0x1ffffffe, 0x1ffffffe, 0x1ffffffe, 0x1ffffffc, 0x1ffffffe, 0x1ffffffe, 0x1ffffffe, 0x1ffffffe, 0x1ffffffe, 0x1ffffffe, 0x1ffffffe] */
 
 #include <stdint.h>
 typedef unsigned char fiat_p448_uint1;
@@ -40,6 +40,7 @@ static __inline__ uint32_t fiat_p448_value_barrier_u32(uint32_t a) {
 
 /*
  * The function fiat_p448_addcarryx_u28 is an addition with carry.
+ *
  * Postconditions:
  *   out1 = (arg1 + arg2 + arg3) mod 2^28
  *   out2 = ⌊(arg1 + arg2 + arg3) / 2^28⌋
@@ -65,6 +66,7 @@ static void fiat_p448_addcarryx_u28(uint32_t* out1, fiat_p448_uint1* out2, fiat_
 
 /*
  * The function fiat_p448_subborrowx_u28 is a subtraction with borrow.
+ *
  * Postconditions:
  *   out1 = (-arg1 + arg2 + -arg3) mod 2^28
  *   out2 = -⌊(-arg1 + arg2 + -arg3) / 2^28⌋
@@ -90,6 +92,7 @@ static void fiat_p448_subborrowx_u28(uint32_t* out1, fiat_p448_uint1* out2, fiat
 
 /*
  * The function fiat_p448_cmovznz_u32 is a single-word conditional move.
+ *
  * Postconditions:
  *   out1 = (if arg1 = 0 then arg2 else arg3)
  *
@@ -112,6 +115,7 @@ static void fiat_p448_cmovznz_u32(uint32_t* out1, fiat_p448_uint1 arg1, uint32_t
 
 /*
  * The function fiat_p448_carry_mul multiplies two field elements and reduces the result.
+ *
  * Postconditions:
  *   eval out1 mod m = (eval arg1 * eval arg2) mod m
  *
@@ -1106,6 +1110,7 @@ static void fiat_p448_carry_mul(uint32_t out1[16], const uint32_t arg1[16], cons
 
 /*
  * The function fiat_p448_carry_square squares a field element and reduces the result.
+ *
  * Postconditions:
  *   eval out1 mod m = (eval arg1 * eval arg1) mod m
  *
@@ -1813,6 +1818,7 @@ static void fiat_p448_carry_square(uint32_t out1[16], const uint32_t arg1[16]) {
 
 /*
  * The function fiat_p448_carry reduces a field element.
+ *
  * Postconditions:
  *   eval out1 mod m = eval arg1 mod m
  *
@@ -1918,6 +1924,7 @@ static void fiat_p448_carry(uint32_t out1[16], const uint32_t arg1[16]) {
 
 /*
  * The function fiat_p448_add adds two field elements.
+ *
  * Postconditions:
  *   eval out1 mod m = (eval arg1 + eval arg2) mod m
  *
@@ -1980,6 +1987,7 @@ static void fiat_p448_add(uint32_t out1[16], const uint32_t arg1[16], const uint
 
 /*
  * The function fiat_p448_sub subtracts two field elements.
+ *
  * Postconditions:
  *   eval out1 mod m = (eval arg1 - eval arg2) mod m
  *
@@ -2042,6 +2050,7 @@ static void fiat_p448_sub(uint32_t out1[16], const uint32_t arg1[16], const uint
 
 /*
  * The function fiat_p448_opp negates a field element.
+ *
  * Postconditions:
  *   eval out1 mod m = -eval arg1 mod m
  *
@@ -2103,6 +2112,7 @@ static void fiat_p448_opp(uint32_t out1[16], const uint32_t arg1[16]) {
 
 /*
  * The function fiat_p448_selectznz is a multi-limb conditional select.
+ *
  * Postconditions:
  *   eval out1 = (if arg1 = 0 then eval arg2 else eval arg3)
  *
@@ -2166,6 +2176,7 @@ static void fiat_p448_selectznz(uint32_t out1[16], fiat_p448_uint1 arg1, const u
 
 /*
  * The function fiat_p448_to_bytes serializes a field element to bytes in little-endian order.
+ *
  * Postconditions:
  *   out1 = map (λ x, ⌊((eval arg1 mod m) mod 2^(8 * (x + 1))) / 2^(8 * x)⌋) [0..55]
  *
@@ -2557,6 +2568,7 @@ static void fiat_p448_to_bytes(uint8_t out1[56], const uint32_t arg1[16]) {
 
 /*
  * The function fiat_p448_from_bytes deserializes a field element from bytes in little-endian order.
+ *
  * Postconditions:
  *   eval out1 mod m = bytes_eval arg1 mod m
  *
@@ -2823,4 +2835,3 @@ static void fiat_p448_from_bytes(uint32_t out1[16], const uint8_t arg1[56]) {
   out1[14] = x116;
   out1[15] = x120;
 }
-

@@ -96,6 +96,7 @@ Local Opaque
 Section __.
   Context {output_language_api : ToString.OutputLanguageAPI}
           {language_naming_conventions : language_naming_conventions_opt}
+          {documentation_options : documentation_options_opt}
           {package_namev : package_name_opt}
           {class_namev : class_name_opt}
           {static : static_opt}
@@ -323,7 +324,7 @@ Section __.
           machine_wordsize prefix "mul" mul
           (docstring_with_summary_from_lemma!
              prefix
-             (fun fname : string => ["The function " ++ fname ++ " multiplies two field elements in the Montgomery domain."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " multiplies two field elements in the Montgomery domain."]%string)
              (mul_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition square
@@ -343,7 +344,7 @@ Section __.
           machine_wordsize prefix "square" square
           (docstring_with_summary_from_lemma!
              prefix
-             (fun fname : string => ["The function " ++ fname ++ " squares a field element in the Montgomery domain."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " squares a field element in the Montgomery domain."]%string)
              (square_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition add
@@ -363,7 +364,7 @@ Section __.
           machine_wordsize prefix "add" add
           (docstring_with_summary_from_lemma!
              prefix
-             (fun fname : string => ["The function " ++ fname ++ " adds two field elements in the Montgomery domain."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " adds two field elements in the Montgomery domain."]%string)
              (add_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition sub
@@ -383,7 +384,7 @@ Section __.
           machine_wordsize prefix "sub" sub
           (docstring_with_summary_from_lemma!
              prefix
-             (fun fname : string => ["The function " ++ fname ++ " subtracts two field elements in the Montgomery domain."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " subtracts two field elements in the Montgomery domain."]%string)
              (sub_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition opp
@@ -403,7 +404,7 @@ Section __.
           machine_wordsize prefix "opp" opp
           (docstring_with_summary_from_lemma!
              prefix
-             (fun fname : string => ["The function " ++ fname ++ " negates a field element in the Montgomery domain."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " negates a field element in the Montgomery domain."]%string)
              (opp_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition from_montgomery
@@ -423,7 +424,7 @@ Section __.
           machine_wordsize prefix "from_montgomery" from_montgomery
           (docstring_with_summary_from_lemma!
              prefix
-             (fun fname : string => ["The function " ++ fname ++ " translates a field element out of the Montgomery domain."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " translates a field element out of the Montgomery domain."]%string)
              (from_montgomery_correct machine_wordsize n m r' valid)).
 
   Definition to_montgomery
@@ -443,7 +444,7 @@ Section __.
           machine_wordsize prefix "to_montgomery" to_montgomery
           (docstring_with_summary_from_lemma!
              prefix
-             (fun fname : string => ["The function " ++ fname ++ " translates a field element into the Montgomery domain."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " translates a field element into the Montgomery domain."]%string)
              (to_montgomery_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition nonzero
@@ -462,7 +463,7 @@ Section __.
           machine_wordsize prefix "nonzero" nonzero
           (docstring_with_summary_from_lemma!
              prefix
-             (fun fname : string => ["The function " ++ fname ++ " outputs a single non-zero word if the input is non-zero and zero otherwise."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " outputs a single non-zero word if the input is non-zero and zero otherwise."]%string)
              (nonzero_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition to_bytes
@@ -482,7 +483,7 @@ Section __.
           machine_wordsize prefix "to_bytes" to_bytes
           (docstring_with_summary_from_lemma!
              prefix
-             (fun fname : string => ["The function " ++ fname ++ " serializes a field element NOT in the Montgomery domain to bytes in little-endian order."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " serializes a field element NOT in the Montgomery domain to bytes in little-endian order."]%string)
              (to_bytes_correct machine_wordsize n n_bytes m valid)).
 
   Definition from_bytes
@@ -502,7 +503,7 @@ Section __.
           machine_wordsize prefix "from_bytes" from_bytes
           (docstring_with_summary_from_lemma!
              prefix
-             (fun fname : string => ["The function " ++ fname ++ " deserializes a field element NOT in the Montgomery domain from bytes in little-endian order."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " deserializes a field element NOT in the Montgomery domain from bytes in little-endian order."]%string)
              (from_bytes_correct machine_wordsize n n_bytes m valid bytes_valid)).
 
   Definition encode
@@ -522,7 +523,7 @@ Section __.
           machine_wordsize prefix "encode" encode
           (docstring_with_summary_from_lemma!
              prefix
-             (fun fname : string => ["The function " ++ fname ++ " encodes an integer as a field element in the Montgomery domain."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " encodes an integer as a field element in the Montgomery domain."]%string)
              (encode_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition zero
@@ -542,7 +543,7 @@ Section __.
           machine_wordsize prefix "zero" zero
           (docstring_with_summary_from_lemma!
              prefix
-             (fun fname => ["The function " ++ fname ++ " returns the field element zero in the Montgomery domain."]%string)
+             (fun fname => [text_before_function_name ++ fname ++ " returns the field element zero in the Montgomery domain."]%string)
              (zero_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition one
@@ -562,7 +563,7 @@ Section __.
           machine_wordsize prefix "set_one" one (* to avoid conflict with boringSSL *)
           (docstring_with_summary_from_lemma!
              prefix
-             (fun fname => ["The function " ++ fname ++ " returns the field element one in the Montgomery domain."]%string)
+             (fun fname => [text_before_function_name ++ fname ++ " returns the field element one in the Montgomery domain."]%string)
              (one_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition reval (* r for reified *)
@@ -630,7 +631,7 @@ Section __.
           machine_wordsize prefix "msat" msat
           (docstring_with_summary_from_lemma!
              prefix
-             (fun fname => ["The function " ++ fname ++ " returns the saturated representation of the prime modulus."]%string)
+             (fun fname => [text_before_function_name ++ fname ++ " returns the saturated representation of the prime modulus."]%string)
              (msat_correct machine_wordsize n m valid)).
 
   Definition divstep_precomp
@@ -650,7 +651,7 @@ Section __.
           machine_wordsize prefix "divstep_precomp" divstep_precomp
           (docstring_with_summary_from_lemma!
              prefix
-             (fun fname => ["The function " ++ fname ++ " returns the precomputed value for Bernstein-Yang-inversion (in montgomery form)."]%string)
+             (fun fname => [text_before_function_name ++ fname ++ " returns the precomputed value for Bernstein-Yang-inversion (in montgomery form)."]%string)
              (divstep_precomp_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition divstep
@@ -670,7 +671,7 @@ Section __.
           machine_wordsize prefix "divstep" divstep
           (docstring_with_summary_from_lemma!
              prefix
-             (fun fname : string => ["The function " ++ fname ++ " computes a divstep."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " computes a divstep."]%string)
              (divstep_correct machine_wordsize n m valid from_montgomery_res)).
 
   Lemma bounded_by_of_valid x
@@ -1088,11 +1089,13 @@ Section __.
            check_args
            (ToString.comment_file_header_block
               (comment_header
-                  ++ [""
-                      ; "Computed values:"]
-                  ++ (ToString.prefix_and_indent "eval z = " [seval "z" false])
-                  ++ (ToString.prefix_and_indent "bytes_eval z = " [sbytes_eval "z" false])
-                  ++ (ToString.prefix_and_indent "twos_complement_eval z = " [seval_twos_complement "z" false])))
+                 ++ [""
+                     ; "Computed values:"]
+                 ++ (List.map
+                       (fun s => "  " ++ s)%string
+                       ((ToString.prefix_and_indent "eval z = " [seval "z" false])
+                          ++ (ToString.prefix_and_indent "bytes_eval z = " [sbytes_eval "z" false])
+                          ++ (ToString.prefix_and_indent "twos_complement_eval z = " [seval_twos_complement "z" false])))))
            function_name_prefix requests.
   End for_stringification.
 End __.

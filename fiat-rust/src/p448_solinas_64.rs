@@ -7,10 +7,10 @@
 //! tight_bounds_multiplier = 1 (from "")
 //!
 //! Computed values:
-//! carry_chain = [3, 7, 4, 0, 5, 1, 6, 2, 7, 3, 4, 0]
-//! eval z = z[0] + (z[1] << 56) + (z[2] << 112) + (z[3] << 168) + (z[4] << 224) + (z[5] << 0x118) + (z[6] << 0x150) + (z[7] << 0x188)
-//! bytes_eval z = z[0] + (z[1] << 8) + (z[2] << 16) + (z[3] << 24) + (z[4] << 32) + (z[5] << 40) + (z[6] << 48) + (z[7] << 56) + (z[8] << 64) + (z[9] << 72) + (z[10] << 80) + (z[11] << 88) + (z[12] << 96) + (z[13] << 104) + (z[14] << 112) + (z[15] << 120) + (z[16] << 128) + (z[17] << 136) + (z[18] << 144) + (z[19] << 152) + (z[20] << 160) + (z[21] << 168) + (z[22] << 176) + (z[23] << 184) + (z[24] << 192) + (z[25] << 200) + (z[26] << 208) + (z[27] << 216) + (z[28] << 224) + (z[29] << 232) + (z[30] << 240) + (z[31] << 248) + (z[32] << 256) + (z[33] << 0x108) + (z[34] << 0x110) + (z[35] << 0x118) + (z[36] << 0x120) + (z[37] << 0x128) + (z[38] << 0x130) + (z[39] << 0x138) + (z[40] << 0x140) + (z[41] << 0x148) + (z[42] << 0x150) + (z[43] << 0x158) + (z[44] << 0x160) + (z[45] << 0x168) + (z[46] << 0x170) + (z[47] << 0x178) + (z[48] << 0x180) + (z[49] << 0x188) + (z[50] << 0x190) + (z[51] << 0x198) + (z[52] << 0x1a0) + (z[53] << 0x1a8) + (z[54] << 0x1b0) + (z[55] << 0x1b8)
-//! balance = [0x1fffffffffffffe, 0x1fffffffffffffe, 0x1fffffffffffffe, 0x1fffffffffffffe, 0x1fffffffffffffc, 0x1fffffffffffffe, 0x1fffffffffffffe, 0x1fffffffffffffe]
+//!   carry_chain = [3, 7, 4, 0, 5, 1, 6, 2, 7, 3, 4, 0]
+//!   eval z = z[0] + (z[1] << 56) + (z[2] << 112) + (z[3] << 168) + (z[4] << 224) + (z[5] << 0x118) + (z[6] << 0x150) + (z[7] << 0x188)
+//!   bytes_eval z = z[0] + (z[1] << 8) + (z[2] << 16) + (z[3] << 24) + (z[4] << 32) + (z[5] << 40) + (z[6] << 48) + (z[7] << 56) + (z[8] << 64) + (z[9] << 72) + (z[10] << 80) + (z[11] << 88) + (z[12] << 96) + (z[13] << 104) + (z[14] << 112) + (z[15] << 120) + (z[16] << 128) + (z[17] << 136) + (z[18] << 144) + (z[19] << 152) + (z[20] << 160) + (z[21] << 168) + (z[22] << 176) + (z[23] << 184) + (z[24] << 192) + (z[25] << 200) + (z[26] << 208) + (z[27] << 216) + (z[28] << 224) + (z[29] << 232) + (z[30] << 240) + (z[31] << 248) + (z[32] << 256) + (z[33] << 0x108) + (z[34] << 0x110) + (z[35] << 0x118) + (z[36] << 0x120) + (z[37] << 0x128) + (z[38] << 0x130) + (z[39] << 0x138) + (z[40] << 0x140) + (z[41] << 0x148) + (z[42] << 0x150) + (z[43] << 0x158) + (z[44] << 0x160) + (z[45] << 0x168) + (z[46] << 0x170) + (z[47] << 0x178) + (z[48] << 0x180) + (z[49] << 0x188) + (z[50] << 0x190) + (z[51] << 0x198) + (z[52] << 0x1a0) + (z[53] << 0x1a8) + (z[54] << 0x1b0) + (z[55] << 0x1b8)
+//!   balance = [0x1fffffffffffffe, 0x1fffffffffffffe, 0x1fffffffffffffe, 0x1fffffffffffffe, 0x1fffffffffffffc, 0x1fffffffffffffe, 0x1fffffffffffffe, 0x1fffffffffffffe]
 
 #![allow(unused_parens)]
 #[allow(non_camel_case_types)]
@@ -22,6 +22,7 @@ pub type fiat_p448_i2 = i8;
 
 
 /// The function fiat_p448_addcarryx_u56 is an addition with carry.
+///
 /// Postconditions:
 ///   out1 = (arg1 + arg2 + arg3) mod 2^56
 ///   out2 = ⌊(arg1 + arg2 + arg3) / 2^56⌋
@@ -43,6 +44,7 @@ pub fn fiat_p448_addcarryx_u56(out1: &mut u64, out2: &mut fiat_p448_u1, arg1: fi
 }
 
 /// The function fiat_p448_subborrowx_u56 is a subtraction with borrow.
+///
 /// Postconditions:
 ///   out1 = (-arg1 + arg2 + -arg3) mod 2^56
 ///   out2 = -⌊(-arg1 + arg2 + -arg3) / 2^56⌋
@@ -64,6 +66,7 @@ pub fn fiat_p448_subborrowx_u56(out1: &mut u64, out2: &mut fiat_p448_u1, arg1: f
 }
 
 /// The function fiat_p448_cmovznz_u64 is a single-word conditional move.
+///
 /// Postconditions:
 ///   out1 = (if arg1 = 0 then arg2 else arg3)
 ///
@@ -82,6 +85,7 @@ pub fn fiat_p448_cmovznz_u64(out1: &mut u64, arg1: fiat_p448_u1, arg2: u64, arg3
 }
 
 /// The function fiat_p448_carry_mul multiplies two field elements and reduces the result.
+///
 /// Postconditions:
 ///   eval out1 mod m = (eval arg1 * eval arg2) mod m
 ///
@@ -247,6 +251,7 @@ pub fn fiat_p448_carry_mul(out1: &mut [u64; 8], arg1: &[u64; 8], arg2: &[u64; 8]
 }
 
 /// The function fiat_p448_carry_square squares a field element and reduces the result.
+///
 /// Postconditions:
 ///   eval out1 mod m = (eval arg1 * eval arg1) mod m
 ///
@@ -390,6 +395,7 @@ pub fn fiat_p448_carry_square(out1: &mut [u64; 8], arg1: &[u64; 8]) -> () {
 }
 
 /// The function fiat_p448_carry reduces a field element.
+///
 /// Postconditions:
 ///   eval out1 mod m = eval arg1 mod m
 ///
@@ -432,6 +438,7 @@ pub fn fiat_p448_carry(out1: &mut [u64; 8], arg1: &[u64; 8]) -> () {
 }
 
 /// The function fiat_p448_add adds two field elements.
+///
 /// Postconditions:
 ///   eval out1 mod m = (eval arg1 + eval arg2) mod m
 ///
@@ -461,6 +468,7 @@ pub fn fiat_p448_add(out1: &mut [u64; 8], arg1: &[u64; 8], arg2: &[u64; 8]) -> (
 }
 
 /// The function fiat_p448_sub subtracts two field elements.
+///
 /// Postconditions:
 ///   eval out1 mod m = (eval arg1 - eval arg2) mod m
 ///
@@ -490,6 +498,7 @@ pub fn fiat_p448_sub(out1: &mut [u64; 8], arg1: &[u64; 8], arg2: &[u64; 8]) -> (
 }
 
 /// The function fiat_p448_opp negates a field element.
+///
 /// Postconditions:
 ///   eval out1 mod m = -eval arg1 mod m
 ///
@@ -518,6 +527,7 @@ pub fn fiat_p448_opp(out1: &mut [u64; 8], arg1: &[u64; 8]) -> () {
 }
 
 /// The function fiat_p448_selectznz is a multi-limb conditional select.
+///
 /// Postconditions:
 ///   eval out1 = (if arg1 = 0 then eval arg2 else eval arg3)
 ///
@@ -556,6 +566,7 @@ pub fn fiat_p448_selectznz(out1: &mut [u64; 8], arg1: fiat_p448_u1, arg2: &[u64;
 }
 
 /// The function fiat_p448_to_bytes serializes a field element to bytes in little-endian order.
+///
 /// Postconditions:
 ///   out1 = map (λ x, ⌊((eval arg1 mod m) mod 2^(8 * (x + 1))) / 2^(8 * x)⌋) [0..55]
 ///
@@ -770,6 +781,7 @@ pub fn fiat_p448_to_bytes(out1: &mut [u8; 56], arg1: &[u64; 8]) -> () {
 }
 
 /// The function fiat_p448_from_bytes deserializes a field element from bytes in little-endian order.
+///
 /// Postconditions:
 ///   eval out1 mod m = bytes_eval arg1 mod m
 ///
@@ -892,4 +904,3 @@ pub fn fiat_p448_from_bytes(out1: &mut [u64; 8], arg1: &[u8; 56]) -> () {
   out1[6] = x98;
   out1[7] = x104;
 }
-

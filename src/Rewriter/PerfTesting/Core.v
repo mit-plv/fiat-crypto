@@ -45,6 +45,7 @@ Import
 
 Local Existing Instance Stringification.C.Compilers.ToString.C.OutputCAPI.
 Local Existing Instance default_language_naming_conventions.
+Local Existing Instance default_documentation_options.
 Local Instance : package_name_opt := None.
 Local Instance : class_name_opt := None.
 Local Instance : static_opt := true.

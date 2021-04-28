@@ -7,10 +7,10 @@
 /* tight_bounds_multiplier = 1 (from "") */
 /*  */
 /* Computed values: */
-/* carry_chain = [0, 1, 2, 3, 4, 0, 1] */
-/* eval z = z[0] + (z[1] << 26) + (z[2] << 52) + (z[3] << 78) + (z[4] << 104) */
-/* bytes_eval z = z[0] + (z[1] << 8) + (z[2] << 16) + (z[3] << 24) + (z[4] << 32) + (z[5] << 40) + (z[6] << 48) + (z[7] << 56) + (z[8] << 64) + (z[9] << 72) + (z[10] << 80) + (z[11] << 88) + (z[12] << 96) + (z[13] << 104) + (z[14] << 112) + (z[15] << 120) + (z[16] << 128) */
-/* balance = [0x7fffff6, 0x7fffffe, 0x7fffffe, 0x7fffffe, 0x7fffffe] */
+/*   carry_chain = [0, 1, 2, 3, 4, 0, 1] */
+/*   eval z = z[0] + (z[1] << 26) + (z[2] << 52) + (z[3] << 78) + (z[4] << 104) */
+/*   bytes_eval z = z[0] + (z[1] << 8) + (z[2] << 16) + (z[3] << 24) + (z[4] << 32) + (z[5] << 40) + (z[6] << 48) + (z[7] << 56) + (z[8] << 64) + (z[9] << 72) + (z[10] << 80) + (z[11] << 88) + (z[12] << 96) + (z[13] << 104) + (z[14] << 112) + (z[15] << 120) + (z[16] << 128) */
+/*   balance = [0x7fffff6, 0x7fffffe, 0x7fffffe, 0x7fffffe, 0x7fffffe] */
 
 #include <stdint.h>
 typedef unsigned char fiat_poly1305_uint1;
@@ -32,6 +32,7 @@ static __inline__ uint32_t fiat_poly1305_value_barrier_u32(uint32_t a) {
 
 /*
  * The function fiat_poly1305_addcarryx_u26 is an addition with carry.
+ *
  * Postconditions:
  *   out1 = (arg1 + arg2 + arg3) mod 2^26
  *   out2 = ⌊(arg1 + arg2 + arg3) / 2^26⌋
@@ -57,6 +58,7 @@ static void fiat_poly1305_addcarryx_u26(uint32_t* out1, fiat_poly1305_uint1* out
 
 /*
  * The function fiat_poly1305_subborrowx_u26 is a subtraction with borrow.
+ *
  * Postconditions:
  *   out1 = (-arg1 + arg2 + -arg3) mod 2^26
  *   out2 = -⌊(-arg1 + arg2 + -arg3) / 2^26⌋
@@ -82,6 +84,7 @@ static void fiat_poly1305_subborrowx_u26(uint32_t* out1, fiat_poly1305_uint1* ou
 
 /*
  * The function fiat_poly1305_cmovznz_u32 is a single-word conditional move.
+ *
  * Postconditions:
  *   out1 = (if arg1 = 0 then arg2 else arg3)
  *
@@ -104,6 +107,7 @@ static void fiat_poly1305_cmovznz_u32(uint32_t* out1, fiat_poly1305_uint1 arg1, 
 
 /*
  * The function fiat_poly1305_carry_mul multiplies two field elements and reduces the result.
+ *
  * Postconditions:
  *   eval out1 mod m = (eval arg1 * eval arg2) mod m
  *
@@ -227,6 +231,7 @@ static void fiat_poly1305_carry_mul(uint32_t out1[5], const uint32_t arg1[5], co
 
 /*
  * The function fiat_poly1305_carry_square squares a field element and reduces the result.
+ *
  * Postconditions:
  *   eval out1 mod m = (eval arg1 * eval arg1) mod m
  *
@@ -345,6 +350,7 @@ static void fiat_poly1305_carry_square(uint32_t out1[5], const uint32_t arg1[5])
 
 /*
  * The function fiat_poly1305_carry reduces a field element.
+ *
  * Postconditions:
  *   eval out1 mod m = eval arg1 mod m
  *
@@ -387,6 +393,7 @@ static void fiat_poly1305_carry(uint32_t out1[5], const uint32_t arg1[5]) {
 
 /*
  * The function fiat_poly1305_add adds two field elements.
+ *
  * Postconditions:
  *   eval out1 mod m = (eval arg1 + eval arg2) mod m
  *
@@ -416,6 +423,7 @@ static void fiat_poly1305_add(uint32_t out1[5], const uint32_t arg1[5], const ui
 
 /*
  * The function fiat_poly1305_sub subtracts two field elements.
+ *
  * Postconditions:
  *   eval out1 mod m = (eval arg1 - eval arg2) mod m
  *
@@ -445,6 +453,7 @@ static void fiat_poly1305_sub(uint32_t out1[5], const uint32_t arg1[5], const ui
 
 /*
  * The function fiat_poly1305_opp negates a field element.
+ *
  * Postconditions:
  *   eval out1 mod m = -eval arg1 mod m
  *
@@ -473,6 +482,7 @@ static void fiat_poly1305_opp(uint32_t out1[5], const uint32_t arg1[5]) {
 
 /*
  * The function fiat_poly1305_selectznz is a multi-limb conditional select.
+ *
  * Postconditions:
  *   eval out1 = (if arg1 = 0 then eval arg2 else eval arg3)
  *
@@ -503,6 +513,7 @@ static void fiat_poly1305_selectznz(uint32_t out1[5], fiat_poly1305_uint1 arg1, 
 
 /*
  * The function fiat_poly1305_to_bytes serializes a field element to bytes in little-endian order.
+ *
  * Postconditions:
  *   out1 = map (λ x, ⌊((eval arg1 mod m) mod 2^(8 * (x + 1))) / 2^(8 * x)⌋) [0..16]
  *
@@ -637,6 +648,7 @@ static void fiat_poly1305_to_bytes(uint8_t out1[17], const uint32_t arg1[5]) {
 
 /*
  * The function fiat_poly1305_from_bytes deserializes a field element from bytes in little-endian order.
+ *
  * Postconditions:
  *   eval out1 mod m = bytes_eval arg1 mod m
  *
@@ -728,4 +740,3 @@ static void fiat_poly1305_from_bytes(uint32_t out1[5], const uint8_t arg1[17]) {
   out1[3] = x35;
   out1[4] = x38;
 }
-

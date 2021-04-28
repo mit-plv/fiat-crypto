@@ -61,6 +61,7 @@ Local Opaque expr.Interp.
 Section __.
   Context {output_language_api : ToString.OutputLanguageAPI}
           {language_naming_conventions : language_naming_conventions_opt}
+          {documentation_options : documentation_options_opt}
           {package_namev : package_name_opt}
           {class_namev : class_name_opt}
           {static : static_opt}
@@ -200,7 +201,7 @@ Section __.
         FromPipelineToString
           machine_wordsize prefix "mul" mul
           (docstring_with_summary_from_lemma!
-             (fun fname : string => ["The function " ++ fname ++ " multiplies two field elements."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " multiplies two field elements."]%string)
              (mul_correct weightf n m boundsn)).
 
   Local Ltac solve_extra_bounds_side_conditions :=
@@ -241,7 +242,8 @@ Section __.
                (comment_header
                   ++ ["";
                      "Computed values:";
-                     "# reductions = " ++ show false nreductions]%string)))
+                     "";
+                     "  # reductions = " ++ show false nreductions]%string)))
            function_name_prefix requests.
   End for_stringification.
 End __.
