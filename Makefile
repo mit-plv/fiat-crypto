@@ -16,7 +16,6 @@ ZIG_BUILD := zig build
 
 SKIP_BEDROCK2?=
 
-PROFILE?=
 VERBOSE?=
 SHOW := $(if $(VERBOSE),@true "",@echo "")
 HIDE := $(if $(VERBOSE),,@)
@@ -332,14 +331,6 @@ print-nobigmem::
 	@echo 'Files Not Made:'
 	@for i in $(sort $(NOBIGMEM_ALL_UNMADE_VOFILES)); do echo $$i; done
 
-# Remove -undeclared-scope once we stop supporting 8.9
-OTHERFLAGS += -w -notation-overridden,-undeclared-scope
-ifneq ($(PROFILE),)
-OTHERFLAGS += -profile-ltac
-endif
-
-export OTHERFLAGS
-
 ifneq ($(filter /cygdrive/%,$(CURDIR)),)
 CURDIR_SAFE := $(shell cygpath -m "$(CURDIR)")
 else
@@ -456,10 +447,9 @@ install-rupicola:
 	$(MAKE) --no-print-directory -C $(RUPICOLA_FOLDER) install
 endif
 
-# Note that the bit about OTHERFLAGS is to work around COQBUG(https://github.com/coq/coq/issues/10905)
 Makefile.coq: Makefile _CoqProject
 	$(SHOW)'COQ_MAKEFILE -f _CoqProject > $@'
-	$(HIDE)$(COQBIN)coq_makefile -f _CoqProject INSTALLDEFAULTROOT = $(INSTALLDEFAULTROOT) -o Makefile-coq && cat Makefile-coq | sed 's/^printenv:/printenv::/g; s/^printenv:::/printenv::/g; s/^all:/all-old:/g; s/OTHERFLAGS        :=/OTHERFLAGS        ?=/g; s/^validate:/validate-vo:/g; s/^.PHONY: validate/.PHONY: validate-vo/g' > $@ && rm -f Makefile-coq
+	$(HIDE)$(COQBIN)coq_makefile -f _CoqProject INSTALLDEFAULTROOT = $(INSTALLDEFAULTROOT) -o Makefile-coq && cat Makefile-coq | sed 's/^printenv:/printenv::/g; s/^printenv:::/printenv::/g; s/^all:/all-old:/g; s/^validate:/validate-vo:/g; s/^.PHONY: validate/.PHONY: validate-vo/g' > $@ && rm -f Makefile-coq
 
 
 STANDALONE := unsaturated_solinas saturated_solinas word_by_word_montgomery base_conversion

@@ -1,0 +1,6 @@
+PROFILE?=
+# Remove -undeclared-scope once we stop supporting 8.9
+OTHERFLAGS += -w -notation-overridden,-undeclared-scope
+ifneq ($(PROFILE),)
+OTHERFLAGS += -profile-ltac
+endif
