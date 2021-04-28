@@ -5,7 +5,7 @@ Require Import Coq.Lists.List. Import ListNotations.
 Require Import Crypto.COperationSpecifications. Import COperationSpecifications.BarrettReduction.
 Require Import Rewriter.Language.Language. Import Language.Compilers.
 Require Import Crypto.Language.API. Import Language.API.Compilers.
-Require Import Rewriter.Language.Wf.
+Require Import Rewriter.Language.Wf. Import Language.Wf.Compilers.
 Require Import Crypto.PushButtonSynthesis.BarrettReduction.
 Require Import Crypto.Fancy.Compiler.
 Require Import Crypto.Fancy.Prod.
@@ -25,6 +25,9 @@ Module Barrett256.
          SuchThat (barrett_red M machine_wordsize = ErrorT.Success barrett_red256)
          As barrett_red256_eq.
   Proof. lazy; reflexivity. Qed.
+
+  Lemma Wf_barrett_red256 : Wf barrett_red256.
+  Proof using Type. eapply Wf_barrett_red, barrett_red256_eq. Qed.
 
   Lemma barrett_red256_correct :
     COperationSpecifications.BarrettReduction.barrett_red_correct machine_wordsize M (API.Interp barrett_red256).
@@ -53,14 +56,13 @@ Module Barrett256.
   Qed.
 
   Local Ltac wf_subgoal :=
-    repeat match goal with
-           | _ => progress cbn [fst snd]
-           | |- Language.Wf.Compilers.expr.wf _ _ _ =>
-             econstructor; try solve [econstructor]; [ ]
-           | |- Language.Wf.Compilers.expr.wf _ _ _ =>
-             solve [econstructor]
-           | |- In _ _ => auto 50 using in_eq, in_cons
-           end.
+    repeat first [ progress cbn [List.In type.and_for_each_lhs_of_arrow fst snd List.app List.map]
+                 | apply expr.wf_smart_App_curried
+                 | progress intros
+                 | exfalso; assumption
+                 | apply conj
+                 | exact I
+                 | solve [ eauto 50 using or_introl, or_intror, eq_refl with nocore ] ].
   Local Ltac valid_expr_subgoal :=
     repeat match goal with
            | _ => progress intros
@@ -115,12 +117,9 @@ Module Barrett256.
       assert (M < 2 ^ machine_wordsize) by (cbv; congruence).
       assert (0 <= muLow < 2 ^ machine_wordsize) by (split; cbv; congruence).
       intuition; Prod.inversion_prod; subst; apply Z.mod_small; lia. }
-    { cbn.
-      repeat match goal with
-             | _ => apply Compilers.expr.WfLetIn
-             | _ => progress wf_subgoal
-             | _ => econstructor
-             end. }
+    { repeat first [ eapply expr.wf_Proper_list, Wf_barrett_red256
+                   | progress cbv [make_pairs consts_list arg_list]
+                   | wf_subgoal ]. }
     { cbn. cbv [muLow M].
       repeat (match goal with
              | _ => eapply valid_LetInZZ
