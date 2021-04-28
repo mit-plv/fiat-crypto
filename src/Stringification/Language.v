@@ -238,17 +238,22 @@ Module Compilers.
                 if (v.(lower) =? -2^(lg2-1)) && (v.(upper) =? 2^(lg2-1)-1)
                 then ("int" ++ Decimal.Z.to_string lg2 ++ "_t")%string
                 else show false v.
-      Definition show_compact_Z (with_parens : bool) (v : Z) : string
+      Local Notation Z_opp_lvl := 35%nat (only parsing).
+      Local Notation Z_sub_lvl := 50%nat (only parsing).
+      Local Notation Z_add_lvl := 50%nat (only parsing).
+      Local Notation Z_pow_lvl := 30%nat (only parsing).
+      Definition show_compact_Z (lvl : nat) (v : Z) : string
         := let is_neg := v <? 0 in
-           (if is_neg then "-" else "")
-             ++ (let v := Z.abs v in
+           (if is_neg then (fun v => maybe_wrap_parens (Nat.ltb lvl Z_opp_lvl) ("-" ++ v Z_opp_lvl)) else fun v => v lvl)
+             (fun lvl
+              => let v := Z.abs v in
                  (if v <=? 2^8
-                  then Decimal.Z.to_string v
+                  then maybe_wrap_parens (Nat.eqb lvl 0) (Decimal.Z.to_string v)
                   else if v =? 2^(Z.log2 v)
-                       then "2^" ++ (Decimal.Z.to_string (Z.log2 v))
+                       then maybe_wrap_parens (Nat.ltb lvl Z_pow_lvl) ("2^" ++ (Decimal.Z.to_string (Z.log2 v)))
                        else if v =? 2^(Z.log2_up v) - 1
-                            then maybe_wrap_parens is_neg ("2^" ++ (Decimal.Z.to_string (Z.log2_up v)) ++ "-1")
-                            else Hex.show_Z with_parens v)).
+                            then maybe_wrap_parens (Nat.ltb lvl Z_sub_lvl) ("2^" ++ (Decimal.Z.to_string (Z.log2_up v)) ++ "-1")
+                            else Hex.show_Z (Nat.eqb lvl 0) v)).
 
       Fixpoint make_castb {t} : ZRange.type.base.option.interp t -> option string
         := match t with
@@ -310,7 +315,7 @@ Module Compilers.
         Global Instance show_ident {t} : Show (ident.ident t)
           := fun with_parens idc
              => match idc with
-                | ident.Literal base.type.Z v => show_compact_Z with_parens v
+                | ident.Literal base.type.Z v => show_compact_Z (if with_parens then 0 else 200) v
                 | ident.Literal t v => show with_parens v
                 | ident.value_barrier => "value_barrier"
                 | ident.comment _ => "comment"
@@ -330,6 +335,7 @@ Module Compilers.
                 | ident.snd A B => "snd"
                 | ident.prod_rect A B T => "prod_rect"
                 | ident.bool_rect T => "bool_rect"
+                | ident.bool_rect_nodep T => "bool_rect_nodep"
                 | ident.nat_rect P => "nat_rect"
                 | ident.eager_nat_rect P => "eager_nat_rect"
                 | ident.nat_rect_arrow P Q => "nat_rect(→)"
@@ -424,15 +430,15 @@ Module Compilers.
         Definition show_ident_lvl (with_casts : bool) {t} (idc : ident.ident t)
           : type.for_each_lhs_of_arrow (fun t => (nat -> string) * ZRange.type.option.interp t)%type t -> (nat -> string) * ZRange.type.base.option.interp (type.final_codomain t)
           := match idc in ident.ident t return type.for_each_lhs_of_arrow (fun t => (nat -> string) * ZRange.type.option.interp t)%type t -> (nat -> string) * ZRange.type.base.option.interp (type.final_codomain t) with
-             | ident.Literal base.type.Z v => fun 'tt => (fun lvl => show_compact_Z (Nat.eqb lvl 0) v, ZRange.type.base.option.None)
+             | ident.Literal base.type.Z v => fun 'tt => (fun lvl => show_compact_Z lvl v, ZRange.type.base.option.None)
              | ident.Literal t v => fun 'tt => (fun lvl => show (Nat.eqb lvl 0) v, ZRange.type.base.option.Some (t:=t) v)
              | ident.tt => fun _ => (fun _ => "()", tt)
              | ident.Nat_succ => fun '((x, xr), tt) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 10) ((x 10%nat) ++ ".+1"), ZRange.type.base.option.None)
              | ident.Nat_pred => fun '((x, xr), tt) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 10) ((x 10%nat) ++ ".-1"), ZRange.type.base.option.None)
              | ident.Nat_max => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 10) ("Nat.max " ++ x 9%nat ++ " " ++ y 9%nat), ZRange.type.base.option.None)
              | ident.Nat_mul => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 40) (x 40%nat ++ " *ℕ " ++ y 39%nat), ZRange.type.base.option.None)
-             | ident.Nat_add => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 50) (x 50%nat ++ " +ℕ " ++ y 49%nat), ZRange.type.base.option.None)
-             | ident.Nat_sub => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 50) (x 50%nat ++ " -ℕ " ++ y 49%nat), ZRange.type.base.option.None)
+             | ident.Nat_add => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl Z_add_lvl) (x Z_add_lvl ++ " +ℕ " ++ y (pred Z_add_lvl)), ZRange.type.base.option.None)
+             | ident.Nat_sub => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl Z_sub_lvl) (x Z_sub_lvl ++ " -ℕ " ++ y (pred Z_sub_lvl)), ZRange.type.base.option.None)
              | ident.Nat_eqb => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 70) (x 69%nat ++ " =ℕ " ++ y 69%nat), ZRange.type.base.option.None)
              | ident.None _ => fun 'tt => (fun _ => "None", ZRange.type.base.option.None)
              | ident.nil t => fun 'tt => (fun _ => "[]", ZRange.type.base.option.None)
@@ -441,7 +447,9 @@ Module Compilers.
              | ident.fst A B => fun '((x, xr), tt) => (fun _ => x 0%nat ++ "₁", fst xr)
              | ident.snd A B => fun '((x, xr), tt) => (fun _ => x 0%nat ++ "₂", snd xr)
              | ident.prod_rect A B T => fun '((f, fr), ((p, pr), tt)) => (fun _ => "match " ++ p 200%nat ++ " with " ++ f 200%nat ++ " end", ZRange.type.base.option.None)
-             | ident.bool_rect T => fun '(t, (f, ((b, br), tt))) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 200) ("if " ++ b 200%nat ++ " then " ++ maybe_wrap_cast with_casts t 200%nat ++ " else " ++ maybe_wrap_cast with_casts f 200%nat), ZRange.type.base.option.None)
+             | ident.bool_rect _
+             | ident.bool_rect_nodep _
+               => fun '(t, (f, ((b, br), tt))) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 200) ("if " ++ b 200%nat ++ " then " ++ maybe_wrap_cast with_casts t 200%nat ++ " else " ++ maybe_wrap_cast with_casts f 200%nat), ZRange.type.base.option.None)
              | ident.List_app _
                => fun '((xs, xsr), ((ys, ysr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 60) (xs 59%nat ++ " ++ " ++ ys 60%nat), ZRange.type.base.option.None)
              | ident.eager_List_nth_default T
@@ -449,10 +457,10 @@ Module Compilers.
              | ident.List_nth_default T
                => fun '((d, dr), ((ls, lsr), ((i, ir), tt))) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 10) (ls 10%nat ++ "[" ++ i 200%nat ++ "]"), ZRange.type.base.option.None)
              | ident.Z_mul => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 40) (x 40%nat ++ " * " ++ y 39%nat), ZRange.type.base.option.None)
-             | ident.Z_add => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 50) (x 50%nat ++ " + " ++ y 49%nat), ZRange.type.base.option.None)
-             | ident.Z_sub => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 50) (x 50%nat ++ " - " ++ y 49%nat), ZRange.type.base.option.None)
-             | ident.Z_pow => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 30) (x 30%nat ++ " ^ " ++ y 29%nat), ZRange.type.base.option.None)
-             | ident.Z_opp => fun '((x, xr), tt) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 35) ("-" ++ x 35%nat), ZRange.type.base.option.None)
+             | ident.Z_add => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl Z_add_lvl) (x Z_add_lvl ++ " + " ++ y (pred Z_add_lvl)), ZRange.type.base.option.None)
+             | ident.Z_sub => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl Z_sub_lvl) (x Z_sub_lvl ++ " - " ++ y (pred Z_sub_lvl)), ZRange.type.base.option.None)
+             | ident.Z_pow => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl Z_pow_lvl) (x Z_pow_lvl ++ " ^ " ++ y (pred Z_pow_lvl)), ZRange.type.base.option.None)
+             | ident.Z_opp => fun '((x, xr), tt) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl Z_opp_lvl) ("-" ++ x Z_opp_lvl), ZRange.type.base.option.None)
              | ident.Z_bneg => fun '((x, xr), tt) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 75) ("!" ++ x 75%nat), ZRange.type.base.option.None)
              | ident.Z_lnot_modulo => fun '((x, xr), ((m, mr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 75) ("~" ++ x 75%nat ++ (if with_casts then " (mod " ++ m 200%nat ++ ")" else "")), ZRange.type.base.option.None)
              | ident.Z_lxor => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 50) (x 50%nat ++ " ⊕ " ++ y 49%nat), ZRange.type.base.option.None)
@@ -463,10 +471,10 @@ Module Compilers.
              | ident.Z_leb => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 70) (x 69%nat ++ " ≤ " ++ y 69%nat), ZRange.type.base.option.None)
              | ident.Z_gtb => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 70) (x 69%nat ++ " > " ++ y 69%nat), ZRange.type.base.option.None)
              | ident.Z_geb => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 70) (x 69%nat ++ " ≥ " ++ y 69%nat), ZRange.type.base.option.None)
-             | ident.Z_shiftr => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 55) (x 30%nat ++ " >> " ++ y 29%nat), ZRange.type.base.option.None)
-             | ident.Z_shiftl => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 55) (x 30%nat ++ " << " ++ y 29%nat), ZRange.type.base.option.None)
-             | ident.Z_land => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 55) (x 30%nat ++ " & " ++ y 29%nat), ZRange.type.base.option.None)
-             | ident.Z_lor => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 55) (x 30%nat ++ " | " ++ y 29%nat), ZRange.type.base.option.None)
+             | ident.Z_shiftr => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 55) (x 35%nat ++ " >> " ++ y 35%nat), ZRange.type.base.option.None)
+             | ident.Z_shiftl => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 55) (x 35%nat ++ " << " ++ y 35%nat), ZRange.type.base.option.None)
+             | ident.Z_land => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 55) (x 35%nat ++ " & " ++ y 35%nat), ZRange.type.base.option.None)
+             | ident.Z_lor => fun '((x, xr), ((y, yr), tt)) => (fun lvl => maybe_wrap_parens (Nat.ltb lvl 55) (x 35%nat ++ " | " ++ y 35%nat), ZRange.type.base.option.None)
              | ident.Z_cast
              | ident.Z_cast2
                => fun '((_, range), ((x, xr), tt)) => (x, range)
@@ -637,21 +645,24 @@ Module Compilers.
                             | Some n' => show_eta_cps of_string (fun t e args idx => @show_expr_lines_gen with_casts var to_string of_string t e args idx) (Pos.succ idx) (f n')
                             | None => (idx, (fun _ => ["_"]), ZRange.type.option.None)
                             end in
-                     let ty_str := match make_cast xr with
-                                   | Some c => " : " ++ c
-                                   | None => ""
-                                   end in
-                     let expr_let_line := "expr_let " ++ n ++ " := " in
+                     let '(ty_str, comment_ty_str, space_comment_ty_str)
+                         := match make_cast xr with
+                            | Some c => let ty_str := " : " ++ c in
+                                        let comment_ty_str := "(*" ++ ty_str ++ " *)" in
+                                        (ty_str, comment_ty_str, " " ++ comment_ty_str)
+                            | None => ("", "", "")
+                            end in
+                     let expr_let_line := "let " ++ n ++ " := " in
                      (idx,
                       (fun lvl
                        => match show_x 200%nat with
-                          | nil => [expr_let_line ++ "(* NOTHING‽ *) (*" ++ ty_str ++ " *) in"]%string ++ show_f 200%nat
-                          | show_x::nil => [expr_let_line ++ show_x ++ " (*" ++ ty_str ++ " *) in"]%string ++ show_f 200%nat
+                          | nil => [expr_let_line ++ "(* NOTHING‽ *)" ++ space_comment_ty_str ++ " in"]%string ++ show_f 200%nat
+                          | show_x::nil => [expr_let_line ++ show_x ++ "" ++ space_comment_ty_str ++ " in"]%string ++ show_f 200%nat
                           | show_x::rest
                             => ([expr_let_line ++ show_x]%string)
                                  ++ (List.map (fun l => String.string_of_list_ascii (List.repeat " "%char (String.length expr_let_line)) ++ l)%string
                                               rest)
-                                 ++ ["(*" ++ ty_str ++ " *)"]%string
+                                 ++ (if ty_str =? "" then ["(*" ++ ty_str ++ " *)"] else [])%string
                                  ++ ["in"]
                                  ++ show_f 200%nat
                           end%list),
@@ -665,24 +676,27 @@ Module Compilers.
                             | Some n' => show_eta_cps of_string (fun t e args idx => @show_expr_lines_gen with_casts var to_string of_string t e args idx) (Pos.succ idx) (f n')
                             | None => (idx, (fun _ => ["_"]), ZRange.type.option.None)
                             end in
-                     let ty_str := match make_cast xr with
-                                   | Some c => " : " ++ c
-                                   | None => ""
-                                   end in
-                     let expr_let_line := "expr_let " ++ n ++ " := " in
+                     let '(ty_str, comment_ty_str, space_comment_ty_str)
+                         := match make_cast xr with
+                            | Some c => let ty_str := " : " ++ c in
+                                        let comment_ty_str := "(*" ++ ty_str ++ " *)" in
+                                        (ty_str, comment_ty_str, " " ++ comment_ty_str)
+                            | None => ("", "", "")
+                            end in
+                     let expr_let_line := "let " ++ n ++ " := " in
                      (idx,
                       (fun lvl
                        => (["("]
                              ++ (map
                                    (String " ")
                                    match show_x 200%nat with
-                                   | nil => [expr_let_line ++ "(* NOTHING‽ *) (*" ++ ty_str ++ " *) in"]%string ++ show_f 200%nat
-                                   | show_x::nil => [expr_let_line ++ show_x ++ " (*" ++ ty_str ++ " *) in"]%string ++ show_f 200%nat
+                                   | nil => [expr_let_line ++ "(* NOTHING‽ *)" ++ space_comment_ty_str ++ " in"]%string ++ show_f 200%nat
+                                   | show_x::nil => [expr_let_line ++ show_x ++ "" ++ space_comment_ty_str ++ " in"]%string ++ show_f 200%nat
                                    | show_x::rest
                                      => ([expr_let_line ++ show_x]%string)
                                           ++ (List.map (fun l => String.string_of_list_ascii (List.repeat " "%char (String.length expr_let_line)) ++ l)%string
                                                        rest)
-                                          ++ ["(*" ++ ty_str ++ " *)"]%string
+                                          ++ (if ty_str =? "" then ["(*" ++ ty_str ++ " *)"] else [])%string
                                           ++ ["in"]
                                           ++ show_f 200%nat
                                    end%list)
@@ -1212,8 +1226,23 @@ Module Compilers.
       : string
       := format_special_function_name internal_private prefix name (int.is_signed t) (int.bitwidth_of t).
 
-    Definition preprocess_comment_block (lines : list string)
+    Definition normalize_newlines (lines : list string)
       := String.split String.NewLine (String.concat String.NewLine lines).
+
+    Definition preprocess_comment_block (lines : list string) := normalize_newlines lines.
+
+    (** prepends [prefix] to the first line of [lines] (after
+        processing it to adjust for newlines), and indents the rest of
+        the lines appropriately *)
+    Definition prefix_and_indent (prefix : string) (lines : list string)
+      := let lines := normalize_newlines lines in
+         match lines with
+         | [] => [prefix]
+         | val :: vals
+           => let indent := String.repeat " " (String.length prefix) in
+              (prefix ++ val)
+                :: List.map (fun v => indent ++ v) vals
+         end.
 
     Class OutputLanguageAPI :=
       {

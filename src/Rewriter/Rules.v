@@ -541,6 +541,9 @@ Definition add_assoc_left_rewrite_rulesT : list (bool * Prop)
            ]
         ].
 
+Definition flatten_thunked_rects_rewrite_rulesT : list (bool * Prop)
+  := [dont_do_again (forall P t f b, @Thunked.bool_rect P t f b = @bool_rect_nodep P (t tt) (f tt) b)].
+
 Section fancy.
   Context (invert_low invert_high : Z (*log2wordmax*) -> Z -> option Z)
           (value_range flag_range : zrange).

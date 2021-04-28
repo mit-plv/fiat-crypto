@@ -566,7 +566,7 @@ Section __.
              (one_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition reval (* r for reified *)
-    := Pipeline.RepeatRewriteAddAssocLeft
+    := Pipeline.RepeatRewriteAddAssocLeftAndFlattenThunkedRects
          n
          (Pipeline.PreBoundsPipeline
             true (* subst01 *)
@@ -580,7 +580,7 @@ Section __.
     := Show.show with_parens (invert_expr.smart_App_curried (reval _) (arg_name, tt)).
 
   Definition rbytes_eval (* r for reified *)
-    := Pipeline.RepeatRewriteAddAssocLeft
+    := Pipeline.RepeatRewriteAddAssocLeftAndFlattenThunkedRects
          n_bytes
          (Pipeline.PreBoundsPipeline
             true (* subst01 *)
@@ -592,6 +592,21 @@ Section __.
 
   Definition sbytes_eval (arg_name : string) (with_parens : bool) (* s for string *)
     := Show.show with_parens (invert_expr.smart_App_curried (rbytes_eval _) (arg_name, tt)).
+
+  Definition reval_twos_complement (* r for reified *)
+    := Pipeline.RepeatRewriteAddAssocLeftAndFlattenThunkedRects
+         n
+         (Pipeline.PreBoundsPipeline
+            true (* subst01 *)
+            false (* let_bind_return *)
+            None (* fancy *)
+            (reified_eval_twos_complement_gen
+               @ GallinaReify.Reify machine_wordsize
+               @ GallinaReify.Reify n)
+            (Some bounds, tt)).
+
+  Definition seval_twos_complement (arg_name : string) (with_parens : bool) (* s for string *)
+    := Show.show with_parens (invert_expr.smart_App_curried (reval_twos_complement _) (arg_name, tt)).
 
   Definition selectznz : Pipeline.ErrorT _ := Primitives.selectznz n machine_wordsize.
   Definition sselectznz (prefix : string)
@@ -1074,10 +1089,10 @@ Section __.
            (ToString.comment_file_header_block
               (comment_header
                   ++ [""
-                      ; "Computed values:"
-                      ; "eval z = " ++ seval "z" false
-                      ; "bytes_eval z = " ++ sbytes_eval "z" false
-                     ]%string))
+                      ; "Computed values:"]
+                  ++ (ToString.prefix_and_indent "eval z = " [seval "z" false])
+                  ++ (ToString.prefix_and_indent "bytes_eval z = " [sbytes_eval "z" false])
+                  ++ (ToString.prefix_and_indent "twos_complement_eval z = " [seval_twos_complement "z" false])))
            function_name_prefix requests.
   End for_stringification.
 End __.
