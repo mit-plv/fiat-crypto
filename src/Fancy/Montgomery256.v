@@ -4,7 +4,7 @@ Require Import Coq.ZArith.ZArith Coq.micromega.Lia.
 Require Import Coq.Lists.List. Import ListNotations.
 Require Import Rewriter.Language.Language. Import Language.Compilers.
 Require Import Crypto.Language.API. Import Language.API.Compilers.
-Require Import Rewriter.Language.Wf.
+Require Import Rewriter.Language.Wf. Import Language.Wf.Compilers.
 Require Import Crypto.Arithmetic.FancyMontgomeryReduction.
 Require Import Crypto.PushButtonSynthesis.FancyMontgomeryReduction.
 Require Import Crypto.Fancy.Compiler.
@@ -28,6 +28,9 @@ Module Montgomery256.
          SuchThat (montred N R N' machine_wordsize = ErrorT.Success montred256)
          As montred256_eq.
   Proof. lazy; reflexivity. Qed.
+
+  Lemma Wf_montred256 : Wf montred256.
+  Proof using Type. eapply Wf_montred, montred256_eq. Qed.
 
   Lemma montred256_correct :
     COperationSpecifications.MontgomeryReduction.montred_correct N R R' (API.Interp montred256).
@@ -70,14 +73,13 @@ Module Montgomery256.
 
   (* TODO: these tactics are duplicated; move them elsewhere (probably translation *)
   Local Ltac wf_subgoal :=
-    repeat match goal with
-           | _ => progress cbn [fst snd]
-           | |- Language.Wf.Compilers.expr.wf _ _ _ =>
-             econstructor; try solve [econstructor]; [ ]
-           | |- Language.Wf.Compilers.expr.wf _ _ _ =>
-             solve [econstructor]
-           | |- In _ _ => auto 50 using in_eq, in_cons
-           end.
+    repeat first [ progress cbn [List.In type.and_for_each_lhs_of_arrow fst snd List.app List.map]
+                 | apply expr.wf_smart_App_curried
+                 | progress intros
+                 | exfalso; assumption
+                 | apply conj
+                 | exact I
+                 | solve [ eauto 50 using or_introl, or_intror, eq_refl with nocore ] ].
   Local Ltac valid_expr_subgoal :=
     repeat match goal with
            | _ => progress intros
@@ -126,12 +128,9 @@ Module Montgomery256.
       match goal with |- context [_ mod ?m] => change m with (2 ^ machine_wordsize) end.
       assert (R <= 2 ^ machine_wordsize) by (cbv; congruence).
       intuition; Prod.inversion_prod; subst; apply Z.mod_small; lia. }
-    { cbn.
-      repeat match goal with
-             | _ => apply Compilers.expr.WfLetIn
-             | _ => progress wf_subgoal
-             | _ => econstructor
-             end. }
+    { repeat first [ eapply expr.wf_Proper_list, Wf_montred256
+                   | progress cbv [make_pairs consts_list arg_list]
+                   | wf_subgoal ]. }
     { cbn. cbv [N' N].
       repeat (econstructor; [ solve [valid_expr_subgoal] | intros ]).
       econstructor. valid_expr_subgoal. }
