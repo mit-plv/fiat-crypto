@@ -54,17 +54,38 @@ endif
 
 .DEFAULT_GOAL := all
 
-SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g' | uniq
-WARNINGS := +implicit-core-hint-db,+implicits-in-term,+non-reversible-notation,+deprecated-intros-until-0,+deprecated-focus,+unused-intro-pattern,+variable-collision,-deprecated-hint-constr,-fragile-hint-constr,+omega-is-deprecated,+deprecated-instantiate-syntax,+non-recursive
-update-_CoqProject::
-	$(SHOW)'ECHO > _CoqProject'
-	$(HIDE)(echo '-R $(SRC_DIR) $(MOD_NAME)'; echo '-arg -w -arg $(WARNINGS)'; (git ls-files 'src/*.v' | $(GREP_EXCLUDE_SPECIAL_VOFILES) | $(SORT_COQPROJECT))) > _CoqProject
-
 # coq .vo files that are not compiled using coq_makefile
 SPECIAL_VOFILES := \
 	src/ExtractionOCaml/%.vo \
 	src/ExtractionHaskell/%.vo
 GREP_EXCLUDE_SPECIAL_VOFILES := grep -v '^src/Extraction\(OCaml\|Haskell\)/'
+
+ifneq (,$(filter 8.9%,$(COQ_VERSION)))
+NATIVE_COMPILER_ONDEMAND_COQPROJECT_FRAGMENT :=
+else
+NATIVE_COMPILER_ONDEMAND_COQPROJECT_FRAGMENT := -arg -native-compiler -arg ondemand
+endif
+
+_CoqProject: _CoqProject.in
+	sed 's/@NATIVE_COMPILER_ARG@/$(NATIVE_COMPILER_ONDEMAND_COQPROJECT_FRAGMENT)/g' $< > $@
+
+# This target is used to update the _CoqProject file.
+# But it only works if we have git
+ifneq (,$(wildcard .git/))
+SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g'
+EXISTING_COQPROJECT_CONTENTS_SORTED:=$(shell cat _CoqProject.in 2>&1 | $(SORT_COQPROJECT))
+WARNINGS := +implicit-core-hint-db,+implicits-in-term,+non-reversible-notation,+deprecated-intros-until-0,+deprecated-focus,+unused-intro-pattern,+variable-collision,+omega-is-deprecated,+deprecated-instantiate-syntax,+non-recursive
+COQPROJECT_CMD:=(echo '-R $(SRC_DIR) $(MOD_NAME)'; echo '-arg -w -arg $(WARNINGS)'; echo '@NATIVE_COMPILER_ARG@'; (git ls-files 'src/*.v' | $(GREP_EXCLUDE_SPECIAL_VOFILES) | $(SORT_COQPROJECT)))
+NEW_COQPROJECT_CONTENTS_SORTED:=$(shell $(COQPROJECT_CMD) | $(SORT_COQPROJECT))
+
+ifneq ($(EXISTING_COQPROJECT_CONTENTS_SORTED),$(NEW_COQPROJECT_CONTENTS_SORTED))
+.PHONY: _CoqProject.in
+_CoqProject.in:
+	$(SHOW)'ECHO > $@'
+	$(HIDE)$(COQPROJECT_CMD) > $@
+endif
+endif
+
 PERFTESTING_VO := \
 	src/Rewriter/PerfTesting/Core.vo \
 	src/Rewriter/PerfTesting/StandaloneOCamlMain.vo
