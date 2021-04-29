@@ -15,12 +15,13 @@ jobs:
       NJOBS: "2"
       COQ_VERSION: "master"
 
-    # initial steps copied from https://github.com/coq/coq/blob/d7b2da080bbfbbc85b3ce19bcda99e06ee355fef/azure-pipelines.yml#L51-L120
+    # initial steps copied from https://github.com/coq/coq/blob/97e2c757b6deaeaca0a73a4cfbcbc64d13205b1e/.github/workflows/ci.yml#L29-L78
     steps:
     - name: Install system dependencies
       run: |
         set -e
-        brew install gnu-time opam pkg-config gtksourceview3 adwaita-icon-theme
+        brew tap discoteq/discoteq
+        brew install gnu-time opam gtksourceview3 adwaita-icon-theme flock
         pip3 install macpack
 
     - name: Install OCaml dependencies
@@ -31,12 +32,13 @@ jobs:
         opam switch set ocaml-base-compiler.$COMPILER
         eval $(opam env)
         opam update
-        opam install -j "$NJOBS" num ocamlfind${FINDLIB_VER} ounit lablgtk3-sourceview3 zarith.1.10
+        opam install -j "$NJOBS" num ocamlfind${FINDLIB_VER} ounit lablgtk3-sourceview3 zarith.1.10 dune.2.8.5
         opam list
       env:
-        COMPILER: "4.09.0"
+        COMPILER: "4.11.1"
         FINDLIB_VER: ".1.8.1"
         OPAMYES: "true"
+        NJOBS: "2"
 
     - name: Build Coq
       run: |
@@ -44,8 +46,10 @@ jobs:
         git clone https://github.com/coq/coq.git --branch=${COQ_VERSION}
         eval $(opam env)
         (cd coq && git log -1)
-        (cd coq && ./configure -prefix /usr/local/ -warn-error yes -native-compiler no -coqide no)
+        (cd coq && ./configure -prefix "$(pwd)/_install_ci" -warn-error yes -native-compiler no -coqide opt)
         (cd coq && make -j "$NJOBS")
+      env:
+        NJOBS: "2"
 
     - name: Install Coq
       run: |
