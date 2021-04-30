@@ -29,7 +29,7 @@ Module Montgomery256.
          As montred256_eq.
   Proof. lazy; reflexivity. Qed.
 
-  Lemma Wf_montred256 : Wf montred256.
+  Lemma Wf_montred256 : API.Wf montred256.
   Proof using Type. eapply Wf_montred, montred256_eq. Qed.
 
   Lemma montred256_correct :

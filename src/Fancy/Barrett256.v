@@ -26,7 +26,7 @@ Module Barrett256.
          As barrett_red256_eq.
   Proof. lazy; reflexivity. Qed.
 
-  Lemma Wf_barrett_red256 : Wf barrett_red256.
+  Lemma Wf_barrett_red256 : API.Wf barrett_red256.
   Proof using Type. eapply Wf_barrett_red, barrett_red256_eq. Qed.
 
   Lemma barrett_red256_correct :

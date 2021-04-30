@@ -20,7 +20,6 @@ Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.ZUtil.Hints.Core.
 
 Import API.Compilers.
-Import Wf.Compilers.expr.
 Import ListNotations Types.Notations.
 
 Section UsedVarnames.

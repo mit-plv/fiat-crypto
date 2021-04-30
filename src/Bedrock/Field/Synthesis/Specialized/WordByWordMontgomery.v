@@ -329,7 +329,7 @@ Ltac handle_easy_preconditions :=
     abstract vm_cast_no_check (eq_refl true)
   | |- Types.ok => solve [typeclasses eauto]
   | |- _ = ErrorT.Success _ => solve [apply reified_eq]
-  | |- Wf.Compilers.expr.Wf _ => solve [apply reified_Wf]
+  | |- API.Wf _ => solve [apply reified_Wf]
   | |- Func.valid_func _ => solve [apply reified_valid]
   | _ => first [ apply inname_gen_varname_gen_disjoint
                | apply outname_gen_varname_gen_disjoint

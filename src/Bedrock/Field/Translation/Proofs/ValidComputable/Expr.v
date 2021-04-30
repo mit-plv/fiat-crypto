@@ -18,7 +18,6 @@ Local Open Scope Z_scope.
 Local Open Scope bool_scope.
 
 Import API.Compilers.
-Import Wf.Compilers.expr.
 Import Types.Notations.
 
 Section Expr.

@@ -482,7 +482,7 @@ Section of_prefancy.
           (e2 : cexpr (type.base tZ))
           G (ctx : name -> Z) (cctx : name -> bool) :
       valid_scalar e1 ->
-      Compilers.expr.wf G e1 e2 ->
+      API.wf G e1 e2 ->
       (forall n v, consts v = Some n -> In (existZ (n, v)) G) ->
       (forall t v1 v2, In (existT _ (type.base t) (v1, v2)) G -> interp_base ctx cctx v1 = v2) ->
       (forall v1 v2, In (existZ (v1, v2)) G -> ctx v1 = v2) -> (* implied by above *)
@@ -540,7 +540,7 @@ Section of_prefancy.
           (e2 : cexpr (type.base tZ))
           G (ctx : name -> Z) cc :
       valid_scalar e1 ->
-      Compilers.expr.wf G e1 e2 ->
+      API.wf G e1 e2 ->
       (forall n v, consts v = Some n -> In (existZ (n, v)) G) ->
       (forall t v1 v2, In (existT _ (type.base t) (v1, v2)) G -> interp_base ctx cc v1 = v2) ->
       (forall n, ctx n mod wordmax = ctx n) ->
@@ -679,7 +679,7 @@ Section of_prefancy.
           (e : cexpr (type.base tZ))
           G (ctx : name -> Z) cctx :
       valid_carry c ->
-      Compilers.expr.wf G c e ->
+      API.wf G c e ->
       (forall n0, consts 0 = Some n0 -> cctx n0 = false) ->
       (forall n1, consts 1 = Some n1 -> cctx n1 = true) ->
       (forall t v1 v2, In (existT _ (type.base t) (v1, v2)) G -> interp_base ctx cctx v1 = v2) ->
@@ -744,8 +744,8 @@ Section of_prefancy.
         match s, d return ident (s -> d) -> cexpr s -> (var d -> _ -> _) -> Prop with
         | type.base s, type.base tZ
           => fun idc x rf
-             => Compilers.expr.wf G (#idc @ x)%expr x2 ->
-                Compilers.expr.wf G (cstZ r[0~>u]) f ->
+             => API.wf G (#idc @ x)%expr x2 ->
+                API.wf G (cstZ r[0~>u]) f ->
                 0 < u < wordmax ->
                 cc_good cc cctx ctx r ->
                 (forall n v, consts v = Some n -> In (existZ (n, v)) G) ->
@@ -793,8 +793,8 @@ Section of_prefancy.
     Lemma of_prefancy_identZ_loosen_correct {s} idc:
       forall (x : @cexpr var _) i ctx G cc cctx x2 r rf f u,
         @valid_ident (type.base s) tZ r rf idc x ->
-        Compilers.expr.wf G (#idc @ x)%expr x2 ->
-        Compilers.expr.wf G (cstZ r[0~>u]) f ->
+        API.wf G (#idc @ x)%expr x2 ->
+        API.wf G (cstZ r[0~>u]) f ->
         0 < u < wordmax ->
         cc_good cc cctx ctx r ->
         (forall n v, consts v = Some n -> In (existZ (n, v)) G) ->
@@ -807,8 +807,8 @@ Section of_prefancy.
     Lemma of_prefancy_identZ_correct {s} idc:
       forall (x : @cexpr var _) i ctx G cc cctx x2 r rf f,
         @valid_ident (type.base s) tZ r rf idc x ->
-        Compilers.expr.wf G (#idc @ x)%expr x2 ->
-        Compilers.expr.wf G (cstZ uint256) f ->
+        API.wf G (#idc @ x)%expr x2 ->
+        API.wf G (cstZ uint256) f ->
         cc_good cc cctx ctx r ->
         (forall n v, consts v = Some n -> In (existZ (n, v)) G) ->
         (forall t v1 v2, In (existT _ (type.base t) (v1, v2)) G -> interp_base ctx cctx v1 = v2) ->
@@ -822,8 +822,8 @@ Section of_prefancy.
     Lemma of_prefancy_identZZ_correct' {s} idc:
       forall (x : @cexpr var _) i ctx G cc cctx x2 r rf f,
         @valid_ident (type.base s) (tZ * tZ) r rf idc x ->
-        Compilers.expr.wf G (#idc @ x)%expr x2 ->
-        Compilers.expr.wf G (cstZZ uint256 r[0~>1]) f ->
+        API.wf G (#idc @ x)%expr x2 ->
+        API.wf G (cstZZ uint256 r[0~>1]) f ->
         cc_good cc cctx ctx r ->
         (forall n v, consts v = Some n -> In (existZ (n, v)) G) ->
         (forall t v1 v2, In (existT _ (type.base t) (v1, v2)) G -> interp_base ctx cctx v1 = v2) ->
@@ -838,9 +838,9 @@ Section of_prefancy.
       all: repeat match goal with
                | H : CC.cc_c _ = _ |- _ => rewrite H
                | H: of_prefancy_scalar _ = ?r ?c |- _ => rewrite <-H
-               | H : Compilers.expr.wf _ ?x ?e |- context [cinterp ?e] =>
+               | H : API.wf _ ?x ?e |- context [cinterp ?e] =>
                  erewrite <-of_prefancy_scalar_correct with (e1:=x) (e2:=e) by eauto
-               | H : Compilers.expr.wf _ ?x ?e2 |- context [cinterp ?e2] =>
+               | H : API.wf _ ?x ?e2 |- context [cinterp ?e2] =>
                  erewrite <-of_prefancy_scalar_carry with (c:=x) (e:=e2) by eauto
                   end.
       all: match goal with |- context [(?x << ?n) mod ?m] =>
@@ -861,8 +861,8 @@ Section of_prefancy.
     Lemma of_prefancy_identZZ_correct {s} idc:
       forall (x : @cexpr var _) i ctx G cc cctx x2 r rf f,
         @valid_ident (type.base s) (tZ * tZ) r rf idc x ->
-        Compilers.expr.wf G (#idc @ x)%expr x2 ->
-        Compilers.expr.wf G (cstZZ uint256 r[0~>1]) f ->
+        API.wf G (#idc @ x)%expr x2 ->
+        API.wf G (cstZZ uint256 r[0~>1]) f ->
         cc_good cc cctx ctx r ->
         (forall n v, consts v = Some n -> In (existZ (n, v)) G) ->
         (forall t v1 v2, In (existT _ (type.base t) (v1, v2)) G -> interp_base ctx cctx v1 = v2) ->
@@ -873,8 +873,8 @@ Section of_prefancy.
     Lemma of_prefancy_identZZ_correct_carry {s} idc:
       forall (x : @cexpr var _) i ctx G cc cctx x2 r rf f,
         @valid_ident (type.base s) (tZ * tZ) r rf idc x ->
-        Compilers.expr.wf G (#idc @ x)%expr x2 ->
-        Compilers.expr.wf G (cstZZ uint256 r[0~>1]) f ->
+        API.wf G (#idc @ x)%expr x2 ->
+        API.wf G (cstZZ uint256 r[0~>1]) f ->
         cc_good cc cctx ctx r ->
         (forall n v, consts v = Some n -> In (existZ (n, v)) G) ->
         (forall t v1 v2, In (existT _ (type.base t) (v1, v2)) G -> interp_base ctx cctx v1 = v2) ->
@@ -986,7 +986,7 @@ Section of_prefancy.
           {t} (e1 : @cexpr var t) (e2 : @cexpr _ t) r :
       valid_expr _ r e1 ->
       forall G,
-      Compilers.expr.wf G e1 e2 ->
+      API.wf G e1 e2 ->
       forall ctx cc cctx,
         cc_good cc cctx ctx r ->
         (forall n v, consts v = Some n -> In (existZ (n, v)) G) ->
@@ -1234,7 +1234,7 @@ Section Proofs.
                      In (n, v2) (consts_list ++ arg_list) -> v1 = v2) (* no duplicate names *) ->
     (forall v1 v2, In (v1, v2) consts_list -> v2 mod 2 ^ 256 = v2) ->
     (forall v1 v2, In (v1, v2) arg_list -> v2 mod 2 ^ 256 = v2) ->
-    (Compilers.expr.wf G e1 e2) ->
+    (API.wf G e1 e2) ->
     valid_expr _ error consts _ last_wrote e1 ->
     interp_if_Z e2 = Some result ->
     interp Pos.eqb wordmax cc_spec (of_Expr next_name consts e x1 error) cc ctx = result.

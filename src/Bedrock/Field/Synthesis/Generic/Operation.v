@@ -24,7 +24,6 @@ Require Import Crypto.Language.API.
 Require Import Coq.Lists.List. (* after SeparationLogic *)
 
 Import Language.Compilers.
-Import Language.Wf.Compilers.
 
 Require Import Crypto.Util.Notations.
 Local Open Scope Z_scope.
@@ -92,7 +91,7 @@ Section op.
              {name : string} (spec : spec_of name) : Prop :=
     (forall res : API.Expr t,
         start = ErrorT.Success res ->
-        expr.Wf res ->
+        API.Wf res ->
         valid_func (res (fun _ : API.type => unit)) ->
         forall functions,
           spec (make_bedrock_func name op res :: functions)).
