@@ -1210,9 +1210,7 @@ Qed.
 Lemma nth_default_in_bounds : forall {T} (d' d : T) n us, (n < length us)%nat ->
   nth_default d us n = nth_default d' us n.
 Proof.
-  intros; erewrite !nth_default_nth_dep; reflexivity.
-  Grab Existential Variables.
-  assumption.
+  intros; now unshelve erewrite !nth_default_nth_dep.
 Qed.
 
 Global Hint Resolve nth_default_in_bounds : simpl_nth_default.

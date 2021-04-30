@@ -20,7 +20,7 @@ if [ "$1" == "--warnings" ]; then
     shift
 fi
 if [ ! -z "${reportify}" ]; then
-    reportify="COQC=etc/coq-scripts/github/reportify-coq.sh${reportify} ${COQBIN}coqc"
+    reportify="COQC='$(pwd)/etc/coq-scripts/github/reportify-coq.sh'${reportify} ${COQBIN}coqc"
 fi
 
 rm -f finished.ok
