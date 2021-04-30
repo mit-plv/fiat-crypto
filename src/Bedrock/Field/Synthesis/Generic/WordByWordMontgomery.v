@@ -44,7 +44,6 @@ Require Import Coq.Lists.List. (* after SeparationLogic *)
 Existing Instances rep.Z rep.listZ_mem.
 
 Import Language.Compilers.
-Import Language.Wf.Compilers.
 Import Associational Positional.
 
 Require Import Crypto.Util.Notations.
