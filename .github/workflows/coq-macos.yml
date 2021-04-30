@@ -46,7 +46,7 @@ jobs:
         git clone https://github.com/coq/coq.git --branch=${COQ_VERSION}
         eval $(opam env)
         (cd coq && git log -1)
-        (cd coq && ./configure -prefix "$(pwd)/_install_ci" -warn-error yes -native-compiler no -coqide opt)
+        (cd coq && ./configure -prefix /usr/local/ -warn-error yes -native-compiler no -coqide opt)
         (cd coq && make -j "$NJOBS")
       env:
         NJOBS: "2"
