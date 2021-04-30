@@ -9,10 +9,9 @@ on:
 jobs:
   build:
 
-    runs-on: ubuntu-latest
-
     strategy:
       matrix:
+        os: ['ubuntu-latest']
         env:
         - { COQ_VERSION: "8.13.1", COQ_PACKAGE: "coq-8.13.1 libcoq-8.13.1-ocaml-dev", SKIP_BEDROCK2: "" , SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/many-coq-versions-ocaml-4-11" }
         - { COQ_VERSION: "8.13.1", COQ_PACKAGE: "coq-8.13.1 libcoq-8.13.1-ocaml-dev", SKIP_BEDROCK2: "" , SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/many-coq-versions-ocaml-4-08" }
@@ -29,7 +28,11 @@ jobs:
         - { COQ_VERSION: "v8.9"  , COQ_PACKAGE: "coq libcoq-ocaml-dev"              , SKIP_BEDROCK2: "1", SKIP_VALIDATE: "1", PPA: "ppa:jgross-h/coq-8.9-daily" }
         ghc: [ '8.8.1' ]
         cabal: [ '3.0' ]
+        include:
+        - env: { COQ_VERSION: "Ubuntu LTS", COQ_PACKAGE: "coq libcoq-ocaml-dev", SKIP_BEDROCK2: "1", SKIP_VALIDATE: "" , PPA: "" }
+          os: 'ubuntu-20.04'
 
+    runs-on: ${{ matrix.os }}
     env: ${{ matrix.env }}
 
     steps:
