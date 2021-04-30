@@ -216,7 +216,7 @@ Section WithParameters.
   Ltac translate_func_precondition_hammer :=
     lazymatch goal with
     | |- valid_func _ => assumption
-    | |- Wf.Compilers.expr.Wf3 _ => assumption
+    | |- API.Wf _ => assumption
     | |- @eq (list word.rep) _ _ => reflexivity
     | |- length [?p] = _ => reflexivity
     | |- forall _, ~ VarnameSet.varname_set_args _ _ =>
@@ -318,7 +318,7 @@ Section WithParameters.
     Context {res : API.Expr (type_listZ -> type_listZ -> type_listZ)}
             (res_valid :
                valid_func (res (fun _ : API.type => unit)))
-            (res_Wf3 : Wf.Compilers.expr.Wf3 res).
+            (res_Wf : API.Wf res).
     Context (xbounds ybounds outbounds : bounds)
             (op : F M_pos -> F M_pos -> F M_pos)
             (outbounds_tighter_than_max :
@@ -411,7 +411,7 @@ Section WithParameters.
     Context {res : API.Expr (type_listZ -> type_listZ)}
             (res_valid :
                valid_func (res (fun _ : API.type => unit)))
-            (res_Wf3 : Wf.Compilers.expr.Wf3 res).
+            (res_Wf : API.Wf res).
     Context (xbounds outbounds : bounds)
             (op : F M_pos -> F M_pos)
             (outbounds_tighter_than_max :
@@ -499,7 +499,7 @@ Section WithParameters.
     Context {res : API.Expr (type_listZ -> type_listZ)}
             (res_valid :
                valid_func (res (fun _ : API.type => unit)))
-            (res_Wf3 : Wf.Compilers.expr.Wf3 res).
+            (res_Wf : API.Wf res).
     Context (tight_bounds_tighter_than_max :
                list_Z_tighter_than tight_bounds (MaxBounds.max_bounds n))
             (tight_bounds_length : length tight_bounds = n)
@@ -588,7 +588,7 @@ Section WithParameters.
     Context {res : API.Expr (type_listZ -> type_listZ)}
             (res_valid :
                valid_func (res (fun _ : API.type => unit)))
-            (res_Wf3 : Wf.Compilers.expr.Wf3 res).
+            (res_Wf : API.Wf res).
     Context (byte_bounds_tighter_than_max :
                list_Z_tighter_than
                  byte_bounds (ByteBounds.byte_bounds n_bytes))

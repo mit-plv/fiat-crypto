@@ -1,7 +1,6 @@
 Require Import Coq.Lists.List.
 Require Import Coq.ZArith.ZArith.
 Require Import bedrock2.Syntax.
-Require Import Rewriter.Language.Wf.
 Require Import Crypto.Arithmetic.Core.
 Require Import Crypto.Spec.ModularArithmetic.
 Require Import Crypto.Arithmetic.ModularArithmeticTheorems.
@@ -23,7 +22,6 @@ Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Import ListNotations API.Compilers Types.Notations.
-Import Language.Wf.Compilers.
 
 Class unsaturated_solinas_ops
            {p : Types.parameters}
@@ -230,6 +228,13 @@ Section UnsaturatedSolinas.
 
   Ltac handle_side_conditions :=
     lazymatch goal with
+    | |- API.Wf (res ?op)
+      => generalize (res op), (res_eq op);
+         (* Kludge around auto being bad (COQBUG(https://github.com/coq/coq/issues/14190)) and eauto not respecting Hint Opaque *)
+         typeclasses eauto with wf_op_cache;
+         let e := lazymatch goal with | |- forall res, ?e = _ -> API.Wf _ => e end in
+         idtac "Warning: Falling back to manually proving pipeline well-formedness for" e;
+         PipelineTactics.prove_pipeline_wf ()
     | |- context [varname_gen] => rewrite varname_gen_is_default
     | |- context [Field.tight_bounds] => rewrite tight_bounds_eq
     | |- context [Field.loose_bounds] => rewrite loose_bounds_eq
@@ -262,7 +267,6 @@ Section UnsaturatedSolinas.
 
   Lemma mul_func_correct :
     valid_func (res mul_op _) ->
-    expr.Wf3 (res mul_op) ->
     forall functions,
       spec_of_mul (mul_func :: functions).
   Proof.
@@ -283,7 +287,6 @@ Section UnsaturatedSolinas.
 
   Lemma square_func_correct :
     valid_func (res square_op _) ->
-    expr.Wf3 (res square_op) ->
     forall functions,
       spec_of_square (square_func :: functions).
   Proof.
@@ -305,7 +308,6 @@ Section UnsaturatedSolinas.
 
   Lemma add_func_correct :
     valid_func (res add_op _) ->
-    expr.Wf3 (res add_op) ->
     forall functions,
       spec_of_add (add_func :: functions).
   Proof.
@@ -326,7 +328,6 @@ Section UnsaturatedSolinas.
 
   Lemma sub_func_correct :
     valid_func (res sub_op _) ->
-    expr.Wf3 (res sub_op) ->
     forall functions,
       spec_of_sub (sub_func :: functions).
   Proof.
@@ -348,7 +349,6 @@ Section UnsaturatedSolinas.
 
   Lemma opp_func_correct :
     valid_func (res opp_op _) ->
-    expr.Wf3 (res opp_op) ->
     forall functions,
       spec_of_opp (opp_func :: functions).
   Proof.
@@ -369,7 +369,6 @@ Section UnsaturatedSolinas.
 
   Lemma scmula24_func_correct :
     valid_func (res scmula24_op _) ->
-    expr.Wf3 (res scmula24_op) ->
     forall functions,
       spec_of_scmula24 (scmula24_func :: functions).
   Proof.
@@ -391,7 +390,6 @@ Section UnsaturatedSolinas.
 
   Lemma from_bytes_func_correct :
     valid_func (res from_bytes_op _) ->
-    expr.Wf3 (res from_bytes_op) ->
     forall functions,
       spec_of_from_bytes (from_bytes_func :: functions).
   Proof.
@@ -412,7 +410,6 @@ Section UnsaturatedSolinas.
 
   Lemma to_bytes_func_correct :
     valid_func (res to_bytes_op _) ->
-    expr.Wf3 (res to_bytes_op) ->
     forall functions,
       spec_of_to_bytes (to_bytes_func :: functions).
   Proof.
@@ -495,7 +492,6 @@ Local Ltac derive_bedrock2_func op :=
   | |- valid_func _ =>
     eapply valid_func_bool_iff;
     abstract vm_cast_no_check (eq_refl true)
-  | |- expr.Wf3 _ => abstract (prove_Wf3 ()) (* this abstract is slow, but if it is removed the slowness moves to Qed instead *)
   | |- _ = m _ _ => vm_compute; reflexivity
   | |- _ = default_varname_gen => vm_compute; reflexivity
   end.
