@@ -239,7 +239,7 @@ Module Compilers.
            | base.type.list _ => fun _ => ["#error ""complex list"";"]
            | base.type.option _ => fun _ => ["#error option;"]
            | base.type.unit => fun _ => ["#error unit;"]
-           | base.type.type_base t => fun _ => ["#error " ++ show false t ++ ";"]%string
+           | base.type.type_base t => fun _ => ["#error " ++ show t ++ ";"]%string
            end.
 
       Definition to_arg_list {language_naming_conventions : language_naming_conventions_opt} (prefix : string) {t} : var_data t -> list string
@@ -267,7 +267,7 @@ Module Compilers.
            | base.type.list _ => fun _ => ["#error ""complex list"";"]
            | base.type.option _ => fun _ => ["#error option;"]
            | base.type.unit => fun _ => ["#error unit;"]
-           | base.type.type_base t => fun _ => ["#error " ++ show false t ++ ";"]%string
+           | base.type.type_base t => fun _ => ["#error " ++ show t ++ ";"]%string
            end.
 
       Definition to_retarg_list {language_naming_conventions : language_naming_conventions_opt} (prefix : string) {t} : var_data t -> list string

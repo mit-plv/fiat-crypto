@@ -24,32 +24,37 @@ Global Existing Instances name_case_kind_Listable name_case_kind_FinitelyListabl
 
 (* M-x query-replace-regex RET \([^ ]+\) => _ RET \1 => "\1" *)
 Global Instance show_name_case_kind : Show name_case_kind
-  := fun with_parens v
+  := fun v
      => match v with
         | lower => "lower"
         | upper => "upper"
         end.
+Global Instance show_lvl_name_case_kind : ShowLevel name_case_kind := show_name_case_kind.
 
 Definition parse_name_case_kind_list : list (string * name_case_kind)
   := Eval vm_compute in
       List.map
-        (fun v => (show false v, v))
+        (fun v => (show v, v))
         (list_all name_case_kind).
 
 Global Instance show_word_case_data : Show word_case_data
-  := fun parens v
-     => ("{| first_letter_case := " ++ show false v.(first_letter_case))
-          ++ " ; rest_letters_case := " ++ show false v.(rest_letters_case) ++ " |}".
+  := fun v
+     => ("{| first_letter_case := " ++ show v.(first_letter_case))
+          ++ " ; rest_letters_case := " ++ show v.(rest_letters_case) ++ " |}".
+Global Instance show_lvl_word_case_data : ShowLevel word_case_data := show_word_case_data.
+
 Global Instance show_capitalization_data : Show capitalization_data
-  := fun parens v
-     => ("{| separator := " ++ show false v.(separator))
-          ++ (" ; first_word_case := " ++ show false v.(first_word_case))
-          ++ " ; rest_words_case := " ++ show false v.(rest_words_case) ++ " |}".
+  := fun v
+     => ("{| separator := " ++ show v.(separator))
+          ++ (" ; first_word_case := " ++ show v.(first_word_case))
+          ++ " ; rest_words_case := " ++ show v.(rest_words_case) ++ " |}".
+Global Instance show_lvl_capitalization_data : ShowLevel capitalization_data := show_capitalization_data.
 
 Global Instance show_capitalization_convention : Show capitalization_convention
-  := fun parens v
-     => ("{| capitalization_convention_data := " ++ show false v.(capitalization_convention_data))
-          ++ " ; only_lower_first_letters := " ++ show false v.(only_lower_first_letters) ++ " |}".
+  := fun v
+     => ("{| capitalization_convention_data := " ++ show v.(capitalization_convention_data))
+          ++ " ; only_lower_first_letters := " ++ show v.(only_lower_first_letters) ++ " |}".
+Global Instance show_lvl_capitalization_convention : ShowLevel capitalization_convention := show_capitalization_convention.
 
 Definition case_adjust_ascii (data : name_case_kind) : Ascii.ascii -> Ascii.ascii
   := match data with

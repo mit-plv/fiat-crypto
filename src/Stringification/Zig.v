@@ -170,7 +170,7 @@ Module Zig.
     | base.type.list _ => fun _ => ["@compilerError(""complex list"");"]
     | base.type.option _ => fun _ => ["@compilerError(""option"");"]
     | base.type.unit => fun _ => ["@compilerError(""unit"");"]
-    | base.type.type_base t => fun _ => ["@compilerError(""" ++ show false t ++ """);"]%string
+    | base.type.type_base t => fun _ => ["@compilerError(""" ++ show t ++ """);"]%string
     end%string.
 
   Definition to_arg_list {language_naming_conventions : language_naming_conventions_opt} (internal_private : bool) (prefix : string) (mode : Mode) {t} : var_data t -> list string :=

@@ -542,8 +542,8 @@ Section __.
                @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify n)
             (Some loose_bounds, tt)).
 
-  Definition seval (arg_name : string) (with_parens : bool) (* s for string *)
-    := show with_parens (invert_expr.smart_App_curried (reval _) (arg_name, tt)).
+  Definition seval (arg_name : string) (* s for string *)
+    := show (invert_expr.smart_App_curried (reval _) (arg_name, tt)).
 
   Definition rbytes_eval (* r for reified *)
     := Pipeline.RepeatRewriteAddAssocLeftAndFlattenThunkedRects
@@ -556,8 +556,8 @@ Section __.
                @ GallinaReify.Reify s)
             (prime_bytes_bounds, tt)).
 
-  Definition sbytes_eval (arg_name : string) (with_parens : bool) (* s for string *)
-    := show with_parens (invert_expr.smart_App_curried (rbytes_eval _) (arg_name, tt)).
+  Definition sbytes_eval (arg_name : string) (* s for string *)
+    := show (invert_expr.smart_App_curried (rbytes_eval _) (arg_name, tt)).
 
   Definition selectznz : Pipeline.ErrorT _ := Primitives.selectznz n machine_wordsize.
   Definition sselectznz (prefix : string)
@@ -825,10 +825,10 @@ Section __.
                      ; "Computed values:"]
                  ++ (List.map
                        (fun s => "  " ++ s)%string
-                       ((ToString.prefix_and_indent "carry_chain = " [show false idxs])
-                          ++ (ToString.prefix_and_indent "eval z = " [seval "z" false])
-                          ++ (ToString.prefix_and_indent "bytes_eval z = " [sbytes_eval "z" false])
-                          ++ (ToString.prefix_and_indent "balance = " [let show_Z := Hex.show_Z in show false balance])))))
+                       ((ToString.prefix_and_indent "carry_chain = " [show idxs])
+                          ++ (ToString.prefix_and_indent "eval z = " [seval "z"])
+                          ++ (ToString.prefix_and_indent "bytes_eval z = " [sbytes_eval "z"])
+                          ++ (ToString.prefix_and_indent "balance = " [let show_lvl_Z := Hex.show_lvl_Z in show balance])))))
            function_name_prefix requests.
   End for_stringification.
 End __.

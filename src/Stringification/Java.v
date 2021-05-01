@@ -242,7 +242,7 @@ Module Java.
     | base.type.list _ => fun _ => ["error_complex_list"]
     | base.type.option _ => fun _ => ["error_option"]
     | base.type.unit => fun _ => ["error_unit"]
-    | base.type.type_base t => fun _ => ["error_" ++ show false t]%string
+    | base.type.type_base t => fun _ => ["error_" ++ show t]%string
     end%string.
 
   Definition to_arg_list (prefix : string) (mode : Mode) {t} : var_data t -> list string :=

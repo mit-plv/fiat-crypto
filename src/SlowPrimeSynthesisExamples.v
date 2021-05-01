@@ -179,7 +179,6 @@ Module debugging_sat_solinas_25519.
 
     Time Redirect "log" Compute
          Show.show (* [show] for pretty-printing of the AST without needing lots of imports *)
-         false
          (Pipeline.BoundsPipelineToString
             "fiat" "mul"
             false (* subst01 *)
@@ -393,7 +392,6 @@ Module debugging_sat_solinas_25519_expanded.
     Time Redirect "log"
          Compute
          Show.show (* [show] for pretty-printing of the AST without needing lots of imports *)
-         false
          (Pipeline.BoundsPipelineToString
             "fiat" "mul"
             false (* subst01 *)
