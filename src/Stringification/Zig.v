@@ -22,8 +22,19 @@ Import Stringification.Language.Compilers.ToString.
 Import Stringification.Language.Compilers.ToString.int.Notations.
 
 Module Zig.
-  Definition comment_module_header_block := List.map (fun line => "/// " ++ line)%string.
+  Definition comment_module_header_block := List.map (fun line => "// " ++ line)%string.
   Definition comment_block := List.map (fun line => "// " ++ line)%string.
+
+  Definition header
+             {language_naming_conventions : language_naming_conventions_opt}
+             {package_namev : package_name_opt}
+             {class_namev : class_name_opt}
+             (machine_wordsize : Z) (internal_private : bool) (private : bool) (prefix : string) (infos : ToString.ident_infos)
+    : list string
+    := (["";
+         "const std = @import(""std"");";
+         "const cast = std.meta.cast;";
+         "const mode = std.builtin.mode; // Checked arithmetic is disabled in non-debug modes to avoid side channels"]%string)%list.
 
   (* Zig natively supports any integer size between 0 and 4096 bits.
      So, we never need to define our own types. *)
@@ -93,7 +104,7 @@ Module Zig.
        | (IR.Z_value_barrier ty @@@ args) =>
          special_name_ty "value_barrier" ty ++ "(" ++ arith_to_string internal_private prefix args ++ ")"
        | (IR.Z_static_cast int_t @@@ e) =>
-         "@intCast(" ++ primitive_type_to_string internal_private prefix IR.type.Z (Some int_t) ++ ", " ++ arith_to_string internal_private prefix e ++ ")"
+         "cast(" ++ primitive_type_to_string internal_private prefix IR.type.Z (Some int_t) ++ ", " ++ arith_to_string internal_private prefix e ++ ")"
        | IR.Var _ v => v
        | IR.Pair A B a b => arith_to_string internal_private prefix a ++ ", " ++ arith_to_string internal_private prefix b
        | (IR.Z_add_modulo @@@ (x1, x2, x3)) => "@compilerError(""addmodulo"");"
@@ -116,7 +127,7 @@ Module Zig.
     | IR.Call val => arith_to_string internal_private prefix val ++ ";"
     | IR.Assign true t sz name val =>
       (* local non-mutable declaration with initialization *)
-      "const " ++ name ++ ": " ++ primitive_type_to_string internal_private prefix t sz ++ " = " ++ arith_to_string internal_private prefix val ++ ";"
+      "const " ++ name ++ " = " ++ arith_to_string internal_private prefix val ++ ";"
     | IR.Assign false _ sz name val =>
     (* code : name ++ " = " ++ arith_to_string internal_private prefix val ++ ";" *)
       "@compilerError(""trying to assign value to non-mutable variable"");"
@@ -247,7 +258,7 @@ Module Zig.
     let '(args, rets, body) := f in
     ((if private then "fn " else "pub fn ") ++ name ++
       "(" ++ String.concat ", " (to_arg_list internal_private prefix Out rets ++ to_arg_list_for_each_lhs_of_arrow internal_private prefix args) ++
-      ")" ++ (if private then " callconv(.Inline) " else " ") ++ "void {")%string :: (List.map (fun s => "    " ++ s)%string (to_strings internal_private prefix body)) ++ ["}"%string]%list.
+      ")" ++ (if private then " callconv(.Inline) " else " ") ++ "void {")%string :: (["    @setRuntimeSafety(mode == .Debug);"; ""]%string)%list ++ (List.map (fun s => "    " ++ s)%string (to_strings internal_private prefix body)) ++ ["}"%string]%list.
 
   (** In Zig, there is no munging of return arguments (they remain
       passed by pointers), so all variables are live *)
@@ -289,7 +300,7 @@ Module Zig.
     {| ToString.comment_block := comment_block;
        ToString.comment_file_header_block := comment_module_header_block;
        ToString.ToFunctionLines := @ToFunctionLines;
-       ToString.header := fun _ _ _ _ _ _ _ _ => [];
+       ToString.header := @header;
        ToString.footer := fun _ _ _ _ _ _ _ _ => [];
        ToString.strip_special_infos machine_wordsize infos := infos |}.
 
