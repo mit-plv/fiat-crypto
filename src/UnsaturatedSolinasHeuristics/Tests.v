@@ -169,14 +169,14 @@ Time Definition balances
                                        let dif := map2 Z.sub bal tub in
                                        ((bw, n),
                                         ("balance:                                        ",
-                                         (let show_Z := PowersOfTwo.show_Z in show false bal),
-                                         (let show_Z := Hex.show_Z in show false bal)),
+                                         (let show_lvl_Z := PowersOfTwo.show_lvl_Z in show bal),
+                                         (let show_lvl_Z := Hex.show_lvl_Z in show bal)),
                                         ("tight_upperbounds:                              ",
-                                         (let show_Z := PowersOfTwo.show_Z in show false tub),
-                                         (let show_Z := Hex.show_Z in show false tub)),
+                                         (let show_lvl_Z := PowersOfTwo.show_lvl_Z in show tub),
+                                         (let show_lvl_Z := Hex.show_lvl_Z in show tub)),
                                         ("balance - tight_upperbounds:                    ",
-                                         (let show_Z := PowersOfTwo.show_Z in show false dif),
-                                         (let show_Z := Hex.show_Z in show false dif))))
+                                         (let show_lvl_Z := PowersOfTwo.show_lvl_Z in show dif),
+                                         (let show_lvl_Z := Hex.show_lvl_Z in show dif))))
                                    ns)
                              ls))
                       (parseZ_arith_to_taps p))

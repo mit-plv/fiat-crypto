@@ -243,7 +243,7 @@ Section __.
                   ++ ["";
                      "Computed values:";
                      "";
-                     "  # reductions = " ++ show false nreductions]%string)))
+                     "  # reductions = " ++ show nreductions]%string)))
            function_name_prefix requests.
   End for_stringification.
 End __.

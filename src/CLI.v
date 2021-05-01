@@ -192,7 +192,7 @@ Module ForExtraction.
                       | _, ErrorT.Error err, rest
                         => let in_name := ("In " ++ name ++ ":") in
                            let cur :=
-                               match show_lines false err with
+                               match show_lines err with
                                | [serr] => [in_name ++ " " ++ serr]
                                | serr => in_name::serr
                                end in
@@ -345,12 +345,12 @@ Module ForExtraction.
   Definition inbounds_multiplier_spec : named_argT
     := ([Arg.long_key "inbounds-multiplier"],
         Arg.String,
-        ["The (improper) fraction by which the bounds of each input limb are scaled (default: " ++ show false default_inbounds_multiplier ++ ")"]).
+        ["The (improper) fraction by which the bounds of each input limb are scaled (default: " ++ show default_inbounds_multiplier ++ ")"]).
   Definition default_outbounds_multiplier := 1.
   Definition outbounds_multiplier_spec : named_argT
     := ([Arg.long_key "outbounds-multiplier"],
         Arg.String,
-        ["The (improper) fraction by which the bounds of each output limb are scaled (default: " ++ show false default_outbounds_multiplier ++ ")"]).
+        ["The (improper) fraction by which the bounds of each output limb are scaled (default: " ++ show default_outbounds_multiplier ++ ")"]).
   Definition inbounds_spec : named_argT
     := ([Arg.long_key "inbounds"],
         Arg.String,
@@ -380,11 +380,11 @@ Module ForExtraction.
     := ([Arg.long_key "asm-reg"],
         Arg.Custom (parse_string_and parse_list_REG) "REG",
         ["A comma-separated list of registers to use for calling conventions.  Only relevant when --hints-file is specified."
-         ; "Defaults to the System V AMD64 ABI of " ++ String.concat "," (List.map (show false) default_assembly_calling_registers) ++ ".  Note that registers are first used for outputs and then inputs."]).
+         ; "Defaults to the System V AMD64 ABI of " ++ String.concat "," (List.map show default_assembly_calling_registers) ++ ".  Note that registers are first used for outputs and then inputs."]).
   Definition asm_stack_size_spec : named_argT
     := ([Arg.long_key "asm-stack-size"],
         Arg.Custom (parse_string_and parse_N) "ℕ",
-        ["The number of bytes of stack.  Only relevant when --hints-file is specified.  Default: " ++ show false (default_assembly_stack_size:N) ++ "."]).
+        ["The number of bytes of stack.  Only relevant when --hints-file is specified.  Default: " ++ show (default_assembly_stack_size:N) ++ "."]).
   Definition no_error_on_unused_asm_functions_spec : named_argT
     := ([Arg.long_key "no-error-on-unused-asm-functions"],
         Arg.Unit,
@@ -726,7 +726,7 @@ Module ForExtraction.
                          | _, _, Some cls
                            => "curve description (via class name): " ++ cls
                          end
-                       ; "machine_wordsize = " ++ show false (machine_wordsize:Z) ++ " (from """ ++ str_machine_wordsize ++ """)"]%string)
+                       ; "machine_wordsize = " ++ show (machine_wordsize:Z) ++ " (from """ ++ str_machine_wordsize ++ """)"]%string)
                   ++ show_lines_args args)%list in
            inl (Synthesize (snd args) header prefix).
 
@@ -841,8 +841,8 @@ Module ForExtraction.
              let '(str_tight_bounds_multiplier, tight_bounds_multiplier) := collapse_list_default ("", tight_bounds_multiplier_default) (List.map (@snd _ _) tight_bounds_multiplier) in
              let tight_bounds_multiplier : tight_upperbound_fraction_opt := tight_bounds_multiplier in
              match get_num_limbs s c machine_wordsize n, n with
-             | None, NumLimbs n => inr ["Internal error: get_num_limbs (on (" ++ PowersOfTwo.show_Z false s ++ ", " ++ show_c false c ++ ", " ++ show false (machine_wordsize:Z) ++ ", " ++ show false n ++ ")) returned None even though the argument was NumLimbs"]
-             | None, Auto idx => inr ["Invalid index " ++ show false idx ++ " when guessing the number of limbs for s-c = " ++ PowersOfTwo.show_Z false s ++ " - " ++ show_c false c ++ "; valid indices must index into the list " ++ show false (get_possible_limbs s c machine_wordsize) ++ "."]
+             | None, NumLimbs n => inr ["Internal error: get_num_limbs (on (" ++ PowersOfTwo.show_Z s ++ ", " ++ show_c c ++ ", " ++ show (machine_wordsize:Z) ++ ", " ++ show n ++ ")) returned None even though the argument was NumLimbs"]
+             | None, Auto idx => inr ["Invalid index " ++ show idx ++ " when guessing the number of limbs for s-c = " ++ PowersOfTwo.show_Z s ++ " - " ++ show_c c ++ "; valid indices must index into the list " ++ show (get_possible_limbs s c machine_wordsize) ++ "."]
              | Some n, _
                => inl
                     ((str_n, str_sc, str_tight_bounds_multiplier, show_requests),
@@ -853,9 +853,9 @@ Module ForExtraction.
             fun '((str_n, str_sc, str_tight_bounds_multiplier, show_requests),
                   (n, s, c, tight_bounds_multiplier, requests))
             => ["requested operations: " ++ show_requests;
-               "n = " ++ show false n ++ " (from """ ++ str_n ++ """)";
-               "s-c = " ++ PowersOfTwo.show_Z false s ++ " - " ++ show_c false c ++ " (from """ ++ str_sc ++ """)";
-               "tight_bounds_multiplier = " ++ show false (tight_bounds_multiplier:Q) ++ " (from """ ++ str_tight_bounds_multiplier ++ """)"]%string;
+               "n = " ++ show n ++ " (from """ ++ str_n ++ """)";
+               "s-c = " ++ PowersOfTwo.show_Z s ++ " - " ++ show_c c ++ " (from """ ++ str_sc ++ """)";
+               "tight_bounds_multiplier = " ++ show (tight_bounds_multiplier:Q) ++ " (from """ ++ str_tight_bounds_multiplier ++ """)"]%string;
 
           Synthesize
           := fun _ opts '(n, s, c, tight_bounds_multiplier, requests) comment_header prefix
@@ -890,7 +890,7 @@ Module ForExtraction.
             fun '((str_m, show_requests),
                   (m, requests))
             => ["requested operations: " ++ show_requests;
-               "m = " ++ Hex.show_Z false m ++ " (from """ ++ str_m ++ """)";
+               "m = " ++ Hex.show_Z m ++ " (from """ ++ str_m ++ """)";
                "                                                                  ";
                "NOTE: In addition to the bounds specified above each function, all";
                "  functions synthesized for this Montgomery arithmetic require the";
@@ -932,7 +932,7 @@ Module ForExtraction.
             fun '((str_sc, show_requests),
                   (s, c, requests))
             => ["requested operations: " ++ show_requests;
-               "s-c = " ++ PowersOfTwo.show_Z false s ++ " - " ++ show_c false c ++ " (from """ ++ str_sc ++ """)"];
+               "s-c = " ++ PowersOfTwo.show_Z s ++ " - " ++ show_c c ++ " (from """ ++ str_sc ++ """)"];
 
           Synthesize
           := fun _ opts '(s, c, requests) comment_header prefix
@@ -993,14 +993,14 @@ Module ForExtraction.
             fun '((str_src_n, str_sc, str_src_limbwidth, str_dst_limbwidth, str_inbounds_multiplier, str_outbounds_multiplier, use_bitwidth_in, use_bitwidth_out, str_inbounds, str_outbounds, show_requests),
                   (src_n, s, c, src_limbwidth, dst_limbwidth, inbounds_multiplier, outbounds_multiplier, inbounds, outbounds, requests))
             => ["requested operations: " ++ show_requests;
-               "src_n = " ++ show false src_n ++ " (from """ ++ str_src_n ++ """)";
-               "s-c = " ++ PowersOfTwo.show_Z false s ++ " - " ++ show_c false c ++ " (from """ ++ str_sc ++ """)";
-               "src_limbwidth = " ++ show false src_limbwidth ++ " (from """ ++ str_src_limbwidth ++ """)";
-               "dst_limbwidth = " ++ show false dst_limbwidth ++ " (from """ ++ str_dst_limbwidth ++ """)";
-               "inbounds_multiplier = " ++ show false inbounds_multiplier ++ " (from """ ++ str_inbounds_multiplier ++ """)";
-               "outbounds_multiplier = " ++ show false outbounds_multiplier ++ " (from """ ++ str_outbounds_multiplier ++ """)";
-               "inbounds = " ++ show false inbounds ++ " (from """ ++ str_inbounds ++ """ and use_bithwidth_in = " ++ show false use_bitwidth_in ++ ")";
-               "outbounds = " ++ show false outbounds ++ " (from """ ++ str_outbounds ++ """ and use_bithwidth_out = " ++ show false use_bitwidth_out ++ ")"];
+               "src_n = " ++ show src_n ++ " (from """ ++ str_src_n ++ """)";
+               "s-c = " ++ PowersOfTwo.show_Z s ++ " - " ++ show_c c ++ " (from """ ++ str_sc ++ """)";
+               "src_limbwidth = " ++ show src_limbwidth ++ " (from """ ++ str_src_limbwidth ++ """)";
+               "dst_limbwidth = " ++ show dst_limbwidth ++ " (from """ ++ str_dst_limbwidth ++ """)";
+               "inbounds_multiplier = " ++ show inbounds_multiplier ++ " (from """ ++ str_inbounds_multiplier ++ """)";
+               "outbounds_multiplier = " ++ show outbounds_multiplier ++ " (from """ ++ str_outbounds_multiplier ++ """)";
+               "inbounds = " ++ show inbounds ++ " (from """ ++ str_inbounds ++ """ and use_bithwidth_in = " ++ show use_bitwidth_in ++ ")";
+               "outbounds = " ++ show outbounds ++ " (from """ ++ str_outbounds ++ """ and use_bithwidth_out = " ++ show use_bitwidth_out ++ ")"];
 
           Synthesize
           := fun _ opts '(src_n, s, c, src_limbwidth, dst_limbwidth, inbounds_multiplier, outbounds_multiplier, inbounds, outbounds, requests) comment_header prefix

@@ -23,7 +23,7 @@ Global Existing Instances REG_Listable REG_FinitelyListable.
 
 (* M-x query-replace-regex RET \([^ ]+\) => _ RET \1 => "\1" *)
 Global Instance show_REG : Show REG
-  := fun with_parens reg
+  := fun reg
      => match reg with
         | rax => "rax"
         | rcx => "rcx"
@@ -94,6 +94,7 @@ Global Instance show_REG : Show REG
         | r14b => "r14b"
         | r15b => "r15b"
         end.
+Global Instance show_lvl_REG : ShowLevel REG := show_REG.
 
 Derive FLAG_Listable SuchThat (@FinitelyListable FLAG FLAG_Listable) As FLAG_FinitelyListable.
 Proof. prove_ListableDerive. Qed.
@@ -101,7 +102,7 @@ Global Existing Instances FLAG_Listable FLAG_FinitelyListable.
 
 (* M-x query-replace-regex RET \([^ ]+\) => _ RET \1 => "\1" *)
 Global Instance show_FLAG : Show FLAG
-  := fun with_parens flag
+  := fun flag
      => match flag with
         | CF => "CF"
         | PF => "PF"
@@ -110,6 +111,7 @@ Global Instance show_FLAG : Show FLAG
         | SF => "SF"
         | OF => "OF"
         end.
+Global Instance show_lvl_FLAG : ShowLevel FLAG := show_FLAG.
 
 Derive OpCode_Listable SuchThat (@FinitelyListable OpCode OpCode_Listable) As OpCode_FinitelyListable.
 Proof. prove_ListableDerive. Qed.
@@ -117,7 +119,7 @@ Global Existing Instances OpCode_Listable OpCode_FinitelyListable.
 
 (* M-x query-replace-regex RET \([^ ]+\) => _ RET \1 => "\1" *)
 Global Instance show_OpCode : Show OpCode
-  := fun with_parens opc
+  := fun opc
      => match opc with
         | adc => "adc"
         | adcx => "adcx"
@@ -145,11 +147,12 @@ Global Instance show_OpCode : Show OpCode
         | xchg => "xchg"
         | xor => "xor"
         end.
+Global Instance show_lvl_OpCode : ShowLevel OpCode := show_OpCode.
 
 Definition parse_REG_list : list (string * REG)
   := Eval vm_compute in
       List.map
-        (fun r => (show false r, r))
+        (fun r => (show r, r))
         (list_all REG).
 
 Definition parse_REG : ParserAction REG
@@ -158,7 +161,7 @@ Definition parse_REG : ParserAction REG
 Definition parse_FLAG_list : list (string * FLAG)
   := Eval vm_compute in
       List.map
-        (fun r => (show false r, r))
+        (fun r => (show r, r))
         (list_all FLAG).
 
 Definition parse_FLAG : ParserAction FLAG
@@ -196,7 +199,7 @@ Definition parse_ARG (const_keyword : bool) : ParserAction ARG
 Definition parse_OpCode_list : list (string * OpCode)
   := Eval vm_compute in
       List.map
-        (fun r => (show false r, r))
+        (fun r => (show r, r))
         (list_all OpCode).
 
 Definition parse_OpCode : ParserAction OpCode
@@ -259,64 +262,64 @@ Definition parse_Lines (l : list string) := parse_Lines' (String.split_newlines 
 
 Notation parse := parse_Lines (only parsing).
 
-Global Instance show_MEM : Show MEM
-  := fun with_parens m
-     => maybe_wrap_parens
-          with_parens
-          ((if m.(mem_is_byte) then "byte " else "")
-             ++ "[" ++ (show false m.(mem_reg))
-             ++ (match m.(mem_extra_reg) with
-                 | None => ""
-                 | Some r => " + " ++ show false r
-                 end)
-             ++ (match m.(mem_offset) with
-                 | None => ""
-                 | Some offset
-                   => (if offset <? 0 then " - " else " + ")
-                        ++ (let offset := Z.abs offset in
-                            if (Z.modulo offset 8 =? 0)%Z
-                            then "0x08 * " ++ Decimal.show_Z false (offset / 8)
-                            else Hex.show_Z false offset)
-                 end%Z)
-             ++ "]").
+Global Instance show_lvl_MEM : ShowLevel MEM
+  := fun m
+     => (if m.(mem_is_byte) then show_lvl_app (fun 'tt => "byte") else show_lvl)
+          (fun 'tt
+           => "[" ++ (show m.(mem_reg))
+                  ++ (match m.(mem_extra_reg) with
+                      | None => ""
+                      | Some r => " + " ++ show r
+                      end)
+                  ++ (match m.(mem_offset) with
+                      | None => ""
+                      | Some offset
+                        => (if offset <? 0 then " - " else " + ")
+                             ++ (let offset := Z.abs offset in
+                                 if (Z.modulo offset 8 =? 0)%Z
+                                 then "0x08 * " ++ Decimal.show_Z (offset / 8)
+                                 else Hex.show_Z offset)
+                      end%Z)
+                  ++ "]").
+Global Instance show_MEM : Show MEM := show_lvl_MEM.
 
-Global Instance show_ARG : Show ARG
-  := fun with_parens a
+Global Instance show_lvl_ARG : ShowLevel ARG
+  := fun a
      => match a with
-        | reg r => show with_parens r
-        | mem m => show with_parens m
-        | const c => show with_parens c
+        | reg r => show_lvl r
+        | mem m => show_lvl m
+        | const c => show_lvl c
         end.
+Global Instance show_ARG : Show ARG := show_lvl_ARG.
 
 Global Instance show_NormalInstruction : Show NormalInstruction
-  := fun with_parens i
-     => show false i.(op) ++ match i.(args) with
+  := fun i
+     => show i.(op) ++ match i.(args) with
                              | [] => ""
-                             | _ => " " ++ String.concat ", " (List.map (show false) i.(args))
-                             end.
+                             | _ => " " ++ String.concat ", " (List.map show i.(args))
+                       end.
 
 Global Instance show_RawLine : Show RawLine
-  := fun with_parens l
+  := fun l
      => match l with
         | SECTION name => "SECTION " ++ name
         | GLOBAL name => "GLOBAL " ++ name
         | LABEL name => name ++ ":"
         | EMPTY => ""
-        | INSTR instr => show with_parens instr
+        | INSTR instr => show instr
         end.
 
 Global Instance show_Line : Show Line
-  := fun with_parens l
-     => l.(indent) ++ show false l.(rawline) ++ l.(pre_comment_whitespace) ++ match l.(comment) with
-                                                                              | Some c => ";" ++ c
-                                                                              | None => ""
-                                                                              end.
-
+  := fun l
+     => l.(indent) ++ show l.(rawline) ++ l.(pre_comment_whitespace) ++ match l.(comment) with
+                                                                        | Some c => ";" ++ c
+                                                                        | None => ""
+                                                                        end.
 Global Instance show_lines_Lines : ShowLines Lines
-  := fun with_parens ls => List.map (show false) ls.
+  := fun ls => List.map show ls.
 
 Definition parse_correct_on (v : list string)
-  := forall res, parse v = Success res -> parse v = parse (show_lines false res).
+  := forall res, parse v = Success res -> parse v = parse (show_lines res).
 
 Inductive ParseError :=
 | Parse_error (msgs : list string)
@@ -332,58 +335,56 @@ Inductive ParseValidatedError :=
 Global Coercion Initial_parse_error : ParseError >-> ParseValidatedError.
 
 Global Instance show_lines_ParseError : ShowLines ParseError
-  := fun parens err => match err with
-                       | Parse_error err => err
-                       end.
-Global Instance show_ParseError : Show ParseError
-  := fun parens err => String.concat String.NewLine (show_lines parens err).
+  := fun err => match err with
+                | Parse_error err => err
+                end.
+Global Instance show_ParseError : Show ParseError := _.
 Global Instance show_lines_ParseValidatedError : ShowLines ParseValidatedError
-  := fun parens err => match err with
-                       | Initial_parse_error err
-                         => match show_lines parens err with
-                            | [] => ["Unknown error while parsing assembly"]
-                            | [err] => ["Error while parsing assembly: " ++ err]%string
-                            | lines => "Error while parsing assembly:" :: lines
-                            end
-                       | Reparse_error new_asm err
-                         => match show_lines parens err with
-                            | [] => ["Unknown error while reparsing assembly:"] ++ new_asm
-                            | [err] => (["Error while reparsing assembly: " ++ err
-                                         ; "New assembly being parsed:"]%string)
-                                         ++ new_asm
-                            | lines => ["Error while parsing assembly:"]
-                                         ++ lines
-                                         ++ [""]
-                                         ++ ["New assembly being parsed:"]
-                                         ++ new_asm
-                            end
-                       | Lengths_not_equal old_asm new_asm
-                         => ["Reparsing the assembly:"]
-                              ++ show_lines parens old_asm
-                              ++ [""]
-                              ++ ["Yielded non-equal assembly:"]
-                              ++ show_lines parens new_asm
-                              ++ [""]
-                              ++ (["The number of lines was not equal (" ++ show false (List.length old_asm) ++ " ≠ " ++ show false (List.length new_asm) ++ ")"]%string)
-                       | Lines_not_equal mismatched_lines
-                         => ["When reparsing assembly for validation, the following lines were not equal:"]
-                              ++ (List.flat_map (fun '(old, new) => ["- " ++ show false old; "+ " ++ show false new; ""]%string)
-                                                mismatched_lines)
-                       | Duplicate_labels nil
-                         => ["Internal error: Duplicate_labels []"]
-                       | Duplicate_labels [(name, count)]
-                         => ["Label occurs multiple times: " ++ name ++ " occurs " ++ show false count ++ " times"]%string
-                       | Duplicate_labels name_counts
-                         => ["Labels occurs multiple times:"]
-                              ++ List.map (fun '(name, count) => name ++ " occurs " ++ show false count ++ " times")%string name_counts
-                       end%list.
-Global Instance show_ParseValidatedError : Show ParseValidatedError
-  := fun parens err => String.concat String.NewLine (show_lines parens err).
+  := fun err => match err with
+                | Initial_parse_error err
+                  => match show_lines err with
+                     | [] => ["Unknown error while parsing assembly"]
+                     | [err] => ["Error while parsing assembly: " ++ err]%string
+                     | lines => "Error while parsing assembly:" :: lines
+                     end
+                | Reparse_error new_asm err
+                  => match show_lines err with
+                     | [] => ["Unknown error while reparsing assembly:"] ++ new_asm
+                     | [err] => (["Error while reparsing assembly: " ++ err
+                                  ; "New assembly being parsed:"]%string)
+                                  ++ new_asm
+                     | lines => ["Error while parsing assembly:"]
+                                  ++ lines
+                                  ++ [""]
+                                  ++ ["New assembly being parsed:"]
+                                  ++ new_asm
+                     end
+                | Lengths_not_equal old_asm new_asm
+                  => ["Reparsing the assembly:"]
+                       ++ show_lines old_asm
+                       ++ [""]
+                       ++ ["Yielded non-equal assembly:"]
+                       ++ show_lines new_asm
+                       ++ [""]
+                       ++ (["The number of lines was not equal (" ++ show (List.length old_asm) ++ " ≠ " ++ show (List.length new_asm) ++ ")"]%string)
+                | Lines_not_equal mismatched_lines
+                  => ["When reparsing assembly for validation, the following lines were not equal:"]
+                       ++ (List.flat_map (fun '(old, new) => ["- " ++ show old; "+ " ++ show new; ""]%string)
+                                         mismatched_lines)
+                | Duplicate_labels nil
+                  => ["Internal error: Duplicate_labels []"]
+                | Duplicate_labels [(name, count)]
+                  => ["Label occurs multiple times: " ++ name ++ " occurs " ++ show count ++ " times"]%string
+                | Duplicate_labels name_counts
+                  => ["Labels occurs multiple times:"]
+                       ++ List.map (fun '(name, count) => name ++ " occurs " ++ show count ++ " times")%string name_counts
+                end%list.
+Global Instance show_ParseValidatedError : Show ParseValidatedError := _.
 
 Definition parse_validated (v : list string) : ErrorT ParseValidatedError Lines
   := match parse v with
      | Success v
-       => let new_asm := show_lines false v in
+       => let new_asm := show_lines v in
           match parse new_asm with
           | Success v'
             => let labels := Option.List.map (fun l => match l.(rawline) with
@@ -422,7 +423,7 @@ Lemma parse_validated_correct_on_iff v : parse_validated_correct_on v <-> parse_
 Proof.
   cbv [parse_validated_correct_on parse_correct_on parse_validated].
   destruct (parse_Lines v) eqn:Hp; [ | split; [ congruence | split; congruence ] ].
-  destruct (parse_Lines (show_lines false _)) eqn:Hp2; (split; [ intros H res Hres; inversion Hres; subst | intro H; specialize (H _ eq_refl); rewrite <- H in Hp2; inversion Hp2; subst ]); rewrite ?Nat.eqb_refl, ?combine_same; try congruence.
+  destruct (parse_Lines (show_lines _)) eqn:Hp2; (split; [ intros H res Hres; inversion Hres; subst | intro H; specialize (H _ eq_refl); rewrite <- H in Hp2; inversion Hp2; subst ]); rewrite ?Nat.eqb_refl, ?combine_same; try congruence.
   all: repeat first [ progress destruct_head' iff
                     | congruence
                     | progress subst
@@ -451,7 +452,7 @@ Abort.
 (* This version allows for easier debugging because it highlights the differences *)
 Definition parse_correct_on_debug (v : list string)
   := match parse v with
-     | Success v => match parse (show_lines false v) with
+     | Success v => match parse (show_lines v) with
                     | Success v'
                       => if (List.length v =? List.length v')%nat
                          then List.filter (fun '(x, y) => negb (Line_beq x y)) (List.combine v v') = nil

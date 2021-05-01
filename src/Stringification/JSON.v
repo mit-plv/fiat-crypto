@@ -185,7 +185,7 @@ Module JSON.
   Local Notation quote_string s := ("""" ++ s ++ """")%string (only parsing).
 
   Fixpoint to_base_arg_list {t} : base_var_data t -> Compilers.ZRange.type.base.option.interp t -> list (string * string * (string * string))
-    := let show_Z s := quote_string (Hex.show_Z false s) in
+    := let show_Z s := quote_string (Hex.show_Z s) in
        let opt_to_json T f (b : option T) :=
            match b with
            | None => (None_object, None_object)
@@ -214,7 +214,7 @@ Module JSON.
        | base.type.list _ => fun _ _ => [("#error ""complex list""", "", (None_object, None_object))]
        | base.type.option _ => fun _ _ => [("#error option", "", (None_object, None_object))]
        | base.type.unit => fun _ _ => [("#error unit", "", (None_object, None_object))]
-       | base.type.type_base t => fun _ _ => [("#error " ++ show false t, "", (None_object, None_object))]
+       | base.type.type_base t => fun _ _ => [("#error " ++ show t, "", (None_object, None_object))]
        end%string.
 
   Definition to_arg_list {t} : var_data t -> Compilers.ZRange.type.option.interp t -> list (string * string * (string * string)) :=

@@ -67,11 +67,11 @@ Local Opaque
 Inductive bounds := exactly (_ : list Z) | use_prime | use_bitwidth.
 
 Global Instance show_bounds : Show bounds
-  := fun with_parens v
+  := fun v
      => match v with
         | use_prime => "use_prime"
         | use_bitwidth => "use_bitwidth"
-        | exactly l => @show_list _ PowersOfTwo.show_Z with_parens l
+        | exactly l => @show_list _ PowersOfTwo.show_Z l
         end%string.
 
 Definition default_bounds : bounds := use_prime.
@@ -290,7 +290,7 @@ Section __.
         FromPipelineToString
           machine_wordsize prefix "convert_bases" convert_bases
           (docstring_with_summary_from_lemma!
-             (fun fname : string => [text_before_function_name ++ fname ++ " converts a field element from base " ++ Decimal.show_Q false src_limbwidth ++ " to base " ++ Decimal.show_Q false dst_limbwidth ++ " in little-endian order."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " converts a field element from base " ++ Decimal.show_Q src_limbwidth ++ " to base " ++ Decimal.show_Q dst_limbwidth ++ " in little-endian order."]%string)
              (convert_bases_correct src_weight dst_weight src_n dst_n in_bounds)).
 
   Local Ltac solve_extra_bounds_side_conditions :=
@@ -357,7 +357,7 @@ Section __.
                (comment_header
                   ++ ["";
                      "Computed values:";
-                     "  dst_n = " ++ show false dst_n]%string)))
+                     "  dst_n = " ++ show dst_n]%string)))
            function_name_prefix requests.
   End for_stringification.
 End __.
