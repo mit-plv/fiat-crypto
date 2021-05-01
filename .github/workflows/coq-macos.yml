@@ -38,7 +38,6 @@ jobs:
         COMPILER: "4.11.1"
         FINDLIB_VER: ".1.8.1"
         OPAMYES: "true"
-        MACOSX_DEPLOYMENT_TARGET: "10.11"
 
     - name: Build Coq
       run: |
@@ -47,7 +46,7 @@ jobs:
         eval $(opam env)
         (cd coq && git log -1)
         (cd coq && ./configure -prefix /usr/local/ -warn-error yes -native-compiler no -coqide opt)
-        (cd coq && make -j "$NJOBS")
+        (cd coq && make -j "$NJOBS" && dune build coq-core.install)
 
     - name: Install Coq
       run: |
