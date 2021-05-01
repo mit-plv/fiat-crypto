@@ -221,7 +221,12 @@ Module Zig.
               get_Zcast_down_if_needed desired_type (Some ty),
               (** always cast to the width of the type, unless we are already exactly that type (which the machinery in IR handles *)
               Some ty)
-          | Z_bneg
+          | IR.Z_value_barrier ty
+            => (
+              get_Zcast_down_if_needed desired_type (Some ty),
+              (** always cast to the width of the type, unless we are already exactly that type (which the machinery in IR handles *)
+              Some ty)
+          | IR.Z_bneg
             => ((* bneg is !, i.e., takes the argument to 1 if its not zero, and to zero if it is zero; so we don't ever need to cast *)
               None, None)
           end.
