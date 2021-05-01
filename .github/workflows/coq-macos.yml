@@ -38,7 +38,7 @@ jobs:
         COMPILER: "4.11.1"
         FINDLIB_VER: ".1.8.1"
         OPAMYES: "true"
-        NJOBS: "2"
+        MACOSX_DEPLOYMENT_TARGET: "10.11"
 
     - name: Build Coq
       run: |
@@ -48,8 +48,6 @@ jobs:
         (cd coq && git log -1)
         (cd coq && ./configure -prefix /usr/local/ -warn-error yes -native-compiler no -coqide opt)
         (cd coq && make -j "$NJOBS")
-      env:
-        NJOBS: "2"
 
     - name: Install Coq
       run: |
