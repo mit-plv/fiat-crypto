@@ -42,7 +42,7 @@ Definition and_reified_Prop (x y : reified_Prop) : reified_Prop
 Definition or_reified_Prop (x y : reified_Prop) : reified_Prop
   := match x, y with
      | rTrue, _
-     | -, rTrue
+     | _, rTrue
        => rTrue
      | rFalse, x
      | x, rFalse
