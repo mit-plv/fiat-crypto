@@ -33,9 +33,9 @@ jobs:
         ocaml-version: 4.11.1
     - name: Install Coq
       run: |
-        C:\tools\cygwin\bin\bash.exe -l -c 'eval $(opam env) && opam install opam-depext'
-        C:\tools\cygwin\bin\bash.exe -l -c 'eval $(opam env) && opam-depext coq'
-        C:\tools\cygwin\bin\bash.exe -l -c 'eval $(opam env) && opam pin add coq ${COQ_VERSION}'
+        opam install opam-depext
+        opam-depext coq
+        opam pin add coq %COQ_VERSION%
       env:
         OPAMYES: "true"
       shell: cmd
@@ -55,32 +55,32 @@ jobs:
         C:\tools\cygwin\bin\bash.exe -l -c 'git config --global -l'
         ECHO ::endgroup::
         ECHO ::group::opam list
-        C:\tools\cygwin\bin\bash.exe -l -c 'eval $(opam env) && opam list'
+        C:\tools\cygwin\bin\bash.exe -l -c 'eval $(opam env); opam list'
         ECHO ::endgroup::
         ECHO ::group::ocamlc -config
-        C:\tools\cygwin\bin\bash.exe -l -c 'eval $(opam env) && ocamlc -config'
+        C:\tools\cygwin\bin\bash.exe -l -c 'eval $(opam env); ocamlc -config'
         ECHO ::endgroup::
         ECHO ::group::coqc --config
-        C:\tools\cygwin\bin\bash.exe -l -c 'eval $(opam env) && coqc --config'
+        C:\tools\cygwin\bin\bash.exe -l -c 'eval $(opam env); coqc --config'
         ECHO ::endgroup::
         ECHO ::group::coqc --version
-        C:\tools\cygwin\bin\bash.exe -l -c 'eval $(opam env) && coqc --version'
+        C:\tools\cygwin\bin\bash.exe -l -c 'eval $(opam env); coqc --version'
         ECHO ::endgroup::
         ECHO ::group::coqtop version
-        true | C:\tools\cygwin\bin\bash.exe -l -c 'eval $(opam env) && coqtop'
+        true | C:\tools\cygwin\bin\bash.exe -l -c 'eval $(opam env); coqtop'
         ECHO ::endgroup::
         ECHO ::group::make printenv
-        C:\tools\cygwin\bin\bash.exe -l -c 'cd "%cd%"; eval $(opam env) && make printenv'
+        C:\tools\cygwin\bin\bash.exe -l -c 'cd "%cd%"; eval $(opam env); make printenv'
         ECHO ::endgroup::
         ECHO ::group::PATH
         C:\tools\cygwin\bin\bash.exe -l -c 'cd "%cd%"; echo "${PATH}"'
         ECHO ::endgroup::
       shell: cmd
     - name: deps
-      run: C:\tools\cygwin\bin\bash.exe -l -c 'cd "%cd%"; eval $(opam env) && etc/ci/github-actions-make.sh -j%NJOBS% deps'
+      run: C:\tools\cygwin\bin\bash.exe -l -c 'cd "%cd%"; eval $(opam env); etc/ci/github-actions-make.sh -j%NJOBS% deps'
       shell: cmd
     - name: all
-      run: C:\tools\cygwin\bin\bash.exe -l -c 'cd "%cd%"; eval $(opam env) && etc/ci/github-actions-make.sh -j%NJOBS% all'
+      run: C:\tools\cygwin\bin\bash.exe -l -c 'cd "%cd%"; eval $(opam env); etc/ci/github-actions-make.sh -j%NJOBS% all'
       shell: cmd
     - name: upload OCaml files
       uses: actions/upload-artifact@v1
@@ -100,6 +100,6 @@ jobs:
 #        path: .
 #      if: always ()
     - name: validate
-      run: C:\tools\cygwin\bin\bash.exe -l -c 'cd "%cd%"; eval $(opam env) && make TIMED=1 validate COQCHKFLAGS="-o"'
+      run: C:\tools\cygwin\bin\bash.exe -l -c 'cd "%cd%"; eval $(opam env); make TIMED=1 validate COQCHKFLAGS="-o"'
       shell: cmd
       if: github.event_name != 'pull_request'
