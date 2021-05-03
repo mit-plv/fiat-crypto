@@ -404,7 +404,7 @@ Ltac change_with_computed_func ops :=
 
 Ltac prove_correctness ops m machine_wordsize :=
   assert (WordByWordMontgomery.check_args
-            m machine_wordsize (ErrorT.Success tt) =
+            m machine_wordsize [] (ErrorT.Success tt) =
           ErrorT.Success tt) by abstract (native_compute; reflexivity);
   lazymatch goal with
     | |- bedrock2_wbwmontgomery_correctness => econstructor end;

@@ -62,33 +62,33 @@ Local Infix "*" := sep : sep_scope.
 Ltac apply_correctness_in H :=
   match type of H with
   | context [WordByWordMontgomery.mul] =>
-    apply WordByWordMontgomery.mul_correct in H
+    eapply WordByWordMontgomery.mul_correct in H
   | context [WordByWordMontgomery.square] =>
-    apply WordByWordMontgomery.square_correct in H
+    eapply WordByWordMontgomery.square_correct in H
   | context [WordByWordMontgomery.add] =>
-    apply WordByWordMontgomery.add_correct in H
+    eapply WordByWordMontgomery.add_correct in H
   | context [WordByWordMontgomery.sub] =>
-    apply WordByWordMontgomery.sub_correct in H
+    eapply WordByWordMontgomery.sub_correct in H
   | context [WordByWordMontgomery.opp] =>
-    apply WordByWordMontgomery.opp_correct in H
+    eapply WordByWordMontgomery.opp_correct in H
   | context [WordByWordMontgomery.to_montgomery] =>
-    apply WordByWordMontgomery.to_montgomery_correct in H
+    eapply WordByWordMontgomery.to_montgomery_correct in H
   | context [WordByWordMontgomery.from_montgomery] =>
-    apply WordByWordMontgomery.from_montgomery_correct in H
+    eapply WordByWordMontgomery.from_montgomery_correct in H
   | context [WordByWordMontgomery.nonzero] =>
-    apply WordByWordMontgomery.nonzero_correct in H
+    eapply WordByWordMontgomery.nonzero_correct in H
   | context [WordByWordMontgomery.selectznz] =>
     eapply Primitives.selectznz_correct in H
   | context [WordByWordMontgomery.to_bytes] =>
-    apply WordByWordMontgomery.to_bytes_correct in H
+    eapply WordByWordMontgomery.to_bytes_correct in H
   | context [WordByWordMontgomery.from_bytes] =>
-    apply WordByWordMontgomery.from_bytes_correct in H
+    eapply WordByWordMontgomery.from_bytes_correct in H
   | context [WordByWordMontgomery.encode] =>
-    apply WordByWordMontgomery.encode_correct in H
+    eapply WordByWordMontgomery.encode_correct in H
   | context [WordByWordMontgomery.zero] =>
-    apply WordByWordMontgomery.zero_correct in H
+    eapply WordByWordMontgomery.zero_correct in H
   | context [WordByWordMontgomery.one] =>
-    apply WordByWordMontgomery.one_correct in H
+    eapply WordByWordMontgomery.one_correct in H
   end.
 
 Section __.
@@ -164,7 +164,7 @@ Section __.
               t inbounds insizes outsizes inlengths outlengths)
     with (pipeline_out:=out)
          (check_args_ok:=
-            check_args m machine_wordsize (ErrorT.Success tt)
+            check_args m machine_wordsize [] (ErrorT.Success tt)
             = ErrorT.Success tt).
 
   Definition mul
@@ -568,16 +568,16 @@ Section __.
     Proof. eapply byte_bounds_range_iff. Qed.
 
     Lemma valid_bounded_by_prime_bounds x :
-      (check_args m Semantics.width (ErrorT.Success tt)
+      (check_args m Semantics.width [] (ErrorT.Success tt)
        = ErrorT.Success tt) ->
       WordByWordMontgomery.valid Semantics.width n m x ->
       list_Z_bounded_by prime_bounds_value x.
     Proof.
-      intros; apply bounded_by_prime_bounds_of_valid; auto.
+      intros; unshelve eapply bounded_by_prime_bounds_of_valid; eauto.
     Qed.
 
     Lemma valid_bounded_by_prime_bytes_bounds x :
-      (check_args m Semantics.width (ErrorT.Success tt)
+      (check_args m Semantics.width [] (ErrorT.Success tt)
        = ErrorT.Success tt) ->
       WordByWordMontgomery.valid 8 n_bytes m x ->
       list_Z_bounded_by prime_bytes_bounds_value x.
@@ -721,7 +721,7 @@ Section __.
       | setup_lists_reserved; solve_lists_reserved out_ptrs ].
 
     Context (check_args_ok :
-               check_args m Semantics.width (ErrorT.Success tt)
+               check_args m Semantics.width [] (ErrorT.Success tt)
                = ErrorT.Success tt).
 
     Lemma mul_correct name :

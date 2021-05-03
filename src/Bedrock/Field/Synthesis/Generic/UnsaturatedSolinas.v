@@ -61,32 +61,35 @@ Local Infix "*" := sep : sep_scope.
 Ltac apply_correctness_in H :=
   match type of H with
   | context [UnsaturatedSolinas.carry_mul] =>
-    apply UnsaturatedSolinas.carry_mul_correct in H
+    eapply UnsaturatedSolinas.carry_mul_correct in H
   | context [UnsaturatedSolinas.carry_square] =>
-    apply UnsaturatedSolinas.carry_square_correct in H
+    eapply UnsaturatedSolinas.carry_square_correct in H
   | context [UnsaturatedSolinas.carry] =>
-    apply UnsaturatedSolinas.carry_correct in H
+    eapply UnsaturatedSolinas.carry_correct in H
   | context [UnsaturatedSolinas.add] =>
-    apply UnsaturatedSolinas.add_correct in H
+    eapply UnsaturatedSolinas.add_correct in H
   | context [UnsaturatedSolinas.sub] =>
-    apply UnsaturatedSolinas.sub_correct in H
+    eapply UnsaturatedSolinas.sub_correct in H
   | context [UnsaturatedSolinas.opp] =>
-    apply UnsaturatedSolinas.opp_correct in H
+    eapply UnsaturatedSolinas.opp_correct in H
   | context [UnsaturatedSolinas.selectznz] =>
     eapply Primitives.selectznz_correct in H
   | context [UnsaturatedSolinas.to_bytes] =>
-    apply UnsaturatedSolinas.to_bytes_correct in H
+    eapply UnsaturatedSolinas.to_bytes_correct in H
   | context [UnsaturatedSolinas.from_bytes] =>
-    apply UnsaturatedSolinas.from_bytes_correct in H
+    eapply UnsaturatedSolinas.from_bytes_correct in H
   | context [UnsaturatedSolinas.carry_scmul_const] =>
-    apply UnsaturatedSolinas.carry_scmul_const_correct in H
+    eapply UnsaturatedSolinas.carry_scmul_const_correct in H
   | context [UnsaturatedSolinas.encode] =>
-    apply UnsaturatedSolinas.encode_correct in H
+    eapply UnsaturatedSolinas.encode_correct in H
   | context [UnsaturatedSolinas.zero] =>
-    apply UnsaturatedSolinas.zero_correct in H
+    eapply UnsaturatedSolinas.zero_correct in H
   | context [UnsaturatedSolinas.one] =>
-    apply UnsaturatedSolinas.one_correct in H
+    eapply UnsaturatedSolinas.one_correct in H
   end.
+
+(** We need to tell [check_args] that we are requesting these functions in order to get the relevant properties out *)
+Notation necessary_requests := ["to_bytes"; "from_bytes"]%string (only parsing).
 
 Section __.
   Context {p : Types.parameters}
@@ -145,7 +148,7 @@ Section __.
     intros;
     let Hcorrect :=
         lazymatch goal with H : _ = ErrorT.Success _ |- _ => H end in
-    apply_correctness_in Hcorrect; [ | eassumption .. ];
+    apply_correctness_in Hcorrect; [ | eassumption + refine (eq_refl true) .. ];
     fold weight in *; specialize_to_args Hcorrect;
     postcondition_from_correctness.
 
@@ -161,7 +164,7 @@ Section __.
               t inbounds insizes outsizes inlengths outlengths)
     with (pipeline_out:=out)
          (check_args_ok:=
-            check_args n s c machine_wordsize (ErrorT.Success tt)
+            check_args n s c machine_wordsize necessary_requests (ErrorT.Success tt)
             = ErrorT.Success tt).
 
   Definition carry_mul
@@ -631,7 +634,7 @@ Section __.
       | setup_lists_reserved; solve_lists_reserved out_ptrs ].
 
     Context (check_args_ok :
-               check_args n s c Semantics.width (ErrorT.Success tt)
+               check_args n s c Semantics.width necessary_requests (ErrorT.Success tt)
                = ErrorT.Success tt).
 
     Lemma carry_mul_correct name :

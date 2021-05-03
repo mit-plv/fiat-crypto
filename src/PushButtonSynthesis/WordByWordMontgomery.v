@@ -193,53 +193,37 @@ Section __.
 
   (** Note: If you change the name or type signature of this
         function, you will need to update the code in CLI.v *)
-  Definition check_args {T} (res : Pipeline.ErrorT T)
+  Definition check_args {T} (requests : list string) (res : Pipeline.ErrorT T)
     : Pipeline.ErrorT T
-    := fold_right
-         (fun '(b, e) k => if b:bool then Error e else k)
-         res
-         [(negb (1 <? machine_wordsize)%Z, Pipeline.Value_not_ltZ "machine_wordsize <= 1" 1 machine_wordsize);
-            ((negb (0 <? c)%Z, Pipeline.Value_not_ltZ "c ≤ 0" 0 c));
-            ((negb (1 <? m))%Z, Pipeline.Value_not_ltZ "m ≤ 1" 1 m);
-            ((n =? 0)%nat, Pipeline.Values_not_provably_distinctZ "n = 0" n 0%nat);
-            ((r' =? 0)%Z, Pipeline.No_modular_inverse "r⁻¹ mod m" r m);
-            (negb ((r * r') mod m =? 1)%Z, Pipeline.Values_not_provably_equalZ "(r * r') mod m ≠ 1" ((r * r') mod m) 1);
-            (negb ((m * m') mod r =? (-1) mod r)%Z, Pipeline.Values_not_provably_equalZ "(m * m') mod r ≠ (-1) mod r" ((m * m') mod r) ((-1) mod r));
-            (negb (s <=? r^n), Pipeline.Value_not_leZ "r^n ≤ s" s (r^n));
-            (negb (s <=? uweight machine_wordsize n), Pipeline.Value_not_leZ "weight n < s (needed for from_bytes)" s (uweight machine_wordsize n));
-            (negb (s <=? uweight 8 n_bytes), Pipeline.Value_not_leZ "bytes_weight n_bytes < s (needed for from_bytes)" s (uweight 8 n_bytes))].
+    := check_args_of_list
+         (List.map
+            (fun v => (true, v))
+            [((1 <? machine_wordsize)%Z, Pipeline.Value_not_ltZ "machine_wordsize <= 1" 1 machine_wordsize)
+             ; ((0 <? c)%Z, Pipeline.Value_not_ltZ "c ≤ 0" 0 c)
+             ; ((1 <? m)%Z, Pipeline.Value_not_ltZ "m ≤ 1" 1 m)
+             ; (negb (n =? 0)%nat, Pipeline.Values_not_provably_distinctZ "n = 0" n 0%nat)
+             ; (negb (r' =? 0)%Z, Pipeline.No_modular_inverse "r⁻¹ mod m" r m)
+             ; (((r * r') mod m =? 1)%Z, Pipeline.Values_not_provably_equalZ "(r * r') mod m ≠ 1" ((r * r') mod m) 1)
+             ; (((m * m') mod r =? (-1) mod r)%Z, Pipeline.Values_not_provably_equalZ "(m * m') mod r ≠ (-1) mod r" ((m * m') mod r) ((-1) mod r))
+             ; (s <=? r^n, Pipeline.Value_not_leZ "r^n ≤ s" s (r^n))
+             ; (s <=? uweight machine_wordsize n, Pipeline.Value_not_leZ "weight n < s (needed for from_bytes)" s (uweight machine_wordsize n))
+             ; (s <=? uweight 8 n_bytes, Pipeline.Value_not_leZ "bytes_weight n_bytes < s (needed for from_bytes)" s (uweight 8 n_bytes))
+         ])
+         res.
 
   Local Arguments Z.mul !_ !_.
-  Local Ltac prepare_use_curve_good _ :=
-    let curve_good := lazymatch goal with | curve_good : check_args _ = Success _ |- _ => curve_good end in
-    clear -curve_good;
-    cbv [check_args] in curve_good |- *;
-    cbn [fold_right] in curve_good |- *;
-    repeat first [ match goal with
-                   | [ H : context[match ?b with true => _ | false => _ end ] |- _ ] => destruct b eqn:?
-                   end
-                 | discriminate
-                 | progress Reflect.reflect_hyps
-                 | assumption
-                 | apply conj
-                 | progress destruct_head'_and ].
 
   Local Ltac use_curve_good_t :=
-    repeat first [ assumption
-                 | progress rewrite ?map_length, ?Z.mul_0_r, ?Pos.mul_1_r, ?Z.mul_1_r in *
-                 | reflexivity
+    repeat first [ use_requests_to_prove_curve_good_t_step
+                 | assumption
                  | lia
-                 | rewrite expr.interp_reify_list, ?map_map
-                 | rewrite map_ext with (g:=id), map_id
+                 | progress autorewrite with distr_length
                  | progress distr_length
-                 | progress cbv [Qceiling Qfloor Qopp Qdiv Qplus inject_Z Qmult Qinv] in *
-                 | progress cbv [Qle] in *
-                 | progress cbn -[reify_list] in *
-                 | progress intros
                  | solve [ auto with zarith ]
                  | rewrite Z.log2_pow2 by use_curve_good_t ].
 
-  Context (curve_good : check_args (Success tt) = Success tt).
+  Context (requests : list string)
+          (curve_good : check_args requests (Success tt) = Success tt).
 
   Lemma use_curve_good
     : Z.pos (Z.to_pos m) = m

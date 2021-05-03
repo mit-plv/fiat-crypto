@@ -33,6 +33,7 @@ Require Import Crypto.BoundsPipeline.
 Require Import Crypto.COperationSpecifications.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.
 Require Import Crypto.Util.Strings.Show.
+Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Crypto.Assembly.Parse.
 Require Import Crypto.Assembly.Equivalence.
 Import ListNotations.
@@ -170,19 +171,71 @@ Notation FromPipelineToString machine_wordsize prefix name result
 Notation FromPipelineToInternalString machine_wordsize prefix name result
   := (Pipeline.FromPipelineToInternalString machine_wordsize prefix name result).
 
+(** Some utilities for defining [check_args] *)
+Definition request_present (requests : list string) (request : string) : bool
+  := List.existsb (String.eqb request) requests.
+(** [None] means that the condition should hold regardless of what requests were made *)
+Definition any_request_present (requests : list string) (search_for : option (list string)) : bool
+  := match search_for with
+     | None => true
+     | Some search_for => List.existsb (request_present requests) search_for
+     end.
+(** Turns a list of [(precondition : bool, (check : bool, error))]
+    into a [check_args] function.  The [precondition] is something
+    like "this function was requested" or "this option was passed". *)
+Definition check_args_of_list (check_args_descr : list (bool * (bool * Pipeline.ErrorMessage)))
+           {T} (res : Pipeline.ErrorT T)
+  : Pipeline.ErrorT T
+  := fold_right
+       (fun '(precondition, (b, e)) k => if implb precondition b then k else Error e)
+       res
+       check_args_descr.
+
+Ltac prepare_use_curve_good _ :=
+  let curve_good := lazymatch goal with | curve_good : ?check_args (Success tt) = Success tt |- _ => curve_good end in
+  let requests := lazymatch type of curve_good with ?check_args ?requests _ = Success _ => requests end in
+  revert dependent requests; clear; intros;
+  lazymatch type of curve_good with
+  | ?check = Success ?v => let check' := (eval hnf in check) in change (check' = Success v) in curve_good
+  end;
+  cbv [check_args_of_list] in *;
+  cbn [List.fold_right List.map List.app] in *;
+  cbv [any_request_present] in *;
+  cbn [List.existsb] in *;
+  repeat first [ progress cbv beta iota in *
+               | progress cbn [andb orb implb] in *
+               | discriminate
+               | match goal with
+                 | [ H : context[match ?b with true => _ | false => _ end ] |- _ ] => destruct b eqn:?
+                 | [ H : context[orb _ false] |- _ ] => rewrite Bool.orb_false_r in H
+                 | [ H : context[orb false _] |- _ ] => rewrite Bool.orb_false_l in H
+                 end
+               | progress Reflect.reflect_hyps
+               | assumption
+               | progress destruct_head'_and
+               | apply conj ].
+
+Ltac use_requests_to_prove_curve_good_t_step :=
+  first [ progress intros
+        | progress Reflect.reflect_hyps
+        | exfalso; assumption
+        | progress specialize_by auto 50 using or_introl, or_intror with nocore ].
+
 Ltac prove_correctness' should_not_clear use_curve_good :=
+  let should_not_clear_requests H := lazymatch type of H with context[request_present] => idtac end in
   let Hres := match goal with H : _ = Success _ |- _ => H end in
   let H := fresh in
   pose proof use_curve_good as H;
   (* I want to just use [clear -H Hres], but then I can't use any lemmas in the section because of COQBUG(https://github.com/coq/coq/issues/8153) *)
   repeat match goal with
          | [ H' : _ |- _ ]
-           => tryif first [ has_body H' | constr_eq H' H | constr_eq H' Hres | should_not_clear H' ]
+           => tryif first [ has_body H' | constr_eq H' H | constr_eq H' Hres | should_not_clear_requests H' | should_not_clear H' ]
            then fail
            else clear H'
          end;
   cbv zeta in *;
-  destruct_head'_and;
+  repeat first [ progress destruct_head'_and
+               | progress specialize_by_assumption ];
   let f := match type of Hres with ?f = _ => head f end in
   try cbv [f] in *;
   hnf;
@@ -1128,7 +1181,7 @@ Section __.
 
     (** Note: If you change the name or type signature of this
           function, you will need to update the code in CLI.v *)
-    Definition Synthesize (check_args : Pipeline.ErrorT (list string) -> Pipeline.ErrorT (list string))
+    Definition Synthesize (check_args : list string -> Pipeline.ErrorT (list string) -> Pipeline.ErrorT (list string))
                (comment_header : list string) (function_name_prefix : string) (requests : list string)
       : list (synthesis_output_kind * string * Pipeline.ErrorT (list string))
       := let requests := match requests with
@@ -1192,7 +1245,7 @@ Section __.
              ToString.footer machine_wordsize (orb internal_static static) static function_name_prefix infos in
          [(normal_output,
            "check_args" ++ String.NewLine ++ String.concat String.NewLine header,
-           check_args (ErrorT.Success header))%string]
+           check_args requests (ErrorT.Success header))%string]
            ++ asm_ls
            ++ res
            ++ match footer with
