@@ -13,45 +13,30 @@ jobs:
 
     env:
       NJOBS: "2"
-      COQ_VERSION: "master"
+      COQ_VERSION: "8.13.1"
 
-    # initial steps copied from https://github.com/coq/coq/blob/97e2c757b6deaeaca0a73a4cfbcbc64d13205b1e/.github/workflows/ci.yml#L29-L78
     steps:
+    - name: Set up OCaml
+      uses: avsm/setup-ocaml@v1.1.10
+      with:
+        ocaml-version: 4.11.1
+
     - name: Install system dependencies
       run: |
         set -e
-        brew tap discoteq/discoteq
-        brew install gnu-time opam gtksourceview3 adwaita-icon-theme flock
-        pip3 install macpack
-
-    - name: Install OCaml dependencies
-      run: |
-        set -e
-        export PKG_CONFIG_PATH=/usr/local/opt/libffi/lib/pkgconfig
-        opam init -a -j "$NJOBS" --compiler=ocaml-base-compiler.$COMPILER
-        opam switch set ocaml-base-compiler.$COMPILER
-        eval $(opam env)
-        opam update
-        opam install -j "$NJOBS" num ocamlfind${FINDLIB_VER} ounit lablgtk3-sourceview3 zarith.1.10 dune.2.8.5
-        opam list
-      env:
-        COMPILER: "4.11.1"
-        FINDLIB_VER: ".1.8.1"
-        OPAMYES: "true"
-
-    - name: Build Coq
-      run: |
-        set -e
-        git clone https://github.com/coq/coq.git --branch=${COQ_VERSION}
-        eval $(opam env)
-        (cd coq && git log -1)
-        (cd coq && ./configure -prefix /usr/local/ -warn-error yes -native-compiler no -coqide opt)
-        (cd coq && make -j "$NJOBS" && dune build coq-core.install)
+        brew install gnu-time
 
     - name: Install Coq
       run: |
+        set -e
         eval $(opam env)
-        (cd coq && sudo make install)
+        opam update
+        opam install opam-depext
+        opam-depext coq
+        opam pin add coq ${COQ_VERSION}
+        opam list
+      env:
+        OPAMYES: "true"
 
     - name: echo build params
       run: |
