@@ -192,7 +192,7 @@ Go | :white_check_mark: @mdempsky | :heavy_check_mark: | |
 Java | :x: Unmaintained | :heavy_check_mark: | :x: Known Buggy [#707](https://github.com/mit-plv/fiat-crypto/issues/707#issuecomment-763098543) | 
 JSON | Experimental | :white_check_mark: (only syntax) | | 
 Rust | :white_check_mark: | :heavy_check_mark: | :heavy_check_mark: ([Dalek Cryptography test-suite](https://github.com/dalek-cryptography/curve25519-dalek)) | 
-Zig | :white_check_mark: @jedisct1 | :heavy_check_mark: | :white_check_mark: (Zig standard library) |
+Zig | :white_check_mark: @jedisct1 | :heavy_check_mark: | :white_check_mark: ([Zig standard library](https://github.com/ziglang/zig/tree/master/lib/std/crypto/pcurves) (generated file [here](https://github.com/ziglang/zig/blob/master/lib/std/crypto/pcurves/p256/p256_64.zig)) (main CI [here](https://dev.azure.com/ziglang/zig/_build?definitionId=1&_a=summary&repositoryFilter=1&branchFilter=5%2C5%2C5%2C5%2C5%2C5%2C5%2C5))) |
 
 ### Contributing a new backend
 
