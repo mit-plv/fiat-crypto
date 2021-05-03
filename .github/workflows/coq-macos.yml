@@ -24,7 +24,7 @@ jobs:
     - name: Install system dependencies
       run: |
         set -e
-        brew install gnu-time
+        brew install gnu-time coreutils
 
     - name: Install Coq
       run: |
