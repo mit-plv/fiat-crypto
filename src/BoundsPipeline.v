@@ -362,8 +362,8 @@ Module Pipeline.
     Definition show_lines_Expr {t} (arg_bounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t) (include_input_bounds : bool)
       : ShowLines (Expr t)
       := fun with_parens syntax_tree
-         => let __ := default_language_naming_conventions in
-            let __ := default_documentation_options in
+         => let _ := default_language_naming_conventions in
+            let _ := default_documentation_options in
             match ToString.ToFunctionLines
                     (relax_zrange := fun r => r)
                     machine_wordsize
@@ -381,8 +381,8 @@ Module Pipeline.
 
     Global Instance show_lines_ErrorMessage : ShowLines ErrorMessage
       := fun parens e
-         => let __ := default_language_naming_conventions in
-            let __ := default_documentation_options in
+         => let _ := default_language_naming_conventions in
+            let _ := default_documentation_options in
             maybe_wrap_parens_lines
               parens
               match e with

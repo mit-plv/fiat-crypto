@@ -408,7 +408,7 @@ Section Compile.
       map.get locals y_var = Some y_ptr ->
       let v := (overwrite1 op) x Y in
       let v' := op x Y in
-      (let __ := 0 in (* placeholder *)
+      (let _ := 0 in (* placeholder *)
        forall m,
          sep (FElem y_ptr y) Rin m ->
          sep (Placeholder y_ptr) Rin m ->
@@ -445,7 +445,7 @@ Section Compile.
       map.get locals x_var = Some x_ptr ->
       let v := (overwrite2 op) X y in
       let v' := op X y in
-      (let __ := 0 in (* placeholder *)
+      (let _ := 0 in (* placeholder *)
        forall m,
          sep (FElem x_ptr x) Rin m ->
          sep (Placeholder x_ptr) Rin m ->
