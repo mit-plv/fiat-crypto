@@ -13,10 +13,9 @@ jobs:
 
     env:
       NJOBS: "2"
-      COQ_VERSION: "V8.13.1"
+      COQ_VERSION: "8.13.1"
       SKIP_BEDROCK2: "1"
 
-    # initial steps copied from https://github.com/coq/coq/commit/b481ae12fb55cc558d58b9902f1020e43f76fc4e#diff-7915b9b726a397ae7ba6af7b9703633d21c031ebf21682f3ee7e6a4ec52837a5
     steps:
     - uses: actions/checkout@v2
     - name: submodules-init
@@ -28,28 +27,17 @@ jobs:
     - name: Create home dir
       run: |
         C:\tools\cygwin\bin\bash.exe --login -c 'env'
-    - name: Clone Coq
-      run: |
-        C:\tools\cygwin\bin\bash.exe -l -c 'git clone "https://github.com/coq/coq.git" --branch=${COQ_VERSION}'
-        C:\tools\cygwin\bin\bash.exe -l -c 'cd coq; git log --max-count=1'
-      shell: cmd
-    - name: Install opam
-      run: |
-        C:\tools\cygwin\bin\bash.exe -l coq\dev\ci\azure-opam.sh
-
-    - name: Configure Coq
-      run: |
-        C:\tools\cygwin\bin\bash.exe -l -c 'cd coq; ./configure -prefix=/usr/local'
-      shell: cmd
-
-    - name: Build Coq
-      run: |
-        C:\tools\cygwin\bin\bash.exe -l -c 'cd coq; make -j${NJOBS}'
-      shell: cmd
-
+    - name: Set up OCaml
+      uses: avsm/setup-ocaml@v1.1.10
+      with:
+        ocaml-version: 4.11.1
     - name: Install Coq
       run: |
-        C:\tools\cygwin\bin\bash.exe -l -c 'cd coq; make install'
+        C:\tools\cygwin\bin\bash.exe -l -c 'eval $(opam env) && opam install opam-depext'
+        C:\tools\cygwin\bin\bash.exe -l -c 'eval $(opam env) && opam-depext coq'
+        C:\tools\cygwin\bin\bash.exe -l -c 'eval $(opam env) && opam pin add coq ${COQ_VERSION}'
+      env:
+        OPAMYES: "true"
       shell: cmd
 
     - name: echo build params
@@ -66,30 +54,33 @@ jobs:
         ECHO ::group::git config --global -l
         C:\tools\cygwin\bin\bash.exe -l -c 'git config --global -l'
         ECHO ::endgroup::
+        ECHO ::group::opam list
+        C:\tools\cygwin\bin\bash.exe -l -c 'eval $(opam env) && opam list'
+        ECHO ::endgroup::
         ECHO ::group::ocamlc -config
-        C:\tools\cygwin\bin\bash.exe -l -c 'ocamlc -config'
+        C:\tools\cygwin\bin\bash.exe -l -c 'eval $(opam env) && ocamlc -config'
         ECHO ::endgroup::
         ECHO ::group::coqc --config
-        C:\tools\cygwin\bin\bash.exe -l -c 'coqc --config'
+        C:\tools\cygwin\bin\bash.exe -l -c 'eval $(opam env) && coqc --config'
         ECHO ::endgroup::
         ECHO ::group::coqc --version
-        C:\tools\cygwin\bin\bash.exe -l -c 'coqc --version'
+        C:\tools\cygwin\bin\bash.exe -l -c 'eval $(opam env) && coqc --version'
         ECHO ::endgroup::
         ECHO ::group::coqtop version
-        true | C:\tools\cygwin\bin\bash.exe -l -c 'coqtop'
+        true | C:\tools\cygwin\bin\bash.exe -l -c 'eval $(opam env) && coqtop'
         ECHO ::endgroup::
         ECHO ::group::make printenv
-        C:\tools\cygwin\bin\bash.exe -l -c 'cd "%cd%"; make printenv'
+        C:\tools\cygwin\bin\bash.exe -l -c 'cd "%cd%"; eval $(opam env) && make printenv'
         ECHO ::endgroup::
         ECHO ::group::PATH
         C:\tools\cygwin\bin\bash.exe -l -c 'cd "%cd%"; echo "${PATH}"'
         ECHO ::endgroup::
       shell: cmd
     - name: deps
-      run: C:\tools\cygwin\bin\bash.exe -l -c 'cd "%cd%"; etc/ci/github-actions-make.sh -j%NJOBS% deps'
+      run: C:\tools\cygwin\bin\bash.exe -l -c 'cd "%cd%"; eval $(opam env) && etc/ci/github-actions-make.sh -j%NJOBS% deps'
       shell: cmd
     - name: all
-      run: C:\tools\cygwin\bin\bash.exe -l -c 'cd "%cd%"; etc/ci/github-actions-make.sh -j%NJOBS% all'
+      run: C:\tools\cygwin\bin\bash.exe -l -c 'cd "%cd%"; eval $(opam env) && etc/ci/github-actions-make.sh -j%NJOBS% all'
       shell: cmd
     - name: upload OCaml files
       uses: actions/upload-artifact@v1
@@ -109,6 +100,6 @@ jobs:
 #        path: .
 #      if: always ()
     - name: validate
-      run: C:\tools\cygwin\bin\bash.exe -l -c 'cd "%cd%"; make TIMED=1 validate COQCHKFLAGS="-o"'
+      run: C:\tools\cygwin\bin\bash.exe -l -c 'cd "%cd%"; eval $(opam env) && make TIMED=1 validate COQCHKFLAGS="-o"'
       shell: cmd
       if: github.event_name != 'pull_request'
