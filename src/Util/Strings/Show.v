@@ -121,16 +121,16 @@ Global Instance show_lvl_option {T} `{ShowLevel T} : ShowLevel (option T)
           => show_lvl_app (fun 'tt => "Some") (show_lvl v)
         | None => neg_wrap_parens "None"
         end.
-Global Instance show_option {T} `{Show T} : Show (option T) | 2000 := let __ := @ShowLevel_of_Show T in _.
+Global Instance show_option {T} `{Show T} : Show (option T) | 2000 := let _ := @ShowLevel_of_Show T in _.
 Global Instance show_lvl_list {T} `{ShowLevel T} : ShowLevel (list T)
   := fun ls => neg_wrap_parens
                  ("[" ++ String.concat ", " (List.map (fun v => show_lvl v term_lvl) ls) ++ "]").
-Global Instance show_list {T} `{Show T} : Show (list T) | 2000 := let __ := @ShowLevel_of_Show T in _.
+Global Instance show_list {T} `{Show T} : Show (list T) | 2000 := let _ := @ShowLevel_of_Show T in _.
 Global Instance show_lvl_prod {A B} `{ShowLevel A, ShowLevel B} : ShowLevel (A * B)
   := fun '(a, b) => show_lvl_binop pair_assoc pair_lvl a ", " b.
 Global Instance show_prod {A B} `{Show A, Show B} : Show (A * B) | 2000 :=
-  let __ := @ShowLevel_of_Show A in
-  let __ := @ShowLevel_of_Show B in
+  let _ := @ShowLevel_of_Show A in
+  let _ := @ShowLevel_of_Show B in
   _.
 Global Instance show_lvl_string : ShowLevel string := fun s => neg_wrap_parens ("""" ++ (String.replace """" """""" s) ++ """").
 Global Instance show_lvl_ascii : ShowLevel ascii := fun ch => neg_wrap_parens (String "'" (String ch "'")).

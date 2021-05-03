@@ -225,7 +225,7 @@ Module Compilers.
              end.
         Global Existing Instance show_lvl_for_each_lhs_of_arrow.
         Definition show_for_each_lhs_of_arrow {base_type} {f : type.type base_type -> Type} {show_f : forall t, Show (f t)} {t : type.type base_type} : Show (type.for_each_lhs_of_arrow f t)
-          := let __ := fun t => @ShowLevel_of_Show (f t) in
+          := let _ := fun t => @ShowLevel_of_Show (f t) in
              show_lvl_for_each_lhs_of_arrow.
 
         Global Instance show_lvl_type : forall {base_type} {S : ShowLevel base_type}, ShowLevel (type.type base_type)
@@ -237,7 +237,7 @@ Module Compilers.
                   end.
         Global Instance show_lvl {base_type} {S : ShowLevel base_type} : ShowLevel (type.type base_type) := show_lvl_type.
         Global Instance show_type {base_type} {S : Show base_type} : Show (type.type base_type)
-          := let __ := @ShowLevel_of_Show base_type in
+          := let _ := @ShowLevel_of_Show base_type in
              show_lvl_type.
         Global Instance show {base_type} {S : Show base_type} : Show (type.type base_type) := show_type.
       End type.
