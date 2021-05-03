@@ -119,45 +119,28 @@ Section __.
 
   (** Note: If you change the name or type signature of this
         function, you will need to update the code in CLI.v *)
-  Definition check_args {T} (res : Pipeline.ErrorT T)
+  Definition check_args {T} (requests : list string) (res : Pipeline.ErrorT T)
     : Pipeline.ErrorT T
-    := fold_right
-         (fun '(b, e) k => if b:bool then Error e else k)
-         res
-         [((negb (0 <? s - Associational.eval c))%Z, Pipeline.Value_not_ltZ "s - Associational.eval c ≤ 0" 0 (s - Associational.eval c));
-            ((s =? 0)%Z, Pipeline.Values_not_provably_distinctZ "s ≠ 0" s 0);
-            ((n =? 0)%nat, Pipeline.Values_not_provably_distinctZ "n ≠ 0" n 0);
-            ((negb (0 <? machine_wordsize)), Pipeline.Value_not_ltZ "0 < machine_wordsize" 0 machine_wordsize)].
+    := check_args_of_list
+         (List.map
+            (fun v => (true, v))
+            [((0 <? s - Associational.eval c)%Z, Pipeline.Value_not_ltZ "s - Associational.eval c ≤ 0" 0 (s - Associational.eval c))
+             ; (negb (s =? 0)%Z, Pipeline.Values_not_provably_distinctZ "s ≠ 0" s 0)
+             ; (negb (n =? 0)%nat, Pipeline.Values_not_provably_distinctZ "n ≠ 0" n 0)
+             ; (0 <? machine_wordsize, Pipeline.Value_not_ltZ "0 < machine_wordsize" 0 machine_wordsize)
+         ])
+         res.
 
-  Local Ltac prepare_use_curve_good _ :=
-    let curve_good := lazymatch goal with | curve_good : check_args _ = Success _ |- _ => curve_good end in
-    clear -curve_good;
-    cbv [check_args] in curve_good |- *;
-    cbn [fold_right] in curve_good |- *;
-    repeat first [ match goal with
-                   | [ H : context[match ?b with true => _ | false => _ end ] |- _ ] => destruct b eqn:?
-                   end
-                 | discriminate
-                 | progress Reflect.reflect_hyps
-                 | assumption
-                 | apply conj
-                 | progress destruct_head'_and ].
 
   Local Ltac use_curve_good_t :=
-    repeat first [ assumption
-                 | progress rewrite ?map_length, ?Z.mul_0_r, ?Pos.mul_1_r, ?Z.mul_1_r in *
-                 | reflexivity
+    repeat first [ use_requests_to_prove_curve_good_t_step
+                 | assumption
                  | lia
-                 | rewrite expr.interp_reify_list, ?map_map
-                 | rewrite map_ext with (g:=id), map_id
-                 | progress distr_length
-                 | progress cbv [Qceiling Qfloor Qopp Qdiv Qplus inject_Z Qmult Qinv] in *
-                 | progress cbv [Qle] in *
-                 | progress cbn -[reify_list] in *
-                 | progress intros
-                 | solve [ auto ] ].
+                 | progress autorewrite with distr_length
+                 | progress distr_length ].
 
-  Context (curve_good : check_args (Success tt) = Success tt).
+  Context (requests : list string)
+          (curve_good : check_args requests (Success tt) = Success tt).
 
   Lemma use_curve_good
     : 0 < s - Associational.eval c

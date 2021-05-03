@@ -163,68 +163,46 @@ Section __.
 
   (** Note: If you change the name or type signature of this
         function, you will need to update the code in CLI.v *)
-  Definition check_args {T} (res : Pipeline.ErrorT T)
+  Definition check_args {T} (requests : list string) (res : Pipeline.ErrorT T)
     : Pipeline.ErrorT T
-    := fold_right
-         (fun '(b, e) k => if b:bool then Error e else k)
-         res
-         [(negb (Qle_bool 1 src_limbwidth)%Q, Pipeline.Value_not_leQ "src_limbwidth < 1" 1%Q src_limbwidth);
-            (negb (Qle_bool 1 dst_limbwidth)%Q, Pipeline.Value_not_leQ "dst_limbwidth < 1" 1%Q dst_limbwidth);
-            ((src_n =? 0)%nat, Pipeline.Values_not_provably_distinctZ "src_n = 0" src_n 0%nat);
-            ((dst_n =? 0)%nat, Pipeline.Values_not_provably_distinctZ "dst_n = 0" dst_n 0%nat);
-            (negb (List.length in_bounds =? src_n)%nat, Pipeline.Values_not_provably_equalZ "length in_bounds ≠ src_n" (List.length in_bounds) src_n);
-            (negb (List.length in_upperbounds =? src_n)%nat, Pipeline.Values_not_provably_equalZ "length in_upperbounds ≠ src_n" (List.length in_upperbounds) src_n);
-            (negb (List.length out_bounds =? dst_n)%nat, Pipeline.Values_not_provably_equalZ "length out_bounds ≠ dst_n" (List.length out_bounds) dst_n);
-            (negb (List.length out_upperbounds =? dst_n)%nat, Pipeline.Values_not_provably_equalZ "length out_upperbounds ≠ dst_n" (List.length out_upperbounds) dst_n);
-            ((negb (Associational.eval c <? s))%Z, Pipeline.Value_not_ltZ "s ≤ Associational.eval c" (Associational.eval c) s);
-            ((s =? 0)%Z, Pipeline.Values_not_provably_distinctZ "s = 0" s 0);
-            (let eval_in_upperbounds := eval src_weight src_n in_upperbounds in
-             let dst_weight_n := dst_weight dst_n in
-             (negb (eval_in_upperbounds <? dst_weight_n)%Z,
-              Pipeline.Value_not_ltZ "dst_weight dst_n ≤ src_eval in_upperbounds" eval_in_upperbounds dst_weight_n));
-            ((negb (0 <? machine_wordsize)), Pipeline.Value_not_ltZ "machine_wordsize ≤ 0" 0 machine_wordsize);
-            (let v1 := List.fold_right Z.max 0 in_upperbounds in
-             let v2 := 2^machine_wordsize-1 in
-             (negb (v1 <=? v2)%Z,
-              Pipeline.Value_not_leZ "max(in_upperbounds) > 2^machine_wordsize-1" v1 v2));
-            (let v1 := List.fold_right Z.max 0 out_upperbounds in
-             let v2 := 2^machine_wordsize-1 in
-             (negb (v1 <=? v2)%Z,
-              Pipeline.Value_not_leZ "max(out_upperbounds) > 2^machine_wordsize-1" v1 v2))].
-
-  Local Ltac prepare_use_curve_good _ :=
-    let curve_good := lazymatch goal with | curve_good : check_args _ = Success _ |- _ => curve_good end in
-    clear -curve_good;
-    cbv [check_args] in curve_good |- *;
-    cbn [fold_right] in curve_good |- *;
-    repeat first [ match goal with
-                   | [ H : context[match ?b with true => _ | false => _ end ] |- _ ] => destruct b eqn:?
-                   end
-                 | discriminate
-                 | progress Reflect.reflect_hyps
-                 | assumption
-                 | apply conj
-                 | progress destruct_head'_and ].
+    := check_args_of_list
+         (List.map
+            (fun v => (true, v))
+            [((Qle_bool 1 src_limbwidth)%Q, Pipeline.Value_not_leQ "src_limbwidth < 1" 1%Q src_limbwidth)
+             ; ((Qle_bool 1 dst_limbwidth)%Q, Pipeline.Value_not_leQ "dst_limbwidth < 1" 1%Q dst_limbwidth)
+             ; (negb (src_n =? 0)%nat, Pipeline.Values_not_provably_distinctZ "src_n = 0" src_n 0%nat)
+             ; (negb (dst_n =? 0)%nat, Pipeline.Values_not_provably_distinctZ "dst_n = 0" dst_n 0%nat)
+             ; ((List.length in_bounds =? src_n)%nat, Pipeline.Values_not_provably_equalZ "length in_bounds ≠ src_n" (List.length in_bounds) src_n)
+             ; ((List.length in_upperbounds =? src_n)%nat, Pipeline.Values_not_provably_equalZ "length in_upperbounds ≠ src_n" (List.length in_upperbounds) src_n)
+             ; ((List.length out_bounds =? dst_n)%nat, Pipeline.Values_not_provably_equalZ "length out_bounds ≠ dst_n" (List.length out_bounds) dst_n)
+             ; ((List.length out_upperbounds =? dst_n)%nat, Pipeline.Values_not_provably_equalZ "length out_upperbounds ≠ dst_n" (List.length out_upperbounds) dst_n)
+             ; ((Associational.eval c <? s)%Z, Pipeline.Value_not_ltZ "s ≤ Associational.eval c" (Associational.eval c) s)
+             ; (negb (s =? 0)%Z, Pipeline.Values_not_provably_distinctZ "s = 0" s 0)
+             ; (let eval_in_upperbounds := eval src_weight src_n in_upperbounds in
+                let dst_weight_n := dst_weight dst_n in
+                ((eval_in_upperbounds <? dst_weight_n)%Z,
+                 Pipeline.Value_not_ltZ "dst_weight dst_n ≤ src_eval in_upperbounds" eval_in_upperbounds dst_weight_n))
+             ; (0 <? machine_wordsize, Pipeline.Value_not_ltZ "machine_wordsize ≤ 0" 0 machine_wordsize)
+             ; (let v1 := List.fold_right Z.max 0 in_upperbounds in
+                let v2 := 2^machine_wordsize-1 in
+                ((v1 <=? v2)%Z,
+                 Pipeline.Value_not_leZ "max(in_upperbounds) > 2^machine_wordsize-1" v1 v2))
+             ; (let v1 := List.fold_right Z.max 0 out_upperbounds in
+                let v2 := 2^machine_wordsize-1 in
+                ((v1 <=? v2)%Z,
+                 Pipeline.Value_not_leZ "max(out_upperbounds) > 2^machine_wordsize-1" v1 v2))
+         ])
+         res.
 
   Local Ltac use_curve_good_t :=
-    repeat first [ assumption
-                 | progress rewrite ?map_length, ?Z.mul_0_r, ?Pos.mul_1_r, ?Z.mul_1_r in *
-                 | reflexivity
+    repeat first [ use_requests_to_prove_curve_good_t_step
+                 | assumption
                  | lia
-                 | rewrite expr.interp_reify_list, ?map_map
-                 | rewrite map_ext with (g:=id), map_id
-                 | progress distr_length
-                 | progress cbv [Qceiling Qfloor Qopp Qdiv Qplus inject_Z Qmult Qinv] in *
-                 | progress cbv [Qle] in *
-                 | progress cbn -[reify_list] in *
-                 | progress intros
-                 | progress break_innermost_match
-                 | progress specialize_by_assumption
-                 | progress specialize_by (exact eq_refl)
-                 | solve [ auto ]
-                 | progress break_innermost_match_hyps ].
+                 | progress autorewrite with distr_length
+                 | progress distr_length ].
 
-  Context (curve_good : check_args (Success tt) = Success tt).
+  Context (requests : list string)
+          (curve_good : check_args requests (Success tt) = Success tt).
 
   Lemma use_curve_good
     : 0 < machine_wordsize

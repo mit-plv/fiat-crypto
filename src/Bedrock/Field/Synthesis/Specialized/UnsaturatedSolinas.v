@@ -400,7 +400,7 @@ Ltac change_with_computed_func ops :=
 
 Ltac prove_correctness ops n s c machine_wordsize :=
   assert (UnsaturatedSolinas.check_args
-            n s c machine_wordsize (ErrorT.Success tt) =
+            n s c machine_wordsize necessary_requests (ErrorT.Success tt) =
           ErrorT.Success tt) by abstract (native_compute; reflexivity);
   lazymatch goal with
     | |- bedrock2_unsaturated_solinas_correctness => econstructor end;
@@ -411,7 +411,7 @@ Ltac prove_correctness ops n s c machine_wordsize :=
 
 Ltac prove_correctness_scmul ops n s c machine_wordsize :=
   assert (UnsaturatedSolinas.check_args
-            n s c machine_wordsize (ErrorT.Success tt) =
+            n s c machine_wordsize necessary_requests (ErrorT.Success tt) =
           ErrorT.Success tt) by abstract (native_compute; reflexivity);
   lazymatch goal with
   | |- bedrock2_unsaturated_solinas_scmul_correctness =>

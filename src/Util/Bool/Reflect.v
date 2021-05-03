@@ -266,8 +266,8 @@ Local Hint Resolve internal_prod_dec_bl internal_prod_dec_lb
 Local Hint Extern 0 => solve [ solve_reflect ] : typeclass_instances.
 Local Hint Extern 1 => progress inversion_sigma : core.
 
-Global Instance reflect_True : reflect True true | 10 := ReflectT _ I.
-Global Instance reflect_False : reflect False false | 10 := ReflectF _ (fun x => x).
+Global Instance reflect_True : reflect True true | 0 := ReflectT _ I.
+Global Instance reflect_False : reflect False false | 0 := ReflectF _ (fun x => x).
 Global Instance reflect_or {A B a b} `{reflect A a, reflect B b} : reflect (A \/ B) (orb a b) | 10. exact _. Qed.
 Global Instance reflect_and {A B a b} `{reflect A a, reflect B b} : reflect (A /\ B) (andb a b) | 10. exact _. Qed.
 Global Instance reflect_impl_or {A B bona} `{reflect (B \/ ~A) bona} : reflect (A -> B) bona | 15. exact _. Qed.

@@ -1,3 +1,4 @@
+Require Import Coq.Strings.String.
 Require Import Coq.Lists.List.
 Require Import Coq.ZArith.ZArith.
 Require Import bedrock2.Syntax.
@@ -22,6 +23,7 @@ Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.DestructHead.
+Require Import Crypto.Util.Tactics.SpecializeBy.
 Import ListNotations API.Compilers Types.Notations.
 
 Class unsaturated_solinas_ops
@@ -68,6 +70,9 @@ Class unsaturated_solinas_ops
   }.
 Arguments unsaturated_solinas_ops {_ _} _ _ _ _.
 
+(** We need to tell [check_args] that we are requesting these functions in order to get the relevant properties out *)
+Notation necessary_requests := ["to_bytes"; "from_bytes"]%string (only parsing).
+
 Section UnsaturatedSolinas.
   Context {p:Types.parameters} {p_ok : Types.ok}
           {field_parameters : FieldParameters}
@@ -77,7 +82,7 @@ Section UnsaturatedSolinas.
   Context (n : nat) (s : Z) (c : list (Z * Z))
           (M_eq : M = m s c)
           (check_args_ok :
-             check_args n s c Semantics.width (ErrorT.Success tt)
+             check_args n s c Semantics.width necessary_requests (ErrorT.Success tt)
              = ErrorT.Success tt)
           (* TODO: prove a transitivity lemma for list_Z_tighter_than and use
              loose_bounds_tighter_than to prove tight_bounds_tighter_than *)
@@ -164,14 +169,10 @@ Section UnsaturatedSolinas.
     (0 < m s c <= ModOps.weight 8 1 (n_bytes s))%Z.
   Proof using check_args_ok.
     (* Extract information from check_args *)
-    clear - check_args_ok. cbv [check_args] in check_args_ok.
-    cbn [fold_right] in check_args_ok.
-    break_match_hyps; try congruence; [ ].
-    repeat lazymatch goal with
-           | H : negb _ = false |- _ => apply Bool.negb_false_iff in H
-           | H : Nat.eqb _ _ = false |- _ => apply Nat.eqb_neq in H
-           end.
-    Z.ltb_to_lt.
+    clear - check_args_ok. apply use_curve_good in check_args_ok; rename check_args_ok into H.
+    vm_compute Primitives.request_present in H.
+    destruct_head'_and.
+    specialize_by reflexivity.
     match goal with
     | H : s = ModOps.weight _ _ n |- _ =>
       pose proof H;
@@ -214,7 +215,9 @@ Section UnsaturatedSolinas.
   Proof using check_args_ok.
     clear - check_args_ok. intros.
     apply use_curve_good in check_args_ok.
+    vm_compute Primitives.request_present in check_args_ok.
     destruct_head' and.
+    specialize_by reflexivity.
     assert (0 <= x < s)%Z as xbounds
         by (cbv [m] in *; auto with zarith).
     cbv [prime_bytes_upperbound_list].
@@ -275,7 +278,7 @@ Section UnsaturatedSolinas.
         tight_bounds_tighter_than varname_gen_is_default.
     intros. cbv [spec_of_mul]. rewrite mul_func_eq.
     pose proof carry_mul_correct
-         _ _ _ _ ltac:(eassumption) _ (res_eq mul_op)
+         _ _ _ _ _ ltac:(eassumption) _ (res_eq mul_op)
       as Hcorrect.
 
     eapply list_binop_correct with (res:=res mul_op);
@@ -296,7 +299,7 @@ Section UnsaturatedSolinas.
         tight_bounds_tighter_than varname_gen_is_default.
     intros. cbv [spec_of_square]. rewrite square_func_eq.
     pose proof carry_square_correct
-         _ _ _ _ ltac:(eassumption) _ (res_eq square_op)
+         _ _ _ _ _ ltac:(eassumption) _ (res_eq square_op)
       as Hcorrect.
 
     eapply list_unop_correct with (op:=fun x => (x * x)%F)
@@ -318,7 +321,7 @@ Section UnsaturatedSolinas.
         loose_bounds_tighter_than p_ok varname_gen_is_default.
     intros. cbv [spec_of_add]. rewrite add_func_eq.
     pose proof add_correct
-         _ _ _ _ ltac:(eassumption) _ (res_eq add_op)
+         _ _ _ _ _ ltac:(eassumption) _ (res_eq add_op)
       as Hcorrect.
 
     eapply list_binop_correct with (res:=res add_op);
@@ -339,7 +342,7 @@ Section UnsaturatedSolinas.
         varname_gen_is_default.
     intros. cbv [spec_of_sub]. rewrite sub_func_eq.
     pose proof sub_correct
-         _ _ _ _ ltac:(eassumption) _ (res_eq sub_op)
+         _ _ _ _ _ ltac:(eassumption) _ (res_eq sub_op)
       as Hcorrect.
 
     eapply list_binop_correct with (res:=res sub_op);
@@ -361,7 +364,7 @@ Section UnsaturatedSolinas.
         varname_gen_is_default.
     intros. cbv [spec_of_opp]. rewrite opp_func_eq.
     pose proof opp_correct
-         _ _ _ _ ltac:(eassumption) _ (res_eq opp_op)
+         _ _ _ _ _ ltac:(eassumption) _ (res_eq opp_op)
       as Hcorrect.
 
     eapply list_unop_correct with (res:=res opp_op);
@@ -382,7 +385,7 @@ Section UnsaturatedSolinas.
         tight_bounds_tighter_than varname_gen_is_default.
     intros. cbv [spec_of_scmula24]. rewrite scmula24_func_eq.
     pose proof carry_scmul_const_correct
-         _ _ _ _ (ltac:(eassumption)) (F.to_Z a24) _
+         _ _ _ _ _ (ltac:(eassumption)) (F.to_Z a24) _
          (res_eq scmula24_op)
       as Hcorrect.
 
@@ -404,7 +407,7 @@ Section UnsaturatedSolinas.
         tight_bounds_tighter_than varname_gen_is_default.
     intros. cbv [spec_of_from_bytes]. rewrite from_bytes_func_eq.
     pose proof UnsaturatedSolinas.from_bytes_correct
-         _ _ _ _ ltac:(eassumption) _ (res_eq from_bytes_op)
+         _ _ _ _ _ ltac:(eassumption) _ (res_eq from_bytes_op) (eq_refl true)
       as Hcorrect.
 
     eapply Signature.from_bytes_correct with (res:=res from_bytes_op);
@@ -424,7 +427,7 @@ Section UnsaturatedSolinas.
   Proof using M_eq check_args_ok p_ok to_bytes_func_eq varname_gen_is_default.
     intros. cbv [spec_of_to_bytes]. rewrite to_bytes_func_eq.
     pose proof UnsaturatedSolinas.to_bytes_correct
-         _ _ _ _ ltac:(eassumption) _ (res_eq to_bytes_op)
+         _ _ _ _ _ ltac:(eassumption) _ (res_eq to_bytes_op) (eq_refl true)
       as Hcorrect.
 
     eapply Signature.to_bytes_correct with (res:=res to_bytes_op);

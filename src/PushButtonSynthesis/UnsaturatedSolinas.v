@@ -39,7 +39,7 @@ Require Import Crypto.PushButtonSynthesis.UnsaturatedSolinasReificationCache.
 Require Import Crypto.Assembly.Equivalence.
 Import Option.Notations.
 Import ListNotations.
-Local Open Scope Z_scope. Local Open Scope list_scope. Local Open Scope bool_scope.
+Local Open Scope string_scope. Local Open Scope bool_scope. Local Open Scope Z_scope. Local Open Scope list_scope.
 
 Import
   Language.Wf.Compilers
@@ -181,97 +181,102 @@ Section __.
 
   (** Note: If you change the name or type signature of this
         function, you will need to update the code in CLI.v *)
-  Definition check_args {T} (res : Pipeline.ErrorT T)
+  Definition check_args {T} (requests : list string) (res : Pipeline.ErrorT T)
     : Pipeline.ErrorT T
-    := fold_right
-         (fun '(b, e) k => if b:bool then Error e else k)
-         res
-         [(negb (Qle_bool 1 limbwidth)%Q, Pipeline.Value_not_leQ "limbwidth < 1" 1%Q limbwidth);
-            (negb (n <=? (Z.log2_up (s - Associational.eval c)))%Z, Pipeline.Value_not_leZ "Z.log2_up (s - Associational.eval c) < n" n (Z.log2_up (s - Associational.eval c)));
-            ((negb (0 <? Associational.eval c))%Z, Pipeline.Value_not_ltZ "Associational.eval c ≤ 0" 0 (Associational.eval c));
-            ((negb (Associational.eval c <? s))%Z, Pipeline.Value_not_ltZ "s ≤ Associational.eval c" (Associational.eval c) s);
-            ((s =? 0)%Z, Pipeline.Values_not_provably_distinctZ "s = 0" s 0);
-            ((n =? 0)%nat, Pipeline.Values_not_provably_distinctZ "n = 0" n 0%nat);
-            ((negb (0 <? machine_wordsize)), Pipeline.Value_not_ltZ "machine_wordsize ≤ 0" 0 machine_wordsize);
-            (let v1 := s in
-             let v2 := weight (Qnum limbwidth) (QDen limbwidth) n in
-             (negb (v1 =? v2), Pipeline.Values_not_provably_equalZ "s ≠ weight n (needed for to_bytes)" v1 v2));
-            (let v1 := (map (Z.land (Z.ones machine_wordsize)) m_enc) in
-             let v2 := m_enc in
-             (negb (list_beq _ Z.eqb v1 v2), Pipeline.Values_not_provably_equal_listZ "map mask m_enc ≠ m_enc (needed for to_bytes)" v1 v2));
-            (let v1 := eval (weight (Qnum limbwidth) (QDen limbwidth)) n m_enc in
-             let v2 := s - Associational.eval c in
-             (negb (v1 =? v2)%Z, Pipeline.Values_not_provably_equalZ "eval m_enc ≠ s - Associational.eval c (needed for to_bytes)" v1 v2));
-            (let v1 := eval (weight (Qnum limbwidth) (QDen limbwidth)) n tight_upperbounds in
-             let v2 := 2 * eval (weight (Qnum limbwidth) (QDen limbwidth)) n m_enc in
-             (negb (v1 <? v2)%Z, Pipeline.Value_not_ltZ "2 * eval m_enc ≤ eval tight_upperbounds (needed for to_bytes)" v1 v2));
-            (let v1 := List.fold_right Z.max 0 prime_bytes_upperbound_list in
-             let v2 := 2^machine_wordsize-1 in
-             (negb (v1 <=? v2)%Z,
-              Pipeline.Value_not_leZ "max(prime_bytes_upperbounds) > 2^machine_wordsize-1" v1 v2));
-            (let v1 := List.fold_right Z.max 0 tight_upperbounds in
-             let v2 := 2^machine_wordsize-1 in
-             (negb (v1 <=? v2)%Z,
-              Pipeline.Value_not_leZ "max(tight_upperbounds) > 2^machine_wordsize-1" v1 v2));
-            (let v1 := List.fold_right Z.max 0 loose_upperbounds in
-             let v2 := 2^machine_wordsize-1 in
-             (negb (v1 <=? v2)%Z,
-              Pipeline.Value_not_leZ "max(loose_upperbounds) > 2^machine_wordsize-1" v1 v2))].
+    := check_args_of_list
+         ((List.map
+             (fun v => (true, v))
+             (* first, all the ones that should always hold *)
+             [((Qle_bool 1 limbwidth)%Q, Pipeline.Value_not_leQ "limbwidth < 1" 1%Q limbwidth)
+              ; (n <=? Z.log2_up (s - Associational.eval c), Pipeline.Value_not_leZ "Z.log2_up (s - Associational.eval c) < n" n (Z.log2_up (s - Associational.eval c)))
+              ; (Associational.eval c <? s, Pipeline.Value_not_ltZ "s ≤ Associational.eval c" (Associational.eval c) s)
+              ; (0 <? s, Pipeline.Value_not_ltZ "s ≤ 0" 0 s)
+              ; (negb (n =? 0)%nat, Pipeline.Values_not_provably_distinctZ "n = 0" n 0%nat)
+              ; (0 <? machine_wordsize, Pipeline.Value_not_ltZ "machine_wordsize ≤ 0" 0 machine_wordsize)
+              ; (let v1 := s - Associational.eval c in
+                 let v2 := weight (Qnum limbwidth) (QDen limbwidth) n in
+                 (v1 <=? v2, Pipeline.Value_not_leZ "weight n < s - Associational.eval c" v1 v2))
 
-  Local Ltac prepare_use_curve_good _ :=
-    let curve_good := lazymatch goal with | curve_good : check_args _ = Success _ |- _ => curve_good end in
-    clear -curve_good;
-    cbv [check_args] in curve_good |- *;
-    cbn [fold_right] in curve_good |- *;
-    repeat first [ match goal with
-                   | [ H : context[match ?b with true => _ | false => _ end ] |- _ ] => destruct b eqn:?
-                   end
-                 | discriminate
-                 | progress Reflect.reflect_hyps
-                 | assumption
-                 | apply conj
-                 | progress destruct_head'_and ].
+                  (** For bedrock2 *)
+              ; (let v1 := List.fold_right Z.max 0 prime_bytes_upperbound_list in
+                 let v2 := 2^machine_wordsize-1 in
+                 (v1 <=? v2,
+                  Pipeline.Value_not_leZ "max(prime_bytes_upperbounds) > 2^machine_wordsize-1" v1 v2))
+              ; (let v1 := List.fold_right Z.max 0 tight_upperbounds in
+                 let v2 := 2^machine_wordsize-1 in
+                 (v1 <=? v2,
+                  Pipeline.Value_not_leZ "max(tight_upperbounds) > 2^machine_wordsize-1" v1 v2))
+              ; (let v1 := List.fold_right Z.max 0 loose_upperbounds in
+                 let v2 := 2^machine_wordsize-1 in
+                 (v1 <=? v2,
+                  Pipeline.Value_not_leZ "max(loose_upperbounds) > 2^machine_wordsize-1" v1 v2))
+          ])
+            (* the littany of to_bytes ones *)
+            ++ (List.map
+                  (fun v => (request_present requests "to_bytes", v))
+                  [(0 <? Associational.eval c, Pipeline.Value_not_ltZ "Associational.eval c ≤ 0 (needed for to_bytes)" 0 (Associational.eval c))
+                   ; (let v1 := s in
+                      let v2 := weight (Qnum limbwidth) (QDen limbwidth) n in
+                      (v1 =? v2, Pipeline.Values_not_provably_equalZ "s ≠ weight n (needed for to_bytes)" v1 v2))
+                   ; (let v1 := (map (Z.land (Z.ones machine_wordsize)) m_enc) in
+                      let v2 := m_enc in
+                      (list_beq _ Z.eqb v1 v2, Pipeline.Values_not_provably_equal_listZ "map mask m_enc ≠ m_enc (needed for to_bytes)" v1 v2))
+                   ; (let v1 := eval (weight (Qnum limbwidth) (QDen limbwidth)) n m_enc in
+                      let v2 := s - Associational.eval c in
+                      (v1 =? v2, Pipeline.Values_not_provably_equalZ "eval m_enc ≠ s - Associational.eval c (needed for to_bytes)" v1 v2))
+                   ; (let v1 := eval (weight (Qnum limbwidth) (QDen limbwidth)) n tight_upperbounds in
+                      let v2 := 2 * eval (weight (Qnum limbwidth) (QDen limbwidth)) n m_enc in
+                      (v1 <? v2, Pipeline.Value_not_ltZ "2 * eval m_enc ≤ eval tight_upperbounds (needed for to_bytes)" v1 v2))
+               ])
+            ++ [(request_present requests "from_bytes",
+                 (1 <? s, Pipeline.Value_not_ltZ "s ≤ 1 (need for from_bytes)" 1 s))
+         ])
+         res.
 
   Local Ltac use_curve_good_t :=
-    repeat first [ assumption
-                 | progress rewrite ?map_length, ?Z.mul_0_r, ?Pos.mul_1_r, ?Z.mul_1_r in *
-                 | reflexivity
+    repeat first [ use_requests_to_prove_curve_good_t_step
+                 | assumption
                  | lia
-                 | rewrite expr.interp_reify_list, ?map_map
-                 | rewrite map_ext with (g:=id), map_id
                  | progress autorewrite with distr_length
                  | progress distr_length
-                 | progress cbv [Qceiling Qfloor Qopp Qdiv Qplus inject_Z Qmult Qinv] in *
-                 | progress cbv [Qle] in *
-                 | progress cbn -[reify_list] in *
-                 | progress intros
-                 | solve [ auto ] ].
+                 | progress autorewrite with zsimplify_fast in * ].
 
-  Context (curve_good : check_args (Success tt) = Success tt).
+  Context (requests : list string)
+          (curve_good : check_args requests (Success tt) = Success tt).
 
   Lemma use_curve_good
     : let eval := eval (weight (Qnum limbwidth) (QDen limbwidth)) n in
-      s - Associational.eval c <> 0
+      0 < Qden limbwidth <= Qnum limbwidth
+      /\ n <= Z.log2_up (s - Associational.eval c)
+      /\ 0 < s - Associational.eval c
+      /\ 0 < s - Associational.eval c <= weight (Qnum limbwidth) (QDen limbwidth) n
+      /\ s - Associational.eval c <> 0
       /\ s <> 0
-      /\ 1 < s
       /\ 0 < machine_wordsize
       /\ n <> 0%nat
+      /\ List.fold_right Z.max 0 prime_bytes_upperbound_list <= 2^machine_wordsize-1
+      /\ List.fold_right Z.max 0 tight_upperbounds <= 2^machine_wordsize-1
+      /\ List.fold_right Z.max 0 loose_upperbounds <= 2^machine_wordsize-1
+      /\ (request_present requests "from_bytes" = true -> 1 < s)
+      /\ (request_present requests "to_bytes" = true -> 1 < s)
+      /\ (request_present requests "to_bytes" = true -> 0 < Associational.eval c < s)
+      /\ (request_present requests "to_bytes" = true -> s = weight (Qnum limbwidth) (QDen limbwidth) n)
+      /\ (request_present requests "to_bytes" = true -> map (Z.land (Z.ones machine_wordsize)) m_enc = m_enc)
+      /\ (request_present requests "to_bytes" = true -> eval m_enc = s - Associational.eval c)
+      /\ (request_present requests "to_bytes" = true -> eval tight_upperbounds < 2 * eval m_enc)
       /\ List.length tight_bounds = n
       /\ List.length loose_bounds = n
       /\ List.length prime_bytes_upperbound_list = n_bytes
       /\ List.length saturated_bounds_list = n
-      /\ 0 < Qden limbwidth <= Qnum limbwidth
-      /\ s = weight (Qnum limbwidth) (QDen limbwidth) n
-      /\ map (Z.land (Z.ones machine_wordsize)) m_enc = m_enc
-      /\ eval m_enc = s - Associational.eval c
-      /\ Datatypes.length m_enc = n
-      /\ 0 < Associational.eval c < s
-      /\ eval tight_upperbounds < 2 * eval m_enc
-      /\ 0 < s - Associational.eval c
-      /\ 0 < s - Associational.eval c <= weight (Qnum limbwidth) (QDen limbwidth) n
-      /\ n <= Z.log2_up (s - Associational.eval c).
+      /\ Datatypes.length m_enc = n.
   Proof using curve_good.
     prepare_use_curve_good ().
+    { use_curve_good_t. }
+    { use_curve_good_t. }
+    { use_curve_good_t. }
+    { use_curve_good_t. }
+    { use_curve_good_t. }
+    { use_curve_good_t. }
     { use_curve_good_t. }
     { use_curve_good_t. }
     { use_curve_good_t. }
@@ -678,6 +683,7 @@ Section __.
 
   Lemma from_bytes_correct res
         (Hres : from_bytes = Success res)
+        (Hrequests : request_present requests "from_bytes" = true)
     : from_bytes_correct (weight (Qnum limbwidth) (QDen limbwidth)) n n_bytes m s tight_bounds (Interp res).
   Proof using curve_good. prove_correctness (). Qed.
 
@@ -690,6 +696,7 @@ Section __.
 
   Lemma to_bytes_correct res
         (Hres : to_bytes = Success res)
+        (Hrequests : request_present requests "to_bytes" = true)
     : to_bytes_correct (weight (Qnum limbwidth) (QDen limbwidth)) n n_bytes m tight_bounds (Interp res).
   Proof using curve_good.
     prove_correctness (); [].
