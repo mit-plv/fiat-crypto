@@ -95,5 +95,7 @@ jobs:
 #        path: .
 #      if: always ()
     - name: validate
-      run: make TIMED=1 validate COQCHKFLAGS="-o"
+      run: |
+        eval $(opam env)
+        make TIMED=1 validate COQCHKFLAGS="-o"
       if: github.event_name != 'pull_request'
