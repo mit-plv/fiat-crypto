@@ -14,8 +14,8 @@ Global Instance show_lvl_ErrorT {ErrT T} {show_ErrT : ShowLevel ErrT} {show_T : 
         | Error msg => show_lvl_app (fun 'tt => "Error") msg
         end.
 Global Instance show_ErrorT {ErrT T} {show_ErrT : Show ErrT} {show_T : Show T} : Show (@ErrorT ErrT T)
-  := let __ := @ShowLevel_of_Show ErrT in
-     let __ := @ShowLevel_of_Show T in
+  := let _ := @ShowLevel_of_Show ErrT in
+     let _ := @ShowLevel_of_Show T in
      _.
 
 Global Instance show_lines_ErrorT {ErrT T} {show_lines_ErrT : ShowLines ErrT} {show_lines_T : ShowLines T}
