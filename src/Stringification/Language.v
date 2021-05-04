@@ -483,6 +483,16 @@ Module Compilers.
         Class with_space_opt := with_space : bool.
         Global Instance with_space_default : with_space_opt | 1000 := true.
 
+        Definition lookup_lvl (table : list (string * (Associativity * Level))) (op : string)
+          := match List.find (fun '(op', _) => String.eqb op op') table as x return if x then Level else Not_found with
+             | Some (_, (assoc, lvl)) => lvl
+             | None => not_found
+             end.
+        Definition lookup_assoc (table : list (string * (Associativity * Level))) (op : string)
+          := match List.find (fun '(op', _) => String.eqb op op') table as x return if x then Associativity else Not_found with
+             | Some (_, (assoc, lvl)) => assoc
+             | None => not_found
+             end.
         Definition lookup_show_lvl_binop {with_space : bool} (table : list (string * (Associativity * Level))) (binop : string)
           := match List.find (fun '(binop', _) => String.eqb binop binop') table as x return if x then (Level -> string) -> (Level -> string) -> (Level -> string) else Not_found with
              | Some (_, (binop_assoc, binop_lvl)) => fun x y => show_lvl_binop binop_assoc binop_lvl x (if with_space then " " ++ binop ++ " " else binop) y
