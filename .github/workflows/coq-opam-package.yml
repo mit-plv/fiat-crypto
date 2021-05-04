@@ -114,8 +114,8 @@ jobs:
 
     - name: Install Fiat-Crypto
       run: |
-        opam-depext fiat-crypto
-        opam install fiat-crypto
+        opam-depext coq-fiat-crypto
+        opam install coq-fiat-crypto
         opam list
 
     - name: Test Fiat-Crypto binaries
