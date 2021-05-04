@@ -82,7 +82,7 @@ Module Java.
   Definition primitive_type_to_string (use_class : bool) (prefix : string) (t : IR.type.primitive)
              (r : option ToString.int.type) : string :=
     match t with
-    | IR.type.Zptr => fun t => "Box<" ++ t true ++">"
+    | IR.type.Zptr => fun t => "" ++ t false ++"[]"
     | IR.type.Z => fun t => t use_class
     end%string
        (fun use_class
@@ -117,7 +117,7 @@ Module Java.
        (* array dereference *)
        | (IR.List_nth n @@@ IR.Var _ v) => "(" ++ v ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "])"
        (* (de)referencing *)
-       | (IR.Dereference @@@ e) => "(" ++ arith_to_string internal_private prefix e ++ ").get()"
+       | (IR.Dereference @@@ e) => "(" ++ arith_to_string internal_private prefix e ++ ")[0]"
        (* bitwise operations *)
        | (IR.Z_shiftr offset @@@ e) =>
          (* We assume that shift is always unsigned *)
@@ -150,7 +150,7 @@ Module Java.
        | (IR.Z_value_barrier ty @@@ args) =>
          special_name_ty "value_barrier" ty ++ "(" ++ arith_to_string internal_private prefix args ++ ")"
        | (IR.Z_static_cast int_t @@@ e) =>
-         "Long.valueOf(" ++ arith_to_string internal_private prefix e ++ ")." ++ primitive_type_to_string false prefix IR.type.Z (Some int_t) ++ "Value()"
+         "(" ++ primitive_type_to_string false prefix IR.type.Z (Some int_t) ++ ") Integer.toUnsignedLong((int) (" ++ arith_to_string internal_private prefix e ++ "))"
        | IR.Var _ v => v
        | IR.Pair A B a b => arith_to_string internal_private prefix a ++ ", " ++ arith_to_string internal_private prefix b
        | (IR.Addr @@@ IR.Var _ v) => "error_cannot_take_reference_in_Java_to_" ++ v
@@ -191,7 +191,7 @@ Module Java.
     (* code : name ++ " = " ++ arith_to_string internal_private prefix val ++ ";" *)
       "error_trying_to_assign_value_to_non_mutable_variable;"
     | IR.AssignZPtr name sz val =>
-      name ++ ".set(" ++ arith_to_string internal_private prefix val ++ ");"
+      name ++ "[0] = " ++ arith_to_string internal_private prefix val ++ ";"
     | IR.DeclareVar t sz name =>
       (* Local uninitialized declarations become mut declarations, and
          are initialized to 0. *)
@@ -199,7 +199,7 @@ Module Java.
          patterns, are that 1.) this variable will be an argument to a
          call that will store its result in this variable. 2.) this will
          have a non-pointer an integer type *)
-      primitive_type_to_string true prefix IR.type.Zptr sz ++ " " ++ name ++ " = new " ++ primitive_type_to_string true prefix IR.type.Zptr sz ++ "((" ++ primitive_type_to_string false prefix IR.type.Z sz ++ ")0);"
+      primitive_type_to_string true prefix IR.type.Zptr sz ++ " " ++ name ++ " = new " ++ primitive_type_to_string false prefix IR.type.Z sz ++ "[1];"
     | IR.Comment lines _ =>
       String.concat String.NewLine (comment_block (ToString.preprocess_comment_block lines))
     | IR.AssignNth name n val =>
