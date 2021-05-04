@@ -58,17 +58,21 @@ Global Instance show_lvl_id : ShowLevel (Level -> string) := fun f lvl => f lvl.
 
 Definition maybe_wrap_parens (parens : bool) (s : string)
   := if parens then "(" ++ s ++ ")" else s.
+Definition show_wrap_parens (plvl : Level) {A} `{ShowLevel A} : ShowLevel A
+  := fun a lvl => if lvl <? plvl then "(" ++ show_lvl a term_lvl ++ ")" else show_lvl a lvl.
+Definition lvl_wrap_parens (plvl : Level) (s : string) : Level -> string
+  := show_wrap_parens plvl (fun 'tt => s).
 (** wrap with parentheses if the level is negative *)
 Definition neg_wrap_parens_with_lvl (f : Level -> string) : Level -> string
-  := fun lvl => maybe_wrap_parens (lvl <? 0) (f lvl).
+  := show_wrap_parens 0 f.
 Definition neg_wrap_parens (f : string) : Level -> string
   := neg_wrap_parens_with_lvl (fun _ => f).
 Definition ShowLevel2_binop_assoc (assoc : Associativity) (binop_lvl : Level) (binop : string) {A B}
            `{ShowLevel A, ShowLevel B}
   : ShowLevel2 A B
-  := fun a b lvl
-     => maybe_wrap_parens
-          (lvl <? binop_lvl)
+  := fun a b
+     => lvl_wrap_parens
+          binop_lvl
           (let lvl := binop_lvl in
            match assoc with
            | LeftAssoc => show_lvl a lvl ++ binop ++ show_lvl b (Level.next lvl)
@@ -289,10 +293,9 @@ Module PowersOfTwo.
   Definition show_lvl_Z_up_to (max : nat) (max_dec : Z) : ShowLevel Z
     := fun z
        => (if z <? 0
-           then fun lvl
-                => maybe_wrap_parens
-                     (lvl <? add_lvl)%level
-                     ("-" ++ show_lvl_Z_up_to' max max_dec false (-z) add_lvl)
+           then lvl_wrap_parens
+                  add_lvl
+                  ("-" ++ show_lvl_Z_up_to' max max_dec false (-z) add_lvl)
            else if z =? 0
                 then neg_wrap_parens "0"
                 else show_lvl_Z_up_to' max max_dec false z)%Z.
