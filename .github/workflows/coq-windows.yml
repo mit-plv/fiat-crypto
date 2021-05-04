@@ -20,17 +20,12 @@ jobs:
     - uses: actions/checkout@v2
     - name: submodules-init
       uses: snickerbockers/submodules-init@v4
-    - name: Set up Cygwin
-      uses: egor-tensin/setup-cygwin@v1
-      with:
-        packages: rsync patch diffutils make unzip m4 findutils time wget curl git mingw64-x86_64-binutils mingw64-x86_64-gcc-core mingw64-x86_64-gcc-g++ mingw64-x86_64-pkg-config mingw64-x86_64-windows_default_manifest mingw64-x86_64-headers mingw64-x86_64-runtime mingw64-x86_64-pthreads mingw64-x86_64-zlib mingw64-x86_64-gmp python3
-    - name: Create home dir
-      run: |
-        C:\tools\cygwin\bin\bash.exe --login -c 'env'
     - name: Set up OCaml
       uses: avsm/setup-ocaml@v1.1.10
       with:
         ocaml-version: 4.11.1
+    - name: Setup Python
+      uses: actions/setup-python@v2.2.2
     - name: Install Coq
       run: |
         opam install opam-depext
@@ -38,7 +33,6 @@ jobs:
         opam pin add coq %COQ_VERSION%
       env:
         OPAMYES: "true"
-      shell: cmd
 
     - name: echo build params
       run: |
@@ -49,50 +43,50 @@ jobs:
         wmic cpu list /format:list
         ECHO ::endgroup::
         ECHO ::group::git config -l
-        C:\tools\cygwin\bin\bash.exe -l -c 'git config -l'
+        %CYGWIN_ROOT%\bash.exe -l -c 'git config -l'
         ECHO ::endgroup::
         ECHO ::group::git config --global -l
-        C:\tools\cygwin\bin\bash.exe -l -c 'git config --global -l'
+        %CYGWIN_ROOT%\bash.exe -l -c 'git config --global -l'
         ECHO ::endgroup::
         ECHO ::group::opam list
-        C:\tools\cygwin\bin\bash.exe -l -c 'eval $(opam env); opam list'
+        opam list
         ECHO ::endgroup::
         ECHO ::group::ocamlc -config
-        C:\tools\cygwin\bin\bash.exe -l -c 'eval $(opam env); ocamlc -config'
+        opam exec -- ocamlc -config
         ECHO ::endgroup::
         ECHO ::group::coqc --config
-        C:\tools\cygwin\bin\bash.exe -l -c 'eval $(opam env); coqc --config'
+        opam exec -- coqc --config
         ECHO ::endgroup::
         ECHO ::group::coqc --version
-        C:\tools\cygwin\bin\bash.exe -l -c 'eval $(opam env); coqc --version'
+        opam exec -- coqc --version
         ECHO ::endgroup::
         ECHO ::group::coqtop version
-        true | C:\tools\cygwin\bin\bash.exe -l -c 'eval $(opam env); coqtop'
+        echo | opam exec -- coqtop
         ECHO ::endgroup::
         ECHO ::group::make printenv
-        C:\tools\cygwin\bin\bash.exe -l -c 'cd "%cd%"; eval $(opam env); make printenv'
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- make printenv'
         ECHO ::endgroup::
         ECHO ::group::PATH
-        C:\tools\cygwin\bin\bash.exe -l -c 'cd "%cd%"; echo "${PATH}"'
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; echo "${PATH}"'
         ECHO ::endgroup::
       shell: cmd
     - name: deps
-      run: C:\tools\cygwin\bin\bash.exe -l -c 'cd "%cd%"; eval $(opam env); etc/ci/github-actions-make.sh -j%NJOBS% deps'
-      shell: cmd
+      run: opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} deps
+      shell: %CYGWIN_ROOT%\bin\bash.exe --noprofile --norc -eo pipefail {0}
     - name: all
-      run: C:\tools\cygwin\bin\bash.exe -l -c 'cd "%cd%"; eval $(opam env); etc/ci/github-actions-make.sh -j%NJOBS% all'
-      shell: cmd
+      run: opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} all
+      shell: %CYGWIN_ROOT%\bin\bash.exe --noprofile --norc -eo pipefail {0}
     - name: upload OCaml files
       uses: actions/upload-artifact@v1
       with:
         name: ExtractionOCaml
         path: src/ExtractionOCaml
     - name: display timing info
-      run: C:\tools\cygwin\bin\bash.exe -l -c 'cd "%cd%"; cat time-of-build-pretty.log'
+      run: type time-of-build-pretty.log
       shell: cmd
     - name: display per-line timing info
-      run: C:\tools\cygwin\bin\bash.exe -l -c 'cd "%cd%"; etc/ci/github-actions-display-per-line-timing.sh'
-      shell: cmd
+      run: etc/ci/github-actions-display-per-line-timing.sh
+      shell: %CYGWIN_ROOT%\bin\bash.exe --noprofile --norc -eo pipefail {0}
 #    - name: upload timing and .vo info
 #      uses: actions/upload-artifact@v1
 #      with:
@@ -100,6 +94,6 @@ jobs:
 #        path: .
 #      if: always ()
     - name: validate
-      run: C:\tools\cygwin\bin\bash.exe -l -c 'cd "%cd%"; eval $(opam env); make TIMED=1 validate COQCHKFLAGS="-o"'
-      shell: cmd
+      run: opam exec -- make TIMED=1 validate COQCHKFLAGS="-o"
+      shell: %CYGWIN_ROOT%\bin\bash.exe --noprofile --norc -eo pipefail {0}
       if: github.event_name != 'pull_request'
