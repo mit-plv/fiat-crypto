@@ -80,8 +80,6 @@ jobs:
 
     - name: echo Windows build params
       run: |
-    - name: echo build params
-      run: |
         ECHO ::group::wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
         wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
         ECHO ::endgroup::
@@ -100,8 +98,6 @@ jobs:
         opam list
         echo ::endgroup::
         
-    - uses: actions/checkout@v2
-      
     - name: Install Coq
       run: |
         opam repo add coq-core-dev https://coq.inria.fr/opam/core-dev
