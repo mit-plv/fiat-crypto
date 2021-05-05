@@ -10,6 +10,10 @@ jobs:
   build:
 
     runs-on: windows-latest
+    
+    defaults:
+      run:
+        shell: "%CYGWIN_ROOT%/bin/bash.exe --noprofile --norc -eo pipefail {0}"
 
     env:
       NJOBS: "2"
@@ -72,10 +76,8 @@ jobs:
       shell: cmd
     - name: deps
       run: opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} deps
-      shell: "%CYGWIN_ROOT%\bin\bash.exe --noprofile --norc -eo pipefail {0}"
     - name: all
       run: opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} all
-      shell: "%CYGWIN_ROOT%\bin\bash.exe --noprofile --norc -eo pipefail {0}"
     - name: upload OCaml files
       uses: actions/upload-artifact@v1
       with:
@@ -86,7 +88,6 @@ jobs:
       shell: cmd
     - name: display per-line timing info
       run: etc/ci/github-actions-display-per-line-timing.sh
-      shell: "%CYGWIN_ROOT%\bin\bash.exe --noprofile --norc -eo pipefail {0}"
 #    - name: upload timing and .vo info
 #      uses: actions/upload-artifact@v1
 #      with:
@@ -95,5 +96,4 @@ jobs:
 #      if: always ()
     - name: validate
       run: opam exec -- make TIMED=1 validate COQCHKFLAGS="-o"
-      shell: "%CYGWIN_ROOT%\bin\bash.exe --noprofile --norc -eo pipefail {0}"
       if: github.event_name != 'pull_request'
