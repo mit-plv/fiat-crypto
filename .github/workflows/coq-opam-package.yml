@@ -110,7 +110,7 @@ jobs:
         opam update
         opam install opam-depext
         opam exec -- opam-depext coq.${{ matrix.coq-version }}
-        opam pin add coq.${{ matrix.coq-version }}
+        opam pin --kind=version add coq.${{ matrix.coq-version }}
 
     - name: echo more build params
       run: |
