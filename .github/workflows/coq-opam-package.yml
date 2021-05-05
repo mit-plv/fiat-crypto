@@ -85,6 +85,8 @@ jobs:
         echo ::group::opam list
         opam list
         echo ::endgroup::
+        
+    - uses: actions/checkout@v2
       
     - name: Install Coq
       run: |
@@ -93,7 +95,7 @@ jobs:
         opam repo add coq-extra-dev https://coq.inria.fr/opam/extra-dev
         opam update
         opam install opam-depext
-        opam exec -- opam-depext coq
+        opam exec -- opam-depext coq.${{ matrix.coq-version }}
         opam pin add coq.${{ matrix.coq-version }}
 
     - name: echo more build params
