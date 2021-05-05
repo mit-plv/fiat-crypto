@@ -29,7 +29,7 @@ jobs:
     - name: Install Coq
       run: |
         opam install opam-depext
-        opam-depext coq
+        opam exec -- opam-depext coq
         opam pin add coq %COQ_VERSION%
       env:
         OPAMYES: "true"
