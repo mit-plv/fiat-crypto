@@ -1,5 +1,8 @@
 name: CI (Coq, Windows)
 
+# Note that we must split up each command into a separate step for Windows, because otherwise we don't get error code
+# See also https://github.com/avsm/setup-ocaml/issues/72
+
 on:
   push:
   pull_request:
@@ -10,7 +13,7 @@ jobs:
   build:
 
     runs-on: windows-latest
-    
+
     env:
       NJOBS: "2"
       COQ_VERSION: "8.13.1"
@@ -27,11 +30,9 @@ jobs:
       uses: avsm/setup-ocaml@v1.1.10
       with:
         ocaml-version: 4.11.1
-    - name: Install Coq
-      run: |
-        opam install opam-depext
-        opam exec -- opam-depext coq.${{ env.COQ_VERSION }}
-        opam pin add --kind=version coq ${{ env.COQ_VERSION }}
+    - run: opam install opam-depext
+    - run: opam exec -- opam-depext coq.${{ env.COQ_VERSION }}
+    - run: opam pin add --kind=version coq ${{ env.COQ_VERSION }}
 
     - name: echo build params
       run: |
@@ -71,10 +72,10 @@ jobs:
       shell: cmd
     - name: deps
       run: opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} deps
-      shell: "${{ env.CYGWIN_ROOT }}/bin/bash.exe --noprofile --norc -eo pipefail {0}"
+      shell: "${env:CYGWIN_ROOT}/bin/bash.exe --noprofile --norc -eo pipefail {0}"
     - name: all
       run: opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} all
-      shell: "${{ env.CYGWIN_ROOT }}/bin/bash.exe --noprofile --norc -eo pipefail {0}"
+      shell: "${env:CYGWIN_ROOT}/bin/bash.exe --noprofile --norc -eo pipefail {0}"
     - name: upload OCaml files
       uses: actions/upload-artifact@v1
       with:
@@ -85,7 +86,7 @@ jobs:
       shell: cmd
     - name: display per-line timing info
       run: etc/ci/github-actions-display-per-line-timing.sh
-      shell: "${{ env.CYGWIN_ROOT }}/bin/bash.exe --noprofile --norc -eo pipefail {0}"
+      shell: "${env:CYGWIN_ROOT}/bin/bash.exe --noprofile --norc -eo pipefail {0}"
 #    - name: upload timing and .vo info
 #      uses: actions/upload-artifact@v1
 #      with:
@@ -94,5 +95,5 @@ jobs:
 #      if: always ()
     - name: validate
       run: opam exec -- make TIMED=1 validate COQCHKFLAGS="-o"
-      shell: "${{ env.CYGWIN_ROOT }}/bin/bash.exe --noprofile --norc -eo pipefail {0}"
+      shell: "${env:CYGWIN_ROOT}/bin/bash.exe --noprofile --norc -eo pipefail {0}"
       if: github.event_name != 'pull_request'
