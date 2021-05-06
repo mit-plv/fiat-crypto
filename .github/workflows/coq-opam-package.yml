@@ -1,5 +1,8 @@
 name: Test opam package
 
+# Note that we must split up each command into a separate step for Windows, because otherwise we don't get error code
+# See also https://github.com/avsm/setup-ocaml/issues/72
+
 on:
   push:
     branches:
@@ -105,15 +108,13 @@ jobs:
         opam list
         echo ::endgroup::
         
-    - name: Install Coq
-      run: |
-        opam repo add coq-core-dev https://coq.inria.fr/opam/core-dev
-        opam repo add coq-released https://coq.inria.fr/opam/released
-        opam repo add coq-extra-dev https://coq.inria.fr/opam/extra-dev
-        opam update
-        opam install opam-depext
-        opam exec -- opam-depext coq.${{ matrix.coq-version }}
-        opam pin --kind=version add coq ${{ matrix.coq-version }}
+    - run: opam repo add coq-core-dev https://coq.inria.fr/opam/core-dev
+    - run: opam repo add coq-released https://coq.inria.fr/opam/released
+    - run: opam repo add coq-extra-dev https://coq.inria.fr/opam/extra-dev
+    - run: opam update
+    - run: opam install opam-depext
+    - run: opam exec -- opam-depext coq.${{ matrix.coq-version }}
+    - run: opam pin --kind=version add coq ${{ matrix.coq-version }}
 
     - name: echo more build params
       run: |
@@ -130,17 +131,13 @@ jobs:
         echo "" | opam exec -- coqtop
         echo ::endgroup::
 
-    - name: Install Fiat-Crypto
-      run: |
-        opam exec -- opam-depext coq-fiat-crypto
-        opam install coq-fiat-crypto
-        opam list
+    - run: opam exec -- opam-depext coq-fiat-crypto
+    - run: opam install coq-fiat-crypto
       env:
         COQEXTRAFLAGS: ${{ matrix.coq-extra-flags }}
-
-    - name: Test Fiat-Crypto binaries
-      run: |
-        opam exec -- word_by_word_montgomery -h
-        opam exec -- unsaturated_solinas -h
-        opam exec -- saturated_solinas -h
-        opam exec -- base_conversion -h
+        
+    - run: opam list
+    - run: opam exec -- word_by_word_montgomery -h
+    - run: opam exec -- unsaturated_solinas -h
+    - run: opam exec -- saturated_solinas -h
+    - run: opam exec -- base_conversion -h
