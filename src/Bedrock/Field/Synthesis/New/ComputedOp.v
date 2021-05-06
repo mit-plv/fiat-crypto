@@ -1,7 +1,7 @@
 Require Import bedrock2.Syntax.
 Require Import Crypto.Bedrock.Field.Common.Types.
 Require Import Crypto.BoundsPipeline.
-Require Import Crypto.Bedrock.Field.Synthesis.Generic.Signature.
+Require Import Crypto.Bedrock.Field.Synthesis.New.Signature.
 Require Import Crypto.Language.API.
 Import API.Compilers.
 
