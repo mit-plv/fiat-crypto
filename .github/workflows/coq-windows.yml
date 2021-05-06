@@ -24,12 +24,12 @@ jobs:
     - uses: actions/checkout@v2
     - name: submodules-init
       uses: snickerbockers/submodules-init@v4
+    - name: Setup Python
+      uses: actions/setup-python@v2.2.2
     - name: Set up OCaml
       uses: avsm/setup-ocaml@v1.1.10
       with:
         ocaml-version: 4.11.1
-    - name: Setup Python
-      uses: actions/setup-python@v2.2.2
     - name: Install Coq
       run: |
         opam install opam-depext
