@@ -17,8 +17,11 @@ jobs:
         coq-version: ['dev', '8.13.1', '8.12.2', '8.11.1', '8.10.2', '8.9.1']
         ocaml-version: ['4.11.1', '4.08.1']
         os: ['ubuntu-latest', 'macos-latest', 'windows-latest']
-        exclude:
+        include:
         - coq-version: 'dev'
+          coq-version-prefix: 'coq.'
+        exclude:
+        - coq-version: 'coq.dev'
           ocaml-version: '4.08.1'
         - coq-version: '8.13.1'
           ocaml-version: '4.08.1'
@@ -106,7 +109,7 @@ jobs:
         opam update
         opam install opam-depext
         opam exec -- opam-depext coq.${{ matrix.coq-version }}
-        opam pin --kind=version add coq.${{ matrix.coq-version }}
+        opam pin --kind=version add coq ${{ matrix.coq-version-prefix }}${{ matrix.coq-version }}
 
     - name: echo more build params
       run: |
