@@ -80,12 +80,12 @@ jobs:
 
     - name: echo Windows build params
       run: |
-        ECHO ::group::wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
+        echo ::group::wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
         wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
-        ECHO ::endgroup::
-        ECHO ::group::wmic cpu list /format:list
+        echo ::endgroup::
+        echo ::group::wmic cpu list /format:list
         wmic cpu list /format:list
-        ECHO ::endgroup::
+        echo ::endgroup::
       shell: cmd
       if: ${{ runner.os == 'Windows' }}
 
@@ -110,19 +110,18 @@ jobs:
 
     - name: echo more build params
       run: |
-        echo "::group::opam list"
+        echo ::group::opam list
         opam list
-        echo "::endgroup::"
-        echo "::group::coqc --config"
+        echo ::endgroup::
+        echo ::group::coqc --config
         opam exec -- coqc --config
-        echo "::endgroup::"
-        echo "::group::coqc --version"
+        echo ::endgroup::"
+        echo ::group::coqc --version
         opam exec -- coqc --version
-        echo "::endgroup::"
-        echo "::group::true | coqtop"
-        true | opam exec -- coqtop
-        echo "::endgroup::"
-      shell: bash
+        echo ::endgroup::"
+        echo ::group::echo ~ coqtop
+        echo | opam exec -- coqtop
+        echo ::endgroup::
 
     - name: Install Fiat-Crypto
       run: |
