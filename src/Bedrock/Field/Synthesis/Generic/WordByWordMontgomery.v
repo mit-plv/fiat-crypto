@@ -110,34 +110,21 @@ Section __.
   Local Notation eval :=
     (@WordByWordMontgomery.WordByWordMontgomery.eval Semantics.width n).
 
-  (* Note: annoyingly, prime_boudnds, prime_bytes_bounds and saturated_bounds
-     are option types, unlike loose_bounds or tight_bounds, so we have to refer
-     to the values they wrap in Some whenever we want to use them with
-     list_Z_bounded_by *)
-  Local Notation prime_bounds_value :=
-    (map (fun v : Z => Some {| ZRange.lower := 0; ZRange.upper := v |})
-         (prime_upperbound_list m Semantics.width)).
-  Local Notation prime_bytes_bounds_value :=
-    (map (fun v : Z => Some {| ZRange.lower := 0; ZRange.upper := v |})
-         (prime_bytes_upperbound_list m)).
-  Local Notation saturated_bounds_value :=
-    (Primitives.saturated_bounds_list n Semantics.width).
-
   Ltac select_access_size b :=
     lazymatch b with
     | Some bounds => constr:(access_size.word)
-    | saturated_bounds => constr:(access_size.word)
-    | prime_bounds => constr:(access_size.word)
-    | prime_bytes_bounds => constr:(access_size.one)
+    | Some saturated_bounds => constr:(access_size.word)
+    | Some prime_bounds => constr:(access_size.word)
+    | Some prime_bytes_bounds => constr:(access_size.one)
     | ?b => fail "unable to select access size for bound" b
     end.
 
   Ltac select_length b :=
     lazymatch b with
     | Some bounds => constr:(n)
-    | saturated_bounds => constr:(n)
-    | prime_bounds => constr:(n)
-    | prime_bytes_bounds => constr:(n_bytes)
+    | Some saturated_bounds => constr:(n)
+    | Some prime_bounds => constr:(n)
+    | Some prime_bytes_bounds => constr:(n_bytes)
     | ?b => fail "unable to select array length for bound" b
     end.
 
@@ -499,7 +486,7 @@ Section __.
       list_Z_bounded_by (max_bounds n) x.
     Proof.
       apply relax_list_Z_bounded_by. cbn.
-      cbv [Primitives.saturated_bounds_list max_bounds list_Z_tighter_than].
+      cbv [bounds Primitives.saturated_bounds max_bounds list_Z_tighter_than].
       induction n; [ reflexivity | ].
       cbn [repeat FoldBool.fold_andb_map ZRange.lower ZRange.upper max_range].
       apply Bool.andb_true_iff. split; [ | solve [ auto ] ].
@@ -507,7 +494,7 @@ Section __.
     Qed.
 
     Lemma relax_prime_bounds x :
-      list_Z_bounded_by prime_bounds_value x ->
+      list_Z_bounded_by prime_bounds x ->
       list_Z_bounded_by bounds x.
     Proof.
       cbv [prime_bounds prime_upperbound_list].
@@ -517,7 +504,7 @@ Section __.
     Qed.
 
     Lemma relax_to_byte_bounds x :
-      list_Z_bounded_by prime_bytes_bounds_value x ->
+      list_Z_bounded_by prime_bytes_bounds x ->
       list_Z_bounded_by (byte_bounds n_bytes) x.
     Proof.
       cbv [prime_bytes_bounds prime_bytes_upperbound_list].
@@ -536,19 +523,19 @@ Section __.
       rewrite <-length_bounds. cbn - [bounds]. congruence.
     Qed.
 
-    Lemma length_saturated_bounds_value : length saturated_bounds_value = n.
+    Lemma length_saturated_bounds : length saturated_bounds = n.
     Proof. apply repeat_length. Qed.
 
     Lemma bounded_by_saturated_bounds_length x :
-      list_Z_bounded_by saturated_bounds_value x -> length x = n.
+      list_Z_bounded_by saturated_bounds x -> length x = n.
     Proof.
-      cbv [saturated_bounds max_bounds].
+      cbv [max_bounds].
       intros. pose proof length_list_Z_bounded_by _ _ ltac:(eassumption).
-      rewrite length_saturated_bounds_value in *. lia.
+      rewrite Primitives.length_saturated_bounds in *. lia.
     Qed.
 
     Lemma bounded_by_prime_bounds_length x :
-      list_Z_bounded_by prime_bounds_value x -> length x = n.
+      list_Z_bounded_by prime_bounds x -> length x = n.
     Proof.
       intros. pose proof length_list_Z_bounded_by _ _ ltac:(eassumption).
       cbv [prime_bounds prime_upperbound_list] in *.
@@ -556,7 +543,7 @@ Section __.
     Qed.
 
     Lemma bounded_by_prime_bytes_bounds_length x :
-      list_Z_bounded_by prime_bytes_bounds_value x -> length x = n_bytes.
+      list_Z_bounded_by prime_bytes_bounds x -> length x = n_bytes.
     Proof.
       intros. pose proof length_list_Z_bounded_by _ _ ltac:(eassumption).
       cbv [prime_bytes_bounds prime_bytes_upperbound_list] in *.
@@ -571,7 +558,7 @@ Section __.
       (check_args m Semantics.width [] (ErrorT.Success tt)
        = ErrorT.Success tt) ->
       WordByWordMontgomery.valid Semantics.width n m x ->
-      list_Z_bounded_by prime_bounds_value x.
+      list_Z_bounded_by prime_bounds x.
     Proof.
       intros; unshelve eapply bounded_by_prime_bounds_of_valid; eauto.
     Qed.
@@ -580,7 +567,7 @@ Section __.
       (check_args m Semantics.width [] (ErrorT.Success tt)
        = ErrorT.Success tt) ->
       WordByWordMontgomery.valid 8 n_bytes m x ->
-      list_Z_bounded_by prime_bytes_bounds_value x.
+      list_Z_bounded_by prime_bytes_bounds x.
     Proof.
       intros; eapply bounded_by_prime_bytes_bounds_of_bytes_valid; eauto.
     Qed.
@@ -593,15 +580,15 @@ Section __.
       | _ =>
         assert (WordByWordMontgomery.valid Semantics.width n m x)
                by prove_bounds_direct;
-        assert (list_Z_bounded_by prime_bounds_value x)
+        assert (list_Z_bounded_by prime_bounds x)
                by (apply valid_bounded_by_prime_bounds; auto)
       | _ =>
         assert (WordByWordMontgomery.valid 8 n_bytes m x)
                by prove_bounds_direct;
-        assert (list_Z_bounded_by prime_bytes_bounds_value x)
+        assert (list_Z_bounded_by prime_bytes_bounds x)
                by (apply valid_bounded_by_prime_bytes_bounds; auto)
       | _ => assert (list_Z_bounded_by bounds x) by prove_bounds_direct
-      | _ => assert (list_Z_bounded_by prime_bytes_bounds_value x)
+      | _ => assert (list_Z_bounded_by prime_bytes_bounds x)
           by prove_bounds_direct
       | _ => assert (list_Z_bounded_by (max_bounds n) x) by prove_bounds_direct
       | _ => assert (list_Z_bounded_by (byte_bounds n_bytes) x) by prove_bounds_direct
@@ -617,11 +604,11 @@ Section __.
       match goal with
       | H : list_Z_bounded_by ?b1 ?x |- list_Z_bounded_by ?b2 ?x =>
         first [ unify b1 b2; apply H
-              | unify b1 prime_bounds_value; unify b2 bounds;
+              | unify b1 prime_bounds; unify b2 bounds;
                 apply relax_prime_bounds; apply H
-              | unify b1 prime_bounds_value; unify b2 saturated_bounds_value;
+              | unify b1 prime_bounds; unify b2 saturated_bounds;
                 apply relax_to_max_bounds, relax_prime_bounds; apply H
-              | unify b1 prime_bytes_bounds_value; unify b2 (byte_bounds n_bytes);
+              | unify b1 prime_bytes_bounds; unify b2 (byte_bounds n_bytes);
                 apply relax_to_byte_bounds; apply H ]
       end.
 

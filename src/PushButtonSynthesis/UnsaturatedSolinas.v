@@ -118,13 +118,12 @@ Section __.
   Local Notation loose_upperbounds := (loose_upperbounds n s c) (only parsing).
   Local Notation tight_bounds := (tight_bounds n s c) (only parsing).
   Local Notation loose_bounds := (loose_bounds n s c) (only parsing).
-  Definition prime_bound : ZRange.type.option.interp (base.type.Z)
-    := Some r[0~>(s - Associational.eval c - 1)]%zrange.
-  Definition prime_bounds : ZRange.type.option.interp (base.type.list (base.type.Z))
-    := Some (List.map (fun v => Some r[0 ~> v]%zrange) prime_upperbound_list).
-  Definition prime_bytes_bounds : ZRange.type.option.interp (base.type.list (base.type.Z))
-    := Some (List.map (fun v => Some r[0 ~> v]%zrange) prime_bytes_upperbound_list).
-  Local Notation saturated_bounds_list := (saturated_bounds_list n machine_wordsize).
+  Definition prime_bound : ZRange.type.interp base.type.Z
+    := r[0~>(s - Associational.eval c - 1)]%zrange.
+  Definition prime_bounds : list (ZRange.type.option.interp (base.type.Z))
+    := List.map (fun v => Some r[0 ~> v]%zrange) prime_upperbound_list.
+  Definition prime_bytes_bounds : list (ZRange.type.option.interp base.type.Z)
+    := List.map (fun v => Some r[0 ~> v]%zrange) prime_bytes_upperbound_list.
   Local Notation saturated_bounds := (saturated_bounds n machine_wordsize).
   Local Notation balance := (balance n s c).
 
@@ -172,9 +171,9 @@ Section __.
   Lemma length_prime_bytes_upperbound_list : List.length prime_bytes_upperbound_list = n_bytes.
   Proof using Type. cbv [prime_bytes_upperbound_list]; now autorewrite with distr_length. Qed.
   Hint Rewrite length_prime_bytes_upperbound_list : distr_length.
-  Lemma length_saturated_bounds_list : List.length saturated_bounds_list = n.
-  Proof using Type. cbv [saturated_bounds_list]; now autorewrite with distr_length. Qed.
-  Hint Rewrite length_saturated_bounds_list : distr_length.
+  Lemma length_saturated_bounds : List.length saturated_bounds = n.
+  Proof using Type. cbv [saturated_bounds]; now autorewrite with distr_length. Qed.
+  Hint Rewrite length_saturated_bounds : distr_length.
   Lemma length_m_enc : List.length m_enc = n.
   Proof using Type. cbv [m_enc]; repeat distr_length. Qed.
   Hint Rewrite length_m_enc : distr_length.
@@ -267,7 +266,7 @@ Section __.
       /\ List.length tight_bounds = n
       /\ List.length loose_bounds = n
       /\ List.length prime_bytes_upperbound_list = n_bytes
-      /\ List.length saturated_bounds_list = n
+      /\ List.length saturated_bounds = n
       /\ Datatypes.length m_enc = n.
   Proof using curve_good.
     prepare_use_curve_good ().
@@ -449,7 +448,7 @@ Section __.
          (reified_to_bytes_gen
             @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify n @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify m_enc)
          (Some tight_bounds, tt)
-         prime_bytes_bounds.
+         (Some prime_bytes_bounds).
 
   Definition sto_bytes (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
@@ -467,7 +466,7 @@ Section __.
          possible_values_with_bytes
          (reified_from_bytes_gen
             @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify n)
-         (prime_bytes_bounds, tt)
+         (Some prime_bytes_bounds, tt)
          (Some tight_bounds).
 
   Definition sfrom_bytes (prefix : string)
@@ -486,7 +485,7 @@ Section __.
          possible_values
          (reified_encode_gen
             @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n)
-         (prime_bound, tt)
+         (Some prime_bound, tt)
          (Some tight_bounds).
 
   Definition sencode (prefix : string)
@@ -559,7 +558,7 @@ Section __.
             None (* fancy *)
             (reified_bytes_eval_gen
                @ GallinaReify.Reify s)
-            (prime_bytes_bounds, tt)).
+            (Some prime_bytes_bounds, tt)).
 
   Definition sbytes_eval (arg_name : string) (* s for string *)
     := show (invert_expr.smart_App_curried (rbytes_eval _) (arg_name, tt)).

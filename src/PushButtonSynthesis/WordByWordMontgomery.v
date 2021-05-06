@@ -148,13 +148,12 @@ Section __.
   Definition prime_bytes_upperbound_list : list Z
     := Partition.partition (weight 8 1) n_bytes (s-1).
   Definition upperbounds : list Z := prime_upperbound_list.
-  Definition prime_bound : ZRange.type.option.interp (base.type.Z)
-    := Some r[0~>m-1]%zrange.
-  Definition prime_bounds : ZRange.type.option.interp (base.type.list (base.type.Z))
-    := Some (List.map (fun v => Some r[0 ~> v]%zrange) prime_upperbound_list).
-  Definition prime_bytes_bounds : ZRange.type.option.interp (base.type.list (base.type.Z))
-    := Some (List.map (fun v => Some r[0 ~> v]%zrange) prime_bytes_upperbound_list).
-  Local Notation saturated_bounds_list := (saturated_bounds_list n machine_wordsize).
+  Definition prime_bound : ZRange.type.interp (base.type.Z)
+    := r[0~>m-1]%zrange.
+  Definition prime_bounds : list (ZRange.type.option.interp base.type.Z)
+    := List.map (fun v => Some r[0 ~> v]%zrange) prime_upperbound_list.
+  Definition prime_bytes_bounds : list (ZRange.type.option.interp (base.type.Z))
+    := List.map (fun v => Some r[0 ~> v]%zrange) prime_bytes_upperbound_list.
   Local Notation saturated_bounds := (saturated_bounds n machine_wordsize).
   Local Notation larger_saturated_bounds := (Primitives.saturated_bounds sat_limbs machine_wordsize).
 
@@ -183,9 +182,9 @@ Section __.
   Let possible_values := possible_values_of_machine_wordsize.
   Let possible_values_with_bytes := possible_values_of_machine_wordsize_with_bytes.
   Definition bounds : list (ZRange.type.option.interp base.type.Z)
-    := Option.invert_Some saturated_bounds (*List.map (fun u => Some r[0~>u]%zrange) upperbounds*).
+    := saturated_bounds (*List.map (fun u => Some r[0~>u]%zrange) upperbounds*).
   Definition larger_bounds : list (ZRange.type.option.interp base.type.Z)
-    := Option.invert_Some larger_saturated_bounds (*List.map (fun u => Some r[0~>u]%zrange) upperbounds*).
+    := larger_saturated_bounds (*List.map (fun u => Some r[0~>u]%zrange) upperbounds*).
 
   Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
   Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
@@ -457,8 +456,8 @@ Section __.
          possible_values_with_bytes
          (reified_to_bytes_gen
             @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m)
-         (prime_bounds, tt)
-         prime_bytes_bounds.
+         (Some prime_bounds, tt)
+         (Some prime_bytes_bounds).
 
   Definition sto_bytes (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
@@ -477,8 +476,8 @@ Section __.
          possible_values_with_bytes
          (reified_from_bytes_gen
             @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify 1 @ GallinaReify.Reify s @ GallinaReify.Reify n)
-         (prime_bytes_bounds, tt)
-         prime_bounds.
+         (Some prime_bytes_bounds, tt)
+         (Some prime_bounds).
 
   Definition sfrom_bytes (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
@@ -497,7 +496,7 @@ Section __.
          possible_values
          (reified_encode_gen
             @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
-         (prime_bound, tt)
+         (Some prime_bound, tt)
          (Some bounds).
 
   Definition sencode (prefix : string)
@@ -573,7 +572,7 @@ Section __.
             None (* fancy *)
             (reified_bytes_eval_gen
                @ GallinaReify.Reify s)
-            (prime_bytes_bounds, tt)).
+            (Some prime_bytes_bounds, tt)).
 
   Definition sbytes_eval (arg_name : string) (* s for string *)
     := Show.show (invert_expr.smart_App_curried (rbytes_eval _) (arg_name, tt)).
@@ -666,7 +665,7 @@ Section __.
     clear -H use_curve_good curve_good.
     destruct H as [H _]; destruct_head'_and.
     cbv [small] in H.
-    cbv [ZRange.type.base.option.is_bounded_by bounds saturated_bounds saturated_bounds_list Option.invert_Some].
+    cbv [ZRange.type.base.option.is_bounded_by bounds saturated_bounds].
     replace n with (List.length x) by now rewrite H, Partition.length_partition.
     rewrite <- map_const, fold_andb_map_map1, fold_andb_map_iff.
     cbv [ZRange.type.base.is_bounded_by is_bounded_by_bool lower upper type_base].
@@ -774,7 +773,7 @@ Section __.
 
   Lemma bounded_by_prime_bounds_of_valid x
         (H : valid x)
-    : ZRange.type.base.option.is_bounded_by (t:=base.type.list base.type.Z) prime_bounds x = true.
+    : ZRange.type.base.option.is_bounded_by (t:=base.type.list base.type.Z) (Some prime_bounds) x = true.
   Proof using curve_good.
     pose proof use_curve_good as use_curve_good.
     destruct_head'_and.
@@ -783,7 +782,7 @@ Section __.
 
   Lemma bounded_by_prime_bytes_bounds_of_bytes_valid x
         (H : bytes_valid x)
-    : ZRange.type.base.option.is_bounded_by (t:=base.type.list base.type.Z) prime_bytes_bounds x = true.
+    : ZRange.type.base.option.is_bounded_by (t:=base.type.list base.type.Z) (Some prime_bytes_bounds) x = true.
   Proof using curve_good.
     pose proof use_curve_good as use_curve_good.
     destruct_head'_and.
@@ -991,7 +990,7 @@ Section __.
   Local Opaque Pipeline.BoundsPipeline. (* need this or else [eapply Pipeline.BoundsPipeline_correct in Hres] takes forever *)
   Lemma selectznz_correct res
         (Hres : selectznz = Success res)
-    : selectznz_correct machine_wordsize n saturated_bounds_list (Interp res).
+    : selectznz_correct machine_wordsize n saturated_bounds (Interp res).
   Proof using curve_good. Primitives.prove_correctness use_curve_good. Qed.
 
   Lemma Wf_selectznz res (Hres : selectznz = Success res) : Wf res.
