@@ -27,7 +27,6 @@ Require Import Crypto.Bedrock.Specs.Field.
 Require Import Crypto.COperationSpecifications.
 Require Import Crypto.Language.API.
 Require Import Crypto.Spec.ModularArithmetic.
-(*Import ZRange.Compilers.*)
 Import Language.API.Compilers.
 Import ListNotations.
 Import Types.Notations.
@@ -46,37 +45,37 @@ Section Generic.
     (name, body).
 End Generic.
 
-Hint Unfold fst snd : pairs.
-Hint Unfold type.final_codomain : types.
-Hint Unfold Equivalence.equivalent_args
-     Equivalence.equivalent_base rep.equiv
-     rep.listZ_mem rep.Z type.map_for_each_lhs_of_arrow
-     rtype_of_ltype base_rtype_of_ltype rep.rtype_of_ltype
-     WeakestPrecondition.dexpr WeakestPrecondition.expr
-     WeakestPrecondition.expr_body
+Local Hint Unfold fst snd : pairs.
+Local Hint Unfold type.final_codomain : types.
+Local Hint Unfold Equivalence.equivalent_args
+      Equivalence.equivalent_base rep.equiv
+      rep.listZ_mem rep.Z type.map_for_each_lhs_of_arrow
+      rtype_of_ltype base_rtype_of_ltype rep.rtype_of_ltype
+      WeakestPrecondition.dexpr WeakestPrecondition.expr
+      WeakestPrecondition.expr_body
   : equivalence.
-Hint Unfold LoadStoreList.list_lengths_from_args
-     LoadStoreList.list_lengths_from_value
+Local Hint Unfold LoadStoreList.list_lengths_from_args
+      LoadStoreList.list_lengths_from_value
   : list_lengths.
-Hint Unfold LoadStoreList.access_sizes_good_args
-     LoadStoreList.access_sizes_good
-     LoadStoreList.base_access_sizes_good
-     LoadStoreList.within_access_sizes_args
-     LoadStoreList.within_base_access_sizes
+Local Hint Unfold LoadStoreList.access_sizes_good_args
+      LoadStoreList.access_sizes_good
+      LoadStoreList.base_access_sizes_good
+      LoadStoreList.within_access_sizes_args
+      LoadStoreList.within_base_access_sizes
   : access_sizes.
-Hint Unfold LoadStoreList.lists_reserved_with_initial_context
-     LoadStoreList.lists_reserved
-     LoadStoreList.extract_listnames
-     Flatten.flatten_listonly_base_ltype
-     Flatten.flatten_argnames
-     Flatten.flatten_base_ltype
-     List.app map.of_list_zip
-     map.putmany_of_list_zip
+Local Hint Unfold LoadStoreList.lists_reserved_with_initial_context
+      LoadStoreList.lists_reserved
+      LoadStoreList.extract_listnames
+      Flatten.flatten_listonly_base_ltype
+      Flatten.flatten_argnames
+      Flatten.flatten_base_ltype
+      List.app map.of_list_zip
+      map.putmany_of_list_zip
   : lists_reserved.
 
-Hint Resolve @MakeAccessSizes.bits_per_word_le_width
-     @MakeAccessSizes.width_ge_8 @width_0mod_8
-     @Util.Forall_map_byte_unsigned
+Local Hint Resolve MakeAccessSizes.bits_per_word_le_width
+      MakeAccessSizes.width_ge_8 width_0mod_8
+      Util.Forall_map_byte_unsigned
   : translate_func_preconditions.
 
 Section WithParameters.
@@ -111,7 +110,7 @@ Section WithParameters.
               (word.of_Z
                  (Z.of_nat (BinIntDef.Z.to_nat (bytes_per_word width))))
               px (map word.unsigned x))).
-  Proof.
+  Proof using p_ok.
     cbv [FElem Bignum.Bignum field_representation frep].
     rewrite Util.array_truncated_scalar_scalar_iff1.
     rewrite word_size_in_bytes_eq. reflexivity.
@@ -126,7 +125,7 @@ Section WithParameters.
            (Array.array
               (Scalars.truncated_scalar access_size.one)
               (word.of_Z 1) pbs (map byte.unsigned bs))).
-  Proof.
+  Proof using p_ok.
     cbv [FElemBytes].
     rewrite Util.array_truncated_scalar_ptsto_iff1.
     rewrite ByteBounds.byte_map_of_Z_unsigned.
@@ -337,7 +336,7 @@ Section WithParameters.
                 list_Z_bounded_by ybounds y ->
                 list_Z_bounded_by outbounds (API.interp (res _) x y)).
 
-    Ltac equivalence_side_conditions_hook ::=
+    Local Ltac equivalence_side_conditions_hook ::=
       lazymatch goal with
       | |- context [length (API.interp (res _) ?x ?y)] =>
         specialize (res_bounds x y ltac:(auto) ltac:(auto));
@@ -369,7 +368,9 @@ Section WithParameters.
       f = make_bedrock_func name insizes outsizes inlengths res ->
       forall functions,
         (binop_spec name op xbounds ybounds outbounds (f :: functions)).
-    Proof.
+    Proof using inname_gen_varname_gen_disjoint outbounds_length
+          outbounds_tighter_than_max outname_gen_varname_gen_disjoint
+          p_ok relax_bounds res_Wf res_bounds res_eq res_valid.
       subst inlengths insizes outsizes.
       cbv [list_binop_insizes list_binop_outsizes list_binop_inlengths].
       cbv beta; intros; subst f. cbv [make_bedrock_func].
@@ -426,7 +427,7 @@ Section WithParameters.
                 list_Z_bounded_by xbounds x ->
                 list_Z_bounded_by outbounds (API.interp (res _) x)).
 
-    Ltac equivalence_side_conditions_hook ::=
+    Local Ltac equivalence_side_conditions_hook ::=
       lazymatch goal with
       | |- context [length (API.interp (res _) ?x)] =>
         specialize (res_bounds x ltac:(auto));
@@ -457,7 +458,9 @@ Section WithParameters.
       f = make_bedrock_func name insizes outsizes inlengths res ->
       forall functions,
         (unop_spec name op xbounds outbounds (f :: functions)).
-    Proof.
+    Proof using inname_gen_varname_gen_disjoint outbounds_length
+          outbounds_tighter_than_max outname_gen_varname_gen_disjoint
+          p_ok relax_bounds res_Wf res_bounds res_eq res_valid.
       subst inlengths insizes outsizes.
       cbv [list_unop_insizes list_unop_outsizes list_unop_inlengths].
       cbv beta; intros; subst f. cbv [make_bedrock_func].
@@ -514,7 +517,7 @@ Section WithParameters.
                   tight_bounds
                   (API.interp (res _) (map byte.unsigned bs))).
 
-    Ltac equivalence_side_conditions_hook ::=
+    Local Ltac equivalence_side_conditions_hook ::=
       lazymatch goal with
       | |- context [length (API.interp (res _)
                                        (map byte.unsigned ?x))] =>
@@ -546,7 +549,10 @@ Section WithParameters.
       f = make_bedrock_func from_bytes insizes outsizes inlengths res ->
       forall functions,
         spec_of_from_bytes (f :: functions).
-    Proof.
+    Proof using inname_gen_varname_gen_disjoint
+          outname_gen_varname_gen_disjoint p_ok relax_bounds res_Wf
+          res_bounds res_eq res_valid tight_bounds_length
+          tight_bounds_tighter_than_max.
       subst inlengths insizes outsizes. cbv [spec_of_from_bytes].
       cbv [from_bytes_insizes from_bytes_outsizes from_bytes_inlengths].
       cbv beta; intros; subst f. cbv [make_bedrock_func].
@@ -607,7 +613,7 @@ Section WithParameters.
                   (API.interp (res _)
                               (map word.unsigned x))).
 
-    Ltac equivalence_side_conditions_hook ::=
+    Local Ltac equivalence_side_conditions_hook ::=
       lazymatch goal with
       | |- context [length (API.interp (res _) (map word.unsigned ?x))] =>
         specialize (res_bounds x ltac:(auto));
@@ -636,7 +642,10 @@ Section WithParameters.
       f = make_bedrock_func to_bytes insizes outsizes inlengths res ->
       forall functions,
         spec_of_to_bytes (f :: functions).
-    Proof.
+    Proof using byte_bounds_length byte_bounds_tighter_than_max
+          inname_gen_varname_gen_disjoint
+          outname_gen_varname_gen_disjoint p_ok res_Wf res_bounds
+          res_eq res_valid.
       subst inlengths insizes outsizes. cbv [spec_of_to_bytes].
       cbv [to_bytes_insizes to_bytes_outsizes to_bytes_inlengths].
       cbv beta; intros; subst f. cbv [make_bedrock_func].
@@ -675,31 +684,3 @@ Section WithParameters.
     Qed.
   End ToBytes.
 End WithParameters.
-
-  (*
-    Goals:
-    - bedrock2 implementations that fill the role in montladder
-    - infrastructure at a similar level as existing (examples, wbw + unsat)
-
-    Questions:
-    - does montladder require wbw, or unsat? A: unsat
-
-    Next steps:
-    - focus on unsat solinas first, make mul/add defs
-    - take mul/add defs through full synthesis/translation to get x25519 impls
-    - compose with montladder as demo to test
-    === merge ===
-    - generate other bin/unops
-    === merge ===
-    - make signature proofs for other signatures (select, from_bytes)
-    - generate all operations
-    === merge ===
-    - figure out what to do for copy and small_literal; general template that spits out the correct bedrock2?
-    - plug in everything for montladder so we have e2e scalarmult
-    ====== merge ====
-
-    Later:
-    - add examples
-    - make nice demo
-    - wbw
-  *)

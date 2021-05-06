@@ -21,6 +21,7 @@ Require Import Crypto.UnsaturatedSolinasHeuristics.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.Tactics.DestructHead.
 Import ListNotations API.Compilers Types.Notations.
 
 Class unsaturated_solinas_ops
@@ -78,7 +79,8 @@ Section UnsaturatedSolinas.
           (check_args_ok :
              check_args n s c Semantics.width (ErrorT.Success tt)
              = ErrorT.Success tt)
-          (* TODO: is this proven elsewhere/can it be proven in general? *)
+          (* TODO: prove a transitivity lemma for list_Z_tighter_than and use
+             loose_bounds_tighter_than to prove tight_bounds_tighter_than *)
           (tight_bounds_tighter_than:
              list_Z_tighter_than (tight_bounds n s c)
                                  (MaxBounds.max_bounds n))
@@ -138,14 +140,14 @@ Section UnsaturatedSolinas.
     end.
 
   Lemma loose_bounds_eq : Field.loose_bounds = loose_bounds n s c.
-  Proof. reflexivity. Qed.
+  Proof using Type. reflexivity. Qed.
   Lemma tight_bounds_eq : Field.tight_bounds = tight_bounds n s c.
   Proof. reflexivity. Qed.
 
   Lemma byte_bounds_tighter_than :
     list_Z_tighter_than prime_bytes_bounds_value
                         (byte_bounds (n_bytes s)).
-  Proof.
+  Proof using Type.
     clear. cbv [prime_bytes_upperbound_list].
     apply tighter_than_if_upper_bounded_by;
     eauto using Forall_repeat, partition_bounded_by.
@@ -153,14 +155,14 @@ Section UnsaturatedSolinas.
 
   Lemma length_byte_bounds :
     length prime_bytes_bounds_value = encoded_felem_size_in_bytes.
-  Proof.
+  Proof using Type.
     autorewrite with distr_length.
     apply length_prime_bytes_upperbound_list.
   Qed.
 
   Lemma modulus_fits_in_bytes :
     (0 < m s c <= ModOps.weight 8 1 (n_bytes s))%Z.
-  Proof.
+  Proof using check_args_ok.
     (* Extract information from check_args *)
     clear - check_args_ok. cbv [check_args] in check_args_ok.
     cbn [fold_right] in check_args_ok.
@@ -209,10 +211,10 @@ Section UnsaturatedSolinas.
       prime_bytes_bounds_value
       (Partition.Partition.partition
          (ModOps.weight 8 1) (n_bytes s) x).
-  Proof.
+  Proof using check_args_ok.
     clear - check_args_ok. intros.
     apply use_curve_good in check_args_ok.
-    DestructHead.destruct_head' and.
+    destruct_head' and.
     assert (0 <= x < s)%Z as xbounds
         by (cbv [m] in *; auto with zarith).
     cbv [prime_bytes_upperbound_list].
@@ -269,7 +271,8 @@ Section UnsaturatedSolinas.
     valid_func (res mul_op _) ->
     forall functions,
       spec_of_mul (mul_func :: functions).
-  Proof.
+  Proof using M_eq check_args_ok mul_func_eq p_ok
+        tight_bounds_tighter_than varname_gen_is_default.
     intros. cbv [spec_of_mul]. rewrite mul_func_eq.
     pose proof carry_mul_correct
          _ _ _ _ ltac:(eassumption) _ (res_eq mul_op)
@@ -289,7 +292,8 @@ Section UnsaturatedSolinas.
     valid_func (res square_op _) ->
     forall functions,
       spec_of_square (square_func :: functions).
-  Proof.
+  Proof using M_eq check_args_ok p_ok square_func_eq
+        tight_bounds_tighter_than varname_gen_is_default.
     intros. cbv [spec_of_square]. rewrite square_func_eq.
     pose proof carry_square_correct
          _ _ _ _ ltac:(eassumption) _ (res_eq square_op)
@@ -310,7 +314,8 @@ Section UnsaturatedSolinas.
     valid_func (res add_op _) ->
     forall functions,
       spec_of_add (add_func :: functions).
-  Proof.
+  Proof using M_eq add_func_eq check_args_ok
+        loose_bounds_tighter_than p_ok varname_gen_is_default.
     intros. cbv [spec_of_add]. rewrite add_func_eq.
     pose proof add_correct
          _ _ _ _ ltac:(eassumption) _ (res_eq add_op)
@@ -330,7 +335,8 @@ Section UnsaturatedSolinas.
     valid_func (res sub_op _) ->
     forall functions,
       spec_of_sub (sub_func :: functions).
-  Proof.
+  Proof using M_eq check_args_ok loose_bounds_tighter_than p_ok sub_func_eq
+        varname_gen_is_default.
     intros. cbv [spec_of_sub]. rewrite sub_func_eq.
     pose proof sub_correct
          _ _ _ _ ltac:(eassumption) _ (res_eq sub_op)
@@ -351,7 +357,8 @@ Section UnsaturatedSolinas.
     valid_func (res opp_op _) ->
     forall functions,
       spec_of_opp (opp_func :: functions).
-  Proof.
+  Proof using M_eq check_args_ok loose_bounds_tighter_than opp_func_eq p_ok
+        varname_gen_is_default.
     intros. cbv [spec_of_opp]. rewrite opp_func_eq.
     pose proof opp_correct
          _ _ _ _ ltac:(eassumption) _ (res_eq opp_op)
@@ -371,7 +378,8 @@ Section UnsaturatedSolinas.
     valid_func (res scmula24_op _) ->
     forall functions,
       spec_of_scmula24 (scmula24_func :: functions).
-  Proof.
+  Proof using M_eq check_args_ok p_ok scmula24_func_eq
+        tight_bounds_tighter_than varname_gen_is_default.
     intros. cbv [spec_of_scmula24]. rewrite scmula24_func_eq.
     pose proof carry_scmul_const_correct
          _ _ _ _ (ltac:(eassumption)) (F.to_Z a24) _
@@ -392,7 +400,8 @@ Section UnsaturatedSolinas.
     valid_func (res from_bytes_op _) ->
     forall functions,
       spec_of_from_bytes (from_bytes_func :: functions).
-  Proof.
+  Proof using M_eq check_args_ok from_bytes_func_eq p_ok
+        tight_bounds_tighter_than varname_gen_is_default.
     intros. cbv [spec_of_from_bytes]. rewrite from_bytes_func_eq.
     pose proof UnsaturatedSolinas.from_bytes_correct
          _ _ _ _ ltac:(eassumption) _ (res_eq from_bytes_op)
@@ -412,7 +421,7 @@ Section UnsaturatedSolinas.
     valid_func (res to_bytes_op _) ->
     forall functions,
       spec_of_to_bytes (to_bytes_func :: functions).
-  Proof.
+  Proof using M_eq check_args_ok p_ok to_bytes_func_eq varname_gen_is_default.
     intros. cbv [spec_of_to_bytes]. rewrite to_bytes_func_eq.
     pose proof UnsaturatedSolinas.to_bytes_correct
          _ _ _ _ ltac:(eassumption) _ (res_eq to_bytes_op)
@@ -508,8 +517,9 @@ Section Tests.
   Definition prefix : string := "fe25519_"%string.
 
   Instance field_parameters : FieldParameters.
-  Proof.
+  Proof using Type.
     let M := (eval vm_compute in (Z.to_pos (m s c))) in
+    (* Curve25519 "A" parameter (see section 4.1 of RFC 7748) *)
     let a := constr:(F.of_Z M 486662) in
     let prefix := constr:("fe25519_"%string) in
     eapply
@@ -518,7 +528,7 @@ Section Tests.
   Defined.
 
   Instance fe25519_ops : unsaturated_solinas_ops n s c machine_wordsize.
-  Proof. Time constructor; make_computed_op. Defined.
+  Proof using Type. Time constructor; make_computed_op. Defined.
 
   Derive fe25519_mul
          SuchThat (forall functions,
@@ -585,6 +595,8 @@ Section Tests.
   Proof. Time derive_bedrock2_func to_bytes_op. Qed.
 End Tests.
 
+(* Uncomment print statements below to see generated bedrock2 *)
+(*
 Print fe25519_mul.
 Print fe25519_square.
 Print fe25519_add.
@@ -593,3 +605,4 @@ Print fe25519_opp.
 Print fe25519_scmula24.
 Print fe25519_from_bytes.
 Print fe25519_to_bytes.
+*)
