@@ -2952,7 +2952,7 @@ Module debugging_remove_mul_split2.
     Local Notation saturated_bounds := (Primitives.saturated_bounds n machine_wordsize).
 
     Definition bounds : list (ZRange.type.option.interp base.type.Z)
-      := Option.invert_Some saturated_bounds (*List.map (fun u => Some r[0~>u]%zrange) upperbounds*).
+      := saturated_bounds (*List.map (fun u => Some r[0~>u]%zrange) upperbounds*).
 
     Definition possible_values_of_machine_wordsize
       := prefix_with_carry [machine_wordsize; 2 * machine_wordsize]%Z.

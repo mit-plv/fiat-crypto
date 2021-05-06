@@ -818,10 +818,8 @@ Section __.
           (n : nat)
           (machine_wordsize : Z).
 
-  Definition saturated_bounds_list : list (option zrange)
+  Definition saturated_bounds : list (ZRange.type.option.interp base.type.Z)
     := List.repeat (Some r[0 ~> 2^machine_wordsize-1]%zrange) n.
-  Definition saturated_bounds : ZRange.type.option.interp (base.type.list (base.type.Z))
-    := Some saturated_bounds_list.
 
   (* We include [0], so that even after bounds relaxation, we can
        notice where the constant 0s are, and remove them. *)
@@ -838,9 +836,9 @@ Section __.
   Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
   Local Instance split_multiret_to : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
 
-  Lemma length_saturated_bounds_list : List.length saturated_bounds_list = n.
-  Proof using Type. cbv [saturated_bounds_list]; now autorewrite with distr_length. Qed.
-  Hint Rewrite length_saturated_bounds_list : distr_length.
+  Lemma length_saturated_bounds : List.length saturated_bounds = n.
+  Proof using Type. cbv [saturated_bounds]; now autorewrite with distr_length. Qed.
+  Hint Rewrite length_saturated_bounds : distr_length.
 
   Local Notation dummy_weight := (weight 0 0).
   Local Notation evalf := (eval dummy_weight n).
@@ -861,8 +859,8 @@ Section __.
          None (* fancy *)
          possible_values_with_bytes
          reified_selectznz_gen
-         (Some r[0~>1], (saturated_bounds, (saturated_bounds, tt)))%zrange
-         saturated_bounds.
+         (Some r[0~>1], (Some saturated_bounds, (Some saturated_bounds, tt)))%zrange
+         (Some saturated_bounds).
 
   Definition sselectznz (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
@@ -871,7 +869,7 @@ Section __.
           machine_wordsize prefix "selectznz" selectznz
           (docstring_with_summary_from_lemma!
              (fun fname : string => [text_before_function_name ++ fname ++ " is a multi-limb conditional select."]%string)
-             (selectznz_correct dummy_weight n saturated_bounds_list)).
+             (selectznz_correct dummy_weight n saturated_bounds)).
 
   Definition mulx (s : Z)
     := Pipeline.BoundsPipeline
@@ -1058,7 +1056,7 @@ Section __.
 
   Lemma selectznz_correct limbwidth res
         (Hres : selectznz = Success res)
-    : selectznz_correct (weight (Qnum limbwidth) (QDen limbwidth)) n saturated_bounds_list (Interp res).
+    : selectznz_correct (weight (Qnum limbwidth) (QDen limbwidth)) n saturated_bounds (Interp res).
   Proof using Type. prove_correctness I. Qed.
 
   Lemma Wf_selectznz res (Hres : selectznz = Success res) : Wf res.
