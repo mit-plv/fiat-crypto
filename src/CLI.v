@@ -821,7 +821,11 @@ Module ForExtraction.
                            end)
                 | inr errs => error errs
                 end
-           | ErrorT.Error err => error (Arg.show_list_parse_error full_spec err)
+           | ErrorT.Error err
+             => let display := Arg.show_list_parse_error full_spec err in
+                if Arg.is_real_error err
+                then error display
+                else (* just a requested help/usage message *) write_stdout_then display ret
            end.
     End __.
   End Parameterized.
