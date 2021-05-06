@@ -50,6 +50,18 @@ SKIP_INCLUDE?=
 ifneq ($(SKIP_INCLUDE),1)
 -include Makefile.coq
 include etc/coq-scripts/Makefile.vo_closure
+
+ifeq (,$(COQ_VERSION))
+# Makefile.coq didn't get included, so we need to make a best-effort to get the Coq version so we can make _CoqProject
+ifneq (,$(COQBIN))
+# add an ending /
+COQBIN:=$(COQBIN)/
+endif
+
+COQC     ?= "$(COQBIN)coqc"
+COQ_VERSION:=$(shell $(COQC) --print-version | cut -d " " -f 1)
+
+endif
 endif
 
 .DEFAULT_GOAL := all
