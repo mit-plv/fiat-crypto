@@ -37,6 +37,7 @@ jobs:
         opam pin add coq %COQ_VERSION%
       env:
         OPAMYES: "true"
+      shell: cmd
 
     - name: echo build params
       run: |
