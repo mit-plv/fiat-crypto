@@ -9,8 +9,8 @@ Require Import Crypto.Bedrock.Field.Common.Types.
 Require Import Crypto.Bedrock.Field.Common.Util.
 Require Import Crypto.Bedrock.Field.Common.Arrays.ByteBounds.
 Require Import Crypto.Bedrock.Field.Common.Names.VarnameGenerator.
-Require Import Crypto.Bedrock.Field.Synthesis.Generic.Signature.
-Require Import Crypto.Bedrock.Field.Synthesis.Generic.New.ComputedOp.
+Require Import Crypto.Bedrock.Field.Synthesis.New.ComputedOp.
+Require Import Crypto.Bedrock.Field.Synthesis.New.Signature.
 Require Import Crypto.Bedrock.Field.Translation.Parameters.Defaults.
 Require Import Crypto.Bedrock.Field.Translation.Proofs.Func.
 Require Import Crypto.BoundsPipeline.
