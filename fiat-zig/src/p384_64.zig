@@ -12,17 +12,17 @@
 //   return values.
 //
 // Computed values:
-// eval z = z[0] + (z[1] << 64) + (z[2] << 128) + (z[3] << 192) + (z[4] << 256) + (z[5] << 0x140)
-// bytes_eval z = z[0] + (z[1] << 8) + (z[2] << 16) + (z[3] << 24) + (z[4] << 32) + (z[5] << 40) + (z[6] << 48) + (z[7] << 56) + (z[8] << 64) + (z[9] << 72) + (z[10] << 80) + (z[11] << 88) + (z[12] << 96) + (z[13] << 104) + (z[14] << 112) + (z[15] << 120) + (z[16] << 128) + (z[17] << 136) + (z[18] << 144) + (z[19] << 152) + (z[20] << 160) + (z[21] << 168) + (z[22] << 176) + (z[23] << 184) + (z[24] << 192) + (z[25] << 200) + (z[26] << 208) + (z[27] << 216) + (z[28] << 224) + (z[29] << 232) + (z[30] << 240) + (z[31] << 248) + (z[32] << 256) + (z[33] << 0x108) + (z[34] << 0x110) + (z[35] << 0x118) + (z[36] << 0x120) + (z[37] << 0x128) + (z[38] << 0x130) + (z[39] << 0x138) + (z[40] << 0x140) + (z[41] << 0x148) + (z[42] << 0x150) + (z[43] << 0x158) + (z[44] << 0x160) + (z[45] << 0x168) + (z[46] << 0x170) + (z[47] << 0x178)
-// twos_complement_eval z = let x1 := z[0] + (z[1] << 64) + (z[2] << 128) + (z[3] << 192) + (z[4] << 256) + (z[5] << 0x140) in
-//                          if x1 & (2^384-1) < 2^383 then x1 & (2^384-1) else (x1 & (2^384-1)) - 2^384
+//   eval z = z[0] + (z[1] << 64) + (z[2] << 128) + (z[3] << 192) + (z[4] << 256) + (z[5] << 0x140)
+//   bytes_eval z = z[0] + (z[1] << 8) + (z[2] << 16) + (z[3] << 24) + (z[4] << 32) + (z[5] << 40) + (z[6] << 48) + (z[7] << 56) + (z[8] << 64) + (z[9] << 72) + (z[10] << 80) + (z[11] << 88) + (z[12] << 96) + (z[13] << 104) + (z[14] << 112) + (z[15] << 120) + (z[16] << 128) + (z[17] << 136) + (z[18] << 144) + (z[19] << 152) + (z[20] << 160) + (z[21] << 168) + (z[22] << 176) + (z[23] << 184) + (z[24] << 192) + (z[25] << 200) + (z[26] << 208) + (z[27] << 216) + (z[28] << 224) + (z[29] << 232) + (z[30] << 240) + (z[31] << 248) + (z[32] << 256) + (z[33] << 0x108) + (z[34] << 0x110) + (z[35] << 0x118) + (z[36] << 0x120) + (z[37] << 0x128) + (z[38] << 0x130) + (z[39] << 0x138) + (z[40] << 0x140) + (z[41] << 0x148) + (z[42] << 0x150) + (z[43] << 0x158) + (z[44] << 0x160) + (z[45] << 0x168) + (z[46] << 0x170) + (z[47] << 0x178)
+//   twos_complement_eval z = let x1 := z[0] + (z[1] << 64) + (z[2] << 128) + (z[3] << 192) + (z[4] << 256) + (z[5] << 0x140) in
+//                            if x1 & (2^384-1) < 2^383 then x1 & (2^384-1) else (x1 & (2^384-1)) - 2^384
 
 const std = @import("std");
 const cast = std.meta.cast;
 const mode = std.builtin.mode; // Checked arithmetic is disabled in non-debug modes to avoid side channels
 
-
 /// The function addcarryxU64 is an addition with carry.
+///
 /// Postconditions:
 ///   out1 = (arg1 + arg2 + arg3) mod 2^64
 ///   out2 = ⌊(arg1 + arg2 + arg3) / 2^64⌋
@@ -45,6 +45,7 @@ fn addcarryxU64(out1: *u64, out2: *u1, arg1: u1, arg2: u64, arg3: u64) callconv(
 }
 
 /// The function subborrowxU64 is a subtraction with borrow.
+///
 /// Postconditions:
 ///   out1 = (-arg1 + arg2 + -arg3) mod 2^64
 ///   out2 = -⌊(-arg1 + arg2 + -arg3) / 2^64⌋
@@ -67,6 +68,7 @@ fn subborrowxU64(out1: *u64, out2: *u1, arg1: u1, arg2: u64, arg3: u64) callconv
 }
 
 /// The function mulxU64 is a multiplication, returning the full double-width result.
+///
 /// Postconditions:
 ///   out1 = (arg1 * arg2) mod 2^64
 ///   out2 = ⌊arg1 * arg2 / 2^64⌋
@@ -88,6 +90,7 @@ fn mulxU64(out1: *u64, out2: *u64, arg1: u64, arg2: u64) callconv(.Inline) void 
 }
 
 /// The function cmovznzU64 is a single-word conditional move.
+///
 /// Postconditions:
 ///   out1 = (if arg1 = 0 then arg2 else arg3)
 ///
@@ -107,6 +110,7 @@ fn cmovznzU64(out1: *u64, arg1: u1, arg2: u64, arg3: u64) callconv(.Inline) void
 }
 
 /// The function mul multiplies two field elements in the Montgomery domain.
+///
 /// Preconditions:
 ///   0 ≤ eval arg1 < m
 ///   0 ≤ eval arg2 < m
@@ -832,6 +836,7 @@ pub fn mul(out1: *[6]u64, arg1: [6]u64, arg2: [6]u64) void {
 }
 
 /// The function square squares a field element in the Montgomery domain.
+///
 /// Preconditions:
 ///   0 ≤ eval arg1 < m
 /// Postconditions:
@@ -1555,6 +1560,7 @@ pub fn square(out1: *[6]u64, arg1: [6]u64) void {
 }
 
 /// The function add adds two field elements in the Montgomery domain.
+///
 /// Preconditions:
 ///   0 ≤ eval arg1 < m
 ///   0 ≤ eval arg2 < m
@@ -1630,6 +1636,7 @@ pub fn add(out1: *[6]u64, arg1: [6]u64, arg2: [6]u64) void {
 }
 
 /// The function sub subtracts two field elements in the Montgomery domain.
+///
 /// Preconditions:
 ///   0 ≤ eval arg1 < m
 ///   0 ≤ eval arg2 < m
@@ -1692,6 +1699,7 @@ pub fn sub(out1: *[6]u64, arg1: [6]u64, arg2: [6]u64) void {
 }
 
 /// The function opp negates a field element in the Montgomery domain.
+///
 /// Preconditions:
 ///   0 ≤ eval arg1 < m
 /// Postconditions:
@@ -1752,6 +1760,7 @@ pub fn opp(out1: *[6]u64, arg1: [6]u64) void {
 }
 
 /// The function fromMontgomery translates a field element out of the Montgomery domain.
+///
 /// Preconditions:
 ///   0 ≤ eval arg1 < m
 /// Postconditions:
@@ -2240,6 +2249,7 @@ pub fn fromMontgomery(out1: *[6]u64, arg1: [6]u64) void {
 }
 
 /// The function toMontgomery translates a field element into the Montgomery domain.
+///
 /// Preconditions:
 ///   0 ≤ eval arg1 < m
 /// Postconditions:
@@ -2877,6 +2887,7 @@ pub fn toMontgomery(out1: *[6]u64, arg1: [6]u64) void {
 }
 
 /// The function nonzero outputs a single non-zero word if the input is non-zero and zero otherwise.
+///
 /// Preconditions:
 ///   0 ≤ eval arg1 < m
 /// Postconditions:
@@ -2894,6 +2905,7 @@ pub fn nonzero(out1: *u64, arg1: [6]u64) void {
 }
 
 /// The function selectznz is a multi-limb conditional select.
+///
 /// Postconditions:
 ///   eval out1 = (if arg1 = 0 then eval arg2 else eval arg3)
 ///
@@ -2927,6 +2939,7 @@ pub fn selectznz(out1: *[6]u64, arg1: u1, arg2: [6]u64, arg3: [6]u64) void {
 }
 
 /// The function toBytes serializes a field element NOT in the Montgomery domain to bytes in little-endian order.
+///
 /// Preconditions:
 ///   0 ≤ eval arg1 < m
 /// Postconditions:
@@ -3080,6 +3093,7 @@ pub fn toBytes(out1: *[48]u8, arg1: [6]u64) void {
 }
 
 /// The function fromBytes deserializes a field element NOT in the Montgomery domain from bytes in little-endian order.
+///
 /// Preconditions:
 ///   0 ≤ bytes_eval arg1 < m
 /// Postconditions:
@@ -3192,6 +3206,7 @@ pub fn fromBytes(out1: *[6]u64, arg1: [48]u8) void {
 }
 
 /// The function setOne returns the field element one in the Montgomery domain.
+///
 /// Postconditions:
 ///   eval (from_montgomery out1) mod m = 1 mod m
 ///   0 ≤ eval out1 < m
@@ -3211,6 +3226,7 @@ pub fn setOne(out1: *[6]u64) void {
 }
 
 /// The function msat returns the saturated representation of the prime modulus.
+///
 /// Postconditions:
 ///   twos_complement_eval out1 = m
 ///   0 ≤ eval out1 < m
@@ -3231,6 +3247,7 @@ pub fn msat(out1: *[7]u64) void {
 }
 
 /// The function divstep computes a divstep.
+///
 /// Preconditions:
 ///   0 ≤ eval arg4 < m
 ///   0 ≤ eval arg5 < m
@@ -3576,6 +3593,7 @@ pub fn divstep(out1: *u64, out2: *[7]u64, out3: *[7]u64, out4: *[6]u64, out5: *[
 }
 
 /// The function divstepPrecomp returns the precomputed value for Bernstein-Yang-inversion (in montgomery form).
+///
 /// Postconditions:
 ///   eval (from_montgomery out1) = ⌊(m - 1) / 2⌋^(if (log2 m) + 1 < 46 then ⌊(49 * ((log2 m) + 1) + 80) / 17⌋ else ⌊(49 * ((log2 m) + 1) + 57) / 17⌋)
 ///   0 ≤ eval out1 < m
@@ -3593,4 +3611,3 @@ pub fn divstepPrecomp(out1: *[6]u64) void {
     out1[4] = 0x6040000050400;
     out1[5] = 0xfffc480000038000;
 }
-

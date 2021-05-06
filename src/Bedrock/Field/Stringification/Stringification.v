@@ -147,6 +147,7 @@ Notation wrapper_relax_zrange relax_zrange
 Definition Bedrock2_ToFunctionLines
            {relax_zrange : relax_zrange_opt}
            {language_naming_conventions : language_naming_conventions_opt}
+           {documentation_options : documentation_options_opt}
            (machine_wordsize : Z)
            (do_bounds_check : bool) (internal_static : bool) (static : bool) (prefix : string) (name : string)
            {t}
@@ -230,9 +231,9 @@ Definition OutputBedrock2API : ToString.OutputLanguageAPI :=
 
     ToString.ToFunctionLines := @Bedrock2_ToFunctionLines;
 
-    ToString.header := fun _ _ _ _ _ _ _ _ => [""; ToCString.prelude];
+    ToString.header := fun _ _ _ _ _ _ _ _ _ => [""; ToCString.prelude];
 
-    ToString.footer := fun _ _ _ _ _ _ _ _ => [];
+    ToString.footer := fun _ _ _ _ _ _ _ _ _ => [];
 
     (** No special handling for any functions *)
     ToString.strip_special_infos machine_wordsize infos := infos;

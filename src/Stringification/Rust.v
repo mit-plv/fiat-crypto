@@ -37,6 +37,7 @@ Module Rust.
   (* Header imports and type defs *)
   Definition header
              {language_naming_conventions : language_naming_conventions_opt}
+             {documentation_options : documentation_options_opt}
              {package_namev : package_name_opt}
              {class_namev : class_name_opt}
              (machine_wordsize : Z) (internal_private : bool) (private : bool) (prefix : string) (infos : ToString.ident_infos)
@@ -53,7 +54,8 @@ Module Rust.
                       then [type_prefix ++ int_type_to_string internal_private prefix (int.of_bitwidth false bw) ++ " = u8;"; (* C: typedef unsigned char prefix_uint1 *)
                            type_prefix ++ int_type_to_string internal_private prefix (int.of_bitwidth true bw) ++ " = i8;" ]%string (* C: typedef signed char prefix_int1 *)
                       else []))
-                 [1; 2]))%list.
+                 [1; 2])
+           ++ [""])%list%string.
 
   (* Instead of "macros for minimum-width integer constants" we tried to
      use numeric casts in Rust. It turns out that it wasn't needed and Rust
@@ -219,7 +221,7 @@ Module Rust.
     | base.type.list _ => fun _ => ["#error ""complex list"";"]
     | base.type.option _ => fun _ => ["#error option;"]
     | base.type.unit => fun _ => ["#error unit;"]
-    | base.type.type_base t => fun _ => ["#error " ++ show false t ++ ";"]%string
+    | base.type.type_base t => fun _ => ["#error " ++ show t ++ ";"]%string
     end%string.
 
   Definition to_arg_list {language_naming_conventions : language_naming_conventions_opt} (internal_private : bool) (prefix : string) (mode : Mode) {t} : var_data t -> list string :=
@@ -302,7 +304,14 @@ Module Rust.
               get_Zcast_down_if_needed desired_type (Some ty),
               (** always cast to the width of the type, unless we are already exactly that type (which the machinery in IR handles *)
               Some ty)
-          | Z_bneg
+          | IR.Z_value_barrier ty
+            => ((* if the result is too big, we cast it down; we
+                       don't need to upcast it because it'll get
+                       picked up by implicit casts if necessary *)
+              get_Zcast_down_if_needed desired_type (Some ty),
+              (** always cast to the width of the type, unless we are already exactly that type (which the machinery in IR handles *)
+              Some ty)
+          | IR.Z_bneg
             => ((* bneg is !, i.e., takes the argument to 1 if its not zero, and to zero if it is zero; so we don't ever need to cast *)
               None, None)
           end.
@@ -335,6 +344,7 @@ Module Rust.
   Definition ToFunctionLines
              {relax_zrange : relax_zrange_opt}
              {language_naming_conventions : language_naming_conventions_opt}
+             {documentation_options : documentation_options_opt}
              (machine_wordsize : Z)
              (do_bounds_check : bool) (internal_private : bool) (private : bool) (prefix : string) (name : string)
              {t}
@@ -366,7 +376,7 @@ Module Rust.
        ToString.comment_file_header_block := comment_module_header_block;
        ToString.ToFunctionLines := @ToFunctionLines;
        ToString.header := @header;
-       ToString.footer := fun _ _ _ _ _ _ _ _ => [];
+       ToString.footer := fun _ _ _ _ _ _ _ _ _ => [];
        (** No special handling for any functions *)
        ToString.strip_special_infos machine_wordsize infos := infos |}.
 

@@ -673,7 +673,7 @@ Module Compilers.
                  | ident.snd A B => fun r xy => ret (cast_down_if_needed r (@snd _ _ xy))
                  | ident.List_nth_default tZ
                    => fun r d ls n
-                      => List.nth_default (inr ["Invalid list index " ++ show false n]%string)
+                      => List.nth_default (inr ["Invalid list index " ++ show n]%string)
                                           (List.map (fun x => ret (cast_down_if_needed r x)) ls) n
                  | ident.Z_shiftr
                    => fun r e '(offset, roffset)
@@ -724,12 +724,12 @@ Module Compilers.
                                    let rin' := Some ty in
                                    let '(e, _) := Zcast rin' (e, r) in
                                    ret (cast_down_if_needed rout (cast_up_if_needed rout (Z_lnot ty @@@ e, rin')))
-                              | None => inr ["Invalid modulus for Z.lnot (not 2^(2^_)): " ++ show false modulus]%string
+                              | None => inr ["Invalid modulus for Z.lnot (not 2^(2^_)): " ++ show modulus]%string
                               end
                          | None => inr ["Invalid non-literal modulus for Z.lnot"]%string
                          end
                  | ident.pair A B
-                   => fun _ _ _ => inr ["Invalid identifier in arithmetic expression " ++ show true idc]%string
+                   => fun _ _ _ => inr ["Invalid identifier in arithmetic expression " ++ show idc]%string
                  | ident.Z_opp (* we pretend this is [0 - _] *)
                    => fun r x =>
                         let zero := (literal 0 @@@ TT, Some (int.of_zrange_relaxed (relax_zrange r[0~>0]))) in
@@ -819,7 +819,7 @@ Module Compilers.
                  | ident.fancy_selm
                  | ident.fancy_sell
                  | ident.fancy_addm
-                   => fun _ => type.interpM_return _ _ _ (inr ["Invalid identifier in arithmetic expression " ++ show true idc]%string)
+                   => fun _ => type.interpM_return _ _ _ (inr ["Invalid identifier in arithmetic expression " ++ show idc]%string)
                  end%core%Cexpr%option%zrange.
 
             Fixpoint collect_args_and_apply_unknown_casts {t}
@@ -895,7 +895,7 @@ Module Compilers.
                                   | None
                                     => mkcons int.option.None int.option.None
                                   end))
-                 | _ => inr ["Invalid identifier where cast or constructor was expected: " ++ show false idc]%string
+                 | _ => inr ["Invalid identifier where cast or constructor was expected: " ++ show idc]%string
                  end.
 
             Definition collect_args_and_apply_casts {t} (idc : ident.ident t)
@@ -932,7 +932,7 @@ Module Compilers.
                  | base.type.option _
                  | base.type.type_base _
                  | base.type.unit
-                   => fun _ _ => inr ["Invalid type " ++ show false t]%string
+                   => fun _ _ => inr ["Invalid type " ++ show t]%string
                  end.
 
             Fixpoint arith_expr_of_PHOAS
@@ -959,13 +959,13 @@ Module Compilers.
                       | inr errs => type.interpM_return _ _ _ (inr errs)
                       end
                  | expr.Var (type.arrow _ _) _
-                   => type.interpM_return _ _ _ (inr ["Invalid non-arithmetic let-bound Var of type " ++ show false t]%string)
+                   => type.interpM_return _ _ _ (inr ["Invalid non-arithmetic let-bound Var of type " ++ show t]%string)
                  | expr.App (type.arrow _ _) _ _ _
-                   => type.interpM_return _ _ _ (inr ["Invalid non-arithmetic let-bound App of type " ++ show false t]%string)
+                   => type.interpM_return _ _ _ (inr ["Invalid non-arithmetic let-bound App of type " ++ show t]%string)
                  | expr.LetIn _ _ _ _
-                   => type.interpM_return _ _ _ (inr ["Invalid non-arithmetic let-bound LetIn of type " ++ show false t]%string)
+                   => type.interpM_return _ _ _ (inr ["Invalid non-arithmetic let-bound LetIn of type " ++ show t]%string)
                  | expr.Abs _ _ _
-                   => type.interpM_return _ _ _ (inr ["Invalid non-arithmetic let-bound Abs of type: " ++ show false t]%string)
+                   => type.interpM_return _ _ _ (inr ["Invalid non-arithmetic let-bound Abs of type: " ++ show t]%string)
                  end.
 
             Definition arith_expr_of_base_PHOAS
@@ -1001,14 +1001,14 @@ Module Compilers.
                                  else [Assign false type.Z r n e]))
                  | base.type.type_base _
                  | base.type.unit
-                   => fun _ _ => inr ["Invalid type " ++ show false t]%string
+                   => fun _ _ => inr ["Invalid type " ++ show t]%string
                  | base.type.prod A B
                    => fun '(rva, rvb) e
                       => match invert_pair e with
                          | Some (ea, eb)
                            => ea',, eb' <- @make_return_assignment_of_base_arith A rva ea, @make_return_assignment_of_base_arith B rvb eb;
                                 ret (ea' ++ eb')
-                         | None => inr ["Invalid non-pair expr of type " ++ show false t]%string
+                         | None => inr ["Invalid non-pair expr of type " ++ show t]%string
                          end
                  | base.type.list tZ
                    => fun '(n, r, len) e
@@ -1020,7 +1020,7 @@ Module Compilers.
                                    (List.combine (List.seq 0 len) ls)))
                  | base.type.list _
                  | base.type.option _
-                   => fun _ _ => inr ["Invalid type of expr: " ++ show false t]%string
+                   => fun _ _ => inr ["Invalid type of expr: " ++ show t]%string
                  end%list.
             Definition make_return_assignment_of_arith {t}
               : var_data t
@@ -1028,11 +1028,11 @@ Module Compilers.
                 -> ErrT expr
               := match t with
                  | type.base t => make_return_assignment_of_base_arith
-                 | type.arrow s d => fun _ _ => inr ["Invalid type of expr: " ++ show false t]%string
+                 | type.arrow s d => fun _ _ => inr ["Invalid type of expr: " ++ show t]%string
                  end.
 
             Definition report_type_mismatch (expected : API.type) (given : API.type) : string
-              := ("Type mismatch; expected " ++ show false expected ++ " but given " ++ show false given ++ ".")%string.
+              := ("Type mismatch; expected " ++ show expected ++ " but given " ++ show given ++ ".")%string.
 
             Fixpoint arith_expr_of_PHOAS_args
                      {t}
@@ -1046,7 +1046,7 @@ Module Compilers.
                            inl ((arg, arg'), args')
                  | type.arrow s d
                    => fun '(arg, args)
-                      => arg' ,, args' <- @inr unit _ ["Invalid argument of non-ℤ type " ++ show false s]%string , @arith_expr_of_PHOAS_args d args;
+                      => arg' ,, args' <- @inr unit _ ["Invalid argument of non-ℤ type " ++ show s]%string , @arith_expr_of_PHOAS_args d args;
                            inr ["Impossible! (type error got lost somewhere)"]
                  end.
 
@@ -1133,7 +1133,7 @@ Module Compilers.
                 (e : @Compilers.expr.expr base.type ident.ident var_data t)
               : ErrT (expr * var_data t)
               := let _ := @PHOAS.expr.partially_show_expr in
-                 let ret_err := inr ["Not a comment " ++ show false e]%string in
+                 let ret_err := inr ["Not a comment " ++ show e]%string in
                  match invert_AppIdent e, var_data_of_string_opt "()" with
                  | Some (existT t (idc, arg)), Some retdata
                    => let should_keep_live := match idc return option bool with
@@ -1144,7 +1144,7 @@ Module Compilers.
                       match should_keep_live with
                       | Some should_keep_live
                         => inl ([Comment
-                                   (PHOAS.expr.show_lines_expr_gen (@string_of_var_data) (@var_data_of_string_opt) false arg) (* comment lines *)
+                                   (PHOAS.expr.show_lines_expr_gen (@string_of_var_data) (@var_data_of_string_opt) arg) (* comment lines *)
                                    (if should_keep_live then extract_var_data_list arg else []) (* live variables *)],
                                 retdata)
                       | None => ret_err
@@ -1159,11 +1159,11 @@ Module Compilers.
                  else
                    let _ := @PHOAS.expr.partially_show_expr in
                    match found with
-                   | None => inr ["Missing range on " ++ descr ++ " " ++ show true idc ++ ": " ++ show true ev]%string
+                   | None => inr ["Missing range on " ++ descr ++ " " ++ show idc ++ ": " ++ show ev]%string
                    | Some ty
                      => if int.is_tighter_than ty (int.of_zrange_relaxed (relax_zrange r[0~>2^s-1]))
                         then ret tt
-                        else inr ["Final bounds check failed on " ++ descr ++ " " ++ show false idc ++ "; expected an unsigned " ++ Decimal.Z.to_string s ++ "-bit number (relaxed to " ++ show false (int.of_zrange_relaxed (relax_zrange r[0~>2^s-1])) ++ "), but found a " ++ show false ty ++ "."]%string
+                        else inr ["Final bounds check failed on " ++ descr ++ " " ++ show idc ++ "; expected an unsigned " ++ Decimal.Z.to_string s ++ "-bit number (relaxed to " ++ show (int.of_zrange_relaxed (relax_zrange r[0~>2^s-1])) ++ "), but found a " ++ show ty ++ "."]%string
                    end.
 
             Let recognize_1ref_ident
@@ -1182,7 +1182,7 @@ Module Compilers.
                  | ident.Z_zselect
                    => Some
                         (fun rout '((econdv, (econd, rcond)), ((e1v, (e1, r1)), ((e2v, (e2, r2)), tt)))
-                         => (*let err := inr ["Invalid argument to Z.zselect not known to be 0 or 1: " ++ show false econdv]%string in*)
+                         => (*let err := inr ["Invalid argument to Z.zselect not known to be 0 or 1: " ++ show econdv]%string in*)
                            _ <- bounds_check do_bounds_check "first argument to" idc 1 econdv rcond;
                              let '((e1, r1), (e2, r2)) :=
                                  funcall_upcast (t:=tZ*tZ) (rout, rout) ((e1, r1), (e2, r2)) in
@@ -1192,7 +1192,7 @@ Module Compilers.
                                    | None => inr ["Missing cast annotation on return of Z.zselect"]
                                    end;
                                ret (fun retptr => [Call (Z_zselect ty @@@ (retptr, (econd, e1, e2)))]%Cexpr))
-                 | _ => None (* fun _ => inr ["Unrecognized identifier (expecting a 1-pointer-returning function): " ++ show false idc]%string *)
+                 | _ => None (* fun _ => inr ["Unrecognized identifier (expecting a 1-pointer-returning function): " ++ show idc]%string *)
                  end.
 
             Let round_up_to_split_type (lgs : Z) (t : option int.type) : option int.type
@@ -1204,7 +1204,7 @@ Module Compilers.
                  | Some r
                    => if ZRange.type.is_bounded_by (t:=tZ) r v
                       then inl tt
-                      else inr ["Literal value " ++ show true v ++ " is not within the casted range " ++ show true r ++ " (when trying to parse the " ++ nth ++ " argument of " ++ show true idc ++ ")"]%string
+                      else inr ["Literal value " ++ show v ++ " is not within the casted range " ++ show r ++ " (when trying to parse the " ++ nth ++ " argument of " ++ show idc ++ ")"]%string
                  end.
 
             Let recognize_3arg_2ref_ident
@@ -1246,8 +1246,8 @@ Module Compilers.
                        let '(e2, _) := result_upcast (t:=tZ) (Some (int.of_zrange_relaxed r[0 ~> 2 ^ s - 1])) (e2, r2) in
                        inl ((round_up_to_split_type s (fst rout), snd rout),
                             fun retptr => [Call (idc' @@@ (retptr, (literal 0 @@@ TT, e1, e2)))%Cexpr]))
-                  | Some _, _ => inr ["Unrecognized identifier when attempting to construct an assignment with 2 arguments: " ++ show true idc]%string
-                  | None, _ => inr ["Expression is not a literal power of two of type ℤ: " ++ show true s ++ " (when trying to parse the first argument of " ++ show true idc ++ ")"]%string
+                  | Some _, _ => inr ["Unrecognized identifier when attempting to construct an assignment with 2 arguments: " ++ show idc]%string
+                  | None, _ => inr ["Expression is not a literal power of two of type ℤ: " ++ show s ++ " (when trying to parse the first argument of " ++ show idc ++ ")"]%string
                   end.
 
             Let recognize_4arg_2ref_ident
@@ -1281,8 +1281,8 @@ Module Compilers.
                          let '(e3, _) := result_upcast (t:=tZ) (Some (int.of_zrange_relaxed (relax_zrange r[0 ~> 2 ^ s - 1]))) (e3, r3) in
                          inl ((round_up_to_split_type s (fst rout), snd rout),
                               fun retptr => [Call (idc' @@@ (retptr, (e1, e2, e3)))%Cexpr]))
-                 | Some _, _ => inr ["Unrecognized identifier when attempting to construct an assignment with 2 arguments: " ++ show true idc]%string
-                 | None, _ => inr ["Expression is not a literal power of two of type ℤ: " ++ show true s ++ " (when trying to parse the first argument of " ++ show true idc ++ ")"]%string
+                 | Some _, _ => inr ["Unrecognized identifier when attempting to construct an assignment with 2 arguments: " ++ show idc]%string
+                 | None, _ => inr ["Expression is not a literal power of two of type ℤ: " ++ show s ++ " (when trying to parse the first argument of " ++ show idc ++ ")"]%string
                  end.
 
             Let recognize_2ref_ident
@@ -1297,7 +1297,7 @@ Module Compilers.
                    => recognize_3arg_2ref_ident
                  | (type.base tZ -> type.base tZ -> type.base tZ -> type.base tZ -> type.base (tZ * tZ))%etype
                    => recognize_4arg_2ref_ident
-                 | _ => fun do_bounds_check idc rout args => inr ["Unrecognized type for function call: " ++ show false t ++ " (when trying to handle the identifer " ++ show false idc ++ ")"]%string
+                 | _ => fun do_bounds_check idc rout args => inr ["Unrecognized type for function call: " ++ show t ++ " (when trying to handle the identifer " ++ show idc ++ ")"]%string
                  end.
 
             Definition declare_name
@@ -1308,7 +1308,7 @@ Module Compilers.
               : ErrT (expr * string * bool (* is pointer *) * arith_expr type.Zptr)
               := (n ,, r <- (match make_name count with
                              | Some n => ret n
-                             | None => inr ["Variable naming-function does not support the index " ++ show false count]%string
+                             | None => inr ["Variable naming-function does not support the index " ++ show count]%string
                              end,
                              match r with
                              | Some r => ret r
@@ -1337,7 +1337,7 @@ Module Compilers.
                              Some
                                (args <- arith_expr_of_PHOAS_args args;
                                   idce <- recognize rout args;
-                                  v <- declare_name (show false idc) count make_name rout;
+                                  v <- declare_name (show idc) count make_name rout;
                                   let '(decls, n, is_ptr, retv) := v in
                                   ret ((decls ++ (idce retv))%list, (n, is_ptr, rout)))%err)%option in
                  match res_ref with
@@ -1349,7 +1349,7 @@ Module Compilers.
                         match make_name count with
                         | Some n1
                           => ret ([Assign true type.Z r1 n1 e1], (n1, false, r1))
-                        | None => inr ["Variable naming-function does not support the index " ++ show false count]%string
+                        | None => inr ["Variable naming-function does not support the index " ++ show count]%string
                         end
                  end.
 
@@ -1370,12 +1370,12 @@ Module Compilers.
                    => args <- arith_expr_of_PHOAS_args args;
                         idce <- recognize_2ref_ident do_bounds_check idc (rout1, rout2) args;
                         let '((rout1, rout2), idce) := idce in
-                        v1,, v2 <- (declare_name (show false idc) count make_name rout1,
-                                    declare_name (show false idc) (Pos.succ count) make_name rout2);
+                        v1,, v2 <- (declare_name (show idc) count make_name rout1,
+                                    declare_name (show idc) (Pos.succ count) make_name rout2);
                           let '(decls1, n1, is_ptr1, retv1) := v1 in
                           let '(decls2, n2, is_ptr2, retv2) := v2 in
                           ret (decls1 ++ decls2 ++ (idce (retv1, retv2)%Cexpr), ((n1, is_ptr1, rout1), (n2, is_ptr2, rout2)))%list
-                 | None => inr ["Invalid assignment of non-identifier-application: " ++ show false e]%string
+                 | None => inr ["Invalid assignment of non-identifier-application: " ++ show e]%string
                  end.
 
             Let make_assign_arg_ref
@@ -1390,7 +1390,7 @@ Module Compilers.
                  | type.base tZ => make_assign_arg_1ref_opt do_bounds_check
                  | type.base (tZ * tZ)%etype => make_assign_arg_2ref do_bounds_check
                  | type.base base.type.unit => fun e _ _ => make_comment e
-                 | _ => fun e _ _ => inr ["Invalid type of assignment expression: " ++ show false t ++ " (with expression " ++ show true e ++ ")"]
+                 | _ => fun e _ _ => inr ["Invalid type of assignment expression: " ++ show t ++ " (with expression " ++ show e ++ ")"]
                  end.
 
             Fixpoint size_of_type (t : base.type) : positive
@@ -1526,8 +1526,8 @@ Module Compilers.
                                 d (f vs) make_in_name inbounds count _
                                 (fun '(count, (vss, rv))
                                  => k (count, ((vs, vss), rv)))
-                         | None, _ => inr ["Unable to bind names for all arguments and bounds at type " ++ show false s]%string%list
-                         | _, None => inr ["Invalid non-λ expression of arrow type (" ++ show false t ++ "): " ++ show true e]%string%list
+                         | None, _ => inr ["Unable to bind names for all arguments and bounds at type " ++ show s]%string%list
+                         | _, None => inr ["Invalid non-λ expression of arrow type (" ++ show t ++ "): " ++ show e]%string%list
                          end
                  end%core%expr e inbounds.
 
@@ -1590,7 +1590,7 @@ Module Compilers.
                       @expr_of_PHOAS'_cps
                         t e make_in_name inbounds count _
                         (fun '(count, (din, e)) => k (count, (din, dout, e)))
-                 | None => inr ["Unable to bind names for all return arguments and bounds at type " ++ show false (type.final_codomain t)]%string
+                 | None => inr ["Unable to bind names for all return arguments and bounds at type " ++ show (type.final_codomain t)]%string
                  end.
 
             Definition expr_of_PHOAS

@@ -27,6 +27,7 @@ Module Zig.
 
   Definition header
              {language_naming_conventions : language_naming_conventions_opt}
+             {documentation_options : documentation_options_opt}
              {package_namev : package_name_opt}
              {class_namev : class_name_opt}
              (machine_wordsize : Z) (internal_private : bool) (private : bool) (prefix : string) (infos : ToString.ident_infos)
@@ -169,7 +170,7 @@ Module Zig.
     | base.type.list _ => fun _ => ["@compilerError(""complex list"");"]
     | base.type.option _ => fun _ => ["@compilerError(""option"");"]
     | base.type.unit => fun _ => ["@compilerError(""unit"");"]
-    | base.type.type_base t => fun _ => ["@compilerError(""" ++ show false t ++ """);"]%string
+    | base.type.type_base t => fun _ => ["@compilerError(""" ++ show t ++ """);"]%string
     end%string.
 
   Definition to_arg_list {language_naming_conventions : language_naming_conventions_opt} (internal_private : bool) (prefix : string) (mode : Mode) {t} : var_data t -> list string :=
@@ -270,6 +271,7 @@ Module Zig.
   Definition ToFunctionLines
              {relax_zrange : relax_zrange_opt}
              {language_naming_conventions : language_naming_conventions_opt}
+             {documentation_options : documentation_options_opt}
              (machine_wordsize : Z)
              (do_bounds_check : bool) (internal_private : bool) (private : bool) (prefix : string) (name : string)
              {t}
@@ -301,7 +303,7 @@ Module Zig.
        ToString.comment_file_header_block := comment_module_header_block;
        ToString.ToFunctionLines := @ToFunctionLines;
        ToString.header := @header;
-       ToString.footer := fun _ _ _ _ _ _ _ _ => [];
+       ToString.footer := fun _ _ _ _ _ _ _ _ _ => [];
        ToString.strip_special_infos machine_wordsize infos := infos |}.
 
 End Zig.

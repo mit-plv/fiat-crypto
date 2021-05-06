@@ -7,10 +7,10 @@
 /* tight_bounds_multiplier = 1 (from "") */
 /*  */
 /* Computed values: */
-/* carry_chain = [0, 1, 2, 3, 4, 5, 6, 7, 8, 0, 1] */
-/* eval z = z[0] + (z[1] << 58) + (z[2] << 116) + (z[3] << 174) + (z[4] << 232) + (z[5] << 0x122) + (z[6] << 0x15c) + (z[7] << 0x196) + (z[8] << 0x1d0) */
-/* bytes_eval z = z[0] + (z[1] << 8) + (z[2] << 16) + (z[3] << 24) + (z[4] << 32) + (z[5] << 40) + (z[6] << 48) + (z[7] << 56) + (z[8] << 64) + (z[9] << 72) + (z[10] << 80) + (z[11] << 88) + (z[12] << 96) + (z[13] << 104) + (z[14] << 112) + (z[15] << 120) + (z[16] << 128) + (z[17] << 136) + (z[18] << 144) + (z[19] << 152) + (z[20] << 160) + (z[21] << 168) + (z[22] << 176) + (z[23] << 184) + (z[24] << 192) + (z[25] << 200) + (z[26] << 208) + (z[27] << 216) + (z[28] << 224) + (z[29] << 232) + (z[30] << 240) + (z[31] << 248) + (z[32] << 256) + (z[33] << 0x108) + (z[34] << 0x110) + (z[35] << 0x118) + (z[36] << 0x120) + (z[37] << 0x128) + (z[38] << 0x130) + (z[39] << 0x138) + (z[40] << 0x140) + (z[41] << 0x148) + (z[42] << 0x150) + (z[43] << 0x158) + (z[44] << 0x160) + (z[45] << 0x168) + (z[46] << 0x170) + (z[47] << 0x178) + (z[48] << 0x180) + (z[49] << 0x188) + (z[50] << 0x190) + (z[51] << 0x198) + (z[52] << 0x1a0) + (z[53] << 0x1a8) + (z[54] << 0x1b0) + (z[55] << 0x1b8) + (z[56] << 0x1c0) + (z[57] << 0x1c8) + (z[58] << 0x1d0) + (z[59] << 0x1d8) + (z[60] << 0x1e0) + (z[61] << 0x1e8) + (z[62] << 0x1f0) + (z[63] << 0x1f8) + (z[64] << 2^9) + (z[65] << 0x208) */
-/* balance = [0x7fffffffffffffe, 0x7fffffffffffffe, 0x7fffffffffffffe, 0x7fffffffffffffe, 0x7fffffffffffffe, 0x7fffffffffffffe, 0x7fffffffffffffe, 0x7fffffffffffffe, 0x3fffffffffffffe] */
+/*   carry_chain = [0, 1, 2, 3, 4, 5, 6, 7, 8, 0, 1] */
+/*   eval z = z[0] + (z[1] << 58) + (z[2] << 116) + (z[3] << 174) + (z[4] << 232) + (z[5] << 0x122) + (z[6] << 0x15c) + (z[7] << 0x196) + (z[8] << 0x1d0) */
+/*   bytes_eval z = z[0] + (z[1] << 8) + (z[2] << 16) + (z[3] << 24) + (z[4] << 32) + (z[5] << 40) + (z[6] << 48) + (z[7] << 56) + (z[8] << 64) + (z[9] << 72) + (z[10] << 80) + (z[11] << 88) + (z[12] << 96) + (z[13] << 104) + (z[14] << 112) + (z[15] << 120) + (z[16] << 128) + (z[17] << 136) + (z[18] << 144) + (z[19] << 152) + (z[20] << 160) + (z[21] << 168) + (z[22] << 176) + (z[23] << 184) + (z[24] << 192) + (z[25] << 200) + (z[26] << 208) + (z[27] << 216) + (z[28] << 224) + (z[29] << 232) + (z[30] << 240) + (z[31] << 248) + (z[32] << 256) + (z[33] << 0x108) + (z[34] << 0x110) + (z[35] << 0x118) + (z[36] << 0x120) + (z[37] << 0x128) + (z[38] << 0x130) + (z[39] << 0x138) + (z[40] << 0x140) + (z[41] << 0x148) + (z[42] << 0x150) + (z[43] << 0x158) + (z[44] << 0x160) + (z[45] << 0x168) + (z[46] << 0x170) + (z[47] << 0x178) + (z[48] << 0x180) + (z[49] << 0x188) + (z[50] << 0x190) + (z[51] << 0x198) + (z[52] << 0x1a0) + (z[53] << 0x1a8) + (z[54] << 0x1b0) + (z[55] << 0x1b8) + (z[56] << 0x1c0) + (z[57] << 0x1c8) + (z[58] << 0x1d0) + (z[59] << 0x1d8) + (z[60] << 0x1e0) + (z[61] << 0x1e8) + (z[62] << 0x1f0) + (z[63] << 0x1f8) + (z[64] << 2^9) + (z[65] << 0x208) */
+/*   balance = [0x7fffffffffffffe, 0x7fffffffffffffe, 0x7fffffffffffffe, 0x7fffffffffffffe, 0x7fffffffffffffe, 0x7fffffffffffffe, 0x7fffffffffffffe, 0x7fffffffffffffe, 0x3fffffffffffffe] */
 
 #include <stdint.h>
 #include <memory.h>
@@ -26,7 +26,6 @@ static inline uintptr_t _br2_load(uintptr_t a, size_t sz) {
 static inline void _br2_store(uintptr_t a, uintptr_t v, size_t sz) {
   memcpy((void*)a, &v, sz);
 }
-
 
 
 /*
@@ -1991,5 +1990,3 @@ void internal_fiat_p521_from_bytes(uintptr_t out0, uintptr_t in0) {
 static void fiat_p521_from_bytes(uint64_t out1[9], const uint8_t arg1[66]) {
   internal_fiat_p521_from_bytes((uintptr_t)out1, (uintptr_t)arg1);
 }
-
-

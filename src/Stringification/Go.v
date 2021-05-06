@@ -12,6 +12,8 @@ From Crypto Require Import IR Stringification.Language AbstractInterpretation.ZR
 
 Import ListNotations.
 
+Local Open Scope list_scope.
+Local Open Scope string_scope.
 Local Open Scope zrange_scope.
 Local Open Scope Z_scope.
 
@@ -27,21 +29,19 @@ Module Go.
     := match lines with
        | [] => []
        | [""] => [""]
-       | [line] => ["/* " ++ line ++ " */"]%string
-       | lines => ["/*"] ++ List.map (fun s => if (String.length s =? 0)%nat then "" else "   " ++ s)%string lines ++ [" */"]
+       | [line] => ["// " ++ line]%string
+       | lines => List.map (fun s => if (String.length s =? 0)%nat then "//" else "// " ++ s)%string lines
        end%list%string.
 
   Definition comment_block_extra_newlines (lines : list string) : list string
     := match lines with
        | [] => []
        | [""] => [""]
-       | [line] => ["/* " ++ line ++ " */"]%string
-       | lines => ["/*"]
-                    ++ List.tl (List.flat_map (fun s => ["";
-                                                        if (String.length s =? 0)%nat
-                                                        then ""
-                                                        else "   " ++ s])%string lines)
-                    ++ [" */"]
+       | [line] => ["// " ++ line]%string
+       | lines => List.tl (List.flat_map (fun s => ["//";
+                                                   if (String.length s =? 0)%nat
+                                                   then "//"
+                                                   else "// " ++ s])%string lines)
        end%list%string.
 
   (* Supported integer bitwidths *)
@@ -57,6 +57,7 @@ Module Go.
   (* Header imports and type defs *)
   Definition header
              {language_naming_conventions : language_naming_conventions_opt}
+             {documentation_options : documentation_options_opt}
              {package_namev : package_name_opt}
              {class_namev : class_name_opt}
              (machine_wordsize : Z) (internal_private : bool) (private : bool) (prefix : string) (infos : ToString.ident_infos)
@@ -79,36 +80,42 @@ Module Go.
                           else if IntSet.mem uint8 bitwidths_used || IntSet.mem int8 bitwidths_used
                                then int_type_to_string internal_private prefix uint8
                                else int_type_to_string internal_private prefix (int.of_bitwidth false(*unsigned*) machine_wordsize)) in
-       ((["package " ++ package_name prefix;
-            ""]%string)
-          ++ (if needs_bits_import then ["import ""math/bits"""]%string else [])
-          ++ (List.flat_map
-                 (fun bw
-                  => (if IntSet.mem (int.of_bitwidth false bw) bitwidths_used || IntSet.mem (int.of_bitwidth true bw) bitwidths_used
-                      then [type_prefix ++ int_type_to_string internal_private prefix (int.of_bitwidth false bw) ++ " uint8";
-                           type_prefix ++ int_type_to_string internal_private prefix (int.of_bitwidth true bw) ++ " int8" ]%string (* C: typedef signed char prefix_int1 *)
-                      else []))
-                 [1; 2])
-          ++ (if IntSet.mem uint128 bitwidths_used || IntSet.mem int128 bitwidths_used
-              then ["var _ = error_Go_output_does_not_support_128_bit_integers___instead_use_rewriting_rules_for_removing_128_bit_integers"]%string
-              else [])
-          ++ (List.flat_map
-                (fun bw
-                 => let s_bw := Decimal.Z.to_string bw in
-                    List.flat_map
-                      (fun '(newname, bitsname)
-                       => [""%string]
-                            ++ (comment_block
-                                  ["The function " ++ newname ++ " is a thin wrapper around " ++ bitsname ++ " that uses " ++ carry_type ++ " rather than uint" ++ s_bw]%string)
-                            ++ ["func " ++ newname ++ "(x uint" ++ s_bw ++ ", y uint" ++ s_bw ++ ", carry " ++ carry_type ++ ") (uint" ++ s_bw ++ ", " ++ carry_type ++ ") {"
-                                ; "  var sum uint" ++ s_bw
-                                ; "  var carryOut uint" ++ s_bw
-                                ; "  sum, carryOut = " ++ bitsname ++ "(x, y, uint" ++ s_bw ++ "(carry))"
-                                ; "  return sum, " ++ carry_type ++ "(carryOut)"
-                                ; "}"]%string)
-                      [(ToString.format_special_function_name internal_private prefix "addcarryx" false(*unsigned*) bw, "bits.Add" ++ s_bw)
-                       ; (ToString.format_special_function_name internal_private prefix "subborrowx" false(*unsigned*) bw, "bits.Sub" ++ s_bw)]%string)
-                special_addcarryx_lg_splits))%list.
+       strip_trailing_newlines
+         (((if newline_before_package_declaration then [""] else [])
+             ++ ["package " ++ package_name prefix;
+                ""]%string)
+            ++ (if needs_bits_import then ["import ""math/bits"""; ""]%string else [])
+            ++ (let typedefs
+                    := List.flat_map
+                         (fun bw
+                          => (if IntSet.mem (int.of_bitwidth false bw) bitwidths_used || IntSet.mem (int.of_bitwidth true bw) bitwidths_used
+                              then [type_prefix ++ int_type_to_string internal_private prefix (int.of_bitwidth false bw) ++ " uint8";
+                                   type_prefix ++ int_type_to_string internal_private prefix (int.of_bitwidth true bw) ++ " int8"]%string (* C: typedef signed challr prefix_int1 *)
+                              else []))
+                         [1; 2] in
+                match typedefs with
+                | [] => []
+                | _::_ => typedefs ++ [""]
+                end)
+            ++ (if IntSet.mem uint128 bitwidths_used || IntSet.mem int128 bitwidths_used
+                then ["var _ = error_Go_output_does_not_support_128_bit_integers___instead_use_rewriting_rules_for_removing_128_bit_integers"]%string
+                else [])
+            ++ (List.tl
+                  (List.flat_map
+                     (fun bw
+                      => let s_bw := Decimal.Z.to_string bw in
+                         List.flat_map
+                           (fun '(newname, bitsname)
+                            => [""%string]
+                                 ++ (comment_block
+                                       [text_before_function_name ++ newname ++ " is a thin wrapper around " ++ bitsname ++ " that uses " ++ carry_type ++ " rather than uint" ++ s_bw]%string)
+                                 ++ ["func " ++ newname ++ "(x uint" ++ s_bw ++ ", y uint" ++ s_bw ++ ", carry " ++ carry_type ++ ") (uint" ++ s_bw ++ ", " ++ carry_type ++ ") {"
+                                     ; String.Tab ++ "sum, carryOut := " ++ bitsname ++ "(x, y, uint" ++ s_bw ++ "(carry))"
+                                     ; String.Tab ++ "return sum, " ++ carry_type ++ "(carryOut)"
+                                     ; "}"]%string)
+                           [(ToString.format_special_function_name internal_private prefix "addcarryx" false(*unsigned*) bw, "bits.Add" ++ s_bw)
+                            ; (ToString.format_special_function_name internal_private prefix "subborrowx" false(*unsigned*) bw, "bits.Sub" ++ s_bw)]%string)
+                     special_addcarryx_lg_splits)))%list.
 
   (* Instead of "macros for minimum-width integer constants" we tried to
      use numeric casts in Go. It turns out that it wasn't needed and Go
@@ -159,7 +166,7 @@ Module Go.
        (* integer literals *)
        | (IR.literal v @@@ _) => int_literal_to_string prefix IR.type.Z v
        (* array dereference *)
-       | (IR.List_nth n @@@ IR.Var _ v) => "(" ++ v ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "])"
+       | (IR.List_nth n @@@ IR.Var _ v) => v ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "]"
        (* (de)referencing *)
        | (IR.Addr @@@ IR.Var _ v) => "&" ++ v
        | (IR.Dereference @@@ e) => "( *" ++ arith_to_string internal_private prefix e ++ " )"
@@ -263,7 +270,7 @@ Module Go.
     | IR.Call val => arith_to_string internal_private prefix val
     | IR.Assign true t sz name val =>
       (* local non-mutable declaration with initialization *)
-      "var " ++ name ++ " " ++ primitive_type_to_string internal_private prefix t sz ++ " = " ++ arith_to_string internal_private prefix val
+      name ++ " := " ++ arith_to_string internal_private prefix val
     | IR.Assign false _ sz name val =>
     (* This corresponds to assignment to a non-pointer variable and should never ever
        happen in our generated code. Fiat-crypto handles it but I
@@ -320,7 +327,7 @@ Module Go.
     | base.type.list _ => fun _ => ["var _error = error_complex_list"]
     | base.type.option _ => fun _ => ["var _error = error_option"]
     | base.type.unit => fun _ => ["var _error = error_unit"]
-    | base.type.type_base t => fun _ => ["var _error = error_" ++ show false t]%string
+    | base.type.type_base t => fun _ => ["var _error = error_" ++ show t]%string
     end%string.
 
   Definition to_arg_list {language_naming_conventions : language_naming_conventions_opt} (internal_private : bool) (prefix : string) (mode : Mode) {t} : var_data t -> list string :=
@@ -420,7 +427,14 @@ Module Go.
               get_Zcast_down_if_needed desired_type (Some ty),
               (** always cast to the width of the type, unless we are already exactly that type (which the machinery in IR handles *)
               Some ty)
-          | Z_bneg
+          | IR.Z_value_barrier ty
+            => ((* if the result is too big, we cast it down; we
+                       don't need to upcast it because it'll get
+                       picked up by implicit casts if necessary *)
+              get_Zcast_down_if_needed desired_type (Some ty),
+              (** always cast to the width of the type, unless we are already exactly that type (which the machinery in IR handles *)
+              Some ty)
+          | IR.Z_bneg
             => ((* bneg is !, i.e., takes the argument to 1 if its not zero, and to zero if it is zero; so we don't ever need to cast *)
               None, None)
           end.
@@ -439,9 +453,12 @@ Module Go.
              (f : type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * IR.expr)
     : list string :=
     let '(args, rets, body) := f in
-    ("/*inline*/" ++ String.NewLine ++ "func " ++ name ++
-      "(" ++ String.concat ", " (to_arg_list internal_private prefix Out rets ++ to_arg_list_for_each_lhs_of_arrow internal_private prefix args) ++
-      ") {")%string :: (List.map (fun s => "  " ++ s)%string (to_strings internal_private prefix body)) ++ ["}"%string]%list.
+    ((("func "
+         ++ name
+         ++ "(" ++ String.concat ", " (to_arg_list internal_private prefix Out rets ++ to_arg_list_for_each_lhs_of_arrow internal_private prefix args)
+         ++ ") {")%string)
+       :: (List.map (fun s => String.Tab ++ s)%string (to_strings internal_private prefix body))
+       ++ ["}"%string])%list.
 
   Definition strip_special_infos (infos : ToString.ident_infos) : ToString.ident_infos
     := ToString.ident_info_diff
@@ -459,6 +476,7 @@ Module Go.
   Definition ToFunctionLines
              {relax_zrange : relax_zrange_opt}
              {language_naming_conventions : language_naming_conventions_opt}
+             {documentation_options : documentation_options_opt}
              (machine_wordsize : Z)
              (do_bounds_check : bool) (internal_private : bool) (private : bool) (prefix : string) (name : string)
              {t}
@@ -491,7 +509,7 @@ Module Go.
        ToString.comment_file_header_block := comment_block_extra_newlines;
        ToString.ToFunctionLines := @ToFunctionLines;
        ToString.header := @header;
-       ToString.footer := fun _ _ _ _ _ _ _ _ => [];
+       ToString.footer := fun _ _ _ _ _ _ _ _ _ => [];
        ToString.strip_special_infos machine_wordsize := strip_special_infos |}.
 
 End Go.

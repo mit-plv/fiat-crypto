@@ -32,6 +32,7 @@ Require Import Crypto.Arithmetic.UniformWeight.
 Require Import Crypto.BoundsPipeline.
 Require Import Crypto.COperationSpecifications.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.
+Require Import Crypto.Util.Strings.Show.
 Require Crypto.Assembly.Parse.
 Require Import Crypto.Assembly.Equivalence.
 Import ListNotations.
@@ -336,8 +337,16 @@ Module CorrectnessStringification.
          end
     end.
 
+  Ltac to_level lvl :=
+    lazymatch type of lvl with
+    | Z => constr:(Level.level lvl)
+    | _ => lvl
+    end.
+
   Ltac maybe_parenthesize str natural cur_lvl :=
-    let should_paren := (eval cbv in (Z.ltb cur_lvl natural)) in
+    let natural := to_level natural in
+    let cur_lvl := to_level cur_lvl in
+    let should_paren := (eval cbv in (Level.ltb cur_lvl natural)) in
     lazymatch should_paren with
     | true => constr:(("(" ++ str ++ ")")%string)
     | false => str
@@ -455,20 +464,23 @@ Module CorrectnessStringification.
     end.
 
   Ltac stringify_rec0 ctx correctness lvl :=
+    let lvl := to_level lvl in
+    let term_lvl := constr:(term_lvl) in
+    let rel_lvl := constr:(rel_lvl) in
+    let next_rel_lvl := constr:(Level.next rel_lvl) in
+    let app_lvl := constr:(app_lvl) in
+    let next_app_lvl := constr:(Level.next app_lvl) in
     let correctness := eta_match correctness in
     let recurse v lvl := stringify_rec0 ctx v lvl in
     let name_of_var := find_head_in_ctx ctx correctness in
     let stringify_if testv t f :=
-        let stest := recurse testv 200 in
-        let st := recurse t 200 in
-        let sf := recurse f 200 in
-        maybe_parenthesize (("if " ++ stest ++ " then " ++ st ++ " else " ++ sf)%string) 200 lvl in
-    let show_Z _ :=
-        maybe_parenthesize (Show.Decimal.show_Z false correctness) 1 lvl in
-    let show_nat _ :=
-        maybe_parenthesize (Show.Decimal.show_nat false correctness) 1 lvl in
-    let show_list_Z_Z _ :=
-        maybe_parenthesize (@Show.show_list _ (@Show.show_prod _ _ Show.Decimal.show_Z Show.Decimal.show_Z) false correctness) 1 lvl in
+        let stest := recurse testv term_lvl in
+        let st := recurse t term_lvl in
+        let sf := recurse f term_lvl in
+        maybe_parenthesize (("if " ++ stest ++ " then " ++ st ++ " else " ++ sf)%string) term_lvl lvl in
+    let show_Z _ := constr:(Decimal.show_lvl_Z correctness lvl) in
+    let show_nat _ := constr:(Decimal.show_lvl_nat correctness lvl) in
+    let show_list_Z_Z _ := constr:(@show_lvl_list _ (@show_lvl_prod _ _ Decimal.show_lvl_Z Decimal.show_lvl_Z) correctness lvl) in
     let stringify_prefix f natural arg_lvl :=
         lazymatch correctness with
         | ?F ?x
@@ -505,24 +517,24 @@ Module CorrectnessStringification.
         end in
     lazymatch constr:((name_of_var, name_of_fun)) with
     | (Some ?name, _)
-      => maybe_parenthesize name 1 lvl
+      => maybe_parenthesize name (Level.level 1) lvl
     | (None, Some ?name)
       => lazymatch correctness with
          | ?f ?x
-           => let sx := recurse x 9 in
-              maybe_parenthesize ((name ++ " " ++ sx)%string) 10 lvl
+           => let sx := recurse x (Level.next app_lvl) in
+              maybe_parenthesize ((name ++ " " ++ sx)%string) constr:(app_lvl) lvl
          end
     | (None, None)
       => lazymatch correctness with
          | ?x = ?y :> ?T
            => lazymatch (eval cbv in T) with
-              | Z => let sx := recurse x 69 in
-                     let sy := recurse y 69 in
-                     maybe_parenthesize ((sx ++ " = " ++ sy)%string) 70 lvl
+              | Z => let sx := recurse x next_rel_lvl in
+                     let sy := recurse y next_rel_lvl in
+                     maybe_parenthesize ((sx ++ " = " ++ sy)%string) rel_lvl lvl
               | list Z
-                => let sx := recurse x 69 in
-                   let sy := recurse y 69 in
-                   maybe_parenthesize ((sx ++ " = " ++ sy)%string) 70 lvl
+                => let sx := recurse x next_rel_lvl in
+                   let sy := recurse y next_rel_lvl in
+                   maybe_parenthesize ((sx ++ " = " ++ sy)%string) rel_lvl lvl
               | prod ?A ?B
                 => let v := (eval cbn [fst snd] in (fst x = fst y /\ snd x = snd y)) in
                    recurse v lvl
@@ -531,18 +543,18 @@ Module CorrectnessStringification.
               end
          | eval (weight 8 1) _ ?v
            => let sv := recurse v 9 in
-              maybe_parenthesize (("bytes_eval " ++ sv)%string) 10 lvl
+              maybe_parenthesize (("bytes_eval " ++ sv)%string) app_lvl lvl
          | Associational.eval ?c
            => let sc := recurse c 9 in
-              maybe_parenthesize (("Associational.eval " ++ sc)%string) 10 lvl
+              maybe_parenthesize (("Associational.eval " ++ sc)%string) app_lvl lvl
          | uweight ?machine_wordsize ?v
            => recurse (2^(machine_wordsize * Z.of_nat v)) lvl
          | weight 8 1 ?i
            => recurse (2^(8 * Z.of_nat i)) lvl
          | List.map ?x ?y
-           => let sx := recurse x 9 in
-              let sy := recurse y 9 in
-              maybe_parenthesize (("map " ++ sx ++ " " ++ sy)%string) 10 lvl
+           => let sx := recurse x next_app_lvl in
+              let sy := recurse y next_app_lvl in
+              maybe_parenthesize (("map " ++ sx ++ " " ++ sy)%string) app_lvl lvl
          | match ?testv with true => ?t | false => ?f end
            => stringify_if testv t f
          | match ?testv with or_introl _ => ?t | or_intror _ => ?f end
@@ -552,8 +564,8 @@ Module CorrectnessStringification.
          | Crypto.Util.Decidable.dec ?p
            => recurse p lvl
          | Z.odd ?x
-           => let sx := recurse x 9 in
-              maybe_parenthesize ((sx ++ " is odd")%string) 10 lvl
+           => let sx := recurse x next_app_lvl in
+              maybe_parenthesize ((sx ++ " is odd")%string) app_lvl lvl
          | Z0 => show_Z ()
          | Zpos _ => show_Z ()
          | Zneg _ => show_Z ()
@@ -565,10 +577,10 @@ Module CorrectnessStringification.
               | false => recurse (x + 1)%nat lvl
               end
          | Z.of_nat ?x => recurse x lvl
-         | ?x <= ?y <  ?z => stringify_infix2 "≤" "<" 70 69 69 69
-         | ?x <= ?y <= ?z => stringify_infix2 "≤" "≤" 70 69 69 69
-         | ?x <  ?y <= ?z => stringify_infix2 "<" "≤" 70 69 69 69
-         | ?x <  ?y <  ?z => stringify_infix2 "<" "<" 70 69 69 69
+         | ?x <= ?y <  ?z => stringify_infix2 "≤" "<" rel_lvl next_rel_lvl next_rel_lvl next_rel_lvl
+         | ?x <= ?y <= ?z => stringify_infix2 "≤" "≤" rel_lvl next_rel_lvl next_rel_lvl next_rel_lvl
+         | ?x <  ?y <= ?z => stringify_infix2 "<" "≤" rel_lvl next_rel_lvl next_rel_lvl next_rel_lvl
+         | ?x <  ?y <  ?z => stringify_infix2 "<" "<" rel_lvl next_rel_lvl next_rel_lvl next_rel_lvl
          | iff _ _ => stringify_infix "↔" 95 94 94
          | and _ _  => stringify_infix "∧" 80 80 80
          | andb _ _ => stringify_infix "∧" 80 80 80
@@ -578,20 +590,20 @@ Module CorrectnessStringification.
          | Z.add _ _ => stringify_infix "+" 50 50 49
          | Z.sub _ _ => stringify_infix "-" 50 50 49
          | Z.opp _ => stringify_prefix "-" 35 35
-         | Z.le _ _ => stringify_infix "≤" 70 69 69
-         | Z.lt _ _ => stringify_infix "<" 70 69 69
-         | Z.leb _ _ => stringify_infix "≤" 70 69 69
-         | Z.ltb _ _ => stringify_infix "<" 70 69 69
+         | Z.le _ _ => stringify_infix "≤" rel_lvl next_rel_lvl next_rel_lvl
+         | Z.lt _ _ => stringify_infix "<" rel_lvl next_rel_lvl next_rel_lvl
+         | Z.leb _ _ => stringify_infix "≤" rel_lvl next_rel_lvl next_rel_lvl
+         | Z.ltb _ _ => stringify_infix "<" rel_lvl next_rel_lvl next_rel_lvl
          | Nat.mul _ _ => stringify_infix "*" 40 40 39
          | Nat.pow _ _ => stringify_infix "^" 30 29 30
          | Nat.add _ _ => stringify_infix "+" 50 50 49
          | Nat.sub _ _ => stringify_infix "-ℕ" 50 50 49
          | Z.div _ _
-           => let res := stringify_infix' 69 " " "/" 40 40 39 in
-              maybe_parenthesize ("⌊" ++ res ++ "⌋") 9 lvl
+           => let res := stringify_infix' next_rel_lvl " " "/" 40 40 39 in
+              maybe_parenthesize ("⌊" ++ res ++ "⌋") next_app_lvl lvl
          | List.seq ?x ?y
-           => let sx := recurse x 9 in
-              let sy := recurse (pred y) 9 in
+           => let sx := recurse x next_app_lvl in
+              let sy := recurse (pred y) next_app_lvl in
               constr:("[" ++ sx ++ ".." ++ sy ++ "]")
          | pred ?n
            => let iv := test_is_var_or_const n in
@@ -602,8 +614,8 @@ Module CorrectnessStringification.
                 => recurse (n - 1)%nat lvl
               end
          | fun x : ?T => ?f
-           => let slam := stringify_function_binders ctx correctness ltac:(fun ctx body => stringify_rec0 ctx body 200) in
-              maybe_parenthesize ("λ" ++ slam) 200 lvl
+           => let slam := stringify_function_binders ctx correctness ltac:(fun ctx body => stringify_rec0 ctx body term_lvl) in
+              maybe_parenthesize ("λ" ++ slam) term_lvl lvl
          | ?v
            => let iv := test_is_var_or_const v in
               lazymatch iv with
@@ -629,7 +641,7 @@ Module CorrectnessStringification.
     let recurse so_far_rev v := stringify_preconditions ctx so_far_rev v in
     lazymatch correctness with
     | ?A -> ?B
-      => let sA := stringify_rec0 ctx A 200 in
+      => let sA := stringify_rec0 ctx A constr:(term_lvl) in
          recurse (sA :: so_far_rev) B
     | ?T
       => let so_far := (eval cbv [List.rev] in (List.rev so_far_rev)) in
@@ -639,7 +651,7 @@ Module CorrectnessStringification.
   Ltac stringify_postconditions ctx correctness :=
     let correctness := eta_match correctness in
     let recurse v := stringify_postconditions ctx v in
-    let default _ := let v := stringify_rec0 ctx correctness 200 in
+    let default _ := let v := stringify_rec0 ctx correctness constr:(term_lvl) in
                      constr:(v::nil) in
     lazymatch correctness with
     | _ <= _ <  _ => default ()
@@ -672,7 +684,7 @@ Module CorrectnessStringification.
              := constr:((["Postconditions:"]
                            ++ List.map (fun s => "  " ++ s)%string postconditions)%list%string) in
          (eval cbv [List.map List.app] in
-             (preconditions_list_string ++ postconditions_list_string ++ [""])%list%string)
+             ([""] ++ preconditions_list_string ++ postconditions_list_string ++ [""])%list%string)
     end.
 
   Ltac strip_lambdas v :=
@@ -729,6 +741,7 @@ Notation wrap_s v := (fun s => existT (fun t => prod string (Pipeline.ErrorT (Pi
 Section __.
   Context {output_language_api : ToString.OutputLanguageAPI}
           {language_naming_conventions : language_naming_conventions_opt}
+          {documentation_options : documentation_options_opt}
           {package_namev : package_name_opt}
           {class_namev : class_name_opt}
           {static : static_opt}
@@ -804,7 +817,7 @@ Section __.
         FromPipelineToString
           machine_wordsize prefix "selectznz" selectznz
           (docstring_with_summary_from_lemma!
-             (fun fname : string => ["The function " ++ fname ++ " is a multi-limb conditional select."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " is a multi-limb conditional select."]%string)
              (selectznz_correct dummy_weight n saturated_bounds_list)).
 
   Definition mulx (s : Z)
@@ -823,7 +836,7 @@ Section __.
         FromPipelineToInternalString
           machine_wordsize prefix ("mulx_u" ++ Decimal.Z.to_string s) (mulx s)
           (docstring_with_summary_from_lemma!
-             (fun fname : string => ["The function " ++ fname ++ " is a multiplication, returning the full double-width result."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " is a multiplication, returning the full double-width result."]%string)
              (mulx_correct s)).
 
   Definition addcarryx (s : Z)
@@ -843,7 +856,7 @@ Section __.
         FromPipelineToInternalString
           machine_wordsize prefix ("addcarryx_u" ++ Decimal.Z.to_string s) (addcarryx s)
           (docstring_with_summary_from_lemma!
-             (fun fname : string => ["The function " ++ fname ++ " is an addition with carry."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " is an addition with carry."]%string)
              (addcarryx_correct s)).
 
   Definition subborrowx (s : Z)
@@ -862,7 +875,7 @@ Section __.
         FromPipelineToInternalString
           machine_wordsize prefix ("subborrowx_u" ++ Decimal.Z.to_string s) (subborrowx s)
           (docstring_with_summary_from_lemma!
-             (fun fname : string => ["The function " ++ fname ++ " is a subtraction with borrow."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " is a subtraction with borrow."]%string)
              (subborrowx_correct s)).
 
 
@@ -881,7 +894,7 @@ Section __.
         FromPipelineToInternalString
           machine_wordsize prefix ("value_barrier_" ++ (if int.is_unsigned s then "u" else "") ++ Decimal.Z.to_string (int.bitwidth_of s)) (value_barrier s)
           (docstring_with_summary_from_lemma!
-             (fun fname : string => ["The function " ++ fname ++ " is a single-word conditional move."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " is a single-word conditional move."]%string)
              (value_barrier_correct (int.is_signed s) (int.bitwidth_of s))).
 
 
@@ -901,7 +914,7 @@ Section __.
         FromPipelineToInternalString
           machine_wordsize prefix ("cmovznz_u" ++ Decimal.Z.to_string s) (cmovznz s)
           (docstring_with_summary_from_lemma!
-             (fun fname : string => ["The function " ++ fname ++ " is a single-word conditional move."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " is a single-word conditional move."]%string)
              (cmovznz_correct false s)).
 
   Definition cmovznz_by_mul (s : Z)
@@ -920,7 +933,7 @@ Section __.
         FromPipelineToInternalString
           machine_wordsize prefix ("cmovznz_u" ++ Decimal.Z.to_string s) (cmovznz_by_mul s)
           (docstring_with_summary_from_lemma!
-             (fun fname : string => ["The function " ++ fname ++ " is a single-word conditional move."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " is a single-word conditional move."]%string)
              (cmovznz_correct false s)).
 
   Local Ltac solve_extra_bounds_side_conditions :=
@@ -1129,7 +1142,7 @@ Section __.
                 | Success (Some (prefix, function_asms))
                   => let '(asm_ls, ls, unused_asm_ls) := split_to_assembly_functions function_asms ls in
                      (* TODO: Currently we just pass the prefix/header through unchanged; maybe we should instead generate a better header? *)
-                     let asm_ls_prefix := [(assembly_output, "header-prefix", Success (Show.show_lines false prefix))] in
+                     let asm_ls_prefix := [(assembly_output, "header-prefix", Success (Show.show_lines prefix))] in
                      let asm_ls_check
                          := if (error_on_unused_assembly_functions && (0 <? List.length unused_asm_ls))%nat
                             then [(assembly_output, "check", Error (Pipeline.Unused_global_assembly_labels
@@ -1147,7 +1160,7 @@ Section __.
                                            (synthesis_res.(Pipeline.arg_bounds))
                                            (synthesis_res.(Pipeline.out_bounds))
                                    with
-                                   | Success lines => Success (Show.show_lines false lines)
+                                   | Success lines => Success (Show.show_lines lines)
                                    | Error err => Error (Pipeline.Equivalence_checking_failure
                                                            (synthesis_res.(Pipeline.expr))
                                                            asm_lines
@@ -1174,8 +1187,7 @@ Section __.
                         (ToString.ident_info_of_bitwidths_used extra_bit_widths) in
          let header :=
              (comment_header
-                ++ ToString.header machine_wordsize (orb internal_static static) static function_name_prefix infos
-                ++ [""]) in
+                ++ ToString.header machine_wordsize (orb internal_static static) static function_name_prefix infos) in
          let footer :=
              ToString.footer machine_wordsize (orb internal_static static) static function_name_prefix infos in
          [(normal_output,

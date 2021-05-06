@@ -13,6 +13,9 @@ Global Set Warnings Append "-extraction-opaque-accessed".
 Extraction Language OCaml.
 Global Unset Extraction Optimize.
 
+(** Work around COQBUG(https://github.com/coq/coq/issues/4875) / COQBUG(https://github.com/coq/coq/issues/7954) / COQBUG(https://github.com/coq/coq/issues/7954) / https://discuss.ocaml.org/t/why-wont-ocaml-specialize-weak-type-variables-in-dead-code/7776 *)
+Extraction Inline Show.ShowLevel_of_Show.
+
 Inductive int : Set := int_O | int_S (x : int).
 
 (** We pull a hack to get coqchk to not report these as axioms; for

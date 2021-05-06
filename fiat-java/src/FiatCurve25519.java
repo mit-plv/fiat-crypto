@@ -7,10 +7,10 @@
 /* tight_bounds_multiplier = 1 (from "") */
 /*  */
 /* Computed values: */
-/* carry_chain = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1] */
-/* eval z = z[0] + (z[1] << 26) + (z[2] << 51) + (z[3] << 77) + (z[4] << 102) + (z[5] << 128) + (z[6] << 153) + (z[7] << 179) + (z[8] << 204) + (z[9] << 230) */
-/* bytes_eval z = z[0] + (z[1] << 8) + (z[2] << 16) + (z[3] << 24) + (z[4] << 32) + (z[5] << 40) + (z[6] << 48) + (z[7] << 56) + (z[8] << 64) + (z[9] << 72) + (z[10] << 80) + (z[11] << 88) + (z[12] << 96) + (z[13] << 104) + (z[14] << 112) + (z[15] << 120) + (z[16] << 128) + (z[17] << 136) + (z[18] << 144) + (z[19] << 152) + (z[20] << 160) + (z[21] << 168) + (z[22] << 176) + (z[23] << 184) + (z[24] << 192) + (z[25] << 200) + (z[26] << 208) + (z[27] << 216) + (z[28] << 224) + (z[29] << 232) + (z[30] << 240) + (z[31] << 248) */
-/* balance = [0x7ffffda, 0x3fffffe, 0x7fffffe, 0x3fffffe, 0x7fffffe, 0x3fffffe, 0x7fffffe, 0x3fffffe, 0x7fffffe, 0x3fffffe] */
+/*   carry_chain = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1] */
+/*   eval z = z[0] + (z[1] << 26) + (z[2] << 51) + (z[3] << 77) + (z[4] << 102) + (z[5] << 128) + (z[6] << 153) + (z[7] << 179) + (z[8] << 204) + (z[9] << 230) */
+/*   bytes_eval z = z[0] + (z[1] << 8) + (z[2] << 16) + (z[3] << 24) + (z[4] << 32) + (z[5] << 40) + (z[6] << 48) + (z[7] << 56) + (z[8] << 64) + (z[9] << 72) + (z[10] << 80) + (z[11] << 88) + (z[12] << 96) + (z[13] << 104) + (z[14] << 112) + (z[15] << 120) + (z[16] << 128) + (z[17] << 136) + (z[18] << 144) + (z[19] << 152) + (z[20] << 160) + (z[21] << 168) + (z[22] << 176) + (z[23] << 184) + (z[24] << 192) + (z[25] << 200) + (z[26] << 208) + (z[27] << 216) + (z[28] << 224) + (z[29] << 232) + (z[30] << 240) + (z[31] << 248) */
+/*   balance = [0x7ffffda, 0x3fffffe, 0x7fffffe, 0x3fffffe, 0x7fffffe, 0x3fffffe, 0x7fffffe, 0x3fffffe, 0x7fffffe, 0x3fffffe] */
 
 package fiat_crypto;
 
@@ -27,6 +27,7 @@ static class Box<T> {
 
 /**
  * The function fiat_Curve25519_addcarryx_u26 is an addition with carry. <p>
+ * <p>
  * Postconditions: <p>
  *   out1 = (arg1 + arg2 + arg3) mod 2^26 <p>
  *   out2 = ⌊(arg1 + arg2 + arg3) / 2^26⌋ <p>
@@ -49,6 +50,7 @@ static void fiat_Curve25519_addcarryx_u26(Box<Integer> out1, Box<Integer> out2, 
 
 /**
  * The function fiat_Curve25519_subborrowx_u26 is a subtraction with borrow. <p>
+ * <p>
  * Postconditions: <p>
  *   out1 = (-arg1 + arg2 + -arg3) mod 2^26 <p>
  *   out2 = -⌊(-arg1 + arg2 + -arg3) / 2^26⌋ <p>
@@ -71,6 +73,7 @@ static void fiat_Curve25519_subborrowx_u26(Box<Integer> out1, Box<Integer> out2,
 
 /**
  * The function fiat_Curve25519_addcarryx_u25 is an addition with carry. <p>
+ * <p>
  * Postconditions: <p>
  *   out1 = (arg1 + arg2 + arg3) mod 2^25 <p>
  *   out2 = ⌊(arg1 + arg2 + arg3) / 2^25⌋ <p>
@@ -93,6 +96,7 @@ static void fiat_Curve25519_addcarryx_u25(Box<Integer> out1, Box<Integer> out2, 
 
 /**
  * The function fiat_Curve25519_subborrowx_u25 is a subtraction with borrow. <p>
+ * <p>
  * Postconditions: <p>
  *   out1 = (-arg1 + arg2 + -arg3) mod 2^25 <p>
  *   out2 = -⌊(-arg1 + arg2 + -arg3) / 2^25⌋ <p>
@@ -115,6 +119,7 @@ static void fiat_Curve25519_subborrowx_u25(Box<Integer> out1, Box<Integer> out2,
 
 /**
  * The function fiat_Curve25519_cmovznz_u64 is a single-word conditional move. <p>
+ * <p>
  * Postconditions: <p>
  *   out1 = (if arg1 = 0 then arg2 else arg3) <p>
  * <p>
@@ -133,6 +138,7 @@ static void fiat_Curve25519_cmovznz_u64(Box<Long> out1, int arg1, long arg2, lon
 
 /**
  * The function fiat_Curve25519_carry_mul multiplies two field elements and reduces the result. <p>
+ * <p>
  * Postconditions: <p>
  *   eval out1 mod m = (eval arg1 * eval arg2) mod m <p>
  * <p>
@@ -304,6 +310,7 @@ public static void fiat_Curve25519_carry_mul(int[] out1, final int[] arg1, final
 
 /**
  * The function fiat_Curve25519_carry_square squares a field element and reduces the result. <p>
+ * <p>
  * Postconditions: <p>
  *   eval out1 mod m = (eval arg1 * eval arg1) mod m <p>
  * <p>
@@ -447,6 +454,7 @@ public static void fiat_Curve25519_carry_square(int[] out1, final int[] arg1) {
 
 /**
  * The function fiat_Curve25519_carry reduces a field element. <p>
+ * <p>
  * Postconditions: <p>
  *   eval out1 mod m = eval arg1 mod m <p>
  * <p>
@@ -492,6 +500,7 @@ public static void fiat_Curve25519_carry(int[] out1, final int[] arg1) {
 
 /**
  * The function fiat_Curve25519_add adds two field elements. <p>
+ * <p>
  * Postconditions: <p>
  *   eval out1 mod m = (eval arg1 + eval arg2) mod m <p>
  * <p>
@@ -526,6 +535,7 @@ public static void fiat_Curve25519_add(int[] out1, final int[] arg1, final int[]
 
 /**
  * The function fiat_Curve25519_sub subtracts two field elements. <p>
+ * <p>
  * Postconditions: <p>
  *   eval out1 mod m = (eval arg1 - eval arg2) mod m <p>
  * <p>
@@ -560,6 +570,7 @@ public static void fiat_Curve25519_sub(int[] out1, final int[] arg1, final int[]
 
 /**
  * The function fiat_Curve25519_opp negates a field element. <p>
+ * <p>
  * Postconditions: <p>
  *   eval out1 mod m = -eval arg1 mod m <p>
  * <p>
@@ -593,6 +604,7 @@ public static void fiat_Curve25519_opp(int[] out1, final int[] arg1) {
 
 /**
  * The function fiat_Curve25519_selectznz is a multi-limb conditional select. <p>
+ * <p>
  * Postconditions: <p>
  *   eval out1 = (if arg1 = 0 then eval arg2 else eval arg3) <p>
  * <p>
@@ -638,6 +650,7 @@ public static void fiat_Curve25519_selectznz(long[] out1, int arg1, final long[]
 
 /**
  * The function fiat_Curve25519_to_bytes serializes a field element to bytes in little-endian order. <p>
+ * <p>
  * Postconditions: <p>
  *   out1 = map (λ x, ⌊((eval arg1 mod m) mod 2^(8 * (x + 1))) / 2^(8 * x)⌋) [0..31] <p>
  * <p>
@@ -821,6 +834,7 @@ public static void fiat_Curve25519_to_bytes(int[] out1, final int[] arg1) {
 
 /**
  * The function fiat_Curve25519_from_bytes deserializes a field element from bytes in little-endian order. <p>
+ * <p>
  * Postconditions: <p>
  *   eval out1 mod m = bytes_eval arg1 mod m <p>
  * <p>
@@ -922,6 +936,7 @@ public static void fiat_Curve25519_from_bytes(int[] out1, final int[] arg1) {
 
 /**
  * The function fiat_Curve25519_carry_scmul_121666 multiplies a field element by 121666 and reduces the result. <p>
+ * <p>
  * Postconditions: <p>
  *   eval out1 mod m = (121666 * eval arg1) mod m <p>
  * <p>
@@ -991,4 +1006,3 @@ public static void fiat_Curve25519_carry_scmul_121666(int[] out1, final int[] ar
 }
 
 }
-

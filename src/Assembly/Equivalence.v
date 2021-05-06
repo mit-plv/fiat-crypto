@@ -56,23 +56,23 @@ Inductive EquivalenceCheckingError :=
 .
 
 Global Instance show_lines_BoundsDataError : ShowLines BoundsDataError
-  := fun parens err => match err with
-                       | Unknown_array_length t => ["Unknown array length of type " ++ show false t ++ "."]%string
-                       | Invalid_arrow_type t => ["Invalid higher order function involving the type " ++ show false t ++ "."]%string
-                       end%list.
+  := fun err => match err with
+                | Unknown_array_length t => ["Unknown array length of type " ++ show t ++ "."]%string
+                | Invalid_arrow_type t => ["Invalid higher order function involving the type " ++ show t ++ "."]%string
+                end%list.
 Global Instance show_BoundsDataError : Show BoundsDataError
-  := fun parens err => String.concat String.NewLine (show_lines parens err).
+  := fun err => String.concat String.NewLine (show_lines err).
 Global Instance show_lines_EquivalenceCheckingError : ShowLines EquivalenceCheckingError
-  := fun parens err => match err with
-                       | Could_not_prove_equivalence
-                         => ["Could not prove equivalence of assembly and AST."]
-                       | Not_enough_registers num_given num_extra_needed
-                         => ["Not enough registers available for storing input and output (given " ++ show false num_given ++ ", needed an additional " ++ show false num_extra_needed ++ "."]%string
-                       | Invalid_bounds_data err
-                         => show_lines parens err
-                       end%list.
+  := fun err => match err with
+                | Could_not_prove_equivalence
+                  => ["Could not prove equivalence of assembly and AST."]
+                | Not_enough_registers num_given num_extra_needed
+                  => ["Not enough registers available for storing input and output (given " ++ show num_given ++ ", needed an additional " ++ show num_extra_needed ++ "."]%string
+                | Invalid_bounds_data err
+                  => show_lines err
+                end%list.
 Global Instance show_EquivalenceCheckingError : Show EquivalenceCheckingError
-  := fun parens err => String.concat String.NewLine (show_lines parens err).
+  := fun err => String.concat String.NewLine (show_lines err).
 
 (* stores information about registers and array lengths associated to variables *)
 Fixpoint base_reg_data (t : base.type) : Set

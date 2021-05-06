@@ -92,6 +92,7 @@ Module Compilers.
 
         Definition header
              {language_naming_conventions : language_naming_conventions_opt}
+             {documentation_options : documentation_options_opt}
              {package_namev : package_name_opt}
              {class_namev : class_name_opt}
              (machine_wordsize : Z) (internal_static : bool) (static : bool) (prefix : string) (infos : ident_infos)
@@ -121,7 +122,8 @@ Module Compilers.
                     ; "#endif"]
                 ++ (List.flat_map
                       (value_barrier_func internal_static prefix)
-                      (IntSet.elements value_barrier_bitwidths)))%list.
+                      (IntSet.elements value_barrier_bitwidths))
+                ++ [""])%list.
       End String.
 
       Module primitive.
@@ -237,7 +239,7 @@ Module Compilers.
            | base.type.list _ => fun _ => ["#error ""complex list"";"]
            | base.type.option _ => fun _ => ["#error option;"]
            | base.type.unit => fun _ => ["#error unit;"]
-           | base.type.type_base t => fun _ => ["#error " ++ show false t ++ ";"]%string
+           | base.type.type_base t => fun _ => ["#error " ++ show t ++ ";"]%string
            end.
 
       Definition to_arg_list {language_naming_conventions : language_naming_conventions_opt} (prefix : string) {t} : var_data t -> list string
@@ -265,7 +267,7 @@ Module Compilers.
            | base.type.list _ => fun _ => ["#error ""complex list"";"]
            | base.type.option _ => fun _ => ["#error option;"]
            | base.type.unit => fun _ => ["#error unit;"]
-           | base.type.type_base t => fun _ => ["#error " ++ show false t ++ ";"]%string
+           | base.type.type_base t => fun _ => ["#error " ++ show t ++ ";"]%string
            end.
 
       Definition to_retarg_list {language_naming_conventions : language_naming_conventions_opt} (prefix : string) {t} : var_data t -> list string
@@ -530,6 +532,7 @@ Module Compilers.
       Definition ToFunctionLines
                  {relax_zrange : relax_zrange_opt}
                  {language_naming_conventions : language_naming_conventions_opt}
+                 {documentation_options : documentation_options_opt}
                  (machine_wordsize : Z)
                  (do_bounds_check : bool) (internal_static : bool) (static : bool) (prefix : string) (name : string)
                  {t}
@@ -561,6 +564,7 @@ Module Compilers.
       Definition ToFunctionString
                  {relax_zrange : relax_zrange_opt}
                  {language_naming_conventions : language_naming_conventions_opt}
+                 {documentation_options : documentation_options_opt}
                  (machine_wordsize : Z)
                  (do_bounds_check : bool) (internal_static : bool) (static : bool) (prefix : string) (name : string)
                  {t}
@@ -585,7 +589,7 @@ Module Compilers.
 
           ToString.header := @String.header;
 
-          ToString.footer := fun _ _ _ _ _ _ _ _ => [];
+          ToString.footer := fun _ _ _ _ _ _ _ _ _ => [];
 
           (** We handle value_barrier specially *)
           ToString.strip_special_infos machine_wordsize infos

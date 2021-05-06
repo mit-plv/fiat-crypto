@@ -12,10 +12,10 @@
 /*   return values.                                                   */
 /*  */
 /* Computed values: */
-/* eval z = z[0] + (z[1] << 32) + (z[2] << 64) + (z[3] << 96) + (z[4] << 128) + (z[5] << 160) + (z[6] << 192) + (z[7] << 224) */
-/* bytes_eval z = z[0] + (z[1] << 8) + (z[2] << 16) + (z[3] << 24) + (z[4] << 32) + (z[5] << 40) + (z[6] << 48) + (z[7] << 56) + (z[8] << 64) + (z[9] << 72) + (z[10] << 80) + (z[11] << 88) + (z[12] << 96) + (z[13] << 104) + (z[14] << 112) + (z[15] << 120) + (z[16] << 128) + (z[17] << 136) + (z[18] << 144) + (z[19] << 152) + (z[20] << 160) + (z[21] << 168) + (z[22] << 176) + (z[23] << 184) + (z[24] << 192) + (z[25] << 200) + (z[26] << 208) + (z[27] << 216) + (z[28] << 224) + (z[29] << 232) + (z[30] << 240) + (z[31] << 248) */
-/* twos_complement_eval z = let x1 := z[0] + (z[1] << 32) + (z[2] << 64) + (z[3] << 96) + (z[4] << 128) + (z[5] << 160) + (z[6] << 192) + (z[7] << 224) in */
-/*                          if x1 & (2^256-1) < 2^255 then x1 & (2^256-1) else (x1 & (2^256-1)) - 2^256 */
+/*   eval z = z[0] + (z[1] << 32) + (z[2] << 64) + (z[3] << 96) + (z[4] << 128) + (z[5] << 160) + (z[6] << 192) + (z[7] << 224) */
+/*   bytes_eval z = z[0] + (z[1] << 8) + (z[2] << 16) + (z[3] << 24) + (z[4] << 32) + (z[5] << 40) + (z[6] << 48) + (z[7] << 56) + (z[8] << 64) + (z[9] << 72) + (z[10] << 80) + (z[11] << 88) + (z[12] << 96) + (z[13] << 104) + (z[14] << 112) + (z[15] << 120) + (z[16] << 128) + (z[17] << 136) + (z[18] << 144) + (z[19] << 152) + (z[20] << 160) + (z[21] << 168) + (z[22] << 176) + (z[23] << 184) + (z[24] << 192) + (z[25] << 200) + (z[26] << 208) + (z[27] << 216) + (z[28] << 224) + (z[29] << 232) + (z[30] << 240) + (z[31] << 248) */
+/*   twos_complement_eval z = let x1 := z[0] + (z[1] << 32) + (z[2] << 64) + (z[3] << 96) + (z[4] << 128) + (z[5] << 160) + (z[6] << 192) + (z[7] << 224) in */
+/*                            if x1 & (2^256-1) < 2^255 then x1 & (2^256-1) else (x1 & (2^256-1)) - 2^256 */
 
 package fiat_crypto;
 
@@ -32,6 +32,7 @@ static class Box<T> {
 
 /**
  * The function fiat_Secp256K1_addcarryx_u32 is an addition with carry. <p>
+ * <p>
  * Postconditions: <p>
  *   out1 = (arg1 + arg2 + arg3) mod 2^32 <p>
  *   out2 = ⌊(arg1 + arg2 + arg3) / 2^32⌋ <p>
@@ -54,6 +55,7 @@ static void fiat_Secp256K1_addcarryx_u32(Box<Long> out1, Box<Integer> out2, int 
 
 /**
  * The function fiat_Secp256K1_subborrowx_u32 is a subtraction with borrow. <p>
+ * <p>
  * Postconditions: <p>
  *   out1 = (-arg1 + arg2 + -arg3) mod 2^32 <p>
  *   out2 = -⌊(-arg1 + arg2 + -arg3) / 2^32⌋ <p>
@@ -76,6 +78,7 @@ static void fiat_Secp256K1_subborrowx_u32(Box<Long> out1, Box<Integer> out2, int
 
 /**
  * The function fiat_Secp256K1_mulx_u32 is a multiplication, returning the full double-width result. <p>
+ * <p>
  * Postconditions: <p>
  *   out1 = (arg1 * arg2) mod 2^32 <p>
  *   out2 = ⌊arg1 * arg2 / 2^32⌋ <p>
@@ -97,6 +100,7 @@ static void fiat_Secp256K1_mulx_u32(Box<Long> out1, Box<Long> out2, long arg1, l
 
 /**
  * The function fiat_Secp256K1_cmovznz_u64 is a single-word conditional move. <p>
+ * <p>
  * Postconditions: <p>
  *   out1 = (if arg1 = 0 then arg2 else arg3) <p>
  * <p>
@@ -115,6 +119,7 @@ static void fiat_Secp256K1_cmovznz_u64(Box<Long> out1, int arg1, long arg2, long
 
 /**
  * The function fiat_Secp256K1_mul multiplies two field elements in the Montgomery domain. <p>
+ * <p>
  * Preconditions: <p>
  *   0 ≤ eval arg1 &lt; m <p>
  *   0 ≤ eval arg2 &lt; m <p>
@@ -1364,6 +1369,7 @@ public static void fiat_Secp256K1_mul(long[] out1, final long[] arg1, final long
 
 /**
  * The function fiat_Secp256K1_square squares a field element in the Montgomery domain. <p>
+ * <p>
  * Preconditions: <p>
  *   0 ≤ eval arg1 &lt; m <p>
  * Postconditions: <p>
@@ -2611,6 +2617,7 @@ public static void fiat_Secp256K1_square(long[] out1, final long[] arg1) {
 
 /**
  * The function fiat_Secp256K1_add adds two field elements in the Montgomery domain. <p>
+ * <p>
  * Preconditions: <p>
  *   0 ≤ eval arg1 &lt; m <p>
  *   0 ≤ eval arg2 &lt; m <p>
@@ -2704,6 +2711,7 @@ public static void fiat_Secp256K1_add(long[] out1, final long[] arg1, final long
 
 /**
  * The function fiat_Secp256K1_sub subtracts two field elements in the Montgomery domain. <p>
+ * <p>
  * Preconditions: <p>
  *   0 ≤ eval arg1 &lt; m <p>
  *   0 ≤ eval arg2 &lt; m <p>
@@ -2780,6 +2788,7 @@ public static void fiat_Secp256K1_sub(long[] out1, final long[] arg1, final long
 
 /**
  * The function fiat_Secp256K1_opp negates a field element in the Montgomery domain. <p>
+ * <p>
  * Preconditions: <p>
  *   0 ≤ eval arg1 &lt; m <p>
  * Postconditions: <p>
@@ -2854,6 +2863,7 @@ public static void fiat_Secp256K1_opp(long[] out1, final long[] arg1) {
 
 /**
  * The function fiat_Secp256K1_from_montgomery translates a field element out of the Montgomery domain. <p>
+ * <p>
  * Preconditions: <p>
  *   0 ≤ eval arg1 &lt; m <p>
  * Postconditions: <p>
@@ -3690,6 +3700,7 @@ public static void fiat_Secp256K1_from_montgomery(long[] out1, final long[] arg1
 
 /**
  * The function fiat_Secp256K1_to_montgomery translates a field element into the Montgomery domain. <p>
+ * <p>
  * Preconditions: <p>
  *   0 ≤ eval arg1 &lt; m <p>
  * Postconditions: <p>
@@ -4629,6 +4640,7 @@ public static void fiat_Secp256K1_to_montgomery(long[] out1, final long[] arg1) 
 
 /**
  * The function fiat_Secp256K1_nonzero outputs a single non-zero word if the input is non-zero and zero otherwise. <p>
+ * <p>
  * Preconditions: <p>
  *   0 ≤ eval arg1 &lt; m <p>
  * Postconditions: <p>
@@ -4646,6 +4658,7 @@ public static void fiat_Secp256K1_nonzero(Box<Long> out1, final long[] arg1) {
 
 /**
  * The function fiat_Secp256K1_selectznz is a multi-limb conditional select. <p>
+ * <p>
  * Postconditions: <p>
  *   eval out1 = (if arg1 = 0 then eval arg2 else eval arg3) <p>
  * <p>
@@ -4685,6 +4698,7 @@ public static void fiat_Secp256K1_selectznz(long[] out1, int arg1, final long[] 
 
 /**
  * The function fiat_Secp256K1_to_bytes serializes a field element NOT in the Montgomery domain to bytes in little-endian order. <p>
+ * <p>
  * Preconditions: <p>
  *   0 ≤ eval arg1 &lt; m <p>
  * Postconditions: <p>
@@ -4788,6 +4802,7 @@ public static void fiat_Secp256K1_to_bytes(int[] out1, final long[] arg1) {
 
 /**
  * The function fiat_Secp256K1_from_bytes deserializes a field element NOT in the Montgomery domain from bytes in little-endian order. <p>
+ * <p>
  * Preconditions: <p>
  *   0 ≤ bytes_eval arg1 &lt; m <p>
  * Postconditions: <p>
@@ -4868,6 +4883,7 @@ public static void fiat_Secp256K1_from_bytes(long[] out1, final int[] arg1) {
 
 /**
  * The function fiat_Secp256K1_set_one returns the field element one in the Montgomery domain. <p>
+ * <p>
  * Postconditions: <p>
  *   eval (from_montgomery out1) mod m = 1 mod m <p>
  *   0 ≤ eval out1 &lt; m <p>
@@ -4889,6 +4905,7 @@ public static void fiat_Secp256K1_set_one(int[] out1) {
 
 /**
  * The function fiat_Secp256K1_msat returns the saturated representation of the prime modulus. <p>
+ * <p>
  * Postconditions: <p>
  *   twos_complement_eval out1 = m <p>
  *   0 ≤ eval out1 &lt; m <p>
@@ -4911,6 +4928,7 @@ public static void fiat_Secp256K1_msat(long[] out1) {
 
 /**
  * The function fiat_Secp256K1_divstep computes a divstep. <p>
+ * <p>
  * Preconditions: <p>
  *   0 ≤ eval arg4 &lt; m <p>
  *   0 ≤ eval arg5 &lt; m <p>
@@ -5348,6 +5366,7 @@ public static void fiat_Secp256K1_divstep(Box<Long> out1, long[] out2, long[] ou
 
 /**
  * The function fiat_Secp256K1_divstep_precomp returns the precomputed value for Bernstein-Yang-inversion (in montgomery form). <p>
+ * <p>
  * Postconditions: <p>
  *   eval (from_montgomery out1) = ⌊(m - 1) / 2⌋^(if (log2 m) + 1 &lt; 46 then ⌊(49 * ((log2 m) + 1) + 80) / 17⌋ else ⌊(49 * ((log2 m) + 1) + 57) / 17⌋) <p>
  *   0 ≤ eval out1 &lt; m <p>
@@ -5368,4 +5387,3 @@ public static void fiat_Secp256K1_divstep_precomp(long[] out1) {
 }
 
 }
-

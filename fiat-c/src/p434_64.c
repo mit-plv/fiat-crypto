@@ -12,10 +12,10 @@
 /*   return values.                                                   */
 /*  */
 /* Computed values: */
-/* eval z = z[0] + (z[1] << 64) + (z[2] << 128) + (z[3] << 192) + (z[4] << 256) + (z[5] << 0x140) + (z[6] << 0x180) */
-/* bytes_eval z = z[0] + (z[1] << 8) + (z[2] << 16) + (z[3] << 24) + (z[4] << 32) + (z[5] << 40) + (z[6] << 48) + (z[7] << 56) + (z[8] << 64) + (z[9] << 72) + (z[10] << 80) + (z[11] << 88) + (z[12] << 96) + (z[13] << 104) + (z[14] << 112) + (z[15] << 120) + (z[16] << 128) + (z[17] << 136) + (z[18] << 144) + (z[19] << 152) + (z[20] << 160) + (z[21] << 168) + (z[22] << 176) + (z[23] << 184) + (z[24] << 192) + (z[25] << 200) + (z[26] << 208) + (z[27] << 216) + (z[28] << 224) + (z[29] << 232) + (z[30] << 240) + (z[31] << 248) + (z[32] << 256) + (z[33] << 0x108) + (z[34] << 0x110) + (z[35] << 0x118) + (z[36] << 0x120) + (z[37] << 0x128) + (z[38] << 0x130) + (z[39] << 0x138) + (z[40] << 0x140) + (z[41] << 0x148) + (z[42] << 0x150) + (z[43] << 0x158) + (z[44] << 0x160) + (z[45] << 0x168) + (z[46] << 0x170) + (z[47] << 0x178) + (z[48] << 0x180) + (z[49] << 0x188) + (z[50] << 0x190) + (z[51] << 0x198) + (z[52] << 0x1a0) + (z[53] << 0x1a8) + (z[54] << 0x1b0) */
-/* twos_complement_eval z = let x1 := z[0] + (z[1] << 64) + (z[2] << 128) + (z[3] << 192) + (z[4] << 256) + (z[5] << 0x140) + (z[6] << 0x180) in */
-/*                          if x1 & (2^448-1) < 2^447 then x1 & (2^448-1) else (x1 & (2^448-1)) - 2^448 */
+/*   eval z = z[0] + (z[1] << 64) + (z[2] << 128) + (z[3] << 192) + (z[4] << 256) + (z[5] << 0x140) + (z[6] << 0x180) */
+/*   bytes_eval z = z[0] + (z[1] << 8) + (z[2] << 16) + (z[3] << 24) + (z[4] << 32) + (z[5] << 40) + (z[6] << 48) + (z[7] << 56) + (z[8] << 64) + (z[9] << 72) + (z[10] << 80) + (z[11] << 88) + (z[12] << 96) + (z[13] << 104) + (z[14] << 112) + (z[15] << 120) + (z[16] << 128) + (z[17] << 136) + (z[18] << 144) + (z[19] << 152) + (z[20] << 160) + (z[21] << 168) + (z[22] << 176) + (z[23] << 184) + (z[24] << 192) + (z[25] << 200) + (z[26] << 208) + (z[27] << 216) + (z[28] << 224) + (z[29] << 232) + (z[30] << 240) + (z[31] << 248) + (z[32] << 256) + (z[33] << 0x108) + (z[34] << 0x110) + (z[35] << 0x118) + (z[36] << 0x120) + (z[37] << 0x128) + (z[38] << 0x130) + (z[39] << 0x138) + (z[40] << 0x140) + (z[41] << 0x148) + (z[42] << 0x150) + (z[43] << 0x158) + (z[44] << 0x160) + (z[45] << 0x168) + (z[46] << 0x170) + (z[47] << 0x178) + (z[48] << 0x180) + (z[49] << 0x188) + (z[50] << 0x190) + (z[51] << 0x198) + (z[52] << 0x1a0) + (z[53] << 0x1a8) + (z[54] << 0x1b0) */
+/*   twos_complement_eval z = let x1 := z[0] + (z[1] << 64) + (z[2] << 128) + (z[3] << 192) + (z[4] << 256) + (z[5] << 0x140) + (z[6] << 0x180) in */
+/*                            if x1 & (2^448-1) < 2^447 then x1 & (2^448-1) else (x1 & (2^448-1)) - 2^448 */
 
 #include <stdint.h>
 typedef unsigned char fiat_p434_uint1;
@@ -45,6 +45,7 @@ static __inline__ uint64_t fiat_p434_value_barrier_u64(uint64_t a) {
 
 /*
  * The function fiat_p434_addcarryx_u64 is an addition with carry.
+ *
  * Postconditions:
  *   out1 = (arg1 + arg2 + arg3) mod 2^64
  *   out2 = ⌊(arg1 + arg2 + arg3) / 2^64⌋
@@ -70,6 +71,7 @@ static void fiat_p434_addcarryx_u64(uint64_t* out1, fiat_p434_uint1* out2, fiat_
 
 /*
  * The function fiat_p434_subborrowx_u64 is a subtraction with borrow.
+ *
  * Postconditions:
  *   out1 = (-arg1 + arg2 + -arg3) mod 2^64
  *   out2 = -⌊(-arg1 + arg2 + -arg3) / 2^64⌋
@@ -95,6 +97,7 @@ static void fiat_p434_subborrowx_u64(uint64_t* out1, fiat_p434_uint1* out2, fiat
 
 /*
  * The function fiat_p434_mulx_u64 is a multiplication, returning the full double-width result.
+ *
  * Postconditions:
  *   out1 = (arg1 * arg2) mod 2^64
  *   out2 = ⌊arg1 * arg2 / 2^64⌋
@@ -119,6 +122,7 @@ static void fiat_p434_mulx_u64(uint64_t* out1, uint64_t* out2, uint64_t arg1, ui
 
 /*
  * The function fiat_p434_cmovznz_u64 is a single-word conditional move.
+ *
  * Postconditions:
  *   out1 = (if arg1 = 0 then arg2 else arg3)
  *
@@ -141,6 +145,7 @@ static void fiat_p434_cmovznz_u64(uint64_t* out1, fiat_p434_uint1 arg1, uint64_t
 
 /*
  * The function fiat_p434_mul multiplies two field elements in the Montgomery domain.
+ *
  * Preconditions:
  *   0 ≤ eval arg1 < m
  *   0 ≤ eval arg2 < m
@@ -1116,6 +1121,7 @@ static void fiat_p434_mul(uint64_t out1[7], const uint64_t arg1[7], const uint64
 
 /*
  * The function fiat_p434_square squares a field element in the Montgomery domain.
+ *
  * Preconditions:
  *   0 ≤ eval arg1 < m
  * Postconditions:
@@ -2089,6 +2095,7 @@ static void fiat_p434_square(uint64_t out1[7], const uint64_t arg1[7]) {
 
 /*
  * The function fiat_p434_add adds two field elements in the Montgomery domain.
+ *
  * Preconditions:
  *   0 ≤ eval arg1 < m
  *   0 ≤ eval arg2 < m
@@ -2173,6 +2180,7 @@ static void fiat_p434_add(uint64_t out1[7], const uint64_t arg1[7], const uint64
 
 /*
  * The function fiat_p434_sub subtracts two field elements in the Montgomery domain.
+ *
  * Preconditions:
  *   0 ≤ eval arg1 < m
  *   0 ≤ eval arg2 < m
@@ -2242,6 +2250,7 @@ static void fiat_p434_sub(uint64_t out1[7], const uint64_t arg1[7], const uint64
 
 /*
  * The function fiat_p434_opp negates a field element in the Montgomery domain.
+ *
  * Preconditions:
  *   0 ≤ eval arg1 < m
  * Postconditions:
@@ -2309,6 +2318,7 @@ static void fiat_p434_opp(uint64_t out1[7], const uint64_t arg1[7]) {
 
 /*
  * The function fiat_p434_from_montgomery translates a field element out of the Montgomery domain.
+ *
  * Preconditions:
  *   0 ≤ eval arg1 < m
  * Postconditions:
@@ -2902,6 +2912,7 @@ static void fiat_p434_from_montgomery(uint64_t out1[7], const uint64_t arg1[7]) 
 
 /*
  * The function fiat_p434_to_montgomery translates a field element into the Montgomery domain.
+ *
  * Preconditions:
  *   0 ≤ eval arg1 < m
  * Postconditions:
@@ -3798,6 +3809,7 @@ static void fiat_p434_to_montgomery(uint64_t out1[7], const uint64_t arg1[7]) {
 
 /*
  * The function fiat_p434_nonzero outputs a single non-zero word if the input is non-zero and zero otherwise.
+ *
  * Preconditions:
  *   0 ≤ eval arg1 < m
  * Postconditions:
@@ -3816,6 +3828,7 @@ static void fiat_p434_nonzero(uint64_t* out1, const uint64_t arg1[7]) {
 
 /*
  * The function fiat_p434_selectznz is a multi-limb conditional select.
+ *
  * Postconditions:
  *   eval out1 = (if arg1 = 0 then eval arg2 else eval arg3)
  *
@@ -3852,6 +3865,7 @@ static void fiat_p434_selectznz(uint64_t out1[7], fiat_p434_uint1 arg1, const ui
 
 /*
  * The function fiat_p434_to_bytes serializes a field element NOT in the Montgomery domain to bytes in little-endian order.
+ *
  * Preconditions:
  *   0 ≤ eval arg1 < m
  * Postconditions:
@@ -4128,6 +4142,7 @@ static void fiat_p434_to_bytes(uint8_t out1[55], const uint64_t arg1[7]) {
 
 /*
  * The function fiat_p434_from_bytes deserializes a field element NOT in the Montgomery domain from bytes in little-endian order.
+ *
  * Preconditions:
  *   0 ≤ bytes_eval arg1 < m
  * Postconditions:
@@ -4357,6 +4372,7 @@ static void fiat_p434_from_bytes(uint64_t out1[7], const uint8_t arg1[55]) {
 
 /*
  * The function fiat_p434_set_one returns the field element one in the Montgomery domain.
+ *
  * Postconditions:
  *   eval (from_montgomery out1) mod m = 1 mod m
  *   0 ≤ eval out1 < m
@@ -4377,6 +4393,7 @@ static void fiat_p434_set_one(uint64_t out1[7]) {
 
 /*
  * The function fiat_p434_msat returns the saturated representation of the prime modulus.
+ *
  * Postconditions:
  *   twos_complement_eval out1 = m
  *   0 ≤ eval out1 < m
@@ -4398,6 +4415,7 @@ static void fiat_p434_msat(uint64_t out1[8]) {
 
 /*
  * The function fiat_p434_divstep computes a divstep.
+ *
  * Preconditions:
  *   0 ≤ eval arg4 < m
  *   0 ≤ eval arg5 < m
@@ -4806,6 +4824,7 @@ static void fiat_p434_divstep(uint64_t* out1, uint64_t out2[8], uint64_t out3[8]
 
 /*
  * The function fiat_p434_divstep_precomp returns the precomputed value for Bernstein-Yang-inversion (in montgomery form).
+ *
  * Postconditions:
  *   eval (from_montgomery out1) = ⌊(m - 1) / 2⌋^(if (log2 m) + 1 < 46 then ⌊(49 * ((log2 m) + 1) + 80) / 17⌋ else ⌊(49 * ((log2 m) + 1) + 57) / 17⌋)
  *   0 ≤ eval out1 < m
@@ -4823,4 +4842,3 @@ static void fiat_p434_divstep_precomp(uint64_t out1[7]) {
   out1[5] = UINT64_C(0x6e1ddae1d9609ae1);
   out1[6] = UINT64_C(0x6df82285eec6);
 }
-

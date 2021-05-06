@@ -7,17 +7,17 @@
 // tight_bounds_multiplier = 1 (from "")
 //
 // Computed values:
-// carry_chain = [0, 1, 2, 3, 4, 0, 1]
-// eval z = z[0] + (z[1] << 51) + (z[2] << 102) + (z[3] << 153) + (z[4] << 204)
-// bytes_eval z = z[0] + (z[1] << 8) + (z[2] << 16) + (z[3] << 24) + (z[4] << 32) + (z[5] << 40) + (z[6] << 48) + (z[7] << 56) + (z[8] << 64) + (z[9] << 72) + (z[10] << 80) + (z[11] << 88) + (z[12] << 96) + (z[13] << 104) + (z[14] << 112) + (z[15] << 120) + (z[16] << 128) + (z[17] << 136) + (z[18] << 144) + (z[19] << 152) + (z[20] << 160) + (z[21] << 168) + (z[22] << 176) + (z[23] << 184) + (z[24] << 192) + (z[25] << 200) + (z[26] << 208) + (z[27] << 216) + (z[28] << 224) + (z[29] << 232) + (z[30] << 240) + (z[31] << 248)
-// balance = [0xfffffffffffda, 0xffffffffffffe, 0xffffffffffffe, 0xffffffffffffe, 0xffffffffffffe]
+//   carry_chain = [0, 1, 2, 3, 4, 0, 1]
+//   eval z = z[0] + (z[1] << 51) + (z[2] << 102) + (z[3] << 153) + (z[4] << 204)
+//   bytes_eval z = z[0] + (z[1] << 8) + (z[2] << 16) + (z[3] << 24) + (z[4] << 32) + (z[5] << 40) + (z[6] << 48) + (z[7] << 56) + (z[8] << 64) + (z[9] << 72) + (z[10] << 80) + (z[11] << 88) + (z[12] << 96) + (z[13] << 104) + (z[14] << 112) + (z[15] << 120) + (z[16] << 128) + (z[17] << 136) + (z[18] << 144) + (z[19] << 152) + (z[20] << 160) + (z[21] << 168) + (z[22] << 176) + (z[23] << 184) + (z[24] << 192) + (z[25] << 200) + (z[26] << 208) + (z[27] << 216) + (z[28] << 224) + (z[29] << 232) + (z[30] << 240) + (z[31] << 248)
+//   balance = [0xfffffffffffda, 0xffffffffffffe, 0xffffffffffffe, 0xffffffffffffe, 0xffffffffffffe]
 
 const std = @import("std");
 const cast = std.meta.cast;
 const mode = std.builtin.mode; // Checked arithmetic is disabled in non-debug modes to avoid side channels
 
-
 /// The function addcarryxU51 is an addition with carry.
+///
 /// Postconditions:
 ///   out1 = (arg1 + arg2 + arg3) mod 2^51
 ///   out2 = ⌊(arg1 + arg2 + arg3) / 2^51⌋
@@ -40,6 +40,7 @@ fn addcarryxU51(out1: *u64, out2: *u1, arg1: u1, arg2: u64, arg3: u64) callconv(
 }
 
 /// The function subborrowxU51 is a subtraction with borrow.
+///
 /// Postconditions:
 ///   out1 = (-arg1 + arg2 + -arg3) mod 2^51
 ///   out2 = -⌊(-arg1 + arg2 + -arg3) / 2^51⌋
@@ -62,6 +63,7 @@ fn subborrowxU51(out1: *u64, out2: *u1, arg1: u1, arg2: u64, arg3: u64) callconv
 }
 
 /// The function cmovznzU64 is a single-word conditional move.
+///
 /// Postconditions:
 ///   out1 = (if arg1 = 0 then arg2 else arg3)
 ///
@@ -81,6 +83,7 @@ fn cmovznzU64(out1: *u64, arg1: u1, arg2: u64, arg3: u64) callconv(.Inline) void
 }
 
 /// The function carryMul multiplies two field elements and reduces the result.
+///
 /// Postconditions:
 ///   eval out1 mod m = (eval arg1 * eval arg2) mod m
 ///
@@ -152,6 +155,7 @@ pub fn carryMul(out1: *[5]u64, arg1: [5]u64, arg2: [5]u64) void {
 }
 
 /// The function carrySquare squares a field element and reduces the result.
+///
 /// Postconditions:
 ///   eval out1 mod m = (eval arg1 * eval arg1) mod m
 ///
@@ -220,6 +224,7 @@ pub fn carrySquare(out1: *[5]u64, arg1: [5]u64) void {
 }
 
 /// The function carry reduces a field element.
+///
 /// Postconditions:
 ///   eval out1 mod m = eval arg1 mod m
 ///
@@ -250,6 +255,7 @@ pub fn carry(out1: *[5]u64, arg1: [5]u64) void {
 }
 
 /// The function add adds two field elements.
+///
 /// Postconditions:
 ///   eval out1 mod m = (eval arg1 + eval arg2) mod m
 ///
@@ -274,6 +280,7 @@ pub fn add(out1: *[5]u64, arg1: [5]u64, arg2: [5]u64) void {
 }
 
 /// The function sub subtracts two field elements.
+///
 /// Postconditions:
 ///   eval out1 mod m = (eval arg1 - eval arg2) mod m
 ///
@@ -298,6 +305,7 @@ pub fn sub(out1: *[5]u64, arg1: [5]u64, arg2: [5]u64) void {
 }
 
 /// The function opp negates a field element.
+///
 /// Postconditions:
 ///   eval out1 mod m = -eval arg1 mod m
 ///
@@ -321,6 +329,7 @@ pub fn opp(out1: *[5]u64, arg1: [5]u64) void {
 }
 
 /// The function selectznz is a multi-limb conditional select.
+///
 /// Postconditions:
 ///   eval out1 = (if arg1 = 0 then eval arg2 else eval arg3)
 ///
@@ -351,6 +360,7 @@ pub fn selectznz(out1: *[5]u64, arg1: u1, arg2: [5]u64, arg3: [5]u64) void {
 }
 
 /// The function toBytes serializes a field element to bytes in little-endian order.
+///
 /// Postconditions:
 ///   out1 = map (λ x, ⌊((eval arg1 mod m) mod 2^(8 * (x + 1))) / 2^(8 * x)⌋) [0..31]
 ///
@@ -498,6 +508,7 @@ pub fn toBytes(out1: *[32]u8, arg1: [5]u64) void {
 }
 
 /// The function fromBytes deserializes a field element from bytes in little-endian order.
+///
 /// Postconditions:
 ///   eval out1 mod m = bytes_eval arg1 mod m
 ///
@@ -587,6 +598,7 @@ pub fn fromBytes(out1: *[5]u64, arg1: [32]u8) void {
 }
 
 /// The function carryScmul121666 multiplies a field element by 121666 and reduces the result.
+///
 /// Postconditions:
 ///   eval out1 mod m = (121666 * eval arg1) mod m
 ///
@@ -630,4 +642,3 @@ pub fn carryScmul121666(out1: *[5]u64, arg1: [5]u64) void {
     out1[3] = x16;
     out1[4] = x19;
 }
-

@@ -12,10 +12,10 @@
 //!   return values.
 //!
 //! Computed values:
-//! eval z = z[0] + (z[1] << 32) + (z[2] << 64) + (z[3] << 96) + (z[4] << 128) + (z[5] << 160) + (z[6] << 192) + (z[7] << 224)
-//! bytes_eval z = z[0] + (z[1] << 8) + (z[2] << 16) + (z[3] << 24) + (z[4] << 32) + (z[5] << 40) + (z[6] << 48) + (z[7] << 56) + (z[8] << 64) + (z[9] << 72) + (z[10] << 80) + (z[11] << 88) + (z[12] << 96) + (z[13] << 104) + (z[14] << 112) + (z[15] << 120) + (z[16] << 128) + (z[17] << 136) + (z[18] << 144) + (z[19] << 152) + (z[20] << 160) + (z[21] << 168) + (z[22] << 176) + (z[23] << 184) + (z[24] << 192) + (z[25] << 200) + (z[26] << 208) + (z[27] << 216) + (z[28] << 224) + (z[29] << 232) + (z[30] << 240) + (z[31] << 248)
-//! twos_complement_eval z = let x1 := z[0] + (z[1] << 32) + (z[2] << 64) + (z[3] << 96) + (z[4] << 128) + (z[5] << 160) + (z[6] << 192) + (z[7] << 224) in
-//!                          if x1 & (2^256-1) < 2^255 then x1 & (2^256-1) else (x1 & (2^256-1)) - 2^256
+//!   eval z = z[0] + (z[1] << 32) + (z[2] << 64) + (z[3] << 96) + (z[4] << 128) + (z[5] << 160) + (z[6] << 192) + (z[7] << 224)
+//!   bytes_eval z = z[0] + (z[1] << 8) + (z[2] << 16) + (z[3] << 24) + (z[4] << 32) + (z[5] << 40) + (z[6] << 48) + (z[7] << 56) + (z[8] << 64) + (z[9] << 72) + (z[10] << 80) + (z[11] << 88) + (z[12] << 96) + (z[13] << 104) + (z[14] << 112) + (z[15] << 120) + (z[16] << 128) + (z[17] << 136) + (z[18] << 144) + (z[19] << 152) + (z[20] << 160) + (z[21] << 168) + (z[22] << 176) + (z[23] << 184) + (z[24] << 192) + (z[25] << 200) + (z[26] << 208) + (z[27] << 216) + (z[28] << 224) + (z[29] << 232) + (z[30] << 240) + (z[31] << 248)
+//!   twos_complement_eval z = let x1 := z[0] + (z[1] << 32) + (z[2] << 64) + (z[3] << 96) + (z[4] << 128) + (z[5] << 160) + (z[6] << 192) + (z[7] << 224) in
+//!                            if x1 & (2^256-1) < 2^255 then x1 & (2^256-1) else (x1 & (2^256-1)) - 2^256
 
 #![allow(unused_parens)]
 #[allow(non_camel_case_types)]
@@ -27,6 +27,7 @@ pub type fiat_p256_i2 = i8;
 
 
 /// The function fiat_p256_addcarryx_u32 is an addition with carry.
+///
 /// Postconditions:
 ///   out1 = (arg1 + arg2 + arg3) mod 2^32
 ///   out2 = ⌊(arg1 + arg2 + arg3) / 2^32⌋
@@ -48,6 +49,7 @@ pub fn fiat_p256_addcarryx_u32(out1: &mut u32, out2: &mut fiat_p256_u1, arg1: fi
 }
 
 /// The function fiat_p256_subborrowx_u32 is a subtraction with borrow.
+///
 /// Postconditions:
 ///   out1 = (-arg1 + arg2 + -arg3) mod 2^32
 ///   out2 = -⌊(-arg1 + arg2 + -arg3) / 2^32⌋
@@ -69,6 +71,7 @@ pub fn fiat_p256_subborrowx_u32(out1: &mut u32, out2: &mut fiat_p256_u1, arg1: f
 }
 
 /// The function fiat_p256_mulx_u32 is a multiplication, returning the full double-width result.
+///
 /// Postconditions:
 ///   out1 = (arg1 * arg2) mod 2^32
 ///   out2 = ⌊arg1 * arg2 / 2^32⌋
@@ -89,6 +92,7 @@ pub fn fiat_p256_mulx_u32(out1: &mut u32, out2: &mut u32, arg1: u32, arg2: u32) 
 }
 
 /// The function fiat_p256_cmovznz_u32 is a single-word conditional move.
+///
 /// Postconditions:
 ///   out1 = (if arg1 = 0 then arg2 else arg3)
 ///
@@ -107,6 +111,7 @@ pub fn fiat_p256_cmovznz_u32(out1: &mut u32, arg1: fiat_p256_u1, arg2: u32, arg3
 }
 
 /// The function fiat_p256_mul multiplies two field elements in the Montgomery domain.
+///
 /// Preconditions:
 ///   0 ≤ eval arg1 < m
 ///   0 ≤ eval arg2 < m
@@ -1115,6 +1120,7 @@ pub fn fiat_p256_mul(out1: &mut [u32; 8], arg1: &[u32; 8], arg2: &[u32; 8]) -> (
 }
 
 /// The function fiat_p256_square squares a field element in the Montgomery domain.
+///
 /// Preconditions:
 ///   0 ≤ eval arg1 < m
 /// Postconditions:
@@ -2121,6 +2127,7 @@ pub fn fiat_p256_square(out1: &mut [u32; 8], arg1: &[u32; 8]) -> () {
 }
 
 /// The function fiat_p256_add adds two field elements in the Montgomery domain.
+///
 /// Preconditions:
 ///   0 ≤ eval arg1 < m
 ///   0 ≤ eval arg2 < m
@@ -2213,6 +2220,7 @@ pub fn fiat_p256_add(out1: &mut [u32; 8], arg1: &[u32; 8], arg2: &[u32; 8]) -> (
 }
 
 /// The function fiat_p256_sub subtracts two field elements in the Montgomery domain.
+///
 /// Preconditions:
 ///   0 ≤ eval arg1 < m
 ///   0 ≤ eval arg2 < m
@@ -2288,6 +2296,7 @@ pub fn fiat_p256_sub(out1: &mut [u32; 8], arg1: &[u32; 8], arg2: &[u32; 8]) -> (
 }
 
 /// The function fiat_p256_opp negates a field element in the Montgomery domain.
+///
 /// Preconditions:
 ///   0 ≤ eval arg1 < m
 /// Postconditions:
@@ -2361,6 +2370,7 @@ pub fn fiat_p256_opp(out1: &mut [u32; 8], arg1: &[u32; 8]) -> () {
 }
 
 /// The function fiat_p256_from_montgomery translates a field element out of the Montgomery domain.
+///
 /// Preconditions:
 ///   0 ≤ eval arg1 < m
 /// Postconditions:
@@ -2899,6 +2909,7 @@ pub fn fiat_p256_from_montgomery(out1: &mut [u32; 8], arg1: &[u32; 8]) -> () {
 }
 
 /// The function fiat_p256_to_montgomery translates a field element into the Montgomery domain.
+///
 /// Preconditions:
 ///   0 ≤ eval arg1 < m
 /// Postconditions:
@@ -3789,6 +3800,7 @@ pub fn fiat_p256_to_montgomery(out1: &mut [u32; 8], arg1: &[u32; 8]) -> () {
 }
 
 /// The function fiat_p256_nonzero outputs a single non-zero word if the input is non-zero and zero otherwise.
+///
 /// Preconditions:
 ///   0 ≤ eval arg1 < m
 /// Postconditions:
@@ -3805,6 +3817,7 @@ pub fn fiat_p256_nonzero(out1: &mut u32, arg1: &[u32; 8]) -> () {
 }
 
 /// The function fiat_p256_selectznz is a multi-limb conditional select.
+///
 /// Postconditions:
 ///   eval out1 = (if arg1 = 0 then eval arg2 else eval arg3)
 ///
@@ -3843,6 +3856,7 @@ pub fn fiat_p256_selectznz(out1: &mut [u32; 8], arg1: fiat_p256_u1, arg2: &[u32;
 }
 
 /// The function fiat_p256_to_bytes serializes a field element NOT in the Montgomery domain to bytes in little-endian order.
+///
 /// Preconditions:
 ///   0 ≤ eval arg1 < m
 /// Postconditions:
@@ -3945,6 +3959,7 @@ pub fn fiat_p256_to_bytes(out1: &mut [u8; 32], arg1: &[u32; 8]) -> () {
 }
 
 /// The function fiat_p256_from_bytes deserializes a field element NOT in the Montgomery domain from bytes in little-endian order.
+///
 /// Preconditions:
 ///   0 ≤ bytes_eval arg1 < m
 /// Postconditions:
@@ -4024,6 +4039,7 @@ pub fn fiat_p256_from_bytes(out1: &mut [u32; 8], arg1: &[u8; 32]) -> () {
 }
 
 /// The function fiat_p256_set_one returns the field element one in the Montgomery domain.
+///
 /// Postconditions:
 ///   eval (from_montgomery out1) mod m = 1 mod m
 ///   0 ≤ eval out1 < m
@@ -4044,6 +4060,7 @@ pub fn fiat_p256_set_one(out1: &mut [u32; 8]) -> () {
 }
 
 /// The function fiat_p256_msat returns the saturated representation of the prime modulus.
+///
 /// Postconditions:
 ///   twos_complement_eval out1 = m
 ///   0 ≤ eval out1 < m
@@ -4065,6 +4082,7 @@ pub fn fiat_p256_msat(out1: &mut [u32; 9]) -> () {
 }
 
 /// The function fiat_p256_divstep computes a divstep.
+///
 /// Preconditions:
 ///   0 ≤ eval arg4 < m
 ///   0 ≤ eval arg5 < m
@@ -4501,6 +4519,7 @@ pub fn fiat_p256_divstep(out1: &mut u32, out2: &mut [u32; 9], out3: &mut [u32; 9
 }
 
 /// The function fiat_p256_divstep_precomp returns the precomputed value for Bernstein-Yang-inversion (in montgomery form).
+///
 /// Postconditions:
 ///   eval (from_montgomery out1) = ⌊(m - 1) / 2⌋^(if (log2 m) + 1 < 46 then ⌊(49 * ((log2 m) + 1) + 80) / 17⌋ else ⌊(49 * ((log2 m) + 1) + 57) / 17⌋)
 ///   0 ≤ eval out1 < m
@@ -4519,4 +4538,3 @@ pub fn fiat_p256_divstep_precomp(out1: &mut [u32; 8]) -> () {
   out1[6] = 0xffffffff;
   out1[7] = 0x2fffffff;
 }
-

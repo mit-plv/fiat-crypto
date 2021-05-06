@@ -29,6 +29,7 @@ Module Java.
   (* Header imports and type defs *)
   Definition header
              {language_naming_conventions : language_naming_conventions_opt}
+             {documentation_options : documentation_options_opt}
              {package_namev : package_name_opt}
              {class_namev : class_name_opt}
              (machine_wordsize : Z) (internal_private : bool) (private : bool) (prefix : string) (infos : ToString.ident_infos)
@@ -48,9 +49,11 @@ Module Java.
          "  public void set(T value) { this.value = value; }";
          "  public T get() { return this.value; }";
          "}";
+         "";
          ""]%string)).
   Definition footer
              {language_naming_conventions : language_naming_conventions_opt}
+             {documentation_options : documentation_options_opt}
              {package_namev : package_name_opt}
              {class_namev : class_name_opt}
              (machine_wordsize : Z) (internal_private : bool) (private : bool) (prefix : string) (infos : ToString.ident_infos)
@@ -239,7 +242,7 @@ Module Java.
     | base.type.list _ => fun _ => ["error_complex_list"]
     | base.type.option _ => fun _ => ["error_option"]
     | base.type.unit => fun _ => ["error_unit"]
-    | base.type.type_base t => fun _ => ["error_" ++ show false t]%string
+    | base.type.type_base t => fun _ => ["error_" ++ show t]%string
     end%string.
 
   Definition to_arg_list (prefix : string) (mode : Mode) {t} : var_data t -> list string :=
@@ -382,6 +385,7 @@ Module Java.
   Definition ToFunctionLines
              {relax_zrange : relax_zrange_opt}
              {language_naming_conventions : language_naming_conventions_opt}
+             {documentation_options : documentation_options_opt}
              (machine_wordsize : Z)
              (do_bounds_check : bool) (internal_private : bool) (internal : bool) (prefix : string) (name : string)
              {t}

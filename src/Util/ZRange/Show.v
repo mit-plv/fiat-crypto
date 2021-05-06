@@ -4,5 +4,6 @@ Require Import Crypto.Util.ZRange.
 Local Open Scope string_scope.
 
 Global Instance show_zrange : Show zrange
-  := fun _ r
-     => "[" ++ Hex.show_Z false (lower r) ++ " ~> " ++ Hex.show_Z false (upper r) ++ "]".
+  := fun r
+     => "[" ++ Hex.show_Z (lower r) ++ " ~> " ++ Hex.show_Z (upper r) ++ "]".
+Global Instance show_lvl_zrange : ShowLevel zrange := show_zrange.
