@@ -136,6 +136,23 @@ jobs:
       env:
         COQEXTRAFLAGS: ${{ matrix.coq-extra-flags }}
         
+    - name: cat opam logs (Linux, Mac)
+      run: |
+        for i in $(ls ~/.opam/log/); do echo "::group::$i"; cat "$i"; echo "::endgroup::"; done
+      if: ${{ always() && ( runner.os == 'Linux' || runner.os == 'macOS' ) }}
+        
+    - name: cat opam logs (Windows, native)
+      run: |
+        cat ~/.opam/log/*
+        true
+      if: ${{ always() && runner.os == 'Windows' }}
+
+    - name: cat opam logs (Windows)
+      run: |
+        %CYGWIN_ROOT%\bash.exe -l -c 'for i in $(ls ~/.opam/log/); do echo "::group::$i"; cat "$i"; echo "::endgroup::"; done'
+      shell: cmd
+      if: ${{ always() && runner.os == 'Windows' }}
+
     - run: opam list
     - run: opam exec -- word_by_word_montgomery -h
     - run: opam exec -- unsaturated_solinas -h
