@@ -1,0 +1,23 @@
+name: Test Generated Rust
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '0 0 1 * *'
+
+jobs:
+  test-rust:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: cargo build
+      run: (cd fiat-rust; cargo build --verbose)
+    - name: cargo test
+      run: (cd fiat-rust; cargo test --verbose)
+    - name: curve25519-dalek test
+      run: etc/ci/test-fiat-rust-curve25519-dalek.sh
+    - name: crate-crypto/Ed448-Goldilocks test
+      run: etc/ci/test-fiat-rust-crate-crypto-Ed448-Goldilocks.sh

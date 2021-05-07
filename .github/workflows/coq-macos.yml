@@ -1,0 +1,103 @@
+name: CI (Coq, MacOS)
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '0 0 1 * *'
+
+jobs:
+  build:
+
+    runs-on: macOS-10.15
+
+    env:
+      NJOBS: "2"
+      COQ_VERSION: "8.13.1"
+
+    steps:
+    - name: Set up OCaml
+      uses: avsm/setup-ocaml@v1.1.10
+      with:
+        ocaml-version: 4.11.1
+
+    - name: Install system dependencies
+      run: |
+        set -e
+        brew install gnu-time coreutils
+
+    - name: Install Coq
+      run: |
+        set -e
+        eval $(opam env)
+        opam update
+        opam install opam-depext
+        opam-depext coq
+        opam pin add coq ${COQ_VERSION}
+      env:
+        OPAMYES: "true"
+
+    - name: echo build params
+      run: |
+        eval $(opam env)
+        echo "::group::sysctl -n machdep.cpu.brand_string"
+        sysctl -n machdep.cpu.brand_string
+        echo "::endgroup::"
+        echo "::group::sysctl -a | grep machdep.cpu"
+        sysctl -a | grep machdep.cpu
+        echo "::endgroup::"
+        echo "::group::uname -a"
+        uname -a
+        echo "::endgroup::"
+        echo "::group::sw_vers -productVersion"
+        sw_vers -productVersion
+        echo "::endgroup::"
+        echo "::group::system_profiler SPSoftwareDataType"
+        system_profiler SPSoftwareDataType
+        echo "::endgroup::"
+        echo "::group::opam list"
+        opam list
+        echo "::endgroup::"
+        echo "::group::ocamlc -config"
+        ocamlc -config
+        echo "::endgroup::"
+        echo "::group::coqc --config"
+        coqc --config
+        echo "::endgroup::"
+        echo "::group::coqc --version"
+        coqc --version
+        echo "::endgroup::"
+        echo "::group::true | coqtop"
+        true | coqtop
+        echo "::endgroup::"
+    - uses: actions/checkout@v2
+    - name: submodules-init
+      uses: snickerbockers/submodules-init@v4
+    - name: deps
+      run: |
+        eval $(opam env)
+        etc/ci/github-actions-make.sh -j2 deps
+    - name: all
+      run: |
+        eval $(opam env)
+        etc/ci/github-actions-make.sh -j2 all
+    - name: upload OCaml files
+      uses: actions/upload-artifact@v1
+      with:
+        name: ExtractionOCaml
+        path: src/ExtractionOCaml
+    - name: display timing info
+      run: cat time-of-build-pretty.log
+    - name: display per-line timing info
+      run: etc/ci/github-actions-display-per-line-timing.sh
+#    - name: upload timing and .vo info
+#      uses: actions/upload-artifact@v1
+#      with:
+#        name: build-outputs
+#        path: .
+#      if: always ()
+    - name: validate
+      run: |
+        eval $(opam env)
+        make TIMED=1 validate COQCHKFLAGS="-o"
+      if: github.event_name != 'pull_request'
