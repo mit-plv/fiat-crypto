@@ -143,13 +143,13 @@ jobs:
         
     - name: cat opam logs (Windows, native)
       run: |
-        cat ~/.opam/log/*
+        opam exec -- cat ~/.opam/log/*
         true
       if: ${{ always() && runner.os == 'Windows' }}
 
     - name: cat opam logs (Windows)
       run: |
-        %CYGWIN_ROOT%\bash.exe -l -c 'for i in $(ls ~/.opam/log/); do echo "::group::$i"; cat "$i"; echo "::endgroup::"; done'
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'for i in $(ls ~/.opam/log/); do echo "::group::$i"; cat "$i"; echo "::endgroup::"; done'
       shell: cmd
       if: ${{ always() && runner.os == 'Windows' }}
 
