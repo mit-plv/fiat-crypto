@@ -71,11 +71,11 @@ jobs:
         ECHO ::endgroup::
       shell: cmd
     - name: deps
-      run: opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} deps
-      shell: "${env:CYGWIN_ROOT}/bin/bash.exe --noprofile --norc -eo pipefail {0}"
+      run: %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} deps'
+      shell: cmd
     - name: all
-      run: opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} all
-      shell: "${env:CYGWIN_ROOT}/bin/bash.exe --noprofile --norc -eo pipefail {0}"
+      run: %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} all'
+      shell: cmd
     - name: upload OCaml files
       uses: actions/upload-artifact@v1
       with:
@@ -85,8 +85,8 @@ jobs:
       run: type time-of-build-pretty.log
       shell: cmd
     - name: display per-line timing info
-      run: etc/ci/github-actions-display-per-line-timing.sh
-      shell: "${env:CYGWIN_ROOT}/bin/bash.exe --noprofile --norc -eo pipefail {0}"
+      run: %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; etc/ci/github-actions-display-per-line-timing.sh'
+      shell: cmd
 #    - name: upload timing and .vo info
 #      uses: actions/upload-artifact@v1
 #      with:
@@ -94,6 +94,6 @@ jobs:
 #        path: .
 #      if: always ()
     - name: validate
-      run: opam exec -- make TIMED=1 validate COQCHKFLAGS="-o"
-      shell: "${env:CYGWIN_ROOT}/bin/bash.exe --noprofile --norc -eo pipefail {0}"
+      run: %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- make TIMED=1 validate COQCHKFLAGS="-o"'
+      shell: cmd
       if: github.event_name != 'pull_request'
