@@ -36,7 +36,7 @@ fn testVector(comptime fiat: type, expected_s: []const u8) !void {
     var expected: [as.len]u8 = undefined;
     _ = try fmt.hexToBytes(&expected, expected_s);
     std.debug.print("> {s}\n", .{fmt.fmtSliceHexLower(&as)});
-    std.testing.expectEqualSlices(u8, &expected, &as);
+    try std.testing.expectEqualSlices(u8, &expected, &as);
 }
 
 test "curve25519" {

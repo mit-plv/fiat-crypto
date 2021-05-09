@@ -92,5 +92,5 @@ test "Field inversion" {
     const x = Fe.fromBytes(s);
 
     const xinv = x.invert();
-    std.testing.expect(x.mul(xinv).eql(Fe.one));
+    try std.testing.expect(x.mul(xinv).eql(Fe.one));
 }
