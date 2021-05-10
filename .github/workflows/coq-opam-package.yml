@@ -21,6 +21,7 @@ jobs:
         ocaml-version: ['4.11.1', '4.08.1']
         os: ['ubuntu-latest', 'macos-latest', 'windows-latest']
         coq-extra-flags: ['-async-proofs-j 1', '']
+        opam-jobs-flag: ['', '-j 2']
         exclude:
         - os: 'ubuntu-latest'
           coq-extra-flags: '-async-proofs-j 1'
@@ -28,6 +29,12 @@ jobs:
           coq-extra-flags: '-async-proofs-j 1'
         - os: 'windows-latest'
           coq-extra-flags: ''
+        - os: 'ubuntu-latest'
+          opam-jobs-flag: '-j 2'
+        - os: 'macos-latest'
+          opam-jobs-flag: '-j 2'
+        - os: 'windows-latest'
+          opam-jobs-flag: ''
         - coq-version: 'dev'
           ocaml-version: '4.08.1'
         - coq-version: '8.13.1'
@@ -132,7 +139,7 @@ jobs:
         echo ::endgroup::
 
     - run: opam exec -- opam-depext coq-fiat-crypto
-    - run: opam install coq-fiat-crypto
+    - run: opam install coq-fiat-crypto ${{ matrix.opam-jobs-flag }}
       env:
         COQEXTRAFLAGS: ${{ matrix.coq-extra-flags }}
         
