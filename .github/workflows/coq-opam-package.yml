@@ -138,7 +138,7 @@ jobs:
         
     - name: cat opam logs (Linux, Mac)
       run: |
-        for i in $(ls ~/.opam/log/); do echo "::group::$i"; cat "$i"; echo "::endgroup::"; done
+        for i in $(find ~/.opam/log/ -type f); do echo "::group::$i"; cat "$i"; echo "::endgroup::"; done
       if: ${{ always() && ( runner.os == 'Linux' || runner.os == 'macOS' ) }}
         
     - name: cat opam logs (Windows, native)
@@ -149,7 +149,7 @@ jobs:
 
     - name: cat opam logs (Windows)
       run: |
-        %CYGWIN_ROOT%\bin\bash.exe -l -c 'for i in $(ls ~/.opam/log/); do echo "::group::$i"; cat "$i"; echo "::endgroup::"; done'
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'for i in $(find ~/.opam/log/ -type f); do echo "::group::$i"; cat "$i"; echo "::endgroup::"; done'
       shell: cmd
       if: ${{ always() && runner.os == 'Windows' }}
 
