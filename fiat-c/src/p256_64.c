@@ -149,7 +149,7 @@ static FIAT_P256_FIAT_INLINE void fiat_p256_cmovznz_u64(uint64_t* out1, fiat_p25
   uint64_t x3;
   x1 = !!arg1;
   x2 = (fiat_p256_int1)(0x0 - x1) & UINT64_C(0xffffffffffffffff);
-  x3 = fiat_p256_value_barrier_u64(x2) & arg3 | fiat_p256_value_barrier_u64(~x2) & arg2;
+  x3 = (fiat_p256_value_barrier_u64(x2) & arg3) | (fiat_p256_value_barrier_u64(~x2) & arg2);
   *out1 = x3;
 }
 
@@ -1959,11 +1959,11 @@ static FIAT_P256_FIAT_INLINE void fiat_p256_divstep(uint64_t* out1, uint64_t out
   fiat_p256_subborrowx_u64(&x108, &x109, x107, x100, UINT64_C(0xffffffff00000001));
   fiat_p256_subborrowx_u64(&x110, &x111, x109, x101, 0x0);
   fiat_p256_addcarryx_u64(&x112, &x113, 0x0, x6, 0x1);
-  x114 = x80 >> 1 | x82 << 63 & UINT64_C(0xffffffffffffffff);
-  x115 = x82 >> 1 | x84 << 63 & UINT64_C(0xffffffffffffffff);
-  x116 = x84 >> 1 | x86 << 63 & UINT64_C(0xffffffffffffffff);
-  x117 = x86 >> 1 | x88 << 63 & UINT64_C(0xffffffffffffffff);
-  x118 = x88 & UINT64_C(0x8000000000000000) | x88 >> 1;
+  x114 = (x80 >> 1) | ((x82 << 63) & UINT64_C(0xffffffffffffffff));
+  x115 = (x82 >> 1) | ((x84 << 63) & UINT64_C(0xffffffffffffffff));
+  x116 = (x84 >> 1) | ((x86 << 63) & UINT64_C(0xffffffffffffffff));
+  x117 = (x86 >> 1) | ((x88 << 63) & UINT64_C(0xffffffffffffffff));
+  x118 = (x88 & UINT64_C(0x8000000000000000)) | (x88 >> 1);
   fiat_p256_cmovznz_u64(&x119, x48, x39, x31);
   fiat_p256_cmovznz_u64(&x120, x48, x41, x33);
   fiat_p256_cmovznz_u64(&x121, x48, x43, x35);

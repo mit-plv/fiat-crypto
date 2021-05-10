@@ -144,7 +144,7 @@ static FIAT_P224_FIAT_INLINE void fiat_p224_cmovznz_u32(uint32_t* out1, fiat_p22
   uint32_t x3;
   x1 = !!arg1;
   x2 = (fiat_p224_int1)(0x0 - x1) & UINT32_C(0xffffffff);
-  x3 = fiat_p224_value_barrier_u32(x2) & arg3 | fiat_p224_value_barrier_u32(~x2) & arg2;
+  x3 = (fiat_p224_value_barrier_u32(x2) & arg3) | (fiat_p224_value_barrier_u32(~x2) & arg2);
   *out1 = x3;
 }
 
@@ -3899,14 +3899,14 @@ static FIAT_P224_FIAT_INLINE void fiat_p224_divstep(uint32_t* out1, uint32_t out
   fiat_p224_subborrowx_u32(&x177, &x178, x176, x163, UINT32_C(0xffffffff));
   fiat_p224_subborrowx_u32(&x179, &x180, x178, x164, 0x0);
   fiat_p224_addcarryx_u32(&x181, &x182, 0x0, x6, 0x1);
-  x183 = x128 >> 1 | x130 << 31 & UINT32_C(0xffffffff);
-  x184 = x130 >> 1 | x132 << 31 & UINT32_C(0xffffffff);
-  x185 = x132 >> 1 | x134 << 31 & UINT32_C(0xffffffff);
-  x186 = x134 >> 1 | x136 << 31 & UINT32_C(0xffffffff);
-  x187 = x136 >> 1 | x138 << 31 & UINT32_C(0xffffffff);
-  x188 = x138 >> 1 | x140 << 31 & UINT32_C(0xffffffff);
-  x189 = x140 >> 1 | x142 << 31 & UINT32_C(0xffffffff);
-  x190 = x142 & UINT32_C(0x80000000) | x142 >> 1;
+  x183 = (x128 >> 1) | ((x130 << 31) & UINT32_C(0xffffffff));
+  x184 = (x130 >> 1) | ((x132 << 31) & UINT32_C(0xffffffff));
+  x185 = (x132 >> 1) | ((x134 << 31) & UINT32_C(0xffffffff));
+  x186 = (x134 >> 1) | ((x136 << 31) & UINT32_C(0xffffffff));
+  x187 = (x136 >> 1) | ((x138 << 31) & UINT32_C(0xffffffff));
+  x188 = (x138 >> 1) | ((x140 << 31) & UINT32_C(0xffffffff));
+  x189 = (x140 >> 1) | ((x142 << 31) & UINT32_C(0xffffffff));
+  x190 = (x142 & UINT32_C(0x80000000)) | (x142 >> 1);
   fiat_p224_cmovznz_u32(&x191, x75, x60, x46);
   fiat_p224_cmovznz_u32(&x192, x75, x62, x48);
   fiat_p224_cmovznz_u32(&x193, x75, x64, x50);

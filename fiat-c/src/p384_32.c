@@ -144,7 +144,7 @@ static FIAT_P384_FIAT_INLINE void fiat_p384_cmovznz_u32(uint32_t* out1, fiat_p38
   uint32_t x3;
   x1 = !!arg1;
   x2 = (fiat_p384_int1)(0x0 - x1) & UINT32_C(0xffffffff);
-  x3 = fiat_p384_value_barrier_u32(x2) & arg3 | fiat_p384_value_barrier_u32(~x2) & arg2;
+  x3 = (fiat_p384_value_barrier_u32(x2) & arg3) | (fiat_p384_value_barrier_u32(~x2) & arg2);
   *out1 = x3;
 }
 
@@ -10025,19 +10025,19 @@ static FIAT_P384_FIAT_INLINE void fiat_p384_divstep(uint32_t* out1, uint32_t out
   fiat_p384_subborrowx_u32(&x292, &x293, x291, x268, UINT32_C(0xffffffff));
   fiat_p384_subborrowx_u32(&x294, &x295, x293, x269, 0x0);
   fiat_p384_addcarryx_u32(&x296, &x297, 0x0, x6, 0x1);
-  x298 = x208 >> 1 | x210 << 31 & UINT32_C(0xffffffff);
-  x299 = x210 >> 1 | x212 << 31 & UINT32_C(0xffffffff);
-  x300 = x212 >> 1 | x214 << 31 & UINT32_C(0xffffffff);
-  x301 = x214 >> 1 | x216 << 31 & UINT32_C(0xffffffff);
-  x302 = x216 >> 1 | x218 << 31 & UINT32_C(0xffffffff);
-  x303 = x218 >> 1 | x220 << 31 & UINT32_C(0xffffffff);
-  x304 = x220 >> 1 | x222 << 31 & UINT32_C(0xffffffff);
-  x305 = x222 >> 1 | x224 << 31 & UINT32_C(0xffffffff);
-  x306 = x224 >> 1 | x226 << 31 & UINT32_C(0xffffffff);
-  x307 = x226 >> 1 | x228 << 31 & UINT32_C(0xffffffff);
-  x308 = x228 >> 1 | x230 << 31 & UINT32_C(0xffffffff);
-  x309 = x230 >> 1 | x232 << 31 & UINT32_C(0xffffffff);
-  x310 = x232 & UINT32_C(0x80000000) | x232 >> 1;
+  x298 = (x208 >> 1) | ((x210 << 31) & UINT32_C(0xffffffff));
+  x299 = (x210 >> 1) | ((x212 << 31) & UINT32_C(0xffffffff));
+  x300 = (x212 >> 1) | ((x214 << 31) & UINT32_C(0xffffffff));
+  x301 = (x214 >> 1) | ((x216 << 31) & UINT32_C(0xffffffff));
+  x302 = (x216 >> 1) | ((x218 << 31) & UINT32_C(0xffffffff));
+  x303 = (x218 >> 1) | ((x220 << 31) & UINT32_C(0xffffffff));
+  x304 = (x220 >> 1) | ((x222 << 31) & UINT32_C(0xffffffff));
+  x305 = (x222 >> 1) | ((x224 << 31) & UINT32_C(0xffffffff));
+  x306 = (x224 >> 1) | ((x226 << 31) & UINT32_C(0xffffffff));
+  x307 = (x226 >> 1) | ((x228 << 31) & UINT32_C(0xffffffff));
+  x308 = (x228 >> 1) | ((x230 << 31) & UINT32_C(0xffffffff));
+  x309 = (x230 >> 1) | ((x232 << 31) & UINT32_C(0xffffffff));
+  x310 = (x232 & UINT32_C(0x80000000)) | (x232 >> 1);
   fiat_p384_cmovznz_u32(&x311, x120, x95, x71);
   fiat_p384_cmovznz_u32(&x312, x120, x97, x73);
   fiat_p384_cmovznz_u32(&x313, x120, x99, x75);

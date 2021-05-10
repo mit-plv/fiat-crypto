@@ -114,7 +114,7 @@ static FIAT_POLY1305_FIAT_INLINE void fiat_poly1305_cmovznz_u32(uint32_t* out1, 
   uint32_t x3;
   x1 = !!arg1;
   x2 = (fiat_poly1305_int1)(0x0 - x1) & UINT32_C(0xffffffff);
-  x3 = fiat_poly1305_value_barrier_u32(x2) & arg3 | fiat_poly1305_value_barrier_u32(~x2) & arg2;
+  x3 = (fiat_poly1305_value_barrier_u32(x2) & arg3) | (fiat_poly1305_value_barrier_u32(~x2) & arg2);
   *out1 = x3;
 }
 
