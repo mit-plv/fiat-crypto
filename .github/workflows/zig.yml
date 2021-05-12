@@ -1,0 +1,22 @@
+name: Test Generated Zig
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "0 0 1 * *"
+
+jobs:
+  test-zig:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install Zig
+        uses: goto-bus-stop/setup-zig@v1
+        with:
+          version: master
+      - uses: actions/checkout@v2
+      - name: Test Zig files
+        run: (cd fiat-zig && zig build && zig build test)
+      - name: Test Zig field inversion example
+        run: (cp fiat-zig/src/p256_64.zig inversion/zig && cd inversion/zig && zig build test)
