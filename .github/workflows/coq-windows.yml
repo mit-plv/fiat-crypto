@@ -1,0 +1,108 @@
+name: CI (Coq, Windows)
+
+# Note that we must split up each command into a separate step for Windows, because otherwise we don't get error code
+# See also https://github.com/avsm/setup-ocaml/issues/72
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '0 0 1 * *'
+
+jobs:
+  build:
+
+    runs-on: windows-latest
+
+    env:
+      NJOBS: "2"
+      COQ_VERSION: "8.13.1"
+      SKIP_BEDROCK2: "1"
+      OPAMYES: "true"
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: submodules-init
+      uses: snickerbockers/submodules-init@v4
+    - name: Setup Python
+      uses: actions/setup-python@v2.2.2
+    - name: Set up OCaml
+      uses: avsm/setup-ocaml@v1.1.10
+      with:
+        ocaml-version: 4.11.1
+    - run: opam install opam-depext
+    - run: opam exec -- opam-depext coq.${{ env.COQ_VERSION }}
+    - run: opam pin add --kind=version coq ${{ env.COQ_VERSION }}
+    
+    - name: Install System Dependencies
+      run: |
+        %CYGWIN_ROOT%\setup-x86_64.exe -qnNdO -P time 
+      shell: cmd
+
+    - name: echo build params
+      run: |
+        ECHO ::group::wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
+        wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
+        ECHO ::endgroup::
+        ECHO ::group::wmic cpu list /format:list
+        wmic cpu list /format:list
+        ECHO ::endgroup::
+        ECHO ::group::git config -l
+        %CYGWIN_ROOT%\bash.exe -l -c 'git config -l'
+        ECHO ::endgroup::
+        ECHO ::group::git config --global -l
+        %CYGWIN_ROOT%\bash.exe -l -c 'git config --global -l'
+        ECHO ::endgroup::
+        ECHO ::group::opam list
+        opam list
+        ECHO ::endgroup::
+        ECHO ::group::ocamlc -config
+        opam exec -- ocamlc -config
+        ECHO ::endgroup::
+        ECHO ::group::coqc --config
+        opam exec -- coqc --config
+        ECHO ::endgroup::
+        ECHO ::group::coqc --version
+        opam exec -- coqc --version
+        ECHO ::endgroup::
+        ECHO ::group::coqtop version
+        echo | opam exec -- coqtop
+        ECHO ::endgroup::
+        ECHO ::group::make printenv
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- make printenv'
+        ECHO ::endgroup::
+        ECHO ::group::PATH
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; echo "${PATH}"'
+        ECHO ::endgroup::
+      shell: cmd
+    - name: deps
+      run: |
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} deps'
+      shell: cmd
+    - name: all
+      run: |
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- etc/ci/github-actions-make.sh -j${NJOBS} all'
+      shell: cmd
+    - name: upload OCaml files
+      uses: actions/upload-artifact@v1
+      with:
+        name: ExtractionOCaml
+        path: src/ExtractionOCaml
+    - name: display timing info
+      run: type time-of-build-pretty.log
+      shell: cmd
+    - name: display per-line timing info
+      run: |
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; etc/ci/github-actions-display-per-line-timing.sh'
+      shell: cmd
+#    - name: upload timing and .vo info
+#      uses: actions/upload-artifact@v1
+#      with:
+#        name: build-outputs
+#        path: .
+#      if: always ()
+    - name: validate
+      run: |
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'cd "%cd%"; opam exec -- make TIMED=1 validate COQCHKFLAGS="-o"'
+      shell: cmd
+      if: github.event_name != 'pull_request'

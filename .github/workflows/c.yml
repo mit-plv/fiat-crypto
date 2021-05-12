@@ -1,0 +1,38 @@
+name: Test Generated C
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '0 0 1 * *'
+
+jobs:
+  test-c:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: submodules-init
+      uses: snickerbockers/submodules-init@v4
+    - name: install gcc
+      run: |
+        sudo sed -i 's/azure\.//' /etc/apt/sources.list
+        sudo apt-get -o Acquire::Retries=30 update -q
+        sudo apt-get -o Acquire::Retries=30 install -y --allow-unauthenticated \
+             g++-7 libssl-dev \
+             ninja-build libunwind-dev cmake
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 60 --slave /usr/bin/g++ g++ /usr/bin/g++-7
+    - name: Set up Go 1.13
+      uses: actions/setup-go@v2.1.3
+      with:
+        go-version: 1.13
+      id: go
+    - name: make only-test-c-files CC=gcc
+      run: make only-test-c-files CC=gcc EXTERNAL_DEPENDENCIES=1
+    - name: make only-test-bedrock2-files CC=gcc
+      run: make only-test-bedrock2-files CC=gcc EXTERNAL_DEPENDENCIES=1
+    - name: BoringSSL C test
+      run: EXTRA_CFLAGS="" etc/ci/test-fiat-c-boringssl.sh fiat-c/src
+    - name: BoringSSL bedrock2 test
+      run: EXTRA_CFLAGS="$(make bedrock2-extra-cflags SKIP_INCLUDE=1 2>/dev/null)" etc/ci/test-fiat-c-boringssl.sh fiat-bedrock2/src
