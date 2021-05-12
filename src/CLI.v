@@ -825,7 +825,10 @@ Module ForExtraction.
              => let display := Arg.show_list_parse_error full_spec err in
                 if Arg.is_real_error err
                 then error display
-                else (* just a requested help/usage message *) write_stdout_then display ret
+                else (* just a requested help/usage message *)
+                  write_stdout_then
+                    (List.map (fun s => s ++ String.NewLine)%string display)
+                    ret
            end.
     End __.
   End Parameterized.
