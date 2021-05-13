@@ -311,12 +311,12 @@ Hint Rewrite @firstn_all2 @removelast_firstn @firstn_removelast using lia : simp
 Local Arguments value / _ _.
 Local Arguments error / _.
 
-Definition forall2b {A B} (f : A -> B -> bool)
-  := fix forall2b (l1 : list A) (l2 : list B) : bool
+Definition list_beq_hetero {A B} (f : A -> B -> bool)
+  := fix list_beq_hetero (l1 : list A) (l2 : list B) : bool
        := match l1, l2 with
           | [], [] => true
           | [], _ | _, [] => false
-          | x :: xs, y :: ys => f x y && forall2b xs ys
+          | x :: xs, y :: ys => f x y && list_beq_hetero xs ys
           end%bool.
 
 Definition sum_firstn l n := fold_right Z.add 0%Z (firstn n l).
