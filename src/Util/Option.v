@@ -277,6 +277,12 @@ Definition is_None {A} (x : option A) : bool
      | None => true
      end.
 
+Definition is_Some {A} (x : option A) : bool
+  := match x with
+     | Some _ => true
+     | None => false
+     end.
+
 Lemma is_None_eq_None_iff {A x} : @is_None A x = true <-> x = None.
 Proof. destruct x; cbv; split; congruence. Qed.
 
