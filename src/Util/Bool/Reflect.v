@@ -210,8 +210,8 @@ Ltac solve_reflect_step :=
   first [ match goal with
           | [ H : reflect _ ?b |- _ ] => tryif is_var b then destruct H else (inversion H; clear H)
           | [ |- reflect _ _ ] => constructor
-          | [ |- reflect (?R ?x ?y) (?Rb ?x ?y) ] => apply (@reflect_of_brel _ R Rb)
-          | [ H : forall x y, reflect (?R x y) (?Rb x y) |- _ ] => apply (@reflect_to_brel _ R Rb) in H
+          | [ |- reflect (?R ?x ?y) (?Rb ?x ?y) ] => apply (@reflect_of_brel _ _ R Rb)
+          | [ H : forall x y, reflect (?R x y) (?Rb x y) |- _ ] => apply (@reflect_to_brel _ _ R Rb) in H
           end
         | progress destruct_head'_and
         | progress intros

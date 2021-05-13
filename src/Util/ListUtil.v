@@ -444,6 +444,24 @@ Proof using Type.
   induction x, y; cbn in *; rewrite ?Bool.andb_true_iff; intuition (congruence || eauto).
 Qed.
 
+Lemma list_beq_hetero_uniform {A : Type} A_beq {x y}
+  : list_beq_hetero A_beq x y = @list_beq A A_beq x y.
+Proof. destruct x, y; cbn; reflexivity. Qed.
+
+Lemma list_bl_hetero_eq {A}
+      {A_beq : A -> A -> bool}
+      (A_bl : forall x y, A_beq x y = true -> x = y)
+      {x y}
+  : list_beq_hetero A_beq x y = true -> x = y.
+Proof using Type. rewrite list_beq_hetero_uniform; now apply internal_list_dec_bl. Qed.
+
+Lemma list_lb_hetero_eq {A}
+      {A_beq : A -> A -> bool}
+      (A_lb : forall x y, x = y -> A_beq x y = true)
+      {x y}
+  : x = y -> list_beq_hetero A_beq x y = true.
+Proof using Type. rewrite list_beq_hetero_uniform; now apply internal_list_dec_lb. Qed.
+
 Lemma nth_default_cons : forall {T} (x u0 : T) us, nth_default x (u0 :: us) 0 = u0.
 Proof. auto. Qed.
 

@@ -46,6 +46,28 @@ Proof using Type.
   destruct x, y; cbn in *; rewrite ?Bool.andb_true_iff; intuition auto.
 Qed.
 
+Lemma prod_beq_hetero_uniform {A B : Type} A_beq B_beq {x y}
+  : prod_beq_hetero A_beq B_beq x y = @prod_beq A B A_beq B_beq x y.
+Proof. destruct x, y; reflexivity. Qed.
+
+Lemma prod_bl_hetero_eq {A B}
+      {A_beq : A -> A -> bool}
+      {B_beq : B -> B -> bool}
+      (A_bl : forall x y, A_beq x y = true -> x = y)
+      (B_bl : forall x y, B_beq x y = true -> x = y)
+      {x y}
+  : prod_beq_hetero A_beq B_beq x y = true -> x = y.
+Proof using Type. rewrite prod_beq_hetero_uniform; now apply internal_prod_dec_bl. Qed.
+
+Lemma prod_lb_hetero_eq {A B}
+      {A_beq : A -> A -> bool}
+      {B_beq : B -> B -> bool}
+      (A_lb : forall x y, x = y -> A_beq x y = true)
+      (B_lb : forall x y, x = y -> B_beq x y = true)
+      {x y}
+  : x = y -> prod_beq_hetero A_beq B_beq x y = true.
+Proof using Type. rewrite prod_beq_hetero_uniform; now apply internal_prod_dec_lb. Qed.
+
 Definition fst_pair {A B} (a:A) (b:B) : fst (a,b) = a := eq_refl.
 Definition snd_pair {A B} (a:A) (b:B) : snd (a,b) = b := eq_refl.
 Create HintDb cancel_pair discriminated. Hint Rewrite @fst_pair @snd_pair : cancel_pair.
