@@ -15,6 +15,7 @@ Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.Sum.
 Require Import Crypto.Util.Comparison.
 Require Import Crypto.Util.Tactics.DestructHead.
+Require Import Crypto.Util.Tactics.SplitInContext.
 Require Crypto.Util.PrimitiveProd.
 
 Lemma reflect_to_dec_iff {P b1 b2} : reflect P b1 -> (b1 = b2) <-> (if b2 then P else ~P).
@@ -212,8 +213,13 @@ Ltac solve_reflect_step :=
           | [ |- reflect _ _ ] => constructor
           | [ |- reflect (?R ?x ?y) (?Rb ?x ?y) ] => apply (@reflect_of_brel _ _ R Rb)
           | [ H : forall x y, reflect (?R x y) (?Rb x y) |- _ ] => apply (@reflect_to_brel _ _ R Rb) in H
+          | [ H : forall a x y, reflect (@?R a x y) (@?Rb a x y) |- _ ]
+            => let H' := fresh in
+               pose proof (fun a => @reflect_to_brel _ _ (R a) (Rb a) (H a)) as H'; clear H;
+               rename H' into H; cbv beta in H
           end
         | progress destruct_head'_and
+        | progress split_and
         | progress intros
         | progress subst
         | solve [ eauto ]
@@ -261,6 +267,9 @@ Local Hint Resolve internal_prod_dec_bl internal_prod_dec_lb
       sig_dec_bl sig_dec_lb
       sig_dec_bl_hprop sig_dec_lb_hprop
       internal_comparison_dec_bl internal_comparison_dec_lb
+      prod_bl_hetero prod_lb_hetero prod_bl_hetero_eq prod_lb_hetero_eq
+      option_bl_hetero option_lb_hetero option_bl_hetero_eq option_lb_hetero_eq
+      list_bl_hetero list_lb_hetero list_bl_hetero_eq list_lb_hetero_eq
   : core.
 
 Local Hint Extern 0 => solve [ solve_reflect ] : typeclass_instances.
@@ -285,17 +294,34 @@ Global Instance reflect_eq_bool : reflect_rel (@eq bool) Bool.eqb | 10. exact _.
 Global Instance reflect_eq_Empty_set : reflect_rel (@eq Empty_set) (fun _ _ => true) | 10. exact _. Qed.
 Global Existing Instances Ascii.eqb_spec String.eqb_spec | 10.
 Global Instance reflect_eq_prod {A B eqA eqB} `{reflect_rel (@eq A) eqA, reflect_rel (@eq B) eqB} : reflect_rel (@eq (A * B)) (prod_beq A B eqA eqB) | 10. exact _. Qed.
+Global Instance reflect_eq_prod_hetero {A1 B1 A2 B2 bA bB RA RB} `{reflect_rel RA bA, reflect_rel RB bB}
+  : reflect_rel (fun (x : A1 * B1) (y : A2 * B2) => RA (fst x) (fst y) /\ RB (snd x) (snd y))
+                (prod_beq_hetero bA bB) | 20.
+Proof. exact _. Qed.
+Global Instance reflect_eq_prod_hetero_uniform {A B eqA eqB} `{reflect_rel (@eq A) eqA, reflect_rel (@eq B) eqB} : reflect_rel (@eq (A * B)) (prod_beq_hetero eqA eqB) | 15. exact _. Qed.
 Global Instance reflect_eq_option {A eqA} `{reflect_rel (@eq A) eqA} : reflect_rel (@eq (option A)) (option_beq eqA) | 10. exact _. Qed.
+Global Instance reflect_eq_option_hetero {A1 A2 bA RA} `{reflect_rel RA bA} : reflect_rel (option_eq RA) (@option_beq_hetero A1 A2 bA) | 20. exact _. Qed.
+Global Instance reflect_eq_option_hetero_uniform {A eqA} `{reflect_rel (@eq A) eqA} : reflect_rel (@eq (option A)) (option_beq_hetero eqA) | 15. exact _. Qed.
 Global Instance reflect_eq_list {A eqA} `{reflect_rel (@eq A) eqA} : reflect_rel (@eq (list A)) (list_beq A eqA) | 10. exact _. Qed.
+Global Instance reflect_eq_list_hetero {A1 A2 RA bA} `{reflect_rel RA bA} : reflect_rel (list_eq RA) (@list_beq_hetero A1 A2 bA) | 20. exact _. Qed.
+Global Instance reflect_eq_list_hetero_uniform {A eqA} `{reflect_rel (@eq A) eqA} : reflect_rel (@eq (list A)) (list_beq_hetero eqA) | 15. exact _. Qed.
 Global Instance reflect_eq_list_nil_r {A eqA} {ls} : reflect (ls = @nil A) (list_beq A eqA ls (@nil A)) | 10.
 Proof. destruct ls; [ left; reflexivity | right; abstract congruence ]. Qed.
 Global Instance reflect_eq_list_nil_l {A eqA} {ls} : reflect (@nil A = ls) (list_beq A eqA (@nil A) ls) | 10.
+Proof. destruct ls; [ left; reflexivity | right; abstract congruence ]. Qed.
+Global Instance reflect_eq_list_nil_r_hetero {A1 A2 eqA} {ls} : reflect (ls = nil) (@list_beq_hetero A1 A2 eqA ls nil) | 10.
+Proof. destruct ls; [ left; reflexivity | right; abstract congruence ]. Qed.
+Global Instance reflect_eq_list_nil_l_hetero {A1 A2 eqA} {ls} : reflect (nil = ls) (@list_beq_hetero A1 A2 eqA nil ls) | 10.
 Proof. destruct ls; [ left; reflexivity | right; abstract congruence ]. Qed.
 Global Instance reflect_eq_sum {A B eqA eqB} `{reflect_rel (@eq A) eqA, reflect_rel (@eq B) eqB} : reflect_rel (@eq (A + B)) (sum_beq A B eqA eqB) | 10. exact _. Qed.
 Global Instance reflect_sumwise {A B RA RB eqA eqB} `{reflect_rel RA eqA, reflect_rel RB eqB} : reflect_rel (@sumwise A B RA RB) (@sum_beq A B eqA eqB) | 100.
 Proof. intros [?|?] [?|?]; cbn; exact _. Qed.
 Global Instance reflect_sum_le {A B RA RB leA leB} `{reflect_rel RA leA, reflect_rel RB leB} : reflect_rel (@sum_le A B RA RB) (@sum_leb A B leA leB) | 10.
 Proof. intros [?|?] [?|?]; cbn; exact _. Qed.
+Global Instance reflect_eq_sigT {A P eqA} {eqP : forall a a', P a -> P a' -> bool}
+       `{reflect_rel (@eq A) eqA, forall a : A, reflect_rel (@eq (P a)) (eqP a a)}
+  : reflect_rel (@eq (@sigT A P)) (sigT_beq eqA eqP) | 15.
+Proof. exact _. Qed.
 Global Instance reflect_eq_sigT_hprop {A P eqA} `{reflect_rel (@eq A) eqA, forall a : A, IsHProp (P a)} : reflect_rel (@eq (@sigT A P)) (sigT_beq eqA (fun _ _ _ _ => true)) | 10. exact _. Qed.
 Global Instance reflect_eq_sig_hprop {A eqA} {P : A -> Prop} `{reflect_rel (@eq A) eqA, forall a : A, IsHProp (P a)} : reflect_rel (@eq (@sig A P)) (sig_beq eqA (fun _ _ _ _ => true)) | 10. exact _. Qed.
 Global Instance reflect_eq_comparison : reflect_rel (@eq comparison) comparison_beq | 10. exact _. Qed.
