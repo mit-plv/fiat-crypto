@@ -28,17 +28,17 @@ Proof. intro; apply reflect_to_dec_iff; assumption. Qed.
 Lemma reflect_of_dec {P} {b1 b2 : bool} : reflect P b1 -> (if b2 then P else ~P) -> (b1 = b2).
 Proof. intro; apply reflect_to_dec_iff; assumption. Qed.
 
-Lemma reflect_of_brel {A R Rb} (bl : forall a a' : A, Rb a a' = true -> (R a a' : Prop))
-      (lb : forall a a' : A, R a a' -> Rb a a' = true)
+Lemma reflect_of_brel {A A' R Rb} (bl : forall (a : A) (a' : A'), Rb a a' = true -> (R a a' : Prop))
+      (lb : forall a a', R a a' -> Rb a a' = true)
   : forall x y, reflect (R x y) (Rb x y).
 Proof.
   intros x y; specialize (bl x y); specialize (lb x y).
   destruct (Rb x y); constructor; auto; repeat intro; abstract (exfalso; intuition congruence).
 Qed.
 
-Lemma reflect_to_brel {A R Rb} (H : forall x y : A, reflect (R x y) (Rb x y))
-  : (forall a a' : A, Rb a a' = true -> R a a')
-    /\ (forall a a' : A, R a a' -> Rb a a' = true).
+Lemma reflect_to_brel {A A' R Rb} (H : forall (x : A) (y : A'), reflect (R x y) (Rb x y))
+  : (forall a a', Rb a a' = true -> R a a')
+    /\ (forall a a', R a a' -> Rb a a' = true).
 Proof.
   split; intros x y; specialize (H x y); destruct H; trivial; repeat intro; abstract (exfalso; intuition congruence).
 Qed.
