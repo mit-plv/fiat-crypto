@@ -1,5 +1,4 @@
 Require Import Coq.Lists.List.
-Require Import Coq.Lists.SetoidList.
 Require Import Coq.micromega.Lia.
 Require Import Coq.Arith.Peano_dec.
 Require Import Coq.ZArith.ZArith.
