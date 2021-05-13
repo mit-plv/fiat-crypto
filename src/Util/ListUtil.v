@@ -1,4 +1,5 @@
 Require Import Coq.Lists.List.
+Require Import Coq.Lists.SetoidList.
 Require Import Coq.micromega.Lia.
 Require Import Coq.Arith.Peano_dec.
 Require Import Coq.ZArith.ZArith.
@@ -384,6 +385,64 @@ Ltac boring_list :=
          | _ => progress boring
          | _ => progress autorewrite with distr_length simpl_nth_default simpl_update_nth simpl_set_nth simpl_nth_error in *
          end.
+
+Section Relations.
+  Fixpoint list_eq {A B} eq (x : list A) (y : list B) :=
+    match x, y with
+    | [], [] => True
+    | [], _ | _, [] => False
+    | x :: xs, y :: ys => eq x y /\ list_eq eq xs ys
+    end.
+
+  Local Ltac t :=
+    repeat first [ progress cbn in *
+                 | progress break_match
+                 | intro
+                 | intuition congruence
+                 | progress destruct_head'_and
+                 | solve [ apply reflexivity
+                         | apply symmetry; eassumption
+                         | eapply transitivity; eassumption
+                         | eauto ] ].
+
+  Global Instance Reflexive_list_eq {T} {R} {Reflexive_R:@Reflexive T R}
+    : Reflexive (list_eq R) | 1. Proof. intro l; induction l; t. Qed.
+
+  Lemma list_eq_sym {A B} {R1 R2 : _ -> _ -> Prop} (HR : forall v1 v2, R1 v1 v2 -> R2 v2 v1)
+    : forall v1 v2, @list_eq A B R1 v1 v2 -> list_eq R2 v2 v1.
+  Proof. induction v1; t. Qed.
+
+  Lemma list_eq_trans {A B C} {R1 R2 R3 : _ -> _ -> Prop}
+        (HR : forall v1 v2 v3, R1 v1 v2 -> R2 v2 v3 -> R3 v1 v3)
+    : forall v1 v2 v3, @list_eq A B R1 v1 v2 -> @list_eq B C R2 v2 v3 -> @list_eq A C R3 v1 v3.
+  Proof. induction v1; t. Qed.
+
+  Global Instance Transitive_list_eq {T} {R} {Transitive_R:@Transitive T R}
+    : Transitive (list_eq R) | 1 := list_eq_trans Transitive_R.
+
+  Global Instance Symmetric_list_eq {T} {R} {Symmetric_R:@Symmetric T R}
+    : Symmetric (list_eq R) | 1 := list_eq_sym Symmetric_R.
+
+  Global Instance Equivalence_list_eq {T} {R} {Equivalence_R:@Equivalence T R}
+    : Equivalence (list_eq R). Proof. split; exact _. Qed.
+End Relations.
+
+Lemma list_bl_hetero {A B} {AB_beq : A -> B -> bool} {AB_R : A -> B -> Prop}
+      (AB_bl : forall x y, AB_beq x y = true -> AB_R x y)
+  : forall {x y},
+    list_beq_hetero AB_beq x y = true -> list_eq AB_R x y.
+Proof using Type.
+  induction x, y; cbn in *; eauto; try congruence.
+  rewrite Bool.andb_true_iff; intuition eauto.
+Qed.
+
+Lemma list_lb_hetero {A B} {AB_beq : A -> B -> bool} {AB_R : A -> B -> Prop}
+      (AB_lb : forall x y, AB_R x y -> AB_beq x y = true)
+  : forall {x y},
+    list_eq AB_R x y -> list_beq_hetero AB_beq x y = true.
+Proof using Type.
+  induction x, y; cbn in *; rewrite ?Bool.andb_true_iff; intuition (congruence || eauto).
+Qed.
 
 Lemma nth_default_cons : forall {T} (x u0 : T) us, nth_default x (u0 :: us) 0 = u0.
 Proof. auto. Qed.
