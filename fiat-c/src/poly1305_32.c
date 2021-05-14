@@ -16,6 +16,14 @@
 typedef unsigned char fiat_poly1305_uint1;
 typedef signed char fiat_poly1305_int1;
 
+/* The type fiat_poly1305_loose_field_element is a field element with loose bounds. */
+/* Bounds: [[0x0 ~> 0xc000000], [0x0 ~> 0xc000000], [0x0 ~> 0xc000000], [0x0 ~> 0xc000000], [0x0 ~> 0xc000000]] */
+typedef uint32_t fiat_poly1305_loose_field_element[5];
+
+/* The type fiat_poly1305_tight_field_element is a field element with tight bounds. */
+/* Bounds: [[0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000]] */
+typedef uint32_t fiat_poly1305_tight_field_element[5];
+
 #if (-1 & 3) != 3
 #error "This code only works on a two's complement system"
 #endif
@@ -111,13 +119,8 @@ static void fiat_poly1305_cmovznz_u32(uint32_t* out1, fiat_poly1305_uint1 arg1, 
  * Postconditions:
  *   eval out1 mod m = (eval arg1 * eval arg2) mod m
  *
- * Input Bounds:
- *   arg1: [[0x0 ~> 0xc000000], [0x0 ~> 0xc000000], [0x0 ~> 0xc000000], [0x0 ~> 0xc000000], [0x0 ~> 0xc000000]]
- *   arg2: [[0x0 ~> 0xc000000], [0x0 ~> 0xc000000], [0x0 ~> 0xc000000], [0x0 ~> 0xc000000], [0x0 ~> 0xc000000]]
- * Output Bounds:
- *   out1: [[0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000]]
  */
-static void fiat_poly1305_carry_mul(uint32_t out1[5], const uint32_t arg1[5], const uint32_t arg2[5]) {
+static void fiat_poly1305_carry_mul(fiat_poly1305_tight_field_element out1, const fiat_poly1305_loose_field_element arg1, const fiat_poly1305_loose_field_element arg2) {
   uint64_t x1;
   uint64_t x2;
   uint64_t x3;
@@ -235,12 +238,8 @@ static void fiat_poly1305_carry_mul(uint32_t out1[5], const uint32_t arg1[5], co
  * Postconditions:
  *   eval out1 mod m = (eval arg1 * eval arg1) mod m
  *
- * Input Bounds:
- *   arg1: [[0x0 ~> 0xc000000], [0x0 ~> 0xc000000], [0x0 ~> 0xc000000], [0x0 ~> 0xc000000], [0x0 ~> 0xc000000]]
- * Output Bounds:
- *   out1: [[0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000]]
  */
-static void fiat_poly1305_carry_square(uint32_t out1[5], const uint32_t arg1[5]) {
+static void fiat_poly1305_carry_square(fiat_poly1305_tight_field_element out1, const fiat_poly1305_loose_field_element arg1) {
   uint32_t x1;
   uint32_t x2;
   uint32_t x3;
@@ -354,12 +353,8 @@ static void fiat_poly1305_carry_square(uint32_t out1[5], const uint32_t arg1[5])
  * Postconditions:
  *   eval out1 mod m = eval arg1 mod m
  *
- * Input Bounds:
- *   arg1: [[0x0 ~> 0xc000000], [0x0 ~> 0xc000000], [0x0 ~> 0xc000000], [0x0 ~> 0xc000000], [0x0 ~> 0xc000000]]
- * Output Bounds:
- *   out1: [[0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000]]
  */
-static void fiat_poly1305_carry(uint32_t out1[5], const uint32_t arg1[5]) {
+static void fiat_poly1305_carry(fiat_poly1305_tight_field_element out1, const fiat_poly1305_loose_field_element arg1) {
   uint32_t x1;
   uint32_t x2;
   uint32_t x3;
@@ -397,13 +392,8 @@ static void fiat_poly1305_carry(uint32_t out1[5], const uint32_t arg1[5]) {
  * Postconditions:
  *   eval out1 mod m = (eval arg1 + eval arg2) mod m
  *
- * Input Bounds:
- *   arg1: [[0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000]]
- *   arg2: [[0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000]]
- * Output Bounds:
- *   out1: [[0x0 ~> 0xc000000], [0x0 ~> 0xc000000], [0x0 ~> 0xc000000], [0x0 ~> 0xc000000], [0x0 ~> 0xc000000]]
  */
-static void fiat_poly1305_add(uint32_t out1[5], const uint32_t arg1[5], const uint32_t arg2[5]) {
+static void fiat_poly1305_add(fiat_poly1305_loose_field_element out1, const fiat_poly1305_tight_field_element arg1, const fiat_poly1305_tight_field_element arg2) {
   uint32_t x1;
   uint32_t x2;
   uint32_t x3;
@@ -427,13 +417,8 @@ static void fiat_poly1305_add(uint32_t out1[5], const uint32_t arg1[5], const ui
  * Postconditions:
  *   eval out1 mod m = (eval arg1 - eval arg2) mod m
  *
- * Input Bounds:
- *   arg1: [[0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000]]
- *   arg2: [[0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000]]
- * Output Bounds:
- *   out1: [[0x0 ~> 0xc000000], [0x0 ~> 0xc000000], [0x0 ~> 0xc000000], [0x0 ~> 0xc000000], [0x0 ~> 0xc000000]]
  */
-static void fiat_poly1305_sub(uint32_t out1[5], const uint32_t arg1[5], const uint32_t arg2[5]) {
+static void fiat_poly1305_sub(fiat_poly1305_loose_field_element out1, const fiat_poly1305_tight_field_element arg1, const fiat_poly1305_tight_field_element arg2) {
   uint32_t x1;
   uint32_t x2;
   uint32_t x3;
@@ -457,12 +442,8 @@ static void fiat_poly1305_sub(uint32_t out1[5], const uint32_t arg1[5], const ui
  * Postconditions:
  *   eval out1 mod m = -eval arg1 mod m
  *
- * Input Bounds:
- *   arg1: [[0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000]]
- * Output Bounds:
- *   out1: [[0x0 ~> 0xc000000], [0x0 ~> 0xc000000], [0x0 ~> 0xc000000], [0x0 ~> 0xc000000], [0x0 ~> 0xc000000]]
  */
-static void fiat_poly1305_opp(uint32_t out1[5], const uint32_t arg1[5]) {
+static void fiat_poly1305_opp(fiat_poly1305_loose_field_element out1, const fiat_poly1305_tight_field_element arg1) {
   uint32_t x1;
   uint32_t x2;
   uint32_t x3;
@@ -517,12 +498,10 @@ static void fiat_poly1305_selectznz(uint32_t out1[5], fiat_poly1305_uint1 arg1, 
  * Postconditions:
  *   out1 = map (λ x, ⌊((eval arg1 mod m) mod 2^(8 * (x + 1))) / 2^(8 * x)⌋) [0..16]
  *
- * Input Bounds:
- *   arg1: [[0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000]]
  * Output Bounds:
  *   out1: [[0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0x3]]
  */
-static void fiat_poly1305_to_bytes(uint8_t out1[17], const uint32_t arg1[5]) {
+static void fiat_poly1305_to_bytes(uint8_t out1[17], const fiat_poly1305_tight_field_element arg1) {
   uint32_t x1;
   fiat_poly1305_uint1 x2;
   uint32_t x3;
@@ -654,10 +633,8 @@ static void fiat_poly1305_to_bytes(uint8_t out1[17], const uint32_t arg1[5]) {
  *
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0x3]]
- * Output Bounds:
- *   out1: [[0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000], [0x0 ~> 0x4000000]]
  */
-static void fiat_poly1305_from_bytes(uint32_t out1[5], const uint8_t arg1[17]) {
+static void fiat_poly1305_from_bytes(fiat_poly1305_tight_field_element out1, const uint8_t arg1[17]) {
   uint32_t x1;
   uint32_t x2;
   uint32_t x3;

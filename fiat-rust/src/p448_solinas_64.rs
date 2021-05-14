@@ -20,6 +20,14 @@ pub type fiat_p448_i1 = i8;
 pub type fiat_p448_u2 = u8;
 pub type fiat_p448_i2 = i8;
 
+/* The type fiat_p448_loose_field_element is a field element with loose bounds. */
+/* Bounds: [[0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000]] */
+pub type fiat_p448_loose_field_element = [u64; 8];
+
+/* The type fiat_p448_tight_field_element is a field element with tight bounds. */
+/* Bounds: [[0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000]] */
+pub type fiat_p448_tight_field_element = [u64; 8];
+
 
 /// The function fiat_p448_addcarryx_u56 is an addition with carry.
 ///
@@ -95,7 +103,7 @@ pub fn fiat_p448_cmovznz_u64(out1: &mut u64, arg1: fiat_p448_u1, arg2: u64, arg3
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000]]
 #[inline]
-pub fn fiat_p448_carry_mul(out1: &mut [u64; 8], arg1: &[u64; 8], arg2: &[u64; 8]) -> () {
+pub fn fiat_p448_carry_mul(out1: &mut fiat_p448_tight_field_element, arg1: &fiat_p448_loose_field_element, arg2: &fiat_p448_loose_field_element) -> () {
   let x1: u128 = (((arg1[7]) as u128) * ((arg2[7]) as u128));
   let x2: u128 = (((arg1[7]) as u128) * ((arg2[6]) as u128));
   let x3: u128 = (((arg1[7]) as u128) * ((arg2[5]) as u128));
@@ -260,7 +268,7 @@ pub fn fiat_p448_carry_mul(out1: &mut [u64; 8], arg1: &[u64; 8], arg2: &[u64; 8]
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000]]
 #[inline]
-pub fn fiat_p448_carry_square(out1: &mut [u64; 8], arg1: &[u64; 8]) -> () {
+pub fn fiat_p448_carry_square(out1: &mut fiat_p448_tight_field_element, arg1: &fiat_p448_loose_field_element) -> () {
   let x1: u64 = (arg1[7]);
   let x2: u64 = (arg1[7]);
   let x3: u64 = (x1 * 0x2);
@@ -404,7 +412,7 @@ pub fn fiat_p448_carry_square(out1: &mut [u64; 8], arg1: &[u64; 8]) -> () {
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000]]
 #[inline]
-pub fn fiat_p448_carry(out1: &mut [u64; 8], arg1: &[u64; 8]) -> () {
+pub fn fiat_p448_carry(out1: &mut fiat_p448_tight_field_element, arg1: &fiat_p448_loose_field_element) -> () {
   let x1: u64 = (arg1[3]);
   let x2: u64 = (arg1[7]);
   let x3: u64 = (x2 >> 56);
@@ -448,7 +456,7 @@ pub fn fiat_p448_carry(out1: &mut [u64; 8], arg1: &[u64; 8]) -> () {
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000]]
 #[inline]
-pub fn fiat_p448_add(out1: &mut [u64; 8], arg1: &[u64; 8], arg2: &[u64; 8]) -> () {
+pub fn fiat_p448_add(out1: &mut fiat_p448_loose_field_element, arg1: &fiat_p448_tight_field_element, arg2: &fiat_p448_tight_field_element) -> () {
   let x1: u64 = ((arg1[0]) + (arg2[0]));
   let x2: u64 = ((arg1[1]) + (arg2[1]));
   let x3: u64 = ((arg1[2]) + (arg2[2]));
@@ -478,7 +486,7 @@ pub fn fiat_p448_add(out1: &mut [u64; 8], arg1: &[u64; 8], arg2: &[u64; 8]) -> (
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000]]
 #[inline]
-pub fn fiat_p448_sub(out1: &mut [u64; 8], arg1: &[u64; 8], arg2: &[u64; 8]) -> () {
+pub fn fiat_p448_sub(out1: &mut fiat_p448_loose_field_element, arg1: &fiat_p448_tight_field_element, arg2: &fiat_p448_tight_field_element) -> () {
   let x1: u64 = ((0x1fffffffffffffe + (arg1[0])) - (arg2[0]));
   let x2: u64 = ((0x1fffffffffffffe + (arg1[1])) - (arg2[1]));
   let x3: u64 = ((0x1fffffffffffffe + (arg1[2])) - (arg2[2]));
@@ -507,7 +515,7 @@ pub fn fiat_p448_sub(out1: &mut [u64; 8], arg1: &[u64; 8], arg2: &[u64; 8]) -> (
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000], [0x0 ~> 0x300000000000000]]
 #[inline]
-pub fn fiat_p448_opp(out1: &mut [u64; 8], arg1: &[u64; 8]) -> () {
+pub fn fiat_p448_opp(out1: &mut fiat_p448_loose_field_element, arg1: &fiat_p448_tight_field_element) -> () {
   let x1: u64 = (0x1fffffffffffffe - (arg1[0]));
   let x2: u64 = (0x1fffffffffffffe - (arg1[1]));
   let x3: u64 = (0x1fffffffffffffe - (arg1[2]));
@@ -575,7 +583,7 @@ pub fn fiat_p448_selectznz(out1: &mut [u64; 8], arg1: fiat_p448_u1, arg2: &[u64;
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff]]
 #[inline]
-pub fn fiat_p448_to_bytes(out1: &mut [u8; 56], arg1: &[u64; 8]) -> () {
+pub fn fiat_p448_to_bytes(out1: &mut [u8; 56], arg1: &fiat_p448_tight_field_element) -> () {
   let mut x1: u64 = 0;
   let mut x2: fiat_p448_u1 = 0;
   fiat_p448_subborrowx_u56(&mut x1, &mut x2, 0x0, (arg1[0]), 0xffffffffffffff);
@@ -790,7 +798,7 @@ pub fn fiat_p448_to_bytes(out1: &mut [u8; 56], arg1: &[u64; 8]) -> () {
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000], [0x0 ~> 0x100000000000000]]
 #[inline]
-pub fn fiat_p448_from_bytes(out1: &mut [u64; 8], arg1: &[u8; 56]) -> () {
+pub fn fiat_p448_from_bytes(out1: &mut fiat_p448_tight_field_element, arg1: &[u8; 56]) -> () {
   let x1: u64 = (((arg1[55]) as u64) << 48);
   let x2: u64 = (((arg1[54]) as u64) << 40);
   let x3: u64 = (((arg1[53]) as u64) << 32);

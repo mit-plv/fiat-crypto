@@ -97,6 +97,7 @@ Section __.
   Context {output_language_api : ToString.OutputLanguageAPI}
           {language_naming_conventions : language_naming_conventions_opt}
           {documentation_options : documentation_options_opt}
+          {skip_typedefs : skip_typedefs_opt}
           {package_namev : package_name_opt}
           {class_namev : class_name_opt}
           {static : static_opt}
@@ -118,7 +119,7 @@ Section __.
           {assembly_output_first : assembly_output_first_opt}
           {assembly_argument_registers_left_to_right : assembly_argument_registers_left_to_right_opt}
           (m : Z)
-          (machine_wordsize : Z).
+          (machine_wordsize : machine_wordsize_opt).
 
   Definition s := 2^Z.log2_up m.
   Definition c := s - m.
@@ -185,6 +186,17 @@ Section __.
     := saturated_bounds (*List.map (fun u => Some r[0~>u]%zrange) upperbounds*).
   Definition larger_bounds : list (ZRange.type.option.interp base.type.Z)
     := larger_saturated_bounds (*List.map (fun u => Some r[0~>u]%zrange) upperbounds*).
+  Definition montgomery_domain_bounds := saturated_bounds.
+  Definition non_montgomery_domain_bounds := saturated_bounds.
+  Typeclasses Opaque montgomery_domain_bounds.
+  Typeclasses Opaque non_montgomery_domain_bounds.
+  Global Instance montgomery_domain_bounds_typedef : typedef (t:=base.type.list base.type.Z) (Some montgomery_domain_bounds)
+    := { name := "montgomery_domain_field_element"
+         ; description name := (text_before_type_name ++ name ++ " is a field element in the Montgomery domain.")%string }.
+  Global Instance non_montgomery_domain_bounds_typedef : typedef (t:=base.type.list base.type.Z) (Some non_montgomery_domain_bounds)
+    := { name := "non_montgomery_domain_field_element"
+         ; description name := (text_before_type_name ++ name ++ " is a field element NOT in the Montgomery domain.")%string }.
+
 
   Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
   Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
@@ -296,14 +308,14 @@ Section __.
          None (* fancy *)
          possible_values
          (reified_mul_gen
-            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
-         (Some bounds, (Some bounds, tt))
-         (Some bounds).
+            @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
+         (Some montgomery_domain_bounds, (Some montgomery_domain_bounds, tt))
+         (Some montgomery_domain_bounds).
 
   Definition smul (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "mul" mul
           (docstring_with_summary_from_lemma!
              prefix
@@ -316,14 +328,14 @@ Section __.
          None (* fancy *)
          possible_values
          (reified_square_gen
-            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
-         (Some bounds, tt)
-         (Some bounds).
+            @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
+         (Some montgomery_domain_bounds, tt)
+         (Some montgomery_domain_bounds).
 
   Definition ssquare (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "square" square
           (docstring_with_summary_from_lemma!
              prefix
@@ -336,14 +348,14 @@ Section __.
          None (* fancy *)
          possible_values
          (reified_add_gen
-            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m)
-         (Some bounds, (Some bounds, tt))
-         (Some bounds).
+            @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m)
+         (Some montgomery_domain_bounds, (Some montgomery_domain_bounds, tt))
+         (Some montgomery_domain_bounds).
 
   Definition sadd (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "add" add
           (docstring_with_summary_from_lemma!
              prefix
@@ -356,14 +368,14 @@ Section __.
          None (* fancy *)
          possible_values
          (reified_sub_gen
-            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m)
-         (Some bounds, (Some bounds, tt))
-         (Some bounds).
+            @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m)
+         (Some montgomery_domain_bounds, (Some montgomery_domain_bounds, tt))
+         (Some montgomery_domain_bounds).
 
   Definition ssub (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "sub" sub
           (docstring_with_summary_from_lemma!
              prefix
@@ -376,14 +388,14 @@ Section __.
          None (* fancy *)
          possible_values
          (reified_opp_gen
-            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m)
-         (Some bounds, tt)
-         (Some bounds).
+            @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m)
+         (Some montgomery_domain_bounds, tt)
+         (Some montgomery_domain_bounds).
 
   Definition sopp (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "opp" opp
           (docstring_with_summary_from_lemma!
              prefix
@@ -396,14 +408,14 @@ Section __.
          None (* fancy *)
          possible_values
          (reified_from_montgomery_gen
-            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
-         (Some bounds, tt)
-         (Some bounds).
+            @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
+         (Some montgomery_domain_bounds, tt)
+         (Some non_montgomery_domain_bounds).
 
   Definition sfrom_montgomery (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "from_montgomery" from_montgomery
           (docstring_with_summary_from_lemma!
              prefix
@@ -416,14 +428,14 @@ Section __.
          None (* fancy *)
          possible_values
          (reified_to_montgomery_gen
-            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
-         (Some bounds, tt)
-         (Some bounds).
+            @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
+         (Some non_montgomery_domain_bounds, tt)
+         (Some montgomery_domain_bounds).
 
   Definition sto_montgomery (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "to_montgomery" to_montgomery
           (docstring_with_summary_from_lemma!
              prefix
@@ -442,7 +454,7 @@ Section __.
   Definition snonzero (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "nonzero" nonzero
           (docstring_with_summary_from_lemma!
              prefix
@@ -455,14 +467,14 @@ Section __.
          None (* fancy *)
          possible_values_with_bytes
          (reified_to_bytes_gen
-            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m)
+            @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m)
          (Some prime_bounds, tt)
          (Some prime_bytes_bounds).
 
   Definition sto_bytes (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "to_bytes" to_bytes
           (docstring_with_summary_from_lemma!
              prefix
@@ -475,14 +487,14 @@ Section __.
          None (* fancy *)
          possible_values_with_bytes
          (reified_from_bytes_gen
-            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify 1 @ GallinaReify.Reify s @ GallinaReify.Reify n)
+            @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify 1 @ GallinaReify.Reify s @ GallinaReify.Reify n)
          (Some prime_bytes_bounds, tt)
          (Some prime_bounds).
 
   Definition sfrom_bytes (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "from_bytes" from_bytes
           (docstring_with_summary_from_lemma!
              prefix
@@ -495,14 +507,14 @@ Section __.
          None (* fancy *)
          possible_values
          (reified_encode_gen
-            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
+            @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
          (Some prime_bound, tt)
-         (Some bounds).
+         (Some montgomery_domain_bounds).
 
   Definition sencode (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "encode" encode
           (docstring_with_summary_from_lemma!
              prefix
@@ -515,14 +527,14 @@ Section __.
          None (* fancy *)
          possible_values
          (reified_zero_gen
-            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
+            @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
          tt
-         (Some bounds).
+         (Some montgomery_domain_bounds).
 
   Definition szero (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "zero" zero
           (docstring_with_summary_from_lemma!
              prefix
@@ -535,14 +547,14 @@ Section __.
          None (* fancy *)
          possible_values
          (reified_one_gen
-            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
+            @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
          tt
-         (Some bounds).
+         (Some montgomery_domain_bounds).
 
   Definition sone (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "set_one" one (* to avoid conflict with boringSSL *)
           (docstring_with_summary_from_lemma!
              prefix
@@ -557,8 +569,8 @@ Section __.
             false (* let_bind_return *)
             None (* fancy *)
             (reified_eval_gen
-               @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n)
-            (Some bounds, tt)).
+               @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n)
+            (Some montgomery_domain_bounds, tt)).
 
   Definition seval (arg_name : string) (* s for string *)
     := Show.show (invert_expr.smart_App_curried (reval _) (arg_name, tt)).
@@ -585,7 +597,7 @@ Section __.
             false (* let_bind_return *)
             None (* fancy *)
             (reified_eval_twos_complement_gen
-               @ GallinaReify.Reify machine_wordsize
+               @ GallinaReify.Reify (machine_wordsize:Z)
                @ GallinaReify.Reify n)
             (Some bounds, tt)).
 
@@ -603,14 +615,14 @@ Section __.
          None (* fancy *)
          possible_values
          (reified_msat_gen
-            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify sat_limbs @ GallinaReify.Reify m)
+            @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify sat_limbs @ GallinaReify.Reify m)
          tt
          (Some larger_bounds).
 
  Definition smsat (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "msat" msat
           (docstring_with_summary_from_lemma!
              prefix
@@ -623,14 +635,14 @@ Section __.
          None (* fancy *)
          possible_values
          (reified_encode_gen
-            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m' @ GallinaReify.Reify divstep_precompmod)
+            @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m' @ GallinaReify.Reify divstep_precompmod)
          tt
          (Some bounds).
 
   Definition sdivstep_precomp (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "divstep_precomp" divstep_precomp
           (docstring_with_summary_from_lemma!
              prefix
@@ -643,14 +655,14 @@ Section __.
          None (* fancy *)
          possible_values
          (reified_divstep_gen
-            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify sat_limbs @ GallinaReify.Reify n @ GallinaReify.Reify m)
+            @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify sat_limbs @ GallinaReify.Reify n @ GallinaReify.Reify m)
          (divstep_input)
          (divstep_output).
 
   Definition sdivstep (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "divstep" divstep
           (docstring_with_summary_from_lemma!
              prefix
@@ -1068,7 +1080,7 @@ Section __.
     Definition Synthesize (comment_header : list string) (function_name_prefix : string) (requests : list string)
       : list (synthesis_output_kind * string * Pipeline.ErrorT (list string))
       := Primitives.Synthesize
-           machine_wordsize valid_names known_functions (fun _ => nil)
+           machine_wordsize valid_names known_functions (fun _ => nil) all_typedefs!
            check_args
            (ToString.comment_file_header_block
               (comment_header

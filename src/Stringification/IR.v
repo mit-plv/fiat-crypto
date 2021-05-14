@@ -178,6 +178,44 @@ Module Compilers.
                => ident_info_empty
              end.
 
+        Fixpoint collect_infos_of_base_typedef_data {t} : OfPHOAS.base_var_typedef_data t -> ident_infos
+          := match t return OfPHOAS.base_var_typedef_data t -> ident_infos with
+             | tZ
+               => fun n => match n with
+                           | Some n => ident_info_of_typedefs [n]
+                           | None => ident_info_empty
+                           end
+             | base.type.prod A B
+               => fun '(tda, tdb)
+                  => ident_info_union (@collect_infos_of_base_typedef_data A tda)
+                                      (@collect_infos_of_base_typedef_data B tdb)
+             | base.type.list tZ
+               => fun n => match n with
+                           | Some n => ident_info_of_typedefs [n]
+                           | None => ident_info_empty
+                           end
+             | base.type.list _
+             | base.type.option _
+             | base.type.type_base _
+             | base.type.unit
+               => fun _ => ident_info_empty
+             end.
+
+        Definition collect_infos_of_typedef_data {t} : OfPHOAS.var_typedef_data t -> ident_infos
+          := match t return OfPHOAS.var_typedef_data t -> ident_infos with
+             | type.base t => collect_infos_of_base_typedef_data
+             | type.arrow _ _ => fun 'tt => ident_info_empty
+             end.
+
+        Fixpoint collect_infos_of_arg_typedef_data {t} : type.for_each_lhs_of_arrow OfPHOAS.var_typedef_data t -> ident_infos
+          := match t with
+             | type.base _ => fun 'tt => ident_info_empty
+             | type.arrow s d
+               => fun '(td, tds)
+                  => ident_info_union (collect_infos_of_typedef_data td)
+                                      (@collect_infos_of_arg_typedef_data d tds)
+             end.
+
         Definition collect_infos (e : expr) : ident_infos
           := fold_right
                ident_info_union
@@ -185,6 +223,19 @@ Module Compilers.
                (List.map
                   collect_infos_of_stmt
                   e).
+
+        Definition collect_all_infos {skip_typedefs : skip_typedefs_opt}
+                   (e : expr)
+                   {t}
+                   (intypedefs : type.for_each_lhs_of_arrow OfPHOAS.var_typedef_data t)
+                   (outtypedefs : OfPHOAS.base_var_typedef_data (type.final_codomain t))
+          := ident_info_union
+               (collect_infos e)
+               (if skip_typedefs
+                then ident_info_empty
+                else ident_info_union
+                       (ident_infos.collect_infos_of_arg_typedef_data intypedefs)
+                       (ident_infos.collect_infos_of_typedef_data (t:=type.base _) outtypedefs)).
       End ident_infos.
 
       Module name_infos.
@@ -914,7 +965,7 @@ Module Compilers.
               : base_var_data t -> int.option.interp t -> ErrT (arith_expr_for_base t)
               := match t with
                  | tZ
-                   => fun '(n, is_ptr, r) r'
+                   => fun '(n, is_ptr, r, td) r'
                       => let v := if is_ptr
                                   then (Dereference @@@ Var type.Zptr n)%Cexpr
                                   else Var type.Z n in
@@ -924,7 +975,7 @@ Module Compilers.
                       => (ea,, eb <- @arith_expr_of_base_PHOAS_Var A da ra, @arith_expr_of_base_PHOAS_Var B db rb;
                             inl (ea, eb))
                  | base.type.list tZ
-                   => fun '(n, r, len) r'
+                   => fun '(n, r, len, td) r'
                       => ret (List.map
                                 (fun i => (List_nth i @@@ Var type.Zptr n, r))%core%Cexpr
                                 (List.seq 0 len))
@@ -937,7 +988,7 @@ Module Compilers.
 
             Fixpoint arith_expr_of_PHOAS
                      {t}
-                     (e : @Compilers.expr.expr base.type ident.ident var_data t)
+                     (e : @API.expr var_data t)
               : type.interpM_final
                   (fun T => ErrT T)
                   (fun t => int.option.interp t -> ErrT (arith_expr_for_base t))
@@ -970,7 +1021,7 @@ Module Compilers.
 
             Definition arith_expr_of_base_PHOAS
                        {t:base.type}
-                       (e : @Compilers.expr.expr base.type ident.ident var_data (type.base t))
+                       (e : @API.expr var_data (type.base t))
                        (rout : int.option.interp t)
               : ErrT (arith_expr_for_base t)
               := (e' <- arith_expr_of_PHOAS e; e' rout).
@@ -989,11 +1040,11 @@ Module Compilers.
 
             Fixpoint make_return_assignment_of_base_arith {t}
               : base_var_data t
-                -> @Compilers.expr.expr base.type ident.ident var_data (type.base t)
+                -> @API.expr var_data (type.base t)
                 -> ErrT expr
               := match t return base_var_data t -> expr.expr (type.base t) -> ErrT expr with
                  | tZ
-                   => fun '(n, is_ptr, r) e
+                   => fun '(n, is_ptr, r, td) e
                       => (rhs <- arith_expr_of_base_PHOAS e r;
                             let '(e, r) := result_upcast (t:=tZ) r rhs in
                             ret (if is_ptr
@@ -1011,7 +1062,7 @@ Module Compilers.
                          | None => inr ["Invalid non-pair expr of type " ++ show t]%string
                          end
                  | base.type.list tZ
-                   => fun '(n, r, len) e
+                   => fun '(n, r, len, td) e
                       => (ls <- arith_expr_of_base_PHOAS e (Some (repeat r len));
                             ret (List.map
                                    (fun '(i, rhs) =>
@@ -1024,7 +1075,7 @@ Module Compilers.
                  end%list.
             Definition make_return_assignment_of_arith {t}
               : var_data t
-                -> @Compilers.expr.expr base.type ident.ident var_data t
+                -> @API.expr var_data t
                 -> ErrT expr
               := match t with
                  | type.base t => make_return_assignment_of_base_arith
@@ -1036,8 +1087,8 @@ Module Compilers.
 
             Fixpoint arith_expr_of_PHOAS_args
                      {t}
-              : type.for_each_lhs_of_arrow (@Compilers.expr.expr base.type ident.ident var_data) t
-                -> ErrT (type.for_each_lhs_of_arrow (fun t => @Compilers.expr.expr base.type ident.ident var_data t * (arith_expr type.Z * option int.type)) t)
+              : type.for_each_lhs_of_arrow (@API.expr var_data) t
+                -> ErrT (type.for_each_lhs_of_arrow (fun t => @API.expr var_data t * (arith_expr type.Z * option int.type)) t)
               := match t with
                  | type.base t => fun 'tt => inl tt
                  | type.arrow (type.base tZ) d
@@ -1109,7 +1160,7 @@ Module Compilers.
             Definition string_of_var_data {t} (v : var_data t) : string
               := string_of_var_names (names_of_var_data v).
 
-            Fixpoint extract_var_data_list {t} (e : @Compilers.expr.expr base.type ident.ident var_data t) : list { t : _ & var_data t }
+            Fixpoint extract_var_data_list {t} (e : @API.expr var_data t) : list { t : _ & var_data t }
               := match e with
                  | expr.Ident t idc => []
                  | expr.Var t v => [existT _ _ v]
@@ -1130,7 +1181,7 @@ Module Compilers.
 
             Let make_comment
                 {t}
-                (e : @Compilers.expr.expr base.type ident.ident var_data t)
+                (e : @API.expr var_data t)
               : ErrT (expr * var_data t)
               := let _ := @PHOAS.expr.partially_show_expr in
                  let ret_err := inr ["Not a comment " ++ show e]%string in
@@ -1152,7 +1203,7 @@ Module Compilers.
                  | None, _ | _, None => ret_err
                  end.
 
-            Definition bounds_check (do_bounds_check : bool) (descr : string) {t} (idc : ident.ident t) (s : BinInt.Z) {t'} (ev : @Compilers.expr.expr base.type ident.ident var_data t') (found : option int.type)
+            Definition bounds_check (do_bounds_check : bool) (descr : string) {t} (idc : ident.ident t) (s : BinInt.Z) {t'} (ev : @API.expr var_data t') (found : option int.type)
               : ErrT unit
               := if negb do_bounds_check
                  then ret tt
@@ -1171,12 +1222,12 @@ Module Compilers.
                 {t}
                 (idc : ident.ident t)
               : option (forall (rout : option int.type),
-                           type.for_each_lhs_of_arrow (fun t => @Compilers.expr.expr base.type ident.ident var_data t * (arith_expr type.Z * option int.type))%type t
+                           type.for_each_lhs_of_arrow (fun t => @API.expr var_data t * (arith_expr type.Z * option int.type))%type t
                            -> ErrT (arith_expr type.Zptr -> expr))
               := let _ := @PHOAS.expr.partially_show_expr in
                  match idc in ident.ident t
                        return option (forall (rout : option int.type),
-                                                        type.for_each_lhs_of_arrow (fun t => @Compilers.expr.expr base.type ident.ident var_data t * (arith_expr type.Z * option int.type))%type t
+                                                        type.for_each_lhs_of_arrow (fun t => @API.expr var_data t * (arith_expr type.Z * option int.type))%type t
                                                         -> ErrT (arith_expr type.Zptr -> expr))
                  with
                  | ident.Z_zselect
@@ -1212,7 +1263,7 @@ Module Compilers.
                 (t:=(tZ -> tZ -> tZ -> tZ * tZ)%etype)
                 (idc : ident.ident t)
                 (rout : option int.type * option int.type)
-                (args : type.for_each_lhs_of_arrow (fun t => @Compilers.expr.expr base.type ident.ident var_data t *
+                (args : type.for_each_lhs_of_arrow (fun t => @API.expr var_data t *
                                                              (arith_expr type.Z * option int.type))%type t)
               : ErrT ((option int.type * option int.type) * (arith_expr (type.Zptr * type.Zptr) -> expr))
               := let _ := @PHOAS.expr.partially_show_expr in
@@ -1255,7 +1306,7 @@ Module Compilers.
                 (t:=(tZ -> tZ -> tZ -> tZ -> tZ * tZ)%etype)
                 (idc : ident.ident t)
                 (rout : option int.type * option int.type)
-                (args : type.for_each_lhs_of_arrow (fun t => @Compilers.expr.expr base.type ident.ident var_data t * (arith_expr type.Z * option int.type))%type t)
+                (args : type.for_each_lhs_of_arrow (fun t => @API.expr var_data t * (arith_expr type.Z * option int.type))%type t)
               : ErrT ((option int.type * option int.type) * (arith_expr (type.Zptr * type.Zptr) -> expr))
               := let _ := @PHOAS.expr.partially_show_expr in
                  let '((s, _), ((e1v, (e1, r1)), ((e2v, (e2, r2)), ((e3v, (e3, r3)), tt)))) := args in
@@ -1290,7 +1341,7 @@ Module Compilers.
               : forall (do_bounds_check : bool)
                        (idc : ident.ident t)
                        (rout : option int.type * option int.type)
-                       (args : type.for_each_lhs_of_arrow (fun t => @Compilers.expr.expr base.type ident.ident var_data t * (arith_expr type.Z * option int.type))%type t),
+                       (args : type.for_each_lhs_of_arrow (fun t => @API.expr var_data t * (arith_expr type.Z * option int.type))%type t),
                 ErrT ((option int.type * option int.type) * (arith_expr (type.Zptr * type.Zptr) -> expr))
               := match t with
                  | (type.base tZ -> type.base tZ -> type.base tZ -> type.base (tZ * tZ))%etype
@@ -1320,7 +1371,7 @@ Module Compilers.
 
             Let make_assign_arg_1ref_opt
                 (do_bounds_check : bool)
-                (e : @Compilers.expr.expr base.type ident.ident var_data tZ)
+                (e : @API.expr var_data tZ)
                 (count : positive)
                 (make_name : positive -> option string)
               : ErrT (expr * var_data tZ)
@@ -1339,7 +1390,7 @@ Module Compilers.
                                   idce <- recognize rout args;
                                   v <- declare_name (show idc) count make_name rout;
                                   let '(decls, n, is_ptr, retv) := v in
-                                  ret ((decls ++ (idce retv))%list, (n, is_ptr, rout)))%err)%option in
+                                  ret ((decls ++ (idce retv))%list, (n, is_ptr, rout, None)))%err)%option in
                  match res_ref with
                  | Some (inl res) => ret res
                  | Some (inr err) => inr err
@@ -1348,14 +1399,14 @@ Module Compilers.
                         let '(e1, r1) := e1 in
                         match make_name count with
                         | Some n1
-                          => ret ([Assign true type.Z r1 n1 e1], (n1, false, r1))
+                          => ret ([Assign true type.Z r1 n1 e1], (n1, false, r1, None))
                         | None => inr ["Variable naming-function does not support the index " ++ show count]%string
                         end
                  end.
 
             Let make_assign_arg_2ref
                 (do_bounds_check : bool)
-                (e : @Compilers.expr.expr base.type ident.ident var_data (tZ * tZ))
+                (e : @API.expr var_data (tZ * tZ))
                 (count : positive)
                 (make_name : positive -> option string)
               : ErrT (expr * var_data (tZ * tZ))
@@ -1374,14 +1425,14 @@ Module Compilers.
                                     declare_name (show idc) (Pos.succ count) make_name rout2);
                           let '(decls1, n1, is_ptr1, retv1) := v1 in
                           let '(decls2, n2, is_ptr2, retv2) := v2 in
-                          ret (decls1 ++ decls2 ++ (idce (retv1, retv2)%Cexpr), ((n1, is_ptr1, rout1), (n2, is_ptr2, rout2)))%list
+                          ret (decls1 ++ decls2 ++ (idce (retv1, retv2)%Cexpr), ((n1, is_ptr1, rout1, None), (n2, is_ptr2, rout2, None)))%list
                  | None => inr ["Invalid assignment of non-identifier-application: " ++ show e]%string
                  end.
 
             Let make_assign_arg_ref
                 (do_bounds_check : bool)
                 {t}
-              : forall (e : @Compilers.expr.expr base.type ident.ident var_data t)
+              : forall (e : @API.expr var_data t)
                        (count : positive)
                        (make_name : positive -> option string),
                 ErrT (expr * var_data t)
@@ -1405,7 +1456,7 @@ Module Compilers.
 
             Let make_uniform_assign_expr_of_PHOAS
                 (do_bounds_check : bool)
-                {s} (e1 : @Compilers.expr.expr base.type ident.ident var_data s)
+                {s} (e1 : @API.expr var_data s)
                 {d} (e2 : var_data s -> var_data d -> ErrT expr)
                 (count : positive)
                 (make_name : positive -> option string)
@@ -1420,7 +1471,7 @@ Module Compilers.
             (* See above comment about extraction issues *)
             Definition make_assign_expr_of_PHOAS
                        (do_bounds_check : bool)
-                       {s} (e1 : @Compilers.expr.expr base.type ident.ident var_data s)
+                       {s} (e1 : @API.expr var_data s)
                        {s' d} (e2 : var_data s' -> var_data d -> ErrT expr)
                        (count : positive)
                        (make_name : positive -> option string)
@@ -1435,7 +1486,7 @@ Module Compilers.
             Fixpoint expr_of_base_PHOAS
                      (do_bounds_check : bool)
                      {t}
-                     (e : @Compilers.expr.expr base.type ident.ident var_data t)
+                     (e : @API.expr var_data t)
                      (count : positive)
                      (make_name : positive -> option string)
                      {struct e}
@@ -1455,81 +1506,79 @@ Module Compilers.
                    => fun v => make_return_assignment_of_arith v e
                  end%expr_pat%option.
 
-            Fixpoint base_var_data_of_bounds {t}
+            Fixpoint base_var_data_of_bounds_and_typedefs {t}
                      (is_ptr : bool)
                      (count : positive)
                      (make_name : positive -> option string)
                      {struct t}
-              : ZRange.type.base.option.interp t -> option (positive * var_data (type.base t))
-              := match t return ZRange.type.base.option.interp t -> option (positive * var_data (type.base t)) with
-                 | tZ
-                   => fun r => (n <- make_name count;
-                                  Some (Pos.succ count, (n, is_ptr, option_map int.of_zrange_relaxed (option_map relax_zrange r))))
+              : ZRange.type.base.option.interp t -> base_var_typedef_data t -> option (positive * var_data (type.base t))
+              := match t return ZRange.type.base.option.interp t -> base_var_typedef_data t -> option (positive * var_data (type.base t)) with
+                 | tZ as t
+                   => fun r typedefs
+                      => (n <- make_name count;
+                         Some (Pos.succ count, (n, is_ptr, int.option.interp.of_zrange_relaxed (t:=t) (option_map relax_zrange r), typedefs)))
                  | base.type.prod A B
-                   => fun '(ra, rb)
-                      => (va <- @base_var_data_of_bounds A is_ptr count make_name ra;
+                   => fun '(ra, rb) '(typedefsa, typedefsb)
+                      => (va <- @base_var_data_of_bounds_and_typedefs A is_ptr count make_name ra typedefsa;
                             let '(count, va) := va in
-                            vb <- @base_var_data_of_bounds B is_ptr count make_name rb;
+                            vb <- @base_var_data_of_bounds_and_typedefs B is_ptr count make_name rb typedefsb;
                               let '(count, vb) := vb in
                               Some (count, (va, vb)))
-                 | base.type.list tZ
-                   => fun r
+                 | base.type.list tZ as t
+                   => fun r typedefs
                       => (ls <- r;
-                            n <- make_name count;
-                            Some (Pos.succ count,
-                                  (n,
-                                   match List.map (option_map (fun r => int.of_zrange_relaxed (relax_zrange r))) ls with
-                                   | nil => None
-                                   | cons x xs
-                                     => List.fold_right
-                                          (fun r1 r2 => r1 <- r1; r2 <- r2; Some (int.union r1 r2))
-                                          x
-                                          xs
-                                   end,
-                                   length ls)))
+                         n <- make_name count;
+                         Some (Pos.succ count,
+                               (n,
+                                int.option.interp.to_union
+                                  (int.option.interp.of_zrange_relaxed
+                                     (t:=t) (Some (List.map (option_map relax_zrange) ls))),
+                                length ls,
+                                typedefs)))
                  | base.type.unit
-                   => fun _ => Some (count, tt)
+                   => fun _ _ => Some (count, tt)
                  | base.type.list _
                  | base.type.option _
                  | base.type.type_base _
-                   => fun _ => None
+                   => fun _ _ => None
                  end%option.
 
-            Definition var_data_of_bounds {t}
+            Definition var_data_of_bounds_and_typedefs {t}
                        (is_ptr : bool)
                        (count : positive)
                        (make_name : positive -> option string)
-              : ZRange.type.option.interp t -> option (positive * var_data t)
+              : ZRange.type.option.interp t -> var_typedef_data t -> option (positive * var_data t)
               := match t with
-                 | type.base t => base_var_data_of_bounds is_ptr count make_name
-                 | type.arrow s d => fun _ => None
+                 | type.base t => base_var_data_of_bounds_and_typedefs is_ptr count make_name
+                 | type.arrow s d => fun _ _ => None
                  end.
 
             Fixpoint expr_of_PHOAS'_cps
                      {t}
-                     (e : @Compilers.expr.expr base.type ident.ident var_data t)
+                     (e : @API.expr var_data t)
                      (make_in_name : positive -> option string)
                      (inbounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
+                     (intypedefs : type.for_each_lhs_of_arrow var_typedef_data t)
                      (count : positive)
                      {T}
                      {struct t}
-              : (positive * (type.for_each_lhs_of_arrow var_data t * @Compilers.expr.expr base.type ident.ident var_data (type.final_codomain t)) -> ErrT T) -> ErrT T
+              : (positive * (type.for_each_lhs_of_arrow var_data t * @API.expr var_data (type.final_codomain t)) -> ErrT T) -> ErrT T
               := let _ := @PHOAS.expr.partially_show_expr in (* for TC resolution *)
-                 match t return @Compilers.expr.expr base.type ident.ident var_data t -> type.for_each_lhs_of_arrow ZRange.type.option.interp t -> (positive * (type.for_each_lhs_of_arrow var_data t * @Compilers.expr.expr base.type ident.ident var_data (type.final_codomain t)) -> ErrT T) -> ErrT T with
+                 match t return @API.expr var_data t -> type.for_each_lhs_of_arrow ZRange.type.option.interp t -> type.for_each_lhs_of_arrow var_typedef_data t -> (positive * (type.for_each_lhs_of_arrow var_data t * @API.expr var_data (type.final_codomain t)) -> ErrT T) -> ErrT T with
                  | type.base t
-                   => fun e tt k => k (count, (tt, e))
+                   => fun e 'tt 'tt k => k (count, (tt, e))
                  | type.arrow s d
-                   => fun e '(inbound, inbounds) k
-                      => match var_data_of_bounds false count make_in_name inbound, invert_Abs e with
+                   => fun e '(inbound, inbounds) '(intypedef, intypedefs) k
+                      => match var_data_of_bounds_and_typedefs false count make_in_name inbound intypedef, invert_Abs e with
                          | Some (count, vs), Some f
                            => @expr_of_PHOAS'_cps
-                                d (f vs) make_in_name inbounds count _
+                                d (f vs) make_in_name inbounds intypedefs count _
                                 (fun '(count, (vss, rv))
                                  => k (count, ((vs, vss), rv)))
                          | None, _ => inr ["Unable to bind names for all arguments and bounds at type " ++ show s]%string%list
                          | _, None => inr ["Invalid non-λ expression of arrow type (" ++ show t ++ "): " ++ show e]%string%list
                          end
-                 end%core%expr e inbounds.
+                 end%core%expr e inbounds intypedefs.
 
             Definition expr_of_PHOAS'_cont
                        (do_bounds_check : bool)
@@ -1537,7 +1586,7 @@ Module Compilers.
                        (make_name : positive -> option string)
                        (out_data : var_data (type.base (type.final_codomain t)))
                        (in_to_body_count : positive -> positive)
-              : positive * (type.for_each_lhs_of_arrow var_data t * @Compilers.expr.expr base.type ident.ident var_data (type.final_codomain t))
+              : positive * (type.for_each_lhs_of_arrow var_data t * @API.expr var_data (type.final_codomain t))
                 -> ErrT (type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * expr)
               := let _ := @PHOAS.expr.partially_show_expr in (* for TC resolution *)
                  fun '(count, (d, e))
@@ -1549,16 +1598,17 @@ Module Compilers.
             Definition expr_of_PHOAS'
                        (do_bounds_check : bool)
                        {t}
-                       (e : @Compilers.expr.expr base.type ident.ident var_data t)
+                       (e : @API.expr var_data t)
                        (make_in_name : positive -> option string)
                        (make_name : positive -> option string)
                        (inbounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
+                       (intypedefs : type.for_each_lhs_of_arrow var_typedef_data t)
                        (out_data : var_data (type.base (type.final_codomain t)))
                        (count : positive)
                        (in_to_body_count : positive -> positive)
               : ErrT (type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * expr)
               := @expr_of_PHOAS'_cps
-                   _ e make_in_name inbounds count _
+                   _ e make_in_name inbounds intypedefs count _
                    (@expr_of_PHOAS'_cont do_bounds_check t make_name out_data in_to_body_count).
 
             Definition expr_of_PHOAS_cont
@@ -1566,29 +1616,31 @@ Module Compilers.
                        {t}
                        (make_name : positive -> option string)
                        (in_to_body_count : positive -> positive)
-              : positive * (type.for_each_lhs_of_arrow var_data t * var_data (type.final_codomain t) * @Compilers.expr.expr base.type ident.ident var_data (type.final_codomain t))
+              : positive * (type.for_each_lhs_of_arrow var_data t * var_data (type.final_codomain t) * @API.expr var_data (type.final_codomain t))
                 -> ErrT (type.for_each_lhs_of_arrow var_data t * var_data (type.final_codomain t) * expr)
               := fun '(count, (din, dout, e))
                  => @expr_of_PHOAS'_cont do_bounds_check t make_name dout in_to_body_count (count, (din, e)).
 
             Definition expr_of_PHOAS_cps
                        {t}
-                       (e : @Compilers.expr.expr base.type ident.ident var_data t)
+                       (e : @API.expr var_data t)
                        (make_in_name : positive -> option string)
                        (make_out_name : positive -> option string)
                        (inbounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
                        (outbounds : ZRange.type.option.interp (type.base (type.final_codomain t)))
+                       (intypedefs : type.for_each_lhs_of_arrow var_typedef_data t)
+                       (outtypedefs : var_typedef_data (type.base (type.final_codomain t)))
                        (count : positive)
                        (out_to_in_count : positive -> positive)
                        {T}
-                       (k : positive * (type.for_each_lhs_of_arrow var_data t * var_data (type.final_codomain t) * @Compilers.expr.expr base.type ident.ident var_data (type.final_codomain t)) -> ErrT T)
+                       (k : positive * (type.for_each_lhs_of_arrow var_data t * var_data (type.final_codomain t) * @API.expr var_data (type.final_codomain t)) -> ErrT T)
               : ErrT T
-              := match var_data_of_bounds true count make_out_name outbounds with
+              := match var_data_of_bounds_and_typedefs true count make_out_name outbounds outtypedefs with
                  | Some vd
                    => let '(count, dout) := vd in
                       let count := out_to_in_count count in
                       @expr_of_PHOAS'_cps
-                        t e make_in_name inbounds count _
+                        t e make_in_name inbounds intypedefs count _
                         (fun '(count, (din, e)) => k (count, (din, dout, e)))
                  | None => inr ["Unable to bind names for all return arguments and bounds at type " ++ show (type.final_codomain t)]%string
                  end.
@@ -1596,17 +1648,19 @@ Module Compilers.
             Definition expr_of_PHOAS
                        (do_bounds_check : bool)
                        {t}
-                       (e : @Compilers.expr.expr base.type ident.ident var_data t)
+                       (e : @API.expr var_data t)
                        (make_in_name : positive -> option string)
                        (make_out_name : positive -> option string)
                        (make_name : positive -> option string)
                        (inbounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
                        (outbounds : ZRange.type.option.interp (type.base (type.final_codomain t)))
+                       (intypedefs : type.for_each_lhs_of_arrow var_typedef_data t)
+                       (outtypedefs : var_typedef_data (type.base (type.final_codomain t)))
                        (count : positive)
                        (in_to_body_count out_to_in_count : positive -> positive)
               : ErrT (type.for_each_lhs_of_arrow var_data t * var_data (type.final_codomain t) * expr)
               := @expr_of_PHOAS_cps
-                   _ e make_in_name make_out_name inbounds outbounds count out_to_in_count _
+                   _ e make_in_name make_out_name inbounds outbounds intypedefs outtypedefs count out_to_in_count _
                    (@expr_of_PHOAS_cont do_bounds_check t make_name in_to_body_count).
 
             Let make_name_gen (name_list : option (list string))
@@ -1629,7 +1683,7 @@ Module Compilers.
                        (do_bounds_check : bool)
                        {t}
                        (name_list : option (list string))
-              : positive * (type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * @Compilers.expr.expr base.type ident.ident var_data (type.final_codomain t))
+              : positive * (type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * @API.expr var_data (type.final_codomain t))
                 -> ErrT (type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * expr)
               := @expr_of_PHOAS_cont
                    do_bounds_check t
@@ -1637,57 +1691,67 @@ Module Compilers.
 
             Definition ExprOfPHOAS_with_opt_outbounds_cps
                        {t}
-                       (e : @Compilers.expr.Expr base.type ident.ident t)
+                       (e : @API.Expr t)
                        (name_list : option (list string))
                        (inbounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
                        (outbounds : option (ZRange.type.base.option.interp (type.final_codomain t)))
+                       (intypedefs : type.for_each_lhs_of_arrow var_typedef_data t)
+                       (outtypedefs : base_var_typedef_data (type.final_codomain t))
                        {T}
-                       (k : positive * (type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * @Compilers.expr.expr base.type ident.ident var_data (type.final_codomain t)) -> ErrT T)
+                       (k : positive * (type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * @API.expr var_data (type.final_codomain t)) -> ErrT T)
               : ErrT T
               := let outbounds := Option.value outbounds (partial.Extract true (* assume the output has casts around it *) e inbounds) in
                  expr_of_PHOAS_cps
-                   (e _) (make_in_name name_list) (make_out_name name_list) inbounds outbounds 1 (reset_if_names_given name_list) k.
+                   (e _) (make_in_name name_list) (make_out_name name_list) inbounds outbounds intypedefs outtypedefs 1 (reset_if_names_given name_list) k.
 
             Definition ExprOfPHOAS_cps
                        {t}
-                       (e : @Compilers.expr.Expr base.type ident.ident t)
+                       (e : @API.Expr t)
                        (name_list : option (list string))
                        (inbounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
+                       (intypedefs : type.for_each_lhs_of_arrow var_typedef_data t)
+                       (outtypedefs : base_var_typedef_data (type.final_codomain t))
                        {T}
-                       (k : positive * (type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * @Compilers.expr.expr base.type ident.ident var_data (type.final_codomain t)) -> ErrT T)
+                       (k : positive * (type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * @API.expr var_data (type.final_codomain t)) -> ErrT T)
               : ErrT T
-              := ExprOfPHOAS_with_opt_outbounds_cps e name_list inbounds None k.
+              := ExprOfPHOAS_with_opt_outbounds_cps e name_list inbounds None intypedefs outtypedefs k.
 
             Definition var_data_of_PHOAS
                        {t}
-                       (e : @Compilers.expr.Expr base.type ident.ident t)
+                       (e : @API.Expr t)
                        (name_list : option (list string))
                        (inbounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
+                       (intypedefs : type.for_each_lhs_of_arrow var_typedef_data t)
+                       (outtypedefs : base_var_typedef_data (type.final_codomain t))
               : ErrT (type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)))
               := ExprOfPHOAS_with_opt_outbounds_cps
-                   e name_list inbounds None
+                   e name_list inbounds None intypedefs outtypedefs
                    (fun '(count, (din, dout, e)) => ret (din, dout)).
 
             Definition var_data_of_PHOAS_bounds
                        {t}
-                       (e : @Compilers.expr.Expr base.type ident.ident t)
+                       (e : @API.Expr t)
                        (name_list : option (list string))
                        (inbounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
                        (outbounds : ZRange.type.base.option.interp (type.final_codomain t))
+                       (intypedefs : type.for_each_lhs_of_arrow var_typedef_data t)
+                       (outtypedefs : base_var_typedef_data (type.final_codomain t))
               : ErrT (type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)))
               := ExprOfPHOAS_with_opt_outbounds_cps
-                   e name_list inbounds (Some outbounds)
+                   e name_list inbounds (Some outbounds) intypedefs outtypedefs
                    (fun '(count, (din, dout, e)) => ret (din, dout)).
 
             Definition ExprOfPHOAS
                        (do_bounds_check : bool)
                        {t}
-                       (e : @Compilers.expr.Expr base.type ident.ident t)
+                       (e : @API.Expr t)
                        (name_list : option (list string))
                        (inbounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
+                       (intypedefs : type.for_each_lhs_of_arrow var_typedef_data t)
+                       (outtypedefs : base_var_typedef_data (type.final_codomain t))
               : ErrT (type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * expr)
               := ExprOfPHOAS_cps
-                   e name_list inbounds
+                   e name_list inbounds intypedefs outtypedefs
                    (ExprOfPHOAS_cont do_bounds_check name_list).
           End with_bind.
         End __.

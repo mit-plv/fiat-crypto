@@ -32,6 +32,16 @@ import "math/bits"
 type uint1 uint8
 type int1 int8
 
+// The type LooseFieldElement is a field element with loose bounds.
+//
+// Bounds: [[0x0 ~> 0x300000000000], [0x0 ~> 0x180000000000], [0x0 ~> 0x180000000000]]
+type LooseFieldElement[3]uint64
+
+// The type TightFieldElement is a field element with tight bounds.
+//
+// Bounds: [[0x0 ~> 0x100000000000], [0x0 ~> 0x80000000000], [0x0 ~> 0x80000000000]]
+type TightFieldElement[3]uint64
+
 // addcarryxU64 is a thin wrapper around bits.Add64 that uses uint1 rather than uint64
 func addcarryxU64(x uint64, y uint64, carry uint1) (uint64, uint1) {
 	sum, carryOut := bits.Add64(x, y, uint64(carry))
@@ -155,7 +165,7 @@ func cmovznzU64(out1 *uint64, arg1 uint1, arg2 uint64, arg3 uint64) {
 //   arg2: [[0x0 ~> 0x300000000000], [0x0 ~> 0x180000000000], [0x0 ~> 0x180000000000]]
 // Output Bounds:
 //   out1: [[0x0 ~> 0x100000000000], [0x0 ~> 0x80000000000], [0x0 ~> 0x80000000000]]
-func CarryMul(out1 *[3]uint64, arg1 *[3]uint64, arg2 *[3]uint64) {
+func CarryMul(out1 *TightFieldElement, arg1 *LooseFieldElement, arg2 *LooseFieldElement) {
 	var x1 uint64
 	var x2 uint64
 	x2, x1 = bits.Mul64(arg1[2], (arg2[2] * 0x5))
@@ -249,7 +259,7 @@ func CarryMul(out1 *[3]uint64, arg1 *[3]uint64, arg2 *[3]uint64) {
 //   arg1: [[0x0 ~> 0x300000000000], [0x0 ~> 0x180000000000], [0x0 ~> 0x180000000000]]
 // Output Bounds:
 //   out1: [[0x0 ~> 0x100000000000], [0x0 ~> 0x80000000000], [0x0 ~> 0x80000000000]]
-func CarrySquare(out1 *[3]uint64, arg1 *[3]uint64) {
+func CarrySquare(out1 *TightFieldElement, arg1 *LooseFieldElement) {
 	x1 := (arg1[2] * 0x5)
 	x2 := (x1 * 0x2)
 	x3 := (arg1[2] * 0x2)
@@ -323,7 +333,7 @@ func CarrySquare(out1 *[3]uint64, arg1 *[3]uint64) {
 //   arg1: [[0x0 ~> 0x300000000000], [0x0 ~> 0x180000000000], [0x0 ~> 0x180000000000]]
 // Output Bounds:
 //   out1: [[0x0 ~> 0x100000000000], [0x0 ~> 0x80000000000], [0x0 ~> 0x80000000000]]
-func Carry(out1 *[3]uint64, arg1 *[3]uint64) {
+func Carry(out1 *TightFieldElement, arg1 *LooseFieldElement) {
 	x1 := arg1[0]
 	x2 := ((x1 >> 44) + arg1[1])
 	x3 := ((x2 >> 43) + arg1[2])
@@ -347,7 +357,7 @@ func Carry(out1 *[3]uint64, arg1 *[3]uint64) {
 //   arg2: [[0x0 ~> 0x100000000000], [0x0 ~> 0x80000000000], [0x0 ~> 0x80000000000]]
 // Output Bounds:
 //   out1: [[0x0 ~> 0x300000000000], [0x0 ~> 0x180000000000], [0x0 ~> 0x180000000000]]
-func Add(out1 *[3]uint64, arg1 *[3]uint64, arg2 *[3]uint64) {
+func Add(out1 *LooseFieldElement, arg1 *TightFieldElement, arg2 *TightFieldElement) {
 	x1 := (arg1[0] + arg2[0])
 	x2 := (arg1[1] + arg2[1])
 	x3 := (arg1[2] + arg2[2])
@@ -366,7 +376,7 @@ func Add(out1 *[3]uint64, arg1 *[3]uint64, arg2 *[3]uint64) {
 //   arg2: [[0x0 ~> 0x100000000000], [0x0 ~> 0x80000000000], [0x0 ~> 0x80000000000]]
 // Output Bounds:
 //   out1: [[0x0 ~> 0x300000000000], [0x0 ~> 0x180000000000], [0x0 ~> 0x180000000000]]
-func Sub(out1 *[3]uint64, arg1 *[3]uint64, arg2 *[3]uint64) {
+func Sub(out1 *LooseFieldElement, arg1 *TightFieldElement, arg2 *TightFieldElement) {
 	x1 := ((0x1ffffffffff6 + arg1[0]) - arg2[0])
 	x2 := ((0xffffffffffe + arg1[1]) - arg2[1])
 	x3 := ((0xffffffffffe + arg1[2]) - arg2[2])
@@ -384,7 +394,7 @@ func Sub(out1 *[3]uint64, arg1 *[3]uint64, arg2 *[3]uint64) {
 //   arg1: [[0x0 ~> 0x100000000000], [0x0 ~> 0x80000000000], [0x0 ~> 0x80000000000]]
 // Output Bounds:
 //   out1: [[0x0 ~> 0x300000000000], [0x0 ~> 0x180000000000], [0x0 ~> 0x180000000000]]
-func Opp(out1 *[3]uint64, arg1 *[3]uint64) {
+func Opp(out1 *LooseFieldElement, arg1 *TightFieldElement) {
 	x1 := (0x1ffffffffff6 - arg1[0])
 	x2 := (0xffffffffffe - arg1[1])
 	x3 := (0xffffffffffe - arg1[2])
@@ -425,7 +435,7 @@ func Selectznz(out1 *[3]uint64, arg1 uint1, arg2 *[3]uint64, arg3 *[3]uint64) {
 //   arg1: [[0x0 ~> 0x100000000000], [0x0 ~> 0x80000000000], [0x0 ~> 0x80000000000]]
 // Output Bounds:
 //   out1: [[0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0x3]]
-func ToBytes(out1 *[17]uint8, arg1 *[3]uint64) {
+func ToBytes(out1 *[17]uint8, arg1 *TightFieldElement) {
 	var x1 uint64
 	var x2 uint1
 	subborrowxU44(&x1, &x2, 0x0, arg1[0], 0xffffffffffb)
@@ -510,7 +520,7 @@ func ToBytes(out1 *[17]uint8, arg1 *[3]uint64) {
 //   arg1: [[0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0x3]]
 // Output Bounds:
 //   out1: [[0x0 ~> 0x100000000000], [0x0 ~> 0x80000000000], [0x0 ~> 0x80000000000]]
-func FromBytes(out1 *[3]uint64, arg1 *[17]uint8) {
+func FromBytes(out1 *TightFieldElement, arg1 *[17]uint8) {
 	x1 := (uint64(arg1[16]) << 41)
 	x2 := (uint64(arg1[15]) << 33)
 	x3 := (uint64(arg1[14]) << 25)

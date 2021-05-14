@@ -21,6 +21,14 @@
 typedef unsigned char fiat_p224_uint1;
 typedef signed char fiat_p224_int1;
 
+/* The type fiat_p224_montgomery_domain_field_element is a field element in the Montgomery domain. */
+/* Bounds: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]] */
+typedef uint32_t fiat_p224_montgomery_domain_field_element[7];
+
+/* The type fiat_p224_non_montgomery_domain_field_element is a field element NOT in the Montgomery domain. */
+/* Bounds: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]] */
+typedef uint32_t fiat_p224_non_montgomery_domain_field_element[7];
+
 #if (-1 & 3) != 3
 #error "This code only works on a two's complement system"
 #endif
@@ -151,7 +159,7 @@ static void fiat_p224_cmovznz_u32(uint32_t* out1, fiat_p224_uint1 arg1, uint32_t
  * Output Bounds:
  *   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  */
-static void fiat_p224_mul(uint32_t out1[7], const uint32_t arg1[7], const uint32_t arg2[7]) {
+static void fiat_p224_mul(fiat_p224_montgomery_domain_field_element out1, const fiat_p224_montgomery_domain_field_element arg1, const fiat_p224_montgomery_domain_field_element arg2) {
   uint32_t x1;
   uint32_t x2;
   uint32_t x3;
@@ -1020,7 +1028,7 @@ static void fiat_p224_mul(uint32_t out1[7], const uint32_t arg1[7], const uint32
  * Output Bounds:
  *   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  */
-static void fiat_p224_square(uint32_t out1[7], const uint32_t arg1[7]) {
+static void fiat_p224_square(fiat_p224_montgomery_domain_field_element out1, const fiat_p224_montgomery_domain_field_element arg1) {
   uint32_t x1;
   uint32_t x2;
   uint32_t x3;
@@ -1891,7 +1899,7 @@ static void fiat_p224_square(uint32_t out1[7], const uint32_t arg1[7]) {
  * Output Bounds:
  *   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  */
-static void fiat_p224_add(uint32_t out1[7], const uint32_t arg1[7], const uint32_t arg2[7]) {
+static void fiat_p224_add(fiat_p224_montgomery_domain_field_element out1, const fiat_p224_montgomery_domain_field_element arg1, const fiat_p224_montgomery_domain_field_element arg2) {
   uint32_t x1;
   fiat_p224_uint1 x2;
   uint32_t x3;
@@ -1976,7 +1984,7 @@ static void fiat_p224_add(uint32_t out1[7], const uint32_t arg1[7], const uint32
  * Output Bounds:
  *   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  */
-static void fiat_p224_sub(uint32_t out1[7], const uint32_t arg1[7], const uint32_t arg2[7]) {
+static void fiat_p224_sub(fiat_p224_montgomery_domain_field_element out1, const fiat_p224_montgomery_domain_field_element arg1, const fiat_p224_montgomery_domain_field_element arg2) {
   uint32_t x1;
   fiat_p224_uint1 x2;
   uint32_t x3;
@@ -2044,7 +2052,7 @@ static void fiat_p224_sub(uint32_t out1[7], const uint32_t arg1[7], const uint32
  * Output Bounds:
  *   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  */
-static void fiat_p224_opp(uint32_t out1[7], const uint32_t arg1[7]) {
+static void fiat_p224_opp(fiat_p224_montgomery_domain_field_element out1, const fiat_p224_montgomery_domain_field_element arg1) {
   uint32_t x1;
   fiat_p224_uint1 x2;
   uint32_t x3;
@@ -2112,7 +2120,7 @@ static void fiat_p224_opp(uint32_t out1[7], const uint32_t arg1[7]) {
  * Output Bounds:
  *   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  */
-static void fiat_p224_from_montgomery(uint32_t out1[7], const uint32_t arg1[7]) {
+static void fiat_p224_from_montgomery(fiat_p224_non_montgomery_domain_field_element out1, const fiat_p224_montgomery_domain_field_element arg1) {
   uint32_t x1;
   uint32_t x2;
   uint32_t x3;
@@ -2593,7 +2601,7 @@ static void fiat_p224_from_montgomery(uint32_t out1[7], const uint32_t arg1[7]) 
  * Output Bounds:
  *   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  */
-static void fiat_p224_to_montgomery(uint32_t out1[7], const uint32_t arg1[7]) {
+static void fiat_p224_to_montgomery(fiat_p224_montgomery_domain_field_element out1, const fiat_p224_non_montgomery_domain_field_element arg1) {
   uint32_t x1;
   uint32_t x2;
   uint32_t x3;
@@ -3531,11 +3539,10 @@ static void fiat_p224_from_bytes(uint32_t out1[7], const uint8_t arg1[28]) {
  *   eval (from_montgomery out1) mod m = 1 mod m
  *   0 ≤ eval out1 < m
  *
- * Input Bounds:
  * Output Bounds:
  *   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  */
-static void fiat_p224_set_one(uint32_t out1[7]) {
+static void fiat_p224_set_one(fiat_p224_montgomery_domain_field_element out1) {
   out1[0] = UINT32_C(0xffffffff);
   out1[1] = UINT32_C(0xffffffff);
   out1[2] = UINT32_C(0xffffffff);
@@ -3552,7 +3559,6 @@ static void fiat_p224_set_one(uint32_t out1[7]) {
  *   twos_complement_eval out1 = m
  *   0 ≤ eval out1 < m
  *
- * Input Bounds:
  * Output Bounds:
  *   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  */
@@ -3983,7 +3989,6 @@ static void fiat_p224_divstep(uint32_t* out1, uint32_t out2[8], uint32_t out3[8]
  *   eval (from_montgomery out1) = ⌊(m - 1) / 2⌋^(if (log2 m) + 1 < 46 then ⌊(49 * ((log2 m) + 1) + 80) / 17⌋ else ⌊(49 * ((log2 m) + 1) + 57) / 17⌋)
  *   0 ≤ eval out1 < m
  *
- * Input Bounds:
  * Output Bounds:
  *   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  */

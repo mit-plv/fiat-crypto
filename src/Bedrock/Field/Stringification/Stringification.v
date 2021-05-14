@@ -48,9 +48,12 @@ Section with_parameters.
     | base_Z =>
       fun name _ =>
         let is_pointer := false in (* never a pointer *)
-        Some (name, is_pointer, Some int_type)
+        let typedef := None in (* no typedefs for bedrock2 *)
+        Some (name, is_pointer, Some int_type, typedef)
     | base_listZ =>
-      fun name len => Some (name, Some int_type, len)
+      fun name len =>
+        let typedef := None in (* no typedefs for bedrock2 *)
+        Some (name, Some int_type, len, typedef)
     | _ => fun _ _ => None
     end.
 
@@ -78,7 +81,9 @@ Section with_parameters.
     | type.base b => fun _ _ => Some tt
     end.
 
-  Definition make_header {t}
+  Definition make_header
+             {skip_typedefs : skip_typedefs_opt}
+             {t}
              (innames : type.for_each_lhs_of_arrow ltype t)
              (inlengths : type.for_each_lhs_of_arrow list_lengths t)
              (inbounds : type.for_each_lhs_of_arrow
@@ -148,8 +153,9 @@ Definition Bedrock2_ToFunctionLines
            {relax_zrange : relax_zrange_opt}
            {language_naming_conventions : language_naming_conventions_opt}
            {documentation_options : documentation_options_opt}
+           {skip_typedefs : skip_typedefs_opt}
            (machine_wordsize : Z)
-           (do_bounds_check : bool) (internal_static : bool) (static : bool) (prefix : string) (name : string)
+           (do_bounds_check : bool) (internal_static : bool) (static : bool) (all_static : bool) (prefix : string) (name : string)
            {t}
            (e : @API.Expr t)
            (comment : type.for_each_lhs_of_arrow ToString.OfPHOAS.var_data t ->
@@ -157,6 +163,8 @@ Definition Bedrock2_ToFunctionLines
            (name_list : option (list string))
            (inbounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
            (outbounds : ZRange.type.base.option.interp (type.final_codomain t))
+           (intypedefs : type.for_each_lhs_of_arrow var_typedef_data t)
+           (outtypedefs : base_var_typedef_data (type.final_codomain t))
   : (list string * ToString.ident_infos) + string
   :=
     match select_parameters machine_wordsize with
@@ -180,7 +188,7 @@ Definition Bedrock2_ToFunctionLines
                               outnames outlengths outbounds with
             | Some header =>
               match (let relax_zrange : relax_zrange_opt := wrapper_relax_zrange relax_zrange in
-                     IR.OfPHOAS.var_data_of_PHOAS_bounds e name_list inbounds outbounds) with
+                     IR.OfPHOAS.var_data_of_PHOAS_bounds e name_list inbounds outbounds intypedefs outtypedefs) with
               | inl (indata, outdata)
                 => inl ((header ++ ["static"] ++ bedrock_func_to_lines f)
                           ++ ["/* NOTE: The following wrapper function is not covered by Coq proofs */"
@@ -231,7 +239,7 @@ Definition OutputBedrock2API : ToString.OutputLanguageAPI :=
 
     ToString.ToFunctionLines := @Bedrock2_ToFunctionLines;
 
-    ToString.header := fun _ _ _ _ _ _ _ _ _ => [""; ToCString.prelude];
+    ToString.header := fun _ _ _ _ _ _ _ _ _ _ _ => [""; ToCString.prelude];
 
     ToString.footer := fun _ _ _ _ _ _ _ _ _ => [];
 

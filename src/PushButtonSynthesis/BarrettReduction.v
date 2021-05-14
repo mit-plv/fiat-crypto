@@ -45,7 +45,8 @@ Section rbarrett_red.
   Context {output_language_api : ToString.OutputLanguageAPI}
           {static : static_opt}
           {internal_static : internal_static_opt}
-          (M machine_wordsize : Z).
+          (M : Z)
+          (machine_wordsize : machine_wordsize_opt).
 
   Let value_range := r[0 ~> (2^machine_wordsize - 1)%Z]%zrange.
   Let flag_range := r[0 ~> 1]%zrange.
@@ -60,6 +61,7 @@ Section rbarrett_red.
 
   Local Existing Instance default_language_naming_conventions.
   Local Existing Instance default_documentation_options.
+  Local Instance skip_typedefs : skip_typedefs_opt := true.
   Local Instance widen_carry : widen_carry_opt := false.
   Local Instance widen_bytes : widen_bytes_opt := true.
   Local Instance only_signed : only_signed_opt := false.
@@ -162,8 +164,8 @@ Section rbarrett_red.
          possible_values
          (reified_barrett_red_gen
             @ GallinaReify.Reify M
-            @ GallinaReify.Reify machine_wordsize
-            @ GallinaReify.Reify machine_wordsize
+            @ GallinaReify.Reify (machine_wordsize:Z)
+            @ GallinaReify.Reify (machine_wordsize:Z)
             @ GallinaReify.Reify 1%nat
             @ GallinaReify.Reify [muLow;1]
             @ GallinaReify.Reify [M])
@@ -173,7 +175,7 @@ Section rbarrett_red.
   Definition sbarrett_red (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "barrett_red" barrett_red
           (fun _ _ _ => @nil string).
 

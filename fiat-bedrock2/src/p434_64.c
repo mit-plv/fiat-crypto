@@ -1217,7 +1217,7 @@ void internal_fiat_p434_mul(uintptr_t out0, uintptr_t in0, uintptr_t in1) {
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
-static void fiat_p434_mul(uint64_t out1[7], const uint64_t arg1[7], const uint64_t arg2[7]) {
+static void fiat_p434_mul(fiat_p434_montgomery_domain_field_element out1, const fiat_p434_montgomery_domain_field_element arg1, const fiat_p434_montgomery_domain_field_element arg2) {
   internal_fiat_p434_mul((uintptr_t)out1, (uintptr_t)arg1, (uintptr_t)arg2);
 }
 
@@ -2397,7 +2397,7 @@ void internal_fiat_p434_square(uintptr_t out0, uintptr_t in0) {
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
-static void fiat_p434_square(uint64_t out1[7], const uint64_t arg1[7]) {
+static void fiat_p434_square(fiat_p434_montgomery_domain_field_element out1, const fiat_p434_montgomery_domain_field_element arg1) {
   internal_fiat_p434_square((uintptr_t)out1, (uintptr_t)arg1);
 }
 
@@ -2498,7 +2498,7 @@ void internal_fiat_p434_add(uintptr_t out0, uintptr_t in0, uintptr_t in1) {
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
-static void fiat_p434_add(uint64_t out1[7], const uint64_t arg1[7], const uint64_t arg2[7]) {
+static void fiat_p434_add(fiat_p434_montgomery_domain_field_element out1, const fiat_p434_montgomery_domain_field_element arg1, const fiat_p434_montgomery_domain_field_element arg2) {
   internal_fiat_p434_add((uintptr_t)out1, (uintptr_t)arg1, (uintptr_t)arg2);
 }
 
@@ -2576,7 +2576,7 @@ void internal_fiat_p434_sub(uintptr_t out0, uintptr_t in0, uintptr_t in1) {
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
-static void fiat_p434_sub(uint64_t out1[7], const uint64_t arg1[7], const uint64_t arg2[7]) {
+static void fiat_p434_sub(fiat_p434_montgomery_domain_field_element out1, const fiat_p434_montgomery_domain_field_element arg1, const fiat_p434_montgomery_domain_field_element arg2) {
   internal_fiat_p434_sub((uintptr_t)out1, (uintptr_t)arg1, (uintptr_t)arg2);
 }
 
@@ -2645,7 +2645,7 @@ void internal_fiat_p434_opp(uintptr_t out0, uintptr_t in0) {
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
-static void fiat_p434_opp(uint64_t out1[7], const uint64_t arg1[7]) {
+static void fiat_p434_opp(fiat_p434_montgomery_domain_field_element out1, const fiat_p434_montgomery_domain_field_element arg1) {
   internal_fiat_p434_opp((uintptr_t)out1, (uintptr_t)arg1);
 }
 
@@ -3017,7 +3017,7 @@ void internal_fiat_p434_from_montgomery(uintptr_t out0, uintptr_t in0) {
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
-static void fiat_p434_from_montgomery(uint64_t out1[7], const uint64_t arg1[7]) {
+static void fiat_p434_from_montgomery(fiat_p434_non_montgomery_domain_field_element out1, const fiat_p434_montgomery_domain_field_element arg1) {
   internal_fiat_p434_from_montgomery((uintptr_t)out1, (uintptr_t)arg1);
 }
 
@@ -3609,7 +3609,7 @@ void internal_fiat_p434_to_montgomery(uintptr_t out0, uintptr_t in0) {
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
-static void fiat_p434_to_montgomery(uint64_t out1[7], const uint64_t arg1[7]) {
+static void fiat_p434_to_montgomery(fiat_p434_montgomery_domain_field_element out1, const fiat_p434_non_montgomery_domain_field_element arg1) {
   internal_fiat_p434_to_montgomery((uintptr_t)out1, (uintptr_t)arg1);
 }
 
@@ -4184,7 +4184,7 @@ void internal_fiat_p434_set_one(uintptr_t out0) {
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
-static void fiat_p434_set_one(uint64_t out1[7]) {
+static void fiat_p434_set_one(fiat_p434_montgomery_domain_field_element out1) {
   internal_fiat_p434_set_one((uintptr_t)out1);
 }
 

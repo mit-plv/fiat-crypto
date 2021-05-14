@@ -25,6 +25,14 @@ pub type fiat_p256_i1 = i8;
 pub type fiat_p256_u2 = u8;
 pub type fiat_p256_i2 = i8;
 
+/* The type fiat_p256_montgomery_domain_field_element is a field element in the Montgomery domain. */
+/* Bounds: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]] */
+pub type fiat_p256_montgomery_domain_field_element = [u64; 4];
+
+/* The type fiat_p256_non_montgomery_domain_field_element is a field element NOT in the Montgomery domain. */
+/* Bounds: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]] */
+pub type fiat_p256_non_montgomery_domain_field_element = [u64; 4];
+
 
 /// The function fiat_p256_addcarryx_u64 is an addition with carry.
 ///
@@ -125,7 +133,7 @@ pub fn fiat_p256_cmovznz_u64(out1: &mut u64, arg1: fiat_p256_u1, arg2: u64, arg3
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 #[inline]
-pub fn fiat_p256_mul(out1: &mut [u64; 4], arg1: &[u64; 4], arg2: &[u64; 4]) -> () {
+pub fn fiat_p256_mul(out1: &mut fiat_p256_montgomery_domain_field_element, arg1: &fiat_p256_montgomery_domain_field_element, arg2: &fiat_p256_montgomery_domain_field_element) -> () {
   let x1: u64 = (arg1[1]);
   let x2: u64 = (arg1[2]);
   let x3: u64 = (arg1[3]);
@@ -420,7 +428,7 @@ pub fn fiat_p256_mul(out1: &mut [u64; 4], arg1: &[u64; 4], arg2: &[u64; 4]) -> (
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 #[inline]
-pub fn fiat_p256_square(out1: &mut [u64; 4], arg1: &[u64; 4]) -> () {
+pub fn fiat_p256_square(out1: &mut fiat_p256_montgomery_domain_field_element, arg1: &fiat_p256_montgomery_domain_field_element) -> () {
   let x1: u64 = (arg1[1]);
   let x2: u64 = (arg1[2]);
   let x3: u64 = (arg1[3]);
@@ -717,7 +725,7 @@ pub fn fiat_p256_square(out1: &mut [u64; 4], arg1: &[u64; 4]) -> () {
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 #[inline]
-pub fn fiat_p256_add(out1: &mut [u64; 4], arg1: &[u64; 4], arg2: &[u64; 4]) -> () {
+pub fn fiat_p256_add(out1: &mut fiat_p256_montgomery_domain_field_element, arg1: &fiat_p256_montgomery_domain_field_element, arg2: &fiat_p256_montgomery_domain_field_element) -> () {
   let mut x1: u64 = 0;
   let mut x2: fiat_p256_u1 = 0;
   fiat_p256_addcarryx_u64(&mut x1, &mut x2, 0x0, (arg1[0]), (arg2[0]));
@@ -774,7 +782,7 @@ pub fn fiat_p256_add(out1: &mut [u64; 4], arg1: &[u64; 4], arg2: &[u64; 4]) -> (
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 #[inline]
-pub fn fiat_p256_sub(out1: &mut [u64; 4], arg1: &[u64; 4], arg2: &[u64; 4]) -> () {
+pub fn fiat_p256_sub(out1: &mut fiat_p256_montgomery_domain_field_element, arg1: &fiat_p256_montgomery_domain_field_element, arg2: &fiat_p256_montgomery_domain_field_element) -> () {
   let mut x1: u64 = 0;
   let mut x2: fiat_p256_u1 = 0;
   fiat_p256_subborrowx_u64(&mut x1, &mut x2, 0x0, (arg1[0]), (arg2[0]));
@@ -820,7 +828,7 @@ pub fn fiat_p256_sub(out1: &mut [u64; 4], arg1: &[u64; 4], arg2: &[u64; 4]) -> (
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 #[inline]
-pub fn fiat_p256_opp(out1: &mut [u64; 4], arg1: &[u64; 4]) -> () {
+pub fn fiat_p256_opp(out1: &mut fiat_p256_montgomery_domain_field_element, arg1: &fiat_p256_montgomery_domain_field_element) -> () {
   let mut x1: u64 = 0;
   let mut x2: fiat_p256_u1 = 0;
   fiat_p256_subborrowx_u64(&mut x1, &mut x2, 0x0, (0x0 as u64), (arg1[0]));
@@ -866,7 +874,7 @@ pub fn fiat_p256_opp(out1: &mut [u64; 4], arg1: &[u64; 4]) -> () {
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 #[inline]
-pub fn fiat_p256_from_montgomery(out1: &mut [u64; 4], arg1: &[u64; 4]) -> () {
+pub fn fiat_p256_from_montgomery(out1: &mut fiat_p256_non_montgomery_domain_field_element, arg1: &fiat_p256_montgomery_domain_field_element) -> () {
   let x1: u64 = (arg1[0]);
   let mut x2: u64 = 0;
   let mut x3: u64 = 0;
@@ -1022,7 +1030,7 @@ pub fn fiat_p256_from_montgomery(out1: &mut [u64; 4], arg1: &[u64; 4]) -> () {
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 #[inline]
-pub fn fiat_p256_to_montgomery(out1: &mut [u64; 4], arg1: &[u64; 4]) -> () {
+pub fn fiat_p256_to_montgomery(out1: &mut fiat_p256_montgomery_domain_field_element, arg1: &fiat_p256_non_montgomery_domain_field_element) -> () {
   let x1: u64 = (arg1[1]);
   let x2: u64 = (arg1[2]);
   let x3: u64 = (arg1[3]);
@@ -1521,11 +1529,10 @@ pub fn fiat_p256_from_bytes(out1: &mut [u64; 4], arg1: &[u8; 32]) -> () {
 ///   eval (from_montgomery out1) mod m = 1 mod m
 ///   0 ≤ eval out1 < m
 ///
-/// Input Bounds:
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 #[inline]
-pub fn fiat_p256_set_one(out1: &mut [u64; 4]) -> () {
+pub fn fiat_p256_set_one(out1: &mut fiat_p256_montgomery_domain_field_element) -> () {
   out1[0] = (0x1 as u64);
   out1[1] = 0xffffffff00000000;
   out1[2] = 0xffffffffffffffff;
@@ -1538,7 +1545,6 @@ pub fn fiat_p256_set_one(out1: &mut [u64; 4]) -> () {
 ///   twos_complement_eval out1 = m
 ///   0 ≤ eval out1 < m
 ///
-/// Input Bounds:
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 #[inline]
@@ -1809,7 +1815,6 @@ pub fn fiat_p256_divstep(out1: &mut u64, out2: &mut [u64; 5], out3: &mut [u64; 5
 ///   eval (from_montgomery out1) = ⌊(m - 1) / 2⌋^(if (log2 m) + 1 < 46 then ⌊(49 * ((log2 m) + 1) + 80) / 17⌋ else ⌊(49 * ((log2 m) + 1) + 57) / 17⌋)
 ///   0 ≤ eval out1 < m
 ///
-/// Input Bounds:
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 #[inline]

@@ -42,6 +42,16 @@ import "math/bits"
 type uint1 uint8
 type int1 int8
 
+// The type MontgomeryDomainFieldElement is a field element in the Montgomery domain.
+//
+// Bounds: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
+type MontgomeryDomainFieldElement[8]uint32
+
+// The type NonMontgomeryDomainFieldElement is a field element NOT in the Montgomery domain.
+//
+// Bounds: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
+type NonMontgomeryDomainFieldElement[8]uint32
+
 // addcarryxU32 is a thin wrapper around bits.Add32 that uses uint1 rather than uint32
 func addcarryxU32(x uint32, y uint32, carry uint1) (uint32, uint1) {
 	sum, carryOut := bits.Add32(x, y, uint32(carry))
@@ -85,7 +95,7 @@ func cmovznzU32(out1 *uint32, arg1 uint1, arg2 uint32, arg3 uint32) {
 //   arg2: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
 // Output Bounds:
 //   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
-func Mul(out1 *[8]uint32, arg1 *[8]uint32, arg2 *[8]uint32) {
+func Mul(out1 *MontgomeryDomainFieldElement, arg1 *MontgomeryDomainFieldElement, arg2 *MontgomeryDomainFieldElement) {
 	x1 := arg1[1]
 	x2 := arg1[2]
 	x3 := arg1[3]
@@ -1082,7 +1092,7 @@ func Mul(out1 *[8]uint32, arg1 *[8]uint32, arg2 *[8]uint32) {
 //   arg1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
 // Output Bounds:
 //   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
-func Square(out1 *[8]uint32, arg1 *[8]uint32) {
+func Square(out1 *MontgomeryDomainFieldElement, arg1 *MontgomeryDomainFieldElement) {
 	x1 := arg1[1]
 	x2 := arg1[2]
 	x3 := arg1[3]
@@ -2081,7 +2091,7 @@ func Square(out1 *[8]uint32, arg1 *[8]uint32) {
 //   arg2: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
 // Output Bounds:
 //   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
-func Add(out1 *[8]uint32, arg1 *[8]uint32, arg2 *[8]uint32) {
+func Add(out1 *MontgomeryDomainFieldElement, arg1 *MontgomeryDomainFieldElement, arg2 *MontgomeryDomainFieldElement) {
 	var x1 uint32
 	var x2 uint1
 	x1, x2 = addcarryxU32(arg1[0], arg2[0], 0x0)
@@ -2172,7 +2182,7 @@ func Add(out1 *[8]uint32, arg1 *[8]uint32, arg2 *[8]uint32) {
 //   arg2: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
 // Output Bounds:
 //   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
-func Sub(out1 *[8]uint32, arg1 *[8]uint32, arg2 *[8]uint32) {
+func Sub(out1 *MontgomeryDomainFieldElement, arg1 *MontgomeryDomainFieldElement, arg2 *MontgomeryDomainFieldElement) {
 	var x1 uint32
 	var x2 uint1
 	x1, x2 = subborrowxU32(arg1[0], arg2[0], 0x0)
@@ -2244,7 +2254,7 @@ func Sub(out1 *[8]uint32, arg1 *[8]uint32, arg2 *[8]uint32) {
 //   arg1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
 // Output Bounds:
 //   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
-func Opp(out1 *[8]uint32, arg1 *[8]uint32) {
+func Opp(out1 *MontgomeryDomainFieldElement, arg1 *MontgomeryDomainFieldElement) {
 	var x1 uint32
 	var x2 uint1
 	x1, x2 = subborrowxU32(uint32(0x0), arg1[0], 0x0)
@@ -2316,7 +2326,7 @@ func Opp(out1 *[8]uint32, arg1 *[8]uint32) {
 //   arg1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
 // Output Bounds:
 //   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
-func FromMontgomery(out1 *[8]uint32, arg1 *[8]uint32) {
+func FromMontgomery(out1 *NonMontgomeryDomainFieldElement, arg1 *MontgomeryDomainFieldElement) {
 	x1 := arg1[0]
 	var x2 uint32
 	var x3 uint32
@@ -2845,7 +2855,7 @@ func FromMontgomery(out1 *[8]uint32, arg1 *[8]uint32) {
 //   arg1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
 // Output Bounds:
 //   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
-func ToMontgomery(out1 *[8]uint32, arg1 *[8]uint32) {
+func ToMontgomery(out1 *MontgomeryDomainFieldElement, arg1 *NonMontgomeryDomainFieldElement) {
 	x1 := arg1[1]
 	x2 := arg1[2]
 	x3 := arg1[3]
@@ -3955,10 +3965,9 @@ func FromBytes(out1 *[8]uint32, arg1 *[32]uint8) {
 //   eval (from_montgomery out1) mod m = 1 mod m
 //   0 ≤ eval out1 < m
 //
-// Input Bounds:
 // Output Bounds:
 //   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
-func SetOne(out1 *[8]uint32) {
+func SetOne(out1 *MontgomeryDomainFieldElement) {
 	out1[0] = uint32(0x1)
 	out1[1] = uint32(0x0)
 	out1[2] = uint32(0x0)
@@ -3975,7 +3984,6 @@ func SetOne(out1 *[8]uint32) {
 //   twos_complement_eval out1 = m
 //   0 ≤ eval out1 < m
 //
-// Input Bounds:
 // Output Bounds:
 //   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
 func Msat(out1 *[9]uint32) {
@@ -4424,7 +4432,6 @@ func Divstep(out1 *uint32, out2 *[9]uint32, out3 *[9]uint32, out4 *[8]uint32, ou
 //   eval (from_montgomery out1) = ⌊(m - 1) / 2⌋^(if (log2 m) + 1 < 46 then ⌊(49 * ((log2 m) + 1) + 80) / 17⌋ else ⌊(49 * ((log2 m) + 1) + 57) / 17⌋)
 //   0 ≤ eval out1 < m
 //
-// Input Bounds:
 // Output Bounds:
 //   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
 func DivstepPrecomp(out1 *[8]uint32) {

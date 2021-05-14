@@ -298,6 +298,8 @@ Module ForExtraction.
     := ([Arg.long_key "use-value-barrier"], Arg.Unit, ["Guard some expressions with an assembly barrier to prevent compilers from generating non-constant-time code for cmovznz."]).
   Definition no_primitives_spec : named_argT
     := ([Arg.long_key "no-primitives"], Arg.Unit, ["Suppress the generation of the bodies of primitive operations such as addcarryx, subborrowx, cmovznz, mulx, etc."]).
+  Definition no_field_element_typedefs_spec : named_argT
+    := ([Arg.long_key "no-field-element-typedefs"], Arg.Unit, ["Do not use type aliases for field elements based on bounds, Montgomery-domain vs not Montgomery-domain, etc."]).
   Definition cmovznz_by_mul_spec : named_argT
     := ([Arg.long_key "cmovznz-by-mul"], Arg.Unit, ["Use an alternative implementation of cmovznz using multiplication rather than bitwise-and with -1."]).
   Definition tight_bounds_multiplier_default := default_tight_upperbound_fraction.
@@ -401,6 +403,10 @@ Module ForExtraction.
     := ([Arg.long_key "doc-text-before-function-name"],
         Arg.String,
         ["Documentation Option: A custom string to insert before the function name in each docstring.  Default: " ++ default_text_before_function_name]).
+  Definition doc_text_before_type_name_spec : named_argT
+    := ([Arg.long_key "doc-text-before-type-name"],
+        Arg.String,
+        ["Documentation Option: A custom string to insert before the type name in each docstring.  Default: " ++ default_text_before_type_name]).
   Definition doc_newline_before_package_declaration_spec : named_argT
     := ([Arg.long_key "doc-newline-before-package-declaration"],
         Arg.Unit,
@@ -439,6 +445,8 @@ Module ForExtraction.
       ; no_select :> no_select_opt
       (** Should we emit primitive operations *)
       ; emit_primitives :> emit_primitives_opt
+      (** Should we skip emitting typedefs for field elements *)
+      ; skip_typedefs :> skip_typedefs_opt
       (** Should we use the alternate implementation of cmovznz *)
       ; use_mul_for_cmovznz :> use_mul_for_cmovznz_opt
       (** Should we split apart oversized operations? *)
@@ -537,6 +545,7 @@ Module ForExtraction.
         ; split_multiret_spec
         ; value_barrier_spec
         ; no_primitives_spec
+        ; no_field_element_typedefs_spec
         ; cmovznz_by_mul_spec
         ; only_signed_spec
         ; hint_file_spec
@@ -548,6 +557,7 @@ Module ForExtraction.
         ; asm_input_first_spec
         ; asm_reg_rtl_spec
         ; doc_text_before_function_name_spec
+        ; doc_text_before_type_name_spec
         ; doc_newline_before_package_declaration_spec
         ; doc_prepend_header_raw_spec
         ; doc_prepend_header_spec
@@ -577,6 +587,7 @@ Module ForExtraction.
              , split_multiretv
              , value_barrierv
              , no_primitivesv
+             , no_field_element_typedefsv
              , cmovznz_by_mulv
              , only_signedv
              , hint_file_namesv
@@ -588,6 +599,7 @@ Module ForExtraction.
              , asm_input_firstv
              , asm_reg_rtlv
              , doc_text_before_function_namev
+             , doc_text_before_type_namev
              , doc_newline_before_package_declarationv
              , doc_prepend_header_rawv
              , doc_prepend_headerv
@@ -636,6 +648,7 @@ Module ForExtraction.
                   ; unfold_value_barrier := negb (to_bool value_barrierv)
                   ; use_mul_for_cmovznz := to_bool cmovznz_by_mulv
                   ; emit_primitives := negb (to_bool no_primitivesv)
+                  ; skip_typedefs := to_bool no_field_element_typedefsv
                   ; assembly_calling_registers := to_reg_list asm_regv
                   ; assembly_stack_size := to_N_opt asm_stack_sizev
                   ; error_on_unused_assembly_functions := negb (to_bool no_error_on_unused_asm_functionsv)
@@ -643,6 +656,7 @@ Module ForExtraction.
                   ; assembly_argument_registers_left_to_right := negb (to_bool asm_reg_rtlv)
                   ; documentation_options
                     := {| text_before_function_name_opt := to_string_opt doc_text_before_function_namev
+                          ; text_before_type_name_opt := to_string_opt doc_text_before_type_namev
                           ; newline_before_package_declaration := to_bool doc_newline_before_package_declarationv
                        |}
                   ; before_header_lines := to_string_list doc_prepend_header_rawv

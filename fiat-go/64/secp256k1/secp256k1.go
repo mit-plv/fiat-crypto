@@ -42,6 +42,16 @@ import "math/bits"
 type uint1 uint8
 type int1 int8
 
+// The type MontgomeryDomainFieldElement is a field element in the Montgomery domain.
+//
+// Bounds: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
+type MontgomeryDomainFieldElement[4]uint64
+
+// The type NonMontgomeryDomainFieldElement is a field element NOT in the Montgomery domain.
+//
+// Bounds: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
+type NonMontgomeryDomainFieldElement[4]uint64
+
 // addcarryxU64 is a thin wrapper around bits.Add64 that uses uint1 rather than uint64
 func addcarryxU64(x uint64, y uint64, carry uint1) (uint64, uint1) {
 	sum, carryOut := bits.Add64(x, y, uint64(carry))
@@ -85,7 +95,7 @@ func cmovznzU64(out1 *uint64, arg1 uint1, arg2 uint64, arg3 uint64) {
 //   arg2: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 // Output Bounds:
 //   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
-func Mul(out1 *[4]uint64, arg1 *[4]uint64, arg2 *[4]uint64) {
+func Mul(out1 *MontgomeryDomainFieldElement, arg1 *MontgomeryDomainFieldElement, arg2 *MontgomeryDomainFieldElement) {
 	x1 := arg1[1]
 	x2 := arg1[2]
 	x3 := arg1[3]
@@ -418,7 +428,7 @@ func Mul(out1 *[4]uint64, arg1 *[4]uint64, arg2 *[4]uint64) {
 //   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 // Output Bounds:
 //   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
-func Square(out1 *[4]uint64, arg1 *[4]uint64) {
+func Square(out1 *MontgomeryDomainFieldElement, arg1 *MontgomeryDomainFieldElement) {
 	x1 := arg1[1]
 	x2 := arg1[2]
 	x3 := arg1[3]
@@ -753,7 +763,7 @@ func Square(out1 *[4]uint64, arg1 *[4]uint64) {
 //   arg2: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 // Output Bounds:
 //   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
-func Add(out1 *[4]uint64, arg1 *[4]uint64, arg2 *[4]uint64) {
+func Add(out1 *MontgomeryDomainFieldElement, arg1 *MontgomeryDomainFieldElement, arg2 *MontgomeryDomainFieldElement) {
 	var x1 uint64
 	var x2 uint1
 	x1, x2 = addcarryxU64(arg1[0], arg2[0], 0x0)
@@ -808,7 +818,7 @@ func Add(out1 *[4]uint64, arg1 *[4]uint64, arg2 *[4]uint64) {
 //   arg2: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 // Output Bounds:
 //   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
-func Sub(out1 *[4]uint64, arg1 *[4]uint64, arg2 *[4]uint64) {
+func Sub(out1 *MontgomeryDomainFieldElement, arg1 *MontgomeryDomainFieldElement, arg2 *MontgomeryDomainFieldElement) {
 	var x1 uint64
 	var x2 uint1
 	x1, x2 = subborrowxU64(arg1[0], arg2[0], 0x0)
@@ -852,7 +862,7 @@ func Sub(out1 *[4]uint64, arg1 *[4]uint64, arg2 *[4]uint64) {
 //   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 // Output Bounds:
 //   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
-func Opp(out1 *[4]uint64, arg1 *[4]uint64) {
+func Opp(out1 *MontgomeryDomainFieldElement, arg1 *MontgomeryDomainFieldElement) {
 	var x1 uint64
 	var x2 uint1
 	x1, x2 = subborrowxU64(uint64(0x0), arg1[0], 0x0)
@@ -896,7 +906,7 @@ func Opp(out1 *[4]uint64, arg1 *[4]uint64) {
 //   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 // Output Bounds:
 //   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
-func FromMontgomery(out1 *[4]uint64, arg1 *[4]uint64) {
+func FromMontgomery(out1 *NonMontgomeryDomainFieldElement, arg1 *MontgomeryDomainFieldElement) {
 	x1 := arg1[0]
 	var x2 uint64
 	_, x2 = bits.Mul64(x1, 0xd838091dd2253531)
@@ -1122,7 +1132,7 @@ func FromMontgomery(out1 *[4]uint64, arg1 *[4]uint64) {
 //   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 // Output Bounds:
 //   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
-func ToMontgomery(out1 *[4]uint64, arg1 *[4]uint64) {
+func ToMontgomery(out1 *MontgomeryDomainFieldElement, arg1 *NonMontgomeryDomainFieldElement) {
 	x1 := arg1[1]
 	x2 := arg1[2]
 	x3 := arg1[3]
@@ -1596,10 +1606,9 @@ func FromBytes(out1 *[4]uint64, arg1 *[32]uint8) {
 //   eval (from_montgomery out1) mod m = 1 mod m
 //   0 ≤ eval out1 < m
 //
-// Input Bounds:
 // Output Bounds:
 //   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
-func SetOne(out1 *[4]uint64) {
+func SetOne(out1 *MontgomeryDomainFieldElement) {
 	out1[0] = 0x1000003d1
 	out1[1] = uint64(0x0)
 	out1[2] = uint64(0x0)
@@ -1612,7 +1621,6 @@ func SetOne(out1 *[4]uint64) {
 //   twos_complement_eval out1 = m
 //   0 ≤ eval out1 < m
 //
-// Input Bounds:
 // Output Bounds:
 //   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 func Msat(out1 *[5]uint64) {
@@ -1873,7 +1881,6 @@ func Divstep(out1 *uint64, out2 *[5]uint64, out3 *[5]uint64, out4 *[4]uint64, ou
 //   eval (from_montgomery out1) = ⌊(m - 1) / 2⌋^(if (log2 m) + 1 < 46 then ⌊(49 * ((log2 m) + 1) + 80) / 17⌋ else ⌊(49 * ((log2 m) + 1) + 57) / 17⌋)
 //   0 ≤ eval out1 < m
 //
-// Input Bounds:
 // Output Bounds:
 //   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 func DivstepPrecomp(out1 *[4]uint64) {

@@ -39,8 +39,8 @@ Section Flatten.
     | base.type.prod a b =>
       fun x : base_var_data a * base_var_data b =>
         (flatten_base_var_data (fst x) ++ flatten_base_var_data (snd x))
-    | base.type.list _ => fun '(n, ty, len) => [(n, ty)]
-    | base_Z => fun '(n, is_ptr, ty) => [(n, ty)]
+    | base.type.list _ => fun '(n, ty, len, _typedef) => [(n, ty)]
+    | base_Z => fun '(n, is_ptr, ty, _typedef) => [(n, ty)]
     | _ => fun _ => []
     end.
 

@@ -29,7 +29,7 @@ Import ListNotations API.Compilers Types.Notations.
 Class unsaturated_solinas_ops
            {p : Types.parameters}
            {field_parameters : FieldParameters}
-           {n s c machine_wordsize} : Type :=
+           {n s c} {machine_wordsize : Z} : Type :=
   { mul_op :
       computed_op
         (UnsaturatedSolinas.carry_mul n s c machine_wordsize) Field.mul
@@ -92,6 +92,7 @@ Section UnsaturatedSolinas.
           (loose_bounds_tighter_than:
              list_Z_tighter_than (loose_bounds n s c)
                                  (MaxBounds.max_bounds n)).
+
   Context (ops : unsaturated_solinas_ops n s c Semantics.width)
           mul_func add_func sub_func opp_func square_func
           scmula24_func from_bytes_func to_bytes_func

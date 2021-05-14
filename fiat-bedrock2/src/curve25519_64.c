@@ -227,7 +227,7 @@ void internal_fiat_25519_carry_mul(uintptr_t out0, uintptr_t in0, uintptr_t in1)
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
-static void fiat_25519_carry_mul(uint64_t out1[5], const uint64_t arg1[5], const uint64_t arg2[5]) {
+static void fiat_25519_carry_mul(fiat_25519_tight_field_element out1, const fiat_25519_loose_field_element arg1, const fiat_25519_loose_field_element arg2) {
   internal_fiat_25519_carry_mul((uintptr_t)out1, (uintptr_t)arg1, (uintptr_t)arg2);
 }
 
@@ -372,7 +372,7 @@ void internal_fiat_25519_carry_square(uintptr_t out0, uintptr_t in0) {
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
-static void fiat_25519_carry_square(uint64_t out1[5], const uint64_t arg1[5]) {
+static void fiat_25519_carry_square(fiat_25519_tight_field_element out1, const fiat_25519_loose_field_element arg1) {
   internal_fiat_25519_carry_square((uintptr_t)out1, (uintptr_t)arg1);
 }
 
@@ -421,7 +421,7 @@ void internal_fiat_25519_carry(uintptr_t out0, uintptr_t in0) {
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
-static void fiat_25519_carry(uint64_t out1[5], const uint64_t arg1[5]) {
+static void fiat_25519_carry(fiat_25519_tight_field_element out1, const fiat_25519_loose_field_element arg1) {
   internal_fiat_25519_carry((uintptr_t)out1, (uintptr_t)arg1);
 }
 
@@ -470,7 +470,7 @@ void internal_fiat_25519_add(uintptr_t out0, uintptr_t in0, uintptr_t in1) {
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
-static void fiat_25519_add(uint64_t out1[5], const uint64_t arg1[5], const uint64_t arg2[5]) {
+static void fiat_25519_add(fiat_25519_loose_field_element out1, const fiat_25519_tight_field_element arg1, const fiat_25519_tight_field_element arg2) {
   internal_fiat_25519_add((uintptr_t)out1, (uintptr_t)arg1, (uintptr_t)arg2);
 }
 
@@ -519,7 +519,7 @@ void internal_fiat_25519_sub(uintptr_t out0, uintptr_t in0, uintptr_t in1) {
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
-static void fiat_25519_sub(uint64_t out1[5], const uint64_t arg1[5], const uint64_t arg2[5]) {
+static void fiat_25519_sub(fiat_25519_loose_field_element out1, const fiat_25519_tight_field_element arg1, const fiat_25519_tight_field_element arg2) {
   internal_fiat_25519_sub((uintptr_t)out1, (uintptr_t)arg1, (uintptr_t)arg2);
 }
 
@@ -561,7 +561,7 @@ void internal_fiat_25519_opp(uintptr_t out0, uintptr_t in0) {
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
-static void fiat_25519_opp(uint64_t out1[5], const uint64_t arg1[5]) {
+static void fiat_25519_opp(fiat_25519_loose_field_element out1, const fiat_25519_tight_field_element arg1) {
   internal_fiat_25519_opp((uintptr_t)out1, (uintptr_t)arg1);
 }
 
@@ -844,7 +844,7 @@ void internal_fiat_25519_to_bytes(uintptr_t out0, uintptr_t in0) {
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
-static void fiat_25519_to_bytes(uint8_t out1[32], const uint64_t arg1[5]) {
+static void fiat_25519_to_bytes(uint8_t out1[32], const fiat_25519_tight_field_element arg1) {
   internal_fiat_25519_to_bytes((uintptr_t)out1, (uintptr_t)arg1);
 }
 
@@ -979,7 +979,7 @@ void internal_fiat_25519_from_bytes(uintptr_t out0, uintptr_t in0) {
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
-static void fiat_25519_from_bytes(uint64_t out1[5], const uint8_t arg1[32]) {
+static void fiat_25519_from_bytes(fiat_25519_tight_field_element out1, const uint8_t arg1[32]) {
   internal_fiat_25519_from_bytes((uintptr_t)out1, (uintptr_t)arg1);
 }
 
@@ -1056,6 +1056,6 @@ void internal_fiat_25519_carry_scmul_121666(uintptr_t out0, uintptr_t in0) {
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
-static void fiat_25519_carry_scmul_121666(uint64_t out1[5], const uint64_t arg1[5]) {
+static void fiat_25519_carry_scmul_121666(fiat_25519_tight_field_element out1, const fiat_25519_loose_field_element arg1) {
   internal_fiat_25519_carry_scmul_121666((uintptr_t)out1, (uintptr_t)arg1);
 }

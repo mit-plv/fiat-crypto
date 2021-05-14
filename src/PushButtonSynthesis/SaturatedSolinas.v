@@ -62,6 +62,7 @@ Section __.
   Context {output_language_api : ToString.OutputLanguageAPI}
           {language_naming_conventions : language_naming_conventions_opt}
           {documentation_options : documentation_options_opt}
+          {skip_typedefs : skip_typedefs_opt}
           {package_namev : package_name_opt}
           {class_namev : class_name_opt}
           {static : static_opt}
@@ -84,7 +85,7 @@ Section __.
           {assembly_argument_registers_left_to_right : assembly_argument_registers_left_to_right_opt}
           (s : Z)
           (c : list (Z * Z))
-          (machine_wordsize : Z).
+          (machine_wordsize : machine_wordsize_opt).
 
   Local Existing Instance widen_bytes.
 
@@ -174,14 +175,14 @@ Section __.
          None (* fancy *)
          possible_values
          (reified_mul_gen
-            @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify nreductions)
+            @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify nreductions)
          (Some boundsn, (Some boundsn, tt))
          (Some boundsn, None (* Should be: Some r[0~>0]%zrange, but bounds analysis is not good enough *) ).
 
   Definition smul (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "mul" mul
           (docstring_with_summary_from_lemma!
              (fun fname : string => [text_before_function_name ++ fname ++ " multiplies two field elements."]%string)
@@ -219,7 +220,7 @@ Section __.
     Definition Synthesize (comment_header : list string) (function_name_prefix : string) (requests : list string)
       : list (synthesis_output_kind * string * Pipeline.ErrorT (list string))
       := Primitives.Synthesize
-           machine_wordsize valid_names known_functions (fun _ => nil)
+           machine_wordsize valid_names known_functions (fun _ => nil) all_typedefs!
            check_args
            ((ToString.comment_file_header_block
                (comment_header

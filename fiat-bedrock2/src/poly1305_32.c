@@ -238,7 +238,7 @@ void internal_fiat_poly1305_carry_mul(uintptr_t out0, uintptr_t in0, uintptr_t i
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
-static void fiat_poly1305_carry_mul(uint32_t out1[5], const uint32_t arg1[5], const uint32_t arg2[5]) {
+static void fiat_poly1305_carry_mul(fiat_poly1305_tight_field_element out1, const fiat_poly1305_loose_field_element arg1, const fiat_poly1305_loose_field_element arg2) {
   internal_fiat_poly1305_carry_mul((uintptr_t)out1, (uintptr_t)arg1, (uintptr_t)arg2);
 }
 
@@ -394,7 +394,7 @@ void internal_fiat_poly1305_carry_square(uintptr_t out0, uintptr_t in0) {
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
-static void fiat_poly1305_carry_square(uint32_t out1[5], const uint32_t arg1[5]) {
+static void fiat_poly1305_carry_square(fiat_poly1305_tight_field_element out1, const fiat_poly1305_loose_field_element arg1) {
   internal_fiat_poly1305_carry_square((uintptr_t)out1, (uintptr_t)arg1);
 }
 
@@ -443,7 +443,7 @@ void internal_fiat_poly1305_carry(uintptr_t out0, uintptr_t in0) {
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
-static void fiat_poly1305_carry(uint32_t out1[5], const uint32_t arg1[5]) {
+static void fiat_poly1305_carry(fiat_poly1305_tight_field_element out1, const fiat_poly1305_loose_field_element arg1) {
   internal_fiat_poly1305_carry((uintptr_t)out1, (uintptr_t)arg1);
 }
 
@@ -492,7 +492,7 @@ void internal_fiat_poly1305_add(uintptr_t out0, uintptr_t in0, uintptr_t in1) {
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
-static void fiat_poly1305_add(uint32_t out1[5], const uint32_t arg1[5], const uint32_t arg2[5]) {
+static void fiat_poly1305_add(fiat_poly1305_loose_field_element out1, const fiat_poly1305_tight_field_element arg1, const fiat_poly1305_tight_field_element arg2) {
   internal_fiat_poly1305_add((uintptr_t)out1, (uintptr_t)arg1, (uintptr_t)arg2);
 }
 
@@ -541,7 +541,7 @@ void internal_fiat_poly1305_sub(uintptr_t out0, uintptr_t in0, uintptr_t in1) {
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
-static void fiat_poly1305_sub(uint32_t out1[5], const uint32_t arg1[5], const uint32_t arg2[5]) {
+static void fiat_poly1305_sub(fiat_poly1305_loose_field_element out1, const fiat_poly1305_tight_field_element arg1, const fiat_poly1305_tight_field_element arg2) {
   internal_fiat_poly1305_sub((uintptr_t)out1, (uintptr_t)arg1, (uintptr_t)arg2);
 }
 
@@ -583,7 +583,7 @@ void internal_fiat_poly1305_opp(uintptr_t out0, uintptr_t in0) {
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
-static void fiat_poly1305_opp(uint32_t out1[5], const uint32_t arg1[5]) {
+static void fiat_poly1305_opp(fiat_poly1305_loose_field_element out1, const fiat_poly1305_tight_field_element arg1) {
   internal_fiat_poly1305_opp((uintptr_t)out1, (uintptr_t)arg1);
 }
 
@@ -802,7 +802,7 @@ void internal_fiat_poly1305_to_bytes(uintptr_t out0, uintptr_t in0) {
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
-static void fiat_poly1305_to_bytes(uint8_t out1[17], const uint32_t arg1[5]) {
+static void fiat_poly1305_to_bytes(uint8_t out1[17], const fiat_poly1305_tight_field_element arg1) {
   internal_fiat_poly1305_to_bytes((uintptr_t)out1, (uintptr_t)arg1);
 }
 
@@ -889,6 +889,6 @@ void internal_fiat_poly1305_from_bytes(uintptr_t out0, uintptr_t in0) {
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
-static void fiat_poly1305_from_bytes(uint32_t out1[5], const uint8_t arg1[17]) {
+static void fiat_poly1305_from_bytes(fiat_poly1305_tight_field_element out1, const uint8_t arg1[17]) {
   internal_fiat_poly1305_from_bytes((uintptr_t)out1, (uintptr_t)arg1);
 }

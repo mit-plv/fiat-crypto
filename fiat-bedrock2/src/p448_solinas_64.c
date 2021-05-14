@@ -687,7 +687,7 @@ void internal_fiat_p448_carry_mul(uintptr_t out0, uintptr_t in0, uintptr_t in1) 
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
-static void fiat_p448_carry_mul(uint64_t out1[8], const uint64_t arg1[8], const uint64_t arg2[8]) {
+static void fiat_p448_carry_mul(fiat_p448_tight_field_element out1, const fiat_p448_loose_field_element arg1, const fiat_p448_loose_field_element arg2) {
   internal_fiat_p448_carry_mul((uintptr_t)out1, (uintptr_t)arg1, (uintptr_t)arg2);
 }
 
@@ -1110,7 +1110,7 @@ void internal_fiat_p448_carry_square(uintptr_t out0, uintptr_t in0) {
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
-static void fiat_p448_carry_square(uint64_t out1[8], const uint64_t arg1[8]) {
+static void fiat_p448_carry_square(fiat_p448_tight_field_element out1, const fiat_p448_loose_field_element arg1) {
   internal_fiat_p448_carry_square((uintptr_t)out1, (uintptr_t)arg1);
 }
 
@@ -1178,7 +1178,7 @@ void internal_fiat_p448_carry(uintptr_t out0, uintptr_t in0) {
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
-static void fiat_p448_carry(uint64_t out1[8], const uint64_t arg1[8]) {
+static void fiat_p448_carry(fiat_p448_tight_field_element out1, const fiat_p448_loose_field_element arg1) {
   internal_fiat_p448_carry((uintptr_t)out1, (uintptr_t)arg1);
 }
 
@@ -1242,7 +1242,7 @@ void internal_fiat_p448_add(uintptr_t out0, uintptr_t in0, uintptr_t in1) {
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
-static void fiat_p448_add(uint64_t out1[8], const uint64_t arg1[8], const uint64_t arg2[8]) {
+static void fiat_p448_add(fiat_p448_loose_field_element out1, const fiat_p448_tight_field_element arg1, const fiat_p448_tight_field_element arg2) {
   internal_fiat_p448_add((uintptr_t)out1, (uintptr_t)arg1, (uintptr_t)arg2);
 }
 
@@ -1306,7 +1306,7 @@ void internal_fiat_p448_sub(uintptr_t out0, uintptr_t in0, uintptr_t in1) {
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
-static void fiat_p448_sub(uint64_t out1[8], const uint64_t arg1[8], const uint64_t arg2[8]) {
+static void fiat_p448_sub(fiat_p448_loose_field_element out1, const fiat_p448_tight_field_element arg1, const fiat_p448_tight_field_element arg2) {
   internal_fiat_p448_sub((uintptr_t)out1, (uintptr_t)arg1, (uintptr_t)arg2);
 }
 
@@ -1360,7 +1360,7 @@ void internal_fiat_p448_opp(uintptr_t out0, uintptr_t in0) {
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
-static void fiat_p448_opp(uint64_t out1[8], const uint64_t arg1[8]) {
+static void fiat_p448_opp(fiat_p448_loose_field_element out1, const fiat_p448_tight_field_element arg1) {
   internal_fiat_p448_opp((uintptr_t)out1, (uintptr_t)arg1);
 }
 
@@ -1783,7 +1783,7 @@ void internal_fiat_p448_to_bytes(uintptr_t out0, uintptr_t in0) {
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
-static void fiat_p448_to_bytes(uint8_t out1[56], const uint64_t arg1[8]) {
+static void fiat_p448_to_bytes(uint8_t out1[56], const fiat_p448_tight_field_element arg1) {
   internal_fiat_p448_to_bytes((uintptr_t)out1, (uintptr_t)arg1);
 }
 
@@ -1981,6 +1981,6 @@ void internal_fiat_p448_from_bytes(uintptr_t out0, uintptr_t in0) {
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
-static void fiat_p448_from_bytes(uint64_t out1[8], const uint8_t arg1[56]) {
+static void fiat_p448_from_bytes(fiat_p448_tight_field_element out1, const uint8_t arg1[56]) {
   internal_fiat_p448_from_bytes((uintptr_t)out1, (uintptr_t)arg1);
 }

@@ -48,7 +48,7 @@ Section rmontred.
           {static : static_opt}
           {internal_static : internal_static_opt}
           (N R N' : Z) (n : nat)
-          (machine_wordsize : Z).
+          (machine_wordsize : machine_wordsize_opt).
 
   Let value_range := r[0 ~> (2^machine_wordsize - 1)%Z]%zrange.
   Let flag_range := r[0 ~> 1]%zrange.
@@ -67,6 +67,7 @@ Section rmontred.
 
   Local Existing Instance default_language_naming_conventions.
   Local Existing Instance default_documentation_options.
+  Local Instance skip_typedefs : skip_typedefs_opt := true.
   Local Instance widen_carry : widen_carry_opt := false.
   Local Instance widen_bytes : widen_bytes_opt := true.
   Local Instance only_signed : only_signed_opt := false.
@@ -155,14 +156,14 @@ Section rmontred.
          fancy_args (* fancy *)
          possible_values
          (reified_montred_gen
-            @ GallinaReify.Reify N @ GallinaReify.Reify R @ GallinaReify.Reify N' @ GallinaReify.Reify machine_wordsize)
+            @ GallinaReify.Reify N @ GallinaReify.Reify R @ GallinaReify.Reify N' @ GallinaReify.Reify (machine_wordsize:Z))
          (bound, (bound, tt))
          bound.
 
   Definition smontred (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "montred" montred
           (fun _ _ _ => @nil string).
 
