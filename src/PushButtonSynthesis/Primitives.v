@@ -159,17 +159,12 @@ Local Opaque reified_cmovznz_by_mul_gen. (* needed for making [autorewrite] not 
 (* needed for making [autorewrite] with [Set Keyed Unification] fast *)
 Local Opaque expr.Interp.
 
-Local Notation arg_bounds_of_pipeline result
-  := ((fun a b c d e arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e arg_bounds out_bounds = result') => arg_bounds) _ _ _ _ _ _ _ result eq_refl)
-       (only parsing).
-Local Notation out_bounds_of_pipeline result
-  := ((fun a b c d e arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e arg_bounds out_bounds = result') => out_bounds) _ _ _ _ _ _ _ result eq_refl)
-       (only parsing).
-
-Notation FromPipelineToString machine_wordsize prefix name result
-  := (Pipeline.FromPipelineToString machine_wordsize prefix name result).
-Notation FromPipelineToInternalString machine_wordsize prefix name result
-  := (Pipeline.FromPipelineToInternalString machine_wordsize prefix name result).
+Notation "'FromPipelineToString!' machine_wordsize prefix name result"
+  := (Pipeline.FromPipelineToString machine_wordsize prefix name result)
+       (only parsing, at level 10, machine_wordsize at next level, prefix at next level, name at next level, result at next level).
+Notation "'FromPipelineToInternalString!' machine_wordsize prefix name result"
+  := (Pipeline.FromPipelineToInternalString machine_wordsize prefix name result)
+       (only parsing, at level 10, machine_wordsize at next level, prefix at next level, name at next level, result at next level).
 
 (** Some utilities for defining [check_args] *)
 Definition request_present (requests : list string) (request : string) : bool
@@ -190,7 +185,6 @@ Definition check_args_of_list (check_args_descr : list (bool * (bool * Pipeline.
        (fun '(precondition, (b, e)) k => if implb precondition b then k else Error e)
        res
        check_args_descr.
-
 Ltac prepare_use_curve_good _ :=
   let curve_good := lazymatch goal with | curve_good : ?check_args (Success tt) = Success tt |- _ => curve_good end in
   let requests := lazymatch type of curve_good with ?check_args ?requests _ = Success _ => requests end in
@@ -198,6 +192,7 @@ Ltac prepare_use_curve_good _ :=
   lazymatch type of curve_good with
   | ?check = Success ?v => let check' := (eval hnf in check) in change (check' = Success v) in curve_good
   end;
+  cbv [machine_wordsize_opt] in *;
   cbv [check_args_of_list] in *;
   cbn [List.fold_right List.map List.app] in *;
   cbv [any_request_present] in *;
@@ -214,13 +209,11 @@ Ltac prepare_use_curve_good _ :=
                | assumption
                | progress destruct_head'_and
                | apply conj ].
-
 Ltac use_requests_to_prove_curve_good_t_step :=
   first [ progress intros
         | progress Reflect.reflect_hyps
         | exfalso; assumption
         | progress specialize_by auto 50 using or_introl, or_intror with nocore ].
-
 Ltac prove_correctness' should_not_clear use_curve_good :=
   let should_not_clear_requests H := lazymatch type of H with context[request_present] => idtac end in
   let Hres := match goal with H : _ = Success _ |- _ => H end in
@@ -341,7 +334,6 @@ Module CorrectnessStringification.
       => constr_fail_with ltac:(fun _ => idtac "Unrecognized bounds component:" correctness;
                                          fail 1 "Unrecognized bounds component:" correctness)
     end.
-
   Ltac with_assoc_list ctx correctness arg_var_names out_var_names cont :=
     lazymatch correctness with
     | (fun x : ?T => ?f)
@@ -389,7 +381,6 @@ Module CorrectnessStringification.
          | _ => cont ctx correctness
          end
     end.
-
   Ltac to_level lvl :=
     lazymatch type of lvl with
     | Z => constr:(Level.level lvl)
@@ -437,7 +428,6 @@ Module CorrectnessStringification.
 
   Ltac test_is_var_or_const v :=
     constr:(ltac:(tryif first [ is_var v | is_const v ] then exact true else exact false)).
-
   Local Open Scope string_scope.
 
   Ltac fresh_from' ctx check_list start_val :=
@@ -782,19 +772,17 @@ Module CorrectnessStringification.
         end)
          (only parsing).
 End CorrectnessStringification.
-
 Notation "'docstring_with_summary_from_lemma_with_ctx!' ctx summary correctness"
   := (CorrectnessStringification.docstring_with_summary_from_lemma_with_ctx ctx summary correctness) (only parsing, at level 10, ctx at next level, summary at next level, correctness at next level).
 Notation "'docstring_with_summary_from_lemma!' summary correctness"
   := (CorrectnessStringification.docstring_with_summary_from_lemma summary correctness) (only parsing, at level 10, summary at next level, correctness at next level).
-
 (** Used to sigma up the output of stringified pipelines *)
 Notation wrap_s v := (fun s => existT (fun t => prod string (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult t))) _ (v s)) (only parsing).
-
 Section __.
   Context {output_language_api : ToString.OutputLanguageAPI}
           {language_naming_conventions : language_naming_conventions_opt}
           {documentation_options : documentation_options_opt}
+          {skip_typedefs : skip_typedefs_opt}
           {package_namev : package_name_opt}
           {class_namev : class_name_opt}
           {static : static_opt}
@@ -816,30 +804,23 @@ Section __.
           {assembly_output_first : assembly_output_first_opt}
           {assembly_argument_registers_left_to_right : assembly_argument_registers_left_to_right_opt}
           (n : nat)
-          (machine_wordsize : Z).
-
+          (machine_wordsize : machine_wordsize_opt).
   Definition saturated_bounds : list (ZRange.type.option.interp base.type.Z)
     := List.repeat (Some r[0 ~> 2^machine_wordsize-1]%zrange) n.
-
   (* We include [0], so that even after bounds relaxation, we can
        notice where the constant 0s are, and remove them. *)
   Definition possible_values_of_machine_wordsize
     := prefix_with_carry [machine_wordsize; 2 * machine_wordsize]%Z.
-
   Definition possible_values_of_machine_wordsize_with_bytes
     := prefix_with_carry_bytes [machine_wordsize; 2 * machine_wordsize]%Z.
-
   Let possible_values := possible_values_of_machine_wordsize.
   Let possible_values_with_bytes := possible_values_of_machine_wordsize_with_bytes.
-
   Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
   Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
   Local Instance split_multiret_to : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
-
   Lemma length_saturated_bounds : List.length saturated_bounds = n.
   Proof using Type. cbv [saturated_bounds]; now autorewrite with distr_length. Qed.
   Hint Rewrite length_saturated_bounds : distr_length.
-
   Local Notation dummy_weight := (weight 0 0).
   Local Notation evalf := (eval dummy_weight n).
   Local Notation notations_for_docstring
@@ -852,7 +833,6 @@ Section __.
           summary
           correctness)
          (only parsing, at level 10, summary at next level, correctness at next level).
-
   Definition selectznz
     := Pipeline.BoundsPipeline
          false (* subst01 *)
@@ -861,16 +841,14 @@ Section __.
          reified_selectznz_gen
          (Some r[0~>1], (Some saturated_bounds, (Some saturated_bounds, tt)))%zrange
          (Some saturated_bounds).
-
   Definition sselectznz (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "selectznz" selectznz
           (docstring_with_summary_from_lemma!
              (fun fname : string => [text_before_function_name ++ fname ++ " is a multi-limb conditional select."]%string)
              (selectznz_correct dummy_weight n saturated_bounds)).
-
   Definition mulx (s : Z)
     := Pipeline.BoundsPipeline
          false (* subst01 *)
@@ -880,16 +858,14 @@ Section __.
             @ GallinaReify.Reify s)
          (Some r[0~>2^s-1], (Some r[0~>2^s-1], tt))%zrange
          (Some r[0~>2^s-1], Some r[0~>2^s-1])%zrange.
-
   Definition smulx (prefix : string) (s : Z)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToInternalString
+        FromPipelineToInternalString!
           machine_wordsize prefix ("mulx_u" ++ Decimal.Z.to_string s) (mulx s)
           (docstring_with_summary_from_lemma!
              (fun fname : string => [text_before_function_name ++ fname ++ " is a multiplication, returning the full double-width result."]%string)
              (mulx_correct s)).
-
   Definition addcarryx (s : Z)
     := Pipeline.BoundsPipeline
          false (* subst01 *)
@@ -899,17 +875,14 @@ Section __.
             @ GallinaReify.Reify s)
          (Some r[0~>1], (Some r[0~>2^s-1], (Some r[0~>2^s-1], tt)))%zrange
          (Some r[0~>2^s-1], Some r[0~>1])%zrange.
-
-
   Definition saddcarryx (prefix : string) (s : Z)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToInternalString
+        FromPipelineToInternalString!
           machine_wordsize prefix ("addcarryx_u" ++ Decimal.Z.to_string s) (addcarryx s)
           (docstring_with_summary_from_lemma!
              (fun fname : string => [text_before_function_name ++ fname ++ " is an addition with carry."]%string)
              (addcarryx_correct s)).
-
   Definition subborrowx (s : Z)
     := Pipeline.BoundsPipeline
          false (* subst01 *)
@@ -919,16 +892,14 @@ Section __.
             @ GallinaReify.Reify s)
          (Some r[0~>1], (Some r[0~>2^s-1], (Some r[0~>2^s-1], tt)))%zrange
          (Some r[0~>2^s-1], Some r[0~>1])%zrange.
-
   Definition ssubborrowx (prefix : string) (s : Z)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToInternalString
+        FromPipelineToInternalString!
           machine_wordsize prefix ("subborrowx_u" ++ Decimal.Z.to_string s) (subborrowx s)
           (docstring_with_summary_from_lemma!
              (fun fname : string => [text_before_function_name ++ fname ++ " is a subtraction with borrow."]%string)
              (subborrowx_correct s)).
-
 
   Definition value_barrier (s : int.type)
     := Pipeline.BoundsPipeline
@@ -938,16 +909,14 @@ Section __.
          reified_value_barrier_gen
          (Some (int.to_zrange s), tt)
          (Some (int.to_zrange s)).
-
   Definition svalue_barrier (prefix : string) (s : int.type)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToInternalString
+        FromPipelineToInternalString!
           machine_wordsize prefix ("value_barrier_" ++ (if int.is_unsigned s then "u" else "") ++ Decimal.Z.to_string (int.bitwidth_of s)) (value_barrier s)
           (docstring_with_summary_from_lemma!
              (fun fname : string => [text_before_function_name ++ fname ++ " is a single-word conditional move."]%string)
              (value_barrier_correct (int.is_signed s) (int.bitwidth_of s))).
-
 
   Definition cmovznz (s : Z)
     := Pipeline.BoundsPipeline
@@ -958,16 +927,14 @@ Section __.
             @ GallinaReify.Reify s)
          (Some r[0~>1], (Some r[0~>2^s-1], (Some r[0~>2^s-1], tt)))%zrange
          (Some r[0~>2^s-1])%zrange.
-
   Definition scmovznz (prefix : string) (s : Z)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToInternalString
+        FromPipelineToInternalString!
           machine_wordsize prefix ("cmovznz_u" ++ Decimal.Z.to_string s) (cmovznz s)
           (docstring_with_summary_from_lemma!
              (fun fname : string => [text_before_function_name ++ fname ++ " is a single-word conditional move."]%string)
              (cmovznz_correct false s)).
-
   Definition cmovznz_by_mul (s : Z)
     := Pipeline.BoundsPipeline
          false (* subst01 *)
@@ -977,19 +944,16 @@ Section __.
             @ GallinaReify.Reify s)
          (Some r[0~>1], (Some r[0~>2^s-1], (Some r[0~>2^s-1], tt)))%zrange
          (Some r[0~>2^s-1])%zrange.
-
   Definition scmovznz_by_mul (prefix : string) (s : Z)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToInternalString
+        FromPipelineToInternalString!
           machine_wordsize prefix ("cmovznz_u" ++ Decimal.Z.to_string s) (cmovznz_by_mul s)
           (docstring_with_summary_from_lemma!
              (fun fname : string => [text_before_function_name ++ fname ++ " is a single-word conditional move."]%string)
              (cmovznz_correct false s)).
-
   Local Ltac solve_extra_bounds_side_conditions :=
-    cbn [lower upper fst snd] in *; Bool.split_andb; Z.ltb_to_lt; lia.
-
+    cbn [lower upper fst snd machine_wordsize_opt] in *; Bool.split_andb; Z.ltb_to_lt; lia.
   Hint Rewrite
        eval_select
        Arithmetic.Primitives.mulx_correct
@@ -999,7 +963,6 @@ Section __.
        Arithmetic.Primitives.cmovznz_by_mul_correct
        Z.zselect_correct
        using solve [ auto | congruence | solve_extra_bounds_side_conditions ] : push_eval.
-
   Strategy -1000 [mulx]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
   Lemma mulx_correct s' res
         (Hres : mulx s' = Success res)
@@ -1008,7 +971,6 @@ Section __.
 
   Lemma Wf_mulx s' res (Hres : mulx s' = Success res) : Wf res.
   Proof using Type. prove_pipeline_wf (). Qed.
-
   Strategy -1000 [addcarryx]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
   Lemma addcarryx_correct s' res
         (Hres : addcarryx s' = Success res)
@@ -1179,7 +1141,9 @@ Section __.
 
     (** Note: If you change the name or type signature of this
           function, you will need to update the code in CLI.v *)
-    Definition Synthesize (check_args : list string -> Pipeline.ErrorT (list string) -> Pipeline.ErrorT (list string))
+    Definition Synthesize
+               (all_typedefs : list ToString.typedef_info)
+               (check_args : list string -> Pipeline.ErrorT (list string) -> Pipeline.ErrorT (list string))
                (comment_header : list string) (function_name_prefix : string) (requests : list string)
       : list (synthesis_output_kind * string * Pipeline.ErrorT (list string))
       := let requests := match requests with
@@ -1238,7 +1202,7 @@ Section __.
                         (ToString.ident_info_of_bitwidths_used extra_bit_widths) in
          let header :=
              (comment_header
-                ++ ToString.header machine_wordsize (orb internal_static static) static function_name_prefix infos) in
+                ++ ToString.header machine_wordsize (orb internal_static static) static function_name_prefix infos all_typedefs) in
          let footer :=
              ToString.footer machine_wordsize (orb internal_static static) static function_name_prefix infos in
          [(normal_output,
@@ -1252,6 +1216,14 @@ Section __.
               end.
   End for_stringification.
 End __.
+
+Notation "'all_typedefs!'" :=
+  (match ((fun r => Option.value (relax_zrange_gen only_signed (possible_values_of_machine_wordsize_with_bytes machine_wordsize) r) r)
+          : relax_zrange_opt)
+         return _ with
+   | relax_zrange
+     => Pipeline.all_typedefs
+   end) (only parsing).
 
 Module Export Hints.
   Hint Opaque

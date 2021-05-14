@@ -24,6 +24,14 @@ typedef signed char fiat_25519_int1;
 FIAT_25519_FIAT_EXTENSION typedef signed __int128 fiat_25519_int128;
 FIAT_25519_FIAT_EXTENSION typedef unsigned __int128 fiat_25519_uint128;
 
+/* The type fiat_25519_loose_field_element is a field element with loose bounds. */
+/* Bounds: [[0x0 ~> 0x18000000000000], [0x0 ~> 0x18000000000000], [0x0 ~> 0x18000000000000], [0x0 ~> 0x18000000000000], [0x0 ~> 0x18000000000000]] */
+typedef uint64_t fiat_25519_loose_field_element[5];
+
+/* The type fiat_25519_tight_field_element is a field element with tight bounds. */
+/* Bounds: [[0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000]] */
+typedef uint64_t fiat_25519_tight_field_element[5];
+
 #if (-1 & 3) != 3
 #error "This code only works on a two's complement system"
 #endif
@@ -119,13 +127,8 @@ static void fiat_25519_cmovznz_u64(uint64_t* out1, fiat_25519_uint1 arg1, uint64
  * Postconditions:
  *   eval out1 mod m = (eval arg1 * eval arg2) mod m
  *
- * Input Bounds:
- *   arg1: [[0x0 ~> 0x18000000000000], [0x0 ~> 0x18000000000000], [0x0 ~> 0x18000000000000], [0x0 ~> 0x18000000000000], [0x0 ~> 0x18000000000000]]
- *   arg2: [[0x0 ~> 0x18000000000000], [0x0 ~> 0x18000000000000], [0x0 ~> 0x18000000000000], [0x0 ~> 0x18000000000000], [0x0 ~> 0x18000000000000]]
- * Output Bounds:
- *   out1: [[0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000]]
  */
-static void fiat_25519_carry_mul(uint64_t out1[5], const uint64_t arg1[5], const uint64_t arg2[5]) {
+static void fiat_25519_carry_mul(fiat_25519_tight_field_element out1, const fiat_25519_loose_field_element arg1, const fiat_25519_loose_field_element arg2) {
   fiat_25519_uint128 x1;
   fiat_25519_uint128 x2;
   fiat_25519_uint128 x3;
@@ -243,12 +246,8 @@ static void fiat_25519_carry_mul(uint64_t out1[5], const uint64_t arg1[5], const
  * Postconditions:
  *   eval out1 mod m = (eval arg1 * eval arg1) mod m
  *
- * Input Bounds:
- *   arg1: [[0x0 ~> 0x18000000000000], [0x0 ~> 0x18000000000000], [0x0 ~> 0x18000000000000], [0x0 ~> 0x18000000000000], [0x0 ~> 0x18000000000000]]
- * Output Bounds:
- *   out1: [[0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000]]
  */
-static void fiat_25519_carry_square(uint64_t out1[5], const uint64_t arg1[5]) {
+static void fiat_25519_carry_square(fiat_25519_tight_field_element out1, const fiat_25519_loose_field_element arg1) {
   uint64_t x1;
   uint64_t x2;
   uint64_t x3;
@@ -362,12 +361,8 @@ static void fiat_25519_carry_square(uint64_t out1[5], const uint64_t arg1[5]) {
  * Postconditions:
  *   eval out1 mod m = eval arg1 mod m
  *
- * Input Bounds:
- *   arg1: [[0x0 ~> 0x18000000000000], [0x0 ~> 0x18000000000000], [0x0 ~> 0x18000000000000], [0x0 ~> 0x18000000000000], [0x0 ~> 0x18000000000000]]
- * Output Bounds:
- *   out1: [[0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000]]
  */
-static void fiat_25519_carry(uint64_t out1[5], const uint64_t arg1[5]) {
+static void fiat_25519_carry(fiat_25519_tight_field_element out1, const fiat_25519_loose_field_element arg1) {
   uint64_t x1;
   uint64_t x2;
   uint64_t x3;
@@ -405,13 +400,8 @@ static void fiat_25519_carry(uint64_t out1[5], const uint64_t arg1[5]) {
  * Postconditions:
  *   eval out1 mod m = (eval arg1 + eval arg2) mod m
  *
- * Input Bounds:
- *   arg1: [[0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000]]
- *   arg2: [[0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000]]
- * Output Bounds:
- *   out1: [[0x0 ~> 0x18000000000000], [0x0 ~> 0x18000000000000], [0x0 ~> 0x18000000000000], [0x0 ~> 0x18000000000000], [0x0 ~> 0x18000000000000]]
  */
-static void fiat_25519_add(uint64_t out1[5], const uint64_t arg1[5], const uint64_t arg2[5]) {
+static void fiat_25519_add(fiat_25519_loose_field_element out1, const fiat_25519_tight_field_element arg1, const fiat_25519_tight_field_element arg2) {
   uint64_t x1;
   uint64_t x2;
   uint64_t x3;
@@ -435,13 +425,8 @@ static void fiat_25519_add(uint64_t out1[5], const uint64_t arg1[5], const uint6
  * Postconditions:
  *   eval out1 mod m = (eval arg1 - eval arg2) mod m
  *
- * Input Bounds:
- *   arg1: [[0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000]]
- *   arg2: [[0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000]]
- * Output Bounds:
- *   out1: [[0x0 ~> 0x18000000000000], [0x0 ~> 0x18000000000000], [0x0 ~> 0x18000000000000], [0x0 ~> 0x18000000000000], [0x0 ~> 0x18000000000000]]
  */
-static void fiat_25519_sub(uint64_t out1[5], const uint64_t arg1[5], const uint64_t arg2[5]) {
+static void fiat_25519_sub(fiat_25519_loose_field_element out1, const fiat_25519_tight_field_element arg1, const fiat_25519_tight_field_element arg2) {
   uint64_t x1;
   uint64_t x2;
   uint64_t x3;
@@ -465,12 +450,8 @@ static void fiat_25519_sub(uint64_t out1[5], const uint64_t arg1[5], const uint6
  * Postconditions:
  *   eval out1 mod m = -eval arg1 mod m
  *
- * Input Bounds:
- *   arg1: [[0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000]]
- * Output Bounds:
- *   out1: [[0x0 ~> 0x18000000000000], [0x0 ~> 0x18000000000000], [0x0 ~> 0x18000000000000], [0x0 ~> 0x18000000000000], [0x0 ~> 0x18000000000000]]
  */
-static void fiat_25519_opp(uint64_t out1[5], const uint64_t arg1[5]) {
+static void fiat_25519_opp(fiat_25519_loose_field_element out1, const fiat_25519_tight_field_element arg1) {
   uint64_t x1;
   uint64_t x2;
   uint64_t x3;
@@ -525,12 +506,10 @@ static void fiat_25519_selectznz(uint64_t out1[5], fiat_25519_uint1 arg1, const 
  * Postconditions:
  *   out1 = map (λ x, ⌊((eval arg1 mod m) mod 2^(8 * (x + 1))) / 2^(8 * x)⌋) [0..31]
  *
- * Input Bounds:
- *   arg1: [[0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000]]
  * Output Bounds:
  *   out1: [[0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0x7f]]
  */
-static void fiat_25519_to_bytes(uint8_t out1[32], const uint64_t arg1[5]) {
+static void fiat_25519_to_bytes(uint8_t out1[32], const fiat_25519_tight_field_element arg1) {
   uint64_t x1;
   fiat_25519_uint1 x2;
   uint64_t x3;
@@ -745,10 +724,8 @@ static void fiat_25519_to_bytes(uint8_t out1[32], const uint64_t arg1[5]) {
  *
  * Input Bounds:
  *   arg1: [[0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0x7f]]
- * Output Bounds:
- *   out1: [[0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000]]
  */
-static void fiat_25519_from_bytes(uint64_t out1[5], const uint8_t arg1[32]) {
+static void fiat_25519_from_bytes(fiat_25519_tight_field_element out1, const uint8_t arg1[32]) {
   uint64_t x1;
   uint64_t x2;
   uint64_t x3;
@@ -904,12 +881,8 @@ static void fiat_25519_from_bytes(uint64_t out1[5], const uint8_t arg1[32]) {
  * Postconditions:
  *   eval out1 mod m = (121666 * eval arg1) mod m
  *
- * Input Bounds:
- *   arg1: [[0x0 ~> 0x18000000000000], [0x0 ~> 0x18000000000000], [0x0 ~> 0x18000000000000], [0x0 ~> 0x18000000000000], [0x0 ~> 0x18000000000000]]
- * Output Bounds:
- *   out1: [[0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000], [0x0 ~> 0x8000000000000]]
  */
-static void fiat_25519_carry_scmul_121666(uint64_t out1[5], const uint64_t arg1[5]) {
+static void fiat_25519_carry_scmul_121666(fiat_25519_tight_field_element out1, const fiat_25519_loose_field_element arg1) {
   fiat_25519_uint128 x1;
   fiat_25519_uint128 x2;
   fiat_25519_uint128 x3;

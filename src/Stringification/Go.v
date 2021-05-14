@@ -51,8 +51,30 @@ Module Go.
   Definition is_standard_bitwidth (bw : Z) := existsb (Z.eqb bw) stdint_bitwidths.
   Definition is_special_bitwidth (bw : Z) := negb (is_standard_bitwidth bw).
 
+  Definition int_type_to_string_opt_typedef {language_naming_conventions : language_naming_conventions_opt} {skip_typedefs : skip_typedefs_opt} (private : bool) (all_private : bool) (prefix : string) (t : ToString.int.type) (typedef : option string) : string :=
+    int.to_string_gen_opt_typedef stdint_bitwidths "uint" "int" "" "" private all_private prefix t typedef.
   Definition int_type_to_string {language_naming_conventions : language_naming_conventions_opt} (private : bool) (prefix : string) (t : ToString.int.type) : string :=
-    int.to_string_gen stdint_bitwidths "uint" "int" "" "" private prefix t.
+    int_type_to_string_opt_typedef (skip_typedefs:=true) private private prefix t None.
+
+  Definition make_typedef
+             {language_naming_conventions : language_naming_conventions_opt}
+             {documentation_options : documentation_options_opt}
+             (prefix : string) (internal_private : bool) (private : bool)
+             (typedef : typedef_info)
+    : list string
+    := let '(name, (ty, array_len), description) := name_and_type_and_describe_typedef prefix private typedef in
+       ((comment_block_extra_newlines description)
+          ++ ["type "
+                ++ name ++
+                match array_len with
+                | None (* just an integer *) => ""
+                | Some None (* unknown array length *) => "[]"
+                | Some (Some len) => "[" ++ Decimal.Z.to_string (Z.of_nat len) ++ "]"
+                end
+                ++ match ty with
+                   | Some ty => int_type_to_string internal_private prefix ty
+                   | None => "ℤ" (* blackboard bold Z for unbounded integers (which don't actually exist, and thus will error) *)
+                   end]%string)%list.
 
   (* Header imports and type defs *)
   Definition header
@@ -60,7 +82,9 @@ Module Go.
              {documentation_options : documentation_options_opt}
              {package_namev : package_name_opt}
              {class_namev : class_name_opt}
+             {skip_typedefs : skip_typedefs_opt}
              (machine_wordsize : Z) (internal_private : bool) (private : bool) (prefix : string) (infos : ToString.ident_infos)
+             (typedef_map : list typedef_info)
     : list string
     := let bitwidths_used := ToString.bitwidths_used infos in
        let needs_bits_import (* we only need the bits import if we use addcarryx/subborrowx/mulx with a standard bitwidth *)
@@ -93,6 +117,17 @@ Module Go.
                                    type_prefix ++ int_type_to_string internal_private prefix (int.of_bitwidth true bw) ++ " int8"]%string (* C: typedef signed challr prefix_int1 *)
                               else []))
                          [1; 2] in
+                let typedefs :=
+                    typedefs
+                      ++ if skip_typedefs
+                         then []
+                         else List.flat_map
+                                (fun td_name =>
+                                   match List.find (fun '(name, _, _, _) => (td_name =? name)%string) typedef_map with
+                                   | Some td_info => [""] ++ make_typedef prefix internal_private private td_info
+                                   | None => ["var _ = error_Go_Could_not_find_typedef_info_for_" ++ td_name]%string
+                                   end%list)
+                                (typedefs_used infos) in
                 match typedefs with
                 | [] => []
                 | _::_ => typedefs ++ [""]
@@ -137,17 +172,33 @@ Module Go.
      In the longer term, we should examine whether we should use
      non-void functions in Go and just return the result *)
 
-  Definition primitive_type_to_string
-             {language_naming_conventions : language_naming_conventions_opt} (private : bool)
+  Definition primitive_type_to_string_opt_typedef
+             {language_naming_conventions : language_naming_conventions_opt} {skip_typedefs : skip_typedefs_opt}
+             (private : bool) (all_private : bool)
              (prefix : string) (t : IR.type.primitive)
-             (r : option ToString.int.type) : string :=
+             (r : option ToString.int.type) (typedef : option string) : string :=
     match t with
     | IR.type.Zptr => "*"
     | IR.type.Z => ""
     end ++ match r with
-           | Some int_t => int_type_to_string private prefix int_t
+           | Some int_t => int_type_to_string_opt_typedef private all_private prefix int_t typedef
            | None => "ℤ" (* blackboard bold Z for unbounded integers (which don't actually exist, and thus will error) *)
            end.
+  Definition primitive_type_to_string
+             {language_naming_conventions : language_naming_conventions_opt} (private : bool)
+             (prefix : string) (t : IR.type.primitive)
+             (r : option ToString.int.type) : string :=
+    primitive_type_to_string_opt_typedef (skip_typedefs:=true) private private prefix t r None.
+  Definition primitive_array_type_to_string
+             {language_naming_conventions : language_naming_conventions_opt} {skip_typedefs : skip_typedefs_opt}
+             (internal_private : bool) (all_private : bool)
+             (prefix : string) (t : IR.type.primitive)
+             (r : option ToString.int.type) (len : nat) (typedef : option string) : string :=
+    match (if skip_typedefs then None else typedef) with
+    | Some typedef => format_typedef_name prefix all_private typedef
+    | None => "[" ++ Decimal.Z.to_string (Z.of_nat len) ++ "]" ++
+                  primitive_type_to_string internal_private prefix t r
+    end.
 
   (* Integer literal to string *)
   Definition int_literal_to_string (prefix : string) (t : IR.type.primitive) (v : BinInt.Z) : string :=
@@ -305,43 +356,34 @@ Module Go.
   (* This would have been nice, but coercions don't work *)
   (* Module Base := Rewriter.Language.Language.Compilers.base. *)
 
-  Fixpoint to_base_arg_list {language_naming_conventions : language_naming_conventions_opt} (internal_private : bool) (prefix : string) (mode : Mode) {t} : ToString.OfPHOAS.base_var_data t -> list string :=
+  Fixpoint to_base_arg_list {language_naming_conventions : language_naming_conventions_opt} {skip_typedefs : skip_typedefs_opt} (internal_private : bool) (all_private : bool) (prefix : string) (mode : Mode) {t} : ToString.OfPHOAS.base_var_data t -> list string :=
     match t return base_var_data t -> _ with
     | tZ =>
       let typ := match mode with In => IR.type.Z | Out => IR.type.Zptr end in
-      fun '(n, is_ptr, r) => [n ++ " " ++ primitive_type_to_string internal_private prefix typ r]
+      fun '(n, is_ptr, r, typedef) => [n ++ " " ++ primitive_type_to_string_opt_typedef internal_private all_private prefix typ r typedef]
     | base.type.prod A B =>
-      fun '(va, vb) => (to_base_arg_list internal_private prefix mode va ++ to_base_arg_list internal_private prefix mode vb)%list
+      fun '(va, vb) => (to_base_arg_list internal_private all_private prefix mode va ++ to_base_arg_list internal_private all_private prefix mode vb)%list
     | base.type.list tZ =>
-      fun '(n, r, len) =>
-        match mode with
-        | In => (* arrays for inputs are immutable borrows *)
-          [ n ++ " " ++
-              "*[" ++ Decimal.Z.to_string (Z.of_nat len) ++ "]" ++
-              primitive_type_to_string internal_private prefix IR.type.Z r ]
-        | Out => (* arrays for outputs are mutable borrows *)
-          [ n ++ " " ++
-              "*[" ++ Decimal.Z.to_string (Z.of_nat len) ++ "]" ++
-              primitive_type_to_string internal_private prefix IR.type.Z r ]
-        end
+      fun '(n, r, len, typedef) =>
+        [ n ++ " *" ++ primitive_array_type_to_string internal_private all_private prefix IR.type.Z r len typedef]
     | base.type.list _ => fun _ => ["var _error = error_complex_list"]
     | base.type.option _ => fun _ => ["var _error = error_option"]
     | base.type.unit => fun _ => ["var _error = error_unit"]
     | base.type.type_base t => fun _ => ["var _error = error_" ++ show t]%string
     end%string.
 
-  Definition to_arg_list {language_naming_conventions : language_naming_conventions_opt} (internal_private : bool) (prefix : string) (mode : Mode) {t} : var_data t -> list string :=
+  Definition to_arg_list {language_naming_conventions : language_naming_conventions_opt} {skip_typedefs : skip_typedefs_opt} (internal_private : bool) (all_private : bool) (prefix : string) (mode : Mode) {t} : var_data t -> list string :=
     match t return var_data t -> _ with
-    | type.base t => to_base_arg_list internal_private prefix mode
+    | type.base t => to_base_arg_list internal_private all_private prefix mode
     | type.arrow _ _ => fun _ => ["var _error = error_arrow"]
     end%string.
 
-  Fixpoint to_arg_list_for_each_lhs_of_arrow {language_naming_conventions : language_naming_conventions_opt} (internal_private : bool) (prefix : string) {t} : type.for_each_lhs_of_arrow var_data t -> list string
+  Fixpoint to_arg_list_for_each_lhs_of_arrow {language_naming_conventions : language_naming_conventions_opt} {skip_typedefs : skip_typedefs_opt} (internal_private : bool) (all_private : bool) (prefix : string) {t} : type.for_each_lhs_of_arrow var_data t -> list string
     := match t return type.for_each_lhs_of_arrow var_data t -> _ with
        | type.base t => fun _ => nil
        | type.arrow s d
          => fun '(x, xs)
-            => to_arg_list internal_private prefix In x ++ to_arg_list_for_each_lhs_of_arrow internal_private prefix xs
+            => to_arg_list internal_private all_private prefix In x ++ to_arg_list_for_each_lhs_of_arrow internal_private all_private prefix xs
        end%list.
 
   (** * Language-specific numeric conversions to be passed to the PHOAS -> IR translation *)
@@ -448,14 +490,14 @@ Module Go.
        ; explicit_pointer_variables := false
     |}.
 
-  Definition to_function_lines {language_naming_conventions : language_naming_conventions_opt} (internal_private : bool) (private : bool) (prefix : string) (name : string)
+  Definition to_function_lines {language_naming_conventions : language_naming_conventions_opt} {skip_typedefs : skip_typedefs_opt} (internal_private : bool) (private : bool) (all_private : bool) (prefix : string) (name : string)
              {t}
              (f : type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * IR.expr)
     : list string :=
     let '(args, rets, body) := f in
     ((("func "
          ++ name
-         ++ "(" ++ String.concat ", " (to_arg_list internal_private prefix Out rets ++ to_arg_list_for_each_lhs_of_arrow internal_private prefix args)
+         ++ "(" ++ String.concat ", " (to_arg_list internal_private all_private prefix Out rets ++ to_arg_list_for_each_lhs_of_arrow internal_private all_private prefix args)
          ++ ") {")%string)
        :: (List.map (fun s => String.Tab ++ s)%string (to_strings internal_private prefix body))
        ++ ["}"%string])%list.
@@ -477,25 +519,32 @@ Module Go.
              {relax_zrange : relax_zrange_opt}
              {language_naming_conventions : language_naming_conventions_opt}
              {documentation_options : documentation_options_opt}
+             {skip_typedefs : skip_typedefs_opt}
              (machine_wordsize : Z)
-             (do_bounds_check : bool) (internal_private : bool) (private : bool) (prefix : string) (name : string)
+             (do_bounds_check : bool) (internal_private : bool) (private : bool) (all_private : bool) (prefix : string) (name : string)
              {t}
              (e : API.Expr t)
              (comment : type.for_each_lhs_of_arrow var_data t -> var_data (type.base (type.final_codomain t)) -> list string)
              (name_list : option (list string))
              (inbounds : type.for_each_lhs_of_arrow Compilers.ZRange.type.option.interp t)
              (outbounds : Compilers.ZRange.type.base.option.interp (type.final_codomain t))
+             (intypedefs : type.for_each_lhs_of_arrow var_typedef_data t)
+             (outtypedefs : base_var_typedef_data (type.final_codomain t))
     : (list string * ToString.ident_infos) + string :=
-    match ExprOfPHOAS do_bounds_check e name_list inbounds with
+    match ExprOfPHOAS do_bounds_check e name_list inbounds intypedefs outtypedefs with
     | inl (indata, outdata, f) =>
       inl ((comment_block
               ((comment indata outdata)
-                 ++ ["Input Bounds:"]
-                 ++ List.map (fun v => "  " ++ v)%string (input_bounds_to_string indata inbounds)
-                 ++ ["Output Bounds:"]
-                 ++ List.map (fun v => "  " ++ v)%string (bound_to_string outdata outbounds))%list%string
-              ++ to_function_lines internal_private private prefix name (indata, outdata, f))%list,
-           IR.ident_infos.collect_infos f)
+                 ++ match input_bounds_to_string indata inbounds with
+                    | nil => nil
+                    | ls => ["Input Bounds:"] ++ List.map (fun v => "  " ++ v)%string ls
+                    end
+                 ++ match bound_to_string outdata outbounds with
+                    | nil => nil
+                    | ls => ["Output Bounds:"] ++ List.map (fun v => "  " ++ v)%string ls
+                    end)%list%string
+              ++ to_function_lines internal_private private all_private prefix name (indata, outdata, f))%list,
+           IR.ident_infos.collect_all_infos f intypedefs outtypedefs)
     | inr nil =>
       inr ("Unknown internal error in converting " ++ name ++ " to Go")%string
     | inr [err] =>

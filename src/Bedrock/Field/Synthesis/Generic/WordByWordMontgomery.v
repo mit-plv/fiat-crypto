@@ -101,6 +101,10 @@ Section __.
   Local Notation n_bytes := (WordByWordMontgomery.n_bytes m).
   Local Notation bounds :=
     (WordByWordMontgomery.bounds m Semantics.width).
+  Local Notation montgomery_domain_bounds :=
+    (WordByWordMontgomery.montgomery_domain_bounds m Semantics.width).
+  Local Notation non_montgomery_domain_bounds :=
+    (WordByWordMontgomery.non_montgomery_domain_bounds m Semantics.width).
   Local Notation prime_bounds :=
     (WordByWordMontgomery.prime_bounds m Semantics.width).
   Local Notation prime_bytes_bounds :=
@@ -113,6 +117,8 @@ Section __.
   Ltac select_access_size b :=
     lazymatch b with
     | Some bounds => constr:(access_size.word)
+    | Some montgomery_domain_bounds => constr:(access_size.word)
+    | Some non_montgomery_domain_bounds => constr:(access_size.word)
     | Some saturated_bounds => constr:(access_size.word)
     | Some prime_bounds => constr:(access_size.word)
     | Some prime_bytes_bounds => constr:(access_size.one)
@@ -122,6 +128,8 @@ Section __.
   Ltac select_length b :=
     lazymatch b with
     | Some bounds => constr:(n)
+    | Some montgomery_domain_bounds => constr:(n)
+    | Some non_montgomery_domain_bounds => constr:(n)
     | Some saturated_bounds => constr:(n)
     | Some prime_bounds => constr:(n)
     | Some prime_bytes_bounds => constr:(n_bytes)

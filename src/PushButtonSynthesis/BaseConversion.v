@@ -80,6 +80,7 @@ Section __.
   Context {output_language_api : ToString.OutputLanguageAPI}
           {language_naming_conventions : language_naming_conventions_opt}
           {documentation_options : documentation_options_opt}
+          {skip_typedefs : skip_typedefs_opt}
           {package_namev : package_name_opt}
           {class_namev : class_name_opt}
           {static : static_opt}
@@ -104,7 +105,7 @@ Section __.
           (src_n : nat)
           (src_limbwidth : Q)
           (dst_limbwidth : Q)
-          (machine_wordsize : Z)
+          (machine_wordsize : machine_wordsize_opt)
           (inbounds_multiplier : option Q)
           (outbounds_multiplier : option Q)
           (inbounds : bounds)
@@ -265,7 +266,7 @@ Section __.
   Definition sconvert_bases (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "convert_bases" convert_bases
           (docstring_with_summary_from_lemma!
              (fun fname : string => [text_before_function_name ++ fname ++ " converts a field element from base " ++ Decimal.show_Q src_limbwidth ++ " to base " ++ Decimal.show_Q dst_limbwidth ++ " in little-endian order."]%string)
@@ -329,7 +330,7 @@ Section __.
     Definition Synthesize (comment_header : list string) (function_name_prefix : string) (requests : list string)
       : list (synthesis_output_kind * string * Pipeline.ErrorT (list string))
       := Primitives.Synthesize
-           machine_wordsize valid_names known_functions (fun _ => nil)
+           machine_wordsize valid_names known_functions (fun _ => nil) all_typedefs!
            check_args
            ((ToString.comment_file_header_block
                (comment_header

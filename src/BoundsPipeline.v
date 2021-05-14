@@ -18,6 +18,7 @@ Require Import Crypto.Util.ZRange.BasicLemmas.
 Require Import Crypto.Util.ZRange.Show.
 Require Import Crypto.Util.Sum.
 Require Import Crypto.Util.ErrorT.Show.
+Require Import Crypto.Util.DynList.
 Require Import Crypto.Util.Tactics.ConstrFail.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.SetoidSubst.
@@ -27,6 +28,7 @@ Require Import Crypto.Util.Tactics.Head.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.SplitInContext.
 Require Import Crypto.Util.Tactics.UniquePose.
+Require Import Crypto.Util.Tactics.AllInstances.
 Require Rewriter.Language.Language.
 Require Crypto.Language.API.
 Require Rewriter.Language.UnderLets.
@@ -48,7 +50,7 @@ Require Crypto.AbstractInterpretation.Proofs.
 Require Crypto.Assembly.Parse.
 Require Crypto.Assembly.Equivalence.
 Require Import Crypto.Util.Notations.
-Import ListNotations. Local Open Scope Z_scope.
+Import Coq.Lists.List. Import ListNotations. Local Open Scope Z_scope.
 
 Local Set Implicit Arguments.
 
@@ -150,6 +152,13 @@ Lemma relax_zrange_gen_good
     (z <=? r)%zrange = true -> relax_zrange_gen only_signed possible_values r = Some r' -> (z <=? r')%zrange = true.
 Proof. apply relax_zrange_gen_ranges_good. Qed.
 
+(** Instantiate this class with typedefs for various bounds *)
+Module typedef.
+  Class typedef {t} (bounds : ZRange.type.base.option.interp t) := { name : string ; description : string -> string }.
+  Global Arguments name {_ _ _}.
+  Global Arguments description {_ _ _} _.
+End typedef.
+Notation typedef := typedef.typedef (only parsing).
 (** Which of the rewriter methods do we use? *)
 (** Note that we don't currently generate a precomputed naive method, because it eats too much RAM to do so. *)
 Inductive low_level_rewriter_method_opt :=
@@ -231,6 +240,13 @@ Notation prefix_with_carry_bytes bitwidths :=
   (prefix_with_carry (match bitwidths return _ with bw => if widen_bytes then bw else 8::bw end)%Z) (* master and 8.9 are incompatible about scoping of multiple occurrences of an argument *)
     (only parsing).
 
+Definition typedef_info_of_typedef {relax_zrange : relax_zrange_opt} {t bounds} (td : @typedef t bounds)
+  : ToString.typedef_info
+  := (typedef.name,
+      typedef.description,
+      ToString.int.option.interp.to_union (ToString.int.option.interp.of_zrange_relaxed (ZRange.type.base.option.map_ranges relax_zrange bounds)),
+      existT _ t bounds).
+
 Module Pipeline.
   Import GeneralizeVar.
   Inductive ErrorMessage :=
@@ -263,6 +279,8 @@ Module Pipeline.
       ; ident_infos : ToString.ident_infos
       ; arg_bounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t
       ; out_bounds : ZRange.type.base.option.interp (type.final_codomain t)
+      ; arg_typedefs : type.for_each_lhs_of_arrow ToString.OfPHOAS.var_typedef_data t
+      ; out_typedefs : ToString.OfPHOAS.base_var_typedef_data (type.final_codomain t)
       ; expr : Expr t
     }.
 
@@ -364,10 +382,11 @@ Module Pipeline.
       := fun syntax_tree
          => let _ := default_language_naming_conventions in
             let _ := default_documentation_options in
+            let _ : skip_typedefs_opt := true in
             match ToString.ToFunctionLines
                     (relax_zrange := fun r => r)
                     machine_wordsize
-                    false (* do extra bounds check *) false (* internal static *) false (* static *) "" "f" syntax_tree (fun _ _ => nil) None arg_bounds ZRange.type.base.option.None with
+                    false (* do extra bounds check *) false (* internal static *) false (* static *) false (* all static *) "" "f" syntax_tree (fun _ _ => nil) None arg_bounds ZRange.type.base.option.None (type.forall_each_lhs_of_arrow (@ToString.OfPHOAS.var_typedef_data_None)) ToString.OfPHOAS.base_var_typedef_data_None with
             | inl (E_lines, types_used)
               => ["The syntax tree:"]
                    ++ show_lines syntax_tree
@@ -607,8 +626,10 @@ Module Pipeline.
              {output_language_api : ToString.OutputLanguageAPI}
              {language_naming_conventions : language_naming_conventions_opt}
              {documentation_options : documentation_options_opt}
+             {skip_typedefs : skip_typedefs_opt}
              {internal_static : internal_static_opt}
              {static : static_opt}
+             {all_static : static_opt}
              {low_level_rewriter_method : low_level_rewriter_method_opt}
              {only_signed : only_signed_opt}
              {no_select_size : no_select_size_opt}
@@ -629,6 +650,8 @@ Module Pipeline.
              (comment : type.for_each_lhs_of_arrow ToString.OfPHOAS.var_data t -> ToString.OfPHOAS.var_data (type.final_codomain t) -> list string)
              (arg_bounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
              (out_bounds : ZRange.type.base.option.interp (type.final_codomain t))
+             (arg_typedefs : type.for_each_lhs_of_arrow ToString.OfPHOAS.var_typedef_data t)
+             (out_typedefs : ToString.OfPHOAS.base_var_typedef_data (type.final_codomain t))
     : ErrorT (ExtendedSynthesisResult t)
     := dlet_nd E := BoundsPipeline
                       (*with_dead_code_elimination*)
@@ -638,10 +661,10 @@ Module Pipeline.
                       E arg_bounds out_bounds in
        match E with
        | Success E' => let E := ToString.ToFunctionLines
-                                  machine_wordsize true (orb internal_static static) static type_prefix name E' comment None arg_bounds out_bounds in
+                                  machine_wordsize true (orb internal_static static) static all_static type_prefix name E' comment None arg_bounds out_bounds arg_typedefs out_typedefs in
                       match E with
                       | inl (lines, infos)
-                        => Success {| lines := lines; ident_infos := infos; arg_bounds := arg_bounds; out_bounds := out_bounds; expr := E' |}
+                        => Success {| lines := lines; ident_infos := infos; arg_bounds := arg_bounds; out_bounds := out_bounds; arg_typedefs := arg_typedefs ; out_typedefs := out_typedefs ; expr := E' |}
                       | inr err => Error (Stringification_failed E' err)
                       end
        | Error err => Error err
@@ -651,8 +674,10 @@ Module Pipeline.
              {output_language_api : ToString.OutputLanguageAPI}
              {language_naming_conventions : language_naming_conventions_opt}
              {documentation_options : documentation_options_opt}
+             {skip_typedefs : skip_typedefs_opt}
              {internal_static : internal_static_opt}
              {static : static_opt}
+             {all_static : static_opt}
              {low_level_rewriter_method : low_level_rewriter_method_opt}
              {only_signed : only_signed_opt}
              {no_select_size : no_select_size_opt}
@@ -673,15 +698,18 @@ Module Pipeline.
              (comment : type.for_each_lhs_of_arrow ToString.OfPHOAS.var_data t -> ToString.OfPHOAS.var_data (type.final_codomain t) -> list string)
              arg_bounds
              out_bounds
+             arg_typedefs
+             out_typedefs
     : ErrorT (list string * ToString.ident_infos)
     := let E := BoundsPipelineToExtendedResult
+                  (static:=static) (all_static:=all_static)
                   type_prefix name
                   (*with_dead_code_elimination*)
                   with_subst01
                   translate_to_fancy
                   possible_values
                   machine_wordsize
-                  E comment arg_bounds out_bounds in
+                  E comment arg_bounds out_bounds arg_typedefs out_typedefs in
        match E with
        | Success v => Success (v.(lines), v.(ident_infos))
        | Error err => Error err
@@ -691,6 +719,7 @@ Module Pipeline.
              {output_language_api : ToString.OutputLanguageAPI}
              {language_naming_conventions : language_naming_conventions_opt}
              {documentation_options : documentation_options_opt}
+             {skip_typedefs : skip_typedefs_opt}
              {internal_static : internal_static_opt}
              {static : static_opt}
              {low_level_rewriter_method : low_level_rewriter_method_opt}
@@ -711,6 +740,8 @@ Module Pipeline.
              (comment : type.for_each_lhs_of_arrow ToString.OfPHOAS.var_data t -> ToString.OfPHOAS.var_data (type.final_codomain t) -> list string)
              arg_bounds
              out_bounds
+             arg_typedefs
+             out_typedefs
     : ErrorT (string * ToString.ident_infos)
     := let E := BoundsPipelineToStrings
                   type_prefix name
@@ -719,12 +750,45 @@ Module Pipeline.
                   translate_to_fancy
                   possible_values
                   machine_wordsize
-                  E comment arg_bounds out_bounds in
+                  E comment arg_bounds out_bounds arg_typedefs out_typedefs in
        match E with
        | Success (E, types_used) => Success (ToString.LinesToString E, types_used)
        | Error err => Error err
        end.
 
+  Ltac typedef_var_data_of_bounds t bounds :=
+    let t := (eval cbv [type.interp type.for_each_lhs_of_arrow ZRange.type.option.interp type.final_codomain] in t) in
+    let do_prod a b
+        := lazymatch (eval hnf in bounds) with
+           | (?b1, ?b2) => let td1 := typedef_var_data_of_bounds a b1 in
+                           let td2 := typedef_var_data_of_bounds b b2 in
+                           uconstr:((td1, td2))
+           | ?bounds => fail 1 "Unsupported" "non-literal-pair" "bounds" bounds "for" "type" t
+           end in
+    match constr:(Set) with
+    | _ => let td := constr:(_ : @typedef t bounds) in
+           constr:(Some (@typedef.name t bounds td))
+    | _
+      => lazymatch t with
+         | ZRange.type.base.option.interp ?t => typedef_var_data_of_bounds t bounds
+         | type.base ?t => typedef_var_data_of_bounds t bounds
+         | type.arrow ?s ?d => fail 1 "Unsupported" "arrow" "in" "typedef_var_data_of_bounds" t
+         | ?s -> ?d => fail 1 "Unsupported" "arrow" "in" "typedef_var_data_of_bounds" t
+         | prod ?a ?b => do_prod a b
+         | base.type.prod ?a ?b => do_prod a b
+         | unit => constr:(tt)
+         | base.type.unit => constr:(tt)
+         | base.type.option _ => constr:(tt)
+         | base.type.list _ => constr:(@None string)
+         | base.type.type_base base.type.Z => constr:(@None string)
+         | base.type.type_base _ => constr:(tt)
+         | ?t => fail 1 "Unsupported" "type" "in" "typedef_var_data_of_bounds" t
+         end
+    end.
+
+  Notation type_of_pipeline result
+    := ((fun a b c d e f g h possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e f g h possible_values t E arg_bounds out_bounds = result') => t) _ _ _ _ _ _ _ _ _ _ _ _ _ result eq_refl)
+         (only parsing).
   Notation arg_bounds_of_pipeline result
     := ((fun a b c d e f g h possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e f g h possible_values t E arg_bounds out_bounds = result') => arg_bounds) _ _ _ _ _ _ _ _ _ _ _ _ _ result eq_refl)
          (only parsing).
@@ -734,42 +798,73 @@ Module Pipeline.
   Notation possible_values_of_pipeline result
     := ((fun a b c d e f g h possible_values t E arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e f g h possible_values t E arg_bounds out_bounds = result') => possible_values) _ _ _ _ _ _ _ _ _ _ _ _ _ result eq_refl)
          (only parsing).
+  Notation arg_typedefs_via_tc_of_pipeline result
+    := (match type_of_pipeline result, arg_bounds_of_pipeline result return _ with
+        | t, arg_bounds
+          => ltac:(let t := (eval cbv in t) in
+                   let arg_bounds := (eval cbv [arg_bounds] in arg_bounds) in
+                   let v := typedef_var_data_of_bounds (type.for_each_lhs_of_arrow ZRange.type.option.interp t) arg_bounds in
+                   let v := (eval cbv in v) in
+                   exact v)
+        end) (only parsing).
+  Notation out_typedefs_via_tc_of_pipeline result
+    := (match type_of_pipeline result, out_bounds_of_pipeline result return _ with
+        | t, out_bounds
+          => ltac:(let t := (eval cbv in t) in
+                   let out_bounds := (eval cbv [out_bounds] in out_bounds) in
+                   let v := typedef_var_data_of_bounds (ZRange.type.base.option.interp (type.final_codomain t)) out_bounds in
+                   let v := (eval cbv in v) in
+                   exact v)
+        end) (only parsing).
 
   Notation FromPipelineToString_gen machine_wordsize is_internal prefix name result
     := (fun comment
         => ((prefix ++ name)%string,
             match result with
             | Success E'
-              => let is_internal' := match is_internal return bool with
-                                     | true => orb (_ : static_opt) (_ : internal_static_opt)
-                                     | false => _ : static_opt
+              => let static : static_opt := _ in
+                 let internal_static : internal_static_opt := _ in
+                 let internal_static := orb static internal_static in
+                 let is_internal' := match is_internal return bool with
+                                     | true => internal_static
+                                     | false => static
                                      end in
                  let adjust_name := convert_to_naming_convention (if is_internal' then private_function_naming_convention else public_function_naming_convention) in
                  let arg_bounds := arg_bounds_of_pipeline result in
                  let out_bounds := out_bounds_of_pipeline result in
+                 let arg_typedefs := arg_typedefs_via_tc_of_pipeline result in
+                 let out_typedefs := out_typedefs_via_tc_of_pipeline result in
                  let E := ToString.ToFunctionLines
                             (relax_zrange
                              := fun r => Option.value (relax_zrange_gen (_ : only_signed_opt) (possible_values_of_pipeline result) r) r)
                             machine_wordsize
-                            true (orb (_ : static_opt) (_ : internal_static_opt)) is_internal'
+                            true internal_static is_internal' static
                             prefix (adjust_name (prefix ++ name)%string)
                             E'
                             (comment (adjust_name (prefix ++ name)%string))
                             None
                             arg_bounds
-                            out_bounds in
+                            out_bounds arg_typedefs out_typedefs in
                  match E with
                  | inl (lines, infos)
-                   => Success {| lines := lines; ident_infos := infos; arg_bounds := arg_bounds; out_bounds := out_bounds; expr := E' |}
+                   => Success {| lines := lines; ident_infos := infos; arg_bounds := arg_bounds; out_bounds := out_bounds; arg_typedefs := arg_typedefs ; out_typedefs := out_typedefs ; expr := E' |}
                  | inr err => Error (Pipeline.Stringification_failed E' err)
                  end
             | Error err => Error err
-            end)).
+            end))
+         (only parsing).
 
   Notation FromPipelineToString machine_wordsize prefix name result
-    := (FromPipelineToString_gen machine_wordsize false prefix name result).
+    := (FromPipelineToString_gen machine_wordsize false prefix name result) (only parsing).
   Notation FromPipelineToInternalString machine_wordsize prefix name result
-    := (FromPipelineToString_gen machine_wordsize true prefix name result).
+    := (FromPipelineToString_gen machine_wordsize true prefix name result) (only parsing).
+
+  Ltac get_all_typedefs _ :=
+    let all_typedefs := all_instances_of_family (@typedef) in
+    let res := DynList.map_homogenous ltac:(fun td => constr:(typedef_info_of_typedef td)) all_typedefs in
+    (* typecheck as a list (to infer the right argument for nil), then strip the cast *)
+    match constr:(res : list ToString.typedef_info) with ?res => res end.
+  Notation all_typedefs := (ltac:(let v := get_all_typedefs () in exact v)) (only parsing).
 
   Local Ltac wf_interp_t_step :=
     first [ progress destruct_head'_and

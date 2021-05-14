@@ -52,8 +52,10 @@ Module Compilers.
 
         Module int.
           Module type.
+            Definition to_string_opt_typedef {language_naming_conventions : language_naming_conventions_opt} {skip_typedefs : skip_typedefs_opt} (prefix : string) (t : int.type) (typedef : option string) : string
+              := int.to_string_gen_opt_typedef stdint_bitwidths "uint" "int" "_t" "" false(*type declarations not static*) false(*typedef declarations are not static*) prefix t typedef.
             Definition to_string {language_naming_conventions : language_naming_conventions_opt} (prefix : string) (t : int.type) : string
-              := int.to_string_gen stdint_bitwidths "uint" "int" "_t" "" false(*type declarations not static*) prefix t.
+              := to_string_opt_typedef (skip_typedefs:=true) prefix t None.
             Definition to_literal_macro_string (t : int.type) : option string
               := if Z.ltb (int.bitwidth_of t) 8
                  then None
@@ -66,14 +68,16 @@ Module Compilers.
 
         Module type.
           Module primitive.
-            Definition to_string {language_naming_conventions : language_naming_conventions_opt} (prefix : string) (t : type.primitive) (r : option int.type) : string
+            Definition to_string_opt_typedef {language_naming_conventions : language_naming_conventions_opt} {skip_typedefs : skip_typedefs_opt} (prefix : string) (t : type.primitive) (r : option int.type) (typedef : option string) : string
               := match r with
-                 | Some int_t => int.type.to_string prefix int_t
+                 | Some int_t => int.type.to_string_opt_typedef prefix int_t typedef
                  | None => "ℤ"
                  end ++ match t with
                         | type.Zptr => "*"
                         | type.Z => ""
                         end.
+            Definition to_string {language_naming_conventions : language_naming_conventions_opt} (prefix : string) (t : type.primitive) (r : option int.type) : string
+              := to_string_opt_typedef (skip_typedefs:=true) prefix t r None.
           End primitive.
         End type.
 
@@ -90,12 +94,31 @@ Module Compilers.
               ; "#  define " ++ value_barrier_name static prefix ty ++ "(x) (x)"
               ; "#endif"].
 
+        Definition make_typedef
+                   {language_naming_conventions : language_naming_conventions_opt}
+                   {documentation_options : documentation_options_opt}
+                   (prefix : string)
+                   (typedef : typedef_info)
+          : list string
+          := let '(name, (ty, array_len), description) := name_and_type_and_describe_typedef prefix false(*type declarations not static*) typedef in
+             ((comment_block description)
+                ++ match array_len with
+                   | None (* just an integer *)
+                     => ["typedef " ++ String.type.primitive.to_string prefix type.Z ty ++ " " ++ name ++ ";"]
+                   | Some None (* unknown array length *)
+                     => ["typedef " ++ String.type.primitive.to_string prefix type.Zptr ty ++ " " ++ name ++ ";"]
+                   | Some (Some len)
+                     => ["typedef " ++ String.type.primitive.to_string prefix type.Z ty ++ " " ++ name ++ "[" ++ Decimal.Z.to_string (Z.of_nat len) ++ "];"]
+                   end%string)%list.
+
         Definition header
              {language_naming_conventions : language_naming_conventions_opt}
              {documentation_options : documentation_options_opt}
              {package_namev : package_name_opt}
              {class_namev : class_name_opt}
+             {skip_typedefs : skip_typedefs_opt}
              (machine_wordsize : Z) (internal_static : bool) (static : bool) (prefix : string) (infos : ident_infos)
+             (typedef_map : list typedef_info)
         : list string
           := let bitwidths_used := bitwidths_used infos in
              let value_barrier_bitwidths := value_barrier_bitwidths infos in
@@ -116,6 +139,15 @@ Module Compilers.
                           FIAT_EXTENSION ++ " typedef signed __int128 " ++ int.type.to_string prefix int128 ++ ";";
                           FIAT_EXTENSION ++ " typedef unsigned __int128 " ++ int.type.to_string prefix uint128 ++ ";"]%string
                     else [])
+                ++ (if skip_typedefs
+                    then []
+                    else List.flat_map
+                           (fun td_name =>
+                              match List.find (fun '(name, _, _, _) => (td_name =? name)%string) typedef_map with
+                              | Some td_info => [""] ++ make_typedef prefix td_info
+                              | None => ["#error ""Could not find typedef info for '" ++ td_name ++ "'"";"]%string
+                              end%list)
+                           (typedefs_used infos))
                 ++ [""
                     ; "#if (-1 & 3) != 3"
                     ; "#error ""This code only works on a two's complement system"""
@@ -228,27 +260,33 @@ Module Compilers.
 
       Import OfPHOAS.
 
-      Fixpoint to_base_arg_list {language_naming_conventions : language_naming_conventions_opt} (prefix : string) {t} : base_var_data t -> list string
+      Fixpoint to_base_arg_list {language_naming_conventions : language_naming_conventions_opt} {skip_typedefs : skip_typedefs_opt} (prefix : string) {t} : base_var_data t -> list string
         := match t return base_var_data t -> _ with
            | tZ
-             => fun '(n, is_ptr, r) => [String.type.primitive.to_string prefix type.Z r ++ " " ++ n]
+             => fun '(n, is_ptr, r, typedef)
+                => [String.type.primitive.to_string_opt_typedef prefix type.Z r typedef ++ " " ++ n]
            | base.type.prod A B
              => fun '(va, vb) => (to_base_arg_list prefix va ++ to_base_arg_list prefix vb)%list
            | base.type.list tZ
-             => fun '(n, r, len) => ["const " ++ String.type.primitive.to_string prefix type.Z r ++ " " ++ n ++ "[" ++ Decimal.Z.to_string (Z.of_nat len) ++ "]"]
+             => fun '(n, r, len, typedef)
+                => ["const "
+                      ++ match (if skip_typedefs then None else typedef) with
+                         | Some typedef => format_typedef_name prefix false(*type declarations not static*) typedef ++ " " ++ n
+                         | None => String.type.primitive.to_string prefix type.Z r ++ " " ++ n ++ "[" ++ Decimal.Z.to_string (Z.of_nat len) ++ "]"
+                         end]
            | base.type.list _ => fun _ => ["#error ""complex list"";"]
            | base.type.option _ => fun _ => ["#error option;"]
            | base.type.unit => fun _ => ["#error unit;"]
            | base.type.type_base t => fun _ => ["#error " ++ show t ++ ";"]%string
            end.
 
-      Definition to_arg_list {language_naming_conventions : language_naming_conventions_opt} (prefix : string) {t} : var_data t -> list string
+      Definition to_arg_list {language_naming_conventions : language_naming_conventions_opt} {skip_typedefs : skip_typedefs_opt} (prefix : string) {t} : var_data t -> list string
         := match t return var_data t -> _ with
            | type.base t => to_base_arg_list prefix
            | type.arrow _ _ => fun _ => ["#error arrow;"]
            end.
 
-      Fixpoint to_arg_list_for_each_lhs_of_arrow {language_naming_conventions : language_naming_conventions_opt} (prefix : string) {t} : type.for_each_lhs_of_arrow var_data t -> list string
+      Fixpoint to_arg_list_for_each_lhs_of_arrow {language_naming_conventions : language_naming_conventions_opt} {skip_typedefs : skip_typedefs_opt} (prefix : string) {t} : type.for_each_lhs_of_arrow var_data t -> list string
         := match t return type.for_each_lhs_of_arrow var_data t -> _ with
            | type.base t => fun _ => nil
            | type.arrow s d
@@ -256,21 +294,30 @@ Module Compilers.
                 => to_arg_list prefix x ++ to_arg_list_for_each_lhs_of_arrow prefix xs
            end%list.
 
-      Fixpoint to_base_retarg_list {language_naming_conventions : language_naming_conventions_opt} prefix {t} : base_var_data t -> list string
+      Fixpoint to_base_retarg_list {language_naming_conventions : language_naming_conventions_opt} {skip_typedefs : skip_typedefs_opt} prefix {t} : base_var_data t -> list string
         := match t return base_var_data t -> _ with
            | tZ
-             => fun '(n, is_ptr, r) => [String.type.primitive.to_string prefix type.Zptr r ++ " " ++ n]
+             => fun '(n, is_ptr, r, typedef)
+                => [match typedef with
+                    | Some typedef => format_typedef_name prefix false(*type declarations not static*) typedef ++ "*"
+                    | None => String.type.primitive.to_string prefix type.Zptr r
+                    end
+                      ++ " " ++ n]
            | base.type.prod A B
              => fun '(va, vb) => (to_base_retarg_list prefix va ++ to_base_retarg_list prefix vb)%list
            | base.type.list tZ
-             => fun '(n, r, len) => [String.type.primitive.to_string prefix type.Z r ++ " " ++ n ++ "[" ++ Decimal.Z.to_string (Z.of_nat len) ++ "]"]
+             => fun '(n, r, len, typedef)
+                => [match (if skip_typedefs then None else typedef) with
+                    | Some typedef => format_typedef_name prefix false(*type declarations not static*) typedef ++ " " ++ n
+                    | None => String.type.primitive.to_string prefix type.Z r ++ " " ++ n ++ "[" ++ Decimal.Z.to_string (Z.of_nat len) ++ "]"
+                    end]
            | base.type.list _ => fun _ => ["#error ""complex list"";"]
            | base.type.option _ => fun _ => ["#error option;"]
            | base.type.unit => fun _ => ["#error unit;"]
            | base.type.type_base t => fun _ => ["#error " ++ show t ++ ";"]%string
            end.
 
-      Definition to_retarg_list {language_naming_conventions : language_naming_conventions_opt} (prefix : string) {t} : var_data t -> list string
+      Definition to_retarg_list {language_naming_conventions : language_naming_conventions_opt} {skip_typedefs : skip_typedefs_opt} (prefix : string) {t} : var_data t -> list string
         := match t return var_data t -> _ with
            | type.base _ => to_base_retarg_list prefix
            | type.arrow _ _ => fun _ => ["#error arrow;"]
@@ -507,8 +554,9 @@ Module Compilers.
       (** Top-level printing functions *)
 
       Definition to_function_lines
-                 {language_naming_conventions : language_naming_conventions_opt} (internal_static : bool)
-                 (static : bool) (prefix : string) (name : string)
+                 {language_naming_conventions : language_naming_conventions_opt}
+                 {skip_typedefs : skip_typedefs_opt}
+                 (internal_static : bool) (static : bool) (all_static : bool) (prefix : string) (name : string)
                  {t}
                  (f : type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * expr)
         : list string
@@ -533,26 +581,33 @@ Module Compilers.
                  {relax_zrange : relax_zrange_opt}
                  {language_naming_conventions : language_naming_conventions_opt}
                  {documentation_options : documentation_options_opt}
+                 {skip_typedefs : skip_typedefs_opt}
                  (machine_wordsize : Z)
-                 (do_bounds_check : bool) (internal_static : bool) (static : bool) (prefix : string) (name : string)
+                 (do_bounds_check : bool) (internal_static : bool) (static : bool) (all_static : bool) (prefix : string) (name : string)
                  {t}
                  (e : @Compilers.expr.Expr base.type ident.ident t)
                  (comment : type.for_each_lhs_of_arrow var_data t -> var_data (type.base (type.final_codomain t)) -> list string)
                  (name_list : option (list string))
                  (inbounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
                  (outbounds : ZRange.type.base.option.interp (type.final_codomain t))
+                 (intypedefs : type.for_each_lhs_of_arrow var_typedef_data t)
+                 (outtypedefs : base_var_typedef_data (type.final_codomain t))
         : (list string * ident_infos) + string
-        := match ExprOfPHOAS do_bounds_check e name_list inbounds with
+        := match ExprOfPHOAS do_bounds_check e name_list inbounds intypedefs outtypedefs with
            | inl (indata, outdata, f)
              => inl ((["/*"]
                         ++ (List.map (fun s => if (String.length s =? 0)%nat then " *" else (" * " ++ s))%string (comment indata outdata))
-                        ++ [" * Input Bounds:"]
-                        ++ List.map (fun v => " *   " ++ v)%string (input_bounds_to_string indata inbounds)
-                        ++ [" * Output Bounds:"]
-                        ++ List.map (fun v => " *   " ++ v)%string (bound_to_string outdata outbounds)
+                        ++ match input_bounds_to_string indata inbounds with
+                           | nil => nil
+                           | ls => [" * Input Bounds:"] ++ List.map (fun v => " *   " ++ v)%string ls
+                           end
+                        ++ match bound_to_string outdata outbounds with
+                           | nil => nil
+                           | ls => [" * Output Bounds:"] ++ List.map (fun v => " *   " ++ v)%string ls
+                           end
                         ++ [" */"]
-                        ++ to_function_lines internal_static static prefix name (indata, outdata, f))%list,
-                     ident_infos.collect_infos f)
+                        ++ to_function_lines internal_static static all_static prefix name (indata, outdata, f))%list,
+                     ident_infos.collect_all_infos f intypedefs outtypedefs)
            | inr nil
              => inr ("Unknown internal error in converting " ++ name ++ " to C")%string
            | inr [err]
@@ -565,16 +620,19 @@ Module Compilers.
                  {relax_zrange : relax_zrange_opt}
                  {language_naming_conventions : language_naming_conventions_opt}
                  {documentation_options : documentation_options_opt}
+                 {skip_typedefs : skip_typedefs_opt}
                  (machine_wordsize : Z)
-                 (do_bounds_check : bool) (internal_static : bool) (static : bool) (prefix : string) (name : string)
+                 (do_bounds_check : bool) (internal_static : bool) (static : bool) (all_static : bool) (prefix : string) (name : string)
                  {t}
                  (e : @Compilers.expr.Expr base.type ident.ident t)
                  (comment : type.for_each_lhs_of_arrow var_data t -> var_data (type.base (type.final_codomain t)) -> list string)
                  (name_list : option (list string))
                  (inbounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
                  (outbounds : ZRange.type.option.interp (type.base (type.final_codomain t)))
+                 (intypedefs : type.for_each_lhs_of_arrow var_typedef_data t)
+                 (outtypedefs : base_var_typedef_data (type.final_codomain t))
         : (string * ident_infos) + string
-        := match ToFunctionLines machine_wordsize do_bounds_check internal_static static prefix name e comment name_list inbounds outbounds with
+        := match ToFunctionLines machine_wordsize do_bounds_check internal_static static all_static prefix name e comment name_list inbounds outbounds intypedefs outtypedefs with
            | inl (ls, used_types) => inl (LinesToString ls, used_types)
            | inr err => inr err
            end.

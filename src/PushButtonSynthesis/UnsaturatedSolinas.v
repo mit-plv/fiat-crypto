@@ -82,6 +82,7 @@ Section __.
   Context {output_language_api : ToString.OutputLanguageAPI}
           {language_naming_conventions : language_naming_conventions_opt}
           {documentation_options : documentation_options_opt}
+          {skip_typedefs : skip_typedefs_opt}
           {package_namev : package_name_opt}
           {class_namev : class_name_opt}
           {static : static_opt}
@@ -106,7 +107,7 @@ Section __.
           (n : nat)
           (s : Z)
           (c : list (Z * Z))
-          (machine_wordsize : Z).
+          (machine_wordsize : machine_wordsize_opt).
 
   Local Notation limbwidth := (limbwidth n s c).
   Definition idxs : list nat := carry_chains n s c.
@@ -118,6 +119,12 @@ Section __.
   Local Notation loose_upperbounds := (loose_upperbounds n s c) (only parsing).
   Local Notation tight_bounds := (tight_bounds n s c) (only parsing).
   Local Notation loose_bounds := (loose_bounds n s c) (only parsing).
+  Global Instance tight_bounds_typedef : typedef (t:=base.type.list base.type.Z) (Some tight_bounds)
+    := { name := "tight_field_element"
+         ; description name := (text_before_type_name ++ name ++ " is a field element with tight bounds.")%string }.
+  Global Instance loose_bounds_typedef : typedef (t:=base.type.list base.type.Z) (Some loose_bounds)
+    := { name := "loose_field_element"
+         ; description name := (text_before_type_name ++ name ++ " is a field element with loose bounds.")%string }.
   Definition prime_bound : ZRange.type.interp base.type.Z
     := r[0~>(s - Associational.eval c - 1)]%zrange.
   Definition prime_bounds : list (ZRange.type.option.interp (base.type.Z))
@@ -320,7 +327,7 @@ Section __.
   Definition scarry_mul (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "carry_mul" carry_mul
           (docstring_with_summary_from_lemma!
              (fun fname : string => [text_before_function_name ++ fname ++ " multiplies two field elements and reduces the result."]%string)
@@ -339,7 +346,7 @@ Section __.
   Definition scarry_square (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "carry_square" carry_square
           (docstring_with_summary_from_lemma!
              (fun fname : string => [text_before_function_name ++ fname ++ " squares a field element and reduces the result."]%string)
@@ -358,7 +365,7 @@ Section __.
   Definition scarry_scmul_const (prefix : string) (x : Z)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix ("carry_scmul_" ++ Decimal.Z.to_string x) (carry_scmul_const x)
           (docstring_with_summary_from_lemma!
              (fun fname : string => [text_before_function_name ++ fname ++ " multiplies a field element by " ++ Decimal.Z.to_string x ++ " and reduces the result."]%string)
@@ -377,7 +384,7 @@ Section __.
   Definition scarry (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "carry" carry
           (docstring_with_summary_from_lemma!
              (fun fname : string => [text_before_function_name ++ fname ++ " reduces a field element."]%string)
@@ -396,7 +403,7 @@ Section __.
   Definition sadd (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "add" add
           (docstring_with_summary_from_lemma!
              (fun fname : string => [text_before_function_name ++ fname ++ " adds two field elements."]%string)
@@ -415,7 +422,7 @@ Section __.
   Definition ssub (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "sub" sub
           (docstring_with_summary_from_lemma!
              (fun fname : string => [text_before_function_name ++ fname ++ " subtracts two field elements."]%string)
@@ -434,7 +441,7 @@ Section __.
   Definition sopp (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "opp" opp
           (docstring_with_summary_from_lemma!
              (fun fname : string => [text_before_function_name ++ fname ++ " negates a field element."]%string)
@@ -446,14 +453,14 @@ Section __.
          None (* fancy *)
          possible_values_with_bytes
          (reified_to_bytes_gen
-            @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify n @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify m_enc)
+            @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify n @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify m_enc)
          (Some tight_bounds, tt)
          (Some prime_bytes_bounds).
 
   Definition sto_bytes (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "to_bytes" to_bytes
           (docstring_with_summary_from_lemma!
              (fun fname : string => [text_before_function_name ++ fname ++ " serializes a field element to bytes in little-endian order."]%string)
@@ -472,7 +479,7 @@ Section __.
   Definition sfrom_bytes (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "from_bytes" from_bytes
           (docstring_with_summary_from_lemma!
              (fun fname : string => [text_before_function_name ++ fname ++ " deserializes a field element from bytes in little-endian order."]%string)
@@ -491,7 +498,7 @@ Section __.
   Definition sencode (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "encode" encode
           (docstring_with_summary_from_lemma!
              (fun fname : string => [text_before_function_name ++ fname ++ " encodes an integer as a field element."]%string)
@@ -510,7 +517,7 @@ Section __.
   Definition szero (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "zero" zero
           (docstring_with_summary_from_lemma!
              (fun fname => [text_before_function_name ++ fname ++ " returns the field element zero."]%string)
@@ -529,7 +536,7 @@ Section __.
   Definition sone (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "one" one
           (docstring_with_summary_from_lemma!
              (fun fname => [text_before_function_name ++ fname ++ " returns the field element one."]%string)
@@ -823,7 +830,7 @@ Section __.
     Definition Synthesize (comment_header : list string) (function_name_prefix : string) (requests : list string)
       : list (synthesis_output_kind * string * Pipeline.ErrorT (list string))
       := Primitives.Synthesize
-           machine_wordsize valid_names known_functions (extra_special_synthesis function_name_prefix)
+           machine_wordsize valid_names known_functions (extra_special_synthesis function_name_prefix) all_typedefs!
            check_args
            (ToString.comment_file_header_block
               (comment_header

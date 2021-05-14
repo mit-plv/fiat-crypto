@@ -9148,7 +9148,6 @@ public static void fiat_P384_from_bytes(long[] out1, final int[] arg1) {
  *   eval (from_montgomery out1) mod m = 1 mod m <p>
  *   0 ≤ eval out1 &lt; m <p>
  * <p>
- * Input Bounds: <p>
  * Output Bounds: <p>
  *   out1: [[0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff]] <p>
  */
@@ -9174,7 +9173,6 @@ public static void fiat_P384_set_one(long[] out1) {
  *   twos_complement_eval out1 = m <p>
  *   0 ≤ eval out1 &lt; m <p>
  * <p>
- * Input Bounds: <p>
  * Output Bounds: <p>
  *   out1: [[0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff]] <p>
  */
@@ -9823,7 +9821,6 @@ public static void fiat_P384_divstep(Box<Long> out1, long[] out2, long[] out3, l
  *   eval (from_montgomery out1) = ⌊(m - 1) / 2⌋^(if ⌊log2 m⌋ + 1 &lt; 46 then ⌊(49 * (⌊log2 m⌋ + 1) + 80) / 17⌋ else ⌊(49 * (⌊log2 m⌋ + 1) + 57) / 17⌋) <p>
  *   0 ≤ eval out1 &lt; m <p>
  * <p>
- * Input Bounds: <p>
  * Output Bounds: <p>
  *   out1: [[0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff], [0x0 ~&gt; 0xffffffff]] <p>
  */

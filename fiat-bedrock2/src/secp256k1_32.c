@@ -1584,7 +1584,7 @@ void internal_fiat_secp256k1_mul(uintptr_t out0, uintptr_t in0, uintptr_t in1) {
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
-static void fiat_secp256k1_mul(uint32_t out1[8], const uint32_t arg1[8], const uint32_t arg2[8]) {
+static void fiat_secp256k1_mul(fiat_secp256k1_montgomery_domain_field_element out1, const fiat_secp256k1_montgomery_domain_field_element arg1, const fiat_secp256k1_montgomery_domain_field_element arg2) {
   internal_fiat_secp256k1_mul((uintptr_t)out1, (uintptr_t)arg1, (uintptr_t)arg2);
 }
 
@@ -3130,7 +3130,7 @@ void internal_fiat_secp256k1_square(uintptr_t out0, uintptr_t in0) {
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
-static void fiat_secp256k1_square(uint32_t out1[8], const uint32_t arg1[8]) {
+static void fiat_secp256k1_square(fiat_secp256k1_montgomery_domain_field_element out1, const fiat_secp256k1_montgomery_domain_field_element arg1) {
   internal_fiat_secp256k1_square((uintptr_t)out1, (uintptr_t)arg1);
 }
 
@@ -3242,7 +3242,7 @@ void internal_fiat_secp256k1_add(uintptr_t out0, uintptr_t in0, uintptr_t in1) {
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
-static void fiat_secp256k1_add(uint32_t out1[8], const uint32_t arg1[8], const uint32_t arg2[8]) {
+static void fiat_secp256k1_add(fiat_secp256k1_montgomery_domain_field_element out1, const fiat_secp256k1_montgomery_domain_field_element arg1, const fiat_secp256k1_montgomery_domain_field_element arg2) {
   internal_fiat_secp256k1_add((uintptr_t)out1, (uintptr_t)arg1, (uintptr_t)arg2);
 }
 
@@ -3328,7 +3328,7 @@ void internal_fiat_secp256k1_sub(uintptr_t out0, uintptr_t in0, uintptr_t in1) {
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
-static void fiat_secp256k1_sub(uint32_t out1[8], const uint32_t arg1[8], const uint32_t arg2[8]) {
+static void fiat_secp256k1_sub(fiat_secp256k1_montgomery_domain_field_element out1, const fiat_secp256k1_montgomery_domain_field_element arg1, const fiat_secp256k1_montgomery_domain_field_element arg2) {
   internal_fiat_secp256k1_sub((uintptr_t)out1, (uintptr_t)arg1, (uintptr_t)arg2);
 }
 
@@ -3404,7 +3404,7 @@ void internal_fiat_secp256k1_opp(uintptr_t out0, uintptr_t in0) {
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
-static void fiat_secp256k1_opp(uint32_t out1[8], const uint32_t arg1[8]) {
+static void fiat_secp256k1_opp(fiat_secp256k1_montgomery_domain_field_element out1, const fiat_secp256k1_montgomery_domain_field_element arg1) {
   internal_fiat_secp256k1_opp((uintptr_t)out1, (uintptr_t)arg1);
 }
 
@@ -3914,7 +3914,7 @@ void internal_fiat_secp256k1_from_montgomery(uintptr_t out0, uintptr_t in0) {
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
-static void fiat_secp256k1_from_montgomery(uint32_t out1[8], const uint32_t arg1[8]) {
+static void fiat_secp256k1_from_montgomery(fiat_secp256k1_non_montgomery_domain_field_element out1, const fiat_secp256k1_montgomery_domain_field_element arg1) {
   internal_fiat_secp256k1_from_montgomery((uintptr_t)out1, (uintptr_t)arg1);
 }
 
@@ -4504,7 +4504,7 @@ void internal_fiat_secp256k1_to_montgomery(uintptr_t out0, uintptr_t in0) {
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
-static void fiat_secp256k1_to_montgomery(uint32_t out1[8], const uint32_t arg1[8]) {
+static void fiat_secp256k1_to_montgomery(fiat_secp256k1_montgomery_domain_field_element out1, const fiat_secp256k1_non_montgomery_domain_field_element arg1) {
   internal_fiat_secp256k1_to_montgomery((uintptr_t)out1, (uintptr_t)arg1);
 }
 
@@ -4929,7 +4929,7 @@ void internal_fiat_secp256k1_set_one(uintptr_t out0) {
 }
 
 /* NOTE: The following wrapper function is not covered by Coq proofs */
-static void fiat_secp256k1_set_one(uint32_t out1[8]) {
+static void fiat_secp256k1_set_one(fiat_secp256k1_montgomery_domain_field_element out1) {
   internal_fiat_secp256k1_set_one((uintptr_t)out1);
 }
 

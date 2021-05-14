@@ -20,6 +20,14 @@ pub type fiat_poly1305_i1 = i8;
 pub type fiat_poly1305_u2 = u8;
 pub type fiat_poly1305_i2 = i8;
 
+/* The type fiat_poly1305_loose_field_element is a field element with loose bounds. */
+/* Bounds: [[0x0 ~> 0x300000000000], [0x0 ~> 0x180000000000], [0x0 ~> 0x180000000000]] */
+pub type fiat_poly1305_loose_field_element = [u64; 3];
+
+/* The type fiat_poly1305_tight_field_element is a field element with tight bounds. */
+/* Bounds: [[0x0 ~> 0x100000000000], [0x0 ~> 0x80000000000], [0x0 ~> 0x80000000000]] */
+pub type fiat_poly1305_tight_field_element = [u64; 3];
+
 
 /// The function fiat_poly1305_addcarryx_u44 is an addition with carry.
 ///
@@ -139,7 +147,7 @@ pub fn fiat_poly1305_cmovznz_u64(out1: &mut u64, arg1: fiat_poly1305_u1, arg2: u
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0x100000000000], [0x0 ~> 0x80000000000], [0x0 ~> 0x80000000000]]
 #[inline]
-pub fn fiat_poly1305_carry_mul(out1: &mut [u64; 3], arg1: &[u64; 3], arg2: &[u64; 3]) -> () {
+pub fn fiat_poly1305_carry_mul(out1: &mut fiat_poly1305_tight_field_element, arg1: &fiat_poly1305_loose_field_element, arg2: &fiat_poly1305_loose_field_element) -> () {
   let x1: u128 = (((arg1[2]) as u128) * (((arg2[2]) * 0x5) as u128));
   let x2: u128 = (((arg1[2]) as u128) * (((arg2[1]) * 0xa) as u128));
   let x3: u128 = (((arg1[1]) as u128) * (((arg2[2]) * 0xa) as u128));
@@ -183,7 +191,7 @@ pub fn fiat_poly1305_carry_mul(out1: &mut [u64; 3], arg1: &[u64; 3], arg2: &[u64
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0x100000000000], [0x0 ~> 0x80000000000], [0x0 ~> 0x80000000000]]
 #[inline]
-pub fn fiat_poly1305_carry_square(out1: &mut [u64; 3], arg1: &[u64; 3]) -> () {
+pub fn fiat_poly1305_carry_square(out1: &mut fiat_poly1305_tight_field_element, arg1: &fiat_poly1305_loose_field_element) -> () {
   let x1: u64 = ((arg1[2]) * 0x5);
   let x2: u64 = (x1 * 0x2);
   let x3: u64 = ((arg1[2]) * 0x2);
@@ -228,7 +236,7 @@ pub fn fiat_poly1305_carry_square(out1: &mut [u64; 3], arg1: &[u64; 3]) -> () {
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0x100000000000], [0x0 ~> 0x80000000000], [0x0 ~> 0x80000000000]]
 #[inline]
-pub fn fiat_poly1305_carry(out1: &mut [u64; 3], arg1: &[u64; 3]) -> () {
+pub fn fiat_poly1305_carry(out1: &mut fiat_poly1305_tight_field_element, arg1: &fiat_poly1305_loose_field_element) -> () {
   let x1: u64 = (arg1[0]);
   let x2: u64 = ((x1 >> 44) + (arg1[1]));
   let x3: u64 = ((x2 >> 43) + (arg1[2]));
@@ -253,7 +261,7 @@ pub fn fiat_poly1305_carry(out1: &mut [u64; 3], arg1: &[u64; 3]) -> () {
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0x300000000000], [0x0 ~> 0x180000000000], [0x0 ~> 0x180000000000]]
 #[inline]
-pub fn fiat_poly1305_add(out1: &mut [u64; 3], arg1: &[u64; 3], arg2: &[u64; 3]) -> () {
+pub fn fiat_poly1305_add(out1: &mut fiat_poly1305_loose_field_element, arg1: &fiat_poly1305_tight_field_element, arg2: &fiat_poly1305_tight_field_element) -> () {
   let x1: u64 = ((arg1[0]) + (arg2[0]));
   let x2: u64 = ((arg1[1]) + (arg2[1]));
   let x3: u64 = ((arg1[2]) + (arg2[2]));
@@ -273,7 +281,7 @@ pub fn fiat_poly1305_add(out1: &mut [u64; 3], arg1: &[u64; 3], arg2: &[u64; 3]) 
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0x300000000000], [0x0 ~> 0x180000000000], [0x0 ~> 0x180000000000]]
 #[inline]
-pub fn fiat_poly1305_sub(out1: &mut [u64; 3], arg1: &[u64; 3], arg2: &[u64; 3]) -> () {
+pub fn fiat_poly1305_sub(out1: &mut fiat_poly1305_loose_field_element, arg1: &fiat_poly1305_tight_field_element, arg2: &fiat_poly1305_tight_field_element) -> () {
   let x1: u64 = ((0x1ffffffffff6 + (arg1[0])) - (arg2[0]));
   let x2: u64 = ((0xffffffffffe + (arg1[1])) - (arg2[1]));
   let x3: u64 = ((0xffffffffffe + (arg1[2])) - (arg2[2]));
@@ -292,7 +300,7 @@ pub fn fiat_poly1305_sub(out1: &mut [u64; 3], arg1: &[u64; 3], arg2: &[u64; 3]) 
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0x300000000000], [0x0 ~> 0x180000000000], [0x0 ~> 0x180000000000]]
 #[inline]
-pub fn fiat_poly1305_opp(out1: &mut [u64; 3], arg1: &[u64; 3]) -> () {
+pub fn fiat_poly1305_opp(out1: &mut fiat_poly1305_loose_field_element, arg1: &fiat_poly1305_tight_field_element) -> () {
   let x1: u64 = (0x1ffffffffff6 - (arg1[0]));
   let x2: u64 = (0xffffffffffe - (arg1[1]));
   let x3: u64 = (0xffffffffffe - (arg1[2]));
@@ -335,7 +343,7 @@ pub fn fiat_poly1305_selectznz(out1: &mut [u64; 3], arg1: fiat_poly1305_u1, arg2
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0xff], [0x0 ~> 0x3]]
 #[inline]
-pub fn fiat_poly1305_to_bytes(out1: &mut [u8; 17], arg1: &[u64; 3]) -> () {
+pub fn fiat_poly1305_to_bytes(out1: &mut [u8; 17], arg1: &fiat_poly1305_tight_field_element) -> () {
   let mut x1: u64 = 0;
   let mut x2: fiat_poly1305_u1 = 0;
   fiat_poly1305_subborrowx_u44(&mut x1, &mut x2, 0x0, (arg1[0]), 0xffffffffffb);
@@ -421,7 +429,7 @@ pub fn fiat_poly1305_to_bytes(out1: &mut [u8; 17], arg1: &[u64; 3]) -> () {
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0x100000000000], [0x0 ~> 0x80000000000], [0x0 ~> 0x80000000000]]
 #[inline]
-pub fn fiat_poly1305_from_bytes(out1: &mut [u64; 3], arg1: &[u8; 17]) -> () {
+pub fn fiat_poly1305_from_bytes(out1: &mut fiat_poly1305_tight_field_element, arg1: &[u8; 17]) -> () {
   let x1: u64 = (((arg1[16]) as u64) << 41);
   let x2: u64 = (((arg1[15]) as u64) << 33);
   let x3: u64 = (((arg1[14]) as u64) << 25);
