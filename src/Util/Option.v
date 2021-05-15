@@ -124,6 +124,24 @@ Proof using Type.
   destruct x, y; cbn in *; eauto; intuition congruence.
 Qed.
 
+Lemma option_beq_hetero_uniform {A : Type} A_beq {x y}
+  : option_beq_hetero A_beq x y = @option_beq A A_beq x y.
+Proof. destruct x, y; reflexivity. Qed.
+
+Lemma option_bl_hetero_eq {A}
+      {A_beq : A -> A -> bool}
+      (A_bl : forall x y, A_beq x y = true -> x = y)
+      {x y}
+  : option_beq_hetero A_beq x y = true -> x = y.
+Proof using Type. rewrite option_beq_hetero_uniform; now apply internal_option_dec_bl. Qed.
+
+Lemma option_lb_hetero_eq {A}
+      {A_beq : A -> A -> bool}
+      (A_lb : forall x y, x = y -> A_beq x y = true)
+      {x y}
+  : x = y -> option_beq_hetero A_beq x y = true.
+Proof using Type. rewrite option_beq_hetero_uniform; now apply internal_option_dec_lb. Qed.
+
 Global Instance bind_Proper {A B}
   : Proper (eq ==> (pointwise_relation _ eq) ==> eq) (@bind A B).
 Proof.

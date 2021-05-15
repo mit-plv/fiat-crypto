@@ -102,7 +102,7 @@ Module Compilers.
   Global Arguments ident_zrange_rect {_} : assert.
   Global Arguments eta_base_cps {_} _ _ : assert.
   Global Arguments ident_interp {_} _ : assert.
-  Global Arguments base_interp_beq {_} _ _ : assert.
+  Global Arguments base_interp_beq {_ _} _ _ : assert.
   Global Arguments reflect_base_interp_beq {_}.
   Global Arguments ident_is_var_like {_} _ : assert.
   Global Arguments eqv_Reflexive_Proper {_} _.
