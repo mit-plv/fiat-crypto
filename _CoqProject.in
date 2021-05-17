@@ -234,6 +234,7 @@ src/Util/Compose.v
 src/Util/Curry.v
 src/Util/Decidable.v
 src/Util/DefaultedTypes.v
+src/Util/DynList.v
 src/Util/Equality.v
 src/Util/ErrorT.v
 src/Util/Factorize.v
@@ -331,6 +332,9 @@ src/Util/Structures/Equalities/Iso.v
 src/Util/Structures/Equalities/Sum.v
 src/Util/Structures/Orders/Iso.v
 src/Util/Structures/Orders/Sum.v
+src/Util/Tactics/AllInstances.v
+src/Util/Tactics/AllSuccesses.v
+src/Util/Tactics/AppendUnderscores.v
 src/Util/Tactics/BreakMatch.v
 src/Util/Tactics/CPSId.v
 src/Util/Tactics/CacheTerm.v
@@ -341,6 +345,7 @@ src/Util/Tactics/ClearbodyAll.v
 src/Util/Tactics/ConstrFail.v
 src/Util/Tactics/Contains.v
 src/Util/Tactics/ConvoyDestruct.v
+src/Util/Tactics/CountBinders.v
 src/Util/Tactics/DebugPrint.v
 src/Util/Tactics/DestructHead.v
 src/Util/Tactics/DestructHyps.v

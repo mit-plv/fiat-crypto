@@ -1,5 +1,8 @@
 (** * Generic Tactics *)
 Require Export Crypto.Util.FixCoqMistakes.
+Require Export Crypto.Util.Tactics.AllInstances.
+Require Export Crypto.Util.Tactics.AllSuccesses.
+Require Export Crypto.Util.Tactics.AppendUnderscores.
 Require Export Crypto.Util.Tactics.BreakMatch.
 Require Export Crypto.Util.Tactics.CacheTerm.
 Require Export Crypto.Util.Tactics.ChangeInAll.
@@ -9,6 +12,7 @@ Require Export Crypto.Util.Tactics.ClearbodyAll.
 Require Export Crypto.Util.Tactics.ConstrFail.
 Require Export Crypto.Util.Tactics.Contains.
 Require Export Crypto.Util.Tactics.ConvoyDestruct.
+Require Export Crypto.Util.Tactics.CountBinders.
 Require Export Crypto.Util.Tactics.CPSId.
 Require Export Crypto.Util.Tactics.DebugPrint.
 Require Export Crypto.Util.Tactics.DestructHead.
