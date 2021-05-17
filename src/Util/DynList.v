@@ -18,7 +18,7 @@ Module DynList.
                    | true => f T x
                    | false => f x
                    end in
-         let xs := map_gen explicit f xs in
+         let xs := map_gen explicit f xs N C in
          constr:(C fx xs)
     end.
   Ltac map_gen_dyn explicit f ls := map_gen explicit f ls constr:(nil) uconstr:(@cons _).
