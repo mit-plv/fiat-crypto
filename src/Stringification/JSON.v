@@ -238,93 +238,16 @@ Module JSON.
     := fun idc '(t1, t2)
        => ToString.int.union t1 t2.
 
-  (* Does the binary operation commute with (-- mod 2^bw)? *)
-  Definition bin_op_commutes_with_mod_pow2 (idc : IR.Z_binop)
-    := match idc with
-       | IR.Z_land
-       | IR.Z_lor
-       | IR.Z_lxor
-       | IR.Z_add
-       | IR.Z_mul
-       | IR.Z_sub
-         => true
-       end.
-
+  (** We want casts to record only the types that exist.  Therefore,
+      we insert casts at the outputs of all operations, and never at
+      the inputs *)
   Definition JSON_bin_op_casts
     : IR.Z_binop -> option ToString.int.type -> ToString.int.type * ToString.int.type -> option ToString.int.type * (option ToString.int.type * option ToString.int.type)
-    := fun idc desired_type '(t1, t2)
-       => match desired_type with
-          | Some desired_type
-            => let ct := ToString.int.union t1 t2 in
-               if bin_op_commutes_with_mod_pow2 idc
-               then
-                 (* these operations commute with mod, so we just pre-cast them *)
-                 (None, (Some desired_type, Some desired_type))
-               else
-                 let desired_type' := Some (ToString.int.union ct desired_type) in
-                 (desired_type',
-                  (get_Zcast_up_if_needed desired_type' (Some t1),
-                   get_Zcast_up_if_needed desired_type' (Some t2)))
-          | None => (None, (None, None))
-          end.
+    := fun idc desired_type _ => (desired_type, (None, None)).
 
   Definition JSON_un_op_casts
     : IR.Z_unop -> option ToString.int.type -> ToString.int.type -> option ToString.int.type * option ToString.int.type
-    := fun idc desired_type t
-       => match idc with
-          | IR.Z_shiftr offset
-            => (** N.B. We must cast the expression up to a large
-                   enough type to fit 2^offset (importantly, not just
-                   2^offset-1), because C considers it to be undefined
-                   behavior to shift >= width of the type.  We should
-                   probably figure out how to not generate these
-                   things in the first place...
-
-                   N.B. We must preserve signedness of the value being
-                   shifted, because shift does not commute with
-                   mod. *)
-            let t' := ToString.int.union_zrange r[0~>2^offset]%zrange t in
-            ((** We cast the result down to the specified type, if needed *)
-              get_Zcast_down_if_needed desired_type (Some t'),
-              (** We cast the argument up to a large enough type *)
-              get_Zcast_up_if_needed (Some t') (Some t))
-          | IR.Z_shiftl offset
-            => (** N.B. We must cast the expression up to a large
-                   enough type to fit 2^offset (importantly, not just
-                   2^offset-1), because C considers it to be undefined
-                   behavior to shift >= width of the type.  We should
-                   probably figure out how to not generate these
-                   things in the first place...
-
-                   N.B. We make sure that we only left-shift unsigned
-                   values, since shifting into the sign bit is
-                   undefined behavior. *)
-            let rpre_out := match desired_type with
-                            | Some rout => Some (ToString.int.union_zrange r[0~>2^offset] (ToString.int.unsigned_counterpart_of rout))
-                            | None => Some (ToString.int.of_zrange_relaxed r[0~>2^offset]%zrange)
-                            end in
-            ((** We cast the result down to the specified type, if needed *)
-              get_Zcast_down_if_needed desired_type rpre_out,
-              (** We cast the argument up to a large enough type *)
-              get_Zcast_up_if_needed rpre_out (Some t))
-          | IR.Z_lnot ty
-            => ((* if the result is too big, we cast it down; we
-                       don't need to upcast it because it'll get
-                       picked up by implicit casts if necessary *)
-              get_Zcast_down_if_needed desired_type (Some ty),
-              (** always cast to the width of the type, unless we are already exactly that type (which the machinery in IR handles *)
-              Some ty)
-          | IR.Z_value_barrier ty
-            => ((* if the result is too big, we cast it down; we
-                       don't need to upcast it because it'll get
-                       picked up by implicit casts if necessary *)
-              get_Zcast_down_if_needed desired_type (Some ty),
-              (** always cast to the width of the type, unless we are already exactly that type (which the machinery in IR handles *)
-              Some ty)
-          | IR.Z_bneg
-            => ((* bneg is !, i.e., takes the argument to 1 if its not zero, and to zero if it is zero; so we don't ever need to cast *)
-              None, None)
-          end.
+    := fun idc desired_type _ => (desired_type, None).
 
   Local Instance JSONLanguageCasts : LanguageCasts :=
     {| bin_op_natural_output := JSON_bin_op_natural_output
