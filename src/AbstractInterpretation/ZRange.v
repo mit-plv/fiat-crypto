@@ -33,6 +33,16 @@ Module Compilers.
              | base.type.list A => list (interp A)
              | base.type.option A => option (interp A)
              end%type.
+        Fixpoint map_ranges (f : zrange -> zrange) {t} : interp t -> interp t
+          := match t with
+             | base.type.type_base base.type.Z => f
+             | base.type.type_base _ as t
+             | base.type.unit as t
+               => fun x => x
+             | base.type.prod A B => fun '(a, b) => (@map_ranges f A a, @map_ranges f B b)
+             | base.type.list A => List.map (@map_ranges f A)
+             | base.type.option A => option_map (@map_ranges f A)
+             end%type.
         Definition is_neg {t} : interp t -> bool
           := match t with
              | base.type.type_base base.type.Z => fun r => (lower r <? 0) && (upper r <=? 0)
@@ -111,6 +121,15 @@ Module Compilers.
                | base.type.list A => option (list (interp A))
                | base.type.option A => option (option (interp A))
                | base.type.unit => unit
+               end%type.
+          Fixpoint map_ranges (f : zrange -> zrange) {t} : interp t -> interp t
+            := match t with
+               | base.type.type_base _ as t
+                 => option_map (@base.map_ranges f t)
+               | base.type.prod A B => fun '(a, b) => (@map_ranges f A a, @map_ranges f B b)
+               | base.type.list A => option_map (List.map (@map_ranges f A))
+               | base.type.option A => option_map (option_map (@map_ranges f A))
+               | base.type.unit => fun 'tt => tt
                end%type.
           Fixpoint None {t} : interp t
             := match t with
