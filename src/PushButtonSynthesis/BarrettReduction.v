@@ -116,7 +116,7 @@ Section rbarrett_red.
 
   (** Note: If you change the name or type signature of this
         function, you will need to update the code in CLI.v *)
-  Definition check_args {T} (res : Pipeline.ErrorT T)
+  Definition check_args {T} (requests : list string) (res : Pipeline.ErrorT T)
     : Pipeline.ErrorT T
     := fold_right
          (fun '(b, e) k => if b:bool then Error e else k)
@@ -129,19 +129,6 @@ Section rbarrett_red.
             (negb ((2 * (((2 ^ 2) ^ machine_wordsize) mod M) <=? 2 ^ (machine_wordsize + 1) - (muLow + 2 ^ machine_wordsize)))%Z, Pipeline.Value_not_leZ ("(2 * ((2 ^ 2) ^ machine_wordsize) mod M)  2 ^ (machine_wordsize + 1) - (muLow + 2 ^ machine_wordsize)") (2 * (((2 ^ 2) ^ machine_wordsize) mod M)) (2 ^ (machine_wordsize + 1) - (muLow + 2 ^ machine_wordsize))) ].
 
   Local Arguments Z.mul !_ !_.
-  Local Ltac prepare_use_curve_good _ :=
-    let curve_good := lazymatch goal with | curve_good : check_args _ = Success _ |- _ => curve_good end in
-    clear -curve_good;
-    cbv [check_args] in curve_good |- *;
-    cbn [fold_right] in curve_good |- *;
-    repeat first [ match goal with
-                   | [ H : context[match ?b with true => _ | false => _ end ] |- _ ] => destruct b eqn:?
-                   end
-                 | discriminate
-                 | progress Reflect.reflect_hyps
-                 | assumption
-                 | apply conj
-                 | progress destruct_head'_and ].
 
   Local Ltac use_curve_good_t :=
     repeat first [ assumption
@@ -154,7 +141,8 @@ Section rbarrett_red.
                  | solve [ auto with zarith ]
                  | rewrite Z.log2_pow2 by use_curve_good_t ].
 
-  Context (curve_good : check_args (Success tt) = Success tt).
+  Context (requests : list string)
+          (curve_good : check_args requests (Success tt) = Success tt).
 
   Lemma use_curve_good
     : 1 < machine_wordsize

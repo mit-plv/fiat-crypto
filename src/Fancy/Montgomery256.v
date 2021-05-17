@@ -35,7 +35,7 @@ Module Montgomery256.
   Lemma montred256_correct :
     COperationSpecifications.MontgomeryReduction.montred_correct N R R' (API.Interp montred256).
   Proof.
-    apply montred_correct with (n:=2%nat) (machine_wordsize:=machine_wordsize) (N':=N').
+    apply montred_correct with (n:=2%nat) (machine_wordsize:=machine_wordsize) (N':=N') (requests:=[]).
     { lazy. reflexivity. }
     { apply montred256_eq. }
   Qed.
