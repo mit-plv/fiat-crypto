@@ -127,11 +127,6 @@ pub fn fiat_secp256k1_cmovznz_u64(out1: &mut u64, arg1: fiat_secp256k1_u1, arg2:
 ///   eval (from_montgomery out1) mod m = (eval (from_montgomery arg1) * eval (from_montgomery arg2)) mod m
 ///   0 ≤ eval out1 < m
 ///
-/// Input Bounds:
-///   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
-///   arg2: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
-/// Output Bounds:
-///   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 #[inline]
 pub fn fiat_secp256k1_mul(out1: &mut fiat_secp256k1_montgomery_domain_field_element, arg1: &fiat_secp256k1_montgomery_domain_field_element, arg2: &fiat_secp256k1_montgomery_domain_field_element) -> () {
   let x1: u64 = (arg1[1]);
@@ -471,10 +466,6 @@ pub fn fiat_secp256k1_mul(out1: &mut fiat_secp256k1_montgomery_domain_field_elem
 ///   eval (from_montgomery out1) mod m = (eval (from_montgomery arg1) * eval (from_montgomery arg1)) mod m
 ///   0 ≤ eval out1 < m
 ///
-/// Input Bounds:
-///   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
-/// Output Bounds:
-///   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 #[inline]
 pub fn fiat_secp256k1_square(out1: &mut fiat_secp256k1_montgomery_domain_field_element, arg1: &fiat_secp256k1_montgomery_domain_field_element) -> () {
   let x1: u64 = (arg1[1]);
@@ -815,11 +806,6 @@ pub fn fiat_secp256k1_square(out1: &mut fiat_secp256k1_montgomery_domain_field_e
 ///   eval (from_montgomery out1) mod m = (eval (from_montgomery arg1) + eval (from_montgomery arg2)) mod m
 ///   0 ≤ eval out1 < m
 ///
-/// Input Bounds:
-///   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
-///   arg2: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
-/// Output Bounds:
-///   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 #[inline]
 pub fn fiat_secp256k1_add(out1: &mut fiat_secp256k1_montgomery_domain_field_element, arg1: &fiat_secp256k1_montgomery_domain_field_element, arg2: &fiat_secp256k1_montgomery_domain_field_element) -> () {
   let mut x1: u64 = 0;
@@ -872,11 +858,6 @@ pub fn fiat_secp256k1_add(out1: &mut fiat_secp256k1_montgomery_domain_field_elem
 ///   eval (from_montgomery out1) mod m = (eval (from_montgomery arg1) - eval (from_montgomery arg2)) mod m
 ///   0 ≤ eval out1 < m
 ///
-/// Input Bounds:
-///   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
-///   arg2: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
-/// Output Bounds:
-///   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 #[inline]
 pub fn fiat_secp256k1_sub(out1: &mut fiat_secp256k1_montgomery_domain_field_element, arg1: &fiat_secp256k1_montgomery_domain_field_element, arg2: &fiat_secp256k1_montgomery_domain_field_element) -> () {
   let mut x1: u64 = 0;
@@ -919,10 +900,6 @@ pub fn fiat_secp256k1_sub(out1: &mut fiat_secp256k1_montgomery_domain_field_elem
 ///   eval (from_montgomery out1) mod m = -eval (from_montgomery arg1) mod m
 ///   0 ≤ eval out1 < m
 ///
-/// Input Bounds:
-///   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
-/// Output Bounds:
-///   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 #[inline]
 pub fn fiat_secp256k1_opp(out1: &mut fiat_secp256k1_montgomery_domain_field_element, arg1: &fiat_secp256k1_montgomery_domain_field_element) -> () {
   let mut x1: u64 = 0;
@@ -965,10 +942,6 @@ pub fn fiat_secp256k1_opp(out1: &mut fiat_secp256k1_montgomery_domain_field_elem
 ///   eval out1 mod m = (eval arg1 * ((2^64)⁻¹ mod m)^4) mod m
 ///   0 ≤ eval out1 < m
 ///
-/// Input Bounds:
-///   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
-/// Output Bounds:
-///   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 #[inline]
 pub fn fiat_secp256k1_from_montgomery(out1: &mut fiat_secp256k1_non_montgomery_domain_field_element, arg1: &fiat_secp256k1_montgomery_domain_field_element) -> () {
   let x1: u64 = (arg1[0]);
@@ -1201,10 +1174,6 @@ pub fn fiat_secp256k1_from_montgomery(out1: &mut fiat_secp256k1_non_montgomery_d
 ///   eval (from_montgomery out1) mod m = eval arg1 mod m
 ///   0 ≤ eval out1 < m
 ///
-/// Input Bounds:
-///   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
-/// Output Bounds:
-///   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 #[inline]
 pub fn fiat_secp256k1_to_montgomery(out1: &mut fiat_secp256k1_montgomery_domain_field_element, arg1: &fiat_secp256k1_non_montgomery_domain_field_element) -> () {
   let x1: u64 = (arg1[1]);
@@ -1693,8 +1662,6 @@ pub fn fiat_secp256k1_from_bytes(out1: &mut [u64; 4], arg1: &[u8; 32]) -> () {
 ///   eval (from_montgomery out1) mod m = 1 mod m
 ///   0 ≤ eval out1 < m
 ///
-/// Output Bounds:
-///   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 #[inline]
 pub fn fiat_secp256k1_set_one(out1: &mut fiat_secp256k1_montgomery_domain_field_element) -> () {
   out1[0] = 0x1000003d1;

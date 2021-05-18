@@ -5429,5 +5429,150 @@
         ]
       }
     ]
+  },
+  {
+    "operation": "fiat_poly1305_relax",
+    "arguments": [
+      {
+        "datatype": "u32[5]",
+        "name": "arg1",
+        "lbound": [
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0"
+        ],
+        "ubound": [
+          "0x4000000",
+          "0x4000000",
+          "0x4000000",
+          "0x4000000",
+          "0x4000000"
+        ]
+      }
+    ],
+    "returns": [
+      {
+        "datatype": "u32[5]",
+        "name": "out1",
+        "lbound": [
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0"
+        ],
+        "ubound": [
+          "0xc000000",
+          "0xc000000",
+          "0xc000000",
+          "0xc000000",
+          "0xc000000"
+        ]
+      }
+    ],
+    "body": [
+      {
+        "datatype": "u32",
+        "name": [
+          "x1"
+        ],
+        "operation": "=",
+        "arguments": [
+          "arg1[0]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x2"
+        ],
+        "operation": "=",
+        "arguments": [
+          "arg1[1]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x3"
+        ],
+        "operation": "=",
+        "arguments": [
+          "arg1[2]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x4"
+        ],
+        "operation": "=",
+        "arguments": [
+          "arg1[3]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x5"
+        ],
+        "operation": "=",
+        "arguments": [
+          "arg1[4]"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[0]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x1"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[1]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x2"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[2]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x3"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[3]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x4"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[4]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x5"
+        ]
+      }
+    ]
   }
 ]

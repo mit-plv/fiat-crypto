@@ -183,7 +183,7 @@ Section UnsaturatedSolinas.
   Qed.
 
   Local Hint Resolve
-        relax_correct func_eq
+        relax_valid func_eq
         inname_gen_varname_gen_disjoint
         outname_gen_varname_gen_disjoint
         length_tight_bounds length_loose_bounds
@@ -232,25 +232,27 @@ Section UnsaturatedSolinas.
     auto with zarith.
   Qed.
 
+  (* We wrap the tactic in [once] so it doesn't take forever to fail *)
   Ltac handle_side_conditions :=
-    lazymatch goal with
-    | |- API.Wf (res ?op)
-      => generalize (res op), (res_eq op);
-         (* Kludge around auto being bad (COQBUG(https://github.com/coq/coq/issues/14190)) and eauto not respecting Hint Opaque *)
-         typeclasses eauto with wf_op_cache;
-         let e := lazymatch goal with | |- forall res, ?e = _ -> API.Wf _ => e end in
-         idtac "Warning: Falling back to manually proving pipeline well-formedness for" e;
-         PipelineTactics.prove_pipeline_wf ()
-    | |- context [varname_gen] => rewrite varname_gen_is_default
-    | |- context [Field.tight_bounds] => rewrite tight_bounds_eq
-    | |- context [Field.loose_bounds] => rewrite loose_bounds_eq
-    | _ => idtac
-    end;
-    lazymatch goal with
-    | |- context [expr.interp] =>
-      cbv [expr.Interp] in *; autounfold with solinas_specs in *
-    | _ => eauto with helpers
-    end.
+    once
+      (lazymatch goal with
+       | |- API.Wf (res ?op)
+         => generalize (res op), (res_eq op);
+            (* Kludge around auto being bad (COQBUG(https://github.com/coq/coq/issues/14190)) and eauto not respecting Hint Opaque *)
+            typeclasses eauto with wf_op_cache;
+            let e := lazymatch goal with | |- forall res, ?e = _ -> API.Wf _ => e end in
+            idtac "Warning: Falling back to manually proving pipeline well-formedness for" e;
+            PipelineTactics.prove_pipeline_wf ()
+       | |- context [varname_gen] => rewrite varname_gen_is_default
+       | |- context [Field.tight_bounds] => rewrite tight_bounds_eq
+       | |- context [Field.loose_bounds] => rewrite loose_bounds_eq
+       | _ => idtac
+       end;
+       lazymatch goal with
+       | |- context [expr.interp] =>
+         cbv [expr.Interp] in *; autounfold with solinas_specs in *
+       | _ => eauto with helpers
+       end).
 
   Hint Resolve relax_list_Z_bounded_by partition_bounded_by : bounds.
 

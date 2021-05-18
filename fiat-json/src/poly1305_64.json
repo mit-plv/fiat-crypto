@@ -4126,5 +4126,102 @@
         ]
       }
     ]
+  },
+  {
+    "operation": "fiat_poly1305_relax",
+    "arguments": [
+      {
+        "datatype": "u64[3]",
+        "name": "arg1",
+        "lbound": [
+          "0x0",
+          "0x0",
+          "0x0"
+        ],
+        "ubound": [
+          "0x100000000000",
+          "0x80000000000",
+          "0x80000000000"
+        ]
+      }
+    ],
+    "returns": [
+      {
+        "datatype": "u64[3]",
+        "name": "out1",
+        "lbound": [
+          "0x0",
+          "0x0",
+          "0x0"
+        ],
+        "ubound": [
+          "0x300000000000",
+          "0x180000000000",
+          "0x180000000000"
+        ]
+      }
+    ],
+    "body": [
+      {
+        "datatype": "u64",
+        "name": [
+          "x1"
+        ],
+        "operation": "=",
+        "arguments": [
+          "arg1[0]"
+        ]
+      },
+      {
+        "datatype": "u64",
+        "name": [
+          "x2"
+        ],
+        "operation": "=",
+        "arguments": [
+          "arg1[1]"
+        ]
+      },
+      {
+        "datatype": "u64",
+        "name": [
+          "x3"
+        ],
+        "operation": "=",
+        "arguments": [
+          "arg1[2]"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[0]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x1"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[1]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x2"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[2]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x3"
+        ]
+      }
+    ]
   }
 ]

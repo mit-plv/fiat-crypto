@@ -298,6 +298,13 @@ Module Solinas.
         -> eval (opp x) mod m = (Z.opp (eval x)) mod m
            /\ list_Z_bounded_by loose_bounds (opp x).
 
+    Definition relax_correct
+               (relax : list Z -> list Z)
+      := forall x,
+        list_Z_bounded_by tight_bounds x
+        -> relax x = x
+           /\ list_Z_bounded_by loose_bounds (relax x).
+
     Definition carry_correct
                (carry : list Z -> list Z)
       := forall x,

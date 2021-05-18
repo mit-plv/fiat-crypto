@@ -90,11 +90,6 @@ func cmovznzU64(out1 *uint64, arg1 uint1, arg2 uint64, arg3 uint64) {
 //   eval (from_montgomery out1) mod m = (eval (from_montgomery arg1) * eval (from_montgomery arg2)) mod m
 //   0 ≤ eval out1 < m
 //
-// Input Bounds:
-//   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
-//   arg2: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
-// Output Bounds:
-//   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 func Mul(out1 *MontgomeryDomainFieldElement, arg1 *MontgomeryDomainFieldElement, arg2 *MontgomeryDomainFieldElement) {
 	x1 := arg1[1]
 	x2 := arg1[2]
@@ -424,10 +419,6 @@ func Mul(out1 *MontgomeryDomainFieldElement, arg1 *MontgomeryDomainFieldElement,
 //   eval (from_montgomery out1) mod m = (eval (from_montgomery arg1) * eval (from_montgomery arg1)) mod m
 //   0 ≤ eval out1 < m
 //
-// Input Bounds:
-//   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
-// Output Bounds:
-//   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 func Square(out1 *MontgomeryDomainFieldElement, arg1 *MontgomeryDomainFieldElement) {
 	x1 := arg1[1]
 	x2 := arg1[2]
@@ -758,11 +749,6 @@ func Square(out1 *MontgomeryDomainFieldElement, arg1 *MontgomeryDomainFieldEleme
 //   eval (from_montgomery out1) mod m = (eval (from_montgomery arg1) + eval (from_montgomery arg2)) mod m
 //   0 ≤ eval out1 < m
 //
-// Input Bounds:
-//   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
-//   arg2: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
-// Output Bounds:
-//   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 func Add(out1 *MontgomeryDomainFieldElement, arg1 *MontgomeryDomainFieldElement, arg2 *MontgomeryDomainFieldElement) {
 	var x1 uint64
 	var x2 uint1
@@ -813,11 +799,6 @@ func Add(out1 *MontgomeryDomainFieldElement, arg1 *MontgomeryDomainFieldElement,
 //   eval (from_montgomery out1) mod m = (eval (from_montgomery arg1) - eval (from_montgomery arg2)) mod m
 //   0 ≤ eval out1 < m
 //
-// Input Bounds:
-//   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
-//   arg2: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
-// Output Bounds:
-//   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 func Sub(out1 *MontgomeryDomainFieldElement, arg1 *MontgomeryDomainFieldElement, arg2 *MontgomeryDomainFieldElement) {
 	var x1 uint64
 	var x2 uint1
@@ -858,10 +839,6 @@ func Sub(out1 *MontgomeryDomainFieldElement, arg1 *MontgomeryDomainFieldElement,
 //   eval (from_montgomery out1) mod m = -eval (from_montgomery arg1) mod m
 //   0 ≤ eval out1 < m
 //
-// Input Bounds:
-//   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
-// Output Bounds:
-//   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 func Opp(out1 *MontgomeryDomainFieldElement, arg1 *MontgomeryDomainFieldElement) {
 	var x1 uint64
 	var x2 uint1
@@ -902,10 +879,6 @@ func Opp(out1 *MontgomeryDomainFieldElement, arg1 *MontgomeryDomainFieldElement)
 //   eval out1 mod m = (eval arg1 * ((2^64)⁻¹ mod m)^4) mod m
 //   0 ≤ eval out1 < m
 //
-// Input Bounds:
-//   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
-// Output Bounds:
-//   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 func FromMontgomery(out1 *NonMontgomeryDomainFieldElement, arg1 *MontgomeryDomainFieldElement) {
 	x1 := arg1[0]
 	var x2 uint64
@@ -1128,10 +1101,6 @@ func FromMontgomery(out1 *NonMontgomeryDomainFieldElement, arg1 *MontgomeryDomai
 //   eval (from_montgomery out1) mod m = eval arg1 mod m
 //   0 ≤ eval out1 < m
 //
-// Input Bounds:
-//   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
-// Output Bounds:
-//   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 func ToMontgomery(out1 *MontgomeryDomainFieldElement, arg1 *NonMontgomeryDomainFieldElement) {
 	x1 := arg1[1]
 	x2 := arg1[2]
@@ -1606,8 +1575,6 @@ func FromBytes(out1 *[4]uint64, arg1 *[32]uint8) {
 //   eval (from_montgomery out1) mod m = 1 mod m
 //   0 ≤ eval out1 < m
 //
-// Output Bounds:
-//   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 func SetOne(out1 *MontgomeryDomainFieldElement) {
 	out1[0] = 0x1000003d1
 	out1[1] = uint64(0x0)

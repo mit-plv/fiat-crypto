@@ -531,9 +531,9 @@ Section __.
       | H : list_Z_bounded_by ?b1 ?x |- list_Z_bounded_by ?b2 ?x =>
         first [ unify b1 b2; apply H
               | unify b1 tight_bounds; unify b2 saturated_bounds;
-                apply relax_to_max_bounds, relax_correct; apply H
+                apply relax_to_max_bounds, relax_valid; apply H
               | unify b1 tight_bounds; unify b2 loose_bounds;
-                apply relax_correct; apply H
+                apply relax_valid; apply H
               | unify b1 loose_bounds; unify b2 saturated_bounds;
                 apply relax_to_max_bounds; apply H
               | unify b1 prime_bytes_bounds; unify b2 (byte_bounds n_bytes);
