@@ -29,6 +29,8 @@ Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.SplitInContext.
 Require Import Crypto.Util.Tactics.UniquePose.
 Require Import Crypto.Util.Tactics.AllInstances.
+Require Import Crypto.Util.Tactics.PrintContext.
+Require Import Crypto.Util.Tactics.PrintGoal.
 Require Rewriter.Language.Language.
 Require Crypto.Language.API.
 Require Rewriter.Language.UnderLets.
@@ -1249,7 +1251,10 @@ Module PipelineTactics.
                   end)
                   (* but if that doesn't work, try both ways *)
               | eapply H1
-              | erewrite H2 ];
+              | erewrite H2
+              | print_context_and_goal ();
+                let G := match goal with |- ?G => G end in
+                fail 1 "Could not figure out how to prove" G ];
         clear H1 H2 Hres
       | .. ];
       solve_side_conditions_of_BoundsPipeline_correct

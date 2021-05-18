@@ -93,7 +93,7 @@ Ltac prove_bounds :=
   match goal with
   | H : list_Z_bounded_by tight_bounds ?x
     |- list_Z_bounded_by loose_bounds ?x =>
-    apply UnsaturatedSolinas.relax_correct; apply H
+    apply UnsaturatedSolinas.relax_valid; apply H
   | H : list_Z_bounded_by ?b ?x |- list_Z_bounded_by ?b ?x =>
     apply H
   end.

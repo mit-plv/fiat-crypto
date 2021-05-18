@@ -32052,5 +32052,414 @@
         ]
       }
     ]
+  },
+  {
+    "operation": "fiat_p448_relax",
+    "arguments": [
+      {
+        "datatype": "u32[16]",
+        "name": "arg1",
+        "lbound": [
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0"
+        ],
+        "ubound": [
+          "0x10000000",
+          "0x10000000",
+          "0x10000000",
+          "0x10000000",
+          "0x10000000",
+          "0x10000000",
+          "0x10000000",
+          "0x10000000",
+          "0x10000000",
+          "0x10000000",
+          "0x10000000",
+          "0x10000000",
+          "0x10000000",
+          "0x10000000",
+          "0x10000000",
+          "0x10000000"
+        ]
+      }
+    ],
+    "returns": [
+      {
+        "datatype": "u32[16]",
+        "name": "out1",
+        "lbound": [
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0",
+          "0x0"
+        ],
+        "ubound": [
+          "0x30000000",
+          "0x30000000",
+          "0x30000000",
+          "0x30000000",
+          "0x30000000",
+          "0x30000000",
+          "0x30000000",
+          "0x30000000",
+          "0x30000000",
+          "0x30000000",
+          "0x30000000",
+          "0x30000000",
+          "0x30000000",
+          "0x30000000",
+          "0x30000000",
+          "0x30000000"
+        ]
+      }
+    ],
+    "body": [
+      {
+        "datatype": "u32",
+        "name": [
+          "x1"
+        ],
+        "operation": "=",
+        "arguments": [
+          "arg1[0]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x2"
+        ],
+        "operation": "=",
+        "arguments": [
+          "arg1[1]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x3"
+        ],
+        "operation": "=",
+        "arguments": [
+          "arg1[2]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x4"
+        ],
+        "operation": "=",
+        "arguments": [
+          "arg1[3]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x5"
+        ],
+        "operation": "=",
+        "arguments": [
+          "arg1[4]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x6"
+        ],
+        "operation": "=",
+        "arguments": [
+          "arg1[5]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x7"
+        ],
+        "operation": "=",
+        "arguments": [
+          "arg1[6]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x8"
+        ],
+        "operation": "=",
+        "arguments": [
+          "arg1[7]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x9"
+        ],
+        "operation": "=",
+        "arguments": [
+          "arg1[8]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x10"
+        ],
+        "operation": "=",
+        "arguments": [
+          "arg1[9]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x11"
+        ],
+        "operation": "=",
+        "arguments": [
+          "arg1[10]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x12"
+        ],
+        "operation": "=",
+        "arguments": [
+          "arg1[11]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x13"
+        ],
+        "operation": "=",
+        "arguments": [
+          "arg1[12]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x14"
+        ],
+        "operation": "=",
+        "arguments": [
+          "arg1[13]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x15"
+        ],
+        "operation": "=",
+        "arguments": [
+          "arg1[14]"
+        ]
+      },
+      {
+        "datatype": "u32",
+        "name": [
+          "x16"
+        ],
+        "operation": "=",
+        "arguments": [
+          "arg1[15]"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[0]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x1"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[1]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x2"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[2]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x3"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[3]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x4"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[4]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x5"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[5]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x6"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[6]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x7"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[7]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x8"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[8]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x9"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[9]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x10"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[10]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x11"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[11]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x12"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[12]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x13"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[13]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x14"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[14]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x15"
+        ]
+      },
+      {
+        "datatype": "(auto)",
+        "name": [
+          "out1[15]"
+        ],
+        "operation": "=",
+        "arguments": [
+          "x16"
+        ]
+      }
+    ]
   }
 ]

@@ -69,6 +69,7 @@ Local Opaque
       reified_add_gen
       reified_sub_gen
       reified_opp_gen
+      reified_id_gen
       reified_zero_gen
       reified_one_gen
       reified_prime_gen
@@ -447,6 +448,24 @@ Section __.
              (fun fname : string => [text_before_function_name ++ fname ++ " negates a field element."]%string)
              (opp_correct weightf n m tight_bounds loose_bounds)).
 
+  Definition relax
+    := Pipeline.BoundsPipeline
+         true (* subst01 *)
+         None (* fancy *)
+         possible_values
+         reified_id_gen
+         (Some tight_bounds, tt)
+         (Some loose_bounds).
+
+  Definition srelax (prefix : string)
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    := Eval cbv beta in
+        FromPipelineToString!
+          machine_wordsize prefix "relax" relax
+          (docstring_with_summary_from_lemma!
+             (fun fname : string => [text_before_function_name ++ fname ++ " is the identity function converting from tight field elements to loose field elements."]%string)
+             (relax_correct tight_bounds loose_bounds)).
+
   Definition to_bytes
     := Pipeline.BoundsPipeline
          false (* subst01 *)
@@ -687,6 +706,14 @@ Section __.
   Lemma Wf_opp res (Hres : opp = Success res) : Wf res.
   Proof using Type. prove_pipeline_wf (). Qed.
 
+  Lemma relax_correct res
+        (Hres : relax = Success res)
+    : relax_correct tight_bounds loose_bounds (Interp res).
+  Proof using curve_good. prove_correctness (). Qed.
+
+  Lemma Wf_relax res (Hres : relax = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Lemma from_bytes_correct res
         (Hres : from_bytes = Success res)
         (Hrequests : request_present requests "from_bytes" = true)
@@ -696,7 +723,7 @@ Section __.
   Lemma Wf_from_bytes res (Hres : from_bytes = Success res) : Wf res.
   Proof using Type. prove_pipeline_wf (). Qed.
 
-  Lemma relax_correct
+  Lemma relax_valid
     : forall x, list_Z_bounded_by tight_bounds x -> list_Z_bounded_by loose_bounds x.
   Proof using Type. apply relax_list_Z_bounded_by, tight_bounds_tighter. Qed.
 
@@ -793,7 +820,7 @@ Section __.
                         | apply encode_correct
                         | apply zero_correct
                         | apply one_correct
-                        | apply relax_correct ].
+                        | apply relax_valid ].
     Qed.
   End ring.
 
@@ -808,6 +835,7 @@ Section __.
             ("add", wrap_s sadd);
             ("sub", wrap_s ssub);
             ("opp", wrap_s sopp);
+            ("relax", wrap_s srelax);
             ("selectznz", wrap_s sselectznz);
             ("to_bytes", wrap_s sto_bytes);
             ("from_bytes", wrap_s sfrom_bytes)].
@@ -855,6 +883,7 @@ Module Export Hints.
        add
        sub
        opp
+       relax
        from_bytes
        to_bytes
        encode
@@ -869,6 +898,7 @@ Module Export Hints.
        Wf_add
        Wf_sub
        Wf_opp
+       Wf_relax
        Wf_from_bytes
        Wf_to_bytes
        Wf_encode
