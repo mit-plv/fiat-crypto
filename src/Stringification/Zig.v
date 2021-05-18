@@ -12,6 +12,8 @@ From Crypto Require Import IR Stringification.Language AbstractInterpretation.ZR
 
 Import ListNotations.
 
+Local Open Scope string_scope.
+Local Open Scope list_scope.
 Local Open Scope zrange_scope.
 Local Open Scope Z_scope.
 
@@ -25,6 +27,64 @@ Module Zig.
   Definition comment_module_header_block := List.map (fun line => "// " ++ line)%string.
   Definition comment_block := List.map (fun line => "// " ++ line)%string.
 
+  (* Zig natively supports any integer size between 0 and 4096 bits.
+     So, we never need to define our own types. *)
+  Definition int_type_to_string_opt_typedef {skip_typedefs : skip_typedefs_opt} {language_naming_conventions : language_naming_conventions_opt} (typedef_private : bool) (prefix : string) (t : ToString.int.type) (typedef : option string) : string :=
+    match (if skip_typedefs then None else typedef) with
+    | None => (if int.is_unsigned t then "u" else "i") ++ Decimal.Z.to_string (ToString.int.bitwidth_of t)
+    | Some typedef => format_typedef_name prefix typedef_private typedef
+    end.
+  Definition int_type_to_string {language_naming_conventions : language_naming_conventions_opt} (t : ToString.int.type) : string :=
+    int_type_to_string_opt_typedef (skip_typedefs:=true) false "" t None.
+
+  Definition primitive_type_to_string_opt_typedef
+             {language_naming_conventions : language_naming_conventions_opt} {skip_typedefs : skip_typedefs_opt}
+             (all_private : bool)
+             (prefix : string) (t : IR.type.primitive)
+             (r : option ToString.int.type) (typedef : option string) : string :=
+    match t with
+    | IR.type.Zptr => "*"
+    | IR.type.Z => ""
+    end ++ match r with
+           | Some int_t => int_type_to_string_opt_typedef all_private prefix int_t typedef
+           | None => "ℤ" (* blackboard bold Z for unbounded integers (which don't actually exist, and thus will error) *)
+           end.
+  Definition primitive_type_to_string {language_naming_conventions : language_naming_conventions_opt} (t : IR.type.primitive)
+             (r : option ToString.int.type) : string :=
+    primitive_type_to_string_opt_typedef (skip_typedefs:=true) false "" t r None.
+
+  Definition primitive_array_type_to_string
+             {language_naming_conventions : language_naming_conventions_opt} {skip_typedefs : skip_typedefs_opt}
+             (all_private : bool)
+             (prefix : string) (t : IR.type.primitive)
+             (r : option ToString.int.type) (len : nat) (typedef : option string) : string :=
+    match (if skip_typedefs then None else typedef) with
+    | Some typedef => format_typedef_name prefix all_private typedef
+    | None => "[" ++ Decimal.Z.to_string (Z.of_nat len) ++ "]" ++
+                  primitive_type_to_string t r
+    end.
+
+  Definition make_typedef
+             {language_naming_conventions : language_naming_conventions_opt}
+             {documentation_options : documentation_options_opt}
+             (prefix : string) (private : bool)
+             (typedef : typedef_info)
+    : list string
+    := let '(name, (ty, array_len), description) := name_and_type_and_describe_typedef prefix private typedef in
+       ((comment_block description)
+          ++ [(if private then "const " else "pub const ")
+                ++ name ++ " = " ++
+                let ty_string := match ty with
+                                 | Some ty => int_type_to_string ty
+                                 | None => "ℤ" (* blackboard bold Z for unbounded integers (which don't actually exist, and thus will error) *)
+                                 end in
+                match array_len with
+                | None (* just an integer *) => ty_string
+                | Some None (* unknown array length *) => "*" ++ ty_string
+                | Some (Some len) => "[" ++ Decimal.Z.to_string (Z.of_nat len) ++ "]" ++ ty_string
+                end
+                ++ ";"]%string)%list.
+
   Definition header
              {language_naming_conventions : language_naming_conventions_opt}
              {documentation_options : documentation_options_opt}
@@ -35,24 +95,18 @@ Module Zig.
              (typedef_map : list typedef_info)
     : list string
     := (["";
-         "const std = @import(""std"");";
-         "const cast = std.meta.cast;";
-         "const mode = std.builtin.mode; // Checked arithmetic is disabled in non-debug modes to avoid side channels"]%string)%list.
-
-  (* Zig natively supports any integer size between 0 and 4096 bits.
-     So, we never need to define our own types. *)
-  Definition int_type_to_string {language_naming_conventions : language_naming_conventions_opt} (t : ToString.int.type) : string :=
-    (if int.is_unsigned t then "u" else "i") ++ Decimal.Z.to_string(ToString.int.bitwidth_of t).
-
-  Definition primitive_type_to_string {language_naming_conventions : language_naming_conventions_opt} (private : bool) (prefix : string) (t : IR.type.primitive)
-             (r : option ToString.int.type) : string :=
-    match t with
-    | IR.type.Zptr => "*"
-    | IR.type.Z => ""
-    end ++ match r with
-           | Some int_t => int_type_to_string int_t
-           | None => "ℤ"
-           end.
+        "const std = @import(""std"");";
+        "const cast = std.meta.cast;";
+        "const mode = std.builtin.mode; // Checked arithmetic is disabled in non-debug modes to avoid side channels"]
+          ++ (if skip_typedefs
+              then []
+              else List.flat_map
+                     (fun td_name =>
+                        match List.find (fun '(name, _, _, _) => (td_name =? name)%string) typedef_map with
+                        | Some td_info => [""] ++ make_typedef prefix private td_info
+                        | None => ["@compilerError(""Could not find typedef info for '" ++ td_name ++ "'"");"]%string
+                        end%list)
+                     (typedefs_used infos)))%list.
 
   (* Integer literal to string *)
   Definition int_literal_to_string (prefix : string) (t : IR.type.primitive) (v : BinInt.Z) : string :=
@@ -107,7 +161,7 @@ Module Zig.
        | (IR.Z_value_barrier ty @@@ args) =>
          special_name_ty "value_barrier" ty ++ "(" ++ arith_to_string internal_private prefix args ++ ")"
        | (IR.Z_static_cast int_t @@@ e) =>
-         "cast(" ++ primitive_type_to_string internal_private prefix IR.type.Z (Some int_t) ++ ", " ++ arith_to_string internal_private prefix e ++ ")"
+         "cast(" ++ primitive_type_to_string IR.type.Z (Some int_t) ++ ", " ++ arith_to_string internal_private prefix e ++ ")"
        | IR.Var _ v => v
        | IR.Pair A B a b => arith_to_string internal_private prefix a ++ ", " ++ arith_to_string internal_private prefix b
        | (IR.Z_add_modulo @@@ (x1, x2, x3)) => "@compilerError(""addmodulo"");"
@@ -137,7 +191,7 @@ Module Zig.
     | IR.AssignZPtr name sz val =>
       name ++ ".* = " ++ arith_to_string internal_private prefix val ++ ";"
     | IR.DeclareVar t sz name =>
-      "var " ++ name ++ ": " ++ primitive_type_to_string internal_private prefix t sz ++ " = undefined;"
+      "var " ++ name ++ ": " ++ primitive_type_to_string t sz ++ " = undefined;"
     | IR.Comment lines _ =>
       String.concat String.NewLine (comment_block (ToString.preprocess_comment_block lines))
     | IR.AssignNth name n val =>
@@ -156,7 +210,7 @@ Module Zig.
     match t return base_var_data t -> _ with
     | tZ =>
       let typ := match mode with In => IR.type.Z | Out => IR.type.Zptr end in
-      fun '(n, is_ptr, r, typedefs) => [n ++ ": " ++ primitive_type_to_string internal_private prefix typ r]
+      fun '(n, is_ptr, r, typedef) => [n ++ ": " ++ primitive_type_to_string_opt_typedef all_private prefix typ r typedef]
     | base.type.prod A B =>
       fun '(va, vb) => (to_base_arg_list internal_private all_private prefix mode va ++ to_base_arg_list internal_private all_private prefix mode vb)%list
     | base.type.list tZ =>
@@ -165,8 +219,7 @@ Module Zig.
                         | In => (* arrays for inputs are immutable *) ""
                         | Out => (* arrays for outputs are mutable *) "*"
                         end in
-        [ n ++ ": " ++ modifier ++
-            "[" ++ Decimal.Z.to_string (Z.of_nat len) ++ "]" ++ primitive_type_to_string internal_private prefix IR.type.Z r ]
+        [ n ++ ": " ++ modifier ++ primitive_array_type_to_string all_private prefix IR.type.Z r len typedef ]
     | base.type.list _ => fun _ => ["@compilerError(""complex list"");"]
     | base.type.option _ => fun _ => ["@compilerError(""option"");"]
     | base.type.unit => fun _ => ["@compilerError(""unit"");"]

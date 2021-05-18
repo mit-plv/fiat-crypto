@@ -276,7 +276,7 @@ JAVA_EXTRA_ARGS_ALL := --cmovznz-by-mul --widen-carry --widen-bytes --internal-s
 JAVA_EXTRA_ARGS_64  := --no-wide-int $(JAVA_EXTRA_ARGS_ALL)
 JAVA_EXTRA_ARGS_32  := $(JAVA_EXTRA_ARGS_ALL)
 
-ZIG_EXTRA_ARGS := --no-field-element-typedefs --internal-static --public-function-case camelCase --private-function-case camelCase --no-prefix-fiat
+ZIG_EXTRA_ARGS := --internal-static --public-function-case camelCase --private-function-case camelCase --no-prefix-fiat
 
 .PHONY: bedrock2-extra-cflags
 bedrock2-extra-cflags:
