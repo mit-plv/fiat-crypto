@@ -50,7 +50,7 @@ Require Import Crypto.PushButtonSynthesis.WordByWordMontgomeryReificationCache.
 Require Import Crypto.PushButtonSynthesis.BYInversionReificationCache.
 Require Import Crypto.Assembly.Equivalence.
 Import ListNotations.
-Local Open Scope Z_scope. Local Open Scope list_scope. Local Open Scope bool_scope.
+Local Open Scope string_scope. Local Open Scope Z_scope. Local Open Scope list_scope. Local Open Scope bool_scope.
 
 Import
   Language.Wf.Compilers
