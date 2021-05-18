@@ -862,7 +862,7 @@ Section __.
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToInternalString!
-          machine_wordsize prefix ("mulx_u" ++ Decimal.Z.to_string s) (mulx s)
+          machine_wordsize prefix ("mulx_u" ++ Decimal.Z.to_string s)%string (mulx s)
           (docstring_with_summary_from_lemma!
              (fun fname : string => [text_before_function_name ++ fname ++ " is a multiplication, returning the full double-width result."]%string)
              (mulx_correct s)).
@@ -879,7 +879,7 @@ Section __.
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToInternalString!
-          machine_wordsize prefix ("addcarryx_u" ++ Decimal.Z.to_string s) (addcarryx s)
+          machine_wordsize prefix ("addcarryx_u" ++ Decimal.Z.to_string s)%string (addcarryx s)
           (docstring_with_summary_from_lemma!
              (fun fname : string => [text_before_function_name ++ fname ++ " is an addition with carry."]%string)
              (addcarryx_correct s)).
@@ -896,7 +896,7 @@ Section __.
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToInternalString!
-          machine_wordsize prefix ("subborrowx_u" ++ Decimal.Z.to_string s) (subborrowx s)
+          machine_wordsize prefix ("subborrowx_u" ++ Decimal.Z.to_string s)%string (subborrowx s)
           (docstring_with_summary_from_lemma!
              (fun fname : string => [text_before_function_name ++ fname ++ " is a subtraction with borrow."]%string)
              (subborrowx_correct s)).
@@ -913,7 +913,7 @@ Section __.
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToInternalString!
-          machine_wordsize prefix ("value_barrier_" ++ (if int.is_unsigned s then "u" else "") ++ Decimal.Z.to_string (int.bitwidth_of s)) (value_barrier s)
+          machine_wordsize prefix ("value_barrier_" ++ (if int.is_unsigned s then "u" else "") ++ Decimal.Z.to_string (int.bitwidth_of s))%string (value_barrier s)
           (docstring_with_summary_from_lemma!
              (fun fname : string => [text_before_function_name ++ fname ++ " is a single-word conditional move."]%string)
              (value_barrier_correct (int.is_signed s) (int.bitwidth_of s))).
@@ -931,7 +931,7 @@ Section __.
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToInternalString!
-          machine_wordsize prefix ("cmovznz_u" ++ Decimal.Z.to_string s) (cmovznz s)
+          machine_wordsize prefix ("cmovznz_u" ++ Decimal.Z.to_string s)%string (cmovznz s)
           (docstring_with_summary_from_lemma!
              (fun fname : string => [text_before_function_name ++ fname ++ " is a single-word conditional move."]%string)
              (cmovznz_correct false s)).
@@ -948,7 +948,7 @@ Section __.
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToInternalString!
-          machine_wordsize prefix ("cmovznz_u" ++ Decimal.Z.to_string s) (cmovznz_by_mul s)
+          machine_wordsize prefix ("cmovznz_u" ++ Decimal.Z.to_string s)%string (cmovznz_by_mul s)
           (docstring_with_summary_from_lemma!
              (fun fname : string => [text_before_function_name ++ fname ++ " is a single-word conditional move."]%string)
              (cmovznz_correct false s)).

@@ -367,7 +367,7 @@ Section __.
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
         FromPipelineToString!
-          machine_wordsize prefix ("carry_scmul_" ++ Decimal.Z.to_string x) (carry_scmul_const x)
+          machine_wordsize prefix ("carry_scmul_" ++ Decimal.Z.to_string x)%string (carry_scmul_const x)
           (docstring_with_summary_from_lemma!
              (fun fname : string => [text_before_function_name ++ fname ++ " multiplies a field element by " ++ Decimal.Z.to_string x ++ " and reduces the result."]%string)
              (carry_scmul_const_correct weightf n m tight_bounds loose_bounds x)).
