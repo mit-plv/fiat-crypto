@@ -65,7 +65,7 @@ Module Go.
     := let '(name, (ty, array_len), description) := name_and_type_and_describe_typedef prefix private typedef in
        ((comment_block_extra_newlines description)
           ++ ["type "
-                ++ name ++
+                ++ name ++ " " ++
                 match array_len with
                 | None (* just an integer *) => ""
                 | Some None (* unknown array length *) => "[]"
