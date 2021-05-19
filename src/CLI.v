@@ -411,6 +411,10 @@ Module ForExtraction.
     := ([Arg.long_key "doc-newline-before-package-declaration"],
         Arg.Unit,
         ["Documentation Option: For languages that emit package declarations, add an extra newline before the declaration.  Primarily useful to detach the header from the Go package."]).
+  Definition doc_newline_in_typedef_bounds_spec : named_argT
+    := ([Arg.long_key "doc-newline-in-typedef-bounds"],
+        Arg.Unit,
+        ["Documentation Option: When emitting the documentation comment for typedefs, insert a newline between ""Bounds:"" and the bounds rather than a space."]).
   Definition doc_prepend_header_raw_spec : named_argT
     := ([Arg.long_key "doc-prepend-header-raw"],
         Arg.String,
@@ -559,6 +563,7 @@ Module ForExtraction.
         ; doc_text_before_function_name_spec
         ; doc_text_before_type_name_spec
         ; doc_newline_before_package_declaration_spec
+        ; doc_newline_in_typedef_bounds_spec
         ; doc_prepend_header_raw_spec
         ; doc_prepend_header_spec
        ].
@@ -601,6 +606,7 @@ Module ForExtraction.
              , doc_text_before_function_namev
              , doc_text_before_type_namev
              , doc_newline_before_package_declarationv
+             , doc_newline_in_typedef_boundsv
              , doc_prepend_header_rawv
              , doc_prepend_headerv
             ) := data in
@@ -658,6 +664,7 @@ Module ForExtraction.
                     := {| text_before_function_name_opt := to_string_opt doc_text_before_function_namev
                           ; text_before_type_name_opt := to_string_opt doc_text_before_type_namev
                           ; newline_before_package_declaration := to_bool doc_newline_before_package_declarationv
+                          ; newline_in_typedef_bounds := to_bool doc_newline_in_typedef_boundsv
                        |}
                   ; before_header_lines := to_string_list doc_prepend_header_rawv
                   ; extra_early_header_lines := to_string_list doc_prepend_headerv

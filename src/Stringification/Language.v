@@ -115,12 +115,15 @@ Module Compilers.
         text_before_type_name : string := Option.value text_before_type_name_opt default_text_before_type_name;
         (** Stick an extra newline before the package declaration *)
         newline_before_package_declaration : bool;
+        (** Stick a newline between the "Bounds:" and the bounds of typedefs *)
+        newline_in_typedef_bounds : bool;
       }.
 
     Definition default_documentation_options : documentation_options_opt
       := {| text_before_function_name_opt := None
             ; text_before_type_name_opt := None
             ; newline_before_package_declaration := false
+            ; newline_in_typedef_bounds := false
          |}.
   End Options.
 
@@ -1535,11 +1538,13 @@ Module Compilers.
          let '(_, description, ty, existT t bounds) := typedef in
          (([description name]%string)
             ++ (if ZRange.type.base.option.is_informative bounds
-                then ["Bounds: "
-                        ++ match ZRange.type.base.option.lift_Some bounds with
-                           | Some bounds => show bounds
-                           | None => show bounds
-                           end]%string
+                then let bounds := match ZRange.type.base.option.lift_Some bounds with
+                                   | Some bounds => show bounds
+                                   | None => show bounds
+                                   end in
+                     if newline_in_typedef_bounds
+                     then ["Bounds:"; "  " ++ bounds]%string
+                     else ["Bounds: " ++ bounds]%string
                 else []))%list.
 
 
