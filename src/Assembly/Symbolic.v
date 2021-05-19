@@ -28,7 +28,7 @@ Module Import List.
       forall i a, nth_error l i = Some a -> f a = false.
     Admitted.
     Lemma indexof_Some l i (H : indexof l = Some i) :
-      exists a, nth_error l i = Some a -> f a = true.
+      exists a, nth_error l i = Some a /\ f a = true.
     Admitted.
     Lemma indexof_first l i (H : indexof l = Some i) :
       forall j a, j < i -> nth_error l j = Some a -> f a = false.
@@ -42,10 +42,17 @@ Module Import List.
       match l with
       | nil => (nil, s)
       | cons a l =>
-          let b_s := f a s in
-          let bs_s := foldmap l (snd b_s) in
-          (cons (fst b_s) (fst bs_s), snd bs_s)
+          let bs_s := foldmap l s in
+          let b_s := f a (snd bs_s) in
+          (cons (fst b_s) (fst bs_s), snd b_s)
       end.
+    Lemma foldmap_ind
+      l s
+      (P : list A -> list B -> S -> Prop)
+      (Hnil : P nil nil s)
+      (Hcons : forall (l : list A) (l' : list B) (s : S),
+      P l l' s -> forall a, P (cons a l) (cons (fst (f a s)) l') (snd (f a s))) : P l (fst (foldmap l s)) (snd (foldmap l s)).
+    Proof. induction l; eauto; []; eapply Hcons; trivial. Qed.
   End FoldMap.
 End List.
 
@@ -69,6 +76,15 @@ End NOrder.
 Module NSort := Mergesort.Sort NOrder.
 Notation sortN := NSort.sort.
 
+Section Forall2_weaken.
+  Context {A B} {P Q:A->B->Prop} (H : forall (a : A) (b : B), P a b -> Q a b).
+  Fixpoint Forall2_weaken args args' (pf : Forall2 P args args') : Forall2 Q args args' :=
+    match pf with
+    | Forall2_nil => Forall2_nil _
+    | Forall2_cons _ _ _ _ Rxy k => Forall2_cons _ _ (H _ _ Rxy) (Forall2_weaken _ _ k)
+    end.
+End Forall2_weaken.
+
 Require Import Crypto.Assembly.Syntax.
 Definition idx := N.
 Local Set Boolean Equality Schemes.
@@ -88,17 +104,38 @@ Local Unset Elimination Schemes.
 Inductive expr : Set :=
 | ExprRef (_ : idx)
 | ExprApp (_ : node expr).
-  (* Note: need custom induction principle *)
-Local Unset Elimination Schemes.
+Local Set Elimination Schemes.
+Section expr_ind.
+  Context (P : expr -> Prop)
+    (HRef : forall i, P (ExprRef i))
+    (HApp : forall n, Forall P (snd n) -> P (ExprApp n)).
+  Fixpoint expr_ind e {struct e} : P e :=
+    match e with
+    | ExprRef i => HRef i
+    | ExprApp n => HApp _ (list_rect _ (Forall_nil _) (fun e _ H => Forall_cons e (expr_ind e) H) (snd n))
+    end.
+End expr_ind.
 Definition invert_ExprRef (e : expr) : option idx :=
   match e with ExprRef i => Some i | _ => None end.
+
+Require Import Crypto.Util.Option Crypto.Util.Notations Coq.Lists.List.
+Import ListNotations.
+
+Definition interp_op o s args :=
+  match o, args with
+  | add, args => Some (N.land (List.fold_right N.add 0 args) (N.ones s))
+  | neg, [a] => Some (N.land (2^s - a) (N.ones s))
+  | const z, nil => Some (N.land z (N.ones s))
+  (* note: incomplete *)
+  | _, _ => None
+  end%N.
 
 Definition node_beq [A : Set] (arg_eqb : A -> A -> bool) : node A -> node A -> bool := 
   Prod.prod_beq _ _ op_beq (ListUtil.list_beq _ arg_eqb).
 
 Definition dag := list (node idx).
 
-Section Reveal.
+Section WithDag.
   Context (dag : dag).
   Definition reveal_step reveal (i : idx) : expr :=
     match List.nth_error dag (N.to_nat i) with
@@ -113,7 +150,115 @@ Section Reveal.
 
   Definition reveal_node n '(op, args) :=
     ExprApp (op, List.map (reveal n) args).
-End Reveal.
+
+  Local Unset Elimination Schemes.
+  Inductive repr  : forall (i:N) (e : expr), Prop :=
+  | RepApp i op args args'
+    (_:List.nth_error dag (N.to_nat i) = Some (op, args))
+    (_:List.Forall2 repr args args') : repr i (ExprApp (op, args')).
+
+  Section repr_ind.
+    Context (P : N -> expr -> Prop)
+      (H : forall i op args args', nth_error dag (N.to_nat i) = Some (op, args) ->
+        Forall2 (fun i e => repr i e /\ P i e) args args' -> P i (ExprApp (op, args'))).
+    Fixpoint repr_ind i e (pf : repr i e) {struct pf} : P i e :=
+       let '(RepApp _ _ _ _ A B) := pf in 
+       H _ _ _ _ A (Forall2_weaken (fun _ _ C => conj C (repr_ind _ _ C)) _ _ B).
+  End repr_ind.
+
+  Inductive reveals : expr -> expr -> Prop :=
+  | RRef i op args args'
+    (_:List.nth_error dag (N.to_nat i) = Some (op, args))
+    (_:List.Forall2 (fun i e => reveals (ExprRef i) e) args args')
+    : reveals (ExprRef i) (ExprApp (op, args'))
+  | RApp op args args'
+    (_:List.Forall2 reveals args args')
+    : reveals (ExprApp (op, args)) (ExprApp (op, args')).
+
+  Section reveals_ind.
+    Context (P : expr -> expr -> Prop)
+      (HRef : forall i op args args', nth_error dag (N.to_nat i) = Some (op, args) ->
+        Forall2 (fun i e => reveals (ExprRef i) e /\ P (ExprRef i) e) args args' ->
+        P (ExprRef i) (ExprApp (op, args')))
+      (HApp : forall op args args',
+        Forall2 (fun i e => reveals i e /\ P i e) args args' ->
+        P (ExprApp (op, args)) (ExprApp (op, args'))).
+    Fixpoint reveals_ind i e (pf : reveals i e) {struct pf} : P i e :=
+      match pf with
+      | RRef _ _ _ _ A B => HRef _ _ _ _ A (Forall2_weaken (fun _ _ C => conj C (reveals_ind _ _ C)) _ _ B)
+      | RApp _ _ _ A => HApp _ _ _ (Forall2_weaken (fun _ _ B => conj B (reveals_ind _ _ B)) _ _ A)
+      end.
+  End reveals_ind.
+
+  Inductive eval : expr -> N -> Prop :=
+  | ERef i opn s args args' n
+    (_:List.nth_error dag (N.to_nat i) = Some ((opn, s), args))
+    (_:List.Forall2 eval (map ExprRef args) args')
+    (_:interp_op opn s args' = Some n)
+    : eval (ExprRef i) n
+  | EApp opn s args args' n
+    (_:List.Forall2 eval args args')
+    (_:interp_op opn s args' = Some n)
+    : eval (ExprApp ((opn, s), args)) n.
+
+  Section eval_ind.
+    Context (P : expr -> N -> Prop)
+      (HRef : forall i opn s args args' n, nth_error dag (N.to_nat i) = Some ((opn, s), args) ->
+        Forall2 (fun e n => eval e n /\ P e n) (map ExprRef args) args' ->
+        interp_op opn s args' = Some n ->
+        P (ExprRef i) n)
+      (HApp : forall opn s args args' n,
+        Forall2 (fun i e => eval i e /\ P i e) args args' ->
+        interp_op opn s args' = Some n ->
+        P (ExprApp ((opn, s), args)) n).
+    Fixpoint eval_ind i n (pf : eval i n) {struct pf} : P i n :=
+      match pf with
+      | ERef _ _ _ _ _ _ A B C => HRef _ _ _ _ _ _ A (Forall2_weaken (fun _ _ D => conj D (eval_ind _ _ D)) _ _ B) C
+      | EApp _ _ _ _ _ A B => HApp _ _ _ _ _ (Forall2_weaken (fun _ _ C => conj C (eval_ind _ _ C)) _ _ A) B
+      end.
+  End eval_ind.
+
+
+  Require Import Coq.Program.Equality.
+  Lemma repr_reveals : forall i e, reveals (ExprRef i) e -> repr i e.
+  Proof.
+    intros ? ? H.
+    dependent induction H; econstructor; try eassumption.
+    eapply Forall2_weaken; [|eauto]; cbn; intuition eauto.
+  Qed.
+
+  Lemma reveals_repr : forall i e, repr i e -> reveals (ExprRef i) e.
+  Proof.
+    induction 1; econstructor; try eassumption.
+    eapply Forall2_weaken; [|eauto]; cbn; intuition eauto.
+  Qed.
+
+  Lemma reveal_exists_enough_fuel i e : repr i e -> exists n, reveal n i = e.
+  Proof.
+    induction 1.
+    enough (exists n, map (reveal n) args = args') as [n Hn].
+    { eexists (S n); cbn [reveal]; cbv [reveal_step]; rewrite H, Hn; trivial. }
+    clear H.
+    dependent induction H0.
+    { cbn; eauto using O. }
+    destruct H as [_ [n' Hn'] ].
+    destruct IHForall2 as [n IH].
+    exists (max n n').
+    cbn [map]; f_equal.
+    (* fuel weakening *)
+  Admitted.
+
+  Lemma reveals_reveal_repr : forall n i e', reveal n i = e' ->
+    forall e, repr i e -> reveals e' e.
+  Proof.
+    induction n; cbn [reveal]; cbv [reveal_step]; intros; subst.
+    { eauto using reveals_repr. }
+    inversion H0; subst.
+    rewrite H; econstructor.
+    clear dependent i.
+    induction H1; cbn; eauto.
+  Qed.
+End WithDag.
 
 Definition merge_node (n : node idx) (d : dag) : idx * dag :=
   match List.indexof (node_beq N.eqb n) d with
@@ -131,24 +276,132 @@ Fixpoint merge (e : expr) (d : dag) : idx * dag :=
     merge_node (op, idxs) (snd idxs_d)
   end.
 
-Lemma reveal_merge : forall d e, exists n, reveal (snd (merge e d)) n (fst (merge e d)) = e.
+Lemma node_beq_sound e x : node_beq N.eqb e x = true -> e = x.
+Admitted.
+
+Lemma eval_weaken d x e n : eval d e n -> eval (d ++ [x]) e n.
 Proof.
 Admitted.
 
-Require Import Crypto.Util.Option Crypto.Util.Notations.
-Import ListNotations.
+Lemma permute_commutative opn s args n : commutative opn = true -> 
+  interp_op opn s args = Some n ->
+  forall args', Permutation.Permutation args args' ->
+  interp_op opn s args' = Some n.
+Admitted.
 
-Require Import Crypto.Util.Option Crypto.Util.Notations.
-Import ListNotations.
+Lemma Forall2_flip {A B} {R : A -> B -> Prop} xs ys :
+  Forall2 R xs ys -> Forall2 (fun y x => R x y) ys xs.
+Proof. induction 1; eauto. Qed.
 
-Definition interp_op o s args :=
-  match o, args with
-  | add, args => Some (N.land (List.fold_right N.add 0 args) (N.ones s))
-  | neg, [a] => Some (N.land (2^s - a) (N.ones s))
-  | const z, nil => Some (N.land z (N.ones s))
-  (* note: incomplete *)
-  | _, _ => None
-  end%N.
+Definition dag_ok (d : dag) := forall i _r, nth_error d (N.to_nat i) = Some _r -> exists v, eval d (ExprRef i) v.
+
+Lemma eval_merge_node :
+  forall d, dag_ok d ->
+  forall op args n, let e := (op, args) in
+  eval d (ExprApp (op, List.map ExprRef args)) n ->
+  eval (snd (merge_node e d)) (ExprRef (fst (merge_node e d))) n /\
+  dag_ok (snd (merge_node e d)) /\
+  forall i e', eval d i e' -> eval (snd (merge_node e d)) i e'.
+Proof.
+  intros.
+  cbv beta delta [merge_node].
+  inversion H0; subst.
+  case (indexof _ _) eqn:?; cbn; repeat split; eauto.
+  { eapply indexof_Some in Heqo; case Heqo as (?&?&?).
+    replace x with e in * by (eauto using node_beq_sound); clear H2. (* node_beq -> eq *)
+    econstructor; rewrite ?Nnat.Nat2N.id; eauto. }
+  { econstructor; eauto.
+    { erewrite ?nth_error_app2, ?Nnat.Nat2N.id, Nat.sub_diag by Lia.lia.
+      exact eq_refl. }
+    eapply Forall2_weaken; [|eauto]; eauto using eval_weaken. }
+  { cbv [dag_ok]; intros.
+    case (lt_dec (N.to_nat i) (length d)) as [?|?];
+      erewrite ?nth_error_app1, ?nth_error_app2 in H1 by Lia.lia.
+      { case (H _ _ H1); eauto using eval_weaken. }
+      { destruct (N.to_nat i - length d) eqn:?.
+        2: { inversion H1. rewrite ListUtil.nth_error_nil_error in H4; inversion H4. }
+        eexists. econstructor.
+        replace (N.to_nat i) with (length d) by Lia.lia.
+        { erewrite ?nth_error_app2, ?Nnat.Nat2N.id, Nat.sub_diag by Lia.lia.
+          exact eq_refl. }
+        { eapply Forall2_weaken; [|eauto]; eauto using eval_weaken. }
+        eauto. } }
+  { eauto using eval_weaken. }
+Qed.
+
+Lemma eval_merge :
+  forall d, dag_ok d ->
+  forall e n, eval d e n ->
+  eval (snd (merge e d)) (ExprRef (fst (merge e d))) n /\
+  dag_ok (snd (merge e d)) /\
+  forall i e', eval d i e' -> eval (snd (merge e d)) i e'.
+Proof.
+  induction 2.
+  { split; cbn; eauto.
+    econstructor; eauto. eapply Forall2_weaken, H1; cbn; intuition idtac. }
+  set (merge _ _) as m; cbv beta iota delta [merge] in m; fold merge in m.
+  repeat match goal with
+    m := let x := ?A in @?B x |- _ =>
+    let y := fresh x in
+    set A as y;
+    let m' := eval cbv beta in (B y) in
+    change m' in (value of m)
+  end.
+
+  unshelve edestruct (foldmap_ind merge args d (fun args args' d' =>
+    Forall2 (fun e i => forall n, eval d e n -> eval d' (ExprRef i) n) args args' /\
+    dag_ok d' /\
+    forall i e', eval d i e' -> eval d' i e'
+  ) ltac:(repeat split; eauto)) as (?&?&?).
+  {
+    admit.
+  }
+  fold idxs_d in H2, H3, H4.
+
+  (* discard dag preservation IH, keep needle eval IH *)
+  clearbody idxs_d; eapply (Forall2_weaken (fun a b => @proj1 _ _)) in H0.
+
+  enough (eval (snd idxs_d) (ExprApp (opn, s, map ExprRef idxs)) n) by 
+    (unshelve edestruct ((eval_merge_node _ H3 (opn, s)) idxs n) as (?&?&?); eauto); clear m H3 H4.
+
+  assert (length idxs = length args) as Hl1 by admit. (* length_Forall2 *)
+  assert (length args = length args') as Hl2 by admit. (* length_Forall2 *)
+
+  cbn [fst snd] in *; destruct (commutative opn) eqn:?; cycle 1; subst idxs.
+  { econstructor; eauto.
+    eapply ListUtil.Forall2_forall_iff; rewrite map_length.
+    { Fail congruence. etransitivity. 1:eapply Hl1. eapply Hl2. } (* why *)
+    intros i Hi.
+    unshelve (
+      epose proof (proj1 (ListUtil.Forall2_forall_iff _ _ _ _ _ _) H2 i _);
+      epose proof (proj1 (ListUtil.Forall2_forall_iff _ _ _ _ _ _) H0 i _));
+    shelve_unifiable.
+    1,2,3,4: admit. (* more lengths *)
+    rewrite ListUtil.map_nth_default_always.
+    eauto. }
+
+  pose proof NSort.Permuted_sort (fst idxs_d) as Hperm.
+  eapply Forall2_flip in H2.
+  eapply (Permutation.Permutation_Forall2 Hperm) in H2.
+  case H2 as (argExprs&Hperm'&H2).
+  eapply (Permutation.Permutation_Forall2 Hperm') in H0.
+  case H0 as (argEvals&Hperm''&H0).
+  eapply permute_commutative in H1; try eassumption.
+
+  {
+    econstructor; [|eapply H1].
+    eapply ListUtil.Forall2_forall_iff; rewrite map_length.
+    1:admit. (* length of permutation *)
+    intros i Hi.
+    unshelve (
+      epose proof (proj1 (ListUtil.Forall2_forall_iff _ _ _ _ _ _) H2 i _);
+      epose proof (proj1 (ListUtil.Forall2_forall_iff _ _ _ _ _ _) H0 i _));
+    shelve_unifiable.
+    1,2,3,4: admit. (* more lengths *)
+    rewrite ListUtil.map_nth_default_always.
+    eauto. }
+  Unshelve. all : exact 0%N || exact (ExprRef 0%N).
+Abort.
 
 Definition zconst s (z:Z) :=
   const (if z <? 0 then invert_Some (interp_op neg s [Z.abs_N z]) else Z.to_N z)%Z.
