@@ -4826,7 +4826,7 @@ static void fiat_p434_divstep(uint64_t* out1, uint64_t out2[8], uint64_t out3[8]
  * The function fiat_p434_divstep_precomp returns the precomputed value for Bernstein-Yang-inversion (in montgomery form).
  *
  * Postconditions:
- *   eval (from_montgomery out1) = ⌊(m - 1) / 2⌋^(if (log2 m) + 1 < 46 then ⌊(49 * ((log2 m) + 1) + 80) / 17⌋ else ⌊(49 * ((log2 m) + 1) + 57) / 17⌋)
+ *   eval (from_montgomery out1) = ⌊(m - 1) / 2⌋^(if ⌊log2 m⌋ + 1 < 46 then ⌊(49 * (⌊log2 m⌋ + 1) + 80) / 17⌋ else ⌊(49 * (⌊log2 m⌋ + 1) + 57) / 17⌋)
  *   0 ≤ eval out1 < m
  *
  * Input Bounds:

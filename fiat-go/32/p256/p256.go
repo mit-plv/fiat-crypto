@@ -4421,7 +4421,7 @@ func Divstep(out1 *uint32, out2 *[9]uint32, out3 *[9]uint32, out4 *[8]uint32, ou
 // DivstepPrecomp returns the precomputed value for Bernstein-Yang-inversion (in montgomery form).
 //
 // Postconditions:
-//   eval (from_montgomery out1) = ⌊(m - 1) / 2⌋^(if (log2 m) + 1 < 46 then ⌊(49 * ((log2 m) + 1) + 80) / 17⌋ else ⌊(49 * ((log2 m) + 1) + 57) / 17⌋)
+//   eval (from_montgomery out1) = ⌊(m - 1) / 2⌋^(if ⌊log2 m⌋ + 1 < 46 then ⌊(49 * (⌊log2 m⌋ + 1) + 80) / 17⌋ else ⌊(49 * (⌊log2 m⌋ + 1) + 57) / 17⌋)
 //   0 ≤ eval out1 < m
 //
 // Input Bounds:

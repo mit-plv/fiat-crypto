@@ -278,7 +278,7 @@ Section __.
                     (CorrectnessStringification.dyn_context.cons
                        (@eval 8 n_bytes) "bytes_eval"
                             (CorrectnessStringification.dyn_context.cons
-                               (Z.log2 m) "(log2 m)"
+                               (Z.log2 m) "⌊log2 m⌋"
                                (CorrectnessStringification.dyn_context.cons
                                   (@eval_twos_complement machine_wordsize n) "twos_complement_eval"
                                   CorrectnessStringification.dyn_context.nil)))))))%string)
