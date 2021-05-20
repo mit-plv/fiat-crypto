@@ -279,6 +279,9 @@ src/Util/TagList.v
 src/Util/Tower.v
 src/Util/Tuple.v
 src/Util/Unit.v
+src/Util/Wf.v
+src/Util/Wf1.v
+src/Util/Wf2.v
 src/Util/ZBounded.v
 src/Util/ZRange.v
 src/Util/ZUtil.v
@@ -386,6 +389,9 @@ src/Util/Tactics/UnfoldArg.v
 src/Util/Tactics/UnifyAbstractReflexivity.v
 src/Util/Tactics/UniquePose.v
 src/Util/Tactics/VM.v
+src/Util/Telescope/Core.v
+src/Util/Telescope/Equality.v
+src/Util/Telescope/Instances.v
 src/Util/ZRange/BasicLemmas.v
 src/Util/ZRange/CornersMonotoneBounds.v
 src/Util/ZRange/LandLorBounds.v
