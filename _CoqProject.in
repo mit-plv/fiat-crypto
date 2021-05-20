@@ -431,6 +431,7 @@ src/Util/ZUtil/Morphisms.v
 src/Util/ZUtil/Mul.v
 src/Util/ZUtil/MulSplit.v
 src/Util/ZUtil/N2Z.v
+src/Util/ZUtil/Nat2Z.v
 src/Util/ZUtil/Notations.v
 src/Util/ZUtil/Odd.v
 src/Util/ZUtil/Ones.v
