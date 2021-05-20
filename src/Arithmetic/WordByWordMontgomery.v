@@ -1317,4 +1317,355 @@ Module WordByWordMontgomery.
             = eval a mod m).
     Proof. apply to_bytesmod_correct. Qed.
   End modops.
+
+  Module Generic.
+    Section modops.
+      Context (bitwidth : Z)
+              (n : nat)
+              (m : Z).
+      Let r := 2^bitwidth.
+      Local Notation weight := (uweight bitwidth).
+      Local Notation eval := (@eval bitwidth n).
+      Let m_enc := Partition.partition weight n m.
+      Local Coercion Z.of_nat : nat >-> Z.
+      Context (r' : Z)
+              (m' : Z)
+              (r'_correct : (r * r') mod m = 1)
+              (m'_correct : (m * m') mod r = (-1) mod r)
+              (bitwidth_big : 0 < bitwidth)
+              (m_big : 1 < m)
+              (n_nz : n <> 0%nat)
+              (m_small : m < r^n).
+
+      Local Notation wprops := (@uwprops bitwidth bitwidth_big).
+      Local Notation small := (@small bitwidth n).
+
+      Local Hint Immediate (wprops) : core.
+      Local Hint Immediate (weight_0 wprops) : core.
+      Local Hint Immediate (weight_positive wprops) : core.
+      Local Hint Immediate (weight_multiples wprops) : core.
+      Local Hint Immediate (weight_divides wprops) : core.
+
+      Local Lemma r'_correct_alt : ((r mod m) * (r' mod m)) mod m = 1.
+      Proof using r'_correct. pull_Zmod; apply r'_correct. Qed.
+
+      Local Lemma m_enc_correct_montgomery : m = eval m_enc.
+      Proof using m_small m_big bitwidth_big.
+        clear -m_small m_big bitwidth_big.
+        cbv [eval m_enc]; autorewrite with push_eval; auto.
+        rewrite uweight_eq_alt by lia.
+        Z.rewrite_mod_small; reflexivity.
+      Qed.
+      Local Lemma r'_pow_correct : (r'^n * r^n) mod (eval m_enc) = 1.
+      Proof using r'_correct m_small m_big bitwidth_big.
+        clear -r'_correct m_small m_big bitwidth_big.
+        rewrite <- Z.pow_mul_l, Z.mod_pow_full, ?(Z.mul_comm r'), <- m_enc_correct_montgomery, r'_correct.
+        autorewrite with zsimplify_const; auto with lia.
+        Z.rewrite_mod_small; lia.
+      Qed.
+      Local Lemma small_m_enc : small m_enc.
+      Proof using m_small m_big bitwidth_big.
+        clear -m_small m_big bitwidth_big.
+        cbv [m_enc small eval]; autorewrite with push_eval; auto.
+        rewrite uweight_eq_alt by lia.
+        Z.rewrite_mod_small; reflexivity.
+      Qed.
+
+      Local Ltac t_fin :=
+        repeat match goal with
+               | _ => assumption
+               | [ |- ?x = ?x ] => reflexivity
+               | [ |- and _ _ ] => split
+               | _ => rewrite <- !m_enc_correct_montgomery
+               | _ => rewrite !r'_correct
+               | _ => rewrite !Z.mod_1_l by assumption; reflexivity
+               | _ => rewrite !(Z.mul_comm m' m)
+               | _ => lia
+               | _ => exact small_m_enc
+               | [ H : small ?x |- context[eval ?x] ]
+                 => rewrite H; cbv [eval]; rewrite eval_partition by auto
+               | [ |- context[weight _] ] => rewrite uweight_eq_alt by auto with lia
+               | _=> progress Z.rewrite_mod_small
+               | _ => progress Z.zero_bounds
+               | [ |- _ mod ?x < ?x ] => apply Z.mod_pos_bound
+               end.
+
+      Definition mulmod (a b : list Z) : list Z := @redc bitwidth n m_enc n a b m'.
+      Definition squaremod (a : list Z) : list Z := mulmod a a.
+      Definition addmod (a b : list Z) : list Z := @add bitwidth n m_enc a b.
+      Definition submod (a b : list Z) : list Z := @sub bitwidth n m_enc a b.
+      Definition oppmod (a : list Z) : list Z := @opp bitwidth n m_enc a.
+      Definition nonzeromod (a : list Z) : Z := @nonzero a.
+      Definition to_bytesmod (a : list Z) : list Z := @to_bytesmod bitwidth 1 (2^Z.log2_up m) n a.
+
+      Definition valid (a : list Z) := small a /\ 0 <= eval a < m.
+
+      Lemma mulmod_correct0
+        : forall a b : list Z,
+          small a -> small b
+          -> small (mulmod a b)
+             /\ (eval b < m -> 0 <= eval (mulmod a b) < m)
+             /\ (eval (mulmod a b) mod m = (eval a * eval b * r'^n) mod m).
+      Proof using r'_correct n_nz m_small m_big m'_correct bitwidth_big.
+        intros a b Ha Hb; repeat apply conj; cbv [small mulmod eval];
+          [ eapply small_redc
+          | rewrite m_enc_correct_montgomery; eapply redc_bound_N
+          | rewrite !m_enc_correct_montgomery; eapply redc_mod_N ];
+          t_fin.
+      Qed.
+
+      Definition onemod : list Z := Partition.partition weight n 1.
+
+      Definition onemod_correct : eval onemod = 1 /\ valid onemod.
+      Proof using n_nz m_big bitwidth_big.
+        clear -n_nz m_big bitwidth_big.
+        cbv [valid small onemod eval]; autorewrite with push_eval; t_fin.
+      Qed.
+
+      Lemma eval_onemod : eval onemod = 1.
+      Proof. apply onemod_correct. Qed.
+
+      Definition R2mod : list Z := Partition.partition weight n ((r^n * r^n) mod m).
+
+      Definition R2mod_correct : eval R2mod mod m = (r^n*r^n) mod m /\ valid R2mod.
+      Proof using n_nz m_small m_big m'_correct bitwidth_big.
+        clear -n_nz m_small m_big m'_correct bitwidth_big.
+        cbv [valid small R2mod eval]; autorewrite with push_eval; t_fin;
+          rewrite !(Z.mod_small (_ mod m)) by (Z.div_mod_to_quot_rem; subst r; lia);
+          t_fin.
+      Qed.
+
+      Lemma eval_R2mod : eval R2mod mod m = (r^n*r^n) mod m.
+      Proof using n_nz m_small m_big m'_correct bitwidth_big. apply R2mod_correct. Qed.
+
+      Definition from_montgomerymod (v : list Z) : list Z
+        := mulmod v onemod.
+
+      Lemma from_montgomerymod_correct (v : list Z)
+        : valid v -> eval (from_montgomerymod v) mod m = (eval v * r'^n) mod m
+                     /\ valid (from_montgomerymod v).
+      Proof using r'_correct n_nz m_small m_big m'_correct bitwidth_big.
+        clear -r'_correct n_nz m_small m_big m'_correct bitwidth_big.
+        intro Hv; cbv [from_montgomerymod valid] in *; destruct_head'_and.
+        replace (eval v * r'^n) with (eval v * eval onemod * r'^n) by (rewrite (proj1 onemod_correct); lia).
+        repeat apply conj; apply mulmod_correct0; auto; try apply onemod_correct; rewrite (proj1 onemod_correct); lia.
+      Qed.
+
+      Lemma eval_from_montgomerymod (v : list Z) : valid v -> eval (from_montgomerymod v) mod m = (eval v * r'^n) mod m.
+      Proof using r'_correct n_nz m_small m_big m'_correct bitwidth_big.
+        intros; apply from_montgomerymod_correct; assumption.
+      Qed.
+      Lemma valid_from_montgomerymod (v : list Z)
+        : valid v -> valid (from_montgomerymod v).
+      Proof using r'_correct n_nz m_small m_big m'_correct bitwidth_big.
+        intros; apply from_montgomerymod_correct; assumption.
+      Qed.
+
+      Lemma mulmod_correct
+        : (forall a (_ : valid a) b (_ : valid b), eval (from_montgomerymod (mulmod a b)) mod m
+                                                   = (eval (from_montgomerymod a) * eval (from_montgomerymod b)) mod m)
+          /\ (forall a (_ : valid a) b (_ : valid b), valid (mulmod a b)).
+      Proof using r'_correct r' n_nz m_small m_big m'_correct bitwidth_big.
+        repeat apply conj; intros;
+          push_Zmod; rewrite ?eval_from_montgomerymod; pull_Zmod; repeat apply conj;
+            try apply mulmod_correct0; cbv [valid] in *; destruct_head'_and; auto; [].
+        rewrite !Z.mul_assoc.
+        apply Z.mul_mod_Proper; [ | reflexivity ].
+        cbv [Z.equiv_modulo]; etransitivity; [ apply mulmod_correct0 | apply f_equal2; lia ]; auto.
+      Qed.
+
+      Lemma eval_mulmod
+        : (forall a (_ : valid a) b (_ : valid b),
+              eval (from_montgomerymod (mulmod a b)) mod m
+              = (eval (from_montgomerymod a) * eval (from_montgomerymod b)) mod m).
+      Proof. apply mulmod_correct. Qed.
+
+      Lemma squaremod_correct
+        : (forall a (_ : valid a), eval (from_montgomerymod (squaremod a)) mod m
+                                   = (eval (from_montgomerymod a) * eval (from_montgomerymod a)) mod m)
+          /\ (forall a (_ : valid a), valid (squaremod a)).
+      Proof using r'_correct n_nz m_small m_big m'_correct bitwidth_big.
+        split; intros; cbv [squaremod]; apply mulmod_correct; assumption.
+      Qed.
+
+      Lemma eval_squaremod
+        : (forall a (_ : valid a),
+              eval (from_montgomerymod (squaremod a)) mod m
+              = (eval (from_montgomerymod a) * eval (from_montgomerymod a)) mod m).
+      Proof. apply squaremod_correct. Qed.
+
+      Local Ltac t_valid_side :=
+        repeat first [ solve [ auto ]
+                     | apply R2mod_correct
+                     | apply mulmod_correct ].
+
+      Definition to_montgomerymod (v : list Z) : list Z
+        := mulmod v R2mod.
+
+      Lemma to_montgomerymod_correct
+        : (forall v (_ : valid v),
+              eval (from_montgomerymod (to_montgomerymod v)) mod m
+              = eval v mod m)
+          /\ (forall v (_ : valid v), valid (to_montgomerymod v)).
+      Proof using r'_correct n_nz m_small m_big m'_correct bitwidth_big.
+        split; intros v ?; cbv [to_montgomerymod]; [ | t_valid_side ].
+        repeat first [ reflexivity
+                     | rewrite !eval_mulmod by t_valid_side
+                     | rewrite !eval_from_montgomerymod by t_valid_side
+                     | rewrite !eval_R2mod by t_valid_side
+                     | rewrite r'_correct_alt
+                     | rewrite Z.mul_1_r
+                     | rewrite Z.mod_mod by lia
+                     | rewrite (Z.mul_comm (r' mod _) (r mod _))
+                     | progress push_Zmod
+                     | progress (pull_Zmod; rewrite Z.mul_1_r; push_Zmod)
+                     | progress (pull_Zmod; rewrite Z.pow_1_l by lia; push_Zmod)
+                     | progress (pull_Zmod; rewrite <- !Z.mul_assoc, <- !Z.pow_mul_l; push_Zmod) ].
+      Qed.
+
+      Lemma eval_to_montgomerymod
+        : forall v (_ : valid v),
+          eval (from_montgomerymod (to_montgomerymod v)) mod m
+          = eval v mod m.
+      Proof. apply to_montgomerymod_correct. Qed.
+
+      Definition encodemod (v : Z) : list Z
+        := to_montgomerymod (Partition.partition weight n v).
+
+      Local Ltac t_valid v :=
+        cbv [valid]; repeat apply conj;
+        auto; cbv [small eval]; autorewrite with push_eval; auto;
+        rewrite ?uweight_eq_alt by lia;
+        Z.rewrite_mod_small;
+        rewrite ?(Z.mod_small (_ mod m)) by (subst r; Z.div_mod_to_quot_rem; lia);
+        rewrite ?(Z.mod_small v) by (subst r; Z.div_mod_to_quot_rem; lia);
+        try apply Z.mod_pos_bound; subst r; try lia; try reflexivity.
+      Lemma encodemod_correct
+        : (forall v, 0 <= v < m -> eval (from_montgomerymod (encodemod v)) mod m = v mod m)
+          /\ (forall v, 0 <= v < m -> valid (encodemod v)).
+      Proof using r'_correct n_nz m_small m_big m'_correct bitwidth_big.
+        split; intros v ?; cbv [encodemod];
+          [ rewrite eval_to_montgomerymod | apply to_montgomerymod_correct ];
+          [ | now t_valid v.. ].
+        cbv [eval]; autorewrite with push_eval; auto.
+        rewrite ?uweight_eq_alt by lia.
+        rewrite ?(Z.mod_small v) by (subst r; Z.div_mod_to_quot_rem; lia).
+        reflexivity.
+      Qed.
+
+      Lemma eval_encodemod
+        : (forall v, 0 <= v < m
+                     -> eval (from_montgomerymod (encodemod v)) mod m = v mod m).
+      Proof. apply encodemod_correct. Qed.
+
+      Lemma addmod_correct
+        : (forall a (_ : valid a) b (_ : valid b), eval (from_montgomerymod (addmod a b)) mod m
+                                                   = (eval (from_montgomerymod a) + eval (from_montgomerymod b)) mod m)
+          /\ (forall a (_ : valid a) b (_ : valid b), valid (addmod a b)).
+      Proof using r'_correct n_nz m_small m_big m'_correct bitwidth_big.
+        repeat apply conj; intros;
+          push_Zmod; rewrite ?eval_from_montgomerymod; pull_Zmod; repeat apply conj;
+            cbv [valid addmod] in *; destruct_head'_and; auto;
+              try rewrite m_enc_correct_montgomery;
+              try (eapply small_add || eapply add_bound);
+              cbv [small]; rewrite <- ?m_enc_correct_montgomery;
+                eauto with lia; [ ].
+        push_Zmod; erewrite eval_add by (cbv [small]; rewrite <- ?m_enc_correct_montgomery; eauto with lia); pull_Zmod; rewrite <- ?m_enc_correct_montgomery.
+        break_innermost_match; push_Zmod; pull_Zmod; autorewrite with zsimplify_const; apply f_equal2; nia.
+      Qed.
+
+      Lemma eval_addmod
+        : (forall a (_ : valid a) b (_ : valid b),
+              eval (from_montgomerymod (addmod a b)) mod m
+              = (eval (from_montgomerymod a) + eval (from_montgomerymod b)) mod m).
+      Proof. apply addmod_correct. Qed.
+
+      Lemma submod_correct
+        : (forall a (_ : valid a) b (_ : valid b), eval (from_montgomerymod (submod a b)) mod m
+                                                   = (eval (from_montgomerymod a) - eval (from_montgomerymod b)) mod m)
+          /\ (forall a (_ : valid a) b (_ : valid b), valid (submod a b)).
+      Proof using r'_correct n_nz m_small m_big m'_correct bitwidth_big.
+        repeat apply conj; intros;
+          push_Zmod; rewrite ?eval_from_montgomerymod; pull_Zmod; repeat apply conj;
+            cbv [valid submod] in *; destruct_head'_and; auto;
+              try rewrite m_enc_correct_montgomery;
+              try (eapply small_sub || eapply sub_bound);
+              cbv [small]; rewrite <- ?m_enc_correct_montgomery;
+                eauto with lia; [ ].
+        push_Zmod; erewrite eval_sub by (cbv [small]; rewrite <- ?m_enc_correct_montgomery; eauto with lia); pull_Zmod; rewrite <- ?m_enc_correct_montgomery.
+        break_innermost_match; push_Zmod; pull_Zmod; autorewrite with zsimplify_const; apply f_equal2; nia.
+      Qed.
+
+      Lemma eval_submod
+        : (forall a (_ : valid a) b (_ : valid b),
+              eval (from_montgomerymod (submod a b)) mod m
+              = (eval (from_montgomerymod a) - eval (from_montgomerymod b)) mod m).
+      Proof. apply submod_correct. Qed.
+
+      Lemma oppmod_correct
+        : (forall a (_ : valid a), eval (from_montgomerymod (oppmod a)) mod m
+                                   = (-eval (from_montgomerymod a)) mod m)
+          /\ (forall a (_ : valid a), valid (oppmod a)).
+      Proof using r'_correct n_nz m_small m_big m'_correct bitwidth_big.
+        repeat apply conj; intros;
+          push_Zmod; rewrite ?eval_from_montgomerymod; pull_Zmod; repeat apply conj;
+            cbv [valid oppmod] in *; destruct_head'_and; auto;
+              try rewrite m_enc_correct_montgomery;
+              try (eapply small_opp || eapply opp_bound);
+              cbv [small]; rewrite <- ?m_enc_correct_montgomery;
+                eauto with lia; [ ].
+        push_Zmod; erewrite eval_opp by (cbv [small]; rewrite <- ?m_enc_correct_montgomery; eauto with lia); pull_Zmod; rewrite <- ?m_enc_correct_montgomery.
+        break_innermost_match; push_Zmod; pull_Zmod; autorewrite with zsimplify_const; apply f_equal2; nia.
+      Qed.
+
+      Lemma eval_oppmod
+        : (forall a (_ : valid a),
+              eval (from_montgomerymod (oppmod a)) mod m
+              = (-eval (from_montgomerymod a)) mod m).
+      Proof. apply oppmod_correct. Qed.
+
+      Lemma nonzeromod_correct
+        : (forall a (_ : valid a), (nonzeromod a = 0) <-> ((eval (from_montgomerymod a)) mod m = 0)).
+      Proof using r'_correct n_nz m_small m_big m'_correct bitwidth_big.
+        intros a Ha; rewrite eval_from_montgomerymod by assumption.
+        cbv [nonzeromod valid] in *; destruct_head'_and.
+        rewrite eval_nonzero; try eassumption; [ | subst r; apply conj; try eassumption; lia.. ].
+        split; intro H'; [ rewrite H'; autorewrite with zsimplify_const; reflexivity | ].
+        assert (H'' : ((eval a * r'^n) * r^n) mod m = 0)
+          by (revert H'; push_Zmod; intro H'; rewrite H'; autorewrite with zsimplify_const; reflexivity).
+        rewrite <- Z.mul_assoc in H''.
+        autorewrite with pull_Zpow push_Zmod in H''.
+        rewrite (Z.mul_comm r' r), r'_correct in H''.
+        autorewrite with zsimplify_const pull_Zmod in H''; [ | lia.. ].
+        clear H'.
+        generalize dependent (eval a); clear.
+        intros z ???.
+        assert (z / m = 0) by (Z.div_mod_to_quot_rem; nia).
+        Z.div_mod_to_quot_rem; nia.
+      Qed.
+
+      Lemma to_bytesmod_correct
+        : (forall a (_ : valid a), Positional.eval (uweight 8) (bytes_n (2^Z.log2_up m)) (to_bytesmod a)
+                                   = eval a mod m)
+          /\ (forall a (_ : valid a), to_bytesmod a = Partition.partition (uweight 8) (bytes_n (2^Z.log2_up m)) (eval a mod m)).
+      Proof using m_big n_nz m_small bitwidth_big.
+        clear -m_big n_nz m_small bitwidth_big.
+        pose proof (Z.log2_up_le_full m).
+        generalize (@length_small bitwidth n);
+          cbv [valid small to_bytesmod eval]; split; intros; (etransitivity; [ apply eval_to_bytesmod | ]);
+            fold weight in *; fold (uweight 8) in *; subst r;
+              try solve [ intuition eauto with lia ].
+        all: repeat first [ rewrite uweight_eq_alt by lia
+                          | lia
+                          | reflexivity
+                          | progress Z.rewrite_mod_small ].
+      Qed.
+
+      Lemma eval_to_bytesmod
+        : (forall a (_ : valid a),
+              Positional.eval (uweight 8) (bytes_n (2^Z.log2_up m)) (to_bytesmod a)
+              = eval a mod m).
+      Proof. apply to_bytesmod_correct. Qed.
+    End modops.
+  End Generic.
 End WordByWordMontgomery.
