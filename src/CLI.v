@@ -19,6 +19,7 @@ Require Import Crypto.Util.Strings.Show.
 Require Crypto.PushButtonSynthesis.SaturatedSolinas.
 Require Crypto.PushButtonSynthesis.UnsaturatedSolinas.
 Require Crypto.PushButtonSynthesis.WordByWordMontgomery.
+Require Crypto.PushButtonSynthesis.WordByWordMontgomeryGeneric.
 Require Crypto.PushButtonSynthesis.BaseConversion.
 Require Import Crypto.UnsaturatedSolinasHeuristics.
 Require Import Crypto.Stringification.Language.
@@ -84,6 +85,8 @@ Module ForExtraction.
   Definition parse_machine_wordsize (s : string) : option Z
     := parse_Z s.
   Definition parse_m (s : string) : option Z
+    := parse_Z s.
+  Definition parse_log2_up_m (s : string) : option Z
     := parse_Z s.
 
   Definition parse_case_convention (s : string) : option capitalization_data
@@ -317,6 +320,10 @@ Module ForExtraction.
     := ("m",
         Arg.Custom (parse_string_and parse_m) "an integer expression",
         ["The prime (e.g., '2^434 - (2^216*3^137 - 1)')"]).
+  Definition log2_up_m_spec : anon_argT
+    := ("⌈log₂(m)⌉",
+        Arg.Custom (parse_string_and parse_log2_up_m) "an integer expression",
+        ["The number of bits needed to represent the prime (e.g., 255 for 2^255-19)"]).
   Definition machine_wordsize_spec : anon_argT
     := ("machine_wordsize",
         Arg.Custom (parse_string_and parse_machine_wordsize) "an integer",
@@ -919,6 +926,48 @@ Module ForExtraction.
       : A
       := Parameterized.PipelineMain argv.
   End WordByWordMontgomery.
+
+  Module WordByWordMontgomeryGeneric.
+    Local Instance api : PipelineAPI
+      := {
+          spec :=
+            {| Arg.named_args := []
+               ; Arg.anon_args := [log2_up_m_spec]
+               ; Arg.anon_opt_args := []
+               ; Arg.anon_opt_repeated_arg := Some (function_to_synthesize_spec WordByWordMontgomeryGeneric.valid_names) |};
+
+          parse_args opts args
+          := let '(tt, (str_log2_up_m, log2_up_m), tt, requests) := args in
+             let show_requests := match requests with nil => "(all)" | _ => String.concat ", " requests end in
+             inl ((str_log2_up_m, show_requests),
+                  (log2_up_m, requests));
+
+          show_lines_args :=
+            fun '((str_log2_up_m, show_requests),
+                  (log2_up_m, requests))
+            => ["requested operations: " ++ show_requests;
+               "⌈log₂(m)⌉ = " ++ Decimal.show_Z log2_up_m ++ " (from """ ++ str_log2_up_m ++ """)";
+               "                                                                  ";
+               "NOTE: In addition to the bounds specified above each function, all";
+               "  functions synthesized for this Montgomery arithmetic require the";
+               "  input to be strictly less than the prime modulus (m), and also  ";
+               "  require the input to be in the unique saturated representation. ";
+               "  All functions also ensure that these two properties are true of ";
+               "  return values.                                                  "];
+
+          Synthesize
+          := fun _ opts '(log2_up_m, requests) comment_header prefix
+             => WordByWordMontgomeryGeneric.Synthesize log2_up_m machine_wordsize comment_header prefix requests
+        }.
+
+    Definition PipelineMain
+               {supported_languages : supported_languagesT}
+               {A}
+               {io_driver : IODriverAPI A}
+               (argv : list string)
+      : A
+      := Parameterized.PipelineMain argv.
+  End WordByWordMontgomeryGeneric.
 
   Module SaturatedSolinas.
     Local Instance api : PipelineAPI

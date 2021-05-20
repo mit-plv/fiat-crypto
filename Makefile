@@ -485,7 +485,7 @@ Makefile.coq: Makefile _CoqProject
 	$(HIDE)$(COQBIN)coq_makefile -f _CoqProject INSTALLDEFAULTROOT = $(INSTALLDEFAULTROOT) -o Makefile-coq && cat Makefile-coq | sed 's/^printenv:/printenv::/g; s/^printenv:::/printenv::/g; s/^all:/all-old:/g; s/^validate:/validate-vo:/g; s/^.PHONY: validate/.PHONY: validate-vo/g' > $@ && rm -f Makefile-coq
 
 
-STANDALONE := unsaturated_solinas saturated_solinas word_by_word_montgomery base_conversion
+STANDALONE := unsaturated_solinas saturated_solinas word_by_word_montgomery word_by_word_montgomery_generic base_conversion
 BEDROCK2_STANDALONE := $(addprefix bedrock2_,$(STANDALONE))
 ifneq ($(SKIP_BEDROCK2),1)
 STANDALONE += $(BEDROCK2_STANDALONE)

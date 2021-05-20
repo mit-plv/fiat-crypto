@@ -107,6 +107,11 @@ Module WordByWordMontgomery.
     := main_gen ForExtraction.WordByWordMontgomery.PipelineMain.
 End WordByWordMontgomery.
 
+Module WordByWordMontgomeryGeneric.
+  Definition main : IO_unit
+    := main_gen ForExtraction.WordByWordMontgomeryGeneric.PipelineMain.
+End WordByWordMontgomeryGeneric.
+
 Module SaturatedSolinas.
   Definition main : IO_unit
     := main_gen ForExtraction.SaturatedSolinas.PipelineMain.

@@ -185,6 +185,8 @@ src/PushButtonSynthesis/SmallExamples.v
 src/PushButtonSynthesis/UnsaturatedSolinas.v
 src/PushButtonSynthesis/UnsaturatedSolinasReificationCache.v
 src/PushButtonSynthesis/WordByWordMontgomery.v
+src/PushButtonSynthesis/WordByWordMontgomeryGeneric.v
+src/PushButtonSynthesis/WordByWordMontgomeryGenericReificationCache.v
 src/PushButtonSynthesis/WordByWordMontgomeryReificationCache.v
 src/Rewriter/All.v
 src/Rewriter/AllTacticsExtra.v

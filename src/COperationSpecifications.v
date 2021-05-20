@@ -681,6 +681,267 @@ Module WordByWordMontgomery.
   End __.
 End WordByWordMontgomery.
 
+Module WordByWordMontgomeryGeneric.
+  Import Arithmetic.WordByWordMontgomery.
+  Local Coercion Z.of_nat : nat >-> Z.
+  Section __.
+    Context (bitwidth : Z)
+            (n : nat)
+            (n_bytes : nat)
+            (log2_up_m : Z)
+            (*(m r' : Z)*)
+            (s : Z) (* only for prime_bytes *)
+            (bounds : list (option zrange))
+            (length_bounds : length bounds = n)
+            (small : list Z -> Prop)
+            (valid : forall m_enc : list Z, list Z -> Prop)
+            (bytes_valid : list Z -> Prop)
+            (log2_up_m_pos : 0 < log2_up_m)
+            (*(m_pos : 0 < m)*)
+            (from_montgomery : forall (m_enc : list Z) (m' : Z), list Z -> list Z)
+            (to_montgomery : forall (m_enc : list Z) (m' : Z), list Z -> list Z)
+            (* saturated_bounds is only for selectznz *)
+            (saturated_bounds : list (option zrange))
+            (length_saturated_bounds : length saturated_bounds = n).
+    Local Notation eval := (@WordByWordMontgomery.eval bitwidth n).
+    Local Notation bytes_eval := (Positional.eval (weight 8 1) n_bytes).
+    Local Notation twos_complement_eval f := (eval_twos_complement bitwidth n f).
+    Local Notation r := (2^bitwidth).
+
+    (*
+    Let prime_bound : zrange
+      := r[0~>(m - 1)]%zrange.
+     *)
+    Definition from_montgomery_correct
+      := forall m_enc m' v r',
+        small m_enc -> valid m_enc v -> 1 < eval m_enc
+        -> (r * r') mod eval m_enc = 1
+        -> (eval m_enc * m') mod r = (-1) mod r
+        -> (eval (from_montgomery m_enc m' v) mod eval m_enc = (eval v * r'^n) mod eval m_enc)
+           /\ valid m_enc (from_montgomery m_enc m' v).
+
+    Definition to_montgomery_correct
+      := forall m_enc m' v r',
+        small m_enc -> valid m_enc v -> 1 < eval m_enc
+        -> (r * r') mod eval m_enc = 1
+        -> (eval m_enc * m') mod r = (-1) mod r
+        -> (eval (from_montgomery m_enc m' (to_montgomery m_enc m' v)) mod eval m_enc = (eval v) mod eval m_enc)
+           /\ valid m_enc (to_montgomery m_enc m' v).
+
+    Definition mul_correct
+               (mul : forall (m_enc : list Z) (m' : Z), list Z -> list Z -> list Z)
+      := forall m_enc m' a b r',
+        small m_enc -> 1 < eval m_enc
+        -> (r * r') mod eval m_enc = 1
+        -> (eval m_enc * m') mod r = (-1) mod r
+        -> valid m_enc a
+        -> valid m_enc b
+        -> eval (from_montgomery m_enc m' (mul m_enc m' a b)) mod eval m_enc
+           = (Z.mul (eval (from_montgomery m_enc m' a)) (eval (from_montgomery m_enc m' b))) mod eval m_enc
+           /\ valid m_enc (mul m_enc m' a b).
+(*
+    Definition add_correct
+               (add : list Z -> list Z -> list Z)
+      := forall a b,
+        valid a
+        -> valid b
+        -> eval (from_montgomery (add a b)) mod m = (Z.add (eval (from_montgomery a)) (eval (from_montgomery b))) mod m
+           /\ valid (add a b).
+
+    Definition sub_correct
+               (sub : list Z -> list Z -> list Z)
+      := forall a b,
+        valid a
+        -> valid b
+        -> eval (from_montgomery (sub a b)) mod m = (Z.sub (eval (from_montgomery a)) (eval (from_montgomery b))) mod m
+           /\ valid (sub a b).
+
+    Definition opp_correct
+               (opp : list Z -> list Z)
+      := forall a,
+        valid a
+        -> eval (from_montgomery (opp a)) mod m = (Z.opp (eval (from_montgomery a))) mod m
+           /\ valid (opp a).
+
+    Definition square_correct
+               (square : list Z -> list Z)
+      := forall a,
+        valid a
+        -> eval (from_montgomery (square a)) mod m = (eval (from_montgomery a) * eval (from_montgomery a)) mod m
+           /\ valid (square a).
+
+    Definition zero_correct
+               (zero : list Z)
+      := eval (from_montgomery zero) mod m = 0
+         /\ valid zero.
+
+    Definition one_correct
+               (one : list Z)
+      := eval (from_montgomery one) mod m = 1 mod m
+         /\ valid one.
+
+    Definition encode_correct
+               (encode : Z -> list Z)
+      := forall x,
+        is_bounded_by0 prime_bound x = true
+        -> eval (from_montgomery (encode x)) mod m = x mod m
+           /\ valid (encode x).
+
+    Definition nonzero_correct
+               (nonzero : list Z -> Z)
+      := forall x,
+        valid x
+        -> (nonzero x = 0) <-> (eval (from_montgomery x) mod m = 0).
+
+    Definition to_bytes_correct
+               (to_bytes : list Z -> list Z)
+      := forall x,
+        valid x
+        -> to_bytes x = Partition.partition (weight 8 1) n_bytes (eval x mod m).
+
+    Definition from_bytes_correct
+               (from_bytes : list Z -> list Z)
+      := forall x,
+        bytes_valid x
+        -> eval (from_bytes x) mod m = bytes_eval x mod m
+           /\ valid (from_bytes x).
+
+    Definition selectznz_correct
+               (selectznz : Z -> list Z -> list Z -> list Z)
+      : Prop
+      := selectznz.selectznz_correct
+           (UniformWeight.uweight bitwidth)
+           n
+           saturated_bounds
+           selectznz.
+
+    (* Bernstein-Yang inversion *)
+    Definition msat_correct
+               (msat : list Z) :=
+      twos_complement_eval msat = m /\
+      valid msat.
+
+    Definition divstep_precomp_correct
+               (divstep_precomp : list Z) :=
+      let mbits := (Z.log2 m) + 1  in
+      (eval (from_montgomery divstep_precomp) = ((m - 1) / 2) ^ (if Decidable.dec (mbits < 46)
+                                                         then (49 * mbits + 80) / 17
+                                                         else (49 * mbits + 57)/ 17))
+      /\ valid divstep_precomp.
+
+    Definition divstep_correct
+               (divstep :
+                  Z -> list Z -> list Z -> list Z -> list Z ->
+                  Z * list Z * list Z * list Z * list Z) : Prop
+      := forall (d : Z) f g v r,
+        valid v -> valid r ->
+        let '(d1,f1,g1,v1,r1) := divstep d f g v r in
+        (((d1,
+           twos_complement_eval f1,
+           twos_complement_eval g1,
+           eval (from_montgomery v1) mod m,
+           eval (from_montgomery r1) mod m) =
+          (if (0 <? d) && Z.odd (twos_complement_eval g)
+           then (1 - d,
+                 (twos_complement_eval g),
+                 ((twos_complement_eval g) - (twos_complement_eval f)) / 2,
+                 (2 * (eval (from_montgomery r))) mod m,
+                 ((eval (from_montgomery v)) - (eval (from_montgomery v))) mod m)
+           else (1 + d,
+                 (twos_complement_eval f),
+                 ((twos_complement_eval g) + (twos_complement_eval g mod 2) * (twos_complement_eval f)) / 2,
+                 (2 * (eval (from_montgomery v))) mod m,
+                 ((eval (from_montgomery r)) + (twos_complement_eval g mod 2) * (eval (from_montgomery v))) mod m)))
+         /\ valid r1 /\ valid r1 /\ valid f1 /\ valid g1).
+
+    Section ring.
+      Context mul     (Hmul     :     mul_correct mul)
+              add     (Hadd     :     add_correct add)
+              sub     (Hsub     :     sub_correct sub)
+              opp     (Hopp     :     opp_correct opp)
+              encode  (Hencode  :  encode_correct encode)
+              zero    (Hzero    :    zero_correct zero)
+              one     (Hone     :     one_correct one).
+
+      Let m' := Z.to_pos m.
+
+      Local Notation T := (list Z) (only parsing).
+      Local Notation encoded_ok ls
+        := (valid ls) (only parsing).
+      Local Notation encoded_okf := (fun ls => encoded_ok ls) (only parsing).
+
+      Definition Fdecode (v : T) : F m'
+        := F.of_Z m' (eval (from_montgomery v)).
+      Definition T_eq (x y : T)
+        := Fdecode x = Fdecode y.
+
+      Definition encodedT := sig encoded_okf.
+
+      Definition ring_mul (x y : T) : T := mul x y.
+      Definition ring_add (x y : T) : T := add x y.
+      Definition ring_sub (x y : T) : T := sub x y.
+      Definition ring_opp (x : T) : T := opp x.
+      Definition ring_encode (x : F m') : T := encode (F.to_Z x).
+
+      Definition GoodT : Prop
+        := @subsetoid_ring
+             (list Z) encoded_okf T_eq
+             zero one ring_opp ring_add ring_sub ring_mul
+           /\ @is_subsetoid_homomorphism
+                (F m') (fun _ => True) eq 1%F F.add F.mul
+                (list Z) encoded_okf T_eq one ring_add ring_mul ring_encode
+           /\ @is_subsetoid_homomorphism
+                (list Z) encoded_okf T_eq one ring_add ring_mul
+                (F m') (fun _ => True) eq 1%F F.add F.mul
+                Fdecode.
+
+      Hint Rewrite ->@F.to_Z_add : push_FtoZ.
+      Hint Rewrite ->@F.to_Z_mul : push_FtoZ.
+      Hint Rewrite ->@F.to_Z_opp : push_FtoZ.
+      Hint Rewrite ->@F.to_Z_of_Z : push_FtoZ.
+
+      Lemma Fm_bounded_alt (x : F m')
+        : is_bounded_by0 prime_bound (F.to_Z x) = true.
+      Proof using m_pos.
+        clear -m_pos.
+        destruct x as [x H]; cbn [F.to_Z proj1_sig].
+        pose proof (Z.mod_pos_bound x (Z.pos m')).
+        subst m'; rewrite Z2Pos.id in * by lia.
+        cbv [prime_bound lower upper].
+        rewrite Bool.andb_true_iff; split; Z.ltb_to_lt; lia.
+      Qed.
+
+      Lemma Good : GoodT.
+      Proof.
+        split_and; simpl in *.
+        repeat match goal with
+               | [ H : context[andb _ true] |- _ ] => setoid_rewrite andb_true_r in H
+               end.
+        all: cbv [mul_correct add_correct sub_correct opp_correct encode_correct zero_correct one_correct] in *; split_and.
+        eapply subsetoid_ring_by_ring_isomorphism;
+          cbv [ring_opp ring_add ring_sub ring_mul ring_encode F.sub list_Z_bounded_by Fdecode m' F.one] in *; auto.
+        all: repeat first [ progress intros
+                          | reflexivity
+                          | progress autorewrite with push_FtoZ
+                          | rewrite Z2Pos.id
+                          | apply Fm_bounded_alt
+                          | match goal with
+                            | [ |- _ = _ :> F _ ] => apply F.eq_to_Z_iff
+                            | [ |- _ mod _ = F.to_Z ?x ]
+                              => etransitivity; [ | apply (F.mod_to_Z x) ]
+                            | [ H : _ |- _ ] => apply H; clear H
+                            | [ H : context[eval (?f _) mod ?m = _] |- context[eval (?f _) mod ?m] ]
+                              => rewrite H
+                            | [ H : context[eval (?f _ _) mod ?m = _] |- context[eval (?f _ _) mod ?m] ]
+                              => rewrite H
+                            end
+                          | progress (push_Zmod; pull_Zmod); try (f_equal; lia) ].
+      Qed.
+    End ring.
+*)
+  End __.
+End WordByWordMontgomeryGeneric.
+
 Module BarrettReduction.
   Section __.
     Context (k M : Z).

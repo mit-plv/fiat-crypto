@@ -78,6 +78,7 @@ There is a separate compiler binary for each implementation strategy:
  - `saturated_solinas`
  - `unsaturated_solinas`
  - `word_by_word_montgomery`
+ - `word_by_word_montgomery_generic`
 
 Passing no arguments, or passing `-h` or `--help` (or any other invalid arguments) will result in a usage message being printed.  These binaries output C code on stdout.
 
@@ -100,6 +101,10 @@ Note that for large primes, you may need to increase the stack size to avoid sta
 This sets the stack size to 1 GB (= 1024 MB = 1024 * 1024 KB = 1048576 KB) before running the command.
 As of the last edit of this line, this command takes about an hour to run, but does in fact complete successfully.
 Without a sufficiently large stack-size, it instead stack overflows.
+
+The `word_by_word_montgomery_generic` binary generates code that takes
+the prime as a runtime argument; the code depends only on the number
+of bits in the prime at compile-time.
 
 Usage (Generating Bedrock2 Files)
 ---------------------------------
@@ -126,6 +131,7 @@ There is a separate compiler binary for each implementation strategy:
  - `bedrock2_saturated_solinas`
  - `bedrock2_unsaturated_solinas`
  - `bedrock2_word_by_word_montgomery`
+ - `bedrock2_word_by_word_montgomery_generic`
 
 Passing no arguments, or passing `-h` or `--help` (or any other invalid arguments) will result in a usage message being printed.  These binaries output bedrock2/C code on stdout.
 

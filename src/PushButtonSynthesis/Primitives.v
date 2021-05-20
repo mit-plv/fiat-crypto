@@ -261,6 +261,10 @@ Module CorrectnessStringification.
     Inductive list :=
     | nil
     | cons {T1 T2} (k : T1) (v : T2) (ctx : list).
+    Local Set Universe Polymorphism.
+    Local Set Primitive Projections.
+    Record prod := pair { A : Type ; fst : A ; B : Type; snd : B }.
+    Global Arguments pair {A} _ {B} _.
   End dyn_context.
 
   Ltac strip_bounds_info correctness :=
@@ -487,6 +491,37 @@ Module CorrectnessStringification.
     | ?v => let res := stringify_body ctx v in
             constr:(", " ++ res)
     end.
+  Ltac stringify_forall_binders ctx correctness stringify_body :=
+    lazymatch correctness with
+    | ?A -> ?B
+      => let res := stringify_body ctx correctness in
+         constr:(", " ++ res)
+    | (forall x : ?T, ?f)
+      => let fx := fresh in
+         let x' := fresh in
+         let xn := fresh_from ctx in
+         lazymatch
+           constr:(
+             fun x : T
+             => match x, f return string with
+                | x', fx
+                  => ltac:(
+                       let fx' := (eval cbv delta [fx] in fx) in
+                       let x := (eval cbv delta [x'] in x') in
+                       clear fx x';
+                       let res := stringify_forall_binders
+                                    (dyn_context.cons x xn ctx)
+                                    fx'
+                                    stringify_body in
+                       exact (" " ++ xn ++ res))
+                end) with
+         | fun _ => ?f => f
+         | ?F => constr_fail_with ltac:(fun _ => idtac "Failed to eliminate functional dependencies in" F;
+                                                 fail 1 "Failed to eliminate functional dependencies in" F)
+         end
+    | ?v => let res := stringify_body ctx v in
+            constr:(", " ++ res)
+    end.
 
   Ltac is_literal x :=
     lazymatch x with
@@ -563,20 +598,37 @@ Module CorrectnessStringification.
              let sz := recurse z r_lvl in
              maybe_parenthesize (sx ++ " " ++ f1 ++ " " ++ sy ++ " " ++ f2 ++ " " ++ sz)%string natural lvl
         end in
-    let name_of_fun :=
+    let rec name_of_fun correctness :=
         lazymatch correctness with
-        | ?f ?x => find_in_ctx ctx f
+        | ?f ?x => let fname := find_in_ctx ctx f in
+                   lazymatch fname with
+                   | Some ?fname => constr:(Some (dyn_context.pair fname x))
+                   | None
+                     => let fname := name_of_fun f in
+                        lazymatch fname with
+                        | Some (dyn_context.pair ?fname ?args) => constr:(Some (dyn_context.pair fname (dyn_context.pair args x)))
+                        | None => constr:(@None string)
+                        | ?v => fail 1 "Invalid non-literal-option return from name_of_fun" v
+                        end
+                   | ?v => fail 1 "Invalid non-literal-option return from find_in_ctx" v
+                   end
         | _ => constr:(@None string)
         end in
+    let name_of_fun := name_of_fun correctness in
+    let rec recurse_args args lvl
+        := lazymatch args with
+           | dyn_context.pair ?args ?last
+             => let xs := recurse_args args lvl in
+                let last := recurse last lvl in
+                constr:((xs ++ " " ++ last)%string)
+           | ?args => recurse args lvl
+           end in
     lazymatch constr:((name_of_var, name_of_fun)) with
     | (Some ?name, _)
       => maybe_parenthesize name (Level.level 1) lvl
-    | (None, Some ?name)
-      => lazymatch correctness with
-         | ?f ?x
-           => let sx := recurse x (Level.next app_lvl) in
-              maybe_parenthesize ((name ++ " " ++ sx)%string) constr:(app_lvl) lvl
-         end
+    | (None, Some (dyn_context.pair ?name ?args))
+      => let sargs := recurse_args args (Level.next app_lvl) in
+         maybe_parenthesize ((name ++ " " ++ sargs)%string) constr:(app_lvl) lvl
     | (None, None)
       => lazymatch correctness with
          | ?x = ?y :> ?T
@@ -635,6 +687,8 @@ Module CorrectnessStringification.
          | ?x <  ?y <= ?z => stringify_infix2 "<" "≤" rel_lvl next_rel_lvl next_rel_lvl next_rel_lvl
          | ?x <  ?y <  ?z => stringify_infix2 "<" "<" rel_lvl next_rel_lvl next_rel_lvl next_rel_lvl
          | iff _ _ => stringify_infix "↔" 95 94 94
+         | Basics.impl _ _ => stringify_infix "→" 95 94 95
+         | ?A -> ?B => recurse (Basics.impl A B) lvl
          | and _ _  => stringify_infix "∧" 80 80 80
          | andb _ _ => stringify_infix "∧" 80 80 80
          | Z.modulo _ _ => stringify_infix "mod" 41 39 39
@@ -669,6 +723,9 @@ Module CorrectnessStringification.
          | fun x : ?T => ?f
            => let slam := stringify_function_binders ctx correctness ltac:(fun ctx body => stringify_rec0 ctx body term_lvl) in
               maybe_parenthesize ("λ" ++ slam) term_lvl lvl
+         | forall x : ?T, ?f
+           => let sforall := stringify_forall_binders ctx correctness ltac:(fun ctx body => stringify_rec0 ctx body term_lvl) in
+              maybe_parenthesize ("∀" ++ sforall) term_lvl lvl
          | ?v
            => let iv := test_is_var_or_const v in
               lazymatch iv with
@@ -749,7 +806,7 @@ Module CorrectnessStringification.
   Ltac stringify ctx correctness fname arg_var_data out_var_data :=
     let G := match goal with |- ?G => G end in
     let correctness := (eval hnf in correctness) in
-    let correctness := (eval cbv [Partition.partition WordByWordMontgomery.valid WordByWordMontgomery.small] in correctness) in
+    let correctness := (eval cbv [Partition.partition WordByWordMontgomery.valid WordByWordMontgomery.Generic.valid WordByWordMontgomery.small] in correctness) in
     let correctness := strip_bounds_info correctness in
     let arg_var_names := constr:(type.map_for_each_lhs_of_arrow (@ToString.OfPHOAS.names_of_var_data) arg_var_data) in
     let out_var_names := constr:(ToString.OfPHOAS.names_of_base_var_data out_var_data) in

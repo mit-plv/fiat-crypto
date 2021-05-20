@@ -1,4 +1,4 @@
-(** * Push-Button Synthesis of Word-By-Word Montgomery *)
+(** * Push-Button Synthesis of Word-By-Word Montgomery, Generic over the Prime  *)
 Require Import Coq.Strings.String.
 Require Import Coq.micromega.Lia.
 Require Import Coq.ZArith.ZArith.
@@ -46,7 +46,7 @@ Require Import Crypto.BoundsPipeline.
 Require Import Crypto.COperationSpecifications.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.
 Require Import Crypto.PushButtonSynthesis.Primitives.
-Require Import Crypto.PushButtonSynthesis.WordByWordMontgomeryReificationCache.
+Require Import Crypto.PushButtonSynthesis.WordByWordMontgomeryGenericReificationCache.
 Require Import Crypto.PushButtonSynthesis.BYInversionReificationCache.
 Require Import Crypto.Assembly.Equivalence.
 Import ListNotations.
@@ -62,12 +62,13 @@ Import Compilers.API.
 
 Import COperationSpecifications.Primitives.
 Import COperationSpecifications.Solinas.
-Import COperationSpecifications.WordByWordMontgomery.
+Import COperationSpecifications.WordByWordMontgomeryGeneric.
 
 Import Associational Positional.
 Import Arithmetic.WordByWordMontgomery.WordByWordMontgomery.
+Import Arithmetic.WordByWordMontgomery.WordByWordMontgomery.Generic.
 
-Import WordByWordMontgomeryReificationCache.WordByWordMontgomery.
+Import WordByWordMontgomeryGenericReificationCache.WordByWordMontgomeryGeneric.
 Import BYInversionReificationCache.WordByWordMontgomeryInversion.
 
 Local Coercion Z.of_nat : nat >-> Z.
@@ -79,18 +80,18 @@ Local Set Keyed Unification. (* needed for making [autorewrite] fast, c.f. COQBU
 (* needed for making [autorewrite] not take a very long time *)
 Local Opaque
       reified_mul_gen
-      reified_add_gen
+      (*reified_add_gen
       reified_sub_gen
       reified_opp_gen
       reified_to_bytes_gen
       reified_from_bytes_gen
       reified_nonzero_gen
       reified_square_gen
-      reified_encode_gen
-      reified_from_montgomery_gen
+      reified_encode_gen*)
+      reified_from_montgomery_gen(*
       reified_to_montgomery_gen
       reified_zero_gen
-      reified_one_gen
+      reified_one_gen*)
       expr.Interp.
 
 Section __.
@@ -117,15 +118,14 @@ Section __.
           {error_on_unused_assembly_functions : error_on_unused_assembly_functions_opt}
           {assembly_output_first : assembly_output_first_opt}
           {assembly_argument_registers_left_to_right : assembly_argument_registers_left_to_right_opt}
-          (m : Z)
+          (log2_up_m : Z)
           (machine_wordsize : Z).
 
-  Definition s := 2^Z.log2_up m.
-  Definition c := s - m.
-  Definition n : nat := Z.to_nat (Qceiling (Z.log2_up s / machine_wordsize)).
+  Definition s := 2^log2_up_m.
+  Definition n : nat := Z.to_nat (Qceiling (log2_up_m / machine_wordsize)).
   Definition sat_limbs := (n + 1)%nat.   (* to represent m in twos complement we might need another bit *)
   Definition r := 2^machine_wordsize.
-  Definition r'
+  (*Definition r'
     := match Z.modinv r m with
        | Some r' => r'
        | None => 0
@@ -134,26 +134,31 @@ Section __.
     := match Z.modinv (-m) r with
        | Some m' => m'
        | None => 0
-       end.
+       end.*)
   Definition n_bytes := bytes_n s.
 
+  (*
   Definition divstep_precompmod :=
     let bits := (Z.log2 m) + 1 in
     let i := if bits <? 46 then (49 * bits + 80) / 17 else (49 * bits + 57) / 17 in
     let k := (m + 1) / 2 in
     (Z.modexp k i m).
-
+*)
   Definition prime_upperbound_list : list Z
     := Partition.partition (uweight machine_wordsize) n (s-1).
   Definition prime_bytes_upperbound_list : list Z
     := Partition.partition (weight 8 1) n_bytes (s-1).
   Definition upperbounds : list Z := prime_upperbound_list.
+  (*
   Definition prime_bound : ZRange.type.interp (base.type.Z)
     := r[0~>m-1]%zrange.
+*)
   Definition prime_bounds : list (ZRange.type.option.interp base.type.Z)
     := List.map (fun v => Some r[0 ~> v]%zrange) prime_upperbound_list.
   Definition prime_bytes_bounds : list (ZRange.type.option.interp (base.type.Z))
     := List.map (fun v => Some r[0 ~> v]%zrange) prime_bytes_upperbound_list.
+  Definition saturated_bound : zrange
+    := r[0 ~> 2^machine_wordsize - 1].
   Local Notation saturated_bounds := (saturated_bounds n machine_wordsize).
   Local Notation larger_saturated_bounds := (Primitives.saturated_bounds sat_limbs machine_wordsize).
 
@@ -198,12 +203,8 @@ Section __.
          (List.map
             (fun v => (true, v))
             [((1 <? machine_wordsize)%Z, Pipeline.Value_not_ltZ "machine_wordsize <= 1" 1 machine_wordsize)
-             ; ((0 <? c)%Z, Pipeline.Value_not_ltZ "c ≤ 0" 0 c)
-             ; ((1 <? m)%Z, Pipeline.Value_not_ltZ "m ≤ 1" 1 m)
+             ; ((0 <? log2_up_m)%Z, Pipeline.Value_not_ltZ "log2_up m ≤ 0" 0 log2_up_m)
              ; (negb (n =? 0)%nat, Pipeline.Values_not_provably_distinctZ "n = 0" n 0%nat)
-             ; (negb (r' =? 0)%Z, Pipeline.No_modular_inverse "r⁻¹ mod m" r m)
-             ; (((r * r') mod m =? 1)%Z, Pipeline.Values_not_provably_equalZ "(r * r') mod m ≠ 1" ((r * r') mod m) 1)
-             ; (((m * m') mod r =? (-1) mod r)%Z, Pipeline.Values_not_provably_equalZ "(m * m') mod r ≠ (-1) mod r" ((m * m') mod r) ((-1) mod r))
              ; (s <=? r^n, Pipeline.Value_not_leZ "r^n ≤ s" s (r^n))
              ; (s <=? uweight machine_wordsize n, Pipeline.Value_not_leZ "weight n < s (needed for from_bytes)" s (uweight machine_wordsize n))
              ; (s <=? uweight 8 n_bytes, Pipeline.Value_not_leZ "bytes_weight n_bytes < s (needed for from_bytes)" s (uweight 8 n_bytes))
@@ -225,32 +226,28 @@ Section __.
           (curve_good : check_args requests (Success tt) = Success tt).
 
   Lemma use_curve_good
-    : Z.pos (Z.to_pos m) = m
-      /\ m = s - c
+    : 0 < log2_up_m
+            (* Z.pos (Z.to_pos m) = m*)
+      (*/\ m = s - c
       /\ Z.pos (Z.to_pos m) <> 0
-      /\ s - c <> 0
+      /\ s - c <> 0*)
       /\ 0 < s
       /\ s <> 0
       /\ 0 < machine_wordsize
       /\ n <> 0%nat
       /\ List.length bounds = n
       /\ 0 < 1 <= machine_wordsize
-      /\ 0 < c < s
+      (*/\ 0 < c < s
       /\ (r * r') mod m = 1
-      /\ (m * m') mod r = (-1) mod r
+      /\ (m * m') mod r = (-1) mod r*)
       /\ 0 < machine_wordsize
-      /\ 1 < m
-      /\ m < r^n
+      (*/\ 1 < m*)
+      (*/\ m < r^n*)
       /\ s = 2^Z.log2 s
       /\ s <= uweight machine_wordsize n
       /\ s <= uweight 8 n_bytes.
   Proof.
-    prepare_use_curve_good (); cbv [s c] in *.
-    { destruct m eqn:?; cbn; lia. }
-    { use_curve_good_t. }
-    { use_curve_good_t. }
-    { use_curve_good_t. }
-    { use_curve_good_t. }
+    prepare_use_curve_good (); cbv [s] in *.
     { use_curve_good_t. }
     { use_curve_good_t. }
     { use_curve_good_t. }
@@ -261,16 +258,16 @@ Section __.
     { use_curve_good_t. }
   Qed.
 
-  Local Notation valid := (valid machine_wordsize n m).
-  Local Notation bytes_valid := (WordByWordMontgomery.valid 8 n_bytes m).
-
-  Local Notation from_montgomery_res := (from_montgomerymod machine_wordsize n m m').
+  Local Notation valid := (valid machine_wordsize n).
+  Local Notation small := (@small machine_wordsize n).
+  Local Notation bytes_valid := (WordByWordMontgomery.valid 8 n_bytes).
+  Local Notation from_montgomery_res := (from_montgomerymod machine_wordsize n).
 
   Local Notation notations_for_docstring prefix
-    := ((CorrectnessStringification.dyn_context.cons
-           m "m"
-           (CorrectnessStringification.dyn_context.cons
-              r' ("((2^" ++ Decimal.Z.to_string machine_wordsize ++ ")⁻¹ mod m)")
+    := (((*CorrectnessStringification.dyn_context.cons
+           m "m"*)
+           ((*CorrectnessStringification.dyn_context.cons
+              r' ("((2^" ++ Decimal.Z.to_string machine_wordsize ++ ")⁻¹ mod m)")*)
               (CorrectnessStringification.dyn_context.cons
                  from_montgomery_res "from_montgomery"
                  (CorrectnessStringification.dyn_context.cons
@@ -278,7 +275,7 @@ Section __.
                     (CorrectnessStringification.dyn_context.cons
                        (@eval 8 n_bytes) "bytes_eval"
                             (CorrectnessStringification.dyn_context.cons
-                               (Z.log2 m) "(log2 m)"
+                               log2_up_m "⌈log2 m⌉"
                                (CorrectnessStringification.dyn_context.cons
                                   (@eval_twos_complement machine_wordsize n) "twos_complement_eval"
                                   CorrectnessStringification.dyn_context.nil)))))))%string)
@@ -296,8 +293,8 @@ Section __.
          None (* fancy *)
          possible_values
          (reified_mul_gen
-            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
-         (Some bounds, (Some bounds, tt))
+            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n)
+         (Some bounds, (Some saturated_bound, (Some bounds, (Some bounds, tt))))
          (Some bounds).
 
   Definition smul (prefix : string)
@@ -308,8 +305,8 @@ Section __.
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => [text_before_function_name ++ fname ++ " multiplies two field elements in the Montgomery domain."]%string)
-             (mul_correct machine_wordsize n m valid from_montgomery_res)).
-
+             (mul_correct machine_wordsize n small valid from_montgomery_res)).
+  (*
   Definition square
     := Pipeline.BoundsPipeline
          false (* subst01 *)
@@ -389,15 +386,15 @@ Section __.
              prefix
              (fun fname : string => [text_before_function_name ++ fname ++ " negates a field element in the Montgomery domain."]%string)
              (opp_correct machine_wordsize n m valid from_montgomery_res)).
-
+*)
   Definition from_montgomery
     := Pipeline.BoundsPipeline
          true (* subst01 *)
          None (* fancy *)
          possible_values
          (reified_from_montgomery_gen
-            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
-         (Some bounds, tt)
+            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n)
+         (Some bounds, (Some saturated_bound, (Some bounds, tt)))
          (Some bounds).
 
   Definition sfrom_montgomery (prefix : string)
@@ -408,8 +405,8 @@ Section __.
           (docstring_with_summary_from_lemma!
              prefix
              (fun fname : string => [text_before_function_name ++ fname ++ " translates a field element out of the Montgomery domain."]%string)
-             (from_montgomery_correct machine_wordsize n m r' valid)).
-
+             (from_montgomery_correct machine_wordsize n small valid)).
+(*
   Definition to_montgomery
     := Pipeline.BoundsPipeline
          true (* subst01 *)
@@ -548,6 +545,7 @@ Section __.
              prefix
              (fun fname => [text_before_function_name ++ fname ++ " returns the field element one in the Montgomery domain."]%string)
              (one_correct machine_wordsize n m valid from_montgomery_res)).
+ *)
 
   Definition reval (* r for reified *)
     := Pipeline.RepeatRewriteAddAssocLeftAndFlattenThunkedRects
@@ -576,7 +574,7 @@ Section __.
 
   Definition sbytes_eval (arg_name : string) (* s for string *)
     := Show.show (invert_expr.smart_App_curried (rbytes_eval _) (arg_name, tt)).
-
+(*
   Definition reval_twos_complement (* r for reified *)
     := Pipeline.RepeatRewriteAddAssocLeftAndFlattenThunkedRects
          n
@@ -591,7 +589,7 @@ Section __.
 
   Definition seval_twos_complement (arg_name : string) (* s for string *)
     := Show.show (invert_expr.smart_App_curried (reval_twos_complement _) (arg_name, tt)).
-
+*)(*
   Definition selectznz : Pipeline.ErrorT _ := Primitives.selectznz n machine_wordsize.
   Definition sselectznz (prefix : string)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
@@ -656,9 +654,9 @@ Section __.
              prefix
              (fun fname : string => [text_before_function_name ++ fname ++ " computes a divstep."]%string)
              (divstep_correct machine_wordsize n m valid from_montgomery_res)).
-
-  Lemma bounded_by_of_valid x
-        (H : valid x)
+*)
+  Lemma bounded_by_of_valid x m_enc
+        (H : valid m_enc x)
     : ZRange.type.base.option.is_bounded_by (t:=base.type.list base.type.Z) (Some bounds) x = true.
   Proof using curve_good.
     pose proof use_curve_good as use_curve_good.
@@ -692,13 +690,13 @@ Section __.
       rewrite Z.le_sub_1_iff.
       auto with zarith. }
   Qed.
-
+(*
   (* XXX FIXME *)
-  Lemma bounded_by_prime_bounds_of_valid_gen lgr n' x
+  Lemma bounded_by_prime_bounds_of_valid_gen m_enc lgr n' x
         (Hlgr : 0 < lgr)
         (Hs : s = 2^Z.log2 s)
         (Hs' : s <= uweight lgr n')
-        (H : WordByWordMontgomery.valid lgr n' m x)
+        (H : WordByWordMontgomery.valid lgr n' m_enc x)
     : ZRange.type.base.option.is_bounded_by (t:=base.type.list base.type.Z) (Some (List.map (fun v => Some r[0~>v]%zrange) (Partition.partition (uweight lgr) n' (s-1)))) x = true.
   Proof using curve_good.
     pose proof use_curve_good as use_curve_good.
@@ -714,7 +712,7 @@ Section __.
     intros [v1 v0]; cbn [fst snd].
     rename x into x'.
     generalize dependent (eval (n:=n') lgr x').
-    replace m with (s - c) in * by easy.
+    (*replace m with (s - c) in * by easy.*)
     intro x; intros ??? H; subst x'.
     eapply In_nth_error in H; destruct H as [i H].
     rewrite nth_error_combine in H.
@@ -724,7 +722,7 @@ Section __.
     rewrite nth_error_seq in *.
     break_match_hyps; try discriminate; Option.inversion_option; Prod.inversion_prod; subst.
     rewrite ?Nat.add_0_l.
-    assert (0 <= x < s) by lia.
+    assert (0 <= x < 2^log2_up_m) by lia.
     replace s with (2^Z.log2 s) by easy.
     assert (1 < s) by lia.
     assert (0 < Z.log2 s) by now apply Z.log2_pos.
@@ -762,17 +760,17 @@ Section __.
     { rewrite Z.mod_pow2_bits_high; trivial; lia. }
     { rewrite OrdersEx.Z_as_DT.ones_spec_high, Bool.andb_false_r; trivial; nia. }
   Qed.
-
-  Lemma length_of_valid lgr n' x
-        (H : WordByWordMontgomery.valid lgr n' m x)
+*)
+  Lemma length_of_valid m_enc lgr n' x
+        (H : WordByWordMontgomery.valid lgr n' m_enc x)
     : List.length x = n'.
   Proof using Type.
     destruct H as [H _]; rewrite H.
     now autorewrite with distr_length.
   Qed.
-
-  Lemma bounded_by_prime_bounds_of_valid x
-        (H : valid x)
+(*
+  Lemma bounded_by_prime_bounds_of_valid m_enc x
+        (H : valid m_enc x)
     : ZRange.type.base.option.is_bounded_by (t:=base.type.list base.type.Z) (Some prime_bounds) x = true.
   Proof using curve_good.
     pose proof use_curve_good as use_curve_good.
@@ -798,38 +796,38 @@ Section __.
     pose proof use_curve_good.
     cbv [uweight] in *; destruct_head'_and; lia.
   Qed.
-
+*)
   Local Ltac solve_extra_bounds_side_conditions :=
     solve [ cbn [lower upper fst snd] in *; Bool.split_andb; Z.ltb_to_lt; lia
           | cbv [valid small eval uweight n_bytes] in *; destruct_head'_and; auto
-          | now apply weight_bounded_of_bytes_valid
+          (*| now apply weight_bounded_of_bytes_valid*)
           | eapply length_of_valid; eassumption ].
 
   Hint Rewrite
-       (@eval_mulmod machine_wordsize n m r' m')
-       (@eval_squaremod machine_wordsize n m r' m')
-       (@eval_addmod machine_wordsize n m r' m')
-       (@eval_submod machine_wordsize n m r' m')
-       (@eval_oppmod machine_wordsize n m r' m')
-       (@eval_from_montgomerymod machine_wordsize n m r' m')
-       (@eval_to_montgomerymod machine_wordsize n m r' m')
-       (@eval_encodemod machine_wordsize n m r' m')
+       (@eval_mulmod machine_wordsize n)
+       (*(@eval_squaremod machine_wordsize n)
+       (@eval_addmod machine_wordsize n)
+       (@eval_submod machine_wordsize n)
+       (@eval_oppmod machine_wordsize n)*)
+       (@eval_from_montgomerymod machine_wordsize n)
+       (*(@eval_to_montgomerymod machine_wordsize n)
+       (@eval_encodemod machine_wordsize n)
        eval_to_bytesmod
-       eval_from_bytesmod
+       eval_from_bytesmod*)
        using solve [ eauto using length_of_valid | congruence | solve_extra_bounds_side_conditions ] : push_eval.
   (* needed for making [autorewrite] fast enough *)
   Local Opaque
-        WordByWordMontgomery.WordByWordMontgomery.onemod
-        WordByWordMontgomery.WordByWordMontgomery.from_montgomerymod
-        WordByWordMontgomery.WordByWordMontgomery.to_montgomerymod
-        WordByWordMontgomery.WordByWordMontgomery.mulmod
-        WordByWordMontgomery.WordByWordMontgomery.squaremod
-        WordByWordMontgomery.WordByWordMontgomery.encodemod
-        WordByWordMontgomery.WordByWordMontgomery.addmod
-        WordByWordMontgomery.WordByWordMontgomery.submod
-        WordByWordMontgomery.WordByWordMontgomery.oppmod
-        WordByWordMontgomery.WordByWordMontgomery.to_bytesmod.
-  Hint Unfold eval zeromod onemod : push_eval.
+        (*WordByWordMontgomery.WordByWordMontgomery.Generic.onemod*)
+        WordByWordMontgomery.WordByWordMontgomery.Generic.from_montgomerymod
+        (*WordByWordMontgomery.WordByWordMontgomery.Generic.to_montgomerymod*)
+        WordByWordMontgomery.WordByWordMontgomery.Generic.mulmod
+        (*WordByWordMontgomery.WordByWordMontgomery.Generic.squaremod
+        WordByWordMontgomery.WordByWordMontgomery.Generic.encodemod
+        WordByWordMontgomery.WordByWordMontgomery.Generic.addmod
+        WordByWordMontgomery.WordByWordMontgomery.Generic.submod
+        WordByWordMontgomery.WordByWordMontgomery.Generic.oppmod
+        WordByWordMontgomery.WordByWordMontgomery.Generic.to_bytesmod*).
+  Hint Unfold eval (*zeromod onemod*) : push_eval.
 
   Local Ltac prove_correctness op_correct :=
     let dont_clear H := first [ constr_eq H curve_good ] in
@@ -861,9 +859,9 @@ Section __.
     PipelineTactics.use_compilers_correctness Hres;
     repeat first [ reflexivity
                  | now apply bounded_by_of_valid
-                 | now apply bounded_by_prime_bounds_of_valid
-                 | now apply bounded_by_prime_bytes_bounds_of_bytes_valid
-                 | now apply weight_bounded_of_bytes_valid
+                 (*| now apply bounded_by_prime_bounds_of_valid*)
+                 (*| now apply bounded_by_prime_bytes_bounds_of_bytes_valid*)
+                 (*| now apply weight_bounded_of_bytes_valid*)
                  | solve [ eapply op_correct; try eassumption; solve_extra_bounds_side_conditions ]
                  | progress autorewrite with interp_gen_cache interp_extra
                  | progress autorewrite with push_eval
@@ -882,12 +880,12 @@ Section __.
 
   Lemma mul_correct res
         (Hres : mul = Success res)
-    : mul_correct machine_wordsize n m valid from_montgomery_res (Interp res).
-  Proof using curve_good. prove_correctness mulmod_correct. Qed.
+    : mul_correct machine_wordsize n small valid from_montgomery_res (Interp res).
+  Proof using curve_good. Admitted. (*prove_correctness mulmod_correct. Qed.*)
 
   Lemma Wf_mul res (Hres : mul = Success res) : Wf res.
   Proof using Type. prove_pipeline_wf (). Qed.
-
+(*
   Lemma square_correct res
         (Hres : square = Success res)
     : square_correct machine_wordsize n m valid from_montgomery_res (Interp res).
@@ -919,15 +917,15 @@ Section __.
 
   Lemma Wf_opp res (Hres : opp = Success res) : Wf res.
   Proof using Type. prove_pipeline_wf (). Qed.
-
+*)
   Lemma from_montgomery_correct res
         (Hres : from_montgomery = Success res)
-    : from_montgomery_correct machine_wordsize n m r' valid (Interp res).
-  Proof using curve_good. prove_correctness from_montgomerymod_correct. Qed.
+    : from_montgomery_correct machine_wordsize n small valid (Interp res).
+  Proof using curve_good. Admitted. (*prove_correctness from_montgomerymod_correct. Qed.*)
 
   Lemma Wf_from_montgomery res (Hres : from_montgomery = Success res) : Wf res.
   Proof using Type. prove_pipeline_wf (). Qed.
-
+(*
   Lemma to_montgomery_correct res
         (Hres : to_montgomery = Success res)
     : to_montgomery_correct machine_wordsize n m valid from_montgomery_res (Interp res).
@@ -1039,19 +1037,19 @@ Section __.
                           end ].
     Qed.
   End ring.
-
+*)
   Section for_stringification.
     Local Open Scope string_scope.
     Local Open Scope list_scope.
 
     Definition known_functions
       := [("mul", wrap_s smul);
-            ("square", wrap_s ssquare);
+         (*("square", wrap_s ssquare);
             ("add", wrap_s sadd);
             ("sub", wrap_s ssub);
-            ("opp", wrap_s sopp);
-            ("from_montgomery", wrap_s sfrom_montgomery);
-            ("to_montgomery", wrap_s sto_montgomery);
+            ("opp", wrap_s sopp);*)
+            ("from_montgomery", wrap_s sfrom_montgomery)(*;
+                                                          ("to_montgomery", wrap_s sto_montgomery);
             ("nonzero", wrap_s snonzero);
             ("selectznz", wrap_s sselectznz);
             ("to_bytes", wrap_s sto_bytes);
@@ -1059,7 +1057,7 @@ Section __.
             ("one", wrap_s sone);
             ("msat", wrap_s smsat);
             ("divstep_precomp", wrap_s sdivstep_precomp);
-            ("divstep", wrap_s sdivstep)].
+            ("divstep", wrap_s sdivstep)*)].
 
     Definition valid_names : string := Eval compute in String.concat ", " (List.map (@fst _ _) known_functions).
 
@@ -1078,7 +1076,7 @@ Section __.
                        (fun s => "  " ++ s)%string
                        ((ToString.prefix_and_indent "eval z = " [seval "z"])
                           ++ (ToString.prefix_and_indent "bytes_eval z = " [sbytes_eval "z"])
-                          ++ (ToString.prefix_and_indent "twos_complement_eval z = " [seval_twos_complement "z"])))))
+                        (*++ (ToString.prefix_and_indent "twos_complement_eval z = " [seval_twos_complement "z"])*)))))
            function_name_prefix requests.
   End for_stringification.
 End __.
@@ -1086,34 +1084,34 @@ End __.
 Module Export Hints.
   Hint Opaque
        mul
-       square
+       (*square
        add
        sub
-       opp
+       opp*)
        from_montgomery
-       to_montgomery
+       (*to_montgomery
        nonzero
        to_bytes
        from_bytes
        encode
        zero
        one
-       selectznz
+       selectznz*)
   : wf_op_cache.
   Hint Immediate
        Wf_mul
-       Wf_square
+       (*Wf_square
        Wf_add
        Wf_sub
-       Wf_opp
+       Wf_opp*)
        Wf_from_montgomery
-       Wf_to_montgomery
+       (*Wf_to_montgomery
        Wf_nonzero
        Wf_to_bytes
        Wf_from_bytes
        Wf_encode
        Wf_zero
        Wf_one
-       Wf_selectznz
+       Wf_selectznz*)
   : wf_op_cache.
 End Hints.

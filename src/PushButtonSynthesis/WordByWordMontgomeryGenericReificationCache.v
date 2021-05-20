@@ -21,13 +21,13 @@ Import Associational Positional.
 
 Local Set Keyed Unification. (* needed for making [autorewrite] fast, c.f. COQBUG(https://github.com/coq/coq/issues/9283) *)
 
-Module Export WordByWordMontgomery.
-  Import WordByWordMontgomery.WordByWordMontgomery.
+Module Export WordByWordMontgomeryGeneric.
+  Import WordByWordMontgomery.WordByWordMontgomery.Generic.
 
   Definition zeromod bitwidth n m m' := encodemod bitwidth n m m' 0.
   Definition onemod bitwidth n m m' := encodemod bitwidth n m m' 1.
-  Definition evalmod bitwidth n := @eval bitwidth n.
-  Definition bytes_evalmod s := @eval 8 (bytes_n s).
+  Definition evalmod bitwidth n := @WordByWordMontgomery.eval bitwidth n.
+  Definition bytes_evalmod s := @WordByWordMontgomery.eval 8 (bytes_n s).
 
   (* we would do something faster, but it generally breaks extraction COQBUG(https://github.com/coq/coq/issues/7954) *)
   Local Ltac precache_reify_faster _ :=
@@ -132,7 +132,7 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
   Hint Immediate (proj2 reified_mul_gen_correct) : wf_gen_cache.
   Hint Rewrite (proj1 reified_mul_gen_correct) : interp_gen_cache.
   Local Opaque reified_mul_gen. (* needed for making [autorewrite] not take a very long time *)
-
+(*
   Derive reified_add_gen
          SuchThat (is_reification_of reified_add_gen addmod)
          As reified_add_gen_correct.
@@ -186,7 +186,7 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
   Hint Immediate (proj2 reified_nonzero_gen_correct) : wf_gen_cache.
   Hint Rewrite (proj1 reified_nonzero_gen_correct) : interp_gen_cache.
   Local Opaque reified_nonzero_gen. (* needed for making [autorewrite] not take a very long time *)
-
+*)
   Derive reified_eval_gen
          SuchThat (is_reification_of reified_eval_gen evalmod)
          As reified_eval_gen_correct.
@@ -204,7 +204,7 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
   Hint Immediate (proj2 reified_bytes_eval_gen_correct) : wf_gen_cache.
   Hint Rewrite (proj1 reified_bytes_eval_gen_correct) : interp_gen_cache.
   Local Opaque reified_bytes_eval_gen. (* needed for making [autorewrite] not take a very long time *)
-
+(*
   Derive reified_square_gen
          SuchThat (is_reification_of reified_square_gen squaremod)
          As reified_square_gen_correct.
@@ -230,7 +230,7 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
   Hint Immediate (proj2 reified_encode_gen_correct) : wf_gen_cache.
   Hint Rewrite (proj1 reified_encode_gen_correct) : interp_gen_cache.
   Local Opaque reified_encode_gen. (* needed for making [autorewrite] not take a very long time *)
-
+*)
   Derive reified_from_montgomery_gen
          SuchThat (is_reification_of reified_from_montgomery_gen from_montgomerymod)
          As reified_from_montgomery_gen_correct.
@@ -243,7 +243,7 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
   Hint Immediate (proj2 reified_from_montgomery_gen_correct) : wf_gen_cache.
   Hint Rewrite (proj1 reified_from_montgomery_gen_correct) : interp_gen_cache.
   Local Opaque reified_from_montgomery_gen. (* needed for making [autorewrite] not take a very long time *)
-
+(*
   Derive reified_to_montgomery_gen
          SuchThat (is_reification_of reified_to_montgomery_gen to_montgomerymod)
          As reified_to_montgomery_gen_correct.
@@ -283,4 +283,5 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
   Hint Immediate (proj2 reified_one_gen_correct) : wf_gen_cache.
   Hint Rewrite (proj1 reified_one_gen_correct) : interp_gen_cache.
   Local Opaque reified_one_gen. (* needed for making [autorewrite] not take a very long time *)
-End WordByWordMontgomery.
+*)
+End WordByWordMontgomeryGeneric.
