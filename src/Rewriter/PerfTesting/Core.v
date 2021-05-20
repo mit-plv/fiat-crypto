@@ -299,10 +299,7 @@ Module Import WordByWordMontgomery.
       s := 2^Z.log2_up m;
       n : nat := Z.to_nat (Qceiling (Z.log2_up s / machine_wordsize));
       r := 2^machine_wordsize;
-      m' := match Z.modinv (-m) r with
-            | Some m' => m'
-            | None => 0
-            end }.
+      m' := Z.modinv (-m) r }.
 
   Global Instance show_lvl_params : ShowLevel params
     := fun p => neg_wrap_parens ("{| m := " ++ show_lvl m term_lvl ++ "; machine_wordsize := " ++ show_lvl machine_wordsize term_lvl ++ "|}")%string.

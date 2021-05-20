@@ -126,16 +126,8 @@ Section __.
   Definition n : nat := Z.to_nat (Qceiling (Z.log2_up s / machine_wordsize)).
   Definition sat_limbs := (n + 1)%nat.   (* to represent m in twos complement we might need another bit *)
   Definition r := 2^machine_wordsize.
-  Definition r'
-    := match Z.modinv r m with
-       | Some r' => r'
-       | None => 0
-       end.
-  Definition m'
-    := match Z.modinv (-m) r with
-       | Some m' => m'
-       | None => 0
-       end.
+  Definition r' := Z.modinv r m.
+  Definition m' := Z.modinv (-m) r.
   Definition n_bytes := bytes_n s.
 
   Definition divstep_precompmod :=

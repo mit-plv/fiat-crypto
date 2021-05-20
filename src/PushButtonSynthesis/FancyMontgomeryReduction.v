@@ -54,10 +54,7 @@ Section rmontred.
   Let flag_range := r[0 ~> 1]%zrange.
   Let bound := Some value_range.
   Let consts_list := [N; N'].
-  Let R' := match Z.modinv R N with
-            | Some R' => R'
-            | None => 0
-            end.
+  Let R' := Z.modinv R N.
 
   Definition possible_values_of_machine_wordsize
     := [1; machine_wordsize / 2; machine_wordsize; 2 * machine_wordsize]%Z.

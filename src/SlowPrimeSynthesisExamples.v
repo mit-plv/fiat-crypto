@@ -3000,15 +3000,8 @@ Module debugging_remove_mul_split2.
     Let c := s - m.
     Let n : nat := Eval compute in Z.to_nat (Qceiling (Z.log2_up s / machine_wordsize)).
     Let r := 2^machine_wordsize.
-    Let r' := match Z.modinv r m with
-              | Some r' => r'
-              | None => 0
-              end.
-    Let m' := Eval vm_compute in
-          match Z.modinv (-m) r with
-          | Some m' => m'
-          | None => 0
-          end.
+    Let r' := Z.modinv r m.
+    Let m' := Eval vm_compute in Z.modinv (-m) r.
 
     Local Notation saturated_bounds := (Primitives.saturated_bounds n machine_wordsize).
 
