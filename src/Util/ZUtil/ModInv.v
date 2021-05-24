@@ -194,15 +194,15 @@ def modinv(a, m):
 
   Lemma egcd_None : forall fuel a b, Z.egcd fuel a b = None -> (fuel <= (if b <? a then S else (fun x => x))%Z (Z.to_nat (Z.min a b)))%nat \/ a < 0 \/ b < 0.
   Proof.
-    induction fuel as [|fuel IH]; cbn; [ lia | ].
+    induction fuel as [|fuel IH]; cbn; [ intros; break_innermost_match; lia | ].
     intros; break_innermost_match_hyps; Z.ltb_to_lt; auto; try congruence.
     specialize (IH _ _ ltac:(eassumption)).
     destruct_head'_or; [ | solve [ auto | exfalso; Z.div_mod_to_equations; nia ] .. ].
     destruct (Z_lt_dec b 0); auto; [].
     left.
     rewrite Z.min_l in * |- by (Z.div_mod_to_equations; nia).
-    break_innermost_match_hyps; break_innermost_match; Z.ltb_to_lt; try ((idtac + exfalso); Z.div_mod_to_equations; nia); [].
-    rewrite Z.min_r by lia.
+    break_innermost_match_hyps; break_innermost_match; Z.ltb_to_lt; rewrite ?Z.min_r, ?Z.min_l by lia;
+      try ((idtac + exfalso); Z.div_mod_to_equations; zify; rewrite ?Z2Nat.id in * by lia; nia); [].
     Z.rewrite_mod_small_in_all; lia.
   Qed.
 
@@ -362,7 +362,9 @@ def modinv(a, m):
   Lemma modinv'_fuel_good a m
     : ((if (m <? Z.abs a)%Z then S else fun x : nat => x) (Z.to_nat (Z.min (Z.abs a) m)) < S (2 ^ Z.to_nat (Z.log2_up (Z.max (Z.abs a) m))))%nat.
   Proof.
-    destruct (Z_lt_dec a 0), (Z_zerop a); subst; Z.replace_all_neg_with_pos; rewrite ?Z.abs_opp, ?Z.abs_eq by lia.
+    assert (0 <= Z.log2_up (if Z_lt_dec a 0 then -a else a)) by auto with zarith.
+    assert (0 <= Z.log2_up m) by auto with zarith.
+    destruct (Z_lt_dec a 0), (Z_zerop a), (Z_lt_dec m 0); subst; Z.replace_all_neg_with_pos; rewrite ?Z.abs_opp, ?Z.abs_eq in * by lia.
     all: break_innermost_match; Z.ltb_to_lt.
     all: repeat first [ rewrite Z.min_l by lia
                       | rewrite Z.min_r by lia
@@ -370,16 +372,17 @@ def modinv(a, m):
                       | rewrite Z.max_r by lia
                       | exfalso; lia
                       | lia
-                      | progress change ((2^Z.to_nat (Z.log2_up 0))%nat) with 1%nat ].
+                      | progress change ((2^Z.to_nat (Z.log2_up 0))%nat) with 1%nat
+                      | match goal with
+                        | [ |- context[Z.to_nat ?x] ] => rewrite (Z2Nat.inj_nonpos x) by lia
+                        end ].
     all: change 2%nat with (Z.to_nat 2).
-    all: assert (0 <= Z.log2_up a) by auto with zarith.
-    all: assert (0 <= Z.log2_up m) by auto with zarith.
     all: eapply Nat.lt_le_trans;
       [
       | apply le_n_S; zify; set_evars; autorewrite with push_Zof_nat; rewrite ?Z2Nat.id by lia; subst_evars;
-        etransitivity; [ | apply Z.log2_log2_up_spec; lia ];
-        rewrite Z2Nat.id; [ reflexivity | lia ] ].
-    all: lia.
+        etransitivity; [ | apply Z.log2_log2_up_spec; change (2^Z.log2 1) with 1 in *; zify; rewrite ?Z2Nat.id by lia; lia ];
+        rewrite Z2Nat.id; [ reflexivity | change (2^Z.log2 1) with 1 in *; zify; rewrite ?Z2Nat.id by lia; lia ] ].
+    all: zify; rewrite ?Z2Nat.id by lia; lia.
   Qed.
 
   Lemma modinv'_None a m
