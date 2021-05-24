@@ -13,6 +13,7 @@ Require Import Crypto.Util.ZUtil.ZSimplify.Core.
 Require Import Crypto.Util.ZUtil.Hints.PullPush.
 Require Import Crypto.Util.ZUtil.Nat2Z.
 Require Import Crypto.Util.ZUtil.Z2Nat.
+Require Import Crypto.Util.ZUtil.Tactics.DivModToQuotRem.
 Require Import Crypto.Util.Tactics.SetEvars.
 Require Import Crypto.Util.Tactics.SubstEvars.
 Require Import Crypto.Util.Option.
@@ -141,7 +142,7 @@ def modinv(a, m):
                  | lia
                  | match goal with
                    | [ H : forall y, _ -> forall a, egcd y a = _ -> y < 0, H' : egcd ?v1 ?v2 = _ |- _ ]
-                     => specialize (fun pf => H v1 pf v2 H'); Z.div_mod_to_equations; nia
+                     => specialize (fun pf => H v1 pf v2 H'); Z.div_mod_to_quot_rem; nia
                    end ].
   Qed.
 
@@ -165,9 +166,9 @@ def modinv(a, m):
                  | lia
                  | match goal with
                    | [ H : forall y, _ -> forall a g x' y', egcd y a = _ -> _, H' : egcd ?v1 ?v2 = _ |- _ ]
-                     => specialize (fun pf => H _ pf _ _ _ _ H'); try specialize (H ltac:(Z.div_mod_to_equations; nia))
+                     => specialize (fun pf => H _ pf _ _ _ _ H'); try specialize (H ltac:(Z.div_mod_to_quot_rem; nia))
                    end
-                 | Z.div_mod_to_equations; nia
+                 | Z.div_mod_to_quot_rem; nia
                  | apply conj ].
   Qed.
 
@@ -186,9 +187,9 @@ def modinv(a, m):
                  | lia
                  | match goal with
                    | [ H : forall _ _ _ _ _, egcd _ _ _ = _ -> _, H' : egcd _ _ _ = _ |- _ ]
-                     => specialize (H _ _ _ _ _ H'); try specialize (H ltac:(Z.div_mod_to_equations; nia))
+                     => specialize (H _ _ _ _ _ H'); try specialize (H ltac:(Z.div_mod_to_quot_rem; nia))
                    end
-                 | Z.div_mod_to_equations; nia
+                 | Z.div_mod_to_quot_rem; nia
                  | apply conj ].
   Qed.
 
@@ -197,12 +198,12 @@ def modinv(a, m):
     induction fuel as [|fuel IH]; cbn; [ intros; break_innermost_match; lia | ].
     intros; break_innermost_match_hyps; Z.ltb_to_lt; auto; try congruence.
     specialize (IH _ _ ltac:(eassumption)).
-    destruct_head'_or; [ | solve [ auto | exfalso; Z.div_mod_to_equations; nia ] .. ].
+    destruct_head'_or; [ | solve [ auto | exfalso; Z.div_mod_to_quot_rem; nia ] .. ].
     destruct (Z_lt_dec b 0); auto; [].
     left.
-    rewrite Z.min_l in * |- by (Z.div_mod_to_equations; nia).
+    rewrite Z.min_l in * |- by (Z.div_mod_to_quot_rem; nia).
     break_innermost_match_hyps; break_innermost_match; Z.ltb_to_lt; rewrite ?Z.min_r, ?Z.min_l by lia;
-      try ((idtac + exfalso); Z.div_mod_to_equations; zify; rewrite ?Z2Nat.id in * by lia; nia); [].
+      try (Z.div_mod_to_quot_rem; zify; rewrite ?Z2Nat.id in * by lia; lia); [].
     Z.rewrite_mod_small_in_all; lia.
   Qed.
 
@@ -248,7 +249,7 @@ def modinv(a, m):
     exists ((1 - a * x) / m).
     assert ((1 - a * x) mod m = 0)
       by (revert H; push_Zmod; intro H; rewrite H; autorewrite with zsimplify_const; reflexivity).
-    Z.div_mod_to_equations; nia.
+    Z.div_mod_to_quot_rem; nia.
   Qed.
 
   Lemma modinv_of_egcd_Some egcd P a m
@@ -281,7 +282,7 @@ def modinv(a, m):
                       | solve [ auto ]
                       | exfalso; lia
                       | apply conj
-                      | Z.div_mod_to_equations; nia
+                      | Z.div_mod_to_quot_rem; nia
                       | progress (push_Zmod; pull_Zmod) ].
     all: generalize dependent (Z.gcd a m); intros; subst; erewrite bezout_modinv by eassumption; reflexivity.
   Qed.
@@ -300,6 +301,7 @@ def modinv(a, m):
                       | progress destruct_head'_or
                       | tauto
                       | lia
+                      | rewrite <- ?Z.mul_assoc, ?(Z.mul_comm (Z.sgn _) (Z.abs _)), Z.abs_sgn
                       | match goal with
                         | [ H : Z.gcd (Z.abs ?a) ?b <> 1, H' : ?x * ?a + ?y * ?b = 1 |- False ]
                           => apply H, Z.bezout_1_gcd; clear H; exists (x * Z.sgn a), y; rewrite <- H'; clear
