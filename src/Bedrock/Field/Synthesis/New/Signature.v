@@ -367,17 +367,17 @@ Section WithParameters.
     Lemma list_binop_correct name f :
       f = make_bedrock_func name insizes outsizes inlengths res ->
       forall functions,
-        (binop_spec name op xbounds ybounds outbounds (f :: functions)).
+        (binop_spec (Build_BinOp name op xbounds ybounds outbounds) (f :: functions)).
     Proof using inname_gen_varname_gen_disjoint outbounds_length
           outbounds_tighter_than_max outname_gen_varname_gen_disjoint
           p_ok relax_bounds res_Wf res_bounds res_eq res_valid.
       subst inlengths insizes outsizes.
-      cbv [list_binop_insizes list_binop_outsizes list_binop_inlengths].
+      cbv [binop_spec list_binop_insizes list_binop_outsizes list_binop_inlengths].
       cbv beta; intros; subst f. cbv [make_bedrock_func].
       cleanup. eapply Proper_call.
       2: {
         use_translate_func_correct
-          constr:((map word.unsigned x, (map word.unsigned y, tt))) R.
+          constr:((map word.unsigned x, (map word.unsigned y, tt))) x0.
         all:translate_func_precondition_hammer.
         { (* lists_reserved_with_initial_context *)
           lists_reserved_simplify pout.

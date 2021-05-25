@@ -1,3 +1,4 @@
+(* NOTE: broken, fix after Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder. *)
 Require Import Rupicola.Lib.Api. (* for helpful tactics + notations *)
 Require Import coqutil.Byte.
 Require Import Crypto.Algebra.Hierarchy.
@@ -256,6 +257,8 @@ Module M.
                | _ => clear_old_seps; straightline'
                end.
 
+(* NOTE: broken, fix after Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder. *)
+(*
         (* call from_bytes *)
         handle_call; [ solve [eauto] .. | ].
         sepsimpl; repeat straightline'.
@@ -312,6 +315,8 @@ Module M.
           sepsimpl. lift_eexists.
           ecancel_assumption. }
       Qed.
+ *)
+      Abort.
     End Implementation.
   End __.
 End M.

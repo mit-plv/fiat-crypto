@@ -24,8 +24,8 @@ Section Equivalence.
   Proof.
     intros. cbv [ladderstep_gallina M.xzladderstep].
     destruct P1 as [x1 z1]. destruct P2 as [x2 z2].
-    cbv [Rewriter.Util.LetIn.Let_In dlet.dlet]. cbn [fst snd].
-    rewrite !F.pow_2_r. reflexivity.
+    cbv [Rewriter.Util.LetIn.Let_In Notations.nlet]. cbn [fst snd].
+    rewrite !F.pow_2_r; trivial.
   Qed.
 
   Lemma montladder_gallina_equiv
@@ -38,7 +38,7 @@ Section Equivalence.
       a24 cswap scalarbits (Z.testbit n) point.
   Proof.
     intros. cbv [montladder_gallina M.montladder].
-    cbv [Rewriter.Util.LetIn.Let_In dlet.dlet]. cbn [fst snd].
+    cbv [Rewriter.Util.LetIn.Let_In Notations.nlet]. cbn [fst snd].
     rewrite downto_while.
     match goal with
     | |- ?lhs = ?rhs =>
@@ -57,7 +57,7 @@ Section Equivalence.
         end end end.
 
     (* first, finish proving post-loop equivalence *)
-    { destruct_products. rewrite cswap_pair. cbn [fst snd].
+    { destruct_products; cbn [fst snd]. rewrite cswap_pair. cbn [fst snd].
       repeat match goal with
              | |- context [match ?e with | pair _ _ => _ end] =>
                destr e
@@ -67,11 +67,11 @@ Section Equivalence.
     (* then, prove loop-equivalence preconditions *)
     { intros. destruct_products. congruence. }
     { intros. destruct_products. LtbToLt.Z.ltb_to_lt.
-      rewrite ladderstep_gallina_equiv.
       repeat match goal with
              | _ => progress rewrite Z2Nat.id by lia
              | _ => progress cbn [fst snd]
              | _ => rewrite cswap_pair
+             | _ => rewrite ladderstep_gallina_equiv
              | _ => rewrite <-surjective_pairing
              | H : forall i : nat, _ i = Z.testbit _ _ |- _ =>
                rewrite H
@@ -81,7 +81,11 @@ Section Equivalence.
              | |- context [match ?e with | pair _ _ => _ end] =>
                destr e
              | _ => reflexivity
-             end. }
+             end. 
+
+             (* fixup added during merge without investigation: *)
+             setoid_rewrite <-E; setoid_rewrite E3; trivial.
+    }
     { rewrite Z2Nat.id by lia. reflexivity. }
   Qed.
 End Equivalence.
