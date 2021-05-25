@@ -300,8 +300,8 @@ Section WithParameters.
            Equivalence.equivalent_flat_base
         ]; lists_autounfold; cbn [hd];
     repeat intro;
-    cbv [Notations.postcondition_func_norets
-           Notations.postcondition_func];
+    cbv [Core.postcondition_func_norets
+           Core.postcondition_func];
     sepsimpl; [ assumption .. | ];
     repeat match goal with
            | _ => progress subst

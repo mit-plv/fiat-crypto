@@ -125,7 +125,7 @@ Section Cmd.
           eexists; sepsimpl; [ eassumption | ].
           eapply expr_only_differ_undef; eauto.
           rewrite used_varnames_1.
-          eauto using only_differ_sym, only_differ_put. }
+          eauto using @only_differ_sym, @only_differ_put with typeclass_instances. }
         { intros. apply put_undef_on; eauto with lia.
           rewrite used_varnames_iff; intro; cleanup.
           match goal with H : varname_gen _ = varname_gen _ |- _ =>
@@ -142,7 +142,7 @@ Section Cmd.
         reflexivity. }
       { cbn [varname_set_base
                rep.varname_set rep.listZ_local rep.Z fold_right] in *.
-        eauto using only_differ_sym, only_differ_put, only_differ_trans. }
+        eauto 10 using @only_differ_sym, @only_differ_put, @only_differ_trans with typeclass_instances. }
       { constructor; eauto; [ ].
         sepsimpl; [ lia .. | ].
         cbn [rep.rtype_of_ltype rep.Z].
@@ -205,7 +205,7 @@ Section Cmd.
       repeat (split; [reflexivity | ]).
       repeat match goal with |- _ /\ _ => split end;
         try eexists; sepsimpl;
-        eauto using dexpr_put_same, only_differ_sym, only_differ_put.
+        eauto using @dexpr_put_same, @only_differ_sym, @only_differ_put with typeclass_instances.
       all:cbv [PropSet.singleton_set]; apply sameset_iff; intros.
       all:rewrite used_varnames_iff; split; intros; cleanup; subst; eauto;
         first [ eexists; eauto with lia
@@ -233,7 +233,7 @@ Section Cmd.
       cbv beta in *; cleanup; subst.
       cbn [varname_set_base base_rtype_of_ltype fst snd].
       repeat match goal with |- _ /\ _ => split end;
-        eauto using only_differ_sym, only_differ_trans; [ | ].
+        eauto 10 using @only_differ_sym, @only_differ_trans with typeclass_instances; [ | ].
       { rewrite used_varnames_union.
         repeat match goal with H : PropSet.sameset _ _ |- _ =>
                                rewrite H end.

@@ -42,7 +42,7 @@ Section OnlyDiffer.
     cbv [WeakestPrecondition.dexpr].
     rewrite <-disjoint_singleton_r_iff by eauto using string_dec.
     split; intros; sepsimpl; subst; eexists; sepsimpl; eauto;
-      eapply expr_untouched; eauto using only_differ_sym.
+      eapply expr_untouched; eauto using @only_differ_sym with typeclass_instances.
   Qed.
 
   Lemma equiv_Z_only_differ_undef {listZ:rep.rep base_listZ} :
@@ -80,7 +80,7 @@ Section OnlyDiffer.
       { eapply equiv_Z_only_differ_iff1;
           cbn [rep.equiv rep.Z]; cbv [emp];
             destruct_head'_and;
-            eauto using only_differ_sym.
+            eauto using @only_differ_sym with typeclass_instances.
         cbv [varname_set rep.varname_set rep.Z] in *.
         match goal with H : disjoint _ _ |- _ =>
                         apply disjoint_union_r_iff in H;
@@ -103,7 +103,7 @@ Section OnlyDiffer.
     Proof.
       cbv [Lift1Prop.iff1]; split; intros;
         eapply equiv_listZ_only_differ_local;
-        eauto using only_differ_sym.
+        eauto using @only_differ_sym with typeclass_instances.
     Qed.
 
     Lemma equiv_listZ_only_differ_undef_local :
@@ -142,7 +142,7 @@ Section OnlyDiffer.
              end.
       eapply Proper_sep_iff1; [ | reflexivity | eassumption ].
       cancel.
-      eapply equiv_Z_only_differ_iff1; eauto using only_differ_sym.
+      eapply equiv_Z_only_differ_iff1; eauto using @only_differ_sym with typeclass_instances.
     Qed.
 
     Lemma equiv_listZ_only_differ_mem_iff1
@@ -155,7 +155,7 @@ Section OnlyDiffer.
     Proof.
       cbv [Lift1Prop.iff1]; split; intros;
         eapply equiv_listZ_only_differ_mem;
-        eauto using only_differ_sym.
+        eauto using @only_differ_sym with typeclass_instances.
     Qed.
 
     Lemma equiv_listZ_only_differ_undef_mem :
@@ -254,7 +254,7 @@ Section OnlyDiffer.
         cbn [fst snd rtype_of_ltype varname_set_base equivalent_base] in *;
         intros; break_match; destruct_head'_and; try tauto.
       { (* base case *)
-        eapply equiv_Z_only_differ_iff1; eauto using only_differ_sym. }
+        eapply equiv_Z_only_differ_iff1; eauto using @only_differ_sym with typeclass_instances. }
       { (* prod case *)
         match goal with H : disjoint _ (union _ _) |- _ =>
                         apply disjoint_union_r_iff in H
@@ -276,7 +276,7 @@ Section OnlyDiffer.
         (equivalent_base x (base_rtype_of_ltype varnames) s locals2).
     Proof.
       repeat intro. split; intros.
-      all:eapply equivalent_only_differ; eauto using only_differ_sym.
+      all:eapply equivalent_only_differ; eauto using @only_differ_sym with typeclass_instances.
     Qed.
 
     Lemma equivalent_args_only_differ {t}
@@ -308,7 +308,7 @@ Section OnlyDiffer.
         [ eapply Proper_sep_iff1;
           [ eapply equivalent_only_differ_iff1
           | reflexivity | eassumption ] | eapply IHt2 ];
-        eauto using only_differ_sym.
+        eauto using @only_differ_sym with typeclass_instances.
       all:match goal with
           | H : disjoint _ (union _ _) |- _ =>
             apply disjoint_union_r_iff in H;
