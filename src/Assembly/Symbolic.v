@@ -76,14 +76,21 @@ End NOrder.
 Module NSort := Mergesort.Sort NOrder.
 Notation sortN := NSort.sort.
 
-Section Forall2_weaken.
+Section Forall2.
+  Lemma Forall2_flip {A B} {R : A -> B -> Prop} xs ys :
+    Forall2 R xs ys -> Forall2 (fun y x => R x y) ys xs.
+  Proof. induction 1; eauto. Qed.
+  
+  Lemma length_Forall2 [A B : Type] [xs ys] [P:A->B->Prop] : Forall2 P xs ys -> length xs = length ys.
+  Proof. induction 1; cbn; eauto. Qed.
+
   Context {A B} {P Q:A->B->Prop} (H : forall (a : A) (b : B), P a b -> Q a b).
   Fixpoint Forall2_weaken args args' (pf : Forall2 P args args') : Forall2 Q args args' :=
     match pf with
     | Forall2_nil => Forall2_nil _
     | Forall2_cons _ _ _ _ Rxy k => Forall2_cons _ _ (H _ _ Rxy) (Forall2_weaken _ _ k)
     end.
-End Forall2_weaken.
+End Forall2.
 
 Require Import Crypto.Assembly.Syntax.
 Definition idx := N.
@@ -289,10 +296,6 @@ Lemma permute_commutative opn s args n : commutative opn = true ->
   interp_op opn s args' = Some n.
 Admitted.
 
-Lemma Forall2_flip {A B} {R : A -> B -> Prop} xs ys :
-  Forall2 R xs ys -> Forall2 (fun y x => R x y) ys xs.
-Proof. induction 1; eauto. Qed.
-
 Definition dag_ok (d : dag) := forall i _r, nth_error d (N.to_nat i) = Some _r -> exists v, eval d (ExprRef i) v.
 
 Lemma eval_merge_node :
@@ -329,17 +332,21 @@ Proof.
   { eauto using eval_weaken. }
 Qed.
 
+Require Import Crypto.Util.Tactics.SplitInContext.
+
 Lemma eval_merge :
+  forall e n, 
   forall d, dag_ok d ->
-  forall e n, eval d e n ->
+  eval d e n ->
   eval (snd (merge e d)) (ExprRef (fst (merge e d))) n /\
   dag_ok (snd (merge e d)) /\
   forall i e', eval d i e' -> eval (snd (merge e d)) i e'.
 Proof.
-  induction 2.
-  { split; cbn; eauto.
-    econstructor; eauto. eapply Forall2_weaken, H1; cbn; intuition idtac. }
+  induction e; intros; eauto; [].
+  rename n0 into v.
+
   set (merge _ _) as m; cbv beta iota delta [merge] in m; fold merge in m.
+  destruct n as ((opn&s)&args).
   repeat match goal with
     m := let x := ?A in @?B x |- _ =>
     let y := fresh x in
@@ -348,60 +355,49 @@ Proof.
     change m' in (value of m)
   end.
 
-  unshelve edestruct (foldmap_ind merge args d (fun args args' d' =>
-    Forall2 (fun e i => forall n, eval d e n -> eval d' (ExprRef i) n) args args' /\
-    dag_ok d' /\
-    forall i e', eval d i e' -> eval d' i e'
-  ) ltac:(repeat split; eauto)) as (?&?&?).
-  {
-    admit.
-  }
-  fold idxs_d in H2, H3, H4.
+  inversion H1; clear H1 ; subst.
 
-  (* discard dag preservation IH, keep needle eval IH *)
-  clearbody idxs_d; eapply (Forall2_weaken (fun a b => @proj1 _ _)) in H0.
+  cbn [fst snd] in *.
+  assert (dag_ok (snd idxs_d) /\
+    Forall2 (fun i v => eval (snd idxs_d) (ExprRef i) v) (fst idxs_d) args' /\
+    forall i e', eval d i e' -> eval (snd idxs_d) i e'
+  ) as HH; [|destruct HH as(?&?&?)].
+  { clear m idxs H7 v s opn; revert dependent d; revert dependent args'.
+    induction H; cbn; intros; inversion H6; subst;
+      split_and; pose proof @Forall2_weaken; typeclasses eauto 8 with core. }
+  clearbody idxs_d.
 
-  enough (eval (snd idxs_d) (ExprApp (opn, s, map ExprRef idxs)) n) by 
-    (unshelve edestruct ((eval_merge_node _ H3 (opn, s)) idxs n) as (?&?&?); eauto); clear m H3 H4.
+  enough (eval (snd idxs_d) (ExprApp (opn, s, map ExprRef idxs)) v) by
+    (unshelve edestruct ((eval_merge_node _ ltac:(eassumption) (opn, s)) idxs v) as (?&?&?); eauto); clear m.
 
-  assert (length idxs = length args) as Hl1 by admit. (* length_Forall2 *)
-  assert (length args = length args') as Hl2 by admit. (* length_Forall2 *)
+  pose proof length_Forall2 H6; pose proof length_Forall2 H2.
 
   cbn [fst snd] in *; destruct (commutative opn) eqn:?; cycle 1; subst idxs.
+
   { econstructor; eauto.
-    eapply ListUtil.Forall2_forall_iff; rewrite map_length.
-    { Fail congruence. etransitivity. 1:eapply Hl1. eapply Hl2. } (* why *)
+    eapply ListUtil.Forall2_forall_iff; rewrite map_length; try congruence; [].
     intros i Hi.
-    unshelve (
-      epose proof (proj1 (ListUtil.Forall2_forall_iff _ _ _ _ _ _) H2 i _);
-      epose proof (proj1 (ListUtil.Forall2_forall_iff _ _ _ _ _ _) H0 i _));
-    shelve_unifiable.
-    1,2,3,4: admit. (* more lengths *)
-    rewrite ListUtil.map_nth_default_always.
-    eauto. }
+    unshelve (epose proof (proj1 (ListUtil.Forall2_forall_iff _ _ _ _ _ _) H2 i _));
+      shelve_unifiable; try congruence; [].
+    rewrite ListUtil.map_nth_default_always. eapply H8. }
 
   pose proof NSort.Permuted_sort (fst idxs_d) as Hperm.
-  eapply Forall2_flip in H2.
   eapply (Permutation.Permutation_Forall2 Hperm) in H2.
   case H2 as (argExprs&Hperm'&H2).
-  eapply (Permutation.Permutation_Forall2 Hperm') in H0.
-  case H0 as (argEvals&Hperm''&H0).
-  eapply permute_commutative in H1; try eassumption.
+  eapply permute_commutative in H7; try eassumption; [].
+  epose proof Permutation.Permutation_length Hperm.
+  epose proof Permutation.Permutation_length Hperm'.
 
-  {
-    econstructor; [|eapply H1].
-    eapply ListUtil.Forall2_forall_iff; rewrite map_length.
-    1:admit. (* length of permutation *)
+  { econstructor; eauto.
+    eapply ListUtil.Forall2_forall_iff; rewrite map_length; try congruence; [|].
+    { setoid_rewrite <-H8. setoid_rewrite <-H9. eassumption. }
     intros i Hi.
-    unshelve (
-      epose proof (proj1 (ListUtil.Forall2_forall_iff _ _ _ _ _ _) H2 i _);
-      epose proof (proj1 (ListUtil.Forall2_forall_iff _ _ _ _ _ _) H0 i _));
-    shelve_unifiable.
-    1,2,3,4: admit. (* more lengths *)
-    rewrite ListUtil.map_nth_default_always.
-    eauto. }
-  Unshelve. all : exact 0%N || exact (ExprRef 0%N).
-Abort.
+    unshelve (epose proof (proj1 (ListUtil.Forall2_forall_iff _ _ _ _ _ _) H2 i _));
+      shelve_unifiable; try trivial; [|].
+    { setoid_rewrite <-H8. setoid_rewrite <-H9. eassumption. }
+    rewrite ListUtil.map_nth_default_always. eapply H10. }
+  Unshelve. all : exact 0%N.
+Qed.
 
 Definition zconst s (z:Z) :=
   const (if z <? 0 then invert_Some (interp_op neg s [Z.abs_N z]) else Z.to_N z)%Z.
