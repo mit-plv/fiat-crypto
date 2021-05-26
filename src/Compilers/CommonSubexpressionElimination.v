@@ -20,6 +20,7 @@ Inductive symbolic_expr {base_type_code op_code} : Type :=
 | SFst  (A B : flat_type base_type_code) (x : symbolic_expr)
 | SSnd  (A B : flat_type base_type_code) (x : symbolic_expr)
 | SInvalid.
+Scheme Equality for flat_type.
 Scheme Equality for symbolic_expr.
 
 Arguments symbolic_expr : clear implicits.
