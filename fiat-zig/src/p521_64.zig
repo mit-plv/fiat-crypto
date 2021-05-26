@@ -37,7 +37,7 @@ pub const TightFieldElement = [9]u64;
 /// Output Bounds:
 ///   out1: [0x0 ~> 0x3ffffffffffffff]
 ///   out2: [0x0 ~> 0x1]
-fn addcarryxU58(out1: *u64, out2: *u1, arg1: u1, arg2: u64, arg3: u64) callconv(.Inline) void {
+inline fn addcarryxU58(out1: *u64, out2: *u1, arg1: u1, arg2: u64, arg3: u64) void {
     @setRuntimeSafety(mode == .Debug);
 
     const x1 = ((cast(u64, arg1) + arg2) + arg3);
@@ -60,7 +60,7 @@ fn addcarryxU58(out1: *u64, out2: *u1, arg1: u1, arg2: u64, arg3: u64) callconv(
 /// Output Bounds:
 ///   out1: [0x0 ~> 0x3ffffffffffffff]
 ///   out2: [0x0 ~> 0x1]
-fn subborrowxU58(out1: *u64, out2: *u1, arg1: u1, arg2: u64, arg3: u64) callconv(.Inline) void {
+inline fn subborrowxU58(out1: *u64, out2: *u1, arg1: u1, arg2: u64, arg3: u64) void {
     @setRuntimeSafety(mode == .Debug);
 
     const x1 = cast(i64, (cast(i128, cast(i64, (cast(i128, arg2) - cast(i128, arg1)))) - cast(i128, arg3)));
@@ -83,7 +83,7 @@ fn subborrowxU58(out1: *u64, out2: *u1, arg1: u1, arg2: u64, arg3: u64) callconv
 /// Output Bounds:
 ///   out1: [0x0 ~> 0x1ffffffffffffff]
 ///   out2: [0x0 ~> 0x1]
-fn addcarryxU57(out1: *u64, out2: *u1, arg1: u1, arg2: u64, arg3: u64) callconv(.Inline) void {
+inline fn addcarryxU57(out1: *u64, out2: *u1, arg1: u1, arg2: u64, arg3: u64) void {
     @setRuntimeSafety(mode == .Debug);
 
     const x1 = ((cast(u64, arg1) + arg2) + arg3);
@@ -106,7 +106,7 @@ fn addcarryxU57(out1: *u64, out2: *u1, arg1: u1, arg2: u64, arg3: u64) callconv(
 /// Output Bounds:
 ///   out1: [0x0 ~> 0x1ffffffffffffff]
 ///   out2: [0x0 ~> 0x1]
-fn subborrowxU57(out1: *u64, out2: *u1, arg1: u1, arg2: u64, arg3: u64) callconv(.Inline) void {
+inline fn subborrowxU57(out1: *u64, out2: *u1, arg1: u1, arg2: u64, arg3: u64) void {
     @setRuntimeSafety(mode == .Debug);
 
     const x1 = cast(i64, (cast(i128, cast(i64, (cast(i128, arg2) - cast(i128, arg1)))) - cast(i128, arg3)));
@@ -127,7 +127,7 @@ fn subborrowxU57(out1: *u64, out2: *u1, arg1: u1, arg2: u64, arg3: u64) callconv
 ///   arg3: [0x0 ~> 0xffffffffffffffff]
 /// Output Bounds:
 ///   out1: [0x0 ~> 0xffffffffffffffff]
-fn cmovznzU64(out1: *u64, arg1: u1, arg2: u64, arg3: u64) callconv(.Inline) void {
+inline fn cmovznzU64(out1: *u64, arg1: u1, arg2: u64, arg3: u64) void {
     @setRuntimeSafety(mode == .Debug);
 
     const x1 = (~(~arg1));
