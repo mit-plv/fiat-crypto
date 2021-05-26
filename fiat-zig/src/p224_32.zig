@@ -42,7 +42,7 @@ pub const NonMontgomeryDomainFieldElement = [7]u32;
 /// Output Bounds:
 ///   out1: [0x0 ~> 0xffffffff]
 ///   out2: [0x0 ~> 0x1]
-fn addcarryxU32(out1: *u32, out2: *u1, arg1: u1, arg2: u32, arg3: u32) callconv(.Inline) void {
+inline fn addcarryxU32(out1: *u32, out2: *u1, arg1: u1, arg2: u32, arg3: u32) void {
     @setRuntimeSafety(mode == .Debug);
 
     const x1 = ((cast(u64, arg1) + cast(u64, arg2)) + cast(u64, arg3));
@@ -65,7 +65,7 @@ fn addcarryxU32(out1: *u32, out2: *u1, arg1: u1, arg2: u32, arg3: u32) callconv(
 /// Output Bounds:
 ///   out1: [0x0 ~> 0xffffffff]
 ///   out2: [0x0 ~> 0x1]
-fn subborrowxU32(out1: *u32, out2: *u1, arg1: u1, arg2: u32, arg3: u32) callconv(.Inline) void {
+inline fn subborrowxU32(out1: *u32, out2: *u1, arg1: u1, arg2: u32, arg3: u32) void {
     @setRuntimeSafety(mode == .Debug);
 
     const x1 = ((cast(i64, arg2) - cast(i64, arg1)) - cast(i64, arg3));
@@ -87,7 +87,7 @@ fn subborrowxU32(out1: *u32, out2: *u1, arg1: u1, arg2: u32, arg3: u32) callconv
 /// Output Bounds:
 ///   out1: [0x0 ~> 0xffffffff]
 ///   out2: [0x0 ~> 0xffffffff]
-fn mulxU32(out1: *u32, out2: *u32, arg1: u32, arg2: u32) callconv(.Inline) void {
+inline fn mulxU32(out1: *u32, out2: *u32, arg1: u32, arg2: u32) void {
     @setRuntimeSafety(mode == .Debug);
 
     const x1 = (cast(u64, arg1) * cast(u64, arg2));
@@ -108,7 +108,7 @@ fn mulxU32(out1: *u32, out2: *u32, arg1: u32, arg2: u32) callconv(.Inline) void 
 ///   arg3: [0x0 ~> 0xffffffff]
 /// Output Bounds:
 ///   out1: [0x0 ~> 0xffffffff]
-fn cmovznzU32(out1: *u32, arg1: u1, arg2: u32, arg3: u32) callconv(.Inline) void {
+inline fn cmovznzU32(out1: *u32, arg1: u1, arg2: u32, arg3: u32) void {
     @setRuntimeSafety(mode == .Debug);
 
     const x1 = (~(~arg1));

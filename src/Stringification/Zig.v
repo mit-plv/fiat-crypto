@@ -310,9 +310,9 @@ Module Zig.
              (f : type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * IR.expr)
     : list string :=
     let '(args, rets, body) := f in
-    ((if private then "fn " else "pub fn ") ++ name ++
+    ((if private then "inline fn " else "pub fn ") ++ name ++
       "(" ++ String.concat ", " (to_arg_list internal_private all_private prefix Out rets ++ to_arg_list_for_each_lhs_of_arrow internal_private all_private prefix args) ++
-      ")" ++ (if private then " callconv(.Inline) " else " ") ++ "void {")%string :: (["    @setRuntimeSafety(mode == .Debug);"; ""]%string)%list ++ (List.map (fun s => "    " ++ s)%string (to_strings internal_private prefix body)) ++ ["}"%string]%list.
+      ") void {")%string :: (["    @setRuntimeSafety(mode == .Debug);"; ""]%string)%list ++ (List.map (fun s => "    " ++ s)%string (to_strings internal_private prefix body)) ++ ["}"%string]%list.
 
   (** In Zig, there is no munging of return arguments (they remain
       passed by pointers), so all variables are live *)
