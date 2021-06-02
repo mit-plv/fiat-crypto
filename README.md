@@ -32,7 +32,7 @@ Package Manager | Command Line Invocation |
 --|--|
 Aptitude (Ubuntu / Debian) | `apt install coq ocaml-findlib libcoq-ocaml-dev` |
 Homebrew (OS X) | `brew install coq ocaml-findlib coreutils` |
-Pacman (Archlinux) | `pacman -S coq ocaml-findlib ocaml-zarith` |
+Pacman (Archlinux) | `pacman -S coq ocaml-findlib ocaml-zarith jq` |
 
 You can clone this repository with
 
