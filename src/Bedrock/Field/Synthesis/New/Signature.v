@@ -404,19 +404,18 @@ Section WithParameters.
             (res_valid :
                valid_func (res (fun _ : API.type => unit)))
             (res_Wf : API.Wf res).
-    Context (xbounds outbounds : bounds)
-            (op : F M_pos -> F M_pos)
-            (outbounds_tighter_than_max :
-               list_Z_tighter_than outbounds (MaxBounds.max_bounds n))
-            (outbounds_length : length outbounds = n)
-            (res_eq : forall x,
-                bounded_by xbounds x ->
+    Context name (uop : UnOp name)
+            (res_eq : forall x : list Semantics.word,
+                bounded_by un_xbounds x ->
                 feval (map word.of_Z
                            (API.interp (res _) (map word.unsigned x)))
-                = op (feval x))
+                = un_model (feval x))
             (res_bounds : forall x,
-                list_Z_bounded_by xbounds x ->
-                list_Z_bounded_by outbounds (API.interp (res _) x)).
+                list_Z_bounded_by un_xbounds x ->
+                list_Z_bounded_by un_outbounds (API.interp (res _) x))
+            (outbounds_tighter_than_max : list_Z_tighter_than un_outbounds (max_bounds n))
+            (xbounds_length : length un_xbounds = n)
+            (outbounds_length : length un_outbounds = n).
 
     Local Ltac equivalence_side_conditions_hook ::=
       lazymatch goal with
@@ -445,20 +444,18 @@ Section WithParameters.
     Let outsizes := list_unop_outsizes.
     Let inlengths := list_unop_inlengths.
 
-    Lemma list_unop_correct name f :
+    Lemma list_unop_correct f :
       f = make_bedrock_func name insizes outsizes inlengths res ->
-      forall functions,
-        (unop_spec name op xbounds outbounds (f :: functions)).
+      forall functions, unop_spec _ (f :: functions).
     Proof using inname_gen_varname_gen_disjoint outbounds_length
           outbounds_tighter_than_max outname_gen_varname_gen_disjoint
           p_ok relax_bounds res_Wf res_bounds res_eq res_valid.
       subst inlengths insizes outsizes.
-      cbv [list_unop_insizes list_unop_outsizes list_unop_inlengths].
+      cbv [unop_spec list_unop_insizes list_unop_outsizes list_unop_inlengths].
       cbv beta; intros; subst f. cbv [make_bedrock_func].
       cleanup. eapply Proper_call.
       2: {
-        use_translate_func_correct
-          constr:((map word.unsigned x, tt)) R.
+        use_translate_func_correct constr:((map word.unsigned x, tt)) Rr.
         all:translate_func_precondition_hammer.
         { (* lists_reserved_with_initial_context *)
           lists_reserved_simplify pout.
@@ -507,6 +504,8 @@ Section WithParameters.
                 list_Z_bounded_by
                   tight_bounds
                   (API.interp (res _) (map byte.unsigned bs))).
+    Context (FElemBytes_in_bounds :
+      forall p bs R m, (FElemBytes p bs ⋆ R)%sep m -> bytes_in_bounds bs).
 
     Local Ltac equivalence_side_conditions_hook ::=
       lazymatch goal with
@@ -543,18 +542,20 @@ Section WithParameters.
     Proof using inname_gen_varname_gen_disjoint
           outname_gen_varname_gen_disjoint p_ok relax_bounds res_Wf
           res_bounds res_eq res_valid tight_bounds_length
-          tight_bounds_tighter_than_max.
+          tight_bounds_tighter_than_max FElemBytes_in_bounds.
       subst inlengths insizes outsizes. cbv [spec_of_from_bytes].
       cbv [from_bytes_insizes from_bytes_outsizes from_bytes_inlengths].
       cbv beta; intros; subst f. cbv [make_bedrock_func].
-      cleanup. eapply Proper_call.
+      cleanup.
+      pose proof FElemBytes_in_bounds _ _ _ _ H.
+      eapply Proper_call.
       2:{
-        use_translate_func_correct
-          constr:((map Byte.byte.unsigned bs, tt)) R.
+        use_translate_func_correct constr:((map Byte.byte.unsigned bs, tt)) Rr.
         all:translate_func_precondition_hammer.
         { (* lists_reserved_with_initial_context *)
           lists_reserved_simplify pout.
-          all:solve_equivalence_side_conditions. } }
+          all:solve_equivalence_side_conditions.
+        } }
       { postcondition_simplify; [ | | ].
         { (* output correctness *)
           eapply res_eq; auto. }
@@ -643,20 +644,14 @@ Section WithParameters.
       cleanup. eapply Proper_call.
       2:{
         use_translate_func_correct
-          constr:((map word.unsigned x, tt)) R.
-        all:translate_func_precondition_hammer.
+          constr:((map word.unsigned x, tt)) Rr.
+        all:try translate_func_precondition_hammer.
         { (* lists_reserved_with_initial_context *)
           lists_reserved_simplify pout.
           all:solve_equivalence_side_conditions. } }
-      { postcondition_simplify; [ | | ].
+      { postcondition_simplify; [ | ].
         { (* output correctness *)
           eapply res_eq; auto. }
-        { (* output bounds *)
-          cbn [bytes_in_bounds field_representation frep] in *.
-          erewrite ByteBounds.byte_map_unsigned_of_Z,
-          ByteBounds.map_byte_wrap_bounded
-            by eauto using relax_list_Z_bounded_by.
-          eauto. }
         { (* separation-logic postcondition *)
           eapply Proper_sep_iff1;
             [ solve [apply FElemBytes_array_truncated_scalar_iff1]

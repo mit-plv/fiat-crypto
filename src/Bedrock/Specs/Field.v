@@ -142,6 +142,8 @@ Section FunctionSpecs.
     {| un_model := F.mul a24; un_xbounds := loose_bounds; un_outbounds := tight_bounds |}.
   Instance un_inv : UnOp inv := (* TODO: what are the bounds for inv? *)
     {| un_model := F.inv; un_xbounds := tight_bounds; un_outbounds := loose_bounds |}.
+  Instance un_opp : UnOp opp :=
+    {| un_model := F.opp; un_xbounds := tight_bounds; un_outbounds := loose_bounds |}.
 
   Instance spec_of_from_bytes : spec_of from_bytes :=
     fnspec! from_bytes (pout px : word) / out (bs : list byte) Rr,
@@ -157,6 +159,7 @@ Section FunctionSpecs.
   Instance spec_of_to_bytes : spec_of to_bytes :=
     fnspec! to_bytes (pout px : word) / (out : list byte) (x : felem) Rr,
     { requires tr mem :=
+        bounded_by tight_bounds x /\
         (exists Ra, (FElem px x * Ra)%sep mem)
         /\ (FElemBytes pout out * Rr)%sep mem;
       ensures tr' mem' :=
