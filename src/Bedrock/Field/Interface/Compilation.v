@@ -55,8 +55,7 @@ Section Compile.
          Locals := locals;
          Functions := functions }>
       cmd.seq
-        (cmd.call [] name [expr.var x_var; expr.var y_var;
-                          expr.var out_var])
+        (cmd.call [] name [expr.var out_var; expr.var x_var; expr.var y_var])
         k_impl
       <{ pred (nlet_eq [out_var] v k) }>.
   Proof. prove_field_compilation. Qed.
@@ -90,7 +89,7 @@ Section Compile.
          Locals := locals;
          Functions := functions }>
       cmd.seq
-        (cmd.call [] name [expr.var x_var; expr.var out_var])
+        (cmd.call [] name [expr.var out_var; expr.var x_var])
         k_impl
       <{ pred (nlet_eq [out_var] v k) }>.
   Proof. prove_field_compilation. Qed.
@@ -155,7 +154,7 @@ Section Compile.
          Locals := locals;
          Functions := functions }>
       cmd.seq
-        (cmd.call [] felem_copy [expr.var x_var; expr.var out_var])
+        (cmd.call [] felem_copy [expr.var out_var; expr.var x_var])
         k_impl
       <{ pred (nlet_eq [out_var] v k) }>.
   Proof. prove_field_compilation. Qed.
@@ -189,7 +188,7 @@ Section Compile.
          Functions := functions }>
       cmd.seq
         (cmd.call [] felem_small_literal
-                  [expr.literal x; expr.var out_var])
+                  [expr.var out_var; expr.literal x])
         k_impl
       <{ pred (nlet_eq [out_var] v k) }>.
   Proof.

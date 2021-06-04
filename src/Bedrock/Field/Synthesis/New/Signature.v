@@ -135,9 +135,9 @@ Section WithParameters.
   Ltac felem_to_array :=
     repeat
       lazymatch goal with
-      | H : sep (FElem _ _) _ _ |- _ =>
-        seprewrite_in FElem_array_truncated_scalar_iff1 H
-      | H : sep (FElemBytes _ _) _ _ |- _ =>
+      | H:context[sep (FElem _ _) _]
+        |- _ => seprewrite_in FElem_array_truncated_scalar_iff1 H
+      | H : context [sep (FElemBytes _ _) _] |- _ =>
         seprewrite_in FElemBytes_array_truncated_scalar_iff1 H
       end.
 
@@ -276,11 +276,6 @@ Section WithParameters.
   Ltac lists_reserved_simplify pout :=
     compute_names; cbn [type.app_curried fst snd];
     autounfold with types list_lengths pairs;
-    lazymatch goal with
-    | H : context [Placeholder] |- _ =>
-      seprewrite_in @FElem_from_bytes H; [ ]
-    | _ => idtac
-    end;
     lists_autounfold; sepsimpl;
     match goal with
     | H : context [FElem pout ?old_out]
@@ -310,31 +305,33 @@ Section WithParameters.
              rewrite word.of_Z_unsigned in H
            | H : word.unsigned _ = word.unsigned _ |- _ =>
              apply Properties.word.unsigned_inj in H
-           end;
-    Tactics.lift_eexists; sepsimpl.
+           | |- exists _, _ => eexists
+           | |- _ /\ _ => eexists
+           end.
 
   Section ListBinop.
     Context {res : API.Expr (type_listZ -> type_listZ -> type_listZ)}
             (res_valid :
                valid_func (res (fun _ : API.type => unit)))
             (res_Wf : API.Wf res).
-    Context (xbounds ybounds outbounds : bounds)
-            (op : F M_pos -> F M_pos -> F M_pos)
-            (outbounds_tighter_than_max :
-               list_Z_tighter_than outbounds (MaxBounds.max_bounds n))
-            (outbounds_length : length outbounds = n)
-            (res_eq : forall x y,
-                bounded_by xbounds x ->
-                bounded_by ybounds y ->
+    Context name (bop : BinOp name)
+            (res_eq : forall x y : list Semantics.word,
+                bounded_by bin_xbounds x ->
+                bounded_by bin_ybounds y ->
                 feval (map word.of_Z
                            (API.interp (res _)
                                        (map word.unsigned x)
                                        (map word.unsigned y)))
-                = op (feval x) (feval y))
+                = bin_model (feval x) (feval y))
             (res_bounds : forall x y,
-                list_Z_bounded_by xbounds x ->
-                list_Z_bounded_by ybounds y ->
-                list_Z_bounded_by outbounds (API.interp (res _) x y)).
+                list_Z_bounded_by bin_xbounds x ->
+                list_Z_bounded_by bin_ybounds y ->
+                list_Z_bounded_by bin_outbounds (API.interp (res _) x y))
+
+            (outbounds_tighter_than_max : list_Z_tighter_than bin_outbounds (max_bounds n))
+            (xbounds_length : length bin_xbounds = n)
+            (ybounds_length : length bin_ybounds = n)
+            (outbounds_length : length bin_outbounds = n).
 
     Local Ltac equivalence_side_conditions_hook ::=
       lazymatch goal with
@@ -364,47 +361,41 @@ Section WithParameters.
     Let outsizes := list_binop_outsizes.
     Let inlengths := list_binop_inlengths.
 
-    Lemma list_binop_correct name f :
+    Lemma list_binop_correct f :
       f = make_bedrock_func name insizes outsizes inlengths res ->
-      forall functions,
-        (binop_spec (Build_BinOp name op xbounds ybounds outbounds) (f :: functions)).
-    Proof using inname_gen_varname_gen_disjoint outbounds_length
-          outbounds_tighter_than_max outname_gen_varname_gen_disjoint
-          p_ok relax_bounds res_Wf res_bounds res_eq res_valid.
+      forall functions, (binop_spec _ (f :: functions)).
+    Proof.
       subst inlengths insizes outsizes.
       cbv [binop_spec list_binop_insizes list_binop_outsizes list_binop_inlengths].
       cbv beta; intros; subst f. cbv [make_bedrock_func].
       cleanup. eapply Proper_call.
       2: {
         use_translate_func_correct
-          constr:((map word.unsigned x, (map word.unsigned y, tt))) x0.
-        all:translate_func_precondition_hammer.
+          constr:((map word.unsigned x, (map word.unsigned y, tt))) Rr;
+          translate_func_precondition_hammer.
         { (* lists_reserved_with_initial_context *)
-          lists_reserved_simplify pout.
-          all:solve_equivalence_side_conditions. } }
-      { postcondition_simplify; [ | | ].
+          lists_reserved_simplify pout; solve_equivalence_side_conditions. } }
+      { postcondition_simplify; [ | | ]; cycle -1.
+        { refine (proj1 (Proper_sep_iff1 _ _ _ _ _ _ _) _);
+            [symmetry; eapply FElem_array_truncated_scalar_iff1 | reflexivity | sepsimpl ].
+          2:eassumption.
+          erewrite <-map_length.
+          match goal with H : map word.unsigned _ = API.interp (res _) _ _ |- _ =>
+            rewrite H end.
+          erewrite length_list_Z_bounded_by; eauto using res_bounds. }
         { (* output correctness *)
-          eapply res_eq; auto. }
+          erewrite <-res_eq; auto.
+          match goal with H : map word.unsigned _ = API.interp (res _) _ _ |- _ =>
+            rewrite <-H end.
+          rewrite map_map.
+          f_equal; eapply List.nth_error_ext; intros i; rewrite ListUtil.nth_error_map.
+          case (nth_error x2 i); cbn; trivial; []; intros; eapply f_equal.
+          symmetry; eapply word.of_Z_unsigned. }
         { (* output bounds *)
           cbn [bounded_by field_representation frep] in *.
-          erewrite Util.map_unsigned_of_Z, MaxBounds.map_word_wrap_bounded
-            by eauto using relax_list_Z_bounded_by.
-          eauto. }
-        { (* separation-logic postcondition *)
-          eapply Proper_sep_iff1;
-            [ solve [apply FElem_array_truncated_scalar_iff1]
-            | reflexivity | ].
-          sepsimpl; [ | ].
-          { rewrite !map_length.
-            solve_equivalence_side_conditions. }
-          { erewrite Util.map_unsigned_of_Z, MaxBounds.map_word_wrap_bounded
-              by eauto using relax_list_Z_bounded_by.
-            rewrite MakeAccessSizes.bytes_per_word_eq.
-            clear outbounds_length; subst.
-            match goal with
-              H : map word.unsigned _ = API.interp (res _) _ _ |- _ =>
-              rewrite <-H end.
-            auto. } } }
+          match goal with H : map word.unsigned _ = API.interp (res _) _ _ |- _ =>
+            rewrite H end.
+          eauto using res_bounds. } }
     Qed.
   End ListBinop.
 

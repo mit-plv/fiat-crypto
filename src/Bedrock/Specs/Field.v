@@ -92,7 +92,7 @@ Section FunctionSpecs.
       un_outbounds: bounds }.
 
   Definition unop_spec {name} (op: UnOp name) :=
-    fnspec! name (px pout : word) / (x out : felem) Rr,
+    fnspec! name (pout px : word) / (out x : felem) Rr,
     { requires tr mem :=
         bounded_by un_xbounds x
         /\ (exists Ra, (FElem px x * Ra)%sep mem)
@@ -114,7 +114,7 @@ Section FunctionSpecs.
       bin_outbounds: bounds }.
 
   Definition binop_spec  {name} (op: BinOp name) :=
-    fnspec! name (px py pout : word) / (x y out: felem) Rr,
+    fnspec! name (pout px py : word) / (out x y : felem) Rr,
     { requires tr mem :=
         bounded_by bin_xbounds x
         /\ bounded_by bin_ybounds y
@@ -144,7 +144,7 @@ Section FunctionSpecs.
     {| un_model := F.inv; un_xbounds := tight_bounds; un_outbounds := loose_bounds |}.
 
   Instance spec_of_from_bytes : spec_of from_bytes :=
-    fnspec! from_bytes (px pout : word) / (bs : list byte) out Rr,
+    fnspec! from_bytes (pout px : word) / out (bs : list byte) Rr,
     { requires tr mem :=
         (exists Ra, (FElemBytes px bs * Ra)%sep mem)
         /\ (FElem pout out * Rr)%sep mem;
@@ -155,7 +155,7 @@ Section FunctionSpecs.
              /\ (FElem pout X * Rr)%sep mem' }.
 
   Instance spec_of_to_bytes : spec_of to_bytes :=
-    fnspec! to_bytes (px pout : word) / (x : felem) (out : list byte) Rr,
+    fnspec! to_bytes (pout px : word) / (out : list byte) (x : felem) Rr,
     { requires tr mem :=
         (exists Ra, (FElem px x * Ra)%sep mem)
         /\ (FElemBytes pout out * Rr)%sep mem;
@@ -165,7 +165,7 @@ Section FunctionSpecs.
                    /\ (FElemBytes pout bs * Rr)%sep mem' }.
 
   Instance spec_of_felem_copy : spec_of felem_copy :=
-    fnspec! felem_copy (px pout : word) / (x out : felem) R,
+    fnspec! felem_copy (pout px : word) / (out x : felem) R,
     { requires tr mem :=
         (FElem px x * FElem pout out * R)%sep mem;
       ensures tr' mem' :=
@@ -173,7 +173,7 @@ Section FunctionSpecs.
         (FElem px x * FElem pout x * R)%sep mem' }.
 
   Instance spec_of_felem_small_literal : spec_of felem_small_literal :=
-    fnspec! felem_small_literal (x pout : word) / out R,
+    fnspec! felem_small_literal (pout x : word) / out R,
     { requires tr mem :=
         (FElem pout out * R)%sep mem;
       ensures tr' mem' :=
