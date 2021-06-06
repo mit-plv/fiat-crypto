@@ -5,12 +5,6 @@ Require Import Crypto.Bedrock.Group.Point.
 Require Import Crypto.Bedrock.Specs.Field.
 Local Open Scope Z_scope.
 
-(*TODO: currently relies on Examples files.
-  This file should either be moved somewhere else or the dependency removed.
-*)
-Require Import Rupicola.Examples.Nondeterminism.NonDeterminism.
-Require Import Rupicola.Examples.Nondeterminism.StackAlloc.
-Import NDMonad.
 
 Section __.
   Context {width: Z} {BW: Bitwidth width} {word: word.word width} {mem: map.map word Byte.byte}.
@@ -26,10 +20,102 @@ Section __.
           {field_representation_ok : FieldRepresentation_ok}.
   Hint Resolve relax_bounds : compiler.
 
+  (*
   (*Modified from stack_alloc*)
   Definition felem_alloc : Comp (felem) := fun _ => True.
+   *)
 
-  Lemma compile_stack_alloc {tr mem locals functions}:
+  Definition felem_alloc (v : F M_pos) := v.
+  Arguments felem_alloc : simpl never.
+  
+  Lemma compile_felem_alloc
+        (tr : Semantics.trace)
+        (mem locals : map.rep)
+        (functions : list (string * (list string * list string * cmd)))
+        (e : felem) :
+    let v := (feval e)%F in
+    forall (P : F M_pos -> Type)
+           (pred : P v -> predicate)
+           (k : nlet_eq_k P v) (v_impl k_impl : cmd)
+           (Rin Rout : map.rep -> Prop)
+           (out : felem)
+           (out_var : string),
+      (*
+      (FElem out_ptr out ⋆ Rout) mem ->
+      (FElem e_ptr e ⋆ Rin) mem ->
+       *)
+      Rout mem ->
+      Rin mem ->
+      bounded_by loose_bounds e ->
+      (let v0 := v in
+       forall (out0 : felem) (out_ptr : word.rep) (m : map.rep),
+         feval out0 = v0 ->
+         bounded_by loose_bounds out0 ->
+         (Placeholder out_ptr ⋆ Rout) m ->
+         <{ Trace := tr;
+            Memory := m;
+            Locals := map.put locals out_var out_ptr;
+            Functions := functions }>
+         v_impl
+         <{ fun tr' mem l => tr' = tr /\ (FElem out_ptr out0 ⋆ Rout) mem /\ l = map.put locals out_var out_ptr }>) ->
+      (let v0 := v in
+       forall (out0 : felem) (out_ptr : word.rep) (m : map.rep),
+         feval out0 = v0 ->
+         bounded_by loose_bounds out0 ->
+         (FElem out_ptr out0 ⋆ Rout) m ->
+         <{ Trace := tr;
+            Memory := m;
+            Locals := map.put locals out_var out_ptr;
+            Functions := functions }>
+         k_impl
+         <{fun tr' mem' locals' =>
+             exists m' mStack' : map.rep, Placeholder out_ptr mStack' /\
+                                          map.split mem' m' mStack' /\
+                                          pred (k v0 eq_refl) tr' m' locals' }>) ->
+      <{ Trace := tr;
+         Memory := mem;
+         Locals := locals;
+         Functions := functions }>
+      cmd.stackalloc out_var (@felem_size_in_bytes field_parameters _ field_representaton)
+                     (cmd.seq v_impl k_impl)
+      <{ pred (let/n x as out_var eq:Heq := felem_alloc v in
+               k x Heq) }>.
+  Proof.
+    red.
+    red.
+    cbn.
+    intros.
+    split; eauto using felem_size_in_bytes_mod.
+    change (Memory.anybytes ?p felem_size_in_bytes ?m) with (Placeholder p m).
+    intros ptr mStack mCombined Hany Hsplit.
+    eapply WeakestPrecondition_weaken; cycle 1.
+    - eapply H2; eauto.
+      exists mStack.
+      exists mem.
+      intuition.
+      apply map.split_comm; eauto.
+    - intros tr' mem' locals' [Htr [Hmem Hloc]]; subst.
+      unfold felem_alloc.
+      unfold nlet_eq.
+      eapply H3; eauto.
+  Qed.
+
+  
+  (*
+  Definition alloclet {A T} s v (k: A -> T) := nlet s v k.
+  Notation "'let/+' x := val 'in' body" :=
+  (alloclet (cons match IdentParsing.TC.__ltac2_marker return IdentParsing.TC.__IdentToString with
+              | x => _
+              end nil) val (fun x => body))  (at level 60).
+
+  Definition alloclet_eq {A P} s (a : A) (k : nlet_eq_k P a) := nlet_eq s a k.
+  Notation "'let/+' x 'as' nm 'eq:' Heq := val 'in' body" :=
+    (alloclet_eq (cons nm nil) val (fun x Heq => body)) (at level 60).
+*)
+
+
+  (*
+  Lemma deterministic_stack_alloc {tr mem locals functions}:
     let c := felem_alloc in
     forall {B} {pred: B -> predicate}
       {k: felem -> Comp B} {k_impl}
@@ -52,36 +138,28 @@ Section __.
          Locals := locals;
          Functions := functions }>
       cmd.stackalloc var felem_size_in_bytes k_impl
-      <{ pbind pred (bindn [var] c k) }>.
+      <{ pred (bindn [var] c k) }>.
   Proof.
   Admitted.
+*)
 
 
   Section Gallina.
     Local Open Scope F_scope.
 
     Definition ladderstep_gallina
-               (X1: F M_pos) (P1 P2: point) : Comp (point * point) :=
-      let/+ A := felem_alloc in
-      let/+ AA := felem_alloc in
-      let/+ B := felem_alloc in
-      let/+ BB := felem_alloc in
-      let/+ E := felem_alloc in
-      let/+ C := felem_alloc in
-      let/+ D := felem_alloc in
-      let/+ DA := felem_alloc in
-      let/+ CB := felem_alloc in
+               (X1: F M_pos) (P1 P2: point) : (point * point) :=
       let '(X2, Z2) := P1 in
       let '(X3, Z3) := P2 in
       let/n A := X2+Z2 in
-      let/n AA := A^2 in
-      let/n B := X2-Z2 in
-      let/n BB := B^2 in
-      let/n E := AA-BB in
-      let/n C := X3+Z3 in
-      let/n D := X3-Z3 in
-      let/n DA := D*A in
-      let/n CB := C*B in
+      let/n AA := felem_alloc (A^2) in
+      let/n B := felem_alloc (X2-Z2) in
+      let/n BB := felem_alloc (B^2) in
+      let/n E := felem_alloc (AA-BB) in
+      let/n C := felem_alloc (X3+Z3) in
+      let/n D := felem_alloc (X3-Z3) in
+      let/n DA := felem_alloc (D*A) in
+      let/n CB := felem_alloc (C*B) in
       (* store X5 under X3 pointer *)
       let/n X3 := (DA+CB) in
       let/n X3 := X3^2 in
@@ -96,7 +174,7 @@ Section __.
       let/n Z2:= (AA+Z2) in
       let/n Z2 := E*Z2 in
       (* ((X4, Z4), (X5, Z5)) *)
-      ret ((X2, Z2), (X3, Z3)).
+      ((X2, Z2), (X3, Z3)).
   End Gallina.
 
   Instance spec_of_ladderstep : spec_of "ladderstep" :=
@@ -114,41 +192,38 @@ Section __.
             * FElem pX2 X2 * FElem pZ2 Z2
             * FElem pX3 X3 * FElem pZ3 Z3
             (** FElem pA A * FElem pAA AA
-            * FElem pB B * FElem pBB BB
-            * FElem pE E * FElem pC C
-            * FElem pD D * FElem pDA DA
-            * FElem pCB CB*) * R)%sep mem;
-      ensures tr' mem' rets :=
-        (propbind
-           (ladderstep_gallina
-              (feval X1) (feval X2, feval Z2)
-              (feval X3, feval Z3))
-           (fun res =>
-              rets = [] /\
-             tr = tr'
-             /\ exists X4 Z4 X5 Z5 (* output values *)
-                       (*A' AA' B' BB' E' C' D' DA' CB' (* new intermediates *)*)
-                       : felem,
-               (res = ((feval X4, feval Z4), (feval X5, feval Z5)))
-        /\ bounded_by tight_bounds X4
-        /\ bounded_by tight_bounds Z4
-        /\ bounded_by tight_bounds X5
-        /\ bounded_by tight_bounds Z5
-        /\ (FElem pX1 X1 * FElem pX2 X4 * FElem pZ2 Z4
-            * FElem pX3 X5 * FElem pZ3 Z5
-            (** FElem pA A' * FElem pAA AA'
-             * FElem pB B' * FElem pBB BB'
-             * FElem pE E' * FElem pC C' * FElem pD D'
-             * FElem pDA DA' * FElem pCB CB'*) * R)%sep mem'))}.
+             * FElem pB B * FElem pBB BB
+             * FElem pE E * FElem pC C
+             * FElem pD D * FElem pDA DA
+             * FElem pCB CB*) * R)%sep mem;
+      ensures tr' mem' :=
+        tr = tr'
+        /\ exists X4 Z4 X5 Z5 (* output values *)
+                  (*A' AA' B' BB' E' C' D' DA' CB' (* new intermediates *)*)
+                  : felem,
+          (ladderstep_gallina
+             (feval X1) (feval X2, feval Z2)
+             (feval X3, feval Z3)
+           = ((feval X4, feval Z4), (feval X5, feval Z5)))
+          /\ bounded_by tight_bounds X4
+          /\ bounded_by tight_bounds Z4
+          /\ bounded_by tight_bounds X5
+          /\ bounded_by tight_bounds Z5
+          /\ (FElem pX1 X1 * FElem pX2 X4 * FElem pZ2 Z4
+              * FElem pX3 X5 * FElem pZ3 Z5
+              (** FElem pA A' * FElem pAA AA'
+               * FElem pB B' * FElem pBB BB'
+               * FElem pE E' * FElem pC C' * FElem pD D'
+               * FElem pDA DA' * FElem pCB CB'*) * R)%sep mem'}.
 
   Lemma compile_ladderstep : forall {tr mem locals functions}
         (x1 x2 z2 x3 z3 : F M_pos),
     let v := ladderstep_gallina x1 (x2, z2) (x3, z3) in
-    forall {P} {pred: P -> predicate} {k: (point *point) -> Comp P} {k_impl}
+    forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
            Rout
            X1 X1_ptr X1_var X2 X2_ptr X2_var Z2 Z2_ptr Z2_var
            X3 X3_ptr X3_var Z3 Z3_ptr Z3_var
-          (* A A_ptr A_var AA AA_ptr AA_var
+    (* A A_ptr A_var AA AA_ptr AA_var
            B B_ptr B_var BB BB_ptr BB_var
            E E_ptr E_var C C_ptr C_var
            D D_ptr D_var DA DA_ptr DA_var
@@ -194,11 +269,10 @@ Section __.
          forall (X4 Z4 X5 Z5 (* output values *)
                     (*A' AA' B' BB' E' C' D' DA' CB' (* new intermediates *)*)
                  : felem) m
-                (Heq : propbind
-                         (ladderstep_gallina
-                            (feval X1) (feval X2, feval Z2)
-                            (feval X3, feval Z3))
-                         (eq ((feval X4, feval Z4), (feval X5, feval Z5)))),
+                (Heq : ladderstep_gallina
+                         (feval X1) (feval X2, feval Z2)
+                         (feval X3, feval Z3)
+                       = ((feval X4, feval Z4), (feval X5, feval Z5))),
           bounded_by tight_bounds X4 ->
           bounded_by tight_bounds Z4 ->
           bounded_by tight_bounds X5 ->
@@ -214,9 +288,7 @@ Section __.
                Locals := locals;
                Functions := functions }>
             k_impl
-            <{ pbind pred (bindn
-                   [X1_var; X2_var; Z2_var; X3_var; Z3_var]
-                   v k) }>)) ->
+            <{ pred (k v eq_refl) }>)) ->
 
         <{ Trace := tr;
            Memory := mem;
@@ -232,40 +304,16 @@ Section __.
                                 expr.var C_var; expr.var D_var;
                                   expr.var DA_var; expr.var CB_var *)])
           k_impl
-        <{ pbind pred (bindn
+        <{ pred (nlet_eq
                    [X1_var; X2_var; Z2_var; X3_var; Z3_var]
                    v k) }>.
-    Proof.
+  Proof.
       repeat straightline'.
-      handle_call. 
+      handle_call;
         lazymatch goal with
         | |- sep _ _ _ => ecancel_assumption
         | _ => solve [eauto]
         end.
-        lazymatch goal with
-        | |- sep _ _ _ => ecancel_assumption
-        | _ => solve [eauto]
-        end.
-        lazymatch goal with
-        | |- sep _ _ _ => ecancel_assumption
-        | _ => solve [eauto]
-        end.
-        lazymatch goal with
-        | |- sep _ _ _ => ecancel_assumption
-        | _ => solve [eauto]
-        end.
-        lazymatch goal with
-        | |- sep _ _ _ => ecancel_assumption
-        | _ => solve [eauto]
-        end.
-        destruct H17.
-        unfold intersection in H17.
-        repeat straightline.
-        eapply H16.
-        6:eauto.
-        all: eauto.
-        exists x.
-        split; eauto.
     Qed.
 
   Ltac ladderstep_compile_custom :=
@@ -327,7 +375,8 @@ Derive ladderstep_body SuchThat
                           proc [mul;add;sub;square;scmula24] in
             exact (__rupicola_program_marker ladderstep_gallina -> goal)))
          As ladderstep_correct.
-  Proof.
+Proof.
+  enough True.
     compile.
   Qed.
 
