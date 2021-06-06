@@ -503,12 +503,12 @@ Definition field_parameters_prefixed
 
 Local Ltac begin_derive_bedrock2_func :=
   lazymatch goal with
-  | |- context [spec_of_mul] => eapply mul_func_correct
-  | |- context [spec_of_square] => eapply square_func_correct
-  | |- context [spec_of_add] => eapply add_func_correct
-  | |- context [spec_of_sub] => eapply sub_func_correct
-  | |- context [spec_of_opp] => eapply opp_func_correct
-  | |- context [spec_of_scmula24] => eapply scmula24_func_correct
+  | |- context [spec_of_BinOp bin_mul] => eapply mul_func_correct
+  | |- context [spec_of_UnOp un_square] => eapply square_func_correct
+  | |- context [spec_of_BinOp bin_add] => eapply add_func_correct
+  | |- context [spec_of_BinOp bin_sub] => eapply sub_func_correct
+  | |- context [spec_of_UnOp un_opp] => eapply opp_func_correct
+  | |- context [spec_of_UnOp un_scmula24] => eapply scmula24_func_correct
   | |- context [spec_of_from_bytes] => eapply from_bytes_func_correct
   | |- context [spec_of_to_bytes] => eapply to_bytes_func_correct
   end.
@@ -559,7 +559,7 @@ Section Tests.
 
   Derive fe25519_mul
          SuchThat (forall functions,
-                      spec_of_mul
+                      spec_of_BinOp bin_mul
                         (field_representation:=field_representation n s c)
                         (fe25519_mul :: functions))
          As fe25519_mul_correct.
@@ -567,7 +567,7 @@ Section Tests.
 
   Derive fe25519_square
          SuchThat (forall functions,
-                      spec_of_square
+                      spec_of_UnOp un_square
                         (field_representation:=field_representation n s c)
                         (fe25519_square :: functions))
          As fe25519_square_correct.
@@ -575,15 +575,16 @@ Section Tests.
 
   Derive fe25519_add
          SuchThat (forall functions,
-                      spec_of_add
+                      spec_of_BinOp bin_add
                         (field_representation:=field_representation n s c)
                         (fe25519_add :: functions))
          As fe25519_add_correct.
   Proof. Time derive_bedrock2_func add_op. Qed.
 
+
   Derive fe25519_sub
          SuchThat (forall functions,
-                      spec_of_sub
+                      spec_of_BinOp bin_sub
                         (field_representation:=field_representation n s c)
                         (fe25519_sub :: functions))
          As fe25519_sub_correct.
@@ -591,7 +592,7 @@ Section Tests.
 
   Derive fe25519_opp
          SuchThat (forall functions,
-                      spec_of_opp
+                      spec_of_UnOp un_opp
                         (field_representation:=field_representation n s c)
                         (fe25519_opp :: functions))
          As fe25519_opp_correct.
@@ -599,7 +600,7 @@ Section Tests.
 
   Derive fe25519_scmula24
          SuchThat (forall functions,
-                      spec_of_scmula24
+                      spec_of_UnOp un_scmula24
                         (field_representation:=field_representation n s c)
                         (fe25519_scmula24 :: functions))
          As fe25519_scmula24_correct.
