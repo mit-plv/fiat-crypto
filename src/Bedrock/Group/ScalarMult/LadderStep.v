@@ -100,49 +100,210 @@ Section __.
       eapply H3; eauto.
   Qed.
 
-  
   (*
-  Definition alloclet {A T} s v (k: A -> T) := nlet s v k.
-  Notation "'let/+' x := val 'in' body" :=
-  (alloclet (cons match IdentParsing.TC.__ltac2_marker return IdentParsing.TC.__IdentToString with
-              | x => _
-              end nil) val (fun x => body))  (at level 60).
-
-  Definition alloclet_eq {A P} s (a : A) (k : nlet_eq_k P a) := nlet_eq s a k.
-  Notation "'let/+' x 'as' nm 'eq:' Heq := val 'in' body" :=
-    (alloclet_eq (cons nm nil) val (fun x Heq => body)) (at level 60).
+   Local Ltac prove_field_compilation :=
+    repeat straightline';
+    handle_call;
+    lazymatch goal with
+    | |- sep _ _ _ => ecancel_assumption
+    | _ => idtac
+    end; eauto;
+    sepsimpl; repeat straightline'; subst; eauto.
 *)
 
+  Lemma compile_binop_alloc {name} {op: BinOp name}
+        {tr mem locals functions} x y:
+    let v := felem_alloc (bin_model (feval x) (feval y)) in
+    forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
+      Rin x_ptr x_var y_ptr y_var out_var,
 
-  (*
-  Lemma deterministic_stack_alloc {tr mem locals functions}:
-    let c := felem_alloc in
-    forall {B} {pred: B -> predicate}
-      {k: felem -> Comp B} {k_impl}
-      (R: _ -> Prop) var,
-      R mem ->
-      (forall ptr (bs: felem) mem,
-          (FElem ptr bs * R)%sep mem ->
-          let pred g tr' mem' locals' :=
-              exists R' bs',
-                (FElem ptr bs' * R')%sep mem' /\
-                forall mem'', R' mem'' -> pred g tr' mem'' locals' in
-          <{ Trace := tr;
-             Memory := mem;
-             Locals := map.put locals var ptr;
+      (_: spec_of name) functions ->
+      bounded_by bin_xbounds x ->
+      bounded_by bin_ybounds y ->
+
+      (*
+      map.get locals out_var = Some out_ptr ->
+       
+      (FElem out_ptr out * Rout)%sep mem ->
+       *)
+      (*Rout mem -> TODO: is this okay?*)
+      let Rout := (FElem x_ptr x * FElem y_ptr y * Rin)%sep in
+      (FElem x_ptr x * FElem y_ptr y * Rin)%sep mem ->
+      map.get locals x_var = Some x_ptr ->
+      map.get locals y_var = Some y_ptr ->
+
+      out_var <> x_var ->
+      out_var <> y_var ->
+
+      (let v := v in
+       forall out out_ptr m (Heq: feval out = v),
+         bounded_by bin_outbounds out ->
+         sep (FElem out_ptr out) Rout m ->
+         (<{ Trace := tr;
+             Memory := m;
+             Locals := map.put locals out_var out_ptr;
              Functions := functions }>
           k_impl
-          <{ pbind pred (k bs) }>) ->
+          <{ fun tr' mem' locals' =>
+             exists m' mStack' : map.rep, Placeholder out_ptr mStack' /\
+                                          map.split mem' m' mStack' /\
+                                          pred (k v eq_refl) tr' m' locals' }>)) ->
       <{ Trace := tr;
          Memory := mem;
          Locals := locals;
          Functions := functions }>
-      cmd.stackalloc var felem_size_in_bytes k_impl
-      <{ pred (bindn [var] c k) }>.
+      
+      cmd.stackalloc out_var (@felem_size_in_bytes field_parameters _ field_representaton)
+                     (cmd.seq
+                        (cmd.call [] name [expr.var out_var; expr.var x_var; expr.var y_var ])
+                        k_impl)
+      <{ pred (nlet_eq [out_var] v k) }>.
   Proof.
-  Admitted.
-*)
+    repeat straightline'.
+    split; eauto using felem_size_in_bytes_mod.
+    intros out_ptr mStack mCombined Hplace%FElem_from_bytes.
+    destruct Hplace as [out Hout].
+    repeat straightline'.
+    straightline_call.
+    intuition eauto.
+    {
+      exists (FElem out_ptr out * Rin)%sep.
+      assert (((FElem x_ptr x ⋆ FElem y_ptr y ⋆ Rin) * FElem out_ptr out)%sep mCombined).
+      exists mem.
+      exists mStack.
+      intuition.
+      ecancel_assumption.
+    }
+    {
+      exists mStack.
+      exists mem.
+      intuition eauto.
+      apply map.split_comm; eauto.
+    }
+    repeat straightline'.
+    eapply H7; repeat straightline'.
+    {
+      unfold v.
+      unfold felem_alloc.
+      eauto.
+    }
+    eauto.
+    {
+      unfold Rout.
+      ecancel_assumption.
+    }
+  Qed.
 
+   Ltac cleanup_op_lemma lem := (* This makes [simple apply] work *)
+    let lm := fresh in
+    let op := match lem with _ _ ?op => op end in
+    let op_hd := term_head op in
+    let simp proj :=
+        (let hd := term_head proj in
+         let reduced := (eval cbv [op_hd hd] in proj) in
+         change proj with reduced in (type of lm)) in
+    pose lem as lm;
+    first [ simp (bin_model (BinOp := op));
+            simp (bin_xbounds (BinOp := op));
+            simp (bin_ybounds (BinOp := op));
+            simp (bin_outbounds (BinOp := op))
+          | simp (un_model (UnOp := op));
+            simp (un_xbounds (UnOp := op));
+            simp (un_outbounds (UnOp := op)) ];
+    let t := type of lm in
+    let t := (eval cbv beta in t) in
+    exact (lm: t).
+  
+  Notation make_bin_alloc_lemma op :=
+    ltac:(cleanup_op_lemma (@compile_binop_alloc _ op)) (only parsing).
+
+  Definition compile_mul := make_bin_alloc_lemma bin_mul.
+  Definition compile_add := make_bin_alloc_lemma bin_add.
+  Definition compile_sub := make_bin_alloc_lemma bin_sub.
+
+   Lemma compile_unop_alloc {name} (op: UnOp name) {tr mem locals functions} x:
+    let v := felem_alloc (un_model (feval x)) in
+    forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
+      Rin x_ptr x_var out_var,
+
+      (_: spec_of name) functions ->
+      bounded_by un_xbounds x ->
+
+      
+      let Rout := (FElem x_ptr x * Rin)%sep in
+      (*
+        map.get locals out_var = Some out_ptr ->
+        (FElem out_ptr out * Rout)%sep mem ->
+       *)
+
+      (FElem x_ptr x * Rin)%sep mem ->
+      map.get locals x_var = Some x_ptr ->
+      out_var <> x_var ->
+
+      (let v := v in
+       forall out out_ptr m (Heq : feval out = v),
+         bounded_by un_outbounds out ->
+         sep (FElem out_ptr out) Rout m ->
+         (<{ Trace := tr;
+             Memory := m;
+             Locals := map.put locals out_var out_ptr;
+             Functions := functions }>
+          k_impl
+          <{ fun tr' mem' locals' =>
+             exists m' mStack' : map.rep, Placeholder out_ptr mStack' /\
+                                          map.split mem' m' mStack' /\
+                                          pred (k v eq_refl) tr' m' locals' }>)) ->
+      <{ Trace := tr;
+         Memory := mem;
+         Locals := locals;
+         Functions := functions }>
+      cmd.stackalloc out_var (@felem_size_in_bytes field_parameters _ field_representaton)
+                     (cmd.seq
+                        (cmd.call [] name [expr.var out_var; expr.var x_var])
+                        k_impl)
+      <{ pred (nlet_eq [out_var] v k) }>.
+   Proof.
+    repeat straightline'.
+    split; eauto using felem_size_in_bytes_mod.
+    intros out_ptr mStack mCombined Hplace%FElem_from_bytes.
+    destruct Hplace as [out Hout].
+    repeat straightline'.
+    straightline_call.
+    intuition eauto.
+    {
+      exists (FElem out_ptr out * Rin)%sep.
+      assert (((FElem x_ptr x ⋆ Rin) * FElem out_ptr out)%sep mCombined).
+      exists mem.
+      exists mStack.
+      intuition.
+      ecancel_assumption.
+    }
+    {
+      exists mStack.
+      exists mem.
+      intuition eauto.
+      apply map.split_comm; eauto.
+    }
+    repeat straightline'.
+    eapply H4; repeat straightline'.
+    {
+      unfold v.
+      unfold felem_alloc.
+      eauto.
+    }
+    eauto.
+    {
+      unfold Rout.
+      ecancel_assumption.
+    }
+  Qed.
+
+   Notation make_un_lemma op :=
+     ltac:(cleanup_op_lemma (@compile_unop _ _ _ _ _ op)) (only parsing).
+
+   Definition compile_square := make_un_lemma un_square.
+   Definition compile_scmula24 := make_un_lemma un_scmula24.
+   Definition compile_inv := make_un_lemma un_inv.
 
   Section Gallina.
     Local Open Scope F_scope.
@@ -151,7 +312,8 @@ Section __.
                (X1: F M_pos) (P1 P2: point) : (point * point) :=
       let '(X2, Z2) := P1 in
       let '(X3, Z3) := P2 in
-      let/n A := X2+Z2 in
+      (*TODO: set things up so eq isn't needed *)
+      let/n A := felem_alloc (X2+Z2) in
       let/n AA := felem_alloc (A^2) in
       let/n B := felem_alloc (X2-Z2) in
       let/n BB := felem_alloc (B^2) in
@@ -316,6 +478,25 @@ Section __.
         end.
     Qed.
 
+  (*TODO: move, along with allocating lemma *)
+  Ltac field_compile_step :=
+  (first
+   [ simple eapply compile_scmula24
+   | simple eapply compile_mul
+   | simple eapply compile_add
+   | simple eapply compile_sub
+   | simple eapply compile_square
+   | simple eapply compile_inv
+   | simple eapply Compilation.compile_scmula24
+   | simple eapply Compilation.compile_mul
+   | simple eapply Compilation.compile_add
+   | simple eapply Compilation.compile_sub
+   | simple eapply Compilation.compile_square
+   | simple eapply Compilation.compile_inv ]); lazymatch goal with
+                                   | |- feval _ = _ => try eassumption; try reflexivity
+                                   | |- _ => idtac
+                                   end.
+  
   Ltac ladderstep_compile_custom :=
     simple apply compile_nlet_as_nlet_eq;
     field_compile_step; [ repeat compile_step .. | intros ];
@@ -327,13 +508,6 @@ Section __.
            end.
 
   Ltac compile_custom ::= ladderstep_compile_custom.
-  
-  Hint Extern 1 => simple eapply compile_stack_alloc; shelve : compiler.
-  
-  Hint Unfold pbind: compiler_cleanup.
-  Hint Extern 1 (ret _ _) => reflexivity : compiler_cleanup.
-  Hint Resolve compile_setup_nondet_pbind : compiler_setup.
-  Hint Extern 2 (IsRupicolaBinding (bindn _ _ _)) => exact true : typeclass_instances.
   
 Definition
   ladderstep_body' :=
@@ -376,7 +550,17 @@ Derive ladderstep_body SuchThat
             exact (__rupicola_program_marker ladderstep_gallina -> goal)))
          As ladderstep_correct.
 Proof.
-  enough True.
+  compile_setup.
+  repeat compile_step.
+  simpl.
+  simple eapply compile_nlet_as_nlet_eq.
+  compile_step.
+  compile_step.
+  compile_step.
+  compile_step.
+  compile_step.
+  simple eapply compile_add.
+  compile_step.
     compile.
   Qed.
 
