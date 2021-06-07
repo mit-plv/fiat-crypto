@@ -115,6 +115,7 @@ Section Lists.
 End Lists.
 
 Section Maps.
+  Local Hint Mode map.map - - : typeclass_instances.
   Context {key value} {key_eqb}
           {map : map.map key value}
           {key_eq_dec :
@@ -758,6 +759,7 @@ Section Bytes.
 End Bytes.
 
 Section Scalars.
+  Local Hint Mode word.word - : typeclass_instances.
   Context {p : Semantics.parameters} {ok : Semantics.parameters_ok p}.
 
   Local Notation bytes_per_word :=
@@ -833,6 +835,7 @@ Section Scalars.
 End Scalars.
 
 Section Words.
+  Local Hint Mode word.word - : typeclass_instances.
   Context {width} {word : word.word width} {ok : word.ok word}.
 
   Lemma map_of_Z_unsigned x :
@@ -876,6 +879,7 @@ End Words.
 
 (* These lemmas should be moved to bedrock2, not coqutil *)
 Section Separation.
+  Local Hint Mode map.map - - : typeclass_instances.
   Context `{map_ok : map.ok}
            {key_eqb : forall H H0 : key, bool}
            {key_eq_dec :
@@ -964,7 +968,7 @@ Section WeakestPrecondition.
     Proof.
       cbv [get]; intros.
       match goal with H : exists _, _ |- _ => destruct H end.
-      destruct_head'_and. eexists; eauto using get_only_differ_undef.
+      destruct_head'_and. eexists; split; try eassumption; eapply get_only_differ_undef; eauto.
     Qed.
   End Get.
 

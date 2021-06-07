@@ -123,10 +123,13 @@ Section UnsaturatedSolinas.
          (prime_bytes_bounds_value).
 
   Local Ltac specialize_correctness_hyp Hcorrect :=
-    cbv [feval feval_bytes bounded_by bytes_in_bounds
+    cbv [feval feval_bytes bounded_by bytes_in_bounds Field.loose_bounds
                field_representation Signature.field_representation
                Representation.frep Representation.eval_bytes
-               Representation.eval_words] in *;
+               Representation.eval_words
+               bin_model bin_xbounds bin_ybounds
+               un_model un_xbounds
+               ] in *;
     (* if prime_bytes_bounds, simplify first *)
     try match type of Hcorrect with
         | context [list_Z_bounded_by (map ?f ?x)] =>
@@ -276,130 +279,148 @@ Section UnsaturatedSolinas.
   Lemma mul_func_correct :
     valid_func (res mul_op _) ->
     forall functions,
-      spec_of_mul (mul_func :: functions).
+      spec_of_BinOp bin_mul (mul_func :: functions).
   Proof using M_eq check_args_ok mul_func_eq p_ok
         tight_bounds_tighter_than varname_gen_is_default.
-    intros. cbv [spec_of_mul]. rewrite mul_func_eq.
+    intros. cbv [spec_of_BinOp bin_mul]. rewrite mul_func_eq.
     pose proof carry_mul_correct
          _ _ _ _ _ ltac:(eassumption) _ (res_eq mul_op)
       as Hcorrect.
-
     eapply list_binop_correct with (res:=res mul_op);
-      handle_side_conditions; [ | ].
+    handle_side_conditions; [ | | ].
     { (* output *value* is correct *)
-      intros. specialize_correctness_hyp Hcorrect.
+      intros. 
+      specialize_correctness_hyp Hcorrect.
       destruct Hcorrect. simpl_map_unsigned.
       FtoZ; congruence. }
     { (* output *bounds* are correct *)
       intros. apply Hcorrect; auto. }
+    { cbv [bin_outbounds tight_bounds tight_upperbounds
+        prime_upperbound_list Partition.Partition.partition];
+        rewrite !map_length, seq_length; trivial. }
   Qed.
 
   Lemma square_func_correct :
     valid_func (res square_op _) ->
     forall functions,
-      spec_of_square (square_func :: functions).
+      spec_of_UnOp un_square (square_func :: functions).
   Proof using M_eq check_args_ok p_ok square_func_eq
         tight_bounds_tighter_than varname_gen_is_default.
-    intros. cbv [spec_of_square]. rewrite square_func_eq.
+    intros. cbv [spec_of_UnOp un_square]. rewrite square_func_eq.
     pose proof carry_square_correct
          _ _ _ _ _ ltac:(eassumption) _ (res_eq square_op)
       as Hcorrect.
-
-    eapply list_unop_correct with (op:=fun x => (x * x)%F)
-                                  (res:=res square_op);
-      handle_side_conditions; [ | ].
+    eapply list_unop_correct with (res:=res square_op);
+      handle_side_conditions; [ | | ].
     { (* output *value* is correct *)
       intros. specialize_correctness_hyp Hcorrect.
       destruct Hcorrect. simpl_map_unsigned.
-      FtoZ; congruence. }
+      rewrite F.pow_2_r. FtoZ; congruence. }
     { (* output *bounds* are correct *)
       intros. apply Hcorrect; auto. }
+    { cbv [un_outbounds tight_bounds tight_upperbounds
+        prime_upperbound_list Partition.Partition.partition];
+        rewrite !map_length, seq_length; trivial. }
   Qed.
 
   Lemma add_func_correct :
     valid_func (res add_op _) ->
     forall functions,
-      spec_of_add (add_func :: functions).
-  Proof using M_eq add_func_eq check_args_ok
-        loose_bounds_tighter_than p_ok varname_gen_is_default.
-    intros. cbv [spec_of_add]. rewrite add_func_eq.
+      spec_of_BinOp bin_add (add_func :: functions).
+  Proof using M_eq check_args_ok add_func_eq p_ok
+        tight_bounds_tighter_than varname_gen_is_default loose_bounds_tighter_than.
+    intros. cbv [spec_of_BinOp bin_add]. rewrite add_func_eq.
     pose proof add_correct
          _ _ _ _ _ ltac:(eassumption) _ (res_eq add_op)
       as Hcorrect.
-
     eapply list_binop_correct with (res:=res add_op);
-      handle_side_conditions; [ | ].
+    handle_side_conditions; [ | | ].
     { (* output *value* is correct *)
-      intros. specialize_correctness_hyp Hcorrect.
+      intros. 
+      specialize_correctness_hyp Hcorrect.
       destruct Hcorrect. simpl_map_unsigned.
       FtoZ; congruence. }
     { (* output *bounds* are correct *)
       intros. apply Hcorrect; auto. }
+    { cbn. cbv [loose_bounds loose_upperbounds tight_upperbounds 
+        prime_upperbound_list Partition.Partition.partition  ].
+      rewrite !map_length,combine_length,!map_length,seq_length,length_balance.
+      eapply Nat.min_id. }
   Qed.
 
   Lemma sub_func_correct :
     valid_func (res sub_op _) ->
     forall functions,
-      spec_of_sub (sub_func :: functions).
-  Proof using M_eq check_args_ok loose_bounds_tighter_than p_ok sub_func_eq
-        varname_gen_is_default.
-    intros. cbv [spec_of_sub]. rewrite sub_func_eq.
+      spec_of_BinOp bin_sub (sub_func :: functions).
+  Proof using M_eq check_args_ok sub_func_eq p_ok
+        tight_bounds_tighter_than varname_gen_is_default loose_bounds_tighter_than.
+    intros. cbv [spec_of_BinOp bin_sub]. rewrite sub_func_eq.
     pose proof sub_correct
          _ _ _ _ _ ltac:(eassumption) _ (res_eq sub_op)
       as Hcorrect.
-
     eapply list_binop_correct with (res:=res sub_op);
-      handle_side_conditions; [ | ].
+    handle_side_conditions; [ | | ].
     { (* output *value* is correct *)
-      intros. specialize_correctness_hyp Hcorrect.
+      intros. 
+      specialize_correctness_hyp Hcorrect.
       destruct Hcorrect. simpl_map_unsigned.
-      rewrite <-F.of_Z_sub. FtoZ.
-      congruence. }
+      rewrite <-F.of_Z_sub. FtoZ. congruence. }
     { (* output *bounds* are correct *)
       intros. apply Hcorrect; auto. }
+    { cbn. cbv [loose_bounds loose_upperbounds tight_upperbounds 
+        prime_upperbound_list Partition.Partition.partition  ].
+      rewrite !map_length,combine_length,!map_length,seq_length,length_balance.
+      eapply Nat.min_id. }
   Qed.
 
   Lemma opp_func_correct :
     valid_func (res opp_op _) ->
     forall functions,
-      spec_of_opp (opp_func :: functions).
+      spec_of_UnOp un_opp (opp_func :: functions).
   Proof using M_eq check_args_ok loose_bounds_tighter_than opp_func_eq p_ok
         varname_gen_is_default.
-    intros. cbv [spec_of_opp]. rewrite opp_func_eq.
+    intros. cbv [spec_of_UnOp un_opp]. rewrite opp_func_eq.
     pose proof opp_correct
          _ _ _ _ _ ltac:(eassumption) _ (res_eq opp_op)
       as Hcorrect.
 
     eapply list_unop_correct with (res:=res opp_op);
-      handle_side_conditions; [ | ].
+      handle_side_conditions; [ | | ].
     { (* output *value* is correct *)
       intros. specialize_correctness_hyp Hcorrect.
       destruct Hcorrect. simpl_map_unsigned.
       FtoZ. rewrite Z.sub_0_l; congruence. }
     { (* output *bounds* are correct *)
       intros. apply Hcorrect; auto. }
+    { cbn. cbv [loose_bounds loose_upperbounds tight_upperbounds 
+        prime_upperbound_list Partition.Partition.partition  ].
+      rewrite !map_length,combine_length,!map_length,seq_length,length_balance.
+      eapply Nat.min_id. }
   Qed.
 
   Lemma scmula24_func_correct :
     valid_func (res scmula24_op _) ->
     forall functions,
-      spec_of_scmula24 (scmula24_func :: functions).
+      spec_of_UnOp un_scmula24 (scmula24_func :: functions).
   Proof using M_eq check_args_ok p_ok scmula24_func_eq
         tight_bounds_tighter_than varname_gen_is_default.
-    intros. cbv [spec_of_scmula24]. rewrite scmula24_func_eq.
+    intros. cbv [spec_of_UnOp un_scmula24]. rewrite scmula24_func_eq.
     pose proof carry_scmul_const_correct
          _ _ _ _ _ (ltac:(eassumption)) (F.to_Z a24) _
          (res_eq scmula24_op)
       as Hcorrect.
 
     eapply list_unop_correct with (res:=res scmula24_op);
-      handle_side_conditions; [ | ].
+      handle_side_conditions; [ | | ].
     { (* output *value* is correct *)
       intros. specialize_correctness_hyp Hcorrect.
       destruct Hcorrect. simpl_map_unsigned.
       FtoZ. congruence. }
     { (* output *bounds* are correct *)
       intros. apply Hcorrect; auto. }
+    { cbv [un_outbounds tight_bounds tight_upperbounds
+        prime_upperbound_list Partition.Partition.partition];
+        rewrite !map_length, seq_length; trivial. }
   Qed.
 
   Lemma from_bytes_func_correct :
@@ -414,14 +435,17 @@ Section UnsaturatedSolinas.
       as Hcorrect.
 
     eapply Signature.from_bytes_correct with (res:=res from_bytes_op);
-      handle_side_conditions; [ | ].
+      handle_side_conditions; [ | | ].
     { (* output *value* is correct *)
       intros. specialize_correctness_hyp Hcorrect.
       destruct Hcorrect. simpl_map_unsigned.
       FtoZ. congruence. }
     { (* output *bounds* are correct *)
       intros. apply Hcorrect; auto. }
-  Qed.
+    (* forall (p0 : Interface.word.rep) (bs : list Init.Byte.byte)
+       (R : Interface.map.rep -> Prop) (m : Interface.map.rep),
+       Separation.sep (FElemBytes p0 bs) R m -> bytes_in_bounds bs *)
+  Admitted.
 
   Lemma to_bytes_func_correct :
     valid_func (res to_bytes_op _) ->
@@ -482,12 +506,12 @@ Definition field_parameters_prefixed
 
 Local Ltac begin_derive_bedrock2_func :=
   lazymatch goal with
-  | |- context [spec_of_mul] => eapply mul_func_correct
-  | |- context [spec_of_square] => eapply square_func_correct
-  | |- context [spec_of_add] => eapply add_func_correct
-  | |- context [spec_of_sub] => eapply sub_func_correct
-  | |- context [spec_of_opp] => eapply opp_func_correct
-  | |- context [spec_of_scmula24] => eapply scmula24_func_correct
+  | |- context [spec_of_BinOp bin_mul] => eapply mul_func_correct
+  | |- context [spec_of_UnOp un_square] => eapply square_func_correct
+  | |- context [spec_of_BinOp bin_add] => eapply add_func_correct
+  | |- context [spec_of_BinOp bin_sub] => eapply sub_func_correct
+  | |- context [spec_of_UnOp un_opp] => eapply opp_func_correct
+  | |- context [spec_of_UnOp un_scmula24] => eapply scmula24_func_correct
   | |- context [spec_of_from_bytes] => eapply from_bytes_func_correct
   | |- context [spec_of_to_bytes] => eapply to_bytes_func_correct
   end.
@@ -538,7 +562,7 @@ Section Tests.
 
   Derive fe25519_mul
          SuchThat (forall functions,
-                      spec_of_mul
+                      spec_of_BinOp bin_mul
                         (field_representation:=field_representation n s c)
                         (fe25519_mul :: functions))
          As fe25519_mul_correct.
@@ -546,7 +570,7 @@ Section Tests.
 
   Derive fe25519_square
          SuchThat (forall functions,
-                      spec_of_square
+                      spec_of_UnOp un_square
                         (field_representation:=field_representation n s c)
                         (fe25519_square :: functions))
          As fe25519_square_correct.
@@ -554,15 +578,16 @@ Section Tests.
 
   Derive fe25519_add
          SuchThat (forall functions,
-                      spec_of_add
+                      spec_of_BinOp bin_add
                         (field_representation:=field_representation n s c)
                         (fe25519_add :: functions))
          As fe25519_add_correct.
   Proof. Time derive_bedrock2_func add_op. Qed.
 
+
   Derive fe25519_sub
          SuchThat (forall functions,
-                      spec_of_sub
+                      spec_of_BinOp bin_sub
                         (field_representation:=field_representation n s c)
                         (fe25519_sub :: functions))
          As fe25519_sub_correct.
@@ -570,7 +595,7 @@ Section Tests.
 
   Derive fe25519_opp
          SuchThat (forall functions,
-                      spec_of_opp
+                      spec_of_UnOp un_opp
                         (field_representation:=field_representation n s c)
                         (fe25519_opp :: functions))
          As fe25519_opp_correct.
@@ -578,7 +603,7 @@ Section Tests.
 
   Derive fe25519_scmula24
          SuchThat (forall functions,
-                      spec_of_scmula24
+                      spec_of_UnOp un_scmula24
                         (field_representation:=field_representation n s c)
                         (fe25519_scmula24 :: functions))
          As fe25519_scmula24_correct.

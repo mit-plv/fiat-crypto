@@ -362,7 +362,7 @@ Section LoadStoreList.
         eapply IHrem; eauto with lia.
         eapply Proper_sep_iff1; [ | reflexivity | eassumption ].
         eapply equiv_listZ_only_differ_mem_iff1;
-          eauto using only_differ_put.
+          eauto using @only_differ_put with typeclass_instances.
         cbn [varname_set rep.varname_set rep.listZ_mem rep.Z].
         apply disjoint_singleton_singleton; eauto using string_dec. }
       repeat intro.
@@ -383,7 +383,7 @@ Section LoadStoreList.
         rewrite skipn_nth_default with (d:=0%Z) by lia.
         eapply Forall2_cons; eauto.
         eapply (equiv_Z_only_differ_iff1 (listZ:=rep.listZ_mem)); eauto.
-        { eauto using only_differ_sym, only_differ_put. }
+        { eauto using @only_differ_sym, only_differ_put with typeclass_instances. }
         { eapply disjoint_used_varnames_singleton.
           lia. }
         { assert (2 ^ (Z.of_nat (Memory.bytes_per (width:=Semantics.width) sizes) * 8)
@@ -491,7 +491,7 @@ Section LoadStoreList.
           { cbn [base_rtype_of_ltype fst snd] in *.
             eapply Proper_sep_iff1; [ | reflexivity | ].
             { eapply equivalent_only_differ_iff1;
-                eauto using equiv_listZ_only_differ_mem, only_differ_sym.
+                eauto using equiv_listZ_only_differ_mem, @only_differ_sym with typeclass_instances.
               eapply disjoint_used_varnames_lt.
               match goal with
               | H : _ |- _ =>
@@ -509,7 +509,7 @@ Section LoadStoreList.
         cbn [equivalent_args fst rtype_of_ltype].
         apply sep_empty_iff; split; eauto.
         eapply equivalent_only_differ_iff1;
-          eauto using equiv_listZ_only_differ_local, only_differ_sym.
+          eauto using equiv_listZ_only_differ_local, @only_differ_sym with typeclass_instances.
         intros.
         eapply disjoint_used_varnames_lt.
         cleanup. subst.
@@ -922,7 +922,7 @@ Section LoadStoreList.
       cbv [dlet.dlet]; split; [reflexivity|].
       split; [reflexivity|].
       split;
-        [ solve [eauto using only_differ_sym, only_differ_put] | ].
+        [ solve [eauto using @only_differ_sym, @only_differ_put with typeclass_instances] | ].
       sepsimpl. eexists; sepsimpl; try eassumption; [ ].
       cbv [WeakestPrecondition.dexpr
              WeakestPrecondition.expr
@@ -969,7 +969,7 @@ Section LoadStoreList.
       repeat match goal with H : list_lengths_from_value _ = _ |- _ =>
                              rewrite H end.
       repeat match goal with |- _ /\ _ => split end;
-        eauto using only_differ_sym, only_differ_trans.
+        eauto 10 using @only_differ_sym, @only_differ_trans with typeclass_instances.
       use_sep_assumption. cancel.
       (* TODO: why doesn't cancel handle the below? *)
       cancel_seps_at_indices 0 1; [ reflexivity | ].
