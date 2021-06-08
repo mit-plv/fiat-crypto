@@ -109,8 +109,11 @@ Section __.
     | _ => idtac
     end; eauto;
     sepsimpl; repeat straightline'; subst; eauto.
-*)
+   *)
 
+  Definition pred_sep {A} R (pred : A -> predicate) (v : A) tr' mem' locals':=
+    (R * Basics.flip (pred v tr') locals')%sep mem'.
+  
   Lemma compile_binop_alloc {name} {op: BinOp name}
         {tr mem locals functions} x y:
     let v := felem_alloc (bin_model (feval x) (feval y)) in
@@ -144,10 +147,7 @@ Section __.
              Locals := map.put locals out_var out_ptr;
              Functions := functions }>
           k_impl
-          <{ fun tr' mem' locals' =>
-             exists m' mStack' : map.rep, Placeholder out_ptr mStack' /\
-                                          map.split mem' m' mStack' /\
-                                          pred (k v eq_refl) tr' m' locals' }>)) ->
+          <{ pred_sep (Placeholder out_ptr) pred (k v eq_refl) }>)) ->
       <{ Trace := tr;
          Memory := mem;
          Locals := locals;
@@ -181,6 +181,19 @@ Section __.
       apply map.split_comm; eauto.
     }
     repeat straightline'.
+    eapply WeakestPrecondition_weaken with (p1 := pred_sep (Memory.anybytes out_ptr felem_size_in_bytes)
+                                                           pred (let/n x as out_var eq:Heq := v in
+                                                                 k x Heq)).
+    {
+      unfold pred_sep.
+      repeat straightline'.
+      destruct H9 as [mStack' [m' [Hmem [HmStack Hm]]]].
+      unfold Basics.flip in Hm.
+      exists m'.
+      exists mStack'.
+      intuition.
+      apply map.split_comm; auto.
+    }
     eapply H7; repeat straightline'.
     {
       unfold v.
@@ -221,6 +234,7 @@ Section __.
   Definition compile_add := make_bin_alloc_lemma bin_add.
   Definition compile_sub := make_bin_alloc_lemma bin_sub.
 
+  
    Lemma compile_unop_alloc {name} (op: UnOp name) {tr mem locals functions} x:
     let v := felem_alloc (un_model (feval x)) in
     forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
@@ -249,10 +263,14 @@ Section __.
              Locals := map.put locals out_var out_ptr;
              Functions := functions }>
           k_impl
-          <{ fun tr' mem' locals' =>
+          <{ pred_sep (Placeholder out_ptr) pred (k v eq_refl)
+
+            (*fun tr' mem' locals' =>
              exists m' mStack' : map.rep, Placeholder out_ptr mStack' /\
                                           map.split mem' m' mStack' /\
-                                          pred (k v eq_refl) tr' m' locals' }>)) ->
+                                          pred (k v eq_refl) tr' m' locals' 
+
+             *)}>)) ->
       <{ Trace := tr;
          Memory := mem;
          Locals := locals;
@@ -285,6 +303,19 @@ Section __.
       apply map.split_comm; eauto.
     }
     repeat straightline'.
+    eapply WeakestPrecondition_weaken with (p1 := pred_sep (Memory.anybytes out_ptr felem_size_in_bytes)
+                                                           pred (let/n x as out_var eq:Heq := v in
+                                                                 k x Heq)).
+    {
+      unfold pred_sep.
+      repeat straightline'.
+      destruct H6 as [mStack' [m' [Hmem [HmStack Hm]]]].
+      unfold Basics.flip in Hm.
+      exists m'.
+      exists mStack'.
+      intuition.
+      apply map.split_comm; auto.
+    }
     eapply H4; repeat straightline'.
     {
       unfold v.
@@ -299,7 +330,7 @@ Section __.
   Qed.
 
    Notation make_un_lemma op :=
-     ltac:(cleanup_op_lemma (@compile_unop _ _ _ _ _ op)) (only parsing).
+     ltac:(cleanup_op_lemma (@compile_unop_alloc _ op)) (only parsing).
 
    Definition compile_square := make_un_lemma un_square.
    Definition compile_scmula24 := make_un_lemma un_scmula24.
@@ -539,6 +570,7 @@ Definition
                                                            (fun (v : string) (c : cmd) => cmd.seq (cmd.unset v) c)
                                                            cmd.skip []))))))))))))))))))).
 
+Axiom TODO : False.
 Derive ladderstep_body SuchThat
          (let args := ["X1"; "X2"; "Z2"; "X3"; "Z3"] in
           ltac:(
@@ -550,20 +582,131 @@ Derive ladderstep_body SuchThat
             exact (__rupicola_program_marker ladderstep_gallina -> goal)))
          As ladderstep_correct.
 Proof.
-  compile_setup.
-  repeat compile_step.
-  simpl.
-  simple eapply compile_nlet_as_nlet_eq.
-  compile_step.
-  compile_step.
-  compile_step.
-  compile_step.
-  compile_step.
-  simple eapply compile_add.
-  compile_step.
-    compile.
-  Qed.
+  unfold ladderstep_body.
+  instantiate (1:=
+                  noskips
+                       (cmd.stackalloc "A" felem_size_in_bytes
+                          (cmd.seq (cmd.call [] add [expr.var "A"; expr.var "X2"; expr.var "Z2"])
+                             (cmd.stackalloc "AA" felem_size_in_bytes
+                                (cmd.seq (cmd.call [] square [expr.var "AA"; expr.var "A"])
+                                   (cmd.stackalloc "B" felem_size_in_bytes
+                                      (cmd.seq (cmd.call [] sub [expr.var "B"; expr.var "X2"; expr.var "Z2"])
+                                         (cmd.stackalloc "BB" felem_size_in_bytes
+                                            (cmd.seq (cmd.call [] square [expr.var "BB"; expr.var "B"])
+                                               (cmd.stackalloc "E" felem_size_in_bytes
+                                                  (cmd.seq
+                                                     (cmd.call [] sub [expr.var "E"; expr.var "AA"; expr.var "BB"])
+                                                     (cmd.stackalloc "C" felem_size_in_bytes
+                                                        (cmd.seq
+                                                           (cmd.call [] add
+                                                              [expr.var "C"; expr.var "X3"; expr.var "Z3"])
+                                                           (cmd.stackalloc "D" felem_size_in_bytes
+                                                              (cmd.seq
+                                                                 (cmd.call [] sub
+                                                                    [expr.var "D"; expr.var "X3"; expr.var "Z3"])
+                                                                 (cmd.stackalloc "DA" felem_size_in_bytes
+                                                                    (cmd.seq
+                                                                       (cmd.call [] mul
+                                                                          [expr.var "DA"; 
+                                                                          expr.var "D"; 
+                                                                          expr.var "A"])
+                                                                       (cmd.stackalloc "CB" felem_size_in_bytes
+                                                                          (cmd.seq
+                                                                             (cmd.call [] mul
+                                                                                [expr.var "CB"; 
+                                                                                expr.var "C"; 
+                                                                                expr.var "B"])
+                                                                             (cmd.seq
+                                                                                (cmd.call [] add
+                                                                                   [expr.var "X3"; 
+                                                                                   expr.var "DA"; 
+                                                                                   expr.var "CB"])
+                                                                                (cmd.seq
+                                                                                   (cmd.call [] square
+                                                                                     [
+                                                                                     expr.var "X3"; 
+                                                                                     expr.var "X3"])
+                                                                                   (cmd.seq
+                                                                                     (cmd.call [] sub
+                                                                                     [
+                                                                                     expr.var "Z3"; 
+                                                                                     expr.var "DA"; 
+                                                                                     expr.var "CB"]) cmd.skip)))))))))))))))))))))).
+  destruct TODO.
+Qed.
 
+(*compile_setup.
+  do 16 compile_step.
+  (* 3 s*)
+  simple apply compile_nlet_as_nlet_eq.
+  field_compile_step.
+  Set Printing Depth 100.
+  9:instantiate(1:= cmd.skip).
+  7:instantiate(2:= "DA").
+  8:instantiate(2:= "CB").
+  all: destruct TODO.
+  
+  destruct TODO.
+Time Qed.
+    Time
+    1-8:repeat compile_step.
+    eauto with compiler;
+    (* rewrite results in terms of feval to match lemmas *)
+    repeat lazymatch goal with
+           | H : feval _ = ?x |- context [?x] =>
+             is_var x; rewrite <-H
+           end.
+  compile_custom.
+  compile_step.
+  (* 10 s*)
+  compile_step.
+  (*26s *)
+  compile_step.
+  (*96s *)
+  instantiate(1:= cmd.skip).
+  destruct TODO.
+Time Qed.
+  unfold pred_sep; simpl.
+  unfold Basics.flip; simpl.
+  repeat change (fun x => ?h x) with h.
+  unfold map.getmany_of_list.
+  simpl.
+  {
+    (*TODO: do in a better way*)
+    repeat lazymatch goal with
+      [H : (_ * _)%sep _ |-_] =>
+      let m1 := fresh "m" in
+      let m2 := fresh "m" in
+      let Hm1 := fresh "Hm" in
+      let Hm2 := fresh  "Hm" in
+      destruct H as [m1 [m2 [? [Hm1 Hm2]]]]
+           end.
+    match goal with
+      [H := noskips ?c |- _] =>
+      idtac c
+    end.
+    idtac ladderstep_body.
+    destruct TODO.
+    (*
+      repeat lazymatch goal with
+      [H : FElem ?ptr _ ?m' |- (Placeholder ?ptr * _)%sep ?m] =>
+      exists m'; eexists; split; [shelve|]; split;
+        [ apply FElem_from_bytes; eexists; eassumption |]
+           end.
+    exists [].
+    intuition.
+    do 4 eexists.
+    split; [reflexivity|].
+    intuition.
+    repeat lazymatch goal with
+      [H : ?R ?m' |- (_ * ?R)%sep ?m] =>
+      eexists; exists m';
+        split; [shelve|]; split; [| eassumption]
+           end.
+    eassumption.
+     *)
+  }
+Qed.*)
   
 End __.
 
