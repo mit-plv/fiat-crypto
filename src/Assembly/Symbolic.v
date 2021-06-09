@@ -76,6 +76,8 @@ End NOrder.
 Module NSort := Mergesort.Sort NOrder.
 Notation sortN := NSort.sort.
 
+Require Import Coq.Program.Equality.
+
 Section Forall2.
   Lemma Forall2_flip {A B} {R : A -> B -> Prop} xs ys :
     Forall2 R xs ys -> Forall2 (fun y x => R x y) ys xs.
@@ -84,12 +86,30 @@ Section Forall2.
   Lemma length_Forall2 [A B : Type] [xs ys] [P:A->B->Prop] : Forall2 P xs ys -> length xs = length ys.
   Proof. induction 1; cbn; eauto. Qed.
 
-  Context {A B} {P Q:A->B->Prop} (H : forall (a : A) (b : B), P a b -> Q a b).
-  Fixpoint Forall2_weaken args args' (pf : Forall2 P args args') : Forall2 Q args args' :=
-    match pf with
-    | Forall2_nil => Forall2_nil _
-    | Forall2_cons _ _ _ _ Rxy k => Forall2_cons _ _ (H _ _ Rxy) (Forall2_weaken _ _ k)
-    end.
+  Section weaken.
+    Context {A B} {P Q:A->B->Prop} (H : forall (a : A) (b : B), P a b -> Q a b).
+    Fixpoint Forall2_weaken args args' (pf : Forall2 P args args') : Forall2 Q args args' :=
+      match pf with
+      | Forall2_nil => Forall2_nil _
+      | Forall2_cons _ _ _ _ Rxy k => Forall2_cons _ _ (H _ _ Rxy) (Forall2_weaken _ _ k)
+      end.
+  End weaken.
+  Lemma Forall2_map_l {A' A B} (f : A' -> A) {R : A -> B -> Prop} (xs : list A') (ys : list B) :
+    Forall2 R (map f xs) ys <-> Forall2 (fun x y => R (f x) y) xs ys.
+  Proof.
+    split; intros H; dependent induction H; try destruct xs; cbn in *;
+      try congruence; eauto.
+    { inversion x; subst; eauto. }
+  Qed.
+  Import RelationClasses.
+  Instance Reflexive_forall2 [A] [R] : @Reflexive A R -> Reflexive (Forall2 R).
+  Proof. intros ? l; induction l; eauto. Qed.
+  Lemma Forall2_eq [A] (xs ys : list A) : Forall2 eq xs ys <-> xs = ys.
+  Proof. split; induction 1; subst; eauto; reflexivity. Qed.
+  Lemma Forall2_trans [A B C] [AB BC] [xs : list A] [ys : list B] :
+    Forall2 AB xs ys -> forall [zs : list C], Forall2 BC ys zs ->
+    Forall2 (fun x z => exists y, AB x y /\ BC y z) xs zs.
+  Proof. induction 1; inversion 1; subst; econstructor; eauto. Qed.
 End Forall2.
 
 Require Import Crypto.Assembly.Syntax.
@@ -129,9 +149,13 @@ Require Import Crypto.Util.Option Crypto.Util.Notations Coq.Lists.List.
 Import ListNotations.
 
 Definition interp_op o s args :=
+  let keep n x := N.land x (N.ones n) in
+  let ret x := Some (keep s x) in
   match o, args with
-  | add, args => Some (N.land (List.fold_right N.add 0 args) (N.ones s))
-  | neg, [a] => Some (N.land (2^s - a) (N.ones s))
+  | add, args => ret (List.fold_right N.add 0 args)
+  | xor, args => ret (List.fold_right N.lxor 0 args)
+  | neg, [a] => ret (2^s - a)
+  | slice lo sz, [a] => ret (keep sz (N.shiftr a lo))
   | const z, nil => Some (N.land z (N.ones s))
   (* note: incomplete *)
   | _, _ => None
@@ -208,6 +232,13 @@ Section WithDag.
     (_:interp_op opn s args' = Some n)
     : eval (ExprApp ((opn, s), args)) n.
 
+  Variant eval_node : node idx -> N -> Prop :=
+  | ENod opn s args args' n
+    (_:List.Forall2 eval (map ExprRef args) args')
+    (_:interp_op opn s args' = Some n)
+    : eval_node ((opn, s), args) n.
+
+
   Section eval_ind.
     Context (P : expr -> N -> Prop)
       (HRef : forall i opn s args args' n, nth_error dag (N.to_nat i) = Some ((opn, s), args) ->
@@ -225,8 +256,21 @@ Section WithDag.
       end.
   End eval_ind.
 
+  Lemma eval_eval : forall e v1, eval e v1 -> forall v2, eval e v2 -> v1=v2.
+  Proof.
+    induction 1; inversion 1; subst;
+    enough (args' = args'0) by congruence;
+    try replace args0 with args in * by congruence.
+    { eapply Forall2_map_l in H0.
+      eapply Forall2_flip in H0.
+      eapply (proj1 (Forall2_map_l _ _ _)) in H5.
+      epose proof Forall2_trans H0 H5 as HH.
+      eapply Forall2_eq, Forall2_weaken, HH; cbv beta; clear; firstorder. }
+    { eapply Forall2_flip in H.
+      epose proof Forall2_trans H H6 as HH.
+      eapply Forall2_eq, Forall2_weaken, HH; cbv beta; clear; firstorder. }
+  Qed.
 
-  Require Import Coq.Program.Equality.
   Lemma repr_reveals : forall i e, reveals (ExprRef i) e -> repr i e.
   Proof.
     intros ? ? H.
@@ -264,6 +308,27 @@ Section WithDag.
     rewrite H; econstructor.
     clear dependent i.
     induction H1; cbn; eauto.
+  Qed.
+
+  Lemma eval_reveal : forall n i, forall v, eval (ExprRef i) v ->
+    forall e, reveal n i = e -> eval e v.
+  Proof.
+    induction n; cbn [reveal]; cbv [reveal_step]; intros; subst; eauto; [].
+    inversion H; subst; clear H.
+    rewrite H1; econstructor; try eassumption.
+    eapply (proj1 (Forall2_map_l _ _ _)) in H2.
+    clear dependent i; clear dependent v.
+    induction H2; cbn; eauto.
+  Qed.
+
+  Lemma eval_node_reveal_node : forall n v, eval_node n v ->
+    forall f e, reveal_node f n = e -> eval e v.
+  Proof.
+    cbv [reveal_node]; inversion 1; intros; subst.
+    econstructor; eauto.
+    eapply (proj1 (Forall2_map_l _ _ _)) in H0; eapply Forall2_map_l.
+    eapply Forall2_weaken; try eassumption; []; cbv beta; intros.
+    eapply eval_reveal; eauto.
   Qed.
 End WithDag.
 
@@ -410,12 +475,30 @@ Fixpoint interp_expr (e : expr) : option N :=
   | _ => None
   end%option.
 
+Lemma eval_interp_expr e : forall d v, interp_expr e = Some v -> eval d e v.
+Proof.
+  induction e; cbn; try discriminate; intros.
+  case n in *; case o in *; cbn [fst snd] in *.
+  destruct (Option.List.lift _) eqn:? in *; try discriminate.
+  econstructor; try eassumption; [].
+  clear dependent v.
+  revert dependent l0.
+  induction H; cbn in *.
+  { inversion 1; subst; eauto. }
+  destruct (interp_expr _) eqn:? in *; cbn in *; try discriminate; [].
+  destruct (fold_right _ _ _) eqn:? in *; cbn in *; try discriminate; [].
+  specialize (fun d => H d _ eq_refl).
+  inversion 1; subst.
+  econstructor; trivial; [].
+  eapply IHForall; eassumption.
+Qed.
+
 Definition isCst (e : expr) :=
   match e with ExprApp ((const _, _), _) => true | _ => false end.
 Definition simplify_expr : expr -> expr :=
   List.fold_left (fun e f => f e)
   [fun e => match interp_expr e with
-            | Some v => ExprApp ((const v, 64(*note:arbitrary*)), nil)
+            | Some v => ExprApp ((const v, 1+N.log2 v), nil)
             | _ => e end
   ;fun e => match e with
     ExprApp (o, args) =>
@@ -433,6 +516,7 @@ Definition simplify_expr : expr -> expr :=
     ExprApp (o, ExprApp (const v, snd o, nil):: snd csts_exprs)
     end else e | _ => e end
   ;fun e => match e with
+    (* note: this rule is wrong, it may remove a truncation *)
     ExprApp ((slice 0 s',s), [a]) =>
       if N.eqb s s' then a else e | _ => e end
   ;fun e => match e with
@@ -451,6 +535,59 @@ Definition simplify_expr : expr -> expr :=
   ]%N%bool.
 Definition simplify (dag : dag) (e : node idx) : expr :=
   simplify_expr (reveal_node dag 2 e).
+
+Lemma eval_simplify_expr d e v : eval d e v -> eval d (simplify_expr e) v.
+Proof.
+  intros H; cbv [simplify_expr].
+  repeat match goal with (* one goal per rewrite rule *)
+  | |- context G [fold_left ?f (cons ?r ?rs) ?e] =>
+    let re := fresh "e" in
+    let e_re := eval cbv beta in (r e) in pose (e_re) as re;
+    let g := context G [fold_left f rs re] in change g;
+    assert (eval d re v); [ subst re | clearbody re;
+        clear dependent e; rename re into e ]
+  | |- context G [fold_left ?f nil ?e] => eassumption
+  end.
+  all : repeat match goal with
+               | _ => solve [trivial]
+               | _ => progress cbn [fst snd interp_op] in *
+               | _ => progress inversion_option
+               | H: interp_expr _ = Some _ |- _ => eapply eval_interp_expr in H; instantiate (1:=d) in H
+               | H : eval _ ?e _ |- _ => assert_fails (is_var e); inversion H; clear H; subst
+               | H : Forall2 (eval _) ?es _ |- _ => assert_fails (is_var es); inversion H; clear H; subst
+               | H : N.eqb ?n _ = true |- _ => eapply N.eqb_eq in H; subst n
+               | H : expr_beq ?a ?b = true |- _ => replace a with b in * by admit; clear H
+               | H : eval ?d ?e ?v1, G: eval ?d ?e ?v2 |- _ =>
+                   assert_fails (constr_eq v1 v2);
+                   eapply (eval_eval d e v1 H v2) in G
+               | H : _ = ?v |- _ => is_var v; progress subst v
+               | H : ?v = _ |- _ => is_var v; progress subst v
+               | |- eval ?d ?e ?v =>
+                   match goal with
+                     H : eval d e ?v' |- _ =>
+                         let Heq := fresh in
+                         enough (Heq : v = v') by (rewrite Heq; exact H); 
+                         clear H; try clear e
+                   end
+               | _ => progress BreakMatch.break_match
+               end.
+  { econstructor; eauto; []; cbn [interp_op].
+    rewrite N.land_ones_low by Lia.lia.
+    f_equal; eauto using eval_eval. }
+  admit.
+  admit.
+  admit.
+  { 
+    rewrite N.shiftr_0_r.
+    rewrite <-N.land_assoc, N.land_diag.
+    admit. (* bad rewrite rule *)
+  }
+  admit.
+  admit.
+  admit.
+  { econstructor; eauto; []; cbn [interp_op fold_right].
+    rewrite N.lxor_0_r, N.lxor_nilpotent; trivial. }
+Admitted.
 
 Definition reg_state := Tuple.tuple (option idx) 16.
 Definition flag_state := Tuple.tuple (option idx) 6.
