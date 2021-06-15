@@ -493,6 +493,57 @@ Proof.
   eapply IHForall; eassumption.
 Qed.
 
+Lemma le_land n m : (N.land n m <= m)%N.
+Proof.
+Admitted.
+
+Lemma land_ones_le n m : (n <= N.ones m -> N.land n (N.ones m) = n)%N.
+Proof.
+  intros; eapply N.bits_inj_iff; intro i.
+  rewrite N.land_spec.
+  epose proof N.ones_spec_iff m i.
+  destruct (N.testbit (N.ones m) i);
+    rewrite ?Bool.andb_true_r, ?Bool.andb_false_r; intuition idtac.
+  destruct (N.le_gt_cases m i); try intuition congruence; [].
+  clear H1 H2.
+  (*
+  erewrite N.bits_above_log2; trivial.
+  erewrite N.ones_equiv in H.
+  assert (n < 2 ^ m)%N by admit; clear H.
+  assert (n < 2 ^ i)%N by admit; clear H0.
+  eapply N.log2_lt_pow2.
+  Search N.log2 N.lt N.pow.
+  Search N.ones N.pow.
+  *)
+Admitted.
+
+Lemma bound_interp_op o s args v : interp_op o s args = Some v ->
+  (v <= N.ones s)%N.
+Proof.
+  repeat match goal with
+         | _ => progress subst
+         | _ => progress cbv [interp_op]
+         | _ => progress inversion_option
+         | _ => progress BreakMatch.break_match
+         | _ => progress intros
+         end;
+    eauto using le_land.
+Qed.
+
+Definition bound_expr e : option N := (* e <= r *)
+  match e with
+  | ExprApp ((_, s), _) => Some (N.ones s)
+  | _ => None
+  end.
+
+Lemma eval_bound_expr e b : bound_expr e = Some b ->
+  forall d v, eval d e v -> (v <= b)%N.
+Proof.
+  cbv [bound_expr]; BreakMatch.break_match;
+    inversion 2; intros; inversion_option; subst;
+    eauto using bound_interp_op.
+Qed.
+
 Definition isCst (e : expr) :=
   match e with ExprApp ((const _, _), _) => true | _ => false end.
 Definition simplify_expr : expr -> expr :=
@@ -516,9 +567,10 @@ Definition simplify_expr : expr -> expr :=
     ExprApp (o, ExprApp (const v, snd o, nil):: snd csts_exprs)
     end else e | _ => e end
   ;fun e => match e with
-    (* note: this rule is wrong, it may remove a truncation *)
     ExprApp ((slice 0 s',s), [a]) =>
-      if N.eqb s s' then a else e | _ => e end
+      match bound_expr a with Some b =>
+      if N.leb b (N.ones s) && N.leb b (N.ones s')
+      then a else e | _ => e end | _ => e end
   ;fun e => match e with
     ExprApp (o, args) =>
     match identity (fst o) with
@@ -553,10 +605,15 @@ Proof.
                | _ => progress cbn [fst snd interp_op] in *
                | _ => progress inversion_option
                | H: interp_expr _ = Some _ |- _ => eapply eval_interp_expr in H; instantiate (1:=d) in H
+               | H: bound_expr _ = Some _ |- _ => eapply eval_bound_expr in H; eauto; [ ]
                | H : eval _ ?e _ |- _ => assert_fails (is_var e); inversion H; clear H; subst
                | H : Forall2 (eval _) ?es _ |- _ => assert_fails (is_var es); inversion H; clear H; subst
+
+               | H : andb _ _ = true |- _ => eapply Bool.andb_prop in Heqb; case Heqb as (?&?)
                | H : N.eqb ?n _ = true |- _ => eapply N.eqb_eq in H; subst n
                | H : expr_beq ?a ?b = true |- _ => replace a with b in * by admit; clear H
+
+               | H : (?x <=? ?y)%N = ?b |- _ => is_constructor b; destruct (N.leb_spec x y); (inversion H || clear H)
                | H : eval ?d ?e ?v1, G: eval ?d ?e ?v2 |- _ =>
                    assert_fails (constr_eq v1 v2);
                    eapply (eval_eval d e v1 H v2) in G
@@ -578,9 +635,8 @@ Proof.
   admit.
   admit.
   { 
-    rewrite N.shiftr_0_r.
-    rewrite <-N.land_assoc, N.land_diag.
-    admit. (* bad rewrite rule *)
+    erewrite 2land_ones_le; rewrite ?N.shiftr_0_r; trivial; try Lia.lia.
+    admit. (*N.land and N.le *)
   }
   admit.
   admit.
@@ -588,6 +644,9 @@ Proof.
   { econstructor; eauto; []; cbn [interp_op fold_right].
     rewrite N.lxor_0_r, N.lxor_nilpotent; trivial. }
 Admitted.
+
+Lemma eval_simplify d n v : eval_node d n v -> eval d (simplify d n) v.
+Proof. eauto using eval_simplify_expr, eval_node_reveal_node. Qed.
 
 Definition reg_state := Tuple.tuple (option idx) 16.
 Definition flag_state := Tuple.tuple (option idx) 6.
