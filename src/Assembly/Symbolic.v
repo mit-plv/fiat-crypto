@@ -353,7 +353,13 @@ Admitted.
 
 Lemma eval_weaken d x e n : eval d e n -> eval (d ++ [x]) e n.
 Proof.
-Admitted.
+  induction 1; subst; econstructor; eauto.
+  { erewrite nth_error_app1; try eassumption; [].
+    eapply ListUtil.nth_error_value_length; eassumption. }
+  all : eapply Forall2_weaken; [|eassumption].
+  { intuition eauto. eapply H2. }
+  { intuition eauto. eapply H1. }
+Qed.
 
 Lemma permute_commutative opn s args n : commutative opn = true -> 
   interp_op opn s args = Some n ->
