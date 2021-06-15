@@ -582,6 +582,7 @@ Derive ladderstep_body SuchThat
             exact (__rupicola_program_marker ladderstep_gallina -> goal)))
          As ladderstep_correct.
 Proof.
+  (*
   unfold ladderstep_body.
   instantiate (1:=
                   noskips
@@ -633,11 +634,12 @@ Proof.
                                                                                      expr.var "DA"; 
                                                                                      expr.var "CB"]) cmd.skip)))))))))))))))))))))).
   destruct TODO.
-Qed.
+Qed.*)
 
-(*compile_setup.
+  compile_setup.
   do 16 compile_step.
   (* 3 s*)
+  (*
   simple apply compile_nlet_as_nlet_eq.
   field_compile_step.
   Set Printing Depth 100.
@@ -657,56 +659,77 @@ Time Qed.
              is_var x; rewrite <-H
            end.
   compile_custom.
+*)
   compile_step.
   (* 10 s*)
   compile_step.
   (*26s *)
   compile_step.
   (*96s *)
-  instantiate(1:= cmd.skip).
+  repeat compile_step.
+ 
+  (*instantiate(1:= cmd.skip).
   destruct TODO.
-Time Qed.
-  unfold pred_sep; simpl.
-  unfold Basics.flip; simpl.
-  repeat change (fun x => ?h x) with h.
-  unfold map.getmany_of_list.
-  simpl.
+Time Qed. *)
   {
-    (*TODO: do in a better way*)
-    repeat lazymatch goal with
-      [H : (_ * _)%sep _ |-_] =>
-      let m1 := fresh "m" in
-      let m2 := fresh "m" in
-      let Hm1 := fresh "Hm" in
-      let Hm2 := fresh  "Hm" in
-      destruct H as [m1 [m2 [? [Hm1 Hm2]]]]
-           end.
-    match goal with
-      [H := noskips ?c |- _] =>
-      idtac c
-    end.
-    idtac ladderstep_body.
-    destruct TODO.
-    (*
-      repeat lazymatch goal with
-      [H : FElem ?ptr _ ?m' |- (Placeholder ?ptr * _)%sep ?m] =>
-      exists m'; eexists; split; [shelve|]; split;
-        [ apply FElem_from_bytes; eexists; eassumption |]
-           end.
-    exists [].
-    intuition.
-    do 4 eexists.
-    split; [reflexivity|].
-    intuition.
-    repeat lazymatch goal with
-      [H : ?R ?m' |- (_ * ?R)%sep ?m] =>
-      eexists; exists m';
-        split; [shelve|]; split; [| eassumption]
-           end.
-    eassumption.
-     *)
+    unfold pred_sep; simpl.
+    unfold Basics.flip; simpl.
+    repeat change (fun x => ?h x) with h.
+    unfold map.getmany_of_list.
+    simpl.
+    {
+      (*TODO: do in a better way*)
+      change (fun y => exists ws, @?P ws y) with (Lift1Prop.ex1 P).
+      repeat seprewrite FElem_from_bytes.
+      repeat (sepsimpl;
+              match goal with
+                [H : context [FElem ?p ?v] |- Lift1Prop.ex1 (fun h => FElem ?p h * _)%sep _] =>
+                exists v
+              end).
+      sepsimpl.
+      exists [].
+      cbv beta.
+      eapply Proper_sep_iff1.
+      2: reflexivity.
+      {
+        instantiate (1:=
+                       (Lift1Prop.ex1 (fun X4 =>
+                        Lift1Prop.ex1 (fun Z4 =>
+                        Lift1Prop.ex1 (fun X5 =>
+                        Lift1Prop.ex1 (fun Z5 =>
+                        (emp ((feval out13, feval out16, (feval out9, feval out12))
+                         = (feval X4, feval Z4, (feval X5, feval Z5)) /\
+                        bounded_by tight_bounds X4 /\
+                        bounded_by tight_bounds Z4 /\
+                        bounded_by tight_bounds X5 /\ bounded_by tight_bounds Z5))
+                        * (FElem pX1 X1 ⋆ FElem pX2 X4 ⋆ FElem pZ2 Z4 ⋆ FElem pX3 X5 ⋆ FElem pZ3 Z5 ⋆ R))))))%sep).
+        cbv [Lift1Prop.iff1 Lift1Prop.ex1].
+        intuition idtac.
+        {
+          destruct H33 as (?&?&?&?&?).
+          exists x0, x1, x2, x3.
+          intuition idtac.
+          eapply sep_emp_l.
+          intuition idtac.
+        }
+        {
+          destruct H28 as (?&?&?&?&?).
+          exists x0, x1, x2, x3.
+          eapply sep_emp_l in H28.
+          intuition idtac.
+        }
+      }
+      sepsimpl; eexists.
+      sepsimpl; eexists.
+      sepsimpl; eexists.
+      sepsimpl; eexists.
+      sepsimpl.
+      auto.
+      all: try assumption.
+      ecancel_assumption.
+    }
   }
-Qed.*)
+Qed.
   
 End __.
 
