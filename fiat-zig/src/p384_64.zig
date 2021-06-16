@@ -18,8 +18,20 @@
 //                            if x1 & (2^384-1) < 2^383 then x1 & (2^384-1) else (x1 & (2^384-1)) - 2^384
 
 const std = @import("std");
-const cast = std.meta.cast;
 const mode = std.builtin.mode; // Checked arithmetic is disabled in non-debug modes to avoid side channels
+
+inline fn cast(comptime DestType: type, target: anytype) DestType {
+    if (@typeInfo(@TypeOf(target)) == .Int) {
+        const dest = @typeInfo(DestType).Int;
+        const source = @typeInfo(@TypeOf(target)).Int;
+        if (dest.bits < source.bits) {
+            return @bitCast(DestType, @truncate(std.meta.Int(source.signedness, dest.bits), target));
+        } else {
+            return @bitCast(DestType, @as(std.meta.Int(source.signedness, dest.bits), target));
+        }
+    }
+    return @as(DestType, target);
+}
 
 // The type MontgomeryDomainFieldElement is a field element in the Montgomery domain.
 // Bounds: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
