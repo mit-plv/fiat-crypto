@@ -95,9 +95,21 @@ Module Zig.
              (typedef_map : list typedef_info)
     : list string
     := (["";
-        "const std = @import(""std"");";
-        "const cast = std.meta.cast;";
-        "const mode = std.builtin.mode; // Checked arithmetic is disabled in non-debug modes to avoid side channels"]
+         "const std = @import(""std"");";
+         "const mode = std.builtin.mode; // Checked arithmetic is disabled in non-debug modes to avoid side channels";
+         "";
+         "inline fn cast(comptime DestType: type, target: anytype) DestType {";
+         "    if (@typeInfo(@TypeOf(target)) == .Int) {";
+         "        const dest = @typeInfo(DestType).Int;";
+         "        const source = @typeInfo(@TypeOf(target)).Int;";
+         "        if (dest.bits < source.bits) {";
+         "            return @bitCast(DestType, @truncate(std.meta.Int(source.signedness, dest.bits), target));";
+         "        } else {";
+         "            return @bitCast(DestType, @as(std.meta.Int(source.signedness, dest.bits), target));";
+         "        }";
+         "    }";
+         "    return @as(DestType, target);";
+         "}"]
           ++ (if skip_typedefs
               then []
               else List.flat_map
