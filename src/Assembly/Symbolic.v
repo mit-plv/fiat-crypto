@@ -115,7 +115,7 @@ End Forall2.
 Require Import Crypto.Assembly.Syntax.
 Definition idx := N.
 Local Set Boolean Equality Schemes.
-Variant opname := old (_:REG*option nat) | const (_ : N) | add | addcarry | notaddcarry | neg | shl | shr | and | or | xor | slice (lo sz : N) | mul | mulhuu | set_slice (lo sz : N)(* | ... *).
+Variant opname := old (_:REG*option nat) | const (_ : N) | add | addcarry | addoverflow | notaddcarry | addbytecarry | addbyteoverflow | neg | shl | shr | sarbytecarry | sarbyteoverflow | lowbyte | setlowbyte | nonzero | select | rcr | rcrbyteoverflow | rcrbytecarry | and | or | xor | slice (lo sz : N) | mul | mulhuu | set_slice (lo sz : N)(* | ... *).
 
 Definition associative o := match o with add|mul|or|and => true | _ => false end.
 Definition commutative o := match o with add|addcarry|mul|mulhuu => true | _ => false end.
@@ -744,6 +744,7 @@ Section MapM. (* map over a list in the state monad *)
     | nil => ret nil
     | cons a l => b <- f a; bs <- mapM l; ret (cons b bs)
     end%x86symex.
+
 End MapM.
 Definition mapM_ [A B] (f: A -> M B) l : M unit := _ <- mapM f l; ret tt.
 
