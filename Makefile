@@ -523,7 +523,7 @@ $(PERF_TXTS) : %.txt :
 	$(SHOW)'PYTHON > $@'
 	$(HIDE)$(file >$@.list.tmp,)
 	$(HIDE)$(foreach i,$(wildcard $(ALL_PERF_LOGS)),$(file >>$@.list.tmp,$(i)))
-	$(HIDE)xargs ./src/Rewriter/PerfTesting/Specific/to_csv.py --$* --txt --file-list $@.list.tmp > $@.tmp
+	$(HIDE)./src/Rewriter/PerfTesting/Specific/to_csv.py --$* --txt --file-list $@.list.tmp > $@.tmp
 	$(HIDE)cat $@.tmp | sed 's/\s*$$//g' > $@ && rm -f $@.tmp
 
 # work around COQBUG(https://github.com/coq/coq/issues/10495)
