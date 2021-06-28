@@ -41,7 +41,8 @@ REGS = {'kind': r'(UnsaturatedSolinas|WordByWordMontgomery)',
         'descr': r'\|}\s*\)[\s"]*([^:]+)',
         'real': r'(?:ran for |real:\s*)([0-9\.]*) s',
         'user': r'(?:secs \(|user:\s*)([0-9\.]*)(?:u,| s)',
-        'index': r'(?:UnsaturatedSolinas.*index = ([0-9]+)|WordByWordMontgomery)'}
+        'index': r'(?:index = ([0-9]+)|WordByWordMontgomery)',
+        'nlimbs': r'(?:[ \.]n := ([0-9]+)|WordByWordMontgomery)'}
 def get_data(line):
     ret = {}
     bad = False
@@ -151,7 +152,7 @@ def lines_to_rows(lines, for_graph=False, real_or_user='real', only=None, **kwar
                                           *[v for short_key, v in extra_args if d_key_filter(short_key)])
                         if row is not None: yield row
     else:
-        keys = ['prime', 'user', 'real', 'kind', 'bitwidth', 'descr1', 'descr2', 'index', 'prime_str']
+        keys = ['prime', 'user', 'real', 'kind', 'bitwidth', 'descr1', 'descr2', 'index', 'nlimbs', 'prime_str']
         yield list(keys)
         for data in map(get_data, lines):
             if data is None: continue
