@@ -202,6 +202,13 @@ if __name__ == '__main__':
     if '--txt' in fnames:
         txt = True
         del fnames[fnames.index('--txt')]
+    while '--file-list' in fnames:
+        file_list_file = fnames[fnames.index('--file-list')+1]
+        del fnames[fnames.index('--file-list')+1]
+        del fnames[fnames.index('--file-list')]
+        with open(file_list_file, 'r') as f:
+            file_list = [i.strip() for i in f.readlines() if i.strip()]
+        fnames.extend(file_list)
     lines = [line
              for fname in fnames
              for line in postformat(get_input(fname))]
