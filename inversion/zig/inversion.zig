@@ -52,7 +52,7 @@ fn fieldElement(comptime Field: type) type {
             return fe;
         }
 
-        pub const one = comptime one: {
+        pub const one = one: {
             var fe: Self = undefined;
             fiat.setOne(&fe.limbs);
             break :one fe;
