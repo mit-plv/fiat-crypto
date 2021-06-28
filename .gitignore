@@ -140,6 +140,8 @@ src/Rewriter/PerfTesting/Specific/generated/*.v
 src/Rewriter/PerfTesting/Specific/generated/*.sh
 src/Rewriter/PerfTesting/Specific/generated/primes.mk
 
+/*.csv.list.tmp
+
 # Rust
 /fiat-rust/Cargo.lock
 /fiat-rust/target/
