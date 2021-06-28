@@ -162,7 +162,7 @@ def lines_to_rows(lines, for_graph=False, real_or_user='real', only=None, **kwar
 def writecsv(outfname, lines, **kwargs):
     rows = lines_to_rows(lines, **kwargs)
     def do_write(csvfile):
-        writer = csv.writer(csvfile, quoting=csv.QUOTE_MINIMAL)
+        writer = csv.writer(csvfile, quoting=csv.QUOTE_MINIMAL, lineterminator='\n')
         writer.writerows(rows)
     if outfname == '-': do_write(sys.stdout)
     else:
