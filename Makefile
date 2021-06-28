@@ -505,20 +505,26 @@ perf-csv: perf.csv perf-graph.csv $(PERF_TXTS)
 .PHONY: perf.csv
 perf.csv:
 	$(SHOW)'PYTHON > $@'
-	$(HIDE)./src/Rewriter/PerfTesting/Specific/to_csv.py $(wildcard $(ALL_PERF_LOGS)) > $@.tmp
-	$(HIDE)sed 's/\r\n/\n/g; s/\r//g; s/\s*$$//g' $@.tmp > $@ && rm -f $@.tmp
+	$(HIDE)$(file >$@.list.tmp,)
+	$(HIDE)$(foreach i,$(wildcard $(ALL_PERF_LOGS)),$(file >>$@.list.tmp,$(i)))
+	$(HIDE)cat $@.list.tmp | xargs ./src/Rewriter/PerfTesting/Specific/to_csv.py > $@.tmp
+	$(HIDE)cat $@.tmp | tr -d '\r' | sed 's/\s*$$//g' > $@ && rm -f $@.tmp
 
 .PHONY: perf-graph.csv
 perf-graph.csv:
 	$(SHOW)'PYTHON > $@'
-	$(HIDE)./src/Rewriter/PerfTesting/Specific/to_csv.py --for-graph $(wildcard $(ALL_PERF_LOGS)) > $@.tmp
-	$(HIDE)sed 's/\r\n/\n/g; s/\r//g; s/\s*$$//g' $@.tmp > $@ && rm -f $@.tmp
+	$(HIDE)$(file >$@.list.tmp,)
+	$(HIDE)$(foreach i,$(wildcard $(ALL_PERF_LOGS)),$(file >>$@.list.tmp,$(i)))
+	$(HIDE)cat $@.list.tmp | xargs ./src/Rewriter/PerfTesting/Specific/to_csv.py --for-graph > $@.tmp
+	$(HIDE)cat $@.tmp | tr -d '\r' | sed 's/\s*$$//g' > $@ && rm -f $@.tmp
 
 .PHONY: $(PERF_TXTS)
 $(PERF_TXTS) : %.txt :
 	$(SHOW)'PYTHON > $@'
-	$(HIDE)./src/Rewriter/PerfTesting/Specific/to_csv.py --$* --txt $(wildcard $(ALL_PERF_LOGS)) > $@.tmp
-	$(HIDE)sed 's/\r\n/\n/g; s/\r//g; s/\s*$$//g' $@.tmp > $@ && rm -f $@.tmp
+	$(HIDE)$(file >$@.list.tmp,)
+	$(HIDE)$(foreach i,$(wildcard $(ALL_PERF_LOGS)),$(file >>$@.list.tmp,$(i)))
+	$(HIDE)cat $@.list.tmp | xargs ./src/Rewriter/PerfTesting/Specific/to_csv.py --$* --txt > $@.tmp
+	$(HIDE)cat $@.tmp | tr -d '\r' | sed 's/\s*$$//g' > $@ && rm -f $@.tmp
 
 # work around COQBUG(https://github.com/coq/coq/issues/10495)
 .PHONY: clean-tmp-native-work-around-bug-10495
