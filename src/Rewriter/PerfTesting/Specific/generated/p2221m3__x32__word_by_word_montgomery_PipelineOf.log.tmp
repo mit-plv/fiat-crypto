@@ -1,0 +1,11 @@
+Testing WordByWordMontgomery "2^221-3" (bitwidth = 32 ) (method = BoundsPipeline.precomputed_decision_tree ) (params = {| WordByWordMontgomery.m := 3369993333393829974333376885877453834204643052817571560137951281149; WordByWordMontgomery.machine_wordsize := 32 |} ) "PipelineFullOf with vm_compute" :
+Tactic call ran for 18.624 secs (18.56u,0.063s) (success)
+Testing WordByWordMontgomery "2^221-3" (bitwidth = 32 ) (method = BoundsPipeline.unreduced_decision_tree ) (params = {| WordByWordMontgomery.m := 3369993333393829974333376885877453834204643052817571560137951281149; WordByWordMontgomery.machine_wordsize := 32 |} ) "PipelineFullOf with vm_compute" :
+Tactic call ran for 83.86 secs (83.797u,0.059s) (success)
+Testing WordByWordMontgomery "2^221-3" (bitwidth = 32 ) (method = BoundsPipeline.unreduced_naive ) (params = {| WordByWordMontgomery.m := 3369993333393829974333376885877453834204643052817571560137951281149; WordByWordMontgomery.machine_wordsize := 32 |} ) "PipelineFullOf with vm_compute" :
+Tactic call ran for 198.525 secs (198.467u,0.056s) (success)
+Testing WordByWordMontgomery "2^221-3" (bitwidth = 32 ) (method = BoundsPipeline.precomputed_decision_tree ) (params = {| WordByWordMontgomery.m := 3369993333393829974333376885877453834204643052817571560137951281149; WordByWordMontgomery.machine_wordsize := 32 |} ) "PipelineFullToStringsOf with vm_compute" :
+Tactic call ran for 19.582 secs (19.581u,0.s) (success)
+Testing WordByWordMontgomery "2^221-3" (bitwidth = 32 ) (method = BoundsPipeline.unreduced_decision_tree ) (params = {| WordByWordMontgomery.m := 3369993333393829974333376885877453834204643052817571560137951281149; WordByWordMontgomery.machine_wordsize := 32 |} ) "PipelineFullToStringsOf with vm_compute" :
+Tactic call ran for 85.369 secs (85.369u,0.s) (success)
+Testing WordByWordMontgomery "2^221-3" (bitwidth = 32 ) (method = BoundsPipeline.unreduced_naive ) (params = {| WordByWordMontgomery.m := 3369993333393829974333376885877453834204643052817571560137951281149; WordByWordMontgomery.machine_wordsize := 32 |} ) "PipelineFullToStringsOf with vm_compute" :
