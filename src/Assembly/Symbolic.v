@@ -115,7 +115,7 @@ End Forall2.
 Require Import Crypto.Assembly.Syntax.
 Definition idx := N.
 Local Set Boolean Equality Schemes.
-Variant opname := old (_:REG*option nat) | const (_ : N) | add | addcarry | notaddcarry | neg | shl | shr | and | or | xor | slice (lo sz : N) | mul | mulhuu | set_slice (lo sz : N)(* | ... *).
+Variant opname := old (_:N) | oldold (_:REG*option nat) | const (_ : N) | add | addcarry | notaddcarry | neg | shl | shr | and | or | xor | slice (lo sz : N) | mul | mulhuu | set_slice (lo sz : N)(* | ... *).
 
 Definition associative o := match o with add|mul|or|and => true | _ => false end.
 Definition commutative o := match o with add|addcarry|mul|mulhuu => true | _ => false end.
@@ -943,17 +943,17 @@ Definition SymexNormalInstructions := fun st is => mapM_ SymexNormalInstruction 
 
 
 Definition OldReg (r : REG) : M unit :=
-  i <- Merge (ExprApp ((old (r, None), reg_size r), nil));
+  i <- Merge (ExprApp ((oldold (r, None), reg_size r), nil));
   SetReg r i.
 Definition OldCell (r : REG) (i : nat) : M unit :=
   a <- @Address 64%N {| mem_reg := r; mem_offset := Some (Z.of_nat(8*i));
                  mem_is_byte := false; mem_extra_reg:=None |};
-  v <- Merge (ExprApp ((old (r, Some i), 64%N), nil));
+  v <- Merge (ExprApp ((oldold (r, Some i), 64%N), nil));
   (fun s => Success (tt, update_mem_with s (cons (a,v)))).
 Definition OldStack (r := rsp) (i : nat) : M unit :=
   a <- @Address 64%N {| mem_reg := r; mem_offset := Some (Z.opp (Z.of_nat(8*S i)));
                  mem_is_byte := false; mem_extra_reg:=None |};
-  v <- Merge (ExprApp ((old (r, Some i), 64%N), nil));
+  v <- Merge (ExprApp ((oldold (r, Some i), 64%N), nil));
   (fun s => Success (tt, update_mem_with s (cons (a,v)))).
 
 Definition init

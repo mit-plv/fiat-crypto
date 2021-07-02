@@ -68,7 +68,8 @@ of the equivalence graphs.  If desired, we can parameterize the error
 printing functions on command-lines options indicating how verbose to
 be in printing the error message. *)
 Inductive EquivalenceCheckingError :=
-| Could_not_prove_equivalence
+| Could_not_prove_equivalence (_ : Symbolic.error) (_ : symbolic_state)
+| Internal_error_output_load_failed
 | Not_enough_registers (num_given num_extra_needed : nat)
 | Incorrect_array_input_dag_node
 | Incorrect_Z_input_dag_node
@@ -83,8 +84,9 @@ Inductive EquivalenceCheckingError :=
 
 Global Instance show_lines_EquivalenceCheckingError : ShowLines EquivalenceCheckingError
   := fun err => match err with
-                | Could_not_prove_equivalence
-                  => ["Could not prove equivalence of assembly and AST."]
+                | Could_not_prove_equivalence _ _
+                  => ["Could not prove equivalence of assembly and AST (_ :Symbolic.error) (_ : symbolic_state)."]
+                | Internal_error_output_load_failed => ["Internal_error_output_load_failed"]%string
                 | Not_enough_registers num_given num_extra_needed
                   => ["Not enough registers available for storing input and output (given " ++ show num_given ++ ", needed an additional " ++ show num_extra_needed ++ "."]%string
                 | Incorrect_array_input_dag_node
@@ -119,8 +121,7 @@ Definition gensym_state_init : gensym_state := 0%N.
 Definition gensym (st : gensym_state) : symbol * gensym_state := (st, N.succ st).
 
 Definition empty_dag : dag := nil.
-(* note: rax, None, and 64 are placeholder values pending additional arguments *)
-Definition merge_symbol (s:symbol) (d:dag) : idx * dag := merge_node ((old (rax, None), 64%N, nil)) d.
+Definition merge_symbol (s:symbol) (d:dag) : idx * dag := merge_node ((old s), 64%N, nil) d.
 Definition merge_literal (l:Z) (d:dag) : idx * dag := merge_node ((const (Z.to_N l), 64%N, nil)) d.
 
 (** symbolic evaluations live in the state monad, pushed to the leaves of a PHOAS type *)
@@ -202,6 +203,18 @@ Fixpoint build_inputs (st : dag * gensym_state) (types : type_spec) : list (idx 
                    ([], st) in
           let '(rest, (d, st)) := build_inputs (d, st) tys in
           (inr idxs :: rest, (d, st))
+     end.
+
+Fixpoint build_addresses {T} (st : dag * gensym_state) (items : list (idx + T)) : list (idx * option T) * (dag * gensym_state)
+  := match items with
+     | [] => ([], st)
+     | inr x :: xs
+       => let '(d, st) := st in
+          let '(n, st) := gensym st in
+          let '(idx, d) := merge_symbol n d in
+          let '(rest, (d, st)) := build_addresses (d, st) xs in
+          ((idx, Some x) :: rest, (d, st))
+     | inl _ :: xs => build_addresses st xs
      end.
 
 (** PHOAS var type, storing dag indices or nat literals *)
@@ -485,29 +498,53 @@ Section check_equivalence.
             (arg_bounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
             (out_bounds : ZRange.type.base.option.interp (type.final_codomain t)).
 
-    Definition check_equivalence : ErrorT EquivalenceCheckingError unit.
-    Proof.
-      refine (
-          let reg_available := assembly_calling_registers (* registers available for calling conventions *) in
-          let d := empty_dag in
-          let gensym_st := gensym_state_init in
-          input_types <- simplify_input_type t arg_bounds;
-          let '(inputs, (d, gensym_st)) := build_inputs (d, gensym_st) input_types in
-          input_var_data <- build_input_var t inputs;
-          let '(input_var_data, unused_inputs) := input_var_data in
-          (* TODO: should we check that there are no unused input nodes? *)
-          let ast : API.expr (type.base (type.final_codomain t))
-              := invert_expr.smart_App_curried (expr _) input_var_data in
-          symevaled_PHOAS <- symex_expr ast d;
-          let '(PHOAS_output, PHOAS_dag) := symevaled_PHOAS in
-          let stack_size : nat := N.to_nat (assembly_stack_size asm) in
-          output_types <- simplify_base_type (type.final_codomain t) out_bounds;
-          (*let asm_lines : Lines := asm in*)
-          _)%error.
-      refine (if false
-              then Success tt
-              else Error Could_not_prove_equivalence).
-    Defined.
+    Definition check_equivalence : ErrorT EquivalenceCheckingError unit :=
+      let reg_available := assembly_calling_registers (* registers available for calling conventions *) in
+      let d := empty_dag in
+      let gensym_st := gensym_state_init in
+      input_types <- simplify_input_type t arg_bounds;
+      let '(inputs, (d, gensym_st)) := build_inputs (d, gensym_st) input_types in
+      input_var_data <- build_input_var t inputs;
+      let '(input_var_data, unused_inputs) := input_var_data in
+      (* TODO: should we check that there are no unused input nodes? *)
+      let ast : API.expr (type.base (type.final_codomain t))
+          := invert_expr.smart_App_curried (expr _) input_var_data in
+      symevaled_PHOAS <- symex_expr ast d;
+      let '(PHOAS_output, PHOAS_dag) := symevaled_PHOAS in
+      let stack_size : nat := N.to_nat (assembly_stack_size asm) in
+      output_types <- simplify_base_type (type.final_codomain t) out_bounds;
+
+      let '(output_placeholders, (d, gensym_st)) := build_inputs (d, gensym_st) output_types in
+      let '(stack_placeholders, (d, gensym_st)) := build_inputs (d, gensym_st) [Some stack_size] in
+      let '(asminputs, (d, gensym_st)) := build_addresses (d, gensym_st) (inputs ++ output_placeholders) in
+      let s0 :=
+        {|
+          dag_state := d;
+          symbolic_reg_state := Tuple.repeat None 16;
+          symbolic_mem_state := [];
+          symbolic_flag_state := Tuple.repeat None 6;
+        |} in
+
+      match
+        (_ <- mapM_ (fun '(r, (idx, oarr)) => _ <- SetReg r idx;
+          match oarr with None => Symbolic.ret tt
+          | Some idxs =>
+              mapM_ (fun '(i, idx) =>
+              offset <- Symbolic.App ((const (8*N.of_nat i), 64), nil);
+              addr <- Symbolic.App ((add, 64), [idx; offset]);
+              Store64 addr idx
+              ) (List.combine (seq 0 (length idxs)) idxs)
+          end) (List.combine reg_available asminputs);
+          mapM_ SymexNormalInstruction (Option.List.map invert_rawline asm))%N%x86symex s0
+      with
+      | Success (_, s) =>
+          let outputlocations := List.map fst (skipn (length inputs) asminputs) in
+          match Option.List.lift (List.map (fun i => load i s) outputlocations) with
+          | None => Error Internal_error_output_load_failed
+          | Some asm_output => Success tt (* FIXME: asm_output == PHOAS_output *)
+          end
+      | Error (e, s) => Error (Could_not_prove_equivalence e s)
+      end.
 
     (** We don't actually generate assembly, we just check equivalence and pass assembly through unchanged *)
     Definition generate_assembly_of_hinted_expr : ErrorT EquivalenceCheckingError Lines
