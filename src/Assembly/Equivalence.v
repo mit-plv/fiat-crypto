@@ -4,6 +4,7 @@ Require Import Coq.ZArith.ZArith.
 Require Import Coq.NArith.NArith.
 Require Import Crypto.Assembly.Syntax.
 Require Import Crypto.Assembly.Parse.
+Require Import Crypto.Assembly.Symbolic.
 Require Import Crypto.Util.ErrorT.
 Require Import Crypto.Util.Strings.String.
 Require Import Crypto.Language.API.
@@ -46,7 +47,7 @@ Definition assembly_stack_size {v : assembly_stack_size_opt} (asm : Lines) : N
        => match Option.List.map
                   (fun l
                    => match l.(rawline) with
-                      | INSTR {| op := sub ; args := [reg rsp; const n] |}
+                      | INSTR {| Syntax.op := sub ; args := [reg rsp; Syntax.const n] |}
                         => Some (Z.to_N n)
                       | _ => None
                       end)
@@ -116,12 +117,11 @@ Definition symbol := N.
 Definition gensym_state := N.
 Definition gensym_state_init : gensym_state := 0%N.
 Definition gensym (st : gensym_state) : symbol * gensym_state := (st, N.succ st).
-Definition idx := N.
-Definition dummy_dag : { T : Type & T }. exists unit; constructor. Qed.
-(*Axiom*) Definition dag : Type := projT1 dummy_dag.
-(*Axiom*) Definition empty_dag : dag := projT2 dummy_dag.
-(*Axiom*) Definition merge : symbol -> dag -> idx * dag := fun _ st => (0%N, st).
-(*Axiom*) Definition merge_literal : Z -> dag -> idx * dag := fun _ st => (0%N, st).
+
+Definition empty_dag : dag := nil.
+(* note: rax, None, and 64 are placeholder values pending additional arguments *)
+Definition merge_symbol (s:symbol) (d:dag) : idx * dag := merge_node ((old (rax, None), 64%N, nil)) d.
+Definition merge_literal (l:Z) (d:dag) : idx * dag := merge_node ((const (Z.to_N l), 64%N, nil)) d.
 
 (** symbolic evaluations live in the state monad, pushed to the leaves of a PHOAS type *)
 Definition symexM T := dag -> ErrorT EquivalenceCheckingError (T * dag).
@@ -134,10 +134,7 @@ Bind Scope symex_scope with symexM.
 Notation "'slet' x .. y <- X ; B"  := (symex_bind X (fun x => .. (fun y => B%symex) .. )) : symex_scope.
 Notation "A <- X ; B" := (symex_bind X (fun A => B%symex)) : symex_scope.
 (* light alias *)
-Definition merge_literalM (v : Z) : symexM idx := fun st => Success (merge_literal v st).
-
-(** FIXME: change *)
-Definition merge_addition : idx -> idx -> symexM idx := fun _ _ st => Error (Unhandled_identifier ident.Z_add).
+Definition Merge (e : Symbolic.expr) : symexM idx := fun st => Success (merge e st).
 
 Definition type_spec := list (option nat). (* list of array lengths; None means not an array *)
 
@@ -191,7 +188,7 @@ Fixpoint build_inputs (st : dag * gensym_state) (types : type_spec) : list (idx 
      | None :: tys
        => let '(d, st) := st in
           let '(n, st) := gensym st in
-          let '(idx, d) := merge n d in
+          let '(idx, d) := merge_symbol n d in
           let '(rest, (d, st)) := build_inputs (d, st) tys in
           (inl idx :: rest, (d, st))
      | Some len :: tys
@@ -199,7 +196,7 @@ Fixpoint build_inputs (st : dag * gensym_state) (types : type_spec) : list (idx 
               := List.fold_left
                    (fun '(idxs, (d, st)) _
                     => let '(n, st) := gensym st in
-                       let '(idx, d) := merge n d in
+                       let '(idx, d) := merge_symbol n d in
                        (idx :: idxs, (d, st)))
                    (List.seq 0 len)
                    ([], st) in
@@ -309,11 +306,8 @@ Proof.
   refine (let symex_mod_zrange idx range := symex_error (Unhandled_identifier idc) in
           match idc in ident t return symex_T t with
           | ident.Literal base.type.Z v
-            => idx <- merge_literalM v;
-               symex_return idx
-
-          | ident.Z_add
-            => fun x y => idx <- merge_addition x y; symex_return idx
+            => Merge (ExprApp (const (Z.to_N v), 64%N, nil) (* note: 64 is placeholder, to_N is unsound *))
+          | ident.Z_add => fun x y => Merge (ExprApp (add, 64%N, [ExprRef x; ExprRef y]))
 
           | ident.Z_modulo
           | ident.Z_mul
@@ -411,7 +405,7 @@ Proof.
                   idx2 <- symex_mod_zrange v2_idx r2;
                   symex_return (idx1, idx2)
           | ident.Z_of_nat
-            => fun n => idx <- merge_literalM (Z.of_nat n); symex_return idx
+            => fun n => Merge (ExprApp (const (N.of_nat n), 64%N, nil)) (* note: 64 is placeholder *)
 
           | ident.Z_eqb
           | ident.Z_leb
@@ -454,7 +448,7 @@ Proof.
           | ident.fancy_addm
             => symex_T_error (Unhandled_identifier idc)
           end%symex).
-  all: cbn.
+  all: cbn in *.
 Defined.
 
 Fixpoint symex_expr {t} (e : API.expr (var:=var) t) : symex_T t
