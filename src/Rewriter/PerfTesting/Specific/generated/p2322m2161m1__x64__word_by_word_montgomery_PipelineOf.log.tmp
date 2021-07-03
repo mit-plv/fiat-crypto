@@ -1,23 +1,38 @@
 Testing WordByWordMontgomery "2^322-2^161-1" (bitwidth = 64 ) (method = BoundsPipeline.precomputed_decision_tree ) (params = {| WordByWordMontgomery.m := 8543948143683640329580086824678208458410818089423688076513504625452471533457129634052536482660351; WordByWordMontgomery.machine_wordsize := 64 |} ) "PipelineFullOf with vm_compute" :
-Tactic call ran for 13.935 secs (13.899u,0.035s) (success)
+Tactic call ran for 13.88 secs (13.836u,0.043s) (success)
 Testing WordByWordMontgomery "2^322-2^161-1" (bitwidth = 64 ) (method = BoundsPipeline.unreduced_decision_tree ) (params = {| WordByWordMontgomery.m := 8543948143683640329580086824678208458410818089423688076513504625452471533457129634052536482660351; WordByWordMontgomery.machine_wordsize := 64 |} ) "PipelineFullOf with vm_compute" :
-Tactic call ran for 50.537 secs (50.456u,0.079s) (success)
+Tactic call ran for 51.422 secs (51.365u,0.055s) (success)
 Testing WordByWordMontgomery "2^322-2^161-1" (bitwidth = 64 ) (method = BoundsPipeline.unreduced_naive ) (params = {| WordByWordMontgomery.m := 8543948143683640329580086824678208458410818089423688076513504625452471533457129634052536482660351; WordByWordMontgomery.machine_wordsize := 64 |} ) "PipelineFullOf with vm_compute" :
-Tactic call ran for 117.398 secs (117.353u,0.044s) (success)
+Tactic call ran for 116.309 secs (116.285u,0.023s) (success)
 Testing WordByWordMontgomery "2^322-2^161-1" (bitwidth = 64 ) (method = BoundsPipeline.precomputed_decision_tree ) (params = {| WordByWordMontgomery.m := 8543948143683640329580086824678208458410818089423688076513504625452471533457129634052536482660351; WordByWordMontgomery.machine_wordsize := 64 |} ) "PipelineFullToStringsOf with vm_compute" :
-Tactic call ran for 15.204 secs (15.192u,0.011s) (success)
+Tactic call ran for 14.739 secs (14.711u,0.027s) (success)
 Testing WordByWordMontgomery "2^322-2^161-1" (bitwidth = 64 ) (method = BoundsPipeline.unreduced_decision_tree ) (params = {| WordByWordMontgomery.m := 8543948143683640329580086824678208458410818089423688076513504625452471533457129634052536482660351; WordByWordMontgomery.machine_wordsize := 64 |} ) "PipelineFullToStringsOf with vm_compute" :
-Tactic call ran for 52.546 secs (52.546u,0.s) (success)
+Tactic call ran for 51.488 secs (51.489u,0.s) (success)
 Testing WordByWordMontgomery "2^322-2^161-1" (bitwidth = 64 ) (method = BoundsPipeline.unreduced_naive ) (params = {| WordByWordMontgomery.m := 8543948143683640329580086824678208458410818089423688076513504625452471533457129634052536482660351; WordByWordMontgomery.machine_wordsize := 64 |} ) "PipelineFullToStringsOf with vm_compute" :
-Tactic call ran for 115.482 secs (115.408u,0.071s) (success)
+Tactic call ran for 118.227 secs (118.159u,0.067s) (success)
 Testing WordByWordMontgomery "2^322-2^161-1" (bitwidth = 64 ) (method = BoundsPipeline.precomputed_decision_tree ) (params = {| WordByWordMontgomery.m := 8543948143683640329580086824678208458410818089423688076513504625452471533457129634052536482660351; WordByWordMontgomery.machine_wordsize := 64 |} ) "PipelineNBEOf with vm_compute" :
-Tactic call ran for 11.098 secs (11.086u,0.011s) (success)
+Tactic call ran for 11.249 secs (11.245u,0.003s) (success)
 Testing WordByWordMontgomery "2^322-2^161-1" (bitwidth = 64 ) (method = BoundsPipeline.unreduced_decision_tree ) (params = {| WordByWordMontgomery.m := 8543948143683640329580086824678208458410818089423688076513504625452471533457129634052536482660351; WordByWordMontgomery.machine_wordsize := 64 |} ) "PipelineNBEOf with vm_compute" :
-Tactic call ran for 34.196 secs (34.196u,0.s) (success)
+Tactic call ran for 34.185 secs (34.185u,0.s) (success)
 Testing WordByWordMontgomery "2^322-2^161-1" (bitwidth = 64 ) (method = BoundsPipeline.unreduced_naive ) (params = {| WordByWordMontgomery.m := 8543948143683640329580086824678208458410818089423688076513504625452471533457129634052536482660351; WordByWordMontgomery.machine_wordsize := 64 |} ) "PipelineNBEOf with vm_compute" :
-Tactic call ran for 76.183 secs (76.182u,0.s) (success)
+Tactic call ran for 75.779 secs (75.779u,0.s) (success)
 Testing WordByWordMontgomery "2^322-2^161-1" (bitwidth = 64 ) (method = BoundsPipeline.precomputed_decision_tree ) (params = {| WordByWordMontgomery.m := 8543948143683640329580086824678208458410818089423688076513504625452471533457129634052536482660351; WordByWordMontgomery.machine_wordsize := 64 |} ) "PipelineArithOf with vm_compute" :
-Tactic call ran for 10.997 secs (10.997u,0.s) (success)
+Tactic call ran for 11.077 secs (11.077u,0.s) (success)
 Testing WordByWordMontgomery "2^322-2^161-1" (bitwidth = 64 ) (method = BoundsPipeline.unreduced_decision_tree ) (params = {| WordByWordMontgomery.m := 8543948143683640329580086824678208458410818089423688076513504625452471533457129634052536482660351; WordByWordMontgomery.machine_wordsize := 64 |} ) "PipelineArithOf with vm_compute" :
-Tactic call ran for 34.11 secs (34.11u,0.s) (success)
+Tactic call ran for 34.296 secs (34.296u,0.s) (success)
 Testing WordByWordMontgomery "2^322-2^161-1" (bitwidth = 64 ) (method = BoundsPipeline.unreduced_naive ) (params = {| WordByWordMontgomery.m := 8543948143683640329580086824678208458410818089423688076513504625452471533457129634052536482660351; WordByWordMontgomery.machine_wordsize := 64 |} ) "PipelineArithOf with vm_compute" :
+Tactic call ran for 77.32 secs (77.32u,0.s) (success)
+Testing WordByWordMontgomery "2^322-2^161-1" (bitwidth = 64 ) (method = BoundsPipeline.precomputed_decision_tree ) (params = {| WordByWordMontgomery.m := 8543948143683640329580086824678208458410818089423688076513504625452471533457129634052536482660351; WordByWordMontgomery.machine_wordsize := 64 |} ) "PipelineFullOf with native_compute" (1) :
+Tactic call ran for 270.602 secs (9.245u,0.187s) (failure)
+Tactic call ran for 0. secs (0.u,0.s) (failure after 1 backtracking)
+Tactic call ran for 0. secs (0.u,0.s) (failure after 1 backtracking)
+Tactic call ran for 0. secs (0.u,0.s) (failure after 1 backtracking)
+Tactic call ran for 0. secs (0.u,0.s) (failure after 1 backtracking)
+Tactic call ran for 0. secs (0.u,0.s) (failure after 1 backtracking)
+Tactic call ran for 0. secs (0.u,0.s) (failure after 1 backtracking)
+Tactic call ran for 0. secs (0.u,0.s) (failure after 1 backtracking)
+Tactic call ran for 0. secs (0.u,0.s) (failure after 1 backtracking)
+Tactic call ran for 0. secs (0.u,0.s) (failure after 1 backtracking)
+Tactic call ran for 0. secs (0.u,0.s) (failure after 1 backtracking)
+Tactic call ran for 0. secs (0.u,0.s) (failure after 1 backtracking)
+Tactic call ran for 0. secs (0.u,0.s) (failure after 1 backtracking)

@@ -1,0 +1,10 @@
+Testing WordByWordMontgomery "2^480-2^240-1" (bitwidth = 64 ) (method = None ) (params = {| WordByWordMontgomery.m := 3121748550315992231381597229793166305748598142664971150859156959625371737052918555341921773480194470416908415293922726019829017557682084013670399; WordByWordMontgomery.machine_wordsize := 64 |} ) "GallinaAxOf with vm_compute" :
+Tactic call ran for 23.455 secs (23.374u,0.08s) (success)
+Testing WordByWordMontgomery "2^480-2^240-1" (bitwidth = 64 ) (method = None ) (params = {| WordByWordMontgomery.m := 3121748550315992231381597229793166305748598142664971150859156959625371737052918555341921773480194470416908415293922726019829017557682084013670399; WordByWordMontgomery.machine_wordsize := 64 |} ) "GallinaAxOf with native_compute" (1) :
+Tactic call ran for 4.751 secs (4.168u,0.119s) (success)
+Testing WordByWordMontgomery "2^480-2^240-1" (bitwidth = 64 ) (method = None ) (params = {| WordByWordMontgomery.m := 3121748550315992231381597229793166305748598142664971150859156959625371737052918555341921773480194470416908415293922726019829017557682084013670399; WordByWordMontgomery.machine_wordsize := 64 |} ) "GallinaAxOf with native_compute" (2) :
+Tactic call ran for 4.311 secs (4.069u,0.151s) (success)
+Testing WordByWordMontgomery "2^480-2^240-1" (bitwidth = 64 ) (method = None ) (params = {| WordByWordMontgomery.m := 3121748550315992231381597229793166305748598142664971150859156959625371737052918555341921773480194470416908415293922726019829017557682084013670399; WordByWordMontgomery.machine_wordsize := 64 |} ) "GallinaAxOf with cbv" :
+Tactic call ran for 561.738 secs (561.578u,0.16s) (success)
+Testing WordByWordMontgomery "2^480-2^240-1" (bitwidth = 64 ) (method = None ) (params = {| WordByWordMontgomery.m := 3121748550315992231381597229793166305748598142664971150859156959625371737052918555341921773480194470416908415293922726019829017557682084013670399; WordByWordMontgomery.machine_wordsize := 64 |} ) "GallinaAxOf with lazy" :
+Tactic call ran for 913.508 secs (913.053u,0.299s) (success)

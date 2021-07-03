@@ -1,29 +1,29 @@
 Testing WordByWordMontgomery "2^130-5" (bitwidth = 32 ) (method = BoundsPipeline.precomputed_decision_tree ) (params = {| WordByWordMontgomery.m := 1361129467683753853853498429727072845819; WordByWordMontgomery.machine_wordsize := 32 |} ) "PipelineFullOf with vm_compute" :
-Tactic call ran for 5.023 secs (5.003u,0.02s) (success)
+Tactic call ran for 4.948 secs (4.936u,0.011s) (success)
 Testing WordByWordMontgomery "2^130-5" (bitwidth = 32 ) (method = BoundsPipeline.unreduced_decision_tree ) (params = {| WordByWordMontgomery.m := 1361129467683753853853498429727072845819; WordByWordMontgomery.machine_wordsize := 32 |} ) "PipelineFullOf with vm_compute" :
-Tactic call ran for 24.267 secs (24.234u,0.031s) (success)
+Tactic call ran for 23.67 secs (23.626u,0.043s) (success)
 Testing WordByWordMontgomery "2^130-5" (bitwidth = 32 ) (method = BoundsPipeline.unreduced_naive ) (params = {| WordByWordMontgomery.m := 1361129467683753853853498429727072845819; WordByWordMontgomery.machine_wordsize := 32 |} ) "PipelineFullOf with vm_compute" :
-Tactic call ran for 58.108 secs (58.083u,0.023s) (success)
+Tactic call ran for 56.669 secs (56.604u,0.063s) (success)
 Testing WordByWordMontgomery "2^130-5" (bitwidth = 32 ) (method = BoundsPipeline.precomputed_decision_tree ) (params = {| WordByWordMontgomery.m := 1361129467683753853853498429727072845819; WordByWordMontgomery.machine_wordsize := 32 |} ) "PipelineFullToStringsOf with vm_compute" :
-Tactic call ran for 5.597 secs (5.581u,0.015s) (success)
+Tactic call ran for 5.529 secs (5.517u,0.012s) (success)
 Testing WordByWordMontgomery "2^130-5" (bitwidth = 32 ) (method = BoundsPipeline.unreduced_decision_tree ) (params = {| WordByWordMontgomery.m := 1361129467683753853853498429727072845819; WordByWordMontgomery.machine_wordsize := 32 |} ) "PipelineFullToStringsOf with vm_compute" :
-Tactic call ran for 25.199 secs (25.199u,0.s) (success)
+Tactic call ran for 24.49 secs (24.478u,0.011s) (success)
 Testing WordByWordMontgomery "2^130-5" (bitwidth = 32 ) (method = BoundsPipeline.unreduced_naive ) (params = {| WordByWordMontgomery.m := 1361129467683753853853498429727072845819; WordByWordMontgomery.machine_wordsize := 32 |} ) "PipelineFullToStringsOf with vm_compute" :
-Tactic call ran for 59.055 secs (59.051u,0.003s) (success)
+Tactic call ran for 58.886 secs (58.849u,0.035s) (success)
 Testing WordByWordMontgomery "2^130-5" (bitwidth = 32 ) (method = BoundsPipeline.precomputed_decision_tree ) (params = {| WordByWordMontgomery.m := 1361129467683753853853498429727072845819; WordByWordMontgomery.machine_wordsize := 32 |} ) "PipelineNBEOf with vm_compute" :
-Tactic call ran for 3.666 secs (3.65u,0.015s) (success)
+Tactic call ran for 3.679 secs (3.642u,0.036s) (success)
 Testing WordByWordMontgomery "2^130-5" (bitwidth = 32 ) (method = BoundsPipeline.unreduced_decision_tree ) (params = {| WordByWordMontgomery.m := 1361129467683753853853498429727072845819; WordByWordMontgomery.machine_wordsize := 32 |} ) "PipelineNBEOf with vm_compute" :
-Tactic call ran for 15.888 secs (15.864u,0.024s) (success)
+Tactic call ran for 15.645 secs (15.628u,0.015s) (success)
 Testing WordByWordMontgomery "2^130-5" (bitwidth = 32 ) (method = BoundsPipeline.unreduced_naive ) (params = {| WordByWordMontgomery.m := 1361129467683753853853498429727072845819; WordByWordMontgomery.machine_wordsize := 32 |} ) "PipelineNBEOf with vm_compute" :
-Tactic call ran for 37.442 secs (37.442u,0.s) (success)
+Tactic call ran for 37.409 secs (37.401u,0.007s) (success)
 Testing WordByWordMontgomery "2^130-5" (bitwidth = 32 ) (method = BoundsPipeline.precomputed_decision_tree ) (params = {| WordByWordMontgomery.m := 1361129467683753853853498429727072845819; WordByWordMontgomery.machine_wordsize := 32 |} ) "PipelineArithOf with vm_compute" :
-Tactic call ran for 3.761 secs (3.761u,0.s) (success)
+Tactic call ran for 3.811 secs (3.811u,0.s) (success)
 Testing WordByWordMontgomery "2^130-5" (bitwidth = 32 ) (method = BoundsPipeline.unreduced_decision_tree ) (params = {| WordByWordMontgomery.m := 1361129467683753853853498429727072845819; WordByWordMontgomery.machine_wordsize := 32 |} ) "PipelineArithOf with vm_compute" :
-Tactic call ran for 15.715 secs (15.715u,0.s) (success)
+Tactic call ran for 15.404 secs (15.4u,0.003s) (success)
 Testing WordByWordMontgomery "2^130-5" (bitwidth = 32 ) (method = BoundsPipeline.unreduced_naive ) (params = {| WordByWordMontgomery.m := 1361129467683753853853498429727072845819; WordByWordMontgomery.machine_wordsize := 32 |} ) "PipelineArithOf with vm_compute" :
-Tactic call ran for 38.038 secs (38.037u,0.s) (success)
+Tactic call ran for 37.341 secs (37.325u,0.016s) (success)
 Testing WordByWordMontgomery "2^130-5" (bitwidth = 32 ) (method = BoundsPipeline.precomputed_decision_tree ) (params = {| WordByWordMontgomery.m := 1361129467683753853853498429727072845819; WordByWordMontgomery.machine_wordsize := 32 |} ) "PipelineFullOf with native_compute" (1) :
-Tactic call ran for 267.037 secs (9.09u,0.143s) (failure)
+Tactic call ran for 256.555 secs (8.787u,0.192s) (failure)
 Tactic call ran for 0. secs (0.u,0.s) (failure after 1 backtracking)
 Tactic call ran for 0. secs (0.u,0.s) (failure after 1 backtracking)
 Tactic call ran for 0. secs (0.u,0.s) (failure after 1 backtracking)

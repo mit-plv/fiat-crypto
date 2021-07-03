@@ -1,0 +1,10 @@
+Testing WordByWordMontgomery "2^512-569" (bitwidth = 64 ) (method = None ) (params = {| WordByWordMontgomery.m := 13407807929942597099574024998205846127479365820592393377723561443721764030073546976801874298166903427690031858186486050853753882811946569946433649006083527; WordByWordMontgomery.machine_wordsize := 64 |} ) "GallinaAxOf with vm_compute" :
+Tactic call ran for 23.517 secs (23.459u,0.031s) (success)
+Testing WordByWordMontgomery "2^512-569" (bitwidth = 64 ) (method = None ) (params = {| WordByWordMontgomery.m := 13407807929942597099574024998205846127479365820592393377723561443721764030073546976801874298166903427690031858186486050853753882811946569946433649006083527; WordByWordMontgomery.machine_wordsize := 64 |} ) "GallinaAxOf with native_compute" (1) :
+Tactic call ran for 4.819 secs (4.242u,0.103s) (success)
+Testing WordByWordMontgomery "2^512-569" (bitwidth = 64 ) (method = None ) (params = {| WordByWordMontgomery.m := 13407807929942597099574024998205846127479365820592393377723561443721764030073546976801874298166903427690031858186486050853753882811946569946433649006083527; WordByWordMontgomery.machine_wordsize := 64 |} ) "GallinaAxOf with native_compute" (2) :
+Tactic call ran for 4.356 secs (4.088u,0.167s) (success)
+Testing WordByWordMontgomery "2^512-569" (bitwidth = 64 ) (method = None ) (params = {| WordByWordMontgomery.m := 13407807929942597099574024998205846127479365820592393377723561443721764030073546976801874298166903427690031858186486050853753882811946569946433649006083527; WordByWordMontgomery.machine_wordsize := 64 |} ) "GallinaAxOf with cbv" :
+Tactic call ran for 561.7 secs (560.279u,0.668s) (success)
+Testing WordByWordMontgomery "2^512-569" (bitwidth = 64 ) (method = None ) (params = {| WordByWordMontgomery.m := 13407807929942597099574024998205846127479365820592393377723561443721764030073546976801874298166903427690031858186486050853753882811946569946433649006083527; WordByWordMontgomery.machine_wordsize := 64 |} ) "GallinaAxOf with lazy" :
+Tactic call ran for 917.76 secs (915.383u,1.131s) (success)

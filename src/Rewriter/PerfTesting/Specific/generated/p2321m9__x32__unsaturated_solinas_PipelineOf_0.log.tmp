@@ -1,25 +1,38 @@
 Testing UnsaturatedSolinas "2^321-9" (bitwidth = 32 ) (index = 0%nat ) (method = BoundsPipeline.precomputed_decision_tree ) (params = {| UnsaturatedSolinas.n := 13; UnsaturatedSolinas.s := 4271974071841820164790043412339104229205409044713305539894083215644439451561281100045924173873152; UnsaturatedSolinas.c := (1, 9) :: nil; UnsaturatedSolinas.idxs := 0%nat :: 1%nat :: 2%nat :: 3%nat :: 4%nat :: 5%nat :: 6%nat :: 7%nat :: 8%nat :: 9%nat :: 10%nat :: 11%nat :: 12%nat :: 0%nat :: 1%nat :: nil; UnsaturatedSolinas.machine_wordsize := 32 |} ) "PipelineFullOf with vm_compute" :
-Tactic call ran for 6.269 secs (6.247u,0.011s) (success)
+Tactic call ran for 6.099 secs (6.099u,0.s) (success)
 Testing UnsaturatedSolinas "2^321-9" (bitwidth = 32 ) (index = 0%nat ) (method = BoundsPipeline.unreduced_decision_tree ) (params = {| UnsaturatedSolinas.n := 13; UnsaturatedSolinas.s := 4271974071841820164790043412339104229205409044713305539894083215644439451561281100045924173873152; UnsaturatedSolinas.c := (1, 9) :: nil; UnsaturatedSolinas.idxs := 0%nat :: 1%nat :: 2%nat :: 3%nat :: 4%nat :: 5%nat :: 6%nat :: 7%nat :: 8%nat :: 9%nat :: 10%nat :: 11%nat :: 12%nat :: 0%nat :: 1%nat :: nil; UnsaturatedSolinas.machine_wordsize := 32 |} ) "PipelineFullOf with vm_compute" :
-Tactic call ran for 19.369 secs (19.337u,0.015s) (success)
+Tactic call ran for 18.648 secs (18.624u,0.023s) (success)
 Testing UnsaturatedSolinas "2^321-9" (bitwidth = 32 ) (index = 0%nat ) (method = BoundsPipeline.unreduced_naive ) (params = {| UnsaturatedSolinas.n := 13; UnsaturatedSolinas.s := 4271974071841820164790043412339104229205409044713305539894083215644439451561281100045924173873152; UnsaturatedSolinas.c := (1, 9) :: nil; UnsaturatedSolinas.idxs := 0%nat :: 1%nat :: 2%nat :: 3%nat :: 4%nat :: 5%nat :: 6%nat :: 7%nat :: 8%nat :: 9%nat :: 10%nat :: 11%nat :: 12%nat :: 0%nat :: 1%nat :: nil; UnsaturatedSolinas.machine_wordsize := 32 |} ) "PipelineFullOf with vm_compute" :
-Tactic call ran for 39.951 secs (39.879u,0.027s) (success)
+Tactic call ran for 39.25 secs (39.217u,0.031s) (success)
 Testing UnsaturatedSolinas "2^321-9" (bitwidth = 32 ) (index = 0%nat ) (method = BoundsPipeline.precomputed_decision_tree ) (params = {| UnsaturatedSolinas.n := 13; UnsaturatedSolinas.s := 4271974071841820164790043412339104229205409044713305539894083215644439451561281100045924173873152; UnsaturatedSolinas.c := (1, 9) :: nil; UnsaturatedSolinas.idxs := 0%nat :: 1%nat :: 2%nat :: 3%nat :: 4%nat :: 5%nat :: 6%nat :: 7%nat :: 8%nat :: 9%nat :: 10%nat :: 11%nat :: 12%nat :: 0%nat :: 1%nat :: nil; UnsaturatedSolinas.machine_wordsize := 32 |} ) "PipelineFullToStringsOf with vm_compute" :
-Tactic call ran for 8.897 secs (8.857u,0.019s) (success)
+Tactic call ran for 8.684 secs (8.66u,0.024s) (success)
 Testing UnsaturatedSolinas "2^321-9" (bitwidth = 32 ) (index = 0%nat ) (method = BoundsPipeline.unreduced_decision_tree ) (params = {| UnsaturatedSolinas.n := 13; UnsaturatedSolinas.s := 4271974071841820164790043412339104229205409044713305539894083215644439451561281100045924173873152; UnsaturatedSolinas.c := (1, 9) :: nil; UnsaturatedSolinas.idxs := 0%nat :: 1%nat :: 2%nat :: 3%nat :: 4%nat :: 5%nat :: 6%nat :: 7%nat :: 8%nat :: 9%nat :: 10%nat :: 11%nat :: 12%nat :: 0%nat :: 1%nat :: nil; UnsaturatedSolinas.machine_wordsize := 32 |} ) "PipelineFullToStringsOf with vm_compute" :
-Tactic call ran for 21.765 secs (21.732u,0.007s) (success)
+Tactic call ran for 21.371 secs (21.354u,0.015s) (success)
 Testing UnsaturatedSolinas "2^321-9" (bitwidth = 32 ) (index = 0%nat ) (method = BoundsPipeline.unreduced_naive ) (params = {| UnsaturatedSolinas.n := 13; UnsaturatedSolinas.s := 4271974071841820164790043412339104229205409044713305539894083215644439451561281100045924173873152; UnsaturatedSolinas.c := (1, 9) :: nil; UnsaturatedSolinas.idxs := 0%nat :: 1%nat :: 2%nat :: 3%nat :: 4%nat :: 5%nat :: 6%nat :: 7%nat :: 8%nat :: 9%nat :: 10%nat :: 11%nat :: 12%nat :: 0%nat :: 1%nat :: nil; UnsaturatedSolinas.machine_wordsize := 32 |} ) "PipelineFullToStringsOf with vm_compute" :
-Tactic call ran for 42.353 secs (42.283u,0.011s) (success)
+Tactic call ran for 42.419 secs (42.345u,0.023s) (success)
 Testing UnsaturatedSolinas "2^321-9" (bitwidth = 32 ) (index = 0%nat ) (method = BoundsPipeline.precomputed_decision_tree ) (params = {| UnsaturatedSolinas.n := 13; UnsaturatedSolinas.s := 4271974071841820164790043412339104229205409044713305539894083215644439451561281100045924173873152; UnsaturatedSolinas.c := (1, 9) :: nil; UnsaturatedSolinas.idxs := 0%nat :: 1%nat :: 2%nat :: 3%nat :: 4%nat :: 5%nat :: 6%nat :: 7%nat :: 8%nat :: 9%nat :: 10%nat :: 11%nat :: 12%nat :: 0%nat :: 1%nat :: nil; UnsaturatedSolinas.machine_wordsize := 32 |} ) "PipelineNBEOf with vm_compute" :
-Tactic call ran for 3.907 secs (3.898u,0.004s) (success)
+Tactic call ran for 3.889 secs (3.885u,0.s) (success)
 Testing UnsaturatedSolinas "2^321-9" (bitwidth = 32 ) (index = 0%nat ) (method = BoundsPipeline.unreduced_decision_tree ) (params = {| UnsaturatedSolinas.n := 13; UnsaturatedSolinas.s := 4271974071841820164790043412339104229205409044713305539894083215644439451561281100045924173873152; UnsaturatedSolinas.c := (1, 9) :: nil; UnsaturatedSolinas.idxs := 0%nat :: 1%nat :: 2%nat :: 3%nat :: 4%nat :: 5%nat :: 6%nat :: 7%nat :: 8%nat :: 9%nat :: 10%nat :: 11%nat :: 12%nat :: 0%nat :: 1%nat :: nil; UnsaturatedSolinas.machine_wordsize := 32 |} ) "PipelineNBEOf with vm_compute" :
-Tactic call ran for 15.858 secs (15.757u,0.084s) (success)
+Tactic call ran for 15.568 secs (15.547u,0.003s) (success)
 Testing UnsaturatedSolinas "2^321-9" (bitwidth = 32 ) (index = 0%nat ) (method = BoundsPipeline.unreduced_naive ) (params = {| UnsaturatedSolinas.n := 13; UnsaturatedSolinas.s := 4271974071841820164790043412339104229205409044713305539894083215644439451561281100045924173873152; UnsaturatedSolinas.c := (1, 9) :: nil; UnsaturatedSolinas.idxs := 0%nat :: 1%nat :: 2%nat :: 3%nat :: 4%nat :: 5%nat :: 6%nat :: 7%nat :: 8%nat :: 9%nat :: 10%nat :: 11%nat :: 12%nat :: 0%nat :: 1%nat :: nil; UnsaturatedSolinas.machine_wordsize := 32 |} ) "PipelineNBEOf with vm_compute" :
-Tactic call ran for 34.181 secs (34.131u,0.007s) (success)
+Tactic call ran for 33.933 secs (33.877u,0.007s) (success)
 Testing UnsaturatedSolinas "2^321-9" (bitwidth = 32 ) (index = 0%nat ) (method = BoundsPipeline.precomputed_decision_tree ) (params = {| UnsaturatedSolinas.n := 13; UnsaturatedSolinas.s := 4271974071841820164790043412339104229205409044713305539894083215644439451561281100045924173873152; UnsaturatedSolinas.c := (1, 9) :: nil; UnsaturatedSolinas.idxs := 0%nat :: 1%nat :: 2%nat :: 3%nat :: 4%nat :: 5%nat :: 6%nat :: 7%nat :: 8%nat :: 9%nat :: 10%nat :: 11%nat :: 12%nat :: 0%nat :: 1%nat :: nil; UnsaturatedSolinas.machine_wordsize := 32 |} ) "PipelineArithOf with vm_compute" :
-Tactic call ran for 3.835 secs (3.808u,0.016s) (success)
+Tactic call ran for 3.769 secs (3.765u,0.s) (success)
 Testing UnsaturatedSolinas "2^321-9" (bitwidth = 32 ) (index = 0%nat ) (method = BoundsPipeline.unreduced_decision_tree ) (params = {| UnsaturatedSolinas.n := 13; UnsaturatedSolinas.s := 4271974071841820164790043412339104229205409044713305539894083215644439451561281100045924173873152; UnsaturatedSolinas.c := (1, 9) :: nil; UnsaturatedSolinas.idxs := 0%nat :: 1%nat :: 2%nat :: 3%nat :: 4%nat :: 5%nat :: 6%nat :: 7%nat :: 8%nat :: 9%nat :: 10%nat :: 11%nat :: 12%nat :: 0%nat :: 1%nat :: nil; UnsaturatedSolinas.machine_wordsize := 32 |} ) "PipelineArithOf with vm_compute" :
-Tactic call ran for 16.162 secs (16.125u,0.019s) (success)
+Tactic call ran for 15.89 secs (15.856u,0.015s) (success)
 Testing UnsaturatedSolinas "2^321-9" (bitwidth = 32 ) (index = 0%nat ) (method = BoundsPipeline.unreduced_naive ) (params = {| UnsaturatedSolinas.n := 13; UnsaturatedSolinas.s := 4271974071841820164790043412339104229205409044713305539894083215644439451561281100045924173873152; UnsaturatedSolinas.c := (1, 9) :: nil; UnsaturatedSolinas.idxs := 0%nat :: 1%nat :: 2%nat :: 3%nat :: 4%nat :: 5%nat :: 6%nat :: 7%nat :: 8%nat :: 9%nat :: 10%nat :: 11%nat :: 12%nat :: 0%nat :: 1%nat :: nil; UnsaturatedSolinas.machine_wordsize := 32 |} ) "PipelineArithOf with vm_compute" :
-Tactic call ran for 35.564 secs (35.506u,0.019s) (success)
+Tactic call ran for 34.824 secs (34.746u,0.027s) (success)
 Testing UnsaturatedSolinas "2^321-9" (bitwidth = 32 ) (index = 0%nat ) (method = BoundsPipeline.precomputed_decision_tree ) (params = {| UnsaturatedSolinas.n := 13; UnsaturatedSolinas.s := 4271974071841820164790043412339104229205409044713305539894083215644439451561281100045924173873152; UnsaturatedSolinas.c := (1, 9) :: nil; UnsaturatedSolinas.idxs := 0%nat :: 1%nat :: 2%nat :: 3%nat :: 4%nat :: 5%nat :: 6%nat :: 7%nat :: 8%nat :: 9%nat :: 10%nat :: 11%nat :: 12%nat :: 0%nat :: 1%nat :: nil; UnsaturatedSolinas.machine_wordsize := 32 |} ) "PipelineFullOf with native_compute" (1) :
+Tactic call ran for 330.34 secs (8.967u,0.127s) (failure)
+Tactic call ran for 0. secs (0.u,0.s) (failure after 1 backtracking)
+Tactic call ran for 0. secs (0.u,0.s) (failure after 1 backtracking)
+Tactic call ran for 0. secs (0.u,0.s) (failure after 1 backtracking)
+Tactic call ran for 0. secs (0.u,0.s) (failure after 1 backtracking)
+Tactic call ran for 0. secs (0.u,0.s) (failure after 1 backtracking)
+Tactic call ran for 0. secs (0.u,0.s) (failure after 1 backtracking)
+Tactic call ran for 0. secs (0.u,0.s) (failure after 1 backtracking)
+Tactic call ran for 0. secs (0.u,0.s) (failure after 1 backtracking)
+Tactic call ran for 0. secs (0.u,0.s) (failure after 1 backtracking)
+Tactic call ran for 0. secs (0.u,0.s) (failure after 1 backtracking)
+Tactic call ran for 0. secs (0.u,0.s) (failure after 1 backtracking)
+Tactic call ran for 0. secs (0.u,0.s) (failure after 1 backtracking)

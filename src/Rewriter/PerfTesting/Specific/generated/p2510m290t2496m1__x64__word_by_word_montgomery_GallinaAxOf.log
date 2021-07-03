@@ -1,0 +1,10 @@
+Testing WordByWordMontgomery "2^510-290*2^496-1" (bitwidth = 64 ) (method = None ) (params = {| WordByWordMontgomery.m := 3292621777717531703499517186296461297235914818063567795121505704883698582458552017893209304118318844074148143396809486426396407928092469737516832688963583; WordByWordMontgomery.machine_wordsize := 64 |} ) "GallinaAxOf with vm_compute" :
+Tactic call ran for 23.106 secs (23.078u,0.027s) (success)
+Testing WordByWordMontgomery "2^510-290*2^496-1" (bitwidth = 64 ) (method = None ) (params = {| WordByWordMontgomery.m := 3292621777717531703499517186296461297235914818063567795121505704883698582458552017893209304118318844074148143396809486426396407928092469737516832688963583; WordByWordMontgomery.machine_wordsize := 64 |} ) "GallinaAxOf with native_compute" (1) :
+Tactic call ran for 4.696 secs (4.156u,0.099s) (success)
+Testing WordByWordMontgomery "2^510-290*2^496-1" (bitwidth = 64 ) (method = None ) (params = {| WordByWordMontgomery.m := 3292621777717531703499517186296461297235914818063567795121505704883698582458552017893209304118318844074148143396809486426396407928092469737516832688963583; WordByWordMontgomery.machine_wordsize := 64 |} ) "GallinaAxOf with native_compute" (2) :
+Tactic call ran for 4.282 secs (4.05u,0.143s) (success)
+Testing WordByWordMontgomery "2^510-290*2^496-1" (bitwidth = 64 ) (method = None ) (params = {| WordByWordMontgomery.m := 3292621777717531703499517186296461297235914818063567795121505704883698582458552017893209304118318844074148143396809486426396407928092469737516832688963583; WordByWordMontgomery.machine_wordsize := 64 |} ) "GallinaAxOf with cbv" :
+Tactic call ran for 559.11 secs (557.779u,0.636s) (success)
+Testing WordByWordMontgomery "2^510-290*2^496-1" (bitwidth = 64 ) (method = None ) (params = {| WordByWordMontgomery.m := 3292621777717531703499517186296461297235914818063567795121505704883698582458552017893209304118318844074148143396809486426396407928092469737516832688963583; WordByWordMontgomery.machine_wordsize := 64 |} ) "GallinaAxOf with lazy" :
+Tactic call ran for 920.621 secs (918.617u,0.835s) (success)

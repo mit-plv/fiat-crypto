@@ -1,7 +1,9 @@
 Testing WordByWordMontgomery "2^414-17" (bitwidth = 32 ) (method = None ) (params = {| WordByWordMontgomery.m := 42307582002575910332922579714097346549017899709713998034217522897561970639123926132812109468141778230245837569601494931472367; WordByWordMontgomery.machine_wordsize := 32 |} ) "GallinaAxOf with vm_compute" :
-Tactic call ran for 88.981 secs (88.736u,0.243s) (success)
+Tactic call ran for 89.016 secs (88.856u,0.159s) (success)
 Testing WordByWordMontgomery "2^414-17" (bitwidth = 32 ) (method = None ) (params = {| WordByWordMontgomery.m := 42307582002575910332922579714097346549017899709713998034217522897561970639123926132812109468141778230245837569601494931472367; WordByWordMontgomery.machine_wordsize := 32 |} ) "GallinaAxOf with native_compute" (1) :
-Tactic call ran for 15.123 secs (14.338u,0.311s) (success)
+Tactic call ran for 15.201 secs (14.321u,0.383s) (success)
 Testing WordByWordMontgomery "2^414-17" (bitwidth = 32 ) (method = None ) (params = {| WordByWordMontgomery.m := 42307582002575910332922579714097346549017899709713998034217522897561970639123926132812109468141778230245837569601494931472367; WordByWordMontgomery.machine_wordsize := 32 |} ) "GallinaAxOf with native_compute" (2) :
-Tactic call ran for 14.624 secs (14.33u,0.183s) (success)
+Tactic call ran for 14.805 secs (14.371u,0.319s) (success)
 Testing WordByWordMontgomery "2^414-17" (bitwidth = 32 ) (method = None ) (params = {| WordByWordMontgomery.m := 42307582002575910332922579714097346549017899709713998034217522897561970639123926132812109468141778230245837569601494931472367; WordByWordMontgomery.machine_wordsize := 32 |} ) "GallinaAxOf with cbv" :
+Tactic call ran for 2279.283 secs (2273.964u,2.46s) (success)
+Testing WordByWordMontgomery "2^414-17" (bitwidth = 32 ) (method = None ) (params = {| WordByWordMontgomery.m := 42307582002575910332922579714097346549017899709713998034217522897561970639123926132812109468141778230245837569601494931472367; WordByWordMontgomery.machine_wordsize := 32 |} ) "GallinaAxOf with lazy" :
