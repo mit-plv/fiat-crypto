@@ -1128,7 +1128,7 @@ Section __.
                              => ((n1, normal_data), List.find (fun '(n2, _) => n1 =? n2)%string assembly_data))
                             normal_data in
          let '(lsAB, lsB) := List.partition (fun '(_, o) => match o with Some _ => true | None => false end) ls in
-         let lsA := List.filter (fun '(n1, _) => List.existsb (fun '(n2, _) => (n1 =? n2)%string) normal_data) assembly_data in
+         let lsA := List.filter (fun '(n1, _) => negb (List.existsb (fun '(n2, _) => (n1 =? n2)%string) normal_data)) assembly_data in
          (Option.List.map
             (fun '((n, normal_data), assembly_data)
              => match assembly_data with
