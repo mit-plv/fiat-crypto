@@ -1155,13 +1155,15 @@ Section __.
              := match parse_asm_hints with
                 | Success None => ([], ls)
                 | Success (Some (prefix, function_asms))
-                  => let '(asm_ls, ls, unused_asm_ls) := split_to_assembly_functions function_asms ls in
+                  => let valid_function_names := List.map fst ls in
+                     let '(asm_ls, ls, unused_asm_ls) := split_to_assembly_functions function_asms ls in
                      (* TODO: Currently we just pass the prefix/header through unchanged; maybe we should instead generate a better header? *)
                      let asm_ls_prefix := [(assembly_output, "header-prefix", Success (Show.show_lines prefix))] in
                      let asm_ls_check
                          := if (error_on_unused_assembly_functions && (0 <? List.length unused_asm_ls))%nat
                             then [(assembly_output, "check", Error (Pipeline.Unused_global_assembly_labels
-                                                                      (List.map (@fst _ _) unused_asm_ls)))]
+                                                                      (List.map (@fst _ _) unused_asm_ls)
+                                                                      valid_function_names))]
                             else [] in
                      let asm_ls
                          := List.map
