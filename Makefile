@@ -768,8 +768,8 @@ check-output: $(CHECK_OUTPUTS)
 accept-output: $(ACCEPT_OUTPUTS)
 $(CHECK_OUTPUTS) : check-% : $(OUTPUT_VOS)
 	$(SHOW)'DIFF $*'
-	$(HIDE)cat output-tests/$*.expected | tr '\n' ' ' > output-tests/$*.expected.processed
-	$(HIDE)cat $*.out | tr '\n' ' ' > $*.out.processed
+	$(HIDE)cat output-tests/$*.expected | grep -v '^Arguments ' | tr '\n' ' ' > output-tests/$*.expected.processed
+	$(HIDE)cat $*.out | grep -v '^Arguments ' | tr '\n' ' ' > $*.out.processed
 	$(HIDE)diff --ignore-space-change output-tests/$*.expected.processed $*.out.processed || (RV=$$?; echo "To accept the new output, run make accept-$*"; exit $$RV)
 
 $(ACCEPT_OUTPUTS) : accept-% :
