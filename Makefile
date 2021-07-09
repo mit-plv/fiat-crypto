@@ -770,7 +770,7 @@ $(CHECK_OUTPUTS) : check-% : $(OUTPUT_VOS)
 	$(SHOW)'DIFF $*'
 	$(HIDE)cat output-tests/$*.expected | grep -v '^Arguments ' | tr '\n' ' ' > output-tests/$*.expected.processed
 	$(HIDE)cat $*.out | grep -v '^Arguments ' | tr '\n' ' ' > $*.out.processed
-	$(HIDE)diff --ignore-space-change output-tests/$*.expected.processed $*.out.processed || (RV=$$?; echo "To accept the new output, run make accept-$*"; exit $$RV)
+	$(HIDE)diff --ignore-space-change output-tests/$*.expected.processed $*.out.processed || (RV=$$?; diff --ignore-space-change output-tests/$*.expected $*.out; echo "To accept the new output, run make accept-$*"; exit $$RV)
 
 $(ACCEPT_OUTPUTS) : accept-% :
 	$(SHOW)'ACCEPT $*.out'
