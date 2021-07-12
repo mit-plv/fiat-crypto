@@ -112,20 +112,44 @@ Section Forall2.
   Proof. induction 1; inversion 1; subst; econstructor; eauto. Qed.
 End Forall2.
 
+Require Import Coq.Strings.String Crypto.Util.Strings.Show.
 Require Import Crypto.Assembly.Syntax.
 Definition idx := N.
 Local Set Boolean Equality Schemes.
-Variant opname := old (_:N) | oldold (_:REG*option nat) | const (_ : N) | add | addcarry | notaddcarry | neg | shl | shr | and | or | xor | slice (lo sz : N) | mul | mulhuu | set_slice (lo sz : N)(* | ... *).
+Variant opname := old (_:N) | oldold (_:REG*option nat) | const (_ : N) | add | addcarry | notaddcarry | neg | shl | shr | and | or | xor | slice (lo sz : N) | mul | mulhuu (_:N) | set_slice (lo sz : N)(* | ... *).
+
+Global Instance show_opname : Show opname := fun o =>
+  match o with
+  | old n => "old " ++ show n
+  | oldold p => "oldold " ++ show p
+  | const n => "const " ++ show n
+  | add => "add"
+  | addcarry => "addcarry"
+  | notaddcarry => "notaddcarry"
+  | neg => "neg"
+  | shl => "shl"
+  | shr => "shr"
+  | and => "and"
+  | or => "or"
+  | xor => "xor"
+  | slice lo sz => "slice " ++ show lo ++ " " ++ show sz
+  | mul => "mul"
+  | mulhuu n => "mulhuu"
+  | set_slice lo sz => "set_slice " ++ show lo ++ " " ++ show sz
+  end%string.
 
 Definition associative o := match o with add|mul|or|and => true | _ => false end.
-Definition commutative o := match o with add|addcarry|mul|mulhuu => true | _ => false end.
-Definition identity o := match o with add|addcarry => Some 0%N | mul|mulhuu=>Some 1%N |_=> None end.
+Definition commutative o := match o with add|addcarry|mul|mulhuu _ => true | _ => false end.
+Definition identity o := match o with add|addcarry => Some 0%N | mul|mulhuu _=>Some 1%N |_=> None end.
 
 Class OperationSize := operation_size : N.
+Global Instance Show_OperationSize : Show OperationSize := show_N.
 Definition op : Set := opname * OperationSize.
+Global Instance Show_op : Show op := show_prod.
 Definition op_beq := Prod.prod_beq _ _ opname_beq N.eqb.
 
 Definition node (A : Set) : Set := op * list A.
+Global Instance Show_node {A : Set} [show_A : Show A] : Show (node A) := show_prod.
 
 Local Unset Elimination Schemes.
 Inductive expr : Set :=
@@ -144,6 +168,11 @@ Section expr_ind.
 End expr_ind.
 Definition invert_ExprRef (e : expr) : option idx :=
   match e with ExprRef i => Some i | _ => None end.
+Global Instance Show_expr : Show expr := fix f e :=
+   match e with
+   | ExprRef i => "ExprRef " ++ show i
+   | ExprApp n => "ExprApp " ++ @show (node expr) (@Show_node _ f) n
+   end%string.
 
 Require Import Crypto.Util.Option Crypto.Util.Notations Coq.Lists.List.
 Import ListNotations.
@@ -899,7 +928,7 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
   | mulx, [hi; lo; src2] =>
     let src1 : ARG := rdx in
     vl <- Symeval (mul@(src1,src2));
-    vh <- Symeval (mulhuu@(src1,src2));
+    vh <- Symeval ((mulhuu s)@(src1,src2));
     _ <- SetOperand lo vl;
          SetOperand hi vh
    | Syntax.shr, [dst; cnt] =>

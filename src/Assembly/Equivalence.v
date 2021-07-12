@@ -80,12 +80,29 @@ Inductive EquivalenceCheckingError :=
 | Invalid_higher_order_application {var} {s d : API.type} (f : API.expr (var:=var) (s -> d)) (x : API.expr (var:=var) s)
 | Invalid_higher_order_let {var} {s : API.type} (x : API.expr (var:=var) s)
 | Unhandled_identifier {t} (idc : ident t)
+| Unhandled_cast (_ _ : Z)
 .
 
+Global Instance Show_error : Show Symbolic.error := fun e =>
+ match e with
+ | error.nth_error_dag n => "error.nth_error_dag " ++ show n
+ | error.get_flag f => "error.get_flag " ++ show f
+ | error.get_reg r => "error.get_reg " ++ show r
+ | error.load a => "error.load " ++ show a
+ | error.store a v => "error.store " ++ show a ++ " " ++ show v
+ | error.set_const c i => "error.set_const " ++ show c ++ " " ++ show i
+ | error.unimplemented_instruction n => "error.unimplemented_instruction " ++ show n
+ | error.ambiguous_operation_size n => "error.ambiguous_operation_size " ++ show n
+ | error.failed_to_unify l => "error.failed_to_unify _"
+ end%string.
+
+Global Instance ShowLines_symbolic_state : ShowLines symbolic_state := fun s =>
+ [].
+  
 Global Instance show_lines_EquivalenceCheckingError : ShowLines EquivalenceCheckingError
   := fun err => match err with
-                | Could_not_prove_equivalence _ _
-                  => ["Could not prove equivalence of assembly and AST (_ :Symbolic.error) (_ : symbolic_state)."]
+                | Could_not_prove_equivalence l r
+                  => ["Could not prove equivalence of assembly and AST: " ++ show l]%string ++ ["Combined state:"] ++ show_lines r
                 | Internal_error_output_load_failed => ["Internal_error_output_load_failed"]%string
                 | Not_enough_registers num_given num_extra_needed
                   => ["Not enough registers available for storing input and output (given " ++ show num_given ++ ", needed an additional " ++ show num_extra_needed ++ "."]%string
@@ -110,6 +127,8 @@ Global Instance show_lines_EquivalenceCheckingError : ShowLines EquivalenceCheck
                       ; "Let-bound expression: " ++ show x]%string
                 | Unhandled_identifier t idc
                   => ["Identifier not yet handled by symbolic evaluation: " ++ show idc ++ "."]%string
+                | Unhandled_cast l u
+                  => ["Argument not yet handled by symbolic evaluation: " ++ show (l, u)]%string
                 end%list.
 Global Instance show_EquivalenceCheckingError : Show EquivalenceCheckingError
   := fun err => String.concat String.NewLine (show_lines err).
@@ -316,14 +335,20 @@ Bind Scope symex_scope with symex_T.
 
 Definition symex_ident {t} (idc : ident t) : symex_T t.
 Proof.
-  refine (let symex_mod_zrange idx range := symex_error (Unhandled_identifier idc) in
+  refine (let symex_mod_zrange idx '(ZRange.Build_zrange l u) :=
+            let u := Z.succ u in
+            let lu := Z.log2 u in
+            if Z.eqb u (2^lu)
+            then Merge (ExprApp ((slice 0 (Z.to_N lu)), Z.to_N lu, [ExprRef idx]))
+            else symex_error (Unhandled_cast l u)
+          in
           match idc in ident t return symex_T t with
           | ident.Literal base.type.Z v
             => Merge (ExprApp (const (Z.to_N v), 64%N, nil) (* note: 64 is placeholder, to_N is unsound *))
           | ident.Z_add => fun x y => Merge (ExprApp (add, 64%N, [ExprRef x; ExprRef y]))
 
           | ident.Z_modulo
-          | ident.Z_mul
+          | ident.Z_mul => fun x y => Merge (ExprApp (mul, 64%N, [ExprRef x; ExprRef y]))
           | ident.Z_pow
           | ident.Z_sub
           | ident.Z_opp
@@ -331,17 +356,27 @@ Proof.
           | ident.Z_log2
           | ident.Z_log2_up
           | ident.Z_to_nat
-          | ident.Z_shiftr
-          | ident.Z_shiftl
-          | ident.Z_land
-          | ident.Z_lor
+            => symex_T_error (Unhandled_identifier idc)
+          | ident.Z_shiftr => fun x y => Merge (ExprApp (shr, 64%N, [ExprRef x; ExprRef y]))
+          | ident.Z_shiftl => fun x y => Merge (ExprApp (shl, 64%N, [ExprRef x; ExprRef y]))
+          | ident.Z_land => fun x y => Merge (ExprApp (and, 64%N, [ExprRef x; ExprRef y]))
+          | ident.Z_lor => fun x y => Merge (ExprApp (or, 64%N, [ExprRef x; ExprRef y]))
           | ident.Z_min
           | ident.Z_max
           | ident.Z_mul_split
-          | ident.Z_mul_high
-          | ident.Z_add_get_carry
-          | ident.Z_add_with_carry
-          | ident.Z_add_with_get_carry
+            => symex_T_error (Unhandled_identifier idc)
+           (* note for mulhuu/adc: the argument order is a guess, 64 is a kludge and we need something better to use the value of s whose type is var *)
+          | ident.Z_mul_high => fun s x y => Merge (ExprApp (mulhuu 64%N, 64%N, [ExprRef x; ExprRef y]))
+          | ident.Z_add_get_carry => fun s x y =>
+            a <- Merge (ExprApp (add     , 64%N, [ExprRef x; ExprRef y]));
+            c <- Merge (ExprApp (addcarry, 64%N, [ExprRef x; ExprRef y]));
+            symex_return (a, c)
+          | ident.Z_add_with_carry => fun x y z => Merge (ExprApp (add, 64%N, [ExprRef x; ExprRef y; ExprRef z]))
+
+          | ident.Z_add_with_get_carry => fun s x y z =>
+            a <- Merge (ExprApp (add     , 64%N, [ExprRef x; ExprRef y; ExprRef z]));
+            c <- Merge (ExprApp (addcarry, 64%N, [ExprRef x; ExprRef y; ExprRef z]));
+            symex_return (a, c)
           | ident.Z_sub_get_borrow
           | ident.Z_sub_with_get_borrow
           | ident.Z_ltz
