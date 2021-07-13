@@ -12,8 +12,10 @@
 //!   return values.
 //!
 //! Computed values:
-//! eval z = z[0] + (z[1] << 64) + (z[2] << 128) + (z[3] << 192) + (z[4] << 256) + (z[5] << 0x140) + (z[6] << 0x180)
-//! bytes_eval z = z[0] + (z[1] << 8) + (z[2] << 16) + (z[3] << 24) + (z[4] << 32) + (z[5] << 40) + (z[6] << 48) + (z[7] << 56) + (z[8] << 64) + (z[9] << 72) + (z[10] << 80) + (z[11] << 88) + (z[12] << 96) + (z[13] << 104) + (z[14] << 112) + (z[15] << 120) + (z[16] << 128) + (z[17] << 136) + (z[18] << 144) + (z[19] << 152) + (z[20] << 160) + (z[21] << 168) + (z[22] << 176) + (z[23] << 184) + (z[24] << 192) + (z[25] << 200) + (z[26] << 208) + (z[27] << 216) + (z[28] << 224) + (z[29] << 232) + (z[30] << 240) + (z[31] << 248) + (z[32] << 256) + (z[33] << 0x108) + (z[34] << 0x110) + (z[35] << 0x118) + (z[36] << 0x120) + (z[37] << 0x128) + (z[38] << 0x130) + (z[39] << 0x138) + (z[40] << 0x140) + (z[41] << 0x148) + (z[42] << 0x150) + (z[43] << 0x158) + (z[44] << 0x160) + (z[45] << 0x168) + (z[46] << 0x170) + (z[47] << 0x178) + (z[48] << 0x180) + (z[49] << 0x188) + (z[50] << 0x190) + (z[51] << 0x198) + (z[52] << 0x1a0) + (z[53] << 0x1a8) + (z[54] << 0x1b0)
+//!   eval z = z[0] + (z[1] << 64) + (z[2] << 128) + (z[3] << 192) + (z[4] << 256) + (z[5] << 0x140) + (z[6] << 0x180)
+//!   bytes_eval z = z[0] + (z[1] << 8) + (z[2] << 16) + (z[3] << 24) + (z[4] << 32) + (z[5] << 40) + (z[6] << 48) + (z[7] << 56) + (z[8] << 64) + (z[9] << 72) + (z[10] << 80) + (z[11] << 88) + (z[12] << 96) + (z[13] << 104) + (z[14] << 112) + (z[15] << 120) + (z[16] << 128) + (z[17] << 136) + (z[18] << 144) + (z[19] << 152) + (z[20] << 160) + (z[21] << 168) + (z[22] << 176) + (z[23] << 184) + (z[24] << 192) + (z[25] << 200) + (z[26] << 208) + (z[27] << 216) + (z[28] << 224) + (z[29] << 232) + (z[30] << 240) + (z[31] << 248) + (z[32] << 256) + (z[33] << 0x108) + (z[34] << 0x110) + (z[35] << 0x118) + (z[36] << 0x120) + (z[37] << 0x128) + (z[38] << 0x130) + (z[39] << 0x138) + (z[40] << 0x140) + (z[41] << 0x148) + (z[42] << 0x150) + (z[43] << 0x158) + (z[44] << 0x160) + (z[45] << 0x168) + (z[46] << 0x170) + (z[47] << 0x178) + (z[48] << 0x180) + (z[49] << 0x188) + (z[50] << 0x190) + (z[51] << 0x198) + (z[52] << 0x1a0) + (z[53] << 0x1a8) + (z[54] << 0x1b0)
+//!   twos_complement_eval z = let x1 := z[0] + (z[1] << 64) + (z[2] << 128) + (z[3] << 192) + (z[4] << 256) + (z[5] << 0x140) + (z[6] << 0x180) in
+//!                            if x1 & (2^448-1) < 2^447 then x1 & (2^448-1) else (x1 & (2^448-1)) - 2^448
 
 #![allow(unused_parens)]
 #[allow(non_camel_case_types)]
@@ -23,8 +25,17 @@ pub type fiat_p434_i1 = i8;
 pub type fiat_p434_u2 = u8;
 pub type fiat_p434_i2 = i8;
 
+/* The type fiat_p434_montgomery_domain_field_element is a field element in the Montgomery domain. */
+/* Bounds: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]] */
+pub type fiat_p434_montgomery_domain_field_element = [u64; 7];
+
+/* The type fiat_p434_non_montgomery_domain_field_element is a field element NOT in the Montgomery domain. */
+/* Bounds: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]] */
+pub type fiat_p434_non_montgomery_domain_field_element = [u64; 7];
+
 
 /// The function fiat_p434_addcarryx_u64 is an addition with carry.
+///
 /// Postconditions:
 ///   out1 = (arg1 + arg2 + arg3) mod 2^64
 ///   out2 = ⌊(arg1 + arg2 + arg3) / 2^64⌋
@@ -46,6 +57,7 @@ pub fn fiat_p434_addcarryx_u64(out1: &mut u64, out2: &mut fiat_p434_u1, arg1: fi
 }
 
 /// The function fiat_p434_subborrowx_u64 is a subtraction with borrow.
+///
 /// Postconditions:
 ///   out1 = (-arg1 + arg2 + -arg3) mod 2^64
 ///   out2 = -⌊(-arg1 + arg2 + -arg3) / 2^64⌋
@@ -67,6 +79,7 @@ pub fn fiat_p434_subborrowx_u64(out1: &mut u64, out2: &mut fiat_p434_u1, arg1: f
 }
 
 /// The function fiat_p434_mulx_u64 is a multiplication, returning the full double-width result.
+///
 /// Postconditions:
 ///   out1 = (arg1 * arg2) mod 2^64
 ///   out2 = ⌊arg1 * arg2 / 2^64⌋
@@ -87,6 +100,7 @@ pub fn fiat_p434_mulx_u64(out1: &mut u64, out2: &mut u64, arg1: u64, arg2: u64) 
 }
 
 /// The function fiat_p434_cmovznz_u64 is a single-word conditional move.
+///
 /// Postconditions:
 ///   out1 = (if arg1 = 0 then arg2 else arg3)
 ///
@@ -105,6 +119,7 @@ pub fn fiat_p434_cmovznz_u64(out1: &mut u64, arg1: fiat_p434_u1, arg2: u64, arg3
 }
 
 /// The function fiat_p434_mul multiplies two field elements in the Montgomery domain.
+///
 /// Preconditions:
 ///   0 ≤ eval arg1 < m
 ///   0 ≤ eval arg2 < m
@@ -112,13 +127,8 @@ pub fn fiat_p434_cmovznz_u64(out1: &mut u64, arg1: fiat_p434_u1, arg2: u64, arg3
 ///   eval (from_montgomery out1) mod m = (eval (from_montgomery arg1) * eval (from_montgomery arg2)) mod m
 ///   0 ≤ eval out1 < m
 ///
-/// Input Bounds:
-///   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
-///   arg2: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
-/// Output Bounds:
-///   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 #[inline]
-pub fn fiat_p434_mul(out1: &mut [u64; 7], arg1: &[u64; 7], arg2: &[u64; 7]) -> () {
+pub fn fiat_p434_mul(out1: &mut fiat_p434_montgomery_domain_field_element, arg1: &fiat_p434_montgomery_domain_field_element, arg2: &fiat_p434_montgomery_domain_field_element) -> () {
   let x1: u64 = (arg1[1]);
   let x2: u64 = (arg1[2]);
   let x3: u64 = (arg1[3]);
@@ -1052,18 +1062,15 @@ pub fn fiat_p434_mul(out1: &mut [u64; 7], arg1: &[u64; 7], arg2: &[u64; 7]) -> (
 }
 
 /// The function fiat_p434_square squares a field element in the Montgomery domain.
+///
 /// Preconditions:
 ///   0 ≤ eval arg1 < m
 /// Postconditions:
 ///   eval (from_montgomery out1) mod m = (eval (from_montgomery arg1) * eval (from_montgomery arg1)) mod m
 ///   0 ≤ eval out1 < m
 ///
-/// Input Bounds:
-///   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
-/// Output Bounds:
-///   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 #[inline]
-pub fn fiat_p434_square(out1: &mut [u64; 7], arg1: &[u64; 7]) -> () {
+pub fn fiat_p434_square(out1: &mut fiat_p434_montgomery_domain_field_element, arg1: &fiat_p434_montgomery_domain_field_element) -> () {
   let x1: u64 = (arg1[1]);
   let x2: u64 = (arg1[2]);
   let x3: u64 = (arg1[3]);
@@ -1997,6 +2004,7 @@ pub fn fiat_p434_square(out1: &mut [u64; 7], arg1: &[u64; 7]) -> () {
 }
 
 /// The function fiat_p434_add adds two field elements in the Montgomery domain.
+///
 /// Preconditions:
 ///   0 ≤ eval arg1 < m
 ///   0 ≤ eval arg2 < m
@@ -2004,13 +2012,8 @@ pub fn fiat_p434_square(out1: &mut [u64; 7], arg1: &[u64; 7]) -> () {
 ///   eval (from_montgomery out1) mod m = (eval (from_montgomery arg1) + eval (from_montgomery arg2)) mod m
 ///   0 ≤ eval out1 < m
 ///
-/// Input Bounds:
-///   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
-///   arg2: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
-/// Output Bounds:
-///   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 #[inline]
-pub fn fiat_p434_add(out1: &mut [u64; 7], arg1: &[u64; 7], arg2: &[u64; 7]) -> () {
+pub fn fiat_p434_add(out1: &mut fiat_p434_montgomery_domain_field_element, arg1: &fiat_p434_montgomery_domain_field_element, arg2: &fiat_p434_montgomery_domain_field_element) -> () {
   let mut x1: u64 = 0;
   let mut x2: fiat_p434_u1 = 0;
   fiat_p434_addcarryx_u64(&mut x1, &mut x2, 0x0, (arg1[0]), (arg2[0]));
@@ -2080,6 +2083,7 @@ pub fn fiat_p434_add(out1: &mut [u64; 7], arg1: &[u64; 7], arg2: &[u64; 7]) -> (
 }
 
 /// The function fiat_p434_sub subtracts two field elements in the Montgomery domain.
+///
 /// Preconditions:
 ///   0 ≤ eval arg1 < m
 ///   0 ≤ eval arg2 < m
@@ -2087,13 +2091,8 @@ pub fn fiat_p434_add(out1: &mut [u64; 7], arg1: &[u64; 7], arg2: &[u64; 7]) -> (
 ///   eval (from_montgomery out1) mod m = (eval (from_montgomery arg1) - eval (from_montgomery arg2)) mod m
 ///   0 ≤ eval out1 < m
 ///
-/// Input Bounds:
-///   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
-///   arg2: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
-/// Output Bounds:
-///   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 #[inline]
-pub fn fiat_p434_sub(out1: &mut [u64; 7], arg1: &[u64; 7], arg2: &[u64; 7]) -> () {
+pub fn fiat_p434_sub(out1: &mut fiat_p434_montgomery_domain_field_element, arg1: &fiat_p434_montgomery_domain_field_element, arg2: &fiat_p434_montgomery_domain_field_element) -> () {
   let mut x1: u64 = 0;
   let mut x2: fiat_p434_u1 = 0;
   fiat_p434_subborrowx_u64(&mut x1, &mut x2, 0x0, (arg1[0]), (arg2[0]));
@@ -2148,18 +2147,15 @@ pub fn fiat_p434_sub(out1: &mut [u64; 7], arg1: &[u64; 7], arg2: &[u64; 7]) -> (
 }
 
 /// The function fiat_p434_opp negates a field element in the Montgomery domain.
+///
 /// Preconditions:
 ///   0 ≤ eval arg1 < m
 /// Postconditions:
 ///   eval (from_montgomery out1) mod m = -eval (from_montgomery arg1) mod m
 ///   0 ≤ eval out1 < m
 ///
-/// Input Bounds:
-///   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
-/// Output Bounds:
-///   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 #[inline]
-pub fn fiat_p434_opp(out1: &mut [u64; 7], arg1: &[u64; 7]) -> () {
+pub fn fiat_p434_opp(out1: &mut fiat_p434_montgomery_domain_field_element, arg1: &fiat_p434_montgomery_domain_field_element) -> () {
   let mut x1: u64 = 0;
   let mut x2: fiat_p434_u1 = 0;
   fiat_p434_subborrowx_u64(&mut x1, &mut x2, 0x0, (0x0 as u64), (arg1[0]));
@@ -2214,18 +2210,15 @@ pub fn fiat_p434_opp(out1: &mut [u64; 7], arg1: &[u64; 7]) -> () {
 }
 
 /// The function fiat_p434_from_montgomery translates a field element out of the Montgomery domain.
+///
 /// Preconditions:
 ///   0 ≤ eval arg1 < m
 /// Postconditions:
 ///   eval out1 mod m = (eval arg1 * ((2^64)⁻¹ mod m)^7) mod m
 ///   0 ≤ eval out1 < m
 ///
-/// Input Bounds:
-///   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
-/// Output Bounds:
-///   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 #[inline]
-pub fn fiat_p434_from_montgomery(out1: &mut [u64; 7], arg1: &[u64; 7]) -> () {
+pub fn fiat_p434_from_montgomery(out1: &mut fiat_p434_non_montgomery_domain_field_element, arg1: &fiat_p434_montgomery_domain_field_element) -> () {
   let x1: u64 = (arg1[0]);
   let mut x2: u64 = 0;
   let mut x3: u64 = 0;
@@ -2804,18 +2797,15 @@ pub fn fiat_p434_from_montgomery(out1: &mut [u64; 7], arg1: &[u64; 7]) -> () {
 }
 
 /// The function fiat_p434_to_montgomery translates a field element into the Montgomery domain.
+///
 /// Preconditions:
 ///   0 ≤ eval arg1 < m
 /// Postconditions:
 ///   eval (from_montgomery out1) mod m = eval arg1 mod m
 ///   0 ≤ eval out1 < m
 ///
-/// Input Bounds:
-///   arg1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
-/// Output Bounds:
-///   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 #[inline]
-pub fn fiat_p434_to_montgomery(out1: &mut [u64; 7], arg1: &[u64; 7]) -> () {
+pub fn fiat_p434_to_montgomery(out1: &mut fiat_p434_montgomery_domain_field_element, arg1: &fiat_p434_non_montgomery_domain_field_element) -> () {
   let x1: u64 = (arg1[1]);
   let x2: u64 = (arg1[2]);
   let x3: u64 = (arg1[3]);
@@ -3691,6 +3681,7 @@ pub fn fiat_p434_to_montgomery(out1: &mut [u64; 7], arg1: &[u64; 7]) -> () {
 }
 
 /// The function fiat_p434_nonzero outputs a single non-zero word if the input is non-zero and zero otherwise.
+///
 /// Preconditions:
 ///   0 ≤ eval arg1 < m
 /// Postconditions:
@@ -3707,6 +3698,7 @@ pub fn fiat_p434_nonzero(out1: &mut u64, arg1: &[u64; 7]) -> () {
 }
 
 /// The function fiat_p434_selectznz is a multi-limb conditional select.
+///
 /// Postconditions:
 ///   eval out1 = (if arg1 = 0 then eval arg2 else eval arg3)
 ///
@@ -3742,6 +3734,7 @@ pub fn fiat_p434_selectznz(out1: &mut [u64; 7], arg1: fiat_p434_u1, arg2: &[u64;
 }
 
 /// The function fiat_p434_to_bytes serializes a field element NOT in the Montgomery domain to bytes in little-endian order.
+///
 /// Preconditions:
 ///   0 ≤ eval arg1 < m
 /// Postconditions:
@@ -3914,6 +3907,7 @@ pub fn fiat_p434_to_bytes(out1: &mut [u8; 55], arg1: &[u64; 7]) -> () {
 }
 
 /// The function fiat_p434_from_bytes deserializes a field element NOT in the Montgomery domain from bytes in little-endian order.
+///
 /// Preconditions:
 ///   0 ≤ bytes_eval arg1 < m
 /// Postconditions:
@@ -4039,15 +4033,13 @@ pub fn fiat_p434_from_bytes(out1: &mut [u64; 7], arg1: &[u8; 55]) -> () {
 }
 
 /// The function fiat_p434_set_one returns the field element one in the Montgomery domain.
+///
 /// Postconditions:
 ///   eval (from_montgomery out1) mod m = 1 mod m
 ///   0 ≤ eval out1 < m
 ///
-/// Input Bounds:
-/// Output Bounds:
-///   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 #[inline]
-pub fn fiat_p434_set_one(out1: &mut [u64; 7]) -> () {
+pub fn fiat_p434_set_one(out1: &mut fiat_p434_montgomery_domain_field_element) -> () {
   out1[0] = 0x742c;
   out1[1] = (0x0 as u64);
   out1[2] = (0x0 as u64);
@@ -4057,12 +4049,12 @@ pub fn fiat_p434_set_one(out1: &mut [u64; 7]) -> () {
   out1[6] = 0xeceea7bd2eda;
 }
 
-/// The function fiat_p434_msat returns the saturated represtation of the prime modulus.
+/// The function fiat_p434_msat returns the saturated representation of the prime modulus.
+///
 /// Postconditions:
 ///   twos_complement_eval out1 = m
 ///   0 ≤ eval out1 < m
 ///
-/// Input Bounds:
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 #[inline]
@@ -4078,6 +4070,7 @@ pub fn fiat_p434_msat(out1: &mut [u64; 8]) -> () {
 }
 
 /// The function fiat_p434_divstep computes a divstep.
+///
 /// Preconditions:
 ///   0 ≤ eval arg4 < m
 ///   0 ≤ eval arg5 < m
@@ -4468,11 +4461,11 @@ pub fn fiat_p434_divstep(out1: &mut u64, out2: &mut [u64; 8], out3: &mut [u64; 8
 }
 
 /// The function fiat_p434_divstep_precomp returns the precomputed value for Bernstein-Yang-inversion (in montgomery form).
+///
 /// Postconditions:
-///   eval (from_montgomery out1) = ⌊(m - 1) / 2⌋^(if (log2 m) + 1 < 46 then ⌊(49 * ((log2 m) + 1) + 80) / 17⌋ else ⌊(49 * ((log2 m) + 1) + 57) / 17⌋)
+///   eval (from_montgomery out1) = ⌊(m - 1) / 2⌋^(if ⌊log2 m⌋ + 1 < 46 then ⌊(49 * (⌊log2 m⌋ + 1) + 80) / 17⌋ else ⌊(49 * (⌊log2 m⌋ + 1) + 57) / 17⌋)
 ///   0 ≤ eval out1 < m
 ///
-/// Input Bounds:
 /// Output Bounds:
 ///   out1: [[0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff], [0x0 ~> 0xffffffffffffffff]]
 #[inline]
@@ -4485,4 +4478,3 @@ pub fn fiat_p434_divstep_precomp(out1: &mut [u64; 7]) -> () {
   out1[5] = 0x6e1ddae1d9609ae1;
   out1[6] = 0x6df82285eec6;
 }
-

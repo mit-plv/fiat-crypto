@@ -180,7 +180,7 @@ else:
   Definition default_tight_upperbound_fraction : Q := 1%Q.
   Definition coef := 2. (* for balance in sub *)
   Definition prime_upperbound_list : list Z
-    := Partition.partition weight n (s-1).
+    := Partition.partition weight n (2 ^ Z.log2_up (s - Associational.eval c) - 1).
   (** We take the absolute value mostly to make proofs easy *)
   Definition tight_upperbounds : list Z
     := List.map

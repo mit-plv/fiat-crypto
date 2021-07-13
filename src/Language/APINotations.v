@@ -72,6 +72,7 @@ Module Compilers.
   Global Arguments ident_snd {_ _} : assert.
   Global Arguments ident_prod_rect {_ _ _} : assert.
   Global Arguments ident_bool_rect {_} : assert.
+  Global Arguments ident_bool_rect_nodep {_} : assert.
   Global Arguments ident_nat_rect {_} : assert.
   Global Arguments ident_nat_rect_arrow {_ _} : assert.
   Global Arguments ident_eager_nat_rect {_} : assert.
@@ -101,7 +102,7 @@ Module Compilers.
   Global Arguments ident_zrange_rect {_} : assert.
   Global Arguments eta_base_cps {_} _ _ : assert.
   Global Arguments ident_interp {_} _ : assert.
-  Global Arguments base_interp_beq {_} _ _ : assert.
+  Global Arguments base_interp_beq {_ _} _ _ : assert.
   Global Arguments reflect_base_interp_beq {_}.
   Global Arguments ident_is_var_like {_} _ : assert.
   Global Arguments eqv_Reflexive_Proper {_} _.
@@ -188,6 +189,7 @@ Module Compilers.
     Notation snd := Compilers.ident_snd (only parsing).
     Notation prod_rect := Compilers.ident_prod_rect (only parsing).
     Notation bool_rect := Compilers.ident_bool_rect (only parsing).
+    Notation bool_rect_nodep := Compilers.ident_bool_rect_nodep (only parsing).
     Notation nat_rect := Compilers.ident_nat_rect (only parsing).
     Notation nat_rect_arrow := Compilers.ident_nat_rect_arrow (only parsing).
     Notation eager_nat_rect := Compilers.ident_eager_nat_rect (only parsing).

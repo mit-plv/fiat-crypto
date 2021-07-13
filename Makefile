@@ -12,10 +12,10 @@ GHCFLAGS?= # -XStrict
 CFLAGS?=
 
 CARGO_BUILD := cargo build
+ZIG_BUILD := zig build
 
 SKIP_BEDROCK2?=
 
-PROFILE?=
 VERBOSE?=
 SHOW := $(if $(VERBOSE),@true "",@echo "")
 HIDE := $(if $(VERBOSE),,@)
@@ -30,8 +30,8 @@ INSTALLDEFAULTROOT := Crypto
 	install-standalone install-standalone-ocaml install-standalone-haskell \
 	uninstall-standalone uninstall-standalone-ocaml uninstall-standalone-haskell \
 	util all-except-generated \
-	c-files bedrock2-files rust-files go-files json-files java-files generated-files \
-	lite-c-files lite-bedrock2-files lite-rust-files lite-go-files lite-json-files lite-java-files lite-generated-files \
+	c-files bedrock2-files rust-files go-files json-files java-files zig-files generated-files \
+	lite-c-files lite-bedrock2-files lite-rust-files lite-go-files lite-json-files lite-java-files lite-zig-files lite-generated-files \
 	bedrock2-backend \
 	update-go-pkg-cache \
 	deps \
@@ -39,8 +39,8 @@ INSTALLDEFAULTROOT := Crypto
 	lite only-heavy printlite \
 	all-except-compiled \
 	some-early pre-standalone pre-standalone-extracted standalone standalone-haskell standalone-ocaml \
-	test-c-files test-bedrock2-files test-rust-files test-go-files test-json-files test-java-files \
-	only-test-c-files only-test-bedrock2-files only-test-rust-files only-test-go-files only-test-json-files only-test-java-files \
+	test-c-files test-bedrock2-files test-rust-files test-go-files test-json-files test-java-files test-zig-files \
+	only-test-c-files only-test-bedrock2-files only-test-rust-files only-test-go-files only-test-json-files only-test-java-files only-test-zig-files \
 	test-go-module only-test-go-module \
 	javadoc only-javadoc \
 	check-output accept-output
@@ -50,21 +50,54 @@ SKIP_INCLUDE?=
 ifneq ($(SKIP_INCLUDE),1)
 -include Makefile.coq
 include etc/coq-scripts/Makefile.vo_closure
+
+ifeq (,$(COQ_VERSION))
+# Makefile.coq didn't get included, so we need to make a best-effort to get the Coq version so we can make _CoqProject
+ifneq (,$(COQBIN))
+# add an ending /
+COQBIN:=$(COQBIN)/
+endif
+
+COQC     ?= "$(COQBIN)coqc"
+COQ_VERSION:=$(shell $(COQC) --print-version | cut -d " " -f 1)
+
+endif
 endif
 
 .DEFAULT_GOAL := all
-
-SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g' | uniq
-WARNINGS := +implicit-core-hint-db,+implicits-in-term,+non-reversible-notation,+deprecated-intros-until-0,+deprecated-focus,+unused-intro-pattern,+variable-collision,-deprecated-hint-constr,-fragile-hint-constr,+omega-is-deprecated,+deprecated-instantiate-syntax,+non-recursive
-update-_CoqProject::
-	$(SHOW)'ECHO > _CoqProject'
-	$(HIDE)(echo '-R $(SRC_DIR) $(MOD_NAME)'; echo '-arg -w -arg $(WARNINGS)'; (git ls-files 'src/*.v' | $(GREP_EXCLUDE_SPECIAL_VOFILES) | $(SORT_COQPROJECT))) > _CoqProject
 
 # coq .vo files that are not compiled using coq_makefile
 SPECIAL_VOFILES := \
 	src/ExtractionOCaml/%.vo \
 	src/ExtractionHaskell/%.vo
 GREP_EXCLUDE_SPECIAL_VOFILES := grep -v '^src/Extraction\(OCaml\|Haskell\)/'
+
+ifneq (,$(filter 8.9%,$(COQ_VERSION)))
+NATIVE_COMPILER_ONDEMAND_COQPROJECT_FRAGMENT :=
+else
+NATIVE_COMPILER_ONDEMAND_COQPROJECT_FRAGMENT := -arg -native-compiler -arg ondemand
+endif
+
+_CoqProject: _CoqProject.in
+	sed 's/@NATIVE_COMPILER_ARG@/$(NATIVE_COMPILER_ONDEMAND_COQPROJECT_FRAGMENT)/g' $< > $@
+
+# This target is used to update the _CoqProject file.
+# But it only works if we have git
+ifneq (,$(wildcard .git/))
+SORT_COQPROJECT = sed 's,[^/]*/,~&,g' | env LC_COLLATE=C sort | sed 's,~,,g'
+EXISTING_COQPROJECT_CONTENTS_SORTED:=$(shell cat _CoqProject.in 2>&1 | $(SORT_COQPROJECT))
+WARNINGS := +implicit-core-hint-db,+implicits-in-term,+non-reversible-notation,+deprecated-intros-until-0,+deprecated-focus,+unused-intro-pattern,+variable-collision,+omega-is-deprecated,+deprecated-instantiate-syntax,+non-recursive
+COQPROJECT_CMD:=(echo '-R $(SRC_DIR) $(MOD_NAME)'; echo '-arg -w -arg $(WARNINGS)'; echo '@NATIVE_COMPILER_ARG@'; (git ls-files 'src/*.v' | $(GREP_EXCLUDE_SPECIAL_VOFILES) | $(SORT_COQPROJECT)))
+NEW_COQPROJECT_CONTENTS_SORTED:=$(shell $(COQPROJECT_CMD) | $(SORT_COQPROJECT))
+
+ifneq ($(EXISTING_COQPROJECT_CONTENTS_SORTED),$(NEW_COQPROJECT_CONTENTS_SORTED))
+.PHONY: _CoqProject.in
+_CoqProject.in:
+	$(SHOW)'ECHO > $@'
+	$(HIDE)$(COQPROJECT_CMD) > $@
+endif
+endif
+
 PERFTESTING_VO := \
 	src/Rewriter/PerfTesting/Core.vo \
 	src/Rewriter/PerfTesting/StandaloneOCamlMain.vo
@@ -140,6 +173,7 @@ GO_DIR := fiat-go/
 JSON_DIR := fiat-json/src/
 JAVA_DIR := fiat-java/src/
 JAVADOC_DIR := fiat-java/doc/
+ZIG_DIR := fiat-zig/src/
 
 # Java only really supports 32-bit builds, because we have neither 64x64->64x64 multiplication, nor uint128
 # Java also requires that class names match file names
@@ -181,7 +215,7 @@ JAVA_$(call JAVA_RENAME,$(1))_FUNCTIONS:=$(6)
 
 endef
 
-UNSATURATED_SOLINAS_FUNCTIONS := carry_mul carry_square carry add sub opp selectznz to_bytes from_bytes
+UNSATURATED_SOLINAS_FUNCTIONS := carry_mul carry_square carry add sub opp selectznz to_bytes from_bytes relax
 FUNCTIONS_FOR_25519 := $(UNSATURATED_SOLINAS_FUNCTIONS) carry_scmul121666
 WORD_BY_WORD_MONTGOMERY_FUNCTIONS := mul square add sub opp from_montgomery to_montgomery nonzero selectznz to_bytes from_bytes one msat divstep divstep_precomp
 UNSATURATED_SOLINAS := src/ExtractionOCaml/unsaturated_solinas
@@ -210,7 +244,7 @@ $(foreach bw,64,$(eval $(call add_curve_keys,p434_$(bw),WORD_BY_WORD_MONTGOMERY,
 # Files taking 30s or less
 LITE_BASE_FILES := curve25519_64 poly1305_64 poly1305_32 p256_64 secp256k1_64 p384_64 p224_32 p434_64 p448_solinas_64 secp256k1_32 p256_32 p448_solinas_32
 
-EXTRA_C_FILES := inversion-c/*_test.c
+EXTRA_C_FILES := inversion/c/*_test.c
 
 ALL_C_FILES := $(patsubst %,$(C_DIR)%.c,$(ALL_BASE_FILES))
 ALL_BEDROCK2_FILES := $(patsubst %,$(BEDROCK2_DIR)%.c,$(filter-out $(BASE_FILES_NEEDING_INT128),$(ALL_BASE_FILES)))
@@ -218,6 +252,7 @@ ALL_RUST_FILES := $(patsubst %,$(RUST_DIR)%.rs,$(ALL_BASE_FILES))
 ALL_GO_FILES := $(patsubst %,$(GO_DIR)%.go,$(call GO_RENAME_TO_FILE,$(filter-out $(BASE_FILES_NEEDING_INT128),$(ALL_BASE_FILES))))
 ALL_JSON_FILES := $(patsubst %,$(JSON_DIR)%.json,$(ALL_BASE_FILES))
 ALL_JAVA_FILES := $(patsubst %,$(JAVA_DIR)%.java,$(call JAVA_RENAME,$(filter-out $(BASE_FILES_NEEDING_INT128),$(ALL_BASE_FILES))))
+ALL_ZIG_FILES := $(patsubst %,$(ZIG_DIR)%.zig,$(ALL_BASE_FILES))
 
 LITE_C_FILES := $(patsubst %,$(C_DIR)%.c,$(LITE_BASE_FILES))
 LITE_BEDROCK2_FILES := $(patsubst %,$(BEDROCK2_DIR)%.c,$(filter-out $(BASE_FILES_NEEDING_INT128),$(LITE_BASE_FILES)))
@@ -225,20 +260,23 @@ LITE_RUST_FILES := $(patsubst %,$(RUST_DIR)%.rs,$(LITE_BASE_FILES))
 LITE_GO_FILES := $(patsubst %,$(GO_DIR)%.go,$(call GO_RENAME_TO_FILE,$(filter-out $(BASE_FILES_NEEDING_INT128),$(LITE_BASE_FILES))))
 LITE_JSON_FILES := $(patsubst %,$(JSON_DIR)%.json,$(LITE_BASE_FILES))
 LITE_JAVA_FILES := $(patsubst %,$(JAVA_DIR)%.java,$(call JAVA_RENAME,$(filter-out $(BASE_FILES_NEEDING_INT128),$(LITE_BASE_FILES))))
+LITE_ZIG_FILES := $(patsubst %,$(ZIG_DIR)%.zig,$(LITE_BASE_FILES))
 
 BEDROCK2_UNSATURATED_SOLINAS := src/ExtractionOCaml/bedrock2_unsaturated_solinas
 BEDROCK2_WORD_BY_WORD_MONTGOMERY := src/ExtractionOCaml/bedrock2_word_by_word_montgomery
 
-BEDROCK2_ARGS := --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select
+BEDROCK2_ARGS := --no-wide-int --widen-carry --widen-bytes --split-multiret --no-select --no-field-element-typedefs
 BEDROCK2_EXTRA_CFLAGS := -Wno-error=unused-but-set-variable
 
-GO_EXTRA_ARGS_ALL := --cmovznz-by-mul --internal-static --package-case flatcase --public-function-case UpperCamelCase --private-function-case camelCase --public-type-case UpperCamelCase --private-type-case camelCase --no-prefix-fiat
+GO_EXTRA_ARGS_ALL := --cmovznz-by-mul --internal-static --package-case flatcase --public-function-case UpperCamelCase --private-function-case camelCase --public-type-case UpperCamelCase --private-type-case camelCase --no-prefix-fiat --doc-newline-in-typedef-bounds --doc-prepend-header 'Code generated by Fiat Cryptography. DO NOT EDIT.' --doc-text-before-function-name '' --doc-text-before-type-name ''
 GO_EXTRA_ARGS_64  := --no-wide-int $(GO_EXTRA_ARGS_ALL)
 GO_EXTRA_ARGS_32  := $(GO_EXTRA_ARGS_ALL)
 
-JAVA_EXTRA_ARGS_ALL := --cmovznz-by-mul --widen-carry --widen-bytes --internal-static --only-signed --package-name fiat_crypto --class-case UpperCamelCase
+JAVA_EXTRA_ARGS_ALL := --cmovznz-by-mul --widen-carry --widen-bytes --internal-static --package-name fiat_crypto --class-case UpperCamelCase --no-field-element-typedefs
 JAVA_EXTRA_ARGS_64  := --no-wide-int $(JAVA_EXTRA_ARGS_ALL)
 JAVA_EXTRA_ARGS_32  := $(JAVA_EXTRA_ARGS_ALL)
+
+ZIG_EXTRA_ARGS := --internal-static --public-function-case camelCase --private-function-case camelCase --public-type-case UpperCamelCase --private-type-case UpperCamelCase --no-prefix-fiat
 
 .PHONY: bedrock2-extra-cflags
 bedrock2-extra-cflags:
@@ -273,8 +311,8 @@ endif
 CHECK_OUTPUTS := $(addprefix check-,$(OUTPUT_PREOUTS))
 ACCEPT_OUTPUTS := $(addprefix accept-,$(OUTPUT_PREOUTS))
 
-generated-files: c-files rust-files go-files json-files java-files
-lite-generated-files: lite-c-files lite-rust-files lite-go-files lite-json-files lite-java-files
+generated-files: c-files rust-files go-files json-files java-files zig-files
+lite-generated-files: lite-c-files lite-rust-files lite-go-files lite-json-files lite-java-files lite-zig-files
 all-except-compiled: coq pre-standalone-extracted check-output
 all-except-generated: standalone-ocaml perf-standalone all-except-compiled
 all: all-except-generated generated-files
@@ -291,6 +329,7 @@ rust-files: $(ALL_RUST_FILES)
 go-files: $(ALL_GO_FILES)
 json-files: $(ALL_JSON_FILES)
 java-files: $(ALL_JAVA_FILES)
+zig-files: $(ALL_ZIG_FILES)
 
 lite-c-files: $(LITE_C_FILES)
 lite-bedrock2-files: $(LITE_BEDROCK2_FILES)
@@ -298,6 +337,7 @@ lite-rust-files: $(LITE_RUST_FILES)
 lite-go-files: $(LITE_GO_FILES)
 lite-json-files: $(LITE_JSON_FILES)
 lite-java-files: $(LITE_JAVA_FILES)
+lite-zig-files: $(LITE_ZIG_FILES)
 
 lite: $(LITE_VOFILES)
 nobigmem: $(NOBIGMEM_VOFILES)
@@ -325,14 +365,6 @@ print-nobigmem::
 	@echo
 	@echo 'Files Not Made:'
 	@for i in $(sort $(NOBIGMEM_ALL_UNMADE_VOFILES)); do echo $$i; done
-
-# Remove -undeclared-scope once we stop supporting 8.9
-OTHERFLAGS += -w -notation-overridden,-undeclared-scope
-ifneq ($(PROFILE),)
-OTHERFLAGS += -profile-ltac
-endif
-
-export OTHERFLAGS
 
 ifneq ($(filter /cygdrive/%,$(CURDIR)),)
 CURDIR_SAFE := $(shell cygpath -m "$(CURDIR)")
@@ -450,10 +482,9 @@ install-rupicola:
 	$(MAKE) --no-print-directory -C $(RUPICOLA_FOLDER) install
 endif
 
-# Note that the bit about OTHERFLAGS is to work around COQBUG(https://github.com/coq/coq/issues/10905)
 Makefile.coq: Makefile _CoqProject
 	$(SHOW)'COQ_MAKEFILE -f _CoqProject > $@'
-	$(HIDE)$(COQBIN)coq_makefile -f _CoqProject INSTALLDEFAULTROOT = $(INSTALLDEFAULTROOT) -o Makefile-coq && cat Makefile-coq | sed 's/^printenv:/printenv::/g; s/^printenv:::/printenv::/g; s/^all:/all-old:/g; s/OTHERFLAGS        :=/OTHERFLAGS        ?=/g; s/^validate:/validate-vo:/g; s/^.PHONY: validate/.PHONY: validate-vo/g' > $@ && rm -f Makefile-coq
+	$(HIDE)$(COQBIN)coq_makefile -f _CoqProject INSTALLDEFAULTROOT = $(INSTALLDEFAULTROOT) -o Makefile-coq && cat Makefile-coq | sed 's/^printenv:/printenv::/g; s/^printenv:::/printenv::/g; s/^all:/all-old:/g; s/^validate:/validate-vo:/g; s/^.PHONY: validate/.PHONY: validate-vo/g' > $@ && rm -f Makefile-coq
 
 
 STANDALONE := unsaturated_solinas saturated_solinas word_by_word_montgomery base_conversion
@@ -536,6 +567,17 @@ test-rust-files: $(ALL_RUST_FILES)
 
 test-rust-files only-test-rust-files:
 	cd fiat-rust; $(CARGO_BUILD)
+
+$(ALL_ZIG_FILES) : $(ZIG_DIR)%.zig : $$($$($$*_BINARY_NAME))
+	$(SHOW)'SYNTHESIZE > $@'
+	$(HIDE)rm -f $@.ok
+	$(HIDE)($(TIMER) $($($*_BINARY_NAME)) --lang Zig $(ZIG_EXTRA_ARGS) --package-name $($*_DESCRIPTION) "" $($*_ARGS) $($*_FUNCTIONS) && touch $@.ok) > $@.tmp
+	$(HIDE)(rm $@.ok && mv $@.tmp $@) || ( RV=$$?; cat $@.tmp; exit $$RV )
+
+test-zig-files: $(ALL_ZIG_FILES)
+
+test-zig-files only-test-zig-files:
+	cd fiat-zig; $(ZIG_BUILD)
 
 all: $(addprefix fiat-rust/,$(COPY_TO_FIAT_RUST))
 all: $(addprefix fiat-go/,$(COPY_TO_FIAT_GO))
@@ -680,20 +722,26 @@ perf-csv: perf.csv perf-graph.csv $(PERF_TXTS)
 .PHONY: perf.csv
 perf.csv:
 	$(SHOW)'PYTHON > $@'
-	$(HIDE)./src/Rewriter/PerfTesting/Specific/to_csv.py $(wildcard $(ALL_PERF_LOGS)) > $@.tmp
-	$(HIDE)cat $@.tmp | tr -d '\r' | sed 's/\s*$$//g' > $@ && rm -f $@.tmp
+	$(HIDE)$(file >$@.list.tmp,)
+	$(HIDE)$(foreach i,$(wildcard $(ALL_PERF_LOGS)),$(file >>$@.list.tmp,$(i)))
+	$(HIDE)./src/Rewriter/PerfTesting/Specific/to_csv.py --file-list $@.list.tmp > $@.tmp
+	$(HIDE)cat $@.tmp | sed 's/\s*$$//g' > $@ && rm -f $@.tmp
 
 .PHONY: perf-graph.csv
 perf-graph.csv:
 	$(SHOW)'PYTHON > $@'
-	$(HIDE)./src/Rewriter/PerfTesting/Specific/to_csv.py --for-graph $(wildcard $(ALL_PERF_LOGS)) > $@.tmp
-	$(HIDE)cat $@.tmp | tr -d '\r' | sed 's/\s*$$//g' > $@ && rm -f $@.tmp
+	$(HIDE)$(file >$@.list.tmp,)
+	$(HIDE)$(foreach i,$(wildcard $(ALL_PERF_LOGS)),$(file >>$@.list.tmp,$(i)))
+	$(HIDE)./src/Rewriter/PerfTesting/Specific/to_csv.py --for-graph --file-list $@.list.tmp > $@.tmp
+	$(HIDE)cat $@.tmp | sed 's/\s*$$//g' > $@ && rm -f $@.tmp
 
 .PHONY: $(PERF_TXTS)
 $(PERF_TXTS) : %.txt :
 	$(SHOW)'PYTHON > $@'
-	$(HIDE)./src/Rewriter/PerfTesting/Specific/to_csv.py --$* --txt $(wildcard $(ALL_PERF_LOGS)) > $@.tmp
-	$(HIDE)cat $@.tmp | tr -d '\r' | sed 's/\s*$$//g' > $@ && rm -f $@.tmp
+	$(HIDE)$(file >$@.list.tmp,)
+	$(HIDE)$(foreach i,$(wildcard $(ALL_PERF_LOGS)),$(file >>$@.list.tmp,$(i)))
+	$(HIDE)./src/Rewriter/PerfTesting/Specific/to_csv.py --$* --txt --file-list $@.list.tmp > $@.tmp
+	$(HIDE)cat $@.tmp | sed 's/\s*$$//g' > $@ && rm -f $@.tmp
 
 # work around COQBUG(https://github.com/coq/coq/issues/10495)
 .PHONY: clean-tmp-native-work-around-bug-10495

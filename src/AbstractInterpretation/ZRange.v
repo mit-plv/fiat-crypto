@@ -33,6 +33,16 @@ Module Compilers.
              | base.type.list A => list (interp A)
              | base.type.option A => option (interp A)
              end%type.
+        Fixpoint map_ranges (f : zrange -> zrange) {t} : interp t -> interp t
+          := match t with
+             | base.type.type_base base.type.Z => f
+             | base.type.type_base _ as t
+             | base.type.unit as t
+               => fun x => x
+             | base.type.prod A B => fun '(a, b) => (@map_ranges f A a, @map_ranges f B b)
+             | base.type.list A => List.map (@map_ranges f A)
+             | base.type.option A => option_map (@map_ranges f A)
+             end%type.
         Definition is_neg {t} : interp t -> bool
           := match t with
              | base.type.type_base base.type.Z => fun r => (lower r <? 0) && (upper r <=? 0)
@@ -43,7 +53,7 @@ Module Compilers.
              | base.type.type_base base.type.Z => is_tighter_than_bool
              | base.type.type_base _ as t
              | base.type.unit as t
-               => base.interp_beq (@base.base_interp_beq)
+               => base.interp_beq (fun t => @base.base_interp_beq t t)
              | base.type.prod A B
                => fun '(a, b) '(a', b')
                   => @is_tighter_than A a a' && @is_tighter_than B b b'
@@ -57,7 +67,7 @@ Module Compilers.
              | base.type.type_base base.type.Z => fun r z => ZRange.is_bounded_by_bool z r
              | base.type.type_base _ as t
              | base.type.unit as t
-               => base.interp_beq (@base.base_interp_beq)
+               => base.interp_beq (fun t => @base.base_interp_beq t t)
              | base.type.prod A B
                => fun '(a, b) '(a', b')
                   => @is_bounded_by A a a' && @is_bounded_by B b b'
@@ -66,29 +76,36 @@ Module Compilers.
              | base.type.option A
                => option_beq_hetero (@is_bounded_by A)
              end.
-        Fixpoint interp_beq {t} : interp t -> interp t -> bool
-          := match t return interp t -> interp t -> bool with
-             | base.type.type_base base.type.Z => zrange_beq
-             | base.type.type_base _ as t
-             | base.type.unit as t
-               => base.interp_beq (@base.base_interp_beq)
-             | base.type.prod A B
+        Fixpoint interp_beq {t1 t2} : interp t1 -> interp t2 -> bool
+          := match t1, t2 return interp t1 -> interp t2 -> bool with
+             | base.type.type_base base.type.Z, base.type.type_base base.type.Z => zrange_beq
+             | base.type.type_base base.type.Z, _ | _, base.type.type_base base.type.Z => fun _ _ => false
+             | base.type.type_base _ as t1, base.type.type_base _ as t2
+             | base.type.unit as t1, base.type.unit as t2
+               => base.interp_beq_hetero (@base.base_interp_beq)
+             | base.type.prod A1 B1, base.type.prod A2 B2
                => fun '(a, b) '(a', b')
-                  => @interp_beq A a a' && @interp_beq B b b'
-             | base.type.list A
-               => list_beq _ (@interp_beq A)
-             | base.type.option A
-               => option_beq (@interp_beq A)
+                  => @interp_beq A1 A2 a a' && @interp_beq B1 B2 b b'
+             | base.type.list A1, base.type.list A2
+               => list_beq_hetero (@interp_beq A1 A2)
+             | base.type.option A1, base.type.option A2
+               => option_beq_hetero (@interp_beq A1 A2)
+             | base.type.type_base _, _
+             | base.type.unit, _
+             | base.type.prod _ _, _
+             | base.type.list _, _
+             | base.type.option _, _
+               => fun _ _ => false
              end%bool.
 
-        Global Instance reflect_interp_eq {t} : reflect_rel (@eq _) (@interp_beq t).
+        Global Instance reflect_interp_eq {t} : reflect_rel (@eq _) (@interp_beq t t).
         Proof.
           induction t; cbn [interp_beq]; intros; break_innermost_match; try exact _.
         Defined.
 
-        Lemma interp_beq_bl {t x y} : @interp_beq t x y = true -> x = y.
+        Lemma interp_beq_bl {t x y} : @interp_beq t t x y = true -> x = y.
         Proof. apply reflect_to_beq; exact _. Qed.
-        Lemma interp_beq_lb {t x y} : x = y -> @interp_beq t x y = true.
+        Lemma interp_beq_lb {t x y} : x = y -> @interp_beq t t x y = true.
         Proof. apply reflect_to_beq; exact _. Qed.
 
         Module option.
@@ -104,6 +121,15 @@ Module Compilers.
                | base.type.list A => option (list (interp A))
                | base.type.option A => option (option (interp A))
                | base.type.unit => unit
+               end%type.
+          Fixpoint map_ranges (f : zrange -> zrange) {t} : interp t -> interp t
+            := match t with
+               | base.type.type_base _ as t
+                 => option_map (@base.map_ranges f t)
+               | base.type.prod A B => fun '(a, b) => (@map_ranges f A a, @map_ranges f B b)
+               | base.type.list A => option_map (List.map (@map_ranges f A))
+               | base.type.option A => option_map (option_map (@map_ranges f A))
+               | base.type.unit => fun 'tt => tt
                end%type.
           Fixpoint None {t} : interp t
             := match t with
@@ -142,6 +168,17 @@ Module Compilers.
                | base.type.prod A B
                  => fun '(a, b) => a <- @lift_Some A a; b <- @lift_Some B b; Datatypes.Some (a, b)
                end%option.
+          Fixpoint is_informative {t} : interp t -> bool (* true iff there's some bounds info *)
+            := match t with
+               | base.type.type_base _
+               | base.type.list _
+               | base.type.option _
+                 => Option.is_Some
+               | base.type.unit
+                 => fun _ => false
+               | base.type.prod A B
+                 => fun '(a, b) => orb (@is_informative A a) (@is_informative B b)
+               end.
           (** Keep data about list length and nat value, but not zrange *)
           Fixpoint strip_ranges {t} : interp t -> interp t
             := match t with
@@ -196,27 +233,33 @@ Module Compilers.
                        end
                | base.type.unit => fun 'tt 'tt => true
                end.
-          Fixpoint interp_beq {t} : interp t -> interp t -> bool
-            := match t return interp t -> interp t -> bool with
-               | base.type.type_base _ as t => option_beq base.interp_beq
-               | base.type.prod A B
+          Fixpoint interp_beq {t1 t2} : interp t1 -> interp t2 -> bool
+            := match t1, t2 return interp t1 -> interp t2 -> bool with
+               | base.type.type_base _ as t1, base.type.type_base _ as t2 => option_beq_hetero base.interp_beq
+               | base.type.prod A1 B1, base.type.prod A2 B2
                  => fun '(a, b) '(a', b')
-                    => @interp_beq A a a' && @interp_beq B b b'
-               | base.type.list A
-                 => option_beq (list_beq _ (@interp_beq A))
-               | base.type.option A
-                 => option_beq (option_beq (@interp_beq A))
-               | base.type.unit => fun 'tt 'tt => true
+                    => @interp_beq A1 A2 a a' && @interp_beq B1 B2 b b'
+               | base.type.list A1, base.type.list A2
+                 => option_beq_hetero (list_beq_hetero (@interp_beq A1 A2))
+               | base.type.option A1, base.type.option A2
+                 => option_beq_hetero (option_beq_hetero (@interp_beq A1 A2))
+               | base.type.unit, base.type.unit => fun 'tt 'tt => true
+               | base.type.type_base _, _
+               | base.type.unit, _
+               | base.type.prod _ _, _
+               | base.type.list _, _
+               | base.type.option _, _
+                 => fun _ _ => false
                end.
 
-          Global Instance reflect_interp_eq {t} : reflect_rel (@eq _) (@interp_beq t).
+          Global Instance reflect_interp_eq {t} : reflect_rel (@eq _) (@interp_beq t t).
           Proof.
             induction t; cbn [interp_beq]; intros; break_innermost_match; try exact _.
           Defined.
 
-          Lemma interp_beq_bl {t x y} : @interp_beq t x y = true -> x = y.
+          Lemma interp_beq_bl {t x y} : @interp_beq t t x y = true -> x = y.
           Proof. apply reflect_to_beq; exact _. Qed.
-          Lemma interp_beq_lb {t x y} : x = y -> @interp_beq t x y = true.
+          Lemma interp_beq_lb {t x y} : x = y -> @interp_beq t t x y = true.
           Proof. apply reflect_to_beq; exact _. Qed.
 
           Fixpoint is_bounded_by {t} : interp t -> binterp t -> bool
@@ -525,11 +568,11 @@ Module Compilers.
                => fun v m
                  => match to_literal m, to_literal v with
                    | Some m, Some v => of_literal (ident.interp idc v m)
-                   | Some m, None => Some (if (0 <? m)%Z
-                                           then r[0 ~> m-1]
+                   | Some m, None => (if (0 <? m)%Z
+                                           then Some r[0 ~> m-1]
                                            else if (m =? 0)%Z
-                                                then r[0 ~> 0]
-                                                else r[m+1 ~> 0])
+                                                then ltac:(match eval hnf in (1 mod 0) with | 0 => exact r[0 ~> 0] | _ => exact None (* if `_ mod 0` is not constant and neither is `v`, we do not bother computing the bounds of `Z.lnot v` *) end)
+                                                else Some r[m+1 ~> 0])
                    | _, _ => None
                     end
              | ident.Z_truncating_shiftl as idc
@@ -540,13 +583,19 @@ Module Compilers.
                                        y <- y;
                                        Some (ZRange.land_bounds
                                                (ZRange.four_corners_and_zero Z.shiftl x y)
-                                               (ZRange.constant (Z.ones (Z.max 0 bw))))
+                                               (ZRange.constant (Z.ones (ltac:(match eval hnf in (1 mod 0) with | 0 => exact (Z.max 0 bw) | _ => exact bw end)))))
                                 | None, _, _ => None
                                 end
              | ident.bool_rect _
                => fun t f b
                  => match b with
                    | Some b => if b then t tt else f tt
+                   | None => ZRange.type.base.option.None
+                   end
+             | ident.bool_rect_nodep _
+               => fun t f b
+                 => match b with
+                   | Some b => if b then t else f
                    | None => ZRange.type.base.option.None
                    end
              | ident.option_rect _ _

@@ -185,7 +185,7 @@ Module JSON.
   Local Notation quote_string s := ("""" ++ s ++ """")%string (only parsing).
 
   Fixpoint to_base_arg_list {t} : base_var_data t -> Compilers.ZRange.type.base.option.interp t -> list (string * string * (string * string))
-    := let show_Z s := quote_string (Hex.show_Z false s) in
+    := let show_Z s := quote_string (Hex.show_Z s) in
        let opt_to_json T f (b : option T) :=
            match b with
            | None => (None_object, None_object)
@@ -203,18 +203,18 @@ Module JSON.
            opt_to_json _ opt_zrange_list_to_json ls in
        match t return base_var_data t -> Compilers.ZRange.type.base.option.interp t -> _ with
        | tZ
-         => fun '(n, is_ptr, r) b
+         => fun '(n, is_ptr, r, typedef) b
             => [(primitive_type_to_string IR.type.Z r, n, opt_zrange_to_json b)]
        | base.type.prod A B
          => fun '(va, vb) '(ba, bb) => (@to_base_arg_list A va ba ++ @to_base_arg_list B vb bb)%list
        | base.type.list tZ
-         => fun '(n, r, len) b
+         => fun '(n, r, len, typedef) b
             => [(primitive_type_to_string IR.type.Z r ++ "[" ++ Decimal.Z.to_string (Z.of_nat len) ++ "]", n,
                  opt_opt_zrange_list_to_json b)]
        | base.type.list _ => fun _ _ => [("#error ""complex list""", "", (None_object, None_object))]
        | base.type.option _ => fun _ _ => [("#error option", "", (None_object, None_object))]
        | base.type.unit => fun _ _ => [("#error unit", "", (None_object, None_object))]
-       | base.type.type_base t => fun _ _ => [("#error " ++ show false t, "", (None_object, None_object))]
+       | base.type.type_base t => fun _ _ => [("#error " ++ show t, "", (None_object, None_object))]
        end%string.
 
   Definition to_arg_list {t} : var_data t -> Compilers.ZRange.type.option.interp t -> list (string * string * (string * string)) :=
@@ -314,7 +314,14 @@ Module JSON.
               get_Zcast_down_if_needed desired_type (Some ty),
               (** always cast to the width of the type, unless we are already exactly that type (which the machinery in IR handles *)
               Some ty)
-          | Z_bneg
+          | IR.Z_value_barrier ty
+            => ((* if the result is too big, we cast it down; we
+                       don't need to upcast it because it'll get
+                       picked up by implicit casts if necessary *)
+              get_Zcast_down_if_needed desired_type (Some ty),
+              (** always cast to the width of the type, unless we are already exactly that type (which the machinery in IR handles *)
+              Some ty)
+          | IR.Z_bneg
             => ((* bneg is !, i.e., takes the argument to 1 if its not zero, and to zero if it is zero; so we don't ever need to cast *)
               None, None)
           end.
@@ -361,23 +368,27 @@ Module JSON.
   Definition ToFunctionLines
              {relax_zrange : relax_zrange_opt}
              {language_naming_conventions : language_naming_conventions_opt}
+             {documentation_options : documentation_options_opt}
+             {skip_typedefs : skip_typedefs_opt}
              (machine_wordsize : Z)
-             (do_bounds_check : bool) (internal_static : bool) (static : bool) (prefix : string) (name : string)
+             (do_bounds_check : bool) (internal_static : bool) (static : bool) (all_static : bool) (prefix : string) (name : string)
              {t}
              (e : API.Expr t)
              (comment : type.for_each_lhs_of_arrow var_data t -> var_data (type.base (type.final_codomain t)) -> list string)
              (name_list : option (list string))
              (inbounds : type.for_each_lhs_of_arrow Compilers.ZRange.type.option.interp t)
              (outbounds : Compilers.ZRange.type.base.option.interp (type.final_codomain t))
+             (intypedefs : type.for_each_lhs_of_arrow var_typedef_data t)
+             (outtypedefs : base_var_typedef_data (type.final_codomain t))
     : (list string * ToString.ident_infos) + string :=
-    match ExprOfPHOAS do_bounds_check e name_list inbounds with
+    match ExprOfPHOAS do_bounds_check e name_list inbounds intypedefs outtypedefs with
     | inl (indata, outdata, f) =>
       inl (to_function_lines
              static name
              inbounds
              outbounds
              (indata, outdata, f),
-           IR.ident_infos.collect_infos f)
+           IR.ident_infos.collect_all_infos f intypedefs outtypedefs)
     | inr nil =>
       inr ("Unknown internal error in converting " ++ name ++ " to JSON")%string
     | inr [err] =>
@@ -390,8 +401,8 @@ Module JSON.
     {| ToString.comment_block _ := [];
        ToString.comment_file_header_block _ := [];
        ToString.ToFunctionLines := @ToFunctionLines;
-       ToString.header := fun _ _ _ _ _ _ _ _ => [];
-       ToString.footer := fun _ _ _ _ _ _ _ _ => [];
+       ToString.header := fun _ _ _ _ _ _ _ _ _ _ _ => [];
+       ToString.footer := fun _ _ _ _ _ _ _ _ _ => [];
        (** No special handling for any functions *)
        ToString.strip_special_infos machine_wordsize infos := infos |}.
 

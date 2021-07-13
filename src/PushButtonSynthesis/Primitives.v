@@ -8,6 +8,7 @@ Require Import Coq.QArith.QArith_base Coq.QArith.Qround.
 Require Import Coq.derive.Derive.
 Require Import Crypto.Util.ErrorT.
 Require Import Crypto.Util.ListUtil.
+Require Import Crypto.Util.OptionList.
 Require Import Crypto.Util.Strings.Decimal.
 Require Import Crypto.Util.ZRange.
 Require Import Crypto.Util.ZUtil.Definitions.
@@ -31,7 +32,10 @@ Require Import Crypto.Arithmetic.UniformWeight.
 Require Import Crypto.BoundsPipeline.
 Require Import Crypto.COperationSpecifications.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.
+Require Import Crypto.Util.Strings.Show.
+Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Crypto.Assembly.Parse.
+Require Import Crypto.Assembly.Equivalence.
 Import ListNotations.
 Local Open Scope string_scope. Local Open Scope Z_scope. Local Open Scope list_scope. Local Open Scope bool_scope.
 
@@ -155,31 +159,76 @@ Local Opaque reified_cmovznz_by_mul_gen. (* needed for making [autorewrite] not 
 (* needed for making [autorewrite] with [Set Keyed Unification] fast *)
 Local Opaque expr.Interp.
 
-Local Notation arg_bounds_of_pipeline result
-  := ((fun a b c d e arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e arg_bounds out_bounds = result') => arg_bounds) _ _ _ _ _ _ _ result eq_refl)
-       (only parsing).
-Local Notation out_bounds_of_pipeline result
-  := ((fun a b c d e arg_bounds out_bounds result' (H : @Pipeline.BoundsPipeline a b c d e arg_bounds out_bounds = result') => out_bounds) _ _ _ _ _ _ _ result eq_refl)
-       (only parsing).
+Notation "'FromPipelineToString!' machine_wordsize prefix name result"
+  := (Pipeline.FromPipelineToString machine_wordsize prefix name result)
+       (only parsing, at level 10, machine_wordsize at next level, prefix at next level, name at next level, result at next level).
+Notation "'FromPipelineToInternalString!' machine_wordsize prefix name result"
+  := (Pipeline.FromPipelineToInternalString machine_wordsize prefix name result)
+       (only parsing, at level 10, machine_wordsize at next level, prefix at next level, name at next level, result at next level).
 
-Notation FromPipelineToString machine_wordsize prefix name result
-  := (Pipeline.FromPipelineToString machine_wordsize prefix name result).
-Notation FromPipelineToInternalString machine_wordsize prefix name result
-  := (Pipeline.FromPipelineToInternalString machine_wordsize prefix name result).
-
+(** Some utilities for defining [check_args] *)
+Definition request_present (requests : list string) (request : string) : bool
+  := List.existsb (String.eqb request) requests.
+(** [None] means that the condition should hold regardless of what requests were made *)
+Definition any_request_present (requests : list string) (search_for : option (list string)) : bool
+  := match search_for with
+     | None => true
+     | Some search_for => List.existsb (request_present requests) search_for
+     end.
+(** Turns a list of [(precondition : bool, (check : bool, error))]
+    into a [check_args] function.  The [precondition] is something
+    like "this function was requested" or "this option was passed". *)
+Definition check_args_of_list (check_args_descr : list (bool * (bool * Pipeline.ErrorMessage)))
+           {T} (res : Pipeline.ErrorT T)
+  : Pipeline.ErrorT T
+  := fold_right
+       (fun '(precondition, (b, e)) k => if implb precondition b then k else Error e)
+       res
+       check_args_descr.
+Ltac prepare_use_curve_good _ :=
+  let curve_good := lazymatch goal with | curve_good : ?check_args (Success tt) = Success tt |- _ => curve_good end in
+  let requests := lazymatch type of curve_good with ?check_args ?requests _ = Success _ => requests end in
+  revert dependent requests; clear; intros;
+  lazymatch type of curve_good with
+  | ?check = Success ?v => let check' := (eval hnf in check) in change (check' = Success v) in curve_good
+  end;
+  cbv [machine_wordsize_opt] in *;
+  cbv [check_args_of_list] in *;
+  cbn [List.fold_right List.map List.app] in *;
+  cbv [any_request_present] in *;
+  cbn [List.existsb] in *;
+  repeat first [ progress cbv beta iota in *
+               | progress cbn [andb orb implb] in *
+               | discriminate
+               | match goal with
+                 | [ H : context[match ?b with true => _ | false => _ end ] |- _ ] => destruct b eqn:?
+                 | [ H : context[orb _ false] |- _ ] => rewrite Bool.orb_false_r in H
+                 | [ H : context[orb false _] |- _ ] => rewrite Bool.orb_false_l in H
+                 end
+               | progress Reflect.reflect_hyps
+               | assumption
+               | progress destruct_head'_and
+               | apply conj ].
+Ltac use_requests_to_prove_curve_good_t_step :=
+  first [ progress intros
+        | progress Reflect.reflect_hyps
+        | exfalso; assumption
+        | progress specialize_by auto 50 using or_introl, or_intror with nocore ].
 Ltac prove_correctness' should_not_clear use_curve_good :=
+  let should_not_clear_requests H := lazymatch type of H with context[request_present] => idtac end in
   let Hres := match goal with H : _ = Success _ |- _ => H end in
   let H := fresh in
   pose proof use_curve_good as H;
   (* I want to just use [clear -H Hres], but then I can't use any lemmas in the section because of COQBUG(https://github.com/coq/coq/issues/8153) *)
   repeat match goal with
          | [ H' : _ |- _ ]
-           => tryif first [ has_body H' | constr_eq H' H | constr_eq H' Hres | should_not_clear H' ]
+           => tryif first [ has_body H' | constr_eq H' H | constr_eq H' Hres | should_not_clear_requests H' | should_not_clear H' ]
            then fail
            else clear H'
          end;
   cbv zeta in *;
-  destruct_head'_and;
+  repeat first [ progress destruct_head'_and
+               | progress specialize_by_assumption ];
   let f := match type of Hres with ?f = _ => head f end in
   try cbv [f] in *;
   hnf;
@@ -198,6 +247,7 @@ Ltac prove_correctness' should_not_clear use_curve_good :=
   | .. ].
 
 Ltac prove_correctness use_curve_good := prove_correctness' ltac:(fun _ => fail) use_curve_good.
+Ltac prove_pipeline_wf _ := PipelineTactics.prove_pipeline_wf ().
 
 Module CorrectnessStringification.
   Module dyn_context.
@@ -284,7 +334,6 @@ Module CorrectnessStringification.
       => constr_fail_with ltac:(fun _ => idtac "Unrecognized bounds component:" correctness;
                                          fail 1 "Unrecognized bounds component:" correctness)
     end.
-
   Ltac with_assoc_list ctx correctness arg_var_names out_var_names cont :=
     lazymatch correctness with
     | (fun x : ?T => ?f)
@@ -332,9 +381,16 @@ Module CorrectnessStringification.
          | _ => cont ctx correctness
          end
     end.
+  Ltac to_level lvl :=
+    lazymatch type of lvl with
+    | Z => constr:(Level.level lvl)
+    | _ => lvl
+    end.
 
   Ltac maybe_parenthesize str natural cur_lvl :=
-    let should_paren := (eval cbv in (Z.ltb cur_lvl natural)) in
+    let natural := to_level natural in
+    let cur_lvl := to_level cur_lvl in
+    let should_paren := (eval cbv in (Level.ltb cur_lvl natural)) in
     lazymatch should_paren with
     | true => constr:(("(" ++ str ++ ")")%string)
     | false => str
@@ -372,7 +428,6 @@ Module CorrectnessStringification.
 
   Ltac test_is_var_or_const v :=
     constr:(ltac:(tryif first [ is_var v | is_const v ] then exact true else exact false)).
-
   Local Open Scope string_scope.
 
   Ltac fresh_from' ctx check_list start_val :=
@@ -452,20 +507,23 @@ Module CorrectnessStringification.
     end.
 
   Ltac stringify_rec0 ctx correctness lvl :=
+    let lvl := to_level lvl in
+    let term_lvl := constr:(term_lvl) in
+    let rel_lvl := constr:(rel_lvl) in
+    let next_rel_lvl := constr:(Level.next rel_lvl) in
+    let app_lvl := constr:(app_lvl) in
+    let next_app_lvl := constr:(Level.next app_lvl) in
     let correctness := eta_match correctness in
     let recurse v lvl := stringify_rec0 ctx v lvl in
     let name_of_var := find_head_in_ctx ctx correctness in
     let stringify_if testv t f :=
-        let stest := recurse testv 200 in
-        let st := recurse t 200 in
-        let sf := recurse f 200 in
-        maybe_parenthesize (("if " ++ stest ++ " then " ++ st ++ " else " ++ sf)%string) 200 lvl in
-    let show_Z _ :=
-        maybe_parenthesize (Show.Decimal.show_Z false correctness) 1 lvl in
-    let show_nat _ :=
-        maybe_parenthesize (Show.Decimal.show_nat false correctness) 1 lvl in
-    let show_list_Z_Z _ :=
-        maybe_parenthesize (@Show.show_list _ (@Show.show_prod _ _ Show.Decimal.show_Z Show.Decimal.show_Z) false correctness) 1 lvl in
+        let stest := recurse testv term_lvl in
+        let st := recurse t term_lvl in
+        let sf := recurse f term_lvl in
+        maybe_parenthesize (("if " ++ stest ++ " then " ++ st ++ " else " ++ sf)%string) term_lvl lvl in
+    let show_Z _ := constr:(Decimal.show_lvl_Z correctness lvl) in
+    let show_nat _ := constr:(Decimal.show_lvl_nat correctness lvl) in
+    let show_list_Z_Z _ := constr:(@show_lvl_list _ (@show_lvl_prod _ _ Decimal.show_lvl_Z Decimal.show_lvl_Z) correctness lvl) in
     let stringify_prefix f natural arg_lvl :=
         lazymatch correctness with
         | ?F ?x
@@ -502,24 +560,24 @@ Module CorrectnessStringification.
         end in
     lazymatch constr:((name_of_var, name_of_fun)) with
     | (Some ?name, _)
-      => maybe_parenthesize name 1 lvl
+      => maybe_parenthesize name (Level.level 1) lvl
     | (None, Some ?name)
       => lazymatch correctness with
          | ?f ?x
-           => let sx := recurse x 9 in
-              maybe_parenthesize ((name ++ " " ++ sx)%string) 10 lvl
+           => let sx := recurse x (Level.next app_lvl) in
+              maybe_parenthesize ((name ++ " " ++ sx)%string) constr:(app_lvl) lvl
          end
     | (None, None)
       => lazymatch correctness with
          | ?x = ?y :> ?T
            => lazymatch (eval cbv in T) with
-              | Z => let sx := recurse x 69 in
-                     let sy := recurse y 69 in
-                     maybe_parenthesize ((sx ++ " = " ++ sy)%string) 70 lvl
+              | Z => let sx := recurse x next_rel_lvl in
+                     let sy := recurse y next_rel_lvl in
+                     maybe_parenthesize ((sx ++ " = " ++ sy)%string) rel_lvl lvl
               | list Z
-                => let sx := recurse x 69 in
-                   let sy := recurse y 69 in
-                   maybe_parenthesize ((sx ++ " = " ++ sy)%string) 70 lvl
+                => let sx := recurse x next_rel_lvl in
+                   let sy := recurse y next_rel_lvl in
+                   maybe_parenthesize ((sx ++ " = " ++ sy)%string) rel_lvl lvl
               | prod ?A ?B
                 => let v := (eval cbn [fst snd] in (fst x = fst y /\ snd x = snd y)) in
                    recurse v lvl
@@ -528,18 +586,18 @@ Module CorrectnessStringification.
               end
          | eval (weight 8 1) _ ?v
            => let sv := recurse v 9 in
-              maybe_parenthesize (("bytes_eval " ++ sv)%string) 10 lvl
+              maybe_parenthesize (("bytes_eval " ++ sv)%string) app_lvl lvl
          | Associational.eval ?c
            => let sc := recurse c 9 in
-              maybe_parenthesize (("Associational.eval " ++ sc)%string) 10 lvl
+              maybe_parenthesize (("Associational.eval " ++ sc)%string) app_lvl lvl
          | uweight ?machine_wordsize ?v
            => recurse (2^(machine_wordsize * Z.of_nat v)) lvl
          | weight 8 1 ?i
            => recurse (2^(8 * Z.of_nat i)) lvl
          | List.map ?x ?y
-           => let sx := recurse x 9 in
-              let sy := recurse y 9 in
-              maybe_parenthesize (("map " ++ sx ++ " " ++ sy)%string) 10 lvl
+           => let sx := recurse x next_app_lvl in
+              let sy := recurse y next_app_lvl in
+              maybe_parenthesize (("map " ++ sx ++ " " ++ sy)%string) app_lvl lvl
          | match ?testv with true => ?t | false => ?f end
            => stringify_if testv t f
          | match ?testv with or_introl _ => ?t | or_intror _ => ?f end
@@ -549,8 +607,8 @@ Module CorrectnessStringification.
          | Crypto.Util.Decidable.dec ?p
            => recurse p lvl
          | Z.odd ?x
-           => let sx := recurse x 9 in
-              maybe_parenthesize ((sx ++ " is odd")%string) 10 lvl
+           => let sx := recurse x next_app_lvl in
+              maybe_parenthesize ((sx ++ " is odd")%string) app_lvl lvl
          | Z0 => show_Z ()
          | Zpos _ => show_Z ()
          | Zneg _ => show_Z ()
@@ -562,10 +620,10 @@ Module CorrectnessStringification.
               | false => recurse (x + 1)%nat lvl
               end
          | Z.of_nat ?x => recurse x lvl
-         | ?x <= ?y <  ?z => stringify_infix2 "≤" "<" 70 69 69 69
-         | ?x <= ?y <= ?z => stringify_infix2 "≤" "≤" 70 69 69 69
-         | ?x <  ?y <= ?z => stringify_infix2 "<" "≤" 70 69 69 69
-         | ?x <  ?y <  ?z => stringify_infix2 "<" "<" 70 69 69 69
+         | ?x <= ?y <  ?z => stringify_infix2 "≤" "<" rel_lvl next_rel_lvl next_rel_lvl next_rel_lvl
+         | ?x <= ?y <= ?z => stringify_infix2 "≤" "≤" rel_lvl next_rel_lvl next_rel_lvl next_rel_lvl
+         | ?x <  ?y <= ?z => stringify_infix2 "<" "≤" rel_lvl next_rel_lvl next_rel_lvl next_rel_lvl
+         | ?x <  ?y <  ?z => stringify_infix2 "<" "<" rel_lvl next_rel_lvl next_rel_lvl next_rel_lvl
          | iff _ _ => stringify_infix "↔" 95 94 94
          | and _ _  => stringify_infix "∧" 80 80 80
          | andb _ _ => stringify_infix "∧" 80 80 80
@@ -575,20 +633,20 @@ Module CorrectnessStringification.
          | Z.add _ _ => stringify_infix "+" 50 50 49
          | Z.sub _ _ => stringify_infix "-" 50 50 49
          | Z.opp _ => stringify_prefix "-" 35 35
-         | Z.le _ _ => stringify_infix "≤" 70 69 69
-         | Z.lt _ _ => stringify_infix "<" 70 69 69
-         | Z.leb _ _ => stringify_infix "≤" 70 69 69
-         | Z.ltb _ _ => stringify_infix "<" 70 69 69
+         | Z.le _ _ => stringify_infix "≤" rel_lvl next_rel_lvl next_rel_lvl
+         | Z.lt _ _ => stringify_infix "<" rel_lvl next_rel_lvl next_rel_lvl
+         | Z.leb _ _ => stringify_infix "≤" rel_lvl next_rel_lvl next_rel_lvl
+         | Z.ltb _ _ => stringify_infix "<" rel_lvl next_rel_lvl next_rel_lvl
          | Nat.mul _ _ => stringify_infix "*" 40 40 39
          | Nat.pow _ _ => stringify_infix "^" 30 29 30
          | Nat.add _ _ => stringify_infix "+" 50 50 49
          | Nat.sub _ _ => stringify_infix "-ℕ" 50 50 49
          | Z.div _ _
-           => let res := stringify_infix' 69 " " "/" 40 40 39 in
-              maybe_parenthesize ("⌊" ++ res ++ "⌋") 9 lvl
+           => let res := stringify_infix' next_rel_lvl " " "/" 40 40 39 in
+              maybe_parenthesize ("⌊" ++ res ++ "⌋") next_app_lvl lvl
          | List.seq ?x ?y
-           => let sx := recurse x 9 in
-              let sy := recurse (pred y) 9 in
+           => let sx := recurse x next_app_lvl in
+              let sy := recurse (pred y) next_app_lvl in
               constr:("[" ++ sx ++ ".." ++ sy ++ "]")
          | pred ?n
            => let iv := test_is_var_or_const n in
@@ -599,8 +657,8 @@ Module CorrectnessStringification.
                 => recurse (n - 1)%nat lvl
               end
          | fun x : ?T => ?f
-           => let slam := stringify_function_binders ctx correctness ltac:(fun ctx body => stringify_rec0 ctx body 200) in
-              maybe_parenthesize ("λ" ++ slam) 200 lvl
+           => let slam := stringify_function_binders ctx correctness ltac:(fun ctx body => stringify_rec0 ctx body term_lvl) in
+              maybe_parenthesize ("λ" ++ slam) term_lvl lvl
          | ?v
            => let iv := test_is_var_or_const v in
               lazymatch iv with
@@ -626,7 +684,7 @@ Module CorrectnessStringification.
     let recurse so_far_rev v := stringify_preconditions ctx so_far_rev v in
     lazymatch correctness with
     | ?A -> ?B
-      => let sA := stringify_rec0 ctx A 200 in
+      => let sA := stringify_rec0 ctx A constr:(term_lvl) in
          recurse (sA :: so_far_rev) B
     | ?T
       => let so_far := (eval cbv [List.rev] in (List.rev so_far_rev)) in
@@ -636,7 +694,7 @@ Module CorrectnessStringification.
   Ltac stringify_postconditions ctx correctness :=
     let correctness := eta_match correctness in
     let recurse v := stringify_postconditions ctx v in
-    let default _ := let v := stringify_rec0 ctx correctness 200 in
+    let default _ := let v := stringify_rec0 ctx correctness constr:(term_lvl) in
                      constr:(v::nil) in
     lazymatch correctness with
     | _ <= _ <  _ => default ()
@@ -669,7 +727,7 @@ Module CorrectnessStringification.
              := constr:((["Postconditions:"]
                            ++ List.map (fun s => "  " ++ s)%string postconditions)%list%string) in
          (eval cbv [List.map List.app] in
-             (preconditions_list_string ++ postconditions_list_string ++ [""])%list%string)
+             ([""] ++ preconditions_list_string ++ postconditions_list_string ++ [""])%list%string)
     end.
 
   Ltac strip_lambdas v :=
@@ -714,15 +772,17 @@ Module CorrectnessStringification.
         end)
          (only parsing).
 End CorrectnessStringification.
-
 Notation "'docstring_with_summary_from_lemma_with_ctx!' ctx summary correctness"
   := (CorrectnessStringification.docstring_with_summary_from_lemma_with_ctx ctx summary correctness) (only parsing, at level 10, ctx at next level, summary at next level, correctness at next level).
 Notation "'docstring_with_summary_from_lemma!' summary correctness"
   := (CorrectnessStringification.docstring_with_summary_from_lemma summary correctness) (only parsing, at level 10, summary at next level, correctness at next level).
-
+(** Used to sigma up the output of stringified pipelines *)
+Notation wrap_s v := (fun s => existT (fun t => prod string (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult t))) _ (v s)) (only parsing).
 Section __.
   Context {output_language_api : ToString.OutputLanguageAPI}
           {language_naming_conventions : language_naming_conventions_opt}
+          {documentation_options : documentation_options_opt}
+          {skip_typedefs : skip_typedefs_opt}
           {package_namev : package_name_opt}
           {class_namev : class_name_opt}
           {static : static_opt}
@@ -738,33 +798,29 @@ Section __.
           {assembly_hints_lines : assembly_hints_lines_opt}
           {widen_carry : widen_carry_opt}
           {widen_bytes : widen_bytes_opt}
+          {assembly_calling_registers : assembly_calling_registers_opt}
+          {assembly_stack_size : assembly_stack_size_opt}
+          {error_on_unused_assembly_functions : error_on_unused_assembly_functions_opt}
+          {assembly_output_first : assembly_output_first_opt}
+          {assembly_argument_registers_left_to_right : assembly_argument_registers_left_to_right_opt}
           (n : nat)
-          (machine_wordsize : Z).
-
-  Definition saturated_bounds_list : list (option zrange)
+          (machine_wordsize : machine_wordsize_opt).
+  Definition saturated_bounds : list (ZRange.type.option.interp base.type.Z)
     := List.repeat (Some r[0 ~> 2^machine_wordsize-1]%zrange) n.
-  Definition saturated_bounds : ZRange.type.option.interp (base.type.list (base.type.Z))
-    := Some saturated_bounds_list.
-
   (* We include [0], so that even after bounds relaxation, we can
        notice where the constant 0s are, and remove them. *)
   Definition possible_values_of_machine_wordsize
     := prefix_with_carry [machine_wordsize; 2 * machine_wordsize]%Z.
-
   Definition possible_values_of_machine_wordsize_with_bytes
     := prefix_with_carry_bytes [machine_wordsize; 2 * machine_wordsize]%Z.
-
   Let possible_values := possible_values_of_machine_wordsize.
   Let possible_values_with_bytes := possible_values_of_machine_wordsize_with_bytes.
-
   Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
   Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
   Local Instance split_multiret_to : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
-
-  Lemma length_saturated_bounds_list : List.length saturated_bounds_list = n.
-  Proof using Type. cbv [saturated_bounds_list]; now autorewrite with distr_length. Qed.
-  Hint Rewrite length_saturated_bounds_list : distr_length.
-
+  Lemma length_saturated_bounds : List.length saturated_bounds = n.
+  Proof using Type. cbv [saturated_bounds]; now autorewrite with distr_length. Qed.
+  Hint Rewrite length_saturated_bounds : distr_length.
   Local Notation dummy_weight := (weight 0 0).
   Local Notation evalf := (eval dummy_weight n).
   Local Notation notations_for_docstring
@@ -777,25 +833,22 @@ Section __.
           summary
           correctness)
          (only parsing, at level 10, summary at next level, correctness at next level).
-
   Definition selectznz
     := Pipeline.BoundsPipeline
          false (* subst01 *)
          None (* fancy *)
          possible_values_with_bytes
          reified_selectznz_gen
-         (Some r[0~>1], (saturated_bounds, (saturated_bounds, tt)))%zrange
-         saturated_bounds.
-
+         (Some r[0~>1], (Some saturated_bounds, (Some saturated_bounds, tt)))%zrange
+         (Some saturated_bounds).
   Definition sselectznz (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "selectznz" selectznz
           (docstring_with_summary_from_lemma!
-             (fun fname : string => ["The function " ++ fname ++ " is a multi-limb conditional select."]%string)
-             (selectznz_correct dummy_weight n saturated_bounds_list)).
-
+             (fun fname : string => [text_before_function_name ++ fname ++ " is a multi-limb conditional select."]%string)
+             (selectznz_correct dummy_weight n saturated_bounds)).
   Definition mulx (s : Z)
     := Pipeline.BoundsPipeline
          false (* subst01 *)
@@ -805,16 +858,14 @@ Section __.
             @ GallinaReify.Reify s)
          (Some r[0~>2^s-1], (Some r[0~>2^s-1], tt))%zrange
          (Some r[0~>2^s-1], Some r[0~>2^s-1])%zrange.
-
   Definition smulx (prefix : string) (s : Z)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToInternalString
-          machine_wordsize prefix ("mulx_u" ++ Decimal.Z.to_string s) (mulx s)
+        FromPipelineToInternalString!
+          machine_wordsize prefix ("mulx_u" ++ Decimal.Z.to_string s)%string (mulx s)
           (docstring_with_summary_from_lemma!
-             (fun fname : string => ["The function " ++ fname ++ " is a multiplication, returning the full double-width result."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " is a multiplication, returning the full double-width result."]%string)
              (mulx_correct s)).
-
   Definition addcarryx (s : Z)
     := Pipeline.BoundsPipeline
          false (* subst01 *)
@@ -824,17 +875,14 @@ Section __.
             @ GallinaReify.Reify s)
          (Some r[0~>1], (Some r[0~>2^s-1], (Some r[0~>2^s-1], tt)))%zrange
          (Some r[0~>2^s-1], Some r[0~>1])%zrange.
-
-
   Definition saddcarryx (prefix : string) (s : Z)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToInternalString
-          machine_wordsize prefix ("addcarryx_u" ++ Decimal.Z.to_string s) (addcarryx s)
+        FromPipelineToInternalString!
+          machine_wordsize prefix ("addcarryx_u" ++ Decimal.Z.to_string s)%string (addcarryx s)
           (docstring_with_summary_from_lemma!
-             (fun fname : string => ["The function " ++ fname ++ " is an addition with carry."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " is an addition with carry."]%string)
              (addcarryx_correct s)).
-
   Definition subborrowx (s : Z)
     := Pipeline.BoundsPipeline
          false (* subst01 *)
@@ -844,16 +892,14 @@ Section __.
             @ GallinaReify.Reify s)
          (Some r[0~>1], (Some r[0~>2^s-1], (Some r[0~>2^s-1], tt)))%zrange
          (Some r[0~>2^s-1], Some r[0~>1])%zrange.
-
   Definition ssubborrowx (prefix : string) (s : Z)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToInternalString
-          machine_wordsize prefix ("subborrowx_u" ++ Decimal.Z.to_string s) (subborrowx s)
+        FromPipelineToInternalString!
+          machine_wordsize prefix ("subborrowx_u" ++ Decimal.Z.to_string s)%string (subborrowx s)
           (docstring_with_summary_from_lemma!
-             (fun fname : string => ["The function " ++ fname ++ " is a subtraction with borrow."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " is a subtraction with borrow."]%string)
              (subborrowx_correct s)).
-
 
   Definition value_barrier (s : int.type)
     := Pipeline.BoundsPipeline
@@ -863,16 +909,14 @@ Section __.
          reified_value_barrier_gen
          (Some (int.to_zrange s), tt)
          (Some (int.to_zrange s)).
-
   Definition svalue_barrier (prefix : string) (s : int.type)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToInternalString
-          machine_wordsize prefix ("value_barrier_" ++ (if int.is_unsigned s then "u" else "") ++ Decimal.Z.to_string (int.bitwidth_of s)) (value_barrier s)
+        FromPipelineToInternalString!
+          machine_wordsize prefix ("value_barrier_" ++ (if int.is_unsigned s then "u" else "") ++ Decimal.Z.to_string (int.bitwidth_of s))%string (value_barrier s)
           (docstring_with_summary_from_lemma!
-             (fun fname : string => ["The function " ++ fname ++ " is a single-word conditional move."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " is a single-word conditional move."]%string)
              (value_barrier_correct (int.is_signed s) (int.bitwidth_of s))).
-
 
   Definition cmovznz (s : Z)
     := Pipeline.BoundsPipeline
@@ -883,16 +927,14 @@ Section __.
             @ GallinaReify.Reify s)
          (Some r[0~>1], (Some r[0~>2^s-1], (Some r[0~>2^s-1], tt)))%zrange
          (Some r[0~>2^s-1])%zrange.
-
   Definition scmovznz (prefix : string) (s : Z)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToInternalString
-          machine_wordsize prefix ("cmovznz_u" ++ Decimal.Z.to_string s) (cmovznz s)
+        FromPipelineToInternalString!
+          machine_wordsize prefix ("cmovznz_u" ++ Decimal.Z.to_string s)%string (cmovznz s)
           (docstring_with_summary_from_lemma!
-             (fun fname : string => ["The function " ++ fname ++ " is a single-word conditional move."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " is a single-word conditional move."]%string)
              (cmovznz_correct false s)).
-
   Definition cmovznz_by_mul (s : Z)
     := Pipeline.BoundsPipeline
          false (* subst01 *)
@@ -902,19 +944,16 @@ Section __.
             @ GallinaReify.Reify s)
          (Some r[0~>1], (Some r[0~>2^s-1], (Some r[0~>2^s-1], tt)))%zrange
          (Some r[0~>2^s-1])%zrange.
-
   Definition scmovznz_by_mul (prefix : string) (s : Z)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToInternalString
-          machine_wordsize prefix ("cmovznz_u" ++ Decimal.Z.to_string s) (cmovznz_by_mul s)
+        FromPipelineToInternalString!
+          machine_wordsize prefix ("cmovznz_u" ++ Decimal.Z.to_string s)%string (cmovznz_by_mul s)
           (docstring_with_summary_from_lemma!
-             (fun fname : string => ["The function " ++ fname ++ " is a single-word conditional move."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " is a single-word conditional move."]%string)
              (cmovznz_correct false s)).
-
   Local Ltac solve_extra_bounds_side_conditions :=
-    cbn [lower upper fst snd] in *; Bool.split_andb; Z.ltb_to_lt; lia.
-
+    cbn [lower upper fst snd machine_wordsize_opt] in *; Bool.split_andb; Z.ltb_to_lt; lia.
   Hint Rewrite
        eval_select
        Arithmetic.Primitives.mulx_correct
@@ -924,18 +963,22 @@ Section __.
        Arithmetic.Primitives.cmovznz_by_mul_correct
        Z.zselect_correct
        using solve [ auto | congruence | solve_extra_bounds_side_conditions ] : push_eval.
-
   Strategy -1000 [mulx]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
   Lemma mulx_correct s' res
         (Hres : mulx s' = Success res)
     : mulx_correct s' (Interp res).
   Proof using Type. prove_correctness I. Qed.
 
+  Lemma Wf_mulx s' res (Hres : mulx s' = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
   Strategy -1000 [addcarryx]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
   Lemma addcarryx_correct s' res
         (Hres : addcarryx s' = Success res)
     : addcarryx_correct s' (Interp res).
   Proof using Type. prove_correctness I. Qed.
+
+  Lemma Wf_addcarryx s' res (Hres : addcarryx s' = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
 
   Strategy -1000 [subborrowx]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
   Lemma subborrowx_correct s' res
@@ -943,11 +986,17 @@ Section __.
     : subborrowx_correct s' (Interp res).
   Proof using Type. prove_correctness I. Qed.
 
+  Lemma Wf_subborrowx s' res (Hres : subborrowx s' = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Strategy -1000 [value_barrier]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
   Lemma value_barrier_correct s' res
         (Hres : value_barrier s' = Success res)
     : value_barrier_correct (int.is_signed s') (int.bitwidth_of s') (Interp res).
   Proof using Type. prove_correctness I. Qed.
+
+  Lemma Wf_value_barrier s' res (Hres : value_barrier s' = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
 
   Strategy -1000 [cmovznz]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
   Lemma cmovznz_correct s' res
@@ -955,62 +1004,77 @@ Section __.
     : cmovznz_correct false s' (Interp res).
   Proof using Type. prove_correctness I. Qed.
 
+  Lemma Wf_cmovznz s' res (Hres : cmovznz s' = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Strategy -1000 [cmovznz_by_mul]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
   Lemma cmovznz_by_mul_correct s' res
         (Hres : cmovznz_by_mul s' = Success res)
     : COperationSpecifications.Primitives.cmovznz_correct false s' (Interp res).
   Proof using Type. prove_correctness I. Qed.
 
+  Lemma Wf_cmovznz_by_mul s' res (Hres : cmovznz_by_mul s' = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Lemma selectznz_correct limbwidth res
         (Hres : selectznz = Success res)
-    : selectznz_correct (weight (Qnum limbwidth) (QDen limbwidth)) n saturated_bounds_list (Interp res).
+    : selectznz_correct (weight (Qnum limbwidth) (QDen limbwidth)) n saturated_bounds (Interp res).
   Proof using Type. prove_correctness I. Qed.
+
+  Lemma Wf_selectznz res (Hres : selectznz = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
 
   Section for_stringification.
     Context (valid_names : string)
             (known_functions : list (string
                                      * (string
-                                        -> string *
-                                           Pipeline.ErrorT (list string * ToString.ident_infos))))
+                                        -> { t : _
+                                                 & string * Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult t) }%type)))
             (extra_special_synthesis : string ->
                                        list
                                          (option
-                                            (string *
-                                             Pipeline.ErrorT
-                                               (list string * ToString.ident_infos)))).
+                                            { t : _
+                                                  & string * Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult t) }%type)).
 
-    Definition aggregate_infos {A B C} (ls : list (A * ErrorT B (C * ToString.ident_infos))) : ToString.ident_infos
+    Definition aggregate_infos (ls : list (string * Pipeline.ErrorT { t : _ & Pipeline.ExtendedSynthesisResult t })) : ToString.ident_infos
       := fold_right
            ToString.ident_info_union
            ToString.ident_info_empty
            (List.map
               (fun '(_, res) => match res with
-                                | Success (_, infos) => infos
+                                | Success (existT _ v) => v.(Pipeline.ident_infos)
                                 | Error _ => ToString.ident_info_empty
                                 end)
               ls).
 
+    Definition push_sig_type (v : { t : _ & string * Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult t) }%type)
+      : string * Pipeline.ErrorT { t : _ & Pipeline.ExtendedSynthesisResult t }
+      := let '(existT t (n, v)) := v in
+         (n, (v <- v; Success (existT _ t v))%error).
+
     Definition extra_synthesis (function_name_prefix : string) (infos : ToString.ident_infos)
-      : list (string * Pipeline.ErrorT (list string)) * ToString.ident_infos
+      : list { t : _ & string * Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult t) }%type * ToString.ident_infos
       := let infos := ToString.strip_special_infos machine_wordsize infos in
+         let mk := existT (fun t => string * Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult t))%type in
          let ls_addcarryx := List.flat_map
-                               (fun lg_split:positive => [saddcarryx function_name_prefix lg_split; ssubborrowx function_name_prefix lg_split])
+                               (fun lg_split:positive
+                                => [mk _ (saddcarryx function_name_prefix lg_split)
+                                    ; mk _ (ssubborrowx function_name_prefix lg_split)])
                                (PositiveSet.elements (ToString.addcarryx_lg_splits infos)) in
          let ls_mulx := List.map
-                          (fun lg_split:positive => smulx function_name_prefix lg_split)
+                          (fun lg_split:positive => mk _ (smulx function_name_prefix lg_split))
                           (PositiveSet.elements (ToString.mulx_lg_splits infos)) in
          let ls_value_barrier
              := List.map
-                  (svalue_barrier function_name_prefix)
+                  (fun bw => mk _ (svalue_barrier function_name_prefix bw))
                   (IntSet.elements (value_barrier_bitwidths infos)) in
          let ls_cmov := List.map
                           (fun ty:int.type
-                           => (if use_mul_for_cmovznz then scmovznz_by_mul else scmovznz) function_name_prefix (int.bitwidth_of ty))
+                           => mk _ ((if use_mul_for_cmovznz then scmovznz_by_mul else scmovznz) function_name_prefix (int.bitwidth_of ty)))
                           (IntSet.elements (cmovznz_bitwidths infos)) in
          let ls := ls_addcarryx ++ ls_mulx ++ ls_value_barrier ++ ls_cmov in
-         let infos := aggregate_infos ls in
-         (List.map (fun '(name, res) => (name, (res <- res; Success (fst res))%error)) ls,
-          infos).
+         let infos := aggregate_infos (List.map push_sig_type ls) in
+         (ls, infos).
 
     (** Since some of the extra functions (such as [cmovznz]) are the
         only users of other extra functions (such as [value_barrier]),
@@ -1026,66 +1090,127 @@ Section __.
               (fun infos => snd (extra_synthesis "" infos))
               infos).
 
-
     Definition synthesize_of_name (function_name_prefix : string) (name : string)
-      : string * ErrorT Pipeline.ErrorMessage (list string * ToString.ident_infos)
+      : string * Pipeline.ErrorT { t : _ & Pipeline.ExtendedSynthesisResult t }%type
       := fold_right
            (fun v default
             => match v with
-               | Some res => res
+               | Some (existT t (n, res))
+                 => (n, (res <- res; Success (existT _ t res))%error)
                | None => default
                end)
-           ((name,
-             Error
-               (Pipeline.Invalid_argument
-                  ("Unrecognized request to synthesize """ ++ name ++ """; valid names are " ++ valid_names ++ "."))))
+           (name,
+            Error
+              (Pipeline.Invalid_argument
+                 ("Unrecognized request to synthesize """ ++ name ++ """; valid names are " ++ valid_names ++ ".")))
            ((map
-               (fun '(expected_name, resf) => if (name =? expected_name)%string then Some (resf function_name_prefix) else None)
+               (fun '(expected_name, resf)
+                => if (name =? expected_name)%string
+                   then Some (resf function_name_prefix)
+                   else None)
                known_functions)
               ++ extra_special_synthesis name).
 
-    Definition parse_asm_hints : Pipeline.ErrorT (option Assembly.Syntax.Lines)
+    Definition parse_asm_hints
+      : Pipeline.ErrorT (option (Assembly.Syntax.Lines (* prefix *) * list (string (* function name *) * Assembly.Syntax.Lines)))
       := match assembly_hints_lines with
          | None => Success None
          | Some lines
            => match Assembly.Parse.parse_validated lines with
               | Error err => Error (Pipeline.Assembly_parsing_error err)
-              | Success v => Success (Some v)
+              | Success v => Success (Some (Assembly.Parse.split_code_to_functions v))
               end
          end.
 
+    Definition split_to_assembly_functions {A B} (assembly_data : list (string * A)) (normal_data : list (string * B))
+      : list (string * (A * B)) * list (string * B) * list (string * A)
+      := let ls := List.map (fun '(n1, normal_data)
+                             => ((n1, normal_data), List.find (fun '(n2, _) => n1 =? n2)%string assembly_data))
+                            normal_data in
+         let '(lsAB, lsB) := List.partition (fun '(_, o) => match o with Some _ => true | None => false end) ls in
+         let lsA := List.filter (fun '(n1, _) => negb (List.existsb (fun '(n2, _) => (n1 =? n2)%string) normal_data)) assembly_data in
+         (Option.List.map
+            (fun '((n, normal_data), assembly_data)
+             => match assembly_data with
+                | Some (_n (* should be equal to n *), assembly_data) => Some (n, (assembly_data, normal_data))
+                | None => (* should not happen *) None
+                end)
+            lsAB,
+          List.map (@fst _ _) lsB,
+          lsA).
+
     (** Note: If you change the name or type signature of this
           function, you will need to update the code in CLI.v *)
-    Definition Synthesize (check_args : Pipeline.ErrorT (list string) -> Pipeline.ErrorT (list string))
+    Definition Synthesize
+               (all_typedefs : list ToString.typedef_info)
+               (check_args : list string -> Pipeline.ErrorT (list string) -> Pipeline.ErrorT (list string))
                (comment_header : list string) (function_name_prefix : string) (requests : list string)
       : list (synthesis_output_kind * string * Pipeline.ErrorT (list string))
-      := let parse_asm_ls := match parse_asm_hints with
-                             | Success _ => [] (* TODO: make use of the parsed assembly *)
-                             | Error err => [(assembly_output, "parsing", Error err)]
-                             end in
-         let ls := match requests with
-                   | nil => List.map (fun '(_, sr) => sr function_name_prefix) known_functions
-                   | requests => List.map (synthesize_of_name function_name_prefix) requests
-                   end in
+      := let requests := match requests with
+                         | nil => List.map (@fst _ _) known_functions
+                         | _ => requests
+                         end in
+         let ls := List.map (synthesize_of_name function_name_prefix) requests in
+         let '(asm_ls, ls)
+             := match parse_asm_hints with
+                | Success None => ([], ls)
+                | Success (Some (prefix, function_asms))
+                  => let valid_function_names := List.map fst ls in
+                     let '(asm_ls, ls, unused_asm_ls) := split_to_assembly_functions function_asms ls in
+                     (* TODO: Currently we just pass the prefix/header through unchanged; maybe we should instead generate a better header? *)
+                     let asm_ls_prefix := [(assembly_output, "header-prefix", Success (Show.show_lines prefix))] in
+                     let asm_ls_check
+                         := if (error_on_unused_assembly_functions && (0 <? List.length unused_asm_ls))%nat
+                            then [(assembly_output, "check", Error (Pipeline.Unused_global_assembly_labels
+                                                                      (List.map (@fst _ _) unused_asm_ls)
+                                                                      valid_function_names))]
+                            else [] in
+                     let asm_ls
+                         := List.map
+                              (fun '(name, (asm_lines, synthesis_res))
+                               => (name,
+                                   (synthesis_res <- synthesis_res;
+                                   let 'existT _ synthesis_res := synthesis_res in
+                                   match Assembly.Equivalence.generate_assembly_of_hinted_expr
+                                           asm_lines
+                                           (synthesis_res.(Pipeline.expr))
+                                           (synthesis_res.(Pipeline.arg_bounds))
+                                           (synthesis_res.(Pipeline.out_bounds))
+                                   with
+                                   | Success lines => Success (Show.show_lines lines)
+                                   | Error err => Error (Pipeline.Equivalence_checking_failure
+                                                           (synthesis_res.(Pipeline.expr))
+                                                           asm_lines
+                                                           (synthesis_res.(Pipeline.arg_bounds))
+                                                           err)
+                                   end)%error))
+                              asm_ls in
+                     let asm_ls := List.map (fun '(name, lines) => (assembly_output, name, lines)) asm_ls in
+                     (match asm_ls with
+                      | [] => asm_ls_check
+                      | _ => asm_ls_check ++ asm_ls_prefix ++ asm_ls
+                      end,
+                      ls)
+                | Error err => ([(assembly_output, "parsing", Error err)], ls)
+                end in
          let infos := aggregate_infos ls in
          let infos := union_extra_infos_of_extra_synthesis infos in
          let '(extra_ls, extra_infos) := extra_synthesis function_name_prefix infos in
          let extra_bit_widths := ToString.bitwidths_used extra_infos in
-         let extra_ls := List.map (fun '(name, res) => (normal_output, name, res)) extra_ls in
-         let res := (if emit_primitives then extra_ls else nil) ++ List.map (fun '(name, res) => (normal_output, name, (res <- res; Success (fst res))%error)) ls in
+         let res := (if emit_primitives then List.map push_sig_type extra_ls else nil) ++ ls in
+         let res := List.map (fun '(name, res) => (normal_output, name, (res <- res; Success (projT2 res).(Pipeline.lines))%error)) res in
          let infos := ToString.ident_info_union
                         infos
                         (ToString.ident_info_of_bitwidths_used extra_bit_widths) in
          let header :=
              (comment_header
-                ++ ToString.header machine_wordsize (orb internal_static static) static function_name_prefix infos
-                ++ [""]) in
+                ++ ToString.header machine_wordsize (orb internal_static static) static function_name_prefix infos all_typedefs) in
          let footer :=
              ToString.footer machine_wordsize (orb internal_static static) static function_name_prefix infos in
          [(normal_output,
            "check_args" ++ String.NewLine ++ String.concat String.NewLine header,
-           check_args (ErrorT.Success header))%string]
-           ++ parse_asm_ls
+           check_args requests (ErrorT.Success header))%string]
+           ++ asm_ls
            ++ res
            ++ match footer with
               | nil => nil
@@ -1093,3 +1218,32 @@ Section __.
               end.
   End for_stringification.
 End __.
+
+Notation "'all_typedefs!'" :=
+  (match ((fun r => Option.value (relax_zrange_gen only_signed (possible_values_of_machine_wordsize_with_bytes machine_wordsize) r) r)
+          : relax_zrange_opt)
+         return _ with
+   | relax_zrange
+     => Pipeline.all_typedefs
+   end) (only parsing).
+
+Module Export Hints.
+  Hint Opaque
+       mulx
+       addcarryx
+       subborrowx
+       value_barrier
+       cmovznz
+       cmovznz_by_mul
+       selectznz
+  : wf_op_cache.
+  Hint Immediate
+       Wf_mulx
+       Wf_addcarryx
+       Wf_subborrowx
+       Wf_value_barrier
+       Wf_cmovznz
+       Wf_cmovznz_by_mul
+       Wf_selectznz
+  : wf_op_cache.
+End Hints.

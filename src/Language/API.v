@@ -6,6 +6,7 @@ Export Language.IdentifiersBasicGENERATED.
 
 Module Compilers.
   Import IdentifiersBasicGENERATED.Compilers.
+  Import Language.Wf.Compilers.
   Include Language.APINotations.Compilers.
 
   (** This is the module that defines the top-level constants which
@@ -46,6 +47,9 @@ Compute API.type. (* to figure out what goes into a type *)
     Ltac reify var term := Compilers.reify var term.
     Ltac Reify term := Compilers.Reify term.
     Ltac Reify_rhs _ := Compilers.Reify_rhs ().
+
+    Notation wf := (@expr.wf base.type ident).
+    Notation Wf := (@expr.Wf base.type ident).
   End API.
 
   Module GallinaReify.

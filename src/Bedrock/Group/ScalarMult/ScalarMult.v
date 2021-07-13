@@ -1,3 +1,4 @@
+(* NOTE: broken, fix after Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder. *)
 Require Import Rupicola.Lib.Api. (* for helpful tactics + notations *)
 Require Import coqutil.Byte.
 Require Import Crypto.Algebra.Hierarchy.
@@ -81,7 +82,7 @@ Module M.
     Qed.
 
     Definition xrepresents (x : list byte) (P : G) : Prop :=
-      feval_bytes x = to_x (to_xz P).
+      feval_bytes x = to_x (to_xz P) /\ bytes_in_bounds x.
 
     Global Instance x_representation : GroupRepresentation :=
       { gelem := list byte; (* x only, as bytes *)
@@ -238,7 +239,8 @@ Module M.
             change_no_check T
         end; (cbv beta match delta [WeakestPrecondition.func]).
 
-        cbv [GElem x_representation] in *. sepsimpl.
+        cbv [GElem x_representation grepresents xrepresents] in *.
+        sepsimpl.
         (* plain straightline should do this but doesn't (because locals
            representation is abstract?); using enhanced version from
            rupicola (straightline') *)
@@ -255,8 +257,10 @@ Module M.
                | _ => clear_old_seps; straightline'
                end.
 
+(* NOTE: broken, fix after Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder. *)
+(*
         (* call from_bytes *)
-        handle_call.
+        handle_call; [ solve [eauto] .. | ].
         sepsimpl; repeat straightline'.
 
         (* call montladder *)
@@ -282,7 +286,9 @@ Module M.
 
         extract_emp.
 
-        extract_emp. sepsimpl; [ | ].
+        extract_emp.
+
+        sepsimpl; [ | | ].
         {
           pose proof scalarbits_pos.
           match goal with
@@ -301,6 +307,7 @@ Module M.
           end.
           apply @M.montladder_correct with (Feq := Logic.eq);
             eauto using F.inv_0, sceval_range with lia; try congruence. }
+        { eauto. }
         { repeat match goal with
                  | H : context [FElem ?p] |- context [Placeholder ?p] =>
                    seprewrite (FElem_from_bytes p)
@@ -308,6 +315,8 @@ Module M.
           sepsimpl. lift_eexists.
           ecancel_assumption. }
       Qed.
+ *)
+      Abort.
     End Implementation.
   End __.
 End M.

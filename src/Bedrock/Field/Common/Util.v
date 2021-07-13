@@ -115,6 +115,7 @@ Section Lists.
 End Lists.
 
 Section Maps.
+  Local Hint Mode map.map - - : typeclass_instances.
   Context {key value} {key_eqb}
           {map : map.map key value}
           {key_eq_dec :
@@ -519,6 +520,37 @@ Section ListZBoundedBy.
              end.
   Qed.
 
+  Lemma list_Z_tighter_than_cons b1 b2 b1s b2s :
+    list_Z_tighter_than (b1 :: b1s) (b2 :: b2s) <->
+    (match b1 with
+     | Some r1 =>
+       match b2 with
+       | Some r2 =>
+         (ZRange.lower r2 <= ZRange.lower r1
+          /\ ZRange.upper r1 <= ZRange.upper r2)%Z
+       | None => True
+       end
+     | None => match b2 with
+               | Some _ => False
+               | None => True
+               end
+     end /\ list_Z_tighter_than b1s b2s).
+  Proof.
+    cbv [list_Z_tighter_than]. cbn [FoldBool.fold_andb_map].
+    split; destruct b1, b2; intros;
+      repeat match goal with
+             | H : (_ && _)%bool = true |- _ =>
+               apply Bool.andb_true_iff in H
+             | |- (_ && _)%bool = true => apply Bool.andb_true_iff
+             | H : _ /\ _ |- _ => destruct H
+             | |- _ /\ _ => split
+             | _ => progress Z.ltb_to_lt
+             | _ => assumption
+             | _ => tauto
+             | _ => congruence
+             end.
+  Qed.
+
   Lemma list_Z_bounded_by_snoc b0 bs x0 xs:
     list_Z_bounded_by (bs ++ [b0]) (xs ++ [x0]) <->
     (match b0 with
@@ -581,6 +613,73 @@ Section ListZBoundedBy.
            | _ => Z.ltb_to_lt; lia
            | H : _ |- list_Z_bounded_by _ _ => eapply H; solve [eauto]
            end.
+  Qed.
+
+  Lemma tighter_than_if_upper_bounded_by lo uppers bs :
+    list_Z_bounded_by bs uppers ->
+    Forall (fun b =>
+              exists r,
+                b = Some r /\ ZRange.lower r = lo) bs ->
+    list_Z_tighter_than
+      (map (fun v : Z => Some {| ZRange.lower := lo; ZRange.upper := v |})
+           uppers) bs.
+  Proof.
+    clear; revert bs; induction uppers; intros;
+      lazymatch goal with
+      | H : list_Z_bounded_by _ _ |- _ =>
+        pose proof H; apply length_list_Z_bounded_by in H
+      end; (destruct bs; cbn [length] in *; try auto with lia); [ ].
+    repeat lazymatch goal with
+           | H : list_Z_bounded_by (_::_) (_::_) |- _ =>
+             rewrite list_Z_bounded_by_cons in H
+           | |- list_Z_tighter_than (map _ (_ :: _)) (_ :: _) =>
+             cbn [map]; rewrite list_Z_tighter_than_cons
+           | H : ZRange.is_bounded_by_bool _ _ = true |- _ =>
+             apply Bool.andb_true_iff in H; destruct H;
+               Z.ltb_to_lt
+           | H : Forall _ (_ :: _) |- _ => inversion H; clear H; subst
+           | H : exists _, _ |- _ => destruct H; subst
+           | H : _ /\ _ |- _ => destruct H; subst
+           end.
+    progress cbn [ZRange.lower ZRange.upper].
+    split; auto with lia.
+  Qed.
+
+  Lemma partition_bounded_by_partition_ones x lg2s nb :
+    (0 <= x < 2 ^ lg2s)%Z ->
+    list_Z_bounded_by
+      (map (fun v : Z => Some {| ZRange.lower := 0; ZRange.upper := v |})
+           (Partition.Partition.partition
+              (ModOps.weight 8 1) nb (2 ^ lg2s - 1)))
+      (Partition.Partition.partition (ModOps.weight 8 1) nb x).
+  Proof.
+    clear.
+    induction nb; [ reflexivity | ].
+    rewrite !Partition.partition_step.
+    rewrite map_last, list_Z_bounded_by_snoc.
+    split; [ | solve [auto] ]. cbv [ZRange.is_bounded_by_bool].
+    cbn [ZRange.lower ZRange.upper].
+    apply Bool.andb_true_iff; split; Z.ltb_to_lt;
+      [ ZeroBounds.Z.zero_bounds;
+        solve [auto using Core.weight_positive, ModOps.wprops
+                 with zarith] | ].
+    apply Z.div_le_mono;
+      [ solve [auto using Core.weight_positive, ModOps.wprops
+                 with zarith] | ].
+    cbv [ModOps.weight]. rewrite Nat2Z.inj_succ.
+    autorewrite with zsimplify_fast. clear IHnb.
+    destruct (Z_lt_dec lg2s ((8 * Z.of_nat nb + 8)%Z));
+      [ assert (2 ^ lg2s < 2 ^ (8 * Z.of_nat nb + 8))%Z | ].
+    1:auto with zarith.
+    1:rewrite !Z.mod_small; auto with zarith.
+    replace (2 ^ lg2s - 1)%Z with (Z.ones lg2s)
+      by (rewrite Z.ones_equiv; auto with zarith).
+    rewrite Z.ones_mod_pow2 by auto with zarith.
+    lazymatch goal with
+      |- context [(x mod ?m)%Z] =>
+      pose proof Z.mod_pos_bound x m ltac:(auto with zarith)
+    end.
+    rewrite Z.ones_equiv; auto with zarith.
   Qed.
 End ListZBoundedBy.
 
@@ -660,6 +759,7 @@ Section Bytes.
 End Bytes.
 
 Section Scalars.
+  Local Hint Mode word.word - : typeclass_instances.
   Context {p : Semantics.parameters} {ok : Semantics.parameters_ok p}.
 
   Local Notation bytes_per_word :=
@@ -735,6 +835,7 @@ Section Scalars.
 End Scalars.
 
 Section Words.
+  Local Hint Mode word.word - : typeclass_instances.
   Context {width} {word : word.word width} {ok : word.ok word}.
 
   Lemma map_of_Z_unsigned x :
@@ -778,6 +879,7 @@ End Words.
 
 (* These lemmas should be moved to bedrock2, not coqutil *)
 Section Separation.
+  Local Hint Mode map.map - - : typeclass_instances.
   Context `{map_ok : map.ok}
            {key_eqb : forall H H0 : key, bool}
            {key_eq_dec :
@@ -866,7 +968,7 @@ Section WeakestPrecondition.
     Proof.
       cbv [get]; intros.
       match goal with H : exists _, _ |- _ => destruct H end.
-      destruct_head'_and. eexists; eauto using get_only_differ_undef.
+      destruct_head'_and. eexists; split; try eassumption; eapply get_only_differ_undef; eauto.
     Qed.
   End Get.
 

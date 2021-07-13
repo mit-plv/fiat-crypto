@@ -5,6 +5,9 @@ Require Import Coq.Lists.List.
 Require Import Coq.Strings.String.
 Require Import Coq.Strings.HexString.
 Require Crypto.Util.Strings.String.
+Require Import Crypto.Assembly.Syntax.
+Require Import Crypto.Assembly.Parse.
+Require Import Crypto.Assembly.Equivalence.
 Require Import Crypto.Util.Strings.Decimal.
 Require Import Crypto.Util.Strings.ParseArithmetic.
 Require Import Crypto.Util.Strings.ParseArithmeticToTaps.
@@ -25,6 +28,7 @@ Require Import Crypto.Stringification.Rust.
 Require Import Crypto.Stringification.Go.
 Require Import Crypto.Stringification.Java.
 Require Import Crypto.Stringification.JSON.
+Require Import Crypto.Stringification.Zig.
 Require Crypto.Util.Arg.
 Import ListNotations. Local Open Scope Z_scope. Local Open Scope string_scope.
 
@@ -50,6 +54,9 @@ Module ForExtraction.
           ls <-- List.map ParseArithmetic.eval_Qexpr_strict ls;
           ls <-- List.map ParseArithmetic.Q_to_Z_strict ls;
           Some ls).
+
+  Definition parse_list_REG (s : string) : option (list REG)
+    := finalize (parse_comma_list parse_REG) s.
 
   (* Workaround for lack of notation in 8.8 *)
   Local Notation "x =? y" := (if string_dec x y then true else false) : string_scope.
@@ -185,7 +192,7 @@ Module ForExtraction.
                       | _, ErrorT.Error err, rest
                         => let in_name := ("In " ++ name ++ ":") in
                            let cur :=
-                               match show_lines false err with
+                               match show_lines err with
                                | [serr] => [in_name ++ " " ++ serr]
                                | serr => in_name::serr
                                end in
@@ -216,7 +223,8 @@ Module ForExtraction.
         ; ("Rust", Rust.OutputRustAPI)
         ; ("Go", Go.OutputGoAPI)
         ; ("Java", Java.OutputJavaAPI)
-        ; ("JSON", JSON.OutputJSONAPI)].
+        ; ("JSON", JSON.OutputJSONAPI)
+        ; ("Zig", Zig.OutputZigAPI)].
 
   Local Notation anon_argT := (string * Arg.spec * Arg.doc)%type (only parsing).
   Local Notation named_argT := (list Arg.key * Arg.spec * Arg.doc)%type (only parsing).
@@ -290,6 +298,8 @@ Module ForExtraction.
     := ([Arg.long_key "use-value-barrier"], Arg.Unit, ["Guard some expressions with an assembly barrier to prevent compilers from generating non-constant-time code for cmovznz."]).
   Definition no_primitives_spec : named_argT
     := ([Arg.long_key "no-primitives"], Arg.Unit, ["Suppress the generation of the bodies of primitive operations such as addcarryx, subborrowx, cmovznz, mulx, etc."]).
+  Definition no_field_element_typedefs_spec : named_argT
+    := ([Arg.long_key "no-field-element-typedefs"], Arg.Unit, ["Do not use type aliases for field elements based on bounds, Montgomery-domain vs not Montgomery-domain, etc."]).
   Definition cmovznz_by_mul_spec : named_argT
     := ([Arg.long_key "cmovznz-by-mul"], Arg.Unit, ["Use an alternative implementation of cmovznz using multiplication rather than bitwise-and with -1."]).
   Definition tight_bounds_multiplier_default := default_tight_upperbound_fraction.
@@ -337,12 +347,12 @@ Module ForExtraction.
   Definition inbounds_multiplier_spec : named_argT
     := ([Arg.long_key "inbounds-multiplier"],
         Arg.String,
-        ["The (improper) fraction by which the bounds of each input limb are scaled (default: " ++ show false default_inbounds_multiplier ++ ")"]).
+        ["The (improper) fraction by which the bounds of each input limb are scaled (default: " ++ show default_inbounds_multiplier ++ ")"]).
   Definition default_outbounds_multiplier := 1.
   Definition outbounds_multiplier_spec : named_argT
     := ([Arg.long_key "outbounds-multiplier"],
         Arg.String,
-        ["The (improper) fraction by which the bounds of each output limb are scaled (default: " ++ show false default_outbounds_multiplier ++ ")"]).
+        ["The (improper) fraction by which the bounds of each output limb are scaled (default: " ++ show default_outbounds_multiplier ++ ")"]).
   Definition inbounds_spec : named_argT
     := ([Arg.long_key "inbounds"],
         Arg.String,
@@ -359,7 +369,7 @@ Module ForExtraction.
   Definition hint_file_spec : named_argT
     := ([Arg.long_key "hints-file"],
         Arg.String,
-        ["An assembly file to be read for hinting the synthesis process.  Use - for stdin.  Currently unused."]).
+        ["An assembly file to be read for hinting the synthesis process.  Use - for stdin."]).
   Definition output_file_spec : named_argT
     := ([Arg.long_key "output"; Arg.short_key "o"],
         Arg.String,
@@ -367,7 +377,53 @@ Module ForExtraction.
   Definition asm_output_spec : named_argT
     := ([Arg.long_key "output-asm"],
         Arg.String,
-        ["The name of the file to write generated assembly to.  Use - for stdout.  (default: -)  Currently unused."]).
+        ["The name of the file to write generated assembly to.  Use - for stdout.  (default: -)"]).
+  Definition asm_reg_spec : named_argT
+    := ([Arg.long_key "asm-reg"],
+        Arg.Custom (parse_string_and parse_list_REG) "REG",
+        ["A comma-separated list of registers to use for calling conventions.  Only relevant when --hints-file is specified."
+         ; "Defaults to the System V AMD64 ABI of " ++ String.concat "," (List.map show default_assembly_calling_registers) ++ ".  Note that registers are first used for outputs and then inputs."]).
+  Definition asm_stack_size_spec : named_argT
+    := ([Arg.long_key "asm-stack-size"],
+        Arg.Custom (parse_string_and parse_N) "ℕ",
+        ["The number of bytes of stack.  Only relevant when --hints-file is specified.  Defaults to the literal argument to the first `sub rsp, LITERAL` in the code, or else " ++ show (default_assembly_stack_size:N) ++ " if none exists."]).
+  Definition no_error_on_unused_asm_functions_spec : named_argT
+    := ([Arg.long_key "no-error-on-unused-asm-functions"],
+        Arg.Unit,
+        ["Don't error if there are global labels in the hints-file which are not requested functions."]).
+  Definition asm_input_first_spec : named_argT
+    := ([Arg.long_key "asm-input-first"],
+        Arg.Unit,
+        ["By default, output pointers are assumed to come before input arguments in the C code the assembly hints are based on.  This flag reverses that convention."]).
+  Definition asm_reg_rtl_spec : named_argT
+    := ([Arg.long_key "asm-reg-rtl"],
+        Arg.Unit,
+        ["By default, registers are assumed to be assigned to function arguments from left to right in the hints file.  This flag reverses that convention to be right-to-left.  Note that this flag interacts with --asm-input-first, which determines whether the output pointers are to the left or to the right of the input arguments."]).
+  Definition doc_text_before_function_name_spec : named_argT
+    := ([Arg.long_key "doc-text-before-function-name"],
+        Arg.String,
+        ["Documentation Option: A custom string to insert before the function name in each docstring.  Default: " ++ default_text_before_function_name]).
+  Definition doc_text_before_type_name_spec : named_argT
+    := ([Arg.long_key "doc-text-before-type-name"],
+        Arg.String,
+        ["Documentation Option: A custom string to insert before the type name in each docstring.  Default: " ++ default_text_before_type_name]).
+  Definition doc_newline_before_package_declaration_spec : named_argT
+    := ([Arg.long_key "doc-newline-before-package-declaration"],
+        Arg.Unit,
+        ["Documentation Option: For languages that emit package declarations, add an extra newline before the declaration.  Primarily useful to detach the header from the Go package."]).
+  Definition doc_newline_in_typedef_bounds_spec : named_argT
+    := ([Arg.long_key "doc-newline-in-typedef-bounds"],
+        Arg.Unit,
+        ["Documentation Option: When emitting the documentation comment for typedefs, insert a newline between ""Bounds:"" and the bounds rather than a space."]).
+  Definition doc_prepend_header_raw_spec : named_argT
+    := ([Arg.long_key "doc-prepend-header-raw"],
+        Arg.String,
+        ["Documentation Option: Prepend a line before the documentation header at the top of the file.  This argument can be passed multiple times to insert multiple lines."]).
+  Definition doc_prepend_header_spec : named_argT
+    := ([Arg.long_key "doc-prepend-header"],
+        Arg.String,
+        ["Documentation Option: Prepend a line at the beginning of the documentation header at the top of the file.  This argument can be passed multiple times to insert multiple lines.  Lines will be automatically commented."]).
+
 
   Definition collapse_list_default {A} (default : A) (ls : list A)
     := List.hd default (List.rev ls).
@@ -393,6 +449,8 @@ Module ForExtraction.
       ; no_select :> no_select_opt
       (** Should we emit primitive operations *)
       ; emit_primitives :> emit_primitives_opt
+      (** Should we skip emitting typedefs for field elements *)
+      ; skip_typedefs :> skip_typedefs_opt
       (** Should we use the alternate implementation of cmovznz *)
       ; use_mul_for_cmovznz :> use_mul_for_cmovznz_opt
       (** Should we split apart oversized operations? *)
@@ -416,8 +474,24 @@ Module ForExtraction.
       ; internal_class_name :> class_name_opt
       (** What's are the naming conventions to use? *)
       ; language_naming_conventions :> language_naming_conventions_opt
+      (** Documentation options *)
+      ; documentation_options :> documentation_options_opt
+      (** list of registers for calling assembly functions *)
+      ; assembly_calling_registers :> assembly_calling_registers_opt
+      (** size of the stack in bytes *)
+      ; assembly_stack_size :> assembly_stack_size_opt
+      (** error if there are un-requested assembly functions *)
+      ; error_on_unused_assembly_functions :> error_on_unused_assembly_functions_opt
+      (** Are output arrays considered to come before input arrays, or after them? *)
+      ; assembly_output_first :> assembly_output_first_opt
+      (** Should we assign registers to the arguments in left-to-right or right-to-left order? *)
+      ; assembly_argument_registers_left_to_right :> assembly_argument_registers_left_to_right_opt
       (** don't prepend fiat to prefix *)
       ; no_prefix_fiat : bool
+      (** Extra lines before the documentation header *)
+      ; before_header_lines : list string
+      (** Extra lines at the beginning of the documentation header *)
+      ; extra_early_header_lines : list string
     }.
   Class SynthesizeOptions :=
     {
@@ -475,11 +549,23 @@ Module ForExtraction.
         ; split_multiret_spec
         ; value_barrier_spec
         ; no_primitives_spec
+        ; no_field_element_typedefs_spec
         ; cmovznz_by_mul_spec
         ; only_signed_spec
         ; hint_file_spec
         ; output_file_spec
         ; asm_output_spec
+        ; asm_reg_spec
+        ; asm_stack_size_spec
+        ; no_error_on_unused_asm_functions_spec
+        ; asm_input_first_spec
+        ; asm_reg_rtl_spec
+        ; doc_text_before_function_name_spec
+        ; doc_text_before_type_name_spec
+        ; doc_newline_before_package_declaration_spec
+        ; doc_newline_in_typedef_bounds_spec
+        ; doc_prepend_header_raw_spec
+        ; doc_prepend_header_spec
        ].
 
   Definition parse_common_optional_options
@@ -506,14 +592,33 @@ Module ForExtraction.
              , split_multiretv
              , value_barrierv
              , no_primitivesv
+             , no_field_element_typedefsv
              , cmovznz_by_mulv
              , only_signedv
              , hint_file_namesv
              , output_file_namev
              , asm_output_file_namev
+             , asm_regv
+             , asm_stack_sizev
+             , no_error_on_unused_asm_functionsv
+             , asm_input_firstv
+             , asm_reg_rtlv
+             , doc_text_before_function_namev
+             , doc_text_before_type_namev
+             , doc_newline_before_package_declarationv
+             , doc_newline_in_typedef_boundsv
+             , doc_prepend_header_rawv
+             , doc_prepend_headerv
             ) := data in
        let to_bool ls := (0 <? List.length ls)%nat in
        let to_string_list ls := List.map (@snd _ _) ls in
+       let to_N_list ls := List.map (@snd _ _) (List.map (@snd _ _) ls) in
+       let to_reg_list ls := match List.map (@snd _ _) (List.map (@snd _ _) ls) with
+                             | nil => None
+                             | ls => Some (List.concat ls)
+                             end in
+       let to_N_opt ls := List.nth_error (to_N_list ls) 0 in
+       let to_N_default ls default := Option.value (to_N_opt ls) default in
        let to_string_opt ls := List.nth_error (to_string_list ls) 0 in
        let to_string_default ls default := Option.value (to_string_opt ls) default in
        let to_capitalization_data_opt ls := List.nth_error (List.map (fun '(_, (_, v)) => v) ls) 0 in
@@ -549,6 +654,20 @@ Module ForExtraction.
                   ; unfold_value_barrier := negb (to_bool value_barrierv)
                   ; use_mul_for_cmovznz := to_bool cmovznz_by_mulv
                   ; emit_primitives := negb (to_bool no_primitivesv)
+                  ; skip_typedefs := to_bool no_field_element_typedefsv
+                  ; assembly_calling_registers := to_reg_list asm_regv
+                  ; assembly_stack_size := to_N_opt asm_stack_sizev
+                  ; error_on_unused_assembly_functions := negb (to_bool no_error_on_unused_asm_functionsv)
+                  ; assembly_output_first := negb (to_bool asm_input_firstv)
+                  ; assembly_argument_registers_left_to_right := negb (to_bool asm_reg_rtlv)
+                  ; documentation_options
+                    := {| text_before_function_name_opt := to_string_opt doc_text_before_function_namev
+                          ; text_before_type_name_opt := to_string_opt doc_text_before_type_namev
+                          ; newline_before_package_declaration := to_bool doc_newline_before_package_declarationv
+                          ; newline_in_typedef_bounds := to_bool doc_newline_in_typedef_boundsv
+                       |}
+                  ; before_header_lines := to_string_list doc_prepend_header_rawv
+                  ; extra_early_header_lines := to_string_list doc_prepend_headerv
                |},
                snd (List.hd lang_default langv)) in
        match langv with
@@ -617,22 +736,20 @@ Module ForExtraction.
         := let prefix := ((if no_prefix_fiat then "" else "fiat_")
                             ++ (if (curve_description =? "") then "" else (curve_description ++ "_")))%string in
            let header :=
-               ((["Autogenerated: " ++ invocation
-                  ; match (curve_description =? ""), internal_package_name, internal_class_name with
-                    | false, _, _
-                    | _, (None | Some ""), (None | Some "")
-                      => "curve description: " ++ curve_description
-                    | _, Some pkg, _
-                      => "curve description (via package name): " ++ pkg
-                    | _, _, Some cls
-                      => "curve description (via class name): " ++ cls
-                    end
-                  ; "machine_wordsize = " ++ show false (machine_wordsize:Z) ++ " (from """ ++ str_machine_wordsize ++ """)"]%string)
+               ((extra_early_header_lines
+                   ++ ["Autogenerated: " ++ invocation
+                       ; match (curve_description =? ""), internal_package_name, internal_class_name with
+                         | false, _, _
+                         | _, (None | Some ""), (None | Some "")
+                           => "curve description: " ++ curve_description
+                         | _, Some pkg, _
+                           => "curve description (via package name): " ++ pkg
+                         | _, _, Some cls
+                           => "curve description (via class name): " ++ cls
+                         end
+                       ; "machine_wordsize = " ++ show (machine_wordsize:Z) ++ " (from """ ++ str_machine_wordsize ++ """)"]%string)
                   ++ show_lines_args args)%list in
            inl (Synthesize (snd args) header prefix).
-
-      Definition strip_trailing_spaces (s : string) : string
-        := String.concat String.NewLine (List.map String.rtrim (String.split String.NewLine s)).
 
       Definition ProcessedLines
                  {output_language_api : ToString.OutputLanguageAPI}
@@ -644,10 +761,13 @@ Module ForExtraction.
         : ((* normal *) list string * (* asm *) list string) + list string
         := match CollectErrors (PipelineLines invocation curve_description str_machine_wordsize args) with
            | inl (ls_normal, ls_asm)
-             => let postprocess_lines
-                    := List.flat_map (fun s => ((List.map (fun s => s ++ String.NewLine) (List.map strip_trailing_spaces s))%string)
-                                                 ++ [String.NewLine])%list in
-                inl (postprocess_lines ls_normal, postprocess_lines ls_asm)
+             => let before_header := List.map (fun s => s ++ String.NewLine) before_header_lines in
+                let postprocess_lines ls
+                    := String.strip_trailing_newlines
+                         (List.flat_map (fun s => ((List.map (fun s => s ++ String.NewLine) (List.map String.strip_trailing_spaces s))%string)
+                                                    ++ [String.NewLine])
+                                        ls)%list in
+                inl (before_header ++ postprocess_lines ls_normal, postprocess_lines ls_asm)%list
            | inr nil => inr nil
            | inr (l :: ls)
              => inr (l ++ (List.flat_map
@@ -722,7 +842,14 @@ Module ForExtraction.
                            end)
                 | inr errs => error errs
                 end
-           | ErrorT.Error err => error (Arg.show_list_parse_error full_spec err)
+           | ErrorT.Error err
+             => let display := Arg.show_list_parse_error full_spec err in
+                if Arg.is_real_error err
+                then error display
+                else (* just a requested help/usage message *)
+                  write_stdout_then
+                    (List.map (fun s => s ++ String.NewLine)%string display)
+                    ret
            end.
     End __.
   End Parameterized.
@@ -742,8 +869,8 @@ Module ForExtraction.
              let '(str_tight_bounds_multiplier, tight_bounds_multiplier) := collapse_list_default ("", tight_bounds_multiplier_default) (List.map (@snd _ _) tight_bounds_multiplier) in
              let tight_bounds_multiplier : tight_upperbound_fraction_opt := tight_bounds_multiplier in
              match get_num_limbs s c machine_wordsize n, n with
-             | None, NumLimbs n => inr ["Internal error: get_num_limbs (on (" ++ PowersOfTwo.show_Z false s ++ ", " ++ show_c false c ++ ", " ++ show false (machine_wordsize:Z) ++ ", " ++ show false n ++ ")) returned None even though the argument was NumLimbs"]
-             | None, Auto idx => inr ["Invalid index " ++ show false idx ++ " when guessing the number of limbs for s-c = " ++ PowersOfTwo.show_Z false s ++ " - " ++ show_c false c ++ "; valid indices must index into the list " ++ show false (get_possible_limbs s c machine_wordsize) ++ "."]
+             | None, NumLimbs n => inr ["Internal error: get_num_limbs (on (" ++ PowersOfTwo.show_Z s ++ ", " ++ show_c c ++ ", " ++ show (machine_wordsize:Z) ++ ", " ++ show n ++ ")) returned None even though the argument was NumLimbs"]
+             | None, Auto idx => inr ["Invalid index " ++ show idx ++ " when guessing the number of limbs for s-c = " ++ PowersOfTwo.show_Z s ++ " - " ++ show_c c ++ "; valid indices must index into the list " ++ show (get_possible_limbs s c machine_wordsize) ++ "."]
              | Some n, _
                => inl
                     ((str_n, str_sc, str_tight_bounds_multiplier, show_requests),
@@ -754,9 +881,9 @@ Module ForExtraction.
             fun '((str_n, str_sc, str_tight_bounds_multiplier, show_requests),
                   (n, s, c, tight_bounds_multiplier, requests))
             => ["requested operations: " ++ show_requests;
-               "n = " ++ show false n ++ " (from """ ++ str_n ++ """)";
-               "s-c = " ++ PowersOfTwo.show_Z false s ++ " - " ++ show_c false c ++ " (from """ ++ str_sc ++ """)";
-               "tight_bounds_multiplier = " ++ show false (tight_bounds_multiplier:Q) ++ " (from """ ++ str_tight_bounds_multiplier ++ """)"]%string;
+               "n = " ++ show n ++ " (from """ ++ str_n ++ """)";
+               "s-c = " ++ PowersOfTwo.show_Z s ++ " - " ++ show_c c ++ " (from """ ++ str_sc ++ """)";
+               "tight_bounds_multiplier = " ++ show (tight_bounds_multiplier:Q) ++ " (from """ ++ str_tight_bounds_multiplier ++ """)"]%string;
 
           Synthesize
           := fun _ opts '(n, s, c, tight_bounds_multiplier, requests) comment_header prefix
@@ -791,7 +918,7 @@ Module ForExtraction.
             fun '((str_m, show_requests),
                   (m, requests))
             => ["requested operations: " ++ show_requests;
-               "m = " ++ Hex.show_Z false m ++ " (from """ ++ str_m ++ """)";
+               "m = " ++ Hex.show_Z m ++ " (from """ ++ str_m ++ """)";
                "                                                                  ";
                "NOTE: In addition to the bounds specified above each function, all";
                "  functions synthesized for this Montgomery arithmetic require the";
@@ -833,7 +960,7 @@ Module ForExtraction.
             fun '((str_sc, show_requests),
                   (s, c, requests))
             => ["requested operations: " ++ show_requests;
-               "s-c = " ++ PowersOfTwo.show_Z false s ++ " - " ++ show_c false c ++ " (from """ ++ str_sc ++ """)"];
+               "s-c = " ++ PowersOfTwo.show_Z s ++ " - " ++ show_c c ++ " (from """ ++ str_sc ++ """)"];
 
           Synthesize
           := fun _ opts '(s, c, requests) comment_header prefix
@@ -894,14 +1021,14 @@ Module ForExtraction.
             fun '((str_src_n, str_sc, str_src_limbwidth, str_dst_limbwidth, str_inbounds_multiplier, str_outbounds_multiplier, use_bitwidth_in, use_bitwidth_out, str_inbounds, str_outbounds, show_requests),
                   (src_n, s, c, src_limbwidth, dst_limbwidth, inbounds_multiplier, outbounds_multiplier, inbounds, outbounds, requests))
             => ["requested operations: " ++ show_requests;
-               "src_n = " ++ show false src_n ++ " (from """ ++ str_src_n ++ """)";
-               "s-c = " ++ PowersOfTwo.show_Z false s ++ " - " ++ show_c false c ++ " (from """ ++ str_sc ++ """)";
-               "src_limbwidth = " ++ show false src_limbwidth ++ " (from """ ++ str_src_limbwidth ++ """)";
-               "dst_limbwidth = " ++ show false dst_limbwidth ++ " (from """ ++ str_dst_limbwidth ++ """)";
-               "inbounds_multiplier = " ++ show false inbounds_multiplier ++ " (from """ ++ str_inbounds_multiplier ++ """)";
-               "outbounds_multiplier = " ++ show false outbounds_multiplier ++ " (from """ ++ str_outbounds_multiplier ++ """)";
-               "inbounds = " ++ show false inbounds ++ " (from """ ++ str_inbounds ++ """ and use_bithwidth_in = " ++ show false use_bitwidth_in ++ ")";
-               "outbounds = " ++ show false outbounds ++ " (from """ ++ str_outbounds ++ """ and use_bithwidth_out = " ++ show false use_bitwidth_out ++ ")"];
+               "src_n = " ++ show src_n ++ " (from """ ++ str_src_n ++ """)";
+               "s-c = " ++ PowersOfTwo.show_Z s ++ " - " ++ show_c c ++ " (from """ ++ str_sc ++ """)";
+               "src_limbwidth = " ++ show src_limbwidth ++ " (from """ ++ str_src_limbwidth ++ """)";
+               "dst_limbwidth = " ++ show dst_limbwidth ++ " (from """ ++ str_dst_limbwidth ++ """)";
+               "inbounds_multiplier = " ++ show inbounds_multiplier ++ " (from """ ++ str_inbounds_multiplier ++ """)";
+               "outbounds_multiplier = " ++ show outbounds_multiplier ++ " (from """ ++ str_outbounds_multiplier ++ """)";
+               "inbounds = " ++ show inbounds ++ " (from """ ++ str_inbounds ++ """ and use_bithwidth_in = " ++ show use_bitwidth_in ++ ")";
+               "outbounds = " ++ show outbounds ++ " (from """ ++ str_outbounds ++ """ and use_bithwidth_out = " ++ show use_bitwidth_out ++ ")"];
 
           Synthesize
           := fun _ opts '(src_n, s, c, src_limbwidth, dst_limbwidth, inbounds_multiplier, outbounds_multiplier, inbounds, outbounds, requests) comment_header prefix

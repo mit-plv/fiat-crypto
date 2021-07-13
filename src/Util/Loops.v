@@ -8,7 +8,7 @@ Module Import core.
     without proving its termination. The loop body does not have
     access to the amount of remaining fuel, and thus increasing fuel
     beyond termination cannot change the behavior. fuel counts full
-    loops -- the one that exacutes "break" is not included *)
+    loops -- the one that executes "break" is not included *)
 
     Fixpoint loop (fuel : nat) (s : A) {struct fuel} : A + B :=
       let s := body s in

@@ -1154,7 +1154,7 @@ Module Compilers.
       Lemma Wf_StripAnnotations {assume_cast_truncates} {t} (e : Expr t) bound (Hwf : Wf e) (bound_valid : Proper (type.and_for_each_lhs_of_arrow (@abstract_domain_R)) bound)
         : Wf (StripAnnotations assume_cast_truncates e bound).
       Proof.
-        intros ??; eapply wf_strip_annotations with (G:=nil); cbn [List.In]; try tauto; apply GeneralizeVar.Wf_GeneralizeVar, Hwf.
+        intros ??; eapply wf_strip_annotations with (G:=nil); cbn [List.In]; try tauto; apply Hwf.
       Qed.
 
       Lemma Wf_EtaExpandWithBound {relax_zrange t} (e : Expr t) bound (Hwf : Wf e) (bound_valid : Proper (type.and_for_each_lhs_of_arrow (@abstract_domain_R)) bound)

@@ -12,12 +12,22 @@
 /*   return values.                                                   */
 /*  */
 /* Computed values: */
-/* eval z = z[0] + (z[1] << 32) + (z[2] << 64) + (z[3] << 96) + (z[4] << 128) + (z[5] << 160) + (z[6] << 192) + (z[7] << 224) */
-/* bytes_eval z = z[0] + (z[1] << 8) + (z[2] << 16) + (z[3] << 24) + (z[4] << 32) + (z[5] << 40) + (z[6] << 48) + (z[7] << 56) + (z[8] << 64) + (z[9] << 72) + (z[10] << 80) + (z[11] << 88) + (z[12] << 96) + (z[13] << 104) + (z[14] << 112) + (z[15] << 120) + (z[16] << 128) + (z[17] << 136) + (z[18] << 144) + (z[19] << 152) + (z[20] << 160) + (z[21] << 168) + (z[22] << 176) + (z[23] << 184) + (z[24] << 192) + (z[25] << 200) + (z[26] << 208) + (z[27] << 216) + (z[28] << 224) + (z[29] << 232) + (z[30] << 240) + (z[31] << 248) */
+/*   eval z = z[0] + (z[1] << 32) + (z[2] << 64) + (z[3] << 96) + (z[4] << 128) + (z[5] << 160) + (z[6] << 192) + (z[7] << 224) */
+/*   bytes_eval z = z[0] + (z[1] << 8) + (z[2] << 16) + (z[3] << 24) + (z[4] << 32) + (z[5] << 40) + (z[6] << 48) + (z[7] << 56) + (z[8] << 64) + (z[9] << 72) + (z[10] << 80) + (z[11] << 88) + (z[12] << 96) + (z[13] << 104) + (z[14] << 112) + (z[15] << 120) + (z[16] << 128) + (z[17] << 136) + (z[18] << 144) + (z[19] << 152) + (z[20] << 160) + (z[21] << 168) + (z[22] << 176) + (z[23] << 184) + (z[24] << 192) + (z[25] << 200) + (z[26] << 208) + (z[27] << 216) + (z[28] << 224) + (z[29] << 232) + (z[30] << 240) + (z[31] << 248) */
+/*   twos_complement_eval z = let x1 := z[0] + (z[1] << 32) + (z[2] << 64) + (z[3] << 96) + (z[4] << 128) + (z[5] << 160) + (z[6] << 192) + (z[7] << 224) in */
+/*                            if x1 & (2^256-1) < 2^255 then x1 & (2^256-1) else (x1 & (2^256-1)) - 2^256 */
 
 #include <stdint.h>
 typedef unsigned char fiat_secp256k1_uint1;
 typedef signed char fiat_secp256k1_int1;
+
+/* The type fiat_secp256k1_montgomery_domain_field_element is a field element in the Montgomery domain. */
+/* Bounds: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]] */
+typedef uint32_t fiat_secp256k1_montgomery_domain_field_element[8];
+
+/* The type fiat_secp256k1_non_montgomery_domain_field_element is a field element NOT in the Montgomery domain. */
+/* Bounds: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]] */
+typedef uint32_t fiat_secp256k1_non_montgomery_domain_field_element[8];
 
 #if (-1 & 3) != 3
 #error "This code only works on a two's complement system"
@@ -35,6 +45,7 @@ static __inline__ uint32_t fiat_secp256k1_value_barrier_u32(uint32_t a) {
 
 /*
  * The function fiat_secp256k1_addcarryx_u32 is an addition with carry.
+ *
  * Postconditions:
  *   out1 = (arg1 + arg2 + arg3) mod 2^32
  *   out2 = ⌊(arg1 + arg2 + arg3) / 2^32⌋
@@ -60,6 +71,7 @@ static void fiat_secp256k1_addcarryx_u32(uint32_t* out1, fiat_secp256k1_uint1* o
 
 /*
  * The function fiat_secp256k1_subborrowx_u32 is a subtraction with borrow.
+ *
  * Postconditions:
  *   out1 = (-arg1 + arg2 + -arg3) mod 2^32
  *   out2 = -⌊(-arg1 + arg2 + -arg3) / 2^32⌋
@@ -85,6 +97,7 @@ static void fiat_secp256k1_subborrowx_u32(uint32_t* out1, fiat_secp256k1_uint1* 
 
 /*
  * The function fiat_secp256k1_mulx_u32 is a multiplication, returning the full double-width result.
+ *
  * Postconditions:
  *   out1 = (arg1 * arg2) mod 2^32
  *   out2 = ⌊arg1 * arg2 / 2^32⌋
@@ -109,6 +122,7 @@ static void fiat_secp256k1_mulx_u32(uint32_t* out1, uint32_t* out2, uint32_t arg
 
 /*
  * The function fiat_secp256k1_cmovznz_u32 is a single-word conditional move.
+ *
  * Postconditions:
  *   out1 = (if arg1 = 0 then arg2 else arg3)
  *
@@ -131,6 +145,7 @@ static void fiat_secp256k1_cmovznz_u32(uint32_t* out1, fiat_secp256k1_uint1 arg1
 
 /*
  * The function fiat_secp256k1_mul multiplies two field elements in the Montgomery domain.
+ *
  * Preconditions:
  *   0 ≤ eval arg1 < m
  *   0 ≤ eval arg2 < m
@@ -138,13 +153,8 @@ static void fiat_secp256k1_cmovznz_u32(uint32_t* out1, fiat_secp256k1_uint1 arg1
  *   eval (from_montgomery out1) mod m = (eval (from_montgomery arg1) * eval (from_montgomery arg2)) mod m
  *   0 ≤ eval out1 < m
  *
- * Input Bounds:
- *   arg1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
- *   arg2: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
- * Output Bounds:
- *   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  */
-static void fiat_secp256k1_mul(uint32_t out1[8], const uint32_t arg1[8], const uint32_t arg2[8]) {
+static void fiat_secp256k1_mul(fiat_secp256k1_montgomery_domain_field_element out1, const fiat_secp256k1_montgomery_domain_field_element arg1, const fiat_secp256k1_montgomery_domain_field_element arg2) {
   uint32_t x1;
   uint32_t x2;
   uint32_t x3;
@@ -1411,18 +1421,15 @@ static void fiat_secp256k1_mul(uint32_t out1[8], const uint32_t arg1[8], const u
 
 /*
  * The function fiat_secp256k1_square squares a field element in the Montgomery domain.
+ *
  * Preconditions:
  *   0 ≤ eval arg1 < m
  * Postconditions:
  *   eval (from_montgomery out1) mod m = (eval (from_montgomery arg1) * eval (from_montgomery arg1)) mod m
  *   0 ≤ eval out1 < m
  *
- * Input Bounds:
- *   arg1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
- * Output Bounds:
- *   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  */
-static void fiat_secp256k1_square(uint32_t out1[8], const uint32_t arg1[8]) {
+static void fiat_secp256k1_square(fiat_secp256k1_montgomery_domain_field_element out1, const fiat_secp256k1_montgomery_domain_field_element arg1) {
   uint32_t x1;
   uint32_t x2;
   uint32_t x3;
@@ -2689,6 +2696,7 @@ static void fiat_secp256k1_square(uint32_t out1[8], const uint32_t arg1[8]) {
 
 /*
  * The function fiat_secp256k1_add adds two field elements in the Montgomery domain.
+ *
  * Preconditions:
  *   0 ≤ eval arg1 < m
  *   0 ≤ eval arg2 < m
@@ -2696,13 +2704,8 @@ static void fiat_secp256k1_square(uint32_t out1[8], const uint32_t arg1[8]) {
  *   eval (from_montgomery out1) mod m = (eval (from_montgomery arg1) + eval (from_montgomery arg2)) mod m
  *   0 ≤ eval out1 < m
  *
- * Input Bounds:
- *   arg1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
- *   arg2: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
- * Output Bounds:
- *   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  */
-static void fiat_secp256k1_add(uint32_t out1[8], const uint32_t arg1[8], const uint32_t arg2[8]) {
+static void fiat_secp256k1_add(fiat_secp256k1_montgomery_domain_field_element out1, const fiat_secp256k1_montgomery_domain_field_element arg1, const fiat_secp256k1_montgomery_domain_field_element arg2) {
   uint32_t x1;
   fiat_secp256k1_uint1 x2;
   uint32_t x3;
@@ -2782,6 +2785,7 @@ static void fiat_secp256k1_add(uint32_t out1[8], const uint32_t arg1[8], const u
 
 /*
  * The function fiat_secp256k1_sub subtracts two field elements in the Montgomery domain.
+ *
  * Preconditions:
  *   0 ≤ eval arg1 < m
  *   0 ≤ eval arg2 < m
@@ -2789,13 +2793,8 @@ static void fiat_secp256k1_add(uint32_t out1[8], const uint32_t arg1[8], const u
  *   eval (from_montgomery out1) mod m = (eval (from_montgomery arg1) - eval (from_montgomery arg2)) mod m
  *   0 ≤ eval out1 < m
  *
- * Input Bounds:
- *   arg1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
- *   arg2: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
- * Output Bounds:
- *   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  */
-static void fiat_secp256k1_sub(uint32_t out1[8], const uint32_t arg1[8], const uint32_t arg2[8]) {
+static void fiat_secp256k1_sub(fiat_secp256k1_montgomery_domain_field_element out1, const fiat_secp256k1_montgomery_domain_field_element arg1, const fiat_secp256k1_montgomery_domain_field_element arg2) {
   uint32_t x1;
   fiat_secp256k1_uint1 x2;
   uint32_t x3;
@@ -2858,18 +2857,15 @@ static void fiat_secp256k1_sub(uint32_t out1[8], const uint32_t arg1[8], const u
 
 /*
  * The function fiat_secp256k1_opp negates a field element in the Montgomery domain.
+ *
  * Preconditions:
  *   0 ≤ eval arg1 < m
  * Postconditions:
  *   eval (from_montgomery out1) mod m = -eval (from_montgomery arg1) mod m
  *   0 ≤ eval out1 < m
  *
- * Input Bounds:
- *   arg1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
- * Output Bounds:
- *   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  */
-static void fiat_secp256k1_opp(uint32_t out1[8], const uint32_t arg1[8]) {
+static void fiat_secp256k1_opp(fiat_secp256k1_montgomery_domain_field_element out1, const fiat_secp256k1_montgomery_domain_field_element arg1) {
   uint32_t x1;
   fiat_secp256k1_uint1 x2;
   uint32_t x3;
@@ -2932,18 +2928,15 @@ static void fiat_secp256k1_opp(uint32_t out1[8], const uint32_t arg1[8]) {
 
 /*
  * The function fiat_secp256k1_from_montgomery translates a field element out of the Montgomery domain.
+ *
  * Preconditions:
  *   0 ≤ eval arg1 < m
  * Postconditions:
  *   eval out1 mod m = (eval arg1 * ((2^32)⁻¹ mod m)^8) mod m
  *   0 ≤ eval out1 < m
  *
- * Input Bounds:
- *   arg1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
- * Output Bounds:
- *   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  */
-static void fiat_secp256k1_from_montgomery(uint32_t out1[8], const uint32_t arg1[8]) {
+static void fiat_secp256k1_from_montgomery(fiat_secp256k1_non_montgomery_domain_field_element out1, const fiat_secp256k1_montgomery_domain_field_element arg1) {
   uint32_t x1;
   uint32_t x2;
   uint32_t x3;
@@ -3769,18 +3762,15 @@ static void fiat_secp256k1_from_montgomery(uint32_t out1[8], const uint32_t arg1
 
 /*
  * The function fiat_secp256k1_to_montgomery translates a field element into the Montgomery domain.
+ *
  * Preconditions:
  *   0 ≤ eval arg1 < m
  * Postconditions:
  *   eval (from_montgomery out1) mod m = eval arg1 mod m
  *   0 ≤ eval out1 < m
  *
- * Input Bounds:
- *   arg1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
- * Output Bounds:
- *   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  */
-static void fiat_secp256k1_to_montgomery(uint32_t out1[8], const uint32_t arg1[8]) {
+static void fiat_secp256k1_to_montgomery(fiat_secp256k1_montgomery_domain_field_element out1, const fiat_secp256k1_non_montgomery_domain_field_element arg1) {
   uint32_t x1;
   uint32_t x2;
   uint32_t x3;
@@ -4716,6 +4706,7 @@ static void fiat_secp256k1_to_montgomery(uint32_t out1[8], const uint32_t arg1[8
 
 /*
  * The function fiat_secp256k1_nonzero outputs a single non-zero word if the input is non-zero and zero otherwise.
+ *
  * Preconditions:
  *   0 ≤ eval arg1 < m
  * Postconditions:
@@ -4734,6 +4725,7 @@ static void fiat_secp256k1_nonzero(uint32_t* out1, const uint32_t arg1[8]) {
 
 /*
  * The function fiat_secp256k1_selectznz is a multi-limb conditional select.
+ *
  * Postconditions:
  *   eval out1 = (if arg1 = 0 then eval arg2 else eval arg3)
  *
@@ -4773,6 +4765,7 @@ static void fiat_secp256k1_selectznz(uint32_t out1[8], fiat_secp256k1_uint1 arg1
 
 /*
  * The function fiat_secp256k1_to_bytes serializes a field element NOT in the Montgomery domain to bytes in little-endian order.
+ *
  * Preconditions:
  *   0 ≤ eval arg1 < m
  * Postconditions:
@@ -4932,6 +4925,7 @@ static void fiat_secp256k1_to_bytes(uint8_t out1[32], const uint32_t arg1[8]) {
 
 /*
  * The function fiat_secp256k1_from_bytes deserializes a field element NOT in the Montgomery domain from bytes in little-endian order.
+ *
  * Preconditions:
  *   0 ≤ bytes_eval arg1 < m
  * Postconditions:
@@ -5068,15 +5062,13 @@ static void fiat_secp256k1_from_bytes(uint32_t out1[8], const uint8_t arg1[32]) 
 
 /*
  * The function fiat_secp256k1_set_one returns the field element one in the Montgomery domain.
+ *
  * Postconditions:
  *   eval (from_montgomery out1) mod m = 1 mod m
  *   0 ≤ eval out1 < m
  *
- * Input Bounds:
- * Output Bounds:
- *   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  */
-static void fiat_secp256k1_set_one(uint32_t out1[8]) {
+static void fiat_secp256k1_set_one(fiat_secp256k1_montgomery_domain_field_element out1) {
   out1[0] = UINT16_C(0x3d1);
   out1[1] = 0x1;
   out1[2] = 0x0;
@@ -5088,12 +5080,12 @@ static void fiat_secp256k1_set_one(uint32_t out1[8]) {
 }
 
 /*
- * The function fiat_secp256k1_msat returns the saturated represtation of the prime modulus.
+ * The function fiat_secp256k1_msat returns the saturated representation of the prime modulus.
+ *
  * Postconditions:
  *   twos_complement_eval out1 = m
  *   0 ≤ eval out1 < m
  *
- * Input Bounds:
  * Output Bounds:
  *   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  */
@@ -5111,6 +5103,7 @@ static void fiat_secp256k1_msat(uint32_t out1[9]) {
 
 /*
  * The function fiat_secp256k1_divstep computes a divstep.
+ *
  * Preconditions:
  *   0 ≤ eval arg4 < m
  *   0 ≤ eval arg5 < m
@@ -5567,11 +5560,11 @@ static void fiat_secp256k1_divstep(uint32_t* out1, uint32_t out2[9], uint32_t ou
 
 /*
  * The function fiat_secp256k1_divstep_precomp returns the precomputed value for Bernstein-Yang-inversion (in montgomery form).
+ *
  * Postconditions:
- *   eval (from_montgomery out1) = ⌊(m - 1) / 2⌋^(if (log2 m) + 1 < 46 then ⌊(49 * ((log2 m) + 1) + 80) / 17⌋ else ⌊(49 * ((log2 m) + 1) + 57) / 17⌋)
+ *   eval (from_montgomery out1) = ⌊(m - 1) / 2⌋^(if ⌊log2 m⌋ + 1 < 46 then ⌊(49 * (⌊log2 m⌋ + 1) + 80) / 17⌋ else ⌊(49 * (⌊log2 m⌋ + 1) + 57) / 17⌋)
  *   0 ≤ eval out1 < m
  *
- * Input Bounds:
  * Output Bounds:
  *   out1: [[0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff], [0x0 ~> 0xffffffff]]
  */
@@ -5585,4 +5578,3 @@ static void fiat_secp256k1_divstep_precomp(uint32_t out1[8]) {
   out1[6] = UINT32_C(0x4b03709);
   out1[7] = UINT32_C(0x24fb8a31);
 }
-

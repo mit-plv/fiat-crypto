@@ -152,7 +152,7 @@ Ltac setup_lists_reserved :=
       | H : context [map byte.unsigned ?bs] |- _ =>
         assert (map byte.unsigned bs
                 = map word.unsigned
-                      (map word.of_Z (map byte.unsigned bs)))
+                      (map (@word.of_Z _ Semantics.word) (map byte.unsigned bs)))
           by (erewrite map_unsigned_of_Z, map_word_wrap_bounded;
               eauto using byte_unsigned_within_max_bounds)
       end.
@@ -243,7 +243,7 @@ Ltac exists_all_placeholders out_array_ptrs :=
         lazymatch type of bits with
         | list word.rep => constr:(bits)
         | list Init.Byte.byte =>
-          constr:(map word.of_Z (map byte.unsigned bits))
+          constr:(map (@word.of_Z _ Semantics.word) (map byte.unsigned bits))
         | ?t => fail "unexpected placeholder type" t
         end in
     exists_out_array_placeholder zs words p;

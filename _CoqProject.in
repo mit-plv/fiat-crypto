@@ -1,5 +1,6 @@
 -R src Crypto
--arg -w -arg +implicit-core-hint-db,+implicits-in-term,+non-reversible-notation,+deprecated-intros-until-0,+deprecated-focus,+unused-intro-pattern,+variable-collision,-deprecated-hint-constr,-fragile-hint-constr,+omega-is-deprecated,+deprecated-instantiate-syntax,+non-recursive
+-arg -w -arg +implicit-core-hint-db,+implicits-in-term,+non-reversible-notation,+deprecated-intros-until-0,+deprecated-focus,+unused-intro-pattern,+variable-collision,+omega-is-deprecated,+deprecated-instantiate-syntax,+non-recursive
+@NATIVE_COMPILER_ARG@
 src/BoundsPipeline.v
 src/CLI.v
 src/COperationSpecifications.v
@@ -10,6 +11,7 @@ src/MiscCompilerPasses.v
 src/MiscCompilerPassesProofs.v
 src/MiscCompilerPassesProofsExtra.v
 src/SlowPrimeSynthesisExamples.v
+src/StandaloneDebuggingExamples.v
 src/StandaloneHaskellMain.v
 src/StandaloneOCamlMain.v
 src/TAPSort.v
@@ -59,6 +61,7 @@ src/ArithmeticCPS/ModOps.v
 src/ArithmeticCPS/Saturated.v
 src/ArithmeticCPS/WordByWordMontgomery.v
 src/Assembly/Equality.v
+src/Assembly/Equivalence.v
 src/Assembly/Parse.v
 src/Assembly/Semantics.v
 src/Assembly/Symbolic.v
@@ -99,6 +102,9 @@ src/Bedrock/Field/Synthesis/Generic/Operation.v
 src/Bedrock/Field/Synthesis/Generic/Tactics.v
 src/Bedrock/Field/Synthesis/Generic/UnsaturatedSolinas.v
 src/Bedrock/Field/Synthesis/Generic/WordByWordMontgomery.v
+src/Bedrock/Field/Synthesis/New/ComputedOp.v
+src/Bedrock/Field/Synthesis/New/Signature.v
+src/Bedrock/Field/Synthesis/New/UnsaturatedSolinas.v
 src/Bedrock/Field/Synthesis/Specialized/ReifiedOperation.v
 src/Bedrock/Field/Synthesis/Specialized/Tactics.v
 src/Bedrock/Field/Synthesis/Specialized/UnsaturatedSolinas.v
@@ -191,6 +197,7 @@ src/Rewriter/TestRulesProofs.v
 src/Rewriter/Passes/AddAssocLeft.v
 src/Rewriter/Passes/Arith.v
 src/Rewriter/Passes/ArithWithCasts.v
+src/Rewriter/Passes/FlattenThunkedRects.v
 src/Rewriter/Passes/MulSplit.v
 src/Rewriter/Passes/MultiRetSplit.v
 src/Rewriter/Passes/NBE.v
@@ -215,6 +222,7 @@ src/Stringification/JSON.v
 src/Stringification/Java.v
 src/Stringification/Language.v
 src/Stringification/Rust.v
+src/Stringification/Zig.v
 src/UnsaturatedSolinasHeuristics/Tests.v
 src/Util/AdditionChainExponentiation.v
 src/Util/Arg.v
@@ -228,6 +236,7 @@ src/Util/Compose.v
 src/Util/Curry.v
 src/Util/Decidable.v
 src/Util/DefaultedTypes.v
+src/Util/DynList.v
 src/Util/Equality.v
 src/Util/ErrorT.v
 src/Util/Factorize.v
@@ -242,6 +251,7 @@ src/Util/IffT.v
 src/Util/Isomorphism.v
 src/Util/LetIn.v
 src/Util/LetInMonad.v
+src/Util/Level.v
 src/Util/ListUtil.v
 src/Util/Listable.v
 src/Util/Logic.v
@@ -271,6 +281,9 @@ src/Util/TagList.v
 src/Util/Tower.v
 src/Util/Tuple.v
 src/Util/Unit.v
+src/Util/Wf.v
+src/Util/Wf1.v
+src/Util/Wf2.v
 src/Util/ZBounded.v
 src/Util/ZRange.v
 src/Util/ZUtil.v
@@ -324,6 +337,9 @@ src/Util/Structures/Equalities/Iso.v
 src/Util/Structures/Equalities/Sum.v
 src/Util/Structures/Orders/Iso.v
 src/Util/Structures/Orders/Sum.v
+src/Util/Tactics/AllInstances.v
+src/Util/Tactics/AllSuccesses.v
+src/Util/Tactics/AppendUnderscores.v
 src/Util/Tactics/BreakMatch.v
 src/Util/Tactics/CPSId.v
 src/Util/Tactics/CacheTerm.v
@@ -334,6 +350,7 @@ src/Util/Tactics/ClearbodyAll.v
 src/Util/Tactics/ConstrFail.v
 src/Util/Tactics/Contains.v
 src/Util/Tactics/ConvoyDestruct.v
+src/Util/Tactics/CountBinders.v
 src/Util/Tactics/DebugPrint.v
 src/Util/Tactics/DestructHead.v
 src/Util/Tactics/DestructHyps.v
@@ -374,6 +391,9 @@ src/Util/Tactics/UnfoldArg.v
 src/Util/Tactics/UnifyAbstractReflexivity.v
 src/Util/Tactics/UniquePose.v
 src/Util/Tactics/VM.v
+src/Util/Telescope/Core.v
+src/Util/Telescope/Equality.v
+src/Util/Telescope/Instances.v
 src/Util/ZRange/BasicLemmas.v
 src/Util/ZRange/CornersMonotoneBounds.v
 src/Util/ZRange/LandLorBounds.v
@@ -412,6 +432,7 @@ src/Util/ZUtil/Morphisms.v
 src/Util/ZUtil/Mul.v
 src/Util/ZUtil/MulSplit.v
 src/Util/ZUtil/N2Z.v
+src/Util/ZUtil/Nat2Z.v
 src/Util/ZUtil/Notations.v
 src/Util/ZUtil/Odd.v
 src/Util/ZUtil/Ones.v

@@ -42,7 +42,8 @@ REGS = {'kind': r'(UnsaturatedSolinas|WordByWordMontgomery)',
         'descr': r'\|}\s*\)[\s"]*([^:]+)',
         'real': r'(?:ran for |real:\s*)([0-9\.]*) s',
         'user': r'(?:secs \(|user:\s*)([0-9\.]*)(?:u,| s)',
-        'index': r'(?:UnsaturatedSolinas.*index = ([0-9]+)|WordByWordMontgomery)'}
+        'index': r'(?:index = ([0-9]+)|WordByWordMontgomery)',
+        'nlimbs': r'(?:[ \.]n := ([0-9]+)|WordByWordMontgomery)'}
 def get_data(line):
     ret = {}
     bad = False
@@ -152,7 +153,7 @@ def lines_to_rows(lines, for_graph=False, real_or_user='real', only=None, **kwar
                                           *[v for short_key, v in extra_args if d_key_filter(short_key)])
                         if row is not None: yield row
     else:
-        keys = ['prime', 'user', 'real', 'kind', 'bitwidth', 'descr1', 'descr2', 'method', 'index', 'prime_str']
+        keys = ['prime', 'user', 'real', 'kind', 'bitwidth', 'descr1', 'descr2', 'method', 'index', 'nlimbs', 'prime_str']
         yield list(keys)
         for data in map(get_data, lines):
             if data is None: continue
@@ -161,7 +162,7 @@ def lines_to_rows(lines, for_graph=False, real_or_user='real', only=None, **kwar
 def writecsv(outfname, lines, **kwargs):
     rows = lines_to_rows(lines, **kwargs)
     def do_write(csvfile):
-        writer = csv.writer(csvfile, quoting=csv.QUOTE_MINIMAL)
+        writer = csv.writer(csvfile, quoting=csv.QUOTE_MINIMAL, lineterminator='\n')
         writer.writerows(rows)
     if outfname == '-': do_write(sys.stdout)
     else:
@@ -202,6 +203,13 @@ if __name__ == '__main__':
     if '--txt' in fnames:
         txt = True
         del fnames[fnames.index('--txt')]
+    while '--file-list' in fnames:
+        file_list_file = fnames[fnames.index('--file-list')+1]
+        del fnames[fnames.index('--file-list')+1]
+        del fnames[fnames.index('--file-list')]
+        with open(file_list_file, 'r') as f:
+            file_list = [i.strip() for i in f.readlines() if i.strip()]
+        fnames.extend(file_list)
     lines = [line
              for fname in fnames
              for line in postformat(get_input(fname))]

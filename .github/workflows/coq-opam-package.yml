@@ -1,0 +1,166 @@
+name: Test opam package
+
+# Note that we must split up each command into a separate step for Windows, because otherwise we don't get error code
+# See also https://github.com/avsm/setup-ocaml/issues/72
+
+on:
+  push:
+    branches:
+    - master
+  schedule:
+    - cron: '0 0 1 * *'
+
+jobs:
+  install:
+
+    strategy:
+      fail-fast: false
+      matrix:
+        coq-version: ['dev', '8.13.1', '8.12.2', '8.11.1', '8.10.2', '8.9.1']
+        ocaml-version: ['4.11.1', '4.08.1']
+        os: ['ubuntu-latest', 'macos-latest', 'windows-latest']
+        coq-extra-flags: ['-async-proofs-j 1', '']
+        opam-jobs-flag: ['-j 1', '']
+        exclude:
+        - os: 'ubuntu-latest'
+          coq-extra-flags: '-async-proofs-j 1'
+        - os: 'macos-latest'
+          coq-extra-flags: '-async-proofs-j 1'
+        - os: 'windows-latest'
+          coq-extra-flags: ''
+        - os: 'ubuntu-latest'
+          opam-jobs-flag: '-j 1'
+        - os: 'macos-latest'
+          opam-jobs-flag: '-j 1'
+        - os: 'windows-latest'
+          opam-jobs-flag: ''
+        - coq-version: 'dev'
+          ocaml-version: '4.08.1'
+        - coq-version: '8.13.1'
+          ocaml-version: '4.08.1'
+        - coq-version: '8.12.2'
+          ocaml-version: '4.08.1'
+        - coq-version: '8.11.1'
+          ocaml-version: '4.08.1'
+        - coq-version: '8.10.2'
+          ocaml-version: '4.11.1'
+        - coq-version: '8.9.1'
+          ocaml-version: '4.11.1'
+
+
+    runs-on: ${{ matrix.os }}
+
+    env:
+      OPAMYES: "true"
+
+    steps:
+    - name: Set up OCaml
+      uses: avsm/setup-ocaml@v1
+      with:
+        ocaml-version: ${{ matrix.ocaml-version }}
+
+    - name: echo Linux build params
+      run: |
+        echo "::group::lscpu"
+        lscpu
+        echo "::endgroup::"
+        echo "::group::uname -a"
+        uname -a
+        echo "::endgroup::"
+        echo "::group::lsb_release -a"
+        lsb_release -a
+        echo "::endgroup::"
+        echo "::group::gcc -v"
+        gcc -v
+        echo "::endgroup::"
+      if: ${{ runner.os == 'Linux' }}
+
+    - name: echo macOS build params
+      run: |
+        echo "::group::sysctl -n machdep.cpu.brand_string"
+        sysctl -n machdep.cpu.brand_string
+        echo "::endgroup::"
+        echo "::group::sysctl -a | grep machdep.cpu"
+        sysctl -a | grep machdep.cpu
+        echo "::endgroup::"
+        echo "::group::uname -a"
+        uname -a
+        echo "::endgroup::"
+        echo "::group::sw_vers -productVersion"
+        sw_vers -productVersion
+        echo "::endgroup::"
+        echo "::group::system_profiler SPSoftwareDataType"
+        system_profiler SPSoftwareDataType
+        echo "::endgroup::"
+      if: ${{ runner.os == 'macOS' }}
+
+    - name: echo Windows build params
+      run: |
+        echo ::group::wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
+        wmic cpu get caption, deviceid, name, numberofcores, maxclockspeed, status
+        echo ::endgroup::
+        echo ::group::wmic cpu list /format:list
+        wmic cpu list /format:list
+        echo ::endgroup::
+      shell: cmd
+      if: ${{ runner.os == 'Windows' }}
+
+    - name: echo opam build params
+      run: |
+        echo ::group::ocamlc -config
+        opam exec -- ocamlc -config
+        echo ::endgroup::
+        echo ::group::opam list
+        opam list
+        echo ::endgroup::
+        
+    - run: opam repo add coq-core-dev https://coq.inria.fr/opam/core-dev
+    - run: opam repo add coq-released https://coq.inria.fr/opam/released
+    - run: opam repo add coq-extra-dev https://coq.inria.fr/opam/extra-dev
+    - run: opam update
+    - run: opam install opam-depext
+    - run: opam exec -- opam-depext coq.${{ matrix.coq-version }}
+    - run: opam pin --kind=version add coq ${{ matrix.coq-version }}
+
+    - name: echo more build params
+      run: |
+        echo ::group::opam list
+        opam list
+        echo ::endgroup::
+        echo ::group::coqc --config
+        opam exec -- coqc --config
+        echo ::endgroup::
+        echo ::group::coqc --version
+        opam exec -- coqc --version
+        echo ::endgroup::
+        echo ::group::echo ~ coqtop
+        echo "" | opam exec -- coqtop
+        echo ::endgroup::
+
+    - run: opam exec -- opam-depext coq-fiat-crypto
+    - run: opam install coq-fiat-crypto ${{ matrix.opam-jobs-flag }}
+      env:
+        COQEXTRAFLAGS: ${{ matrix.coq-extra-flags }}
+        
+    - name: cat opam logs (Linux, Mac)
+      run: |
+        for i in $(find ~/.opam/log/ -type f); do echo "::group::$i"; cat "$i"; echo "::endgroup::"; done
+      if: ${{ always() && ( runner.os == 'Linux' || runner.os == 'macOS' ) }}
+        
+    - name: cat opam logs (Windows, native)
+      run: |
+        opam exec -- cat ~/.opam/log/*
+        true
+      if: ${{ always() && runner.os == 'Windows' }}
+
+    - name: cat opam logs (Windows)
+      run: |
+        %CYGWIN_ROOT%\bin\bash.exe -l -c 'for i in $(find ~/.opam/log/ -type f); do echo "::group::$i"; cat "$i"; echo "::endgroup::"; done'
+      shell: cmd
+      if: ${{ always() && runner.os == 'Windows' }}
+
+    - run: opam list
+    - run: opam exec -- word_by_word_montgomery -h
+    - run: opam exec -- unsaturated_solinas -h
+    - run: opam exec -- saturated_solinas -h
+    - run: opam exec -- base_conversion -h

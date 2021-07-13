@@ -19,8 +19,8 @@ Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
 Section Representation.
   Context {p : Types.parameters} {field_parameters : FieldParameters}
           {p_ok : Types.ok}.
-  Context (n : nat) (weight : nat -> Z)
-          (loose_bounds tight_bounds : list (option zrange))
+  Context (n n_bytes : nat) (weight : nat -> Z)
+          (loose_bounds tight_bounds byte_bounds : list (option zrange))
           (relax_bounds :
              forall X : list Z,
                list_Z_bounded_by tight_bounds X ->
@@ -35,14 +35,18 @@ Section Representation.
     fun bs =>
       F.of_Z _ (Positional.eval
                            (ModOps.weight 8 1)
-                           (Z.to_nat word_size_in_bytes)
+                           n_bytes
                            (map byte.unsigned bs)).
 
   Local Instance frep : FieldRepresentation :=
     { felem := list word;
       feval := eval_words;
       feval_bytes := eval_bytes;
-      felem_size_in_bytes := bytes_per_word Semantics.width * Z.of_nat n;
+      felem_size_in_bytes :=
+        Z.of_nat n * bytes_per_word Semantics.width;
+      encoded_felem_size_in_bytes := n_bytes;
+      bytes_in_bounds :=
+        fun bs => list_Z_bounded_by byte_bounds (map byte.unsigned bs);
       FElem := Bignum n;
       bounds := list (option zrange);
       bounded_by :=
@@ -56,8 +60,10 @@ Section Representation.
   Proof.
     constructor.
     { cbn [felem_size_in_bytes frep].
-      push_Zmod. autorewrite with zsimplify_fast. reflexivity. }
-    { cbv [Placeholder FElem felem_size_in_bytes frep]; repeat intro.
+      push_Zmod. autorewrite with zsimplify_fast.
+      reflexivity. }
+    { cbv [Placeholder FElem felem_size_in_bytes frep].
+      repeat intro.
       assert (word_size_in_bytes = bytes_per_word width).
       { pose proof word.width_pos.
         rewrite word_size_in_bytes_eq; cbn [bytes_per].
@@ -73,7 +79,7 @@ Section Representation.
       { match goal with
           | H : Array.array _ _ _ _ _ |- _ =>
             eapply Bignum_of_bytes with (n0:=n) in H;
-              [ destruct H | nia ]
+              [ destruct H | (idtac + destruct Semantics.width_cases); nia.. ]
         end.
         eexists; eauto. }
       {

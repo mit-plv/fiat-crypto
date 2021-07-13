@@ -288,7 +288,7 @@ Section Func.
         { eapply (equivalent_only_differ_iff1
                     ltac:(eapply equiv_listZ_only_differ_mem)
                  _ locals');
-            eauto using only_differ_sym, map.only_differ_putmany.
+            eauto using @only_differ_sym, @map.only_differ_putmany with typeclass_instances.
           symmetry.
           eapply disjoint_sameset; eauto using varname_set_flatten.
           apply NoDup_disjoint; eauto using string_dec. }
@@ -375,8 +375,8 @@ Section Func.
             [ | reflexivity | eassumption ].
           rewrite equivalent_flat_base_iff1 by eauto.
           eapply equivalent_only_differ_iff1;
-            eauto using only_differ_sym, map.only_differ_putmany
-              with equiv; [ ].
+            eauto using @only_differ_sym, @map.only_differ_putmany
+              with typeclass_instances equiv; [ ].
           rewrite varname_set_flatten; symmetry;
             apply NoDup_disjoint; eauto using string_dec. }
         { eapply IHt2; eassumption. } }
@@ -387,8 +387,8 @@ Section Func.
             [ | reflexivity | eassumption ].
           rewrite equivalent_flat_base_iff1 by eauto.
           eapply equivalent_only_differ_iff1;
-            eauto using only_differ_sym, map.only_differ_putmany
-              with equiv; [ ].
+            eauto using @only_differ_sym, @map.only_differ_putmany
+              with typeclass_instances equiv; [ ].
           rewrite varname_set_flatten; symmetry;
             apply NoDup_disjoint; eauto using string_dec. }
         { eapply IHt2; eassumption. } } }
@@ -441,7 +441,7 @@ Section Func.
         pose proof H; apply map.only_differ_putmany in H
       end.
 
-      erewrite IHt1; eauto using only_differ_trans;
+      erewrite IHt1; eauto using @only_differ_trans with typeclass_instances;
         [ | apply disjoint_union_l_iff; split; eauto;
             symmetry; solve [eauto using NoDup_disjoint] ].
       erewrite IHt2 by eauto using only_differ_trans.
@@ -486,7 +486,7 @@ Section Func.
         (e : API.Expr t)
         (* expressions are valid input to translate_func *)
         (e_valid : valid_func (e _)) :
-    Wf3 e ->
+    Wf e ->
     forall (fname : string)
            (retnames : base_ltype (type.final_codomain t))
            (retsizes : base_access_sizes (type.final_codomain t))
@@ -557,7 +557,7 @@ Section Func.
                          rets out_ptrs retsizes))
                  R mem').
   Proof.
-    cbv [translate_func Wf3]; intros. subst.
+    cbv [translate_func]; intros. subst.
     cbn [fst snd
              WeakestPrecondition.call
              WeakestPrecondition.call_body WeakestPrecondition.func].
@@ -598,7 +598,7 @@ Section Func.
     cbv beta in *. cleanup; subst.
     eapply Proper_cmd; [ solve [apply Proper_call] | repeat intro | ].
     2 : { eapply translate_func'_correct with (args0:=args);
-          cbv [context_equiv]; intros; eauto; [ ].
+          cbv [context_equiv]; intros; try apply Wf3_of_Wf; eauto; [ ].
           eapply only_differ_disjoint_undef_on; eauto;
             [ eapply used_varnames_disjoint; lia | ].
           eapply putmany_of_list_zip_undef_on
@@ -607,7 +607,7 @@ Section Func.
               symmetry; eapply disjoint_used_varnames_lt;
               eauto with lia | ].
           eapply putmany_of_list_zip_undef_on;
-            eauto using undef_on_empty.
+            eauto using @undef_on_empty with typeclass_instances.
           eapply subset_disjoint_l;
             eauto using flatten_listonly_subset; [ ].
           eapply disjoint_sym.
@@ -619,7 +619,8 @@ Section Func.
       break_match_hyps; try congruence; [ ].
       match goal with H : Some _ = Some _ |- _ =>
                       inversion H; clear H; subst end.
-      eapply store_return_values_correct; eauto using only_differ_trans.
+      eapply store_return_values_correct;
+        eauto using @only_differ_trans with typeclass_instances.
       { eapply of_list_zip_undef_on; eauto.
         rewrite of_list_app.
         rewrite <-varname_set_args_flatten.
@@ -672,8 +673,8 @@ Section Func.
     cleanup.
 
     eapply equivalent_listonly_flat_iff1;
-      eauto using only_differ_sym, map.only_differ_putmany,
-      only_differ_trans; [ ].
+      eauto 10 using @only_differ_sym, @map.only_differ_putmany,
+      @only_differ_trans with typeclass_instances; [ ].
     repeat match goal with
              |- disjoint (union _ _) _ =>
              eapply disjoint_union_l_iff; split

@@ -37,8 +37,9 @@ Require Import Crypto.UnsaturatedSolinasHeuristics.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.
 Require Import Crypto.PushButtonSynthesis.Primitives.
 Require Import Crypto.PushButtonSynthesis.BaseConversionReificationCache.
+Require Import Crypto.Assembly.Equivalence.
 Import ListNotations.
-Local Open Scope Z_scope. Local Open Scope list_scope. Local Open Scope bool_scope.
+Local Open Scope string_scope. Local Open Scope Z_scope. Local Open Scope list_scope. Local Open Scope bool_scope.
 
 Import
   Language.Wf.Compilers
@@ -66,11 +67,11 @@ Local Opaque
 Inductive bounds := exactly (_ : list Z) | use_prime | use_bitwidth.
 
 Global Instance show_bounds : Show bounds
-  := fun with_parens v
+  := fun v
      => match v with
         | use_prime => "use_prime"
         | use_bitwidth => "use_bitwidth"
-        | exactly l => @show_list _ PowersOfTwo.show_Z with_parens l
+        | exactly l => @show_list _ PowersOfTwo.show_Z l
         end%string.
 
 Definition default_bounds : bounds := use_prime.
@@ -78,6 +79,8 @@ Definition default_bounds : bounds := use_prime.
 Section __.
   Context {output_language_api : ToString.OutputLanguageAPI}
           {language_naming_conventions : language_naming_conventions_opt}
+          {documentation_options : documentation_options_opt}
+          {skip_typedefs : skip_typedefs_opt}
           {package_namev : package_name_opt}
           {class_namev : class_name_opt}
           {static : static_opt}
@@ -93,11 +96,16 @@ Section __.
           {assembly_hints_lines : assembly_hints_lines_opt}
           {widen_carry : widen_carry_opt}
           {widen_bytes : widen_bytes_opt}
+          {assembly_calling_registers : assembly_calling_registers_opt}
+          {assembly_stack_size : assembly_stack_size_opt}
+          {error_on_unused_assembly_functions : error_on_unused_assembly_functions_opt}
+          {assembly_output_first : assembly_output_first_opt}
+          {assembly_argument_registers_left_to_right : assembly_argument_registers_left_to_right_opt}
           (s : Z) (c : list (Z * Z))
           (src_n : nat)
           (src_limbwidth : Q)
           (dst_limbwidth : Q)
-          (machine_wordsize : Z)
+          (machine_wordsize : machine_wordsize_opt)
           (inbounds_multiplier : option Q)
           (outbounds_multiplier : option Q)
           (inbounds : bounds)
@@ -156,68 +164,46 @@ Section __.
 
   (** Note: If you change the name or type signature of this
         function, you will need to update the code in CLI.v *)
-  Definition check_args {T} (res : Pipeline.ErrorT T)
+  Definition check_args {T} (requests : list string) (res : Pipeline.ErrorT T)
     : Pipeline.ErrorT T
-    := fold_right
-         (fun '(b, e) k => if b:bool then Error e else k)
-         res
-         [(negb (Qle_bool 1 src_limbwidth)%Q, Pipeline.Value_not_leQ "src_limbwidth < 1" 1%Q src_limbwidth);
-            (negb (Qle_bool 1 dst_limbwidth)%Q, Pipeline.Value_not_leQ "dst_limbwidth < 1" 1%Q dst_limbwidth);
-            ((src_n =? 0)%nat, Pipeline.Values_not_provably_distinctZ "src_n = 0" src_n 0%nat);
-            ((dst_n =? 0)%nat, Pipeline.Values_not_provably_distinctZ "dst_n = 0" dst_n 0%nat);
-            (negb (List.length in_bounds =? src_n)%nat, Pipeline.Values_not_provably_equalZ "length in_bounds ≠ src_n" (List.length in_bounds) src_n);
-            (negb (List.length in_upperbounds =? src_n)%nat, Pipeline.Values_not_provably_equalZ "length in_upperbounds ≠ src_n" (List.length in_upperbounds) src_n);
-            (negb (List.length out_bounds =? dst_n)%nat, Pipeline.Values_not_provably_equalZ "length out_bounds ≠ dst_n" (List.length out_bounds) dst_n);
-            (negb (List.length out_upperbounds =? dst_n)%nat, Pipeline.Values_not_provably_equalZ "length out_upperbounds ≠ dst_n" (List.length out_upperbounds) dst_n);
-            ((negb (Associational.eval c <? s))%Z, Pipeline.Value_not_ltZ "s ≤ Associational.eval c" (Associational.eval c) s);
-            ((s =? 0)%Z, Pipeline.Values_not_provably_distinctZ "s = 0" s 0);
-            (let eval_in_upperbounds := eval src_weight src_n in_upperbounds in
-             let dst_weight_n := dst_weight dst_n in
-             (negb (eval_in_upperbounds <? dst_weight_n)%Z,
-              Pipeline.Value_not_ltZ "dst_weight dst_n ≤ src_eval in_upperbounds" eval_in_upperbounds dst_weight_n));
-            ((negb (0 <? machine_wordsize)), Pipeline.Value_not_ltZ "machine_wordsize ≤ 0" 0 machine_wordsize);
-            (let v1 := List.fold_right Z.max 0 in_upperbounds in
-             let v2 := 2^machine_wordsize-1 in
-             (negb (v1 <=? v2)%Z,
-              Pipeline.Value_not_leZ "max(in_upperbounds) > 2^machine_wordsize-1" v1 v2));
-            (let v1 := List.fold_right Z.max 0 out_upperbounds in
-             let v2 := 2^machine_wordsize-1 in
-             (negb (v1 <=? v2)%Z,
-              Pipeline.Value_not_leZ "max(out_upperbounds) > 2^machine_wordsize-1" v1 v2))].
-
-  Local Ltac prepare_use_curve_good _ :=
-    let curve_good := lazymatch goal with | curve_good : check_args _ = Success _ |- _ => curve_good end in
-    clear -curve_good;
-    cbv [check_args] in curve_good |- *;
-    cbn [fold_right] in curve_good |- *;
-    repeat first [ match goal with
-                   | [ H : context[match ?b with true => _ | false => _ end ] |- _ ] => destruct b eqn:?
-                   end
-                 | discriminate
-                 | progress Reflect.reflect_hyps
-                 | assumption
-                 | apply conj
-                 | progress destruct_head'_and ].
+    := check_args_of_list
+         (List.map
+            (fun v => (true, v))
+            [((Qle_bool 1 src_limbwidth)%Q, Pipeline.Value_not_leQ "src_limbwidth < 1" 1%Q src_limbwidth)
+             ; ((Qle_bool 1 dst_limbwidth)%Q, Pipeline.Value_not_leQ "dst_limbwidth < 1" 1%Q dst_limbwidth)
+             ; (negb (src_n =? 0)%nat, Pipeline.Values_not_provably_distinctZ "src_n = 0" src_n 0%nat)
+             ; (negb (dst_n =? 0)%nat, Pipeline.Values_not_provably_distinctZ "dst_n = 0" dst_n 0%nat)
+             ; ((List.length in_bounds =? src_n)%nat, Pipeline.Values_not_provably_equalZ "length in_bounds ≠ src_n" (List.length in_bounds) src_n)
+             ; ((List.length in_upperbounds =? src_n)%nat, Pipeline.Values_not_provably_equalZ "length in_upperbounds ≠ src_n" (List.length in_upperbounds) src_n)
+             ; ((List.length out_bounds =? dst_n)%nat, Pipeline.Values_not_provably_equalZ "length out_bounds ≠ dst_n" (List.length out_bounds) dst_n)
+             ; ((List.length out_upperbounds =? dst_n)%nat, Pipeline.Values_not_provably_equalZ "length out_upperbounds ≠ dst_n" (List.length out_upperbounds) dst_n)
+             ; ((Associational.eval c <? s)%Z, Pipeline.Value_not_ltZ "s ≤ Associational.eval c" (Associational.eval c) s)
+             ; (negb (s =? 0)%Z, Pipeline.Values_not_provably_distinctZ "s = 0" s 0)
+             ; (let eval_in_upperbounds := eval src_weight src_n in_upperbounds in
+                let dst_weight_n := dst_weight dst_n in
+                ((eval_in_upperbounds <? dst_weight_n)%Z,
+                 Pipeline.Value_not_ltZ "dst_weight dst_n ≤ src_eval in_upperbounds" eval_in_upperbounds dst_weight_n))
+             ; (0 <? machine_wordsize, Pipeline.Value_not_ltZ "machine_wordsize ≤ 0" 0 machine_wordsize)
+             ; (let v1 := List.fold_right Z.max 0 in_upperbounds in
+                let v2 := 2^machine_wordsize-1 in
+                ((v1 <=? v2)%Z,
+                 Pipeline.Value_not_leZ "max(in_upperbounds) > 2^machine_wordsize-1" v1 v2))
+             ; (let v1 := List.fold_right Z.max 0 out_upperbounds in
+                let v2 := 2^machine_wordsize-1 in
+                ((v1 <=? v2)%Z,
+                 Pipeline.Value_not_leZ "max(out_upperbounds) > 2^machine_wordsize-1" v1 v2))
+         ])
+         res.
 
   Local Ltac use_curve_good_t :=
-    repeat first [ assumption
-                 | progress rewrite ?map_length, ?Z.mul_0_r, ?Pos.mul_1_r, ?Z.mul_1_r in *
-                 | reflexivity
+    repeat first [ use_requests_to_prove_curve_good_t_step
+                 | assumption
                  | lia
-                 | rewrite expr.interp_reify_list, ?map_map
-                 | rewrite map_ext with (g:=id), map_id
-                 | progress distr_length
-                 | progress cbv [Qceiling Qfloor Qopp Qdiv Qplus inject_Z Qmult Qinv] in *
-                 | progress cbv [Qle] in *
-                 | progress cbn -[reify_list] in *
-                 | progress intros
-                 | progress break_innermost_match
-                 | progress specialize_by_assumption
-                 | progress specialize_by (exact eq_refl)
-                 | solve [ auto ]
-                 | progress break_innermost_match_hyps ].
+                 | progress autorewrite with distr_length
+                 | progress distr_length ].
 
-  Context (curve_good : check_args (Success tt) = Success tt).
+  Context (requests : list string)
+          (curve_good : check_args requests (Success tt) = Success tt).
 
   Lemma use_curve_good
     : 0 < machine_wordsize
@@ -278,12 +264,12 @@ Section __.
          (Some out_bounds).
 
   Definition sconvert_bases (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "convert_bases" convert_bases
           (docstring_with_summary_from_lemma!
-             (fun fname : string => ["The function " ++ fname ++ " converts a field element from base " ++ Decimal.show_Q false src_limbwidth ++ " to base " ++ Decimal.show_Q false dst_limbwidth ++ " in little-endian order."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " converts a field element from base " ++ Decimal.show_Q src_limbwidth ++ " to base " ++ Decimal.show_Q dst_limbwidth ++ " in little-endian order."]%string)
              (convert_bases_correct src_weight dst_weight src_n dst_n in_bounds)).
 
   Local Ltac solve_extra_bounds_side_conditions :=
@@ -326,32 +312,40 @@ Section __.
                       | destruct_head'_and; eapply Z.le_lt_trans; eassumption ].
   Qed.
 
+  Lemma Wf_convert_bases res (Hres : convert_bases = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Section for_stringification.
     Local Open Scope string_scope.
     Local Open Scope list_scope.
 
     Definition known_functions
-      := [("convert_bases", sconvert_bases)].
+      := [("convert_bases", wrap_s sconvert_bases)].
 
     Definition valid_names : string
       := Eval compute in String.concat ", " (List.map (@fst _ _) known_functions).
-
-    Definition extra_special_synthesis (function_name_prefix : string) (name : string)
-      : list (option (string * Pipeline.ErrorT (list string * ToString.ident_infos)))
-      := [].
 
     (** Note: If you change the name or type signature of this
           function, you will need to update the code in CLI.v *)
     Definition Synthesize (comment_header : list string) (function_name_prefix : string) (requests : list string)
       : list (synthesis_output_kind * string * Pipeline.ErrorT (list string))
       := Primitives.Synthesize
-           machine_wordsize valid_names known_functions (extra_special_synthesis function_name_prefix)
+           machine_wordsize valid_names known_functions (fun _ => nil) all_typedefs!
            check_args
            ((ToString.comment_file_header_block
                (comment_header
                   ++ ["";
                      "Computed values:";
-                     "dst_n = " ++ show false dst_n]%string)))
+                     "  dst_n = " ++ show dst_n]%string)))
            function_name_prefix requests.
   End for_stringification.
 End __.
+
+Module Export Hints.
+  Hint Opaque
+       convert_bases
+  : wf_op_cache.
+  Hint Immediate
+       Wf_convert_bases
+  : wf_op_cache.
+End Hints.

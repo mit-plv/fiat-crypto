@@ -29,9 +29,12 @@ Module Java.
   (* Header imports and type defs *)
   Definition header
              {language_naming_conventions : language_naming_conventions_opt}
+             {documentation_options : documentation_options_opt}
              {package_namev : package_name_opt}
              {class_namev : class_name_opt}
+             {skip_typedefs : skip_typedefs_opt}
              (machine_wordsize : Z) (internal_private : bool) (private : bool) (prefix : string) (infos : ToString.ident_infos)
+             (typedef_map : list typedef_info)
   : list string
     (* N.B. We don't do anything with private; we always export everything *)
     := let bitwidths_used := ToString.bitwidths_used infos in
@@ -48,9 +51,11 @@ Module Java.
          "  public void set(T value) { this.value = value; }";
          "  public T get() { return this.value; }";
          "}";
+         "";
          ""]%string)).
   Definition footer
              {language_naming_conventions : language_naming_conventions_opt}
+             {documentation_options : documentation_options_opt}
              {package_namev : package_name_opt}
              {class_namev : class_name_opt}
              (machine_wordsize : Z) (internal_private : bool) (private : bool) (prefix : string) (infos : ToString.ident_infos)
@@ -145,7 +150,7 @@ Module Java.
        | (IR.Z_value_barrier ty @@@ args) =>
          special_name_ty "value_barrier" ty ++ "(" ++ arith_to_string internal_private prefix args ++ ")"
        | (IR.Z_static_cast int_t @@@ e) =>
-         "Long.valueOf(" ++ arith_to_string internal_private prefix e ++ ")." ++ primitive_type_to_string false prefix IR.type.Z (Some int_t) ++ "Value()"
+         "(" ++ primitive_type_to_string false prefix IR.type.Z (Some int_t) ++ ") Integer.toUnsignedLong(((Number) (" ++ arith_to_string internal_private prefix e ++ ")).intValue())"
        | IR.Var _ v => v
        | IR.Pair A B a b => arith_to_string internal_private prefix a ++ ", " ++ arith_to_string internal_private prefix b
        | (IR.Addr @@@ IR.Var _ v) => "error_cannot_take_reference_in_Java_to_" ++ v
@@ -221,11 +226,11 @@ Module Java.
     match t return base_var_data t -> _ with
     | tZ =>
       let typ := match mode with In => IR.type.Z | Out => IR.type.Zptr end in
-      fun '(n, is_ptr, r) => [primitive_type_to_string false prefix typ r ++ " " ++ n]
+      fun '(n, is_ptr, r, typedef) => [primitive_type_to_string false prefix typ r ++ " " ++ n]
     | base.type.prod A B =>
       fun '(va, vb) => (to_base_arg_list prefix mode va ++ to_base_arg_list prefix mode vb)%list
     | base.type.list tZ =>
-      fun '(n, r, len) =>
+      fun '(n, r, len, typedef) =>
         match mode with
         | In => (* arrays for inputs are immutable borrows *)
           [("final " ++ primitive_type_to_string false prefix IR.type.Z r)
@@ -239,7 +244,7 @@ Module Java.
     | base.type.list _ => fun _ => ["error_complex_list"]
     | base.type.option _ => fun _ => ["error_option"]
     | base.type.unit => fun _ => ["error_unit"]
-    | base.type.type_base t => fun _ => ["error_" ++ show false t]%string
+    | base.type.type_base t => fun _ => ["error_" ++ show t]%string
     end%string.
 
   Definition to_arg_list (prefix : string) (mode : Mode) {t} : var_data t -> list string :=
@@ -339,7 +344,14 @@ Module Java.
               get_Zcast_down_if_needed desired_type (Some ty),
               (** always cast to the width of the type, unless we are already exactly that type (which the machinery in IR handles *)
               Some ty)
-          | Z_bneg
+          | IR.Z_value_barrier ty
+            => ((* if the result is too big, we cast it down; we
+                       don't need to upcast it because it'll get
+                       picked up by implicit casts if necessary *)
+              get_Zcast_down_if_needed desired_type (Some ty),
+              (** always cast to the width of the type, unless we are already exactly that type (which the machinery in IR handles *)
+              Some ty)
+          | IR.Z_bneg
             => ((* bneg is !, i.e., takes the argument to 1 if its not zero, and to zero if it is zero; so we don't ever need to cast *)
               None, None)
           end.
@@ -375,25 +387,33 @@ Module Java.
   Definition ToFunctionLines
              {relax_zrange : relax_zrange_opt}
              {language_naming_conventions : language_naming_conventions_opt}
+             {documentation_options : documentation_options_opt}
+             {skip_typedefs : skip_typedefs_opt}
              (machine_wordsize : Z)
-             (do_bounds_check : bool) (internal_private : bool) (internal : bool) (prefix : string) (name : string)
+             (do_bounds_check : bool) (internal_private : bool) (internal : bool) (all_private : bool) (prefix : string) (name : string)
              {t}
              (e : API.Expr t)
              (comment : type.for_each_lhs_of_arrow var_data t -> var_data (type.base (type.final_codomain t)) -> list string)
              (name_list : option (list string))
              (inbounds : type.for_each_lhs_of_arrow Compilers.ZRange.type.option.interp t)
              (outbounds : Compilers.ZRange.type.base.option.interp (type.final_codomain t))
+             (intypedefs : type.for_each_lhs_of_arrow var_typedef_data t)
+             (outtypedefs : base_var_typedef_data (type.final_codomain t))
     : (list string * ToString.ident_infos) + string :=
-    match ExprOfPHOAS do_bounds_check e name_list inbounds with
+    match ExprOfPHOAS do_bounds_check e name_list inbounds intypedefs outtypedefs with
     | inl (indata, outdata, f) =>
       inl ((javadoc_format
               ((List.map (fun s => if (String.length s =? 0)%nat then " *" else (" * " ++ javadoc_replace s))%string (comment indata outdata))
-                 ++ [" * Input Bounds:"%string]
-                 ++ List.map (fun v => " *   "%string ++ javadoc_replace v)%string (input_bounds_to_string indata inbounds)
-                 ++ [" * Output Bounds:"%string]
-                 ++ List.map (fun v => " *   "%string ++ javadoc_replace v)%string (bound_to_string outdata outbounds))
-              ++ to_function_lines internal_private internal prefix name (indata, outdata, f))%list,
-           IR.ident_infos.collect_infos f)
+                 ++ match input_bounds_to_string indata inbounds with
+                    | nil => nil
+                    | ls => [" * Input Bounds:"] ++ List.map (fun v => " *   " ++ javadoc_replace v)%string ls
+                    end
+                 ++ match bound_to_string outdata outbounds with
+                    | nil => nil
+                    | ls => [" * Output Bounds:"] ++ List.map (fun v => " *   " ++ javadoc_replace v)%string ls
+                    end)
+              ++ to_function_lines internal_private internal prefix name (indata, outdata, f))%list%string,
+           IR.ident_infos.collect_all_infos f intypedefs outtypedefs)
     | inr nil =>
       inr ("Unknown internal error in converting " ++ name ++ " to Java")%string
     | inr [err] =>

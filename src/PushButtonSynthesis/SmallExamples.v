@@ -70,6 +70,8 @@ Time Redirect "log" Compute
 
 Local Existing Instance ToString.C.OutputCAPI.
 Local Existing Instance default_language_naming_conventions.
+Local Existing Instance default_documentation_options.
+Local Instance skip_typedefs : skip_typedefs_opt := true.
 Local Instance : package_name_opt := None.
 Local Instance : class_name_opt := None.
 Local Instance : static_opt := true.
@@ -84,7 +86,10 @@ Time Redirect "log" Compute
               exact r)
                (fun _ _ => [])
                (Some r[0~>2^64-1], (Some r[0~>2^64-1], tt))%zrange
-               (Some r[0~>2^64-1], Some r[0~>2^64-1])%zrange).
+               (Some r[0~>2^64-1], Some r[0~>2^64-1])%zrange
+               (None, (None, tt))
+               (None, None)
+   : Pipeline.ErrorT _).
 
 Time Redirect "log" Compute
   (Pipeline.BoundsPipelineToString
@@ -94,7 +99,10 @@ Time Redirect "log" Compute
               exact r)
                (fun _ _ => [])
                (Some r[0~>1], (Some r[0~>2^64-1], (Some r[0~>2^64-1], tt)))%zrange
-               (Some r[0~>2^64-1], Some r[0~>1])%zrange).
+               (Some r[0~>2^64-1], Some r[0~>1])%zrange
+               (None, (None, (None, tt)))
+               (None, None)
+   : Pipeline.ErrorT _).
 
 Time Redirect "log" Compute
   (Pipeline.BoundsPipelineToString
@@ -104,7 +112,10 @@ Time Redirect "log" Compute
               exact r)
                (fun _ _ => [])
                (Some r[0~>1], (Some r[0~>2^51-1], (Some r[0~>2^51-1], tt)))%zrange
-               (Some r[0~>2^51-1], Some r[0~>1])%zrange).
+               (Some r[0~>2^51-1], Some r[0~>1])%zrange
+               (None, (None, (None, tt)))
+               (None, None)
+   : Pipeline.ErrorT _).
 
 Time Redirect "log" Compute
   (Pipeline.BoundsPipelineToString
@@ -114,7 +125,10 @@ Time Redirect "log" Compute
               exact r)
                (fun _ _ => [])
                (Some r[0~>1], (Some r[0~>2^64-1], (Some r[0~>2^64-1], tt)))%zrange
-               (Some r[0~>2^64-1], Some r[0~>1])%zrange).
+               (Some r[0~>2^64-1], Some r[0~>1])%zrange
+               (None, (None, (None, tt)))
+               (None, None)
+   : Pipeline.ErrorT _).
 Time Redirect "log" Compute
   (Pipeline.BoundsPipelineToString
      "fiat_" "fiat_subborrowx_u51"
@@ -123,7 +137,10 @@ Time Redirect "log" Compute
               exact r)
                (fun _ _ => [])
                (Some r[0~>1], (Some r[0~>2^51-1], (Some r[0~>2^51-1], tt)))%zrange
-               (Some r[0~>2^51-1], Some r[0~>1])%zrange).
+               (Some r[0~>2^51-1], Some r[0~>1])%zrange
+               (None, (None, (None, tt)))
+               (None, None)
+   : Pipeline.ErrorT _).
 
 Time Redirect "log" Compute
   (Pipeline.BoundsPipelineToString
@@ -133,4 +150,7 @@ Time Redirect "log" Compute
               exact r)
                (fun _ _ => [])
                (Some r[0~>1], (Some r[0~>2^64-1], (Some r[0~>2^64-1], tt)))%zrange
-               (Some r[0~>2^64-1])%zrange).
+               (Some r[0~>2^64-1])%zrange
+               (None, (None, (None, tt)))
+               None
+   : Pipeline.ErrorT _).

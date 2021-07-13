@@ -9,37 +9,39 @@ on:
 jobs:
   build:
 
-    runs-on: ubuntu-latest
-
     strategy:
       matrix:
         env:
         - { COQ_VERSION: "8.13.1", COQ_PACKAGE: "coq-8.13.1 libcoq-8.13.1-ocaml-dev", SKIP_BEDROCK2: "" , SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/many-coq-versions-ocaml-4-11" }
         - { COQ_VERSION: "8.13.1", COQ_PACKAGE: "coq-8.13.1 libcoq-8.13.1-ocaml-dev", SKIP_BEDROCK2: "" , SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/many-coq-versions-ocaml-4-08" }
         - { COQ_VERSION: "8.13.1", COQ_PACKAGE: "coq-8.13.1 libcoq-8.13.1-ocaml-dev", SKIP_BEDROCK2: "" , SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/many-coq-versions-ocaml-4-05" }
-        - { COQ_VERSION: "8.12.2", COQ_PACKAGE: "coq-8.12.2 libcoq-8.12.2-ocaml-dev", SKIP_BEDROCK2: "" , SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/many-coq-versions-ocaml-4-05" }
+        - { COQ_VERSION: "8.12.2", COQ_PACKAGE: "coq-8.12.2 libcoq-8.12.2-ocaml-dev", SKIP_BEDROCK2: "1", SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/many-coq-versions-ocaml-4-05" }
         - { COQ_VERSION: "8.11.1", COQ_PACKAGE: "coq-8.11.1 libcoq-8.11.1-ocaml-dev", SKIP_BEDROCK2: "1", SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/many-coq-versions-ocaml-4-05" }
         - { COQ_VERSION: "8.10.2", COQ_PACKAGE: "coq-8.10.2 libcoq-8.10.2-ocaml-dev", SKIP_BEDROCK2: "1", SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/many-coq-versions-ocaml-4-05" }
         - { COQ_VERSION: "8.9.1" , COQ_PACKAGE: "coq-8.9.1 libcoq-8.9.1-ocaml-dev"  , SKIP_BEDROCK2: "1", SKIP_VALIDATE: "1", PPA: "ppa:jgross-h/many-coq-versions" }
-        - { COQ_VERSION: "master", COQ_PACKAGE: "coq libcoq-ocaml-dev"              , SKIP_BEDROCK2: "" , SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/coq-master-daily" }
+        - { COQ_VERSION: "master", COQ_PACKAGE: "coq libcoq-ocaml-dev"              , SKIP_BEDROCK2: "" , SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/coq-master-daily", EXTRA_GH_REPORTIFY: "--warnings" }
         - { COQ_VERSION: "v8.13" , COQ_PACKAGE: "coq libcoq-ocaml-dev"              , SKIP_BEDROCK2: "" , SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/coq-8.13-daily" }
-        - { COQ_VERSION: "v8.12" , COQ_PACKAGE: "coq libcoq-ocaml-dev"              , SKIP_BEDROCK2: "" , SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/coq-8.12-daily" }
+        - { COQ_VERSION: "v8.12" , COQ_PACKAGE: "coq libcoq-ocaml-dev"              , SKIP_BEDROCK2: "1", SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/coq-8.12-daily" }
         - { COQ_VERSION: "v8.11" , COQ_PACKAGE: "coq libcoq-ocaml-dev"              , SKIP_BEDROCK2: "1", SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/coq-8.11-daily" }
         - { COQ_VERSION: "v8.10" , COQ_PACKAGE: "coq libcoq-ocaml-dev"              , SKIP_BEDROCK2: "1", SKIP_VALIDATE: "" , PPA: "ppa:jgross-h/coq-8.10-daily" }
         - { COQ_VERSION: "v8.9"  , COQ_PACKAGE: "coq libcoq-ocaml-dev"              , SKIP_BEDROCK2: "1", SKIP_VALIDATE: "1", PPA: "ppa:jgross-h/coq-8.9-daily" }
-        ghc: [ '8.8.1' ]
-        cabal: [ '3.0' ]
+        ghc: [ 'latest' ]
+        cabal: [ 'latest' ]
+        os: ['ubuntu-latest']
+        include:
+        - env: { COQ_VERSION: "Ubuntu LTS", COQ_PACKAGE: "coq libcoq-ocaml-dev", SKIP_BEDROCK2: "1", SKIP_VALIDATE: "" , PPA: "" }
+          os: 'ubuntu-20.04'
 
+    runs-on: ${{ matrix.os }}
     env: ${{ matrix.env }}
 
     steps:
     - name: install Coq
       run: |
-        sudo sed -i 's/azure\.//' /etc/apt/sources.list
         if [ ! -z "$PPA" ]; then sudo add-apt-repository "$PPA" -y; fi
         sudo apt-get -o Acquire::Retries=30 update -q
         sudo apt-get -o Acquire::Retries=30 install ocaml-findlib $COQ_PACKAGE -y --allow-unauthenticated
-    - uses: actions/setup-haskell@v1
+    - uses: haskell/actions/setup@v1
       with:
         ghc-version: ${{ matrix.ghc }}
         cabal-version: ${{ matrix.cabal }}
@@ -69,18 +71,16 @@ jobs:
         echo "::group::coqc --version"
         coqc --version
         echo "::endgroup::"
-        echo "::group::echo | coqtop"
-        echo | coqtop
+        echo "::group::true | coqtop"
+        true | coqtop
         echo "::endgroup::"
     - uses: actions/checkout@v2
     - name: submodules-init
       uses: snickerbockers/submodules-init@v4
-    - name: add Coq matcher
-      run: echo "::add-matcher::.github/coq.json"
     - name: deps
       run: etc/ci/github-actions-make.sh -j2 deps
     - name: all
-      run: etc/ci/github-actions-make.sh -j2 all
+      run: etc/ci/github-actions-make.sh ${EXTRA_GH_REPORTIFY} -j2 all
     - name: upload OCaml files
       uses: actions/upload-artifact@v1
       with:

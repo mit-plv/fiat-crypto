@@ -22,10 +22,10 @@ Import C.Compilers.ToString IR.Compilers.ToString.
 Notation name_with_type := (string * option int.type)%type (only parsing).
 Definition print_name (n : name_with_type) : string := fst n.
 Definition print_type (n : name_with_type) : string
-  := let __ := Compilers.Options.default_language_naming_conventions in
+  := let _ := Compilers.Options.default_language_naming_conventions in
      C.String.type.primitive.to_string "" IR.type.Z (snd n).
 Definition print_ptr_type (n : name_with_type) : string
-  := let __ := Compilers.Options.default_language_naming_conventions in
+  := let _ := Compilers.Options.default_language_naming_conventions in
      C.String.type.primitive.to_string "" IR.type.Zptr (snd n).
 Definition print_cast (n : name_with_type) : string
   := ("(" ++ print_type n ++ ")")%string.
@@ -39,8 +39,8 @@ Section Flatten.
     | base.type.prod a b =>
       fun x : base_var_data a * base_var_data b =>
         (flatten_base_var_data (fst x) ++ flatten_base_var_data (snd x))
-    | base.type.list _ => fun '(n, ty, len) => [(n, ty)]
-    | base_Z => fun '(n, is_ptr, ty) => [(n, ty)]
+    | base.type.list _ => fun '(n, ty, len, _typedef) => [(n, ty)]
+    | base_Z => fun '(n, is_ptr, ty, _typedef) => [(n, ty)]
     | _ => fun _ => []
     end.
 

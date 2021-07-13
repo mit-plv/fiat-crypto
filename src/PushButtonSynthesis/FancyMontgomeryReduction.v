@@ -25,10 +25,11 @@ Require Import Crypto.PushButtonSynthesis.Primitives.
 Require Import Crypto.PushButtonSynthesis.FancyMontgomeryReductionReificationCache.
 Require Import Crypto.PushButtonSynthesis.InvertHighLow.
 Import ListNotations.
-Local Open Scope Z_scope. Local Open Scope list_scope. Local Open Scope bool_scope.
+Local Open Scope string_scope. Local Open Scope Z_scope. Local Open Scope list_scope. Local Open Scope bool_scope.
 
 Import
   Language.Compilers
+  Language.Wf.Compilers
   Stringification.Language.Compilers.
 Import Compilers.API.
 
@@ -47,16 +48,13 @@ Section rmontred.
           {static : static_opt}
           {internal_static : internal_static_opt}
           (N R N' : Z) (n : nat)
-          (machine_wordsize : Z).
+          (machine_wordsize : machine_wordsize_opt).
 
   Let value_range := r[0 ~> (2^machine_wordsize - 1)%Z]%zrange.
   Let flag_range := r[0 ~> 1]%zrange.
   Let bound := Some value_range.
   Let consts_list := [N; N'].
-  Let R' := match Z.modinv R N with
-            | Some R' => R'
-            | None => 0
-            end.
+  Let R' := Z.modinv R N.
 
   Definition possible_values_of_machine_wordsize
     := [1; machine_wordsize / 2; machine_wordsize; 2 * machine_wordsize]%Z.
@@ -65,6 +63,8 @@ Section rmontred.
   Let possible_values := possible_values_of_machine_wordsize.
 
   Local Existing Instance default_language_naming_conventions.
+  Local Existing Instance default_documentation_options.
+  Local Instance skip_typedefs : skip_typedefs_opt := true.
   Local Instance widen_carry : widen_carry_opt := false.
   Local Instance widen_bytes : widen_bytes_opt := true.
   Local Instance only_signed : only_signed_opt := false.
@@ -96,7 +96,7 @@ Section rmontred.
 
   (** Note: If you change the name or type signature of this
         function, you will need to update the code in CLI.v *)
-  Definition check_args {T} (res : Pipeline.ErrorT T)
+  Definition check_args {T} (requests : list string) (res : Pipeline.ErrorT T)
     : Pipeline.ErrorT T
     := fold_right
          (fun '(b, e) k => if b:bool then Error e else k)
@@ -115,19 +115,6 @@ Section rmontred.
             ((negb (2 <=? machine_wordsize))%Z, Pipeline.Value_not_leZ "machine_wordsize < 2" 2 machine_wordsize)].
 
   Local Arguments Z.mul !_ !_.
-  Local Ltac prepare_use_curve_good _ :=
-    let curve_good := lazymatch goal with | curve_good : check_args _ = Success _ |- _ => curve_good end in
-    clear -curve_good;
-    cbv [check_args] in curve_good |- *;
-    cbn [fold_right] in curve_good |- *;
-    repeat first [ match goal with
-                   | [ H : context[match ?b with true => _ | false => _ end ] |- _ ] => destruct b eqn:?
-                   end
-                 | discriminate
-                 | progress Reflect.reflect_hyps
-                 | assumption
-                 | apply conj
-                 | progress destruct_head'_and ].
 
   Local Ltac use_curve_good_t :=
     repeat first [ assumption
@@ -140,7 +127,8 @@ Section rmontred.
                  | solve [ auto with zarith ]
                  | rewrite Z.log2_pow2 by use_curve_good_t ].
 
-  Context (curve_good : check_args (Success tt) = Success tt).
+  Context (requests : list string)
+          (curve_good : check_args requests (Success tt) = Success tt).
 
   Lemma use_curve_good
     : 0 <= N < R
@@ -165,14 +153,14 @@ Section rmontred.
          fancy_args (* fancy *)
          possible_values
          (reified_montred_gen
-            @ GallinaReify.Reify N @ GallinaReify.Reify R @ GallinaReify.Reify N' @ GallinaReify.Reify machine_wordsize)
+            @ GallinaReify.Reify N @ GallinaReify.Reify R @ GallinaReify.Reify N' @ GallinaReify.Reify (machine_wordsize:Z))
          (bound, (bound, tt))
          bound.
 
   Definition smontred (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "montred" montred
           (fun _ _ _ => @nil string).
 
@@ -198,4 +186,16 @@ Section rmontred.
     { cbv [ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by bound is_bounded_by_bool value_range upper lower].
       rewrite Bool.andb_true_iff, !Z.leb_le. lia. }
   Qed.
+
+  Lemma Wf_montred res (Hres : montred = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). apply fancy_args_good. Qed.
 End rmontred.
+
+Module Export Hints.
+  Hint Opaque
+       montred
+  : wf_op_cache.
+  Hint Immediate
+       Wf_montred
+  : wf_op_cache.
+End Hints.
