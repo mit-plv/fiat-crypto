@@ -69,7 +69,7 @@ printing functions on command-lines options indicating how verbose to
 be in printing the error message. *)
 Inductive EquivalenceCheckingError :=
 | Could_not_prove_equivalence (_ : Symbolic.error) (_ : symbolic_state)
-| Internal_error_output_load_failed
+| Internal_error_output_load_failed (_ : list (option (list idx))) (_ : symbolic_state)
 | Not_enough_registers (num_given num_extra_needed : nat)
 | Incorrect_array_input_dag_node
 | Incorrect_Z_input_dag_node
@@ -81,29 +81,14 @@ Inductive EquivalenceCheckingError :=
 | Invalid_higher_order_let {var} {s : API.type} (x : API.expr (var:=var) s)
 | Unhandled_identifier {t} (idc : ident t)
 | Unhandled_cast (_ _ : Z)
+| Unimplemented_check (_ : list (list idx)) (_ : symbolic_state)
 .
 
-Global Instance Show_error : Show Symbolic.error := fun e =>
- match e with
- | error.nth_error_dag n => "error.nth_error_dag " ++ show n
- | error.get_flag f => "error.get_flag " ++ show f
- | error.get_reg r => "error.get_reg " ++ show r
- | error.load a => "error.load " ++ show a
- | error.store a v => "error.store " ++ show a ++ " " ++ show v
- | error.set_const c i => "error.set_const " ++ show c ++ " " ++ show i
- | error.unimplemented_instruction n => "error.unimplemented_instruction " ++ show n
- | error.ambiguous_operation_size n => "error.ambiguous_operation_size " ++ show n
- | error.failed_to_unify l => "error.failed_to_unify _"
- end%string.
-
-Global Instance ShowLines_symbolic_state : ShowLines symbolic_state := fun s =>
- [].
-  
 Global Instance show_lines_EquivalenceCheckingError : ShowLines EquivalenceCheckingError
   := fun err => match err with
                 | Could_not_prove_equivalence l r
                   => ["Could not prove equivalence of assembly and AST: " ++ show l]%string ++ ["Combined state:"] ++ show_lines r
-                | Internal_error_output_load_failed => ["Internal_error_output_load_failed"]%string
+                | Internal_error_output_load_failed l r => ["Internal error. Output load failed: " ++ show l]%string ++ ["Combined state:"] ++ show_lines r
                 | Not_enough_registers num_given num_extra_needed
                   => ["Not enough registers available for storing input and output (given " ++ show num_given ++ ", needed an additional " ++ show num_extra_needed ++ "."]%string
                 | Incorrect_array_input_dag_node
@@ -129,6 +114,7 @@ Global Instance show_lines_EquivalenceCheckingError : ShowLines EquivalenceCheck
                   => ["Identifier not yet handled by symbolic evaluation: " ++ show idc ++ "."]%string
                 | Unhandled_cast l u
                   => ["Argument not yet handled by symbolic evaluation: " ++ show (l, u)]%string
+                | Unimplemented_check ll s => ["Unimplemented_check " ++ show ll]%string ++ show_lines s
                 end%list.
 Global Instance show_EquivalenceCheckingError : Show EquivalenceCheckingError
   := fun err => String.concat String.NewLine (show_lines err).
@@ -202,6 +188,14 @@ Fixpoint simplify_input_type
              Success (vA ++ vB))
      end%error.
 
+Definition build_inputarray (st : dag * gensym_state) (len : nat)  : list idx * (dag * gensym_state) :=
+  List.fold_left (fun '(idxs, (d, st)) _
+                    => let '(n, st) := gensym st in
+                       let '(idx, d) := merge_symbol n d in
+                       (idx :: idxs, (d, st)))
+                   (List.seq 0 len)
+                   ([], st).
+
 Fixpoint build_inputs (st : dag * gensym_state) (types : type_spec) : list (idx + list idx) * (dag * gensym_state)
   := match types with
      | [] => ([], st)
@@ -212,29 +206,35 @@ Fixpoint build_inputs (st : dag * gensym_state) (types : type_spec) : list (idx 
           let '(rest, (d, st)) := build_inputs (d, st) tys in
           (inl idx :: rest, (d, st))
      | Some len :: tys
-       => let '(idxs, (d, st))
-              := List.fold_left
-                   (fun '(idxs, (d, st)) _
-                    => let '(n, st) := gensym st in
-                       let '(idx, d) := merge_symbol n d in
-                       (idx :: idxs, (d, st)))
-                   (List.seq 0 len)
-                   ([], st) in
+       => let '(idxs, (d, st)) := build_inputarray st len in
           let '(rest, (d, st)) := build_inputs (d, st) tys in
           (inr idxs :: rest, (d, st))
      end.
 
-Fixpoint build_addresses {T} (st : dag * gensym_state) (items : list (idx + T)) : list (idx * option T) * (dag * gensym_state)
+Fixpoint build_base_addresses {T} (st : dag * gensym_state) (items : list (idx + T)) : list (idx * option T) * (dag * gensym_state)
   := match items with
      | [] => ([], st)
      | inr x :: xs
        => let '(d, st) := st in
           let '(n, st) := gensym st in
           let '(idx, d) := merge_symbol n d in
-          let '(rest, (d, st)) := build_addresses (d, st) xs in
+          let '(rest, (d, st)) := build_base_addresses (d, st) xs in
           ((idx, Some x) :: rest, (d, st))
-     | inl _ :: xs => build_addresses st xs
+     | inl idx :: xs =>
+          let '(rest, st) := build_base_addresses st xs in
+          ((idx, None) :: rest, st)
      end.
+
+Fixpoint dag_gensym_n (n : nat) (s : dag * gensym_state) : list symbol * (dag * gensym_state) :=
+  match n with
+  | O => (nil, s)
+  | S n =>
+      let (d, s) := s in
+      let (sym, s) := gensym s in
+      let (i, d) := merge_symbol sym d in
+      let '(rest, (d, s)) := dag_gensym_n n (d, s) in
+      (cons i rest, (d, s))
+  end.
 
 (** PHOAS var type, storing dag indices or nat literals *)
 Fixpoint base_var (t : base.type) : Set
@@ -363,9 +363,12 @@ Proof.
           | ident.Z_lor => fun x y => Merge (ExprApp (or, 64%N, [ExprRef x; ExprRef y]))
           | ident.Z_min
           | ident.Z_max
-          | ident.Z_mul_split
             => symex_T_error (Unhandled_identifier idc)
-           (* note for mulhuu/adc: the argument order is a guess, 64 is a kludge and we need something better to use the value of s whose type is var *)
+           (* note for mulhuu/adc: the argument and output order is a guess, 64 is a kludge and we need something better to use the value of s whose type is var *)
+          | ident.Z_mul_split => fun s x y =>
+            lo <- Merge (ExprApp (mul, 64%N, [ExprRef x; ExprRef y]));
+            hi <- Merge (ExprApp (mulhuu 64%N, 64%N, [ExprRef x; ExprRef y]));
+            symex_return (lo, hi)
           | ident.Z_mul_high => fun s x y => Merge (ExprApp (mulhuu 64%N, 64%N, [ExprRef x; ExprRef y]))
           | ident.Z_add_get_carry => fun s x y =>
             a <- Merge (ExprApp (add     , 64%N, [ExprRef x; ExprRef y]));
@@ -382,7 +385,9 @@ Proof.
           | ident.Z_ltz
           | ident.Z_zselect
           | ident.Z_add_modulo
-          | ident.Z_truncating_shiftl
+            => symex_T_error (Unhandled_identifier idc)
+            (* assuming s=64 *)
+          | ident.Z_truncating_shiftl => fun s x y => Merge (ExprApp (shl, 64%N, [ExprRef x; ExprRef y]))
           | ident.Z_bneg
           | ident.Z_lnot_modulo
           | ident.Z_lxor
@@ -545,38 +550,52 @@ Section check_equivalence.
       let ast : API.expr (type.base (type.final_codomain t))
           := invert_expr.smart_App_curried (expr _) input_var_data in
       symevaled_PHOAS <- symex_expr ast d;
-      let '(PHOAS_output, PHOAS_dag) := symevaled_PHOAS in
+      let '(PHOAS_output, d) := symevaled_PHOAS in
       let stack_size : nat := N.to_nat (assembly_stack_size asm) in
       output_types <- simplify_base_type (type.final_codomain t) out_bounds;
 
       let '(output_placeholders, (d, gensym_st)) := build_inputs (d, gensym_st) output_types in
-      let '(stack_placeholders, (d, gensym_st)) := build_inputs (d, gensym_st) [Some stack_size] in
-      let '(asminputs, (d, gensym_st)) := build_addresses (d, gensym_st) (inputs ++ output_placeholders) in
+      let '(rsp_idx, gensym_st) := gensym gensym_st in
+      let '(stack_placeholders, (d, gensym_st)) := build_inputarray (d, gensym_st) stack_size in
+      let '(asminputs, (d, gensym_st)) := build_base_addresses (d, gensym_st) (inputs ++ output_placeholders) in
+      let '(initial_reg_idxs, (d, gensym_st)) := dag_gensym_n 16 (d, gensym_st) in
       let s0 :=
         {|
           dag_state := d;
-          symbolic_reg_state := Tuple.repeat None 16;
+          symbolic_reg_state := Tuple.from_list_default None 16 (List.map Some initial_reg_idxs);
           symbolic_mem_state := [];
           symbolic_flag_state := Tuple.repeat None 6;
         |} in
 
       match
-        (_ <- mapM_ (fun '(r, (idx, oarr)) => _ <- SetReg r idx;
-          match oarr with None => Symbolic.ret tt
+        (inputaddrs <- mapM (fun '(r, (base, oarr)) => _ <- SetReg r base; (* note: overwrites initial value *)
+          match oarr with None => Symbolic.ret None
           | Some idxs =>
-              mapM_ (fun '(i, idx) =>
-              offset <- Symbolic.App ((const (8*N.of_nat i), 64), nil);
-              addr <- Symbolic.App ((add, 64), [idx; offset]);
-              Store64 addr idx
-              ) (List.combine (seq 0 (length idxs)) idxs)
+              addrs <- mapM (fun '(i, idx) =>
+                offset <- Symbolic.App ((const (8*N.of_nat i), 64), nil);
+                addr <- Symbolic.App ((add, 64), [base; offset]);
+                (fun s => Success (addr, update_mem_with s (cons (addr,idx))))
+              ) (ListUtil.List.enumerate idxs);
+              Symbolic.ret (Some addrs)
           end) (List.combine reg_available asminputs);
-          mapM_ SymexNormalInstruction (Option.List.map invert_rawline asm))%N%x86symex s0
+        _ <- SetReg rsp rsp_idx;
+        _ <- mapM_ (fun '(i, idx) =>
+            a <- @Address 64%N {| mem_reg := rsp; mem_offset := Some (Z.opp (Z.of_nat(8*S i))); mem_is_byte := false; mem_extra_reg:=None |};
+            (fun s => Success (tt, update_mem_with s (cons (a,idx))))
+          ) (ListUtil.List.enumerate stack_placeholders);
+        _ <- mapM_ SymexNormalInstruction (Option.List.map invert_rawline asm);
+        Symbolic.ret inputaddrs)%N%x86symex s0
       with
-      | Success (_, s) =>
-          let outputlocations := List.map fst (skipn (length inputs) asminputs) in
-          match Option.List.lift (List.map (fun i => load i s) outputlocations) with
-          | None => Error Internal_error_output_load_failed
-          | Some asm_output => Success tt (* FIXME: asm_output == PHOAS_output *)
+      | Success (inputaddrs, s) =>
+          let outputaddrs : list (option (list idx))  := skipn (length inputs) inputaddrs in
+          match Option.List.lift (List.map (fun ocells =>
+            match ocells with
+            | None => None
+            | Some cells => Option.List.lift (List.map (fun i => load i s) cells)
+            end
+          ) outputaddrs) with
+          | None => Error (Internal_error_output_load_failed outputaddrs s)
+          | Some asm_output => Error (Unimplemented_check asm_output s) (* FIXME: asm_output == PHOAS_output *)
           end
       | Error (e, s) => Error (Could_not_prove_equivalence e s)
       end.
