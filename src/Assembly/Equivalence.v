@@ -140,7 +140,7 @@ Bind Scope symex_scope with symexM.
 Notation "'slet' x .. y <- X ; B"  := (symex_bind X (fun x => .. (fun y => B%symex) .. )) : symex_scope.
 Notation "A <- X ; B" := (symex_bind X (fun A => B%symex)) : symex_scope.
 (* light alias *)
-Definition Merge (e : Symbolic.expr) : symexM idx := fun st => Success (merge e st).
+Definition App (e : Symbolic.node idx) : symexM idx := fun st => Success (merge (simplify st e) st).
 
 Definition type_spec := list (option nat). (* list of array lengths; None means not an array *)
 
@@ -361,17 +361,19 @@ Proof.
   refine (let symex_mod_zrange idx '(ZRange.Build_zrange l u) :=
             let u := Z.succ u in
             let lu := Z.log2 u in
-            if Z.eqb u (2^lu)
-            then Merge (ExprApp ((slice 0 (Z.to_N lu)), Z.to_N lu, [ExprRef idx]))
+            if (Z.eqb l 0 && Z.eqb u (2^lu))%bool
+            then 
+              (* App (((slice 0 (Z.to_N lu)), Z.to_N lu, [idx])) *)
+              symex_return idx
             else symex_error (Unhandled_cast l u)
           in
           match idc in ident t return symex_T t with
           | ident.Literal base.type.Z v
-            => Merge (ExprApp (const (Z.to_N v), 64%N, nil) (* note: 64 is placeholder, to_N is unsound *))
-          | ident.Z_add => fun x y => Merge (ExprApp (add, 64%N, [ExprRef x; ExprRef y]))
+            => App (const (Z.to_N v), 64%N, nil) (* note: 64 is placeholder, to_N is unsound *)
+          | ident.Z_add => fun x y => App (add, 64%N, [x; y])
 
           | ident.Z_modulo
-          | ident.Z_mul => fun x y => Merge (ExprApp (mul, 64%N, [ExprRef x; ExprRef y]))
+          | ident.Z_mul => fun x y => App (mul, 64%N, [x; y])
           | ident.Z_pow
           | ident.Z_sub
           | ident.Z_opp
@@ -380,28 +382,28 @@ Proof.
           | ident.Z_log2_up
           | ident.Z_to_nat
             => symex_T_error (Unhandled_identifier idc)
-          | ident.Z_shiftr => fun x y => Merge (ExprApp (shr, 64%N, [ExprRef x; ExprRef y]))
-          | ident.Z_shiftl => fun x y => Merge (ExprApp (shl, 64%N, [ExprRef x; ExprRef y]))
-          | ident.Z_land => fun x y => Merge (ExprApp (and, 64%N, [ExprRef x; ExprRef y]))
-          | ident.Z_lor => fun x y => Merge (ExprApp (or, 64%N, [ExprRef x; ExprRef y]))
+          | ident.Z_shiftr => fun x y => App (shr, 64%N, [x; y])
+          | ident.Z_shiftl => fun x y => App (shl, 64%N, [x; y])
+          | ident.Z_land => fun x y => App (and, 64%N, [x; y])
+          | ident.Z_lor => fun x y => App (or, 64%N, [x; y])
           | ident.Z_min
           | ident.Z_max
             => symex_T_error (Unhandled_identifier idc)
            (* note for mulhuu/adc: the argument and output order is a guess, 64 is a kludge and we need something better to use the value of s whose type is var *)
           | ident.Z_mul_split => fun s x y =>
-            lo <- Merge (ExprApp (mul, 64%N, [ExprRef x; ExprRef y]));
-            hi <- Merge (ExprApp (mulhuu 64%N, 64%N, [ExprRef x; ExprRef y]));
+            lo <- App (mul, 64%N, [x; y]);
+            hi <- App (mulhuu 64%N, 64%N, [x; y]);
             symex_return (lo, hi)
-          | ident.Z_mul_high => fun s x y => Merge (ExprApp (mulhuu 64%N, 64%N, [ExprRef x; ExprRef y]))
+          | ident.Z_mul_high => fun s x y => App (mulhuu 64%N, 64%N, [x; y])
           | ident.Z_add_get_carry => fun s x y =>
-            a <- Merge (ExprApp (add     , 64%N, [ExprRef x; ExprRef y]));
-            c <- Merge (ExprApp (addcarry, 64%N, [ExprRef x; ExprRef y]));
+            a <- App (add     , 64%N, [x; y]);
+            c <- App (addcarry, 64%N, [x; y]);
             symex_return (a, c)
-          | ident.Z_add_with_carry => fun x y z => Merge (ExprApp (add, 64%N, [ExprRef x; ExprRef y; ExprRef z]))
+          | ident.Z_add_with_carry => fun x y z => App (add, 64%N, [x; y; z])
 
           | ident.Z_add_with_get_carry => fun s x y z =>
-            a <- Merge (ExprApp (add     , 64%N, [ExprRef x; ExprRef y; ExprRef z]));
-            c <- Merge (ExprApp (addcarry, 64%N, [ExprRef x; ExprRef y; ExprRef z]));
+            a <- App (add     , 64%N, [x; y; z]);
+            c <- App (addcarry, 64%N, [x; y; z]);
             symex_return (a, c)
           | ident.Z_sub_get_borrow
           | ident.Z_sub_with_get_borrow
@@ -410,7 +412,7 @@ Proof.
           | ident.Z_add_modulo
             => symex_T_error (Unhandled_identifier idc)
             (* assuming s=64 *)
-          | ident.Z_truncating_shiftl => fun s x y => Merge (ExprApp (shl, 64%N, [ExprRef x; ExprRef y]))
+          | ident.Z_truncating_shiftl => fun s x y => App (shl, 64%N, [x; y])
           | ident.Z_bneg
           | ident.Z_lnot_modulo
           | ident.Z_lxor
@@ -481,7 +483,7 @@ Proof.
                   idx2 <- symex_mod_zrange v2_idx r2;
                   symex_return (idx1, idx2)
           | ident.Z_of_nat
-            => fun n => Merge (ExprApp (const (N.of_nat n), 64%N, nil)) (* note: 64 is placeholder *)
+            => fun n => App (const (N.of_nat n), 64%N, nil) (* note: 64 is placeholder *)
 
           | ident.Z_eqb
           | ident.Z_leb
