@@ -45,6 +45,8 @@ Section rbarrett_red.
   Context {output_language_api : ToString.OutputLanguageAPI}
           {static : static_opt}
           {internal_static : internal_static_opt}
+          {inline : inline_opt}
+          {inline_internal : inline_internal_opt}
           (M : Z)
           (machine_wordsize : machine_wordsize_opt).
 

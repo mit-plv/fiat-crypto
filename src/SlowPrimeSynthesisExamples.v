@@ -55,6 +55,8 @@ Module debugging_typedefs.
     Local Existing Instance C.OutputCAPI.
     Local Instance static : static_opt := false.
     Local Instance : internal_static_opt := true.
+    Local Instance : inline_opt := true.
+    Local Instance : inline_internal_opt := true.
     Local Instance : emit_primitives_opt := false.
     Local Instance : use_mul_for_cmovznz_opt := false.
     Local Instance : widen_carry_opt := false.
@@ -105,6 +107,8 @@ Module debugging_21271_from_bytes.
     Local Existing Instance C.OutputCAPI.
     Local Instance static : static_opt := false.
     Local Instance : internal_static_opt := true.
+    Local Instance : inline_opt := true.
+    Local Instance : inline_internal_opt := true.
     Local Instance : emit_primitives_opt := false.
     Local Instance : use_mul_for_cmovznz_opt := false.
     Local Instance : widen_carry_opt := false.
@@ -192,6 +196,8 @@ Module debugging_sat_solinas_25519.
     Local Instance : no_select_opt := false.
     Local Instance : static_opt := true.
     Local Instance : internal_static_opt := true.
+    Local Instance : inline_opt := true.
+    Local Instance : inline_internal_opt := true.
     Local Instance : use_mul_for_cmovznz_opt := false.
     Local Instance : emit_primitives_opt := true.
     Local Instance : should_split_mul_opt := false.
@@ -233,6 +239,7 @@ Module debugging_sat_solinas_25519.
          (Pipeline.BoundsPipelineToString
             "fiat" "mul"
             false (* subst01 *)
+            false (* inline *)
             None (* fancy *)
             possible_values
             machine_wordsize
@@ -407,6 +414,8 @@ Module debugging_sat_solinas_25519_expanded.
     Local Instance : no_select_opt := false.
     Local Instance : static_opt := true.
     Local Instance : internal_static_opt := true.
+    Local Instance : inline_opt := true.
+    Local Instance : inline_internal_opt := true.
     Local Instance : use_mul_for_cmovznz_opt := false.
     Local Instance : emit_primitives_opt := true.
     Local Instance : should_split_mul_opt := false.
@@ -449,6 +458,7 @@ Module debugging_sat_solinas_25519_expanded.
          (Pipeline.BoundsPipelineToString
             "fiat" "mul"
             false (* subst01 *)
+            false (* inline *)
             None (* fancy *)
             possible_values
             machine_wordsize
@@ -476,6 +486,8 @@ Module debugging_p256_mul_bedrock2.
     Local Existing Instance (*OutputBedrock2API*) C.OutputCAPI.
     Local Instance static : static_opt := false.
     Local Instance : internal_static_opt := true.
+    Local Instance : inline_opt := true.
+    Local Instance : inline_internal_opt := true.
     Local Instance : emit_primitives_opt := false.
     Local Instance : use_mul_for_cmovznz_opt := false.
     Local Instance : widen_carry_opt := true.
@@ -543,6 +555,8 @@ Module debugging_25519_to_bytes_bedrock2.
     Local Existing Instance C.OutputCAPI.
     Local Instance static : static_opt := false.
     Local Instance : internal_static_opt := true.
+    Local Instance : inline_opt := true.
+    Local Instance : inline_internal_opt := true.
     Local Instance : emit_primitives_opt := false.
     Local Instance : use_mul_for_cmovznz_opt := false.
     Local Instance : widen_carry_opt := true.
@@ -864,7 +878,7 @@ Module debugging_25519_to_bytes_bedrock2.
       vm_compute in k.
       subst k.
       cbv beta iota zeta in v.
-      set (k := Language.Compilers.ToString.ToFunctionLines _ _ _ _ _ _ _ _ _ _) in (value of v).
+      set (k := Language.Compilers.ToString.ToFunctionLines _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) in (value of v).
       clear v.
       cbv [Language.Compilers.ToString.ToFunctionLines] in k.
       cbv [Java.OutputJavaAPI] in k.
@@ -994,6 +1008,8 @@ Module debugging_25519_to_bytes_java.
     Local Existing Instance Java.OutputJavaAPI.
     Local Instance static : static_opt := false.
     Local Instance : internal_static_opt := true.
+    Local Instance : inline_opt := true.
+    Local Instance : inline_internal_opt := true.
     Local Instance : emit_primitives_opt := true.
     Local Instance : use_mul_for_cmovznz_opt := true.
     Local Instance : widen_carry_opt := true.
@@ -1016,7 +1032,7 @@ Module debugging_25519_to_bytes_java.
       vm_compute in k.
       subst k.
       cbv beta iota zeta in v.
-      set (k := Language.Compilers.ToString.ToFunctionLines _ _ _ _ _ _ _ _ _ _ _ _ _ _) in (value of v).
+      set (k := Language.Compilers.ToString.ToFunctionLines _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) in (value of v).
       clear v.
       cbv [Language.Compilers.ToString.ToFunctionLines] in k.
       cbv [Java.OutputJavaAPI] in k.
@@ -1149,6 +1165,8 @@ Module debugging_p256_uint1.
     Local Existing Instance Java.OutputJavaAPI.
     Local Instance static : static_opt := false.
     Local Instance : internal_static_opt := true.
+    Local Instance : inline_opt := true.
+    Local Instance : inline_internal_opt := true.
     Local Instance : emit_primitives_opt := true.
     Local Instance : use_mul_for_cmovznz_opt := true.
     Local Instance : widen_carry_opt := true.
@@ -1206,6 +1224,8 @@ Module debugging_go_build0.
     Local Existing Instance Go.OutputGoAPI.
     Local Instance static : static_opt := false.
     Local Instance : internal_static_opt := false.
+    Local Instance : inline_opt := false.
+    Local Instance : inline_internal_opt := false.
     Local Instance : emit_primitives_opt := true.
     Local Instance : use_mul_for_cmovznz_opt := true.
     Local Instance : widen_carry_opt := true.
@@ -1317,6 +1337,8 @@ Module debugging_go_build.
     Local Existing Instance Go.OutputGoAPI.
     Local Instance static : static_opt := false.
     Local Instance : internal_static_opt := false.
+    Local Instance : inline_opt := false.
+    Local Instance : inline_internal_opt := false.
     Local Instance : emit_primitives_opt := true.
     Local Instance : use_mul_for_cmovznz_opt := true.
     Local Instance : widen_carry_opt := true.
@@ -2142,6 +2164,8 @@ Module debugging_go_output.
     Local Existing Instance Go.OutputGoAPI.
     Local Instance static : static_opt := false.
     Local Instance : internal_static_opt := false.
+    Local Instance : inline_opt := false.
+    Local Instance : inline_internal_opt := false.
     Local Instance : emit_primitives_opt := true.
     Local Instance : use_mul_for_cmovznz_opt := true.
     Local Instance : widen_carry_opt := true.
@@ -2259,6 +2283,8 @@ Import Stringification.C.Compilers.
 Local Existing Instance ToString.C.OutputCAPI.
 Local Instance static : static_opt := true.
 Local Instance : internal_static_opt := true.
+Local Instance : inline_opt := true.
+Local Instance : inline_internal_opt := true.
 Local Instance : use_mul_for_cmovznz_opt := false.
 Local Instance : emit_primitives_opt := true.
 
@@ -2310,6 +2336,7 @@ Module debugging_remove_mul_split_to_C_uint1_carry.
       "" (* prefix *)
       "mul"
       false (* subst01 *)
+      false (* inline *)
       None (* fancy *)
       possible_values
       machine_wordsize
@@ -3028,6 +3055,7 @@ Module debugging_remove_mul_split2.
       "" (* prefix *)
       "mul"
       false (* subst01 *)
+      false (* inline *)
       None
       None (* fancy *)
       possible_values
@@ -3235,6 +3263,7 @@ Section debugging_p448.
        "" (* prefix *)
        "mul"
        false (* subst01 *)
+       false (* inline *)
        None (* fancy *)
        possible_values machine_wordsize
        ltac:(let r := Reify ((carry_mulmod limbwidth_num limbwidth_den s c n [3; 7; 4; 0; 5; 1; 6; 2; 7; 3; 4; 0]%nat)) in

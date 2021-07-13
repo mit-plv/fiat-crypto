@@ -1630,7 +1630,7 @@ Module Compilers.
                  {documentation_options : documentation_options_opt}
                  {skip_typedefs : skip_typedefs_opt}
                  (machine_wordsize : Z)
-                 (do_bounds_check : bool) (internal_private : bool) (private : bool) (all_private : bool) (prefix : string) (name : string)
+                 (do_bounds_check : bool) (internal_private : bool) (private : bool) (all_private : bool) (inline : bool) (prefix : string) (name : string)
                  {t}
                  (e : @API.Expr t)
                  (comment : type.for_each_lhs_of_arrow var_data t -> var_data (type.final_codomain t) -> list string)

@@ -367,7 +367,7 @@ Module Java.
 
   Definition to_function_lines
              {language_naming_conventions : language_naming_conventions_opt} (internal_private : bool)
-             (internal : bool) (prefix : string) (name : string)
+             (internal : bool) (inline : bool) (prefix : string) (name : string)
              {t}
              (f : type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * IR.expr)
     : list string :=
@@ -390,7 +390,7 @@ Module Java.
              {documentation_options : documentation_options_opt}
              {skip_typedefs : skip_typedefs_opt}
              (machine_wordsize : Z)
-             (do_bounds_check : bool) (internal_private : bool) (internal : bool) (all_private : bool) (prefix : string) (name : string)
+             (do_bounds_check : bool) (internal_private : bool) (internal : bool) (all_private : bool) (inline : bool) (prefix : string) (name : string)
              {t}
              (e : API.Expr t)
              (comment : type.for_each_lhs_of_arrow var_data t -> var_data (type.base (type.final_codomain t)) -> list string)
@@ -412,7 +412,7 @@ Module Java.
                     | nil => nil
                     | ls => [" * Output Bounds:"] ++ List.map (fun v => " *   " ++ javadoc_replace v)%string ls
                     end)
-              ++ to_function_lines internal_private internal prefix name (indata, outdata, f))%list%string,
+              ++ to_function_lines internal_private internal inline prefix name (indata, outdata, f))%list%string,
            IR.ident_infos.collect_all_infos f intypedefs outtypedefs)
     | inr nil =>
       inr ("Unknown internal error in converting " ++ name ++ " to Java")%string

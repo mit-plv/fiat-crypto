@@ -155,7 +155,7 @@ Definition Bedrock2_ToFunctionLines
            {documentation_options : documentation_options_opt}
            {skip_typedefs : skip_typedefs_opt}
            (machine_wordsize : Z)
-           (do_bounds_check : bool) (internal_static : bool) (static : bool) (all_static : bool) (prefix : string) (name : string)
+           (do_bounds_check : bool) (internal_static : bool) (static : bool) (all_static : bool) (inline : bool) (prefix : string) (name : string)
            {t}
            (e : @API.Expr t)
            (comment : type.for_each_lhs_of_arrow ToString.OfPHOAS.var_data t ->
@@ -192,7 +192,7 @@ Definition Bedrock2_ToFunctionLines
               | inl (indata, outdata)
                 => inl ((header ++ ["static"] ++ bedrock_func_to_lines f)
                           ++ ["/* NOTE: The following wrapper function is not covered by Coq proofs */"
-                              ; (((if static then "static " else "") ++ "void " ++ name ++ "(")
+                              ; (((if inline then "__inline__ " else "") ++ (if static then "static " else "") ++ "void " ++ name ++ "(")
                                    ++ (String.concat ", " (C.to_retarg_list prefix outdata ++ C.to_arg_list_for_each_lhs_of_arrow prefix indata))
                                    ++ ") {")
                               ; "  " ++ (wrap_call indata outdata f insizes outsizes) ++ ";"

@@ -787,6 +787,8 @@ Section __.
           {class_namev : class_name_opt}
           {static : static_opt}
           {internal_static : internal_static_opt}
+          {inline : inline_opt}
+          {inline_internal : inline_internal_opt}
           {low_level_rewriter_method : low_level_rewriter_method_opt}
           {only_signed : only_signed_opt}
           {no_select : no_select_opt}

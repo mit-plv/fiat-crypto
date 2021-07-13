@@ -46,6 +46,8 @@ Module Compilers.
     Module C.
       Definition comment_block := List.map (fun line => "/* " ++ line ++ " */")%string.
 
+      Definition FIAT_INLINE (prefix : string) := (String.to_upper prefix ++ "FIAT_INLINE")%string.
+
       Module String.
         Definition stdint_bitwidths : list Z := [8; 16; 32; 64].
         Definition is_special_bitwidth (bw : Z) := negb (existsb (Z.eqb bw) stdint_bitwidths).
@@ -122,22 +124,28 @@ Module Compilers.
         : list string
           := let bitwidths_used := bitwidths_used infos in
              let value_barrier_bitwidths := value_barrier_bitwidths infos in
+             let FIAT_EXTENSION := (String.to_upper prefix ++ "FIAT_EXTENSION")%string in
              (["";
               "#include <stdint.h>"]
                 ++ (if IntSet.mem _Bool bitwidths_used || IntSet.mem (int.signed_counterpart_of _Bool) bitwidths_used
                     then ["typedef unsigned char " ++ int.type.to_string prefix _Bool ++ ";";
                             "typedef signed char " ++ int.type.to_string prefix (int.signed_counterpart_of _Bool) ++ ";"]%string
                     else [])
+                ++ (let gnuc_defines
+                        := (if IntSet.mem uint128 bitwidths_used || IntSet.mem int128 bitwidths_used
+                            then [(FIAT_EXTENSION, "__extension__")]
+                            else [])
+                             ++ [(FIAT_INLINE prefix, "__inline__")]
+                    in
+                    ["#ifdef __GNUC__"]
+                      ++ List.map (fun '(MACRO, primitive) => "#  define " ++ MACRO ++ " " ++ primitive)%string gnuc_defines
+                      ++ ["#else"]
+                      ++ List.map (fun '(MACRO, primitive) => "#  define " ++ MACRO)%string gnuc_defines
+                      ++ ["#endif"])
                 ++ (if IntSet.mem uint128 bitwidths_used || IntSet.mem int128 bitwidths_used
-                    then let FIAT_EXTENSION := (String.to_upper prefix ++ "FIAT_EXTENSION")%string in
-                         ["#ifdef __GNUC__";
-                          "#  define " ++ FIAT_EXTENSION ++ " __extension__";
-                          "#else";
-                          "#  define " ++ FIAT_EXTENSION;
-                          "#endif";
-                          "";
-                          FIAT_EXTENSION ++ " typedef signed __int128 " ++ int.type.to_string prefix int128 ++ ";";
-                          FIAT_EXTENSION ++ " typedef unsigned __int128 " ++ int.type.to_string prefix uint128 ++ ";"]%string
+                    then ["";
+                         FIAT_EXTENSION ++ " typedef signed __int128 " ++ int.type.to_string prefix int128 ++ ";";
+                         FIAT_EXTENSION ++ " typedef unsigned __int128 " ++ int.type.to_string prefix uint128 ++ ";"]%string
                     else [])
                 ++ (if skip_typedefs
                     then []
@@ -556,12 +564,13 @@ Module Compilers.
       Definition to_function_lines
                  {language_naming_conventions : language_naming_conventions_opt}
                  {skip_typedefs : skip_typedefs_opt}
-                 (internal_static : bool) (static : bool) (all_static : bool) (prefix : string) (name : string)
+                 (internal_static : bool) (static : bool) (all_static : bool) (inline : bool) (prefix : string) (name : string)
                  {t}
                  (f : type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * expr)
         : list string
         := let '(args, rets, body) := f in
            (((((if static then "static " else "")
+                 ++ (if inline then FIAT_INLINE prefix ++ " " else "")
                  ++ "void "
                  ++ name ++ "("
                  ++ (String.concat ", " (to_retarg_list prefix rets ++ to_arg_list_for_each_lhs_of_arrow prefix args))
@@ -583,7 +592,7 @@ Module Compilers.
                  {documentation_options : documentation_options_opt}
                  {skip_typedefs : skip_typedefs_opt}
                  (machine_wordsize : Z)
-                 (do_bounds_check : bool) (internal_static : bool) (static : bool) (all_static : bool) (prefix : string) (name : string)
+                 (do_bounds_check : bool) (internal_static : bool) (static : bool) (all_static : bool) (inline : bool) (prefix : string) (name : string)
                  {t}
                  (e : @Compilers.expr.Expr base.type ident.ident t)
                  (comment : type.for_each_lhs_of_arrow var_data t -> var_data (type.base (type.final_codomain t)) -> list string)
@@ -606,7 +615,7 @@ Module Compilers.
                            | ls => [" * Output Bounds:"] ++ List.map (fun v => " *   " ++ v)%string ls
                            end
                         ++ [" */"]
-                        ++ to_function_lines internal_static static all_static prefix name (indata, outdata, f))%list,
+                        ++ to_function_lines internal_static static all_static inline prefix name (indata, outdata, f))%list,
                      ident_infos.collect_all_infos f intypedefs outtypedefs)
            | inr nil
              => inr ("Unknown internal error in converting " ++ name ++ " to C")%string
@@ -622,7 +631,7 @@ Module Compilers.
                  {documentation_options : documentation_options_opt}
                  {skip_typedefs : skip_typedefs_opt}
                  (machine_wordsize : Z)
-                 (do_bounds_check : bool) (internal_static : bool) (static : bool) (all_static : bool) (prefix : string) (name : string)
+                 (do_bounds_check : bool) (internal_static : bool) (static : bool) (all_static : bool) (inline : bool) (prefix : string) (name : string)
                  {t}
                  (e : @Compilers.expr.Expr base.type ident.ident t)
                  (comment : type.for_each_lhs_of_arrow var_data t -> var_data (type.base (type.final_codomain t)) -> list string)
@@ -632,7 +641,7 @@ Module Compilers.
                  (intypedefs : type.for_each_lhs_of_arrow var_typedef_data t)
                  (outtypedefs : base_var_typedef_data (type.final_codomain t))
         : (string * ident_infos) + string
-        := match ToFunctionLines machine_wordsize do_bounds_check internal_static static all_static prefix name e comment name_list inbounds outbounds intypedefs outtypedefs with
+        := match ToFunctionLines machine_wordsize do_bounds_check internal_static static all_static inline prefix name e comment name_list inbounds outbounds intypedefs outtypedefs with
            | inl (ls, used_types) => inl (LinesToString ls, used_types)
            | inr err => inr err
            end.

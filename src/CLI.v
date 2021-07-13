@@ -280,6 +280,10 @@ Module ForExtraction.
     := ([Arg.long_key "static"], Arg.Unit, ["Declare the functions as static, i.e., local to the file."]).
   Definition internal_static_spec : named_argT
     := ([Arg.long_key "internal-static"], Arg.Unit, ["Declare internal functions as static, i.e., local to the file."]).
+  Definition inline_spec : named_argT
+    := ([Arg.long_key "inline"], Arg.Unit, ["Declare all functions as inline."]).
+  Definition inline_internal_spec : named_argT
+    := ([Arg.long_key "inline-internal"], Arg.Unit, ["Declare internal functions as inline."]).
   Definition only_signed_spec : named_argT
     := ([Arg.long_key "only-signed"], Arg.Unit, ["Only allow signed integer types."]).
   Definition no_select_spec : named_argT
@@ -439,10 +443,14 @@ Module ForExtraction.
   (** We split up the ones we can directly parse and the ones we have to process *)
   Class ParsedSynthesizeOptions :=
     {
-      (** Is the code static / inlined *)
+      (** Is the code static / private *)
       static :> static_opt
-      (** Is the internal code static / inlined *)
+      (** Is the internal code static / private *)
       ; internal_static :> internal_static_opt
+      (** Is the code inlined *)
+      ; inline :> inline_opt
+      (** Is the internal code inlined *)
+      ; inline_internal :> inline_internal_opt
       (** Should we only use signed integers *)
       ; only_signed :> only_signed_opt
       (** Should we emit expressions requiring cmov *)
@@ -542,6 +550,8 @@ Module ForExtraction.
         ; no_prefix_fiat_spec
         ; static_spec
         ; internal_static_spec
+        ; inline_spec
+        ; inline_internal_spec
         ; no_wide_int_spec
         ; widen_carry_spec
         ; widen_bytes_spec
@@ -585,6 +595,8 @@ Module ForExtraction.
              , no_prefix_fiatv
              , staticv
              , internal_staticv
+             , inlinev
+             , inline_internalv
              , no_wide_intv
              , widen_carryv
              , widen_bytesv
@@ -632,6 +644,9 @@ Module ForExtraction.
                   ; asm_output_file_name := to_string_default asm_output_file_namev "-"
                 |},
                {| static := to_bool staticv
+                  ; internal_static := to_bool internal_staticv
+                  ; inline := to_bool inlinev
+                  ; inline_internal := to_bool inline_internalv
                   ; internal_class_name := to_string_opt class_namev
                   ; internal_package_name := to_string_opt package_namev
                   ; language_naming_conventions
@@ -644,7 +659,6 @@ Module ForExtraction.
                           ; class_naming_convention := to_capitalization_convention_opt class_casev
                        |}
                   ; no_prefix_fiat := to_bool no_prefix_fiatv
-                  ; internal_static := to_bool internal_staticv
                   ; widen_carry := to_bool widen_carryv
                   ; widen_bytes := to_bool widen_bytesv
                   ; no_select := to_bool no_selectv
