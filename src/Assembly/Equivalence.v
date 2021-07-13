@@ -23,7 +23,7 @@ Local Open Scope list_scope.
 (** List of registers used for outputs/inputs *)
 Class assembly_calling_registers_opt := assembly_calling_registers' : option (list REG).
 Typeclasses Opaque assembly_calling_registers_opt.
-Definition default_assembly_calling_registers := [rdi;rsi;rdx;rcx;r8;r9].
+Definition default_assembly_calling_registers := [rsi;rdi;rdx;rcx;r8;r9]. (* note: andres swapped rdi and rsi being unsure where this list is from *)
 Definition assembly_calling_registers {v : assembly_calling_registers_opt} : list REG
   := Option.value v default_assembly_calling_registers.
 (** Are output arrays considered to come before input arrays, or after them? *)
@@ -68,7 +68,7 @@ of the equivalence graphs.  If desired, we can parameterize the error
 printing functions on command-lines options indicating how verbose to
 be in printing the error message. *)
 Inductive EquivalenceCheckingError :=
-| Could_not_prove_equivalence (_ : Symbolic.error) (_ : symbolic_state)
+| Symbolic_execution_failed (_ : Symbolic.error) (_ : symbolic_state)
 | Internal_error_output_load_failed (_ : list (option (list idx))) (_ : symbolic_state)
 | Not_enough_registers (num_given num_extra_needed : nat)
 | Incorrect_array_input_dag_node
@@ -81,13 +81,13 @@ Inductive EquivalenceCheckingError :=
 | Invalid_higher_order_let {var} {s : API.type} (x : API.expr (var:=var) s)
 | Unhandled_identifier {t} (idc : ident t)
 | Unhandled_cast (_ _ : Z)
-| Unimplemented_check (_ : list (list idx)) (_ : symbolic_state)
+| Unable_to_unify (_ : string) (_ : symbolic_state)
 .
 
 Global Instance show_lines_EquivalenceCheckingError : ShowLines EquivalenceCheckingError
   := fun err => match err with
-                | Could_not_prove_equivalence l r
-                  => ["Could not prove equivalence of assembly and AST: " ++ show l]%string ++ ["Combined state:"] ++ show_lines r
+                | Symbolic_execution_failed l r
+                  => ["Symbolic execution failed: " ++ show l]%string ++ ["Combined state:"] ++ show_lines r
                 | Internal_error_output_load_failed l r => ["Internal error. Output load failed: " ++ show l]%string ++ ["Combined state:"] ++ show_lines r
                 | Not_enough_registers num_given num_extra_needed
                   => ["Not enough registers available for storing input and output (given " ++ show num_given ++ ", needed an additional " ++ show num_extra_needed ++ "."]%string
@@ -114,7 +114,7 @@ Global Instance show_lines_EquivalenceCheckingError : ShowLines EquivalenceCheck
                   => ["Identifier not yet handled by symbolic evaluation: " ++ show idc ++ "."]%string
                 | Unhandled_cast l u
                   => ["Argument not yet handled by symbolic evaluation: " ++ show (l, u)]%string
-                | Unimplemented_check ll s => ["Unimplemented_check " ++ show ll]%string ++ show_lines s
+                | Unable_to_unify s r => ["Unable to unify: "++s]%string ++ show_lines r
                 end%list.
 Global Instance show_EquivalenceCheckingError : Show EquivalenceCheckingError
   := fun err => String.concat String.NewLine (show_lines err).
@@ -255,6 +255,29 @@ Definition var (t : API.type) : Set
      | type.base t => base_var t
      | type.arrow s d => Empty_set
      end.
+
+Fixpoint base_var_beq {t : base.type} : forall a b : base_var t, bool :=
+  match t return forall a b : base_var t, bool with
+  | base.type.unit => fun _ _ => true
+  | base.type.type_base base.type.Z => N.eqb
+  | base.type.prod _ _ => fun a b => base_var_beq (fst a) (fst b) && base_var_beq (snd a) (snd b)
+  | base.type.list _ => @ListUtil.list_beq _ base_var_beq
+  | base.type.type_base base.type.nat => Nat.eqb
+  | base.type.type_base base.type.zrange => ZRange.zrange_beq
+  | _ => fun _ _ => false
+  end%bool.
+
+Fixpoint show_base_var {t : base.type} : Show (base_var t) :=
+  match t return base_var t -> string with
+  | base.type.unit => @show unit _
+  | base.type.type_base base.type.Z => @show N _
+  | base.type.prod _ _ => @show_prod _ _ show_base_var show_base_var
+  | base.type.list _ => @show_list _ show_base_var
+  | base.type.type_base base.type.nat => @show nat _
+  | base.type.type_base base.type.zrange => @show ZRange.zrange _
+  | _ => fun _ => "..."
+  end.
+Global Existing Instance show_base_var.
 
 (** From the information about dag nodes for inputs, build up the var
     data we're passing into PHOAS, and return as well the indices that
@@ -586,6 +609,7 @@ Section check_equivalence.
         _ <- mapM_ SymexNormalInstruction (Option.List.map invert_rawline asm);
         Symbolic.ret inputaddrs)%N%x86symex s0
       with
+      | Error (e, s) => Error (Symbolic_execution_failed e s)
       | Success (inputaddrs, s) =>
           let outputaddrs : list (option (list idx))  := skipn (length inputs) inputaddrs in
           match Option.List.lift (List.map (fun ocells =>
@@ -595,9 +619,13 @@ Section check_equivalence.
             end
           ) outputaddrs) with
           | None => Error (Internal_error_output_load_failed outputaddrs s)
-          | Some asm_output => Error (Unimplemented_check asm_output s) (* FIXME: asm_output == PHOAS_output *)
+          | Some asm_output =>
+              x <- (build_base_var (type.final_codomain t) (List.map inr asm_output));
+              let asm_output := fst x in
+              if base_var_beq asm_output PHOAS_output
+              then Success tt
+              else Error (Unable_to_unify (show asm_output ++ " == " ++ show PHOAS_output)%string s)
           end
-      | Error (e, s) => Error (Could_not_prove_equivalence e s)
       end.
 
     (** We don't actually generate assembly, we just check equivalence and pass assembly through unchanged *)
