@@ -47,6 +47,8 @@ Section rmontred.
   Context {output_language_api : ToString.OutputLanguageAPI}
           {static : static_opt}
           {internal_static : internal_static_opt}
+          {inline : inline_opt}
+          {inline_internal : inline_internal_opt}
           (N R N' : Z) (n : nat)
           (machine_wordsize : machine_wordsize_opt).
 

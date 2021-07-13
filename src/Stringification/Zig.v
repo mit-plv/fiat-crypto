@@ -317,12 +317,12 @@ Module Zig.
        ; explicit_pointer_variables := false
     |}.
 
-  Definition to_function_lines {language_naming_conventions : language_naming_conventions_opt} {skip_typedefs : skip_typedefs_opt} (internal_private : bool) (private : bool) (all_private : bool) (prefix : string) (name : string)
+  Definition to_function_lines {language_naming_conventions : language_naming_conventions_opt} {skip_typedefs : skip_typedefs_opt} (internal_private : bool) (private : bool) (all_private : bool) (inline : bool) (prefix : string) (name : string)
              {t}
              (f : type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * IR.expr)
     : list string :=
     let '(args, rets, body) := f in
-    ((if private then "inline fn " else "pub fn ") ++ name ++
+    ((if private || inline then "inline fn " else "pub fn ") ++ name ++
       "(" ++ String.concat ", " (to_arg_list internal_private all_private prefix Out rets ++ to_arg_list_for_each_lhs_of_arrow internal_private all_private prefix args) ++
       ") void {")%string :: (["    @setRuntimeSafety(mode == .Debug);"; ""]%string)%list ++ (List.map (fun s => "    " ++ s)%string (to_strings internal_private prefix body)) ++ ["}"%string]%list.
 
@@ -339,7 +339,7 @@ Module Zig.
              {documentation_options : documentation_options_opt}
              {skip_typedefs : skip_typedefs_opt}
              (machine_wordsize : Z)
-             (do_bounds_check : bool) (internal_private : bool) (private : bool) (all_private : bool) (prefix : string) (name : string)
+             (do_bounds_check : bool) (internal_private : bool) (private : bool) (all_private : bool) (inline : bool) (prefix : string) (name : string)
              {t}
              (e : API.Expr t)
              (comment : type.for_each_lhs_of_arrow var_data t -> var_data (type.base (type.final_codomain t)) -> list string)
@@ -360,7 +360,7 @@ Module Zig.
                  | nil => nil
                  | ls => ["/// Output Bounds:"] ++ List.map (fun v => "///   " ++ v)%string ls
                  end
-              ++ to_function_lines internal_private private all_private prefix name (indata, outdata, f))%list%string,
+              ++ to_function_lines internal_private private all_private inline prefix name (indata, outdata, f))%list%string,
            IR.ident_infos.collect_all_infos f intypedefs outtypedefs)
     | inr nil =>
       inr ("Unknown internal error in converting " ++ name ++ " to Zig")%string
