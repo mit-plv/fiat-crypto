@@ -24,10 +24,11 @@ Require Import Crypto.PushButtonSynthesis.Primitives.
 Require Import Crypto.PushButtonSynthesis.BarrettReductionReificationCache.
 Require Import Crypto.PushButtonSynthesis.InvertHighLow.
 Import ListNotations.
-Local Open Scope Z_scope. Local Open Scope list_scope. Local Open Scope bool_scope.
+Local Open Scope string_scope. Local Open Scope Z_scope. Local Open Scope list_scope. Local Open Scope bool_scope.
 
 Import
   Language.Compilers
+  Language.Wf.Compilers
   Stringification.Language.Compilers.
 Import Compilers.API.
 
@@ -44,7 +45,8 @@ Section rbarrett_red.
   Context {output_language_api : ToString.OutputLanguageAPI}
           {static : static_opt}
           {internal_static : internal_static_opt}
-          (M machine_wordsize : Z).
+          (M : Z)
+          (machine_wordsize : machine_wordsize_opt).
 
   Let value_range := r[0 ~> (2^machine_wordsize - 1)%Z]%zrange.
   Let flag_range := r[0 ~> 1]%zrange.
@@ -58,6 +60,8 @@ Section rbarrett_red.
   Let possible_values := possible_values_of_machine_wordsize.
 
   Local Existing Instance default_language_naming_conventions.
+  Local Existing Instance default_documentation_options.
+  Local Instance skip_typedefs : skip_typedefs_opt := true.
   Local Instance widen_carry : widen_carry_opt := false.
   Local Instance widen_bytes : widen_bytes_opt := true.
   Local Instance only_signed : only_signed_opt := false.
@@ -114,7 +118,7 @@ Section rbarrett_red.
 
   (** Note: If you change the name or type signature of this
         function, you will need to update the code in CLI.v *)
-  Definition check_args {T} (res : Pipeline.ErrorT T)
+  Definition check_args {T} (requests : list string) (res : Pipeline.ErrorT T)
     : Pipeline.ErrorT T
     := fold_right
          (fun '(b, e) k => if b:bool then Error e else k)
@@ -127,19 +131,6 @@ Section rbarrett_red.
             (negb ((2 * (((2 ^ 2) ^ machine_wordsize) mod M) <=? 2 ^ (machine_wordsize + 1) - (muLow + 2 ^ machine_wordsize)))%Z, Pipeline.Value_not_leZ ("(2 * ((2 ^ 2) ^ machine_wordsize) mod M)  2 ^ (machine_wordsize + 1) - (muLow + 2 ^ machine_wordsize)") (2 * (((2 ^ 2) ^ machine_wordsize) mod M)) (2 ^ (machine_wordsize + 1) - (muLow + 2 ^ machine_wordsize))) ].
 
   Local Arguments Z.mul !_ !_.
-  Local Ltac prepare_use_curve_good _ :=
-    let curve_good := lazymatch goal with | curve_good : check_args _ = Success _ |- _ => curve_good end in
-    clear -curve_good;
-    cbv [check_args] in curve_good |- *;
-    cbn [fold_right] in curve_good |- *;
-    repeat first [ match goal with
-                   | [ H : context[match ?b with true => _ | false => _ end ] |- _ ] => destruct b eqn:?
-                   end
-                 | discriminate
-                 | progress Reflect.reflect_hyps
-                 | assumption
-                 | apply conj
-                 | progress destruct_head'_and ].
 
   Local Ltac use_curve_good_t :=
     repeat first [ assumption
@@ -152,7 +143,8 @@ Section rbarrett_red.
                  | solve [ auto with zarith ]
                  | rewrite Z.log2_pow2 by use_curve_good_t ].
 
-  Context (curve_good : check_args (Success tt) = Success tt).
+  Context (requests : list string)
+          (curve_good : check_args requests (Success tt) = Success tt).
 
   Lemma use_curve_good
     : 1 < machine_wordsize
@@ -172,8 +164,8 @@ Section rbarrett_red.
          possible_values
          (reified_barrett_red_gen
             @ GallinaReify.Reify M
-            @ GallinaReify.Reify machine_wordsize
-            @ GallinaReify.Reify machine_wordsize
+            @ GallinaReify.Reify (machine_wordsize:Z)
+            @ GallinaReify.Reify (machine_wordsize:Z)
             @ GallinaReify.Reify 1%nat
             @ GallinaReify.Reify [muLow;1]
             @ GallinaReify.Reify [M])
@@ -181,9 +173,9 @@ Section rbarrett_red.
          bound.
 
   Definition sbarrett_red (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "barrett_red" barrett_red
           (fun _ _ _ => @nil string).
 
@@ -215,4 +207,16 @@ Section rbarrett_red.
     { cbv [ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by bound is_bounded_by_bool value_range upper lower]. rewrite Bool.andb_true_iff, !Z.leb_le. lia. }
     { cbv [ZRange.type.base.option.is_bounded_by ZRange.type.base.is_bounded_by bound is_bounded_by_bool value_range upper lower]. rewrite Bool.andb_true_iff, !Z.leb_le. lia. }
   Qed.
+
+  Lemma Wf_barrett_red res (Hres : barrett_red = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). apply fancy_args_good. Qed.
 End rbarrett_red.
+
+Module Export Hints.
+  Hint Opaque
+       barrett_red
+  : wf_op_cache.
+  Hint Immediate
+       Wf_barrett_red
+  : wf_op_cache.
+End Hints.

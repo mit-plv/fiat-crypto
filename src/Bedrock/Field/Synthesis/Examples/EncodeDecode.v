@@ -47,7 +47,7 @@ Local Notation eval := (Positional.eval weight n).
 Local Notation n_bytes := (UnsaturatedSolinas.n_bytes s).
 Local Notation loose_bounds := (UnsaturatedSolinasHeuristics.loose_bounds n s c).
 Local Notation tight_bounds := (UnsaturatedSolinasHeuristics.tight_bounds n s c).
-Local Notation prime_bytes_bounds_value :=
+Local Notation prime_bytes_bounds :=
   (map (fun v : Z => Some {| ZRange.lower := 0; ZRange.upper := v |})
        (UnsaturatedSolinas.prime_bytes_upperbound_list s)).
 Local Infix "*" := sep : sep_scope.
@@ -118,11 +118,11 @@ is not needed *)
 Lemma bounded_by_prime_bytes_bounds x :
   0 <= x < M ->
   list_Z_bounded_by
-    prime_bytes_bounds_value
+    prime_bytes_bounds
     (Partition.partition (ModOps.weight 8 1) n_bytes x).
 Proof.
   let weight := constr:(ModOps.weight 8 1) in
-  change (prime_bytes_bounds_value) with
+  change (prime_bytes_bounds) with
       ((ByteBounds.byte_bounds (n_bytes-1)%nat)
          ++ [Some {| ZRange.lower:=0;
                      ZRange.upper:=
@@ -163,7 +163,7 @@ Proof.
      to extract them *)
   lazymatch goal with
     H : ?out = Partition.partition _ _ _ |- _ =>
-    assert (list_Z_bounded_by prime_bytes_bounds_value out)
+    assert (list_Z_bounded_by prime_bytes_bounds out)
       by (rewrite H; apply bounded_by_prime_bytes_bounds;
           apply Z.mod_pos_bound; reflexivity)
   end.

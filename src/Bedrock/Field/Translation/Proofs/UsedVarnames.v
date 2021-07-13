@@ -20,7 +20,6 @@ Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.ZUtil.Hints.Core.
 
 Import API.Compilers.
-Import Wf.Compilers.expr.
 Import ListNotations Types.Notations.
 
 Section UsedVarnames.
@@ -157,6 +156,8 @@ Section UsedVarnames.
     eexists; split; eauto; lia.
   Qed.
 
+  Implicit Types l : Semantics.locals.
+
   Lemma only_differ_zero nextn l :
     map.only_differ l (used_varnames nextn 0) l.
   Proof.
@@ -171,9 +172,8 @@ Section UsedVarnames.
   Proof.
     intros.
     eapply Proper_only_differ;
-      [ reflexivity | | reflexivity
-        | eapply only_differ_trans;
-          solve [eauto using only_differ_sym, only_differ_put] ].
+      [ reflexivity | | reflexivity | eapply only_differ_trans;
+         solve [eauto using @only_differ_sym, @only_differ_put with typeclass_instances ] ].
     eapply sameset_iff; intros.
     cbv [used_varnames of_list elem_of union singleton_set].
     cbn [seq map In].

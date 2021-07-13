@@ -136,6 +136,8 @@ Reserved Notation "u {{ i }}" (at level 30).
 Reserved Notation "a # b" (at level 55, no associativity). (* match with theories/QArith/QArith_base.v *)
 Reserved Notation "'olet' x .. y <- X ; Y"
          (at level 70, X at next level, x binder, y binder, right associativity, format "'[v' 'olet'  x  ..  y  <-  X ; '/' Y ']'").
+Reserved Notation "'slet' x .. y <- X ; Y"
+         (at level 70, X at next level, x binder, y binder, right associativity, format "'[v' 'slet'  x  ..  y  <-  X ; '/' Y ']'").
 Reserved Notation "'plet' x := y 'in' z"
          (at level 200, z at level 200, format "'plet'  x  :=  y  'in' '//' z").
 Reserved Notation "'subst_let' x := y 'in' z"

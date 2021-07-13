@@ -48,8 +48,9 @@ Require Import Crypto.PushButtonSynthesis.ReificationCache.
 Require Import Crypto.PushButtonSynthesis.Primitives.
 Require Import Crypto.PushButtonSynthesis.WordByWordMontgomeryReificationCache.
 Require Import Crypto.PushButtonSynthesis.BYInversionReificationCache.
+Require Import Crypto.Assembly.Equivalence.
 Import ListNotations.
-Local Open Scope Z_scope. Local Open Scope list_scope. Local Open Scope bool_scope.
+Local Open Scope string_scope. Local Open Scope Z_scope. Local Open Scope list_scope. Local Open Scope bool_scope.
 
 Import
   Language.Wf.Compilers
@@ -95,6 +96,8 @@ Local Opaque
 Section __.
   Context {output_language_api : ToString.OutputLanguageAPI}
           {language_naming_conventions : language_naming_conventions_opt}
+          {documentation_options : documentation_options_opt}
+          {skip_typedefs : skip_typedefs_opt}
           {package_namev : package_name_opt}
           {class_namev : class_name_opt}
           {static : static_opt}
@@ -110,24 +113,21 @@ Section __.
           {assembly_hints_lines : assembly_hints_lines_opt}
           {widen_carry : widen_carry_opt}
           {widen_bytes : widen_bytes_opt}
+          {assembly_calling_registers : assembly_calling_registers_opt}
+          {assembly_stack_size : assembly_stack_size_opt}
+          {error_on_unused_assembly_functions : error_on_unused_assembly_functions_opt}
+          {assembly_output_first : assembly_output_first_opt}
+          {assembly_argument_registers_left_to_right : assembly_argument_registers_left_to_right_opt}
           (m : Z)
-          (machine_wordsize : Z).
+          (machine_wordsize : machine_wordsize_opt).
 
   Definition s := 2^Z.log2_up m.
   Definition c := s - m.
   Definition n : nat := Z.to_nat (Qceiling (Z.log2_up s / machine_wordsize)).
   Definition sat_limbs := (n + 1)%nat.   (* to represent m in twos complement we might need another bit *)
   Definition r := 2^machine_wordsize.
-  Definition r'
-    := match Z.modinv r m with
-       | Some r' => r'
-       | None => 0
-       end.
-  Definition m'
-    := match Z.modinv (-m) r with
-       | Some m' => m'
-       | None => 0
-       end.
+  Definition r' := Z.modinv r m.
+  Definition m' := Z.modinv (-m) r.
   Definition n_bytes := bytes_n s.
 
   Definition divstep_precompmod :=
@@ -141,13 +141,12 @@ Section __.
   Definition prime_bytes_upperbound_list : list Z
     := Partition.partition (weight 8 1) n_bytes (s-1).
   Definition upperbounds : list Z := prime_upperbound_list.
-  Definition prime_bound : ZRange.type.option.interp (base.type.Z)
-    := Some r[0~>m-1]%zrange.
-  Definition prime_bounds : ZRange.type.option.interp (base.type.list (base.type.Z))
-    := Some (List.map (fun v => Some r[0 ~> v]%zrange) prime_upperbound_list).
-  Definition prime_bytes_bounds : ZRange.type.option.interp (base.type.list (base.type.Z))
-    := Some (List.map (fun v => Some r[0 ~> v]%zrange) prime_bytes_upperbound_list).
-  Local Notation saturated_bounds_list := (saturated_bounds_list n machine_wordsize).
+  Definition prime_bound : ZRange.type.interp (base.type.Z)
+    := r[0~>m-1]%zrange.
+  Definition prime_bounds : list (ZRange.type.option.interp base.type.Z)
+    := List.map (fun v => Some r[0 ~> v]%zrange) prime_upperbound_list.
+  Definition prime_bytes_bounds : list (ZRange.type.option.interp (base.type.Z))
+    := List.map (fun v => Some r[0 ~> v]%zrange) prime_bytes_upperbound_list.
   Local Notation saturated_bounds := (saturated_bounds n machine_wordsize).
   Local Notation larger_saturated_bounds := (Primitives.saturated_bounds sat_limbs machine_wordsize).
 
@@ -176,9 +175,20 @@ Section __.
   Let possible_values := possible_values_of_machine_wordsize.
   Let possible_values_with_bytes := possible_values_of_machine_wordsize_with_bytes.
   Definition bounds : list (ZRange.type.option.interp base.type.Z)
-    := Option.invert_Some saturated_bounds (*List.map (fun u => Some r[0~>u]%zrange) upperbounds*).
+    := saturated_bounds (*List.map (fun u => Some r[0~>u]%zrange) upperbounds*).
   Definition larger_bounds : list (ZRange.type.option.interp base.type.Z)
-    := Option.invert_Some larger_saturated_bounds (*List.map (fun u => Some r[0~>u]%zrange) upperbounds*).
+    := larger_saturated_bounds (*List.map (fun u => Some r[0~>u]%zrange) upperbounds*).
+  Definition montgomery_domain_bounds := saturated_bounds.
+  Definition non_montgomery_domain_bounds := saturated_bounds.
+  Typeclasses Opaque montgomery_domain_bounds.
+  Typeclasses Opaque non_montgomery_domain_bounds.
+  Global Instance montgomery_domain_bounds_typedef : typedef (t:=base.type.list base.type.Z) (Some montgomery_domain_bounds)
+    := { name := "montgomery_domain_field_element"
+         ; description name := (text_before_type_name ++ name ++ " is a field element in the Montgomery domain.")%string }.
+  Global Instance non_montgomery_domain_bounds_typedef : typedef (t:=base.type.list base.type.Z) (Some non_montgomery_domain_bounds)
+    := { name := "non_montgomery_domain_field_element"
+         ; description name := (text_before_type_name ++ name ++ " is a field element NOT in the Montgomery domain.")%string }.
+
 
   Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
   Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
@@ -186,53 +196,37 @@ Section __.
 
   (** Note: If you change the name or type signature of this
         function, you will need to update the code in CLI.v *)
-  Definition check_args {T} (res : Pipeline.ErrorT T)
+  Definition check_args {T} (requests : list string) (res : Pipeline.ErrorT T)
     : Pipeline.ErrorT T
-    := fold_right
-         (fun '(b, e) k => if b:bool then Error e else k)
-         res
-         [(negb (1 <? machine_wordsize)%Z, Pipeline.Value_not_ltZ "machine_wordsize <= 1" 1 machine_wordsize);
-            ((negb (0 <? c)%Z, Pipeline.Value_not_ltZ "c ≤ 0" 0 c));
-            ((negb (1 <? m))%Z, Pipeline.Value_not_ltZ "m ≤ 1" 1 m);
-            ((n =? 0)%nat, Pipeline.Values_not_provably_distinctZ "n = 0" n 0%nat);
-            ((r' =? 0)%Z, Pipeline.No_modular_inverse "r⁻¹ mod m" r m);
-            (negb ((r * r') mod m =? 1)%Z, Pipeline.Values_not_provably_equalZ "(r * r') mod m ≠ 1" ((r * r') mod m) 1);
-            (negb ((m * m') mod r =? (-1) mod r)%Z, Pipeline.Values_not_provably_equalZ "(m * m') mod r ≠ (-1) mod r" ((m * m') mod r) ((-1) mod r));
-            (negb (s <=? r^n), Pipeline.Value_not_leZ "r^n ≤ s" s (r^n));
-            (negb (s <=? uweight machine_wordsize n), Pipeline.Value_not_leZ "weight n < s (needed for from_bytes)" s (uweight machine_wordsize n));
-            (negb (s <=? uweight 8 n_bytes), Pipeline.Value_not_leZ "bytes_weight n_bytes < s (needed for from_bytes)" s (uweight 8 n_bytes))].
+    := check_args_of_list
+         (List.map
+            (fun v => (true, v))
+            [((1 <? machine_wordsize)%Z, Pipeline.Value_not_ltZ "machine_wordsize <= 1" 1 machine_wordsize)
+             ; ((0 <? c)%Z, Pipeline.Value_not_ltZ "c ≤ 0" 0 c)
+             ; ((1 <? m)%Z, Pipeline.Value_not_ltZ "m ≤ 1" 1 m)
+             ; (negb (n =? 0)%nat, Pipeline.Values_not_provably_distinctZ "n = 0" n 0%nat)
+             ; (negb (r' =? 0)%Z, Pipeline.No_modular_inverse "r⁻¹ mod m" r m)
+             ; (((r * r') mod m =? 1)%Z, Pipeline.Values_not_provably_equalZ "(r * r') mod m ≠ 1" ((r * r') mod m) 1)
+             ; (((m * m') mod r =? (-1) mod r)%Z, Pipeline.Values_not_provably_equalZ "(m * m') mod r ≠ (-1) mod r" ((m * m') mod r) ((-1) mod r))
+             ; (s <=? r^n, Pipeline.Value_not_leZ "r^n ≤ s" s (r^n))
+             ; (s <=? uweight machine_wordsize n, Pipeline.Value_not_leZ "weight n < s (needed for from_bytes)" s (uweight machine_wordsize n))
+             ; (s <=? uweight 8 n_bytes, Pipeline.Value_not_leZ "bytes_weight n_bytes < s (needed for from_bytes)" s (uweight 8 n_bytes))
+         ])
+         res.
 
   Local Arguments Z.mul !_ !_.
-  Local Ltac prepare_use_curve_good _ :=
-    let curve_good := lazymatch goal with | curve_good : check_args _ = Success _ |- _ => curve_good end in
-    clear -curve_good;
-    cbv [check_args] in curve_good |- *;
-    cbn [fold_right] in curve_good |- *;
-    repeat first [ match goal with
-                   | [ H : context[match ?b with true => _ | false => _ end ] |- _ ] => destruct b eqn:?
-                   end
-                 | discriminate
-                 | progress Reflect.reflect_hyps
-                 | assumption
-                 | apply conj
-                 | progress destruct_head'_and ].
 
   Local Ltac use_curve_good_t :=
-    repeat first [ assumption
-                 | progress rewrite ?map_length, ?Z.mul_0_r, ?Pos.mul_1_r, ?Z.mul_1_r in *
-                 | reflexivity
+    repeat first [ use_requests_to_prove_curve_good_t_step
+                 | assumption
                  | lia
-                 | rewrite expr.interp_reify_list, ?map_map
-                 | rewrite map_ext with (g:=id), map_id
+                 | progress autorewrite with distr_length
                  | progress distr_length
-                 | progress cbv [Qceiling Qfloor Qopp Qdiv Qplus inject_Z Qmult Qinv] in *
-                 | progress cbv [Qle] in *
-                 | progress cbn -[reify_list] in *
-                 | progress intros
                  | solve [ auto with zarith ]
                  | rewrite Z.log2_pow2 by use_curve_good_t ].
 
-  Context (curve_good : check_args (Success tt) = Success tt).
+  Context (requests : list string)
+          (curve_good : check_args requests (Success tt) = Success tt).
 
   Lemma use_curve_good
     : Z.pos (Z.to_pos m) = m
@@ -288,7 +282,7 @@ Section __.
                     (CorrectnessStringification.dyn_context.cons
                        (@eval 8 n_bytes) "bytes_eval"
                             (CorrectnessStringification.dyn_context.cons
-                               (Z.log2 m) "(log2 m)"
+                               (Z.log2 m) "⌊log2 m⌋"
                                (CorrectnessStringification.dyn_context.cons
                                   (@eval_twos_complement machine_wordsize n) "twos_complement_eval"
                                   CorrectnessStringification.dyn_context.nil)))))))%string)
@@ -306,18 +300,18 @@ Section __.
          None (* fancy *)
          possible_values
          (reified_mul_gen
-            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
-         (Some bounds, (Some bounds, tt))
-         (Some bounds).
+            @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
+         (Some montgomery_domain_bounds, (Some montgomery_domain_bounds, tt))
+         (Some montgomery_domain_bounds).
 
   Definition smul (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "mul" mul
           (docstring_with_summary_from_lemma!
              prefix
-             (fun fname : string => ["The function " ++ fname ++ " multiplies two field elements in the Montgomery domain."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " multiplies two field elements in the Montgomery domain."]%string)
              (mul_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition square
@@ -326,18 +320,18 @@ Section __.
          None (* fancy *)
          possible_values
          (reified_square_gen
-            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
-         (Some bounds, tt)
-         (Some bounds).
+            @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
+         (Some montgomery_domain_bounds, tt)
+         (Some montgomery_domain_bounds).
 
   Definition ssquare (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "square" square
           (docstring_with_summary_from_lemma!
              prefix
-             (fun fname : string => ["The function " ++ fname ++ " squares a field element in the Montgomery domain."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " squares a field element in the Montgomery domain."]%string)
              (square_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition add
@@ -346,18 +340,18 @@ Section __.
          None (* fancy *)
          possible_values
          (reified_add_gen
-            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m)
-         (Some bounds, (Some bounds, tt))
-         (Some bounds).
+            @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m)
+         (Some montgomery_domain_bounds, (Some montgomery_domain_bounds, tt))
+         (Some montgomery_domain_bounds).
 
   Definition sadd (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "add" add
           (docstring_with_summary_from_lemma!
              prefix
-             (fun fname : string => ["The function " ++ fname ++ " adds two field elements in the Montgomery domain."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " adds two field elements in the Montgomery domain."]%string)
              (add_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition sub
@@ -366,18 +360,18 @@ Section __.
          None (* fancy *)
          possible_values
          (reified_sub_gen
-            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m)
-         (Some bounds, (Some bounds, tt))
-         (Some bounds).
+            @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m)
+         (Some montgomery_domain_bounds, (Some montgomery_domain_bounds, tt))
+         (Some montgomery_domain_bounds).
 
   Definition ssub (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "sub" sub
           (docstring_with_summary_from_lemma!
              prefix
-             (fun fname : string => ["The function " ++ fname ++ " subtracts two field elements in the Montgomery domain."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " subtracts two field elements in the Montgomery domain."]%string)
              (sub_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition opp
@@ -386,18 +380,18 @@ Section __.
          None (* fancy *)
          possible_values
          (reified_opp_gen
-            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m)
-         (Some bounds, tt)
-         (Some bounds).
+            @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m)
+         (Some montgomery_domain_bounds, tt)
+         (Some montgomery_domain_bounds).
 
   Definition sopp (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "opp" opp
           (docstring_with_summary_from_lemma!
              prefix
-             (fun fname : string => ["The function " ++ fname ++ " negates a field element in the Montgomery domain."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " negates a field element in the Montgomery domain."]%string)
              (opp_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition from_montgomery
@@ -406,18 +400,18 @@ Section __.
          None (* fancy *)
          possible_values
          (reified_from_montgomery_gen
-            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
-         (Some bounds, tt)
-         (Some bounds).
+            @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
+         (Some montgomery_domain_bounds, tt)
+         (Some non_montgomery_domain_bounds).
 
   Definition sfrom_montgomery (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "from_montgomery" from_montgomery
           (docstring_with_summary_from_lemma!
              prefix
-             (fun fname : string => ["The function " ++ fname ++ " translates a field element out of the Montgomery domain."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " translates a field element out of the Montgomery domain."]%string)
              (from_montgomery_correct machine_wordsize n m r' valid)).
 
   Definition to_montgomery
@@ -426,18 +420,18 @@ Section __.
          None (* fancy *)
          possible_values
          (reified_to_montgomery_gen
-            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
-         (Some bounds, tt)
-         (Some bounds).
+            @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
+         (Some non_montgomery_domain_bounds, tt)
+         (Some montgomery_domain_bounds).
 
   Definition sto_montgomery (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "to_montgomery" to_montgomery
           (docstring_with_summary_from_lemma!
              prefix
-             (fun fname : string => ["The function " ++ fname ++ " translates a field element into the Montgomery domain."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " translates a field element into the Montgomery domain."]%string)
              (to_montgomery_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition nonzero
@@ -450,13 +444,13 @@ Section __.
          (Some r[0~>r-1]%zrange).
 
   Definition snonzero (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "nonzero" nonzero
           (docstring_with_summary_from_lemma!
              prefix
-             (fun fname : string => ["The function " ++ fname ++ " outputs a single non-zero word if the input is non-zero and zero otherwise."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " outputs a single non-zero word if the input is non-zero and zero otherwise."]%string)
              (nonzero_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition to_bytes
@@ -465,18 +459,18 @@ Section __.
          None (* fancy *)
          possible_values_with_bytes
          (reified_to_bytes_gen
-            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m)
-         (prime_bounds, tt)
-         prime_bytes_bounds.
+            @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m)
+         (Some prime_bounds, tt)
+         (Some prime_bytes_bounds).
 
   Definition sto_bytes (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "to_bytes" to_bytes
           (docstring_with_summary_from_lemma!
              prefix
-             (fun fname : string => ["The function " ++ fname ++ " serializes a field element NOT in the Montgomery domain to bytes in little-endian order."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " serializes a field element NOT in the Montgomery domain to bytes in little-endian order."]%string)
              (to_bytes_correct machine_wordsize n n_bytes m valid)).
 
   Definition from_bytes
@@ -485,18 +479,18 @@ Section __.
          None (* fancy *)
          possible_values_with_bytes
          (reified_from_bytes_gen
-            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify 1 @ GallinaReify.Reify s @ GallinaReify.Reify n)
-         (prime_bytes_bounds, tt)
-         prime_bounds.
+            @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify 1 @ GallinaReify.Reify s @ GallinaReify.Reify n)
+         (Some prime_bytes_bounds, tt)
+         (Some prime_bounds).
 
   Definition sfrom_bytes (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "from_bytes" from_bytes
           (docstring_with_summary_from_lemma!
              prefix
-             (fun fname : string => ["The function " ++ fname ++ " deserializes a field element NOT in the Montgomery domain from bytes in little-endian order."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " deserializes a field element NOT in the Montgomery domain from bytes in little-endian order."]%string)
              (from_bytes_correct machine_wordsize n n_bytes m valid bytes_valid)).
 
   Definition encode
@@ -505,18 +499,18 @@ Section __.
          None (* fancy *)
          possible_values
          (reified_encode_gen
-            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
-         (prime_bound, tt)
-         (Some bounds).
+            @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
+         (Some prime_bound, tt)
+         (Some montgomery_domain_bounds).
 
   Definition sencode (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "encode" encode
           (docstring_with_summary_from_lemma!
              prefix
-             (fun fname : string => ["The function " ++ fname ++ " encodes an integer as a field element in the Montgomery domain."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " encodes an integer as a field element in the Montgomery domain."]%string)
              (encode_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition zero
@@ -525,18 +519,18 @@ Section __.
          None (* fancy *)
          possible_values
          (reified_zero_gen
-            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
+            @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
          tt
-         (Some bounds).
+         (Some montgomery_domain_bounds).
 
   Definition szero (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "zero" zero
           (docstring_with_summary_from_lemma!
              prefix
-             (fun fname => ["The function " ++ fname ++ " returns the field element zero in the Montgomery domain."]%string)
+             (fun fname => [text_before_function_name ++ fname ++ " returns the field element zero in the Montgomery domain."]%string)
              (zero_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition one
@@ -545,36 +539,36 @@ Section __.
          None (* fancy *)
          possible_values
          (reified_one_gen
-            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
+            @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m')
          tt
-         (Some bounds).
+         (Some montgomery_domain_bounds).
 
   Definition sone (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "set_one" one (* to avoid conflict with boringSSL *)
           (docstring_with_summary_from_lemma!
              prefix
-             (fun fname => ["The function " ++ fname ++ " returns the field element one in the Montgomery domain."]%string)
+             (fun fname => [text_before_function_name ++ fname ++ " returns the field element one in the Montgomery domain."]%string)
              (one_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition reval (* r for reified *)
-    := Pipeline.RepeatRewriteAddAssocLeft
+    := Pipeline.RepeatRewriteAddAssocLeftAndFlattenThunkedRects
          n
          (Pipeline.PreBoundsPipeline
             true (* subst01 *)
             false (* let_bind_return *)
             None (* fancy *)
             (reified_eval_gen
-               @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n)
-            (Some bounds, tt)).
+               @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n)
+            (Some montgomery_domain_bounds, tt)).
 
-  Definition seval (arg_name : string) (with_parens : bool) (* s for string *)
-    := Show.show with_parens (invert_expr.smart_App_curried (reval _) (arg_name, tt)).
+  Definition seval (arg_name : string) (* s for string *)
+    := Show.show (invert_expr.smart_App_curried (reval _) (arg_name, tt)).
 
   Definition rbytes_eval (* r for reified *)
-    := Pipeline.RepeatRewriteAddAssocLeft
+    := Pipeline.RepeatRewriteAddAssocLeftAndFlattenThunkedRects
          n_bytes
          (Pipeline.PreBoundsPipeline
             true (* subst01 *)
@@ -582,14 +576,29 @@ Section __.
             None (* fancy *)
             (reified_bytes_eval_gen
                @ GallinaReify.Reify s)
-            (prime_bytes_bounds, tt)).
+            (Some prime_bytes_bounds, tt)).
 
-  Definition sbytes_eval (arg_name : string) (with_parens : bool) (* s for string *)
-    := Show.show with_parens (invert_expr.smart_App_curried (rbytes_eval _) (arg_name, tt)).
+  Definition sbytes_eval (arg_name : string) (* s for string *)
+    := Show.show (invert_expr.smart_App_curried (rbytes_eval _) (arg_name, tt)).
+
+  Definition reval_twos_complement (* r for reified *)
+    := Pipeline.RepeatRewriteAddAssocLeftAndFlattenThunkedRects
+         n
+         (Pipeline.PreBoundsPipeline
+            true (* subst01 *)
+            false (* let_bind_return *)
+            None (* fancy *)
+            (reified_eval_twos_complement_gen
+               @ GallinaReify.Reify (machine_wordsize:Z)
+               @ GallinaReify.Reify n)
+            (Some bounds, tt)).
+
+  Definition seval_twos_complement (arg_name : string) (* s for string *)
+    := Show.show (invert_expr.smart_App_curried (reval_twos_complement _) (arg_name, tt)).
 
   Definition selectznz : Pipeline.ErrorT _ := Primitives.selectznz n machine_wordsize.
   Definition sselectznz (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Primitives.sselectznz n machine_wordsize prefix.
 
   Definition msat
@@ -598,18 +607,18 @@ Section __.
          None (* fancy *)
          possible_values
          (reified_msat_gen
-            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify sat_limbs @ GallinaReify.Reify m)
+            @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify sat_limbs @ GallinaReify.Reify m)
          tt
          (Some larger_bounds).
 
  Definition smsat (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "msat" msat
           (docstring_with_summary_from_lemma!
              prefix
-             (fun fname => ["The function " ++ fname ++ " returns the saturated represtation of the prime modulus."]%string)
+             (fun fname => [text_before_function_name ++ fname ++ " returns the saturated representation of the prime modulus."]%string)
              (msat_correct machine_wordsize n m valid)).
 
   Definition divstep_precomp
@@ -618,18 +627,18 @@ Section __.
          None (* fancy *)
          possible_values
          (reified_encode_gen
-            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m' @ GallinaReify.Reify divstep_precompmod)
+            @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify n @ GallinaReify.Reify m @ GallinaReify.Reify m' @ GallinaReify.Reify divstep_precompmod)
          tt
          (Some bounds).
 
   Definition sdivstep_precomp (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "divstep_precomp" divstep_precomp
           (docstring_with_summary_from_lemma!
              prefix
-             (fun fname => ["The function " ++ fname ++ " returns the precomputed value for Bernstein-Yang-inversion (in montgomery form)."]%string)
+             (fun fname => [text_before_function_name ++ fname ++ " returns the precomputed value for Bernstein-Yang-inversion (in montgomery form)."]%string)
              (divstep_precomp_correct machine_wordsize n m valid from_montgomery_res)).
 
   Definition divstep
@@ -638,18 +647,18 @@ Section __.
          None (* fancy *)
          possible_values
          (reified_divstep_gen
-            @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify sat_limbs @ GallinaReify.Reify n @ GallinaReify.Reify m)
+            @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify sat_limbs @ GallinaReify.Reify n @ GallinaReify.Reify m)
          (divstep_input)
          (divstep_output).
 
   Definition sdivstep (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "divstep" divstep
           (docstring_with_summary_from_lemma!
              prefix
-             (fun fname : string => ["The function " ++ fname ++ " computes a divstep."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " computes a divstep."]%string)
              (divstep_correct machine_wordsize n m valid from_montgomery_res)).
 
   Lemma bounded_by_of_valid x
@@ -660,7 +669,7 @@ Section __.
     clear -H use_curve_good curve_good.
     destruct H as [H _]; destruct_head'_and.
     cbv [small] in H.
-    cbv [ZRange.type.base.option.is_bounded_by bounds saturated_bounds saturated_bounds_list Option.invert_Some].
+    cbv [ZRange.type.base.option.is_bounded_by bounds saturated_bounds].
     replace n with (List.length x) by now rewrite H, Partition.length_partition.
     rewrite <- map_const, fold_andb_map_map1, fold_andb_map_iff.
     cbv [ZRange.type.base.is_bounded_by is_bounded_by_bool lower upper type_base].
@@ -768,7 +777,7 @@ Section __.
 
   Lemma bounded_by_prime_bounds_of_valid x
         (H : valid x)
-    : ZRange.type.base.option.is_bounded_by (t:=base.type.list base.type.Z) prime_bounds x = true.
+    : ZRange.type.base.option.is_bounded_by (t:=base.type.list base.type.Z) (Some prime_bounds) x = true.
   Proof using curve_good.
     pose proof use_curve_good as use_curve_good.
     destruct_head'_and.
@@ -777,7 +786,7 @@ Section __.
 
   Lemma bounded_by_prime_bytes_bounds_of_bytes_valid x
         (H : bytes_valid x)
-    : ZRange.type.base.option.is_bounded_by (t:=base.type.list base.type.Z) prime_bytes_bounds x = true.
+    : ZRange.type.base.option.is_bounded_by (t:=base.type.list base.type.Z) (Some prime_bytes_bounds) x = true.
   Proof using curve_good.
     pose proof use_curve_good as use_curve_good.
     destruct_head'_and.
@@ -880,50 +889,80 @@ Section __.
     : mul_correct machine_wordsize n m valid from_montgomery_res (Interp res).
   Proof using curve_good. prove_correctness mulmod_correct. Qed.
 
+  Lemma Wf_mul res (Hres : mul = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Lemma square_correct res
         (Hres : square = Success res)
     : square_correct machine_wordsize n m valid from_montgomery_res (Interp res).
   Proof using curve_good. prove_correctness squaremod_correct. Qed.
+
+  Lemma Wf_square res (Hres : square = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
 
   Lemma add_correct res
         (Hres : add = Success res)
     : add_correct machine_wordsize n m valid from_montgomery_res (Interp res).
   Proof using curve_good. prove_correctness addmod_correct. Qed.
 
+  Lemma Wf_add res (Hres : add = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Lemma sub_correct res
         (Hres : sub = Success res)
     : sub_correct machine_wordsize n m valid from_montgomery_res (Interp res).
   Proof using curve_good. prove_correctness submod_correct. Qed.
+
+  Lemma Wf_sub res (Hres : sub = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
 
   Lemma opp_correct res
         (Hres : opp = Success res)
     : opp_correct machine_wordsize n m valid from_montgomery_res (Interp res).
   Proof using curve_good. prove_correctness oppmod_correct. Qed.
 
+  Lemma Wf_opp res (Hres : opp = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Lemma from_montgomery_correct res
         (Hres : from_montgomery = Success res)
     : from_montgomery_correct machine_wordsize n m r' valid (Interp res).
   Proof using curve_good. prove_correctness from_montgomerymod_correct. Qed.
+
+  Lemma Wf_from_montgomery res (Hres : from_montgomery = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
 
   Lemma to_montgomery_correct res
         (Hres : to_montgomery = Success res)
     : to_montgomery_correct machine_wordsize n m valid from_montgomery_res (Interp res).
   Proof using curve_good. prove_correctness to_montgomerymod_correct. Qed.
 
+  Lemma Wf_to_montgomery res (Hres : to_montgomery = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Lemma nonzero_correct res
         (Hres : nonzero = Success res)
     : nonzero_correct machine_wordsize n m valid from_montgomery_res (Interp res).
   Proof using curve_good. prove_correctness nonzeromod_correct. Qed.
+
+  Lemma Wf_nonzero res (Hres : nonzero = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
 
   Lemma to_bytes_correct res
         (Hres : to_bytes = Success res)
     : to_bytes_correct machine_wordsize n n_bytes m valid (Interp res).
   Proof using curve_good. prove_correctness to_bytesmod_correct. Qed.
 
+  Lemma Wf_to_bytes res (Hres : to_bytes = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Lemma from_bytes_correct res
         (Hres : from_bytes = Success res)
     : from_bytes_correct machine_wordsize n n_bytes m valid bytes_valid (Interp res).
   Proof using curve_good. prove_correctness eval_from_bytesmod_and_partitions. Qed.
+
+  Lemma Wf_from_bytes res (Hres : from_bytes = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
 
   Strategy -1000 [encode]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
   Lemma encode_correct res
@@ -931,11 +970,17 @@ Section __.
     : encode_correct machine_wordsize n m valid from_montgomery_res (Interp res).
   Proof using curve_good. prove_correctness encodemod_correct. Qed.
 
+  Lemma Wf_encode res (Hres : encode = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Strategy -1000 [zero]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
   Lemma zero_correct res
         (Hres : zero = Success res)
     : zero_correct machine_wordsize n m valid from_montgomery_res (Interp res).
   Proof using curve_good. prove_correctness encodemod_correct. Qed.
+
+  Lemma Wf_zero res (Hres : zero = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
 
   Strategy -1000 [one]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
   Lemma one_correct res
@@ -943,11 +988,17 @@ Section __.
     : one_correct machine_wordsize n m valid from_montgomery_res (Interp res).
   Proof using curve_good. prove_correctness encodemod_correct. Qed.
 
+  Lemma Wf_one res (Hres : one = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Local Opaque Pipeline.BoundsPipeline. (* need this or else [eapply Pipeline.BoundsPipeline_correct in Hres] takes forever *)
   Lemma selectznz_correct res
         (Hres : selectznz = Success res)
-    : selectznz_correct machine_wordsize n saturated_bounds_list (Interp res).
+    : selectznz_correct machine_wordsize n saturated_bounds (Interp res).
   Proof using curve_good. Primitives.prove_correctness use_curve_good. Qed.
+
+  Lemma Wf_selectznz res (Hres : selectznz = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
 
   Section ring.
     Context from_montgomery_res (Hfrom_montgomery : from_montgomery = Success from_montgomery_res)
@@ -998,21 +1049,21 @@ Section __.
     Local Open Scope list_scope.
 
     Definition known_functions
-      := [("mul", smul);
-            ("square", ssquare);
-            ("add", sadd);
-            ("sub", ssub);
-            ("opp", sopp);
-            ("from_montgomery", sfrom_montgomery);
-            ("to_montgomery", sto_montgomery);
-            ("nonzero", snonzero);
-            ("selectznz", sselectznz);
-            ("to_bytes", sto_bytes);
-            ("from_bytes", sfrom_bytes);
-            ("one", sone);
-            ("msat", smsat);
-            ("divstep_precomp", sdivstep_precomp);
-            ("divstep", sdivstep)].
+      := [("mul", wrap_s smul);
+            ("square", wrap_s ssquare);
+            ("add", wrap_s sadd);
+            ("sub", wrap_s ssub);
+            ("opp", wrap_s sopp);
+            ("from_montgomery", wrap_s sfrom_montgomery);
+            ("to_montgomery", wrap_s sto_montgomery);
+            ("nonzero", wrap_s snonzero);
+            ("selectznz", wrap_s sselectznz);
+            ("to_bytes", wrap_s sto_bytes);
+            ("from_bytes", wrap_s sfrom_bytes);
+            ("one", wrap_s sone);
+            ("msat", wrap_s smsat);
+            ("divstep_precomp", wrap_s sdivstep_precomp);
+            ("divstep", wrap_s sdivstep)].
 
     Definition valid_names : string := Eval compute in String.concat ", " (List.map (@fst _ _) known_functions).
 
@@ -1021,15 +1072,52 @@ Section __.
     Definition Synthesize (comment_header : list string) (function_name_prefix : string) (requests : list string)
       : list (synthesis_output_kind * string * Pipeline.ErrorT (list string))
       := Primitives.Synthesize
-           machine_wordsize valid_names known_functions (fun _ => nil)
+           machine_wordsize valid_names known_functions (fun _ => nil) all_typedefs!
            check_args
            (ToString.comment_file_header_block
               (comment_header
-                  ++ [""
-                      ; "Computed values:"
-                      ; "eval z = " ++ seval "z" false
-                      ; "bytes_eval z = " ++ sbytes_eval "z" false
-                     ]%string))
+                 ++ [""
+                     ; "Computed values:"]
+                 ++ (List.map
+                       (fun s => "  " ++ s)%string
+                       ((ToString.prefix_and_indent "eval z = " [seval "z"])
+                          ++ (ToString.prefix_and_indent "bytes_eval z = " [sbytes_eval "z"])
+                          ++ (ToString.prefix_and_indent "twos_complement_eval z = " [seval_twos_complement "z"])))))
            function_name_prefix requests.
   End for_stringification.
 End __.
+
+Module Export Hints.
+  Hint Opaque
+       mul
+       square
+       add
+       sub
+       opp
+       from_montgomery
+       to_montgomery
+       nonzero
+       to_bytes
+       from_bytes
+       encode
+       zero
+       one
+       selectznz
+  : wf_op_cache.
+  Hint Immediate
+       Wf_mul
+       Wf_square
+       Wf_add
+       Wf_sub
+       Wf_opp
+       Wf_from_montgomery
+       Wf_to_montgomery
+       Wf_nonzero
+       Wf_to_bytes
+       Wf_from_bytes
+       Wf_encode
+       Wf_zero
+       Wf_one
+       Wf_selectznz
+  : wf_op_cache.
+End Hints.

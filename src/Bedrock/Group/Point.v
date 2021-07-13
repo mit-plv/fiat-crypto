@@ -19,7 +19,7 @@ Section Compile.
       tr retvars R functions T (pred: T -> _ -> _ -> Prop)
       (x y : F M_pos) k k_impl,
       let v := (x, y) in
-      (let __ := 0 in (* placeholder *)
+      (let _ := 0 in (* placeholder *)
        find k_impl
        implementing (pred (dlet x
                                 (fun x => dlet y

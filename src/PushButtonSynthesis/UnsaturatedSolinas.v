@@ -36,9 +36,10 @@ Require Import Crypto.UnsaturatedSolinasHeuristics.
 Require Import Crypto.PushButtonSynthesis.ReificationCache.
 Require Import Crypto.PushButtonSynthesis.Primitives.
 Require Import Crypto.PushButtonSynthesis.UnsaturatedSolinasReificationCache.
+Require Import Crypto.Assembly.Equivalence.
 Import Option.Notations.
 Import ListNotations.
-Local Open Scope Z_scope. Local Open Scope list_scope. Local Open Scope bool_scope.
+Local Open Scope string_scope. Local Open Scope bool_scope. Local Open Scope Z_scope. Local Open Scope list_scope.
 
 Import
   Language.Wf.Compilers
@@ -68,6 +69,7 @@ Local Opaque
       reified_add_gen
       reified_sub_gen
       reified_opp_gen
+      reified_id_gen
       reified_zero_gen
       reified_one_gen
       reified_prime_gen
@@ -80,6 +82,8 @@ Local Opaque
 Section __.
   Context {output_language_api : ToString.OutputLanguageAPI}
           {language_naming_conventions : language_naming_conventions_opt}
+          {documentation_options : documentation_options_opt}
+          {skip_typedefs : skip_typedefs_opt}
           {package_namev : package_name_opt}
           {class_namev : class_name_opt}
           {static : static_opt}
@@ -96,10 +100,15 @@ Section __.
           {widen_carry : widen_carry_opt}
           {widen_bytes : widen_bytes_opt}
           {tight_upperbound_fraction : tight_upperbound_fraction_opt}
+          {assembly_calling_registers : assembly_calling_registers_opt}
+          {assembly_stack_size : assembly_stack_size_opt}
+          {error_on_unused_assembly_functions : error_on_unused_assembly_functions_opt}
+          {assembly_output_first : assembly_output_first_opt}
+          {assembly_argument_registers_left_to_right : assembly_argument_registers_left_to_right_opt}
           (n : nat)
           (s : Z)
           (c : list (Z * Z))
-          (machine_wordsize : Z).
+          (machine_wordsize : machine_wordsize_opt).
 
   Local Notation limbwidth := (limbwidth n s c).
   Definition idxs : list nat := carry_chains n s c.
@@ -111,13 +120,18 @@ Section __.
   Local Notation loose_upperbounds := (loose_upperbounds n s c) (only parsing).
   Local Notation tight_bounds := (tight_bounds n s c) (only parsing).
   Local Notation loose_bounds := (loose_bounds n s c) (only parsing).
-  Definition prime_bound : ZRange.type.option.interp (base.type.Z)
-    := Some r[0~>(s - Associational.eval c - 1)]%zrange.
-  Definition prime_bounds : ZRange.type.option.interp (base.type.list (base.type.Z))
-    := Some (List.map (fun v => Some r[0 ~> v]%zrange) prime_upperbound_list).
-  Definition prime_bytes_bounds : ZRange.type.option.interp (base.type.list (base.type.Z))
-    := Some (List.map (fun v => Some r[0 ~> v]%zrange) prime_bytes_upperbound_list).
-  Local Notation saturated_bounds_list := (saturated_bounds_list n machine_wordsize).
+  Global Instance tight_bounds_typedef : typedef (t:=base.type.list base.type.Z) (Some tight_bounds)
+    := { name := "tight_field_element"
+         ; description name := (text_before_type_name ++ name ++ " is a field element with tight bounds.")%string }.
+  Global Instance loose_bounds_typedef : typedef (t:=base.type.list base.type.Z) (Some loose_bounds)
+    := { name := "loose_field_element"
+         ; description name := (text_before_type_name ++ name ++ " is a field element with loose bounds.")%string }.
+  Definition prime_bound : ZRange.type.interp base.type.Z
+    := r[0~>(s - Associational.eval c - 1)]%zrange.
+  Definition prime_bounds : list (ZRange.type.option.interp (base.type.Z))
+    := List.map (fun v => Some r[0 ~> v]%zrange) prime_upperbound_list.
+  Definition prime_bytes_bounds : list (ZRange.type.option.interp base.type.Z)
+    := List.map (fun v => Some r[0 ~> v]%zrange) prime_bytes_upperbound_list.
   Local Notation saturated_bounds := (saturated_bounds n machine_wordsize).
   Local Notation balance := (balance n s c).
 
@@ -165,106 +179,111 @@ Section __.
   Lemma length_prime_bytes_upperbound_list : List.length prime_bytes_upperbound_list = n_bytes.
   Proof using Type. cbv [prime_bytes_upperbound_list]; now autorewrite with distr_length. Qed.
   Hint Rewrite length_prime_bytes_upperbound_list : distr_length.
-  Lemma length_saturated_bounds_list : List.length saturated_bounds_list = n.
-  Proof using Type. cbv [saturated_bounds_list]; now autorewrite with distr_length. Qed.
-  Hint Rewrite length_saturated_bounds_list : distr_length.
+  Lemma length_saturated_bounds : List.length saturated_bounds = n.
+  Proof using Type. cbv [saturated_bounds]; now autorewrite with distr_length. Qed.
+  Hint Rewrite length_saturated_bounds : distr_length.
   Lemma length_m_enc : List.length m_enc = n.
   Proof using Type. cbv [m_enc]; repeat distr_length. Qed.
   Hint Rewrite length_m_enc : distr_length.
 
   (** Note: If you change the name or type signature of this
         function, you will need to update the code in CLI.v *)
-  Definition check_args {T} (res : Pipeline.ErrorT T)
+  Definition check_args {T} (requests : list string) (res : Pipeline.ErrorT T)
     : Pipeline.ErrorT T
-    := fold_right
-         (fun '(b, e) k => if b:bool then Error e else k)
-         res
-         [(negb (Qle_bool 1 limbwidth)%Q, Pipeline.Value_not_leQ "limbwidth < 1" 1%Q limbwidth);
-            (negb (n <=? (Z.log2_up (s - Associational.eval c)))%Z, Pipeline.Value_not_leZ "Z.log2_up (s - Associational.eval c) < n" n (Z.log2_up (s - Associational.eval c)));
-            ((negb (0 <? Associational.eval c))%Z, Pipeline.Value_not_ltZ "Associational.eval c ≤ 0" 0 (Associational.eval c));
-            ((negb (Associational.eval c <? s))%Z, Pipeline.Value_not_ltZ "s ≤ Associational.eval c" (Associational.eval c) s);
-            ((s =? 0)%Z, Pipeline.Values_not_provably_distinctZ "s = 0" s 0);
-            ((n =? 0)%nat, Pipeline.Values_not_provably_distinctZ "n = 0" n 0%nat);
-            ((negb (0 <? machine_wordsize)), Pipeline.Value_not_ltZ "machine_wordsize ≤ 0" 0 machine_wordsize);
-            (let v1 := s in
-             let v2 := weight (Qnum limbwidth) (QDen limbwidth) n in
-             (negb (v1 =? v2), Pipeline.Values_not_provably_equalZ "s ≠ weight n (needed for to_bytes)" v1 v2));
-            (let v1 := (map (Z.land (Z.ones machine_wordsize)) m_enc) in
-             let v2 := m_enc in
-             (negb (list_beq _ Z.eqb v1 v2), Pipeline.Values_not_provably_equal_listZ "map mask m_enc ≠ m_enc (needed for to_bytes)" v1 v2));
-            (let v1 := eval (weight (Qnum limbwidth) (QDen limbwidth)) n m_enc in
-             let v2 := s - Associational.eval c in
-             (negb (v1 =? v2)%Z, Pipeline.Values_not_provably_equalZ "eval m_enc ≠ s - Associational.eval c (needed for to_bytes)" v1 v2));
-            (let v1 := eval (weight (Qnum limbwidth) (QDen limbwidth)) n tight_upperbounds in
-             let v2 := 2 * eval (weight (Qnum limbwidth) (QDen limbwidth)) n m_enc in
-             (negb (v1 <? v2)%Z, Pipeline.Value_not_ltZ "2 * eval m_enc ≤ eval tight_upperbounds (needed for to_bytes)" v1 v2));
-            (let v1 := List.fold_right Z.max 0 prime_bytes_upperbound_list in
-             let v2 := 2^machine_wordsize-1 in
-             (negb (v1 <=? v2)%Z,
-              Pipeline.Value_not_leZ "max(prime_bytes_upperbounds) > 2^machine_wordsize-1" v1 v2));
-            (let v1 := List.fold_right Z.max 0 tight_upperbounds in
-             let v2 := 2^machine_wordsize-1 in
-             (negb (v1 <=? v2)%Z,
-              Pipeline.Value_not_leZ "max(tight_upperbounds) > 2^machine_wordsize-1" v1 v2));
-            (let v1 := List.fold_right Z.max 0 loose_upperbounds in
-             let v2 := 2^machine_wordsize-1 in
-             (negb (v1 <=? v2)%Z,
-              Pipeline.Value_not_leZ "max(loose_upperbounds) > 2^machine_wordsize-1" v1 v2))].
+    := check_args_of_list
+         ((List.map
+             (fun v => (true, v))
+             (* first, all the ones that should always hold *)
+             [((Qle_bool 1 limbwidth)%Q, Pipeline.Value_not_leQ "limbwidth < 1" 1%Q limbwidth)
+              ; (n <=? Z.log2_up (s - Associational.eval c), Pipeline.Value_not_leZ "Z.log2_up (s - Associational.eval c) < n" n (Z.log2_up (s - Associational.eval c)))
+              ; (Associational.eval c <? s, Pipeline.Value_not_ltZ "s ≤ Associational.eval c" (Associational.eval c) s)
+              ; (0 <? s, Pipeline.Value_not_ltZ "s ≤ 0" 0 s)
+              ; (negb (n =? 0)%nat, Pipeline.Values_not_provably_distinctZ "n = 0" n 0%nat)
+              ; (0 <? machine_wordsize, Pipeline.Value_not_ltZ "machine_wordsize ≤ 0" 0 machine_wordsize)
+              ; (let v1 := s - Associational.eval c in
+                 let v2 := weight (Qnum limbwidth) (QDen limbwidth) n in
+                 (v1 <=? v2, Pipeline.Value_not_leZ "weight n < s - Associational.eval c" v1 v2))
 
-  Local Ltac prepare_use_curve_good _ :=
-    let curve_good := lazymatch goal with | curve_good : check_args _ = Success _ |- _ => curve_good end in
-    clear -curve_good;
-    cbv [check_args] in curve_good |- *;
-    cbn [fold_right] in curve_good |- *;
-    repeat first [ match goal with
-                   | [ H : context[match ?b with true => _ | false => _ end ] |- _ ] => destruct b eqn:?
-                   end
-                 | discriminate
-                 | progress Reflect.reflect_hyps
-                 | assumption
-                 | apply conj
-                 | progress destruct_head'_and ].
+                  (** For bedrock2 *)
+              ; (let v1 := List.fold_right Z.max 0 prime_bytes_upperbound_list in
+                 let v2 := 2^machine_wordsize-1 in
+                 (v1 <=? v2,
+                  Pipeline.Value_not_leZ "max(prime_bytes_upperbounds) > 2^machine_wordsize-1" v1 v2))
+              ; (let v1 := List.fold_right Z.max 0 tight_upperbounds in
+                 let v2 := 2^machine_wordsize-1 in
+                 (v1 <=? v2,
+                  Pipeline.Value_not_leZ "max(tight_upperbounds) > 2^machine_wordsize-1" v1 v2))
+              ; (let v1 := List.fold_right Z.max 0 loose_upperbounds in
+                 let v2 := 2^machine_wordsize-1 in
+                 (v1 <=? v2,
+                  Pipeline.Value_not_leZ "max(loose_upperbounds) > 2^machine_wordsize-1" v1 v2))
+          ])
+            (* the littany of to_bytes ones *)
+            ++ (List.map
+                  (fun v => (request_present requests "to_bytes", v))
+                  [(0 <? Associational.eval c, Pipeline.Value_not_ltZ "Associational.eval c ≤ 0 (needed for to_bytes)" 0 (Associational.eval c))
+                   ; (let v1 := s in
+                      let v2 := weight (Qnum limbwidth) (QDen limbwidth) n in
+                      (v1 =? v2, Pipeline.Values_not_provably_equalZ "s ≠ weight n (needed for to_bytes)" v1 v2))
+                   ; (let v1 := (map (Z.land (Z.ones machine_wordsize)) m_enc) in
+                      let v2 := m_enc in
+                      (list_beq _ Z.eqb v1 v2, Pipeline.Values_not_provably_equal_listZ "map mask m_enc ≠ m_enc (needed for to_bytes)" v1 v2))
+                   ; (let v1 := eval (weight (Qnum limbwidth) (QDen limbwidth)) n m_enc in
+                      let v2 := s - Associational.eval c in
+                      (v1 =? v2, Pipeline.Values_not_provably_equalZ "eval m_enc ≠ s - Associational.eval c (needed for to_bytes)" v1 v2))
+                   ; (let v1 := eval (weight (Qnum limbwidth) (QDen limbwidth)) n tight_upperbounds in
+                      let v2 := 2 * eval (weight (Qnum limbwidth) (QDen limbwidth)) n m_enc in
+                      (v1 <? v2, Pipeline.Value_not_ltZ "2 * eval m_enc ≤ eval tight_upperbounds (needed for to_bytes)" v1 v2))
+               ])
+            ++ [(request_present requests "from_bytes",
+                 (1 <? s, Pipeline.Value_not_ltZ "s ≤ 1 (need for from_bytes)" 1 s))
+         ])
+         res.
 
   Local Ltac use_curve_good_t :=
-    repeat first [ assumption
-                 | progress rewrite ?map_length, ?Z.mul_0_r, ?Pos.mul_1_r, ?Z.mul_1_r in *
-                 | reflexivity
+    repeat first [ use_requests_to_prove_curve_good_t_step
+                 | assumption
                  | lia
-                 | rewrite expr.interp_reify_list, ?map_map
-                 | rewrite map_ext with (g:=id), map_id
                  | progress autorewrite with distr_length
                  | progress distr_length
-                 | progress cbv [Qceiling Qfloor Qopp Qdiv Qplus inject_Z Qmult Qinv] in *
-                 | progress cbv [Qle] in *
-                 | progress cbn -[reify_list] in *
-                 | progress intros
-                 | solve [ auto ] ].
+                 | progress autorewrite with zsimplify_fast in * ].
 
-  Context (curve_good : check_args (Success tt) = Success tt).
+  Context (requests : list string)
+          (curve_good : check_args requests (Success tt) = Success tt).
 
   Lemma use_curve_good
     : let eval := eval (weight (Qnum limbwidth) (QDen limbwidth)) n in
-      s - Associational.eval c <> 0
+      0 < Qden limbwidth <= Qnum limbwidth
+      /\ n <= Z.log2_up (s - Associational.eval c)
+      /\ 0 < s - Associational.eval c
+      /\ 0 < s - Associational.eval c <= weight (Qnum limbwidth) (QDen limbwidth) n
+      /\ s - Associational.eval c <> 0
       /\ s <> 0
-      /\ 1 < s
       /\ 0 < machine_wordsize
       /\ n <> 0%nat
+      /\ List.fold_right Z.max 0 prime_bytes_upperbound_list <= 2^machine_wordsize-1
+      /\ List.fold_right Z.max 0 tight_upperbounds <= 2^machine_wordsize-1
+      /\ List.fold_right Z.max 0 loose_upperbounds <= 2^machine_wordsize-1
+      /\ (request_present requests "from_bytes" = true -> 1 < s)
+      /\ (request_present requests "to_bytes" = true -> 1 < s)
+      /\ (request_present requests "to_bytes" = true -> 0 < Associational.eval c < s)
+      /\ (request_present requests "to_bytes" = true -> s = weight (Qnum limbwidth) (QDen limbwidth) n)
+      /\ (request_present requests "to_bytes" = true -> map (Z.land (Z.ones machine_wordsize)) m_enc = m_enc)
+      /\ (request_present requests "to_bytes" = true -> eval m_enc = s - Associational.eval c)
+      /\ (request_present requests "to_bytes" = true -> eval tight_upperbounds < 2 * eval m_enc)
       /\ List.length tight_bounds = n
       /\ List.length loose_bounds = n
       /\ List.length prime_bytes_upperbound_list = n_bytes
-      /\ List.length saturated_bounds_list = n
-      /\ 0 < Qden limbwidth <= Qnum limbwidth
-      /\ s = weight (Qnum limbwidth) (QDen limbwidth) n
-      /\ map (Z.land (Z.ones machine_wordsize)) m_enc = m_enc
-      /\ eval m_enc = s - Associational.eval c
-      /\ Datatypes.length m_enc = n
-      /\ 0 < Associational.eval c < s
-      /\ eval tight_upperbounds < 2 * eval m_enc
-      /\ 0 < s - Associational.eval c
-      /\ 0 < s - Associational.eval c <= weight (Qnum limbwidth) (QDen limbwidth) n
-      /\ n <= Z.log2_up (s - Associational.eval c).
+      /\ List.length saturated_bounds = n
+      /\ Datatypes.length m_enc = n.
   Proof using curve_good.
     prepare_use_curve_good ().
+    { use_curve_good_t. }
+    { use_curve_good_t. }
+    { use_curve_good_t. }
+    { use_curve_good_t. }
+    { use_curve_good_t. }
+    { use_curve_good_t. }
     { use_curve_good_t. }
     { use_curve_good_t. }
     { use_curve_good_t. }
@@ -307,12 +326,12 @@ Section __.
          (Some tight_bounds).
 
   Definition scarry_mul (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "carry_mul" carry_mul
           (docstring_with_summary_from_lemma!
-             (fun fname : string => ["The function " ++ fname ++ " multiplies two field elements and reduces the result."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " multiplies two field elements and reduces the result."]%string)
              (carry_mul_correct weightf n m tight_bounds loose_bounds)).
 
   Definition carry_square
@@ -326,12 +345,12 @@ Section __.
          (Some tight_bounds).
 
   Definition scarry_square (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "carry_square" carry_square
           (docstring_with_summary_from_lemma!
-             (fun fname : string => ["The function " ++ fname ++ " squares a field element and reduces the result."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " squares a field element and reduces the result."]%string)
              (carry_square_correct weightf n m tight_bounds loose_bounds)).
 
   Definition carry_scmul_const (x : Z)
@@ -345,12 +364,12 @@ Section __.
          (Some tight_bounds).
 
   Definition scarry_scmul_const (prefix : string) (x : Z)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
-          machine_wordsize prefix ("carry_scmul_" ++ Decimal.Z.to_string x) (carry_scmul_const x)
+        FromPipelineToString!
+          machine_wordsize prefix ("carry_scmul_" ++ Decimal.Z.to_string x)%string (carry_scmul_const x)
           (docstring_with_summary_from_lemma!
-             (fun fname : string => ["The function " ++ fname ++ " multiplies a field element by " ++ Decimal.Z.to_string x ++ " and reduces the result."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " multiplies a field element by " ++ Decimal.Z.to_string x ++ " and reduces the result."]%string)
              (carry_scmul_const_correct weightf n m tight_bounds loose_bounds x)).
 
   Definition carry
@@ -364,12 +383,12 @@ Section __.
          (Some tight_bounds).
 
   Definition scarry (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "carry" carry
           (docstring_with_summary_from_lemma!
-             (fun fname : string => ["The function " ++ fname ++ " reduces a field element."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " reduces a field element."]%string)
              (carry_correct weightf n m tight_bounds loose_bounds)).
 
   Definition add
@@ -383,12 +402,12 @@ Section __.
          (Some loose_bounds).
 
   Definition sadd (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "add" add
           (docstring_with_summary_from_lemma!
-             (fun fname : string => ["The function " ++ fname ++ " adds two field elements."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " adds two field elements."]%string)
              (add_correct weightf n m tight_bounds loose_bounds)).
 
   Definition sub
@@ -402,12 +421,12 @@ Section __.
          (Some loose_bounds).
 
   Definition ssub (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "sub" sub
           (docstring_with_summary_from_lemma!
-             (fun fname : string => ["The function " ++ fname ++ " subtracts two field elements."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " subtracts two field elements."]%string)
              (sub_correct weightf n m tight_bounds loose_bounds)).
 
   Definition opp
@@ -421,13 +440,31 @@ Section __.
          (Some loose_bounds).
 
   Definition sopp (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "opp" opp
           (docstring_with_summary_from_lemma!
-             (fun fname : string => ["The function " ++ fname ++ " negates a field element."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " negates a field element."]%string)
              (opp_correct weightf n m tight_bounds loose_bounds)).
+
+  Definition relax
+    := Pipeline.BoundsPipeline
+         true (* subst01 *)
+         None (* fancy *)
+         possible_values
+         reified_id_gen
+         (Some tight_bounds, tt)
+         (Some loose_bounds).
+
+  Definition srelax (prefix : string)
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    := Eval cbv beta in
+        FromPipelineToString!
+          machine_wordsize prefix "relax" relax
+          (docstring_with_summary_from_lemma!
+             (fun fname : string => [text_before_function_name ++ fname ++ " is the identity function converting from tight field elements to loose field elements."]%string)
+             (relax_correct tight_bounds loose_bounds)).
 
   Definition to_bytes
     := Pipeline.BoundsPipeline
@@ -435,17 +472,17 @@ Section __.
          None (* fancy *)
          possible_values_with_bytes
          (reified_to_bytes_gen
-            @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify n @ GallinaReify.Reify machine_wordsize @ GallinaReify.Reify m_enc)
+            @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify n @ GallinaReify.Reify (machine_wordsize:Z) @ GallinaReify.Reify m_enc)
          (Some tight_bounds, tt)
-         prime_bytes_bounds.
+         (Some prime_bytes_bounds).
 
   Definition sto_bytes (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "to_bytes" to_bytes
           (docstring_with_summary_from_lemma!
-             (fun fname : string => ["The function " ++ fname ++ " serializes a field element to bytes in little-endian order."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " serializes a field element to bytes in little-endian order."]%string)
              (to_bytes_correct weightf n n_bytes m tight_bounds)).
 
   Definition from_bytes
@@ -455,16 +492,16 @@ Section __.
          possible_values_with_bytes
          (reified_from_bytes_gen
             @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify n)
-         (prime_bytes_bounds, tt)
+         (Some prime_bytes_bounds, tt)
          (Some tight_bounds).
 
   Definition sfrom_bytes (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "from_bytes" from_bytes
           (docstring_with_summary_from_lemma!
-             (fun fname : string => ["The function " ++ fname ++ " deserializes a field element from bytes in little-endian order."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " deserializes a field element from bytes in little-endian order."]%string)
              (from_bytes_correct weightf n n_bytes m s tight_bounds)).
 
   Definition encode
@@ -474,16 +511,16 @@ Section __.
          possible_values
          (reified_encode_gen
             @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n)
-         (prime_bound, tt)
+         (Some prime_bound, tt)
          (Some tight_bounds).
 
   Definition sencode (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "encode" encode
           (docstring_with_summary_from_lemma!
-             (fun fname : string => ["The function " ++ fname ++ " encodes an integer as a field element."]%string)
+             (fun fname : string => [text_before_function_name ++ fname ++ " encodes an integer as a field element."]%string)
              (encode_correct weightf n m tight_bounds)).
 
   Definition zero
@@ -497,12 +534,12 @@ Section __.
          (Some tight_bounds).
 
   Definition szero (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "zero" zero
           (docstring_with_summary_from_lemma!
-             (fun fname => ["The function " ++ fname ++ " returns the field element zero."]%string)
+             (fun fname => [text_before_function_name ++ fname ++ " returns the field element zero."]%string)
              (zero_correct weightf n m tight_bounds)).
 
   Definition one
@@ -516,16 +553,16 @@ Section __.
          (Some tight_bounds).
 
   Definition sone (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
-        FromPipelineToString
+        FromPipelineToString!
           machine_wordsize prefix "one" one
           (docstring_with_summary_from_lemma!
-             (fun fname => ["The function " ++ fname ++ " returns the field element one."]%string)
+             (fun fname => [text_before_function_name ++ fname ++ " returns the field element one."]%string)
              (one_correct weightf n m tight_bounds)).
 
   Definition reval (* r for reified *)
-    := Pipeline.RepeatRewriteAddAssocLeft
+    := Pipeline.RepeatRewriteAddAssocLeftAndFlattenThunkedRects
          n
          (Pipeline.PreBoundsPipeline
             true (* subst01 *)
@@ -535,11 +572,11 @@ Section __.
                @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify n)
             (Some loose_bounds, tt)).
 
-  Definition seval (arg_name : string) (with_parens : bool) (* s for string *)
-    := show with_parens (invert_expr.smart_App_curried (reval _) (arg_name, tt)).
+  Definition seval (arg_name : string) (* s for string *)
+    := show (invert_expr.smart_App_curried (reval _) (arg_name, tt)).
 
   Definition rbytes_eval (* r for reified *)
-    := Pipeline.RepeatRewriteAddAssocLeft
+    := Pipeline.RepeatRewriteAddAssocLeftAndFlattenThunkedRects
          n_bytes
          (Pipeline.PreBoundsPipeline
             true (* subst01 *)
@@ -547,14 +584,14 @@ Section __.
             None (* fancy *)
             (reified_bytes_eval_gen
                @ GallinaReify.Reify s)
-            (prime_bytes_bounds, tt)).
+            (Some prime_bytes_bounds, tt)).
 
-  Definition sbytes_eval (arg_name : string) (with_parens : bool) (* s for string *)
-    := show with_parens (invert_expr.smart_App_curried (rbytes_eval _) (arg_name, tt)).
+  Definition sbytes_eval (arg_name : string) (* s for string *)
+    := show (invert_expr.smart_App_curried (rbytes_eval _) (arg_name, tt)).
 
   Definition selectznz : Pipeline.ErrorT _ := Primitives.selectznz n machine_wordsize.
   Definition sselectznz (prefix : string)
-    : string * (Pipeline.ErrorT (list string * ToString.ident_infos))
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Primitives.sselectznz n machine_wordsize prefix.
 
   Local Ltac solve_extra_bounds_side_conditions :=
@@ -618,47 +655,81 @@ Section __.
     : carry_mul_correct (weight (Qnum limbwidth) (QDen limbwidth)) n m tight_bounds loose_bounds (Interp res).
   Proof using curve_good. prove_correctness (). Qed.
 
+  Lemma Wf_carry_mul res (Hres : carry_mul = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Lemma carry_square_correct res
         (Hres : carry_square = Success res)
     : carry_square_correct (weight (Qnum limbwidth) (QDen limbwidth)) n m tight_bounds loose_bounds (Interp res).
   Proof using curve_good. prove_correctness (). Qed.
+
+  Lemma Wf_carry_square res (Hres : carry_square = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
 
   Lemma carry_scmul_const_correct a res
         (Hres : carry_scmul_const a = Success res)
     : carry_scmul_const_correct (weight (Qnum limbwidth) (QDen limbwidth)) n m tight_bounds loose_bounds a (Interp res).
   Proof using curve_good. prove_correctness (). Qed.
 
+  Lemma Wf_carry_scmul_const a res (Hres : carry_scmul_const a = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Lemma carry_correct res
         (Hres : carry = Success res)
     : carry_correct (weight (Qnum limbwidth) (QDen limbwidth)) n m tight_bounds loose_bounds (Interp res).
   Proof using curve_good. prove_correctness (). Qed.
+
+  Lemma Wf_carry res (Hres : carry = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
 
   Lemma add_correct res
         (Hres : add = Success res)
     : add_correct (weight (Qnum limbwidth) (QDen limbwidth)) n m tight_bounds loose_bounds (Interp res).
   Proof using curve_good. prove_correctness (). Qed.
 
+  Lemma Wf_add res (Hres : add = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Lemma sub_correct res
         (Hres : sub = Success res)
     : sub_correct (weight (Qnum limbwidth) (QDen limbwidth)) n m tight_bounds loose_bounds (Interp res).
   Proof using curve_good. prove_correctness (). Qed.
+
+  Lemma Wf_sub res (Hres : sub = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
 
   Lemma opp_correct res
         (Hres : opp = Success res)
     : opp_correct (weight (Qnum limbwidth) (QDen limbwidth)) n m tight_bounds loose_bounds (Interp res).
   Proof using curve_good. prove_correctness (). Qed.
 
+  Lemma Wf_opp res (Hres : opp = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
+  Lemma relax_correct res
+        (Hres : relax = Success res)
+    : relax_correct tight_bounds loose_bounds (Interp res).
+  Proof using curve_good. prove_correctness (). Qed.
+
+  Lemma Wf_relax res (Hres : relax = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Lemma from_bytes_correct res
         (Hres : from_bytes = Success res)
+        (Hrequests : request_present requests "from_bytes" = true)
     : from_bytes_correct (weight (Qnum limbwidth) (QDen limbwidth)) n n_bytes m s tight_bounds (Interp res).
   Proof using curve_good. prove_correctness (). Qed.
 
-  Lemma relax_correct
+  Lemma Wf_from_bytes res (Hres : from_bytes = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
+  Lemma relax_valid
     : forall x, list_Z_bounded_by tight_bounds x -> list_Z_bounded_by loose_bounds x.
   Proof using Type. apply relax_list_Z_bounded_by, tight_bounds_tighter. Qed.
 
   Lemma to_bytes_correct res
         (Hres : to_bytes = Success res)
+        (Hrequests : request_present requests "to_bytes" = true)
     : to_bytes_correct (weight (Qnum limbwidth) (QDen limbwidth)) n n_bytes m tight_bounds (Interp res).
   Proof using curve_good.
     prove_correctness (); [].
@@ -684,11 +755,17 @@ Section __.
                       | progress cbv [tight_upperbounds] in * ].
   Qed.
 
+  Lemma Wf_to_bytes res (Hres : to_bytes = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Strategy -1000 [encode]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
   Lemma encode_correct res
         (Hres : encode = Success res)
     : encode_correct (weight (Qnum limbwidth) (QDen limbwidth)) n m tight_bounds (Interp res).
   Proof using curve_good. prove_correctness (). Qed.
+
+  Lemma Wf_encode res (Hres : encode = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
 
   Strategy -1000 [zero]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
   Lemma zero_correct res
@@ -696,11 +773,17 @@ Section __.
     : zero_correct (weight (Qnum limbwidth) (QDen limbwidth)) n m tight_bounds (Interp res).
   Proof using curve_good. prove_correctness (). Qed.
 
+  Lemma Wf_zero res (Hres : zero = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
   Strategy -1000 [one]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
   Lemma one_correct res
         (Hres : one = Success res)
     : one_correct (weight (Qnum limbwidth) (QDen limbwidth)) n m tight_bounds (Interp res).
   Proof using curve_good. prove_correctness (). Qed.
+
+  Lemma Wf_one res (Hres : one = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
 
   Section ring.
     Context carry_mul_res (Hcarry_mul : carry_mul = Success carry_mul_res)
@@ -737,7 +820,7 @@ Section __.
                         | apply encode_correct
                         | apply zero_correct
                         | apply one_correct
-                        | apply relax_correct ].
+                        | apply relax_valid ].
     Qed.
   End ring.
 
@@ -746,26 +829,27 @@ Section __.
     Local Open Scope list_scope.
 
     Definition known_functions
-      := [("carry_mul", scarry_mul);
-            ("carry_square", scarry_square);
-            ("carry", scarry);
-            ("add", sadd);
-            ("sub", ssub);
-            ("opp", sopp);
-            ("selectznz", sselectznz);
-            ("to_bytes", sto_bytes);
-            ("from_bytes", sfrom_bytes)].
+      := [("carry_mul", wrap_s scarry_mul);
+            ("carry_square", wrap_s scarry_square);
+            ("carry", wrap_s scarry);
+            ("add", wrap_s sadd);
+            ("sub", wrap_s ssub);
+            ("opp", wrap_s sopp);
+            ("relax", wrap_s srelax);
+            ("selectznz", wrap_s sselectznz);
+            ("to_bytes", wrap_s sto_bytes);
+            ("from_bytes", wrap_s sfrom_bytes)].
 
     Definition valid_names : string
       := Eval compute in String.concat ", " (List.map (@fst _ _) known_functions) ++ ", or 'carry_scmul' followed by a decimal literal".
 
     Definition extra_special_synthesis (function_name_prefix : string) (name : string)
-      : list (option (string * Pipeline.ErrorT (list string * ToString.ident_infos)))
+      : list (option { t : _ & string * Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult t) }%type)
       := [if prefix "carry_scmul" name
           then let sc := substring (String.length "carry_scmul") (String.length name) name in
                (scZ <- Decimal.Z.of_string sc;
                if (sc =? Decimal.Z.to_string scZ)%string
-               then Some (scarry_scmul_const function_name_prefix scZ)
+               then Some (wrap_s (fun _ => scarry_scmul_const function_name_prefix scZ) tt)
                else None)%option
           else None].
 
@@ -774,17 +858,51 @@ Section __.
     Definition Synthesize (comment_header : list string) (function_name_prefix : string) (requests : list string)
       : list (synthesis_output_kind * string * Pipeline.ErrorT (list string))
       := Primitives.Synthesize
-           machine_wordsize valid_names known_functions (extra_special_synthesis function_name_prefix)
+           machine_wordsize valid_names known_functions (extra_special_synthesis function_name_prefix) all_typedefs!
            check_args
-           ((ToString.comment_file_header_block
-               (comment_header
-                  ++ [""
-                      ; "Computed values:"
-                      ; "carry_chain = " ++ show false idxs
-                      ; "eval z = " ++ seval "z" false
-                      ; "bytes_eval z = " ++ sbytes_eval "z" false
-                      ; "balance = " ++ let show_Z := Hex.show_Z in show false balance
-                     ]%string)))
+           (ToString.comment_file_header_block
+              (comment_header
+                 ++ [""
+                     ; "Computed values:"]
+                 ++ (List.map
+                       (fun s => "  " ++ s)%string
+                       ((ToString.prefix_and_indent "carry_chain = " [show idxs])
+                          ++ (ToString.prefix_and_indent "eval z = " [seval "z"])
+                          ++ (ToString.prefix_and_indent "bytes_eval z = " [sbytes_eval "z"])
+                          ++ (ToString.prefix_and_indent "balance = " [let show_lvl_Z := Hex.show_lvl_Z in show balance])))))
            function_name_prefix requests.
   End for_stringification.
 End __.
+
+Module Export Hints.
+  Hint Opaque
+       carry_mul
+       carry_square
+       carry_scmul_const
+       carry
+       add
+       sub
+       opp
+       relax
+       from_bytes
+       to_bytes
+       encode
+       zero
+       one
+  : wf_op_cache.
+  Hint Immediate
+       Wf_carry_mul
+       Wf_carry_square
+       Wf_carry_scmul_const
+       Wf_carry
+       Wf_add
+       Wf_sub
+       Wf_opp
+       Wf_relax
+       Wf_from_bytes
+       Wf_to_bytes
+       Wf_encode
+       Wf_zero
+       Wf_one
+  : wf_op_cache.
+End Hints.

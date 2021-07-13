@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 Require Crypto.Assembly.Parse Crypto.Assembly.Parse.Examples.fiat_25519_carry_square_optimised_seed20.
 Definition lines' := Eval native_compute in
   Assembly.Parse.parse
@@ -9,6 +10,9 @@ Definition lines'10 := Eval native_compute in
   Assembly.Parse.Examples.fiat_25519_carry_square_optimised_seed10.example.
 Definition lines10 := Eval cbv in ErrorT.invert_result lines'10.
 
+=======
+Require Crypto.Assembly.Parse.
+>>>>>>> 9a095f9d6108b39a3f967d41b651caefe2d268f5
 Require Import Coq.Lists.List.
 Require Import Coq.ZArith.ZArith.
 Require Crypto.Util.Tuple.
@@ -112,6 +116,7 @@ Section Forall2.
   Proof. induction 1; inversion 1; subst; econstructor; eauto. Qed.
 End Forall2.
 
+<<<<<<< HEAD
 Require Import Crypto.Assembly.Syntax.
 Definition idx := N.
 Local Set Boolean Equality Schemes.
@@ -126,6 +131,46 @@ Definition op : Set := opname * OperationSize.
 Definition op_beq := Prod.prod_beq _ _ opname_beq N.eqb.
 
 Definition node (A : Set) : Set := op * list A.
+=======
+Require Import Coq.Strings.String Crypto.Util.Strings.Show.
+Require Import Crypto.Assembly.Syntax.
+Definition idx := N.
+Local Set Boolean Equality Schemes.
+Variant opname := old (_:N) | oldold (_:REG*option nat) | const (_ : N) | add | addcarry | notaddcarry | neg | shl | shr | and | or | xor | slice (lo sz : N) | mul | mulhuu (_:N) | set_slice (lo sz : N)(* | ... *).
+
+Global Instance show_opname : Show opname := fun o =>
+  match o with
+  | old n => "old " ++ show n
+  | oldold p => "oldold " ++ show p
+  | const n => "const " ++ show n
+  | add => "add"
+  | addcarry => "addcarry"
+  | notaddcarry => "notaddcarry"
+  | neg => "neg"
+  | shl => "shl"
+  | shr => "shr"
+  | and => "and"
+  | or => "or"
+  | xor => "xor"
+  | slice lo sz => "slice " ++ show lo ++ " " ++ show sz
+  | mul => "mul"
+  | mulhuu n => "mulhuu"
+  | set_slice lo sz => "set_slice " ++ show lo ++ " " ++ show sz
+  end%string.
+
+Definition associative o := match o with add|mul|or|and => true | _ => false end.
+Definition commutative o := match o with add|addcarry|mul|mulhuu _ => true | _ => false end.
+Definition identity o := match o with add|addcarry => Some 0%N | mul|mulhuu _=>Some 1%N |_=> None end.
+
+Class OperationSize := operation_size : N.
+Global Instance Show_OperationSize : Show OperationSize := show_N.
+Definition op : Set := opname * OperationSize.
+Global Instance Show_op : Show op := show_prod.
+Definition op_beq := Prod.prod_beq _ _ opname_beq N.eqb.
+
+Definition node (A : Set) : Set := op * list A.
+Global Instance Show_node {A : Set} [show_A : Show A] : Show (node A) := show_prod.
+>>>>>>> 9a095f9d6108b39a3f967d41b651caefe2d268f5
 
 Local Unset Elimination Schemes.
 Inductive expr : Set :=
@@ -144,6 +189,14 @@ Section expr_ind.
 End expr_ind.
 Definition invert_ExprRef (e : expr) : option idx :=
   match e with ExprRef i => Some i | _ => None end.
+<<<<<<< HEAD
+=======
+Global Instance Show_expr : Show expr := fix f e :=
+   match e with
+   | ExprRef i => "ExprRef " ++ show i
+   | ExprApp n => "ExprApp " ++ @show (node expr) (@Show_node _ f) n
+   end%string.
+>>>>>>> 9a095f9d6108b39a3f967d41b651caefe2d268f5
 
 Require Import Crypto.Util.Option Crypto.Util.Notations Coq.Lists.List.
 Import ListNotations.
@@ -707,6 +760,46 @@ Definition update_flag_with (st : symbolic_state) (f : flag_state -> flag_state)
 Definition update_mem_with (st : symbolic_state) (f : mem_state -> mem_state) : symbolic_state
   := {| dag_state := st.(dag_state); symbolic_reg_state := st.(symbolic_reg_state) ; symbolic_flag_state := st.(symbolic_flag_state) ; symbolic_mem_state := f st.(symbolic_mem_state) |}.
 
+<<<<<<< HEAD
+=======
+Global Instance show_reg_state : Show reg_state := fun st =>
+  show (List.map (fun '(n, v) => (widest_register_of_index n, v)) (ListUtil.List.enumerate (Option.List.map id (Tuple.to_list _ st)))).
+
+Global Instance show_flag_state : Show flag_state :=
+  fun '(cfv, pfv, afv, zfv, sfv, ofv) => (
+  "(*flag_state*)(CF="++show cfv
+  ++" PF="++show pfv
+  ++" AF="++show afv
+  ++" ZF="++show zfv
+  ++" SF="++show sfv
+  ++" ZF="++show zfv
+  ++" OF="++show ofv++")")%string.
+Global Instance show_lines_dag : ShowLines dag := (fun d =>
+  ["(*dag*)["]
+  ++List.map (fun '(i, v) =>"(*"++show i ++"*) " ++ show v++";")%string (@ListUtil.List.enumerate (node idx) d)
+  ++["]"])%list%string.
+Global Instance show_lines_mem_state : ShowLines mem_state :=
+  @show_lines_list _ ShowLines_of_Show.
+
+Global Instance ShowLines_symbolic_state : ShowLines symbolic_state :=
+ fun X : symbolic_state =>
+ match X with
+ | {|
+     dag_state := ds;
+     symbolic_reg_state := rs;
+     symbolic_flag_state := fs;
+     symbolic_mem_state := ms
+   |} => 
+   ["(*symbolic_state*) {|";
+   "  dag_state :="] ++ show_lines ds ++ [";";
+   ("  symbolic_reg_state := " ++ show rs ++ ";")%string;
+   ("  symbolic_flag_state := " ++ show fs ++";")%string;
+   "  symbolic_mem_state :="] ++show_lines ms ++ [";";
+   "|}"]
+ end%list%string.
+
+
+>>>>>>> 9a095f9d6108b39a3f967d41b651caefe2d268f5
 Module error.
   Variant error :=
   | nth_error_dag (_ : nat)
@@ -721,6 +814,22 @@ Module error.
   | ambiguous_operation_size (_ : NormalInstruction)
 
   | failed_to_unify (_ : list (expr * (option idx * option idx))).
+<<<<<<< HEAD
+=======
+
+  Global Instance Show_error : Show error := fun e =>
+   match e with
+   | nth_error_dag n => "error.nth_error_dag " ++ show n
+   | get_flag f => "error.get_flag " ++ show f
+   | get_reg r => "error.get_reg " ++ show r
+   | load a => "error.load " ++ show a
+   | store a v => "error.store " ++ show a ++ " " ++ show v
+   | set_const c i => "error.set_const " ++ show c ++ " " ++ show i
+   | unimplemented_instruction n => "error.unimplemented_instruction " ++ show n
+   | ambiguous_operation_size n => "error.ambiguous_operation_size " ++ show n
+   | failed_to_unify l => "error.failed_to_unify " ++ show l
+   end%string.
+>>>>>>> 9a095f9d6108b39a3f967d41b651caefe2d268f5
 End error.
 Notation error := error.error.
 
@@ -900,7 +1009,11 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
   | mulx, [hi; lo; src2] =>
     let src1 : ARG := rdx in
     vl <- Symeval (mul@(src1,src2));
+<<<<<<< HEAD
     vh <- Symeval (mulhuu@(src1,src2));
+=======
+    vh <- Symeval ((mulhuu s)@(src1,src2));
+>>>>>>> 9a095f9d6108b39a3f967d41b651caefe2d268f5
     _ <- SetOperand lo vl;
          SetOperand hi vh
    | Syntax.shr, [dst; cnt] =>
@@ -944,17 +1057,29 @@ Definition SymexNormalInstructions := fun st is => mapM_ SymexNormalInstruction 
 
 
 Definition OldReg (r : REG) : M unit :=
+<<<<<<< HEAD
   i <- Merge (ExprApp ((old (r, None), reg_size r), nil));
+=======
+  i <- Merge (ExprApp ((oldold (r, None), reg_size r), nil));
+>>>>>>> 9a095f9d6108b39a3f967d41b651caefe2d268f5
   SetReg r i.
 Definition OldCell (r : REG) (i : nat) : M unit :=
   a <- @Address 64%N {| mem_reg := r; mem_offset := Some (Z.of_nat(8*i));
                  mem_is_byte := false; mem_extra_reg:=None |};
+<<<<<<< HEAD
   v <- Merge (ExprApp ((old (r, Some i), 64%N), nil));
+=======
+  v <- Merge (ExprApp ((oldold (r, Some i), 64%N), nil));
+>>>>>>> 9a095f9d6108b39a3f967d41b651caefe2d268f5
   (fun s => Success (tt, update_mem_with s (cons (a,v)))).
 Definition OldStack (r := rsp) (i : nat) : M unit :=
   a <- @Address 64%N {| mem_reg := r; mem_offset := Some (Z.opp (Z.of_nat(8*S i)));
                  mem_is_byte := false; mem_extra_reg:=None |};
+<<<<<<< HEAD
   v <- Merge (ExprApp ((old (r, Some i), 64%N), nil));
+=======
+  v <- Merge (ExprApp ((oldold (r, Some i), 64%N), nil));
+>>>>>>> 9a095f9d6108b39a3f967d41b651caefe2d268f5
   (fun s => Success (tt, update_mem_with s (cons (a,v)))).
 
 Definition init
@@ -1022,6 +1147,22 @@ Definition symex_asm_asm args stack impl1 impl2 : ErrorT _ _ :=
   then Success tt
   else Error (error.failed_to_unify answers, s2).
 
+<<<<<<< HEAD
+=======
+(*
+Require Crypto.Assembly.Parse Crypto.Assembly.Parse.Examples.fiat_25519_carry_square_optimised_seed20.
+Definition lines' := Eval native_compute in
+  Assembly.Parse.parse
+  Assembly.Parse.Examples.fiat_25519_carry_square_optimised_seed20.example.
+Definition lines := Eval cbv in ErrorT.invert_result lines'.
+Require Crypto.Assembly.Parse Crypto.Assembly.Parse.Examples.fiat_25519_carry_square_optimised_seed10.
+Definition lines'10 := Eval native_compute in
+  Assembly.Parse.parse
+  Assembly.Parse.Examples.fiat_25519_carry_square_optimised_seed10.example.
+Definition lines10 := Eval cbv in ErrorT.invert_result lines'10.
+
+
+>>>>>>> 9a095f9d6108b39a3f967d41b651caefe2d268f5
 Example curve25519_square_same : symex_asm_asm [(rsi, 5); (rdi, 5)] 7 lines lines10 = Success tt. vm_cast_no_check (eq_refl (@Success (error.error*symbolic_state) unit tt)). Qed.
 
 Example evaluation : True.
@@ -1064,3 +1205,7 @@ Example evaluation : True.
 
   exact I.
 Defined.
+<<<<<<< HEAD
+=======
+ *)
+>>>>>>> 9a095f9d6108b39a3f967d41b651caefe2d268f5

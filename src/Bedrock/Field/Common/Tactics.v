@@ -5,10 +5,8 @@ Require Import Crypto.Bedrock.Field.Common.Util.
 Require Import Crypto.Language.API.
 Require Import Crypto.Util.Tactics.DestructHead.
 Require Import Crypto.Util.Tactics.BreakMatch.
-Require Import Rewriter.Language.Wf.
 
 Import API.Compilers.
-Import Wf.Compilers.expr.
 
 (** Tactics ***)
 Ltac cleanup :=

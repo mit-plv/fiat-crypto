@@ -6,6 +6,8 @@
     a systematic way of reducing such equalities to equalities at
     simpler types. *)
 Require Import Coq.Classes.Morphisms.
+Require Import Coq.Setoids.Setoid.
+Require Import Coq.Bool.Bool.
 Require Import Crypto.Util.IffT.
 Require Import Crypto.Util.Equality.
 Require Import Crypto.Util.GlobalSettings.
@@ -15,6 +17,56 @@ Local Arguments snd {_ _} _.
 Local Arguments f_equal {_ _} _ {_ _} _.
 
 Scheme Equality for prod.
+
+Definition prod_beq_hetero {A1 B1 A2 B2} (A_beq_hetero : A1 -> A2 -> bool) (B_beq_hetero : B1 -> B2 -> bool)
+           (x : A1 * B1) (y : A2 * B2) : bool
+  := (A_beq_hetero (fst x) (fst y) && B_beq_hetero (snd x) (snd y))%bool.
+
+Arguments prod_beq_hetero {_ _ _ _} _ _ x y / .
+
+Lemma prod_bl_hetero {A1 B1 A2 B2}
+      {A_beq_hetero : A1 -> A2 -> bool} {A_R : A1 -> A2 -> Prop}
+      {B_beq_hetero : B1 -> B2 -> bool} {B_R : B1 -> B2 -> Prop}
+      (A_bl : forall x y, A_beq_hetero x y = true -> A_R x y)
+      (B_bl : forall x y, B_beq_hetero x y = true -> B_R x y)
+      {x y}
+  : prod_beq_hetero A_beq_hetero B_beq_hetero x y = true -> A_R (fst x) (fst y) /\ B_R (snd x) (snd y).
+Proof using Type.
+  destruct x, y; cbn in *; rewrite ?Bool.andb_true_iff; intuition auto.
+Qed.
+
+Lemma prod_lb_hetero {A1 B1 A2 B2}
+      {A_beq_hetero : A1 -> A2 -> bool} {A_R : A1 -> A2 -> Prop}
+      {B_beq_hetero : B1 -> B2 -> bool} {B_R : B1 -> B2 -> Prop}
+      (A_lb : forall x y, A_R x y -> A_beq_hetero x y = true)
+      (B_lb : forall x y, B_R x y -> B_beq_hetero x y = true)
+      {x y}
+  : A_R (fst x) (fst y) /\ B_R (snd x) (snd y) -> prod_beq_hetero A_beq_hetero B_beq_hetero x y = true.
+Proof using Type.
+  destruct x, y; cbn in *; rewrite ?Bool.andb_true_iff; intuition auto.
+Qed.
+
+Lemma prod_beq_hetero_uniform {A B : Type} A_beq B_beq {x y}
+  : prod_beq_hetero A_beq B_beq x y = @prod_beq A B A_beq B_beq x y.
+Proof. destruct x, y; reflexivity. Qed.
+
+Lemma prod_bl_hetero_eq {A B}
+      {A_beq : A -> A -> bool}
+      {B_beq : B -> B -> bool}
+      (A_bl : forall x y, A_beq x y = true -> x = y)
+      (B_bl : forall x y, B_beq x y = true -> x = y)
+      {x y}
+  : prod_beq_hetero A_beq B_beq x y = true -> x = y.
+Proof using Type. rewrite prod_beq_hetero_uniform; now apply internal_prod_dec_bl. Qed.
+
+Lemma prod_lb_hetero_eq {A B}
+      {A_beq : A -> A -> bool}
+      {B_beq : B -> B -> bool}
+      (A_lb : forall x y, x = y -> A_beq x y = true)
+      (B_lb : forall x y, x = y -> B_beq x y = true)
+      {x y}
+  : x = y -> prod_beq_hetero A_beq B_beq x y = true.
+Proof using Type. rewrite prod_beq_hetero_uniform; now apply internal_prod_dec_lb. Qed.
 
 Definition fst_pair {A B} (a:A) (b:B) : fst (a,b) = a := eq_refl.
 Definition snd_pair {A B} (a:A) (b:B) : snd (a,b) = b := eq_refl.

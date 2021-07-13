@@ -180,21 +180,12 @@ Import RuntimeAxioms.
 Axiom hide : forall {T} {v : T}, True.
 Require Import Crypto.Util.ZUtil.ModInv.
 
-Time Compute @hide _ (fun a b => (let m := (2^256 - 2^224 + 2^192 + 2^96 - 1) in mulmod 64 4 m match Z.modinv (-m) (2^64) with
-            | Some m' => m'
-            | None => 0
-                                                                     end (expand_list 0 a 4) (expand_list 0 b 4))).
-Time Eval lazy in @hide _ (fun a b => (let m := (2^256 - 2^224 + 2^192 + 2^96 - 1) in mulmod 64 4 m match Z.modinv (-m) (2^64) with
-            | Some m' => m'
-            | None => 0
-                                                                     end (expand_list 0 a 4) (expand_list 0 b 4))).
+Time Compute @hide _ (fun a b => (let m := (2^256 - 2^224 + 2^192 + 2^96 - 1) in mulmod 64 4 m (Z.modinv (-m) (2^64)) (expand_list 0 a 4) (expand_list 0 b 4))).
+Time Eval lazy in @hide _ (fun a b => (let m := (2^256 - 2^224 + 2^192 + 2^96 - 1) in mulmod 64 4 m (Z.modinv (-m) (2^64)) (expand_list 0 a 4) (expand_list 0 b 4))).
 
 Goal forall (a b : list Z), True.
   intros.
-  pose (let m := (2^256 - 2^224 + 2^192 + 2^96 - 1) in mulmod 64 4 m match Z.modinv (-m) (2^64) with
-            | Some m' => m'
-            | None => 0
-                                                                     end (expand_list 0 a 4) (expand_list 0 b 4)) as e.
+  pose (let m := (2^256 - 2^224 + 2^192 + 2^96 - 1) in mulmod 64 4 m (Z.modinv (-m) (2^64)) (expand_list 0 a 4) (expand_list 0 b 4)) as e.
   cbv [Z.pow Pos.pow Init.Nat.pred nat_rect fst Z.of_nat Pos.of_succ_nat Pos.succ Z.mul Pos.mul Pos.add Pos.iter Z.opp Z.div Z.div_eucl Z.pos_div_eucl Z.leb Z.compare Pos.compare Pos.compare_cont Z.add Z.ltb Z.sub Z.pos_sub Z.succ_double Z.double Z.pow Z.pow_pos Z.modulo Z.eqb Pos.eqb Pos.compare snd Pos.pred_double Z.opp] in e.
   set (k := Z.modinv _ _) in (value of e).
   vm_compute in k; subst k.

@@ -43,7 +43,6 @@ Require Import Coq.Lists.List. (* after SeparationLogic *)
 Existing Instances rep.Z rep.listZ_mem.
 
 Import Language.Compilers.
-Import Language.Wf.Compilers.
 Import Associational Positional.
 
 Require Import Crypto.Util.Notations.
@@ -62,32 +61,35 @@ Local Infix "*" := sep : sep_scope.
 Ltac apply_correctness_in H :=
   match type of H with
   | context [UnsaturatedSolinas.carry_mul] =>
-    apply UnsaturatedSolinas.carry_mul_correct in H
+    eapply UnsaturatedSolinas.carry_mul_correct in H
   | context [UnsaturatedSolinas.carry_square] =>
-    apply UnsaturatedSolinas.carry_square_correct in H
+    eapply UnsaturatedSolinas.carry_square_correct in H
   | context [UnsaturatedSolinas.carry] =>
-    apply UnsaturatedSolinas.carry_correct in H
+    eapply UnsaturatedSolinas.carry_correct in H
   | context [UnsaturatedSolinas.add] =>
-    apply UnsaturatedSolinas.add_correct in H
+    eapply UnsaturatedSolinas.add_correct in H
   | context [UnsaturatedSolinas.sub] =>
-    apply UnsaturatedSolinas.sub_correct in H
+    eapply UnsaturatedSolinas.sub_correct in H
   | context [UnsaturatedSolinas.opp] =>
-    apply UnsaturatedSolinas.opp_correct in H
+    eapply UnsaturatedSolinas.opp_correct in H
   | context [UnsaturatedSolinas.selectznz] =>
     eapply Primitives.selectznz_correct in H
   | context [UnsaturatedSolinas.to_bytes] =>
-    apply UnsaturatedSolinas.to_bytes_correct in H
+    eapply UnsaturatedSolinas.to_bytes_correct in H
   | context [UnsaturatedSolinas.from_bytes] =>
-    apply UnsaturatedSolinas.from_bytes_correct in H
+    eapply UnsaturatedSolinas.from_bytes_correct in H
   | context [UnsaturatedSolinas.carry_scmul_const] =>
-    apply UnsaturatedSolinas.carry_scmul_const_correct in H
+    eapply UnsaturatedSolinas.carry_scmul_const_correct in H
   | context [UnsaturatedSolinas.encode] =>
-    apply UnsaturatedSolinas.encode_correct in H
+    eapply UnsaturatedSolinas.encode_correct in H
   | context [UnsaturatedSolinas.zero] =>
-    apply UnsaturatedSolinas.zero_correct in H
+    eapply UnsaturatedSolinas.zero_correct in H
   | context [UnsaturatedSolinas.one] =>
-    apply UnsaturatedSolinas.one_correct in H
+    eapply UnsaturatedSolinas.one_correct in H
   end.
+
+(** We need to tell [check_args] that we are requesting these functions in order to get the relevant properties out *)
+Notation necessary_requests := ["to_bytes"; "from_bytes"]%string (only parsing).
 
 Section __.
   Context {p : Types.parameters}
@@ -112,30 +114,21 @@ Section __.
        (QDen (inject_Z (Z.log2_up M) / inject_Z (Z.of_nat n)))).
   Local Notation eval := (eval weight n).
 
-  (* Note: annoyingly, prime_bytes_bounds and saturated_bounds are option types,
-     unlike loose_bounds or tight_bounds, so we have to refer to the values they
-     wrap in Some whenever we want to use them with list_Z_bounded_by *)
-  Local Notation prime_bytes_bounds_value :=
-    (map (fun v : Z => Some {| ZRange.lower := 0; ZRange.upper := v |})
-         (prime_bytes_upperbound_list s)).
-  Local Notation saturated_bounds_value :=
-    (Primitives.saturated_bounds_list n Semantics.width).
-
   Ltac select_access_size bounds :=
     lazymatch bounds with
-    | saturated_bounds => constr:(access_size.word)
+    | Some saturated_bounds => constr:(access_size.word)
     | Some loose_bounds => constr:(access_size.word)
     | Some tight_bounds => constr:(access_size.word)
-    | prime_bytes_bounds => constr:(access_size.one)
+    | Some prime_bytes_bounds => constr:(access_size.one)
     | ?b => fail "unable to select access size for bound" b
     end.
 
   Ltac select_length bounds :=
     lazymatch bounds with
-    | saturated_bounds => constr:(n)
+    | Some saturated_bounds => constr:(n)
     | Some loose_bounds => constr:(n)
     | Some tight_bounds => constr:(n)
-    | prime_bytes_bounds => constr:(n_bytes)
+    | Some prime_bytes_bounds => constr:(n_bytes)
     | ?b => fail "unable to select array length for bound" b
     end.
 
@@ -146,7 +139,7 @@ Section __.
     intros;
     let Hcorrect :=
         lazymatch goal with H : _ = ErrorT.Success _ |- _ => H end in
-    apply_correctness_in Hcorrect; [ | eassumption .. ];
+    apply_correctness_in Hcorrect; [ | eassumption + refine (eq_refl true) .. ];
     fold weight in *; specialize_to_args Hcorrect;
     postcondition_from_correctness.
 
@@ -162,7 +155,7 @@ Section __.
               t inbounds insizes outsizes inlengths outlengths)
     with (pipeline_out:=out)
          (check_args_ok:=
-            check_args n s c machine_wordsize (ErrorT.Success tt)
+            check_args n s c machine_wordsize necessary_requests (ErrorT.Success tt)
             = ErrorT.Success tt).
 
   Definition carry_mul
@@ -478,7 +471,7 @@ Section __.
     Proof. apply relax_list_Z_bounded_by; auto. Qed.
 
     Lemma relax_to_byte_bounds x :
-      list_Z_bounded_by prime_bytes_bounds_value x ->
+      list_Z_bounded_by prime_bytes_bounds x ->
       list_Z_bounded_by (byte_bounds n_bytes) x.
     Proof.
       cbv [prime_bytes_bounds prime_bytes_upperbound_list].
@@ -495,15 +488,15 @@ Section __.
     Qed.
 
     Lemma bounded_by_saturated_bounds_length x :
-      list_Z_bounded_by saturated_bounds_value x -> length x = n.
+      list_Z_bounded_by saturated_bounds x -> length x = n.
     Proof.
-      cbv [saturated_bounds max_bounds].
+      cbv [max_bounds].
       intros. pose proof length_list_Z_bounded_by _ _ ltac:(eassumption).
-      rewrite length_saturated_bounds_list in *. lia.
+      rewrite length_saturated_bounds in *. lia.
     Qed.
 
     Lemma bounded_by_prime_bytes_bounds_length x :
-      list_Z_bounded_by prime_bytes_bounds_value x -> length x = n_bytes.
+      list_Z_bounded_by prime_bytes_bounds x -> length x = n_bytes.
     Proof.
       intros. pose proof length_list_Z_bounded_by _ _ ltac:(eassumption).
       cbv [prime_bytes_bounds prime_bytes_upperbound_list] in *.
@@ -537,13 +530,13 @@ Section __.
       match goal with
       | H : list_Z_bounded_by ?b1 ?x |- list_Z_bounded_by ?b2 ?x =>
         first [ unify b1 b2; apply H
-              | unify b1 tight_bounds; unify b2 saturated_bounds_value;
-                apply relax_to_max_bounds, relax_correct; apply H
+              | unify b1 tight_bounds; unify b2 saturated_bounds;
+                apply relax_to_max_bounds, relax_valid; apply H
               | unify b1 tight_bounds; unify b2 loose_bounds;
-                apply relax_correct; apply H
-              | unify b1 loose_bounds; unify b2 saturated_bounds_value;
+                apply relax_valid; apply H
+              | unify b1 loose_bounds; unify b2 saturated_bounds;
                 apply relax_to_max_bounds; apply H
-              | unify b1 prime_bytes_bounds_value; unify b2 (byte_bounds n_bytes);
+              | unify b1 prime_bytes_bounds; unify b2 (byte_bounds n_bytes);
                 apply relax_to_byte_bounds; apply H ]
       end.
 
@@ -632,7 +625,7 @@ Section __.
       | setup_lists_reserved; solve_lists_reserved out_ptrs ].
 
     Context (check_args_ok :
-               check_args n s c Semantics.width (ErrorT.Success tt)
+               check_args n s c Semantics.width necessary_requests (ErrorT.Success tt)
                = ErrorT.Success tt).
 
     Lemma carry_mul_correct name :

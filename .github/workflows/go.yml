@@ -24,3 +24,8 @@ jobs:
       run: make only-test-go-module EXTERNAL_DEPENDENCIES=1
     - name: make only-test-go-files
       run: make only-test-go-files EXTERNAL_DEPENDENCIES=1
+    - name: Test for non-diff of gofmt
+      run:
+        DIFF="$(find fiat-go -name "*.go" | xargs gofmt -s -d)"
+        echo "${DIFF}"
+        test -z "${DIFF}"

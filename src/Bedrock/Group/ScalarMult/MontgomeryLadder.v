@@ -1,3 +1,5 @@
+(* NOTE: the plan is to completely redo montladder after ladderstep is updated to use stackalloc *)
+
 Require Import Rupicola.Lib.Api.
 Require Import Rupicola.Lib.SepLocals.
 Require Import Rupicola.Lib.ControlFlow.CondSwap.
@@ -21,11 +23,7 @@ Section __.
   Context {field_representaton : FieldRepresentation}
           {scalar_representation : ScalarRepresentation}.
   Context {field_representation_ok : FieldRepresentation_ok}.
-  Existing Instances spec_of_mul spec_of_square spec_of_add
-           spec_of_sub spec_of_scmula24 spec_of_inv spec_of_felem_copy
-           spec_of_felem_small_literal spec_of_sctestbit
-           spec_of_ladderstep.
-  Hint Resolve @relax_bounds : core.
+  Hint Resolve @relax_bounds : compiler.
 
   Section Gallina.
     Local Open Scope F_scope.
@@ -33,73 +31,69 @@ Section __.
     Definition montladder_gallina
                (scalarbits : Z) (testbit:nat ->bool) (u:F M_pos)
       : F M_pos :=
-      let/d P1 := (1, 0) in
-      let/d P2 := (u, 1) in
-      let/d swap := false in
-      let/d count := scalarbits in
-      let/d ''(P1, P2, swap) :=
+      let/n P1 := (1, 0) in
+      let/n P2 := (u, 1) in
+      let/n swap := false in
+      let/n count := scalarbits in
+      let '(P1, P2, swap) :=
          downto
            (P1, P2, swap) (* initial state *)
            (Z.to_nat count)
            (fun state i =>
               let '(P1, P2, swap) := state in
-              let/d s_i := testbit i in
-              let/d swap := xorb swap s_i in
-              let/d ''(P1, P2) := cswap swap P1 P2 in
-              let/d ''(P1, P2) := ladderstep_gallina u P1 P2 in
-              let/d swap := s_i in
+              let/n s_i := testbit i in
+              let/n swap := xorb swap s_i in
+              let/n (P1, P2) := cswap swap P1 P2 in
+              let/n (P1, P2) := ladderstep_gallina u P1 P2 in
+              let/n swap := s_i in
               (P1, P2, swap)
            ) in
-      let/d ''(P1, P2) := cswap swap P1 P2 in
+      let/n (P1, P2) := cswap swap P1 P2 in
       let '(x, z) := P1 in
-      let/d r := F.inv z in
-      let/d r := (x * r) in
+      let/n r := F.inv z in
+      let/n r := (x * r) in
       r.
   End Gallina.
 
   Section MontLadder.
     Context (scalarbits_small : word.wrap scalarbits = scalarbits).
 
-    Definition MontLadderResult
-               (K : scalar)
-               (pOUT pK pU pX1 pZ1 pX2 pZ2 pA pAA pB pBB pE pC pD pDA pCB: Semantics.word)
-               (result : F M_pos)
-      : list word -> Semantics.mem -> Prop :=
-      fun _ =>
-      (liftexists OUT : felem,
-         (emp (result = feval OUT /\ bounded_by tight_bounds OUT)
-          * (FElem pOUT OUT * Scalar pK K * Placeholder pU
-             * Placeholder pX1 * Placeholder pZ1
-             * Placeholder pX2 * Placeholder pZ2
-             * Placeholder pA * Placeholder pAA
-             * Placeholder pB * Placeholder pBB
-             * Placeholder pE * Placeholder pC * Placeholder pD
-             * Placeholder pDA * Placeholder pCB))%sep).
-
     Instance spec_of_montladder : spec_of "montladder" :=
-      forall! (K : scalar) (U : felem) (* input *)
+      fnspec! "montladder"
             (pOUT pK pU pX1 pZ1 pX2 pZ2
-                  pA pAA pB pBB pE pC pD pDA pCB : Semantics.word),
-        (fun R m =>
+                  pA pAA pB pBB pE pC pD pDA pCB : Semantics.word)
+            / (K : scalar) (U : felem) (* inputs *)
+            OUT X1 Z1 X2 Z2 A AA B BB E C D DA CB (* intermediates *)
+            R,
+      { requires tr mem :=
            bounded_by tight_bounds U
-           /\ (Placeholder pOUT * Scalar pK K * FElem pU U
-               * Placeholder pX1 * Placeholder pZ1
-               * Placeholder pX2 * Placeholder pZ2
-               * Placeholder pA * Placeholder pAA
-               * Placeholder pB * Placeholder pBB
-               * Placeholder pE * Placeholder pC
-               * Placeholder pD * Placeholder pDA
-               * Placeholder pCB * R)%sep m)
-          ===>
-          "montladder" @
-          [pOUT; pK; pU; pX1; pZ1; pX2; pZ2; pA; pAA; pB; pBB; pE; pC; pD; pDA; pCB]
-          ===>
-          (MontLadderResult
-             K pOUT pK pU pX1 pZ1 pX2 pZ2 pA pAA pB pBB pE pC pD pDA pCB
-             (montladder_gallina
-                scalarbits
-                (fun i => Z.testbit (F.to_Z (sceval K)) (Z.of_nat i))
-                (feval U))).
+           /\ (FElem pOUT OUT * Scalar pK K * FElem pU U
+               * FElem pX1 X1 * FElem pZ1 Z1
+               * FElem pX2 X2 * FElem pZ2 Z2
+               * FElem pA A * FElem pAA AA
+               * FElem pB B * FElem pBB BB
+               * FElem pE E * FElem pC C
+               * FElem pD D * FElem pDA DA
+               * FElem pCB CB * R)%sep mem;
+        ensures tr' mem' :=
+          tr' = tr
+          /\ (exists OUT X1 Z1 X2 Z2
+                     A AA B BB E C D DA CB : felem,
+                 feval OUT = montladder_gallina
+                               scalarbits
+                               (fun i =>
+                                  Z.testbit (F.to_Z (sceval K))
+                                            (Z.of_nat i))
+                               (feval U)
+            /\ bounded_by tight_bounds OUT
+            /\ (FElem pOUT OUT * Scalar pK K * FElem pU U
+                * FElem pX1 X1 * FElem pZ1 Z1
+                * FElem pX2 X2 * FElem pZ2 Z2
+                * FElem pA A * FElem pAA AA
+                * FElem pB B * FElem pBB BB
+                * FElem pE E * FElem pC C
+                * FElem pD D * FElem pDA DA
+                * FElem pCB CB * R)%sep mem) }.
 
     Ltac apply_compile_cswap_nocopy :=
       simple eapply compile_cswap_nocopy with
@@ -122,17 +116,17 @@ Section __.
       [ try congruence .. | ].
 
     Ltac compile_custom ::=
-      gen_sym_inc;
-      let name := gen_sym_fetch "v" in
-      cleanup;
+      simple apply compile_nlet_as_nlet_eq;
       first [ simple eapply compile_downto
-            | simple eapply compile_sctestbit with (var:=name)
+            | simple eapply compile_sctestbit
             | simple eapply compile_point_assign
             | simple eapply compile_felem_small_literal
             | simple eapply compile_felem_copy
             | simple eapply compile_cswap_pair
             | apply_compile_cswap_nocopy ].
 
+    (* TODO: make a new loop invariant, drop the sep-local stuff *)
+    (*
     Definition downto_inv
                swap_var X1_var Z1_var X2_var Z2_var K_var
                K K_ptr X1_ptr Z1_ptr X2_ptr Z2_ptr Rl
@@ -181,7 +175,7 @@ Section __.
             * Placeholder E_ptr * Placeholder C_ptr
             * Placeholder D_ptr * Placeholder DA_ptr
             * Placeholder CB_ptr))%sep.
-
+*)
     Definition downto_ghost_step
                (K : scalar) (st : point * point * bool)
                (gst : bool) (i : nat) :=
@@ -227,9 +221,9 @@ Section __.
        compiler doesn't work, presumably because of the typeclass
        preconditions. This is a hacky workaround. *)
     (* TODO: figure out a cleaner way to do this *)
-    Lemma unsigned_of_Z_1 : word.unsigned (word.of_Z 1) = 1.
+    Lemma unsigned_of_Z_1 : word.unsigned (@word.of_Z _ Semantics.word 1) = 1.
     Proof. exact word.unsigned_of_Z_1. Qed.
-    Lemma unsigned_of_Z_0 : word.unsigned (word.of_Z 0) = 0.
+    Lemma unsigned_of_Z_0 : word.unsigned (@word.of_Z _ Semantics.word 0) = 0.
     Proof. exact word.unsigned_of_Z_0. Qed.
     Hint Resolve unsigned_of_Z_0 unsigned_of_Z_1 : compiler.
 
@@ -283,24 +277,31 @@ Section __.
       | _ => solve_field_subgoals_with_cswap
       end.
 
+    Existing Instance spec_of_sctestbit.
+
     Derive montladder_body SuchThat
            (let args := ["OUT"; "K"; "U"; "X1"; "Z1"; "X2"; "Z2";
                            "A"; "AA"; "B"; "BB"; "E"; "C"; "D"; "DA"; "CB"] in
-            let montladder := ("montladder", (args, [], montladder_body)) in
-            program_logic_goal_for
-              montladder
-              (ltac:(
-                 let callees :=
-                     constr:([felem_small_literal; felem_copy;
-                                "ladderstep";
-                                sctestbit; inv; mul]) in
-                 let x := program_logic_goal_for_function
-                                montladder callees in
-                     exact x)))
-           As montladder_body_correct.
+            let montladder : Syntax.func :=
+                ("montladder", (args, [], montladder_body)) in
+          ltac:(
+            let goal := Rupicola.Lib.Tactics.program_logic_goal_for_function
+                          montladder [felem_small_literal; felem_copy;
+                                        sctestbit; "ladderstep"; inv; mul] in
+            exact (__rupicola_program_marker montladder_gallina -> goal)))
+         As montladder_correct.
     Proof.
-      cbv [program_logic_goal_for spec_of_montladder].
+(* NOTE: the plan is to completely redo montladder after ladderstep is updated to use stackalloc *)
+    Abort.
+(*
       pose proof scalarbits_pos.
+      compile_setup.
+      repeat compile_step.
+      (* need to update point compilation lemmas! Point.v *)
+
+      (* compile constants *)
+
+      cbv [program_logic_goal_for spec_of_montladder].
       setup. cbv [F.one F.zero]. (* expose F.of_Z *)
 
       (* prevent things from getting stored in pOUT *)
@@ -484,9 +485,13 @@ Section __.
         all:repeat (sepsimpl; lift_eexists).
         all:ecancel_assumption. }
     Qed.
+ *)
+
   End MontLadder.
 End __.
 
 Local Coercion expr.var : string >-> Syntax.expr.
 Local Unset Printing Coercions.
+(*
 Redirect "Crypto.Bedrock.Group.ScalarMult.MontgomeryLadder.montladder_body" Print montladder_body.
+*)

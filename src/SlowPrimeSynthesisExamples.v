@@ -41,8 +41,60 @@ Local Instance : unfold_value_barrier_opt := true.
 Local Instance : assembly_hints_lines_opt := None.
 Local Instance : tight_upperbound_fraction_opt := default_tight_upperbound_fraction.
 Local Existing Instance default_language_naming_conventions.
+Local Existing Instance default_documentation_options.
+Local Instance skip_typedefs : skip_typedefs_opt := true.
 Local Instance : package_name_opt := None.
 Local Instance : class_name_opt := None.
+
+Module debugging_typedefs.
+  Import Crypto.PushButtonSynthesis.UnsaturatedSolinas.
+  Import Stringification.C.
+  Import Stringification.C.Compilers.
+  Import Stringification.C.Compilers.ToString.
+  Section __.
+    Local Existing Instance C.OutputCAPI.
+    Local Instance static : static_opt := false.
+    Local Instance : internal_static_opt := true.
+    Local Instance : emit_primitives_opt := false.
+    Local Instance : use_mul_for_cmovznz_opt := false.
+    Local Instance : widen_carry_opt := false.
+    Local Instance : widen_bytes_opt := false.
+    Local Instance : only_signed_opt := false.
+    Local Instance : no_select_opt := false.
+    Local Instance : should_split_mul_opt := false.
+    Local Instance : should_split_multiret_opt :=false.
+
+    Definition n := 3%nat (*5%nat*).
+    Definition s := 2^127 (* 255*).
+    Definition c := [(1, 1(*9*))].
+    Definition machine_wordsize := 64.
+
+    Import IR.Compilers.ToString.
+    Redirect "log"
+             Compute match (sadd n s c machine_wordsize "1271") return (string * Pipeline.ErrorT _) with
+                     | (name, ErrorT.Success {| Pipeline.lines := v |}) => (name, ErrorT.Success (String.concat String.NewLine v))
+                     | v => _
+                     end.
+    Redirect "log"
+             Compute Synthesize n s c machine_wordsize [] "curve" ["add"].
+
+    Goal True.
+      pose (sadd n s c machine_wordsize "1271") as v.
+      cbv [sadd] in v.
+      vm_compute add in v.
+      cbv beta iota zeta in v.
+      cbv [Language.Compilers.ToString.ToFunctionLines] in v.
+      cbv [C.OutputCAPI] in v.
+      cbv [ToFunctionLines] in v.
+      vm_compute IR.OfPHOAS.ExprOfPHOAS in v.
+      cbv beta iota zeta in v.
+      (*vm_compute in v.*)
+      set (k := ToString.OfPHOAS.input_bounds_to_string _ _) in (value of v).
+      clear v.
+      vm_compute in k.
+    Abort.
+  End __.
+End debugging_typedefs.
 
 Module debugging_21271_from_bytes.
   Import Crypto.PushButtonSynthesis.UnsaturatedSolinas.
@@ -178,7 +230,6 @@ Module debugging_sat_solinas_25519.
 
     Time Redirect "log" Compute
          Show.show (* [show] for pretty-printing of the AST without needing lots of imports *)
-         false
          (Pipeline.BoundsPipelineToString
             "fiat" "mul"
             false (* subst01 *)
@@ -191,7 +242,10 @@ Module debugging_sat_solinas_25519.
                   exact r)
                    (fun _ _ => []) (* comment *)
                    (Some boundsn, (Some boundsn, tt))
-                   (Some boundsn, None (* Should be: Some r[0~>0]%zrange, but bounds analysis is not good enough *) )).
+                   (Some boundsn, None (* Should be: Some r[0~>0]%zrange, but bounds analysis is not good enough *) )
+                   (None, (None, tt))
+                   (None, None)
+          : Pipeline.ErrorT _).
     (* Finished transaction in 6.9 secs (4.764u,0.001s) (successful) *)
   End __.
 End debugging_sat_solinas_25519.
@@ -392,7 +446,6 @@ Module debugging_sat_solinas_25519_expanded.
     Time Redirect "log"
          Compute
          Show.show (* [show] for pretty-printing of the AST without needing lots of imports *)
-         false
          (Pipeline.BoundsPipelineToString
             "fiat" "mul"
             false (* subst01 *)
@@ -405,7 +458,10 @@ Module debugging_sat_solinas_25519_expanded.
                   exact r)
                    (fun _ _ => []) (* comment *)
                    (Some boundsn, (Some boundsn, tt))
-                   (Some boundsn, None (* Should be: Some r[0~>0]%zrange, but bounds analysis is not good enough *) )).
+                   (Some boundsn, None (* Should be: Some r[0~>0]%zrange, but bounds analysis is not good enough *) )
+                   (None, (None, tt))
+                   (None, None)
+          : Pipeline.ErrorT _).
     (* Finished transaction in 6.9 secs (4.764u,0.001s) (successful) *)
   End __.
 End debugging_sat_solinas_25519_expanded.
@@ -960,22 +1016,22 @@ Module debugging_25519_to_bytes_java.
       vm_compute in k.
       subst k.
       cbv beta iota zeta in v.
-      set (k := Language.Compilers.ToString.ToFunctionLines _ _ _ _ _ _ _ _ _ _) in (value of v).
+      set (k := Language.Compilers.ToString.ToFunctionLines _ _ _ _ _ _ _ _ _ _ _ _ _ _) in (value of v).
       clear v.
       cbv [Language.Compilers.ToString.ToFunctionLines] in k.
       cbv [Java.OutputJavaAPI] in k.
       cbv [Language.Compilers.ToString.ToFunctionLines] in k.
       cbv [Java.ToFunctionLines] in k.
-      set (k' := IR.OfPHOAS.ExprOfPHOAS _ _ _ _) in (value of k).
+      set (k' := IR.OfPHOAS.ExprOfPHOAS _ _ _ _ _ _) in (value of k).
       clear k.
       cbv [IR.OfPHOAS.ExprOfPHOAS IR.OfPHOAS.ExprOfPHOAS_cps IR.OfPHOAS.ExprOfPHOAS_with_opt_outbounds_cps IR.OfPHOAS.ExprOfPHOAS_cont] in k'.
       cbv [IR.OfPHOAS.expr_of_PHOAS IR.OfPHOAS.expr_of_PHOAS_cps IR.OfPHOAS.expr_of_PHOAS_cont] in k'.
-      set (k := IR.OfPHOAS.var_data_of_bounds _ _ _ _) in (value of k').
+      set (k := IR.OfPHOAS.var_data_of_bounds_and_typedefs _ _ _ _ _) in (value of k').
       vm_compute in k.
       subst k.
       cbv beta iota zeta in k'.
       cbv [IR.OfPHOAS.expr_of_PHOAS' IR.OfPHOAS.expr_of_PHOAS'_cps IR.OfPHOAS.expr_of_PHOAS'_cont] in k'.
-      set (k := IR.OfPHOAS.var_data_of_bounds _ _ _ _) in (value of k').
+      set (k := IR.OfPHOAS.var_data_of_bounds_and_typedefs _ _ _ _ _) in (value of k').
       vm_compute in k.
       subst k.
       cbv beta iota zeta in k'.
@@ -2261,7 +2317,11 @@ Module debugging_remove_mul_split_to_C_uint1_carry.
             exact r)
              (fun _ _ => []) (* comment *)
              (Some loose_bounds, (Some loose_bounds, tt))
-             (Some tight_bounds).
+             (Some tight_bounds)
+             (None, (None, tt))
+             None
+      : Pipeline.ErrorT _
+    .
 (* /*
  * Input Bounds:
  *   arg1: [[0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664], [0x0 ~> 0x1a666666666664]]
@@ -2940,20 +3000,13 @@ Module debugging_remove_mul_split2.
     Let c := s - m.
     Let n : nat := Eval compute in Z.to_nat (Qceiling (Z.log2_up s / machine_wordsize)).
     Let r := 2^machine_wordsize.
-    Let r' := match Z.modinv r m with
-              | Some r' => r'
-              | None => 0
-              end.
-    Let m' := Eval vm_compute in
-          match Z.modinv (-m) r with
-          | Some m' => m'
-          | None => 0
-          end.
+    Let r' := Z.modinv r m.
+    Let m' := Eval vm_compute in Z.modinv (-m) r.
 
     Local Notation saturated_bounds := (Primitives.saturated_bounds n machine_wordsize).
 
     Definition bounds : list (ZRange.type.option.interp base.type.Z)
-      := Option.invert_Some saturated_bounds (*List.map (fun u => Some r[0~>u]%zrange) upperbounds*).
+      := saturated_bounds (*List.map (fun u => Some r[0~>u]%zrange) upperbounds*).
 
     Definition possible_values_of_machine_wordsize
       := prefix_with_carry [machine_wordsize; 2 * machine_wordsize]%Z.
@@ -3188,7 +3241,10 @@ Section debugging_p448.
              exact r)
               (fun _ _ => []) (* comment *)
               (Some loose_bounds, (Some loose_bounds, tt))
-              (Some tight_bounds).
+              (Some tight_bounds)
+              (None, (None, tt))
+              None
+    : Pipeline.ErrorT _.
 
   Time Redirect "log" Compute
        Pipeline.BoundsPipeline

@@ -45,6 +45,8 @@ Import
 
 Local Existing Instance Stringification.C.Compilers.ToString.C.OutputCAPI.
 Local Existing Instance default_language_naming_conventions.
+Local Existing Instance default_documentation_options.
+Local Instance skip_typedefs : skip_typedefs_opt := true.
 Local Instance : package_name_opt := None.
 Local Instance : class_name_opt := None.
 Local Instance : static_opt := true.
@@ -90,8 +92,9 @@ Module Import UnsaturatedSolinas.
       limbwidth := limbwidth n s c;
       machine_wordsize : Z }.
 
-  Global Instance show_params : Show params
-    := fun _ p => ("{| n := " ++ show false n ++ "; s := " ++ show false s ++ "; c := " ++ show false c ++ "; idxs := " ++ show false idxs ++ "; machine_wordsize := " ++ show false machine_wordsize ++ "|}")%string.
+  Global Instance show_lvl_params : ShowLevel params
+    := fun p => neg_wrap_parens ("{| n := " ++ show_lvl n term_lvl ++ "; s := " ++ show_lvl s term_lvl ++ "; c := " ++ show_lvl c term_lvl ++ "; idxs := " ++ show_lvl idxs term_lvl ++ "; machine_wordsize := " ++ show_lvl machine_wordsize term_lvl ++ "|}")%string.
+  Global Instance show_params : Show params := show_lvl_params.
 
   Definition of_string (p : string) (bitwidth : Z) : list params
     := match parseZ_arith_to_taps p with
@@ -158,7 +161,7 @@ Module Import UnsaturatedSolinas.
                     (seq _ _ id id)
                     (List.map
                        (fun method
-                        => let make_descr := fun kind => ("Testing UnsaturatedSolinas " ++ prime ++ " (bitwidth = " ++ str_bitwidth ++ " ) (index = " ++ str_index ++ " ) (method = " ++ show false method ++ " ) (params = " ++ show false p ++ " ) " ++ kind ++ " with extraction " ++ extr_descr)%string in
+                        => let make_descr := fun kind => ("Testing UnsaturatedSolinas " ++ prime ++ " (bitwidth = " ++ str_bitwidth ++ " ) (index = " ++ str_index ++ " ) (method = " ++ show method ++ " ) (params = " ++ show p ++ " ) " ++ kind ++ " with extraction " ++ extr_descr)%string in
                            (seq _ _)
                              (fun _ => time _ (make_descr "PipelineFullToStringsOf") (fun _ => PipelineFullToStringsOf (p, method)))
                              (fun _
@@ -296,13 +299,11 @@ Module Import WordByWordMontgomery.
       s := 2^Z.log2_up m;
       n : nat := Z.to_nat (Qceiling (Z.log2_up s / machine_wordsize));
       r := 2^machine_wordsize;
-      m' := match Z.modinv (-m) r with
-            | Some m' => m'
-            | None => 0
-            end }.
+      m' := Z.modinv (-m) r }.
 
-  Global Instance show_params : Show params
-    := fun _ p => ("{| m := " ++ show false m ++ "; machine_wordsize := " ++ show false machine_wordsize ++ "|}")%string.
+  Global Instance show_lvl_params : ShowLevel params
+    := fun p => neg_wrap_parens ("{| m := " ++ show_lvl m term_lvl ++ "; machine_wordsize := " ++ show_lvl machine_wordsize term_lvl ++ "|}")%string.
+  Global Instance show_params : Show params := show_lvl_params.
 
   Definition of_string (p : string) (bitwidth : Z) : option params
     := match parseZ_arith_strict p with
@@ -366,7 +367,7 @@ Module Import WordByWordMontgomery.
                     (seq _ _ id id)
                     (List.map
                        (fun method
-                        => let make_descr := fun kind => ("Testing WordByWordMontgomery " ++ prime ++ " (bitwidth = " ++ str_bitwidth ++ " ) (method = " ++ show false method ++ " ) (params = " ++ show false p ++ " ) " ++ kind ++ " with extraction " ++ extr_descr)%string in
+                        => let make_descr := fun kind => ("Testing WordByWordMontgomery " ++ prime ++ " (bitwidth = " ++ str_bitwidth ++ " ) (method = " ++ show method ++ " ) (params = " ++ show p ++ " ) " ++ kind ++ " with extraction " ++ extr_descr)%string in
                            (seq _ _)
                              (fun _ => time _ (make_descr "PipelineFullToStringsOf") (fun _ => PipelineFullToStringsOf (p, method)))
                              (fun _

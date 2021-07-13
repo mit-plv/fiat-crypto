@@ -337,6 +337,7 @@ Notation NewLine := (String Ascii.NewLine "").
 Notation CR := (String Ascii.CR "").
 Notation LF := (String Ascii.LF "").
 Notation CRLF := (String Ascii.CR (String Ascii.LF "")).
+Notation Tab := (String Ascii.Tab "").
 
 (** Given a list of strings, breaks all strings within the list at
     CFLF, CF, and LF.  Useful for normalizing a newline-separated list
@@ -395,3 +396,17 @@ Definition rfill (ch : ascii) (ls : list string) : list string
   := let len := List.fold_right Nat.max 0 (List.map String.length ls) in
      let fill s := s ++ repeat ch (len - String.length s) in
      List.map fill ls.
+
+Definition strip_trailing_spaces (s : string) : string
+  := concat NewLine (List.map rtrim (split NewLine s)).
+
+Fixpoint strip_leading_newlines (s : list string) : list string
+  := match s with
+     | nil => nil
+     | s :: ls => if (rtrim s =? "")%string
+                  then strip_leading_newlines ls
+                  else s :: ls
+     end.
+
+Definition strip_trailing_newlines (s : list string) : list string
+  := List.rev (strip_leading_newlines (List.rev s)).

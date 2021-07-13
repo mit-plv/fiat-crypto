@@ -1290,8 +1290,7 @@ Module Compilers.
               {skip_annotations_under : forall t, ident t -> bool}
               {strip_preexisting_annotations : bool}
               {t} (e : Expr t)
-              (Hwf : expr.Wf3 e)
-              (Hwf' : expr.Wf e)
+              (Hwf : expr.Wf e)
               (Ht : type.is_not_higher_order t = true)
               (st : type.for_each_lhs_of_arrow abstract_domain t)
               (Hst : Proper (type.and_for_each_lhs_of_arrow (@abstract_domain_R)) st)
@@ -1306,7 +1305,7 @@ Module Compilers.
                    abstraction_relation'
                      (Extract assume_cast_truncates e st)
                      (type.app_curried (expr.Interp (@ident.interp) (EvalWithBound relax_zrange assume_cast_truncates skip_annotations_under strip_preexisting_annotations e st)) arg1)).
-        Proof using Hrelax. cbv [Extract EvalWithBound]; apply interp_eval_with_bound; auto. Qed.
+        Proof using Hrelax. cbv [Extract EvalWithBound]; apply interp_eval_with_bound; try apply expr.Wf3_of_Wf; auto. Qed.
 
         Lemma Interp_EtaExpandWithBound
               {t} (E : Expr t)
@@ -1402,14 +1401,7 @@ Module Compilers.
           type.app_curried (expr.Interp (@ident.interp) (StripAnnotations assume_cast_truncates E b_in)) arg1
           = type.app_curried (expr.Interp (@ident.interp) E) arg2.
       Proof using Type.
-        cbv [StripAnnotations].
-        intros *; rewrite <- (GeneralizeVar.Interp_gen1_GeneralizeVar E) by assumption.
-        apply (let E := GeneralizeVar.GeneralizeVar (E _) in
-               @interp_strip_annotations assume_cast_truncates t (E _) (E _) (E _));
-          try assumption;
-          try apply GeneralizeVar.Wf_GeneralizeVar;
-          try apply GeneralizeVar.Wf3_GeneralizeVar;
-          try apply Hwf.
+        apply (@interp_strip_annotations assume_cast_truncates t (E _) (E _) (E _)); try apply expr.Wf3_of_Wf; auto.
       Qed.
 
       Lemma Interp_StripAnnotations_bounded
@@ -1426,14 +1418,7 @@ Module Compilers.
             (type.app_curried (expr.Interp (@ident.interp) (StripAnnotations assume_cast_truncates E b_in)) arg1)
           = true.
       Proof using Type.
-        cbv [StripAnnotations].
-        intros; rewrite <- Extract_FromFlat_ToFlat by auto with wf typeclass_instances.
-        apply (let E := GeneralizeVar.GeneralizeVar (E _) in
-               @interp_strip_annotations assume_cast_truncates t (E _) (E _) (E _));
-          try assumption;
-          try apply GeneralizeVar.Wf_GeneralizeVar;
-          try apply GeneralizeVar.Wf3_GeneralizeVar;
-          try apply Hwf.
+        apply (@interp_strip_annotations assume_cast_truncates t (E _) (E _) (E _)); try apply expr.Wf3_of_Wf; auto.
       Qed.
 
       Lemma Interp_EtaExpandWithListInfoFromBound

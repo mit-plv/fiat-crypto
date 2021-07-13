@@ -13,15 +13,20 @@ Module Z.
   Proof. reflexivity. Qed.
 
   Lemma truncating_shiftl_correct_land_ones bw x y
-  : Z.truncating_shiftl bw x y = (x << y) &' Z.ones (Z.max 0 bw).
+  : Z.truncating_shiftl bw x y = (x << y) &' 
+      Z.ones ltac:(match eval hnf in (1 mod 0) with | 0 => exact (Z.max 0 bw) | _ => exact bw end).
   Proof.
-    apply Z.max_case_strong; intro; rewrite truncating_shiftl_correct, ?Z.land_ones by lia;
-      destruct (Z_zerop bw); subst; try reflexivity.
-    rewrite Z.pow_neg_r, Z.pow_0_r, Zmod_0_r, Z.mod_1_r by lia; reflexivity.
+    rewrite truncating_shiftl_correct.
+    destruct (Z_lt_le_dec bw 0).
+    - assert (Hbw : Z.max 0 bw = 0) by lia.
+      assert (H0 : Z.pred (2 ^ 0) = 0) by reflexivity.
+      now rewrite ?Hbw, Z.ones_equiv, ?H0, ?(Z.base_pow_neg 2 bw), ?Z.land_0_r, ?Z.land_m1_r, ?Zmod_0_r.
+    - assert (Hbw : Z.max 0 bw = bw) by lia.
+      rewrite ?Hbw. now rewrite Z.land_ones.
   Qed.
 
   Lemma truncating_shiftl_correct_land_pow2 bw x y
-  : Z.truncating_shiftl bw x y = (x << y) &' (2^(Z.max 0 bw) - 1).
+  : Z.truncating_shiftl bw x y = (x << y) &' (2^(ltac:(match eval hnf in (1 mod 0) with | 0 => exact (Z.max 0 bw) | _ => exact bw end)) - 1).
   Proof.
     rewrite truncating_shiftl_correct_land_ones, Z.ones_equiv, <- Z.sub_1_r.
     reflexivity.
@@ -36,7 +41,7 @@ Module Z.
 
   Lemma truncating_shiftl_testbit_spec_full m a k i :
     Z.testbit (Z.truncating_shiftl m a k) i
-    = if (i <? 0) then false else if (i <? m) then Z.testbit a (i - k) else false.
+    = if (i <? 0) then false else if (orb (i <? m) ((1 mod 0 =? 1) && (m <? 0))) then Z.testbit a (i - k) else false.
   Proof. unfold Z.truncating_shiftl. Z.solve_testbit. Qed.
 
   Hint Rewrite truncating_shiftl_testbit_spec_full : testbit_rewrite.
@@ -47,7 +52,6 @@ Module Z.
     Z.truncating_shiftl m (Z.truncating_shiftl m a p) q
     = Z.truncating_shiftl m a (p + q).
   Proof. Z.solve_using_testbit. Qed.
-
   Lemma truncating_shiftl0 m k :
     Z.truncating_shiftl m 0 k = 0.
   Proof. Z.solve_using_testbit. Qed.
@@ -57,9 +61,10 @@ Module Z.
     = (Z.truncating_shiftl m a k) |' (Z.truncating_shiftl m b k).
   Proof. Z.solve_using_testbit. Qed.
 
+  (* (* not compatible with x mod 0 = x *)
   Lemma truncating_shiftl_large m a k (Hk : k >= m) :
     Z.truncating_shiftl m a k = 0.
-  Proof. Z.solve_using_testbit. Qed.
+  Proof. Z.solve_using_testbit. Qed. *)
 
   Lemma truncating_shiftl_range m a k (Hm : 0 <= m) :
     0 <= Z.truncating_shiftl m a k < 2 ^ m.
