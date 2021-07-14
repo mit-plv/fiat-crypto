@@ -1,0 +1,68 @@
+montladder_body = 
+fun (field_parameters : FieldParameters)
+  (scalar_field_parameters : ScalarFieldParameters) =>
+cmd.seq (cmd.call [] felem_small_literal ["X1"; expr.literal 1])
+  (cmd.seq (cmd.call [] felem_small_literal ["Z1"; expr.literal 0])
+     (cmd.seq (cmd.call [] felem_copy ["X2"; "U"])
+        (cmd.seq (cmd.call [] felem_small_literal ["Z2"; expr.literal 1])
+           (cmd.seq (cmd.set "v6" (expr.literal 0))
+              (cmd.seq (cmd.set "v7" (expr.literal scalarbits))
+                 (cmd.seq
+                    (cmd.while (expr.op bopname.ltu (expr.literal 0) "v7")
+                       (cmd.seq
+                          (cmd.set "v7"
+                             (expr.op bopname.sub "v7" (expr.literal 1)))
+                          (cmd.seq (cmd.call ["v8"] sctestbit ["K"; "v7"])
+                             (cmd.seq
+                                (cmd.set "v9" (expr.op bopname.xor "v6" "v8"))
+                                (cmd.seq
+                                   (cmd.cond "v9"
+                                      (cmd.seq
+                                         (cmd.seq
+                                            (cmd.seq 
+                                               (cmd.set "tmp" "X1")
+                                               (cmd.set "X1" "X2"))
+                                            (cmd.set "X2" "tmp"))
+                                         (cmd.unset "tmp")) cmd.skip)
+                                   (cmd.seq
+                                      (cmd.cond "v9"
+                                         (cmd.seq
+                                            (cmd.seq
+                                               (cmd.seq 
+                                                 (cmd.set "tmp" "Z1")
+                                                 (cmd.set "Z1" "Z2"))
+                                               (cmd.set "Z2" "tmp"))
+                                            (cmd.unset "tmp")) cmd.skip)
+                                      (cmd.seq
+                                         (cmd.call [] "ladderstep"
+                                            ["U"; "X1"; "Z1"; "X2"; "Z2";
+                                            "A"; "AA"; "B"; "BB"; "E"; "C";
+                                            "D"; "DA"; "CB"])
+                                         (cmd.seq 
+                                            (cmd.set "v6" "v8")
+                                            (cmd.seq 
+                                               (cmd.unset "v9")
+                                               (cmd.seq 
+                                                 (cmd.unset "v8") cmd.skip))))))))))
+                    (cmd.seq
+                       (cmd.cond "v6"
+                          (cmd.seq
+                             (cmd.seq
+                                (cmd.seq (cmd.set "tmp" "X1")
+                                   (cmd.set "X1" "X2")) 
+                                (cmd.set "X2" "tmp")) 
+                             (cmd.unset "tmp")) cmd.skip)
+                       (cmd.seq
+                          (cmd.cond "v6"
+                             (cmd.seq
+                                (cmd.seq
+                                   (cmd.seq (cmd.set "tmp" "Z1")
+                                      (cmd.set "Z1" "Z2"))
+                                   (cmd.set "Z2" "tmp")) 
+                                (cmd.unset "tmp")) cmd.skip)
+                          (cmd.seq (cmd.call [] inv ["A"; "Z1"])
+                             (cmd.seq (cmd.call [] mul ["OUT"; "X1"; "A"])
+                                cmd.skip))))))))))
+     : FieldParameters -> ScalarFieldParameters -> cmd
+
+Arguments montladder_body {field_parameters scalar_field_parameters}
