@@ -158,11 +158,16 @@ Section expr_ind.
 End expr_ind.
 Definition invert_ExprRef (e : expr) : option idx :=
   match e with ExprRef i => Some i | _ => None end.
-Global Instance Show_expr : Show expr := fix f e :=
-   match e with
-   | ExprRef i => "ExprRef " ++ show i
-   | ExprApp n => "ExprApp " ++ @show (node expr) (@Show_node _ f) n
-   end%string.
+Definition Show_expr_body (Show_expr : Show expr) : Show expr
+  := Eval cbv -[String.append show_N concat List.map Show_op] in
+      fun e => match e with
+               | ExprRef i => "ExprRef " ++ show i
+               | ExprApp (o, e) => "ExprApp " ++ show (o, e)
+               end%string.
+Definition Show_expr : Show expr
+  := Eval cbv -[String.append show_N concat List.map Show_op] in
+      fix Show_expr e := Show_expr_body Show_expr e.
+Global Existing Instance Show_expr.
 
 Require Import Crypto.Util.Option Crypto.Util.Notations Coq.Lists.List.
 Import ListNotations.
