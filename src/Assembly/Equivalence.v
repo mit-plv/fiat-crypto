@@ -379,11 +379,7 @@ Fixpoint build_input_var (t : API.type) (indices : list (idx + list idx))
 Fixpoint symex_T (t : API.type) : Type
   := match t with
      | type.base t => symexM (base_var t)
-     | type.arrow s d
-       => match s with
-          | type.base s => base_var s
-          | type.arrow _ _ => Empty_set
-          end -> symex_T d
+     | type.arrow s d => var s -> symex_T d
      end.
 Definition symex_T_return {t : API.type} : var t -> symex_T t
   := match t return var t -> symex_T t with
@@ -402,6 +398,12 @@ Fixpoint symex_T_bind_base {T t} : symexM T -> (T -> symex_T t) -> symex_T t
      | type.arrow s d
        => fun v f x => @symex_T_bind_base T d v (fun w => f w x)
      end.
+Fixpoint symex_T_app_curried {t : API.type} : symex_T t -> type.for_each_lhs_of_arrow var t -> symexM (base_var (type.final_codomain t))
+  := match t with
+     | type.base t => fun f 'tt => f
+     | type.arrow s d => fun f '(x, xs) => @symex_T_app_curried d (f x) xs
+     end.
+
 Bind Scope symex_scope with symex_T.
 
 Definition symex_ident {t} (idc : ident t) : symex_T t.
