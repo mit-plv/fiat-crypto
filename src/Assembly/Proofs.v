@@ -1,4 +1,5 @@
 Require Import Coq.Lists.List.
+Require Import Coq.micromega.Lia.
 Require Import Coq.NArith.NArith.
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.Language.API.
@@ -10,10 +11,14 @@ Require Import Crypto.Assembly.Semantics.
 Require Import Crypto.Assembly.Symbolic.
 Require Import Crypto.Assembly.Equivalence.
 Require Import Crypto.Util.Option.
+Require Import Crypto.Util.Prod.
+Require Import Crypto.Util.Sigma.
 Require Import Crypto.Util.Notations.
 Require Import Crypto.Util.Sum.
 Require Import Crypto.Util.Bool.Reflect.
+Require Import Crypto.Util.ListUtil.
 Require Import Crypto.Util.Tactics.BreakMatch.
+Require Import Crypto.Util.Tactics.HasBody.
 Require Import Crypto.Util.Tactics.DestructHead.
 Import API.Compilers APINotations.Compilers AbstractInterpretation.ZRange.Compilers.
 Import ListNotations.
@@ -46,13 +51,131 @@ Definition eval_var (dag : dag) {t : API.type} : var t -> API.interp_type t -> P
      | type.arrow _ _ => fun _ _ => False
      end.
 
-Check @symex_expr.
-Print symex_T.
-(* TODO(Jason?): figure out this lemma statement, reduce proof to ident case *)
-(*Theorem symex_expr_correct
-        {t} (expr : API.Expr t)
-  : ???.
- *)
+Local Lemma ex_Z_of_N_iff P v
+  : (exists n, Z.of_N n = v /\ P n) <-> (0 <= v /\ P (Z.to_N v))%Z.
+Proof.
+  split; [ intros [n [H1 H2] ] | intros [H1 H2]; exists (Z.to_N v) ]; subst; rewrite ?N2Z.id, ?Z2N.id by lia.
+  all: split; eauto; lia.
+Qed.
+
+Local Lemma ex_Z_of_N_iff' P v (H : (0 <= v)%Z)
+  : (exists n, Z.of_N n = v /\ P n) <-> P (Z.to_N v).
+Proof. rewrite ex_Z_of_N_iff; intuition lia. Qed.
+
+Theorem symex_ident_correct
+        {t} (idc : ident t)
+        (d : dag)
+        (input_var_data : type.for_each_lhs_of_arrow var t)
+        (input_runtime_var : type.for_each_lhs_of_arrow API.interp_type t)
+        (* N.B. We need [Hinput] for the [dag_ok] conclusion, because
+            we need to know that we can evaluate the indices in the
+            arguments w.r.t. the dag for, e.g., [eval_merge_node] *)
+        (Hinput : type.and_for_each_lhs_of_arrow (@eval_var d) input_var_data input_runtime_var)
+        (rets : base_var (type.final_codomain t))
+        (d' : dag)
+        (H : symex_T_app_curried (symex_ident idc) input_var_data d = Success (rets, d'))
+        (d_ok : dag_ok d)
+  : eval_base_var d' rets (type.app_curried (Compilers.ident_interp idc) input_runtime_var)
+    /\ dag_ok d'
+    /\ (forall e n, eval d e n -> eval d' e n).
+Proof.
+  cbv [symex_ident] in H; break_innermost_match_hyps.
+  all: cbn [type.app_curried type.and_for_each_lhs_of_arrow Compilers.ident_interp symex_T_app_curried type.for_each_lhs_of_arrow] in *.
+  all: cbn [API.interp_type base_var type.final_codomain var] in *.
+  all: destruct_head'_prod; destruct_head'_unit.
+  all: cbv [symex_T_error symex_error symex_return symex_bind App ErrorT.bind ident.eagerly ident.literal] in *.
+  all: break_innermost_match_hyps.
+  all: match goal with
+       | [ H : Success _ = Success _ |- _ ] => inversion H; clear H
+       | [ H : Error _ = Success _ |- _ ] => exfalso; clear -H; now inversion H
+       | _ => let T := type of H in fail 0 T
+       end.
+  all: try solve [ repeat first [ progress subst
+                                | progress inversion_prod
+                                | progress cbn [fst snd] in *
+                                | progress cbn [eval_var eval_base_var] in *
+                                | progress cbn [Language.Compilers.base.interp Compilers.base_interp] in *
+                                | reflexivity
+                                | repeat apply conj; [ | assumption | exact (fun _ _ x => x) ]
+                                | progress intros
+                                | progress destruct_head'_and
+                                | progress destruct_head'_ex
+                                | progress cbv [Definitions.Z.value_barrier]
+                                | solve [ eauto using length_Forall2, Forall.Forall2_firstn, Forall.Forall2_skipn, Forall.Forall2_combine, Forall2_app, Forall2_rev ]
+                                | rewrite Forall2_eq
+                                | rewrite Forall.Forall2_repeat_iff
+                                | now apply Forall.Forall2_forall_iff'' ] ].
+  (** TODO(Andres): Finish this proof.  What follows is Jason's stab at making progress on it; feel free to remove any/all of it *)
+  all: repeat first [ progress subst
+                    | progress inversion_prod
+                    | progress cbn [fst snd] in *
+                    | progress cbn [eval_var eval_base_var] in *
+                    | progress cbn [Language.Compilers.base.interp Compilers.base_interp] in *
+                    | reflexivity
+                    | repeat apply conj; [ | assumption | exact (fun _ _ x => x) ]
+                    | progress intros
+                    | progress destruct_head'_and
+                    | progress destruct_head'_ex
+                    | progress cbv [Definitions.Z.value_barrier]
+                    | solve [ eauto using length_Forall2, Forall.Forall2_firstn, Forall.Forall2_skipn, Forall.Forall2_combine, Forall2_app, Forall2_rev ]
+                    | rewrite Forall2_eq
+                    | rewrite Forall.Forall2_repeat_iff
+                    | now apply Forall.Forall2_forall_iff'' ].
+  all: repeat match goal with
+              | [ |- context[merge_node ?x ?y] ] => set (merge_node x y) in *; set (x) in *
+              | [ |- context[merge ?x ?y] ] => set (merge x y) in *; set (x) in *
+              | [ H := (?x, ?y, ?z) |- _ ] => set (x) in *; set (y) in *; set (z) in *; subst H
+              end.
+  all: rewrite ?ex_Z_of_N_iff'.
+  all: repeat first [ apply eval_merge_node
+                    | apply eval_merge ].
+  all: try assumption.
+  all: try lia.
+  all: lazymatch goal with
+       | [ |- (0 <= ?x mod ?y)%Z ]
+         => let H := fresh in
+            destruct (Z_zerop y) as [H|H]; [ rewrite H; destruct x eqn:?; cbv -[Z.le]; lia | pose proof (Z_mod_lt x y); lia ]
+       | _ => idtac
+       end.
+Admitted.
+Theorem symex_expr_correct
+        {t} (expr1 : API.expr (var:=var) t) (expr2 : API.expr (var:=API.interp_type) t)
+        (d : dag)
+        (input_var_data : type.for_each_lhs_of_arrow var t) (input_runtime_var : type.for_each_lhs_of_arrow API.interp_type t)
+        (Hinputs : type.and_for_each_lhs_of_arrow (@eval_var d) input_var_data input_runtime_var)
+        (rets : base_var (type.final_codomain t))
+        (d' : dag)
+        G
+        (HG : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> eval_var d v1 v2)
+        (Hwf : API.wf G expr1 expr2)
+        (H : symex_T_app_curried (symex_expr expr1) input_var_data d = Success (rets, d'))
+        (d_ok : dag_ok d)
+  : eval_base_var d' rets (type.app_curried (API.interp expr2) input_runtime_var)
+    /\ dag_ok d'
+    /\ (forall e n, eval d e n -> eval d' e n).
+Proof.
+  revert dependent d; revert dependent input_var_data; revert dependent input_runtime_var.
+  induction Hwf; intros; cbn [symex_expr expr.interp type.for_each_lhs_of_arrow type.and_for_each_lhs_of_arrow] in *;
+    cbv [var] in *; destruct_head'_prod; destruct_head'_and; destruct_head_hnf' unit; destruct_head'_Empty_set;
+      try (break_innermost_match_hyps; destruct_head'_Empty_set; []);
+      destruct_head_hnf' unit; cbn [fst snd] in *.
+  { (* ident *)
+    eapply symex_ident_correct; eassumption. }
+  { (* var *)
+    specialize (fun t => HG (type.base t)).
+    cbv [eval_var symex_T_app_curried symex_T_return symex_return type.app_curried] in *.
+    match goal with H : Success _ = Success _ |- _ => inversion H; clear H end.
+    subst; eauto. }
+  { (* *)
+    cbn [type.app_curried symex_T_app_curried fst snd] in *.
+    match goal with H : _ |- _ => eapply H; clear H end.
+    all: try eassumption.
+    cbn [List.In]; intros; destruct_head'_or; inversion_sigma; subst; cbn [eq_rect] in *; inversion_prod; subst; eauto. }
+  { (* *)
+
+Admitted.
+
+
 Theorem symex_PHOAS_PHOAS_correct
         {t} (expr : API.Expr t)
         (input_var_data : type.for_each_lhs_of_arrow var t)
