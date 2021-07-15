@@ -42,7 +42,7 @@ Module Import List.
       (Hnil : P nil nil s)
       (Hcons : forall (l : list A) (l' : list B) (s : S),
       P l l' s -> forall a, P (cons a l) (cons (fst (f a s)) l') (snd (f a s))) : P l (fst (foldmap l s)) (snd (foldmap l s)).
-    Proof. induction l; eauto; []; eapply Hcons; trivial. Qed.
+    Proof using Type. induction l; eauto; []; eapply Hcons; trivial. Qed.
   End FoldMap.
 End List.
 
@@ -72,7 +72,7 @@ Section Forall2.
   Lemma Forall2_flip {A B} {R : A -> B -> Prop} xs ys :
     Forall2 R xs ys -> Forall2 (fun y x => R x y) ys xs.
   Proof. induction 1; eauto. Qed.
-  
+
   Lemma length_Forall2 [A B : Type] [xs ys] [P:A->B->Prop] : Forall2 P xs ys -> length xs = length ys.
   Proof. induction 1; cbn; eauto. Qed.
 
@@ -180,7 +180,7 @@ Definition interp_op o s args :=
   | _, _ => None
   end%N.
 
-Definition node_beq [A : Set] (arg_eqb : A -> A -> bool) : node A -> node A -> bool := 
+Definition node_beq [A : Set] (arg_eqb : A -> A -> bool) : node A -> node A -> bool :=
   Prod.prod_beq _ _ op_beq (ListUtil.list_beq _ arg_eqb).
 
 Definition dag := list (node idx).
@@ -212,7 +212,7 @@ Section WithDag.
       (H : forall i op args args', nth_error dag (N.to_nat i) = Some (op, args) ->
         Forall2 (fun i e => repr i e /\ P i e) args args' -> P i (ExprApp (op, args'))).
     Fixpoint repr_ind i e (pf : repr i e) {struct pf} : P i e :=
-       let '(RepApp _ _ _ _ A B) := pf in 
+       let '(RepApp _ _ _ _ A B) := pf in
        H _ _ _ _ A (Forall2_weaken (fun _ _ C => conj C (repr_ind _ _ C)) _ _ B).
   End repr_ind.
 
@@ -276,7 +276,7 @@ Section WithDag.
   End eval_ind.
 
   Lemma eval_eval : forall e v1, eval e v1 -> forall v2, eval e v2 -> v1=v2.
-  Proof.
+  Proof using Type.
     induction 1; inversion 1; subst;
     enough (args' = args'0) by congruence;
     try replace args0 with args in * by congruence.
@@ -291,14 +291,14 @@ Section WithDag.
   Qed.
 
   Lemma repr_reveals : forall i e, reveals (ExprRef i) e -> repr i e.
-  Proof.
+  Proof using Type.
     intros ? ? H.
     dependent induction H; econstructor; try eassumption.
     eapply Forall2_weaken; [|eauto]; cbn; intuition eauto.
   Qed.
 
   Lemma reveals_repr : forall i e, repr i e -> reveals (ExprRef i) e.
-  Proof.
+  Proof using Type.
     induction 1; econstructor; try eassumption.
     eapply Forall2_weaken; [|eauto]; cbn; intuition eauto.
   Qed.
@@ -320,7 +320,7 @@ Section WithDag.
 
   Lemma reveals_reveal_repr : forall n i e', reveal n i = e' ->
     forall e, repr i e -> reveals e' e.
-  Proof.
+  Proof using Type.
     induction n; cbn [reveal]; cbv [reveal_step]; intros; subst.
     { eauto using reveals_repr. }
     inversion H0; subst.
@@ -331,7 +331,7 @@ Section WithDag.
 
   Lemma eval_reveal : forall n i, forall v, eval (ExprRef i) v ->
     forall e, reveal n i = e -> eval e v.
-  Proof.
+  Proof using Type.
     induction n; cbn [reveal]; cbv [reveal_step]; intros; subst; eauto; [].
     inversion H; subst; clear H.
     rewrite H1; econstructor; try eassumption.
@@ -342,7 +342,7 @@ Section WithDag.
 
   Lemma eval_node_reveal_node : forall n v, eval_node n v ->
     forall f e, reveal_node f n = e -> eval e v.
-  Proof.
+  Proof using Type.
     cbv [reveal_node]; inversion 1; intros; subst.
     econstructor; eauto.
     eapply (proj1 (Forall2_map_l _ _ _)) in H0; eapply Forall2_map_l.
@@ -380,7 +380,7 @@ Proof.
   { intuition eauto. eapply H1. }
 Qed.
 
-Lemma permute_commutative opn s args n : commutative opn = true -> 
+Lemma permute_commutative opn s args n : commutative opn = true ->
   interp_op opn s args = Some n ->
   forall args', Permutation.Permutation args args' ->
   interp_op opn s args' = Some n.
@@ -425,7 +425,7 @@ Qed.
 Require Import Crypto.Util.Tactics.SplitInContext.
 
 Lemma eval_merge :
-  forall e n, 
+  forall e n,
   forall d, dag_ok d ->
   eval d e n ->
   eval (snd (merge e d)) (ExprRef (fst (merge e d))) n /\
@@ -599,7 +599,7 @@ Definition simplify_expr : expr -> expr :=
   ;fun e => match e with
     ExprApp (o, args) =>
     match identity (fst o) with
-    | Some i => 
+    | Some i =>
         let args := List.filter (fun a => negb (option_beq N.eqb (interp_expr a) (Some i))) args in
         match args with
         | nil => ExprApp ((const i, snd o), nil)
@@ -648,7 +648,7 @@ Proof.
                    match goal with
                      H : eval d e ?v' |- _ =>
                          let Heq := fresh in
-                         enough (Heq : v = v') by (rewrite Heq; exact H); 
+                         enough (Heq : v = v') by (rewrite Heq; exact H);
                          clear H; try clear e
                    end
                | _ => progress BreakMatch.break_match
@@ -659,7 +659,7 @@ Proof.
   admit.
   admit.
   admit.
-  { 
+  {
     erewrite 2land_ones_le; rewrite ?N.shiftr_0_r; trivial; try Lia.lia.
     admit. (*N.land and N.le *)
   }
@@ -753,7 +753,7 @@ Global Instance ShowLines_symbolic_state : ShowLines symbolic_state :=
      symbolic_reg_state := rs;
      symbolic_flag_state := fs;
      symbolic_mem_state := ms
-   |} => 
+   |} =>
    ["(*symbolic_state*) {|";
    "  dag_state :="] ++ show_lines ds ++ [";";
    ("  symbolic_reg_state := " ++ show rs ++ ";")%string;
@@ -858,7 +858,7 @@ Definition Address {sa : AddressSize} (a : MEM) : M idx :=
            | None => App ((const 0, sa), nil)
            end;
   offset <- App ((zconst sa (match a.(mem_offset) with
-                             | Some s => s 
+                             | Some s => s
                              | None => 0 end), sa), nil);
   bi <- App ((add, sa), [base; index]);
   App ((add, sa), [bi; offset]).
@@ -1118,11 +1118,11 @@ Example evaluation : True.
     let g := eval cbv delta [n] in n in
     idtac (* g *);
 
-    try (match e with context [?i] => 
+    try (match e with context [?i] =>
       let d := eval cbv in (reveal evaluation_subterm 999 170%N) in
       idtac d end)
   | Success (_, ?s) =>
-      let ss := fresh "s" in 
+      let ss := fresh "s" in
       set s as ss; clear s1; rename ss into s1;
       let v := eval cbv in (Option.bind (nth_error lines10 n) invert_rawline) in
       match v with
