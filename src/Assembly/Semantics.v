@@ -239,7 +239,7 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
 
   | lea, [reg dst; mem src] => (* Flags Affected: None *)
     Some (update_reg_with st (fun rs => set_reg rs dst (DenoteAddress sa st src)))
-  | (add | adc) as opc, [dst; src] => 
+  | (add | adc) as opc, [dst; src] =>
     c <- (match opc with adc => get_flag st CF | _ => Some false end);
     let c := N.b2n c in
     v1 <- DenoteOperand sa s st dst;
@@ -379,3 +379,27 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
   | xor, _
   | xchg, _ => None
  end | _ => None end%N%option.
+
+
+Definition DenoteRawLine (st : machine_state) (rawline : RawLine) : option machine_state :=
+  match rawline with
+  | EMPTY
+  | LABEL _
+    => Some st
+  | INSTR instr
+    => DenoteNormalInstruction st instr
+  | SECTION _
+  | GLOBAL _
+    => None
+  end.
+
+Definition DenoteLine (st : machine_state) (line : Line) : option machine_state
+  := DenoteRawLine st line.(rawline).
+
+Fixpoint DenoteLines (st : machine_state) (lines : Lines) : option machine_state
+  := match lines with
+     | [] => Some st
+     | line :: lines
+       => (st <- DenoteLine st line;
+          DenoteLines st lines)
+     end%option.

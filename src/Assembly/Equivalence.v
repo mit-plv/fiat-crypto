@@ -13,6 +13,8 @@ Require Import Crypto.AbstractInterpretation.ZRange.
 Require Import Crypto.Stringification.Language.
 Require Import Crypto.Util.Strings.Show.
 Require Import Crypto.Util.Option.
+Require Import Crypto.Util.ListUtil.
+Require Import Crypto.Util.Sum.
 Require Import Crypto.Util.OptionList.
 Require Import Crypto.Util.Notations.
 Import API.Compilers APINotations.Compilers AbstractInterpretation.ZRange.Compilers.
@@ -70,6 +72,7 @@ be in printing the error message. *)
 Inductive EquivalenceCheckingError :=
 | Symbolic_execution_failed (_ : Symbolic.error) (_ : symbolic_state)
 | Internal_error_output_load_failed (_ : list (option (list idx))) (_ : symbolic_state)
+| Internal_error_extra_input_arguments (t : API.type) (unused_arguments : list (idx + list idx))
 | Not_enough_registers (num_given num_extra_needed : nat)
 | Incorrect_array_input_dag_node
 | Incorrect_Z_input_dag_node
@@ -77,11 +80,12 @@ Inductive EquivalenceCheckingError :=
 | Unknown_array_length (t : base.type)
 | Invalid_arrow_type (t : API.type)
 | Invalid_argument_type (t : API.type)
+| Invalid_return_type (t : base.type)
 | Invalid_higher_order_application {var} {s d : API.type} (f : API.expr (var:=var) (s -> d)) (x : API.expr (var:=var) s)
 | Invalid_higher_order_let {var} {s : API.type} (x : API.expr (var:=var) s)
 | Unhandled_identifier {t} (idc : ident t)
 | Unhandled_cast (_ _ : Z)
-| Unable_to_unify (_ : string) (_ : symbolic_state)
+| Unable_to_unify (_ _ : list (idx + list idx)) (_ : symbolic_state)
 .
 
 Global Instance show_lines_EquivalenceCheckingError : ShowLines EquivalenceCheckingError
@@ -89,6 +93,8 @@ Global Instance show_lines_EquivalenceCheckingError : ShowLines EquivalenceCheck
                 | Symbolic_execution_failed l r
                   => ["Symbolic execution failed: " ++ show l]%string ++ ["Combined state:"] ++ show_lines r
                 | Internal_error_output_load_failed l r => ["Internal error. Output load failed: " ++ show l]%string ++ ["Combined state:"] ++ show_lines r
+                | Internal_error_extra_input_arguments t unused_arguments
+                  => ["Internal error. Too many input arguments for type " ++ show t ++ ". Unused arguments: " ++ show unused_arguments]%string
                 | Not_enough_registers num_given num_extra_needed
                   => ["Not enough registers available for storing input and output (given " ++ show num_given ++ ", needed an additional " ++ show num_extra_needed ++ "."]%string
                 | Incorrect_array_input_dag_node
@@ -99,6 +105,8 @@ Global Instance show_lines_EquivalenceCheckingError : ShowLines EquivalenceCheck
                   => ["Internal error: Not enough input dag nodes to allocate for type " ++ show t ++ "."]%string
                 | Invalid_argument_type t
                   => ["Invalid type for argument: " ++ show t]%string
+                | Invalid_return_type t
+                  => ["Invalid type for return: " ++ show t]%string
                 | Unknown_array_length t => ["Unknown array length of type " ++ show t ++ "."]%string
                 | Invalid_arrow_type t => ["Invalid higher order function involving the type " ++ show t ++ "."]%string
                 | Invalid_higher_order_application var s d f x
@@ -114,7 +122,8 @@ Global Instance show_lines_EquivalenceCheckingError : ShowLines EquivalenceCheck
                   => ["Identifier not yet handled by symbolic evaluation: " ++ show idc ++ "."]%string
                 | Unhandled_cast l u
                   => ["Argument not yet handled by symbolic evaluation: " ++ show (l, u)]%string
-                | Unable_to_unify s r => ["Unable to unify: "++s]%string ++ show_lines r
+                | Unable_to_unify asm_output PHOAS_output r
+                  => ["Unable to unify: " ++ show asm_output ++ " == " ++ show PHOAS_output]%string ++ show_lines r
                 end%list.
 Global Instance show_EquivalenceCheckingError : Show EquivalenceCheckingError
   := fun err => String.concat String.NewLine (show_lines err).
@@ -256,12 +265,51 @@ Definition var (t : API.type) : Set
      | type.arrow s d => Empty_set
      end.
 
-Fixpoint base_var_beq {t : base.type} : forall a b : base_var t, bool :=
-  match t return forall a b : base_var t, bool with
+(* true iff simplify_base_var (and all other things that process input and output types) can succeed *)
+Fixpoint check_base_type_ok (t : base.type) : bool
+  := match t with
+     | base.type.unit => true
+     | base.type.type_base base.type.Z => true
+     | base.type.prod A B => check_base_type_ok A && check_base_type_ok B
+     | base.type.list (base.type.type_base base.type.Z) => true
+     | base.type.list _
+     | base.type.type_base _
+     | base.type.option _
+       => false
+     end.
+Class base_type_ok t : Prop := base_type_is_ok : check_base_type_ok t = true.
+Global Hint Extern 1 (base_type_ok ?t) => abstract vm_cast_no_check (eq_refl true) : typeclass_instances.
+Definition check_argument_type_ok (t : API.type) : bool
+  := match t with
+     | type.base t => check_base_type_ok t
+     | type.arrow _ _ => false
+     end.
+Class argument_type_ok t : Prop := argument_type_is_ok : check_argument_type_ok t = true.
+Global Hint Extern 1 (argument_type_ok ?t) => abstract vm_cast_no_check (eq_refl true) : typeclass_instances.
+Class type_ok (t : API.type) : Prop
+  := type_is_ok : (type.andb_each_lhs_of_arrow check_argument_type_ok t && check_base_type_ok (type.final_codomain t))%bool = true.
+Global Hint Extern 1 (type_ok ?t) => abstract vm_cast_no_check (eq_refl true) : typeclass_instances.
+
+Fixpoint simplify_base_var {t : base.type} : base_var t -> ErrorT EquivalenceCheckingError (list (idx + list idx))
+  := match t return base_var t -> ErrorT EquivalenceCheckingError (list (idx + list idx)) with
+     | base.type.unit
+       => fun 'tt => Success []
+     | base.type.type_base base.type.Z => fun idx => Success [inl idx]
+     | base.type.prod A B => fun ab => (a <- simplify_base_var (fst ab); b <- simplify_base_var (snd ab); Success (a ++ b))
+     | base.type.list (base.type.type_base base.type.Z)
+       => fun ls : list idx => Success (List.map inl ls)
+     | base.type.list _
+     | base.type.type_base _
+     | base.type.option _
+       => fun _ => Error (Invalid_return_type t)
+     end%error.
+
+Fixpoint base_var_beq {t : base.type} : base_var t -> base_var t -> bool :=
+  match t return base_var t -> base_var t -> bool with
   | base.type.unit => fun _ _ => true
   | base.type.type_base base.type.Z => N.eqb
   | base.type.prod _ _ => fun a b => base_var_beq (fst a) (fst b) && base_var_beq (snd a) (snd b)
-  | base.type.list _ => @ListUtil.list_beq _ base_var_beq
+  | base.type.list _ => @list_beq _ base_var_beq
   | base.type.type_base base.type.nat => Nat.eqb
   | base.type.type_base base.type.zrange => ZRange.zrange_beq
   | _ => fun _ _ => false
@@ -362,7 +410,7 @@ Proof.
             let u := Z.succ u in
             let lu := Z.log2 u in
             if (Z.eqb l 0 && Z.eqb u (2^lu))%bool
-            then 
+            then
               (* App (((slice 0 (Z.to_N lu)), Z.to_N lu, [idx])) *)
               symex_return idx
             else symex_error (Unhandled_cast l u)
@@ -550,36 +598,34 @@ Fixpoint symex_expr {t} (e : API.expr (var:=var) t) : symex_T t
        => fun v : Empty_set => match v with end
      end.
 
-Section check_equivalence.
-  Context {assembly_calling_registers' : assembly_calling_registers_opt}
-          {assembly_stack_size' : assembly_stack_size_opt}
-          {assembly_output_first : assembly_output_first_opt}
-          {assembly_argument_registers_left_to_right : assembly_argument_registers_left_to_right_opt}.
+(* takes and returns PHOAS-style things *)
+Definition symex_PHOAS_PHOAS {t} (expr : API.Expr t) (input_var_data : type.for_each_lhs_of_arrow _ t) (d : dag)
+  : ErrorT EquivalenceCheckingError (base_var (type.final_codomain t) * dag)
+  := let ast : API.expr (type.base (type.final_codomain t))
+         := invert_expr.smart_App_curried (expr _) input_var_data in
+     symex_expr ast d.
 
-  Section with_expr.
-    Context {t}
-            (asm : Lines)
-            (expr : API.Expr t)
-            (arg_bounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
-            (out_bounds : ZRange.type.base.option.interp (type.final_codomain t)).
+(* takes and returns assembly/list style things *)
+Definition symex_PHOAS
+           {t} (expr : API.Expr t)
+           (inputs : list (idx + list idx))
+           (d : dag)
+  : ErrorT EquivalenceCheckingError (list (idx + list idx) * dag)
+  := (input_var_data <- build_input_var t inputs;
+     let '(input_var_data, unused_inputs) := input_var_data in
+     _ <- (if (List.length unused_inputs =? 0)%nat
+           then Success tt
+           else Error (Internal_error_extra_input_arguments t unused_inputs));
+     symevaled_PHOAS <- symex_PHOAS_PHOAS expr input_var_data d;
+     let '(PHOAS_output, d) := symevaled_PHOAS in
+     PHOAS_output <- simplify_base_var PHOAS_output;
+     Success (PHOAS_output, d)).
 
-    Definition check_equivalence : ErrorT EquivalenceCheckingError unit :=
-      let reg_available := assembly_calling_registers (* registers available for calling conventions *) in
-      let d := empty_dag in
-      let gensym_st := gensym_state_init in
-      input_types <- simplify_input_type t arg_bounds;
-      let '(inputs, (d, gensym_st)) := build_inputs (d, gensym_st) input_types in
-      input_var_data <- build_input_var t inputs;
-      let '(input_var_data, unused_inputs) := input_var_data in
-      (* TODO: should we check that there are no unused input nodes? *)
-      let ast : API.expr (type.base (type.final_codomain t))
-          := invert_expr.smart_App_curried (expr _) input_var_data in
-      symevaled_PHOAS <- symex_expr ast d;
-      let '(PHOAS_output, d) := symevaled_PHOAS in
-      let stack_size : nat := N.to_nat (assembly_stack_size asm) in
-      output_types <- simplify_base_type (type.final_codomain t) out_bounds;
-
-      let '(output_placeholders, (d, gensym_st)) := build_inputs (d, gensym_st) output_types in
+Definition symex_asm_func
+           (d : dag) (gensym_st : gensym_state) (output_types : type_spec) (stack_size : nat)
+           (inputs : list (idx + list idx)) (reg_available : list REG) (asm : Lines)
+  : ErrorT EquivalenceCheckingError (list (idx + list idx) * symbolic_state)
+  := let '(output_placeholders, (d, gensym_st)) := build_inputs (d, gensym_st) output_types in
       let '(rsp_idx, gensym_st) := gensym gensym_st in
       let '(stack_placeholders, (d, gensym_st)) := build_inputarray (d, gensym_st) stack_size in
       let '(asminputs, (d, gensym_st)) := build_base_addresses (d, gensym_st) (inputs ++ output_placeholders) in
@@ -600,14 +646,14 @@ Section check_equivalence.
                 offset <- Symbolic.App ((const (8*N.of_nat i), 64), nil);
                 addr <- Symbolic.App ((add, 64), [base; offset]);
                 (fun s => Success (addr, update_mem_with s (cons (addr,idx))))
-              ) (ListUtil.List.enumerate idxs);
+              ) (List.enumerate idxs);
               Symbolic.ret (Some addrs)
           end) (List.combine reg_available asminputs);
         _ <- SetReg rsp rsp_idx;
         _ <- mapM_ (fun '(i, idx) =>
             a <- @Address 64%N {| mem_reg := rsp; mem_offset := Some (Z.opp (Z.of_nat(8*S i))); mem_is_byte := false; mem_extra_reg:=None |};
             (fun s => Success (tt, update_mem_with s (cons (a,idx))))
-          ) (ListUtil.List.enumerate stack_placeholders);
+          ) (List.enumerate stack_placeholders);
         _ <- mapM_ SymexNormalInstruction (Option.List.map invert_rawline asm);
         Symbolic.ret inputaddrs)%N%x86symex s0
       with
@@ -622,13 +668,39 @@ Section check_equivalence.
           ) outputaddrs) with
           | None => Error (Internal_error_output_load_failed outputaddrs s)
           | Some asm_output =>
-              x <- (build_base_var (type.final_codomain t) (List.map inr asm_output));
-              let asm_output := fst x in
-              if base_var_beq asm_output PHOAS_output
-              then Success tt
-              else Error (Unable_to_unify (show asm_output ++ " == " ++ show PHOAS_output)%string s)
+              Success (List.map inr asm_output, s)
           end
       end.
+
+Section check_equivalence.
+  Context {assembly_calling_registers' : assembly_calling_registers_opt}
+          {assembly_stack_size' : assembly_stack_size_opt}
+          {assembly_output_first : assembly_output_first_opt}
+          {assembly_argument_registers_left_to_right : assembly_argument_registers_left_to_right_opt}.
+
+  Section with_expr.
+    Context {t}
+            (asm : Lines)
+            (expr : API.Expr t)
+            (arg_bounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
+            (out_bounds : ZRange.type.base.option.interp (type.final_codomain t)).
+
+    Definition check_equivalence : ErrorT EquivalenceCheckingError unit :=
+      let reg_available := assembly_calling_registers (* registers available for calling conventions *) in
+      let d := empty_dag in
+      let gensym_st := gensym_state_init in
+      input_types <- simplify_input_type t arg_bounds;
+      let '(inputs, (d, gensym_st)) := build_inputs (d, gensym_st) input_types in
+      PHOAS_output <- symex_PHOAS expr inputs d;
+      let '(PHOAS_output, d) := PHOAS_output in
+      let stack_size : nat := N.to_nat (assembly_stack_size asm) in
+      output_types <- simplify_base_type (type.final_codomain t) out_bounds;
+
+      symevaled_asm <- symex_asm_func d gensym_st output_types stack_size inputs reg_available asm;
+      let '(asm_output, s) := symevaled_asm in
+      if list_beq _ (sum_beq _ _ N.eqb (list_beq _ N.eqb)) asm_output PHOAS_output
+      then Success tt
+      else Error (Unable_to_unify asm_output PHOAS_output s).
 
     (** We don't actually generate assembly, we just check equivalence and pass assembly through unchanged *)
     Definition generate_assembly_of_hinted_expr : ErrorT EquivalenceCheckingError Lines
