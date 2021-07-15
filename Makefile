@@ -725,7 +725,7 @@ perf.csv:
 	$(HIDE)$(file >$@.list.tmp,)
 	$(HIDE)$(foreach i,$(wildcard $(ALL_PERF_LOGS)),$(file >>$@.list.tmp,$(i)))
 	$(HIDE)./src/Rewriter/PerfTesting/Specific/to_csv.py --file-list $@.list.tmp > $@.tmp
-	$(HIDE)cat $@.tmp | sed 's/\s*$$//g' > $@ && rm -f $@.tmp
+	$(HIDE)cat $@.tmp | sed 's/\s*$$//g' > $@ && rm -f $@.list.tmp $@.tmp
 
 .PHONY: perf-graph.csv
 perf-graph.csv:
@@ -733,7 +733,7 @@ perf-graph.csv:
 	$(HIDE)$(file >$@.list.tmp,)
 	$(HIDE)$(foreach i,$(wildcard $(ALL_PERF_LOGS)),$(file >>$@.list.tmp,$(i)))
 	$(HIDE)./src/Rewriter/PerfTesting/Specific/to_csv.py --for-graph --file-list $@.list.tmp > $@.tmp
-	$(HIDE)cat $@.tmp | sed 's/\s*$$//g' > $@ && rm -f $@.tmp
+	$(HIDE)cat $@.tmp | sed 's/\s*$$//g' > $@ && rm -f $@.list.tmp $@.tmp
 
 .PHONY: $(PERF_TXTS)
 $(PERF_TXTS) : %.txt :
@@ -741,7 +741,7 @@ $(PERF_TXTS) : %.txt :
 	$(HIDE)$(file >$@.list.tmp,)
 	$(HIDE)$(foreach i,$(wildcard $(ALL_PERF_LOGS)),$(file >>$@.list.tmp,$(i)))
 	$(HIDE)./src/Rewriter/PerfTesting/Specific/to_csv.py --$* --txt --file-list $@.list.tmp > $@.tmp
-	$(HIDE)cat $@.tmp | sed 's/\s*$$//g' > $@ && rm -f $@.tmp
+	$(HIDE)cat $@.tmp | sed 's/\s*$$//g' > $@ && rm -f $@.list.tmp $@.tmp
 
 # work around COQBUG(https://github.com/coq/coq/issues/10495)
 .PHONY: clean-tmp-native-work-around-bug-10495
