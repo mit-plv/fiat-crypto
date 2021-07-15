@@ -63,6 +63,7 @@ src/ArithmeticCPS/WordByWordMontgomery.v
 src/Assembly/Equality.v
 src/Assembly/Equivalence.v
 src/Assembly/Parse.v
+src/Assembly/Proofs.v
 src/Assembly/Semantics.v
 src/Assembly/Symbolic.v
 src/Assembly/Syntax.v
