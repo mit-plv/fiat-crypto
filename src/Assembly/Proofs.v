@@ -20,10 +20,17 @@ Require Import Crypto.Util.Sum.
 Require Import Crypto.Util.Bool.Reflect.
 Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.ListUtil.
+Require Import Crypto.Util.ZUtil.Definitions.
+Require Import Crypto.Util.ZUtil.AddGetCarry.
+Require Import Crypto.Util.ZUtil.MulSplit.
+Require Import Crypto.Util.ZUtil.TruncatingShiftl.
 Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
+Require Import Crypto.Util.ZUtil.Tactics.ZeroBounds.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.HasBody.
+Require Import Crypto.Util.Tactics.PrintContext.
+Require Import Crypto.Util.Tactics.PrintGoal.
 Require Import Crypto.Util.Tactics.DestructHead.
 Import API.Compilers APINotations.Compilers AbstractInterpretation.ZRange.Compilers.
 Import ListNotations.
@@ -37,13 +44,13 @@ Fixpoint eval_base_var (dag : dag) {t : base.type} : base_var t -> API.interp_ty
   | base.type.list _ => List.Forall2 (eval_base_var dag)
   | base.type.type_base base.type.nat => @eq _
   | base.type.type_base base.type.zrange => @eq _
-  | _ => fun _ _ => False
+  | _ => fun (bad : Empty_set) _ => match bad with end
   end%bool.
 
 Definition eval_var (dag : dag) {t : API.type} : var t -> API.interp_type t -> Prop
   := match t with
      | type.base _ => eval_base_var dag
-     | type.arrow _ _ => fun _ _ => False
+     | type.arrow _ _ => fun (bad : Empty_set) _ => match bad with end
      end.
 
 Local Lemma ex_Z_of_N_iff P v
@@ -194,21 +201,41 @@ Proof.
                       | [ H : _ = fst ?x |- _ ] => is_var x; destruct x
                       | [ H : _ = snd ?x |- _ ] => is_var x; destruct x
                       end ].
-  all: rewrite ?Z.shiftr_nonneg, ?Z.shiftl_nonneg, ?Z.land_nonneg, ?Z.lor_nonneg.
-  all: try lia.
+  (* handle 0 <= .. from ex_Z_of_N *)
   all: lazymatch goal with
-       | [ |- (0 <= ?x mod ?y)%Z ]
-         => let H := fresh in
-            destruct (Z_zerop y) as [H|H]; [ rewrite H; destruct x eqn:?; cbv -[Z.le]; lia | pose proof (Z_mod_lt x y); lia ]
-       | [ |- (0 <= ident.cast ?r ?v)%Z ]
-         => assert (ZRange.lower r <= ZRange.upper r)%Z;
-              [ cbn [ZRange.lower ZRange.upper] in *;
-                match goal with
-                | [ H : Z.succ ?v = (2^Z.log2 (Z.succ ?v))%Z |- (0 <= ?v)%Z ]
-                  => clear -H; destruct v; try lia; rewrite Z.log2_nonpos, Z.pow_0_r in H by lia; lia
-                end
-              | pose proof (ident.cast_bounded r v ltac:(assumption));
-                cbv [ZRange.is_bounded_by_bool] in *; split_andb; Z.ltb_to_lt; assumption ]
+       | [ |- (0 <= _)%Z ]
+         => rewrite <- ?Z.mul_split_high, ?Z.mul_split_div, ?Z.mul_split_mod,
+            ?Z.add_get_carry_full_div, ?Z.add_get_carry_full_mod, ?Z.add_with_get_carry_full_div, ?Z.add_with_get_carry_full_mod;
+              cbv [Z.add_with_carry];
+              lazymatch goal with
+              | [ |- (0 <= ?x mod ?y)%Z ]
+                => let H := fresh in
+                   destruct (Z_zerop y) as [H|H]; [ rewrite H; destruct x eqn:?; cbv -[Z.le]; lia | Z.zero_bounds ]
+              | [ |- (0 <= Z.truncating_shiftl _ _ _)%Z ]
+                => apply Z.truncating_shiftl_nonneg
+              | [ |- (0 <= ident.cast ?r ?v)%Z ]
+                => assert (ZRange.lower r <= ZRange.upper r)%Z;
+                     [ cbn [ZRange.lower ZRange.upper] in *;
+                       match goal with
+                       | [ H : Z.succ ?v = (2^Z.log2 (Z.succ ?v))%Z |- (0 <= ?v)%Z ]
+                         => clear -H; destruct v; try lia; rewrite Z.log2_nonpos, Z.pow_0_r in H by lia; lia
+                       end
+                     | pose proof (ident.cast_bounded r v ltac:(assumption));
+                       cbv [ZRange.is_bounded_by_bool] in *; split_andb; Z.ltb_to_lt; assumption ]
+              | _ => idtac
+              end;
+              try solve [ Z.zero_bounds ];
+              [ > idtac "Warning: Unsolved zero bounds goal:"; print_context_and_goal () .. ]
+       | _ => idtac
+       end.
+  (* turn casts into mod *)
+  all: lazymatch goal with
+       | [ |- context[ident.cast ?r ?v] ]
+         => rewrite !ident.platform_specific_cast_0_is_mod
+           by match goal with
+              | [ H : Z.succ ?v = (2^Z.log2 (Z.succ ?v))%Z |- (0 <= ?v)%Z ]
+                => clear -H; destruct v; try lia; rewrite Z.log2_nonpos, Z.pow_0_r in H by lia; lia
+              end
        | _ => idtac
        end.
 Admitted.
