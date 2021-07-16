@@ -689,17 +689,19 @@ Section check_equivalence.
 
     Definition check_equivalence : ErrorT EquivalenceCheckingError unit :=
       let reg_available := assembly_calling_registers (* registers available for calling conventions *) in
+      let stack_size : nat := N.to_nat (assembly_stack_size asm) in
       let d := empty_dag in
       let gensym_st := gensym_state_init in
       input_types <- simplify_input_type t arg_bounds;
+      output_types <- simplify_base_type (type.final_codomain t) out_bounds;
       let '(inputs, (d, gensym_st)) := build_inputs (d, gensym_st) input_types in
+
       PHOAS_output <- symex_PHOAS expr inputs d;
       let '(PHOAS_output, d) := PHOAS_output in
-      let stack_size : nat := N.to_nat (assembly_stack_size asm) in
-      output_types <- simplify_base_type (type.final_codomain t) out_bounds;
 
       symevaled_asm <- symex_asm_func d gensym_st output_types stack_size inputs reg_available asm;
       let '(asm_output, s) := symevaled_asm in
+
       if list_beq _ (sum_beq _ _ N.eqb (list_beq _ N.eqb)) asm_output PHOAS_output
       then Success tt
       else Error (Unable_to_unify asm_output PHOAS_output s).
