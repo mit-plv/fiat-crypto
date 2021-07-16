@@ -297,7 +297,7 @@ Fixpoint simplify_base_var {t : base.type} : base_var t -> ErrorT EquivalenceChe
      | base.type.type_base base.type.Z => fun idx => Success [inl idx]
      | base.type.prod A B => fun ab => (a <- simplify_base_var (fst ab); b <- simplify_base_var (snd ab); Success (a ++ b))
      | base.type.list (base.type.type_base base.type.Z)
-       => fun ls : list idx => Success (List.map inl ls)
+       => fun ls : list idx => Success [inr ls]
      | base.type.list _
      | base.type.type_base _
      | base.type.option _
