@@ -2,6 +2,7 @@ Require Import Coq.Lists.List.
 Require Import Coq.micromega.Lia.
 Require Import Coq.NArith.NArith.
 Require Import Coq.ZArith.ZArith.
+Require Import Crypto.Language.PreExtra.
 Require Import Crypto.Language.API.
 Require Import Crypto.Language.APINotations.
 Require Import Crypto.AbstractInterpretation.ZRange.
@@ -10,6 +11,7 @@ Require Import Crypto.Assembly.Syntax.
 Require Import Crypto.Assembly.Semantics.
 Require Import Crypto.Assembly.Symbolic.
 Require Import Crypto.Assembly.Equivalence.
+Require Import Crypto.CastLemmas.
 Require Import Crypto.Util.Option.
 Require Import Crypto.Util.Prod.
 Require Import Crypto.Util.Sigma.
@@ -18,6 +20,7 @@ Require Import Crypto.Util.Sum.
 Require Import Crypto.Util.Bool.Reflect.
 Require Import Crypto.Util.Bool.
 Require Import Crypto.Util.ListUtil.
+Require Import Crypto.Util.ZUtil.Tactics.LtbToLt.
 Require Import Crypto.Util.Tactics.BreakMatch.
 Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.HasBody.
@@ -186,16 +189,26 @@ Proof.
                     | progress subst
                     | progress split_andb
                     | progress reflect_hyps
-                    | progress cbv [PreExtra.ident.cast2]
+                    | progress cbv [ident.cast2]
                     | match goal with
                       | [ H : _ = fst ?x |- _ ] => is_var x; destruct x
                       | [ H : _ = snd ?x |- _ ] => is_var x; destruct x
                       end ].
+  all: rewrite ?Z.shiftr_nonneg, ?Z.shiftl_nonneg, ?Z.land_nonneg, ?Z.lor_nonneg.
   all: try lia.
   all: lazymatch goal with
        | [ |- (0 <= ?x mod ?y)%Z ]
          => let H := fresh in
             destruct (Z_zerop y) as [H|H]; [ rewrite H; destruct x eqn:?; cbv -[Z.le]; lia | pose proof (Z_mod_lt x y); lia ]
+       | [ |- (0 <= ident.cast ?r ?v)%Z ]
+         => assert (ZRange.lower r <= ZRange.upper r)%Z;
+              [ cbn [ZRange.lower ZRange.upper] in *;
+                match goal with
+                | [ H : Z.succ ?v = (2^Z.log2 (Z.succ ?v))%Z |- (0 <= ?v)%Z ]
+                  => clear -H; destruct v; try lia; rewrite Z.log2_nonpos, Z.pow_0_r in H by lia; lia
+                end
+              | pose proof (ident.cast_bounded r v ltac:(assumption));
+                cbv [ZRange.is_bounded_by_bool] in *; split_andb; Z.ltb_to_lt; assumption ]
        | _ => idtac
        end.
 Admitted.
