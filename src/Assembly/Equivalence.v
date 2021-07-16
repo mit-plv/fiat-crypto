@@ -257,7 +257,7 @@ Fixpoint base_var (t : base.type) : Set
      | base.type.type_base base.type.zrange => ZRange.zrange
      | base.type.type_base _
      | base.type.option _
-       => unit (* should not happen *)
+       => Empty_set (* should not happen *)
      end.
 Definition var (t : API.type) : Set
   := match t with
@@ -476,16 +476,16 @@ Proof.
             => fun _ => symex_return tt
           | ident.value_barrier
             => fun v => symex_return v
-          | ident.Literal base.type.bool _
-          | ident.Literal base.type.string _
           | ident.tt
-          | ident.None _
             => symex_return tt
+          | ident.Literal base.type.bool _ as idc
+          | ident.Literal base.type.string _ as idc
+          | ident.None _ as idc
+          | ident.Some _ as idc
+            => symex_T_error (Unhandled_identifier idc)
           | ident.Literal base.type.zrange v
           | ident.Literal base.type.nat v
             => symex_return v
-          | ident.Some _
-            => fun _ => symex_return tt
           | ident.pair _ _
             => fun a b => symex_return (a, b)
           | ident.fst _ _
