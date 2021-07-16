@@ -31,6 +31,7 @@ Require Import Crypto.Util.Tactics.SpecializeBy.
 Require Import Crypto.Util.Tactics.HasBody.
 Require Import Crypto.Util.Tactics.PrintContext.
 Require Import Crypto.Util.Tactics.PrintGoal.
+Require Import Crypto.Util.Tactics.UniquePose.
 Require Import Crypto.Util.Tactics.DestructHead.
 Import API.Compilers APINotations.Compilers AbstractInterpretation.ZRange.Compilers.
 Import ListNotations.
@@ -383,6 +384,21 @@ Definition eval_idx_or_list_idx (d : dag) (v1 : idx + list idx) (v2 : Z + list Z
      | inl _, inr _ | inr _, inl _ => False
      end.
 
+Lemma lift_eval_idx_Z_impl d1 d2
+      (H : forall v n, eval d1 v n -> eval d2 v n)
+  : forall v n, eval_idx_Z d1 v n -> eval_idx_Z d2 v n.
+Proof.
+  cbv [eval_idx_Z]; intros; destruct_head'_ex; destruct_head'_and; eexists; split; [ eassumption | ].
+  eauto.
+Qed.
+
+Lemma lift_eval_idx_or_list_idx_impl d1 d2
+      (H : forall v n, eval d1 v n -> eval d2 v n)
+  : forall v n, eval_idx_or_list_idx d1 v n -> eval_idx_or_list_idx d2 v n.
+Proof.
+  cbv [eval_idx_or_list_idx]; intros; break_innermost_match; eauto using lift_eval_idx_Z_impl, Forall2_weaken.
+Qed.
+
 Fixpoint build_base_runtime (t : base.type) (values : list (Z + list Z))
   : option (base.interp t * list (Z + list Z))
   := match t, values return option (base.interp t * list (Z + list Z)) with
@@ -616,33 +632,146 @@ Theorem symex_asm_func_correct
         (s : symbolic_state)
         (H : symex_asm_func d gensym_st output_types stack_size inputs reg_available asm = Success (rets, s))
         (d' := s.(dag_state))
-  : (forall (st : machine_state)
-            (runtime_inputs : list (Z + list Z)),
-        List.Forall2 (eval_idx_or_list_idx d) inputs runtime_inputs
-        -> exists st'
-                  (* ??? *) (*(input_runtime_var : type.for_each_lhs_of_arrow API.interp_type t)*)
-                  (runtime_rets : list (Z + list Z)),
-          DenoteLines st asm = Some st'
-          (*/\ build_input_runtime t runtime_inputs = Some (input_runtime_var, [])*)
-          (*/\ simplify_base_runtime (type.app_curried (API.Interp expr) input_runtime_var) = Some runtime_rets*)
-          /\ List.Forall2 (eval_idx_or_list_idx d') rets runtime_rets)
+        (st : machine_state)
+        (runtime_inputs : list (Z + list Z))
+        (Hinputs : List.Forall2 (eval_idx_or_list_idx d) inputs runtime_inputs)
+        (* TODO(Andres): write down something that relates [st] to args *)
+  : (exists st'
+            (* ??? *) (*(input_runtime_var : type.for_each_lhs_of_arrow API.interp_type t)*)
+           (runtime_rets : list (Z + list Z)),
+        DenoteLines st asm = Some st'
+        /\ True (* TODO(Andres): write down something that relates st' to retvals *)
+        /\ List.Forall2 (eval_idx_or_list_idx d') rets runtime_rets)
     /\ dag_ok d'
     /\ (forall e n, eval d e n -> eval d' e n).
 Proof.
 Admitted.
 
-Lemma build_inputs_ok d gensym_st v inputs d' gensym_st'
+Definition val_or_list_val_matches_spec (arg : Z + list Z) (spec : option nat)
+  := match arg, spec with
+     | inl _, None => True
+     | inr ls, Some len => List.length ls = len
+     | inl _, Some _ | inr _, None => False
+     end.
+
+
+
+Local Ltac build_runtime_ok_t_step :=
+  first [ progress subst
+        | progress destruct_head'_unit
+        | progress inversion_option
+        | progress inversion_prod
+        | progress destruct_head'_prod
+        | progress destruct_head'_and
+        | progress destruct_head'_ex
+        | progress cbv [Crypto.Util.Option.bind Rewriter.Util.Option.bind ErrorT.bind] in *
+        | progress cbn [val_or_list_val_matches_spec] in *
+        | progress cbn [fst snd ZRange.type.base.option.is_bounded_by type.andb_bool_for_each_lhs_of_arrow] in *
+        | progress split_andb
+        | progress break_innermost_match_hyps
+        | rewrite <- !List.app_assoc in *
+        | discriminate
+        | progress specialize_by_assumption
+        | match goal with
+          | [ H : ?x = Some _ |- context[?x] ] => rewrite H
+          | [ H : forall extra, ?f (?x ++ extra) = Some _ |- context[?f (?x ++ _)] ] => rewrite !H
+          | [ H : Success _ = Success _ |- _ ] => inversion H; clear H
+          | [ |- exists args, ?extra = args ++ ?extra /\ _ /\ _ ]
+            => exists nil
+          | [ |- exists args, ?x :: ?extra = args ++ ?extra /\ _ /\ _ ]
+            => exists (x :: nil)
+          | [ |- exists args, ?x ++ ?extra = args ++ ?extra /\ _ /\ _ ]
+            => exists x
+          | [ |- exists args, ?x ++ (?y ++ ?extra) = args ++ ?extra /\ _ /\ _ ]
+            => exists (x ++ y); rewrite !List.app_assoc
+          | [ IH : forall a b c d e, simplify_base_type _ _ = Success _ -> build_base_runtime _ _ = Some _ -> _ |- _ ]
+            => specialize (IH _ _ _ _ _ ltac:(eassumption) ltac:(eassumption))
+          | [ IH : forall a b c d e, simplify_type _ _ = Success _ -> build_runtime _ _ = Some _ -> _ |- _ ]
+            => specialize (IH _ _ _ _ _ ltac:(eassumption) ltac:(eassumption))
+          | [ IH : forall a b c d e, simplify_input_type _ _ = Success _ -> build_input_runtime _ _ = Some _ -> _ |- _ ]
+            => specialize (IH _ _ _ _ _ ltac:(eassumption) ltac:(eassumption))
+          | [ |- Forall2 _ (_ ++ _) (_ ++ _) ] => apply Forall2_app
+          | [ H : FoldBool.fold_andb_map _ _ _ = true |- List.length _ = List.length _ ]
+            => apply FoldBool.fold_andb_map_length in H
+          end
+        | progress intros
+        | apply conj
+        | reflexivity
+        | (idtac + symmetry); assumption ].
+
+Lemma build_base_runtime_ok t arg_bounds args types PHOAS_args extra
+      (H : simplify_base_type t arg_bounds = Success types)
+      (Hargs : build_base_runtime t args = Some (PHOAS_args, extra))
+      (HPHOAS_args : ZRange.type.base.option.is_bounded_by arg_bounds PHOAS_args = true)
+  : exists args',
+    args = args' ++ extra
+    /\ (forall extra', build_base_runtime t (args' ++ extra') = Some (PHOAS_args, extra'))
+    /\ Forall2 val_or_list_val_matches_spec args' types.
+Proof.
+  revert args extra types H Hargs HPHOAS_args; induction t; intros;
+    cbn [simplify_base_type build_base_runtime type.for_each_lhs_of_arrow Language.Compilers.base.interp] in *;
+    break_innermost_match_hyps;
+    repeat first [ build_runtime_ok_t_step
+                 | constructor ].
+Qed.
+
+Lemma build_runtime_ok t arg_bounds args types PHOAS_args extra
+      (H : simplify_type t arg_bounds = Success types)
+      (Hargs : build_runtime t args = Some (PHOAS_args, extra))
+      (HPHOAS_args : ZRange.type.option.is_bounded_by arg_bounds PHOAS_args = true)
+  : exists args',
+    args = args' ++ extra
+    /\ (forall extra', build_runtime t (args' ++ extra') = Some (PHOAS_args, extra'))
+    /\ Forall2 val_or_list_val_matches_spec args' types.
+Proof.
+  revert args extra types H Hargs HPHOAS_args; induction t; intros;
+    cbn [simplify_type build_runtime type.for_each_lhs_of_arrow] in *;
+    [ eapply build_base_runtime_ok; eassumption | discriminate ].
+Qed.
+
+Lemma build_input_runtime_ok t arg_bounds args input_types PHOAS_args extra
+      (H : simplify_input_type t arg_bounds = Success input_types)
+      (Hargs : build_input_runtime t args = Some (PHOAS_args, extra))
+      (HPHOAS_args : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds PHOAS_args = true)
+  : exists args',
+    args = args' ++ extra
+    /\ (forall extra', build_input_runtime t (args' ++ extra') = Some (PHOAS_args, extra'))
+    /\ Forall2 val_or_list_val_matches_spec args' input_types.
+Proof.
+  revert args extra input_types H Hargs HPHOAS_args; induction t as [|t1 ? t2]; intros;
+    [ eexists [] | pose proof (build_runtime_ok t1) ];
+    cbn [simplify_input_type build_input_runtime type.for_each_lhs_of_arrow] in *;
+    repeat first [ build_runtime_ok_t_step
+                 | constructor ].
+Qed.
+
+Lemma build_input_runtime_ok_nil t arg_bounds args input_types PHOAS_args
+      (H : simplify_input_type t arg_bounds = Success input_types)
+      (Hargs : build_input_runtime t args = Some (PHOAS_args, []))
+      (HPHOAS_args : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds PHOAS_args = true)
+  : Forall2 val_or_list_val_matches_spec args input_types.
+Proof.
+  pose proof (build_input_runtime_ok t arg_bounds args input_types PHOAS_args [] H Hargs HPHOAS_args).
+  destruct_head'_ex; destruct_head'_and; subst; rewrite app_nil_r; assumption.
+Qed.
+
+Lemma build_inputs_ok d gensym_st (spec : type_spec) inputs d' gensym_st'
       (d_ok : dag_ok d)
-      (H : build_inputs (d, gensym_st) v = (inputs, (d', gensym_st')))
-  : True (* Something about inputs *)
+      (H : build_inputs (d, gensym_st) spec = (inputs, (d', gensym_st')))
+  : (forall args,
+        Forall2 val_or_list_val_matches_spec args spec
+        -> Forall2 (eval_idx_or_list_idx d') inputs args)
     /\ dag_ok d'
     /\ True (* something about gensym_st' *).
 Proof.
+  (* TODO(Andres) *)
 Admitted.
 
-Axiom empty_dag_ok : dag_ok empty_dag.
+Lemma empty_dag_ok : dag_ok empty_dag.
+Proof.
+  (* TOOD(Andres) *)
+Admitted.
 
-Check @check_equivalence.
 Theorem check_equivalence_correct
         {assembly_calling_registers' : assembly_calling_registers_opt}
         {assembly_stack_size' : assembly_stack_size_opt}
@@ -660,7 +789,7 @@ Theorem check_equivalence_correct
         (args : list (Z + list Z))
         (Hargs : build_input_runtime t args = Some (PHOAS_args, []))
         (HPHOAS_args : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds PHOAS_args = true)
-  (* TODO(Andres): write down something that relates [st] to args *)
+        (* TODO: this should match symex_asm_func_correct *)
   : exists st'
            (retvals : list (Z + list Z)),
     DenoteLines st asm = Some st'
@@ -694,20 +823,28 @@ Proof.
   reflect_hyps.
   subst.
   pose proof empty_dag_ok.
+  let H := fresh in pose proof Hargs as H; eapply build_input_runtime_ok_nil in H; [ | eassumption .. ].
   repeat first [ assumption
                | match goal with
-                 | [ H : build_inputs _ _ = _ |- _ ] => move H at bottom; apply build_inputs_ok in H; [ | assumption.. ]
-                 | [ H : symex_PHOAS _ _ _ = Success _, H' : build_input_runtime _ ?ri = Some _ |- _ ]
-                   => move H at bottom; apply symex_PHOAS_correct with (runtime_inputs:=ri) in H; [ | clear H; try assumption.. ]
-                 | [ H : _ /\ _ |- _ ] => move H at bottom; destruct H
+                 | [ H : build_inputs _ _ = _ |- _ ] => move H at bottom; apply build_inputs_ok in H; [ | assumption .. ]
+                 | [ H : symex_PHOAS ?expr ?inputs ?d = Success _, H' : build_input_runtime _ ?ri = Some _ |- _ ]
+                   => move H at bottom; apply symex_PHOAS_correct with (runtime_inputs:=ri) in H; [ | assumption .. ]
+                 | [ H : symex_asm_func _ _ _ _ _ _ _ = Success _ |- _ ]
+                   => move H at bottom; eapply symex_asm_func_correct in H;
+                      [ | clear H; eapply Forall2_weaken; [ apply lift_eval_idx_or_list_idx_impl | eassumption ] ]
+                 end
+               | progress destruct_head'_ex
+               | progress destruct_head'_and
+               | progress inversion_prod
+               | progress subst
+               | match goal with
+                 | [ H : ?x = Some ?a, H' : ?x = Some ?b |- _ ]
+                   => rewrite H in H'; inversion_option
+                 | [ H : forall args, Forall2 ?P args ?v -> Forall2 _ _ _, H' : Forall2 ?P _ ?v |- _ ]
+                   => specialize (H _ H')
                  end ].
-  (*2: {
-  lazymatch goal with
-  | [ H : symex_PHOAS _ _ _ = Success _, H' : build_input_runtime _ _ = Some (?ri, _) |- _ ]
-    => move H at bottom; apply symex_PHOAS_correct with (runtime_inputs:=ri) in H; [ | assumption.. ]
-  end.*)
-  epose (DenoteLines st asm).
-Admitted.
+  do 2 eexists; repeat apply conj; eassumption.
+Qed.
 
 Theorem generate_assembly_of_hinted_expr_correct
         {assembly_calling_registers' : assembly_calling_registers_opt}
@@ -731,10 +868,21 @@ Theorem generate_assembly_of_hinted_expr_correct
            /\ API.Wf expr)
         (H : generate_assembly_of_hinted_expr asm expr arg_bounds out_bounds = Success asm_out)
   : asm = asm_out
-    /\ True (* ??? Something about equivalence of [API.Interp expr] and [asm] *).
+    /\ forall (st : machine_state)
+              (PHOAS_args : type.for_each_lhs_of_arrow API.interp_type t)
+              (args : list (Z + list Z))
+              (Hargs : build_input_runtime t args = Some (PHOAS_args, []))
+              (HPHOAS_args : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds PHOAS_args = true),
+      (* Should match check_equivalence_correct exactly *)
+      exists st'
+             (retvals : list (Z + list Z)),
+        DenoteLines st asm = Some st'
+        /\ simplify_base_runtime (type.app_curried (API.Interp expr) PHOAS_args) = Some retvals
+        /\ True (* TODO(andres): write down something that relates st' to retvals *).
 Proof.
   cbv [generate_assembly_of_hinted_expr] in H.
-  break_innermost_match_hyps; inversion H; subst; repeat apply conj; try reflexivity.
+  break_innermost_match_hyps; inversion H; subst; destruct_head'_and; split; [ reflexivity | intros ].
+  eapply check_equivalence_correct; eassumption.
 Qed.
 
 (* Some theorems about the result of calling generate_assembly_of_hinted_expr_correct on various Pipeline functions *)
