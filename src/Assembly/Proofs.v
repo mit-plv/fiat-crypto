@@ -831,6 +831,7 @@ Proof.
                    => move H at bottom; apply symex_PHOAS_correct with (runtime_inputs:=ri) in H; [ | assumption .. ]
                  | [ H : symex_asm_func _ _ _ _ _ _ _ = Success _ |- _ ]
                    => move H at bottom; eapply symex_asm_func_correct in H;
+                      [ | try eassumption .. ];
                       [ | clear H; eapply Forall2_weaken; [ apply lift_eval_idx_or_list_idx_impl | eassumption ] ]
                  end
                | progress destruct_head'_ex
