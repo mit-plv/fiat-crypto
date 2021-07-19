@@ -133,11 +133,11 @@ Definition associative o := match o with add|mul|or|and => true | _ => false end
 Definition commutative o := match o with add|addcarry|mul|mulhuu _ => true | _ => false end.
 Definition identity o := match o with add|addcarry => Some 0%N | mul|mulhuu _=>Some 1%N |_=> None end.
 
-Class OperationSize := operation_size : N.
-Global Instance Show_OperationSize : Show OperationSize := show_N.
+Class OperationSize := operation_size : option N.
+Global Instance Show_OperationSize : Show OperationSize := @show_option _ show_N.
 Definition op : Set := opname * OperationSize.
 Global Instance Show_op : Show op := show_prod.
-Definition op_beq := Prod.prod_beq _ _ opname_beq N.eqb.
+Definition op_beq : op -> op -> bool := Prod.prod_beq _ _ opname_beq (@Option.option_beq N N.eqb).
 
 Definition node (A : Set) : Set := op * list A.
 Global Instance Show_node {A : Set} [show_A : Show A] : Show (node A) := show_prod.
@@ -175,16 +175,16 @@ Import ListNotations.
 
 Section WithContext.
   Context (ctx : symbol -> option N).
-  Definition interp_op o s args :=
+  Definition interp_op o (s : option N) args :=
     let keep n x := N.land x (N.ones n) in
-    let ret x := Some (keep s x) in
+    let ret x := Some (match s with None => x | Some s => keep s x end) in
     match o, args with
     | old s, nil => match ctx s with Some v => ret v | None => None end
     | add, args => ret (List.fold_right N.add 0 args)
     | xor, args => ret (List.fold_right N.lxor 0 args)
-    | neg, [a] => ret (2^s - a)
+    | neg, [a] => ret (match s with None => 0 | Some s => 2^s - a end)
     | slice lo sz, [a] => ret (keep sz (N.shiftr a lo))
-    | const z, nil => Some (N.land z (N.ones s))
+    | const z, nil => ret z
     (* note: incomplete *)
     | _, _ => None
     end%N.
@@ -395,9 +395,11 @@ Lemma interp_op_weaken_symbols G1 G2 o s args
   (H : forall s v, G1 s = Some v -> G2 s = Some v)
   : forall v, interp_op G1 o s args = Some v -> interp_op G2 o s args = Some v.
 Proof.
-  cbv [interp_op]; intros; repeat (BreakMatch.break_match || BreakMatch.break_match_hyps); try congruence.
-  { eapply H in Heqo0. congruence. }
-  { eapply H in Heqo0. congruence. }
+  cbv [interp_op]; intros;
+    repeat (BreakMatch.break_match || BreakMatch.break_match_hyps);
+    inversion_option; subst;
+    try congruence.
+  all : eapply H in Heqo0; congruence.
 Qed.
 
 Lemma eval_weaken_symbols G1 G2 d e n
@@ -579,7 +581,7 @@ Proof.
   *)
 Admitted.
 
-Lemma bound_interp_op G o s args v : interp_op G o s args = Some v ->
+Lemma bound_interp_op G o s args v : interp_op G o (Some s) args = Some v ->
   (v <= N.ones s)%N.
 Proof.
   repeat match goal with
@@ -594,7 +596,7 @@ Qed.
 
 Definition bound_expr e : option N := (* e <= r *)
   match e with
-  | ExprApp ((_, s), _) => Some (N.ones s)
+  | ExprApp ((_, Some s), _) => Some (N.ones s)
   | _ => None
   end.
 
@@ -611,7 +613,7 @@ Definition isCst (e : expr) :=
 Definition simplify_expr : expr -> expr :=
   List.fold_left (fun e f => f e)
   [fun e => match interp0_expr e with
-            | Some v => ExprApp ((const v, 1+N.log2 v), nil)
+            | Some v => ExprApp ((const v, Some (1+N.log2 v)), nil)
             | _ => e end
   ;fun e => match e with
     ExprApp (o, args) =>
@@ -629,7 +631,7 @@ Definition simplify_expr : expr -> expr :=
     ExprApp (o, ExprApp (const v, snd o, nil):: snd csts_exprs)
     end else e | _ => e end
   ;fun e => match e with
-    ExprApp ((slice 0 s',s), [a]) =>
+    ExprApp ((slice 0 s',Some s), [a]) =>
       match bound_expr a with Some b =>
       if N.leb b (N.ones s) && N.leb b (N.ones s')
       then a else e | _ => e end | _ => e end
@@ -878,16 +880,16 @@ Definition Reveal n (i : idx) : M expr :=
 Definition GetReg r : M idx :=
   let '(rn, lo, sz) := index_and_shift_and_bitcount_of_reg r in
   v <- GetReg64 rn;
-  App ((slice lo sz, 64%N), [v]).
+  App ((slice lo sz, Some 64%N), [v]).
 Definition SetReg r (v : idx) : M unit :=
   let '(rn, lo, sz) := index_and_shift_and_bitcount_of_reg r in
   if N.eqb sz 64
   then SetReg64 rn v (* works even if old value is unspecified *)
   else old <- GetReg64 rn;
-       v <- App ((set_slice lo sz, 64%N), [old; v]);
+       v <- App ((set_slice lo sz, Some 64%N), [old; v]);
        SetReg64 rn v.
 
-Class AddressSize := address_size : N.
+Class AddressSize := address_size : option N.
 Definition Address {sa : AddressSize} (a : MEM) : M idx :=
   base <- GetReg a.(mem_reg);
   index <- match a.(mem_extra_reg) with
@@ -904,7 +906,7 @@ Definition Load {sa : AddressSize} (a : MEM) : M idx :=
   addr <- Address a;
   v <- Load64 addr;
   if a.(mem_is_byte)
-  then App ((slice 0 8, 64%N), [v])
+  then App ((slice 0 8, Some 64%N), [v])
   else ret v.
 
 Definition Store {sa : AddressSize} (a : MEM) v : M unit :=
@@ -912,13 +914,13 @@ Definition Store {sa : AddressSize} (a : MEM) v : M unit :=
   if negb a.(mem_is_byte) (* works even if old value undefined *)
   then Store64 addr v
   else old <- Load64 addr;
-       v <- App ((set_slice 0 8, 64), [old; v])%N;
+       v <- App ((set_slice 0 8, Some 64), [old; v])%N;
        Store64 addr v.
 
 (* note: this could totally just handle truncation of constants if semanics handled it *)
 Definition GetOperand {sa : AddressSize} (o : ARG) : M idx :=
   match o with
-  | Syntax.const a => App ((zconst 64 a, 64%N), [])
+  | Syntax.const a => App ((zconst (Some 64%N) a, Some 64%N), [])
   | mem a => Load a
   | reg r => GetReg r
   end.
@@ -955,9 +957,9 @@ Fixpoint Symeval {sa : AddressSize} (e : pre_expr) : M idx :=
 
 Notation "f @ ( x , y , .. , z )" := (PreApp f (@cons pre_expr x (@cons pre_expr y .. (@cons pre_expr z nil) ..))) (at level 10) : x86symex_scope.
 Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
-  let sa : AddressSize := 64%N in
+  let sa : AddressSize := Some 64%N in
   match Syntax.operation_size instr with Some (Some s) =>
-  let s : OperationSize := s in
+  let os : OperationSize := Some s in
   match instr.(Syntax.op), instr.(args) with
   | mov, [dst; src] => (* Note: unbundle when switching from N to Z *)
     v <- GetOperand src;
@@ -1041,7 +1043,7 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
  end
   | _ =>
   match instr.(Syntax.op), instr.(args) with
-  | clc, [] => zero <- Symeval (@PreApp (const 0) 1 nil); SetFlag CF zero
+  | clc, [] => zero <- Symeval (@PreApp (const 0) (Some 1) nil); SetFlag CF zero
   | Syntax.ret, [] => ret tt
   | _, _ => err (error.ambiguous_operation_size instr) end end%N%x86symex.
 
@@ -1049,17 +1051,17 @@ Definition SymexNormalInstructions := fun st is => mapM_ SymexNormalInstruction 
 
 
 Definition OldReg (r : REG) : M unit :=
-  i <- Merge (ExprApp ((oldold (r, None), reg_size r), nil));
+  i <- Merge (ExprApp ((oldold (r, None), Some (reg_size r)), nil));
   SetReg r i.
 Definition OldCell (r : REG) (i : nat) : M unit :=
-  a <- @Address 64%N {| mem_reg := r; mem_offset := Some (Z.of_nat(8*i));
+  a <- @Address (Some 64%N) {| mem_reg := r; mem_offset := Some (Z.of_nat(8*i));
                  mem_is_byte := false; mem_extra_reg:=None |};
-  v <- Merge (ExprApp ((oldold (r, Some i), 64%N), nil));
+  v <- Merge (ExprApp ((oldold (r, Some i), Some 64%N), nil));
   (fun s => Success (tt, update_mem_with s (cons (a,v)))).
 Definition OldStack (r := rsp) (i : nat) : M unit :=
-  a <- @Address 64%N {| mem_reg := r; mem_offset := Some (Z.opp (Z.of_nat(8*S i)));
+  a <- @Address (Some 64%N) {| mem_reg := r; mem_offset := Some (Z.opp (Z.of_nat(8*S i)));
                  mem_is_byte := false; mem_extra_reg:=None |};
-  v <- Merge (ExprApp ((oldold (r, Some i), 64%N), nil));
+  v <- Merge (ExprApp ((oldold (r, Some i), Some 64%N), nil));
   (fun s => Success (tt, update_mem_with s (cons (a,v)))).
 
 Definition init
