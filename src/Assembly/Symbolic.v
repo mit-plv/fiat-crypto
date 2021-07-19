@@ -106,7 +106,8 @@ Require Import Coq.Strings.String Crypto.Util.Strings.Show.
 Require Import Crypto.Assembly.Syntax.
 Definition idx := N.
 Local Set Boolean Equality Schemes.
-Variant opname := old (_:N) | oldold (_:REG*option nat) | const (_ : N) | add | addcarry | notaddcarry | neg | shl | shr | and | or | xor | slice (lo sz : N) | mul | mulhuu (_:N) | set_slice (lo sz : N)(* | ... *).
+Definition symbol := N.
+Variant opname := old (_:symbol) | oldold (_:REG*option nat) | const (_ : N) | add | addcarry | notaddcarry | neg | shl | shr | and | or | xor | slice (lo sz : N) | mul | mulhuu (_:N) | set_slice (lo sz : N)(* | ... *).
 
 Global Instance show_opname : Show opname := fun o =>
   match o with
@@ -172,18 +173,23 @@ Global Existing Instance Show_expr.
 Require Import Crypto.Util.Option Crypto.Util.Notations Coq.Lists.List.
 Import ListNotations.
 
-Definition interp_op o s args :=
-  let keep n x := N.land x (N.ones n) in
-  let ret x := Some (keep s x) in
-  match o, args with
-  | add, args => ret (List.fold_right N.add 0 args)
-  | xor, args => ret (List.fold_right N.lxor 0 args)
-  | neg, [a] => ret (2^s - a)
-  | slice lo sz, [a] => ret (keep sz (N.shiftr a lo))
-  | const z, nil => Some (N.land z (N.ones s))
-  (* note: incomplete *)
-  | _, _ => None
-  end%N.
+Section WithContext.
+  Context (ctx : symbol -> option N).
+  Definition interp_op o s args :=
+    let keep n x := N.land x (N.ones n) in
+    let ret x := Some (keep s x) in
+    match o, args with
+    | old s, nil => match ctx s with Some v => ret v | None => None end
+    | add, args => ret (List.fold_right N.add 0 args)
+    | xor, args => ret (List.fold_right N.lxor 0 args)
+    | neg, [a] => ret (2^s - a)
+    | slice lo sz, [a] => ret (keep sz (N.shiftr a lo))
+    | const z, nil => Some (N.land z (N.ones s))
+    (* note: incomplete *)
+    | _, _ => None
+    end%N.
+End WithContext.
+Definition interp0_op := interp_op (fun _ => None).
 
 Definition node_beq [A : Set] (arg_eqb : A -> A -> bool) : node A -> node A -> bool :=
   Prod.prod_beq _ _ op_beq (ListUtil.list_beq _ arg_eqb).
@@ -191,7 +197,7 @@ Definition node_beq [A : Set] (arg_eqb : A -> A -> bool) : node A -> node A -> b
 Definition dag := list (node idx).
 
 Section WithDag.
-  Context (dag : dag).
+  Context (ctx : symbol -> option N) (dag : dag).
   Definition reveal_step reveal (i : idx) : expr :=
     match List.nth_error dag (N.to_nat i) with
     | None => (* undefined *) ExprRef i
@@ -249,17 +255,17 @@ Section WithDag.
   | ERef i opn s args args' n
     (_:List.nth_error dag (N.to_nat i) = Some ((opn, s), args))
     (_:List.Forall2 eval (map ExprRef args) args')
-    (_:interp_op opn s args' = Some n)
+    (_:interp_op ctx opn s args' = Some n)
     : eval (ExprRef i) n
   | EApp opn s args args' n
     (_:List.Forall2 eval args args')
-    (_:interp_op opn s args' = Some n)
+    (_:interp_op ctx opn s args' = Some n)
     : eval (ExprApp ((opn, s), args)) n.
 
   Variant eval_node : node idx -> N -> Prop :=
   | ENod opn s args args' n
     (_:List.Forall2 eval (map ExprRef args) args')
-    (_:interp_op opn s args' = Some n)
+    (_:interp_op ctx opn s args' = Some n)
     : eval_node ((opn, s), args) n.
 
 
@@ -267,11 +273,11 @@ Section WithDag.
     Context (P : expr -> N -> Prop)
       (HRef : forall i opn s args args' n, nth_error dag (N.to_nat i) = Some ((opn, s), args) ->
         Forall2 (fun e n => eval e n /\ P e n) (map ExprRef args) args' ->
-        interp_op opn s args' = Some n ->
+        interp_op ctx opn s args' = Some n ->
         P (ExprRef i) n)
       (HApp : forall opn s args args' n,
         Forall2 (fun i e => eval i e /\ P i e) args args' ->
-        interp_op opn s args' = Some n ->
+        interp_op ctx opn s args' = Some n ->
         P (ExprApp ((opn, s), args)) n).
     Fixpoint eval_ind i n (pf : eval i n) {struct pf} : P i n :=
       match pf with
@@ -296,14 +302,14 @@ Section WithDag.
   Qed.
 
   Lemma repr_reveals : forall i e, reveals (ExprRef i) e -> repr i e.
-  Proof using Type.
+  Proof using Type ctx.
     intros ? ? H.
     dependent induction H; econstructor; try eassumption.
     eapply Forall2_weaken; [|eauto]; cbn; intuition eauto.
   Qed.
 
   Lemma reveals_repr : forall i e, repr i e -> reveals (ExprRef i) e.
-  Proof using Type.
+  Proof using Type ctx.
     induction 1; econstructor; try eassumption.
     eapply Forall2_weaken; [|eauto]; cbn; intuition eauto.
   Qed.
@@ -325,7 +331,7 @@ Section WithDag.
 
   Lemma reveals_reveal_repr : forall n i e', reveal n i = e' ->
     forall e, repr i e -> reveals e' e.
-  Proof using Type.
+  Proof using Type ctx.
     induction n; cbn [reveal]; cbv [reveal_step]; intros; subst.
     { eauto using reveals_repr. }
     inversion H0; subst.
@@ -339,7 +345,7 @@ Section WithDag.
   Proof using Type.
     induction n; cbn [reveal]; cbv [reveal_step]; intros; subst; eauto; [].
     inversion H; subst; clear H.
-    rewrite H1; econstructor; try eassumption.
+    rewrite H1; econstructor; try eassumption; [].
     eapply (proj1 (Forall2_map_l _ _ _)) in H2.
     clear dependent i; clear dependent v.
     induction H2; cbn; eauto.
@@ -375,7 +381,7 @@ Fixpoint merge (e : expr) (d : dag) : idx * dag :=
 Lemma node_beq_sound e x : node_beq N.eqb e x = true -> e = x.
 Admitted.
 
-Lemma eval_weaken d x e n : eval d e n -> eval (d ++ [x]) e n.
+Lemma eval_weaken G d x e n : eval G d e n -> eval G (d ++ [x]) e n.
 Proof.
   induction 1; subst; econstructor; eauto.
   { erewrite nth_error_app1; try eassumption; [].
@@ -385,21 +391,43 @@ Proof.
   { intuition eauto. eapply H1. }
 Qed.
 
-Lemma permute_commutative opn s args n : commutative opn = true ->
-  interp_op opn s args = Some n ->
+Lemma interp_op_weaken_symbols G1 G2 o s args
+  (H : forall s v, G1 s = Some v -> G2 s = Some v)
+  : forall v, interp_op G1 o s args = Some v -> interp_op G2 o s args = Some v.
+Proof.
+  cbv [interp_op]; intros; repeat (BreakMatch.break_match || BreakMatch.break_match_hyps); try congruence.
+  { eapply H in Heqo0. congruence. }
+  { eapply H in Heqo0. congruence. }
+Qed.
+
+Lemma eval_weaken_symbols G1 G2 d e n
+  (H : forall s v, G1 s = Some v -> G2 s = Some v)
+  : eval G1 d e n -> eval G2 d e n.
+Proof.
+  induction 1; subst; econstructor;
+    intuition eauto using interp_op_weaken_symbols.
+  { eapply Forall2_weaken; [|eassumption]; intros ? ? (?&?); eauto. }
+  { eapply Forall2_weaken; [|eassumption]; intros ? ? (?&?); eauto. }
+Qed.
+
+Lemma eval_eval0 d e n G : eval (fun _ => None) d e n -> eval G d e n.
+Proof. eapply eval_weaken_symbols; congruence. Qed.
+
+Lemma permute_commutative G opn s args n : commutative opn = true ->
+  interp_op G opn s args = Some n ->
   forall args', Permutation.Permutation args args' ->
-  interp_op opn s args' = Some n.
+  interp_op G opn s args' = Some n.
 Admitted.
 
-Definition dag_ok (d : dag) := forall i _r, nth_error d (N.to_nat i) = Some _r -> exists v, eval d (ExprRef i) v.
+Definition dag_ok G (d : dag) := forall i _r, nth_error d (N.to_nat i) = Some _r -> exists v, eval G d (ExprRef i) v.
 
 Lemma eval_merge_node :
-  forall d, dag_ok d ->
+  forall G d, dag_ok G d ->
   forall op args n, let e := (op, args) in
-  eval d (ExprApp (op, List.map ExprRef args)) n ->
-  eval (snd (merge_node e d)) (ExprRef (fst (merge_node e d))) n /\
-  dag_ok (snd (merge_node e d)) /\
-  forall i e', eval d i e' -> eval (snd (merge_node e d)) i e'.
+  eval G d (ExprApp (op, List.map ExprRef args)) n ->
+  eval G (snd (merge_node e d)) (ExprRef (fst (merge_node e d))) n /\
+  dag_ok G (snd (merge_node e d)) /\
+  forall i e', eval G d i e' -> eval G (snd (merge_node e d)) i e'.
 Proof.
   intros.
   cbv beta delta [merge_node].
@@ -429,13 +457,13 @@ Qed.
 
 Require Import Crypto.Util.Tactics.SplitInContext.
 
-Lemma eval_merge :
+Lemma eval_merge G :
   forall e n,
-  forall d, dag_ok d ->
-  eval d e n ->
-  eval (snd (merge e d)) (ExprRef (fst (merge e d))) n /\
-  dag_ok (snd (merge e d)) /\
-  forall i e', eval d i e' -> eval (snd (merge e d)) i e'.
+  forall d, dag_ok G d ->
+  eval G d e n ->
+  eval G (snd (merge e d)) (ExprRef (fst (merge e d))) n /\
+  dag_ok G (snd (merge e d)) /\
+  forall i e', eval G d i e' -> eval G (snd (merge e d)) i e'.
 Proof.
   induction e; intros; eauto; [].
   rename n0 into v.
@@ -453,17 +481,17 @@ Proof.
   inversion H1; clear H1 ; subst.
 
   cbn [fst snd] in *.
-  assert (dag_ok (snd idxs_d) /\
-    Forall2 (fun i v => eval (snd idxs_d) (ExprRef i) v) (fst idxs_d) args' /\
-    forall i e', eval d i e' -> eval (snd idxs_d) i e'
+  assert (dag_ok G (snd idxs_d) /\
+    Forall2 (fun i v => eval G (snd idxs_d) (ExprRef i) v) (fst idxs_d) args' /\
+    forall i e', eval G d i e' -> eval G (snd idxs_d) i e'
   ) as HH; [|destruct HH as(?&?&?)].
   { clear m idxs H7 v s opn; revert dependent d; revert dependent args'.
     induction H; cbn; intros; inversion H6; subst;
       split_and; pose proof @Forall2_weaken; typeclasses eauto 8 with core. }
   clearbody idxs_d.
 
-  enough (eval (snd idxs_d) (ExprApp (opn, s, map ExprRef idxs)) v) by
-    (unshelve edestruct ((eval_merge_node _ ltac:(eassumption) (opn, s)) idxs v) as (?&?&?); eauto); clear m.
+  enough (eval G (snd idxs_d) (ExprApp (opn, s, map ExprRef idxs)) v) by
+    (unshelve edestruct ((eval_merge_node _ _ ltac:(eassumption) (opn, s)) idxs v) as (?&?&?); eauto); clear m.
 
   pose proof length_Forall2 H6; pose proof length_Forall2 H2.
 
@@ -495,17 +523,21 @@ Proof.
 Qed.
 
 Definition zconst s (z:Z) :=
-  const (if z <? 0 then invert_Some (interp_op neg s [Z.abs_N z]) else Z.to_N z)%Z.
+  const (if z <? 0 then invert_Some (interp0_op neg s [Z.abs_N z]) else Z.to_N z)%Z.
 
-Fixpoint interp_expr (e : expr) : option N :=
-  match e with
-  | ExprApp ((o,s), arges) =>
-      args <- Option.List.lift (List.map interp_expr arges);
-      interp_op o s args
-  | _ => None
-  end%option.
+Section WithContext.
+  Context (ctx : symbol -> option N).
+  Fixpoint interp_expr (e : expr) : option N :=
+    match e with
+    | ExprApp ((o,s), arges) =>
+        args <- Option.List.lift (List.map interp_expr arges);
+        interp_op ctx o s args
+    | _ => None
+    end%option.
+End WithContext.
+Definition interp0_expr := interp_expr (fun _ => None).
 
-Lemma eval_interp_expr e : forall d v, interp_expr e = Some v -> eval d e v.
+Lemma eval_interp_expr G e : forall d v, interp_expr G e = Some v -> eval G d e v.
 Proof.
   induction e; cbn; try discriminate; intros.
   case n in *; case o in *; cbn [fst snd] in *.
@@ -547,7 +579,7 @@ Proof.
   *)
 Admitted.
 
-Lemma bound_interp_op o s args v : interp_op o s args = Some v ->
+Lemma bound_interp_op G o s args v : interp_op G o s args = Some v ->
   (v <= N.ones s)%N.
 Proof.
   repeat match goal with
@@ -566,8 +598,8 @@ Definition bound_expr e : option N := (* e <= r *)
   | _ => None
   end.
 
-Lemma eval_bound_expr e b : bound_expr e = Some b ->
-  forall d v, eval d e v -> (v <= b)%N.
+Lemma eval_bound_expr G e b : bound_expr e = Some b ->
+  forall d v, eval G d e v -> (v <= b)%N.
 Proof.
   cbv [bound_expr]; BreakMatch.break_match;
     inversion 2; intros; inversion_option; subst;
@@ -578,7 +610,7 @@ Definition isCst (e : expr) :=
   match e with ExprApp ((const _, _), _) => true | _ => false end.
 Definition simplify_expr : expr -> expr :=
   List.fold_left (fun e f => f e)
-  [fun e => match interp_expr e with
+  [fun e => match interp0_expr e with
             | Some v => ExprApp ((const v, 1+N.log2 v), nil)
             | _ => e end
   ;fun e => match e with
@@ -593,7 +625,7 @@ Definition simplify_expr : expr -> expr :=
     ExprApp (o, args) =>
     if commutative (fst o) then
     let csts_exprs := List.partition isCst args in
-    match interp_expr (ExprApp (o, fst csts_exprs)) with None => e | Some v =>
+    match interp0_expr (ExprApp (o, fst csts_exprs)) with None => e | Some v =>
     ExprApp (o, ExprApp (const v, snd o, nil):: snd csts_exprs)
     end else e | _ => e end
   ;fun e => match e with
@@ -605,7 +637,7 @@ Definition simplify_expr : expr -> expr :=
     ExprApp (o, args) =>
     match identity (fst o) with
     | Some i =>
-        let args := List.filter (fun a => negb (option_beq N.eqb (interp_expr a) (Some i))) args in
+        let args := List.filter (fun a => negb (option_beq N.eqb (interp0_expr a) (Some i))) args in
         match args with
         | nil => ExprApp ((const i, snd o), nil)
         | cons a nil => a
@@ -618,7 +650,7 @@ Definition simplify_expr : expr -> expr :=
 Definition simplify (dag : dag) (e : node idx) : expr :=
   simplify_expr (reveal_node dag 2 e).
 
-Lemma eval_simplify_expr d e v : eval d e v -> eval d (simplify_expr e) v.
+Lemma eval_simplify_expr c d e v : eval c d e v -> eval c d (simplify_expr e) v.
 Proof.
   intros H; cbv [simplify_expr].
   repeat match goal with (* one goal per rewrite rule *)
@@ -626,7 +658,7 @@ Proof.
     let re := fresh "e" in
     let e_re := eval cbv beta in (r e) in pose (e_re) as re;
     let g := context G [fold_left f rs re] in change g;
-    assert (eval d re v); [ subst re | clearbody re;
+    assert (eval c d re v); [ subst re | clearbody re;
         clear dependent e; rename re into e ]
   | |- context G [fold_left ?f nil ?e] => eassumption
   end.
@@ -634,24 +666,24 @@ Proof.
                | _ => solve [trivial]
                | _ => progress cbn [fst snd interp_op] in *
                | _ => progress inversion_option
-               | H: interp_expr _ = Some _ |- _ => eapply eval_interp_expr in H; instantiate (1:=d) in H
+               | H: interp0_expr _ = Some _ |- _ => eapply eval_interp_expr in H; instantiate (1:=d) in H
                | H: bound_expr _ = Some _ |- _ => eapply eval_bound_expr in H; eauto; [ ]
-               | H : eval _ ?e _ |- _ => assert_fails (is_var e); inversion H; clear H; subst
-               | H : Forall2 (eval _) ?es _ |- _ => assert_fails (is_var es); inversion H; clear H; subst
+               | H : eval _ _ ?e _ |- _ => assert_fails (is_var e); inversion H; clear H; subst
+               | H : Forall2 (eval _ _) ?es _ |- _ => assert_fails (is_var es); inversion H; clear H; subst
 
                | H : andb _ _ = true |- _ => eapply Bool.andb_prop in Heqb; case Heqb as (?&?)
                | H : N.eqb ?n _ = true |- _ => eapply N.eqb_eq in H; subst n
                | H : expr_beq ?a ?b = true |- _ => replace a with b in * by admit; clear H
 
                | H : (?x <=? ?y)%N = ?b |- _ => is_constructor b; destruct (N.leb_spec x y); (inversion H || clear H)
-               | H : eval ?d ?e ?v1, G: eval ?d ?e ?v2 |- _ =>
+               | H : eval _ ?d ?e ?v1, G: eval _ ?d ?e ?v2 |- _ =>
                    assert_fails (constr_eq v1 v2);
-                   eapply (eval_eval d e v1 H v2) in G
+                   eapply (eval_eval _ d e v1 H v2) in G
                | H : _ = ?v |- _ => is_var v; progress subst v
                | H : ?v = _ |- _ => is_var v; progress subst v
-               | |- eval ?d ?e ?v =>
+               | |- eval _ ?d ?e ?v =>
                    match goal with
-                     H : eval d e ?v' |- _ =>
+                     H : eval _ d e ?v' |- _ =>
                          let Heq := fresh in
                          enough (Heq : v = v') by (rewrite Heq; exact H);
                          clear H; try clear e
@@ -660,7 +692,7 @@ Proof.
                end.
   { econstructor; eauto; []; cbn [interp_op].
     rewrite N.land_ones_low by Lia.lia.
-    f_equal; eauto using eval_eval. }
+    f_equal; eauto using eval_eval, eval_eval0. }
   admit.
   admit.
   admit.
@@ -675,7 +707,7 @@ Proof.
     rewrite N.lxor_0_r, N.lxor_nilpotent; trivial. }
 Admitted.
 
-Lemma eval_simplify d n v : eval_node d n v -> eval d (simplify d n) v.
+Lemma eval_simplify G d n v : eval_node G d n v -> eval G d (simplify d n) v.
 Proof. eauto using eval_simplify_expr, eval_node_reveal_node. Qed.
 
 Definition reg_state := Tuple.tuple (option idx) 16.
