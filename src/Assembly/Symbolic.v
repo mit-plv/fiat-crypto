@@ -175,19 +175,24 @@ Import ListNotations.
 
 Section WithContext.
   Context (ctx : symbol -> option N).
-  Definition interp_op o (s : option N) args :=
-    let keep n x := N.land x (N.ones n) in
-    let ret x := Some (match s with None => x | Some s => keep s x end) in
+  Definition interp_op' o (s : option N) args :=
+    let keep' n x := N.land x (N.ones n) in
     match o, args with
-    | old s, nil => match ctx s with Some v => ret v | None => None end
-    | add, args => ret (List.fold_right N.add 0 args)
-    | xor, args => ret (List.fold_right N.lxor 0 args)
-    | neg, [a] => ret (match s with None => 0 | Some s => 2^s - a end)
-    | slice lo sz, [a] => ret (keep sz (N.shiftr a lo))
-    | const z, nil => ret z
+    | old s, nil => match ctx s with Some v => Some v | None => None end
+    | add, args => Some (List.fold_right N.add 0 args)
+    | xor, args => Some (List.fold_right N.lxor 0 args)
+    | neg, [a] => Some (match s with None => 0 | Some s => 2^s - a end)
+    (* note: this case is real awkward, consider Z? *)
+    | slice lo sz, [a] => Some (keep' sz (N.shiftr a lo))
+    (* shifts should not truncate shamt because fiat-crypto semantics does not *)
+    | const z, nil => Some z
     (* note: incomplete *)
     | _, _ => None
     end%N.
+  Definition interp_op o s args :=
+    let keep' n x := N.land x (N.ones n) in
+    let keep x := match s with None => x | Some s => keep' s x end in
+    option_map keep (interp_op' o s args).
 End WithContext.
 Definition interp0_op := interp_op (fun _ => None).
 
@@ -395,11 +400,11 @@ Lemma interp_op_weaken_symbols G1 G2 o s args
   (H : forall s v, G1 s = Some v -> G2 s = Some v)
   : forall v, interp_op G1 o s args = Some v -> interp_op G2 o s args = Some v.
 Proof.
-  cbv [interp_op]; intros;
+  cbv [interp_op interp_op' option_map]; intros;
     repeat (BreakMatch.break_match || BreakMatch.break_match_hyps);
     inversion_option; subst;
     try congruence.
-  all : eapply H in Heqo0; congruence.
+  all : eapply H in Heqo2; congruence.
 Qed.
 
 Lemma eval_weaken_symbols G1 G2 d e n
@@ -561,6 +566,27 @@ Lemma le_land n m : (N.land n m <= m)%N.
 Proof.
 Admitted.
 
+Module N.
+Lemma testbit_ones n i : N.testbit (N.ones n) i = N.ltb i n.
+Proof.
+  pose proof N.ones_spec_iff n i.
+  destruct (N.testbit _ _) eqn:? in*; destruct (N.ltb_spec i n); trivial.
+  { pose proof (proj1 H eq_refl); Lia.lia. }
+  { pose proof (proj2 H H0). inversion H1. }
+Qed.
+ 
+Lemma ones_min m n : N.ones (N.min m n) = N.land (N.ones m) (N.ones n).
+Proof.
+  eapply N.bits_inj_iff; intro i.
+  rewrite N.land_spec.
+  rewrite !N.testbit_ones.
+  destruct (N.ltb_spec0 i (N.min m n));
+  destruct (N.ltb_spec0 i m);
+  destruct (N.ltb_spec0 i n);
+  Lia.lia.
+Qed.
+End N.
+
 Lemma land_ones_le n m : (n <= N.ones m -> N.land n (N.ones m) = n)%N.
 Proof.
   intros; eapply N.bits_inj_iff; intro i.
@@ -584,14 +610,10 @@ Admitted.
 Lemma bound_interp_op G o s args v : interp_op G o (Some s) args = Some v ->
   (v <= N.ones s)%N.
 Proof.
-  repeat match goal with
-         | _ => progress subst
-         | _ => progress cbv [interp_op]
-         | _ => progress inversion_option
-         | _ => progress BreakMatch.break_match
-         | _ => progress intros
-         end;
-    eauto using le_land.
+  cbv [interp_op].
+  match goal with |- context [option_map _ ?x] => destruct x end;
+    inversion 1; subst.
+  eauto using le_land.
 Qed.
 
 Definition bound_expr e : option N := (* e <= r *)
@@ -610,11 +632,24 @@ Qed.
 
 Definition isCst (e : expr) :=
   match e with ExprApp ((const _, _), _) => true | _ => false end.
+
+Definition simplify_slice :=
+  fun e => match e with
+    ExprApp ((slice 0 s',Some s), [(ExprApp (oo, None, args))]) =>
+      ExprApp (oo, Some (N.min s s'), args) | _ => e end.
+Definition simplify_shr := 
+  fun e => match e with
+    ExprApp ((shr, Some s), [x; shamt]) =>
+        ExprApp ((shr, None), [x; shamt])
+        | _ => e end.
+
 Definition simplify_expr : expr -> expr :=
   List.fold_left (fun e f => f e)
   [fun e => match interp0_expr e with
-            | Some v => ExprApp ((const v, Some (1+N.log2 v)), nil)
+            | Some v => ExprApp ((const v, None), nil)
             | _ => e end
+  ;simplify_slice
+  ;simplify_shr
   ;fun e => match e with
     ExprApp (o, args) =>
     if associative (fst o) then
@@ -655,6 +690,8 @@ Definition simplify (dag : dag) (e : node idx) : expr :=
 Lemma eval_simplify_expr c d e v : eval c d e v -> eval c d (simplify_expr e) v.
 Proof.
   intros H; cbv [simplify_expr].
+
+  Local Opaque simplify_shr simplify_slice.
   repeat match goal with (* one goal per rewrite rule *)
   | |- context G [fold_left ?f (cons ?r ?rs) ?e] =>
     let re := fresh "e" in
@@ -664,9 +701,12 @@ Proof.
         clear dependent e; rename re into e ]
   | |- context G [fold_left ?f nil ?e] => eassumption
   end.
+  Local Transparent simplify_shr simplify_slice.
+  all : cbv [simplify_shr simplify_slice] in *.
+
   all : repeat match goal with
                | _ => solve [trivial]
-               | _ => progress cbn [fst snd interp_op] in *
+               | _ => progress cbn [fst snd interp_op interp_op' option_map] in *
                | _ => progress inversion_option
                | H: interp0_expr _ = Some _ |- _ => eapply eval_interp_expr in H; instantiate (1:=d) in H
                | H: bound_expr _ = Some _ |- _ => eapply eval_bound_expr in H; eauto; [ ]
@@ -692,9 +732,14 @@ Proof.
                    end
                | _ => progress BreakMatch.break_match
                end.
-  { econstructor; eauto; []; cbn [interp_op].
-    rewrite N.land_ones_low by Lia.lia.
+  { econstructor; eauto; []; cbn [interp_op interp_op' option_map].
     f_equal; eauto using eval_eval, eval_eval0. }
+  { econstructor; try eassumption; [].
+    cbv [interp_op option_map] in *; cbn [interp_op'] in *.
+    replace (interp_op' c o (Some (N.min n sz)) args')
+       with (interp_op' c o None args') by admit. (* false in neg case  *)
+    destruct (interp_op' c o None args') in *; inversion H7; []; subst.
+    rewrite N.shiftr_0_r, <-N.land_assoc, N.min_comm, N.ones_min; trivial. }
   admit.
   admit.
   admit.
@@ -966,20 +1011,20 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
     SetOperand dst v
   | Syntax.add, [dst; src] =>
     v <- Symeval (add@(dst, src));
-    c <- Symeval (addcarry@(dst, src));
+    c <- Symeval (let os : OperationSize := Some 1 in addcarry@(dst, src));
     _ <- SetOperand dst v;
     _ <- HavocFlags;
     SetFlag CF c
   | Syntax.adc, [dst; src] =>
     v <- Symeval (add@(dst, src, CF));
-    c <- Symeval (addcarry@(dst, src, CF));
+    c <- Symeval (let os : OperationSize := Some 1 in addcarry@(dst, src, CF));
     _ <- SetOperand dst v;
     _ <- HavocFlags;
     SetFlag CF c
   | (adcx|adox) as op, [dst; src] =>
     let f := match op with adcx => CF | _ => OF end in
     v <- Symeval (add@(dst, src, f));
-    c <- Symeval (addcarry@(dst, src, f));
+    c <- Symeval (let os : OperationSize := Some 1 in addcarry@(dst, src, f));
     _ <- SetOperand dst v;
     SetFlag f c
   | Syntax.sub, [dst; src] =>
