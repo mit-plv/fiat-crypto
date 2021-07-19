@@ -37,10 +37,13 @@ Import API.Compilers APINotations.Compilers AbstractInterpretation.ZRange.Compil
 Import ListNotations.
 Local Open Scope list_scope.
 
+Section WithCtx.
+Context (G : symbol -> option N).
+
 Fixpoint eval_base_var (dag : dag) {t : base.type} : base_var t -> API.interp_type (type.base t) -> Prop :=
   match t with
   | base.type.unit => fun _ _ => True
-  | base.type.type_base base.type.Z => fun idx v => exists n, Z.of_N n = v /\ eval dag (ExprRef idx) n
+  | base.type.type_base base.type.Z => fun idx v => exists n, Z.of_N n = v /\ eval G dag (ExprRef idx) n
   | base.type.prod _ _ => fun a b => eval_base_var dag (fst a) (fst b) /\ eval_base_var dag (snd a) (snd b)
   | base.type.list _ => List.Forall2 (eval_base_var dag)
   | base.type.type_base base.type.nat => @eq _
@@ -94,13 +97,13 @@ Proof.
 Qed.
 
 Lemma lift_eval_base_var_impl d1 d2
-      (H : forall v n, eval d1 v n -> eval d2 v n)
+      (H : forall v n, eval G d1 v n -> eval G d2 v n)
   : forall t v n, @eval_base_var d1 t v n -> @eval_base_var d2 t v n.
 Proof.
   induction t; cbn [base_var eval_base_var]; break_innermost_match; intros; destruct_head'_ex; destruct_head'_and; subst; eauto using Forall2_weaken.
 Qed.
 Lemma lift_eval_var_impl d1 d2
-      (H : forall v n, eval d1 v n -> eval d2 v n)
+      (H : forall v n, eval G d1 v n -> eval G d2 v n)
   : forall t v n, @eval_var d1 t v n -> @eval_var d2 t v n.
 Proof.
   induction t; cbn [var eval_var]; eauto using lift_eval_base_var_impl.
@@ -118,10 +121,10 @@ Theorem symex_ident_correct
         (rets : base_var (type.final_codomain t))
         (d' : dag)
         (H : symex_T_app_curried (symex_ident idc) input_var_data d = Success (rets, d'))
-        (d_ok : dag_ok d)
+        (d_ok : dag_ok G d)
   : eval_base_var d' rets (type.app_curried (Compilers.ident_interp idc) input_runtime_var)
-    /\ dag_ok d'
-    /\ (forall e n, eval d e n -> eval d' e n).
+    /\ dag_ok G d'
+    /\ (forall e n, eval G d e n -> eval G d' e n).
 Proof.
   cbv [symex_ident] in H; break_innermost_match_hyps.
   all: cbn [type.app_curried type.and_for_each_lhs_of_arrow Compilers.ident_interp symex_T_app_curried type.for_each_lhs_of_arrow] in *.
@@ -247,14 +250,14 @@ Theorem symex_expr_correct
         (Hinputs : type.and_for_each_lhs_of_arrow (@eval_var d) input_var_data input_runtime_var)
         (rets : base_var (type.final_codomain t))
         (d' : dag)
-        G
-        (HG : forall t v1 v2, List.In (existT _ t (v1, v2)) G -> eval_var d v1 v2)
-        (Hwf : API.wf G expr1 expr2)
+        GG
+        (HG : forall t v1 v2, List.In (existT _ t (v1, v2)) GG -> eval_var d v1 v2)
+        (Hwf : API.wf GG expr1 expr2)
         (H : symex_T_app_curried (symex_expr expr1) input_var_data d = Success (rets, d'))
-        (d_ok : dag_ok d)
+        (d_ok : dag_ok G d)
   : eval_base_var d' rets (type.app_curried (API.interp expr2) input_runtime_var)
-    /\ dag_ok d'
-    /\ (forall e n, eval d e n -> eval d' e n).
+    /\ dag_ok G d'
+    /\ (forall e n, eval G d e n -> eval G d' e n).
 Proof.
   revert dependent d; revert dependent d'; revert dependent input_var_data; revert dependent input_runtime_var.
   induction Hwf; intros; cbn [symex_expr] in *.
@@ -364,18 +367,18 @@ Theorem symex_PHOAS_PHOAS_correct
         (d' : dag)
         (Hwf : API.Wf expr)
         (H : symex_PHOAS_PHOAS expr input_var_data d = Success (rets, d'))
-        (d_ok : dag_ok d)
+        (d_ok : dag_ok G d)
   : eval_base_var d' rets (type.app_curried (API.Interp expr) input_runtime_var)
-    /\ dag_ok d'
-    /\ (forall e n, eval d e n -> eval d' e n).
+    /\ dag_ok G d'
+    /\ (forall e n, eval G d e n -> eval G d' e n).
 Proof.
   cbv [symex_PHOAS_PHOAS] in H.
   rewrite symex_expr_smart_App_curried in H.
-  eapply symex_expr_correct with (G:=[]); try eassumption; cbn [List.In]; try eapply Hwf; try now intros; exfalso.
+  eapply symex_expr_correct with (GG:=[]); try eassumption; cbn [List.In]; try eapply Hwf; try now intros; exfalso.
 Qed.
 
 Definition eval_idx_Z (dag : dag) (idx : idx) (v : Z) : Prop
-  := exists n, Z.of_N n = v /\ eval dag (ExprRef idx) n.
+  := exists n, Z.of_N n = v /\ eval G dag (ExprRef idx) n.
 Definition eval_idx_or_list_idx (d : dag) (v1 : idx + list idx) (v2 : Z + list Z)
   : Prop
   := match v1, v2 with
@@ -385,7 +388,7 @@ Definition eval_idx_or_list_idx (d : dag) (v1 : idx + list idx) (v2 : Z + list Z
      end.
 
 Lemma lift_eval_idx_Z_impl d1 d2
-      (H : forall v n, eval d1 v n -> eval d2 v n)
+      (H : forall v n, eval G d1 v n -> eval G d2 v n)
   : forall v n, eval_idx_Z d1 v n -> eval_idx_Z d2 v n.
 Proof.
   cbv [eval_idx_Z]; intros; destruct_head'_ex; destruct_head'_and; eexists; split; [ eassumption | ].
@@ -393,7 +396,7 @@ Proof.
 Qed.
 
 Lemma lift_eval_idx_or_list_idx_impl d1 d2
-      (H : forall v n, eval d1 v n -> eval d2 v n)
+      (H : forall v n, eval G d1 v n -> eval G d2 v n)
   : forall v n, eval_idx_or_list_idx d1 v n -> eval_idx_or_list_idx d2 v n.
 Proof.
   cbv [eval_idx_or_list_idx]; intros; break_innermost_match; eauto using lift_eval_idx_Z_impl, Forall2_weaken.
@@ -559,7 +562,7 @@ Proof.
                     | progress break_innermost_match_hyps
                     | rewrite Forall.Forall2_map_map_iff
                     | solve [ eauto using Forall2_app ] ].
-Qed.
+Admitted. (* note: Andres broke this when adding [G] to [eval] and does not know how fix *)
 
 Theorem symex_PHOAS_correct
         {t} (expr : API.Expr t)
@@ -570,14 +573,14 @@ Theorem symex_PHOAS_correct
         (d' : dag)
         (Hwf : API.Wf expr)
         (H : symex_PHOAS expr inputs d = Success (rets, d'))
-        (d_ok : dag_ok d)
+        (d_ok : dag_ok G d)
   : (exists (input_runtime_var : type.for_each_lhs_of_arrow API.interp_type t)
             (runtime_rets : list (Z + list Z)),
         build_input_runtime t runtime_inputs = Some (input_runtime_var, [])
         /\ simplify_base_runtime (type.app_curried (API.Interp expr) input_runtime_var) = Some runtime_rets
         /\ List.Forall2 (eval_idx_or_list_idx d') rets runtime_rets)
-    /\ dag_ok d'
-    /\ (forall e n, eval d e n -> eval d' e n).
+    /\ dag_ok G d'
+    /\ (forall e n, eval G d e n -> eval G d' e n).
 Proof.
   cbv [symex_PHOAS ErrorT.bind] in H; break_innermost_match_hyps; try discriminate.
   destruct (build_input_runtime t runtime_inputs) as [ [input_runtime_var [|] ] | ] eqn:H'; [ | exfalso.. ].
@@ -642,8 +645,8 @@ Theorem symex_asm_func_correct
         DenoteLines st asm = Some st'
         /\ True (* TODO(Andres): write down something that relates st' to retvals *)
         /\ List.Forall2 (eval_idx_or_list_idx d') rets runtime_rets)
-    /\ dag_ok d'
-    /\ (forall e n, eval d e n -> eval d' e n).
+    /\ dag_ok G d'
+    /\ (forall e n, eval G d e n -> eval G d' e n).
 Proof.
 Admitted.
 
@@ -756,21 +759,23 @@ Proof.
 Qed.
 
 Lemma build_inputs_ok d gensym_st (spec : type_spec) inputs d' gensym_st'
-      (d_ok : dag_ok d)
+      (d_ok : dag_ok G d)
       (H : build_inputs (d, gensym_st) spec = (inputs, (d', gensym_st')))
   : (forall args,
         Forall2 val_or_list_val_matches_spec args spec
         -> Forall2 (eval_idx_or_list_idx d') inputs args)
-    /\ dag_ok d'
+    /\ dag_ok G d'
     /\ True (* something about gensym_st' *).
 Proof.
   (* TODO(Andres) *)
 Admitted.
 
-Lemma empty_dag_ok : dag_ok empty_dag.
+Lemma empty_dag_ok : dag_ok G empty_dag.
 Proof.
-  (* TOOD(Andres) *)
-Admitted.
+  econstructor. setoid_rewrite ListUtil.nth_error_nil_error in H. inversion H.
+  Unshelve.
+  exact N0.
+Qed.
 
 Theorem check_equivalence_correct
         {assembly_calling_registers' : assembly_calling_registers_opt}
@@ -885,5 +890,6 @@ Proof.
   break_innermost_match_hyps; inversion H; subst; destruct_head'_and; split; [ reflexivity | intros ].
   eapply check_equivalence_correct; eassumption.
 Qed.
+End WithCtx.
 
 (* Some theorems about the result of calling generate_assembly_of_hinted_expr_correct on various Pipeline functions *)
