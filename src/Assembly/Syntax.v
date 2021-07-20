@@ -3,6 +3,7 @@ Require Import Coq.NArith.NArith.
 Require Import Coq.Strings.String.
 Require Import Coq.Lists.List.
 Require Crypto.Util.Tuple.
+Require Crypto.Util.OptionList.
 Import ListNotations.
 
 Local Open Scope list_scope.
@@ -84,7 +85,7 @@ Definition reg_size (r : REG) : N :=
        => 8
       end.
 
-Definition operand_size (x : ARG) : option N :=
+Definition standalone_operand_size (x : ARG) : option N :=
   match x with
   | reg r => Some (reg_size r)
   | mem m => if m.(mem_is_byte)
@@ -92,19 +93,30 @@ Definition operand_size (x : ARG) : option N :=
              else None
   | const c => None
   end%N.
-Definition unify_operand_size (a : option N)  (b : option (option N)) : option (option N) :=
-  match a with
-  | None => b
-  | Some s =>
-      match b with
-      | None => None
-      | Some None => Some (Some s)
-      | Some (Some s') => if N.eqb s s' then Some (Some s) else None
-      end
+
+Definition operation_size instr :=
+  let argsizes := List.map standalone_operand_size instr.(args) in
+  match OptionList.Option.List.lift argsizes with
+  | Some szs => match szs with
+                | nil => None (* unspecified *)
+                | _ => Some (List.fold_right N.max 0%N szs) (* fully specified *)
+                end
+  | _ => match OptionList.Option.List.map id argsizes with
+         | nil => None (* unspecified *)
+         | szs =>
+             let m := List.fold_right N.max 0%N szs in
+             let n := List.fold_right N.min m szs in
+             if N.eqb m n (* uniquely inferred from annotations *)
+             then Some n
+             else None (* inference needed but ambiguous *)
+         end
   end.
-(* None => contradiction, Some None => underconstrained, Some Some s => size s *)
-Definition operation_size (instr : NormalInstruction) : option (option N) :=
-  List.fold_right unify_operand_size (Some None) (List.map operand_size instr.(args)).
+
+Definition operand_size (x : ARG) (operation_size : N) : N :=
+  match standalone_operand_size x with
+  | Some s => s
+  | None => operation_size
+  end.
 
 
 Definition reg_index (r : REG) : nat
