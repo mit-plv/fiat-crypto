@@ -25,7 +25,7 @@ Local Open Scope list_scope.
 (** List of registers used for outputs/inputs *)
 Class assembly_calling_registers_opt := assembly_calling_registers' : option (list REG).
 Typeclasses Opaque assembly_calling_registers_opt.
-Definition default_assembly_calling_registers := [rsi;rdi;rdx;rcx;r8;r9]. (* note: andres swapped rdi and rsi being unsure where this list is from *)
+Definition default_assembly_calling_registers := [rdi;rsi;rdx;rcx;r8;r9].
 Definition assembly_calling_registers {v : assembly_calling_registers_opt} : list REG
   := Option.value v default_assembly_calling_registers.
 (** Are output arrays considered to come before input arrays, or after them? *)
@@ -629,7 +629,7 @@ Definition symex_asm_func
   := let '(output_placeholders, (d, gensym_st)) := build_inputs (d, gensym_st) output_types in
       let '(rsp_idx, gensym_st) := gensym gensym_st in
       let '(stack_placeholders, (d, gensym_st)) := build_inputarray (d, gensym_st) stack_size in
-      let '(asminputs, (d, gensym_st)) := build_base_addresses (d, gensym_st) (inputs ++ output_placeholders) in
+      let '(asminputs, (d, gensym_st)) := build_base_addresses (d, gensym_st) (output_placeholders ++ inputs) in
       let '(initial_reg_idxs, (d, gensym_st)) := dag_gensym_n 16 (d, gensym_st) in
       let s0 :=
         {|
@@ -640,7 +640,7 @@ Definition symex_asm_func
         |} in
 
       match
-        (inputaddrs <- mapM (fun '(r, (base, oarr)) => _ <- SetReg r base; (* note: overwrites initial value *)
+        (argptrs <- mapM (fun '(r, (base, oarr)) => _ <- SetReg r base; (* note: overwrites initial value *)
           match oarr with None => Symbolic.ret None
           | Some idxs =>
               addrs <- mapM (fun '(i, idx) =>
@@ -656,11 +656,11 @@ Definition symex_asm_func
             (fun s => Success (tt, update_mem_with s (cons (a,idx))))
           ) (List.enumerate stack_placeholders);
         _ <- mapM_ SymexNormalInstruction (Option.List.map invert_rawline asm);
-        Symbolic.ret inputaddrs)%N%x86symex s0
+        Symbolic.ret argptrs)%N%x86symex s0
       with
       | Error (e, s) => Error (Symbolic_execution_failed e s)
-      | Success (inputaddrs, s) =>
-          let outputaddrs : list (option (list idx))  := skipn (length inputs) inputaddrs in
+      | Success (argptrs, s) =>
+          let outputaddrs : list (option (list idx))  := firstn (length inputs) argptrs in
           match Option.List.lift (List.map (fun ocells =>
             match ocells with
             | None => None

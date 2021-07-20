@@ -165,8 +165,8 @@ Definition update_flag_with (st : machine_state) (f : flag_state -> flag_state) 
 Definition update_mem_with (st : machine_state) (f : mem_state -> mem_state) : machine_state
   := {| machine_reg_state := st.(machine_reg_state) ; machine_flag_state := st.(machine_flag_state) ; machine_mem_state := f st.(machine_mem_state) |}.
 
-Definition DenoteConst (s : N) (a : CONST) : N :=
-  Z.to_N (Z.land a (Z.ones (Z.of_N s))).
+Definition DenoteConst (sz : N) (a : CONST) : N :=
+  Z.to_N (Z.land a (Z.ones (Z.of_N sz))).
 
 Definition DenoteAddress (sa : N) (st : machine_state) (a : MEM) : N :=
   N.land (N.ones sa) (
@@ -177,14 +177,14 @@ Definition DenoteAddress (sa : N) (st : machine_state) (a : MEM) : N :=
 Definition DenoteOperand (sa s : N) (st : machine_state) (a : ARG) : option N :=
   match a with
   | reg a => Some (get_reg st a)
-  | mem a => get_mem st (DenoteAddress sa st a) (N.to_nat (N.div s 8))
-  | const a => Some (DenoteConst s a)
+  | mem a => get_mem st (DenoteAddress sa st a) (N.to_nat (N.div (operand_size a s) 8))
+  | const a => Some (DenoteConst (operand_size a s) a)
   end.
 
 Definition SetOperand (sa s : N) (st : machine_state) (a : ARG) (v : N) : option machine_state :=
   match a with
   | reg a => Some (update_reg_with st (fun rs => set_reg rs a v))
-  | mem a => ms <- set_mem_error st (DenoteAddress sa st a) (N.to_nat (N.div s 8)) v;
+  | mem a => ms <- set_mem_error st (DenoteAddress sa st a) (N.to_nat (N.div (operand_size a s) 8)) v;
              Some (update_mem_with st (fun _ => ms))
   | const a => None
   end.
@@ -214,7 +214,7 @@ Local Coercion Z.of_N : N >-> Z.
  * performed ahead of time. *)
 Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstruction) : option machine_state :=
   let sa := 64%N in
-  match operation_size instr with Some (Some s) =>
+  match operation_size instr with Some s =>
   match instr.(op), instr.(args) with
   | (mov | movzx), [dst; src] => (* Note: unbundle when switching from N to Z *)
     v <- DenoteOperand sa s st src;

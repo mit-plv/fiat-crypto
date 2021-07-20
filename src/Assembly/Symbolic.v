@@ -107,7 +107,7 @@ Require Import Crypto.Assembly.Syntax.
 Definition idx := N.
 Local Set Boolean Equality Schemes.
 Definition symbol := N.
-Variant opname := old (_:symbol) | oldold (_:REG*option nat) | const (_ : N) | add | addcarry | notaddcarry | neg | shl | shr | and | or | xor | slice (lo sz : N) | mul | mulhuu (_:N) | set_slice (lo sz : N)(* | ... *).
+Variant opname := old (_:symbol) | oldold (_:REG*option nat) | const (_ : N) | add | addcarry | notaddcarry | neg | shl | shr | sar | sarcarry | saroverflow | and | or | xor | slice (lo sz : N) | mul | mulhuu (_:N) | set_slice (lo sz : N)(* | ... *).
 
 Global Instance show_opname : Show opname := fun o =>
   match o with
@@ -120,6 +120,9 @@ Global Instance show_opname : Show opname := fun o =>
   | neg => "neg"
   | shl => "shl"
   | shr => "shr"
+  | sar => "sar"
+  | sarcarry => "sarcarry"
+  | saroverflow => "saroverflow"
   | and => "and"
   | or => "or"
   | xor => "xor"
@@ -133,9 +136,9 @@ Definition associative o := match o with add|mul|or|and => true | _ => false end
 Definition commutative o := match o with add|addcarry|mul|mulhuu _ => true | _ => false end.
 Definition identity o := match o with add|addcarry => Some 0%N | mul|mulhuu _=>Some 1%N |_=> None end.
 
-Class OperationSize := operation_size : option N.
-Global Instance Show_OperationSize : Show OperationSize := @show_option _ show_N.
-Definition op : Set := opname * OperationSize.
+Class OperationSize := operation_size : N.
+Global Instance Show_OperationSize : Show OperationSize := show_N.
+Definition op : Set := opname * option OperationSize.
 Global Instance Show_op : Show op := show_prod.
 Definition op_beq : op -> op -> bool := Prod.prod_beq _ _ opname_beq (@Option.option_beq N N.eqb).
 
@@ -736,9 +739,9 @@ Proof.
     f_equal; eauto using eval_eval, eval_eval0. }
   { econstructor; try eassumption; [].
     cbv [interp_op option_map] in *; cbn [interp_op'] in *.
-    replace (interp_op' c o (Some (N.min n sz)) args')
-       with (interp_op' c o None args') by admit. (* false in neg case  *)
-    destruct (interp_op' c o None args') in *; inversion H7; []; subst.
+    replace (interp_op' c o0 (Some (N.min o sz)) args')
+       with (interp_op' c o0 None args') by admit. (* false in neg case  *)
+    destruct (interp_op' _ _ _ _) in *; inversion H7; []; subst.
     rewrite N.shiftr_0_r, <-N.land_assoc, N.min_comm, N.ones_min; trivial. }
   admit.
   admit.
@@ -947,30 +950,30 @@ Definition Address {sa : AddressSize} (a : MEM) : M idx :=
   bi <- App ((add, sa), [base; index]);
   App ((add, sa), [bi; offset]).
 
-Definition Load {sa : AddressSize} (a : MEM) : M idx :=
+Definition Load {s : OperationSize} {sa : AddressSize} (a : MEM) : M idx :=
   addr <- Address a;
   v <- Load64 addr;
-  if a.(mem_is_byte)
-  then App ((slice 0 8, Some 64%N), [v])
-  else ret v.
+  if N.eqb s 64%N
+  then ret v
+  else App ((slice 0 (Syntax.operand_size a s), Some 64%N), [v]).
 
-Definition Store {sa : AddressSize} (a : MEM) v : M unit :=
+Definition Store {s : OperationSize} {sa : AddressSize} (a : MEM) v : M unit :=
   addr <- Address a;
-  if negb a.(mem_is_byte) (* works even if old value undefined *)
+  if N.eqb s 64%N
   then Store64 addr v
   else old <- Load64 addr;
-       v <- App ((set_slice 0 8, Some 64), [old; v])%N;
+       v <- App ((set_slice 0 (Syntax.operand_size a s), Some 64), [old; v])%N;
        Store64 addr v.
 
 (* note: this could totally just handle truncation of constants if semanics handled it *)
-Definition GetOperand {sa : AddressSize} (o : ARG) : M idx :=
+Definition GetOperand {s : OperationSize} {sa : AddressSize} (o : ARG) : M idx :=
   match o with
   | Syntax.const a => App ((zconst (Some 64%N) a, Some 64%N), [])
   | mem a => Load a
   | reg r => GetReg r
   end.
 
-Definition SetOperand {sa : AddressSize} (o : ARG) (v : idx) : M unit :=
+Definition SetOperand {s : OperationSize} {sa : AddressSize} (o : ARG) (v : idx) : M unit :=
   match o with
   | Syntax.const a => err (error.set_const a v)
   | mem a => Store a v
@@ -991,40 +994,46 @@ Example __testPreARG_boring : ARG -> list pre_expr := fun x : ARG => @cons pre_e
 Example __testPreARG : ARG -> list pre_expr := fun x : ARG => [x].
 *)
 
-Fixpoint Symeval {sa : AddressSize} (e : pre_expr) : M idx :=
+Fixpoint Symeval {s : OperationSize} {sa : AddressSize} (e : pre_expr) : M idx :=
   match e with
   | PreARG o => GetOperand o
   | PreFLG f => GetFlag f
   | PreApp op s args =>
-      idxs <- mapM Symeval args;
-      App ((op, s), idxs)
+      idxs <- mapM (@Symeval s sa) args;
+      App ((op, Some s), idxs)
   end.
 
 Notation "f @ ( x , y , .. , z )" := (PreApp f (@cons pre_expr x (@cons pre_expr y .. (@cons pre_expr z nil) ..))) (at level 10) : x86symex_scope.
 Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
   let sa : AddressSize := Some 64%N in
-  match Syntax.operation_size instr with Some (Some s) =>
-  let os : OperationSize := Some s in
+  match Syntax.operation_size instr with Some s =>
+  let s : OperationSize := s in
   match instr.(Syntax.op), instr.(args) with
-  | mov, [dst; src] => (* Note: unbundle when switching from N to Z *)
+  | (mov | movzx), [dst; src] => (* Note: unbundle when switching from N to Z *)
     v <- GetOperand src;
     SetOperand dst v
+  | seto, [dst] =>
+    of <- GetFlag OF;
+    SetOperand dst of
+  | setc, [dst] =>
+    cf <- GetFlag CF;
+    SetOperand dst cf
   | Syntax.add, [dst; src] =>
     v <- Symeval (add@(dst, src));
-    c <- Symeval (let os : OperationSize := Some 1 in addcarry@(dst, src));
+    c <- Symeval (let os : OperationSize := 1 in addcarry@(dst, src));
     _ <- SetOperand dst v;
     _ <- HavocFlags;
     SetFlag CF c
   | Syntax.adc, [dst; src] =>
     v <- Symeval (add@(dst, src, CF));
-    c <- Symeval (let os : OperationSize := Some 1 in addcarry@(dst, src, CF));
+    c <- Symeval (let os : OperationSize := 1 in addcarry@(dst, src, CF));
     _ <- SetOperand dst v;
     _ <- HavocFlags;
     SetFlag CF c
   | (adcx|adox) as op, [dst; src] =>
     let f := match op with adcx => CF | _ => OF end in
     v <- Symeval (add@(dst, src, f));
-    c <- Symeval (let os : OperationSize := Some 1 in addcarry@(dst, src, f));
+    c <- Symeval (let os : OperationSize := 1 in addcarry@(dst, src, f));
     _ <- SetOperand dst v;
     SetFlag f c
   | Syntax.sub, [dst; src] =>
@@ -1059,6 +1068,14 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
     v <- Symeval (shr@(dst, cnt));
     _ <- SetOperand dst v;
     HavocFlags
+   | Syntax.sar, [dst; cnt] =>
+    v <- Symeval (sar@(dst, cnt));
+    cf <- Symeval (sarcarry@(dst, cnt));
+    of <- Symeval (saroverflow@(dst, cnt));
+    _ <- SetOperand dst v;
+    _ <- HavocFlags;
+    _ <- SetFlag CF cf;
+    SetFlag OF of
   | shrd, [lo as dst; hi; cnt] =>
     let cnt' := add@(Z.of_N s, PreApp neg [PreARG cnt]) in
     v <- Symeval (or@(shr@(lo, cnt), shl@(hi, cnt')));
@@ -1088,7 +1105,7 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
  end
   | _ =>
   match instr.(Syntax.op), instr.(args) with
-  | clc, [] => zero <- Symeval (@PreApp (const 0) (Some 1) nil); SetFlag CF zero
+  | clc, [] => zero <- @Symeval 1 _ (@PreApp (const 0) 1 nil); SetFlag CF zero
   | Syntax.ret, [] => ret tt
   | _, _ => err (error.ambiguous_operation_size instr) end end%N%x86symex.
 
