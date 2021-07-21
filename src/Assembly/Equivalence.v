@@ -660,7 +660,7 @@ Definition symex_asm_func
       with
       | Error (e, s) => Error (Symbolic_execution_failed e s)
       | Success (argptrs, s) =>
-          let outputaddrs : list (option (list idx))  := firstn (length inputs) argptrs in
+          let outputaddrs : list (option (list idx))  := firstn (length argptrs - length inputs) argptrs in
           match Option.List.lift (List.map (fun ocells =>
             match ocells with
             | None => None

@@ -107,7 +107,7 @@ Require Import Crypto.Assembly.Syntax.
 Definition idx := N.
 Local Set Boolean Equality Schemes.
 Definition symbol := N.
-Variant opname := old (_:symbol) | oldold (_:REG*option nat) | const (_ : N) | add | addcarry | notaddcarry | neg | shl | shr | sar | sarcarry | saroverflow | and | or | xor | slice (lo sz : N) | mul | mulhuu (_:N) | set_slice (lo sz : N)(* | ... *).
+Variant opname := old (_:symbol) | oldold (_:REG*option nat) | const (_ : N) | add | addcarry | notaddcarry | neg | shl | shr | sar | and | or | xor | slice (lo sz : N) | mul | mulhuu (_:N) | set_slice (lo sz : N)(* | ... *).
 
 Global Instance show_opname : Show opname := fun o =>
   match o with
@@ -121,8 +121,6 @@ Global Instance show_opname : Show opname := fun o =>
   | shl => "shl"
   | shr => "shr"
   | sar => "sar"
-  | sarcarry => "sarcarry"
-  | saroverflow => "saroverflow"
   | and => "and"
   | or => "or"
   | xor => "xor"
@@ -636,10 +634,30 @@ Qed.
 Definition isCst (e : expr) :=
   match e with ExprApp ((const _, _), _) => true | _ => false end.
 
-Definition simplify_slice :=
+Definition simplify_slice0_head :=
   fun e => match e with
-    ExprApp ((slice 0 s',Some s), [(ExprApp (oo, None, args))]) =>
-      ExprApp (oo, Some (N.min s s'), args) | _ => e end.
+    ExprApp ((slice 0 s',Some s), args) =>
+      ExprApp (slice 0 (N.min s s'), None, args) | _ => e end.
+Definition simplify_slice0 :=
+  fun e => match e with
+    ExprApp ((slice 0 s', None), [(ExprApp (oo, s, args))]) =>
+      let s := match s with None => s' | Some s => N.min s s' end in
+      ExprApp (oo, Some s, args) | _ => e end.
+Definition simplify_truncate_set_slice :=
+  fun e => match e with
+    ExprApp ((set_slice 0 s1, Some s2), [_; ExprApp (oo, s, args)]) =>
+      if N.leb s2 s1 then
+        let s := match s with None => s2 | Some s => N.min s s2 end in
+        ExprApp (oo, Some s, args) 
+      else e | _ => e end.
+Definition simplify_truncate_small :=
+  fun e => match e with
+    ExprApp ((op, Some s), args) =>
+      let e' := ExprApp ((op, None), args) in
+      match bound_expr e' with Some b =>
+      if N.leb b (N.ones s)
+      then e'
+      else e | _ => e end | _ => e end.
 Definition simplify_shr := 
   fun e => match e with
     ExprApp ((shr, Some s), [x; shamt]) =>
@@ -651,7 +669,10 @@ Definition simplify_expr : expr -> expr :=
   [fun e => match interp0_expr e with
             | Some v => ExprApp ((const v, None), nil)
             | _ => e end
-  ;simplify_slice
+  ;simplify_slice0_head
+  ;simplify_slice0
+  ;simplify_truncate_set_slice
+  ;simplify_truncate_small
   ;simplify_shr
   ;fun e => match e with
     ExprApp (o, args) =>
@@ -694,7 +715,7 @@ Lemma eval_simplify_expr c d e v : eval c d e v -> eval c d (simplify_expr e) v.
 Proof.
   intros H; cbv [simplify_expr].
 
-  Local Opaque simplify_shr simplify_slice.
+  Local Opaque simplify_slice0_head simplify_slice0 simplify_truncate_set_slice simplify_truncate_small simplify_shr.
   repeat match goal with (* one goal per rewrite rule *)
   | |- context G [fold_left ?f (cons ?r ?rs) ?e] =>
     let re := fresh "e" in
@@ -704,8 +725,8 @@ Proof.
         clear dependent e; rename re into e ]
   | |- context G [fold_left ?f nil ?e] => eassumption
   end.
-  Local Transparent simplify_shr simplify_slice.
-  all : cbv [simplify_shr simplify_slice] in *.
+  Local Transparent simplify_slice0_head simplify_slice0 simplify_truncate_set_slice simplify_truncate_small simplify_shr.
+  all : cbv [simplify_slice0_head simplify_slice0 simplify_truncate_set_slice simplify_truncate_small simplify_shr] in *.
 
   all : repeat match goal with
                | _ => solve [trivial]
@@ -737,12 +758,10 @@ Proof.
                end.
   { econstructor; eauto; []; cbn [interp_op interp_op' option_map].
     f_equal; eauto using eval_eval, eval_eval0. }
-  { econstructor; try eassumption; [].
-    cbv [interp_op option_map] in *; cbn [interp_op'] in *.
-    replace (interp_op' c o0 (Some (N.min o sz)) args')
-       with (interp_op' c o0 None args') by admit. (* false in neg case  *)
-    destruct (interp_op' _ _ _ _) in *; inversion H7; []; subst.
-    rewrite N.shiftr_0_r, <-N.land_assoc, N.min_comm, N.ones_min; trivial. }
+  admit.
+  admit.
+  admit.
+  admit.
   admit.
   admit.
   admit.
@@ -1069,13 +1088,17 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
     _ <- SetOperand dst v;
     HavocFlags
    | Syntax.sar, [dst; cnt] =>
-    v <- Symeval (sar@(dst, cnt));
-    cf <- Symeval (sarcarry@(dst, cnt));
-    of <- Symeval (saroverflow@(dst, cnt));
-    _ <- SetOperand dst v;
+    x <- GetOperand dst;
+    c <- GetOperand cnt; c <- Reveal 1 c;
+    y <- Symeval (sar@(dst, cnt));
+    _ <- SetOperand dst y;
     _ <- HavocFlags;
-    _ <- SetFlag CF cf;
-    SetFlag OF of
+    if match c with ExprApp (const 1%N, _, nil) => true | _ => false end
+    then (
+      cf <- App ((slice 0 1, None), cons (x) nil);
+      _ <- SetFlag CF cf;
+      zero <- Symeval (PreApp (const 0) nil); SetFlag OF zero)
+    else ret tt
   | shrd, [lo as dst; hi; cnt] =>
     let cnt' := add@(Z.of_N s, PreApp neg [PreARG cnt]) in
     v <- Symeval (or@(shr@(lo, cnt), shl@(hi, cnt')));
