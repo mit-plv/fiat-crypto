@@ -210,15 +210,228 @@ Section Compile.
                     rewrite word.of_Z_unsigned in H end.
     use_hyp_with_matching_cmd; eauto.
   Qed.
+
+
+  (*Stack allocation lemmas *)
+
+  (* identity used as a marker to indicate when something should be allocated *)
+  Definition felem_alloc (v : F M_pos) := v.
+  Arguments felem_alloc : simpl never.
+
+  (*TODO: this stars something with a raw function.
+    Ideally, we would star R with the separation logic condition
+    inside of pred, but pred is abstract.
+   *)
+  Definition pred_sep {A} R (pred : A -> predicate) (v : A) tr' mem' locals':=
+    (R * Basics.flip (pred v tr') locals')%sep mem'.
+
+   Lemma compile_binop_alloc {name} {op: BinOp name}
+        {tr mem locals functions} x y:
+    let v := felem_alloc (bin_model (feval x) (feval y)) in
+    forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
+      Rin x_ptr x_var y_ptr y_var out_var,
+
+      (_: spec_of name) functions ->
+      bounded_by bin_xbounds x ->
+      bounded_by bin_ybounds y ->
+
+      let Rout := (FElem x_ptr x * FElem y_ptr y * Rin)%sep in
+      
+      (FElem x_ptr x * FElem y_ptr y * Rin)%sep mem ->
+      map.get locals x_var = Some x_ptr ->
+      map.get locals y_var = Some y_ptr ->
+
+      out_var <> x_var ->
+      out_var <> y_var ->
+
+      (let v := v in
+       forall out out_ptr m (Heq: feval out = v),
+         bounded_by bin_outbounds out ->
+         sep (FElem out_ptr out) Rout m ->
+         (<{ Trace := tr;
+             Memory := m;
+             Locals := map.put locals out_var out_ptr;
+             Functions := functions }>
+          k_impl
+          <{ pred_sep (Placeholder out_ptr) pred (k v eq_refl) }>)) ->
+      <{ Trace := tr;
+         Memory := mem;
+         Locals := locals;
+         Functions := functions }>
+      
+      cmd.stackalloc out_var (@felem_size_in_bytes field_parameters _ field_representaton)
+                     (cmd.seq
+                        (cmd.call [] name [expr.var out_var; expr.var x_var; expr.var y_var ])
+                        k_impl)
+      <{ pred (nlet_eq [out_var] v k) }>.
+   Proof.
+     (*TODO: this proof can be greatly simplified
+       and overlaps with the relevant one for unary ops
+      *)
+     repeat straightline'.
+     split; eauto using felem_size_in_bytes_mod.
+     intros out_ptr mStack mCombined Hplace%FElem_from_bytes.
+     destruct Hplace as [out Hout].
+     repeat straightline'.
+     straightline_call.
+     intuition eauto.
+     {
+       exists (FElem out_ptr out * Rin)%sep.
+       assert (((FElem x_ptr x ⋆ FElem y_ptr y ⋆ Rin) * FElem out_ptr out)%sep mCombined).
+       exists mem.
+       exists mStack.
+       intuition.
+       ecancel_assumption.
+     }
+     {
+       exists mStack.
+       exists mem.
+       intuition eauto.
+       apply map.split_comm; eauto.
+     }
+     repeat straightline'.
+     eapply WeakestPrecondition_weaken
+       with (p1 := pred_sep (Memory.anybytes out_ptr felem_size_in_bytes)
+                            pred (let/n x as out_var eq:Heq := v in
+                                  k x Heq)).
+     {
+       unfold pred_sep.
+       repeat straightline'.
+       destruct H9 as [mStack' [m' [Hmem [HmStack Hm]]]].
+       unfold Basics.flip in Hm.
+       exists m'.
+       exists mStack'.
+       intuition.
+       apply map.split_comm; auto.
+     }
+     eapply H7; repeat straightline'.
+     {
+       unfold v.
+       unfold felem_alloc.
+       eauto.
+     }
+     eauto.
+     {
+       unfold Rout.
+       ecancel_assumption.
+     }
+   Qed.
+
+   Notation make_bin_alloc_lemma op :=
+     ltac:(cleanup_op_lemma (@compile_binop_alloc _ op)) (only parsing).
+
+   Definition compile_mul_alloc := make_bin_alloc_lemma bin_mul.
+   Definition compile_add_alloc := make_bin_alloc_lemma bin_add.
+   Definition compile_sub_alloc := make_bin_alloc_lemma bin_sub.
+
+   
+   Lemma compile_unop_alloc {name} (op: UnOp name) {tr mem locals functions} x:
+     let v := felem_alloc (un_model (feval x)) in
+     forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
+            Rin x_ptr x_var out_var,
+
+       (_: spec_of name) functions ->
+       bounded_by un_xbounds x ->
+
+       let Rout := (FElem x_ptr x * Rin)%sep in
+       
+       (FElem x_ptr x * Rin)%sep mem ->
+       map.get locals x_var = Some x_ptr ->
+       out_var <> x_var ->
+
+       (let v := v in
+        forall out out_ptr m (Heq : feval out = v),
+          bounded_by un_outbounds out ->
+          sep (FElem out_ptr out) Rout m ->
+          (<{ Trace := tr;
+              Memory := m;
+              Locals := map.put locals out_var out_ptr;
+              Functions := functions }>
+           k_impl
+           <{ pred_sep (Placeholder out_ptr) pred (k v eq_refl)}>)) ->
+       <{ Trace := tr;
+          Memory := mem;
+          Locals := locals;
+          Functions := functions }>
+       cmd.stackalloc out_var (@felem_size_in_bytes field_parameters _ field_representaton)
+                      (cmd.seq
+                         (cmd.call [] name [expr.var out_var; expr.var x_var])
+                         k_impl)
+       <{ pred (nlet_eq [out_var] v k) }>.
+   Proof.
+     repeat straightline'.
+     split; eauto using felem_size_in_bytes_mod.
+     intros out_ptr mStack mCombined Hplace%FElem_from_bytes.
+     destruct Hplace as [out Hout].
+     repeat straightline'.
+     straightline_call.
+     intuition eauto.
+     {
+       exists (FElem out_ptr out * Rin)%sep.
+       assert (((FElem x_ptr x ⋆ Rin) * FElem out_ptr out)%sep mCombined).
+       exists mem.
+       exists mStack.
+       intuition.
+       ecancel_assumption.
+     }
+     {
+       exists mStack.
+       exists mem.
+       intuition eauto.
+       apply map.split_comm; eauto.
+     }
+     repeat straightline'.
+     eapply WeakestPrecondition_weaken
+       with (p1 := pred_sep (Memory.anybytes out_ptr felem_size_in_bytes)
+                            pred (let/n x as out_var eq:Heq := v in
+                                  k x Heq)).
+     {
+       unfold pred_sep.
+       repeat straightline'.
+       destruct H6 as [mStack' [m' [Hmem [HmStack Hm]]]].
+       unfold Basics.flip in Hm.
+       exists m'.
+       exists mStack'.
+       intuition.
+       apply map.split_comm; auto.
+     }
+     eapply H4; repeat straightline'.
+     {
+       unfold v.
+       unfold felem_alloc.
+       eauto.
+     }
+     eauto.
+     {
+       unfold Rout.
+       ecancel_assumption.
+     }
+   Qed.
+
+   Notation make_un_alloc_lemma op :=
+     ltac:(cleanup_op_lemma (@compile_unop_alloc _ op)) (only parsing).
+
+   Definition compile_square_alloc := make_un_alloc_lemma un_square.
+   Definition compile_scmula24_alloc := make_un_alloc_lemma un_scmula24.
+   Definition compile_inv_alloc := make_un_alloc_lemma un_inv.
+   
 End Compile.
 
+(*TODO: why doesn't simple eapply work? *)
 Ltac field_compile_step :=
   first [ simple eapply compile_scmula24 (* must precede compile_mul *)
         | simple eapply compile_mul
         | simple eapply compile_add
         | simple eapply compile_sub
         | simple eapply compile_square
-        | simple eapply compile_inv ];
+        | simple eapply compile_inv
+        (*must come second due to eapply *)
+        | eapply compile_scmula24_alloc (* must precede compile_mul_alloc *)
+        | eapply compile_mul_alloc
+        | eapply compile_add_alloc
+        | eapply compile_sub_alloc
+        | eapply compile_square_alloc
+        | eapply compile_inv_alloc ];
   lazymatch goal with
   | |- feval _ = _ => try eassumption; try reflexivity
   | |- _ => idtac
