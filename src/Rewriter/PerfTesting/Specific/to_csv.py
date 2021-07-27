@@ -121,10 +121,10 @@ def lines_to_rows(lines, for_graph=False, real_or_user='real', only=None, **kwar
         def format_prime(p): return p
         def format_time(t): return t
         def format_time_ratio(n, d): return float(n) / float(d)
-        def get_div_row(p, n, d):
+        def get_div_row(p, n=None, d=None):
             if p is None or n is None or d is None or '' in (p, n, d): return None
             return [format_prime(p), format_time_ratio(n, d)]
-        def get_row(p, t):
+        def get_row(p, t=None):
             if p is None or t is None or '' in (p, t): return
             return [format_prime(p), format_time(t)]
         arg_to_key_filter = {

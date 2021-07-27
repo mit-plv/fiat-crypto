@@ -136,6 +136,15 @@ Global Instance show_prod {A B} `{Show A, Show B} : Show (A * B) | 2000 :=
   let _ := @ShowLevel_of_Show A in
   let _ := @ShowLevel_of_Show B in
   _.
+Global Instance show_lvl_sum {A B} `{ShowLevel A, ShowLevel B} : ShowLevel (A + B)
+  := fun ab => match ab with
+               | inl v => show_lvl_app (fun 'tt => "inl") (show_lvl v)
+               | inr v => show_lvl_app (fun 'tt => "inr") (show_lvl v)
+               end.
+Global Instance show_sum {A B} `{Show A, Show B} : Show (A + B) | 2000
+  := let _ := @ShowLevel_of_Show A in
+     let _ := @ShowLevel_of_Show B in
+     _.
 Global Instance show_lvl_sigT {A B} `{ShowLevel A, forall a, ShowLevel (B a)} : ShowLevel (@sigT A B)
   := fun '(existT a b) => show_lvl_binop pair_assoc pair_lvl a "; " b.
 Global Instance show_sigT {A B} `{Show A, forall a, Show (B a)} : Show (@sigT A B) | 2000 :=

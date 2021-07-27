@@ -175,6 +175,12 @@ Typeclasses Opaque machine_wordsize_opt.
 (** Prefix function definitions with static/non-public? *)
 Class static_opt := static : bool.
 Typeclasses Opaque static_opt.
+(** Prefix internal/helper function definitions with inline? *)
+Class inline_internal_opt := inline_internal : bool.
+Typeclasses Opaque inline_internal_opt.
+(** Prefix all function definitions with inline? *)
+Class inline_opt := inline : bool.
+Typeclasses Opaque inline_opt.
 (** Prefix internal function definitions with static/non-public? *)
 Class internal_static_opt := internal_static : bool.
 Typeclasses Opaque internal_static_opt.
@@ -388,7 +394,7 @@ Module Pipeline.
             match ToString.ToFunctionLines
                     (relax_zrange := fun r => r)
                     machine_wordsize
-                    false (* do extra bounds check *) false (* internal static *) false (* static *) false (* all static *) "" "f" syntax_tree (fun _ _ => nil) None arg_bounds ZRange.type.base.option.None (type.forall_each_lhs_of_arrow (@ToString.OfPHOAS.var_typedef_data_None)) ToString.OfPHOAS.base_var_typedef_data_None with
+                    false (* do extra bounds check *) false (* internal static *) false (* static *) false (* all static *) false (* inline *) "" "f" syntax_tree (fun _ _ => nil) None arg_bounds ZRange.type.base.option.None (type.forall_each_lhs_of_arrow (@ToString.OfPHOAS.var_typedef_data_None)) ToString.OfPHOAS.base_var_typedef_data_None with
             | inl (E_lines, types_used)
               => ["The syntax tree:"]
                    ++ show_lines syntax_tree
@@ -642,6 +648,7 @@ Module Pipeline.
              (name : string)
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
+             (inline : bool)
              (translate_to_fancy : option to_fancy_args)
              (possible_values : list Z)
              (relax_zrangef : relax_zrange_opt
@@ -663,7 +670,7 @@ Module Pipeline.
                       E arg_bounds out_bounds in
        match E with
        | Success E' => let E := ToString.ToFunctionLines
-                                  machine_wordsize true (orb internal_static static) static all_static type_prefix name E' comment None arg_bounds out_bounds arg_typedefs out_typedefs in
+                                  machine_wordsize true (orb internal_static static) static all_static inline type_prefix name E' comment None arg_bounds out_bounds arg_typedefs out_typedefs in
                       match E with
                       | inl (lines, infos)
                         => Success {| lines := lines; ident_infos := infos; arg_bounds := arg_bounds; out_bounds := out_bounds; arg_typedefs := arg_typedefs ; out_typedefs := out_typedefs ; expr := E' |}
@@ -690,6 +697,7 @@ Module Pipeline.
              (name : string)
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
+             (inline : bool)
              (translate_to_fancy : option to_fancy_args)
              (possible_values : list Z)
              (relax_zrangef : relax_zrange_opt
@@ -708,6 +716,7 @@ Module Pipeline.
                   type_prefix name
                   (*with_dead_code_elimination*)
                   with_subst01
+                  inline
                   translate_to_fancy
                   possible_values
                   machine_wordsize
@@ -734,6 +743,7 @@ Module Pipeline.
              (name : string)
              (with_dead_code_elimination : bool := true)
              (with_subst01 : bool)
+             (inline : bool)
              (translate_to_fancy : option to_fancy_args)
              (possible_values : list Z)
              (machine_wordsize : Z)
@@ -749,6 +759,7 @@ Module Pipeline.
                   type_prefix name
                   (*with_dead_code_elimination*)
                   with_subst01
+                  inline
                   translate_to_fancy
                   possible_values
                   machine_wordsize
@@ -831,6 +842,13 @@ Module Pipeline.
                                      | true => internal_static
                                      | false => static
                                      end in
+                 let inline : inline_opt := _ in
+                 let inline_internal : inline_internal_opt := _ in
+                 let inline_internal := orb inline_internal inline in
+                 let inline' := match is_internal return bool with
+                                | true => inline_internal
+                                | false => inline
+                                end in
                  let adjust_name := convert_to_naming_convention (if is_internal' then private_function_naming_convention else public_function_naming_convention) in
                  let arg_bounds := arg_bounds_of_pipeline result in
                  let out_bounds := out_bounds_of_pipeline result in
@@ -840,7 +858,7 @@ Module Pipeline.
                             (relax_zrange
                              := fun r => Option.value (relax_zrange_gen (_ : only_signed_opt) (possible_values_of_pipeline result) r) r)
                             machine_wordsize
-                            true internal_static is_internal' static
+                            true internal_static is_internal' static inline'
                             prefix (adjust_name (prefix ++ name)%string)
                             E'
                             (comment (adjust_name (prefix ++ name)%string))
