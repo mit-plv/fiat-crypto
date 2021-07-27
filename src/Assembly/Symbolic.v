@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 Require Crypto.Assembly.Parse Crypto.Assembly.Parse.Examples.fiat_25519_carry_square_optimised_seed20.
 Definition lines' := Eval native_compute in
   Assembly.Parse.parse
@@ -10,9 +10,6 @@ Definition lines'10 := Eval native_compute in
   Assembly.Parse.Examples.fiat_25519_carry_square_optimised_seed10.example.
 Definition lines10 := Eval cbv in ErrorT.invert_result lines'10.
 
-=======
-Require Crypto.Assembly.Parse.
->>>>>>> 9a095f9d6108b39a3f967d41b651caefe2d268f5
 Require Import Coq.Lists.List.
 Require Import Coq.ZArith.ZArith.
 Require Crypto.Util.Tuple.
@@ -116,27 +113,11 @@ Section Forall2.
   Proof. induction 1; inversion 1; subst; econstructor; eauto. Qed.
 End Forall2.
 
-<<<<<<< HEAD
-Require Import Crypto.Assembly.Syntax.
-Definition idx := N.
-Local Set Boolean Equality Schemes.
-Variant opname := old (_:REG*option nat) | const (_ : N) | add | addcarry | addoverflow | notaddcarry | addbytecarry | addbyteoverflow | neg | shl | shr | sarbytecarry | sarbyteoverflow | lowbyte | setlowbyte | nonzero | select | rcr | rcrbyteoverflow | rcrbytecarry | and | or | xor | slice (lo sz : N) | mul | mulhuu | set_slice (lo sz : N)(* | ... *).
-
-Definition associative o := match o with add|mul|or|and => true | _ => false end.
-Definition commutative o := match o with add|addcarry|mul|mulhuu => true | _ => false end.
-Definition identity o := match o with add|addcarry => Some 0%N | mul|mulhuu=>Some 1%N |_=> None end.
-
-Class OperationSize := operation_size : N.
-Definition op : Set := opname * OperationSize.
-Definition op_beq := Prod.prod_beq _ _ opname_beq N.eqb.
-
-Definition node (A : Set) : Set := op * list A.
-=======
 Require Import Coq.Strings.String Crypto.Util.Strings.Show.
 Require Import Crypto.Assembly.Syntax.
 Definition idx := N.
 Local Set Boolean Equality Schemes.
-Variant opname := old (_:N) | oldold (_:REG*option nat) | const (_ : N) | add | addcarry | notaddcarry | neg | shl | shr | and | or | xor | slice (lo sz : N) | mul | mulhuu (_:N) | set_slice (lo sz : N)(* | ... *).
+Variant opname := old (_:N) | oldold (_:REG*option nat) | const (_ : N) | add | addcarry | notaddcarry | neg | shl | shr | rcr | and | or | xor | slice (lo sz : N) | mul | mulhuu (_:N) | set_slice (lo sz : N)(* | ... *).
 
 Global Instance show_opname : Show opname := fun o =>
   match o with
@@ -149,6 +130,7 @@ Global Instance show_opname : Show opname := fun o =>
   | neg => "neg"
   | shl => "shl"
   | shr => "shr"
+  | rcr => "rcr"            
   | and => "and"
   | or => "or"
   | xor => "xor"
@@ -170,7 +152,6 @@ Definition op_beq := Prod.prod_beq _ _ opname_beq N.eqb.
 
 Definition node (A : Set) : Set := op * list A.
 Global Instance Show_node {A : Set} [show_A : Show A] : Show (node A) := show_prod.
->>>>>>> 9a095f9d6108b39a3f967d41b651caefe2d268f5
 
 Local Unset Elimination Schemes.
 Inductive expr : Set :=
@@ -189,14 +170,12 @@ Section expr_ind.
 End expr_ind.
 Definition invert_ExprRef (e : expr) : option idx :=
   match e with ExprRef i => Some i | _ => None end.
-<<<<<<< HEAD
-=======
+
 Global Instance Show_expr : Show expr := fix f e :=
    match e with
    | ExprRef i => "ExprRef " ++ show i
    | ExprApp n => "ExprApp " ++ @show (node expr) (@Show_node _ f) n
    end%string.
->>>>>>> 9a095f9d6108b39a3f967d41b651caefe2d268f5
 
 Require Import Crypto.Util.Option Crypto.Util.Notations Coq.Lists.List.
 Import ListNotations.
@@ -760,8 +739,7 @@ Definition update_flag_with (st : symbolic_state) (f : flag_state -> flag_state)
 Definition update_mem_with (st : symbolic_state) (f : mem_state -> mem_state) : symbolic_state
   := {| dag_state := st.(dag_state); symbolic_reg_state := st.(symbolic_reg_state) ; symbolic_flag_state := st.(symbolic_flag_state) ; symbolic_mem_state := f st.(symbolic_mem_state) |}.
 
-<<<<<<< HEAD
-=======
+
 Global Instance show_reg_state : Show reg_state := fun st =>
   show (List.map (fun '(n, v) => (widest_register_of_index n, v)) (ListUtil.List.enumerate (Option.List.map id (Tuple.to_list _ st)))).
 
@@ -799,7 +777,6 @@ Global Instance ShowLines_symbolic_state : ShowLines symbolic_state :=
  end%list%string.
 
 
->>>>>>> 9a095f9d6108b39a3f967d41b651caefe2d268f5
 Module error.
   Variant error :=
   | nth_error_dag (_ : nat)
@@ -814,8 +791,7 @@ Module error.
   | ambiguous_operation_size (_ : NormalInstruction)
 
   | failed_to_unify (_ : list (expr * (option idx * option idx))).
-<<<<<<< HEAD
-=======
+
 
   Global Instance Show_error : Show error := fun e =>
    match e with
@@ -829,7 +805,6 @@ Module error.
    | ambiguous_operation_size n => "error.ambiguous_operation_size " ++ show n
    | failed_to_unify l => "error.failed_to_unify " ++ show l
    end%string.
->>>>>>> 9a095f9d6108b39a3f967d41b651caefe2d268f5
 End error.
 Notation error := error.error.
 
@@ -1009,11 +984,7 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
   | mulx, [hi; lo; src2] =>
     let src1 : ARG := rdx in
     vl <- Symeval (mul@(src1,src2));
-<<<<<<< HEAD
-    vh <- Symeval (mulhuu@(src1,src2));
-=======
     vh <- Symeval ((mulhuu s)@(src1,src2));
->>>>>>> 9a095f9d6108b39a3f967d41b651caefe2d268f5
     _ <- SetOperand lo vl;
          SetOperand hi vh
    | Syntax.shr, [dst; cnt] =>
@@ -1057,29 +1028,17 @@ Definition SymexNormalInstructions := fun st is => mapM_ SymexNormalInstruction 
 
 
 Definition OldReg (r : REG) : M unit :=
-<<<<<<< HEAD
-  i <- Merge (ExprApp ((old (r, None), reg_size r), nil));
-=======
   i <- Merge (ExprApp ((oldold (r, None), reg_size r), nil));
->>>>>>> 9a095f9d6108b39a3f967d41b651caefe2d268f5
   SetReg r i.
 Definition OldCell (r : REG) (i : nat) : M unit :=
   a <- @Address 64%N {| mem_reg := r; mem_offset := Some (Z.of_nat(8*i));
                  mem_is_byte := false; mem_extra_reg:=None |};
-<<<<<<< HEAD
-  v <- Merge (ExprApp ((old (r, Some i), 64%N), nil));
-=======
   v <- Merge (ExprApp ((oldold (r, Some i), 64%N), nil));
->>>>>>> 9a095f9d6108b39a3f967d41b651caefe2d268f5
   (fun s => Success (tt, update_mem_with s (cons (a,v)))).
 Definition OldStack (r := rsp) (i : nat) : M unit :=
   a <- @Address 64%N {| mem_reg := r; mem_offset := Some (Z.opp (Z.of_nat(8*S i)));
                  mem_is_byte := false; mem_extra_reg:=None |};
-<<<<<<< HEAD
-  v <- Merge (ExprApp ((old (r, Some i), 64%N), nil));
-=======
   v <- Merge (ExprApp ((oldold (r, Some i), 64%N), nil));
->>>>>>> 9a095f9d6108b39a3f967d41b651caefe2d268f5
   (fun s => Success (tt, update_mem_with s (cons (a,v)))).
 
 Definition init
@@ -1147,8 +1106,7 @@ Definition symex_asm_asm args stack impl1 impl2 : ErrorT _ _ :=
   then Success tt
   else Error (error.failed_to_unify answers, s2).
 
-<<<<<<< HEAD
-=======
+
 (*
 Require Crypto.Assembly.Parse Crypto.Assembly.Parse.Examples.fiat_25519_carry_square_optimised_seed20.
 Definition lines' := Eval native_compute in
@@ -1208,4 +1166,3 @@ Defined.
 <<<<<<< HEAD
 =======
  *)
->>>>>>> 9a095f9d6108b39a3f967d41b651caefe2d268f5
