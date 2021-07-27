@@ -24,9 +24,7 @@ Section __.
     Local Open Scope F_scope.
 
     Definition ladderstep_gallina
-               (X1: F M_pos) (P1 P2: point) : (point * point) :=
-      let '(X2, Z2) := P1 in
-      let '(X3, Z3) := P2 in
+               (X1 X2 Z2 X3 Z3: F M_pos) : F M_pos * F M_pos * F M_pos * F M_pos :=
       let/n A := felem_alloc (X2+Z2) in
       let/n AA := felem_alloc (A^2) in
       let/n B := felem_alloc (X2-Z2) in
@@ -49,7 +47,7 @@ Section __.
       let/n Z2 := a24*E in
       let/n Z2:= (AA+Z2) in
       let/n Z2 := E*Z2 in
-      ((X2, Z2), (X3, Z3)).
+      (X2, Z2, X3, Z3).
   End Gallina.
 
   Instance spec_of_ladderstep : spec_of "ladderstep" :=
@@ -70,9 +68,9 @@ Section __.
         /\ exists X4 Z4 X5 Z5 (* output values *)
                   : felem,
           (ladderstep_gallina
-             (feval X1) (feval X2, feval Z2)
-             (feval X3, feval Z3)
-           = ((feval X4, feval Z4), (feval X5, feval Z5)))
+             (feval X1) (feval X2) (feval Z2)
+             (feval X3) (feval Z3)
+           = (feval X4, feval Z4, feval X5, feval Z5))
           /\ bounded_by tight_bounds X4
           /\ bounded_by tight_bounds Z4
           /\ bounded_by tight_bounds X5
@@ -80,9 +78,9 @@ Section __.
           /\ (FElem pX1 X1 * FElem pX2 X4 * FElem pZ2 Z4
               * FElem pX3 X5 * FElem pZ3 Z5 * R)%sep mem'}.
 
-  Lemma compile_ladderstep : forall {tr mem locals functions}
-        (x1 x2 z2 x3 z3 : F M_pos),
-    let v := ladderstep_gallina x1 (x2, z2) (x3, z3) in
+  Lemma compile_ladderstep {tr mem locals functions}
+        (x1 x2 z2 x3 z3 : F M_pos) :
+    let v := ladderstep_gallina x1 x2 z2 x3 z3 in
     forall {P} {pred: P v -> predicate} {k: nlet_eq_k P v} {k_impl}
            Rout
            X1 X1_ptr X1_var X2 X2_ptr X2_var Z2 Z2_ptr Z2_var
@@ -114,9 +112,9 @@ Section __.
          forall (X4 Z4 X5 Z5 (* output values *)
                  : felem) m
                 (Heq : ladderstep_gallina
-                         (feval X1) (feval X2, feval Z2)
-                         (feval X3, feval Z3)
-                       = ((feval X4, feval Z4), (feval X5, feval Z5))),
+                         (feval X1) (feval X2) (feval Z2)
+                         (feval X3) (feval Z3)
+                       = (feval X4, feval Z4, feval X5, feval Z5)),
           bounded_by tight_bounds X4 ->
           bounded_by tight_bounds Z4 ->
           bounded_by tight_bounds X5 ->
@@ -206,8 +204,8 @@ Proof.
                         Lift1Prop.ex1 (fun Z4 =>
                         Lift1Prop.ex1 (fun X5 =>
                         Lift1Prop.ex1 (fun Z5 =>
-                        (emp ((feval out13, feval out16, (feval out9, feval out12))
-                         = (feval X4, feval Z4, (feval X5, feval Z5)) /\
+                        (emp ((feval out13, feval out16, feval out9, feval out12)
+                         = (feval X4, feval Z4, feval X5, feval Z5) /\
                         bounded_by tight_bounds X4 /\
                         bounded_by tight_bounds Z4 /\
                         bounded_by tight_bounds X5 /\ bounded_by tight_bounds Z5))
@@ -238,7 +236,9 @@ Proof.
       ecancel_assumption.
     }
   }
-Qed.
+  
+  (* TODO: currently takes a few hours *)
+Time Qed.
   
 End __.
 
