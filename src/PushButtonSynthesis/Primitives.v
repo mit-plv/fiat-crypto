@@ -1135,7 +1135,10 @@ Section __.
 
     Definition split_to_assembly_functions {A B} (assembly_data : list (string * A)) (normal_data : list (string * B))
       : list (string * (A * B)) * list (string * B) * list (string * A)
-      := let ls := List.map (fun '(n1, normal_data)
+      := if andb (Nat.eqb (length assembly_data) 1%nat) (Nat.eqb (length normal_data) 1%nat) 
+         then match assembly_data, normal_data with cons (_, a) _, cons (n, b) _ => (cons (n, (a,b)) nil, nil, nil) | _, _ => (nil, normal_data, assembly_data) end
+         else
+         let ls := List.map (fun '(n1, normal_data)
                              => ((n1, normal_data), List.find (fun '(n2, _) => n1 =? n2)%string assembly_data))
                             normal_data in
          let '(lsAB, lsB) := List.partition (fun '(_, o) => match o with Some _ => true | None => false end) ls in
