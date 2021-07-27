@@ -230,6 +230,12 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
     SetOperand sa s st dst (N.b2n b)
   | clc, [] => Some (update_flag_with st (fun fs =>
     set_flag fs CF false))
+  | cmovc, [dst; src] => (* Flags Affected: None *)
+    v <- DenoteOperand sa s st src;
+    cf <- get_flag st CF;
+    if cf
+    then SetOperand sa s st dst v
+    else Some st
   | cmovnz, [dst; src] => (* Flags Affected: None *)
     v <- DenoteOperand sa s st src;
     zf <- get_flag st ZF;
@@ -247,7 +253,7 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
     let v := v1 + v2 + c in
     st <- SetOperand sa s st dst v;
     let st := HavocFlagsFromResult s st v in
-    let v := N.land v (N.ones s) in
+    let v := N.land v (N.ones (N.log2 s)) in
     let st := SetFlag st CF (negb (v =? v1 + v2 + c)) in
     Some (SetFlag st OF (negb (signed s v =? signed s v1 + signed s v2 + c)%Z))
   | (adcx | adox) as opc, [dst; src] =>
@@ -343,6 +349,15 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
     let st := SetFlag st CF false in
     let st := SetFlag st OF false in
     Some (HavocFlag st AF)
+  | bzhi, [dst; src1; src2] =>
+    v1 <- DenoteOperand sa s st src1;
+    v2 <- DenoteOperand sa s st src2;
+    let n := N.land (N.ones 8) v2 in
+    let v := N.land (N.ones n) v1 in
+    let st := HavocFlagsFromResult s st v in
+    let st := SetFlag st CF (((operand_size src1 s) - 1) <? v) in
+    let st := SetFlag st OF false in
+    SetOperand sa s st dst v
   | test, [src1; src2] =>
     v1 <- DenoteOperand sa s st src1;
     v2 <- DenoteOperand sa s st src2;
@@ -359,7 +374,9 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
   | add, _
   | adox, _
   | and, _
+  | bzhi, _
   | mulx, _
+  | cmovc, _
   | cmovnz, _
   | setc, _
   | seto, _

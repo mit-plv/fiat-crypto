@@ -77,6 +77,8 @@ Inductive EquivalenceCheckingError :=
 | Incorrect_array_input_dag_node
 | Incorrect_Z_input_dag_node
 | Not_enough_input_dag_nodes (t : API.type)
+| Expected_const_in_reference_code (_ : idx)
+| Expected_power_of_two (w : N) (_ : idx)
 | Unknown_array_length (t : base.type)
 | Invalid_arrow_type (t : API.type)
 | Invalid_argument_type (t : API.type)
@@ -103,6 +105,8 @@ Global Instance show_lines_EquivalenceCheckingError : ShowLines EquivalenceCheck
                   => ["Internal error: Input dag node had an unexpected Z."]
                 | Not_enough_input_dag_nodes t
                   => ["Internal error: Not enough input dag nodes to allocate for type " ++ show t ++ "."]%string
+                | Expected_const_in_reference_code i => ["Expected const in reference code for dag node " ++ show i]%string
+                | Expected_power_of_two w i => ["Expected power of 2, got " ++ show w ++ " (index " ++ show i ++ ")"]%string
                 | Invalid_argument_type t
                   => ["Invalid type for argument: " ++ show t]%string
                 | Invalid_return_type t
@@ -150,6 +154,17 @@ Notation "'slet' x .. y <- X ; B"  := (symex_bind X (fun x => .. (fun y => B%sym
 Notation "A <- X ; B" := (symex_bind X (fun A => B%symex)) : symex_scope.
 (* light alias *)
 Definition App (e : Symbolic.node idx) : symexM idx := fun st => Success (merge (simplify st e) st).
+Definition RevealConstant (i : idx) : symexM N := fun st =>
+  match reveal st 1 i with
+  | ExprApp (const n, _, nil) => Success (n, st)
+  | _ => Error (Expected_const_in_reference_code i)
+  end.
+Definition RevealWidth (i : idx) : symexM N :=
+  s <- RevealConstant i;
+  let w := N.log2 s in
+  if N.eqb s (N.pow 2 w)
+  then symex_return w
+  else symex_error (Expected_power_of_two s i).
 
 Definition type_spec := list (option nat). (* list of array lengths; None means not an array *)
 
@@ -424,7 +439,8 @@ Proof.
           | ident.Z_modulo
           | ident.Z_mul => fun x y => App (mul, None, [x; y])
           | ident.Z_pow
-          | ident.Z_sub
+            => symex_T_error (Unhandled_identifier idc)
+          | ident.Z_sub => fun x y => y' <- App (neg, None, [y]); App (add, None, [x;y'])
           | ident.Z_opp
           | ident.Z_div
           | ident.Z_log2
@@ -440,28 +456,45 @@ Proof.
             => symex_T_error (Unhandled_identifier idc)
            (* note for mulhuu/adc: the argument and output order is a guess, 64 is a kludge and we need something better to use the value of s whose type is var *)
           | ident.Z_mul_split => fun s x y =>
-            lo <- App (mul, None, [x; y]);
-            hi <- App (mulhuu 64%N, None, [x; y]);
+            s <- RevealWidth s;
+            lo <- App (mul, Some s, [x; y]);
+            hi <- App (mulhuu 64%N, Some s, [x; y]);
             symex_return (lo, hi)
-          | ident.Z_mul_high => fun s x y => App (mulhuu 64%N, None, [x; y])
+          | ident.Z_mul_high => fun s x y =>
+            s <- RevealWidth s;
+            App (mulhuu 64%N, Some s, [x; y])
           | ident.Z_add_get_carry => fun s x y =>
+            s <- RevealWidth s;
             a <- App (add     , None, [x; y]);
-            c <- App (addcarry, None, [x; y]);
+            c <- App (addcarry, Some s, [x; y]);
             symex_return (a, c)
           | ident.Z_add_with_carry => fun x y z => App (add, None, [x; y; z])
-
           | ident.Z_add_with_get_carry => fun s x y z =>
+            s <- RevealWidth s;
             a <- App (add     , None, [x; y; z]);
-            c <- App (addcarry, None, [x; y; z]);
+            c <- App (addcarry, Some s, [x; y; z]);
             symex_return (a, c)
-          | ident.Z_sub_get_borrow
-          | ident.Z_sub_with_get_borrow
+          | ident.Z_sub_get_borrow => fun s x y =>
+            s <- RevealWidth s;
+            y' <- App (neg, Some s, [y]);
+            a <- App (add,         Some s, [x;y']);
+            c <- App (notaddcarry, Some s, [x;y']);
+            symex_return (a, c)
+          | ident.Z_sub_with_get_borrow => fun s x y z =>
+            s <- RevealWidth s;
+            y' <- App (neg, Some s, [y]);
+            z' <- App (neg, Some s, [z]);
+            a <- App (add,         Some s, [x;y';z']);
+            c <- App (notaddcarry, Some s, [x;y';z']);
+            symex_return (a, c)
           | ident.Z_ltz
-          | ident.Z_zselect
+            => symex_T_error (Unhandled_identifier idc)
+          | ident.Z_zselect => fun c x y => App (Symbolic.selectznz, None, [c; x; y])
           | ident.Z_add_modulo
             => symex_T_error (Unhandled_identifier idc)
-            (* assuming s=64 *)
-          | ident.Z_truncating_shiftl => fun s x y => App (shl, None, [x; y])
+          | ident.Z_truncating_shiftl => fun s x y =>
+            s <- RevealConstant s;
+            App (shl, Some s, [x; y])
           | ident.Z_bneg
           | ident.Z_lnot_modulo
           | ident.Z_lxor

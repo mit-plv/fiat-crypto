@@ -33,7 +33,9 @@ Inductive OpCode :=
 | add
 | adox
 | and
+| bzhi
 | clc
+| cmovc
 | cmovnz
 | dec
 | imul

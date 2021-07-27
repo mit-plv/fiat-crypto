@@ -107,7 +107,7 @@ Require Import Crypto.Assembly.Syntax.
 Definition idx := N.
 Local Set Boolean Equality Schemes.
 Definition symbol := N.
-Variant opname := old (_:symbol) | oldold (_:REG*option nat) | const (_ : N) | add | addcarry | notaddcarry | neg | shl | shr | sar | and | or | xor | slice (lo sz : N) | mul | mulhuu (_:N) | set_slice (lo sz : N)(* | ... *).
+Variant opname := old (_:symbol) | oldold (_:REG*option nat) | const (_ : N) | add | addcarry | notaddcarry | addoverflow | neg | shl | shr | sar | and | or | xor | slice (lo sz : N) | mul | mulhuu (_:N) | set_slice (lo sz : N) | selectznz (* | ... *).
 
 Global Instance show_opname : Show opname := fun o =>
   match o with
@@ -117,6 +117,7 @@ Global Instance show_opname : Show opname := fun o =>
   | add => "add"
   | addcarry => "addcarry"
   | notaddcarry => "notaddcarry"
+  | addoverflow => "addoverflow"
   | neg => "neg"
   | shl => "shl"
   | shr => "shr"
@@ -128,6 +129,7 @@ Global Instance show_opname : Show opname := fun o =>
   | mul => "mul"
   | mulhuu n => "mulhuu"
   | set_slice lo sz => "set_slice " ++ show lo ++ " " ++ show sz
+  | selectznz => "selectznz"
   end%string.
 
 Definition associative o := match o with add|mul|or|and => true | _ => false end.
@@ -181,6 +183,11 @@ Section WithContext.
     match o, args with
     | old s, nil => match ctx s with Some v => Some v | None => None end
     | add, args => Some (List.fold_right N.add 0 args)
+    | addoverflow, args => Some (
+        let v := List.fold_right N.add 0 args in
+        match s with None => 0 | Some s =>
+            if 2^(s-1)-1 <? v then 1 else 0
+        end)%N
     | xor, args => Some (List.fold_right N.lxor 0 args)
     | neg, [a] => Some (match s with None => 0 | Some s => 2^s - a end)
     (* note: this case is real awkward, consider Z? *)
@@ -878,6 +885,7 @@ Module error.
   | load (a : idx)
   | store (a v : idx)
   | set_const (_ : CONST) (_ : idx)
+  | expected_const (_ : idx)
 
   | unimplemented_instruction (_ : NormalInstruction)
   | ambiguous_operation_size (_ : NormalInstruction)
@@ -892,6 +900,7 @@ Module error.
    | load a => "error.load " ++ show a
    | store a v => "error.store " ++ show a ++ " " ++ show v
    | set_const c i => "error.set_const " ++ show c ++ " " ++ show i
+   | expected_const i => "error.expected_const " ++ show i
    | unimplemented_instruction n => "error.unimplemented_instruction " ++ show n
    | ambiguous_operation_size n => "error.ambiguous_operation_size " ++ show n
    | failed_to_unify l => "error.failed_to_unify " ++ show l
@@ -943,6 +952,13 @@ Definition App (n : node idx) : M idx :=
   fun s => Merge (simplify s n) s.
 Definition Reveal n (i : idx) : M expr :=
   fun s => Success (reveal s n i, s).
+Definition RevealConst (i : idx) : M N :=
+  x <- Reveal 1 i;
+  match x with
+  | ExprApp (const n, None, nil) => ret n
+  | ExprApp (const n, Some s, nil) => ret (N.land n (N.ones s))
+  | _ => err (error.expected_const i)
+  end.
 
 Definition GetReg r : M idx :=
   let '(rn, lo, sz) := index_and_shift_and_bitcount_of_reg r in
@@ -1031,6 +1047,17 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
   | (mov | movzx), [dst; src] => (* Note: unbundle when switching from N to Z *)
     v <- GetOperand src;
     SetOperand dst v
+  | xchg, [a; b] => (* Note: unbundle when switching from N to Z *)
+    va <- GetOperand a;
+    vb <- GetOperand b;
+    _ <- SetOperand a vb;
+    SetOperand b va
+  | cmovc, [dst; src] =>
+    v <- Symeval (selectznz@(CF, dst, src));
+    SetOperand dst v
+  | cmovnz, [dst; src] =>
+    v <- Symeval (selectznz@(ZF, src, dst));
+    SetOperand dst v
   | seto, [dst] =>
     of <- GetFlag OF;
     SetOperand dst of
@@ -1077,6 +1104,12 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
     v <- Symeval (and@(dst,src));
     _ <- SetOperand dst v;
     HavocFlags
+  | Syntax.bzhi, [dst; src; cnt] =>
+    cnt <- GetOperand cnt;
+    cnt <- RevealConst cnt;
+    v <- Symeval (and@(dst,PreApp (const (N.ones (N.land cnt (N.ones (N.log2 s))))) nil));
+    _ <- SetOperand dst v;
+    HavocFlags
   | mulx, [hi; lo; src2] =>
     let src1 : ARG := rdx in
     vl <- Symeval (mul@(src1,src2));
@@ -1105,12 +1138,12 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
     _ <- SetOperand dst v;
     HavocFlags
   | inc, [dst] =>
-    orig <- GetOperand dst; orig <- Reveal 1 orig;
+    orig <- GetOperand dst;
     v <- Symeval (add@(dst, PreARG 1%Z));
+    o <- Symeval (addoverflow@(dst, PreARG 1%Z));
     _ <- SetOperand dst v;
-    cf <- GetFlag CF; _ <- HavocFlags; _ <- SetFlag CF cf;
-    if match orig with ExprApp (const n, _, nil) => n =? 2^s-1 | _ => false end
-    then zero <- Symeval (PreApp (const 0) nil); SetFlag OF zero else SetFlag CF cf
+    cf <- GetFlag CF; _ <- HavocFlags;
+    _ <- SetFlag CF cf; SetFlag OF o
   | dec, [dst] =>
     orig <- GetOperand dst; orig <- Reveal 1 orig;
     v <- Symeval (add@(dst, PreApp neg [PreARG 1%Z]));
