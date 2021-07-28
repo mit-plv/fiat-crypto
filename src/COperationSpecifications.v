@@ -122,23 +122,28 @@ Module Primitives.
     -> mulx x y = ((x * y) mod 2^s, (x * y) / 2^s)
        /\ is_bounded_by2 (r[0~>2^s-1], r[0~>2^s-1]) (mulx x y) = true.
 
-  Definition addcarryx_correct s
+  Local Notation return_carry_range relax_adc_sbb_return_carry_to_bitwidth s
+    := (if List.existsb (Z.eqb s) relax_adc_sbb_return_carry_to_bitwidth then r[0~>2^s%Z-1] else r[0~>1])%zrange.
+
+  Definition addcarryx_correct (relax_adc_sbb_return_carry_to_bitwidth : list Z) s
              (addcarryx : Z -> Z -> Z -> Z * Z)
     := forall c x y,
       is_bounded_by0 r[0~>1] c = true
       -> is_bounded_by0 r[0~>2^s-1] x = true
       -> is_bounded_by0 r[0~>2^s-1] y = true
       -> addcarryx c x y = ((c + x + y) mod 2^s, (c + x + y) / 2^s)
-         /\ is_bounded_by2 (r[0~>2^s-1], r[0~>1]) (addcarryx c x y) = true.
+         /\ is_bounded_by2 (r[0~>2^s-1], return_carry_range relax_adc_sbb_return_carry_to_bitwidth s)
+                           (addcarryx c x y) = true.
 
-  Definition subborrowx_correct s
+  Definition subborrowx_correct (relax_adc_sbb_return_carry_to_bitwidth : list Z) s
              (subborrowx : Z -> Z -> Z -> Z * Z)
     := forall b x y,
       is_bounded_by0 r[0~>1] b = true
       -> is_bounded_by0 r[0~>2^s-1] x = true
       -> is_bounded_by0 r[0~>2^s-1] y = true
       -> subborrowx b x y = ((-b + x + -y) mod 2^s, -((-b + x + -y) / 2^s))
-         /\ is_bounded_by2 (r[0~>2^s-1], r[0~>1]) (subborrowx b x y) = true.
+         /\ is_bounded_by2 (r[0~>2^s-1], return_carry_range relax_adc_sbb_return_carry_to_bitwidth s)
+                           (subborrowx b x y) = true.
 
   Definition value_barrier_correct (is_signed : bool) s
              (value_barrier : Z -> Z)

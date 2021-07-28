@@ -118,7 +118,7 @@ Module Compilers.
              {documentation_options : documentation_options_opt}
              {package_namev : package_name_opt}
              {class_namev : class_name_opt}
-             {skip_typedefs : skip_typedefs_opt}
+             {output_options : output_options_opt}
              (machine_wordsize : Z) (internal_static : bool) (static : bool) (prefix : string) (infos : ident_infos)
              (typedef_map : list typedef_info)
         : list string
@@ -590,7 +590,7 @@ Module Compilers.
                  {relax_zrange : relax_zrange_opt}
                  {language_naming_conventions : language_naming_conventions_opt}
                  {documentation_options : documentation_options_opt}
-                 {skip_typedefs : skip_typedefs_opt}
+                 {output_options : output_options_opt}
                  (machine_wordsize : Z)
                  (do_bounds_check : bool) (internal_static : bool) (static : bool) (all_static : bool) (inline : bool) (prefix : string) (name : string)
                  {t}
@@ -629,7 +629,7 @@ Module Compilers.
                  {relax_zrange : relax_zrange_opt}
                  {language_naming_conventions : language_naming_conventions_opt}
                  {documentation_options : documentation_options_opt}
-                 {skip_typedefs : skip_typedefs_opt}
+                 {output_options : output_options_opt}
                  (machine_wordsize : Z)
                  (do_bounds_check : bool) (internal_static : bool) (static : bool) (all_static : bool) (inline : bool) (prefix : string) (name : string)
                  {t}

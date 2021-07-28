@@ -369,7 +369,7 @@ Module JSON.
              {relax_zrange : relax_zrange_opt}
              {language_naming_conventions : language_naming_conventions_opt}
              {documentation_options : documentation_options_opt}
-             {skip_typedefs : skip_typedefs_opt}
+             {output_options : output_options_opt}
              (machine_wordsize : Z)
              (do_bounds_check : bool) (internal_static : bool) (static : bool) (all_static : bool) (inline : bool) (prefix : string) (name : string)
              {t}

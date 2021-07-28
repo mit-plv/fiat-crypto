@@ -569,6 +569,46 @@ Lemma flatten_thunked_rects_rewrite_rules_proofs
   : PrimitiveHList.hlist (@snd bool Prop) flatten_thunked_rects_rewrite_rulesT.
 Proof using Type. start_proof; intros; reflexivity. Qed.
 
+Local Ltac saturate_goodb_step :=
+  first [ match goal with
+          | [ H : (ZRange.normalize ?r <=? _)%zrange = true |- _ ]
+            => unique pose proof (ZRange.goodb_of_is_tighter_than_bool_normalize _ _ H)
+          end ].
+
+Local Ltac unnormalize_step :=
+  first [ match goal with
+          | [ H : ZRange.goodb ?r = true |- _ ]
+            => rewrite (proj1 ZRange.normalize_id_iff_goodb H) in *
+          end
+        | progress rewrite ?ZRange.normalize_flip, ?ZRange.normalize_idempotent, ?ZRange.normalize_union_normalize, ?ZRange.normalize_id_iff_goodb, ?ZRange.normalize_id_pow2, ?ZRange.normalize_is_tighter_than_bool_of_goodb, ?ZRange.normalize_opp, ?ZRange.normalize_constant, ?ZRange.normalize_two_corners, ?ZRange.normalize_four_corners, ?ZRange.normalize_eight_corners, ?ZRange.normalize_two_corners_and_zero, ?ZRange.normalize_four_corners_and_zero, ?ZRange.normalize_eight_corners_and_zero, ?ZRange.normalize_log2, ?ZRange.normalize_log2_up, ?ZRange.normalize_add, ?ZRange.normalize_sub, ?ZRange.normalize_mul, ?ZRange.normalize_div, ?ZRange.normalize_shiftr, ?ZRange.normalize_shiftl, ?ZRange.normalize_land, ?ZRange.normalize_lor, ?ZRange.normalize_cc_m in * ].
+
+
+  Local Ltac is_bounded_by_bool_step :=
+    first [ match goal with
+            | [ |- is_bounded_by_bool (_ / _) (_ / _) = true ] => apply ZRange.is_bounded_by_bool_div
+            | [ |- is_bounded_by_bool (_ * _) (_ * _) = true ] => apply ZRange.is_bounded_by_bool_mul
+            | [ |- is_bounded_by_bool (_ + _) (_ + _) = true ] => apply ZRange.is_bounded_by_bool_add
+            | [ |- is_bounded_by_bool (_ - _) (_ - _) = true ] => apply ZRange.is_bounded_by_bool_sub
+            | [ |- is_bounded_by_bool (- _) (- _) = true ] => rewrite ZRange.is_bounded_by_bool_opp
+            | [ |- is_bounded_by_bool (ident.cast ?r _) (ZRange.normalize ?r) = true ] => apply ident.cast_always_bounded
+            end ].
+
+Lemma relax_bitwidth_adc_sbb_rewrite_rules_proofs which_bitwidths
+  : PrimitiveHList.hlist (@snd bool Prop) (relax_bitwidth_adc_sbb_rewrite_rulesT which_bitwidths).
+Proof using Type.
+  start_proof; intros; repeat interp_good_t_step_related; repeat saturate_goodb_step; repeat unnormalize_step.
+  all: match goal with
+       | [ H0 : (_ <=? ?sm)%zrange = true, H1 : (?sm <=? ?lg)%zrange = true
+           |- ident.cast ?sm ?v = ident.cast ?lg ?v ]
+         => rewrite (ident.cast_in_bounds sm v), (ident.cast_in_bounds lg v);
+              [ reflexivity
+              | eapply ZRange.is_bounded_by_of_is_tighter_than; [ eassumption | ];
+                eapply ZRange.is_bounded_by_of_is_tighter_than; [ eassumption | ]
+              | eapply ZRange.is_bounded_by_of_is_tighter_than; [ eassumption | ] ]
+       end.
+  all: repeat is_bounded_by_bool_step.
+Qed.
+
 Section fancy.
   Context (invert_low invert_high : Z (*log2wordmax*) -> Z -> option Z)
           (value_range flag_range : zrange).

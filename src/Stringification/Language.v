@@ -63,6 +63,9 @@ Module Compilers.
     (** Should we emit typedefs or not? *)
     Class skip_typedefs_opt := skip_typedefs : bool.
     Typeclasses Opaque skip_typedefs_opt.
+    (** Which adc/sbb bitwidth-split-carries should be relaxed to bitwidth *)
+    Class relax_adc_sbb_return_carry_to_bitwidth_opt := relax_adc_sbb_return_carry_to_bitwidth : list Z.
+    Typeclasses Opaque relax_adc_sbb_return_carry_to_bitwidth_opt.
     Class language_naming_conventions_opt :=
       { public_function_naming_convention : option capitalization_convention
         ; private_function_naming_convention : option capitalization_convention
@@ -124,6 +127,16 @@ Module Compilers.
             ; text_before_type_name_opt := None
             ; newline_before_package_declaration := false
             ; newline_in_typedef_bounds := false
+         |}.
+
+    Class output_options_opt :=
+      { skip_typedefs_ :> skip_typedefs_opt
+        ; relax_adc_sbb_return_carry_to_bitwidth_ :> relax_adc_sbb_return_carry_to_bitwidth_opt
+      }.
+
+    Definition default_output_options : output_options_opt
+      := {| skip_typedefs_ := true
+            ; relax_adc_sbb_return_carry_to_bitwidth_ := []
          |}.
   End Options.
 
@@ -1628,7 +1641,7 @@ Module Compilers.
         : forall {relax_zrange : relax_zrange_opt}
                  {language_naming_conventions : language_naming_conventions_opt}
                  {documentation_options : documentation_options_opt}
-                 {skip_typedefs : skip_typedefs_opt}
+                 {output_options : output_options_opt}
                  (machine_wordsize : Z)
                  (do_bounds_check : bool) (internal_private : bool) (private : bool) (all_private : bool) (inline : bool) (prefix : string) (name : string)
                  {t}
@@ -1647,7 +1660,7 @@ Module Compilers.
                  {documentation_options : documentation_options_opt}
                  {package_name : package_name_opt}
                  {class_name : class_name_opt}
-                 {skip_typedefs : skip_typedefs_opt}
+                 {output_options : output_options_opt}
                  (machine_wordsize : Z) (internal_private : bool) (private : bool) (prefix : string) (ident_info : ident_infos)
                  (typedef_map : list typedef_info),
             list string;

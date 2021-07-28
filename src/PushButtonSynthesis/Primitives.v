@@ -782,7 +782,7 @@ Section __.
   Context {output_language_api : ToString.OutputLanguageAPI}
           {language_naming_conventions : language_naming_conventions_opt}
           {documentation_options : documentation_options_opt}
-          {skip_typedefs : skip_typedefs_opt}
+          {output_options : output_options_opt}
           {package_namev : package_name_opt}
           {class_namev : class_name_opt}
           {static : static_opt}
@@ -820,6 +820,8 @@ Section __.
   Local Instance no_select_size : no_select_size_opt := no_select_size_of_no_select machine_wordsize.
   Local Instance split_mul_to : split_mul_to_opt := split_mul_to_of_should_split_mul machine_wordsize possible_values.
   Local Instance split_multiret_to : split_multiret_to_opt := split_multiret_to_of_should_split_multiret machine_wordsize possible_values.
+  Local Notation adc_sbb_return_carry_range s
+    := ((if List.existsb (Z.eqb s) relax_adc_sbb_return_carry_to_bitwidth then r[0~>2^s%Z-1] else r[0~>1])%zrange).
   Lemma length_saturated_bounds : List.length saturated_bounds = n.
   Proof using Type. cbv [saturated_bounds]; now autorewrite with distr_length. Qed.
   Hint Rewrite length_saturated_bounds : distr_length.
@@ -876,7 +878,7 @@ Section __.
          (reified_addcarryx_gen
             @ GallinaReify.Reify s)
          (Some r[0~>1], (Some r[0~>2^s-1], (Some r[0~>2^s-1], tt)))%zrange
-         (Some r[0~>2^s-1], Some r[0~>1])%zrange.
+         (Some r[0~>2^s-1], Some (adc_sbb_return_carry_range s))%zrange.
   Definition saddcarryx (prefix : string) (s : Z)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
@@ -884,7 +886,8 @@ Section __.
           machine_wordsize prefix ("addcarryx_u" ++ Decimal.Z.to_string s)%string (addcarryx s)
           (docstring_with_summary_from_lemma!
              (fun fname : string => [text_before_function_name ++ fname ++ " is an addition with carry."]%string)
-             (addcarryx_correct s)).
+             (addcarryx_correct relax_adc_sbb_return_carry_to_bitwidth s)).
+
   Definition subborrowx (s : Z)
     := Pipeline.BoundsPipeline
          false (* subst01 *)
@@ -893,7 +896,7 @@ Section __.
          (reified_subborrowx_gen
             @ GallinaReify.Reify s)
          (Some r[0~>1], (Some r[0~>2^s-1], (Some r[0~>2^s-1], tt)))%zrange
-         (Some r[0~>2^s-1], Some r[0~>1])%zrange.
+         (Some r[0~>2^s-1], Some (adc_sbb_return_carry_range s))%zrange.
   Definition ssubborrowx (prefix : string) (s : Z)
     : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
     := Eval cbv beta in
@@ -901,7 +904,7 @@ Section __.
           machine_wordsize prefix ("subborrowx_u" ++ Decimal.Z.to_string s)%string (subborrowx s)
           (docstring_with_summary_from_lemma!
              (fun fname : string => [text_before_function_name ++ fname ++ " is a subtraction with borrow."]%string)
-             (subborrowx_correct s)).
+             (subborrowx_correct relax_adc_sbb_return_carry_to_bitwidth s)).
 
   Definition value_barrier (s : int.type)
     := Pipeline.BoundsPipeline
@@ -976,7 +979,7 @@ Section __.
   Strategy -1000 [addcarryx]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
   Lemma addcarryx_correct s' res
         (Hres : addcarryx s' = Success res)
-    : addcarryx_correct s' (Interp res).
+    : addcarryx_correct relax_adc_sbb_return_carry_to_bitwidth s' (Interp res).
   Proof using Type. prove_correctness I. Qed.
 
   Lemma Wf_addcarryx s' res (Hres : addcarryx s' = Success res) : Wf res.
@@ -985,7 +988,7 @@ Section __.
   Strategy -1000 [subborrowx]. (* if we don't tell the kernel to unfold this early, then [Qed] seems to run off into the weeds *)
   Lemma subborrowx_correct s' res
         (Hres : subborrowx s' = Success res)
-    : subborrowx_correct s' (Interp res).
+    : subborrowx_correct relax_adc_sbb_return_carry_to_bitwidth s' (Interp res).
   Proof using Type. prove_correctness I. Qed.
 
   Lemma Wf_subborrowx s' res (Hres : subborrowx s' = Success res) : Wf res.

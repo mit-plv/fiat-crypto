@@ -201,6 +201,7 @@ src/Rewriter/Passes/MulSplit.v
 src/Rewriter/Passes/MultiRetSplit.v
 src/Rewriter/Passes/NBE.v
 src/Rewriter/Passes/NoSelect.v
+src/Rewriter/Passes/RelaxBitwidthAdcSbb.v
 src/Rewriter/Passes/StripLiteralCasts.v
 src/Rewriter/Passes/Test.v
 src/Rewriter/Passes/ToFancy.v

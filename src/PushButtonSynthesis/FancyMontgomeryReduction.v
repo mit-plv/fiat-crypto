@@ -66,7 +66,7 @@ Section rmontred.
 
   Local Existing Instance default_language_naming_conventions.
   Local Existing Instance default_documentation_options.
-  Local Instance skip_typedefs : skip_typedefs_opt := true.
+  Local Existing Instance default_output_options.
   Local Instance widen_carry : widen_carry_opt := false.
   Local Instance widen_bytes : widen_bytes_opt := true.
   Local Instance only_signed : only_signed_opt := false.

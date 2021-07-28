@@ -18,6 +18,8 @@ Global Existing Instances Types.rep.Z Types.rep.listZ_mem.
 
 (* Reification/bounds pipeline options *)
 Global Existing Instance default_low_level_rewriter_method.
+(* Output options involving typedefs, carry bounds, etc, which are generally not relevant to bedrock2 *)
+Global Existing Instance default_output_options.
 (* Split multiplications into two outputs, not just one huge word *)
 Global Instance should_split_mul : should_split_mul_opt := true.
 (* For functions that return multiple values, split into two LetIns (this is

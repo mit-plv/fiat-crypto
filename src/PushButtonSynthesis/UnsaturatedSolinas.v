@@ -83,7 +83,7 @@ Section __.
   Context {output_language_api : ToString.OutputLanguageAPI}
           {language_naming_conventions : language_naming_conventions_opt}
           {documentation_options : documentation_options_opt}
-          {skip_typedefs : skip_typedefs_opt}
+          {output_options : output_options_opt}
           {package_namev : package_name_opt}
           {class_namev : class_name_opt}
           {static : static_opt}

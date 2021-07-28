@@ -58,6 +58,12 @@ Module ForExtraction.
   Definition parse_list_REG (s : string) : option (list REG)
     := finalize (parse_comma_list parse_REG) s.
 
+  Definition parse_comma_list_Z (s : string) : option (list Z)
+    := (ls <- finalize (parse_comma_list ParseArithmetic.parse_Qexpr) s;
+          ls <-- List.map ParseArithmetic.eval_Qexpr_strict ls;
+          ls <-- List.map ParseArithmetic.Q_to_Z_strict ls;
+          Some ls).
+
   (* Workaround for lack of notation in 8.8 *)
   Local Notation "x =? y" := (if string_dec x y then true else false) : string_scope.
 
@@ -304,6 +310,10 @@ Module ForExtraction.
     := ([Arg.long_key "no-primitives"], Arg.Unit, ["Suppress the generation of the bodies of primitive operations such as addcarryx, subborrowx, cmovznz, mulx, etc."]).
   Definition no_field_element_typedefs_spec : named_argT
     := ([Arg.long_key "no-field-element-typedefs"], Arg.Unit, ["Do not use type aliases for field elements based on bounds, Montgomery-domain vs not Montgomery-domain, etc."]).
+  Definition relax_primitive_carry_to_bitwidth_spec : named_argT
+    := ([Arg.long_key "relax-primitive-carry-to-bitwidth"],
+        Arg.Custom (parse_string_and parse_comma_list_Z) "ℤ,ℤ,…",
+        ["For any (comma-separated) bitwidths passed to this argument, use bitwidth-sized bounds rather than tighter bounds for the carry return value of primitives such as addcarryx and subborrowx."]).
   Definition cmovznz_by_mul_spec : named_argT
     := ([Arg.long_key "cmovznz-by-mul"], Arg.Unit, ["Use an alternative implementation of cmovznz using multiplication rather than bitwise-and with -1."]).
   Definition tight_bounds_multiplier_default := default_tight_upperbound_fraction.
@@ -457,8 +467,10 @@ Module ForExtraction.
       ; no_select :> no_select_opt
       (** Should we emit primitive operations *)
       ; emit_primitives :> emit_primitives_opt
+      (** Various output options including: *)
       (** Should we skip emitting typedefs for field elements *)
-      ; skip_typedefs :> skip_typedefs_opt
+      (** Should we relax the bounds on the return carry type of sbb/adc operations? *)
+      ; output_options :> output_options_opt
       (** Should we use the alternate implementation of cmovznz *)
       ; use_mul_for_cmovznz :> use_mul_for_cmovznz_opt
       (** Should we split apart oversized operations? *)
@@ -560,6 +572,7 @@ Module ForExtraction.
         ; value_barrier_spec
         ; no_primitives_spec
         ; no_field_element_typedefs_spec
+        ; relax_primitive_carry_to_bitwidth_spec
         ; cmovznz_by_mul_spec
         ; only_signed_spec
         ; hint_file_spec
@@ -605,6 +618,7 @@ Module ForExtraction.
              , value_barrierv
              , no_primitivesv
              , no_field_element_typedefsv
+             , relax_primitive_carry_to_bitwidthv
              , cmovznz_by_mulv
              , only_signedv
              , hint_file_namesv
@@ -625,6 +639,7 @@ Module ForExtraction.
        let to_bool ls := (0 <? List.length ls)%nat in
        let to_string_list ls := List.map (@snd _ _) ls in
        let to_N_list ls := List.map (@snd _ _) (List.map (@snd _ _) ls) in
+       let to_Z_flat_list ls := List.flat_map (@snd _ _) (List.map (@snd _ _) ls) in
        let to_reg_list ls := match List.map (@snd _ _) (List.map (@snd _ _) ls) with
                              | nil => None
                              | ls => Some (List.concat ls)
@@ -668,7 +683,10 @@ Module ForExtraction.
                   ; unfold_value_barrier := negb (to_bool value_barrierv)
                   ; use_mul_for_cmovznz := to_bool cmovznz_by_mulv
                   ; emit_primitives := negb (to_bool no_primitivesv)
-                  ; skip_typedefs := to_bool no_field_element_typedefsv
+                  ; output_options :=
+                      {| skip_typedefs_ := to_bool no_field_element_typedefsv
+                         ; relax_adc_sbb_return_carry_to_bitwidth_ := to_Z_flat_list relax_primitive_carry_to_bitwidthv
+                      |}
                   ; assembly_calling_registers := to_reg_list asm_regv
                   ; assembly_stack_size := to_N_opt asm_stack_sizev
                   ; error_on_unused_assembly_functions := negb (to_bool no_error_on_unused_asm_functionsv)
