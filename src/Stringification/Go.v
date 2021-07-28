@@ -48,8 +48,10 @@ Module Go.
   Definition stdint_bitwidths : list Z := [8; 16; 32; 64].
   (* supported bitwidth for things like bits.Mul64 *)
   Definition bits_std_bitwidths : list Z := [32; 64].
+  Definition is_bits_standard_bitwidth (bw : Z) := existsb (Z.eqb bw) bits_std_bitwidths.
   Definition is_standard_bitwidth (bw : Z) := existsb (Z.eqb bw) stdint_bitwidths.
   Definition is_special_bitwidth (bw : Z) := negb (is_standard_bitwidth bw).
+  Definition is_nonbits_special_bitwidth (bw : Z) := negb (is_bits_standard_bitwidth bw).
 
   Definition int_type_to_string_opt_typedef {language_naming_conventions : language_naming_conventions_opt} {skip_typedefs : skip_typedefs_opt} (private : bool) (all_private : bool) (prefix : string) (t : ToString.int.type) (typedef : option string) : string :=
     int.to_string_gen_opt_typedef stdint_bitwidths "uint" "int" "" "" private all_private prefix t typedef.
@@ -82,23 +84,25 @@ Module Go.
              {documentation_options : documentation_options_opt}
              {package_namev : package_name_opt}
              {class_namev : class_name_opt}
-             {skip_typedefs : skip_typedefs_opt}
+             {output_options : output_options_opt}
              (machine_wordsize : Z) (internal_private : bool) (private : bool) (prefix : string) (infos : ToString.ident_infos)
              (typedef_map : list typedef_info)
     : list string
     := let bitwidths_used := ToString.bitwidths_used infos in
        let needs_bits_import (* we only need the bits import if we use addcarryx/subborrowx/mulx with a standard bitwidth *)
            := PositiveSet.exists_
-                (fun bw => is_standard_bitwidth (Z.pos bw))
+                (fun bw => is_bits_standard_bitwidth (Z.pos bw))
                 (PositiveSet.union (ToString.addcarryx_lg_splits infos)
                                    (ToString.mulx_lg_splits infos)) in
        let type_prefix := "type "%string in
        let special_addcarryx_lg_splits
            := List.filter
-                is_standard_bitwidth
-                (List.map
-                   Z.pos
-                   (PositiveSet.elements (ToString.addcarryx_lg_splits infos))) in
+                (fun bw => negb (List.existsb (Z.eqb bw) relax_adc_sbb_return_carry_to_bitwidth))
+                (List.filter
+                   is_bits_standard_bitwidth
+                   (List.map
+                      Z.pos
+                      (PositiveSet.elements (ToString.addcarryx_lg_splits infos)))) in
        let carry_type := (if IntSet.mem _Bool bitwidths_used || IntSet.mem (ToString.int.signed_counterpart_of _Bool) bitwidths_used
                           then int_type_to_string internal_private prefix _Bool
                           else if IntSet.mem uint8 bitwidths_used || IntSet.mem int8 bitwidths_used
@@ -210,7 +214,12 @@ Module Go.
 
   Import IR.Notations.
 
-  Fixpoint arith_to_string {language_naming_conventions : language_naming_conventions_opt} (internal_private : bool) (prefix : string) {t} (e : IR.arith_expr t) : string
+  Fixpoint arith_to_string
+           {language_naming_conventions : language_naming_conventions_opt}
+           {relax_adc_sbb_return_carry_to_bitwidth : relax_adc_sbb_return_carry_to_bitwidth_opt}
+           (internal_private : bool) (prefix : string)
+           {t} (e : IR.arith_expr t)
+    : string
     := let special_name_ty name ty := ToString.format_special_function_name_ty internal_private prefix name ty in
        let special_name name bw := ToString.format_special_function_name internal_private prefix name false(*unsigned*) bw in
        match e with
@@ -242,7 +251,7 @@ Module Go.
          "(" ++ arith_to_string internal_private prefix x1 ++ " - " ++ arith_to_string internal_private prefix x2 ++ ")"
        | (IR.Z_bneg @@@ e) => "(!/* TODO: FIX ME */ " ++ arith_to_string internal_private prefix e ++ ")"
        | (IR.Z_mul_split lg2s @@@ args) =>
-         match is_standard_bitwidth lg2s, args with
+         match is_bits_standard_bitwidth lg2s, args with
          | true, ((IR.Addr @@@ lo, IR.Addr @@@ hi), args)
            => (arith_to_string internal_private prefix hi ++ ", " ++ arith_to_string internal_private prefix lo)
                 ++ " = bits.Mul"
@@ -251,20 +260,28 @@ Module Go.
            => special_name "mulx" lg2s ++ "(" ++ arith_to_string internal_private prefix args ++ ")"
          end
        | (IR.Z_add_with_get_carry lg2s @@@ args) =>
-         match is_standard_bitwidth lg2s, args with
+         let (func_name, wrap_carry)
+             := (if List.existsb (Z.eqb lg2s) relax_adc_sbb_return_carry_to_bitwidth
+                 then ("bits.Add" ++ Decimal.Z.to_string lg2s, fun c => "uint" ++ Decimal.Z.to_string lg2s ++ "(" ++ c ++ ")")
+                 else (special_name "addcarryx" lg2s, fun c => c))%core in
+         match is_bits_standard_bitwidth lg2s, args with
          | true, ((IR.Addr @@@ v, IR.Addr @@@ c), (cin, x, y))
            => (arith_to_string internal_private prefix v ++ ", " ++ arith_to_string internal_private prefix c)
-                ++ " = " ++ special_name "addcarryx" lg2s
-                ++ "(" ++ arith_to_string internal_private prefix x ++ ", " ++ arith_to_string internal_private prefix y ++ ", " ++ arith_to_string internal_private prefix cin ++ ")"
+                ++ " = " ++ func_name
+                ++ "(" ++ arith_to_string internal_private prefix x ++ ", " ++ arith_to_string internal_private prefix y ++ ", " ++ wrap_carry (arith_to_string internal_private prefix cin) ++ ")"
          | _, _
            => special_name "addcarryx" lg2s ++ "(" ++ arith_to_string internal_private prefix args ++ ")"
          end
        | (IR.Z_sub_with_get_borrow lg2s @@@ args) =>
-         match is_standard_bitwidth lg2s, args with
+         let (func_name, wrap_carry)
+             := (if List.existsb (Z.eqb lg2s) relax_adc_sbb_return_carry_to_bitwidth
+                 then ("bits.Sub" ++ Decimal.Z.to_string lg2s, fun c => "uint" ++ Decimal.Z.to_string lg2s ++ "(" ++ c ++ ")")
+                 else (special_name "subborrowx" lg2s, fun c => c))%core in
+         match is_bits_standard_bitwidth lg2s, args with
          | true, ((IR.Addr @@@ v, IR.Addr @@@ b), (bin, x, y))
            => (arith_to_string internal_private prefix v ++ ", " ++ arith_to_string internal_private prefix b)
-                ++ " = " ++ special_name "subborrowx" lg2s
-                ++ "(" ++ arith_to_string internal_private prefix x ++ ", " ++ arith_to_string internal_private prefix y ++ ", " ++ arith_to_string internal_private prefix bin ++ ")"
+                ++ " = " ++ func_name
+                ++ "(" ++ arith_to_string internal_private prefix x ++ ", " ++ arith_to_string internal_private prefix y ++ ", " ++ wrap_carry (arith_to_string internal_private prefix bin) ++ ")"
          | _, _
            => special_name "subborrowx" lg2s ++ "(" ++ arith_to_string internal_private prefix args ++ ")"
          end
@@ -299,7 +316,7 @@ Module Go.
           | IR.Z_sub_with_get_borrow lg2s
             (* these are munged; having a variable be used as a return
                from these functions doesn't imply that it is live *)
-            => is_special_bitwidth lg2s
+            => is_nonbits_special_bitwidth lg2s
           | IR.literal _
           | IR.List_nth _
           | IR.Addr
@@ -316,7 +333,12 @@ Module Go.
   (** No need to lift declarations to the top *)
   Local Instance : IR.OfPHOAS.lift_declarations_opt := false.
 
-  Definition stmt_to_string {language_naming_conventions : language_naming_conventions_opt} (internal_private : bool) (prefix : string) (e : IR.stmt) : string :=
+  Definition stmt_to_string
+             {language_naming_conventions : language_naming_conventions_opt}
+             {relax_adc_sbb_return_carry_to_bitwidth : relax_adc_sbb_return_carry_to_bitwidth_opt}
+             (internal_private : bool) (prefix : string)
+             (e : IR.stmt)
+    : string :=
     match e with
     | IR.Call val => arith_to_string internal_private prefix val
     | IR.Assign true t sz name val =>
@@ -344,7 +366,12 @@ Module Go.
       name ++ "[" ++ Decimal.Z.to_string (Z.of_nat n) ++ "] = " ++ arith_to_string internal_private prefix val
     end.
 
-  Definition to_strings {language_naming_conventions : language_naming_conventions_opt} (internal_private : bool) (prefix : string) (e : IR.expr) : list string :=
+  Definition to_strings
+             {language_naming_conventions : language_naming_conventions_opt}
+             {relax_adc_sbb_return_carry_to_bitwidth : relax_adc_sbb_return_carry_to_bitwidth_opt}
+             (internal_private : bool) (prefix : string)
+             (e : IR.expr)
+    : list string :=
     List.map (stmt_to_string internal_private prefix) e.
 
   Import Rewriter.Language.Language.Compilers Crypto.Language.API.Compilers IR.OfPHOAS.
@@ -490,7 +517,7 @@ Module Go.
        ; explicit_pointer_variables := false
     |}.
 
-  Definition to_function_lines {language_naming_conventions : language_naming_conventions_opt} {skip_typedefs : skip_typedefs_opt} (internal_private : bool) (private : bool) (all_private : bool) (inline : bool) (prefix : string) (name : string)
+  Definition to_function_lines {language_naming_conventions : language_naming_conventions_opt} {output_options : output_options_opt} (internal_private : bool) (private : bool) (all_private : bool) (inline : bool) (prefix : string) (name : string)
              {t}
              (f : type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * IR.expr)
     : list string :=
@@ -519,7 +546,7 @@ Module Go.
              {relax_zrange : relax_zrange_opt}
              {language_naming_conventions : language_naming_conventions_opt}
              {documentation_options : documentation_options_opt}
-             {skip_typedefs : skip_typedefs_opt}
+             {output_options : output_options_opt}
              (machine_wordsize : Z)
              (do_bounds_check : bool) (internal_private : bool) (private : bool) (all_private : bool) (inline : bool) (prefix : string) (name : string)
              {t}

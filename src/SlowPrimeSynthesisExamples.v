@@ -42,9 +42,299 @@ Local Instance : assembly_hints_lines_opt := None.
 Local Instance : tight_upperbound_fraction_opt := default_tight_upperbound_fraction.
 Local Existing Instance default_language_naming_conventions.
 Local Existing Instance default_documentation_options.
-Local Instance skip_typedefs : skip_typedefs_opt := true.
 Local Instance : package_name_opt := None.
 Local Instance : class_name_opt := None.
+
+Module debugging_go_bits_add.
+  Import Stringification.Go.
+  Section __.
+    Local Existing Instance Go.OutputGoAPI.
+    Local Instance : relax_adc_sbb_return_carry_to_bitwidth_opt := [32; 64].
+    Local Instance : skip_typedefs_opt := true.
+    Local Existing Instance Build_output_options_opt.
+    Local Instance static : static_opt := false.
+    Local Instance : internal_static_opt := false.
+    Local Instance : inline_opt := false.
+    Local Instance : inline_internal_opt := false.
+    Local Instance : emit_primitives_opt := true.
+    Local Instance : use_mul_for_cmovznz_opt := true.
+    Local Instance : widen_carry_opt := true.
+    Local Instance : widen_bytes_opt := true.
+    Local Instance : only_signed_opt := false.
+    Local Instance : no_select_opt := false.
+    Local Instance : should_split_mul_opt := true. (* only for x64 *)
+    Local Instance : should_split_multiret_opt := false.
+
+    Context (s := 2^127)
+            (c :=  [(1,1)])
+            (machine_wordsize := 64).
+
+    Goal True.
+      pose (WordByWordMontgomery.smul (s - Associational.eval c) machine_wordsize "p256_") as v.
+      vm_compute Z.sub in v.
+      cbv [WordByWordMontgomery.smul] in v.
+      set (k := WordByWordMontgomery.mul _ _) in (value of v).
+      vm_compute in v.
+      clear v; cbv [WordByWordMontgomery.mul] in k.
+      cbv beta delta [Pipeline.BoundsPipeline] in k.
+      cbv [Rewriter.Util.LetIn.Let_In] in k.
+      set (v := CheckedPartialEvaluateWithBounds _ _ _ _ _ _ _) in (value of k).
+      vm_compute in v.
+      repeat match goal with
+             | [ H := @inl ?A ?B ?v |- _ ] => let H' := fresh "E" in pose v as H'; change (@inl A B H') in (value of H); subst H; rename H' into H; cbv beta iota in *
+             | [ H := @inr ?A ?B ?v |- _ ] => let H' := fresh "E" in pose v as H'; change (@inr A B H') in (value of H); subst H; rename H' into H; cbv beta iota in *
+             end.
+      set (v' := CheckedPartialEvaluateWithBounds _ _ _ _ _ _ _) in (value of k).
+      vm_compute in v'.
+      clear -k.
+      repeat match goal with
+             | [ H := @inl ?A ?B ?v |- _ ] => let H' := fresh "E" in pose v as H'; change (@inl A B H') in (value of H); subst H; rename H' into H; cbv beta iota in *
+             | [ H := @inr ?A ?B ?v |- _ ] => let H' := fresh "E" in pose v as H'; change (@inr A B H') in (value of H); subst H; rename H' into H; cbv beta iota in *
+             end.
+      vm_compute WordByWordMontgomery.no_select_size in k.
+      vm_compute WordByWordMontgomery.split_mul_to in k.
+      vm_compute WordByWordMontgomery.split_multiret_to in k.
+      vm_compute WordByWordMontgomery.split_multiret_to in k.
+      cbv beta iota in k.
+      set (v := CheckedPartialEvaluateWithBounds _ _ _ _ _ _ _) in (value of k).
+      vm_compute in v.
+      clear -k.
+      repeat match goal with
+             | [ H := @inl ?A ?B ?v |- _ ] => let H' := fresh "E" in pose v as H'; change (@inl A B H') in (value of H); subst H; rename H' into H; cbv beta iota in *
+             | [ H := @inr ?A ?B ?v |- _ ] => let H' := fresh "E" in pose v as H'; change (@inr A B H') in (value of H); subst H; rename H' into H; cbv beta iota in *
+             end.
+      vm_compute relax_adc_sbb_return_carry_to_bitwidth_ in k.
+      cbv beta iota in k.
+      set (v' := Pipeline.RewriteAndEliminateDeadAndInline _ _ _ _ _) in (value of k).
+      vm_compute in v'; clear -k.
+      set (v := RelaxBitwidthAdcSbb.Compilers.RewriteRules.RewriteRelaxBitwidthAdcSbb _ _ _) in (value of k).
+      Notation uint64 := r[0~>18446744073709551615]%zrange.
+      Import IdentifiersBasicGENERATED.Compilers.
+      Import API.Compilers.
+      Import APINotations.Compilers.
+      (*
+      Compute 2^64-1.
+      Compute Z.log2(18446744073709551615+1).
+      clear -v.
+      vm_compute in v.
+      subst v; cbv beta iota zeta in k.
+      vm_compute in k.
+
+      Import Rewriter.Util.LetIn.
+      let do_set a v f :=
+          lazymatch v with
+          | context[let n := _ in _] => fail
+          | context[dlet n := _ in _] => fail
+          | _ => idtac
+          end;
+          first [ pose v as a; change (f a) in (value of k)
+                | let a := fresh "E" in pose v as a; change (f a) in (value of k) ]
+      in
+      repeat
+        (repeat (lazymatch (eval cbv delta [k] in k) with
+                 | context T[(let a := ?v in @?f a) ?x]
+                   => let G' := context T[let a := v in f a x] in change G' in (value of k)
+                 end; cbv beta in k);
+         match (eval cbv delta [k] in k) with
+         | context T[let a := ?v in @?f a]  => do_set a v f
+         | context T[dlet a := ?v in @?f a] => do_set a v f
+         end; cbv beta in k).
+      clear -k.
+      match (eval cbv delta [E] in E) with
+      | context T[@expr.APP ?a ?b ?c ?d ?e ?f]
+        => pose (@expr.APP a b c d e f) as v;
+             let T' := context T[v] in
+             change T' in (value of E)
+      end.
+      Time vm_compute in v.
+      cbv beta delta [Pipeline.PreBoundsPipeline] in E.
+      repeat (lazymatch (eval cbv delta [E] in E) with
+              | context T[(let a := ?v in @?f a) ?x]
+                => let G' := context T[let a := v in f a x] in change G' in (value of E)
+              end; cbv beta in E).
+      let do_set a v f :=
+          lazymatch v with
+          | context[let n := _ in _] => fail
+          | context[dlet n := _ in _] => fail
+          | _ => idtac
+          end;
+          first [ pose v as a; change (f a) in (value of E)
+                | let a := fresh "E" in pose v as a; change (f a) in (value of E) ]
+      in
+      repeat
+        (repeat (lazymatch (eval cbv delta [E] in E) with
+                 | context T[(let a := ?v in @?f a) ?x]
+                   => let G' := context T[let a := v in f a x] in change G' in (value of E)
+                 end; cbv beta in E);
+         match (eval cbv delta [E] in E) with
+         | context T[let a := ?v in @?f a]  => do_set a v f
+         | context T[dlet a := ?v in @?f a] => do_set a v f
+         end; cbv beta iota in * ).
+      vm_compute WordByWordMontgomery.possible_values_of_machine_wordsize in relax_zrange.
+      cbv [only_signed_opt_instance_0] in relax_zrange.
+      cbv [Pipeline.opts_of_method] in E1; subst E0.
+      cbv [default_low_level_rewriter_method] in E1.
+      vm_compute in E1.
+      Notation "'hide'" := (expr.Abs _) : expr_scope.
+      Time vm_compute in E2.
+      Time vm_compute in E3.
+      clear -k.
+      subst E7.
+      Time time vm_compute in E4; time vm_compute in E5; time vm_compute in E6; time vm_compute in e; time vm_compute in E8; subst E8; time vm_compute in E'; clear -k.
+      repeat match goal with
+             | [ H := @inl ?A ?B ?v |- _ ] => let H' := fresh "E" in pose v as H'; change (@inl A B H') in (value of H); subst H; rename H' into H
+             | [ H := @inr ?A ?B ?v |- _ ] => let H' := fresh "E" in pose v as H'; change (@inr A B H') in (value of H); subst H; rename H' into H
+             end.
+      cbv beta iota in *.
+      let do_set a v f :=
+          lazymatch v with
+          | context[let n := _ in _] => idtac v; fail
+          | context[dlet n := _ in _] => idtac v; fail
+          | _ => idtac
+          end;
+          first [ pose v as a; change (f a) in (value of k)
+                | let a := fresh "k" in pose v as a; change (f a) in (value of k) ]
+      in
+      repeat
+        (repeat (lazymatch (eval cbv delta [k] in k) with
+                 | context T[(let a := ?v in @?f a) ?x]
+                   => let G' := context T[let a := v in f a x] in change G' in (value of k)
+                 end; cbv beta in k);
+         match (eval cbv delta [k] in k) with
+         | context T[let a := ?v in @?f a]  => do_set a v f
+         | context T[dlet a := ?v in @?f a] => do_set a v f
+         end; cbv beta iota in * ).
+      HERE
+      Set Printing Implicit.
+             end.
+      let do_set a v f :=
+          lazymatch v with
+          | context[let n := _ in _] => fail
+          | context[dlet n := _ in _] => fail
+          | _ => idtac
+          end;
+          first [ pose v as a; change (f a) in (value of k)
+                | let a := fresh "E" in pose v as a; change (f a) in (value of k) ]
+      in
+      lazymatch (eval cbv delta [E] in E) with
+      | context T[let a := ?v in @?f a]  => idtac a v f; do_set a v f
+      | context T[dlet a := ?v in @?f a] => do_set a v f
+      end.
+      let do_set a v f :=
+          lazymatch v with
+          | context[let n := _ in _] => fail
+          | context[dlet n := _ in _] => fail
+          | _ => idtac
+          end;
+          first [ set (a := v) in (value of k); change (f a) in (value of k)
+                | let a := fresh "E" in set (a := v) in (value of k); change (f a) in (value of k) ]
+      in
+      do 1
+        (repeat (lazymatch (eval cbv delta [E] in E) with
+                 | context T[(let a := ?v in @?f a) ?x]
+                   => let G' := context T[let a := v in f a x] in change G' in (value of E)
+                 end; cbv beta in E);
+         match (eval cbv delta [E] in E) with
+         | context T[let a := ?v in @?f a]  => do_set a v f
+         | context T[dlet a := ?v in @?f a] => do_set a v f
+         end; cbv beta in E).
+      lazymatch (eval cbv delta [E] in E) with
+                 | context T[(let a := ?v in @?f a) ?x]
+                   => let G' := context T[let a := v in f a x] in change G' in (value of E)
+                 end; cbv beta in E.
+      Time vm_compute in E.
+      set (k' := expr.APP _ _) in (value of E) at 1.
+      Time vm_compute in E.
+      vm_compute in E'.
+      vm_compute in k.
+      vm_compute in v.
+      subst k.
+      cbv beta iota in v.
+      cbv [Language.Compilers.ToString.ToFunctionLines] in v.
+      cbv [Go.OutputGoAPI Crypto.Util.Option.sequence_return] in v.
+      cbv [Go.ToFunctionLines] in v.
+      set (k := IR.OfPHOAS.ExprOfPHOAS _ _ _ _) in (value of v).
+      clear v.
+      cbv [IR.OfPHOAS.ExprOfPHOAS IR.OfPHOAS.ExprOfPHOAS_cps IR.OfPHOAS.ExprOfPHOAS_with_opt_outbounds_cps IR.OfPHOAS.ExprOfPHOAS_cont] in k; rename k into v.
+      cbv [IR.OfPHOAS.expr_of_PHOAS IR.OfPHOAS.expr_of_PHOAS_cps IR.OfPHOAS.expr_of_PHOAS_cont] in v.
+      set (k := partial.Extract _ _ _) in (value of v).
+      cbv [partial.Extract] in k.
+      clear v; rename k into v.
+      cbv [partial.ident.extract] in v.
+      cbv [partial.extract_gen] in v.
+      cbv [type.app_curried] in v.
+      cbv delta [partial.extract'] in v.
+      cbv delta [partial.extract_gen] in v.
+      cbv beta in v.
+      cbv [type.app_curried] in v.
+      cbv delta [partial.extract'] in v.
+      cbv beta in v.
+      cbv iota in v; cbv beta in v.
+      cbv iota in v; cbv beta in v.
+      cbv iota in v; cbv beta in v.
+      cbv iota in v; cbv beta in v.
+      cbv iota in v; cbv beta in v.
+      cbv iota in v; cbv beta in v.
+      cbv iota in v; cbv beta in v.
+      cbv iota in v; cbv beta in v.
+      cbv iota in v; cbv beta in v.
+      cbv iota in v; cbv beta in v.
+      cbv iota in v; cbv beta in v.
+      do 50 (cbv iota in v; cbv beta in v).
+      Import Rewriter.Util.LetIn.
+      repeat match (eval cbv [v] in v) with
+             | Let_In ?x ?f
+               => let x := (eval vm_compute in x) in
+                  clear v; pose (f x) as v
+             end.
+      (*
+      cbv beta in v.
+      cbv [partial.abstract_interp_ident] in v.
+      set (k := ZRange.ident.option.interp true Compilers.ident_cons) in (value of v).
+      cbn in k; subst k; cbv beta in v.
+      set (k := ZRange.ident.option.interp true Compilers.ident_nil) in (value of v).
+      cbn in k; subst k; cbv beta in v.
+      cbn [option_map] in v.
+      set (l := ZRange.ident.option.interp true _) in (value of v) at 2; vm_compute in l.
+      subst l.
+      set (l := ZRange.ident.option.interp true _) in (value of v) at 3; vm_compute in l.
+      subst l.
+      set (l := ZRange.ident.option.interp true _) in (value of v) at 4; vm_compute in l.
+      subst l.
+       *)
+      (*
+      cbv [ZRange.ident.option.interp] in v.
+      cbv [
+      cbv beta zeta delta [Rewriter.Util.LetIn.Let_In].
+      cbv [partial.extract'] in v.
+      vm_compute in k.
+      vm_compute in k.
+      vm_compute in k; subst k.
+      cbv beta iota zeta in v.
+      set (v' := Go.to_function_lines _ _ _ _) in (value of v).
+
+      clear v; rename v' into v.
+      cbv [WordByWordMontgomery.add] in k.
+      cbv [possible_values_of_machine_wordsize] in k.
+      cbv [widen_carry] in k.
+      cbv [widen_carry_opt_instance_0] in k.
+      cbv [Pipeline.BoundsPipeline Pipeline.PreBoundsPipeline] in k.
+      set (k' := GeneralizeVar.ToFlat _) in (value of k).
+      vm_compute in k'; subst k'.
+      cbv [Rewriter.Util.LetIn.Let_In] in k.
+      set (k' := GeneralizeVar.FromFlat _) in (value of k); vm_compute in k'; subst k'.
+      cbv [CheckedPartialEvaluateWithBounds] in k.
+      cbv [Rewriter.Util.LetIn.Let_In] in k.
+      set (k' := CheckCasts.GetUnsupportedCasts _) in (value of k).
+      vm_compute in k'.
+      subst k'.
+      cbv beta iota in k.
+       *) *)
+    Abort.
+  End __.
+End debugging_go_bits_add.
+
+Local Existing Instance default_output_options.
 
 Module debugging_typedefs.
   Import Crypto.PushButtonSynthesis.UnsaturatedSolinas.

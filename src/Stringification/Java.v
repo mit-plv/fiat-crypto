@@ -32,7 +32,7 @@ Module Java.
              {documentation_options : documentation_options_opt}
              {package_namev : package_name_opt}
              {class_namev : class_name_opt}
-             {skip_typedefs : skip_typedefs_opt}
+             {output_options : output_options_opt}
              (machine_wordsize : Z) (internal_private : bool) (private : bool) (prefix : string) (infos : ToString.ident_infos)
              (typedef_map : list typedef_info)
   : list string
@@ -388,7 +388,7 @@ Module Java.
              {relax_zrange : relax_zrange_opt}
              {language_naming_conventions : language_naming_conventions_opt}
              {documentation_options : documentation_options_opt}
-             {skip_typedefs : skip_typedefs_opt}
+             {output_options : output_options_opt}
              (machine_wordsize : Z)
              (do_bounds_check : bool) (internal_private : bool) (internal : bool) (all_private : bool) (inline : bool) (prefix : string) (name : string)
              {t}

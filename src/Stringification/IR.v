@@ -1259,6 +1259,7 @@ Module Compilers.
                  end.
 
             Let recognize_3arg_2ref_ident
+                {relax_adc_sbb_return_carry_to_bitwidth : relax_adc_sbb_return_carry_to_bitwidth_opt}
                 (do_bounds_check : bool)
                 (t:=(tZ -> tZ -> tZ -> tZ * tZ)%etype)
                 (idc : ident.ident t)
@@ -1288,20 +1289,25 @@ Module Compilers.
                                                  | _ => None
                                                  end in
                        (_ <- check_literal_rangeZ r (2^s) "first" idc;
+                       let '(return_carry_borrow_width, round_up_return_carry)
+                           := if List.existsb (Z.eqb s) relax_adc_sbb_return_carry_to_bitwidth
+                              then (s, round_up_to_split_type s)
+                              else (1 (* boolean carry/borrow *), fun x => x) in
                        _ ,, _ ,, _ ,, _
                           <- bounds_check do_bounds_check "first argument to" idc s e1v r1,
                         bounds_check do_bounds_check "second argument to" idc s e2v r2,
                         bounds_check do_bounds_check "first return value of" idc s e2v (fst rout),
-                        bounds_check do_bounds_check "second return value of" idc 1 (* boolean carry/borrow *) e2v (snd rout);
+                        bounds_check do_bounds_check "second return value of" idc return_carry_borrow_width e2v (snd rout);
                        let '(e1, _) := result_upcast (t:=tZ) (Some (int.of_zrange_relaxed r[0 ~> 2 ^ s - 1])) (e1, r1) in
                        let '(e2, _) := result_upcast (t:=tZ) (Some (int.of_zrange_relaxed r[0 ~> 2 ^ s - 1])) (e2, r2) in
-                       inl ((round_up_to_split_type s (fst rout), snd rout),
+                       inl ((round_up_to_split_type s (fst rout), round_up_return_carry (snd rout)),
                             fun retptr => [Call (idc' @@@ (retptr, (literal 0 @@@ TT, e1, e2)))%Cexpr]))
                   | Some _, _ => inr ["Unrecognized identifier when attempting to construct an assignment with 2 arguments: " ++ show idc]%string
                   | None, _ => inr ["Expression is not a literal power of two of type ℤ: " ++ show s ++ " (when trying to parse the first argument of " ++ show idc ++ ")"]%string
                   end.
 
             Let recognize_4arg_2ref_ident
+                {relax_adc_sbb_return_carry_to_bitwidth : relax_adc_sbb_return_carry_to_bitwidth_opt}
                 (do_bounds_check : bool)
                 (t:=(tZ -> tZ -> tZ -> tZ -> tZ * tZ)%etype)
                 (idc : ident.ident t)
@@ -1321,22 +1327,27 @@ Module Compilers.
                                                 | _ => None
                                                 end in
                       (_ <- check_literal_rangeZ r (2^s) "first" idc;
+                      let '(return_carry_borrow_width, round_up_return_carry)
+                          := if List.existsb (Z.eqb s) relax_adc_sbb_return_carry_to_bitwidth
+                             then (s, round_up_to_split_type s)
+                             else (1 (* boolean carry/borrow *), fun x => x) in
                       _ ,, _ ,, _ ,, _ ,, _
                          <- (bounds_check do_bounds_check "first (carry) argument to" idc 1 e1v r1,
                              bounds_check do_bounds_check "second argument to" idc s e2v r2,
                              bounds_check do_bounds_check "third argument to" idc s e2v r2,
                              bounds_check do_bounds_check "first return value of" idc s e2v (fst rout),
-                             bounds_check do_bounds_check "second (carry) return value of" idc 1 (* boolean carry/borrow *) e2v (snd rout));
+                             bounds_check do_bounds_check "second (carry) return value of" idc return_carry_borrow_width e2v (snd rout));
                          let '(e1, _) := result_upcast (t:=tZ) (Some (int.of_zrange_relaxed (relax_zrange r[0 ~> 2 ^ 1 - 1]))) (e1, r1) in
                          let '(e2, _) := result_upcast (t:=tZ) (Some (int.of_zrange_relaxed (relax_zrange r[0 ~> 2 ^ s - 1]))) (e2, r2) in
                          let '(e3, _) := result_upcast (t:=tZ) (Some (int.of_zrange_relaxed (relax_zrange r[0 ~> 2 ^ s - 1]))) (e3, r3) in
-                         inl ((round_up_to_split_type s (fst rout), snd rout),
+                         inl ((round_up_to_split_type s (fst rout), round_up_return_carry (snd rout)),
                               fun retptr => [Call (idc' @@@ (retptr, (e1, e2, e3)))%Cexpr]))
                  | Some _, _ => inr ["Unrecognized identifier when attempting to construct an assignment with 2 arguments: " ++ show idc]%string
                  | None, _ => inr ["Expression is not a literal power of two of type ℤ: " ++ show s ++ " (when trying to parse the first argument of " ++ show idc ++ ")"]%string
                  end.
 
             Let recognize_2ref_ident
+                {relax_adc_sbb_return_carry_to_bitwidth : relax_adc_sbb_return_carry_to_bitwidth_opt}
                 {t}
               : forall (do_bounds_check : bool)
                        (idc : ident.ident t)
@@ -1405,6 +1416,7 @@ Module Compilers.
                  end.
 
             Let make_assign_arg_2ref
+                {relax_adc_sbb_return_carry_to_bitwidth : relax_adc_sbb_return_carry_to_bitwidth_opt}
                 (do_bounds_check : bool)
                 (e : @API.expr var_data (tZ * tZ))
                 (count : positive)
@@ -1430,6 +1442,7 @@ Module Compilers.
                  end.
 
             Let make_assign_arg_ref
+                {relax_adc_sbb_return_carry_to_bitwidth : relax_adc_sbb_return_carry_to_bitwidth_opt}
                 (do_bounds_check : bool)
                 {t}
               : forall (e : @API.expr var_data t)
@@ -1455,6 +1468,7 @@ Module Compilers.
                  end%positive.
 
             Let make_uniform_assign_expr_of_PHOAS
+                {relax_adc_sbb_return_carry_to_bitwidth : relax_adc_sbb_return_carry_to_bitwidth_opt}
                 (do_bounds_check : bool)
                 {s} (e1 : @API.expr var_data s)
                 {d} (e2 : var_data s -> var_data d -> ErrT expr)
@@ -1470,6 +1484,7 @@ Module Compilers.
 
             (* See above comment about extraction issues *)
             Definition make_assign_expr_of_PHOAS
+                       {relax_adc_sbb_return_carry_to_bitwidth : relax_adc_sbb_return_carry_to_bitwidth_opt}
                        (do_bounds_check : bool)
                        {s} (e1 : @API.expr var_data s)
                        {s' d} (e2 : var_data s' -> var_data d -> ErrT expr)
@@ -1484,6 +1499,7 @@ Module Compilers.
                   end.
 
             Fixpoint expr_of_base_PHOAS
+                     {relax_adc_sbb_return_carry_to_bitwidth : relax_adc_sbb_return_carry_to_bitwidth_opt}
                      (do_bounds_check : bool)
                      {t}
                      (e : @API.expr var_data t)
@@ -1496,7 +1512,7 @@ Module Compilers.
                    => make_assign_expr_of_PHOAS
                         do_bounds_check
                         e1
-                        (fun vs vd => @expr_of_base_PHOAS do_bounds_check d (e2 vs) (size_of_type s + count)%positive make_name vd)
+                        (fun vs vd => expr_of_base_PHOAS do_bounds_check (t:=d) (e2 vs) (size_of_type s + count)%positive make_name vd)
                         count make_name
                  | expr.LetIn (type.arrow _ _) _ _ _ as e
                  | expr.Var _ _ as e
@@ -1581,6 +1597,7 @@ Module Compilers.
                  end%core%expr e inbounds intypedefs.
 
             Definition expr_of_PHOAS'_cont
+                       {relax_adc_sbb_return_carry_to_bitwidth : relax_adc_sbb_return_carry_to_bitwidth_opt}
                        (do_bounds_check : bool)
                        {t}
                        (make_name : positive -> option string)
@@ -1596,6 +1613,7 @@ Module Compilers.
                     ret (d, out_data, rv)).
 
             Definition expr_of_PHOAS'
+                       {relax_adc_sbb_return_carry_to_bitwidth : relax_adc_sbb_return_carry_to_bitwidth_opt}
                        (do_bounds_check : bool)
                        {t}
                        (e : @API.expr var_data t)
@@ -1609,9 +1627,10 @@ Module Compilers.
               : ErrT (type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * expr)
               := @expr_of_PHOAS'_cps
                    _ e make_in_name inbounds intypedefs count _
-                   (@expr_of_PHOAS'_cont do_bounds_check t make_name out_data in_to_body_count).
+                   (expr_of_PHOAS'_cont do_bounds_check (t:=t) make_name out_data in_to_body_count).
 
             Definition expr_of_PHOAS_cont
+                       {relax_adc_sbb_return_carry_to_bitwidth : relax_adc_sbb_return_carry_to_bitwidth_opt}
                        (do_bounds_check : bool)
                        {t}
                        (make_name : positive -> option string)
@@ -1619,7 +1638,7 @@ Module Compilers.
               : positive * (type.for_each_lhs_of_arrow var_data t * var_data (type.final_codomain t) * @API.expr var_data (type.final_codomain t))
                 -> ErrT (type.for_each_lhs_of_arrow var_data t * var_data (type.final_codomain t) * expr)
               := fun '(count, (din, dout, e))
-                 => @expr_of_PHOAS'_cont do_bounds_check t make_name dout in_to_body_count (count, (din, e)).
+                 => expr_of_PHOAS'_cont do_bounds_check (t:=t) make_name dout in_to_body_count (count, (din, e)).
 
             Definition expr_of_PHOAS_cps
                        {t}
@@ -1646,6 +1665,7 @@ Module Compilers.
                  end.
 
             Definition expr_of_PHOAS
+                       {relax_adc_sbb_return_carry_to_bitwidth : relax_adc_sbb_return_carry_to_bitwidth_opt}
                        (do_bounds_check : bool)
                        {t}
                        (e : @API.expr var_data t)
@@ -1661,7 +1681,7 @@ Module Compilers.
               : ErrT (type.for_each_lhs_of_arrow var_data t * var_data (type.final_codomain t) * expr)
               := @expr_of_PHOAS_cps
                    _ e make_in_name make_out_name inbounds outbounds intypedefs outtypedefs count out_to_in_count _
-                   (@expr_of_PHOAS_cont do_bounds_check t make_name in_to_body_count).
+                   (expr_of_PHOAS_cont do_bounds_check (t:=t) make_name in_to_body_count).
 
             Let make_name_gen (name_list : option (list string))
               := fun prefix
@@ -1680,13 +1700,14 @@ Module Compilers.
                  end.
 
             Definition ExprOfPHOAS_cont
+                       {relax_adc_sbb_return_carry_to_bitwidth : relax_adc_sbb_return_carry_to_bitwidth_opt}
                        (do_bounds_check : bool)
                        {t}
                        (name_list : option (list string))
               : positive * (type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * @API.expr var_data (type.final_codomain t))
                 -> ErrT (type.for_each_lhs_of_arrow var_data t * var_data (type.base (type.final_codomain t)) * expr)
-              := @expr_of_PHOAS_cont
-                   do_bounds_check t
+              := expr_of_PHOAS_cont
+                   do_bounds_check (t:=t)
                    (make_name name_list) (reset_if_names_given name_list).
 
             Definition ExprOfPHOAS_with_opt_outbounds_cps
@@ -1742,6 +1763,7 @@ Module Compilers.
                    (fun '(count, (din, dout, e)) => ret (din, dout)).
 
             Definition ExprOfPHOAS
+                       {relax_adc_sbb_return_carry_to_bitwidth : relax_adc_sbb_return_carry_to_bitwidth_opt}
                        (do_bounds_check : bool)
                        {t}
                        (e : @API.Expr t)

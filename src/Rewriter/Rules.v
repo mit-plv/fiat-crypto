@@ -41,6 +41,7 @@ Local Notation dlet2 rv rc e
 Local Notation "x '\in' y" := (is_bounded_by_bool x (ZRange.normalize y) = true) : zrange_scope.
 Local Notation "x ∈ y" := (is_bounded_by_bool x (ZRange.normalize y) = true) : zrange_scope.
 Local Notation "x <= y" := (is_tighter_than_bool (ZRange.normalize x) y = true) : zrange_scope.
+Local Notation "x <= y <= z" := (andb (is_tighter_than_bool (ZRange.normalize x) y) (is_tighter_than_bool (ZRange.normalize y) z) = true) : zrange_scope.
 Local Notation litZZ x := (ident.literal (fst x), ident.literal (snd x)) (only parsing).
 Local Notation n r := (ZRange.normalize r) (only parsing).
 
@@ -543,6 +544,32 @@ Definition add_assoc_left_rewrite_rulesT : list (bool * Prop)
 
 Definition flatten_thunked_rects_rewrite_rulesT : list (bool * Prop)
   := [dont_do_again (forall P t f b, @Thunked.bool_rect P t f b = @bool_rect_nodep P (t tt) (f tt) b)].
+
+Definition relax_bitwidth_adc_sbb_rewrite_rulesT (which_bitwidths : list Z) : list (bool * Prop)
+  := Eval cbv [myapp mymap myflatten] in
+      mymap
+        dont_do_again
+        [(forall rv rc' rs s rc c rx x ry y,
+             (((ZRange.normalize rc + ZRange.normalize rx + ZRange.normalize ry) / ZRange.normalize rs) <= rc' <= rv)%zrange ->
+             List.existsb (Z.eqb (Z.log2 s)) which_bitwidths = true ->
+             cstZZ rv rc' (Z.add_with_get_carry_full (cstZ rs ('s)) (cstZ rc c) (cstZ rx x) (cstZ ry y))
+             = cstZZ rv rv (Z.add_with_get_carry_full (cstZ rs ('s)) (cstZ rc c) (cstZ rx x) (cstZ ry y)))
+         ; (forall rv rc' rs s rx x ry y,
+             (((ZRange.normalize rx + ZRange.normalize ry) / ZRange.normalize rs) <= rc' <= rv)%zrange ->
+             List.existsb (Z.eqb (Z.log2 s)) which_bitwidths = true ->
+             cstZZ rv rc' (Z.add_get_carry_full (cstZ rs ('s)) (cstZ rx x) (cstZ ry y))
+             = cstZZ rv rv (Z.add_get_carry_full (cstZ rs ('s)) (cstZ rx x) (cstZ ry y)))
+         ; (forall rv rc' rs s rc c rx x ry y,
+             (- ((ZRange.normalize rx - ZRange.normalize ry - ZRange.normalize rc) / ZRange.normalize rs) <= rc' <= rv)%zrange ->
+             List.existsb (Z.eqb (Z.log2 s)) which_bitwidths = true ->
+             cstZZ rv rc' (Z.sub_with_get_borrow_full (cstZ rs ('s)) (cstZ rc c) (cstZ rx x) (cstZ ry y))
+             = cstZZ rv rv (Z.sub_with_get_borrow_full (cstZ rs ('s)) (cstZ rc c) (cstZ rx x) (cstZ ry y)))
+         ; (forall rv rc' rs s rx x ry y,
+             (- ((ZRange.normalize rx - ZRange.normalize ry) / ZRange.normalize rs) <= rc' <= rv)%zrange ->
+             List.existsb (Z.eqb (Z.log2 s)) which_bitwidths = true ->
+             cstZZ rv rc' (Z.sub_get_borrow_full (cstZ rs ('s)) (cstZ rx x) (cstZ ry y))
+             = cstZZ rv rv (Z.sub_get_borrow_full (cstZ rs ('s)) (cstZ rx x) (cstZ ry y)))
+        ].
 
 Section fancy.
   Context (invert_low invert_high : Z (*log2wordmax*) -> Z -> option Z)

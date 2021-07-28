@@ -161,9 +161,9 @@ Module debugging_typedef_bounds.
     repeat (set (k'' := (_ =? _)%string) in (value of k') at 1; vm_compute in k''; subst k''; cbv beta iota zeta in k').
     set (k'' := UnsaturatedSolinas.sadd _ _ _ _ _) in (value of k').
     clear -k''; rename k'' into v.
-    cbn -[UnsaturatedSolinas.sadd ForExtraction.skip_typedefs] in v.
+    cbn -[UnsaturatedSolinas.sadd] in v.
     cbv [ForExtraction.low_level_rewriter_method] in v.
-    cbn -[UnsaturatedSolinas.sadd ForExtraction.skip_typedefs] in v.
+    cbn -[UnsaturatedSolinas.sadd] in v.
     cbv [UnsaturatedSolinas.sadd] in v.
     vm_compute UnsaturatedSolinas.add in v.
     cbv beta iota zeta in v.

@@ -7,6 +7,7 @@ Require Import Crypto.Rewriter.Passes.FlattenThunkedRects.
 Require Import Crypto.Rewriter.Passes.MulSplit.
 Require Import Crypto.Rewriter.Passes.MultiRetSplit.
 Require Import Crypto.Rewriter.Passes.NoSelect.
+Require Import Crypto.Rewriter.Passes.RelaxBitwidthAdcSbb.
 Require Import Crypto.Rewriter.Passes.ToFancy.
 Require Import Crypto.Rewriter.Passes.ToFancyWithCasts.
 Require Import Crypto.Rewriter.Passes.UnfoldValueBarrier.
@@ -21,6 +22,7 @@ Module Compilers.
   Export MulSplit.Compilers.
   Export MultiRetSplit.Compilers.
   Export NoSelect.Compilers.
+  Export RelaxBitwidthAdcSbb.Compilers.
   Export ToFancy.Compilers.
   Export ToFancyWithCasts.Compilers.
   Export UnfoldValueBarrier.Compilers.
@@ -35,6 +37,7 @@ Module Compilers.
     Export MulSplit.Compilers.RewriteRules.
     Export MultiRetSplit.Compilers.RewriteRules.
     Export NoSelect.Compilers.RewriteRules.
+    Export RelaxBitwidthAdcSbb.Compilers.RewriteRules.
     Export ToFancy.Compilers.RewriteRules.
     Export ToFancyWithCasts.Compilers.RewriteRules.
     Export UnfoldValueBarrier.Compilers.RewriteRules.
