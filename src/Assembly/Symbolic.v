@@ -107,40 +107,50 @@ Require Import Crypto.Assembly.Syntax.
 Definition idx := N.
 Local Set Boolean Equality Schemes.
 Definition symbol := N.
-Variant opname := old (_:symbol) | oldold (_:REG*option nat) | const (_ : N) | add | addcarry | notaddcarry | addoverflow | neg | shl | shr | sar | and | or | xor | slice (lo sz : N) | mul | mulhuu (_:N) | set_slice (lo sz : N) | selectznz (* | ... *).
-
-Global Instance show_opname : Show opname := fun o =>
-  match o with
-  | old n => "old " ++ show n
-  | oldold p => "oldold " ++ show p
-  | const n => "const " ++ show n
-  | add => "add"
-  | addcarry => "addcarry"
-  | notaddcarry => "notaddcarry"
-  | addoverflow => "addoverflow"
-  | neg => "neg"
-  | shl => "shl"
-  | shr => "shr"
-  | sar => "sar"
-  | and => "and"
-  | or => "or"
-  | xor => "xor"
-  | slice lo sz => "slice " ++ show lo ++ " " ++ show sz
-  | mul => "mul"
-  | mulhuu n => "mulhuu"
-  | set_slice lo sz => "set_slice " ++ show lo ++ " " ++ show sz
-  | selectznz => "selectznz"
-  end%string.
-
-Definition associative o := match o with add|mul|or|and => true | _ => false end.
-Definition commutative o := match o with add|addcarry|mul|mulhuu _ => true | _ => false end.
-Definition identity o := match o with add|addcarry => Some 0%N | mul|mulhuu _=>Some 1%N |_=> None end.
 
 Class OperationSize := operation_size : N.
 Global Instance Show_OperationSize : Show OperationSize := show_N.
-Definition op : Set := opname * option OperationSize.
-Global Instance Show_op : Show op := show_prod.
-Definition op_beq : op -> op -> bool := Prod.prod_beq _ _ opname_beq (@Option.option_beq N N.eqb).
+
+Section S.
+Implicit Type s : OperationSize.
+Variant op := old s (_:symbol) | oldold (_:REG*option nat) | const (_ : N) | add s | addcarry s | notaddcarry s | addoverflow s | neg s | shl s | shr s | sar s | and s | or s | xor s | slice (lo sz : N) | mul s | mulhuu s | set_slice (lo sz : N) | selectznz (* | ... *)
+  | addZ | mulZ | negZ | shlZ | shrZ | andZ | orZ.
+End S.
+
+Global Instance Show_op : Show op := fun o =>
+  match o with
+  | old s n => "old " ++ show s ++ " " ++ show n
+  | oldold p => "oldold " ++ show p
+  | const n => "const " ++ show n
+  | add s => "add " ++ show s
+  | addcarry s => "addcarry " ++ show s
+  | notaddcarry s => "notaddcarry " ++ show s
+  | addoverflow s => "addoverflow " ++ show s
+  | neg s => "neg " ++ show s
+  | shl s => "shl " ++ show s
+  | shr s => "shr " ++ show s
+  | sar s => "sar " ++ show s
+  | and s => "and " ++ show s
+  | or s => "or " ++ show s
+  | xor s => "xor " ++ show s
+  | slice lo sz => "slice " ++ show lo ++ " " ++ show sz
+  | mul s => "mul " ++ show s
+  | mulhuu s => "mulhuu " ++ show s
+  | set_slice lo sz => "set_slice " ++ show lo ++ " " ++ show sz
+  | selectznz => "selectznz"
+
+  | addZ => "addZ"
+  | mulZ => "mulZ"
+  | negZ => "negZ"
+  | shlZ => "shlZ"
+  | shrZ => "shrZ"
+  | andZ => "andZ"
+  | orZ => "orZ"
+  end%string.
+
+Definition associative o := match o with add _|mul _|or _|and _=> true | _ => false end.
+Definition commutative o := match o with add _|addcarry _|mul _|mulhuu _ => true | _ => false end.
+Definition identity o := match o with add _|addcarry _ => Some 0%N | mul _|mulhuu _=>Some 1%N |_=> None end.
 
 Definition node (A : Set) : Set := op * list A.
 Global Instance Show_node {A : Set} [show_A : Show A] : Show (node A) := show_prod.
@@ -178,29 +188,24 @@ Import ListNotations.
 
 Section WithContext.
   Context (ctx : symbol -> option N).
-  Definition interp_op' o (s : option N) args :=
-    let keep' n x := N.land x (N.ones n) in
+  Definition interp_op o args :=
+    let keep n x := N.land x (N.ones n) in
+    let signed s n : Z := (Z.land (Z.shiftl 1 (Z.of_N s-1) + Z.of_N n) (Z.ones (Z.of_N s)) - Z.shiftl 1 (Z.of_N s-1))%Z in
     match o, args with
-    | old s, nil => match ctx s with Some v => Some v | None => None end
-    | add, args => Some (List.fold_right N.add 0 args)
-    | addoverflow, args => Some (
-        let v := List.fold_right N.add 0 args in
-        match s with None => 0 | Some s =>
-            if 2^(s-1)-1 <? v then 1 else 0
-        end)%N
-    | xor, args => Some (List.fold_right N.lxor 0 args)
-    | neg, [a] => Some (match s with None => 0 | Some s => 2^s - a end)
+    | old s x, nil => match ctx x with Some v => Some (keep s v) | None => None end
+    | add s, args => Some (keep s (List.fold_right N.add 0 args))
+    | addoverflow s, args => Some (
+        let v := List.fold_right Z.add 0%Z (List.map (signed s) args) in
+        if Z.eqb v (Z.land v (Z.ones (Z.of_N s))) then 0 else 1)
+    | xor s, args => Some (keep s (List.fold_right N.lxor 0 args))
+    | neg s, [a] => Some (keep s (2^s - a))
     (* note: this case is real awkward, consider Z? *)
-    | slice lo sz, [a] => Some (keep' sz (N.shiftr a lo))
+    | slice lo sz, [a] => Some (keep sz (N.shiftr a lo))
     (* shifts should not truncate shamt because fiat-crypto semantics does not *)
     | const z, nil => Some z
     (* note: incomplete *)
     | _, _ => None
     end%N.
-  Definition interp_op o s args :=
-    let keep' n x := N.land x (N.ones n) in
-    let keep x := match s with None => x | Some s => keep' s x end in
-    option_map keep (interp_op' o s args).
 End WithContext.
 Definition interp0_op := interp_op (fun _ => None).
 
@@ -265,37 +270,37 @@ Section WithDag.
   End reveals_ind.
 
   Inductive eval : expr -> N -> Prop :=
-  | ERef i opn s args args' n
-    (_:List.nth_error dag (N.to_nat i) = Some ((opn, s), args))
+  | ERef i op args args' n
+    (_:List.nth_error dag (N.to_nat i) = Some (op, args))
     (_:List.Forall2 eval (map ExprRef args) args')
-    (_:interp_op ctx opn s args' = Some n)
+    (_:interp_op ctx op args' = Some n)
     : eval (ExprRef i) n
-  | EApp opn s args args' n
+  | EApp op args args' n
     (_:List.Forall2 eval args args')
-    (_:interp_op ctx opn s args' = Some n)
-    : eval (ExprApp ((opn, s), args)) n.
+    (_:interp_op ctx op args' = Some n)
+    : eval (ExprApp (op, args)) n.
 
   Variant eval_node : node idx -> N -> Prop :=
-  | ENod opn s args args' n
+  | ENod op args args' n
     (_:List.Forall2 eval (map ExprRef args) args')
-    (_:interp_op ctx opn s args' = Some n)
-    : eval_node ((opn, s), args) n.
+    (_:interp_op ctx op args' = Some n)
+    : eval_node (op, args) n.
 
 
   Section eval_ind.
     Context (P : expr -> N -> Prop)
-      (HRef : forall i opn s args args' n, nth_error dag (N.to_nat i) = Some ((opn, s), args) ->
+      (HRef : forall i op args args' n, nth_error dag (N.to_nat i) = Some (op, args) ->
         Forall2 (fun e n => eval e n /\ P e n) (map ExprRef args) args' ->
-        interp_op ctx opn s args' = Some n ->
+        interp_op ctx op args' = Some n ->
         P (ExprRef i) n)
-      (HApp : forall opn s args args' n,
+      (HApp : forall op args args' n,
         Forall2 (fun i e => eval i e /\ P i e) args args' ->
-        interp_op ctx opn s args' = Some n ->
-        P (ExprApp ((opn, s), args)) n).
+        interp_op ctx op args' = Some n ->
+        P (ExprApp (op, args)) n).
     Fixpoint eval_ind i n (pf : eval i n) {struct pf} : P i n :=
       match pf with
-      | ERef _ _ _ _ _ _ A B C => HRef _ _ _ _ _ _ A (Forall2_weaken (fun _ _ D => conj D (eval_ind _ _ D)) _ _ B) C
-      | EApp _ _ _ _ _ A B => HApp _ _ _ _ _ (Forall2_weaken (fun _ _ C => conj C (eval_ind _ _ C)) _ _ A) B
+      | ERef _ _ _ _ _ A B C => HRef _ _ _ _ _ A (Forall2_weaken (fun _ _ D => conj D (eval_ind _ _ D)) _ _ B) C
+      | EApp _ _ _ _ A B => HApp _ _ _ _ (Forall2_weaken (fun _ _ C => conj C (eval_ind _ _ C)) _ _ A) B
       end.
   End eval_ind.
 
@@ -310,7 +315,7 @@ Section WithDag.
       epose proof Forall2_trans H0 H5 as HH.
       eapply Forall2_eq, Forall2_weaken, HH; cbv beta; clear; firstorder. }
     { eapply Forall2_flip in H.
-      epose proof Forall2_trans H H6 as HH.
+      epose proof Forall2_trans H H4 as HH.
       eapply Forall2_eq, Forall2_weaken, HH; cbv beta; clear; firstorder. }
   Qed.
 
@@ -385,7 +390,7 @@ Fixpoint merge (e : expr) (d : dag) : idx * dag :=
   | ExprRef i => (i, d)
   | ExprApp (op, args) =>
     let idxs_d := List.foldmap merge args d in
-    let idxs := if commutative (fst op)
+    let idxs := if commutative op
                 then sortN (fst idxs_d)
                 else (fst idxs_d) in
     merge_node (op, idxs) (snd idxs_d)
@@ -404,15 +409,15 @@ Proof.
   { intuition eauto. eapply H1. }
 Qed.
 
-Lemma interp_op_weaken_symbols G1 G2 o s args
-  (H : forall s v, G1 s = Some v -> G2 s = Some v)
-  : forall v, interp_op G1 o s args = Some v -> interp_op G2 o s args = Some v.
+Lemma interp_op_weaken_symbols G1 G2 o args
+  (H : forall (s:symbol) v, G1 s = Some v -> G2 s = Some v)
+  : forall v, interp_op G1 o args = Some v -> interp_op G2 o args = Some v.
 Proof.
-  cbv [interp_op interp_op' option_map]; intros;
+  cbv [interp_op option_map]; intros;
     repeat (BreakMatch.break_match || BreakMatch.break_match_hyps);
     inversion_option; subst;
     try congruence.
-  all : eapply H in Heqo2; congruence.
+  all : eapply H in Heqo0; congruence.
 Qed.
 
 Lemma eval_weaken_symbols G1 G2 d e n
@@ -428,10 +433,10 @@ Qed.
 Lemma eval_eval0 d e n G : eval (fun _ => None) d e n -> eval G d e n.
 Proof. eapply eval_weaken_symbols; congruence. Qed.
 
-Lemma permute_commutative G opn s args n : commutative opn = true ->
-  interp_op G opn s args = Some n ->
+Lemma permute_commutative G op args n : commutative op = true ->
+  interp_op G op args = Some n ->
   forall args', Permutation.Permutation args args' ->
-  interp_op G opn s args' = Some n.
+  interp_op G op args' = Some n.
 Admitted.
 
 Definition dag_ok G (d : dag) := forall i _r, nth_error d (N.to_nat i) = Some _r -> exists v, eval G d (ExprRef i) v.
@@ -484,7 +489,7 @@ Proof.
   rename n0 into v.
 
   set (merge _ _) as m; cbv beta iota delta [merge] in m; fold merge in m.
-  destruct n as ((opn&s)&args).
+  destruct n as (op&args).
   repeat match goal with
     m := let x := ?A in @?B x |- _ =>
     let y := fresh x in
@@ -500,17 +505,17 @@ Proof.
     Forall2 (fun i v => eval G (snd idxs_d) (ExprRef i) v) (fst idxs_d) args' /\
     forall i e', eval G d i e' -> eval G (snd idxs_d) i e'
   ) as HH; [|destruct HH as(?&?&?)].
-  { clear m idxs H7 v s opn; revert dependent d; revert dependent args'.
-    induction H; cbn; intros; inversion H6; subst;
+  { clear m idxs H6 v op; revert dependent d; revert dependent args'.
+    induction H; cbn; intros; inversion H4; subst;
       split_and; pose proof @Forall2_weaken; typeclasses eauto 8 with core. }
   clearbody idxs_d.
 
-  enough (eval G (snd idxs_d) (ExprApp (opn, s, map ExprRef idxs)) v) by
-    (unshelve edestruct ((eval_merge_node _ _ ltac:(eassumption) (opn, s)) idxs v) as (?&?&?); eauto); clear m.
+  enough (eval G (snd idxs_d) (ExprApp (op, map ExprRef idxs)) v) by
+    (unshelve edestruct ((eval_merge_node _ _ ltac:(eassumption) op) idxs v) as (?&?&?); eauto); clear m.
 
-  pose proof length_Forall2 H6; pose proof length_Forall2 H2.
+  pose proof length_Forall2 H4; pose proof length_Forall2 H2.
 
-  cbn [fst snd] in *; destruct (commutative opn) eqn:?; cycle 1; subst idxs.
+  cbn [fst snd] in *; destruct (commutative op) eqn:?; cycle 1; subst idxs.
 
   { econstructor; eauto.
     eapply ListUtil.Forall2_forall_iff; rewrite map_length; try congruence; [].
@@ -522,7 +527,7 @@ Proof.
   pose proof NSort.Permuted_sort (fst idxs_d) as Hperm.
   eapply (Permutation.Permutation_Forall2 Hperm) in H2.
   case H2 as (argExprs&Hperm'&H2).
-  eapply permute_commutative in H7; try eassumption; [].
+  eapply permute_commutative in H6; try eassumption; [].
   epose proof Permutation.Permutation_length Hperm.
   epose proof Permutation.Permutation_length Hperm'.
 
@@ -538,15 +543,15 @@ Proof.
 Qed.
 
 Definition zconst s (z:Z) :=
-  const (if z <? 0 then invert_Some (interp0_op neg s [Z.abs_N z]) else Z.to_N z)%Z.
+  const (if z <? 0 then invert_Some (interp0_op (neg s) [Z.abs_N z]) else Z.to_N z)%Z.
 
 Section WithContext.
   Context (ctx : symbol -> option N).
   Fixpoint interp_expr (e : expr) : option N :=
     match e with
-    | ExprApp ((o,s), arges) =>
+    | ExprApp (o, arges) =>
         args <- Option.List.lift (List.map interp_expr arges);
-        interp_op ctx o s args
+        interp_op ctx o args
     | _ => None
     end%option.
 End WithContext.
@@ -555,7 +560,7 @@ Definition interp0_expr := interp_expr (fun _ => None).
 Lemma eval_interp_expr G e : forall d v, interp_expr G e = Some v -> eval G d e v.
 Proof.
   induction e; cbn; try discriminate; intros.
-  case n in *; case o in *; cbn [fst snd] in *.
+  case n in *; cbn [fst snd] in *.
   destruct (Option.List.lift _) eqn:? in *; try discriminate.
   econstructor; try eassumption; [].
   clear dependent v.
@@ -615,18 +620,11 @@ Proof.
   *)
 Admitted.
 
-Lemma bound_interp_op G o s args v : interp_op G o (Some s) args = Some v ->
-  (v <= N.ones s)%N.
-Proof.
-  cbv [interp_op].
-  match goal with |- context [option_map _ ?x] => destruct x end;
-    inversion 1; subst.
-  eauto using le_land.
-Qed.
-
 Definition bound_expr e : option N := (* e <= r *)
   match e with
-  | ExprApp ((_, Some s), _) => Some (N.ones s)
+  | ExprApp (const v, _) => Some v
+  | ExprApp ((old s _ | add s | mul s | shl s | shr s | sar s | neg s | mulhuu s | and s | or s | xor s), _) => Some (N.ones s)
+  | ExprApp ((addcarry _ | notaddcarry _ | addoverflow _), _) => Some 1%N
   | _ => None
   end.
 
@@ -635,55 +633,51 @@ Lemma eval_bound_expr G e b : bound_expr e = Some b ->
 Proof.
   cbv [bound_expr]; BreakMatch.break_match;
     inversion 2; intros; inversion_option; subst;
-    eauto using bound_interp_op.
-Qed.
+    cbv [interp_op] in *;
+    BreakMatch.break_match_hyps; inversion_option; subst;
+    rewrite ?N.land_ones, ?N.ones_equiv;
+    try match goal with |- context [(?a mod ?b)%N] => pose proof N.mod_bound_pos a b ltac:(Lia.lia) end;
+    try Lia.lia.
+    assert (0 < 2^s)%N as HH by admit. pose proof (H HH). Lia.lia.
+    assert (0 < 2^s)%N as HH by admit. pose proof (H HH). Lia.lia.
+Admitted.
 
 Definition isCst (e : expr) :=
-  match e with ExprApp ((const _, _), _) => true | _ => false end.
+  match e with ExprApp ((const _), _) => true | _ => false end.
 
-Definition simplify_slice0_head :=
-  fun e => match e with
-    ExprApp ((slice 0 s',Some s), args) =>
-      ExprApp (slice 0 (N.min s s'), None, args) | _ => e end.
 Definition simplify_slice0 :=
   fun e => match e with
-    ExprApp ((slice 0 s', None), [(ExprApp (oo, s, args))]) =>
-      let s := match s with None => s' | Some s => N.min s s' end in
-      ExprApp (oo, Some s, args) | _ => e end.
-Definition simplify_truncate_set_slice :=
+    ExprApp (slice 0 s, [(ExprApp ((addZ|mulZ|negZ|shlZ|shrZ|andZ|orZ) as o, args))]) =>
+        ExprApp ((match o with addZ=>add s|mulZ=>mul s|negZ=>neg s|shlZ=>shl s|shrZ => shr s|andZ => and s| orZ => or s |_=>old 0%N 999999%N end), args)
+      | _ => e end.
+Definition simplify_slice_set_slice :=
   fun e => match e with
-    ExprApp ((set_slice 0 s1, Some s2), [_; ExprApp (oo, s, args)]) =>
-      if N.leb s2 s1 then
-        let s := match s with None => s2 | Some s => N.min s s2 end in
-        ExprApp (oo, Some s, args) 
-      else e | _ => e end.
+    ExprApp (slice lo1 s1, [ExprApp (set_slice lo2 s2, [_; e'])]) =>
+      if andb (N.eqb lo1 lo2) (N.leb s1 s2) then e' else e | _ => e end.
+Definition simplify_set_slice_set_slice :=
+  fun e => match e with
+    ExprApp (set_slice lo1 s1, [ExprApp (set_slice lo2 s2, [x; e']); y]) =>
+      if andb (N.eqb lo1 lo2) (N.leb s2 s1) then ExprApp (set_slice lo1 s1, [x; y]) else e | _ => e end.
 Definition simplify_truncate_small :=
   fun e => match e with
-    ExprApp ((op, Some s), args) =>
-      let e' := ExprApp ((op, None), args) in
+    ExprApp (slice 0%N s, [ExprApp (op, args) as e']) =>
       match bound_expr e' with Some b =>
       if N.leb b (N.ones s)
       then e'
       else e | _ => e end | _ => e end.
-Definition simplify_shr := 
-  fun e => match e with
-    ExprApp ((shr, Some s), [x; shamt]) =>
-        ExprApp ((shr, None), [x; shamt])
-        | _ => e end.
 
 Definition simplify_expr : expr -> expr :=
   List.fold_left (fun e f => f e)
   [fun e => match interp0_expr e with
-            | Some v => ExprApp ((const v, None), nil)
+            | Some v => ExprApp (const v, nil)
             | _ => e end
-  ;simplify_slice0_head
-  ;simplify_slice0
-  ;simplify_truncate_set_slice
   ;simplify_truncate_small
-  ;simplify_shr
+  ;simplify_slice0
+  ;simplify_set_slice_set_slice
+  ;simplify_slice_set_slice
   ;fun e => match e with
     ExprApp (o, args) =>
-    if associative (fst o) then
+    if associative o then
       ExprApp (o, List.flat_map (fun e' =>
         match e' with
         | ExprApp (o', args') => if op_beq o o' then args' else [e']
@@ -691,29 +685,29 @@ Definition simplify_expr : expr -> expr :=
     else e | _ => e end
   ;fun e => match e with
     ExprApp (o, args) =>
-    if commutative (fst o) then
+    if commutative o then
     let csts_exprs := List.partition isCst args in
     match interp0_expr (ExprApp (o, fst csts_exprs)) with None => e | Some v =>
-    ExprApp (o, ExprApp (const v, snd o, nil):: snd csts_exprs)
+    ExprApp (o, ExprApp (const v, nil):: snd csts_exprs)
     end else e | _ => e end
   ;fun e => match e with
-    ExprApp ((slice 0 s',Some s), [a]) =>
+    ExprApp (slice 0 s, [a]) =>
       match bound_expr a with Some b =>
-      if N.leb b (N.ones s) && N.leb b (N.ones s')
+      if N.leb b (N.ones s)
       then a else e | _ => e end | _ => e end
   ;fun e => match e with
     ExprApp (o, args) =>
-    match identity (fst o) with
+    match identity o with
     | Some i =>
         let args := List.filter (fun a => negb (option_beq N.eqb (interp0_expr a) (Some i))) args in
         match args with
-        | nil => ExprApp ((const i, snd o), nil)
+        | nil => ExprApp (const i, nil)
         | cons a nil => a
         | _ => ExprApp (o, args)
         end
     | _ => e end | _ => e end
-  ;fun e => match e with ExprApp ((xor,s),[x;y]) =>
-    if expr_beq x y then ExprApp ((const 0, s), nil) else e | _ => e end
+  ;fun e => match e with ExprApp (xor _,[x;y]) =>
+    if expr_beq x y then ExprApp (const 0, nil) else e | _ => e end
   ]%N%bool.
 Definition simplify (dag : dag) (e : node idx) : expr :=
   simplify_expr (reveal_node dag 2 e).
@@ -722,22 +716,23 @@ Lemma eval_simplify_expr c d e v : eval c d e v -> eval c d (simplify_expr e) v.
 Proof.
   intros H; cbv [simplify_expr].
 
-  Local Opaque simplify_slice0_head simplify_slice0 simplify_truncate_set_slice simplify_truncate_small simplify_shr.
+  Strategy 10000 [simplify_slice0 simplify_slice_set_slice simplify_truncate_small].
+  Local Opaque simplify_slice0 simplify_slice_set_slice simplify_truncate_small.
   repeat match goal with (* one goal per rewrite rule *)
   | |- context G [fold_left ?f (cons ?r ?rs) ?e] =>
     let re := fresh "e" in
     let e_re := eval cbv beta in (r e) in pose (e_re) as re;
-    let g := context G [fold_left f rs re] in change g;
+    let g := context G [fold_left f rs re] in time change g;
     assert (eval c d re v); [ subst re | clearbody re;
         clear dependent e; rename re into e ]
   | |- context G [fold_left ?f nil ?e] => eassumption
   end.
-  Local Transparent simplify_slice0_head simplify_slice0 simplify_truncate_set_slice simplify_truncate_small simplify_shr.
-  all : cbv [simplify_slice0_head simplify_slice0 simplify_truncate_set_slice simplify_truncate_small simplify_shr] in *.
+  Local Transparent simplify_slice0 simplify_slice_set_slice simplify_truncate_small.
+  all : cbv [simplify_slice0 simplify_slice_set_slice simplify_truncate_small] in *.
 
   all : repeat match goal with
                | _ => solve [trivial]
-               | _ => progress cbn [fst snd interp_op interp_op' option_map] in *
+               | _ => progress cbn [fst snd interp_op option_map] in *
                | _ => progress inversion_option
                | H: interp0_expr _ = Some _ |- _ => eapply eval_interp_expr in H; instantiate (1:=d) in H
                | H: bound_expr _ = Some _ |- _ => eapply eval_bound_expr in H; eauto; [ ]
@@ -763,7 +758,7 @@ Proof.
                    end
                | _ => progress BreakMatch.break_match
                end.
-  { econstructor; eauto; []; cbn [interp_op interp_op' option_map].
+  { econstructor; eauto; []; cbn [interp_op option_map].
     f_equal; eauto using eval_eval, eval_eval0. }
   admit.
   admit.
@@ -771,11 +766,6 @@ Proof.
   admit.
   admit.
   admit.
-  admit.
-  {
-    erewrite 2land_ones_le; rewrite ?N.shiftr_0_r; trivial; try Lia.lia.
-    admit. (*N.land and N.le *)
-  }
   admit.
   admit.
   admit.
@@ -955,55 +945,54 @@ Definition Reveal n (i : idx) : M expr :=
 Definition RevealConst (i : idx) : M N :=
   x <- Reveal 1 i;
   match x with
-  | ExprApp (const n, None, nil) => ret n
-  | ExprApp (const n, Some s, nil) => ret (N.land n (N.ones s))
+  | ExprApp (const n, nil) => ret n
   | _ => err (error.expected_const i)
   end.
 
 Definition GetReg r : M idx :=
   let '(rn, lo, sz) := index_and_shift_and_bitcount_of_reg r in
   v <- GetReg64 rn;
-  App ((slice lo sz, Some 64%N), [v]).
+  App ((slice lo sz), [v]).
 Definition SetReg r (v : idx) : M unit :=
   let '(rn, lo, sz) := index_and_shift_and_bitcount_of_reg r in
   if N.eqb sz 64
   then SetReg64 rn v (* works even if old value is unspecified *)
   else old <- GetReg64 rn;
-       v <- App ((set_slice lo sz, Some 64%N), [old; v]);
+       v <- App ((set_slice lo sz), [old; v]);
        SetReg64 rn v.
 
-Class AddressSize := address_size : option N.
+Class AddressSize := address_size : OperationSize.
 Definition Address {sa : AddressSize} (a : MEM) : M idx :=
   base <- GetReg a.(mem_reg);
   index <- match a.(mem_extra_reg) with
            | Some r => GetReg r
-           | None => App ((const 0, sa), nil)
+           | None => App ((const 0), nil)
            end;
   offset <- App ((zconst sa (match a.(mem_offset) with
                              | Some s => s
-                             | None => 0 end), sa), nil);
-  bi <- App ((add, sa), [base; index]);
-  App ((add, sa), [bi; offset]).
+                             | None => 0 end)), nil);
+  bi <- App (add sa, [base; index]);
+  App (add sa, [bi; offset]).
 
 Definition Load {s : OperationSize} {sa : AddressSize} (a : MEM) : M idx :=
   addr <- Address a;
   v <- Load64 addr;
   if N.eqb s 64%N
   then ret v
-  else App ((slice 0 (Syntax.operand_size a s), Some 64%N), [v]).
+  else App ((slice 0 (Syntax.operand_size a s)), [v]).
 
 Definition Store {s : OperationSize} {sa : AddressSize} (a : MEM) v : M unit :=
   addr <- Address a;
   if N.eqb s 64%N
   then Store64 addr v
   else old <- Load64 addr;
-       v <- App ((set_slice 0 (Syntax.operand_size a s), Some 64), [old; v])%N;
+       v <- App (set_slice 0 (Syntax.operand_size a s), [old; v])%N;
        Store64 addr v.
 
 (* note: this could totally just handle truncation of constants if semanics handled it *)
 Definition GetOperand {s : OperationSize} {sa : AddressSize} (o : ARG) : M idx :=
   match o with
-  | Syntax.const a => App ((zconst (Some 64%N) a, Some 64%N), [])
+  | Syntax.const a => App (zconst sa a, [])
   | mem a => Load a
   | reg r => GetReg r
   end.
@@ -1019,7 +1008,7 @@ Local Unset Elimination Schemes.
 Inductive pre_expr : Set :=
 | PreARG (_ : ARG)
 | PreFLG (_ : FLAG)
-| PreApp (_ : opname) {_ : OperationSize} (_ : list pre_expr).
+| PreApp (_ : op) (_ : list pre_expr).
 (* note: need custom induction principle *)
 Local Set Elimination Schemes.
 Local Coercion PreARG : ARG >-> pre_expr.
@@ -1033,14 +1022,14 @@ Fixpoint Symeval {s : OperationSize} {sa : AddressSize} (e : pre_expr) : M idx :
   match e with
   | PreARG o => GetOperand o
   | PreFLG f => GetFlag f
-  | PreApp op s args =>
-      idxs <- mapM (@Symeval s sa) args;
-      App ((op, Some s), idxs)
+  | PreApp op args =>
+      idxs <- mapM Symeval args;
+      App (op, idxs)
   end.
 
 Notation "f @ ( x , y , .. , z )" := (PreApp f (@cons pre_expr x (@cons pre_expr y .. (@cons pre_expr z nil) ..))) (at level 10) : x86symex_scope.
 Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
-  let sa : AddressSize := Some 64%N in
+  let sa : AddressSize := 64%N in
   match Syntax.operation_size instr with Some s =>
   let s : OperationSize := s in
   match instr.(Syntax.op), instr.(args) with
@@ -1065,91 +1054,90 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
     cf <- GetFlag CF;
     SetOperand dst cf
   | Syntax.add, [dst; src] =>
-    v <- Symeval (add@(dst, src));
-    c <- Symeval (let os : OperationSize := 1 in addcarry@(dst, src));
+    v <- Symeval (add s@(dst, src));
+    c <- Symeval (addcarry s@(dst, src));
     _ <- SetOperand dst v;
     _ <- HavocFlags;
     SetFlag CF c
   | Syntax.adc, [dst; src] =>
-    v <- Symeval (add@(dst, src, CF));
-    c <- Symeval (let os : OperationSize := 1 in addcarry@(dst, src, CF));
+    v <- Symeval (add s@(dst, src, CF));
+    c <- Symeval (addcarry s@(dst, src, CF));
     _ <- SetOperand dst v;
     _ <- HavocFlags;
     SetFlag CF c
   | (adcx|adox) as op, [dst; src] =>
     let f := match op with adcx => CF | _ => OF end in
-    v <- Symeval (add@(dst, src, f));
-    c <- Symeval (let os : OperationSize := 1 in addcarry@(dst, src, f));
+    v <- Symeval (add s@(dst, src, f));
+    c <- Symeval (addcarry s@(dst, src, f));
     _ <- SetOperand dst v;
     SetFlag f c
   | Syntax.sub, [dst; src] =>
-    v <- Symeval (add@(dst, PreApp neg [PreARG src]));
+    v <- Symeval (add s@(dst, PreApp (neg s) [PreARG src]));
     _ <- SetOperand dst v;
     HavocFlags
   | lea, [dst; mem src] =>
     a <- Address src;
     SetOperand dst a
   | imul, ([dst as src1; src2] | [dst; src1; src2]) =>
-    v <- Symeval (mul@(src1,src2));
+    v <- Symeval (mul s@(src1,src2));
     _ <- SetOperand dst v;
     HavocFlags
   | Syntax.xor, [dst; src] =>
-    v <- Symeval (xor@(dst,src));
+    v <- Symeval (xor s@(dst,src));
     _ <- SetOperand dst v;
     _ <- HavocFlags;
     zero <- Symeval (PreApp (const 0) nil);
     _ <- SetFlag CF zero;
     SetFlag OF zero
   | Syntax.and, [dst; src] =>
-    v <- Symeval (and@(dst,src));
+    v <- Symeval (and s@(dst,src));
     _ <- SetOperand dst v;
     HavocFlags
   | Syntax.bzhi, [dst; src; cnt] =>
     cnt <- GetOperand cnt;
     cnt <- RevealConst cnt;
-    v <- Symeval (and@(dst,PreApp (const (N.ones (N.land cnt (N.ones (N.log2 s))))) nil));
+    v <- Symeval (and s@(dst,PreApp (const (N.ones (N.land cnt (N.ones (N.log2 s))))) nil));
     _ <- SetOperand dst v;
     HavocFlags
   | mulx, [hi; lo; src2] =>
     let src1 : ARG := rdx in
-    vl <- Symeval (mul@(src1,src2));
-    vh <- Symeval ((mulhuu s)@(src1,src2));
+    vl <- Symeval (mul s@(src1,src2));
+    vh <- Symeval (mulhuu s@(src1,src2));
     _ <- SetOperand lo vl;
          SetOperand hi vh
    | Syntax.shr, [dst; cnt] =>
-    v <- Symeval (shr@(dst, cnt));
+    v <- Symeval (shr s@(dst, cnt));
     _ <- SetOperand dst v;
     HavocFlags
    | Syntax.sar, [dst; cnt] =>
     x <- GetOperand dst;
     c <- GetOperand cnt; c <- Reveal 1 c;
-    y <- Symeval (sar@(dst, cnt));
+    y <- Symeval (sar s@(dst, cnt));
     _ <- SetOperand dst y;
     _ <- HavocFlags;
-    if match c with ExprApp (const 1%N, _, nil) => true | _ => false end
+    if match c with ExprApp (const 1%N, nil) => true | _ => false end
     then (
-      cf <- App ((slice 0 1, None), cons (x) nil);
+      cf <- App ((slice 0 1), cons (x) nil);
       _ <- SetFlag CF cf;
       zero <- Symeval (PreApp (const 0) nil); SetFlag OF zero)
     else ret tt
   | shrd, [lo as dst; hi; cnt] =>
-    let cnt' := add@(Z.of_N s, PreApp neg [PreARG cnt]) in
-    v <- Symeval (or@(shr@(lo, cnt), shl@(hi, cnt')));
+    let cnt' := add s@(Z.of_N s, PreApp (neg s) [PreARG cnt]) in
+    v <- Symeval (or s@(shr s@(lo, cnt), shl s@(hi, cnt')));
     _ <- SetOperand dst v;
     HavocFlags
   | inc, [dst] =>
-    orig <- GetOperand dst;
-    v <- Symeval (add@(dst, PreARG 1%Z));
-    o <- Symeval (addoverflow@(dst, PreARG 1%Z));
+    v <- Symeval (add s@(dst, PreARG 1%Z));
+    o <- Symeval (addoverflow s@(dst, PreARG 1%Z));
     _ <- SetOperand dst v;
     cf <- GetFlag CF; _ <- HavocFlags;
     _ <- SetFlag CF cf; SetFlag OF o
   | dec, [dst] =>
     orig <- GetOperand dst; orig <- Reveal 1 orig;
-    v <- Symeval (add@(dst, PreApp neg [PreARG 1%Z]));
+    v <- Symeval (add s@(dst, PreApp (neg s) [PreARG 1%Z]));
     _ <- SetOperand dst v;
     cf <- GetFlag CF; _ <- HavocFlags; _ <- SetFlag CF cf;
-    if match orig with ExprApp (const n, _, nil) => n =? 0 | _ => false end
+    if match orig with ExprApp (const n, nil) => n =? 0 | _ => false end
     then zero <- Symeval (PreApp (const 0) nil); SetFlag OF zero else SetFlag CF cf
   | test, [a;b] =>
       _ <- HavocFlags;
@@ -1161,145 +1149,12 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
  end
   | _ =>
   match instr.(Syntax.op), instr.(args) with
-  | clc, [] => zero <- @Symeval 1 _ (@PreApp (const 0) 1 nil); SetFlag CF zero
+  | clc, [] => zero <- @Symeval 1 _ (@PreApp (const 0) nil); SetFlag CF zero
   | Syntax.ret, [] => ret tt
   | _, _ => err (error.ambiguous_operation_size instr) end end%N%x86symex.
 
 Definition SymexNormalInstructions := fun st is => mapM_ SymexNormalInstruction is st.
 
-
-Definition OldReg (r : REG) : M unit :=
-  i <- Merge (ExprApp ((oldold (r, None), Some (reg_size r)), nil));
-  SetReg r i.
-Definition OldCell (r : REG) (i : nat) : M unit :=
-  a <- @Address (Some 64%N) {| mem_reg := r; mem_offset := Some (Z.of_nat(8*i));
-                 mem_is_byte := false; mem_extra_reg:=None |};
-  v <- Merge (ExprApp ((oldold (r, Some i), Some 64%N), nil));
-  (fun s => Success (tt, update_mem_with s (cons (a,v)))).
-Definition OldStack (r := rsp) (i : nat) : M unit :=
-  a <- @Address (Some 64%N) {| mem_reg := r; mem_offset := Some (Z.opp (Z.of_nat(8*S i)));
-                 mem_is_byte := false; mem_extra_reg:=None |};
-  v <- Merge (ExprApp ((oldold (r, Some i), Some 64%N), nil));
-  (fun s => Success (tt, update_mem_with s (cons (a,v)))).
-
-Definition init
-  (arrays : list (REG * nat)) (* full 64-bit registers only *)
-  (stack : nat)
-  (d : dag)
-  : symbolic_state :=
-  let sz := 64%N in
-  let s0 :=
-    {|
-      dag_state := d;
-      symbolic_reg_state := Tuple.repeat None 16;
-      symbolic_mem_state := [];
-      symbolic_flag_state := Tuple.repeat None 6;
-    |} in
-  let es :=
-    (_ <- mapM_ OldReg (List.map widest_register_of_index (seq 0 16));
-     _ <- mapM_ (fun '(r, n) => mapM_ (OldCell r) (seq 0 n)) arrays;
-     mapM_ OldStack (seq 0 stack))%x86symex s0 in
-  match es with
-  | Success (_, s) => s
-  | _ => s0
-  end.
-
-Example test1 : match (
-  let st := init [(rsi, 4)] 0 [] in
-  (SymexNormalInstructions st
-    [Build_NormalInstruction lea [reg rax; mem (Build_MEM false rsi None (Some 16%Z))]
-    ;Build_NormalInstruction mov [reg rbx; mem (Build_MEM false rsi None (Some 16%Z))]
-    ;Build_NormalInstruction lea [reg rcx; mem (Build_MEM false rsi (Some rbx) (Some 7%Z))]
-    ;Build_NormalInstruction mov [         mem (Build_MEM false rsi None (Some 24%Z)); reg rcx]
-     ])
-) with Error _ => False | Success st => True end. native_cast_no_check I. Qed.
-
 Definition invert_rawline l := match l.(rawline) with INSTR instr => Some instr | _ => None end.
 Definition SymexLines st (lines : list Syntax.Line) :=
   SymexNormalInstructions st (Option.List.map invert_rawline lines).
-
-Import Coq.Strings.String.
-Local Open Scope string_scope.
-Notation "f" := (ExprApp ((f,64%N), (@nil expr))) (at level 10, only printing).
-Notation "f @ ( x , y , .. , z )" := (ExprApp ((f,64%N), (@cons expr x%N (@cons expr y%N .. (@cons expr z%N nil) ..)))) (at level 10).
-Local Coercion ExprRef : idx >-> expr.
-
-Ltac step e :=
-  let ev := eval cbv [e] in e in
-  let X := match ev with (x <- ?X; _)%x86symex _ => X end in
-  let C := match ev with (x <- ?X; @?C x)%x86symex _ => C end in
-  let s := match ev with _ ?s => s end in
-  let Y := eval hnf in (X s) in
-  match Y with
-  | Success (?r, ?s) => clear e; set (e:=C r s); simpl in e
-  | Error (?e, ?s) => fail e
-  end.
-
-Definition symex_asm_asm args stack impl1 impl2 : ErrorT _ _ :=
-  let s0 := init args stack nil in
-  _s1 <- SymexLines s0 impl1; let s1 := snd _s1 in
-  _s2 <- SymexLines s1 impl2; let s2 := snd _s2 in
-  let answers := List.map
-    (fun '(k, _) => (reveal s0 2 k, (load k s1, load k s2)))
-    ((init args 0 s0).(symbolic_mem_state)) in
-  if List.forallb (fun '(_, (a, b)) =>
-      match a,b with Some a, Some b => N.eqb a b | _, _ => false end) answers
-  then Success tt
-  else Error (error.failed_to_unify answers, s2).
-
-(*
-Require Crypto.Assembly.Parse Crypto.Assembly.Parse.Examples.fiat_25519_carry_square_optimised_seed20.
-Definition lines' := Eval native_compute in
-  Assembly.Parse.parse
-  Assembly.Parse.Examples.fiat_25519_carry_square_optimised_seed20.example.
-Definition lines := Eval cbv in ErrorT.invert_result lines'.
-Require Crypto.Assembly.Parse Crypto.Assembly.Parse.Examples.fiat_25519_carry_square_optimised_seed10.
-Definition lines'10 := Eval native_compute in
-  Assembly.Parse.parse
-  Assembly.Parse.Examples.fiat_25519_carry_square_optimised_seed10.example.
-Definition lines10 := Eval cbv in ErrorT.invert_result lines'10.
-
-
-Example curve25519_square_same : symex_asm_asm [(rsi, 5); (rdi, 5)] 7 lines lines10 = Success tt. vm_cast_no_check (eq_refl (@Success (error.error*symbolic_state) unit tt)). Qed.
-
-Example evaluation : True.
-  pose (s0 := init [(rsi, 5); (rdi, 5)] 7 nil).
-  let n := constr:(600%nat) in
-  pose (s1 := SymexLines s0 (firstn n lines10));
-  cbv in s1;
-  let v := eval cbv delta [s1] in s1 in
-  match v with Error (?e, ?s) =>
-    let n := fresh in
-    simple notypeclasses refine (let n : symbolic_state := _ in _);
-    [ transparent_abstract (exact s) |];
-    let g := eval cbv delta [n] in n in
-    idtac (* g *);
-
-    try (match e with context [?i] =>
-      let d := eval cbv in (reveal evaluation_subterm 999 170%N) in
-      idtac d end)
-  | Success (_, ?s) =>
-      let ss := fresh "s" in
-      set s as ss; clear s1; rename ss into s1;
-      let v := eval cbv in (Option.bind (nth_error lines10 n) invert_rawline) in
-      match v with
-      | Some ?ni => pose (SymexNormalInstruction ni ss)
-      | _ => idtac (* "COMMENT" *)
-      end
-  end.
-
-  set (s2 := invert_result (SymexLines s1 (firstn 151 lines))).
-  native_compute in s2.
-  pose (s2' := snd s2); cbv in s2'; clear s2; rename s2' into s2.
-  pose (output :=
-  let answers := List.map
-    (fun '(k, _) => (reveal s0 2 k, (load k s1, load k s2)))
-    ((init [(rsi, 5); (rdi, 5)] 0 s0).(symbolic_mem_state)) in
-    (answers,
-    List.forallb (fun '(_, (a, b)) =>
-    match a,b with Some a, Some b => N.eqb a b | _, _ => false end) answers));
-  vm_compute in output.
-
-  exact I.
-Defined.
- *)
