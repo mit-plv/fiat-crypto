@@ -139,8 +139,8 @@ Definition gensym_state_init : gensym_state := 0%N.
 Definition gensym (st : gensym_state) : symbol * gensym_state := (st, N.succ st).
 
 Definition empty_dag : dag := nil.
-Definition merge_symbol (s:symbol) (d:dag) : idx * dag := merge_node ((old s), Some 64%N, nil) d.
-Definition merge_literal (l:Z) (d:dag) : idx * dag := merge_node ((const (Z.to_N l), Some 64%N, nil)) d.
+Definition merge_symbol (s:symbol) (d:dag) : idx * dag := merge_node ((old 64%N s), nil) d.
+Definition merge_literal (l:Z) (d:dag) : idx * dag := merge_node ((const (Z.to_N l), nil)) d.
 
 (** symbolic evaluations live in the state monad, pushed to the leaves of a PHOAS type *)
 Definition symexM T := dag -> ErrorT EquivalenceCheckingError (T * dag).
@@ -156,7 +156,7 @@ Notation "A <- X ; B" := (symex_bind X (fun A => B%symex)) : symex_scope.
 Definition App (e : Symbolic.node idx) : symexM idx := fun st => Success (merge (simplify st e) st).
 Definition RevealConstant (i : idx) : symexM N := fun st =>
   match reveal st 1 i with
-  | ExprApp (const n, _, nil) => Success (n, st)
+  | ExprApp (const n, nil) => Success (n, st)
   | _ => Error (Expected_const_in_reference_code i)
   end.
 Definition RevealWidth (i : idx) : symexM N :=
@@ -428,73 +428,73 @@ Proof.
             let lu := Z.log2 u in
             if (Z.eqb l 0 && Z.eqb u (2^lu))%bool
             then
-              App (((slice 0 (Z.to_N lu)), Some (Z.to_N lu), [idx])) 
+              App (((slice 0 (Z.to_N lu)), [idx])) 
             else symex_error (Unhandled_cast l u)
           in
           match idc in ident t return symex_T t with
           | ident.Literal base.type.Z v
-            => App (const (Z.to_N v), None, nil) (* note: 64 is placeholder, to_N is unsound *)
-          | ident.Z_add => fun x y => App (add, None, [x; y])
+            => App (const (Z.to_N v), nil) (* note: 64 is placeholder, to_N is unsound *)
+          | ident.Z_add => fun x y => App (addZ, [x; y])
 
           | ident.Z_modulo
-          | ident.Z_mul => fun x y => App (mul, None, [x; y])
+          | ident.Z_mul => fun x y => App (mulZ, [x; y])
           | ident.Z_pow
             => symex_T_error (Unhandled_identifier idc)
-          | ident.Z_sub => fun x y => y' <- App (neg, None, [y]); App (add, None, [x;y'])
+          | ident.Z_sub => fun x y => y' <- App (negZ, [y]); App (addZ, [x;y'])
           | ident.Z_opp
           | ident.Z_div
           | ident.Z_log2
           | ident.Z_log2_up
           | ident.Z_to_nat
             => symex_T_error (Unhandled_identifier idc)
-          | ident.Z_shiftr => fun x y => App (shr, None, [x; y])
-          | ident.Z_shiftl => fun x y => App (shl, None, [x; y])
-          | ident.Z_land => fun x y => App (and, None, [x; y])
-          | ident.Z_lor => fun x y => App (or, None, [x; y])
+          | ident.Z_shiftr => fun x y => App (shrZ, [x; y])
+          | ident.Z_shiftl => fun x y => App (shlZ, [x; y])
+          | ident.Z_land => fun x y => App (andZ, [x; y])
+          | ident.Z_lor => fun x y => App (orZ, [x; y])
           | ident.Z_min
           | ident.Z_max
             => symex_T_error (Unhandled_identifier idc)
            (* note for mulhuu/adc: the argument and output order is a guess, 64 is a kludge and we need something better to use the value of s whose type is var *)
           | ident.Z_mul_split => fun s x y =>
             s <- RevealWidth s;
-            lo <- App (mul, Some s, [x; y]);
-            hi <- App (mulhuu 64%N, Some s, [x; y]);
+            lo <- App (mul s, [x; y]);
+            hi <- App (mulhuu s, [x; y]);
             symex_return (lo, hi)
           | ident.Z_mul_high => fun s x y =>
             s <- RevealWidth s;
-            App (mulhuu 64%N, Some s, [x; y])
+            App (mulhuu s, [x; y])
           | ident.Z_add_get_carry => fun s x y =>
             s <- RevealWidth s;
-            a <- App (add     , None, [x; y]);
-            c <- App (addcarry, Some s, [x; y]);
+            a <- App (add s, [x; y]);
+            c <- App (addcarry s, [x; y]);
             symex_return (a, c)
-          | ident.Z_add_with_carry => fun x y z => App (add, None, [x; y; z])
+          | ident.Z_add_with_carry => fun x y z => App (addZ, [x; y; z])
           | ident.Z_add_with_get_carry => fun s x y z =>
             s <- RevealWidth s;
-            a <- App (add     , None, [x; y; z]);
-            c <- App (addcarry, Some s, [x; y; z]);
+            a <- App (add s, [x; y; z]);
+            c <- App (addcarry s, [x; y; z]);
             symex_return (a, c)
           | ident.Z_sub_get_borrow => fun s x y =>
             s <- RevealWidth s;
-            y' <- App (neg, Some s, [y]);
-            a <- App (add,         Some s, [x;y']);
-            c <- App (notaddcarry, Some s, [x;y']);
+            y' <- App (neg s, [y]);
+            a <- App (add         s, [x;y']);
+            c <- App (notaddcarry s, [x;y']);
             symex_return (a, c)
           | ident.Z_sub_with_get_borrow => fun s x y z =>
             s <- RevealWidth s;
-            y' <- App (neg, Some s, [y]);
-            z' <- App (neg, Some s, [z]);
-            a <- App (add,         Some s, [x;y';z']);
-            c <- App (notaddcarry, Some s, [x;y';z']);
+            y' <- App (neg s, [y]);
+            z' <- App (neg s, [z]);
+            a <- App (add s, [x;y';z']);
+            c <- App (notaddcarry s, [x;y';z']);
             symex_return (a, c)
           | ident.Z_ltz
             => symex_T_error (Unhandled_identifier idc)
-          | ident.Z_zselect => fun c x y => App (Symbolic.selectznz, None, [c; x; y])
+          | ident.Z_zselect => fun c x y => App (Symbolic.selectznz, [c; x; y])
           | ident.Z_add_modulo
             => symex_T_error (Unhandled_identifier idc)
           | ident.Z_truncating_shiftl => fun s x y =>
             s <- RevealConstant s;
-            App (shl, Some s, [x; y])
+            App (shl s, [x; y])
           | ident.Z_bneg
           | ident.Z_lnot_modulo
           | ident.Z_lxor
@@ -565,7 +565,7 @@ Proof.
                   idx2 <- symex_mod_zrange v2_idx r2;
                   symex_return (idx1, idx2)
           | ident.Z_of_nat
-            => fun n => App (const (N.of_nat n), None, nil) (* note: 64 is placeholder *)
+            => fun n => App (const (N.of_nat n), nil) (* note: 64 is placeholder *)
 
           | ident.Z_eqb
           | ident.Z_leb
@@ -677,15 +677,15 @@ Definition symex_asm_func
           match oarr with None => Symbolic.ret None
           | Some idxs =>
               addrs <- mapM (fun '(i, idx) =>
-                offset <- Symbolic.App ((const (8*N.of_nat i), Some 64), nil);
-                addr <- Symbolic.App ((add, Some 64), [base; offset]);
+                offset <- Symbolic.App ((const (8*N.of_nat i)), nil);
+                addr <- Symbolic.App (add 64, [base; offset]);
                 (fun s => Success (addr, update_mem_with s (cons (addr,idx))))
               ) (List.enumerate idxs);
               Symbolic.ret (Some addrs)
           end) (List.combine reg_available asminputs);
         _ <- SetReg rsp rsp_idx;
         _ <- mapM_ (fun '(i, idx) =>
-            a <- @Address (Some 64%N) {| mem_reg := rsp; mem_offset := Some (Z.opp (Z.of_nat(8*S i))); mem_is_byte := false; mem_extra_reg:=None |};
+            a <- @Address (64%N) {| mem_reg := rsp; mem_offset := Some (Z.opp (Z.of_nat(8*S i))); mem_is_byte := false; mem_extra_reg:=None |};
             (fun s => Success (tt, update_mem_with s (cons (a,idx))))
           ) (List.enumerate stack_placeholders);
         _ <- mapM_ SymexNormalInstruction (Option.List.map invert_rawline asm);
