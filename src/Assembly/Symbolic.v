@@ -666,6 +666,19 @@ Definition simplify_truncate_small :=
       then e'
       else e | _ => e end | _ => e end.
 
+
+Definition ones_expr := ExprApp (const 18446744073709551615, nil).
+
+Definition simplify_and_ones1 :=
+  fun e => match e with
+        | ExprApp (and 64%N, [ones_expr; y]) => y
+        | _ => e end.
+
+Definition simplify_and_ones2 :=
+  fun e => match e with
+        | ExprApp (and 64%N, [x;ones_expr]) => x    
+        | _ => e end.
+
 Definition simplify_expr : expr -> expr :=
   List.fold_left (fun e f => f e)
   [fun e => match interp0_expr e with
@@ -675,6 +688,8 @@ Definition simplify_expr : expr -> expr :=
   ;simplify_slice0
   ;simplify_set_slice_set_slice
   ;simplify_slice_set_slice
+  ;simplify_and_ones1
+  ;simplify_and_ones2      
   ;fun e => match e with
     ExprApp (o, args) =>
     if associative o then
@@ -708,6 +723,18 @@ Definition simplify_expr : expr -> expr :=
     | _ => e end | _ => e end
   ;fun e => match e with ExprApp (xor _,[x;y]) =>
     if expr_beq x y then ExprApp (const 0, nil) else e | _ => e end
+                    
+ (* ;fun e => match e with ExprApp ((and,s),[x;y]) =>
+                       match interp_expr x with
+                       | Some 18446744073709551615 => y
+                       | _ => e end
+                 | _ => e end
+
+ ;fun e => match e with ExprApp ((and,s),[x;y]) =>
+                       match interp_expr y with
+                       | Some 18446744073709551615 => x
+                       | _ => e end
+          | _ => e end**)
   ]%N%bool.
 Definition simplify (dag : dag) (e : node idx) : expr :=
   simplify_expr (reveal_node dag 2 e).
@@ -716,8 +743,8 @@ Lemma eval_simplify_expr c d e v : eval c d e v -> eval c d (simplify_expr e) v.
 Proof.
   intros H; cbv [simplify_expr].
 
-  Strategy 10000 [simplify_slice0 simplify_slice_set_slice simplify_truncate_small].
-  Local Opaque simplify_slice0 simplify_slice_set_slice simplify_truncate_small.
+  Strategy 10000 [simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_and_ones1 simplify_and_ones2].
+  Local Opaque simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_and_ones1 simplify_and_ones2.
   repeat match goal with (* one goal per rewrite rule *)
   | |- context G [fold_left ?f (cons ?r ?rs) ?e] =>
     let re := fresh "e" in
@@ -727,8 +754,8 @@ Proof.
         clear dependent e; rename re into e ]
   | |- context G [fold_left ?f nil ?e] => eassumption
   end.
-  Local Transparent simplify_slice0 simplify_slice_set_slice simplify_truncate_small.
-  all : cbv [simplify_slice0 simplify_slice_set_slice simplify_truncate_small] in *.
+  Local Transparent simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_and_ones1 simplify_and_ones2.
+  all : cbv [simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_and_ones1 simplify_and_ones2] in *.
 
   all : repeat match goal with
                | _ => solve [trivial]
