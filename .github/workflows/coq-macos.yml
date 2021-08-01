@@ -17,7 +17,7 @@ jobs:
 
     steps:
     - name: Set up OCaml
-      uses: avsm/setup-ocaml@v1.1.10
+      uses: ocaml/setup-ocaml@v1.1.11
       with:
         ocaml-version: 4.11.1
 

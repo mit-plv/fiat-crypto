@@ -55,7 +55,7 @@ jobs:
 
     steps:
     - name: Set up OCaml
-      uses: avsm/setup-ocaml@v1
+      uses: ocaml/setup-ocaml@v1.1.11
       with:
         ocaml-version: ${{ matrix.ocaml-version }}
 
@@ -113,7 +113,7 @@ jobs:
         echo ::group::opam list
         opam list
         echo ::endgroup::
-        
+
     - run: opam repo add coq-core-dev https://coq.inria.fr/opam/core-dev
     - run: opam repo add coq-released https://coq.inria.fr/opam/released
     - run: opam repo add coq-extra-dev https://coq.inria.fr/opam/extra-dev
@@ -141,12 +141,12 @@ jobs:
     - run: opam install coq-fiat-crypto ${{ matrix.opam-jobs-flag }}
       env:
         COQEXTRAFLAGS: ${{ matrix.coq-extra-flags }}
-        
+
     - name: cat opam logs (Linux, Mac)
       run: |
         for i in $(find ~/.opam/log/ -type f); do echo "::group::$i"; cat "$i"; echo "::endgroup::"; done
       if: ${{ always() && ( runner.os == 'Linux' || runner.os == 'macOS' ) }}
-        
+
     - name: cat opam logs (Windows, native)
       run: |
         opam exec -- cat ~/.opam/log/*
