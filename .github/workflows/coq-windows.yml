@@ -27,7 +27,7 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@v2.2.2
     - name: Set up OCaml
-      uses: ocaml/setup-ocaml@v1.1.12
+      uses: ocaml/setup-ocaml@v2.0.0-beta3
       with:
         ocaml-version: 4.11.1
     - run: opam install opam-depext
