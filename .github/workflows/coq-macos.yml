@@ -17,9 +17,9 @@ jobs:
 
     steps:
     - name: Set up OCaml
-      uses: ocaml/setup-ocaml@v2.0.0-beta3
+      uses: ocaml/setup-ocaml@v2
       with:
-        ocaml-version: 4.11.1
+        ocaml-compiler: 4.11.1
 
     - name: Install system dependencies
       run: |

@@ -17,7 +17,7 @@ jobs:
       fail-fast: false
       matrix:
         coq-version: ['dev', '8.13.1', '8.12.2', '8.11.1', '8.10.2', '8.9.1']
-        ocaml-version: ['4.11.1', '4.08.1']
+        ocaml-compiler: ['4.11.1', '4.08.1']
         os: ['ubuntu-latest', 'macos-latest', 'windows-latest']
         coq-extra-flags: ['-async-proofs-j 1', '']
         opam-jobs-flag: ['-j 1', '']
@@ -35,17 +35,17 @@ jobs:
         - os: 'windows-latest'
           opam-jobs-flag: ''
         - coq-version: 'dev'
-          ocaml-version: '4.08.1'
+          ocaml-compiler: '4.08.1'
         - coq-version: '8.13.1'
-          ocaml-version: '4.08.1'
+          ocaml-compiler: '4.08.1'
         - coq-version: '8.12.2'
-          ocaml-version: '4.08.1'
+          ocaml-compiler: '4.08.1'
         - coq-version: '8.11.1'
-          ocaml-version: '4.08.1'
+          ocaml-compiler: '4.08.1'
         - coq-version: '8.10.2'
-          ocaml-version: '4.11.1'
+          ocaml-compiler: '4.11.1'
         - coq-version: '8.9.1'
-          ocaml-version: '4.11.1'
+          ocaml-compiler: '4.11.1'
 
 
     runs-on: ${{ matrix.os }}
@@ -55,9 +55,9 @@ jobs:
 
     steps:
     - name: Set up OCaml
-      uses: ocaml/setup-ocaml@v2.0.0-beta3
+      uses: ocaml/setup-ocaml@v2
       with:
-        ocaml-version: ${{ matrix.ocaml-version }}
+        ocaml-compiler: ${{ matrix.ocaml-compiler }}
 
     - name: echo Linux build params
       run: |
