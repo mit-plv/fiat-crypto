@@ -113,7 +113,7 @@ Global Instance Show_OperationSize : Show OperationSize := show_N.
 
 Section S.
 Implicit Type s : OperationSize.
-Variant op := old s (_:symbol) | oldold (_:REG*option nat) | const (_ : N) | add s | addcarry s | notaddcarry s | addoverflow s | neg s | shl s | shr s | sar s | sarbytecarry s | sarbyteoverflow s | rcr s | rcrbytecarry s | and s | or s | xor s | slice (lo sz : N) | mul s | mulhuu s | set_slice (lo sz : N) | selectznz (* | ... *) | bzhi s
+Variant op := old s (_:symbol) | oldold (_:REG*option nat) | const (_ : N) | add s | addcarry s | notaddcarry s | addoverflow s | neg s | shl s | shr s | sar s | rcr s | rcrcarry s | and s | or s | xor s | slice (lo sz : N) | mul s | mulhuu s | set_slice (lo sz : N) | selectznz (* | ... *)
   | addZ | mulZ | negZ | shlZ | shrZ | andZ | orZ.
 End S.
 
@@ -130,14 +130,11 @@ Global Instance Show_op : Show op := fun o =>
   | shl s => "shl " ++ show s
   | shr s => "shr " ++ show s
   | sar s => "sar " ++ show s
-  | sarbytecarry s => "sarbytecarry " ++ show s
-  | sarbyteoverflow s => "sarbyteoverflow " ++ show s                 
   | rcr s => "rcr " ++ show s
-  | rcrbytecarry s => "rcrbytecarry " ++ show s                 
+  | rcrcarry s => "rcrcarry " ++ show s
   | and s => "and " ++ show s
   | or s => "or " ++ show s
   | xor s => "xor " ++ show s
-  | bzhi s => "bzhi" ++ show s                 
   | slice lo sz => "slice " ++ show lo ++ " " ++ show sz
   | mul s => "mul " ++ show s
   | mulhuu s => "mulhuu " ++ show s
@@ -156,7 +153,7 @@ Global Instance Show_op : Show op := fun o =>
 
 Definition associative o := match o with add _|mul _|or _|and _=> true | _ => false end.
 Definition commutative o := match o with add _|addcarry _|addoverflow _|mul _|mulhuu _ => true | _ => false end.
-Definition identity o := match o with add _|addcarry _|addoverflow _ => Some 0%N | mul _|mulhuu _=>Some 1%N |_=> None end.
+Definition identity o := match o with add _|addcarry _|addoverflow _ => Some 0%N | mul _|mulhuu _=>Some 1%N | and s => Some (N.ones s) |_=> None end.
 
 Definition node (A : Set) : Set := op * list A.
 Global Instance Show_node {A : Set} [show_A : Show A] : Show (node A) := show_prod.
@@ -679,37 +676,19 @@ Definition simplify_addoverflow_bit :=
       && option_beq N.eqb (interp0_op (addoverflow s) [a; 1]) (Some 1)
       then b
       else e | _ => e end%N%bool.
-
-
-Definition simplify_and_ones1 :=
+Definition simplify_addcarry_bit :=
   fun e => match e with
-        | ExprApp (and 64%N, [ExprApp (const 18446744073709551615, nil); y]) => y
-        | _ => e end.
-
-Definition simplify_and_ones2 :=
-  fun e => match e with
-        | ExprApp (and 64%N, [x; ExprApp (const 18446744073709551615, nil)]) => x    
-        | _ => e end.
-
-Definition simplify_bzhi :=
-  fun e => match e with
-        | ExprApp (bzhi s, [x; ExprApp (const 43, nil)]) => ExprApp (and s, [x;  ExprApp (const 8796093022207, nil)])
-        | ExprApp (bzhi s, [x; ExprApp (const 44, nil)]) => ExprApp (and s, [x;  ExprApp (const 17592186044415, nil)])
-        | ExprApp (bzhi s, [x; ExprApp (const 51, nil)]) => ExprApp (and s, [x;  ExprApp (const 2251799813685247, nil)])
-        | ExprApp (bzhi s, [x; ExprApp (const 56, nil)]) => ExprApp (and s, [x;  ExprApp (const 72057594037927935, nil)])
-        | ExprApp (bzhi s, [x; ExprApp (const 57, nil)]) => ExprApp (and s, [x;  ExprApp (const 144115188075855871, nil)])
-        | ExprApp (bzhi s, [x; ExprApp (const 58, nil)]) => ExprApp (and s, [x;  ExprApp (const 288230376151711743, nil)])                   | _ => e end.
+    ExprApp (addcarry s, ([ExprApp (const a, nil);b] (*|[b;ExprApp (const a, nil)]*) )) =>
+      if option_beq N.eqb (bound_expr b) (Some 1)
+      && option_beq N.eqb (interp0_op (addcarry s) [a; 0]) (Some 0)
+      && option_beq N.eqb (interp0_op (addcarry s) [a; 1]) (Some 1)
+      then b
+      else e | _ => e end%N%bool.
 
 Definition simplify_rcr :=
   fun e => match e with
         | ExprApp (rcr s, [x; ExprApp (addcarry _, _); ExprApp (const 1, nil)]) => ExprApp (mul s, [x;  ExprApp (const 64, nil)]) (*not sure about this mul s*)   
-        | ExprApp (rcrbytecarry _, [x; ExprApp (addcarry s, xs); ExprApp (const 1, nil)]) => ExprApp (addcarry s, xs)
-        | _ => e end.
-
-Definition simplify_sarbyte :=
-  fun e => match e with
-        | ExprApp (sarbytecarry s, [x; ExprApp (const 1, nil)]) => x
-        | ExprApp (sarbyteoverflow s, [x; ExprApp (const 1, nil)]) =>  ExprApp (const 0, nil)
+        | ExprApp (rcrcarry _, [x; ExprApp (addcarry s, xs); ExprApp (const 1, nil)]) => ExprApp (addcarry s, xs)
         | _ => e end.
 
 Definition simplify_expr : expr -> expr :=
@@ -720,11 +699,7 @@ Definition simplify_expr : expr -> expr :=
   ;simplify_slice0
   ;simplify_set_slice_set_slice
   ;simplify_slice_set_slice
-  ;simplify_and_ones1
-  ;simplify_and_ones2      
-  ;simplify_bzhi
   ;simplify_rcr    
-  ;simplify_sarbyte
   ;simplify_truncate_small
   ;fun e => match e with
     ExprApp (o, args) =>
@@ -769,8 +744,8 @@ Lemma eval_simplify_expr c d e v : eval c d e v -> eval c d (simplify_expr e) v.
 Proof.
   intros H; cbv [simplify_expr].
 
-  Strategy 10000 [simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_and_ones1 simplify_and_ones2 simplify_bzhi simplify_rcr simplify_sarbyte simplify_addoverflow_bit].
-  Local Opaque simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_and_ones1 simplify_and_ones2 simplify_bzhi simplify_rcr simplify_sarbyte simplify_addoverflow_bit.
+  Strategy 10000 [simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_rcr simplify_addoverflow_bit].
+  Local Opaque simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_rcr simplify_addoverflow_bit.
   repeat match goal with (* one goal per rewrite rule *)
   | |- context G [fold_left ?f (cons ?r ?rs) ?e] =>
     let re := fresh "e" in
@@ -780,8 +755,8 @@ Proof.
         clear dependent e; rename re into e ]
   | |- context G [fold_left ?f nil ?e] => eassumption
   end.
-  Local Transparent simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_and_ones1 simplify_and_ones2 simplify_bzhi simplify_rcr simplify_sarbyte simplify_addoverflow_bit.
-  all : cbv [simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_and_ones1 simplify_and_ones2 simplify_bzhi simplify_rcr simplify_sarbyte simplify_addoverflow_bit] in *.
+  Local Transparent simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_rcr simplify_addoverflow_bit.
+  all : cbv [simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_rcr simplify_addoverflow_bit] in *.
 
   all : repeat match goal with
                | _ => solve [trivial]
