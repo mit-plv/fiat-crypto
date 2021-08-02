@@ -37,8 +37,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: submodules-init
-      uses: snickerbockers/submodules-init@v4
+      with:
+        submodules: true
     - name: install Coq
       run: |
         if [ ! -z "$PPA" ]; then sudo add-apt-repository "$PPA" -y; fi

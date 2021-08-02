@@ -22,8 +22,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: submodules-init
-      uses: snickerbockers/submodules-init@v4
+      with:
+        submodules: true
     - name: Setup Python
       uses: actions/setup-python@v2.2.2
     - name: Set up OCaml
