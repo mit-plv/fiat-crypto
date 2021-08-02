@@ -16,6 +16,9 @@ jobs:
       COQ_VERSION: "8.13.1"
 
     steps:
+    - uses: actions/checkout@v2
+    - name: submodules-init
+      uses: snickerbockers/submodules-init@v4
     - name: Set up OCaml
       uses: ocaml/setup-ocaml@v2
       with:
@@ -70,9 +73,6 @@ jobs:
         echo "::group::true | coqtop"
         true | coqtop
         echo "::endgroup::"
-    - uses: actions/checkout@v2
-    - name: submodules-init
-      uses: snickerbockers/submodules-init@v4
     - name: deps
       run: |
         eval $(opam env)

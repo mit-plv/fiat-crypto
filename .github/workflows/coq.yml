@@ -36,6 +36,9 @@ jobs:
     env: ${{ matrix.env }}
 
     steps:
+    - uses: actions/checkout@v2
+    - name: submodules-init
+      uses: snickerbockers/submodules-init@v4
     - name: install Coq
       run: |
         if [ ! -z "$PPA" ]; then sudo add-apt-repository "$PPA" -y; fi
@@ -74,9 +77,6 @@ jobs:
         echo "::group::true | coqtop"
         true | coqtop
         echo "::endgroup::"
-    - uses: actions/checkout@v2
-    - name: submodules-init
-      uses: snickerbockers/submodules-init@v4
     - name: deps
       run: etc/ci/github-actions-make.sh -j2 deps
     - name: all
