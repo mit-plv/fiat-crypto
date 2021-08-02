@@ -13,7 +13,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-      with:
-        submodules: true
+    - name: submodules-init
+      uses: snickerbockers/submodules-init@v4
     - name: make only-test-json-files
       run: make only-test-json-files EXTERNAL_DEPENDENCIES=1

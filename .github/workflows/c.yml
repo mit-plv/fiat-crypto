@@ -13,8 +13,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-      with:
-        submodules: true
+    - name: submodules-init
+      uses: snickerbockers/submodules-init@v4
     - name: install gcc
       run: |
         sudo sed -i 's/azure\.//' /etc/apt/sources.list
