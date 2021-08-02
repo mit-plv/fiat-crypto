@@ -113,7 +113,7 @@ Global Instance Show_OperationSize : Show OperationSize := show_N.
 
 Section S.
 Implicit Type s : OperationSize.
-Variant op := old s (_:symbol) | oldold (_:REG*option nat) | const (_ : N) | add s | addcarry s | notaddcarry s | addoverflow s | neg s | shl s | shr s | sar s | rcr s | and s | or s | xor s | slice (lo sz : N) | mul s | mulhuu s | set_slice (lo sz : N) | selectznz (* | ... *) | bzhi s
+Variant op := old s (_:symbol) | oldold (_:REG*option nat) | const (_ : N) | add s | addcarry s | notaddcarry s | addoverflow s | neg s | shl s | shr s | sar s | rcr s | rcrbytecarry s | and s | or s | xor s | slice (lo sz : N) | mul s | mulhuu s | set_slice (lo sz : N) | selectznz (* | ... *) | bzhi s
   | addZ | mulZ | negZ | shlZ | shrZ | andZ | orZ.
 End S.
 
@@ -131,6 +131,7 @@ Global Instance Show_op : Show op := fun o =>
   | shr s => "shr " ++ show s
   | sar s => "sar " ++ show s
   | rcr s => "rcr " ++ show s
+  | rcrbytecarry s => "rcrbytecarry " ++ show s                 
   | and s => "and " ++ show s
   | or s => "or " ++ show s
   | xor s => "xor " ++ show s
@@ -670,8 +671,6 @@ Definition simplify_truncate_small :=
       else e | _ => e end | _ => e end.
 
 
-
-
 Definition simplify_and_ones1 :=
   fun e => match e with
         | ExprApp (and 64%N, [ExprApp (const 18446744073709551615, nil); y]) => y
@@ -691,6 +690,12 @@ Definition simplify_bzhi :=
         | ExprApp (bzhi s, [x; ExprApp (const 57, nil)]) => ExprApp (and s, [x;  ExprApp (const 144115188075855871, nil)])
         | ExprApp (bzhi s, [x; ExprApp (const 58, nil)]) => ExprApp (and s, [x;  ExprApp (const 288230376151711743, nil)])                   | _ => e end.
 
+Definition simplify_rcr :=
+  fun e => match e with
+        | ExprApp (rcr s, [x; ExprApp (addcarry _, _); ExprApp (const 1, nil)]) => ExprApp (mul s, [x;  ExprApp (const 64, nil)]) (*not sure about this mul s*)   
+        | ExprApp (rcrbytecarry _, [x; ExprApp (addcarry s, xs); ExprApp (const 1, nil)]) => ExprApp (addcarry s, xs)
+        | _ => e end.
+
 Definition simplify_expr : expr -> expr :=
   List.fold_left (fun e f => f e)
   [fun e => match interp0_expr e with
@@ -703,7 +708,7 @@ Definition simplify_expr : expr -> expr :=
   ;simplify_and_ones1
   ;simplify_and_ones2      
   ;simplify_bzhi
-      
+  ;simplify_rcr    
   ;fun e => match e with
     ExprApp (o, args) =>
     if associative o then
@@ -746,8 +751,8 @@ Lemma eval_simplify_expr c d e v : eval c d e v -> eval c d (simplify_expr e) v.
 Proof.
   intros H; cbv [simplify_expr].
 
-  Strategy 10000 [simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_and_ones1 simplify_and_ones2 simplify_bzhi].
-  Local Opaque simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_and_ones1 simplify_and_ones2 simplify_bzhi.
+  Strategy 10000 [simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_and_ones1 simplify_and_ones2 simplify_bzhi simplify_rcr].
+  Local Opaque simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_and_ones1 simplify_and_ones2 simplify_bzhi simplify_rcr.
   repeat match goal with (* one goal per rewrite rule *)
   | |- context G [fold_left ?f (cons ?r ?rs) ?e] =>
     let re := fresh "e" in
@@ -757,8 +762,8 @@ Proof.
         clear dependent e; rename re into e ]
   | |- context G [fold_left ?f nil ?e] => eassumption
   end.
-  Local Transparent simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_and_ones1 simplify_and_ones2 simplify_bzhi.
-  all : cbv [simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_and_ones1 simplify_and_ones2 simplify_bzhi] in *.
+  Local Transparent simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_and_ones1 simplify_and_ones2 simplify_bzhi simplify_rcr.
+  all : cbv [simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_and_ones1 simplify_and_ones2 simplify_bzhi simplify_rcr] in *.
 
   all : repeat match goal with
                | _ => solve [trivial]
