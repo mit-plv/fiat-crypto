@@ -113,7 +113,7 @@ Global Instance Show_OperationSize : Show OperationSize := show_N.
 
 Section S.
 Implicit Type s : OperationSize.
-Variant op := old s (_:symbol) | oldold (_:REG*option nat) | const (_ : N) | add s | addcarry s | notaddcarry s | addoverflow s | neg s | shl s | shr s | sar s | and s | or s | xor s | slice (lo sz : N) | mul s | mulhuu s | set_slice (lo sz : N) | selectznz (* | ... *)
+Variant op := old s (_:symbol) | oldold (_:REG*option nat) | const (_ : N) | add s | addcarry s | notaddcarry s | addoverflow s | neg s | shl s | shr s | sar s | rcr s | and s | or s | xor s | slice (lo sz : N) | mul s | mulhuu s | set_slice (lo sz : N) | selectznz (* | ... *) | bzhi s
   | addZ | mulZ | negZ | shlZ | shrZ | andZ | orZ.
 End S.
 
@@ -130,15 +130,18 @@ Global Instance Show_op : Show op := fun o =>
   | shl s => "shl " ++ show s
   | shr s => "shr " ++ show s
   | sar s => "sar " ++ show s
+  | rcr s => "rcr " ++ show s
   | and s => "and " ++ show s
   | or s => "or " ++ show s
   | xor s => "xor " ++ show s
+  | bzhi s => "bzhi" ++ show s                 
   | slice lo sz => "slice " ++ show lo ++ " " ++ show sz
   | mul s => "mul " ++ show s
   | mulhuu s => "mulhuu " ++ show s
   | set_slice lo sz => "set_slice " ++ show lo ++ " " ++ show sz
   | selectznz => "selectznz"
 
+             
   | addZ => "addZ"
   | mulZ => "mulZ"
   | negZ => "negZ"
@@ -667,17 +670,26 @@ Definition simplify_truncate_small :=
       else e | _ => e end | _ => e end.
 
 
-Definition ones_expr := ExprApp (const 18446744073709551615, nil).
+
 
 Definition simplify_and_ones1 :=
   fun e => match e with
-        | ExprApp (and 64%N, [ones_expr; y]) => y
+        | ExprApp (and 64%N, [ExprApp (const 18446744073709551615, nil); y]) => y
         | _ => e end.
 
 Definition simplify_and_ones2 :=
   fun e => match e with
-        | ExprApp (and 64%N, [x;ones_expr]) => x    
+        | ExprApp (and 64%N, [x; ExprApp (const 18446744073709551615, nil)]) => x    
         | _ => e end.
+
+Definition simplify_bzhi :=
+  fun e => match e with
+        | ExprApp (bzhi s, [x; ExprApp (const 43, nil)]) => ExprApp (and s, [x;  ExprApp (const 8796093022207, nil)])
+        | ExprApp (bzhi s, [x; ExprApp (const 44, nil)]) => ExprApp (and s, [x;  ExprApp (const 17592186044415, nil)])
+        | ExprApp (bzhi s, [x; ExprApp (const 51, nil)]) => ExprApp (and s, [x;  ExprApp (const 2251799813685247, nil)])
+        | ExprApp (bzhi s, [x; ExprApp (const 56, nil)]) => ExprApp (and s, [x;  ExprApp (const 72057594037927935, nil)])
+        | ExprApp (bzhi s, [x; ExprApp (const 57, nil)]) => ExprApp (and s, [x;  ExprApp (const 144115188075855871, nil)])
+        | ExprApp (bzhi s, [x; ExprApp (const 58, nil)]) => ExprApp (and s, [x;  ExprApp (const 288230376151711743, nil)])                   | _ => e end.
 
 Definition simplify_expr : expr -> expr :=
   List.fold_left (fun e f => f e)
@@ -690,6 +702,8 @@ Definition simplify_expr : expr -> expr :=
   ;simplify_slice_set_slice
   ;simplify_and_ones1
   ;simplify_and_ones2      
+  ;simplify_bzhi
+      
   ;fun e => match e with
     ExprApp (o, args) =>
     if associative o then
@@ -724,17 +738,6 @@ Definition simplify_expr : expr -> expr :=
   ;fun e => match e with ExprApp (xor _,[x;y]) =>
     if expr_beq x y then ExprApp (const 0, nil) else e | _ => e end
                     
- (* ;fun e => match e with ExprApp ((and,s),[x;y]) =>
-                       match interp_expr x with
-                       | Some 18446744073709551615 => y
-                       | _ => e end
-                 | _ => e end
-
- ;fun e => match e with ExprApp ((and,s),[x;y]) =>
-                       match interp_expr y with
-                       | Some 18446744073709551615 => x
-                       | _ => e end
-          | _ => e end**)
   ]%N%bool.
 Definition simplify (dag : dag) (e : node idx) : expr :=
   simplify_expr (reveal_node dag 2 e).
@@ -743,8 +746,8 @@ Lemma eval_simplify_expr c d e v : eval c d e v -> eval c d (simplify_expr e) v.
 Proof.
   intros H; cbv [simplify_expr].
 
-  Strategy 10000 [simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_and_ones1 simplify_and_ones2].
-  Local Opaque simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_and_ones1 simplify_and_ones2.
+  Strategy 10000 [simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_and_ones1 simplify_and_ones2 simplify_bzhi].
+  Local Opaque simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_and_ones1 simplify_and_ones2 simplify_bzhi.
   repeat match goal with (* one goal per rewrite rule *)
   | |- context G [fold_left ?f (cons ?r ?rs) ?e] =>
     let re := fresh "e" in
@@ -754,8 +757,8 @@ Proof.
         clear dependent e; rename re into e ]
   | |- context G [fold_left ?f nil ?e] => eassumption
   end.
-  Local Transparent simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_and_ones1 simplify_and_ones2.
-  all : cbv [simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_and_ones1 simplify_and_ones2] in *.
+  Local Transparent simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_and_ones1 simplify_and_ones2 simplify_bzhi.
+  all : cbv [simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_and_ones1 simplify_and_ones2 simplify_bzhi] in *.
 
   all : repeat match goal with
                | _ => solve [trivial]
