@@ -155,8 +155,8 @@ Global Instance Show_op : Show op := fun o =>
   end%string.
 
 Definition associative o := match o with add _|mul _|or _|and _=> true | _ => false end.
-Definition commutative o := match o with add _|addcarry _|mul _|mulhuu _ => true | _ => false end.
-Definition identity o := match o with add _|addcarry _ => Some 0%N | mul _|mulhuu _=>Some 1%N |_=> None end.
+Definition commutative o := match o with add _|addcarry _|addoverflow _|mul _|mulhuu _ => true | _ => false end.
+Definition identity o := match o with add _|addcarry _|addoverflow _ => Some 0%N | mul _|mulhuu _=>Some 1%N |_=> None end.
 
 Definition node (A : Set) : Set := op * list A.
 Global Instance Show_node {A : Set} [show_A : Show A] : Show (node A) := show_prod.
@@ -196,13 +196,13 @@ Section WithContext.
   Context (ctx : symbol -> option N).
   Definition interp_op o args :=
     let keep n x := N.land x (N.ones n) in
-    let signed s n : Z := (Z.land (Z.shiftl 1 (Z.of_N s-1) + Z.of_N n) (Z.ones (Z.of_N s)) - Z.shiftl 1 (Z.of_N s-1))%Z in
+    let signed s n : Z := (Z.land (Z.shiftl 1 (Z.of_N s-1) + n) (Z.ones (Z.of_N s)) - Z.shiftl 1 (Z.of_N s-1))%Z in
     match o, args with
     | old s x, nil => match ctx x with Some v => Some (keep s v) | None => None end
     | add s, args => Some (keep s (List.fold_right N.add 0 args))
     | addoverflow s, args => Some (
-        let v := List.fold_right Z.add 0%Z (List.map (signed s) args) in
-        if Z.eqb v (Z.land v (Z.ones (Z.of_N s))) then 0 else 1)
+        let v := List.fold_right Z.add 0%Z (List.map (fun x => signed s (Z.of_N x)) args) in
+        if Z.eqb v (signed s v) then 0 else 1)
     | xor s, args => Some (keep s (List.fold_right N.lxor 0 args))
     | neg s, [a] => Some (keep s (2^s - a))
     (* note: this case is real awkward, consider Z? *)
@@ -671,6 +671,14 @@ Definition simplify_truncate_small :=
       if N.leb b (N.ones s)
       then e'
       else e | _ => e end | _ => e end.
+Definition simplify_addoverflow_bit :=
+  fun e => match e with
+    ExprApp (addoverflow s, ([ExprApp (const a, nil);b] (*|[b;ExprApp (const a, nil)]*) )) =>
+      if option_beq N.eqb (bound_expr b) (Some 1)
+      && option_beq N.eqb (interp0_op (addoverflow s) [a; 0]) (Some 0)
+      && option_beq N.eqb (interp0_op (addoverflow s) [a; 1]) (Some 1)
+      then b
+      else e | _ => e end%N%bool.
 
 
 Definition simplify_and_ones1 :=
@@ -709,7 +717,6 @@ Definition simplify_expr : expr -> expr :=
   [fun e => match interp0_expr e with
             | Some v => ExprApp (const v, nil)
             | _ => e end
-  ;simplify_truncate_small
   ;simplify_slice0
   ;simplify_set_slice_set_slice
   ;simplify_slice_set_slice
@@ -718,6 +725,7 @@ Definition simplify_expr : expr -> expr :=
   ;simplify_bzhi
   ;simplify_rcr    
   ;simplify_sarbyte
+  ;simplify_truncate_small
   ;fun e => match e with
     ExprApp (o, args) =>
     if associative o then
@@ -749,6 +757,7 @@ Definition simplify_expr : expr -> expr :=
         | _ => ExprApp (o, args)
         end
     | _ => e end | _ => e end
+  ;simplify_addoverflow_bit
   ;fun e => match e with ExprApp (xor _,[x;y]) =>
     if expr_beq x y then ExprApp (const 0, nil) else e | _ => e end
                     
@@ -760,8 +769,8 @@ Lemma eval_simplify_expr c d e v : eval c d e v -> eval c d (simplify_expr e) v.
 Proof.
   intros H; cbv [simplify_expr].
 
-  Strategy 10000 [simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_and_ones1 simplify_and_ones2 simplify_bzhi simplify_rcr simplify_sarbyte].
-  Local Opaque simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_and_ones1 simplify_and_ones2 simplify_bzhi simplify_rcr simplify_sarbyte.
+  Strategy 10000 [simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_and_ones1 simplify_and_ones2 simplify_bzhi simplify_rcr simplify_sarbyte simplify_addoverflow_bit].
+  Local Opaque simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_and_ones1 simplify_and_ones2 simplify_bzhi simplify_rcr simplify_sarbyte simplify_addoverflow_bit.
   repeat match goal with (* one goal per rewrite rule *)
   | |- context G [fold_left ?f (cons ?r ?rs) ?e] =>
     let re := fresh "e" in
@@ -771,8 +780,8 @@ Proof.
         clear dependent e; rename re into e ]
   | |- context G [fold_left ?f nil ?e] => eassumption
   end.
-  Local Transparent simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_and_ones1 simplify_and_ones2 simplify_bzhi simplify_rcr simplify_sarbyte.
-  all : cbv [simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_and_ones1 simplify_and_ones2 simplify_bzhi simplify_rcr simplify_sarbyte] in *.
+  Local Transparent simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_and_ones1 simplify_and_ones2 simplify_bzhi simplify_rcr simplify_sarbyte simplify_addoverflow_bit.
+  all : cbv [simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_and_ones1 simplify_and_ones2 simplify_bzhi simplify_rcr simplify_sarbyte simplify_addoverflow_bit] in *.
 
   all : repeat match goal with
                | _ => solve [trivial]
@@ -804,6 +813,8 @@ Proof.
                end.
   { econstructor; eauto; []; cbn [interp_op option_map].
     f_equal; eauto using eval_eval, eval_eval0. }
+  admit.
+  admit.
   admit.
   admit.
   admit.
@@ -974,6 +985,11 @@ Definition SetFlag f i : M unit :=
   fun s => Success (tt, update_flag_with s (fun s => set_flag s f i)).
 Definition HavocFlags : M unit :=
   fun s => Success (tt, update_flag_with s (fun _ => Tuple.repeat None 6)).
+Definition PreserveFlag {T} (f : FLAG) (k : M T) : M T :=
+  vf <- (fun s => Success (get_flag s f, s));
+  x <- k;
+  _ <- (fun s => Success (tt, update_flag_with s (fun s => set_flag_internal s f vf)));
+  ret x.
 Definition SetReg64 rn i : M unit :=
   fun s => Success (tt, update_reg_with s (fun s => set_reg s rn i)).
 Definition Store64 (a v : idx) : M unit :=
@@ -1100,9 +1116,11 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
   | Syntax.add, [dst; src] =>
     v <- Symeval (add s@(dst, src));
     c <- Symeval (addcarry s@(dst, src));
+    o <- Symeval (addoverflow s@(dst, src));
     _ <- SetOperand dst v;
     _ <- HavocFlags;
-    SetFlag CF c
+    _ <- SetFlag CF c;
+    SetFlag OF o
   | Syntax.adc, [dst; src] =>
     v <- Symeval (add s@(dst, src, CF));
     c <- Symeval (addcarry s@(dst, src, CF));
@@ -1116,9 +1134,17 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
     _ <- SetOperand dst v;
     SetFlag f c
   | Syntax.sub, [dst; src] =>
-    v <- Symeval (add s@(dst, PreApp (neg s) [PreARG src]));
+    v <- Symeval (add         s@(dst, PreApp (neg s) [PreARG src]));
+    c <- Symeval (notaddcarry s@(dst, PreApp (neg s) [PreARG src]));
+    _ <- HavocFlags;
     _ <- SetOperand dst v;
-    HavocFlags
+    SetFlag CF c
+  | Syntax.sbb, [dst; src] =>
+    v <- Symeval (add         s@(dst, PreApp (neg s) [PreARG src], PreApp (neg s) [PreFLG CF]));
+    c <- Symeval (notaddcarry s@(dst, PreApp (neg s) [PreARG src], PreApp (neg s) [PreFLG CF]));
+    _ <- HavocFlags;
+    _ <- SetOperand dst v;
+    SetFlag CF c
   | lea, [dst; mem src] =>
     a <- Address src;
     SetOperand dst a
@@ -1136,7 +1162,8 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
   | Syntax.and, [dst; src] =>
     v <- Symeval (and s@(dst,src));
     _ <- SetOperand dst v;
-    HavocFlags
+    _ <- HavocFlags;
+    zero <- Symeval (PreApp (const 0) nil); _ <- SetFlag CF zero; SetFlag OF zero
   | Syntax.bzhi, [dst; src; cnt] =>
     cnt <- GetOperand cnt;
     cnt <- RevealConst cnt;
@@ -1174,15 +1201,14 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
     v <- Symeval (add s@(dst, PreARG 1%Z));
     o <- Symeval (addoverflow s@(dst, PreARG 1%Z));
     _ <- SetOperand dst v;
-    cf <- GetFlag CF; _ <- HavocFlags;
-    _ <- SetFlag CF cf; SetFlag OF o
+    _ <- PreserveFlag CF HavocFlags;
+    SetFlag OF o
   | dec, [dst] =>
-    orig <- GetOperand dst; orig <- Reveal 1 orig;
-    v <- Symeval (add s@(dst, PreApp (neg s) [PreARG 1%Z]));
+    v <- Symeval (add s@(dst, PreARG (-1)%Z));
+    o <- Symeval (addoverflow s@(dst, PreARG (-1)%Z));
     _ <- SetOperand dst v;
-    cf <- GetFlag CF; _ <- HavocFlags; _ <- SetFlag CF cf;
-    if match orig with ExprApp (const n, nil) => n =? 0 | _ => false end
-    then zero <- Symeval (PreApp (const 0) nil); SetFlag OF zero else SetFlag CF cf
+    _ <- PreserveFlag CF HavocFlags;
+    SetFlag OF o
   | test, [a;b] =>
       _ <- HavocFlags;
     zero <- Symeval (PreApp (const 0) nil);
