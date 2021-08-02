@@ -630,11 +630,16 @@ Proof.
   *)
 Admitted.
 
-Definition bound_expr e : option N := (* e <= r *)
+Fixpoint bound_expr e : option N := (* e <= r *)
   match e with
   | ExprApp (const v, _) => Some v
-  | ExprApp ((old s _ | add s | mul s | shl s | shr s | sar s | neg s | mulhuu s | and s | or s | xor s), _) => Some (N.ones s)
-  | ExprApp ((addcarry _ | notaddcarry _ | addoverflow _), _) => Some 1%N
+  | ExprApp (add s, args) =>
+      Some  match Option.List.lift (List.map bound_expr args) with
+            | Some bounds => N.min (List.fold_right N.add 0%N bounds) (N.ones s)
+            | None => N.ones s
+            end
+  | ExprApp ((old s _ | slice _ s | mul s | shl s | shr s | sar s | neg s | mulhuu s | and s | or s | xor s), _) => Some (N.ones s)
+  | ExprApp ((addcarry _ | notaddcarry _ | addoverflow _ | rcrcarry _ | nonzero), _) => Some 1%N
   | _ => None
   end.
 
@@ -648,7 +653,6 @@ Proof.
     rewrite ?N.land_ones, ?N.ones_equiv;
     try match goal with |- context [(?a mod ?b)%N] => pose proof N.mod_bound_pos a b ltac:(Lia.lia) end;
     try Lia.lia.
-    assert (0 < 2^s)%N as HH by admit. pose proof (H HH). Lia.lia.
     assert (0 < 2^s)%N as HH by admit. pose proof (H HH). Lia.lia.
 Admitted.
 
