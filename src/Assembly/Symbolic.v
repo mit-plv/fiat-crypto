@@ -777,7 +777,7 @@ Definition simplify_expr : expr -> expr :=
 Definition simplify (dag : dag) (e : node idx) : expr :=
   simplify_expr (reveal_node dag 2 e).
 
-Lemma eval_simplify_expr c d e v : eval c d e v -> eval c d (simplify_expr e) v.
+(*Lemma eval_simplify_expr c d e v : eval c d e v -> eval c d (simplify_expr e) v.
 Proof.
   intros H; cbv [simplify_expr].
 
@@ -849,7 +849,7 @@ Admitted.
 
 Lemma eval_simplify G d n v : eval_node G d n v -> eval G d (simplify d n) v.
 Proof. eauto using eval_simplify_expr, eval_node_reveal_node. Qed.
-
+*)
 Definition reg_state := Tuple.tuple (option idx) 16.
 Definition flag_state := Tuple.tuple (option idx) 6.
 Definition mem_state := list (idx * idx).
@@ -1189,13 +1189,16 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
     v <- Symeval (and s@(src,PreApp (const (N.ones (N.land cnt (N.ones (N.log2 s))))) nil));
     _ <- SetOperand dst v;
     HavocFlags
- (* | Syntax.rcr, [dst; cnt] =>
+  | Syntax.rcr, [dst; cnt] =>
     x <- GetOperand dst;
     c <- GetOperand cnt; c <- Reveal 1 c;
     _ <- HavocFlags;
     if match c with ExprApp (const 1%N, nil) => true | _ => false end
-    then (cf <- App ((slice 0 1), cons (x) nil); _ <- SetFlag CF cf)
-    else ret tt  *)
+    then (
+      cf <- App ((slice 0 1), cons (x) nil);
+      _ <- SetFlag CF cf;
+      zero <- Symeval (PreApp (const 0) nil); SetFlag OF zero)
+    else ret tt    
   | mulx, [hi; lo; src2] =>
     let src1 : ARG := rdx in
     vl <- Symeval (mul s@(src1,src2));
