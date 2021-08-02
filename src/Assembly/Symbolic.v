@@ -777,7 +777,7 @@ Definition simplify_expr : expr -> expr :=
 Definition simplify (dag : dag) (e : node idx) : expr :=
   simplify_expr (reveal_node dag 2 e).
 
-(*Lemma eval_simplify_expr c d e v : eval c d e v -> eval c d (simplify_expr e) v.
+Lemma eval_simplify_expr c d e v : eval c d e v -> eval c d (simplify_expr e) v.
 Proof.
   intros H; cbv [simplify_expr].
 
@@ -849,7 +849,7 @@ Admitted.
 
 Lemma eval_simplify G d n v : eval_node G d n v -> eval G d (simplify d n) v.
 Proof. eauto using eval_simplify_expr, eval_node_reveal_node. Qed.
-*)
+
 Definition reg_state := Tuple.tuple (option idx) 16.
 Definition flag_state := Tuple.tuple (option idx) 6.
 Definition mem_state := list (idx * idx).
