@@ -1186,7 +1186,7 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
   | Syntax.bzhi, [dst; src; cnt] =>
     cnt <- GetOperand cnt;
     cnt <- RevealConst cnt;
-    v <- Symeval (and s@(dst,PreApp (const (N.ones (N.land cnt (N.ones (N.log2 s))))) nil));
+    v <- Symeval (and s@(src,PreApp (const (N.ones (N.land cnt (N.ones (N.log2 s))))) nil));
     _ <- SetOperand dst v;
     HavocFlags
  (* | Syntax.rcr, [dst; cnt] =>
