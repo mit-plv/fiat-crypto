@@ -689,22 +689,24 @@ Definition simplify_truncate_small :=
       if N.leb b (N.ones s)
       then e'
       else e | _ => e end | _ => e end.
-Definition simplify_addoverflow_bit :=
-  fun e => match e with
-    ExprApp (addoverflow s, ([ExprApp (const a, nil);b] (*|[b;ExprApp (const a, nil)]*) )) =>
-      if option_beq N.eqb (bound_expr b) (Some 1)
-      && option_beq N.eqb (interp0_op (addoverflow s) [a; 0]) (Some 0)
-      && option_beq N.eqb (interp0_op (addoverflow s) [a; 1]) (Some 1)
-      then b
-      else e | _ => e end%N%bool.
 Definition simplify_addcarry_bit :=
   fun e => match e with
-    ExprApp (addcarry s, ([ExprApp (const a, nil);b] (*|[b;ExprApp (const a, nil)]*) )) =>
-      if option_beq N.eqb (bound_expr b) (Some 1)
-      && option_beq N.eqb (interp0_op (addcarry s) [a; 0]) (Some 0)
-      && option_beq N.eqb (interp0_op (addcarry s) [a; 1]) (Some 1)
-      then b
-      else e | _ => e end%N%bool.
+    ExprApp (addcarry s, ([ExprApp (const a, nil);b])) =>
+      if option_beq N.eqb (bound_expr b) (Some 1) then
+      match interp0_op (addcarry s) [a; 0] , interp0_op (addcarry s) [a; 1] with
+      | Some 0, Some 1 => b
+      | Some 0, Some 0 => ExprApp (const 0, nil)
+      | _, _ => e
+      end else e | _ => e end%N%bool.
+Definition simplify_addoverflow_bit :=
+  fun e => match e with
+    ExprApp (addoverflow s, ([ExprApp (const a, nil);b])) =>
+      if option_beq N.eqb (bound_expr b) (Some 1) then
+      match interp0_op (addoverflow s) [a; 0] , interp0_op (addoverflow s) [a; 1] with
+      | Some 0, Some 1 => b
+      | Some 0, Some 0 => ExprApp (const 0, nil)
+      | _, _ => e
+      end else e | _ => e end%N%bool.
 Definition simplify_nonzero_bit :=
   fun e => match e with
     ExprApp (nonzero, [b]) =>
@@ -848,6 +850,10 @@ Proof.
                end.
   { econstructor; eauto; []; cbn [interp_op option_map].
     f_equal; eauto using eval_eval, eval_eval0. }
+  admit.
+  admit.
+  admit.
+  admit.
   admit.
   admit.
   admit.
