@@ -324,12 +324,29 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
       let st := if cnt =? 1 then SetFlag st OF (N.testbit v1 (s-1)) else st in
       let st := if cnt <? s then SetFlag st CF (N.testbit v1 (cnt-1)) else st in
       Some (HavocFlag st AF)
+  | rcr, [dst; cnt] =>
+    v1 <- DenoteOperand sa s st dst;
+    cnt <- DenoteOperand sa s st cnt;
+    let cnt :=
+      if N.eqb s 8 then N.land cnt 0x1f mod 9 else
+      if N.eqb s 16 then N.land cnt 0x1f mod 17 else
+      N.land cnt (s-1) in
+    c <- get_flag st CF;
+    let v1c := N.lor v1 (N.shiftl (N.b2n c) s) in
+    let l := N.lor v1c (N.shiftl v1 (1+s)) in
+    let v := N.shiftr l cnt in
+    st <- SetOperand sa s st dst v;
+    Some (
+      if cnt =? 0 then st else
+      let st := SetFlag st CF (N.testbit v1c (cnt-1)) in
+      if cnt =? 1 then SetFlag st OF (xorb (N.testbit v (s-1)) (N.testbit v (s-2))) else st)
   | shrd, [lo as dst; hi; cnt] =>
     lo <- DenoteOperand sa s st lo;
     hi <- DenoteOperand sa s st hi;
     cnt <- DenoteOperand sa s st cnt;
+    let cnt := N.land cnt (s-1) in
     let l := N.lor lo (N.shiftl hi s) in
-    let v := N.shiftr l (N.land cnt (s-1)) in
+    let v := N.shiftr l cnt in
     st <- SetOperand sa s st dst v;
     if cnt =? 0 then Some st else
     if s <? cnt then Some (HavocFlags st) else
@@ -388,6 +405,7 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
   | imul, _
   | inc, _
   | sar, _
+  | rcr, _
   | sbb, _
   | shr, _
   | shrd, _
