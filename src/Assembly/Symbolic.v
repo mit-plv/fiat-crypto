@@ -153,8 +153,8 @@ Global Instance Show_op : Show op := fun o =>
   end%string.
 
 Definition associative o := match o with add _|mul _|or _|and _=> true | _ => false end.
-Definition commutative o := match o with add _|addcarry _|addoverflow _|mul _|mulhuu _ => true | _ => false end.
-Definition identity o := match o with add _|addcarry _|addoverflow _ => Some 0%N | mul _|mulhuu _=>Some 1%N | and s => Some (N.ones s) |_=> None end.
+Definition commutative o := match o with add _|addcarry _|notaddcarry _|addoverflow _|mul _|mulhuu _ => true | _ => false end.
+Definition identity o := match o with add _|addcarry _|notaddcarry _|addoverflow _ => Some 0%N | mul _|mulhuu _=>Some 1%N | and s => Some (N.ones s) |_=> None end.
 
 Definition node (A : Set) : Set := op * list A.
 Global Instance Show_node {A : Set} [show_A : Show A] : Show (node A) := show_prod.
@@ -638,6 +638,16 @@ Fixpoint bound_expr e : option N := (* e <= r *)
             | Some bounds => N.min (List.fold_right N.add 0%N bounds) (N.ones s)
             | None => N.ones s
             end
+  | ExprApp (selectznz, [c;a;b]) =>
+      match bound_expr a, bound_expr b with
+      | Some a, Some b => Some (N.max a b)
+      | _, _ => None
+      end
+  | ExprApp (set_slice l w, [a;b]) =>
+      match bound_expr a with
+      | Some a => Some (N.max a (N.ones w))
+      | _ => None
+      end
   | ExprApp ((old s _ | slice _ s | mul s | shl s | shr s | sar s | neg s | mulhuu s | and s | or s | xor s), _) => Some (N.ones s)
   | ExprApp ((addcarry _ | notaddcarry _ | addoverflow _ | rcrcarry _ | nonzero), _) => Some 1%N
   | _ => None
@@ -701,6 +711,14 @@ Definition simplify_nonzero_bit :=
       if option_beq N.eqb (bound_expr b) (Some 1)
       then b
       else e | _ => e end%N%bool.
+Definition simplify_addbyte_small :=
+  fun e => match e with
+    ExprApp (add (8%N as s), args) =>
+      match Option.List.lift (List.map bound_expr args) with
+      | Some bounds =>
+          if N.leb (List.fold_right N.add 0%N bounds) (N.ones s)
+          then ExprApp (add 64%N, args)
+          else e | _ => e end | _ =>  e end.
 Definition simplify_addcarry_small :=
   fun e => match e with
     ExprApp (addcarry s, args) =>
@@ -770,6 +788,7 @@ Definition simplify_expr : expr -> expr :=
   ;simplify_nonzero_bit
   ;simplify_addcarry_small
   ;simplify_addoverflow_small
+  ;simplify_addbyte_small
   ;fun e => match e with ExprApp (xor _,[x;y]) =>
     if expr_beq x y then ExprApp (const 0, nil) else e | _ => e end
                     
@@ -781,8 +800,8 @@ Lemma eval_simplify_expr c d e v : eval c d e v -> eval c d (simplify_expr e) v.
 Proof.
   intros H; cbv [simplify_expr].
 
-  Strategy 10000 [simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_rcr simplify_addoverflow_bit simplify_addcarry_bit simplify_nonzero_bit simplify_addcarry_small simplify_addoverflow_small].
-  Local Opaque simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_rcr simplify_addoverflow_bit simplify_addcarry_bit simplify_nonzero_bit simplify_addcarry_small simplify_addoverflow_small.
+  Strategy 10000 [simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_rcr simplify_addoverflow_bit simplify_addcarry_bit simplify_nonzero_bit simplify_addcarry_small simplify_addoverflow_small simplify_addbyte_small].
+  Local Opaque simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_rcr simplify_addoverflow_bit simplify_addcarry_bit simplify_nonzero_bit simplify_addcarry_small simplify_addoverflow_small simplify_addbyte_small.
   repeat match goal with (* one goal per rewrite rule *)
   | |- context G [fold_left ?f (cons ?r ?rs) ?e] =>
     let re := fresh "e" in
@@ -792,8 +811,8 @@ Proof.
         clear dependent e; rename re into e ]
   | |- context G [fold_left ?f nil ?e] => eassumption
   end.
-  Local Transparent simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_rcr simplify_addoverflow_bit simplify_addcarry_bit simplify_nonzero_bit simplify_addcarry_small.
-  all : cbv [simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_rcr simplify_addoverflow_bit simplify_addcarry_bit simplify_nonzero_bit simplify_addcarry_small simplify_addoverflow_small] in *.
+  Local Transparent simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_rcr simplify_addoverflow_bit simplify_addcarry_bit simplify_nonzero_bit simplify_addcarry_small simplify_addbyte_small.
+  all : cbv [simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_rcr simplify_addoverflow_bit simplify_addcarry_bit simplify_nonzero_bit simplify_addcarry_small simplify_addoverflow_small simplify_addbyte_small] in *.
 
   all : repeat match goal with
                | _ => solve [trivial]
@@ -825,6 +844,7 @@ Proof.
                end.
   { econstructor; eauto; []; cbn [interp_op option_map].
     f_equal; eauto using eval_eval, eval_eval0. }
+  admit.
   admit.
   admit.
   admit.
@@ -1056,7 +1076,7 @@ Definition Address {sa : AddressSize} (a : MEM) : M idx :=
 Definition Load {s : OperationSize} {sa : AddressSize} (a : MEM) : M idx :=
   addr <- Address a;
   v <- Load64 addr;
-  if N.eqb s 64%N
+  if N.eqb (Syntax.operand_size a s) 64%N
   then ret v
   else App ((slice 0 (Syntax.operand_size a s)), [v]).
 
@@ -1143,9 +1163,11 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
   | Syntax.adc, [dst; src] =>
     v <- Symeval (add s@(dst, src, CF));
     c <- Symeval (addcarry s@(dst, src, CF));
+    o <- Symeval (addoverflow s@(dst, src, CF));
     _ <- SetOperand dst v;
     _ <- HavocFlags;
-    SetFlag CF c
+    _ <- SetFlag CF c;
+    SetFlag OF o
   | (adcx|adox) as op, [dst; src] =>
     let f := match op with adcx => CF | _ => OF end in
     v <- Symeval (add s@(dst, src, f));
@@ -1248,13 +1270,11 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
     if N.eqb a b 
     then nz <- App (nonzero, [a]); SetFlag ZF nz
     else ret tt
-  | _, _ => err (error.unimplemented_instruction instr)
- end
-  | _ =>
-  match instr.(Syntax.op), instr.(args) with
   | clc, [] => zero <- @Symeval 1 _ (@PreApp (const 0) nil); SetFlag CF zero
   | Syntax.ret, [] => ret tt
-  | _, _ => err (error.ambiguous_operation_size instr) end end%N%x86symex.
+  | _, _ => err (error.unimplemented_instruction instr)
+ end
+  | _ => err (error.ambiguous_operation_size instr) end%N%x86symex.
 
 Definition SymexNormalInstructions := fun st is => mapM_ SymexNormalInstruction is st.
 

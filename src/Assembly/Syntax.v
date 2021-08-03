@@ -97,7 +97,17 @@ Definition standalone_operand_size (x : ARG) : option N :=
   | const c => None
   end%N.
 
+Definition opcode_size (op : OpCode) :=
+  match op with
+  | seto | setc => Some 8
+  | ret => Some 64 (* irrelevant? *)
+  | clc => Some 1 (* irrelevant? *)
+  | _ => None
+  end%N.
+
 Definition operation_size instr :=
+  match opcode_size instr.(op) with
+  | Some s => Some s | None =>
   let argsizes := List.map standalone_operand_size instr.(args) in
   match OptionList.Option.List.lift argsizes with
   | Some szs => match szs with
@@ -113,6 +123,7 @@ Definition operation_size instr :=
              then Some n
              else None (* inference needed but ambiguous *)
          end
+  end
   end.
 
 Definition operand_size (x : ARG) (operation_size : N) : N :=
