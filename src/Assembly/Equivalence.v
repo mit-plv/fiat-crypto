@@ -480,7 +480,7 @@ Proof.
             a <- App (add         s, [x;y']);
             c <- App (notaddcarry s, [x;y']);
             symex_return (a, c)
-          | ident.Z_sub_with_get_borrow => fun s x y z =>
+          | ident.Z_sub_with_get_borrow => fun s z x y =>
             s <- RevealWidth s;
             y' <- App (neg s, [y]);
             z' <- App (neg s, [z]);
