@@ -764,9 +764,13 @@ Definition simplify_expr : expr -> expr :=
     ExprApp (o, args) =>
     if commutative o then
     let csts_exprs := List.partition isCst args in
-    match interp0_expr (ExprApp (o, fst csts_exprs)) with None => e | Some v =>
-    ExprApp (o, ExprApp (const v, nil):: snd csts_exprs)
-    end else e | _ => e end
+    if associative o
+    then match interp0_expr (ExprApp (o, fst csts_exprs)) with
+         | Some v => ExprApp (o, ExprApp (const v, nil):: snd csts_exprs)
+         | _ => ExprApp (o, fst csts_exprs ++ snd csts_exprs)
+         end
+    else ExprApp (o, fst csts_exprs ++ snd csts_exprs)
+    else e | _ => e end
   ;fun e => match e with
     ExprApp (slice 0 s, [a]) =>
       match bound_expr a with Some b =>
@@ -844,6 +848,8 @@ Proof.
                end.
   { econstructor; eauto; []; cbn [interp_op option_map].
     f_equal; eauto using eval_eval, eval_eval0. }
+  admit.
+  admit.
   admit.
   admit.
   admit.
