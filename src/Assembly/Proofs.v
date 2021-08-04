@@ -451,7 +451,7 @@ Fixpoint simplify_base_runtime {t : base.type} : base.interp t -> option (list (
      | base.type.type_base base.type.Z => fun val => Some [inl val]
      | base.type.prod A B => fun ab => (a <- simplify_base_runtime (fst ab); b <- simplify_base_runtime (snd ab); Some (a ++ b))
      | base.type.list (base.type.type_base base.type.Z)
-       => fun ls : list Z => Some (List.map inl ls)
+       => fun ls : list Z => Some [inr ls]
      | base.type.list _
      | base.type.type_base _
      | base.type.option _
@@ -562,7 +562,7 @@ Proof.
                     | progress break_innermost_match_hyps
                     | rewrite Forall.Forall2_map_map_iff
                     | solve [ eauto using Forall2_app ] ].
-Admitted. (* note: Andres broke this when adding [G] to [eval] and does not know how fix *)
+Qed.
 
 Theorem symex_PHOAS_correct
         {t} (expr : API.Expr t)
