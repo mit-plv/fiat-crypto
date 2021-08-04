@@ -214,6 +214,68 @@ Section mod_ops.
     subst oppmod; reflexivity.
   Qed.
 
+  Derive carry_addmod
+         SuchThat (forall (f g : list Z)
+                          (Hf : length f = n)
+                          (Hg : length g = n),
+                      (eval weight n (carry_addmod f g)) mod (s - Associational.eval c)
+                      = (eval weight n f + eval weight n g) mod (s - Associational.eval c))
+         As eval_carry_addmod.
+  Proof.
+    revert carry_addmod; instantiate (1:=ltac:(clear -idxs s c n)); intro carry_addmod.
+    clear -m_nz s_nz limbwidth_good Hn_nz idxs.
+    intros.
+    rewrite <-eval_add by auto with zarith.
+    etransitivity;
+      [ | rewrite <- @eval_chained_carries with (s:=s) (c:=c) (idxs:=idxs)
+          by auto with zarith; reflexivity ].
+    eapply f_equal2; [|trivial]. eapply f_equal.
+    subst carry_addmod; reflexivity.
+  Qed.
+
+  Derive carry_submod
+         SuchThat (forall (balance : list Z)
+                          (f g : list Z)
+                          (length_balance : length balance = n)
+                          (eval_balance : eval weight n balance mod (s - Associational.eval c) = 0)
+                          (Hf : length f = n)
+                          (Hg : length g = n),
+                      (eval weight n (carry_submod balance f g)) mod (s - Associational.eval c)
+                      = (eval weight n f - eval weight n g) mod (s - Associational.eval c))
+         As eval_carry_submod.
+  Proof.
+    revert carry_submod; instantiate (1:=ltac:(clear -idxs s c n)); intro carry_submod.
+    clear -m_nz s_nz limbwidth_good Hn_nz idxs.
+    intros.
+    rewrite <-eval_sub with (balance:=balance) by auto with zarith.
+    etransitivity;
+      [ | rewrite <- @eval_chained_carries with (s:=s) (c:=c) (idxs:=idxs)
+          by auto with zarith; reflexivity ].
+    eapply f_equal2; [|trivial]. eapply f_equal.
+    subst carry_submod; reflexivity.
+  Qed.
+
+  Derive carry_oppmod
+         SuchThat (forall (balance : list Z)
+                          (f: list Z)
+                          (length_balance : length balance = n)
+                          (eval_balance : eval weight n balance mod (s - Associational.eval c) = 0)
+                          (Hf : length f = n),
+                      (eval weight n (carry_oppmod balance f)) mod (s - Associational.eval c)
+                      = (- eval weight n f) mod (s - Associational.eval c))
+         As eval_carry_oppmod.
+  Proof.
+    revert carry_oppmod; instantiate (1:=ltac:(clear -idxs s c n)); intro carry_oppmod.
+    clear -m_nz s_nz limbwidth_good Hn_nz idxs.
+    intros.
+    rewrite <-eval_opp with (balance:=balance) by auto with zarith.
+    etransitivity;
+      [ | rewrite <- @eval_chained_carries with (s:=s) (c:=c) (idxs:=idxs)
+          by auto with zarith; reflexivity ].
+    eapply f_equal2; [|trivial]. eapply f_equal.
+    subst carry_oppmod; reflexivity.
+  Qed.
+
   Derive encodemod
          SuchThat (forall (f:Z),
                       (eval weight n (encodemod f)) mod (s - Associational.eval c)

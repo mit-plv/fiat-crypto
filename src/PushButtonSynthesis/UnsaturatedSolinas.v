@@ -450,6 +450,63 @@ Section __.
              (fun fname : string => [text_before_function_name ++ fname ++ " negates a field element."]%string)
              (opp_correct weightf n m tight_bounds loose_bounds)).
 
+  Definition carry_add
+    := Pipeline.BoundsPipeline
+         true (* subst01 *)
+         None (* fancy *)
+         possible_values
+         (reified_carry_add_gen
+            @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify idxs)
+         (Some tight_bounds, (Some tight_bounds, tt))
+         (Some tight_bounds).
+
+  Definition scarry_add (prefix : string)
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    := Eval cbv beta in
+        FromPipelineToString!
+          machine_wordsize prefix "carry_add" carry_add
+          (docstring_with_summary_from_lemma!
+             (fun fname : string => [text_before_function_name ++ fname ++ " adds two field elements."]%string)
+             (carry_add_correct weightf n m tight_bounds)).
+
+  Definition carry_sub
+    := Pipeline.BoundsPipeline
+         true (* subst01 *)
+         None (* fancy *)
+         possible_values
+         (reified_carry_sub_gen
+            @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify idxs @ GallinaReify.Reify balance)
+         (Some tight_bounds, (Some tight_bounds, tt))
+         (Some tight_bounds).
+
+  Definition scarry_sub (prefix : string)
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    := Eval cbv beta in
+        FromPipelineToString!
+          machine_wordsize prefix "carry_sub" carry_sub
+          (docstring_with_summary_from_lemma!
+             (fun fname : string => [text_before_function_name ++ fname ++ " subtracts two field elements."]%string)
+             (carry_sub_correct weightf n m tight_bounds)).
+
+  Definition carry_opp
+    := Pipeline.BoundsPipeline
+         true (* subst01 *)
+         None (* fancy *)
+         possible_values
+         (reified_carry_opp_gen
+            @ GallinaReify.Reify (Qnum limbwidth) @ GallinaReify.Reify (Z.pos (Qden limbwidth)) @ GallinaReify.Reify s @ GallinaReify.Reify c @ GallinaReify.Reify n @ GallinaReify.Reify idxs @ GallinaReify.Reify balance)
+         (Some tight_bounds, tt)
+         (Some tight_bounds).
+
+  Definition scarry_opp (prefix : string)
+    : string * (Pipeline.ErrorT (Pipeline.ExtendedSynthesisResult _))
+    := Eval cbv beta in
+        FromPipelineToString!
+          machine_wordsize prefix "carry_opp" carry_opp
+          (docstring_with_summary_from_lemma!
+             (fun fname : string => [text_before_function_name ++ fname ++ " negates a field element."]%string)
+             (carry_opp_correct weightf n m tight_bounds)).
+
   Definition relax
     := Pipeline.BoundsPipeline
          true (* subst01 *)
@@ -606,6 +663,9 @@ Section __.
        eval_addmod
        eval_submod
        eval_oppmod
+       eval_carry_addmod
+       eval_carry_submod
+       eval_carry_oppmod
        eval_carrymod
        freeze_to_bytesmod_partitions
        eval_to_bytesmod
@@ -627,6 +687,9 @@ Section __.
         addmod
         submod
         oppmod
+        carry_addmod
+        carry_submod
+        carry_oppmod
         from_bytesmod
         to_bytesmod
         (* Set Printing Width 100000. Print Rewrite HintDb push_eval. | sed s'/^.*->//g' | grep -o ' eval \(([^)]\+)\|[^ ]*\) \(([^)]\+)\|[^ ]*\) [^ )]*' | grep -o '[A-Za-z0-9_\.][A-Za-z0-9_\.]\+$' | sort | uniq *)
@@ -706,6 +769,30 @@ Section __.
   Proof using curve_good. prove_correctness (). Qed.
 
   Lemma Wf_opp res (Hres : opp = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
+  Lemma carry_add_correct res
+        (Hres : carry_add = Success res)
+    : carry_add_correct (weight (Qnum limbwidth) (QDen limbwidth)) n m tight_bounds (Interp res).
+  Proof using curve_good. prove_correctness (). Qed.
+
+  Lemma Wf_carry_add res (Hres : carry_add = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
+  Lemma carry_sub_correct res
+        (Hres : carry_sub = Success res)
+    : carry_sub_correct (weight (Qnum limbwidth) (QDen limbwidth)) n m tight_bounds (Interp res).
+  Proof using curve_good. prove_correctness (). Qed.
+
+  Lemma Wf_carry_sub res (Hres : carry_sub = Success res) : Wf res.
+  Proof using Type. prove_pipeline_wf (). Qed.
+
+  Lemma carry_opp_correct res
+        (Hres : carry_opp = Success res)
+    : carry_opp_correct (weight (Qnum limbwidth) (QDen limbwidth)) n m tight_bounds (Interp res).
+  Proof using curve_good. prove_correctness (). Qed.
+
+  Lemma Wf_carry_opp res (Hres : carry_opp = Success res) : Wf res.
   Proof using Type. prove_pipeline_wf (). Qed.
 
   Lemma relax_correct res
@@ -837,6 +924,9 @@ Section __.
             ("add", wrap_s sadd);
             ("sub", wrap_s ssub);
             ("opp", wrap_s sopp);
+            ("carry_add", wrap_s scarry_add);
+            ("carry_sub", wrap_s scarry_sub);
+            ("carry_opp", wrap_s scarry_opp);
             ("relax", wrap_s srelax);
             ("selectznz", wrap_s sselectznz);
             ("to_bytes", wrap_s sto_bytes);
@@ -885,6 +975,9 @@ Module Export Hints.
        add
        sub
        opp
+       carry_add
+       carry_sub
+       carry_opp
        relax
        from_bytes
        to_bytes
@@ -900,6 +993,9 @@ Module Export Hints.
        Wf_add
        Wf_sub
        Wf_opp
+       Wf_carry_add
+       Wf_carry_sub
+       Wf_carry_opp
        Wf_relax
        Wf_from_bytes
        Wf_to_bytes

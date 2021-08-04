@@ -30,7 +30,7 @@ print((indent + '(' + r'''**
 >>
 *''' + ')\n') % open(__file__, 'r').read())
 
-for i in ('carry_mul', 'carry_square', 'carry_scmul', 'carry', 'encode', 'add', 'sub', 'opp', 'zero', 'one', 'prime', 'eval', 'bytes_eval'):
+for i in ('carry_mul', 'carry_square', 'carry_scmul', 'carry', 'encode', 'add', 'sub', 'opp', 'carry_add', 'carry_sub', 'carry_opp', 'zero', 'one', 'prime', 'eval', 'bytes_eval'):
     print((r'''%sDerive reified_%s_gen
        SuchThat (is_reification_of reified_%s_gen %smod)
        As reified_%s_gen_correct.
@@ -124,6 +124,33 @@ Local Opaque reified_%s_gen. (* needed for making [autorewrite] not take a very 
   Hint Immediate (proj2 reified_opp_gen_correct) : wf_gen_cache.
   Hint Rewrite (proj1 reified_opp_gen_correct) : interp_gen_cache.
   Local Opaque reified_opp_gen. (* needed for making [autorewrite] not take a very long time *)
+
+  Derive reified_carry_add_gen
+         SuchThat (is_reification_of reified_carry_add_gen carry_addmod)
+         As reified_carry_add_gen_correct.
+  Proof. Time cache_reify (). Time Qed.
+  Hint Extern 1 (_ = _) => apply_cached_reification carry_addmod (proj1 reified_carry_add_gen_correct) : reify_cache_gen.
+  Hint Immediate (proj2 reified_carry_add_gen_correct) : wf_gen_cache.
+  Hint Rewrite (proj1 reified_carry_add_gen_correct) : interp_gen_cache.
+  Local Opaque reified_carry_add_gen. (* needed for making [autorewrite] not take a very long time *)
+
+  Derive reified_carry_sub_gen
+         SuchThat (is_reification_of reified_carry_sub_gen carry_submod)
+         As reified_carry_sub_gen_correct.
+  Proof. Time cache_reify (). Time Qed.
+  Hint Extern 1 (_ = _) => apply_cached_reification carry_submod (proj1 reified_carry_sub_gen_correct) : reify_cache_gen.
+  Hint Immediate (proj2 reified_carry_sub_gen_correct) : wf_gen_cache.
+  Hint Rewrite (proj1 reified_carry_sub_gen_correct) : interp_gen_cache.
+  Local Opaque reified_carry_sub_gen. (* needed for making [autorewrite] not take a very long time *)
+
+  Derive reified_carry_opp_gen
+         SuchThat (is_reification_of reified_carry_opp_gen carry_oppmod)
+         As reified_carry_opp_gen_correct.
+  Proof. Time cache_reify (). Time Qed.
+  Hint Extern 1 (_ = _) => apply_cached_reification carry_oppmod (proj1 reified_carry_opp_gen_correct) : reify_cache_gen.
+  Hint Immediate (proj2 reified_carry_opp_gen_correct) : wf_gen_cache.
+  Hint Rewrite (proj1 reified_carry_opp_gen_correct) : interp_gen_cache.
+  Local Opaque reified_carry_opp_gen. (* needed for making [autorewrite] not take a very long time *)
 
   Derive reified_zero_gen
          SuchThat (is_reification_of reified_zero_gen zeromod)
