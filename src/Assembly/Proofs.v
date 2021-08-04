@@ -59,25 +59,25 @@ Definition eval_var (dag : dag) {t : API.type} : var t -> API.interp_type t -> P
 
 Local Lemma ex_Z_of_N_iff P v
   : (exists n, Z.of_N n = v /\ P n) <-> (0 <= v /\ P (Z.to_N v))%Z.
-Proof.
+Proof using Type.
   split; [ intros [n [H1 H2] ] | intros [H1 H2]; exists (Z.to_N v) ]; subst; rewrite ?N2Z.id, ?Z2N.id by lia.
   all: split; eauto; lia.
 Qed.
 
 Local Lemma ex_Z_of_N_iff' P v (H : (0 <= v)%Z)
   : (exists n, Z.of_N n = v /\ P n) <-> P (Z.to_N v).
-Proof. rewrite ex_Z_of_N_iff; intuition lia. Qed.
+Proof using Type. rewrite ex_Z_of_N_iff; intuition lia. Qed.
 
 Lemma symex_T_app_curried_symex_T_error {t} err v d
   : @symex_T_app_curried t (symex_T_error err) v d = Error err.
-Proof. induction t; cbn in *; break_innermost_match; try reflexivity; eauto. Qed.
+Proof using Type. induction t; cbn in *; break_innermost_match; try reflexivity; eauto. Qed.
 
 Lemma symex_T_app_curried_symex_T_bind_base_split T t v1 v2 v3 d rets d''
       (H : symex_T_app_curried (@symex_T_bind_base T t v1 v2) v3 d = Success (rets, d''))
   : exists rets' d',
     v1 d = Success (rets', d')
     /\ symex_T_app_curried (v2 rets') v3 d' = Success (rets, d'').
-Proof.
+Proof using Type.
   induction t; cbn [symex_T symex_T_bind_base symex_T_app_curried] in *.
   all: cbv [symex_bind ErrorT.bind] in *.
   all: break_innermost_match_hyps; try discriminate; eauto.
@@ -89,7 +89,7 @@ Lemma symex_T_app_curried_symex_T_bind_base_split_err T t v1 v2 v3 d err
     \/ exists rets' d',
       v1 d = Success (rets', d')
       /\ symex_T_app_curried (v2 rets') v3 d' = Error err.
-Proof.
+Proof using Type.
   induction t; cbn [symex_T symex_T_bind_base symex_T_app_curried] in *.
   all: cbv [symex_bind ErrorT.bind] in *.
   all: break_innermost_match_hyps; try discriminate; eauto.
@@ -99,13 +99,13 @@ Qed.
 Lemma lift_eval_base_var_impl d1 d2
       (H : forall v n, eval G d1 v n -> eval G d2 v n)
   : forall t v n, @eval_base_var d1 t v n -> @eval_base_var d2 t v n.
-Proof.
+Proof using Type.
   induction t; cbn [base_var eval_base_var]; break_innermost_match; intros; destruct_head'_ex; destruct_head'_and; subst; eauto using Forall2_weaken.
 Qed.
 Lemma lift_eval_var_impl d1 d2
       (H : forall v n, eval G d1 v n -> eval G d2 v n)
   : forall t v n, @eval_var d1 t v n -> @eval_var d2 t v n.
-Proof.
+Proof using Type.
   induction t; cbn [var eval_var]; eauto using lift_eval_base_var_impl.
 Qed.
 
@@ -258,7 +258,7 @@ Theorem symex_expr_correct
   : eval_base_var d' rets (type.app_curried (API.interp expr2) input_runtime_var)
     /\ dag_ok G d'
     /\ (forall e n, eval G d e n -> eval G d' e n).
-Proof.
+Proof using Type.
   revert dependent d; revert dependent d'; revert dependent input_var_data; revert dependent input_runtime_var.
   induction Hwf; intros; cbn [symex_expr] in *.
   all: repeat first [ match goal with
@@ -334,7 +334,7 @@ Qed.
 Lemma symex_expr_App_curried {t} (e : API.expr t) input_var_data d
   : symex_expr (invert_expr.App_curried e (type.map_for_each_lhs_of_arrow (fun t v => ($v)%expr) input_var_data)) d
     = symex_T_app_curried (symex_expr e) input_var_data d.
-Proof.
+Proof using Type.
   induction t; cbn [invert_expr.App_curried symex_T_app_curried type.map_for_each_lhs_of_arrow];
     destruct_head_hnf' prod; destruct_head_hnf' unit; cbn [fst snd]; try reflexivity.
   match goal with H : _ |- _ => rewrite H; clear H end.
@@ -351,7 +351,7 @@ Qed.
 Lemma symex_expr_smart_App_curried {t} (e : API.expr t) input_var_data d
   : symex_expr (invert_expr.smart_App_curried e input_var_data) d
     = symex_T_app_curried (symex_expr e) input_var_data d.
-Proof.
+Proof using Type.
   induction e; cbn [invert_expr.smart_App_curried];
     rewrite ?symex_expr_App_curried; try reflexivity.
   match goal with H : _ |- _ => rewrite H; clear H end.
@@ -371,7 +371,7 @@ Theorem symex_PHOAS_PHOAS_correct
   : eval_base_var d' rets (type.app_curried (API.Interp expr) input_runtime_var)
     /\ dag_ok G d'
     /\ (forall e n, eval G d e n -> eval G d' e n).
-Proof.
+Proof using Type.
   cbv [symex_PHOAS_PHOAS] in H.
   rewrite symex_expr_smart_App_curried in H.
   eapply symex_expr_correct with (GG:=[]); try eassumption; cbn [List.In]; try eapply Hwf; try now intros; exfalso.
@@ -390,7 +390,7 @@ Definition eval_idx_or_list_idx (d : dag) (v1 : idx + list idx) (v2 : Z + list Z
 Lemma lift_eval_idx_Z_impl d1 d2
       (H : forall v n, eval G d1 v n -> eval G d2 v n)
   : forall v n, eval_idx_Z d1 v n -> eval_idx_Z d2 v n.
-Proof.
+Proof using Type.
   cbv [eval_idx_Z]; intros; destruct_head'_ex; destruct_head'_and; eexists; split; [ eassumption | ].
   eauto.
 Qed.
@@ -398,7 +398,7 @@ Qed.
 Lemma lift_eval_idx_or_list_idx_impl d1 d2
       (H : forall v n, eval G d1 v n -> eval G d2 v n)
   : forall v n, eval_idx_or_list_idx d1 v n -> eval_idx_or_list_idx d2 v n.
-Proof.
+Proof using Type.
   cbv [eval_idx_or_list_idx]; intros; break_innermost_match; eauto using lift_eval_idx_Z_impl, Forall2_weaken.
 Qed.
 
@@ -470,7 +470,7 @@ Lemma build_base_var_runtime_gen
     | Success _, None | Error _, Some _ => False
     | Error _, None => True
     end.
-Proof.
+Proof using Type.
   revert inputs runtime_inputs Hinputs; induction t; cbn [build_base_var build_base_runtime]; intros; break_innermost_match.
   all: repeat first [ exact I
                     | progress subst
@@ -507,7 +507,7 @@ Lemma build_var_runtime_gen
     | Success _, None | Error _, Some _ => False
     | Error _, None => True
     end.
-Proof.
+Proof using Type.
   destruct t as [t|s d']; [ pose proof (build_base_var_runtime_gen _ _ _ Hinputs t) | ].
   all: cbv [build_var build_runtime]; break_innermost_match; try assumption; try exact I.
 Qed.
@@ -524,7 +524,7 @@ Lemma build_input_var_runtime_gen
     | Success _, None | Error _, Some _ => False
     | Error _, None => True
     end.
-Proof.
+Proof using Type.
   revert inputs runtime_inputs Hinputs; induction t as [|s _ d' IHd];
     cbn [build_input_runtime build_input_var build_var type.and_for_each_lhs_of_arrow] in *; intros; auto; [].
   cbv [Crypto.Util.Option.bind Rewriter.Util.Option.bind ErrorT.bind].
