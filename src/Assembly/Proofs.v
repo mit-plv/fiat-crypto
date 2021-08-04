@@ -132,11 +132,7 @@ Proof.
   all: destruct_head'_prod; destruct_head'_unit.
   all: cbv [symex_T_error symex_error symex_return symex_bind App ErrorT.bind ident.eagerly ident.literal] in *.
   all: break_innermost_match_hyps.
-  all: match goal with
-       | [ H : Success _ = Success _ |- _ ] => inversion H; clear H
-       | [ H : Error _ = Success _ |- _ ] => exfalso; clear -H; now inversion H
-       | _ => let T := type of H in fail 0 T
-       end.
+  all: first [ inversion_ErrorT_step | let T := type of H in fail 1 T ].
   all: try solve [ repeat first [ progress subst
                                 | progress inversion_prod
                                 | progress cbn [fst snd] in *
@@ -169,25 +165,34 @@ Proof.
                     | rewrite Forall.Forall2_repeat_iff
                     | now apply Forall.Forall2_forall_iff'' ].
   all: rewrite ?ex_Z_of_N_iff'.
+  (** Factor out [merge] and [merge_node] *)
   all: repeat first [ assumption
-                    | match goal with
-                      | [ |- context[eval _ (ExprRef (fst (merge_node (@pair ?A ?B ?op ?args) ?d))) ?n] ]
+                    | let print_failure clear_H kind :=
+                          clear H;
+                          idtac "=================================";
+                          idtac "Warning: Failure to prove" kind "goal:";
+                          print_context_and_goal ();
+                          idtac "=================================" in
+                      (** TODO for Andres: Improve automatic proving of `dag_ok` and `eval` `merge`/`merge_node` goals *)
+                      (** QUESTION for Andres: Should the automation should be tweaked to leave over evars for unknown evaluations?  Where should the responsibility lie for determining what nested calls to [merge] evaluate to? *)
+                      match goal with
+                      | [ |- context[eval ?G _ (ExprRef (fst (merge_node (@pair ?A ?B ?op ?args) ?d))) ?n] ]
                         => let T := open_constr:(_) in
                            cut T;
                            [ let H := fresh in
                              intro H;
                              let H' := fresh in
-                             pose proof (eval_merge_node d ltac:(assumption) op args n H) as H'; cbv beta zeta in *;
+                             pose proof (eval_merge_node G d ltac:(assumption || print_failure H merge_node) op args n H) as H'; cbv beta zeta in *;
                              progress change (op, args) with (@pair A B op args) in H';
                              let k := fresh in
                              set (k := merge_node (@pair A B op args) d) in *; clearbody k
                            | ]
-                      | [ |- context[eval _ (ExprRef (fst (merge ?e ?d))) ?n] ]
+                      | [ |- context[eval ?G _ (ExprRef (fst (merge ?e ?d))) ?n] ]
                         => let T := open_constr:(_) in
                            cut T;
                            [ let H := fresh in
                              intro H;
-                             pose proof (eval_merge e n d ltac:(assumption) H);
+                             pose proof (eval_merge G e n d ltac:(assumption || print_failure H merge) H);
                              let k := fresh in
                              set (k := merge e d) in *; clearbody k
                            | ]
