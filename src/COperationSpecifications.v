@@ -298,6 +298,29 @@ Module Solinas.
         -> eval (opp x) mod m = (Z.opp (eval x)) mod m
            /\ list_Z_bounded_by loose_bounds (opp x).
 
+    Definition carry_add_correct
+               (carry_add : list Z -> list Z -> list Z)
+      := forall x y,
+        list_Z_bounded_by tight_bounds x
+        -> list_Z_bounded_by tight_bounds y
+        -> eval (carry_add x y) mod m = (Z.add (eval x) (eval y)) mod m
+           /\ list_Z_bounded_by tight_bounds (carry_add x y).
+
+    Definition carry_sub_correct
+               (carry_sub : list Z -> list Z -> list Z)
+      := forall x y,
+        list_Z_bounded_by tight_bounds x
+        -> list_Z_bounded_by tight_bounds y
+        -> eval (carry_sub x y) mod m = (Z.sub (eval x) (eval y)) mod m
+           /\ list_Z_bounded_by tight_bounds (carry_sub x y).
+
+    Definition carry_opp_correct
+               (carry_opp : list Z -> list Z)
+      := forall x,
+        list_Z_bounded_by tight_bounds x
+        -> eval (carry_opp x) mod m = (Z.opp (eval x)) mod m
+           /\ list_Z_bounded_by tight_bounds (carry_opp x).
+
     Definition relax_correct
                (relax : list Z -> list Z)
       := forall x,

@@ -205,7 +205,7 @@ GO_$(call GO_RENAME_TO_KEY,$(1))_BINARY_NAME:=$(2)
 GO_$(call GO_RENAME_TO_KEY,$(1))_PACKAGE:=$(subst _,,$(patsubst %_32,%,$(patsubst %_64,%,$(1))))
 GO_$(call GO_RENAME_TO_KEY,$(1))_BITWIDTH:=$(4)
 GO_$(call GO_RENAME_TO_KEY,$(1))_ARGS:=$(4) $(5)
-GO_$(call GO_RENAME_TO_KEY,$(1))_FUNCTIONS:=$(6)
+GO_$(call GO_RENAME_TO_KEY,$(1))_FUNCTIONS:=$(6) $(GO_EXTRA_$(7)_FUNCTIONS)
 
 JAVA_$(call JAVA_RENAME,$(1))_BINARY_NAME:=$(2)
 JAVA_$(call JAVA_RENAME,$(1))_DESCRIPTION:=$(patsubst Fiat%,%,$(call JAVA_RENAME,$(1)))
@@ -227,19 +227,22 @@ ALL_BASE_FILES := $(UNSATURATED_SOLINAS_BASE_FILES) $(WORD_BY_WORD_MONTGOMERY_BA
 
 BASE_FILES_NEEDING_INT128 := p448_solinas_32
 
-$(foreach bw,64 32,$(eval $(call add_curve_keys,curve25519_$(bw),UNSATURATED_SOLINAS,'25519',$(bw),'(auto)' '2^255 - 19',$(FUNCTIONS_FOR_25519))))
-$(eval $(call add_curve_keys,poly1305_64,UNSATURATED_SOLINAS,'poly1305',64,'3' '2^130 - 5',$(UNSATURATED_SOLINAS_FUNCTIONS)))
-$(eval $(call add_curve_keys,poly1305_32,UNSATURATED_SOLINAS,'poly1305',32,'(auto)' '2^130 - 5',$(UNSATURATED_SOLINAS_FUNCTIONS)))
-$(eval $(call add_curve_keys,p521_64,UNSATURATED_SOLINAS,'p521',64,'9' '2^521 - 1',$(UNSATURATED_SOLINAS_FUNCTIONS)))
+GO_EXTRA_UNSATURATED_SOLINAS_FUNCTIONS := carry_add carry_sub carry_opp
+GO_EXTRA_WORD_BY_WORD_MONTGOMERY_FUNCTIONS :=
+
+$(foreach bw,64 32,$(eval $(call add_curve_keys,curve25519_$(bw),UNSATURATED_SOLINAS,'25519',$(bw),'(auto)' '2^255 - 19',$(FUNCTIONS_FOR_25519),UNSATURATED_SOLINAS)))
+$(eval $(call add_curve_keys,poly1305_64,UNSATURATED_SOLINAS,'poly1305',64,'3' '2^130 - 5',$(UNSATURATED_SOLINAS_FUNCTIONS),UNSATURATED_SOLINAS))
+$(eval $(call add_curve_keys,poly1305_32,UNSATURATED_SOLINAS,'poly1305',32,'(auto)' '2^130 - 5',$(UNSATURATED_SOLINAS_FUNCTIONS),UNSATURATED_SOLINAS))
+$(eval $(call add_curve_keys,p521_64,UNSATURATED_SOLINAS,'p521',64,'9' '2^521 - 1',$(UNSATURATED_SOLINAS_FUNCTIONS),UNSATURATED_SOLINAS))
 ## 2^224 - 2^96 + 1 ## does not bounds check
-#$(eval $(call add_curve_keys,p224_solinas_64,UNSATURATED_SOLINAS,'p224',64,'4' '2^224 - 2^96 + 1',$(UNSATURATED_SOLINAS_FUNCTIONS)))
-$(eval $(call add_curve_keys,p448_solinas_64,UNSATURATED_SOLINAS,'p448',64,'8' '2^448 - 2^224 - 1',$(UNSATURATED_SOLINAS_FUNCTIONS)))
-$(eval $(call add_curve_keys,p448_solinas_32,UNSATURATED_SOLINAS,'p448',32,'16' '2^448 - 2^224 - 1',$(UNSATURATED_SOLINAS_FUNCTIONS)))
-$(foreach bw,64 32,$(eval $(call add_curve_keys,p256_$(bw),WORD_BY_WORD_MONTGOMERY,'p256',$(bw),'2^256 - 2^224 + 2^192 + 2^96 - 1',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS))))
-$(foreach bw,64 32,$(eval $(call add_curve_keys,secp256k1_$(bw),WORD_BY_WORD_MONTGOMERY,'secp256k1',$(bw),'2^256 - 2^32 - 977',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS))))
-$(foreach bw,64 32,$(eval $(call add_curve_keys,p384_$(bw),WORD_BY_WORD_MONTGOMERY,'p384',$(bw),'2^384 - 2^128 - 2^96 + 2^32 - 1',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS))))
-$(foreach bw,64 32,$(eval $(call add_curve_keys,p224_$(bw),WORD_BY_WORD_MONTGOMERY,'p224',$(bw),'2^224 - 2^96 + 1',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS))))
-$(foreach bw,64,$(eval $(call add_curve_keys,p434_$(bw),WORD_BY_WORD_MONTGOMERY,'p434',$(bw),'2^216 * 3^137 - 1',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS)))) # 32 is a bit too heavy
+#$(eval $(call add_curve_keys,p224_solinas_64,UNSATURATED_SOLINAS,'p224',64,'4' '2^224 - 2^96 + 1',$(UNSATURATED_SOLINAS_FUNCTIONS),UNSATURATED_SOLINAS))
+$(eval $(call add_curve_keys,p448_solinas_64,UNSATURATED_SOLINAS,'p448',64,'8' '2^448 - 2^224 - 1',$(UNSATURATED_SOLINAS_FUNCTIONS),UNSATURATED_SOLINAS))
+$(eval $(call add_curve_keys,p448_solinas_32,UNSATURATED_SOLINAS,'p448',32,'16' '2^448 - 2^224 - 1',$(UNSATURATED_SOLINAS_FUNCTIONS),UNSATURATED_SOLINAS))
+$(foreach bw,64 32,$(eval $(call add_curve_keys,p256_$(bw),WORD_BY_WORD_MONTGOMERY,'p256',$(bw),'2^256 - 2^224 + 2^192 + 2^96 - 1',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS),WORD_BY_WORD_MONTGOMERY)))
+$(foreach bw,64 32,$(eval $(call add_curve_keys,secp256k1_$(bw),WORD_BY_WORD_MONTGOMERY,'secp256k1',$(bw),'2^256 - 2^32 - 977',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS),WORD_BY_WORD_MONTGOMERY)))
+$(foreach bw,64 32,$(eval $(call add_curve_keys,p384_$(bw),WORD_BY_WORD_MONTGOMERY,'p384',$(bw),'2^384 - 2^128 - 2^96 + 2^32 - 1',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS),WORD_BY_WORD_MONTGOMERY)))
+$(foreach bw,64 32,$(eval $(call add_curve_keys,p224_$(bw),WORD_BY_WORD_MONTGOMERY,'p224',$(bw),'2^224 - 2^96 + 1',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS),WORD_BY_WORD_MONTGOMERY)))
+$(foreach bw,64,$(eval $(call add_curve_keys,p434_$(bw),WORD_BY_WORD_MONTGOMERY,'p434',$(bw),'2^216 * 3^137 - 1',$(WORD_BY_WORD_MONTGOMERY_FUNCTIONS),WORD_BY_WORD_MONTGOMERY))) # 32 is a bit too heavy
 
 # Files taking 30s or less
 LITE_BASE_FILES := curve25519_64 poly1305_64 poly1305_32 p256_64 secp256k1_64 p384_64 p224_32 p434_64 p448_solinas_64 secp256k1_32 p256_32 p448_solinas_32
