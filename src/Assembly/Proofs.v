@@ -33,6 +33,7 @@ Require Import Crypto.Util.Tactics.PrintContext.
 Require Import Crypto.Util.Tactics.PrintGoal.
 Require Import Crypto.Util.Tactics.UniquePose.
 Require Import Crypto.Util.Tactics.DestructHead.
+Require Import Crypto.Util.Tactics.SetEvars.
 Import API.Compilers APINotations.Compilers AbstractInterpretation.ZRange.Compilers.
 Import ListNotations.
 Local Open Scope list_scope.
@@ -109,6 +110,79 @@ Proof using Type.
   induction t; cbn [var eval_var]; eauto using lift_eval_base_var_impl.
 Qed.
 
+(** TODO(Andres): Is this the right place for this lemmas? *)
+Lemma RevealWidth_correct idx d d' v
+      (H : RevealWidth idx d = Success (v, d'))
+      (d_ok : dag_ok G d)
+  : True (* something relating idx to v *)
+    /\ dag_ok G d'
+    /\ (forall e n, eval G d e n -> eval G d' e n).
+Proof using Type.
+  (** TODO(Andres): this proof *)
+Admitted.
+
+(** TODO(Andres): Is this the right place for this lemmas? *)
+Lemma RevealConstant_correct idx d d' v
+      (H : RevealConstant idx d = Success (v, d'))
+      (d_ok : dag_ok G d)
+  : True (* something relating idx to v *)
+    /\ dag_ok G d'
+    /\ (forall e n, eval G d e n -> eval G d' e n).
+Proof using Type.
+  (** TODO(Andres): this proof *)
+Admitted.
+
+(** Makes use of [eval_merge] and [eval_merge_node] lemmas, leaving
+over evars for unknown evaluation values, reading off which [merge]
+and [merge_node] constructs to pose proofs about from the goal and
+hypotheses *)
+Local Ltac saturate_eval_merge_step :=
+  first [ eassumption
+        | let saturate_lem eval_lem mergev do_change do_clear :=
+              (** ensure that we do innermost merge first *)
+              (let e := lazymatch mergev with
+                        | merge_node ?e ?d => e
+                        | merge ?e ?d => e
+                        end in
+               lazymatch e with
+               | context[merge_node] => fail
+               | context[merge] => fail
+               | _ => idtac
+               end);
+              let n := open_constr:(_) in
+              let G := open_constr:(_) in
+              let T := open_constr:(_) in
+              cut T;
+              [ let H := fresh in
+                intro H;
+                let T' := open_constr:(_) in
+                cut T';
+                [ let H' := fresh in
+                  intro H';
+                  let H'' := fresh in
+                  pose proof (eval_lem G n H' H); cbv beta zeta in *;
+                  do_change ();
+                  let k := fresh in
+                  set (k := mergev) in *; clearbody k
+                | do_clear () ]
+              | do_clear () ]
+          in
+          let saturate_of T do_clear :=
+              match T with
+              | context[merge_node (@pair ?A ?B ?op ?args) ?d]
+                => saturate_lem (fun G n H' H => eval_merge_node G d H' op args n H) (merge_node (@pair A B op args) d)
+                                ltac:(fun _ => progress change (op, args) with (@pair A B op args) in * ) do_clear
+              | context[merge ?e ?d]
+                => saturate_lem (fun G n H' H => eval_merge G e n d H' H) (merge e d)
+                                ltac:(fun _ => idtac) do_clear
+              end in
+          match goal with
+          | [ |- ?T ] => saturate_of T ltac:(fun _ => idtac)
+          | [ H : ?T |- _ ] => saturate_of T ltac:(fun _ => clear H)
+          end
+        | progress destruct_head'_and
+        | solve [ eauto 100 ] ].
+Local Ltac saturate_eval_merge := repeat saturate_eval_merge_step.
 Theorem symex_ident_correct
         {t} (idc : ident t)
         (d : dag)
@@ -125,7 +199,7 @@ Theorem symex_ident_correct
   : eval_base_var d' rets (type.app_curried (Compilers.ident_interp idc) input_runtime_var)
     /\ dag_ok G d'
     /\ (forall e n, eval G d e n -> eval G d' e n).
-Proof.
+Proof using Type.
   cbv [symex_ident] in H; break_innermost_match_hyps.
   all: cbn [type.app_curried type.and_for_each_lhs_of_arrow Compilers.ident_interp symex_T_app_curried type.for_each_lhs_of_arrow] in *.
   all: cbn [API.interp_type base_var type.final_codomain var] in *.
@@ -165,41 +239,29 @@ Proof.
                     | rewrite Forall.Forall2_repeat_iff
                     | now apply Forall.Forall2_forall_iff'' ].
   all: rewrite ?ex_Z_of_N_iff'.
+  (** Handle things like [RevealWidth] and [RevealConstant] *)
+  all: repeat first [ progress destruct_head'_and
+                    | match goal with
+                      | [ H : RevealWidth _ _ = Success _ |- _ ]
+                        => eapply RevealWidth_correct in H; [ | clear H; try eassumption .. ]
+                      | [ H : RevealConstant _ _ = Success _ |- _ ]
+                        => eapply RevealConstant_correct in H; [ | clear H; try eassumption .. ]
+                      end ].
   (** Factor out [merge] and [merge_node] *)
-  all: repeat first [ assumption
-                    | let print_failure clear_H kind :=
-                          clear H;
-                          idtac "=================================";
-                          idtac "Warning: Failure to prove" kind "goal:";
-                          print_context_and_goal ();
-                          idtac "=================================" in
-                      (** TODO for Andres: Improve automatic proving of `dag_ok` and `eval` `merge`/`merge_node` goals *)
-                      (** QUESTION for Andres: Should the automation should be tweaked to leave over evars for unknown evaluations?  Where should the responsibility lie for determining what nested calls to [merge] evaluate to? *)
-                      match goal with
-                      | [ |- context[eval ?G _ (ExprRef (fst (merge_node (@pair ?A ?B ?op ?args) ?d))) ?n] ]
-                        => let T := open_constr:(_) in
-                           cut T;
-                           [ let H := fresh in
-                             intro H;
-                             let H' := fresh in
-                             pose proof (eval_merge_node G d ltac:(assumption || print_failure H merge_node) op args n H) as H'; cbv beta zeta in *;
-                             progress change (op, args) with (@pair A B op args) in H';
-                             let k := fresh in
-                             set (k := merge_node (@pair A B op args) d) in *; clearbody k
-                           | ]
-                      | [ |- context[eval ?G _ (ExprRef (fst (merge ?e ?d))) ?n] ]
-                        => let T := open_constr:(_) in
-                           cut T;
-                           [ let H := fresh in
-                             intro H;
-                             pose proof (eval_merge G e n d ltac:(assumption || print_failure H merge) H);
-                             let k := fresh in
-                             set (k := merge e d) in *; clearbody k
-                           | ]
-                      end
-                    | progress destruct_head'_and
-                    | solve [ auto ]
-                    | repeat apply conj ].
+  all: saturate_eval_merge; repeat apply conj; eauto 100; set_evars.
+  (** Ensure that all remaining goals are of the desired form, i.e., that we haven't left over anything *)
+  all: let print_line _ := idtac "=================================" in
+       let print_header _ := print_line () in
+       let print_footer _ := print_context_and_goal (); print_line () in
+       lazymatch goal with
+       | [ H : context[merge] |- _ ] => print_header (); idtac "Warning: Goal involving merge in hypothesis" H "remains; should have been taken care of by saturate_eval_merge"; print_footer (); fail 0 "Remaining merge hyp goal"
+       | [ H : context[merge_node] |- _ ] => print_header (); idtac "Warning: Goal involving merge_node in hypothesis" H "remains; should have been taken care of by saturate_eval_merge"; print_footer (); fail 0 "Remaining merge_node hyp goal"
+       | [ |- context[merge] ] => print_header (); idtac "Warning: Goal involving merge remains; should have been taken care of by saturate_eval_merge"; print_footer (); fail 0 "Remaining merge goal"
+       | [ |- context[merge_node] ] => print_header (); idtac "Warning: Goal involving merge_node remains; should have been taken care of by saturate_eval_merge"; print_footer (); fail 0 "Remaining merge_hyp goal"
+       | [ |- eval _ _ _ _ ] => idtac
+       | [ |- (0 <= _)%Z ] => idtac
+       | [ |- ?G ] => print_header (); idtac "Warning: Unrecognized goal remains:"; print_footer (); fail 0 "Unknown goal:" G
+       end.
   (* misc processing *)
   all: repeat first [ progress cbn [fst snd List.map] in *
                     | progress subst
@@ -214,8 +276,8 @@ Proof.
   all: lazymatch goal with
        | [ |- (0 <= _)%Z ]
          => rewrite <- ?Z.mul_split_high, ?Z.mul_split_div, ?Z.mul_split_mod,
-            ?Z.add_get_carry_full_div, ?Z.add_get_carry_full_mod, ?Z.add_with_get_carry_full_div, ?Z.add_with_get_carry_full_mod;
-              cbv [Z.add_with_carry];
+            ?Z.add_get_carry_full_div, ?Z.add_get_carry_full_mod, ?Z.add_with_get_carry_full_div, ?Z.add_with_get_carry_full_mod, <- ?Z.sub_get_borrow_full_div, ?Z.sub_get_borrow_full_mod, ?Z.sub_with_get_borrow_full_div, ?Z.sub_with_get_borrow_full_mod;
+              cbv [Z.add_with_carry Z.sub_with_borrow];
               lazymatch goal with
               | [ |- (0 <= ?x mod ?y)%Z ]
                 => let H := fresh in
