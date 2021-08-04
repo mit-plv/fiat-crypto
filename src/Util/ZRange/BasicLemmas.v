@@ -123,6 +123,12 @@ Module ZRange.
   Lemma goodb_of_is_bounded_by_bool v r : is_bounded_by_bool v r = true -> goodb r = true.
   Proof. repeat t2_step. Qed.
 
+  Lemma goodb_of_is_tighter_than_bool_goodb r1 r2 : is_tighter_than_bool r1 r2 = true -> goodb r1 = true -> goodb r2 = true.
+  Proof. repeat t2_step. Qed.
+
+  Lemma goodb_of_is_tighter_than_bool_normalize r1 r2 : is_tighter_than_bool (normalize r1) r2 = true -> goodb r2 = true.
+  Proof. repeat t2_step. Qed.
+
   Lemma is_tighter_than_bool_normalize_of_goodb r : goodb r = true -> is_tighter_than_bool r (normalize r) = true.
   Proof. repeat t2_step. Qed.
 
