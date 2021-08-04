@@ -544,7 +544,7 @@ Lemma simplify_base_var_runtime_gen {t} d b v
     | Success _, None | Error _, Some _ => False
     | Error _, None => True
     end.
-Proof.
+Proof using Type.
   induction t; cbn [eval_base_var simplify_base_var simplify_base_runtime] in *; break_innermost_match.
   all: repeat first [ assumption
                     | exact I
@@ -581,7 +581,7 @@ Theorem symex_PHOAS_correct
         /\ List.Forall2 (eval_idx_or_list_idx d') rets runtime_rets)
     /\ dag_ok G d'
     /\ (forall e n, eval G d e n -> eval G d' e n).
-Proof.
+Proof using Type.
   cbv [symex_PHOAS ErrorT.bind] in H; break_innermost_match_hyps; try discriminate.
   destruct (build_input_runtime t runtime_inputs) as [ [input_runtime_var [|] ] | ] eqn:H'; [ | exfalso.. ].
   all: lazymatch goal with
@@ -710,7 +710,7 @@ Lemma build_base_runtime_ok t arg_bounds args types PHOAS_args extra
     args = args' ++ extra
     /\ (forall extra', build_base_runtime t (args' ++ extra') = Some (PHOAS_args, extra'))
     /\ Forall2 val_or_list_val_matches_spec args' types.
-Proof.
+Proof using Type.
   revert args extra types H Hargs HPHOAS_args; induction t; intros;
     cbn [simplify_base_type build_base_runtime type.for_each_lhs_of_arrow Language.Compilers.base.interp] in *;
     break_innermost_match_hyps;
@@ -726,7 +726,7 @@ Lemma build_runtime_ok t arg_bounds args types PHOAS_args extra
     args = args' ++ extra
     /\ (forall extra', build_runtime t (args' ++ extra') = Some (PHOAS_args, extra'))
     /\ Forall2 val_or_list_val_matches_spec args' types.
-Proof.
+Proof using Type.
   revert args extra types H Hargs HPHOAS_args; induction t; intros;
     cbn [simplify_type build_runtime type.for_each_lhs_of_arrow] in *;
     [ eapply build_base_runtime_ok; eassumption | discriminate ].
@@ -740,7 +740,7 @@ Lemma build_input_runtime_ok t arg_bounds args input_types PHOAS_args extra
     args = args' ++ extra
     /\ (forall extra', build_input_runtime t (args' ++ extra') = Some (PHOAS_args, extra'))
     /\ Forall2 val_or_list_val_matches_spec args' input_types.
-Proof.
+Proof using Type.
   revert args extra input_types H Hargs HPHOAS_args; induction t as [|t1 ? t2]; intros;
     [ eexists [] | pose proof (build_runtime_ok t1) ];
     cbn [simplify_input_type build_input_runtime type.for_each_lhs_of_arrow] in *;
@@ -753,7 +753,7 @@ Lemma build_input_runtime_ok_nil t arg_bounds args input_types PHOAS_args
       (Hargs : build_input_runtime t args = Some (PHOAS_args, []))
       (HPHOAS_args : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds PHOAS_args = true)
   : Forall2 val_or_list_val_matches_spec args input_types.
-Proof.
+Proof using Type.
   pose proof (build_input_runtime_ok t arg_bounds args input_types PHOAS_args [] H Hargs HPHOAS_args).
   destruct_head'_ex; destruct_head'_and; subst; rewrite app_nil_r; assumption.
 Qed.
@@ -771,7 +771,7 @@ Proof.
 Admitted.
 
 Lemma empty_dag_ok : dag_ok G empty_dag.
-Proof.
+Proof using Type.
   econstructor. setoid_rewrite ListUtil.nth_error_nil_error in H. inversion H.
   Unshelve.
   exact N0.
@@ -800,7 +800,7 @@ Theorem check_equivalence_correct
     DenoteLines st asm = Some st'
     /\ simplify_base_runtime (type.app_curried (API.Interp expr) PHOAS_args) = Some retvals
     /\ True (* TODO(andres): write down something that relates st' to retvals *).
-Proof.
+Proof using G.
   cbv beta delta [check_equivalence ErrorT.bind] in H.
   repeat match type of H with
          | (let n := ?v in _) = _
@@ -885,7 +885,7 @@ Theorem generate_assembly_of_hinted_expr_correct
         DenoteLines st asm = Some st'
         /\ simplify_base_runtime (type.app_curried (API.Interp expr) PHOAS_args) = Some retvals
         /\ True (* TODO(andres): write down something that relates st' to retvals *).
-Proof.
+Proof using G.
   cbv [generate_assembly_of_hinted_expr] in H.
   break_innermost_match_hyps; inversion H; subst; destruct_head'_and; split; [ reflexivity | intros ].
   eapply check_equivalence_correct; eassumption.
