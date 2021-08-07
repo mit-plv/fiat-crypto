@@ -39,8 +39,8 @@ package p224
 
 import "math/bits"
 
-type uint1 uint8
-type int1 int8
+type uint1 uint64 // We use uint64 instead of a more narrow type for performance reasons; see https://github.com/mit-plv/fiat-crypto/pull/1006#issuecomment-892625927
+type int1 int64 // We use uint64 instead of a more narrow type for performance reasons; see https://github.com/mit-plv/fiat-crypto/pull/1006#issuecomment-892625927
 
 // MontgomeryDomainFieldElement is a field element in the Montgomery domain.
 //
