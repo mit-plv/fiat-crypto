@@ -114,11 +114,13 @@ Module Go.
                 ""]%string)
             ++ (if needs_bits_import then ["import ""math/bits"""; ""]%string else [])
             ++ (let typedefs
-                    := List.flat_map
+                    := let carry_bitwidth := 64 (* c.f. https://github.com/mit-plv/fiat-crypto/pull/1006#issuecomment-892625927 *) in
+                       let carry_typedef_comment := (" // We use uint" ++ Decimal.Z.to_string carry_bitwidth ++ " instead of a more narrow type for performance reasons; see https://github.com/mit-plv/fiat-crypto/pull/1006#issuecomment-892625927")%string in
+                       List.flat_map
                          (fun bw
                           => (if IntSet.mem (int.of_bitwidth false bw) bitwidths_used || IntSet.mem (int.of_bitwidth true bw) bitwidths_used
-                              then [type_prefix ++ int_type_to_string internal_private prefix (int.of_bitwidth false bw) ++ " uint8";
-                                   type_prefix ++ int_type_to_string internal_private prefix (int.of_bitwidth true bw) ++ " int8"]%string (* C: typedef signed challr prefix_int1 *)
+                              then [type_prefix ++ int_type_to_string internal_private prefix (int.of_bitwidth false bw) ++ " uint" ++ Decimal.Z.to_string carry_bitwidth ++ carry_typedef_comment;
+                                   type_prefix ++ int_type_to_string internal_private prefix (int.of_bitwidth true bw) ++ " int" ++ Decimal.Z.to_string carry_bitwidth ++ carry_typedef_comment]%string
                               else []))
                          [1; 2] in
                 let typedefs :=
