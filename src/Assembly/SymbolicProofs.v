@@ -115,13 +115,85 @@ Proof.
     intuition idtac; Option.inversion_option.
 Qed.
 
+Local Arguments Tuple.tuple : simpl never.
+Local Arguments Tuple.fieldwise : simpl never.
+
+Notation subsumed d1 d2 := (forall i v, eval d1 i v -> eval d2 i v).
+Local Infix ":<" := subsumed (at level 70, no associativity).
+
+Lemma R_flag_subsumed d s m (HR : R_flag d s m) d' (Hlt : d :< d')
+  : R_flag d' s m.
+Proof.
+  cbv [R_flag] in *; intros.
+  case (HR i H) as (?&?&?); subst; eauto.
+Qed.
+
+Lemma R_flags_subsumed d s m (HR : R_flags d s m) d' (Hlt : d :< d')
+  : R_flags d' s m.
+Proof.
+  cbv [R_flags Tuple.fieldwise Tuple.fieldwise'] in *;
+    intuition eauto using R_flag_subsumed.
+Qed.
+
+Lemma R_reg_subsumed d s m (HR : R_reg d s m) d' (Hlt : d :< d')
+  : R_reg d' s m.
+Proof. cbv [R_reg] in *; eauto. Qed.
+
+Lemma R_regs_subsumed d s m (HR : R_regs d s m) d' (Hlt : d :< d')
+  : R_regs d' s m.
+Proof.
+  cbv [R_regs Tuple.fieldwise Tuple.fieldwise'] in *;
+    intuition eauto using R_reg_subsumed.
+Qed.
+
+Lemma R_mem_subsumed d s m (HR : R_mem d s m) d' (Hlt : d :< d')
+  : R_mem d' s m. Admitted.
+
+Lemma R_subsumed s m (HR : R s m) d' (Hd' : dag_ok d') (Hlt : s :< d')
+  (s' := update_dag_with s (fun _ => d')) : R s' m.
+Proof.
+  destruct s, m; case HR as (Hd&Hr&Hf&Hm);
+    cbv [update_dag_with] in *; cbn in *;
+    intuition eauto using R_flags_subsumed, R_regs_subsumed, R_mem_subsumed.
+Qed.
+
+Lemma Merge_R s m (HR : R s m) e v (H : eval s e v) :
+  forall i s', Merge e s = Success (i, s') ->
+  R s' m /\ eval s' i v.
+Proof.
+  cbv [Merge].
+  inversion 1; subst; match goal with H: ?x = ?x |- _ => clear H end.
+  destruct s, m.
+  case (eval_merge _ e _ dag_state (proj1 HR) H) as (He'&Hd'&Hes).
+  intuition eauto using R_subsumed.
+Qed.
+
+Ltac step_Merge :=
+  match goal with
+  | H : bind (Merge ?e) _ ?s = _ |- _ =>
+      let i := fresh "i" in
+      let s' := fresh "s'" in
+      let Hs' := fresh "H" s' in
+      unfold bind at 1 in H;
+      destruct (Merge e s) as [(i,s')|] eqn:Hs' in H; [|solve [inversion H]];
+      cbn [ErrorT.bind] in H;
+      let H' := fresh H in
+      unshelve (epose proof Merge_R s _ ltac:(eassumption) e _ _ _ _ Hs' as H'; destruct H'); shelve_unifiable
+  end.
+
 Lemma R_SymexNornalInstruction s m (HR : R s m) instr :
   forall s', Symbolic.SymexNormalInstruction instr s = Success (tt, s') ->
   exists m', Semantics.DenoteNormalInstruction m instr = Some m' /\
-  R s' m.
+  R s' m'.
 Proof.
   intros s' H.
   cbv [SymexNormalInstruction] in H.
   BreakMatch.break_innermost_match_hyps; cbv [ret err] in *; inversion_ErrorT.
-  {
+  { destruct instr; cbn [Syntax.args Syntax.op] in *; subst.
+    eexists; split; [exact eq_refl|].
+    step_Merge.
+    { econstructor; econstructor. }
+    eauto using R_SetFlag. }
+Admitted.
+
 Abort.

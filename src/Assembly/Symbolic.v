@@ -1282,7 +1282,7 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
     if N.eqb a b 
     then nz <- App (nonzero, [a]); SetFlag ZF nz
     else ret tt
-  | clc, [] => zero <- @Symeval 1 _ (@PreApp (const 0) nil); SetFlag CF zero
+  | clc, [] => zero <- Merge (@ExprApp (const 0, nil)); SetFlag CF zero
   | Syntax.ret, [] => ret tt
   | _, _ => err (error.unimplemented_instruction instr)
  end
