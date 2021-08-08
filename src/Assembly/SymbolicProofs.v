@@ -117,6 +117,11 @@ Qed.
 
 Local Arguments Tuple.tuple : simpl never.
 Local Arguments Tuple.fieldwise : simpl never.
+Local Arguments Tuple.from_list_default : simpl never.
+Local Arguments Tuple.to_list : simpl never.
+Local Arguments Tuple.nth_default ! _ _.
+Local Arguments set_reg ! _ _.
+Local Arguments N.ones ! _.
 
 Notation subsumed d1 d2 := (forall i v, eval d1 i v -> eval d2 i v).
 Local Infix ":<" := subsumed (at level 70, no associativity).
@@ -157,6 +162,65 @@ Proof.
     intuition eauto using R_flags_subsumed, R_regs_subsumed, R_mem_subsumed.
 Qed.
 
+Lemma Tuple__nth_default_to_list {A} n (xs : Tuple.tuple A n) (d : A) :
+  forall i, List.nth_default d (Tuple.to_list _ xs) i = Tuple.nth_default d i xs.
+Proof.
+Admitted.
+
+Lemma get_reg_R s m (HR : R s m) ri :
+  forall i, Symbolic.get_reg s ri = Some i ->
+  exists v, eval s i v /\ Tuple.nth_default 0%N ri (m : reg_state) = v.
+Proof.
+  cbv [Symbolic.get_reg]; intros.
+  rewrite <-Tuple__nth_default_to_list in H.
+  cbv [nth_default] in H; BreakMatch.break_match_hyps; subst; [|solve[congruence] ].
+  destruct s,m; cbn in *; destruct HR as (_&?&_); cbv [R_regs R_reg] in *.
+  eapply Tuple.fieldwise_to_list_iff in H.
+  eapply Forall.Forall2_forall_iff_nth_error in H; cbv [Option.option_eq] in H.
+
+  rewrite Heqo in H.
+  BreakMatch.break_match_hyps; [|solve[contradiction]].
+  specialize (H _ eq_refl).
+  eexists; split; [eassumption|].
+
+  rewrite <-Tuple__nth_default_to_list.
+  cbv [nth_default].
+  rewrite Heqo0.
+  trivial.
+Qed.
+
+Ltac step_symex0 :=
+  match goal with
+  | H : (x <- ?v; ?k)%x86symex ?s = Success _ |- _  =>
+    unfold bind at 1 in H;
+    let x := fresh x in
+    let HH := fresh "HS" x in
+    destruct v as [[x ?]|] eqn:HH in H;
+    cbn [ErrorT.bind] in H; [|solve[exfalso;clear-H;inversion H]]
+  end.
+Ltac step_symex := step_symex0.
+
+Lemma GetFlag_R s m (HR : R s m) f i s' (H : GetFlag f s = Success (i, s')) :
+  exists b, eval s i (N.b2n b) /\ Semantics.get_flag m f = Some b /\ s = s'.
+Proof.
+  cbv [GetFlag some_or] in H.
+  destruct (Symbolic.get_flag _ _) eqn:? in H;
+    ErrorT.inversion_ErrorT; Prod.inversion_prod; subst; [].
+  eapply get_flag_R in Heqo; eauto; destruct Heqo as (b&Hb&Hf); eauto.
+Qed.
+
+Ltac step_GetFlag :=
+  match goal with
+  | H : GetFlag ?f ?s = Success (?i0, _) |- _ =>
+    let v := fresh "v" f in let Hv := fresh "H" v
+    in let Hi := fresh "H" i0 in let Heq := fresh H "eq" in
+    case (GetFlag_R s _ ltac:(eassumption) _ _ _ H) as (v&Hi&Hvcf&Heq); clear H;
+    (let i := fresh "i" f in try rename i0 into i);
+    (try match type of Heq with _ = ?s' => subst s' end)
+  end.
+Ltac step_symex1 := first [step_symex0 | step_GetFlag].
+Ltac step_symex ::= step_symex1.
+
 Lemma Merge_R s m (HR : R s m) e v (H : eval s e v) :
   forall i s', Merge e s = Success (i, s') ->
   R s' m /\ eval s' i v.
@@ -170,16 +234,108 @@ Qed.
 
 Ltac step_Merge :=
   match goal with
-  | H : bind (Merge ?e) _ ?s = _ |- _ =>
-      let i := fresh "i" in
-      let s' := fresh "s'" in
-      let Hs' := fresh "H" s' in
-      unfold bind at 1 in H;
-      destruct (Merge e s) as [(i,s')|] eqn:Hs' in H; [|solve [inversion H]];
-      cbn [ErrorT.bind] in H;
-      let H' := fresh H in
-      unshelve (epose proof Merge_R s _ ltac:(eassumption) e _ _ _ _ Hs' as H'; destruct H'); shelve_unifiable
+  | H : Merge ?e ?s = Success (?i, ?s') |- _ =>
+    let Hs' := fresh "H" s' in let v := fresh "v" i in let Hi := fresh "H" i in
+    let t := open_constr:(fun A B => Merge_R s _ A e ?[v] B _ _ H) in
+    unshelve (edestruct t as (Hs'&Hi); clear H); shelve_unifiable;
+    [eassumption|..]
   end.
+Ltac step_symex2 := first [step_symex1 | step_Merge].
+Ltac step_symex ::= step_symex2.
+
+Lemma App_R s m (HR : R s m) e v (H : eval_node G s e v) :
+  forall i s', Symbolic.App e s = Success (i, s') ->
+  R s' m /\ eval s' i v.
+Proof.
+  cbv [Symbolic.App]; intros.
+  eapply Merge_R in H0; intuition eauto using eval_simplify.
+Qed.
+
+Ltac step_App :=
+  match goal with
+  | H : Symbolic.App ?n ?s = Success (?i, ?s') |- _ =>
+    let Hs' := fresh "H" s' in let v := fresh "v" i in let Hi := fresh "H" i in
+    let t := open_constr:(fun A B => App_R s _ A n ?[v] B _ _ H) in
+    unshelve (edestruct t as (Hs'&Hi); clear H); shelve_unifiable;
+    [eassumption|..]
+  end.
+Ltac step_symex3 := first [step_symex2 | step_App].
+Ltac step_symex ::= step_symex3.
+
+Import ListNotations.
+
+Lemma R_SetOperand s m (HR : R s m)
+  sz sa a i s' (H : @Symbolic.SetOperand sz sa a i s = Success (tt, s'))
+  v (Hv : eval s i v)
+  : exists m', SetOperand sa sz m a v = Some m' /\ R s' m'.
+Proof.
+  destruct a in *; cbn in H; [ | | solve [inversion H] ];
+    cbv [SetOperand Crypto.Util.Option.bind SetReg64 update_reg_with Symbolic.update_reg_with] in *;
+    repeat (BreakMatch.break_innermost_match_hyps; Prod.inversion_prod; ErrorT.inversion_ErrorT; subst).
+
+  { eexists; split; [exact eq_refl|].
+    destruct s; cbv [R] in *; cbn in *; intuition idtac.
+    cbv [R_regs Symbolic.set_reg set_reg index_and_shift_and_bitcount_of_reg].
+    eapply Tuple.fieldwise_to_list_iff.
+    unshelve erewrite 2Tuple.from_list_default_eq, 2Tuple.to_list_from_list;
+      try solve [rewrite ?Crypto.Util.ListUtil.length_set_nth, ?Crypto.Util.ListUtil.length_update_nth, ?Tuple.length_to_list; trivial].
+    eapply Crypto.Util.ListUtil.Forall2_update_nth.
+    { eapply Tuple.fieldwise_to_list_iff; eassumption. }
+    cbv [R_reg bitmask_of_reg index_and_shift_and_bitcount_of_reg];
+      intros; Option.inversion_option; subst.
+    eapply Ndec.Neqb_complete in Heqb; rewrite Heqb.
+    replace (reg_offset r) with 0%N by (destruct r;cbv;trivial||cbv in Heqb;inversion Heqb).
+    rewrite (N.shiftl_0_r v), (N.shiftl_0_r (N.ones 64)).
+    clear H6.
+    rename v2 into x.
+    assert (Hx64: N.ldiff (*reg*)x (N.ones 64) = 0%N) by admit.
+    assert (Hv64: N.land (*val*)v (N.ones 64) = v) by admit.
+    rewrite N.land_comm, Hv64, Hx64, N.lor_0_r; trivial. }
+  { eexists; split; [exact eq_refl|].
+    repeat (step_symex; []).
+    cbv [GetReg64 some_or] in *.
+    pose proof (get_reg_R s _ ltac:(eassumption) (reg_index r)) as Hr.
+    destruct (Symbolic.get_reg _ _) in *; cbn [ErrorT.bind] in H;
+      ErrorT.inversion_ErrorT; Prod.inversion_prod; subst;cbn [fst snd] in *.
+    specialize (Hr _ eq_refl); case Hr as (?&?&?).
+    step_App.
+    { econstructor.
+      { econstructor; try eassumption. econstructor; try eassumption. econstructor. }
+      { (* interp_op set_slice *)
+        instantiate (1:=N.lor (N.land (bitmask_of_reg r) (N.shiftl v (reg_offset r))) (N.ldiff x (bitmask_of_reg r))); exact eq_refl||admit. } }
+    repeat (Prod.inversion_prod; ErrorT.inversion_ErrorT; subst).
+    destruct s1; cbv [R] in *; cbn in *; intuition idtac.
+    cbv [R_regs Symbolic.set_reg set_reg index_and_shift_and_bitcount_of_reg].
+    eapply Tuple.fieldwise_to_list_iff.
+    unshelve erewrite 2Tuple.from_list_default_eq, 2Tuple.to_list_from_list;
+      try solve [rewrite ?Crypto.Util.ListUtil.length_set_nth, ?Crypto.Util.ListUtil.length_update_nth, ?Tuple.length_to_list; trivial].
+    eapply Crypto.Util.ListUtil.Forall2_update_nth.
+    { eapply Tuple.fieldwise_to_list_iff; eassumption. }
+    cbv [R_reg]; intros; Option.inversion_option; subst.
+    erewrite <-Tuple__nth_default_to_list in Hv0;
+      unfold nth_default in Hv0; rewrite H6 in Hv0; exact Hv0. }
+  admit. (* store *)
+Admitted.
+
+Ltac step_SetOperand :=
+  match goal with
+  | H : Symbolic.SetOperand ?a ?i ?s = Success (?i0, _) |- _ =>
+      let m := fresh "m" in let Hm := fresh "H" m in let HR := fresh "HR" m in
+      case (R_SetOperand s _ ltac:(eassumption) _ _ _ _ _ H _ ltac:(eassumption))
+        as (m&?Hm&?HR); clear H
+  end.
+Ltac step_symex4 := first [step_symex3 | step_SetOperand].
+Ltac step_symex ::= step_symex4.
+
+Ltac step_SetFlag :=
+  match goal with
+  | H : Symbolic.SetFlag ?f ?i ?s = Success (?_tt, ?s') |- _ =>
+    let i := fresh "i" in let b := fresh "b" in
+    unshelve epose proof (R_SetFlag s _ f _ ?[i] ?[b] _ _ H); shelve_unifiable;
+    [eassumption|..]
+  end.
+Ltac step_symex5 := first [step_symex4 | step_SetFlag ].
+Ltac step_symex ::= step_symex4.
 
 Lemma R_SymexNornalInstruction s m (HR : R s m) instr :
   forall s', Symbolic.SymexNormalInstruction instr s = Success (tt, s') ->
@@ -188,12 +344,27 @@ Lemma R_SymexNornalInstruction s m (HR : R s m) instr :
 Proof.
   intros s' H.
   cbv [SymexNormalInstruction] in H.
-  BreakMatch.break_innermost_match_hyps; cbv [ret err] in *; inversion_ErrorT.
-  { destruct instr; cbn [Syntax.args Syntax.op] in *; subst.
-    eexists; split; [exact eq_refl|].
-    step_Merge.
+  destruct instr; BreakMatch.break_innermost_match_hyps; cbv [ret err Syntax.args Syntax.op] in *; inversion_ErrorT; Prod.inversion_prod; subst.
+  { repeat step_symex.
     { econstructor; econstructor. }
-    eauto using R_SetFlag. }
+    repeat step_symex.
+    step_SetFlag.
+    { instantiate (1:=false); eassumption. }
+    cbn; eauto. }
+  1:admit. (* ret *)
+  1:admit. (* dec *)
+  1:admit. (* inc *)
+  { inversion Heqo; subst. repeat step_symex; cbn. rewrite Hvcf; cbn. eauto. }
+  { inversion Heqo; subst. repeat step_symex; cbn. rewrite Hvcf; cbn. eauto. }
+  1:admit. (* adc *)
+  1:admit. (* adcx *)
+  1:admit. (* add *)
+  1:admit. (* adox *)
+  1:admit. (* and *)
+  1:admit. (* cmovc *)
+  1:admit. (* cmovnz *)
+  1:admit. (* imul *)
+  (* mov *)
 Admitted.
 
-Abort.
+End WithCtx.
