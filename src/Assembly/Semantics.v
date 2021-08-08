@@ -225,7 +225,7 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
     st <- SetOperand sa s st b va;
     SetOperand sa s st a vb
   | (setc | seto) as opc, [dst] => (* Flags Affected: None *)
-    let flag := match opc with adcx => CF | _ => OF end in
+    let flag := match opc with setc => CF | _ => OF end in
     b <- get_flag st flag;
     SetOperand sa s st dst (N.b2n b)
   | clc, [] => Some (update_flag_with st (fun fs =>
