@@ -1149,8 +1149,8 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
   | xchg, [a; b] => (* Note: unbundle when switching from N to Z *)
     va <- GetOperand a;
     vb <- GetOperand b;
-    _ <- SetOperand a vb;
-    SetOperand b va
+    _ <- SetOperand b va;
+    SetOperand a vb
   | cmovc, [dst; src] =>
     v <- Symeval (selectznz@(CF, dst, src));
     SetOperand dst v
@@ -1230,15 +1230,14 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
     _ <- SetOperand dst y;
     _ <- HavocFlags;
     if expr_beq rc (ExprApp (const 1%N, nil))
-    then (
-      cf <- App ((slice 0 1), cons (x) nil);
-      _ <- SetFlag CF cf;
-      zero <- App (const 0, nil); SetFlag OF zero)
+    then cf <- App ((slice 0 1), cons (x) nil); SetFlag CF cf
     else ret tt    
   | mulx, [hi; lo; src2] =>
     let src1 : ARG := rdx in
-    vl <- Symeval (mul s@(src1,src2));
-    vh <- Symeval (mulhuu s@(src1,src2));
+    v1 <- GetOperand src1;
+    v2 <- GetOperand src2;
+    vl <- App (mul s, [v1; v2]);
+    vh <- App (mulhuu s, [v1; v2]);
     _ <- SetOperand lo vl;
          SetOperand hi vh
    | Syntax.shr, [dst; cnt] =>
