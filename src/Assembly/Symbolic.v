@@ -552,8 +552,7 @@ Proof.
   Unshelve. all : exact 0%N.
 Qed.
 
-Definition zconst s (z:Z) :=
-  const (if z <? 0 then invert_Some (interp0_op (neg s) [Z.abs_N z]) else Z.to_N z)%Z.
+Definition zconst s (z:Z) := const (Z.to_N (Z.land z (Z.ones (Z.of_N s))))%Z.
 
 Section WithContext.
   Context (ctx : symbol -> option N).
@@ -1225,13 +1224,16 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
     HavocFlags
   | Syntax.rcr, [dst; cnt] =>
     x <- GetOperand dst;
-    c <- GetOperand cnt; c <- Reveal 1 c;
+    c <- GetOperand cnt; rc <- Reveal 1 c;
+    cf <- GetFlag CF;
+    y <- App (rcr s, [x; cf; c]);
+    _ <- SetOperand dst y;
     _ <- HavocFlags;
-    if match c with ExprApp (const 1%N, nil) => true | _ => false end
+    if expr_beq rc (ExprApp (const 1%N, nil))
     then (
       cf <- App ((slice 0 1), cons (x) nil);
       _ <- SetFlag CF cf;
-      zero <- Symeval (PreApp (const 0) nil); SetFlag OF zero)
+      zero <- App (const 0, nil); SetFlag OF zero)
     else ret tt    
   | mulx, [hi; lo; src2] =>
     let src1 : ARG := rdx in
@@ -1245,15 +1247,15 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
     HavocFlags
    | Syntax.sar, [dst; cnt] =>
     x <- GetOperand dst;
-    c <- GetOperand cnt; c <- Reveal 1 c;
-    y <- Symeval (sar s@(dst, cnt));
+    c <- GetOperand cnt; rc <- Reveal 1 c;
+    y <- App (sar s, [x; c]);
     _ <- SetOperand dst y;
     _ <- HavocFlags;
-    if match c with ExprApp (const 1%N, nil) => true | _ => false end
+    if expr_beq rc (ExprApp (const 1%N, nil))
     then (
       cf <- App ((slice 0 1), cons (x) nil);
       _ <- SetFlag CF cf;
-      zero <- Symeval (PreApp (const 0) nil); SetFlag OF zero)
+      zero <- App (const 0, nil); SetFlag OF zero)
     else ret tt
   | shrd, [lo as dst; hi; cnt] =>
     let cnt' := add s@(Z.of_N s, PreApp (neg s) [PreARG cnt]) in
@@ -1272,14 +1274,14 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
     _ <- SetOperand dst v;
     _ <- PreserveFlag CF HavocFlags;
     SetFlag OF o
-  | test, [a;b] =>
-    a <- GetOperand a;
-    b <- GetOperand b;
-    zero <- Symeval (PreApp (const 0) nil);
+  | test, [ea;eb] =>
+    a <- GetOperand ea;
+    b <- GetOperand eb;
+    zero <- App (const 0, nil);
     _ <- HavocFlags;
     _ <- SetFlag CF zero;
     _ <- SetFlag OF zero;
-    if N.eqb a b 
+    if Equality.ARG_beq ea eb 
     then nz <- App (nonzero, [a]); SetFlag ZF nz
     else ret tt
   | clc, [] => zero <- Merge (@ExprApp (const 0, nil)); SetFlag CF zero
