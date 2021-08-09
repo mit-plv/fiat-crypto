@@ -219,6 +219,21 @@ Section WithContext.
 End WithContext.
 Definition interp0_op := interp_op (fun _ => None).
 
+Lemma interp_op_weaken_symbols G1 G2 o args
+  (H : forall (s:symbol) v, G1 s = Some v -> G2 s = Some v)
+  : forall v, interp_op G1 o args = Some v -> interp_op G2 o args = Some v.
+Proof.
+  cbv [interp_op option_map]; intros;
+    repeat (BreakMatch.break_match || BreakMatch.break_match_hyps);
+    inversion_option; subst;
+    try congruence.
+  all : eapply H in Heqo0; congruence.
+Qed.
+
+Lemma interp_op_interp0_op o a v (H : interp0_op o a = Some v)
+  : forall G, interp_op G o a = Some v.
+Proof. intros; eapply interp_op_weaken_symbols in H; eauto; discriminate. Qed.
+
 Definition node_beq [A : Set] (arg_eqb : A -> A -> bool) : node A -> node A -> bool :=
   Prod.prod_beq _ _ op_beq (ListUtil.list_beq _ arg_eqb).
 
@@ -419,17 +434,6 @@ Proof.
   { intuition eauto. eapply H1. }
 Qed.
 
-Lemma interp_op_weaken_symbols G1 G2 o args
-  (H : forall (s:symbol) v, G1 s = Some v -> G2 s = Some v)
-  : forall v, interp_op G1 o args = Some v -> interp_op G2 o args = Some v.
-Proof.
-  cbv [interp_op option_map]; intros;
-    repeat (BreakMatch.break_match || BreakMatch.break_match_hyps);
-    inversion_option; subst;
-    try congruence.
-  all : eapply H in Heqo0; congruence.
-Qed.
-
 Lemma eval_weaken_symbols G1 G2 d e n
   (H : forall s v, G1 s = Some v -> G2 s = Some v)
   : eval G1 d e n -> eval G2 d e n.
@@ -486,6 +490,8 @@ Proof.
 Qed.
 
 Require Import Crypto.Util.Tactics.SplitInContext.
+Require Import coqutil.Tactics.autoforward coqutil.Decidable coqutil.Tactics.Tactics.
+Global Set Default Goal Selector "1".
 
 Lemma eval_merge G :
   forall e n,
@@ -584,9 +590,11 @@ Proof.
   eapply IHForall; eassumption.
 Qed.
 
-Lemma le_land n m : (N.land n m <= m)%N.
+Lemma eval_interp0_expr e v (H : interp0_expr e = Some v) : forall G d, eval G d e v.
 Proof.
-Admitted.
+  cbv [interp0_expr]; intros.
+  eapply eval_interp_expr, eval_weaken_symbols in H; [eassumption|congruence].
+Qed.
 
 Module N.
 Lemma testbit_ones n i : N.testbit (N.ones n) i = N.ltb i n.
@@ -608,26 +616,6 @@ Proof.
   Lia.lia.
 Qed.
 End N.
-
-Lemma land_ones_le n m : (n <= N.ones m -> N.land n (N.ones m) = n)%N.
-Proof.
-  intros; eapply N.bits_inj_iff; intro i.
-  rewrite N.land_spec.
-  epose proof N.ones_spec_iff m i.
-  destruct (N.testbit (N.ones m) i);
-    rewrite ?Bool.andb_true_r, ?Bool.andb_false_r; intuition idtac.
-  destruct (N.le_gt_cases m i); try intuition congruence; [].
-  clear H1 H2.
-  (*
-  erewrite N.bits_above_log2; trivial.
-  erewrite N.ones_equiv in H.
-  assert (n < 2 ^ m)%N by admit; clear H.
-  assert (n < 2 ^ i)%N by admit; clear H0.
-  eapply N.log2_lt_pow2.
-  Search N.log2 N.lt N.pow.
-  Search N.ones N.pow.
-  *)
-Admitted.
 
 Fixpoint bound_expr e : option N := (* e <= r *)
   match e with
@@ -653,7 +641,7 @@ Fixpoint bound_expr e : option N := (* e <= r *)
   end.
 
 Lemma eval_bound_expr G e b : bound_expr e = Some b ->
-  forall d v, eval G d e v -> (v <= b)%N.
+  forall d v, eval G d e v -> (0 <= v <= b)%N.
 Proof.
   cbv [bound_expr]; BreakMatch.break_match;
     inversion 2; intros; inversion_option; subst;
@@ -662,33 +650,101 @@ Proof.
     rewrite ?N.land_ones, ?N.ones_equiv;
     try match goal with |- context [(?a mod ?b)%N] => pose proof N.mod_bound_pos a b ltac:(Lia.lia) end;
     try Lia.lia.
-    assert (0 < 2^s)%N as HH by admit. pose proof (H HH). Lia.lia.
 Admitted.
 
 Definition isCst (e : expr) :=
   match e with ExprApp ((const _), _) => true | _ => false end.
 
-Definition simplify_slice0 :=
+
+Module Rewrite.
+Class Ok r := rwok : forall G d e v, eval G d e v -> eval G d (r e) v.
+
+Ltac resolve_match_using_hyp :=
+  match goal with |- context[match ?x with _ => _ end] =>
+  match goal with H : x = ?v |- _ =>
+      let h := Head.head v in
+      is_constructor h;
+      rewrite H
+  end end.
+
+Ltac step := match goal with
+  | |- Ok ?r => cbv [Ok r]; intros
+  | _ => solve [trivial | contradiction]
+  |  _ => resolve_match_using_hyp
+  | _ => inversion_option_step
+
+  | H : _ = ?v |- _ => is_var v; progress subst v
+  | H : ?v = _ |- _ => is_var v; progress subst v
+
+  | H : eval _ ?d ?e ?v1, G: eval _ ?d ?e ?v2 |- _ =>
+      assert_fails (constr_eq v1 v2);
+      eapply (eval_eval _ d e v1 H v2) in G
+  | |- eval _ ?d ?e ?v =>
+      match goal with
+        H : eval _ d e ?v' |- _ =>
+            let Heq := fresh in
+            enough (Heq : v = v') by (rewrite Heq; exact H);
+            try (clear H; clear e)
+      end
+
+  | H: interp_op _ (const _) nil = Some _ |- _ => inversion H; clear H; subst
+  | H: interp0_op _ _ = Some _ |- _ => eapply interp_op_interp0_op in H
+  | H: interp0_expr _ = Some _ |- _ => eapply eval_interp0_expr in H
+  | H: bound_expr _ = Some _ |- _ => eapply eval_bound_expr in H; eauto; [ ]
+
+  | H : (?x <=? ?y)%N = ?b |- _ => is_constructor b; destruct (N.leb_spec x y); (inversion H || clear H)
+  | H : andb _ _ = true |- _ => eapply Bool.andb_prop in H; case H as (?&?)
+  | H : N.eqb ?n _ = true |- _ => eapply N.eqb_eq in H; try subst n
+  | H : expr_beq ?a ?b = true |- _ => replace a with b in * by admit; clear H
+  | _ => progress destruct_one_match_hyp
+  | _ => progress destruct_one_match
+
+  | H : eval _ _ ?e _ |- _ => assert_fails (is_var e); inversion H; clear H; subst
+  | H : Forall2 (eval _ _) (cons _ _) _ |- _ => inversion H; clear H; subst
+  | H : Forall2 (eval _ _) _ (cons _ _) |- _ => inversion H; clear H; subst
+  | H : Forall2 _ _ nil |- _ => inversion H; clear H; subst
+  | H : Forall2 _ nil _ |- _ => inversion H; clear H; subst
+
+  | _ => progress cbn [fst snd map option_map] in *
+  end.
+
+Ltac Econstructor :=
+  match goal with
+  | |- Forall2 (eval _ _) _ _ =>  econstructor
+  | |- eval _ _ ?e _ => econstructor
+  end.
+
+Ltac t := repeat (step || Econstructor || eauto || (progress cbn [interp0_op interp_op] in * ) ).
+
+Definition slice0 :=
   fun e => match e with
     ExprApp (slice 0 s, [(ExprApp ((addZ|mulZ|negZ|shlZ|shrZ|andZ|orZ) as o, args))]) =>
         ExprApp ((match o with addZ=>add s|mulZ=>mul s|negZ=>neg s|shlZ=>shl s|shrZ => shr s|andZ => and s| orZ => or s |_=>old 0%N 999999%N end), args)
       | _ => e end.
-Definition simplify_slice_set_slice :=
+Global Instance slice0_ok : Ok slice0. Proof. t. Unshelve. all:exact nil. Qed.
+
+Definition slice_set_slice :=
   fun e => match e with
     ExprApp (slice lo1 s1, [ExprApp (set_slice lo2 s2, [_; e'])]) =>
       if andb (N.eqb lo1 lo2) (N.leb s1 s2) then e' else e | _ => e end.
-Definition simplify_set_slice_set_slice :=
+Global Instance slice_set_slice_ok : Ok slice_set_slice. Proof. t. Admitted.
+
+Definition set_slice_set_slice :=
   fun e => match e with
     ExprApp (set_slice lo1 s1, [ExprApp (set_slice lo2 s2, [x; e']); y]) =>
       if andb (N.eqb lo1 lo2) (N.leb s2 s1) then ExprApp (set_slice lo1 s1, [x; y]) else e | _ => e end.
-Definition simplify_truncate_small :=
+Global Instance set_slice_set_slice_ok : Ok set_slice_set_slice. Proof. t. Unshelve. all: exact nil. Qed.
+
+Definition truncate_small :=
   fun e => match e with
-    ExprApp (slice 0%N s, [ExprApp (op, args) as e']) =>
+    ExprApp (slice 0%N s, [e']) =>
       match bound_expr e' with Some b =>
       if N.leb b (N.ones s)
       then e'
       else e | _ => e end | _ => e end.
-Definition simplify_addcarry_bit :=
+Global Instance truncate_small_ok : Ok truncate_small. Proof. t; []. Admitted.
+
+Definition addcarry_bit :=
   fun e => match e with
     ExprApp (addcarry s, ([ExprApp (const a, nil);b])) =>
       if option_beq N.eqb (bound_expr b) (Some 1) then
@@ -697,7 +753,17 @@ Definition simplify_addcarry_bit :=
       | Some 0, Some 0 => ExprApp (const 0, nil)
       | _, _ => e
       end else e | _ => e end%N%bool.
-Definition simplify_addoverflow_bit :=
+Global Instance addcarry_bit_ok : Ok addcarry_bit.
+Proof.
+  repeat step;
+    [instantiate (1:=G) in E0; instantiate (1:=G) in E1|];
+    destruct (Reflect.reflect_eq_option (bound_expr e) (Some 1)%N) in E;
+      try discriminate; repeat step;
+    assert (y0 = 0 \/ y0 = 1)%N as HH by Lia.lia; case HH as [|];
+      subst; repeat step; repeat Econstructor; cbn; congruence.
+Qed.
+
+Definition addoverflow_bit :=
   fun e => match e with
     ExprApp (addoverflow s, ([ExprApp (const a, nil);b])) =>
       if option_beq N.eqb (bound_expr b) (Some 1) then
@@ -706,7 +772,17 @@ Definition simplify_addoverflow_bit :=
       | Some 0, Some 0 => ExprApp (const 0, nil)
       | _, _ => e
       end else e | _ => e end%N%bool.
-Definition simplify_addbyte_small :=
+Global Instance addoverflow_bit_ok : Ok addoverflow_bit.
+Proof.
+  repeat step;
+    [instantiate (1:=G) in E0; instantiate (1:=G) in E1|];
+    destruct (Reflect.reflect_eq_option (bound_expr e) (Some 1)%N) in E;
+      try discriminate; repeat step;
+    assert (y0 = 0 \/ y0 = 1)%N as HH by Lia.lia; case HH as [|];
+      subst; repeat step; repeat Econstructor; cbn; congruence.
+Qed.
+
+Definition addbyte_small :=
   fun e => match e with
     ExprApp (add (8%N as s), args) =>
       match Option.List.lift (List.map bound_expr args) with
@@ -714,7 +790,10 @@ Definition simplify_addbyte_small :=
           if N.leb (List.fold_right N.add 0%N bounds) (N.ones s)
           then ExprApp (add 64%N, args)
           else e | _ => e end | _ =>  e end.
-Definition simplify_addcarry_small :=
+Global Instance addbyte_small_ok : Ok addbyte_small.
+Proof. t. Admitted.
+
+Definition addcarry_small :=
   fun e => match e with
     ExprApp (addcarry s, args) =>
       match Option.List.lift (List.map bound_expr args) with
@@ -722,7 +801,10 @@ Definition simplify_addcarry_small :=
           if N.leb (List.fold_right N.add 0%N bounds) (N.ones s)
           then (ExprApp (const 0, nil))
           else e | _ => e end | _ =>  e end.
-Definition simplify_addoverflow_small :=
+Global Instance addcarry_small_ok : Ok addcarry_small.
+Proof. t. exfalso; eapply E1; clear E1. Admitted.
+
+Definition addoverflow_small :=
   fun e => match e with
     ExprApp (addoverflow s, args) =>
       match Option.List.lift (List.map bound_expr args) with
@@ -730,32 +812,38 @@ Definition simplify_addoverflow_small :=
           if N.leb (List.fold_right N.add 0%N bounds) (N.ones (s-1))
           then (ExprApp (const 0, nil))
           else e | _ => e end | _ =>  e end.
+Global Instance addoverflow_small_ok : Ok addoverflow_small.
+Proof. t. exfalso; eapply E1; clear E1. Admitted.
 
-Definition simplify_rcr :=
+Definition rcr :=
   fun e => match e with
         | ExprApp (rcr s, [x; ExprApp (addcarry _, _); ExprApp (const 1, nil)]) => ExprApp (mul s, [x;  ExprApp (const 64, nil)]) (*not sure about this mul s*)   
         | ExprApp (rcrcarry _, [x; ExprApp (addcarry s, xs); ExprApp (const 1, nil)]) => ExprApp (addcarry s, xs)
         | _ => e end.
+Global Instance rcr_ok : Ok rcr.
+Proof. t. Admitted.
 
-Definition simplify_expr : expr -> expr :=
-  List.fold_left (fun e f => f e)
-  [fun e => match interp0_expr e with
-            | Some v => ExprApp (const v, nil)
-            | _ => e end
-  ;simplify_slice0
-  ;simplify_set_slice_set_slice
-  ;simplify_slice_set_slice
-  ;simplify_rcr    
-  ;simplify_truncate_small
-  ;fun e => match e with
+Definition constprop :=
+  fun e => match interp0_expr e with
+           | Some v => ExprApp (const v, nil)
+           | _ => e end.
+Global Instance constprop_ok : Ok constprop.
+Proof. t. f_equal; eauto using eval_eval. Qed.
+
+Definition flatten_associative :=
+  fun e => match e with
     ExprApp (o, args) =>
     if associative o then
       ExprApp (o, List.flat_map (fun e' =>
         match e' with
         | ExprApp (o', args') => if op_beq o o' then args' else [e']
         | _ => [e'] end) args)
-    else e | _ => e end
-  ;fun e => match e with
+    else e | _ => e end.
+Global Instance flatten_associative_ok : Ok flatten_associative.
+Proof. t. Admitted.
+
+Definition consts_commutative :=
+  fun e => match e with
     ExprApp (o, args) =>
     if commutative o then
     let csts_exprs := List.partition isCst args in
@@ -765,14 +853,12 @@ Definition simplify_expr : expr -> expr :=
          | _ => ExprApp (o, fst csts_exprs ++ snd csts_exprs)
          end
     else ExprApp (o, fst csts_exprs ++ snd csts_exprs)
-    else e | _ => e end
-  ;fun e => match e with
-    ExprApp (slice 0 s, [a]) =>
-      match bound_expr a with Some b =>
-      if N.leb b (N.ones s)
-      then a else e | _ => e end | _ => e end
-  ;fun e => match e with
-    ExprApp (o, args) =>
+    else e | _ => e end.
+Global Instance consts_commutative_ok : Ok consts_commutative.
+Proof. repeat step. Admitted.
+
+Definition drop_identity :=
+  fun e => match e with ExprApp (o, args) =>
     match identity o with
     | Some i =>
         let args := List.filter (fun a => negb (option_beq N.eqb (interp0_expr a) (Some i))) args in
@@ -781,97 +867,53 @@ Definition simplify_expr : expr -> expr :=
         | cons a nil => a
         | _ => ExprApp (o, args)
         end
-    | _ => e end | _ => e end
-  ;simplify_addoverflow_bit
-  ;simplify_addcarry_bit
-  ;simplify_addcarry_small
-  ;simplify_addoverflow_small
-  ;simplify_addbyte_small
-  ;fun e => match e with ExprApp (xor _,[x;y]) =>
-    if expr_beq x y then ExprApp (const 0, nil) else e | _ => e end
-                    
-  ]%N%bool.
-Definition simplify (dag : dag) (e : node idx) : expr :=
-  simplify_expr (reveal_node dag 2 e).
+    | _ => e end | _ => e end.
+Global Instance drop_identity_0k : Ok drop_identity.
+Proof. repeat step. Admitted.
 
-Lemma eval_simplify_expr c d e v : eval c d e v -> eval c d (simplify_expr e) v.
+Definition xor_same :=
+  fun e => match e with ExprApp (xor _,[x;y]) =>
+    if expr_beq x y then ExprApp (const 0, nil) else e | _ => e end.
+Global Instance xor_same_ok : Ok xor_same.
 Proof.
-  intros H; cbv [simplify_expr].
-
-  Strategy 10000 [simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_rcr simplify_addoverflow_bit simplify_addcarry_bit simplify_addcarry_small simplify_addoverflow_small simplify_addbyte_small].
-  Local Opaque simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_rcr simplify_addoverflow_bit simplify_addcarry_bit simplify_addcarry_small simplify_addoverflow_small simplify_addbyte_small.
-  repeat match goal with (* one goal per rewrite rule *)
-  | |- context G [fold_left ?f (cons ?r ?rs) ?e] =>
-    let re := fresh "e" in
-    let e_re := eval cbv beta in (r e) in pose (e_re) as re;
-    let g := context G [fold_left f rs re] in time change g;
-    assert (eval c d re v); [ subst re | clearbody re;
-        clear dependent e; rename re into e ]
-  | |- context G [fold_left ?f nil ?e] => eassumption
-  end.
-  Local Transparent simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_rcr simplify_addoverflow_bit simplify_addcarry_bit simplify_addcarry_small simplify_addbyte_small.
-  all : cbv [simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_rcr simplify_addoverflow_bit simplify_addcarry_bit simplify_addcarry_small simplify_addoverflow_small simplify_addbyte_small] in *.
-
-  all : repeat match goal with
-               | _ => solve [trivial]
-               | _ => progress cbn [fst snd interp_op option_map] in *
-               | _ => progress inversion_option
-               | H: interp0_expr _ = Some _ |- _ => eapply eval_interp_expr in H; instantiate (1:=d) in H
-               | H: bound_expr _ = Some _ |- _ => eapply eval_bound_expr in H; eauto; [ ]
-               | H : eval _ _ ?e _ |- _ => assert_fails (is_var e); inversion H; clear H; subst
-               | H : Forall2 (eval _ _) ?es _ |- _ => assert_fails (is_var es); inversion H; clear H; subst
-
-               | H : andb _ _ = true |- _ => eapply Bool.andb_prop in H; case H as (?&?)
-               | H : N.eqb ?n _ = true |- _ => eapply N.eqb_eq in H; try subst n
-               | H : expr_beq ?a ?b = true |- _ => replace a with b in * by admit; clear H
-
-               | H : (?x <=? ?y)%N = ?b |- _ => is_constructor b; destruct (N.leb_spec x y); (inversion H || clear H)
-               | H : eval _ ?d ?e ?v1, G: eval _ ?d ?e ?v2 |- _ =>
-                   assert_fails (constr_eq v1 v2);
-                   eapply (eval_eval _ d e v1 H v2) in G
-               | H : _ = ?v |- _ => is_var v; progress subst v
-               | H : ?v = _ |- _ => is_var v; progress subst v
-               | |- eval _ ?d ?e ?v =>
-                   match goal with
-                     H : eval _ d e ?v' |- _ =>
-                         let Heq := fresh in
-                         enough (Heq : v = v') by (rewrite Heq; exact H);
-                         clear H; try clear e
-                   end
-               | _ => progress BreakMatch.break_match
-               end.
-  { econstructor; eauto; []; cbn [interp_op option_map].
-    f_equal; eauto using eval_eval, eval_eval0. }
-  admit.
-  admit.
-  admit.
-  admit.
-  admit.
-  admit.
-  admit.
-  admit.
-  admit.
-  admit.
-  admit.
-  admit.
-  admit.
-  admit.
-  admit.
-  admit.
-  admit.
-  admit.
-  admit.
-  admit.
-  admit.
-  admit.
-  admit.
-  admit.
-  { econstructor; eauto; []; cbn [interp_op fold_right].
-    rewrite N.lxor_0_r, N.lxor_nilpotent; trivial. }
+  t; cbn [fold_right]. rewrite N.lxor_0_r, N.lxor_nilpotent; trivial.
 Admitted.
 
+Definition expr : expr -> expr :=
+  List.fold_left (fun e f => f e)
+  [constprop
+  ;slice0
+  ;set_slice_set_slice
+  ;slice_set_slice
+  ;rcr
+  ;truncate_small
+  ;flatten_associative
+  ;consts_commutative
+  ;drop_identity
+  ;addoverflow_bit
+  ;addcarry_bit
+  ;addcarry_small
+  ;addoverflow_small
+  ;addbyte_small
+  ;xor_same 
+  ].
+
+Lemma eval_expr c d e v : eval c d e v -> eval c d (expr e) v.
+Proof.
+  intros H; cbv [expr fold_left].
+  repeat lazymatch goal with
+  | H : eval ?c ?d ?e _ |- context[?r ?e] =>
+    let Hr := fresh in epose proof ((_:Ok r) _ _ _ _ H) as Hr; clear H
+  end.
+  eassumption.
+Qed.
+End Rewrite.
+
+Definition simplify (dag : dag) (e : node idx) :=
+  Rewrite.expr (reveal_node dag 2 e).
+
 Lemma eval_simplify G d n v : eval_node G d n v -> eval G d (simplify d n) v.
-Proof. eauto using eval_simplify_expr, eval_node_reveal_node. Qed.
+Proof. eauto using Rewrite.eval_expr, eval_node_reveal_node. Qed.
 
 Definition reg_state := Tuple.tuple (option idx) 16.
 Definition flag_state := Tuple.tuple (option idx) 6.
