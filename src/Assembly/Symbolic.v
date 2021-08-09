@@ -113,7 +113,7 @@ Global Instance Show_OperationSize : Show OperationSize := show_N.
 
 Section S.
 Implicit Type s : OperationSize.
-Variant op := old s (_:symbol) | oldold (_:REG*option nat) | const (_ : N) | add s | addcarry s | notaddcarry s | addoverflow s | neg s | shl s | shr s | sar s | rcr s | rcrcarry s | and s | or s | xor s | slice (lo sz : N) | mul s | mulhuu s | set_slice (lo sz : N) | selectznz | nonzero (* | ... *)
+Variant op := old s (_:symbol) | oldold (_:REG*option nat) | const (_ : N) | add s | addcarry s | notaddcarry s | addoverflow s | neg s | shl s | shr s | sar s | rcr s | rcrcarry s | and s | or s | xor s | slice (lo sz : N) | mul s | mulhuu s | set_slice (lo sz : N) | selectznz | iszero (* | ... *)
   | addZ | mulZ | negZ | shlZ | shrZ | andZ | orZ.
 End S.
 
@@ -140,7 +140,7 @@ Global Instance Show_op : Show op := fun o =>
   | mulhuu s => "mulhuu " ++ show s
   | set_slice lo sz => "set_slice " ++ show lo ++ " " ++ show sz
   | selectznz => "selectznz"
-  | nonzero => "nonzero"
+  | iszero => "iszero"
 
              
   | addZ => "addZ"
@@ -204,7 +204,7 @@ Section WithContext.
     | addoverflow s, args => Some (
         let v := List.fold_right Z.add 0%Z (List.map (fun x => signed s (Z.of_N x)) args) in
         if Z.eqb v (signed s v) then 0 else 1)
-    | nonzero, [a] => Some (if N.eqb a 0 then 0 else 1)
+    | iszero, [a] => Some (if N.eqb a 0 then 1 else 0)
     | and s, args => Some (keep s (List.fold_right N.land 0 args))
     | or s, args => Some (keep s (List.fold_right N.lor 0 args))
     | xor s, args => Some (keep s (List.fold_right N.lxor 0 args))
@@ -648,7 +648,7 @@ Fixpoint bound_expr e : option N := (* e <= r *)
       | _ => None
       end
   | ExprApp ((old s _ | slice _ s | mul s | shl s | shr s | sar s | neg s | mulhuu s | and s | or s | xor s), _) => Some (N.ones s)
-  | ExprApp ((addcarry _ | notaddcarry _ | addoverflow _ | rcrcarry _ | nonzero), _) => Some 1%N
+  | ExprApp ((addcarry _ | notaddcarry _ | addoverflow _ | rcrcarry _ | iszero), _) => Some 1%N
   | _ => None
   end.
 
@@ -706,12 +706,6 @@ Definition simplify_addoverflow_bit :=
       | Some 0, Some 0 => ExprApp (const 0, nil)
       | _, _ => e
       end else e | _ => e end%N%bool.
-Definition simplify_nonzero_bit :=
-  fun e => match e with
-    ExprApp (nonzero, [b]) =>
-      if option_beq N.eqb (bound_expr b) (Some 1)
-      then b
-      else e | _ => e end%N%bool.
 Definition simplify_addbyte_small :=
   fun e => match e with
     ExprApp (add (8%N as s), args) =>
@@ -790,7 +784,6 @@ Definition simplify_expr : expr -> expr :=
     | _ => e end | _ => e end
   ;simplify_addoverflow_bit
   ;simplify_addcarry_bit
-  ;simplify_nonzero_bit
   ;simplify_addcarry_small
   ;simplify_addoverflow_small
   ;simplify_addbyte_small
@@ -805,8 +798,8 @@ Lemma eval_simplify_expr c d e v : eval c d e v -> eval c d (simplify_expr e) v.
 Proof.
   intros H; cbv [simplify_expr].
 
-  Strategy 10000 [simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_rcr simplify_addoverflow_bit simplify_addcarry_bit simplify_nonzero_bit simplify_addcarry_small simplify_addoverflow_small simplify_addbyte_small].
-  Local Opaque simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_rcr simplify_addoverflow_bit simplify_addcarry_bit simplify_nonzero_bit simplify_addcarry_small simplify_addoverflow_small simplify_addbyte_small.
+  Strategy 10000 [simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_rcr simplify_addoverflow_bit simplify_addcarry_bit simplify_addcarry_small simplify_addoverflow_small simplify_addbyte_small].
+  Local Opaque simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_rcr simplify_addoverflow_bit simplify_addcarry_bit simplify_addcarry_small simplify_addoverflow_small simplify_addbyte_small.
   repeat match goal with (* one goal per rewrite rule *)
   | |- context G [fold_left ?f (cons ?r ?rs) ?e] =>
     let re := fresh "e" in
@@ -816,8 +809,8 @@ Proof.
         clear dependent e; rename re into e ]
   | |- context G [fold_left ?f nil ?e] => eassumption
   end.
-  Local Transparent simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_rcr simplify_addoverflow_bit simplify_addcarry_bit simplify_nonzero_bit simplify_addcarry_small simplify_addbyte_small.
-  all : cbv [simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_rcr simplify_addoverflow_bit simplify_addcarry_bit simplify_nonzero_bit simplify_addcarry_small simplify_addoverflow_small simplify_addbyte_small] in *.
+  Local Transparent simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_rcr simplify_addoverflow_bit simplify_addcarry_bit simplify_addcarry_small simplify_addbyte_small.
+  all : cbv [simplify_slice0 simplify_slice_set_slice simplify_truncate_small simplify_rcr simplify_addoverflow_bit simplify_addcarry_bit simplify_addcarry_small simplify_addoverflow_small simplify_addbyte_small] in *.
 
   all : repeat match goal with
                | _ => solve [trivial]
@@ -849,7 +842,6 @@ Proof.
                end.
   { econstructor; eauto; []; cbn [interp_op option_map].
     f_equal; eauto using eval_eval, eval_eval0. }
-  admit.
   admit.
   admit.
   admit.
@@ -1155,7 +1147,7 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
     v <- Symeval (selectznz@(CF, dst, src));
     SetOperand dst v
   | cmovnz, [dst; src] =>
-    v <- Symeval (selectznz@(ZF, src, dst));
+    v <- Symeval (selectznz@(ZF, dst, src));
     SetOperand dst v
   | seto, [dst] =>
     of <- GetFlag OF;
@@ -1281,7 +1273,7 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
     _ <- SetFlag CF zero;
     _ <- SetFlag OF zero;
     if Equality.ARG_beq ea eb 
-    then nz <- App (nonzero, [a]); SetFlag ZF nz
+    then zf <- App (iszero, [a]); SetFlag ZF zf
     else ret tt
   | clc, [] => zero <- Merge (@ExprApp (const 0, nil)); SetFlag CF zero
   | Syntax.ret, [] => ret tt
