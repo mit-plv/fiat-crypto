@@ -529,17 +529,18 @@ Proof.
     cbv [DenoteNormalInstruction]; repeat step.
     eexists m0; rewrite <-Hm0; clear Hm0; split; case vCF in *; trivial.
     symmetry; revert Hv.
-    (* DenoteOperand m a = Some v -> SetOperand 64 n m a v = Some m *) admit. }
+    (* DenoteOperand 64 n m a = Some v -> SetOperand 64 n m a v = Some m *) admit. }
   { (* cmovnz *)
     cbv [Symeval mapM] in *.
     repeat step.
     { (* eval *) repeat (eauto || econstructor).
-      instantiate (1:=if vZF then v0 else v).
+      instantiate (1:=if vZF then v else v0).
       1:admit. (*interp_op selectznz *) }
     cbv [DenoteNormalInstruction]; repeat step.
-    eexists m0; rewrite <-Hm0; clear Hm0; split; case vZF in *; cbn; trivial.
-    symmetry; revert Hv0.
-    (* DenoteOperand 64 n m a = Some v0 -> SetOperand 64 n m a v0 = Some m *) admit. }
+    eexists m0; rewrite <-Hm0; clear Hm0; split; [|eassumption].
+    rewrite Bool.if_negb; case vZF in *; cbn; trivial.
+    symmetry; revert Hv.
+    (* DenoteOperand 64 n m a = Some v -> SetOperand 64 n m a v = Some m *) admit. }
 
   1:admit. (* dec *)
   1:admit. (* imul *)
@@ -665,7 +666,7 @@ Proof.
     1: { (* eval *) repeat (eauto 6 || econstructor). }
     repeat step.
     1: { eval_same_expr_goal.
-      instantiate (1:=negb (v =? 0)%N); case (v =? 0)%N; trivial. }
+      instantiate (1:=(v =? 0)%N); case (v =? 0)%N; trivial. }
     repeat step.
     cbv [DenoteNormalInstruction]; repeat step.
     eexists; split; [exact eq_refl|].
@@ -677,16 +678,10 @@ Proof.
     (* bash flags weakening *)
     case s', m in *; cbn;
       repeat match goal with
-             | _ => Option.inversion_option
              | H : R_flag _ ?f None |- _ => eapply R_flag_None_r in H; try (rewrite H in * )
-             | H : R_flag ?d ?f (Some ?y) |- R_flag ?d ?f ?x =>
-                 let HH := fresh in enough (HH : x = Some y) by (rewrite HH; exact H)
              | _ => progress (cbv [R_flags Tuple.fieldwise Tuple.fieldwise'] in *; cbn in * ; subst)
-             | _ => destruct_one_match
              | _ => progress intuition eauto 1
              end.
-             (* note: nonzero might need to be iszero, but then what about nonzero_bit *)
-             admit.
   }
 
   { (* test *) repeat step.
