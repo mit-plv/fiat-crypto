@@ -319,11 +319,11 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
     cnt <- DenoteOperand sa s st cnt;
     let v := N.shiftr v1 (N.land cnt (s-1)) in
     st <- SetOperand sa s st dst v;
-    if cnt =? 0 then Some st else
+    Some (if cnt =? 0 then st else
       let st := HavocFlagsFromResult s st v in
       let st := if cnt =? 1 then SetFlag st OF (N.testbit v1 (s-1)) else st in
       let st := if cnt <? s then SetFlag st CF (N.testbit v1 (cnt-1)) else st in
-      Some (HavocFlag st AF)
+      HavocFlag st AF)
   | rcr, [dst; cnt] =>
     v1 <- DenoteOperand sa s st dst;
     cnt <- DenoteOperand sa s st cnt;
