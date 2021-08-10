@@ -113,7 +113,7 @@ Global Instance Show_OperationSize : Show OperationSize := show_N.
 
 Section S.
 Implicit Type s : OperationSize.
-Variant op := old s (_:symbol) | const (_ : Z) | add s | addcarry s | notaddcarry s | addoverflow s | neg s | shl s | shr s | sar s | rcr s | and s | or s | xor s | slice (lo sz : N) | mul s | mulhuu s | set_slice (lo sz : N) | selectznz | iszero (* | ... *)
+Variant op := old s (_:symbol) | const (_ : Z) | add s | addcarry s | notaddcarry s | addoverflow s | neg s | shl s | shr s | sar s | rcr s | and s | or s | xor s | slice (lo sz : N) | mul s | set_slice (lo sz : N) | selectznz | iszero (* | ... *)
   | addZ | mulZ | negZ | shlZ | shrZ | andZ | orZ.
 End S.
 
@@ -135,7 +135,6 @@ Global Instance Show_op : Show op := fun o =>
   | xor s => "xor " ++ show s
   | slice lo sz => "slice " ++ show lo ++ " " ++ show sz
   | mul s => "mul " ++ show s
-  | mulhuu s => "mulhuu " ++ show s
   | set_slice lo sz => "set_slice " ++ show lo ++ " " ++ show sz
   | selectznz => "selectznz"
   | iszero => "iszero"
@@ -148,9 +147,9 @@ Global Instance Show_op : Show op := fun o =>
   | orZ => "orZ"
   end%string.
 
-Definition associative o := match o with add _|mul _|or _|and _=> true | _ => false end.
-Definition commutative o := match o with add _|addcarry _|notaddcarry _|addoverflow _|mul _|mulhuu _ => true | _ => false end.
-Definition identity o := match o with add _|addcarry _|notaddcarry _|addoverflow _ => Some 0%Z | mul _|mulhuu _=>Some 1%Z | and s => Some (Z.ones (Z.of_N s)) |_=> None end.
+Definition associative o := match o with add _|mul _|mulZ|or _|and _=> true | _ => false end.
+Definition commutative o := match o with add _|addcarry _|notaddcarry _|addoverflow _|mul _|mulZ => true | _ => false end.
+Definition identity o := match o with add _|addcarry _|notaddcarry _|addoverflow _ => Some 0%Z | mul _|mulZ=>Some 1%Z | and s => Some (Z.ones (Z.of_N s)) |_=> None end.
 
 Definition node (A : Set) : Set := op * list A.
 Global Instance Show_node {A : Set} [show_A : Show A] : Show (node A) := show_prod.
@@ -218,7 +217,6 @@ Section WithContext.
     | xor s, args => Some (keep s (List.fold_right Z.lxor 0 args))
     | slice lo sz, [a] => Some (keep sz (Z.shiftr a (Z.of_N lo)))
     | mul s, args => Some (keep s (List.fold_right Z.mul 1 args))
-    | mulhuu s, args => Some (keep s (Z.shiftr (List.fold_right Z.mul 1 args) (Z.of_N s)))
     | set_slice lo sz, [a; b] =>
         Some (Z.lor (Z.shiftl (keep sz b) (Z.of_N lo))
                     (Z.ldiff a (Z.shiftl (Z.ones (Z.of_N sz)) (Z.of_N lo))))
@@ -652,7 +650,7 @@ Fixpoint bound_expr e : option Z := (* e <= r *)
       | Some a => Some (Z.max a (Z.ones (Z.of_N w)))
       | _ => None
       end
-  | ExprApp ((old s _ | slice _ s | mul s | shl s | shr s | sar s | neg s | mulhuu s | and s | or s | xor s), _) => Some (Z.ones (Z.of_N s))
+  | ExprApp ((old s _ | slice _ s | mul s | shl s | shr s | sar s | neg s | and s | or s | xor s), _) => Some (Z.ones (Z.of_N s))
   | ExprApp ((addcarry _ | notaddcarry _ | addoverflow _ | iszero), _) => Some 1%Z
   | _ => None
   end.
@@ -1119,7 +1117,8 @@ Definition GetReg r : M idx :=
 Definition SetReg r (v : idx) : M unit :=
   let '(rn, lo, sz) := index_and_shift_and_bitcount_of_reg r in
   if N.eqb sz 64
-  then SetReg64 rn v (* works even if old value is unspecified *)
+  then v <- App (slice 0 64, [v]);
+       SetReg64 rn v (* works even if old value is unspecified *)
   else old <- GetReg64 rn;
        v <- App ((set_slice lo sz), [old; v]);
        SetReg64 rn v.
@@ -1289,9 +1288,10 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
     let src1 : ARG := rdx in
     v1 <- GetOperand src1;
     v2 <- GetOperand src2;
-    vl <- App (mul s, [v1; v2]);
-    vh <- App (mulhuu s, [v1; v2]);
-    _ <- SetOperand lo vl;
+    v <- App (mulZ, [v1; v2]);
+    s <- App (const (Z.of_N s), nil);
+    vh <- App (shrZ, [v; s]);
+    _ <- SetOperand lo v;
          SetOperand hi vh
    | Syntax.shr, [dst; cnt] =>
     v <- Symeval (shr s@(dst, cnt));

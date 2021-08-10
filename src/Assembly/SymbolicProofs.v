@@ -300,8 +300,12 @@ Proof.
     cbv [SetOperand Crypto.Util.Option.bind SetReg64 update_reg_with Symbolic.update_reg_with] in *;
     repeat (BreakMatch.break_innermost_match_hyps; Prod.inversion_prod; ErrorT.inversion_ErrorT; subst).
 
-  { eexists; split; [exact eq_refl|].
-    destruct s; cbv [R] in *; cbn in *; intuition idtac.
+  { repeat step_symex.
+    { repeat (eauto||econstructor). }
+    inversion_ErrorT; Prod.inversion_prod; subst.
+    rewrite Z.shiftr_0_r in *.
+    eexists; split; [exact eq_refl|].
+    destruct s0; cbv [R] in *; intuition try solve [cbn in *; intuition idtac].
     cbv [R_regs Symbolic.set_reg set_reg index_and_shift_and_bitcount_of_reg].
     eapply Tuple.fieldwise_to_list_iff.
     unshelve erewrite 2Tuple.from_list_default_eq, 2Tuple.to_list_from_list;
@@ -314,11 +318,11 @@ Proof.
     replace (reg_offset r) with 0%N by (destruct r;cbv;trivial||cbv in Heqb;inversion Heqb).
     rewrite N.shiftl_0_r, N.shiftl_0_r.
     rename v2 into x.
-    clear H5.
+    eval_same_expr_goal.
     assert (0 <= v) by admit.
     assert (Hx64: N.ldiff (*reg*)x (N.ones 64) = 0%N) by admit.
-    assert (Hv64: N.land (*val*)(Z.to_N v) (N.ones 64) = (Z.to_N v)) by admit.
-    rewrite N.land_comm, Hv64, Hx64, N.lor_0_r, Z2N.id; trivial. }
+    rewrite N.land_comm, Hx64, N.lor_0_r.
+    (* Z.of_N N.land Z.to_N *) admit. }
   { eexists; split; [exact eq_refl|].
     repeat (step_symex; []).
     cbv [GetReg64 some_or] in *.
@@ -570,10 +574,14 @@ Proof.
     repeat step.
     { repeat (eauto || econstructor). }
     { repeat (eauto || econstructor). }
+    { repeat (eauto || econstructor). }
     cbv [DenoteNormalInstruction]; repeat step.
     repeat resolve_SetOperand_using_hyp; eauto.
     all : cbn [fold_right]; rewrite Z.mul_1_r.
-    admit. admit. }
+    1: Lia.lia.
+    rewrite Z.shiftr_div_pow2, N.shiftr_div_pow2 by Lia.lia.
+    rewrite Z2N.inj_div, Z2N.inj_pow, N2Z.id;
+      try eapply Z.pow_nonneg; eauto; try Lia.lia. }
 
   1:admit. (* ret -- note: strip from input, disallow in Symbolic *)
 

@@ -253,7 +253,7 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
     let v := v1 + v2 + c in
     st <- SetOperand sa s st dst v;
     let st := HavocFlagsFromResult s st v in
-    let v := N.land v (N.ones (N.log2 s)) in
+    let v := N.land v (N.ones (N.log2 s)) in (* note: really log2? *)
     let st := SetFlag st CF (negb (v =? v1 + v2 + c)) in
     Some (SetFlag st OF (negb (signed s v =? signed s v1 + signed s v2 + c)%Z))
   | (adcx | adox) as opc, [dst; src] =>
