@@ -737,7 +737,7 @@ Definition slice0 :=
     ExprApp (slice 0 s, [(ExprApp ((addZ|mulZ|negZ|shlZ|shrZ|andZ|orZ) as o, args))]) =>
         ExprApp ((match o with addZ=>add s|mulZ=>mul s|negZ=>neg s|shlZ=>shl s|shrZ => shr s|andZ => and s| orZ => or s |_=>old 0%N 999999%N end), args)
       | _ => e end.
-Global Instance slice0_ok : Ok slice0. Proof. t; admit. Admitted.
+Global Instance slice0_ok : Ok slice0. Proof. t. Qed.
 
 Definition slice_set_slice :=
   fun e => match e with
@@ -751,6 +751,29 @@ Definition set_slice_set_slice :=
       if andb (N.eqb lo1 lo2) (N.leb s2 s1) then ExprApp (set_slice lo1 s1, [x; y]) else e | _ => e end.
 Global Instance set_slice_set_slice_ok : Ok set_slice_set_slice. Proof. t. Admitted.
 
+Lemma helper'': forall sz, (2^Z.of_N sz>0)%Z.
+  Proof. Admitted. (*
+    induct sz; simplify; try Lia.lia.
+    replace (2^Z.of_N (sz+1))%Z with (2 * 2^Z.of_N sz )%Z; try Lia.lia.
+    replace (2^Z.of_N (sz+1))%Z with ( 2^ Z.succ (Z.of_N sz) )%Z.
+    erewrite Z.pow_succ_r; eauto; Lia.lia.
+    f_equal; Lia.lia.
+  Qed.*)
+  
+Lemma helper': forall sz y,(y<= Z.pred (2^ Z.of_N sz))%Z -> (y <  (2 ^ Z.of_N sz ))%Z. 
+Proof.
+  intros; pose proof helper'' sz; replace( N.pred (2^ sz))%N with (2^sz-1)%N in H by Lia.lia; Lia.lia.
+Qed.
+
+Lemma le_ones: forall sz y,  (0 <= y )%Z -> (y<=Z.ones (Z.of_N sz))%Z -> Z.land y (Z.ones (Z.of_N sz)) = y.
+Proof.
+  intros.
+  erewrite Z.land_ones.
+  erewrite Z.ones_equiv in H0.
+  eapply helper' in H0.
+  eapply Z.mod_small; eauto. Lia.lia.
+Qed.
+
 Definition truncate_small :=
   fun e => match e with
     ExprApp (slice 0%N s, [e']) =>
@@ -758,8 +781,8 @@ Definition truncate_small :=
       if Z.leb b (Z.ones (Z.of_N s))
       then e'
       else e | _ => e end | _ => e end.
-Global Instance truncate_small_ok : Ok truncate_small. Proof. t; []. Admitted.
-
+Global Instance truncate_small_ok : Ok truncate_small. Proof. t; []. cbn in *; eapply le_ones; eauto. firstorder. Lia.lia. Qed.
+ 
 Definition addcarry_bit :=
   fun e => match e with
     ExprApp (addcarry s, ([ExprApp (const a, nil);b])) =>
