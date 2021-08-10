@@ -438,6 +438,7 @@ Proof.
           | ident.Z_add => fun x y => App (addZ, [x; y])
 
           | ident.Z_modulo
+            => symex_T_error (Unhandled_identifier idc)
           | ident.Z_mul => fun x y => App (mulZ, [x; y])
           | ident.Z_pow
             => symex_T_error (Unhandled_identifier idc)
@@ -468,13 +469,13 @@ Proof.
           | ident.Z_add_get_carry => fun s x y =>
             s <- RevealWidth s;
             a <- App (add s, [x; y]);
-            c <- App (addcarry s, [x; y]);
+            c <- App (addcarryZ s, [x; y]);
             symex_return (a, c)
           | ident.Z_add_with_carry => fun x y z => App (addZ, [x; y; z])
           | ident.Z_add_with_get_carry => fun s x y z =>
             s <- RevealWidth s;
             a <- App (add s, [x; y; z]);
-            c <- App (addcarry s, [x; y; z]);
+            c <- App (addcarryZ s, [x; y; z]);
             symex_return (a, c)
           | ident.Z_sub_get_borrow => fun s x y =>
             s <- RevealWidth s;

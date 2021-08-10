@@ -110,27 +110,33 @@ Proof using Type.
   induction t; cbn [var eval_var]; eauto using lift_eval_base_var_impl.
 Qed.
 
-(** TODO(Andres): Is this the right place for this lemmas? *)
-Lemma RevealWidth_correct idx d d' v
-      (H : RevealWidth idx d = Success (v, d'))
-      (d_ok : dag_ok G d)
-  : True (* something relating idx to v *)
-    /\ dag_ok G d'
-    /\ (forall e n, eval G d e n -> eval G d' e n).
-Proof using Type.
-  (** TODO(Andres): this proof *)
-Admitted.
-
-(** TODO(Andres): Is this the right place for this lemmas? *)
 Lemma RevealConstant_correct idx d d' v
       (H : RevealConstant idx d = Success (v, d'))
       (d_ok : dag_ok G d)
-  : True (* something relating idx to v *)
-    /\ dag_ok G d'
-    /\ (forall e n, eval G d e n -> eval G d' e n).
+  : eval G d (ExprRef idx) (Z.of_N v) /\ d = d'.
+Proof.
+  cbv [RevealConstant] in *; break_innermost_match_hyps;
+    inversion_ErrorT; inversion_prod; subst; split; trivial; [].
+  pose proof Heqe as Hx.
+  cbv [reveal reveal_step] in Hx.
+  break_innermost_match_hyps; inversion Hx; subst.
+  eapply map_eq_nil in H1; subst.
+  repeat (eauto || econstructor).
+  rewrite Z2N.id; eauto using Zle_bool_imp_le.
+Qed.
+
+Lemma RevealWidth_correct idx d d' v
+      (H : RevealWidth idx d = Success (v, d'))
+      (d_ok : dag_ok G d)
+  : eval G d (ExprRef idx) (2 ^ Z.of_N v) /\ d = d'.
 Proof using Type.
-  (** TODO(Andres): this proof *)
-Admitted.
+  cbv [RevealWidth symex_bind ErrorT.bind symex_return symex_error] in *.
+  break_innermost_match_hyps; inversion_ErrorT; inversion_prod; subst.
+  eapply RevealConstant_correct in Heqe; intuition idtac.
+  eapply Neqb_ok in Heqb; subst.
+  epose proof N2Z.inj_pow 2 (N.log2 n) as HH.
+  rewrite <-Heqb in HH. rewrite HH in H. exact H.
+Qed.
 
 (** Makes use of [eval_merge] and [eval_merge_node] lemmas, leaving
 over evars for unknown evaluation values, reading off which [merge]
@@ -183,6 +189,22 @@ Local Ltac saturate_eval_merge_step :=
         | progress destruct_head'_and
         | solve [ eauto 100 ] ].
 Local Ltac saturate_eval_merge := repeat saturate_eval_merge_step.
+
+Lemma App_correct n d (Hdag : dag_ok G d) i d' (H : App n d = Success (i, d'))
+  v (Heval : eval_node G d n v)
+  : eval G d' (ExprRef i) v /\ dag_ok G d' /\ (forall e n, eval G d e n -> eval G d' e n).
+Proof.
+  cbv [App] in *. inversion_ErrorT.
+  do 2
+  match goal with
+  | H : context [simplify ?d ?n] |- _ =>
+      unique pose proof (eval_simplify _ d n _ ltac:(eassumption))
+  | H : context [merge ?e ?d] |- _ =>
+      case (eval_merge _ e _ d ltac:(eassumption) ltac:(eassumption)) as (?&?&?)
+  end.
+  inversion_prod; subst; eauto 9.
+Qed.
+
 Theorem symex_ident_correct
         {t} (idc : ident t)
         (d : dag)
@@ -204,65 +226,60 @@ Proof using Type.
   all: cbn [type.app_curried type.and_for_each_lhs_of_arrow Compilers.ident_interp symex_T_app_curried type.for_each_lhs_of_arrow] in *.
   all: cbn [API.interp_type base_var type.final_codomain var] in *.
   all: destruct_head'_prod; destruct_head'_unit.
-  all: cbv [symex_T_error symex_error symex_return symex_bind App ErrorT.bind ident.eagerly ident.literal] in *.
-  all: break_innermost_match_hyps.
-  all: first [ inversion_ErrorT_step | let T := type of H in fail 1 T ].
-  all: try solve [ repeat first [ progress subst
-                                | progress inversion_prod
-                                | progress cbn [fst snd] in *
-                                | progress cbn [eval_var eval_base_var] in *
-                                | progress cbn [Language.Compilers.base.interp Compilers.base_interp] in *
-                                | reflexivity
-                                | repeat apply conj; [ | assumption | exact (fun _ _ x => x) ]
-                                | progress intros
-                                | progress destruct_head'_and
-                                | progress destruct_head'_ex
-                                | progress cbv [Definitions.Z.value_barrier]
-                                | solve [ eauto using length_Forall2, Forall.Forall2_firstn, Forall.Forall2_skipn, Forall.Forall2_combine, Forall2_app, Forall2_rev ]
+  all: cbv [symex_T_error symex_error symex_return symex_bind ErrorT.bind ident.eagerly ident.literal] in *.
+  all : repeat match goal with
+        | _ => destruct_one_head'_and
+        | _ => inversion_ErrorT_step
+        | H : App ?e ?d = Success (?i, ?d') |- _ =>
+            eapply (App_correct e d ltac:(eassumption)) in H; [|clear H..]
+        | [ H : RevealWidth _ _ = Success _ |- _ ]
+          => eapply RevealWidth_correct in H; [ | clear H; try eassumption .. ]
+        | [ H : RevealConstant _ _ = Success _ |- _ ]
+          => eapply RevealConstant_correct in H; [ | clear H; try eassumption .. ]
+        | H : eval ?a ?b ?c ?x, G : eval ?a ?b ?c ?y |- _ => epose proof eval_eval _ _ _ _ H _ G; clear G
+        | _ => inversion_prod_step
+        | _ => break_innermost_match_hyps_step
+        | _ => progress cbn [eval_base_var eval_var fst snd List.map] in *
+        | _ => progress subst
+        |  |- eval _ _ (ExprRef _) _ => solve[eauto 99 with nocore]
+        | |- eval_node _ _ (?op, ?args) _ => let h := Head.head op in is_constructor h; econstructor
+        | |- interp_op _ ?op ?args = Some _ => let h := Head.head op in is_constructor h; exact eq_refl
+        | |- Forall2 _ _ _ => econstructor
+        end.
+  all : Tactics.ssplit; eauto 9.
+  all : match goal with
+        | |- context[eval _ _ _ _] => idtac (* solve below *)
+        | _ => solve [ repeat first [ solve [ eauto using length_Forall2, Forall.Forall2_firstn, Forall.Forall2_skipn, Forall.Forall2_combine, Forall2_app, Forall2_rev ]
                                 | rewrite Forall2_eq
                                 | rewrite Forall.Forall2_repeat_iff
-                                | now apply Forall.Forall2_forall_iff'' ] ].
-  (** TODO(Andres): Finish this proof.  What follows is Jason's stab at making progress on it; feel free to remove any/all of it *)
-  all: repeat first [ progress subst
-                    | progress inversion_prod
-                    | progress cbn [fst snd] in *
-                    | progress cbn [eval_var eval_base_var] in *
-                    | progress cbn [Language.Compilers.base.interp Compilers.base_interp] in *
-                    | reflexivity
-                    | repeat apply conj; [ | assumption | exact (fun _ _ x => x) ]
-                    | progress intros
-                    | progress destruct_head'_and
-                    | progress destruct_head'_ex
-                    | progress cbv [Definitions.Z.value_barrier]
-                    | solve [ eauto using length_Forall2, Forall.Forall2_firstn, Forall.Forall2_skipn, Forall.Forall2_combine, Forall2_app, Forall2_rev ]
-                    | rewrite Forall2_eq
-                    | rewrite Forall.Forall2_repeat_iff
-                    | now apply Forall.Forall2_forall_iff'' ].
-  all: rewrite ?ex_Z_of_N_iff'.
-  (** Handle things like [RevealWidth] and [RevealConstant] *)
-  all: repeat first [ progress destruct_head'_and
-                    | match goal with
-                      | [ H : RevealWidth _ _ = Success _ |- _ ]
-                        => eapply RevealWidth_correct in H; [ | clear H; try eassumption .. ]
-                      | [ H : RevealConstant _ _ = Success _ |- _ ]
-                        => eapply RevealConstant_correct in H; [ | clear H; try eassumption .. ]
-                      end ].
-  (** Factor out [merge] and [merge_node] *)
-  all: saturate_eval_merge; repeat apply conj; eauto 100; set_evars.
-  (** Ensure that all remaining goals are of the desired form, i.e., that we haven't left over anything *)
-  all: let print_line _ := idtac "=================================" in
-       let print_header _ := print_line () in
-       let print_footer _ := print_context_and_goal (); print_line () in
-       lazymatch goal with
-       | [ H : context[merge] |- _ ] => print_header (); idtac "Warning: Goal involving merge in hypothesis" H "remains; should have been taken care of by saturate_eval_merge"; print_footer (); fail 0 "Remaining merge hyp goal"
-       | [ H : context[merge_node] |- _ ] => print_header (); idtac "Warning: Goal involving merge_node in hypothesis" H "remains; should have been taken care of by saturate_eval_merge"; print_footer (); fail 0 "Remaining merge_node hyp goal"
-       | [ |- context[merge] ] => print_header (); idtac "Warning: Goal involving merge remains; should have been taken care of by saturate_eval_merge"; print_footer (); fail 0 "Remaining merge goal"
-       | [ |- context[merge_node] ] => print_header (); idtac "Warning: Goal involving merge_node remains; should have been taken care of by saturate_eval_merge"; print_footer (); fail 0 "Remaining merge_hyp goal"
-       | [ |- eval _ _ _ _ ] => idtac
-       | [ |- (0 <= _)%Z ] => idtac
-       | [ |- ?G ] => print_header (); idtac "Warning: Unrecognized goal remains:"; print_footer (); fail 0 "Unknown goal:" G
-       end.
-  (* misc processing *)
+                                | now apply Forall.Forall2_forall_iff'' ] ] end.
+  all: match goal with (* eval_same_expr_goal *)
+        | |- eval G ?d ?e ?v =>
+            match goal with
+              H : eval G d e ?v' |- _ =>
+                  let Heq := fresh in
+                  enough (Heq : v = v') by (rewrite Heq; exact H);
+                  try clear H e
+            end
+        | |- eval G ?d ?e ?v =>
+            let H := fresh in
+            let v' := open_constr:(_) in
+            eassert (eval G d e v') by (eauto 99 with nocore);
+            let Heq := fresh in
+            enough (Heq : v = v') by (rewrite Heq; exact H);
+            try clear H e
+        end.
+  all : cbv [fold_right Z.add_with_carry Z.truncating_shiftl] in *.
+  all : repeat (rewrite ?Z.mul_split_mod, ?Z.mul_split_div, ?Z.mul_high_div,
+    ?Z.add_get_carry_full_div, ?Z.add_get_carry_full_mod,
+    ?Z.add_with_get_carry_full_div, ?Z.add_with_get_carry_full_mod,
+    ?Z.sub_get_borrow_full_div, ?Z.sub_get_borrow_full_mod,
+    ?Z.sub_with_get_borrow_full_div, ?Z.sub_with_get_borrow_full_mod,
+    ?Z.add_0_r, ?Z.mul_1_r, ?Z.lor_0_r, ?Z.land_m1_r, ?Z.add_opp_r,
+    ?Z.add_assoc, ?Z.shiftr_0_r,  ?Z.shiftr_div_pow2, ?Z.land_ones;
+    Modulo.push_Zmod; Modulo.pull_Zmod);
+    try Lia.lia.
+  1,2:admit. (*sbb*)
   all: repeat first [ progress cbn [fst snd List.map] in *
                     | progress subst
                     | progress split_andb
@@ -272,43 +289,17 @@ Proof using Type.
                       | [ H : _ = fst ?x |- _ ] => is_var x; destruct x
                       | [ H : _ = snd ?x |- _ ] => is_var x; destruct x
                       end ].
-  (* handle 0 <= .. from ex_Z_of_N *)
-  all: lazymatch goal with
-       | [ |- (0 <= _)%Z ]
-         => rewrite <- ?Z.mul_split_high, ?Z.mul_split_div, ?Z.mul_split_mod,
-            ?Z.add_get_carry_full_div, ?Z.add_get_carry_full_mod, ?Z.add_with_get_carry_full_div, ?Z.add_with_get_carry_full_mod, <- ?Z.sub_get_borrow_full_div, ?Z.sub_get_borrow_full_mod, ?Z.sub_with_get_borrow_full_div, ?Z.sub_with_get_borrow_full_mod;
-              cbv [Z.add_with_carry Z.sub_with_borrow];
-              lazymatch goal with
-              | [ |- (0 <= ?x mod ?y)%Z ]
-                => let H := fresh in
-                   destruct (Z_zerop y) as [H|H]; [ rewrite H; destruct x eqn:?; cbv -[Z.le]; lia | Z.zero_bounds ]
-              | [ |- (0 <= Z.truncating_shiftl _ _ _)%Z ]
-                => apply Z.truncating_shiftl_nonneg
-              | [ |- (0 <= ident.cast ?r ?v)%Z ]
-                => assert (ZRange.lower r <= ZRange.upper r)%Z;
-                     [ cbn [ZRange.lower ZRange.upper] in *;
-                       match goal with
-                       | [ H : Z.succ ?v = (2^Z.log2 (Z.succ ?v))%Z |- (0 <= ?v)%Z ]
-                         => clear -H; destruct v; try lia; rewrite Z.log2_nonpos, Z.pow_0_r in H by lia; lia
-                       end
-                     | pose proof (ident.cast_bounded r v ltac:(assumption));
-                       cbv [ZRange.is_bounded_by_bool] in *; split_andb; Z.ltb_to_lt; assumption ]
-              | _ => idtac
-              end;
-              try solve [ Z.zero_bounds ];
-              [ > idtac "Warning: Unsolved zero bounds goal:"; print_context_and_goal () .. ]
-       | _ => idtac
-       end.
-  (* turn casts into mod *)
-  all: lazymatch goal with
-       | [ |- context[ident.cast ?r ?v] ]
+  all : match goal with
+        | [ |- context[ident.cast ?r ?v] ]
          => rewrite !ident.platform_specific_cast_0_is_mod
            by match goal with
               | [ H : Z.succ ?v = (2^Z.log2 (Z.succ ?v))%Z |- (0 <= ?v)%Z ]
                 => clear -H; destruct v; try lia; rewrite Z.log2_nonpos, Z.pow_0_r in H by lia; lia
               end
-       | _ => idtac
-       end.
+        end.
+  all : rewrite Z2N.id by eapply Z.log2_nonneg.
+  all : match goal with H : Z.succ _=_|-_=> rewrite <-H, Z.add_1_r end; trivial.
+  all : fail.
 Admitted.
 Theorem symex_expr_correct
         {t} (expr1 : API.expr (var:=var) t) (expr2 : API.expr (var:=API.interp_type) t)

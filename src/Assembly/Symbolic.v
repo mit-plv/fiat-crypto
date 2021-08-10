@@ -114,7 +114,7 @@ Global Instance Show_OperationSize : Show OperationSize := show_N.
 Section S.
 Implicit Type s : OperationSize.
 Variant op := old s (_:symbol) | const (_ : Z) | add s | addcarry s | notaddcarry s | addoverflow s | neg s | shl s | shr s | sar s | rcr s | and s | or s | xor s | slice (lo sz : N) | mul s | set_slice (lo sz : N) | selectznz | iszero (* | ... *)
-  | addZ | mulZ | negZ | shlZ | shrZ | andZ | orZ.
+  | addZ | mulZ | negZ | shlZ | shrZ | andZ | orZ | addcarryZ s.
 End S.
 
 Global Instance Show_op : Show op := fun o =>
@@ -145,6 +145,7 @@ Global Instance Show_op : Show op := fun o =>
   | shrZ => "shrZ"
   | andZ => "andZ"
   | orZ => "orZ"
+  | addcarryZ s => "addcarryZ " ++ show s
   end%string.
 
 Definition associative o := match o with add _|mul _|mulZ|or _|and _=> true | _ => false end.
@@ -229,6 +230,7 @@ Section WithContext.
     | shrZ, [a; b] => Some (Z.shiftr a b)
     | andZ, args => Some (List.fold_right Z.land (-1) args)
     | orZ, args => Some (List.fold_right Z.lor 0 args)
+    | addcarryZ s, args => Some (Z.shiftr (List.fold_right Z.add 0 args) (Z.of_N s))
     | _, _ => None
     end%Z.
 End WithContext.
@@ -739,6 +741,14 @@ Definition slice0 :=
       | _ => e end.
 Global Instance slice0_ok : Ok slice0. Proof. t. Qed.
 
+Definition slice01_addcarryZ :=
+  fun e => match e with
+    ExprApp (slice 0 1, [(ExprApp (addcarryZ s, args))]) =>
+        ExprApp (addcarry s, args)
+      | _ => e end.
+Global Instance slice01_addcarryZ_ok : Ok slice01_addcarryZ.
+Proof. t; f_equal. Admitted.
+
 Definition slice_set_slice :=
   fun e => match e with
     ExprApp (slice lo1 s1, [ExprApp (set_slice lo2 s2, [_; e'])]) =>
@@ -919,10 +929,19 @@ Proof.
   t; cbn [fold_right]. rewrite Z.lxor_0_r, Z.lxor_nilpotent; trivial.
 Admitted.
 
+Definition UNSOUND_widen_shr :=
+  fun e => match e with
+    | ExprApp (shr 1,args) => ExprApp (shr 64, args)
+    | ExprApp (slice 0 1,[ExprApp(shr 64, args)]) => ExprApp (shr 64, args)
+    | _ => e end%N.
+Global Instance UNSOUND_widen_shr_ok : Ok UNSOUND_widen_shr.
+Admitted.
+
 Definition expr : expr -> expr :=
   List.fold_left (fun e f => f e)
   [constprop
   ;slice0
+  ;slice01_addcarryZ
   ;set_slice_set_slice
   ;slice_set_slice
   ;rcr
@@ -936,6 +955,7 @@ Definition expr : expr -> expr :=
   ;addoverflow_small
   ;addbyte_small
   ;xor_same 
+  ;UNSOUND_widen_shr 
   ].
 
 Lemma eval_expr c d e v : eval c d e v -> eval c d (expr e) v.
