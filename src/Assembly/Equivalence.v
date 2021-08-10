@@ -455,14 +455,16 @@ Proof.
           | ident.Z_min
           | ident.Z_max
             => symex_T_error (Unhandled_identifier idc)
-          | ident.Z_mul_split => fun s x y =>
-            s <- RevealWidth s;
-            lo <- App (mul s, [x; y]);
-            hi <- App (mulhuu s, [x; y]);
+          | ident.Z_mul_split => fun bs x y =>
+            vs <- RevealWidth bs; s <- App (const (Z.of_N vs), nil);
+            v <- App (mulZ, [x; y]);
+            lo <- App (slice 0 vs, [v]);
+            hi <- App (shrZ, [v; s]);
             symex_return (lo, hi)
-          | ident.Z_mul_high => fun s x y =>
-            s <- RevealWidth s;
-            App (mulhuu s, [x; y])
+          | ident.Z_mul_high => fun bs x y =>
+            vs <- RevealWidth bs; s <- App (const (Z.of_N vs), nil);
+            v <- App (mulZ, [x; y]);
+            App (shrZ, [v; s])
           | ident.Z_add_get_carry => fun s x y =>
             s <- RevealWidth s;
             a <- App (add s, [x; y]);
