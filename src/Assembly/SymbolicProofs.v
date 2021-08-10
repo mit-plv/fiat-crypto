@@ -21,7 +21,7 @@ Local Coercion ExprRef : idx >-> expr.
 
 Section WithCtx.
 Context (frame : mem_state).
-Context (G : symbol -> option N).
+Context (G : symbol -> option Z).
 Local Notation eval := (Symbolic.eval G).
 Local Notation dag_ok := (Symbolic.dag_ok G).
 
@@ -30,12 +30,12 @@ Context (d : dag).
 Local Notation eval := (Symbolic.eval G d).
 
 Definition R_reg (x : option idx) (v : N) : Prop :=
-  forall i, x = Some i -> eval i v.
+  forall i, x = Some i -> eval i (Z.of_N v).
 Definition R_regs : Symbolic.reg_state -> Semantics.reg_state -> Prop :=
   Tuple.fieldwise R_reg.
 
 Definition R_flag (x : option idx) (ob : option bool) : Prop :=
-  forall i, x = Some i -> exists b, eval i (N.b2n b) /\ ob = Some b.
+  forall i, x = Some i -> exists b, eval i (Z.b2z b) /\ ob = Some b.
 Definition R_flags : Symbolic.flag_state -> Semantics.flag_state -> Prop :=
   Tuple.fieldwise R_flag.
 
@@ -47,7 +47,7 @@ Definition R_cell64' (a v : Z) : mem_state -> Prop :=
 Definition R_cell64 (ia iv : idx) (m : mem_state) : Prop :=
   exists a, eval ia a /\
   exists v, eval iv v /\
-  R_cell64' (Z.of_N a) (Z.of_N v) m.
+  R_cell64' a v m.
 
 Fixpoint R_mem (sm : Symbolic.mem_state) : mem_state -> Prop :=
   match sm with
@@ -76,7 +76,7 @@ Definition R (ss : symbolic_state) (ms : machine_state) : Prop :=
 
 Lemma get_flag_R s m f (HR : R s m) :
   forall i, Symbolic.get_flag s f = Some i ->
-  exists b, eval s i (N.b2n b) /\
+  exists b, eval s i (Z.b2z b) /\
   Semantics.get_flag m f = Some b.
 Proof.
   repeat (
@@ -90,7 +90,7 @@ Proof.
   cbn [R_flags Tuple.fieldwise Tuple.fieldwise' fst snd] in *; intuition idtac.
 Qed.
 
-Lemma R_set_flag_internal s m f (HR : R s m) (i:idx) b (Hi : eval s i (N.b2n b)) :
+Lemma R_set_flag_internal s m f (HR : R s m) (i:idx) b (Hi : eval s i (Z.b2z b)) :
   R_flags s (Symbolic.set_flag s f i) (Semantics.set_flag m f b).
 Proof.
   repeat (
@@ -123,6 +123,15 @@ Local Arguments N.land !_ !_.
 Local Arguments N.lor !_ !_.
 Local Arguments N.shiftl !_ !_.
 Local Arguments N.shiftr !_ !_.
+
+Local Arguments Z.modulo !_ !_.
+Local Arguments Z.add !_ !_.
+Local Arguments Z.b2z ! _.
+Local Arguments Z.ones ! _.
+Local Arguments Z.land !_ !_.
+Local Arguments Z.lor !_ !_.
+Local Arguments Z.shiftl !_ !_.
+Local Arguments Z.shiftr !_ !_.
 
 Lemma R_flag_subsumed d s m (HR : R_flag d s m) d' (Hlt : d :< d')
   : R_flag d' s m.
@@ -167,7 +176,7 @@ Admitted.
 
 Lemma get_reg_R s m (HR : R s m) ri :
   forall i, Symbolic.get_reg s ri = Some i ->
-  exists v, eval s i v /\ Tuple.nth_default 0%N ri (m : reg_state) = v.
+  exists v, eval s i (Z.of_N v) /\ Tuple.nth_default 0%N ri (m : reg_state) = v.
 Proof.
   cbv [Symbolic.get_reg]; intros.
   rewrite <-Tuple__nth_default_to_list in H.
@@ -205,7 +214,7 @@ Ltac step_symex0 :=
 Ltac step_symex := step_symex0.
 
 Lemma GetFlag_R s m (HR : R s m) f i s' (H : GetFlag f s = Success (i, s')) :
-  exists b, eval s i (N.b2n b) /\ Semantics.get_flag m f = Some b /\ s = s'.
+  exists b, eval s i (Z.b2z b) /\ Semantics.get_flag m f = Some b /\ s = s'.
 Proof.
   cbv [GetFlag some_or] in H.
   destruct (Symbolic.get_flag _ _) eqn:? in H;
@@ -268,12 +277,24 @@ Ltac step_App :=
 Ltac step_symex3 := first [step_symex2 | step_App].
 Ltac step_symex ::= step_symex3.
 
+Ltac eval_same_expr_goal :=
+  match goal with
+  | |- eval ?d ?e ?v =>
+      match goal with
+        H : eval d e ?v' |- _ =>
+            let Heq := fresh in
+            enough (Heq : v = v') by (rewrite Heq; exact H);
+            clear H; try clear e
+      end
+  end.
+
 Import ListNotations.
 
+(* note: do the two SetOperand both truncate inputs or not?... *)
 Lemma R_SetOperand s m (HR : R s m)
   sz sa a i _tt s' (H : @Symbolic.SetOperand sz sa a i s = Success (_tt, s'))
   v (Hv : eval s i v)
-  : exists m', SetOperand sa sz m a v = Some m' /\ R s' m' /\ s :< s'.
+  : exists m', SetOperand sa sz m a (Z.to_N v) = Some m' /\ R s' m' /\ s :< s'.
 Proof.
   destruct a in *; cbn in H; [ | | solve [inversion H] ];
     cbv [SetOperand Crypto.Util.Option.bind SetReg64 update_reg_with Symbolic.update_reg_with] in *;
@@ -291,12 +312,13 @@ Proof.
       intros; Option.inversion_option; subst.
     eapply Ndec.Neqb_complete in Heqb; rewrite Heqb.
     replace (reg_offset r) with 0%N by (destruct r;cbv;trivial||cbv in Heqb;inversion Heqb).
-    rewrite (N.shiftl_0_r v), (N.shiftl_0_r (N.ones 64)).
+    rewrite N.shiftl_0_r, N.shiftl_0_r.
     rename v2 into x.
     clear H5.
+    assert (0 <= v) by admit.
     assert (Hx64: N.ldiff (*reg*)x (N.ones 64) = 0%N) by admit.
-    assert (Hv64: N.land (*val*)v (N.ones 64) = v) by admit.
-    rewrite N.land_comm, Hv64, Hx64, N.lor_0_r; trivial. }
+    assert (Hv64: N.land (*val*)(Z.to_N v) (N.ones 64) = (Z.to_N v)) by admit.
+    rewrite N.land_comm, Hv64, Hx64, N.lor_0_r, Z2N.id; trivial. }
   { eexists; split; [exact eq_refl|].
     repeat (step_symex; []).
     cbv [GetReg64 some_or] in *.
@@ -305,10 +327,7 @@ Proof.
       ErrorT.inversion_ErrorT; Prod.inversion_prod; subst;cbn [fst snd] in *.
     specialize (Hr _ eq_refl); case Hr as (?&?&?).
     step_App.
-    { econstructor.
-      { econstructor; try eassumption. econstructor; try eassumption. econstructor. }
-      { (* interp_op set_slice *)
-        instantiate (1:=N.lor (N.land (bitmask_of_reg r) (N.shiftl v (reg_offset r))) (N.ldiff x (bitmask_of_reg r))); exact eq_refl||admit. } }
+    { repeat (eauto || econstructor). }
     repeat (Prod.inversion_prod; ErrorT.inversion_ErrorT; subst).
     destruct s1; cbv [R] in *; cbn in *; intuition idtac.
     cbv [R_regs Symbolic.set_reg set_reg index_and_shift_and_bitcount_of_reg].
@@ -318,8 +337,8 @@ Proof.
     eapply Crypto.Util.ListUtil.Forall2_update_nth.
     { eapply Tuple.fieldwise_to_list_iff; eassumption. }
     cbv [R_reg]; intros; Option.inversion_option; subst.
-    erewrite <-Tuple__nth_default_to_list in Hv0;
-      unfold nth_default in Hv0; rewrite H5 in Hv0; exact Hv0. }
+    eval_same_expr_goal.
+    (* Z&N bitwise *) admit. }
   admit. (* store *)
 Admitted.
 
@@ -334,7 +353,7 @@ Ltac step_SetOperand :=
 Ltac step_symex4 := first [step_symex3 | step_SetOperand].
 Ltac step_symex ::= step_symex4.
 
-Lemma SetFlag_R s m f (HR : R s m) (i:idx) b (Hi : eval s i (N.b2n b)) :
+Lemma SetFlag_R s m f (HR : R s m) (i:idx) b (Hi : eval s i (Z.b2z b)) :
   forall _tt s', Symbolic.SetFlag f i s = Success (_tt, s') ->
   R s' (SetFlag m f b) /\ s :< s'.
 Proof.
@@ -360,7 +379,7 @@ Ltac step_symex ::= step_symex5.
 
 Lemma GetReg_R s m (HR: R s m) r i s'
   (H : @GetReg r s = Success (i, s'))
-  : R s' m  /\ s :< s' /\ eval s' i (get_reg m r).
+  : R s' m  /\ s :< s' /\ eval s' i (Z.of_N (get_reg m r)).
 Proof.
   cbv [GetReg GetReg64 bind some_or get_reg index_and_shift_and_bitcount_of_reg] in *.
   pose proof (get_reg_R s _ ltac:(eassumption) (reg_index r)) as Hr.
@@ -368,17 +387,20 @@ Proof.
   specialize (Hr _ eq_refl); case Hr as (v&Hi0&Hv).
   rewrite Hv; clear Hv.
   step_symex; eauto.
-  (* interp_op slice *) exact eq_refl || admit.
+  repeat (eauto || econstructor); cbn [interp_op].
+  (* bitwise Z&N *) admit.
 Admitted.
 
 Lemma GetOperand_R s m (HR: R s m) so sa a i s'
   (H : @GetOperand so sa a s = Success (i, s'))
-  : R s' m /\ s :< s' /\ exists v, eval s' i v /\ DenoteOperand sa so m a = Some v.
+  : R s' m /\ s :< s' /\ exists v, eval s' i (Z.of_N v) /\ DenoteOperand sa so m a = Some v.
 Proof.
   cbv [GetOperand DenoteOperand] in *; BreakMatch.break_innermost_match.
   { eapply GetReg_R in H; intuition eauto. }
   1: (* Load *) admit.
   step_symex; eauto.
+  repeat (eauto || econstructor); unfold interp_op, DenoteConst; cbn.
+  rewrite Z2N.id; trivial.
   { (* zconst*) repeat econstructor || admit. }
 Admitted.
 
@@ -465,22 +487,18 @@ Ltac resolve_match_using_hyp :=
       rewrite H
   end end.
 
+Ltac resolve_SetOperand_using_hyp :=
+  match goal with
+  | |- context[SetOperand ?a ?b ?c ?d ?x] =>
+      match goal with H : SetOperand a b c d ?y = Some _ |- _ =>
+          replace x with y; [rewrite H|]; cycle 1
+  end end.
+
 Ltac lift_let_goal :=
   match goal with
   | |- context G [let x := ?v in @?C x] =>
       let xH := fresh x in pose v as xH;
       let g := context G [C xH] in change g; cbv beta
-  end.
-
-Ltac eval_same_expr_goal :=
-  match goal with
-  | |- eval ?d ?e ?v =>
-      match goal with
-        H : eval d e ?v' |- _ =>
-            let Heq := fresh in
-            enough (Heq : v = v') by (rewrite Heq; exact H);
-            clear H; try clear e
-      end
   end.
 
 Ltac step :=
@@ -523,24 +541,22 @@ Proof.
   { (* cmovc *)
     cbv [Symeval mapM] in *.
     repeat step.
-    { (* eval *) repeat (eauto || econstructor).
-      instantiate (1:=if vCF then v0 else v).
-      1:admit. (*interp_op selectznz *) }
+    { (* eval *) repeat (eauto || econstructor). }
     cbv [DenoteNormalInstruction]; repeat step.
-    eexists m0; rewrite <-Hm0; clear Hm0; split; case vCF in *; trivial.
+    repeat match goal with H : _ |- _ => rewrite Bool.pull_bool_if, ?N2Z.id in H end.
+    eexists m0; rewrite <-Hm0; clear Hm0; split; [|eassumption].
+    destruct vCF; cbn; trivial.
     symmetry; revert Hv.
-    (* DenoteOperand 64 n m a = Some v -> SetOperand 64 n m a v = Some m *) admit. }
+    assert (DenoteOperand 64 n m a = Some v -> SetOperand 64 n m a v = Some m)
+      by admit; trivial. }
   { (* cmovnz *)
     cbv [Symeval mapM] in *.
     repeat step.
-    { (* eval *) repeat (eauto || econstructor).
-      instantiate (1:=if vZF then v else v0).
-      1:admit. (*interp_op selectznz *) }
+    { (* eval *) repeat (eauto || econstructor). }
     cbv [DenoteNormalInstruction]; repeat step.
-    eexists m0; rewrite <-Hm0; clear Hm0; split; [|eassumption].
-    rewrite Bool.if_negb; case vZF in *; cbn; trivial.
-    symmetry; revert Hv.
-    (* DenoteOperand 64 n m a = Some v -> SetOperand 64 n m a v = Some m *) admit. }
+    repeat match goal with H : _ |- _ => rewrite Bool.pull_bool_if, ?N2Z.id in H end.
+    rewrite Bool.if_negb.
+    admit. (* stuck? *) }
 
   1:admit. (* dec *)
   1:admit. (* imul *)
@@ -548,43 +564,42 @@ Proof.
   1:admit. (* inc *)
   1:admit. (* lea *)
 
-  { (* mov   *) cbv [DenoteNormalInstruction]; repeat step; eauto. }
-  { (* movzx *) cbv [DenoteNormalInstruction]; repeat step; eauto. }
+  { (* mov   *) cbv [DenoteNormalInstruction]; repeat step; rewrite N2Z.id in *; eauto. }
+  { (* movzx *) cbv [DenoteNormalInstruction]; repeat step; rewrite N2Z.id in *; eauto. }
   { (* mulx *)
     repeat step.
-    { econstructor. 1:econstructor. 1:eauto. 1:econstructor.
-      1:eassumption. 1:econstructor. (* interp_op mul *) exact eq_refl||admit. }
-    { econstructor. 1:econstructor. 1:eauto. 1:econstructor.
-      1:eauto. 1:econstructor. (* interp_op mulhuu *) exact eq_refl||admit. }
+    { repeat (eauto || econstructor). }
+    { repeat (eauto || econstructor). }
     cbv [DenoteNormalInstruction]; repeat step.
-    rewrite Hm0, Hm1; eauto. }
+    repeat resolve_SetOperand_using_hyp; eauto.
+    all : cbn [fold_right]; rewrite Z.mul_1_r.
+    admit. admit. }
 
   1:admit. (* ret -- note: strip from input, disallow in Symbolic *)
 
   { (* sar *)
     step.
-    { econstructor. 1:econstructor. 2:econstructor. 3:econstructor. 1,2: eauto.
-      (* interp_op sar *) admit. }
+    { repeat (eauto || econstructor). }
 
     destr_expr_beq; repeat step1.
 
     1: repeat step1; step.
     1: { (* eval *) repeat (eauto || econstructor). }
     1: repeat step1; step.
-    1: { rewrite N.bit0_mod. rewrite N.land_ones in Hcf. exact Hcf. }
+    1: { rewrite Z.bit0_mod. rewrite Z.land_ones in Hcf by (clear;Lia.lia). exact Hcf. }
     1: repeat step1; step.
     1: { repeat econstructor. }
     1: repeat step1; step.
     1: { instantiate (1:=false). eassumption. }
 
     all: unfold DenoteNormalInstruction; repeat step1.
-    2: rewrite Hm0.
-    1: rewrite Hm0.
+    all : repeat resolve_SetOperand_using_hyp.
+    1,3: (* bitwise Z&N *) admit.
     all : eexists; split; [exact eq_refl|].
 
     (* bash flag state weakening *)
     all: revert Hs'.
-    all: abstract (
+    all: (
       destruct s';
       repeat match goal with
              | H : R_flag _ ?f None |- _ => eapply R_flag_None_r in H; try (rewrite H in * )
@@ -593,27 +608,32 @@ Proof.
              | _ => progress (cbv [R_flags Tuple.fieldwise Tuple.fieldwise'] in *; cbn -[Syntax.operation_size] in * ; subst)
              | _ => destruct_one_match
              | _ => progress intuition idtac
-             end; eauto; pose_operation_size_cases; Lia.lia). }
+             end; eauto;
+             pose_operation_size_cases;
+             rewrite ?Z.shiftr_0_r, <-?Z.bit0_odd, <-?N2Z.inj_testbit;
+             f_equal; try Lia.lia).  }
   { (* rcr *)
     step. 
-    1: { repeat (eauto || econstructor).
-         (* interp_op rcr *) exact eq_refl || admit. }
+    1: { repeat (eauto || econstructor). }
     destr_expr_beq; repeat step1.
     1:repeat step1; step.
     1: { repeat (eauto || econstructor). }
     1:repeat step1; step.
-    1: { rewrite N.bit0_mod. rewrite N.land_ones in *. eassumption. }
+    1: { instantiate (1:=(Z.testbit (Z.of_N v) 0)).
+         eval_same_expr_goal. rewrite Z.bit0_mod, Z.shiftr_0_r, Z.land_ones;
+         cbn; Lia.lia. }
 
     all: cbv beta delta [DenoteNormalInstruction]; repeat step1.
     all: subst sa; repeat step1.
 
-    2: setoid_rewrite Hm0.
-    1: unshelve erewrite (_ : N.shiftr _ _ = _) in Hm0; shelve_unifiable; cycle 1;
-      [> rewrite Hm0 | exact eq_refl].
+    all : repeat resolve_SetOperand_using_hyp.
+    1,3: (* bitwise Z&N *) admit.
 
-    1: subst v0; replace cnt with 1%N in * by (
-      pose_operation_size_cases; subst cnt;
-      repeat destruct_one_match; intuition (subst n; trivial)); clear cnt; cbn.
+    1: replace cnt with 1%N in *. 2:{
+      pose_operation_size_cases. subst cnt.
+      replace v0 with 1%N in * by Lia.lia.
+      repeat destruct_one_match; intuition (subst n; trivial). }
+
     all : eexists; split; [exact eq_refl|].
 
     (* bash flag state weakening *)
@@ -631,19 +651,22 @@ Proof.
              end; try eauto; try Lia.lia.
      cbv [set_flag set_flag_internal]; repeat (destruct_one_match||step1).
      subst v1c.
-     rewrite N.shiftr_0_r, N.lor_spec.
-     rewrite N.shiftl_spec_low by admit. (* s <> 0 *)
-     rewrite Bool.orb_false_r; trivial.
+     rewrite N.lor_spec, N.shiftl_spec_low by admit. (* s <> 0 *)
+     rewrite <-?Z.bit0_odd, Bool.orb_false_r, <-?N2Z.inj_testbit; trivial.
   }
 
   1: (* sbb *) admit.
 
-  { (* setc *) cbv [DenoteNormalInstruction]; repeat step; eauto. }
-  { (* seto *) cbv [DenoteNormalInstruction]; repeat step; eauto. }
+  { (* setc *) cbv [DenoteNormalInstruction]; repeat step;
+    resolve_SetOperand_using_hyp; eauto. destruct vCF; trivial. }
+  { (* seto *) cbv [DenoteNormalInstruction]; repeat step;
+    resolve_SetOperand_using_hyp; eauto. destruct vOF; trivial. } 
   { (* shr *) repeat step.
-    1: { repeat (eauto || econstructor). 1: (*interp_op shr*)admit. }
+    1: { repeat (eauto || econstructor). }
     cbv beta delta [DenoteNormalInstruction]; repeat step. subst sa; repeat step.
-    rewrite Hm0.
+    resolve_SetOperand_using_hyp; eauto.
+    (* bitwise N&Z *)1:admit.
+
     eexists; split; [exact eq_refl|].
     (* bash flags weakening *)
     case s', m0 in *; cbn;
@@ -665,8 +688,7 @@ Proof.
     1: { (* eval *) instantiate (1:=false). eauto. }
     1: { (* eval *) repeat (eauto 6 || econstructor). }
     repeat step.
-    1: { eval_same_expr_goal.
-      instantiate (1:=(v =? 0)%N); case (v =? 0)%N; trivial. }
+    1: { eval_same_expr_goal; trivial. }
     repeat step.
     cbv [DenoteNormalInstruction]; repeat step.
     eexists; split; [exact eq_refl|].
@@ -674,6 +696,8 @@ Proof.
     destruct (Equality.ARG_beq_spec a a0); try discriminate; subst a0.
     replace v0 with v in * by congruence; clear v0.
     rewrite N.land_diag.
+
+    replace (Z.of_N v =? 0) with (v =? 0)%N in * by admit.
 
     (* bash flags weakening *)
     case s', m in *; cbn;
@@ -701,7 +725,8 @@ Proof.
   { (* xchg *)
     all: cbv beta delta [DenoteNormalInstruction]; repeat step.
     subst sa; repeat step; eauto.
-  }
+    resolve_SetOperand_using_hyp; eauto using N2Z.id.
+    resolve_SetOperand_using_hyp; eauto using N2Z.id. }
   (* xor *) admit.
 
 Admitted.

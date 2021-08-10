@@ -39,12 +39,12 @@ Import ListNotations.
 Local Open Scope list_scope.
 
 Section WithCtx.
-Context (G : symbol -> option N).
+Context (G : symbol -> option Z).
 
 Fixpoint eval_base_var (dag : dag) {t : base.type} : base_var t -> API.interp_type (type.base t) -> Prop :=
   match t with
   | base.type.unit => fun _ _ => True
-  | base.type.type_base base.type.Z => fun idx v => exists n, Z.of_N n = v /\ eval G dag (ExprRef idx) n
+  | base.type.type_base base.type.Z => fun idx v => eval G dag (ExprRef idx) v
   | base.type.prod _ _ => fun a b => eval_base_var dag (fst a) (fst b) /\ eval_base_var dag (snd a) (snd b)
   | base.type.list _ => List.Forall2 (eval_base_var dag)
   | base.type.type_base base.type.nat => @eq _
@@ -445,7 +445,7 @@ Proof using Type.
 Qed.
 
 Definition eval_idx_Z (dag : dag) (idx : idx) (v : Z) : Prop
-  := exists n, Z.of_N n = v /\ eval G dag (ExprRef idx) n.
+  :=  eval G dag (ExprRef idx) v.
 Definition eval_idx_or_list_idx (d : dag) (v1 : idx + list idx) (v2 : Z + list Z)
   : Prop
   := match v1, v2 with
@@ -458,8 +458,7 @@ Lemma lift_eval_idx_Z_impl d1 d2
       (H : forall v n, eval G d1 v n -> eval G d2 v n)
   : forall v n, eval_idx_Z d1 v n -> eval_idx_Z d2 v n.
 Proof using Type.
-  cbv [eval_idx_Z]; intros; destruct_head'_ex; destruct_head'_and; eexists; split; [ eassumption | ].
-  eauto.
+  cbv [eval_idx_Z]; intros; destruct_head'_ex; destruct_head'_and; eauto.
 Qed.
 
 Lemma lift_eval_idx_or_list_idx_impl d1 d2
@@ -841,7 +840,7 @@ Lemma empty_dag_ok : dag_ok G empty_dag.
 Proof using Type.
   econstructor. setoid_rewrite ListUtil.nth_error_nil_error in H. inversion H.
   Unshelve.
-  exact N0.
+  exact Z0.
 Qed.
 
 Theorem check_equivalence_correct

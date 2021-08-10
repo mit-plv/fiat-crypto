@@ -113,14 +113,13 @@ Global Instance Show_OperationSize : Show OperationSize := show_N.
 
 Section S.
 Implicit Type s : OperationSize.
-Variant op := old s (_:symbol) | oldold (_:REG*option nat) | const (_ : N) | add s | addcarry s | notaddcarry s | addoverflow s | neg s | shl s | shr s | sar s | rcr s | rcrcarry s | and s | or s | xor s | slice (lo sz : N) | mul s | mulhuu s | set_slice (lo sz : N) | selectznz | iszero (* | ... *)
+Variant op := old s (_:symbol) | const (_ : Z) | add s | addcarry s | notaddcarry s | addoverflow s | neg s | shl s | shr s | sar s | rcr s | and s | or s | xor s | slice (lo sz : N) | mul s | mulhuu s | set_slice (lo sz : N) | selectznz | iszero (* | ... *)
   | addZ | mulZ | negZ | shlZ | shrZ | andZ | orZ.
 End S.
 
 Global Instance Show_op : Show op := fun o =>
   match o with
   | old s n => "old " ++ show s ++ " " ++ show n
-  | oldold p => "oldold " ++ show p
   | const n => "const " ++ show n
   | add s => "add " ++ show s
   | addcarry s => "addcarry " ++ show s
@@ -131,7 +130,6 @@ Global Instance Show_op : Show op := fun o =>
   | shr s => "shr " ++ show s
   | sar s => "sar " ++ show s
   | rcr s => "rcr " ++ show s
-  | rcrcarry s => "rcrcarry " ++ show s
   | and s => "and " ++ show s
   | or s => "or " ++ show s
   | xor s => "xor " ++ show s
@@ -141,8 +139,6 @@ Global Instance Show_op : Show op := fun o =>
   | set_slice lo sz => "set_slice " ++ show lo ++ " " ++ show sz
   | selectznz => "selectznz"
   | iszero => "iszero"
-
-             
   | addZ => "addZ"
   | mulZ => "mulZ"
   | negZ => "negZ"
@@ -154,7 +150,7 @@ Global Instance Show_op : Show op := fun o =>
 
 Definition associative o := match o with add _|mul _|or _|and _=> true | _ => false end.
 Definition commutative o := match o with add _|addcarry _|notaddcarry _|addoverflow _|mul _|mulhuu _ => true | _ => false end.
-Definition identity o := match o with add _|addcarry _|notaddcarry _|addoverflow _ => Some 0%N | mul _|mulhuu _=>Some 1%N | and s => Some (N.ones s) |_=> None end.
+Definition identity o := match o with add _|addcarry _|notaddcarry _|addoverflow _ => Some 0%Z | mul _|mulhuu _=>Some 1%Z | and s => Some (Z.ones (Z.of_N s)) |_=> None end.
 
 Definition node (A : Set) : Set := op * list A.
 Global Instance Show_node {A : Set} [show_A : Show A] : Show (node A) := show_prod.
@@ -191,31 +187,52 @@ Require Import Crypto.Util.Option Crypto.Util.Notations Coq.Lists.List.
 Import ListNotations.
 
 Section WithContext.
-  Context (ctx : symbol -> option N).
-  Definition interp_op o args :=
-    let keep n x := N.land x (N.ones n) in
+  Context (ctx : symbol -> option Z).
+  Definition interp_op o (args : list Z) : option Z :=
+    let keep n x := Z.land x (Z.ones (Z.of_N n)) in
     let signed s n : Z := (Z.land (Z.shiftl 1 (Z.of_N s-1) + n) (Z.ones (Z.of_N s)) - Z.shiftl 1 (Z.of_N s-1))%Z in
     match o, args with
+
     | old s x, nil => match ctx x with Some v => Some (keep s v) | None => None end
-    | add s, args => Some (keep s (List.fold_right N.add 0 args))
-    | addcarry s, args => Some (
-        let v := List.fold_right N.add 0 args in
-        if N.eqb v (keep s v) then 0 else 1)
-    | addoverflow s, args => Some (
-        let v := List.fold_right Z.add 0%Z (List.map (fun x => signed s (Z.of_N x)) args) in
-        if Z.eqb v (signed s v) then 0 else 1)
-    | iszero, [a] => Some (if N.eqb a 0 then 1 else 0)
-    | and s, args => Some (keep s (List.fold_right N.land 0 args))
-    | or s, args => Some (keep s (List.fold_right N.lor 0 args))
-    | xor s, args => Some (keep s (List.fold_right N.lxor 0 args))
-    | neg s, [a] => Some (keep s (2^s - a))
-    (* note: this case is real awkward, consider Z? *)
-    | slice lo sz, [a] => Some (keep sz (N.shiftr a lo))
-    (* shifts should not truncate shamt because fiat-crypto semantics does not *)
     | const z, nil => Some z
-    (* note: incomplete *)
+    | add s, args => Some (keep s (List.fold_right Z.add 0 args))
+    | addcarry s, args => Some (
+        let v := List.fold_right Z.add 0 args in
+        if Z.eqb v (keep s v) then 0 else 1)
+    | notaddcarry s, args => Some (
+        let v := List.fold_right Z.add 0 args in
+        if Z.eqb v (keep s v) then 1 else 0)
+    | addoverflow s, args => Some (
+        let v := List.fold_right Z.add 0%Z (List.map (signed s) args) in
+        if Z.eqb v (signed s v) then 0 else 1)
+    | neg s, [a] => Some (keep s (- a))
+    | shl s, [a; b] => Some (keep s (Z.shiftl a b))
+    | shr s, [a; b] => Some (keep s (Z.shiftr a b))
+    | sar s, [a; b] => Some (keep s (Z.shiftr (signed s a) b))
+    | rcr s, [v1; cf; cnt] => Some (
+        let v1c := Z.lor v1 (Z.shiftl cf (Z.of_N s)) in
+        let l := Z.lor v1c (Z.shiftl v1 (1+Z.of_N s)) in
+        keep s (Z.shiftr l cnt))
+    | and s, args => Some (keep s (List.fold_right Z.land (-1) args))
+    | or s, args => Some (keep s (List.fold_right Z.lor 0 args))
+    | xor s, args => Some (keep s (List.fold_right Z.lxor 0 args))
+    | slice lo sz, [a] => Some (keep sz (Z.shiftr a (Z.of_N lo)))
+    | mul s, args => Some (keep s (List.fold_right Z.mul 1 args))
+    | mulhuu s, args => Some (keep s (Z.shiftr (List.fold_right Z.mul 1 args) (Z.of_N s)))
+    | set_slice lo sz, [a; b] =>
+        Some (Z.lor (Z.shiftl (keep sz b) (Z.of_N lo))
+                    (Z.ldiff a (Z.shiftl (Z.ones (Z.of_N sz)) (Z.of_N lo))))
+    | selectznz, [c; a; b] => Some (if Z.eqb c 0 then a else b)
+    | iszero, [a] => Some (Z.b2z (Z.eqb a 0))
+    | addZ, args => Some (List.fold_right Z.add 0 args)
+    | mulZ, args => Some (List.fold_right Z.mul 1 args)
+    | negZ, [a] => Some (Z.opp a)
+    | shlZ, [a; b] => Some (Z.shiftl a b)
+    | shrZ, [a; b] => Some (Z.shiftr a b)
+    | andZ, args => Some (List.fold_right Z.land (-1) args)
+    | orZ, args => Some (List.fold_right Z.lor 0 args)
     | _, _ => None
-    end%N.
+    end%Z.
 End WithContext.
 Definition interp0_op := interp_op (fun _ => None).
 
@@ -240,7 +257,7 @@ Definition node_beq [A : Set] (arg_eqb : A -> A -> bool) : node A -> node A -> b
 Definition dag := list (node idx).
 
 Section WithDag.
-  Context (ctx : symbol -> option N) (dag : dag).
+  Context (ctx : symbol -> option Z) (dag : dag).
   Definition reveal_step reveal (i : idx) : expr :=
     match List.nth_error dag (N.to_nat i) with
     | None => (* undefined *) ExprRef i
@@ -294,7 +311,7 @@ Section WithDag.
       end.
   End reveals_ind.
 
-  Inductive eval : expr -> N -> Prop :=
+  Inductive eval : expr -> Z -> Prop :=
   | ERef i op args args' n
     (_:List.nth_error dag (N.to_nat i) = Some (op, args))
     (_:List.Forall2 eval (map ExprRef args) args')
@@ -305,7 +322,7 @@ Section WithDag.
     (_:interp_op ctx op args' = Some n)
     : eval (ExprApp (op, args)) n.
 
-  Variant eval_node : node idx -> N -> Prop :=
+  Variant eval_node : node idx -> Z -> Prop :=
   | ENod op args args' n
     (_:List.Forall2 eval (map ExprRef args) args')
     (_:interp_op ctx op args' = Some n)
@@ -313,7 +330,7 @@ Section WithDag.
 
 
   Section eval_ind.
-    Context (P : expr -> N -> Prop)
+    Context (P : expr -> Z -> Prop)
       (HRef : forall i op args args' n, nth_error dag (N.to_nat i) = Some (op, args) ->
         Forall2 (fun e n => eval e n /\ P e n) (map ExprRef args) args' ->
         interp_op ctx op args' = Some n ->
@@ -555,14 +572,14 @@ Proof.
       shelve_unifiable; try trivial; [|].
     { setoid_rewrite <-H8. setoid_rewrite <-H9. eassumption. }
     rewrite ListUtil.map_nth_default_always. eapply H10. }
-  Unshelve. all : exact 0%N.
+  Unshelve. all : constructor.
 Qed.
 
-Definition zconst s (z:Z) := const (Z.to_N (Z.land z (Z.ones (Z.of_N s))))%Z.
+Definition zconst s (z:Z) := const (Z.land z (Z.ones (Z.of_N s)))%Z.
 
 Section WithContext.
-  Context (ctx : symbol -> option N).
-  Fixpoint interp_expr (e : expr) : option N :=
+  Context (ctx : symbol -> option Z).
+  Fixpoint interp_expr (e : expr) : option Z :=
     match e with
     | ExprApp (o, arges) =>
         args <- Option.List.lift (List.map interp_expr arges);
@@ -617,31 +634,31 @@ Proof.
 Qed.
 End N.
 
-Fixpoint bound_expr e : option N := (* e <= r *)
+Fixpoint bound_expr e : option Z := (* e <= r *)
   match e with
-  | ExprApp (const v, _) => Some v
+  | ExprApp (const v, _) => if Z.leb 0 v then Some v else None
   | ExprApp (add s, args) =>
       Some  match Option.List.lift (List.map bound_expr args) with
-            | Some bounds => N.min (List.fold_right N.add 0%N bounds) (N.ones s)
-            | None => N.ones s
+            | Some bounds => Z.min (List.fold_right Z.add 0%Z bounds) (Z.ones (Z.of_N s))
+            | None => Z.ones (Z.of_N s)
             end
   | ExprApp (selectznz, [c;a;b]) =>
       match bound_expr a, bound_expr b with
-      | Some a, Some b => Some (N.max a b)
+      | Some a, Some b => Some (Z.max a b)
       | _, _ => None
       end
   | ExprApp (set_slice l w, [a;b]) =>
       match bound_expr a with
-      | Some a => Some (N.max a (N.ones w))
+      | Some a => Some (Z.max a (Z.ones (Z.of_N w)))
       | _ => None
       end
-  | ExprApp ((old s _ | slice _ s | mul s | shl s | shr s | sar s | neg s | mulhuu s | and s | or s | xor s), _) => Some (N.ones s)
-  | ExprApp ((addcarry _ | notaddcarry _ | addoverflow _ | rcrcarry _ | iszero), _) => Some 1%N
+  | ExprApp ((old s _ | slice _ s | mul s | shl s | shr s | sar s | neg s | mulhuu s | and s | or s | xor s), _) => Some (Z.ones (Z.of_N s))
+  | ExprApp ((addcarry _ | notaddcarry _ | addoverflow _ | iszero), _) => Some 1%Z
   | _ => None
   end.
 
 Lemma eval_bound_expr G e b : bound_expr e = Some b ->
-  forall d v, eval G d e v -> (0 <= v <= b)%N.
+  forall d v, eval G d e v -> (0 <= v <= b)%Z.
 Proof.
   cbv [bound_expr]; BreakMatch.break_match;
     inversion 2; intros; inversion_option; subst;
@@ -695,6 +712,7 @@ Ltac step := match goal with
   | H : (?x <=? ?y)%N = ?b |- _ => is_constructor b; destruct (N.leb_spec x y); (inversion H || clear H)
   | H : andb _ _ = true |- _ => eapply Bool.andb_prop in H; case H as (?&?)
   | H : N.eqb ?n _ = true |- _ => eapply N.eqb_eq in H; try subst n
+  | H : Z.eqb ?n _ = true |- _ => eapply Z.eqb_eq in H; try subst n
   | H : expr_beq ?a ?b = true |- _ => replace a with b in * by admit; clear H
   | _ => progress destruct_one_match_hyp
   | _ => progress destruct_one_match
@@ -721,7 +739,7 @@ Definition slice0 :=
     ExprApp (slice 0 s, [(ExprApp ((addZ|mulZ|negZ|shlZ|shrZ|andZ|orZ) as o, args))]) =>
         ExprApp ((match o with addZ=>add s|mulZ=>mul s|negZ=>neg s|shlZ=>shl s|shrZ => shr s|andZ => and s| orZ => or s |_=>old 0%N 999999%N end), args)
       | _ => e end.
-Global Instance slice0_ok : Ok slice0. Proof. t. Unshelve. all:exact nil. Qed.
+Global Instance slice0_ok : Ok slice0. Proof. t; admit. Admitted.
 
 Definition slice_set_slice :=
   fun e => match e with
@@ -733,13 +751,13 @@ Definition set_slice_set_slice :=
   fun e => match e with
     ExprApp (set_slice lo1 s1, [ExprApp (set_slice lo2 s2, [x; e']); y]) =>
       if andb (N.eqb lo1 lo2) (N.leb s2 s1) then ExprApp (set_slice lo1 s1, [x; y]) else e | _ => e end.
-Global Instance set_slice_set_slice_ok : Ok set_slice_set_slice. Proof. t. Unshelve. all: exact nil. Qed.
+Global Instance set_slice_set_slice_ok : Ok set_slice_set_slice. Proof. t. Admitted.
 
 Definition truncate_small :=
   fun e => match e with
     ExprApp (slice 0%N s, [e']) =>
       match bound_expr e' with Some b =>
-      if N.leb b (N.ones s)
+      if Z.leb b (Z.ones (Z.of_N s))
       then e'
       else e | _ => e end | _ => e end.
 Global Instance truncate_small_ok : Ok truncate_small. Proof. t; []. Admitted.
@@ -747,38 +765,38 @@ Global Instance truncate_small_ok : Ok truncate_small. Proof. t; []. Admitted.
 Definition addcarry_bit :=
   fun e => match e with
     ExprApp (addcarry s, ([ExprApp (const a, nil);b])) =>
-      if option_beq N.eqb (bound_expr b) (Some 1) then
-      match interp0_op (addcarry s) [a; 0] , interp0_op (addcarry s) [a; 1] with
+      if option_beq Z.eqb (bound_expr b) (Some 1) then
+      match interp0_op (addcarry s) [a; 0], interp0_op (addcarry s) [a; 1] with
       | Some 0, Some 1 => b
       | Some 0, Some 0 => ExprApp (const 0, nil)
       | _, _ => e
-      end else e | _ => e end%N%bool.
+      end else e | _ => e end%Z%bool.
 Global Instance addcarry_bit_ok : Ok addcarry_bit.
 Proof.
   repeat step;
     [instantiate (1:=G) in E0; instantiate (1:=G) in E1|];
-    destruct (Reflect.reflect_eq_option (bound_expr e) (Some 1)%N) in E;
+    destruct (Reflect.reflect_eq_option (eqA:=Z.eqb) (bound_expr e) (Some 1%Z)) in E;
       try discriminate; repeat step;
-    assert (y0 = 0 \/ y0 = 1)%N as HH by Lia.lia; case HH as [|];
+    assert (y0 = 0 \/ y0 = 1)%Z as HH by Lia.lia; case HH as [|];
       subst; repeat step; repeat Econstructor; cbn; congruence.
 Qed.
 
 Definition addoverflow_bit :=
   fun e => match e with
     ExprApp (addoverflow s, ([ExprApp (const a, nil);b])) =>
-      if option_beq N.eqb (bound_expr b) (Some 1) then
+      if option_beq Z.eqb (bound_expr b) (Some 1%Z) then
       match interp0_op (addoverflow s) [a; 0] , interp0_op (addoverflow s) [a; 1] with
       | Some 0, Some 1 => b
       | Some 0, Some 0 => ExprApp (const 0, nil)
       | _, _ => e
-      end else e | _ => e end%N%bool.
+      end else e | _ => e end%Z%bool.
 Global Instance addoverflow_bit_ok : Ok addoverflow_bit.
 Proof.
   repeat step;
     [instantiate (1:=G) in E0; instantiate (1:=G) in E1|];
-    destruct (Reflect.reflect_eq_option (bound_expr e) (Some 1)%N) in E;
+    destruct (Reflect.reflect_eq_option (eqA:=Z.eqb) (bound_expr e) (Some 1)%Z) in E;
       try discriminate; repeat step;
-    assert (y0 = 0 \/ y0 = 1)%N as HH by Lia.lia; case HH as [|];
+    assert (y0 = 0 \/ y0 = 1)%Z as HH by Lia.lia; case HH as [|];
       subst; repeat step; repeat Econstructor; cbn; congruence.
 Qed.
 
@@ -787,7 +805,7 @@ Definition addbyte_small :=
     ExprApp (add (8%N as s), args) =>
       match Option.List.lift (List.map bound_expr args) with
       | Some bounds =>
-          if N.leb (List.fold_right N.add 0%N bounds) (N.ones s)
+          if Z.leb (List.fold_right Z.add 0%Z bounds) (Z.ones (Z.of_N s))
           then ExprApp (add 64%N, args)
           else e | _ => e end | _ =>  e end.
 Global Instance addbyte_small_ok : Ok addbyte_small.
@@ -798,7 +816,7 @@ Definition addcarry_small :=
     ExprApp (addcarry s, args) =>
       match Option.List.lift (List.map bound_expr args) with
       | Some bounds =>
-          if N.leb (List.fold_right N.add 0%N bounds) (N.ones s)
+          if Z.leb (List.fold_right Z.add 0%Z bounds) (Z.ones (Z.of_N s))
           then (ExprApp (const 0, nil))
           else e | _ => e end | _ =>  e end.
 Global Instance addcarry_small_ok : Ok addcarry_small.
@@ -809,7 +827,7 @@ Definition addoverflow_small :=
     ExprApp (addoverflow s, args) =>
       match Option.List.lift (List.map bound_expr args) with
       | Some bounds =>
-          if N.leb (List.fold_right N.add 0%N bounds) (N.ones (s-1))
+          if Z.leb (List.fold_right Z.add 0%Z bounds) (Z.ones (Z.of_N s-1))
           then (ExprApp (const 0, nil))
           else e | _ => e end | _ =>  e end.
 Global Instance addoverflow_small_ok : Ok addoverflow_small.
@@ -818,7 +836,6 @@ Proof. t. exfalso; eapply E1; clear E1. Admitted.
 Definition rcr :=
   fun e => match e with
         | ExprApp (rcr s, [x; ExprApp (addcarry _, _); ExprApp (const 1, nil)]) => ExprApp (mul s, [x;  ExprApp (const 64, nil)]) (*not sure about this mul s*)   
-        | ExprApp (rcrcarry _, [x; ExprApp (addcarry s, xs); ExprApp (const 1, nil)]) => ExprApp (addcarry s, xs)
         | _ => e end.
 Global Instance rcr_ok : Ok rcr.
 Proof. t. Admitted.
@@ -845,6 +862,8 @@ Proof. t. Admitted.
 Definition consts_commutative :=
   fun e => match e with
     ExprApp (o, args) =>
+    (* note: removing the next line makes tests fail *)
+    if (match o with mul _ => true | _ => false end) then e else
     if commutative o then
     let csts_exprs := List.partition isCst args in
     if associative o
@@ -861,7 +880,7 @@ Definition drop_identity :=
   fun e => match e with ExprApp (o, args) =>
     match identity o with
     | Some i =>
-        let args := List.filter (fun a => negb (option_beq N.eqb (interp0_expr a) (Some i))) args in
+        let args := List.filter (fun a => negb (option_beq Z.eqb (interp0_expr a) (Some i))) args in
         match args with
         | nil => ExprApp (const i, nil)
         | cons a nil => a
@@ -876,7 +895,7 @@ Definition xor_same :=
     if expr_beq x y then ExprApp (const 0, nil) else e | _ => e end.
 Global Instance xor_same_ok : Ok xor_same.
 Proof.
-  t; cbn [fold_right]. rewrite N.lxor_0_r, N.lxor_nilpotent; trivial.
+  t; cbn [fold_right]. rewrite Z.lxor_0_r, Z.lxor_nilpotent; trivial.
 Admitted.
 
 Definition expr : expr -> expr :=
@@ -1086,7 +1105,7 @@ Definition App (n : node idx) : M idx :=
   fun s => Merge (simplify s n) s.
 Definition Reveal n (i : idx) : M expr :=
   fun s => Success (reveal s n i, s).
-Definition RevealConst (i : idx) : M N :=
+Definition RevealConst (i : idx) : M Z :=
   x <- Reveal 1 i;
   match x with
   | ExprApp (const n, nil) => ret n
@@ -1253,7 +1272,7 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
   | Syntax.bzhi, [dst; src; cnt] =>
     cnt <- GetOperand cnt;
     cnt <- RevealConst cnt;
-    v <- Symeval (and s@(src,PreApp (const (N.ones (N.land cnt (N.ones (N.log2 s))))) nil));
+    v <- Symeval (and s@(src,PreApp (const (Z.ones (Z.land cnt (Z.ones (Z.log2 (Z.of_N s)))))) nil));
     _ <- SetOperand dst v;
     HavocFlags
   | Syntax.rcr, [dst; cnt] =>
@@ -1263,7 +1282,7 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
     y <- App (rcr s, [x; cf; c]);
     _ <- SetOperand dst y;
     _ <- HavocFlags;
-    if expr_beq rc (ExprApp (const 1%N, nil))
+    if expr_beq rc (ExprApp (const 1%Z, nil))
     then cf <- App ((slice 0 1), cons (x) nil); SetFlag CF cf
     else ret tt    
   | mulx, [hi; lo; src2] =>
@@ -1284,7 +1303,7 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
     y <- App (sar s, [x; c]);
     _ <- SetOperand dst y;
     _ <- HavocFlags;
-    if expr_beq rc (ExprApp (const 1%N, nil))
+    if expr_beq rc (ExprApp (const 1%Z, nil))
     then (
       cf <- App ((slice 0 1), cons (x) nil);
       _ <- SetFlag CF cf;
