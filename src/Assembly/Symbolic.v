@@ -937,14 +937,6 @@ Proof.
   t; cbn [fold_right]. rewrite Z.lxor_0_r, Z.lxor_nilpotent; trivial.
 Admitted.
 
-Definition UNSOUND_widen_shr :=
-  fun e => match e with
-    | ExprApp (shr 1,args) => ExprApp (shr 64, args)
-    | ExprApp (slice 0 1,[ExprApp(shr 64, args)]) => ExprApp (shr 64, args)
-    | _ => e end%N.
-Global Instance UNSOUND_widen_shr_ok : Ok UNSOUND_widen_shr.
-Admitted.
-
 Definition expr : expr -> expr :=
   List.fold_left (fun e f => f e)
   [constprop
@@ -963,7 +955,6 @@ Definition expr : expr -> expr :=
   ;addoverflow_small
   ;addbyte_small
   ;xor_same 
-  ;UNSOUND_widen_shr 
   ].
 
 Lemma eval_expr c d e v : eval c d e v -> eval c d (expr e) v.

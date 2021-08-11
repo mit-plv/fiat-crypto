@@ -21,9 +21,9 @@ for fname in sys.argv[1:]:
     op, name = fname.removesuffix('.asm').replace('_solinas','').split('_')[-2:]
     if name in solinasprimes.keys():
         n, prime = solinasprimes[name]
-        print ('src/ExtractionOCaml/unsaturated_solinas', name, '64', n, shlex.quote(prime), dict(mul='carry_mul',square='carry_square')[op], '--no-wide-int', '--hints-file', shlex.quote(fname), '-o', '/dev/null', '--output-asm', '/dev/null')
+        print ('src/ExtractionOCaml/unsaturated_solinas', name, '64', n, shlex.quote(prime), dict(mul='carry_mul',square='carry_square')[op], '--no-wide-int', '--shiftr-avoid-uint1', '--tight-bounds-mul-by', '1.000001', '--hints-file', shlex.quote(fname), '-o', '/dev/null', '--output-asm', '/dev/null')
     elif name in montgomeryprimes.keys():
         prime = montgomeryprimes[name]
-        print ('src/ExtractionOCaml/word_by_word_montgomery', name, '64', shlex.quote(prime), op, '--no-wide-int', '--hints-file', shlex.quote(fname), '-o', '/dev/null', '--output-asm', '/dev/null')
+        print ('src/ExtractionOCaml/word_by_word_montgomery', name, '64', shlex.quote(prime), op, '--no-wide-int', '--shiftr-avoid-uint1', '--hints-file', shlex.quote(fname), '-o', '/dev/null', '--output-asm', '/dev/null')
     else:
         assert False, name
