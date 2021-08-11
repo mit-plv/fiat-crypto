@@ -761,14 +761,22 @@ Definition set_slice_set_slice :=
       if andb (N.eqb lo1 lo2) (N.leb s2 s1) then ExprApp (set_slice lo1 s1, [x; y]) else e | _ => e end.
 Global Instance set_slice_set_slice_ok : Ok set_slice_set_slice. Proof. t. Admitted.
 
+Lemma indN: forall (P: N -> Prop),
+    P 0%N ->                                 (* base case to prove *)
+    (forall n: N, P n -> P (n + 1)%N) ->     (* inductive case to prove *)
+    forall n, P n.                           (* conclusion to enjoy *)
+Proof. setoid_rewrite N.add_1_r. exact N.peano_ind. Qed.
+
+Ltac induct e := induction e using indN.
+                  
 Lemma helper'': forall sz, (2^Z.of_N sz>0)%Z.
-  Proof. Admitted. (*
-    induct sz; simplify; try Lia.lia.
+  Proof. 
+    induct sz; cbn in *; try Lia.lia.
     replace (2^Z.of_N (sz+1))%Z with (2 * 2^Z.of_N sz )%Z; try Lia.lia.
     replace (2^Z.of_N (sz+1))%Z with ( 2^ Z.succ (Z.of_N sz) )%Z.
     erewrite Z.pow_succ_r; eauto; Lia.lia.
     f_equal; Lia.lia.
-  Qed.*)
+  Qed.
   
 Lemma helper': forall sz y,(y<= Z.pred (2^ Z.of_N sz))%Z -> (y <  (2 ^ Z.of_N sz ))%Z. 
 Proof.
