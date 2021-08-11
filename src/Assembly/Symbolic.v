@@ -894,7 +894,7 @@ Definition addcarry_small :=
           then (ExprApp (const 0, nil))
           else e | _ => e end | _ =>  e end.
 Global Instance addcarry_small_ok : Ok addcarry_small.
-Proof. t. exfalso; eapply E1; clear E1. (* Is l0 == args'? Then apply le_ones*) Admitted.
+Proof. t. exfalso. (* Is l0 == args'? Then apply le_ones*) Admitted.
 
 Definition addoverflow_small :=
   fun e => match e with
