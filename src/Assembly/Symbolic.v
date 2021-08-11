@@ -1310,14 +1310,14 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
   | Syntax.sub, [dst; src] =>
     v <- Symeval (add       s@(dst, PreApp (neg s) [PreARG src]));
     c <- Symeval (subborrow s@(dst, src));
-    _ <- HavocFlags;
     _ <- SetOperand dst v;
+    _ <- HavocFlags;
     SetFlag CF c
   | Syntax.sbb, [dst; src] =>
     v <- Symeval (add         s@(dst, PreApp (neg s) [PreARG src], PreApp (neg s) [PreFLG CF]));
     c <- Symeval (subborrow s@(dst, src, CF));
-    _ <- HavocFlags;
     _ <- SetOperand dst v;
+    _ <- HavocFlags;
     SetFlag CF c
   | lea, [dst; mem src] =>
     a <- Address src;

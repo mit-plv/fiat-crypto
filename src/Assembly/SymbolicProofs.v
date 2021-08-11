@@ -1,5 +1,6 @@
 Require Import Coq.Lists.List.
 Require Import Coq.micromega.Lia.
+Require Import Crypto.Util.ZUtil.Tactics.PullPush.
 Require Import Coq.NArith.NArith.
 Require Import Coq.ZArith.ZArith.
 Require Import Crypto.AbstractInterpretation.ZRange.
@@ -687,7 +688,38 @@ Proof.
 
   1: (* shrd *) admit.
 
-  1: (* sub *) admit.
+  1: (* sub *) {
+    idtac.
+    repeat step.
+    1: { (* eval *) repeat (eauto || econstructor). }
+    1: { (* eval *) repeat (eauto || econstructor). }
+    1: { (* eval *) repeat (eauto || econstructor). }
+    1: { rewrite Z.bit0_mod; eauto. }
+    cbv [DenoteNormalInstruction]; repeat step.
+    resolve_SetOperand_using_hyp.
+    { cbn; repeat (rewrite ?Z.land_ones, ?Z.add_0_r, ?N.add_0_r, ?Z.add_opp_r by Lia.lia).
+      push_Zmod; pull_Zmod. rewrite Z.add_opp_r; congruence. }
+
+    eexists; split; [exact eq_refl|].
+
+    (* bash flags weakening *)
+    case s', m in *; cbn;
+      repeat match goal with
+             | H : R_flag _ ?f None |- _ => eapply R_flag_None_r in H; try (rewrite H in * )
+             | H : R_flag ?d ?f (Some ?y) |- R_flag ?d ?f ?x =>
+                 let HH := fresh in enough (HH : x = Some y) by (rewrite HH; exact H)
+             | _ => progress (cbv [R_flags Tuple.fieldwise Tuple.fieldwise'] in *; cbn in * ; subst)
+             | _ => progress intuition eauto 1
+             end.
+    { cbn; repeat (rewrite ?Z.land_ones, ?Z.add_0_r, ?N.add_0_r, ?Z.add_opp_r, ?N2Z.id by Lia.lia).
+      push_Zmod; pull_Zmod.
+      replace v1 with v by congruence; replace v2 with v0 by congruence.
+      rewrite Z.add_opp_r, Z.odd_opp, <-Z.bit0_odd, Z.shiftr_spec, Z.add_0_l by Lia.lia.
+      set (Z.of_N v - Z.of_N v0) as d.
+      rewrite Z2N.id by (eapply Z.mod_pos_bound, Z.pow_pos_nonneg; Lia.lia).
+      f_equal.
+      (* negb (d mod 2 ^ Z.of_N n =? d) = Z.testbit d (Z.of_N n) *)
+      admit. }
 
   { (* test r r *) repeat step.
     1: { (* eval *) repeat (eauto || econstructor). }
