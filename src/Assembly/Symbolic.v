@@ -105,7 +105,7 @@ End Forall2.
 Require Import Coq.Strings.String Crypto.Util.Strings.Show.
 Require Import Crypto.Assembly.Syntax.
 Definition idx := N.
-Local Set Boolean Equality Schemes.
+Local Set Decidable Equality Schemes.
 Definition symbol := N.
 
 Class OperationSize := operation_size : N.
@@ -115,6 +115,7 @@ Section S.
 Implicit Type s : OperationSize.
 Variant op := old s (_:symbol) | const (_ : Z) | add s | addcarry s | notaddcarry s | addoverflow s | neg s | shl s | shr s | sar s | rcr s | and s | or s | xor s | slice (lo sz : N) | mul s | set_slice (lo sz : N) | selectznz | iszero (* | ... *)
   | addZ | mulZ | negZ | shlZ | shrZ | andZ | orZ | addcarryZ s.
+Definition op_beq a b := if op_eq_dec a b then true else false.
 End S.
 
 Global Instance Show_op : Show op := fun o =>
@@ -182,6 +183,29 @@ Definition Show_expr : Show expr
   := Eval cbv -[String.append show_N concat List.map Show_op] in
       fix Show_expr e := Show_expr_body Show_expr e.
 Global Existing Instance Show_expr.
+
+Lemma op_beq_spec a b : BoolSpec (a=b) (a<>b) (op_beq a b).
+Proof. cbv [op_beq]; destruct (op_eq_dec a b); constructor; congruence. Qed.
+Fixpoint expr_beq (X Y : expr) {struct X} : bool :=
+  match X, Y with
+  | ExprRef x, ExprRef x0 => N.eqb x x0
+  | ExprApp x, ExprApp x0 =>
+      Prod.prod_beq _ _ op_beq (ListUtil.list_beq expr expr_beq) x x0
+  | _, _ => false
+  end.
+Lemma expr_beq_spec a b : BoolSpec (a=b) (a<>b) (expr_beq a b).
+Proof.
+  revert b; induction a, b; cbn.
+  1: destruct (N.eqb_spec i i0); constructor; congruence.
+  1,2: constructor; congruence.
+  destruct n, n0; cbn.
+  destruct (op_beq_spec o o0); cbn in *; [subst|constructor; congruence].
+  induction H, l0; cbn; try (constructor; congruence); [].
+  destruct (H e); cbn; try (constructor; congruence); [].
+Admitted.
+Lemma expr_beq_true a b : expr_beq a b = true -> a = b.
+Proof. destruct (expr_beq_spec a b); congruence. Qed.
+
 
 Require Import Crypto.Util.Option Crypto.Util.Notations Coq.Lists.List.
 Import ListNotations.
@@ -713,7 +737,7 @@ Ltac step := match goal with
   | H : andb _ _ = true |- _ => eapply Bool.andb_prop in H; case H as (?&?)
   | H : N.eqb ?n _ = true |- _ => eapply N.eqb_eq in H; try subst n
   | H : Z.eqb ?n _ = true |- _ => eapply Z.eqb_eq in H; try subst n
-  | H : expr_beq ?a ?b = true |- _ => replace a with b in * by admit; clear H
+  | H : expr_beq ?a ?b = true |- _ => replace a with b in * by (symmetry;exact (expr_beq_true a b H)); clear H
   | _ => progress destruct_one_match_hyp
   | _ => progress destruct_one_match
 
