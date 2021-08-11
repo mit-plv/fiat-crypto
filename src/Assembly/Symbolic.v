@@ -112,8 +112,8 @@ Global Instance Show_OperationSize : Show OperationSize := show_N.
 
 Section S.
 Implicit Type s : OperationSize.
-Variant op := old s (_:symbol) | const (_ : Z) | add s | addcarry s | notaddcarry s | addoverflow s | neg s | shl s | shr s | sar s | rcr s | and s | or s | xor s | slice (lo sz : N) | mul s | set_slice (lo sz : N) | selectznz | iszero (* | ... *)
-  | addZ | mulZ | negZ | shlZ | shrZ | andZ | orZ | addcarryZ s.
+Variant op := old s (_:symbol) | const (_ : Z) | add s | addcarry s | subborrow s | addoverflow s | neg s | shl s | shr s | sar s | rcr s | and s | or s | xor s | slice (lo sz : N) | mul s | set_slice (lo sz : N) | selectznz | iszero (* | ... *)
+  | addZ | mulZ | negZ | shlZ | shrZ | andZ | orZ | addcarryZ s | subborrowZ s.
 Definition op_beq a b := if op_eq_dec a b then true else false.
 End S.
 
@@ -123,7 +123,7 @@ Global Instance Show_op : Show op := fun o =>
   | const n => "const " ++ show n
   | add s => "add " ++ show s
   | addcarry s => "addcarry " ++ show s
-  | notaddcarry s => "notaddcarry " ++ show s
+  | subborrow s => "subborrow " ++ show s
   | addoverflow s => "addoverflow " ++ show s
   | neg s => "neg " ++ show s
   | shl s => "shl " ++ show s
@@ -146,11 +146,12 @@ Global Instance Show_op : Show op := fun o =>
   | andZ => "andZ"
   | orZ => "orZ"
   | addcarryZ s => "addcarryZ " ++ show s
+  | subborrowZ s => "subborrowZ " ++ show s
   end%string.
 
 Definition associative o := match o with add _|mul _|mulZ|or _|and _=> true | _ => false end.
-Definition commutative o := match o with add _|addcarry _|notaddcarry _|addoverflow _|mul _|mulZ => true | _ => false end.
-Definition identity o := match o with add _|addcarry _|notaddcarry _|addoverflow _ => Some 0%Z | mul _|mulZ=>Some 1%Z | and s => Some (Z.ones (Z.of_N s)) |_=> None end.
+Definition commutative o := match o with add _|addcarry _|addoverflow _|mul _|mulZ => true | _ => false end.
+Definition identity o := match o with add _|addcarry _|addoverflow _|subborrow _ => Some 0%Z | mul _|mulZ=>Some 1%Z | and s => Some (Z.ones (Z.of_N s)) |_=> None end.
 
 Definition node (A : Set) : Set := op * list A.
 Global Instance Show_node {A : Set} [show_A : Show A] : Show (node A) := show_prod.
@@ -219,12 +220,10 @@ Section WithContext.
     | old s x, nil => match ctx x with Some v => Some (keep s v) | None => None end
     | const z, nil => Some z
     | add s, args => Some (keep s (List.fold_right Z.add 0 args))
-    | addcarry s, args => Some (
-        let v := List.fold_right Z.add 0 args in
-        if Z.eqb v (keep s v) then 0 else 1)
-    | notaddcarry s, args => Some (
-        let v := List.fold_right Z.add 0 args in
-        if Z.eqb v (keep s v) then 1 else 0)
+    | addcarry s, args =>
+        Some (Z.shiftr (List.fold_right Z.add 0 args) (Z.of_N s) mod 2)
+    | subborrow s, cons a args' =>
+        Some ((- Z.shiftr (a - List.fold_right Z.add 0 args') (Z.of_N s)) mod 2)
     | addoverflow s, args => Some (
         let v := List.fold_right Z.add 0%Z (List.map (signed s) args) in
         if Z.eqb v (signed s v) then 0 else 1)
@@ -254,6 +253,7 @@ Section WithContext.
     | andZ, args => Some (List.fold_right Z.land (-1) args)
     | orZ, args => Some (List.fold_right Z.lor 0 args)
     | addcarryZ s, args => Some (Z.shiftr (List.fold_right Z.add 0 args) (Z.of_N s))
+    | subborrowZ s, cons a args' => Some (- Z.shiftr (a - List.fold_right Z.add 0 args') (Z.of_N s))
     | _, _ => None
     end%Z.
 End WithContext.
@@ -680,7 +680,7 @@ Fixpoint bound_expr e : option Z := (* e <= r *)
       | _ => None
       end
   | ExprApp ((old s _ | slice _ s | mul s | shl s | shr s | sar s | neg s | and s | or s | xor s), _) => Some (Z.ones (Z.of_N s))
-  | ExprApp ((addcarry _ | notaddcarry _ | addoverflow _ | iszero), _) => Some 1%Z
+  | ExprApp ((addcarry _ | subborrow _ | addoverflow _ | iszero), _) => Some 1%Z
   | _ => None
   end.
 
@@ -774,7 +774,15 @@ Definition slice01_addcarryZ :=
         ExprApp (addcarry s, args)
       | _ => e end.
 Global Instance slice01_addcarryZ_ok : Ok slice01_addcarryZ.
-Proof. t; f_equal. Admitted.
+Proof. t; rewrite ?Z.shiftr_0_r, ?Z.land_ones, ?Z.shiftr_div_pow2; trivial; Lia.lia. Qed.
+
+Definition slice01_subborrowZ :=
+  fun e => match e with
+    ExprApp (slice 0 1, [(ExprApp (subborrowZ s, args))]) =>
+        ExprApp (subborrow s, args)
+      | _ => e end.
+Global Instance slice01_subborrowZ_ok : Ok slice01_subborrowZ.
+Proof. t; rewrite ?Z.shiftr_0_r, ?Z.land_ones, ?Z.shiftr_div_pow2; trivial; Lia.lia. Qed.
 
 Definition slice_set_slice :=
   fun e => match e with
@@ -886,7 +894,7 @@ Definition addcarry_small :=
           then (ExprApp (const 0, nil))
           else e | _ => e end | _ =>  e end.
 Global Instance addcarry_small_ok : Ok addcarry_small.
-Proof. t. exfalso; eapply E1; clear E1. Admitted.
+Proof. t. Admitted.
 
 Definition addoverflow_small :=
   fun e => match e with
@@ -897,7 +905,7 @@ Definition addoverflow_small :=
           then (ExprApp (const 0, nil))
           else e | _ => e end | _ =>  e end.
 Global Instance addoverflow_small_ok : Ok addoverflow_small.
-Proof. t. exfalso; eapply E1; clear E1. Admitted.
+Proof. t. Admitted.
 
 Definition constprop :=
   fun e => match interp0_expr e with
@@ -962,6 +970,7 @@ Definition expr : expr -> expr :=
   [constprop
   ;slice0
   ;slice01_addcarryZ
+  ;slice01_subborrowZ
   ;set_slice_set_slice
   ;slice_set_slice
   ;truncate_small
@@ -1299,14 +1308,14 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
     _ <- SetOperand dst v;
     SetFlag f c
   | Syntax.sub, [dst; src] =>
-    v <- Symeval (add         s@(dst, PreApp (neg s) [PreARG src]));
-    c <- Symeval (notaddcarry s@(dst, PreApp (neg s) [PreARG src]));
+    v <- Symeval (add       s@(dst, PreApp (neg s) [PreARG src]));
+    c <- Symeval (subborrow s@(dst, src));
     _ <- HavocFlags;
     _ <- SetOperand dst v;
     SetFlag CF c
   | Syntax.sbb, [dst; src] =>
     v <- Symeval (add         s@(dst, PreApp (neg s) [PreARG src], PreApp (neg s) [PreFLG CF]));
-    c <- Symeval (notaddcarry s@(dst, PreApp (neg s) [PreARG src], PreApp (neg s) [PreFLG CF]));
+    c <- Symeval (subborrow s@(dst, src, CF));
     _ <- HavocFlags;
     _ <- SetOperand dst v;
     SetFlag CF c

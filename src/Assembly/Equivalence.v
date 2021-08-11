@@ -481,14 +481,14 @@ Proof.
             s <- RevealWidth s;
             y' <- App (neg s, [y]);
             a <- App (add         s, [x;y']);
-            c <- App (notaddcarry s, [x;y']);
+            c <- App (subborrowZ s, [x;y]);
             symex_return (a, c)
           | ident.Z_sub_with_get_borrow => fun s z x y =>
             s <- RevealWidth s;
             y' <- App (neg s, [y]);
             z' <- App (neg s, [z]);
             a <- App (add s, [x;y';z']);
-            c <- App (notaddcarry s, [x;y';z']);
+            c <- App (subborrowZ s, [x;y;z]);
             symex_return (a, c)
           | ident.Z_ltz
             => symex_T_error (Unhandled_identifier idc)
