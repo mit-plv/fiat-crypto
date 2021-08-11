@@ -200,12 +200,12 @@ Proof.
   1,2: constructor; congruence.
   destruct n, n0; cbn.
   destruct (op_beq_spec o o0); cbn in *; [subst|constructor; congruence].
-  induction H, l0; cbn; try (constructor; congruence); [].
-  destruct (H e); cbn; try (constructor; congruence); [].
-Admitted.
+  revert l0; induction H, l0; cbn; try (constructor; congruence); [].
+  destruct (H e); cbn; try (constructor; congruence); []; subst.
+  destruct (IHForall l0); [left|right]; congruence.
+Qed.
 Lemma expr_beq_true a b : expr_beq a b = true -> a = b.
 Proof. destruct (expr_beq_spec a b); congruence. Qed.
-
 
 Require Import Crypto.Util.Option Crypto.Util.Notations Coq.Lists.List.
 Import ListNotations.
@@ -896,13 +896,6 @@ Definition addoverflow_small :=
 Global Instance addoverflow_small_ok : Ok addoverflow_small.
 Proof. t. exfalso; eapply E1; clear E1. Admitted.
 
-Definition rcr :=
-  fun e => match e with
-        | ExprApp (rcr s, [x; ExprApp (addcarry _, _); ExprApp (const 1, nil)]) => ExprApp (mul s, [x;  ExprApp (const 64, nil)]) (*not sure about this mul s*)   
-        | _ => e end.
-Global Instance rcr_ok : Ok rcr.
-Proof. t. Admitted.
-
 Definition constprop :=
   fun e => match interp0_expr e with
            | Some v => ExprApp (const v, nil)
@@ -959,7 +952,7 @@ Definition xor_same :=
 Global Instance xor_same_ok : Ok xor_same.
 Proof.
   t; cbn [fold_right]. rewrite Z.lxor_0_r, Z.lxor_nilpotent; trivial.
-Admitted.
+Qed.
 
 Definition expr : expr -> expr :=
   List.fold_left (fun e f => f e)
@@ -968,7 +961,6 @@ Definition expr : expr -> expr :=
   ;slice01_addcarryZ
   ;set_slice_set_slice
   ;slice_set_slice
-  ;rcr
   ;truncate_small
   ;flatten_associative
   ;consts_commutative
