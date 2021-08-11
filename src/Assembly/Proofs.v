@@ -271,15 +271,14 @@ Proof using Type.
         end.
   all : cbv [fold_right Z.add_with_carry Z.truncating_shiftl] in *.
   all : repeat (rewrite ?Z.mul_split_mod, ?Z.mul_split_div, ?Z.mul_high_div,
-    ?Z.add_get_carry_full_div, ?Z.add_get_carry_full_mod,
+    ?Z.add_get_carry_full_div, ?Z.add_get_carry_full_mod, ?Z.sub_add_distr,
     ?Z.add_with_get_carry_full_div, ?Z.add_with_get_carry_full_mod,
-    ?Z.sub_get_borrow_full_div, ?Z.sub_get_borrow_full_mod,
+    ?Z.sub_get_borrow_full_div, ?Z.sub_get_borrow_full_mod, ?Z.sub_0_r,
     ?Z.sub_with_get_borrow_full_div, ?Z.sub_with_get_borrow_full_mod,
     ?Z.add_0_r, ?Z.mul_1_r, ?Z.lor_0_r, ?Z.land_m1_r, ?Z.add_opp_r,
     ?Z.add_assoc, ?Z.shiftr_0_r,  ?Z.shiftr_div_pow2, ?Z.land_ones;
     Modulo.push_Zmod; Modulo.pull_Zmod);
     try Lia.lia.
-  1,2:admit. (*sbb*)
   all: repeat first [ progress cbn [fst snd List.map] in *
                     | progress subst
                     | progress split_andb
