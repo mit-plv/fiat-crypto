@@ -14,15 +14,14 @@ Module Import List.
           if f a then Some 0
           else option_map S (indexof l )
       end.
-    Lemma indexof_none l (H : indexof l = None) :
-      forall i a, nth_error l i = Some a -> f a = false.
-    Admitted.
     Lemma indexof_Some l i (H : indexof l = Some i) :
       exists a, nth_error l i = Some a /\ f a = true.
-    Admitted.
-    Lemma indexof_first l i (H : indexof l = Some i) :
-      forall j a, j < i -> nth_error l j = Some a -> f a = false.
-    Admitted.
+    Proof.
+      revert dependent i; induction l; cbn in *; try congruence; [].
+      destruct (f a) eqn:?; cbn.
+      { inversion 1; subst. eexists. split. exact eq_refl. eassumption. }
+      { cbv [option_map]; destruct (indexof l) eqn:?; inversion 1; subst; eauto. }
+    Qed.
   End IndexOf.
 
 
@@ -411,7 +410,7 @@ Section WithDag.
     exists (max n n').
     cbn [map]; f_equal.
     (* fuel weakening *)
-  Admitted.
+  Abort.
 
   Lemma reveals_reveal_repr : forall n i e', reveal n i = e' ->
     forall e, repr i e -> reveals e' e.
@@ -463,7 +462,11 @@ Fixpoint merge (e : expr) (d : dag) : idx * dag :=
   end.
 
 Lemma node_beq_sound e x : node_beq N.eqb e x = true -> e = x.
-Admitted.
+Proof.
+  eapply Prod.internal_prod_dec_bl.
+  { intros X Y; destruct (op_beq_spec X Y); congruence. }
+  { intros X Y. eapply ListUtil.internal_list_dec_bl, N.eqb_eq. }
+Qed.
 
 Lemma eval_weaken G d x e n : eval G d e n -> eval G (d ++ [x]) e n.
 Proof.
