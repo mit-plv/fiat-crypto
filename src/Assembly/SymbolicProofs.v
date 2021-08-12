@@ -343,6 +343,7 @@ Proof.
     { eapply Tuple.fieldwise_to_list_iff; eassumption. }
     cbv [R_reg]; intros; Option.inversion_option; subst.
     eval_same_expr_goal.
+    cbv [bitmask_of_reg index_and_shift_and_bitcount_of_reg].
     (* Z&N bitwise *) admit. }
   admit. (* store *)
 Admitted.
@@ -406,7 +407,8 @@ Proof.
   step_symex; eauto.
   repeat (eauto || econstructor); unfold interp_op, DenoteConst; cbn.
   rewrite Z2N.id; trivial.
-  { (* zconst*) repeat econstructor || admit. }
+  rewrite Z.land_ones by Lia.lia.
+  eapply Z.mod_pos_bound, Z.pow_pos_nonneg; Lia.lia.
 Admitted.
 
 Ltac step_GetOperand :=

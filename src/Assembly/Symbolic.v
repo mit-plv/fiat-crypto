@@ -1225,7 +1225,7 @@ Definition Store {s : OperationSize} {sa : AddressSize} (a : MEM) v : M unit :=
 (* note: this could totally just handle truncation of constants if semanics handled it *)
 Definition GetOperand {s : OperationSize} {sa : AddressSize} (o : ARG) : M idx :=
   match o with
-  | Syntax.const a => App (zconst sa a, [])
+  | Syntax.const a => App (zconst s a, [])
   | mem a => Load a
   | reg r => GetReg r
   end.
