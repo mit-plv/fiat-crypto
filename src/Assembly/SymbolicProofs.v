@@ -170,10 +170,19 @@ Proof.
     intuition eauto using R_flags_subsumed, R_regs_subsumed, R_mem_subsumed.
 Qed.
 
+Lemma Tuple__nth_default_to_list' {A} n (xs : Tuple.tuple' A n) (d : A) :
+  forall i, nth_default d (Tuple.to_list' n xs) i = @Tuple.nth_default A (S n) d i xs.
+Proof.
+  revert xs; induction n, i; cbn; BreakMatch.break_match; intros;
+    rewrite ?ListUtil.nth_default_cons_S; eauto using ListUtil.nth_default_nil.
+Qed.
 Lemma Tuple__nth_default_to_list {A} n (xs : Tuple.tuple A n) (d : A) :
   forall i, List.nth_default d (Tuple.to_list _ xs) i = Tuple.nth_default d i xs.
 Proof.
-Admitted.
+  destruct n; cbv [Tuple.tuple Tuple.to_list] in *.
+  { destruct i; reflexivity. }
+  eapply Tuple__nth_default_to_list'.
+Qed.
 
 Lemma get_reg_R s m (HR : R s m) ri :
   forall i, Symbolic.get_reg s ri = Some i ->
