@@ -719,7 +719,7 @@ Proof.
       rewrite Z2N.id by (eapply Z.mod_pos_bound, Z.pow_pos_nonneg; Lia.lia).
       f_equal.
       (* negb (d mod 2 ^ Z.of_N n =? d) = Z.testbit d (Z.of_N n) *)
-      admit. }
+      admit. } }
 
   { (* test r r *) repeat step.
     1: { (* eval *) repeat (eauto || econstructor). }
