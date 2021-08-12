@@ -546,7 +546,25 @@ Proof.
   1:admit. (* adcx *)
   1:admit. (* add *)
   1:admit. (* adox *)
-  1:admit. (* and *)
+  1: {
+    repeat step.
+    { (* eval *) repeat (eauto || econstructor). }
+    { (* eval *) repeat (eauto || econstructor). }
+    { instantiate (1:=false); eauto. }
+    repeat step.
+    { instantiate (1:=false); eauto. }
+    repeat step.
+    cbv [DenoteNormalInstruction]; repeat step.
+    repeat resolve_SetOperand_using_hyp; eauto.
+    { cbn [fold_right].
+      rewrite Z.land_m1_r.
+      rewrite Z.land_ones, Z.mod_small; try Lia.lia.
+      eapply N2Z.inj. rewrite Z2N.id.
+      eapply Z.bits_inj_iff'; intros i Hi; replace i with (Z.of_N (Z.to_N i)) in * by Lia.lia.
+      rewrite Z.land_spec, !N2Z.inj_testbit, N.land_spec; trivial.
+      1,2: (* bounds on Z.land *) admit. }
+    
+
   1:admit. (* bzhi *)
 
   { (* clc *) step.
