@@ -235,9 +235,9 @@ Qed.
 Ltac step_GetFlag :=
   match goal with
   | H : GetFlag ?f ?s = Success (?i0, _) |- _ =>
-    let v := fresh "v" f in let Hv := fresh "H" v
-    in let Hi := fresh "H" i0 in let Heq := fresh H "eq" in
-    case (GetFlag_R s _ ltac:(eassumption) _ _ _ H) as (v&Hi&Hvcf&Heq); clear H;
+    let v := fresh "v" f in let Hv := fresh "H" v in let Hvf := fresh "Hv" f in
+    let Hi := fresh "H" i0 in let Heq := fresh H "eq" in
+    case (GetFlag_R s _ ltac:(eassumption) _ _ _ H) as (v&Hi&Hvf&Heq); clear H;
     (let i := fresh "i" f in try rename i0 into i);
     (try match type of Heq with _ = ?s' => subst s' end)
   end.
@@ -258,9 +258,9 @@ Qed.
 Ltac step_Merge :=
   match goal with
   | H : Merge ?e ?s = Success (?i, ?s') |- _ =>
-    let v := fresh "v" i in let Hi := fresh "H" i in
+    let v := open_constr:(_) in let Hi := fresh "H" i in
     let Hs' := fresh "H" s' in let Hl := fresh "Hl" s' in
-    let t := open_constr:(fun A B => Merge_R s _ A e ?[v] B _ _ H) in
+    let t := open_constr:(fun A B => Merge_R s _ A e v B _ _ H) in
     unshelve (edestruct t as (Hs'&Hl&Hi); clear H); shelve_unifiable;
     [eassumption|..]
   end.
@@ -289,14 +289,21 @@ Ltac step_symex ::= step_symex3.
 
 Ltac eval_same_expr_goal :=
   match goal with
-  | |- eval ?d ?e ?v =>
-      match goal with
-        H : eval d e ?v' |- _ =>
-            let Heq := fresh in
-            enough (Heq : v = v') by (rewrite Heq; exact H);
-            clear H; try clear e
-      end
-  end.
+   | |- eval ?d ?e ?v =>
+       match goal with
+         H : eval d e ?v' |- _ =>
+             let Heq := fresh in
+             enough (Heq : v = v') by (rewrite Heq; exact H);
+             try clear H e
+       end
+   | |- eval ?d ?e ?v =>
+       let H := fresh in
+       let v' := open_constr:(_) in
+       eassert (eval d e v') by (eauto 99 with nocore);
+       let Heq := fresh in
+       enough (Heq : v = v') by (rewrite Heq; exact H);
+       try clear H e
+   end.
 
 Import ListNotations.
 
@@ -383,9 +390,9 @@ Qed.
 Ltac step_SetFlag :=
   match goal with
   | H : Symbolic.SetFlag ?f ?i ?s = Success (?_tt, ?s') |- _ =>
-    let i := fresh "i" in let b := fresh "b" in
+    let i := open_constr:(_) in let b := open_constr:(_) in
     let Hs' := fresh "H" s' in let Hlt := fresh "He" s' in
-    let t := open_constr:(fun A B => SetFlag_R s _ f A ?[i] ?[b] B _ _ H) in
+    let t := open_constr:(fun A B => SetFlag_R s _ f A i b B _ _ H) in
     unshelve (edestruct t as (Hs'&Hlt); clear H); shelve_unifiable;
     [eassumption|..|clear H]
   end.
@@ -483,6 +490,7 @@ Ltac pose_operation_size_cases :=
 
 Ltac invert_eval :=
   match goal with
+  | H : context[match reveal ?d ?n ?i with _ => _ end] |- _ => destruct (reveal d n i) as [?|[[] []]]eqn:? in *  (* kludge *)
   | H : reveal ?d _ ?i = ?rhs, G : eval ?d (ExprRef ?i) ?v |- _ =>
       let h := Head.head rhs in is_constructor h;
       let HH := fresh H in
@@ -490,7 +498,8 @@ Ltac invert_eval :=
       clear H; rename HH into H
   | H : eval ?d (ExprApp ?n) ?v |- _ =>
       let HH := fresh H in
-      inversion H as [|? ? _ ? [] HH ];
+      let x := fresh "x" in (* COQBUG: using _ below clears unrelated hypothesis *)
+      inversion E0 as [|? ? x ? [] HH ]; clear x;
       clear H; subst; rename HH into H
   | H : interp_op _ ?o ?a = Some ?v |- _ => inversion H; clear H; subst
   end.
@@ -505,10 +514,13 @@ Ltac resolve_match_using_hyp :=
 
 Ltac resolve_SetOperand_using_hyp :=
   match goal with
-  | |- context[SetOperand ?a ?b ?c ?d ?x] =>
+  | |- context[match SetOperand ?a ?b ?c ?d ?x with _ => _ end] =>
       match goal with H : SetOperand a b c d ?y = Some _ |- _ =>
-          replace x with y; [rewrite H|]; cycle 1
-  end end.
+          replace x with y; [rewrite H|]; cycle 1 end
+  | |- context[SetOperand ?a ?b ?c ?d ?x = Some _] =>
+      match goal with H : SetOperand a b c d ?y = Some _ |- _ =>
+          replace x with y; [rewrite H|]; cycle 1 end
+  end.
 
 Ltac lift_let_goal :=
   match goal with
@@ -521,7 +533,7 @@ Ltac step :=
   first
   [ lift_let_goal
   | resolve_match_using_hyp
-  | progress (cbn beta iota delta [fst snd Syntax.op Syntax.args] in *; cbv beta iota delta [Reveal Crypto.Util.Option.bind Symbolic.ret Symbolic.err Symeval mapM] in *; subst)
+  | progress (cbn beta iota delta [fst snd Syntax.op Syntax.args] in *; cbv beta iota delta [Reveal RevealConst Crypto.Util.Option.bind Symbolic.ret Symbolic.err Symeval mapM] in *; subst)
   | Prod.inversion_prod_step
   | inversion_ErrorT_step
   | Option.inversion_option_step
@@ -534,6 +546,9 @@ Ltac step01 := solve [step] || step1.
 
 Import coqutil.Tactics.autoforward coqutil.Decidable coqutil.Tactics.Tactics.
 
+Lemma Z__ones_nonneg n (H : 0 <= n)  : 0 <= Z.ones n.
+Proof. rewrite Z.ones_equiv. pose proof Z.pow_pos_nonneg 2 n ltac:(lia) ltac:(assumption); Lia.lia. Qed.
+
 Lemma R_SymexNornalInstruction s m (HR : R s m) instr :
   forall s', Symbolic.SymexNormalInstruction instr s = Success (tt, s') ->
   exists m', Semantics.DenoteNormalInstruction m instr = Some m' /\ R s' m'.
@@ -542,138 +557,143 @@ Proof.
   case instr as [op args]; cbv [SymexNormalInstruction] in H.
   repeat destruct_one_match_hyp; repeat step01.
 
-  1:admit. (* adc *)
-  1:admit. (* adcx *)
-  1:admit. (* add *)
-  1:admit. (* adox *)
-  1: {
-    repeat step.
-    { (* eval *) repeat (eauto || econstructor). }
-    { (* eval *) repeat (eauto || econstructor). }
-    { instantiate (1:=false); eauto. }
-    repeat step.
-    { instantiate (1:=false); eauto. }
-    repeat step.
-    cbv [DenoteNormalInstruction]; repeat step.
-    repeat resolve_SetOperand_using_hyp; eauto.
-    { cbn [fold_right].
-      rewrite Z.land_m1_r.
-      rewrite Z.land_ones, Z.mod_small; try Lia.lia.
-      eapply N2Z.inj. rewrite Z2N.id.
-      eapply Z.bits_inj_iff'; intros i Hi; replace i with (Z.of_N (Z.to_N i)) in * by Lia.lia.
-      rewrite Z.land_spec, !N2Z.inj_testbit, N.land_spec; trivial.
-      1,2: (* bounds on Z.land *) admit. }
-    
+  all : repeat 
+  match goal with
+  | _ => step
+  | |- eval_node _ _ (?op, ?args) ?e =>
+      solve [repeat (eauto 99 with nocore || econstructor)]
+  | |- eval _ (ExprApp (?op, ?args)) ?e =>
+      solve [repeat (eauto 99 with nocore || econstructor)]
+  | |- eval _ (ExprRef ?v) ?e => eval_same_expr_goal; try solve [ (* bashing *)
+      exact eq_refl || rewrite Z.bit0_mod; trivial; rewrite  Z.mod_small; trivial; Lia.lia]
+  end.
 
-  1:admit. (* bzhi *)
+  all: cbv beta delta [DenoteNormalInstruction].
+  all: repeat
+  match goal with
+  | x := ?v |- _ => let t := type of x in
+      assert_fails (idtac; match v with context[match _ with _ => _ end] => idtac end);
+          subst x
+  | _ => step
+  | _ => resolve_SetOperand_using_hyp
+  | _ => rewrite (Bool.pull_bool_if Some)
+  | |- exists _, Some _ = Some _ /\ _ => eexists; split; [f_equal|]
+  | |- exists _, None   = Some _ /\ _ => exfalso
+  end.
 
-  { (* clc *) step.
-    { (* eval *) repeat (eauto || econstructor). }
-    step.
-    { instantiate (1:=false); eassumption. }
-    cbn; eauto. }
-  { (* cmovc *)
-    cbv [Symeval mapM] in *.
-    repeat step.
-    { (* eval *) repeat (eauto || econstructor). }
-    cbv [DenoteNormalInstruction]; repeat step.
-    repeat match goal with H : _ |- _ => rewrite Bool.pull_bool_if, ?N2Z.id in H end.
-    eexists m0; rewrite <-Hm0; clear Hm0; split; [|eassumption].
-    destruct vCF; cbn; trivial.
-    symmetry; revert Hv.
-    assert (DenoteOperand 64 n m a = Some v -> SetOperand 64 n m a v = Some m)
-      by admit; trivial. }
-  { (* cmovnz *)
-    cbv [Symeval mapM] in *.
-    repeat step.
-    { (* eval *) repeat (eauto || econstructor). }
-    cbv [DenoteNormalInstruction]; repeat step.
-    repeat match goal with H : _ |- _ => rewrite Bool.pull_bool_if, ?N2Z.id in H end.
-    rewrite Bool.if_negb.
-    admit. (* stuck? *) }
+  all : cbn [fold_right map]; rewrite ?N2Z.id; eauto.
 
-  1:admit. (* dec *)
-  1:admit. (* imul *)
-  1:admit. (* imul *)
-  1:admit. (* inc *)
-  1:admit. (* lea *)
+  all: try solve[ (* bash flags weakening *)
+  match goal with H : R ?s' _ |- R ?s' ?m' =>
+      try (is_var s'; destruct s');
+      try (is_var m'; destruct m');
+      repeat match goal with
+             | x := ?v |- _ => subst x
+             | H : R_flag _ ?f None |- _ => eapply R_flag_None_r in H; try (rewrite H in * )
+             | H : R_flag ?d ?f (Some ?y) |- R_flag ?d ?f ?x =>
+                 let HH := fresh in enough (HH : x = Some y) by (rewrite HH; exact H)
+             | H : _ = None |- _ => progress (try rewrite H; try rewrite H in * )
+             | _ => progress (cbv [R_flags Tuple.fieldwise Tuple.fieldwise'] in *; cbn -[Syntax.operation_size] in * ; subst)
+             | _ => destruct_one_match
+             | _ => progress intuition idtac
+             end; try eauto; try Lia.lia
+  end
+  ].
 
-  { (* mov   *) cbv [DenoteNormalInstruction]; repeat step; rewrite N2Z.id in *; eauto. }
-  { (* movzx *) cbv [DenoteNormalInstruction]; repeat step; rewrite N2Z.id in *; eauto. }
-  { (* mulx *)
-    repeat step.
-    { repeat (eauto || econstructor). }
-    { repeat (eauto || econstructor). }
-    { repeat (eauto || econstructor). }
-    cbv [DenoteNormalInstruction]; repeat step.
-    repeat resolve_SetOperand_using_hyp; eauto.
-    all : cbn [fold_right]; rewrite Z.mul_1_r.
-    1: Lia.lia.
-    rewrite Z.shiftr_div_pow2, N.shiftr_div_pow2 by Lia.lia.
+  (*
+  all : match goal with H: context[Syntax.ret] |- _ => idtac H; admit | _ => idtac end.
+  all : match goal with H: context[Address] |- _ => idtac H; admit | _ => idtac end.
+  *)
+
+  Unshelve. all : match goal with H : context[Syntax.setc] |- _ => idtac | _ => shelve end.
+  { destruct vCF; trivial. }
+  Unshelve. all : match goal with H : context[Syntax.seto] |- _ => idtac | _ => shelve end.
+  { destruct vOF; trivial. }
+
+  Unshelve. all : match goal with H : context[Syntax.and] |- _ => idtac | _ => shelve end. {
+    rewrite Z.land_m1_r, Z.land_ones, Z.mod_small; try Lia.lia.
+    eapply N2Z.inj. rewrite Z2N.id.
+    eapply Z.bits_inj_iff'; intros i Hi; replace i with (Z.of_N (Z.to_N i)) in * by Lia.lia.
+    rewrite Z.land_spec, !N2Z.inj_testbit, N.land_spec; trivial.
+    1,2: (* bounds on Z.land *) admit. }
+
+  Unshelve. all : match goal with H : context[Syntax.mulx] |- _ => idtac | _ => shelve end.
+  { Lia.lia. }
+  { rewrite Z.shiftr_div_pow2, N.shiftr_div_pow2 by Lia.lia.
     rewrite Z2N.inj_div, Z2N.inj_pow, N2Z.id;
       try eapply Z.pow_nonneg; eauto; try Lia.lia. }
 
-  1:admit. (* ret -- note: strip from input, disallow in Symbolic *)
-
-  { (* sar *)
-    step.
-    { repeat (eauto || econstructor). }
-
-    destr_expr_beq; repeat step1.
-
-    1: repeat step1; step.
-    1: { (* eval *) repeat (eauto || econstructor). }
-    1: repeat step1; step.
-    1: { rewrite Z.bit0_mod. rewrite Z.land_ones in Hcf by (clear;Lia.lia). exact Hcf. }
-    1: repeat step1; step.
-    1: { repeat econstructor. }
-    1: repeat step1; step.
-    1: { instantiate (1:=false). eassumption. }
-
-    all: unfold DenoteNormalInstruction; repeat step1.
-    all : repeat resolve_SetOperand_using_hyp.
-    1,3: (* bitwise Z&N *) admit.
-    all : eexists; split; [exact eq_refl|].
-
-    (* bash flag state weakening *)
-    all: revert Hs'.
-    all: (
-      destruct s';
+  Unshelve. all : match goal with H : context[Syntax.sub] |- _ => idtac | _ => shelve end.
+  { cbn; repeat (rewrite ?Z.land_ones, ?Z.add_0_r, ?N.add_0_r, ?Z.add_opp_r by Lia.lia).
+    push_Zmod; pull_Zmod. rewrite Z.add_opp_r; congruence. }
+  { case s', m in *; cbn;
       repeat match goal with
              | H : R_flag _ ?f None |- _ => eapply R_flag_None_r in H; try (rewrite H in * )
              | H : R_flag ?d ?f (Some ?y) |- R_flag ?d ?f ?x =>
                  let HH := fresh in enough (HH : x = Some y) by (rewrite HH; exact H)
-             | _ => progress (cbv [R_flags Tuple.fieldwise Tuple.fieldwise'] in *; cbn -[Syntax.operation_size] in * ; subst)
-             | _ => destruct_one_match
-             | _ => progress intuition idtac
-             end; eauto;
-             pose_operation_size_cases;
-             rewrite ?Z.shiftr_0_r, <-?Z.bit0_odd, <-?N2Z.inj_testbit;
-             f_equal; try Lia.lia).  }
-  { (* rcr *)
-    step. 
-    1: { repeat (eauto || econstructor). }
-    destr_expr_beq; repeat step1.
-    1:repeat step1; step.
-    1: { repeat (eauto || econstructor). }
-    1:repeat step1; step.
-    1: { instantiate (1:=(Z.testbit (Z.of_N v) 0)).
-         eval_same_expr_goal. rewrite Z.bit0_mod, Z.shiftr_0_r, Z.land_ones;
-         cbn; Lia.lia. }
+             | _ => progress (cbv [R_flags Tuple.fieldwise Tuple.fieldwise'] in *; cbn in * ; subst)
+             | _ => progress intuition eauto 1
+             end.
+    cbn; repeat (rewrite ?Z.land_ones, ?Z.add_0_r, ?N.add_0_r, ?Z.add_opp_r, ?N2Z.id by Lia.lia).
+    push_Zmod; pull_Zmod.
+    replace v1 with v by congruence; replace v2 with v0 by congruence.
+    rewrite Z.add_opp_r, Z.odd_opp, <-Z.bit0_odd, Z.shiftr_spec, Z.add_0_l by Lia.lia.
+    set (Z.of_N v - Z.of_N v0) as d.
+    rewrite Z2N.id by (eapply Z.mod_pos_bound, Z.pow_pos_nonneg; Lia.lia).
+    f_equal.
+    assert (negb (d mod 2 ^ Z.of_N n =? d) = Z.testbit d (Z.of_N n)) by admit; trivial. }
 
-    all: cbv beta delta [DenoteNormalInstruction]; repeat step1.
-    all: subst sa; repeat step1.
+  Unshelve. all : match goal with H : context[Syntax.cmovc] |- _ => idtac | _ => shelve end.
+  { (* cmovc *)
+    repeat match goal with H : _ |- _ => rewrite Bool.pull_bool_if, ?N2Z.id in H end.
+    destruct vCF; cbn [negb Z.b2z Z.eqb] in *; eauto; [].
+    enough (m = m0) by (subst; eauto). revert Hm0. revert Hv. admit. }
 
-    all : repeat resolve_SetOperand_using_hyp.
-    1,3: (* bitwise Z&N *) admit.
+  Unshelve. all : match goal with H : context[Syntax.cmovnz] |- _ => idtac | _ => shelve end.
+  { (* cmovnz *)
+    repeat match goal with H : _ |- _ => rewrite Bool.pull_bool_if, ?N2Z.id in H end.
+    destruct vZF; cbn [negb Z.b2z Z.eqb] in *; eauto; [].
+    enough (m = m0) by (subst; eauto). revert Hm0. revert Hv0. admit. }
 
-    1: replace cnt with 1%N in *. 2:{
+  Unshelve. all : match goal with H : context[Syntax.test] |- _ => idtac | _ => shelve end.
+  { destruct (Equality.ARG_beq_spec a a0); try discriminate; subst a0.
+    replace v0 with v in * by congruence; clear v0.
+    rewrite N.land_diag.
+    replace (Z.of_N v =? 0) with (v =? 0)%N in * by (destruct (Z.eqb_spec (Z.of_N v) 0); destruct(N.eqb_spec v 0); Lia.lia).
+    case s', m in *; cbn;
+      repeat match goal with
+             | H : R_flag _ ?f None |- _ => eapply R_flag_None_r in H; try (rewrite H in * )
+             | _ => progress (cbv [R_flags Tuple.fieldwise Tuple.fieldwise'] in *; cbn in * ; subst)
+             | _ => progress intuition eauto 1
+    end. }
+
+  Unshelve. all : match goal with H : context[Syntax.sar] |- _ => idtac | _ => shelve end; shelve_unifiable.
+  { rewrite Z.shiftr_0_r, Z.land_ones, Z.bit0_mod by Lia.lia; exact eq_refl. }
+  1,3:shelve.
+  { rewrite Z.land_m1_r in *.
+    assert (N.land v0 (n - 1) = 1)%N as H00 by admit; rewrite ?H00 in *.
+    revert Hs'.
+    repeat match goal with x:= _ |- _ => subst x end;
+    destruct s';
+    repeat match goal with
+           | H : R_flag _ ?f None |- _ => eapply R_flag_None_r in H; try (rewrite H in * )
+           | H : R_flag ?d ?f (Some ?y) |- R_flag ?d ?f ?x =>
+               let HH := fresh in enough (HH : x = Some y) by (rewrite HH; exact H)
+           | _ => progress (cbv [R_flags Tuple.fieldwise Tuple.fieldwise'] in *; cbn -[Syntax.operation_size] in * ; subst)
+           | _ => destruct_one_match
+           | _ => progress intuition idtac
+           end; eauto;
+           pose_operation_size_cases;
+           rewrite ?Z.shiftr_0_r, <-?Z.bit0_odd, <-?N2Z.inj_testbit;
+           rewrite ?H00; f_equal; try Lia.lia. }
+
+  Unshelve. all : match goal with H : context[Syntax.rcr] |- _ => idtac | _ => shelve end; shelve_unifiable.
+  { rewrite Z.shiftr_0_r, Z.land_ones, Z.bit0_mod by Lia.lia; exact eq_refl. }
+  1,3: shelve.
+  { replace cnt with 1%N in *; cycle 1. {
       pose_operation_size_cases. subst cnt.
       replace v0 with 1%N in * by Lia.lia.
       repeat destruct_one_match; intuition (subst n; trivial). }
-
-    all : eexists; split; [exact eq_refl|].
-
     (* bash flag state weakening *)
     all : revert Hs'.
     all:
@@ -688,115 +708,43 @@ Proof.
              | _ => progress intuition idtac
              end; try eauto; try Lia.lia.
      cbv [set_flag set_flag_internal]; repeat (destruct_one_match||step1).
-     subst v1c.
-     rewrite N.lor_spec, N.shiftl_spec_low by admit. (* s <> 0 *)
-     rewrite <-?Z.bit0_odd, Bool.orb_false_r, <-?N2Z.inj_testbit; trivial.
+     rewrite <-Z.bit0_odd, N.lor_spec, N.shiftl_spec_low, Bool.orb_false_r, <-N2Z.inj_testbit; trivial.
+     assert (0 < n)%N by admit; trivial.
   }
 
+  Unshelve. all : shelve_unifiable.
+  all : rewrite ?Z.mul_1_r, ?Z.add_0_r, ?Z.land_m1_r, ?Z.land_m1_l, ?Z.lxor_0_r.
+  1: (* adc *) admit.
+  1: (* adc *) admit.
+  1: (* adc *) admit.
+  1: (* adcx *) admit.
+  1: (* adcx *) admit.
+  1: (* Syntax.add *) admit.
+  1: (* Syntax.add *) admit.
+  1: (* Syntax.add *) admit.
+  1: (* adox *) admit.
+  1: (* adox *) admit.
+  1: (* bzhi *) admit.
+  { (* dec*) progress cbv [DenoteOperand DenoteConst operand_size standalone_operand_size] in Hv0;
+      inversion Hv0; subst v0; clear Hv0.
+    rewrite ?Z.add_0_r, ?Z.land_m1_l, Z2N.id by (eapply Z__ones_nonneg; lia).
+    rewrite Z.ones_equiv at 1. rewrite !Z.land_ones, <-Z.sub_1_r by Lia.lia.
+    push_Zmod. rewrite <-PullPush.Z.mod_pow_full, Z_mod_same_full. pull_Zmod.
+    rewrite Z.sub_0_l, Z.add_opp_r. congruence. }
+  1: (* dec *) admit.
+  1: (* imul *) admit.
+  1: (* imul *) admit.
+  1: (* inc *) admit.
+  1: (* inc *) admit.
   1: (* sbb *) admit.
-
-  { (* setc *) cbv [DenoteNormalInstruction]; repeat step;
-    resolve_SetOperand_using_hyp; eauto. destruct vCF; trivial. }
-  { (* seto *) cbv [DenoteNormalInstruction]; repeat step;
-    resolve_SetOperand_using_hyp; eauto. destruct vOF; trivial. } 
-  { (* shr *) repeat step.
-    1: { repeat (eauto || econstructor). }
-    cbv beta delta [DenoteNormalInstruction]; repeat step. subst sa; repeat step.
-    resolve_SetOperand_using_hyp; eauto.
-    (* bitwise N&Z *)1:admit.
-
-    eexists; split; [exact eq_refl|].
-    (* bash flags weakening *)
-    case s', m0 in *; cbn;
-      repeat match goal with
-             | H : R_flag _ ?f None |- _ => eapply R_flag_None_r in H; try (rewrite H in * )
-             | _ => progress (cbv [R_flags Tuple.fieldwise Tuple.fieldwise'] in *; cbn in * ; subst)
-             | _ => destruct_one_match
-             | _ => progress intuition eauto 1
-             end. }
-
+  1: (* sbb *) admit.
+  1: (* shr*) admit.
   1: (* shrd *) admit.
-
-  1: (* sub *) {
-    idtac.
-    repeat step.
-    1: { (* eval *) repeat (eauto || econstructor). }
-    1: { (* eval *) repeat (eauto || econstructor). }
-    1: { (* eval *) repeat (eauto || econstructor). }
-    1: { rewrite Z.bit0_mod; eauto. }
-    cbv [DenoteNormalInstruction]; repeat step.
-    resolve_SetOperand_using_hyp.
-    { cbn; repeat (rewrite ?Z.land_ones, ?Z.add_0_r, ?N.add_0_r, ?Z.add_opp_r by Lia.lia).
-      push_Zmod; pull_Zmod. rewrite Z.add_opp_r; congruence. }
-
-    eexists; split; [exact eq_refl|].
-
-    (* bash flags weakening *)
-    case s', m in *; cbn;
-      repeat match goal with
-             | H : R_flag _ ?f None |- _ => eapply R_flag_None_r in H; try (rewrite H in * )
-             | H : R_flag ?d ?f (Some ?y) |- R_flag ?d ?f ?x =>
-                 let HH := fresh in enough (HH : x = Some y) by (rewrite HH; exact H)
-             | _ => progress (cbv [R_flags Tuple.fieldwise Tuple.fieldwise'] in *; cbn in * ; subst)
-             | _ => progress intuition eauto 1
-             end.
-    { cbn; repeat (rewrite ?Z.land_ones, ?Z.add_0_r, ?N.add_0_r, ?Z.add_opp_r, ?N2Z.id by Lia.lia).
-      push_Zmod; pull_Zmod.
-      replace v1 with v by congruence; replace v2 with v0 by congruence.
-      rewrite Z.add_opp_r, Z.odd_opp, <-Z.bit0_odd, Z.shiftr_spec, Z.add_0_l by Lia.lia.
-      set (Z.of_N v - Z.of_N v0) as d.
-      rewrite Z2N.id by (eapply Z.mod_pos_bound, Z.pow_pos_nonneg; Lia.lia).
-      f_equal.
-      (* negb (d mod 2 ^ Z.of_N n =? d) = Z.testbit d (Z.of_N n) *)
-      admit. } }
-
-  { (* test r r *) repeat step.
-    1: { (* eval *) repeat (eauto || econstructor). }
-    1: { (* eval *) instantiate (1:=false). eauto. }
-    repeat step.
-    1: { (* eval *) instantiate (1:=false). eauto. }
-    1: { (* eval *) repeat (eauto 6 || econstructor). }
-    repeat step.
-    1: { eval_same_expr_goal; trivial. }
-    repeat step.
-    cbv [DenoteNormalInstruction]; repeat step.
-    eexists; split; [exact eq_refl|].
-
-    destruct (Equality.ARG_beq_spec a a0); try discriminate; subst a0.
-    replace v0 with v in * by congruence; clear v0.
-    rewrite N.land_diag.
-
-    replace (Z.of_N v =? 0) with (v =? 0)%N in * by admit.
-
-    (* bash flags weakening *)
-    case s', m in *; cbn;
-      repeat match goal with
-             | H : R_flag _ ?f None |- _ => eapply R_flag_None_r in H; try (rewrite H in * )
-             | _ => progress (cbv [R_flags Tuple.fieldwise Tuple.fieldwise'] in *; cbn in * ; subst)
-             | _ => progress intuition eauto 1
-             end.
-  }
-
-  { (* test *) repeat step.
-    1: { (* eval *) repeat (eauto || econstructor). }
-    1: { (* eval *) instantiate (1:=false). eauto. }
-    repeat step.
-    1: { (* eval *) instantiate (1:=false). eauto. }
-    cbv [DenoteNormalInstruction]; repeat step.
-    eexists; split; [exact eq_refl|].
-    destruct s', m;
-      repeat match goal with
-             | H : R_flag _ ?f None |- _ => eapply R_flag_None_r in H; try (rewrite H in * )
-             | _ => progress (cbv [R_flags Tuple.fieldwise Tuple.fieldwise'] in *; cbn in * ; subst)
-             | _ => progress intuition eauto 1
-             end. }
-
-  { (* xchg *)
-    all: cbv beta delta [DenoteNormalInstruction]; repeat step.
-    subst sa; repeat step; eauto.
-    resolve_SetOperand_using_hyp; eauto using N2Z.id.
-    resolve_SetOperand_using_hyp; eauto using N2Z.id. }
-  (* xor *) admit.
+  1: (* Syntax.xor *) admit.
+  1: (* Syntax.sar *) admit.
+  1: (* Syntax.sar *) admit.
+  1: (* Syntax.rcr *) admit.
+  1: (* Syntax.rcr *) admit.
 
 Admitted.
 

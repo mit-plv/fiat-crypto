@@ -1278,7 +1278,7 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
     v <- Symeval (selectznz@(CF, dst, src));
     SetOperand dst v
   | cmovnz, [dst; src] =>
-    v <- Symeval (selectznz@(ZF, dst, src));
+    v <- Symeval (selectznz@(ZF, src, dst));
     SetOperand dst v
   | seto, [dst] =>
     of <- GetFlag OF;
@@ -1342,7 +1342,7 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
   | Syntax.bzhi, [dst; src; cnt] =>
     cnt <- GetOperand cnt;
     cnt <- RevealConst cnt;
-    v <- Symeval (and s@(src,PreApp (const (Z.ones (Z.land cnt (Z.ones (Z.log2 (Z.of_N s)))))) nil));
+    v <- Symeval (and s@(src,PreApp (const (Z.ones (Z.land cnt (Z.ones 8)))) nil));
     _ <- SetOperand dst v;
     HavocFlags
   | Syntax.rcr, [dst; cnt] =>
@@ -1364,13 +1364,15 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
     vh <- App (shrZ, [v; s]);
     _ <- SetOperand lo v;
          SetOperand hi vh
-   | Syntax.shr, [dst; cnt] =>
+  | Syntax.shr, [dst; cnt] =>
+    let cnt := andZ@(cnt, (PreApp (const (Z.of_N s-1)%Z) nil)) in
     v <- Symeval (shr s@(dst, cnt));
     _ <- SetOperand dst v;
     HavocFlags
-   | Syntax.sar, [dst; cnt] =>
+  | Syntax.sar, [dst; cnt] =>
     x <- GetOperand dst;
-    c <- GetOperand cnt; rc <- Reveal 1 c;
+    let cnt := andZ@(cnt, (PreApp (const (Z.of_N s-1)%Z) nil)) in
+    c <- Symeval cnt; rc <- Reveal 1 c;
     y <- App (sar s, [x; c]);
     _ <- SetOperand dst y;
     _ <- HavocFlags;
@@ -1381,7 +1383,8 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
       zero <- App (const 0, nil); SetFlag OF zero)
     else ret tt
   | shrd, [lo as dst; hi; cnt] =>
-    let cnt' := add s@(Z.of_N s, PreApp (neg s) [PreARG cnt]) in
+    let cnt := andZ@(cnt, (PreApp (const (Z.of_N s-1)%Z) nil)) in
+    let cnt' := add s@(Z.of_N s, PreApp (neg s) [cnt]) in
     v <- Symeval (or s@(shr s@(lo, cnt), shl s@(hi, cnt')));
     _ <- SetOperand dst v;
     HavocFlags
