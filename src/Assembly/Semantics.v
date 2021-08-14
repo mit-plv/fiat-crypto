@@ -296,18 +296,19 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
     st <- SetOperand sa s st lo v;
     SetOperand sa s st hi (N.shiftr v s)
   | imul, [_] => None (* Note: exists, not supported yet, different CF/OF *)
-  | imul, ([dst as src1; src2] | [dst; src1; src2]) =>
-    src1 <- DenoteOperand sa s st src1;
-    src2 <- DenoteOperand sa s st src2;
-    let v := (signed s src1 * signed s src2)%Z in
+  | imul, ([src1 as dst; src2] | [dst; src1; src2]) =>
+    v1 <- DenoteOperand sa s st src1;
+    v2 <- DenoteOperand sa s st src2;
+    let v := (signed s v1 * signed s v1)%Z in
     let lo := Z.land v (Z.ones s) in
     st <- SetOperand sa s st dst (Z.to_N lo);
     let c := negb (v =? lo)%Z in
     Some (SetFlag (SetFlag (HavocFlags st) CF c) OF c)
   | sar, [dst; cnt] =>
     v1 <- DenoteOperand sa s st dst;
-    cnt <- DenoteOperand sa s st cnt;
-    let v := Z.to_N (Z.land (Z.shiftr v1 (N.land cnt (s-1))) (Z.ones s)) in
+    cnt' <- DenoteOperand sa s st cnt;
+    let cnt := N.land cnt' (s-1) in
+    let v := Z.to_N (Z.land (Z.shiftr v1 cnt) (Z.ones s)) in
     st <- SetOperand sa s st dst v;
     Some (if cnt =? 0 then st else
       let st := HavocFlagsFromResult s st v in
@@ -340,18 +341,18 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
       if cnt =? 0 then st else
       let st := SetFlag st CF (N.testbit v1c (cnt-1)) in
       if cnt =? 1 then SetFlag st OF (xorb (N.testbit v (s-1)) (N.testbit v (s-2))) else st)
-  | shrd, [lo as dst; hi; cnt] =>
-    lo <- DenoteOperand sa s st lo;
-    hi <- DenoteOperand sa s st hi;
+  | shrd, [dst as lo; hi; cnt] =>
+    lv <- DenoteOperand sa s st lo;
+    hv <- DenoteOperand sa s st hi;
     cnt <- DenoteOperand sa s st cnt;
     let cnt := N.land cnt (s-1) in
-    let l := N.lor lo (N.shiftl hi s) in
+    let l := N.lor lv (N.shiftl hv s) in
     let v := N.shiftr l cnt in
     st <- SetOperand sa s st dst v;
     if cnt =? 0 then Some st else
     if s <? cnt then Some (HavocFlags st) else
       let st := HavocFlagsFromResult s st l in
-      let signchange := xorb (signed s lo <? 0)%Z (signed s v <? 0)%Z in
+      let signchange := xorb (signed s lv <? 0)%Z (signed s v <? 0)%Z in
       (* Note: IA-32 SDM does not make it clear what sign change is in question *)
       let st := if cnt =? 1 then SetFlag st OF signchange else st in
       let st := SetFlag st CF (N.testbit l (cnt-1)) in
@@ -369,12 +370,12 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
   | bzhi, [dst; src1; src2] =>
     v1 <- DenoteOperand sa s st src1;
     v2 <- DenoteOperand sa s st src2;
-    let n := N.land (N.ones 8) v2 in
-    let v := N.land (N.ones n) v1 in
+    let n := N.land v2 (N.ones 8) in
+    let v := N.land v1 (N.ones n) in
+    st <- SetOperand sa s st dst v;
     let st := HavocFlagsFromResult s st v in
     let st := SetFlag st CF (((operand_size src1 s) - 1) <? v) in
-    let st := SetFlag st OF false in
-    SetOperand sa s st dst v
+    Some (SetFlag st OF false)
   | test, [src1; src2] =>
     v1 <- DenoteOperand sa s st src1;
     v2 <- DenoteOperand sa s st src2;
