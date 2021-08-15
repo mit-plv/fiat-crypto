@@ -113,7 +113,7 @@ Global Instance Show_OperationSize : Show OperationSize := show_N.
 Section S.
 Implicit Type s : OperationSize.
 Variant op := old s (_:symbol) | const (_ : Z) | add s | addcarry s | subborrow s | addoverflow s | neg s | shl s | shr s | sar s | rcr s | and s | or s | xor s | slice (lo sz : N) | mul s | set_slice (lo sz : N) | selectznz | iszero (* | ... *)
-  | addZ | mulZ | negZ | shlZ | shrZ | andZ | orZ | addcarryZ s | subborrowZ s.
+  | addZ | mulZ | negZ | shlZ | shrZ | andZ | orZ | xorZ | addcarryZ s | subborrowZ s.
 Definition op_beq a b := if op_eq_dec a b then true else false.
 End S.
 
@@ -145,6 +145,7 @@ Global Instance Show_op : Show op := fun o =>
   | shrZ => "shrZ"
   | andZ => "andZ"
   | orZ => "orZ"
+  | xorZ => "xorZ"
   | addcarryZ s => "addcarryZ " ++ show s
   | subborrowZ s => "subborrowZ " ++ show s
   end%string.
@@ -251,6 +252,7 @@ Section WithContext.
     | shrZ, [a; b] => Some (Z.shiftr a b)
     | andZ, args => Some (List.fold_right Z.land (-1) args)
     | orZ, args => Some (List.fold_right Z.lor 0 args)
+    | xorZ, args => Some (List.fold_right Z.lxor 0 args)
     | addcarryZ s, args => Some (Z.shiftr (List.fold_right Z.add 0 args) (Z.of_N s))
     | subborrowZ s, cons a args' => Some (- Z.shiftr (a - List.fold_right Z.add 0 args') (Z.of_N s))
     | _, _ => None
@@ -762,8 +764,8 @@ Ltac t := repeat (step || Econstructor || eauto || (progress cbn [interp0_op int
 
 Definition slice0 :=
   fun e => match e with
-    ExprApp (slice 0 s, [(ExprApp ((addZ|mulZ|negZ|shlZ|shrZ|andZ|orZ) as o, args))]) =>
-        ExprApp ((match o with addZ=>add s|mulZ=>mul s|negZ=>neg s|shlZ=>shl s|shrZ => shr s|andZ => and s| orZ => or s |_=>old 0%N 999999%N end), args)
+    ExprApp (slice 0 s, [(ExprApp ((addZ|mulZ|negZ|shlZ|shrZ|andZ|orZ|xorZ) as o, args))]) =>
+        ExprApp ((match o with addZ=>add s|mulZ=>mul s|negZ=>neg s|shlZ=>shl s|shrZ => shr s|andZ => and s| orZ => or s|xorZ => xor s |_=>old 0%N 999999%N end), args)
       | _ => e end.
 Global Instance slice0_ok : Ok slice0. Proof. t. Qed.
 
@@ -1262,6 +1264,11 @@ Fixpoint Symeval {s : OperationSize} {sa : AddressSize} (e : pre_expr) : M idx :
       App (op, idxs)
   end.
 
+Definition rcrcnt s cnt : Z :=
+  if N.eqb s 8 then Z.land cnt 0x1f mod 9 else
+  if N.eqb s 16 then Z.land cnt 0x1f mod 17 else
+  Z.land cnt (Z.of_N s-1).
+
 Notation "f @ ( x , y , .. , z )" := (PreApp f (@cons pre_expr x (@cons pre_expr y .. (@cons pre_expr z nil) ..))) (at level 10) : x86symex_scope.
 Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
   let sa : AddressSize := 64%N in
@@ -1330,7 +1337,7 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
     _ <- SetOperand dst v;
     HavocFlags
   | Syntax.xor, [dst; src] =>
-    v <- Symeval (xor s@(dst,src));
+    v <- Symeval (xorZ@(dst,src));
     _ <- SetOperand dst v;
     _ <- HavocFlags;
     zero <- Symeval (PreApp (const 0) nil);
@@ -1350,12 +1357,13 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
     zero <- App (const 0, nil); SetFlag OF zero
   | Syntax.rcr, [dst; cnt] =>
     x <- GetOperand dst;
-    c <- GetOperand cnt; rc <- Reveal 1 c;
     cf <- GetFlag CF;
-    y <- App (rcr s, [x; cf; c]);
+    cnt <- GetOperand cnt; cnt <- RevealConst cnt; let cnt := rcrcnt s cnt in
+    cntv <- App (const cnt, nil);
+    y <- App (rcr s, [x; cf; cntv]);
     _ <- SetOperand dst y;
     _ <- HavocFlags;
-    if expr_beq rc (ExprApp (const 1%Z, nil))
+    if (cnt =? 1)%Z
     then cf <- App ((slice 0 1), cons (x) nil); SetFlag CF cf
     else ret tt    
   | mulx, [hi; lo; src2] =>
@@ -1387,7 +1395,7 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
     else ret tt
   | shrd, [lo as dst; hi; cnt] =>
     let cnt := andZ@(cnt, (PreApp (const (Z.of_N s-1)%Z) nil)) in
-    let cnt' := add s@(Z.of_N s, PreApp (neg s) [cnt]) in
+    let cnt' := addZ@(Z.of_N s, PreApp negZ [cnt]) in
     v <- Symeval (or s@(shr s@(lo, cnt), shl s@(hi, cnt')));
     _ <- SetOperand dst v;
     HavocFlags
@@ -1414,7 +1422,6 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
     then zf <- App (iszero, [a]); SetFlag ZF zf
     else ret tt
   | clc, [] => zero <- Merge (@ExprApp (const 0, nil)); SetFlag CF zero
-  | Syntax.ret, [] => ret tt
   | _, _ => err (error.unimplemented_instruction instr)
  end
   | _ => err (error.ambiguous_operation_size instr) end%N%x86symex.
