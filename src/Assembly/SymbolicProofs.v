@@ -415,6 +415,24 @@ Proof.
   (* bitwise Z&N *) admit.
 Admitted.
 
+Lemma Address_R s m (HR : R s m) sa o a s' (H : @Symbolic.Address sa o s = Success (a, s'))
+  : R s' m /\ s :< s' /\ exists v, eval s' a v /\ @DenoteAddress sa m o = Z.to_N v.
+Proof.
+  destruct o as [? ? ? ?]; cbv [Address DenoteAddress] in *; repeat step_symex.
+  eapply GetReg_R in HSbase; eauto; []; DestructHead.destruct_head'_and.
+  destruct mem_extra_reg; cbn -[GetReg] in *.
+  1: eapply GetReg_R in HSindex; eauto; []; DestructHead.destruct_head'_and.
+  all: destruct mem_offset; cbn -[GetReg] in *.
+  all: (step_symex; try solve [repeat (eauto || econstructor)]; []).
+  all: (step_symex; try solve [repeat (eauto || econstructor)]; []).
+  all: (step_symex; try solve [repeat (eauto || econstructor)]; []).
+  3,4: (step_symex; try solve [repeat (eauto || econstructor)]; []).
+  all : cbn in *.
+  all : Tactics.ssplit; eauto 99 with nocore.
+  all : eexists; split; eauto; [].
+  all : cbv [DenoteConst].
+Admitted.
+
 Lemma GetOperand_R s m (HR: R s m) so sa a i s'
   (H : @GetOperand so sa a s = Success (i, s'))
   : R s' m /\ s :< s' /\ exists v, eval s' i (Z.of_N v) /\ DenoteOperand sa so m a = Some v.

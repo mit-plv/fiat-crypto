@@ -1201,9 +1201,9 @@ Definition Address {sa : AddressSize} (a : MEM) : M idx :=
            | Some r => GetReg r
            | None => App ((const 0), nil)
            end;
-  offset <- App ((zconst sa (match a.(mem_offset) with
-                             | Some s => s
-                             | None => 0 end)), nil);
+  offset <- App (match a.(mem_offset) with
+                             | Some s => (zconst sa s, nil)
+                             | None => (const 0, nil) end);
   bi <- App (add sa, [base; index]);
   App (add sa, [bi; offset]).
 
