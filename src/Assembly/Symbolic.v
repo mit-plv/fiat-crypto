@@ -1241,11 +1241,13 @@ Local Unset Elimination Schemes.
 Inductive pre_expr : Set :=
 | PreARG (_ : ARG)
 | PreFLG (_ : FLAG)
+| PreRef (_ : idx)
 | PreApp (_ : op) (_ : list pre_expr).
 (* note: need custom induction principle *)
 Local Set Elimination Schemes.
 Local Coercion PreARG : ARG >-> pre_expr.
 Local Coercion PreFLG : FLAG >-> pre_expr.
+Local Coercion PreRef : idx >-> pre_expr.
 Example __testPreARG_boring : ARG -> list pre_expr := fun x : ARG => @cons pre_expr x nil.
 (*
 Example __testPreARG : ARG -> list pre_expr := fun x : ARG => [x].
@@ -1255,6 +1257,7 @@ Fixpoint Symeval {s : OperationSize} {sa : AddressSize} (e : pre_expr) : M idx :
   match e with
   | PreARG o => GetOperand o
   | PreFLG f => GetFlag f
+  | PreRef i => ret i
   | PreApp op args =>
       idxs <- mapM Symeval args;
       App (op, idxs)

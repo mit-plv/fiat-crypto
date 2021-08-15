@@ -31,7 +31,7 @@ Context (d : dag).
 Local Notation eval := (Symbolic.eval G d).
 
 Definition R_reg (x : option idx) (v : N) : Prop :=
-  forall i, x = Some i -> eval i (Z.of_N v).
+  (forall i, x = Some i -> eval i (Z.of_N v)) /\ (Z.of_N v = Z.land (Z.of_N v) (Z.ones 64)).
 Definition R_regs : Symbolic.reg_state -> Semantics.reg_state -> Prop :=
   Tuple.fieldwise R_reg.
 
@@ -150,7 +150,7 @@ Qed.
 
 Lemma R_reg_subsumed d s m (HR : R_reg d s m) d' (Hlt : d :< d')
   : R_reg d' s m.
-Proof. cbv [R_reg] in *; eauto. Qed.
+Proof. cbv [R_reg] in *; intuition eauto. Qed.
 
 Lemma R_regs_subsumed d s m (HR : R_regs d s m) d' (Hlt : d :< d')
   : R_regs d' s m.
@@ -197,7 +197,7 @@ Proof.
 
   rewrite Heqo in H.
   BreakMatch.break_match_hyps; [|solve[contradiction]].
-  specialize (H _ eq_refl).
+  specialize (proj1 H _ eq_refl).
   eexists; split; [eassumption|].
 
   rewrite <-Tuple__nth_default_to_list.
@@ -329,17 +329,20 @@ Proof.
       try solve [rewrite ?Crypto.Util.ListUtil.length_set_nth, ?Crypto.Util.ListUtil.length_update_nth, ?Tuple.length_to_list; trivial].
     eapply Crypto.Util.ListUtil.Forall2_update_nth.
     { eapply Tuple.fieldwise_to_list_iff; eassumption. }
-    cbv [R_reg bitmask_of_reg index_and_shift_and_bitcount_of_reg];
-      intros; Option.inversion_option; subst.
+    cbv [R_reg bitmask_of_reg index_and_shift_and_bitcount_of_reg].
+    intros. DestructHead.destruct_head'_and.
     eapply Ndec.Neqb_complete in Heqb; rewrite Heqb.
     replace (reg_offset r) with 0%N by (destruct r;cbv;trivial||cbv in Heqb;inversion Heqb).
-    rewrite N.shiftl_0_r, N.shiftl_0_r.
-    rename v2 into x.
-    eval_same_expr_goal.
-    assert (0 <= v) by admit.
-    assert (Hx64: N.ldiff (*reg*)x (N.ones 64) = 0%N) by admit.
-    rewrite N.land_comm, Hx64, N.lor_0_r.
-    (* Z.of_N N.land Z.to_N *) admit. }
+    rewrite Z.land_ones in * by Lia.lia.
+    assert (Hx64: N.ldiff v2 (N.ones 64) = 0%N). {
+      rewrite N.ldiff_ones_r, N.shiftl_eq_0_iff, N.shiftr_div_pow2.
+      clear -H6. cbn in *; zify; Z.div_mod_to_equations; lia. }
+    rewrite N.shiftl_0_r, N.shiftl_0_r, Hx64, N.land_comm, N.lor_0_r.
+    intuition idtac; try Option.inversion_option; subst.
+    { eval_same_expr_goal.
+      (* Z.of_N N.land Z.to_N *) admit. }
+    { rewrite N.land_ones, Z.mod_small; try Lia.lia.
+      clear -H6. cbn in *. zify. Z.quot_rem_to_equations. Z.div_mod_to_equations. lia. } }
   { eexists; split; [exact eq_refl|].
     repeat (step_symex; []).
     cbv [GetReg64 some_or] in *.
@@ -357,10 +360,9 @@ Proof.
       try solve [rewrite ?Crypto.Util.ListUtil.length_set_nth, ?Crypto.Util.ListUtil.length_update_nth, ?Tuple.length_to_list; trivial].
     eapply Crypto.Util.ListUtil.Forall2_update_nth.
     { eapply Tuple.fieldwise_to_list_iff; eassumption. }
-    cbv [R_reg]; intros; Option.inversion_option; subst.
-    eval_same_expr_goal.
+    cbv [R_reg]; intuition idtac; try Option.inversion_option; subst; try eval_same_expr_goal;
     cbv [bitmask_of_reg index_and_shift_and_bitcount_of_reg].
-    (* Z&N bitwise *) admit. }
+    (* Z&N bitwise *) admit. admit. }
   admit. (* store *)
 Admitted.
 
