@@ -345,9 +345,8 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
     lv <- DenoteOperand sa s st lo;
     hv <- DenoteOperand sa s st hi;
     cnt <- DenoteOperand sa s st cnt;
-    let cnt := N.land cnt (s-1) in
     let l := N.lor lv (N.shiftl hv s) in
-    let v := N.shiftr l cnt in
+    let v := N.shiftr l (N.land cnt (s-1)) in
     st <- SetOperand sa s st dst v;
     if cnt =? 0 then Some st else
     if s <? cnt then Some (HavocFlags st) else
