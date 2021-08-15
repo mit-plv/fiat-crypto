@@ -208,6 +208,11 @@ Definition PreserveFlag (st : machine_state) (f : FLAG) st' :=
 Definition signed (s : N) (z : Z) : Z :=
   Z.land (Z.shiftl 1 (Z.of_N s-1) + z) (Z.ones (Z.of_N s)) - Z.shiftl 1 (Z.of_N s-1).
 
+Definition rcrcnt s cnt : Z :=
+  if N.eqb s 8 then Z.land cnt 0x1f mod 9 else
+  if N.eqb s 16 then Z.land cnt 0x1f mod 17 else
+  Z.land cnt (Z.of_N s-1).
+
 (* NOTE: currently immediate operands are treated as if sign-extension has been
  * performed ahead of time. *)
 Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstruction) : option machine_state :=
@@ -262,7 +267,7 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
     let v := v1 + v2 + c in
     let v := Z.land v (Z.ones (Z.of_N s)) in
     st <- SetOperand sa s st dst v;
-    Some (SetFlag st flag (Z.odd (Z.shiftr (v1 + v2) (Z.of_N s))))
+    Some (SetFlag st flag (Z.odd (Z.shiftr (v1 + v2 + c) (Z.of_N s))))
   | (sbb | sub) as opc, [dst; src] =>
     c <- (match opc with sbb => get_flag st CF | _ => Some false end);
     let c := Z.b2z c in
@@ -296,9 +301,9 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
   | imul, ([src1 as dst; src2] | [dst; src1; src2]) =>
     v1 <- DenoteOperand sa s st src1;
     v2 <- DenoteOperand sa s st src2;
-    let lo := Z.land (v1 * v2) (Z.ones (Z.of_N s)) in
-    st <- SetOperand sa s st dst lo;
-    let c := negb (v1 * v2 =? lo)%Z in
+    let v := v1 * v2 in
+    st <- SetOperand sa s st dst v;
+    let c := negb (v =? Z.land v (Z.ones (Z.of_N s)))%Z in
     Some (SetFlag (SetFlag (HavocFlags st) CF c) OF c)
   | sar, [dst; cnt] =>
     v1 <- DenoteOperand sa s st dst;
@@ -324,10 +329,7 @@ Definition DenoteNormalInstruction (st : machine_state) (instr : NormalInstructi
   | rcr, [dst; cnt] =>
     v1 <- DenoteOperand sa s st dst;
     cnt <- DenoteOperand sa s st cnt;
-    let cnt :=
-      if N.eqb s 8 then Z.land cnt 0x1f mod 9 else
-      if N.eqb s 16 then Z.land cnt 0x1f mod 17 else
-      Z.land cnt (Z.of_N s-1) in
+    let cnt := rcrcnt s cnt in
     c <- get_flag st CF;
     let v1c := Z.lor v1 (Z.shiftl (Z.b2z c) (Z.of_N s)) in
     let l := Z.lor v1c (Z.shiftl v1 (1+Z.of_N s)) in

@@ -563,7 +563,7 @@ Ltac step :=
   first
   [ lift_let_goal
   | resolve_match_using_hyp
-  | progress (cbn beta iota delta [fst snd Syntax.op Syntax.args] in *; cbv beta iota delta [Reveal RevealConst Crypto.Util.Option.bind Symbolic.ret Symbolic.err Symeval mapM] in *; subst)
+  | progress (cbn beta iota delta [fst snd Syntax.op Syntax.args] in *; cbv beta iota delta [Reveal RevealConst Crypto.Util.Option.bind Symbolic.ret Symbolic.err Symeval mapM PreserveFlag] in *; subst)
   | Prod.inversion_prod_step
   | inversion_ErrorT_step
   | Option.inversion_option_step
@@ -611,7 +611,7 @@ Proof.
   | |- exists _, None   = Some _ /\ _ => exfalso
   end.
 
-  all : cbn [fold_right map]; rewrite ?N2Z.id, ?Z.add_0_r, ?Z.add_assoc, ?Z.mul_1_r, ?Z.land_m1_r;
+  all : cbn [fold_right map]; rewrite ?N2Z.id, ?Z.add_0_r, ?Z.add_assoc, ?Z.mul_1_r, ?Z.land_m1_r, ?Z.lxor_0_r;
     (congruence||eauto).
   all : try solve [rewrite Z.land_ones, Z.bit0_mod by Lia.lia; exact eq_refl].
 
@@ -644,11 +644,55 @@ Proof.
   { cbv [DenoteOperand DenoteConst] in Hv0. Option.inversion_option. subst v0.
     cbn; repeat (rewrite ?Z.land_ones, ?Z.add_opp_r by Lia.lia).
     push_Zmod; pull_Zmod. replace v1 with v by congruence. exact eq_refl. }
+  { cbv [Symbolic.PreserveFlag Symbolic.HavocFlags Symbolic.update_flag_with ret] in HSx4; cbn in HSx4; induction_path_ErrorT HSx4; Prod.inversion_prod; subst.
+    inversion H; subst s'.
+    destruct s6, m0;
+      repeat match goal with
+             | _ => Option.inversion_option_step
+             | x := ?v |- _ => subst x
+             | H : R_flag _ ?f None |- _ => eapply R_flag_None_r in H; try (rewrite H in * )
+             | H : R_flag ?d ?f (Some ?y) |- R_flag ?d ?f ?x =>
+                 let HH := fresh in enough (HH : x = Some y) by (rewrite HH; exact H)
+             | H : _ = None |- _ => progress (try rewrite H; try rewrite H in * )
+             | _ => progress (cbv [R_flags R_flag Tuple.fieldwise Tuple.fieldwise' Symbolic.get_flag get_flag ] in *; cbn -[Syntax.operation_size] in * ; subst)
+             | _ => destruct_one_match
+             | _ => progress intuition idtac
+             end; eauto; try Lia.lia; try congruence.
+             eexists. split. eauto.
+             f_equal. f_equal.
+             change Symbolic.signed with signed.
+             rewrite ?Z.add_0_r.
+             f_equal.
+             1:congruence.
+             rewrite <-Z.add_opp_r; f_equal.
+             pose_operation_size_cases; intuition (subst; trivial). }
 
   Unshelve. all : match goal with H : context[Syntax.inc] |- _ => idtac | _ => shelve end.
   { cbv [DenoteOperand DenoteConst] in Hv0. Option.inversion_option. subst v0.
     cbn; repeat (rewrite ?Z.land_ones, ?Z.add_opp_r by Lia.lia).
     push_Zmod; pull_Zmod. replace v1 with v by congruence. exact eq_refl. }
+  { cbv [Symbolic.PreserveFlag Symbolic.HavocFlags Symbolic.update_flag_with ret] in HSx4; cbn in HSx4; induction_path_ErrorT HSx4; Prod.inversion_prod; subst.
+    inversion H; subst s'.
+    destruct s6, m0;
+      repeat match goal with
+             | _ => Option.inversion_option_step
+             | x := ?v |- _ => subst x
+             | H : R_flag _ ?f None |- _ => eapply R_flag_None_r in H; try (rewrite H in * )
+             | H : R_flag ?d ?f (Some ?y) |- R_flag ?d ?f ?x =>
+                 let HH := fresh in enough (HH : x = Some y) by (rewrite HH; exact H)
+             | H : _ = None |- _ => progress (try rewrite H; try rewrite H in * )
+             | _ => progress (cbv [R_flags R_flag Tuple.fieldwise Tuple.fieldwise' Symbolic.get_flag get_flag ] in *; cbn -[Syntax.operation_size] in * ; subst)
+             | _ => destruct_one_match
+             | _ => progress intuition idtac
+             end; eauto; try Lia.lia; try congruence.
+             eexists. split. eauto.
+             f_equal. f_equal.
+             change Symbolic.signed with signed.
+             rewrite ?Z.add_0_r.
+             f_equal.
+             1:congruence.
+             f_equal.
+             pose_operation_size_cases; intuition (subst; trivial). }
 
   Unshelve. all : match goal with H : context[Syntax.add] |- _ => idtac | _ => shelve end.
   { destruct s';
@@ -664,6 +708,26 @@ Proof.
              end; rewrite ?Z.add_0_r, ?Z.odd_opp; eauto; try Lia.lia; try congruence.
              replace (signed n 0) with 0 by admit; rewrite Z.add_0_r.
              cbv [signed Symbolic.signed]; congruence. }
+
+  Unshelve. all : match goal with H : context[Syntax.adc] |- _ => idtac | _ => shelve end.
+  { destruct s';
+      repeat match goal with
+             | x := ?v |- _ => subst x
+             | H : R_flag _ ?f None |- _ => eapply R_flag_None_r in H; try (rewrite H in * )
+             | H : R_flag ?d ?f (Some ?y) |- R_flag ?d ?f ?x =>
+                 let HH := fresh in enough (HH : x = Some y) by (rewrite HH; exact H)
+             | H : _ = None |- _ => progress (try rewrite H; try rewrite H in * )
+             | _ => progress (cbv [R_flags Tuple.fieldwise Tuple.fieldwise'] in *; cbn -[Syntax.operation_size] in * ; subst)
+             | _ => destruct_one_match
+             | _ => progress intuition idtac
+             end; rewrite ?Z.add_assoc, ?Z.add_0_r, ?Z.odd_opp; eauto; try Lia.lia; try congruence.
+             change Symbolic.signed with signed. congruence. }
+
+  Unshelve. all : match goal with H : context[Syntax.adcx] |- _ => idtac | _ => shelve end.
+  { cbn [fold_right] in *; rewrite ?Z.bit0_odd, ?Z.add_0_r, ?Z.add_assoc in *; assumption. }
+
+  Unshelve. all : match goal with H : context[Syntax.adox] |- _ => idtac | _ => shelve end.
+  { cbn [fold_right] in *; rewrite ?Z.bit0_odd, ?Z.add_0_r, ?Z.add_assoc in *; assumption. }
 
   Unshelve. all : match goal with H : context[Syntax.cmovc] |- _ => idtac | _ => shelve end.
   { (* cmovc *)
@@ -704,50 +768,47 @@ Proof.
            end; eauto. }
 
   Unshelve. all : match goal with H : context[Syntax.rcr] |- _ => idtac | _ => shelve end; shelve_unifiable.
-  1,3: shelve.
-  { replace cnt with 1%Z in *; cycle 1. {
-      pose_operation_size_cases. subst cnt.
-      repeat destruct_one_match; intuition (subst n; trivial). }
-    (* bash flag state weakening *)
-    all : revert Hs'.
-    all:
+  all : inversion Heqe as [|? ? ? ? []]; cbn [interp_op] in *; Option.inversion_option; subst; trivial.
+  all : change Symbolic.rcrcnt with rcrcnt in *.
+  { destruct_one_match_hyp; repeat step; eauto.
+    { econstructor. econstructor. eauto 9. econstructor. cbn.
+      rewrite Z.shiftr_0_r. change 1 with (Z.ones 1). rewrite Z.land_ones by lia.
+      rewrite <-Z.bit0_mod. exact eq_refl. }
+  all : destruct_one_match; try lia.
+  all:
       destruct s';
       repeat match goal with
              | H : R_flag _ ?f None |- _ => eapply R_flag_None_r in H; try (rewrite H in * )
              | H : R_flag ?d ?f (Some ?y) |- R_flag ?d ?f ?x =>
                  let HH := fresh in enough (HH : x = Some y) by (rewrite HH; exact H)
              | H : _ = None |- _ => progress (try rewrite H; try rewrite H in * )
-             | _ => progress (cbv [R_flags Tuple.fieldwise Tuple.fieldwise'] in *; cbn in * ; subst)
+             | _ => progress (cbv [R_flags Tuple.fieldwise Tuple.fieldwise' set_flag set_flag_internal] in *; cbn -[Syntax.operation_size] in * ; subst)
              | _ => destruct_one_match
              | _ => progress intuition idtac
              end; try eauto; try Lia.lia.
-     cbv [set_flag set_flag_internal]; repeat (destruct_one_match||step1).
-     rewrite <-2Z.bit0_odd, Z.lor_spec, Z.shiftr_0_r, Z.shiftl_spec_low, Bool.orb_false_r;
-     trivial.
-     assert (0 < n)%N by admit; lia.
-  }
+     destr (machine_flag_state m0); cbn [Tuple.tuple'] in *; DestructHead.destruct_head'_prod; subst; Prod.inversion_prod; subst.
+     f_equal.
+     rewrite E0; cbn.
+     rewrite <-2Z.bit0_odd, Z.lor_spec, Z.shiftl_spec_low, Bool.orb_false_r; trivial.
+     pose_operation_size_cases; intuition (subst; cbn; clear; lia). }
 
-  Unshelve. all : shelve_unifiable.
-  all : try match goal with |- @eq Z _ _  => shelve end.
-  { (* inc SetFlag *) admit. }
-  { (* dec *) admit. }
-  { (* adc *) admit. }
-  { (* adcx *) admit. }
-  { (* adox *) admit. }
-  { (* lea *) admit. }
-  { (* Syntax.ret *) admit. }
-  
-  Unshelve. all : shelve_unifiable.
-  all : match goal with H : context[Build_NormalInstruction ?i] |- _ =>
-      idtac "{ (*" i "*) admit. }" end.
+  Unshelve. all : match goal with H : context[Syntax.lea] |- _ => idtac | _ => shelve end; shelve_unifiable.
+  { (* lea *)
+    cbv [SetOperand update_reg_with] in *; Option.inversion_option; subst; trivial. }
+
+  Unshelve. all : match goal with H : context[Syntax.bzhi] |- _ => idtac | _ => shelve end; shelve_unifiable.
   { (* bzhi *) inversion Heqe; subst. inversion H1; subst. inversion H3; congruence. }
-  { (* imul truncation *) admit. }
-  { (* imul truncation *) admit. }
-  { (* shrd mess *) admit. }
-  { (* Syntax.xor truncation *) admit. }
-  { (* Syntax.rcr cnt *) admit. }
-  { (* Syntax.rcr cnt *) admit. }
 
+  Unshelve. all : match goal with H : context[Syntax.shrd] |- _ => idtac | _ => shelve end; shelve_unifiable.
+  { eapply Z.bits_inj_iff'; intros i Hi.
+    inversion Hv2; subst; cbv [DenoteConst operand_size standalone_operand_size].
+    repeat rewrite ?Z.land_spec, ?Z.lor_spec, ?Z.shiftr_spec, ?Z.shiftl_spec, ?Z.testbit_ones_nonneg, ?Z.testbit_0_l; try lia.
+    destr (i <? Z.of_N n); rewrite ?Bool.orb_false_r, ?Bool.andb_false_r, ?Bool.andb_true_r; trivial.
+    replace v0 with v3 by congruence; f_equal; f_equal.
+    rewrite Z.land_ones, Z.mod_small.
+    1:ring_simplify; rewrite Z.add_sub_swap; exact eq_refl.
+    3: enough (0 <= Z.land v3 (Z.of_N n - 1)) by lia; eapply Z.land_nonneg; right.
+    1,2,3:pose_operation_size_cases; intuition (subst; cbn; clear; lia). }
 Admitted.
 
 End WithCtx.
