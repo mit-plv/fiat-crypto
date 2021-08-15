@@ -506,16 +506,29 @@ Ltac destr_expr_beq :=
   | H : context [expr_beq ?a ?b] |- _ => destr.destr (expr_beq a b)
   end.
 
-Lemma operation_size_cases i n : Syntax.operation_size i = Some n ->
+Lemma standalone_operand_size_cases o n : standalone_operand_size o = Some n ->
   (n = 8 \/ n = 16 \/ n = 32 \/ n = 64)%N.
 Proof.
-Admitted.
+   destruct o; cbn.
+   { destruct r; cbn; inversion 1; subst; eauto. }
+   { destruct (mem_is_byte _); inversion 1; eauto. }
+   { inversion 1. }
+Qed.
+
+Lemma operation_size_cases i n : Syntax.operation_size i = Some n ->
+  (exists a, i = Build_NormalInstruction dec [a]) \/ (exists a, i = Build_NormalInstruction inc [a]) \/ (exists a b, i = Build_NormalInstruction Syntax.rcr [a; b]) \/ (exists a b c, i = Build_NormalInstruction Syntax.shrd [a; b; c]) \/ (exists a b, i = Build_NormalInstruction Syntax.sar [a;b])\/(exists a b, i = Build_NormalInstruction Syntax.add [a;b]) ->
+  (n = 8 \/ n = 16 \/ n = 32 \/ n = 64)%N.
+Proof.
+  intuition idtac; DestructHead.destruct_head'_ex; subst; cbn in *.
+  all : repeat (repeat (let HH := fresh "H" in destruct (standalone_operand_size _) eqn:HH in H; repeat Option.inversion_option; try eapply standalone_operand_size_cases in HH); cbn in *; repeat Option.inversion_option; subst || Tactics.destruct_one_match_hyp).
+  all : lia.
+Qed.
 
 Import UniquePose.
 Ltac pose_operation_size_cases :=
   match goal with
   | H : Syntax.operation_size _ = Some _ |- _ =>
-      unique pose proof (operation_size_cases _ _ H)
+      unique pose proof (operation_size_cases _ _ H ltac:(eauto 99))
   end.
 
 Ltac invert_eval :=
@@ -575,6 +588,36 @@ Ltac step1 := step; (eassumption||trivial); [].
 Ltac step01 := solve [step] || step1.
 
 Import coqutil.Tactics.autoforward coqutil.Decidable coqutil.Tactics.Tactics.
+
+Lemma SetOperand_same n m a v m'
+  (Hd : DenoteOperand 64 n m a = Some v) (Hs : SetOperand 64 n m a v = Some m')
+  : m = m'.
+Proof.
+  destruct a, m; cbn -[DenoteAddress] in *; repeat (subst; Option.inversion_option).
+  { cbv [update_reg_with set_reg]; cbn in *; f_equal.
+    eapply Tuple.to_list_ext.
+    rewrite <-Tuple__nth_default_to_list in Hd; rewrite <-Hd; clear Hd.
+    unshelve erewrite Tuple.from_list_default_eq, Tuple.to_list_from_list.
+    { abstract (rewrite Crypto.Util.ListUtil.length_update_nth; eapply Tuple.length_to_list). }
+    eapply List.nth_error_ext; intro i; cbv [nth_default].
+    rewrite Crypto.Util.ListUtil.nth_update_nth; destruct_one_match; subst; trivial.
+    destruct_one_match; cbn; trivial; eapply f_equal.
+    eapply Z.bits_inj_iff'; intros i Hi.
+    repeat rewrite ?Z.land_spec, ?Z.ldiff_spec, ?Z.lor_spec, ?bitblast.Z.shiftr_spec', ?bitblast.Z.shiftl_spec', ?Z.testbit_ones, ?Z.testbit_0_l by (clear;lia).
+    destr (i <? 0); cbn; try lia.
+    destr (i - Z.of_N (reg_offset r) <? 0); cbn; try lia.
+    { destr (0 <=? i - Z.of_N (reg_offset r)); cbn; rewrite ?Bool.andb_true_r; trivial.
+      destr (i - Z.of_N (reg_offset r) <? Z.of_N (reg_size r)); cbn; try Btauto.btauto.
+      lia. }
+    destr (0 <=? i - Z.of_N (reg_offset r)); try lia; cbn.
+    replace (i - Z.of_N (reg_offset r) + Z.of_N (reg_offset r)) with i by lia.
+    destr (i - Z.of_N (reg_offset r) <? Z.of_N (reg_size r)); Btauto.btauto. }
+  { destruct m'; cbv [update_mem_with Crypto.Util.Option.bind set_mem_error set_mem_bytes_error get_mem option_map] in *; repeat (destruct_one_match_hyp || Option.inversion_option).
+    inversion Hs; clear Hs; subst; f_equal.
+    clear E1.
+    (* mem *)
+Admitted.
+
 
 Lemma Z__ones_nonneg n (H : 0 <= n)  : 0 <= Z.ones n.
 Proof. rewrite Z.ones_equiv. pose proof Z.pow_pos_nonneg 2 n ltac:(lia) ltac:(assumption); Lia.lia. Qed.
@@ -706,8 +749,9 @@ Proof.
              | _ => destruct_one_match
              | _ => progress intuition idtac
              end; rewrite ?Z.add_0_r, ?Z.odd_opp; eauto; try Lia.lia; try congruence.
-             replace (signed n 0) with 0 by admit; rewrite Z.add_0_r.
-             cbv [signed Symbolic.signed]; congruence. }
+             replace (signed n 0) with 0; cycle 1.
+             { pose_operation_size_cases. clear -H0; intuition (subst; cbv; trivial). }
+             rewrite Z.add_0_r; cbv [signed Symbolic.signed]; congruence. }
 
   Unshelve. all : match goal with H : context[Syntax.adc] |- _ => idtac | _ => shelve end.
   { destruct s';
@@ -732,12 +776,14 @@ Proof.
   Unshelve. all : match goal with H : context[Syntax.cmovc] |- _ => idtac | _ => shelve end.
   { (* cmovc *)
     destruct vCF; cbn [negb Z.b2z Z.eqb] in *; eauto; [].
-    enough (m = m0) by (subst; eauto). revert Hm0. revert Hv. admit. }
+    enough (m = m0) by (subst; eauto).
+    clear -Hm0 Hv frame G ; eauto using SetOperand_same. }
 
   Unshelve. all : match goal with H : context[Syntax.cmovnz] |- _ => idtac | _ => shelve end.
   { (* cmovnz *)
     destruct vZF; cbn [negb Z.b2z Z.eqb] in *; eauto; [].
-    enough (m = m0) by (subst; eauto). revert Hm0. revert Hv0. admit. }
+    enough (m = m0) by (subst; eauto). 
+    clear -Hm0 Hv0 frame G ; eauto using SetOperand_same. }
 
   Unshelve. all : match goal with H : context[Syntax.test] |- _ => idtac | _ => shelve end.
   { destruct (Equality.ARG_beq_spec a a0); try discriminate; subst a0.
@@ -754,7 +800,8 @@ Proof.
   { rewrite Z.land_m1_r in *.
     subst st st0.
     rewrite <-H1; cbn.
-    replace (1 <? Z.of_N n) with true by admit; cbn.
+    replace (1 <? Z.of_N n) with true; cycle 1. {
+     pose_operation_size_cases; intuition (subst; cbn; clear; lia). }
     revert Hs'.
     repeat match goal with x:= _ |- _ => subst x end;
     destruct s';
@@ -809,6 +856,7 @@ Proof.
     1:ring_simplify; rewrite Z.add_sub_swap; exact eq_refl.
     3: enough (0 <= Z.land v3 (Z.of_N n - 1)) by lia; eapply Z.land_nonneg; right.
     1,2,3:pose_operation_size_cases; intuition (subst; cbn; clear; lia). }
+  all : fail.
 Admitted.
 
 End WithCtx.
