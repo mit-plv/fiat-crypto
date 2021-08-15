@@ -212,11 +212,10 @@ Import ListNotations.
 
 Section WithContext.
   Context (ctx : symbol -> option Z).
+  Definition signed s n : Z := (Z.land (Z.shiftl 1 (Z.of_N s-1) + n) (Z.ones (Z.of_N s)) - Z.shiftl 1 (Z.of_N s-1))%Z.
   Definition interp_op o (args : list Z) : option Z :=
     let keep n x := Z.land x (Z.ones (Z.of_N n)) in
-    let signed s n : Z := (Z.land (Z.shiftl 1 (Z.of_N s-1) + n) (Z.ones (Z.of_N s)) - Z.shiftl 1 (Z.of_N s-1))%Z in
     match o, args with
-
     | old s x, nil => match ctx x with Some v => Some (keep s v) | None => None end
     | const z, nil => Some z
     | add s, args => Some (keep s (List.fold_right Z.add 0 args))
@@ -224,9 +223,9 @@ Section WithContext.
         Some (Z.shiftr (List.fold_right Z.add 0 args) (Z.of_N s) mod 2)
     | subborrow s, cons a args' =>
         Some ((- Z.shiftr (a - List.fold_right Z.add 0 args') (Z.of_N s)) mod 2)
-    | addoverflow s, args => Some (
-        let v := List.fold_right Z.add 0%Z (List.map (signed s) args) in
-        if Z.eqb v (signed s v) then 0 else 1)
+    | addoverflow s, args => Some (Z.b2z (negb (Z.eqb
+      (signed s (keep s (List.fold_right Z.add 0 args)))
+                         (List.fold_right Z.add 0%Z (List.map (signed s) args)))))
     | neg s, [a] => Some (keep s (- a))
     | shl s, [a; b] => Some (keep s (Z.shiftl a b))
     | shr s, [a; b] => Some (keep s (Z.shiftr a b))
@@ -905,7 +904,7 @@ Definition addoverflow_small :=
           then (ExprApp (const 0, nil))
           else e | _ => e end | _ =>  e end.
 Global Instance addoverflow_small_ok : Ok addoverflow_small.
-Proof. t. exfalso; eapply E1; clear E1. Admitted.
+Proof. t. Admitted.
 
 
 Definition constprop :=
@@ -1323,11 +1322,11 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
     _ <- SetOperand dst v;
     _ <- HavocFlags;
     SetFlag CF c
-  | lea, [dst; mem src] =>
+  | lea, [reg dst; mem src] =>
     a <- Address src;
     SetOperand dst a
   | imul, ([dst as src1; src2] | [dst; src1; src2]) =>
-    v <- Symeval (mul s@(src1,src2));
+    v <- Symeval (mulZ@(src1,src2));
     _ <- SetOperand dst v;
     HavocFlags
   | Syntax.xor, [dst; src] =>
@@ -1338,14 +1337,14 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
     _ <- SetFlag CF zero;
     SetFlag OF zero
   | Syntax.and, [dst; src] =>
-    v <- Symeval (and s@(dst,src));
+    v <- Symeval (andZ@(dst,src));
     _ <- SetOperand dst v;
     _ <- HavocFlags;
     zero <- Symeval (PreApp (const 0) nil); _ <- SetFlag CF zero; SetFlag OF zero
   | Syntax.bzhi, [dst; src; cnt] =>
     cnt <- GetOperand cnt;
     cnt <- RevealConst cnt;
-    v <- Symeval (and s@(src,PreApp (const (Z.ones (Z.land cnt (Z.ones 8)))) nil));
+    v <- Symeval (andZ@(src,PreApp (const (Z.ones (Z.land cnt (Z.ones 8)))) nil));
     _ <- SetOperand dst v;
     _ <- HavocFlags;
     zero <- App (const 0, nil); SetFlag OF zero
