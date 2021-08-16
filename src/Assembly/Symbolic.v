@@ -4,6 +4,7 @@ Require Import Coq.ZArith.ZArith.
 Require Crypto.Util.Tuple.
 Require Import Util.OptionList.
 Require Import Crypto.Util.ErrorT.
+
 Module Import List.
   Section IndexOf.
     Context [A] (f : A -> bool).
@@ -697,6 +698,23 @@ Proof.
     try Lia.lia.
 Admitted.
 
+Lemma eval_bound_expr': forall(G : symbol -> option Z) (d : dag) 
+    (l : list expr) (args' l0 : list Z), 
+    Option.List.lift (map bound_expr l) = Some l0 ->
+     Forall2 (eval G d) l args' ->
+     (0<=fold_right Z.add 0 args' <= fold_right Z.add 0 l0)%Z.
+Proof.
+  pose proof eval_bound_expr.
+  induction l; cbn in *.
+    firstorder. replace l0 with ([]: list Z). 
+  eapply length_Forall2 in H1.
+  cbn in *.
+  replace args' with ([]:list Z) in *. cbn in *. Lia.lia.
+  eapply eq_sym in H1.
+  eapply ListUtil.length0_nil in H1; eauto.
+  inversion H0; clear H0; subst; eauto. intros.
+Admitted.
+
 Definition isCst (e : expr) :=
   match e with ExprApp ((const _), _) => true | _ => false end.
 
@@ -795,7 +813,7 @@ Definition set_slice_set_slice :=
   fun e => match e with
     ExprApp (set_slice lo1 s1, [ExprApp (set_slice lo2 s2, [x; e']); y]) =>
       if andb (N.eqb lo1 lo2) (N.leb s2 s1) then ExprApp (set_slice lo1 s1, [x; y]) else e | _ => e end.
-Global Instance set_slice_set_slice_ok : Ok set_slice_set_slice. Proof. t. Admitted.
+Global Instance set_slice_set_slice_ok : Ok set_slice_set_slice. Proof. t. f_equal. f_equal. Admitted.
 
 Lemma indN: forall (P: N -> Prop),
     P 0%N ->                                 (* base case to prove *)
@@ -884,8 +902,20 @@ Definition addbyte_small :=
           then ExprApp (add 64%N, args)
           else e | _ => e end | _ =>  e end.
 Global Instance addbyte_small_ok : Ok addbyte_small.
-Proof. t; f_equal. (* Is l0 == args'? then apply le_ones*) Admitted.
-
+Proof. t; f_equal.
+       eapply eval_bound_expr' in H2; eauto.
+       assert  (fold_right Z.add 0 args' <= Z.ones (Z.of_N 8))%Z by Lia.lia.
+       eapply le_ones in H; eauto; try Lia.lia.
+       assert  ( Z.ones (Z.of_N 8) <= Z.ones (Z.of_N 64))%Z. cbn in *. Lia.lia.
+       assert  (fold_right Z.add 0 args' <= Z.ones (Z.of_N 64))%Z by Lia.lia.
+       eapply le_ones in H1; eauto; try Lia.lia. Qed.
+                                   
+Lemma shiftr_ones: forall s,  Z.shiftr (Z.ones (Z.of_N s)) (Z.of_N s) = 0%Z.
+Proof.
+  intros.
+  erewrite Z.shiftr_div_pow2; eauto; try Lia.lia.
+  eapply Z.div_small; eauto; try Lia.lia. pose proof helper'' s.  erewrite Z.ones_equiv. Lia.lia. Qed.
+                    
 Definition addcarry_small :=
   fun e => match e with
     ExprApp (addcarry s, args) =>
@@ -895,7 +925,14 @@ Definition addcarry_small :=
           then (ExprApp (const 0, nil))
           else e | _ => e end | _ =>  e end.
 Global Instance addcarry_small_ok : Ok addcarry_small.
-Proof. t. exfalso. (* Is l0 == args'? Then apply le_ones*) Admitted.
+Proof. t.  eapply eval_bound_expr' in H2; eauto.
+        assert  (fold_right Z.add 0 args' <= Z.ones (Z.of_N s))%Z by Lia.lia.
+        eapply le_ones in H; eauto; try Lia.lia. rewrite <- H. cbn in *.
+        f_equal.
+        erewrite Z.shiftr_land. cbn in *. replace (Z.shiftr (Z.ones (Z.of_N s)) (Z.of_N s)) with 0%Z. cbn in *.
+        erewrite Z.land_0_r. cbn in *. Lia.lia. erewrite  shiftr_ones with (s:=s); eauto.
+Qed.
+
 
 Definition addoverflow_small :=
   fun e => match e with
