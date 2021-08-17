@@ -706,13 +706,12 @@ Lemma eval_bound_expr': forall(G : symbol -> option Z) (d : dag)
 Proof.
   pose proof eval_bound_expr.
   induction l; cbn in *.
-    firstorder. replace l0 with ([]: list Z). 
-  eapply length_Forall2 in H1.
-  cbn in *.
+  {intros. inversion H0; clear H0; subst.
+   eapply length_Forall2 in H1; eauto.
   replace args' with ([]:list Z) in *. cbn in *. Lia.lia.
   eapply eq_sym in H1.
-  eapply ListUtil.length0_nil in H1; eauto.
-  inversion H0; clear H0; subst; eauto. intros.
+  eapply ListUtil.length0_nil in H1; eauto. }
+  { admit. }
 Admitted.
 
 Definition isCst (e : expr) :=
@@ -1468,3 +1467,45 @@ Definition SymexNormalInstructions := fun st is => mapM_ SymexNormalInstruction 
 Definition invert_rawline l := match l.(rawline) with INSTR instr => Some instr | _ => None end.
 Definition SymexLines st (lines : list Syntax.Line) :=
   SymexNormalInstructions st (Option.List.map invert_rawline lines).
+
+(*Print map.
+Fixpoint some_sum l0:=
+  match l0 with
+  | [] => 0
+           
+  | None::l => some_sum l
+  | (Some a)::l => a+ (some_sum l) end.
+
+Definition  some_sum' := 
+fun (x : (option Z)) (y: Z) =>
+  match x with
+| None => 0%Z
+| Some a=> (a+y)%Z end.
+
+Print fold_right.
+Lemma eval_bound_expr': forall(G : symbol -> option Z) (d : dag) 
+    (l : list expr) (args': list Z) (l0: list (option Z)), 
+    (map bound_expr l) = l0 ->
+     Forall2 (eval G d) l args' ->
+     (0<=fold_right Z.add 0 args' <= fold_right some_sum' 0 l0)%Z.
+Proof.
+  pose proof eval_bound_expr.
+  induction l; cbn in *.
+  { intros. rewrite <- H0.
+  eapply length_Forall2 in H1.
+  cbn in *.
+  replace args' with ([]:list Z) in *. cbn in *. Lia.lia.
+  eapply eq_sym in H1.
+  eapply ListUtil.length0_nil in H1; eauto.
+  (*inversion H0; clear H0; subst; eauto.*) }
+  { intros. split. admit. Search tail.
+    specialize (IHl (tl args') (tl l0)). subst. cbn in *.
+    assert (Forall2 (eval G d) l (tl args')). admit.
+    eapply IHl in H0; eauto. 
+    eapply IHl in H1.
+
+    
+
+
+    specialize H with G a _ d _.
+Admitted.*)
