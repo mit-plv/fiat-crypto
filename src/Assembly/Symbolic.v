@@ -5,6 +5,8 @@ Require Crypto.Util.Tuple.
 Require Import Util.OptionList.
 Require Import Crypto.Util.ErrorT.
 
+Require Import coqutil.Z.bitblast.
+
 Module Import List.
   Section IndexOf.
     Context [A] (f : A -> bool).
@@ -493,11 +495,23 @@ Qed.
 Lemma eval_eval0 d e n G : eval (fun _ => None) d e n -> eval G d e n.
 Proof. eapply eval_weaken_symbols; congruence. Qed.
 
+Lemma permute_add xs ys : Permutation.Permutation xs ys -> fold_right Z.add Z0 xs = fold_right Z.add Z0 ys.
+Proof. induction 1; cbn; try Lia.lia. Qed.
+Lemma permute_mul xs ys : Permutation.Permutation xs ys -> fold_right Z.mul 1%Z xs = fold_right Z.mul 1%Z ys.
+Proof. induction 1; cbn; try Lia.lia. Qed.
 Lemma permute_commutative G op args n : commutative op = true ->
   interp_op G op args = Some n ->
   forall args', Permutation.Permutation args args' ->
   interp_op G op args' = Some n.
-Admitted.
+Proof.
+  destruct op; inversion 1; cbn; intros ? ? Hp.
+  { erewrite <-permute_add; eauto. }
+  { erewrite <-permute_add; eauto. }
+  { erewrite <-permute_add; eauto.
+    erewrite <-(permute_add _ (map _ args')); eauto using Permutation.Permutation_map. }
+  { erewrite <-permute_mul; eauto. }
+  { erewrite <-permute_mul; eauto. }
+Qed.
 
 Definition dag_ok G (d : dag) := forall i _r, nth_error d (N.to_nat i) = Some _r -> exists v, eval G d (ExprRef i) v.
 
@@ -804,15 +818,17 @@ Proof. t; rewrite ?Z.shiftr_0_r, ?Z.land_ones, ?Z.shiftr_div_pow2; trivial; Lia.
 
 Definition slice_set_slice :=
   fun e => match e with
-    ExprApp (slice lo1 s1, [ExprApp (set_slice lo2 s2, [_; e'])]) =>
-      if andb (N.eqb lo1 lo2) (N.leb s1 s2) then e' else e | _ => e end.
-Global Instance slice_set_slice_ok : Ok slice_set_slice. Proof. t. Admitted.
+    ExprApp (slice 0 s1, [ExprApp (set_slice 0 s2, [_; e'])]) =>
+      if N.leb s1 s2 then ExprApp (slice 0 s1, [e']) else e | _ => e end.
+Global Instance slice_set_slice_ok : Ok slice_set_slice.
+Proof. t. f_equal. Z.bitblast. Qed.
 
 Definition set_slice_set_slice :=
   fun e => match e with
     ExprApp (set_slice lo1 s1, [ExprApp (set_slice lo2 s2, [x; e']); y]) =>
       if andb (N.eqb lo1 lo2) (N.leb s2 s1) then ExprApp (set_slice lo1 s1, [x; y]) else e | _ => e end.
-Global Instance set_slice_set_slice_ok : Ok set_slice_set_slice. Proof. t. f_equal. f_equal. Admitted.
+Global Instance set_slice_set_slice_ok : Ok set_slice_set_slice.
+Proof. t. f_equal. Z.bitblast. Qed.
 
 Definition set_slice0_small :=
   fun e => match e with
@@ -1032,10 +1048,10 @@ Definition expr : expr -> expr :=
   ;set_slice_set_slice
   ;slice_set_slice
   ;set_slice0_small 
-  ;truncate_small
   ;flatten_associative
   ;consts_commutative
   ;drop_identity
+  ;truncate_small
   ;addoverflow_bit
   ;addcarry_bit
   ;addcarry_small
@@ -1056,7 +1072,7 @@ Qed.
 End Rewrite.
 
 Definition simplify (dag : dag) (e : node idx) :=
-  Rewrite.expr (reveal_node dag 2 e).
+  Rewrite.expr (reveal_node dag 3 e).
 
 Lemma eval_simplify G d n v : eval_node G d n v -> eval G d (simplify d n) v.
 Proof. eauto using Rewrite.eval_expr, eval_node_reveal_node. Qed.
