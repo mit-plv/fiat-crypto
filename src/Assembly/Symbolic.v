@@ -4,6 +4,7 @@ Require Import Coq.ZArith.ZArith.
 Require Crypto.Util.Tuple.
 Require Import Util.OptionList.
 Require Import Crypto.Util.ErrorT.
+Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
 
 Require Import coqutil.Z.bitblast.
 
@@ -988,6 +989,51 @@ Definition constprop :=
 Global Instance constprop_ok : Ok constprop.
 Proof. t. f_equal; eauto using eval_eval. Qed.
 
+Lemma invert_interp_op_associative o : associative o = true ->
+  forall G x xs v, interp_op G o (x :: xs) = Some v ->
+  exists v', interp_op G o xs = Some v' /\
+  interp_op G o [x; v'] = Some v.
+Proof.
+  destruct o; inversion 1; intros * HH; inversion HH; clear HH; subst; cbn;
+    eexists; split; eauto; f_equal; try ring; try solve [Z.bitblast].
+  { rewrite !Z.add_0_r, ?Z.land_ones; push_Zmod; pull_Zmod; Lia.lia. }
+  { rewrite !Z.mul_1_r, ?Z.land_ones; push_Zmod; pull_Zmod; Lia.lia. }
+Qed.
+
+Lemma interp_op_associative_cons o : associative o = true ->
+  forall G x xs ys v,
+  interp_op G o xs = Some v -> interp_op G o ys = Some v ->
+  interp_op G o (x :: xs) = interp_op G o (x :: ys).
+Proof.
+  destruct o; inversion 1;
+    do 2 (intros * HH; inversion HH; clear HH; subst; cbn); f_equal.
+  { rewrite ?Z.land_ones in *; push_Zmod; rewrite ?H1; pull_Zmod; Lia.lia. }
+  { rewrite <-2Z.land_assoc; congruence. }
+  { rewrite 2Z.land_lor_distr_l; congruence. }
+  { rewrite ?Z.land_ones in *; push_Zmod; rewrite ?H1; pull_Zmod; Lia.lia. }
+Qed.
+
+Lemma interp_op_associative_app G o : associative o = true ->
+  forall xs vxs, interp_op G o xs = Some vxs -> 
+  forall ys vys, interp_op G o ys = Some vys ->
+  interp_op G o (xs ++ ys) = interp_op G o [vxs; vys].
+Proof.
+  induction xs; destruct o; inversion H; cbn [app interp_op fold_right] in *;
+    intros; Option.inversion_option; subst; f_equal;
+    try ring; try solve [Z.bitblast].
+  { rewrite ?Z.land_ones in *; push_Zmod; pull_Zmod; try Lia.lia; f_equal; ring. }
+  { rewrite ?Z.land_ones in *; push_Zmod; pull_Zmod; try Lia.lia; f_equal; ring. }
+  all : epose proof (IHxs _ eq_refl _ _ eq_refl) as HH;
+        inversion HH as [HHH]; clear IHxs HH.
+  { rewrite ?Z.land_ones in *; push_Zmod;
+    rewrite ?HHH; push_Zmod; pull_Zmod; try Lia.lia. f_equal; ring. }
+  { rewrite <-2Z.land_assoc. rewrite ?HHH. Z.bitblast. }
+  { rewrite 2Z.land_lor_distr_l. rewrite ?HHH. Z.bitblast. }
+  { rewrite ?Z.land_ones in *; push_Zmod;
+    rewrite ?HHH; push_Zmod; pull_Zmod; try Lia.lia. f_equal; ring. }
+  { rewrite ?HHH. ring. }
+Qed.
+
 Definition flatten_associative :=
   fun e => match e with
     ExprApp (o, args) =>
@@ -998,7 +1044,25 @@ Definition flatten_associative :=
         | _ => [e'] end) args)
     else e | _ => e end.
 Global Instance flatten_associative_ok : Ok flatten_associative.
-Proof. t. Admitted.
+Proof.
+  repeat step.
+  revert dependent v; induction H2; cbn.
+  { econstructor; eauto. }
+  intros ? H4.
+  pose proof H4.
+  eapply invert_interp_op_associative in H4; eauto. destruct H4 as (?&?&?).
+  specialize (IHForall2 _ ltac:(eassumption)).
+  inversion IHForall2; subst.
+  destruct x as [i|[o' args''] ].
+  { econstructor. { econstructor. eauto. eauto. }
+    erewrite interp_op_associative_cons; eauto. }
+  { destruct (op_beq_spec o o'); subst; cycle 1.
+    { econstructor. { econstructor. eauto. eauto. }
+      erewrite interp_op_associative_cons; eauto. }
+    inversion H; clear H; subst.
+    econstructor; eauto using Forall2_app.
+    erewrite interp_op_associative_app; eauto. }
+Qed.
 
 Definition consts_commutative :=
   fun e => match e with
