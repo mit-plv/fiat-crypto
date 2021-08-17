@@ -851,9 +851,9 @@ Theorem check_equivalence_correct
         (Hargs : build_input_runtime t args = Some (PHOAS_args, []))
         (HPHOAS_args : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds PHOAS_args = true)
         (* TODO: this should match symex_asm_func_correct *)
-  : exists st'
-           (retvals : list (Z + list Z)),
-    DenoteLines st asm = Some st'
+  : exists asm' st' (retvals : list (Z + list Z)),
+    strip_ret asm = Success asm'
+    /\ DenoteLines st asm' = Some st'
     /\ simplify_base_runtime (type.app_curried (API.Interp expr) PHOAS_args) = Some retvals
     /\ True (* TODO(andres): write down something that relates st' to retvals *).
 Proof using G.
@@ -905,7 +905,7 @@ Proof using G.
                  | [ H : forall args, Forall2 ?P args ?v -> Forall2 _ _ _, H' : Forall2 ?P _ ?v |- _ ]
                    => specialize (H _ H')
                  end ].
-  do 2 eexists; repeat apply conj; eassumption.
+  do 3 eexists; repeat apply conj; try eassumption; trivial.
 Qed.
 
 Theorem generate_assembly_of_hinted_expr_correct
@@ -936,9 +936,9 @@ Theorem generate_assembly_of_hinted_expr_correct
               (Hargs : build_input_runtime t args = Some (PHOAS_args, []))
               (HPHOAS_args : type.andb_bool_for_each_lhs_of_arrow (@ZRange.type.option.is_bounded_by) arg_bounds PHOAS_args = true),
       (* Should match check_equivalence_correct exactly *)
-      exists st'
-             (retvals : list (Z + list Z)),
-        DenoteLines st asm = Some st'
+      exists asm' st' (retvals : list (Z + list Z)),
+             strip_ret asm = Success asm'
+        /\ DenoteLines st asm' = Some st'
         /\ simplify_base_runtime (type.app_curried (API.Interp expr) PHOAS_args) = Some retvals
         /\ True (* TODO(andres): write down something that relates st' to retvals *).
 Proof using G.

@@ -81,80 +81,17 @@ Module Byte.
   Notation x00 := 0%Z (only parsing).
 End Byte.
 
-Record mem_state := { mem_bytes_state :> PositiveMap.t Byte.byte }.
-Definition get_mem_byte (st : mem_state) (addr : Z) : option Byte.byte
-  := match addr with
-     | Zpos p => PositiveMap.find p st.(mem_bytes_state)
-     | _ => None
-     end.
-Definition set_mem_byte (st : mem_state) (addr : positive) (b : Byte.byte) : mem_state
-  := {| mem_bytes_state := PositiveMap.add addr b st.(mem_bytes_state) |}.
-Definition set_mem_byte_error (st : mem_state) (addr : Z) (b : Byte.byte) : option mem_state
-  := match addr with
-     | Zpos addr => Some (set_mem_byte st addr b)
-     | _ => None
-     end.
-Definition set_mem_byte_default (st : mem_state) (addr : Z) (b : Byte.byte) : mem_state
-  := match set_mem_byte_error st addr b with
-     | Some st => st
-     | None => st
-     end.
-Fixpoint get_mem_bytes (st : mem_state) (addr : Z) (nbytes : nat) : option (list Byte.byte)
-  := match nbytes with
-     | O => Some nil
-     | S nbytes => match get_mem_byte st addr, get_mem_bytes st (addr + 1) nbytes with
-                   | Some b, Some bs => Some (b :: bs)
-                   | _, _ => None
-                   end
-     end.
-Fixpoint set_mem_bytes (st : mem_state) (addr : positive) (v : list Byte.byte) : mem_state
-  := match v with
-     | nil => st
-     | v :: vs => let st := set_mem_byte st addr v in
-                  set_mem_bytes st (addr + 1) vs
-     end.
-Definition set_mem_bytes_error (st : mem_state) (addr : Z) (v : list Byte.byte) : option mem_state
-  := match addr with
-     | Zpos addr => Some (set_mem_bytes st addr v)
-     | _ => None
-     end.
-Definition set_mem_bytes_default (st : mem_state) (addr : Z) (v : list Byte.byte) : mem_state
-  := match set_mem_bytes_error st addr v with
-     | Some st => st
-     | None => st
-     end.
-(* x86 is little-endian according to https://stackoverflow.com/a/25939262/377022, so we have l[0] + 8*l[1] + ... *)
-Fixpoint mem_bytes_to_Z (bytes : list Byte.byte) : Z
-  := match bytes with
-     | nil => 0
-     | b :: bs => Byte.to_Z b + 8 * mem_bytes_to_Z bs
-     end%Z.
-(* returns the carry as well *)
-Fixpoint mem_bytes_of_N_split (nbytes : nat) (v : Z) : list Byte.byte * Z
-  := match nbytes with
-     | O => (nil, v)
-     | S nbytes => let '(vh, vl) := (Z.shiftr v 8, Z.land v (Z.ones 8)) in
-                   let '(bs, carry) := mem_bytes_of_N_split nbytes vh in
-                   let vl := match Byte.of_Z vl with
-                             | Some vl => vl
-                             | None (* should be impossible *) => Byte.x00
-                             end in
-                   (vl :: bs, carry)
-     end%Z.
-Definition mem_bytes_of_N_error (nbytes : nat) (v : Z) : option (list Byte.byte)
-  := let '(bs, carry) := mem_bytes_of_N_split nbytes v in
-     if (carry =? 0)%Z then Some bs else None.
-Definition mem_bytes_of_N_masked (nbytes : nat) (v : Z) : list Byte.byte
-  := let '(bs, carry) := mem_bytes_of_N_split nbytes v in bs.
+Require Import coqutil.Word.Interface.
+Require Import coqutil.Map.Interface. (* coercions *)
+Require Import coqutil.Word.LittleEndianList.
+Require Import bedrock2.Memory. Import WithoutTuples.
+Require coqutil.Word.Naive coqutil.Map.SortedListWord.
+Definition mem_state := (SortedListWord.map (Naive.word 64) Byte.byte).
+
 Definition get_mem (st : mem_state) (addr : Z) (nbytes : nat) : option Z
-  := option_map mem_bytes_to_Z (get_mem_bytes st addr nbytes).
-Definition set_mem_error (st : mem_state) (addr : Z) (nbytes : nat) (v : Z) : option mem_state
-  := (bs <- mem_bytes_of_N_error nbytes v;
-     set_mem_bytes_error st addr bs)%option.
-Definition set_mem_masked_error (st : mem_state) (addr : Z) (nbytes : nat) (v : Z) : option mem_state
-  := set_mem_bytes_error st addr (mem_bytes_of_N_masked nbytes v).
-Definition set_mem_default (st : mem_state) (addr : Z) (nbytes : nat) (v : Z) : mem_state
-  := Option.value (set_mem_masked_error st addr nbytes v) st.
+  := (bs <- load_bytes st (word.of_Z addr) nbytes; Some (LittleEndianList.le_combine bs))%option.
+Definition set_mem (st : mem_state) (addr : Z) (nbytes : nat) (v : Z) : option mem_state
+  := store_bytes st (word.of_Z addr) (LittleEndianList.le_split nbytes v).
 
 Record machine_state := { machine_reg_state :> reg_state ; machine_flag_state :> flag_state ; machine_mem_state :> mem_state }.
 Definition update_reg_with (st : machine_state) (f : reg_state -> reg_state) : machine_state
@@ -180,11 +117,14 @@ Definition DenoteOperand (sa s : N) (st : machine_state) (a : ARG) : option Z :=
   | const a => Some (DenoteConst (operand_size a s) a)
   end.
 
+Definition SetMem (st : machine_state) (addr : Z) (nbytes : nat) (v : Z) : option machine_state :=
+  ms <- set_mem st addr nbytes v;
+  Some (update_mem_with st (fun _ => ms)).
+
 Definition SetOperand (sa s : N) (st : machine_state) (a : ARG) (v : Z) : option machine_state :=
   match a with
   | reg a => Some (update_reg_with st (fun rs => set_reg rs a v))
-  | mem a => ms <- set_mem_error st (DenoteAddress sa st a) (N.to_nat (N.div (operand_size a s) 8)) v;
-             Some (update_mem_with st (fun _ => ms))
+  | mem a => SetMem st (DenoteAddress sa st a) (N.to_nat (N.div (operand_size a s) 8)) v
   | const a => None
   end.
 

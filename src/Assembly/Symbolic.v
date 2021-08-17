@@ -814,6 +814,26 @@ Definition set_slice_set_slice :=
       if andb (N.eqb lo1 lo2) (N.leb s2 s1) then ExprApp (set_slice lo1 s1, [x; y]) else e | _ => e end.
 Global Instance set_slice_set_slice_ok : Ok set_slice_set_slice. Proof. t. f_equal. f_equal. Admitted.
 
+Definition set_slice0_small :=
+  fun e => match e with
+    ExprApp (set_slice 0 s, [x; y]) =>
+      match bound_expr x, bound_expr y with Some a, Some b =>
+      if Z.leb a (Z.ones (Z.of_N s)) && Z.leb b (Z.ones (Z.of_N s)) then y
+      else e | _, _ => e end | _ => e end%bool.
+Global Instance set_slice0_small_ok : Ok set_slice0_small.
+Proof.
+  t.
+  eapply Zle_bool_imp_le in H0; rewrite Z.ones_equiv in H0; eapply Z.lt_le_pred in H0.
+  eapply Zle_bool_imp_le in H1; rewrite Z.ones_equiv in H1; eapply Z.lt_le_pred in H1.
+  assert ((0 <= y < 2^Z.of_N sz)%Z) by Lia.lia; clear dependent z.
+  assert ((0 <= y0 < 2^Z.of_N sz)%Z) by Lia.lia; clear dependent z0.
+  rewrite ?Z.shiftl_0_r, Z.land_ones, Z.mod_small by Lia.lia.
+  destruct (Z.eq_dec y 0); subst.
+  { rewrite Z.ldiff_0_l, Z.lor_0_r; trivial. }
+  rewrite Z.ldiff_ones_r_low, Z.lor_0_r; try Lia.lia.
+  eapply Z.log2_lt_pow2; Lia.lia.
+Qed.
+
 Lemma indN: forall (P: N -> Prop),
     P 0%N ->                                 (* base case to prove *)
     (forall n: N, P n -> P (n + 1)%N) ->     (* inductive case to prove *)
@@ -1011,6 +1031,7 @@ Definition expr : expr -> expr :=
   ;slice01_subborrowZ
   ;set_slice_set_slice
   ;slice_set_slice
+  ;set_slice0_small 
   ;truncate_small
   ;flatten_associative
   ;consts_commutative
@@ -1141,7 +1162,9 @@ Module error.
   | set_const (_ : CONST) (_ : idx)
   | expected_const (_ : idx)
 
+  | unsupported_memory_access_size (_:N)
   | unimplemented_instruction (_ : NormalInstruction)
+  | unsupported_line (_ : RawLine)
   | ambiguous_operation_size (_ : NormalInstruction)
 
   | failed_to_unify (_ : list (expr * (option idx * option idx))).
@@ -1155,7 +1178,9 @@ Module error.
    | store a v => "error.store " ++ show a ++ " " ++ show v
    | set_const c i => "error.set_const " ++ show c ++ " " ++ show i
    | expected_const i => "error.expected_const " ++ show i
+   | unsupported_memory_access_size n => "error.unsupported_memory_access_size " ++ show n
    | unimplemented_instruction n => "error.unimplemented_instruction " ++ show n
+   | unsupported_line n => "error.unsupported_line " ++ show n
    | ambiguous_operation_size n => "error.ambiguous_operation_size " ++ show n
    | failed_to_unify l => "error.failed_to_unify " ++ show l
    end%string.
@@ -1245,19 +1270,20 @@ Definition Address {sa : AddressSize} (a : MEM) : M idx :=
   App (add sa, [bi; offset]).
 
 Definition Load {s : OperationSize} {sa : AddressSize} (a : MEM) : M idx :=
+  if negb (orb (Syntax.operand_size a s =? 8 )( Syntax.operand_size a s =? 64))%N
+  then err (error.unsupported_memory_access_size (Syntax.operand_size a s)) else
   addr <- Address a;
   v <- Load64 addr;
-  if N.eqb (Syntax.operand_size a s) 64%N
-  then ret v
-  else App ((slice 0 (Syntax.operand_size a s)), [v]).
+  App ((slice 0 (Syntax.operand_size a s)), [v]).
 
 Definition Store {s : OperationSize} {sa : AddressSize} (a : MEM) v : M unit :=
+  if negb (orb (Syntax.operand_size a s =? 8 )( Syntax.operand_size a s =? 64))%N
+  then err (error.unsupported_memory_access_size (Syntax.operand_size a s)) else
   addr <- Address a;
-  if N.eqb s 64%N
-  then Store64 addr v
-  else old <- Load64 addr;
-       v <- App (set_slice 0 (Syntax.operand_size a s), [old; v])%N;
-       Store64 addr v.
+  old <- Load64 addr;
+  v <- App (slice 0 (Syntax.operand_size a s), [v]);
+  v <- App (set_slice 0 (Syntax.operand_size a s), [old; v])%N;
+  Store64 addr v.
 
 (* note: this could totally just handle truncation of constants if semanics handled it *)
 Definition GetOperand {s : OperationSize} {sa : AddressSize} (o : ARG) : M idx :=
@@ -1462,11 +1488,27 @@ Definition SymexNormalInstruction (instr : NormalInstruction) : M unit :=
  end
   | _ => err (error.ambiguous_operation_size instr) end%N%x86symex.
 
-Definition SymexNormalInstructions := fun st is => mapM_ SymexNormalInstruction is st.
+Definition SymexRawLine (rawline : RawLine) : M unit :=
+  match rawline with
+  | EMPTY
+  | LABEL _
+    => ret tt
+  | INSTR instr
+    => SymexNormalInstruction instr
+  | SECTION _
+  | GLOBAL _
+      => err (error.unsupported_line rawline)
+  end.
 
-Definition invert_rawline l := match l.(rawline) with INSTR instr => Some instr | _ => None end.
-Definition SymexLines st (lines : list Syntax.Line) :=
-  SymexNormalInstructions st (Option.List.map invert_rawline lines).
+Definition SymexLine line := SymexRawLine line.(rawline).
+
+Fixpoint SymexLines (lines : Lines) : M unit
+  := match lines with
+     | [] => ret tt
+     | line :: lines
+       => (st <- SymexLine line;
+          SymexLines lines)
+     end.
 
 (*Print map.
 Fixpoint some_sum l0:=
