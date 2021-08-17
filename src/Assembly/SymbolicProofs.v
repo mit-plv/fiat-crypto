@@ -961,11 +961,11 @@ Lemma Z__ones_nonneg n (H : 0 <= n)  : 0 <= Z.ones n.
 Proof. rewrite Z.ones_equiv. pose proof Z.pow_pos_nonneg 2 n ltac:(lia) ltac:(assumption); Lia.lia. Qed.
 
 
-Lemma R_SymexNornalInstruction s m (HR : R s m) instr :
-  forall s', Symbolic.SymexNormalInstruction instr s = Success (tt, s') ->
-  exists m', Semantics.DenoteNormalInstruction m instr = Some m' /\ R s' m'.
+Lemma SymexNornalInstruction_R s m (HR : R s m) instr :
+  forall _tt s', Symbolic.SymexNormalInstruction instr s = Success (_tt, s') ->
+  exists m', Semantics.DenoteNormalInstruction m instr = Some m' /\ R s' m' /\ s :< s'.
 Proof.
-  intros s' H.
+  intros [] s' H.
   case instr as [op args]; cbv [SymexNormalInstruction] in H.
   repeat destruct_one_match_hyp; repeat step01.
 
@@ -991,6 +991,7 @@ Proof.
   | _ => rewrite (Bool.pull_bool_if Some)
   | |- exists _, Some _ = Some _ /\ _ => eexists; split; [f_equal|]
   | |- exists _, None   = Some _ /\ _ => exfalso
+  | |- _ /\ _ :< _ => split; [|solve[eauto 99 with nocore] ]
   end.
 
   all : cbn [fold_right map]; rewrite ?N2Z.id, ?Z.add_0_r, ?Z.add_assoc, ?Z.mul_1_r, ?Z.land_m1_r, ?Z.lxor_0_r;
@@ -1027,7 +1028,8 @@ Proof.
     cbn; repeat (rewrite ?Z.land_ones, ?Z.add_opp_r by Lia.lia).
     push_Zmod; pull_Zmod. replace v1 with v by congruence. exact eq_refl. }
   { cbv [Symbolic.PreserveFlag Symbolic.HavocFlags Symbolic.update_flag_with ret] in HSx4; cbn in HSx4; induction_path_ErrorT HSx4; Prod.inversion_prod; subst.
-    inversion H; subst s'.
+    inversion H; clear H; subst s'.
+    split; [|solve[eauto 99 with nocore] ].
     destruct s6, m0;
       repeat match goal with
              | _ => Option.inversion_option_step
@@ -1055,6 +1057,7 @@ Proof.
     push_Zmod; pull_Zmod. replace v1 with v by congruence. exact eq_refl. }
   { cbv [Symbolic.PreserveFlag Symbolic.HavocFlags Symbolic.update_flag_with ret] in HSx4; cbn in HSx4; induction_path_ErrorT HSx4; Prod.inversion_prod; subst.
     inversion H; subst s'.
+    split; [|solve[eauto 99 with nocore] ].
     destruct s6, m0;
       repeat match goal with
              | _ => Option.inversion_option_step
@@ -1114,14 +1117,14 @@ Proof.
 
   Unshelve. all : match goal with H : context[Syntax.cmovc] |- _ => idtac | _ => shelve end.
   { (* cmovc *)
-    destruct vCF; cbn [negb Z.b2z Z.eqb] in *; eauto; [].
-    enough (m = m0) by (subst; eauto).
+    destruct vCF; cbn [negb Z.b2z Z.eqb] in *; eauto 9; [].
+    enough (m = m0) by (subst; eauto 9).
     clear -Hm0 Hv frame G ; eauto using SetOperand_same. }
 
   Unshelve. all : match goal with H : context[Syntax.cmovnz] |- _ => idtac | _ => shelve end.
   { (* cmovnz *)
-    destruct vZF; cbn [negb Z.b2z Z.eqb] in *; eauto; [].
-    enough (m = m0) by (subst; eauto). 
+    destruct vZF; cbn [negb Z.b2z Z.eqb] in *; eauto 9; [].
+    enough (m = m0) by (subst; eauto 9). 
     clear -Hm0 Hv0 frame G ; eauto using SetOperand_same. }
 
   Unshelve. all : match goal with H : context[Syntax.test] |- _ => idtac | _ => shelve end.
@@ -1161,6 +1164,7 @@ Proof.
       rewrite Z.shiftr_0_r. rewrite Z.land_ones by lia.
       rewrite <-Z.bit0_mod. exact eq_refl. }
   all : destruct_one_match; try lia.
+  all : split; [|solve[eauto 99 with nocore] ].
   all:
       destruct s';
       repeat match goal with
@@ -1198,4 +1202,17 @@ Proof.
   all : fail.
 Qed.
 
+Lemma SymexLines_R s m (HR : R s m) asm :
+  forall _tt s', Symbolic.SymexLines asm s = Success (_tt, s') ->
+  exists m', Semantics.DenoteLines m asm = Some m' /\ R s' m' /\ s :< s'.
+Proof.
+  revert dependent m; revert dependent s; induction asm; cbn [SymexLines DenoteLines]; intros.
+  { inversion H; subst; eauto. }
+  destruct a.
+  rewrite unfold_bind in H; destruct_one_match_hyp; inversion_ErrorT.
+  cbv [SymexLine SymexRawLine DenoteLine DenoteRawLine ret err Crypto.Util.Option.bind] in *; cbn in *.
+  destruct_one_match_hyp; inversion_ErrorT; subst; eauto; destruct v.
+  eapply SymexNornalInstruction_R in E; eauto. destruct E as (m1&Hm1&Rm1&?). rewrite Hm1.
+  eapply IHasm in H; eauto. destruct H as (?&?&?&?). eauto 9.
+Qed.
 End WithCtx.
