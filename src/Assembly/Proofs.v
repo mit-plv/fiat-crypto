@@ -205,6 +205,11 @@ Proof.
   inversion_prod; subst; eauto 9.
 Qed.
 
+(* workaround: using cbn instead of this lemma makes Qed hang after next destruct *)
+Lemma unfold_symex_bind {A B} ma amb :
+  @symex_bind A B ma amb = ltac:(let t := eval cbv [symex_bind ErrorT.bind] in (@symex_bind A B ma amb) in exact t).
+Proof. exact eq_refl. Qed.
+
 Theorem symex_ident_correct
         {t} (idc : ident t)
         (d : dag)
@@ -226,8 +231,9 @@ Proof using Type.
   all: cbn [type.app_curried type.and_for_each_lhs_of_arrow Compilers.ident_interp symex_T_app_curried type.for_each_lhs_of_arrow] in *.
   all: cbn [API.interp_type base_var type.final_codomain var] in *.
   all: destruct_head'_prod; destruct_head'_unit.
-  all: cbv [symex_T_error symex_error symex_return symex_bind ErrorT.bind ident.eagerly ident.literal] in *.
+  all: cbv [symex_T_error symex_error symex_return ident.eagerly ident.literal] in *.
   all : repeat match goal with
+        | H : context[symex_bind _ _] |- _ => rewrite !unfold_symex_bind in H
         | _ => destruct_one_head'_and
         | _ => inversion_ErrorT_step
         | H : App ?e ?d = Success (?i, ?d') |- _ =>
@@ -299,7 +305,7 @@ Proof using Type.
   all : rewrite Z2N.id by eapply Z.log2_nonneg.
   all : match goal with H : Z.succ _=_|-_=> rewrite <-H, Z.add_1_r end; trivial.
   all : fail.
-Admitted.
+Qed.
 Theorem symex_expr_correct
         {t} (expr1 : API.expr (var:=var) t) (expr2 : API.expr (var:=API.interp_type) t)
         (d : dag)
