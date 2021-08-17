@@ -48,8 +48,8 @@ Definition assembly_stack_size {v : assembly_stack_size_opt} (asm : _) : N
      | None
        => match Option.List.map
                   (fun l
-                   => match l with
-                      | {| Syntax.op := sub ; args := [reg rsp; Syntax.const n] |}
+                   => match l.(rawline) with
+                      | INSTR {| Syntax.op := sub ; args := [reg rsp; Syntax.const n] |}
                         => Some (Z.to_N n)
                       | _ => None
                       end)
@@ -89,6 +89,7 @@ Inductive EquivalenceCheckingError :=
 | Unhandled_cast (_ _ : Z)
 | Unable_to_unify (_ _ : list (idx + list idx)) (_ : symbolic_state)
 | Missing_ret
+| Code_after_ret
 .
 
 Global Instance show_lines_EquivalenceCheckingError : ShowLines EquivalenceCheckingError
@@ -129,8 +130,10 @@ Global Instance show_lines_EquivalenceCheckingError : ShowLines EquivalenceCheck
                   => ["Argument not yet handled by symbolic evaluation: " ++ show (l, u)]%string
                 | Unable_to_unify asm_output PHOAS_output r
                   => ["Unable to unify: " ++ show asm_output ++ " == " ++ show PHOAS_output]%string ++ show_lines r
-                | Missing_reg
+                | Missing_ret
                   => ["Missing 'ret' at the end of the function"]
+                | Code_after_ret
+                  => ["Code after ret"]
                 end%list.
 Global Instance show_EquivalenceCheckingError : Show EquivalenceCheckingError
   := fun err => String.concat String.NewLine (show_lines err).
@@ -663,7 +666,7 @@ Definition symex_PHOAS
 
 Definition symex_asm_func
            (d : dag) (gensym_st : gensym_state) (output_types : type_spec) (stack_size : nat)
-           (inputs : list (idx + list idx)) (reg_available : list REG) (asm : list NormalInstruction)
+           (inputs : list (idx + list idx)) (reg_available : list REG) (asm : Lines)
   : ErrorT EquivalenceCheckingError (list (idx + list idx) * symbolic_state)
   := let '(output_placeholders, (d, gensym_st)) := build_inputs (d, gensym_st) output_types in
       let '(rsp_idx, gensym_st) := gensym gensym_st in
@@ -694,7 +697,7 @@ Definition symex_asm_func
             a <- @Address (64%N) {| mem_reg := rsp; mem_offset := Some (Z.opp (Z.of_nat(8*S i))); mem_is_byte := false; mem_extra_reg:=None |};
             (fun s => Success (tt, update_mem_with s (cons (a,idx))))
           ) (List.enumerate stack_placeholders);
-        _ <- mapM_ SymexNormalInstruction asm;
+        _ <- SymexLines asm;
         Symbolic.ret argptrs)%N%x86symex s0
       with
       | Error (e, s) => Error (Symbolic_execution_failed e s)
@@ -718,16 +721,6 @@ Section check_equivalence.
           {assembly_output_first : assembly_output_first_opt}
           {assembly_argument_registers_left_to_right : assembly_argument_registers_left_to_right_opt}.
 
-  Search ErrorT option.
-  Definition strip_comments : Lines -> _ := Option.List.map invert_rawline.
-
-  Definition strip_ret asm : ErrorT EquivalenceCheckingError (list NormalInstruction) :=
-    if Equality.NormalInstruction_beq
-      (List.last asm (Build_NormalInstruction clc nil))
-      (Build_NormalInstruction Syntax.ret nil)
-    then Success (List.removelast asm)
-    else Error Missing_ret.
-
   Section with_expr.
     Context {t}
             (asm : Lines)
@@ -735,11 +728,18 @@ Section check_equivalence.
             (arg_bounds : type.for_each_lhs_of_arrow ZRange.type.option.interp t)
             (out_bounds : ZRange.type.base.option.interp (type.final_codomain t)).
 
-    Definition check_equivalence : ErrorT EquivalenceCheckingError unit :=
-      asm <- strip_ret (strip_comments asm);
+    Definition strip_ret (asm : Lines) :=
+      let isinstr := fun l => match l.(rawline) with INSTR _ => true | _ => false end in
+      let notret := fun l => negb (Equality.RawLine_beq l.(rawline) (INSTR {| Syntax.op := Syntax.ret; Syntax.args := nil |})) in
+      match dropWhile notret asm with
+      | nil => Error Missing_ret
+      | cons _r trailer =>
+          if List.existsb isinstr trailer then Error Code_after_ret
+          else Success (takeWhile notret asm)
+      end.
 
+    Definition check_equivalence : ErrorT EquivalenceCheckingError unit :=
       let reg_available := assembly_calling_registers (* registers available for calling conventions *) in
-      let stack_size : nat := N.to_nat (assembly_stack_size asm) in
       let d := empty_dag in
       let gensym_st := gensym_state_init in
       input_types <- simplify_input_type t arg_bounds;
@@ -749,6 +749,8 @@ Section check_equivalence.
       PHOAS_output <- symex_PHOAS expr inputs d;
       let '(PHOAS_output, d) := PHOAS_output in
 
+      asm <- strip_ret asm;
+      let stack_size : nat := N.to_nat (assembly_stack_size asm) in
       symevaled_asm <- symex_asm_func d gensym_st output_types stack_size inputs reg_available asm;
       let '(asm_output, s) := symevaled_asm in
 

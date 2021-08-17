@@ -9,14 +9,69 @@ Require Import Crypto.Assembly.Syntax.
 Require Import Crypto.Assembly.Symbolic.
 Require Import Crypto.Assembly.Semantics.
 Require Import Crypto.Assembly.Equivalence.
+Import Permutation.
 
-Require Import coqutil.Word.Interface.
-Require Import coqutil.Map.Interface. (* coercions *)
 Require Import bedrock2.Map.Separation.
-Require Import bedrock2.Memory.
-Require coqutil.Map.SortedListWord.
-Require coqutil.Word.Naive.
-Local Notation mem_state := (SortedListWord.map (Naive.word 64) Byte.byte).
+Require Import bedrock2.Map.SeparationLogic.
+Require Import bedrock2.Memory. Import WithoutTuples.
+Require Import coqutil.Map.Interface. (* coercions *)
+Require Import coqutil.Word.Interface.
+Require Import coqutil.Word.LittleEndianList.
+Import Word.Naive.
+
+Section Memory.
+  (* bedrock2/src/bedrock2/Memory.v Section WithoutTuples *)
+  Import Word.Properties Word.Interface Coq.Init.Byte coqutil.Map.OfListWord Map.Properties coqutil.Tactics.Tactics.
+  Context {width: Z} {word: word width} {mem: map.map word byte}.
+  Context {mem_ok: map.ok mem} {word_ok: word.ok word}.
+  Local Infix "$+" := map.putmany (at level 70).
+  Local Notation "xs $@ a" := (map.of_list_word_at a xs) (at level 10, format "xs $@ a").
+  Local Notation unchecked_store_bytes := (unchecked_store_bytes (mem:=mem) (word:=word)).
+  Lemma unchecked_store_bytes_unchecked_store_bytes m a bs1 bs2 :
+    length bs1 = length bs2 ->
+    unchecked_store_bytes (unchecked_store_bytes m a bs1) a bs2 =
+    unchecked_store_bytes m a bs2.
+  Proof.
+    cbv [unchecked_store_bytes]; intros.
+    eapply map.map_ext; intros.
+    rewrite !map.get_putmany_dec, !map.get_of_list_word_at;
+      repeat (destruct_one_match; trivial).
+    epose proof proj1 (List.nth_error_Some bs1 (BinInt.Z.to_nat (word.unsigned (word.sub k a)))) ltac:(congruence).
+    rewrite H in H0.
+    eapply List.nth_error_Some in E; intuition idtac.
+  Qed.
+
+  (* not sure where to put this since depends on sep *)
+  Import Map.Interface Word.Interface BinInt.
+  Local Coercion Z.of_nat : nat >-> Z.
+  Local Coercion word.unsigned : word.rep >-> Z.
+  Let sepclause_of_map {key value map} (m : @map.rep key value map)
+    : map.rep -> Prop := Logic.eq m.
+  Local Coercion sepclause_of_map : Interface.map.rep >-> Funclass.
+
+  Lemma unchecked_store_bytes_of_sep
+    m a bs1 bs2 R (Hsep : sep R (bs1$@a) m)
+    (Hlen : length bs1 = length bs2)
+    : sep R (bs2$@a) (unchecked_store_bytes m a bs2).
+  Proof.
+    destruct Hsep as (?&?&(?&Hd)&HR&?);
+      cbv [sepclause_of_map] in *; subst.
+    setoid_rewrite unchecked_store_bytes_unchecked_store_bytes; trivial.
+    eexists _, _; split; split; try exact HR; try exact eq_refl.
+    cbv [map.disjoint] in *; intros k v1 v2 Hv1 Hv2.
+    pose proof map.get_of_list_word_at_domain a bs1 k as HA.
+    pose proof map.get_of_list_word_at_domain a bs2 k as HB.
+    rewrite Hlen, <-HB in HA; clear HB.
+    destruct (map.get (bs2$@a) k) in *; try congruence.
+    pose proof proj2 HA ltac:(congruence).
+    destruct (map.get (bs1$@a) k) eqn:? in *; try congruence.
+    eauto.
+  Qed.
+End Memory.
+
+
+Import BreakMatch DestructHead UniquePose.
+Import coqutil.Tactics.autoforward coqutil.Decidable coqutil.Tactics.Tactics.
 
 Local Coercion ExprRef : idx >-> expr.
 
@@ -40,15 +95,12 @@ Definition R_flag (x : option idx) (ob : option bool) : Prop :=
 Definition R_flags : Symbolic.flag_state -> Semantics.flag_state -> Prop :=
   Tuple.fieldwise R_flag.
 
-
-Definition R_cell64' (a v : Z) : mem_state -> Prop :=
-  eq (OfListWord.map.of_list_word_at (word.of_Z a)
-  (HList.tuple.to_list (LittleEndian.split 8 v))).
-
-Definition R_cell64 (ia iv : idx) (m : mem_state) : Prop :=
-  exists a, eval ia a /\
-  exists v, eval iv v /\
-  R_cell64' a v m.
+Definition R_cell64 (ia iv : idx) : mem_state -> Prop :=
+  Lift1Prop.ex1 (fun a =>
+  Lift1Prop.ex1 (fun bs => sep (emp (
+      eval ia (word.unsigned a) /\
+      length bs = 8%nat /\ eval iv (le_combine bs)))
+    (eq (OfListWord.map.of_list_word_at a bs)))).
 
 Fixpoint R_mem (sm : Symbolic.mem_state) : mem_state -> Prop :=
   match sm with
@@ -69,11 +121,10 @@ End WithDag.
 Local Hint Resolve R_flag_None_l : core.
 Local Hint Resolve R_flag_None_r : typeclass_instances.
 
-Axiom TODOmem : Semantics.mem_state -> mem_state.
 Definition R (ss : symbolic_state) (ms : machine_state) : Prop :=
   let (mr, mf, mm) := ms in
   let (d, sr, sf, sm) := ss in
-  dag_ok d /\ R_regs d sr mr /\ R_flags d sf mf /\ R_mem d sm (TODOmem mm).
+  dag_ok d /\ R_regs d sr mr /\ R_flags d sf mf /\ R_mem d sm mm.
 
 Lemma get_flag_R s m f (HR : R s m) :
   forall i, Symbolic.get_flag s f = Some i ->
@@ -128,7 +179,7 @@ Local Arguments N.shiftr !_ !_.
 Local Arguments Z.modulo !_ !_.
 Local Arguments Z.add !_ !_.
 Local Arguments Z.b2z ! _.
-Local Arguments Z.ones ! _.
+Local Arguments Z.ones : simpl never.
 Local Arguments Z.land !_ !_.
 Local Arguments Z.lor !_ !_.
 Local Arguments Z.shiftl !_ !_.
@@ -159,8 +210,25 @@ Proof.
     intuition eauto using R_reg_subsumed.
 Qed.
 
+Local Existing Instance Naive.word64_ok.
+Local Existing Instance SortedListWord.ok.
+
+Lemma R_cell64_subsumed d i i0 d' (Hd' : d :< d') m :
+  R_cell64 d i i0 m -> R_cell64 d' i i0 m.
+Proof.
+  intros (?&?&?&(?&?&?&?)).
+  eexists _, _, _, _; split; cbv [emp] in *; intuition eauto.
+Qed.
+
 Lemma R_mem_subsumed d s m (HR : R_mem d s m) d' (Hlt : d :< d')
-  : R_mem d' s m. Admitted.
+  : R_mem d' s m.
+Proof.
+  revert dependent m; induction s; cbn; break_match; intuition idtac.
+  eapply SeparationLogic.Proper_sep_impl1; try eassumption.
+  intro; eauto using R_cell64_subsumed.
+  Unshelve. 
+  { refine (SortedListWord.ok _ _). }
+Qed.
 
 Lemma R_subsumed s m (HR : R s m) d' (Hd' : dag_ok d') (Hlt : s :< d')
   (s' := update_dag_with s (fun _ => d')) : R s' m.
@@ -168,6 +236,25 @@ Proof.
   destruct s, m; case HR as (Hd&Hr&Hf&Hm);
     cbv [update_dag_with] in *; cbn in *;
     intuition eauto using R_flags_subsumed, R_regs_subsumed, R_mem_subsumed.
+Qed.
+
+Lemma R_mem_Permutation d s1 m (HR : R_mem d s1 m) s2
+  (HP : Permutation s1 s2) : R_mem d s2 m.
+Proof.
+  revert dependent m. induction HP; cbn; break_match; intros; eauto.
+  { eapply SeparationLogic.Proper_sep_impl1; cbv [Lift1Prop.impl1]; eauto. }
+  cbv [mem_state] in *.
+  refine (Lift1Prop.subrelation_iff1_impl1 _ _ _ _ _ HR); clear HR.
+  SeparationLogic.cancel.
+  SeparationLogic.cancel_seps_at_indices 0%nat 1%nat; try exact _.
+  { refine (SortedListWord.ok _ _). }
+  2: { epose proof Properties.word.eqb_spec. exact H. }
+  trivial.
+  reflexivity.
+  Unshelve.
+  { refine (SortedListWord.ok _ _). }
+  { refine (SortedListWord.ok _ _). }
+  2: { epose proof Properties.word.eqb_spec. exact H. }
 Qed.
 
 Lemma Tuple__nth_default_to_list' {A} n (xs : Tuple.tuple' A n) (d : A) :
@@ -307,6 +394,309 @@ Ltac eval_same_expr_goal :=
 
 Import ListNotations.
 
+Lemma SetFlag_R s m f (HR : R s m) (i:idx) b (Hi : eval s i (Z.b2z b)) :
+  forall _tt s', Symbolic.SetFlag f i s = Success (_tt, s') ->
+  R s' (SetFlag m f b) /\ s :< s'.
+Proof.
+  destruct s; cbv [Symbolic.SetFlag Symbolic.update_flag_with Symbolic.set_flag] in *;
+    intros; inversion_ErrorT_step; Prod.inversion_prod; subst.
+  cbv [R].
+  intuition idtac.
+  all : try eapply R_set_flag_internal; eauto.
+  all : cbv [R] in *; intuition idtac.
+Qed.
+
+Ltac step_SetFlag :=
+  match goal with
+  | H : Symbolic.SetFlag ?f ?i ?s = Success (?_tt, ?s') |- _ =>
+    let i := open_constr:(_) in let b := open_constr:(_) in
+    let Hs' := fresh "H" s' in let Hlt := fresh "He" s' in
+    let t := open_constr:(fun A B => SetFlag_R s _ f A i b B _ _ H) in
+    unshelve (edestruct t as (Hs'&Hlt); clear H); shelve_unifiable;
+    [eassumption|..|clear H]
+  end.
+
+Lemma GetReg_R s m (HR: R s m) r i s'
+  (H : @GetReg r s = Success (i, s'))
+  : R s' m  /\ s :< s' /\ eval s' i (get_reg m r).
+Proof.
+  cbv [GetReg GetReg64 bind some_or get_reg index_and_shift_and_bitcount_of_reg] in *.
+  pose proof (get_reg_R s _ ltac:(eassumption) (reg_index r)) as Hr.
+  destruct Symbolic.get_reg in *; [|inversion H]; cbn in H.
+  specialize (Hr _ eq_refl); case Hr as (v&Hi0&Hv).
+  rewrite Hv; clear Hv.
+  step_symex; eauto.
+  repeat (eauto || econstructor); cbn [interp_op].
+Qed.
+
+Lemma Address_R s m (HR : R s m) sa o a s' (H : @Symbolic.Address sa o s = Success (a, s'))
+  : R s' m /\ s :< s' /\ exists v, eval s' a v /\ @DenoteAddress sa m o = v.
+Proof.
+  destruct o as [? ? ? ?]; cbv [Address DenoteAddress] in *; repeat step_symex.
+  eapply GetReg_R in HSbase; eauto; []; DestructHead.destruct_head'_and.
+  destruct mem_extra_reg; cbn -[GetReg] in *.
+  1: eapply GetReg_R in HSindex; eauto; []; DestructHead.destruct_head'_and.
+  all: destruct mem_offset; cbn -[GetReg] in *.
+  all: (step_symex; try solve [repeat (eauto || econstructor)]; []).
+  all: (step_symex; try solve [repeat (eauto || econstructor)]; []).
+  all: (step_symex; try solve [repeat (eauto || econstructor)]; []).
+  3,4: (step_symex; try solve [repeat (eauto || econstructor)]; []).
+  all : cbn in *.
+  all : Tactics.ssplit; eauto 99 with nocore.
+  all : eexists; split; eauto; [].
+  all : cbv [DenoteConst].
+  all : rewrite ?Z.add_0_r, ?Z.land_ones, ?Z.shiftr_div_pow2 by lia.
+  all : push_Zmod; pull_Zmod; split; trivial.
+Qed.
+
+Ltac step_Address :=
+  match goal with HSa: context[Address] |- _ =>
+      eapply Address_R in HSa; [|eassumption];
+          destruct HSa as (?&?&?&?&?)
+  end.
+
+Ltac step_symex4 := first [step_symex3 | step_SetFlag | step_Address].
+Ltac step_symex ::= step_symex4.
+
+Lemma load_bytes_Rcell64 d
+  (a:idx) va (Ha : eval d a va)
+  i m fr (HR : (R_cell64 d a i ⋆ fr)%sep m)
+  : exists bs, load_bytes m (word.of_Z va) 8 = Some bs /\ eval d i (le_combine bs).
+Proof.
+  cbn in HR. eapply SeparationLogic.sep_comm in HR.
+  destruct HR as (?&?&(?&?)&?&?). rewrite H.
+  destruct H2 as (?&?&?). eapply SeparationLogic.sep_emp_l in H2;
+    destruct_head'_and.
+  eapply eval_eval in Ha; [|eauto]; []; subst.
+  eexists; split; try eassumption; cbv [get_mem Crypto.Util.Option.bind] in *.
+  rewrite word.of_Z_unsigned.
+  unshelve epose proof load_bytes_of_putmany_bytes_at _ x1 x _ H4 ltac:(clear;lia).
+  destruct load_bytes eqn:?; simpl in *; try congruence; eassumption.
+  Unshelve.
+  { refine (SortedListWord.ok _ _). }
+  2: { epose proof Properties.word.eqb_spec. exact H. }
+Qed.
+
+Lemma Load64_R s m (HR : R s m) (a : idx)
+  va (Ha : eval s a va)
+  i s' (H : Load64 a s = Success (i, s'))
+  : s' = s /\ exists v, eval s i v /\ get_mem m va 8 = Some v /\ v = Z.land v (Z.ones 64).
+Proof.
+  cbv [Load64 some_or Symbolic.load option_map] in *.
+  destruct find as [(?&?)|] eqn:? in *;
+    inversion_ErrorT; Prod.inversion_prod; subst.
+  split;trivial.
+  eapply ListUtil.find_some_iff in Heqo;
+    repeat (cbn in *; destruct_head'_and; destruct_head'_ex).
+  clear H1. autoforward with typeclass_instances in H0; subst.
+  eapply nth_error_split in H;
+    repeat (cbn in *; destruct_head'_and; destruct_head'_ex).
+  destruct s'; cbn in *; destruct_head'_and; subst.
+  progress unfold machine_mem_state in *.
+  eapply R_mem_Permutation in H4;
+    [|symmetry; eapply Permutation.Permutation_middle].
+  cbv [get_mem Crypto.Util.Option.bind].
+  eapply load_bytes_Rcell64 in H4; eauto; [];
+    repeat (destruct_head'_and; destruct_head'_ex).
+  eexists; split; try eassumption; split.
+  { destruct_one_match; simpl in *; try congruence. }
+  { epose proof le_combine_bound x as HH.
+    erewrite length_load_bytes in HH by eassumption.
+    rewrite Z.land_ones, Z.mod_small; lia. }
+Qed.
+
+Lemma store_R d s m (HR : R_mem d s m)
+  (a : idx) va (Ha : eval d a va)
+  (i : idx) v (Hi :eval d i v) (Hv : v = Z.land v (Z.ones 64))
+  v' (Hv' : Z.land v' (Z.ones 64) = v)
+  s' (H : Symbolic.store a i s = Some s')
+  : exists m', set_mem m va 8 v' = Some m' /\ R_mem d s' m'.
+Proof.
+  cbv [Symbolic.store Crypto.Util.Option.bind ] in *.
+  destruct List.indexof eqn:Hfound; Option.inversion_option.
+  eapply List.indexof_Some in Hfound; destruct_head_ex; destruct_head_and.
+  autoforward with typeclass_instances in H1; subst a s'.
+  pose H0 as H0'; eapply nth_error_split in H0';
+    repeat (destruct_head_and; destruct_head_ex); subst s n.
+  destruct x; cbn [fst snd] in *.
+  eapply R_mem_Permutation in HR;
+    [|symmetry; eapply Permutation.Permutation_middle].
+  cbv [set_mem store_bytes].
+  pose proof split_le_combine (le_split 8 v').
+  rewrite length_le_split, le_combine_split, <-Z.land_ones in H by lia.
+  setoid_rewrite Hv' in H; clear Hv'; rewrite <-H; clear H.
+  cbn in HR.
+  rewrite length_le_split.
+  pose proof HR as HR'; eapply load_bytes_Rcell64 in HR'; eauto; [];
+    repeat (destruct_head'_and; destruct_head'_ex).
+  rewrite H.
+  eexists; split; trivial; [].
+  erewrite <-Crypto.Util.ListUtil.splice_nth_equiv_update_nth_update
+    by (rewrite app_length; cbn; clear; lia); instantiate (1:=(0,0)%N).
+  cbv [Crypto.Util.ListUtil.splice_nth].
+  rewrite ListUtil.firstn_app_sharp by trivial.
+  rewrite (ListUtil.app_cons_app_app _ _ _ x1) at 2.
+  rewrite ListUtil.skipn_app_sharp by (rewrite app_length; cbn; clear; lia).
+  cbv [nth_default]; destruct_one_match; setoid_rewrite H0 in E;
+    Option.inversion_option; destruct p; Prod.inversion_prod; subst;
+    cbn [fst snd].
+  eapply R_mem_Permutation; [|eapply Permutation.Permutation_middle];
+  cbn [R_mem]; cbv [R_cell64] in *.
+  eapply SeparationLogic.sep_ex1_l in HR. destruct HR as [? HR].
+  (* COQBUG: semicolon on previous line fails *)
+  eapply SeparationLogic.sep_ex1_l in HR. destruct HR as [? HR].
+  eapply SeparationLogic.sep_assoc in HR;
+  eapply SeparationLogic.sep_emp_l in HR. destruct HR as [(?&?&?) HR].
+  eapply eval_eval in Ha; [|eauto]; []; subst.
+  eapply SeparationLogic.sep_ex1_l; eexists.
+  eapply SeparationLogic.sep_ex1_l; eexists.
+  rewrite word.of_Z_unsigned.
+  eapply SeparationLogic.sep_assoc, SeparationLogic.sep_emp_l; split.
+  2:{ eapply SeparationLogic.sep_comm in HR.
+    eapply SeparationLogic.sep_comm, unchecked_store_bytes_of_sep; eauto. }
+  rewrite le_combine_split, Z.mod_small; eauto.
+  rewrite Z.land_ones in Hv by (clear;lia).
+  clear -Hv; cbn in *; Z.div_mod_to_equations; lia.
+
+  all : fail. Unshelve. all : shelve_unifiable.
+  all : try refine (SortedListWord.ok _ _).
+  all : try (epose proof Properties.word.eqb_spec as HH; exact HH).
+Qed.
+
+Lemma Store64_R s m (HR : R s m)
+  (a : idx) va (Ha : eval s a va)
+  (i : idx) v (Hi :eval s i v) (Hv : v = Z.land v (Z.ones 64))
+  v' (Hv' : Z.land v' (Z.ones 64) = v)
+  s' _tt (H : Store64 a i s = Success (_tt, s'))
+  : exists m', SetMem m va 8 v' = Some m' /\ R s' m' /\ s :< s'.
+Proof.
+  cbv [Store64 bind some_or Crypto.Util.Option.bind ErrorT.bind] in *.
+  destruct Symbolic.store eqn:? in H; inversion_ErrorT; Prod.inversion_prod; subst.
+  destruct s, m; cbv [R] in *; destruct_head'_and.
+  eapply store_R in Heqo; try eassumption; trivial; try lia;
+    destruct_head_ex; destruct_head_and.
+  cbv [SetMem]. setoid_rewrite H3; cbv [update_mem_with]; cbn; eauto 9.
+Qed.
+
+Lemma store8 m a
+  old (Hold : get_mem m a 8 = Some old) b
+  m'  (Hm': set_mem m a 8 (Z.lor (Z.land b (Z.ones 8)) (Z.ldiff old (Z.ones 8))) = Some m')
+  : set_mem m a 1 b = Some m'.
+Proof.
+  cbv [set_mem store_bytes] in *.
+  destruct_one_match_hyp; Option.inversion_option.
+  epose proof length_load_bytes _ _ _ _ E as H;
+    do 9 (destruct l; try solve [inversion H]); clear H.
+  epose proof nth_error_load_bytes _ _ _ _ E as H.
+  rewrite length_le_split in *.
+  destruct_one_match; cycle 1. 
+  { eapply load_bytes_None in E0; destruct E0 as (?&?&?).
+    destruct x; [|lia].
+    specialize (H 0%nat ltac:(lia));
+    rewrite H1 in H; inversion H. }
+  f_equal; rewrite <-Hm'; clear Hm'.
+  cbv [unchecked_store_bytes]; eapply map.map_ext; intros k.
+  setoid_rewrite OfListWord.map.of_list_word_singleton.
+  rewrite 2 Properties.map.get_putmany_dec, Properties.map.get_put_dec, map.get_empty, OfListWord.map.get_of_list_word_at.
+  break_innermost_match_step;
+    autoforward with typeclass_instances in Heqb8; subst.
+  { rewrite word.unsigned_sub, word.unsigned_of_Z, Z.sub_diag.
+    cbv [le_split]; cbn -[Z.ones]; f_equal.
+    eapply Byte.byte.unsigned_inj;
+      rewrite !Byte.byte.unsigned_of_Z; cbv [Byte.byte.wrap];
+      rewrite <-!Z.land_ones by lia.
+      bitblast.Z.bitblast. }
+  destruct_one_match; trivial.
+  epose proof Crypto.Util.ListUtil.nth_error_value_length _ _ _ _ E1 as I.
+  rewrite length_le_split in *. specialize (H _ I); clear I.
+  rewrite Z2Nat.id in H by (eapply Properties.word.unsigned_range).
+  rewrite word.of_Z_unsigned in H.
+  replace (word.add (word.of_Z a) (word.sub k (word.of_Z a)))
+     with k in H by ring.
+  rewrite <-H, <-E1; clear H E1.
+  remember (Z.to_nat (word.unsigned (word.sub k (word.of_Z a)))) as i.
+  destruct i.
+  { destruct Heqb8. eapply Properties.word.unsigned_inj.
+    epose proof Properties.word.unsigned_range (word.sub k (word.of_Z a)).
+    assert (word.unsigned (word.sub k (word.of_Z a)) = 0) by lia.
+    change (word.unsigned (word.sub k (word.of_Z a)) = word.unsigned (word.of_Z 0: Naive.word 64)) in H0.
+    rewrite word.unsigned_sub, Properties.word.unsigned_of_Z_0 in H0.
+    cbv [word.wrap] in H0.
+    pose proof Properties.word.unsigned_range k.
+    pose proof Properties.word.unsigned_range (word.of_Z a).
+    Z.div_mod_to_equations.
+    lia. }
+  cbv [get_mem Crypto.Util.Option.bind] in *;
+    destruct load_bytes in *; repeat Option.inversion_option; subst.
+  change (le_combine (cons ?x ?y))
+  with (Z.lor (Byte.byte.unsigned x) (Z.shiftl (le_combine y) 8)).
+  change (le_split 8 ?x)
+  with (Byte.byte.of_Z x:: le_split 7 (Z.shiftr x 8)).
+  progress cbn [nth_error]; f_equal.
+  rewrite Z.shiftr_lor, Z.shiftr_land, Z.land_0_r, Z.lor_0_l.
+  rewrite Z.shiftr_ldiff, Z.ldiff_0_r.
+  rewrite <-(Byte.byte.wrap_unsigned b0);
+    cbv [Byte.byte.wrap]; rewrite <-!Z.land_ones by lia.
+  rewrite Z.shiftr_lor, Z.shiftr_land, Z.land_0_r, Z.lor_0_l.
+  rewrite Z.shiftr_shiftl_l, Z.shiftl_0_r by lia.
+  setoid_rewrite (split_le_combine [b1; b2; b3; b4; b5; b6; b7]); trivial.
+Qed.
+
+
+Lemma GetOperand_R s m (HR: R s m) so sa a i s'
+  (H : @GetOperand so sa a s = Success (i, s'))
+  : R s' m /\ s :< s' /\ exists v, eval s' i v /\ DenoteOperand sa so m a = Some v.
+Proof.
+  cbv [GetOperand DenoteOperand] in *; BreakMatch.break_innermost_match.
+  { eapply GetReg_R in H; intuition eauto. }
+  { progress cbv [Load ret] in *.
+    repeat (cbv [err] in *; cbn [fst snd] in * || step_symex || Tactics.destruct_one_match_hyp || inversion_ErrorT || Prod.inversion_prod || subst).
+    eapply Load64_R in HSv; try eassumption; [];
+      repeat (subst; destruct_head'_and; destruct_head'_ex).
+    repeat step_symex.
+    { repeat (eauto||econstructor). }
+    split; eauto; [].
+    split; eauto; [].
+    rewrite Z.shiftr_0_r in Hi by lia.
+    eapply Bool.negb_false_iff, Bool.orb_true_iff in E; case E as [E|E];
+      eapply Ndec.Neqb_complete in E; rewrite E in *; simpl Z.of_N in *.
+    { cbv [get_mem Crypto.Util.Option.bind] in *.
+      destruct_one_match_hyp; Option.inversion_option.
+      epose proof length_load_bytes _ _ _ _ E0.
+      do 1 (destruct l; try solve [inversion H]).
+      eapply nth_error_load_bytes with (i0:=0%nat) in E0; [|clear;lia].
+      symmetry in E0; cbn [nth_error] in E0; simpl Z.of_nat in E0.
+      simpl load_bytes.
+      change (Pos.to_nat 1) with 1%nat.
+      cbv [load_bytes footprint map seq List.option_all].
+      setoid_rewrite E0.
+      eexists; split; eauto.
+      cbv [le_combine].
+      rewrite Z.shiftl_0_l, Z.lor_0_r.
+      change (Z.lor (Byte.byte.unsigned b) (Z.shiftl (le_combine l) 8) = x) in H4.
+      rewrite <-H4 in H5 at 2; rewrite H5; clear H4 H5.
+      f_equal.
+      rewrite <-Byte.byte.wrap_unsigned at 1; setoid_rewrite <-Z.land_ones; [|clear;lia].
+      rewrite <-Z.land_assoc.
+      change (Z.land (Z.ones 64) (Z.ones 8)) with (Z.ones 8).
+      rewrite Z.land_lor_distr_l.
+      bitblast.Z.bitblast. subst.
+      rewrite (Z.testbit_neg_r _ (_-8)) by lia; Btauto.btauto. }
+    { setoid_rewrite H4.
+      eexists; split; eauto; f_equal.
+      rewrite H5 at 1; trivial. } }
+  { step_symex; repeat (eauto||econstructor). }
+Qed.
+
+Ltac step_GetOperand :=
+  match goal with
+  | H : GetOperand ?a ?s = Success (?i0, ?s') |- _ =>
+    let v := fresh "v" (*a*) in let Hv := fresh "H" v
+    in let Hi := fresh "H" i0 in let Heq := fresh H "eq" in
+    let Hs' := fresh "H" s' in let Hl := fresh "Hl" s' in
+    case (GetOperand_R s _ ltac:(eassumption) _ _ _ _ _ H) as (Hs'&Hl&(v&Hi&Hv)); clear H
+  end.
+
 (* note: do the two SetOperand both truncate inputs or not?... *)
 Lemma R_SetOperand s m (HR : R s m)
   sz sa a i _tt s' (H : @Symbolic.SetOperand sz sa a i s = Success (_tt, s'))
@@ -369,8 +759,26 @@ Proof.
     rewrite Bool.andb_true_r, Bool.andb_false_r, Bool.orb_false_l.
     rewrite H8, Z.land_spec, Z.ones_spec_high; revert dependent j; lia. }
   { progress cbv [Store] in *.
-    admit. (* store *) }
-Admitted.
+    destruct_one_match_hyp; cbv [err] in *; inversion_ErrorT.
+    repeat (step_symex; cbn [fst snd] in * ).
+    eapply Load64_R in HSold; eauto;
+      repeat (subst; destruct_head'_ex; destruct_head'_and).
+    repeat (step_symex; cbn [fst snd] in * ).
+    { repeat (eauto || econstructor). }
+    { repeat (eauto || econstructor). }
+    rewrite !Z.shiftl_0_r, ?Z.shiftr_0_r, <-Z.land_assoc, Z.land_diag in *.
+    eapply Bool.negb_false_iff, Bool.orb_true_iff in E; case E as [E|E];
+      eapply Ndec.Neqb_complete in E; rewrite E in *; simpl Z.of_N in *.
+    { eapply Store64_R with (v':=Z.lor (Z.land v (Z.ones 8)) (Z.ldiff x (Z.ones 8))) in H;
+        try eassumption; eauto with nocore; try solve [rewrite H5; bitblast.Z.bitblast].
+      destruct_head'_ex; destruct_head'_and.
+      cbv [SetMem Crypto.Util.Option.bind update_mem_with] in *;
+        destruct set_mem eqn:? in *; Option.inversion_option; subst.
+      erewrite store8; eauto 9. }
+    { eapply Store64_R with (v':=v) in H;
+        try eassumption; eauto with nocore; try solve [rewrite H5; bitblast.Z.bitblast].
+      destruct_head'_ex; destruct_head'_and. setoid_rewrite H. eauto 9. } }
+Qed.
 
 Ltac step_SetOperand :=
   match goal with
@@ -380,94 +788,6 @@ Ltac step_SetOperand :=
       case (R_SetOperand s _ ltac:(eassumption) _ _ _ _ _ _ H _ ltac:(eauto 99 with nocore))
         as (m&?Hm&HR&Hl); clear H
   end.
-Ltac step_symex4 := first [step_symex3 | step_SetOperand].
-Ltac step_symex ::= step_symex4.
-
-Lemma SetFlag_R s m f (HR : R s m) (i:idx) b (Hi : eval s i (Z.b2z b)) :
-  forall _tt s', Symbolic.SetFlag f i s = Success (_tt, s') ->
-  R s' (SetFlag m f b) /\ s :< s'.
-Proof.
-  destruct s; cbv [Symbolic.SetFlag Symbolic.update_flag_with Symbolic.set_flag] in *;
-    intros; inversion_ErrorT_step; Prod.inversion_prod; subst.
-  cbv [R].
-  intuition idtac.
-  all : try eapply R_set_flag_internal; eauto.
-  all : cbv [R] in *; intuition idtac.
-Qed.
-
-Ltac step_SetFlag :=
-  match goal with
-  | H : Symbolic.SetFlag ?f ?i ?s = Success (?_tt, ?s') |- _ =>
-    let i := open_constr:(_) in let b := open_constr:(_) in
-    let Hs' := fresh "H" s' in let Hlt := fresh "He" s' in
-    let t := open_constr:(fun A B => SetFlag_R s _ f A i b B _ _ H) in
-    unshelve (edestruct t as (Hs'&Hlt); clear H); shelve_unifiable;
-    [eassumption|..|clear H]
-  end.
-Ltac step_symex5 := first [step_symex4 | step_SetFlag ].
-Ltac step_symex ::= step_symex5.
-
-Lemma GetReg_R s m (HR: R s m) r i s'
-  (H : @GetReg r s = Success (i, s'))
-  : R s' m  /\ s :< s' /\ eval s' i (get_reg m r).
-Proof.
-  cbv [GetReg GetReg64 bind some_or get_reg index_and_shift_and_bitcount_of_reg] in *.
-  pose proof (get_reg_R s _ ltac:(eassumption) (reg_index r)) as Hr.
-  destruct Symbolic.get_reg in *; [|inversion H]; cbn in H.
-  specialize (Hr _ eq_refl); case Hr as (v&Hi0&Hv).
-  rewrite Hv; clear Hv.
-  step_symex; eauto.
-  repeat (eauto || econstructor); cbn [interp_op].
-Qed.
-
-Lemma Address_R s m (HR : R s m) sa o a s' (H : @Symbolic.Address sa o s = Success (a, s'))
-  : R s' m /\ s :< s' /\ exists v, eval s' a v /\ @DenoteAddress sa m o = v.
-Proof.
-  destruct o as [? ? ? ?]; cbv [Address DenoteAddress] in *; repeat step_symex.
-  eapply GetReg_R in HSbase; eauto; []; DestructHead.destruct_head'_and.
-  destruct mem_extra_reg; cbn -[GetReg] in *.
-  1: eapply GetReg_R in HSindex; eauto; []; DestructHead.destruct_head'_and.
-  all: destruct mem_offset; cbn -[GetReg] in *.
-  all: (step_symex; try solve [repeat (eauto || econstructor)]; []).
-  all: (step_symex; try solve [repeat (eauto || econstructor)]; []).
-  all: (step_symex; try solve [repeat (eauto || econstructor)]; []).
-  3,4: (step_symex; try solve [repeat (eauto || econstructor)]; []).
-  all : cbn in *.
-  all : Tactics.ssplit; eauto 99 with nocore.
-  all : eexists; split; eauto; [].
-  all : cbv [DenoteConst].
-  all : rewrite ?Z.add_0_r, ?Z.land_ones, ?Z.shiftr_div_pow2 by lia.
-  all : push_Zmod; pull_Zmod; trivial.
-Qed.
-
-Ltac step_Address :=
-  match goal with HSa: context[Address] |- _ =>
-      eapply Address_R in HSa; [|eassumption];
-          destruct HSa as (?&?&?&?&?)
-  end.
-
-Lemma GetOperand_R s m (HR: R s m) so sa a i s'
-  (H : @GetOperand so sa a s = Success (i, s'))
-  : R s' m /\ s :< s' /\ exists v, eval s' i v /\ DenoteOperand sa so m a = Some v.
-Proof.
-  cbv [GetOperand DenoteOperand] in *; BreakMatch.break_innermost_match.
-  { eapply GetReg_R in H; intuition eauto. }
-  1: {
-    progress cbv [Load] in *.
-    (* Load *) admit. }
-  { step_symex; repeat (eauto || econstructor). }
-Admitted.
-
-Ltac step_GetOperand :=
-  match goal with
-  | H : GetOperand ?a ?s = Success (?i0, ?s') |- _ =>
-    let v := fresh "v" (*a*) in let Hv := fresh "H" v
-    in let Hi := fresh "H" i0 in let Heq := fresh H "eq" in
-    let Hs' := fresh "H" s' in let Hl := fresh "Hl" s' in
-    case (GetOperand_R s _ ltac:(eassumption) _ _ _ _ _ H) as (Hs'&Hl&(v&Hi&Hv)); clear H
-  end.
-Ltac step_symex6 := first [step_symex5 | step_GetOperand | step_Address ].
-Ltac step_symex ::= step_symex6.
 
 Lemma HavocFlags_R s m (HR : R s m) :
   forall _tt s', Symbolic.HavocFlags s = Success (_tt, s') ->
@@ -488,8 +808,9 @@ Ltac step_HavocFlags :=
     unshelve (edestruct t as (Hs'&Hl); clear H); shelve_unifiable;
     [eassumption|]
   end.
-Ltac step_symex7 := first [step_symex6 | step_HavocFlags ].
-Ltac step_symex ::= step_symex7.
+
+Ltac step_symex5 := first [step_symex4 | step_GetOperand | step_SetOperand | step_HavocFlags ].
+Ltac step_symex ::= step_symex5.
 
 Ltac him :=
   match goal with
@@ -524,7 +845,6 @@ Proof.
   all : lia.
 Qed.
 
-Import UniquePose.
 Ltac pose_operation_size_cases :=
   match goal with
   | H : Syntax.operation_size _ = Some _ |- _ =>
@@ -587,8 +907,6 @@ Ltac step :=
 Ltac step1 := step; (eassumption||trivial); [].
 Ltac step01 := solve [step] || step1.
 
-Import coqutil.Tactics.autoforward coqutil.Decidable coqutil.Tactics.Tactics.
-
 Lemma SetOperand_same n m a v m'
   (Hd : DenoteOperand 64 n m a = Some v) (Hs : SetOperand 64 n m a v = Some m')
   : m = m'.
@@ -612,11 +930,22 @@ Proof.
     destr (0 <=? i - Z.of_N (reg_offset r)); try lia; cbn.
     replace (i - Z.of_N (reg_offset r) + Z.of_N (reg_offset r)) with i by lia.
     destr (i - Z.of_N (reg_offset r) <? Z.of_N (reg_size r)); Btauto.btauto. }
-  { destruct m'; cbv [update_mem_with Crypto.Util.Option.bind set_mem_error set_mem_bytes_error get_mem option_map] in *; repeat (destruct_one_match_hyp || Option.inversion_option).
+  { destruct m'; cbv [SetMem update_mem_with Crypto.Util.Option.bind get_mem option_map set_mem store_bytes unchecked_store_bytes] in *; repeat (destruct_one_match_hyp || Option.inversion_option).
     inversion Hs; clear Hs; subst; f_equal.
-    clear E1.
-    (* mem *)
-Admitted.
+    clear E0.
+    change (@map.putmany ?K ?V ?M ?m) with (@map.putmany K V M machine_mem_state).
+    set (word.of_Z _) as a in *; clearbody a.
+    rename n into n'; set (N.to_nat (operand_size m0 n' / 8)) as n in *; clearbody n; clear n'.
+    epose proof (length_load_bytes _ _ _ _ E1) as Hl; rewrite <-Hl, split_le_combine.
+    eapply (@map.map_ext _ _ mem_state _); intro k.
+    rewrite Properties.map.get_putmany_dec, OfListWord.map.get_of_list_word_at.
+    destruct_one_match; trivial.
+    epose proof ListUtil.nth_error_value_length _ _ _ _ E.
+    rewrite <-E; clear E.
+    rewrite (nth_error_load_bytes _ _ _ _ E1 (Z.to_nat (word.unsigned (word.sub k a))) ltac:(lia)).
+    rewrite Z2Nat.id, word.of_Z_unsigned by (eapply Properties.word.unsigned_range).
+    f_equal. ring. }
+Qed.
 
 
 Lemma Z__ones_nonneg n (H : 0 <= n)  : 0 <= Z.ones n.
@@ -703,7 +1032,7 @@ Proof.
              end; eauto; try Lia.lia; try congruence.
              eexists. split. eauto.
              f_equal. f_equal.
-             change Symbolic.signed with signed.
+             change Symbolic.signed with Semantics.signed.
              rewrite ?Z.add_0_r.
              f_equal.
              1:congruence.
@@ -730,7 +1059,7 @@ Proof.
              end; eauto; try Lia.lia; try congruence.
              eexists. split. eauto.
              f_equal. f_equal.
-             change Symbolic.signed with signed.
+             change Symbolic.signed with Semantics.signed.
              rewrite ?Z.add_0_r.
              f_equal.
              1:congruence.
@@ -749,9 +1078,9 @@ Proof.
              | _ => destruct_one_match
              | _ => progress intuition idtac
              end; rewrite ?Z.add_0_r, ?Z.odd_opp; eauto; try Lia.lia; try congruence.
-             replace (signed n 0) with 0; cycle 1.
+             replace (Semantics.signed n 0) with 0; cycle 1.
              { pose_operation_size_cases. clear -H0; intuition (subst; cbv; trivial). }
-             rewrite Z.add_0_r; cbv [signed Symbolic.signed]; congruence. }
+             rewrite Z.add_0_r; cbv [Semantics.signed Symbolic.signed]; congruence. }
 
   Unshelve. all : match goal with H : context[Syntax.adc] |- _ => idtac | _ => shelve end.
   { destruct s';
@@ -765,7 +1094,7 @@ Proof.
              | _ => destruct_one_match
              | _ => progress intuition idtac
              end; rewrite ?Z.add_assoc, ?Z.add_0_r, ?Z.odd_opp; eauto; try Lia.lia; try congruence.
-             change Symbolic.signed with signed. congruence. }
+             change Symbolic.signed with Semantics.signed. congruence. }
 
   Unshelve. all : match goal with H : context[Syntax.adcx] |- _ => idtac | _ => shelve end.
   { cbn [fold_right] in *; rewrite ?Z.bit0_odd, ?Z.add_0_r, ?Z.add_assoc in *; assumption. }
@@ -819,7 +1148,7 @@ Proof.
   all : change Symbolic.rcrcnt with rcrcnt in *.
   { destruct_one_match_hyp; repeat step; eauto.
     { econstructor. econstructor. eauto 9. econstructor. cbn.
-      rewrite Z.shiftr_0_r. change 1 with (Z.ones 1). rewrite Z.land_ones by lia.
+      rewrite Z.shiftr_0_r. rewrite Z.land_ones by lia.
       rewrite <-Z.bit0_mod. exact eq_refl. }
   all : destruct_one_match; try lia.
   all:
