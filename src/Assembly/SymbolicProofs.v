@@ -297,16 +297,25 @@ Lemma bind_assoc {A B C} (v:M A) (k1:A->M B) (k2:B->M C) s
  : (y <- (x <- v; k1 x); k2 y)%x86symex s = (x<-v; y<-k1 x; k2 y)%x86symex s.
 Proof. cbv; destruct v; trivial. Qed.
 
+(* workaround: using cbn instead of this lemma makes Qed hang after next rewrite in same hyp *)
+Lemma unfold_bind {A B} ma amb s :
+  @bind A B ma amb s = ltac:(let t := eval unfold bind, ErrorT.bind in (@bind A B ma amb s) in exact t).
+Proof. exact eq_refl. Qed.
+
 Ltac step_symex0 :=
   match goal with
   | H : (x <- ?v; ?k)%x86symex ?s = _ |- _  =>
     rewrite !bind_assoc in H
   | H : (x <- ?v; ?k)%x86symex ?s = Success _ |- _  =>
-    unfold bind at 1 in H;
-    let x := fresh x in
-    let HH := fresh "HS" x in
-    destruct v as [[x ?]|] eqn:HH in H;
-    cbn [ErrorT.bind] in H; [|solve[exfalso;clear-H;inversion H]]
+    rewrite unfold_bind in H;
+    match type of H with (* workaround: rewrite sometimes reduces the match *)
+    | match _ with _ => _ end = Success _ =>
+      let x := fresh x in
+      let HH := fresh "HS" x in
+      destruct v as [[x ?]|] eqn:HH in H;
+        [|solve[exfalso;clear-H;inversion H]]
+    | _ => idtac
+    end
   end.
 Ltac step_symex := step_symex0.
 
@@ -951,6 +960,7 @@ Qed.
 Lemma Z__ones_nonneg n (H : 0 <= n)  : 0 <= Z.ones n.
 Proof. rewrite Z.ones_equiv. pose proof Z.pow_pos_nonneg 2 n ltac:(lia) ltac:(assumption); Lia.lia. Qed.
 
+
 Lemma R_SymexNornalInstruction s m (HR : R s m) instr :
   forall s', Symbolic.SymexNormalInstruction instr s = Success (tt, s') ->
   exists m', Semantics.DenoteNormalInstruction m instr = Some m' /\ R s' m'.
@@ -1186,6 +1196,6 @@ Proof.
     3: enough (0 <= Z.land v3 (Z.of_N n - 1)) by lia; eapply Z.land_nonneg; right.
     1,2,3:pose_operation_size_cases; intuition (subst; cbn; clear; lia). }
   all : fail.
-Admitted.
+Qed.
 
 End WithCtx.
