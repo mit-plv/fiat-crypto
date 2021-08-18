@@ -301,44 +301,6 @@ Section WithDag.
     ExprApp (op, List.map (reveal n) args).
 
   Local Unset Elimination Schemes.
-  Inductive repr  : forall (i:N) (e : expr), Prop :=
-  | RepApp i op args args'
-    (_:List.nth_error dag (N.to_nat i) = Some (op, args))
-    (_:List.Forall2 repr args args') : repr i (ExprApp (op, args')).
-
-  Section repr_ind.
-    Context (P : N -> expr -> Prop)
-      (H : forall i op args args', nth_error dag (N.to_nat i) = Some (op, args) ->
-        Forall2 (fun i e => repr i e /\ P i e) args args' -> P i (ExprApp (op, args'))).
-    Fixpoint repr_ind i e (pf : repr i e) {struct pf} : P i e :=
-       let '(RepApp _ _ _ _ A B) := pf in
-       H _ _ _ _ A (Forall2_weaken (fun _ _ C => conj C (repr_ind _ _ C)) _ _ B).
-  End repr_ind.
-
-  Inductive reveals : expr -> expr -> Prop :=
-  | RRef i op args args'
-    (_:List.nth_error dag (N.to_nat i) = Some (op, args))
-    (_:List.Forall2 (fun i e => reveals (ExprRef i) e) args args')
-    : reveals (ExprRef i) (ExprApp (op, args'))
-  | RApp op args args'
-    (_:List.Forall2 reveals args args')
-    : reveals (ExprApp (op, args)) (ExprApp (op, args')).
-
-  Section reveals_ind.
-    Context (P : expr -> expr -> Prop)
-      (HRef : forall i op args args', nth_error dag (N.to_nat i) = Some (op, args) ->
-        Forall2 (fun i e => reveals (ExprRef i) e /\ P (ExprRef i) e) args args' ->
-        P (ExprRef i) (ExprApp (op, args')))
-      (HApp : forall op args args',
-        Forall2 (fun i e => reveals i e /\ P i e) args args' ->
-        P (ExprApp (op, args)) (ExprApp (op, args'))).
-    Fixpoint reveals_ind i e (pf : reveals i e) {struct pf} : P i e :=
-      match pf with
-      | RRef _ _ _ _ A B => HRef _ _ _ _ A (Forall2_weaken (fun _ _ C => conj C (reveals_ind _ _ C)) _ _ B)
-      | RApp _ _ _ A => HApp _ _ _ (Forall2_weaken (fun _ _ B => conj B (reveals_ind _ _ B)) _ _ A)
-      end.
-  End reveals_ind.
-
   Inductive eval : expr -> Z -> Prop :=
   | ERef i op args args' n
     (_:List.nth_error dag (N.to_nat i) = Some (op, args))
@@ -387,45 +349,6 @@ Section WithDag.
     { eapply Forall2_flip in H.
       epose proof Forall2_trans H H4 as HH.
       eapply Forall2_eq, Forall2_weaken, HH; cbv beta; clear; firstorder. }
-  Qed.
-
-  Lemma repr_reveals : forall i e, reveals (ExprRef i) e -> repr i e.
-  Proof using Type ctx.
-    intros ? ? H.
-    dependent induction H; econstructor; try eassumption.
-    eapply Forall2_weaken; [|eauto]; cbn; intuition eauto.
-  Qed.
-
-  Lemma reveals_repr : forall i e, repr i e -> reveals (ExprRef i) e.
-  Proof using Type ctx.
-    induction 1; econstructor; try eassumption.
-    eapply Forall2_weaken; [|eauto]; cbn; intuition eauto.
-  Qed.
-
-  Lemma reveal_exists_enough_fuel i e : repr i e -> exists n, reveal n i = e.
-  Proof.
-    induction 1.
-    enough (exists n, map (reveal n) args = args') as [n Hn].
-    { eexists (S n); cbn [reveal]; cbv [reveal_step]; rewrite H, Hn; trivial. }
-    clear H.
-    dependent induction H0.
-    { cbn; eauto using O. }
-    destruct H as [_ [n' Hn'] ].
-    destruct IHForall2 as [n IH].
-    exists (max n n').
-    cbn [map]; f_equal.
-    (* fuel weakening *)
-  Abort.
-
-  Lemma reveals_reveal_repr : forall n i e', reveal n i = e' ->
-    forall e, repr i e -> reveals e' e.
-  Proof using Type ctx.
-    induction n; cbn [reveal]; cbv [reveal_step]; intros; subst.
-    { eauto using reveals_repr. }
-    inversion H0; subst.
-    rewrite H; econstructor.
-    clear dependent i.
-    induction H1; cbn; eauto.
   Qed.
 
   Lemma eval_reveal : forall n i, forall v, eval (ExprRef i) v ->
