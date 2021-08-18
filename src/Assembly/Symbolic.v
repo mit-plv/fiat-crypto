@@ -5,6 +5,7 @@ Require Crypto.Util.Tuple.
 Require Import Util.OptionList.
 Require Import Crypto.Util.ErrorT.
 Require Import Crypto.Util.ZUtil.Tactics.PullPush.Modulo.
+Require Import Crypto.Util.ZUtil.Testbit.
 
 Require Import coqutil.Z.bitblast.
 
@@ -351,6 +352,13 @@ Section WithDag.
       eapply Forall2_eq, Forall2_weaken, HH; cbv beta; clear; firstorder. }
   Qed.
 
+  Lemma eval_eval_Forall2 xs vxs (_ : Forall2 eval xs vxs)
+    vys (_ : Forall2 eval xs vys) : vxs = vys.
+  Proof.
+    revert dependent vys; induction H; inversion 1; subst;
+      eauto; eauto using f_equal2, IHForall2, eval_eval.
+  Qed.
+
   Lemma eval_reveal : forall n i, forall v, eval (ExprRef i) v ->
     forall e, reveal n i = e -> eval e v.
   Proof using Type.
@@ -603,40 +611,6 @@ End N.
 
 Local Open Scope Z_scope.
 
-Lemma less_highest_bit a : a - 2^Z.log2 a < 2^Z.log2 a.
-Proof.
-  epose proof Z.log2_nonneg a.
-  enough (a < 2*2^Z.log2 a) by Lia.lia.
-  change 2 with (2^1)%Z at 1; rewrite <-Z.pow_add_r by Lia.lia.
-  eapply Z.log2_lt_cancel; rewrite Z.log2_pow2; Lia.lia.
-Qed.
-
-Lemma le_bitwise a b (Ha : 0 <= a) (Hb : 0 <= b)  (H : forall i, 0 <= i -> Bool.le (Z.testbit a i) (Z.testbit b i))
-  : Z.le a b.
-Proof.
-  destruct (Z.eq_dec b 0). {
-    subst. setoid_rewrite Z.testbit_0_l in H.
-    enough (a=0) by Lia.lia.
-    eapply Z.bits_inj_0; intros i; specialize (H i).
-    admit. }
-  pose proof less_highest_bit a.
-  pose proof less_highest_bit b.
-  destruct (Z_le_dec (Z.log2 a) (Z.log2 b)).
-  { assert (0 <= Z.log2 b) as Hlb by eapply Z.log2_nonneg.
-    assert (2^Z.log2 b <= b) by (eapply Z.log2_log2_up_spec; Lia.lia).
-    move Hlb at top; generalize dependent (Z.log2 b).
-    intros lb Hlb.
-    generalize dependent a.
-    generalize dependent b.
-    revert dependent lb.
-    refine (natlike_ind _ _ _ ); intros.
-    { pose proof Z.log2_nonneg a. replace (Z.log2 a) with 0 in * by Lia.lia.
-      assert (Hbd : b = 0 \/ b = 1) by Lia.lia.
-      assert (Had : a = 0 \/ a = 1) by Lia.lia.
-      destruct Had, Hbd; subst; try Lia.lia. }
-    { destruct (Z.eq_dec (Z.log2 a) (Z.succ x)).
-Admitted.
-
 Fixpoint bound_expr e : option Z := (* e <= r *)
   match e with
   | ExprApp (const v, _) => if Z.leb 0 v then Some v else None
@@ -731,7 +705,7 @@ Proof.
     rewrite !Z.shiftl_0_r.
     split.
     { eapply Z.lor_nonneg; split; try eapply Z.land_nonneg; try eapply Z.ldiff_nonneg; Lia.lia. }
-    eapply le_bitwise.
+    eapply Z.le_bitwise.
     { eapply Z.lor_nonneg; split; try eapply Z.land_nonneg; try eapply Z.ldiff_nonneg; Lia.lia. }
     { eapply Z.lor_nonneg; split; try eapply Z.land_nonneg; try eapply Z.ldiff_nonneg;
         left; try eapply Z__ones_nonneg; Lia.lia. }
@@ -1126,6 +1100,15 @@ Definition consts_commutative :=
          end
     else ExprApp (o, fst csts_exprs ++ snd csts_exprs)
     else e | _ => e end.
+
+Lemma Permutation_partition {A} (l : list A) f :
+    Permutation.Permutation l (fst (partition f l) ++ snd (partition f l)).
+Proof.
+  induction l; cbn; BreakMatch.break_match; cbn in *; eauto.
+  etransitivity. econstructor. eassumption.
+  eapply Permutation.Permutation_middle.
+Qed.
+
 Global Instance consts_commutative_ok : Ok consts_commutative.
 Proof.
   step.
@@ -1134,7 +1117,7 @@ Proof.
   destruct (match o with mul _ => true | _ => false end); trivial.
   destruct commutative eqn:?; trivial.
   inversion H; clear H; subst.
-  assert (Permutation.Permutation l (fst (partition isCst l) ++ snd (partition isCst l))) by admit.
+  epose proof Permutation_partition l isCst.
   eapply Permutation.Permutation_Forall2 in H2; [|eassumption].
   DestructHead.destruct_head'_ex; DestructHead.destruct_head'_and.
   epose proof permute_commutative  _ _ _ _ Heqb H4 _ H0.
@@ -1147,33 +1130,24 @@ Proof.
   clear dependent l. clear dependent args'. 
   move o at top; move Heqb0 at top; move Heqb at top.
   eapply eval_interp0_expr in Heqo0; instantiate (1:=d) in Heqo0; instantiate (1:=G) in Heqo0.
+
+  eapply Forall2_app_inv_l in H1; destruct H1 as (?&?&?&?&?); subst.
+  rename x0 into xs. rename x1 into ys.
+  econstructor. { econstructor. econstructor. econstructor. exact eq_refl. eassumption. }
+
   inversion Heqo0; clear Heqo0; subst.
-  revert dependent v. revert dependent args'. revert z.
-  rename x into vs_csts_exps; revert dependent vs_csts_exps. revert exps.
-  induction csts; cbn [app]; intros.
-  { admit. }
-  { inversion H1; clear H1; subst.
-    specialize (IHcsts _ _ ltac:(eassumption)).
-    inversion H3; clear H3; subst.
-    eapply invert_interp_op_associative in H2; trivial.
-    eapply invert_interp_op_associative in H5; trivial.
-    DestructHead.destruct_head'_ex; DestructHead.destruct_head'_and.
-    repeat step.
-    rename l' into vs_csts_exps.
-    rename l'0 into vs_csts.
-    rename x into op_csts_exps.
-    rename x0 into op_csts.
-    specialize (IHcsts _ _ ltac:(eassumption) ltac:(eassumption) _ ltac:(eassumption)).
-    (*
-    eapply invert_interp_op_associative in H2; trivial.
-    Search interp_op associative.
+  eapply eval_eval_Forall2 in H; eauto; subst.
+  clear dependent exps. clear dependent csts.
+  clear -H2 H6 Heqb Heqb0.
 
-    (* eapply eval_interp0_expr in Heqo0; instantiate (1:=d) in Heqo0; instantiate (1:=G) in Heqo0. *)
-
-    identity o = Some i ->
-  eval G d (ExprApp (o, ExprApp (const i, []) :: exps)) v <-> eval G d (ExprApp (o, exps)) v.
-     *)
-Admitted.
+  destruct o; try solve [inversion Heqb; inversion Heqb0]; clear Heqb Heqb0;
+  inversion H6; inversion H2; clear H6 H2; subst; eapply (f_equal Some).
+  all: rewrite fold_right_app, ListUtil.List.fold_right_cons.
+  all : rewrite ?Z.land_ones; push_Zmod; pull_Zmod; try Lia.lia; f_equal.
+  all : set (fold_right _ _ ys) as Y; clearbody Y.
+  all : induction xs; cbn [fold_right]; eauto;
+    try ring [IHxs]; try (symmetry in IHxs; ring [IHxs]); try ring.
+Qed.
 
 Definition neqconst i := fun a : expr => negb (option_beq Z.eqb (interp0_expr a) (Some i)).
 Definition drop_identity :=
@@ -1390,8 +1364,6 @@ Definition expr : expr -> expr :=
   ;addbyte_small
   ;xor_same 
   ].
-
-Compute fun x y => expr (ExprApp (addcarry 64%N, [ExprApp (const 0, []);ExprRef x;ExprRef y])).
 
 Lemma eval_expr c d e v : eval c d e v -> eval c d (expr e) v.
 Proof.

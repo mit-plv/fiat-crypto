@@ -107,24 +107,24 @@ Fixpoint R_mem (sm : Symbolic.mem_state) : mem_state -> Prop :=
   | nil => eq frame
   | cons (ia, iv) sm' => sep (R_cell64 ia iv) (R_mem sm')
   end.
-
-
-Lemma R_flag_None_l f : R_flag None f.
-Proof. inversion 1. Qed.
-Lemma R_flag_None_r f : autoforward.autoforward (R_flag f None) (f = None).
-Proof.
-  destruct f; cbv; trivial. intros H.
-  case (H _ eq_refl) as (?&?&HX); inversion HX.
-Qed.
 End WithDag.
-
-Local Hint Resolve R_flag_None_l : core.
-Local Hint Resolve R_flag_None_r : typeclass_instances.
 
 Definition R (ss : symbolic_state) (ms : machine_state) : Prop :=
   let (mr, mf, mm) := ms in
   let (d, sr, sf, sm) := ss in
   dag_ok d /\ R_regs d sr mr /\ R_flags d sf mf /\ R_mem d sm mm.
+
+
+Lemma R_flag_None_l d f : R_flag d None f.
+Proof. inversion 1. Qed.
+Lemma R_flag_None_r d f : autoforward.autoforward (R_flag d f None) (f = None).
+Proof.
+  destruct f; cbv; trivial. intros H.
+  case (H _ eq_refl) as (?&?&HX); inversion HX.
+Qed.
+
+Local Hint Resolve R_flag_None_l : core.
+Local Hint Resolve R_flag_None_r : typeclass_instances.
 
 Lemma get_flag_R s m f (HR : R s m) :
   forall i, Symbolic.get_flag s f = Some i ->
