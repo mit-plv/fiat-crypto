@@ -678,6 +678,42 @@ Proof.
 Qed.
 End N.
 
+Local Open Scope Z_scope.
+
+Lemma less_highest_bit a : a - 2^Z.log2 a < 2^Z.log2 a.
+Proof.
+  epose proof Z.log2_nonneg a.
+  enough (a < 2*2^Z.log2 a) by Lia.lia.
+  change 2 with (2^1)%Z at 1; rewrite <-Z.pow_add_r by Lia.lia.
+  eapply Z.log2_lt_cancel; rewrite Z.log2_pow2; Lia.lia.
+Qed.
+
+Lemma le_bitwise a b (Ha : 0 <= a) (Hb : 0 <= b)  (H : forall i, 0 <= i -> Bool.le (Z.testbit a i) (Z.testbit b i))
+  : Z.le a b.
+Proof.
+  destruct (Z.eq_dec b 0). {
+    subst. setoid_rewrite Z.testbit_0_l in H.
+    enough (a=0) by Lia.lia.
+    eapply Z.bits_inj_0; intros i; specialize (H i).
+    admit. }
+  pose proof less_highest_bit a.
+  pose proof less_highest_bit b.
+  destruct (Z_le_dec (Z.log2 a) (Z.log2 b)).
+  { assert (0 <= Z.log2 b) as Hlb by eapply Z.log2_nonneg.
+    assert (2^Z.log2 b <= b) by (eapply Z.log2_log2_up_spec; Lia.lia).
+    move Hlb at top; generalize dependent (Z.log2 b).
+    intros lb Hlb.
+    generalize dependent a.
+    generalize dependent b.
+    revert dependent lb.
+    refine (natlike_ind _ _ _ ); intros.
+    { pose proof Z.log2_nonneg a. replace (Z.log2 a) with 0 in * by Lia.lia.
+      assert (Hbd : b = 0 \/ b = 1) by Lia.lia.
+      assert (Had : a = 0 \/ a = 1) by Lia.lia.
+      destruct Had, Hbd; subst; try Lia.lia. }
+    { destruct (Z.eq_dec (Z.log2 a) (Z.succ x)).
+Admitted.
+
 Fixpoint bound_expr e : option Z := (* e <= r *)
   match e with
   | ExprApp (const v, _) => if Z.leb 0 v then Some v else None
@@ -691,43 +727,117 @@ Fixpoint bound_expr e : option Z := (* e <= r *)
       | Some a, Some b => Some (Z.max a b)
       | _, _ => None
       end
-  | ExprApp (set_slice l w, [a;b]) =>
-      match bound_expr a with
-      | Some a => Some (Z.max a (Z.ones (Z.of_N w)))
-      | _ => None
+  | ExprApp (set_slice 0 w, [a;b]) =>
+      match bound_expr a, bound_expr b with
+      | Some a, Some b => Some (Z.lor
+                                  (Z.land (Z.ones (Z.succ (Z.log2 b))) (Z.ones (Z.of_N w)))
+                                  (Z.ldiff (Z.ones (Z.succ (Z.log2 a))) (Z.ones (Z.of_N w))))
+      | _, _ => None
       end
   | ExprApp ((old s _ | slice _ s | mul s | shl s | shr s | sar s | neg s | and s | or s | xor s), _) => Some (Z.ones (Z.of_N s))
-  | ExprApp ((addcarry _ | subborrow _ | addoverflow _ | iszero), _) => Some 1%Z
+  | ExprApp ((addcarry _ | subborrow _ | addoverflow _ | iszero), _) => Some 1
   | _ => None
+  end%Z.
+
+Import coqutil.Tactics.Tactics.
+Ltac t:= match goal with
+  | _ => progress intros
+  | H : eval _ _ (ExprApp _) _ |- _ => inversion H; clear H; subst
+  | H : Forall _ (cons _ _) |- _ => inversion H; clear H; subst
+  | H : Forall _ nil |- _ => inversion H; clear H; subst
+  | H : Forall2 _ (cons _ _) _ |- _ => inversion H; clear H; subst
+  | H : Forall2 _ nil _ |- _ => inversion H; clear H; subst
+  | H : Forall2 _ _ (cons _ _) |- _ => inversion H; clear H; subst
+  | H : Forall2 _ _ nil |- _ => inversion H; clear H; subst
+  | H : _ = true |- _ => autoforward with typeclass_instances in H
+  | H : forall b, _ |- _ => pose proof (H _ ltac:(eassumption) _ _ ltac:(eassumption)); clear H
+  | H : eval _ ?d ?e ?v1, G: eval _ ?d ?e ?v2 |- _ =>
+      assert_fails (constr_eq v1 v2);
+      eapply (eval_eval _ d e v1 H v2) in G
+  | _ => progress cbv [interp_op] in *
+  | _ => progress cbn [fst snd] in *
+  | _ => progress destruct_one_match
+  | _ => progress Option.inversion_option
+  | _ => progress subst
   end.
 
+Lemma bound_sum' G d
+  es (He : Forall (fun e => forall b, bound_expr e = Some b -> 
+       forall (d : dag) (v : Z), eval G d e v -> (0 <= v <= b)%Z) es)
+  : forall
+  bs (Hb : Option.List.lift (map bound_expr es) = Some bs)
+  vs (Hv : Forall2 (eval G d) es vs)
+  , (0 <= fold_right Z.add 0 vs <= fold_right Z.add 0 bs)%Z.
+Proof.
+  induction He; cbn in *; repeat t.
+  { cbv [fold_right]; Lia.lia. }
+  destruct (bound_expr _) eqn:? in *; cbn in *; repeat t.
+  destruct (fold_right (B:=option _) _) eqn:? in *; cbn in *; repeat t.
+  specialize (IHHe _ ltac:(eassumption) _ ltac:(eassumption)); cbn.
+  specialize (H _ ltac:(exact eq_refl) _ _ ltac:(eassumption)).
+  Lia.lia.
+Qed.
+
+
+Lemma Z__ones_nonneg n (H : 0 <= n)  : 0 <= Z.ones n.
+Proof. rewrite Z.ones_equiv. pose proof Z.pow_pos_nonneg 2 n ltac:(Lia.lia) ltac:(assumption); Lia.lia. Qed.
+
+Require Import Util.ZRange.LandLorBounds.
 Lemma eval_bound_expr G e b : bound_expr e = Some b ->
   forall d v, eval G d e v -> (0 <= v <= b)%Z.
 Proof.
   revert b; induction e; simpl bound_expr; BreakMatch.break_match;
     inversion 2; intros; inversion_option; subst;
-    cbn [interp_op] in *;
+    try match goal with H : context [set_slice] |- _ => shelve end;
+    cbv [interp_op] in *;
     BreakMatch.break_match_hyps; inversion_option; subst;
-    rewrite ?Z.land_ones, ?Z.ones_equiv;
-    try match goal with |- context [(?a mod ?b)%Z] => epose proof Z.mod_pos_bound a b ltac:(admit) end;
+    rewrite ?Z.ldiff_ones_r, ?Z.land_ones, ?Z.ones_equiv;
+    cbv [Z.b2z];
+    try match goal with |- context [(?a mod ?b)%Z] => unshelve epose proof Z.mod_pos_bound a b ltac:(eapply Z.pow_pos_nonneg; Lia.lia) end;
+    repeat t;
     try (Z.div_mod_to_equations; Lia.lia).
-Admitted.
+  { clear dependent args'0.
+    epose proof bound_sum' _ ltac:(eassumption) _ ltac:(eassumption) _ ltac:(eassumption) _ ltac:(eassumption).
+    split; try Lia.lia.
+    eapply Z.min_glb_iff; split; try Lia.lia.
+    etransitivity. eapply Zmod_le.
+    all : try Lia.lia. }
+  Unshelve. {
+    repeat t.
+    pose proof Z.log2_nonneg z; pose proof Z.log2_nonneg z0.
+    rewrite !Z.shiftl_0_r.
+    split.
+    { eapply Z.lor_nonneg; split; try eapply Z.land_nonneg; try eapply Z.ldiff_nonneg; Lia.lia. }
+    eapply le_bitwise.
+    { eapply Z.lor_nonneg; split; try eapply Z.land_nonneg; try eapply Z.ldiff_nonneg; Lia.lia. }
+    { eapply Z.lor_nonneg; split; try eapply Z.land_nonneg; try eapply Z.ldiff_nonneg;
+        left; try eapply Z__ones_nonneg; Lia.lia. }
+    { intros i Hi.
+      Z.rewrite_bitwise.
+      destr (i <? Z.of_N sz);
+        rewrite ?Bool.andb_false_r, ?Bool.andb_true_r, ?Bool.orb_false_l, ?Bool.orb_false_r.
+      { clear -H Hi.
+        destr (i <? Z.succ (Z.log2 z0)).
+        { eapply Bool.le_implb, Bool.implb_true_r. }
+        rewrite Z.bits_above_log2; cbn; trivial; try Lia.lia.
+        destruct H as [? H]; eapply Z.log2_le_mono in H. Lia.lia. }
+      { clear -H0 Hi.
+        destr (i <? Z.succ (Z.log2 z)).
+        { eapply Bool.le_implb, Bool.implb_true_r. }
+        rewrite Z.bits_above_log2; cbn; trivial; try Lia.lia.
+        destruct H0 as [? H0]; eapply Z.log2_le_mono in H0. Lia.lia. } } }
+Qed.
 
-Lemma eval_bound_expr': forall(G : symbol -> option Z) (d : dag) 
-    (l : list expr) (args' l0 : list Z), 
-    Option.List.lift (map bound_expr l) = Some l0 ->
-     Forall2 (eval G d) l args' ->
-     (0<=fold_right Z.add 0 args' <= fold_right Z.add 0 l0)%Z.
+Lemma bound_sum G d es 
+  bs (Hb : Option.List.lift (map bound_expr es) = Some bs)
+  vs (Hv : Forall2 (eval G d) es vs)
+  : (0 <= fold_right Z.add 0 vs <= fold_right Z.add 0 bs)%Z.
 Proof.
-  pose proof eval_bound_expr.
-  induction l; cbn in *.
-  {intros. inversion H0; clear H0; subst.
-   eapply length_Forall2 in H1; eauto.
-  replace args' with ([]:list Z) in *. cbn in *. Lia.lia.
-  eapply eq_sym in H1.
-  eapply ListUtil.length0_nil in H1; eauto. }
-  { admit. }
-Admitted.
+  eapply bound_sum' in Hb; eauto.
+  eapply Forall_forall; intros.
+  eapply eval_bound_expr; eauto.
+Qed.
+
 
 Definition isCst (e : expr) :=
   match e with ExprApp ((const _), _) => true | _ => false end.
@@ -938,14 +1048,12 @@ Definition addbyte_small :=
           then ExprApp (add 64%N, args)
           else e | _ => e end | _ =>  e end.
 Global Instance addbyte_small_ok : Ok addbyte_small.
-Proof. t; f_equal.
-       eapply eval_bound_expr' in H2; eauto.
-       assert  (fold_right Z.add 0 args' <= Z.ones (Z.of_N 8))%Z by Lia.lia.
-       eapply le_ones in H; eauto; try Lia.lia.
-       assert  ( Z.ones (Z.of_N 8) <= Z.ones (Z.of_N 64))%Z. cbn in *. Lia.lia.
-       assert  (fold_right Z.add 0 args' <= Z.ones (Z.of_N 64))%Z by Lia.lia.
-       eapply le_ones in H1; eauto; try Lia.lia. Qed.
-                                   
+Proof. 
+  t; f_equal.
+  eapply bound_sum in H2; eauto.
+  rewrite Z.ones_equiv in E0; rewrite !Z.land_ones, !Z.mod_small; Lia.lia.
+Qed.
+
 Lemma shiftr_ones: forall s,  Z.shiftr (Z.ones (Z.of_N s)) (Z.of_N s) = 0%Z.
 Proof.
   intros.
@@ -961,12 +1069,10 @@ Definition addcarry_small :=
           then (ExprApp (const 0, nil))
           else e | _ => e end | _ =>  e end.
 Global Instance addcarry_small_ok : Ok addcarry_small.
-Proof. t.  eapply eval_bound_expr' in H2; eauto.
-        assert  (fold_right Z.add 0 args' <= Z.ones (Z.of_N s))%Z by Lia.lia.
-        eapply le_ones in H; eauto; try Lia.lia. rewrite <- H. cbn in *.
-        f_equal.
-        erewrite Z.shiftr_land. cbn in *. replace (Z.shiftr (Z.ones (Z.of_N s)) (Z.of_N s)) with 0%Z. cbn in *.
-        erewrite Z.land_0_r. cbn in *. Lia.lia. erewrite  shiftr_ones with (s:=s); eauto.
+Proof.
+  t; f_equal.
+  eapply bound_sum in H2; eauto.
+  rewrite Z.ones_equiv in E0; rewrite Z.shiftr_div_pow2, Z.div_small; cbn; Lia.lia.
 Qed.
 
 Lemma signed_small s v (Hv : (0 <= v <= Z.ones (Z.of_N s-1))%Z) : signed s v = v.
@@ -1102,15 +1208,48 @@ Proof.
   step.
   destruct e; trivial.
   destruct n.
-  destruct (match o with mul _ => true | _ => false end) eqn:?; trivial.
+  destruct (match o with mul _ => true | _ => false end); trivial.
   destruct commutative eqn:?; trivial.
   inversion H; clear H; subst.
   assert (Permutation.Permutation l (fst (partition isCst l) ++ snd (partition isCst l))) by admit.
   eapply Permutation.Permutation_Forall2 in H2; [|eassumption].
   DestructHead.destruct_head'_ex; DestructHead.destruct_head'_and.
-  epose proof permute_commutative  _ _ _ _ Heqb0 H4 _ H0.
+  epose proof permute_commutative  _ _ _ _ Heqb H4 _ H0.
+  repeat Econstructor; eauto.
   destruct associative eqn:?; [|solve[repeat Econstructor; eauto] ].
   BreakMatch.break_match; [|solve[repeat Econstructor; eauto] ].
+
+  set (fst (partition isCst l)) as csts in *; clearbody csts.
+  set (snd (partition isCst l)) as exps in *; clearbody exps.
+  clear dependent l. clear dependent args'. 
+  move o at top; move Heqb0 at top; move Heqb at top.
+  eapply eval_interp0_expr in Heqo0; instantiate (1:=d) in Heqo0; instantiate (1:=G) in Heqo0.
+  inversion Heqo0; clear Heqo0; subst.
+  revert dependent v. revert dependent args'. revert z.
+  rename x into vs_csts_exps; revert dependent vs_csts_exps. revert exps.
+  induction csts; cbn [app]; intros.
+  { admit. }
+  { inversion H1; clear H1; subst.
+    specialize (IHcsts _ _ ltac:(eassumption)).
+    inversion H3; clear H3; subst.
+    eapply invert_interp_op_associative in H2; trivial.
+    eapply invert_interp_op_associative in H5; trivial.
+    DestructHead.destruct_head'_ex; DestructHead.destruct_head'_and.
+    repeat step.
+    rename l' into vs_csts_exps.
+    rename l'0 into vs_csts.
+    rename x into op_csts_exps.
+    rename x0 into op_csts.
+    specialize (IHcsts _ _ ltac:(eassumption) ltac:(eassumption) _ ltac:(eassumption)).
+    (*
+    eapply invert_interp_op_associative in H2; trivial.
+    Search interp_op associative.
+
+    (* eapply eval_interp0_expr in Heqo0; instantiate (1:=d) in Heqo0; instantiate (1:=G) in Heqo0. *)
+
+    identity o = Some i ->
+  eval G d (ExprApp (o, ExprApp (const i, []) :: exps)) v <-> eval G d (ExprApp (o, exps)) v.
+     *)
 Admitted.
 
 Definition neqconst i := fun a : expr => negb (option_beq Z.eqb (interp0_expr a) (Some i)).
