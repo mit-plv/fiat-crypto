@@ -957,10 +957,6 @@ Proof.
 Qed.
 
 
-Lemma Z__ones_nonneg n (H : 0 <= n)  : 0 <= Z.ones n.
-Proof. rewrite Z.ones_equiv. pose proof Z.pow_pos_nonneg 2 n ltac:(lia) ltac:(assumption); Lia.lia. Qed.
-
-
 Lemma SymexNornalInstruction_R s m (HR : R s m) instr :
   forall _tt s', Symbolic.SymexNormalInstruction instr s = Success (_tt, s') ->
   exists m', Semantics.DenoteNormalInstruction m instr = Some m' /\ R s' m' /\ s :< s'.
