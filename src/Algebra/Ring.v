@@ -16,42 +16,31 @@ Section Ring.
   Local Notation "0" := zero. Local Notation "1" := one.
   Local Infix "+" := add. Local Infix "-" := sub. Local Infix "*" := mul.
 
-  Lemma mul_0_l : forall x, 0 * x = 0.
+  Global Instance Ncring_Ring_ops : @Ncring.Ring_ops T zero one add mul sub opp eq := {}.
+  Global Instance Ncring_Ring : @Ncring.Ring T zero one add mul sub opp eq Ncring_Ring_ops.
   Proof using Type*.
-    intros x.
-    assert (0*x = 0*x) as Hx by reflexivity.
-    rewrite <-(right_identity 0), right_distributive in Hx at 1.
-    assert (0*x + 0*x - 0*x = 0*x - 0*x) as Hxx by (rewrite Hx; reflexivity).
-    rewrite !ring_sub_definition, <-associative, right_inverse, right_identity in Hxx; exact Hxx.
-  Qed.
+    split; exact _ || cbv; intros; eauto using left_identity, right_identity, commutative, associative, right_inverse, left_distributive, right_distributive, ring_sub_definition with core typeclass_instances.
+    - (* TODO: why does [eauto using @left_identity with typeclass_instances] not work? *)
+      eapply @left_identity; eauto with typeclass_instances.
+    - eapply @right_identity; eauto with typeclass_instances.
+    - eapply associative.
+  Qed. 
+
+  
+  Lemma mul_0_l : forall x, 0 * x = 0.
+  Proof using Type*. apply Ncring.ring_mul_0_l. Qed.
 
   Lemma mul_0_r : forall x, x * 0 = 0.
-  Proof using Type*.
-    intros x.
-    assert (x*0 = x*0) as Hx by reflexivity.
-    rewrite <-(left_identity 0), left_distributive in Hx at 1.
-    assert (opp (x*0) + (x*0 + x*0)  = opp (x*0) + x*0) as Hxx by (rewrite Hx; reflexivity).
-    rewrite associative, left_inverse, left_identity in Hxx; exact Hxx.
-  Qed.
+  Proof using Type*. apply Ncring.ring_mul_0_r. Qed.
 
   Lemma sub_0_l x : 0 - x = opp x.
   Proof using Type*. rewrite ring_sub_definition. rewrite left_identity. reflexivity. Qed.
 
   Lemma mul_opp_r x y : x * opp y = opp (x * y).
-  Proof using Type*.
-    assert (Ho:x*(opp y) + x*y = 0)
-      by (rewrite <-left_distributive, left_inverse, mul_0_r; reflexivity).
-    rewrite <-(left_identity (opp (x*y))), <-Ho; clear Ho.
-    rewrite <-!associative, right_inverse, right_identity; reflexivity.
-  Qed.
+  Proof using Type*. symmetry. apply Ncring.ring_opp_mul_r. Qed. 
 
   Lemma mul_opp_l x y : opp x * y = opp (x * y).
-  Proof using Type*.
-    assert (Ho:opp x*y + x*y = 0)
-      by (rewrite <-right_distributive, left_inverse, mul_0_l; reflexivity).
-    rewrite <-(left_identity (opp (x*y))), <-Ho; clear Ho.
-    rewrite <-!associative, right_inverse, right_identity; reflexivity.
-  Qed.
+  Proof using Type*. symmetry. apply Ncring.ring_opp_mul_l. Qed. 
 
   Definition opp_zero_iff : forall x, opp x = 0 <-> x = 0 := Group.inv_id_iff.
 
@@ -93,17 +82,7 @@ Section Ring.
     forall x y : T, not (eq (mul x y) zero) <-> (not (eq x zero) /\ not (eq y zero)).
   Proof using Type*. intros; rewrite zero_product_iff_zero_factor; tauto. Qed.
 
-  Global Instance Ncring_Ring_ops : @Ncring.Ring_ops T zero one add mul sub opp eq := {}.
-  Global Instance Ncring_Ring : @Ncring.Ring T zero one add mul sub opp eq Ncring_Ring_ops.
-  Proof using Type*.
-    split; exact _ || cbv; intros; eauto using left_identity, right_identity, commutative, associative, right_inverse, left_distributive, right_distributive, ring_sub_definition with core typeclass_instances.
-    - (* TODO: why does [eauto using @left_identity with typeclass_instances] not work? *)
-      eapply @left_identity; eauto with typeclass_instances.
-    - eapply @right_identity; eauto with typeclass_instances.
-    - eapply associative.
-    - intros; eapply right_distributive.
-    - intros; eapply left_distributive.
-  Qed.
+  
 End Ring.
 
 Section Homomorphism.
